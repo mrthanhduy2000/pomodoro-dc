@@ -16,7 +16,7 @@ import PrestigeModal from './components/PrestigeModal';
 import LevelUpModal from './components/LevelUpModal';
 import WeeklyReportModal from './components/WeeklyReportModal';
 import NotificationCenter from './components/NotificationCenter';
-import { CivJourneySidebarBrand } from './components/CivJourneyBrand';
+import { DCPomodoroSidebarBrand } from './components/DCPomodoroBrand';
 import { useGameLoop } from './hooks/useGameLoop';
 import useGameStore from './store/gameStore';
 import useSettingsStore from './store/settingsStore';
@@ -1773,7 +1773,7 @@ function EditorialSidebar({ activeTab, isOpen, onOpenWeeklyReport, onSelect, onT
       animate={{ width: isOpen ? 258 : 60 }}
       transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}
     >
-      <CivJourneySidebarBrand isOpen={isOpen} />
+      <DCPomodoroSidebarBrand isOpen={isOpen} />
 
       <nav className="mt-2 flex flex-1 flex-col gap-0.5 px-2">
         {isOpen && (

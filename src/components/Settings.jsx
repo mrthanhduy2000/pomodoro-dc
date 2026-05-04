@@ -704,12 +704,12 @@ export default function Settings() {
               eyebrow="Install"
               icon="📱"
               title="Cài đặt app"
-              description="Đưa CivJourney lên thiết bị để mở nhanh và chạy như một ứng dụng riêng."
+              description="Đưa DC Pomodoro lên thiết bị để mở nhanh và chạy như một ứng dụng riêng."
             />
             <div className="mt-4">
               {isInstalled ? (
                 <p className="text-sm" style={lightTheme ? { color: '#6f7b62' } : { color: 'var(--good)' }}>
-                  CivJourney đã được cài đặt trên thiết bị này.
+                  DC Pomodoro đã được cài đặt trên thiết bị này.
                 </p>
               ) : (
                 <>
@@ -748,7 +748,7 @@ export default function Settings() {
           />
           <div className="mt-4 space-y-1 text-sm">
             <p style={lightTheme ? { color: '#1f1e1d' } : { color: 'var(--ink)' }}>
-              <span className="font-semibold">CivJourney</span> — Pomodoro nhập vai
+              <span className="font-semibold">DC Pomodoro</span> — Pomodoro nhập vai
             </p>
             <p style={lightTheme ? { color: '#6a6862' } : { color: 'var(--muted-2)' }}>
               Hành trình qua 15 kỷ nguyên. Dữ liệu đang được lưu cục bộ trong trình duyệt.

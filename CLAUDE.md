@@ -13,7 +13,7 @@ App chạy hoàn toàn trên **web** tại `https://pomodoro-dc.vercel.app`
 
 ## Tech Stack
 - React + Vite + PWA
-- State: Zustand + localStorage (key: `civjourney-v1`)
+- State: Zustand + localStorage (key: `dc-pomodoro-v1`, vẫn đọc được key cũ `civjourney-v1`)
 - Sync cloud: Supabase
 - Hosting: Vercel (auto-deploy từ GitHub)
 

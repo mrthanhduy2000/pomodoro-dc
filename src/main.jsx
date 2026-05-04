@@ -7,12 +7,22 @@ import {
   attemptRuntimeRecovery,
   cleanupRuntimeRecoveryState,
 } from './utils/runtimeRecovery.js'
+import {
+  GLOBAL_ERROR_HANDLERS_FLAG,
+  LEGACY_GLOBAL_ERROR_HANDLERS_FLAGS,
+  SETTINGS_STORAGE_KEY,
+  LEGACY_SETTINGS_STORAGE_KEYS,
+  LOCAL_SW_RESET_KEY,
+  LEGACY_LOCAL_SW_RESET_KEYS,
+  readLocalStorageValue,
+  readSessionStorageValue,
+} from './lib/appIdentity.js'
 
 function readPersistedUiTheme() {
   if (typeof window === 'undefined') return 'light'
 
   try {
-    const raw = window.localStorage.getItem('civjourney-settings-v2')
+    const raw = readLocalStorageValue(SETTINGS_STORAGE_KEY, LEGACY_SETTINGS_STORAGE_KEYS)
     if (!raw) return 'light'
 
     const parsed = JSON.parse(raw)
@@ -31,9 +41,12 @@ function reportReactRootError(kind, error, errorInfo) {
 
 function installGlobalErrorHandlers() {
   if (typeof window === 'undefined') return
-  if (window.__civjourneyGlobalErrorHandlersInstalled) return
+  if (window[GLOBAL_ERROR_HANDLERS_FLAG] || LEGACY_GLOBAL_ERROR_HANDLERS_FLAGS.some((flag) => window[flag])) return
 
-  window.__civjourneyGlobalErrorHandlersInstalled = true
+  window[GLOBAL_ERROR_HANDLERS_FLAG] = true
+  LEGACY_GLOBAL_ERROR_HANDLERS_FLAGS.forEach((flag) => {
+    window[flag] = true
+  })
 
   window.addEventListener('error', (event) => {
     console.error('[window:error]', event.error ?? event.message, event)
@@ -66,9 +79,9 @@ async function resetLocalServiceWorkers() {
     await Promise.all(cacheKeys.map((cacheKey) => window.caches.delete(cacheKey)))
   }
 
-  if (window.sessionStorage.getItem('civjourney-local-sw-reset') === 'done') return
+  if (readSessionStorageValue(LOCAL_SW_RESET_KEY, LEGACY_LOCAL_SW_RESET_KEYS) === 'done') return
 
-  window.sessionStorage.setItem('civjourney-local-sw-reset', 'done')
+  window.sessionStorage.setItem(LOCAL_SW_RESET_KEY, 'done')
   window.location.reload()
 }
 

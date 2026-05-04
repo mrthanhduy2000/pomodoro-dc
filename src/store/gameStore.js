@@ -4,7 +4,7 @@
  * Zustand store — nguồn sự thật duy nhất cho toàn bộ trạng thái game.
  *
  * Chiến lược lưu trữ:
- *   • zustand/middleware `persist` ghi vào localStorage với key 'civjourney-v1'
+ *   • zustand/middleware `persist` ghi vào localStorage với key 'dc-pomodoro-v1'
  *   • Schema version được theo dõi riêng bằng `GAME_STORE_SCHEMA_VERSION`
  *   • Chỉ slice `game` được persist; trạng thái UI tạm thời nằm ở slice `ui`
  *
@@ -24,7 +24,17 @@
  */
 
 import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
+import { persist } from 'zustand/middleware';
+import {
+  GAME_STORE_STORAGE_KEY,
+  GAME_STORE_EXPORT_VERSION,
+  LEGACY_GAME_STORE_STORAGE_KEYS,
+  LEGACY_GAME_STORE_EXPORT_VERSIONS,
+  SETTINGS_STORAGE_KEY,
+  LEGACY_SETTINGS_STORAGE_KEYS,
+  createLegacyCompatibleJSONStorage,
+  readLocalStorageValue,
+} from '../lib/appIdentity';
 import {
   localDateStr,
   localWeekMondayStr,
@@ -116,8 +126,7 @@ import {
   aggregateActiveBuffs,
 } from '../engine/challengeEngine';
 
-export const GAME_STORE_STORAGE_KEY = 'civjourney-v1';
-export const GAME_STORE_EXPORT_VERSION = GAME_STORE_STORAGE_KEY;
+export { GAME_STORE_STORAGE_KEY, GAME_STORE_EXPORT_VERSION };
 export const GAME_STORE_SCHEMA_VERSION = 2;
 
 function isRecord(value) {
@@ -319,7 +328,7 @@ const makeDefaultSkills = () => ({
 function readDailyGoalSettings() {
   if (typeof window === 'undefined') return { type: 'sessions', sessions: 5, minutes: 125 };
   try {
-    const raw = window.localStorage.getItem('civjourney-settings-v2');
+    const raw = readLocalStorageValue(SETTINGS_STORAGE_KEY, LEGACY_SETTINGS_STORAGE_KEYS);
     if (!raw) return { type: 'sessions', sessions: 5, minutes: 125 };
     const parsed = JSON.parse(raw);
     const state = parsed?.state ?? parsed;
@@ -4677,11 +4686,15 @@ const useGameStore = create(
               message: 'File không chứa dữ liệu game hợp lệ.',
             };
           }
-          if (typeof data._version === 'string' && data._version !== GAME_STORE_EXPORT_VERSION) {
+          if (
+            typeof data._version === 'string'
+            && data._version !== GAME_STORE_EXPORT_VERSION
+            && !LEGACY_GAME_STORE_EXPORT_VERSIONS.includes(data._version)
+          ) {
             return {
               ok: false,
               code: 'version_mismatch',
-              message: `File backup thuộc phiên bản ${data._version}. Phiên bản hiện tại hỗ trợ ${GAME_STORE_EXPORT_VERSION}.`,
+              message: `File backup thuộc phiên bản ${data._version}. Phiên bản hiện tại hỗ trợ ${[GAME_STORE_EXPORT_VERSION, ...LEGACY_GAME_STORE_EXPORT_VERSIONS].join(', ')}.`,
             };
           }
           set((prev) => ({
@@ -4747,7 +4760,7 @@ const useGameStore = create(
     // ── Cấu hình Persist ────────────────────────────────────────────────────
     {
       name:    GAME_STORE_STORAGE_KEY,
-      storage: createJSONStorage(() => localStorage),
+      storage: createLegacyCompatibleJSONStorage(LEGACY_GAME_STORE_STORAGE_KEYS),
       version: GAME_STORE_SCHEMA_VERSION,
       migrate: (stored, fromVersion) => migratePersistedGameState(stored, fromVersion),
 

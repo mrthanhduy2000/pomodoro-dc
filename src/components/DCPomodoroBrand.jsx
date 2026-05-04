@@ -7,7 +7,7 @@ const BRAND = {
   line: '#ddd9cc',
 };
 
-export function CivJourneyMarkClockC({
+export function DCPomodoroMarkClockC({
   size = 28,
   color = 'var(--ink)',
   accent = BRAND.bronze,
@@ -41,7 +41,7 @@ export function CivJourneyMarkClockC({
   );
 }
 
-export function CivJourneyMarkStamp({
+export function DCPomodoroMarkStamp({
   size = 28,
   color = 'var(--ink)',
   accent = BRAND.bronze,
@@ -69,17 +69,17 @@ export function CivJourneyMarkStamp({
         y="92"
         textAnchor="middle"
         fontFamily="'JetBrains Mono', monospace"
-        fontSize="4"
+        fontSize="3.6"
         fill={color}
-        letterSpacing="2"
+        letterSpacing="1.2"
       >
-        CIVJOURNEY
+        DC POMODORO
       </text>
     </svg>
   );
 }
 
-export function CivJourneyWordmark({
+export function DCPomodoroWordmark({
   color = 'var(--ink)',
   size = 1,
 }) {
@@ -96,14 +96,14 @@ export function CivJourneyWordmark({
           whiteSpace: 'nowrap',
         }}
       >
-        Civ
-        <span style={{ fontStyle: 'italic', fontWeight: 400 }}>Journey</span>
+        DC
+        <span style={{ fontStyle: 'italic', fontWeight: 400 }}> Pomodoro</span>
       </div>
     </div>
   );
 }
 
-export function CivJourneySidebarBrand({ isOpen }) {
+export function DCPomodoroSidebarBrand({ isOpen }) {
   return (
     <div className="flex items-center gap-1.5 px-3 pb-3 pr-3 pt-4">
       <div
@@ -113,11 +113,11 @@ export function CivJourneySidebarBrand({ isOpen }) {
           background: BRAND.cream,
         }}
       >
-        <CivJourneyMarkStamp size={22} color="#1a1918" accent={BRAND.bronze} />
+        <DCPomodoroMarkStamp size={22} color="#1a1918" accent={BRAND.bronze} />
       </div>
       {isOpen && (
         <div className="shrink-0">
-          <CivJourneyWordmark size={1.12} />
+          <DCPomodoroWordmark size={1.12} />
         </div>
       )}
     </div>

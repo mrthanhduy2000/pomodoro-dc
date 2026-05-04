@@ -4,6 +4,7 @@
  * để mỗi hạt có quỹ đạo riêng mà không cần nhiều @keyframes.
  */
 import React, { useEffect, useMemo } from 'react';
+import { PARTICLE_STYLE_ID } from '../lib/appIdentity';
 
 // ─── Seed-based pseudo-random (deterministic — tránh layout shift khi HMR) ───
 function seeded(seed) {
@@ -11,7 +12,7 @@ function seeded(seed) {
   return () => { s = (s * 16807) % 2147483647; return (s - 1) / 2147483646; };
 }
 
-const STYLE_ID = 'civjourney-particles-css';
+const STYLE_ID = PARTICLE_STYLE_ID;
 
 const GLOBAL_CSS = `
 @keyframes cj-particle {

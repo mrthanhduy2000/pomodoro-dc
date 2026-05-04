@@ -1,7 +1,7 @@
 /**
  * constants.js
  * ─────────────────────────────────────────────────────────────────────────────
- * Nguồn sự thật duy nhất cho mọi hằng số, ngưỡng và danh mục trong CivJourney.
+ * Nguồn sự thật duy nhất cho mọi hằng số, ngưỡng và danh mục trong DC Pomodoro.
  * Import từ đây — không bao giờ hard-code con số thần kỳ ở nơi khác.
  * ─────────────────────────────────────────────────────────────────────────────
  */
@@ -1663,10 +1663,10 @@ export const ACHIEVEMENTS = [
   { id:'level_50',   category:'xp_level', tier:'gold',     icon:'⚡', label:'Cấp 50',                description:'Đạt cấp độ 50',         check:(s)=>s.playerLevel>=50 },
   { id:'level_75',   category:'xp_level', tier:'platinum', icon:'💎', label:'Cấp 75',                description:'Đạt cấp độ 75',         check:(s)=>s.playerLevel>=75 },
   { id:'level_100',  category:'xp_level', tier:'diamond',  icon:'👑', label:'Cấp 100',               description:'Đạt cấp độ 100',        check:(s)=>s.playerLevel>=100 },
-  { id:'days_30',    category:'xp_level', tier:'bronze',   icon:'📅', label:'30 Ngày Cùng CivJourney',description:'30 ngày kể từ phiên đầu', check:(s)=>s.daysSinceFirst>=30 },
+  { id:'days_30',    category:'xp_level', tier:'bronze',   icon:'📅', label:'30 Ngày Cùng DC Pomodoro',description:'30 ngày kể từ phiên đầu', check:(s)=>s.daysSinceFirst>=30 },
   { id:'days_100',   category:'xp_level', tier:'silver',   icon:'🗓️', label:'100 Ngày',               description:'100 ngày kể từ phiên đầu', check:(s)=>s.daysSinceFirst>=100 },
-  { id:'days_365',   category:'xp_level', tier:'gold',     icon:'🌟', label:'Một Năm Cùng CivJourney',description:'365 ngày kể từ phiên đầu', check:(s)=>s.daysSinceFirst>=365 },
-  { id:'days_730',   category:'xp_level', tier:'diamond',  icon:'∞',  label:'Hai Năm Cùng CivJourney',description:'730 ngày kể từ phiên đầu', check:(s)=>s.daysSinceFirst>=730 },
+  { id:'days_365',   category:'xp_level', tier:'gold',     icon:'🌟', label:'Một Năm Cùng DC Pomodoro',description:'365 ngày kể từ phiên đầu', check:(s)=>s.daysSinceFirst>=365 },
+  { id:'days_730',   category:'xp_level', tier:'diamond',  icon:'∞',  label:'Hai Năm Cùng DC Pomodoro',description:'730 ngày kể từ phiên đầu', check:(s)=>s.daysSinceFirst>=730 },
 
   // ══ ĐẶC BIỆT & BÍ ẨN (27) ════════════════════════════════════════════════
   { id:'pi_day',         category:'special', tier:'gold',     icon:'π',  label:'Ngày Pi',               description:'Phiên vào ngày 14/3 (Pi Day)',                        check:(s)=>s.hasMar14Session },

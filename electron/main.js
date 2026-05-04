@@ -10,8 +10,10 @@ const { app, Tray, Menu, nativeImage, shell } = require('electron');
 const path = require('path');
 const https = require('https');
 
+const APP_URL = 'https://pomodoro-dc.vercel.app';
 const SUPABASE_HOST = 'jcefdsdccmnmqvuwelmm.supabase.co';
 const SUPABASE_KEY  = 'sb_publishable_Uiyl9FuyERZFVWBCFw519Q_UZbRmBVG';
+const TRAY_TITLE_OPTIONS = { fontType: 'monospacedDigit' };
 
 let tray      = null;
 let timerData = null;
@@ -33,7 +35,9 @@ function fetchTimerLive() {
       try {
         const rows = JSON.parse(raw);
         if (Array.isArray(rows) && rows.length > 0) timerData = rows[0];
-      } catch (_) {}
+      } catch {
+        return;
+      }
     });
   }).on('error', () => {});
 }
@@ -43,31 +47,35 @@ function formatTime(totalSec) {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 }
 
-function updateTrayTitle() {
+function setTrayTitle(title = '') {
   if (!tray) return;
+  tray.setTitle(title, TRAY_TITLE_OPTIONS);
+}
 
-  if (!timerData) { tray.setTitle(''); return; }
+function updateTrayTitle() {
+  if (!timerData) {
+    setTrayTitle('');
+    return;
+  }
 
   const { is_running, started_at, total_seconds, paused_seconds_remaining } = timerData;
 
   if (is_running && started_at && total_seconds) {
-    const elapsed  = (Date.now() - new Date(started_at).getTime()) / 1000;
+    const elapsed = (Date.now() - new Date(started_at).getTime()) / 1000;
     const remaining = Math.max(0, total_seconds - elapsed);
-    tray.setTitle(` 🍅 ${formatTime(remaining)}`);
+    setTrayTitle(`🍅 ${formatTime(remaining)}`);
   } else if (!is_running && paused_seconds_remaining > 0) {
-    tray.setTitle(` ⏸ ${formatTime(paused_seconds_remaining)}`);
+    setTrayTitle(`⏸ ${formatTime(paused_seconds_remaining)}`);
   } else {
-    tray.setTitle('');
+    setTrayTitle('');
   }
 }
 
 function createTray() {
-  const iconPath = path.join(__dirname, '../public/tray-icon.png');
+  const iconPath = path.join(__dirname, '../public/tray-template.png');
   let icon = nativeImage.createFromPath(iconPath);
   if (icon.isEmpty()) {
-    icon = nativeImage.createFromDataURL(
-      'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=='
-    );
+    icon = nativeImage.createEmpty();
   }
   const trayIcon = icon.resize({ width: 18, height: 18 });
   trayIcon.setTemplateImage(true);
@@ -78,14 +86,14 @@ function createTray() {
   const ctxMenu = Menu.buildFromTemplate([
     {
       label: 'Mở DC Pomodoro',
-      click: () => shell.openExternal('https://pomodoro-dc.vercel.app'),
+      click: () => shell.openExternal(APP_URL),
     },
     { type: 'separator' },
     { label: 'Thoát', click: () => { app.isQuitting = true; app.quit(); } },
   ]);
   tray.setContextMenu(ctxMenu);
 
-  tray.on('click', () => shell.openExternal('https://pomodoro-dc.vercel.app'));
+  tray.on('click', () => shell.openExternal(APP_URL));
 }
 
 app.whenReady().then(() => {

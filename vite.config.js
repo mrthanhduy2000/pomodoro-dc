@@ -82,7 +82,7 @@ export default defineConfig({
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
             handler: 'StaleWhileRevalidate',
             options: {
-              cacheName: 'civjourney-google-fonts-styles',
+              cacheName: 'dc-pomodoro-google-fonts-styles',
               expiration: {
                 maxEntries: 16,
                 maxAgeSeconds: 30 * 24 * 60 * 60, // 30 days
@@ -94,7 +94,7 @@ export default defineConfig({
             urlPattern: /^https:\/\/fonts\.gstatic\.com\/.*/i,
             handler: 'CacheFirst',
             options: {
-              cacheName: 'civjourney-google-fonts-webfonts',
+              cacheName: 'dc-pomodoro-google-fonts-webfonts',
               cacheableResponse: {
                 statuses: [0, 200],
               },

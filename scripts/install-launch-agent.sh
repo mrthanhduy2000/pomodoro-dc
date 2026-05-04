@@ -2,7 +2,9 @@
 set -euo pipefail
 
 PROJECT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-PLIST_PATH="$HOME/Library/LaunchAgents/com.civjourney.localhost.plist"
+PLIST_PATH="$HOME/Library/LaunchAgents/com.dcpomodoro.localhost.plist"
+LEGACY_PLIST_PATH="$HOME/Library/LaunchAgents/com.civjourney.localhost.plist"
+AGENT_LABEL="com.dcpomodoro.localhost"
 LOG_DIR="$PROJECT_DIR/.runtime"
 ESCAPED_PROJECT_DIR="$(printf '%s' "$PROJECT_DIR" | sed "s/'/'\\\\''/g")"
 START_COMMAND="export PATH=/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin:\$PATH; cd '$ESCAPED_PROJECT_DIR'; NODE_BIN=\$(command -v node); if [ -z \"\$NODE_BIN\" ]; then echo 'Node not found'; exit 1; fi; exec \"\$NODE_BIN\" scripts/serve-dist.mjs"
@@ -15,7 +17,7 @@ cat > "$PLIST_PATH" <<PLIST
 <plist version="1.0">
 <dict>
   <key>Label</key>
-  <string>com.civjourney.localhost</string>
+  <string>${AGENT_LABEL}</string>
   <key>ProgramArguments</key>
   <array>
     <string>/bin/bash</string>
@@ -26,9 +28,9 @@ cat > "$PLIST_PATH" <<PLIST
   <dict>
     <key>PATH</key>
     <string>/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
-    <key>CIVJOURNEY_PORT</key>
+    <key>DC_POMODORO_PORT</key>
     <string>31105</string>
-    <key>CIVJOURNEY_HOST</key>
+    <key>DC_POMODORO_HOST</key>
     <string>0.0.0.0</string>
   </dict>
   <key>KeepAlive</key>
@@ -38,16 +40,18 @@ cat > "$PLIST_PATH" <<PLIST
   <key>WorkingDirectory</key>
   <string>${PROJECT_DIR}</string>
   <key>StandardOutPath</key>
-  <string>${LOG_DIR}/civjourney-server.log</string>
+  <string>${LOG_DIR}/dc-pomodoro-server.log</string>
   <key>StandardErrorPath</key>
-  <string>${LOG_DIR}/civjourney-server.err.log</string>
+  <string>${LOG_DIR}/dc-pomodoro-server.err.log</string>
 </dict>
 </plist>
 PLIST
 
+launchctl bootout "gui/$(id -u)" "$LEGACY_PLIST_PATH" >/dev/null 2>&1 || true
 launchctl bootout "gui/$(id -u)" "$PLIST_PATH" >/dev/null 2>&1 || true
+rm -f "$LEGACY_PLIST_PATH"
 launchctl bootstrap "gui/$(id -u)" "$PLIST_PATH"
-launchctl kickstart -k "gui/$(id -u)/com.civjourney.localhost"
+launchctl kickstart -k "gui/$(id -u)/${AGENT_LABEL}"
 
 echo "Installed LaunchAgent at $PLIST_PATH"
-echo "CivJourney will now keep localhost:31105 alive after login."
+echo "DC Pomodoro will now keep localhost:31105 alive after login."

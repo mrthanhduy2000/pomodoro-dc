@@ -17,10 +17,10 @@ const releasesDir = path.join(runtimeDir, 'releases');
 const pendingDir = path.join(runtimeDir, 'pending');
 const assetArchiveDir = path.join(runtimeDir, 'asset-archive');
 const currentReleasePath = path.join(runtimeDir, 'current-release.json');
-const port = Number(process.env.CIVJOURNEY_PORT ?? 31105);
-const host = process.env.CIVJOURNEY_HOST ?? '127.0.0.1';
-const buildRetryMs = Number(process.env.CIVJOURNEY_BUILD_RETRY_MS ?? 60_000);
-const releasesToKeep = Math.max(5, Number(process.env.CIVJOURNEY_RELEASES_TO_KEEP ?? 12));
+const port = Number(process.env.DC_POMODORO_PORT ?? process.env.CIVJOURNEY_PORT ?? 31105);
+const host = process.env.DC_POMODORO_HOST ?? process.env.CIVJOURNEY_HOST ?? '127.0.0.1';
+const buildRetryMs = Number(process.env.DC_POMODORO_BUILD_RETRY_MS ?? process.env.CIVJOURNEY_BUILD_RETRY_MS ?? 60_000);
+const releasesToKeep = Math.max(5, Number(process.env.DC_POMODORO_RELEASES_TO_KEEP ?? process.env.CIVJOURNEY_RELEASES_TO_KEEP ?? 12));
 const buildWatchRoots = [
   path.join(projectDir, 'src'),
   path.join(projectDir, 'public'),
@@ -57,11 +57,12 @@ let retryAfter = 0;
 let buildStatus = 'idle';
 
 function log(message) {
-  console.log(`[civjourney:${formatVietnamOffsetISOString()}] ${message}`);
+  console.log(`[dc-pomodoro:${formatVietnamOffsetISOString()}] ${message}`);
 }
 
 function resolveNpmBin() {
   const candidates = [
+    process.env.DC_POMODORO_NPM_BIN,
     process.env.CIVJOURNEY_NPM_BIN,
     process.env.npm_execpath,
     '/opt/homebrew/bin/npm',
@@ -400,7 +401,7 @@ async function resolveRequestFile(safePath) {
 
 function writeError(res, statusCode, error) {
   res.writeHead(statusCode, { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' });
-  res.end(`CivJourney server error: ${error instanceof Error ? error.message : String(error)}`);
+  res.end(`DC Pomodoro server error: ${error instanceof Error ? error.message : String(error)}`);
 }
 
 const server = createServer(async (req, res) => {

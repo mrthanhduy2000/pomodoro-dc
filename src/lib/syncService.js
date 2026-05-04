@@ -1,10 +1,13 @@
 import { supabase } from './supabase';
 import useGameStore, { GAME_STORE_EXPORT_VERSION } from '../store/gameStore';
+import {
+  LAST_CLOUD_SYNC_KEY,
+  LEGACY_LAST_CLOUD_SYNC_KEYS,
+  readLocalStorageValue,
+} from './appIdentity';
 
 const SYNC_ID = 'singleton';
 const DEBOUNCE_MS = 5000;
-const LAST_SYNC_KEY = '_civjourney_last_cloud_sync';
-
 let debounceTimer = null;
 
 function getExportableState() {
@@ -65,7 +68,7 @@ async function pushToCloud() {
       .upsert({ id: SYNC_ID, data, updated_at: now });
 
     if (error) throw error;
-    localStorage.setItem(LAST_SYNC_KEY, Date.now().toString());
+    localStorage.setItem(LAST_CLOUD_SYNC_KEY, Date.now().toString());
     console.log('[sync] pushed to cloud');
   } catch (err) {
     console.warn('[sync] push failed', err);
@@ -89,12 +92,12 @@ export async function initSync() {
       await pushToCloud();
     } else {
       const cloudTime = new Date(data.updated_at).getTime();
-      const lastSync = parseInt(localStorage.getItem(LAST_SYNC_KEY) ?? '0', 10);
+      const lastSync = parseInt(readLocalStorageValue(LAST_CLOUD_SYNC_KEY, LEGACY_LAST_CLOUD_SYNC_KEYS) ?? '0', 10);
 
       if (cloudTime > lastSync) {
         const result = useGameStore.getState()._importGameData(data.data);
         if (result.ok) {
-          localStorage.setItem(LAST_SYNC_KEY, cloudTime.toString());
+          localStorage.setItem(LAST_CLOUD_SYNC_KEY, cloudTime.toString());
           console.log('[sync] pulled newer data from cloud');
         } else {
           console.warn('[sync] import failed:', result.message);

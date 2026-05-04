@@ -1,8 +1,13 @@
 import { lazy } from 'react';
+import {
+  CACHE_NAME_PATTERNS,
+  RUNTIME_RECOVERY_STORAGE_PREFIX,
+  LEGACY_RUNTIME_RECOVERY_STORAGE_PREFIXES,
+  readSessionStorageValue,
+} from '../lib/appIdentity';
 
-const RECOVERY_STORAGE_PREFIX = 'civjourney:runtime-recovery:';
+const RECOVERY_STORAGE_PREFIXES = [RUNTIME_RECOVERY_STORAGE_PREFIX, ...LEGACY_RUNTIME_RECOVERY_STORAGE_PREFIXES];
 const RECOVERY_TTL_MS = 60_000;
-const CACHE_NAME_PATTERNS = [/^workbox-/i, /^civjourney/i];
 const CHUNK_ERROR_PATTERNS = [
   /failed to fetch dynamically imported module/i,
   /error loading dynamically imported module/i,
@@ -17,14 +22,18 @@ function canUseBrowserRuntime() {
 }
 
 function getRecoveryStorageKey(scope = 'global') {
-  return `${RECOVERY_STORAGE_PREFIX}${scope}`;
+  return `${RUNTIME_RECOVERY_STORAGE_PREFIX}${scope}`;
+}
+
+function getLegacyRecoveryStorageKeys(scope = 'global') {
+  return LEGACY_RUNTIME_RECOVERY_STORAGE_PREFIXES.map((prefix) => `${prefix}${scope}`);
 }
 
 function readRecoveryEntry(scope) {
   if (!canUseBrowserRuntime()) return null;
 
   try {
-    const raw = window.sessionStorage.getItem(getRecoveryStorageKey(scope));
+    const raw = readSessionStorageValue(getRecoveryStorageKey(scope), getLegacyRecoveryStorageKeys(scope));
     if (!raw) return null;
 
     const parsed = JSON.parse(raw);
@@ -67,7 +76,7 @@ export function cleanupRuntimeRecoveryState() {
     const now = Date.now();
 
     for (const key of Object.keys(window.sessionStorage)) {
-      if (!key.startsWith(RECOVERY_STORAGE_PREFIX)) continue;
+      if (!RECOVERY_STORAGE_PREFIXES.some((prefix) => key.startsWith(prefix))) continue;
 
       const raw = window.sessionStorage.getItem(key);
       if (!raw) {

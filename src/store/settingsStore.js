@@ -7,11 +7,16 @@
  */
 
 import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
+import { persist } from 'zustand/middleware';
 import soundEngine from '../engine/soundEngine';
 import ambientEngine from '../engine/ambientEngine';
 import notificationManager from '../engine/notifications';
 import { DEFAULT_QUICK_FOCUS_PRESET } from '../engine/breaks';
+import {
+  SETTINGS_STORAGE_KEY,
+  LEGACY_SETTINGS_STORAGE_KEYS,
+  createLegacyCompatibleJSONStorage,
+} from '../lib/appIdentity';
 
 const DEFAULT_BREAK_PROFILE = {
   shortBreakDuration: DEFAULT_QUICK_FOCUS_PRESET.shortBreakDuration,
@@ -159,8 +164,8 @@ const useSettingsStore = create(
     }),
 
     {
-      name:    'civjourney-settings-v2',
-      storage: createJSONStorage(() => localStorage),
+      name:    SETTINGS_STORAGE_KEY,
+      storage: createLegacyCompatibleJSONStorage(LEGACY_SETTINGS_STORAGE_KEYS),
       migrate: (stored) => {
         const safeStored = stored ?? {};
         const ambientVolume = safeStored.ambientVolume > 0 ? safeStored.ambientVolume : 0.3;

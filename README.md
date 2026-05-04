@@ -1,4 +1,4 @@
-# CivJourney
+# DC Pomodoro
 
 ## Stable local app
 
@@ -7,7 +7,7 @@
 Use one of these:
 
 - `npm run install:agent`
-- double-click `CivJourney.app` after regenerating it with `bash scripts/create-launcher.sh`
+- double-click `DC Pomodoro.app` after regenerating it with `bash scripts/create-launcher.sh`
 
 What changed:
 

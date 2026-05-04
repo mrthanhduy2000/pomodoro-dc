@@ -11,6 +11,7 @@ import { useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import useGameStore, { GAME_STORE_EXPORT_VERSION } from '../store/gameStore';
 import { formatVietnamOffsetISOString, localDateStr } from '../engine/time';
+import { EXPORT_FILENAME_PREFIX } from '../lib/appIdentity';
 
 export default function ExportImport() {
   const storeState   = useGameStore.getState;
@@ -73,7 +74,7 @@ export default function ExportImport() {
     const url  = URL.createObjectURL(blob);
     const a    = document.createElement('a');
     a.href     = url;
-    a.download = `civjourney-backup-${localDateStr()}.json`;
+    a.download = `${EXPORT_FILENAME_PREFIX}-${localDateStr()}.json`;
     a.click();
     URL.revokeObjectURL(url);
   };

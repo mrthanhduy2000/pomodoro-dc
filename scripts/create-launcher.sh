@@ -15,9 +15,11 @@ PROJECT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 APP_NAME="DC Pomodoro"
 APP_PATH="$PROJECT_DIR/$APP_NAME.app"
 ICON_SVG="$PROJECT_DIR/public/icon.svg"
-ICONSET_DIR="/tmp/civjourney.iconset"
-ICNS_PATH="/tmp/civjourney.icns"
-QL_TMP="/tmp/civjourney_ql"
+ICONSET_DIR="/tmp/dc-pomodoro.iconset"
+ICNS_PATH="/tmp/dc-pomodoro.icns"
+QL_TMP="/tmp/dc-pomodoro_ql"
+AGENT_LABEL="com.dcpomodoro.localhost"
+LEGACY_AGENT_LABEL="com.civjourney.localhost"
 
 echo "🏗  Building $APP_NAME.app …"
 
@@ -52,7 +54,7 @@ def make_png(size, r, g, b):
     idat = zlib.compress(raw)
     return b'\x89PNG\r\n\x1a\n' + chunk(b'IHDR', ihdr) + chunk(b'IDAT', idat) + chunk(b'IEND', b'')
 
-d = '/tmp/civjourney.iconset'
+d = '/tmp/dc-pomodoro.iconset'
 os.makedirs(d, exist_ok=True)
 for sz in [16, 32, 64, 128, 256, 512]:
     data = make_png(sz, 99, 102, 241)   # #6366f1 indigo-500
@@ -70,7 +72,7 @@ iconutil -c icns "$ICONSET_DIR" -o "$ICNS_PATH" 2>/dev/null || {
 # ── Step 3: Write AppleScript source ─────────────────────────────────────────
 echo "  📝 Compiling AppleScript …"
 ESC_DIR=$(printf '%s' "$PROJECT_DIR" | sed "s/'/'\\\\''/g")
-SCRIPT_TMP="/tmp/civjourney_launcher.applescript"
+SCRIPT_TMP="/tmp/dc-pomodoro_launcher.applescript"
 
 # NOTE: "url" is a reserved word in AppleScript → use "launchUrl" instead
 cat > "$SCRIPT_TMP" <<APPLESCRIPT
@@ -98,7 +100,7 @@ end try
 -- Start server if needed
 if not serverRunning then
     try
-        do shell script "launchctl kickstart -k gui/$(id -u)/com.civjourney.localhost >/dev/null 2>&1"
+        do shell script "launchctl kickstart -k gui/$(id -u)/${AGENT_LABEL} >/dev/null 2>&1 || launchctl kickstart -k gui/$(id -u)/${LEGACY_AGENT_LABEL} >/dev/null 2>&1"
         delay 1
         do shell script "curl -sf http://localhost:" & devPort & "/healthz > /dev/null 2>&1"
         set serverRunning to true

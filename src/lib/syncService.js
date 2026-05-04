@@ -8,6 +8,7 @@ import {
 
 const SYNC_ID = 'singleton';
 const DEBOUNCE_MS = 5000;
+const PULL_INTERVAL_MS = 30_000;
 let debounceTimer = null;
 
 function getExportableState() {
@@ -80,6 +81,34 @@ function schedulePush() {
   debounceTimer = setTimeout(pushToCloud, DEBOUNCE_MS);
 }
 
+async function pullFromCloud() {
+  // Không pull đè lên nếu thiết bị này đang chạy timer
+  if (useGameStore.getState().timerSession?.isRunning) return;
+
+  try {
+    const { data, error } = await supabase
+      .from('game_state')
+      .select('data, updated_at')
+      .eq('id', SYNC_ID)
+      .single();
+
+    if (error || !data?.data) return;
+
+    const cloudTime = new Date(data.updated_at).getTime();
+    const lastSync = parseInt(readLocalStorageValue(LAST_CLOUD_SYNC_KEY, LEGACY_LAST_CLOUD_SYNC_KEYS) ?? '0', 10);
+
+    if (cloudTime > lastSync) {
+      const result = useGameStore.getState()._importGameData(data.data);
+      if (result.ok) {
+        localStorage.setItem(LAST_CLOUD_SYNC_KEY, cloudTime.toString());
+        console.log('[sync] pulled update from cloud');
+      }
+    }
+  } catch (err) {
+    console.warn('[sync] pull failed', err);
+  }
+}
+
 export async function initSync() {
   try {
     const { data, error } = await supabase
@@ -113,5 +142,13 @@ export async function initSync() {
 
   useGameStore.subscribe(() => {
     schedulePush();
+  });
+
+  // Pull định kỳ mỗi 30 giây
+  setInterval(pullFromCloud, PULL_INTERVAL_MS);
+
+  // Pull ngay khi user mở lại tab/app
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') pullFromCloud();
   });
 }

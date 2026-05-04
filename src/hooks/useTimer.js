@@ -5,6 +5,7 @@ import soundEngine from '../engine/soundEngine';
 import notificationManager from '../engine/notifications';
 import { getBreakPlan } from '../engine/breaks';
 import { BREAK_EXTENSION_MINUTES } from '../engine/constants';
+import { updateTimerLive, clearTimerLive } from '../lib/timerLiveService';
 
 export const TIMER_STATES = {
   IDLE: 'IDLE',
@@ -414,6 +415,26 @@ export function useTimer({ focusMinutes, mode = TIMER_MODES.POMODORO }) {
 
     window.electronAPI.updateTray({ state: timerState, timeLeft: '' });
   }, [displaySeconds, timerState]);
+
+  useEffect(() => {
+    if (timerState === TIMER_STATES.RUNNING) {
+      updateTimerLive({
+        isRunning: true,
+        startedAt: startTimeRef.current ? new Date(startTimeRef.current).toISOString() : null,
+        totalSeconds: totalSecondsRef.current,
+        pausedSecondsRemaining: null,
+      });
+    } else if (timerState === TIMER_STATES.PAUSED) {
+      updateTimerLive({
+        isRunning: false,
+        startedAt: null,
+        totalSeconds: 0,
+        pausedSecondsRemaining: secondsRef.current,
+      });
+    } else {
+      clearTimerLive();
+    }
+  }, [timerState]);
 
   useEffect(() => {
     const {

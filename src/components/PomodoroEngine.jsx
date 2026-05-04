@@ -1190,11 +1190,6 @@ export default function PomodoroEngine({
           </AnimatePresence>
 
           {!useMinimalFocusStage && cycleIndicator}
-          {!useMinimalFocusStage && !isBreakMode && timerState === TIMER_STATES.IDLE && (
-            <p className={`mono hidden pl-1 text-[10px] uppercase tracking-[0.18em] md:block ${lightTheme ? 'text-[var(--muted-2)]' : 'text-slate-500'}`}>
-              Space bắt đầu · Shift trái + F full screen · Shift trái + G thu/mở cột
-            </p>
-          )}
         </div>
       </div>
     </>
@@ -1473,6 +1468,14 @@ export default function PomodoroEngine({
     </section>
   );
 
+  const shortcutHint = !useMinimalFocusStage && !isBreakMode && timerState === TIMER_STATES.IDLE ? (
+    <p className={`mono hidden px-1 text-center text-[10px] uppercase tracking-[0.18em] md:block ${
+      lightTheme ? 'text-[var(--muted-2)]' : 'text-slate-500'
+    }`}>
+      Space bắt đầu · Shift trái + F full screen · Shift trái + G thu/mở cột
+    </p>
+  ) : null;
+
   if (fullScreenMode) {
     return (
       <Motion.div className="relative mx-auto flex w-full flex-col items-stretch select-none">
@@ -1555,11 +1558,13 @@ export default function PomodoroEngine({
           }`}>
             {timerStageContent}
           </div>
+          {shortcutHint}
           {focusSupportContent}
         </>
       ) : (
         <>
           {timerStageContent}
+          {shortcutHint}
           {focusSupportContent}
         </>
       )}

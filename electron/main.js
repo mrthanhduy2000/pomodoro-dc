@@ -1,123 +1,103 @@
 /**
- * electron/main.js — CivJourney Electron Main Process
+ * electron/main.js — DC Pomodoro Menu Bar
  *
- * Creates:
- *   • BrowserWindow — the main app UI (Vite dev server or built files)
- *   • Tray         — macOS status-bar icon that shows the live timer
- *
- * IPC channel "tray-update":
- *   Renderer sends { state: string, timeLeft: string }
- *   States: RUNNING | PAUSED | BREAK | IDLE | FINISHED | CANCELLED
+ * Tray-only app (no window, no dock icon).
+ * Polls Supabase timer_live table every 3 seconds,
+ * then ticks the countdown locally every second.
  */
 
-const { app, BrowserWindow, Tray, Menu, ipcMain, nativeImage } = require('electron');
+const { app, Tray, Menu, nativeImage, shell } = require('electron');
 const path = require('path');
+const https = require('https');
 
-let tray       = null;
-let mainWindow = null;
+const SUPABASE_HOST = 'jcefdsdccmnmqvuwelmm.supabase.co';
+const SUPABASE_KEY  = 'sb_publishable_Uiyl9FuyERZFVWBCFw519Q_UZbRmBVG';
 
-const isDev = !app.isPackaged;
-const DEV_SERVER_URL = process.env.VITE_DEV_SERVER_URL || 'http://localhost:31105';
+let tray      = null;
+let timerData = null;
 
-// ─── Tray icon (18×18 template so macOS inverts it for dark/light bar) ───────
+function fetchTimerLive() {
+  const options = {
+    hostname: SUPABASE_HOST,
+    path: '/rest/v1/timer_live?id=eq.singleton&select=*',
+    headers: {
+      'apikey': SUPABASE_KEY,
+      'Authorization': `Bearer ${SUPABASE_KEY}`,
+    },
+  };
+
+  https.get(options, (res) => {
+    let raw = '';
+    res.on('data', (chunk) => { raw += chunk; });
+    res.on('end', () => {
+      try {
+        const rows = JSON.parse(raw);
+        if (Array.isArray(rows) && rows.length > 0) timerData = rows[0];
+      } catch (_) {}
+    });
+  }).on('error', () => {});
+}
+
+function formatTime(totalSec) {
+  const s = Math.max(0, Math.floor(totalSec));
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+}
+
+function updateTrayTitle() {
+  if (!tray) return;
+
+  if (!timerData) { tray.setTitle(''); return; }
+
+  const { is_running, started_at, total_seconds, paused_seconds_remaining } = timerData;
+
+  if (is_running && started_at && total_seconds) {
+    const elapsed  = (Date.now() - new Date(started_at).getTime()) / 1000;
+    const remaining = Math.max(0, total_seconds - elapsed);
+    tray.setTitle(` 🍅 ${formatTime(remaining)}`);
+  } else if (!is_running && paused_seconds_remaining > 0) {
+    tray.setTitle(` ⏸ ${formatTime(paused_seconds_remaining)}`);
+  } else {
+    tray.setTitle('');
+  }
+}
+
 function createTray() {
   const iconPath = path.join(__dirname, '../public/tray-icon.png');
   let icon = nativeImage.createFromPath(iconPath);
   if (icon.isEmpty()) {
-    // Fallback: 1×1 transparent PNG
     icon = nativeImage.createFromDataURL(
       'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=='
     );
   }
   const trayIcon = icon.resize({ width: 18, height: 18 });
-  trayIcon.setTemplateImage(true); // adapts to dark / light menu bar automatically
+  trayIcon.setTemplateImage(true);
 
   tray = new Tray(trayIcon);
-  tray.setToolTip('CivJourney');
+  tray.setToolTip('DC Pomodoro');
 
   const ctxMenu = Menu.buildFromTemplate([
     {
-      label: 'Mở CivJourney',
-      click: () => { mainWindow?.show(); mainWindow?.focus(); },
+      label: 'Mở DC Pomodoro',
+      click: () => shell.openExternal('https://pomodoro-dc.vercel.app'),
     },
     { type: 'separator' },
     { label: 'Thoát', click: () => { app.isQuitting = true; app.quit(); } },
   ]);
   tray.setContextMenu(ctxMenu);
 
-  // Left-click → show / focus main window
-  tray.on('click', () => {
-    if (!mainWindow) return;
-    if (mainWindow.isVisible()) mainWindow.focus();
-    else mainWindow.show();
-  });
+  tray.on('click', () => shell.openExternal('https://pomodoro-dc.vercel.app'));
 }
 
-// ─── Main window ──────────────────────────────────────────────────────────────
-function createWindow() {
-  mainWindow = new BrowserWindow({
-    width:          1440,
-    height:         900,
-    minWidth:       900,
-    minHeight:      600,
-    titleBarStyle:  'hiddenInset',   // macOS native traffic lights inset
-    webPreferences: {
-      preload:          path.join(__dirname, 'preload.js'),
-      nodeIntegration:  false,
-      contextIsolation: true,
-    },
-  });
-
-  if (isDev) {
-    mainWindow.loadURL(DEV_SERVER_URL);
-  } else {
-    mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
-  }
-
-  // Keep app in tray when the window is closed via the red button
-  mainWindow.on('close', (e) => {
-    if (!app.isQuitting) {
-      e.preventDefault();
-      mainWindow.hide();
-    }
-  });
-
-  mainWindow.on('closed', () => { mainWindow = null; });
-}
-
-// ─── IPC: tray title updates from renderer ────────────────────────────────────
-ipcMain.on('tray-update', (_, data) => {
-  if (!tray) return;
-  const { state, timeLeft } = data ?? {};
-
-  switch (state) {
-    case 'RUNNING':
-      tray.setTitle(` ${timeLeft} ⏱`);
-      break;
-    case 'PAUSED':
-      tray.setTitle(` ${timeLeft} ⏸`);
-      break;
-    case 'BREAK':
-      tray.setTitle(` ${timeLeft} ☕`);
-      break;
-    default:
-      tray.setTitle('');
-      break;
-  }
-});
-
-// ─── App lifecycle ────────────────────────────────────────────────────────────
 app.whenReady().then(() => {
-  createTray();
-  createWindow();
+  if (app.dock) app.dock.hide();
 
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow();
-    else { mainWindow?.show(); mainWindow?.focus(); }
-  });
+  createTray();
+  fetchTimerLive();
+  setInterval(fetchTimerLive, 3000);
+  setInterval(updateTrayTitle, 1000);
+  updateTrayTitle();
 });
 
-// On macOS: keep running in tray when all windows are closed
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') app.quit();
+  // Keep running as tray-only — do not quit
 });

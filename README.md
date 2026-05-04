@@ -23,6 +23,43 @@ Useful commands:
 - `npm run dev` — run Vite on `31101`
 - `npm run electron-dev` — run Electron against the dev server on `31101`
 - `npm run uninstall:agent` — remove the background LaunchAgent
+- `npm run push:keys` — generate a new VAPID key pair for Web Push
+
+## Web Push cho iPhone
+
+Code đã có sẵn trong repo. Để notification chạy ngoài nền trên iPhone, làm thêm 4 bước:
+
+1. Tạo VAPID keys:
+
+```bash
+npm run push:keys
+```
+
+2. Thêm env vars trên Vercel:
+
+```bash
+WEB_PUSH_PUBLIC_KEY=...
+WEB_PUSH_PRIVATE_KEY=...
+WEB_PUSH_SUBJECT=mailto:your-email@example.com
+SUPABASE_SERVICE_ROLE_KEY=...
+CRON_SECRET=...
+```
+
+3. Vào Supabase SQL Editor và chạy file:
+
+`supabase/push_notifications.sql`
+
+4. Trên iPhone:
+
+- Mở `https://pomodoro-dc.vercel.app` bằng Safari
+- Chọn Share → `Add to Home Screen`
+- Mở app từ icon ngoài Home Screen
+- Vào `Cài đặt` trong app và bấm bật thông báo
+
+Ghi chú:
+
+- Vercel Cron trong repo chạy mỗi phút qua `/api/push/dispatch`
+- Vì vậy push thường đến rất nhanh, nhưng có thể trễ tối đa khoảng 1 phút so với giây timer chạm 0
 
 ## React + Vite template notes
 

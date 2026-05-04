@@ -6,6 +6,7 @@ import notificationManager from '../engine/notifications';
 import { getBreakPlan } from '../engine/breaks';
 import { BREAK_EXTENSION_MINUTES } from '../engine/constants';
 import { updateTimerLive, clearTimerLive } from '../lib/timerLiveService';
+import { cancelFocusCompletePush, scheduleFocusCompletePush } from '../lib/pushService';
 
 export const TIMER_STATES = {
   IDLE: 'IDLE',
@@ -94,6 +95,23 @@ export function useTimer({ focusMinutes, mode = TIMER_MODES.POMODORO }) {
     sessionNoteRef.current = '';
     sessionGoalRef.current = '';
     sessionNextNoteRef.current = '';
+  }, []);
+
+  const syncFocusCompletePush = useCallback((
+    endsAtMs,
+    scheduledMinutes = totalSecondsRef.current / 60,
+    currentMode = modeRef.current,
+  ) => {
+    if (currentMode !== TIMER_MODES.POMODORO) return;
+
+    void scheduleFocusCompletePush({
+      endsAtMs,
+      focusMinutes: Math.max(1, Math.round(scheduledMinutes)),
+    });
+  }, []);
+
+  const clearFocusCompletePush = useCallback((reason = 'cancelled') => {
+    void cancelFocusCompletePush(reason);
   }, []);
 
   const getElapsedSeconds = useCallback((clockStartMs, nowMs = Date.now()) => {
@@ -504,12 +522,21 @@ export function useTimer({ focusMinutes, mode = TIMER_MODES.POMODORO }) {
     });
 
     if (runtimeMode === TIMER_MODES.STOPWATCH) {
+      clearFocusCompletePush('stopwatch');
       setTimerState(shouldRestorePaused ? TIMER_STATES.PAUSED : TIMER_STATES.RUNNING);
       if (!shouldRestorePaused) runInterval();
       return;
     }
 
     if (restoredDisplaySeconds > 0 || shouldRestorePaused) {
+      if (shouldRestorePaused) {
+        clearFocusCompletePush('paused');
+      } else {
+        syncFocusCompletePush(
+          effectiveClockStart + (savedTotalSeconds * 1000),
+          savedTotalSeconds / 60,
+        );
+      }
       setTimerState(shouldRestorePaused ? TIMER_STATES.PAUSED : TIMER_STATES.RUNNING);
       if (!shouldRestorePaused) runInterval();
       return;
@@ -518,6 +545,7 @@ export function useTimer({ focusMinutes, mode = TIMER_MODES.POMODORO }) {
     startTimeRef.current = null;
     const creditedMinutes = Math.round(savedTotalSeconds / 60);
     const finishedAtMs = effectiveClockStart + (savedTotalSeconds * 1000);
+    syncFocusCompletePush(finishedAtMs, creditedMinutes);
     const sessionTiming = {
       startedAt: new Date(startedAt).toISOString(),
       finishedAt: new Date(finishedAtMs).toISOString(),
@@ -627,6 +655,7 @@ export function useTimer({ focusMinutes, mode = TIMER_MODES.POMODORO }) {
       totalSeconds: focusMinutes * 60,
     });
 
+    syncFocusCompletePush(now + (focusMinutes * 60 * 1000), focusMinutes, mode);
     setTimerState(TIMER_STATES.RUNNING);
     soundEngine.playSessionStart();
     runInterval();
@@ -643,6 +672,7 @@ export function useTimer({ focusMinutes, mode = TIMER_MODES.POMODORO }) {
     persistCurrentTimerSession,
     runInterval,
     sessionCategories,
+    syncFocusCompletePush,
     timerState,
   ]);
 
@@ -659,12 +689,13 @@ export function useTimer({ focusMinutes, mode = TIMER_MODES.POMODORO }) {
     setLastCompletedSessionId(null);
     setTimerState(TIMER_STATES.CANCELLED);
     clearTimeout(pendingBreakTimeoutRef.current);
+    clearFocusCompletePush('cancelled');
 
     if (strictMode || stakingActive) {
       cancelFocusSession(progressRatio, { applyDisaster: strictMode });
     }
     clearTimerSession();
-  }, [cancelFocusSession, clearTimerSession, computeProgressPct, resetSessionTimeline, stakingActive, strictMode, timerState]);
+  }, [cancelFocusSession, clearFocusCompletePush, clearTimerSession, computeProgressPct, resetSessionTimeline, stakingActive, strictMode, timerState]);
 
   const pause = useCallback(() => {
     if (timerState !== TIMER_STATES.RUNNING) return;
@@ -672,8 +703,9 @@ export function useTimer({ focusMinutes, mode = TIMER_MODES.POMODORO }) {
     clearInterval(intervalRef.current);
     pausedAtRef.current = Date.now();
     persistCurrentTimerSession({ pausedAt: pausedAtRef.current });
+    clearFocusCompletePush('paused');
     setTimerState(TIMER_STATES.PAUSED);
-  }, [persistCurrentTimerSession, timerState]);
+  }, [clearFocusCompletePush, persistCurrentTimerSession, timerState]);
 
   const resume = useCallback(() => {
     if (timerState !== TIMER_STATES.PAUSED) return;
@@ -701,9 +733,13 @@ export function useTimer({ focusMinutes, mode = TIMER_MODES.POMODORO }) {
       countdownStartedAt: startTimeRef.current,
     });
 
+    syncFocusCompletePush(
+      (startTimeRef.current ?? resumedAt) + (totalSecondsRef.current * 1000),
+      totalSecondsRef.current / 60,
+    );
     setTimerState(TIMER_STATES.RUNNING);
     runInterval();
-  }, [persistCurrentTimerSession, runInterval, timerState]);
+  }, [persistCurrentTimerSession, runInterval, syncFocusCompletePush, timerState]);
 
   const extendCurrentSession = useCallback((extraSeconds = 60) => {
     if (modeRef.current !== TIMER_MODES.POMODORO) return false;
@@ -715,8 +751,16 @@ export function useTimer({ focusMinutes, mode = TIMER_MODES.POMODORO }) {
     extensionReadyArmedRef.current = secondsRef.current > EXTENSION_READY_SECONDS;
     setDisplaySeconds(secondsRef.current);
     persistCurrentTimerSession({ totalSeconds: totalSecondsRef.current });
+    if (timerState === TIMER_STATES.RUNNING) {
+      syncFocusCompletePush(
+        (startTimeRef.current ?? Date.now()) + (totalSecondsRef.current * 1000),
+        totalSecondsRef.current / 60,
+      );
+    } else {
+      clearFocusCompletePush('paused');
+    }
     return true;
-  }, [persistCurrentTimerSession, timerState]);
+  }, [clearFocusCompletePush, persistCurrentTimerSession, syncFocusCompletePush, timerState]);
 
   const reset = useCallback(() => {
     clearInterval(intervalRef.current);
@@ -735,7 +779,10 @@ export function useTimer({ focusMinutes, mode = TIMER_MODES.POMODORO }) {
     setTimerState(TIMER_STATES.IDLE);
     setMilestone(null);
     clearTimerSession();
-  }, [clearTimerSession, focusMinutes, mode, resetSessionTimeline]);
+    if (timerState !== TIMER_STATES.FINISHED) {
+      clearFocusCompletePush('reset');
+    }
+  }, [clearFocusCompletePush, clearTimerSession, focusMinutes, mode, resetSessionTimeline, timerState]);
 
   const currentTotalSeconds = totalSecondsRef.current;
   const progressPct = computeProgressPct(displaySeconds);

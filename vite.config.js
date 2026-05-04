@@ -27,10 +27,11 @@ export default defineConfig({
       injectRegister: 'auto',
 
       // Files to pre-cache on install
-      includeAssets: ['favicon.svg', 'icon.svg', 'icon-192.png', 'icon-512.png', 'manifest.json'],
+      includeAssets: ['favicon.svg', 'icon.svg', 'icon-192.png', 'icon-512.png', 'manifest.json', 'push-worker.js'],
 
       // Web App Manifest (mirrored from public/manifest.json for the plugin)
       manifest: {
+        id: '/',
         name: 'DC Pomodoro',
         short_name: 'DC Pomodoro',
         description: 'Pomodoro nhập vai qua các kỷ nguyên lịch sử',
@@ -71,6 +72,7 @@ export default defineConfig({
       workbox: {
         cleanupOutdatedCaches: true,
         clientsClaim: true,
+        importScripts: ['/push-worker.js'],
         // Pre-cache all built assets
         globPatterns: ['**/*.{js,css,html,svg,png,ico,woff,woff2}'],
         skipWaiting: true,

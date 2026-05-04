@@ -13,6 +13,12 @@ import ambientEngine from '../engine/ambientEngine';
 import notificationManager from '../engine/notifications';
 import { DEFAULT_QUICK_FOCUS_PRESET } from '../engine/breaks';
 import {
+  disablePushSubscription,
+  ensurePushSubscription,
+  getPushRuntimeState,
+  getPushSupportStatus,
+} from '../lib/pushService';
+import {
   SETTINGS_STORAGE_KEY,
   LEGACY_SETTINGS_STORAGE_KEYS,
   createLegacyCompatibleJSONStorage,
@@ -54,6 +60,9 @@ const useSettingsStore = create(
       notificationPermission: typeof Notification !== 'undefined'
         ? Notification.permission
         : 'unsupported',
+      pushSupportStatus: getPushSupportStatus(),
+      pushSubscriptionStatus: 'unknown', // 'unknown' | 'subscribed' | 'unsubscribed'
+      pushStatusMessage: '',
 
       // ── Theme ──────────────────────────────────────────────────────────
       // 'auto' follows the era; 'dark' is always slate-950
@@ -109,9 +118,29 @@ const useSettingsStore = create(
         set({ ambientVolume: clamped });
       },
 
-      setNotificationsEnabled: (enabled) => {
+      setNotificationsEnabled: async (enabled) => {
         notificationManager.enabled = enabled;
-        set({ notificationsEnabled: enabled });
+
+        if (!enabled) {
+          const result = await disablePushSubscription();
+          set({
+            notificationsEnabled: false,
+            pushSubscriptionStatus: 'unsubscribed',
+            pushStatusMessage: result.errorMessage ?? '',
+          });
+          return result;
+        }
+
+        const result = await ensurePushSubscription();
+        set({
+          notificationsEnabled: result.permission === 'granted',
+          notificationPermission: result.permission,
+          pushSupportStatus: result.supportStatus,
+          pushSubscriptionStatus: result.subscribed ? 'subscribed' : 'unsubscribed',
+          pushStatusMessage: result.errorMessage ?? '',
+        });
+        notificationManager.enabled = result.permission === 'granted';
+        return result;
       },
 
       /**
@@ -119,9 +148,28 @@ const useSettingsStore = create(
        * Must be called from a button click handler.
        */
       requestNotificationPermission: async () => {
-        const perm = await notificationManager.requestPermission();
-        set({ notificationPermission: perm });
-        return perm;
+        const result = await ensurePushSubscription();
+        set({
+          notificationsEnabled: result.permission === 'granted',
+          notificationPermission: result.permission,
+          pushSupportStatus: result.supportStatus,
+          pushSubscriptionStatus: result.subscribed ? 'subscribed' : 'unsubscribed',
+          pushStatusMessage: result.errorMessage ?? '',
+        });
+        notificationManager.enabled = result.permission === 'granted';
+        return result.permission;
+      },
+
+      refreshPushState: async () => {
+        const result = await getPushRuntimeState();
+        set({
+          notificationPermission: result.permission,
+          pushSupportStatus: result.supportStatus,
+          pushSubscriptionStatus: result.subscribed ? 'subscribed' : 'unsubscribed',
+          pushStatusMessage: result.errorMessage ?? '',
+        });
+        notificationManager.enabled = get().notificationsEnabled && result.permission === 'granted';
+        return result;
       },
 
       setThemeMode: (mode) => set({ themeMode: mode }),
@@ -156,6 +204,7 @@ const useSettingsStore = create(
         soundEngine.volume  = masterVolume;
         soundEngine.setPack(soundPack ?? 'classic');
         notificationManager.enabled = notificationsEnabled;
+        void get().refreshPushState();
         // Restore ambient sound after page reload
         if (ambientSound && ambientSound !== 'none') {
           ambientEngine.play(ambientSound, ambientVolume);

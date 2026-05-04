@@ -97,7 +97,7 @@ export default function DailyMissions() {
             {completedCount}/{Math.max(list.length, 0)}
           </span>
         )}
-        title="Hôm nay"
+        title="Nhiệm vụ ngày"
       >
         <div className="space-y-3">
           <div className="flex items-end justify-between gap-3 border-b pb-3" style={{ borderColor: 'var(--line)' }}>
@@ -176,7 +176,7 @@ export default function DailyMissions() {
               {chainStepsCompleted}/{chain.steps.length}
             </span>
           )}
-          title="Nhịp tuần"
+          title="Nhiệm vụ tuần"
       >
         <div className="space-y-3">
           <div className="flex items-start justify-between gap-3 border-b pb-3" style={{ borderColor: 'var(--line)' }}>

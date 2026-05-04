@@ -392,37 +392,70 @@ export default function PomodoroEngine({
     : 560;
   const isDesktopFullScreen = fullScreenMode && isDesktopViewport;
   const immersiveTimerScale = immersiveMode
-    ? isBreakMode
-      ? 1.3
-      : isActive
-        ? 1.56
-        : timerState === TIMER_STATES.FINISHED
-          ? 1.42
-          : 1.46
+    ? fullScreenMode
+      ? isBreakMode
+        ? 1.3
+        : isActive
+          ? 1.56
+          : timerState === TIMER_STATES.FINISHED
+            ? 1.42
+            : 1.46
+      : isBreakMode
+        ? 1.24
+        : isActive
+          ? 1.34
+          : timerState === TIMER_STATES.FINISHED
+            ? 1.22
+            : 1.16
     : 1;
   const fullScreenDesktopBoost = isDesktopFullScreen
     ? isBreakMode
-      ? 1.32
+      ? 1.4
       : isActive
-        ? 1.38
+        ? 1.5
         : timerState === TIMER_STATES.FINISHED
-          ? 1.34
-          : 1.3
-    : 1;
+          ? 1.42
+          : 1.38
+    : immersiveMode && isDesktopViewport
+      ? isBreakMode
+        ? 1.06
+        : 1.1
+      : 1;
   const timerCircleBoost = isDesktopFullScreen
     ? isBreakMode
-      ? 1.14
-      : 1.18
-    : 1;
+      ? 1.2
+      : 1.28
+    : immersiveMode && isDesktopViewport
+      ? isBreakMode
+        ? 1.06
+        : 1.1
+      : 1;
   const timerVisualScale = immersiveMode ? immersiveTimerScale * fullScreenDesktopBoost : 1;
   const timerCanvasSize = Math.ceil(SVG_SIZE * timerCircleBoost);
   const timerFootprintScale = immersiveMode ? timerVisualScale * timerCircleBoost : 1;
   const timerFootprintSize = Math.ceil(SVG_SIZE * timerFootprintScale);
-  const timerFootprintHeight = timerFootprintSize + (immersiveMode ? (isDesktopFullScreen ? 128 : 40) : 0);
-  const fullScreenDesktopStageLift = isDesktopFullScreen ? -56 : 0;
+  const timerFootprintHeight = timerFootprintSize + (immersiveMode ? (isDesktopFullScreen ? 176 : 40) : 0);
+  const fullScreenDesktopStageLift = isDesktopFullScreen ? -44 : 0;
   const prioritizeSetupCard = !fullScreenMode && immersiveMode && isIdle && !isBreakMode;
   const useImmersiveHeroLayout = fullScreenMode || (immersiveMode && !prioritizeSetupCard);
   const useMinimalFocusStage = fullScreenMode;
+  const timerValueLayoutClass = useImmersiveHeroLayout
+    ? fullScreenMode
+      ? isDesktopFullScreen
+        ? 'block w-[82%] text-center text-[4.8rem] leading-[0.81] tracking-[-0.065em] md:text-[5.6rem] xl:text-[6.4rem] 2xl:text-[7.05rem]'
+        : 'block w-[84%] text-center text-[4.55rem] leading-[0.8] tracking-[-0.068em] sm:text-[4.9rem] md:text-[5.2rem] xl:text-[5.55rem]'
+      : 'block max-w-[80%] text-center text-[3.6rem] leading-[0.88] tracking-[-0.055em] md:text-[4.2rem] xl:text-[4.7rem]'
+    : 'text-6xl tracking-widest';
+  const timerValueFontClass = lightTheme ? 'serif font-medium' : 'font-mono font-bold';
+  const timerValueToneClass = isBreakMode
+    ? breakIsLong
+      ? 'text-blue-300'
+      : 'text-sky-300'
+    : !lightTheme && timerState === TIMER_STATES.RUNNING && !isStopwatchMode && displaySeconds <= 10
+      ? 'text-red-400'
+      : lightTheme
+        ? 'text-[var(--ink)]'
+        : 'text-white';
   const immersiveGlow = isBreakMode
     ? breakIsLong
       ? (lightTheme
@@ -969,27 +1002,7 @@ export default function PomodoroEngine({
             </span>
             <motion.span
               key={`${isBreakMode ? 'break' : timerMode}-${displayRingSeconds}`}
-              className={`mt-3 ${useImmersiveHeroLayout
-                ? fullScreenMode
-                  ? isDesktopFullScreen
-                    ? 'block w-[90%] text-center text-[5.35rem] leading-[0.79] tracking-[-0.078em] md:text-[6.15rem] xl:text-[7.05rem] 2xl:text-[7.75rem]'
-                    : 'block w-[86%] text-center text-[4.9rem] leading-[0.8] tracking-[-0.075em] sm:text-[5.15rem] md:text-[5.35rem] xl:text-[5.55rem]'
-                  : 'block max-w-[78%] text-center text-[3.6rem] leading-[0.88] tracking-[-0.055em] md:text-[4.15rem] xl:text-[4.7rem]'
-                : 'text-6xl'} tabular-nums transition-all duration-300 ${
-                lightTheme
-                  ? 'serif font-medium text-[var(--ink)]'
-                  : (
-                isBreakMode
-                  ? breakIsLong
-                    ? 'text-blue-300'
-                    : 'text-sky-300'
-                  : timerState === TIMER_STATES.RUNNING && !isStopwatchMode && displaySeconds <= 10
-                    ? 'text-red-400'
-                  : timerState === TIMER_STATES.RUNNING
-                      ? 'font-mono font-bold text-white tracking-widest'
-                      : 'font-mono font-bold text-white tracking-widest'
-                  )
-              }`}
+              className={`mt-3 ${timerValueLayoutClass} ${timerValueFontClass} ${timerValueToneClass} tabular-nums transition-all duration-300`}
               animate={!isBreakMode && timerState === TIMER_STATES.RUNNING && !isStopwatchMode && displaySeconds <= 10
                 ? { scale: [1, 1.04, 1] }
                 : {}}

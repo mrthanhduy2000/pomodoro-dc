@@ -265,7 +265,18 @@ export function useTimer({ focusMinutes, mode = TIMER_MODES.POMODORO }) {
 
   const runInterval = useCallback(() => {
     clearInterval(intervalRef.current);
-    intervalRef.current = window.setInterval(tickClock, 1000);
+    if (!startTimeRef.current) {
+      intervalRef.current = window.setInterval(tickClock, 1000);
+      return;
+    }
+    // Align the first tick to the next exact second boundary of startTimeRef
+    // so all devices fire in sync regardless of when they start/restore.
+    const msInto = (Date.now() - startTimeRef.current) % 1000;
+    const msUntilNext = msInto === 0 ? 0 : 1000 - msInto;
+    intervalRef.current = window.setTimeout(() => {
+      tickClock();
+      intervalRef.current = window.setInterval(tickClock, 1000);
+    }, msUntilNext);
   }, [tickClock]);
 
   const commitCompletedSession = useCallback((

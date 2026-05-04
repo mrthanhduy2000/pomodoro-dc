@@ -7,8 +7,8 @@ const FOCUS_COMPLETE_OWNER_NAME = 'Đàm';
 function createFocusCompleteNotificationPayload(focusMinutes) {
   const roundedMinutes = Math.max(1, Math.round(focusMinutes || 0));
   return {
-    title: '🎇 Phiên tập trung xong!',
-    body: `Phiên ${roundedMinutes} phút của ${FOCUS_COMPLETE_OWNER_NAME} đã xong. Mở app nghỉ giải lao nha!`,
+    title: '🎇 XONG PHIÊN TẬP TRUNG!',
+    body: `Phiên ${roundedMinutes} phút của ${FOCUS_COMPLETE_OWNER_NAME} đã xong. Mở app bấm nghỉ giải lao nha!`,
     icon: '/icon-192.png',
     badge: '/icon-192.png',
     tag: 'dc-pomodoro-focus-complete',

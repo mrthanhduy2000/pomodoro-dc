@@ -266,6 +266,9 @@ html:has([data-theme="light"]) #root {
 [data-theme="light"] ::-webkit-scrollbar-track { background: #f4f2ec; }
 [data-theme="light"] ::-webkit-scrollbar-thumb { background: #d9d6cc; }
 [data-theme="light"] ::-webkit-scrollbar-thumb:hover { background: #c5c1b5; }
+[data-theme="dark"] ::-webkit-scrollbar-track { background: #1b1814; }
+[data-theme="dark"] ::-webkit-scrollbar-thumb { background: #3a342e; }
+[data-theme="dark"] ::-webkit-scrollbar-thumb:hover { background: #4a433c; }
 
 .serif {
   font-family: 'Source Serif 4', Georgia, serif;

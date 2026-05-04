@@ -109,9 +109,9 @@ function choiceStyle(active, lightTheme) {
           color: 'var(--accent-light)',
         }
       : {
-          background: 'var(--item-bg, rgba(15,23,42,0.5))',
+          background: 'var(--item-bg, rgba(31, 27, 22, 0.82))',
           border: '1px solid rgba(255,255,255,0.05)',
-          color: '#64748b',
+          color: 'var(--muted)',
         };
   }
 
@@ -204,13 +204,13 @@ export default function Settings() {
             </p>
             <h2
               className="serif mt-2 text-3xl leading-tight md:text-[2.5rem]"
-              style={lightTheme ? { color: '#1f1e1d' } : { color: '#ffffff' }}
+              style={lightTheme ? { color: '#1f1e1d' } : { color: 'var(--ink)' }}
             >
               Cài đặt trải nghiệm tập trung
             </h2>
             <p
               className="mt-2 max-w-xl text-sm leading-relaxed"
-              style={lightTheme ? { color: '#6a6862' } : { color: '#94a3b8' }}
+              style={lightTheme ? { color: '#6a6862' } : { color: 'var(--muted)' }}
             >
               Điều chỉnh nhịp nghỉ, âm thanh và cách hiển thị để khu vực làm việc giữ được cảm giác yên, rõ và dùng lâu không mệt.
             </p>
@@ -287,7 +287,7 @@ export default function Settings() {
             <Divider lightTheme={lightTheme} />
 
             <div>
-              <p className="mono mb-2 text-[11px] font-semibold uppercase tracking-[0.22em]" style={lightTheme ? { color: '#9a5a48' } : { color: '#94a3b8' }}>
+              <p className="mono mb-2 text-[11px] font-semibold uppercase tracking-[0.22em]" style={lightTheme ? { color: '#9a5a48' } : { color: 'rgba(var(--accent-rgb), 0.8)' }}>
                 Mục tiêu ngày
               </p>
 
@@ -304,7 +304,7 @@ export default function Settings() {
                       style={choiceStyle(active, lightTheme)}
                     >
                       <p className="text-sm font-semibold">{opt.label}</p>
-                      <p className="mt-1 text-[11px]" style={lightTheme ? { color: '#6a6862' } : { color: '#64748b' }}>
+                      <p className="mt-1 text-[11px]" style={lightTheme ? { color: '#6a6862' } : { color: 'var(--muted-2)' }}>
                         {opt.note}
                       </p>
                     </motion.button>
@@ -325,7 +325,7 @@ export default function Settings() {
                 />
               </div>
 
-              <p className="mt-2 text-[11px] leading-relaxed" style={lightTheme ? { color: '#6a6862' } : { color: '#64748b' }}>
+              <p className="mt-2 text-[11px] leading-relaxed" style={lightTheme ? { color: '#6a6862' } : { color: 'var(--muted-2)' }}>
                 Phần mở đầu ở tab tập trung sẽ tính số còn lại theo lựa chọn này.
               </p>
             </div>
@@ -383,7 +383,7 @@ export default function Settings() {
                   style={choiceStyle(active, lightTheme)}
                 >
                   <div className="flex items-center justify-between gap-2">
-                    <span className="mono text-[11px] font-semibold uppercase tracking-[0.16em]" style={lightTheme ? { color: active ? '#9a5a48' : '#6a6862' } : { color: active ? 'var(--accent-light)' : '#94a3b8' }}>
+                    <span className="mono text-[11px] font-semibold uppercase tracking-[0.16em]" style={lightTheme ? { color: active ? '#9a5a48' : '#6a6862' } : { color: active ? 'var(--accent-light)' : 'var(--muted)' }}>
                       {opt.short}
                     </span>
                     {active && (
@@ -406,8 +406,8 @@ export default function Settings() {
               className="overflow-hidden"
             >
               <div className="mt-4 flex items-center justify-between">
-                <span className="text-xs" style={lightTheme ? { color: '#6a6862' } : { color: '#94a3b8' }}>Âm lượng nền</span>
-                <span className="mono text-xs" style={lightTheme ? { color: '#1f1e1d' } : { color: '#94a3b8' }}>{Math.round(ambientVolume * 100)}%</span>
+                <span className="text-xs" style={lightTheme ? { color: '#6a6862' } : { color: 'var(--muted)' }}>Âm lượng nền</span>
+                <span className="mono text-xs" style={lightTheme ? { color: '#1f1e1d' } : { color: 'var(--ink)' }}>{Math.round(ambientVolume * 100)}%</span>
               </div>
               <input
                 type="range"
@@ -417,9 +417,9 @@ export default function Settings() {
                 value={ambientVolume}
                 onChange={(e) => setAmbientVolume(parseFloat(e.target.value))}
                 className="mt-2 w-full"
-                style={{ accentColor: lightTheme ? '#c96442' : '#10b981' }}
+                style={{ accentColor: lightTheme ? '#c96442' : 'var(--accent)' }}
               />
-              <p className="mt-2 text-[11px] leading-relaxed" style={lightTheme ? { color: '#6a6862' } : { color: '#64748b' }}>
+              <p className="mt-2 text-[11px] leading-relaxed" style={lightTheme ? { color: '#6a6862' } : { color: 'var(--muted-2)' }}>
                 Âm nền chạy suốt phiên, nên tôi giữ điều khiển ngắn và tránh mọi lớp hiệu ứng gây xao lãng.
               </p>
             </motion.div>
@@ -454,8 +454,8 @@ export default function Settings() {
                 >
                   <div>
                     <div className="flex items-center justify-between">
-                      <span className="text-xs" style={lightTheme ? { color: '#6a6862' } : { color: '#94a3b8' }}>Âm lượng chính</span>
-                      <span className="mono text-xs" style={lightTheme ? { color: '#1f1e1d' } : { color: '#94a3b8' }}>{Math.round(masterVolume * 100)}%</span>
+                      <span className="text-xs" style={lightTheme ? { color: '#6a6862' } : { color: 'var(--muted)' }}>Âm lượng chính</span>
+                      <span className="mono text-xs" style={lightTheme ? { color: '#1f1e1d' } : { color: 'var(--ink)' }}>{Math.round(masterVolume * 100)}%</span>
                     </div>
                     <input
                       type="range"
@@ -465,7 +465,7 @@ export default function Settings() {
                       value={masterVolume}
                       onChange={(e) => setMasterVolume(parseFloat(e.target.value))}
                       className="mt-2 w-full"
-                      style={{ accentColor: lightTheme ? '#c96442' : '#6366f1' }}
+                      style={{ accentColor: lightTheme ? '#c96442' : 'var(--accent)' }}
                     />
                   </div>
                   <div
@@ -474,12 +474,12 @@ export default function Settings() {
                       background: 'rgba(250, 249, 246, 0.94)',
                       border: '1px solid rgba(31, 30, 29, 0.08)',
                     } : {
-                      background: 'rgba(255,255,255,0.03)',
+                      background: 'var(--item-bg, rgba(31, 27, 22, 0.82))',
                       border: '1px solid rgba(255,255,255,0.08)',
                     }}
                   >
-                    <p className="text-xs font-semibold" style={lightTheme ? { color: '#1f1e1d' } : { color: '#cbd5e1' }}>Âm thanh Pomodoro</p>
-                    <p className="mt-1 text-[11px] leading-relaxed" style={lightTheme ? { color: '#6a6862' } : { color: '#64748b' }}>
+                    <p className="text-xs font-semibold" style={lightTheme ? { color: '#1f1e1d' } : { color: 'var(--ink-2)' }}>Âm thanh Pomodoro</p>
+                    <p className="mt-1 text-[11px] leading-relaxed" style={lightTheme ? { color: '#6a6862' } : { color: 'var(--muted-2)' }}>
                       Trong lúc tập trung, trò chơi chỉ phát tiếng khi bắt đầu phiên, trong 10 giây cuối và khi phiên kết thúc.
                     </p>
                   </div>
@@ -510,7 +510,7 @@ export default function Settings() {
                   className="flex items-center gap-2.5 rounded-2xl px-3 py-3 text-sm font-medium transition-all"
                   style={choiceStyle(active, lightTheme)}
                 >
-                  <span className="mono text-[11px] font-semibold uppercase tracking-[0.18em]" style={lightTheme ? { color: active ? '#9a5a48' : '#6a6862' } : { color: active ? 'var(--accent-light)' : '#94a3b8' }}>
+                  <span className="mono text-[11px] font-semibold uppercase tracking-[0.18em]" style={lightTheme ? { color: active ? '#9a5a48' : '#6a6862' } : { color: active ? 'var(--accent-light)' : 'var(--muted)' }}>
                     {opt.short}
                   </span>
                   <span>{opt.label}</span>
@@ -531,7 +531,7 @@ export default function Settings() {
 
           <div className="mt-4">
             {notificationPermission === 'unsupported' ? (
-              <p className="text-sm" style={lightTheme ? { color: '#6a6862' } : { color: '#64748b' }}>
+              <p className="text-sm" style={lightTheme ? { color: '#6a6862' } : { color: 'var(--muted-2)' }}>
                 Trình duyệt hiện tại không hỗ trợ thông báo.
               </p>
             ) : notificationPermission === 'denied' ? (
@@ -552,7 +552,7 @@ export default function Settings() {
                       boxShadow: '0 12px 28px rgba(201, 100, 66, 0.18)',
                     } : {
                       background: 'rgba(var(--accent-rgb), 0.88)',
-                      color: '#ffffff',
+                      color: 'var(--ink)',
                       boxShadow: '0 10px 22px rgba(var(--accent-rgb), 0.18)',
                     }}
                   >
@@ -584,7 +584,7 @@ export default function Settings() {
 
           <div className="mt-4 space-y-4">
             <div>
-              <p className="mono mb-2 text-[11px] font-semibold uppercase tracking-[0.22em]" style={lightTheme ? { color: '#9a5a48' } : { color: '#94a3b8' }}>
+              <p className="mono mb-2 text-[11px] font-semibold uppercase tracking-[0.22em]" style={lightTheme ? { color: '#9a5a48' } : { color: 'rgba(var(--accent-rgb), 0.8)' }}>
                 Không khí nền
               </p>
               <div className="grid gap-2 sm:grid-cols-2">
@@ -600,7 +600,7 @@ export default function Settings() {
                       style={choiceStyle(active, lightTheme)}
                     >
                       <p className="text-sm font-semibold">{opt.label}</p>
-                      <p className="mt-1 text-[11px]" style={lightTheme ? { color: '#6a6862' } : { color: '#64748b' }}>{opt.note}</p>
+                      <p className="mt-1 text-[11px]" style={lightTheme ? { color: '#6a6862' } : { color: 'var(--muted-2)' }}>{opt.note}</p>
                     </motion.button>
                   );
                 })}
@@ -608,7 +608,7 @@ export default function Settings() {
             </div>
 
             <div>
-              <p className="mono mb-2 text-[11px] font-semibold uppercase tracking-[0.22em]" style={lightTheme ? { color: '#9a5a48' } : { color: '#94a3b8' }}>
+              <p className="mono mb-2 text-[11px] font-semibold uppercase tracking-[0.22em]" style={lightTheme ? { color: '#9a5a48' } : { color: 'rgba(var(--accent-rgb), 0.8)' }}>
                 Chủ đề UI
               </p>
               <div className="grid gap-2">
@@ -625,7 +625,7 @@ export default function Settings() {
                     >
                       <div>
                         <p className="text-sm font-semibold">{opt.label}</p>
-                        <p className="mt-1 text-[11px]" style={lightTheme ? { color: '#6a6862' } : { color: '#64748b' }}>{opt.note}</p>
+                        <p className="mt-1 text-[11px]" style={lightTheme ? { color: '#6a6862' } : { color: 'var(--muted-2)' }}>{opt.note}</p>
                       </div>
                       {active && (
                         <span
@@ -636,7 +636,7 @@ export default function Settings() {
                             border: '1px solid rgba(201, 100, 66, 0.18)',
                           } : {
                             background: 'rgba(255,255,255,0.08)',
-                            color: '#ffffff',
+                            color: 'var(--ink)',
                             border: '1px solid rgba(255,255,255,0.12)',
                           }}
                         >
@@ -673,7 +673,7 @@ export default function Settings() {
               title="New Game+"
               description="Bắt đầu một vòng mới với chỉ số nền tốt hơn sau khi chạm ngưỡng EP yêu cầu."
             />
-            <p className="my-3 text-sm leading-relaxed" style={lightTheme ? { color: '#6a6862' } : { color: '#94a3b8' }}>
+            <p className="my-3 text-sm leading-relaxed" style={lightTheme ? { color: '#6a6862' } : { color: 'var(--muted)' }}>
               Đạt {PRESTIGE_EP_REQUIREMENT.toLocaleString()} EP. Bắt đầu lại với +5% chỉ số vĩnh viễn.
               {prestigeCount > 0 && ` (Lần ${prestigeCount + 1})`}
             </p>
@@ -688,7 +688,7 @@ export default function Settings() {
                 boxShadow: '0 10px 22px rgba(201, 100, 66, 0.16)',
               } : {
                 background: 'rgba(var(--accent-rgb), 0.88)',
-                color: '#ffffff',
+                color: 'var(--ink)',
                 boxShadow: '0 10px 22px rgba(var(--accent-rgb), 0.18)',
               }}
             >
@@ -708,12 +708,12 @@ export default function Settings() {
             />
             <div className="mt-4">
               {isInstalled ? (
-                <p className="text-sm" style={lightTheme ? { color: '#6f7b62' } : { color: '#34d399' }}>
+                <p className="text-sm" style={lightTheme ? { color: '#6f7b62' } : { color: 'var(--good)' }}>
                   CivJourney đã được cài đặt trên thiết bị này.
                 </p>
               ) : (
                 <>
-                  <p className="mb-3 text-sm leading-relaxed" style={lightTheme ? { color: '#6a6862' } : { color: '#94a3b8' }}>
+                  <p className="mb-3 text-sm leading-relaxed" style={lightTheme ? { color: '#6a6862' } : { color: 'var(--muted)' }}>
                     Cài lên màn hình chính để mở nhanh và dùng như một cửa sổ app riêng.
                   </p>
                   <motion.button
@@ -726,7 +726,7 @@ export default function Settings() {
                       color: '#faf9f6',
                     } : {
                       background: 'rgba(var(--accent-rgb), 0.88)',
-                      color: '#ffffff',
+                      color: 'var(--ink)',
                       boxShadow: '0 10px 22px rgba(var(--accent-rgb), 0.18)',
                     }}
                   >
@@ -747,10 +747,10 @@ export default function Settings() {
             description="Tóm tắt sản phẩm và phạm vi lưu trữ hiện tại."
           />
           <div className="mt-4 space-y-1 text-sm">
-            <p style={lightTheme ? { color: '#1f1e1d' } : { color: '#ffffff' }}>
+            <p style={lightTheme ? { color: '#1f1e1d' } : { color: 'var(--ink)' }}>
               <span className="font-semibold">CivJourney</span> — Pomodoro nhập vai
             </p>
-            <p style={lightTheme ? { color: '#6a6862' } : { color: '#64748b' }}>
+            <p style={lightTheme ? { color: '#6a6862' } : { color: 'var(--muted-2)' }}>
               Hành trình qua 15 kỷ nguyên. Dữ liệu đang được lưu cục bộ trong trình duyệt.
             </p>
           </div>
@@ -764,7 +764,7 @@ export default function Settings() {
             title="Vùng nguy hiểm"
             description="Xóa vĩnh viễn toàn bộ tiến trình. Không có thao tác hoàn tác."
           />
-          <p className="my-3 text-sm" style={lightTheme ? { color: '#6a6862' } : { color: '#94a3b8' }}>
+          <p className="my-3 text-sm" style={lightTheme ? { color: '#6a6862' } : { color: 'var(--muted)' }}>
             Chỉ dùng khi bạn thực sự muốn bắt đầu lại từ đầu.
           </p>
           <motion.button
@@ -779,7 +779,7 @@ export default function Settings() {
                 boxShadow: '0 14px 30px rgba(159, 74, 62, 0.22)',
               } : {
                 background: 'rgba(159, 74, 62, 0.92)',
-                color: '#ffffff',
+                color: '#fff8f4',
                 boxShadow: '0 10px 22px rgba(159, 74, 62, 0.18)',
               }
             ) : (
@@ -821,7 +821,7 @@ function SectionHeader({ icon, title, description, eyebrow, lightTheme = false }
           >
             {eyebrow}
           </p>
-          <h3 className="mt-2 text-[18px] font-semibold leading-tight" style={lightTheme ? { color: '#1f1e1d' } : { color: '#ffffff' }}>
+          <h3 className="mt-2 text-[18px] font-semibold leading-tight" style={lightTheme ? { color: '#1f1e1d' } : { color: 'var(--ink)' }}>
             {title}
           </h3>
         </div>
@@ -841,7 +841,7 @@ function SectionHeader({ icon, title, description, eyebrow, lightTheme = false }
         </span>
       </div>
       {description && (
-        <p className="mt-2 max-w-xl text-xs leading-relaxed" style={lightTheme ? { color: '#6a6862' } : { color: '#64748b' }}>
+        <p className="mt-2 max-w-xl text-xs leading-relaxed" style={lightTheme ? { color: '#6a6862' } : { color: 'var(--muted-2)' }}>
           {description}
         </p>
       )}
@@ -864,11 +864,11 @@ function ToggleRow({ label, description, value, onChange, compact = false, disab
   return (
     <div className={`flex items-center justify-between gap-3 ${compact ? '' : ''} ${disabled ? 'pointer-events-none opacity-40' : ''}`}>
       <div className="min-w-0 flex-1">
-        <p className="text-sm leading-tight" style={lightTheme ? { color: '#1f1e1d' } : { color: '#cbd5e1' }}>
+        <p className="text-sm leading-tight" style={lightTheme ? { color: '#1f1e1d' } : { color: 'var(--ink-2)' }}>
           {label}
         </p>
         {description && (
-          <p className="mt-0.5 text-[11px]" style={lightTheme ? { color: '#6a6862' } : { color: '#64748b' }}>
+          <p className="mt-0.5 text-[11px]" style={lightTheme ? { color: '#6a6862' } : { color: 'var(--muted-2)' }}>
             {description}
           </p>
         )}
@@ -882,7 +882,7 @@ function ToggleRow({ label, description, value, onChange, compact = false, disab
           background: value ? '#c96442' : 'rgba(31, 30, 29, 0.12)',
           border: value ? '1px solid rgba(201, 100, 66, 0.5)' : '1px solid rgba(31, 30, 29, 0.08)',
         } : {
-          background: value ? 'var(--accent)' : 'var(--toggle-off-bg, rgba(51,65,85,0.8))',
+          background: value ? 'var(--accent)' : 'var(--toggle-off-bg, rgba(58, 52, 46, 0.96))',
           border: value ? '1px solid rgba(var(--accent-rgb), 0.5)' : '1px solid rgba(255,255,255,0.08)',
         }}
       >
@@ -890,7 +890,7 @@ function ToggleRow({ label, description, value, onChange, compact = false, disab
           animate={{ x: value ? 26 : 2 }}
           transition={{ type: 'spring', stiffness: 500, damping: 30 }}
           className="absolute left-0 top-1 h-4 w-4 rounded-full shadow"
-          style={{ background: value ? '#fffdf9' : (lightTheme ? '#faf9f6' : '#64748b') }}
+          style={{ background: value ? '#fffdf9' : (lightTheme ? '#faf9f6' : 'var(--muted)') }}
         />
       </button>
     </div>
@@ -931,11 +931,11 @@ function NumberStepper({ label, sub, value, min, max, onChange, step = 1, disabl
         background: 'rgba(250, 249, 246, 0.92)',
         border: '1px solid rgba(31, 30, 29, 0.08)',
       } : {
-        background: 'var(--item-bg-solid, rgba(15,23,42,0.6))',
+        background: 'var(--item-bg-solid, rgba(24, 21, 17, 0.96))',
         border: '1px solid rgba(255,255,255,0.06)',
       }}
     >
-      <p className="mb-1.5 text-[11px]" style={lightTheme ? { color: '#6a6862' } : { color: '#64748b' }}>
+      <p className="mb-1.5 text-[11px]" style={lightTheme ? { color: '#6a6862' } : { color: 'var(--muted-2)' }}>
         {label}
       </p>
       <div className="flex items-center gap-2">
@@ -948,9 +948,9 @@ function NumberStepper({ label, sub, value, min, max, onChange, step = 1, disabl
             border: '1px solid rgba(31, 30, 29, 0.08)',
             color: '#6a6862',
           } : {
-            background: 'var(--item-btn-bg, rgba(30,41,59,0.8))',
+            background: 'var(--item-btn-bg, rgba(31, 27, 22, 0.96))',
             border: '1px solid rgba(255,255,255,0.08)',
-            color: '#94a3b8',
+            color: 'var(--muted)',
           }}
         >
           −
@@ -992,11 +992,11 @@ function NumberStepper({ label, sub, value, min, max, onChange, step = 1, disabl
             className="mono min-w-0 bg-transparent text-center text-lg font-bold leading-none outline-none"
             style={{
               width: `${Math.max(3, draftValue.length || String(value).length)}ch`,
-              color: lightTheme ? '#1f1e1d' : '#ffffff',
+              color: lightTheme ? '#1f1e1d' : 'var(--ink)',
             }}
           />
           {sub && (
-            <span className="ml-1 text-[10px]" style={lightTheme ? { color: '#6a6862' } : { color: '#64748b' }}>
+            <span className="ml-1 text-[10px]" style={lightTheme ? { color: '#6a6862' } : { color: 'var(--muted-2)' }}>
               {sub}
             </span>
           )}
@@ -1010,9 +1010,9 @@ function NumberStepper({ label, sub, value, min, max, onChange, step = 1, disabl
             border: '1px solid rgba(31, 30, 29, 0.08)',
             color: '#6a6862',
           } : {
-            background: 'var(--item-btn-bg, rgba(30,41,59,0.8))',
+            background: 'var(--item-btn-bg, rgba(31, 27, 22, 0.96))',
             border: '1px solid rgba(255,255,255,0.08)',
-            color: '#94a3b8',
+            color: 'var(--muted)',
           }}
         >
           +

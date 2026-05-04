@@ -46,9 +46,36 @@ function installGlobalErrorHandlers() {
   })
 }
 
+function shouldResetLocalServiceWorkers() {
+  if (typeof window === 'undefined') return false
+  const hostname = window.location.hostname
+  return hostname === 'localhost' || hostname === '127.0.0.1'
+}
+
+async function resetLocalServiceWorkers() {
+  if (!shouldResetLocalServiceWorkers()) return
+  if (!('serviceWorker' in navigator)) return
+
+  const registrations = await navigator.serviceWorker.getRegistrations()
+  if (registrations.length === 0) return
+
+  await Promise.all(registrations.map((registration) => registration.unregister()))
+
+  if ('caches' in window) {
+    const cacheKeys = await window.caches.keys()
+    await Promise.all(cacheKeys.map((cacheKey) => window.caches.delete(cacheKey)))
+  }
+
+  if (window.sessionStorage.getItem('civjourney-local-sw-reset') === 'done') return
+
+  window.sessionStorage.setItem('civjourney-local-sw-reset', 'done')
+  window.location.reload()
+}
+
 const initialUiTheme = readPersistedUiTheme()
 cleanupRuntimeRecoveryState()
 installGlobalErrorHandlers()
+void resetLocalServiceWorkers()
 
 createRoot(document.getElementById('root'), {
   onCaughtError: (error, errorInfo) => reportReactRootError('caught', error, errorInfo),

@@ -1516,7 +1516,7 @@ export default function App() {
               </AppErrorBoundary>
             ) : activeTab === 'focus' ? (
               <div className="flex h-full min-h-0">
-                <div className="min-h-0 min-w-0 flex-1 overflow-y-auto scroll-pb-[calc(env(safe-area-inset-bottom)+8.5rem)]">
+                <div className="min-h-0 min-w-0 flex-1 overflow-y-auto scroll-pb-[calc(env(safe-area-inset-bottom)+7.4rem)]">
                   {!isDesktop && !showFocusFullscreen && renderTopRail()}
                   <AppErrorBoundary
                     area="trang tập trung"
@@ -1525,7 +1525,7 @@ export default function App() {
                     resetKeys={[activeTab, isDesktop, isWideViewport, focusFullscreen]}
                     variant="section"
                   >
-                    <div className="mx-auto max-w-[860px] px-5 pb-[calc(env(safe-area-inset-bottom)+8.5rem)] pt-8 md:px-8 md:pb-28 lg:px-12 lg:pb-8 xl:px-16">
+                    <div className="mx-auto max-w-[860px] px-5 pb-[calc(env(safe-area-inset-bottom)+7.4rem)] pt-8 md:px-8 md:pb-28 lg:px-12 lg:pb-8 xl:px-16">
                       <FocusIntro
                         greeting={greeting}
                         sessionsCompletedToday={sessionsCompletedToday}
@@ -1701,11 +1701,11 @@ export default function App() {
 
       {!isDesktop && !showFocusFullscreen && (
         <div
-          className="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center px-3"
+          className="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center px-2.5 sm:px-3"
           style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 12px)' }}
         >
           <nav
-            className="pointer-events-auto flex w-full max-w-[760px] items-center gap-1 rounded-[26px] border p-1.5 backdrop-blur-xl"
+            className="pointer-events-auto flex w-full max-w-[760px] items-center gap-0.5 rounded-[24px] border p-1 backdrop-blur-xl"
             style={{
               borderColor: 'var(--line)',
               background: 'var(--panel-soft)',
@@ -1719,7 +1719,7 @@ export default function App() {
                   key={tab.id}
                   type="button"
                   onClick={() => selectTab(tab.id)}
-                  className="relative flex min-h-[54px] flex-1 flex-col items-center justify-center gap-0.5 rounded-[18px] px-1 py-2 text-[9.5px] font-medium transition-colors"
+                  className="relative flex min-h-[48px] flex-1 flex-col items-center justify-center gap-px rounded-[16px] px-1 py-1.5 text-[9px] font-medium leading-none transition-colors"
                   style={{
                     color: active ? 'var(--ink)' : 'var(--muted)',
                     background: active ? 'var(--panel-strong)' : 'transparent',
@@ -1727,11 +1727,11 @@ export default function App() {
                     boxShadow: active ? '0 8px 14px rgba(31,30,29,0.03)' : 'none',
                   }}
                 >
-                  <tab.Icon size={15} />
+                  <tab.Icon size={14} />
                   <span className="truncate">{tab.shortLabel}</span>
                   {active && (
                     <span
-                      className="absolute bottom-1.5 h-[4px] w-[4px] rounded-full"
+                      className="absolute bottom-1 h-[3px] w-[3px] rounded-full"
                       style={{ background: 'var(--accent)' }}
                     />
                   )}

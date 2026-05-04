@@ -30,3 +30,8 @@ create index if not exists push_jobs_status_scheduled_for_idx
 
 alter table public.push_subscriptions enable row level security;
 alter table public.push_jobs enable row level security;
+
+grant select, insert, update on public.push_subscriptions to anon;
+grant select, insert, update on public.push_jobs to anon;
+grant select, insert, update on public.push_subscriptions to service_role;
+grant select, insert, update on public.push_jobs to service_role;

@@ -73,10 +73,10 @@ class NotificationManager {
 
   // ── Các phím tắt tiện lợi ─────────────────────────────────────────────────
 
-  notifyFocusComplete(minutes, xpEarned) {
+  notifyFocusComplete(minutes) {
     this.notify({
-      title: '🎉 Hoàn Thành Phiên Tập Trung!',
-      body: `Tập trung ${minutes} phút · +${xpEarned.toLocaleString()} XP. Mở ứng dụng để nhận thưởng!`,
+      title: '🎇 Đã Hoàn Thành Phiên Tập Trung!',
+      body: `Phiên tập trung ${minutes} phút của Đàm đã xong. Hãy mở app lên và nghỉ giải lao nha!`,
       tag: 'focus-complete',
       onClick: () => window.focus(),
     });

@@ -2,6 +2,19 @@ import { APP_DISPLAY_NAME, APP_SLUG } from './appIdentity';
 
 const PUSH_DEVICE_ID_KEY = `${APP_SLUG}:push-device-id`;
 export const FOCUS_COMPLETE_PUSH_JOB_KEY = `${APP_SLUG}:focus-complete`;
+const FOCUS_COMPLETE_OWNER_NAME = 'Đàm';
+
+function createFocusCompleteNotificationPayload(focusMinutes) {
+  const roundedMinutes = Math.max(1, Math.round(focusMinutes || 0));
+  return {
+    title: '🎇 Đã Hoàn Thành Phiên Tập Trung!',
+    body: `Phiên tập trung ${roundedMinutes} phút của ${FOCUS_COMPLETE_OWNER_NAME} đã xong. Hãy mở app lên và nghỉ giải lao nha!`,
+    icon: '/icon-192.png',
+    badge: '/icon-192.png',
+    tag: 'dc-pomodoro-focus-complete',
+    url: '/',
+  };
+}
 
 function canUseBrowserApis() {
   return typeof window !== 'undefined';
@@ -299,14 +312,7 @@ export async function scheduleFocusCompletePush({ endsAtMs, focusMinutes }) {
       body: JSON.stringify({
         jobKey: FOCUS_COMPLETE_PUSH_JOB_KEY,
         scheduledFor: new Date(endsAtMs).toISOString(),
-        payload: {
-          title: '🍅 Hết giờ tập trung',
-          body: `Phiên ${Math.max(1, Math.round(focusMinutes || 0))} phút của bạn đã xong. Mở ${APP_DISPLAY_NAME} để nhận thưởng.`,
-          icon: '/icon-192.png',
-          badge: '/icon-192.png',
-          tag: 'dc-pomodoro-focus-complete',
-          url: '/',
-        },
+        payload: createFocusCompleteNotificationPayload(focusMinutes),
       }),
     });
   } catch (error) {

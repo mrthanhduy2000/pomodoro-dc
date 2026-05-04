@@ -149,11 +149,17 @@ export default function DailyMissions() {
                   whileTap={reduceMotion ? undefined : { scale: 0.98 }}
                   type="button"
                   onClick={claimMissionAllBonus}
-                  className="whitespace-nowrap rounded-[10px] px-3.5 py-2 text-[12px] font-semibold text-white"
-                  style={{
+                  className="whitespace-nowrap rounded-[10px] px-3.5 py-2 text-[12px] font-semibold"
+                  style={lightTheme ? {
                     background: 'var(--ink)',
+                    color: 'var(--canvas)',
                     border: '1px solid rgba(31, 30, 29, 0.06)',
                     boxShadow: '0 10px 20px rgba(31, 30, 29, 0.12)',
+                  } : {
+                    background: 'rgba(var(--accent-rgb), 0.9)',
+                    color: 'var(--ink)',
+                    border: '1px solid rgba(var(--accent-rgb), 0.22)',
+                    boxShadow: '0 10px 20px rgba(var(--accent-rgb), 0.18)',
                   }}
                 >
                   Nhận +{allMissionBonusXP} XP

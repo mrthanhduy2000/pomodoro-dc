@@ -391,6 +391,7 @@ export default function PomodoroEngine({
       : 1240
     : 560;
   const isDesktopFullScreen = fullScreenMode && isDesktopViewport;
+  const isDesktopFocusStage = immersiveMode && isDesktopViewport && !fullScreenMode;
   const immersiveTimerScale = immersiveMode
     ? fullScreenMode
       ? isBreakMode
@@ -416,25 +417,31 @@ export default function PomodoroEngine({
         : timerState === TIMER_STATES.FINISHED
           ? 1.42
           : 1.38
-    : immersiveMode && isDesktopViewport
+    : isDesktopFocusStage
       ? isBreakMode
-        ? 1.06
-        : 1.1
+        ? 1.12
+        : 1.18
       : 1;
   const timerCircleBoost = isDesktopFullScreen
     ? isBreakMode
       ? 1.2
       : 1.28
-    : immersiveMode && isDesktopViewport
+    : isDesktopFocusStage
       ? isBreakMode
-        ? 1.06
-        : 1.1
+        ? 1.14
+        : 1.22
       : 1;
   const timerVisualScale = immersiveMode ? immersiveTimerScale * fullScreenDesktopBoost : 1;
   const timerCanvasSize = Math.ceil(SVG_SIZE * timerCircleBoost);
   const timerFootprintScale = immersiveMode ? timerVisualScale * timerCircleBoost : 1;
   const timerFootprintSize = Math.ceil(SVG_SIZE * timerFootprintScale);
-  const timerFootprintHeight = timerFootprintSize + (immersiveMode ? (isDesktopFullScreen ? 176 : 40) : 0);
+  const timerFootprintHeight = timerFootprintSize + (immersiveMode
+    ? isDesktopFullScreen
+      ? 176
+      : isDesktopFocusStage
+        ? 92
+        : 40
+    : 0);
   const fullScreenDesktopStageLift = isDesktopFullScreen ? -44 : 0;
   const prioritizeSetupCard = !fullScreenMode && immersiveMode && isIdle && !isBreakMode;
   const useImmersiveHeroLayout = fullScreenMode || (immersiveMode && !prioritizeSetupCard);
@@ -444,7 +451,7 @@ export default function PomodoroEngine({
       ? isDesktopFullScreen
         ? 'block w-[82%] text-center text-[4.8rem] leading-[0.81] tracking-[-0.065em] md:text-[5.6rem] xl:text-[6.4rem] 2xl:text-[7.05rem]'
         : 'block w-[84%] text-center text-[4.55rem] leading-[0.8] tracking-[-0.068em] sm:text-[4.9rem] md:text-[5.2rem] xl:text-[5.55rem]'
-      : 'block max-w-[80%] text-center text-[3.6rem] leading-[0.88] tracking-[-0.055em] md:text-[4.2rem] xl:text-[4.7rem]'
+      : 'block max-w-[82%] text-center text-[3.95rem] leading-[0.86] tracking-[-0.06em] md:text-[4.65rem] xl:text-[5.2rem]'
     : 'text-6xl tracking-widest';
   const timerValueFontClass = lightTheme ? 'serif font-medium' : 'font-mono font-bold';
   const timerValueToneClass = isBreakMode

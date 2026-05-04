@@ -72,12 +72,8 @@ function updateTrayTitle() {
 }
 
 function createTray() {
-  const iconPath = path.join(__dirname, '../public/tray-template.png');
-  let icon = nativeImage.createFromPath(iconPath);
-  if (icon.isEmpty()) {
-    icon = nativeImage.createEmpty();
-  }
-  const trayIcon = icon.resize({ width: 18, height: 18 });
+  const iconPath = path.join(__dirname, '../public/tray-empty.png');
+  const trayIcon = nativeImage.createFromPath(iconPath);
   trayIcon.setTemplateImage(true);
 
   tray = new Tray(trayIcon);

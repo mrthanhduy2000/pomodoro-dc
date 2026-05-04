@@ -59,7 +59,6 @@ export function useTimer({ focusMinutes, mode = TIMER_MODES.POMODORO }) {
   const shortBreakDuration = useSettingsStore((s) => s.shortBreakDuration);
   const longBreakDuration = useSettingsStore((s) => s.longBreakDuration);
   const longBreakAfterN = useSettingsStore((s) => s.longBreakAfterN);
-  const pushSubscriptionStatus = useSettingsStore((s) => s.pushSubscriptionStatus);
 
   const [displaySeconds, setDisplaySeconds] = useState(() => getInitialDisplaySeconds(mode, focusMinutes));
   const [timerState, setTimerState] = useState(TIMER_STATES.IDLE);
@@ -402,10 +401,6 @@ export function useTimer({ focusMinutes, mode = TIMER_MODES.POMODORO }) {
 
     const shouldAutoStartBreak = !disableBreak && autoStartBreak;
     setTimerState(TIMER_STATES.FINISHED);
-    if (pushSubscriptionStatus !== 'subscribed') {
-      notificationManager.notifyFocusComplete(creditedMinutes);
-    }
-
     if (shouldAutoStartBreak) {
       clearTimeout(pendingBreakTimeoutRef.current);
       // ** Not a bug / won't fix: this delayed auto-start is tracked in a ref
@@ -432,7 +427,6 @@ export function useTimer({ focusMinutes, mode = TIMER_MODES.POMODORO }) {
     shortBreakDuration,
     startBreak,
     timerState,
-    pushSubscriptionStatus,
     unlockedSkills.hit_tho_sau,
   ]);
 

@@ -311,6 +311,7 @@ export async function scheduleFocusCompletePush({ endsAtMs, focusMinutes }) {
       method: 'POST',
       body: JSON.stringify({
         jobKey: FOCUS_COMPLETE_PUSH_JOB_KEY,
+        focusMinutes: Math.max(1, Math.round(focusMinutes || 0)),
         scheduledFor: new Date(endsAtMs).toISOString(),
         payload: createFocusCompleteNotificationPayload(focusMinutes),
       }),

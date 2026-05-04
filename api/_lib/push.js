@@ -84,6 +84,30 @@ export async function upsertPushSubscription({
     });
 
   if (error) throw error;
+
+  if (userAgent || platform || deviceId) {
+    let cleanupQuery = admin
+      .from('push_subscriptions')
+      .update({
+        enabled: false,
+        updated_at: now,
+      })
+      .neq('endpoint', subscription.endpoint)
+      .eq('enabled', true);
+
+    if (deviceId) {
+      cleanupQuery = cleanupQuery.eq('device_id', deviceId);
+    } else if (userAgent && platform) {
+      cleanupQuery = cleanupQuery.eq('user_agent', userAgent).eq('platform', platform);
+    } else if (userAgent) {
+      cleanupQuery = cleanupQuery.eq('user_agent', userAgent);
+    } else if (platform) {
+      cleanupQuery = cleanupQuery.eq('platform', platform);
+    }
+
+    const { error: cleanupError } = await cleanupQuery;
+    if (cleanupError) throw cleanupError;
+  }
 }
 
 export async function disablePushSubscription({ endpoint = null, deviceId = null }) {

@@ -1,6 +1,25 @@
 import { methodNotAllowed, readJsonBody, sendJson } from '../_lib/http.js';
 import { upsertPushJob } from '../_lib/push.js';
 
+function buildFocusCompletePayload(focusMinutes) {
+  const roundedMinutes = Math.max(1, Math.round(focusMinutes || 0));
+  return {
+    title: '🎇 XONG PHIÊN TẬP TRUNG!',
+    body: `Phiên ${roundedMinutes} phút của Đàm đã xong. Mở app bấm nghỉ giải lao nha!`,
+    icon: '/icon-192.png',
+    badge: '/icon-192.png',
+    tag: 'dc-pomodoro-focus-complete',
+    url: '/',
+  };
+}
+
+function inferFocusMinutes(body) {
+  if (Number.isFinite(body?.focusMinutes)) return Number(body.focusMinutes);
+  const text = body?.payload?.body ?? '';
+  const match = text.match(/(\d+)\s*phút/i);
+  return match ? Number(match[1]) : 1;
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return methodNotAllowed(res, ['POST']);
@@ -33,10 +52,12 @@ export default async function handler(req, res) {
       });
     }
 
+    const focusMinutes = inferFocusMinutes(body);
+
     await upsertPushJob({
       jobKey,
       scheduledFor,
-      payload,
+      payload: buildFocusCompletePayload(focusMinutes),
     });
 
     return sendJson(res, 200, { ok: true });

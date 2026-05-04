@@ -1194,8 +1194,14 @@ export default function PomodoroEngine({
       </div>
     </>
   );
+  const showShortcutHint = !useMinimalFocusStage && !isBreakMode && timerState === TIMER_STATES.IDLE;
+
   const focusSupportContent = (
-    <div className={`w-full flex flex-col gap-5 md:gap-6 ${useImmersiveHeroLayout ? 'mx-auto max-w-[760px] pt-6 lg:max-w-[780px] lg:pt-8' : ''}`}>
+    <div className={`w-full flex flex-col gap-5 md:gap-6 ${
+      useImmersiveHeroLayout
+        ? `mx-auto max-w-[760px] lg:max-w-[780px] ${showShortcutHint ? 'pt-0' : 'pt-6 lg:pt-8'}`
+        : ''
+    }`}>
       <div className={`w-full rounded-[24px] border backdrop-blur-2xl ${
         useImmersiveHeroLayout
           ? 'bg-white/[0.045] border-white/[0.10] px-4 py-4 shadow-[0_12px_28px_rgba(15,23,42,0.10)]'
@@ -1468,12 +1474,14 @@ export default function PomodoroEngine({
     </section>
   );
 
-  const shortcutHint = !useMinimalFocusStage && !isBreakMode && timerState === TIMER_STATES.IDLE ? (
-    <p className={`mono hidden px-1 text-center text-[10px] uppercase tracking-[0.18em] md:block ${
-      lightTheme ? 'text-[var(--muted-2)]' : 'text-slate-500'
-    }`}>
-      Space bắt đầu · Shift trái + F full screen · Shift trái + G thu/mở cột
-    </p>
+  const shortcutHint = showShortcutHint ? (
+    <div className="hidden w-full justify-center py-5 md:flex">
+      <p className={`mono px-1 text-center text-[10px] uppercase tracking-[0.18em] ${
+        lightTheme ? 'text-[var(--muted-2)]' : 'text-slate-500'
+      }`}>
+        Space bắt đầu · Shift trái + F full screen · Shift trái + G thu/mở cột
+      </p>
+    </div>
   ) : null;
 
   if (fullScreenMode) {

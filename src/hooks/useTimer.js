@@ -6,6 +6,7 @@ import notificationManager from '../engine/notifications';
 import { getBreakPlan } from '../engine/breaks';
 import { BREAK_EXTENSION_MINUTES } from '../engine/constants';
 import { updateTimerLive, clearTimerLive } from '../lib/timerLiveService';
+import { pushNow } from '../lib/syncService';
 import { cancelFocusCompletePush, scheduleFocusCompletePush } from '../lib/pushService';
 
 export const TIMER_STATES = {
@@ -66,6 +67,7 @@ export function useTimer({ focusMinutes, mode = TIMER_MODES.POMODORO }) {
   const [sessionStartedAt, setSessionStartedAt] = useState(null);
 
   const modeRef = useRef(mode);
+  const timerStateRef = useRef(TIMER_STATES.IDLE);
   const secondsRef = useRef(getInitialDisplaySeconds(mode, focusMinutes));
   const totalSecondsRef = useRef(totalSeconds);
   const intervalRef = useRef(null);
@@ -446,6 +448,10 @@ export function useTimer({ focusMinutes, mode = TIMER_MODES.POMODORO }) {
   }, [displaySeconds, timerState]);
 
   useEffect(() => {
+    timerStateRef.current = timerState;
+  }, [timerState]);
+
+  useEffect(() => {
     if (timerState === TIMER_STATES.RUNNING) {
       updateTimerLive({
         isRunning: true,
@@ -453,6 +459,7 @@ export function useTimer({ focusMinutes, mode = TIMER_MODES.POMODORO }) {
         totalSeconds: totalSecondsRef.current,
         pausedSecondsRemaining: null,
       });
+      void pushNow();
     } else if (timerState === TIMER_STATES.PAUSED) {
       updateTimerLive({
         isRunning: false,
@@ -460,10 +467,32 @@ export function useTimer({ focusMinutes, mode = TIMER_MODES.POMODORO }) {
         totalSeconds: 0,
         pausedSecondsRemaining: secondsRef.current,
       });
+      void pushNow();
     } else {
       clearTimerLive();
+      void pushNow();
     }
   }, [timerState]);
+
+  // Phản ứng với pause/resume từ thiết bị khác qua cloud sync
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!timerSession.isRunning) return;
+    // Thiết bị khác pause: pausedAt xuất hiện nhưng mình vẫn đang RUNNING
+    if (timerSession.pausedAt && timerStateRef.current === TIMER_STATES.RUNNING) {
+      clearInterval(intervalRef.current);
+      pausedAtRef.current = timerSession.pausedAt;
+      setTimerState(TIMER_STATES.PAUSED);
+      return;
+    }
+    // Thiết bị khác resume: pausedAt biến mất nhưng mình vẫn đang PAUSED
+    if (!timerSession.pausedAt && timerStateRef.current === TIMER_STATES.PAUSED) {
+      startTimeRef.current = timerSession.countdownStartedAt ?? startTimeRef.current;
+      pausedAtRef.current = null;
+      setTimerState(TIMER_STATES.RUNNING);
+      runInterval();
+    }
+  }, [timerSession.pausedAt, timerSession.countdownStartedAt, timerSession.isRunning]);
 
   useEffect(() => {
     const {

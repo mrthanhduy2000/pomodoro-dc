@@ -9,6 +9,8 @@ import {
 const SYNC_ID = 'singleton';
 const DEBOUNCE_MS = 5000;
 let debounceTimer = null;
+let isImporting = false;
+let initialized = false;
 
 function getExportableState() {
   const s = useGameStore.getState();
@@ -76,13 +78,22 @@ async function pushToCloud() {
 }
 
 function schedulePush() {
+  if (isImporting) return;
   if (debounceTimer) clearTimeout(debounceTimer);
   debounceTimer = setTimeout(pushToCloud, DEBOUNCE_MS);
 }
 
+export async function pushNow() {
+  if (debounceTimer) clearTimeout(debounceTimer);
+  await pushToCloud();
+}
+
+function isSameSession(localSession, cloudSession) {
+  return localSession?.startedAt && cloudSession?.startedAt &&
+    localSession.startedAt === cloudSession.startedAt;
+}
+
 async function pullFromCloud() {
-  // Không pull đè lên nếu thiết bị này đang chạy timer
-  if (useGameStore.getState().timerSession?.isRunning) return;
 
   try {
     const { data, error } = await supabase
@@ -97,7 +108,14 @@ async function pullFromCloud() {
     const lastSync = parseInt(readLocalStorageValue(LAST_CLOUD_SYNC_KEY, LEGACY_LAST_CLOUD_SYNC_KEYS) ?? '0', 10);
 
     if (cloudTime > lastSync) {
+      const localSession = useGameStore.getState().timerSession;
+      const cloudSession = data.data?.timerSession;
+      // Nếu đang chạy session khác thì không pull đè
+      if (localSession?.isRunning && !isSameSession(localSession, cloudSession)) return;
+
+      isImporting = true;
       const result = useGameStore.getState()._importGameData(data.data);
+      setTimeout(() => { isImporting = false; }, 0);
       if (result.ok) {
         localStorage.setItem(LAST_CLOUD_SYNC_KEY, cloudTime.toString());
         console.log('[sync] pulled update from cloud');
@@ -109,6 +127,9 @@ async function pullFromCloud() {
 }
 
 export async function initSync() {
+  if (initialized) return;
+  initialized = true;
+
   try {
     const { data, error } = await supabase
       .from('game_state')
@@ -150,13 +171,20 @@ export async function initSync() {
       'postgres_changes',
       { event: 'UPDATE', schema: 'public', table: 'game_state', filter: `id=eq.${SYNC_ID}` },
       (payload) => {
-        if (useGameStore.getState().timerSession?.isRunning) return;
         const cloudData = payload.new;
         if (!cloudData?.data) return;
         const cloudTime = new Date(cloudData.updated_at).getTime();
         const lastSync = parseInt(readLocalStorageValue(LAST_CLOUD_SYNC_KEY, LEGACY_LAST_CLOUD_SYNC_KEYS) ?? '0', 10);
         if (cloudTime <= lastSync) return;
+
+        const localSession = useGameStore.getState().timerSession;
+        const cloudSession = cloudData.data?.timerSession;
+        // Chỉ block nếu đang chạy session KHÁC (không phải cùng session đang pause/resume)
+        if (localSession?.isRunning && !isSameSession(localSession, cloudSession)) return;
+
+        isImporting = true;
         const result = useGameStore.getState()._importGameData(cloudData.data);
+        setTimeout(() => { isImporting = false; }, 0);
         if (result.ok) {
           localStorage.setItem(LAST_CLOUD_SYNC_KEY, cloudTime.toString());
           console.log('[sync] real-time update received');

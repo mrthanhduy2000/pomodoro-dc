@@ -8,7 +8,6 @@ import {
 
 const SYNC_ID = 'singleton';
 const DEBOUNCE_MS = 5000;
-const PULL_INTERVAL_MS = 30_000;
 let debounceTimer = null;
 
 function getExportableState() {
@@ -144,10 +143,29 @@ export async function initSync() {
     schedulePush();
   });
 
-  // Pull định kỳ mỗi 30 giây
-  setInterval(pullFromCloud, PULL_INTERVAL_MS);
+  // Real-time: nhận ngay khi thiết bị khác push lên cloud
+  supabase
+    .channel('game-state-sync')
+    .on(
+      'postgres_changes',
+      { event: 'UPDATE', schema: 'public', table: 'game_state', filter: `id=eq.${SYNC_ID}` },
+      (payload) => {
+        if (useGameStore.getState().timerSession?.isRunning) return;
+        const cloudData = payload.new;
+        if (!cloudData?.data) return;
+        const cloudTime = new Date(cloudData.updated_at).getTime();
+        const lastSync = parseInt(readLocalStorageValue(LAST_CLOUD_SYNC_KEY, LEGACY_LAST_CLOUD_SYNC_KEYS) ?? '0', 10);
+        if (cloudTime <= lastSync) return;
+        const result = useGameStore.getState()._importGameData(cloudData.data);
+        if (result.ok) {
+          localStorage.setItem(LAST_CLOUD_SYNC_KEY, cloudTime.toString());
+          console.log('[sync] real-time update received');
+        }
+      }
+    )
+    .subscribe();
 
-  // Pull ngay khi user mở lại tab/app
+  // Fallback: pull khi user mở lại tab (phòng khi WebSocket mất kết nối)
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') pullFromCloud();
   });

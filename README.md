@@ -49,7 +49,11 @@ CRON_SECRET=...
 
 `supabase/push_notifications.sql`
 
-4. Trên iPhone:
+4. Trong Supabase SQL Editor, chạy thêm file:
+
+`supabase/push_dispatch_scheduler.sql`
+
+5. Trên iPhone:
 
 - Mở `https://pomodoro-dc.vercel.app` bằng Safari
 - Chọn Share → `Add to Home Screen`
@@ -58,7 +62,8 @@ CRON_SECRET=...
 
 Ghi chú:
 
-- Vercel Cron trong repo chạy mỗi phút qua `/api/push/dispatch`
+- Bản hiện tại không dùng Vercel Cron nữa, vì Vercel Hobby không hỗ trợ cron mỗi phút
+- Supabase Cron sẽ gọi `https://pomodoro-dc.vercel.app/api/push/dispatch` mỗi phút
 - Vì vậy push thường đến rất nhanh, nhưng có thể trễ tối đa khoảng 1 phút so với giây timer chạm 0
 
 ## React + Vite template notes

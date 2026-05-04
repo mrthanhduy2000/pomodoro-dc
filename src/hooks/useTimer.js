@@ -475,7 +475,6 @@ export function useTimer({ focusMinutes, mode = TIMER_MODES.POMODORO }) {
   }, [timerState]);
 
   // Phản ứng với pause/resume từ thiết bị khác qua cloud sync
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!timerSession.isRunning) return;
     // Thiết bị khác pause: pausedAt xuất hiện nhưng mình vẫn đang RUNNING
@@ -492,7 +491,7 @@ export function useTimer({ focusMinutes, mode = TIMER_MODES.POMODORO }) {
       setTimerState(TIMER_STATES.RUNNING);
       runInterval();
     }
-  }, [timerSession.pausedAt, timerSession.countdownStartedAt, timerSession.isRunning]);
+  }, [runInterval, timerSession.pausedAt, timerSession.countdownStartedAt, timerSession.isRunning]);
 
   useEffect(() => {
     const {

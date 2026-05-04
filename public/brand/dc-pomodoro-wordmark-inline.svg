@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="260" viewBox="0 0 760 260" fill="none">
+  <rect width="760" height="260" fill="#f5f3ed" />
+  <text x="380" y="112" text-anchor="middle" font-family="Cormorant Garamond, Georgia, serif" font-size="56" font-weight="500" letter-spacing="-1.68" fill="#1a1918">DC</text>
+  <text x="441" y="112" text-anchor="middle" font-family="Cormorant Garamond, Georgia, serif" font-size="56" font-style="italic" font-weight="400" letter-spacing="-1.68" fill="#1a1918">Pomodoro</text>
+  <line x1="171" y1="150" x2="189" y2="150" stroke="#1a1918" stroke-opacity="0.6" />
+  <text x="380" y="154" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="9.5" letter-spacing="3.04" text-transform="uppercase" fill="#1a1918">A POMODORO THROUGH ERAS</text>
+  <rect x="570" y="149" width="1" height="1" fill="#8a6a3d" />
+</svg>

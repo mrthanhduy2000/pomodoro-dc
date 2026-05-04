@@ -41,6 +41,85 @@ export function DCPomodoroMarkClockC({
   );
 }
 
+export function DCPomodoroMarkJourneyArc({
+  size = 28,
+  color = 'var(--ink)',
+  accent = BRAND.bronze,
+}) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 120 120" fill="none" aria-hidden="true">
+      <line x1="10" y1="86" x2="110" y2="86" stroke={color} strokeWidth="1" />
+      <circle cx="60" cy="56" r="22" stroke={color} strokeWidth="1.2" fill="none" />
+      <path d="M 60 34 A 22 22 0 0 1 80.7 64.6" stroke={accent} strokeWidth="2" fill="none" strokeLinecap="round" />
+      <line x1="22" y1="86" x2="22" y2="74" stroke={color} strokeWidth="1.6" />
+      <line x1="60" y1="86" x2="60" y2="78" stroke={color} strokeWidth="1.2" />
+      <line x1="98" y1="86" x2="98" y2="68" stroke={color} strokeWidth="2" />
+      <circle cx="22" cy="74" r="1" fill={color} />
+      <circle cx="60" cy="78" r="1" fill={color} />
+      <circle cx="98" cy="68" r="1" fill={accent} />
+    </svg>
+  );
+}
+
+export function DCPomodoroMarkSeal({
+  size = 28,
+  color = 'var(--ink)',
+  accent = BRAND.bronze,
+}) {
+  const leaves = [];
+  for (let i = 0; i < 9; i += 1) {
+    const t = i / 8;
+    const angle = -110 + t * 120;
+    const radius = 50;
+    const cx = 60 + Math.cos(angle * Math.PI / 180) * radius;
+    const cy = 60 + Math.sin(angle * Math.PI / 180) * radius;
+    const rotation = angle + 90;
+    leaves.push({ cx, cy, rotation });
+  }
+
+  return (
+    <svg width={size} height={size} viewBox="0 0 120 120" fill="none" aria-hidden="true">
+      <circle cx="60" cy="60" r="56" stroke={color} strokeWidth="0.8" />
+      <circle cx="60" cy="60" r="51" stroke={color} strokeWidth="0.4" />
+      {leaves.map((leaf, index) => (
+        <g key={`left-${index}`} transform={`translate(${leaf.cx} ${leaf.cy}) rotate(${leaf.rotation})`}>
+          <path d="M 0 0 q -3 -2 -6 0 q 3 2 6 0 z" fill={color} />
+        </g>
+      ))}
+      {leaves.map((leaf, index) => (
+        <g key={`right-${index}`} transform={`translate(${120 - leaf.cx} ${leaf.cy}) scale(-1 1) rotate(${leaf.rotation})`}>
+          <path d="M 0 0 q -3 -2 -6 0 q 3 2 6 0 z" fill={color} />
+        </g>
+      ))}
+      <path d="M 50 102 q 10 5 20 0" stroke={color} strokeWidth="0.6" fill="none" />
+      <circle cx="60" cy="104" r="1" fill={accent} />
+      <text
+        x="60"
+        y="72"
+        textAnchor="middle"
+        fontFamily="'Cormorant Garamond', 'Source Serif 4', Georgia, serif"
+        fontSize="56"
+        fontWeight="500"
+        fill={color}
+        letterSpacing="-2"
+      >
+        C
+      </text>
+      <text
+        x="60"
+        y="89"
+        textAnchor="middle"
+        fontFamily="'JetBrains Mono', monospace"
+        fontSize="6"
+        fill={color}
+        letterSpacing="3"
+      >
+        MMXXVI
+      </text>
+    </svg>
+  );
+}
+
 export function DCPomodoroMarkStamp({
   size = 28,
   color = 'var(--ink)',
@@ -79,6 +158,28 @@ export function DCPomodoroMarkStamp({
   );
 }
 
+export function DCPomodoroMarkAnalemma({
+  size = 28,
+  color = 'var(--ink)',
+  accent = BRAND.bronze,
+}) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 100 100" fill="none" aria-hidden="true">
+      <path
+        d="M 50 14 C 40 26 40 38 50 50 C 60 62 60 74 50 86 C 40 74 40 62 50 50 C 60 38 60 26 50 14 Z"
+        stroke={color}
+        strokeWidth="1.2"
+        fill="none"
+      />
+      <circle cx="58" cy="42" r="2.4" fill={accent} />
+      <line x1="20" y1="50" x2="80" y2="50" stroke={color} strokeWidth="0.5" strokeDasharray="1 2" />
+      <circle cx="50" cy="14" r="0.9" fill={color} />
+      <circle cx="50" cy="50" r="0.9" fill={color} />
+      <circle cx="50" cy="86" r="0.9" fill={color} />
+    </svg>
+  );
+}
+
 export function DCPomodoroWordmark({
   color = 'var(--ink)',
   size = 1,
@@ -98,6 +199,56 @@ export function DCPomodoroWordmark({
       >
         DC
         <span style={{ fontStyle: 'italic', fontWeight: 400 }}> Pomodoro</span>
+      </div>
+    </div>
+  );
+}
+
+export function DCPomodoroWordmarkStacked({
+  color = 'var(--ink)',
+  size = 1,
+}) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', minWidth: 0 }}>
+      <div
+        style={{
+          fontFamily: "'JetBrains Mono', monospace",
+          fontSize: `${8 * size}px`,
+          letterSpacing: '0.4em',
+          textTransform: 'uppercase',
+          color,
+          opacity: 0.6,
+        }}
+      >
+        EST · MMXXVI
+      </div>
+      <div
+        style={{
+          fontFamily: "'Cormorant Garamond', 'Source Serif 4', Georgia, serif",
+          fontWeight: 500,
+          fontSize: `${64 * size}px`,
+          letterSpacing: '-0.04em',
+          color,
+          lineHeight: 1,
+          marginTop: `${6 * size}px`,
+        }}
+      >
+        DC Pomodoro
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: `${10 * size}px`, marginTop: `${10 * size}px` }}>
+        <span style={{ width: `${30 * size}px`, height: 1, background: color, opacity: 0.35 }} />
+        <span
+          style={{
+            fontFamily: "'Cormorant Garamond', 'Source Serif 4', Georgia, serif",
+            fontStyle: 'italic',
+            fontSize: `${14 * size}px`,
+            color,
+            letterSpacing: '0.01em',
+          }}
+        >
+          a deep-work atelier
+        </span>
+        <span style={{ width: `${30 * size}px`, height: 1, background: color, opacity: 0.35 }} />
       </div>
     </div>
   );

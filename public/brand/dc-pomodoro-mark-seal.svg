@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120" fill="none">
+  <circle cx="60" cy="60" r="56" stroke="#1a1918" stroke-width="0.8" />
+  <circle cx="60" cy="60" r="51" stroke="#1a1918" stroke-width="0.4" />
+  <g transform="translate(42.8993 13.0154) rotate(-20)"><path d="M 0 0 q -3 -2 -6 0 q 3 2 6 0 z" fill="#1a1918" /></g>
+  <g transform="translate(30.4883 18.0528) rotate(-5)"><path d="M 0 0 q -3 -2 -6 0 q 3 2 6 0 z" fill="#1a1918" /></g>
+  <g transform="translate(20.2994 26.6912) rotate(10)"><path d="M 0 0 q -3 -2 -6 0 q 3 2 6 0 z" fill="#1a1918" /></g>
+  <g transform="translate(13.0154 37.1007) rotate(25)"><path d="M 0 0 q -3 -2 -6 0 q 3 2 6 0 z" fill="#1a1918" /></g>
+  <g transform="translate(9.2126 49.2019) rotate(40)"><path d="M 0 0 q -3 -2 -6 0 q 3 2 6 0 z" fill="#1a1918" /></g>
+  <g transform="translate(9.2126 62.7981) rotate(55)"><path d="M 0 0 q -3 -2 -6 0 q 3 2 6 0 z" fill="#1a1918" /></g>
+  <g transform="translate(13.0154 74.8993) rotate(70)"><path d="M 0 0 q -3 -2 -6 0 q 3 2 6 0 z" fill="#1a1918" /></g>
+  <g transform="translate(20.2994 85.3088) rotate(85)"><path d="M 0 0 q -3 -2 -6 0 q 3 2 6 0 z" fill="#1a1918" /></g>
+  <g transform="translate(30.4883 93.9472) rotate(100)"><path d="M 0 0 q -3 -2 -6 0 q 3 2 6 0 z" fill="#1a1918" /></g>
+  <g transform="translate(77.1007 13.0154) scale(-1 1) rotate(-20)"><path d="M 0 0 q -3 -2 -6 0 q 3 2 6 0 z" fill="#1a1918" /></g>
+  <g transform="translate(89.5117 18.0528) scale(-1 1) rotate(-5)"><path d="M 0 0 q -3 -2 -6 0 q 3 2 6 0 z" fill="#1a1918" /></g>
+  <g transform="translate(99.7006 26.6912) scale(-1 1) rotate(10)"><path d="M 0 0 q -3 -2 -6 0 q 3 2 6 0 z" fill="#1a1918" /></g>
+  <g transform="translate(106.9846 37.1007) scale(-1 1) rotate(25)"><path d="M 0 0 q -3 -2 -6 0 q 3 2 6 0 z" fill="#1a1918" /></g>
+  <g transform="translate(110.7874 49.2019) scale(-1 1) rotate(40)"><path d="M 0 0 q -3 -2 -6 0 q 3 2 6 0 z" fill="#1a1918" /></g>
+  <g transform="translate(110.7874 62.7981) scale(-1 1) rotate(55)"><path d="M 0 0 q -3 -2 -6 0 q 3 2 6 0 z" fill="#1a1918" /></g>
+  <g transform="translate(106.9846 74.8993) scale(-1 1) rotate(70)"><path d="M 0 0 q -3 -2 -6 0 q 3 2 6 0 z" fill="#1a1918" /></g>
+  <g transform="translate(99.7006 85.3088) scale(-1 1) rotate(85)"><path d="M 0 0 q -3 -2 -6 0 q 3 2 6 0 z" fill="#1a1918" /></g>
+  <g transform="translate(89.5117 93.9472) scale(-1 1) rotate(100)"><path d="M 0 0 q -3 -2 -6 0 q 3 2 6 0 z" fill="#1a1918" /></g>
+  <path d="M50 102q10 5 20 0" stroke="#1a1918" stroke-width="0.6" fill="none" />
+  <circle cx="60" cy="104" r="1" fill="#8a6a3d" />
+  <text x="60" y="72" text-anchor="middle" font-family="Cormorant Garamond, Georgia, serif" font-size="56" font-weight="500" letter-spacing="-2" fill="#1a1918">C</text>
+  <text x="60" y="89" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="6" letter-spacing="3" fill="#1a1918">MMXXVI</text>
+</svg>

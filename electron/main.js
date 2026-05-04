@@ -6,7 +6,7 @@
  * then ticks the countdown locally every second.
  */
 
-const { app, Tray, Menu, nativeImage, shell } = require('electron');
+const { app, Tray, Menu, nativeImage, shell, Notification } = require('electron');
 const path = require('path');
 const https = require('https');
 
@@ -15,10 +15,18 @@ const SUPABASE_HOST = 'jcefdsdccmnmqvuwelmm.supabase.co';
 const SUPABASE_KEY  = 'sb_publishable_Uiyl9FuyERZFVWBCFw519Q_UZbRmBVG';
 const TRAY_TITLE_OPTIONS = { fontType: 'monospacedDigit' };
 
-let tray        = null;
-let timerData   = null;
-let iconNormal  = null;
-let iconEmpty   = null;
+let tray          = null;
+let timerData     = null;
+let iconNormal    = null;
+let iconEmpty     = null;
+let prevIsRunning = null; // null = chưa biết (lần fetch đầu tiên)
+
+function showSessionEndNotification() {
+  new Notification({
+    title: '🍅 Phiên hoàn thành!',
+    body: 'Tốt lắm! Đã xong một phiên tập trung. Nghỉ ngơi một chút nhé.',
+  }).show();
+}
 
 function fetchTimerLive() {
   const options = {
@@ -36,7 +44,15 @@ function fetchTimerLive() {
     res.on('end', () => {
       try {
         const rows = JSON.parse(raw);
-        if (Array.isArray(rows) && rows.length > 0) timerData = rows[0];
+        if (Array.isArray(rows) && rows.length > 0) {
+          const newData = rows[0];
+          // Phiên kết thúc: trước đang chạy, giờ dừng hẳn (không phải pause)
+          if (prevIsRunning === true && !newData.is_running && newData.paused_seconds_remaining == null) {
+            showSessionEndNotification();
+          }
+          prevIsRunning = newData.is_running;
+          timerData = newData;
+        }
       } catch {
         return;
       }

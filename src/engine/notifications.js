@@ -75,8 +75,8 @@ class NotificationManager {
 
   notifyFocusComplete(minutes) {
     this.notify({
-      title: '🎇 Đã Hoàn Thành Phiên Tập Trung!',
-      body: `Phiên tập trung ${minutes} phút của Đàm đã xong. Hãy mở app lên và nghỉ giải lao nha!`,
+      title: '🎇 Phiên tập trung xong!',
+      body: `Phiên ${minutes} phút của Đàm đã xong. Mở app nghỉ giải lao nha!`,
       tag: 'focus-complete',
       onClick: () => window.focus(),
     });

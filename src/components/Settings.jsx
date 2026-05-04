@@ -142,7 +142,11 @@ export default function Settings() {
     notificationsEnabled,
     setNotificationsEnabled,
     notificationPermission,
+    pushSupportStatus,
+    pushSubscriptionStatus,
+    pushStatusMessage,
     requestNotificationPermission,
+    refreshPushState,
     themeMode,
     setThemeMode,
     uiTheme,
@@ -180,6 +184,11 @@ export default function Settings() {
   const activeAmbient = AMBIENT_OPTIONS.find((opt) => opt.value === ambientSound) ?? AMBIENT_OPTIONS[0];
   const activeSoundPack = SOUND_PACK_OPTIONS.find((opt) => opt.value === soundPack) ?? SOUND_PACK_OPTIONS[0];
   const activeThemeLabel = UI_THEME_OPTIONS.find((opt) => opt.value === uiTheme)?.label ?? uiTheme;
+  const pushConnected = pushSubscriptionStatus === 'subscribed';
+
+  useEffect(() => {
+    void refreshPushState();
+  }, [isInstalled, refreshPushState]);
 
   const handleReset = () => {
     if (resetConfirm) {
@@ -529,11 +538,50 @@ export default function Settings() {
             description="Tín hiệu ngoài tab khi một phiên vừa kết thúc hoặc đã tới lúc quay lại."
           />
 
-          <div className="mt-4">
+          <div className="mt-4 space-y-3">
             {notificationPermission === 'unsupported' ? (
               <p className="text-sm" style={lightTheme ? { color: '#6a6862' } : { color: 'var(--muted-2)' }}>
                 Trình duyệt hiện tại không hỗ trợ thông báo.
               </p>
+            ) : pushSupportStatus === 'needs-install' ? (
+              <div
+                className="rounded-2xl px-4 py-4 text-sm leading-relaxed"
+                style={lightTheme ? {
+                  background: 'rgba(201, 100, 66, 0.08)',
+                  border: '1px solid rgba(201, 100, 66, 0.18)',
+                  color: '#6a6862',
+                } : {
+                  background: 'rgba(var(--accent-rgb), 0.12)',
+                  border: '1px solid rgba(var(--accent-rgb), 0.2)',
+                  color: 'var(--muted)',
+                }}
+              >
+                <p className="font-semibold" style={lightTheme ? { color: '#1f1e1d' } : { color: 'var(--ink)' }}>
+                  Trên iPhone, cần mở app từ Home Screen mới nhận được Web Push.
+                </p>
+                <p className="mt-2">
+                  1. Mở `pomodoro-dc.vercel.app` bằng Safari.
+                </p>
+                <p>2. Bấm Chia sẻ → “Add to Home Screen”.</p>
+                <p>3. Mở lại app từ icon ngoài màn hình chính rồi quay lại đây để bật thông báo.</p>
+                {!isInstalled && canInstall && (
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={install}
+                    className="mt-3 rounded-2xl px-4 py-3 text-sm font-semibold"
+                    style={lightTheme ? {
+                      background: '#1f1e1d',
+                      color: '#fffdf9',
+                    } : {
+                      background: 'rgba(255,255,255,0.08)',
+                      color: 'var(--ink)',
+                    }}
+                  >
+                    Cài app ra Home Screen
+                  </motion.button>
+                )}
+              </div>
             ) : notificationPermission === 'denied' ? (
               <p className="text-sm" style={lightTheme ? { color: '#9f4a3e' } : { color: '#f87171' }}>
                 Thông báo đang bị chặn trong cài đặt trình duyệt.
@@ -556,19 +604,33 @@ export default function Settings() {
                       boxShadow: '0 10px 22px rgba(var(--accent-rgb), 0.18)',
                     }}
                   >
-                    Bật thông báo trình duyệt
+                    Bật thông báo iPhone
                   </motion.button>
                 )}
                 {notificationPermission === 'granted' && (
-                  <ToggleRow
-                    lightTheme={lightTheme}
-                    label="Thông báo khi hết giờ"
-                    description="Kể cả khi tab đang ở nền."
-                    value={notificationsEnabled}
-                    onChange={setNotificationsEnabled}
-                  />
+                  <>
+                    <ToggleRow
+                      lightTheme={lightTheme}
+                      label="Thông báo khi hết giờ"
+                      description="Kể cả khi iPhone đang khóa màn hình hoặc app đang ở nền."
+                      value={notificationsEnabled}
+                      onChange={setNotificationsEnabled}
+                    />
+                    <p className="text-[12px] leading-relaxed" style={lightTheme ? { color: '#6a6862' } : { color: 'var(--muted-2)' }}>
+                      {pushConnected
+                        ? 'Web Push đã sẵn sàng. Khi phiên kết thúc, iPhone sẽ nhận notification ngay cả khi bạn đang ở app khác.'
+                        : pushSupportStatus === 'ready'
+                          ? 'Safari đã cho phép thông báo, nhưng Web Push chưa nối xong. Bật lại toggle nếu cần.'
+                          : 'Thông báo cục bộ đã sẵn sàng trên thiết bị hiện tại.'}
+                    </p>
+                  </>
                 )}
               </>
+            )}
+            {pushStatusMessage && notificationPermission !== 'unsupported' && (
+              <p className="text-[12px] leading-relaxed" style={lightTheme ? { color: '#9f4a3e' } : { color: '#fca5a5' }}>
+                {pushStatusMessage}
+              </p>
             )}
           </div>
         </Card>

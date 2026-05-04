@@ -1221,6 +1221,7 @@ export default function App() {
   const dailyGoalType = useSettingsStore((s) => s.dailyGoalType);
   const dailyGoalSessions = useSettingsStore((s) => s.dailyGoalSessions);
   const dailyGoalMinutes = useSettingsStore((s) => s.dailyGoalMinutes);
+  const refreshPushState = useSettingsStore((s) => s.refreshPushState);
   const checkRankChallengeDeadlines = useGameStore((s) => s.checkRankChallengeDeadlines);
   const checkEraCrisisDeadlines = useGameStore((s) => s.checkEraCrisisDeadlines);
   const timerSessionRunning = useGameStore((s) => s.timerSession.isRunning);
@@ -1232,11 +1233,22 @@ export default function App() {
 
   useEffect(() => {
     hydrateEngines();
+    void refreshPushState();
     checkRankChallengeDeadlines();
     refreshDailyMissions();
     checkWeeklyReport();
     initSync();
-  }, [hydrateEngines, checkRankChallengeDeadlines, refreshDailyMissions, checkWeeklyReport]);
+  }, [hydrateEngines, refreshPushState, checkRankChallengeDeadlines, refreshDailyMissions, checkWeeklyReport]);
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState !== 'visible') return;
+      void refreshPushState();
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [refreshPushState]);
 
   useEffect(() => {
     if (!timerSessionRunning) checkEraCrisisDeadlines();

@@ -9,10 +9,17 @@
 const { app, Tray, Menu, nativeImage, shell, Notification } = require('electron');
 const path = require('path');
 const https = require('https');
+const { createClient } = require('@supabase/supabase-js');
+const WebSocket = require('ws');
 
-const APP_URL = 'https://pomodoro-dc.vercel.app';
+const APP_URL      = 'https://pomodoro-dc.vercel.app';
+const SUPABASE_URL = 'https://jcefdsdccmnmqvuwelmm.supabase.co';
 const SUPABASE_HOST = 'jcefdsdccmnmqvuwelmm.supabase.co';
 const SUPABASE_KEY  = 'sb_publishable_Uiyl9FuyERZFVWBCFw519Q_UZbRmBVG';
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
+  realtime: { transport: WebSocket },
+});
 const TRAY_TITLE_OPTIONS = { fontType: 'monospacedDigit' };
 
 let tray          = null;
@@ -46,10 +53,6 @@ function fetchTimerLive() {
         const rows = JSON.parse(raw);
         if (Array.isArray(rows) && rows.length > 0) {
           const newData = rows[0];
-          // Phiên kết thúc: trước đang chạy, giờ dừng hẳn (không phải pause)
-          if (prevIsRunning === true && !newData.is_running && newData.paused_seconds_remaining == null) {
-            showSessionEndNotification();
-          }
           prevIsRunning = newData.is_running;
           timerData = newData;
         }
@@ -121,8 +124,28 @@ app.whenReady().then(() => {
   if (app.dock) app.dock.hide();
 
   createTray();
+
+  // Lấy trạng thái hiện tại ngay khi khởi động
   fetchTimerLive();
-  setInterval(fetchTimerLive, 3000);
+
+  // Real-time: nhận ngay khi web app thay đổi timer state
+  supabase
+    .channel('timer-live-realtime')
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'timer_live', filter: 'id=eq.singleton' },
+      (payload) => {
+        const newData = payload.new;
+        if (prevIsRunning === true && !newData.is_running && newData.paused_seconds_remaining == null) {
+          showSessionEndNotification();
+        }
+        prevIsRunning = newData.is_running;
+        timerData = newData;
+      }
+    )
+    .subscribe();
+
+  // Tích tắc countdown mỗi giây (tính từ startedAt, không cần poll)
   setInterval(updateTrayTitle, 1000);
   updateTrayTitle();
 });

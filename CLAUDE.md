@@ -4,38 +4,46 @@
 - Tên: Đàm (non-coder, dùng Codex + Claude Code để code)
 - Giải thích đơn giản, tránh jargon kỹ thuật
 
-## Tech Stack
-- React + Vite + PWA + Electron (macOS)
-- State: Zustand + localStorage (key: `civjourney-v1`)
-- Working dir: `/Users/damduy/Downloads/Claude Code/Pomodoro Game - USING`
+## Nền tảng hiện tại
+App chạy hoàn toàn trên **web** tại `https://pomodoro-dc.vercel.app`
 
-## Hạ tầng đã có sẵn
+- Không dùng Electron nữa
+- Không dùng localhost nữa
+- iPhone và Mac đều truy cập qua URL Vercel
+
+## Tech Stack
+- React + Vite + PWA
+- State: Zustand + localStorage (key: `civjourney-v1`)
+- Sync cloud: Supabase
+- Hosting: Vercel (auto-deploy từ GitHub)
+
+## Hạ tầng
 
 | Thứ | Chi tiết |
 |-----|----------|
-| Local server | `http://localhost:31105` — tự chạy qua LaunchAgent |
-| iPhone PWA | Cài trên Home Screen, truy cập qua `192.168.1.153:31105` khi ở nhà |
-| Vercel (live) | `https://pomodoro-dc.vercel.app` — dùng được mọi nơi |
-| GitHub | `https://github.com/mrthanhduy2000/pomodoro-dc` — push lên main → Vercel tự deploy |
-| Supabase sync | `https://jcefdsdccmnmqvuwelmm.supabase.co` — tự sync Mac ↔ iPhone |
-| Deploy script | `/Users/damduy/Desktop/🚀 Deploy App.command` — bấm đúp để push |
+| App URL | `https://pomodoro-dc.vercel.app` |
+| GitHub | `https://github.com/mrthanhduy2000/pomodoro-dc` |
+| Supabase | `https://jcefdsdccmnmqvuwelmm.supabase.co` |
+| Bảng DB | `game_state` (id, data JSONB, updated_at) |
 
 ## Sync (đã hoàn chỉnh)
 - `src/lib/supabase.js` — Supabase client
-- `src/lib/syncService.js` — pull khi mở app, push debounced 5s sau thay đổi
-- `initSync()` được gọi trong `App.jsx` useEffect đầu tiên
+- `src/lib/syncService.js` — pull khi mở app, push debounced 5s
+- `initSync()` gọi trong `App.jsx` useEffect đầu tiên
 
 ## Quy trình deploy
 ```
-Sửa code → bấm đúp "🚀 Deploy App.command" → Vercel tự deploy (~2 phút)
+Sửa code → git add . && git commit -m "mô tả" && git push
+→ Vercel tự deploy trong ~2 phút
+→ Mọi thiết bị thấy bản mới
 ```
-Hoặc thủ công: `git add . && git commit -m "update" && git push`
+Hoặc bấm đúp file `/Users/damduy/Desktop/🚀 Deploy App.command`
 
-## Việc đang làm / chưa làm
-- [ ] Menu bar Mac: hiển thị đếm ngược Pomodoro trên thanh menu bar macOS bằng Electron tray
-- [ ] iPhone notification khi hết phiên
+## Việc chưa làm
+- [ ] Hiển thị đếm ngược Pomodoro trên menu bar macOS
+- [ ] Thông báo iPhone khi hết phiên
 
 ## Lưu ý kỹ thuật
-- `npm install` cần flag `--legacy-peer-deps` (do xung đột vite-plugin-pwa vs vite 8)
-- Server local dùng `serve-dist.mjs`, không phải Vite dev server
-- Electron chạy riêng qua `npm run electron-dev`
+- `npm install` cần flag `--legacy-peer-deps`
+- File serve local (`serve-dist.mjs`, LaunchAgent) vẫn còn trong code nhưng không phải focus nữa
+- Electron vẫn còn trong code nhưng không dùng

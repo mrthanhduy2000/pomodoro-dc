@@ -420,7 +420,7 @@ export default function NotificationCenter({ onNavigate }) {
           className="group relative flex h-[48px] min-w-[54px] items-center justify-center rounded-[18px] border px-3.5 shadow-[0_8px_18px_rgba(31,30,29,0.08)] transition-transform hover:-translate-y-[1px] md:h-[42px] md:min-w-[46px] md:rounded-[16px] md:px-3"
           style={{
             borderColor: 'var(--line)',
-            background: 'rgba(255,255,255,0.78)',
+            background: 'var(--panel)',
             color: 'var(--ink)',
             boxShadow: '0 8px 16px rgba(31,30,29,0.03)',
           }}
@@ -464,7 +464,7 @@ export default function NotificationCenter({ onNavigate }) {
             style={{
               maxHeight: 'min(64vh, 640px)',
               borderColor: 'var(--line)',
-              background: 'rgba(250,249,246,0.96)',
+              background: 'var(--panel-strong)',
               boxShadow: '0 20px 48px rgba(31,30,29,0.14)',
               backdropFilter: 'blur(18px)',
             }}
@@ -495,7 +495,7 @@ export default function NotificationCenter({ onNavigate }) {
                       style={{
                         borderColor: 'var(--line)',
                         color: 'var(--muted)',
-                        background: 'rgba(255,255,255,0.72)',
+                        background: 'var(--item-bg)',
                         fontFamily: MONO_FONT,
                       }}
                     >
@@ -510,7 +510,7 @@ export default function NotificationCenter({ onNavigate }) {
                     style={{
                       borderColor: 'var(--line)',
                       color: 'var(--muted)',
-                      background: 'rgba(255,255,255,0.72)',
+                      background: 'var(--item-bg)',
                     }}
                     aria-label="Đóng trung tâm thông báo"
                   >
@@ -545,7 +545,7 @@ export default function NotificationCenter({ onNavigate }) {
                         className="flex w-full items-start gap-2.5 rounded-[18px] border px-3.5 py-3 text-left transition-transform hover:-translate-y-[1px]"
                         style={{
                           borderColor: 'rgba(var(--accent-rgb),0.14)',
-                          background: 'rgba(255,255,255,0.78)',
+                          background: 'var(--panel)',
                           boxShadow: '0 8px 18px rgba(31,30,29,0.05)',
                         }}
                       >
@@ -580,7 +580,7 @@ export default function NotificationCenter({ onNavigate }) {
                           style={{
                             borderColor: 'var(--line)',
                             color: 'var(--ink)',
-                            background: 'rgba(244,242,236,0.9)',
+                            background: 'var(--item-bg-solid)',
                             fontFamily: MONO_FONT,
                           }}
                         >
@@ -595,7 +595,7 @@ export default function NotificationCenter({ onNavigate }) {
                     className="rounded-[18px] border px-3.5 py-4"
                     style={{
                       borderColor: 'var(--line)',
-                      background: 'rgba(255,255,255,0.74)',
+                      background: 'var(--panel)',
                     }}
                   >
                     <p className="text-[12px] leading-[1.55]" style={{ color: 'var(--muted)' }}>
@@ -640,7 +640,7 @@ export default function NotificationCenter({ onNavigate }) {
                         className="rounded-[18px] border px-3.5 py-3"
                         style={{
                           borderColor: item.readAt ? 'var(--line)' : 'rgba(var(--accent-rgb),0.14)',
-                          background: item.readAt ? 'rgba(255,255,255,0.72)' : 'rgba(255,255,255,0.86)',
+                          background: item.readAt ? 'var(--panel)' : 'var(--panel-strong)',
                           boxShadow: item.readAt ? 'none' : '0 8px 18px rgba(31,30,29,0.04)',
                         }}
                       >
@@ -687,7 +687,7 @@ export default function NotificationCenter({ onNavigate }) {
                                 style={{
                                   borderColor: 'var(--line)',
                                   color: 'var(--ink)',
-                                  background: 'rgba(244,242,236,0.92)',
+                                  background: 'var(--item-bg-solid)',
                                   fontFamily: MONO_FONT,
                                 }}
                               >
@@ -704,7 +704,7 @@ export default function NotificationCenter({ onNavigate }) {
                             style={{
                               borderColor: 'var(--line)',
                               color: 'var(--muted)',
-                              background: 'rgba(255,255,255,0.72)',
+                              background: 'var(--item-bg)',
                             }}
                             aria-label={`Xóa thông báo ${item.title}`}
                           >
@@ -719,7 +719,7 @@ export default function NotificationCenter({ onNavigate }) {
                     className="rounded-[18px] border px-3.5 py-4"
                     style={{
                       borderColor: 'var(--line)',
-                      background: 'rgba(255,255,255,0.74)',
+                      background: 'var(--panel)',
                     }}
                   >
                     <p className="text-[12px] leading-[1.55]" style={{ color: 'var(--muted)' }}>
@@ -749,7 +749,7 @@ export default function NotificationCenter({ onNavigate }) {
               className="pointer-events-auto overflow-hidden rounded-[18px] border"
               style={{
                 borderColor: 'rgba(var(--accent-rgb),0.16)',
-                background: 'rgba(255,255,255,0.94)',
+                background: 'var(--panel-strong)',
                 boxShadow: '0 14px 30px rgba(31,30,29,0.12)',
                 backdropFilter: 'blur(18px)',
               }}
@@ -799,7 +799,7 @@ export default function NotificationCenter({ onNavigate }) {
                   style={{
                     borderColor: 'var(--line)',
                     color: 'var(--muted)',
-                    background: 'rgba(255,255,255,0.72)',
+                    background: 'var(--item-bg)',
                   }}
                   aria-label={`Đóng thông báo ${popup.title}`}
                 >

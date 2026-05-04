@@ -1575,7 +1575,7 @@ export default function App() {
                         type="button"
                         onClick={() => setSupportRailOpen((value) => !value)}
                         title={supportRailOpen ? 'Thu gọn cột phải' : 'Mở rộng cột phải'}
-                        className={`flex h-[34px] w-full items-center rounded-[8px] text-[12.5px] text-[var(--muted-2)] transition-colors hover:bg-[rgba(0,0,0,0.025)] ${
+                        className={`flex h-[34px] w-full items-center rounded-[8px] text-[12.5px] text-[var(--muted-2)] transition-colors hover:bg-[var(--panel)] ${
                           supportRailOpen ? 'gap-2.5 px-2.5 justify-start' : 'justify-center'
                         }`}
                       >
@@ -1696,7 +1696,7 @@ export default function App() {
             className="pointer-events-auto flex w-full max-w-[760px] items-center gap-1 rounded-[26px] border p-1.5 backdrop-blur-xl"
             style={{
               borderColor: 'var(--line)',
-              background: 'rgba(250,249,246,0.92)',
+              background: 'var(--panel-soft)',
               boxShadow: '0 12px 28px rgba(31,30,29,0.08)',
             }}
           >
@@ -1710,7 +1710,7 @@ export default function App() {
                   className="relative flex min-h-[54px] flex-1 flex-col items-center justify-center gap-0.5 rounded-[18px] px-1 py-2 text-[9.5px] font-medium transition-colors"
                   style={{
                     color: active ? 'var(--ink)' : 'var(--muted)',
-                    background: active ? 'rgba(244,242,236,0.98)' : 'transparent',
+                    background: active ? 'var(--panel-strong)' : 'transparent',
                     border: active ? '1px solid var(--line)' : '1px solid transparent',
                     boxShadow: active ? '0 8px 14px rgba(31,30,29,0.03)' : 'none',
                   }}
@@ -1817,7 +1817,7 @@ function EditorialSidebar({ activeTab, isOpen, onOpenWeeklyReport, onSelect, onT
         <button
           type="button"
           onClick={onToggle}
-          className={`flex h-[34px] items-center rounded-[8px] text-[12.5px] text-[var(--muted-2)] transition-colors hover:bg-[rgba(0,0,0,0.025)] ${
+          className={`flex h-[34px] items-center rounded-[8px] text-[12.5px] text-[var(--muted-2)] transition-colors hover:bg-[var(--panel)] ${
             isOpen ? 'gap-2.5 px-2.5 justify-start' : 'justify-center'
           }`}
         >
@@ -1840,12 +1840,12 @@ function SidebarItem({ active, icon, isOpen, label, onClick }) {
       type="button"
       onClick={onClick}
       title={!isOpen ? label : undefined}
-      className={`group relative flex min-h-[40px] items-center rounded-[12px] border text-left text-[13.5px] font-medium transition-colors hover:bg-[rgba(255,255,255,0.56)] ${
+      className={`group relative flex min-h-[40px] items-center rounded-[12px] border text-left text-[13.5px] font-medium transition-colors hover:bg-[var(--panel)] ${
         isOpen ? 'gap-2.5 px-2.5 justify-start' : 'justify-center'
       }`}
       style={{
-        background: active ? 'rgba(244,242,236,0.72)' : 'transparent',
-        borderColor: active ? 'rgba(217,214,204,0.6)' : 'transparent',
+        background: active ? 'var(--panel-soft)' : 'transparent',
+        borderColor: active ? 'var(--line)' : 'transparent',
         color: active ? 'var(--ink)' : 'var(--muted)',
         boxShadow: 'none',
       }}
@@ -1899,7 +1899,7 @@ function TopRail({
             className="rounded-full border px-3 py-1.5"
             style={{
               borderColor: 'var(--line)',
-              background: 'rgba(255,255,255,0.72)',
+              background: 'var(--panel)',
               boxShadow: '0 10px 18px rgba(31,30,29,0.04)',
             }}
           >
@@ -1916,7 +1916,7 @@ function TopRail({
           className="min-w-0 flex-1 rounded-[18px] border px-3 py-2.5"
           style={{
             borderColor: 'var(--line)',
-            background: 'rgba(255,255,255,0.74)',
+            background: 'var(--panel-soft)',
             boxShadow: '0 8px 16px rgba(31,30,29,0.03)',
           }}
         >
@@ -1948,7 +1948,7 @@ function TopRail({
             className="flex items-center gap-2 rounded-[16px] border px-3 py-2"
             style={{
               borderColor: 'var(--line)',
-              background: 'rgba(255,255,255,0.74)',
+              background: 'var(--panel-soft)',
               boxShadow: '0 8px 16px rgba(31,30,29,0.03)',
             }}
           >
@@ -1983,7 +1983,7 @@ function LevelDot({ level, pct }) {
       style={{
         width: size,
         height: size,
-        background: 'rgba(255,255,255,0.78)',
+        background: 'var(--panel-strong)',
       }}
     >
       <svg width={size} height={size} style={{ transform: 'rotate(-90deg)' }}>
@@ -2013,7 +2013,7 @@ function TinyStat({ accent = false, compact = false, label, value }) {
       className={`rounded-[16px] border text-center leading-tight ${compact ? 'min-w-[68px] px-2.5 py-2' : 'min-w-[72px] px-3 py-2'}`}
       style={{
         borderColor: 'var(--line)',
-        background: 'rgba(255,255,255,0.74)',
+        background: 'var(--panel-soft)',
         boxShadow: '0 8px 16px rgba(31,30,29,0.03)',
       }}
     >
@@ -2155,7 +2155,7 @@ function CollectionView({ sub = 'relics', onChange }) {
         className="mb-6 inline-flex flex-wrap gap-2 rounded-[18px] border p-1.5"
         style={{
           borderColor: 'var(--line)',
-          background: 'rgba(255,255,255,0.72)',
+          background: 'var(--panel)',
           boxShadow: '0 8px 16px rgba(31,30,29,0.03)',
         }}
       >
@@ -2168,7 +2168,7 @@ function CollectionView({ sub = 'relics', onChange }) {
               onClick={() => onChange?.(tab.id)}
               className="rounded-full px-4 py-2 text-[13px] font-medium transition-colors"
               style={{
-                background: active ? 'rgba(244,242,236,0.98)' : 'transparent',
+                background: active ? 'var(--panel-strong)' : 'transparent',
                 color: active ? 'var(--ink)' : 'var(--muted)',
                 border: active ? '1px solid var(--line)' : '1px solid transparent',
                 boxShadow: active ? '0 8px 14px rgba(31,30,29,0.03)' : 'none',
@@ -2199,7 +2199,7 @@ function SessionHistory() {
         className="rounded-[22px] border py-14 text-center"
         style={{
           borderColor: 'var(--line)',
-          background: 'rgba(255,255,255,0.82)',
+          background: 'var(--panel)',
           boxShadow: '0 12px 26px rgba(31,30,29,0.04)',
         }}
       >
@@ -2217,7 +2217,7 @@ function SessionHistory() {
           className="rounded-[22px] border p-4"
           style={{
             borderColor: 'var(--line)',
-            background: 'rgba(255,255,255,0.84)',
+            background: 'var(--panel)',
             boxShadow: '0 10px 24px rgba(31,30,29,0.04)',
           }}
         >
@@ -2226,7 +2226,7 @@ function SessionHistory() {
               className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] border"
               style={{
                 borderColor: 'var(--line)',
-                background: 'rgba(244,242,236,0.96)',
+                background: 'var(--item-bg-solid)',
               }}
             >
               <span className="mono text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
@@ -2262,7 +2262,7 @@ function SessionHistory() {
                   <span
                     className="rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em]"
                     style={{
-                      background: entry.goalAchieved ? 'var(--good-soft)' : 'var(--accent-soft)',
+                      background: entry.goalAchieved ? 'var(--good-soft)' : 'rgba(var(--accent-rgb),0.12)',
                       color: entry.goalAchieved ? 'var(--good)' : 'var(--accent-ink)',
                     }}
                   >
@@ -2290,7 +2290,7 @@ function SessionHistory() {
               className="shrink-0 rounded-[14px] border px-3 py-2 text-right text-[11px] text-[var(--muted)]"
               style={{
                 borderColor: 'var(--line)',
-                background: 'rgba(255,255,255,0.74)',
+                background: 'var(--item-bg)',
               }}
             >
               <div>{formatVietnamDate(entry.timestamp, { month: 'short', day: 'numeric' })}</div>

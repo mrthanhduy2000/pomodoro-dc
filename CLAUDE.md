@@ -40,10 +40,13 @@ Sửa code → git add . && git commit -m "mô tả" && git push
 Hoặc bấm đúp file `/Users/damduy/Desktop/🚀 Deploy App.command`
 
 ## Việc chưa làm
-- [ ] Hiển thị đếm ngược Pomodoro trên menu bar macOS
-- [ ] Thông báo iPhone khi hết phiên
+- [ ] Thông báo iPhone khi hết phiên (web push notification)
+
+## KHÔNG làm những thứ này
+- ❌ Electron — không dùng nữa, app chạy web hoàn toàn
+- ❌ localhost / serve-dist.mjs / LaunchAgent — không dùng nữa
+- ❌ Menu bar macOS qua Electron — không làm, không liên quan
 
 ## Lưu ý kỹ thuật
 - `npm install` cần flag `--legacy-peer-deps`
-- File serve local (`serve-dist.mjs`, LaunchAgent) vẫn còn trong code nhưng không phải focus nữa
-- Electron vẫn còn trong code nhưng không dùng
+- Electron và serve-dist.mjs vẫn còn trong code nhưng bỏ qua hoàn toàn

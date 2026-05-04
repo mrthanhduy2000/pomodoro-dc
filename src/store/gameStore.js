@@ -659,11 +659,13 @@ function normalizeMissionTemplate(mission) {
   const template = MISSION_CATALOG.find((entry) => entry.id === mission.id);
   if (!template) return mission;
   return {
-    ...template,
     ...mission,
-    family: mission.family ?? template.family,
-    bucket: mission.bucket ?? template.bucket,
-    weight: mission.weight ?? template.weight ?? 1,
+    ...template,
+    progress: Number.isFinite(mission.progress) ? mission.progress : 0,
+    claimed: Boolean(mission.claimed),
+    family: template.family ?? mission.family,
+    bucket: template.bucket ?? mission.bucket,
+    weight: template.weight ?? mission.weight ?? 1,
   };
 }
 

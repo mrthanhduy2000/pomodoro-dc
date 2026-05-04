@@ -1785,14 +1785,14 @@ export const MISSION_CATALOG = [
   { id: 'focus_120min',         label: 'Chinh phục 2 giờ tập trung',                type: 'focusMinutes',    family: 'focusMinutes',     bucket: 'stretch', weight: 0.8,  goal: 120, rewardXP: 120 },
   { id: 'focus_150min',         label: 'Vượt 2.5 giờ tập trung trong ngày',         type: 'focusMinutes',    family: 'focusMinutes',     bucket: 'stretch', weight: 0.55, goal: 150, rewardXP: 160 },
   // Single session milestones
-  { id: 'session_25min',        label: 'Hoàn thành phiên Pomodoro chuẩn ≥25 phút',  type: 'singleSession',   family: 'singleSession',    bucket: 'core',    weight: 1.0,  goal: 25,  rewardXP: 25  },
-  { id: 'session_30min',        label: 'Hoàn thành 1 phiên tập trung ≥30 phút',     type: 'singleSession',   family: 'singleSession',    bucket: 'core',    weight: 1.0,  goal: 30,  rewardXP: 35  },
+  { id: 'session_25min',        label: 'Hoàn thành 1 phiên ≥25 phút',               type: 'singleSession',   family: 'singleSession',    bucket: 'core',    weight: 1.0,  goal: 25,  rewardXP: 25  },
+  { id: 'session_30min',        label: 'Hoàn thành 1 phiên ≥30 phút',               type: 'singleSession',   family: 'singleSession',    bucket: 'core',    weight: 1.0,  goal: 30,  rewardXP: 35  },
   { id: 'session_45min',        label: 'Hoàn thành 1 phiên ≥45 phút',               type: 'singleSession',   family: 'singleSession',    bucket: 'stretch', weight: 1.0,  goal: 45,  rewardXP: 45  },
-  { id: 'session_60min',        label: 'Hoàn thành 1 phiên Marathon ≥60 phút',      type: 'singleSession',   family: 'singleSession',    bucket: 'stretch', weight: 0.9,  goal: 60,  rewardXP: 75  },
-  { id: 'session_90min',        label: 'Hoàn thành 1 phiên Sử Thi ≥90 phút',        type: 'singleSession',   family: 'singleSession',    bucket: 'stretch', weight: 0.65, goal: 90,  rewardXP: 130 },
-  { id: 'session_120min',       label: 'Siêu phiên — 1 phiên liên tục ≥2 giờ',      type: 'singleSession',   family: 'singleSession',    bucket: 'stretch', weight: 0.35, goal: 120, rewardXP: 200 },
+  { id: 'session_60min',        label: 'Hoàn thành 1 phiên ≥60 phút',               type: 'singleSession',   family: 'singleSession',    bucket: 'stretch', weight: 0.9,  goal: 60,  rewardXP: 75  },
+  { id: 'session_90min',        label: 'Hoàn thành 1 phiên ≥90 phút',               type: 'singleSession',   family: 'singleSession',    bucket: 'stretch', weight: 0.65, goal: 90,  rewardXP: 130 },
+  { id: 'session_120min',       label: 'Hoàn thành 1 phiên ≥120 phút',              type: 'singleSession',   family: 'singleSession',    bucket: 'stretch', weight: 0.35, goal: 120, rewardXP: 200 },
   // Deep work
-  { id: 'deep_2_sessions',      label: 'Hoàn thành 2 phiên deep work ≥45 phút',     type: 'deepSessions',    family: 'deepSessions',     bucket: 'stretch', weight: 0.75, goal: 2,   rewardXP: 80  },
+  { id: 'deep_2_sessions',      label: 'Hoàn thành 2 phiên ≥45 phút',               type: 'deepSessions',    family: 'deepSessions',     bucket: 'stretch', weight: 0.75, goal: 2,   rewardXP: 80  },
   // Research points
   { id: 'earn_80_rp',           label: 'Kiếm 80 RP trong ngày',                     type: 'researchPoints',  family: 'researchPoints',   bucket: 'stretch', weight: 0.45, goal: 80,  rewardXP: 55  },
   { id: 'earn_160_rp',          label: 'Kiếm 160 RP trong ngày',                    type: 'researchPoints',  family: 'researchPoints',   bucket: 'rare',    weight: 0.18, goal: 160, rewardXP: 95  },
@@ -1841,7 +1841,7 @@ export const WEEKLY_CHAINS = [
     steps: [
       { id: 'wq_i1', label: 'Nổ máy — hoàn thành 2 phiên đầu tuần',      type: 'sessions',       goal: 2,   rewardXP: 30  },
       { id: 'wq_i2', label: 'Tăng tốc — tổng 150 phút tập trung',        type: 'focusMinutes',   goal: 150, rewardXP: 75  },
-      { id: 'wq_i3', label: 'Ca kép — hoàn thành 2 phiên deep work ≥45 phút', type: 'deepSessions', goal: 2, rewardXP: 95 },
+      { id: 'wq_i3', label: 'Ca kép — hoàn thành 2 phiên ≥45 phút', type: 'deepSessions', goal: 2, rewardXP: 95 },
       { id: 'wq_i4', label: 'Đúng nhịp — kết thúc nghỉ đúng giờ 2 lần',  type: 'perfectBreaks',  goal: 2,   rewardXP: 105 },
     ],
     bonusXP: 420, bonusSP: 1,
@@ -1866,7 +1866,7 @@ export const WEEKLY_CHAINS = [
       { id: 'wq_s1', label: 'Quỹ đạo thấp — 4 ngày có phiên tập trung',  type: 'daysActive',    goal: 4,   rewardXP: 75  },
       { id: 'wq_s2', label: 'Thoát khí quyển — 200 phút tổng trong tuần',type: 'focusMinutes',  goal: 200, rewardXP: 100 },
       { id: 'wq_s3', label: 'Quỹ đạo — 8 phiên hoàn thành',              type: 'sessions',      goal: 8,   rewardXP: 120 },
-      { id: 'wq_s4', label: 'Đổ bộ — 1 phiên sử thi ≥90 phút',           type: 'singleSession', goal: 90,  rewardXP: 145 },
+      { id: 'wq_s4', label: 'Đổ bộ — 1 phiên ≥90 phút',                   type: 'singleSession', goal: 90,  rewardXP: 145 },
     ],
     bonusXP: 430, bonusSP: 2,
   },
@@ -1900,7 +1900,7 @@ export const WEEKLY_CHAINS = [
     flavor: 'Giữ nhịp bằng nhiều kiểu tập trung khác nhau',
     steps: [
       { id: 'wq_h1', label: 'Lấy đà — có 1 ngày gồm cả phiên ngắn và phiên dài', type: 'balancedDays',  goal: 1, rewardXP: 40  },
-      { id: 'wq_h2', label: 'Giữ trục — hoàn thành 2 phiên deep work ≥45 phút',  type: 'deepSessions', goal: 2, rewardXP: 85  },
+      { id: 'wq_h2', label: 'Giữ trục — hoàn thành 2 phiên ≥45 phút',    type: 'deepSessions', goal: 2, rewardXP: 85  },
       { id: 'wq_h3', label: 'Neo ý — viết 2 ghi chú ít nhất 5 từ',                type: 'notes',        goal: 2, rewardXP: 60  },
       { id: 'wq_h4', label: 'Đúng nhịp — kết thúc nghỉ đúng giờ 2 lần',           type: 'perfectBreaks', goal: 2, rewardXP: 100 },
     ],

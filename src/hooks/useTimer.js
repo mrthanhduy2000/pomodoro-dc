@@ -105,6 +105,19 @@ export function useTimer({ focusMinutes, mode = TIMER_MODES.POMODORO }) {
     return Math.max(0, totalSecondsRef.current - elapsedSeconds);
   }, []);
 
+  const getAuthoritativeDisplaySeconds = useCallback((
+    currentMode = modeRef.current,
+    nowMs = Date.now(),
+  ) => {
+    if (!startTimeRef.current) {
+      return Math.max(0, secondsRef.current);
+    }
+
+    const effectiveNowMs = pausedAtRef.current ?? nowMs;
+    const elapsedSeconds = getElapsedSeconds(startTimeRef.current, effectiveNowMs);
+    return computeDisplayFromElapsed(elapsedSeconds, currentMode);
+  }, [computeDisplayFromElapsed, getElapsedSeconds]);
+
   const computeProgressPct = useCallback((secondsValue, currentMode = modeRef.current) => {
     if (totalSecondsRef.current <= 0) return 0;
 
@@ -294,6 +307,13 @@ export function useTimer({ focusMinutes, mode = TIMER_MODES.POMODORO }) {
     if (!capturedClockStart) return;
 
     const finishedAtMs = pausedAtRef.current ?? Date.now();
+    const authoritativeDisplaySeconds = getAuthoritativeDisplaySeconds(modeRef.current, finishedAtMs);
+    if (modeRef.current === TIMER_MODES.POMODORO && authoritativeDisplaySeconds > 0) {
+      secondsRef.current = authoritativeDisplaySeconds;
+      setDisplaySeconds(authoritativeDisplaySeconds);
+      return;
+    }
+
     const sessionTiming = buildCompletedSessionTiming(finishedAtMs);
     const lockedCategoryId = sessionCategoryIdRef.current ?? null;
     const lockedNote = sessionNoteRef.current ?? '';
@@ -368,6 +388,7 @@ export function useTimer({ focusMinutes, mode = TIMER_MODES.POMODORO }) {
     buildCompletedSessionTiming,
     commitCompletedSession,
     disableBreak,
+    getAuthoritativeDisplaySeconds,
     longBreakAfterN,
     longBreakCycleStart,
     longBreakDuration,
@@ -456,7 +477,7 @@ export function useTimer({ focusMinutes, mode = TIMER_MODES.POMODORO }) {
       return;
     }
 
-    if (restoredDisplaySeconds > 5 || shouldRestorePaused) {
+    if (restoredDisplaySeconds > 0 || shouldRestorePaused) {
       setTimerState(shouldRestorePaused ? TIMER_STATES.PAUSED : TIMER_STATES.RUNNING);
       if (!shouldRestorePaused) runInterval();
       return;

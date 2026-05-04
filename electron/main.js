@@ -15,8 +15,10 @@ const SUPABASE_HOST = 'jcefdsdccmnmqvuwelmm.supabase.co';
 const SUPABASE_KEY  = 'sb_publishable_Uiyl9FuyERZFVWBCFw519Q_UZbRmBVG';
 const TRAY_TITLE_OPTIONS = { fontType: 'monospacedDigit' };
 
-let tray      = null;
-let timerData = null;
+let tray        = null;
+let timerData   = null;
+let iconNormal  = null;
+let iconEmpty   = null;
 
 function fetchTimerLive() {
   const options = {
@@ -54,6 +56,7 @@ function setTrayTitle(title = '') {
 
 function updateTrayTitle() {
   if (!timerData) {
+    tray?.setImage(iconNormal);
     setTrayTitle('');
     return;
   }
@@ -63,20 +66,26 @@ function updateTrayTitle() {
   if (is_running && started_at && total_seconds) {
     const elapsed = (Date.now() - new Date(started_at).getTime()) / 1000;
     const remaining = Math.max(0, total_seconds - elapsed);
+    tray?.setImage(iconEmpty);
     setTrayTitle(`🍅 ${formatTime(remaining)}`);
   } else if (!is_running && paused_seconds_remaining > 0) {
+    tray?.setImage(iconEmpty);
     setTrayTitle(`⏸ ${formatTime(paused_seconds_remaining)}`);
   } else {
+    tray?.setImage(iconNormal);
     setTrayTitle('');
   }
 }
 
 function createTray() {
-  const iconPath = path.join(__dirname, '../public/tray-empty.png');
-  const trayIcon = nativeImage.createFromPath(iconPath);
-  trayIcon.setTemplateImage(true);
+  iconNormal = nativeImage.createFromPath(path.join(__dirname, '../public/tray-template.png'));
+  iconNormal = iconNormal.resize({ width: 18, height: 18 });
+  iconNormal.setTemplateImage(true);
 
-  tray = new Tray(trayIcon);
+  iconEmpty = nativeImage.createFromPath(path.join(__dirname, '../public/tray-empty.png'));
+  iconEmpty.setTemplateImage(true);
+
+  tray = new Tray(iconNormal);
   tray.setToolTip('DC Pomodoro');
 
   const ctxMenu = Menu.buildFromTemplate([

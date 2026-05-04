@@ -1,0 +1,479 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CivJourney · Logo System</title>
+<link rel="stylesheet" href="app/tokens.css">
+<style>
+  body { background: #2a2825; overflow: auto; }
+  .stage { background: var(--canvas); }
+  .stage-dark { background: #14110d; color: #ebe6d8; }
+  .stage-paper { background: #faf8f2; }
+  .grid-faint { background-image:
+    linear-gradient(to right, rgba(0,0,0,.03) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0,0,0,.03) 1px, transparent 1px);
+    background-size: 24px 24px; }
+  .swatch { width: 100%; aspect-ratio: 1.6; display: flex; align-items: center; justify-content: center; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="design-canvas.jsx"></script>
+
+<script type="text/babel">
+const { useState, useEffect } = React;
+
+/* ====================================================================
+   FIVE LOGO MARKS — share visual DNA, differ in expression
+   Theme constants below mirror the app tokens so logos translate 1:1.
+   ==================================================================== */
+
+const T = {
+  ink: '#1a1918',
+  inkSoft: '#3a3936',
+  cream: '#f5f3ed',
+  paper: '#faf8f2',
+  bronze: '#8a6a3d',
+  bronzeSoft: '#b69567',
+  line: '#ddd9cc',
+  muted: '#6a685f',
+};
+
+/* -------------------------------------------------------------------
+   1. MONOGRAM "C" — a clock-face C, where the C's terminal becomes
+      the 12-o'clock tick of a pomodoro dial. Also reads as a sundial.
+   ------------------------------------------------------------------- */
+function MarkClockC({ size = 96, color = T.ink, accent = T.bronze }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 100 100" fill="none">
+      {/* outer thin circle */}
+      <circle cx="50" cy="50" r="44" stroke={color} strokeWidth="1.2" />
+      {/* hour ticks */}
+      {Array.from({length: 12}).map((_, i) => {
+        const a = (i * 30 - 90) * Math.PI / 180;
+        const x1 = 50 + Math.cos(a) * 42, y1 = 50 + Math.sin(a) * 42;
+        const len = i % 3 === 0 ? 4 : 2;
+        const x2 = 50 + Math.cos(a) * (42 - len), y2 = 50 + Math.sin(a) * (42 - len);
+        return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke={color} strokeWidth={i % 3 === 0 ? 1 : 0.6} />;
+      })}
+      {/* the C itself — open arc */}
+      <path d="M 72 26 A 32 32 0 1 0 72 74" stroke={color} strokeWidth="6" fill="none" strokeLinecap="square" />
+      {/* tomato cap — tiny detail at top */}
+      <path d="M 50 14 q 2 -3 4 -1 M 50 14 q -2 -3 -4 -1" stroke={accent} strokeWidth="0.9" fill="none" strokeLinecap="round" />
+      {/* center dot */}
+      <circle cx="50" cy="50" r="1.4" fill={color} />
+    </svg>
+  );
+}
+
+/* -------------------------------------------------------------------
+   2. JOURNEY ARC — a horizon with three pillars rising at intervals
+      (eras). The setting/rising sun is the pomodoro. Hairline only.
+   ------------------------------------------------------------------- */
+function MarkJourneyArc({ size = 96, color = T.ink, accent = T.bronze }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 120 120" fill="none">
+      {/* horizon */}
+      <line x1="10" y1="86" x2="110" y2="86" stroke={color} strokeWidth="1" />
+      {/* sun (pomodoro) */}
+      <circle cx="60" cy="56" r="22" stroke={color} strokeWidth="1.2" fill="none" />
+      {/* sun progress arc — bronze, 70% */}
+      <path d="M 60 34 A 22 22 0 0 1 80.7 64.6" stroke={accent} strokeWidth="2" fill="none" strokeLinecap="round" />
+      {/* three eras as small obelisks */}
+      <line x1="22" y1="86" x2="22" y2="74" stroke={color} strokeWidth="1.6" />
+      <line x1="60" y1="86" x2="60" y2="78" stroke={color} strokeWidth="1.2" />
+      <line x1="98" y1="86" x2="98" y2="68" stroke={color} strokeWidth="2" />
+      {/* tick markers */}
+      <circle cx="22" cy="74" r="1" fill={color} />
+      <circle cx="60" cy="78" r="1" fill={color} />
+      <circle cx="98" cy="68" r="1" fill={accent} />
+    </svg>
+  );
+}
+
+/* -------------------------------------------------------------------
+   3. SEAL / EMBLEM — laurel wreath ringing a serif "C", with
+      Roman numerals MMXXVI below. The most heraldic, most luxurious.
+   ------------------------------------------------------------------- */
+function MarkSeal({ size = 120, color = T.ink, accent = T.bronze }) {
+  // Half-laurel: produced as a path of small leaves
+  const leaves = [];
+  for (let i = 0; i < 9; i++) {
+    const t = i / 8;            // 0..1
+    const angle = -110 + t * 120; // sweep along left side
+    const r = 50;
+    const cx = 60 + Math.cos(angle * Math.PI/180) * r;
+    const cy = 60 + Math.sin(angle * Math.PI/180) * r;
+    const rot = angle + 90;
+    leaves.push({ cx, cy, rot });
+  }
+  return (
+    <svg width={size} height={size} viewBox="0 0 120 120" fill="none">
+      {/* outer + inner hairline circles */}
+      <circle cx="60" cy="60" r="56" stroke={color} strokeWidth="0.8" />
+      <circle cx="60" cy="60" r="51" stroke={color} strokeWidth="0.4" />
+
+      {/* laurel — left side */}
+      {leaves.map((l, i) => (
+        <g key={'l'+i} transform={`translate(${l.cx} ${l.cy}) rotate(${l.rot})`}>
+          <path d="M 0 0 q -3 -2 -6 0 q 3 2 6 0 z" fill={color} />
+        </g>
+      ))}
+      {/* laurel — right side (mirror) */}
+      {leaves.map((l, i) => (
+        <g key={'r'+i} transform={`translate(${120 - l.cx} ${l.cy}) scale(-1 1) rotate(${l.rot})`}>
+          <path d="M 0 0 q -3 -2 -6 0 q 3 2 6 0 z" fill={color} />
+        </g>
+      ))}
+      {/* connecting bow at bottom */}
+      <path d="M 50 102 q 10 5 20 0" stroke={color} strokeWidth="0.6" fill="none" />
+      <circle cx="60" cy="104" r="1" fill={accent} />
+
+      {/* the C — drawn as serif character via path approximation */}
+      <text x="60" y="72" textAnchor="middle" fontFamily="'Cormorant Garamond', Georgia, serif" fontSize="56" fontWeight="500" fill={color} letterSpacing="-2">C</text>
+
+      {/* roman numerals */}
+      <text x="60" y="89" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="6" fill={color} letterSpacing="3">MMXXVI</text>
+    </svg>
+  );
+}
+
+/* -------------------------------------------------------------------
+   4. STAMP — a square seal, off-balance C with a "tick mark"
+      pomodoro indicator at top right. Reads as a wax stamp.
+   ------------------------------------------------------------------- */
+function MarkStamp({ size = 96, color = T.ink, accent = T.bronze, bg = T.cream }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 100 100" fill="none">
+      <rect x="4" y="4" width="92" height="92" stroke={color} strokeWidth="1" fill="none" />
+      <rect x="9" y="9" width="82" height="82" stroke={color} strokeWidth="0.4" fill="none" />
+      {/* big serif C */}
+      <text x="50" y="73" textAnchor="middle" fontFamily="'Cormorant Garamond', Georgia, serif" fontSize="78" fontWeight="500" fill={color} letterSpacing="-3">C</text>
+      {/* tick — pomodoro position */}
+      <line x1="74" y1="22" x2="74" y2="32" stroke={accent} strokeWidth="2" strokeLinecap="round" />
+      <circle cx="74" cy="20" r="1.4" fill={accent} />
+      {/* tiny mono caption */}
+      <text x="50" y="92" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="4" fill={color} letterSpacing="2">CIVJOURNEY</text>
+    </svg>
+  );
+}
+
+/* -------------------------------------------------------------------
+   5. ANALEMMA — a vertical figure-8 path (the sun's annual track),
+      reduced to a hairline mark. Signals a long arc through time.
+   ------------------------------------------------------------------- */
+function MarkAnalemma({ size = 96, color = T.ink, accent = T.bronze }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 100 100" fill="none">
+      {/* analemma figure-8 */}
+      <path d="M 50 14 C 40 26 40 38 50 50 C 60 62 60 74 50 86 C 40 74 40 62 50 50 C 60 38 60 26 50 14 Z"
+            stroke={color} strokeWidth="1.2" fill="none" />
+      {/* current position (today) */}
+      <circle cx="58" cy="42" r="2.4" fill={accent} />
+      {/* horizon */}
+      <line x1="20" y1="50" x2="80" y2="50" stroke={color} strokeWidth="0.5" strokeDasharray="1 2" />
+      {/* tiny tick marks at 25/50/75 */}
+      <circle cx="50" cy="14" r="0.9" fill={color} />
+      <circle cx="50" cy="50" r="0.9" fill={color} />
+      <circle cx="50" cy="86" r="0.9" fill={color} />
+    </svg>
+  );
+}
+
+/* ===== WORDMARKS ===== */
+function Wordmark({ color = T.ink, accent = T.bronze, size = 1 }) {
+  const s = size;
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+      <div style={{ fontFamily: "'Cormorant Garamond', serif", fontWeight: 500, fontSize: 56*s, letterSpacing: '-0.03em', color, lineHeight: 0.9 }}>
+        Civ<span style={{ fontStyle: 'italic', fontWeight: 400, color }}>Journey</span>
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10*s, marginTop: 12*s }}>
+        <span style={{ width: 18*s, height: 1, background: color, opacity: .6 }} />
+        <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9.5*s, letterSpacing: '0.32em', textTransform: 'uppercase', color }}>
+          A Pomodoro Through Eras
+        </span>
+        <span style={{ width: 1, height: 1, background: accent }} />
+      </div>
+    </div>
+  );
+}
+
+function WordmarkStacked({ color = T.ink, accent = T.bronze, size = 1 }) {
+  const s = size;
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
+      <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 8*s, letterSpacing: '0.4em', textTransform: 'uppercase', color, opacity: .6 }}>EST · MMXXVI</div>
+      <div style={{ fontFamily: "'Cormorant Garamond', serif", fontWeight: 500, fontSize: 64*s, letterSpacing: '-0.04em', color, lineHeight: 1, marginTop: 6*s }}>
+        CivJourney
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10*s, marginTop: 10*s }}>
+        <span style={{ width: 30*s, height: 1, background: color, opacity: .35 }} />
+        <span style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic', fontSize: 14*s, color, letterSpacing: '0.01em' }}>
+          a deep-work atelier
+        </span>
+        <span style={{ width: 30*s, height: 1, background: color, opacity: .35 }} />
+      </div>
+    </div>
+  );
+}
+
+/* ===== Reusable card frame ===== */
+function ShowcaseCard({ title, code, children, height = 320, bg = T.cream, color = T.ink }) {
+  return (
+    <div style={{
+      background: bg, color,
+      border: `1px solid ${color === T.ink ? T.line : 'rgba(255,255,255,0.12)'}`,
+      display: 'flex', flexDirection: 'column',
+    }}>
+      <div style={{
+        padding: '14px 20px', borderBottom: `1px solid ${color === T.ink ? T.line : 'rgba(255,255,255,0.1)'}`,
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+      }}>
+        <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9.5, letterSpacing: '0.28em', textTransform: 'uppercase', color: color === T.ink ? T.muted : 'rgba(255,255,255,0.55)' }}>
+          {title}
+        </div>
+        <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9, letterSpacing: '0.18em', color: color === T.ink ? T.muted : 'rgba(255,255,255,0.4)' }}>{code}</div>
+      </div>
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, height }}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+/* =====================================================================
+   APP
+   ===================================================================== */
+function App() {
+  return (
+    <DesignCanvas title="CivJourney · Logo System" subtitle="Bộ nhận diện Editorial Cream — 5 marks, wordmark, monogram, ứng dụng">
+      {/* ============ PRIMARY MARK ============ */}
+      <DCSection id="primary" title="01 · Logo Chính" subtitle="Marca chủ — emblem dạng huy hiệu, dùng cho landing, bao bì, footer, ấn phẩm in. Sang trọng nhất, phù hợp khi bạn chỉ có một dấu mộc.">
+        <DCArtboard id="primary-light" label="Bản sáng" width={760} height={520}>
+          <div className="stage" style={{ width: 760, height: 520, background: T.cream, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 28 }}>
+            <MarkSeal size={180} />
+            <Wordmark size={1} />
+          </div>
+        </DCArtboard>
+
+        <DCArtboard id="primary-dark" label="Bản tối" width={760} height={520}>
+          <div className="stage-dark" style={{ width: 760, height: 520, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 28, background: '#14110d' }}>
+            <MarkSeal size={180} color="#ebe6d8" accent="#c9a877" />
+            <Wordmark color="#ebe6d8" accent="#c9a877" />
+          </div>
+        </DCArtboard>
+      </DCSection>
+
+      {/* ============ MARK FAMILY ============ */}
+      <DCSection id="marks" title="02 · Họ Marca" subtitle="Năm phương án mark, mỗi cái kể một mặt khác của câu chuyện. Bạn có thể chọn 1 chính + 1 phụ (vd: Seal cho ấn phẩm, Stamp cho app icon).">
+        <DCArtboard id="mark-1" label="01 · Clock C — đồng hồ pomodoro" width={320} height={360}>
+          <div className="stage grid-faint" style={{ width: 320, height: 360, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 20, background: T.cream }}>
+            <MarkClockC size={160} />
+            <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9, letterSpacing: '0.3em', textTransform: 'uppercase', color: T.muted }}>Clock C</div>
+          </div>
+        </DCArtboard>
+        <DCArtboard id="mark-2" label="02 · Journey Arc — chân trời" width={320} height={360}>
+          <div className="stage grid-faint" style={{ width: 320, height: 360, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 20, background: T.cream }}>
+            <MarkJourneyArc size={170} />
+            <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9, letterSpacing: '0.3em', textTransform: 'uppercase', color: T.muted }}>Journey Arc</div>
+          </div>
+        </DCArtboard>
+        <DCArtboard id="mark-3" label="03 · Seal — huy hiệu nguyệt quế" width={320} height={360}>
+          <div className="stage grid-faint" style={{ width: 320, height: 360, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 20, background: T.cream }}>
+            <MarkSeal size={170} />
+            <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9, letterSpacing: '0.3em', textTransform: 'uppercase', color: T.muted }}>Seal</div>
+          </div>
+        </DCArtboard>
+        <DCArtboard id="mark-4" label="04 · Stamp — dấu vuông" width={320} height={360}>
+          <div className="stage grid-faint" style={{ width: 320, height: 360, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 20, background: T.cream }}>
+            <MarkStamp size={160} />
+            <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9, letterSpacing: '0.3em', textTransform: 'uppercase', color: T.muted }}>Stamp</div>
+          </div>
+        </DCArtboard>
+        <DCArtboard id="mark-5" label="05 · Analemma — đường mặt trời" width={320} height={360}>
+          <div className="stage grid-faint" style={{ width: 320, height: 360, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 20, background: T.cream }}>
+            <MarkAnalemma size={160} />
+            <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9, letterSpacing: '0.3em', textTransform: 'uppercase', color: T.muted }}>Analemma</div>
+          </div>
+        </DCArtboard>
+      </DCSection>
+
+      {/* ============ WORDMARKS ============ */}
+      <DCSection id="wordmark" title="03 · Wordmark" subtitle="Hai phương án chữ. Inline cho header app; stacked cho splash, ấn phẩm in, in danh thiếp.">
+        <DCArtboard id="wm-inline" label="Inline · header" width={760} height={260}>
+          <div style={{ width: 760, height: 260, background: T.cream, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 60 }}>
+            <Wordmark />
+          </div>
+        </DCArtboard>
+        <DCArtboard id="wm-stacked" label="Stacked · ấn phẩm" width={760} height={420}>
+          <div style={{ width: 760, height: 420, background: T.paper, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <WordmarkStacked size={1.05} />
+          </div>
+        </DCArtboard>
+        <DCArtboard id="wm-mono" label="Monoline" width={760} height={200}>
+          <div style={{ width: 760, height: 200, background: T.cream, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 22 }}>
+            <MarkClockC size={56} />
+            <div style={{ fontFamily: "'Cormorant Garamond', serif", fontWeight: 500, fontSize: 44, letterSpacing: '-0.025em', color: T.ink }}>
+              Civ<span style={{ fontStyle: 'italic', fontWeight: 400 }}>Journey</span>
+            </div>
+          </div>
+        </DCArtboard>
+      </DCSection>
+
+      {/* ============ APP ICONS ============ */}
+      <DCSection id="icons" title="04 · App Icon" subtitle="Stamp được chọn làm icon vì nó hoạt động tốt ở kích thước nhỏ và giữ được tinh thần dấu mộc.">
+        <DCArtboard id="icon-set" label="Bộ icon đa kích thước" width={920} height={300}>
+          <div style={{ width: 920, height: 300, background: '#f0ede4', display: 'flex', alignItems: 'center', justifyContent: 'space-evenly', padding: '0 40px' }}>
+            {[180, 120, 80, 56, 32].map(sz => (
+              <div key={sz} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
+                <div style={{ width: sz, height: sz, background: T.cream, border: `1px solid ${T.line}`, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: sz >= 80 ? sz * 0.18 : sz * 0.16 }}>
+                  <MarkStamp size={sz * 0.78} />
+                </div>
+                <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9, color: T.muted, letterSpacing: '0.2em' }}>{sz}px</div>
+              </div>
+            ))}
+          </div>
+        </DCArtboard>
+
+        <DCArtboard id="icon-context" label="Trong context (macOS dock)" width={920} height={220}>
+          <div style={{ width: 920, height: 220, background: 'linear-gradient(180deg, #b9a890, #8d7a64)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', paddingBottom: 26 }}>
+            <div style={{ display: 'flex', gap: 8, padding: '8px 12px', background: 'rgba(255,255,255,0.18)', backdropFilter: 'blur(20px)', borderRadius: 18, border: '1px solid rgba(255,255,255,0.22)' }}>
+              {[
+                { emoji: '🗓', name: 'Calendar' },
+                { emoji: '✎', name: 'Notes' },
+                { custom: true },
+                { emoji: '✉', name: 'Mail' },
+                { emoji: '☾', name: 'Sleep' },
+              ].map((app, i) => (
+                <div key={i} style={{ width: 60, height: 60, borderRadius: 13, display: 'flex', alignItems: 'center', justifyContent: 'center', background: app.custom ? T.cream : 'rgba(0,0,0,0.18)', border: app.custom ? `1px solid ${T.line}` : 'none', color: 'white', fontSize: 28 }}>
+                  {app.custom ? <MarkStamp size={48} /> : app.emoji}
+                </div>
+              ))}
+            </div>
+          </div>
+        </DCArtboard>
+      </DCSection>
+
+      {/* ============ APPLICATIONS ============ */}
+      <DCSection id="apps" title="05 · Ứng dụng" subtitle="Logo ở các điểm chạm: header app, splash, danh thiếp, social avatar.">
+        <DCArtboard id="app-header" label="Header trong app" width={1200} height={120}>
+          <div style={{ width: 1200, height: 120, background: T.cream, borderBottom: `1px solid ${T.line}`, display: 'flex', alignItems: 'center', padding: '0 32px', gap: 14 }}>
+            <MarkStamp size={36} />
+            <div style={{ fontFamily: "'Cormorant Garamond', serif", fontWeight: 500, fontSize: 22, letterSpacing: '-0.02em', color: T.ink }}>
+              Civ<span style={{ fontStyle: 'italic', fontWeight: 400 }}>Journey</span>
+            </div>
+            <span style={{ width: 1, height: 24, background: T.line, marginLeft: 12 }} />
+            <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, letterSpacing: '0.24em', textTransform: 'uppercase', color: T.muted }}>Tập trung</span>
+          </div>
+        </DCArtboard>
+
+        <DCArtboard id="app-splash" label="Splash screen" width={760} height={500}>
+          <div style={{ width: 760, height: 500, background: T.cream, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+            <MarkSeal size={140} />
+            <div style={{ marginTop: 28 }}>
+              <Wordmark />
+            </div>
+            <div style={{ position: 'absolute', bottom: 28, left: 0, right: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
+              <span style={{ width: 24, height: 1, background: T.muted, opacity: .4 }} />
+              <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9, letterSpacing: '0.32em', textTransform: 'uppercase', color: T.muted }}>Đang khởi tạo phiên</span>
+              <span style={{ width: 24, height: 1, background: T.muted, opacity: .4 }} />
+            </div>
+          </div>
+        </DCArtboard>
+
+        <DCArtboard id="app-card" label="Danh thiếp · 90×55mm" width={760} height={500}>
+          <div style={{ width: 760, height: 500, background: '#403a30', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ width: 510, height: 312, background: T.paper, padding: '34px 40px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', boxShadow: '0 30px 60px rgba(0,0,0,0.35)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div>
+                  <div style={{ fontFamily: "'Cormorant Garamond', serif", fontWeight: 500, fontSize: 28, letterSpacing: '-0.025em', color: T.ink, lineHeight: 1 }}>
+                    Civ<span style={{ fontStyle: 'italic', fontWeight: 400 }}>Journey</span>
+                  </div>
+                  <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 8, letterSpacing: '0.3em', textTransform: 'uppercase', color: T.muted, marginTop: 8 }}>A Pomodoro Through Eras</div>
+                </div>
+                <MarkSeal size={56} />
+              </div>
+              <div>
+                <div style={{ height: 1, background: T.line, marginBottom: 14 }} />
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+                  <div>
+                    <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 16, color: T.ink }}>Nguyễn Hoàng An</div>
+                    <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9, letterSpacing: '0.18em', textTransform: 'uppercase', color: T.muted, marginTop: 4 }}>Founder · Atelier</div>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9, color: T.muted, letterSpacing: '0.1em' }}>civjourney.app</div>
+                    <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9, color: T.muted, letterSpacing: '0.1em', marginTop: 3 }}>an@civjourney.app</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </DCArtboard>
+
+        <DCArtboard id="app-social" label="Avatar mạng xã hội" width={620} height={320}>
+          <div style={{ width: 620, height: 320, background: T.cream, display: 'flex', alignItems: 'center', justifyContent: 'space-around', padding: 30 }}>
+            {/* circular avatar */}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+              <div style={{ width: 130, height: 130, borderRadius: '50%', background: T.ink, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <MarkClockC size={86} color={T.cream} accent={T.bronzeSoft} />
+              </div>
+              <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9, letterSpacing: '0.22em', color: T.muted }}>CIRCULAR</div>
+            </div>
+            {/* square avatar */}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+              <div style={{ width: 130, height: 130, background: T.cream, border: `1px solid ${T.ink}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <MarkStamp size={104} />
+              </div>
+              <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9, letterSpacing: '0.22em', color: T.muted }}>SQUARE</div>
+            </div>
+            {/* bronze on dark */}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+              <div style={{ width: 130, height: 130, background: '#14110d', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <MarkSeal size={108} color="#c9a877" accent="#c9a877" />
+              </div>
+              <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9, letterSpacing: '0.22em', color: T.muted }}>NIGHT</div>
+            </div>
+          </div>
+        </DCArtboard>
+      </DCSection>
+
+      {/* ============ SYSTEM NOTES ============ */}
+      <DCSection id="notes" title="06 · Quy tắc sử dụng">
+        <DCArtboard id="rules" label="Hướng dẫn nhanh" width={1240} height={460}>
+          <div style={{ width: 1240, height: 460, background: T.paper, padding: '40px 60px', fontFamily: 'Inter, sans-serif', color: T.ink }}>
+            <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, letterSpacing: '0.3em', textTransform: 'uppercase', color: T.muted, marginBottom: 18 }}>Brand guidelines · trích yếu</div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 32 }}>
+              {[
+                { n: '01', t: 'Một accent duy nhất', d: 'Bronze #8a6a3d. Không thêm màu thứ hai. Đỏ terracotta của bản cũ đã loại bỏ.' },
+                { n: '02', t: 'Chỉ đường 1px', d: 'Tất cả nét viền của marca = 0.6 – 1.6px. Bỏ shadow. Bỏ gradient.' },
+                { n: '03', t: 'Khoảng trống ≥ chiều cao C', d: 'Quanh marca luôn để khoảng trống tối thiểu bằng chiều cao chữ C trong logo.' },
+                { n: '04', t: 'Min 24px', d: 'Không thu marca xuống dưới 24px. Dưới ngưỡng này dùng monogram C đơn giản.' },
+                { n: '05', t: 'Cặp chữ chuẩn', d: 'Cormorant Garamond (logo) + JetBrains Mono (caption MMXXVI). Không thay font.' },
+                { n: '06', t: 'Nền cho phép', d: 'Cream #f5f3ed, Paper #faf8f2, Obsidian #14110d. Không đặt lên ảnh, gradient, hay màu khác.' },
+                { n: '07', t: 'Không bóp méo', d: 'Tỷ lệ 1:1 cho seal/stamp. Không nghiêng, không kéo, không vẽ thêm laurel.' },
+                { n: '08', t: 'Roman numerals', d: 'MMXXVI là năm thành lập, được giữ nguyên cố định trong seal.' },
+              ].map(r => (
+                <div key={r.n}>
+                  <div style={{ fontFamily: "'Cormorant Garamond', serif", fontWeight: 300, fontSize: 36, letterSpacing: '-0.03em', color: T.ink, lineHeight: 1 }}>{r.n}</div>
+                  <div style={{ fontFamily: "'Cormorant Garamond', serif", fontWeight: 500, fontSize: 16, color: T.ink, marginTop: 10, letterSpacing: '-0.005em' }}>{r.t}</div>
+                  <div style={{ fontSize: 12, color: T.muted, marginTop: 6, lineHeight: 1.55 }}>{r.d}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </DCArtboard>
+      </DCSection>
+    </DesignCanvas>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

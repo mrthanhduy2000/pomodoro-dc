@@ -1,0 +1,633 @@
+/**
+ * App.jsx — CivJourney · Optimized for MacBook Air M3 13" (1280×832 viewport)
+ */
+
+import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
+import { AnimatePresence, motion as Motion } from 'framer-motion';
+
+import EraHUD              from './components/EraHUD';
+import PomodoroEngine      from './components/PomodoroEngine';
+import ResourceDisplay     from './components/ResourceDisplay';
+import RankDisplay         from './components/RankDisplay';
+import Settings            from './components/Settings';
+import LootDropModal       from './components/LootDropModal';
+import DisasterModal       from './components/DisasterModal';
+import EraCrisisModal      from './components/EraCrisisModal';
+import AchievementToast    from './components/AchievementToast';
+import DailyMissions       from './components/DailyMissions';
+import PrestigeModal       from './components/PrestigeModal';
+import LevelUpModal        from './components/LevelUpModal';
+import WeeklyReportModal   from './components/WeeklyReportModal';
+import ParticleBackground  from './components/ParticleBackground';
+import { useGameLoop }     from './hooks/useGameLoop';
+import useGameStore        from './store/gameStore';
+import useSettingsStore    from './store/settingsStore';
+import { ERA_METADATA }   from './engine/constants';
+import {
+  localDateStr,
+  localWeekMondayStr,
+  formatVietnamDate,
+  formatVietnamTime,
+} from './engine/time';
+
+const TABS = [
+  { id: 'focus',        label: 'Tập Trung',  icon: '⏱️' },
+  { id: 'skills',       label: 'Kỹ Năng',    icon: '🌿' },
+  { id: 'collection',   label: 'Kho Báu',    icon: '🏺' },
+  { id: 'achievements', label: 'Thành Tích', icon: '🏆' },
+  { id: 'stats',        label: 'Thống Kê',   icon: '📊' },
+  { id: 'settings',     label: 'Cài Đặt',    icon: '⚙️' },
+];
+
+const SkillTree = lazy(() => import('./components/SkillTree.jsx'));
+const RelicInventory = lazy(() => import('./components/RelicInventory.jsx'));
+const BlueprintInventory = lazy(() => import('./components/BlueprintInventory.jsx'));
+const Achievements = lazy(() => import('./components/Achievements.jsx'));
+const StatsDashboard = lazy(() => import('./components/StatsDashboard.jsx'));
+const BuildingWorkshop = lazy(() => import('./components/BuildingWorkshop.jsx'));
+
+export default function App() {
+  useGameLoop();
+
+  const hydrateEngines              = useSettingsStore((s) => s.hydrateEngines);
+  const uiTheme                     = useSettingsStore((s) => s.uiTheme);
+  const checkRankChallengeDeadlines = useGameStore((s) => s.checkRankChallengeDeadlines);
+  const refreshDailyMissions        = useGameStore((s) => s.refreshDailyMissions);
+  const checkWeeklyReport           = useGameStore((s) => s.checkWeeklyReport);
+  const openWeeklyReport            = useGameStore((s) => s.openWeeklyReport);
+  const missionBoundaryRef          = useRef({ day: localDateStr(), week: localWeekMondayStr() });
+
+  useEffect(() => {
+    hydrateEngines();
+    checkRankChallengeDeadlines();
+    refreshDailyMissions();
+    checkWeeklyReport();
+  }, [hydrateEngines, checkRankChallengeDeadlines, refreshDailyMissions, checkWeeklyReport]);
+
+  useEffect(() => {
+    const refreshIfBoundaryChanged = () => {
+      const day = localDateStr();
+      const week = localWeekMondayStr();
+      const boundaryChanged =
+        missionBoundaryRef.current.day !== day
+        || missionBoundaryRef.current.week !== week;
+
+      if (!boundaryChanged) return;
+
+      const weekChanged = missionBoundaryRef.current.week !== week;
+      missionBoundaryRef.current = { day, week };
+      refreshDailyMissions();
+      if (weekChanged) checkWeeklyReport();
+    };
+
+    missionBoundaryRef.current = { day: localDateStr(), week: localWeekMondayStr() };
+
+    const intervalId = window.setInterval(refreshIfBoundaryChanged, 30_000);
+    const handleFocus = () => refreshIfBoundaryChanged();
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') refreshIfBoundaryChanged();
+    };
+
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.clearInterval(intervalId);
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [refreshDailyMissions, checkWeeklyReport]);
+
+  // ── Electron tray: update status-bar title during break ─────────────────
+  const isOnBreak     = useGameStore((s) => s.ui.isOnBreak);
+  const breakSecsLeft = useGameStore((s) => s.ui.breakSecondsLeft);
+  const breakTrayWasActiveRef = useRef(false);
+  useEffect(() => {
+    if (!window.electronAPI) {
+      breakTrayWasActiveRef.current = isOnBreak;
+      return;
+    }
+    if (isOnBreak) {
+      const mm = String(Math.floor(breakSecsLeft / 60)).padStart(2, '0');
+      const ss = String(breakSecsLeft % 60).padStart(2, '0');
+      window.electronAPI.updateTray({ state: 'BREAK', timeLeft: `${mm}:${ss}` });
+      breakTrayWasActiveRef.current = true;
+      return;
+    }
+    if (breakTrayWasActiveRef.current) {
+      window.electronAPI.updateTray({ state: 'IDLE', timeLeft: '' });
+    }
+    breakTrayWasActiveRef.current = false;
+  }, [isOnBreak, breakSecsLeft]);
+
+  const activeBook = useGameStore((s) => s.progress.activeBook);
+  const eraMeta    = ERA_METADATA[activeBook] ?? ERA_METADATA[1];
+
+  const [activeTab,      setActiveTab]      = useState('focus');
+  const [sidebarOpen,    setSidebarOpen]    = useState(true);
+  const [rightPanelOpen, setRightPanelOpen] = useState(true);
+  const isLargeScreen = useMinWidth(1024);
+
+  return (
+    <div className="h-screen flex overflow-hidden" style={{ background: 'var(--bg-app, #080c14)', color: 'var(--text-app, #f8fafc)' }} data-theme={uiTheme}>
+
+      {/* ── Particle background layer ─────────────────────────────────── */}
+      <ParticleBackground />
+
+      {/* ── Sidebar (desktop md+) ─────────────────────────────────────── */}
+      <Motion.aside
+        className="hidden md:flex flex-shrink-0 flex-col pt-4 pb-0 z-20"
+        animate={{ width: sidebarOpen ? 200 : 56 }}
+        transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}
+        style={{
+          backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(20px)',
+          background: 'var(--bg-panel, rgba(8,12,20,0.85))',
+          borderRight: '1px solid rgba(var(--accent-rgb), 0.15)',
+          boxShadow: '2px 0 24px rgba(0,0,0,0.3)',
+        }}
+      >
+        {/* ── Logo + App name ────────────────────────────────────────── */}
+        <div className={`flex items-center mb-6 px-3 ${sidebarOpen ? 'gap-3' : 'justify-center'}`}>
+          <div
+            className="w-10 h-10 rounded-2xl flex items-center justify-center text-[18px] flex-shrink-0 shadow-lg"
+            style={{
+              background: 'linear-gradient(135deg, var(--accent) 0%, var(--accent2) 100%)',
+              boxShadow: '0 0 16px rgba(var(--accent-rgb), 0.45)',
+            }}
+          >
+            🏛️
+          </div>
+          {/* Text: fade + slide when collapsing */}
+          <div
+            className="min-w-0 leading-tight overflow-hidden"
+            style={{
+              maxWidth: sidebarOpen ? '140px' : '0px',
+              opacity: sidebarOpen ? 1 : 0,
+              transition: 'max-width 0.18s ease, opacity 0.14s ease',
+            }}
+          >
+            <p className="text-[15px] font-extrabold tracking-tight text-white whitespace-nowrap">CivJourney</p>
+            <p className="text-[9px] font-bold uppercase tracking-[0.16em] truncate whitespace-nowrap"
+               style={{ color: 'var(--accent-light)' }}>
+              Kỷ {activeBook}: {eraMeta.label}
+            </p>
+          </div>
+        </div>
+
+        {/* ── Nav items ──────────────────────────────────────────────── */}
+        <nav className={`flex flex-col gap-0.5 flex-1 ${sidebarOpen ? 'px-2' : 'px-1.5'}`}>
+
+          {/* Weekly Report */}
+          <SidebarItem
+            icon="📊" label="Báo Cáo Tuần"
+            isOpen={sidebarOpen} isActive={false}
+            onClick={openWeeklyReport}
+          />
+
+          {/* Divider */}
+          <div className="my-1.5 mx-1 h-px"
+               style={{ background: 'rgba(var(--accent-rgb), 0.12)' }} />
+
+          {/* Main tabs */}
+          {TABS.map((tab) => (
+            <SidebarItem
+              key={tab.id}
+              icon={tab.icon} label={tab.label}
+              isOpen={sidebarOpen} isActive={activeTab === tab.id}
+              onClick={() => setActiveTab(tab.id)}
+            />
+          ))}
+        </nav>
+
+        {/* ── Toggle collapse button ─────────────────────────────────── */}
+        <div className={`mt-2 pt-2 shrink-0 ${sidebarOpen ? 'px-2' : 'px-1.5'}`}
+             style={{ borderTop: '1px solid rgba(var(--accent-rgb), 0.10)' }}>
+          <PanelFooterToggle
+            isOpen={sidebarOpen}
+            onClick={() => setSidebarOpen((v) => !v)}
+          />
+        </div>
+      </Motion.aside>
+
+      {/* ── Main ───────────────────────────────────────────────────────── */}
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        <EraHUD />
+
+        <main className="flex-1 overflow-hidden min-h-0">
+
+          {/* TẬP TRUNG — always mounted */}
+          <div className={`h-full flex flex-col lg:flex-row ${activeTab === 'focus' ? '' : 'hidden'}`}>
+
+            {/* Timer center */}
+            <div className="flex-1 min-w-0 overflow-y-auto flex items-start justify-center
+                            pt-4 pb-20 px-4 md:pt-6 md:pb-8 md:px-8"
+                 style={{ scrollbarWidth: 'thin', scrollbarColor: '#1e293b transparent' }}>
+              <div className="w-full flex flex-col items-center">
+                <PomodoroEngine />
+                {!isLargeScreen && (
+                  <FocusProgressPanelContent className="w-full max-w-lg mt-4 space-y-4" />
+                )}
+              </div>
+            </div>
+
+            {/* Right panel — desktop only (lg+) */}
+            {isLargeScreen && (
+              <Motion.aside
+                className="hidden lg:flex flex-shrink-0 flex-col relative"
+                animate={{ width: rightPanelOpen ? 368 : 56 }}
+                transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}
+                style={{
+                  overflow: 'hidden',
+                  backdropFilter: 'blur(20px)',
+                  WebkitBackdropFilter: 'blur(20px)',
+                  background: 'var(--bg-rpanel, rgba(10,14,22,0.70))',
+                  borderLeft: '1px solid rgba(var(--accent-rgb), 0.1)',
+                  boxShadow: '-2px 0 24px rgba(0,0,0,0.25)',
+                }}
+              >
+                {/* Scrollable content — fixed width, clipped by parent during animation */}
+                <div
+                  className="flex-1 min-h-0"
+                  style={{
+                    width: '368px',
+                    overflowY: 'auto',
+                    scrollbarWidth: 'thin',
+                    scrollbarColor: '#1e293b transparent',
+                    flexShrink: 0,
+                  }}
+                >
+                  <FocusProgressPanelContent className="p-5 flex flex-col gap-4" />
+                </div>
+
+                <div
+                  className={`mt-2 pt-2 shrink-0 ${rightPanelOpen ? 'px-2' : 'px-1.5'}`}
+                  style={{ borderTop: '1px solid rgba(var(--accent-rgb), 0.10)' }}
+                >
+                  <PanelFooterToggle
+                    isOpen={rightPanelOpen}
+                    onClick={() => setRightPanelOpen((v) => !v)}
+                  />
+                </div>
+              </Motion.aside>
+            )}
+          </div>
+
+          <AnimatePresence mode="wait">
+            {activeTab === 'skills' && (
+              <TabPane key="skills">
+                <DeferredTabContent>
+                  <div className="max-w-5xl mx-auto p-3 md:p-6 pb-20 md:pb-6"><SkillTree /></div>
+                </DeferredTabContent>
+              </TabPane>
+            )}
+            {activeTab === 'collection' && (
+              <TabPane key="collection">
+                <DeferredTabContent>
+                  <div className="max-w-3xl mx-auto p-3 md:p-6 pb-20 md:pb-6"><CollectionView /></div>
+                </DeferredTabContent>
+              </TabPane>
+            )}
+            {activeTab === 'achievements' && (
+              <TabPane key="achievements">
+                <DeferredTabContent>
+                  <div className="max-w-3xl mx-auto p-3 md:p-6 pb-20 md:pb-6"><Achievements /></div>
+                </DeferredTabContent>
+              </TabPane>
+            )}
+            {activeTab === 'stats' && (
+              <TabPane key="stats">
+                <DeferredTabContent>
+                  <div className="min-h-full w-full max-w-[1080px] mx-auto px-3 md:px-6 xl:px-8 pb-20 md:pb-6"><StatsDashboard /></div>
+                </DeferredTabContent>
+              </TabPane>
+            )}
+            {activeTab === 'settings' && (
+              <TabPane key="settings">
+                <div className="max-w-xl mx-auto p-3 md:p-6 pb-20 md:pb-6"><Settings /></div>
+              </TabPane>
+            )}
+          </AnimatePresence>
+        </main>
+      </div>
+
+      {/* ── Mobile Bottom Nav (< md) ──────────────────────────────────── */}
+      <nav
+        className="md:hidden fixed bottom-0 left-0 right-0 z-30 flex items-stretch"
+        style={{
+          background: 'var(--nav-bg, linear-gradient(0deg, #0a0e18 0%, rgba(10,14,24,0.97) 100%))',
+          borderTop: '1px solid rgba(var(--accent-rgb), 0.12)',
+          paddingBottom: 'env(safe-area-inset-bottom)',
+        }}
+      >
+        {TABS.map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`flex-1 flex flex-col items-center justify-center gap-0.5 py-2
+                        transition-all duration-150 text-[20px] ${
+              activeTab === tab.id ? 'text-white' : 'text-slate-600'
+            }`}
+            style={activeTab === tab.id ? { color: 'var(--accent-light)' } : {}}
+          >
+            <span>{tab.icon}</span>
+            <span className="text-[9px] font-medium leading-none"
+                  style={{ color: activeTab === tab.id ? 'var(--accent-light)' : '#475569' }}>
+              {tab.label.split(' ')[0]}
+            </span>
+            {activeTab === tab.id && (
+              <span className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-[2px] rounded-b-full"
+                    style={{ background: 'var(--accent)' }} />
+            )}
+          </button>
+        ))}
+      </nav>
+
+      <LootDropModal />
+      <DisasterModal />
+      <EraCrisisModal />
+      <PrestigeModal />
+      <LevelUpModal />
+      <WeeklyReportModal />
+      <AchievementToast />
+    </div>
+  );
+}
+
+// ─── SidebarItem ─────────────────────────────────────────────────────────────
+function SidebarItem({ icon, label, isActive, isOpen, onClick }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`relative w-full flex items-center rounded-xl transition-all duration-150 group
+                  ${isOpen ? 'gap-3 px-3' : 'justify-center px-0'}
+                  ${isActive ? '' : 'hover:bg-white/5'}`}
+      style={{
+        paddingTop: '10px',
+        paddingBottom: '10px',
+        ...(isActive ? {
+          background: 'linear-gradient(135deg, rgba(var(--accent-rgb),0.18) 0%, rgba(var(--accent2-rgb),0.10) 100%)',
+          boxShadow: 'inset 0 0 0 1px rgba(var(--accent-rgb),0.25)',
+        } : {}),
+      }}
+    >
+      {/* Active bar — only in expanded mode */}
+      {isActive && isOpen && (
+        <span
+          className="absolute -left-px top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full"
+          style={{ background: 'linear-gradient(180deg, var(--accent-light), var(--accent))' }}
+        />
+      )}
+
+      {/* Icon */}
+      <span className="text-[17px] w-6 text-center flex-shrink-0 leading-none">
+        {icon}
+      </span>
+
+      {/* Label: slides in/out */}
+      <span
+        className="text-[13px] font-semibold leading-none whitespace-nowrap overflow-hidden"
+        style={{
+          maxWidth: isOpen ? '140px' : '0px',
+          opacity: isOpen ? 1 : 0,
+          transition: 'max-width 0.18s ease, opacity 0.14s ease',
+          color: isActive ? '#ffffff' : '#64748b',
+        }}
+      >
+        {label}
+      </span>
+
+      {/* Tooltip when collapsed */}
+      {!isOpen && (
+        <span className="pointer-events-none absolute left-[52px] whitespace-nowrap
+                         bg-slate-800/95 border border-slate-700/50 text-slate-200 text-xs
+                         px-2.5 py-1.5 rounded-lg shadow-2xl z-50
+                         opacity-0 group-hover:opacity-100 transition-opacity duration-150
+                         translate-x-1 group-hover:translate-x-0 backdrop-blur-sm">
+          {label}
+        </span>
+      )}
+    </button>
+  );
+}
+
+function TabPane({ children }) {
+  return (
+    <Motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -8 }}
+      transition={{ duration: 0.15 }}
+      className="h-full overflow-y-auto"
+      style={{ scrollbarWidth: 'thin', scrollbarColor: '#1e293b transparent' }}
+    >
+      {children}
+    </Motion.div>
+  );
+}
+
+function Divider() {
+  const uiTheme = useSettingsStore((s) => s.uiTheme);
+  const lightTheme = uiTheme === 'light';
+
+  return (
+    <div
+      className="h-px bg-gradient-to-r from-transparent to-transparent"
+      style={{
+        backgroundImage: `linear-gradient(to right, transparent, ${
+          lightTheme ? 'rgba(148, 163, 184, 0.28)' : 'rgba(51, 65, 85, 0.40)'
+        }, transparent)`,
+      }}
+    />
+  );
+}
+
+function DeferredTabContent({ children }) {
+  return (
+    <Suspense fallback={<TabLoadingState />}>
+      {children}
+    </Suspense>
+  );
+}
+
+function TabLoadingState() {
+  return (
+    <div className="rounded-3xl border border-white/8 bg-slate-950/40 px-5 py-10 text-center backdrop-blur-xl shadow-[0_10px_40px_rgba(0,0,0,0.22)]">
+      <div className="inline-flex items-center gap-3 rounded-full border border-white/8 bg-white/[0.03] px-4 py-2 text-sm text-slate-400">
+        <span className="h-2 w-2 rounded-full bg-sky-400 animate-pulse" />
+        Đang tải màn chơi...
+      </div>
+    </div>
+  );
+}
+
+function FocusProgressPanelContent({ className = '' }) {
+  return (
+    <div className={className}>
+      <DailyMissions />
+      <Divider />
+      <ResourceDisplay />
+      <Divider />
+      <RankDisplay />
+    </div>
+  );
+}
+
+function PanelFooterToggle({ isOpen, onClick }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`w-full h-11 flex items-center rounded-xl transition-all duration-150 hover:bg-white/5
+                  ${isOpen ? 'gap-3 px-3 justify-start' : 'justify-center px-0'}`}
+      title={isOpen ? 'Thu gọn' : 'Mở rộng'}
+    >
+      <Motion.span
+        animate={{ rotate: isOpen ? 0 : 180 }}
+        transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}
+        className="h-11 w-6 flex-shrink-0 text-slate-500 flex items-center justify-center leading-none"
+      >
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+          <path d="M9 11L5 7l4-4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      </Motion.span>
+      <span
+        className="h-11 flex items-center text-[12px] font-medium leading-none text-slate-500 whitespace-nowrap overflow-hidden"
+        style={{
+          maxWidth: isOpen ? '100px' : '0px',
+          opacity: isOpen ? 1 : 0,
+          transition: 'max-width 0.18s ease, opacity 0.12s ease',
+        }}
+      >
+        Thu gọn
+      </span>
+    </button>
+  );
+}
+
+function useMinWidth(minWidth) {
+  const [matches, setMatches] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return window.matchMedia(`(min-width: ${minWidth}px)`).matches;
+  });
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+
+    const media = window.matchMedia(`(min-width: ${minWidth}px)`);
+    const update = (event) => setMatches(event.matches);
+
+    media.addEventListener('change', update);
+    return () => media.removeEventListener('change', update);
+  }, [minWidth]);
+
+  return matches;
+}
+
+// ─── Kho Báu ─────────────────────────────────────────────────────────────────
+
+const COLLECTION_TABS = [
+  { id: 'relics',     label: 'Di Vật',  icon: '🏺' },
+  { id: 'blueprints', label: 'Bản Vẽ',  icon: '📜' },
+  { id: 'workshop',   label: 'Xưởng',   icon: '🔨' },
+  { id: 'history',    label: 'Lịch Sử', icon: '📋' },
+];
+
+function CollectionView() {
+  const [sub, setSub] = React.useState('relics');
+  return (
+    <div>
+      <div className="flex rounded-xl overflow-hidden border border-slate-800/80 mb-6">
+        {COLLECTION_TABS.map((t) => (
+          <button
+            key={t.id}
+            onClick={() => setSub(t.id)}
+            className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-semibold
+                        transition-colors ${
+              sub === t.id
+                ? 'bg-slate-800 text-white'
+                : 'bg-slate-900/50 text-slate-500 hover:text-slate-300'
+            }`}
+          >
+            <span>{t.icon}</span>{t.label}
+          </button>
+        ))}
+      </div>
+      <Suspense fallback={<TabLoadingState />}>
+        {sub === 'relics'     && <RelicInventory />}
+        {sub === 'blueprints' && <BlueprintInventory />}
+        {sub === 'workshop'   && <BuildingWorkshop />}
+        {sub === 'history'    && <SessionHistory />}
+      </Suspense>
+    </div>
+  );
+}
+
+function SessionHistory() {
+  const history = useGameStore((s) => s.history);
+  if (history.length === 0) {
+    return (
+      <div className="text-center py-20 text-slate-500">
+        <div className="text-5xl mb-4 opacity-30">📭</div>
+        <p>Chưa có phiên nào — hãy bắt đầu phiên đầu tiên!</p>
+      </div>
+    );
+  }
+  return (
+    <div>
+      <h2 className="text-white font-bold text-lg mb-4">Lịch Sử Phiên</h2>
+      <div className="flex flex-col gap-2">
+        {history.map((entry) => (
+          <div key={entry.id}
+               className="bg-slate-900/60 border border-slate-800/60 rounded-2xl p-4 flex items-center gap-4">
+            <div className="text-2xl">{entry.jackpot ? '🎰' : ((entry.refinedEarned ?? 0) > 0 || (entry.minutes ?? 0) >= 45) ? '🪨' : '⏱️'}</div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-white font-bold">{entry.minutes} phút</span>
+                <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-900/60 text-indigo-300 border border-indigo-700/50">{entry.tier}</span>
+                {((entry.refinedEarned ?? 0) > 0 || (entry.minutes ?? 0) >= 45) && (
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-violet-900/60 text-violet-300 border border-violet-700/50">
+                    + Tinh luyện
+                  </span>
+                )}
+              </div>
+              <div className="text-sm text-slate-400 mt-0.5">
+                +{(entry.xpEarned ?? entry.epEarned ?? 0).toLocaleString()} XP
+                {entry.multiplier > 1 && <span className="ml-1 text-xs text-yellow-500">×{entry.multiplier.toFixed(1)}</span>}
+              </div>
+              {entry.goal && (
+                <p className="text-xs text-amber-300/90 mt-1 leading-snug line-clamp-2">
+                  🎯 {entry.goal}
+                </p>
+              )}
+              {typeof entry.goalAchieved === 'boolean' && (
+                <div className="mt-1">
+                  <span className={`text-[10px] px-2 py-0.5 rounded-full border ${
+                    entry.goalAchieved
+                      ? 'bg-emerald-900/50 text-emerald-300 border-emerald-700/50'
+                      : 'bg-rose-900/50 text-rose-300 border-rose-700/50'
+                  }`}>
+                    {entry.goalAchieved ? 'Đạt mục tiêu' : 'Chưa đạt mục tiêu'}
+                  </span>
+                </div>
+              )}
+              {entry.note && (
+                <p className="text-xs text-slate-500 mt-1 italic leading-snug line-clamp-2">
+                  "{entry.note}"
+                </p>
+              )}
+              {entry.nextNote && (
+                <p className="text-xs text-sky-300/80 mt-1 leading-snug line-clamp-2">
+                  ↺ Lần sau: {entry.nextNote}
+                </p>
+              )}
+            </div>
+            <div className="text-right text-xs text-slate-600 flex-shrink-0">
+              <div>{formatVietnamDate(entry.timestamp, { month: 'short', day: 'numeric' })}</div>
+              <div>{formatVietnamTime(entry.timestamp, { hour: '2-digit', minute: '2-digit' })}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}

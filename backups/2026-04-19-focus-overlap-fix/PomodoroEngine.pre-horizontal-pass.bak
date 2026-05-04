@@ -1,0 +1,1603 @@
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
+
+import useGameStore from '../store/gameStore';
+import useSettingsStore from '../store/settingsStore';
+import { useTimer, formatTime, TIMER_MODES, TIMER_STATES } from '../hooks/useTimer';
+import { getMultiplierTier } from '../engine/gameMath';
+import { FLOWTIME_BREAK_RULES, QUICK_FOCUS_PRESETS, getBreakPlan } from '../engine/breaks';
+import {
+  DEFAULT_DEEP_FOCUS_THRESHOLD,
+  WARMUP_REDUCED_THRESHOLD,
+  BREAK_EXTENSION_MINUTES,
+  OVERCLOCK_MIN_SESSION_MIN,
+  VUNG_DONG_CHAY_MIN_MIN,
+  DISASTER_MIN_PENALTY_RATE,
+  DISASTER_MAX_PENALTY_RATE,
+  Y_CHI_THEP_RETENTION,
+  BAT_KHUAT_DISASTER_XP_PENALTY,
+  RELIC_EVOLUTION,
+  BUILDING_EFFECTS,
+  getBuildingLevelMultiplier,
+} from '../engine/constants';
+import StakePanel from './StakePanel';
+
+const NOTE_WORD_LIMIT = 3000;
+const SESSION_GOAL_WORD_LIMIT = 120;
+const NEXT_NOTE_WORD_LIMIT = 160;
+const RING_RADIUS = 128;
+const RING_STROKE = 8;
+const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
+const SVG_SIZE = (RING_RADIUS + RING_STROKE) * 2 + 4;
+
+const RING_COLORS = {
+  [TIMER_STATES.IDLE]: '#6366f1',
+  [TIMER_STATES.RUNNING]: '#22c55e',
+  [TIMER_STATES.FINISHED]: '#f59e0b',
+  [TIMER_STATES.CANCELLED]: '#ef4444',
+};
+const Motion = motion;
+
+function countWords(text = '') {
+  const trimmed = text.trim();
+  return trimmed ? trimmed.split(/\s+/).length : 0;
+}
+
+function trimToWordLimit(text, maxWords) {
+  const tokens = text.match(/\S+\s*/g);
+  if (!tokens || tokens.length <= maxWords) return text;
+  return tokens.slice(0, maxWords).join('').trimEnd();
+}
+
+function formatPreviewPercent(value) {
+  if (!Number.isFinite(value)) return '0';
+  if (value === 0) return '0';
+  if (value < 1) return value.toFixed(2).replace(/0+$/, '').replace(/\.$/, '');
+  return value.toFixed(1).replace(/\.0$/, '');
+}
+
+function getCompletedSessionWorkedMinutes(session) {
+  if (!session) return null;
+
+  if (Number.isFinite(session.wallClockDurationMs)) {
+    const effectiveMs = Math.max(0, session.wallClockDurationMs - (session.pausedTotalMs ?? 0));
+    return effectiveMs / 60_000;
+  }
+
+  return Number.isFinite(session.minutes) ? session.minutes : null;
+}
+
+export default function PomodoroEngine({ immersiveMode = false }) {
+  const timerConfig = useGameStore((s) => s.timerConfig);
+  const setTimerConfig = useGameStore((s) => s.setTimerConfig);
+  const unlockedSkills = useGameStore((s) => s.player.unlockedSkills);
+  const forgiveness = useGameStore((s) => s.forgiveness);
+  const eraCrisis = useGameStore((s) => s.eraCrisis);
+  const openCrisis = useGameStore((s) => s.openEraCrisisModal);
+  const relics = useGameStore((s) => s.relics);
+  const relicEvolutions = useGameStore((s) => s.relicEvolutions ?? {});
+  const buildings = useGameStore((s) => s.buildings);
+  const buildingLevels = useGameStore((s) => s.buildingLevels ?? {});
+  const sessionCategories = useGameStore((s) => s.sessionCategories);
+  const pendingCategoryId = useGameStore((s) => s.pendingCategoryId);
+  const setPendingCategory = useGameStore((s) => s.setPendingCategory);
+  const pendingNote = useGameStore((s) => s.pendingNote);
+  const setPendingNote = useGameStore((s) => s.setPendingNote);
+  const pendingSessionGoal = useGameStore((s) => s.pendingSessionGoal);
+  const setPendingSessionGoal = useGameStore((s) => s.setPendingSessionGoal);
+  const pendingNextSessionNote = useGameStore((s) => s.pendingNextSessionNote);
+  const setPendingNextSessionNote = useGameStore((s) => s.setPendingNextSessionNote);
+  const addCategory = useGameStore((s) => s.addCategory);
+  const deleteCategory = useGameStore((s) => s.deleteCategory);
+  const reviewCompletedSession = useGameStore((s) => s.reviewCompletedSession);
+  const combo = useGameStore((s) => s.combo);
+  const sessionsCompleted = useGameStore((s) => s.progress.sessionsCompleted);
+  const longBreakCycleStart = useGameStore((s) => s.progress.longBreakCycleStart ?? 0);
+  const resetLongBreakCycle = useGameStore((s) => s.resetLongBreakCycle);
+  const startBreak = useGameStore((s) => s.startBreak);
+  const endBreak = useGameStore((s) => s.endBreak);
+  const isOnBreak = useGameStore((s) => s.ui.isOnBreak);
+  const breakSecsLeft = useGameStore((s) => s.ui.breakSecondsLeft);
+  const breakTotalSeconds = useGameStore((s) => s.ui.breakTotalSeconds);
+  const breakIsLong = useGameStore((s) => s.ui.breakIsLong);
+
+  const autoStartNext = useSettingsStore((s) => s.autoStartNext);
+  const disableBreak = useSettingsStore((s) => s.disableBreak);
+  const autoStartBreak = useSettingsStore((s) => s.autoStartBreak);
+  const shortBreakDuration = useSettingsStore((s) => s.shortBreakDuration);
+  const longBreakDuration = useSettingsStore((s) => s.longBreakDuration);
+  const longBreakAfterN = useSettingsStore((s) => s.longBreakAfterN);
+  const setBreakProfile = useSettingsStore((s) => s.setBreakProfile);
+  const uiTheme = useSettingsStore((s) => s.uiTheme);
+  const lightTheme = uiTheme === 'light';
+
+  const timerMode = timerConfig.mode ?? TIMER_MODES.POMODORO;
+  const strictMode = timerConfig.strictMode;
+  const isStopwatchMode = timerMode === TIMER_MODES.STOPWATCH;
+
+  const {
+    displaySeconds,
+    elapsedSeconds,
+    progressPct,
+    timerState,
+    milestone,
+    start,
+    pause,
+    resume,
+    cancel,
+    reset,
+    finish,
+    lastCompletedSessionId,
+  } = useTimer({
+    focusMinutes: timerConfig.focusMinutes,
+    mode: timerMode,
+  });
+
+  const completedSessionReview = useGameStore((s) => (
+    lastCompletedSessionId
+      ? (s.history.find((entry) => entry.id === lastCompletedSessionId) ?? null)
+      : null
+  ));
+
+  const [showCatManager, setShowCatManager] = useState(false);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [activeMilestone, setActiveMilestone] = useState(null);
+  const [showSessionGoalEditor, setShowSessionGoalEditor] = useState(() => Boolean(pendingSessionGoal?.trim()));
+  const [showNextSessionNoteEditor, setShowNextSessionNoteEditor] = useState(() => Boolean(pendingNextSessionNote?.trim()));
+
+  useEffect(() => {
+    if (!milestone) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setActiveMilestone(milestone);
+    const timeoutId = window.setTimeout(() => setActiveMilestone(null), 2200);
+    return () => window.clearTimeout(timeoutId);
+  }, [milestone]);
+
+  useEffect(() => {
+    if (!isOnBreak) return;
+    document.title = `${formatTime(breakSecsLeft)} ☕ CivJourney`;
+    return () => {
+      document.title = 'CivJourney';
+    };
+  }, [breakSecsLeft, isOnBreak]);
+
+  const prevIsOnBreakRef = useStateRef(isOnBreak);
+  useEffect(() => {
+    if (prevIsOnBreakRef.current && !isOnBreak && autoStartNext && timerState === TIMER_STATES.IDLE) {
+      window.setTimeout(() => start(), 800);
+    }
+    prevIsOnBreakRef.current = isOnBreak;
+  }, [autoStartNext, isOnBreak, start, timerState, prevIsOnBreakRef]);
+
+  const COMBO_DECAY_MS = 4 * 3_600_000;
+  const [comboActive, setComboActive] = useState(false);
+  useEffect(() => {
+    if (!combo.lastSessionTs) {
+      const resetId = window.setTimeout(() => setComboActive(false), 0);
+      return () => window.clearTimeout(resetId);
+    }
+
+    const syncId = window.setTimeout(() => {
+      setComboActive((Date.now() - combo.lastSessionTs) < COMBO_DECAY_MS);
+    }, 0);
+
+    const expiresInMs = (combo.lastSessionTs + COMBO_DECAY_MS) - Date.now();
+    if (expiresInMs <= 0) {
+      return () => window.clearTimeout(syncId);
+    }
+
+    const timeoutId = window.setTimeout(() => setComboActive(false), expiresInMs + 100);
+    return () => {
+      window.clearTimeout(syncId);
+      window.clearTimeout(timeoutId);
+    };
+  }, [combo.lastSessionTs, combo.count, COMBO_DECAY_MS]);
+
+  const warmupUnlocked = unlockedSkills.khoi_dong_nhanh || unlockedSkills.lam_nong_nhanh;
+  const deepFocusThreshold = warmupUnlocked ? WARMUP_REDUCED_THRESHOLD : DEFAULT_DEEP_FOCUS_THRESHOLD;
+  const rewardReferenceMinutes = isStopwatchMode
+    ? Math.max(timerConfig.focusMinutes, Math.max(1, Math.floor(elapsedSeconds / 60)))
+    : timerConfig.focusMinutes;
+
+  const rawTier = getMultiplierTier(rewardReferenceMinutes, warmupUnlocked);
+  const tier = useMemo(() => {
+    if (unlockedSkills.vung_dong_chay && rewardReferenceMinutes >= VUNG_DONG_CHAY_MIN_MIN) {
+      return {
+        multiplier: rewardReferenceMinutes >= 60 ? 2.0 : 1.3,
+        chestGuaranteed: true,
+        tierLabel: rewardReferenceMinutes >= 60 ? 'Marathon ×2.0' : 'Tập trung sâu ×1.3',
+      };
+    }
+    return rawTier;
+  }, [rawTier, rewardReferenceMinutes, unlockedSkills.vung_dong_chay]);
+
+  const isIdle = timerState === TIMER_STATES.IDLE;
+  const isActive = timerState === TIMER_STATES.RUNNING || timerState === TIMER_STATES.PAUSED;
+  const isBreakMode = isOnBreak;
+  const noteWordCount = countWords(pendingNote);
+  const sessionGoalWordCount = countWords(pendingSessionGoal);
+  const nextSessionNoteWordCount = countWords(pendingNextSessionNote);
+  const showSessionReview = Boolean(lastCompletedSessionId && completedSessionReview && !isActive);
+  const completedGoalAchieved = completedSessionReview?.goalAchieved ?? null;
+  const reviewGoalText = completedSessionReview?.goal?.trim() || pendingSessionGoal.trim();
+  const comboCount = comboActive ? combo.count : 0;
+  const completedSessionWorkedMinutes = getCompletedSessionWorkedMinutes(completedSessionReview);
+  const immersiveRootMaxWidth = immersiveMode
+    ? isIdle && !isBreakMode
+      ? 860
+      : 760
+    : 560;
+  const immersiveTimerScale = immersiveMode
+    ? isBreakMode
+      ? 1.08
+      : isActive
+        ? 1.14
+        : timerState === TIMER_STATES.FINISHED
+          ? 1.05
+          : 1.02
+    : 1;
+  const timerFootprintScale = immersiveMode ? immersiveTimerScale : 1;
+  const timerFootprintSize = Math.ceil(SVG_SIZE * timerFootprintScale);
+  const timerFootprintHeight = timerFootprintSize + (immersiveMode ? 12 : 0);
+  const prioritizeSetupCard = immersiveMode && isIdle && !isBreakMode;
+  const immersiveGlow = isBreakMode
+    ? breakIsLong
+      ? 'radial-gradient(circle, rgba(96,165,250,0.14) 0%, rgba(96,165,250,0.06) 36%, rgba(96,165,250,0) 70%)'
+      : 'radial-gradient(circle, rgba(56,189,248,0.12) 0%, rgba(56,189,248,0.05) 36%, rgba(56,189,248,0) 70%)'
+    : isActive
+      ? 'radial-gradient(circle, rgba(34,197,94,0.14) 0%, rgba(34,197,94,0.06) 36%, rgba(34,197,94,0) 70%)'
+      : 'radial-gradient(circle, rgba(99,102,241,0.08) 0%, rgba(99,102,241,0.03) 36%, rgba(99,102,241,0) 70%)';
+  const manualBreakWorkedMinutes = isStopwatchMode
+    ? (completedSessionWorkedMinutes ?? (elapsedSeconds / 60))
+    : timerConfig.focusMinutes;
+
+  const manualBreakPlan = getBreakPlan({
+    mode: timerMode,
+    workedMinutes: manualBreakWorkedMinutes,
+    sessionsCompleted,
+    longBreakCycleStart,
+    shortBreakDuration,
+    longBreakDuration,
+    longBreakAfterN,
+    extraBreakMinutes: unlockedSkills.hit_tho_sau ? BREAK_EXTENSION_MINUTES : 0,
+  });
+
+  const disasterReductionPreview = useMemo(() => (
+    relics.reduce((acc, relic) => {
+      const stage = relicEvolutions[relic.id] ?? 0;
+      const evoDef = RELIC_EVOLUTION[relic.id];
+      const buff = evoDef?.stages[stage]?.buff ?? relic.buff ?? {};
+      return acc + (buff.disasterReduction ?? 0);
+    }, 0)
+  ), [relicEvolutions, relics]);
+
+  const cancelPenaltyWonderMultiplier = useMemo(
+    () => buildings.reduce((multiplier, bpId) => {
+      const wonderEffect = BUILDING_EFFECTS[bpId]?.wonderEffect;
+      if (wonderEffect === 'building_hp_boost') return multiplier * 0.85;
+      if (wonderEffect === 'disaster_hp_50off') return multiplier * 0.5;
+      return multiplier;
+    }, 1),
+    [buildings],
+  );
+
+  const cancelPenaltyStabilityMultiplier = useMemo(() => {
+    const totalReduction = buildings.reduce((sum, bpId) => {
+      const effect = BUILDING_EFFECTS[bpId];
+      if (effect?.type !== 'defense') return sum;
+      return sum + (effect.cancelLossReductionPct ?? 0) * getBuildingLevelMultiplier(buildingLevels[bpId] ?? 1);
+    }, 0);
+    return 1 - Math.min(totalReduction, 0.6);
+  }, [buildingLevels, buildings]);
+
+  const cancelPenaltyPreview = useMemo(() => {
+    const progressRatio = Math.max(0, Math.min(1, progressPct / 100));
+
+    if (unlockedSkills.su_tha_thu && forgiveness.chargesRemaining > 0) {
+      return {
+        waived: true,
+        progressPct: progressRatio * 100,
+        minPct: 0,
+        maxPct: 0,
+      };
+    }
+
+    const skillPenaltyMultiplier = unlockedSkills.bat_khuat
+      ? BAT_KHUAT_DISASTER_XP_PENALTY
+      : unlockedSkills.y_chi_thep
+        ? (1 - Y_CHI_THEP_RETENTION)
+        : 1;
+
+    const adjustedMin = Math.max(DISASTER_MIN_PENALTY_RATE, DISASTER_MIN_PENALTY_RATE - disasterReductionPreview);
+    const adjustedMax = Math.max(DISASTER_MIN_PENALTY_RATE, DISASTER_MAX_PENALTY_RATE - disasterReductionPreview);
+
+    return {
+      waived: false,
+      progressPct: progressRatio * 100,
+      minPct: adjustedMin * skillPenaltyMultiplier * progressRatio * 100 * cancelPenaltyWonderMultiplier * cancelPenaltyStabilityMultiplier,
+      maxPct: adjustedMax * skillPenaltyMultiplier * progressRatio * 100 * cancelPenaltyWonderMultiplier * cancelPenaltyStabilityMultiplier,
+    };
+  }, [
+    cancelPenaltyStabilityMultiplier,
+    cancelPenaltyWonderMultiplier,
+    disasterReductionPreview,
+    forgiveness.chargesRemaining,
+    progressPct,
+    unlockedSkills.bat_khuat,
+    unlockedSkills.su_tha_thu,
+    unlockedSkills.y_chi_thep,
+  ]);
+
+  const handleCancelClick = useCallback(() => {
+    if (!strictMode) {
+      cancel();
+      window.setTimeout(reset, 300);
+      return;
+    }
+    setShowCancelConfirm(true);
+  }, [cancel, reset, strictMode]);
+
+  const handleConfirmCancel = useCallback(() => {
+    setShowCancelConfirm(false);
+    cancel();
+    window.setTimeout(reset, 300);
+  }, [cancel, reset]);
+
+  const handleSessionReview = useCallback((goalAchieved) => {
+    if (!lastCompletedSessionId) return;
+    reviewCompletedSession(lastCompletedSessionId, {
+      goal: pendingSessionGoal,
+      nextNote: pendingNextSessionNote,
+      goalAchieved,
+    });
+  }, [lastCompletedSessionId, pendingNextSessionNote, pendingSessionGoal, reviewCompletedSession]);
+
+  const switchMode = useCallback((nextMode) => {
+    if (isActive || isBreakMode || nextMode === timerMode) return;
+    setTimerConfig({ mode: nextMode });
+  }, [isActive, isBreakMode, setTimerConfig, timerMode]);
+  const applyQuickPreset = useCallback((preset) => {
+    setTimerConfig({
+      focusMinutes: preset.focusMinutes,
+      breakMinutes: preset.shortBreakDuration,
+    });
+    setBreakProfile({
+      shortBreakDuration: preset.shortBreakDuration,
+      longBreakDuration: preset.longBreakDuration,
+      longBreakAfterN: preset.longBreakAfterN,
+    });
+  }, [setBreakProfile, setTimerConfig]);
+  const applyFocusMinutes = useCallback((value) => {
+    const parsed = Number.parseInt(String(value), 10);
+    if (Number.isNaN(parsed)) return;
+    setTimerConfig({ focusMinutes: Math.min(180, Math.max(1, parsed)) });
+  }, [setTimerConfig]);
+  const activePresetId = useMemo(() => (
+    QUICK_FOCUS_PRESETS.find((preset) => (
+      preset.focusMinutes === timerConfig.focusMinutes
+      && preset.shortBreakDuration === shortBreakDuration
+      && preset.longBreakDuration === longBreakDuration
+      && preset.longBreakAfterN === longBreakAfterN
+    ))?.id ?? null
+  ), [longBreakAfterN, longBreakDuration, shortBreakDuration, timerConfig.focusMinutes]);
+  const breakProgressPct = breakTotalSeconds > 0
+    ? ((breakTotalSeconds - breakSecsLeft) / breakTotalSeconds) * 100
+    : 0;
+  const displayRingSeconds = isBreakMode ? breakSecsLeft : displaySeconds;
+  const displayProgressPct = isBreakMode ? breakProgressPct : progressPct;
+  const breakRingColor = breakIsLong ? '#60a5fa' : '#38bdf8';
+  const strokeDashoffset = RING_CIRCUMFERENCE - (displayProgressPct / 100) * RING_CIRCUMFERENCE;
+  const baseRingColor = isBreakMode
+    ? breakRingColor
+    : (RING_COLORS[timerState] ?? RING_COLORS[TIMER_STATES.IDLE]);
+  const ringColor = isBreakMode ? breakRingColor : baseRingColor;
+  const sessionSetupCard = (
+    <div className={`w-full overflow-hidden border backdrop-blur-2xl transition-[border-color,box-shadow,background-color,opacity] duration-300 ${
+      immersiveMode
+        ? 'rounded-[28px] bg-white/[0.045] border-white/[0.10] shadow-[0_18px_56px_rgba(15,23,42,0.22),inset_0_1px_0_rgba(255,255,255,0.06)]'
+        : 'rounded-[26px] bg-white/[0.04] border-white/[0.09] shadow-[0_8px_32px_rgba(0,0,0,0.25),inset_0_1px_0_rgba(255,255,255,0.07)]'
+    } ${!isIdle || isBreakMode ? 'opacity-25 pointer-events-none' : ''}`}>
+      <div className={`flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between ${
+        immersiveMode ? 'px-5 py-4 md:px-5' : 'px-4 py-4'
+      }`}>
+        <div className="min-w-0">
+          <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-slate-400 whitespace-nowrap">Thiết lập phiên</p>
+          <p className="mt-1 text-sm text-slate-500">Gọn một chỗ: chọn mode, thời lượng và mức kỷ luật trước khi bắt đầu.</p>
+        </div>
+        <ModeSwitch
+          disabled={timerState !== TIMER_STATES.IDLE || isBreakMode}
+          mode={timerMode}
+          onChange={switchMode}
+        />
+      </div>
+
+      <div className={`grid gap-3 border-t border-white/5 ${
+        immersiveMode
+          ? 'px-5 py-4 md:grid-cols-[minmax(0,1.12fr)_minmax(0,0.88fr)] md:px-5'
+          : 'px-4 py-4 md:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]'
+      }`}>
+        <div className={`min-w-0 rounded-[22px] px-4 py-3.5 ${
+          lightTheme
+            ? 'border border-slate-200/80 bg-slate-50/80'
+            : 'border border-white/[0.07] bg-black/10'
+        }`}>
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className={`text-[10px] font-bold uppercase tracking-[0.22em] whitespace-nowrap ${
+                lightTheme ? 'text-emerald-600' : 'text-emerald-400'
+              }`}>
+                {isStopwatchMode ? 'Mốc tham chiếu' : 'Tập trung'}
+              </p>
+              <p className="mt-1 text-xs text-slate-500">
+                {isStopwatchMode ? 'Dùng để neo mốc thưởng khi bấm giờ.' : 'Thời lượng countdown của phiên kế tiếp.'}
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                aria-label="Giảm số phút tập trung"
+                onClick={() => applyFocusMinutes(Math.max(1, timerConfig.focusMinutes - 1))}
+                className={`size-9 rounded-full font-bold flex items-center justify-center transition-colors focus-visible:outline-none focus-visible:ring-2 ${
+                  lightTheme
+                    ? 'text-slate-500 hover:text-slate-800 bg-white border border-slate-200/80 hover:bg-slate-100 focus-visible:ring-indigo-500/25'
+                    : 'text-slate-400 hover:text-white backdrop-blur-md bg-white/[0.06] hover:bg-white/[0.11] border border-white/[0.10] focus-visible:ring-white/30'
+                }`}
+              >
+                −
+              </button>
+              <div className="min-w-[3.5rem] text-center">
+                <div className="text-white font-mono font-bold text-[2rem] leading-none tabular-nums">
+                  {timerConfig.focusMinutes}
+                </div>
+                <div className="mt-1 text-[11px] uppercase tracking-[0.16em] text-slate-500">phút</div>
+              </div>
+              <button
+                type="button"
+                aria-label="Tăng số phút tập trung"
+                onClick={() => applyFocusMinutes(Math.min(180, timerConfig.focusMinutes + 1))}
+                className={`size-9 rounded-full font-bold flex items-center justify-center transition-colors focus-visible:outline-none focus-visible:ring-2 ${
+                  lightTheme
+                    ? 'text-slate-500 hover:text-slate-800 bg-white border border-slate-200/80 hover:bg-slate-100 focus-visible:ring-indigo-500/25'
+                    : 'text-slate-400 hover:text-white backdrop-blur-md bg-white/[0.06] hover:bg-white/[0.11] border border-white/[0.10] focus-visible:ring-white/30'
+                }`}
+              >
+                +
+              </button>
+            </div>
+          </div>
+
+          <QuickPresets
+            className="mt-4"
+            activePresetId={activePresetId}
+            disabled={timerState !== TIMER_STATES.IDLE || isBreakMode}
+            mode={timerMode}
+            onSelect={applyQuickPreset}
+          />
+        </div>
+
+        <div className={`min-w-0 rounded-[22px] px-4 py-3.5 ${
+          lightTheme
+            ? 'border border-slate-200/80 bg-slate-50/80'
+            : 'border border-white/[0.07] bg-black/10'
+        }`}>
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0">
+              <p className={`text-[10px] font-bold uppercase tracking-[0.22em] whitespace-nowrap ${
+                lightTheme ? 'text-sky-600' : 'text-sky-400'
+              }`}>Nghỉ giải lao</p>
+              {isStopwatchMode ? (
+                <>
+                  <p className="mt-1 text-sm leading-relaxed text-slate-500">
+                    Stopwatch dùng công thức Flowtime để tự đổi giờ nghỉ theo thời lượng bạn vừa làm.
+                  </p>
+                  <div className="mt-3 space-y-2">
+                    {FLOWTIME_BREAK_RULES.map((rule) => (
+                      <div
+                        key={rule.id}
+                        className={`flex items-center justify-between rounded-2xl px-3 py-2 ${
+                          lightTheme
+                            ? 'border border-slate-200/80 bg-white'
+                            : 'border border-white/[0.08] bg-white/[0.03]'
+                        }`}
+                      >
+                        <span className="text-xs text-slate-400">{rule.label}</span>
+                        <span className={`font-mono text-sm font-bold tabular-nums ${
+                          lightTheme ? 'text-slate-900' : 'text-white'
+                        }`}>{rule.breakMinutes}'</span>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p className={`mt-1 text-2xl font-mono font-bold tabular-nums ${
+                    lightTheme ? 'text-slate-900' : 'text-white'
+                  }`}>
+                    {shortBreakDuration}' <span className="text-slate-600">/</span> {longBreakDuration}'
+                  </p>
+                  <p className="mt-1 text-xs text-slate-500">
+                    Phiên dài xuất hiện sau mỗi {longBreakAfterN} lượt hoàn thành.
+                  </p>
+                </>
+              )}
+            </div>
+            <span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] whitespace-nowrap ${
+              lightTheme
+                ? 'border border-sky-200 bg-sky-50 text-sky-700'
+                : 'border border-sky-400/18 bg-sky-400/10 text-sky-300'
+            }`}>
+              Auto
+            </span>
+          </div>
+
+          <div className={`mt-4 pt-4 ${lightTheme ? 'border-t border-slate-200/80' : 'border-t border-white/5'}`}>
+            <StrictModeToggle
+              disabled={isActive}
+              enabled={strictMode}
+              onChange={(value) => setTimerConfig({ strictMode: value })}
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <Motion.div
+      className="relative mx-auto flex w-full flex-col items-center select-none"
+      animate={{ maxWidth: immersiveRootMaxWidth, gap: immersiveMode ? 22 : 20 }}
+      transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+    >
+      {eraCrisis.active && (
+        <motion.button
+          animate={{ borderColor: ['#ef4444', '#f59e0b', '#ef4444'] }}
+          transition={{ duration: 1.5, repeat: Infinity }}
+          onClick={openCrisis}
+          className="w-full py-2 rounded-xl border-2 border-red-700 bg-red-950 text-red-300 text-sm font-bold flex items-center justify-center gap-2"
+        >
+          <span className="animate-pulse">{eraCrisis.icon}</span>
+          {eraCrisis.name} — Nhấn để Xem Lựa Chọn
+          <span className="animate-pulse">{eraCrisis.icon}</span>
+        </motion.button>
+      )}
+
+      <AnimatePresence>
+        {activeMilestone && (
+          <motion.div
+            key={activeMilestone}
+            initial={{ opacity: 0, y: -12, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -12, scale: 0.9 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+            className="flex items-center gap-2 px-4 py-2 rounded-2xl backdrop-blur-xl bg-emerald-400/10 border border-emerald-400/30 shadow-[0_4px_20px_rgba(16,185,129,0.2),inset_0_1px_0_rgba(255,255,255,0.08)]"
+          >
+            <span className="text-lg">
+              {activeMilestone === 25 ? '⚡' : activeMilestone === 50 ? '🔥' : '💎'}
+            </span>
+            <span className="text-emerald-300 font-bold text-sm">
+              {activeMilestone}% hoàn thành!
+            </span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {!isBreakMode && comboCount >= 2 && (
+        <motion.div
+          initial={{ scale: 0.8, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          className="flex items-center gap-2 px-4 py-1.5 rounded-2xl backdrop-blur-xl bg-orange-400/10 border border-orange-400/30 shadow-[0_4px_20px_rgba(251,146,60,0.2),inset_0_1px_0_rgba(255,255,255,0.07)]"
+        >
+          <span className="text-lg">🔥</span>
+          <div className="flex flex-col items-center leading-tight">
+            <span className="text-orange-300 font-bold text-sm">Combo ×{comboCount}</span>
+            <span className="text-orange-400/70 text-xs">+{Math.min((comboCount - 1), 6) * 5}% XP</span>
+          </div>
+          <span className="text-lg">🔥</span>
+        </motion.div>
+      )}
+
+      {!isBreakMode && (
+        <MultiplierBadge
+          deepFocusThreshold={deepFocusThreshold}
+          focusMinutes={timerConfig.focusMinutes}
+          isStopwatchMode={isStopwatchMode}
+          referenceMinutes={rewardReferenceMinutes}
+          tier={tier}
+        />
+      )}
+
+      {isBreakMode && (
+        <motion.div
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className={`flex items-center gap-2 px-4 py-2 rounded-2xl backdrop-blur-xl border ${
+            breakIsLong
+              ? 'bg-blue-400/10 border-blue-400/30 text-blue-300 shadow-[0_4px_20px_rgba(59,130,246,0.18),inset_0_1px_0_rgba(255,255,255,0.08)]'
+              : 'bg-sky-400/10 border-sky-400/30 text-sky-300 shadow-[0_4px_20px_rgba(56,189,248,0.18),inset_0_1px_0_rgba(255,255,255,0.08)]'
+          }`}
+        >
+          <span className="text-lg">{breakIsLong ? '🌙' : '☕'}</span>
+          <span className="text-sm font-bold">
+            {breakIsLong ? 'Đang Trong Giải Lao Dài' : 'Đang Trong Giải Lao'}
+          </span>
+        </motion.div>
+      )}
+
+      <div
+        className="relative flex w-full items-center justify-center"
+        style={{ minHeight: timerFootprintHeight }}
+      >
+        <motion.div
+          className="relative flex shrink-0 items-center justify-center"
+          animate={{ scale: immersiveTimerScale, y: immersiveMode ? 4 : 0 }}
+          transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+        >
+          {immersiveMode && (isActive || isBreakMode) && (
+            <motion.div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-[-10%] rounded-full blur-3xl"
+              initial={{ opacity: 0, scale: 0.92 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.35, ease: 'easeOut' }}
+              style={{ background: immersiveGlow }}
+            />
+          )}
+          <svg
+            width={SVG_SIZE}
+            height={SVG_SIZE}
+            className="transform -rotate-90"
+            aria-hidden="true"
+            style={{
+              filter: isBreakMode
+                ? `drop-shadow(0 0 12px ${ringColor}55)`
+                : timerState === TIMER_STATES.RUNNING
+                  ? `drop-shadow(0 0 12px ${ringColor}60)`
+                  : 'none',
+              transition: 'filter 0.4s ease',
+            }}
+          >
+            <circle cx={SVG_SIZE / 2} cy={SVG_SIZE / 2} r={RING_RADIUS - RING_STROKE / 2 - 2} style={{ fill: 'var(--timer-disc, #0c1320)' }} />
+            <circle cx={SVG_SIZE / 2} cy={SVG_SIZE / 2} r={RING_RADIUS} fill="none" style={{ stroke: 'var(--timer-track, #1e3a52)' }} strokeWidth={RING_STROKE} />
+            {isStopwatchMode && !isBreakMode ? (
+              <circle
+                cx={SVG_SIZE / 2}
+                cy={SVG_SIZE / 2}
+                r={RING_RADIUS}
+                fill="none"
+                stroke="rgba(129,140,248,0.32)"
+                strokeWidth={RING_STROKE}
+                strokeDasharray="3 8"
+                strokeLinecap="round"
+              />
+            ) : (
+              <motion.circle
+                cx={SVG_SIZE / 2}
+                cy={SVG_SIZE / 2}
+                r={RING_RADIUS}
+                fill="none"
+                stroke={ringColor}
+                strokeWidth={RING_STROKE}
+                strokeLinecap="round"
+                strokeDasharray={RING_CIRCUMFERENCE}
+                animate={{ strokeDashoffset, stroke: ringColor }}
+                transition={{
+                  strokeDashoffset: { duration: 0.8, ease: 'easeOut' },
+                  stroke: { duration: 0.3 },
+                }}
+              />
+            )}
+          </svg>
+
+          <div className="absolute inset-0 flex flex-col items-center justify-center">
+            <motion.span
+              key={`${isBreakMode ? 'break' : timerMode}-${displayRingSeconds}`}
+              className={`text-6xl font-mono font-bold tracking-widest transition-all duration-300 ${
+                isBreakMode
+                  ? breakIsLong
+                    ? 'text-blue-300'
+                    : 'text-sky-300'
+                  : timerState === TIMER_STATES.RUNNING && !isStopwatchMode && displaySeconds <= 10
+                    ? 'text-red-400 timer-urgent'
+                    : timerState === TIMER_STATES.RUNNING
+                      ? 'text-white timer-running'
+                      : 'text-white'
+              }`}
+              animate={!isBreakMode && timerState === TIMER_STATES.RUNNING && !isStopwatchMode && displaySeconds <= 10
+                ? { scale: [1, 1.04, 1] }
+                : {}}
+              transition={{ duration: 1, repeat: !isBreakMode && !isStopwatchMode && displaySeconds <= 10 ? Infinity : 0 }}
+            >
+              {formatTime(displayRingSeconds)}
+            </motion.span>
+            <span className="text-xs text-slate-400 mt-1 uppercase tracking-wider">
+              {isBreakMode && (breakIsLong ? 'Giải Lao Dài' : 'Giải Lao')}
+              {!isBreakMode && timerState === TIMER_STATES.IDLE && (isStopwatchMode ? 'Sẵn Sàng Bấm Giờ' : 'Sẵn Sàng')}
+              {!isBreakMode && timerState === TIMER_STATES.RUNNING && (isStopwatchMode ? 'Đang Bấm Giờ' : 'Đang Tập Trung')}
+              {!isBreakMode && timerState === TIMER_STATES.PAUSED && 'Đã Tạm Dừng'}
+              {!isBreakMode && timerState === TIMER_STATES.FINISHED && 'Hoàn Thành!'}
+              {!isBreakMode && timerState === TIMER_STATES.CANCELLED && 'Đã Hủy'}
+            </span>
+            {!isBreakMode && isStopwatchMode && (
+              <span className="text-xs text-indigo-300 mt-0.5">
+                Ghi nhận theo phút thực tế
+              </span>
+            )}
+            {!isBreakMode && unlockedSkills.su_tha_thu && (
+              <span className="text-xs text-emerald-400 mt-0.5">
+                🛡️ {forgiveness.chargesRemaining} lần miễn phạt
+              </span>
+            )}
+            {isBreakMode && (
+              <span className="text-xs mt-0.5" style={{ color: breakIsLong ? '#93c5fd' : '#7dd3fc' }}>
+                Hít thở, thư giãn & quay lại đúng giờ
+              </span>
+            )}
+          </div>
+        </motion.div>
+      </div>
+
+      <div className={`flex w-full items-start justify-center ${immersiveMode ? 'min-h-[82px]' : 'min-h-[68px]'}`}>
+        <AnimatePresence mode="wait">
+        {isBreakMode && (
+          <motion.button
+            key="break-skip"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            whileHover={{ scale: 1.04, y: -1 }}
+            whileTap={{ scale: 0.96 }}
+            onClick={endBreak}
+            className="px-8 py-3.5 font-bold rounded-2xl text-lg backdrop-blur-xl
+                       text-sky-300 bg-sky-400/15 border border-sky-400/40
+                       shadow-[0_4px_28px_rgba(14,165,233,0.25),inset_0_1px_0_rgba(255,255,255,0.10)]
+                       hover:bg-sky-400/22 hover:shadow-[0_4px_32px_rgba(14,165,233,0.38)] transition-all"
+          >
+            ↩ Kết Thúc Giải Lao
+          </motion.button>
+        )}
+
+        {!isBreakMode && timerState === TIMER_STATES.IDLE && (
+          <motion.div
+            key="start"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            className="flex items-center gap-3"
+          >
+            <motion.button
+              whileHover={{ scale: 1.04, y: -1 }}
+              whileTap={{ scale: 0.96 }}
+              onClick={start}
+              className="px-10 py-3.5 font-bold rounded-2xl text-lg backdrop-blur-xl
+                         text-emerald-300 bg-emerald-400/15 border border-emerald-400/40
+                         shadow-[0_4px_28px_rgba(16,185,129,0.3),inset_0_1px_0_rgba(255,255,255,0.12)]
+                         hover:bg-emerald-400/22 hover:shadow-[0_4px_32px_rgba(16,185,129,0.45)] transition-all"
+            >
+              ▶ Bắt Đầu
+            </motion.button>
+          </motion.div>
+        )}
+
+        {!isBreakMode && timerState === TIMER_STATES.RUNNING && (
+          <motion.div
+            key="running-btns"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            className="flex items-center gap-3"
+          >
+            <motion.button
+              whileHover={{ scale: 1.04, y: -1 }}
+              whileTap={{ scale: 0.96 }}
+              onClick={pause}
+              className="px-7 py-3.5 font-bold rounded-2xl text-lg backdrop-blur-xl
+                         text-amber-300 bg-amber-400/15 border border-amber-400/40
+                         shadow-[0_4px_28px_rgba(245,158,11,0.25),inset_0_1px_0_rgba(255,255,255,0.10)]
+                         hover:bg-amber-400/22 hover:shadow-[0_4px_32px_rgba(245,158,11,0.4)] transition-all"
+            >
+              ⏸ Tạm Dừng
+            </motion.button>
+            {isStopwatchMode && (
+              <motion.button
+                whileHover={{ scale: 1.04, y: -1 }}
+                whileTap={{ scale: 0.96 }}
+                onClick={finish}
+                className="px-7 py-3.5 font-bold rounded-2xl text-lg backdrop-blur-xl
+                           text-indigo-200 bg-indigo-400/15 border border-indigo-400/40
+                           shadow-[0_4px_28px_rgba(99,102,241,0.25),inset_0_1px_0_rgba(255,255,255,0.10)]
+                           hover:bg-indigo-400/22 hover:shadow-[0_4px_32px_rgba(99,102,241,0.4)] transition-all"
+              >
+                ■ Chốt Phiên
+              </motion.button>
+            )}
+            <motion.button
+              whileHover={{ scale: 1.04, y: -1 }}
+              whileTap={{ scale: 0.96 }}
+              onClick={handleCancelClick}
+              className="px-7 py-3.5 font-bold rounded-2xl text-lg backdrop-blur-xl
+                         text-red-300 bg-red-400/15 border border-red-400/40
+                         shadow-[0_4px_28px_rgba(239,68,68,0.3),inset_0_1px_0_rgba(255,255,255,0.10)]
+                         hover:bg-red-400/22 hover:shadow-[0_4px_32px_rgba(239,68,68,0.45)] transition-all"
+            >
+              ✕ Hủy
+            </motion.button>
+          </motion.div>
+        )}
+
+        {!isBreakMode && timerState === TIMER_STATES.PAUSED && (
+          <motion.div
+            key="paused-btns"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            className="flex items-center gap-3"
+          >
+            <motion.button
+              whileHover={{ scale: 1.04, y: -1 }}
+              whileTap={{ scale: 0.96 }}
+              onClick={resume}
+              className="px-7 py-3.5 font-bold rounded-2xl text-lg backdrop-blur-xl
+                         text-emerald-300 bg-emerald-400/15 border border-emerald-400/40
+                         shadow-[0_4px_28px_rgba(16,185,129,0.3),inset_0_1px_0_rgba(255,255,255,0.12)]
+                         hover:bg-emerald-400/22 hover:shadow-[0_4px_32px_rgba(16,185,129,0.45)] transition-all"
+            >
+              ▶ Tiếp Tục
+            </motion.button>
+            {isStopwatchMode && (
+              <motion.button
+                whileHover={{ scale: 1.04, y: -1 }}
+                whileTap={{ scale: 0.96 }}
+                onClick={finish}
+                className="px-7 py-3.5 font-bold rounded-2xl text-lg backdrop-blur-xl
+                           text-indigo-200 bg-indigo-400/15 border border-indigo-400/40
+                           shadow-[0_4px_28px_rgba(99,102,241,0.25),inset_0_1px_0_rgba(255,255,255,0.10)]
+                           hover:bg-indigo-400/22 hover:shadow-[0_4px_32px_rgba(99,102,241,0.4)] transition-all"
+              >
+                ■ Chốt Phiên
+              </motion.button>
+            )}
+            <motion.button
+              whileHover={{ scale: 1.04, y: -1 }}
+              whileTap={{ scale: 0.96 }}
+              onClick={handleCancelClick}
+              className="px-7 py-3.5 font-bold rounded-2xl text-lg backdrop-blur-xl
+                         text-red-300 bg-red-400/15 border border-red-400/40
+                         shadow-[0_4px_28px_rgba(239,68,68,0.3),inset_0_1px_0_rgba(255,255,255,0.10)]
+                         hover:bg-red-400/22 hover:shadow-[0_4px_32px_rgba(239,68,68,0.45)] transition-all"
+            >
+              ✕ Hủy
+            </motion.button>
+          </motion.div>
+        )}
+
+        {!isBreakMode && timerState === TIMER_STATES.FINISHED && (
+          <motion.div
+            key="finished-btns"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            className="flex items-center gap-3"
+          >
+            {!disableBreak && !autoStartBreak && (
+              <motion.button
+                whileHover={{ scale: 1.04, y: -1 }}
+                whileTap={{ scale: 0.96 }}
+                onClick={() => {
+                  startBreak({
+                    ...manualBreakPlan,
+                    sourceSessionId: lastCompletedSessionId ?? null,
+                  });
+                  reset();
+                }}
+                className="px-7 py-3.5 font-bold rounded-2xl text-lg backdrop-blur-xl
+                           text-sky-300 bg-sky-400/15 border border-sky-400/40
+                           shadow-[0_4px_28px_rgba(14,165,233,0.3),inset_0_1px_0_rgba(255,255,255,0.10)]
+                           hover:bg-sky-400/22 hover:shadow-[0_4px_32px_rgba(14,165,233,0.45)] transition-all"
+              >
+                ☕ Giải Lao
+              </motion.button>
+            )}
+            <motion.button
+              whileHover={{ scale: 1.04, y: -1 }}
+              whileTap={{ scale: 0.96 }}
+              onClick={reset}
+              className="px-7 py-3.5 font-bold rounded-2xl text-lg backdrop-blur-xl
+                         text-indigo-300 bg-indigo-400/15 border border-indigo-400/40
+                         shadow-[0_4px_28px_rgba(99,102,241,0.3),inset_0_1px_0_rgba(255,255,255,0.10)]
+                         hover:bg-indigo-400/22 hover:shadow-[0_4px_32px_rgba(99,102,241,0.45)] transition-all"
+            >
+              ↺ Đặt Lại
+            </motion.button>
+          </motion.div>
+        )}
+
+        {!isBreakMode && timerState === TIMER_STATES.CANCELLED && (
+          <motion.button
+            key="reset-cancelled"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            whileHover={{ scale: 1.04, y: -1 }}
+            whileTap={{ scale: 0.96 }}
+            onClick={reset}
+            className="px-10 py-3.5 font-bold rounded-2xl text-lg backdrop-blur-xl
+                       text-indigo-300 bg-indigo-400/15 border border-indigo-400/40
+                       shadow-[0_4px_28px_rgba(99,102,241,0.3),inset_0_1px_0_rgba(255,255,255,0.10)]
+                       hover:bg-indigo-400/22 hover:shadow-[0_4px_32px_rgba(99,102,241,0.45)] transition-all"
+          >
+            ↺ Đặt Lại
+          </motion.button>
+        )}
+        </AnimatePresence>
+      </div>
+
+      <AnimatePresence>
+        {showCancelConfirm && (
+          <CancelConfirmDialog
+            hasForgivenessCharge={unlockedSkills.su_tha_thu && forgiveness.chargesRemaining > 0}
+            onAbort={() => setShowCancelConfirm(false)}
+            onConfirm={handleConfirmCancel}
+            preview={cancelPenaltyPreview}
+          />
+        )}
+      </AnimatePresence>
+
+      {prioritizeSetupCard && sessionSetupCard}
+
+      <div className="w-full">
+        <div className="flex items-center justify-between mb-1.5 px-0.5">
+          <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+            ✏️ Tập Trung Ghi Chú
+          </span>
+          {noteWordCount > 0 && (
+            <span className="text-[10px] text-slate-600">{noteWordCount}/{NOTE_WORD_LIMIT} từ</span>
+          )}
+        </div>
+        <textarea
+          value={pendingNote}
+          onChange={(e) => setPendingNote(trimToWordLimit(e.target.value, NOTE_WORD_LIMIT))}
+          rows={3}
+          placeholder="Bạn đang nghĩ gì đó? Hãy ghi lại những suy nghĩ của bạn…"
+          className="w-full rounded-xl px-3 py-2.5 text-sm text-slate-300 placeholder-slate-600
+                     resize-none focus:outline-none transition-all leading-relaxed
+                     backdrop-blur-xl bg-white/[0.04] border border-white/[0.08]
+                     focus:bg-white/[0.07] focus:border-white/[0.16]
+                     shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]"
+          style={{ scrollbarWidth: 'none' }}
+        />
+      </div>
+
+      <div className="w-full rounded-2xl px-3.5 py-3 backdrop-blur-xl bg-white/[0.035] border border-white/[0.08] shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+        <div className="flex items-center justify-between mb-1.5">
+          <button
+            type="button"
+            aria-expanded={showSessionGoalEditor}
+            onClick={() => setShowSessionGoalEditor((value) => !value)}
+            className="flex items-center gap-2 text-left transition-colors hover:text-amber-100"
+          >
+            <span className="text-xs text-amber-300">{showSessionGoalEditor ? '▾' : '▸'}</span>
+            <span className="text-xs font-semibold text-amber-300 uppercase tracking-wide">
+              🎯 Mục Tiêu Của Phiên
+            </span>
+          </button>
+          {sessionGoalWordCount > 0 && (
+            <span className="text-[10px] text-slate-600">{sessionGoalWordCount}/{SESSION_GOAL_WORD_LIMIT} từ</span>
+          )}
+        </div>
+        <AnimatePresence initial={false}>
+          {showSessionGoalEditor ? (
+            <Motion.div
+              key="goal-open"
+              initial={{ opacity: 0, height: 0, marginTop: 0 }}
+              animate={{ opacity: 1, height: 'auto', marginTop: 0 }}
+              exit={{ opacity: 0, height: 0, marginTop: 0 }}
+              transition={{ duration: 0.18, ease: 'easeOut' }}
+              className="overflow-hidden"
+            >
+              <textarea
+                value={pendingSessionGoal}
+                onChange={(e) => setPendingSessionGoal(trimToWordLimit(e.target.value, SESSION_GOAL_WORD_LIMIT))}
+                rows={2}
+                placeholder="Ví dụ: chốt outline, giải xong 3 bài, viết xong phần mở đầu..."
+                className="w-full rounded-xl px-3 py-2 text-sm text-slate-200 placeholder-slate-600
+                           resize-none focus:outline-none transition-all leading-relaxed
+                           backdrop-blur-xl bg-white/[0.04] border border-white/[0.08]
+                           focus:bg-white/[0.07] focus:border-amber-400/30"
+                style={{ scrollbarWidth: 'none' }}
+              />
+            </Motion.div>
+          ) : (
+            pendingSessionGoal.trim() && (
+              <Motion.p
+                key="goal-closed"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="truncate text-xs text-slate-500"
+                title={pendingSessionGoal.trim()}
+              >
+                {pendingSessionGoal.trim()}
+              </Motion.p>
+            )
+          )}
+        </AnimatePresence>
+
+        <div className="flex items-center justify-between mt-3 mb-1.5">
+          <button
+            type="button"
+            aria-expanded={showNextSessionNoteEditor}
+            onClick={() => setShowNextSessionNoteEditor((value) => !value)}
+            className="flex items-center gap-2 text-left transition-colors hover:text-sky-100"
+          >
+            <span className="text-xs text-sky-300">{showNextSessionNoteEditor ? '▾' : '▸'}</span>
+            <span className="text-xs font-semibold text-sky-300 uppercase tracking-wide">
+              🗒 Ghi Chú Cho Lần Sau
+            </span>
+          </button>
+          {nextSessionNoteWordCount > 0 && (
+            <span className="text-[10px] text-slate-600">{nextSessionNoteWordCount}/{NEXT_NOTE_WORD_LIMIT} từ</span>
+          )}
+        </div>
+        <AnimatePresence initial={false}>
+          {showNextSessionNoteEditor ? (
+            <Motion.div
+              key="next-open"
+              initial={{ opacity: 0, height: 0, marginTop: 0 }}
+              animate={{ opacity: 1, height: 'auto', marginTop: 0 }}
+              exit={{ opacity: 0, height: 0, marginTop: 0 }}
+              transition={{ duration: 0.18, ease: 'easeOut' }}
+              className="overflow-hidden"
+            >
+              <textarea
+                value={pendingNextSessionNote}
+                onChange={(e) => setPendingNextSessionNote(trimToWordLimit(e.target.value, NEXT_NOTE_WORD_LIMIT))}
+                rows={2}
+                placeholder="Optional: lần sau cần đổi gì, tránh gì, chuẩn bị gì?"
+                className="w-full rounded-xl px-3 py-2 text-sm text-slate-200 placeholder-slate-600
+                           resize-none focus:outline-none transition-all leading-relaxed
+                           backdrop-blur-xl bg-white/[0.04] border border-white/[0.08]
+                           focus:bg-white/[0.07] focus:border-sky-400/30"
+                style={{ scrollbarWidth: 'none' }}
+              />
+            </Motion.div>
+          ) : (
+            pendingNextSessionNote.trim() && (
+              <Motion.p
+                key="next-closed"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="truncate text-xs text-slate-500"
+                title={pendingNextSessionNote.trim()}
+              >
+                {pendingNextSessionNote.trim()}
+              </Motion.p>
+            )
+          )}
+        </AnimatePresence>
+
+        <AnimatePresence initial={false}>
+          {showSessionReview && (
+            <SessionReviewCard
+              completedGoalAchieved={completedGoalAchieved}
+              goalText={reviewGoalText}
+              onPick={handleSessionReview}
+            />
+          )}
+        </AnimatePresence>
+      </div>
+
+      {!isBreakMode && !isStopwatchMode && longBreakAfterN > 1 && (() => {
+        const cyclePos = (sessionsCompleted - longBreakCycleStart) % longBreakAfterN;
+        return (
+          <div className="flex items-center gap-2.5 w-full px-1">
+            <span className="text-[10px] text-slate-600 uppercase tracking-wider font-medium whitespace-nowrap">
+              Chu kỳ nghỉ
+            </span>
+            <div className="flex items-center gap-1.5">
+              {Array.from({ length: longBreakAfterN }).map((_, index) => (
+                <div
+                  key={index}
+                  className="rounded-full transition-all duration-300"
+                  style={{
+                    width: index < cyclePos ? 8 : 7,
+                    height: index < cyclePos ? 8 : 7,
+                    background: index < cyclePos
+                      ? 'var(--accent, #6366f1)'
+                      : 'var(--timer-track, #1e293b)',
+                    boxShadow: index < cyclePos
+                      ? '0 0 6px rgba(var(--accent-rgb, 99,102,241), 0.5)'
+                      : 'none',
+                  }}
+                />
+              ))}
+            </div>
+            <span className="text-[11px] text-slate-400 font-medium tabular-nums">
+              {cyclePos}/{longBreakAfterN}
+            </span>
+            <button
+              type="button"
+              onClick={resetLongBreakCycle}
+              title="Reset chu kỳ nghỉ dài"
+              aria-label="Reset chu kỳ nghỉ dài"
+              className="ml-auto text-[10px] text-slate-600 hover:text-slate-300 px-2.5 py-1 rounded-full border border-white/[0.06] hover:border-white/[0.14] bg-white/[0.03] hover:bg-white/[0.07] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30"
+            >
+              ↺ reset
+            </button>
+          </div>
+        );
+      })()}
+
+      <div className={`w-full transition-opacity ${isActive || isBreakMode ? 'opacity-40 pointer-events-none' : ''}`}>
+        <AnimatePresence>
+          {showCatManager && (
+            <CategoryManager
+              categories={sessionCategories ?? []}
+              onClose={() => setShowCatManager(false)}
+              onAdd={(category) => { addCategory(category); }}
+              onDelete={(id) => { deleteCategory(id); }}
+            />
+          )}
+        </AnimatePresence>
+
+        {!showCatManager && (
+          <div className="flex flex-col gap-2.5 w-full">
+            <div className="flex items-center justify-between gap-3 px-1">
+              <div className="min-w-0">
+                <span className="text-[10px] text-slate-600 uppercase tracking-wider font-medium whitespace-nowrap">
+                  Loại phiên
+                </span>
+              </div>
+              {timerState === TIMER_STATES.IDLE && (
+                <button
+                  type="button"
+                  onClick={() => setShowCatManager(true)}
+                  aria-label="Mở quản lý phân loại"
+                  className="flex-shrink-0 size-7 rounded-full flex items-center justify-center text-slate-500 hover:text-slate-200 transition-all text-xs backdrop-blur-md bg-white/[0.05] hover:bg-white/[0.10] border border-white/[0.08] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30"
+                  title="Quản lý phân loại"
+                >
+                  ⚙
+                </button>
+              )}
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <CategoryChip
+                active={pendingCategoryId === null}
+                disabled={false}
+                label="✦ Tất cả"
+                onClick={() => setPendingCategory(null)}
+              />
+              {(sessionCategories ?? []).map((category) => (
+                <CategoryChip
+                  key={category.id}
+                  active={pendingCategoryId === category.id}
+                  color={category.color}
+                  disabled={false}
+                  label={`${category.icon} ${category.label}`}
+                  onClick={() => setPendingCategory(category.id)}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {!prioritizeSetupCard && sessionSetupCard}
+
+      {isIdle && !isBreakMode && !isStopwatchMode && timerConfig.focusMinutes >= OVERCLOCK_MIN_SESSION_MIN && (
+        <StakePanel />
+      )}
+    </Motion.div>
+  );
+}
+
+function MultiplierBadge({ tier, focusMinutes, deepFocusThreshold, isStopwatchMode, referenceMinutes }) {
+  const isHigh = tier.multiplier >= 2.0;
+  const isMid = tier.multiplier >= 1.3;
+
+  return (
+    <div
+      className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold border backdrop-blur-xl ${
+        isHigh
+          ? 'bg-amber-400/10 border-amber-400/35 text-amber-400 shadow-[0_0_20px_rgba(251,191,36,0.2),inset_0_1px_0_rgba(255,255,255,0.08)]'
+          : isMid
+            ? 'bg-sky-400/[0.08] border-sky-400/30 text-sky-300 shadow-[0_0_16px_rgba(56,189,248,0.12),inset_0_1px_0_rgba(255,255,255,0.06)]'
+            : 'bg-white/[0.04] border-white/[0.08] text-slate-500'
+      }`}
+    >
+      <span>{tier.tierLabel}</span>
+      {tier.chestGuaranteed && <span title="Rương Lớn đảm bảo">📦</span>}
+      {isStopwatchMode && <span className="text-xs opacity-70">tham chiếu {referenceMinutes}'</span>}
+      {!isStopwatchMode && tier.multiplier < 1.3 && focusMinutes < deepFocusThreshold && (
+        <span className="text-xs opacity-60">còn {deepFocusThreshold - focusMinutes}' để ×1.3</span>
+      )}
+    </div>
+  );
+}
+
+function ModeSwitch({ disabled, mode, onChange }) {
+  return (
+    <div className={`inline-flex rounded-full border border-white/10 bg-white/[0.04] p-1 ${disabled ? 'opacity-45' : ''}`}>
+      {[
+        { id: TIMER_MODES.POMODORO, label: 'Pomo' },
+        { id: TIMER_MODES.STOPWATCH, label: 'Bấm giờ' },
+      ].map((item) => {
+        const active = item.id === mode;
+        return (
+          <button
+            key={item.id}
+            type="button"
+            disabled={disabled}
+            onClick={() => onChange(item.id)}
+            className={`relative rounded-full px-3.5 py-2 text-[13px] font-semibold whitespace-nowrap transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30 md:px-4 ${
+              active ? 'text-white' : 'text-slate-500 hover:text-slate-200'
+            }`}
+          >
+            {active && (
+              <motion.span
+                layoutId="focus-mode-indicator"
+                className="absolute inset-0 rounded-full bg-white/[0.08] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]"
+                transition={{ type: 'spring', stiffness: 320, damping: 28 }}
+              />
+            )}
+            <span className="relative z-10">{item.label}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function QuickPresets({ className = '', activePresetId, disabled, mode, onSelect }) {
+  const uiTheme = useSettingsStore((s) => s.uiTheme);
+  const lightTheme = uiTheme === 'light';
+
+  return (
+    <div className={`grid grid-cols-[repeat(auto-fit,minmax(120px,1fr))] gap-2 ${className}`}>
+      {QUICK_FOCUS_PRESETS.map((preset) => {
+        const active = activePresetId === preset.id;
+
+        return (
+          <button
+            key={preset.id}
+            type="button"
+            disabled={disabled}
+            onClick={() => onSelect(preset)}
+            className={`min-w-0 overflow-hidden rounded-[18px] border px-3 py-2.5 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 disabled:cursor-not-allowed ${
+              active
+                ? lightTheme
+                  ? 'border-transparent bg-[linear-gradient(135deg,#312e81_0%,#4f46e5_100%)] text-white shadow-[0_12px_22px_rgba(79,70,229,0.18)] focus-visible:ring-indigo-500/25'
+                  : 'border-indigo-400/40 bg-indigo-400/14 text-indigo-100 focus-visible:ring-white/30'
+                : lightTheme
+                  ? 'border-slate-200/80 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-indigo-500/25'
+                  : 'border-white/8 bg-white/[0.03] text-slate-400 hover:border-white/16 hover:text-slate-100 focus-visible:ring-white/30'
+            }`}
+          >
+            <span className="inline-flex max-w-full items-center gap-2 whitespace-nowrap">
+              <span className={`font-mono text-lg font-bold tabular-nums ${
+                active
+                  ? 'text-white'
+                  : lightTheme
+                    ? 'text-slate-900'
+                    : 'text-slate-100'
+              }`}>
+                {preset.focusMinutes}'
+              </span>
+              <span className={`shrink-0 whitespace-nowrap rounded-full px-2 py-0.5 text-[10px] font-semibold tabular-nums ${
+                active
+                  ? 'bg-white/16 text-white/80'
+                  : lightTheme
+                    ? 'bg-slate-100 text-slate-500'
+                    : 'bg-white/[0.06] text-slate-500'
+              }`}>
+                ×{preset.longBreakAfterN}
+              </span>
+            </span>
+            <span className="mt-2 flex flex-wrap gap-1.5">
+              {mode === TIMER_MODES.STOPWATCH ? (
+                <span className={`whitespace-nowrap rounded-full px-2 py-1 text-[10px] font-semibold ${
+                  active
+                    ? 'bg-white/14 text-white/80'
+                    : lightTheme
+                      ? 'bg-indigo-50 text-indigo-600'
+                      : 'bg-indigo-400/10 text-indigo-200'
+                }`}>
+                  Flowtime
+                </span>
+              ) : (
+                <>
+                  <span className={`whitespace-nowrap rounded-full px-2 py-1 text-[10px] font-semibold ${
+                    active
+                      ? 'bg-white/14 text-white/80'
+                      : lightTheme
+                        ? 'bg-slate-100 text-slate-600'
+                        : 'bg-white/[0.05] text-slate-300'
+                  }`}>
+                    nghỉ {preset.shortBreakDuration}'
+                  </span>
+                  <span className={`whitespace-nowrap rounded-full px-2 py-1 text-[10px] font-semibold ${
+                    active
+                      ? 'bg-white/14 text-white/80'
+                      : lightTheme
+                        ? 'bg-slate-100 text-slate-600'
+                        : 'bg-white/[0.05] text-slate-300'
+                  }`}>
+                    dài {preset.longBreakDuration}'
+                  </span>
+                </>
+              )}
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function StrictModeToggle({ disabled, enabled, onChange }) {
+  const uiTheme = useSettingsStore((s) => s.uiTheme);
+  const lightTheme = uiTheme === 'light';
+
+  return (
+    <div className={`flex items-center justify-between gap-4 ${disabled ? 'opacity-45' : ''}`}>
+      <div>
+        <p className={`text-sm font-semibold ${lightTheme ? 'text-slate-900' : 'text-white'}`}>Kỷ luật phiên</p>
+        <p className="mt-1 text-xs leading-relaxed text-slate-500">
+          Bật nếu bạn muốn giữ luật phạt khi hủy giữa chừng.
+        </p>
+      </div>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={enabled}
+        aria-label="Bật hoặc tắt kỷ luật phiên"
+        disabled={disabled}
+        onClick={() => onChange(!enabled)}
+        className={`relative h-7 w-12 flex-shrink-0 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 ${
+          enabled
+            ? lightTheme
+              ? 'bg-rose-500/85 focus-visible:ring-rose-400/25'
+              : 'bg-rose-500/85 focus-visible:ring-white/30'
+            : lightTheme
+              ? 'bg-slate-300 focus-visible:ring-indigo-500/25'
+              : 'bg-slate-700/90 focus-visible:ring-white/30'
+        }`}
+      >
+        <motion.span
+          animate={{ x: enabled ? 20 : 0 }}
+          transition={{ type: 'spring', stiffness: 380, damping: 28 }}
+          className="absolute left-1 top-1 size-5 rounded-full bg-white shadow"
+        />
+      </button>
+    </div>
+  );
+}
+
+function CategoryChip({ active, color, disabled, label, onClick }) {
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onClick}
+      className="max-w-full rounded-full border px-3.5 py-2 text-[13px] font-semibold whitespace-nowrap transition-colors disabled:cursor-not-allowed truncate focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30"
+      style={active
+        ? {
+            borderColor: color ? `${color}88` : 'rgba(129,140,248,0.6)',
+            background: color ? `${color}20` : 'rgba(99,102,241,0.16)',
+            color: color ?? '#c7d2fe',
+          }
+        : {
+            borderColor: 'rgba(255,255,255,0.08)',
+            background: 'rgba(255,255,255,0.03)',
+            color: 'rgb(148 163 184)',
+          }}
+    >
+      {label}
+    </button>
+  );
+}
+
+function SessionReviewCard({ completedGoalAchieved, goalText, onPick }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: 10 }}
+      className="w-full max-w-[520px] rounded-[28px] border border-emerald-400/14 bg-emerald-400/[0.06] p-4 shadow-[0_18px_50px_rgba(16,185,129,0.08)]"
+    >
+      <p className="text-[11px] uppercase tracking-[0.22em] text-emerald-300">Đánh giá phiên vừa xong</p>
+      <p className="mt-2 text-sm leading-relaxed text-slate-200">
+        {goalText
+          ? <>Mục tiêu: <span className="font-semibold text-white">{goalText}</span></>
+          : 'Phiên này chưa có mục tiêu ghi sẵn. Bạn vẫn có thể tự đánh giá nhanh.'}
+      </p>
+      <div className="mt-4 flex gap-3">
+        <button
+          type="button"
+          onClick={() => onPick(true)}
+          className={`flex-1 rounded-full border px-4 py-2.5 text-sm font-semibold transition ${
+            completedGoalAchieved === true
+              ? 'border-emerald-300/40 bg-emerald-400/20 text-emerald-50'
+              : 'border-emerald-400/16 bg-emerald-400/10 text-emerald-200 hover:bg-emerald-400/16'
+          }`}
+        >
+          Đạt
+        </button>
+        <button
+          type="button"
+          onClick={() => onPick(false)}
+          className={`flex-1 rounded-full border px-4 py-2.5 text-sm font-semibold transition ${
+            completedGoalAchieved === false
+              ? 'border-rose-300/40 bg-rose-400/20 text-rose-50'
+              : 'border-rose-400/16 bg-rose-400/10 text-rose-200 hover:bg-rose-400/16'
+          }`}
+        >
+          Chưa đạt
+        </button>
+      </div>
+    </motion.div>
+  );
+}
+
+function CancelConfirmDialog({ hasForgivenessCharge, onAbort, onConfirm, preview }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 14, scale: 0.98 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: 10, scale: 0.98 }}
+      className="rounded-[30px] border border-rose-400/22 bg-rose-400/[0.07] p-5 shadow-[0_24px_80px_rgba(239,68,68,0.12)] backdrop-blur-2xl"
+    >
+      <p className="text-[11px] uppercase tracking-[0.22em] text-rose-300">Xác nhận hủy phiên</p>
+      <p className="mt-2 text-sm leading-relaxed text-slate-200">
+        {hasForgivenessCharge
+          ? 'Bạn còn lượt tha thứ, nên lần hủy này sẽ không mất tài nguyên.'
+          : 'Hệ thống sẽ tính phạt theo phần tiến độ bạn đã đi qua. Hủy càng muộn, giá phải trả càng cao.'}
+      </p>
+      {preview && (
+        <p className="mt-2 text-xs leading-relaxed text-slate-400">
+          {preview.waived
+            ? `Tiến độ hiện tại ${formatPreviewPercent(preview.progressPct)}%. Phiên này đang được bảo vệ hoàn toàn.`
+            : `Tiến độ hiện tại ${formatPreviewPercent(preview.progressPct)}%. Phạt ước tính ${formatPreviewPercent(preview.minPct)}%–${formatPreviewPercent(preview.maxPct)}% tài nguyên sau khi đã tính kỹ năng và công trình.`}
+        </p>
+      )}
+      <div className="mt-5 flex flex-wrap gap-3">
+        <button
+          type="button"
+          onClick={onAbort}
+          className="rounded-full border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm font-semibold text-slate-200 transition hover:border-white/18 hover:bg-white/[0.08]"
+        >
+          Quay lại
+        </button>
+        <button
+          type="button"
+          onClick={onConfirm}
+          className="rounded-full border border-rose-400/22 bg-rose-400/14 px-4 py-2.5 text-sm font-semibold text-rose-100 transition hover:bg-rose-400/20"
+        >
+          {hasForgivenessCharge ? 'Hủy có bảo vệ' : 'Hủy phiên'}
+        </button>
+      </div>
+    </motion.div>
+  );
+}
+
+function CategoryManager({ categories, onClose, onAdd, onDelete }) {
+  const [newLabel, setNewLabel] = useState('');
+  const [newIcon, setNewIcon] = useState('📌');
+  const [newColor, setNewColor] = useState('#6366f1');
+  const icons = ['📌', '🎯', '💡', '🔬', '🎨', '📝', '💼', '🏃', '🎮', '🎵', '🍀', '⚡'];
+  const colors = ['#6366f1', '#22c55e', '#f59e0b', '#ef4444', '#06b6d4', '#ec4899', '#8b5cf6', '#f97316'];
+  const defaultIds = ['cat_hoc_dh', 'cat_tu_hoc', 'cat_lam_viec', 'cat_doc_sach', 'cat_luyen_tap', 'cat_khac'];
+  const customCategories = categories.filter((category) => !defaultIds.includes(category.id));
+
+  const handleAdd = () => {
+    const label = newLabel.trim();
+    if (!label) return;
+
+    onAdd({ id: `cat_${Date.now()}`, label, icon: newIcon, color: newColor });
+    setNewLabel('');
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -8 }}
+      className="mt-3 rounded-3xl border border-white/8 bg-white/[0.03] p-4"
+    >
+      <div className="flex items-center justify-between">
+        <p className="text-sm font-semibold text-white">Quản lý phân loại</p>
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Đóng quản lý phân loại"
+          className="text-xl leading-none text-slate-500 transition hover:text-white"
+        >
+          ✕
+        </button>
+      </div>
+
+      {customCategories.length > 0 && (
+        <div className="mt-3 flex flex-col gap-2">
+          {customCategories.map((category) => (
+            <div
+              key={category.id}
+              className="flex items-center justify-between rounded-2xl border border-white/8 bg-black/20 px-3 py-2"
+            >
+              <span style={{ color: category.color }}>{category.icon} {category.label}</span>
+              <button
+                type="button"
+                onClick={() => onDelete(category.id)}
+                className="text-xs font-semibold text-slate-500 transition hover:text-rose-300"
+              >
+                Xóa
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="mt-4 rounded-2xl border border-white/8 bg-black/20 p-3">
+        <div className="flex flex-wrap gap-2">
+          {icons.map((icon) => (
+            <button
+              key={icon}
+              type="button"
+              onClick={() => setNewIcon(icon)}
+              aria-label={`Chọn biểu tượng ${icon}`}
+              aria-pressed={newIcon === icon}
+              className={`flex h-8 w-8 items-center justify-center rounded-full transition ${
+                newIcon === icon ? 'bg-indigo-500 text-white' : 'bg-white/[0.04] text-slate-300'
+              }`}
+            >
+              {icon}
+            </button>
+          ))}
+        </div>
+
+        <div className="mt-3 flex flex-wrap gap-2">
+          {colors.map((color) => (
+            <button
+              key={color}
+              type="button"
+              onClick={() => setNewColor(color)}
+              aria-label={`Chọn màu ${color}`}
+              aria-pressed={newColor === color}
+              className={`h-6 w-6 rounded-full ${newColor === color ? 'ring-2 ring-white/80 ring-offset-2 ring-offset-black/40' : ''}`}
+              style={{ backgroundColor: color }}
+            />
+          ))}
+        </div>
+
+        <div className="mt-3 flex gap-2">
+          <input
+            type="text"
+            name="newCategoryLabel"
+            value={newLabel}
+            onChange={(event) => setNewLabel(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') handleAdd();
+            }}
+            aria-label="Tên phân loại mới"
+            autoComplete="off"
+            placeholder="Tên phân loại mới"
+            className="flex-1 rounded-2xl border border-white/8 bg-black/20 px-3 py-2 text-sm text-white placeholder:text-slate-600 focus:border-white/16 focus:outline-none"
+          />
+          <button
+            type="button"
+            disabled={!newLabel.trim()}
+            onClick={handleAdd}
+            className="rounded-2xl border border-indigo-400/24 bg-indigo-500/14 px-4 py-2 text-sm font-semibold text-indigo-100 transition hover:bg-indigo-500/20 disabled:opacity-40"
+          >
+            Thêm
+          </button>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+function useStateRef(value) {
+  const ref = React.useRef(value);
+  return ref;
+}

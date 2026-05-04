@@ -1,0 +1,156 @@
+/**
+ * ExportImport.jsx — Xuất / Nhập Dữ Liệu Game
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Card nhỏ trong tab Cài Đặt.
+ * - Xuất: serialize toàn bộ store state → JSON blob download
+ * - Nhập: file input → parse JSON → call _importGameData
+ * ─────────────────────────────────────────────────────────────────────────────
+ */
+
+import React, { useRef, useState } from 'react';
+import { motion } from 'framer-motion';
+import useGameStore from '../store/gameStore';
+import { formatVietnamOffsetISOString, localDateStr } from '../engine/time';
+
+export default function ExportImport() {
+  const storeState   = useGameStore.getState;
+  const importData   = useGameStore((s) => s._importGameData);
+  const fileInputRef = useRef(null);
+
+  const [importStatus, setImportStatus] = useState(null); // 'success' | 'error' | null
+
+  const handleExport = () => {
+    const state = storeState();
+    // Only export persisted fields
+    const exportObj = {
+      _version:     'civjourney-v1',
+      _exportedAt:  formatVietnamOffsetISOString(),
+      player:       state.player,
+      progress:     state.progress,
+      resources:    state.resources,
+      timerConfig:  state.timerConfig,
+      forgiveness:  state.forgiveness,
+      rankSystem:   state.rankSystem,
+      rankChallenge: state.rankChallenge,
+      eraCrisis:    state.eraCrisis,
+      relics:       state.relics,
+      blueprints:   state.blueprints,
+      achievements: state.achievements,
+      history:      state.history,
+      savedNotes:   state.savedNotes,
+      sessionCategories: state.sessionCategories,
+      pendingCategoryId: state.pendingCategoryId,
+      pendingNote:  state.pendingNote,
+      pendingBreakNote: state.pendingBreakNote,
+      streak:       state.streak,
+      missions:     state.missions,
+      buildings:    state.buildings,
+      staking:      state.staking,
+      prestige:     state.prestige,
+      timerSession: state.timerSession,
+      weeklyChain:  state.weeklyChain,
+      gachaPity:    state.gachaPity,
+      dailyTracking: state.dailyTracking,
+      skillActivations: state.skillActivations,
+      categoryTracking: state.categoryTracking,
+      eraTracking:  state.eraTracking,
+      sessionMeta:  state.sessionMeta,
+      research:     state.research,
+      craftingQueue: state.craftingQueue,
+      buildingHP:   state.buildingHP,
+      buildingLevels: state.buildingLevels,
+      resourcesRefined: state.resourcesRefined,
+      relicEvolutions: state.relicEvolutions,
+      lastWeeklyReportDate: state.lastWeeklyReportDate,
+      buildingLastUsed: state.buildingLastUsed,
+    };
+
+    const blob = new Blob([JSON.stringify(exportObj, null, 2)], { type: 'application/json' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = `civjourney-backup-${localDateStr()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const text   = await file.text();
+      const parsed = JSON.parse(text);
+      const ok     = importData(parsed);
+      setImportStatus(ok ? 'success' : 'error');
+    } catch {
+      setImportStatus('error');
+    }
+
+    // Reset input so same file can be re-imported
+    e.target.value = '';
+    setTimeout(() => setImportStatus(null), 3000);
+  };
+
+  return (
+    <div className="space-y-3">
+      {/* Status banner */}
+      {importStatus && (
+        <motion.div
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className={`p-2.5 rounded-xl text-xs font-medium text-center ${
+            importStatus === 'success'
+              ? 'bg-emerald-900/50 border border-emerald-600 text-emerald-300'
+              : 'bg-red-900/50 border border-red-600 text-red-300'
+          }`}
+        >
+          {importStatus === 'success'
+            ? '✓ Nhập dữ liệu thành công!'
+            : '⚠️ File không hợp lệ. Vui lòng thử lại.'}
+        </motion.div>
+      )}
+
+      <div className="flex gap-2">
+        {/* Export */}
+        <motion.button
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          onClick={handleExport}
+          className="flex-1 py-2.5 bg-indigo-700 hover:bg-indigo-600 text-white rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-2"
+        >
+          <span>⬇️</span>
+          Xuất JSON
+        </motion.button>
+
+        {/* Import */}
+        <motion.button
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          onClick={handleImportClick}
+          className="flex-1 py-2.5 bg-slate-700 hover:bg-slate-600 text-white rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-2 border border-slate-600"
+        >
+          <span>⬆️</span>
+          Nhập JSON
+        </motion.button>
+      </div>
+
+      <p className="text-xs text-slate-600 text-center">
+        Dữ liệu lưu cục bộ — xuất để backup hoặc chuyển thiết bị.
+      </p>
+
+      {/* Hidden file input */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".json,application/json"
+        onChange={handleFileChange}
+        className="hidden"
+      />
+    </div>
+  );
+}

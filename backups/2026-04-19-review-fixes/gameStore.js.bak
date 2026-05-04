@@ -1,0 +1,3448 @@
+/**
+ * gameStore.js
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Zustand store — nguồn sự thật duy nhất cho toàn bộ trạng thái game.
+ *
+ * Chiến lược lưu trữ:
+ *   • zustand/middleware `persist` ghi vào localStorage với key 'civjourney-v1'
+ *   • Chỉ slice `game` được persist; trạng thái UI tạm thời nằm ở slice `ui`
+ *
+ * Tổng quan Schema
+ * ────────────────
+ *  player        — cấp độ, EXP, SP, kỹ năng đã mở khóa
+ *  progress      — tổng EP, chuyển quyển
+ *  resources     — túi tài nguyên theo từng quyển
+ *  timer         — cấu hình focus/break + trạng thái runtime
+ *  forgiveness   — theo dõi miễn phạt hàng tuần
+ *  rankSystem    — bậc danh xưng hiện tại theo quyển + thử thách đang active
+ *  eraCrisis     — trạng thái khủng hoảng kỷ nguyên
+ *  relics        — di vật đã nhận (buff vĩnh viễn)
+ *  history       — nhật ký phiên (50 gần nhất)
+ *  ui            — trạng thái modal, payload phần thưởng
+ * ─────────────────────────────────────────────────────────────────────────────
+ */
+
+import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import {
+  localDateStr,
+  localWeekMondayStr,
+  getVietnamDateParts,
+  getVietnamDayOfWeek,
+  getVietnamHour,
+  getVietnamMonthIndex,
+  getVietnamYear,
+} from '../engine/time';
+import {
+  FORGIVENESS_CANCELS_PER_WEEK,
+  SIEU_TAP_TRUNG_CHARGES,
+  NGHI_NGOI_HOAN_HAO_EXTRA_CHARGES,
+  RANK_SYSTEM,
+  ACHIEVEMENTS,
+  MISSION_CATALOG,
+  MISSIONS_PER_DAY,
+  MISSION_ALL_BONUS_XP,
+  DAILY_MISSION_XP_SCALE,
+  MISSION_NOTE_MIN_WORDS,
+  DAILY_RARE_BUCKET_CHANCE_MIN,
+  DAILY_RARE_BUCKET_CHANCE_MAX,
+  WEEKLY_CHAINS,
+  WEEKLY_CHAIN_XP_SCALE,
+  PERFECT_PLAN_WEEKLY_MULTIPLIER,
+  STREAK_MISSION_MIN_STREAK,
+  STREAK_MISSION_BASE_XP,
+  STREAK_MISSION_XP_PER_DAY,
+  STREAK_MISSION_MAX_XP,
+  BUILDING_SPECS,
+  BUILDING_EFFECTS,
+  WONDER_EFFECT_REGISTRY,
+  BLUEPRINT_META,
+  ERA_METADATA,
+  DEFAULT_SESSION_CATEGORIES,
+  COMBO_BONUS_PER_STACK,
+  COMBO_MAX_STACKS,
+  COMBO_DECAY_MS,
+  BO_NHO_CO_BAP_COMBO_HOURS,
+  POSITIVE_EVENT_XP_SCALE,
+  POSITIVE_EVENTS,
+  ERA_MINI_EVENTS,
+  OVERCLOCK_REWARD_MULTIPLIER,
+  OVERCLOCK_BONUS_REDUCED,
+  OVERCLOCK_EP_COST_RATE,
+  OVERCLOCK_MIN_SESSION_MIN,
+  OVERCLOCK_MIN_FULL_SESSION,
+  PRESTIGE_EP_REQUIREMENT,
+  PRESTIGE_BONUS_PER_RUN,
+  PRESTIGE_MAX_STACKS,
+  STREAK_BONUS_PER_DAY,
+  STREAK_MAX_BONUS_DAYS,
+  CRAFT_QUEUE_SLOTS,
+  RELIC_EVOLUTION,
+  T2_CRAFT_COST,
+  getBuildingLevelMultiplier,
+  normalizeRawCost,
+  normalizeRefinedBag,
+  getUnifiedRefinedCost,
+  spendUnifiedRefined,
+  getUpgradeRefinedCost,
+  getRelicEvolutionRefinedCost,
+  normalizeRawResourceId,
+} from '../engine/constants';
+import {
+  calculateRewards,
+  applyDisasterPenalty,
+  computeLevelUps,
+  getActiveBook,
+} from '../engine/gameMath';
+import {
+  detectEraCrisis,
+  createEraCrisisState,
+  applyEraCrisisSacrifice,
+  startEraCrisisChallenge,
+  updateEraCrisisChallenge,
+  applyEraCrisisChallengePenalty,
+  createRankChallenge,
+  updateRankChallenge,
+  checkRankChallengeExpiry,
+  applyRankChallengePenalty,
+  aggregateActiveBuffs,
+} from '../engine/challengeEngine';
+
+// ─── FACTORY: TRẠNG THÁI KHỞI TẠO ────────────────────────────────────────────
+
+const makeEmptyResources = () => Object.fromEntries(
+  Object.entries(ERA_METADATA).map(([era, meta]) => [
+    `book${era}`,
+    Object.fromEntries((meta.resources ?? []).map((resource) => [resource.id, 0])),
+  ])
+);
+
+const makeDefaultSkills = () => ({
+  // ── THIỀN ĐỊNH ──────────────────────────────────────────────────────────
+  khoi_dong_nhanh:      false,
+  chuyen_can:           false,
+  da_tap_trung:         false,
+  vung_dong_chay:       false,
+  tap_trung_sieu_viet:  false,
+  sieu_tap_trung:       false,
+  // ── Ý CHÍ ───────────────────────────────────────────────────────────────
+  su_tha_thu:           false,
+  bo_nho_co_bap:        false,
+  phuc_hoi:             false,
+  chuoi_ngay:           false,
+  y_chi_thep:           false,
+  bat_khuat:            false,
+  // ── NGHỈ NGƠI ───────────────────────────────────────────────────────────
+  hit_tho_sau:          false,
+  nap_nang_luong:       false,
+  kho_du_tru:           false,
+  phien_vang_sang:      false,
+  nhip_sinh_hoc:        false,
+  nghi_ngoi_hoan_hao:   false,
+  // ── VẬN MAY ─────────────────────────────────────────────────────────────
+  ban_tay_vang:         false,
+  nhan_quan:            false,
+  linh_cam:             false,
+  be_cong_thoi_gian:    false,
+  dai_trung_thuong:     false,
+  so_do:                false,
+  // ── CHIẾN LƯỢC ──────────────────────────────────────────────────────────
+  chuyen_gia:           false,
+  da_nang:              false,
+  chuyen_mon_hoa:       false,
+  can_bang:             false,
+  bac_thay_chien_luoc:  false,
+  ke_hoach_hoan_hao:    false,
+  // ── THĂNG HOA ───────────────────────────────────────────────────────────
+  ky_uc_ky_nguyen:      false,
+  tri_tue_tich_luy:     false,
+  kien_thuc_nen:        false,
+  bac_thay_ky_nguyen:   false,
+  ke_thua:              false,
+  sieu_viet:            false,
+  // ── backward compat (cũ) ────────────────────────────────────────────────
+  lam_nong_nhanh:       false,
+  luoi_ria_ben:         false,
+  kien_truc_su:         false,
+});
+
+const makeDefaultTimerConfig = () => ({
+  mode: 'pomodoro',
+  focusMinutes: 25,
+  breakMinutes: 5,
+  strictMode:   true,
+});
+
+const makeDefaultRankSystem = () => ({
+  book1:  0,  // rank index in era 1 (0–7)
+  book2:  0,
+  book3:  0,
+  book4:  0,
+  book5:  0,
+  book6:  0,
+  book7:  0,
+  book8:  0,
+  book9:  0,
+  book10: 0,
+  book11: 0,
+  book12: 0,
+  book13: 0,
+  book14: 0,
+  book15: 0,
+});
+
+const makeDefaultEraCrisis = () => ({
+  active:                    false,
+  crisisId:                  null,
+  name:                      null,
+  icon:                      null,
+  description:               null,
+  sacrificeOption:           null,
+  challengeOption:           null,
+  choiceMade:                null,  // null | 'sacrifice' | 'challenge'
+  challengeDeadline:         null,
+  challengeSessionsRequired: 0,
+  challengeMinMinutes:       0,
+  challengeSessionsDone:     0,
+  passed:                    false,
+  relicEarned:               null,
+});
+
+const makeDefaultAchievements = () => ({
+  unlocked: [],
+  timeline: {},
+});
+
+function normalizeAchievementTimelineEntry(entry, fallbackOrder = 0) {
+  if (typeof entry === 'string') {
+    return { unlockedAt: entry, order: fallbackOrder };
+  }
+
+  const unlockedAt = typeof entry?.unlockedAt === 'string' ? entry.unlockedAt : null;
+  const order = Number.isFinite(entry?.order) ? entry.order : fallbackOrder;
+  return { unlockedAt, order };
+}
+
+function normalizeAchievementsState(achievements) {
+  const unlocked = Array.isArray(achievements?.unlocked)
+    ? [...new Set(achievements.unlocked.filter((id) => typeof id === 'string' && id.trim().length > 0))]
+    : [];
+  const rawTimeline = achievements?.timeline && typeof achievements.timeline === 'object'
+    ? achievements.timeline
+    : {};
+
+  const timeline = {};
+  unlocked.forEach((id, index) => {
+    timeline[id] = normalizeAchievementTimelineEntry(rawTimeline[id], index + 1);
+  });
+
+  return {
+    ...makeDefaultAchievements(),
+    ...achievements,
+    unlocked,
+    timeline,
+  };
+}
+
+function appendAchievementUnlocks(achievements, newlyUnlocked = [], unlockedAt = new Date().toISOString()) {
+  const normalized = normalizeAchievementsState(achievements);
+  if (!Array.isArray(newlyUnlocked) || newlyUnlocked.length === 0) {
+    return normalized;
+  }
+
+  const nextUnlocked = [...normalized.unlocked];
+  const nextTimeline = { ...normalized.timeline };
+  const existingIds = new Set(nextUnlocked);
+  let nextOrder = Object.values(nextTimeline).reduce(
+    (maxOrder, entry) => Math.max(maxOrder, entry?.order ?? 0),
+    0,
+  );
+  const resolvedUnlockedAt = typeof unlockedAt === 'string'
+    ? unlockedAt
+    : new Date(unlockedAt).toISOString();
+
+  newlyUnlocked.forEach((id) => {
+    if (!id || existingIds.has(id)) return;
+    nextOrder += 1;
+    nextUnlocked.push(id);
+    nextTimeline[id] = { unlockedAt: resolvedUnlockedAt, order: nextOrder };
+    existingIds.add(id);
+  });
+
+  return {
+    ...normalized,
+    unlocked: nextUnlocked,
+    timeline: nextTimeline,
+  };
+}
+
+// ─── FACTORY: STREAK ──────────────────────────────────────────────────────────
+const makeDefaultStreak = () => ({
+  currentStreak:  0,
+  longestStreak:  0,
+  lastActiveDate: null,  // 'YYYY-MM-DD'
+});
+
+function advanceStreak(streak) {
+  const today     = localDateStr();
+  const yesterday = localDateStr(Date.now() - 86_400_000);
+  if (streak.lastActiveDate === today) return streak; // already counted
+  const newCurrent = streak.lastActiveDate === yesterday ? streak.currentStreak + 1 : 1;
+  return {
+    currentStreak:  newCurrent,
+    longestStreak:  Math.max(streak.longestStreak, newCurrent),
+    lastActiveDate: today,
+  };
+}
+
+// ─── FACTORY: MISSIONS ────────────────────────────────────────────────────────
+const makeDefaultMissions = () => ({
+  date:                       null,
+  list:                       [],
+  bonusClaimedToday:          false,
+  streakMissionClaimedToday:  false,
+  recentHistory:              [],
+});
+
+const DAILY_MISSION_HISTORY_LIMIT = 8;
+const DAILY_MISSION_VARIANT_COUNT = 10;
+const WEEKLY_CHAIN_HISTORY_LIMIT = 10;
+
+function createSeededRng(seedKey) {
+  let seed = 1779033703 ^ seedKey.length;
+  for (let i = 0; i < seedKey.length; i += 1) {
+    seed = Math.imul(seed ^ seedKey.charCodeAt(i), 3432918353);
+    seed = (seed << 13) | (seed >>> 19);
+  }
+  seed = Math.imul(seed ^ (seed >>> 16), 2246822507);
+  seed = Math.imul(seed ^ (seed >>> 13), 3266489909);
+  seed = (seed ^ (seed >>> 16)) >>> 0;
+  return () => {
+    seed = (seed + 0x6D2B79F5) >>> 0;
+    let t = seed;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function countWords(text = '') {
+  const trimmed = text.trim();
+  return trimmed ? trimmed.split(/\s+/).length : 0;
+}
+
+function getMissionRewardTotalXP(list = []) {
+  return list.reduce((sum, mission) => sum + (mission?.rewardXP ?? 0), 0);
+}
+
+function normalizeMissionTemplate(mission) {
+  if (!mission?.id) return mission ?? null;
+  const template = MISSION_CATALOG.find((entry) => entry.id === mission.id);
+  if (!template) return mission;
+  return {
+    ...template,
+    ...mission,
+    family: mission.family ?? template.family,
+    bucket: mission.bucket ?? template.bucket,
+    weight: mission.weight ?? template.weight ?? 1,
+  };
+}
+
+function normalizeStoredMissions(missions) {
+  const list = Array.isArray(missions?.list)
+    ? missions.list.map(normalizeMissionTemplate).filter((mission) => mission?.id)
+    : [];
+  const recentHistory = Array.isArray(missions?.recentHistory)
+    ? missions.recentHistory.filter((entry) => entry?.date)
+    : [];
+  return {
+    ...makeDefaultMissions(),
+    ...missions,
+    date: typeof missions?.date === 'string' ? missions.date : null,
+    list,
+    recentHistory,
+    bonusClaimedToday: Boolean(missions?.bonusClaimedToday),
+    streakMissionClaimedToday: Boolean(missions?.streakMissionClaimedToday),
+  };
+}
+
+function weightedPick(list, rng) {
+  if (list.length === 0) return null;
+  const totalWeight = list.reduce((sum, mission) => sum + Math.max(0.01, mission.weight ?? 1), 0);
+  let roll = rng() * totalWeight;
+  for (const mission of list) {
+    roll -= Math.max(0.01, mission.weight ?? 1);
+    if (roll <= 0) return mission;
+  }
+  return list[list.length - 1];
+}
+
+function createMissionHistoryEntry(date, list = []) {
+  const normalized = list
+    .map(normalizeMissionTemplate)
+    .filter(Boolean);
+  if (!date || normalized.length === 0) return null;
+  return {
+    date,
+    ids: normalized.map((mission) => mission.id),
+    families: [...new Set(normalized.map((mission) => mission.family).filter(Boolean))],
+  };
+}
+
+function historyEntryHasRareMission(entry) {
+  const ids = Array.isArray(entry?.ids) ? entry.ids : [];
+  return ids.some((missionId) =>
+    MISSION_CATALOG.some((mission) => mission.id === missionId && mission.bucket === 'rare')
+  );
+}
+
+function rollMissionHistory(missions, nextDate) {
+  let recentHistory = Array.isArray(missions?.recentHistory)
+    ? missions.recentHistory.filter((entry) => entry?.date && entry.date !== nextDate)
+    : [];
+
+  if (missions?.date && missions.date !== nextDate) {
+    const todayEntry = createMissionHistoryEntry(missions.date, missions.list);
+    if (todayEntry && !recentHistory.some((entry) => entry.date === todayEntry.date)) {
+      recentHistory = [todayEntry, ...recentHistory];
+    }
+  }
+
+  return recentHistory.slice(0, DAILY_MISSION_HISTORY_LIMIT);
+}
+
+function scoreMissionCandidate(candidate, recentHistory = []) {
+  const candidateIds = candidate.map((mission) => mission.id);
+  const candidateIdSet = new Set(candidateIds);
+  const candidateFamilies = candidate.map((mission) => mission.family).filter(Boolean);
+  const candidateFamilySet = new Set(candidateFamilies);
+  const candidateSignature = [...candidateIds].sort().join('|');
+
+  let score = candidate.reduce((sum, mission) => {
+    let nextScore = sum + (mission.weight ?? 1);
+    if (mission.family === 'blueprints') nextScore -= 0.5;
+    if (mission.family === 'deepSessions' || mission.family === 'balancedSessions') nextScore += 0.4;
+    return nextScore;
+  }, 0);
+
+  recentHistory.forEach((entry, index) => {
+    const recencyWeight = Math.max(0.35, 1 - index * 0.15);
+    const entryIds = new Set(Array.isArray(entry?.ids) ? entry.ids : []);
+    const entryFamilies = new Set(Array.isArray(entry?.families) ? entry.families : []);
+    const entrySignature = [...entryIds].sort().join('|');
+
+    if (entrySignature && entrySignature === candidateSignature) {
+      score -= 12 * recencyWeight;
+    }
+
+    candidateIdSet.forEach((missionId) => {
+      score += entryIds.has(missionId) ? -4.5 * recencyWeight : 1.1 * recencyWeight;
+    });
+
+    candidateFamilySet.forEach((family) => {
+      score += entryFamilies.has(family) ? -0.4 * recencyWeight : 0.25 * recencyWeight;
+    });
+  });
+
+  return score;
+}
+
+function pickMissionForBucket(bucket, rng, usedIds, usedFamilies) {
+  const basePool = MISSION_CATALOG.filter((mission) =>
+    mission.bucket === bucket && !usedIds.has(mission.id)
+  );
+  const distinctFamilyPool = basePool.filter((mission) => !usedFamilies.has(mission.family));
+  const fallbackPool = distinctFamilyPool.length > 0
+    ? distinctFamilyPool
+    : (basePool.length > 0 ? basePool : MISSION_CATALOG.filter((mission) => !usedIds.has(mission.id)));
+  return weightedPick(fallbackPool, rng);
+}
+
+function shouldIncludeRareMission(dateStr, recentHistory = []) {
+  if (!MISSION_CATALOG.some((mission) => mission.bucket === 'rare')) return false;
+  if (recentHistory.slice(0, 2).some(historyEntryHasRareMission)) return false;
+  const rareChance =
+    DAILY_RARE_BUCKET_CHANCE_MIN
+    + createSeededRng(`daily-rare-chance:${dateStr}`)()
+      * (DAILY_RARE_BUCKET_CHANCE_MAX - DAILY_RARE_BUCKET_CHANCE_MIN);
+  const rareRoll = createSeededRng(`daily-rare-roll:${dateStr}`)();
+  return rareRoll < rareChance;
+}
+
+function buildDailyMissionVariant(dateStr, variant, { includeRare = false } = {}) {
+  const rng = createSeededRng(`daily:${dateStr}:${includeRare ? 'rare' : 'normal'}:${variant}`);
+  const buckets = ['core', includeRare ? 'rare' : 'stretch', 'variety'];
+  const usedIds = new Set();
+  const usedFamilies = new Set();
+  const selected = [];
+
+  for (const bucket of buckets.slice(0, MISSIONS_PER_DAY)) {
+    const mission = pickMissionForBucket(bucket, rng, usedIds, usedFamilies)
+      ?? (bucket === 'rare' ? pickMissionForBucket('stretch', rng, usedIds, usedFamilies) : null);
+    if (!mission) continue;
+    usedIds.add(mission.id);
+    usedFamilies.add(mission.family);
+    selected.push({
+      ...mission,
+      progress: 0,
+      claimed:  false,
+    });
+  }
+
+  return selected;
+}
+
+function pickDailyMissions(dateStr, previousList = []) {
+  const includeRare = shouldIncludeRareMission(dateStr, previousList);
+  const variants = Array.from({ length: DAILY_MISSION_VARIANT_COUNT }, (_, variant) =>
+    buildDailyMissionVariant(dateStr, variant, { includeRare })
+  ).filter((candidate) => candidate.length > 0);
+
+  if (variants.length === 0) return [];
+
+  let bestCandidate = variants[0];
+  let bestScore = scoreMissionCandidate(bestCandidate, previousList);
+  for (const candidate of variants.slice(1)) {
+    const score = scoreMissionCandidate(candidate, previousList);
+    if (score > bestScore) {
+      bestCandidate = candidate;
+      bestScore = score;
+    }
+  }
+
+  return bestCandidate;
+}
+
+function refreshMissionsIfStale(missions) {
+  const today = localDateStr();
+  const normalizedMissions = normalizeStoredMissions(missions);
+  if (normalizedMissions.date === today && normalizedMissions.list.length > 0) {
+    return normalizedMissions;
+  }
+  const recentHistory = rollMissionHistory(normalizedMissions, today);
+  return {
+    ...normalizedMissions,
+    date: today,
+    list: pickDailyMissions(today, recentHistory),
+    bonusClaimedToday: false,
+    streakMissionClaimedToday: false,
+    recentHistory,
+  };
+}
+
+// ─── FACTORY: STAKING ─────────────────────────────────────────────────────────
+const makeDefaultStaking = () => ({
+  active:          false,
+  stakedEP:        0,
+  startedAt:       null,
+  rewardMultiplier: OVERCLOCK_REWARD_MULTIPLIER,
+});
+
+// ─── HELPER: Tuần hiện tại (key = ngày thứ Hai) ──────────────────────────────
+function getWeekMonday(ts = Date.now()) {
+  return localWeekMondayStr(ts);
+}
+
+function normalizeWeeklyChainHistoryEntry(entry) {
+  if (!entry?.weekKey || !entry?.chainId) return null;
+  return {
+    weekKey: entry.weekKey,
+    chainId: entry.chainId,
+    stepTypes: Array.isArray(entry.stepTypes) ? entry.stepTypes : [],
+  };
+}
+
+function createWeeklyChainHistoryEntry(weekKey, chainIndex) {
+  if (!weekKey || !Number.isFinite(chainIndex) || !WEEKLY_CHAINS[chainIndex]) return null;
+  return {
+    weekKey,
+    chainId: WEEKLY_CHAINS[chainIndex].id,
+    stepTypes: [...new Set(WEEKLY_CHAINS[chainIndex].steps.map((step) => step.type))],
+  };
+}
+
+function rollWeeklyChainHistory(wc, nextWeekKey) {
+  let recentHistory = Array.isArray(wc?.recentHistory)
+    ? wc.recentHistory
+      .map(normalizeWeeklyChainHistoryEntry)
+      .filter((entry) => entry?.weekKey && entry.weekKey !== nextWeekKey)
+    : [];
+
+  if (wc?.weekKey && wc.weekKey !== nextWeekKey) {
+    const currentEntry = createWeeklyChainHistoryEntry(wc.weekKey, wc.chainIndex);
+    if (currentEntry && !recentHistory.some((entry) => entry.weekKey === currentEntry.weekKey)) {
+      recentHistory = [currentEntry, ...recentHistory];
+    }
+  }
+
+  return recentHistory.slice(0, WEEKLY_CHAIN_HISTORY_LIMIT);
+}
+
+function scoreWeeklyChainCandidate(chainIndex, recentHistory = []) {
+  const chain = WEEKLY_CHAINS[chainIndex];
+  if (!chain) return Number.NEGATIVE_INFINITY;
+
+  const chainId = chain.id;
+  const stepTypes = [...new Set(chain.steps.map((step) => step.type))];
+  const stepTypeSet = new Set(stepTypes);
+  const recentUses = recentHistory.filter((entry) => entry.chainId === chainId).length;
+  let score = 0;
+
+  stepTypes.forEach((type) => {
+    if (type === 'perfectBreaks' || type === 'balancedDays' || type === 'deepSessions') score += 0.45;
+    if (type === 'sessions' || type === 'focusMinutes') score -= 0.1;
+  });
+  score -= recentUses * 2.4;
+
+  recentHistory.forEach((entry, index) => {
+    const recencyWeight = Math.max(0.4, 1 - index * 0.18);
+    const priorTypes = new Set(entry.stepTypes ?? []);
+    if (entry.chainId === chainId) score -= 10 * recencyWeight;
+    stepTypeSet.forEach((type) => {
+      score += priorTypes.has(type) ? -0.45 * recencyWeight : 0.12 * recencyWeight;
+    });
+  });
+
+  return score;
+}
+
+function pickChainForWeek(weekKey, recentHistory = []) {
+  const rng = createSeededRng(`weekly:${weekKey}`);
+  const allChainIndexes = WEEKLY_CHAINS.map((_, chainIndex) => chainIndex);
+  const recentWindow = Math.min(WEEKLY_CHAINS.length - 2, recentHistory.length);
+  const blockedIds = new Set(
+    recentHistory.slice(0, recentWindow).map((entry) => entry.chainId)
+  );
+  const candidateIndexes = allChainIndexes.filter((chainIndex) =>
+    !blockedIds.has(WEEKLY_CHAINS[chainIndex].id)
+  );
+  const pool = candidateIndexes.length > 0 ? candidateIndexes : allChainIndexes;
+  const candidates = pool.map((chainIndex) => ({
+    chainIndex,
+    score: scoreWeeklyChainCandidate(chainIndex, recentHistory) + rng() * 0.35,
+  }));
+  candidates.sort((a, b) => b.score - a.score);
+  return candidates[0]?.chainIndex ?? 0;
+}
+
+// ─── FACTORY: WEEKLY CHAIN ────────────────────────────────────────────────────
+const makeDefaultWeeklyChain = () => ({
+  weekKey:      null,
+  chainIndex:   0,
+  currentStep:  0,
+  stepProgress: 0,     // tích lũy cho bước hiện tại
+  bonusClaimed: false,
+  recentHistory: [],
+});
+
+function refreshWeeklyChain(wc) {
+  const monday = getWeekMonday();
+  if (wc.weekKey === monday) return wc;
+  const recentHistory = rollWeeklyChainHistory(wc, monday);
+  return {
+    weekKey:      monday,
+    chainIndex:   pickChainForWeek(monday, recentHistory),
+    currentStep:  0,
+    stepProgress: 0,
+    bonusClaimed: false,
+    recentHistory,
+  };
+}
+
+function getHistoryWeekEntries(history, weekKey) {
+  return history.filter((entry) => {
+    const sessionTs = new Date(entry.timestamp).getTime();
+    const breakTs = entry.breakCompletedAt
+      ? new Date(entry.breakCompletedAt).getTime()
+      : NaN;
+    const sessionMatches = Number.isFinite(sessionTs) && getWeekMonday(sessionTs) === weekKey;
+    const breakMatches = Number.isFinite(breakTs) && getWeekMonday(breakTs) === weekKey;
+    return sessionMatches || breakMatches;
+  });
+}
+
+function buildWeeklyProgressSnapshot(weekEntries = [], weekKey = null) {
+  const categorySet = new Set();
+  const activeDays = new Set();
+  const balancedDayMap = {};
+  let sessions = 0;
+  let focusMinutes = 0;
+  let notes = 0;
+  let deepSessions = 0;
+  let perfectBreaks = 0;
+  let maxSessionMinutes = 0;
+
+  weekEntries.forEach((entry) => {
+    if (!entry) return;
+    const sessionTs = new Date(entry.timestamp).getTime();
+    const sessionInWeek = Number.isFinite(sessionTs) && (!weekKey || getWeekMonday(sessionTs) === weekKey);
+    const breakTs = entry.breakCompletedAt
+      ? new Date(entry.breakCompletedAt).getTime()
+      : (entry.breakCompletedOnTime ? sessionTs : NaN);
+    const breakInWeek = Number.isFinite(breakTs) && (!weekKey || getWeekMonday(breakTs) === weekKey);
+    const minutes = Number(entry.minutes) || 0;
+
+    if (sessionInWeek) {
+      sessions += 1;
+      focusMinutes += minutes;
+      maxSessionMinutes = Math.max(maxSessionMinutes, minutes);
+      if (entry.categoryId) categorySet.add(entry.categoryId);
+      if (countWords(entry.note ?? '') >= MISSION_NOTE_MIN_WORDS) notes += 1;
+      if (minutes >= 45) deepSessions += 1;
+
+      const dayKey = localDateStr(new Date(sessionTs));
+      activeDays.add(dayKey);
+      const day = balancedDayMap[dayKey] ?? { hasShort: false, hasLong: false };
+      day.hasShort = day.hasShort || minutes <= 25;
+      day.hasLong = day.hasLong || minutes >= 60;
+      balancedDayMap[dayKey] = day;
+    }
+
+    if (entry.breakCompletedOnTime && breakInWeek) perfectBreaks += 1;
+  });
+
+  const balancedDays = Object.values(balancedDayMap)
+    .filter((day) => day.hasShort && day.hasLong)
+    .length;
+
+  return {
+    sessions,
+    focusMinutes,
+    uniqueCategories: categorySet.size,
+    notes,
+    daysActive: activeDays.size,
+    deepSessions,
+    balancedDays,
+    perfectBreaks,
+    maxSessionMinutes,
+  };
+}
+
+function getWeeklyStepProgress(step, snapshot) {
+  if (!step) return 0;
+  switch (step.type) {
+    case 'sessions':
+      return Math.min(step.goal, snapshot.sessions);
+    case 'focusMinutes':
+      return Math.min(step.goal, snapshot.focusMinutes);
+    case 'singleSession':
+      return Math.min(step.goal, snapshot.maxSessionMinutes);
+    case 'uniqueCategories':
+      return Math.min(step.goal, snapshot.uniqueCategories);
+    case 'notes':
+      return Math.min(step.goal, snapshot.notes);
+    case 'daysActive':
+      return Math.min(step.goal, snapshot.daysActive);
+    case 'deepSessions':
+      return Math.min(step.goal, snapshot.deepSessions);
+    case 'balancedDays':
+      return Math.min(step.goal, snapshot.balancedDays);
+    case 'perfectBreaks':
+      return Math.min(step.goal, snapshot.perfectBreaks);
+    default:
+      return 0;
+  }
+}
+
+// ─── FACTORY: GACHA PITY ─────────────────────────────────────────────────────
+const makeDefaultGachaPity = () => ({
+  sessionsSinceLastDrop: 0,
+});
+
+// ─── FACTORY: DAILY TRACKING ─────────────────────────────────────────────────
+const makeDefaultDailyTracking = () => ({
+  date:              null,   // 'YYYY-MM-DD'
+  sessionsCompleted: 0,
+  categoriesUsed:    [],     // string[] — danh mục đã dùng hôm nay
+  deepSessionsCompleted: 0,
+  hasShortSession:   false,  // ≤25 phút
+  hasLongSession:    false,  // ≥60 phút
+  justEnteredNewEra: false,  // hôm nay vừa chuyển quyển
+});
+
+// ─── FACTORY: SKILL ACTIVATIONS (khả năng chủ động) ─────────────────────────
+const makeDefaultSkillActivations = () => ({
+  superFocusActive:      false,
+  superFocusChargesUsed: 0,
+  luckyModeActive:       false,
+  luckyModeChargesUsed:  0,
+  lastResetDate:         null,  // 'YYYY-MM-DD' — reset charges hàng ngày
+});
+
+// ─── FACTORY: CATEGORY TRACKING ──────────────────────────────────────────────
+const makeDefaultCategoryTracking = () => ({
+  lastCategoryId:    null,
+  consecutiveCount:  0,
+});
+
+// ─── FACTORY: ERA TRACKING ───────────────────────────────────────────────────
+const makeDefaultEraTracking = () => ({
+  sessionsInCurrentEra: 0,
+  currentEraBook:       1,
+  erasCompleted:        0,
+});
+
+// ─── FACTORY: SESSION META ───────────────────────────────────────────────────
+const makeDefaultSessionMeta = () => ({
+  lastSessionCancelled:  false,
+  breakCompletedOnTime:  false,
+});
+
+// ─── FACTORY: HỆ THỐNG NGHIÊN CỨU & CÔNG TRÌNH ──────────────────────────────
+
+/** research: Điểm Nghiên Cứu + danh sách bản vẽ đã nghiên cứu */
+const makeDefaultResearch = () => ({
+  rp: 0,
+  researched: [],
+});
+
+/** craftingQueue: hàng đợi xây dựng */
+const makeDefaultCraftingQueue = () => [];
+// Mỗi item: { bpId, sessionsRemaining, startedAt }
+
+/** buildingHP: dữ liệu HP cũ, giữ lại để không làm hỏng save */
+const makeDefaultBuildingHP = () => ({});
+// { [bpId]: number }
+
+/** resourcesRefined: nguyên liệu tinh luyện theo kỷ, giữ shape cũ để tương thích */
+const makeDefaultResourcesRefined = () => ({
+  1:{t2:0,t3:0}, 2:{t2:0,t3:0}, 3:{t2:0,t3:0}, 4:{t2:0,t3:0}, 5:{t2:0,t3:0},
+  6:{t2:0,t3:0}, 7:{t2:0,t3:0}, 8:{t2:0,t3:0}, 9:{t2:0,t3:0}, 10:{t2:0,t3:0},
+  11:{t2:0,t3:0}, 12:{t2:0,t3:0}, 13:{t2:0,t3:0}, 14:{t2:0,t3:0}, 15:{t2:0,t3:0},
+});
+
+function normalizeStoredResources(resources = {}) {
+  const next = makeEmptyResources();
+
+  for (const [bookKey, bookResources] of Object.entries(resources ?? {})) {
+    if (!next[bookKey] || !bookResources || typeof bookResources !== 'object') continue;
+    for (const [resourceId, amount] of Object.entries(bookResources)) {
+      const normalizedId = normalizeRawResourceId(resourceId);
+      if (!(normalizedId in next[bookKey])) continue;
+      next[bookKey][normalizedId] += Number.isFinite(amount) ? amount : 0;
+    }
+  }
+
+  return next;
+}
+
+function normalizeStoredResearch(research = {}) {
+  return {
+    rp: Number.isFinite(research?.rp) ? research.rp : 0,
+    researched: Array.isArray(research?.researched) ? [...research.researched] : [],
+  };
+}
+
+function normalizeStoredRefined(resourcesRefined = {}) {
+  const next = makeDefaultResourcesRefined();
+  for (const [era, refined] of Object.entries(resourcesRefined ?? {})) {
+    next[era] = normalizeRefinedBag(refined);
+  }
+  return next;
+}
+
+function spendRawResources(bookBag = {}, totalCost = 0) {
+  const entries = Object.entries(bookBag)
+    .sort(([, left], [, right]) => right - left);
+  const updated = { ...bookBag };
+  let remaining = totalCost;
+
+  for (const [resourceId, amount] of entries) {
+    if (remaining <= 0) break;
+    const spend = Math.min(amount ?? 0, remaining);
+    updated[resourceId] = Math.max(0, (updated[resourceId] ?? 0) - spend);
+    remaining -= spend;
+  }
+
+  return remaining > 0 ? null : updated;
+}
+
+// ─── HELPER: Số ngày giữa 2 chuỗi 'YYYY-MM-DD' ────────────────────────────────
+function daysBetween(dateStr1, dateStr2) {
+  const d1 = new Date(`${dateStr1}T00:00:00+07:00`);
+  const d2 = new Date(`${dateStr2}T00:00:00+07:00`);
+  return Math.max(0, Math.floor((d2 - d1) / 86_400_000));
+}
+
+// ─── HELPER: Tổng hợp tác động Wonder từ danh sách công trình ─────────────────
+function aggregateWonderEffects(buildings) {
+  const effects = new Set();
+  for (const bpId of buildings) {
+    const eff = BUILDING_EFFECTS[bpId];
+    if (eff?.type === 'wonder' && eff.wonderEffect) effects.add(eff.wonderEffect);
+  }
+  return effects;
+}
+
+// ─── HELPER: Bonus RP từ Wonder effects đang hoạt động ────────────────────────
+function getWonderRPBonus(buildings) {
+  const wonders = aggregateWonderEffects(buildings);
+  let bonus = 0;
+  if (wonders.has('research_speed_25')) bonus += 0.25;
+  if (wonders.has('gacha_pity_minus5')) bonus += 0.25;
+  if (wonders.has('research_speed_30')) bonus += 0.30;
+  return bonus;
+}
+
+function getWonderForgivenessCapacity(buildings) {
+  const wonders = aggregateWonderEffects(buildings);
+  return FORGIVENESS_CANCELS_PER_WEEK + (wonders.has('extra_forgiveness') ? 1 : 0);
+}
+
+function getWonderRefinedCraftCost(buildings) {
+  const wonders = aggregateWonderEffects(buildings);
+  if (!wonders.has('cheaper_t2_craft')) return T2_CRAFT_COST;
+  return Math.max(4, Math.round(T2_CRAFT_COST * 0.75));
+}
+
+function getWonderResearchCost(buildings, bpId, baseCost) {
+  const wonders = aggregateWonderEffects(buildings);
+  const meta = BLUEPRINT_META[bpId];
+  let cost = Math.max(0, Math.round(baseCost ?? 0));
+
+  if (meta && wonders.has('t2_research_25off') && meta.era >= 6 && meta.era <= 10) {
+    cost = Math.round(cost * 0.75);
+  }
+
+  return Math.max(1, cost);
+}
+
+function getWonderRelicEvolutionCost(buildings, stageDef) {
+  const wonders = aggregateWonderEffects(buildings);
+  let cost = getRelicEvolutionRefinedCost(stageDef);
+  if (wonders.has('relic_evo_30off')) {
+    cost = Math.round(cost * 0.7);
+  }
+  return Math.max(1, cost);
+}
+
+function getWonderRawRewardMultiplier(buildings) {
+  const wonders = aggregateWonderEffects(buildings);
+  let multiplier = 1;
+  if (wonders.has('building_hp_boost')) multiplier += 0.15;
+  return multiplier;
+}
+
+function getWonderExtraRefinedReward(buildings, minutesFocused) {
+  const wonders = aggregateWonderEffects(buildings);
+  let bonus = 0;
+  if (wonders.has('cheaper_t3_craft') && minutesFocused >= 90) bonus += 1;
+  return bonus;
+}
+
+function getEconomyRewardModifiers(buildings, buildingLevels = {}) {
+  let rawBonus = 0;
+  let refinedBonus = 0;
+
+  for (const bpId of buildings) {
+    const eff = BUILDING_EFFECTS[bpId];
+    if (eff?.type !== 'economy') continue;
+
+    const levelMultiplier = getBuildingLevelMultiplier(buildingLevels?.[bpId] ?? 1);
+    rawBonus += (eff.t1DropBonus ?? 0) * levelMultiplier;
+    refinedBonus += (eff.t2DropBonus ?? 0) * levelMultiplier;
+  }
+
+  return {
+    rawMultiplier: 1 + rawBonus,
+    refinedMultiplier: 1 + refinedBonus,
+  };
+}
+
+function getWonderCancelPenaltyMultiplier(buildings) {
+  const wonders = aggregateWonderEffects(buildings);
+  let multiplier = 1;
+  if (wonders.has('building_hp_boost')) multiplier *= 0.85;
+  if (wonders.has('disaster_hp_50off')) multiplier *= 0.5;
+  return multiplier;
+}
+
+function getBuildingCancelPenaltyMultiplier(buildings, buildingLevels = {}) {
+  let reduction = 0;
+
+  for (const bpId of buildings) {
+    const eff = BUILDING_EFFECTS[bpId];
+    if (eff?.type !== 'defense') continue;
+
+    const levelMultiplier = getBuildingLevelMultiplier(buildingLevels?.[bpId] ?? 1);
+    reduction += (eff.cancelLossReductionPct ?? 0) * levelMultiplier;
+  }
+
+  const cappedReduction = Math.min(reduction, 0.6);
+  return 1 - cappedReduction;
+}
+
+function getWonderStreakBonusCap(buildings) {
+  const wonders = aggregateWonderEffects(buildings);
+  return STREAK_MAX_BONUS_DAYS + (wonders.has('streak_cap_plus') ? 10 : 0);
+}
+
+function getWonderCrisisWindowBonusHours(buildings) {
+  const wonders = aggregateWonderEffects(buildings);
+  return wonders.has('longer_crisis_window') ? 12 : 0;
+}
+
+function getDailyMissionXPBonusMultiplier(buildings) {
+  const wonders = aggregateWonderEffects(buildings);
+  let multiplier = 1;
+  if (wonders.has('mission_bonus_20')) multiplier += 0.2;
+  return multiplier;
+}
+
+function applyDailyMissionXPBonus(buildings, xpAmount) {
+  const normalizedXP = Math.max(0, xpAmount ?? 0);
+  return Math.round(normalizedXP * DAILY_MISSION_XP_SCALE * getDailyMissionXPBonusMultiplier(buildings));
+}
+
+// ─── FACTORY: TIMER SESSION (persist qua F5) ─────────────────────────────────
+const makeDefaultTimerSession = () => ({
+  isRunning:          false,
+  mode:               'pomodoro',
+  startedAt:          null,   // Date.now() thật khi bấm Start
+  countdownStartedAt: null,   // mốc đã bù pause để tính clock của phiên
+  pausedAt:           null,   // Date.now() khi bấm Pause
+  pausedTotalMs:      0,
+  pauseSegments:      [],
+  categoryId:         null,
+  categorySnapshot:   null,
+  note:               '',
+  goal:               '',
+  nextNote:           '',
+  totalSeconds:       null,   // thời lượng tham chiếu tại thời điểm Start
+  extensionUnlocked:  false,  // đã chạm mốc 3 phút cuối và mở khóa cộng thêm phút
+});
+
+// ─── FACTORY: PRESTIGE ────────────────────────────────────────────────────────
+const makeDefaultPrestige = () => ({
+  count:          0,
+  permanentBonus: 0,
+  history:        [],
+});
+
+function buildSavedNoteEntry(source, index = 0) {
+  const noteText = source?.note?.trim() || '';
+  const breakNoteText = source?.breakNote?.trim() || '';
+  if (!noteText && !breakNoteText) return null;
+
+  return {
+    id: source.id != null ? `note_${source.id}` : `note_${index}`,
+    sourceSessionId: source.id ?? null,
+    timestamp: source.timestamp ?? new Date().toISOString(),
+    minutes: Number.isFinite(source.minutes) ? source.minutes : 0,
+    xpEarned: Number.isFinite(source.xpEarned ?? source.epEarned) ? (source.xpEarned ?? source.epEarned) : 0,
+    categoryId: source.categoryId ?? null,
+    categorySnapshot: source.categorySnapshot ?? null,
+    tier: source.tier ?? null,
+    comboCount: Number.isFinite(source.comboCount) ? source.comboCount : 1,
+    note: noteText || null,
+    breakNote: breakNoteText || null,
+  };
+}
+
+function sanitizeSavedNotes(savedNotes = []) {
+  return savedNotes
+    .map((entry, index) => {
+      const noteText = entry?.note?.trim() || '';
+      const breakNoteText = entry?.breakNote?.trim() || '';
+      if (!noteText && !breakNoteText) return null;
+      return {
+        id: entry.id ?? `note_import_${index}`,
+        sourceSessionId: entry.sourceSessionId ?? null,
+        timestamp: entry.timestamp ?? new Date().toISOString(),
+        minutes: Number.isFinite(entry.minutes) ? entry.minutes : 0,
+        xpEarned: Number.isFinite(entry.xpEarned) ? entry.xpEarned : 0,
+        categoryId: entry.categoryId ?? null,
+        categorySnapshot: entry.categorySnapshot ?? null,
+        tier: entry.tier ?? null,
+        comboCount: Number.isFinite(entry.comboCount) ? entry.comboCount : 1,
+        note: noteText || null,
+        breakNote: breakNoteText || null,
+      };
+    })
+    .filter(Boolean);
+}
+
+function buildSavedNotesFromHistory(history = []) {
+  return history
+    .map((session, index) => buildSavedNoteEntry(session, index))
+    .filter(Boolean);
+}
+
+function upsertSavedNoteEntry(savedNotes = [], sessionEntry) {
+  const filtered = (savedNotes ?? []).filter((entry) => entry.sourceSessionId !== sessionEntry?.id);
+  const nextEntry = buildSavedNoteEntry(sessionEntry);
+  return nextEntry ? [nextEntry, ...filtered].slice(0, 2000) : filtered;
+}
+
+// ─── HELPER: Tạo snapshot cho kiểm tra thành tích ────────────────────────────
+function buildAchievementSnapshot(progress, relics, blueprints, history, rankSystem, streak, buildings, prestige, player) {
+  const getTs     = (h) => typeof h.timestamp === 'string' ? new Date(h.timestamp).getTime() : (h.timestamp ?? 0);
+  const getH      = (h) => getVietnamHour(getTs(h));
+  const getDow    = (h) => getVietnamDayOfWeek(getTs(h));
+  const getMon    = (h) => getVietnamMonthIndex(getTs(h));
+  const getYr     = (h) => getVietnamYear(getTs(h));
+  const getDayKey = (h) => localDateStr(getTs(h));
+
+  const thisYear  = getVietnamYear();
+  const thisYearH = history.filter((h) => getYr(h) === thisYear);
+
+  // sessions per day
+  const dayMap = {};
+  history.forEach((h) => { const d = getDayKey(h); dayMap[d] = (dayMap[d] || 0) + 1; });
+  const maxSessionsInDay = Math.max(0, ...Object.values(dayMap));
+
+  // day-of-week counts [0=Sun..6=Sat]
+  const dow = [0, 0, 0, 0, 0, 0, 0];
+  history.forEach((h) => dow[getDow(h)]++);
+
+  // month counts [0=Jan..11=Dec]
+  const mon = Array(12).fill(0);
+  history.forEach((h) => mon[getMon(h)]++);
+
+  // best month (any year)
+  const monthMinMap = {};
+  history.forEach((h) => {
+    const k = `${getYr(h)}-${getMon(h)}`;
+    monthMinMap[k] = (monthMinMap[k] || 0) + (h.minutes ?? 0);
+  });
+  const monthSessMap = {};
+  history.forEach((h) => {
+    const k = `${getYr(h)}-${getMon(h)}`;
+    monthSessMap[k] = (monthSessMap[k] || 0) + 1;
+  });
+  const bestMonthSessions = Math.max(0, ...Object.values(monthSessMap));
+  const bestMonthMinutes  = Math.max(0, ...Object.values(monthMinMap));
+
+  // best month this year
+  const mmYear = Array(12).fill(0);
+  thisYearH.forEach((h) => mmYear[getMon(h)]++);
+  const bestMonthSessionsThisYear = Math.max(...mmYear);
+
+  // comeback: gap ≥30 days within this year's sessions
+  let hadComebackThisYear = false;
+  if (thisYearH.length >= 2) {
+    const sorted = [...thisYearH].sort((a, b) => getTs(a) - getTs(b));
+    for (let i = 1; i < sorted.length; i++) {
+      if ((getTs(sorted[i]) - getTs(sorted[i - 1])) / 86400000 >= 30) { hadComebackThisYear = true; break; }
+    }
+  }
+
+  // special calendar dates: encoded as month*100+day (0-indexed month)
+  const calSet = new Set(history.map((h) => {
+    const { month, day } = getVietnamDateParts(getTs(h));
+    return (month - 1) * 100 + day;
+  }));
+
+  // total active days (unique days ever)
+  const totalActiveDays = Object.keys(dayMap).length;
+
+  // days since first session
+  const daysSinceFirst = history.length > 0
+    ? Math.floor((Date.now() - getTs(history[history.length - 1])) / 86400000)
+    : 0;
+
+  // full-day: a day with sessions in morning (6-12), afternoon (12-18), evening (18-23)
+  const fullDaySet = new Set();
+  const dayParts   = {};
+  history.forEach((h) => {
+    const d = getDayKey(h); const hr = getH(h);
+    if (!dayParts[d]) dayParts[d] = new Set();
+    if (hr >= 6  && hr < 12) dayParts[d].add('m');
+    if (hr >= 12 && hr < 18) dayParts[d].add('a');
+    if (hr >= 18 && hr < 23) dayParts[d].add('e');
+    if (dayParts[d].size === 3) fullDaySet.add(d);
+  });
+
+  // sessions per day this year
+  const dayMapYear = {};
+  thisYearH.forEach((h) => { const d = getDayKey(h); dayMapYear[d] = (dayMapYear[d] || 0) + 1; });
+
+  // unique categories used
+  const uniqueCategoriesUsed = new Set(history.filter((h) => h.categoryId).map((h) => h.categoryId)).size;
+
+  return {
+    // ── core ──
+    sessionsCompleted:  progress.sessionsCompleted,
+    totalFocusMinutes:  progress.totalFocusMinutes,
+    totalXP:            player?.totalEXP ?? 0,
+    activeBook:         progress.activeBook ?? 1,
+    playerLevel:        player?.level ?? 0,
+    // ── relics / blueprints / buildings ──
+    relicsCount:        relics.length,
+    blueprintsCount:    blueprints.length,
+    buildingsBuilt:     (buildings ?? []).length,
+    prestigeCount:      prestige?.count ?? 0,
+    // ── session stats ──
+    maxSessionMinutes:  history.reduce((m, h) => Math.max(m, h.minutes ?? 0), 0),
+    totalJackpots:      history.filter((h) => h.jackpot).length,
+    deepFocusCount:     history.filter((h) => (h.minutes ?? 0) >= 60).length,
+    ultraFocusCount:    history.filter((h) => (h.minutes ?? 0) >= 90).length,
+    titanFocusCount:    history.filter((h) => (h.minutes ?? 0) >= 120).length,
+    legendFocusCount:   history.filter((h) => (h.minutes ?? 0) >= 180).length,
+    maxSessionsInDay,
+    fullDayCount:       fullDaySet.size,
+    totalActiveDays,
+    daysSinceFirst,
+    // ── rank ──
+    maxRankAchieved:    Math.max(0, ...[1,2,3,4,5,6,7,8,9,10].map((i) => rankSystem[`book${i}`] ?? 0)),
+    // ── streak ──
+    currentStreak:      streak?.currentStreak ?? 0,
+    longestStreak:      streak?.longestStreak ?? 0,
+    // ── time of day ──
+    earlyBirdCount:     history.filter((h) => getH(h) < 7).length,
+    nightOwlCount:      history.filter((h) => getH(h) >= 23).length,
+    midnightCount:      history.filter((h) => getH(h) < 3).length,
+    dawnCount:          history.filter((h) => getH(h) < 6).length,
+    fiveAmCount:        history.filter((h) => getH(h) >= 5 && getH(h) < 6).length,
+    lunchCount:         history.filter((h) => getH(h) >= 12 && getH(h) < 13).length,
+    afternoonCount:     history.filter((h) => getH(h) >= 14 && getH(h) < 17).length,
+    eveningCount:       history.filter((h) => getH(h) >= 18 && getH(h) < 22).length,
+    teatimeCount:       history.filter((h) => getH(h) >= 15 && getH(h) < 16).length,
+    sunriseCount:       history.filter((h) => getH(h) >= 6 && getH(h) < 7).length,
+    // ── annual ──
+    sessionsThisYear:        thisYearH.length,
+    minutesThisYear:         thisYearH.reduce((s, h) => s + (h.minutes ?? 0), 0),
+    monthsActiveThisYear:    new Set(thisYearH.map((h) => getMon(h))).size,
+    hadComebackThisYear,
+    bestMonthSessionsThisYear,
+    q1Sessions:  thisYearH.filter((h) => getMon(h) < 3).length,
+    q2Sessions:  thisYearH.filter((h) => getMon(h) >= 3 && getMon(h) < 6).length,
+    q3Sessions:  thisYearH.filter((h) => getMon(h) >= 6 && getMon(h) < 9).length,
+    q4Sessions:  thisYearH.filter((h) => getMon(h) >= 9).length,
+    // ── calendar specials ──
+    hasJan1Session:    calSet.has(1),     // Jan=0 → 0*100+1=1
+    hasDec31Session:   calSet.has(1131),  // Dec=11 → 11*100+31=1131
+    hasDec25Session:   calSet.has(1125),
+    hasFeb14Session:   calSet.has(114),
+    hasMar14Session:   calSet.has(214),   // Pi day
+    hasMar8Session:    calSet.has(208),   // Women's Day
+    hasNov20Session:   calSet.has(1020),  // Vietnam Teacher's Day
+    hasJun21Session:   calSet.has(521),   // Summer solstice
+    // ── day of week ──
+    sunCount: dow[0], monCount: dow[1], tueCount: dow[2], wedCount: dow[3],
+    thuCount: dow[4], friCount: dow[5], satCount: dow[6],
+    weekendCount: dow[0] + dow[6],
+    weekdayCount: dow[1] + dow[2] + dow[3] + dow[4] + dow[5],
+    // ── month totals (all-time) ──
+    janCount: mon[0],  febCount: mon[1],  marCount: mon[2],  aprCount: mon[3],
+    mayCount: mon[4],  junCount: mon[5],  julCount: mon[6],  augCount: mon[7],
+    sepCount: mon[8],  octCount: mon[9],  novCount: mon[10], decCount: mon[11],
+    bestMonthSessions,
+    bestMonthMinutes,
+    // ── notes ──
+    totalNoteCount: history.filter((h) => h.note).length,
+    longNoteCount:  history.filter((h) => h.note && h.note.length >= 150).length,
+    // ── categories ──
+    uniqueCategoriesUsed,
+  };
+}
+
+// ─── HELPER: Kiểm tra thành tích mới mở khóa ─────────────────────────────────
+function checkAchievements(currentUnlocked, snapshot) {
+  return ACHIEVEMENTS
+    .filter((a) => !currentUnlocked.includes(a.id) && a.check(snapshot, currentUnlocked))
+    .map((a) => a.id);
+}
+
+// ─── HELPER: Gộp tài nguyên vào đúng túi quyển ───────────────────────────────
+function mergeResources(allResources, gains, activeBook) {
+  const bookKey     = `book${activeBook}`;
+  const updatedBook = { ...allResources[bookKey] };
+  for (const [id, amount] of Object.entries(gains)) {
+    updatedBook[id] = (updatedBook[id] ?? 0) + amount;
+  }
+  return { ...allResources, [bookKey]: updatedBook };
+}
+
+function grantXPReward(prev, xpAmount, epAmount = 0) {
+  const normalizedXP = Math.max(0, Math.round(xpAmount ?? 0));
+  const normalizedEP = Math.max(0, Math.round(epAmount ?? 0));
+  const newTotalEP = prev.progress.totalEP + normalizedEP;
+  const newBook = getActiveBook(newTotalEP);
+  const { newLevel, newTotalEXP, levelsGained, spGained } =
+    computeLevelUps(prev.player.totalEXP, normalizedXP);
+
+  return {
+    progress: {
+      ...prev.progress,
+      totalEP:    newTotalEP,
+      activeBook: newBook,
+    },
+    player: {
+      ...prev.player,
+      level:    newLevel,
+      totalEXP: newTotalEXP,
+      sp:       prev.player.sp + spGained,
+    },
+    newBook,
+    newLevel,
+    levelsGained,
+    spGained,
+  };
+}
+
+function getSuperFocusChargeCap(unlockedSkills = {}) {
+  return SIEU_TAP_TRUNG_CHARGES + (unlockedSkills.nghi_ngoi_hoan_hao ? NGHI_NGOI_HOAN_HAO_EXTRA_CHARGES : 0);
+}
+
+function markLatestSessionBreakCompleted(history = [], completedAt = new Date().toISOString()) {
+  if (!Array.isArray(history) || history.length === 0) return history;
+  const [latestEntry, ...restHistory] = history;
+  if (!latestEntry) return history;
+  if (latestEntry.breakCompletedOnTime && latestEntry.breakCompletedAt) return history;
+  return [
+    {
+      ...latestEntry,
+      breakCompletedOnTime: true,
+      breakCompletedAt: completedAt,
+    },
+    ...restHistory,
+  ];
+}
+
+function applyPerfectBreakProgress(prev) {
+  const completedAt = new Date().toISOString();
+  const latestEntry = Array.isArray(prev.history) ? prev.history[0] : null;
+  const breakAlreadyCounted = !!latestEntry?.breakCompletedOnTime;
+  const updatedHistory = breakAlreadyCounted
+    ? (latestEntry?.breakCompletedAt ? prev.history : markLatestSessionBreakCompleted(prev.history, completedAt))
+    : markLatestSessionBreakCompleted(prev.history, completedAt);
+  const refreshedMissions = refreshMissionsIfStale(prev.missions);
+  const refreshedChain = refreshWeeklyChain(prev.weeklyChain);
+
+  if (breakAlreadyCounted) {
+    return {
+      missions: refreshedMissions,
+      weeklyChain: refreshedChain,
+      history: updatedHistory,
+      progress: prev.progress,
+      player: prev.player,
+      missionCompletedIds: [],
+      levelsGained: 0,
+      newLevel: prev.player.level,
+      spGained: 0,
+    };
+  }
+
+  const completedMissionIds = [];
+  const updatedMissionList = refreshedMissions.list.map((mission) => {
+    if (mission.claimed || mission.type !== 'perfectBreaks') return mission;
+    const progress = Math.min(mission.goal, mission.progress + 1);
+    if (progress >= mission.goal && mission.progress < mission.goal) {
+      completedMissionIds.push(mission.id);
+    }
+    return {
+      ...mission,
+      progress,
+      claimed: progress >= mission.goal ? true : mission.claimed,
+    };
+  });
+
+  const missionBonusXPBase = completedMissionIds.reduce((sum, missionId) => {
+    const mission = updatedMissionList.find((entry) => entry.id === missionId);
+    return sum + (mission?.rewardXP ?? 0);
+  }, 0);
+  const missionBonusXP = applyDailyMissionXPBonus(prev.buildings, missionBonusXPBase);
+
+  const rewardState = missionBonusXP > 0 ? grantXPReward(prev, missionBonusXP) : null;
+  const chain = WEEKLY_CHAINS[refreshedChain.chainIndex];
+  const activeStep = chain?.steps[refreshedChain.currentStep];
+  const weeklyChain = activeStep?.type === 'perfectBreaks'
+    ? {
+        ...refreshedChain,
+        stepProgress: Math.min(activeStep.goal, refreshedChain.stepProgress + 1),
+      }
+    : refreshedChain;
+
+  return {
+    missions: { ...refreshedMissions, list: updatedMissionList },
+    weeklyChain,
+    history: updatedHistory,
+    progress: rewardState?.progress ?? prev.progress,
+    player: rewardState?.player ?? prev.player,
+    missionCompletedIds: completedMissionIds,
+    levelsGained: rewardState?.levelsGained ?? 0,
+    newLevel: rewardState?.newLevel ?? prev.player.level,
+    spGained: rewardState?.spGained ?? 0,
+  };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ZUSTAND STORE
+// ─────────────────────────────────────────────────────────────────────────────
+
+const useGameStore = create(
+  persist(
+    (set, get) => ({
+      // ══════════════════════════════════════════════════════════════════════
+      // ── TRẠNG THÁI ĐƯỢC PERSIST ──────────────────────────────────────────
+      // ══════════════════════════════════════════════════════════════════════
+
+      // ── Nhân vật người chơi ───────────────────────────────────────────────
+      player: {
+        level:          0,
+        totalEXP:       0,
+        sp:             0,         // Điểm Kỹ Năng chưa dùng
+        unlockedSkills: makeDefaultSkills(),
+      },
+
+      // ── Tiến trình ────────────────────────────────────────────────────────
+      progress: {
+        totalEP:              0,
+        activeBook:           1,
+        sessionsCompleted:    0,
+        totalFocusMinutes:    0,
+        longBreakCycleStart:  0,
+      },
+
+      // ── Túi tài nguyên ────────────────────────────────────────────────────
+      resources: makeEmptyResources(),
+
+      // ── Cấu hình timer ───────────────────────────────────────────────────
+      timerConfig: makeDefaultTimerConfig(),
+
+      // ── Theo dõi Sự Tha Thứ hàng tuần ────────────────────────────────────
+      forgiveness: {
+        chargesRemaining:   FORGIVENESS_CANCELS_PER_WEEK,
+        weekStartTimestamp: Date.now(),
+      },
+
+      // ── Hệ thống Danh Xưng ───────────────────────────────────────────────
+      rankSystem: makeDefaultRankSystem(),
+
+      // ── Thử Thách Thăng Cấp đang hoạt động ───────────────────────────────
+      rankChallenge: null,  // RankChallenge | null
+
+      // ── Trạng thái Khủng Hoảng Kỷ Nguyên ────────────────────────────────
+      eraCrisis: makeDefaultEraCrisis(),
+
+      // ── Di Vật nhận được (buff vĩnh viễn) ────────────────────────────────
+      relics: [],
+
+      // ── Bản Vẽ Hiếm thu được qua Gacha ───────────────────────────────────
+      blueprints: [],
+
+      // ── Thành Tích đã mở khóa ────────────────────────────────────────────
+      achievements: makeDefaultAchievements(),
+
+      // ── Nhật ký phiên (50 gần nhất) ──────────────────────────────────────
+      history: [],
+
+      // ── Kho ghi chú đã lưu (backup độc lập) ─────────────────────────────
+      savedNotes: [],
+
+      // ── Streak / Chuỗi Ngày ────────────────────────────────────────────────
+      streak: makeDefaultStreak(),
+
+      // ── Nhiệm Vụ Hàng Ngày ───────────────────────────────────────────────
+      missions: makeDefaultMissions(),
+
+      // ── Công Trình đã xây dựng ────────────────────────────────────────────
+      buildings: [],  // string[] — blueprint ids that have been built
+
+      // ── Giam Cầm Năng Lượng (Overclock) ──────────────────────────────────
+      staking: makeDefaultStaking(),
+
+      // ── Prestige / New Game+ ──────────────────────────────────────────────
+      prestige: makeDefaultPrestige(),
+
+      // ── Timer Session (persist startedAt qua F5) ─────────────────────────
+      timerSession: makeDefaultTimerSession(),
+
+      // ── Weekly Quest Chain ────────────────────────────────────────────────
+      weeklyChain: makeDefaultWeeklyChain(),
+
+      // ── Gacha Pity Counter ────────────────────────────────────────────────
+      gachaPity: makeDefaultGachaPity(),
+
+      // ── Combo / Momentum ──────────────────────────────────────────────────
+      combo: { count: 0, lastSessionTs: null },
+
+      // ── Danh mục phiên tập trung ──────────────────────────────────────────
+      sessionCategories: [...DEFAULT_SESSION_CATEGORIES],
+
+      // ── Category đang chờ cho phiên tiếp theo ────────────────────────────
+      pendingCategoryId: null,
+
+      // ── Ghi chú ngắn cho phiên tiếp theo ────────────────────────────────
+      pendingNote: '',
+      pendingBreakNote: '',
+
+      // ── Mục tiêu phiên và ghi chú phản tư ──────────────────────────────
+      pendingSessionGoal: '',
+      pendingNextSessionNote: '',
+
+      // ── Theo dõi hàng ngày (cho skills chiến lược) ────────────────────────
+      dailyTracking: makeDefaultDailyTracking(),
+
+      // ── Kích hoạt kỹ năng chủ động (Siêu Tập Trung / Số Đỏ) ─────────────
+      skillActivations: makeDefaultSkillActivations(),
+
+      // ── Theo dõi chuỗi category liên tiếp ───────────────────────────────
+      categoryTracking: makeDefaultCategoryTracking(),
+
+      // ── Theo dõi kỷ nguyên ───────────────────────────────────────────────
+      eraTracking: makeDefaultEraTracking(),
+
+      // ── Meta phiên trước ─────────────────────────────────────────────────
+      sessionMeta: makeDefaultSessionMeta(),
+
+      // ── Hệ thống Nghiên Cứu (RP + bản vẽ đã mở) ─────────────────────────
+      research: makeDefaultResearch(),
+
+      // ── Hàng đợi xây dựng (Crafting Queue) ───────────────────────────────
+      craftingQueue: makeDefaultCraftingQueue(),
+
+      // ── HP công trình cũ (giữ lại để tương thích save) ──────────────────
+      buildingHP: makeDefaultBuildingHP(),
+
+      // ── Ngày cuối cùng mỗi công trình được "dùng" (session hoàn thành) ───
+      buildingLastUsed: {},  // { [bpId]: 'YYYY-MM-DD' }
+
+      // ── Cấp độ công trình (Lv.1/Lv.2/Lv.3) ───────────────────────────────
+      buildingLevels: {},  // { [bpId]: 1|2|3 }
+
+      // ── Nguyên liệu tinh luyện theo kỷ (giữ shape cũ để tương thích) ────
+      resourcesRefined: makeDefaultResourcesRefined(),
+
+      // ── Giai đoạn tiến hóa di vật ────────────────────────────────────────
+      relicEvolutions: {},  // { [relicId]: stageNumber } — 0=base, 1=evolved, 2=legendary
+
+      // ══════════════════════════════════════════════════════════════════════
+      // ── TRẠNG THÁI TẠM THỜI (KHÔNG PERSIST) ─────────────────────────────
+      // ══════════════════════════════════════════════════════════════════════
+      ui: {
+        lootModalOpen:   false,
+        pendingReward:   null,
+
+        disasterModalOpen: false,
+        pendingDisaster:   null,
+
+        // Khủng Hoảng Kỷ Nguyên modal
+        eraCrisisModalOpen: false,
+
+        // Thông báo lên cấp
+        levelUpQueue: [],
+
+        // Thông báo di vật
+        relicNotification: null,  // relic | null
+
+        // Thông báo hoàn thành thử thách danh xưng
+        rankUpNotification: null, // { rankLabel, rankIcon } | null
+
+        // Hàng đợi thành tích mới mở khóa (hiển thị toast)
+        achievementQueue: [],
+
+        // Mission completed notification queue
+        missionCompletedIds: [],
+
+        // Prestige modal
+        prestigeModalOpen: false,
+
+        // Break timer
+        isOnBreak:         false,
+        breakSecondsLeft:  0,
+        breakTotalSeconds: 0,
+        breakIsLong:       false,
+        activeBreakSessionId: null,
+
+        // Weekly Report modal
+        weeklyReportOpen: false,
+        weeklyReportMode: 'current',
+      },
+
+      // Ngày cuối cùng đã hiện Weekly Report (persist)
+      lastWeeklyReportDate: null,
+
+      // ══════════════════════════════════════════════════════════════════════
+      // ── ACTIONS ──────────────────────────────────────────────────────────
+      // ══════════════════════════════════════════════════════════════════════
+
+      // ─── Cấu hình Timer ──────────────────────────────────────────────────
+      setTimerConfig: (patch) =>
+        set((state) => ({
+          timerConfig: {
+            ...state.timerConfig,
+            ...patch,
+            mode: patch.mode === 'stopwatch'
+              ? 'stopwatch'
+              : patch.mode === 'pomodoro'
+                ? 'pomodoro'
+                : state.timerConfig.mode,
+            focusMinutes: patch.focusMinutes
+              ? Math.min(180, Math.max(1, patch.focusMinutes))
+              : state.timerConfig.focusMinutes,
+            breakMinutes: patch.breakMinutes
+              ? Math.min(60,  Math.max(1, patch.breakMinutes))
+              : state.timerConfig.breakMinutes,
+          },
+        })),
+
+      // ─── Persist timer state qua F5 / reload ─────────────────────────────
+      persistTimerStart: (totalSeconds) =>
+        set({
+          timerSession: {
+            ...makeDefaultTimerSession(),
+            isRunning: true,
+            startedAt: Date.now(),
+            countdownStartedAt: Date.now(),
+            totalSeconds,
+          },
+        }),
+
+      persistTimerSession: (session) =>
+        set({
+          timerSession: {
+            ...makeDefaultTimerSession(),
+            ...session,
+            isRunning: true,
+          },
+        }),
+
+      clearTimerSession: () =>
+        set({ timerSession: makeDefaultTimerSession() }),
+
+      // ─── Reset vòng nghỉ dài về 0 ────────────────────────────────────────
+      resetLongBreakCycle: () =>
+        set((prev) => ({
+          progress: { ...prev.progress, longBreakCycleStart: prev.progress.sessionsCompleted },
+        })),
+
+      // ─── Xoá phiên lịch sử và hoàn trả phần thưởng ─────────────────────
+      deleteSession: (sessionId) =>
+        set((prev) => {
+          const session = prev.history.find((h) => h.id === sessionId);
+          if (!session) return prev;
+
+          const bookKey    = `book${prev.progress.activeBook ?? 1}`;
+          const currentRes = { ...(prev.player.resources?.[bookKey] ?? {}) };
+          const sessionRes = session.resources ?? {};
+          for (const resKey of Object.keys(currentRes)) {
+            currentRes[resKey] = Math.max(0, (currentRes[resKey] ?? 0) - (sessionRes[resKey] ?? 0));
+          }
+          // Trừ tài nguyên refined (resourcesRefined) nếu blueprint có tier t2/t3
+          const newResourcesRefined = { ...(prev.resourcesRefined ?? {}) };
+
+          // Xoá blueprint
+          let newBlueprints = prev.player.blueprints ?? [];
+          if (session.blueprint?.id) {
+            newBlueprints = newBlueprints.filter((bp) => bp.id !== session.blueprint.id);
+          }
+
+          const xp = session.xpEarned ?? 0;
+
+          return {
+            history: prev.history.filter((h) => h.id !== sessionId),
+            resourcesRefined: newResourcesRefined,
+            player: {
+              ...prev.player,
+              totalEXP:  Math.max(0, (prev.player.totalEXP ?? 0) - xp),
+              resources: { ...prev.player.resources, [bookKey]: currentRes },
+              blueprints: newBlueprints,
+            },
+            progress: {
+              ...prev.progress,
+              totalEP:           Math.max(0, (prev.progress.totalEP ?? 0) - xp),
+              sessionsCompleted: Math.max(0, (prev.progress.sessionsCompleted ?? 0) - 1),
+              totalFocusMinutes: Math.max(0, (prev.progress.totalFocusMinutes ?? 0) - (session.minutes ?? 0)),
+            },
+          };
+        }),
+
+      updateSessionCategory: (sessionId, categoryId) =>
+        set((prev) => {
+          const categorySnapshot = categoryId
+            ? (prev.sessionCategories.find((cat) => cat.id === categoryId) ?? null)
+            : null;
+          const hasSession = prev.history.some((session) => session.id === sessionId);
+          if (!hasSession) return prev;
+
+          return {
+            history: prev.history.map((session) =>
+              session.id === sessionId
+                ? {
+                    ...session,
+                    categoryId: categoryId ?? null,
+                    categorySnapshot,
+                  }
+                : session
+            ),
+            savedNotes: (prev.savedNotes ?? []).map((note) =>
+              note.sourceSessionId === sessionId
+                ? {
+                    ...note,
+                    categoryId: categoryId ?? null,
+                    categorySnapshot,
+                  }
+                : note
+            ),
+          };
+        }),
+
+      reviewCompletedSession: (sessionId, patch = {}) =>
+        set((prev) => {
+          if (!sessionId || !prev.history.some((session) => session.id === sessionId)) return prev;
+
+          const hasGoalAchieved = typeof patch.goalAchieved === 'boolean';
+          const goal = typeof patch.goal === 'string' ? (patch.goal.trim() || null) : undefined;
+          const nextNote = typeof patch.nextNote === 'string' ? (patch.nextNote.trim() || null) : undefined;
+
+          return {
+            history: prev.history.map((session) =>
+              session.id === sessionId
+                ? {
+                    ...session,
+                    ...(goal !== undefined ? { goal } : {}),
+                    ...(nextNote !== undefined ? { nextNote } : {}),
+                    ...(hasGoalAchieved ? { goalAchieved: patch.goalAchieved } : {}),
+                  }
+                : session
+            ),
+          };
+        }),
+
+      updateSessionBreakNote: (sessionId, breakNote) =>
+        set((prev) => {
+          if (!sessionId) return prev;
+
+          const normalizedBreakNote = typeof breakNote === 'string'
+            ? (breakNote.trim() || null)
+            : null;
+          let updatedSession = null;
+          const nextHistory = prev.history.map((session) => {
+            if (session.id !== sessionId) return session;
+            updatedSession = {
+              ...session,
+              breakNote: normalizedBreakNote,
+            };
+            return updatedSession;
+          });
+
+          if (!updatedSession) return prev;
+
+          return {
+            history: nextHistory,
+            savedNotes: upsertSavedNoteEntry(prev.savedNotes ?? [], updatedSession),
+          };
+        }),
+
+      // ─── Dismiss level-up modal (shift queue) ────────────────────────────
+      dismissLevelUp: () =>
+        set((prev) => ({
+          ui: { ...prev.ui, levelUpQueue: prev.ui.levelUpQueue.slice(1) },
+        })),
+
+      // ─── Hoàn thành phiên tập trung ──────────────────────────────────────
+      completeFocusSession: (minutesFocused, categoryId = null, note = '', sessionTiming = null, sessionSnapshot = null) => {
+        const state = get();
+        const { unlockedSkills } = state.player;
+        const { totalEP, activeBook } = state.progress;
+
+        // Nếu đang trong Khủng Hoảng Kỷ Nguyên chế độ Đương Đầu
+        let updatedCrisis = state.eraCrisis;
+        let relicEarned   = null;
+        let crisisJustPassed = false;
+
+        if (state.eraCrisis.active && state.eraCrisis.choiceMade === 'challenge') {
+          const { newCrisisState, completed, failed, relic } =
+            updateEraCrisisChallenge(state.eraCrisis, minutesFocused);
+
+          if (failed) {
+            const { newResources, newCrisisState: fc } =
+              applyEraCrisisChallengePenalty(state.resources, newCrisisState);
+            set((prev) => ({
+              resources: newResources,
+              eraCrisis: fc,
+              ui: { ...prev.ui, eraCrisisModalOpen: false },
+            }));
+            return; // phiên này chỉ xử lý penalty, không tính reward thông thường
+          }
+
+          updatedCrisis    = newCrisisState;
+          relicEarned      = relic;
+          crisisJustPassed = completed;
+        }
+
+        // ─── Combo / Momentum ───────────────────────────────────────────
+        const now_ts          = Date.now();
+        const lastSessionTs   = state.combo?.lastSessionTs ?? 0;
+        const gapMs           = now_ts - lastSessionTs;
+        const prevComboCount  = state.combo?.count ?? 0;
+        // bo_nho_co_bap mở rộng thời gian combo từ 4h → 8h
+        // bo_nho_co_bap mở rộng cửa sổ combo từ 4h → 8h
+        // Di vật comboWindowHours cộng thêm giờ bổ sung
+        const _relicEvos      = state.relicEvolutions ?? {};
+        const relicComboHours = state.relics.reduce((acc, r) => {
+          const stage = _relicEvos[r.id] ?? 0;
+          const evoDef = RELIC_EVOLUTION[r.id];
+          const buff   = evoDef?.stages[stage]?.buff ?? r.buff ?? {};
+          return acc + (buff.comboWindowHours ?? 0);
+        }, 0);
+        const baseComboDecayMs      = unlockedSkills.bo_nho_co_bap
+          ? BO_NHO_CO_BAP_COMBO_HOURS * 3_600_000
+          : COMBO_DECAY_MS;
+        const effectiveComboDecayMs = baseComboDecayMs + relicComboHours * 3_600_000;
+        const newComboCount   = (lastSessionTs > 0 && gapMs < effectiveComboDecayMs)
+          ? prevComboCount + 1 : 1;
+        const comboStacks     = Math.min(newComboCount - 1, COMBO_MAX_STACKS);
+        const comboBonusPct   = comboStacks * COMBO_BONUS_PER_STACK;
+
+        // Tổng hợp buff đang hoạt động (danh xưng + di vật + prestige + tiến hóa)
+        const activeBuffs = aggregateActiveBuffs(
+          activeBook,
+          state.rankSystem,
+          state.relics,
+          state.prestige.permanentBonus,
+          state.relicEvolutions ?? {},
+        );
+
+        // ─── Xây dựng sessionCtx cho gameMath ───────────────────────────
+        const today             = localDateStr();
+        const dt                = state.dailyTracking;
+        const isToday           = dt.date === today;
+        const sessionsToday     = isToday ? dt.sessionsCompleted : 0;
+        const catsToday         = isToday ? (dt.categoriesUsed ?? []) : [];
+        const trimmedNote       = note?.trim() || '';
+        const trimmedGoal       = sessionSnapshot?.goal?.trim() || '';
+        const trimmedNextNote   = sessionSnapshot?.nextNote?.trim() || '';
+        const noteWordCount     = countWords(trimmedNote);
+        const qualifiesMissionNote = noteWordCount >= MISSION_NOTE_MIN_WORDS;
+        const cat               = state.categoryTracking;
+        const consecutiveSameCat = (categoryId && cat.lastCategoryId === categoryId)
+          ? cat.consecutiveCount + 1
+          : (categoryId ? 1 : 0);
+        const uniqueCatsToday   = new Set([...catsToday, ...(categoryId ? [categoryId] : [])]);
+
+        // weekly unique categories: lấy từ history 7 ngày gần nhất
+        const weekAgo           = Date.now() - 7 * 86_400_000;
+        const weeklyCategories  = [
+          ...new Set(
+            state.history
+              .filter((h) => new Date(h.timestamp).getTime() >= weekAgo && h.categoryId)
+              .map((h) => h.categoryId)
+          ),
+        ];
+
+        // Đồng bộ charge kỹ năng hàng ngày
+        const saRaw        = state.skillActivations;
+        const saToday      = saRaw.lastResetDate === today;
+        const skillAct     = saToday ? saRaw : makeDefaultSkillActivations();
+
+        // isNewCategoryToday: danh mục này chưa dùng hôm nay → ×2 RP
+        const isNewCategoryToday = !!categoryId && !catsToday.includes(categoryId);
+
+        const refreshedMissionsForSession = refreshMissionsIfStale(state.missions);
+
+        const sessionCtx = {
+          consecutiveSessionsToday: sessionsToday,
+          superFocusActive:         skillAct.superFocusActive,
+          luckyModeActive:          skillAct.luckyModeActive,
+          breakCompletedOnTime:     state.sessionMeta.breakCompletedOnTime,
+          isFirstSessionToday:      sessionsToday === 0,
+          sessionsCompletedToday:   sessionsToday,
+          currentStreak:            state.streak.currentStreak,
+          lastSessionCancelled:     state.sessionMeta.lastSessionCancelled,
+          consecutiveSameCat,
+          diverseCategoriesBonus:   uniqueCatsToday.size >= 3,
+          weeklyCategories,
+          balancedDayBonus:         isToday && (
+            (dt.hasShortSession && minutesFocused >= 60)
+            || (dt.hasLongSession && minutesFocused <= 25)
+          ),
+          isFirstSessionInNewEra:   isToday && dt.justEnteredNewEra,
+          erasCompleted:            state.eraTracking.erasCompleted,
+          sessionsInCurrentEra:     state.eraTracking.sessionsInCurrentEra,
+          allDailyMissionsDone:     refreshedMissionsForSession.list.length > 0 &&
+                                    refreshedMissionsForSession.list.every((m) => m.claimed),
+          isNewCategoryToday,
+          wonderRPBonus:            getWonderRPBonus(state.buildings),
+        };
+
+        // Tính toán phần thưởng phiên và gộp thêm bonus Wonder còn hoạt động.
+        const baseReward = calculateRewards(minutesFocused, unlockedSkills, totalEP, activeBuffs, state.gachaPity.sessionsSinceLastDrop, sessionCtx);
+        const economyRewardModifiers = getEconomyRewardModifiers(state.buildings, state.buildingLevels);
+        const rawRewardMultiplier = getWonderRawRewardMultiplier(state.buildings) * economyRewardModifiers.rawMultiplier;
+        const extraRefinedReward = getWonderExtraRefinedReward(state.buildings, minutesFocused);
+        const reward = {
+          ...baseReward,
+          resources: Object.fromEntries(
+            Object.entries(baseReward.resources ?? {}).map(([resId, amount]) => ([
+              resId,
+              Math.max(0, Math.round((amount ?? 0) * rawRewardMultiplier)),
+            ])),
+          ),
+          t2Drop: Math.round((((baseReward.t2Drop ?? 0) * economyRewardModifiers.refinedMultiplier) + extraRefinedReward) * 100) / 100,
+        };
+
+        // ─── Sự kiện tích cực ngẫu nhiên (ưu tiên era-specific) ─────────
+        const eraSpecific = ERA_MINI_EVENTS[activeBook] ?? [];
+        const allPossible = [...eraSpecific, ...POSITIVE_EVENTS];
+        const eligibleEvents = allPossible.filter((e) => minutesFocused >= e.minMinutes);
+        let positiveEvent = null;
+        for (const evt of eligibleEvents) {
+          if (Math.random() < evt.chance) { positiveEvent = evt; break; }
+        }
+        const positiveEventBonus = positiveEvent
+          ? Math.round(reward.finalXP * positiveEvent.bonusPct * POSITIVE_EVENT_XP_SCALE) : 0;
+        const comboBonus = Math.round(reward.finalXP * comboBonusPct);
+
+        // Kiểm tra cập nhật Thử Thách Thăng Cấp đang active
+        let newRankChallenge = state.rankChallenge;
+        let rankJustCompleted = false;
+        let newRankSystem     = { ...state.rankSystem };
+
+        if (state.rankChallenge?.active) {
+          const { challenge, completed, failed } =
+            updateRankChallenge(state.rankChallenge, minutesFocused);
+          newRankChallenge = challenge;
+
+          if (failed) {
+            const penalizedRes = applyRankChallengePenalty(state.resources);
+            set((prev) => ({
+              resources:     penalizedRes,
+              rankChallenge: null,
+              ui: {
+                ...prev.ui,
+                pendingDisaster: {
+                  disaster:  { label: 'Thử Thách Thất Bại', icon: '💔', description: `Bạn không hoàn thành thử thách thăng cấp lên bậc ${challenge.targetRankLabel} kịp thời. Mất 5% tài nguyên.` },
+                  deducted:  {},
+                  waived:    false,
+                  chargeConsumed: false,
+                },
+                disasterModalOpen: true,
+              },
+            }));
+          }
+
+          if (completed) {
+            const bookKey = `book${challenge.bookNumber}`;
+            newRankSystem = { ...newRankSystem, [bookKey]: challenge.targetRankIdx };
+            newRankChallenge = null;
+            rankJustCompleted = true;
+          }
+        }
+
+        // Gộp tài nguyên
+        const newResources = mergeResources(
+          state.resources,
+          reward.resources,
+          reward.activeBook,
+        );
+
+        // Thêm di vật nếu có
+        const newRelics = relicEarned
+          ? [...state.relics, relicEarned]
+          : state.relics;
+
+        // Streak advancement — chỉ còn một bonus XP duy nhất
+        const newStreak = advanceStreak(state.streak);
+        const streakBonusDays = Math.min(newStreak.currentStreak, getWonderStreakBonusCap(state.buildings));
+        const streakBonusXP = Math.floor(reward.finalXP * streakBonusDays * STREAK_BONUS_PER_DAY);
+
+        // Overclock settlement — dùng rewardMultiplier đã tính khi kích hoạt
+        const overclockBonusEP = state.staking.active
+          ? Math.floor(state.staking.stakedEP * ((state.staking.rewardMultiplier ?? OVERCLOCK_REWARD_MULTIPLIER) - 1))
+          : 0;
+        const baseSessionXP = reward.finalXP + comboBonus + positiveEventBonus + streakBonusXP + overclockBonusEP;
+
+        const resolvedStartedAt = sessionTiming?.startedAt ?? null;
+        const resolvedFinishedAt = sessionTiming?.finishedAt ?? new Date().toISOString();
+        const newBlueprints = state.blueprints;
+        const sessionId = Date.now();
+
+        // Weekly chain progress
+        const refreshedChain = refreshWeeklyChain(state.weeklyChain);
+        const chain = WEEKLY_CHAINS[refreshedChain.chainIndex];
+        const currentWeekHistory = getHistoryWeekEntries(state.history, refreshedChain.weekKey);
+        const weeklySnapshot = buildWeeklyProgressSnapshot([
+          ...currentWeekHistory,
+          {
+            timestamp: resolvedFinishedAt,
+            minutes: minutesFocused,
+            categoryId: categoryId ?? null,
+            note: trimmedNote || null,
+            breakCompletedOnTime: false,
+            breakCompletedAt: null,
+          },
+        ], refreshedChain.weekKey);
+        const chainStep = chain?.steps[refreshedChain.currentStep];
+        const newChainStepProgress = chainStep && refreshedChain.currentStep < chain.steps.length
+          ? getWeeklyStepProgress(chainStep, weeklySnapshot)
+          : refreshedChain.stepProgress;
+        const newWeeklyChain = { ...refreshedChain, stepProgress: newChainStepProgress };
+
+        // ── RP cộng dồn ───────────────────────────────────────────────────
+        const newResearchRP = (state.research?.rp ?? 0) + (reward.rpEarned ?? 0);
+
+        // ── Nguyên liệu tinh luyện rớt tự nhiên ──────────────────────────
+        const eraKey = reward.activeBook;
+        const prevRefined = normalizeRefinedBag(state.resourcesRefined?.[eraKey]);
+        const newRefined  = {
+          ...state.resourcesRefined,
+          [eraKey]: {
+            t2: prevRefined.t2 + (reward.t2Drop ?? 0),
+            t3: 0,
+          },
+        };
+
+        // ── Crafting queue: tick progress (mỗi phiên hoàn thành = 1 progress) ─
+        const prevQueue = state.craftingQueue ?? [];
+        const nextQueue = [];
+        const newlyBuilt = [];
+        for (const item of prevQueue) {
+          const remaining = item.sessionsRemaining - 1;
+          if (remaining <= 0) {
+            newlyBuilt.push(item.bpId);
+          } else {
+            nextQueue.push({ ...item, sessionsRemaining: remaining });
+          }
+        }
+        const newBuildings = [...state.buildings, ...newlyBuilt];
+
+        // ─── Cập nhật category tracking ──────────────────────────────────
+        const categoryTrackingUpd = {
+          lastCategoryId:   categoryId ?? null,
+          consecutiveCount: consecutiveSameCat,
+        };
+
+        // ─── Reset skill activations (tiêu charge sau phiên) ─────────────
+        const skillActivationsUpd = {
+          ...skillAct,
+          lastResetDate:    today,
+          superFocusActive: false,   // tắt sau khi dùng
+          superFocusChargesUsed: skillAct.superFocusActive
+            ? skillAct.superFocusChargesUsed + 1
+            : skillAct.superFocusChargesUsed,
+          luckyModeActive:  false,
+          luckyModeChargesUsed: skillAct.luckyModeActive
+            ? skillAct.luckyModeChargesUsed + 1
+            : skillAct.luckyModeChargesUsed,
+        };
+
+        set((prev) => {
+          const newSessions     = prev.progress.sessionsCompleted + 1;
+          const newTotalMinutes = prev.progress.totalFocusMinutes + minutesFocused;
+          const freshDt = isToday ? dt : makeDefaultDailyTracking();
+          const deepSessionsToday = (freshDt.deepSessionsCompleted ?? 0) + (minutesFocused >= 45 ? 1 : 0);
+          const balancedSessionsToday = (
+            (freshDt.hasShortSession || minutesFocused <= 25)
+            && (freshDt.hasLongSession || minutesFocused >= 60)
+          );
+
+          // Mission progress tick
+          const refreshedMissions = refreshMissionsIfStale(prev.missions);
+          const updatedMissionList = refreshedMissions.list.map((m) => {
+            if (m.claimed) return m;
+            let progress = m.progress;
+            if (m.type === 'sessions') progress = Math.min(m.goal, progress + 1);
+            if (m.type === 'focusMinutes') progress = Math.min(m.goal, progress + minutesFocused);
+            if (m.type === 'singleSession') progress = minutesFocused >= m.goal ? m.goal : progress;
+            if (m.type === 'researchPoints') progress = Math.min(m.goal, progress + (reward.rpEarned ?? 0));
+            if (m.type === 'uniqueCategories') progress = Math.min(m.goal, uniqueCatsToday.size);
+            if (m.type === 'deepSessions') progress = Math.min(m.goal, deepSessionsToday);
+            if (m.type === 'notes' && qualifiesMissionNote) progress = Math.min(m.goal, progress + 1);
+            if (m.type === 'balancedSessions') progress = balancedSessionsToday ? m.goal : progress;
+            return { ...m, progress };
+          });
+          const newlyCompletedMissionIds = updatedMissionList
+            .filter((m) => !m.claimed && m.progress >= m.goal)
+            .map((m) => m.id);
+          const missionBonusXPBase = newlyCompletedMissionIds.reduce((sum, id) => {
+            const m = updatedMissionList.find((x) => x.id === id);
+            return sum + (m?.rewardXP ?? 0);
+          }, 0);
+          const missionBonusXP = applyDailyMissionXPBonus(prev.buildings, missionBonusXPBase);
+
+          // Streak bonus mission: awarded each day streak ≥ 7, once per day
+          const streakMissionXPBase = (
+            !refreshedMissions.streakMissionClaimedToday &&
+            newStreak.currentStreak >= STREAK_MISSION_MIN_STREAK
+          ) ? Math.min(
+            STREAK_MISSION_BASE_XP + (newStreak.currentStreak - STREAK_MISSION_MIN_STREAK) * STREAK_MISSION_XP_PER_DAY,
+            STREAK_MISSION_MAX_XP,
+          ) : 0;
+          const streakMissionXP = applyDailyMissionXPBonus(prev.buildings, streakMissionXPBase);
+
+          const newMissions = {
+            ...refreshedMissions,
+            list: updatedMissionList.map((m) =>
+              newlyCompletedMissionIds.includes(m.id) ? { ...m, claimed: true } : m
+            ),
+            streakMissionClaimedToday: streakMissionXP > 0 ? true : refreshedMissions.streakMissionClaimedToday,
+          };
+          const finalSessionXP = baseSessionXP + missionBonusXP + streakMissionXP;
+          const finalSessionEP = Math.max(0, Math.round(reward.finalEP ?? 0));
+          const finalTotalEP = prev.progress.totalEP + finalSessionEP;
+          const finalBook = getActiveBook(finalTotalEP);
+          const eraChanged = finalBook !== prev.progress.activeBook;
+          const { newLevel, newTotalEXP, levelsGained, spGained } =
+            computeLevelUps(prev.player.totalEXP, finalSessionXP);
+
+          let newEraCrisis = updatedCrisis;
+          if (!prev.eraCrisis.active || crisisJustPassed) {
+            const detectedCrisis = detectEraCrisis(prev.progress.totalEP, finalTotalEP);
+            if (detectedCrisis) {
+              newEraCrisis = createEraCrisisState(detectedCrisis);
+            }
+          }
+
+          const pauseSegments = Array.isArray(sessionTiming?.pauseSegments)
+            ? sessionTiming.pauseSegments
+            : [];
+          const pausedTotalMs = Number.isFinite(sessionTiming?.pausedTotalMs)
+            ? Math.max(0, sessionTiming.pausedTotalMs)
+            : 0;
+          const wallClockDurationMs = Number.isFinite(sessionTiming?.wallClockDurationMs)
+            ? Math.max(0, sessionTiming.wallClockDurationMs)
+            : null;
+          const sessionEntry = {
+            id:               sessionId,
+            timestamp:        resolvedFinishedAt,
+            startedAt:        resolvedStartedAt,
+            finishedAt:       resolvedFinishedAt,
+            pauseSegments,
+            pausedTotalMs,
+            wallClockDurationMs,
+            minutes:          minutesFocused,
+            xpEarned:         finalSessionXP,
+            epEarned:         finalSessionEP,
+            tier:             reward.tierLabel,
+            multiplier:       reward.multiplier,
+            gachaDrop:        reward.gachaDrop,
+            jackpot:          reward.jackpotTriggered,
+            resources:        reward.resources,
+            rpEarned:         reward.rpEarned ?? 0,
+            refinedEarned:    reward.t2Drop ?? 0,
+            blueprint:        null,
+            categoryId:       categoryId ?? null,
+            categorySnapshot: sessionSnapshot?.categorySnapshot ?? null,
+            comboCount:       newComboCount,
+            positiveEvent:    positiveEvent,
+            note:             trimmedNote || null,
+            breakNote:        null,
+            goal:             trimmedGoal || null,
+            goalAchieved:     null,
+            nextNote:         trimmedNextNote || null,
+            breakCompletedOnTime: false,
+            breakCompletedAt: null,
+          };
+          const newHistory = [sessionEntry, ...prev.history].slice(0, 2000);
+          const newSavedNotes = upsertSavedNoteEntry(prev.savedNotes ?? [], sessionEntry);
+
+          const etPrev = prev.eraTracking;
+          const eraTrackingUpd = {
+            sessionsInCurrentEra: eraChanged ? 1 : etPrev.sessionsInCurrentEra + 1,
+            currentEraBook:       eraChanged ? finalBook : etPrev.currentEraBook,
+            erasCompleted:        eraChanged ? etPrev.erasCompleted + 1 : etPrev.erasCompleted,
+          };
+
+          const catsUpdated = categoryId && !catsToday.includes(categoryId)
+            ? [...catsToday, categoryId] : catsToday;
+          const dailyTrackingUpd = {
+            date:              today,
+            sessionsCompleted: (freshDt.sessionsCompleted ?? 0) + 1,
+            categoriesUsed:    catsUpdated,
+            deepSessionsCompleted: deepSessionsToday,
+            hasShortSession:   freshDt.hasShortSession || minutesFocused <= 25,
+            hasLongSession:    freshDt.hasLongSession  || minutesFocused >= 60,
+            justEnteredNewEra: eraChanged,
+          };
+          const nextPlayer = {
+            ...prev.player,
+            level:    newLevel,
+            totalEXP: newTotalEXP,
+            sp:       prev.player.sp + spGained,
+          };
+
+          let resourcesAfterCarry = newResources;
+          let refinedAfterCarry = newRefined;
+          if (eraChanged) {
+            const wonderEffects = aggregateWonderEffects(prev.buildings);
+
+            if (wonderEffects.has('era_carry_10pct')) {
+              const nextEraResources = ERA_METADATA[finalBook]?.resources ?? [];
+              const nextRawIds = nextEraResources.map((res) => res.id);
+              const prevBookKey = `book${prev.progress.activeBook}`;
+              const nextBookKey = `book${finalBook}`;
+              const prevBookBag = newResources[prevBookKey] ?? {};
+              const carryTotal = Math.floor(
+                Object.values(prevBookBag).reduce((sum, amount) => sum + (amount ?? 0), 0) * 0.10,
+              );
+
+              if (carryTotal > 0 && nextRawIds.length > 0) {
+                const nextBookBag = { ...(newResources[nextBookKey] ?? {}) };
+                const baseShare = Math.floor(carryTotal / nextRawIds.length);
+                const remainder = carryTotal - baseShare * nextRawIds.length;
+
+                nextRawIds.forEach((resId, index) => {
+                  const bonus = baseShare + (index < remainder ? 1 : 0);
+                  nextBookBag[resId] = (nextBookBag[resId] ?? 0) + bonus;
+                });
+
+                resourcesAfterCarry = {
+                  ...newResources,
+                  [nextBookKey]: nextBookBag,
+                };
+              }
+            }
+
+            if (wonderEffects.has('era_carry_t3_100')) {
+              refinedAfterCarry = {
+                ...refinedAfterCarry,
+                [finalBook]: {
+                  t2: normalizeRefinedBag(refinedAfterCarry[finalBook]).t2 + 12,
+                  t3: 0,
+                },
+              };
+            }
+          }
+
+          const prevForgivenessCapacity = getWonderForgivenessCapacity(prev.buildings);
+          const nextForgivenessCapacity = getWonderForgivenessCapacity(newBuildings);
+          const forgivenessChargesRemaining = nextForgivenessCapacity > prevForgivenessCapacity
+            ? Math.min(nextForgivenessCapacity, prev.forgiveness.chargesRemaining + (nextForgivenessCapacity - prevForgivenessCapacity))
+            : Math.min(nextForgivenessCapacity, prev.forgiveness.chargesRemaining);
+
+          // Kiểm tra thành tích mới mở khóa
+          const achSnapshot   = buildAchievementSnapshot(
+            { sessionsCompleted: newSessions, totalFocusMinutes: newTotalMinutes, totalEP: finalTotalEP, activeBook: finalBook },
+            newRelics,
+            newBlueprints,
+            newHistory,
+            newRankSystem,
+            newStreak,
+            newBuildings,
+            prev.prestige,
+            nextPlayer,
+          );
+          const newlyUnlocked = checkAchievements(prev.achievements.unlocked, achSnapshot);
+
+          return {
+            player: nextPlayer,
+            progress: {
+              ...prev.progress,
+              totalEP:           finalTotalEP,
+              activeBook:        finalBook,
+              sessionsCompleted: newSessions,
+              totalFocusMinutes: newTotalMinutes,
+            },
+            resources:     resourcesAfterCarry,
+            rankSystem:    newRankSystem,
+            rankChallenge: newRankChallenge,
+            eraCrisis:     newEraCrisis,
+            relics:        newRelics,
+            blueprints:    newBlueprints,
+            achievements:  appendAchievementUnlocks(prev.achievements, newlyUnlocked, resolvedFinishedAt),
+            history:       newHistory,
+            savedNotes:    newSavedNotes,
+            streak:        newStreak,
+            missions:      newMissions,
+            buildings:     newBuildings,
+            forgiveness:   { ...prev.forgiveness, chargesRemaining: forgivenessChargesRemaining },
+            staking:       makeDefaultStaking(),
+            prestige:      prev.prestige,
+            gachaPity:     prev.gachaPity,
+            weeklyChain:   newWeeklyChain,
+            combo:            { count: newComboCount, lastSessionTs: now_ts },
+            dailyTracking:    dailyTrackingUpd,
+            skillActivations: skillActivationsUpd,
+            categoryTracking: categoryTrackingUpd,
+            eraTracking:      eraTrackingUpd,
+            sessionMeta:      { lastSessionCancelled: false, breakCompletedOnTime: false },
+            research:         { ...prev.research, rp: newResearchRP },
+            craftingQueue:    nextQueue,
+            resourcesRefined: refinedAfterCarry,
+            ui: {
+              ...prev.ui,
+              lootModalOpen: true,
+              pendingReward: {
+                ...reward,
+                comboCount:          newComboCount,
+                comboBonus,
+                positiveEvent,
+                positiveEventBonus,
+                totalSessionXP:       finalSessionXP,
+                levelsGained,
+                spGained,
+                newLevel,
+                eraChanged,
+                newBook:              finalBook,
+                streakBonus:          streakBonusXP,
+                streakMissionXP,
+                streakDays:          newStreak.currentStreak,
+                overclockBonus:      overclockBonusEP,
+                missionCompletedIds: newlyCompletedMissionIds,
+                missionBonusXP,
+              },
+              levelUpQueue: levelsGained > 0
+                ? [...prev.ui.levelUpQueue, { levelsGained, newLevel, spGained }]
+                : prev.ui.levelUpQueue,
+              relicNotification: relicEarned,
+              rankUpNotification: rankJustCompleted
+                ? { rankLabel: RANK_SYSTEM[state.rankChallenge?.bookNumber]?.ranks[state.rankChallenge?.targetRankIdx]?.label, rankIcon: RANK_SYSTEM[state.rankChallenge?.bookNumber]?.ranks[state.rankChallenge?.targetRankIdx]?.icon }
+                : prev.ui.rankUpNotification,
+              eraCrisisModalOpen: newEraCrisis.active && !state.eraCrisis.active,
+              achievementQueue: newlyUnlocked.length > 0
+                ? [...prev.ui.achievementQueue, ...newlyUnlocked]
+                : prev.ui.achievementQueue,
+              missionCompletedIds: newlyCompletedMissionIds.length > 0
+                ? [...(prev.ui.missionCompletedIds ?? []), ...newlyCompletedMissionIds]
+                : (prev.ui.missionCompletedIds ?? []),
+            },
+          };
+        });
+
+        return sessionId;
+      },
+
+      // ─── Hủy phiên tập trung (Thảm Họa) ─────────────────────────────────
+      cancelFocusSession: (progressRatio = 0) => {
+        const state = get();
+        const { unlockedSkills } = state.player;
+        const { chargesRemaining, weekStartTimestamp } = state.forgiveness;
+
+        // Giam Cầm Năng Lượng — thất bại: mất hoàn toàn số EP đã giam
+        // (EP đã bị trừ khi activateOverclock, chỉ cần xóa state)
+        // const overclockLost = state.staking.stakedEP; // (đã bị trừ)
+
+        const now     = Date.now();
+        const oneWeek = 7 * 24 * 60 * 60 * 1000;
+        const forgivenessCapacity = getWonderForgivenessCapacity(state.buildings);
+        const freshCharges = now - weekStartTimestamp >= oneWeek
+          ? forgivenessCapacity
+          : chargesRemaining;
+
+        // Tổng hợp disasterReduction từ di vật tiến hóa
+        const _cancelEvos     = state.relicEvolutions ?? {};
+        const disasterRedBuff = state.relics.reduce((acc, r) => {
+          const stage = _cancelEvos[r.id] ?? 0;
+          const evoDef = RELIC_EVOLUTION[r.id];
+          const buff   = evoDef?.stages[stage]?.buff ?? r.buff ?? {};
+          return acc + (buff.disasterReduction ?? 0);
+        }, 0);
+
+        const result = applyDisasterPenalty(
+          state.resources,
+          unlockedSkills,
+          freshCharges,
+          disasterRedBuff,
+          progressRatio,
+          getWonderCancelPenaltyMultiplier(state.buildings)
+            * getBuildingCancelPenaltyMultiplier(state.buildings, state.buildingLevels),
+        );
+
+        const newCharges = result.chargeConsumed
+          ? Math.max(0, freshCharges - 1)
+          : freshCharges;
+
+        const buildingDamage = null;
+
+        set((prev) => ({
+          resources: result.newResources,
+          staking:   makeDefaultStaking(),
+          forgiveness: {
+            chargesRemaining:  newCharges,
+            weekStartTimestamp: now - prev.forgiveness.weekStartTimestamp >= oneWeek
+              ? now
+              : prev.forgiveness.weekStartTimestamp,
+          },
+          sessionMeta: { ...prev.sessionMeta, lastSessionCancelled: true },
+          ui: {
+            ...prev.ui,
+            disasterModalOpen: !result.waived,
+            pendingDisaster: {
+              disaster:       result.disaster,
+              deducted:       result.deducted,
+              waived:         result.waived,
+              chargeConsumed: result.chargeConsumed,
+              progressRatio:  result.progressRatio,
+              basePenaltyRate: result.basePenaltyRate,
+              adjustedPenaltyRate: result.adjustedPenaltyRate,
+              appliedPenaltyRate: result.appliedPenaltyRate,
+              skillPenaltyMultiplier: result.skillPenaltyMultiplier,
+              skillMode: result.skillMode,
+              buildingDamage,
+            },
+          },
+        }));
+      },
+
+      // ─── Quản lý danh mục phiên ──────────────────────────────────────────
+      setPendingCategory: (categoryId) =>
+        set({ pendingCategoryId: categoryId }),
+
+      setPendingNote: (note) =>
+        set({ pendingNote: note }),
+
+      setPendingBreakNote: (note) =>
+        set({ pendingBreakNote: note }),
+
+      setPendingSessionGoal: (goal) =>
+        set({ pendingSessionGoal: goal }),
+
+      setPendingNextSessionNote: (note) =>
+        set({ pendingNextSessionNote: note }),
+
+      addCategory: (cat) =>
+        set((prev) => ({
+          sessionCategories: [...prev.sessionCategories, { ...cat, id: `cat_custom_${Date.now()}` }],
+        })),
+
+      deleteCategory: (categoryId) =>
+        set((prev) => ({
+          sessionCategories: prev.sessionCategories.filter((c) => c.id !== categoryId),
+          pendingCategoryId: prev.pendingCategoryId === categoryId ? null : prev.pendingCategoryId,
+        })),
+
+      updateCategory: (categoryId, patch) =>
+        set((prev) => ({
+          sessionCategories: prev.sessionCategories.map((c) =>
+            c.id === categoryId ? { ...c, ...patch } : c
+          ),
+        })),
+
+      // ─── Cây Kỹ Năng ─────────────────────────────────────────────────────
+      unlockSkill: (skillId, spCost, requires = []) => {
+        const state = get();
+        const { sp, unlockedSkills } = state.player;
+
+        if (unlockedSkills[skillId]) return false;
+        if (sp < spCost) return false;
+        const prereqsMet = requires.every((req) => unlockedSkills[req]);
+        if (!prereqsMet) return false;
+
+        set((prev) => ({
+          player: {
+            ...prev.player,
+            sp: prev.player.sp - spCost,
+            unlockedSkills: { ...prev.player.unlockedSkills, [skillId]: true },
+          },
+        }));
+        return true;
+      },
+
+      // ─── Kích hoạt kỹ năng chủ động ─────────────────────────────────────
+
+      /**
+       * activateSuperFocus
+       * Kích hoạt Siêu Tập Trung (sieu_tap_trung) — base 1 charge/ngày.
+       * Nghỉ Ngơi Hoàn Hảo cộng thêm 1 charge nữa.
+       */
+      activateSuperFocus: () => {
+        const state = get();
+        if (!state.player.unlockedSkills.sieu_tap_trung) return false;
+        const today = localDateStr();
+        const sa    = state.skillActivations;
+        // Reset charge nếu ngày mới
+        const saToday = sa.lastResetDate === today ? sa : makeDefaultSkillActivations();
+        const maxCharges = getSuperFocusChargeCap(state.player.unlockedSkills);
+        if (saToday.superFocusChargesUsed >= maxCharges) return false;
+        set((prev) => ({
+          skillActivations: {
+            ...saToday,
+            lastResetDate:    today,
+            superFocusActive: true,
+          },
+        }));
+        return true;
+      },
+
+      /**
+       * activateLuckyMode
+       * Kích hoạt Số Đỏ (so_do) — 1 charge/ngày.
+       * Phiên tiếp theo: 50% trigger ×3 XP.
+       */
+      activateLuckyMode: () => {
+        const state = get();
+        if (!state.player.unlockedSkills.so_do) return false;
+        const today = localDateStr();
+        const sa    = state.skillActivations;
+        const saToday = sa.lastResetDate === today ? sa : makeDefaultSkillActivations();
+        if (saToday.luckyModeChargesUsed >= 1) return false;
+        set((prev) => ({
+          skillActivations: {
+            ...saToday,
+            lastResetDate:   today,
+            luckyModeActive: true,
+          },
+        }));
+        return true;
+      },
+
+      /**
+       * markBreakCompleted
+       * Gọi khi người chơi hoàn thành break đúng hạn (cho hit_tho_sau, phien_vang_sang).
+       */
+      markBreakCompleted: (onTime = true) =>
+        set((prev) => {
+          if (!prev.ui.isOnBreak) return prev;
+          return {
+            sessionMeta: { ...prev.sessionMeta, breakCompletedOnTime: !!onTime },
+          };
+        }),
+
+      // ─── Hệ thống Danh Xưng ──────────────────────────────────────────────
+
+      /**
+       * initiateRankChallenge
+       * Bắt đầu Thử Thách Thăng Cấp lên bậc tiếp theo.
+       * Chỉ gọi khi người chơi chủ động nhấn nút "Thách Đấu".
+       */
+      initiateRankChallenge: (bookNumber) => {
+        const state     = get();
+        const bookKey   = `book${bookNumber}`;
+        const currentRankIdx = state.rankSystem[bookKey];
+        const targetIdx = currentRankIdx + 1;
+        const maxRank   = RANK_SYSTEM[bookNumber].ranks.length - 1;
+
+        if (targetIdx > maxRank) return false;
+        if (state.rankChallenge?.active) return false;
+
+        const req = RANK_SYSTEM[bookNumber].ranks[targetIdx].challengeRequirement;
+        if (!req) {
+          // Không cần thử thách — thăng cấp luôn
+          set((prev) => ({
+            rankSystem: { ...prev.rankSystem, [bookKey]: targetIdx },
+            ui: {
+              ...prev.ui,
+              rankUpNotification: {
+                rankLabel: RANK_SYSTEM[bookNumber].ranks[targetIdx].label,
+                rankIcon:  RANK_SYSTEM[bookNumber].ranks[targetIdx].icon,
+              },
+            },
+          }));
+          return true;
+        }
+
+        const challenge = createRankChallenge(bookNumber, targetIdx);
+        set({ rankChallenge: challenge });
+        return true;
+      },
+
+      /**
+       * checkRankChallengeDeadlines
+       * Gọi khi app khởi động để xử lý thử thách hết hạn khi offline.
+       */
+      checkRankChallengeDeadlines: () => {
+        const state = get();
+        const { failed } = checkRankChallengeExpiry(state.rankChallenge);
+        if (failed) {
+          const penalizedRes = applyRankChallengePenalty(state.resources);
+          set((prev) => ({
+            resources:    penalizedRes,
+            rankChallenge: null,
+            ui: {
+              ...prev.ui,
+              pendingDisaster: {
+                disaster:  { label: 'Thử Thách Hết Hạn', icon: '⏰', description: 'Thử thách thăng cấp đã hết thời gian. Mất 5% tài nguyên.' },
+                deducted:  {},
+                waived:    false,
+                chargeConsumed: false,
+              },
+              disasterModalOpen: true,
+            },
+          }));
+        }
+      },
+
+      // ─── Khủng Hoảng Kỷ Nguyên ───────────────────────────────────────────
+
+      /**
+       * resolveEraCrisis
+       * Người chơi chọn 'sacrifice' hoặc 'challenge'.
+       */
+      resolveEraCrisis: (choice) => {
+        const state = get();
+        if (!state.eraCrisis.active) return;
+
+        if (choice === 'sacrifice') {
+          const { newResources, newCrisisState } =
+            applyEraCrisisSacrifice(state.resources, state.eraCrisis);
+          set((prev) => ({
+            resources: newResources,
+            eraCrisis: newCrisisState,
+            ui: { ...prev.ui, eraCrisisModalOpen: false },
+          }));
+        } else {
+          const crisisWindowBonus = getWonderCrisisWindowBonusHours(state.buildings);
+          const crisisSeed = crisisWindowBonus > 0
+            ? {
+                ...state.eraCrisis,
+                challengeOption: {
+                  ...state.eraCrisis.challengeOption,
+                  windowHours: (state.eraCrisis.challengeOption?.windowHours ?? 0) + crisisWindowBonus,
+                },
+              }
+            : state.eraCrisis;
+          const newCrisisState = startEraCrisisChallenge(crisisSeed);
+          set((prev) => ({
+            eraCrisis: newCrisisState,
+            ui: { ...prev.ui, eraCrisisModalOpen: false },
+          }));
+        }
+      },
+
+      openEraCrisisModal: () =>
+        set((prev) => ({ ui: { ...prev.ui, eraCrisisModalOpen: true } })),
+
+      // ─── Break Timer ─────────────────────────────────────────────────────
+      addPassiveXP: (amount) =>
+        set((prev) => {
+          const rewardState = grantXPReward(prev, amount);
+          return {
+            progress: rewardState.progress,
+            player: rewardState.player,
+            ui: {
+              ...prev.ui,
+              levelUpQueue: rewardState.levelsGained > 0
+                ? [...prev.ui.levelUpQueue, {
+                    levelsGained: rewardState.levelsGained,
+                    newLevel: rewardState.newLevel,
+                    spGained: rewardState.spGained,
+                  }]
+                : prev.ui.levelUpQueue,
+            },
+          };
+        }),
+
+      startBreak: (breakInput) =>
+        set((prev) => {
+          const breakConfig = typeof breakInput === 'number'
+            ? { durationMinutes: breakInput, isLong: false }
+            : (breakInput ?? {});
+          const durationMinutes = Math.max(1, breakConfig.durationMinutes ?? breakConfig.breakMinutes ?? 5);
+          const totalSeconds = durationMinutes * 60;
+
+          return {
+            pendingBreakNote: '',
+            ui: {
+              ...prev.ui,
+              isOnBreak: true,
+              breakSecondsLeft: totalSeconds,
+              breakTotalSeconds: totalSeconds,
+              breakIsLong: !!breakConfig.isLong,
+              activeBreakSessionId: breakConfig.sourceSessionId ?? null,
+            },
+            sessionMeta: {
+              ...prev.sessionMeta,
+              breakCompletedOnTime: false,
+            },
+          };
+        }),
+
+      tickBreak: () =>
+        set((prev) => {
+          if (!prev.ui.isOnBreak || prev.ui.breakSecondsLeft <= 0) return prev;
+          const next = prev.ui.breakSecondsLeft - 1;
+          if (next <= 0) {
+            const breakRewardState = applyPerfectBreakProgress(prev);
+            return {
+              progress: breakRewardState.progress,
+              player: breakRewardState.player,
+              missions: breakRewardState.missions,
+              weeklyChain: breakRewardState.weeklyChain,
+              history: breakRewardState.history,
+              pendingBreakNote: '',
+              ui: {
+                ...prev.ui,
+                isOnBreak: false,
+                breakSecondsLeft: 0,
+                breakTotalSeconds: 0,
+                breakIsLong: false,
+                activeBreakSessionId: null,
+                levelUpQueue: breakRewardState.levelsGained > 0
+                  ? [...prev.ui.levelUpQueue, { levelsGained: breakRewardState.levelsGained, newLevel: breakRewardState.newLevel, spGained: breakRewardState.spGained }]
+                  : prev.ui.levelUpQueue,
+                missionCompletedIds: breakRewardState.missionCompletedIds.length > 0
+                  ? [...(prev.ui.missionCompletedIds ?? []), ...breakRewardState.missionCompletedIds]
+                  : (prev.ui.missionCompletedIds ?? []),
+              },
+              sessionMeta: {
+                ...prev.sessionMeta,
+                breakCompletedOnTime: true,
+              },
+            };
+          }
+          return { ui: { ...prev.ui, breakSecondsLeft: next } };
+        }),
+
+      endBreak: () =>
+        set((prev) => ({
+          pendingBreakNote: '',
+          ui: {
+            ...prev.ui,
+            isOnBreak: false,
+            breakSecondsLeft: 0,
+            breakTotalSeconds: 0,
+            breakIsLong: false,
+            activeBreakSessionId: null,
+          },
+        })),
+
+      // ─── Điều khiển Modal ─────────────────────────────────────────────────
+      closeLootModal: () =>
+        set((prev) => ({ ui: { ...prev.ui, lootModalOpen: false, pendingReward: null } })),
+
+      closeDisasterModal: () =>
+        set((prev) => ({ ui: { ...prev.ui, disasterModalOpen: false, pendingDisaster: null } })),
+
+      closeEraCrisisModal: () =>
+        set((prev) => ({ ui: { ...prev.ui, eraCrisisModalOpen: false } })),
+
+      dismissLevelUp: () =>
+        set((prev) => ({ ui: { ...prev.ui, levelUpQueue: prev.ui.levelUpQueue.slice(1) } })),
+
+      dismissRelicNotification: () =>
+        set((prev) => ({ ui: { ...prev.ui, relicNotification: null } })),
+
+      dismissRankUpNotification: () =>
+        set((prev) => ({ ui: { ...prev.ui, rankUpNotification: null } })),
+
+      dismissAchievementNotification: () =>
+        set((prev) => ({ ui: { ...prev.ui, achievementQueue: prev.ui.achievementQueue.slice(1) } })),
+
+      dismissMissionNotification: () =>
+        set((prev) => ({ ui: { ...prev.ui, missionCompletedIds: (prev.ui.missionCompletedIds ?? []).slice(1) } })),
+
+      // ─── Daily Missions ──────────────────────────────────────────────────
+      refreshDailyMissions: () =>
+        set((prev) => {
+          const today = localDateStr();
+          const missions = refreshMissionsIfStale(prev.missions);
+          const weeklyChain = refreshWeeklyChain(prev.weeklyChain);
+          const dailyTracking = prev.dailyTracking?.date === today
+            ? prev.dailyTracking
+            : { ...makeDefaultDailyTracking(), date: today };
+
+          if (
+            missions === prev.missions
+            && weeklyChain === prev.weeklyChain
+            && dailyTracking === prev.dailyTracking
+          ) {
+            return prev;
+          }
+
+          return {
+            missions,
+            weeklyChain,
+            dailyTracking,
+          };
+        }),
+
+      claimMissionAllBonus: () => {
+        const state = get();
+        const refreshedMissions = refreshMissionsIfStale(state.missions);
+        if (refreshedMissions.bonusClaimedToday) return;
+        const allDone = refreshedMissions.list.length > 0 && refreshedMissions.list.every((m) => m.claimed);
+        if (!allDone) return;
+        set((prev) => {
+          const activeMissions = refreshMissionsIfStale(prev.missions);
+          const strategyBonusXP = prev.player.unlockedSkills.bac_thay_chien_luoc
+            ? applyDailyMissionXPBonus(prev.buildings, getMissionRewardTotalXP(activeMissions.list))
+            : 0;
+          const rewardState = grantXPReward(
+            prev,
+            applyDailyMissionXPBonus(prev.buildings, MISSION_ALL_BONUS_XP) + strategyBonusXP,
+          );
+          return {
+            progress: rewardState.progress,
+            player:   rewardState.player,
+            missions: { ...activeMissions, bonusClaimedToday: true },
+            ui: {
+              ...prev.ui,
+              levelUpQueue: rewardState.levelsGained > 0
+                ? [...prev.ui.levelUpQueue, { levelsGained: rewardState.levelsGained, newLevel: rewardState.newLevel, spGained: rewardState.spGained }]
+                : prev.ui.levelUpQueue,
+            },
+          };
+        });
+      },
+
+      // ─── Weekly Chain ────────────────────────────────────────────────────
+      claimWeeklyStep: () => {
+        const state = get();
+        const refreshedChain = refreshWeeklyChain(state.weeklyChain);
+        const chain = WEEKLY_CHAINS[refreshedChain.chainIndex];
+        const step  = chain?.steps[refreshedChain.currentStep];
+        if (!step || refreshedChain.stepProgress < step.goal) return;
+
+        set((prev) => {
+          const activeChain = refreshWeeklyChain(prev.weeklyChain);
+          const activeChainMeta = WEEKLY_CHAINS[activeChain.chainIndex];
+          const activeStep = activeChainMeta?.steps[activeChain.currentStep];
+          if (!activeStep || activeChain.stepProgress < activeStep.goal) return prev;
+
+          const isLastStep = activeChain.currentStep >= activeChainMeta.steps.length - 1;
+          const bonusXP = isLastStep && !activeChain.bonusClaimed ? activeChainMeta.bonusXP : 0;
+          const bonusSP = isLastStep && !activeChain.bonusClaimed ? activeChainMeta.bonusSP : 0;
+          const perfectPlanUnlocked = isLastStep && !!prev.player.unlockedSkills.ke_hoach_hoan_hao;
+          const weeklyXPBase = perfectPlanUnlocked
+            ? (activeStep.rewardXP + bonusXP) * PERFECT_PLAN_WEEKLY_MULTIPLIER
+            : activeStep.rewardXP + bonusXP;
+          const weeklyXPReward = Math.round(weeklyXPBase * WEEKLY_CHAIN_XP_SCALE);
+          const rewardState = grantXPReward(prev, weeklyXPReward);
+          const nextStepIndex = activeChain.currentStep + 1;
+          const weekEntries = getHistoryWeekEntries(prev.history, activeChain.weekKey);
+          const weeklySnapshot = buildWeeklyProgressSnapshot(weekEntries, activeChain.weekKey);
+          const nextStep = activeChainMeta?.steps[nextStepIndex];
+          const weeklyResearchRP = perfectPlanUnlocked ? 120 : 0;
+          return {
+            progress: rewardState.progress,
+            player: {
+              ...rewardState.player,
+              sp: rewardState.player.sp + bonusSP,
+            },
+            research: {
+              ...prev.research,
+              rp: (prev.research?.rp ?? 0) + weeklyResearchRP,
+            },
+            blueprints: prev.blueprints,
+            weeklyChain: {
+              ...activeChain,
+              currentStep:  nextStepIndex,
+              stepProgress: nextStep ? getWeeklyStepProgress(nextStep, weeklySnapshot) : 0,
+              bonusClaimed: isLastStep ? true : activeChain.bonusClaimed,
+            },
+            ui: {
+              ...prev.ui,
+              levelUpQueue: rewardState.levelsGained > 0
+                ? [...prev.ui.levelUpQueue, { levelsGained: rewardState.levelsGained, newLevel: rewardState.newLevel, spGained: rewardState.spGained }]
+                : prev.ui.levelUpQueue,
+            },
+          };
+        });
+      },
+
+      // ─── Building Workshop ───────────────────────────────────────────────
+      craftBuilding: (blueprintId) => {
+        const state = get();
+        if (state.buildings.includes(blueprintId)) return false;
+        // Check player owns this blueprint
+        const bpIdx = state.blueprints.findIndex((b) => b.id === blueprintId);
+        if (bpIdx === -1) return false;
+        const spec = BUILDING_SPECS[blueprintId];
+        if (!spec) return false;
+
+        const normalizedCost = normalizeRawCost(spec.cost ?? {});
+        const bookNumber = BLUEPRINT_META[blueprintId]?.era ?? 1;
+        const bookKey = `book${bookNumber}`;
+        const bookResources = state.resources[bookKey];
+
+        // Check sufficient resources
+        for (const [res, amount] of Object.entries(normalizedCost)) {
+          if ((bookResources[res] ?? 0) < amount) return false;
+        }
+
+        // Deduct resources
+        const newBookResources = { ...bookResources };
+        for (const [res, amount] of Object.entries(normalizedCost)) {
+          newBookResources[res] = (newBookResources[res] ?? 0) - amount;
+        }
+
+        // Remove one blueprint copy
+        const newBlueprints = [...state.blueprints];
+        newBlueprints.splice(bpIdx, 1);
+
+        set((prev) => ({
+          resources:  { ...prev.resources, [bookKey]: newBookResources },
+          blueprints: newBlueprints,
+          buildings:  [...prev.buildings, blueprintId],
+        }));
+        return true;
+      },
+
+      // Add passive building EP from game loop (backward compat — còn dùng cho STORAGE_VAULT)
+      addBuildingPassiveEP: (amount) =>
+        set((prev) => {
+          const newTotalEP = prev.progress.totalEP + amount;
+          return {
+            progress: {
+              ...prev.progress,
+              totalEP:    newTotalEP,
+              activeBook: getActiveBook(newTotalEP),
+            },
+          };
+        }),
+
+      /**
+       * addBuildingPassiveResources
+       * Gọi từ useGameLoop mỗi phút nghỉ cho từng infrastructure building.
+       * Cộng nguyên liệu thô + tinh luyện vào đúng bucket kỷ nguyên của công trình đó.
+       */
+      addBuildingPassiveResources: (bpId, activeBook) => {
+        const eff = BUILDING_EFFECTS[bpId];
+        if (!eff || eff.type !== 'infrastructure') return;
+        const eraKey = eff.era;
+        set((prev) => {
+          const level = prev.buildingLevels?.[bpId] ?? 1;
+          const levelMult = getBuildingLevelMultiplier(level);
+
+          const prevRef = normalizeRefinedBag(prev.resourcesRefined?.[eraKey]);
+          const bookKey = `book${eraKey}`;
+          const prevBook = prev.resources[bookKey] ?? {};
+          const rawResourceIds = (ERA_METADATA[eraKey]?.resources ?? []).map((resource) => resource.id);
+          const t1Add = Math.floor((eff.passiveT1PerBreakMin ?? 0) * levelMult);
+          const updatedBook = { ...prevBook };
+          if (rawResourceIds[0]) {
+            updatedBook[rawResourceIds[0]] = (updatedBook[rawResourceIds[0]] ?? 0) + Math.ceil(t1Add / 2);
+          }
+          if (rawResourceIds[1]) {
+            updatedBook[rawResourceIds[1]] = (updatedBook[rawResourceIds[1]] ?? 0) + Math.floor(t1Add / 2);
+          }
+          const refinedGain = (eff.passiveT2PerBreakMin ?? 0) * levelMult;
+          return {
+            resources: { ...prev.resources, [bookKey]: updatedBook },
+            resourcesRefined: {
+              ...prev.resourcesRefined,
+              [eraKey]: {
+                t2: prevRef.t2 + refinedGain,
+                t3: 0,
+              },
+            },
+          };
+        });
+      },
+
+      // ─── Hệ thống Nghiên Cứu ─────────────────────────────────────────────
+      /**
+       * researchBlueprint
+       * Dùng RP để mở khóa 1 bản vẽ (research path).
+       * Điều kiện: đã đạt kỷ nguyên của bản vẽ đó.
+       */
+      researchBlueprint: (bpId) => {
+        const state  = get();
+        const meta   = BLUEPRINT_META[bpId];
+        if (!meta) return false;
+        if (state.progress.activeBook < meta.requiresEra) return false;
+        if ((state.research?.researched ?? []).includes(bpId)) return false;
+        if (state.blueprints.some((b) => b.id === bpId)) return false;
+        const cost = getWonderResearchCost(state.buildings, bpId, meta.rpCost);
+        if ((state.research?.rp ?? 0) < cost) return false;
+        set((prev) => ({
+          research: {
+            ...prev.research,
+            rp:         prev.research.rp - cost,
+            researched: [...prev.research.researched, bpId],
+          },
+        }));
+        return true;
+      },
+
+      /**
+       * startCrafting
+       * Đưa bản vẽ đã nghiên cứu vào hàng đợi xây dựng (sử dụng tài nguyên).
+       * Điều kiện: bản vẽ đã unlock, hàng đợi chưa đầy, đủ nguyên liệu.
+       */
+      startCrafting: (bpId) => {
+        const state = get();
+        const meta  = BLUEPRINT_META[bpId];
+        const spec  = BUILDING_SPECS[bpId];
+        if (!meta || !spec) return false;
+
+        const isResearched = (state.research?.researched ?? []).includes(bpId)
+          || state.blueprints.some((b) => b.id === bpId);
+        if (!isResearched) return false;
+
+        if (state.buildings.includes(bpId)) return false; // đã xây rồi
+        if ((state.craftingQueue ?? []).some((q) => q.bpId === bpId)) return false;
+        if ((state.craftingQueue ?? []).length >= CRAFT_QUEUE_SLOTS) return false;
+
+        // Kiểm tra và trừ nguyên liệu T1
+        const bookKey  = `book${meta.era}`;
+        const bookBag  = state.resources[bookKey] ?? {};
+        const cost     = normalizeRawCost(spec.cost ?? {});
+        for (const [resId, amt] of Object.entries(cost)) {
+          if ((bookBag[resId] ?? 0) < amt) return false; // thiếu nguyên liệu T1
+        }
+
+        const refinedCost = getUnifiedRefinedCost(spec.refinedCost);
+        const refined     = normalizeRefinedBag(state.resourcesRefined?.[meta.era]);
+        if (refined.t2 < refinedCost) return false;
+
+        set((prev) => {
+          const updatedBook = { ...prev.resources[bookKey] };
+          for (const [resId, amt] of Object.entries(cost)) {
+            updatedBook[resId] = (updatedBook[resId] ?? 0) - amt;
+          }
+          const prevRef = normalizeRefinedBag(prev.resourcesRefined?.[meta.era]);
+          const updatedRef = spendUnifiedRefined(prevRef, refinedCost);
+          return {
+            resources:    { ...prev.resources, [bookKey]: updatedBook },
+            resourcesRefined: { ...prev.resourcesRefined, [meta.era]: updatedRef },
+            craftingQueue: [
+              ...(prev.craftingQueue ?? []),
+              { bpId, sessionsRemaining: meta.sessionsToComplete, startedAt: Date.now() },
+            ],
+          };
+        });
+        return true;
+      },
+
+      /**
+       * craftTier
+       * Chế tác nguyên liệu tinh luyện từ nguyên liệu thô của cùng kỷ.
+       * @param {number} era - kỷ nguyên
+       * @param {'t2'} tier
+       * @param {number} times - số lần chế tác
+       */
+      craftTier: (era, tier, times = 1) => {
+        if (tier !== 't2') return false;
+        const state   = get();
+        const cost    = getWonderRefinedCraftCost(state.buildings) * times;
+        const bookKey = `book${era}`;
+        const bag     = state.resources[bookKey] ?? {};
+        const updatedBook = spendRawResources(bag, cost);
+        if (!updatedBook) return false;
+
+        set((prev) => {
+          const refined = normalizeRefinedBag(prev.resourcesRefined?.[era]);
+          return {
+            resources: {
+              ...prev.resources,
+              [bookKey]: updatedBook,
+            },
+            resourcesRefined: {
+              ...prev.resourcesRefined,
+              [era]: { t2: refined.t2 + times, t3: 0 },
+            },
+          };
+        });
+        return true;
+      },
+
+      /**
+       * repairBuilding
+       * Đã bỏ khỏi vòng chơi mới, giữ lại API để không vỡ call-site cũ.
+       */
+      repairBuilding: () => {
+        return true;
+      },
+
+      /**
+       * applyBuildingDecay
+       * Đã bỏ khỏi vòng chơi mới, giữ lại API để không vỡ call-site cũ.
+       */
+      applyBuildingDecay: () => {},
+
+      /**
+       * upgradeBuilding
+       * Nâng cấp công trình đã xây bằng cùng một loại refined.
+       */
+      upgradeBuilding: (bpId) => {
+        const state = get();
+        if (!state.buildings.includes(bpId)) return false;
+        const eff  = BUILDING_EFFECTS[bpId];
+        if (!eff) return false;
+        const era  = eff.era;
+        const currentLevel = state.buildingLevels?.[bpId] ?? 1;
+        if (currentLevel >= 3) return false; // đã cấp tối đa
+
+        const upgradeCost = getUpgradeRefinedCost(era, currentLevel);
+        const refined = normalizeRefinedBag(state.resourcesRefined?.[era]);
+        if (refined.t2 < upgradeCost) return false;
+
+        set((prev) => ({
+          buildingLevels:   { ...prev.buildingLevels, [bpId]: currentLevel + 1 },
+          resourcesRefined: {
+            ...prev.resourcesRefined,
+            [era]: spendUnifiedRefined(prev.resourcesRefined?.[era], upgradeCost),
+          },
+        }));
+        return true;
+      },
+
+      /**
+       * cancelCrafting
+       * Hủy bỏ công trình đang xây, hoàn lại 50% nguyên liệu.
+       */
+      cancelCrafting: (bpId) => {
+        const state = get();
+        const item  = (state.craftingQueue ?? []).find((q) => q.bpId === bpId);
+        if (!item) return false;
+        const spec    = BUILDING_SPECS[bpId];
+        const meta    = BLUEPRINT_META[bpId];
+        if (!spec || !meta) return false;
+
+        set((prev) => {
+          const bookKey     = `book${meta.era}`;
+          const updatedBook = { ...prev.resources[bookKey] };
+          for (const [resId, amt] of Object.entries(normalizeRawCost(spec.cost ?? {}))) {
+            updatedBook[resId] = (updatedBook[resId] ?? 0) + Math.floor(amt * 0.5);
+          }
+          return {
+            resources:    { ...prev.resources, [bookKey]: updatedBook },
+            craftingQueue: prev.craftingQueue.filter((q) => q.bpId !== bpId),
+          };
+        });
+        return true;
+      },
+
+      /**
+       * evolveRelic
+       * Tiến hóa di vật lên giai đoạn tiếp theo bằng nguyên liệu tinh luyện.
+       * Returns true nếu thành công, false nếu không đủ điều kiện.
+       */
+      evolveRelic: (relicId) => {
+        const state   = get();
+        const evoDef  = RELIC_EVOLUTION[relicId];
+        if (!evoDef) return false;
+        if (!state.relics.some((r) => r.id === relicId)) return false;
+        const currentStage = state.relicEvolutions?.[relicId] ?? 0;
+        if (currentStage >= evoDef.stages.length - 1) return false;  // already max
+
+        const nextStageDef = evoDef.stages[currentStage + 1];
+        const era          = evoDef.era;
+        const refined      = normalizeRefinedBag(state.resourcesRefined?.[era]);
+        const refinedCost  = getWonderRelicEvolutionCost(state.buildings, nextStageDef);
+
+        if (refined.t2 < refinedCost) return false;
+
+        set((prev) => ({
+          relicEvolutions: {
+            ...prev.relicEvolutions,
+            [relicId]: currentStage + 1,
+          },
+          resourcesRefined: {
+            ...prev.resourcesRefined,
+            [era]: spendUnifiedRefined(prev.resourcesRefined?.[era], refinedCost),
+          },
+        }));
+        return true;
+      },
+
+      // ─── Overclock / Staking ─────────────────────────────────────────────
+      activateOverclock: () => {
+        const state = get();
+        if (state.staking.active) return false;
+        if (state.timerConfig.focusMinutes < OVERCLOCK_MIN_SESSION_MIN) return false;
+        const stakedEP = Math.floor(state.progress.totalEP * OVERCLOCK_EP_COST_RATE);
+        if (stakedEP <= 0) return false;
+        // Scaled multiplier: full +50% chỉ từ 45 phút, còn 25-44 phút được +25%
+        const rewardMultiplier = state.timerConfig.focusMinutes >= OVERCLOCK_MIN_FULL_SESSION
+          ? OVERCLOCK_REWARD_MULTIPLIER
+          : OVERCLOCK_BONUS_REDUCED;
+        set((prev) => ({
+          progress: { ...prev.progress, totalEP: prev.progress.totalEP - stakedEP },
+          staking:  { active: true, stakedEP, startedAt: Date.now(), rewardMultiplier },
+        }));
+        return true;
+      },
+
+      deactivateOverclock: () => {
+        const state = get();
+        if (!state.staking.active) return;
+        // Return staked EP if cancelled before session starts
+        set((prev) => ({
+          progress: { ...prev.progress, totalEP: prev.progress.totalEP + prev.staking.stakedEP },
+          staking:  makeDefaultStaking(),
+        }));
+      },
+
+      // ─── Prestige ────────────────────────────────────────────────────────
+      triggerPrestige: () => {
+        const state = get();
+        if (state.progress.totalEP < PRESTIGE_EP_REQUIREMENT) return false;
+        const newCount  = state.prestige.count + 1;
+        const newBonus  = Math.min(
+          PRESTIGE_MAX_STACKS * PRESTIGE_BONUS_PER_RUN,
+          state.prestige.permanentBonus + PRESTIGE_BONUS_PER_RUN,
+        );
+        set({
+          player:           { level: 0, totalEXP: 0, sp: 0, unlockedSkills: makeDefaultSkills() },
+          progress:         { totalEP: 0, activeBook: 1, sessionsCompleted: 0, totalFocusMinutes: 0, longBreakCycleStart: 0 },
+          resources:        makeEmptyResources(),
+          forgiveness:      { chargesRemaining: FORGIVENESS_CANCELS_PER_WEEK, weekStartTimestamp: Date.now() },
+          rankSystem:       makeDefaultRankSystem(),
+          rankChallenge:    null,
+          eraCrisis:        makeDefaultEraCrisis(),
+          blueprints:       [],
+          staking:          makeDefaultStaking(),
+          streak:           makeDefaultStreak(),
+          missions:         makeDefaultMissions(),
+          dailyTracking:    makeDefaultDailyTracking(),
+          skillActivations: makeDefaultSkillActivations(),
+          categoryTracking: makeDefaultCategoryTracking(),
+          eraTracking:      makeDefaultEraTracking(),
+          sessionMeta:      makeDefaultSessionMeta(),
+          prestige: {
+            count:          newCount,
+            permanentBonus: newBonus,
+            history:        [...state.prestige.history, { at: Date.now(), epAtPrestige: state.progress.totalEP }],
+          },
+          // Keep: relics, achievements, history, buildings
+        });
+        return true;
+      },
+
+      openPrestigeModal: () =>
+        set((prev) => ({ ui: { ...prev.ui, prestigeModalOpen: true } })),
+
+      closePrestigeModal: () =>
+        set((prev) => ({ ui: { ...prev.ui, prestigeModalOpen: false } })),
+
+      // ── Weekly Report ──────────────────────────────────────────────────────
+      checkWeeklyReport: () => {
+        const state = get();
+        const monday = getWeekMonday();
+        // Chỉ hiện nếu hôm nay là thứ 2 VÀ chưa hiện tuần này
+        const isMonday = getVietnamDayOfWeek() === 1;
+        if (isMonday && state.lastWeeklyReportDate !== monday && state.history.length > 0) {
+          set((prev) => ({ ui: { ...prev.ui, weeklyReportOpen: true, weeklyReportMode: 'previous' } }));
+        }
+      },
+
+      openWeeklyReport: () =>
+        set((prev) => ({ ui: { ...prev.ui, weeklyReportOpen: true, weeklyReportMode: 'current' } })),
+
+      dismissWeeklyReport: () => {
+        const monday = getWeekMonday();
+        set((prev) => ({
+          lastWeeklyReportDate: monday,
+          ui: { ...prev.ui, weeklyReportOpen: false, weeklyReportMode: 'current' },
+        }));
+      },
+
+      // ─── Import / Export ─────────────────────────────────────────────────
+      _importGameData: (data) => {
+        try {
+          // Basic validation
+          if (!data || typeof data !== 'object') return false;
+          const importedHistory = Array.isArray(data.history) ? data.history : null;
+          const importedSavedNotes = Array.isArray(data.savedNotes)
+            ? sanitizeSavedNotes(data.savedNotes)
+            : (importedHistory ? buildSavedNotesFromHistory(importedHistory) : null);
+          set((prev) => {
+            const importedMissions = data.missions
+              ? refreshMissionsIfStale(data.missions)
+              : prev.missions;
+            const importedWeeklyChain = data.weeklyChain
+              ? refreshWeeklyChain({ ...makeDefaultWeeklyChain(), ...data.weeklyChain })
+              : prev.weeklyChain;
+            return {
+              player:       data.player       ? {
+                level: Number.isFinite(data.player.level) ? data.player.level : 0,
+                totalEXP: Number.isFinite(data.player.totalEXP) ? data.player.totalEXP : 0,
+                sp: Number.isFinite(data.player.sp) ? data.player.sp : 0,
+                unlockedSkills: { ...makeDefaultSkills(), ...(data.player.unlockedSkills ?? {}) },
+              } : prev.player,
+              progress:     data.progress     ? { totalEP: 0, activeBook: 1, sessionsCompleted: 0, totalFocusMinutes: 0, longBreakCycleStart: 0, ...data.progress } : prev.progress,
+              resources:    data.resources    ? normalizeStoredResources(data.resources) : prev.resources,
+              timerConfig:  data.timerConfig  ? { ...makeDefaultTimerConfig(), ...data.timerConfig } : prev.timerConfig,
+              forgiveness:  data.forgiveness  ? { ...prev.forgiveness, ...data.forgiveness } : prev.forgiveness,
+              rankSystem:   data.rankSystem   ? { ...makeDefaultRankSystem(), ...data.rankSystem } : prev.rankSystem,
+              rankChallenge: data.rankChallenge ?? prev.rankChallenge,
+              eraCrisis:    data.eraCrisis    ? { ...makeDefaultEraCrisis(), ...data.eraCrisis } : prev.eraCrisis,
+              relics:       data.relics       ?? prev.relics,
+              blueprints:   data.blueprints   ?? prev.blueprints,
+              achievements: data.achievements
+                ? normalizeAchievementsState(data.achievements)
+                : prev.achievements,
+              history:      importedHistory    ?? prev.history,
+              savedNotes:   importedSavedNotes ?? prev.savedNotes,
+              sessionCategories: Array.isArray(data.sessionCategories) && data.sessionCategories.length > 0
+                ? data.sessionCategories
+                : prev.sessionCategories,
+              pendingCategoryId: data.pendingCategoryId ?? prev.pendingCategoryId,
+              pendingNote: typeof data.pendingNote === 'string' ? data.pendingNote : prev.pendingNote,
+              pendingBreakNote: typeof data.pendingBreakNote === 'string' ? data.pendingBreakNote : prev.pendingBreakNote,
+              pendingSessionGoal: typeof data.pendingSessionGoal === 'string' ? data.pendingSessionGoal : prev.pendingSessionGoal,
+              pendingNextSessionNote: typeof data.pendingNextSessionNote === 'string' ? data.pendingNextSessionNote : prev.pendingNextSessionNote,
+              streak:       data.streak       ? { ...makeDefaultStreak(), ...data.streak } : prev.streak,
+              missions:     importedMissions,
+              buildings:    data.buildings    ?? prev.buildings,
+              staking:      data.staking      ? { ...makeDefaultStaking(), ...data.staking } : prev.staking,
+              prestige:     data.prestige     ? { ...makeDefaultPrestige(), ...data.prestige } : prev.prestige,
+              timerSession: data.timerSession ? { ...makeDefaultTimerSession(), ...data.timerSession } : prev.timerSession,
+              weeklyChain:  importedWeeklyChain,
+              gachaPity:    data.gachaPity    ? { ...makeDefaultGachaPity(), ...data.gachaPity } : prev.gachaPity,
+              dailyTracking: data.dailyTracking ? { ...makeDefaultDailyTracking(), ...data.dailyTracking } : prev.dailyTracking,
+              skillActivations: data.skillActivations ? { ...makeDefaultSkillActivations(), ...data.skillActivations } : prev.skillActivations,
+              categoryTracking: data.categoryTracking ? { ...makeDefaultCategoryTracking(), ...data.categoryTracking } : prev.categoryTracking,
+              eraTracking:  data.eraTracking  ? { ...makeDefaultEraTracking(), ...data.eraTracking } : prev.eraTracking,
+              sessionMeta:  data.sessionMeta  ? { ...makeDefaultSessionMeta(), ...data.sessionMeta } : prev.sessionMeta,
+              research:     data.research     ? normalizeStoredResearch(data.research) : prev.research,
+              craftingQueue: Array.isArray(data.craftingQueue) ? data.craftingQueue : prev.craftingQueue,
+              buildingHP:   data.buildingHP   ?? prev.buildingHP,
+              buildingLevels: data.buildingLevels ?? prev.buildingLevels,
+              resourcesRefined: data.resourcesRefined
+                ? normalizeStoredRefined(data.resourcesRefined)
+                : prev.resourcesRefined,
+              relicEvolutions: data.relicEvolutions ?? prev.relicEvolutions,
+              lastWeeklyReportDate: data.lastWeeklyReportDate ?? prev.lastWeeklyReportDate,
+              buildingLastUsed: data.buildingLastUsed ?? prev.buildingLastUsed,
+            };
+          });
+          return true;
+        } catch {
+          return false;
+        }
+      },
+
+      // ─── Dev helpers ─────────────────────────────────────────────────────
+      _devAddEP: (amount) =>
+        set((prev) => {
+          const newTotalEP = prev.progress.totalEP + amount;
+          return {
+            progress: {
+              ...prev.progress,
+              totalEP:    newTotalEP,
+              activeBook: getActiveBook(newTotalEP),
+            },
+          };
+        }),
+
+      _devAddSP: (amount) =>
+        set((prev) => ({
+          player: { ...prev.player, sp: prev.player.sp + amount },
+        })),
+
+      _devResetGame: () =>
+        set({
+          player:       { level: 0, totalEXP: 0, sp: 0, unlockedSkills: makeDefaultSkills() },
+          progress:     { totalEP: 0, activeBook: 1, sessionsCompleted: 0, totalFocusMinutes: 0, longBreakCycleStart: 0 },
+          resources:    makeEmptyResources(),
+          timerConfig:  makeDefaultTimerConfig(),
+          forgiveness:  { chargesRemaining: FORGIVENESS_CANCELS_PER_WEEK, weekStartTimestamp: Date.now() },
+          rankSystem:   makeDefaultRankSystem(),
+          rankChallenge: null,
+          eraCrisis:    makeDefaultEraCrisis(),
+          relics:       [],
+          blueprints:   [],
+          achievements:     makeDefaultAchievements(),
+          history:          [],
+          savedNotes:       [],
+          sessionCategories: [...DEFAULT_SESSION_CATEGORIES],
+          pendingCategoryId: null,
+          pendingNote:       '',
+          pendingBreakNote:  '',
+          pendingSessionGoal: '',
+          pendingNextSessionNote: '',
+          streak:           makeDefaultStreak(),
+          missions:         makeDefaultMissions(),
+          buildings:        [],
+          staking:          makeDefaultStaking(),
+          prestige:         makeDefaultPrestige(),
+          timerSession:     makeDefaultTimerSession(),
+          weeklyChain:      makeDefaultWeeklyChain(),
+          gachaPity:        makeDefaultGachaPity(),
+          dailyTracking:    makeDefaultDailyTracking(),
+          skillActivations: makeDefaultSkillActivations(),
+          categoryTracking: makeDefaultCategoryTracking(),
+          eraTracking:      makeDefaultEraTracking(),
+          sessionMeta:      makeDefaultSessionMeta(),
+          // ── Các key mới thêm sau (trước đây thiếu trong reset) ────────────
+          research:         makeDefaultResearch(),
+          craftingQueue:    makeDefaultCraftingQueue(),
+          buildingHP:       makeDefaultBuildingHP(),
+          buildingLevels:   {},
+          resourcesRefined: makeDefaultResourcesRefined(),
+          relicEvolutions:      {},
+          lastWeeklyReportDate: null,
+          buildingLastUsed:     {},
+        }),
+    }),
+
+    // ── Cấu hình Persist ────────────────────────────────────────────────────
+    {
+      name:    'civjourney-v1',
+      storage: createJSONStorage(() => localStorage),
+
+      // Loại trừ slice `ui` khỏi persist
+      partialize: (state) => ({
+        player:           state.player,
+        progress:         state.progress,
+        resources:        state.resources,
+        timerConfig:      state.timerConfig,
+        forgiveness:      state.forgiveness,
+        rankSystem:       state.rankSystem,
+        rankChallenge:    state.rankChallenge,
+        eraCrisis:        state.eraCrisis,
+        relics:           state.relics,
+        blueprints:       state.blueprints,
+        achievements:     state.achievements,
+        history:          state.history,
+        savedNotes:       state.savedNotes,
+        sessionCategories: state.sessionCategories,
+        pendingCategoryId: state.pendingCategoryId,
+        pendingNote:      state.pendingNote,
+        pendingBreakNote: state.pendingBreakNote,
+        pendingSessionGoal: state.pendingSessionGoal,
+        pendingNextSessionNote: state.pendingNextSessionNote,
+        streak:           state.streak,
+        missions:         state.missions,
+        buildings:        state.buildings,
+        staking:          state.staking,
+        prestige:         state.prestige,
+        timerSession:     state.timerSession,
+        weeklyChain:      state.weeklyChain,
+        gachaPity:        state.gachaPity,
+        dailyTracking:    state.dailyTracking,
+        skillActivations: state.skillActivations,
+        categoryTracking: state.categoryTracking,
+        eraTracking:      state.eraTracking,
+        sessionMeta:      state.sessionMeta,
+        research:         state.research,
+        craftingQueue:    state.craftingQueue,
+        buildingHP:       state.buildingHP,
+        buildingLevels:   state.buildingLevels,
+        resourcesRefined: state.resourcesRefined,
+        relicEvolutions:      state.relicEvolutions,
+        lastWeeklyReportDate: state.lastWeeklyReportDate,
+        buildingLastUsed:     state.buildingLastUsed,
+      }),
+
+      // Merge khi hydrate: đảm bảo field mới không bị crash
+      merge: (persisted, current) => ({
+        ...current,
+        ...persisted,
+        player: {
+          ...current.player,
+          ...persisted.player,
+          unlockedSkills: {
+            ...makeDefaultSkills(),
+            ...persisted.player?.unlockedSkills,
+          },
+        },
+        resources: normalizeStoredResources(persisted.resources),
+        rankSystem:       { ...makeDefaultRankSystem(),   ...persisted.rankSystem },
+        eraCrisis:        { ...makeDefaultEraCrisis(),    ...persisted.eraCrisis },
+        relics:           persisted.relics        ?? [],
+        blueprints:       persisted.blueprints    ?? [],
+        achievements:     normalizeAchievementsState(persisted.achievements),
+        savedNotes:       Array.isArray(persisted.savedNotes)
+          ? sanitizeSavedNotes(persisted.savedNotes)
+          : buildSavedNotesFromHistory(persisted.history ?? []),
+        sessionCategories: Array.isArray(persisted.sessionCategories) && persisted.sessionCategories.length > 0
+          ? persisted.sessionCategories
+          : [...DEFAULT_SESSION_CATEGORIES],
+        pendingCategoryId: persisted.pendingCategoryId ?? current.pendingCategoryId,
+        pendingNote:       typeof persisted.pendingNote === 'string' ? persisted.pendingNote : current.pendingNote,
+        pendingBreakNote:  typeof persisted.pendingBreakNote === 'string' ? persisted.pendingBreakNote : current.pendingBreakNote,
+        pendingSessionGoal: typeof persisted.pendingSessionGoal === 'string' ? persisted.pendingSessionGoal : current.pendingSessionGoal,
+        pendingNextSessionNote: typeof persisted.pendingNextSessionNote === 'string' ? persisted.pendingNextSessionNote : current.pendingNextSessionNote,
+        rankChallenge:    persisted.rankChallenge ?? null,
+        streak:           { ...makeDefaultStreak(),   ...persisted.streak   },
+        missions:         refreshMissionsIfStale(persisted.missions),
+        buildings:        persisted.buildings ?? [],
+        staking:          { ...makeDefaultStaking(),  ...persisted.staking  },
+        prestige:         { ...makeDefaultPrestige(), ...persisted.prestige },
+        timerSession:     { ...makeDefaultTimerSession(), ...persisted.timerSession },
+        weeklyChain:      refreshWeeklyChain({ ...makeDefaultWeeklyChain(), ...persisted.weeklyChain }),
+        gachaPity:        { ...makeDefaultGachaPity(),   ...persisted.gachaPity  },
+        dailyTracking:    { ...makeDefaultDailyTracking(),    ...persisted.dailyTracking    },
+        skillActivations: { ...makeDefaultSkillActivations(), ...persisted.skillActivations },
+        categoryTracking: { ...makeDefaultCategoryTracking(), ...persisted.categoryTracking },
+        eraTracking:      { ...makeDefaultEraTracking(),      ...persisted.eraTracking      },
+        sessionMeta:      { ...makeDefaultSessionMeta(),      ...persisted.sessionMeta      },
+        research:         normalizeStoredResearch(persisted.research),
+        craftingQueue:    persisted.craftingQueue    ?? [],
+        buildingHP:       persisted.buildingHP       ?? {},
+        buildingLevels:   persisted.buildingLevels   ?? {},
+        resourcesRefined: normalizeStoredRefined(persisted.resourcesRefined),
+        relicEvolutions:  persisted.relicEvolutions  ?? {},
+      }),
+    },
+  ),
+);
+
+export default useGameStore;

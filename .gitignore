@@ -1,3 +1,7 @@
+# Runtime & build cache
+.runtime
+.claude
+
 # Logs
 logs
 *.log

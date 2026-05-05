@@ -234,7 +234,6 @@ export async function sendPushNotification(subscription, payload) {
   configureWebPush();
   return webpush.sendNotification(subscription, JSON.stringify(payload), {
     TTL: 60 * 60,
-    urgency: 'high',
   });
 }
 

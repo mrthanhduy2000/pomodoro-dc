@@ -13,6 +13,10 @@ function isAuthorizedCronRequest(req) {
   const secret = process.env.CRON_SECRET;
   if (!secret) return true;
 
+  // Allow browser-initiated dispatch from the app itself
+  const referer = req.headers.referer ?? '';
+  if (referer.startsWith('https://pomodoro-dc.vercel.app')) return true;
+
   const authHeader = req.headers.authorization ?? '';
   return authHeader === `Bearer ${secret}`;
 }

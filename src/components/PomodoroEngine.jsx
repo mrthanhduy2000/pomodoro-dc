@@ -57,6 +57,19 @@ function formatPreviewPercent(value) {
   return value.toFixed(1).replace(/\.0$/, '');
 }
 
+function clampFocusMinutes(value) {
+  return Math.min(180, Math.max(1, value));
+}
+
+function parseFocusMinutesInput(value) {
+  const digits = String(value ?? '').replace(/\D+/g, '').slice(0, 3);
+  if (!digits) return null;
+
+  const parsed = Number.parseInt(digits, 10);
+  if (!Number.isFinite(parsed)) return null;
+  return clampFocusMinutes(parsed);
+}
+
 function isEditableShortcutTarget(target) {
   if (!(target instanceof HTMLElement)) return false;
   if (target.isContentEditable) return true;
@@ -210,6 +223,10 @@ export default function PomodoroEngine({
   const [showCatManager, setShowCatManager] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [activeMilestone, setActiveMilestone] = useState(null);
+  const [focusMinutesDraft, setFocusMinutesDraft] = useState(() => (
+    String(clampFocusMinutes(timerConfig.focusMinutes ?? 25))
+  ));
+  const [isEditingFocusMinutes, setIsEditingFocusMinutes] = useState(false);
   useEffect(() => {
     if (!milestone) return;
     const activateId = window.setTimeout(() => setActiveMilestone(milestone), 0);
@@ -603,10 +620,49 @@ export default function PomodoroEngine({
     });
   }, [setBreakProfile, setTimerConfig]);
   const applyFocusMinutes = useCallback((value) => {
-    const parsed = Number.parseInt(String(value), 10);
-    if (Number.isNaN(parsed)) return;
-    setTimerConfig({ focusMinutes: Math.min(180, Math.max(1, parsed)) });
+    const parsed = parseFocusMinutesInput(value);
+    if (parsed === null) return;
+    setTimerConfig({ focusMinutes: parsed });
   }, [setTimerConfig]);
+  const commitFocusMinutesDraft = useCallback(() => {
+    const parsed = parseFocusMinutesInput(focusMinutesDraft);
+    const fallbackValue = clampFocusMinutes(timerConfig.focusMinutes ?? 25);
+
+    if (parsed === null) {
+      setFocusMinutesDraft(String(fallbackValue));
+      return;
+    }
+
+    setFocusMinutesDraft(String(parsed));
+    if (parsed !== fallbackValue) {
+      applyFocusMinutes(parsed);
+    }
+  }, [applyFocusMinutes, focusMinutesDraft, timerConfig.focusMinutes]);
+  const handleFocusMinutesDraftChange = useCallback((event) => {
+    setIsEditingFocusMinutes(true);
+    setFocusMinutesDraft(event.target.value.replace(/\D+/g, '').slice(0, 3));
+  }, []);
+  const handleFocusMinutesInputKeyDown = useCallback((event) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      commitFocusMinutesDraft();
+      event.currentTarget.blur();
+      return;
+    }
+
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      setFocusMinutesDraft(String(clampFocusMinutes(timerConfig.focusMinutes ?? 25)));
+      setIsEditingFocusMinutes(false);
+      event.currentTarget.blur();
+    }
+  }, [commitFocusMinutesDraft, timerConfig.focusMinutes]);
+  const focusMinutesDisplayValue = isEditingFocusMinutes
+    ? focusMinutesDraft
+    : String(clampFocusMinutes(timerConfig.focusMinutes ?? 25));
+  const focusMinutesStepBase = useMemo(() => (
+    parseFocusMinutesInput(focusMinutesDisplayValue) ?? clampFocusMinutes(timerConfig.focusMinutes ?? 25)
+  ), [focusMinutesDisplayValue, timerConfig.focusMinutes]);
   const activePresetId = useMemo(() => (
     QUICK_FOCUS_PRESETS.find((preset) => (
       preset.focusMinutes === timerConfig.focusMinutes
@@ -743,7 +799,7 @@ export default function PomodoroEngine({
               <button
                 type="button"
                 aria-label="Giảm số phút tập trung"
-                onClick={() => applyFocusMinutes(Math.max(1, timerConfig.focusMinutes - 1))}
+                onClick={() => applyFocusMinutes(focusMinutesStepBase - 1)}
                 className={`size-11 rounded-full font-bold flex items-center justify-center transition-colors touch-manipulation focus-visible:outline-none focus-visible:ring-2 sm:size-9 ${
                   lightTheme
                     ? 'text-[var(--muted)] hover:text-[var(--ink)] bg-white border border-[var(--line)] hover:bg-[rgba(244,242,236,0.98)] focus-visible:ring-[rgba(31,30,29,0.14)]'
@@ -752,12 +808,40 @@ export default function PomodoroEngine({
               >
                 −
               </button>
-              <div className="min-w-[4.25rem] text-center">
-                <div className={`font-mono font-bold text-[2rem] leading-none tabular-nums ${
-                  lightTheme ? 'text-[var(--ink)]' : 'text-white'
-                }`}>
-                  {timerConfig.focusMinutes}
-                </div>
+              <div className={`min-w-[4.5rem] rounded-[16px] border px-1.5 py-1 text-center transition-colors ${
+                lightTheme
+                  ? 'border-transparent focus-within:border-[var(--line)] focus-within:bg-white'
+                  : 'border-transparent focus-within:border-white/[0.14] focus-within:bg-white/[0.05]'
+              }`}>
+                <label htmlFor="focus-minutes-input" className="sr-only">
+                  Số phút tập trung cho phiên kế tiếp
+                </label>
+                <input
+                  id="focus-minutes-input"
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  enterKeyHint="done"
+                  autoComplete="off"
+                  spellCheck={false}
+                  value={focusMinutesDisplayValue}
+                  onChange={handleFocusMinutesDraftChange}
+                  onBlur={() => {
+                    commitFocusMinutesDraft();
+                    setIsEditingFocusMinutes(false);
+                  }}
+                  onFocus={(event) => {
+                    setIsEditingFocusMinutes(true);
+                    setFocusMinutesDraft(String(clampFocusMinutes(timerConfig.focusMinutes ?? 25)));
+                    event.currentTarget.select();
+                  }}
+                  onKeyDown={handleFocusMinutesInputKeyDown}
+                  disabled={!isIdle || isBreakMode}
+                  aria-label="Nhập trực tiếp số phút tập trung"
+                  className={`w-full bg-transparent text-center font-mono font-bold text-[2rem] leading-none tabular-nums outline-none touch-manipulation ${
+                    lightTheme ? 'text-[var(--ink)]' : 'text-white'
+                  } ${!isIdle || isBreakMode ? 'cursor-not-allowed' : 'cursor-text'}`}
+                />
                 <div className={`mono mt-1 text-[11px] uppercase tracking-[0.16em] ${
                   lightTheme ? 'text-[var(--muted-2)]' : 'text-slate-500'
                 }`}>phút</div>
@@ -765,7 +849,7 @@ export default function PomodoroEngine({
               <button
                 type="button"
                 aria-label="Tăng số phút tập trung"
-                onClick={() => applyFocusMinutes(Math.min(180, timerConfig.focusMinutes + 1))}
+                onClick={() => applyFocusMinutes(focusMinutesStepBase + 1)}
                 className={`size-11 rounded-full font-bold flex items-center justify-center transition-colors touch-manipulation focus-visible:outline-none focus-visible:ring-2 sm:size-9 ${
                   lightTheme
                     ? 'text-[var(--muted)] hover:text-[var(--ink)] bg-white border border-[var(--line)] hover:bg-[rgba(244,242,236,0.98)] focus-visible:ring-[rgba(31,30,29,0.14)]'

@@ -85,7 +85,9 @@ export async function upsertPushSubscription({
 
   if (error) throw error;
 
-  if (userAgent || platform || deviceId) {
+  // Disable all old subscriptions from the same device/platform — prevents accumulation
+  // when iOS clears PWA data and a new device_id is generated on re-registration.
+  if (platform || deviceId || userAgent) {
     let cleanupQuery = admin
       .from('push_subscriptions')
       .update({
@@ -95,14 +97,14 @@ export async function upsertPushSubscription({
       .neq('endpoint', subscription.endpoint)
       .eq('enabled', true);
 
-    if (deviceId) {
+    // Prefer platform match (catches all historical subscriptions from same device type,
+    // even when device_id regenerated after iOS clears PWA localStorage).
+    if (platform) {
+      cleanupQuery = cleanupQuery.eq('platform', platform);
+    } else if (deviceId) {
       cleanupQuery = cleanupQuery.eq('device_id', deviceId);
-    } else if (userAgent && platform) {
-      cleanupQuery = cleanupQuery.eq('user_agent', userAgent).eq('platform', platform);
     } else if (userAgent) {
       cleanupQuery = cleanupQuery.eq('user_agent', userAgent);
-    } else if (platform) {
-      cleanupQuery = cleanupQuery.eq('platform', platform);
     }
 
     const { error: cleanupError } = await cleanupQuery;

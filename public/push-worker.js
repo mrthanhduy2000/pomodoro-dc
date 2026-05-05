@@ -19,23 +19,11 @@ self.addEventListener('push', (event) => {
     data: {
       url: payload.url || '/',
     },
-    renotify: false,
+    renotify: true,
     requireInteraction: false,
   };
 
-  event.waitUntil((async () => {
-    const existing = await self.registration.getNotifications({
-      tag: options.tag,
-    });
-
-    const alreadyVisible = existing.some((notification) => (
-      notification.title === title
-      && notification.body === options.body
-    ));
-
-    if (alreadyVisible) return;
-    await self.registration.showNotification(title, options);
-  })());
+  event.waitUntil(self.registration.showNotification(title, options));
 });
 
 self.addEventListener('notificationclick', (event) => {

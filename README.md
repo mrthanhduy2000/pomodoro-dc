@@ -63,8 +63,10 @@ CRON_SECRET=...
 Ghi chú:
 
 - Bản hiện tại không dùng Vercel Cron nữa, vì Vercel Hobby không hỗ trợ cron mỗi phút
-- Supabase Cron sẽ gọi `https://pomodoro-dc.vercel.app/api/push/dispatch` mỗi phút
-- Vì vậy push thường đến rất nhanh, nhưng có thể trễ tối đa khoảng 1 phút so với giây timer chạm 0
+- Supabase Cron sẽ gọi `https://pomodoro-dc.vercel.app/api/push/dispatch` mỗi 5 giây
+- Route `api/push/dispatch` tự claim job trước khi gửi để tránh các lần cron overlap bắn trùng
+- Route `api/push/notify-now` mặc định bị tắt; chỉ bật lại nếu bạn thật sự còn dùng Supabase Database Webhook cũ
+- Vì vậy push thường đến gần như ngay, nhưng có thể trễ vài giây so với lúc timer chạm 0
 
 ## React + Vite template notes
 

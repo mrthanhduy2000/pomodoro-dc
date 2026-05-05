@@ -14,13 +14,20 @@ create table if not exists public.push_jobs (
   job_key text primary key,
   scheduled_for timestamptz not null,
   payload jsonb not null,
-  status text not null default 'scheduled' check (status in ('scheduled', 'sent', 'cancelled')),
+  status text not null default 'scheduled' check (status in ('scheduled', 'processing', 'sent', 'cancelled')),
   created_at timestamptz not null default timezone('utc', now()),
   updated_at timestamptz not null default timezone('utc', now()),
   sent_at timestamptz,
   cancelled_at timestamptz,
   last_error text
 );
+
+alter table if exists public.push_jobs
+  drop constraint if exists push_jobs_status_check;
+
+alter table if exists public.push_jobs
+  add constraint push_jobs_status_check
+  check (status in ('scheduled', 'processing', 'sent', 'cancelled'));
 
 create index if not exists push_subscriptions_enabled_idx
   on public.push_subscriptions (enabled);

@@ -1,7 +1,7 @@
-import { methodNotAllowed, sendJson } from '../_lib/http.js';
+import { methodNotAllowed, readJsonBody, sendJson } from '../_lib/http.js';
 import {
+  claimDuePushJobs,
   disablePushSubscription,
-  getDuePushJobs,
   isExpiredPushSubscriptionError,
   listActivePushSubscriptions,
   markPushJobError,
@@ -9,100 +9,110 @@ import {
   sendPushNotification,
 } from '../_lib/push.js';
 
-function isAuthorizedCronRequest(req) {
+function isAuthorizedRequest(req) {
   const secret = process.env.CRON_SECRET;
   if (!secret) return true;
-
-  // Allow browser-initiated dispatch from the app itself
-  const referer = req.headers.referer ?? '';
-  if (referer.startsWith('https://pomodoro-dc.vercel.app')) return true;
-
   const authHeader = req.headers.authorization ?? '';
   return authHeader === `Bearer ${secret}`;
 }
 
-export default async function handler(req, res) {
-  if (req.method !== 'GET' && req.method !== 'POST') {
-    return methodNotAllowed(res, ['GET', 'POST']);
+// Supabase webhook fires on every timer_live UPDATE — only send when session actually ended
+function isSessionEndEvent(body) {
+  return (
+    body?.type === 'UPDATE' &&
+    body?.old_record?.is_running === true &&
+    body?.record?.is_running === false &&
+    body?.record?.paused_seconds_remaining == null
+  );
+}
+
+async function runDispatch(graceSeconds) {
+  const jobs = await claimDuePushJobs(10, graceSeconds);
+  if (jobs.length === 0) {
+    return { dueJobs: 0, sentJobs: 0, report: [] };
   }
 
-  if (!isAuthorizedCronRequest(req)) {
-    return sendJson(res, 401, {
-      ok: false,
-      error: 'Unauthorized cron request.',
-    });
-  }
+  const subscriptions = await listActivePushSubscriptions();
+  const report = [];
+  let sentJobs = 0;
 
-  try {
-    const jobs = await getDuePushJobs(10, 30);
-    if (jobs.length === 0) {
-      return sendJson(res, 200, {
-        ok: true,
-        dueJobs: 0,
-        sentJobs: 0,
-        report: [],
-      });
+  for (const job of jobs) {
+    if (subscriptions.length === 0) {
+      await markPushJobSent(job.job_key, 'no-active-subscriptions');
+      sentJobs += 1;
+      report.push({ jobKey: job.job_key, status: 'sent-without-subscribers' });
+      continue;
     }
 
-    const subscriptions = await listActivePushSubscriptions();
-    const report = [];
-    let sentJobs = 0;
+    let successCount = 0;
+    let transientError = null;
 
-    for (const job of jobs) {
-      if (subscriptions.length === 0) {
-        await markPushJobSent(job.job_key, 'no-active-subscriptions');
-        sentJobs += 1;
-        report.push({
-          jobKey: job.job_key,
-          status: 'sent-without-subscribers',
-        });
-        continue;
-      }
-
-      let successCount = 0;
-      let transientError = null;
-
-      for (const subscriptionRow of subscriptions) {
-        try {
-          await sendPushNotification(subscriptionRow.subscription, job.payload);
-          successCount += 1;
-        } catch (error) {
-          if (isExpiredPushSubscriptionError(error)) {
-            await disablePushSubscription({ endpoint: subscriptionRow.endpoint });
-            continue;
-          }
-
-          transientError = error instanceof Error ? error.message : 'Unknown push send failure.';
+    for (const subscriptionRow of subscriptions) {
+      try {
+        await sendPushNotification(subscriptionRow.subscription, job.payload);
+        successCount += 1;
+      } catch (error) {
+        if (isExpiredPushSubscriptionError(error)) {
+          await disablePushSubscription({ endpoint: subscriptionRow.endpoint });
+          continue;
         }
+        transientError = error instanceof Error ? error.message : 'Unknown push send failure.';
       }
+    }
 
-      if (successCount > 0 || !transientError) {
-        await markPushJobSent(job.job_key, transientError);
-        sentJobs += 1;
-        report.push({
-          jobKey: job.job_key,
-          status: successCount > 0 ? 'sent' : 'no-valid-subscribers',
-          deliveredTo: successCount,
-          error: transientError,
-        });
-        continue;
-      }
-
-      await markPushJobError(job.job_key, transientError);
+    if (successCount > 0 || !transientError) {
+      await markPushJobSent(job.job_key, transientError);
+      sentJobs += 1;
       report.push({
         jobKey: job.job_key,
-        status: 'retrying',
+        status: successCount > 0 ? 'sent' : 'no-valid-subscribers',
         deliveredTo: successCount,
         error: transientError,
       });
+      continue;
     }
 
-    return sendJson(res, 200, {
-      ok: true,
-      dueJobs: jobs.length,
-      sentJobs,
-      report,
+    await markPushJobError(job.job_key, transientError);
+    report.push({
+      jobKey: job.job_key,
+      status: 'retrying',
+      deliveredTo: successCount,
+      error: transientError,
     });
+  }
+
+  return { dueJobs: jobs.length, sentJobs, report };
+}
+
+export default async function handler(req, res) {
+  // Warm-up ping from tickClock at 30s remaining
+  if (req.method === 'GET') {
+    return sendJson(res, 200, { ok: true, status: 'warm' });
+  }
+
+  if (req.method !== 'POST') {
+    return methodNotAllowed(res, ['GET', 'POST']);
+  }
+
+  if (!isAuthorizedRequest(req)) {
+    return sendJson(res, 401, { ok: false, error: 'Unauthorized.' });
+  }
+
+  try {
+    const body = await readJsonBody(req);
+
+    // Supabase Database Webhook: POST with timer_live UPDATE payload → dispatch immediately
+    if (body?.type === 'UPDATE' && body?.record) {
+      if (!isSessionEndEvent(body)) {
+        return sendJson(res, 200, { ok: true, skipped: true });
+      }
+      const result = await runDispatch(0);
+      return sendJson(res, 200, { ok: true, ...result, source: 'webhook' });
+    }
+
+    // Cron or manual trigger: 30s grace so webhook has time to run first
+    const result = await runDispatch(30);
+    return sendJson(res, 200, { ok: true, ...result, source: 'cron' });
   } catch (error) {
     return sendJson(res, 500, {
       ok: false,

@@ -187,6 +187,42 @@ export async function getDuePushJobs(limit = 10, graceSeconds = 0) {
   return data ?? [];
 }
 
+export async function claimDuePushJobs(limit = 10, graceSeconds = 0) {
+  const admin = getAdminClient();
+  const cutoff = new Date(Date.now() - graceSeconds * 1000).toISOString();
+
+  const { data: dueJobs, error: dueError } = await admin
+    .from('push_jobs')
+    .select('job_key')
+    .eq('status', 'scheduled')
+    .lte('scheduled_for', cutoff)
+    .order('scheduled_for', { ascending: true })
+    .limit(limit);
+
+  if (dueError) throw dueError;
+
+  const jobKeys = (dueJobs ?? [])
+    .map((job) => job.job_key)
+    .filter(Boolean);
+
+  if (jobKeys.length === 0) return [];
+
+  const { data, error } = await admin
+    .from('push_jobs')
+    .update({
+      status: 'processing',
+      updated_at: new Date().toISOString(),
+      last_error: null,
+    })
+    .in('job_key', jobKeys)
+    .eq('status', 'scheduled')
+    .lte('scheduled_for', cutoff)
+    .select('*');
+
+  if (error) throw error;
+  return data ?? [];
+}
+
 export async function listActivePushSubscriptions() {
   const admin = getAdminClient();
   const { data, error } = await admin
@@ -222,6 +258,8 @@ export async function markPushJobError(jobKey, errorMessage) {
   const { error } = await admin
     .from('push_jobs')
     .update({
+      status: 'scheduled',
+      sent_at: null,
       updated_at: now,
       last_error: errorMessage,
     })

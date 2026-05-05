@@ -8,7 +8,7 @@ where jobname = 'dc-pomodoro-push-dispatch';
 select
   cron.schedule(
     'dc-pomodoro-push-dispatch',
-    '1 second',
+    '5 seconds',
     $$
     select
       net.http_post(

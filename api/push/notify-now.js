@@ -8,6 +8,7 @@ import {
 } from '../_lib/push.js';
 
 const FOCUS_JOB_KEY = 'dc-pomodoro:focus-complete';
+const LEGACY_PUSH_WEBHOOK_ENABLED = process.env.ENABLE_LEGACY_PUSH_WEBHOOK === 'true';
 
 // Supabase webhook fires on every timer_live UPDATE — only send when session actually ended
 function isSessionEndEvent(body) {
@@ -54,6 +55,14 @@ export default async function handler(req, res) {
 
   if (req.method !== 'POST') {
     return methodNotAllowed(res, ['GET', 'POST']);
+  }
+
+  if (!LEGACY_PUSH_WEBHOOK_ENABLED) {
+    return sendJson(res, 200, {
+      ok: true,
+      skipped: true,
+      reason: 'legacy-notify-route-disabled',
+    });
   }
 
   try {

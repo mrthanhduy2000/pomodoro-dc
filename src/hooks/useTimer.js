@@ -472,16 +472,6 @@ export function useTimer({ focusMinutes, mode = TIMER_MODES.POMODORO }) {
     } else {
       clearTimerLive();
       void pushNow();
-      if (timerState === TIMER_STATES.FINISHED) {
-        void fetch('/api/push/notify-now', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            jobKey: FOCUS_COMPLETE_PUSH_JOB_KEY,
-            focusMinutes: Math.round(totalSecondsRef.current / 60),
-          }),
-        }).catch(() => {});
-      }
     }
   }, [timerState]);
 

@@ -16,11 +16,13 @@ function isAuthorizedRequest(req) {
   return authHeader === `Bearer ${secret}`;
 }
 
-// Supabase webhook fires on every timer_live UPDATE — only send when session actually ended
+// Supabase webhook fires on every timer_live UPDATE.
+// Detect session-end by new record state alone (old_record not always included in webhook payload).
+// is_running=false + paused_seconds_remaining=null = clearTimerLive() was called (session ended/cancelled).
+// This is distinct from pause (is_running=false + paused_seconds_remaining=<number>).
 function isSessionEndEvent(body) {
   return (
     body?.type === 'UPDATE' &&
-    body?.old_record?.is_running === true &&
     body?.record?.is_running === false &&
     body?.record?.paused_seconds_remaining == null
   );

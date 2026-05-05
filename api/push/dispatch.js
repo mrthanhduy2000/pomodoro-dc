@@ -34,7 +34,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const jobs = await getDuePushJobs(10);
+    const jobs = await getDuePushJobs(10, 30);
     if (jobs.length === 0) {
       return sendJson(res, 200, {
         ok: true,

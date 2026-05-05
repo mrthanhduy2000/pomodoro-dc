@@ -171,15 +171,15 @@ export async function cancelPushJob(jobKey, reason = 'cancelled') {
   if (error) throw error;
 }
 
-export async function getDuePushJobs(limit = 10) {
+export async function getDuePushJobs(limit = 10, graceSeconds = 0) {
   const admin = getAdminClient();
-  const now = new Date().toISOString();
+  const cutoff = new Date(Date.now() - graceSeconds * 1000).toISOString();
 
   const { data, error } = await admin
     .from('push_jobs')
     .select('*')
     .eq('status', 'scheduled')
-    .lte('scheduled_for', now)
+    .lte('scheduled_for', cutoff)
     .order('scheduled_for', { ascending: true })
     .limit(limit);
 
@@ -234,6 +234,7 @@ export async function sendPushNotification(subscription, payload) {
   configureWebPush();
   return webpush.sendNotification(subscription, JSON.stringify(payload), {
     TTL: 60 * 60,
+    topic: 'focus-complete',
   });
 }
 

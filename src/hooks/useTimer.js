@@ -278,6 +278,10 @@ export function useTimer({ focusMinutes, mode = TIMER_MODES.POMODORO }) {
       }
     }
 
+    if (modeRef.current === TIMER_MODES.POMODORO && nextDisplaySeconds === 30) {
+      void fetch('/api/push/dispatch', { method: 'GET' }).catch(() => {});
+    }
+
     if (modeRef.current === TIMER_MODES.POMODORO && nextDisplaySeconds <= 0) {
       handleFinishRef.current?.();
     }

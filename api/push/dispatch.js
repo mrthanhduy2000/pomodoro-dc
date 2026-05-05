@@ -116,9 +116,14 @@ export default async function handler(req, res) {
     const result = await runDispatch(0);
     return sendJson(res, 200, { ok: true, ...result, source: 'cron' });
   } catch (error) {
-    const msg = error instanceof Error
-      ? error.message
-      : (error?.message ?? error?.details ?? JSON.stringify(error) ?? 'Cannot dispatch push notifications.');
-    return sendJson(res, 500, { ok: false, error: msg });
+    let detail;
+    try {
+      detail = error instanceof Error
+        ? `${error.constructor?.name}: ${error.message}`
+        : JSON.stringify(error) || String(error);
+    } catch {
+      detail = 'unserializable';
+    }
+    return sendJson(res, 500, { ok: false, error: `dispatch-v3: ${detail}` });
   }
 }

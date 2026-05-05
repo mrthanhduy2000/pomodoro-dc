@@ -2,12 +2,11 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import useGameStore from '../store/gameStore';
 import useSettingsStore from '../store/settingsStore';
 import soundEngine from '../engine/soundEngine';
-import notificationManager from '../engine/notifications';
 import { getBreakPlan } from '../engine/breaks';
 import { BREAK_EXTENSION_MINUTES } from '../engine/constants';
 import { updateTimerLive, clearTimerLive } from '../lib/timerLiveService';
 import { pushNow } from '../lib/syncService';
-import { cancelFocusCompletePush, scheduleFocusCompletePush } from '../lib/pushService';
+import { cancelFocusCompletePush, scheduleFocusCompletePush, FOCUS_COMPLETE_PUSH_JOB_KEY } from '../lib/pushService';
 
 export const TIMER_STATES = {
   IDLE: 'IDLE',
@@ -279,7 +278,7 @@ export function useTimer({ focusMinutes, mode = TIMER_MODES.POMODORO }) {
     }
 
     if (modeRef.current === TIMER_MODES.POMODORO && nextDisplaySeconds === 30) {
-      void fetch('/api/push/dispatch', { method: 'GET' }).catch(() => {});
+      void fetch('/api/push/notify-now', { method: 'GET' }).catch(() => {});
     }
 
     if (modeRef.current === TIMER_MODES.POMODORO && nextDisplaySeconds <= 0) {
@@ -474,10 +473,13 @@ export function useTimer({ focusMinutes, mode = TIMER_MODES.POMODORO }) {
       clearTimerLive();
       void pushNow();
       if (timerState === TIMER_STATES.FINISHED) {
-        void fetch('/api/push/dispatch', {
+        void fetch('/api/push/notify-now', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ source: 'session-complete' }),
+          body: JSON.stringify({
+            jobKey: FOCUS_COMPLETE_PUSH_JOB_KEY,
+            focusMinutes: Math.round(totalSecondsRef.current / 60),
+          }),
         }).catch(() => {});
       }
     }

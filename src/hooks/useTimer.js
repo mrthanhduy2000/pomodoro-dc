@@ -469,10 +469,12 @@ export function useTimer({ focusMinutes, mode = TIMER_MODES.POMODORO }) {
         pausedSecondsRemaining: secondsRef.current,
       });
       void pushNow();
-    } else {
+    } else if (timerState !== TIMER_STATES.IDLE) {
+      // FINISHED hoặc CANCELLED — session vừa kết thúc, cần clear
       clearTimerLive();
       void pushNow();
     }
+    // IDLE: không làm gì — tránh clearTimerLive() gây Electron notification giả
   }, [timerState]);
 
   // Phản ứng với pause/resume từ thiết bị khác qua cloud sync

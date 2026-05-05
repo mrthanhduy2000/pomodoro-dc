@@ -110,8 +110,8 @@ export default async function handler(req, res) {
       return sendJson(res, 200, { ok: true, ...result, source: 'webhook' });
     }
 
-    // Cron or manual trigger: 30s grace so webhook has time to run first
-    const result = await runDispatch(30);
+    // Cron or manual trigger
+    const result = await runDispatch(0);
     return sendJson(res, 200, { ok: true, ...result, source: 'cron' });
   } catch (error) {
     return sendJson(res, 500, {

@@ -1,10 +1,9 @@
 import { methodNotAllowed, readJsonBody, sendJson } from '../_lib/http.js';
 import {
-  claimDuePushJobs,
+  getDuePushJobs,
   disablePushSubscription,
   isExpiredPushSubscriptionError,
   listActivePushSubscriptions,
-  markPushJobError,
   markPushJobSent,
   sendPushNotification,
 } from '../_lib/push.js';
@@ -29,7 +28,7 @@ function isSessionEndEvent(body) {
 }
 
 async function runDispatch(graceSeconds) {
-  const jobs = await claimDuePushJobs(10, graceSeconds);
+  const jobs = await getDuePushJobs(10, graceSeconds);
   if (jobs.length === 0) {
     return { dueJobs: 0, sentJobs: 0, report: [] };
   }
@@ -74,7 +73,7 @@ async function runDispatch(graceSeconds) {
       continue;
     }
 
-    await markPushJobError(job.job_key, transientError);
+    // Transient error with no successes — job stays 'scheduled', next cron tick retries it
     report.push({
       jobKey: job.job_key,
       status: 'retrying',

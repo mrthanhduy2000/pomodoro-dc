@@ -44,13 +44,18 @@ export function useGameLoop() {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') syncBreakSession();
     };
+    // pageshow fires when iOS restores the page from BFCache (back-forward cache),
+    // which visibilitychange misses on some iPhone PWA scenarios.
+    const handlePageShow = () => syncBreakSession();
 
     window.addEventListener('focus', handleFocus);
     document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('pageshow', handlePageShow);
 
     return () => {
       window.removeEventListener('focus', handleFocus);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('pageshow', handlePageShow);
     };
   }, [breakSessionRunning, syncBreakSession]);
 

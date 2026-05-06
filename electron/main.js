@@ -27,11 +27,17 @@ let timerData     = null;
 let iconNormal    = null;
 let iconEmpty     = null;
 let prevIsRunning = null; // null = chưa biết (lần fetch đầu tiên)
+const FOCUS_COMPLETE_OWNER_NAME = 'Đàm';
 
-function showSessionEndNotification() {
+function getRoundedFocusMinutes(totalSeconds) {
+  return Math.max(1, Math.round((Number(totalSeconds) || 0) / 60));
+}
+
+function showSessionEndNotification(totalSeconds) {
+  const focusMinutes = getRoundedFocusMinutes(totalSeconds);
   new Notification({
-    title: '🍅 Phiên hoàn thành!',
-    body: 'Tốt lắm! Đã xong một phiên tập trung. Nghỉ ngơi một chút nhé.',
+    title: '🎇 XONG PHIÊN TẬP TRUNG!',
+    body: `Phiên ${focusMinutes} phút của ${FOCUS_COMPLETE_OWNER_NAME} đã xong. Mở app bấm nghỉ giải lao nha!`,
   }).show();
 }
 
@@ -137,7 +143,7 @@ app.whenReady().then(() => {
       (payload) => {
         const newData = payload.new;
         if (prevIsRunning === true && !newData.is_running && newData.paused_seconds_remaining == null) {
-          showSessionEndNotification();
+          showSessionEndNotification(newData.total_seconds);
         }
         prevIsRunning = newData.is_running;
         timerData = newData;

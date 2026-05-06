@@ -2,6 +2,7 @@ import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 
 import useGameStore from '../store/gameStore';
+import { pushNow } from '../lib/syncService';
 import useSettingsStore from '../store/settingsStore';
 import { useTimer, formatTime, TIMER_MODES, TIMER_STATES } from '../hooks/useTimer';
 import { getComboDecayMs, getMultiplierTier } from '../engine/gameMath';
@@ -147,6 +148,7 @@ export default function PomodoroEngine({
   const syncLongBreakCycle = useGameStore((s) => s.syncLongBreakCycle);
   const startBreak = useGameStore((s) => s.startBreak);
   const endBreak = useGameStore((s) => s.endBreak);
+  const handleEndBreak = useCallback(() => { endBreak(); void pushNow(); }, [endBreak]);
   const isOnBreak = useGameStore((s) => s.ui.isOnBreak);
   const breakSecsLeft = useGameStore((s) => s.ui.breakSecondsLeft);
   const breakTotalSeconds = useGameStore((s) => s.ui.breakTotalSeconds);
@@ -463,6 +465,8 @@ export default function PomodoroEngine({
   const prioritizeSetupCard = !fullScreenMode && immersiveMode && isIdle && !isBreakMode;
   const useImmersiveHeroLayout = fullScreenMode || (immersiveMode && !prioritizeSetupCard);
   const useMinimalFocusStage = fullScreenMode;
+  const showComboBadge = !useMinimalFocusStage && !isBreakMode && comboCount >= 2;
+  const showMultiplierBadge = !useMinimalFocusStage && !isBreakMode;
   const timerValueLayoutClass = useImmersiveHeroLayout
     ? fullScreenMode
       ? isDesktopFullScreen
@@ -962,31 +966,36 @@ export default function PomodoroEngine({
         )}
       </AnimatePresence>
 
-      {!useMinimalFocusStage && !isBreakMode && comboCount >= 2 && (
-        <motion.div
-          initial={{ scale: 0.8, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          className={`flex items-center gap-2 rounded-2xl px-4 py-1.5 ${
-            lightTheme
-              ? 'border border-[rgba(245,158,11,0.18)] bg-[rgba(255,247,237,0.96)]'
-              : 'bg-white/[0.05] border-white/8'
-          }`}
-        >
-          <div className="flex flex-col items-center leading-tight">
-            <span className={`font-bold text-sm ${lightTheme ? 'text-[var(--warn)]' : 'text-[var(--ink)]'}`}>Combo ×{comboCount}</span>
-            <span className={`text-xs ${lightTheme ? 'text-[var(--muted)]' : 'text-[var(--muted)]'}`}>+{Math.min((comboCount - 1), 6) * 5}% XP</span>
-          </div>
-        </motion.div>
-      )}
+      {(showComboBadge || showMultiplierBadge) && (
+        <div className="flex w-full max-w-full items-center justify-center gap-3 px-3">
+          {showComboBadge && (
+            <motion.div
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className={`flex shrink-0 items-center rounded-full px-3.5 py-1.5 text-[13px] sm:px-4 sm:py-2 sm:text-sm ${
+                lightTheme
+                  ? 'border border-[rgba(245,158,11,0.18)] bg-[rgba(255,247,237,0.96)]'
+                  : 'bg-white/[0.05] border-white/8'
+              }`}
+            >
+              <div className="flex items-center gap-1.5 whitespace-nowrap leading-none">
+                <span className={`font-bold ${lightTheme ? 'text-[var(--warn)]' : 'text-[var(--ink)]'}`}>Combo ×{comboCount}</span>
+                <span className={`${lightTheme ? 'text-[var(--muted)]' : 'text-[var(--muted)]'}`}>+{Math.min((comboCount - 1), 6) * 5}% XP</span>
+              </div>
+            </motion.div>
+          )}
 
-      {!useMinimalFocusStage && !isBreakMode && (
-        <MultiplierBadge
-          deepFocusThreshold={deepFocusThreshold}
-          focusMinutes={timerConfig.focusMinutes}
-          isStopwatchMode={isStopwatchMode}
-          referenceMinutes={rewardReferenceMinutes}
-          tier={tier}
-        />
+          {showMultiplierBadge && (
+            <MultiplierBadge
+              className="min-w-0 shrink"
+              deepFocusThreshold={deepFocusThreshold}
+              focusMinutes={timerConfig.focusMinutes}
+              isStopwatchMode={isStopwatchMode}
+              referenceMinutes={rewardReferenceMinutes}
+              tier={tier}
+            />
+          )}
+        </div>
       )}
 
       {!useMinimalFocusStage && isBreakMode && (
@@ -1126,7 +1135,7 @@ export default function PomodoroEngine({
             {isBreakMode && (
               <ActionButton
                 key="break-skip"
-                onClick={endBreak}
+                onClick={handleEndBreak}
                 variant="primary"
               >
                 ↩ Kết Thúc Giải Lao
@@ -1744,7 +1753,14 @@ export default function PomodoroEngine({
   );
 }
 
-function MultiplierBadge({ tier, focusMinutes, deepFocusThreshold, isStopwatchMode, referenceMinutes }) {
+function MultiplierBadge({
+  className = '',
+  tier,
+  focusMinutes,
+  deepFocusThreshold,
+  isStopwatchMode,
+  referenceMinutes,
+}) {
   const uiTheme = useSettingsStore((s) => s.uiTheme);
   const lightTheme = uiTheme === 'light';
   const isHigh = tier.multiplier >= 2.0;
@@ -1752,7 +1768,7 @@ function MultiplierBadge({ tier, focusMinutes, deepFocusThreshold, isStopwatchMo
 
   return (
     <div
-      className={`flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold border ${
+      className={`flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-[13px] font-semibold leading-none whitespace-nowrap sm:gap-2 sm:px-4 sm:py-2 sm:text-sm ${
         isHigh
           ? lightTheme
             ? 'bg-[rgba(255,247,237,0.98)] border-[rgba(245,158,11,0.22)] text-[var(--warn)]'
@@ -1764,7 +1780,7 @@ function MultiplierBadge({ tier, focusMinutes, deepFocusThreshold, isStopwatchMo
             : lightTheme
               ? 'bg-[rgba(244,242,236,0.96)] border-[var(--line)] text-[var(--muted)]'
               : 'bg-white/[0.04] border-white/[0.08] text-slate-500'
-      }`}
+      } ${className}`}
     >
       <span>{tier.tierLabel}</span>
       {tier.chestGuaranteed && <span className="mono text-[10px] uppercase tracking-[0.16em]" title="Rương Lớn đảm bảo">lớn</span>}

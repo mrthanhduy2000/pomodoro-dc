@@ -86,6 +86,8 @@ function schedulePush() {
 
 export async function pushNow() {
   if (debounceTimer) clearTimeout(debounceTimer);
+  // Chặn realtime events cũ đến trong khi đang push (tránh cloud restore lại session vừa hủy)
+  localStorage.setItem(LAST_CLOUD_SYNC_KEY, Date.now().toString());
   await pushToCloud();
 }
 

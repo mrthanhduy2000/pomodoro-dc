@@ -454,11 +454,17 @@ export default function PomodoroEngine({
         ? 1.14
         : 1.22
       : 1;
-  const timerVisualScale = immersiveMode ? immersiveTimerScale * fullScreenDesktopBoost : 1;
-  const timerCanvasSize = Math.ceil(SVG_SIZE * timerCircleBoost);
-  const timerFootprintScale = immersiveMode ? timerVisualScale * timerCircleBoost : 1;
-  const timerFootprintSize = Math.ceil(SVG_SIZE * timerFootprintScale);
   const shouldDockFullScreenActions = isDesktopFullScreen && !showSessionReview;
+  const fullScreenTimerScaleDown = shouldDockFullScreenActions ? 0.92 : 1;
+  const fullScreenTimerCanvasDown = shouldDockFullScreenActions ? 0.96 : 1;
+  const timerVisualScale = immersiveMode
+    ? immersiveTimerScale * fullScreenDesktopBoost * fullScreenTimerScaleDown
+    : 1;
+  const timerCanvasSize = Math.ceil(SVG_SIZE * timerCircleBoost * fullScreenTimerCanvasDown);
+  const timerFootprintScale = immersiveMode
+    ? timerVisualScale * timerCircleBoost * fullScreenTimerCanvasDown
+    : 1;
+  const timerFootprintSize = Math.ceil(SVG_SIZE * timerFootprintScale);
   const timerFootprintHeight = timerFootprintSize + (immersiveMode
     ? shouldDockFullScreenActions
       ? 40
@@ -469,10 +475,12 @@ export default function PomodoroEngine({
           : 40
     : 0);
   const fullScreenDesktopStageLift = shouldDockFullScreenActions
-    ? -18
+    ? -8
     : isDesktopFullScreen
       ? -44
       : 0;
+  const fullScreenActionsDockTranslateY = shouldDockFullScreenActions ? 26 : 0;
+  const fullScreenActionsDockBottomInset = shouldDockFullScreenActions ? 10 : 28;
   const prioritizeSetupCard = !fullScreenMode && immersiveMode && isIdle && !isBreakMode;
   const useImmersiveHeroLayout = fullScreenMode || (immersiveMode && !prioritizeSetupCard);
   const useMinimalFocusStage = fullScreenMode;
@@ -1641,9 +1649,12 @@ export default function PomodoroEngine({
 
               <div
                 className="pointer-events-none absolute inset-x-0 bottom-0 z-10 flex justify-center px-5 md:px-8 lg:px-10"
-                style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 28px)' }}
+                style={{ paddingBottom: `calc(env(safe-area-inset-bottom) + ${fullScreenActionsDockBottomInset}px)` }}
               >
-                <div className="pointer-events-auto flex w-full max-w-[960px] flex-col items-center gap-4">
+                <div
+                  className="pointer-events-auto flex w-full max-w-[960px] flex-col items-center gap-4"
+                  style={{ transform: fullScreenActionsDockTranslateY !== 0 ? `translateY(${fullScreenActionsDockTranslateY}px)` : undefined }}
+                >
                   {timerStageActions}
                 </div>
               </div>

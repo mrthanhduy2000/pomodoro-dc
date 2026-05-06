@@ -475,7 +475,7 @@ export default function PomodoroEngine({
           : 40
     : 0);
   const fullScreenDesktopStageLift = shouldDockFullScreenActions
-    ? -76
+    ? -54
     : isDesktopFullScreen
       ? -44
       : 0;
@@ -1154,10 +1154,8 @@ export default function PomodoroEngine({
   const compactTimerActionButtonClassName = 'min-w-0 w-full';
 
   const timerStageActions = (
-    <div className={`${shouldDockFullScreenActions ? 'mt-0 min-h-0' : `mt-4 md:mt-0 ${immersiveMode ? 'min-h-[104px]' : 'min-h-[68px]'}`} flex w-full items-start justify-center`}>
-      <div className={`flex w-full max-w-[412px] flex-col items-stretch gap-3 ${
-        shouldDockFullScreenActions ? 'mt-8 md:mt-10' : ''
-      } sm:w-auto sm:max-w-none sm:items-start`}>
+    <div className={`mt-4 flex w-full items-start justify-center md:mt-0 ${immersiveMode ? 'min-h-[104px]' : 'min-h-[68px]'}`}>
+      <div className="flex w-full max-w-[412px] flex-col items-stretch gap-3 sm:w-auto sm:max-w-none sm:items-start">
         <AnimatePresence mode="wait">
           {isBreakMode && (
             <ActionButton
@@ -1643,13 +1641,13 @@ export default function PomodoroEngine({
           {shouldDockFullScreenActions ? (
             <>
               <div
-                className="mx-auto flex min-h-0 w-full flex-1 items-center justify-center pb-0 md:pb-2"
+                className="mx-auto flex min-h-0 w-full flex-1 items-center justify-center pb-3 md:pb-5"
                 style={{ transform: fullScreenDesktopStageLift !== 0 ? `translateY(${fullScreenDesktopStageLift}px)` : undefined }}
               >
                 {timerStageVisual}
               </div>
 
-              <div className="flex shrink-0 justify-center pb-[calc(env(safe-area-inset-bottom)+2px)] pt-3 md:pt-4">
+              <div className="flex shrink-0 justify-center pb-[calc(env(safe-area-inset-bottom)+6px)] pt-1 md:pt-2">
                 <div className="flex w-full max-w-[960px] flex-col items-center gap-4">
                   {timerStageActions}
                 </div>

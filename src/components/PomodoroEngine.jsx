@@ -455,8 +455,8 @@ export default function PomodoroEngine({
         : 1.22
       : 1;
   const shouldDockFullScreenActions = isDesktopFullScreen && !showSessionReview;
-  const fullScreenTimerScaleDown = shouldDockFullScreenActions ? 0.92 : 1;
-  const fullScreenTimerCanvasDown = shouldDockFullScreenActions ? 0.96 : 1;
+  const fullScreenTimerScaleDown = shouldDockFullScreenActions ? 0.86 : 1;
+  const fullScreenTimerCanvasDown = shouldDockFullScreenActions ? 0.92 : 1;
   const timerVisualScale = immersiveMode
     ? immersiveTimerScale * fullScreenDesktopBoost * fullScreenTimerScaleDown
     : 1;
@@ -475,12 +475,10 @@ export default function PomodoroEngine({
           : 40
     : 0);
   const fullScreenDesktopStageLift = shouldDockFullScreenActions
-    ? -8
+    ? -54
     : isDesktopFullScreen
       ? -44
       : 0;
-  const fullScreenActionsDockTranslateY = shouldDockFullScreenActions ? 26 : 0;
-  const fullScreenActionsDockBottomInset = shouldDockFullScreenActions ? 10 : 28;
   const prioritizeSetupCard = !fullScreenMode && immersiveMode && isIdle && !isBreakMode;
   const useImmersiveHeroLayout = fullScreenMode || (immersiveMode && !prioritizeSetupCard);
   const useMinimalFocusStage = fullScreenMode;
@@ -1152,8 +1150,8 @@ export default function PomodoroEngine({
 
     </>
   );
-  const compactTimerActionRowClassName = 'flex w-full items-stretch gap-1.5 sm:w-auto sm:items-center sm:gap-3';
-  const compactTimerActionButtonClassName = 'min-w-0 flex-1 basis-0 px-1.5 py-2.5 text-[10px] font-semibold leading-[1.05] tracking-[-0.03em] whitespace-normal text-center sm:w-auto sm:flex-none sm:basis-auto sm:whitespace-nowrap sm:px-7 sm:py-3.5 sm:text-lg sm:font-bold sm:leading-none sm:tracking-normal';
+  const compactTimerActionRowClassName = 'grid w-full grid-flow-col auto-cols-fr items-stretch gap-1.5 sm:flex sm:w-auto sm:items-center sm:gap-3';
+  const compactTimerActionButtonClassName = 'min-w-0 w-full';
 
   const timerStageActions = (
     <div className={`mt-4 flex w-full items-start justify-center md:mt-0 ${immersiveMode ? 'min-h-[104px]' : 'min-h-[68px]'}`}>
@@ -1214,11 +1212,11 @@ export default function PomodoroEngine({
               exit={{ opacity: 0, scale: 0.9 }}
               className={compactTimerActionRowClassName}
             >
-              <ActionButton onClick={pause} variant="soft" className={compactTimerActionButtonClassName}>
+              <ActionButton onClick={pause} variant="soft" size="compactMobile" className={compactTimerActionButtonClassName}>
                 Tạm dừng
               </ActionButton>
               {canEnterFullScreen && (
-                <ActionButton onClick={onEnterFullScreen} variant="soft" className={compactTimerActionButtonClassName}>
+                <ActionButton onClick={onEnterFullScreen} variant="soft" size="compactMobile" className={compactTimerActionButtonClassName}>
                   Full Screen
                 </ActionButton>
               )}
@@ -1226,17 +1224,18 @@ export default function PomodoroEngine({
                 <ActionButton
                   onClick={() => extendCurrentSession(SESSION_EXTENSION_SECONDS)}
                   variant="info"
+                  size="compactMobile"
                   className={compactTimerActionButtonClassName}
                 >
                   +1 phút
                 </ActionButton>
               )}
               {isStopwatchMode && (
-                <ActionButton onClick={finish} variant="accent" className={compactTimerActionButtonClassName}>
+                <ActionButton onClick={finish} variant="accent" size="compactMobile" className={compactTimerActionButtonClassName}>
                   Chốt phiên
                 </ActionButton>
               )}
-              <ActionButton onClick={handleCancelClick} variant="danger" className={compactTimerActionButtonClassName}>
+              <ActionButton onClick={handleCancelClick} variant="danger" size="compactMobile" className={compactTimerActionButtonClassName}>
                 Hủy phiên
               </ActionButton>
             </motion.div>
@@ -1250,11 +1249,11 @@ export default function PomodoroEngine({
               exit={{ opacity: 0, scale: 0.9 }}
               className={compactTimerActionRowClassName}
             >
-              <ActionButton onClick={resume} variant="primary" className={compactTimerActionButtonClassName}>
+              <ActionButton onClick={resume} variant="primary" size="compactMobile" className={compactTimerActionButtonClassName}>
                 Tiếp tục
               </ActionButton>
               {canEnterFullScreen && (
-                <ActionButton onClick={onEnterFullScreen} variant="soft" className={compactTimerActionButtonClassName}>
+                <ActionButton onClick={onEnterFullScreen} variant="soft" size="compactMobile" className={compactTimerActionButtonClassName}>
                   Full Screen
                 </ActionButton>
               )}
@@ -1262,17 +1261,18 @@ export default function PomodoroEngine({
                 <ActionButton
                   onClick={() => extendCurrentSession(SESSION_EXTENSION_SECONDS)}
                   variant="info"
+                  size="compactMobile"
                   className={compactTimerActionButtonClassName}
                 >
                   +1 phút
                 </ActionButton>
               )}
               {isStopwatchMode && (
-                <ActionButton onClick={finish} variant="accent" className={compactTimerActionButtonClassName}>
+                <ActionButton onClick={finish} variant="accent" size="compactMobile" className={compactTimerActionButtonClassName}>
                   Chốt phiên
                 </ActionButton>
               )}
-              <ActionButton onClick={handleCancelClick} variant="danger" className={compactTimerActionButtonClassName}>
+              <ActionButton onClick={handleCancelClick} variant="danger" size="compactMobile" className={compactTimerActionButtonClassName}>
                 Hủy phiên
               </ActionButton>
             </motion.div>
@@ -1635,26 +1635,20 @@ export default function PomodoroEngine({
         </button>
 
         <section className={shouldDockFullScreenActions
-          ? 'relative flex h-[100svh] min-h-[100svh] items-center justify-center overflow-hidden px-5 py-10 md:px-8 lg:px-10'
+          ? 'flex h-[100svh] min-h-[100svh] flex-col overflow-hidden px-5 pb-5 pt-10 md:px-8 md:pb-6 lg:px-10'
           : 'flex min-h-[100svh] items-center justify-center px-5 py-10 md:px-8 lg:px-10'}
         >
           {shouldDockFullScreenActions ? (
             <>
               <div
-                className="mx-auto flex w-full max-w-[1180px] items-center justify-center"
+                className="mx-auto flex min-h-0 w-full flex-1 items-center justify-center pb-3 md:pb-5"
                 style={{ transform: fullScreenDesktopStageLift !== 0 ? `translateY(${fullScreenDesktopStageLift}px)` : undefined }}
               >
                 {timerStageVisual}
               </div>
 
-              <div
-                className="pointer-events-none absolute inset-x-0 bottom-0 z-10 flex justify-center px-5 md:px-8 lg:px-10"
-                style={{ paddingBottom: `calc(env(safe-area-inset-bottom) + ${fullScreenActionsDockBottomInset}px)` }}
-              >
-                <div
-                  className="pointer-events-auto flex w-full max-w-[960px] flex-col items-center gap-4"
-                  style={{ transform: fullScreenActionsDockTranslateY !== 0 ? `translateY(${fullScreenActionsDockTranslateY}px)` : undefined }}
-                >
+              <div className="flex shrink-0 justify-center pb-[calc(env(safe-area-inset-bottom)+6px)] pt-1 md:pt-2">
+                <div className="flex w-full max-w-[960px] flex-col items-center gap-4">
                   {timerStageActions}
                 </div>
               </div>
@@ -1692,7 +1686,7 @@ export default function PomodoroEngine({
 
   return (
     <Motion.div
-      className="relative mx-auto flex w-full flex-col items-center select-none"
+      className="relative mx-auto flex w-full max-w-full flex-col items-center overflow-x-hidden select-none"
       animate={{ maxWidth: immersiveRootMaxWidth, gap: useImmersiveHeroLayout ? 46 : immersiveMode ? 38 : 34 }}
       transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
     >
@@ -2301,7 +2295,7 @@ function CategoryManager({ categories, onClose, onAdd, onDelete }) {
   );
 }
 
-function ActionButton({ children, className = '', disabled = false, onClick, title, variant = 'soft', ...motionProps }) {
+function ActionButton({ children, className = '', disabled = false, onClick, size = 'default', title, variant = 'soft', ...motionProps }) {
   const uiTheme = useSettingsStore((s) => s.uiTheme);
   const lightTheme = uiTheme === 'light';
 
@@ -2321,6 +2315,11 @@ function ActionButton({ children, className = '', disabled = false, onClick, tit
         danger: 'text-[var(--accent-light)] bg-white/[0.05] border-[rgba(var(--accent-rgb),0.18)] shadow-[0_4px_16px_rgba(0,0,0,0.12)] hover:bg-white/[0.08]',
       };
 
+  const sizeMap = {
+    default: 'px-7 py-3.5 text-lg font-bold leading-none whitespace-nowrap',
+    compactMobile: 'min-w-0 w-full px-1 py-2.5 text-[10px] font-semibold leading-[1.05] tracking-[-0.03em] whitespace-normal sm:w-auto sm:px-7 sm:py-3.5 sm:text-lg sm:font-bold sm:leading-none sm:tracking-normal sm:whitespace-nowrap',
+  };
+
   return (
     <motion.button
       type="button"
@@ -2329,7 +2328,9 @@ function ActionButton({ children, className = '', disabled = false, onClick, tit
       whileHover={disabled ? undefined : { scale: 1.03, y: -1 }}
       whileTap={disabled ? undefined : { scale: 0.97 }}
       onClick={onClick}
-      className={`inline-flex max-w-full items-center justify-center rounded-2xl border px-7 py-3.5 text-lg font-bold text-center transition-all ${
+      className={`inline-flex max-w-full items-center justify-center rounded-2xl border text-center transition-all ${
+        sizeMap[size] ?? sizeMap.default
+      } ${
         themeMap[variant] ?? themeMap.soft
       } ${disabled ? 'cursor-not-allowed opacity-45' : ''} ${className}`}
       {...motionProps}

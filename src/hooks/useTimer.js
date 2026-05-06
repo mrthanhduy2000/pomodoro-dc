@@ -496,6 +496,18 @@ export function useTimer({ focusMinutes, mode = TIMER_MODES.POMODORO }) {
     }
   }, [runInterval, timerSession.pausedAt, timerSession.countdownStartedAt, timerSession.isRunning]);
 
+  // Thiết bị khác bấm +1 phút: totalSeconds tăng nhưng startedAt không đổi
+  useEffect(() => {
+    if (!timerSession.isRunning || !timerSession.totalSeconds) return;
+    if (timerStateRef.current !== TIMER_STATES.RUNNING && timerStateRef.current !== TIMER_STATES.PAUSED) return;
+    if (timerSession.totalSeconds === totalSecondsRef.current) return;
+
+    const diff = timerSession.totalSeconds - totalSecondsRef.current;
+    totalSecondsRef.current = timerSession.totalSeconds;
+    secondsRef.current = Math.max(0, secondsRef.current + diff);
+    setDisplaySeconds(secondsRef.current);
+  }, [timerSession.totalSeconds, timerSession.isRunning]);
+
   useEffect(() => {
     const {
       isRunning,
@@ -790,6 +802,7 @@ export function useTimer({ focusMinutes, mode = TIMER_MODES.POMODORO }) {
     } else {
       clearFocusCompletePush('paused');
     }
+    void pushNow();
     return true;
   }, [clearFocusCompletePush, persistCurrentTimerSession, syncFocusCompletePush, timerState]);
 

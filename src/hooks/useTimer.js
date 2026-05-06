@@ -151,7 +151,11 @@ export function useTimer({ focusMinutes, mode = TIMER_MODES.POMODORO }) {
   const persistCurrentTimerSession = useCallback((overrides = {}) => {
     const startedAt = overrides.startedAt ?? sessionStartedAtRef.current;
     const clockStartedAt = overrides.countdownStartedAt ?? startTimeRef.current ?? startedAt;
-    const totalSecondsValue = overrides.totalSeconds ?? totalSecondsRef.current;
+    // Prefer explicit override; otherwise take the larger of the local ref vs the store value.
+    // The store may have been updated by a cloud sync (e.g. +1 min from another device) before
+    // the ref is updated by the totalSeconds effect, so using Math.max avoids reverting it.
+    const storeTotal = useGameStore.getState().timerSession.totalSeconds ?? 0;
+    const totalSecondsValue = overrides.totalSeconds ?? Math.max(totalSecondsRef.current ?? 0, storeTotal);
 
     if (!startedAt || !clockStartedAt || !totalSecondsValue) return;
 

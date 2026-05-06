@@ -403,6 +403,7 @@ export default function PomodoroEngine({
   const completedGoalAchieved = completedSessionReview?.goalAchieved ?? null;
   const reviewGoalText = completedSessionReview?.goal?.trim() || sessionGoalText;
   const comboCount = comboActive ? combo.count : 0;
+  const comboBonusPercent = Math.min((comboCount - 1), 6) * 5;
   const completedSessionWorkedMinutes = getCompletedSessionWorkedMinutes(completedSessionReview);
   const immersiveRootMaxWidth = immersiveMode
     ? isIdle && !isBreakMode
@@ -454,14 +455,21 @@ export default function PomodoroEngine({
   const timerCanvasSize = Math.ceil(SVG_SIZE * timerCircleBoost);
   const timerFootprintScale = immersiveMode ? timerVisualScale * timerCircleBoost : 1;
   const timerFootprintSize = Math.ceil(SVG_SIZE * timerFootprintScale);
+  const shouldDockFullScreenActions = isDesktopFullScreen && !showSessionReview;
   const timerFootprintHeight = timerFootprintSize + (immersiveMode
-    ? isDesktopFullScreen
-      ? 176
-      : isDesktopFocusStage
-        ? 92
-        : 40
+    ? shouldDockFullScreenActions
+      ? 40
+      : isDesktopFullScreen
+        ? 176
+        : isDesktopFocusStage
+          ? 92
+          : 40
     : 0);
-  const fullScreenDesktopStageLift = isDesktopFullScreen ? -44 : 0;
+  const fullScreenDesktopStageLift = shouldDockFullScreenActions
+    ? -18
+    : isDesktopFullScreen
+      ? -44
+      : 0;
   const prioritizeSetupCard = !fullScreenMode && immersiveMode && isIdle && !isBreakMode;
   const useImmersiveHeroLayout = fullScreenMode || (immersiveMode && !prioritizeSetupCard);
   const useMinimalFocusStage = fullScreenMode;
@@ -940,7 +948,7 @@ export default function PomodoroEngine({
       </div>
     </div>
   );
-  const timerStageContent = (
+  const timerStageVisual = (
     <>
       <AnimatePresence>
         {!useMinimalFocusStage && activeMilestone && (
@@ -967,34 +975,36 @@ export default function PomodoroEngine({
       </AnimatePresence>
 
       {(showComboBadge || showMultiplierBadge) && (
-        <div className="flex w-full max-w-full items-center justify-center gap-3 px-3">
-          {showComboBadge && (
-            <motion.div
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              className={`flex shrink-0 items-center rounded-full px-3.5 py-1.5 text-[13px] sm:px-4 sm:py-2 sm:text-sm ${
-                lightTheme
-                  ? 'border border-[rgba(245,158,11,0.18)] bg-[rgba(255,247,237,0.96)]'
-                  : 'bg-white/[0.05] border-white/8'
-              }`}
-            >
-              <div className="flex items-center gap-1.5 whitespace-nowrap leading-none">
-                <span className={`font-bold ${lightTheme ? 'text-[var(--warn)]' : 'text-[var(--ink)]'}`}>Combo ×{comboCount}</span>
-                <span className={`${lightTheme ? 'text-[var(--muted)]' : 'text-[var(--muted)]'}`}>+{Math.min((comboCount - 1), 6) * 5}% XP</span>
-              </div>
-            </motion.div>
-          )}
+        <div className="flex w-full justify-center px-2 sm:px-3">
+          <div className="flex flex-col items-center gap-2.5 sm:gap-3">
+            {showComboBadge && (
+              <motion.div
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                className={`inline-flex shrink-0 items-center rounded-full px-2.5 py-1.5 text-[11px] font-semibold tracking-[-0.02em] sm:px-4 sm:py-2 sm:text-sm sm:tracking-normal ${
+                  lightTheme
+                    ? 'border border-[rgba(245,158,11,0.18)] bg-[rgba(255,247,237,0.96)]'
+                    : 'bg-white/[0.05] border-white/8'
+                }`}
+              >
+                <div className="inline-flex items-center gap-1 whitespace-nowrap leading-none sm:gap-1.5">
+                  <span className={`font-bold ${lightTheme ? 'text-[var(--warn)]' : 'text-[var(--ink)]'}`}>Combo ×{comboCount}</span>
+                  <span className={`${lightTheme ? 'text-[var(--muted)]' : 'text-[var(--muted)]'}`}>+{comboBonusPercent}% XP</span>
+                </div>
+              </motion.div>
+            )}
 
-          {showMultiplierBadge && (
-            <MultiplierBadge
-              className="min-w-0 shrink"
-              deepFocusThreshold={deepFocusThreshold}
-              focusMinutes={timerConfig.focusMinutes}
-              isStopwatchMode={isStopwatchMode}
-              referenceMinutes={rewardReferenceMinutes}
-              tier={tier}
-            />
-          )}
+            {showMultiplierBadge && (
+              <MultiplierBadge
+                className="shrink-0"
+                deepFocusThreshold={deepFocusThreshold}
+                focusMinutes={timerConfig.focusMinutes}
+                isStopwatchMode={isStopwatchMode}
+                referenceMinutes={rewardReferenceMinutes}
+                tier={tier}
+              />
+            )}
+          </div>
         </div>
       )}
 
@@ -1129,162 +1139,170 @@ export default function PomodoroEngine({
         </motion.div>
       </div>
 
-      <div className={`mt-4 flex w-full items-start justify-center md:mt-0 ${immersiveMode ? 'min-h-[104px]' : 'min-h-[68px]'}`}>
-        <div className="flex w-full max-w-[412px] flex-col items-stretch gap-3 sm:w-auto sm:max-w-none sm:items-start">
-          <AnimatePresence mode="wait">
-            {isBreakMode && (
+    </>
+  );
+  const timerStageActions = (
+    <div className={`mt-4 flex w-full items-start justify-center md:mt-0 ${immersiveMode ? 'min-h-[104px]' : 'min-h-[68px]'}`}>
+      <div className="flex w-full max-w-[412px] flex-col items-stretch gap-3 sm:w-auto sm:max-w-none sm:items-start">
+        <AnimatePresence mode="wait">
+          {isBreakMode && (
+            <ActionButton
+              key="break-skip"
+              onClick={handleEndBreak}
+              variant="primary"
+            >
+              ↩ Kết Thúc Giải Lao
+            </ActionButton>
+          )}
+
+          {!isBreakMode && timerState === TIMER_STATES.IDLE && (
+            <motion.div
+              key="start"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="grid w-full grid-cols-[minmax(0,1.72fr)_minmax(112px,0.88fr)] items-stretch gap-2 sm:flex sm:w-auto sm:gap-3"
+            >
               <ActionButton
-                key="break-skip"
-                onClick={handleEndBreak}
+                disabled={!isSessionGoalValid && !isCrisisBlockingStart}
+                onClick={handleStartSession}
                 variant="primary"
+                className="min-w-0 w-full whitespace-nowrap px-2.5 py-3 text-[11px] font-semibold leading-none tracking-[-0.025em] sm:w-auto sm:px-7 sm:py-3.5 sm:text-lg sm:font-bold sm:tracking-normal"
+                title={isCrisisBlockingStart
+                  ? 'Cần xử lý Khủng hoảng Kỷ Nguyên trước khi bắt đầu phiên mới'
+                  : isSessionGoalValid
+                    ? 'Bắt đầu phiên tập trung'
+                    : `Cần nhập mục tiêu ít nhất ${SESSION_GOAL_MIN_CHARS} ký tự`}
               >
-                ↩ Kết Thúc Giải Lao
+                {isCrisisBlockingStart
+                  ? 'Xử lý khủng hoảng'
+                  : isSessionGoalValid
+                    ? 'Bắt đầu phiên'
+                    : 'Cần điền mục tiêu phiên'}
               </ActionButton>
-            )}
-
-            {!isBreakMode && timerState === TIMER_STATES.IDLE && (
-              <motion.div
-                key="start"
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.9 }}
-                className="grid w-full grid-cols-[minmax(0,1.72fr)_minmax(112px,0.88fr)] items-stretch gap-2 sm:flex sm:w-auto sm:gap-3"
-              >
+              {canEnterFullScreen && (
                 <ActionButton
-                  disabled={!isSessionGoalValid && !isCrisisBlockingStart}
-                  onClick={handleStartSession}
-                  variant="primary"
-                  className="min-w-0 w-full whitespace-nowrap px-2.5 py-3 text-[11px] font-semibold leading-none tracking-[-0.025em] sm:w-auto sm:px-7 sm:py-3.5 sm:text-lg sm:font-bold sm:tracking-normal"
-                  title={isCrisisBlockingStart
-                    ? 'Cần xử lý Khủng hoảng Kỷ Nguyên trước khi bắt đầu phiên mới'
-                    : isSessionGoalValid
-                      ? 'Bắt đầu phiên tập trung'
-                      : `Cần nhập mục tiêu ít nhất ${SESSION_GOAL_MIN_CHARS} ký tự`}
+                  onClick={onEnterFullScreen}
+                  variant="soft"
+                  className="w-full px-2.5 py-3 text-[12px] font-semibold leading-none whitespace-nowrap sm:w-auto sm:px-7 sm:py-3.5 sm:text-lg sm:font-bold"
                 >
-                  {isCrisisBlockingStart
-                    ? 'Xử lý khủng hoảng'
-                    : isSessionGoalValid
-                      ? 'Bắt đầu phiên'
-                      : 'Cần điền mục tiêu phiên'}
+                  Full Screen
                 </ActionButton>
-                {canEnterFullScreen && (
-                  <ActionButton
-                    onClick={onEnterFullScreen}
-                    variant="soft"
-                    className="w-full px-2.5 py-3 text-[12px] font-semibold leading-none whitespace-nowrap sm:w-auto sm:px-7 sm:py-3.5 sm:text-lg sm:font-bold"
-                  >
-                    Full Screen
-                  </ActionButton>
-                )}
-              </motion.div>
-            )}
+              )}
+            </motion.div>
+          )}
 
-            {!isBreakMode && timerState === TIMER_STATES.RUNNING && (
-              <motion.div
-                key="running-btns"
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.9 }}
-                className="flex items-center gap-3"
-              >
-                <ActionButton onClick={pause} variant="soft">
-                  Tạm dừng
+          {!isBreakMode && timerState === TIMER_STATES.RUNNING && (
+            <motion.div
+              key="running-btns"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="flex items-center gap-3"
+            >
+              <ActionButton onClick={pause} variant="soft">
+                Tạm dừng
+              </ActionButton>
+              {canEnterFullScreen && (
+                <ActionButton onClick={onEnterFullScreen} variant="soft">
+                  Full Screen
                 </ActionButton>
-                {canEnterFullScreen && (
-                  <ActionButton onClick={onEnterFullScreen} variant="soft">
-                    Full Screen
-                  </ActionButton>
-                )}
-                {canExtendActivePomodoro && (
-                  <ActionButton onClick={() => extendCurrentSession(SESSION_EXTENSION_SECONDS)} variant="info">
-                    +1 phút
-                  </ActionButton>
-                )}
-                {isStopwatchMode && (
-                  <ActionButton onClick={finish} variant="accent">
-                    Chốt phiên
-                  </ActionButton>
-                )}
-                <ActionButton onClick={handleCancelClick} variant="danger">
-                  Hủy phiên
+              )}
+              {canExtendActivePomodoro && (
+                <ActionButton onClick={() => extendCurrentSession(SESSION_EXTENSION_SECONDS)} variant="info">
+                  +1 phút
                 </ActionButton>
-              </motion.div>
-            )}
+              )}
+              {isStopwatchMode && (
+                <ActionButton onClick={finish} variant="accent">
+                  Chốt phiên
+                </ActionButton>
+              )}
+              <ActionButton onClick={handleCancelClick} variant="danger">
+                Hủy phiên
+              </ActionButton>
+            </motion.div>
+          )}
 
-            {!isBreakMode && timerState === TIMER_STATES.PAUSED && (
-              <motion.div
-                key="paused-btns"
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.9 }}
-                className="flex items-center gap-3"
-              >
-                <ActionButton onClick={resume} variant="primary">
-                  Tiếp tục
+          {!isBreakMode && timerState === TIMER_STATES.PAUSED && (
+            <motion.div
+              key="paused-btns"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="flex items-center gap-3"
+            >
+              <ActionButton onClick={resume} variant="primary">
+                Tiếp tục
+              </ActionButton>
+              {canEnterFullScreen && (
+                <ActionButton onClick={onEnterFullScreen} variant="soft">
+                  Full Screen
                 </ActionButton>
-                {canEnterFullScreen && (
-                  <ActionButton onClick={onEnterFullScreen} variant="soft">
-                    Full Screen
-                  </ActionButton>
-                )}
-                {canExtendActivePomodoro && (
-                  <ActionButton onClick={() => extendCurrentSession(SESSION_EXTENSION_SECONDS)} variant="info">
-                    +1 phút
-                  </ActionButton>
-                )}
-                {isStopwatchMode && (
-                  <ActionButton onClick={finish} variant="accent">
-                    Chốt phiên
-                  </ActionButton>
-                )}
-                <ActionButton onClick={handleCancelClick} variant="danger">
-                  Hủy phiên
+              )}
+              {canExtendActivePomodoro && (
+                <ActionButton onClick={() => extendCurrentSession(SESSION_EXTENSION_SECONDS)} variant="info">
+                  +1 phút
                 </ActionButton>
-              </motion.div>
-            )}
+              )}
+              {isStopwatchMode && (
+                <ActionButton onClick={finish} variant="accent">
+                  Chốt phiên
+                </ActionButton>
+              )}
+              <ActionButton onClick={handleCancelClick} variant="danger">
+                Hủy phiên
+              </ActionButton>
+            </motion.div>
+          )}
 
-            {!isBreakMode && timerState === TIMER_STATES.FINISHED && (
-              <motion.div
-                key="finished-btns"
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.9 }}
-                className="flex items-center gap-3"
-              >
-                {!disableBreak && !autoStartBreak && (
-                  <ActionButton
-                    onClick={() => {
-                      startBreak({
-                        ...manualBreakPlan,
-                        sourceSessionId: lastCompletedSessionId ?? null,
-                      });
-                      reset();
-                    }}
-                    variant="soft"
-                  >
-                    Bắt đầu nghỉ
-                  </ActionButton>
-                )}
-                <ActionButton onClick={reset} variant="accent">
-                  Làm phiên mới
+          {!isBreakMode && timerState === TIMER_STATES.FINISHED && (
+            <motion.div
+              key="finished-btns"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="flex items-center gap-3"
+            >
+              {!disableBreak && !autoStartBreak && (
+                <ActionButton
+                  onClick={() => {
+                    startBreak({
+                      ...manualBreakPlan,
+                      sourceSessionId: lastCompletedSessionId ?? null,
+                    });
+                    reset();
+                  }}
+                  variant="soft"
+                >
+                  Bắt đầu nghỉ
                 </ActionButton>
-              </motion.div>
-            )}
-
-            {!isBreakMode && timerState === TIMER_STATES.CANCELLED && (
-              <ActionButton
-                key="reset-cancelled"
-                onClick={reset}
-                variant="accent"
-              >
+              )}
+              <ActionButton onClick={reset} variant="accent">
                 Làm phiên mới
               </ActionButton>
-            )}
-          </AnimatePresence>
+            </motion.div>
+          )}
 
-          {!useMinimalFocusStage && cycleIndicator}
-        </div>
+          {!isBreakMode && timerState === TIMER_STATES.CANCELLED && (
+            <ActionButton
+              key="reset-cancelled"
+              onClick={reset}
+              variant="accent"
+            >
+              Làm phiên mới
+            </ActionButton>
+          )}
+        </AnimatePresence>
+
+        {!useMinimalFocusStage && cycleIndicator}
       </div>
+    </div>
+  );
+  const timerStageContent = (
+    <>
+      {timerStageVisual}
+      {timerStageActions}
     </>
   );
   const showShortcutHint = !useMinimalFocusStage && !isBreakMode && timerState === TIMER_STATES.IDLE;
@@ -1594,18 +1612,41 @@ export default function PomodoroEngine({
           Thu nhỏ
         </button>
 
-        <section className="flex min-h-[100svh] items-center justify-center px-5 py-10 md:px-8 lg:px-10">
-          <div
-            className="mx-auto flex w-full max-w-[960px] flex-col items-center gap-8"
-            style={{ transform: fullScreenDesktopStageLift !== 0 ? `translateY(${fullScreenDesktopStageLift}px)` : undefined }}
-          >
-            {timerStageContent}
-            {showSessionReview && (
-              <div className="w-full max-w-[520px]">
-                {sessionReviewCard}
+        <section className={shouldDockFullScreenActions
+          ? 'relative flex h-[100svh] min-h-[100svh] items-center justify-center overflow-hidden px-5 py-10 md:px-8 lg:px-10'
+          : 'flex min-h-[100svh] items-center justify-center px-5 py-10 md:px-8 lg:px-10'}
+        >
+          {shouldDockFullScreenActions ? (
+            <>
+              <div
+                className="mx-auto flex w-full max-w-[1180px] items-center justify-center"
+                style={{ transform: fullScreenDesktopStageLift !== 0 ? `translateY(${fullScreenDesktopStageLift}px)` : undefined }}
+              >
+                {timerStageVisual}
               </div>
-            )}
-          </div>
+
+              <div
+                className="pointer-events-none absolute inset-x-0 bottom-0 z-10 flex justify-center px-5 md:px-8 lg:px-10"
+                style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 28px)' }}
+              >
+                <div className="pointer-events-auto flex w-full max-w-[960px] flex-col items-center gap-4">
+                  {timerStageActions}
+                </div>
+              </div>
+            </>
+          ) : (
+            <div
+              className="mx-auto flex w-full max-w-[960px] flex-col items-center gap-8"
+              style={{ transform: fullScreenDesktopStageLift !== 0 ? `translateY(${fullScreenDesktopStageLift}px)` : undefined }}
+            >
+              {timerStageContent}
+              {showSessionReview && (
+                <div className="w-full max-w-[520px]">
+                  {sessionReviewCard}
+                </div>
+              )}
+            </div>
+          )}
         </section>
 
         {fullScreenNotebook}
@@ -1768,7 +1809,7 @@ function MultiplierBadge({
 
   return (
     <div
-      className={`flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-[13px] font-semibold leading-none whitespace-nowrap sm:gap-2 sm:px-4 sm:py-2 sm:text-sm ${
+      className={`inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full border px-2.5 py-1.5 text-[11px] font-semibold leading-none tracking-[-0.02em] sm:gap-2 sm:px-4 sm:py-2 sm:text-sm sm:tracking-normal ${
         isHigh
           ? lightTheme
             ? 'bg-[rgba(255,247,237,0.98)] border-[rgba(245,158,11,0.22)] text-[var(--warn)]'
@@ -1784,9 +1825,9 @@ function MultiplierBadge({
     >
       <span>{tier.tierLabel}</span>
       {tier.chestGuaranteed && <span className="mono text-[10px] uppercase tracking-[0.16em]" title="Rương Lớn đảm bảo">lớn</span>}
-      {isStopwatchMode && <span className="text-xs opacity-70">tham chiếu {referenceMinutes}'</span>}
+      {isStopwatchMode && <span className="text-[10px] opacity-70 sm:text-xs">tham chiếu {referenceMinutes}'</span>}
       {!isStopwatchMode && tier.multiplier < 1.3 && focusMinutes < deepFocusThreshold && (
-        <span className="text-xs opacity-60">còn {deepFocusThreshold - focusMinutes}' để ×1.3</span>
+        <span className="text-[10px] opacity-60 sm:text-xs">còn {deepFocusThreshold - focusMinutes}' để ×1.3</span>
       )}
     </div>
   );

@@ -638,7 +638,7 @@ export function useTimer({ focusMinutes, mode = TIMER_MODES.POMODORO }) {
       }, 500);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [timerSession.startedAt]);
 
   const start = useCallback(() => {
     if (timerState !== TIMER_STATES.IDLE) return;

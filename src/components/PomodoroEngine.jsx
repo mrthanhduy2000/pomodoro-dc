@@ -2127,54 +2127,86 @@ function SessionReviewCard({ completedGoalAchieved, goalText, onPick }) {
 function CancelConfirmDialog({ hasForgivenessCharge, onAbort, onConfirm, preview }) {
   const uiTheme = useSettingsStore((s) => s.uiTheme);
   const lightTheme = uiTheme === 'light';
+
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        onAbort();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onAbort]);
+
   return (
     <motion.div
-      initial={{ opacity: 0, y: 14, scale: 0.98 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, y: 10, scale: 0.98 }}
-      className={`rounded-[30px] border p-5 ${
-        lightTheme
-          ? 'border-[rgba(201,100,66,0.22)] bg-white shadow-[0_24px_64px_rgba(31,30,29,0.10)]'
-          : 'border-white/8 bg-white/[0.04] shadow-[0_22px_56px_rgba(0,0,0,0.18)] backdrop-blur-2xl'
-      }`}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[70] flex items-center justify-center p-4 sm:p-6"
+      style={{ backgroundColor: 'rgba(31, 30, 29, 0.34)', backdropFilter: 'blur(10px)' }}
+      onClick={onAbort}
     >
-      <p className={`mono text-[11px] uppercase tracking-[0.22em] ${lightTheme ? 'text-[var(--accent2)]' : 'text-rose-300'}`}>Xác nhận hủy phiên</p>
-      <p className={`mt-2 text-sm leading-relaxed ${lightTheme ? 'text-[var(--ink-2)]' : 'text-slate-200'}`}>
-        {hasForgivenessCharge
-          ? 'Bạn còn lượt tha thứ, nên lần hủy này sẽ không mất tài nguyên.'
-          : 'Hệ thống sẽ tính phạt theo phần tiến độ bạn đã đi qua. Hủy càng muộn, giá phải trả càng cao.'}
-      </p>
-      {preview && (
-        <p className={`mt-2 text-xs leading-relaxed ${lightTheme ? 'text-[var(--muted)]' : 'text-slate-400'}`}>
-          {preview.waived
-            ? `Tiến độ hiện tại ${formatPreviewPercent(preview.progressPct)}%. Phiên này đang được bảo vệ hoàn toàn.`
-            : `Tiến độ hiện tại ${formatPreviewPercent(preview.progressPct)}%. Phạt ước tính ${formatPreviewPercent(preview.minPct)}%–${formatPreviewPercent(preview.maxPct)}% tài nguyên sau khi đã tính kỹ năng và công trình.`}
+      <motion.div
+        initial={{ opacity: 0, y: 14, scale: 0.98 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: 10, scale: 0.98 }}
+        transition={{ duration: 0.22, ease: 'easeOut' }}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="cancel-session-dialog-title"
+        onClick={(event) => event.stopPropagation()}
+        className={`w-full max-w-md rounded-[30px] border p-5 ${
+          lightTheme
+            ? 'border-[rgba(201,100,66,0.22)] bg-white shadow-[0_24px_64px_rgba(31,30,29,0.10)]'
+            : 'border-white/8 bg-[rgba(21,19,16,0.92)] shadow-[0_22px_56px_rgba(0,0,0,0.24)] backdrop-blur-2xl'
+        }`}
+      >
+        <p
+          id="cancel-session-dialog-title"
+          className={`mono text-[11px] uppercase tracking-[0.22em] ${lightTheme ? 'text-[var(--accent2)]' : 'text-rose-300'}`}
+        >
+          Xác nhận hủy phiên
         </p>
-      )}
-      <div className="mt-5 flex flex-wrap gap-3">
-        <button
-          type="button"
-          onClick={onAbort}
-          className={`rounded-full border px-4 py-2.5 text-sm font-semibold transition ${
-            lightTheme
-              ? 'border-[var(--line)] bg-[rgba(244,242,236,0.82)] text-[var(--ink)] hover:border-[var(--line-2)]'
-              : 'border-white/10 bg-white/[0.04] text-slate-200 hover:border-white/18 hover:bg-white/[0.08]'
-          }`}
-        >
-          Quay lại
-        </button>
-        <button
-          type="button"
-          onClick={onConfirm}
-          className={`rounded-full border px-4 py-2.5 text-sm font-semibold transition ${
-            lightTheme
-              ? 'border-[rgba(201,100,66,0.22)] bg-[rgba(255,247,237,0.96)] text-[var(--accent2)] hover:bg-[rgba(255,239,228,0.98)]'
-              : 'border-[rgba(var(--accent-rgb),0.18)] bg-white/[0.06] text-[var(--accent-light)] hover:bg-white/[0.08]'
-          }`}
-        >
-          {hasForgivenessCharge ? 'Hủy có bảo vệ' : 'Hủy phiên'}
-        </button>
-      </div>
+        <p className={`mt-2 text-sm leading-relaxed ${lightTheme ? 'text-[var(--ink-2)]' : 'text-slate-200'}`}>
+          {hasForgivenessCharge
+            ? 'Bạn còn lượt tha thứ, nên lần hủy này sẽ không mất tài nguyên.'
+            : 'Hệ thống sẽ tính phạt theo phần tiến độ bạn đã đi qua. Hủy càng muộn, giá phải trả càng cao.'}
+        </p>
+        {preview && (
+          <p className={`mt-2 text-xs leading-relaxed ${lightTheme ? 'text-[var(--muted)]' : 'text-slate-400'}`}>
+            {preview.waived
+              ? `Tiến độ hiện tại ${formatPreviewPercent(preview.progressPct)}%. Phiên này đang được bảo vệ hoàn toàn.`
+              : `Tiến độ hiện tại ${formatPreviewPercent(preview.progressPct)}%. Phạt ước tính ${formatPreviewPercent(preview.minPct)}%–${formatPreviewPercent(preview.maxPct)}% tài nguyên sau khi đã tính kỹ năng và công trình.`}
+          </p>
+        )}
+        <div className="mt-5 flex flex-wrap gap-3">
+          <button
+            type="button"
+            onClick={onAbort}
+            className={`rounded-full border px-4 py-2.5 text-sm font-semibold transition ${
+              lightTheme
+                ? 'border-[var(--line)] bg-[rgba(244,242,236,0.82)] text-[var(--ink)] hover:border-[var(--line-2)]'
+                : 'border-white/10 bg-white/[0.04] text-slate-200 hover:border-white/18 hover:bg-white/[0.08]'
+            }`}
+          >
+            Quay lại
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            className={`rounded-full border px-4 py-2.5 text-sm font-semibold transition ${
+              lightTheme
+                ? 'border-[rgba(201,100,66,0.22)] bg-[rgba(255,247,237,0.96)] text-[var(--accent2)] hover:bg-[rgba(255,239,228,0.98)]'
+                : 'border-[rgba(var(--accent-rgb),0.18)] bg-white/[0.06] text-[var(--accent-light)] hover:bg-white/[0.08]'
+            }`}
+          >
+            {hasForgivenessCharge ? 'Hủy có bảo vệ' : 'Hủy phiên'}
+          </button>
+        </div>
+      </motion.div>
     </motion.div>
   );
 }

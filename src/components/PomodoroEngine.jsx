@@ -455,8 +455,8 @@ export default function PomodoroEngine({
         : 1.22
       : 1;
   const shouldDockFullScreenActions = isDesktopFullScreen && !showSessionReview;
-  const fullScreenTimerScaleDown = shouldDockFullScreenActions ? 0.86 : 1;
-  const fullScreenTimerCanvasDown = shouldDockFullScreenActions ? 0.92 : 1;
+  const fullScreenTimerScaleDown = shouldDockFullScreenActions ? 1 : 1;
+  const fullScreenTimerCanvasDown = shouldDockFullScreenActions ? 1 : 1;
   const timerVisualScale = immersiveMode
     ? immersiveTimerScale * fullScreenDesktopBoost * fullScreenTimerScaleDown
     : 1;
@@ -1644,26 +1644,12 @@ export default function PomodoroEngine({
           : 'flex min-h-[100svh] items-center justify-center px-5 py-10 md:px-8 lg:px-10'}
         >
           {shouldDockFullScreenActions ? (
-            <>
-              <div
-                className="mx-auto flex w-full max-w-[1180px] items-center justify-center"
-                style={{ transform: fullScreenDesktopStageLift !== 0 ? `translateY(${fullScreenDesktopStageLift}px)` : undefined }}
-              >
-                {timerStageVisual}
-              </div>
-
-              <div
-                className="pointer-events-none absolute inset-x-0 z-10 flex justify-center px-5 md:px-8 lg:px-10"
-                style={{ bottom: 'calc(env(safe-area-inset-bottom) + 2px)' }}
-              >
-                <div
-                  className="pointer-events-auto flex w-full max-w-[960px] flex-col items-center gap-4"
-                  style={{ transform: 'translateY(18px)' }}
-                >
-                  {timerStageActions}
-                </div>
-              </div>
-            </>
+            <div
+              className="mx-auto flex w-full max-w-[1180px] items-center justify-center"
+              style={{ transform: fullScreenDesktopStageLift !== 0 ? `translateY(${fullScreenDesktopStageLift}px)` : undefined }}
+            >
+              {timerStageVisual}
+            </div>
           ) : (
             <div
               className="mx-auto flex w-full max-w-[960px] flex-col items-center gap-8"
@@ -1678,6 +1664,12 @@ export default function PomodoroEngine({
             </div>
           )}
         </section>
+
+        {shouldDockFullScreenActions && (
+          <div className="mx-auto flex w-full max-w-[960px] justify-center px-5 pb-8 pt-5 md:px-8 md:pb-10 md:pt-6 lg:px-10">
+            {timerStageActions}
+          </div>
+        )}
 
         {fullScreenNotebook}
 

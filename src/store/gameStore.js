@@ -1809,6 +1809,14 @@ function normalizePersistedGameState(persistedState, currentState, options = {})
     breakSession: hasPersistedKey('breakSession')
       ? { ...makeDefaultBreakSession(), ...(isRecord(persisted.breakSession) ? persisted.breakSession : {}) }
       : current.breakSession,
+    // Derive break UI from imported breakSession so cross-device end-break syncs correctly.
+    // ui is not in the cloud payload, so without this it keeps current.ui.isOnBreak = true
+    // even after importing breakSession.isRunning = false from another device.
+    ui: hasPersistedKey('breakSession') && !(
+      isRecord(persisted.breakSession) ? persisted.breakSession.isRunning : false
+    ) && current.ui.isOnBreak
+      ? { ...current.ui, isOnBreak: false, breakSecondsLeft: 0, breakTotalSeconds: 0, breakIsLong: false, activeBreakSessionId: null }
+      : current.ui,
     weeklyChain: hasPersistedKey('weeklyChain')
       ? refreshWeeklyChain({ ...makeDefaultWeeklyChain(), ...(isRecord(persisted.weeklyChain) ? persisted.weeklyChain : {}) })
       : current.weeklyChain,

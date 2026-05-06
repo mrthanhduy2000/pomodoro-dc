@@ -11,6 +11,7 @@ const DEBOUNCE_MS = 5000;
 let debounceTimer = null;
 let isImporting = false;
 let initialized = false;
+let realtimeChannel = null;
 
 function getExportableState() {
   const s = useGameStore.getState();
@@ -94,7 +95,6 @@ function isSameSession(localSession, cloudSession) {
 }
 
 async function pullFromCloud() {
-
   try {
     const { data, error } = await supabase
       .from('game_state')
@@ -110,7 +110,6 @@ async function pullFromCloud() {
     if (cloudTime > lastSync) {
       const localSession = useGameStore.getState().timerSession;
       const cloudSession = data.data?.timerSession;
-      // Nếu đang chạy session khác thì không pull đè
       if (localSession?.isRunning && !isSameSession(localSession, cloudSession)) return;
 
       isImporting = true;
@@ -124,6 +123,41 @@ async function pullFromCloud() {
   } catch (err) {
     console.warn('[sync] pull failed', err);
   }
+}
+
+function handleRealtimeUpdate(payload) {
+  const cloudData = payload.new;
+  if (!cloudData?.data) return;
+  const cloudTime = new Date(cloudData.updated_at).getTime();
+  const lastSync = parseInt(readLocalStorageValue(LAST_CLOUD_SYNC_KEY, LEGACY_LAST_CLOUD_SYNC_KEYS) ?? '0', 10);
+  if (cloudTime <= lastSync) return;
+
+  const localSession = useGameStore.getState().timerSession;
+  const cloudSession = cloudData.data?.timerSession;
+  if (localSession?.isRunning && !isSameSession(localSession, cloudSession)) return;
+
+  isImporting = true;
+  const result = useGameStore.getState()._importGameData(cloudData.data);
+  setTimeout(() => { isImporting = false; }, 0);
+  if (result.ok) {
+    localStorage.setItem(LAST_CLOUD_SYNC_KEY, cloudTime.toString());
+    console.log('[sync] real-time update received');
+  }
+}
+
+function subscribeRealtime() {
+  if (realtimeChannel) {
+    supabase.removeChannel(realtimeChannel);
+    realtimeChannel = null;
+  }
+  realtimeChannel = supabase
+    .channel('game-state-sync')
+    .on(
+      'postgres_changes',
+      { event: 'UPDATE', schema: 'public', table: 'game_state', filter: `id=eq.${SYNC_ID}` },
+      handleRealtimeUpdate,
+    )
+    .subscribe();
 }
 
 export async function initSync() {
@@ -164,37 +198,21 @@ export async function initSync() {
     schedulePush();
   });
 
-  // Real-time: nhận ngay khi thiết bị khác push lên cloud
-  supabase
-    .channel('game-state-sync')
-    .on(
-      'postgres_changes',
-      { event: 'UPDATE', schema: 'public', table: 'game_state', filter: `id=eq.${SYNC_ID}` },
-      (payload) => {
-        const cloudData = payload.new;
-        if (!cloudData?.data) return;
-        const cloudTime = new Date(cloudData.updated_at).getTime();
-        const lastSync = parseInt(readLocalStorageValue(LAST_CLOUD_SYNC_KEY, LEGACY_LAST_CLOUD_SYNC_KEYS) ?? '0', 10);
-        if (cloudTime <= lastSync) return;
+  subscribeRealtime();
 
-        const localSession = useGameStore.getState().timerSession;
-        const cloudSession = cloudData.data?.timerSession;
-        // Chỉ block nếu đang chạy session KHÁC (không phải cùng session đang pause/resume)
-        if (localSession?.isRunning && !isSameSession(localSession, cloudSession)) return;
-
-        isImporting = true;
-        const result = useGameStore.getState()._importGameData(cloudData.data);
-        setTimeout(() => { isImporting = false; }, 0);
-        if (result.ok) {
-          localStorage.setItem(LAST_CLOUD_SYNC_KEY, cloudTime.toString());
-          console.log('[sync] real-time update received');
-        }
-      }
-    )
-    .subscribe();
-
-  // Fallback: pull khi user mở lại tab (phòng khi WebSocket mất kết nối)
+  // On visibility change: pull latest + reconnect WebSocket (iOS kills it when backgrounded)
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible') pullFromCloud();
+    if (document.visibilityState !== 'visible') return;
+    pullFromCloud();
+    subscribeRealtime();
   });
+
+  // Extra triggers for iOS PWA: focus covers switching apps, pageshow covers BFCache restore
+  window.addEventListener('focus', pullFromCloud);
+  window.addEventListener('pageshow', pullFromCloud);
+
+  // Safety net: poll every 30s when visible, in case WebSocket is silently dead
+  setInterval(() => {
+    if (document.visibilityState === 'visible') pullFromCloud();
+  }, 30_000);
 }

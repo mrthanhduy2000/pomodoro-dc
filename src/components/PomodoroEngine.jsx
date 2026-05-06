@@ -1654,9 +1654,12 @@ export default function PomodoroEngine({
 
               <div
                 className="pointer-events-none absolute inset-x-0 z-10 flex justify-center px-5 md:px-8 lg:px-10"
-                style={{ bottom: 'calc(env(safe-area-inset-bottom) + 10px)' }}
+                style={{ bottom: 'calc(env(safe-area-inset-bottom) + 2px)' }}
               >
-                <div className="pointer-events-auto flex w-full max-w-[960px] flex-col items-center gap-4">
+                <div
+                  className="pointer-events-auto flex w-full max-w-[960px] flex-col items-center gap-4"
+                  style={{ transform: 'translateY(18px)' }}
+                >
                   {timerStageActions}
                 </div>
               </div>

@@ -475,7 +475,7 @@ export default function PomodoroEngine({
           : 40
     : 0);
   const fullScreenDesktopStageLift = shouldDockFullScreenActions
-    ? -54
+    ? 0
     : isDesktopFullScreen
       ? -44
       : 0;
@@ -1154,8 +1154,13 @@ export default function PomodoroEngine({
   const compactTimerActionButtonClassName = 'min-w-0 w-full';
 
   const timerStageActions = (
-    <div className={`mt-4 flex w-full items-start justify-center md:mt-0 ${immersiveMode ? 'min-h-[104px]' : 'min-h-[68px]'}`}>
-      <div className="flex w-full max-w-[412px] flex-col items-stretch gap-3 sm:w-auto sm:max-w-none sm:items-start">
+    <div className={shouldDockFullScreenActions
+      ? 'flex w-full items-start justify-center'
+      : `mt-4 flex w-full items-start justify-center md:mt-0 ${immersiveMode ? 'min-h-[104px]' : 'min-h-[68px]'}`
+    }>
+      <div className={`flex w-full max-w-[412px] flex-col items-stretch gap-3 ${
+        shouldDockFullScreenActions ? 'sm:w-full sm:max-w-[540px] sm:items-center' : 'sm:w-auto sm:max-w-none sm:items-start'
+      }`}>
         <AnimatePresence mode="wait">
           {isBreakMode && (
             <ActionButton
@@ -1635,20 +1640,23 @@ export default function PomodoroEngine({
         </button>
 
         <section className={shouldDockFullScreenActions
-          ? 'flex h-[100svh] min-h-[100svh] flex-col overflow-hidden px-5 pb-5 pt-10 md:px-8 md:pb-6 lg:px-10'
+          ? 'relative flex h-[100svh] min-h-[100svh] items-center justify-center overflow-hidden px-5 py-10 md:px-8 lg:px-10'
           : 'flex min-h-[100svh] items-center justify-center px-5 py-10 md:px-8 lg:px-10'}
         >
           {shouldDockFullScreenActions ? (
             <>
               <div
-                className="mx-auto flex min-h-0 w-full flex-1 items-center justify-center pb-3 md:pb-5"
+                className="mx-auto flex w-full max-w-[1180px] items-center justify-center"
                 style={{ transform: fullScreenDesktopStageLift !== 0 ? `translateY(${fullScreenDesktopStageLift}px)` : undefined }}
               >
                 {timerStageVisual}
               </div>
 
-              <div className="flex shrink-0 justify-center pb-[calc(env(safe-area-inset-bottom)+6px)] pt-1 md:pt-2">
-                <div className="flex w-full max-w-[960px] flex-col items-center gap-4">
+              <div
+                className="pointer-events-none absolute inset-x-0 z-10 flex justify-center px-5 md:px-8 lg:px-10"
+                style={{ bottom: 'calc(env(safe-area-inset-bottom) + 10px)' }}
+              >
+                <div className="pointer-events-auto flex w-full max-w-[960px] flex-col items-center gap-4">
                   {timerStageActions}
                 </div>
               </div>

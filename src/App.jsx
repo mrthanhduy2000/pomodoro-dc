@@ -1216,6 +1216,9 @@ function getWeekdayLabel() {
 export default function App() {
   useGameLoop();
 
+  const [storesHydrated, setStoresHydrated] = useState(() => (
+    useGameStore.persist.hasHydrated() && useSettingsStore.persist.hasHydrated()
+  ));
   const hydrateEngines = useSettingsStore((s) => s.hydrateEngines);
   const uiTheme = useSettingsStore((s) => s.uiTheme);
   const dailyGoalType = useSettingsStore((s) => s.dailyGoalType);
@@ -1224,6 +1227,8 @@ export default function App() {
   const refreshPushState = useSettingsStore((s) => s.refreshPushState);
   const checkRankChallengeDeadlines = useGameStore((s) => s.checkRankChallengeDeadlines);
   const checkEraCrisisDeadlines = useGameStore((s) => s.checkEraCrisisDeadlines);
+  const closeDisasterModal = useGameStore((s) => s.closeDisasterModal);
+  const isDisasterModalOpen = useGameStore((s) => s.ui.disasterModalOpen);
   const timerSessionRunning = useGameStore((s) => s.timerSession.isRunning);
   const timerSessionPausedAt = useGameStore((s) => s.timerSession.pausedAt);
   const refreshDailyMissions = useGameStore((s) => s.refreshDailyMissions);
@@ -1232,13 +1237,30 @@ export default function App() {
   const missionBoundaryRef = useRef({ day: localDateStr(), week: localWeekMondayStr() });
 
   useEffect(() => {
+    const syncHydrationState = () => {
+      setStoresHydrated(useGameStore.persist.hasHydrated() && useSettingsStore.persist.hasHydrated());
+    };
+
+    syncHydrationState();
+    const unsubscribeGameHydration = useGameStore.persist.onFinishHydration(syncHydrationState);
+    const unsubscribeSettingsHydration = useSettingsStore.persist.onFinishHydration(syncHydrationState);
+
+    return () => {
+      unsubscribeGameHydration?.();
+      unsubscribeSettingsHydration?.();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!storesHydrated) return;
+
     hydrateEngines();
     void refreshPushState();
     checkRankChallengeDeadlines();
     refreshDailyMissions();
     checkWeeklyReport();
     initSync();
-  }, [hydrateEngines, refreshPushState, checkRankChallengeDeadlines, refreshDailyMissions, checkWeeklyReport]);
+  }, [storesHydrated, hydrateEngines, refreshPushState, checkRankChallengeDeadlines, refreshDailyMissions, checkWeeklyReport]);
 
   useEffect(() => {
     const handleVisibilityChange = () => {
@@ -1251,10 +1273,20 @@ export default function App() {
   }, [refreshPushState]);
 
   useEffect(() => {
+    if (!storesHydrated) return;
     if (!timerSessionRunning) checkEraCrisisDeadlines();
-  }, [checkEraCrisisDeadlines, timerSessionRunning]);
+  }, [storesHydrated, checkEraCrisisDeadlines, timerSessionRunning]);
 
   useEffect(() => {
+    if (!storesHydrated) return;
+    if (timerSessionRunning && isDisasterModalOpen) {
+      closeDisasterModal();
+    }
+  }, [closeDisasterModal, isDisasterModalOpen, storesHydrated, timerSessionRunning]);
+
+  useEffect(() => {
+    if (!storesHydrated) return undefined;
+
     const refreshIfBoundaryChanged = () => {
       const day = localDateStr();
       const week = localWeekMondayStr();
@@ -1291,7 +1323,7 @@ export default function App() {
       window.removeEventListener('focus', handleFocus);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [checkEraCrisisDeadlines, checkWeeklyReport, refreshDailyMissions, timerSessionRunning]);
+  }, [storesHydrated, checkEraCrisisDeadlines, checkWeeklyReport, refreshDailyMissions, timerSessionRunning]);
 
   const isOnBreak = useGameStore((s) => s.ui.isOnBreak);
   const breakSecsLeft = useGameStore((s) => s.ui.breakSecondsLeft);

@@ -11,6 +11,8 @@ import {
   DEFAULT_DEEP_FOCUS_THRESHOLD,
   WARMUP_REDUCED_THRESHOLD,
   BREAK_EXTENSION_MINUTES,
+  COMBO_BONUS_PER_STACK,
+  COMBO_MAX_STACKS,
   OVERCLOCK_MIN_SESSION_MIN,
   VUNG_DONG_CHAY_MIN_MIN,
   DISASTER_MIN_PENALTY_RATE,
@@ -403,7 +405,8 @@ export default function PomodoroEngine({
   const completedGoalAchieved = completedSessionReview?.goalAchieved ?? null;
   const reviewGoalText = completedSessionReview?.goal?.trim() || sessionGoalText;
   const comboCount = comboActive ? combo.count : 0;
-  const comboBonusPercent = Math.min((comboCount - 1), 6) * 5;
+  const comboStacks = Math.max(0, Math.min(comboCount - 1, COMBO_MAX_STACKS));
+  const comboBonusPercent = Math.round(comboStacks * COMBO_BONUS_PER_STACK * 100);
   const completedSessionWorkedMinutes = getCompletedSessionWorkedMinutes(completedSessionReview);
   const immersiveRootMaxWidth = immersiveMode
     ? isIdle && !isBreakMode
@@ -1141,6 +1144,9 @@ export default function PomodoroEngine({
 
     </>
   );
+  const compactTimerActionRowClassName = 'flex w-full items-stretch gap-1.5 sm:w-auto sm:items-center sm:gap-3';
+  const compactTimerActionButtonClassName = 'min-w-0 flex-1 basis-0 px-1.5 py-2.5 text-[10px] font-semibold leading-[1.05] tracking-[-0.03em] whitespace-normal text-center sm:w-auto sm:flex-none sm:basis-auto sm:whitespace-nowrap sm:px-7 sm:py-3.5 sm:text-lg sm:font-bold sm:leading-none sm:tracking-normal';
+
   const timerStageActions = (
     <div className={`mt-4 flex w-full items-start justify-center md:mt-0 ${immersiveMode ? 'min-h-[104px]' : 'min-h-[68px]'}`}>
       <div className="flex w-full max-w-[412px] flex-col items-stretch gap-3 sm:w-auto sm:max-w-none sm:items-start">
@@ -1198,27 +1204,31 @@ export default function PomodoroEngine({
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.9 }}
-              className="flex items-center gap-3"
+              className={compactTimerActionRowClassName}
             >
-              <ActionButton onClick={pause} variant="soft">
+              <ActionButton onClick={pause} variant="soft" className={compactTimerActionButtonClassName}>
                 Tạm dừng
               </ActionButton>
               {canEnterFullScreen && (
-                <ActionButton onClick={onEnterFullScreen} variant="soft">
+                <ActionButton onClick={onEnterFullScreen} variant="soft" className={compactTimerActionButtonClassName}>
                   Full Screen
                 </ActionButton>
               )}
               {canExtendActivePomodoro && (
-                <ActionButton onClick={() => extendCurrentSession(SESSION_EXTENSION_SECONDS)} variant="info">
+                <ActionButton
+                  onClick={() => extendCurrentSession(SESSION_EXTENSION_SECONDS)}
+                  variant="info"
+                  className={compactTimerActionButtonClassName}
+                >
                   +1 phút
                 </ActionButton>
               )}
               {isStopwatchMode && (
-                <ActionButton onClick={finish} variant="accent">
+                <ActionButton onClick={finish} variant="accent" className={compactTimerActionButtonClassName}>
                   Chốt phiên
                 </ActionButton>
               )}
-              <ActionButton onClick={handleCancelClick} variant="danger">
+              <ActionButton onClick={handleCancelClick} variant="danger" className={compactTimerActionButtonClassName}>
                 Hủy phiên
               </ActionButton>
             </motion.div>
@@ -1230,27 +1240,31 @@ export default function PomodoroEngine({
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.9 }}
-              className="flex items-center gap-3"
+              className={compactTimerActionRowClassName}
             >
-              <ActionButton onClick={resume} variant="primary">
+              <ActionButton onClick={resume} variant="primary" className={compactTimerActionButtonClassName}>
                 Tiếp tục
               </ActionButton>
               {canEnterFullScreen && (
-                <ActionButton onClick={onEnterFullScreen} variant="soft">
+                <ActionButton onClick={onEnterFullScreen} variant="soft" className={compactTimerActionButtonClassName}>
                   Full Screen
                 </ActionButton>
               )}
               {canExtendActivePomodoro && (
-                <ActionButton onClick={() => extendCurrentSession(SESSION_EXTENSION_SECONDS)} variant="info">
+                <ActionButton
+                  onClick={() => extendCurrentSession(SESSION_EXTENSION_SECONDS)}
+                  variant="info"
+                  className={compactTimerActionButtonClassName}
+                >
                   +1 phút
                 </ActionButton>
               )}
               {isStopwatchMode && (
-                <ActionButton onClick={finish} variant="accent">
+                <ActionButton onClick={finish} variant="accent" className={compactTimerActionButtonClassName}>
                   Chốt phiên
                 </ActionButton>
               )}
-              <ActionButton onClick={handleCancelClick} variant="danger">
+              <ActionButton onClick={handleCancelClick} variant="danger" className={compactTimerActionButtonClassName}>
                 Hủy phiên
               </ActionButton>
             </motion.div>

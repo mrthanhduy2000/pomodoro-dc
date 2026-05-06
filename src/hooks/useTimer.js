@@ -799,11 +799,23 @@ export function useTimer({ focusMinutes, mode = TIMER_MODES.POMODORO }) {
     setDisplaySeconds(secondsRef.current);
     persistCurrentTimerSession({ totalSeconds: totalSecondsRef.current });
     if (timerState === TIMER_STATES.RUNNING) {
+      updateTimerLive({
+        isRunning: true,
+        startedAt: startTimeRef.current ? new Date(startTimeRef.current).toISOString() : null,
+        totalSeconds: totalSecondsRef.current,
+        pausedSecondsRemaining: null,
+      });
       syncFocusCompletePush(
         (startTimeRef.current ?? Date.now()) + (totalSecondsRef.current * 1000),
         totalSecondsRef.current / 60,
       );
     } else {
+      updateTimerLive({
+        isRunning: false,
+        startedAt: null,
+        totalSeconds: totalSecondsRef.current,
+        pausedSecondsRemaining: secondsRef.current,
+      });
       clearFocusCompletePush('paused');
     }
     void pushNow();

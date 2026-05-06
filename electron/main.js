@@ -27,10 +27,55 @@ let timerData     = null;
 let iconNormal    = null;
 let iconEmpty     = null;
 let prevIsRunning = null; // null = chưa biết (lần fetch đầu tiên)
+let lastActiveSessionSnapshot = null;
 const FOCUS_COMPLETE_OWNER_NAME = 'Đàm';
+const SESSION_COMPLETE_GRACE_SECONDS = 2;
 
 function getRoundedFocusMinutes(totalSeconds) {
   return Math.max(1, Math.round((Number(totalSeconds) || 0) / 60));
+}
+
+function parseStartedAtMs(value) {
+  const parsed = Date.parse(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function createActiveSessionSnapshot(data) {
+  const totalSeconds = Number(data?.total_seconds);
+  const startedAtMs = parseStartedAtMs(data?.started_at);
+  if (!Number.isFinite(totalSeconds) || totalSeconds <= 0 || !startedAtMs) return null;
+
+  return {
+    totalSeconds,
+    startedAtMs,
+  };
+}
+
+function rememberActiveSessionSnapshot(data) {
+  if (!data?.is_running) return;
+  const snapshot = createActiveSessionSnapshot(data);
+  if (snapshot) {
+    lastActiveSessionSnapshot = snapshot;
+  }
+}
+
+function getRemainingSeconds(snapshot, nowMs = Date.now()) {
+  return Math.max(0, snapshot.totalSeconds - ((nowMs - snapshot.startedAtMs) / 1000));
+}
+
+function getCompletedSessionTotalSeconds(previousData, nextData) {
+  if (!prevIsRunning || nextData?.is_running || nextData?.paused_seconds_remaining != null) {
+    return null;
+  }
+
+  const snapshot = createActiveSessionSnapshot(previousData)
+    ?? createActiveSessionSnapshot(timerData)
+    ?? lastActiveSessionSnapshot;
+
+  if (!snapshot) return null;
+  if (getRemainingSeconds(snapshot) > SESSION_COMPLETE_GRACE_SECONDS) return null;
+
+  return snapshot.totalSeconds;
 }
 
 function showSessionEndNotification(totalSeconds) {
@@ -59,6 +104,7 @@ function fetchTimerLive() {
         const rows = JSON.parse(raw);
         if (Array.isArray(rows) && rows.length > 0) {
           const newData = rows[0];
+          rememberActiveSessionSnapshot(newData);
           prevIsRunning = newData.is_running;
           timerData = newData;
         }
@@ -142,9 +188,12 @@ app.whenReady().then(() => {
       { event: '*', schema: 'public', table: 'timer_live', filter: 'id=eq.singleton' },
       (payload) => {
         const newData = payload.new;
-        if (prevIsRunning === true && !newData.is_running && newData.paused_seconds_remaining == null) {
-          showSessionEndNotification(newData.total_seconds);
+        const previousData = payload.old ?? timerData;
+        const completedSessionTotalSeconds = getCompletedSessionTotalSeconds(previousData, newData);
+        if (completedSessionTotalSeconds != null) {
+          showSessionEndNotification(completedSessionTotalSeconds);
         }
+        rememberActiveSessionSnapshot(newData);
         prevIsRunning = newData.is_running;
         timerData = newData;
       }

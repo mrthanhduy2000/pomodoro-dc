@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 
 import {
@@ -27,6 +27,82 @@ const GUIDE_EXAMPLES = [
   { label: 'Highlight', syntax: '==cần chốt==' },
   { label: 'Checklist', syntax: '- [ ] việc cần làm' },
 ];
+
+const TEXTAREA_MIRROR_STYLE_PROPS = [
+  'boxSizing',
+  'width',
+  'borderTopWidth',
+  'borderRightWidth',
+  'borderBottomWidth',
+  'borderLeftWidth',
+  'paddingTop',
+  'paddingRight',
+  'paddingBottom',
+  'paddingLeft',
+  'fontFamily',
+  'fontSize',
+  'fontStyle',
+  'fontVariant',
+  'fontWeight',
+  'letterSpacing',
+  'lineHeight',
+  'textAlign',
+  'textIndent',
+  'textTransform',
+  'wordSpacing',
+  'wordBreak',
+  'overflowWrap',
+  'tabSize',
+];
+
+function clampNumber(value, min, max) {
+  if (min > max) return (min + max) / 2;
+  return Math.min(Math.max(value, min), max);
+}
+
+function getTextareaSelectionRect(textarea, selectionStart, selectionEnd) {
+  const computedStyle = window.getComputedStyle(textarea);
+  const mirror = document.createElement('div');
+  const marker = document.createElement('span');
+  const selectedText = textarea.value.slice(selectionStart, selectionEnd);
+
+  mirror.setAttribute('aria-hidden', 'true');
+  mirror.style.position = 'fixed';
+  mirror.style.left = '-9999px';
+  mirror.style.top = '0';
+  mirror.style.visibility = 'hidden';
+  mirror.style.whiteSpace = 'pre-wrap';
+  mirror.style.overflow = 'hidden';
+  mirror.style.pointerEvents = 'none';
+
+  TEXTAREA_MIRROR_STYLE_PROPS.forEach((prop) => {
+    mirror.style[prop] = computedStyle[prop];
+  });
+
+  marker.textContent = selectedText.replace(/\n$/g, '\n\u200b') || '\u200b';
+  mirror.textContent = textarea.value.slice(0, selectionStart);
+  mirror.appendChild(marker);
+  document.body.appendChild(mirror);
+
+  const markerRect = marker.getBoundingClientRect();
+  const mirrorRect = mirror.getBoundingClientRect();
+  const textareaRect = textarea.getBoundingClientRect();
+  const lineHeight = Number.parseFloat(computedStyle.lineHeight)
+    || Number.parseFloat(computedStyle.fontSize) * 1.25
+    || 18;
+  const rawLeft = textareaRect.left + markerRect.left - mirrorRect.left - textarea.scrollLeft;
+  const rawTop = textareaRect.top + markerRect.top - mirrorRect.top - textarea.scrollTop;
+  const left = clampNumber(
+    rawLeft + markerRect.width / 2,
+    textareaRect.left + 92,
+    textareaRect.right - 92,
+  );
+  const top = clampNumber(rawTop, textareaRect.top + lineHeight, textareaRect.bottom);
+
+  mirror.remove();
+
+  return { left, top };
+}
 
 function getSafeHref(url) {
   const trimmedUrl = String(url ?? '').trim();
@@ -232,18 +308,41 @@ export function RichTextView({ value, className = '', style, compact = false, pl
   );
 }
 
-function FormatButton({ children, label, onClick, lightTheme }) {
+function FormatButton({ children, label, shortcut, onClick, lightTheme }) {
+  const title = shortcut ? `${label} (${shortcut})` : label;
+
   return (
     <button
       type="button"
       aria-label={label}
-      title={label}
+      title={title}
       onMouseDown={(event) => event.preventDefault()}
       onClick={onClick}
       className={`flex size-8 items-center justify-center rounded-[10px] border text-[12px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 ${
         lightTheme
           ? 'border-[var(--line)] bg-white text-[var(--ink)] hover:border-[var(--line-2)] hover:bg-[rgba(244,242,236,0.94)] focus-visible:ring-[rgba(31,30,29,0.14)]'
           : 'border-white/10 bg-white/[0.04] text-slate-200 hover:border-white/20 hover:bg-white/[0.08] focus-visible:ring-white/30'
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
+function FloatingFormatButton({ children, label, shortcut, onClick, lightTheme }) {
+  const title = shortcut ? `${label} (${shortcut})` : label;
+
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      title={title}
+      onMouseDown={(event) => event.preventDefault()}
+      onClick={onClick}
+      className={`flex size-8 shrink-0 items-center justify-center rounded-[8px] text-[12px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 ${
+        lightTheme
+          ? 'text-[var(--ink)] hover:bg-[rgba(31,30,29,0.07)] focus-visible:ring-[rgba(31,30,29,0.14)]'
+          : 'text-slate-100 hover:bg-white/[0.12] focus-visible:ring-white/30'
       }`}
     >
       {children}
@@ -262,12 +361,21 @@ export function RichNoteEditor({
   inputStyle,
   roomy = false,
 }) {
+  const editorShellRef = useRef(null);
   const textareaRef = useRef(null);
   const [showGuide, setShowGuide] = useState(false);
+  const [selectionState, setSelectionState] = useState({ start: 0, end: 0, text: '' });
+  const [floatingToolbarStyle, setFloatingToolbarStyle] = useState(null);
   const computedWordCount = useMemo(() => countRichTextWords(value), [value]);
   const visibleWordCount = Number.isFinite(wordCount) ? wordCount : computedWordCount;
   const canShowLimit = Number.isFinite(maxWords);
   const hasPreview = String(value ?? '').trim().length > 0;
+  const showFloatingToolbar = Boolean(floatingToolbarStyle && selectionState.text);
+
+  const hideFloatingToolbar = useCallback(() => {
+    setSelectionState({ start: 0, end: 0, text: '' });
+    setFloatingToolbarStyle(null);
+  }, []);
 
   const commitChange = useCallback((nextValue, nextSelectionStart = null, nextSelectionEnd = null) => {
     const limitedValue = trimRichTextToWordLimit(nextValue, maxWords);
@@ -280,6 +388,44 @@ export function RichNoteEditor({
       });
     }
   }, [maxWords, onChange]);
+
+  const updateSelectionFromTextarea = useCallback(() => {
+    const textarea = textareaRef.current;
+    const editorShell = editorShellRef.current;
+    if (!textarea || !editorShell || document.activeElement !== textarea) {
+      hideFloatingToolbar();
+      return;
+    }
+
+    const start = textarea.selectionStart ?? 0;
+    const end = textarea.selectionEnd ?? 0;
+    if (start === end) {
+      hideFloatingToolbar();
+      return;
+    }
+
+    const selectedText = String(value ?? '').slice(start, end);
+    if (!selectedText.trim()) {
+      hideFloatingToolbar();
+      return;
+    }
+
+    const selectionRect = getTextareaSelectionRect(textarea, start, end);
+    const shellRect = editorShell.getBoundingClientRect();
+    const relativeLeft = clampNumber(selectionRect.left - shellRect.left, 112, Math.max(112, shellRect.width - 112));
+    const relativeTop = Math.max(selectionRect.top - shellRect.top, 44);
+
+    setSelectionState({ start, end, text: selectedText });
+    setFloatingToolbarStyle({
+      left: `${relativeLeft}px`,
+      top: `${relativeTop}px`,
+      transform: 'translate(-50%, calc(-100% - 10px))',
+    });
+  }, [hideFloatingToolbar, value]);
+
+  const scheduleSelectionUpdate = useCallback(() => {
+    window.requestAnimationFrame(updateSelectionFromTextarea);
+  }, [updateSelectionFromTextarea]);
 
   const wrapSelection = useCallback((prefix, suffix, fallback = 'nội dung') => {
     const textarea = textareaRef.current;
@@ -328,52 +474,75 @@ export function RichNoteEditor({
     if (!usesModifier || event.altKey) return;
 
     const key = event.key.toLowerCase();
-    if (key === 'b') {
+    const code = event.code;
+    if (!event.shiftKey && key === 'b') {
       event.preventDefault();
       wrapSelection('**', '**', 'ưu tiên');
-    } else if (key === 'i') {
+    } else if (!event.shiftKey && key === 'i') {
       event.preventDefault();
       wrapSelection('*', '*', 'ý phụ');
-    } else if (key === 'u') {
+    } else if (!event.shiftKey && key === 'u') {
       event.preventDefault();
       wrapSelection('<u>', '</u>', 'deadline');
-    } else if (key === 'k') {
+    } else if (!event.shiftKey && key === 'k') {
       event.preventDefault();
       insertLink();
+    } else if (!event.shiftKey && key === 'e') {
+      event.preventDefault();
+      wrapSelection('`', '`', 'npm test');
+    } else if (event.shiftKey && key === 'x') {
+      event.preventDefault();
+      wrapSelection('~~', '~~', 'bỏ qua');
+    } else if (event.shiftKey && key === 'h') {
+      event.preventDefault();
+      wrapSelection('==', '==', 'cần chốt');
+    } else if (event.shiftKey && (key === '7' || code === 'Digit7')) {
+      event.preventDefault();
+      insertBlock('- [ ] ', 'việc cần làm');
+    } else if (event.shiftKey && (key === '9' || code === 'Digit9')) {
+      event.preventDefault();
+      insertBlock('> ', 'chỉ làm task này trong phiên');
     }
-  }, [insertLink, wrapSelection]);
+  }, [insertBlock, insertLink, wrapSelection]);
+
+  useEffect(() => {
+    if (!showFloatingToolbar) return undefined;
+    const handleResize = () => updateSelectionFromTextarea();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [showFloatingToolbar, updateSelectionFromTextarea]);
 
   return (
-    <div className="space-y-3">
+    <div ref={editorShellRef} className="relative space-y-3">
       <div className="flex flex-wrap items-center gap-2">
-        <FormatButton label="In đậm" lightTheme={lightTheme} onClick={() => wrapSelection('**', '**', 'ưu tiên')}>
+        <FormatButton label="In đậm" shortcut="Cmd/Ctrl+B" lightTheme={lightTheme} onClick={() => wrapSelection('**', '**', 'ưu tiên')}>
           <strong>B</strong>
         </FormatButton>
-        <FormatButton label="In nghiêng" lightTheme={lightTheme} onClick={() => wrapSelection('*', '*', 'ý phụ')}>
+        <FormatButton label="In nghiêng" shortcut="Cmd/Ctrl+I" lightTheme={lightTheme} onClick={() => wrapSelection('*', '*', 'ý phụ')}>
           <em>I</em>
         </FormatButton>
-        <FormatButton label="Gạch chân" lightTheme={lightTheme} onClick={() => wrapSelection('<u>', '</u>', 'deadline')}>
+        <FormatButton label="Gạch chân" shortcut="Cmd/Ctrl+U" lightTheme={lightTheme} onClick={() => wrapSelection('<u>', '</u>', 'deadline')}>
           <span className="underline underline-offset-2">U</span>
         </FormatButton>
-        <FormatButton label="Gạch ngang" lightTheme={lightTheme} onClick={() => wrapSelection('~~', '~~', 'bỏ qua')}>
+        <FormatButton label="Gạch ngang" shortcut="Cmd/Ctrl+Shift+X" lightTheme={lightTheme} onClick={() => wrapSelection('~~', '~~', 'bỏ qua')}>
           <span className="line-through">S</span>
         </FormatButton>
-        <FormatButton label="Inline code" lightTheme={lightTheme} onClick={() => wrapSelection('`', '`', 'npm test')}>
+        <FormatButton label="Inline code" shortcut="Cmd/Ctrl+E" lightTheme={lightTheme} onClick={() => wrapSelection('`', '`', 'npm test')}>
           <code className="font-mono text-[11px]">{'<'}</code>
         </FormatButton>
-        <FormatButton label="Link" lightTheme={lightTheme} onClick={insertLink}>
+        <FormatButton label="Link" shortcut="Cmd/Ctrl+K" lightTheme={lightTheme} onClick={insertLink}>
           <svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M10 13a5 5 0 0 0 7.1 0l2-2a5 5 0 0 0-7.1-7.1l-1.1 1.1" />
             <path d="M14 11a5 5 0 0 0-7.1 0l-2 2a5 5 0 0 0 7.1 7.1l1.1-1.1" />
           </svg>
         </FormatButton>
-        <FormatButton label="Checklist" lightTheme={lightTheme} onClick={() => insertBlock('- [ ] ', 'việc cần làm')}>
+        <FormatButton label="Checklist" shortcut="Cmd/Ctrl+Shift+7" lightTheme={lightTheme} onClick={() => insertBlock('- [ ] ', 'việc cần làm')}>
           <svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <rect x="4" y="4" width="16" height="16" rx="3" />
             <path d="M8 12l2.4 2.4L16 9" />
           </svg>
         </FormatButton>
-        <FormatButton label="Callout" lightTheme={lightTheme} onClick={() => insertBlock('> ', 'chỉ làm task này trong phiên')}>
+        <FormatButton label="Callout" shortcut="Cmd/Ctrl+Shift+9" lightTheme={lightTheme} onClick={() => insertBlock('> ', 'chỉ làm task này trong phiên')}>
           <svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M5 5h14v10H8l-3 3z" />
           </svg>
@@ -383,7 +552,7 @@ export function RichNoteEditor({
           onMouseDown={(event) => event.preventDefault()}
           onClick={() => wrapSelection('==', '==', 'cần chốt')}
           aria-label="Highlight vàng"
-          title="Highlight vàng"
+          title="Highlight vàng (Cmd/Ctrl+Shift+H)"
           className={`flex size-8 items-center justify-center rounded-[10px] border transition-colors focus-visible:outline-none focus-visible:ring-2 ${
             lightTheme
               ? 'border-[rgba(176,125,59,0.22)] bg-[rgba(176,125,59,0.14)] focus-visible:ring-[rgba(31,30,29,0.14)]'
@@ -421,11 +590,104 @@ export function RichNoteEditor({
         </button>
       </div>
 
+      <AnimatePresence>
+        {showFloatingToolbar && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            style={floatingToolbarStyle}
+            onMouseDown={(event) => event.preventDefault()}
+            role="toolbar"
+            aria-label="Định dạng đoạn đang chọn"
+            className={`absolute z-30 flex max-w-[min(92vw,560px)] items-center gap-1 overflow-x-auto rounded-[12px] border px-1.5 py-1.5 shadow-[0_14px_40px_rgba(15,23,42,0.22)] backdrop-blur-xl ${
+              lightTheme
+                ? 'border-[rgba(31,30,29,0.12)] bg-[rgba(255,255,255,0.96)]'
+                : 'border-white/10 bg-slate-950/90'
+            }`}
+          >
+            <FloatingFormatButton label="In đậm" shortcut="Cmd/Ctrl+B" lightTheme={lightTheme} onClick={() => wrapSelection('**', '**', 'ưu tiên')}>
+              <strong>B</strong>
+            </FloatingFormatButton>
+            <FloatingFormatButton label="In nghiêng" shortcut="Cmd/Ctrl+I" lightTheme={lightTheme} onClick={() => wrapSelection('*', '*', 'ý phụ')}>
+              <em>I</em>
+            </FloatingFormatButton>
+            <FloatingFormatButton label="Gạch chân" shortcut="Cmd/Ctrl+U" lightTheme={lightTheme} onClick={() => wrapSelection('<u>', '</u>', 'deadline')}>
+              <span className="underline underline-offset-2">U</span>
+            </FloatingFormatButton>
+            <FloatingFormatButton label="Gạch ngang" shortcut="Cmd/Ctrl+Shift+X" lightTheme={lightTheme} onClick={() => wrapSelection('~~', '~~', 'bỏ qua')}>
+              <span className="line-through">S</span>
+            </FloatingFormatButton>
+            <FloatingFormatButton label="Inline code" shortcut="Cmd/Ctrl+E" lightTheme={lightTheme} onClick={() => wrapSelection('`', '`', 'npm test')}>
+              <code className="font-mono text-[11px]">{'<'}</code>
+            </FloatingFormatButton>
+            <FloatingFormatButton label="Link" shortcut="Cmd/Ctrl+K" lightTheme={lightTheme} onClick={insertLink}>
+              <svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M10 13a5 5 0 0 0 7.1 0l2-2a5 5 0 0 0-7.1-7.1l-1.1 1.1" />
+                <path d="M14 11a5 5 0 0 0-7.1 0l-2 2a5 5 0 0 0 7.1 7.1l1.1-1.1" />
+              </svg>
+            </FloatingFormatButton>
+            <button
+              type="button"
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() => wrapSelection('==', '==', 'cần chốt')}
+              aria-label="Highlight vàng"
+              title="Highlight vàng (Cmd/Ctrl+Shift+H)"
+              className={`flex size-8 shrink-0 items-center justify-center rounded-[8px] transition-colors focus-visible:outline-none focus-visible:ring-2 ${
+                lightTheme
+                  ? 'hover:bg-[rgba(176,125,59,0.13)] focus-visible:ring-[rgba(31,30,29,0.14)]'
+                  : 'hover:bg-amber-300/10 focus-visible:ring-white/30'
+              }`}
+            >
+              <span className="size-3 rounded-full" style={{ background: '#b07d3b' }} />
+            </button>
+            <span className={`mx-1 h-5 w-px shrink-0 ${lightTheme ? 'bg-[rgba(31,30,29,0.12)]' : 'bg-white/10'}`} />
+            {RICH_TEXT_TONES.map((tone) => (
+              <button
+                key={`floating_${tone.id}`}
+                type="button"
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={() => wrapSelection(`{{${tone.id}:`, '}}', tone.label.toLowerCase())}
+                aria-label={`Màu ${tone.label}`}
+                title={`Màu ${tone.label}`}
+                className="flex size-7 shrink-0 items-center justify-center rounded-full transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(31,30,29,0.14)]"
+                style={{ background: tone.soft }}
+              >
+                <span className="size-3 rounded-full" style={{ background: tone.color }} />
+              </button>
+            ))}
+            <span className={`mx-1 h-5 w-px shrink-0 ${lightTheme ? 'bg-[rgba(31,30,29,0.12)]' : 'bg-white/10'}`} />
+            <FloatingFormatButton label="Checklist" shortcut="Cmd/Ctrl+Shift+7" lightTheme={lightTheme} onClick={() => insertBlock('- [ ] ', 'việc cần làm')}>
+              <svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="4" y="4" width="16" height="16" rx="3" />
+                <path d="M8 12l2.4 2.4L16 9" />
+              </svg>
+            </FloatingFormatButton>
+            <FloatingFormatButton label="Callout" shortcut="Cmd/Ctrl+Shift+9" lightTheme={lightTheme} onClick={() => insertBlock('> ', 'chỉ làm task này trong phiên')}>
+              <svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M5 5h14v10H8l-3 3z" />
+              </svg>
+            </FloatingFormatButton>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <textarea
         ref={textareaRef}
         value={value}
         onChange={(event) => commitChange(event.target.value)}
         onKeyDown={handleKeyDown}
+        onKeyUp={scheduleSelectionUpdate}
+        onMouseUp={scheduleSelectionUpdate}
+        onSelect={scheduleSelectionUpdate}
+        onScroll={scheduleSelectionUpdate}
+        onBlur={() => {
+          window.setTimeout(() => {
+            if (!editorShellRef.current?.contains(document.activeElement)) {
+              hideFloatingToolbar();
+            }
+          }, 0);
+        }}
         rows={rows}
         placeholder={placeholder}
         className={`w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 py-2.5 text-sm leading-relaxed shadow-none outline-none transition-all placeholder-slate-600 focus:border-white/[0.16] focus:bg-white/[0.07] ${
@@ -475,6 +737,10 @@ export function RichNoteEditor({
             <span><strong className={lightTheme ? 'text-[var(--ink)]' : 'text-slate-200'}>Cmd/Ctrl+I</strong> in nghiêng.</span>
             <span><strong className={lightTheme ? 'text-[var(--ink)]' : 'text-slate-200'}>Cmd/Ctrl+U</strong> gạch chân.</span>
             <span><strong className={lightTheme ? 'text-[var(--ink)]' : 'text-slate-200'}>Cmd/Ctrl+K</strong> chèn link.</span>
+            <span><strong className={lightTheme ? 'text-[var(--ink)]' : 'text-slate-200'}>Cmd/Ctrl+E</strong> inline code.</span>
+            <span><strong className={lightTheme ? 'text-[var(--ink)]' : 'text-slate-200'}>Cmd/Ctrl+Shift+X</strong> gạch ngang.</span>
+            <span><strong className={lightTheme ? 'text-[var(--ink)]' : 'text-slate-200'}>Cmd/Ctrl+Shift+H</strong> highlight.</span>
+            <span><strong className={lightTheme ? 'text-[var(--ink)]' : 'text-slate-200'}>Cmd/Ctrl+Shift+7/9</strong> checklist hoặc callout.</span>
           </motion.div>
         )}
       </AnimatePresence>

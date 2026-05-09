@@ -384,6 +384,10 @@ function getSessionReviewMeta(entry) {
   };
 }
 
+function isSessionReviewed(entry) {
+  return typeof entry?.goalAchieved === 'boolean';
+}
+
 function summarizeSessionReviews(entries = []) {
   return entries.reduce((acc, entry) => {
     const goalText = getSessionGoalText(entry);
@@ -425,6 +429,61 @@ function SessionReviewBadge({ entry, compact = false }) {
     >
       {compact ? meta.shortLabel : meta.label}
     </span>
+  );
+}
+
+function SessionReviewControls({ achieved, onPick }) {
+  const options = [
+    {
+      value: true,
+      label: 'Đạt',
+      activeStyle: {
+        background: 'rgba(91,122,82,0.18)',
+        borderColor: 'rgba(91,122,82,0.34)',
+        color: '#6f8f62',
+        boxShadow: '0 10px 22px rgba(91,122,82,0.12)',
+      },
+      idleStyle: {
+        background: 'rgba(255,255,255,0.04)',
+        borderColor: 'rgba(148,163,184,0.18)',
+        color: NOTE_PANEL_TEXT,
+      },
+    },
+    {
+      value: false,
+      label: 'Không đạt',
+      activeStyle: {
+        background: 'rgba(201,100,66,0.16)',
+        borderColor: 'rgba(201,100,66,0.30)',
+        color: ACCENT2,
+        boxShadow: '0 10px 22px rgba(201,100,66,0.12)',
+      },
+      idleStyle: {
+        background: 'rgba(255,255,255,0.04)',
+        borderColor: 'rgba(148,163,184,0.18)',
+        color: NOTE_PANEL_TEXT,
+      },
+    },
+  ];
+
+  return (
+    <div className="mt-3 grid grid-cols-2 gap-2">
+      {options.map((option) => {
+        const isActive = achieved === option.value;
+        return (
+          <button
+            key={option.label}
+            type="button"
+            aria-pressed={isActive}
+            onClick={() => onPick(option.value)}
+            className="rounded-full border px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] transition-[background-color,color,border-color,box-shadow,transform] duration-200 hover:-translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(201,100,66,0.28)] focus-visible:ring-offset-2"
+            style={isActive ? option.activeStyle : option.idleStyle}
+          >
+            {option.label}
+          </button>
+        );
+      })}
+    </div>
   );
 }
 
@@ -5424,6 +5483,7 @@ function JournalTab({ history, sessionCategories }) {
   const deleteSavedNoteEntry = useGameStore((s) => s.deleteSavedNoteEntry);
   const deletableSessionId = useGameStore((s) => s.latestSessionUndo?.sessionId ?? null);
   const updateSessionCategory = useGameStore((s) => s.updateSessionCategory);
+  const reviewCompletedSession = useGameStore((s) => s.reviewCompletedSession);
   const PAGE_SIZE = 20;
 
   // Tạo lookup category
@@ -5469,7 +5529,7 @@ function JournalTab({ history, sessionCategories }) {
     return filtered.reduce((acc, entry) => {
       if (entry.note || entry.breakNote) acc.noted += 1;
       if (getSessionGoalText(entry)) acc.withGoal += 1;
-      if (getSessionReviewMeta(entry)) acc.reviewed += 1;
+      if (isSessionReviewed(entry)) acc.reviewed += 1;
       if ((entry.minutes ?? 0) >= 45) acc.deep += 1;
       return acc;
     }, {
@@ -5953,6 +6013,14 @@ function JournalTab({ history, sessionCategories }) {
                                 <p className="mt-2 text-[11px] leading-relaxed" style={{ color: TEXT_MUTED }}>
                                   Phiên này đã có kết quả tự chấm nhưng không lưu mục tiêu bằng chữ.
                                 </p>
+                              )}
+                              {goalText && (
+                                <SessionReviewControls
+                                  achieved={h.goalAchieved}
+                                  onPick={(goalAchieved) => {
+                                    reviewCompletedSession(h.id, { goal: goalText, goalAchieved });
+                                  }}
+                                />
                               )}
                             </div>
                             {reviewMeta && <SessionReviewBadge entry={h} />}

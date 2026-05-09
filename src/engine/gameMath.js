@@ -792,20 +792,42 @@ export function getLevelProgress(totalEXP) {
   return { level, currentLevelEXP, nextLevelEXP, progressPct };
 }
 
+export const HISTORY_ENTRY_STATUS = {
+  COMPLETED: 'completed',
+  CANCELLED: 'cancelled',
+};
+
+export function isCancelledHistoryEntry(entry) {
+  return entry?.status === HISTORY_ENTRY_STATUS.CANCELLED
+    || entry?.cancelled === true
+    || (entry?.completed === false && Boolean(entry?.cancelledAt));
+}
+
+function getHistoryXP(entry) {
+  return entry?.xpEarned ?? entry?.epEarned ?? 0;
+}
+
+function getHistoryMinutes(entry) {
+  return Math.max(0, entry?.minutes ?? 0);
+}
+
 // ─── Thống kê rolling 7 ngày gần nhất ────────────────────────────────────────
 export function computeWeeklyStats(history) {
   const days = {};
   const now = Date.now();
   for (let i = 6; i >= 0; i--) {
     const d = localDateStr(now - i * 86_400_000);
-    days[d] = { date: d, xp: 0, minutes: 0, sessions: 0 };
+    days[d] = { date: d, xp: 0, minutes: 0, sessions: 0, completed: 0, cancelled: 0 };
   }
   for (const h of history) {
     const d = localDateStr(new Date(h.timestamp));
     if (days[d]) {
-      days[d].xp       += h.xpEarned ?? h.epEarned ?? 0; // backward compat
-      days[d].minutes  += h.minutes  ?? 0;
+      const isCancelled = isCancelledHistoryEntry(h);
+      days[d].xp       += getHistoryXP(h); // backward compat
+      days[d].minutes  += getHistoryMinutes(h);
       days[d].sessions += 1;
+      days[d].completed += isCancelled ? 0 : 1;
+      days[d].cancelled += isCancelled ? 1 : 0;
     }
   }
   return Object.values(days);
@@ -813,7 +835,9 @@ export function computeWeeklyStats(history) {
 
 // ─── Thống kê tổng hợp ────────────────────────────────────────────────────────
 export function computeAllTimeStats(history, progress, player = null, historyStats = null) {
-  const best = history.reduce(
+  const completedHistory = history.filter((entry) => !isCancelledHistoryEntry(entry));
+  const cancelledHistory = history.filter(isCancelledHistoryEntry);
+  const best = completedHistory.reduce(
     (m, h) => (h.minutes > m.minutes ? h : m),
     { minutes: 0, xpEarned: 0, epEarned: 0 },
   );
@@ -829,13 +853,19 @@ export function computeAllTimeStats(history, progress, player = null, historySta
     : history.filter((h) => h.jackpot).length;
   const totalBlueprints = Number.isFinite(normalizedHistoryStats.totalBlueprints)
     ? Math.max(0, normalizedHistoryStats.totalBlueprints)
-    : history.filter((h) => (h.refinedEarned ?? 0) > 0 || (h.minutes ?? 0) >= 45).length;
+    : completedHistory.filter((h) => (h.refinedEarned ?? 0) > 0 || (h.minutes ?? 0) >= 45).length;
+  const cancelledSessions = Number.isFinite(normalizedHistoryStats.cancelledSessions)
+    ? Math.max(0, normalizedHistoryStats.cancelledSessions)
+    : cancelledHistory.length;
+  const cancelledMinutes = Number.isFinite(normalizedHistoryStats.cancelledMinutes)
+    ? Math.max(0, normalizedHistoryStats.cancelledMinutes)
+    : cancelledHistory.reduce((sum, h) => sum + getHistoryMinutes(h), 0);
 
   return {
     totalSessions:    progress.sessionsCompleted,
     totalMinutes:     progress.totalFocusMinutes,
     totalHours:       (progress.totalFocusMinutes / 60).toFixed(1),
-    totalXP:          player?.totalEXP ?? history.reduce((sum, h) => sum + (h.xpEarned ?? h.epEarned ?? 0), 0),
+    totalXP:          player?.totalEXP ?? completedHistory.reduce((sum, h) => sum + getHistoryXP(h), 0),
     bestSessionMins,
     bestSessionXP,
     avgSessionLength: history.length
@@ -843,6 +873,10 @@ export function computeAllTimeStats(history, progress, player = null, historySta
       : 0,
     totalJackpots,
     totalBlueprints,
+    trackedSessions: history.length,
+    trackedMinutes: history.reduce((sum, h) => sum + getHistoryMinutes(h), 0),
+    cancelledSessions,
+    cancelledMinutes,
   };
 }
 
@@ -852,14 +886,17 @@ export function computePrevWeekStats(history) {
   const now  = Date.now();
   for (let i = 13; i >= 7; i--) {
     const d = localDateStr(now - i * 86_400_000);
-    days[d] = { date: d, xp: 0, minutes: 0, sessions: 0 };
+    days[d] = { date: d, xp: 0, minutes: 0, sessions: 0, completed: 0, cancelled: 0 };
   }
   for (const h of history) {
     const d = localDateStr(new Date(h.timestamp));
     if (days[d]) {
-      days[d].xp       += h.xpEarned ?? h.epEarned ?? 0;
-      days[d].minutes  += h.minutes  ?? 0;
+      const isCancelled = isCancelledHistoryEntry(h);
+      days[d].xp       += getHistoryXP(h);
+      days[d].minutes  += getHistoryMinutes(h);
       days[d].sessions += 1;
+      days[d].completed += isCancelled ? 0 : 1;
+      days[d].cancelled += isCancelled ? 1 : 0;
     }
   }
   return Object.values(days);
@@ -876,7 +913,7 @@ export function computeHeatmapData(history, days = 84) {
   }
   for (const h of history) {
     const d = localDateStr(new Date(h.timestamp));
-    if (d in map) map[d] += h.minutes ?? 0;
+    if (d in map) map[d] += getHistoryMinutes(h);
   }
   return Object.entries(map).map(([date, minutes]) => ({
     date,
@@ -899,7 +936,7 @@ export function computeYearGrid(history) {
   }
   for (const h of history) {
     const d = localDateStr(new Date(h.timestamp));
-    if (d in map) map[d] += h.minutes ?? 0;
+    if (d in map) map[d] += getHistoryMinutes(h);
   }
   return Object.entries(map).map(([date, minutes]) => ({
     date,
@@ -934,9 +971,12 @@ export function computeCategoryStats(history, categories) {
       };
     }
     const key = h.categoryId && catMap[h.categoryId] ? h.categoryId : '__none__';
+    const isCancelled = isCancelledHistoryEntry(h);
     catMap[key].sessions += 1;
-    catMap[key].minutes  += h.minutes  ?? 0;
-    catMap[key].xp       += h.xpEarned ?? h.epEarned ?? 0;
+    catMap[key].completed = (catMap[key].completed ?? 0) + (isCancelled ? 0 : 1);
+    catMap[key].cancelled = (catMap[key].cancelled ?? 0) + (isCancelled ? 1 : 0);
+    catMap[key].minutes  += getHistoryMinutes(h);
+    catMap[key].xp       += getHistoryXP(h);
   }
 
   return Object.values(catMap)
@@ -955,7 +995,14 @@ export function computeCategoryStats(history, categories) {
 export function computePeriodStats(history, period, n = 7) {
   const now = Date.now();
   const buckets = [];
-  const getHistoryXP = (entry) => entry.xpEarned ?? entry.epEarned ?? 0;
+  const applyHistoryEntryToBucket = (bucket, entry) => {
+    const isCancelled = isCancelledHistoryEntry(entry);
+    bucket.sessions += 1;
+    bucket.completed = (bucket.completed ?? 0) + (isCancelled ? 0 : 1);
+    bucket.cancelled = (bucket.cancelled ?? 0) + (isCancelled ? 1 : 0);
+    bucket.minutes += getHistoryMinutes(entry);
+    bucket.xp += getHistoryXP(entry);
+  };
 
   if (period === 'day') {
     for (let i = n - 1; i >= 0; i--) {
@@ -964,37 +1011,37 @@ export function computePeriodStats(history, period, n = 7) {
       buckets.push({
         key:      d,
         label:    formatVietnamDate(ts, { weekday: 'short', day: 'numeric', month: 'numeric' }),
-        sessions: 0, minutes: 0, xp: 0,
+        sessions: 0, completed: 0, cancelled: 0, minutes: 0, xp: 0,
       });
     }
     for (const h of history) {
       const d = localDateStr(new Date(h.timestamp));
       const b = buckets.find((bk) => bk.key === d);
-      if (b) { b.sessions++; b.minutes += h.minutes ?? 0; b.xp += getHistoryXP(h); }
+      if (b) applyHistoryEntryToBucket(b, h);
     }
   } else if (period === 'week') {
     for (let i = n - 1; i >= 0; i--) {
       const referenceTs = now - i * 7 * 86_400_000;
       const weekKey = localWeekMondayStr(referenceTs);
       const label = `T${formatVietnamDate(weekKey, { day: 'numeric', month: 'numeric' })}`;
-      buckets.push({ key: weekKey, label, sessions: 0, minutes: 0, xp: 0 });
+      buckets.push({ key: weekKey, label, sessions: 0, completed: 0, cancelled: 0, minutes: 0, xp: 0 });
     }
     for (const h of history) {
       const weekKey = localWeekMondayStr(h.timestamp);
       const b  = buckets.find((bk) => bk.key === weekKey);
-      if (b) { b.sessions++; b.minutes += h.minutes ?? 0; b.xp += getHistoryXP(h); }
+      if (b) applyHistoryEntryToBucket(b, h);
     }
   } else if (period === 'month') {
     for (let i = n - 1; i >= 0; i--) {
       const startTs = startOfVietnamMonthTs(now, -i);
       const endTs = startOfVietnamMonthTs(now, -i + 1);
       const label = formatVietnamDate(startTs, { month: 'short', year: '2-digit' });
-      buckets.push({ startTs, endTs, label, sessions: 0, minutes: 0, xp: 0 });
+      buckets.push({ startTs, endTs, label, sessions: 0, completed: 0, cancelled: 0, minutes: 0, xp: 0 });
     }
     for (const h of history) {
       const ts = new Date(h.timestamp).getTime();
       const b  = buckets.find((bk) => ts >= bk.startTs && ts < bk.endTs);
-      if (b) { b.sessions++; b.minutes += h.minutes ?? 0; b.xp += getHistoryXP(h); }
+      if (b) applyHistoryEntryToBucket(b, h);
     }
   } else if (period === 'quarter') {
     for (let i = n - 1; i >= 0; i--) {
@@ -1003,24 +1050,24 @@ export function computePeriodStats(history, period, n = 7) {
       const { month, year } = getVietnamDateParts(startTs);
       const qNum = Math.floor((month - 1) / 3) + 1;
       const label = `Q${qNum}/${String(year).slice(-2)}`;
-      buckets.push({ startTs, endTs, label, sessions: 0, minutes: 0, xp: 0 });
+      buckets.push({ startTs, endTs, label, sessions: 0, completed: 0, cancelled: 0, minutes: 0, xp: 0 });
     }
     for (const h of history) {
       const ts = new Date(h.timestamp).getTime();
       const b  = buckets.find((bk) => ts >= bk.startTs && ts < bk.endTs);
-      if (b) { b.sessions++; b.minutes += h.minutes ?? 0; b.xp += getHistoryXP(h); }
+      if (b) applyHistoryEntryToBucket(b, h);
     }
   } else if (period === 'year') {
     for (let i = n - 1; i >= 0; i--) {
       const startTs = startOfVietnamYearTs(now, -i);
       const endTs = startOfVietnamYearTs(now, -i + 1);
       const { year } = getVietnamDateParts(startTs);
-      buckets.push({ startTs, endTs, label: String(year), sessions: 0, minutes: 0, xp: 0 });
+      buckets.push({ startTs, endTs, label: String(year), sessions: 0, completed: 0, cancelled: 0, minutes: 0, xp: 0 });
     }
     for (const h of history) {
       const ts = new Date(h.timestamp).getTime();
       const b  = buckets.find((bk) => ts >= bk.startTs && ts < bk.endTs);
-      if (b) { b.sessions++; b.minutes += h.minutes ?? 0; b.xp += getHistoryXP(h); }
+      if (b) applyHistoryEntryToBucket(b, h);
     }
   }
 
@@ -1029,11 +1076,14 @@ export function computePeriodStats(history, period, n = 7) {
 
 // ─── Thống kê theo giờ trong ngày (phân tích giờ tập trung tốt nhất) ─────────
 export function computeHourlyStats(history) {
-  const hours = Array.from({ length: 24 }, (_, i) => ({ hour: i, sessions: 0, minutes: 0 }));
+  const hours = Array.from({ length: 24 }, (_, i) => ({ hour: i, sessions: 0, completed: 0, cancelled: 0, minutes: 0 }));
   for (const h of history) {
     const hr = getVietnamHour(h.timestamp);
+    const isCancelled = isCancelledHistoryEntry(h);
     hours[hr].sessions += 1;
-    hours[hr].minutes  += h.minutes ?? 0;
+    hours[hr].completed += isCancelled ? 0 : 1;
+    hours[hr].cancelled += isCancelled ? 1 : 0;
+    hours[hr].minutes  += getHistoryMinutes(h);
   }
   return hours;
 }
@@ -1046,12 +1096,14 @@ export function computeRangeSummary(history, startTs, endTs) {
   });
   return {
     sessions:   filtered.length,
-    minutes:    filtered.reduce((s, h) => s + (h.minutes ?? 0), 0),
+    completed:  filtered.filter((h) => !isCancelledHistoryEntry(h)).length,
+    cancelled:  filtered.filter(isCancelledHistoryEntry).length,
+    minutes:    filtered.reduce((s, h) => s + getHistoryMinutes(h), 0),
     xp:         filtered.reduce((s, h) => s + (h.xpEarned ?? 0), 0),
-    jackpots:   filtered.filter((h) => h.jackpot).length,
-    blueprints: filtered.filter((h) => (h.refinedEarned ?? 0) > 0 || (h.minutes ?? 0) >= 45).length,
+    jackpots:   filtered.filter((h) => !isCancelledHistoryEntry(h) && h.jackpot).length,
+    blueprints: filtered.filter((h) => !isCancelledHistoryEntry(h) && ((h.refinedEarned ?? 0) > 0 || (h.minutes ?? 0) >= 45)).length,
     avgMinutes: filtered.length > 0
-      ? Math.round(filtered.reduce((s, h) => s + (h.minutes ?? 0), 0) / filtered.length)
+      ? Math.round(filtered.reduce((s, h) => s + getHistoryMinutes(h), 0) / filtered.length)
       : 0,
   };
 }

@@ -325,7 +325,7 @@ function serializeBlockNode(node) {
   const blockType = element.dataset?.richBlock;
 
   if (blockType === 'check') {
-    return `- [${element.dataset.checked === 'true' ? 'x' : ' '}] ${content || 'việc cần làm'}`;
+    return `- [${element.dataset.checked === 'true' ? 'x' : ' '}] ${content}`;
   }
 
   if (blockType === 'callout') return `> ${content}`;
@@ -602,7 +602,7 @@ export function RichNoteEditor({
     return range;
   }, []);
 
-  const getActiveEditorRange = useCallback((fallbackText = '') => {
+  const getActiveEditorRange = useCallback(() => {
     const editor = editorRef.current;
     if (!editor) return null;
 
@@ -617,13 +617,6 @@ export function RichNoteEditor({
     if (!range) range = placeCaretAtEditorEnd();
     if (!range) return null;
 
-    if (range.collapsed && fallbackText) {
-      const textNode = document.createTextNode(fallbackText);
-      range.insertNode(textNode);
-      range.selectNodeContents(textNode);
-      restoreSelectionRange(range);
-    }
-
     savedRangeRef.current = range.cloneRange();
     return range;
   }, [focusEditor, placeCaretAtEditorEnd]);
@@ -635,17 +628,21 @@ export function RichNoteEditor({
     savedRangeRef.current = range.cloneRange();
   }, []);
 
-  const runEditorCommand = useCallback((command, fallbackText = 'nội dung') => {
-    const range = getActiveEditorRange(fallbackText);
+  const runEditorCommand = useCallback((command, value = null) => {
+    const range = getActiveEditorRange();
     if (!range) return;
-    document.execCommand(command, false, null);
+    document.execCommand(command, false, value);
     commitEditorChange();
     scheduleSelectionUpdate();
   }, [commitEditorChange, getActiveEditorRange, scheduleSelectionUpdate]);
 
-  const wrapSelectionWithElement = useCallback((tagName, options = {}, fallbackText = 'nội dung') => {
-    const range = getActiveEditorRange(fallbackText);
+  const wrapSelectionWithElement = useCallback((tagName, options = {}) => {
+    const range = getActiveEditorRange();
     if (!range) return;
+    if (range.collapsed) {
+      scheduleSelectionUpdate();
+      return;
+    }
 
     const wrapper = document.createElement(tagName);
     Object.entries(options.attrs ?? {}).forEach(([key, attrValue]) => {
@@ -687,15 +684,23 @@ export function RichNoteEditor({
         textDecoration: 'underline',
         textUnderlineOffset: '4px',
       },
-    }, 'tài liệu');
+    });
   }, [wrapSelectionWithElement]);
 
   const applyColor = useCallback((tone) => {
+    const range = getActiveEditorRange();
+    if (!range) return;
+    if (range.collapsed) {
+      document.execCommand('foreColor', false, tone.color);
+      scheduleSelectionUpdate();
+      return;
+    }
+
     wrapSelectionWithElement('span', {
       dataset: { richColor: tone.id },
       style: { color: tone.color, fontWeight: '650' },
-    }, tone.label.toLowerCase());
-  }, [wrapSelectionWithElement]);
+    });
+  }, [getActiveEditorRange, scheduleSelectionUpdate, wrapSelectionWithElement]);
 
   const makeChecklistControl = useCallback((checked = false) => {
     const control = document.createElement('span');
@@ -731,8 +736,7 @@ export function RichNoteEditor({
   }, []);
 
   const applyBlockFormat = useCallback((type) => {
-    const fallback = type === 'check' ? 'việc cần làm' : 'chỉ làm task này trong phiên';
-    const range = getActiveEditorRange(fallback);
+    const range = getActiveEditorRange();
     const editor = editorRef.current;
     if (!range || !editor) return;
 
@@ -746,11 +750,8 @@ export function RichNoteEditor({
 
     if (!blocks.length) {
       const block = document.createElement('div');
-      if (range.collapsed) {
-        block.textContent = fallback;
-      } else {
-        block.appendChild(range.extractContents());
-      }
+      if (range.collapsed) block.appendChild(document.createElement('br'));
+      else block.appendChild(range.extractContents());
       range.insertNode(block);
       blocks = [block];
     }
@@ -758,7 +759,9 @@ export function RichNoteEditor({
     blocks.forEach((block) => {
       clearBlockFormatting(block);
 
-      if (!block.textContent.trim()) block.appendChild(document.createTextNode(fallback));
+      if (!block.textContent.trim() && !block.querySelector('br')) {
+        block.appendChild(document.createElement('br'));
+      }
 
       if (type === 'check') {
         block.dataset.richBlock = 'check';
@@ -793,10 +796,10 @@ export function RichNoteEditor({
   }, [clearBlockFormatting, commitEditorChange, getActiveEditorRange, makeChecklistControl, scheduleSelectionUpdate]);
 
   const applyFormat = useCallback((format, payload = null) => {
-    if (format === 'bold') runEditorCommand('bold', 'ưu tiên');
-    else if (format === 'italic') runEditorCommand('italic', 'ý phụ');
-    else if (format === 'underline') runEditorCommand('underline', 'deadline');
-    else if (format === 'strike') runEditorCommand('strikeThrough', 'bỏ qua');
+    if (format === 'bold') runEditorCommand('bold');
+    else if (format === 'italic') runEditorCommand('italic');
+    else if (format === 'underline') runEditorCommand('underline');
+    else if (format === 'strike') runEditorCommand('strikeThrough');
     else if (format === 'code') {
       wrapSelectionWithElement('code', {
         style: {
@@ -808,9 +811,17 @@ export function RichNoteEditor({
           fontSize: '0.92em',
           padding: '1px 6px',
         },
-      }, 'npm test');
+      });
     } else if (format === 'link') insertLink();
     else if (format === 'mark') {
+      const range = getActiveEditorRange();
+      if (!range) return;
+      if (range.collapsed) {
+        document.execCommand('backColor', false, 'rgba(176, 125, 59, 0.18)');
+        scheduleSelectionUpdate();
+        return;
+      }
+
       wrapSelectionWithElement('mark', {
         style: {
           backgroundColor: 'rgba(176, 125, 59, 0.18)',
@@ -818,11 +829,11 @@ export function RichNoteEditor({
           color: 'inherit',
           padding: '0 4px',
         },
-      }, 'cần chốt');
+      });
     } else if (format === 'color') applyColor(payload);
     else if (format === 'check') applyBlockFormat('check');
     else if (format === 'callout') applyBlockFormat('callout');
-  }, [applyBlockFormat, applyColor, insertLink, runEditorCommand, wrapSelectionWithElement]);
+  }, [applyBlockFormat, applyColor, getActiveEditorRange, insertLink, runEditorCommand, scheduleSelectionUpdate, wrapSelectionWithElement]);
 
   const handleKeyDown = useCallback((event) => {
     const usesModifier = event.metaKey || event.ctrlKey;

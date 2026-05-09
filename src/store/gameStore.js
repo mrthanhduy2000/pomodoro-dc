@@ -109,6 +109,8 @@ import {
   computeLevelUps,
   getActiveBook,
   getComboDecayMs,
+  HISTORY_ENTRY_STATUS,
+  isCancelledHistoryEntry,
 } from '../engine/gameMath';
 import { inferAchievementUnlockTimes } from '../engine/achievementTimeline';
 import { countRichTextWords } from '../utils/richText';
@@ -1370,6 +1372,8 @@ const makeDefaultHistoryStats = () => ({
   bestSessionId: null,
   totalJackpots: 0,
   totalBlueprints: 0,
+  cancelledSessions: 0,
+  cancelledMinutes: 0,
   sessionsWithGoal: 0,
   reviewedCount: 0,
   achievedCount: 0,
@@ -1438,6 +1442,8 @@ function buildHistoryStatsFromHistory(history = []) {
   let bestSessionId = null;
   let totalJackpots = 0;
   let totalBlueprints = 0;
+  let cancelledSessions = 0;
+  let cancelledMinutes = 0;
   let sessionsWithGoal = 0;
   let reviewedCount = 0;
   let achievedCount = 0;
@@ -1449,15 +1455,21 @@ function buildHistoryStatsFromHistory(history = []) {
     const xpEarned = Number.isFinite(entry?.xpEarned ?? entry?.epEarned)
       ? (entry.xpEarned ?? entry.epEarned)
       : 0;
+    const isCancelled = isCancelledHistoryEntry(entry);
 
-    if (minutes > bestSessionMinutes) {
+    if (isCancelled) {
+      cancelledSessions += 1;
+      cancelledMinutes += minutes;
+    }
+
+    if (!isCancelled && minutes > bestSessionMinutes) {
       bestSessionMinutes = minutes;
       bestSessionXP = xpEarned;
       bestSessionId = entry?.id ?? null;
     }
 
-    if (entry?.jackpot) totalJackpots += 1;
-    if ((entry?.refinedEarned ?? 0) > 0 || minutes >= 45) totalBlueprints += 1;
+    if (!isCancelled && entry?.jackpot) totalJackpots += 1;
+    if (!isCancelled && ((entry?.refinedEarned ?? 0) > 0 || minutes >= 45)) totalBlueprints += 1;
 
     const reviewStats = getHistoryReviewStatsContribution(entry);
     sessionsWithGoal += reviewStats.sessionsWithGoal;
@@ -1473,6 +1485,8 @@ function buildHistoryStatsFromHistory(history = []) {
     bestSessionId,
     totalJackpots,
     totalBlueprints,
+    cancelledSessions,
+    cancelledMinutes,
     sessionsWithGoal,
     reviewedCount,
     achievedCount,
@@ -1499,6 +1513,12 @@ function normalizeStoredHistoryStats(historyStats = {}, history = []) {
     totalBlueprints: Number.isFinite(historyStats?.totalBlueprints)
       ? Math.max(0, historyStats.totalBlueprints)
       : fallback.totalBlueprints,
+    cancelledSessions: Number.isFinite(historyStats?.cancelledSessions)
+      ? Math.max(0, historyStats.cancelledSessions)
+      : fallback.cancelledSessions,
+    cancelledMinutes: Number.isFinite(historyStats?.cancelledMinutes)
+      ? Math.max(0, historyStats.cancelledMinutes)
+      : fallback.cancelledMinutes,
     sessionsWithGoal: Number.isFinite(historyStats?.sessionsWithGoal)
       ? Math.max(0, historyStats.sessionsWithGoal)
       : fallback.sessionsWithGoal,
@@ -3337,6 +3357,12 @@ const useGameStore = create(
             blueprint:        null,
             categoryId:       categoryId ?? null,
             categorySnapshot: sessionSnapshot?.categorySnapshot ?? null,
+            status:           HISTORY_ENTRY_STATUS.COMPLETED,
+            completed:        true,
+            cancelled:        false,
+            cancelledAt:      null,
+            cancelProgressRatio: null,
+            targetMinutes:    minutesFocused,
             comboCount:       newComboCount,
             positiveEvent:    positiveEvent,
             positiveEventRPBonus,
@@ -3358,6 +3384,8 @@ const useGameStore = create(
             bestSessionId: currentHistoryStats.bestSessionId,
             totalJackpots: currentHistoryStats.totalJackpots + (reward.jackpotTriggered ? 1 : 0),
             totalBlueprints: currentHistoryStats.totalBlueprints + (sessionWasBlueprint ? 1 : 0),
+            cancelledSessions: currentHistoryStats.cancelledSessions,
+            cancelledMinutes: currentHistoryStats.cancelledMinutes,
             sessionsWithGoal: currentHistoryStats.sessionsWithGoal,
             reviewedCount: currentHistoryStats.reviewedCount,
             achievedCount: currentHistoryStats.achievedCount,

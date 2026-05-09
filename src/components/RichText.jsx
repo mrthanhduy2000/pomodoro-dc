@@ -21,38 +21,11 @@ const INLINE_PATTERNS = [
 ];
 
 const GUIDE_EXAMPLES = [
-  { label: 'Đậm', syntax: '**ưu tiên**' },
-  { label: 'Nghiêng', syntax: '*ý phụ*' },
-  { label: 'Gạch chân', syntax: '<u>deadline</u>' },
-  { label: 'Highlight', syntax: '==cần chốt==' },
-  { label: 'Checklist', syntax: '- [ ] việc cần làm' },
-];
-
-const TEXTAREA_MIRROR_STYLE_PROPS = [
-  'boxSizing',
-  'width',
-  'borderTopWidth',
-  'borderRightWidth',
-  'borderBottomWidth',
-  'borderLeftWidth',
-  'paddingTop',
-  'paddingRight',
-  'paddingBottom',
-  'paddingLeft',
-  'fontFamily',
-  'fontSize',
-  'fontStyle',
-  'fontVariant',
-  'fontWeight',
-  'letterSpacing',
-  'lineHeight',
-  'textAlign',
-  'textIndent',
-  'textTransform',
-  'wordSpacing',
-  'wordBreak',
-  'overflowWrap',
-  'tabSize',
+  { id: 'bold', label: 'ưu tiên', className: 'font-bold' },
+  { id: 'italic', label: 'ý phụ', className: 'italic' },
+  { id: 'underline', label: 'deadline', className: 'underline underline-offset-2' },
+  { id: 'mark', label: 'cần chốt', className: 'rounded-[5px] px-1', style: { backgroundColor: 'rgba(176, 125, 59, 0.18)' } },
+  { id: 'check', label: 'việc cần làm', className: '' },
 ];
 
 function clampNumber(value, min, max) {
@@ -60,48 +33,44 @@ function clampNumber(value, min, max) {
   return Math.min(Math.max(value, min), max);
 }
 
-function getTextareaSelectionRect(textarea, selectionStart, selectionEnd) {
-  const computedStyle = window.getComputedStyle(textarea);
-  const mirror = document.createElement('div');
-  const marker = document.createElement('span');
-  const selectedText = textarea.value.slice(selectionStart, selectionEnd);
+function escapeHtml(value = '') {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
 
-  mirror.setAttribute('aria-hidden', 'true');
-  mirror.style.position = 'fixed';
-  mirror.style.left = '-9999px';
-  mirror.style.top = '0';
-  mirror.style.visibility = 'hidden';
-  mirror.style.whiteSpace = 'pre-wrap';
-  mirror.style.overflow = 'hidden';
-  mirror.style.pointerEvents = 'none';
+function isNodeInside(parent, node) {
+  if (!parent || !node) return false;
+  return node === parent || parent.contains(node.nodeType === Node.TEXT_NODE ? node.parentNode : node);
+}
 
-  TEXTAREA_MIRROR_STYLE_PROPS.forEach((prop) => {
-    mirror.style[prop] = computedStyle[prop];
-  });
+function getEditorSelectionRange(editor) {
+  const selection = window.getSelection();
+  if (!selection || selection.rangeCount === 0) return null;
+  const range = selection.getRangeAt(0);
+  if (!isNodeInside(editor, range.commonAncestorContainer)) return null;
+  return range;
+}
 
-  marker.textContent = selectedText.replace(/\n$/g, '\n\u200b') || '\u200b';
-  mirror.textContent = textarea.value.slice(0, selectionStart);
-  mirror.appendChild(marker);
-  document.body.appendChild(mirror);
+function restoreSelectionRange(range) {
+  if (!range) return;
+  const selection = window.getSelection();
+  selection.removeAllRanges();
+  selection.addRange(range);
+}
 
-  const markerRect = marker.getBoundingClientRect();
-  const mirrorRect = mirror.getBoundingClientRect();
-  const textareaRect = textarea.getBoundingClientRect();
-  const lineHeight = Number.parseFloat(computedStyle.lineHeight)
-    || Number.parseFloat(computedStyle.fontSize) * 1.25
-    || 18;
-  const rawLeft = textareaRect.left + markerRect.left - mirrorRect.left - textarea.scrollLeft;
-  const rawTop = textareaRect.top + markerRect.top - mirrorRect.top - textarea.scrollTop;
-  const left = clampNumber(
-    rawLeft + markerRect.width / 2,
-    textareaRect.left + 92,
-    textareaRect.right - 92,
-  );
-  const top = clampNumber(rawTop, textareaRect.top + lineHeight, textareaRect.bottom);
+function getEditorSelectionRect(editor) {
+  const range = getEditorSelectionRange(editor);
+  if (!range || range.collapsed) return null;
 
-  mirror.remove();
+  const rect = range.getBoundingClientRect();
+  if (rect.width || rect.height) return rect;
 
-  return { left, top };
+  const firstClientRect = range.getClientRects()[0];
+  return firstClientRect ?? null;
 }
 
 function getSafeHref(url) {
@@ -221,6 +190,169 @@ function renderInline(text, keyPrefix = 'inline') {
   }
 
   return nodes;
+}
+
+function renderInlineHtml(text) {
+  const chunks = [];
+  let remaining = String(text ?? '');
+
+  while (remaining) {
+    const token = findNextInlineToken(remaining);
+
+    if (!token) {
+      chunks.push(escapeHtml(remaining));
+      break;
+    }
+
+    const { match, type } = token;
+    if (match.index > 0) {
+      chunks.push(escapeHtml(remaining.slice(0, match.index)));
+    }
+
+    if (type === 'link') {
+      const href = getSafeHref(match[2]);
+      chunks.push(href
+        ? `<a href="${escapeHtml(href)}" data-rich-link="true" target="_blank" rel="noreferrer" style="color: var(--accent, #c96442); font-weight: 650; text-decoration: underline; text-underline-offset: 4px;">${renderInlineHtml(match[1])}</a>`
+        : `<span>${renderInlineHtml(match[1])}</span>`);
+    } else if (type === 'color') {
+      const toneId = String(match[1]).toLowerCase();
+      const tone = RICH_TEXT_TONE_MAP[toneId] ?? RICH_TEXT_TONE_MAP.red;
+      chunks.push(`<span data-rich-color="${tone.id}" style="color: ${tone.color}; font-weight: 650;">${renderInlineHtml(match[2])}</span>`);
+    } else if (type === 'underline') {
+      chunks.push(`<u>${renderInlineHtml(match[1])}</u>`);
+    } else if (type === 'bold') {
+      chunks.push(`<strong>${renderInlineHtml(match[1])}</strong>`);
+    } else if (type === 'strike') {
+      chunks.push(`<s style="opacity: 0.72;">${renderInlineHtml(match[1])}</s>`);
+    } else if (type === 'mark') {
+      chunks.push(`<mark style="background-color: rgba(176, 125, 59, 0.18); border-radius: 5px; color: inherit; padding: 0 4px;">${renderInlineHtml(match[1])}</mark>`);
+    } else if (type === 'code') {
+      chunks.push(`<code style="background: rgba(31, 30, 29, 0.06); border: 1px solid var(--line, rgba(31,30,29,0.12)); border-radius: 6px; color: var(--accent-ink, #8a3f24); font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 0.92em; padding: 1px 6px;">${escapeHtml(match[1])}</code>`);
+    } else {
+      chunks.push(`<em>${renderInlineHtml(match[1])}</em>`);
+    }
+
+    remaining = remaining.slice(match.index + match[0].length);
+  }
+
+  return chunks.join('');
+}
+
+function getChecklistControlHtml(checked = false) {
+  return `<span data-rich-control="checkbox" contenteditable="false" style="align-items: center; background: ${checked ? 'var(--good-soft, rgba(91,122,82,0.16))' : 'transparent'}; border: 1px solid ${checked ? 'rgba(91,122,82,0.28)' : 'var(--line-2, rgba(31,30,29,0.18))'}; border-radius: 5px; color: var(--good, #5b7a52); display: inline-flex; flex: 0 0 auto; font-size: 10px; font-weight: 700; height: 16px; justify-content: center; line-height: 1; margin-right: 10px; margin-top: 0.18em; width: 16px;">${checked ? '✓' : ''}</span>`;
+}
+
+function renderEditorLineHtml(line) {
+  if (!String(line ?? '').trim()) return '<div><br></div>';
+
+  const checklistMatch = line.match(/^\s*[-*]\s+\[([ xX])\]\s+(.*)$/);
+  if (checklistMatch) {
+    const checked = checklistMatch[1].toLowerCase() === 'x';
+    return `<div data-rich-block="check" data-checked="${checked ? 'true' : 'false'}" style="display: flex; align-items: flex-start; gap: 0; min-height: 1.7em;">${getChecklistControlHtml(checked)}<span>${renderInlineHtml(checklistMatch[2])}</span></div>`;
+  }
+
+  const headingMatch = line.match(/^\s{0,3}(#{1,3})\s+(.+)$/);
+  if (headingMatch) {
+    const level = String(headingMatch[1].length);
+    const fontSize = level === '1' ? '1.05rem' : '0.95rem';
+    return `<div data-rich-block="heading" data-level="${level}" style="color: var(--ink, #1f1e1d); font-size: ${fontSize}; font-weight: 650; line-height: 1.35;">${renderInlineHtml(headingMatch[2])}</div>`;
+  }
+
+  const calloutMatch = line.match(/^\s*>\s?(.*)$/);
+  if (calloutMatch) {
+    return `<div data-rich-block="callout" style="background: rgba(201, 100, 66, 0.08); border-left: 2px solid var(--accent, #c96442); border-radius: 12px; color: var(--ink-2, #3a3936); padding: 8px 12px;">${renderInlineHtml(calloutMatch[1])}</div>`;
+  }
+
+  return `<div>${renderInlineHtml(line)}</div>`;
+}
+
+function richTextToEditorHtml(value = '') {
+  const lines = String(value ?? '').split(/\r?\n/);
+  return lines.map(renderEditorLineHtml).join('');
+}
+
+function serializeNodeChildren(node) {
+  return Array.from(node.childNodes ?? []).map((child) => serializeInlineNode(child)).join('');
+}
+
+function serializeInlineNode(node) {
+  if (!node) return '';
+  if (node.nodeType === Node.TEXT_NODE) return node.nodeValue.replace(/\u00a0/g, ' ');
+  if (node.nodeType !== Node.ELEMENT_NODE) return '';
+
+  const element = node;
+  const tagName = element.tagName.toLowerCase();
+  if (tagName === 'br') return '';
+  if (element.dataset?.richControl) return '';
+
+  const content = serializeNodeChildren(element);
+  if (!content) return '';
+
+  if (element.dataset?.richColor && RICH_TEXT_TONE_MAP[element.dataset.richColor]) {
+    return `{{${element.dataset.richColor}:${content}}}`;
+  }
+
+  if (tagName === 'a') {
+    const href = getSafeHref(element.getAttribute('href'));
+    return href ? `[${content}](${href})` : content;
+  }
+
+  if (tagName === 'strong' || tagName === 'b') return `**${content}**`;
+  if (tagName === 'em' || tagName === 'i') return `*${content}*`;
+  if (tagName === 'u') return `<u>${content}</u>`;
+  if (tagName === 's' || tagName === 'strike' || tagName === 'del') return `~~${content}~~`;
+  if (tagName === 'mark') return `==${content}==`;
+  if (tagName === 'code') return `\`${element.textContent.replace(/\s+/g, ' ').trim() || content}\``;
+
+  return content;
+}
+
+function isBlockElement(node) {
+  if (!node || node.nodeType !== Node.ELEMENT_NODE) return false;
+  return ['div', 'p', 'h1', 'h2', 'h3', 'li'].includes(node.tagName.toLowerCase());
+}
+
+function serializeBlockNode(node) {
+  if (!node) return '';
+  if (node.nodeType === Node.TEXT_NODE) return serializeInlineNode(node);
+  if (node.nodeType !== Node.ELEMENT_NODE) return '';
+
+  const element = node;
+  const tagName = element.tagName.toLowerCase();
+  if (tagName === 'br') return '';
+
+  const content = serializeNodeChildren(element).trim();
+  const blockType = element.dataset?.richBlock;
+
+  if (blockType === 'check') {
+    return `- [${element.dataset.checked === 'true' ? 'x' : ' '}] ${content || 'việc cần làm'}`;
+  }
+
+  if (blockType === 'callout') return `> ${content}`;
+
+  if (blockType === 'heading') {
+    const level = clampNumber(Number(element.dataset.level) || 1, 1, 3);
+    return `${'#'.repeat(level)} ${content}`;
+  }
+
+  if (tagName === 'h1' || tagName === 'h2' || tagName === 'h3') {
+    const level = clampNumber(Number(tagName.slice(1)) || 1, 1, 3);
+    return `${'#'.repeat(level)} ${content}`;
+  }
+
+  return content;
+}
+
+function serializeEditorRichText(editor) {
+  if (!editor) return '';
+  const childNodes = Array.from(editor.childNodes);
+  if (!childNodes.length) return '';
+
+  if (!childNodes.some(isBlockElement)) {
+    return serializeNodeChildren(editor).trim();
+  }
+
+  return childNodes.map(serializeBlockNode).join('\n').replace(/\n+$/g, '');
 }
 
 function renderRichLine(line, index, compact) {
@@ -362,112 +494,328 @@ export function RichNoteEditor({
   roomy = false,
 }) {
   const editorShellRef = useRef(null);
-  const textareaRef = useRef(null);
+  const editorRef = useRef(null);
+  const savedRangeRef = useRef(null);
+  const lastCommittedValueRef = useRef(String(value ?? ''));
+  const [initialEditorHtml] = useState(() => richTextToEditorHtml(value));
   const [showGuide, setShowGuide] = useState(false);
-  const [selectionState, setSelectionState] = useState({ start: 0, end: 0, text: '' });
+  const [isFocused, setIsFocused] = useState(false);
+  const [selectionState, setSelectionState] = useState({ text: '' });
   const [floatingToolbarStyle, setFloatingToolbarStyle] = useState(null);
   const computedWordCount = useMemo(() => countRichTextWords(value), [value]);
   const visibleWordCount = Number.isFinite(wordCount) ? wordCount : computedWordCount;
   const canShowLimit = Number.isFinite(maxWords);
   const hasPreview = String(value ?? '').trim().length > 0;
   const showFloatingToolbar = Boolean(floatingToolbarStyle && selectionState.text);
+  const editorMinHeight = roomy ? 260 : Math.max(116, rows * 26 + 34);
 
   const hideFloatingToolbar = useCallback(() => {
-    setSelectionState({ start: 0, end: 0, text: '' });
+    setSelectionState({ text: '' });
     setFloatingToolbarStyle(null);
   }, []);
 
-  const commitChange = useCallback((nextValue, nextSelectionStart = null, nextSelectionEnd = null) => {
-    const limitedValue = trimRichTextToWordLimit(nextValue, maxWords);
+  const commitEditorChange = useCallback(() => {
+    const editor = editorRef.current;
+    if (!editor) return;
+
+    const rawValue = serializeEditorRichText(editor);
+    const limitedValue = trimRichTextToWordLimit(rawValue, maxWords);
+    lastCommittedValueRef.current = limitedValue;
     onChange(limitedValue);
 
-    if (nextSelectionStart !== null && nextSelectionEnd !== null) {
-      window.requestAnimationFrame(() => {
-        textareaRef.current?.focus();
-        textareaRef.current?.setSelectionRange(nextSelectionStart, nextSelectionEnd);
-      });
+    if (limitedValue !== rawValue) {
+      editor.innerHTML = richTextToEditorHtml(limitedValue);
     }
   }, [maxWords, onChange]);
 
-  const updateSelectionFromTextarea = useCallback(() => {
-    const textarea = textareaRef.current;
+  const updateSelectionFromEditor = useCallback(() => {
+    const editor = editorRef.current;
     const editorShell = editorShellRef.current;
-    if (!textarea || !editorShell || document.activeElement !== textarea) {
+    const selection = window.getSelection();
+    if (!editor || !editorShell || !selection || selection.rangeCount === 0) {
       hideFloatingToolbar();
       return;
     }
 
-    const start = textarea.selectionStart ?? 0;
-    const end = textarea.selectionEnd ?? 0;
-    if (start === end) {
+    const range = selection.getRangeAt(0);
+    if (!isNodeInside(editor, range.commonAncestorContainer)) {
       hideFloatingToolbar();
       return;
     }
 
-    const selectedText = String(value ?? '').slice(start, end);
+    savedRangeRef.current = range.cloneRange();
+    const selectedText = selection.toString();
     if (!selectedText.trim()) {
       hideFloatingToolbar();
       return;
     }
 
-    const selectionRect = getTextareaSelectionRect(textarea, start, end);
+    const selectionRect = getEditorSelectionRect(editor);
+    if (!selectionRect) {
+      hideFloatingToolbar();
+      return;
+    }
+
     const shellRect = editorShell.getBoundingClientRect();
-    const relativeLeft = clampNumber(selectionRect.left - shellRect.left, 112, Math.max(112, shellRect.width - 112));
+    const relativeLeft = clampNumber(selectionRect.left + selectionRect.width / 2 - shellRect.left, 112, Math.max(112, shellRect.width - 112));
     const relativeTop = Math.max(selectionRect.top - shellRect.top, 44);
 
-    setSelectionState({ start, end, text: selectedText });
+    setSelectionState({ text: selectedText });
     setFloatingToolbarStyle({
       left: `${relativeLeft}px`,
       top: `${relativeTop}px`,
       transform: 'translate(-50%, calc(-100% - 10px))',
     });
-  }, [hideFloatingToolbar, value]);
+  }, [hideFloatingToolbar]);
 
   const scheduleSelectionUpdate = useCallback(() => {
-    window.requestAnimationFrame(updateSelectionFromTextarea);
-  }, [updateSelectionFromTextarea]);
+    window.requestAnimationFrame(updateSelectionFromEditor);
+  }, [updateSelectionFromEditor]);
 
-  const wrapSelection = useCallback((prefix, suffix, fallback = 'nội dung') => {
-    const textarea = textareaRef.current;
-    const currentValue = String(value ?? '');
-    const start = textarea?.selectionStart ?? currentValue.length;
-    const end = textarea?.selectionEnd ?? currentValue.length;
-    const selected = currentValue.slice(start, end) || fallback;
-    const nextValue = `${currentValue.slice(0, start)}${prefix}${selected}${suffix}${currentValue.slice(end)}`;
-    const selectionStart = start + prefix.length;
-    const selectionEnd = selectionStart + selected.length;
-    commitChange(nextValue, selectionStart, selectionEnd);
-  }, [commitChange, value]);
+  const focusEditor = useCallback(() => {
+    const editor = editorRef.current;
+    if (!editor) return;
+    editor.focus();
+  }, []);
 
-  const insertBlock = useCallback((prefix, fallback = 'việc cần làm') => {
-    const textarea = textareaRef.current;
-    const currentValue = String(value ?? '');
-    const start = textarea?.selectionStart ?? currentValue.length;
-    const end = textarea?.selectionEnd ?? currentValue.length;
-    const selected = currentValue.slice(start, end);
-    const lineStart = start > 0 && currentValue[start - 1] !== '\n' ? '\n' : '';
-    const lineEnd = currentValue[end] && currentValue[end] !== '\n' ? '\n' : '';
-    const body = selected
-      ? selected.split(/\r?\n/).map((line) => (line.trim() ? `${prefix}${line.replace(/^\s*[-*]\s+\[[ xX]\]\s+/, '')}` : line)).join('\n')
-      : `${prefix}${fallback}`;
-    const nextValue = `${currentValue.slice(0, start)}${lineStart}${body}${lineEnd}${currentValue.slice(end)}`;
-    const selectionStart = start + lineStart.length + prefix.length;
-    const selectionEnd = selectionStart + (selected ? Math.max(selected.split(/\r?\n/)[0]?.length ?? 0, 0) : fallback.length);
-    commitChange(nextValue, selectionStart, selectionEnd);
-  }, [commitChange, value]);
+  const placeCaretAtEditorEnd = useCallback(() => {
+    const editor = editorRef.current;
+    if (!editor) return null;
+    const lastChild = editor.lastChild;
+    const target = isBlockElement(lastChild) ? lastChild : editor;
+    if (target !== editor && !target.textContent.trim()) {
+      target.innerHTML = '';
+    }
+
+    const range = document.createRange();
+    range.selectNodeContents(target);
+    range.collapse(false);
+    restoreSelectionRange(range);
+    savedRangeRef.current = range.cloneRange();
+    return range;
+  }, []);
+
+  const getActiveEditorRange = useCallback((fallbackText = '') => {
+    const editor = editorRef.current;
+    if (!editor) return null;
+
+    focusEditor();
+    let range = getEditorSelectionRange(editor);
+
+    if (!range && savedRangeRef.current && isNodeInside(editor, savedRangeRef.current.commonAncestorContainer)) {
+      range = savedRangeRef.current.cloneRange();
+      restoreSelectionRange(range);
+    }
+
+    if (!range) range = placeCaretAtEditorEnd();
+    if (!range) return null;
+
+    if (range.collapsed && fallbackText) {
+      const textNode = document.createTextNode(fallbackText);
+      range.insertNode(textNode);
+      range.selectNodeContents(textNode);
+      restoreSelectionRange(range);
+    }
+
+    savedRangeRef.current = range.cloneRange();
+    return range;
+  }, [focusEditor, placeCaretAtEditorEnd]);
+
+  const selectNodeContents = useCallback((node) => {
+    const range = document.createRange();
+    range.selectNodeContents(node);
+    restoreSelectionRange(range);
+    savedRangeRef.current = range.cloneRange();
+  }, []);
+
+  const runEditorCommand = useCallback((command, fallbackText = 'nội dung') => {
+    const range = getActiveEditorRange(fallbackText);
+    if (!range) return;
+    document.execCommand(command, false, null);
+    commitEditorChange();
+    scheduleSelectionUpdate();
+  }, [commitEditorChange, getActiveEditorRange, scheduleSelectionUpdate]);
+
+  const wrapSelectionWithElement = useCallback((tagName, options = {}, fallbackText = 'nội dung') => {
+    const range = getActiveEditorRange(fallbackText);
+    if (!range) return;
+
+    const wrapper = document.createElement(tagName);
+    Object.entries(options.attrs ?? {}).forEach(([key, attrValue]) => {
+      wrapper.setAttribute(key, attrValue);
+    });
+    Object.entries(options.dataset ?? {}).forEach(([key, dataValue]) => {
+      wrapper.dataset[key] = dataValue;
+    });
+    Object.assign(wrapper.style, options.style ?? {});
+
+    const fragment = range.extractContents();
+    wrapper.appendChild(fragment);
+    range.insertNode(wrapper);
+    selectNodeContents(wrapper);
+    commitEditorChange();
+    scheduleSelectionUpdate();
+  }, [commitEditorChange, getActiveEditorRange, scheduleSelectionUpdate, selectNodeContents]);
 
   const insertLink = useCallback(() => {
-    const textarea = textareaRef.current;
-    const currentValue = String(value ?? '');
-    const start = textarea?.selectionStart ?? currentValue.length;
-    const end = textarea?.selectionEnd ?? currentValue.length;
-    const selected = currentValue.slice(start, end) || 'tài liệu';
-    const url = 'https://';
-    const snippet = `[${selected}](${url})`;
-    const nextValue = `${currentValue.slice(0, start)}${snippet}${currentValue.slice(end)}`;
-    const urlStart = start + selected.length + 3;
-    commitChange(nextValue, urlStart, urlStart + url.length);
-  }, [commitChange, value]);
+    const input = window.prompt('Dán link', 'https://');
+    if (input === null) return;
+
+    const normalizedInput = input.trim();
+    if (!normalizedInput) return;
+
+    const href = getSafeHref(normalizedInput) ?? getSafeHref(`https://${normalizedInput}`);
+    if (!href) return;
+
+    wrapSelectionWithElement('a', {
+      attrs: {
+        href,
+        'data-rich-link': 'true',
+        target: '_blank',
+        rel: 'noreferrer',
+      },
+      style: {
+        color: 'var(--accent, #c96442)',
+        fontWeight: '650',
+        textDecoration: 'underline',
+        textUnderlineOffset: '4px',
+      },
+    }, 'tài liệu');
+  }, [wrapSelectionWithElement]);
+
+  const applyColor = useCallback((tone) => {
+    wrapSelectionWithElement('span', {
+      dataset: { richColor: tone.id },
+      style: { color: tone.color, fontWeight: '650' },
+    }, tone.label.toLowerCase());
+  }, [wrapSelectionWithElement]);
+
+  const makeChecklistControl = useCallback((checked = false) => {
+    const control = document.createElement('span');
+    control.dataset.richControl = 'checkbox';
+    control.contentEditable = 'false';
+    control.textContent = checked ? '✓' : '';
+    Object.assign(control.style, {
+      alignItems: 'center',
+      background: checked ? 'var(--good-soft, rgba(91,122,82,0.16))' : 'transparent',
+      border: `1px solid ${checked ? 'rgba(91,122,82,0.28)' : 'var(--line-2, rgba(31,30,29,0.18))'}`,
+      borderRadius: '5px',
+      color: 'var(--good, #5b7a52)',
+      display: 'inline-flex',
+      flex: '0 0 auto',
+      fontSize: '10px',
+      fontWeight: '700',
+      height: '16px',
+      justifyContent: 'center',
+      lineHeight: '1',
+      marginRight: '10px',
+      marginTop: '0.18em',
+      width: '16px',
+    });
+    return control;
+  }, []);
+
+  const clearBlockFormatting = useCallback((block) => {
+    block.removeAttribute('data-rich-block');
+    block.removeAttribute('data-checked');
+    block.removeAttribute('data-level');
+    block.removeAttribute('style');
+    block.querySelectorAll('[data-rich-control]').forEach((node) => node.remove());
+  }, []);
+
+  const applyBlockFormat = useCallback((type) => {
+    const fallback = type === 'check' ? 'việc cần làm' : 'chỉ làm task này trong phiên';
+    const range = getActiveEditorRange(fallback);
+    const editor = editorRef.current;
+    if (!range || !editor) return;
+
+    let blocks = Array.from(editor.children).filter((child) => {
+      try {
+        return range.intersectsNode(child);
+      } catch {
+        return false;
+      }
+    });
+
+    if (!blocks.length) {
+      const block = document.createElement('div');
+      if (range.collapsed) {
+        block.textContent = fallback;
+      } else {
+        block.appendChild(range.extractContents());
+      }
+      range.insertNode(block);
+      blocks = [block];
+    }
+
+    blocks.forEach((block) => {
+      clearBlockFormatting(block);
+
+      if (!block.textContent.trim()) block.appendChild(document.createTextNode(fallback));
+
+      if (type === 'check') {
+        block.dataset.richBlock = 'check';
+        block.dataset.checked = 'false';
+        Object.assign(block.style, {
+          alignItems: 'flex-start',
+          display: 'flex',
+          gap: '0',
+          minHeight: '1.7em',
+        });
+        block.prepend(makeChecklistControl(false));
+      } else if (type === 'callout') {
+        block.dataset.richBlock = 'callout';
+        Object.assign(block.style, {
+          background: 'rgba(201, 100, 66, 0.08)',
+          borderLeft: '2px solid var(--accent, #c96442)',
+          borderRadius: '12px',
+          color: 'var(--ink-2, #3a3936)',
+          padding: '8px 12px',
+        });
+      }
+    });
+
+    const targetBlock = blocks[blocks.length - 1];
+    const nextRange = document.createRange();
+    nextRange.selectNodeContents(targetBlock);
+    nextRange.collapse(false);
+    restoreSelectionRange(nextRange);
+    savedRangeRef.current = nextRange.cloneRange();
+    commitEditorChange();
+    scheduleSelectionUpdate();
+  }, [clearBlockFormatting, commitEditorChange, getActiveEditorRange, makeChecklistControl, scheduleSelectionUpdate]);
+
+  const applyFormat = useCallback((format, payload = null) => {
+    if (format === 'bold') runEditorCommand('bold', 'ưu tiên');
+    else if (format === 'italic') runEditorCommand('italic', 'ý phụ');
+    else if (format === 'underline') runEditorCommand('underline', 'deadline');
+    else if (format === 'strike') runEditorCommand('strikeThrough', 'bỏ qua');
+    else if (format === 'code') {
+      wrapSelectionWithElement('code', {
+        style: {
+          background: 'rgba(31, 30, 29, 0.06)',
+          border: '1px solid var(--line, rgba(31,30,29,0.12))',
+          borderRadius: '6px',
+          color: 'var(--accent-ink, #8a3f24)',
+          fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+          fontSize: '0.92em',
+          padding: '1px 6px',
+        },
+      }, 'npm test');
+    } else if (format === 'link') insertLink();
+    else if (format === 'mark') {
+      wrapSelectionWithElement('mark', {
+        style: {
+          backgroundColor: 'rgba(176, 125, 59, 0.18)',
+          borderRadius: '5px',
+          color: 'inherit',
+          padding: '0 4px',
+        },
+      }, 'cần chốt');
+    } else if (format === 'color') applyColor(payload);
+    else if (format === 'check') applyBlockFormat('check');
+    else if (format === 'callout') applyBlockFormat('callout');
+  }, [applyBlockFormat, applyColor, insertLink, runEditorCommand, wrapSelectionWithElement]);
 
   const handleKeyDown = useCallback((event) => {
     const usesModifier = event.metaKey || event.ctrlKey;
@@ -477,72 +825,108 @@ export function RichNoteEditor({
     const code = event.code;
     if (!event.shiftKey && key === 'b') {
       event.preventDefault();
-      wrapSelection('**', '**', 'ưu tiên');
+      applyFormat('bold');
     } else if (!event.shiftKey && key === 'i') {
       event.preventDefault();
-      wrapSelection('*', '*', 'ý phụ');
+      applyFormat('italic');
     } else if (!event.shiftKey && key === 'u') {
       event.preventDefault();
-      wrapSelection('<u>', '</u>', 'deadline');
+      applyFormat('underline');
     } else if (!event.shiftKey && key === 'k') {
       event.preventDefault();
-      insertLink();
+      applyFormat('link');
     } else if (!event.shiftKey && key === 'e') {
       event.preventDefault();
-      wrapSelection('`', '`', 'npm test');
+      applyFormat('code');
     } else if (event.shiftKey && key === 'x') {
       event.preventDefault();
-      wrapSelection('~~', '~~', 'bỏ qua');
+      applyFormat('strike');
     } else if (event.shiftKey && key === 'h') {
       event.preventDefault();
-      wrapSelection('==', '==', 'cần chốt');
+      applyFormat('mark');
     } else if (event.shiftKey && (key === '7' || code === 'Digit7')) {
       event.preventDefault();
-      insertBlock('- [ ] ', 'việc cần làm');
+      applyFormat('check');
     } else if (event.shiftKey && (key === '9' || code === 'Digit9')) {
       event.preventDefault();
-      insertBlock('> ', 'chỉ làm task này trong phiên');
+      applyFormat('callout');
     }
-  }, [insertBlock, insertLink, wrapSelection]);
+  }, [applyFormat]);
+
+  const handleEditorInput = useCallback(() => {
+    commitEditorChange();
+    scheduleSelectionUpdate();
+  }, [commitEditorChange, scheduleSelectionUpdate]);
+
+  const handlePaste = useCallback((event) => {
+    event.preventDefault();
+    const text = event.clipboardData.getData('text/plain');
+    document.execCommand('insertText', false, text);
+    commitEditorChange();
+  }, [commitEditorChange]);
 
   useEffect(() => {
     if (!showFloatingToolbar) return undefined;
-    const handleResize = () => updateSelectionFromTextarea();
+    const handleResize = () => updateSelectionFromEditor();
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
-  }, [showFloatingToolbar, updateSelectionFromTextarea]);
+  }, [showFloatingToolbar, updateSelectionFromEditor]);
+
+  useEffect(() => {
+    const handleSelectionChange = () => {
+      const editor = editorRef.current;
+      const selection = window.getSelection();
+      if (!editor || !selection || selection.rangeCount === 0) return;
+      if (isNodeInside(editor, selection.getRangeAt(0).commonAncestorContainer)) {
+        scheduleSelectionUpdate();
+      }
+    };
+
+    document.addEventListener('selectionchange', handleSelectionChange);
+    return () => document.removeEventListener('selectionchange', handleSelectionChange);
+  }, [scheduleSelectionUpdate]);
+
+  useEffect(() => {
+    const nextValue = String(value ?? '');
+    if (nextValue === lastCommittedValueRef.current) return;
+
+    const editor = editorRef.current;
+    if (!editor) return;
+    editor.innerHTML = richTextToEditorHtml(nextValue);
+    lastCommittedValueRef.current = nextValue;
+  }, [value]);
 
   return (
     <div ref={editorShellRef} className="relative space-y-3">
       <div className="flex flex-wrap items-center gap-2">
-        <FormatButton label="In đậm" shortcut="Cmd/Ctrl+B" lightTheme={lightTheme} onClick={() => wrapSelection('**', '**', 'ưu tiên')}>
+        <FormatButton label="In đậm" shortcut="Cmd/Ctrl+B" lightTheme={lightTheme} onClick={() => applyFormat('bold')}>
           <strong>B</strong>
         </FormatButton>
-        <FormatButton label="In nghiêng" shortcut="Cmd/Ctrl+I" lightTheme={lightTheme} onClick={() => wrapSelection('*', '*', 'ý phụ')}>
+        <FormatButton label="In nghiêng" shortcut="Cmd/Ctrl+I" lightTheme={lightTheme} onClick={() => applyFormat('italic')}>
           <em>I</em>
         </FormatButton>
-        <FormatButton label="Gạch chân" shortcut="Cmd/Ctrl+U" lightTheme={lightTheme} onClick={() => wrapSelection('<u>', '</u>', 'deadline')}>
+        <FormatButton label="Gạch chân" shortcut="Cmd/Ctrl+U" lightTheme={lightTheme} onClick={() => applyFormat('underline')}>
           <span className="underline underline-offset-2">U</span>
         </FormatButton>
-        <FormatButton label="Gạch ngang" shortcut="Cmd/Ctrl+Shift+X" lightTheme={lightTheme} onClick={() => wrapSelection('~~', '~~', 'bỏ qua')}>
+        <FormatButton label="Gạch ngang" shortcut="Cmd/Ctrl+Shift+X" lightTheme={lightTheme} onClick={() => applyFormat('strike')}>
           <span className="line-through">S</span>
         </FormatButton>
-        <FormatButton label="Inline code" shortcut="Cmd/Ctrl+E" lightTheme={lightTheme} onClick={() => wrapSelection('`', '`', 'npm test')}>
+        <FormatButton label="Inline code" shortcut="Cmd/Ctrl+E" lightTheme={lightTheme} onClick={() => applyFormat('code')}>
           <code className="font-mono text-[11px]">{'<'}</code>
         </FormatButton>
-        <FormatButton label="Link" shortcut="Cmd/Ctrl+K" lightTheme={lightTheme} onClick={insertLink}>
+        <FormatButton label="Link" shortcut="Cmd/Ctrl+K" lightTheme={lightTheme} onClick={() => applyFormat('link')}>
           <svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M10 13a5 5 0 0 0 7.1 0l2-2a5 5 0 0 0-7.1-7.1l-1.1 1.1" />
             <path d="M14 11a5 5 0 0 0-7.1 0l-2 2a5 5 0 0 0 7.1 7.1l1.1-1.1" />
           </svg>
         </FormatButton>
-        <FormatButton label="Checklist" shortcut="Cmd/Ctrl+Shift+7" lightTheme={lightTheme} onClick={() => insertBlock('- [ ] ', 'việc cần làm')}>
+        <FormatButton label="Checklist" shortcut="Cmd/Ctrl+Shift+7" lightTheme={lightTheme} onClick={() => applyFormat('check')}>
           <svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <rect x="4" y="4" width="16" height="16" rx="3" />
             <path d="M8 12l2.4 2.4L16 9" />
           </svg>
         </FormatButton>
-        <FormatButton label="Callout" shortcut="Cmd/Ctrl+Shift+9" lightTheme={lightTheme} onClick={() => insertBlock('> ', 'chỉ làm task này trong phiên')}>
+        <FormatButton label="Callout" shortcut="Cmd/Ctrl+Shift+9" lightTheme={lightTheme} onClick={() => applyFormat('callout')}>
           <svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M5 5h14v10H8l-3 3z" />
           </svg>
@@ -550,7 +934,7 @@ export function RichNoteEditor({
         <button
           type="button"
           onMouseDown={(event) => event.preventDefault()}
-          onClick={() => wrapSelection('==', '==', 'cần chốt')}
+          onClick={() => applyFormat('mark')}
           aria-label="Highlight vàng"
           title="Highlight vàng (Cmd/Ctrl+Shift+H)"
           className={`flex size-8 items-center justify-center rounded-[10px] border transition-colors focus-visible:outline-none focus-visible:ring-2 ${
@@ -567,7 +951,7 @@ export function RichNoteEditor({
               key={tone.id}
               type="button"
               onMouseDown={(event) => event.preventDefault()}
-              onClick={() => wrapSelection(`{{${tone.id}:`, '}}', tone.label.toLowerCase())}
+              onClick={() => applyFormat('color', tone)}
               aria-label={`Màu ${tone.label}`}
               title={`Màu ${tone.label}`}
               className="flex size-7 items-center justify-center rounded-full border transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(31,30,29,0.14)]"
@@ -606,22 +990,22 @@ export function RichNoteEditor({
                 : 'border-white/10 bg-slate-950/90'
             }`}
           >
-            <FloatingFormatButton label="In đậm" shortcut="Cmd/Ctrl+B" lightTheme={lightTheme} onClick={() => wrapSelection('**', '**', 'ưu tiên')}>
+            <FloatingFormatButton label="In đậm" shortcut="Cmd/Ctrl+B" lightTheme={lightTheme} onClick={() => applyFormat('bold')}>
               <strong>B</strong>
             </FloatingFormatButton>
-            <FloatingFormatButton label="In nghiêng" shortcut="Cmd/Ctrl+I" lightTheme={lightTheme} onClick={() => wrapSelection('*', '*', 'ý phụ')}>
+            <FloatingFormatButton label="In nghiêng" shortcut="Cmd/Ctrl+I" lightTheme={lightTheme} onClick={() => applyFormat('italic')}>
               <em>I</em>
             </FloatingFormatButton>
-            <FloatingFormatButton label="Gạch chân" shortcut="Cmd/Ctrl+U" lightTheme={lightTheme} onClick={() => wrapSelection('<u>', '</u>', 'deadline')}>
+            <FloatingFormatButton label="Gạch chân" shortcut="Cmd/Ctrl+U" lightTheme={lightTheme} onClick={() => applyFormat('underline')}>
               <span className="underline underline-offset-2">U</span>
             </FloatingFormatButton>
-            <FloatingFormatButton label="Gạch ngang" shortcut="Cmd/Ctrl+Shift+X" lightTheme={lightTheme} onClick={() => wrapSelection('~~', '~~', 'bỏ qua')}>
+            <FloatingFormatButton label="Gạch ngang" shortcut="Cmd/Ctrl+Shift+X" lightTheme={lightTheme} onClick={() => applyFormat('strike')}>
               <span className="line-through">S</span>
             </FloatingFormatButton>
-            <FloatingFormatButton label="Inline code" shortcut="Cmd/Ctrl+E" lightTheme={lightTheme} onClick={() => wrapSelection('`', '`', 'npm test')}>
+            <FloatingFormatButton label="Inline code" shortcut="Cmd/Ctrl+E" lightTheme={lightTheme} onClick={() => applyFormat('code')}>
               <code className="font-mono text-[11px]">{'<'}</code>
             </FloatingFormatButton>
-            <FloatingFormatButton label="Link" shortcut="Cmd/Ctrl+K" lightTheme={lightTheme} onClick={insertLink}>
+            <FloatingFormatButton label="Link" shortcut="Cmd/Ctrl+K" lightTheme={lightTheme} onClick={() => applyFormat('link')}>
               <svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M10 13a5 5 0 0 0 7.1 0l2-2a5 5 0 0 0-7.1-7.1l-1.1 1.1" />
                 <path d="M14 11a5 5 0 0 0-7.1 0l-2 2a5 5 0 0 0 7.1 7.1l1.1-1.1" />
@@ -630,7 +1014,7 @@ export function RichNoteEditor({
             <button
               type="button"
               onMouseDown={(event) => event.preventDefault()}
-              onClick={() => wrapSelection('==', '==', 'cần chốt')}
+              onClick={() => applyFormat('mark')}
               aria-label="Highlight vàng"
               title="Highlight vàng (Cmd/Ctrl+Shift+H)"
               className={`flex size-8 shrink-0 items-center justify-center rounded-[8px] transition-colors focus-visible:outline-none focus-visible:ring-2 ${
@@ -647,7 +1031,7 @@ export function RichNoteEditor({
                 key={`floating_${tone.id}`}
                 type="button"
                 onMouseDown={(event) => event.preventDefault()}
-                onClick={() => wrapSelection(`{{${tone.id}:`, '}}', tone.label.toLowerCase())}
+                onClick={() => applyFormat('color', tone)}
                 aria-label={`Màu ${tone.label}`}
                 title={`Màu ${tone.label}`}
                 className="flex size-7 shrink-0 items-center justify-center rounded-full transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(31,30,29,0.14)]"
@@ -657,13 +1041,13 @@ export function RichNoteEditor({
               </button>
             ))}
             <span className={`mx-1 h-5 w-px shrink-0 ${lightTheme ? 'bg-[rgba(31,30,29,0.12)]' : 'bg-white/10'}`} />
-            <FloatingFormatButton label="Checklist" shortcut="Cmd/Ctrl+Shift+7" lightTheme={lightTheme} onClick={() => insertBlock('- [ ] ', 'việc cần làm')}>
+            <FloatingFormatButton label="Checklist" shortcut="Cmd/Ctrl+Shift+7" lightTheme={lightTheme} onClick={() => applyFormat('check')}>
               <svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <rect x="4" y="4" width="16" height="16" rx="3" />
                 <path d="M8 12l2.4 2.4L16 9" />
               </svg>
             </FloatingFormatButton>
-            <FloatingFormatButton label="Callout" shortcut="Cmd/Ctrl+Shift+9" lightTheme={lightTheme} onClick={() => insertBlock('> ', 'chỉ làm task này trong phiên')}>
+            <FloatingFormatButton label="Callout" shortcut="Cmd/Ctrl+Shift+9" lightTheme={lightTheme} onClick={() => applyFormat('callout')}>
               <svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M5 5h14v10H8l-3 3z" />
               </svg>
@@ -672,45 +1056,73 @@ export function RichNoteEditor({
         )}
       </AnimatePresence>
 
-      <textarea
-        ref={textareaRef}
-        value={value}
-        onChange={(event) => commitChange(event.target.value)}
-        onKeyDown={handleKeyDown}
-        onKeyUp={scheduleSelectionUpdate}
-        onMouseUp={scheduleSelectionUpdate}
-        onSelect={scheduleSelectionUpdate}
-        onScroll={scheduleSelectionUpdate}
-        onBlur={() => {
-          window.setTimeout(() => {
-            if (!editorShellRef.current?.contains(document.activeElement)) {
-              hideFloatingToolbar();
-            }
-          }, 0);
-        }}
-        rows={rows}
-        placeholder={placeholder}
-        className={`w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 py-2.5 text-sm leading-relaxed shadow-none outline-none transition-all placeholder-slate-600 focus:border-white/[0.16] focus:bg-white/[0.07] ${
-          roomy ? 'min-h-[260px] resize-y' : 'resize-none'
-        }`}
-        style={{ ...inputStyle, scrollbarWidth: roomy ? 'thin' : 'none' }}
-      />
+      <div className="relative">
+        <div
+          ref={editorRef}
+          contentEditable
+          role="textbox"
+          aria-multiline="true"
+          aria-label="Ghi chú phiên"
+          suppressContentEditableWarning
+          dangerouslySetInnerHTML={{ __html: initialEditorHtml }}
+          onInput={handleEditorInput}
+          onKeyDown={handleKeyDown}
+          onKeyUp={scheduleSelectionUpdate}
+          onMouseUp={scheduleSelectionUpdate}
+          onPaste={handlePaste}
+          onScroll={scheduleSelectionUpdate}
+          onFocus={() => {
+            setIsFocused(true);
+            scheduleSelectionUpdate();
+          }}
+          onBlur={() => {
+            setIsFocused(false);
+            window.setTimeout(() => {
+              if (!editorShellRef.current?.contains(document.activeElement)) {
+                hideFloatingToolbar();
+              }
+            }, 0);
+          }}
+          className={`rich-note-editor w-full overflow-y-auto rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 py-2.5 text-sm leading-relaxed shadow-none outline-none transition-all empty:before:pointer-events-none focus:border-white/[0.16] focus:bg-white/[0.07] ${
+            roomy ? 'resize-y' : ''
+          }`}
+          style={{
+            ...inputStyle,
+            minHeight: editorMinHeight,
+            scrollbarWidth: roomy ? 'thin' : 'none',
+          }}
+        />
+        {!hasPreview && !isFocused && placeholder && (
+          <p className={`pointer-events-none absolute left-3 right-3 top-2.5 text-sm leading-relaxed ${
+            lightTheme ? 'text-[var(--muted-2)]' : 'text-slate-600'
+          }`}>
+            {placeholder}
+          </p>
+        )}
+      </div>
 
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex flex-wrap gap-1.5">
           {GUIDE_EXAMPLES.map((item) => (
             <button
-              key={item.label}
+              key={item.id}
               type="button"
               onMouseDown={(event) => event.preventDefault()}
-              onClick={() => wrapSelection('', '', item.syntax)}
+              onClick={() => applyFormat(item.id)}
               className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 ${
                 lightTheme
                   ? 'border-[var(--line)] bg-[rgba(244,242,236,0.82)] text-[var(--muted)] hover:bg-white focus-visible:ring-[rgba(31,30,29,0.14)]'
                   : 'border-white/10 bg-white/[0.035] text-slate-500 hover:text-slate-200 focus-visible:ring-white/30'
               }`}
             >
-              {item.syntax}
+              {item.id === 'check' && (
+                <span
+                  aria-hidden="true"
+                  className="mr-1 inline-flex size-3 items-center justify-center rounded-[4px] border align-[-2px]"
+                  style={{ borderColor: 'var(--line-2, rgba(31,30,29,0.18))' }}
+                />
+              )}
+              <span className={item.className} style={item.style}>{item.label}</span>
             </button>
           ))}
         </div>

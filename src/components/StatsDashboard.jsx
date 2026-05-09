@@ -13,6 +13,8 @@
 import React, { useEffect, useId, useRef, useState, useMemo, useTransition, useDeferredValue } from 'react';
 import { motion as Motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import useGameStore from '../store/gameStore';
+import { RichTextView } from './RichText';
+import { createRichTextPreview } from '../utils/richText';
 import {
   computeWeeklyStats,
   computeAllTimeStats,
@@ -2698,8 +2700,7 @@ function OverviewTab({ history, progress, streak, prestige, buildings }) {
       : 0;
     const goalText = getSessionGoalText(entry);
     const nextNoteText = getSessionNextNoteText(entry);
-    const notePreview = entry?.note?.trim()
-      || entry?.breakNote?.trim()
+    const notePreview = createRichTextPreview(entry?.note?.trim() || entry?.breakNote?.trim() || '', 120)
       || goalText
       || nextNoteText
       || null;
@@ -6032,9 +6033,12 @@ function JournalTab({ history, sessionCategories }) {
                               <p className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: NOTE_PANEL_TITLE }}>
                                 Ghi chú tập trung
                               </p>
-                              <p className="mt-2 text-[11px] leading-relaxed" style={{ color: NOTE_PANEL_TEXT, whiteSpace: 'pre-wrap' }}>
-                                {h.note}
-                              </p>
+                              <RichTextView
+                                value={h.note}
+                                compact
+                                className="mt-2"
+                                style={{ color: NOTE_PANEL_TEXT }}
+                              />
                             </div>
                           )}
                           {h.breakNote && (
@@ -6045,9 +6049,12 @@ function JournalTab({ history, sessionCategories }) {
                               <p className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: NOTE_PANEL_TITLE }}>
                                 Ghi chú giải lao
                               </p>
-                              <p className="mt-2 text-[11px] leading-relaxed" style={{ color: NOTE_PANEL_TEXT, whiteSpace: 'pre-wrap' }}>
-                                {h.breakNote}
-                              </p>
+                              <RichTextView
+                                value={h.breakNote}
+                                compact
+                                className="mt-2"
+                                style={{ color: NOTE_PANEL_TEXT }}
+                              />
                             </div>
                           )}
                         </div>
@@ -6322,9 +6329,11 @@ function NotesTab({ savedNotes, sessionCategories }) {
                         <p className="mt-1 text-[11px] leading-5" style={{ color: TEXT_MUTED }}>
                           Điều đã được giữ lại ngay trong lúc làm việc.
                         </p>
-                        <p className="mt-2 text-sm leading-relaxed" style={{ color: NOTE_PANEL_TEXT, whiteSpace: 'pre-wrap' }}>
-                          {entry.note}
-                        </p>
+                        <RichTextView
+                          value={entry.note}
+                          className="mt-2"
+                          style={{ color: NOTE_PANEL_TEXT }}
+                        />
                       </div>
                     )}
                     {entry.breakNote && (
@@ -6338,9 +6347,11 @@ function NotesTab({ savedNotes, sessionCategories }) {
                         <p className="mt-1 text-[11px] leading-5" style={{ color: TEXT_MUTED }}>
                           Điều còn đọng lại sau khi rời phiên một nhịp ngắn.
                         </p>
-                        <p className="mt-2 text-sm leading-relaxed" style={{ color: NOTE_PANEL_TEXT, whiteSpace: 'pre-wrap' }}>
-                          {entry.breakNote}
-                        </p>
+                        <RichTextView
+                          value={entry.breakNote}
+                          className="mt-2"
+                          style={{ color: NOTE_PANEL_TEXT }}
+                        />
                       </div>
                     )}
                   </div>

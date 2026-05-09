@@ -6,7 +6,7 @@
  * then ticks the countdown locally every second.
  */
 
-const { app, Tray, Menu, nativeImage, shell, Notification } = require('electron');
+const { app, Tray, Menu, nativeImage, shell, Notification, ipcMain } = require('electron');
 const path = require('path');
 const https = require('https');
 const { createClient } = require('@supabase/supabase-js');
@@ -48,11 +48,12 @@ function createActiveSessionSnapshot(data) {
   return {
     totalSeconds,
     startedAtMs,
+    isBreak: data?.is_break === true,
   };
 }
 
 function rememberActiveSessionSnapshot(data) {
-  if (!data?.is_running) return;
+  if (!data?.is_running || data?.is_break === true) return;
   const snapshot = createActiveSessionSnapshot(data);
   if (snapshot) {
     lastActiveSessionSnapshot = snapshot;
@@ -68,11 +69,16 @@ function getCompletedSessionTotalSeconds(previousData, nextData) {
     return null;
   }
 
-  const snapshot = createActiveSessionSnapshot(previousData)
-    ?? createActiveSessionSnapshot(timerData)
+  const snapshotSource = previousData ?? timerData;
+  if (snapshotSource?.is_break === true) {
+    return null;
+  }
+
+  const snapshot = createActiveSessionSnapshot(snapshotSource)
     ?? lastActiveSessionSnapshot;
 
   if (!snapshot) return null;
+  if (snapshot.isBreak) return null;
   if (getRemainingSeconds(snapshot) > SESSION_COMPLETE_GRACE_SECONDS) return null;
 
   return snapshot.totalSeconds;
@@ -132,13 +138,13 @@ function updateTrayTitle() {
     return;
   }
 
-  const { is_running, started_at, total_seconds, paused_seconds_remaining } = timerData;
+  const { is_running, is_break, started_at, total_seconds, paused_seconds_remaining } = timerData;
 
   if (is_running && started_at && total_seconds) {
     const elapsed = (Date.now() - new Date(started_at).getTime()) / 1000;
     const remaining = Math.max(0, total_seconds - elapsed);
     tray?.setImage(iconEmpty);
-    setTrayTitle(`🍅 ${formatTime(remaining)}`);
+    setTrayTitle(`${is_break ? '☕' : '🍅'} ${formatTime(remaining)}`);
   } else if (!is_running && paused_seconds_remaining > 0) {
     tray?.setImage(iconEmpty);
     setTrayTitle(`⏸ ${formatTime(paused_seconds_remaining)}`);
@@ -171,6 +177,24 @@ function createTray() {
 
   tray.on('click', () => shell.openExternal(APP_URL));
 }
+
+function applyRendererTrayUpdate(data = {}) {
+  const timeLeft = typeof data.timeLeft === 'string' ? data.timeLeft : '';
+  if (!timeLeft) {
+    tray?.setImage(iconNormal);
+    setTrayTitle('');
+    return;
+  }
+
+  const state = typeof data.state === 'string' ? data.state.toUpperCase() : '';
+  const prefix = state === 'BREAK' ? '☕' : state === 'PAUSED' ? '⏸' : '🍅';
+  tray?.setImage(iconEmpty);
+  setTrayTitle(`${prefix} ${timeLeft}`);
+}
+
+ipcMain.on('tray-update', (_event, data) => {
+  applyRendererTrayUpdate(data);
+});
 
 app.whenReady().then(() => {
   if (app.dock) app.dock.hide();

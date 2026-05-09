@@ -24,6 +24,8 @@ import {
   getBuildingLevelMultiplier,
 } from '../engine/constants';
 import StakePanel from './StakePanel';
+import { RichNoteEditor } from './RichText';
+import { countRichTextWords, trimRichTextToWordLimit } from '../utils/richText';
 
 const NOTE_WORD_LIMIT = 3000;
 const SESSION_GOAL_MIN_CHARS = 10;
@@ -41,17 +43,6 @@ const RING_COLORS = {
   [TIMER_STATES.CANCELLED]: 'var(--accent2)',
 };
 const Motion = motion;
-
-function countWords(text = '') {
-  const trimmed = text.trim();
-  return trimmed ? trimmed.split(/\s+/).length : 0;
-}
-
-function trimToWordLimit(text, maxWords) {
-  const tokens = text.match(/\S+\s*/g);
-  if (!tokens || tokens.length <= maxWords) return text;
-  return tokens.slice(0, maxWords).join('').trimEnd();
-}
 
 function formatPreviewPercent(value) {
   if (!Number.isFinite(value)) return '0';
@@ -390,7 +381,7 @@ export default function PomodoroEngine({
     && (timerState === TIMER_STATES.RUNNING || timerState === TIMER_STATES.PAUSED)
     && displaySeconds > 0
     && displaySeconds <= SESSION_EXTENSION_WINDOW_SECONDS;
-  const noteWordCount = countWords(pendingNote);
+  const noteWordCount = countRichTextWords(pendingNote);
   const sessionGoalText = pendingSessionGoal.trim();
   const sessionGoalCharCount = sessionGoalText.length;
   const isSessionGoalValid = sessionGoalCharCount >= SESSION_GOAL_MIN_CHARS;
@@ -1351,21 +1342,16 @@ export default function PomodoroEngine({
           }`}>
             Ghi chú phiên
           </span>
-          {noteWordCount > 0 && (
-            <span className={`mono text-[10px] ${lightTheme ? 'text-[var(--muted-2)]' : 'text-slate-600'}`}>{noteWordCount}/{NOTE_WORD_LIMIT} từ</span>
-          )}
         </div>
-        <textarea
+        <RichNoteEditor
           value={pendingNote}
-          onChange={(e) => setPendingNote(trimToWordLimit(e.target.value, NOTE_WORD_LIMIT))}
+          onChange={(nextNote) => setPendingNote(trimRichTextToWordLimit(nextNote, NOTE_WORD_LIMIT))}
           rows={useImmersiveHeroLayout ? 4 : 4}
+          maxWords={NOTE_WORD_LIMIT}
+          wordCount={noteWordCount}
+          lightTheme={lightTheme}
+          inputStyle={paperInputStyle}
           placeholder="Bạn đang nghĩ gì, đang kẹt ở đâu, hay cần chốt ý nào trước khi vào nhịp sâu?"
-          className={`w-full rounded-xl px-3 py-2.5 text-sm placeholder-slate-600
-                     resize-none focus:outline-none transition-all leading-relaxed
-                     backdrop-blur-xl bg-white/[0.04] border border-white/[0.08]
-                     focus:bg-white/[0.07] focus:border-white/[0.16]
-                     shadow-none ${useImmersiveHeroLayout ? 'min-h-[112px]' : 'min-h-[132px]'}`}
-          style={{ ...paperInputStyle, scrollbarWidth: 'none' }}
         />
       </div>
 
@@ -1520,28 +1506,26 @@ export default function PomodoroEngine({
               Ghi nhanh ý đang giữ trong đầu, chỗ đang kẹt, hoặc điều cần khóa lại trước khi vào guồng sâu.
             </p>
           </div>
-          {noteWordCount > 0 && (
-            <span className={`mono shrink-0 text-[10px] ${lightTheme ? 'text-[var(--muted-2)]' : 'text-slate-600'}`}>
-              {noteWordCount}/{NOTE_WORD_LIMIT} từ
-            </span>
-          )}
         </div>
 
-        <textarea
-          value={pendingNote}
-          onChange={(e) => setPendingNote(trimToWordLimit(e.target.value, NOTE_WORD_LIMIT))}
-          rows={10}
-          placeholder="Viết tự do. Một câu cũng được, một trang cũng được."
-          className="mt-5 w-full rounded-[28px] border px-5 py-5 text-[15px] leading-[1.8] resize-none focus:outline-none transition-colors"
-          style={{
-            ...paperInputStyle,
-            borderColor: lightTheme ? 'var(--line)' : 'rgba(255,255,255,0.08)',
-            background: lightTheme ? 'rgba(255,255,255,0.76)' : 'rgba(255,255,255,0.03)',
-            color: lightTheme ? 'var(--ink)' : 'var(--ink)',
-            minHeight: 260,
-            scrollbarWidth: 'thin',
-          }}
-        />
+        <div className="mt-5">
+          <RichNoteEditor
+            value={pendingNote}
+            onChange={(nextNote) => setPendingNote(trimRichTextToWordLimit(nextNote, NOTE_WORD_LIMIT))}
+            rows={10}
+            maxWords={NOTE_WORD_LIMIT}
+            wordCount={noteWordCount}
+            lightTheme={lightTheme}
+            roomy
+            inputStyle={{
+              ...paperInputStyle,
+              borderColor: lightTheme ? 'var(--line)' : 'rgba(255,255,255,0.08)',
+              background: lightTheme ? 'rgba(255,255,255,0.76)' : 'rgba(255,255,255,0.03)',
+              color: lightTheme ? 'var(--ink)' : 'var(--ink)',
+            }}
+            placeholder="Viết tự do. Một câu cũng được, một trang cũng được."
+          />
+        </div>
       </div>
 
       <div className="border-t pt-6" style={{ borderColor: 'var(--line)' }}>

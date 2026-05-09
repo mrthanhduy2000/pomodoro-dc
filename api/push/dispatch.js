@@ -22,6 +22,7 @@ function isAuthorizedRequest(req) {
 function isSessionEndEvent(body) {
   return (
     body?.type === 'UPDATE' &&
+    body?.record?.is_break !== true &&
     body?.record?.is_running === false &&
     body?.record?.paused_seconds_remaining == null
   );

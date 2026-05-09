@@ -15,6 +15,8 @@ function isSessionEndEvent(body) {
   return (
     body?.type === 'UPDATE' &&
     body?.old_record?.is_running === true &&
+    body?.old_record?.is_break !== true &&
+    body?.record?.is_break !== true &&
     body?.record?.is_running === false &&
     body?.record?.paused_seconds_remaining == null
   );

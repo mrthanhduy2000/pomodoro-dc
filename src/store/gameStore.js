@@ -111,6 +111,7 @@ import {
   getComboDecayMs,
 } from '../engine/gameMath';
 import { inferAchievementUnlockTimes } from '../engine/achievementTimeline';
+import { countRichTextWords } from '../utils/richText';
 import {
   detectEraCrisis,
   createEraCrisisState,
@@ -655,8 +656,7 @@ function createSeededRng(seedKey) {
 }
 
 function countWords(text = '') {
-  const trimmed = text.trim();
-  return trimmed ? trimmed.split(/\s+/).length : 0;
+  return countRichTextWords(text);
 }
 
 function getMissionRewardTotalXP(list = []) {

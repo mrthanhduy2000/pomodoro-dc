@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState, Suspense } from 'react';
 import { AnimatePresence, motion as Motion } from 'framer-motion';
 import { initSync } from './lib/syncService';
+import { clearTimerLive, updateTimerLive } from './lib/timerLiveService';
 
 import AppErrorBoundary from './components/AppErrorBoundary';
 import PomodoroEngine from './components/PomodoroEngine';
@@ -17,6 +18,7 @@ import LevelUpModal from './components/LevelUpModal';
 import WeeklyReportModal from './components/WeeklyReportModal';
 import NotificationCenter from './components/NotificationCenter';
 import { DCPomodoroSidebarBrand } from './components/DCPomodoroBrand';
+import { RichTextView } from './components/RichText';
 import { useGameLoop } from './hooks/useGameLoop';
 import useGameStore from './store/gameStore';
 import useSettingsStore from './store/settingsStore';
@@ -1327,7 +1329,30 @@ export default function App() {
 
   const isOnBreak = useGameStore((s) => s.ui.isOnBreak);
   const breakSecsLeft = useGameStore((s) => s.ui.breakSecondsLeft);
+  const breakStartedAt = useGameStore((s) => s.breakSession.startedAt);
+  const breakTotalSeconds = useGameStore((s) => s.breakSession.totalSeconds);
+  const breakIsRunning = useGameStore((s) => s.breakSession.isRunning);
   const breakTrayWasActiveRef = useRef(false);
+  const breakLiveWasActiveRef = useRef(false);
+
+  useEffect(() => {
+    if (breakIsRunning && breakStartedAt && breakTotalSeconds > 0) {
+      updateTimerLive({
+        isRunning: true,
+        isBreak: true,
+        startedAt: new Date(breakStartedAt).toISOString(),
+        totalSeconds: breakTotalSeconds,
+        pausedSecondsRemaining: null,
+      });
+      breakLiveWasActiveRef.current = true;
+      return;
+    }
+
+    if (breakLiveWasActiveRef.current) {
+      clearTimerLive({ isBreak: true, pausedSecondsRemaining: 0 });
+    }
+    breakLiveWasActiveRef.current = false;
+  }, [breakIsRunning, breakStartedAt, breakTotalSeconds]);
 
   useEffect(() => {
     if (!window.electronAPI) {
@@ -2316,10 +2341,10 @@ function SessionHistory() {
               )}
 
               {entry.note && (
-                <p className="mt-2 text-[12px] text-[var(--muted)]">
+                <div className="mt-2 text-[12px] text-[var(--muted)]">
                   <span className="mono mr-1 text-[10px] uppercase tracking-[0.16em]">Ghi chú</span>
-                  {entry.note}
-                </p>
+                  <RichTextView value={entry.note} compact className="mt-1" />
+                </div>
               )}
 
               {entry.nextNote && (

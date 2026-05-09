@@ -497,7 +497,7 @@ export function RichNoteEditor({
   const editorRef = useRef(null);
   const savedRangeRef = useRef(null);
   const lastCommittedValueRef = useRef(String(value ?? ''));
-  const [initialEditorHtml] = useState(() => richTextToEditorHtml(value));
+  const hasInitializedEditorRef = useRef(false);
   const [showGuide, setShowGuide] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
   const [selectionState, setSelectionState] = useState({ text: '' });
@@ -505,7 +505,7 @@ export function RichNoteEditor({
   const computedWordCount = useMemo(() => countRichTextWords(value), [value]);
   const visibleWordCount = Number.isFinite(wordCount) ? wordCount : computedWordCount;
   const canShowLimit = Number.isFinite(maxWords);
-  const hasPreview = String(value ?? '').trim().length > 0;
+  const hasContent = String(value ?? '').trim().length > 0;
   const showFloatingToolbar = Boolean(floatingToolbarStyle && selectionState.text);
   const editorMinHeight = roomy ? 260 : Math.max(116, rows * 26 + 34);
 
@@ -571,6 +571,13 @@ export function RichNoteEditor({
   const scheduleSelectionUpdate = useCallback(() => {
     window.requestAnimationFrame(updateSelectionFromEditor);
   }, [updateSelectionFromEditor]);
+
+  const setEditorElement = useCallback((node) => {
+    editorRef.current = node;
+    if (!node || hasInitializedEditorRef.current) return;
+    node.innerHTML = richTextToEditorHtml(lastCommittedValueRef.current);
+    hasInitializedEditorRef.current = true;
+  }, []);
 
   const focusEditor = useCallback(() => {
     const editor = editorRef.current;
@@ -1058,13 +1065,12 @@ export function RichNoteEditor({
 
       <div className="relative">
         <div
-          ref={editorRef}
+          ref={setEditorElement}
           contentEditable
           role="textbox"
           aria-multiline="true"
           aria-label="Ghi chú phiên"
           suppressContentEditableWarning
-          dangerouslySetInnerHTML={{ __html: initialEditorHtml }}
           onInput={handleEditorInput}
           onKeyDown={handleKeyDown}
           onKeyUp={scheduleSelectionUpdate}
@@ -1092,7 +1098,7 @@ export function RichNoteEditor({
             scrollbarWidth: roomy ? 'thin' : 'none',
           }}
         />
-        {!hasPreview && !isFocused && placeholder && (
+        {!hasContent && !isFocused && placeholder && (
           <p className={`pointer-events-none absolute left-3 right-3 top-2.5 text-sm leading-relaxed ${
             lightTheme ? 'text-[var(--muted-2)]' : 'text-slate-600'
           }`}>
@@ -1156,25 +1162,6 @@ export function RichNoteEditor({
           </motion.div>
         )}
       </AnimatePresence>
-
-      {hasPreview && (
-        <motion.div
-          initial={{ opacity: 0, y: 4 }}
-          animate={{ opacity: 1, y: 0 }}
-          className={`rounded-[18px] border px-3 py-3 ${
-            lightTheme
-              ? 'border-[var(--line)] bg-white/70 text-[var(--ink-2)]'
-              : 'border-white/10 bg-black/10 text-slate-300'
-          }`}
-        >
-          <p className={`mono mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] ${
-            lightTheme ? 'text-[var(--muted-2)]' : 'text-slate-600'
-          }`}>
-            Xem trước
-          </p>
-          <RichTextView value={value} compact={!roomy} />
-        </motion.div>
-      )}
     </div>
   );
 }

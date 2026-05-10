@@ -1184,6 +1184,55 @@ function normalizeStoredResearch(research = {}) {
   };
 }
 
+function getEraScopedBlueprintId(value) {
+  if (typeof value === 'string') return value;
+  if (isRecord(value) && typeof value.id === 'string') return value.id;
+  return null;
+}
+
+function getEraScopedBlueprintEra(bpId) {
+  const era = BLUEPRINT_META[bpId]?.era ?? BUILDING_EFFECTS[bpId]?.era;
+  return Number.isFinite(era) ? era : null;
+}
+
+function isCurrentEraBlueprint(bpId, activeBook) {
+  return !!bpId && getEraScopedBlueprintEra(bpId) === activeBook;
+}
+
+function filterRecordByAllowedIds(record = {}, allowedIds = new Set()) {
+  if (!isRecord(record)) return {};
+  return Object.fromEntries(
+    Object.entries(record).filter(([bpId]) => allowedIds.has(bpId)),
+  );
+}
+
+function pruneEraScopedBlueprintState(state, activeBook) {
+  const currentBook = Number.isFinite(activeBook) ? activeBook : 1;
+  const blueprints = Array.isArray(state.blueprints)
+    ? state.blueprints.filter((blueprint) => isCurrentEraBlueprint(getEraScopedBlueprintId(blueprint), currentBook))
+    : [];
+  const research = normalizeStoredResearch(state.research);
+  const researched = research.researched.filter((bpId) => isCurrentEraBlueprint(bpId, currentBook));
+  const craftingQueue = Array.isArray(state.craftingQueue)
+    ? state.craftingQueue.filter((item) => isCurrentEraBlueprint(item?.bpId, currentBook))
+    : [];
+  const buildings = Array.isArray(state.buildings)
+    ? state.buildings.filter((bpId) => isCurrentEraBlueprint(bpId, currentBook))
+    : [];
+  const allowedBuildingIds = new Set(buildings);
+
+  return {
+    ...state,
+    blueprints,
+    research: { ...research, researched },
+    craftingQueue,
+    buildings,
+    buildingHP: filterRecordByAllowedIds(state.buildingHP, allowedBuildingIds),
+    buildingLastUsed: filterRecordByAllowedIds(state.buildingLastUsed, allowedBuildingIds),
+    buildingLevels: filterRecordByAllowedIds(state.buildingLevels, allowedBuildingIds),
+  };
+}
+
 function normalizeStoredRefined(resourcesRefined = {}) {
   const next = makeDefaultResourcesRefined();
   for (const [era, refined] of Object.entries(resourcesRefined ?? {})) {
@@ -1909,7 +1958,7 @@ function normalizePersistedGameState(persistedState, currentState, options = {})
     achievementHydrationState.shouldPersistBackfilledTimeline = hydratedAchievements.didBackfill;
   }
 
-  return {
+  const normalized = {
     ...current,
     ...persisted,
     player: hasPersistedKey('player') ? normalizeStoredPlayer(persisted.player) : current.player,
@@ -2018,6 +2067,8 @@ function normalizePersistedGameState(persistedState, currentState, options = {})
     lastWeeklyReportDate: persisted.lastWeeklyReportDate ?? current.lastWeeklyReportDate,
     latestSessionUndo: persisted.latestSessionUndo ?? current.latestSessionUndo,
   };
+
+  return pruneEraScopedBlueprintState(normalized, normalized.progress?.activeBook);
 }
 
 function migratePersistedGameState(persistedState, fromVersion) {
@@ -2551,6 +2602,21 @@ function rebuildDailyTrackingFromHistory(dailyTracking, history) {
     hasSession45: dayEntries.some((entry) => (entry.minutes ?? 0) >= 45),
     hasSession60: dayEntries.some((entry) => (entry.minutes ?? 0) >= 60),
   };
+}
+
+function rebuildCurrentDailyTrackingFromHistory(dailyTracking, history, referenceTs = Date.now()) {
+  return rebuildDailyTrackingFromHistory(
+    {
+      ...makeDefaultDailyTracking(),
+      ...(isRecord(dailyTracking) ? dailyTracking : {}),
+      date: localDateStr(referenceTs),
+    },
+    history,
+  );
+}
+
+function isJsonEqual(left, right) {
+  return JSON.stringify(left) === JSON.stringify(right);
 }
 
 function localDateToDayIndex(dateStr) {
@@ -3346,10 +3412,29 @@ const useGameStore = create(
           const undoState = prev.latestSessionUndo;
           const canUndoLatestSession = latestSession?.id === sessionId && undoState?.sessionId === sessionId;
           if (canUndoLatestSession) {
+            const now = Date.now();
+            const nextHistory = prev.history.filter((entry) => entry.id !== sessionId);
+            const nextStreak = rebuildStreakFromHistory(
+              nextHistory,
+              now,
+              undoState.snapshot.streak,
+              undoState.snapshot.player?.unlockedSkills,
+            );
             return {
               ...undoState.snapshot,
-              history: prev.history.filter((entry) => entry.id !== sessionId),
+              history: nextHistory,
+              historyStats: buildHistoryStatsFromHistory(nextHistory),
               savedNotes: (prev.savedNotes ?? []).filter((entry) => entry.sourceSessionId !== sessionId),
+              dailyTracking: rebuildCurrentDailyTrackingFromHistory(undoState.snapshot.dailyTracking, nextHistory, now),
+              streak: nextStreak,
+              missions: rebuildMissionsFromHistory(undoState.snapshot.missions, nextHistory, nextStreak),
+              weeklyChain: rebuildWeeklyChainFromHistory(undoState.snapshot.weeklyChain, nextHistory),
+              combo: rebuildComboFromHistory(nextHistory, undoState.snapshot, now),
+              categoryTracking: rebuildCategoryTrackingFromHistory(nextHistory),
+              eraTracking: rebuildEraTrackingFromHistory(nextHistory, undoState.snapshot.progress?.activeBook),
+              rankChallenge: rebuildRankChallengeAfterSessionDelete(undoState.snapshot.rankChallenge, nextHistory),
+              eraCrisis: rebuildEraCrisisAfterSessionDelete(undoState.snapshot.eraCrisis, nextHistory),
+              craftingQueue: rebuildCraftingQueueAfterSessionDelete(undoState.snapshot.craftingQueue, latestSession),
               breakSession: makeDefaultBreakSession(),
               latestSessionUndo: null,
               ui: {
@@ -3375,11 +3460,6 @@ const useGameStore = create(
           const now = Date.now();
           const nextHistory = prev.history.filter((entry) => entry.id !== sessionId);
           const rewardRollback = subtractSessionProgressAndXP(prev.progress, prev.player, deletedSession);
-          const shouldRebuildDailyTracking = Boolean(
-            deletedSession?.timestamp
-            && prev.dailyTracking?.date
-            && localDateStr(deletedSession.timestamp) === prev.dailyTracking.date
-          );
           const nextStreak = rebuildStreakFromHistory(nextHistory, now, prev.streak, prev.player.unlockedSkills);
           const breakBelongsToDeletedSession =
             prev.breakSession?.sourceSessionId === sessionId
@@ -3394,9 +3474,7 @@ const useGameStore = create(
             resources: subtractSessionRawResources(prev.resources, deletedSession),
             resourcesRefined: subtractSessionRefinedReward(prev.resourcesRefined, deletedSession),
             research: subtractSessionResearchReward(prev.research, deletedSession),
-            dailyTracking: shouldRebuildDailyTracking
-              ? rebuildDailyTrackingFromHistory(prev.dailyTracking, nextHistory)
-              : prev.dailyTracking,
+            dailyTracking: rebuildCurrentDailyTrackingFromHistory(prev.dailyTracking, nextHistory, now),
             streak: nextStreak,
             missions: rebuildMissionsFromHistory(prev.missions, nextHistory, nextStreak),
             weeklyChain: rebuildWeeklyChainFromHistory(prev.weeklyChain, nextHistory),
@@ -4153,8 +4231,20 @@ const useGameStore = create(
             }
           }
 
+          const eraScopedState = pruneEraScopedBlueprintState({
+            blueprints: newBlueprints,
+            research: { ...prev.research, rp: newResearchRP },
+            craftingQueue: nextQueue,
+            buildings: newBuildings,
+            buildingHP: prev.buildingHP,
+            buildingLastUsed: prev.buildingLastUsed,
+            buildingLevels: prev.buildingLevels,
+          }, finalBook);
+          const activeNewlyBuilt = newlyBuilt.filter((bpId) => isCurrentEraBlueprint(bpId, finalBook));
+          const activeAcceleratedCraftingIds = acceleratedCraftingIds.filter((bpId) => isCurrentEraBlueprint(bpId, finalBook));
+
           const prevForgivenessCapacity = getWonderForgivenessCapacity(prev.buildings);
-          const nextForgivenessCapacity = getWonderForgivenessCapacity(newBuildings);
+          const nextForgivenessCapacity = getWonderForgivenessCapacity(eraScopedState.buildings);
           const forgivenessChargesRemaining = nextForgivenessCapacity > prevForgivenessCapacity
             ? Math.min(nextForgivenessCapacity, prev.forgiveness.chargesRemaining + (nextForgivenessCapacity - prevForgivenessCapacity))
             : Math.min(nextForgivenessCapacity, prev.forgiveness.chargesRemaining);
@@ -4163,12 +4253,12 @@ const useGameStore = create(
           const achSnapshot   = buildAchievementSnapshot(
             { sessionsCompleted: newSessions, totalFocusMinutes: newTotalMinutes, totalEP: finalTotalEP, activeBook: finalBook },
             newRelics,
-            newBlueprints,
-            prev.research,
+            eraScopedState.blueprints,
+            eraScopedState.research,
             newHistory,
             newRankSystem,
             newStreak,
-            newBuildings,
+            eraScopedState.buildings,
             prev.prestige,
             nextPlayer,
           );
@@ -4181,10 +4271,10 @@ const useGameStore = create(
               state.rankChallenge?.bookNumber,
               state.rankChallenge?.targetRankIdx,
             ) : null,
-            newlyBuilt.length > 0 ? makeWorkshopCompletedNotification(newlyBuilt) : null,
-            acceleratedCraftingIds.length > 0 ? {
+            activeNewlyBuilt.length > 0 ? makeWorkshopCompletedNotification(activeNewlyBuilt) : null,
+            activeAcceleratedCraftingIds.length > 0 ? {
               title: 'Xưởng tăng tốc',
-              body: `${acceleratedCraftingIds.length} công trình tiến thêm 1 bước nhờ đặc quyền.`,
+              body: `${activeAcceleratedCraftingIds.length} công trình tiến thêm 1 bước nhờ đặc quyền.`,
               icon: '⚡',
               category: 'workshop',
               action: { tab: 'collection', collectionTab: 'workshop' },
@@ -4208,14 +4298,17 @@ const useGameStore = create(
             rankChallenge: newRankChallenge,
             eraCrisis:     newEraCrisis,
             relics:        newRelics,
-            blueprints:    newBlueprints,
+            blueprints:    eraScopedState.blueprints,
             achievements:  appendAchievementUnlocks(prev.achievements, newlyUnlocked, resolvedFinishedAt),
             history:       newHistory,
             historyStats:  nextHistoryStatsWithReview,
             savedNotes:    newSavedNotes,
             streak:        newStreak,
             missions:      newMissions,
-            buildings:     newBuildings,
+            buildings:     eraScopedState.buildings,
+            buildingHP:    eraScopedState.buildingHP,
+            buildingLastUsed: eraScopedState.buildingLastUsed,
+            buildingLevels: eraScopedState.buildingLevels,
             forgiveness:   { ...prev.forgiveness, chargesRemaining: forgivenessChargesRemaining },
             staking:       makeDefaultStaking(),
             prestige:      prev.prestige,
@@ -4226,8 +4319,8 @@ const useGameStore = create(
             categoryTracking: categoryTrackingUpd,
             eraTracking:      eraTrackingUpd,
             sessionMeta:      { lastSessionCancelled: false, breakCompletedOnTime: false },
-            research:         { ...prev.research, rp: newResearchRP },
-            craftingQueue:    nextQueue,
+            research:         eraScopedState.research,
+            craftingQueue:    eraScopedState.craftingQueue,
             resourcesRefined: refinedAfterCarry,
             latestSessionUndo: prev.latestSessionUndo
               ? { ...prev.latestSessionUndo, sessionId }
@@ -4949,19 +5042,17 @@ const useGameStore = create(
       // ─── Daily Missions ──────────────────────────────────────────────────
       refreshDailyMissions: () =>
         set((prev) => {
-          const today = localDateStr();
-          const missions = refreshMissionsIfStale(prev.missions);
-          const weeklyChain = refreshWeeklyChain(prev.weeklyChain);
-          const streak = refreshStreakIfExpired(prev.streak);
-          const dailyTracking = prev.dailyTracking?.date === today
-            ? prev.dailyTracking
-            : { ...makeDefaultDailyTracking(), date: today };
+          const now = Date.now();
+          const streak = rebuildStreakFromHistory(prev.history, now, prev.streak, prev.player.unlockedSkills);
+          const missions = rebuildMissionsFromHistory(prev.missions, prev.history, streak);
+          const weeklyChain = rebuildWeeklyChainFromHistory(prev.weeklyChain, prev.history);
+          const dailyTracking = rebuildCurrentDailyTrackingFromHistory(prev.dailyTracking, prev.history, now);
 
           if (
-            missions === prev.missions
-            && weeklyChain === prev.weeklyChain
-            && streak === prev.streak
-            && dailyTracking === prev.dailyTracking
+            isJsonEqual(missions, prev.missions)
+            && isJsonEqual(weeklyChain, prev.weeklyChain)
+            && isJsonEqual(streak, prev.streak)
+            && isJsonEqual(dailyTracking, prev.dailyTracking)
           ) {
             return prev;
           }
@@ -5083,6 +5174,7 @@ const useGameStore = create(
       craftBuilding: (blueprintId) => {
         const state = get();
         if (state.buildings.includes(blueprintId)) return false;
+        if (!isCurrentEraBlueprint(blueprintId, state.progress.activeBook)) return false;
         // Check player owns this blueprint
         const bpIdx = state.blueprints.findIndex((b) => b.id === blueprintId);
         if (bpIdx === -1) return false;
@@ -5184,7 +5276,7 @@ const useGameStore = create(
         const state  = get();
         const meta   = BLUEPRINT_META[bpId];
         if (!meta) return false;
-        if (state.progress.activeBook < meta.requiresEra) return false;
+        if (!isCurrentEraBlueprint(bpId, state.progress.activeBook)) return false;
         if ((state.research?.researched ?? []).includes(bpId)) return false;
         if (state.blueprints.some((b) => b.id === bpId)) return false;
         const cost = getWonderResearchCost(state.buildings, bpId, meta.rpCost);
@@ -5215,6 +5307,7 @@ const useGameStore = create(
         const meta  = BLUEPRINT_META[bpId];
         const spec  = BUILDING_SPECS[bpId];
         if (!meta || !spec) return false;
+        if (!isCurrentEraBlueprint(bpId, state.progress.activeBook)) return false;
 
         const isResearched = (state.research?.researched ?? []).includes(bpId)
           || state.blueprints.some((b) => b.id === bpId);
@@ -5317,6 +5410,7 @@ const useGameStore = create(
         if (!state.buildings.includes(bpId)) return false;
         const eff  = BUILDING_EFFECTS[bpId];
         if (!eff) return false;
+        if (!isCurrentEraBlueprint(bpId, state.progress.activeBook)) return false;
         const era  = eff.era;
         const currentLevel = state.buildingLevels?.[bpId] ?? 1;
         if (currentLevel >= 3) return false; // đã cấp tối đa
@@ -5453,14 +5547,6 @@ const useGameStore = create(
           history: state.history,
           historyStats: state.historyStats,
           savedNotes: state.savedNotes,
-          forgiveness: {
-            chargesRemaining: getWonderForgivenessCapacity(state.buildings),
-            weekStartTimestamp: Date.now(),
-          },
-          buildings: state.buildings,
-          buildingHP: state.buildingHP,
-          buildingLastUsed: state.buildingLastUsed,
-          buildingLevels: state.buildingLevels,
           relicEvolutions: state.relicEvolutions,
           sessionCategories: state.sessionCategories,
           lastWeeklyReportDate: state.lastWeeklyReportDate,

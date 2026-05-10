@@ -439,13 +439,19 @@ export default function BuildingWorkshop() {
     setTimeout(() => setToast(null), 2500);
   };
 
+  const currentEraBuildings = buildings.filter((bpId) => (
+    (BLUEPRINT_META[bpId]?.era ?? BUILDING_EFFECTS[bpId]?.era) === activeBook
+  ));
+
   // Bản vẽ có thể xây: đã unlock qua RP, chưa xây
   const unlockedBpIds = new Set([
     ...research.researched,
     ...blueprints.map((b) => b.id),
   ]);
   const readyIds = [...unlockedBpIds].filter(
-    (id) => BUILDING_SPECS[id] && !buildings.includes(id)
+    (id) => BUILDING_SPECS[id]
+      && BLUEPRINT_META[id]?.era === activeBook
+      && !currentEraBuildings.includes(id)
   );
 
   const handleStart = (bpId) => {
@@ -468,7 +474,7 @@ export default function BuildingWorkshop() {
     return normalizeRefinedBag(resourcesRefined[era]);
   };
 
-  const builtEntries = buildings.map((bpId) => {
+  const builtEntries = currentEraBuildings.map((bpId) => {
     const eff = BUILDING_EFFECTS[bpId] ?? {};
     const level = buildingLevels[bpId] ?? 1;
     const mult = getBuildingLevelMultiplier(level);
@@ -574,7 +580,7 @@ export default function BuildingWorkshop() {
             </span>
           )}
           <span className="rounded-full px-2.5 sm:px-3 py-1 text-[10.5px] sm:text-xs" style={lightTheme ? { color: '#9a5a48', background: 'rgba(201, 100, 66, 0.08)', border: '1px solid rgba(201, 100, 66, 0.18)' } : {}}>
-            {buildings.length} đã xây
+            {currentEraBuildings.length} đã xây
           </span>
         </div>
       </div>
@@ -637,18 +643,18 @@ export default function BuildingWorkshop() {
       </div>
 
       {/* Công trình đã xây */}
-      {buildings.length > 0 && (
+      {currentEraBuildings.length > 0 && (
         <div className="space-y-2">
           <div className="flex items-center justify-between gap-3">
             <p className="text-[10px] font-semibold uppercase tracking-[0.24em]" style={lightTheme ? { color: '#8a8a86', fontFamily: MONO_FONT } : { color: '#94a3b8', fontFamily: MONO_FONT }}>
               Đã xây dựng
             </p>
             <span className="text-[11px]" style={lightTheme ? { color: '#8a8a86', fontFamily: MONO_FONT } : { color: '#64748b', fontFamily: MONO_FONT }}>
-              {buildings.length}
+              {currentEraBuildings.length}
             </span>
           </div>
           <div className="flex flex-col gap-2">
-            {buildings.map((id) => (
+            {currentEraBuildings.map((id) => (
               <BuiltCard
                 key={id}
                 bpId={id}

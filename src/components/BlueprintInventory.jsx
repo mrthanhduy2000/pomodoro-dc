@@ -209,19 +209,20 @@ function RPBar({ currentRP, cost, lightTheme = false }) {
 }
 
 // ─── Tab 1: Bản Vẽ Của Tôi ────────────────────────────────────────────────────
-function MyBlueprintsTab({ blueprints, research, buildings, onSelectBp, lightTheme }) {
+function MyBlueprintsTab({ blueprints, research, buildings, activeBook, onSelectBp, lightTheme }) {
   const [filterEra, setFilterEra] = useState(0);
 
   const unlockedIds = new Set([
     ...(research?.researched ?? []),
     ...blueprints.map((b) => b.id),
-  ]);
+  ].filter((id) => CATALOG_FLAT[id]?.era === activeBook));
+  const activeFilterEra = filterEra === activeBook ? filterEra : 0;
 
   const eraOptions = [...new Set([...unlockedIds].map((id) => CATALOG_FLAT[id]?.era).filter(Boolean))].sort();
 
   const displayed = [...unlockedIds].filter((id) => {
     const def = CATALOG_FLAT[id];
-    return def && (filterEra === 0 || def.era === filterEra);
+    return def && (activeFilterEra === 0 || def.era === activeFilterEra);
   });
 
   if (unlockedIds.size === 0) {
@@ -247,7 +248,7 @@ function MyBlueprintsTab({ blueprints, research, buildings, onSelectBp, lightThe
           <button
             onClick={() => setFilterEra(0)}
             className="text-xs px-3 py-1 rounded-full border transition-colors"
-            style={filterEra === 0
+            style={activeFilterEra === 0
               ? (lightTheme
                   ? { background: 'rgba(201, 100, 66, 0.10)', borderColor: 'rgba(201, 100, 66, 0.22)', color: '#9a5a48' }
                   : { background: '#4f46e5', borderColor: '#6366f1', color: '#ffffff' })
@@ -262,7 +263,7 @@ function MyBlueprintsTab({ blueprints, research, buildings, onSelectBp, lightThe
               key={era}
               onClick={() => setFilterEra(era)}
               className="text-xs px-3 py-1 rounded-full border transition-colors"
-              style={filterEra === era
+              style={activeFilterEra === era
                 ? (lightTheme
                     ? { background: 'rgba(201, 100, 66, 0.10)', borderColor: 'rgba(201, 100, 66, 0.22)', color: '#9a5a48' }
                     : { background: '#4f46e5', borderColor: '#6366f1', color: '#ffffff' })
@@ -349,7 +350,7 @@ function MyBlueprintsTab({ blueprints, research, buildings, onSelectBp, lightThe
 
 // ─── Tab 2: Nghiên Cứu ────────────────────────────────────────────────────────
 function ResearchTab({ research, blueprints, buildings, activeBook, researchBlueprint, onSelectBp }) {
-  const [selectedEra, setSelectedEra] = useState(activeBook);
+  const selectedEra = activeBook;
   const [toast, setToast] = useState(null);
   const uiTheme = useSettingsStore((s) => s.uiTheme);
 
@@ -365,8 +366,7 @@ function ResearchTab({ research, blueprints, buildings, activeBook, researchBlue
     'Sự kiện có thể làm RP tăng hoặc giảm',
   ];
 
-  const maxEra = activeBook;
-  const eraList = Array.from({ length: maxEra }, (_, i) => i + 1);
+  const eraList = [activeBook];
 
   const eraBps = (BLUEPRINT_CATALOG[selectedEra] ?? []).map((def) => ({
     ...def,
@@ -460,7 +460,7 @@ function ResearchTab({ research, blueprints, buildings, activeBook, researchBlue
         {eraList.map((era) => (
           <button
             key={era}
-            onClick={() => setSelectedEra(era)}
+            type="button"
             className="text-xs px-3 py-1 rounded-full border transition-colors"
             style={selectedEra === era
               ? (lightTheme
@@ -918,6 +918,7 @@ export default function BlueprintInventory() {
           blueprints={blueprints}
           research={research}
           buildings={buildings}
+          activeBook={activeBook}
           onSelectBp={setSelectedBpId}
           lightTheme={lightTheme}
         />

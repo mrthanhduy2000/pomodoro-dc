@@ -2341,6 +2341,67 @@ export const WONDER_EFFECT_REGISTRY = {
   relic_evo_30off:      { era: 15, label: '-30% chi phí tiến hóa Di Vật',    description: 'Giảm 30% tài nguyên cần thiết để tiến hóa tất cả Di Vật.' },
 };
 
+export const BUILDING_PERK_REGISTRY = {
+  craft_haste_first: {
+    family: 'Tăng tốc',
+    label: 'Đẩy nhanh xưởng',
+    summary: 'Phiên từ 45 phút làm công trình đầu hàng đợi tiến thêm 1 bước.',
+    effects: ['craft_haste_first'],
+    minMinutes: 45,
+  },
+  craft_haste_all: {
+    family: 'Tăng tốc',
+    label: 'Cả xưởng tăng tốc',
+    summary: 'Phiên từ 45 phút làm mọi công trình trong hàng đợi tiến thêm 1 bước.',
+    effects: ['craft_haste_all'],
+    minMinutes: 45,
+  },
+  daily_chest: {
+    family: 'Rương thưởng',
+    label: 'Rương phiên thứ 3',
+    summary: 'Mỗi phiên thứ 3 trong ngày tặng 90 XP và 1 tinh luyện.',
+    effects: ['daily_chest'],
+    everySessions: 3,
+    xp: 90,
+    refined: 1,
+  },
+  deep_chest: {
+    family: 'Rương thưởng',
+    label: 'Rương phiên dài',
+    summary: 'Phiên từ 60 phút tặng 140 XP và 1 tinh luyện.',
+    effects: ['deep_chest'],
+    minMinutes: 60,
+    xp: 140,
+    refined: 1,
+  },
+  safety_net: {
+    family: 'Bảo hiểm',
+    label: 'Hủy an toàn + phiên bù',
+    summary: 'Mỗi ngày, lần hủy đầu tiên không gây thảm họa. Sau khi hủy, phiên từ 15 phút tặng 80 XP và 1 tinh luyện.',
+    effects: ['safe_cancel_daily', 'recovery_bonus'],
+    minMinutes: 15,
+    xp: 80,
+    refined: 1,
+  },
+  same_category_combo: {
+    family: 'Combo',
+    label: 'Chuỗi cùng chủ đề',
+    summary: 'Từ phiên thứ 3 liên tiếp cùng danh mục, nhận thêm 120 XP.',
+    effects: ['same_category_combo'],
+    minStreak: 3,
+    xp: 120,
+  },
+  variety_day: {
+    family: 'Combo',
+    label: 'Ngày đa dạng',
+    summary: 'Khi dùng đủ 3 danh mục trong ngày, nhận 120 XP và 1 tinh luyện.',
+    effects: ['variety_day'],
+    requiredCategories: 3,
+    xp: 120,
+    refined: 1,
+  },
+};
+
 // ─── NỘI BỘ: phân loại vai trò từng công trình ─────────────────────────────────
 // [era, type, wonderEffectId?]
 // type: 'infrastructure' | 'economy' | 'defense' | 'wonder'
@@ -2516,6 +2577,39 @@ function _getWonderBuildRefinedCost(era) {
   return { t2: 6 + offset, t3: 2 };
 }
 
+function _getBuildingPerkId(era, type, rarity) {
+  if (type === 'defense') return 'safety_net';
+  if (type === 'infrastructure') {
+    if (rarity === 'rare' && era >= 6) return 'craft_haste_all';
+    if (rarity === 'rare') return 'same_category_combo';
+    return 'craft_haste_first';
+  }
+  if (type === 'economy') {
+    if (rarity === 'rare' && era % 2 === 1) return 'variety_day';
+    if (rarity === 'rare') return 'deep_chest';
+    return 'daily_chest';
+  }
+  return null;
+}
+
+function _makeBuildingPerk(era, type, rarity, wonderEffect) {
+  if (type === 'wonder') {
+    const wonder = WONDER_EFFECT_REGISTRY[wonderEffect];
+    return {
+      id: `wonder_${wonderEffect}`,
+      family: 'Quyền đặc biệt',
+      label: wonder?.label ?? 'Kỳ quan',
+      summary: wonder?.description ?? 'Kỳ quan tạo một luật chơi đặc biệt.',
+      effects: [`wonder:${wonderEffect}`],
+      isWonder: true,
+    };
+  }
+
+  const perkId = _getBuildingPerkId(era, type, rarity);
+  const perk = BUILDING_PERK_REGISTRY[perkId];
+  return perk ? { id: perkId, ...perk } : null;
+}
+
 for (const [bpId, roleArr] of Object.entries(_BLDG_ROLES)) {
   const [era, type] = roleArr;
   if (type === 'wonder' && BUILDING_SPECS[bpId]) {
@@ -2560,6 +2654,7 @@ for (const [bpId, roleArr] of Object.entries(_BLDG_ROLES)) {
 
   _bldEff[bpId] = {
     era, type, maxHP, sessionsToComplete,
+    perk: _makeBuildingPerk(era, type, rarity, wEffect),
     ...(type === 'infrastructure' && {
       passiveT1PerBreakMin: passiveT1,
       passiveT2PerBreakMin: passiveT2,

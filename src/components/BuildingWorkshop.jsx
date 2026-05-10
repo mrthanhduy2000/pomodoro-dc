@@ -15,7 +15,6 @@ import useSettingsStore from '../store/settingsStore';
 import {
   BUILDING_SPECS,
   BUILDING_EFFECTS,
-  WONDER_EFFECT_REGISTRY,
   BLUEPRINT_CATALOG,
   BLUEPRINT_META,
   BLUEPRINT_RARITY_LABEL,
@@ -128,6 +127,28 @@ function RarityBadge({ rarity, lightTheme = false }) {
     <span className={`text-[11px] px-1.5 py-0.5 rounded-full border font-semibold ${s.color} ${s.bg} ${s.border}`}>
       {s.label}
     </span>
+  );
+}
+
+function PerkSummary({ perk, lightTheme = false }) {
+  if (!perk) return null;
+  return (
+    <div
+      className="mt-1.5 rounded-[14px] px-3 py-2"
+      style={lightTheme
+        ? { background: 'rgba(31, 30, 29, 0.04)', border: '1px solid rgba(31, 30, 29, 0.08)' }
+        : { background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}
+    >
+      <p className="text-[11px] font-semibold uppercase tracking-[0.16em]" style={lightTheme ? { color: '#9a5a48' } : { color: '#f8d6a2' }}>
+        {perk.family}
+      </p>
+      <p className="mt-0.5 text-xs font-semibold" style={lightTheme ? { color: '#1f1e1d' } : { color: '#f8fafc' }}>
+        {perk.label}
+      </p>
+      <p className="mt-0.5 text-xs leading-5" style={lightTheme ? { color: '#6a6862' } : { color: '#cbd5e1' }}>
+        {perk.summary}
+      </p>
+    </div>
   );
 }
 
@@ -275,34 +296,7 @@ function ReadyCard({ bpId, bookResources, resourcesRefined, craftingQueue, onSta
 
           {/* Hiệu ứng */}
           <div className="mt-1.5 space-y-0.5">
-            {eff.type === 'infrastructure' && (() => {
-              const ref = ERA_REFINED[eff.era] ?? {};
-              return (
-                <p className="text-xs" style={lightTheme ? { color: '#68796a' } : { color: '#7dd3fc' }}>
-                  Mỗi phút nghỉ: +{eff.passiveT1PerBreakMin ?? 0} nguyên liệu thô
-                  {eff.passiveT2PerBreakMin
-                    ? ` · +${(eff.passiveT2PerBreakMin ?? 0).toFixed(2)} ${ref.t2Icon ?? ''} ${ref.t2Label ?? 'tinh luyện'}`
-                    : ''}
-                </p>
-              );
-            })()}
-            {eff.type === 'economy' && (() => {
-              const ref = ERA_REFINED[eff.era] ?? {};
-              return (
-                <p className="text-xs" style={lightTheme ? { color: '#9c7645' } : { color: '#fcd34d' }}>
-                  Mỗi phiên: +{formatPercent(eff.t1DropBonus ?? 0)} nguyên liệu thô
-                  {eff.t2DropBonus
-                    ? ` · +${formatPercent(eff.t2DropBonus ?? 0)} ${ref.t2Icon ?? ''} ${ref.t2Label ?? 'tinh luyện'}`
-                    : ''}
-                </p>
-              );
-            })()}
-            {eff.type === 'defense' && (
-              <p className="text-xs" style={lightTheme ? { color: '#8d5c54' } : { color: '#fda4af' }}>Giảm {formatPercent(eff.cancelLossReductionPct ?? 0)} thất thoát khi hủy phiên</p>
-            )}
-            {eff.type === 'wonder' && eff.wonderEffect && (
-              <p className="text-xs" style={lightTheme ? { color: '#7a6877' } : { color: '#d8b4fe' }}>Kỳ Quan: xem chi tiết trong tab Bản Vẽ</p>
-            )}
+            <PerkSummary perk={eff.perk} lightTheme={lightTheme} />
             <p className="text-xs" style={lightTheme ? { color: '#8a8a86' } : { color: '#64748b' }}>{meta.sessionsToComplete ?? 1} phiên để hoàn thành</p>
           </div>
           {spec.cost && <ResourceCost era={meta.era} cost={spec.cost} bookResources={bookResources} lightTheme={lightTheme} />}
@@ -352,7 +346,6 @@ const LEVEL_MULT  = [1, 1.0, 1.75, 2.5];
 function BuiltCard({ bpId, level, resourcesRefined, onUpgrade, lightTheme }) {
   const bpDef = getBpDef(bpId);
   const eff   = BUILDING_EFFECTS[bpId] ?? {};
-  const wEff  = eff.wonderEffect ? WONDER_EFFECT_REGISTRY[eff.wonderEffect] : null;
   const era   = eff.era ?? 1;
   const lv    = level ?? 1;
   const refined = normalizeRefinedBag(resourcesRefined);
@@ -360,7 +353,6 @@ function BuiltCard({ bpId, level, resourcesRefined, onUpgrade, lightTheme }) {
   const upgradeCost = getUpgradeRefinedCost(era, lv);
   const canUpgrade = lv < 3 && refined.t2 >= upgradeCost;
   const upgradeCostLabel = `${upgradeCost} ${eraRef.t2Label ?? 'Tinh luyện'}`;
-  const mult = getBuildingLevelMultiplier(lv);
 
   return (
     <div
@@ -395,31 +387,10 @@ function BuiltCard({ bpId, level, resourcesRefined, onUpgrade, lightTheme }) {
             <span className="text-xs" style={lightTheme ? { color: '#8a8a86', fontFamily: MONO_FONT } : { color: '#64748b', fontFamily: MONO_FONT }}>×{LEVEL_MULT[lv]} hiệu ứng</span>
           )}
         </div>
-        {eff.type === 'infrastructure' && (() => {
-          const ref = ERA_REFINED[eff.era] ?? {};
-          const t1Amt = Math.floor((eff.passiveT1PerBreakMin ?? 0) * mult);
-          const t2Amt = (eff.passiveT2PerBreakMin ?? 0) * mult;
-          return (
-            <p className="mt-0.5 text-xs" style={lightTheme ? { color: '#68796a' } : { color: '#64748b' }}>
-              +{t1Amt} nguyên liệu thô/phút nghỉ
-              {t2Amt > 0 ? ` · +${t2Amt.toFixed(2)} ${ref.t2Icon ?? ''} ${ref.t2Label ?? 'tinh luyện'}` : ''}
-            </p>
-          );
-        })()}
-        {eff.type === 'economy' && (
-          <p className="mt-0.5 text-xs" style={lightTheme ? { color: '#9c7645' } : { color: '#64748b' }}>
-            +{formatPercent((eff.t1DropBonus ?? 0) * mult)} nguyên liệu thô/phiên
-            {(eff.t2DropBonus ?? 0) > 0 ? ` · +${formatPercent((eff.t2DropBonus ?? 0) * mult)} ${eraRef.t2Icon ?? ''} ${eraRef.t2Label ?? 'tinh luyện'}` : ''}
-          </p>
-        )}
-        {eff.type === 'defense' && (
-          <p className="mt-0.5 text-xs" style={lightTheme ? { color: '#8d5c54' } : { color: '#64748b' }}>
-            Giảm {formatPercent((eff.cancelLossReductionPct ?? 0) * mult)} thất thoát khi hủy phiên
-          </p>
-        )}
-        {eff.type === 'wonder' && wEff && (
-          <p className="mt-0.5 text-xs" style={lightTheme ? { color: '#7a6877' } : { color: '#64748b' }}>
-            {wEff.label}
+        <PerkSummary perk={eff.perk} lightTheme={lightTheme} />
+        {lv > 1 && (
+          <p className="mt-1 text-xs" style={lightTheme ? { color: '#8a8a86' } : { color: '#64748b' }}>
+            Cấp công trình vẫn tăng thông số nền phía sau đặc quyền.
           </p>
         )}
       </div>
@@ -527,6 +498,7 @@ export default function BuildingWorkshop() {
     ),
     0.6,
   );
+  const activePerkLabels = [...new Set(builtEntries.map(({ eff }) => eff.perk?.label).filter(Boolean))].slice(0, 3);
   return (
     <div className="space-y-5">
       {/* Header */}
@@ -540,6 +512,17 @@ export default function BuildingWorkshop() {
           <h2 className={lightTheme ? 'serif text-[1.8rem] leading-none sm:text-[2rem]' : 'text-white font-bold text-[1.1rem] sm:text-lg'} style={lightTheme ? { color: '#1f1e1d' } : undefined}>Xưởng xây dựng</h2>
         </div>
         <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+          {activePerkLabels.map((label) => (
+            <span
+              key={label}
+              className="rounded-full px-2.5 sm:px-3 py-1 text-[10.5px] sm:text-xs"
+              style={lightTheme
+                ? { color: '#9a5a48', background: 'rgba(201, 100, 66, 0.08)', border: '1px solid rgba(201, 100, 66, 0.18)' }
+                : undefined}
+            >
+              {label}
+            </span>
+          ))}
           {totalT1Passive > 0 && (
             <span
               className="rounded-full px-2.5 sm:px-3 py-1 text-[10.5px] sm:text-xs"

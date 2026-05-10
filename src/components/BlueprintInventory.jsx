@@ -158,6 +158,28 @@ function RarityBadge({ rarity, lightTheme = false }) {
   );
 }
 
+function PerkSummary({ perk, lightTheme = false }) {
+  if (!perk) return null;
+  return (
+    <div
+      className="mt-1.5 rounded-[14px] px-3 py-2"
+      style={lightTheme
+        ? { background: 'rgba(31, 30, 29, 0.04)', border: '1px solid rgba(31, 30, 29, 0.08)' }
+        : { background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}
+    >
+      <p className="text-[11px] font-semibold uppercase tracking-[0.16em]" style={lightTheme ? { color: '#9a5a48' } : { color: '#f8d6a2' }}>
+        {perk.family}
+      </p>
+      <p className="mt-0.5 text-xs font-semibold" style={lightTheme ? { color: '#1f1e1d' } : { color: '#f8fafc' }}>
+        {perk.label}
+      </p>
+      <p className="mt-0.5 text-xs leading-5" style={lightTheme ? { color: '#6a6862' } : { color: '#cbd5e1' }}>
+        {perk.summary}
+      </p>
+    </div>
+  );
+}
+
 // ─── RP progress bar ─────────────────────────────────────────────────────────
 function RPBar({ currentRP, cost, lightTheme = false }) {
   const pct = Math.min(100, Math.round((currentRP / cost) * 100));
@@ -260,8 +282,6 @@ function MyBlueprintsTab({ blueprints, research, buildings, onSelectBp, lightThe
           const def   = CATALOG_FLAT[id];
           const eff   = BUILDING_EFFECTS[id];
           const built = buildings.includes(id);
-          const wKey  = eff?.wonderEffect;
-          const wEff  = wKey ? WONDER_EFFECT_REGISTRY[wKey] : null;
 
           return (
             <motion.div
@@ -306,36 +326,9 @@ function MyBlueprintsTab({ blueprints, research, buildings, onSelectBp, lightThe
                     )}
                   </div>
                   <p className="text-xs mt-0.5 line-clamp-2" style={lightTheme ? { color: '#6a6862' } : { color: '#94a3b8' }}>{def?.description}</p>
-                  {wEff && (
-                    <p className="text-xs mt-1" style={lightTheme ? { color: '#7a6877' } : { color: '#d8b4fe' }}>{wEff.label}</p>
-                  )}
+                  <PerkSummary perk={eff?.perk} lightTheme={lightTheme} />
                   {def?.rarity && (
                     <p className="text-xs mt-0.5" style={lightTheme ? { color: '#8a8a86' } : { color: '#64748b' }}>{RESEARCH_TRACK[def.rarity] ?? 'Đầu tư'}</p>
-                  )}
-                  {eff?.type === 'infrastructure' && (() => {
-                    const ref = ERA_REFINED[def?.era] ?? {};
-                    return (
-                      <p className="text-xs mt-0.5" style={lightTheme ? { color: '#68796a' } : { color: '#7dd3fc' }}>
-                        Mỗi phút nghỉ: +{eff.passiveT1PerBreakMin} nguyên liệu thô
-                        {eff.passiveT2PerBreakMin
-                          ? ` · +${(eff.passiveT2PerBreakMin ?? 0).toFixed(2)} ${ref.t2Icon ?? ''} ${ref.t2Label ?? ''}`
-                          : ''}
-                      </p>
-                    );
-                  })()}
-                  {eff?.type === 'economy' && (() => {
-                    const ref = ERA_REFINED[def?.era] ?? {};
-                    return (
-                      <p className="text-xs mt-0.5" style={lightTheme ? { color: '#9c7645' } : { color: '#fcd34d' }}>
-                        +{formatPercent(eff.t1DropBonus ?? 0)} nguyên liệu thô/phiên
-                        {eff.t2DropBonus ? ` · +${formatPercent(eff.t2DropBonus ?? 0)} ${ref.t2Icon ?? ''} ${ref.t2Label ?? ''}` : ''}
-                      </p>
-                    );
-                  })()}
-                  {eff?.type === 'defense' && (
-                    <p className="text-xs mt-0.5" style={lightTheme ? { color: '#8d5c54' } : { color: '#fda4af' }}>
-                      Giảm {formatPercent(eff.cancelLossReductionPct ?? 0)} thất thoát khi hủy phiên
-                    </p>
                   )}
                 </div>
               </div>
@@ -489,8 +482,6 @@ function ResearchTab({ research, blueprints, buildings, activeBook, researchBlue
           const researchCost = getDisplayedResearchCost(buildings, id);
           const isResearched  = researched.has(id) || alreadyOwned.has(id);
           const canAffordRP   = currentRP >= researchCost;
-          const wKey          = eff?.wonderEffect;
-          const wEff          = wKey ? WONDER_EFFECT_REGISTRY[wKey] : null;
 
           return (
             <div
@@ -537,32 +528,7 @@ function ResearchTab({ research, blueprints, buildings, activeBook, researchBlue
                     {meta?.rarity && (
                       <p className="text-xs" style={lightTheme ? { color: '#8a8a86' } : { color: '#64748b' }}>{RESEARCH_TRACK[meta.rarity] ?? 'Đầu tư'}</p>
                     )}
-                    {eff?.type === 'infrastructure' && (() => {
-                      const ref = ERA_REFINED[selectedEra] ?? {};
-                      return (
-                        <p className="text-xs" style={lightTheme ? { color: '#68796a' } : { color: '#7dd3fc' }}>
-                          Mỗi phút nghỉ: +{eff.passiveT1PerBreakMin} nguyên liệu thô
-                          {eff.passiveT2PerBreakMin
-                            ? ` · +${(eff.passiveT2PerBreakMin ?? 0).toFixed(2)} ${ref.t2Icon ?? ''} ${ref.t2Label ?? ''}`
-                            : ''}
-                        </p>
-                      );
-                    })()}
-                    {eff?.type === 'economy' && (() => {
-                      const ref = ERA_REFINED[selectedEra] ?? {};
-                      return (
-                        <p className="text-xs" style={lightTheme ? { color: '#9c7645' } : { color: '#fcd34d' }}>
-                          +{formatPercent(eff.t1DropBonus ?? 0)} nguyên liệu thô/phiên
-                          {eff.t2DropBonus ? ` · +${formatPercent(eff.t2DropBonus ?? 0)} ${ref.t2Icon ?? ''} ${ref.t2Label ?? ''}` : ''}
-                        </p>
-                      );
-                    })()}
-                    {eff?.type === 'defense' && (
-                      <p className="text-xs" style={lightTheme ? { color: '#8d5c54' } : { color: '#fda4af' }}>Giảm {formatPercent(eff.cancelLossReductionPct ?? 0)} thất thoát khi hủy phiên</p>
-                    )}
-                    {wEff && (
-                      <p className="text-xs" style={lightTheme ? { color: '#7a6877' } : { color: '#d8b4fe' }}>{wEff.label}: {wEff.description}</p>
-                    )}
+                    <PerkSummary perk={eff?.perk} lightTheme={lightTheme} />
                     <p className="text-xs" style={lightTheme ? { color: '#8a8a86' } : { color: '#64748b' }}>{meta.sessionsToComplete} phiên xây</p>
                   </div>
 
@@ -616,6 +582,7 @@ function BlueprintDetailPanel({ bpId, onClose, buildings, research, lightTheme }
   const spec         = BUILDING_SPECS[bpId];
   const wKey         = eff?.wonderEffect;
   const wEff         = wKey ? WONDER_EFFECT_REGISTRY[wKey] : null;
+  const perk         = eff?.perk;
   const era          = def?.era ?? 1;
   const eraRef       = ERA_REFINED[era] ?? {};
   const eraMeta      = ERA_METADATA[era] ?? {};
@@ -723,8 +690,14 @@ function BlueprintDetailPanel({ bpId, onClose, buildings, research, lightTheme }
 
           {/* Effects */}
           <div className="rounded-[22px] p-4 space-y-2" style={lightTheme ? { background: 'rgba(250, 249, 246, 0.94)', border: '1px solid rgba(31, 30, 29, 0.08)' } : { background: 'rgba(30,41,59,0.5)' }}>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] mb-1" style={lightTheme ? { color: '#8a8a86', fontFamily: MONO_FONT } : { color: '#94a3b8', fontFamily: MONO_FONT }}>Hiệu ứng công trình</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] mb-1" style={lightTheme ? { color: '#8a8a86', fontFamily: MONO_FONT } : { color: '#94a3b8', fontFamily: MONO_FONT }}>Đặc quyền công trình</p>
+            <PerkSummary perk={perk} lightTheme={lightTheme} />
 
+            <details className="pt-1">
+              <summary className="cursor-pointer text-xs font-semibold" style={lightTheme ? { color: '#8a8a86' } : { color: '#94a3b8' }}>
+                Thông số cân bằng
+              </summary>
+              <div className="mt-2 space-y-2">
             {eff?.type === 'infrastructure' && (
               <div className="space-y-1.5">
                 <p className="text-sm" style={lightTheme ? { color: '#68796a' } : { color: '#7dd3fc' }}>
@@ -782,6 +755,8 @@ function BlueprintDetailPanel({ bpId, onClose, buildings, research, lightTheme }
                 <p className="text-xs leading-5" style={lightTheme ? { color: '#6a6862' } : { color: '#e9d5ff' }}>{wEff.description}</p>
               </div>
             )}
+              </div>
+            </details>
           </div>
 
           {/* Build info */}

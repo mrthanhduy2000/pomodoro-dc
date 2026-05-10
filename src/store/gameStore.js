@@ -1338,6 +1338,147 @@ function applyDailyMissionXPBonus(buildings, xpAmount) {
   return Math.round(normalizedXP * DAILY_MISSION_XP_SCALE * getDailyMissionXPBonusMultiplier(buildings));
 }
 
+function getBuildingPerkEffects(perk) {
+  return Array.isArray(perk?.effects) ? perk.effects : [];
+}
+
+function getBuiltPerks(buildings = []) {
+  return (buildings ?? [])
+    .map((bpId) => BUILDING_EFFECTS[bpId]?.perk)
+    .filter(Boolean);
+}
+
+function findBuiltPerk(buildings = [], effectId) {
+  return getBuiltPerks(buildings).find((perk) => getBuildingPerkEffects(perk).includes(effectId)) ?? null;
+}
+
+function hasCancelledSessionOnDate(history = [], dayKey = localDateStr()) {
+  return (history ?? []).some((entry) => (
+    isCancelledHistoryEntry(entry)
+    && entry?.timestamp
+    && localDateStr(entry.timestamp) === dayKey
+  ));
+}
+
+function getSafeCancelPerk(buildings = [], history = [], dayKey = localDateStr()) {
+  const perk = findBuiltPerk(buildings, 'safe_cancel_daily');
+  if (!perk) return null;
+  return hasCancelledSessionOnDate(history, dayKey) ? null : perk;
+}
+
+function getCraftingAccelerationMode(buildings = [], minutesFocused = 0) {
+  if (minutesFocused < 45) return null;
+  if (findBuiltPerk(buildings, 'craft_haste_all')) return 'all';
+  if (findBuiltPerk(buildings, 'craft_haste_first')) return 'first';
+  return null;
+}
+
+function advanceCraftingQueueWithPerks(craftingQueue = [], accelerationMode = null) {
+  const nextQueue = [];
+  const newlyBuilt = [];
+  const acceleratedIds = [];
+
+  for (const [index, item] of (craftingQueue ?? []).entries()) {
+    const extraProgress = accelerationMode === 'all' || (accelerationMode === 'first' && index === 0) ? 1 : 0;
+    const remaining = item.sessionsRemaining - 1 - extraProgress;
+
+    if (extraProgress > 0) acceleratedIds.push(item.bpId);
+    if (remaining <= 0) {
+      newlyBuilt.push(item.bpId);
+    } else {
+      nextQueue.push({ ...item, sessionsRemaining: remaining });
+    }
+  }
+
+  return { nextQueue, newlyBuilt, acceleratedIds };
+}
+
+function getBuildingPerkSessionRewards(prev, {
+  minutesFocused = 0,
+  newSessionsCompletedToday = 0,
+  consecutiveSameCat = 0,
+  categoryId = null,
+  catsToday = [],
+  uniqueCatsToday = new Set(),
+} = {}) {
+  const rewards = [];
+
+  const addReward = (perk, reason, xp = 0, refined = 0) => {
+    rewards.push({
+      id: `${perk.id}_${reason}`,
+      label: perk.label,
+      family: perk.family,
+      reason,
+      xp: Math.max(0, Math.round(xp ?? 0)),
+      refined: Math.max(0, Math.round(refined ?? 0)),
+    });
+  };
+
+  const dailyChest = findBuiltPerk(prev.buildings, 'daily_chest');
+  if (
+    dailyChest
+    && newSessionsCompletedToday > 0
+    && newSessionsCompletedToday % (dailyChest.everySessions ?? 3) === 0
+  ) {
+    addReward(dailyChest, 'Phiên thứ 3 trong ngày', dailyChest.xp, dailyChest.refined);
+  }
+
+  const deepChest = findBuiltPerk(prev.buildings, 'deep_chest');
+  if (deepChest && minutesFocused >= (deepChest.minMinutes ?? 60)) {
+    addReward(deepChest, 'Phiên dài', deepChest.xp, deepChest.refined);
+  }
+
+  const safetyNet = findBuiltPerk(prev.buildings, 'recovery_bonus');
+  if (safetyNet && prev.sessionMeta?.lastSessionCancelled && minutesFocused >= (safetyNet.minMinutes ?? 15)) {
+    addReward(safetyNet, 'Phiên bù sau khi hủy', safetyNet.xp, safetyNet.refined);
+  }
+
+  const sameCategory = findBuiltPerk(prev.buildings, 'same_category_combo');
+  if (
+    sameCategory
+    && categoryId
+    && consecutiveSameCat >= (sameCategory.minStreak ?? 3)
+  ) {
+    addReward(sameCategory, 'Chuỗi cùng danh mục', sameCategory.xp, sameCategory.refined);
+  }
+
+  const varietyDay = findBuiltPerk(prev.buildings, 'variety_day');
+  const requiredCategories = varietyDay?.requiredCategories ?? 3;
+  if (
+    varietyDay
+    && (catsToday?.length ?? 0) < requiredCategories
+    && uniqueCatsToday.size >= requiredCategories
+  ) {
+    addReward(varietyDay, 'Đủ 3 danh mục hôm nay', varietyDay.xp, varietyDay.refined);
+  }
+
+  return rewards.reduce((summary, reward) => ({
+    xp: summary.xp + reward.xp,
+    refined: summary.refined + reward.refined,
+    rewards: [...summary.rewards, reward],
+  }), { xp: 0, refined: 0, rewards: [] });
+}
+
+function makeBuildingPerkRewardNotification(reward) {
+  return {
+    title: reward.family ?? 'Đặc quyền công trình',
+    body: `${reward.label}: ${reward.reason}${reward.xp > 0 ? `, +${reward.xp} XP` : ''}${reward.refined > 0 ? `, +${reward.refined} tinh luyện` : ''}.`,
+    icon: reward.refined > 0 ? '🎁' : '⚡',
+    category: 'workshop',
+    action: { tab: 'collection', collectionTab: 'workshop' },
+  };
+}
+
+function makeSafeCancelPerkNotification(perk) {
+  return {
+    title: 'Hủy an toàn',
+    body: `${perk.label}: phiên hủy này không tạo thảm họa.`,
+    icon: '🛡️',
+    category: 'workshop',
+    action: { tab: 'collection', collectionTab: 'workshop' },
+  };
+}
+
 // ─── FACTORY: TIMER SESSION (persist qua F5) ─────────────────────────────────
 const makeDefaultTimerSession = () => ({
   isRunning:          false,
@@ -2505,6 +2646,214 @@ function rebuildComboFromHistory(history, state, referenceTs = Date.now()) {
   };
 }
 
+function getHistoryEntryTimestampMs(entry) {
+  const raw = entry?.timestamp ?? entry?.finishedAt ?? entry?.startedAt;
+  const timestamp = typeof raw === 'string' ? new Date(raw).getTime() : Number(raw);
+  return Number.isFinite(timestamp) ? timestamp : null;
+}
+
+function getCompletedHistoryEntries(history = []) {
+  return (history ?? [])
+    .filter((entry) => getHistoryEntryTimestampMs(entry) !== null && !isCancelledHistoryEntry(entry) && entry.completed !== false)
+    .sort((left, right) => getHistoryEntryTimestampMs(right) - getHistoryEntryTimestampMs(left));
+}
+
+function buildDailyProgressSnapshotFromHistory(history = [], dayKey = localDateStr()) {
+  const dayEntries = getCompletedHistoryEntries(history)
+    .filter((entry) => localDateStr(entry.timestamp) === dayKey);
+  const categorySet = new Set(dayEntries.map((entry) => entry.categoryId).filter(Boolean));
+  const minutes = dayEntries.reduce((sum, entry) => sum + (Number(entry.minutes) || 0), 0);
+  const notes = dayEntries.filter((entry) => countWords(entry.note ?? '') >= MISSION_NOTE_MIN_WORDS).length;
+  const hasShortSession = dayEntries.some((entry) => (entry.minutes ?? 0) <= 25);
+  const hasLongSession = dayEntries.some((entry) => (entry.minutes ?? 0) >= 60);
+
+  return {
+    sessions: dayEntries.length,
+    focusMinutes: minutes,
+    maxSessionMinutes: dayEntries.reduce((max, entry) => Math.max(max, entry.minutes ?? 0), 0),
+    researchPoints: dayEntries.reduce((sum, entry) => sum + (Number(entry.rpEarned) || 0), 0),
+    uniqueCategories: categorySet.size,
+    deepSessions: dayEntries.filter((entry) => (entry.minutes ?? 0) >= 45).length,
+    notes,
+    balancedSessions: hasShortSession && hasLongSession ? 1 : 0,
+  };
+}
+
+function getDailyMissionProgressFromSnapshot(mission, snapshot) {
+  if (!mission) return 0;
+  switch (mission.type) {
+    case 'sessions':
+      return Math.min(mission.goal, snapshot.sessions);
+    case 'focusMinutes':
+      return Math.min(mission.goal, snapshot.focusMinutes);
+    case 'singleSession':
+      return Math.min(mission.goal, snapshot.maxSessionMinutes);
+    case 'researchPoints':
+      return Math.min(mission.goal, snapshot.researchPoints);
+    case 'uniqueCategories':
+      return Math.min(mission.goal, snapshot.uniqueCategories);
+    case 'deepSessions':
+      return Math.min(mission.goal, snapshot.deepSessions);
+    case 'notes':
+      return Math.min(mission.goal, snapshot.notes);
+    case 'balancedSessions':
+      return Math.min(mission.goal, snapshot.balancedSessions);
+    default:
+      return Number.isFinite(mission.progress) ? Math.max(0, mission.progress) : 0;
+  }
+}
+
+function rebuildMissionsFromHistory(missions, history, nextStreak) {
+  const refreshed = refreshMissionsIfStale(missions);
+  const dayKey = refreshed.date ?? localDateStr();
+  const snapshot = buildDailyProgressSnapshotFromHistory(history, dayKey);
+  const list = (refreshed.list ?? []).map((mission) => {
+    const progress = getDailyMissionProgressFromSnapshot(mission, snapshot);
+    return {
+      ...mission,
+      progress,
+      claimed: progress >= mission.goal,
+    };
+  });
+  const allClaimed = list.length > 0 && list.every((mission) => mission.claimed);
+  const streakEligible = (nextStreak?.currentStreak ?? 0) >= STREAK_MISSION_MIN_STREAK;
+
+  return {
+    ...refreshed,
+    list,
+    bonusClaimedToday: allClaimed ? refreshed.bonusClaimedToday : false,
+    streakMissionClaimedToday: streakEligible ? refreshed.streakMissionClaimedToday : false,
+  };
+}
+
+function rebuildWeeklyChainFromHistory(weeklyChain, history) {
+  const activeChain = refreshWeeklyChain(weeklyChain);
+  const chain = WEEKLY_CHAINS[activeChain.chainIndex];
+  if (!chain) return activeChain;
+
+  const weekEntries = getHistoryWeekEntries(history, activeChain.weekKey);
+  const snapshot = buildWeeklyProgressSnapshot(weekEntries, activeChain.weekKey);
+  const previouslyClaimedSteps = Math.max(0, Math.min(activeChain.currentStep ?? 0, chain.steps.length));
+  let currentStep = 0;
+
+  while (currentStep < previouslyClaimedSteps && currentStep < chain.steps.length) {
+    const step = chain.steps[currentStep];
+    const progress = getWeeklyStepProgress(step, snapshot);
+    if (progress < step.goal) break;
+    currentStep += 1;
+  }
+
+  const activeStep = chain.steps[currentStep];
+  return {
+    ...activeChain,
+    currentStep,
+    stepProgress: activeStep ? getWeeklyStepProgress(activeStep, snapshot) : 0,
+    bonusClaimed: currentStep >= chain.steps.length ? activeChain.bonusClaimed : false,
+  };
+}
+
+function rebuildCategoryTrackingFromHistory(history) {
+  const completedEntries = getCompletedHistoryEntries(history);
+  const latestCategoryId = completedEntries[0]?.categoryId ?? null;
+  if (!latestCategoryId) return makeDefaultCategoryTracking();
+
+  let consecutiveCount = 0;
+  for (const entry of completedEntries) {
+    if (entry.categoryId !== latestCategoryId) break;
+    consecutiveCount += 1;
+  }
+
+  return {
+    lastCategoryId: latestCategoryId,
+    consecutiveCount,
+  };
+}
+
+function rebuildEraTrackingFromHistory(history, activeBook) {
+  const completedEntries = getCompletedHistoryEntries(history);
+  const books = completedEntries
+    .map((entry) => entry.book)
+    .filter((book) => Number.isFinite(book));
+  const currentEraBook = Number.isFinite(activeBook) ? activeBook : Math.max(1, ...books, 1);
+
+  return {
+    sessionsInCurrentEra: completedEntries.filter((entry) => entry.book === currentEraBook).length,
+    currentEraBook,
+    erasCompleted: Math.max(0, Math.max(...books, currentEraBook) - 1),
+  };
+}
+
+function rebuildCraftingQueueAfterSessionDelete(craftingQueue = [], deletedSession) {
+  const deletedTs = getHistoryEntryTimestampMs(deletedSession);
+  if (!Number.isFinite(deletedTs)) return craftingQueue;
+
+  return (craftingQueue ?? []).map((item) => {
+    const startedAt = Number(item?.startedAt);
+    if (!Number.isFinite(startedAt) || deletedTs < startedAt) return item;
+
+    const maxSessions = BLUEPRINT_META[item.bpId]?.sessionsToComplete;
+    const nextRemaining = (Number.isFinite(item.sessionsRemaining) ? item.sessionsRemaining : 0) + 1;
+    return {
+      ...item,
+      sessionsRemaining: Number.isFinite(maxSessions)
+        ? Math.min(maxSessions, nextRemaining)
+        : nextRemaining,
+    };
+  });
+}
+
+function getChallengeWindowStart(deadline, windowHours) {
+  if (!Number.isFinite(deadline) || !Number.isFinite(windowHours)) return null;
+  return deadline - (windowHours * 3_600_000);
+}
+
+function countQualifiedChallengeSessions(history, { minMinutes = 0, deadline, windowHours }) {
+  const startedAt = getChallengeWindowStart(deadline, windowHours);
+  if (!Number.isFinite(startedAt)) return null;
+
+  return getCompletedHistoryEntries(history).filter((entry) => {
+    const timestamp = getHistoryEntryTimestampMs(entry);
+    if (!Number.isFinite(timestamp) || timestamp < startedAt || timestamp > deadline) return false;
+    return (Number(entry.minutes) || 0) >= minMinutes;
+  }).length;
+}
+
+function rebuildRankChallengeAfterSessionDelete(rankChallenge, history) {
+  if (!rankChallenge?.active) return rankChallenge;
+  const qualifiedCount = countQualifiedChallengeSessions(history, {
+    minMinutes: rankChallenge.minMinutes,
+    deadline: rankChallenge.deadline,
+    windowHours: rankChallenge.windowHours,
+  });
+  if (!Number.isFinite(qualifiedCount)) return rankChallenge;
+
+  return {
+    ...rankChallenge,
+    sessionsCompleted: Math.max(
+      0,
+      Math.min(rankChallenge.sessionsCompleted ?? 0, qualifiedCount),
+    ),
+  };
+}
+
+function rebuildEraCrisisAfterSessionDelete(eraCrisis, history) {
+  if (!eraCrisis?.active || eraCrisis.choiceMade !== 'challenge') return eraCrisis;
+  const qualifiedCount = countQualifiedChallengeSessions(history, {
+    minMinutes: eraCrisis.challengeMinMinutes,
+    deadline: eraCrisis.challengeDeadline,
+    windowHours: eraCrisis.challengeOption?.windowHours,
+  });
+  if (!Number.isFinite(qualifiedCount)) return eraCrisis;
+
+  return {
+    ...eraCrisis,
+    challengeSessionsDone: Math.max(
+      0,
+      Math.min(eraCrisis.challengeSessionsDone ?? 0, qualifiedCount),
+    ),
+  };
+}
+
 function grantXPReward(prev, xpAmount, epAmount = 0) {
   const normalizedXP = Math.max(0, Math.round(xpAmount ?? 0));
   const normalizedEP = Math.max(0, Math.round(epAmount ?? 0));
@@ -3023,6 +3372,7 @@ const useGameStore = create(
           const deletedSession = prev.history.find((entry) => entry.id === sessionId);
           if (!deletedSession) return prev;
 
+          const now = Date.now();
           const nextHistory = prev.history.filter((entry) => entry.id !== sessionId);
           const rewardRollback = subtractSessionProgressAndXP(prev.progress, prev.player, deletedSession);
           const shouldRebuildDailyTracking = Boolean(
@@ -3030,6 +3380,7 @@ const useGameStore = create(
             && prev.dailyTracking?.date
             && localDateStr(deletedSession.timestamp) === prev.dailyTracking.date
           );
+          const nextStreak = rebuildStreakFromHistory(nextHistory, now, prev.streak, prev.player.unlockedSkills);
           const breakBelongsToDeletedSession =
             prev.breakSession?.sourceSessionId === sessionId
             || prev.ui?.activeBreakSessionId === sessionId;
@@ -3046,8 +3397,15 @@ const useGameStore = create(
             dailyTracking: shouldRebuildDailyTracking
               ? rebuildDailyTrackingFromHistory(prev.dailyTracking, nextHistory)
               : prev.dailyTracking,
-            streak: rebuildStreakFromHistory(nextHistory, Date.now(), prev.streak, prev.player.unlockedSkills),
-            combo: rebuildComboFromHistory(nextHistory, prev),
+            streak: nextStreak,
+            missions: rebuildMissionsFromHistory(prev.missions, nextHistory, nextStreak),
+            weeklyChain: rebuildWeeklyChainFromHistory(prev.weeklyChain, nextHistory),
+            combo: rebuildComboFromHistory(nextHistory, prev, now),
+            categoryTracking: rebuildCategoryTrackingFromHistory(nextHistory),
+            eraTracking: rebuildEraTrackingFromHistory(nextHistory, rewardRollback.progress.activeBook),
+            rankChallenge: rebuildRankChallengeAfterSessionDelete(prev.rankChallenge, nextHistory),
+            eraCrisis: rebuildEraCrisisAfterSessionDelete(prev.eraCrisis, nextHistory),
+            craftingQueue: rebuildCraftingQueueAfterSessionDelete(prev.craftingQueue, deletedSession),
             latestSessionUndo: null,
             ...(breakBelongsToDeletedSession
               ? {
@@ -3474,18 +3832,13 @@ const useGameStore = create(
           },
         };
 
-        // ── Crafting queue: tick progress (mỗi phiên hoàn thành = 1 progress) ─
-        const prevQueue = state.craftingQueue ?? [];
-        const nextQueue = [];
-        const newlyBuilt = [];
-        for (const item of prevQueue) {
-          const remaining = item.sessionsRemaining - 1;
-          if (remaining <= 0) {
-            newlyBuilt.push(item.bpId);
-          } else {
-            nextQueue.push({ ...item, sessionsRemaining: remaining });
-          }
-        }
+        // ── Crafting queue: mỗi phiên tiến 1 bước, đặc quyền có thể đẩy nhanh thêm ─
+        const craftingAccelerationMode = getCraftingAccelerationMode(state.buildings, minutesFocused);
+        const {
+          nextQueue,
+          newlyBuilt,
+          acceleratedIds: acceleratedCraftingIds,
+        } = advanceCraftingQueueWithPerks(state.craftingQueue ?? [], craftingAccelerationMode);
         const newBuildings = [...state.buildings, ...newlyBuilt];
 
         // ─── Cập nhật category tracking ──────────────────────────────────
@@ -3522,6 +3875,9 @@ const useGameStore = create(
             (freshDt.hasShortSession || minutesFocused <= 25)
             && (freshDt.hasLongSession || minutesFocused >= 60)
           );
+          const catsUpdated = categoryId && !catsToday.includes(categoryId)
+            ? [...catsToday, categoryId] : catsToday;
+          const newSessionsCompletedToday = (freshDt.sessionsCompleted ?? 0) + 1;
 
           // Mission progress tick
           const refreshedMissions = refreshMissionsIfStale(prev.missions);
@@ -3556,6 +3912,14 @@ const useGameStore = create(
             STREAK_MISSION_MAX_XP,
           ) : 0;
           const streakMissionXP = applyDailyMissionXPBonus(prev.buildings, streakMissionXPBase);
+          const buildingPerkReward = getBuildingPerkSessionRewards(prev, {
+            minutesFocused,
+            newSessionsCompletedToday,
+            consecutiveSameCat,
+            categoryId,
+            catsToday,
+            uniqueCatsToday,
+          });
 
           const newMissions = {
             ...refreshedMissions,
@@ -3564,7 +3928,7 @@ const useGameStore = create(
             ),
             streakMissionClaimedToday: streakMissionXP > 0 ? true : refreshedMissions.streakMissionClaimedToday,
           };
-          const finalSessionXP = baseSessionXP + missionBonusXP + streakMissionXP;
+          const finalSessionXP = baseSessionXP + missionBonusXP + streakMissionXP + buildingPerkReward.xp;
           const finalSessionEP = Math.max(0, Math.round(reward.finalEP ?? 0));
           const finalTotalEP = prev.progress.totalEP + finalSessionEP + overclockPrincipalReturn;
           const finalBook = getActiveBook(finalTotalEP);
@@ -3611,7 +3975,7 @@ const useGameStore = create(
             jackpot:          reward.jackpotTriggered,
             resources:        reward.resources,
             rpEarned:         finalSessionRP,
-            refinedEarned:    reward.t2Drop ?? 0,
+            refinedEarned:    (reward.t2Drop ?? 0) + buildingPerkReward.refined,
             blueprint:        null,
             categoryId:       categoryId ?? null,
             categorySnapshot: sessionSnapshot?.categorySnapshot ?? null,
@@ -3635,7 +3999,7 @@ const useGameStore = create(
           const newHistory = [sessionEntry, ...prev.history].slice(0, 2000);
           const newSavedNotes = upsertSavedNoteEntry(prev.savedNotes ?? [], sessionEntry);
           const currentHistoryStats = normalizeStoredHistoryStats(prev.historyStats, prev.history);
-          const sessionWasBlueprint = (reward.t2Drop ?? 0) > 0 || minutesFocused >= 45;
+          const sessionWasBlueprint = (reward.t2Drop ?? 0) > 0 || buildingPerkReward.refined > 0 || minutesFocused >= 45;
           const nextHistoryStats = {
             bestSessionMinutes: currentHistoryStats.bestSessionMinutes,
             bestSessionXP: currentHistoryStats.bestSessionXP,
@@ -3664,9 +4028,6 @@ const useGameStore = create(
             erasCompleted:        eraChanged ? etPrev.erasCompleted + 1 : etPrev.erasCompleted,
           };
 
-          const catsUpdated = categoryId && !catsToday.includes(categoryId)
-            ? [...catsToday, categoryId] : catsToday;
-          const newSessionsCompletedToday = (freshDt.sessionsCompleted ?? 0) + 1;
           const dailyTrackingUpd = {
             date:              today,
             sessionsCompleted: newSessionsCompletedToday,
@@ -3719,15 +4080,16 @@ const useGameStore = create(
             .map((b) => ({ ...b, sessionsRemaining: b.sessionsRemaining - 1 }))
             .filter((b) => b.sessionsRemaining > 0);
 
-          // V2: Lộc Ban Tặng refined T2 → cộng vào kho refined của era hiện tại
+          // V2: Lộc Ban Tặng + đặc quyền công trình → cộng vào kho refined của era hiện tại
           let refinedAfterLBT = newRefined;
-          if (locBanTangBonusRefined > 0) {
+          const bonusRefinedGain = locBanTangBonusRefined + buildingPerkReward.refined;
+          if (bonusRefinedGain > 0) {
             const eraKey = reward.activeBook;
             const prevRefined2 = normalizeRefinedBag(refinedAfterLBT[eraKey]);
             refinedAfterLBT = {
               ...refinedAfterLBT,
               [eraKey]: {
-                t2: prevRefined2.t2 + locBanTangBonusRefined,
+                t2: prevRefined2.t2 + bonusRefinedGain,
                 t3: 0,
               },
             };
@@ -3820,6 +4182,14 @@ const useGameStore = create(
               state.rankChallenge?.targetRankIdx,
             ) : null,
             newlyBuilt.length > 0 ? makeWorkshopCompletedNotification(newlyBuilt) : null,
+            acceleratedCraftingIds.length > 0 ? {
+              title: 'Xưởng tăng tốc',
+              body: `${acceleratedCraftingIds.length} công trình tiến thêm 1 bước nhờ đặc quyền.`,
+              icon: '⚡',
+              category: 'workshop',
+              action: { tab: 'collection', collectionTab: 'workshop' },
+            } : null,
+            ...buildingPerkReward.rewards.map(makeBuildingPerkRewardNotification),
           ].filter(Boolean);
 
           return {
@@ -3884,6 +4254,10 @@ const useGameStore = create(
                 overclockBonus:      overclockBonusXP,
                 missionCompletedIds: newlyCompletedMissionIds,
                 missionBonusXP,
+                buildingPerkRewards: buildingPerkReward.rewards,
+                buildingPerkBonusXP: buildingPerkReward.xp,
+                buildingPerkBonusRefined: buildingPerkReward.refined,
+                acceleratedCraftingIds,
                 positiveEventRPBonus,
                 rpEarned: finalSessionRP,
               },
@@ -4103,6 +4477,40 @@ const useGameStore = create(
                 ...prev.ui,
                 disasterModalOpen: false,
                 pendingDisaster: null,
+              },
+            };
+          });
+          return;
+        }
+
+        const safeCancelPerk = getSafeCancelPerk(state.buildings, state.history, today);
+        if (safeCancelPerk) {
+          set((prev) => {
+            const cancelledHistoryPatch = appendCancelledSession(prev, {
+              waived: true,
+              chargeConsumed: false,
+              progressRatio: normalizedProgressRatio,
+              appliedPenaltyRate: 0,
+              deducted: {},
+              source: safeCancelPerk.id,
+            });
+
+            return {
+              ...cancelledHistoryPatch,
+              staking: makeDefaultStaking(),
+              progress: mode === 'pomodoro'
+                ? markLongBreakCycleBreakEnded(prev.progress, now)
+                : syncLongBreakCycleProgress(prev.progress, now),
+              sessionMeta: { ...prev.sessionMeta, lastSessionCancelled: true, breakCompletedOnTime: false },
+              latestSessionUndo: null,
+              ui: {
+                ...prev.ui,
+                disasterModalOpen: false,
+                pendingDisaster: null,
+                notificationFeed: appendUiNotification(
+                  prev.ui.notificationFeed,
+                  makeSafeCancelPerkNotification(safeCancelPerk),
+                ),
               },
             };
           });

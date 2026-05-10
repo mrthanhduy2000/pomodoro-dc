@@ -212,9 +212,10 @@ function LootDropContent({ reward, onClose, isLightTheme }) {
   const accentGlow = hexToRgba(accentHex, 0.35);
   const palette = createRewardPalette(accentHex, isLightTheme);
   const totalResourceUnits = Object.values(reward.resources ?? {}).reduce((sum, value) => sum + (value > 0 ? value : 0), 0);
-  const bonusXP = Math.max(0, (reward.finalXP ?? 0) - (reward.baseXP ?? 0));
+  const displayFinalXP = reward.totalSessionXP ?? reward.finalXP ?? 0;
+  const bonusXP = Math.max(0, displayFinalXP - (reward.baseXP ?? 0));
   const xpPerMinute = reward.effectiveMinutes > 0
-    ? ((reward.finalXP ?? 0) / reward.effectiveMinutes).toFixed(1)
+    ? (displayFinalXP / reward.effectiveMinutes).toFixed(1)
     : '0.0';
   const bonusHighlights = [
     reward.luckyBurstTriggered && {
@@ -241,6 +242,15 @@ function LootDropContent({ reward, onClose, isLightTheme }) {
       value: `+${reward.comboBonus.toLocaleString()} XP`,
       tone: 'sky',
     },
+    ...(reward.buildingPerkRewards ?? []).map((item) => ({
+      icon: 'CT',
+      label: item.label,
+      value: [
+        item.xp > 0 ? `+${item.xp.toLocaleString()} XP` : null,
+        item.refined > 0 ? `+${item.refined} tinh luyện` : null,
+      ].filter(Boolean).join(' · '),
+      tone: 'amber',
+    })),
   ].filter(Boolean);
 
   return (
@@ -371,7 +381,7 @@ function LootDropContent({ reward, onClose, isLightTheme }) {
                       >
                         <XPCounter
                           base={reward.baseXP}
-                          final={resolvedPhase >= 2 ? reward.finalXP : reward.baseXP}
+                          final={resolvedPhase >= 2 ? displayFinalXP : reward.baseXP}
                           countDuration={resolvedPhase === 1 ? 900 : 600}
                           bonusXP={bonusXP}
                           xpPerMinute={xpPerMinute}
@@ -541,12 +551,13 @@ function LootDropContent({ reward, onClose, isLightTheme }) {
                     />
                     {(() => {
                       const refined = ERA_REFINED[reward.activeBook] ?? ERA_REFINED[1];
+                      const refinedTotal = (reward.t2Drop ?? 0) + (reward.buildingPerkBonusRefined ?? 0);
                       return (
                         <>
                           <SupportRewardCard
                             icon="TL"
                             label={refined.t2Label}
-                            value={reward.t2Drop > 0 ? `+${reward.t2Drop}` : 'Không có'}
+                            value={refinedTotal > 0 ? `+${refinedTotal}` : 'Không có'}
                             accent="rgba(243,236,239,0.88)"
                             lightTheme={isLightTheme}
                             palette={palette}

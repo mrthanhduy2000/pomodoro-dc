@@ -228,11 +228,18 @@ export function useTimer({ focusMinutes, mode = TIMER_MODES.POMODORO }) {
     setActiveMode(mode);
   }, [mode]);
 
+  const isContinuingAfterPomodoro = activeMode === TIMER_MODES.STOPWATCH
+    && sessionContinueAfterPomodoroRef.current
+    && totalSecondsRef.current > 0;
+  const visibleDisplaySeconds = isContinuingAfterPomodoro
+    ? Math.max(0, displaySeconds - totalSecondsRef.current)
+    : displaySeconds;
+
   useEffect(() => {
     if (timerState === TIMER_STATES.RUNNING) {
-      document.title = `${formatTime(displaySeconds)} ⏱ DC Pomodoro`;
+      document.title = `${formatTime(visibleDisplaySeconds)} ⏱ DC Pomodoro`;
     } else if (timerState === TIMER_STATES.PAUSED) {
-      document.title = `${formatTime(displaySeconds)} ⏸ DC Pomodoro`;
+      document.title = `${formatTime(visibleDisplaySeconds)} ⏸ DC Pomodoro`;
     } else {
       document.title = 'DC Pomodoro';
     }
@@ -240,7 +247,7 @@ export function useTimer({ focusMinutes, mode = TIMER_MODES.POMODORO }) {
     return () => {
       document.title = 'DC Pomodoro';
     };
-  }, [displaySeconds, timerState]);
+  }, [timerState, visibleDisplaySeconds]);
 
   useEffect(() => {
     if (timerState !== TIMER_STATES.IDLE) return;
@@ -531,12 +538,12 @@ export function useTimer({ focusMinutes, mode = TIMER_MODES.POMODORO }) {
     if (!window.electronAPI) return;
 
     if (timerState === TIMER_STATES.RUNNING || timerState === TIMER_STATES.PAUSED) {
-      window.electronAPI.updateTray({ state: timerState, timeLeft: formatTime(displaySeconds) });
+      window.electronAPI.updateTray({ state: timerState, timeLeft: formatTime(visibleDisplaySeconds) });
       return;
     }
 
     window.electronAPI.updateTray({ state: timerState, timeLeft: '' });
-  }, [displaySeconds, timerState]);
+  }, [timerState, visibleDisplaySeconds]);
 
   useEffect(() => {
     timerStateRef.current = timerState;
@@ -1099,11 +1106,13 @@ export function useTimer({ focusMinutes, mode = TIMER_MODES.POMODORO }) {
   return {
     activeMode,
     displaySeconds,
+    visibleDisplaySeconds,
     elapsedSeconds,
     totalSeconds: currentTotalSeconds,
     timerState,
     progressPct,
     milestone,
+    isContinuingAfterPomodoro,
     start,
     pause,
     resume,

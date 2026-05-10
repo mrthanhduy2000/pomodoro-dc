@@ -192,11 +192,13 @@ export default function PomodoroEngine({
   const {
     activeMode,
     displaySeconds,
+    visibleDisplaySeconds,
     elapsedSeconds,
     totalSeconds,
     progressPct,
     timerState,
     milestone,
+    isContinuingAfterPomodoro,
     start,
     pause,
     resume,
@@ -715,7 +717,7 @@ export default function PomodoroEngine({
   const breakProgressPct = breakTotalSeconds > 0
     ? ((breakTotalSeconds - breakSecsLeft) / breakTotalSeconds) * 100
     : 0;
-  const displayRingSeconds = isBreakMode ? breakSecsLeft : displaySeconds;
+  const displayRingSeconds = isBreakMode ? breakSecsLeft : visibleDisplaySeconds;
   const displayProgressPct = isBreakMode ? breakProgressPct : progressPct;
   const breakRingColor = lightTheme
     ? (breakIsLong ? 'var(--accent2)' : 'var(--accent)')
@@ -1150,9 +1152,16 @@ export default function PomodoroEngine({
               {formatTime(displayRingSeconds)}
             </motion.span>
             {!isBreakMode && isStopwatchMode && (
-              <span className={`mt-0.5 text-xs ${lightTheme ? 'text-[var(--accent)]' : 'text-[var(--accent-light)]'}`}>
-                Ghi nhận theo phút thực tế
-              </span>
+              <>
+                <span className={`mt-0.5 text-xs ${lightTheme ? 'text-[var(--accent)]' : 'text-[var(--accent-light)]'}`}>
+                  Ghi nhận theo phút thực tế
+                </span>
+                {isContinuingAfterPomodoro && (
+                  <span className={`mt-0.5 text-[11px] ${lightTheme ? 'text-[var(--muted)]' : 'text-slate-400'}`}>
+                    Phiên đếm ngược {currentSessionTargetMinutes} phút đã hoàn thành
+                  </span>
+                )}
+              </>
             )}
             {!isBreakMode && unlockedSkills.su_tha_thu && (
               <span className={`mt-0.5 text-xs ${lightTheme ? 'text-[var(--good)]' : 'text-[var(--accent-light)]'}`}>

@@ -2303,6 +2303,208 @@ function mergeResources(allResources, gains, activeBook) {
   return { ...allResources, [bookKey]: updatedBook };
 }
 
+function getSessionRewardNumber(entry, key) {
+  const value = entry?.[key];
+  return Number.isFinite(value) ? Math.max(0, value) : 0;
+}
+
+function getSessionBook(entry) {
+  return Number.isFinite(entry?.book) ? entry.book : null;
+}
+
+function subtractSessionRawResources(allResources, sessionEntry) {
+  const book = getSessionBook(sessionEntry);
+  const gains = isRecord(sessionEntry?.resources) ? sessionEntry.resources : {};
+  if (!book || Object.keys(gains).length === 0) return allResources;
+
+  const bookKey = `book${book}`;
+  const updatedBook = { ...(allResources?.[bookKey] ?? {}) };
+
+  for (const [rawId, rawAmount] of Object.entries(gains)) {
+    const amount = Number.isFinite(rawAmount) ? Math.max(0, rawAmount) : 0;
+    if (amount <= 0) continue;
+
+    const resourceId = normalizeRawResourceId(rawId);
+    updatedBook[resourceId] = Math.max(0, (updatedBook[resourceId] ?? 0) - amount);
+  }
+
+  return { ...allResources, [bookKey]: updatedBook };
+}
+
+function subtractSessionRefinedReward(resourcesRefined, sessionEntry) {
+  const eraKey = getSessionBook(sessionEntry);
+  const refinedEarned = getSessionRewardNumber(sessionEntry, 'refinedEarned');
+  if (!eraKey || refinedEarned <= 0) return resourcesRefined;
+
+  const prevRefined = normalizeRefinedBag(resourcesRefined?.[eraKey]);
+  return {
+    ...resourcesRefined,
+    [eraKey]: {
+      ...prevRefined,
+      t2: Math.max(0, prevRefined.t2 - refinedEarned),
+    },
+  };
+}
+
+function subtractSessionResearchReward(research, sessionEntry) {
+  const rpEarned = getSessionRewardNumber(sessionEntry, 'rpEarned');
+  if (rpEarned <= 0) return research;
+
+  return {
+    ...normalizeStoredResearch(research),
+    rp: Math.max(0, (research?.rp ?? 0) - rpEarned),
+  };
+}
+
+function subtractSessionProgressAndXP(progress, player, sessionEntry) {
+  const xpEarned = Math.round(getSessionRewardNumber(sessionEntry, 'xpEarned'));
+  const epEarned = Math.round(getSessionRewardNumber(sessionEntry, 'epEarned'));
+  const minutes = Math.round(getSessionRewardNumber(sessionEntry, 'minutes'));
+  const completedSession = !isCancelledHistoryEntry(sessionEntry) && sessionEntry?.completed !== false;
+
+  const nextTotalEXP = Math.max(0, (player?.totalEXP ?? 0) - xpEarned);
+  const nextLevel = computeLevelUps(0, nextTotalEXP).newLevel;
+  const lostLevels = Math.max(0, (player?.level ?? 0) - nextLevel);
+
+  const nextTotalEP = Math.max(0, (progress?.totalEP ?? 0) - epEarned);
+  return {
+    progress: {
+      ...progress,
+      totalEP: nextTotalEP,
+      activeBook: getActiveBook(nextTotalEP),
+      sessionsCompleted: completedSession
+        ? Math.max(0, (progress?.sessionsCompleted ?? 0) - 1)
+        : (progress?.sessionsCompleted ?? 0),
+      totalFocusMinutes: completedSession
+        ? Math.max(0, (progress?.totalFocusMinutes ?? 0) - minutes)
+        : (progress?.totalFocusMinutes ?? 0),
+    },
+    player: {
+      ...player,
+      totalEXP: nextTotalEXP,
+      level: nextLevel,
+      sp: Math.max(0, (player?.sp ?? 0) - (lostLevels * SP_PER_LEVEL)),
+    },
+  };
+}
+
+function rebuildDailyTrackingFromHistory(dailyTracking, history) {
+  const trackingDate = dailyTracking?.date ?? localDateStr();
+  const dayEntries = (history ?? []).filter((entry) => (
+    !isCancelledHistoryEntry(entry)
+    && entry?.timestamp
+    && localDateStr(entry.timestamp) === trackingDate
+  ));
+  const categoriesUsed = [
+    ...new Set(dayEntries.map((entry) => entry.categoryId).filter(Boolean)),
+  ];
+
+  return {
+    ...dailyTracking,
+    date: trackingDate,
+    sessionsCompleted: dayEntries.length,
+    categoriesUsed,
+    deepSessionsCompleted: dayEntries.filter((entry) => (entry.minutes ?? 0) >= 45).length,
+    hasShortSession: dayEntries.some((entry) => (entry.minutes ?? 0) <= 25),
+    hasLongSession: dayEntries.some((entry) => (entry.minutes ?? 0) >= 60),
+    hasSession45: dayEntries.some((entry) => (entry.minutes ?? 0) >= 45),
+    hasSession60: dayEntries.some((entry) => (entry.minutes ?? 0) >= 60),
+  };
+}
+
+function localDateToDayIndex(dateStr) {
+  if (typeof dateStr !== 'string') return null;
+  const [year, month, day] = dateStr.split('-').map(Number);
+  if (!Number.isFinite(year) || !Number.isFinite(month) || !Number.isFinite(day)) return null;
+  return Math.floor(Date.UTC(year, month - 1, day) / 86_400_000);
+}
+
+function dayIndexToLocalDate(dayIndex) {
+  if (!Number.isFinite(dayIndex)) return null;
+  const date = new Date(dayIndex * 86_400_000);
+  const year = date.getUTCFullYear();
+  const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(date.getUTCDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function rebuildStreakFromHistory(history, referenceTs = Date.now(), previousStreak = {}, unlockedSkills = null) {
+  const daySet = new Set();
+
+  for (const entry of history ?? []) {
+    if (!entry?.timestamp || isCancelledHistoryEntry(entry) || entry.completed === false) continue;
+    const dayKey = localDateStr(entry.timestamp);
+    const dayIndex = localDateToDayIndex(dayKey);
+    if (Number.isFinite(dayIndex)) daySet.add(dayIndex);
+  }
+
+  if (daySet.size === 0) {
+    return {
+      ...makeDefaultStreak(),
+      skipShieldUsedWeekKey: previousStreak?.skipShieldUsedWeekKey ?? null,
+    };
+  }
+
+  const days = [...daySet].sort((left, right) => left - right);
+  let longestStreak = 0;
+  let runningStreak = 0;
+  let previousDay = null;
+
+  for (const dayIndex of days) {
+    runningStreak = previousDay !== null && dayIndex === previousDay + 1
+      ? runningStreak + 1
+      : 1;
+    longestStreak = Math.max(longestStreak, runningStreak);
+    previousDay = dayIndex;
+  }
+
+  const latestDay = days[days.length - 1];
+  let currentStreak = 0;
+  for (let dayIndex = latestDay; daySet.has(dayIndex); dayIndex -= 1) {
+    currentStreak += 1;
+  }
+
+  return refreshStreakIfExpired({
+    currentStreak,
+    longestStreak,
+    lastActiveDate: dayIndexToLocalDate(latestDay),
+    skipShieldUsedWeekKey: previousStreak?.skipShieldUsedWeekKey ?? null,
+  }, referenceTs, unlockedSkills);
+}
+
+function rebuildComboFromHistory(history, state, referenceTs = Date.now()) {
+  const completedEntries = (history ?? [])
+    .filter((entry) => entry?.timestamp && !isCancelledHistoryEntry(entry) && entry.completed !== false)
+    .map((entry) => ({
+      timestamp: new Date(entry.timestamp).getTime(),
+    }))
+    .filter(({ timestamp }) => Number.isFinite(timestamp))
+    .sort((left, right) => right.timestamp - left.timestamp);
+
+  if (completedEntries.length === 0) return makeDefaultCombo();
+
+  const comboDecayMs = getComboDecayMs(
+    state.player?.unlockedSkills,
+    state.relics,
+    state.relicEvolutions,
+  );
+  const latestTs = completedEntries[0].timestamp;
+  if ((referenceTs - latestTs) >= comboDecayMs) return makeDefaultCombo();
+
+  let count = 1;
+  for (let index = 1; index < completedEntries.length; index += 1) {
+    const newerTs = completedEntries[index - 1].timestamp;
+    const olderTs = completedEntries[index].timestamp;
+    if ((newerTs - olderTs) >= comboDecayMs) break;
+    count += 1;
+  }
+
+  return {
+    count,
+    lastSessionTs: latestTs,
+  };
+}
+
 function grantXPReward(prev, xpAmount, epAmount = 0) {
   const normalizedXP = Math.max(0, Math.round(xpAmount ?? 0));
   const normalizedEP = Math.max(0, Math.round(epAmount ?? 0));
@@ -2822,14 +3024,30 @@ const useGameStore = create(
           if (!deletedSession) return prev;
 
           const nextHistory = prev.history.filter((entry) => entry.id !== sessionId);
+          const rewardRollback = subtractSessionProgressAndXP(prev.progress, prev.player, deletedSession);
+          const shouldRebuildDailyTracking = Boolean(
+            deletedSession?.timestamp
+            && prev.dailyTracking?.date
+            && localDateStr(deletedSession.timestamp) === prev.dailyTracking.date
+          );
           const breakBelongsToDeletedSession =
             prev.breakSession?.sourceSessionId === sessionId
             || prev.ui?.activeBreakSessionId === sessionId;
 
           return {
+            player: rewardRollback.player,
+            progress: rewardRollback.progress,
             history: nextHistory,
             historyStats: buildHistoryStatsFromHistory(nextHistory),
             savedNotes: (prev.savedNotes ?? []).filter((entry) => entry.sourceSessionId !== sessionId),
+            resources: subtractSessionRawResources(prev.resources, deletedSession),
+            resourcesRefined: subtractSessionRefinedReward(prev.resourcesRefined, deletedSession),
+            research: subtractSessionResearchReward(prev.research, deletedSession),
+            dailyTracking: shouldRebuildDailyTracking
+              ? rebuildDailyTrackingFromHistory(prev.dailyTracking, nextHistory)
+              : prev.dailyTracking,
+            streak: rebuildStreakFromHistory(nextHistory, Date.now(), prev.streak, prev.player.unlockedSkills),
+            combo: rebuildComboFromHistory(nextHistory, prev),
             latestSessionUndo: null,
             ...(breakBelongsToDeletedSession
               ? {

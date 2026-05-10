@@ -15,16 +15,29 @@ function isAuthorizedRequest(req) {
   return authHeader === `Bearer ${secret}`;
 }
 
+const LEGACY_COMPLETE_GRACE_MS = 2_000;
+
+function isLegacyCompletionDue(oldRecord, nowMs = Date.now()) {
+  if (!oldRecord?.started_at || !Number.isFinite(Number(oldRecord?.total_seconds))) return true;
+
+  const startedAtMs = Date.parse(oldRecord.started_at);
+  if (!Number.isFinite(startedAtMs)) return true;
+
+  const endsAtMs = startedAtMs + (Number(oldRecord.total_seconds) * 1000);
+  return nowMs >= endsAtMs - LEGACY_COMPLETE_GRACE_MS;
+}
+
 // Supabase webhook fires on every timer_live UPDATE.
 // Prefer ended_reason when the timer_live migration is present. Older payloads fall
 // back to the old shape so deployments keep working while the database catches up.
-export function isSessionEndEvent(body) {
+export function isSessionEndEvent(body, nowMs = Date.now()) {
   const endedReason = body?.record?.ended_reason;
   if (endedReason != null && endedReason !== 'completed') return false;
 
   return (
     body?.type === 'UPDATE' &&
     (body?.old_record?.is_running !== false) &&
+    isLegacyCompletionDue(body?.old_record, nowMs) &&
     body?.record?.is_break !== true &&
     body?.record?.is_running === false &&
     body?.record?.paused_seconds_remaining == null

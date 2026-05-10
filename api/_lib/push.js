@@ -168,7 +168,8 @@ export async function cancelPushJob(jobKey, reason = 'cancelled') {
       updated_at: now,
       last_error: reason,
     })
-    .eq('job_key', jobKey);
+    .eq('job_key', jobKey)
+    .in('status', ['scheduled', 'processing']);
 
   if (error) throw error;
 }

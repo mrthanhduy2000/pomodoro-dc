@@ -1340,6 +1340,7 @@ export default function App() {
       updateTimerLive({
         isRunning: true,
         isBreak: true,
+        mode: 'break',
         startedAt: new Date(breakStartedAt).toISOString(),
         totalSeconds: breakTotalSeconds,
         pausedSecondsRemaining: null,
@@ -1349,7 +1350,7 @@ export default function App() {
     }
 
     if (breakLiveWasActiveRef.current) {
-      clearTimerLive({ isBreak: true, pausedSecondsRemaining: 0 });
+      clearTimerLive({ isBreak: true, mode: 'break', pausedSecondsRemaining: 0, endedReason: 'completed' });
     }
     breakLiveWasActiveRef.current = false;
   }, [breakIsRunning, breakStartedAt, breakTotalSeconds]);

@@ -4,9 +4,23 @@ import useSettingsStore from '../store/settingsStore';
 import soundEngine from '../engine/soundEngine';
 import { getBreakPlan } from '../engine/breaks';
 import { BREAK_EXTENSION_MINUTES } from '../engine/constants';
+import {
+  TIMER_END_REASONS,
+  TIMER_MODES,
+  getCreditedFocusMinutes,
+  getWorkedMinutesForBreak,
+  resolveContinueAfterPomodoro,
+  shouldContinuePomodoroAsStopwatch,
+} from '../engine/timerSession';
 import { updateTimerLive, clearTimerLive } from '../lib/timerLiveService';
 import { pushNow } from '../lib/syncService';
-import { cancelFocusCompletePush, scheduleFocusCompletePush, FOCUS_COMPLETE_PUSH_JOB_KEY } from '../lib/pushService';
+import {
+  cancelScheduledTimerPushes,
+  cancelFocusCompletePush,
+  cancelPomodoroContinuePush,
+  scheduleFocusCompletePush,
+  schedulePomodoroContinuePush,
+} from '../lib/pushService';
 
 export const TIMER_STATES = {
   IDLE: 'IDLE',
@@ -16,10 +30,7 @@ export const TIMER_STATES = {
   CANCELLED: 'CANCELLED',
 };
 
-export const TIMER_MODES = {
-  POMODORO: 'pomodoro',
-  STOPWATCH: 'stopwatch',
-};
+export { TIMER_END_REASONS, TIMER_MODES };
 
 const MILESTONE_PCTS = [25, 50, 75];
 const EXTENSION_READY_SECONDS = 5 * 60;
@@ -85,7 +96,9 @@ export function useTimer({ focusMinutes, mode = TIMER_MODES.POMODORO }) {
   const handleFinishRef = useRef(null);
   const pendingBreakTimeoutRef = useRef(null);
   const extensionReadyArmedRef = useRef(totalSeconds > EXTENSION_READY_SECONDS);
-  const continueTimingAfterPomodoroRef = useRef(continueTimingAfterPomodoro);
+  const continueTimingAfterPomodoroSettingRef = useRef(continueTimingAfterPomodoro);
+  const sessionContinueAfterPomodoroRef = useRef(mode === TIMER_MODES.POMODORO && continueTimingAfterPomodoro);
+  const timerEndReasonRef = useRef(null);
 
   const resetSessionTimeline = useCallback(() => {
     sessionStartedAtRef.current = null;
@@ -98,6 +111,8 @@ export function useTimer({ focusMinutes, mode = TIMER_MODES.POMODORO }) {
     sessionNoteRef.current = '';
     sessionGoalRef.current = '';
     sessionNextNoteRef.current = '';
+    sessionContinueAfterPomodoroRef.current = modeRef.current === TIMER_MODES.POMODORO
+      && continueTimingAfterPomodoroSettingRef.current;
   }, []);
 
   const syncFocusCompletePush = useCallback((
@@ -106,8 +121,16 @@ export function useTimer({ focusMinutes, mode = TIMER_MODES.POMODORO }) {
     currentMode = modeRef.current,
   ) => {
     if (currentMode !== TIMER_MODES.POMODORO) return;
-    if (continueTimingAfterPomodoroRef.current) return;
+    if (sessionContinueAfterPomodoroRef.current) {
+      void cancelFocusCompletePush('continued-session');
+      void schedulePomodoroContinuePush({
+        endsAtMs,
+        focusMinutes: Math.max(1, Math.round(scheduledMinutes)),
+      });
+      return;
+    }
 
+    void cancelPomodoroContinuePush('normal-session');
     void scheduleFocusCompletePush({
       endsAtMs,
       focusMinutes: Math.max(1, Math.round(scheduledMinutes)),
@@ -115,7 +138,7 @@ export function useTimer({ focusMinutes, mode = TIMER_MODES.POMODORO }) {
   }, []);
 
   const clearFocusCompletePush = useCallback((reason = 'cancelled') => {
-    void cancelFocusCompletePush(reason);
+    void cancelScheduledTimerPushes(reason);
   }, []);
 
   const getElapsedSeconds = useCallback((clockStartMs, nowMs = Date.now()) => {
@@ -175,6 +198,7 @@ export function useTimer({ focusMinutes, mode = TIMER_MODES.POMODORO }) {
       goal: overrides.goal ?? sessionGoalRef.current,
       nextNote: overrides.nextNote ?? sessionNextNoteRef.current,
       totalSeconds: totalSecondsValue,
+      continueAfterPomodoro: overrides.continueAfterPomodoro ?? sessionContinueAfterPomodoroRef.current,
     });
   }, [persistTimerSession]);
 
@@ -195,24 +219,8 @@ export function useTimer({ focusMinutes, mode = TIMER_MODES.POMODORO }) {
   }, []);
 
   useEffect(() => {
-    continueTimingAfterPomodoroRef.current = continueTimingAfterPomodoro;
+    continueTimingAfterPomodoroSettingRef.current = continueTimingAfterPomodoro;
   }, [continueTimingAfterPomodoro]);
-
-  useEffect(() => {
-    if (timerState !== TIMER_STATES.RUNNING || modeRef.current !== TIMER_MODES.POMODORO) return;
-    if (!startTimeRef.current) return;
-
-    if (continueTimingAfterPomodoro) {
-      clearFocusCompletePush('continued-setting-enabled');
-      return;
-    }
-
-    syncFocusCompletePush(
-      startTimeRef.current + (totalSecondsRef.current * 1000),
-      totalSecondsRef.current / 60,
-      TIMER_MODES.POMODORO,
-    );
-  }, [clearFocusCompletePush, continueTimingAfterPomodoro, syncFocusCompletePush, timerState]);
 
   useEffect(() => {
     if (timerStateRef.current !== TIMER_STATES.IDLE) return;
@@ -286,22 +294,23 @@ export function useTimer({ focusMinutes, mode = TIMER_MODES.POMODORO }) {
     secondsRef.current = elapsedSeconds;
     extensionReadyArmedRef.current = false;
     setDisplaySeconds(elapsedSeconds);
-    clearFocusCompletePush('continued-stopwatch');
 
     persistCurrentTimerSession({
       mode: TIMER_MODES.STOPWATCH,
       countdownStartedAt: startTimeRef.current,
       totalSeconds: totalSecondsRef.current,
+      continueAfterPomodoro: sessionContinueAfterPomodoroRef.current,
     });
     updateTimerLive({
       isRunning: true,
+      mode: TIMER_MODES.STOPWATCH,
       startedAt: new Date(startTimeRef.current).toISOString(),
       totalSeconds: totalSecondsRef.current,
       pausedSecondsRemaining: null,
     });
     void pushNow();
     return true;
-  }, [clearFocusCompletePush, getElapsedSeconds, persistCurrentTimerSession]);
+  }, [getElapsedSeconds, persistCurrentTimerSession]);
 
   const tickClock = useCallback(() => {
     const elapsedSeconds = getElapsedSeconds(startTimeRef.current);
@@ -336,14 +345,20 @@ export function useTimer({ focusMinutes, mode = TIMER_MODES.POMODORO }) {
 
     if (
       modeRef.current === TIMER_MODES.POMODORO
-      && !continueTimingAfterPomodoroRef.current
       && nextDisplaySeconds === 30
     ) {
       void fetch('/api/push/dispatch', { method: 'GET' }).catch(() => {});
     }
 
     if (modeRef.current === TIMER_MODES.POMODORO && nextDisplaySeconds <= 0) {
-      if (continueTimingAfterPomodoroRef.current && continuePomodoroAsStopwatch()) {
+      if (
+        shouldContinuePomodoroAsStopwatch({
+          mode: modeRef.current,
+          continueAfterPomodoro: sessionContinueAfterPomodoroRef.current,
+          displaySeconds: nextDisplaySeconds,
+        })
+        && continuePomodoroAsStopwatch()
+      ) {
         return;
       }
       handleFinishRef.current?.();
@@ -424,23 +439,29 @@ export function useTimer({ focusMinutes, mode = TIMER_MODES.POMODORO }) {
       nextNote: lockedNextNote,
     };
 
+    timerEndReasonRef.current = TIMER_END_REASONS.COMPLETED;
+    if (modeRef.current === TIMER_MODES.STOPWATCH) {
+      void cancelPomodoroContinuePush('finished-stopwatch');
+    }
     startTimeRef.current = null;
     pausedAtRef.current = null;
     clearInterval(intervalRef.current);
     soundEngine.playTimerFinish();
 
     const elapsedMs = Math.max(0, finishedAtMs - capturedClockStart);
-    const elapsedMinutes = Math.max(1, Math.round(elapsedMs / 60_000));
-    const sessionTargetMinutes = Math.max(1, Math.round(totalSecondsRef.current / 60));
-    const creditedMinutes = modeRef.current === TIMER_MODES.STOPWATCH
-      ? elapsedMinutes
-      : Math.min(sessionTargetMinutes, elapsedMinutes);
+    const creditedMinutes = getCreditedFocusMinutes({
+      mode: modeRef.current,
+      elapsedMs,
+      targetSeconds: totalSecondsRef.current,
+    });
 
     const breakPlan = getBreakPlan({
       mode: modeRef.current,
-      workedMinutes: modeRef.current === TIMER_MODES.STOPWATCH
-        ? (elapsedMs / 60_000)
-        : creditedMinutes,
+      workedMinutes: getWorkedMinutesForBreak({
+        mode: modeRef.current,
+        elapsedMs,
+        creditedMinutes,
+      }),
       sessionsCompleted,
       longBreakCycleStart,
       shortBreakDuration,
@@ -462,6 +483,11 @@ export function useTimer({ focusMinutes, mode = TIMER_MODES.POMODORO }) {
     setLastCompletedSessionId(completedSessionId);
     resetSessionTimeline();
     if (!sessionWasRecorded) {
+      clearTimerLive({
+        mode: modeRef.current,
+        endedReason: TIMER_END_REASONS.COMPLETED,
+      });
+      void pushNow();
       setTimerState(TIMER_STATES.IDLE);
       return;
     }
@@ -520,6 +546,7 @@ export function useTimer({ focusMinutes, mode = TIMER_MODES.POMODORO }) {
     if (timerState === TIMER_STATES.RUNNING) {
       updateTimerLive({
         isRunning: true,
+        mode: modeRef.current,
         startedAt: startTimeRef.current ? new Date(startTimeRef.current).toISOString() : null,
         totalSeconds: totalSecondsRef.current,
         pausedSecondsRemaining: null,
@@ -528,6 +555,7 @@ export function useTimer({ focusMinutes, mode = TIMER_MODES.POMODORO }) {
     } else if (timerState === TIMER_STATES.PAUSED) {
       updateTimerLive({
         isRunning: false,
+        mode: modeRef.current,
         startedAt: null,
         totalSeconds: 0,
         pausedSecondsRemaining: secondsRef.current,
@@ -535,7 +563,12 @@ export function useTimer({ focusMinutes, mode = TIMER_MODES.POMODORO }) {
       void pushNow();
     } else if (timerState !== TIMER_STATES.IDLE) {
       // FINISHED hoặc CANCELLED — session vừa kết thúc, cần clear
-      clearTimerLive();
+      clearTimerLive({
+        mode: modeRef.current,
+        endedReason: timerEndReasonRef.current
+          ?? (timerState === TIMER_STATES.CANCELLED ? TIMER_END_REASONS.CANCELLED : TIMER_END_REASONS.COMPLETED),
+      });
+      timerEndReasonRef.current = null;
       void pushNow();
     }
     // IDLE: không làm gì — tránh clearTimerLive() gây Electron notification giả
@@ -581,10 +614,9 @@ export function useTimer({ focusMinutes, mode = TIMER_MODES.POMODORO }) {
     setDisplaySeconds(syncedDisplaySeconds);
 
     if (syncedMode === TIMER_MODES.STOPWATCH) {
-      clearFocusCompletePush('stopwatch-sync');
+      void cancelFocusCompletePush('stopwatch-sync');
     }
   }, [
-    clearFocusCompletePush,
     computeDisplayFromElapsed,
     getElapsedSeconds,
     timerSession.isRunning,
@@ -619,6 +651,7 @@ export function useTimer({ focusMinutes, mode = TIMER_MODES.POMODORO }) {
       goal,
       nextNote,
       totalSeconds: savedTotalSeconds,
+      continueAfterPomodoro,
     } = timerSession;
 
     if (!isRunning || !startedAt || !savedTotalSeconds) return;
@@ -626,6 +659,10 @@ export function useTimer({ focusMinutes, mode = TIMER_MODES.POMODORO }) {
     const runtimeMode = savedMode === TIMER_MODES.STOPWATCH
       ? TIMER_MODES.STOPWATCH
       : TIMER_MODES.POMODORO;
+    const savedContinueAfterPomodoro = resolveContinueAfterPomodoro(
+      { continueAfterPomodoro },
+      continueTimingAfterPomodoroSettingRef.current,
+    );
     const effectiveClockStart = countdownStartedAt ?? startedAt;
     const effectivePauseSegments = Array.isArray(pauseSegments) ? pauseSegments : [];
     const elapsedSeconds = getElapsedSeconds(effectiveClockStart, pausedAt ?? Date.now());
@@ -645,6 +682,9 @@ export function useTimer({ focusMinutes, mode = TIMER_MODES.POMODORO }) {
     sessionNoteRef.current = note ?? '';
     sessionGoalRef.current = goal ?? '';
     sessionNextNoteRef.current = nextNote ?? '';
+    sessionContinueAfterPomodoroRef.current = runtimeMode === TIMER_MODES.POMODORO
+      ? savedContinueAfterPomodoro
+      : Boolean(savedContinueAfterPomodoro);
     setPendingNote(note ?? '');
     setPendingSessionGoal(goal ?? '');
     setPendingNextSessionNote(nextNote ?? '');
@@ -665,20 +705,27 @@ export function useTimer({ focusMinutes, mode = TIMER_MODES.POMODORO }) {
     });
 
     if (runtimeMode === TIMER_MODES.STOPWATCH) {
-      clearFocusCompletePush('stopwatch');
+      void cancelFocusCompletePush('stopwatch');
       setTimerState(shouldRestorePaused ? TIMER_STATES.PAUSED : TIMER_STATES.RUNNING);
       if (!shouldRestorePaused) runInterval();
       return;
     }
 
-    if (continueTimingAfterPomodoroRef.current && restoredDisplaySeconds <= 0 && !shouldRestorePaused) {
+    if (
+      shouldContinuePomodoroAsStopwatch({
+        mode: runtimeMode,
+        continueAfterPomodoro: sessionContinueAfterPomodoroRef.current,
+        displaySeconds: restoredDisplaySeconds,
+        isPaused: shouldRestorePaused,
+      })
+    ) {
       const stopwatchDisplaySeconds = getElapsedSeconds(effectiveClockStart);
       modeRef.current = TIMER_MODES.STOPWATCH;
       setActiveMode(TIMER_MODES.STOPWATCH);
       secondsRef.current = stopwatchDisplaySeconds;
       extensionReadyArmedRef.current = false;
       setDisplaySeconds(stopwatchDisplaySeconds);
-      clearFocusCompletePush('continued-stopwatch-restore');
+      void cancelFocusCompletePush('continued-stopwatch-restore');
       persistCurrentTimerSession({
         mode: TIMER_MODES.STOPWATCH,
         startedAt,
@@ -692,9 +739,11 @@ export function useTimer({ focusMinutes, mode = TIMER_MODES.POMODORO }) {
         goal: sessionGoalRef.current,
         nextNote: sessionNextNoteRef.current,
         totalSeconds: savedTotalSeconds,
+        continueAfterPomodoro: sessionContinueAfterPomodoroRef.current,
       });
       updateTimerLive({
         isRunning: true,
+        mode: TIMER_MODES.STOPWATCH,
         startedAt: new Date(effectiveClockStart).toISOString(),
         totalSeconds: savedTotalSeconds,
         pausedSecondsRemaining: null,
@@ -796,10 +845,14 @@ export function useTimer({ focusMinutes, mode = TIMER_MODES.POMODORO }) {
       ? (sessionCategories.find((category) => category.id === pendingCategoryId) ?? null)
       : null;
     const initialSeconds = getInitialDisplaySeconds(mode, focusMinutes);
+    const continueAfterPomodoro = mode === TIMER_MODES.POMODORO
+      && continueTimingAfterPomodoroSettingRef.current;
 
     totalSecondsRef.current = focusMinutes * 60;
     secondsRef.current = initialSeconds;
     modeRef.current = mode;
+    sessionContinueAfterPomodoroRef.current = continueAfterPomodoro;
+    timerEndReasonRef.current = null;
     setActiveMode(mode);
     startTimeRef.current = now;
     sessionStartedAtRef.current = now;
@@ -832,6 +885,7 @@ export function useTimer({ focusMinutes, mode = TIMER_MODES.POMODORO }) {
       goal: pendingSessionGoal ?? '',
       nextNote: pendingNextSessionNote ?? '',
       totalSeconds: focusMinutes * 60,
+      continueAfterPomodoro,
     });
 
     syncFocusCompletePush(now + (focusMinutes * 60 * 1000), focusMinutes, mode);
@@ -893,6 +947,7 @@ export function useTimer({ focusMinutes, mode = TIMER_MODES.POMODORO }) {
 
     clearInterval(intervalRef.current);
     startTimeRef.current = null;
+    timerEndReasonRef.current = TIMER_END_REASONS.CANCELLED;
     setLastCompletedSessionId(null);
     setTimerState(TIMER_STATES.CANCELLED);
     clearTimeout(pendingBreakTimeoutRef.current);
@@ -965,6 +1020,7 @@ export function useTimer({ focusMinutes, mode = TIMER_MODES.POMODORO }) {
       pausedTotalMs: pausedTotalMsRef.current,
       pauseSegments: pauseSegmentsRef.current,
       countdownStartedAt: startTimeRef.current,
+      continueAfterPomodoro: sessionContinueAfterPomodoroRef.current,
     });
 
     syncFocusCompletePush(
@@ -988,6 +1044,7 @@ export function useTimer({ focusMinutes, mode = TIMER_MODES.POMODORO }) {
     if (timerState === TIMER_STATES.RUNNING) {
       updateTimerLive({
         isRunning: true,
+        mode: modeRef.current,
         startedAt: startTimeRef.current ? new Date(startTimeRef.current).toISOString() : null,
         totalSeconds: totalSecondsRef.current,
         pausedSecondsRemaining: null,
@@ -999,6 +1056,7 @@ export function useTimer({ focusMinutes, mode = TIMER_MODES.POMODORO }) {
     } else {
       updateTimerLive({
         isRunning: false,
+        mode: modeRef.current,
         startedAt: null,
         totalSeconds: totalSecondsRef.current,
         pausedSecondsRemaining: secondsRef.current,

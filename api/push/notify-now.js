@@ -12,6 +12,9 @@ const LEGACY_PUSH_WEBHOOK_ENABLED = process.env.ENABLE_LEGACY_PUSH_WEBHOOK === '
 
 // Supabase webhook fires on every timer_live UPDATE — only send when session actually ended
 function isSessionEndEvent(body) {
+  const endedReason = body?.record?.ended_reason;
+  if (endedReason != null && endedReason !== 'completed') return false;
+
   return (
     body?.type === 'UPDATE' &&
     body?.old_record?.is_running === true &&

@@ -16,12 +16,15 @@ function isAuthorizedRequest(req) {
 }
 
 // Supabase webhook fires on every timer_live UPDATE.
-// Detect session-end by new record state alone (old_record not always included in webhook payload).
-// is_running=false + paused_seconds_remaining=null = clearTimerLive() was called (session ended/cancelled).
-// This is distinct from pause (is_running=false + paused_seconds_remaining=<number>).
-function isSessionEndEvent(body) {
+// Prefer ended_reason when the timer_live migration is present. Older payloads fall
+// back to the old shape so deployments keep working while the database catches up.
+export function isSessionEndEvent(body) {
+  const endedReason = body?.record?.ended_reason;
+  if (endedReason != null && endedReason !== 'completed') return false;
+
   return (
     body?.type === 'UPDATE' &&
+    (body?.old_record?.is_running !== false) &&
     body?.record?.is_break !== true &&
     body?.record?.is_running === false &&
     body?.record?.paused_seconds_remaining == null

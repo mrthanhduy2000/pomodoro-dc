@@ -13,6 +13,24 @@ function buildFocusCompletePayload(focusMinutes) {
   };
 }
 
+function buildPomodoroContinuePayload(focusMinutes) {
+  const roundedMinutes = Math.max(1, Math.round(focusMinutes || 0));
+  return {
+    title: '⏱ Pomodoro đã hết',
+    body: `Phiên ${roundedMinutes} phút đã chuyển sang Bấm giờ thêm. Bấm Hết Phiên khi muốn chốt phiên.`,
+    icon: '/icon-192.png',
+    badge: '/icon-192.png',
+    tag: 'dc-pomodoro-continue',
+    url: '/',
+  };
+}
+
+function buildKnownPayload(kind, focusMinutes) {
+  return kind === 'pomodoro-continue'
+    ? buildPomodoroContinuePayload(focusMinutes)
+    : buildFocusCompletePayload(focusMinutes);
+}
+
 function inferFocusMinutes(body) {
   if (Number.isFinite(body?.focusMinutes)) return Number(body.focusMinutes);
   const text = body?.payload?.body ?? '';
@@ -28,6 +46,7 @@ export default async function handler(req, res) {
   try {
     const body = await readJsonBody(req);
     const jobKey = body?.jobKey;
+    const kind = body?.kind === 'pomodoro-continue' ? 'pomodoro-continue' : 'focus-complete';
     const scheduledFor = body?.scheduledFor;
     const payload = body?.payload;
 
@@ -57,7 +76,7 @@ export default async function handler(req, res) {
     await upsertPushJob({
       jobKey,
       scheduledFor,
-      payload: buildFocusCompletePayload(focusMinutes),
+      payload: buildKnownPayload(kind, focusMinutes),
     });
 
     return sendJson(res, 200, { ok: true });

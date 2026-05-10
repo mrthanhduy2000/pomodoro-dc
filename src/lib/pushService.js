@@ -2,6 +2,7 @@ import { APP_DISPLAY_NAME, APP_SLUG } from './appIdentity';
 
 const PUSH_DEVICE_ID_KEY = `${APP_SLUG}:push-device-id`;
 export const FOCUS_COMPLETE_PUSH_JOB_KEY = `${APP_SLUG}:focus-complete`;
+export const POMODORO_CONTINUE_PUSH_JOB_KEY = `${APP_SLUG}:pomodoro-continue`;
 const FOCUS_COMPLETE_OWNER_NAME = 'Đàm';
 
 function createFocusCompleteNotificationPayload(focusMinutes) {
@@ -12,6 +13,18 @@ function createFocusCompleteNotificationPayload(focusMinutes) {
     icon: '/icon-192.png',
     badge: '/icon-192.png',
     tag: 'dc-pomodoro-focus-complete',
+    url: '/',
+  };
+}
+
+function createPomodoroContinueNotificationPayload(focusMinutes) {
+  const roundedMinutes = Math.max(1, Math.round(focusMinutes || 0));
+  return {
+    title: '⏱ Pomodoro đã hết',
+    body: `Phiên ${roundedMinutes} phút đã chuyển sang Bấm giờ thêm. Bấm Hết Phiên khi muốn chốt phiên.`,
+    icon: '/icon-192.png',
+    badge: '/icon-192.png',
+    tag: 'dc-pomodoro-continue',
     url: '/',
   };
 }
@@ -310,6 +323,7 @@ export async function scheduleFocusCompletePush({ endsAtMs, focusMinutes }) {
     return await fetchPushJson('/api/push/schedule', {
       method: 'POST',
       body: JSON.stringify({
+        kind: 'focus-complete',
         jobKey: FOCUS_COMPLETE_PUSH_JOB_KEY,
         focusMinutes: Math.max(1, Math.round(focusMinutes || 0)),
         scheduledFor: new Date(endsAtMs).toISOString(),
@@ -318,6 +332,29 @@ export async function scheduleFocusCompletePush({ endsAtMs, focusMinutes }) {
     });
   } catch (error) {
     console.warn('[push] schedule failed', error);
+    return {
+      ok: false,
+      errorMessage: error instanceof Error ? error.message : 'Không lên lịch được Web Push.',
+    };
+  }
+}
+
+export async function schedulePomodoroContinuePush({ endsAtMs, focusMinutes }) {
+  if (!Number.isFinite(endsAtMs)) return { ok: false };
+
+  try {
+    return await fetchPushJson('/api/push/schedule', {
+      method: 'POST',
+      body: JSON.stringify({
+        kind: 'pomodoro-continue',
+        jobKey: POMODORO_CONTINUE_PUSH_JOB_KEY,
+        focusMinutes: Math.max(1, Math.round(focusMinutes || 0)),
+        scheduledFor: new Date(endsAtMs).toISOString(),
+        payload: createPomodoroContinueNotificationPayload(focusMinutes),
+      }),
+    });
+  } catch (error) {
+    console.warn('[push] schedule continue failed', error);
     return {
       ok: false,
       errorMessage: error instanceof Error ? error.message : 'Không lên lịch được Web Push.',
@@ -341,4 +378,35 @@ export async function cancelFocusCompletePush(reason = 'cancelled') {
       errorMessage: error instanceof Error ? error.message : 'Không hủy được Web Push.',
     };
   }
+}
+
+export async function cancelPomodoroContinuePush(reason = 'cancelled') {
+  try {
+    return await fetchPushJson('/api/push/cancel', {
+      method: 'POST',
+      body: JSON.stringify({
+        jobKey: POMODORO_CONTINUE_PUSH_JOB_KEY,
+        reason,
+      }),
+    });
+  } catch (error) {
+    console.warn('[push] cancel continue failed', error);
+    return {
+      ok: false,
+      errorMessage: error instanceof Error ? error.message : 'Không hủy được Web Push.',
+    };
+  }
+}
+
+export async function cancelScheduledTimerPushes(reason = 'cancelled') {
+  const [focusComplete, pomodoroContinue] = await Promise.all([
+    cancelFocusCompletePush(reason),
+    cancelPomodoroContinuePush(reason),
+  ]);
+
+  return {
+    ok: focusComplete.ok !== false && pomodoroContinue.ok !== false,
+    focusComplete,
+    pomodoroContinue,
+  };
 }

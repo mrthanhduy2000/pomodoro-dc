@@ -11,6 +11,7 @@
     "open:chrome:dev": "open -na \"Google Chrome\" --args --app=http://localhost:31101/",
     "build": "vite build",
     "lint": "eslint .",
+    "test": "node --test src/engine/*.test.js src/utils/*.test.js api/push/*.test.js",
     "preview": "PORT=31102 VITE_BIND_HOST=0.0.0.0 vite preview",
     "serve:prod": "node scripts/serve-dist.mjs",
     "install:agent": "bash scripts/install-launch-agent.sh",

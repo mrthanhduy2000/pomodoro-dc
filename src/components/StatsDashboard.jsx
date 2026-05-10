@@ -5569,7 +5569,7 @@ function JournalTab({ history, sessionCategories }) {
   const [editingCategorySessionId, setEditingCategorySessionId] = useState(null);
   const deleteSession = useGameStore((s) => s.deleteSession);
   const deleteSavedNoteEntry = useGameStore((s) => s.deleteSavedNoteEntry);
-  const deletableSessionId = useGameStore((s) => s.latestSessionUndo?.sessionId ?? null);
+  const undoableSessionId = useGameStore((s) => s.latestSessionUndo?.sessionId ?? null);
   const updateSessionCategory = useGameStore((s) => s.updateSessionCategory);
   const reviewCompletedSession = useGameStore((s) => s.reviewCompletedSession);
   const PAGE_SIZE = 20;
@@ -5671,7 +5671,7 @@ function JournalTab({ history, sessionCategories }) {
               Khối này giữ lại nhịp, mốc XP, ghi chú, phần tự chấm và cả những phiên bị hủy theo đúng thứ tự thời gian. Bộ lọc phía dưới giúp soi từng nhóm phiên mà không làm mất cảm giác của một cuốn sổ đang được bổ sung dần.
             </p>
             <p className="mt-2 max-w-2xl text-[12px] leading-5" style={{ color: TEXT_SOFT }}>
-              Xóa phiên vẫn chỉ mở cho phiên mới nhất. Riêng ghi chú cũ, bạn có thể gỡ trực tiếp trong từng bản ghi bên dưới.
+              Bạn có thể xoá từng phiên không muốn giữ. Phiên mới nhất sẽ hoàn tác theo bản lưu tạm; phiên cũ sẽ trừ lại XP, EP, tài nguyên và điểm nghiên cứu đang lưu trong bản ghi đó.
             </p>
           </div>
           <div
@@ -5783,7 +5783,8 @@ function JournalTab({ history, sessionCategories }) {
           const isConfirming = confirmDelete === h.id;
           const isConfirmingNoteDelete = confirmDeleteNoteSessionId === h.id;
           const isEditingCategory = editingCategorySessionId === h.id;
-          const canDeleteThisSession = h.id === deletableSessionId;
+          const canDeleteThisSession = h.id != null;
+          const willUndoSessionReward = h.id === undoableSessionId;
 
           return (
             <Motion.div
@@ -5857,14 +5858,16 @@ function JournalTab({ history, sessionCategories }) {
                     {canDeleteThisSession && isConfirming ? (
                       <>
                         <button
+                          type="button"
                           onClick={() => { deleteSession(h.id); setConfirmDelete(null); }}
                           className="px-2 py-1 rounded-lg text-[10px] font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400/60 focus-visible:ring-offset-2 transition-[background-color,color,border-color,box-shadow] duration-200"
                           style={{ background: 'rgba(239,68,68,0.2)', color: '#f87171', border: '1px solid rgba(239,68,68,0.4)' }}
-                          title="Xác nhận xoá"
+                          title={willUndoSessionReward ? 'Xác nhận xoá và hoàn tác phần thưởng phiên mới nhất' : 'Xác nhận xoá phiên khỏi Nhật ký'}
                         >
-                          Xoá
+                          {willUndoSessionReward ? 'Xoá + hoàn tác' : 'Xoá phiên'}
                         </button>
                         <button
+                          type="button"
                           onClick={() => setConfirmDelete(null)}
                           className="px-2 py-1 rounded-lg text-[10px] font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/60 focus-visible:ring-offset-2 transition-[background-color,color,border-color,box-shadow] duration-200"
                           style={{ background: 'rgba(100,116,139,0.2)', color: '#94a3b8', border: '1px solid rgba(100,116,139,0.3)' }}
@@ -5875,10 +5878,11 @@ function JournalTab({ history, sessionCategories }) {
                       </>
                     ) : canDeleteThisSession ? (
                       <button
+                        type="button"
                         onClick={() => setConfirmDelete(h.id)}
                         className="flex h-8 w-8 items-center justify-center rounded-lg opacity-100 transition-[background-color,color,opacity,transform] duration-200 hover:-translate-y-px sm:opacity-0 sm:group-hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400/60 focus-visible:ring-offset-2"
                         style={{ background: 'rgba(239,68,68,0.12)', color: '#f87171' }}
-                        title="Xoá phiên này"
+                        title={willUndoSessionReward ? 'Xoá phiên này và hoàn tác phần thưởng mới nhất' : 'Xoá phiên này khỏi Nhật ký'}
                       >
                         <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
                           <path d="M2 3h8M5 3V2h2v1M4 3l.5 6.5M8 3l-.5 6.5M3 3.5l.5 6a.5.5 0 00.5.5h4a.5.5 0 00.5-.5l.5-6" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>

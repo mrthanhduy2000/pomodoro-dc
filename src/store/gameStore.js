@@ -1353,6 +1353,7 @@ const makeDefaultTimerSession = () => ({
   goal:               '',
   nextNote:           '',
   totalSeconds:       null,   // thời lượng tham chiếu tại thời điểm Start
+  continueAfterPomodoro: false, // snapshot setting lúc bắt đầu phiên
   extensionUnlocked:  false,  // đã chạm mốc 3 phút cuối và mở khóa cộng thêm phút
 });
 
@@ -2785,28 +2786,64 @@ const useGameStore = create(
           };
         }),
 
-      // ─── Xoá phiên lịch sử và hoàn trả phần thưởng ─────────────────────
+      // ─── Xoá phiên lịch sử ─────────────────────────────────────────────
       deleteSession: (sessionId) =>
         set((prev) => {
+          if (sessionId == null) return prev;
+
           const latestSession = prev.history[0] ?? null;
           const undoState = prev.latestSessionUndo;
           const canUndoLatestSession = latestSession?.id === sessionId && undoState?.sessionId === sessionId;
-          if (!canUndoLatestSession) return prev;
+          if (canUndoLatestSession) {
+            return {
+              ...undoState.snapshot,
+              history: prev.history.filter((entry) => entry.id !== sessionId),
+              savedNotes: (prev.savedNotes ?? []).filter((entry) => entry.sourceSessionId !== sessionId),
+              breakSession: makeDefaultBreakSession(),
+              latestSessionUndo: null,
+              ui: {
+                ...prev.ui,
+                lootModalOpen: false,
+                pendingReward: null,
+                relicNotification: null,
+                rankUpNotification: null,
+                achievementQueue: [],
+                missionCompletedIds: [],
+                isOnBreak: false,
+                breakSecondsLeft: 0,
+                breakTotalSeconds: 0,
+                breakIsLong: false,
+                activeBreakSessionId: null,
+              },
+            };
+          }
+
+          const deletedSession = prev.history.find((entry) => entry.id === sessionId);
+          if (!deletedSession) return prev;
+
+          const nextHistory = prev.history.filter((entry) => entry.id !== sessionId);
+          const breakBelongsToDeletedSession =
+            prev.breakSession?.sourceSessionId === sessionId
+            || prev.ui?.activeBreakSessionId === sessionId;
 
           return {
-            ...undoState.snapshot,
-            history: prev.history.filter((entry) => entry.id !== sessionId),
+            history: nextHistory,
+            historyStats: buildHistoryStatsFromHistory(nextHistory),
             savedNotes: (prev.savedNotes ?? []).filter((entry) => entry.sourceSessionId !== sessionId),
             latestSessionUndo: null,
-            ui: {
-              ...prev.ui,
-              lootModalOpen: false,
-              pendingReward: null,
-              relicNotification: null,
-              rankUpNotification: null,
-              achievementQueue: [],
-              missionCompletedIds: [],
-            },
+            ...(breakBelongsToDeletedSession
+              ? {
+                  breakSession: makeDefaultBreakSession(),
+                  ui: {
+                    ...prev.ui,
+                    isOnBreak: false,
+                    breakSecondsLeft: 0,
+                    breakTotalSeconds: 0,
+                    breakIsLong: false,
+                    activeBreakSessionId: null,
+                  },
+                }
+              : {}),
           };
         }),
 

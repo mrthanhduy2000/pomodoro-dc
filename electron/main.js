@@ -64,8 +64,16 @@ function getRemainingSeconds(snapshot, nowMs = Date.now()) {
   return Math.max(0, snapshot.totalSeconds - ((nowMs - snapshot.startedAtMs) / 1000));
 }
 
+function getStopwatchElapsedSeconds(snapshot, nowMs = Date.now()) {
+  return Math.max(1, Math.round((nowMs - snapshot.startedAtMs) / 1000));
+}
+
 function getCompletedSessionTotalSeconds(previousData, nextData) {
   if (!prevIsRunning || nextData?.is_running || nextData?.paused_seconds_remaining != null) {
+    return null;
+  }
+
+  if (nextData?.ended_reason != null && nextData.ended_reason !== 'completed') {
     return null;
   }
 
@@ -79,6 +87,11 @@ function getCompletedSessionTotalSeconds(previousData, nextData) {
 
   if (!snapshot) return null;
   if (snapshot.isBreak) return null;
+
+  if (snapshotSource?.mode === 'stopwatch') {
+    return getStopwatchElapsedSeconds(snapshot);
+  }
+
   if (getRemainingSeconds(snapshot) > SESSION_COMPLETE_GRACE_SECONDS) return null;
 
   return snapshot.totalSeconds;
@@ -138,13 +151,16 @@ function updateTrayTitle() {
     return;
   }
 
-  const { is_running, is_break, started_at, total_seconds, paused_seconds_remaining } = timerData;
+  const { is_running, is_break, mode, started_at, total_seconds, paused_seconds_remaining } = timerData;
 
   if (is_running && started_at && total_seconds) {
     const elapsed = (Date.now() - new Date(started_at).getTime()) / 1000;
-    const remaining = Math.max(0, total_seconds - elapsed);
+    const isStopwatch = mode === 'stopwatch';
+    const displaySeconds = isStopwatch
+      ? Math.max(0, elapsed)
+      : Math.max(0, total_seconds - elapsed);
     tray?.setImage(iconEmpty);
-    setTrayTitle(`${is_break ? '☕' : '🍅'} ${formatTime(remaining)}`);
+    setTrayTitle(`${is_break ? '☕' : isStopwatch ? '⏱' : '🍅'} ${formatTime(displaySeconds)}`);
   } else if (!is_running && paused_seconds_remaining > 0) {
     tray?.setImage(iconEmpty);
     setTrayTitle(`⏸ ${formatTime(paused_seconds_remaining)}`);

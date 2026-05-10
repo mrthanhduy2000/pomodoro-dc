@@ -1003,6 +1003,7 @@ function refreshWeeklyChain(wc) {
 
 function getHistoryWeekEntries(history, weekKey) {
   return history.filter((entry) => {
+    if (isCancelledHistoryEntry(entry)) return false;
     const sessionTs = new Date(entry.timestamp).getTime();
     const breakTs = entry.breakCompletedAt
       ? new Date(entry.breakCompletedAt).getTime()
@@ -1026,6 +1027,7 @@ function buildWeeklyProgressSnapshot(weekEntries = [], weekKey = null) {
 
   weekEntries.forEach((entry) => {
     if (!entry) return;
+    if (isCancelledHistoryEntry(entry)) return;
     const sessionTs = new Date(entry.timestamp).getTime();
     const sessionInWeek = Number.isFinite(sessionTs) && (!weekKey || getWeekMonday(sessionTs) === weekKey);
     const breakTs = entry.breakCompletedAt
@@ -2121,6 +2123,7 @@ function countCollectedBlueprints(research, blueprints = [], buildings = []) {
 
 // ─── HELPER: Tạo snapshot cho kiểm tra thành tích ────────────────────────────
 function buildAchievementSnapshot(progress, relics, blueprints, research, history, rankSystem, streak, buildings, prestige, player) {
+  const completedHistory = history.filter((h) => !isCancelledHistoryEntry(h));
   const getTs     = (h) => typeof h.timestamp === 'string' ? new Date(h.timestamp).getTime() : (h.timestamp ?? 0);
   const getH      = (h) => getVietnamHour(getTs(h));
   const getDow    = (h) => getVietnamDayOfWeek(getTs(h));
@@ -2129,29 +2132,29 @@ function buildAchievementSnapshot(progress, relics, blueprints, research, histor
   const getDayKey = (h) => localDateStr(getTs(h));
 
   const thisYear  = getVietnamYear();
-  const thisYearH = history.filter((h) => getYr(h) === thisYear);
+  const thisYearH = completedHistory.filter((h) => getYr(h) === thisYear);
 
   // sessions per day
   const dayMap = {};
-  history.forEach((h) => { const d = getDayKey(h); dayMap[d] = (dayMap[d] || 0) + 1; });
+  completedHistory.forEach((h) => { const d = getDayKey(h); dayMap[d] = (dayMap[d] || 0) + 1; });
   const maxSessionsInDay = Math.max(0, ...Object.values(dayMap));
 
   // day-of-week counts [0=Sun..6=Sat]
   const dow = [0, 0, 0, 0, 0, 0, 0];
-  history.forEach((h) => dow[getDow(h)]++);
+  completedHistory.forEach((h) => dow[getDow(h)]++);
 
   // month counts [0=Jan..11=Dec]
   const mon = Array(12).fill(0);
-  history.forEach((h) => mon[getMon(h)]++);
+  completedHistory.forEach((h) => mon[getMon(h)]++);
 
   // best month (any year)
   const monthMinMap = {};
-  history.forEach((h) => {
+  completedHistory.forEach((h) => {
     const k = `${getYr(h)}-${getMon(h)}`;
     monthMinMap[k] = (monthMinMap[k] || 0) + (h.minutes ?? 0);
   });
   const monthSessMap = {};
-  history.forEach((h) => {
+  completedHistory.forEach((h) => {
     const k = `${getYr(h)}-${getMon(h)}`;
     monthSessMap[k] = (monthSessMap[k] || 0) + 1;
   });
@@ -2173,7 +2176,7 @@ function buildAchievementSnapshot(progress, relics, blueprints, research, histor
   }
 
   // special calendar dates: encoded as month*100+day (0-indexed month)
-  const calSet = new Set(history.map((h) => {
+  const calSet = new Set(completedHistory.map((h) => {
     const { month, day } = getVietnamDateParts(getTs(h));
     return (month - 1) * 100 + day;
   }));
@@ -2182,14 +2185,14 @@ function buildAchievementSnapshot(progress, relics, blueprints, research, histor
   const totalActiveDays = Object.keys(dayMap).length;
 
   // days since first session
-  const daysSinceFirst = history.length > 0
-    ? Math.floor((Date.now() - getTs(history[history.length - 1])) / 86400000)
+  const daysSinceFirst = completedHistory.length > 0
+    ? Math.floor((Date.now() - getTs(completedHistory[completedHistory.length - 1])) / 86400000)
     : 0;
 
   // full-day: a day with sessions in morning (6-12), afternoon (12-18), evening (18-23)
   const fullDaySet = new Set();
   const dayParts   = {};
-  history.forEach((h) => {
+  completedHistory.forEach((h) => {
     const d = getDayKey(h); const hr = getH(h);
     if (!dayParts[d]) dayParts[d] = new Set();
     if (hr >= 6  && hr < 12) dayParts[d].add('m');
@@ -2203,7 +2206,7 @@ function buildAchievementSnapshot(progress, relics, blueprints, research, histor
   thisYearH.forEach((h) => { const d = getDayKey(h); dayMapYear[d] = (dayMapYear[d] || 0) + 1; });
 
   // unique categories used
-  const uniqueCategoriesUsed = new Set(history.filter((h) => h.categoryId).map((h) => h.categoryId)).size;
+  const uniqueCategoriesUsed = new Set(completedHistory.filter((h) => h.categoryId).map((h) => h.categoryId)).size;
 
   return {
     // ── core ──
@@ -2218,12 +2221,12 @@ function buildAchievementSnapshot(progress, relics, blueprints, research, histor
     buildingsBuilt:     (buildings ?? []).length,
     prestigeCount:      prestige?.count ?? 0,
     // ── session stats ──
-    maxSessionMinutes:  history.reduce((m, h) => Math.max(m, h.minutes ?? 0), 0),
-    totalJackpots:      history.filter((h) => h.jackpot).length,
-    deepFocusCount:     history.filter((h) => (h.minutes ?? 0) >= 60).length,
-    ultraFocusCount:    history.filter((h) => (h.minutes ?? 0) >= 90).length,
-    titanFocusCount:    history.filter((h) => (h.minutes ?? 0) >= 120).length,
-    legendFocusCount:   history.filter((h) => (h.minutes ?? 0) >= 180).length,
+    maxSessionMinutes:  completedHistory.reduce((m, h) => Math.max(m, h.minutes ?? 0), 0),
+    totalJackpots:      completedHistory.filter((h) => h.jackpot).length,
+    deepFocusCount:     completedHistory.filter((h) => (h.minutes ?? 0) >= 60).length,
+    ultraFocusCount:    completedHistory.filter((h) => (h.minutes ?? 0) >= 90).length,
+    titanFocusCount:    completedHistory.filter((h) => (h.minutes ?? 0) >= 120).length,
+    legendFocusCount:   completedHistory.filter((h) => (h.minutes ?? 0) >= 180).length,
     maxSessionsInDay,
     fullDayCount:       fullDaySet.size,
     totalActiveDays,
@@ -2234,16 +2237,16 @@ function buildAchievementSnapshot(progress, relics, blueprints, research, histor
     currentStreak:      streak?.currentStreak ?? 0,
     longestStreak:      streak?.longestStreak ?? 0,
     // ── time of day ──
-    earlyBirdCount:     history.filter((h) => getH(h) < 7).length,
-    nightOwlCount:      history.filter((h) => getH(h) >= 23).length,
-    midnightCount:      history.filter((h) => getH(h) < 3).length,
-    dawnCount:          history.filter((h) => getH(h) < 6).length,
-    fiveAmCount:        history.filter((h) => getH(h) >= 5 && getH(h) < 6).length,
-    lunchCount:         history.filter((h) => getH(h) >= 12 && getH(h) < 13).length,
-    afternoonCount:     history.filter((h) => getH(h) >= 14 && getH(h) < 17).length,
-    eveningCount:       history.filter((h) => getH(h) >= 18 && getH(h) < 22).length,
-    teatimeCount:       history.filter((h) => getH(h) >= 15 && getH(h) < 16).length,
-    sunriseCount:       history.filter((h) => getH(h) >= 6 && getH(h) < 7).length,
+    earlyBirdCount:     completedHistory.filter((h) => getH(h) < 7).length,
+    nightOwlCount:      completedHistory.filter((h) => getH(h) >= 23).length,
+    midnightCount:      completedHistory.filter((h) => getH(h) < 3).length,
+    dawnCount:          completedHistory.filter((h) => getH(h) < 6).length,
+    fiveAmCount:        completedHistory.filter((h) => getH(h) >= 5 && getH(h) < 6).length,
+    lunchCount:         completedHistory.filter((h) => getH(h) >= 12 && getH(h) < 13).length,
+    afternoonCount:     completedHistory.filter((h) => getH(h) >= 14 && getH(h) < 17).length,
+    eveningCount:       completedHistory.filter((h) => getH(h) >= 18 && getH(h) < 22).length,
+    teatimeCount:       completedHistory.filter((h) => getH(h) >= 15 && getH(h) < 16).length,
+    sunriseCount:       completedHistory.filter((h) => getH(h) >= 6 && getH(h) < 7).length,
     // ── annual ──
     sessionsThisYear:        thisYearH.length,
     minutesThisYear:         thisYearH.reduce((s, h) => s + (h.minutes ?? 0), 0),
@@ -2275,8 +2278,8 @@ function buildAchievementSnapshot(progress, relics, blueprints, research, histor
     bestMonthSessions,
     bestMonthMinutes,
     // ── notes ──
-    totalNoteCount: history.filter((h) => h.note).length,
-    longNoteCount:  history.filter((h) => h.note && h.note.length >= 150).length,
+    totalNoteCount: completedHistory.filter((h) => h.note).length,
+    longNoteCount:  completedHistory.filter((h) => h.note && h.note.length >= 150).length,
     // ── categories ──
     uniqueCategoriesUsed,
   };
@@ -3008,7 +3011,7 @@ const useGameStore = create(
         const weeklyCategories  = [
           ...new Set(
             state.history
-              .filter((h) => new Date(h.timestamp).getTime() >= weekAgo && h.categoryId)
+              .filter((h) => !isCancelledHistoryEntry(h) && new Date(h.timestamp).getTime() >= weekAgo && h.categoryId)
               .map((h) => h.categoryId)
           ),
         ];
@@ -3028,7 +3031,7 @@ const useGameStore = create(
         const dailyGoalCfg = readDailyGoalSettings();
         const focusMinutesToday = isToday
           ? state.history
-              .filter((h) => localDateStr(h.timestamp) === today)
+              .filter((h) => !isCancelledHistoryEntry(h) && localDateStr(h.timestamp) === today)
               .reduce((sum, h) => sum + (h.minutes ?? 0), 0)
           : 0;
         // Cố Vấn áp dụng cho phiên SAU khi goal đã đạt
@@ -3653,7 +3656,21 @@ const useGameStore = create(
       // ─── Hủy phiên tập trung (Thảm Họa) ─────────────────────────────────
       cancelFocusSession: (progressRatio = 0, options = {}) => {
         const state = get();
-        const { applyDisaster = true } = options;
+        const {
+          applyDisaster = true,
+          recordSession = true,
+          mode = state.timerConfig.mode,
+          elapsedMinutes: optionElapsedMinutes = null,
+          elapsedSeconds: optionElapsedSeconds = null,
+          targetMinutes: optionTargetMinutes = null,
+          sessionTiming = null,
+          sessionSnapshot = null,
+          categoryId: optionCategoryId = undefined,
+          categorySnapshot: optionCategorySnapshot = undefined,
+          note: optionNote = undefined,
+          goal: optionGoal = undefined,
+          nextNote: optionNextNote = undefined,
+        } = options;
         const { unlockedSkills } = state.player;
         const { chargesRemaining, weekStartTimestamp } = state.forgiveness;
 
@@ -3662,37 +3679,12 @@ const useGameStore = create(
         // const overclockLost = state.staking.stakedEP; // (đã bị trừ)
 
         const now     = Date.now();
+        const sessionId = now;
         const oneWeek = 7 * 24 * 60 * 60 * 1000;
         const forgivenessCapacity = getWonderForgivenessCapacity(state.buildings);
         const freshCharges = now - weekStartTimestamp >= oneWeek
           ? forgivenessCapacity
           : chargesRemaining;
-
-        if (!applyDisaster) {
-          set((prev) => ({
-            staking: makeDefaultStaking(),
-            progress: state.timerConfig.mode === 'pomodoro'
-              ? markLongBreakCycleBreakEnded(prev.progress, now)
-              : syncLongBreakCycleProgress(prev.progress, now),
-            sessionMeta: { ...prev.sessionMeta, lastSessionCancelled: true },
-            latestSessionUndo: null,
-            ui: {
-              ...prev.ui,
-              disasterModalOpen: false,
-              pendingDisaster: null,
-            },
-          }));
-          return;
-        }
-
-        // Tổng hợp disasterReduction từ di vật tiến hóa
-        const _cancelEvos     = state.relicEvolutions ?? {};
-        const disasterRedBuff = state.relics.reduce((acc, r) => {
-          const stage = _cancelEvos[r.id] ?? 0;
-          const evoDef = RELIC_EVOLUTION[r.id];
-          const buff   = evoDef?.stages[stage]?.buff ?? r.buff ?? {};
-          return acc + (buff.disasterReduction ?? 0);
-        }, 0);
         const normalizedProgressRatio = Math.max(0, Math.min(1, progressRatio));
         const activeBook = getActiveBook(state.progress.totalEP);
         const penaltyBookKey = `book${activeBook}`;
@@ -3700,15 +3692,46 @@ const useGameStore = create(
         const totalSeconds = Number.isFinite(timerSession.totalSeconds)
           ? Math.max(0, timerSession.totalSeconds)
           : 0;
-        const elapsedMinutes = totalSeconds > 0
+        const fallbackElapsedMinutes = totalSeconds > 0
           ? Math.max(0, Math.floor((totalSeconds * normalizedProgressRatio) / 60))
           : 0;
+        const elapsedSeconds = Number.isFinite(optionElapsedSeconds)
+          ? Math.max(0, Math.floor(optionElapsedSeconds))
+          : fallbackElapsedMinutes * 60;
+        const elapsedMinutes = Number.isFinite(optionElapsedMinutes)
+          ? Math.max(0, Math.floor(optionElapsedMinutes))
+          : fallbackElapsedMinutes;
+        const targetMinutes = Number.isFinite(optionTargetMinutes)
+          ? Math.max(0, Math.round(optionTargetMinutes))
+          : Math.max(0, Math.round(totalSeconds / 60));
         const today = localDateStr();
         const currentWeekKey = localWeekMondayStr();
         const dt = state.dailyTracking;
         const isToday = dt.date === today;
         const catsToday = isToday ? (dt.categoriesUsed ?? []) : [];
-        const sessionCategoryId = timerSession.categoryId ?? state.pendingCategoryId ?? null;
+        const sessionCategoryId = optionCategoryId !== undefined
+          ? optionCategoryId
+          : (timerSession.categoryId ?? state.pendingCategoryId ?? null);
+        const sessionCategorySnapshot = optionCategorySnapshot !== undefined
+          ? optionCategorySnapshot
+          : (sessionSnapshot?.categorySnapshot ?? timerSession.categorySnapshot ?? null);
+        const trimmedNote = (optionNote ?? timerSession.note ?? '').trim();
+        const trimmedGoal = (optionGoal ?? sessionSnapshot?.goal ?? timerSession.goal ?? '').trim();
+        const trimmedNextNote = (optionNextNote ?? sessionSnapshot?.nextNote ?? timerSession.nextNote ?? '').trim();
+        const resolvedStartedAt = sessionTiming?.startedAt
+          ?? (timerSession.startedAt ? new Date(timerSession.startedAt).toISOString() : null);
+        const resolvedFinishedAt = sessionTiming?.finishedAt ?? new Date(now).toISOString();
+        const pauseSegments = Array.isArray(sessionTiming?.pauseSegments)
+          ? sessionTiming.pauseSegments
+          : (Array.isArray(timerSession.pauseSegments) ? timerSession.pauseSegments : []);
+        const pausedTotalMs = Number.isFinite(sessionTiming?.pausedTotalMs)
+          ? Math.max(0, sessionTiming.pausedTotalMs)
+          : Math.max(0, timerSession.pausedTotalMs ?? 0);
+        const wallClockDurationMs = Number.isFinite(sessionTiming?.wallClockDurationMs)
+          ? Math.max(0, sessionTiming.wallClockDurationMs)
+          : (resolvedStartedAt
+            ? Math.max(0, new Date(resolvedFinishedAt).getTime() - new Date(resolvedStartedAt).getTime())
+            : null);
         const uniqueCatsToday = new Set([
           ...catsToday,
           ...(sessionCategoryId ? [sessionCategoryId] : []),
@@ -3740,6 +3763,105 @@ const useGameStore = create(
         const resourceLossCap = {
           [penaltyBookKey]: resourceFloor.resources,
         };
+        const appendCancelledSession = (prev, penaltyDetails = null) => {
+          if (!recordSession) {
+            return {
+              history: prev.history,
+              historyStats: prev.historyStats,
+              savedNotes: prev.savedNotes,
+            };
+          }
+
+          const sessionEntry = {
+            id: sessionId,
+            book: activeBook,
+            timestamp: resolvedFinishedAt,
+            startedAt: resolvedStartedAt,
+            finishedAt: resolvedFinishedAt,
+            cancelledAt: resolvedFinishedAt,
+            pauseSegments,
+            pausedTotalMs,
+            wallClockDurationMs,
+            minutes: elapsedMinutes,
+            elapsedSeconds,
+            targetMinutes,
+            xpEarned: 0,
+            epEarned: 0,
+            tier: 'Phiên bị hủy',
+            multiplier: 0,
+            jackpot: false,
+            resources: {},
+            rpEarned: 0,
+            refinedEarned: 0,
+            blueprint: null,
+            categoryId: sessionCategoryId ?? null,
+            categorySnapshot: sessionCategorySnapshot,
+            status: HISTORY_ENTRY_STATUS.CANCELLED,
+            completed: false,
+            cancelled: true,
+            cancelProgressRatio: normalizedProgressRatio,
+            cancelPenalty: penaltyDetails,
+            comboCount: 1,
+            positiveEvent: null,
+            positiveEventRPBonus: 0,
+            note: trimmedNote || null,
+            breakNote: null,
+            goal: trimmedGoal || null,
+            goalAchieved: trimmedGoal ? false : null,
+            nextNote: trimmedNextNote || null,
+            breakCompletedOnTime: false,
+            breakCompletedAt: null,
+          };
+          const currentHistoryStats = normalizeStoredHistoryStats(prev.historyStats, prev.history);
+          const nextHistoryStats = applyHistoryReviewStatsDelta({
+            ...currentHistoryStats,
+            cancelledSessions: currentHistoryStats.cancelledSessions + 1,
+            cancelledMinutes: currentHistoryStats.cancelledMinutes + elapsedMinutes,
+          }, null, sessionEntry);
+
+          return {
+            history: [sessionEntry, ...prev.history].slice(0, 2000),
+            historyStats: nextHistoryStats,
+            savedNotes: upsertSavedNoteEntry(prev.savedNotes ?? [], sessionEntry),
+          };
+        };
+
+        if (!applyDisaster) {
+          set((prev) => {
+            const cancelledHistoryPatch = appendCancelledSession(prev, {
+              waived: true,
+              chargeConsumed: false,
+              progressRatio: normalizedProgressRatio,
+              appliedPenaltyRate: 0,
+              deducted: {},
+            });
+
+            return {
+              ...cancelledHistoryPatch,
+              staking: makeDefaultStaking(),
+              progress: mode === 'pomodoro'
+                ? markLongBreakCycleBreakEnded(prev.progress, now)
+                : syncLongBreakCycleProgress(prev.progress, now),
+              sessionMeta: { ...prev.sessionMeta, lastSessionCancelled: true, breakCompletedOnTime: false },
+              latestSessionUndo: null,
+              ui: {
+                ...prev.ui,
+                disasterModalOpen: false,
+                pendingDisaster: null,
+              },
+            };
+          });
+          return;
+        }
+
+        // Tổng hợp disasterReduction từ di vật tiến hóa
+        const _cancelEvos     = state.relicEvolutions ?? {};
+        const disasterRedBuff = state.relics.reduce((acc, r) => {
+          const stage = _cancelEvos[r.id] ?? 0;
+          const evoDef = RELIC_EVOLUTION[r.id];
+          const buff   = evoDef?.stages[stage]?.buff ?? r.buff ?? {};
+          return acc + (buff.disasterReduction ?? 0);
+        }, 0);
 
         const result = applyDisasterPenalty(
           state.resources,
@@ -3761,37 +3883,44 @@ const useGameStore = create(
 
         const buildingDamage = null;
 
-        set((prev) => ({
-          resources: result.newResources,
-          staking:   makeDefaultStaking(),
-          progress: state.timerConfig.mode === 'pomodoro'
-            ? markLongBreakCycleBreakEnded(prev.progress, now)
-            : syncLongBreakCycleProgress(prev.progress, now),
-          forgiveness: {
-            chargesRemaining:  newCharges,
-            weekStartTimestamp: now - prev.forgiveness.weekStartTimestamp >= oneWeek
-              ? now
-              : prev.forgiveness.weekStartTimestamp,
-          },
-          sessionMeta: { ...prev.sessionMeta, lastSessionCancelled: true },
-          ui: {
-            ...prev.ui,
-            disasterModalOpen: !result.waived,
-            pendingDisaster: {
-              disaster:       result.disaster,
-              deducted:       result.deducted,
-              waived:         result.waived,
-              chargeConsumed: result.chargeConsumed,
-              progressRatio:  result.progressRatio,
-              basePenaltyRate: result.basePenaltyRate,
-              adjustedPenaltyRate: result.adjustedPenaltyRate,
-              appliedPenaltyRate: result.appliedPenaltyRate,
-              skillPenaltyMultiplier: result.skillPenaltyMultiplier,
-              skillMode: result.skillMode,
-              buildingDamage,
+        set((prev) => {
+          const penaltyDetails = {
+            disaster:       result.disaster,
+            deducted:       result.deducted,
+            waived:         result.waived,
+            chargeConsumed: result.chargeConsumed,
+            progressRatio:  result.progressRatio,
+            basePenaltyRate: result.basePenaltyRate,
+            adjustedPenaltyRate: result.adjustedPenaltyRate,
+            appliedPenaltyRate: result.appliedPenaltyRate,
+            skillPenaltyMultiplier: result.skillPenaltyMultiplier,
+            skillMode: result.skillMode,
+            buildingDamage,
+          };
+          const cancelledHistoryPatch = appendCancelledSession(prev, penaltyDetails);
+
+          return {
+            ...cancelledHistoryPatch,
+            resources: result.newResources,
+            staking:   makeDefaultStaking(),
+            progress: mode === 'pomodoro'
+              ? markLongBreakCycleBreakEnded(prev.progress, now)
+              : syncLongBreakCycleProgress(prev.progress, now),
+            forgiveness: {
+              chargesRemaining:  newCharges,
+              weekStartTimestamp: now - prev.forgiveness.weekStartTimestamp >= oneWeek
+                ? now
+                : prev.forgiveness.weekStartTimestamp,
             },
-          },
-        }));
+            sessionMeta: { ...prev.sessionMeta, lastSessionCancelled: true, breakCompletedOnTime: false },
+            latestSessionUndo: null,
+            ui: {
+              ...prev.ui,
+              disasterModalOpen: !result.waived,
+              pendingDisaster: penaltyDetails,
+            },
+          };
+        });
       },
 
       // ─── Quản lý danh mục phiên ──────────────────────────────────────────

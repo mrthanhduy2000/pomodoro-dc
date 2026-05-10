@@ -953,10 +953,10 @@ export function computeYearGrid(history) {
 export function computeCategoryStats(history, categories) {
   const catMap = {};
   for (const cat of categories) {
-    catMap[cat.id] = { ...cat, sessions: 0, minutes: 0, xp: 0 };
+    catMap[cat.id] = { ...cat, sessions: 0, completed: 0, cancelled: 0, minutes: 0, xp: 0 };
   }
   // Bucket "không có category"
-  catMap['__none__'] = { id: '__none__', label: 'Chưa phân loại', color: '#475569', icon: '❓', sessions: 0, minutes: 0, xp: 0 };
+  catMap['__none__'] = { id: '__none__', label: 'Chưa phân loại', color: '#475569', icon: '❓', sessions: 0, completed: 0, cancelled: 0, minutes: 0, xp: 0 };
 
   for (const h of history) {
     if (h.categoryId && !catMap[h.categoryId] && h.categorySnapshot) {
@@ -966,6 +966,8 @@ export function computeCategoryStats(history, categories) {
         color: h.categorySnapshot.color ?? '#475569',
         icon: h.categorySnapshot.icon ?? '🏷️',
         sessions: 0,
+        completed: 0,
+        cancelled: 0,
         minutes: 0,
         xp: 0,
       };

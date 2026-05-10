@@ -22,6 +22,7 @@ import {
   computeYearGrid,
   computeCategoryStats,
   computePeriodStats,
+  isCancelledHistoryEntry,
 } from '../engine/gameMath';
 import { STREAK_MAX_BONUS_DAYS, STREAK_BONUS_PER_DAY, BUILDING_EFFECTS } from '../engine/constants';
 import {
@@ -388,6 +389,28 @@ function isSessionReviewed(entry) {
   return typeof entry?.goalAchieved === 'boolean';
 }
 
+function getSessionStatusMeta(entry) {
+  if (isCancelledHistoryEntry(entry)) {
+    return {
+      key: 'cancelled',
+      label: 'Phiên bị hủy',
+      shortLabel: 'Đã hủy',
+      bg: 'rgba(239,68,68,0.10)',
+      border: 'rgba(239,68,68,0.22)',
+      color: '#ef4444',
+    };
+  }
+
+  return {
+    key: 'completed',
+    label: 'Phiên hoàn thành',
+    shortLabel: 'Hoàn thành',
+    bg: 'rgba(91,122,82,0.12)',
+    border: 'rgba(91,122,82,0.24)',
+    color: '#6f8f62',
+  };
+}
+
 function summarizeSessionReviews(entries = []) {
   return entries.reduce((acc, entry) => {
     const goalText = getSessionGoalText(entry);
@@ -421,6 +444,19 @@ function summarizeSessionReviews(entries = []) {
 function SessionReviewBadge({ entry, compact = false }) {
   const meta = getSessionReviewMeta(entry);
   if (!meta) return null;
+
+  return (
+    <span
+      className={`inline-flex items-center rounded-full border font-semibold tracking-[0.04em] ${compact ? 'px-2 py-0.5 text-[10px]' : 'px-2.5 py-1 text-[11px]'}`}
+      style={{ background: meta.bg, borderColor: meta.border, color: meta.color }}
+    >
+      {compact ? meta.shortLabel : meta.label}
+    </span>
+  );
+}
+
+function SessionStatusBadge({ entry, compact = false }) {
+  const meta = getSessionStatusMeta(entry);
 
   return (
     <span
@@ -1946,6 +1982,8 @@ function OverviewTabLegacy({ history, progress, streak, prestige, buildings }) {
     const prevWeekMins = prevWeekData.reduce((sum, day) => sum + day.minutes, 0);
     const thisWeekSess = weeklyData.reduce((sum, day) => sum + day.sessions, 0);
     const prevWeekSess = prevWeekData.reduce((sum, day) => sum + day.sessions, 0);
+    const thisWeekCancelled = weeklyData.reduce((sum, day) => sum + (day.cancelled ?? 0), 0);
+    const prevWeekCancelled = prevWeekData.reduce((sum, day) => sum + (day.cancelled ?? 0), 0);
     const thisWeekXP = weeklyData.reduce((sum, day) => sum + day.xp, 0);
     const prevWeekXP = prevWeekData.reduce((sum, day) => sum + day.xp, 0);
     const weeklyActiveDays = weeklyData.filter((day) => day.minutes > 0).length;
@@ -1956,7 +1994,8 @@ function OverviewTabLegacy({ history, progress, streak, prestige, buildings }) {
       const timestampMs = getTimestampMs(entry?.timestamp);
       return Number.isFinite(timestampMs) && timestampMs >= weekWindowStartTs;
     });
-    const weeklyBestSession = recentWeekEntries.reduce(
+    const recentCompletedWeekEntries = recentWeekEntries.filter((entry) => !isCancelledHistoryEntry(entry));
+    const weeklyBestSession = recentCompletedWeekEntries.reduce(
       (best, entry) => ((entry?.minutes ?? 0) > (best?.minutes ?? 0) ? entry : best),
       null,
     );
@@ -1969,8 +2008,8 @@ function OverviewTabLegacy({ history, progress, streak, prestige, buildings }) {
     const weeklyBestSessionXPLabel = weeklyBestSessionXP >= 1000
       ? `${(weeklyBestSessionXP / 1000).toFixed(1)}k XP`
       : `${weeklyBestSessionXP} XP`;
-    const weeklyJackpots = recentWeekEntries.filter((entry) => entry?.jackpot).length;
-    const weeklyLongSessions = recentWeekEntries.filter((entry) => (entry?.refinedEarned ?? 0) > 0 || (entry?.minutes ?? 0) >= 45).length;
+    const weeklyJackpots = recentCompletedWeekEntries.filter((entry) => entry?.jackpot).length;
+    const weeklyLongSessions = recentCompletedWeekEntries.filter((entry) => (entry?.refinedEarned ?? 0) > 0 || (entry?.minutes ?? 0) >= 45).length;
     const periodValues = periodData.map((item) => item[metric] ?? 0);
     const periodTotal = periodValues.reduce((sum, value) => sum + value, 0);
     const periodActiveCount = periodValues.filter((value) => value > 0).length;
@@ -2019,6 +2058,8 @@ function OverviewTabLegacy({ history, progress, streak, prestige, buildings }) {
       prevWeekMins,
       thisWeekSess,
       prevWeekSess,
+      thisWeekCancelled,
+      prevWeekCancelled,
       thisWeekXP,
       prevWeekXP,
       weeklyActiveDays,
@@ -2056,6 +2097,7 @@ function OverviewTabLegacy({ history, progress, streak, prestige, buildings }) {
 
   const hasOverviewData = (
     allTime.totalSessions > 0
+    || (allTime.trackedSessions ?? 0) > 0
     || progress.totalFocusMinutes > 0
     || overview.thisWeekSess > 0
     || overview.thisWeekXP > 0
@@ -2754,6 +2796,7 @@ function OverviewTab({ history, progress, streak, prestige, buildings }) {
   const bonusPct = Math.min(streak.currentStreak, streakBonusCapDays) * (STREAK_BONUS_PER_DAY * 100);
   const recentLogs = useMemo(() => history.slice(0, 3).map((entry) => {
     const category = resolveEntryCategory(entry, categoryMap);
+    const isCancelled = isCancelledHistoryEntry(entry);
     const xpEarned = Number.isFinite(entry?.xpEarned ?? entry?.epEarned)
       ? (entry.xpEarned ?? entry.epEarned)
       : 0;
@@ -2767,6 +2810,7 @@ function OverviewTab({ history, progress, streak, prestige, buildings }) {
     return {
       entry,
       category,
+      isCancelled,
       xpEarned,
       goalText,
       nextNoteText,
@@ -2780,6 +2824,8 @@ function OverviewTab({ history, progress, streak, prestige, buildings }) {
     const prevWeekMins = prevWeekData.reduce((sum, day) => sum + day.minutes, 0);
     const thisWeekSess = weeklyData.reduce((sum, day) => sum + day.sessions, 0);
     const prevWeekSess = prevWeekData.reduce((sum, day) => sum + day.sessions, 0);
+    const thisWeekCancelled = weeklyData.reduce((sum, day) => sum + (day.cancelled ?? 0), 0);
+    const prevWeekCancelled = prevWeekData.reduce((sum, day) => sum + (day.cancelled ?? 0), 0);
     const thisWeekXP = weeklyData.reduce((sum, day) => sum + day.xp, 0);
     const prevWeekXP = prevWeekData.reduce((sum, day) => sum + day.xp, 0);
     const weeklyActiveDays = weeklyData.filter((day) => day.minutes > 0).length;
@@ -2790,12 +2836,13 @@ function OverviewTab({ history, progress, streak, prestige, buildings }) {
       const timestampMs = getTimestampMs(entry?.timestamp);
       return Number.isFinite(timestampMs) && Number.isFinite(weekWindowStartTs) && timestampMs >= weekWindowStartTs;
     });
-    const weeklyBestSession = recentWeekEntries.reduce(
+    const recentCompletedWeekEntries = recentWeekEntries.filter((entry) => !isCancelledHistoryEntry(entry));
+    const weeklyBestSession = recentCompletedWeekEntries.reduce(
       (best, entry) => ((entry?.minutes ?? 0) > (best?.minutes ?? 0) ? entry : best),
       null,
     );
-    const weeklyJackpots = recentWeekEntries.filter((entry) => entry?.jackpot).length;
-    const weeklyLongSessions = recentWeekEntries.filter((entry) => (entry?.refinedEarned ?? 0) > 0 || (entry?.minutes ?? 0) >= 45).length;
+    const weeklyJackpots = recentCompletedWeekEntries.filter((entry) => entry?.jackpot).length;
+    const weeklyLongSessions = recentCompletedWeekEntries.filter((entry) => (entry?.refinedEarned ?? 0) > 0 || (entry?.minutes ?? 0) >= 45).length;
 
     const periodValues = periodData.map((item) => item[metric] ?? 0);
     const periodTotal = periodValues.reduce((sum, value) => sum + value, 0);
@@ -2853,6 +2900,8 @@ function OverviewTab({ history, progress, streak, prestige, buildings }) {
       prevWeekMins,
       thisWeekSess,
       prevWeekSess,
+      thisWeekCancelled,
+      prevWeekCancelled,
       thisWeekXP,
       prevWeekXP,
       weeklyActiveDays,
@@ -3135,6 +3184,7 @@ function OverviewTab({ history, progress, streak, prestige, buildings }) {
   const heroBadges = [
     { label: 'Streak hiện tại', value: `${streak.currentStreak} ngày` },
     { label: 'Tuần này', value: `${overview.thisWeekSess} phiên` },
+    allTime.cancelledSessions > 0 ? { label: 'Phiên hủy', value: `${fmtCount(allTime.cancelledSessions)} lần` } : null,
     { label: 'Thưởng nền', value: `+${bonusPct.toFixed(0)}% XP` },
     qualityBadge,
   ].filter(Boolean);
@@ -3142,9 +3192,19 @@ function OverviewTab({ history, progress, streak, prestige, buildings }) {
     {
       label: 'Phiên tuần này',
       value: overview.thisWeekSess.toLocaleString(),
-      detail: `${overview.weeklyActiveDays}/7 ngày có hoạt động`,
+      detail: overview.thisWeekCancelled > 0
+        ? `${overview.weeklyActiveDays}/7 ngày có hoạt động · ${overview.thisWeekCancelled} bị hủy`
+        : `${overview.weeklyActiveDays}/7 ngày có hoạt động`,
       accent: TEXT_PRIMARY,
     },
+    allTime.cancelledSessions > 0
+      ? {
+          label: 'Phiên bị hủy',
+          value: `${fmtCount(allTime.cancelledSessions)}`,
+          detail: `${fmtHours(allTime.cancelledMinutes)} đã ghi trước khi dừng`,
+          accent: '#ef4444',
+        }
+      : null,
     {
       label: 'Phiên tốt nhất tuần',
       value: overview.weeklyBestSessionLabel,
@@ -3157,7 +3217,7 @@ function OverviewTab({ history, progress, streak, prestige, buildings }) {
       detail: `${overview.weeklyLongSessions} phiên dài trong tuần`,
       accent: ACCENT,
     },
-  ];
+  ].filter(Boolean);
   const periodStats = [
     {
       label: 'Tổng',
@@ -3321,9 +3381,11 @@ function OverviewTab({ history, progress, streak, prestige, buildings }) {
           <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,1.15fr)_repeat(2,minmax(0,1fr))]">
             <OverviewHeroMetric
               icon="01"
-              label="Tổng phiên"
+              label="Phiên hoàn thành"
               value={allTime.totalSessions.toLocaleString()}
-              detail={<TrendBadge current={overview.thisWeekSess} previous={overview.prevWeekSess} baselineLabel="7 ngày trước đó" />}
+              detail={(allTime.cancelledSessions ?? 0) > 0
+                ? `${fmtCount(allTime.trackedSessions)} bản ghi · ${fmtCount(allTime.cancelledSessions)} bị hủy`
+                : <TrendBadge current={overview.thisWeekSess} previous={overview.prevWeekSess} baselineLabel="7 ngày trước đó" />}
               accent={ACCENT}
               className="sm:col-span-2 xl:row-span-2"
               chart={<AreaChart data={weeklyData} valueKey="sessions" height={64} accentColor={ACCENT} />}
@@ -3447,7 +3509,7 @@ function OverviewTab({ history, progress, streak, prestige, buildings }) {
             </div>
 
             <div className="mt-5 grid gap-3 lg:grid-cols-3">
-              {recentLogs.map(({ entry, category, xpEarned, goalText, nextNoteText, notePreview, exactTimeLabel }) => (
+              {recentLogs.map(({ entry, category, isCancelled, xpEarned, goalText, nextNoteText, notePreview, exactTimeLabel }) => (
                 <div
                   key={entry.id ?? entry.timestamp}
                   className="rounded-[24px] p-4"
@@ -3473,12 +3535,12 @@ function OverviewTab({ history, progress, streak, prestige, buildings }) {
                         {fmtHours(entry?.minutes ?? 0)}
                       </p>
                       <p className="mt-2 text-[11px] leading-5" style={{ color: TEXT_MUTED }}>
-                        {fmtXPCompact(xpEarned)} XP
-                        {entry?.comboCount > 1 ? ` • Combo ×${entry.comboCount}` : ''}
-                        {entry?.tier ? ` • ${entry.tier}` : ''}
+                        {isCancelled
+                          ? `Đã hủy${Number.isFinite(entry?.cancelProgressRatio) ? ` • ${Math.round(entry.cancelProgressRatio * 100)}% tiến độ` : ''}`
+                          : `${fmtXPCompact(xpEarned)} XP${entry?.comboCount > 1 ? ` • Combo ×${entry.comboCount}` : ''}${entry?.tier ? ` • ${entry.tier}` : ''}`}
                       </p>
                     </div>
-                    <SessionReviewBadge entry={entry} compact />
+                    {isCancelled ? <SessionStatusBadge entry={entry} compact /> : <SessionReviewBadge entry={entry} compact />}
                   </div>
 
                   <div className="mt-4 rounded-[18px] px-3 py-2.5" style={{ background: PANEL_BG, border: `1px solid ${PANEL_BORDER}` }}>
@@ -3847,6 +3909,8 @@ function summarizeFocusStats(history, period = 'all') {
 
   let totalMinutes = 0;
   let totalSessions = 0;
+  let completedSessions = 0;
+  let cancelledSessions = 0;
   let deepFocusCount = 0;
   let ultraFocusCount = 0;
   let maxSessionMinutes = 0;
@@ -3858,9 +3922,12 @@ function summarizeFocusStats(history, period = 'all') {
 
     filteredEntries.push(entry);
     const minutes = Math.max(0, entry?.minutes ?? 0);
+    const isCancelled = isCancelledHistoryEntry(entry);
 
     totalMinutes += minutes;
     totalSessions += 1;
+    completedSessions += isCancelled ? 0 : 1;
+    cancelledSessions += isCancelled ? 1 : 0;
     if (minutes >= 60) deepFocusCount += 1;
     if (minutes >= 90) ultraFocusCount += 1;
     if (minutes > maxSessionMinutes) maxSessionMinutes = minutes;
@@ -3868,6 +3935,8 @@ function summarizeFocusStats(history, period = 'all') {
 
     const hour = getVietnamHour(timestampMs);
     hourlyStats[hour].sessions += 1;
+    hourlyStats[hour].completed = (hourlyStats[hour].completed ?? 0) + (isCancelled ? 0 : 1);
+    hourlyStats[hour].cancelled = (hourlyStats[hour].cancelled ?? 0) + (isCancelled ? 1 : 0);
     hourlyStats[hour].minutes += minutes;
 
     const bucketIndex = getFocusBucketIndex(minutes);
@@ -3887,6 +3956,8 @@ function summarizeFocusStats(history, period = 'all') {
     };
     currentDay.minutes += minutes;
     currentDay.sessions += 1;
+    currentDay.completed = (currentDay.completed ?? 0) + (isCancelled ? 0 : 1);
+    currentDay.cancelled = (currentDay.cancelled ?? 0) + (isCancelled ? 1 : 0);
     dayTotals.set(dayKey, currentDay);
   }
 
@@ -3957,6 +4028,8 @@ function summarizeFocusStats(history, period = 'all') {
 
   return {
     totalSessions,
+    completedSessions,
+    cancelledSessions,
     totalMinutes,
     avgSessionMinutes,
     maxSessionMinutes,
@@ -4363,8 +4436,8 @@ const FocusTab = React.memo(function FocusTab({ history }) {
     : `Chưa có dữ liệu cho ${periodLabel.toLowerCase()}.`;
   const focusBody = focusSummary.totalSessions > 0
     ? focusSummary.sparseMode
-      ? `${periodLabel} mới ghi nhận ${fmtCount(focusSummary.totalSessions)} phiên trên ${fmtCount(focusSummary.activeDays)} ngày có phiên. Khối này ưu tiên những gì vừa diễn ra gần đây để anh đọc nhịp nhanh hơn, thay vì trải số liệu ra quá rộng khi dữ liệu còn mỏng.`
-      : `${periodLabel} ghi nhận ${fmtCount(focusSummary.totalSessions)} phiên với ${fmtHours(focusSummary.totalMinutes)} tổng thời lượng. Trung bình mỗi phiên kéo dài ${focusSummary.avgSessionMinutes} phút, và ${deepFocusRatio}% số phiên đã chạm mốc 60 phút.`
+      ? `${periodLabel} mới ghi nhận ${fmtCount(focusSummary.totalSessions)} phiên trên ${fmtCount(focusSummary.activeDays)} ngày có phiên${focusSummary.cancelledSessions > 0 ? `, trong đó ${fmtCount(focusSummary.cancelledSessions)} phiên bị hủy.` : '.'} Khối này ưu tiên những gì vừa diễn ra gần đây để anh đọc nhịp nhanh hơn, thay vì trải số liệu ra quá rộng khi dữ liệu còn mỏng.`
+      : `${periodLabel} ghi nhận ${fmtCount(focusSummary.totalSessions)} phiên với ${fmtHours(focusSummary.totalMinutes)} tổng thời lượng${focusSummary.cancelledSessions > 0 ? `, gồm ${fmtCount(focusSummary.cancelledSessions)} phiên bị hủy.` : '.'} Trung bình mỗi phiên kéo dài ${focusSummary.avgSessionMinutes} phút, và ${deepFocusRatio}% số phiên đã chạm mốc 60 phút.`
     : `Hoàn thành thêm một phiên trong ${periodLabel.toLowerCase()} để hệ thống bắt đầu đọc được nhịp tập trung của anh.`;
 
   const handlePeriodChange = (nextPeriod) => {
@@ -4545,6 +4618,14 @@ const FocusTab = React.memo(function FocusTab({ history }) {
                   >
                     Phiên sâu · {fmtCount(focusSummary.deepFocusCount)}
                   </div>
+                  {focusSummary.cancelledSessions > 0 && (
+                    <div
+                      className="rounded-full px-3 py-1.5 text-[11px] font-semibold"
+                      style={{ background: 'rgba(239,68,68,0.10)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.22)' }}
+                    >
+                      Phiên hủy · {fmtCount(focusSummary.cancelledSessions)}
+                    </div>
+                  )}
                   <div
                     className="rounded-full px-3 py-1.5 text-[11px] font-semibold"
                     style={{ background: PANEL_BG_SOFT, color: TEXT_MUTED, border: `1px solid ${PANEL_BORDER}` }}
@@ -4572,7 +4653,7 @@ const FocusTab = React.memo(function FocusTab({ history }) {
                 <OverviewRailStat
                   label="Thời lượng đã ghi"
                   value={fmtHours(focusSummary.totalMinutes)}
-                  detail={`${fmtCount(focusSummary.totalSessions)} phiên • ${focusSummary.avgSessionMinutes}p / phiên`}
+                  detail={`${fmtCount(focusSummary.completedSessions)} hoàn thành · ${fmtCount(focusSummary.cancelledSessions)} hủy`}
                   accent={ACCENT2}
                 />
                 <OverviewRailStat
@@ -4777,6 +4858,7 @@ function CategoryTab({ history, sessionCategories }) {
 
   const totalMins = catStats.reduce((s, c) => s + c.minutes, 0);
   const totalSess = catStats.reduce((s, c) => s + c.sessions, 0);
+  const totalCancelled = catStats.reduce((s, c) => s + (c.cancelled ?? 0), 0);
   const totalXP   = catStats.reduce((s, c) => s + c.xp, 0);
   const avgMinutesOverall = totalSess > 0 ? Math.round(totalMins / totalSess) : 0;
 
@@ -4827,7 +4909,9 @@ function CategoryTab({ history, sessionCategories }) {
     {
       label: 'TB mỗi phiên',
       value: `${avgMinutesOverall}p`,
-      sub: `${totalSess} phiên trong ${periodLabel.toLowerCase()}`,
+      sub: totalCancelled > 0
+        ? `${totalSess} phiên · ${totalCancelled} hủy`
+        : `${totalSess} phiên trong ${periodLabel.toLowerCase()}`,
       icon: 'TB',
       color: '#0ea5e9',
     },
@@ -5038,7 +5122,8 @@ function CategoryTab({ history, sessionCategories }) {
                     { label: 'Nhóm chủ đạo', value: `${topShare.toFixed(0)}%`, sub: topTimeCat?.label ?? '—' },
                     { label: 'Nhịp trung bình', value: `${avgMinutesOverall}p`, sub: `${totalSess} phiên` },
                     { label: 'Độ mở', value: `${catStats.length}`, sub: 'loại hoạt động' },
-                  ].map((item) => (
+                    totalCancelled > 0 ? { label: 'Phiên hủy', value: `${totalCancelled}`, sub: 'đã tính vào thời lượng' } : null,
+                  ].filter(Boolean).map((item) => (
                     <div
                       key={item.label}
                       className="rounded-2xl px-3 py-2.5 text-center"
@@ -5056,6 +5141,7 @@ function CategoryTab({ history, sessionCategories }) {
                 {catStats.map((cat, index) => {
                   const pct = totalMins > 0 ? (cat.minutes / totalMins * 100).toFixed(0) : 0;
                   const avgXPPerMin = cat.minutes > 0 ? (cat.xp / cat.minutes).toFixed(1) : '0.0';
+                  const catCancelText = (cat.cancelled ?? 0) > 0 ? ` · ${cat.cancelled} hủy` : '';
                   return (
                     <div
                       key={cat.id}
@@ -5078,7 +5164,7 @@ function CategoryTab({ history, sessionCategories }) {
                                 {cat.label}
                               </span>
                               <span className="text-[11px] mt-1 block" style={{ color: TEXT_MUTED }}>
-                                {fmtHours(cat.minutes)} · {cat.sessions} phiên · {avgXPPerMin} XP/p
+                                {fmtHours(cat.minutes)} · {cat.sessions} phiên{catCancelText} · {avgXPPerMin} XP/p
                               </span>
                             </div>
                             <div className="shrink-0 text-left sm:text-right">
@@ -5152,10 +5238,12 @@ function CategoryTab({ history, sessionCategories }) {
             const pct    = totalMins > 0 ? (cat.minutes / totalMins) * 100 : 0;
             const avgMin = cat.sessions > 0 ? Math.round(cat.minutes / cat.sessions) : 0;
             const xpPerMin = cat.minutes > 0 ? (cat.xp / cat.minutes).toFixed(1) : '0.0';
+            const cancelledCount = cat.cancelled ?? 0;
             const badges = [
               topTimeCat?.id === cat.id ? 'Chủ đạo' : null,
               bestEfficiencyCat?.id === cat.id ? 'Hiệu quả rõ nhất' : null,
               longestAvgCat?.id === cat.id ? 'Phiên dài nhất' : null,
+              cancelledCount > 0 ? `${cancelledCount} hủy` : null,
             ].filter(Boolean);
             return (
               <div
@@ -5176,7 +5264,7 @@ function CategoryTab({ history, sessionCategories }) {
                     <div className="min-w-0">
                       <p className="text-sm font-semibold truncate" style={{ color: TEXT_PRIMARY }}>{cat.label}</p>
                       <p className="text-[11px]" style={{ color: TEXT_MUTED }}>
-                        {cat.sessions} phiên · {fmtHours(cat.minutes)}
+                        {cat.sessions} phiên{cancelledCount > 0 ? ` · ${cancelledCount} hủy` : ''} · {fmtHours(cat.minutes)}
                       </p>
                     </div>
                   </div>
@@ -5527,6 +5615,7 @@ function JournalTab({ history, sessionCategories }) {
 
   const journalSummary = useMemo(() => {
     return filtered.reduce((acc, entry) => {
+      if (isCancelledHistoryEntry(entry)) acc.cancelled += 1;
       if (entry.note || entry.breakNote) acc.noted += 1;
       if (getSessionGoalText(entry)) acc.withGoal += 1;
       if (isSessionReviewed(entry)) acc.reviewed += 1;
@@ -5537,6 +5626,7 @@ function JournalTab({ history, sessionCategories }) {
       withGoal: 0,
       reviewed: 0,
       deep: 0,
+      cancelled: 0,
     });
   }, [filtered]);
 
@@ -5575,10 +5665,10 @@ function JournalTab({ history, sessionCategories }) {
               Lưu trữ
             </p>
             <h3 className="mt-3 text-[1.9rem] font-semibold leading-tight" style={{ color: TEXT_PRIMARY, fontFamily: DISPLAY_FONT }}>
-              Nhật ký của các phiên đã hoàn thành.
+              Nhật ký của các phiên đã ghi.
             </h3>
             <p className="mt-3 max-w-2xl text-[13px] leading-6" style={{ color: TEXT_MUTED }}>
-              Khối này giữ lại nhịp, mốc XP, ghi chú và phần tự chấm theo đúng thứ tự thời gian. Bộ lọc phía dưới giúp soi từng nhóm phiên mà không làm mất cảm giác của một cuốn sổ đang được bổ sung dần.
+              Khối này giữ lại nhịp, mốc XP, ghi chú, phần tự chấm và cả những phiên bị hủy theo đúng thứ tự thời gian. Bộ lọc phía dưới giúp soi từng nhóm phiên mà không làm mất cảm giác của một cuốn sổ đang được bổ sung dần.
             </p>
             <p className="mt-2 max-w-2xl text-[12px] leading-5" style={{ color: TEXT_SOFT }}>
               Xóa phiên vẫn chỉ mở cho phiên mới nhất. Riêng ghi chú cũ, bạn có thể gỡ trực tiếp trong từng bản ghi bên dưới.
@@ -5598,7 +5688,7 @@ function JournalTab({ history, sessionCategories }) {
             { label: 'Phiên hiển thị', value: fmtCount(filtered.length), sub: `${fmtCount(history.length)} phiên toàn bộ` },
             { label: 'Có ghi chú', value: fmtCount(journalSummary.noted), sub: 'có ghi chú trong phiên hoặc lúc nghỉ' },
             { label: 'Đã tự chấm', value: fmtCount(journalSummary.reviewed), sub: `${fmtCount(journalSummary.withGoal)} phiên có mục tiêu` },
-            { label: 'Phiên sâu', value: fmtCount(journalSummary.deep), sub: 'phiên từ 45 phút trở lên' },
+            { label: 'Phiên hủy', value: fmtCount(journalSummary.cancelled), sub: journalSummary.cancelled > 0 ? 'đã ghi vào thống kê' : 'chưa có phiên hủy' },
           ].map((item) => (
             <div
               key={item.label}
@@ -5656,14 +5746,16 @@ function JournalTab({ history, sessionCategories }) {
       <div className="space-y-1.5">
         {paged.map((h, idx) => {
           const cat = resolveEntryCategory(h, catMap);
+          const isCancelled = isCancelledHistoryEntry(h);
           const goalText = getSessionGoalText(h);
           const nextNoteText = getSessionNextNoteText(h);
           const reviewMeta = getSessionReviewMeta(h);
-          const tierShort = h.tier?.includes('×2.0') ? '×2.0'
+          const tierShort = isCancelled ? 'Đã hủy'
+            : h.tier?.includes('×2.0') ? '×2.0'
             : h.tier?.includes('Sâu') ? '×1.3'
             : '×1.0';
-          const hasEvent = !!h.positiveEvent;
-          const comboVal = h.comboCount ?? 1;
+          const hasEvent = !isCancelled && !!h.positiveEvent;
+          const comboVal = isCancelled ? 1 : (h.comboCount ?? 1);
           const pauseSegments = Array.isArray(h.pauseSegments) ? h.pauseSegments : [];
           const pauseCount = pauseSegments.length;
           const pausedTotalMs = Number.isFinite(h.pausedTotalMs)
@@ -5722,6 +5814,7 @@ function JournalTab({ history, sessionCategories }) {
                         <p className="text-[11px] font-semibold" style={{ color: cat?.color ?? '#475569' }}>
                           {cat?.label ?? 'Chưa gắn loại'}
                         </p>
+                        {isCancelled && <SessionStatusBadge entry={h} compact />}
                         {reviewMeta && <SessionReviewBadge entry={h} compact />}
                         <button
                           type="button"
@@ -5802,7 +5895,7 @@ function JournalTab({ history, sessionCategories }) {
                   >
                     <p className="text-[10px] font-semibold uppercase tracking-[0.16em]" style={{ color: TEXT_SOFT }}>XP</p>
                     <p className="mt-2 text-[1rem] font-semibold font-mono leading-none" style={{ color: ACCENT2 }}>
-                      +{(h.xpEarned ?? 0).toLocaleString()}
+                      {isCancelled ? 'Không thưởng' : `+${(h.xpEarned ?? 0).toLocaleString()}`}
                     </p>
                   </div>
                   <div
@@ -5812,10 +5905,15 @@ function JournalTab({ history, sessionCategories }) {
                     <p className="text-[10px] font-semibold uppercase tracking-[0.16em]" style={{ color: TEXT_SOFT }}>Sự kiện</p>
                     <div className="mt-2 flex flex-wrap gap-1.5">
                       {h.jackpot && <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold" style={{ background: 'rgba(201,100,66,0.12)', color: ACCENT2 }}>Thưởng lớn</span>}
-                      {((h.refinedEarned ?? 0) > 0 || (h.minutes ?? 0) >= 45) && <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold" style={{ background: 'rgba(148,163,184,0.18)', color: TEXT_MUTED }}>Tinh luyện</span>}
+                      {!isCancelled && ((h.refinedEarned ?? 0) > 0 || (h.minutes ?? 0) >= 45) && <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold" style={{ background: 'rgba(148,163,184,0.18)', color: TEXT_MUTED }}>Tinh luyện</span>}
                       {hasEvent && <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold" style={{ background: 'rgba(var(--accent-rgb), 0.14)', color: ACCENT2 }}>Mốc phụ</span>}
                       {comboVal >= 2 && <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold" style={{ background: 'rgba(138,63,36,0.12)', color: ACCENT2 }}>Chuỗi ×{comboVal}</span>}
-                      {!h.jackpot && !((h.refinedEarned ?? 0) > 0 || (h.minutes ?? 0) >= 45) && !hasEvent && comboVal < 2 && (
+                      {isCancelled && (
+                        <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold" style={{ background: 'rgba(239,68,68,0.10)', color: '#ef4444' }}>
+                          Dừng ở {Number.isFinite(h.cancelProgressRatio) ? `${Math.round(h.cancelProgressRatio * 100)}%` : 'giữa phiên'}
+                        </span>
+                      )}
+                      {!isCancelled && !h.jackpot && !((h.refinedEarned ?? 0) > 0 || (h.minutes ?? 0) >= 45) && !hasEvent && comboVal < 2 && (
                         <span className="text-[11px]" style={{ color: TEXT_MUTED }}>Phiên gọn, không có lớp thưởng phụ.</span>
                       )}
                     </div>
@@ -6003,7 +6101,7 @@ function JournalTab({ history, sessionCategories }) {
                           <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                             <div className="min-w-0 flex-1">
                               <p className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: NOTE_PANEL_TITLE }}>
-                                Đánh giá phiên vừa xong
+                                {isCancelled ? 'Đánh giá phiên bị hủy' : 'Đánh giá phiên vừa xong'}
                               </p>
                               {goalText ? (
                                 <p className="mt-2 text-[11px] leading-relaxed" style={{ color: NOTE_PANEL_TEXT, whiteSpace: 'pre-wrap' }}>

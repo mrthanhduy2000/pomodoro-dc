@@ -33,7 +33,6 @@ export function useTimer({ focusMinutes, mode = TIMER_MODES.POMODORO }) {
 
   const completeFocusSession = useGameStore((s) => s.completeFocusSession);
   const cancelFocusSession = useGameStore((s) => s.cancelFocusSession);
-  const stakingActive = useGameStore((s) => s.staking.active);
   const strictMode = useGameStore((s) => s.timerConfig.strictMode);
   const eraCrisis = useGameStore((s) => s.eraCrisis);
   const startBreak = useGameStore((s) => s.startBreak);
@@ -726,23 +725,78 @@ export function useTimer({ focusMinutes, mode = TIMER_MODES.POMODORO }) {
   const cancel = useCallback(() => {
     if (timerState !== TIMER_STATES.RUNNING && timerState !== TIMER_STATES.PAUSED) return;
 
+    const cancelledAtMs = Date.now();
+    const authoritativeDisplaySeconds = getAuthoritativeDisplaySeconds(modeRef.current, cancelledAtMs);
+    const elapsedSeconds = modeRef.current === TIMER_MODES.STOPWATCH
+      ? authoritativeDisplaySeconds
+      : Math.max(0, totalSecondsRef.current - authoritativeDisplaySeconds);
+    const elapsedMinutes = Math.max(0, Math.floor(elapsedSeconds / 60));
+    const baseSessionTiming = buildCompletedSessionTiming(cancelledAtMs);
+    const openPauseDurationMs = pausedAtRef.current
+      ? Math.max(0, cancelledAtMs - pausedAtRef.current)
+      : 0;
+    const sessionTiming = openPauseDurationMs > 0
+      ? {
+          ...baseSessionTiming,
+          pausedTotalMs: baseSessionTiming.pausedTotalMs + openPauseDurationMs,
+          pauseSegments: [
+            ...baseSessionTiming.pauseSegments,
+            {
+              startedAt: new Date(pausedAtRef.current).toISOString(),
+              endedAt: new Date(cancelledAtMs).toISOString(),
+              durationMs: openPauseDurationMs,
+            },
+          ],
+        }
+      : baseSessionTiming;
+    const lockedCategoryId = sessionCategoryIdRef.current ?? null;
+    const lockedCategorySnapshot = sessionCategorySnapshotRef.current ?? null;
+    const lockedNote = sessionNoteRef.current ?? '';
+    const lockedGoal = sessionGoalRef.current ?? '';
+    const lockedNextNote = sessionNextNoteRef.current ?? '';
     const progressRatio = totalSecondsRef.current > 0
-      ? Math.max(0, Math.min(1, computeProgressPct(secondsRef.current) / 100))
+      ? Math.max(0, Math.min(1, computeProgressPct(authoritativeDisplaySeconds) / 100))
       : 0;
 
     clearInterval(intervalRef.current);
     startTimeRef.current = null;
-    resetSessionTimeline();
     setLastCompletedSessionId(null);
     setTimerState(TIMER_STATES.CANCELLED);
     clearTimeout(pendingBreakTimeoutRef.current);
     clearFocusCompletePush('cancelled');
 
-    if (strictMode || stakingActive) {
-      cancelFocusSession(progressRatio, { applyDisaster: strictMode });
-    }
+    cancelFocusSession(progressRatio, {
+      applyDisaster: strictMode,
+      recordSession: true,
+      mode: modeRef.current,
+      elapsedSeconds,
+      elapsedMinutes,
+      targetMinutes: Math.max(0, Math.round(totalSecondsRef.current / 60)),
+      sessionTiming,
+      sessionSnapshot: {
+        categorySnapshot: lockedCategorySnapshot,
+        goal: lockedGoal,
+        nextNote: lockedNextNote,
+      },
+      categoryId: lockedCategoryId,
+      categorySnapshot: lockedCategorySnapshot,
+      note: lockedNote,
+      goal: lockedGoal,
+      nextNote: lockedNextNote,
+    });
+    resetSessionTimeline();
     clearTimerSession();
-  }, [cancelFocusSession, clearFocusCompletePush, clearTimerSession, computeProgressPct, resetSessionTimeline, stakingActive, strictMode, timerState]);
+  }, [
+    buildCompletedSessionTiming,
+    cancelFocusSession,
+    clearFocusCompletePush,
+    clearTimerSession,
+    computeProgressPct,
+    getAuthoritativeDisplaySeconds,
+    resetSessionTimeline,
+    strictMode,
+    timerState,
+  ]);
 
   const pause = useCallback(() => {
     if (timerState !== TIMER_STATES.RUNNING) return;

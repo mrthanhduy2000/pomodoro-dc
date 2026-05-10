@@ -31,6 +31,7 @@ const NOTE_WORD_LIMIT = 3000;
 const SESSION_GOAL_MIN_CHARS = 10;
 const SESSION_EXTENSION_SECONDS = 60;
 const SESSION_EXTENSION_WINDOW_SECONDS = 5 * 60;
+const SESSION_EXTENSION_IDLE_GRACE_MS = 30 * 1000;
 const RING_RADIUS = 128;
 const RING_STROKE = 4;
 const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
@@ -204,6 +205,7 @@ export default function PomodoroEngine({
     finish,
     extendCurrentSession,
     lastCompletedSessionId,
+    sessionStartedAt,
   } = useTimer({
     focusMinutes: timerConfig.focusMinutes,
     mode: timerMode,
@@ -222,6 +224,7 @@ export default function PomodoroEngine({
     String(clampFocusMinutes(timerConfig.focusMinutes ?? 25))
   ));
   const [isEditingFocusMinutes, setIsEditingFocusMinutes] = useState(false);
+  const [extendButtonGrace, setExtendButtonGrace] = useState(null);
   useEffect(() => {
     if (!milestone) return;
     const activateId = window.setTimeout(() => setActiveMilestone(milestone), 0);
@@ -376,11 +379,35 @@ export default function PomodoroEngine({
   const isActive = timerState === TIMER_STATES.RUNNING || timerState === TIMER_STATES.PAUSED;
   const isBreakMode = isOnBreak;
   const isCrisisBlockingStart = eraCrisis.active && eraCrisis.choiceMade !== 'challenge';
+  const isExtensionWindowOpen = displaySeconds > 0 && displaySeconds <= SESSION_EXTENSION_WINDOW_SECONDS;
+  const isExtensionGraceActive = Number.isFinite(extendButtonGrace?.until)
+    && extendButtonGrace.sessionStartedAt === sessionStartedAt;
   const canExtendActivePomodoro = !isBreakMode
     && !isStopwatchMode
     && (timerState === TIMER_STATES.RUNNING || timerState === TIMER_STATES.PAUSED)
     && displaySeconds > 0
-    && displaySeconds <= SESSION_EXTENSION_WINDOW_SECONDS;
+    && (isExtensionWindowOpen || isExtensionGraceActive);
+
+  useEffect(() => {
+    if (!Number.isFinite(extendButtonGrace?.until)) return undefined;
+
+    const delay = Math.max(0, extendButtonGrace.until - Date.now());
+    const timeoutId = window.setTimeout(() => {
+      setExtendButtonGrace(null);
+    }, delay + 50);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [extendButtonGrace]);
+
+  const handleExtendActivePomodoro = useCallback(() => {
+    const didExtend = extendCurrentSession(SESSION_EXTENSION_SECONDS);
+    if (!didExtend) return;
+    setExtendButtonGrace({
+      sessionStartedAt,
+      until: Date.now() + SESSION_EXTENSION_IDLE_GRACE_MS,
+    });
+  }, [extendCurrentSession, sessionStartedAt]);
+
   const noteWordCount = countRichTextWords(pendingNote);
   const sessionGoalText = pendingSessionGoal.trim();
   const sessionGoalCharCount = sessionGoalText.length;
@@ -1218,7 +1245,7 @@ export default function PomodoroEngine({
               )}
               {canExtendActivePomodoro && (
                 <ActionButton
-                  onClick={() => extendCurrentSession(SESSION_EXTENSION_SECONDS)}
+                  onClick={handleExtendActivePomodoro}
                   variant="info"
                   size="compactMobile"
                   className={compactTimerActionButtonClassName}
@@ -1255,7 +1282,7 @@ export default function PomodoroEngine({
               )}
               {canExtendActivePomodoro && (
                 <ActionButton
-                  onClick={() => extendCurrentSession(SESSION_EXTENSION_SECONDS)}
+                  onClick={handleExtendActivePomodoro}
                   variant="info"
                   size="compactMobile"
                   className={compactTimerActionButtonClassName}

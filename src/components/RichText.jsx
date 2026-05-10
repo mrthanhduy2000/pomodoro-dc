@@ -62,17 +62,6 @@ function restoreSelectionRange(range) {
   selection.addRange(range);
 }
 
-function getEditorSelectionRect(editor) {
-  const range = getEditorSelectionRange(editor);
-  if (!range || range.collapsed) return null;
-
-  const rect = range.getBoundingClientRect();
-  if (rect.width || rect.height) return rect;
-
-  const firstClientRect = range.getClientRects()[0];
-  return firstClientRect ?? null;
-}
-
 function getSafeHref(url) {
   const trimmedUrl = String(url ?? '').trim();
   if (/^(https?:\/\/|mailto:|\/)/i.test(trimmedUrl)) return trimmedUrl;
@@ -461,27 +450,6 @@ function FormatButton({ children, label, shortcut, onClick, lightTheme }) {
   );
 }
 
-function FloatingFormatButton({ children, label, shortcut, onClick, lightTheme }) {
-  const title = shortcut ? `${label} (${shortcut})` : label;
-
-  return (
-    <button
-      type="button"
-      aria-label={label}
-      title={title}
-      onMouseDown={(event) => event.preventDefault()}
-      onClick={onClick}
-      className={`flex size-8 shrink-0 items-center justify-center rounded-[8px] text-[12px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 ${
-        lightTheme
-          ? 'text-[var(--ink)] hover:bg-[rgba(31,30,29,0.07)] focus-visible:ring-[rgba(31,30,29,0.14)]'
-          : 'text-slate-100 hover:bg-white/[0.12] focus-visible:ring-white/30'
-      }`}
-    >
-      {children}
-    </button>
-  );
-}
-
 export function RichNoteEditor({
   value,
   onChange,
@@ -493,26 +461,17 @@ export function RichNoteEditor({
   inputStyle,
   roomy = false,
 }) {
-  const editorShellRef = useRef(null);
   const editorRef = useRef(null);
   const savedRangeRef = useRef(null);
   const lastCommittedValueRef = useRef(String(value ?? ''));
   const hasInitializedEditorRef = useRef(false);
   const [showGuide, setShowGuide] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
-  const [selectionState, setSelectionState] = useState({ text: '' });
-  const [floatingToolbarStyle, setFloatingToolbarStyle] = useState(null);
   const computedWordCount = useMemo(() => countRichTextWords(value), [value]);
   const visibleWordCount = Number.isFinite(wordCount) ? wordCount : computedWordCount;
   const canShowLimit = Number.isFinite(maxWords);
   const hasContent = String(value ?? '').trim().length > 0;
-  const showFloatingToolbar = Boolean(floatingToolbarStyle && selectionState.text);
   const editorMinHeight = roomy ? 260 : Math.max(116, rows * 26 + 34);
-
-  const hideFloatingToolbar = useCallback(() => {
-    setSelectionState({ text: '' });
-    setFloatingToolbarStyle(null);
-  }, []);
 
   const commitEditorChange = useCallback(() => {
     const editor = editorRef.current;
@@ -528,49 +487,20 @@ export function RichNoteEditor({
     }
   }, [maxWords, onChange]);
 
-  const updateSelectionFromEditor = useCallback(() => {
+  const rememberEditorSelection = useCallback(() => {
     const editor = editorRef.current;
-    const editorShell = editorShellRef.current;
     const selection = window.getSelection();
-    if (!editor || !editorShell || !selection || selection.rangeCount === 0) {
-      hideFloatingToolbar();
-      return;
-    }
+    if (!editor || !selection || selection.rangeCount === 0) return;
 
     const range = selection.getRangeAt(0);
-    if (!isNodeInside(editor, range.commonAncestorContainer)) {
-      hideFloatingToolbar();
-      return;
+    if (isNodeInside(editor, range.commonAncestorContainer)) {
+      savedRangeRef.current = range.cloneRange();
     }
-
-    savedRangeRef.current = range.cloneRange();
-    const selectedText = selection.toString();
-    if (!selectedText.trim()) {
-      hideFloatingToolbar();
-      return;
-    }
-
-    const selectionRect = getEditorSelectionRect(editor);
-    if (!selectionRect) {
-      hideFloatingToolbar();
-      return;
-    }
-
-    const shellRect = editorShell.getBoundingClientRect();
-    const relativeLeft = clampNumber(selectionRect.left + selectionRect.width / 2 - shellRect.left, 112, Math.max(112, shellRect.width - 112));
-    const relativeTop = Math.max(selectionRect.top - shellRect.top, 44);
-
-    setSelectionState({ text: selectedText });
-    setFloatingToolbarStyle({
-      left: `${relativeLeft}px`,
-      top: `${relativeTop}px`,
-      transform: 'translate(-50%, calc(-100% - 10px))',
-    });
-  }, [hideFloatingToolbar]);
+  }, []);
 
   const scheduleSelectionUpdate = useCallback(() => {
-    window.requestAnimationFrame(updateSelectionFromEditor);
-  }, [updateSelectionFromEditor]);
+    window.requestAnimationFrame(rememberEditorSelection);
+  }, [rememberEditorSelection]);
 
   const setEditorElement = useCallback((node) => {
     editorRef.current = node;
@@ -884,13 +814,6 @@ export function RichNoteEditor({
   }, [commitEditorChange]);
 
   useEffect(() => {
-    if (!showFloatingToolbar) return undefined;
-    const handleResize = () => updateSelectionFromEditor();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, [showFloatingToolbar, updateSelectionFromEditor]);
-
-  useEffect(() => {
     const handleSelectionChange = () => {
       const editor = editorRef.current;
       const selection = window.getSelection();
@@ -915,7 +838,7 @@ export function RichNoteEditor({
   }, [value]);
 
   return (
-    <div ref={editorShellRef} className="relative space-y-3">
+    <div className="relative space-y-3">
       <div className="flex flex-wrap items-center gap-2">
         <FormatButton label="In đậm" shortcut="Cmd/Ctrl+B" lightTheme={lightTheme} onClick={() => applyFormat('bold')}>
           <strong>B</strong>
@@ -992,88 +915,6 @@ export function RichNoteEditor({
         </button>
       </div>
 
-      <AnimatePresence>
-        {showFloatingToolbar && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            style={floatingToolbarStyle}
-            onMouseDown={(event) => event.preventDefault()}
-            role="toolbar"
-            aria-label="Định dạng đoạn đang chọn"
-            className={`absolute z-30 flex max-w-[min(92vw,560px)] items-center gap-1 overflow-x-auto rounded-[12px] border px-1.5 py-1.5 shadow-[0_14px_40px_rgba(15,23,42,0.22)] backdrop-blur-xl ${
-              lightTheme
-                ? 'border-[rgba(31,30,29,0.12)] bg-[rgba(255,255,255,0.96)]'
-                : 'border-white/10 bg-slate-950/90'
-            }`}
-          >
-            <FloatingFormatButton label="In đậm" shortcut="Cmd/Ctrl+B" lightTheme={lightTheme} onClick={() => applyFormat('bold')}>
-              <strong>B</strong>
-            </FloatingFormatButton>
-            <FloatingFormatButton label="In nghiêng" shortcut="Cmd/Ctrl+I" lightTheme={lightTheme} onClick={() => applyFormat('italic')}>
-              <em>I</em>
-            </FloatingFormatButton>
-            <FloatingFormatButton label="Gạch chân" shortcut="Cmd/Ctrl+U" lightTheme={lightTheme} onClick={() => applyFormat('underline')}>
-              <span className="underline underline-offset-2">U</span>
-            </FloatingFormatButton>
-            <FloatingFormatButton label="Gạch ngang" shortcut="Cmd/Ctrl+Shift+X" lightTheme={lightTheme} onClick={() => applyFormat('strike')}>
-              <span className="line-through">S</span>
-            </FloatingFormatButton>
-            <FloatingFormatButton label="Inline code" shortcut="Cmd/Ctrl+E" lightTheme={lightTheme} onClick={() => applyFormat('code')}>
-              <code className="font-mono text-[11px]">{'<'}</code>
-            </FloatingFormatButton>
-            <FloatingFormatButton label="Link" shortcut="Cmd/Ctrl+K" lightTheme={lightTheme} onClick={() => applyFormat('link')}>
-              <svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M10 13a5 5 0 0 0 7.1 0l2-2a5 5 0 0 0-7.1-7.1l-1.1 1.1" />
-                <path d="M14 11a5 5 0 0 0-7.1 0l-2 2a5 5 0 0 0 7.1 7.1l1.1-1.1" />
-              </svg>
-            </FloatingFormatButton>
-            <button
-              type="button"
-              onMouseDown={(event) => event.preventDefault()}
-              onClick={() => applyFormat('mark')}
-              aria-label="Highlight vàng"
-              title="Highlight vàng (Cmd/Ctrl+Shift+H)"
-              className={`flex size-8 shrink-0 items-center justify-center rounded-[8px] transition-colors focus-visible:outline-none focus-visible:ring-2 ${
-                lightTheme
-                  ? 'hover:bg-[rgba(176,125,59,0.13)] focus-visible:ring-[rgba(31,30,29,0.14)]'
-                  : 'hover:bg-amber-300/10 focus-visible:ring-white/30'
-              }`}
-            >
-              <span className="size-3 rounded-full" style={{ background: '#b07d3b' }} />
-            </button>
-            <span className={`mx-1 h-5 w-px shrink-0 ${lightTheme ? 'bg-[rgba(31,30,29,0.12)]' : 'bg-white/10'}`} />
-            {RICH_TEXT_TONES.map((tone) => (
-              <button
-                key={`floating_${tone.id}`}
-                type="button"
-                onMouseDown={(event) => event.preventDefault()}
-                onClick={() => applyFormat('color', tone)}
-                aria-label={`Màu ${tone.label}`}
-                title={`Màu ${tone.label}`}
-                className="flex size-7 shrink-0 items-center justify-center rounded-full transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(31,30,29,0.14)]"
-                style={{ background: tone.soft }}
-              >
-                <span className="size-3 rounded-full" style={{ background: tone.color }} />
-              </button>
-            ))}
-            <span className={`mx-1 h-5 w-px shrink-0 ${lightTheme ? 'bg-[rgba(31,30,29,0.12)]' : 'bg-white/10'}`} />
-            <FloatingFormatButton label="Checklist" shortcut="Cmd/Ctrl+Shift+7" lightTheme={lightTheme} onClick={() => applyFormat('check')}>
-              <svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="4" y="4" width="16" height="16" rx="3" />
-                <path d="M8 12l2.4 2.4L16 9" />
-              </svg>
-            </FloatingFormatButton>
-            <FloatingFormatButton label="Callout" shortcut="Cmd/Ctrl+Shift+9" lightTheme={lightTheme} onClick={() => applyFormat('callout')}>
-              <svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M5 5h14v10H8l-3 3z" />
-              </svg>
-            </FloatingFormatButton>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       <div className="relative">
         <div
           ref={setEditorElement}
@@ -1094,11 +935,6 @@ export function RichNoteEditor({
           }}
           onBlur={() => {
             setIsFocused(false);
-            window.setTimeout(() => {
-              if (!editorShellRef.current?.contains(document.activeElement)) {
-                hideFloatingToolbar();
-              }
-            }, 0);
           }}
           className={`rich-note-editor w-full overflow-y-auto rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 py-2.5 text-sm leading-relaxed shadow-none outline-none transition-all empty:before:pointer-events-none focus:border-white/[0.16] focus:bg-white/[0.07] ${
             roomy ? 'resize-y' : ''
@@ -1162,14 +998,22 @@ export function RichNoteEditor({
                 : 'border-white/10 bg-white/[0.035] text-slate-400'
             }`}
           >
-            <span><strong className={lightTheme ? 'text-[var(--ink)]' : 'text-slate-200'}>Cmd/Ctrl+B</strong> in đậm đoạn đang chọn.</span>
-            <span><strong className={lightTheme ? 'text-[var(--ink)]' : 'text-slate-200'}>Cmd/Ctrl+I</strong> in nghiêng.</span>
-            <span><strong className={lightTheme ? 'text-[var(--ink)]' : 'text-slate-200'}>Cmd/Ctrl+U</strong> gạch chân.</span>
-            <span><strong className={lightTheme ? 'text-[var(--ink)]' : 'text-slate-200'}>Cmd/Ctrl+K</strong> chèn link.</span>
-            <span><strong className={lightTheme ? 'text-[var(--ink)]' : 'text-slate-200'}>Cmd/Ctrl+E</strong> inline code.</span>
-            <span><strong className={lightTheme ? 'text-[var(--ink)]' : 'text-slate-200'}>Cmd/Ctrl+Shift+X</strong> gạch ngang.</span>
-            <span><strong className={lightTheme ? 'text-[var(--ink)]' : 'text-slate-200'}>Cmd/Ctrl+Shift+H</strong> highlight.</span>
-            <span><strong className={lightTheme ? 'text-[var(--ink)]' : 'text-slate-200'}>Cmd/Ctrl+Shift+7/9</strong> checklist hoặc callout.</span>
+            <span><span className={lightTheme ? 'text-[var(--ink)]' : 'text-slate-200'}>Cmd/Ctrl+B</span> <span className="font-bold">in đậm</span> đoạn đang chọn.</span>
+            <span><span className={lightTheme ? 'text-[var(--ink)]' : 'text-slate-200'}>Cmd/Ctrl+I</span> <span className="italic">in nghiêng</span>.</span>
+            <span><span className={lightTheme ? 'text-[var(--ink)]' : 'text-slate-200'}>Cmd/Ctrl+U</span> <span className="underline underline-offset-4">gạch chân</span>.</span>
+            <span><span className={lightTheme ? 'text-[var(--ink)]' : 'text-slate-200'}>Cmd/Ctrl+K</span> <span className="font-semibold underline underline-offset-4" style={{ color: 'var(--accent, #c96442)' }}>chèn link</span>.</span>
+            <span><span className={lightTheme ? 'text-[var(--ink)]' : 'text-slate-200'}>Cmd/Ctrl+E</span> <code className="rounded-md border px-1.5 py-0.5 font-mono text-[0.92em]" style={{ background: 'rgba(31, 30, 29, 0.06)', borderColor: 'var(--line, rgba(31,30,29,0.12))', color: 'var(--accent-ink, #8a3f24)' }}>inline code</code>.</span>
+            <span><span className={lightTheme ? 'text-[var(--ink)]' : 'text-slate-200'}>Cmd/Ctrl+Shift+X</span> <span className="line-through opacity-75">gạch ngang</span>.</span>
+            <span><span className={lightTheme ? 'text-[var(--ink)]' : 'text-slate-200'}>Cmd/Ctrl+Shift+H</span> <mark className="rounded-[5px] px-1 py-0.5" style={{ backgroundColor: 'rgba(176, 125, 59, 0.18)', color: 'inherit' }}>highlight</mark>.</span>
+            <span>
+              <span className={lightTheme ? 'text-[var(--ink)]' : 'text-slate-200'}>Cmd/Ctrl+Shift+7</span>{' '}
+              <span className="inline-flex items-center gap-1">
+                <span aria-hidden="true" className="inline-flex size-3 items-center justify-center rounded-[4px] border" style={{ borderColor: 'var(--line-2, rgba(31,30,29,0.18))' }} />
+                checklist
+              </span>{' '}
+              hoặc <span className={lightTheme ? 'text-[var(--ink)]' : 'text-slate-200'}>Cmd/Ctrl+Shift+9</span>{' '}
+              <span className="rounded-[7px] border-l-2 px-2 py-0.5" style={{ background: 'rgba(201, 100, 66, 0.08)', borderColor: 'var(--accent, #c96442)' }}>callout</span>.
+            </span>
           </motion.div>
         )}
       </AnimatePresence>

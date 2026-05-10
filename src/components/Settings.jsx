@@ -169,6 +169,8 @@ export default function Settings() {
     setAutoStartNext,
     autoStartBreak,
     setAutoStartBreak,
+    continueTimingAfterPomodoro,
+    setContinueTimingAfterPomodoro,
     disableBreak,
     setDisableBreak,
   } = useSettingsStore();
@@ -356,6 +358,13 @@ export default function Settings() {
               value={autoStartNext}
               onChange={setAutoStartNext}
               disabled={disableBreak}
+            />
+            <ToggleRow
+              lightTheme={lightTheme}
+              label="Tiếp tục bắt đầu tính giờ thêm sau khi hết phiên"
+              description="Khi Pomodoro về 00:00, app chuyển sang Bấm giờ và chỉ chốt khi bạn bấm Hết Phiên."
+              value={continueTimingAfterPomodoro}
+              onChange={setContinueTimingAfterPomodoro}
             />
 
             <Divider lightTheme={lightTheme} />

@@ -85,6 +85,7 @@ const useSettingsStore = create(
       dailyGoalMinutes:   DEFAULT_DAILY_GOAL.dailyGoalMinutes,
       autoStartNext:      false, // auto-start focus after break ends
       autoStartBreak:     true,  // auto-start break after focus ends
+      continueTimingAfterPomodoro: false, // continue a Pomodoro as stopwatch after countdown reaches zero
       disableBreak:       false, // skip all breaks entirely
 
       // ── Actions ────────────────────────────────────────────────────────
@@ -194,6 +195,7 @@ const useSettingsStore = create(
       }),
       setAutoStartNext:      (v) => set({ autoStartNext: v }),
       setAutoStartBreak:     (v) => set({ autoStartBreak: v }),
+      setContinueTimingAfterPomodoro: (v) => set({ continueTimingAfterPomodoro: v }),
       setDisableBreak:       (v) => set({ disableBreak: v }),
 
       // ── Hydration sync ─────────────────────────────────────────────────
@@ -224,6 +226,7 @@ const useSettingsStore = create(
           ...DEFAULT_DAILY_GOAL,
           autoStartNext:   false,
           autoStartBreak:  true,
+          continueTimingAfterPomodoro: false,
           disableBreak:    false,
           ...safeStored,
           dailyGoalType: safeStored.dailyGoalType === 'minutes' ? 'minutes' : 'sessions',
@@ -237,7 +240,7 @@ const useSettingsStore = create(
           ambientVolume,
         };
       },
-      version: 5,
+      version: 6,
     },
   ),
 );

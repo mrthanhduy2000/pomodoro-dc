@@ -188,9 +188,9 @@ export default function PomodoroEngine({
     : undefined;
   const timerMode = timerConfig.mode ?? TIMER_MODES.POMODORO;
   const strictMode = timerConfig.strictMode;
-  const isStopwatchMode = timerMode === TIMER_MODES.STOPWATCH;
 
   const {
+    activeMode,
     displaySeconds,
     elapsedSeconds,
     totalSeconds,
@@ -210,6 +210,8 @@ export default function PomodoroEngine({
     focusMinutes: timerConfig.focusMinutes,
     mode: timerMode,
   });
+  const runtimeTimerMode = activeMode ?? timerMode;
+  const isStopwatchMode = runtimeTimerMode === TIMER_MODES.STOPWATCH;
 
   const completedSessionReview = useGameStore((s) => (
     lastCompletedSessionId
@@ -539,7 +541,7 @@ export default function PomodoroEngine({
     : (completedSessionReview?.minutes ?? currentSessionTargetMinutes);
 
   const manualBreakPlan = getBreakPlan({
-    mode: timerMode,
+    mode: runtimeTimerMode,
     workedMinutes: manualBreakWorkedMinutes,
     sessionsCompleted,
     longBreakCycleStart,
@@ -804,7 +806,7 @@ export default function PomodoroEngine({
         </div>
         <ModeSwitch
           disabled={timerState !== TIMER_STATES.IDLE || isBreakMode}
-          mode={timerMode}
+          mode={isActive ? runtimeTimerMode : timerMode}
           onChange={switchMode}
         />
       </div>
@@ -904,7 +906,7 @@ export default function PomodoroEngine({
             className="mt-5 sm:mt-4"
             activePresetId={activePresetId}
             disabled={timerState !== TIMER_STATES.IDLE || isBreakMode}
-            mode={timerMode}
+            mode={isActive ? runtimeTimerMode : timerMode}
             onSelect={applyQuickPreset}
           />
         </div>
@@ -1138,7 +1140,7 @@ export default function PomodoroEngine({
               {!isBreakMode && timerState === TIMER_STATES.CANCELLED && 'Đã hủy'}
             </span>
             <motion.span
-              key={`${isBreakMode ? 'break' : timerMode}-${displayRingSeconds}`}
+              key={`${isBreakMode ? 'break' : runtimeTimerMode}-${displayRingSeconds}`}
               className={`mt-3 ${timerValueLayoutClass} ${timerValueFontClass} ${timerValueToneClass} tabular-nums transition-all duration-300`}
               animate={!isBreakMode && timerState === TIMER_STATES.RUNNING && !isStopwatchMode && displaySeconds <= 10
                 ? { scale: [1, 1.04, 1] }
@@ -1255,7 +1257,7 @@ export default function PomodoroEngine({
               )}
               {isStopwatchMode && (
                 <ActionButton onClick={finish} variant="accent" size="compactMobile" className={compactTimerActionButtonClassName}>
-                  Chốt phiên
+                  Hết Phiên
                 </ActionButton>
               )}
               <ActionButton onClick={handleCancelClick} variant="danger" size="compactMobile" className={compactTimerActionButtonClassName}>
@@ -1292,7 +1294,7 @@ export default function PomodoroEngine({
               )}
               {isStopwatchMode && (
                 <ActionButton onClick={finish} variant="accent" size="compactMobile" className={compactTimerActionButtonClassName}>
-                  Chốt phiên
+                  Hết Phiên
                 </ActionButton>
               )}
               <ActionButton onClick={handleCancelClick} variant="danger" size="compactMobile" className={compactTimerActionButtonClassName}>

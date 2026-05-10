@@ -1936,12 +1936,18 @@ function QuickPresets({ className = '', activePresetId, disabled, mode, onSelect
         const active = activePresetId === preset.id;
 
         return (
-          <button
+          <motion.button
             key={preset.id}
+            layout
             type="button"
             disabled={disabled}
+            aria-label={`Chọn preset ${preset.label}: ${preset.focusMinutes} phút tập trung`}
             onClick={() => onSelect(preset)}
-            className={`min-w-0 overflow-hidden rounded-[20px] border px-3.5 py-4 text-left transition-colors touch-manipulation focus-visible:outline-none focus-visible:ring-2 disabled:cursor-not-allowed sm:rounded-[18px] sm:px-3 sm:py-2.5 ${
+            initial={false}
+            animate={{ y: active ? -1 : 0 }}
+            whileTap={disabled ? undefined : { scale: 0.98 }}
+            transition={{ type: 'spring', stiffness: 360, damping: 28 }}
+            className={`relative min-w-0 overflow-hidden rounded-[20px] border px-3.5 py-4 text-left transition-colors touch-manipulation focus-visible:outline-none focus-visible:ring-2 disabled:cursor-not-allowed sm:rounded-[18px] sm:px-3 sm:py-2.5 ${
               active
                 ? lightTheme
                   ? 'border-[rgba(31,30,29,0.16)] bg-[rgba(238,234,227,0.99)] text-[var(--ink)] shadow-[0_10px_20px_rgba(31,30,29,0.05)] focus-visible:ring-[rgba(31,30,29,0.12)]'
@@ -1951,7 +1957,16 @@ function QuickPresets({ className = '', activePresetId, disabled, mode, onSelect
                   : 'border-white/8 bg-white/[0.03] text-slate-400 hover:border-white/16 hover:text-slate-100 focus-visible:ring-white/30'
             }`}
           >
-            <span className="inline-flex max-w-full items-center gap-2 whitespace-nowrap">
+            {active && (
+              <motion.span
+                layoutId="quick-preset-active-line"
+                className={`absolute inset-x-3 top-0 h-0.5 rounded-full ${
+                  lightTheme ? 'bg-[var(--accent)]' : 'bg-[var(--accent-light)]'
+                }`}
+                transition={{ type: 'spring', stiffness: 420, damping: 34 }}
+              />
+            )}
+            <span className="flex min-w-0 items-start justify-between gap-2">
               <span className={`font-mono text-lg font-bold tabular-nums ${
                 active
                   ? lightTheme
@@ -1963,19 +1978,35 @@ function QuickPresets({ className = '', activePresetId, disabled, mode, onSelect
               }`}>
                 {preset.focusMinutes}'
               </span>
-              <span className={`shrink-0 whitespace-nowrap rounded-full px-2 py-0.5 text-[10px] font-semibold tabular-nums ${
-                active
-                    ? lightTheme
-                      ? 'bg-[rgba(255,255,255,0.54)] text-[var(--ink)]'
-                      : 'bg-white/[0.08] text-[var(--ink)]'
-                    : lightTheme
-                      ? 'bg-[rgba(244,242,236,0.96)] text-[var(--muted)]'
-                      : 'bg-white/[0.06] text-slate-500'
-              }`}>
-                ×{preset.longBreakAfterN}
+              <span className="min-w-0 text-right">
+                <span className={`block truncate text-[11px] font-semibold leading-4 ${
+                  active
+                    ? lightTheme ? 'text-[var(--ink)]' : 'text-white'
+                    : lightTheme ? 'text-[var(--ink)]' : 'text-slate-200'
+                }`}>
+                  {preset.label}
+                </span>
+                <span className={`block truncate text-[10px] leading-4 ${
+                  active
+                    ? lightTheme ? 'text-[var(--muted)]' : 'text-slate-300'
+                    : lightTheme ? 'text-[var(--muted)]' : 'text-slate-500'
+                }`}>
+                  {preset.description}
+                </span>
               </span>
             </span>
             <span className="mt-3 flex flex-wrap gap-2 sm:mt-2.5 sm:gap-1.5">
+              <span className={`whitespace-nowrap rounded-full px-2 py-1 text-[10px] font-semibold tabular-nums ${
+                active
+                  ? lightTheme
+                    ? 'bg-[rgba(255,255,255,0.54)] text-[var(--ink)]'
+                    : 'bg-white/[0.08] text-[var(--ink)]'
+                  : lightTheme
+                    ? 'bg-[rgba(244,242,236,0.96)] text-[var(--muted)]'
+                    : 'bg-white/[0.06] text-slate-500'
+              }`}>
+                ×{preset.longBreakAfterN}
+              </span>
               {mode === TIMER_MODES.STOPWATCH ? (
                 <span className={`whitespace-nowrap rounded-full px-2 py-1 text-[10px] font-semibold ${
                   active
@@ -2015,7 +2046,7 @@ function QuickPresets({ className = '', activePresetId, disabled, mode, onSelect
                 </>
               )}
             </span>
-          </button>
+          </motion.button>
         );
       })}
     </div>

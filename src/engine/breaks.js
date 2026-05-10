@@ -5,7 +5,18 @@
 
 export const QUICK_FOCUS_PRESETS = [
   {
+    id: 'starter-15',
+    label: 'Khởi động',
+    description: 'Vào việc nhanh',
+    focusMinutes: 15,
+    shortBreakDuration: 3,
+    longBreakDuration: 12,
+    longBreakAfterN: 4,
+  },
+  {
     id: 'classic-25',
+    label: 'Chuẩn',
+    description: 'Nhịp hằng ngày',
     focusMinutes: 25,
     shortBreakDuration: 5,
     longBreakDuration: 15,
@@ -13,6 +24,8 @@ export const QUICK_FOCUS_PRESETS = [
   },
   {
     id: 'balanced-52',
+    label: 'Sâu',
+    description: 'Một khối dài',
     focusMinutes: 52,
     shortBreakDuration: 17,
     longBreakDuration: 30,
@@ -20,6 +33,8 @@ export const QUICK_FOCUS_PRESETS = [
   },
   {
     id: 'deep-90',
+    label: 'Rất sâu',
+    description: 'Dự án nặng',
     focusMinutes: 90,
     shortBreakDuration: 20,
     longBreakDuration: 45,
@@ -27,7 +42,9 @@ export const QUICK_FOCUS_PRESETS = [
   },
 ];
 
-export const DEFAULT_QUICK_FOCUS_PRESET = QUICK_FOCUS_PRESETS[0];
+export const DEFAULT_QUICK_FOCUS_PRESET = QUICK_FOCUS_PRESETS.find(
+  (preset) => preset.id === 'classic-25',
+);
 
 export const FLOWTIME_BREAK_RULES = [
   { id: 'under-25', label: '< 25 phút', maxWorkMinutes: 25, breakMinutes: 5 },

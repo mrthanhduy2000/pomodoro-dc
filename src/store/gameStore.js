@@ -2619,6 +2619,22 @@ function isJsonEqual(left, right) {
   return JSON.stringify(left) === JSON.stringify(right);
 }
 
+function buildTimeSensitiveProgressState(state, referenceTs = Date.now()) {
+  const streak = rebuildStreakFromHistory(
+    state.history,
+    referenceTs,
+    state.streak,
+    state.player.unlockedSkills,
+  );
+
+  return {
+    streak,
+    missions: rebuildMissionsFromHistory(state.missions, state.history, streak),
+    weeklyChain: rebuildWeeklyChainFromHistory(state.weeklyChain, state.history),
+    dailyTracking: rebuildCurrentDailyTrackingFromHistory(state.dailyTracking, state.history, referenceTs),
+  };
+}
+
 function localDateToDayIndex(dateStr) {
   if (typeof dateStr !== 'string') return null;
   const [year, month, day] = dateStr.split('-').map(Number);
@@ -2725,13 +2741,19 @@ function getCompletedHistoryEntries(history = []) {
 }
 
 function buildDailyProgressSnapshotFromHistory(history = [], dayKey = localDateStr()) {
-  const dayEntries = getCompletedHistoryEntries(history)
+  const completedEntries = getCompletedHistoryEntries(history);
+  const dayEntries = completedEntries
     .filter((entry) => localDateStr(entry.timestamp) === dayKey);
   const categorySet = new Set(dayEntries.map((entry) => entry.categoryId).filter(Boolean));
   const minutes = dayEntries.reduce((sum, entry) => sum + (Number(entry.minutes) || 0), 0);
   const notes = dayEntries.filter((entry) => countWords(entry.note ?? '') >= MISSION_NOTE_MIN_WORDS).length;
   const hasShortSession = dayEntries.some((entry) => (entry.minutes ?? 0) <= 25);
   const hasLongSession = dayEntries.some((entry) => (entry.minutes ?? 0) >= 60);
+  const perfectBreaks = completedEntries.filter((entry) => {
+    if (!entry?.breakCompletedOnTime) return false;
+    const breakDateSource = entry.breakCompletedAt ?? entry.timestamp;
+    return localDateStr(breakDateSource) === dayKey;
+  }).length;
 
   return {
     sessions: dayEntries.length,
@@ -2742,6 +2764,7 @@ function buildDailyProgressSnapshotFromHistory(history = [], dayKey = localDateS
     deepSessions: dayEntries.filter((entry) => (entry.minutes ?? 0) >= 45).length,
     notes,
     balancedSessions: hasShortSession && hasLongSession ? 1 : 0,
+    perfectBreaks,
   };
 }
 
@@ -2764,6 +2787,8 @@ function getDailyMissionProgressFromSnapshot(mission, snapshot) {
       return Math.min(mission.goal, snapshot.notes);
     case 'balancedSessions':
       return Math.min(mission.goal, snapshot.balancedSessions);
+    case 'perfectBreaks':
+      return Math.min(mission.goal, snapshot.perfectBreaks);
     default:
       return Number.isFinite(mission.progress) ? Math.max(0, mission.progress) : 0;
   }
@@ -5042,11 +5067,12 @@ const useGameStore = create(
       // ─── Daily Missions ──────────────────────────────────────────────────
       refreshDailyMissions: () =>
         set((prev) => {
-          const now = Date.now();
-          const streak = rebuildStreakFromHistory(prev.history, now, prev.streak, prev.player.unlockedSkills);
-          const missions = rebuildMissionsFromHistory(prev.missions, prev.history, streak);
-          const weeklyChain = rebuildWeeklyChainFromHistory(prev.weeklyChain, prev.history);
-          const dailyTracking = rebuildCurrentDailyTrackingFromHistory(prev.dailyTracking, prev.history, now);
+          const {
+            streak,
+            missions,
+            weeklyChain,
+            dailyTracking,
+          } = buildTimeSensitiveProgressState(prev, Date.now());
 
           if (
             isJsonEqual(missions, prev.missions)
@@ -5066,13 +5092,33 @@ const useGameStore = create(
         }),
 
       claimMissionAllBonus: () => {
-        const state = get();
-        const refreshedMissions = refreshMissionsIfStale(state.missions);
-        if (refreshedMissions.bonusClaimedToday) return;
-        const allDone = refreshedMissions.list.length > 0 && refreshedMissions.list.every((m) => m.claimed);
-        if (!allDone) return;
         set((prev) => {
-          const activeMissions = refreshMissionsIfStale(prev.missions);
+          const {
+            streak,
+            missions: activeMissions,
+            weeklyChain,
+            dailyTracking,
+          } = buildTimeSensitiveProgressState(prev, Date.now());
+          const allDone = activeMissions.list.length > 0 && activeMissions.list.every((m) => m.claimed);
+
+          if (activeMissions.bonusClaimedToday || !allDone) {
+            if (
+              isJsonEqual(activeMissions, prev.missions)
+              && isJsonEqual(weeklyChain, prev.weeklyChain)
+              && isJsonEqual(streak, prev.streak)
+              && isJsonEqual(dailyTracking, prev.dailyTracking)
+            ) {
+              return prev;
+            }
+
+            return {
+              missions: activeMissions,
+              weeklyChain,
+              streak,
+              dailyTracking,
+            };
+          }
+
           const strategyBonusXP = prev.player.unlockedSkills.bac_thay_chien_luoc
             ? applyDailyMissionXPBonus(prev.buildings, getMissionRewardTotalXP(activeMissions.list))
             : 0;
@@ -5090,7 +5136,10 @@ const useGameStore = create(
           return {
             progress: rewardState.progress,
             player:   updatedPlayer,
+            streak,
             missions: { ...activeMissions, bonusClaimedToday: true },
+            weeklyChain,
+            dailyTracking,
             latestSessionUndo: null,
             ui: {
               ...prev.ui,

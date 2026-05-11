@@ -1569,6 +1569,7 @@ const makeDefaultTimerSession = () => ({
   nextNote:           '',
   totalSeconds:       null,   // thời lượng tham chiếu tại thời điểm Start
   continueAfterPomodoro: false, // snapshot setting lúc bắt đầu phiên
+  continuedPomodoroConfirmedUntilSeconds: null, // mốc elapsed cần xác nhận khi Pomodoro chạy thêm giờ
   extensionUnlocked:  false,  // đã chạm mốc 3 phút cuối và mở khóa cộng thêm phút
 });
 

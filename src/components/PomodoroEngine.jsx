@@ -199,6 +199,7 @@ export default function PomodoroEngine({
     timerState,
     milestone,
     isContinuingAfterPomodoro,
+    continuedPomodoroConfirmationPending,
     start,
     pause,
     resume,
@@ -1137,7 +1138,9 @@ export default function PomodoroEngine({
               {isBreakMode && (breakIsLong ? 'Giải lao dài' : 'Giải lao')}
               {!isBreakMode && timerState === TIMER_STATES.IDLE && (isStopwatchMode ? 'Sẵn sàng bấm giờ' : 'Sẵn sàng')}
               {!isBreakMode && timerState === TIMER_STATES.RUNNING && (isStopwatchMode ? 'Đang bấm giờ' : 'Đang tập trung')}
-              {!isBreakMode && timerState === TIMER_STATES.PAUSED && 'Đã tạm dừng'}
+              {!isBreakMode && timerState === TIMER_STATES.PAUSED && (
+                continuedPomodoroConfirmationPending ? 'Chờ xác nhận' : 'Đã tạm dừng'
+              )}
               {!isBreakMode && timerState === TIMER_STATES.FINISHED && 'Hoàn thành'}
               {!isBreakMode && timerState === TIMER_STATES.CANCELLED && 'Đã hủy'}
             </span>
@@ -1158,7 +1161,9 @@ export default function PomodoroEngine({
                 </span>
                 {isContinuingAfterPomodoro && (
                   <span className={`mt-0.5 text-[11px] ${lightTheme ? 'text-[var(--muted)]' : 'text-slate-400'}`}>
-                    Phiên đếm ngược {currentSessionTargetMinutes} phút đã hoàn thành
+                    {continuedPomodoroConfirmationPending
+                      ? 'Đã dừng ở mốc 15 phút thêm'
+                      : `Phiên đếm ngược ${currentSessionTargetMinutes} phút đã hoàn thành`}
                   </span>
                 )}
               </>
@@ -1277,38 +1282,53 @@ export default function PomodoroEngine({
 
           {!isBreakMode && timerState === TIMER_STATES.PAUSED && (
             <motion.div
-              key="paused-btns"
+              key={continuedPomodoroConfirmationPending ? 'continued-confirm-btns' : 'paused-btns'}
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.9 }}
-              className={compactTimerActionRowClassName}
+              className={continuedPomodoroConfirmationPending
+                ? 'grid w-full grid-cols-2 items-stretch gap-2 sm:w-auto sm:min-w-[360px]'
+                : compactTimerActionRowClassName}
             >
-              <ActionButton onClick={resume} variant="primary" size="compactMobile" className={compactTimerActionButtonClassName}>
-                Tiếp tục
-              </ActionButton>
-              {canEnterFullScreen && (
-                <ActionButton onClick={onEnterFullScreen} variant="soft" size="compactMobile" className={compactTimerActionButtonClassName}>
-                  Full Screen
-                </ActionButton>
+              {continuedPomodoroConfirmationPending ? (
+                <>
+                  <ActionButton onClick={resume} variant="primary" size="compactMobile" className={compactTimerActionButtonClassName}>
+                    Tiếp tục thêm giờ
+                  </ActionButton>
+                  <ActionButton onClick={finish} variant="accent" size="compactMobile" className={compactTimerActionButtonClassName}>
+                    Hết Phiên
+                  </ActionButton>
+                </>
+              ) : (
+                <>
+                  <ActionButton onClick={resume} variant="primary" size="compactMobile" className={compactTimerActionButtonClassName}>
+                    Tiếp tục
+                  </ActionButton>
+                  {canEnterFullScreen && (
+                    <ActionButton onClick={onEnterFullScreen} variant="soft" size="compactMobile" className={compactTimerActionButtonClassName}>
+                      Full Screen
+                    </ActionButton>
+                  )}
+                  {canExtendActivePomodoro && (
+                    <ActionButton
+                      onClick={handleExtendActivePomodoro}
+                      variant="info"
+                      size="compactMobile"
+                      className={compactTimerActionButtonClassName}
+                    >
+                      +1 phút
+                    </ActionButton>
+                  )}
+                  {isStopwatchMode && (
+                    <ActionButton onClick={finish} variant="accent" size="compactMobile" className={compactTimerActionButtonClassName}>
+                      Hết Phiên
+                    </ActionButton>
+                  )}
+                  <ActionButton onClick={handleCancelClick} variant="danger" size="compactMobile" className={compactTimerActionButtonClassName}>
+                    Hủy phiên
+                  </ActionButton>
+                </>
               )}
-              {canExtendActivePomodoro && (
-                <ActionButton
-                  onClick={handleExtendActivePomodoro}
-                  variant="info"
-                  size="compactMobile"
-                  className={compactTimerActionButtonClassName}
-                >
-                  +1 phút
-                </ActionButton>
-              )}
-              {isStopwatchMode && (
-                <ActionButton onClick={finish} variant="accent" size="compactMobile" className={compactTimerActionButtonClassName}>
-                  Hết Phiên
-                </ActionButton>
-              )}
-              <ActionButton onClick={handleCancelClick} variant="danger" size="compactMobile" className={compactTimerActionButtonClassName}>
-                Hủy phiên
-              </ActionButton>
             </motion.div>
           )}
 

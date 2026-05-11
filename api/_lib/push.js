@@ -174,6 +174,18 @@ export async function cancelPushJob(jobKey, reason = 'cancelled') {
   if (error) throw error;
 }
 
+export async function getPushJobStatus(jobKey) {
+  const admin = getAdminClient();
+  const { data, error } = await admin
+    .from('push_jobs')
+    .select('status')
+    .eq('job_key', jobKey)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data?.status ?? null;
+}
+
 export async function getDuePushJobs(limit = 10, graceSeconds = 0) {
   const admin = getAdminClient();
   const cutoff = new Date(Date.now() - graceSeconds * 1000).toISOString();
@@ -237,11 +249,11 @@ export async function listActivePushSubscriptions() {
   return data ?? [];
 }
 
-export async function markPushJobSent(jobKey, lastError = null) {
+export async function markPushJobSent(jobKey, lastError = null, { expectedStatus = null } = {}) {
   const admin = getAdminClient();
   const now = new Date().toISOString();
 
-  const { error } = await admin
+  let query = admin
     .from('push_jobs')
     .update({
       status: 'sent',
@@ -250,6 +262,12 @@ export async function markPushJobSent(jobKey, lastError = null) {
       last_error: lastError,
     })
     .eq('job_key', jobKey);
+
+  if (expectedStatus) {
+    query = query.eq('status', expectedStatus);
+  }
+
+  const { error } = await query;
 
   if (error) throw error;
 }
@@ -266,7 +284,8 @@ export async function markPushJobError(jobKey, errorMessage) {
       updated_at: now,
       last_error: errorMessage,
     })
-    .eq('job_key', jobKey);
+    .eq('job_key', jobKey)
+    .eq('status', 'processing');
 
   if (error) throw error;
 }

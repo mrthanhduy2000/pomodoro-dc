@@ -138,7 +138,7 @@ export function useTimer({ focusMinutes, mode = TIMER_MODES.POMODORO }) {
   }, []);
 
   const clearFocusCompletePush = useCallback((reason = 'cancelled') => {
-    void cancelScheduledTimerPushes(reason);
+    return cancelScheduledTimerPushes(reason);
   }, []);
 
   const getElapsedSeconds = useCallback((clockStartMs, nowMs = Date.now()) => {
@@ -570,16 +570,24 @@ export function useTimer({ focusMinutes, mode = TIMER_MODES.POMODORO }) {
       void pushNow();
     } else if (timerState !== TIMER_STATES.IDLE) {
       // FINISHED hoặc CANCELLED — session vừa kết thúc, cần clear
-      clearTimerLive({
+      const endedReason = timerEndReasonRef.current
+        ?? (timerState === TIMER_STATES.CANCELLED ? TIMER_END_REASONS.CANCELLED : TIMER_END_REASONS.COMPLETED);
+      const clearLive = () => clearTimerLive({
         mode: modeRef.current,
-        endedReason: timerEndReasonRef.current
-          ?? (timerState === TIMER_STATES.CANCELLED ? TIMER_END_REASONS.CANCELLED : TIMER_END_REASONS.COMPLETED),
+        endedReason,
       });
+
+      if (endedReason === TIMER_END_REASONS.COMPLETED) {
+        clearLive();
+      } else {
+        void clearFocusCompletePush(endedReason).finally(clearLive);
+      }
+
       timerEndReasonRef.current = null;
       void pushNow();
     }
     // IDLE: không làm gì — tránh clearTimerLive() gây Electron notification giả
-  }, [timerState]);
+  }, [clearFocusCompletePush, timerState]);
 
   // Phản ứng với pause/resume từ thiết bị khác qua cloud sync
   useEffect(() => {
@@ -956,9 +964,9 @@ export function useTimer({ focusMinutes, mode = TIMER_MODES.POMODORO }) {
     startTimeRef.current = null;
     timerEndReasonRef.current = TIMER_END_REASONS.CANCELLED;
     setLastCompletedSessionId(null);
-    setTimerState(TIMER_STATES.CANCELLED);
     clearTimeout(pendingBreakTimeoutRef.current);
     clearFocusCompletePush('cancelled');
+    setTimerState(TIMER_STATES.CANCELLED);
 
     cancelFocusSession(progressRatio, {
       applyDisaster: strictMode,

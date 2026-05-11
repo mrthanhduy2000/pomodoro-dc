@@ -631,6 +631,7 @@ const makeDefaultMissions = () => ({
   date:                       null,
   list:                       [],
   bonusClaimedToday:          false,
+  bonusClaimedXP:             0,
   streakMissionClaimedToday:  false,
   recentHistory:              [],
 });
@@ -665,6 +666,13 @@ function getMissionRewardTotalXP(list = []) {
   return list.reduce((sum, mission) => sum + (mission?.rewardXP ?? 0), 0);
 }
 
+function getDailyMissionAllBonusXP(missions, buildings = [], unlockedSkills = {}) {
+  const strategyBonusXP = unlockedSkills.bac_thay_chien_luoc
+    ? applyDailyMissionXPBonus(buildings, getMissionRewardTotalXP(missions?.list ?? []))
+    : 0;
+  return applyDailyMissionXPBonus(buildings, MISSION_ALL_BONUS_XP) + strategyBonusXP;
+}
+
 function normalizeMissionTemplate(mission) {
   if (!mission?.id) return mission ?? null;
   const template = MISSION_CATALOG.find((entry) => entry.id === mission.id);
@@ -694,6 +702,9 @@ function normalizeStoredMissions(missions) {
     list,
     recentHistory,
     bonusClaimedToday: Boolean(missions?.bonusClaimedToday),
+    bonusClaimedXP: Number.isFinite(missions?.bonusClaimedXP)
+      ? Math.max(0, Math.round(missions.bonusClaimedXP))
+      : 0,
     streakMissionClaimedToday: Boolean(missions?.streakMissionClaimedToday),
   };
 }
@@ -857,6 +868,7 @@ function refreshMissionsIfStale(missions) {
     date: today,
     list: pickDailyMissions(today, recentHistory),
     bonusClaimedToday: false,
+    bonusClaimedXP: 0,
     streakMissionClaimedToday: false,
     recentHistory,
   };
@@ -1230,6 +1242,19 @@ function pruneEraScopedBlueprintState(state, activeBook) {
     buildingHP: filterRecordByAllowedIds(state.buildingHP, allowedBuildingIds),
     buildingLastUsed: filterRecordByAllowedIds(state.buildingLastUsed, allowedBuildingIds),
     buildingLevels: filterRecordByAllowedIds(state.buildingLevels, allowedBuildingIds),
+  };
+}
+
+function pickEraScopedBlueprintPatch(state, activeBook) {
+  const scoped = pruneEraScopedBlueprintState(state, activeBook);
+  return {
+    blueprints: scoped.blueprints,
+    research: scoped.research,
+    craftingQueue: scoped.craftingQueue,
+    buildings: scoped.buildings,
+    buildingHP: scoped.buildingHP,
+    buildingLastUsed: scoped.buildingLastUsed,
+    buildingLevels: scoped.buildingLevels,
   };
 }
 
@@ -2548,15 +2573,27 @@ function subtractSessionResearchReward(research, sessionEntry) {
   };
 }
 
+function subtractPlayerXP(player, xpAmount) {
+  const normalizedXP = Math.max(0, Math.round(xpAmount ?? 0));
+  if (normalizedXP <= 0) return player;
+
+  const nextTotalEXP = Math.max(0, (player?.totalEXP ?? 0) - normalizedXP);
+  const nextLevel = computeLevelUps(0, nextTotalEXP).newLevel;
+  const lostLevels = Math.max(0, (player?.level ?? 0) - nextLevel);
+
+  return {
+    ...player,
+    totalEXP: nextTotalEXP,
+    level: nextLevel,
+    sp: Math.max(0, (player?.sp ?? 0) - (lostLevels * SP_PER_LEVEL)),
+  };
+}
+
 function subtractSessionProgressAndXP(progress, player, sessionEntry) {
   const xpEarned = Math.round(getSessionRewardNumber(sessionEntry, 'xpEarned'));
   const epEarned = Math.round(getSessionRewardNumber(sessionEntry, 'epEarned'));
   const minutes = Math.round(getSessionRewardNumber(sessionEntry, 'minutes'));
   const completedSession = !isCancelledHistoryEntry(sessionEntry) && sessionEntry?.completed !== false;
-
-  const nextTotalEXP = Math.max(0, (player?.totalEXP ?? 0) - xpEarned);
-  const nextLevel = computeLevelUps(0, nextTotalEXP).newLevel;
-  const lostLevels = Math.max(0, (player?.level ?? 0) - nextLevel);
 
   const nextTotalEP = Math.max(0, (progress?.totalEP ?? 0) - epEarned);
   return {
@@ -2571,12 +2608,7 @@ function subtractSessionProgressAndXP(progress, player, sessionEntry) {
         ? Math.max(0, (progress?.totalFocusMinutes ?? 0) - minutes)
         : (progress?.totalFocusMinutes ?? 0),
     },
-    player: {
-      ...player,
-      totalEXP: nextTotalEXP,
-      level: nextLevel,
-      sp: Math.max(0, (player?.sp ?? 0) - (lostLevels * SP_PER_LEVEL)),
-    },
+    player: subtractPlayerXP(player, xpEarned),
   };
 }
 
@@ -2626,10 +2658,25 @@ function buildTimeSensitiveProgressState(state, referenceTs = Date.now()) {
     state.streak,
     state.player.unlockedSkills,
   );
+  const missions = rebuildMissionsFromHistory(state.missions, state.history, streak);
+  const missionDateUnchanged = state.missions?.date && state.missions.date === missions.date;
+  const shouldRevokeAllBonus = Boolean(
+    missionDateUnchanged
+    && state.missions?.bonusClaimedToday
+    && !missions.bonusClaimedToday
+  );
+  const bonusClaimedXP = Number.isFinite(state.missions?.bonusClaimedXP) && state.missions.bonusClaimedXP > 0
+    ? state.missions.bonusClaimedXP
+    : getDailyMissionAllBonusXP(state.missions, state.buildings, state.player.unlockedSkills);
 
   return {
+    player: shouldRevokeAllBonus
+      ? subtractPlayerXP(state.player, bonusClaimedXP)
+      : state.player,
     streak,
-    missions: rebuildMissionsFromHistory(state.missions, state.history, streak),
+    missions: shouldRevokeAllBonus
+      ? { ...missions, bonusClaimedXP: 0 }
+      : missions,
     weeklyChain: rebuildWeeklyChainFromHistory(state.weeklyChain, state.history),
     dailyTracking: rebuildCurrentDailyTrackingFromHistory(state.dailyTracking, state.history, referenceTs),
   };
@@ -2813,6 +2860,7 @@ function rebuildMissionsFromHistory(missions, history, nextStreak) {
     ...refreshed,
     list,
     bonusClaimedToday: allClaimed ? refreshed.bonusClaimedToday : false,
+    bonusClaimedXP: allClaimed && refreshed.bonusClaimedToday ? refreshed.bonusClaimedXP : 0,
     streakMissionClaimedToday: streakEligible ? refreshed.streakMissionClaimedToday : false,
   };
 }
@@ -3485,30 +3533,40 @@ const useGameStore = create(
           const now = Date.now();
           const nextHistory = prev.history.filter((entry) => entry.id !== sessionId);
           const rewardRollback = subtractSessionProgressAndXP(prev.progress, prev.player, deletedSession);
-          const nextStreak = rebuildStreakFromHistory(nextHistory, now, prev.streak, prev.player.unlockedSkills);
           const breakBelongsToDeletedSession =
             prev.breakSession?.sourceSessionId === sessionId
             || prev.ui?.activeBreakSessionId === sessionId;
+          const rolledBackResearch = subtractSessionResearchReward(prev.research, deletedSession);
+          const rebuiltCraftingQueue = rebuildCraftingQueueAfterSessionDelete(prev.craftingQueue, deletedSession);
+          const eraScopedRollback = pickEraScopedBlueprintPatch({
+            ...prev,
+            research: rolledBackResearch,
+            craftingQueue: rebuiltCraftingQueue,
+          }, rewardRollback.progress.activeBook);
+          const timeSensitiveRollback = buildTimeSensitiveProgressState({
+            ...prev,
+            player: rewardRollback.player,
+            history: nextHistory,
+          }, now);
 
           return {
-            player: rewardRollback.player,
+            player: timeSensitiveRollback.player,
             progress: rewardRollback.progress,
             history: nextHistory,
             historyStats: buildHistoryStatsFromHistory(nextHistory),
             savedNotes: (prev.savedNotes ?? []).filter((entry) => entry.sourceSessionId !== sessionId),
             resources: subtractSessionRawResources(prev.resources, deletedSession),
             resourcesRefined: subtractSessionRefinedReward(prev.resourcesRefined, deletedSession),
-            research: subtractSessionResearchReward(prev.research, deletedSession),
-            dailyTracking: rebuildCurrentDailyTrackingFromHistory(prev.dailyTracking, nextHistory, now),
-            streak: nextStreak,
-            missions: rebuildMissionsFromHistory(prev.missions, nextHistory, nextStreak),
-            weeklyChain: rebuildWeeklyChainFromHistory(prev.weeklyChain, nextHistory),
+            ...eraScopedRollback,
+            dailyTracking: timeSensitiveRollback.dailyTracking,
+            streak: timeSensitiveRollback.streak,
+            missions: timeSensitiveRollback.missions,
+            weeklyChain: timeSensitiveRollback.weeklyChain,
             combo: rebuildComboFromHistory(nextHistory, prev, now),
             categoryTracking: rebuildCategoryTrackingFromHistory(nextHistory),
             eraTracking: rebuildEraTrackingFromHistory(nextHistory, rewardRollback.progress.activeBook),
             rankChallenge: rebuildRankChallengeAfterSessionDelete(prev.rankChallenge, nextHistory),
             eraCrisis: rebuildEraCrisisAfterSessionDelete(prev.eraCrisis, nextHistory),
-            craftingQueue: rebuildCraftingQueueAfterSessionDelete(prev.craftingQueue, deletedSession),
             latestSessionUndo: null,
             ...(breakBelongsToDeletedSession
               ? {
@@ -5068,6 +5126,7 @@ const useGameStore = create(
       refreshDailyMissions: () =>
         set((prev) => {
           const {
+            player,
             streak,
             missions,
             weeklyChain,
@@ -5075,7 +5134,8 @@ const useGameStore = create(
           } = buildTimeSensitiveProgressState(prev, Date.now());
 
           if (
-            isJsonEqual(missions, prev.missions)
+            isJsonEqual(player, prev.player)
+            && isJsonEqual(missions, prev.missions)
             && isJsonEqual(weeklyChain, prev.weeklyChain)
             && isJsonEqual(streak, prev.streak)
             && isJsonEqual(dailyTracking, prev.dailyTracking)
@@ -5084,6 +5144,7 @@ const useGameStore = create(
           }
 
           return {
+            player,
             streak,
             missions,
             weeklyChain,
@@ -5094,6 +5155,7 @@ const useGameStore = create(
       claimMissionAllBonus: () => {
         set((prev) => {
           const {
+            player: reconciledPlayer,
             streak,
             missions: activeMissions,
             weeklyChain,
@@ -5103,7 +5165,8 @@ const useGameStore = create(
 
           if (activeMissions.bonusClaimedToday || !allDone) {
             if (
-              isJsonEqual(activeMissions, prev.missions)
+              isJsonEqual(reconciledPlayer, prev.player)
+              && isJsonEqual(activeMissions, prev.missions)
               && isJsonEqual(weeklyChain, prev.weeklyChain)
               && isJsonEqual(streak, prev.streak)
               && isJsonEqual(dailyTracking, prev.dailyTracking)
@@ -5112,6 +5175,7 @@ const useGameStore = create(
             }
 
             return {
+              player: reconciledPlayer,
               missions: activeMissions,
               weeklyChain,
               streak,
@@ -5119,16 +5183,11 @@ const useGameStore = create(
             };
           }
 
-          const strategyBonusXP = prev.player.unlockedSkills.bac_thay_chien_luoc
-            ? applyDailyMissionXPBonus(prev.buildings, getMissionRewardTotalXP(activeMissions.list))
-            : 0;
-          const rewardState = grantXPReward(
-            prev,
-            applyDailyMissionXPBonus(prev.buildings, MISSION_ALL_BONUS_XP) + strategyBonusXP,
-          );
+          const allBonusXP = getDailyMissionAllBonusXP(activeMissions, prev.buildings, reconciledPlayer.unlockedSkills);
+          const rewardState = grantXPReward({ ...prev, player: reconciledPlayer }, allBonusXP);
           // V2: Người Lập Kế — push buff cho phiên kế tiếp
           const updatedPlayer = { ...rewardState.player };
-          if (prev.player.unlockedSkills.nguoi_lap_ke) {
+          if (reconciledPlayer.unlockedSkills.nguoi_lap_ke) {
             const queue = Array.isArray(updatedPlayer.skillBuffQueue) ? [...updatedPlayer.skillBuffQueue] : [];
             queue.push({ type: 'nguoi_lap_ke', sessionsRemaining: 1 });
             updatedPlayer.skillBuffQueue = queue;
@@ -5137,7 +5196,7 @@ const useGameStore = create(
             progress: rewardState.progress,
             player:   updatedPlayer,
             streak,
-            missions: { ...activeMissions, bonusClaimedToday: true },
+            missions: { ...activeMissions, bonusClaimedToday: true, bonusClaimedXP: allBonusXP },
             weeklyChain,
             dailyTracking,
             latestSessionUndo: null,
@@ -5267,11 +5326,13 @@ const useGameStore = create(
       addBuildingPassiveEP: (amount) =>
         set((prev) => {
           const newTotalEP = prev.progress.totalEP + amount;
+          const activeBook = getActiveBook(newTotalEP);
           return {
+            ...pickEraScopedBlueprintPatch(prev, activeBook),
             progress: {
               ...prev.progress,
               totalEP:    newTotalEP,
-              activeBook: getActiveBook(newTotalEP),
+              activeBook,
             },
           };
         }),
@@ -5688,11 +5749,13 @@ const useGameStore = create(
       _devAddEP: (amount) =>
         set((prev) => {
           const newTotalEP = prev.progress.totalEP + amount;
+          const activeBook = getActiveBook(newTotalEP);
           return {
+            ...pickEraScopedBlueprintPatch(prev, activeBook),
             progress: {
               ...prev.progress,
               totalEP:    newTotalEP,
-              activeBook: getActiveBook(newTotalEP),
+              activeBook,
             },
             latestSessionUndo: null,
           };

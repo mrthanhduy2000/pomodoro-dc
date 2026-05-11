@@ -73,7 +73,7 @@ function getCompletedSessionTotalSeconds(previousData, nextData) {
     return null;
   }
 
-  if (nextData?.ended_reason != null && nextData.ended_reason !== 'completed') {
+  if (nextData?.ended_reason !== 'completed') {
     return null;
   }
 

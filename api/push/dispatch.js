@@ -1,9 +1,11 @@
 import { methodNotAllowed, readJsonBody, sendJson } from '../_lib/http.js';
 import {
-  getDuePushJobs,
+  claimDuePushJobs,
   disablePushSubscription,
+  getPushJobStatus,
   isExpiredPushSubscriptionError,
   listActivePushSubscriptions,
+  markPushJobError,
   markPushJobSent,
   sendPushNotification,
 } from '../_lib/push.js';
@@ -15,29 +17,14 @@ function isAuthorizedRequest(req) {
   return authHeader === `Bearer ${secret}`;
 }
 
-const LEGACY_COMPLETE_GRACE_MS = 2_000;
-
-function isLegacyCompletionDue(oldRecord, nowMs = Date.now()) {
-  if (!oldRecord?.started_at || !Number.isFinite(Number(oldRecord?.total_seconds))) return true;
-
-  const startedAtMs = Date.parse(oldRecord.started_at);
-  if (!Number.isFinite(startedAtMs)) return true;
-
-  const endsAtMs = startedAtMs + (Number(oldRecord.total_seconds) * 1000);
-  return nowMs >= endsAtMs - LEGACY_COMPLETE_GRACE_MS;
-}
-
-// Supabase webhook fires on every timer_live UPDATE.
-// Prefer ended_reason when the timer_live migration is present. Older payloads fall
-// back to the old shape so deployments keep working while the database catches up.
-export function isSessionEndEvent(body, nowMs = Date.now()) {
-  const endedReason = body?.record?.ended_reason;
-  if (endedReason != null && endedReason !== 'completed') return false;
-
+// Supabase webhook fires on every timer_live UPDATE. Only a clear completed
+// reason may dispatch push; cancelled/reset sessions must never fall back to
+// shape-based guessing because late cancels look exactly like completions.
+export function isSessionEndEvent(body) {
   return (
     body?.type === 'UPDATE' &&
     (body?.old_record?.is_running !== false) &&
-    isLegacyCompletionDue(body?.old_record, nowMs) &&
+    body?.record?.ended_reason === 'completed' &&
     body?.record?.is_break !== true &&
     body?.record?.is_running === false &&
     body?.record?.paused_seconds_remaining == null
@@ -45,7 +32,7 @@ export function isSessionEndEvent(body, nowMs = Date.now()) {
 }
 
 async function runDispatch(graceSeconds) {
-  const jobs = await getDuePushJobs(10, graceSeconds);
+  const jobs = await claimDuePushJobs(10, graceSeconds);
   if (jobs.length === 0) {
     return { dueJobs: 0, sentJobs: 0, report: [] };
   }
@@ -55,8 +42,14 @@ async function runDispatch(graceSeconds) {
   let sentJobs = 0;
 
   for (const job of jobs) {
+    const currentStatus = await getPushJobStatus(job.job_key);
+    if (currentStatus !== 'processing') {
+      report.push({ jobKey: job.job_key, status: 'skipped', currentStatus });
+      continue;
+    }
+
     if (subscriptions.length === 0) {
-      await markPushJobSent(job.job_key, 'no-active-subscriptions');
+      await markPushJobSent(job.job_key, 'no-active-subscriptions', { expectedStatus: 'processing' });
       sentJobs += 1;
       report.push({ jobKey: job.job_key, status: 'sent-without-subscribers' });
       continue;
@@ -79,7 +72,7 @@ async function runDispatch(graceSeconds) {
     }
 
     if (successCount > 0 || !transientError) {
-      await markPushJobSent(job.job_key, transientError);
+      await markPushJobSent(job.job_key, transientError, { expectedStatus: 'processing' });
       sentJobs += 1;
       report.push({
         jobKey: job.job_key,
@@ -90,7 +83,8 @@ async function runDispatch(graceSeconds) {
       continue;
     }
 
-    // Transient error with no successes — job stays 'scheduled', next cron tick retries it
+    // Transient error with no successes — release the claim so the next cron tick retries it.
+    await markPushJobError(job.job_key, transientError);
     report.push({
       jobKey: job.job_key,
       status: 'retrying',

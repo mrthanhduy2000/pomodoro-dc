@@ -29,7 +29,7 @@ test('push dispatch ignores cancelled timer_live end events', () => {
   }), false);
 });
 
-test('push dispatch keeps legacy payload compatibility when ended_reason is absent', () => {
+test('push dispatch ignores timer_live end events without an explicit completed reason', () => {
   const nowMs = Date.parse('2026-05-10T10:25:01.000Z');
 
   assert.equal(isSessionEndEvent({
@@ -45,7 +45,7 @@ test('push dispatch keeps legacy payload compatibility when ended_reason is abse
       is_break: false,
       paused_seconds_remaining: null,
     },
-  }, nowMs), true);
+  }, nowMs), false);
 });
 
 test('push dispatch ignores legacy cancel events before the scheduled end', () => {

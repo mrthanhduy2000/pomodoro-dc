@@ -64,6 +64,25 @@ export function shouldContinuePomodoroAsStopwatch({
     && displaySeconds <= 0;
 }
 
+export function shouldInferContinuedPomodoroSession({
+  mode = TIMER_MODES.STOPWATCH,
+  configuredMode = TIMER_MODES.POMODORO,
+  continueAfterPomodoro = false,
+  displaySeconds = 0,
+  targetSeconds = 0,
+} = {}) {
+  const safeDisplaySeconds = Number(displaySeconds);
+  const safeTargetSeconds = Number(targetSeconds);
+
+  return mode === TIMER_MODES.STOPWATCH
+    && configuredMode === TIMER_MODES.POMODORO
+    && continueAfterPomodoro !== true
+    && Number.isFinite(safeDisplaySeconds)
+    && Number.isFinite(safeTargetSeconds)
+    && safeTargetSeconds > 0
+    && safeDisplaySeconds > safeTargetSeconds;
+}
+
 export function shouldHoldContinuedPomodoroForConfirmation({
   mode = TIMER_MODES.STOPWATCH,
   continueAfterPomodoro = false,

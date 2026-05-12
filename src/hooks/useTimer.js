@@ -14,6 +14,7 @@ import {
   resolveContinueAfterPomodoro,
   shouldContinuePomodoroAsStopwatch,
   shouldHoldContinuedPomodoroForConfirmation,
+  shouldInferContinuedPomodoroSession,
 } from '../engine/timerSession';
 import { updateTimerLive, clearTimerLive } from '../lib/timerLiveService';
 import { pushNow } from '../lib/syncService';
@@ -377,6 +378,27 @@ export function useTimer({ focusMinutes, mode = TIMER_MODES.POMODORO }) {
   const tickClock = useCallback(() => {
     const elapsedSeconds = getElapsedSeconds(startTimeRef.current);
     const nextDisplaySeconds = computeDisplayFromElapsed(elapsedSeconds);
+    const shouldInferContinuedPomodoro = shouldInferContinuedPomodoroSession({
+      mode: modeRef.current,
+      configuredMode: mode,
+      continueAfterPomodoro: sessionContinueAfterPomodoroRef.current,
+      displaySeconds: nextDisplaySeconds,
+      targetSeconds: totalSecondsRef.current,
+    });
+
+    if (shouldInferContinuedPomodoro) {
+      const confirmUntilSeconds = getContinuedPomodoroConfirmUntilSeconds(
+        { continuedPomodoroConfirmedUntilSeconds: continuedPomodoroConfirmUntilSecondsRef.current },
+        totalSecondsRef.current,
+      );
+      sessionContinueAfterPomodoroRef.current = true;
+      continuedPomodoroConfirmUntilSecondsRef.current = confirmUntilSeconds;
+      persistCurrentTimerSession({
+        mode: TIMER_MODES.STOPWATCH,
+        continueAfterPomodoro: true,
+        continuedPomodoroConfirmedUntilSeconds: confirmUntilSeconds,
+      });
+    }
 
     if (
       shouldHoldContinuedPomodoroForConfirmation({
@@ -443,6 +465,8 @@ export function useTimer({ focusMinutes, mode = TIMER_MODES.POMODORO }) {
     continuePomodoroAsStopwatch,
     getElapsedSeconds,
     holdContinuedPomodoroForConfirmation,
+    mode,
+    persistCurrentTimerSession,
   ]);
 
   const runInterval = useCallback(() => {
@@ -676,20 +700,31 @@ export function useTimer({ focusMinutes, mode = TIMER_MODES.POMODORO }) {
         timerSession,
         sessionContinueAfterPomodoroRef.current,
       );
-      const syncedConfirmUntilSeconds = syncedMode === TIMER_MODES.STOPWATCH && syncedContinueAfterPomodoro
-        ? getContinuedPomodoroConfirmUntilSeconds(timerSession, timerSession.totalSeconds ?? totalSecondsRef.current)
-        : null;
       const syncedDisplaySeconds = computeDisplayFromElapsed(
         getElapsedSeconds(timerSession.countdownStartedAt ?? startTimeRef.current, timerSession.pausedAt),
         syncedMode,
       );
+      const shouldInferSyncedContinuedPomodoro = shouldInferContinuedPomodoroSession({
+        mode: syncedMode,
+        configuredMode: mode,
+        continueAfterPomodoro: syncedContinueAfterPomodoro,
+        displaySeconds: syncedDisplaySeconds,
+        targetSeconds: timerSession.totalSeconds ?? totalSecondsRef.current,
+      });
+      const effectiveSyncedContinueAfterPomodoro = syncedContinueAfterPomodoro || shouldInferSyncedContinuedPomodoro;
+      const syncedConfirmUntilSeconds = syncedMode === TIMER_MODES.STOPWATCH && effectiveSyncedContinueAfterPomodoro
+        ? getContinuedPomodoroConfirmUntilSeconds(timerSession, timerSession.totalSeconds ?? totalSecondsRef.current)
+        : null;
       const pendingContinuedConfirmation = shouldHoldContinuedPomodoroForConfirmation({
         mode: syncedMode,
-        continueAfterPomodoro: syncedContinueAfterPomodoro,
+        continueAfterPomodoro: effectiveSyncedContinueAfterPomodoro,
         displaySeconds: syncedDisplaySeconds,
         confirmUntilSeconds: syncedConfirmUntilSeconds,
       });
 
+      sessionContinueAfterPomodoroRef.current = syncedMode === TIMER_MODES.STOPWATCH
+        ? Boolean(effectiveSyncedContinueAfterPomodoro)
+        : syncedContinueAfterPomodoro;
       continuedPomodoroConfirmUntilSecondsRef.current = syncedConfirmUntilSeconds;
       setContinuedPomodoroConfirmationPendingState(pendingContinuedConfirmation);
       if (pendingContinuedConfirmation) {
@@ -713,6 +748,7 @@ export function useTimer({ focusMinutes, mode = TIMER_MODES.POMODORO }) {
   }, [
     computeDisplayFromElapsed,
     getElapsedSeconds,
+    mode,
     runInterval,
     setContinuedPomodoroConfirmationPendingState,
     timerSession,
@@ -733,16 +769,22 @@ export function useTimer({ focusMinutes, mode = TIMER_MODES.POMODORO }) {
       timerSession,
       sessionContinueAfterPomodoroRef.current,
     );
-    sessionContinueAfterPomodoroRef.current = syncedMode === TIMER_MODES.STOPWATCH
-      ? Boolean(syncedContinueAfterPomodoro)
-      : syncedContinueAfterPomodoro;
-    continuedPomodoroConfirmUntilSecondsRef.current = syncedMode === TIMER_MODES.STOPWATCH && syncedContinueAfterPomodoro
-      ? getContinuedPomodoroConfirmUntilSeconds(timerSession, timerSession.totalSeconds ?? totalSecondsRef.current)
-      : null;
-
     const effectiveNowMs = pausedAtRef.current ?? Date.now();
     const elapsedSeconds = getElapsedSeconds(startTimeRef.current, effectiveNowMs);
     const syncedDisplaySeconds = computeDisplayFromElapsed(elapsedSeconds, syncedMode);
+    const shouldInferSyncedContinuedPomodoro = shouldInferContinuedPomodoroSession({
+      mode: syncedMode,
+      configuredMode: mode,
+      continueAfterPomodoro: syncedContinueAfterPomodoro,
+      displaySeconds: syncedDisplaySeconds,
+      targetSeconds: timerSession.totalSeconds ?? totalSecondsRef.current,
+    });
+    sessionContinueAfterPomodoroRef.current = syncedMode === TIMER_MODES.STOPWATCH
+      ? Boolean(syncedContinueAfterPomodoro || shouldInferSyncedContinuedPomodoro)
+      : syncedContinueAfterPomodoro;
+    continuedPomodoroConfirmUntilSecondsRef.current = syncedMode === TIMER_MODES.STOPWATCH && sessionContinueAfterPomodoroRef.current
+      ? getContinuedPomodoroConfirmUntilSeconds(timerSession, timerSession.totalSeconds ?? totalSecondsRef.current)
+      : null;
     secondsRef.current = syncedDisplaySeconds;
     extensionReadyArmedRef.current = syncedMode === TIMER_MODES.POMODORO
       && syncedDisplaySeconds > EXTENSION_READY_SECONDS;
@@ -754,6 +796,7 @@ export function useTimer({ focusMinutes, mode = TIMER_MODES.POMODORO }) {
   }, [
     computeDisplayFromElapsed,
     getElapsedSeconds,
+    mode,
     timerSession,
   ]);
 
@@ -804,7 +847,17 @@ export function useTimer({ focusMinutes, mode = TIMER_MODES.POMODORO }) {
     const rawRestoredDisplaySeconds = runtimeMode === TIMER_MODES.STOPWATCH
       ? elapsedSeconds
       : Math.max(0, savedTotalSeconds - elapsedSeconds);
-    const restoredConfirmUntilSeconds = runtimeMode === TIMER_MODES.STOPWATCH && savedContinueAfterPomodoro
+    const shouldInferContinuedPomodoro = shouldInferContinuedPomodoroSession({
+      mode: runtimeMode,
+      configuredMode: mode,
+      continueAfterPomodoro: savedContinueAfterPomodoro,
+      displaySeconds: rawRestoredDisplaySeconds,
+      targetSeconds: savedTotalSeconds,
+    });
+    const effectiveContinueAfterPomodoro = runtimeMode === TIMER_MODES.STOPWATCH
+      ? savedContinueAfterPomodoro || shouldInferContinuedPomodoro
+      : savedContinueAfterPomodoro;
+    const restoredConfirmUntilSeconds = runtimeMode === TIMER_MODES.STOPWATCH && effectiveContinueAfterPomodoro
       ? getContinuedPomodoroConfirmUntilSeconds(
           { continuedPomodoroConfirmedUntilSeconds },
           savedTotalSeconds,
@@ -812,7 +865,7 @@ export function useTimer({ focusMinutes, mode = TIMER_MODES.POMODORO }) {
       : null;
     const shouldHoldForContinuedConfirmation = shouldHoldContinuedPomodoroForConfirmation({
       mode: runtimeMode,
-      continueAfterPomodoro: savedContinueAfterPomodoro,
+      continueAfterPomodoro: effectiveContinueAfterPomodoro,
       displaySeconds: rawRestoredDisplaySeconds,
       confirmUntilSeconds: restoredConfirmUntilSeconds,
     });
@@ -837,7 +890,7 @@ export function useTimer({ focusMinutes, mode = TIMER_MODES.POMODORO }) {
     sessionNextNoteRef.current = nextNote ?? '';
     sessionContinueAfterPomodoroRef.current = runtimeMode === TIMER_MODES.POMODORO
       ? savedContinueAfterPomodoro
-      : Boolean(savedContinueAfterPomodoro);
+      : Boolean(effectiveContinueAfterPomodoro);
     continuedPomodoroConfirmUntilSecondsRef.current = restoredConfirmUntilSeconds;
     setContinuedPomodoroConfirmationPendingState(shouldHoldForContinuedConfirmation);
     setPendingNote(note ?? '');
@@ -862,7 +915,7 @@ export function useTimer({ focusMinutes, mode = TIMER_MODES.POMODORO }) {
 
     if (runtimeMode === TIMER_MODES.STOPWATCH) {
       void cancelFocusCompletePush('stopwatch');
-      if (shouldHoldForContinuedConfirmation) {
+      if (shouldInferContinuedPomodoro || shouldHoldForContinuedConfirmation) {
         persistCurrentTimerSession({
           mode: TIMER_MODES.STOPWATCH,
           startedAt,
@@ -879,6 +932,11 @@ export function useTimer({ focusMinutes, mode = TIMER_MODES.POMODORO }) {
           continueAfterPomodoro: sessionContinueAfterPomodoroRef.current,
           continuedPomodoroConfirmedUntilSeconds: restoredConfirmUntilSeconds,
         });
+        if (!shouldHoldForContinuedConfirmation) {
+          void pushNow();
+        }
+      }
+      if (shouldHoldForContinuedConfirmation) {
         updateTimerLive({
           isRunning: false,
           mode: TIMER_MODES.STOPWATCH,

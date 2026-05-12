@@ -12,6 +12,7 @@ import {
   resolveContinueAfterPomodoro,
   shouldContinuePomodoroAsStopwatch,
   shouldHoldContinuedPomodoroForConfirmation,
+  shouldInferContinuedPomodoroSession,
 } from './timerSession.js';
 
 test('continue-after-Pomodoro is resolved from the running session before settings fallback', () => {
@@ -110,5 +111,31 @@ test('continued Pomodoro confirmation state only applies to continued stopwatch 
     continueAfterPomodoro: true,
     displaySeconds: 60 * 60,
     confirmUntilSeconds: null,
+  }), false);
+});
+
+test('legacy stopwatch restore can be inferred as continued Pomodoro from configured mode', () => {
+  assert.equal(shouldInferContinuedPomodoroSession({
+    mode: TIMER_MODES.STOPWATCH,
+    configuredMode: TIMER_MODES.POMODORO,
+    continueAfterPomodoro: false,
+    displaySeconds: 41 * 60,
+    targetSeconds: 25 * 60,
+  }), true);
+
+  assert.equal(shouldInferContinuedPomodoroSession({
+    mode: TIMER_MODES.STOPWATCH,
+    configuredMode: TIMER_MODES.STOPWATCH,
+    continueAfterPomodoro: false,
+    displaySeconds: 41 * 60,
+    targetSeconds: 25 * 60,
+  }), false);
+
+  assert.equal(shouldInferContinuedPomodoroSession({
+    mode: TIMER_MODES.STOPWATCH,
+    configuredMode: TIMER_MODES.POMODORO,
+    continueAfterPomodoro: true,
+    displaySeconds: 41 * 60,
+    targetSeconds: 25 * 60,
   }), false);
 });

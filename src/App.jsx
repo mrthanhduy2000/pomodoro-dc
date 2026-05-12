@@ -23,7 +23,7 @@ import { useGameLoop } from './hooks/useGameLoop';
 import useGameStore from './store/gameStore';
 import useSettingsStore from './store/settingsStore';
 import { ERA_METADATA, ERA_THRESHOLDS } from './engine/constants';
-import { getLevelProgress } from './engine/gameMath';
+import { getLevelProgress, isCancelledHistoryEntry } from './engine/gameMath';
 import {
   formatVietnamDate,
   formatVietnamTime,
@@ -1491,7 +1491,10 @@ export default function App() {
     ? (dailyTracking.sessionsCompleted ?? 0)
     : 0;
   const focusMinutesToday = history.reduce(
-    (sum, entry) => (localDateStr(entry.timestamp) === todayKey ? sum + (entry.minutes ?? 0) : sum),
+    (sum, entry) => {
+      if (isCancelledHistoryEntry(entry) || entry?.completed === false) return sum;
+      return localDateStr(entry.timestamp) === todayKey ? sum + (entry.minutes ?? 0) : sum;
+    },
     0,
   );
   const focusHoursToday = formatDurationMinutes(focusMinutesToday);

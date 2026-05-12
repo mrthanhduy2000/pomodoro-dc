@@ -10,15 +10,14 @@ import {
 const FOCUS_JOB_KEY = 'dc-pomodoro:focus-complete';
 const LEGACY_PUSH_WEBHOOK_ENABLED = process.env.ENABLE_LEGACY_PUSH_WEBHOOK === 'true';
 
-// Supabase webhook fires on every timer_live UPDATE — only send when session actually ended
-function isSessionEndEvent(body) {
-  const endedReason = body?.record?.ended_reason;
-  if (endedReason != null && endedReason !== 'completed') return false;
-
+// Supabase webhook fires on every timer_live UPDATE. Require an explicit
+// completed reason so cancelled/reset clears never look like finished sessions.
+export function isSessionEndEvent(body) {
   return (
     body?.type === 'UPDATE' &&
     body?.old_record?.is_running === true &&
     body?.old_record?.is_break !== true &&
+    body?.record?.ended_reason === 'completed' &&
     body?.record?.is_break !== true &&
     body?.record?.is_running === false &&
     body?.record?.paused_seconds_remaining == null

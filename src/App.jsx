@@ -7,15 +7,7 @@ import AppErrorBoundary from './components/AppErrorBoundary';
 import PomodoroEngine from './components/PomodoroEngine';
 import ResourceDisplay from './components/ResourceDisplay';
 import RankDisplay from './components/RankDisplay';
-import Settings from './components/Settings';
-import LootDropModal from './components/LootDropModal';
-import DisasterModal from './components/DisasterModal';
-import EraCrisisModal from './components/EraCrisisModal';
-import AchievementToast from './components/AchievementToast';
 import DailyMissions from './components/DailyMissions';
-import PrestigeModal from './components/PrestigeModal';
-import LevelUpModal from './components/LevelUpModal';
-import WeeklyReportModal from './components/WeeklyReportModal';
 import NotificationCenter from './components/NotificationCenter';
 import { DCPomodoroSidebarBrand } from './components/DCPomodoroBrand';
 import { RichTextView } from './components/RichText';
@@ -40,6 +32,14 @@ const BlueprintInventory = createRecoverableLazy(() => import('./components/Blue
 const Achievements = createRecoverableLazy(() => import('./components/Achievements.jsx'), 'achievements');
 const StatsDashboard = createRecoverableLazy(() => import('./components/StatsDashboard.jsx'), 'stats-dashboard');
 const BuildingWorkshop = createRecoverableLazy(() => import('./components/BuildingWorkshop.jsx'), 'building-workshop');
+const Settings = createRecoverableLazy(() => import('./components/Settings.jsx'), 'settings');
+const LootDropModal = createRecoverableLazy(() => import('./components/LootDropModal.jsx'), 'loot-drop-modal');
+const DisasterModal = createRecoverableLazy(() => import('./components/DisasterModal.jsx'), 'disaster-modal');
+const EraCrisisModal = createRecoverableLazy(() => import('./components/EraCrisisModal.jsx'), 'era-crisis-modal');
+const PrestigeModal = createRecoverableLazy(() => import('./components/PrestigeModal.jsx'), 'prestige-modal');
+const LevelUpModal = createRecoverableLazy(() => import('./components/LevelUpModal.jsx'), 'level-up-modal');
+const WeeklyReportModal = createRecoverableLazy(() => import('./components/WeeklyReportModal.jsx'), 'weekly-report-modal');
+const AchievementToast = createRecoverableLazy(() => import('./components/AchievementToast.jsx'), 'achievement-toast');
 
 function createBoundaryLogger(scope) {
   return (error, errorInfo) => {
@@ -1750,7 +1750,9 @@ export default function App() {
                         subtitle="Âm thanh, nhắc nghỉ, theme và các điều chỉnh hành vi của timer."
                         topRail={!isDesktop && !showFocusFullscreen ? renderTopRail() : null}
                       >
-                        <Settings />
+                        <DeferredTabContent>
+                          <Settings />
+                        </DeferredTabContent>
                       </ShellPane>
                     </TabPane>
                   )}
@@ -1818,23 +1820,53 @@ export default function App() {
         ]}
         variant="section"
       >
-        <GlobalOverlays />
+        <GlobalOverlays
+          lootModalOpen={lootModalOpen}
+          disasterModalOpen={disasterModalOpen}
+          eraCrisisModalOpen={eraCrisisModalOpen}
+          prestigeModalOpen={prestigeModalOpen}
+          weeklyReportOpen={weeklyReportOpen}
+          levelUpQueueLength={levelUpQueueLength}
+          achievementQueueLength={achievementQueueLength}
+        />
       </AppErrorBoundary>
     </div>
   );
 }
 
-function GlobalOverlays() {
+function GlobalOverlays({
+  lootModalOpen,
+  disasterModalOpen,
+  eraCrisisModalOpen,
+  prestigeModalOpen,
+  weeklyReportOpen,
+  levelUpQueueLength,
+  achievementQueueLength,
+}) {
+  const hasLevelUp = levelUpQueueLength > 0;
+  const hasAchievementToast = achievementQueueLength > 0;
+  const hasOverlay = (
+    lootModalOpen
+    || disasterModalOpen
+    || eraCrisisModalOpen
+    || prestigeModalOpen
+    || weeklyReportOpen
+    || hasLevelUp
+    || hasAchievementToast
+  );
+
+  if (!hasOverlay) return null;
+
   return (
-    <>
-      <LootDropModal />
-      <DisasterModal />
-      <EraCrisisModal />
-      <PrestigeModal />
-      <LevelUpModal />
-      <WeeklyReportModal />
-      <AchievementToast />
-    </>
+    <Suspense fallback={null}>
+      {lootModalOpen && <LootDropModal />}
+      {disasterModalOpen && <DisasterModal />}
+      {eraCrisisModalOpen && <EraCrisisModal />}
+      {prestigeModalOpen && <PrestigeModal />}
+      {hasLevelUp && <LevelUpModal />}
+      {weeklyReportOpen && <WeeklyReportModal />}
+      {hasAchievementToast && <AchievementToast />}
+    </Suspense>
   );
 }
 

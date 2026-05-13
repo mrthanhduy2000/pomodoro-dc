@@ -18,6 +18,9 @@ async function upsertTimerLive(payload) {
     OPTIONAL_TIMER_LIVE_COLUMNS.forEach((column) => {
       delete fallbackPayload[column];
     });
+    if (payload.mode === 'stopwatch' && payload.is_running === true && payload.is_break !== true) {
+      fallbackPayload.total_seconds = 0;
+    }
     const { error: fallbackError } = await supabase.from('timer_live').upsert(fallbackPayload);
     if (!fallbackError) return;
     throw fallbackError;

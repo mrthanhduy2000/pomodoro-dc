@@ -1,29 +1,32 @@
 # DC Pomodoro
 
-## Stable local app
+## Current App Model
 
-`http://localhost:31105/` is now meant to be the stable everyday URL.
+The full app runs at:
 
-Use one of these:
+`https://pomodoro-dc.vercel.app/`
 
-- `npm run install:agent`
-- double-click `DC Pomodoro.app` after regenerating it with `bash scripts/create-launcher.sh`
+Mac also uses an Electron companion app for the menu bar/tray icon. Electron is not a separate product UI; it opens the Vercel app and reads timer state from Supabase so the Mac menu bar can show the active timer.
 
-What changed:
+Daily usage:
 
-- port `31105` is reserved for the stable built app
-- the stable server keeps serving the last successful build while newer code is rebuilt in the background
-- a macOS LaunchAgent keeps the server alive after login
-- the LaunchAgent now resolves `node` at runtime through an inline shell command, so Node path changes are less likely to break it after upgrades
-- Vite dev mode moved to `http://localhost:31101/` to avoid port fights
+- Use `https://pomodoro-dc.vercel.app/` for the full Pomodoro app on iPhone and Mac.
+- Use the Electron app on Mac when the menu bar icon/countdown is needed.
+- Use localhost only for development and testing.
 
 Useful commands:
 
-- `npm run serve:prod` — serve the stable app on `31105`
-- `npm run dev` — run Vite on `31101`
+- `npm run dev` — run Vite dev server on `31101`
 - `npm run electron-dev` — run Electron against the dev server on `31101`
-- `npm run uninstall:agent` — remove the background LaunchAgent
+- `npm run electron` — run the Electron companion app
+- `npm run build` — production build
 - `npm run push:keys` — generate a new VAPID key pair for Web Push
+
+Legacy local-server commands are still in the repo but are not the normal daily path:
+
+- `npm run serve:prod` — serve the stable app on `31105`
+- `npm run install:agent` — install old LaunchAgent local server
+- `npm run uninstall:agent` — remove the background LaunchAgent
 
 ## Web Push cho iPhone
 

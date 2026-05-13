@@ -11,6 +11,12 @@ const path = require('path');
 const https = require('https');
 const { createClient } = require('@supabase/supabase-js');
 const WebSocket = require('ws');
+const {
+  getTrayTitleFromRendererUpdate,
+  getTrayTitleFromTimerData,
+  isStopwatchMode,
+  parseStartedAtMs,
+} = require('./trayTimer');
 
 const APP_URL      = 'https://pomodoro-dc.vercel.app';
 const SUPABASE_URL = 'https://jcefdsdccmnmqvuwelmm.supabase.co';
@@ -35,20 +41,17 @@ function getRoundedFocusMinutes(totalSeconds) {
   return Math.max(1, Math.round((Number(totalSeconds) || 0) / 60));
 }
 
-function parseStartedAtMs(value) {
-  const parsed = Date.parse(value);
-  return Number.isFinite(parsed) ? parsed : null;
-}
-
 function createActiveSessionSnapshot(data) {
   const totalSeconds = Number(data?.total_seconds);
   const startedAtMs = parseStartedAtMs(data?.started_at);
-  if (!Number.isFinite(totalSeconds) || totalSeconds <= 0 || !startedAtMs) return null;
+  const isStopwatch = isStopwatchMode(data);
+  if (!Number.isFinite(totalSeconds) || (!isStopwatch && totalSeconds <= 0) || !startedAtMs) return null;
 
   return {
-    totalSeconds,
+    totalSeconds: Math.max(0, totalSeconds),
     startedAtMs,
     isBreak: data?.is_break === true,
+    mode: data?.mode,
   };
 }
 
@@ -88,7 +91,7 @@ function getCompletedSessionTotalSeconds(previousData, nextData) {
   if (!snapshot) return null;
   if (snapshot.isBreak) return null;
 
-  if (snapshotSource?.mode === 'stopwatch') {
+  if (isStopwatchMode(snapshotSource) || isStopwatchMode(snapshot)) {
     return getStopwatchElapsedSeconds(snapshot);
   }
 
@@ -134,11 +137,6 @@ function fetchTimerLive() {
   }).on('error', () => {});
 }
 
-function formatTime(totalSec) {
-  const s = Math.max(0, Math.floor(totalSec));
-  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
-}
-
 function setTrayTitle(title = '') {
   if (!tray) return;
   tray.setTitle(title, TRAY_TITLE_OPTIONS);
@@ -151,23 +149,15 @@ function updateTrayTitle() {
     return;
   }
 
-  const { is_running, is_break, mode, started_at, total_seconds, paused_seconds_remaining } = timerData;
-
-  if (is_running && started_at && total_seconds) {
-    const elapsed = (Date.now() - new Date(started_at).getTime()) / 1000;
-    const isStopwatch = mode === 'stopwatch';
-    const displaySeconds = isStopwatch
-      ? Math.max(0, elapsed)
-      : Math.max(0, total_seconds - elapsed);
-    tray?.setImage(iconEmpty);
-    setTrayTitle(`${is_break ? '☕' : isStopwatch ? '⏱' : '🍅'} ${formatTime(displaySeconds)}`);
-  } else if (!is_running && paused_seconds_remaining > 0) {
-    tray?.setImage(iconEmpty);
-    setTrayTitle(`⏸ ${formatTime(paused_seconds_remaining)}`);
-  } else {
+  const title = getTrayTitleFromTimerData(timerData);
+  if (!title) {
     tray?.setImage(iconNormal);
     setTrayTitle('');
+    return;
   }
+
+  tray?.setImage(iconEmpty);
+  setTrayTitle(title);
 }
 
 function createTray() {
@@ -195,17 +185,15 @@ function createTray() {
 }
 
 function applyRendererTrayUpdate(data = {}) {
-  const timeLeft = typeof data.timeLeft === 'string' ? data.timeLeft : '';
-  if (!timeLeft) {
+  const title = getTrayTitleFromRendererUpdate(data);
+  if (!title) {
     tray?.setImage(iconNormal);
     setTrayTitle('');
     return;
   }
 
-  const state = typeof data.state === 'string' ? data.state.toUpperCase() : '';
-  const prefix = state === 'BREAK' ? '☕' : state === 'PAUSED' ? '⏸' : '🍅';
   tray?.setImage(iconEmpty);
-  setTrayTitle(`${prefix} ${timeLeft}`);
+  setTrayTitle(title);
 }
 
 ipcMain.on('tray-update', (_event, data) => {

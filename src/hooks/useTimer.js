@@ -15,6 +15,7 @@ import {
   shouldContinuePomodoroAsStopwatch,
   shouldHoldContinuedPomodoroForConfirmation,
   shouldInferContinuedPomodoroSession,
+  shouldStartBreakAfterCompletion,
 } from '../engine/timerSession';
 import { updateTimerLive, clearTimerLive } from '../lib/timerLiveService';
 import { pushNow } from '../lib/syncService';
@@ -596,7 +597,11 @@ export function useTimer({ focusMinutes, mode = TIMER_MODES.POMODORO }) {
       return;
     }
 
-    const shouldAutoStartBreak = !disableBreak && autoStartBreak;
+    const shouldAutoStartBreak = shouldStartBreakAfterCompletion({
+      mode: modeRef.current,
+      disableBreak,
+      autoStartBreak,
+    });
     setTimerState(TIMER_STATES.FINISHED);
     if (shouldAutoStartBreak) {
       clearTimeout(pendingBreakTimeoutRef.current);
@@ -635,11 +640,18 @@ export function useTimer({ focusMinutes, mode = TIMER_MODES.POMODORO }) {
     if (!window.electronAPI) return;
 
     if (timerState === TIMER_STATES.RUNNING || timerState === TIMER_STATES.PAUSED) {
-      window.electronAPI.updateTray({ state: timerState, timeLeft: formatTime(visibleDisplaySeconds) });
+      window.electronAPI.updateTray({
+        state: timerState,
+        mode: modeRef.current,
+        timeLeft: formatTime(visibleDisplaySeconds),
+        startedAt: startTimeRef.current ? new Date(startTimeRef.current).toISOString() : null,
+        totalSeconds: totalSecondsRef.current,
+        pausedSecondsRemaining: timerState === TIMER_STATES.PAUSED ? visibleDisplaySeconds : null,
+      });
       return;
     }
 
-    window.electronAPI.updateTray({ state: timerState, timeLeft: '' });
+    window.electronAPI.updateTray({ state: timerState, mode: modeRef.current, timeLeft: '' });
   }, [timerState, visibleDisplaySeconds]);
 
   useEffect(() => {
@@ -1064,7 +1076,11 @@ export function useTimer({ focusMinutes, mode = TIMER_MODES.POMODORO }) {
       return;
     }
 
-    const shouldAutoStartBreak = !disableBreak && autoStartBreak;
+    const shouldAutoStartBreak = shouldStartBreakAfterCompletion({
+      mode: runtimeMode,
+      disableBreak,
+      autoStartBreak,
+    });
     setTimerState(TIMER_STATES.FINISHED);
     resetSessionTimeline();
 

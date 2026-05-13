@@ -383,6 +383,7 @@ export default function PomodoroEngine({
   const isIdle = timerState === TIMER_STATES.IDLE;
   const isActive = timerState === TIMER_STATES.RUNNING || timerState === TIMER_STATES.PAUSED;
   const isBreakMode = isOnBreak;
+  const finishedSessionWillStartBreak = !disableBreak && (autoStartBreak || isStopwatchMode);
   const isCrisisBlockingStart = eraCrisis.active && eraCrisis.choiceMade !== 'challenge';
   const isExtensionWindowOpen = displaySeconds > 0 && displaySeconds <= SESSION_EXTENSION_WINDOW_SECONDS;
   const isExtensionGraceActive = Number.isFinite(extendButtonGrace?.until)
@@ -1340,7 +1341,7 @@ export default function PomodoroEngine({
               exit={{ opacity: 0, scale: 0.9 }}
               className="flex items-center gap-3"
             >
-              {!disableBreak && !autoStartBreak && (
+              {!disableBreak && !finishedSessionWillStartBreak && (
                 <ActionButton
                   onClick={() => {
                     startBreak({

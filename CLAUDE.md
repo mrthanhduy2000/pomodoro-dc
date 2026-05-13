@@ -5,11 +5,12 @@
 - Giải thích đơn giản, tránh jargon kỹ thuật
 
 ## Nền tảng hiện tại
-App chạy hoàn toàn trên **web** tại `https://pomodoro-dc.vercel.app`
+App chính chạy trên **web** tại `https://pomodoro-dc.vercel.app`.
 
-- Không dùng Electron nữa
-- Không dùng localhost nữa
-- iPhone và Mac đều truy cập qua URL Vercel
+- Web Vercel là bản đầy đủ, dùng trên iPhone và Mac.
+- Electron vẫn được dùng như app phụ trên Mac để có biểu tượng menu bar/tray.
+- Electron mở URL Vercel và đọc trạng thái timer từ Supabase, không phải bản app riêng tách logic.
+- Localhost chỉ dùng cho dev/test, không phải luồng sử dụng hằng ngày.
 
 ## Tech Stack
 - React + Vite + PWA
@@ -22,9 +23,11 @@ App chạy hoàn toàn trên **web** tại `https://pomodoro-dc.vercel.app`
 | Thứ | Chi tiết |
 |-----|----------|
 | App URL | `https://pomodoro-dc.vercel.app` |
+| Mac menu bar | Electron companion app |
 | GitHub | `https://github.com/mrthanhduy2000/pomodoro-dc` |
 | Supabase | `https://jcefdsdccmnmqvuwelmm.supabase.co` |
 | Bảng DB | `game_state` (id, data JSONB, updated_at) |
+| Timer tray sync | `timer_live` (id `singleton`) |
 
 ## Sync (đã hoàn chỉnh)
 - `src/lib/supabase.js` — Supabase client
@@ -43,10 +46,11 @@ Hoặc bấm đúp file `/Users/damduy/Desktop/🚀 Deploy App.command`
 - [ ] Thông báo iPhone khi hết phiên (web push notification)
 
 ## KHÔNG làm những thứ này
-- ❌ Electron — không dùng nữa, app chạy web hoàn toàn
-- ❌ localhost / serve-dist.mjs / LaunchAgent — không dùng nữa
-- ❌ Menu bar macOS qua Electron — không làm, không liên quan
+- ❌ Không biến Electron thành app chính riêng biệt.
+- ❌ Không dùng localhost / serve-dist.mjs / LaunchAgent làm luồng chạy chính.
+- ❌ Không nhân đôi logic game giữa web và Electron. Logic chính nằm ở web app.
 
 ## Lưu ý kỹ thuật
 - `npm install` cần flag `--legacy-peer-deps`
-- Electron và serve-dist.mjs vẫn còn trong code nhưng bỏ qua hoàn toàn
+- Electron còn liên quan tới menu bar Mac. Đừng xoá hoặc bỏ qua khi sửa timer/tray.
+- `serve-dist.mjs` và LaunchAgent là luồng local cũ, chỉ đụng khi thật sự cần.

@@ -13,6 +13,7 @@ import {
   shouldContinuePomodoroAsStopwatch,
   shouldHoldContinuedPomodoroForConfirmation,
   shouldInferContinuedPomodoroSession,
+  shouldStartBreakAfterCompletion,
 } from './timerSession.js';
 
 test('continue-after-Pomodoro is resolved from the running session before settings fallback', () => {
@@ -64,6 +65,60 @@ test('regular Pomodoro never credits beyond its target', () => {
     elapsedMs: 51 * 60_000,
     targetSeconds: 25 * 60,
   }), 25);
+});
+
+test('Pomodoro completion respects auto-start break and disable-break settings', () => {
+  assert.equal(shouldStartBreakAfterCompletion({
+    mode: TIMER_MODES.POMODORO,
+    autoStartBreak: true,
+    disableBreak: false,
+  }), true);
+
+  assert.equal(shouldStartBreakAfterCompletion({
+    mode: TIMER_MODES.POMODORO,
+    autoStartBreak: false,
+    disableBreak: false,
+  }), false);
+
+  assert.equal(shouldStartBreakAfterCompletion({
+    mode: TIMER_MODES.POMODORO,
+    autoStartBreak: true,
+    disableBreak: true,
+  }), false);
+});
+
+test('Stopwatch-style completion starts break after manual completion unless breaks are disabled', () => {
+  assert.equal(shouldStartBreakAfterCompletion({
+    mode: TIMER_MODES.STOPWATCH,
+    autoStartBreak: false,
+    disableBreak: false,
+  }), true);
+
+  assert.equal(shouldStartBreakAfterCompletion({
+    mode: TIMER_MODES.STOPWATCH,
+    autoStartBreak: false,
+    disableBreak: true,
+  }), false);
+
+  assert.equal(shouldStartBreakAfterCompletion({
+    mode: TIMER_MODES.STOPWATCH,
+    autoStartBreak: true,
+    disableBreak: false,
+  }), true);
+
+  assert.equal(shouldStartBreakAfterCompletion({
+    mode: TIMER_MODES.STOPWATCH,
+    autoStartBreak: true,
+    disableBreak: true,
+  }), false);
+});
+
+test('continued Pomodoro uses Stopwatch-style break completion policy', () => {
+  assert.equal(shouldStartBreakAfterCompletion({
+    mode: TIMER_MODES.STOPWATCH,
+    autoStartBreak: false,
+    disableBreak: false,
+  }), true);
 });
 
 test('continued Pomodoro asks for confirmation after each 15 minute overtime window', () => {

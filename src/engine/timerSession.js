@@ -100,6 +100,15 @@ export function shouldHoldContinuedPomodoroForConfirmation({
     && safeDisplaySeconds >= safeConfirmUntilSeconds;
 }
 
+export function shouldStartBreakAfterCompletion({
+  mode = TIMER_MODES.POMODORO,
+  disableBreak = false,
+  autoStartBreak = false,
+} = {}) {
+  if (disableBreak) return false;
+  return autoStartBreak || mode === TIMER_MODES.STOPWATCH;
+}
+
 export function getCreditedFocusMinutes({
   mode = TIMER_MODES.POMODORO,
   elapsedMs = 0,

@@ -173,6 +173,13 @@ const AppIcon = {
       <path d="M12 3l2 6 6 2-6 2-2 6-2-6-6-2 6-2z" />
     </Glyph>
   ),
+  more: (props) => (
+    <Glyph {...props} fill="currentColor" stroke="none">
+      <circle cx="5" cy="12" r="1.7" />
+      <circle cx="12" cy="12" r="1.7" />
+      <circle cx="19" cy="12" r="1.7" />
+    </Glyph>
+  ),
 };
 
 const DESKTOP_TABS = [
@@ -193,6 +200,11 @@ const MOBILE_TABS = [
   { id: 'stats', label: 'Thống kê', shortLabel: 'Thống kê', Icon: AppIcon.stats },
   { id: 'settings', label: 'Cài đặt', shortLabel: 'Cài đặt', Icon: AppIcon.settings },
 ];
+
+// Mobile: 4 tab chính luôn hiện + nút "Thêm" mở 3 tab phụ → đỡ chật trên iPhone.
+const MOBILE_PRIMARY_IDS = ['focus', 'missions', 'skills', 'stats'];
+const MOBILE_PRIMARY_TABS = MOBILE_TABS.filter((t) => MOBILE_PRIMARY_IDS.includes(t.id));
+const MOBILE_SECONDARY_TABS = MOBILE_TABS.filter((t) => !MOBILE_PRIMARY_IDS.includes(t.id));
 
 const COLLECTION_TABS = [
   { id: 'relics', label: 'Di vật' },
@@ -1222,6 +1234,7 @@ export default function App() {
   const [storesHydrated, setStoresHydrated] = useState(() => (
     useGameStore.persist.hasHydrated() && useSettingsStore.persist.hasHydrated()
   ));
+  const [moreMenuOpen, setMoreMenuOpen] = useState(false);
   const hydrateEngines = useSettingsStore((s) => s.hydrateEngines);
   const uiTheme = useSettingsStore((s) => s.uiTheme);
   const uiSkin = useSettingsStore((s) => s.uiSkin);
@@ -1770,9 +1783,44 @@ export default function App() {
 
       {!isDesktop && !showFocusFullscreen && (
         <div
-          className="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center px-2.5 sm:px-3"
+          className="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex flex-col items-center px-2.5 sm:px-3"
           style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 12px)' }}
         >
+          {moreMenuOpen && (
+            <>
+              <div
+                className="pointer-events-auto fixed inset-0"
+                onClick={() => setMoreMenuOpen(false)}
+                aria-hidden="true"
+              />
+              <Motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="pointer-events-auto relative mb-2 grid w-full max-w-[760px] grid-cols-3 gap-1 rounded-[22px] border p-1.5 backdrop-blur-xl"
+                style={{ borderColor: 'var(--line)', background: 'var(--panel-soft)', boxShadow: '0 16px 34px rgba(31,30,29,0.12)' }}
+              >
+                {MOBILE_SECONDARY_TABS.map((tab) => {
+                  const active = activeTab === tab.id;
+                  return (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => { selectTab(tab.id); setMoreMenuOpen(false); }}
+                      className="flex min-h-[56px] flex-col items-center justify-center gap-1 rounded-[16px] px-1 py-2 text-[11px] font-medium leading-none transition-colors"
+                      style={{
+                        color: active ? 'var(--ink)' : 'var(--muted)',
+                        background: active ? 'var(--panel-strong)' : 'transparent',
+                        border: active ? '1px solid var(--line)' : '1px solid transparent',
+                      }}
+                    >
+                      <tab.Icon size={17} />
+                      <span className="truncate">{tab.shortLabel}</span>
+                    </button>
+                  );
+                })}
+              </Motion.div>
+            </>
+          )}
           <nav
             className="pointer-events-auto flex w-full max-w-[760px] items-center gap-0.5 rounded-[24px] border p-1 backdrop-blur-xl"
             style={{
@@ -1781,14 +1829,14 @@ export default function App() {
               boxShadow: '0 12px 28px rgba(31,30,29,0.08)',
             }}
           >
-            {MOBILE_TABS.map((tab) => {
+            {MOBILE_PRIMARY_TABS.map((tab) => {
               const active = activeTab === tab.id;
               return (
                 <button
                   key={tab.id}
                   type="button"
-                  onClick={() => selectTab(tab.id)}
-                  className="relative flex min-h-[48px] flex-1 flex-col items-center justify-center gap-px rounded-[16px] px-1 py-1.5 text-[9px] font-medium leading-none transition-colors"
+                  onClick={() => { selectTab(tab.id); setMoreMenuOpen(false); }}
+                  className="relative flex min-h-[48px] flex-1 flex-col items-center justify-center gap-0.5 rounded-[16px] px-1 py-1.5 text-[10px] font-medium leading-none transition-colors"
                   style={{
                     color: active ? 'var(--ink)' : 'var(--muted)',
                     background: active ? 'var(--panel-strong)' : 'transparent',
@@ -1796,7 +1844,7 @@ export default function App() {
                     boxShadow: active ? '0 8px 14px rgba(31,30,29,0.03)' : 'none',
                   }}
                 >
-                  <tab.Icon size={14} />
+                  <tab.Icon size={15} />
                   <span className="truncate">{tab.shortLabel}</span>
                   {active && (
                     <span
@@ -1807,6 +1855,34 @@ export default function App() {
                 </button>
               );
             })}
+            {(() => {
+              const secondaryActive = MOBILE_SECONDARY_TABS.some((t) => t.id === activeTab);
+              const active = secondaryActive || moreMenuOpen;
+              return (
+                <button
+                  type="button"
+                  onClick={() => setMoreMenuOpen((v) => !v)}
+                  aria-label="Thêm mục"
+                  aria-expanded={moreMenuOpen}
+                  className="relative flex min-h-[48px] flex-1 flex-col items-center justify-center gap-0.5 rounded-[16px] px-1 py-1.5 text-[10px] font-medium leading-none transition-colors"
+                  style={{
+                    color: active ? 'var(--ink)' : 'var(--muted)',
+                    background: active ? 'var(--panel-strong)' : 'transparent',
+                    border: active ? '1px solid var(--line)' : '1px solid transparent',
+                    boxShadow: active ? '0 8px 14px rgba(31,30,29,0.03)' : 'none',
+                  }}
+                >
+                  <AppIcon.more size={15} />
+                  <span className="truncate">Thêm</span>
+                  {secondaryActive && (
+                    <span
+                      className="absolute bottom-1 h-[3px] w-[3px] rounded-full"
+                      style={{ background: 'var(--accent)' }}
+                    />
+                  )}
+                </button>
+              );
+            })()}
           </nav>
         </div>
       )}

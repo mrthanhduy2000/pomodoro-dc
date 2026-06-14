@@ -136,78 +136,208 @@ html, body, #root {
   --app-bg: radial-gradient(135% 95% at 50% -12%, #fffdf9 0%, var(--canvas) 52%, var(--canvas-2) 100%);
 }
 /* Editorial — giấy ấm, dùng nguyên giá trị baseline ở :root */
-[data-skin="editorial"] {}
+[data-skin="editorial"] {
+  /* Editorial — "Giấy & Đất nung": cream paper, terracotta + sage, near-white cards that clearly float on a warm layered shadow. Self-contained so the default skin stays intentional rather than inheriting :root. */
+  --skin-font-display: 'Source Serif 4', Georgia, serif;
+  --skin-radius-card: 18px;
+  --skin-radius-control: 14px;
+  --skin-card-border-width: 1px;
+  --skin-card-border-color: var(--line);
+  --skin-surface-blur: 0px;
+  --skin-accent-grad: none;
+
+  /* Warm paper canvas */
+  --canvas: #faf9f6;
+  --canvas-2: #f3f1ea;
+
+  /* Soft warm radial depth: a touch of terracotta-tinted light at top, gentle warm vignette toward the edges so cards read as paper on a lit desk */
+  --app-bg: radial-gradient(140% 100% at 50% -14%, #fffdf8 0%, #fdfbf6 34%, var(--canvas) 60%, var(--canvas-2) 100%);
+
+  /* Elevated near-white paper cards (mockup #fffdfa) — this is the token components actually fill from */
+  --card-bg: rgba(255, 253, 250, 0.94);
+  --card-bg-solid: #fffdfa;
+  --card-bg-solid2: rgba(247, 245, 238, 0.97);
+  --panel: rgba(255, 253, 250, 0.90);
+  --panel-soft: rgba(250, 249, 246, 0.95);
+  --panel-strong: #fffdfa;
+  --modal-bg: rgba(255, 254, 251, 0.97);
+  --streak-bg: rgba(255, 246, 238, 0.95);
+  --item-bg: rgba(255, 254, 251, 0.78);
+  --item-bg-solid: rgba(247, 245, 238, 0.94);
+  --item-btn-bg: rgba(247, 245, 238, 0.98);
+
+  /* WARM layered float: ambient brown-terracotta tint (rgba(74,42,28)) instead of cool charcoal, four soft layers so cards CLEARLY lift off the paper yet stay calm and premium */
+  --skin-card-shadow: 0 1px 1px rgba(74, 42, 28, 0.05), 0 3px 6px rgba(74, 42, 28, 0.05), 0 8px 18px rgba(74, 42, 28, 0.06), 0 22px 46px rgba(74, 42, 28, 0.09);
+
+  /* Hairline borders */
+  --line: #e8e6de;
+  --line-2: #ddd9cf;
+
+  /* Terracotta accent + sage "good" */
+  --accent: #c96442;
+  --accent-light: #d57655;
+  --accent2: #8a3f24;
+  --accent-ink: #8a3f24;
+  --accent-rgb: 201, 100, 66;
+  --accent2-rgb: 138, 63, 36;
+  --good: #5b7a52;
+  --good-soft: #e7eddf;
+
+  /* Readable ink on cream (WCAG AA: ink 16.4, ink-2 11.4, muted 5.5, accent2 7.3) */
+  --ink: #1f1e1d;
+  --ink-2: #3a3936;
+  --muted: #6a6862;
+  --muted-2: #9b9892;
+
+  /* Timer: warm cream disc on a soft sand track */
+  --timer-disc: #fffdf8;
+  --timer-track: #ddd8cc;
+}
 /* Aurora — ấm, hiện đại, bo tròn nhiều hơn */
 [data-skin="aurora"] {
-  --skin-radius-card: 24px;
-  --skin-radius-control: 18px;
-  --skin-card-shadow: 0 14px 40px rgba(214, 116, 79, 0.16);
-  --skin-surface-blur: 14px;
-  --skin-accent-grad: linear-gradient(90deg, #e0764f, #cf5a30);
-  --app-bg: linear-gradient(165deg, #fdf3ec 0%, #f7e1d2 46%, #efd1c2 100%);
-  /* palette ấm */
-  --canvas: #fdf3ec;
-  --canvas-2: #f8e3d6;
-  --panel: rgba(255, 252, 249, 0.82);
-  --panel-soft: rgba(255, 248, 242, 0.9);
-  --panel-strong: rgba(255, 255, 255, 0.92);
-  --card-bg: rgba(255, 252, 249, 0.78);
-  --card-bg-solid: rgba(255, 252, 249, 0.92);
-  --card-bg-solid2: rgba(252, 238, 229, 0.9);
-  --modal-bg: rgba(255, 250, 245, 0.96);
-  --streak-bg: rgba(255, 240, 230, 0.94);
-  --line: #f1d8c8;
-  --line-2: #e8c6b2;
-  --accent: #e0764f;
-  --accent-light: #e89070;
-  --accent2: #cf5a30;
-  --accent-ink: #9a4a2c;
-  --accent-rgb: 224, 118, 79;
-  --good: #5b8a72;
-  --timer-disc: #fffaf6;
-  --timer-track: #f1d8c8;
+  /* ── Bình minh — soft warm gradient + frosted glass, dreamy/premium ── */
+    --skin-font-display: 'Source Serif 4', Georgia, serif;
+    --skin-radius-card: 26px;
+    --skin-radius-control: 18px;
+    --skin-card-border-width: 1px;
+    /* viền kính rất mảnh, hơi sáng để bắt sáng mép thẻ */
+    --skin-card-border-color: rgba(255, 255, 255, 0.55);
+    /* quầng sáng ấm mềm — ambient + bloom theo accent */
+    --skin-card-shadow: 0 2px 6px rgba(214, 116, 79, 0.10), 0 18px 48px rgba(214, 116, 79, 0.22), 0 40px 80px rgba(207, 90, 48, 0.10);
+    --skin-surface-blur: 14px;
+    --skin-accent-grad: linear-gradient(90deg, #e0764f, #cf5a30);
+    /* nền: gradient ấm + bloom hồng đào toả từ trên để kính có ánh sáng để 'thở' */
+    --app-bg:
+      radial-gradient(120% 90% at 18% -10%, rgba(255, 246, 235, 0.9) 0%, rgba(255, 246, 235, 0) 55%),
+      radial-gradient(130% 110% at 92% 8%, rgba(247, 198, 168, 0.45) 0%, rgba(247, 198, 168, 0) 60%),
+      linear-gradient(165deg, #fdf3ec 0%, #f7e1d2 46%, #efd1c2 100%);
+
+    /* palette ấm */
+    --canvas: #fdf3ec;
+    --canvas-2: #f5dccc;
+
+    /* text — kế thừa light theme, viết lại cho chắc & đủ tương phản trên kính */
+    --ink: #2a211c;
+    --ink-2: #4a3a32;
+    --muted: #7d6457;
+    --muted-2: #a98d7e;
+
+    /* panel & thẻ: hạ độ đục để gradient 'glow' xuyên qua → cảm giác kính mờ */
+    --panel: rgba(255, 250, 245, 0.62);
+    --panel-soft: rgba(255, 247, 240, 0.66);
+    --panel-strong: rgba(255, 252, 248, 0.82);
+    --card-bg: rgba(255, 250, 245, 0.55);
+    --card-bg-solid: rgba(255, 251, 247, 0.62);
+    --card-bg-solid2: rgba(252, 235, 224, 0.6);
+    --modal-bg: rgba(255, 250, 245, 0.9);
+    --streak-bg: rgba(255, 238, 227, 0.7);
+
+    /* surfaces phụ (list item / toggle / heat) — ấm + hơi trong để đồng bộ kính,
+       thay cho màu trắng lạnh kế thừa từ light theme */
+    --item-bg: rgba(255, 250, 245, 0.7);
+    --item-bg-solid: rgba(253, 240, 231, 0.92);
+    --item-btn-bg: rgba(252, 235, 224, 0.95);
+    --toggle-off-bg: rgba(232, 198, 178, 0.85);
+    --heat-empty: #f3ddce;
+
+    /* đường kẻ mảnh, hơi trong để giữ sự thoáng */
+    --line: rgba(228, 190, 168, 0.55);
+    --line-2: rgba(220, 174, 148, 0.7);
+
+    /* accent hoàng hôn ấm */
+    --accent: #e0764f;
+    --accent-light: #ec9472;
+    --accent2: #cf5a30;
+    --accent-ink: #9a4a2c;
+    --accent-rgb: 224, 118, 79;
+    --accent2-rgb: 207, 90, 48;
+    --good: #5b8a72;
+
+    /* đồng hồ: đĩa sáng kem, rãnh ấm nhạt hài hoà gradient */
+    --timer-disc: #fffbf7;
+    --timer-track: rgba(238, 206, 186, 0.85);
+
+    /* Thống kê: nhuộm ấm + hơi trong (giữ ~0.7–0.74 cho số liệu rõ),
+       thay panel trắng lạnh kế thừa từ light theme cho đồng bộ với kính ấm */
+    --stats-panel-bg: rgba(255, 250, 245, 0.72);
+    --stats-panel-bg-soft: rgba(255, 247, 240, 0.74);
+    --stats-panel-border: rgba(228, 190, 168, 0.7);
+    --stats-grid-line: rgba(228, 190, 168, 0.6);
+    --stats-tab-bar-bg: rgba(252, 235, 224, 0.7);
+    --stats-filter-pill-bg: rgba(255, 248, 242, 0.85);
+    --stats-filter-pill-border: rgba(228, 190, 168, 0.7);
+    --stats-filter-pill-active-bg: rgba(255, 252, 248, 0.95);
+    --stats-journal-row-bg: rgba(255, 250, 245, 0.78);
+    --stats-journal-row-border: rgba(228, 190, 168, 0.65);
+    --stats-journal-panel-bg: rgba(255, 247, 240, 0.82);
+    --stats-journal-panel-border: rgba(228, 190, 168, 0.65);
+    --stats-note-panel-bg: rgba(255, 247, 240, 0.82);
+    --stats-note-panel-border: rgba(228, 190, 168, 0.65);
+    --stats-badge-bg: rgba(252, 235, 224, 0.85);
+    --stats-badge-strong-bg: rgba(224, 118, 79, 0.14);
+    --stats-badge-strong-text: var(--accent-ink);
+    --stats-chart-axis-text: #8a6f5f;
 }
 /* Swiss — tương phản mạnh, viền đậm tối, tiêu đề mono */
 [data-skin="swiss"] {
   --skin-font-display: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
-  --skin-radius-card: 6px;
-  --skin-radius-control: 6px;
-  --skin-card-border-width: 2px;
-  --skin-card-shadow: none;
-  --skin-surface-blur: 0px;
-  --app-bg: var(--canvas);
-  /* palette tương phản cao */
-  --canvas: #f3efe7;
-  --canvas-2: #ece7db;
-  --panel: rgba(255, 253, 250, 0.96);
-  --panel-soft: rgba(248, 245, 238, 0.98);
-  --panel-strong: #fffdfa;
-  --ink: #15140f;
-  --ink-2: #2a2820;
-  --line: #2a2820;
-  --line-2: #15140f;
-  --card-bg: #fffdfa;
-  --card-bg-solid: #fffdfa;
-  --card-bg-solid2: #f3efe7;
-  --modal-bg: #fffdfa;
-  --accent: #d6492f;
-  --accent-light: #e0613f;
-  --accent2: #15140f;
-  --accent-ink: #15140f;
-  --accent-rgb: 214, 73, 47;
-  --timer-disc: #fffdfa;
-  --timer-track: #dcd6c8;
+    --skin-radius-card: 6px;
+    --skin-radius-control: 6px;
+    --skin-card-border-width: 2px;
+    --skin-card-border-color: #15140f;
+    --skin-card-bg: #fffdfa;
+    --skin-card-shadow: none;
+    --skin-surface-blur: 0px;
+    --skin-accent-grad: none;
+    /* FLAT warm-white nền — KHÔNG gradient, đúng brutalist-lite */
+    --app-bg: var(--canvas);
+    /* palette tương phản tối đa: nền giấy ấm, mực gần đen, đỏ-cam punchy */
+    --canvas: #f3efe7;
+    --canvas-2: #ece7db;
+    --panel: #fffdfa;
+    --panel-soft: #f6f2ea;
+    --panel-strong: #fffdfa;
+    --ink: #15140f;
+    --ink-2: #2a2820;
+    --muted: #5a564b;
+    --muted-2: #6e695e;
+    /* viền dày gần đen — dựng lưới grid mạnh thay cho bóng đổ */
+    --line: #15140f;
+    --line-2: #15140f;
+    --card-bg: #fffdfa;
+    --card-bg-solid: #fffdfa;
+    --card-bg-solid2: #f3efe7;
+    --modal-bg: #fffdfa;
+    --accent: #d6492f;
+    --accent-light: #e0613f;
+    --accent2: #15140f;
+    --accent-ink: #15140f;
+    --accent-rgb: 214, 73, 47;
+    --good: #2f6f4a;
+    /* đĩa đồng hồ trắng giấy, track xám trung tính rõ để thành vòng có cấu trúc */
+    --timer-disc: #fffdfa;
+    --timer-track: #d3cdbd;
 }
 /* Ink & Gold — nền tối, điểm vàng đồng (cần ghép data-theme="dark" khi bật) */
 [data-skin="inkgold"] {
-  --skin-radius-card: 18px;
-  --skin-card-bg: rgba(34, 29, 24, 0.96);
-  --skin-card-border-color: #34291f;
-  --skin-card-shadow: 0 14px 34px rgba(0, 0, 0, 0.4);
-  --skin-accent-grad: linear-gradient(90deg, #d9a441, #c96442);
-  --accent: #d9a441;
-  --accent2: #c96442;
-  --accent-rgb: 217, 164, 65;
+  --skin-font-display: 'Source Serif 4', Georgia, 'Times New Roman', serif;
+    --skin-radius-card: 18px;
+    --skin-radius-control: 14px;
+    /* Warm-charcoal card ~#221d18, lightly translucent so the brass glow reads through */
+    --skin-card-bg: rgba(34, 29, 24, 0.94);
+    --skin-card-border-width: 1px;
+    /* Subtle gold-tinted border instead of flat charcoal */
+    --skin-card-border-color: rgba(120, 92, 50, 0.42);
+    --skin-surface-blur: 8px;
+    /* Soft dark glow + brass halo (halo nudged up slightly for warmer glow) */
+    --skin-card-shadow: 0 18px 40px rgba(0, 0, 0, 0.46), 0 0 0 1px rgba(217, 164, 65, 0.06), 0 6px 26px rgba(217, 164, 65, 0.09);
+    --skin-accent-grad: linear-gradient(95deg, #e7c068 0%, #d9a441 42%, #c96442 100%);
+    --accent: #d9a441;
+    --accent-light: #e2b85f;
+    --accent2: #c96442;
+    --accent-ink: #f4d9a1;
+    --accent-rgb: 217, 164, 65;
+    --accent2-rgb: 201, 100, 66;
 }
 
 [data-theme="dark"] {
@@ -305,16 +435,98 @@ html, body, #root {
 /* Ink & Gold = nền dark + accent vàng đồng. Selector 2 thuộc tính để thắng
    [data-theme="dark"] bất kể thứ tự. App tự ép data-theme="dark" khi chọn skin này. */
 [data-theme="dark"][data-skin="inkgold"] {
-  --app-bg: radial-gradient(125% 95% at 50% -12%, #2c1f10 0%, #18120b 52%, #0e0b06 100%);
-  --accent: #d9a441;
-  --accent-light: #e2b85f;
-  --accent2: #c96442;
-  --accent-ink: #f4d9a1;
-  --accent-rgb: 217, 164, 65;
-  --good: #9bb37e;
-  --streak-bg: rgba(58, 44, 24, 0.72);
-  --stats-badge-strong-bg: rgba(217, 164, 65, 0.16);
-  --stats-badge-strong-text: #e2b85f;
+  /* Deep dark canvas #151310 with a warm brass RADIAL GLOW from top-center */
+    --app-bg: radial-gradient(130% 100% at 50% -14%, rgba(217, 164, 65, 0.24) 0%, #2e2415 13%, #1c1610 46%, #151310 70%, #100d09 100%);
+    --canvas: #151310;
+    --canvas-2: #1d1812;
+    /* Warm-charcoal panels/cards ~#221d18, warmer & lighter than the base dark block */
+    --panel: rgba(34, 29, 23, 0.92);
+    --panel-soft: rgba(38, 32, 25, 0.94);
+    --panel-strong: rgba(42, 35, 28, 0.98);
+    --card-bg: rgba(34, 29, 24, 0.9);
+    --card-bg-solid: rgba(34, 29, 24, 0.96);
+    --card-bg-solid2: rgba(40, 33, 26, 0.96);
+    --bg-panel: rgba(34, 29, 23, 0.92);
+    --bg-rpanel: rgba(29, 24, 18, 0.98);
+    --modal-bg: rgba(29, 24, 18, 0.98);
+    --item-bg: rgba(44, 37, 28, 0.82);
+    --item-bg-solid: rgba(34, 29, 24, 0.96);
+    --item-btn-bg: rgba(44, 37, 28, 0.96);
+    --toggle-off-bg: rgba(70, 60, 47, 0.96);
+    /* Warm off-white text #f4efe7 */
+    --ink: #f4efe7;
+    --ink-2: #ded4c4;
+    --muted: #ab9f8c;
+    --muted-2: #7c715f;
+    /* Gold-tinted lines instead of neutral charcoal */
+    --line: #3a2f1f;
+    --line-2: #4a3c28;
+    --heat-empty: #2e261c;
+    /* Brass gold + terracotta accents */
+    --accent: #d9a441;
+    --accent-light: #e6c270;
+    --accent2: #c96442;
+    --accent-ink: #f4dca6;
+    --accent-rgb: 217, 164, 65;
+    --accent2-rgb: 201, 100, 66;
+    --good: #9bb37e;
+    --good-soft: rgba(120, 150, 96, 0.18);
+    --warn: #d9a441;
+    --warn-soft: rgba(217, 164, 65, 0.16);
+    --streak-bg: rgba(72, 54, 28, 0.7);
+    /* Dark disc + brass-tinted track so the focus ring reads gold */
+    --timer-disc: #1a1611;
+    --timer-track: #43351f;
+    --hud-bg: var(--canvas);
+    --nav-bg: var(--canvas);
+    /* Stats surfaces follow the warm-charcoal + brass scheme */
+    --stats-text-primary: var(--ink);
+    --stats-text-muted: var(--muted);
+    --stats-text-soft: var(--muted-2);
+    --stats-panel-bg: rgba(34, 29, 23, 0.9);
+    --stats-panel-bg-soft: rgba(40, 33, 26, 0.94);
+    --stats-panel-border: rgba(74, 60, 40, 0.9);
+    --stats-grid-line: rgba(74, 60, 40, 0.82);
+    --stats-tab-bar-bg: rgba(40, 33, 26, 0.96);
+    --stats-tab-idle-text: var(--muted);
+    --stats-tab-active-bg: rgba(217, 164, 65, 0.14);
+    --stats-tab-active-text: var(--ink);
+    --stats-tab-active-border: rgba(217, 164, 65, 0.22);
+    --stats-tab-active-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+    --stats-filter-pill-bg: rgba(44, 37, 28, 0.96);
+    --stats-filter-pill-border: rgba(74, 60, 40, 0.9);
+    --stats-filter-pill-text: var(--muted);
+    --stats-filter-pill-active-bg: rgba(217, 164, 65, 0.14);
+    --stats-filter-pill-active-text: var(--ink);
+    --stats-filter-pill-active-border: rgba(217, 164, 65, 0.22);
+    --stats-journal-row-bg: rgba(34, 29, 23, 0.94);
+    --stats-journal-row-border: rgba(74, 60, 40, 0.9);
+    --stats-journal-panel-bg: rgba(40, 33, 26, 0.94);
+    --stats-journal-panel-border: rgba(74, 60, 40, 0.9);
+    --stats-journal-panel-title: var(--ink);
+    --stats-journal-panel-muted: var(--muted);
+    --stats-journal-panel-text: var(--ink-2);
+    --stats-journal-panel-sub-bg: rgba(26, 22, 16, 0.7);
+    --stats-note-panel-bg: rgba(29, 24, 18, 0.78);
+    --stats-note-panel-border: rgba(74, 60, 40, 0.9);
+    --stats-note-panel-title: var(--muted);
+    --stats-note-panel-text: var(--ink-2);
+    --stats-badge-bg: rgba(44, 37, 28, 0.96);
+    --stats-badge-text: var(--muted);
+    --stats-badge-strong-bg: rgba(217, 164, 65, 0.18);
+    --stats-badge-strong-text: #e6c270;
+    --stats-chart-surface: linear-gradient(180deg, rgba(36, 30, 23, 0.98) 0%, rgba(24, 19, 14, 0.96) 100%);
+    --stats-chart-surface-compact: linear-gradient(180deg, rgba(40, 33, 26, 0.98) 0%, rgba(26, 21, 15, 0.96) 100%);
+    --stats-chart-guide: rgba(124, 113, 95, 0.46);
+    --stats-chart-inset-line: rgba(217, 164, 65, 0.1);
+    --stats-chart-callout-bg: rgba(44, 37, 28, 0.96);
+    --stats-chart-callout-text: var(--ink);
+    --stats-chart-callout-muted: var(--muted);
+    --stats-chart-axis-text: var(--muted);
+    --stats-chart-point-fill: rgba(44, 37, 28, 0.98);
+    --stats-chart-point-ring: rgba(230, 194, 112, 0.84);
+    --stats-chart-shadow: rgba(0, 0, 0, 0.36);
+    color-scheme: dark;
 }
 html:has([data-theme="light"]),
 html:has([data-theme="light"]) body,

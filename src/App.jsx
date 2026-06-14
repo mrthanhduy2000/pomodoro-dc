@@ -1539,7 +1539,7 @@ export default function App() {
   return (
       <div
         className="flex h-screen overflow-hidden bg-[var(--canvas)] text-[var(--ink)]"
-        data-theme={uiTheme}
+        data-theme={uiSkin === 'inkgold' ? 'dark' : uiTheme}
         data-skin={uiSkin}
       >
         {!showFocusFullscreen && (

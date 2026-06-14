@@ -68,10 +68,10 @@ const THEME_MODE_OPTIONS = [
 
 // Bộ giao diện (skin). Editorial hoàn chỉnh; các skin khác đang hoàn thiện theo phase.
 const SKIN_OPTIONS = [
-  { value: 'editorial', label: 'Giấy & Đất nung', note: 'Ấm, đầm — bản hoàn chỉnh', ready: true, swatch: ['#faf9f6', '#c96442', '#5b7a52'] },
-  { value: 'aurora', label: 'Bình minh', note: 'Gradient kính mờ, hiện đại', ready: false, swatch: ['#fdf3ec', '#e0764f', '#cf5a30'] },
-  { value: 'inkgold', label: 'Mực & Vàng', note: 'Nền tối, điểm vàng đồng', ready: false, swatch: ['#151310', '#d9a441', '#c96442'] },
-  { value: 'swiss', label: 'Khối Thụy Sĩ', note: 'Tương phản, viền đậm', ready: false, swatch: ['#f3efe7', '#d6492f', '#15140f'] },
+  { value: 'editorial', label: 'Giấy & Đất nung', note: 'Ấm, đầm — mặc định', ready: true, swatch: ['#faf9f6', '#c96442', '#5b7a52'] },
+  { value: 'aurora', label: 'Bình minh', note: 'Ấm, hiện đại, bo tròn', ready: true, swatch: ['#fdf3ec', '#e0764f', '#cf5a30'] },
+  { value: 'inkgold', label: 'Mực & Vàng', note: 'Nền tối, điểm vàng đồng', ready: true, swatch: ['#151310', '#d9a441', '#c96442'] },
+  { value: 'swiss', label: 'Khối Thụy Sĩ', note: 'Tương phản, viền đậm', ready: true, swatch: ['#f3efe7', '#d6492f', '#15140f'] },
 ];
 
 const UI_THEME_OPTIONS = [

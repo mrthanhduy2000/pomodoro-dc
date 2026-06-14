@@ -135,33 +135,64 @@ html, body, #root {
 }
 /* Editorial — giấy ấm, dùng nguyên giá trị baseline ở :root */
 [data-skin="editorial"] {}
-/* Aurora — kính mờ, gradient ấm */
+/* Aurora — ấm, hiện đại, bo tròn nhiều hơn */
 [data-skin="aurora"] {
   --skin-radius-card: 24px;
   --skin-radius-control: 18px;
-  --skin-card-bg: rgba(255, 255, 255, 0.55);
-  --skin-card-border-color: rgba(255, 255, 255, 0.7);
   --skin-card-shadow: 0 14px 40px rgba(214, 116, 79, 0.16);
   --skin-surface-blur: 14px;
   --skin-accent-grad: linear-gradient(90deg, #e0764f, #cf5a30);
+  /* palette ấm */
+  --canvas: #fdf3ec;
+  --canvas-2: #f8e3d6;
+  --panel: rgba(255, 252, 249, 0.82);
+  --panel-soft: rgba(255, 248, 242, 0.9);
+  --panel-strong: rgba(255, 255, 255, 0.92);
+  --card-bg: rgba(255, 252, 249, 0.78);
+  --card-bg-solid: rgba(255, 252, 249, 0.92);
+  --card-bg-solid2: rgba(252, 238, 229, 0.9);
+  --modal-bg: rgba(255, 250, 245, 0.96);
+  --streak-bg: rgba(255, 240, 230, 0.94);
+  --line: #f1d8c8;
+  --line-2: #e8c6b2;
   --accent: #e0764f;
   --accent-light: #e89070;
   --accent2: #cf5a30;
+  --accent-ink: #9a4a2c;
   --accent-rgb: 224, 118, 79;
+  --good: #5b8a72;
+  --timer-disc: #fffaf6;
+  --timer-track: #f1d8c8;
 }
-/* Swiss — phẳng, viền đậm, góc sắc, tiêu đề mono */
+/* Swiss — tương phản mạnh, viền đậm tối, tiêu đề mono */
 [data-skin="swiss"] {
   --skin-font-display: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
   --skin-radius-card: 6px;
   --skin-radius-control: 6px;
-  --skin-card-bg: #fffdfa;
   --skin-card-border-width: 2px;
-  --skin-card-border-color: #15140f;
   --skin-card-shadow: none;
   --skin-surface-blur: 0px;
+  /* palette tương phản cao */
+  --canvas: #f3efe7;
+  --canvas-2: #ece7db;
+  --panel: rgba(255, 253, 250, 0.96);
+  --panel-soft: rgba(248, 245, 238, 0.98);
+  --panel-strong: #fffdfa;
+  --ink: #15140f;
+  --ink-2: #2a2820;
+  --line: #2a2820;
+  --line-2: #15140f;
+  --card-bg: #fffdfa;
+  --card-bg-solid: #fffdfa;
+  --card-bg-solid2: #f3efe7;
+  --modal-bg: #fffdfa;
   --accent: #d6492f;
+  --accent-light: #e0613f;
   --accent2: #15140f;
+  --accent-ink: #15140f;
   --accent-rgb: 214, 73, 47;
+  --timer-disc: #fffdfa;
+  --timer-track: #dcd6c8;
 }
 /* Ink & Gold — nền tối, điểm vàng đồng (cần ghép data-theme="dark" khi bật) */
 [data-skin="inkgold"] {
@@ -264,6 +295,20 @@ html, body, #root {
   --stats-chart-point-ring: rgba(244, 239, 231, 0.84);
   --stats-chart-shadow: rgba(0, 0, 0, 0.32);
   color-scheme: dark;
+}
+
+/* Ink & Gold = nền dark + accent vàng đồng. Selector 2 thuộc tính để thắng
+   [data-theme="dark"] bất kể thứ tự. App tự ép data-theme="dark" khi chọn skin này. */
+[data-theme="dark"][data-skin="inkgold"] {
+  --accent: #d9a441;
+  --accent-light: #e2b85f;
+  --accent2: #c96442;
+  --accent-ink: #f4d9a1;
+  --accent-rgb: 217, 164, 65;
+  --good: #9bb37e;
+  --streak-bg: rgba(58, 44, 24, 0.72);
+  --stats-badge-strong-bg: rgba(217, 164, 65, 0.16);
+  --stats-badge-strong-text: #e2b85f;
 }
 html:has([data-theme="light"]),
 html:has([data-theme="light"]) body,

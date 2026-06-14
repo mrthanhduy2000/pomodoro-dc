@@ -2732,1115 +2732,193 @@ function OverviewTabLegacy({ history, progress, streak, prestige, buildings }) {
   );
 }
 
-function OverviewTab({ history, progress, streak, prestige, buildings }) {
+function OverviewTab({ history, streak }) {
   const [period, setPeriod] = useState('week');
-  const [metric, setMetric] = useState('minutes');
-  const [isChartPending, startChartTransition] = useTransition();
-
-  const periodDef  = PERIODS.find((p) => p.key === period) ?? PERIODS[1];
-  const periodData = useMemo(
-    () => computePeriodStats(history, period, periodDef.n),
-    [history, period, periodDef.n]
-  );
-  const weeklyData   = useMemo(() => computeWeeklyStats(history), [history]);
-  const prevWeekData = useMemo(() => computePrevWeekStats(history), [history]);
-  const player       = useGameStore((s) => s.player);
-  const historyStats = useGameStore((s) => s.historyStats);
+  const [now] = useState(() => Date.now());
   const sessionCategories = useGameStore((s) => s.sessionCategories);
-  const allTime      = useMemo(
-    () => computeAllTimeStats(history, progress, player, historyStats),
-    [history, progress, player, historyStats],
-  );
   const categoryMap = useMemo(() => {
-    const map = {
-      __none__: { id: '__none__', label: 'Chưa gắn loại', color: '#475569', icon: '❓' },
-    };
-    (sessionCategories ?? []).forEach((category) => {
-      map[category.id] = category;
-    });
+    const map = { __none__: { id: '__none__', label: 'Chưa gắn loại', color: '#9b9892' } };
+    (sessionCategories ?? []).forEach((c) => { map[c.id] = c; });
     return map;
   }, [sessionCategories]);
-  const reviewSummary = useMemo(() => ({
-    sessionsWithGoal: historyStats?.sessionsWithGoal ?? 0,
-    reviewedCount: historyStats?.reviewedCount ?? 0,
-    achievedCount: historyStats?.achievedCount ?? 0,
-    missedCount: historyStats?.missedCount ?? 0,
-    pendingCount: historyStats?.pendingCount ?? 0,
-  }), [historyStats]);
-  const achievedRateOverall = reviewSummary.sessionsWithGoal > 0
-    ? Math.round((reviewSummary.achievedCount / reviewSummary.sessionsWithGoal) * 100)
-    : 0;
-  const achievedRateReviewed = reviewSummary.reviewedCount > 0
-    ? Math.round((reviewSummary.achievedCount / reviewSummary.reviewedCount) * 100)
-    : 0;
-  const reviewCoverageRate = reviewSummary.sessionsWithGoal > 0
-    ? Math.round((reviewSummary.reviewedCount / reviewSummary.sessionsWithGoal) * 100)
-    : 0;
-  const hasQualitySeed = reviewSummary.sessionsWithGoal > 0;
-  const hasQualityEnoughGoals = reviewSummary.sessionsWithGoal >= 3;
-  const hasQualityReliable = reviewSummary.reviewedCount >= 3;
-  const hasReviewedGoals = reviewSummary.reviewedCount > 0;
-  const showFullQualityPanel = hasQualityEnoughGoals && hasReviewedGoals;
-  const reviewPendingRatio = hasQualitySeed
-    ? reviewSummary.pendingCount / reviewSummary.sessionsWithGoal
-    : 0;
-  const shouldEmphasizeCoverage = hasQualitySeed && reviewPendingRatio > 0.4;
-  const shouldShowQualityPercent = hasQualityReliable && !shouldEmphasizeCoverage;
-  const reviewHeadline = !hasQualitySeed
-    ? 'Chưa có phiên nào đặt mục tiêu'
-    : !hasReviewedGoals
-      ? 'Đã có mục tiêu nhưng chưa tự chấm phiên nào'
-    : shouldEmphasizeCoverage
-      ? `${reviewCoverageRate}% phiên có mục tiêu đã được tự chấm`
-      : shouldShowQualityPercent
-        ? `${achievedRateOverall}% phiên có mục tiêu đã chạm đích`
-        : `${reviewSummary.achievedCount}/${reviewSummary.sessionsWithGoal} mục tiêu đã chạm`;
 
-  const streakBonusCapDays = STREAK_MAX_BONUS_DAYS + (
-    buildings.some((bpId) => BUILDING_EFFECTS[bpId]?.wonderEffect === 'streak_cap_plus') ? 10 : 0
-  );
-  const bonusPct = Math.min(streak.currentStreak, streakBonusCapDays) * (STREAK_BONUS_PER_DAY * 100);
-  const recentLogs = useMemo(() => history.slice(0, 3).map((entry) => {
-    const category = resolveEntryCategory(entry, categoryMap);
-    const isCancelled = isCancelledHistoryEntry(entry);
-    const xpEarned = Number.isFinite(entry?.xpEarned ?? entry?.epEarned)
-      ? (entry.xpEarned ?? entry.epEarned)
-      : 0;
-    const goalText = getSessionGoalText(entry);
-    const nextNoteText = getSessionNextNoteText(entry);
-    const notePreview = createRichTextPreview(entry?.note?.trim() || entry?.breakNote?.trim() || '', 120)
-      || goalText
-      || nextNoteText
-      || null;
+  const view = useMemo(() => {
+    const DAY = 86400000;
+    const isDone = (s) => s && s.completed !== false && s.status !== 'cancelled' && !s.cancelled && Number.isFinite(s.minutes);
+    const done = (history || []).filter(isDone);
+    const ts = (s) => new Date(s.timestamp || s.finishedAt || 0).getTime();
+    const winDays = period === 'week' ? 7 : period === 'month' ? 30 : 365;
+    const winStart = now - winDays * DAY;
+    const prevStart = now - 2 * winDays * DAY;
+    const sum = (arr) => arr.reduce((a, s) => a + (s.minutes || 0), 0);
+    const inWin = done.filter((s) => ts(s) >= winStart);
+    const inPrev = done.filter((s) => ts(s) >= prevStart && ts(s) < winStart);
+    const winMin = sum(inWin);
+    const prevMin = sum(inPrev);
+    const pct = prevMin > 0 ? Math.round(((winMin - prevMin) / prevMin) * 100) : null;
+    const goaled = inWin.filter((s) => typeof s.goalAchieved === 'boolean');
+    const achieved = goaled.filter((s) => s.goalAchieved === true).length;
+    const achPct = goaled.length > 0 ? Math.round((achieved / goaled.length) * 100) : 0;
 
-    return {
-      entry,
-      category,
-      isCancelled,
-      xpEarned,
-      goalText,
-      nextNoteText,
-      notePreview,
-      exactTimeLabel: formatExactDateTime(entry?.finishedAt ?? entry?.timestamp) ?? '—',
-    };
-  }), [history, categoryMap]);
-
-  const overview = useMemo(() => {
-    const thisWeekMins = weeklyData.reduce((sum, day) => sum + day.minutes, 0);
-    const prevWeekMins = prevWeekData.reduce((sum, day) => sum + day.minutes, 0);
-    const thisWeekSess = weeklyData.reduce((sum, day) => sum + day.sessions, 0);
-    const prevWeekSess = prevWeekData.reduce((sum, day) => sum + day.sessions, 0);
-    const thisWeekCancelled = weeklyData.reduce((sum, day) => sum + (day.cancelled ?? 0), 0);
-    const prevWeekCancelled = prevWeekData.reduce((sum, day) => sum + (day.cancelled ?? 0), 0);
-    const thisWeekXP = weeklyData.reduce((sum, day) => sum + day.xp, 0);
-    const prevWeekXP = prevWeekData.reduce((sum, day) => sum + day.xp, 0);
-    const weeklyActiveDays = weeklyData.filter((day) => day.minutes > 0).length;
-    const weekWindowStartTs = weeklyData[0]?.date
-      ? getTimestampMs(`${weeklyData[0].date}T00:00:00+07:00`)
-      : NaN;
-    const recentWeekEntries = history.filter((entry) => {
-      const timestampMs = getTimestampMs(entry?.timestamp);
-      return Number.isFinite(timestampMs) && Number.isFinite(weekWindowStartTs) && timestampMs >= weekWindowStartTs;
-    });
-    const recentCompletedWeekEntries = recentWeekEntries.filter((entry) => !isCancelledHistoryEntry(entry));
-    const weeklyBestSession = recentCompletedWeekEntries.reduce(
-      (best, entry) => ((entry?.minutes ?? 0) > (best?.minutes ?? 0) ? entry : best),
-      null,
-    );
-    const weeklyJackpots = recentCompletedWeekEntries.filter((entry) => entry?.jackpot).length;
-    const weeklyLongSessions = recentCompletedWeekEntries.filter((entry) => (entry?.refinedEarned ?? 0) > 0 || (entry?.minutes ?? 0) >= 45).length;
-
-    const periodValues = periodData.map((item) => item[metric] ?? 0);
-    const periodTotal = periodValues.reduce((sum, value) => sum + value, 0);
-    const periodActiveCount = periodValues.filter((value) => value > 0).length;
-    const periodAvg = periodActiveCount > 0 ? Math.round(periodTotal / periodActiveCount) : 0;
-    const activeRatio = periodData.length > 0 ? Math.round((periodActiveCount / periodData.length) * 100) : 0;
-    const periodHasActivity = periodActiveCount > 0;
-    const periodReadable = periodActiveCount >= 2;
-    const topBucket = periodHasActivity
-      ? periodData.reduce((best, item) => {
-          if (!best) return item;
-          return (item[metric] ?? 0) > (best[metric] ?? 0) ? item : best;
-        }, null)
-      : null;
-    const latestBucket = periodHasActivity ? (periodData[periodData.length - 1] ?? null) : null;
-    const bestDay = weeklyData.reduce(
-      (best, item) => (item.minutes > best.minutes ? item : best),
-      { date: null, minutes: 0, sessions: 0, xp: 0 },
-    );
-
-    let statusTitle = 'Nhịp 7 ngày đang đều';
-    let statusBody = `Tuần này có ${thisWeekSess} phiên, ${fmtHours(thisWeekMins)} và ${thisWeekXP >= 1000 ? `${(thisWeekXP / 1000).toFixed(1)}k XP` : `${thisWeekXP} XP`}.`;
-    if (thisWeekSess === 0) {
-      statusTitle = 'Chưa có nhịp mới';
-      statusBody = '7 ngày gần nhất chưa có phiên hoàn thành.';
-    } else if (thisWeekMins > (prevWeekMins * 1.15) || thisWeekSess > (prevWeekSess + 1)) {
-      statusTitle = 'Đà đang lên';
-      statusBody = `Tuần này có ${thisWeekSess} phiên, ${fmtHours(thisWeekMins)} và đang nhỉnh hơn 7 ngày trước đó.`;
-    } else if (prevWeekSess > 0 && thisWeekMins < (prevWeekMins * 0.85)) {
-      statusTitle = 'Nhịp đang chậm lại';
-      statusBody = `Khối lượng tuần này đang thấp hơn nhịp trước đó, hiện dừng ở ${fmtHours(thisWeekMins)} sau ${thisWeekSess} phiên.`;
-    } else if (streak.currentStreak >= 7) {
-      statusTitle = 'Chuỗi đang giữ form';
-      statusBody = `Chuỗi ${streak.currentStreak} ngày đang là lực đỡ chính cho toàn bộ nhịp tuần này.`;
+    let bars = [];
+    if (period === 'week') {
+      const d = new Date(now);
+      const dow = (d.getDay() + 6) % 7;
+      const monday = new Date(d);
+      monday.setHours(0, 0, 0, 0);
+      monday.setDate(d.getDate() - dow);
+      const labels = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
+      bars = labels.map((lb, i) => {
+        const s = monday.getTime() + i * DAY;
+        const e = s + DAY;
+        return { label: lb, mins: sum(done.filter((x) => ts(x) >= s && ts(x) < e)), active: i === dow };
+      });
+    } else if (period === 'month') {
+      bars = Array.from({ length: 5 }, (_, i) => {
+        const e = now - (4 - i) * 7 * DAY;
+        const s = e - 7 * DAY;
+        return { label: 'Tu' + (i + 1), mins: sum(done.filter((x) => ts(x) >= s && ts(x) < e)), active: i === 4 };
+      });
+    } else {
+      bars = Array.from({ length: 12 }, (_, i) => {
+        const dt = new Date(now);
+        dt.setDate(1);
+        dt.setHours(0, 0, 0, 0);
+        dt.setMonth(dt.getMonth() - (11 - i));
+        const s = dt.getTime();
+        const e2 = new Date(dt);
+        e2.setMonth(e2.getMonth() + 1);
+        return { label: 'Th' + (dt.getMonth() + 1), mins: sum(done.filter((x) => ts(x) >= s && ts(x) < e2.getTime())), active: i === 11 };
+      });
     }
+    const maxBar = Math.max(1, ...bars.map((b) => b.mins));
 
-    const bestSessionLabel = allTime.bestSessionMins > 0 ? fmtHours(allTime.bestSessionMins) : '0p';
-    const bestSessionXPLabel = allTime.bestSessionXP >= 1000
-      ? `${(allTime.bestSessionXP / 1000).toFixed(1)}k XP`
-      : `${allTime.bestSessionXP} XP`;
-    const weeklyBestSessionLabel = (weeklyBestSession?.minutes ?? 0) > 0
-      ? fmtHours(weeklyBestSession.minutes)
-      : '0p';
-    const weeklyBestSessionXP = Number.isFinite(weeklyBestSession?.xpEarned ?? weeklyBestSession?.epEarned)
-      ? (weeklyBestSession.xpEarned ?? weeklyBestSession.epEarned)
-      : 0;
-    const weeklyBestSessionXPLabel = weeklyBestSessionXP >= 1000
-      ? `${(weeklyBestSessionXP / 1000).toFixed(1)}k XP`
-      : `${weeklyBestSessionXP} XP`;
-    const totalXPLabel = allTime.totalXP >= 1000
-      ? `${(allTime.totalXP / 1000).toFixed(allTime.totalXP >= 10_000 ? 0 : 1)}k XP`
-      : `${allTime.totalXP} XP`;
-    return {
-      thisWeekMins,
-      prevWeekMins,
-      thisWeekSess,
-      prevWeekSess,
-      thisWeekCancelled,
-      prevWeekCancelled,
-      thisWeekXP,
-      prevWeekXP,
-      weeklyActiveDays,
-      periodTotal,
-      periodActiveCount,
-      periodAvg,
-      periodHasActivity,
-      periodReadable,
-      activeRatio,
-      topBucket,
-      latestBucket,
-      bestDay,
-      statusTitle,
-      statusBody,
-      bestSessionLabel,
-      bestSessionXPLabel,
-      weeklyBestSessionLabel,
-      weeklyBestSessionXPLabel,
-      weeklyJackpots,
-      weeklyLongSessions,
-      totalXPLabel,
-      periodWindowLabel: `${periodDef.n} ${PERIOD_UNITS[period] ?? 'kỳ'} gần nhất`,
-      periodEmptyDetail: `Không có hoạt động trong ${`${periodDef.n} ${PERIOD_UNITS[period] ?? 'kỳ'} gần nhất`.toLowerCase()}.`,
-    };
-  }, [allTime, history, metric, period, periodData, periodDef.n, prevWeekData, streak.currentStreak, weeklyData]);
+    const catMin = {};
+    inWin.forEach((s) => { const k = s.categoryId || '__none__'; catMin[k] = (catMin[k] || 0) + (s.minutes || 0); });
+    const catTotal = Math.max(1, Object.values(catMin).reduce((a, b) => a + b, 0));
+    const cats = Object.entries(catMin)
+      .map(([k, m]) => ({ id: k, mins: m, pct: Math.round((m / catTotal) * 100) }))
+      .sort((a, b) => b.mins - a.mins)
+      .slice(0, 5);
 
-  const handleMetricChange = (nextMetric) => {
-    if (nextMetric === metric) return;
-    startChartTransition(() => setMetric(nextMetric));
+    const todayMid = new Date(now);
+    todayMid.setHours(0, 0, 0, 0);
+    const dayMin = {};
+    done.forEach((s) => { const dd = new Date(ts(s)); dd.setHours(0, 0, 0, 0); dayMin[dd.getTime()] = (dayMin[dd.getTime()] || 0) + (s.minutes || 0); });
+    const maxDay = Math.max(1, ...Object.values(dayMin));
+    const cells = 16 * 7;
+    const heat = [];
+    for (let i = cells - 1; i >= 0; i--) heat.push(dayMin[todayMid.getTime() - i * DAY] || 0);
+
+    return { winMin, winCount: inWin.length, pct, achPct, achieved, goaled: goaled.length, bars, maxBar, cats, heat, maxDay };
+  }, [history, period, now]);
+
+  const fmtH = (m) => { const h = Math.floor(m / 60); const r = m % 60; return h > 0 ? (r ? `${h}g ${r}p` : `${h}g`) : `${m}p`; };
+  const periodLabel = period === 'week' ? 'tuần này' : period === 'month' ? 'tháng này' : 'năm nay';
+  const periodDays = period === 'week' ? 7 : period === 'month' ? 30 : 365;
+  const shade = (v) => {
+    if (v <= 0) return 'var(--heat-empty, #ece8de)';
+    const r = v / view.maxDay;
+    const a = r > 0.75 ? 1 : r > 0.5 ? 0.72 : r > 0.25 ? 0.48 : 0.26;
+    return `rgba(var(--accent-rgb), ${a})`;
   };
-
-  const handlePeriodChange = (nextPeriod) => {
-    if (nextPeriod === period) return;
-    startChartTransition(() => setPeriod(nextPeriod));
-  };
-
-  const hasOverviewData = (
-    allTime.totalSessions > 0
-    || progress.totalFocusMinutes > 0
-    || overview.thisWeekSess > 0
-    || overview.thisWeekXP > 0
-    || streak.longestStreak > 0
-  );
-
-  if (!hasOverviewData) {
-    return (
-      <div className="space-y-4 md:space-y-5">
-        <Motion.section
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.28, ease: 'easeOut' }}
-          className="relative overflow-hidden rounded-[34px]"
-          style={{
-            background: PANEL_BG,
-            border: `1px solid ${PANEL_BORDER}`,
-            boxShadow: '0 22px 60px rgba(31,30,29,0.08)',
-          }}
-        >
-          <div className="relative grid gap-0 xl:grid-cols-[minmax(0,1fr)_320px]">
-            <div className="p-6 md:p-7 lg:p-8">
-              <div className="max-w-3xl">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.28em]" style={{ color: TEXT_SOFT }}>
-                  Tổng quan
-                </p>
-                <h3
-                  className="mt-3 text-3xl font-semibold leading-tight md:text-[2.75rem]"
-                  style={{ color: TEXT_PRIMARY, fontFamily: DISPLAY_FONT, textWrap: 'balance' }}
-                >
-                  Biên niên sử của anh vẫn đang chờ phiên đầu tiên.
-                </h3>
-                <p className="mt-3 max-w-2xl text-[15px] leading-7" style={{ color: TEXT_MUTED }}>
-                  Hoàn thành một phiên tập trung để tab này bắt đầu vẽ nhịp tuần, streak, XP và các mốc tiến triển thật sự. Khi chưa có dữ liệu, màn hình cần giữ gọn và rõ thay vì dàn một loạt số 0 ra khắp nơi.
-                </p>
-              </div>
-
-              <div className="mt-6 flex flex-wrap gap-2.5">
-                {[
-                  { label: 'Chuỗi', value: `${streak.currentStreak} ngày` },
-                  { label: 'Thưởng nền', value: `+${bonusPct.toFixed(0)}% XP` },
-                  { label: 'Công trình', value: `${buildings.length}` },
-                ].map((item) => (
-                  <div
-                    key={item.label}
-                    className="rounded-full px-4 py-2 text-[12px] font-medium"
-                    style={{ background: FILTER_PILL_BG, color: TEXT_PRIMARY, border: `1px solid ${FILTER_PILL_BORDER}` }}
-                  >
-                    <span style={{ color: TEXT_SOFT }}>{item.label}</span>
-                    <span> · {item.value}</span>
-                  </div>
-                ))}
-              </div>
-
-              <div className="mt-7 grid gap-4 lg:grid-cols-[minmax(0,1.3fr)_minmax(280px,0.7fr)]">
-                <div
-                  className="rounded-[28px] p-5 md:p-6"
-                  style={{ background: PANEL_BG_SOFT, border: `1px solid ${PANEL_BORDER}` }}
-                >
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.24em]" style={{ color: TEXT_SOFT }}>
-                    Khi có dữ liệu
-                  </p>
-                  <div
-                    className="mt-4 overflow-hidden rounded-[24px] border"
-                    style={{ background: BG_CARD, borderColor: PANEL_BORDER }}
-                  >
-                    {[
-                      {
-                        marker: '01',
-                        title: 'Nhịp 7 ngày',
-                        body: 'Ngày nào anh có phiên, tổng phút và XP sẽ hiện ngay ở cột bên phải.',
-                      },
-                      {
-                        marker: '02',
-                        title: 'Chuỗi & thưởng nền',
-                        body: 'Streak hiện tại, thưởng nền XP và mốc cao nhất sẽ tự cập nhật sau mỗi phiên hoàn thành.',
-                      },
-                      {
-                        marker: '03',
-                        title: 'Phân tích sâu hơn',
-                        body: 'Biểu đồ hoạt động, phiên tốt nhất và tần suất sẽ chỉ bung ra khi thật sự có thứ để đọc.',
-                      },
-                    ].map((item, index) => (
-                      <div
-                        key={item.title}
-                        className="grid grid-cols-[56px_minmax(0,1fr)] gap-4 px-4 py-4"
-                        style={{ borderTop: index === 0 ? 'none' : `1px solid ${PANEL_BORDER}` }}
-                      >
-                        <div
-                          className="flex h-11 w-11 items-center justify-center rounded-full text-[11px] font-semibold tracking-[0.18em]"
-                          style={{
-                            background: 'rgba(var(--accent-rgb), 0.08)',
-                            color: ACCENT2,
-                            border: '1px solid rgba(var(--accent-rgb), 0.14)',
-                            fontFamily: MONO_FONT,
-                          }}
-                        >
-                          {item.marker}
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-sm font-semibold" style={{ color: TEXT_PRIMARY }}>{item.title}</p>
-                          <p className="mt-1 text-[13px] leading-6" style={{ color: TEXT_MUTED }}>{item.body}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div
-                  className="rounded-[28px] p-5 md:p-6"
-                  style={{ background: PANEL_BG_SOFT, border: `1px solid ${PANEL_BORDER}` }}
-                >
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.24em]" style={{ color: ACCENT2 }}>
-                    Trạng thái hiện tại
-                  </p>
-                  <div className="mt-4 flex items-end gap-3">
-                    <span
-                      className="text-[4.25rem] font-semibold leading-[0.84]"
-                      style={{ color: TEXT_PRIMARY, fontFamily: DISPLAY_FONT }}
-                    >
-                      0
-                    </span>
-                    <span className="pb-2 text-lg font-medium" style={{ color: TEXT_MUTED }}>
-                      phiên
-                    </span>
-                  </div>
-                  <p className="mt-3 text-[14px] leading-6" style={{ color: TEXT_MUTED }}>
-                    Sau khi xong phiên đầu tiên, màn hình này sẽ chuyển sang chế độ phân tích thật và giữ lại lịch sử của anh.
-                  </p>
-                  <div className="mt-5 grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
-                    <OverviewRailStat label="Phiên tốt nhất" value="0p" detail="Chưa có dữ liệu" accent={TEXT_PRIMARY} />
-                    <OverviewRailStat label="Kỷ lục streak" value={`${streak.longestStreak} ngày`} detail="Đang chờ chuỗi mới" accent="#b88356" />
-                    <OverviewRailStat label="Tổng XP" value={overview.totalXPLabel} detail="Sẽ tăng ngay sau phiên đầu tiên" accent={ACCENT} />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <aside
-              className="border-t xl:border-l xl:border-t-0"
-              style={{ borderColor: PANEL_BORDER, background: PANEL_BG }}
-            >
-              <div className="p-6 md:p-7">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.28em]" style={{ color: TEXT_SOFT }}>
-                  7 ngày gần nhất
-                </p>
-                <p className="mt-2 text-2xl font-semibold leading-tight" style={{ color: TEXT_PRIMARY }}>
-                  Chưa có nhịp mới
-                </p>
-                <p className="mt-2 text-[14px] leading-6" style={{ color: TEXT_MUTED }}>
-                  7 ô ngày sẽ bắt đầu sáng lên ngay khi anh hoàn thành phiên đầu tiên.
-                </p>
-
-                <div className="mt-6 space-y-3">
-                  {['CN', 'TH 2', 'TH 3', 'TH 4', 'TH 5', 'TH 6', 'TH 7'].map((label) => (
-                    <div
-                      key={label}
-                      className="grid grid-cols-[48px_minmax(0,1fr)_40px] items-center gap-3"
-                    >
-                      <span className="text-[11px] font-semibold uppercase tracking-[0.18em]" style={{ color: TEXT_SOFT }}>
-                        {label}
-                      </span>
-                      <div
-                        className="h-11 rounded-2xl"
-                        style={{ background: FILTER_PILL_BG, border: `1px solid ${FILTER_PILL_BORDER}` }}
-                      />
-                      <span className="text-right text-sm font-semibold" style={{ color: TEXT_SOFT }}>
-                        0
-                      </span>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="mt-6 rounded-[24px] p-4" style={{ background: PANEL_BG_SOFT, border: `1px solid ${PANEL_BORDER}` }}>
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.22em]" style={{ color: TEXT_SOFT }}>
-                    Gợi ý
-                  </p>
-                  <p className="mt-2 text-sm font-semibold" style={{ color: TEXT_PRIMARY }}>
-                    Bắt đầu bằng một phiên ngắn 15 đến 25 phút.
-                  </p>
-                  <p className="mt-1 text-[13px] leading-6" style={{ color: TEXT_MUTED }}>
-                    Một phiên hoàn thành là đủ để tab này chuyển từ màn hình chờ sang màn hình thống kê thật.
-                  </p>
-                </div>
-              </div>
-            </aside>
-          </div>
-        </Motion.section>
-
-        {prestige.count > 0 && (
-          <Motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1, duration: 0.28, ease: 'easeOut' }}
-            className="rounded-[28px] px-5 py-4 md:px-6"
-            style={{
-              background: 'rgba(var(--accent-rgb),0.08)',
-              border: '1px solid rgba(var(--accent-rgb),0.14)',
-            }}
-          >
-            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.24em]" style={{ color: ACCENT2 }}>
-                  Tích lũy dài hạn
-                </p>
-                <p className="mt-2 text-lg font-semibold" style={{ color: TEXT_PRIMARY }}>
-                  Lớp cộng dồn dài hạn vẫn đang nâng toàn bộ chu kỳ kế tiếp.
-                </p>
-              </div>
-              <div className="rounded-[22px] px-4 py-3 md:text-right" style={{ background: PANEL_BG_SOFT, border: `1px solid ${PANEL_BORDER}` }}>
-                <p className="text-[10px] font-semibold uppercase tracking-[0.22em]" style={{ color: TEXT_SOFT }}>
-                  Mức hiện tại
-                </p>
-                <p className="mt-2 text-2xl font-semibold leading-none" style={{ color: ACCENT2, fontFamily: DISPLAY_FONT }}>
-                  ×{prestige.count}
-                </p>
-              </div>
-            </div>
-          </Motion.div>
-        )}
-      </div>
-    );
-  }
-
-  const weeklyXPLabel = overview.thisWeekXP >= 1000
-    ? `${(overview.thisWeekXP / 1000).toFixed(1)}k XP`
-    : `${overview.thisWeekXP} XP`;
-  const currentMetricLabel = METRIC_OPTIONS.find((option) => option.key === metric)?.label.toLowerCase() ?? 'phút';
-  const reviewTone = shouldEmphasizeCoverage
-    ? TEXT_PRIMARY
-    : shouldShowQualityPercent
-      ? (achievedRateOverall >= 70 ? ACCENT2 : achievedRateOverall >= 50 ? '#b88356' : '#8b847b')
-      : reviewSummary.achievedCount > 0
-        ? ACCENT2
-        : TEXT_MUTED;
-  const qualityBadge = showFullQualityPanel && (hasQualityReliable || shouldEmphasizeCoverage)
-    ? {
-        label: shouldEmphasizeCoverage ? 'Đã chấm' : 'Tỷ lệ đạt',
-        value: shouldEmphasizeCoverage ? `${reviewCoverageRate}%` : `${achievedRateOverall}%`,
-      }
-    : null;
-  const heroBadges = [
-    { label: 'Streak hiện tại', value: `${streak.currentStreak} ngày` },
-    { label: 'Tuần này', value: `${overview.thisWeekSess} phiên` },
-    allTime.cancelledSessions > 0 ? { label: 'Phiên hủy', value: `${fmtCount(allTime.cancelledSessions)} lần` } : null,
-    { label: 'Thưởng nền', value: `+${bonusPct.toFixed(0)}% XP` },
-    qualityBadge,
-  ].filter(Boolean);
-  const weeklyStats = [
-    {
-      label: 'Phiên tuần này',
-      value: overview.thisWeekSess.toLocaleString(),
-      detail: overview.thisWeekCancelled > 0
-        ? `${overview.weeklyActiveDays}/7 ngày có hoạt động · ${overview.thisWeekCancelled} bị hủy`
-        : `${overview.weeklyActiveDays}/7 ngày có hoạt động`,
-      accent: TEXT_PRIMARY,
-    },
-    allTime.cancelledSessions > 0
-      ? {
-          label: 'Phiên bị hủy',
-          value: `${fmtCount(allTime.cancelledSessions)}`,
-          detail: `${fmtHours(allTime.cancelledMinutes)} đã ghi trước khi dừng`,
-          accent: '#ef4444',
-        }
-      : null,
-    {
-      label: 'Phiên tốt nhất tuần',
-      value: overview.weeklyBestSessionLabel,
-      detail: overview.weeklyBestSessionXPLabel,
-      accent: TEXT_PRIMARY,
-    },
-    {
-      label: 'Thưởng lớn',
-      value: `${overview.weeklyJackpots}`,
-      detail: `${overview.weeklyLongSessions} phiên dài trong tuần`,
-      accent: ACCENT,
-    },
-  ].filter(Boolean);
-  const periodStats = [
-    {
-      label: 'Tổng',
-      value: fmtVal(overview.periodTotal, metric),
-      detail: overview.periodWindowLabel,
-      accent: TEXT_PRIMARY,
-    },
-    {
-      label: 'Trung bình khi có hoạt động',
-      value: fmtVal(overview.periodAvg, metric),
-      detail: `Tính trên ${overview.periodActiveCount || 0} ${PERIOD_UNITS[period] ?? 'kỳ'}`,
-      accent: TEXT_PRIMARY,
-    },
-    {
-      label: 'Đỉnh kỳ',
-      value: overview.topBucket ? fmtVal(overview.topBucket[metric] ?? 0, metric) : '—',
-      detail: overview.topBucket ? `${overview.topBucket.label}` : overview.periodEmptyDetail,
-      accent: ACCENT,
-    },
-    {
-      label: 'Độ phủ',
-      value: `${overview.activeRatio}%`,
-      detail: `${overview.periodActiveCount}/${periodData.length} ${PERIOD_UNITS[period] ?? 'kỳ'} có hoạt động`,
-      accent: TEXT_PRIMARY,
-    },
-  ];
-  const qualityStats = [
-    {
-      label: 'Đã tự chấm',
-      value: `${reviewSummary.reviewedCount}/${reviewSummary.sessionsWithGoal || 0}`,
-      detail: reviewSummary.sessionsWithGoal > 0
-        ? `${reviewCoverageRate}% độ phủ trên tổng phiên có mục tiêu`
-        : 'Chưa có mục tiêu nào được lưu',
-      accent: TEXT_PRIMARY,
-    },
-    {
-      label: 'Chạm mục tiêu',
-      value: `${reviewSummary.achievedCount}`,
-      detail: reviewSummary.reviewedCount > 0
-        ? `${achievedRateReviewed}% trên số đã chấm`
-        : 'Chưa có phiên nào được chấm',
-      accent: ACCENT2,
-    },
-    {
-      label: 'Chờ chấm',
-      value: `${reviewSummary.pendingCount}`,
-      detail: reviewSummary.pendingCount > 0
-        ? `${reviewSummary.pendingCount} phiên đang chờ kết luận`
-        : 'Không còn phiên nào chờ chấm',
-      accent: TEXT_MUTED,
-    },
-  ];
-  const compactQualityStats = [
-    {
-      label: 'Mục tiêu đã đặt',
-      value: `${reviewSummary.sessionsWithGoal}`,
-      detail: hasQualitySeed ? 'Đã ghi mục tiêu trong phiên' : 'Chưa có mục tiêu nào',
-      accent: TEXT_PRIMARY,
-    },
-    {
-      label: 'Đã tự chấm',
-      value: `${reviewSummary.reviewedCount}`,
-      detail: hasQualitySeed ? `${reviewSummary.pendingCount} phiên đang chờ chấm` : 'Chưa có dữ liệu',
-      accent: TEXT_PRIMARY,
-    },
-    {
-      label: 'Chạm mục tiêu',
-      value: `${reviewSummary.achievedCount}`,
-      detail: hasQualitySeed ? 'Ưu tiên đọc theo số lượng trước khi đủ mẫu' : 'Chưa có dữ liệu',
-      accent: ACCENT2,
-    },
-  ];
-  const qualityLeadLabel = shouldEmphasizeCoverage
-    ? 'Độ phủ tự chấm'
-    : shouldShowQualityPercent
-      ? 'Tỷ lệ đạt chính'
-      : 'Mục tiêu đã chạm';
-  const qualityLeadValue = shouldEmphasizeCoverage
-    ? `${reviewCoverageRate}%`
-    : shouldShowQualityPercent
-      ? `${achievedRateOverall}%`
-      : `${reviewSummary.achievedCount}/${reviewSummary.sessionsWithGoal || 0}`;
-  const qualityLeadDetail = !hasQualitySeed
-    ? 'Chưa đủ dữ liệu để đọc chất lượng phiên.'
-    : shouldEmphasizeCoverage
-      ? `${reviewSummary.reviewedCount}/${reviewSummary.sessionsWithGoal} phiên đã được tự chấm.`
-      : shouldShowQualityPercent
-        ? `Tính trên ${reviewSummary.sessionsWithGoal} phiên có mục tiêu.`
-        : 'Mẫu còn mỏng, nên đang ưu tiên nhìn theo số lượng thay vì phần trăm.';
-  const foundationStats = [
-    {
-      label: 'Kỷ lục streak',
-      value: `${streak.longestStreak} ngày`,
-      detail: streak.currentStreak > 0 ? `Hiện tại ${streak.currentStreak} ngày` : 'Đang chờ chuỗi mới',
-      accent: '#b88356',
-    },
-    {
-      label: 'Thưởng lớn',
-      value: `${allTime.totalJackpots}`,
-      detail: 'Số lần phần thưởng lớn đã xuất hiện',
-      accent: ACCENT,
-    },
-    {
-      label: 'Công trình',
-      value: `${buildings.length}`,
-      detail: 'Tổng số công trình đang sở hữu',
-      accent: TEXT_PRIMARY,
-    },
-    prestige.count > 0
-      ? {
-          label: 'Prestige',
-          value: `×${prestige.count}`,
-          detail: `+${(prestige.permanentBonus * 100).toFixed(0)}% thưởng nền dài hạn`,
-          accent: ACCENT2,
-        }
-      : null,
-  ].filter(Boolean);
+  const card = { background: BG_CARD, border: `1px solid ${PANEL_BORDER}`, borderRadius: 'var(--skin-radius-card, 18px)', boxShadow: 'var(--skin-card-shadow)' };
+  const PERIODS_UI = [{ k: 'week', l: 'Tuần' }, { k: 'month', l: 'Tháng' }, { k: 'year', l: 'Năm' }];
 
   return (
-    <div className="space-y-4 md:space-y-5">
-      <Motion.section
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.28, ease: 'easeOut' }}
-        className="relative overflow-hidden rounded-[34px]"
-        style={{
-          background: PANEL_BG_SOFT,
-          border: `1px solid ${PANEL_BORDER}`,
-          boxShadow: '0 24px 64px rgba(31,30,29,0.08)',
-        }}
-      >
-        <div className="p-5 md:p-6 lg:p-7">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.28em]" style={{ color: TEXT_SOFT }}>
-            Tổng quan
-          </p>
-          <div className="mt-3 max-w-3xl">
-            <h3
-              className="text-3xl font-semibold leading-tight md:text-[2.6rem]"
-              style={{ color: TEXT_PRIMARY, fontFamily: DISPLAY_FONT, textWrap: 'balance' }}
+    <div className="flex flex-col gap-4">
+      <div className="flex items-end justify-between gap-3">
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.24em]" style={{ color: TEXT_SOFT }}>Tổng quan</p>
+          <h3 className="mt-1.5 text-[1.9rem] font-semibold leading-tight md:text-[2.2rem]" style={{ color: TEXT_PRIMARY, fontFamily: 'var(--skin-font-display)' }}>Hành trình tập trung</h3>
+        </div>
+        <div className="flex gap-1 rounded-full p-1" style={{ background: PANEL_BG_SOFT, border: `1px solid ${PANEL_BORDER}` }}>
+          {PERIODS_UI.map((p) => (
+            <button
+              key={p.k}
+              type="button"
+              onClick={() => setPeriod(p.k)}
+              className="rounded-full px-3.5 py-1.5 text-[12px] font-semibold transition-colors"
+              style={period === p.k ? { background: 'var(--ink)', color: 'var(--canvas)' } : { background: 'transparent', color: TEXT_MUTED }}
             >
-              {overview.statusTitle}
-            </h3>
-            <p className="mt-3 text-[15px] leading-7" style={{ color: TEXT_MUTED }}>
-              {overview.statusBody}
-            </p>
-          </div>
+              {p.l}
+            </button>
+          ))}
+        </div>
+      </div>
 
-          <div className="mt-5 flex flex-wrap gap-2.5">
-            {heroBadges.map((item) => (
-              <div
-                key={item.label}
-                className="rounded-full px-4 py-2 text-[12px] font-medium"
-                style={{ background: FILTER_PILL_BG, color: TEXT_PRIMARY, border: `1px solid ${FILTER_PILL_BORDER}` }}
-              >
-                <span style={{ color: TEXT_SOFT }}>{item.label}</span>
-                <span> · {item.value}</span>
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <div className="p-4" style={card}>
+          <p className="text-[12px]" style={{ color: TEXT_SOFT }}>Giờ {periodLabel}</p>
+          <p className="mt-1 text-[1.6rem] font-semibold" style={{ color: TEXT_PRIMARY, fontFamily: 'var(--skin-font-display)' }}>{fmtH(view.winMin)}</p>
+          <p className="mt-1 text-[11px]" style={{ color: view.pct == null ? TEXT_SOFT : view.pct >= 0 ? 'var(--good)' : ACCENT2 }}>
+            {view.pct == null ? 'Chưa đủ kỳ trước' : `${view.pct >= 0 ? '▲' : '▼'} ${Math.abs(view.pct)}% vs kỳ trước`}
+          </p>
+        </div>
+        <div className="p-4" style={card}>
+          <p className="text-[12px]" style={{ color: TEXT_SOFT }}>Phiên</p>
+          <p className="mt-1 text-[1.6rem] font-semibold" style={{ color: TEXT_PRIMARY, fontFamily: 'var(--skin-font-display)' }}>{view.winCount}</p>
+          <p className="mt-1 text-[11px]" style={{ color: TEXT_SOFT }}>{(view.winCount / periodDays).toFixed(1)} / ngày</p>
+        </div>
+        <div className="p-4" style={card}>
+          <p className="text-[12px]" style={{ color: TEXT_SOFT }}>Đạt mục tiêu</p>
+          <p className="mt-1 text-[1.6rem] font-semibold" style={{ color: TEXT_PRIMARY, fontFamily: 'var(--skin-font-display)' }}>{view.achPct}<span className="text-[1rem]" style={{ color: TEXT_SOFT }}>%</span></p>
+          <p className="mt-1 text-[11px]" style={{ color: 'var(--good)' }}>{view.achieved} / {view.goaled} phiên</p>
+        </div>
+        <div className="p-4" style={card}>
+          <p className="text-[12px]" style={{ color: TEXT_SOFT }}>Chuỗi</p>
+          <p className="mt-1 text-[1.6rem] font-semibold" style={{ color: ACCENT, fontFamily: 'var(--skin-font-display)' }}>{streak.currentStreak}<span className="text-[1rem]" style={{ color: TEXT_SOFT }}> ngày</span></p>
+          <p className="mt-1 text-[11px]" style={{ color: TEXT_SOFT }}>Kỷ lục: {streak.longestStreak}</p>
+        </div>
+      </div>
+
+      <div className="grid gap-3 lg:grid-cols-[1.5fr_1fr]">
+        <div className="p-5" style={card}>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em]" style={{ color: TEXT_SOFT }}>
+            Giờ tập trung theo {period === 'year' ? 'tháng' : period === 'month' ? 'tuần' : 'ngày'}
+          </p>
+          <div className="mt-5 flex h-[170px] items-stretch justify-between gap-2">
+            {view.bars.map((b, i) => (
+              <div key={i} className="flex h-full flex-1 flex-col items-center gap-2">
+                <div className="flex w-full flex-1 items-end">
+                  <div className="w-full rounded-t-[5px]" style={{ height: `${Math.max(3, (b.mins / view.maxBar) * 100)}%`, background: b.active ? ACCENT : 'rgba(var(--accent-rgb),0.32)' }} title={fmtH(b.mins)} />
+                </div>
+                <span className="text-[10px]" style={{ color: b.active ? TEXT_PRIMARY : TEXT_SOFT, fontWeight: b.active ? 600 : 400 }}>{b.label}</span>
               </div>
             ))}
           </div>
-
-          <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,1.15fr)_repeat(2,minmax(0,1fr))]">
-            <OverviewHeroMetric
-              icon="01"
-              label="Phiên hoàn thành"
-              value={allTime.totalSessions.toLocaleString()}
-              detail={(allTime.cancelledSessions ?? 0) > 0
-                ? `${fmtCount(allTime.trackedSessions)} bản ghi · ${fmtCount(allTime.cancelledSessions)} bị hủy`
-                : <TrendBadge current={overview.thisWeekSess} previous={overview.prevWeekSess} baselineLabel="7 ngày trước đó" />}
-              accent={ACCENT}
-              className="sm:col-span-2 xl:row-span-2"
-              chart={<AreaChart data={weeklyData} valueKey="sessions" height={64} accentColor={ACCENT} />}
-            />
-            <OverviewHeroMetric
-              icon="02"
-              label="Tổng giờ"
-              value={fmtHours(progress.totalFocusMinutes)}
-              detail={allTime.totalSessions > 0 ? `Trung bình ${fmtHours(allTime.avgSessionLength)} mỗi phiên` : 'Sẽ tăng ngay sau phiên đầu tiên'}
-              accent={ACCENT2}
-            />
-            <OverviewHeroMetric
-              icon="03"
-              label="Tổng XP"
-              value={overview.totalXPLabel}
-              detail={allTime.totalSessions > 0 ? `Đỉnh phiên ${overview.bestSessionLabel} · ${overview.bestSessionXPLabel}` : 'XP sẽ tích lũy sau từng phiên'}
-              accent={ACCENT}
-            />
-          </div>
         </div>
-      </Motion.section>
-
-      <Motion.section
-        initial={{ opacity: 0, y: 14 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.06, duration: 0.28, ease: 'easeOut' }}
-      >
-        <div
-          className="rounded-[30px] p-5 md:p-6"
-          style={{ background: BG_CARD, border: `1px solid ${PANEL_BORDER}` }}
-        >
-          <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-            <div className="max-w-2xl">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.24em]" style={{ color: TEXT_SOFT }}>
-                Nhịp 7 ngày
-              </p>
-              <h4 className="mt-2 text-xl font-semibold" style={{ color: TEXT_PRIMARY, fontFamily: DISPLAY_FONT }}>
-                7 ngày gần nhất đang diễn ra thế nào
-              </h4>
-              <p className="mt-2 text-sm leading-6" style={{ color: TEXT_MUTED }}>
-                {overview.weeklyActiveDays > 0
-                  ? `${overview.weeklyActiveDays}/7 ngày có hoạt động. Tuần này có ${overview.thisWeekSess} phiên, ${fmtHours(overview.thisWeekMins)} và ${weeklyXPLabel}.`
-                  : 'Bắt đầu bằng một phiên ngắn để dựng lại nhịp và cho màn này có dữ liệu thật.'}
-              </p>
-            </div>
-            <div className="text-left md:text-right">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.22em]" style={{ color: TEXT_SOFT }}>
-                So với 7 ngày trước đó
-              </p>
-              <div className="mt-2 text-sm">
-                <TrendBadge current={overview.thisWeekSess} previous={overview.prevWeekSess} baselineLabel="7 ngày trước đó" />
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-5 grid gap-4 xl:grid-cols-[minmax(0,1.08fr)_360px]">
-            <div
-              className="rounded-[26px] px-4 py-4 md:px-5"
-              style={{ background: PANEL_BG_SOFT, border: `1px solid ${PANEL_BORDER}` }}
-            >
-              <AreaChart data={weeklyData} valueKey="minutes" height={116} accentColor={ACCENT} />
-              <div className="mt-5 grid gap-3 md:grid-cols-3">
-                {weeklyStats.map((item) => (
-                  <OverviewRailStat
-                    key={item.label}
-                    label={item.label}
-                    value={item.value}
-                    detail={item.detail}
-                    accent={item.accent}
-                  />
-                ))}
-              </div>
-            </div>
-
-            <div
-              className="rounded-[26px] px-4 py-4 md:px-5"
-              style={{ background: PANEL_BG_SOFT, border: `1px solid ${PANEL_BORDER}` }}
-            >
-              <p className="text-[10px] font-semibold uppercase tracking-[0.18em]" style={{ color: TEXT_SOFT }}>
-                Từng ngày trong tuần
-              </p>
-              <p className="mt-2 text-sm leading-6" style={{ color: TEXT_MUTED }}>
-                Cột này chỉ giữ nhịp từng ngày, không trộn thêm chỉ số dài hạn.
-              </p>
-              <div className="mt-4">
-                <WeekPulseList weeklyData={weeklyData} />
-              </div>
-            </div>
-          </div>
-        </div>
-      </Motion.section>
-
-      {recentLogs.length > 0 && (
-        <Motion.section
-          initial={{ opacity: 0, y: 14 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.08, duration: 0.28, ease: 'easeOut' }}
-        >
-          <div
-            className="rounded-[30px] p-4 md:p-5"
-            style={{ background: BG_CARD, border: `1px solid ${PANEL_BORDER}` }}
-          >
-            <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-              <div className="max-w-2xl">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.24em]" style={{ color: TEXT_SOFT }}>
-                  Log gần đây
-                </p>
-                <h4 className="mt-2 text-xl font-semibold" style={{ color: TEXT_PRIMARY, fontFamily: DISPLAY_FONT }}>
-                  Những phiên vừa được ghi vào lịch sử
-                </h4>
-                <p className="mt-2 text-sm leading-6" style={{ color: TEXT_MUTED }}>
-                  Khối này kéo log mới nhất vào `Tổng quan`, để anh còn thấy phiên cụ thể chứ không chỉ còn số tổng hợp.
-                </p>
-              </div>
-              <div
-                className="rounded-full px-3 py-1.5 text-[11px] font-semibold"
-                style={{ background: FILTER_PILL_BG, color: TEXT_MUTED, border: `1px solid ${FILTER_PILL_BORDER}` }}
-              >
-                {fmtCount(recentLogs.length)} log mới nhất
-              </div>
-            </div>
-
-            <div className="mt-5 grid gap-3 lg:grid-cols-3">
-              {recentLogs.map(({ entry, category, isCancelled, xpEarned, goalText, nextNoteText, notePreview, exactTimeLabel }) => (
-                <div
-                  key={entry.id ?? entry.timestamp}
-                  className="rounded-[24px] p-4"
-                  style={{ background: PANEL_BG_SOFT, border: `1px solid ${PANEL_BORDER}` }}
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <div
-                        className="inline-flex max-w-full items-center gap-2 rounded-full px-2.5 py-1 text-[11px] font-semibold"
-                        style={{
-                          background: hexToRgba(category.color, 0.14),
-                          color: category.color,
-                          border: `1px solid ${hexToRgba(category.color, 0.24)}`,
-                        }}
-                      >
-                        <span aria-hidden="true">{category.icon}</span>
-                        <span className="truncate">{category.label}</span>
-                      </div>
-                      <p
-                        className="mt-3 text-[1.65rem] font-semibold leading-none"
-                        style={{ color: TEXT_PRIMARY, fontFamily: DISPLAY_FONT }}
-                      >
-                        {fmtHours(entry?.minutes ?? 0)}
-                      </p>
-                      <p className="mt-2 text-[11px] leading-5" style={{ color: TEXT_MUTED }}>
-                        {isCancelled
-                          ? `Đã hủy${Number.isFinite(entry?.cancelProgressRatio) ? ` • ${Math.round(entry.cancelProgressRatio * 100)}% tiến độ` : ''}`
-                          : `${fmtXPCompact(xpEarned)} XP${entry?.comboCount > 1 ? ` • Combo ×${entry.comboCount}` : ''}${entry?.tier ? ` • ${entry.tier}` : ''}`}
-                      </p>
-                    </div>
-                    {isCancelled ? <SessionStatusBadge entry={entry} compact /> : <SessionReviewBadge entry={entry} compact />}
+        <div className="p-5" style={card}>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em]" style={{ color: TEXT_SOFT }}>Loại việc</p>
+          <div className="mt-4 flex flex-col gap-3">
+            {view.cats.length === 0 && <p className="text-[12px]" style={{ color: TEXT_SOFT }}>Chưa có dữ liệu loại việc.</p>}
+            {view.cats.map((c) => {
+              const meta = categoryMap[c.id] || { label: 'Khác', color: ACCENT };
+              return (
+                <div key={c.id}>
+                  <div className="flex items-center justify-between text-[12px]">
+                    <span style={{ color: TEXT_PRIMARY }}>{meta.label}</span>
+                    <span style={{ color: TEXT_SOFT }}>{c.pct}%</span>
                   </div>
-
-                  <div className="mt-4 rounded-[18px] px-3 py-2.5" style={{ background: PANEL_BG, border: `1px solid ${PANEL_BORDER}` }}>
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.18em]" style={{ color: TEXT_SOFT }}>
-                      Thời điểm ghi
-                    </p>
-                    <p className="mt-1 text-[12px] font-medium" style={{ color: TEXT_PRIMARY }}>
-                      {timeAgo(entry?.finishedAt ?? entry?.timestamp)}
-                    </p>
-                    <p className="mt-1 text-[11px] leading-5" style={{ color: TEXT_MUTED }}>
-                      {exactTimeLabel}
-                    </p>
+                  <div className="mt-1.5 h-[6px] overflow-hidden rounded-full" style={{ background: 'var(--heat-empty, #ece8de)' }}>
+                    <div className="h-full rounded-full" style={{ width: `${c.pct}%`, background: meta.color || ACCENT }} />
                   </div>
-
-                  {(goalText || nextNoteText || notePreview) ? (
-                    <div className="mt-3 space-y-2">
-                      {goalText && (
-                        <div>
-                          <p className="text-[10px] font-semibold uppercase tracking-[0.18em]" style={{ color: TEXT_SOFT }}>
-                            Mục tiêu
-                          </p>
-                          <p className="mt-1 text-[12px] leading-5" style={{ color: TEXT_PRIMARY }}>
-                            {goalText}
-                          </p>
-                        </div>
-                      )}
-                      {!goalText && notePreview && (
-                        <div>
-                          <p className="text-[10px] font-semibold uppercase tracking-[0.18em]" style={{ color: TEXT_SOFT }}>
-                            Ghi chú
-                          </p>
-                          <p className="mt-1 line-clamp-2 text-[12px] leading-5" style={{ color: TEXT_PRIMARY }}>
-                            {notePreview}
-                          </p>
-                        </div>
-                      )}
-                      {nextNoteText && (
-                        <div>
-                          <p className="text-[10px] font-semibold uppercase tracking-[0.18em]" style={{ color: TEXT_SOFT }}>
-                            Phiên kế tiếp
-                          </p>
-                          <p className="mt-1 line-clamp-2 text-[12px] leading-5" style={{ color: TEXT_MUTED }}>
-                            {nextNoteText}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <p className="mt-3 text-[12px] leading-5" style={{ color: TEXT_MUTED }}>
-                      Phiên này chưa có ghi chú hoặc mục tiêu đính kèm.
-                    </p>
-                  )}
                 </div>
-              ))}
-            </div>
-          </div>
-        </Motion.section>
-      )}
-
-      <Motion.section
-        initial={{ opacity: 0, y: 14 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1, duration: 0.28, ease: 'easeOut' }}
-        className="grid gap-4 xl:grid-cols-[minmax(300px,0.72fr)_minmax(0,1.28fr)]"
-      >
-        <div
-          className="rounded-[30px] p-4 md:p-5"
-          style={{ background: BG_CARD, border: `1px solid ${PANEL_BORDER}` }}
-        >
-          <p className="text-[11px] font-semibold uppercase tracking-[0.24em]" style={{ color: TEXT_SOFT }}>
-            Chất lượng phiên
-          </p>
-          <h4 className="mt-2 text-xl font-semibold" style={{ color: TEXT_PRIMARY, fontFamily: DISPLAY_FONT }}>
-            {reviewHeadline}
-          </h4>
-          <p className="mt-2 text-sm leading-6" style={{ color: TEXT_MUTED }}>
-            {reviewSummary.sessionsWithGoal > 0
-              ? reviewSummary.reviewedCount > 0
-                ? `${reviewSummary.achievedCount} phiên đạt, ${reviewSummary.missedCount} phiên chưa đạt${reviewSummary.pendingCount > 0 ? ` và ${reviewSummary.pendingCount} phiên còn chờ chấm.` : '.'}`
-                : `${reviewSummary.pendingCount}/${reviewSummary.sessionsWithGoal} phiên có mục tiêu đang chờ được chốt kết quả cuối phiên.`
-              : 'Khi anh đặt mục tiêu và tự chấm ở cuối phiên, phần này mới phản ánh được chất lượng thay vì chỉ đếm số lượng.'}
-          </p>
-
-          {showFullQualityPanel ? (
-            <>
-              <div
-                className="mt-5 rounded-[24px] border px-4 py-4"
-                style={{ borderColor: PANEL_BORDER, background: PANEL_BG_SOFT }}
-              >
-                <p className="text-[10px] font-semibold uppercase tracking-[0.18em]" style={{ color: TEXT_SOFT }}>
-                  {qualityLeadLabel}
-                </p>
-                <div className="mt-3 flex items-end justify-between gap-4">
-                  <div>
-                    <p
-                      className="text-[2.5rem] font-semibold leading-none"
-                      style={{ color: reviewTone, fontFamily: DISPLAY_FONT }}
-                    >
-                      {qualityLeadValue}
-                    </p>
-                    <p className="mt-2 text-[11px] leading-5" style={{ color: TEXT_MUTED }}>
-                      {qualityLeadDetail}
-                    </p>
-                  </div>
-                  {reviewSummary.reviewedCount > 0 && (
-                    <div className="text-right text-[11px] leading-5" style={{ color: TEXT_MUTED }}>
-                      <div>{achievedRateReviewed}% trên số đã chấm</div>
-                      <div>{reviewCoverageRate}% độ phủ tự chấm</div>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="mt-5 grid gap-3 sm:grid-cols-3 xl:grid-cols-1">
-                {qualityStats.map((item) => (
-                  <OverviewRailStat
-                    key={item.label}
-                    label={item.label}
-                    value={item.value}
-                    detail={item.detail}
-                    accent={item.accent}
-                  />
-                ))}
-              </div>
-            </>
-          ) : (
-            <>
-              <div
-                className="mt-5 rounded-[24px] border px-4 py-4"
-                style={{ borderColor: PANEL_BORDER, background: PANEL_BG_SOFT }}
-              >
-                <p className="text-[10px] font-semibold uppercase tracking-[0.18em]" style={{ color: TEXT_SOFT }}>
-                  Dữ liệu còn mỏng
-                </p>
-                <p className="mt-2 text-lg font-semibold" style={{ color: TEXT_PRIMARY }}>
-                  {hasQualitySeed
-                    ? `Hiện mới có ${reviewSummary.sessionsWithGoal} phiên có mục tiêu.`
-                    : 'Chưa có phiên nào được dùng để đọc chất lượng.'}
-                </p>
-                <p className="mt-2 text-[13px] leading-6" style={{ color: TEXT_MUTED }}>
-                  {hasQualitySeed
-                    ? 'Khi đủ từ 3 phiên có mục tiêu trở lên, phần này sẽ bắt đầu ưu tiên tỷ lệ thay vì chỉ nhìn số lượng.'
-                    : 'Bắt đầu bằng việc ghi mục tiêu cho phiên và chốt kết quả ở cuối phiên để phần này có dữ liệu thật.'}
-                </p>
-              </div>
-
-              <div className="mt-5 grid gap-3 sm:grid-cols-3 xl:grid-cols-1">
-                {compactQualityStats.map((item) => (
-                  <OverviewRailStat
-                    key={item.label}
-                    label={item.label}
-                    value={item.value}
-                    detail={item.detail}
-                    accent={item.accent}
-                  />
-                ))}
-              </div>
-            </>
-          )}
-        </div>
-
-        <div
-          className="rounded-[30px] p-4 md:p-5"
-          style={{ background: BG_CARD, border: `1px solid ${PANEL_BORDER}` }}
-        >
-          <div className="flex flex-col gap-4">
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.24em]" style={{ color: TEXT_SOFT }}>
-                Hoạt động theo kỳ
-              </p>
-              <h4 className="mt-2 text-xl font-semibold" style={{ color: TEXT_PRIMARY, fontFamily: DISPLAY_FONT }}>
-                Đọc nhịp theo {currentMetricLabel}
-              </h4>
-              <p className="mt-2 text-sm leading-6" style={{ color: TEXT_MUTED }}>
-                {overview.periodReadable
-                  ? 'Cửa sổ này gom dữ liệu đủ dài để anh nhìn được đà thật, thay vì bị kéo theo từng phiên riêng lẻ.'
-                  : `Dữ liệu trong ${overview.periodWindowLabel.toLowerCase()} còn mỏng, nên phần này mới chỉ đủ để nhìn trạng thái chứ chưa nên kết luận xu hướng.`}
-              </p>
-            </div>
-
-            <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-              <div>
-                <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em]" style={{ color: TEXT_SOFT }}>
-                  Góc nhìn
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {METRIC_OPTIONS.map((option) => (
-                    <button
-                      key={option.key}
-                      type="button"
-                      onClick={() => handleMetricChange(option.key)}
-                      className="rounded-full px-3 py-1.5 text-xs font-semibold transition-[background-color,color,transform] duration-200 hover:-translate-y-px"
-                      style={metric === option.key
-                        ? { background: TAB_ACTIVE_BG, color: TAB_ACTIVE_TEXT, boxShadow: TAB_ACTIVE_SHADOW, border: `1px solid ${TAB_ACTIVE_BORDER}` }
-                        : { background: FILTER_PILL_BG, color: FILTER_PILL_TEXT, border: `1px solid ${FILTER_PILL_BORDER}` }}
-                    >
-                      {option.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em]" style={{ color: TEXT_SOFT }}>
-                  Khoảng đọc
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {PERIODS.map((option) => (
-                    <button
-                      key={option.key}
-                      type="button"
-                      onClick={() => handlePeriodChange(option.key)}
-                      className="min-w-[72px] rounded-full px-3 py-1.5 text-xs font-medium transition-[background-color,color,transform] duration-200 hover:-translate-y-px"
-                      style={period === option.key
-                        ? { background: FILTER_PILL_ACTIVE_BG, color: FILTER_PILL_ACTIVE_TEXT, boxShadow: TAB_ACTIVE_SHADOW, border: `1px solid ${FILTER_PILL_ACTIVE_BORDER}` }
-                        : { background: FILTER_PILL_BG, color: FILTER_PILL_TEXT, border: `1px solid ${FILTER_PILL_BORDER}` }}
-                    >
-                      {option.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <div
-              className="rounded-[26px] px-3 py-4 md:px-4"
-              style={{ background: PANEL_BG_SOFT, border: `1px solid ${PANEL_BORDER}` }}
-            >
-              <BarChart data={periodData} valueKey={metric} height={196} accentColor={ACCENT} />
-              <div className="mt-4 border-t pt-3" style={{ borderColor: PANEL_BORDER }}>
-                <p className="text-[11px] leading-5" style={{ color: TEXT_MUTED }}>
-                  {isChartPending
-                    ? 'Biểu đồ đang cập nhật theo bộ lọc mới.'
-                    : overview.periodReadable
-                      ? 'Đổi metric hoặc khoảng đọc để xem cùng một nhịp dưới góc nhìn khác.'
-                      : overview.periodHasActivity
-                        ? 'Đã có tín hiệu ban đầu, nhưng chưa đủ dày để đọc thành xu hướng ổn định.'
-                        : overview.periodEmptyDetail}
-                </p>
-              </div>
-            </div>
-
-            <div className="grid gap-3 md:grid-cols-2">
-              {periodStats.map((item) => (
-                <OverviewRailStat
-                  key={item.label}
-                  label={item.label}
-                  value={item.value}
-                  detail={item.detail}
-                  accent={item.accent}
-                />
-              ))}
-            </div>
+              );
+            })}
           </div>
         </div>
-      </Motion.section>
+      </div>
 
-      <Motion.section
-        initial={{ opacity: 0, y: 14 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.14, duration: 0.28, ease: 'easeOut' }}
-      >
-        <div
-          className="rounded-[30px] p-5 md:p-6"
-          style={{ background: BG_CARD, border: `1px solid ${PANEL_BORDER}` }}
-        >
-          <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-            <div className="max-w-2xl">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.24em]" style={{ color: TEXT_SOFT }}>
-                Nền dài hạn
-              </p>
-              <h4 className="mt-2 text-xl font-semibold" style={{ color: TEXT_PRIMARY, fontFamily: DISPLAY_FONT }}>
-                Các mốc cần nhớ, không cần lặp lại khắp màn hình
-              </h4>
-              <p className="mt-2 text-sm leading-6" style={{ color: TEXT_MUTED }}>
-                Phần này gom các chỉ số dài hạn vào một hàng duy nhất để tab tổng quan bớt loãng và dễ quét hơn.
-              </p>
-            </div>
-          </div>
-
-          <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-            {foundationStats.map((item) => (
-              <OverviewRailStat
-                key={item.label}
-                label={item.label}
-                value={item.value}
-                detail={item.detail}
-                accent={item.accent}
-                className="h-full"
-              />
-            ))}
-          </div>
+      <div className="p-5" style={card}>
+        <div className="flex items-center justify-between">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em]" style={{ color: TEXT_SOFT }}>Thói quen 16 tuần</p>
+          <span className="text-[10px]" style={{ color: TEXT_SOFT }}>ít → nhiều</span>
         </div>
-      </Motion.section>
+        <div className="mt-4" style={{ display: 'grid', gridTemplateRows: 'repeat(7, 1fr)', gridAutoFlow: 'column', gridAutoColumns: '1fr', gap: '4px' }}>
+          {view.heat.map((v, i) => (<div key={i} style={{ aspectRatio: '1', borderRadius: '3px', background: shade(v) }} />))}
+        </div>
+      </div>
     </div>
   );
 }

@@ -13,7 +13,6 @@ import NotificationCenter from './components/NotificationCenter';
 import { RichTextView } from './components/RichText';
 import { useGameLoop } from './hooks/useGameLoop';
 import useGameStore from './store/gameStore';
-if (typeof window !== 'undefined') window.__gs = useGameStore; // TẠM: nạp dữ liệu demo, sẽ gỡ
 import useSettingsStore from './store/settingsStore';
 import { ERA_METADATA, ERA_THRESHOLDS } from './engine/constants';
 import { getLevelProgress, isCancelledHistoryEntry } from './engine/gameMath';

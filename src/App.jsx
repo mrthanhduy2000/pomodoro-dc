@@ -2135,29 +2135,12 @@ function TopRail({
           </div>
         </div>
 
-        <div className="hidden items-center gap-2 xl:flex">
-          <div
-            className="flex items-center gap-2 rounded-[16px] border px-3 py-2"
-            style={{
-              borderColor: 'var(--line)',
-              background: 'var(--panel-soft)',
-              boxShadow: '0 8px 16px rgba(31,30,29,0.03)',
-            }}
-          >
-            <LevelDot level={level} pct={levelPct} />
-            <div className="leading-tight">
-              <div className="mono text-[10px] uppercase tracking-[0.18em] text-[var(--muted)]">Cấp</div>
-              <div className="mono text-[12.5px] font-semibold text-[var(--ink)]">
-                {level} · {(levelPct * 100).toFixed(0)}%
-              </div>
-            </div>
-          </div>
-          <TinyStat label="Phiên" value={sessionsCompletedToday.toLocaleString()} />
-          <TinyStat label="Tập trung" value={focusHoursToday} />
-          <TinyStat label="Chuỗi" value={currentStreak.toLocaleString()} accent />
+        {/* HUD gọn như mockup: chỉ vòng cấp (số trong vòng) — số liệu ngày đã nằm ở cột phải/Thống kê */}
+        <div className="hidden items-center gap-2 xl:flex" title={`Cấp ${level} · ${(levelPct * 100).toFixed(0)}%`}>
+          <LevelDot level={level} pct={levelPct} />
         </div>
 
-        <div className="hidden items-center justify-end lg:ml-auto lg:flex">
+        <div className="hidden items-center justify-end gap-2 lg:ml-auto lg:flex">
           {notificationControl}
         </div>
       </div>

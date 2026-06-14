@@ -5,7 +5,7 @@
  */
 import { motion } from 'framer-motion';
 import useGameStore from '../store/gameStore';
-import { calculateStreakMilestoneProgress, suggestSessionLength } from '../engine/gameMath';
+import { calculateStreakMilestoneProgress, generateCoachInsight } from '../engine/gameMath';
 import { getVietnamHour, localWeekMondayStr } from '../engine/time';
 
 const cardStyle = {
@@ -67,13 +67,11 @@ export default function FocusRail({
   const shieldAvailable = hasShield && streak?.skipShieldUsedWeekKey !== localWeekMondayStr();
   const milestone = calculateStreakMilestoneProgress(currentStreak);
 
-  const suggestion = suggestSessionLength(history ?? [], {
+  const coachLine = generateCoachInsight(history ?? [], {
     nowHour: getVietnamHour(),
     getEntryHour: (e) => getVietnamHour(new Date(e?.timestamp ?? 0)),
-  });
-  const coachLine = suggestion
-    ? `${suggestion.bucketLabel} bạn hợp phiên ~${suggestion.minutes}′ — thử ngay bây giờ nhé.`
-    : 'Hoàn thành thêm vài phiên có mục tiêu để Coach học giờ vàng và độ dài lý tưởng của bạn.';
+    currentStreak,
+  }).text;
 
   return (
     <div className="space-y-4">

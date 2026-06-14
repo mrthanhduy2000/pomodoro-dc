@@ -6,6 +6,7 @@ import {
   getTimeOfDayBucket,
   SESSION_SUGGESTION_MIN_SAMPLE,
   calculateStreakMilestoneProgress,
+  generateCoachInsight,
 } from './gameMath.js';
 
 // Giờ của mỗi phiên được lấy trực tiếp từ trường `hour` trong fixture, để test
@@ -116,6 +117,25 @@ test('streak milestone: at 30 everything is unlocked', () => {
   assert.equal(r.nextMilestone, null);
   assert.equal(r.hasUnlockedAll, true);
   assert.equal(r.daysRemaining, 0);
+});
+
+test('coach insight: thin history asks to complete more sessions', () => {
+  const r = generateCoachInsight([session(1, { hour: 9, minutes: 25 })], { nowHour: 9, getEntryHour });
+  assert.equal(r.kind, 'onboarding');
+  assert.ok(r.text.length > 0);
+});
+
+test('coach insight: enough sessions in the current bucket suggests a length', () => {
+  const history = [
+    session(1, { hour: 8, minutes: 25, goalAchieved: true }),
+    session(2, { hour: 9, minutes: 45, goalAchieved: true }),
+    session(3, { hour: 10, minutes: 50, goalAchieved: true }),
+    session(4, { hour: 9, minutes: 45, goalAchieved: true }),
+    session(5, { hour: 8, minutes: 25, goalAchieved: true }),
+  ];
+  const r = generateCoachInsight(history, { nowHour: 9, getEntryHour, currentStreak: 3 });
+  assert.equal(r.kind, 'length');
+  assert.match(r.text, /phiên/);
 });
 
 test('cancelled sessions never count toward the suggestion', () => {

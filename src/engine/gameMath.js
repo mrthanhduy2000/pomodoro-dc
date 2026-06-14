@@ -931,6 +931,57 @@ export function calculateStreakMilestoneProgress(currentStreak = 0) {
   };
 }
 
+/**
+ * generateCoachInsight
+ * "Bộ não" coach MIỄN PHÍ — chọn một gợi ý hữu ích nhất từ chính lịch sử của
+ * người dùng (không gọi API, không tốn tiền). Thuần & dễ test.
+ *
+ * @param {Array} history
+ * @param {object} opts { nowHour, getEntryHour, currentStreak, minSample }
+ * @returns {{kind:string, text:string}}
+ */
+export function generateCoachInsight(history = [], opts = {}) {
+  const {
+    nowHour = 0,
+    getEntryHour = (e) => new Date(e?.timestamp ?? 0).getHours(),
+    currentStreak = 0,
+    minSample = 5,
+  } = opts;
+
+  const completed = (Array.isArray(history) ? history : []).filter((e) =>
+    e && !isCancelledHistoryEntry(e) && e.completed !== false
+    && Number.isFinite(e.minutes) && e.minutes > 0);
+
+  if (completed.length < minSample) {
+    const left = Math.max(1, minSample - completed.length);
+    return { kind: 'onboarding', text: `Hoàn thành thêm ${left} phiên có mục tiêu để Coach học giờ vàng và độ dài lý tưởng của bạn.` };
+  }
+
+  // 1) Gợi ý độ dài phiên cho buổi hiện tại (ưu tiên cao nhất — actionable ngay)
+  const sug = suggestSessionLength(history, { nowHour, getEntryHour });
+  if (sug) {
+    const label = sug.bucketLabel ? sug.bucketLabel.charAt(0).toUpperCase() + sug.bucketLabel.slice(1) : 'Giờ này';
+    return { kind: 'length', text: `${label} bạn hợp phiên ~${sug.minutes}′${sug.categoryScoped ? ' (cùng loại việc)' : ''} — thử ngay bây giờ nhé.` };
+  }
+
+  // 2) Tỉ lệ đạt mục tiêu
+  const withGoal = completed.filter((e) => typeof e.goalAchieved === 'boolean');
+  if (withGoal.length >= minSample) {
+    const rate = withGoal.filter((e) => e.goalAchieved === true).length / withGoal.length;
+    const pct = Math.round(rate * 100);
+    if (rate >= 0.8) return { kind: 'praise', text: `Bạn đạt mục tiêu ${pct}% số phiên gần đây — phong độ rất tốt, giữ nhịp này nhé.` };
+    if (rate <= 0.5) return { kind: 'tip', text: `Tỉ lệ đạt mục tiêu đang ${pct}%. Thử đặt mục tiêu nhỏ hơn cho mỗi phiên để dễ "đạt" và giữ động lực.` };
+  }
+
+  // 3) Nhắc chuỗi
+  if (currentStreak >= 2) {
+    return { kind: 'streak', text: `Chuỗi ${currentStreak} ngày đang đẹp — hoàn thành một phiên hôm nay để giữ lửa.` };
+  }
+
+  // 4) Mặc định
+  return { kind: 'generic', text: `Bạn đã hoàn thành ${completed.length} phiên. Đặt một mục tiêu rõ ràng rồi bắt đầu phiên kế tiếp nhé.` };
+}
+
 function getHistoryXP(entry) {
   return entry?.xpEarned ?? entry?.epEarned ?? 0;
 }

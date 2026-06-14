@@ -1575,7 +1575,7 @@ export default function App() {
         )}
 
         <div className="flex min-w-0 flex-1 flex-col">
-          {!showFocusFullscreen && isDesktop && renderTopRail()}
+          {!showFocusFullscreen && isDesktop && !(activeTab === 'focus' && hasFocusSessionInProgress) && renderTopRail()}
 
           <main className={`min-h-0 flex-1 ${showFocusFullscreen ? 'overflow-y-auto overscroll-y-contain' : 'overflow-hidden'}`}>
             {showFocusFullscreen ? (
@@ -1595,7 +1595,7 @@ export default function App() {
             ) : activeTab === 'focus' ? (
               <div className="flex h-full min-h-0">
                 <div className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto scroll-pb-[calc(env(safe-area-inset-bottom)+7.4rem)]">
-                  {!isDesktop && !showFocusFullscreen && renderTopRail()}
+                  {!isDesktop && !showFocusFullscreen && !hasFocusSessionInProgress && renderTopRail()}
                   <AppErrorBoundary
                     area="trang tập trung"
                     description="Khu vực timer chính gặp lỗi. Các phần khác của app vẫn được giữ lại."
@@ -2228,6 +2228,8 @@ function FocusIntro({
   hasFocusSessionInProgress,
   isFocusSessionPaused,
 }) {
+  // Màn Focus tĩnh: khi phiên đang chạy/tạm dừng, ẩn lời chào lớn để chỉ còn đồng hồ.
+  if (hasFocusSessionInProgress) return null;
   const { badgeLabel, title, progressTemplate, remainingValue, statusTemplate } = getFocusIntroCopy({
     greeting,
     sessionsCompletedToday,

@@ -521,7 +521,9 @@ export default function PomodoroEngine({
       : 0;
   const prioritizeSetupCard = !fullScreenMode && immersiveMode && isIdle && !isBreakMode;
   const useImmersiveHeroLayout = fullScreenMode || (immersiveMode && !prioritizeSetupCard);
-  const useMinimalFocusStage = fullScreenMode;
+  // Màn Focus "tĩnh": khi đang chạy/tạm dừng (không phải giải lao) cũng dùng
+  // chế độ tối giản như fullscreen — ẩn huy hiệu game để 25 phút chỉ còn đồng hồ.
+  const useMinimalFocusStage = fullScreenMode || (isActive && !isBreakMode);
   const showComboBadge = !useMinimalFocusStage && !isBreakMode && comboCount >= 2;
   const showMultiplierBadge = !useMinimalFocusStage && !isBreakMode;
   const timerValueLayoutClass = useImmersiveHeroLayout
@@ -1501,6 +1503,7 @@ export default function PomodoroEngine({
         )}
       </div>
 
+      {isIdle && !isBreakMode && (
       <div className="w-full px-3.5 py-3 backdrop-blur-2xl bg-white/[0.045] border border-white/[0.10] shadow-[0_12px_28px_rgba(15,23,42,0.10)]" style={{ borderRadius: 'var(--skin-radius-card, 18px)', ...paperCardStyle }}>
         <div className="flex items-start justify-between gap-3 px-0.5">
           <div className="min-w-0">
@@ -1628,13 +1631,14 @@ export default function PomodoroEngine({
             </div>
           </div>
         </Motion.div>
-
-        {!immersiveMode && (
-          <AnimatePresence initial={false}>
-            {sessionReviewCard}
-          </AnimatePresence>
-        )}
       </div>
+      )}
+
+      {!immersiveMode && (
+        <AnimatePresence initial={false}>
+          {sessionReviewCard}
+        </AnimatePresence>
+      )}
     </div>
   );
 
@@ -1876,7 +1880,8 @@ export default function PomodoroEngine({
 
       {prioritizeSetupCard && sessionSetupCard}
 
-      <div className={`w-full pt-4 transition-opacity sm:pt-5 ${isActive || isBreakMode ? 'opacity-40 pointer-events-none' : ''}`}>
+      {!isActive && !isBreakMode && (
+      <div className="w-full pt-4 sm:pt-5">
         <AnimatePresence>
           {showCatManager && (
             <CategoryManager
@@ -1936,8 +1941,9 @@ export default function PomodoroEngine({
           </div>
         )}
       </div>
+      )}
 
-      {!prioritizeSetupCard && sessionSetupCard}
+      {!prioritizeSetupCard && isIdle && !isBreakMode && sessionSetupCard}
 
       {isIdle && !isBreakMode && !isStopwatchMode && timerConfig.focusMinutes >= OVERCLOCK_MIN_SESSION_MIN && (
         <StakePanel />

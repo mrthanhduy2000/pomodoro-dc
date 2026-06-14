@@ -229,6 +229,7 @@ export default function PomodoroEngine({
   ));
 
   const [showCatManager, setShowCatManager] = useState(false);
+  const [noteExpanded, setNoteExpanded] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [activeMilestone, setActiveMilestone] = useState(null);
   const [focusMinutesDraft, setFocusMinutesDraft] = useState(() => (
@@ -1174,10 +1175,10 @@ export default function PomodoroEngine({
                 cy={SVG_SIZE / 2}
                 r={RING_RADIUS}
                 fill="none"
-                stroke={lightTheme ? 'rgba(201,100,66,0.26)' : 'rgba(129,140,248,0.32)'}
+                style={{ stroke: 'var(--accent)' }}
                 strokeWidth={RING_STROKE}
-                strokeDasharray="3 8"
                 strokeLinecap="round"
+                opacity={0.6}
               />
             ) : (
               <motion.circle
@@ -1469,23 +1470,35 @@ export default function PomodoroEngine({
           ? 'bg-white/[0.045] border-white/[0.10] px-4 py-4 shadow-[0_12px_28px_rgba(15,23,42,0.10)]'
           : 'bg-white/[0.04] border-white/[0.09] px-3.5 py-3 shadow-[0_8px_22px_rgba(15,23,42,0.08)]'
       }`} style={{ borderRadius: 'var(--skin-radius-card, 18px)', ...paperCardStyle }}>
-        <div className="flex items-center justify-between mb-2 px-0.5">
+        <button
+          type="button"
+          onClick={() => setNoteExpanded((v) => !v)}
+          className="flex w-full items-center justify-between gap-2 px-0.5 text-left"
+          aria-expanded={noteExpanded}
+        >
           <span className={`mono text-[10px] uppercase tracking-[0.2em] ${
             lightTheme ? 'text-[var(--muted-2)]' : 'text-slate-500'
           }`}>
-            Ghi chú phiên
+            Ghi chú phiên{!noteExpanded && noteWordCount > 0 ? ` · ${noteWordCount} từ` : ''}
           </span>
-        </div>
-        <RichNoteEditor
-          value={pendingNote}
-          onChange={(nextNote) => setPendingNote(trimRichTextToWordLimit(nextNote, NOTE_WORD_LIMIT))}
-          rows={useImmersiveHeroLayout ? 4 : 4}
-          maxWords={NOTE_WORD_LIMIT}
-          wordCount={noteWordCount}
-          lightTheme={lightTheme}
-          inputStyle={paperInputStyle}
-          placeholder="Bạn đang nghĩ gì, đang kẹt ở đâu, hay cần chốt ý nào trước khi vào nhịp sâu?"
-        />
+          <span className={`mono text-[10px] uppercase tracking-[0.16em] ${lightTheme ? 'text-[var(--muted)]' : 'text-slate-400'}`}>
+            {noteExpanded ? 'Thu gọn ▴' : 'Mở ▾'}
+          </span>
+        </button>
+        {noteExpanded && (
+          <div className="mt-2.5">
+            <RichNoteEditor
+              value={pendingNote}
+              onChange={(nextNote) => setPendingNote(trimRichTextToWordLimit(nextNote, NOTE_WORD_LIMIT))}
+              rows={4}
+              maxWords={NOTE_WORD_LIMIT}
+              wordCount={noteWordCount}
+              lightTheme={lightTheme}
+              inputStyle={paperInputStyle}
+              placeholder="Bạn đang nghĩ gì, đang kẹt ở đâu, hay cần chốt ý nào trước khi vào nhịp sâu?"
+            />
+          </div>
+        )}
       </div>
 
       <div className="w-full px-3.5 py-3 backdrop-blur-2xl bg-white/[0.045] border border-white/[0.10] shadow-[0_12px_28px_rgba(15,23,42,0.10)]" style={{ borderRadius: 'var(--skin-radius-card, 18px)', ...paperCardStyle }}>

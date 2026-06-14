@@ -6,7 +6,7 @@
 import { motion } from 'framer-motion';
 import useGameStore from '../store/gameStore';
 import { calculateStreakMilestoneProgress, generateCoachInsight } from '../engine/gameMath';
-import { getVietnamHour, localWeekMondayStr } from '../engine/time';
+import { getVietnamHour, getVietnamDayOfWeek, localWeekMondayStr, localPrevWeekMondayStr, vietnamDayNumber } from '../engine/time';
 
 const cardStyle = {
   background: 'var(--card-bg-solid)',
@@ -67,11 +67,18 @@ export default function FocusRail({
   const shieldAvailable = hasShield && streak?.skipShieldUsedWeekKey !== localWeekMondayStr();
   const milestone = calculateStreakMilestoneProgress(currentStreak);
 
-  const coachLine = generateCoachInsight(history ?? [], {
+  const entryDate = (e) => new Date(e?.timestamp ?? 0);
+  const coach = generateCoachInsight(history ?? [], {
     nowHour: getVietnamHour(),
-    getEntryHour: (e) => getVietnamHour(new Date(e?.timestamp ?? 0)),
+    getEntryHour: (e) => getVietnamHour(entryDate(e)),
+    getEntryWeekday: (e) => getVietnamDayOfWeek(entryDate(e)),
+    getEntryWeekKey: (e) => localWeekMondayStr(entryDate(e)),
+    nowWeekKey: localWeekMondayStr(),
+    prevWeekKey: localPrevWeekMondayStr(),
     currentStreak,
-  }).text;
+    // Xoay vòng lời khuyên theo NGÀY: cùng ngày thì ổn định, sang ngày mới đổi câu.
+    rotationSeed: vietnamDayNumber(),
+  });
 
   return (
     <div className="space-y-4">
@@ -132,7 +139,10 @@ export default function FocusRail({
           <span style={{ color: '#d9a441' }}>✦</span>
           <span className="mono text-[10px] uppercase tracking-[0.2em]" style={{ color: '#d9a441' }}>AI Coach</span>
         </div>
-        <p className="mt-2 text-[12.5px] leading-relaxed" style={{ color: '#e8e4dc' }}>{coachLine}</p>
+        <p className="mt-2 text-[12.5px] leading-relaxed" style={{ color: '#e8e4dc' }}>{coach.text}</p>
+        {coach.reason && (
+          <p className="mt-1.5 text-[11px] leading-snug" style={{ color: 'rgba(232,228,220,0.55)' }}>{coach.reason}</p>
+        )}
       </motion.div>
     </div>
   );

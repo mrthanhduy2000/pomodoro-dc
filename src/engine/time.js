@@ -99,6 +99,30 @@ export function getVietnamDayOfWeek(date = new Date()) {
   return getVietnamDateParts(date).weekday;
 }
 
+/**
+ * localPrevWeekMondayStr
+ * Thứ Hai của TUẦN TRƯỚC (theo giờ VN) — để so sánh tuần này với tuần trước.
+ *
+ * @param {Date|number} [date] - mặc định = now
+ * @returns {string} e.g. "2026-06-08"
+ */
+export function localPrevWeekMondayStr(date = new Date()) {
+  const thisMondayTs = startOfVietnamWeekTs(date);
+  return localWeekMondayStr(new Date(thisMondayTs - 24 * 60 * 60 * 1000));
+}
+
+/**
+ * vietnamDayNumber
+ * Số thứ tự ngày (đếm theo nửa đêm giờ VN) — dùng làm "hạt giống" xoay vòng nội
+ * dung theo ngày: cùng ngày cho cùng kết quả, sang ngày mới thì đổi.
+ *
+ * @param {Date|number} [date] - mặc định = now
+ * @returns {number}
+ */
+export function vietnamDayNumber(date = new Date()) {
+  return Math.floor(startOfVietnamDayTs(date) / (24 * 60 * 60 * 1000));
+}
+
 export function getVietnamHour(date = new Date()) {
   return getVietnamDateParts(date).hour;
 }

@@ -931,55 +931,250 @@ export function calculateStreakMilestoneProgress(currentStreak = 0) {
   };
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// "BỘ NÃO" COACH MIỄN PHÍ — các tín hiệu rút ra từ chính lịch sử người dùng.
+// Tất cả thuần (không gọi API), nhận hàm trích giờ/ngày/tuần qua opts để vừa dễ
+// test vừa đúng múi giờ Việt Nam khi chạy thật.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const COACH_MIN_SAMPLE = 5;        // đủ phiên mới bật coach
+const COACH_BUCKET_MIN_SAMPLE = 4;        // đủ mẫu trong 1 buổi mới dám so sánh
+
+const WEEKDAY_LABELS = ['Chủ nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
+
+// Các phiên "thật" (đã hoàn thành, không huỷ, có thời lượng hợp lệ).
+function coachCompletedSessions(history) {
+  return (Array.isArray(history) ? history : []).filter((e) =>
+    e && !isCancelledHistoryEntry(e) && e.completed !== false
+    && Number.isFinite(e.minutes) && e.minutes > 0);
+}
+
+/**
+ * getGoldenHourBucket
+ * "Giờ vàng" thật: buổi trong ngày mà bạn ĐẠT MỤC TIÊU với tỉ lệ cao nhất (dựa
+ * trên tỉ lệ thành công, không phải chỉ số lượng). Cần ≥2 buổi đủ mẫu để so sánh,
+ * buổi tốt nhất phải đạt ≥60% và nhỉnh hơn buổi kế ≥15 điểm % mới trả về.
+ *
+ * @returns {{bucketId,bucketLabel,rate,sampleSize}|null}
+ */
+export function getGoldenHourBucket(history = [], opts = {}) {
+  const {
+    getEntryHour = (e) => new Date(e?.timestamp ?? 0).getHours(),
+    minSample = COACH_BUCKET_MIN_SAMPLE,
+  } = opts;
+  const withGoal = coachCompletedSessions(history).filter((e) => typeof e.goalAchieved === 'boolean');
+  if (withGoal.length === 0) return null;
+
+  const byBucket = new Map();
+  for (const e of withGoal) {
+    const b = getTimeOfDayBucket(getEntryHour(e));
+    const cur = byBucket.get(b.id) ?? { bucket: b, total: 0, hit: 0 };
+    cur.total += 1;
+    if (e.goalAchieved === true) cur.hit += 1;
+    byBucket.set(b.id, cur);
+  }
+  const eligible = [...byBucket.values()].filter((x) => x.total >= minSample);
+  if (eligible.length < 2) return null;
+  eligible.sort((a, b) => (b.hit / b.total) - (a.hit / a.total));
+  const best = eligible[0];
+  const rate = best.hit / best.total;
+  if (rate < 0.6) return null;
+  if (rate - eligible[1].hit / eligible[1].total < 0.15) return null;
+  return { bucketId: best.bucket.id, bucketLabel: best.bucket.label, rate, sampleSize: best.total };
+}
+
+/**
+ * getWeekdayHighlight
+ * Ngày trong tuần bạn hoàn thành nhiều phiên nhất. Cần trải ≥3 ngày khác nhau,
+ * có một ngày dẫn đầu rõ ràng và chiếm ≥25% số phiên mới trả về.
+ *
+ * @returns {{weekday,label,count,share}|null}
+ */
+export function getWeekdayHighlight(history = [], opts = {}) {
+  const {
+    getEntryWeekday = (e) => new Date(e?.timestamp ?? 0).getDay(),
+    minTotal = COACH_MIN_SAMPLE,
+  } = opts;
+  const done = coachCompletedSessions(history);
+  if (done.length < minTotal) return null;
+
+  const counts = new Array(7).fill(0);
+  const distinct = new Set();
+  for (const e of done) {
+    const wd = ((Math.floor(Number(getEntryWeekday(e)) || 0) % 7) + 7) % 7;
+    counts[wd] += 1;
+    distinct.add(wd);
+  }
+  if (distinct.size < 3) return null;
+
+  let best = 0;
+  for (let i = 1; i < 7; i += 1) if (counts[i] > counts[best]) best = i;
+  const sorted = [...counts].sort((a, b) => b - a);
+  if (sorted[0] <= sorted[1]) return null;          // không có ngày dẫn đầu rõ
+  const share = counts[best] / done.length;
+  if (share < 0.25) return null;
+  return { weekday: best, label: WEEKDAY_LABELS[best], count: counts[best], share };
+}
+
+/**
+ * getWeeklyTrend
+ * So sánh tổng phút tập trung tuần này với tuần trước (theo "key tuần" = thứ Hai
+ * của tuần đó). Trả về null khi thiếu hàm trích tuần, hoặc khi một trong hai tuần
+ * chưa có dữ liệu để so.
+ *
+ * @returns {{direction:'up'|'down'|'flat',thisMinutes,prevMinutes,pct,thisN,prevN}|null}
+ */
+export function getWeeklyTrend(history = [], opts = {}) {
+  const { getEntryWeekKey, nowWeekKey, prevWeekKey } = opts;
+  if (typeof getEntryWeekKey !== 'function' || !nowWeekKey || !prevWeekKey) return null;
+
+  let thisMinutes = 0; let prevMinutes = 0; let thisN = 0; let prevN = 0;
+  for (const e of coachCompletedSessions(history)) {
+    const wk = getEntryWeekKey(e);
+    if (wk === nowWeekKey) { thisMinutes += e.minutes; thisN += 1; }
+    else if (wk === prevWeekKey) { prevMinutes += e.minutes; prevN += 1; }
+  }
+  if (prevN === 0 || thisN === 0) return null;
+  const pct = prevMinutes > 0 ? Math.round(((thisMinutes - prevMinutes) / prevMinutes) * 100) : 0;
+  let direction = 'flat';
+  if (pct >= 15) direction = 'up';
+  else if (pct <= -15) direction = 'down';
+  return { direction, thisMinutes, prevMinutes, pct, thisN, prevN };
+}
+
+/**
+ * getAbandonHotspot
+ * Buổi bạn hay bỏ phiên giữa chừng nhất (tỉ lệ huỷ cao). Cần ≥4 lần bắt đầu trong
+ * buổi và tỉ lệ huỷ ≥34% mới cảnh báo.
+ *
+ * @returns {{bucketId,bucketLabel,rate,attempts}|null}
+ */
+export function getAbandonHotspot(history = [], opts = {}) {
+  const {
+    getEntryHour = (e) => new Date(e?.timestamp ?? 0).getHours(),
+    minAttempts = COACH_BUCKET_MIN_SAMPLE,
+  } = opts;
+
+  const byBucket = new Map();
+  for (const e of (Array.isArray(history) ? history : [])) {
+    if (!e || !Number.isFinite(e.minutes)) continue;
+    const cancelled = isCancelledHistoryEntry(e);
+    const completed = !cancelled && e.completed !== false;
+    if (!cancelled && !completed) continue;
+    const b = getTimeOfDayBucket(getEntryHour(e));
+    const cur = byBucket.get(b.id) ?? { bucket: b, attempts: 0, cancelled: 0 };
+    cur.attempts += 1;
+    if (cancelled) cur.cancelled += 1;
+    byBucket.set(b.id, cur);
+  }
+  const eligible = [...byBucket.values()].filter((x) => x.attempts >= minAttempts && x.cancelled > 0);
+  if (!eligible.length) return null;
+  eligible.sort((a, b) => (b.cancelled / b.attempts) - (a.cancelled / a.attempts));
+  const worst = eligible[0];
+  const rate = worst.cancelled / worst.attempts;
+  if (rate < 0.34) return null;
+  return { bucketId: worst.bucket.id, bucketLabel: worst.bucket.label, rate, attempts: worst.attempts };
+}
+
 /**
  * generateCoachInsight
- * "Bộ não" coach MIỄN PHÍ — chọn một gợi ý hữu ích nhất từ chính lịch sử của
- * người dùng (không gọi API, không tốn tiền). Thuần & dễ test.
+ * "Bộ não" coach MIỄN PHÍ — gom nhiều tín hiệu từ chính lịch sử người dùng (độ
+ * dài phiên, tỉ lệ đạt mục tiêu, giờ vàng, ngày năng suất, xu hướng tuần, hay bỏ
+ * giữa chừng…), chấm điểm độ hữu ích, rồi XOAY VÒNG trong nhóm tốt nhất theo
+ * `rotationSeed` để mỗi ngày một lời khuyên khác — đỡ nhàm. Không gọi API.
  *
  * @param {Array} history
- * @param {object} opts { nowHour, getEntryHour, currentStreak, minSample }
- * @returns {{kind:string, text:string}}
+ * @param {object} opts { nowHour, getEntryHour, getEntryWeekday, getEntryWeekKey,
+ *   nowWeekKey, prevWeekKey, currentStreak, minSample, rotationSeed }
+ * @returns {{kind:string, text:string, reason:(string|null)}}
  */
 export function generateCoachInsight(history = [], opts = {}) {
   const {
     nowHour = 0,
     getEntryHour = (e) => new Date(e?.timestamp ?? 0).getHours(),
+    getEntryWeekday = (e) => new Date(e?.timestamp ?? 0).getDay(),
+    getEntryWeekKey = null,
+    nowWeekKey = null,
+    prevWeekKey = null,
     currentStreak = 0,
-    minSample = 5,
+    minSample = COACH_MIN_SAMPLE,
+    rotationSeed = 0,
   } = opts;
 
-  const completed = (Array.isArray(history) ? history : []).filter((e) =>
-    e && !isCancelledHistoryEntry(e) && e.completed !== false
-    && Number.isFinite(e.minutes) && e.minutes > 0);
+  const completed = coachCompletedSessions(history);
 
   if (completed.length < minSample) {
     const left = Math.max(1, minSample - completed.length);
-    return { kind: 'onboarding', text: `Hoàn thành thêm ${left} phiên có mục tiêu để Coach học giờ vàng và độ dài lý tưởng của bạn.` };
+    return { kind: 'onboarding', reason: null, text: `Hoàn thành thêm ${left} phiên có mục tiêu để Coach học giờ vàng và độ dài lý tưởng của bạn.` };
   }
 
-  // 1) Gợi ý độ dài phiên cho buổi hiện tại (ưu tiên cao nhất — actionable ngay)
+  const cap = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
+  const candidates = [];
+
+  // 1) Gợi ý độ dài cho buổi hiện tại — hành động được ngay
   const sug = suggestSessionLength(history, { nowHour, getEntryHour });
   if (sug) {
-    const label = sug.bucketLabel ? sug.bucketLabel.charAt(0).toUpperCase() + sug.bucketLabel.slice(1) : 'Giờ này';
-    return { kind: 'length', text: `${label} bạn hợp phiên ~${sug.minutes}′${sug.categoryScoped ? ' (cùng loại việc)' : ''} — thử ngay bây giờ nhé.` };
+    candidates.push({
+      kind: 'length', score: 80,
+      text: `${cap(sug.bucketLabel) || 'Giờ này'} bạn hợp phiên ~${sug.minutes}′${sug.categoryScoped ? ' (cùng loại việc)' : ''} — thử ngay bây giờ nhé.`,
+      reason: `Dựa trên ${sug.sampleSize} phiên ${sug.basis === 'goal' ? 'đạt mục tiêu' : 'đã hoàn thành'} cùng buổi.`,
+    });
   }
 
   // 2) Tỉ lệ đạt mục tiêu
   const withGoal = completed.filter((e) => typeof e.goalAchieved === 'boolean');
   if (withGoal.length >= minSample) {
-    const rate = withGoal.filter((e) => e.goalAchieved === true).length / withGoal.length;
+    const hit = withGoal.filter((e) => e.goalAchieved === true).length;
+    const rate = hit / withGoal.length;
     const pct = Math.round(rate * 100);
-    if (rate >= 0.8) return { kind: 'praise', text: `Bạn đạt mục tiêu ${pct}% số phiên gần đây — phong độ rất tốt, giữ nhịp này nhé.` };
-    if (rate <= 0.5) return { kind: 'tip', text: `Tỉ lệ đạt mục tiêu đang ${pct}%. Thử đặt mục tiêu nhỏ hơn cho mỗi phiên để dễ "đạt" và giữ động lực.` };
+    if (rate <= 0.5) {
+      candidates.push({ kind: 'tip', score: 78, reason: `${hit}/${withGoal.length} phiên gần đây đạt mục tiêu.`, text: `Tỉ lệ đạt mục tiêu đang ${pct}%. Thử đặt mục tiêu nhỏ hơn cho mỗi phiên để dễ "đạt" và giữ động lực.` });
+    } else if (rate >= 0.8) {
+      candidates.push({ kind: 'praise', score: 58, reason: `${hit}/${withGoal.length} phiên đạt mục tiêu.`, text: `Bạn đạt mục tiêu ${pct}% số phiên gần đây — phong độ rất tốt, giữ nhịp này nhé.` });
+    }
   }
 
-  // 3) Nhắc chuỗi
+  // 3) Hay bỏ phiên giữa chừng theo buổi
+  const abandon = getAbandonHotspot(history, { getEntryHour });
+  if (abandon) {
+    candidates.push({ kind: 'abandon', score: 74, reason: `${abandon.attempts} lần bắt đầu phiên trong buổi này.`, text: `${cap(abandon.bucketLabel)} bạn hay dừng phiên giữa chừng (${Math.round(abandon.rate * 100)}%). Thử đặt phiên ngắn hơn cho khung giờ này.` });
+  }
+
+  // 4) Xu hướng tuần này so với tuần trước
+  const trend = getWeeklyTrend(history, { getEntryWeekKey, nowWeekKey, prevWeekKey });
+  if (trend && trend.direction === 'down') {
+    candidates.push({ kind: 'trend-down', score: 72, reason: `${trend.thisMinutes}′ tuần này so với ${trend.prevMinutes}′ tuần trước.`, text: `Tuần này bạn tập trung ít hơn tuần trước ${Math.abs(trend.pct)}%. Một phiên ngắn ngay bây giờ sẽ kéo lại nhịp.` });
+  } else if (trend && trend.direction === 'up') {
+    candidates.push({ kind: 'trend-up', score: 66, reason: `${trend.thisMinutes}′ tuần này so với ${trend.prevMinutes}′ tuần trước.`, text: `Tuần này bạn tập trung nhiều hơn tuần trước ${trend.pct}% — đang lên phong độ, giữ đà nhé!` });
+  }
+
+  // 5) Giờ vàng (tỉ lệ đạt mục tiêu cao nhất theo buổi)
+  const golden = getGoldenHourBucket(history, { getEntryHour });
+  if (golden) {
+    candidates.push({ kind: 'golden', score: 70, reason: `Tính trên ${golden.sampleSize} phiên có mục tiêu.`, text: `Giờ vàng của bạn là ${golden.bucketLabel} — đạt mục tiêu tới ${Math.round(golden.rate * 100)}%. Ưu tiên việc khó vào khung này.` });
+  }
+
+  // 6) Ngày năng suất nhất trong tuần
+  const wd = getWeekdayHighlight(history, { getEntryWeekday });
+  if (wd) {
+    candidates.push({ kind: 'weekday', score: 60, reason: `Chiếm ${Math.round(wd.share * 100)}% số phiên của bạn.`, text: `${wd.label} thường là ngày bạn làm nhiều nhất (${wd.count} phiên). Đặt việc quan trọng vào ngày này.` });
+  }
+
+  // 7) Nhắc chuỗi
   if (currentStreak >= 2) {
-    return { kind: 'streak', text: `Chuỗi ${currentStreak} ngày đang đẹp — hoàn thành một phiên hôm nay để giữ lửa.` };
+    candidates.push({ kind: 'streak', score: 50, reason: null, text: `Chuỗi ${currentStreak} ngày đang đẹp — hoàn thành một phiên hôm nay để giữ lửa.` });
   }
 
-  // 4) Mặc định
-  return { kind: 'generic', text: `Bạn đã hoàn thành ${completed.length} phiên. Đặt một mục tiêu rõ ràng rồi bắt đầu phiên kế tiếp nhé.` };
+  // 8) Mặc định
+  candidates.push({ kind: 'generic', score: 10, reason: null, text: `Bạn đã hoàn thành ${completed.length} phiên. Đặt một mục tiêu rõ ràng rồi bắt đầu phiên kế tiếp nhé.` });
+
+  // Chọn trong nhóm tốt nhất rồi xoay vòng theo `rotationSeed` (thường là số ngày)
+  // để mỗi ngày một lời khuyên khác nhau mà vẫn luôn ưu tiên cái hữu ích nhất.
+  candidates.sort((a, b) => b.score - a.score);
+  const pool = candidates.slice(0, Math.min(3, candidates.length));
+  const seed = Number.isFinite(rotationSeed) ? Math.abs(Math.floor(rotationSeed)) : 0;
+  const chosen = pool[seed % pool.length];
+  return { kind: chosen.kind, text: chosen.text, reason: chosen.reason ?? null };
 }
 
 function getHistoryXP(entry) {

@@ -2175,15 +2175,18 @@ function FocusIntro({
   };
 
   return (
-    <div className="mb-8 border-t px-1 pt-5 md:pt-6" style={{ borderColor: 'var(--line)' }}>
-      <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.16em] text-[var(--muted)]">
-        <AppIcon.calendar size={14} />
+    <div className="mb-4 flex flex-wrap items-baseline gap-x-3 gap-y-1 border-t px-1 pt-4" style={{ borderColor: 'var(--line)' }}>
+      <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-[0.18em] text-[var(--muted-2)]">
+        <AppIcon.calendar size={13} />
         <span>{badgeLabel}</span>
       </div>
-      <h1 className="serif mt-3 text-[32px] font-medium leading-[1.05] tracking-[-0.035em] text-[var(--ink)] md:text-[38px]">
+      <h1
+        className="text-[19px] font-semibold leading-snug tracking-[-0.01em] text-[var(--ink)] md:text-[21px]"
+        style={{ fontFamily: 'var(--skin-font-display)' }}
+      >
         {title}
       </h1>
-      <p className="mt-3 max-w-[620px] text-[14px] leading-[1.65] text-[var(--muted)]">
+      <p className="w-full text-[12.5px] leading-[1.5] text-[var(--muted)] md:max-w-[560px]">
         {renderFocusIntroCopy(progressTemplate, emphasisValues)}{' '}
         {renderFocusIntroCopy(statusTemplate, emphasisValues)}
       </p>

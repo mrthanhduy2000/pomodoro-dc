@@ -58,45 +58,61 @@ export default function ResourceDisplay() {
 
   return (
     <section
-      className="rounded-[18px] border px-4 py-4"
+      className="px-5 py-5"
       style={{
-        background: lightTheme ? 'rgba(255, 255, 255, 0.84)' : 'rgba(24, 21, 17, 0.9)',
-        borderColor: lightTheme ? 'var(--line)' : 'rgba(148, 163, 184, 0.14)',
-        boxShadow: lightTheme ? '0 10px 22px rgba(31, 30, 29, 0.04)' : '0 12px 28px rgba(0, 0, 0, 0.14)',
+        background: 'var(--card-bg-solid)',
+        border: 'var(--skin-card-border-width, 1px) solid var(--line)',
+        borderRadius: 'var(--skin-radius-card, 18px)',
+        boxShadow: lightTheme
+          ? 'var(--skin-card-shadow, 0 10px 22px rgba(31, 30, 29, 0.04))'
+          : 'var(--skin-card-shadow, 0 12px 28px rgba(0, 0, 0, 0.14))',
       }}
     >
-      <div className="mb-3 flex items-center justify-between gap-3">
-        <div className="mono text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
-          Giai đoạn hiện tại
+      <div className="mb-4 flex items-end justify-between gap-3">
+        <div className="min-w-0">
+          <div className="mono text-[10px] uppercase tracking-[0.2em] text-[var(--muted-2)]">
+            Giai đoạn hiện tại
+          </div>
+          <div
+            className="mt-1.5 text-[23px] font-semibold leading-tight tracking-[-0.02em] text-[var(--ink)]"
+            style={{ fontFamily: 'var(--skin-font-display)' }}
+          >
+            {stage?.label ?? eraMeta.label}
+          </div>
+          <div className="mt-1 text-[12px] text-[var(--muted)]">
+            {stage
+              ? `${eraMeta.label} · chặng ${stage.index + 1}/${stage.totalStages}`
+              : eraMeta.label}
+          </div>
         </div>
-        <span className="mono text-[11px] text-[var(--muted)]">
+        <span
+          className="mono shrink-0 px-2.5 py-1 text-[10px] uppercase tracking-[0.16em]"
+          style={{
+            color: 'var(--accent2)',
+            background: 'rgba(var(--accent-rgb), 0.1)',
+            borderRadius: 'var(--skin-radius-control, 14px)',
+          }}
+        >
           Kỷ {activeBook}
         </span>
       </div>
 
       <div>
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <div className="serif text-[22px] font-medium leading-tight tracking-[-0.02em] text-[var(--ink)]">
-              {stage?.label ?? eraMeta.label}
-            </div>
-            <div className="mt-1 text-[12px] text-[var(--muted)]">
-              {stage
-                ? `${eraMeta.label} · chặng ${stage.index + 1}/${stage.totalStages}`
-                : eraMeta.label}
-            </div>
+        <div className="flex items-baseline justify-between gap-3">
+          <div className="mono text-[10px] uppercase tracking-[0.2em] text-[var(--muted)]">
+            Tiến độ chặng
           </div>
-          <div className="text-right">
-            <div className="mono text-[12px] font-semibold text-[var(--ink)]">
+          <div className="flex items-baseline gap-1.5">
+            <span className="mono text-[15px] font-semibold tabular-nums text-[var(--ink)]">
               {stageXP.toLocaleString()}
-            </div>
-            <div className="text-[11px] text-[var(--muted)]">
+            </span>
+            <span className="mono text-[11px] uppercase tabular-nums text-[var(--muted)]">
               / {stageRange.toLocaleString()} EP
-            </div>
+            </span>
           </div>
         </div>
 
-        <div className="mt-3 h-[2px] overflow-hidden rounded-full bg-[var(--line)]">
+        <div className="mt-2.5 h-[3px] overflow-hidden rounded-full bg-[var(--line)]">
           <motion.div
             className="h-full rounded-full"
             initial={reduceMotion ? false : { width: 0 }}
@@ -104,19 +120,19 @@ export default function ResourceDisplay() {
             transition={reduceMotion ? undefined : { duration: 0.45, ease: 'easeOut' }}
             style={{
               width: reduceMotion ? `${stagePct}%` : undefined,
-              background: 'var(--ink)',
+              background: 'linear-gradient(90deg, var(--accent), var(--accent2))',
             }}
           />
         </div>
       </div>
 
-      <div className="mt-4 border-t pt-3" style={{ borderColor: 'var(--line)' }}>
-        <div className="mono text-[10px] uppercase tracking-[0.16em] text-[var(--muted)]">
+      <div className="mt-5 border-t pt-3.5" style={{ borderColor: 'var(--line)' }}>
+        <div className="mono text-[10px] uppercase tracking-[0.2em] text-[var(--muted-2)]">
           Tài nguyên trong kỷ
         </div>
       </div>
 
-      <div className="divide-y" style={{ borderColor: 'var(--line)' }}>
+      <div className="mt-0.5 divide-y" style={{ borderColor: 'var(--line)' }}>
         {resourceEntries.map((entry) => (
           <ResourceTile key={entry.id} label={entry.label} value={entry.value.toLocaleString()} />
         ))}
@@ -124,12 +140,12 @@ export default function ResourceDisplay() {
         <ResourceTile label={refined.t2Label} value={refinedBag.t2.toLocaleString()} accent />
       </div>
 
-      <div className="mt-3 border-t pt-3" style={{ borderColor: 'var(--line)' }}>
+      <div className="mt-4 border-t pt-3.5" style={{ borderColor: 'var(--line)' }}>
         <div className="flex items-center justify-between gap-3">
-          <div className="mono text-[10px] uppercase tracking-[0.16em] text-[var(--muted)]">
+          <div className="mono text-[10px] uppercase tracking-[0.2em] text-[var(--muted-2)]">
             Khoảng EP của chặng
           </div>
-          <div className="mono text-[11px] text-[var(--muted)]">
+          <div className="mono text-[11px] tabular-nums text-[var(--muted)]">
             {stageStart.toLocaleString()} → {stageEnd.toLocaleString()}
           </div>
         </div>
@@ -141,10 +157,23 @@ export default function ResourceDisplay() {
 function ResourceTile({ accent = false, label, value }) {
   return (
     <div className="flex items-center justify-between gap-3 py-2.5">
-      <div className="text-[11px] text-[var(--muted)]">{label}</div>
-      <div className="mono mt-1 text-[16px] font-semibold" style={{ color: accent ? 'var(--accent)' : 'var(--ink)' }}>
-        {value}
-      </div>
+      <div className="mono text-[10px] uppercase tracking-[0.16em] text-[var(--muted)]">{label}</div>
+      {accent ? (
+        <span
+          className="mono px-2 py-0.5 text-[15px] font-semibold tabular-nums"
+          style={{
+            color: 'var(--accent2)',
+            background: 'rgba(var(--accent-rgb), 0.1)',
+            borderRadius: 'var(--skin-radius-control, 14px)',
+          }}
+        >
+          {value}
+        </span>
+      ) : (
+        <div className="mono text-[16px] font-semibold tabular-nums text-[var(--ink)]">
+          {value}
+        </div>
+      )}
     </div>
   );
 }

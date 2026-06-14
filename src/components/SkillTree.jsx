@@ -191,61 +191,63 @@ export default function SkillTree() {
 
       {/* ── Header: cấp + SP ──────────────────────────────────────────────── */}
       <div
-        className={`rounded-2xl p-3.5 sm:p-4 mb-4 sm:mb-5 ${lightTheme ? '' : 'bg-white/[0.04] border border-white/8'}`}
+        className={`p-3.5 sm:p-4 mb-4 sm:mb-5 ${lightTheme ? '' : 'bg-white/[0.04] border border-white/8 rounded-2xl'}`}
         style={lightTheme ? {
-          background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(250, 249, 246, 0.92))',
-          border: '1px solid rgba(31, 30, 29, 0.08)',
-          boxShadow: '0 20px 44px rgba(31, 30, 29, 0.06)',
+          background: 'var(--card-bg-solid)',
+          border: 'var(--skin-card-border-width,1px) solid var(--line)',
+          borderRadius: 'var(--skin-radius-card,18px)',
+          boxShadow: 'var(--skin-card-shadow)',
         } : undefined}
       >
         <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
           <div>
             {lightTheme && (
-              <p className="mono text-[11px] font-semibold uppercase tracking-[0.28em]" style={{ color: '#9a5a48' }}>
+              <p className="mono text-[10px] uppercase tracking-[0.2em]" style={{ color: 'var(--muted-2)' }}>
                 Kỹ năng
               </p>
             )}
             <div className="flex flex-wrap items-baseline gap-2">
-              <span className={lightTheme ? 'serif text-[1.85rem] leading-none sm:text-3xl' : 'serif text-[1.85rem] leading-none sm:text-3xl'} style={lightTheme ? { color: '#1f1e1d' } : { color: 'var(--ink)' }}>
+              <span className="serif text-[1.85rem] leading-none sm:text-3xl" style={lightTheme ? { fontFamily: 'var(--skin-font-display)', fontWeight: 600, color: 'var(--ink)' } : { color: 'var(--ink)' }}>
                 Cấp {level}
               </span>
-              <span className="text-sm" style={lightTheme ? { color: '#6a6862' } : { color: 'var(--muted)' }}>
+              <span className="text-sm" style={lightTheme ? { color: 'var(--muted)' } : { color: 'var(--muted)' }}>
                 {currentLevelEXP.toLocaleString()} / {nextLevelEXP.toLocaleString()} XP
               </span>
             </div>
             {lightTheme && (
-              <p className="mt-1 max-w-xl text-xs leading-relaxed" style={{ color: '#6a6862' }}>
+              <p className="mt-1 max-w-xl text-xs leading-relaxed" style={{ color: 'var(--muted)' }}>
                 Mỗi nhánh nên tạo ra một thay đổi rõ trong cách làm việc.
               </p>
             )}
           </div>
           <div className="flex items-center gap-3">
-            <span className="text-xs uppercase tracking-[0.16em]" style={lightTheme ? { color: '#6a6862' } : { color: 'var(--muted)' }}>{unlockedCount}/{totalNodes} kỹ năng</span>
+            <span className="text-xs uppercase tracking-[0.16em]" style={lightTheme ? { color: 'var(--muted)' } : { color: 'var(--muted)' }}>{unlockedCount}/{totalNodes} kỹ năng</span>
             <div
-              className={`flex items-center gap-2 rounded-xl px-4 py-1.5 ${lightTheme ? '' : 'bg-white/[0.05] border border-white/8'}`}
+              className={`flex items-center gap-2 px-4 py-1.5 ${lightTheme ? '' : 'bg-white/[0.05] border border-white/8 rounded-xl'}`}
               style={lightTheme ? {
-                background: 'rgba(201, 100, 66, 0.08)',
-                border: '1px solid rgba(201, 100, 66, 0.18)',
+                background: 'rgba(var(--accent-rgb), 0.1)',
+                border: '1px solid rgba(var(--accent-rgb), 0.18)',
+                borderRadius: 'var(--skin-radius-control,14px)',
                 boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.8)',
               } : undefined}
             >
-              <span className="mono text-[10px] uppercase tracking-[0.18em]" style={lightTheme ? { color: '#9a5a48' } : { color: 'var(--accent-light)' }}>SP</span>
-              <span className="font-bold text-xl" style={lightTheme ? { color: '#1f1e1d' } : { color: 'var(--ink)' }}>{sp}</span>
+              <span className="mono text-[10px] uppercase tracking-[0.18em]" style={lightTheme ? { color: 'var(--accent2)' } : { color: 'var(--accent-light)' }}>SP</span>
+              <span className="mono font-bold text-xl tabular-nums" style={lightTheme ? { color: 'var(--ink)' } : { color: 'var(--ink)' }}>{sp}</span>
             </div>
           </div>
         </div>
         <div
-          className={`w-full rounded-full h-2 overflow-hidden ${lightTheme ? '' : ''}`}
-          style={lightTheme ? { background: 'rgba(203, 213, 225, 0.82)' } : { background: 'var(--timer-track)' }}
+          className="w-full rounded-full h-2 overflow-hidden"
+          style={lightTheme ? { background: 'var(--timer-track)' } : { background: 'var(--timer-track)' }}
         >
           <motion.div
             className="h-full rounded-full"
-            style={lightTheme ? { background: 'linear-gradient(90deg, #c96442, #d98d73)' } : { background: 'var(--accent)' }}
+            style={lightTheme ? { background: 'linear-gradient(90deg, var(--accent), var(--accent2))' } : { background: 'var(--accent)' }}
             animate={{ width: `${progressPct}%` }}
             transition={{ duration: 0.6, ease: 'easeOut' }}
           />
         </div>
-        <p className="mt-1 text-xs" style={lightTheme ? { color: '#6a6862' } : { color: 'var(--muted)' }}>
+        <p className="mt-1 text-xs" style={lightTheme ? { color: 'var(--muted)' } : { color: 'var(--muted)' }}>
           {EXP_PER_LEVEL.toLocaleString()} XP/cấp · {SP_PER_LEVEL} ĐKN mỗi cấp · Tổng 336 ĐKN để mở toàn bộ
         </p>
       </div>
@@ -332,32 +334,38 @@ function ActiveAbilityBar({ lightTheme, unlockedSkills, skillActivations, onActi
   const getButtonStyles = (tone) => {
     if (!lightTheme) return null;
 
+    const controlRadius = 'var(--skin-radius-control,14px)';
+
     if (tone === 'active') {
       return {
-        background: 'rgba(201, 100, 66, 0.12)',
-        border: '1px solid rgba(201, 100, 66, 0.24)',
-        color: '#9a5a48',
+        background: 'rgba(var(--accent-rgb), 0.12)',
+        border: '1px solid rgba(var(--accent-rgb), 0.24)',
+        color: 'var(--accent2)',
+        borderRadius: controlRadius,
       };
     }
 
     if (tone === 'disabled') {
       return {
         background: 'rgba(255, 255, 255, 0.74)',
-        border: '1px solid rgba(31, 30, 29, 0.08)',
-        color: '#9ca3af',
+        border: '1px solid var(--line)',
+        color: 'var(--muted-2)',
+        borderRadius: controlRadius,
       };
     }
 
     return tone === 'purple'
       ? {
-          background: 'rgba(201, 100, 66, 0.08)',
-          border: '1px solid rgba(201, 100, 66, 0.18)',
-          color: '#8f4d3a',
+          background: 'rgba(var(--accent-rgb), 0.1)',
+          border: '1px solid rgba(var(--accent-rgb), 0.18)',
+          color: 'var(--accent2)',
+          borderRadius: controlRadius,
         }
       : {
           background: 'rgba(31, 30, 29, 0.04)',
-          border: '1px solid rgba(31, 30, 29, 0.10)',
-          color: '#433630',
+          border: '1px solid var(--line)',
+          color: 'var(--ink)',
+          borderRadius: controlRadius,
         };
   };
 
@@ -384,9 +392,9 @@ function ActiveAbilityBar({ lightTheme, unlockedSkills, skillActivations, onActi
         >
           <span className="mono text-[10px] font-semibold uppercase tracking-[0.16em]">SF</span>
           <span>Siêu Tập Trung</span>
-          {sfActive  && <span className="text-xs ml-1" style={lightTheme ? { color: '#9a5a48' } : undefined}>(Đang chờ phiên · {sfUsedCount}/{superFocusCap})</span>}
-          {sfUsed && !sfActive && <span className="text-xs ml-1" style={lightTheme ? { color: '#6a6862' } : undefined}>(Đã dùng {sfUsedCount}/{superFocusCap})</span>}
-          {!sfActive && !sfUsed && <span className="text-xs ml-1" style={lightTheme ? { color: '#6a6862' } : undefined}>(Còn {superFocusCap - sfUsedCount}/{superFocusCap})</span>}
+          {sfActive  && <span className="text-xs ml-1" style={lightTheme ? { color: 'var(--accent2)' } : undefined}>(Đang chờ phiên · {sfUsedCount}/{superFocusCap})</span>}
+          {sfUsed && !sfActive && <span className="text-xs ml-1" style={lightTheme ? { color: 'var(--muted)' } : undefined}>(Đã dùng {sfUsedCount}/{superFocusCap})</span>}
+          {!sfActive && !sfUsed && <span className="text-xs ml-1" style={lightTheme ? { color: 'var(--muted)' } : undefined}>(Còn {superFocusCap - sfUsedCount}/{superFocusCap})</span>}
         </button>
       )}
 
@@ -411,9 +419,9 @@ function ActiveAbilityBar({ lightTheme, unlockedSkills, skillActivations, onActi
         >
           <span className="mono text-[10px] font-semibold uppercase tracking-[0.16em]">SD</span>
           <span>Số Đỏ</span>
-          {lmActive  && <span className="text-xs ml-1" style={lightTheme ? { color: '#9a5a48' } : undefined}>(Đang chờ phiên · {lmUsedCount}/{luckyModeCap})</span>}
-          {lmUsed && !lmActive && <span className="text-xs ml-1" style={lightTheme ? { color: '#6a6862' } : undefined}>(Đã dùng {lmUsedCount}/{luckyModeCap})</span>}
-          {!lmActive && !lmUsed && <span className="text-xs ml-1" style={lightTheme ? { color: '#6a6862' } : undefined}>(Còn {luckyModeCap - lmUsedCount}/{luckyModeCap})</span>}
+          {lmActive  && <span className="text-xs ml-1" style={lightTheme ? { color: 'var(--accent2)' } : undefined}>(Đang chờ phiên · {lmUsedCount}/{luckyModeCap})</span>}
+          {lmUsed && !lmActive && <span className="text-xs ml-1" style={lightTheme ? { color: 'var(--muted)' } : undefined}>(Đã dùng {lmUsedCount}/{luckyModeCap})</span>}
+          {!lmActive && !lmUsed && <span className="text-xs ml-1" style={lightTheme ? { color: 'var(--muted)' } : undefined}>(Còn {luckyModeCap - lmUsedCount}/{luckyModeCap})</span>}
         </button>
       )}
     </div>
@@ -423,21 +431,22 @@ function ActiveAbilityBar({ lightTheme, unlockedSkills, skillActivations, onActi
 function BranchFocusStrip({ lightTheme }) {
   return (
     <div
-      className={`mb-5 rounded-2xl p-4 ${lightTheme ? '' : 'bg-white/[0.04] border border-white/8'}`}
+      className={`mb-5 p-4 ${lightTheme ? '' : 'bg-white/[0.04] border border-white/8 rounded-2xl'}`}
       style={lightTheme ? {
-        background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.78), rgba(250, 249, 246, 0.90))',
-        border: '1px solid rgba(31, 30, 29, 0.08)',
-        boxShadow: '0 18px 38px rgba(31, 30, 29, 0.05)',
+        background: 'var(--card-bg-solid)',
+        border: 'var(--skin-card-border-width,1px) solid var(--line)',
+        borderRadius: 'var(--skin-radius-card,18px)',
+        boxShadow: 'var(--skin-card-shadow)',
       } : { background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}
     >
       <div className="mb-3">
         {lightTheme && (
-          <p className="mono text-[11px] font-semibold uppercase tracking-[0.28em]" style={{ color: '#9a5a48' }}>
+          <p className="mono text-[10px] uppercase tracking-[0.2em]" style={{ color: 'var(--muted-2)' }}>
             Vai trò
           </p>
         )}
-        <p className="text-sm font-bold text-white" style={lightTheme ? { color: '#1f1e1d' } : { color: 'var(--ink)' }}>Vai trò từng nhánh</p>
-        <p className="text-xs text-slate-500" style={lightTheme ? { color: '#6a6862' } : { color: 'var(--muted)' }}>Đọc nhanh từng nhánh trước khi rót SP.</p>
+        <p className="text-sm font-bold text-white" style={lightTheme ? { fontFamily: 'var(--skin-font-display)', fontWeight: 600, color: 'var(--ink)' } : { color: 'var(--ink)' }}>Vai trò từng nhánh</p>
+        <p className="text-xs text-slate-500" style={lightTheme ? { color: 'var(--muted)' } : { color: 'var(--muted)' }}>Đọc nhanh từng nhánh trước khi rót SP.</p>
       </div>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {Object.entries(SKILL_TREE).map(([branchKey, branch]) => {
@@ -445,18 +454,19 @@ function BranchFocusStrip({ lightTheme }) {
           return (
             <div
               key={branchKey}
-              className={`rounded-2xl px-3.5 py-3 ${lightTheme ? '' : 'bg-white/[0.04] border border-white/8'}`}
+              className={`px-3.5 py-3 ${lightTheme ? '' : 'bg-white/[0.04] border border-white/8 rounded-2xl'}`}
               style={lightTheme ? {
                 background: 'rgba(255, 255, 255, 0.66)',
                 border: `1px solid ${palette.divider}`,
+                borderRadius: 'var(--skin-radius-control,14px)',
                 boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.78)',
               } : undefined}
             >
               <div className="mb-1.5 flex items-center gap-2">
                 <span className="mono inline-flex h-7 w-7 items-center justify-center rounded-full border text-[8px] font-semibold uppercase tracking-[0.14em]" style={lightTheme ? { borderColor: palette.divider, background: 'rgba(255,255,255,0.78)', color: palette.title } : { borderColor: 'rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.04)', color: 'var(--accent-light)' }}>{getLabelMark(branch.label)}</span>
-                <span className="text-sm font-semibold text-white" style={lightTheme ? { color: '#0f172a' } : { color: 'var(--ink)' }}>{branch.label}</span>
+                <span className="text-sm font-semibold text-white" style={lightTheme ? { color: 'var(--ink)' } : { color: 'var(--ink)' }}>{branch.label}</span>
               </div>
-              <p className="text-xs leading-relaxed text-slate-400" style={lightTheme ? { color: '#475569' } : { color: 'var(--muted)' }}>
+              <p className="text-xs leading-relaxed text-slate-400" style={lightTheme ? { color: 'var(--muted)' } : { color: 'var(--muted)' }}>
                 {branch.focus}
               </p>
             </div>
@@ -472,11 +482,12 @@ function BranchFocusStrip({ lightTheme }) {
 function SkillBranch({ branch, palette, lightTheme, reducedMotion, getNodeState, onBuy }) {
   return (
     <div
-      className={`rounded-2xl p-3.5 sm:p-4 ${lightTheme ? '' : 'bg-white/[0.04] border border-white/8'}`}
+      className={`p-3.5 sm:p-4 ${lightTheme ? '' : 'bg-white/[0.04] border border-white/8 rounded-2xl'}`}
       style={lightTheme ? {
-        background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.76), rgba(250, 249, 246, 0.90))',
-        border: `1px solid ${palette.divider}`,
-        boxShadow: '0 18px 38px rgba(31, 30, 29, 0.05)',
+        background: 'var(--card-bg-solid)',
+        border: `var(--skin-card-border-width,1px) solid ${palette.divider}`,
+        borderRadius: 'var(--skin-radius-card,18px)',
+        boxShadow: 'var(--skin-card-shadow)',
       } : undefined}
     >
       <div
@@ -484,7 +495,7 @@ function SkillBranch({ branch, palette, lightTheme, reducedMotion, getNodeState,
         style={lightTheme ? { borderBottom: `1px solid ${palette.divider}` } : undefined}
       >
         <span className="mono inline-flex h-8 w-8 items-center justify-center rounded-full border text-[9px] font-semibold uppercase tracking-[0.14em]" style={lightTheme ? { borderColor: palette.divider, background: 'rgba(255,255,255,0.78)', color: palette.title } : { borderColor: 'rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.04)', color: 'var(--accent-light)' }}>{getLabelMark(branch.label)}</span>
-        <h3 className={`font-bold text-lg ${lightTheme ? '' : ''}`} style={lightTheme ? { color: palette.title } : { color: 'var(--ink)' }}>{branch.label}</h3>
+        <h3 className="font-bold text-lg" style={lightTheme ? { fontFamily: 'var(--skin-font-display)', fontWeight: 600, color: palette.title } : { color: 'var(--ink)' }}>{branch.label}</h3>
       </div>
       <div className="flex flex-col gap-3">
         {branch.nodes.map((node, index) => (
@@ -549,13 +560,13 @@ function SkillNode({ node, nodeState, lightTheme, reducedMotion, palette, branch
             }
           : isInsufficient
         ? {
-            background: 'linear-gradient(135deg, rgba(245, 245, 244, 0.94), rgba(255, 255, 255, 0.92))',
-                borderColor: 'rgba(31, 30, 29, 0.10)',
+            background: 'var(--card-bg-solid2)',
+                borderColor: 'var(--line)',
                 boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.68)',
               }
             : {
-                background: 'linear-gradient(135deg, rgba(250, 249, 246, 0.94), rgba(255, 255, 255, 0.86))',
-                borderColor: 'rgba(31, 30, 29, 0.08)',
+                background: 'var(--card-bg-solid2)',
+                borderColor: 'var(--line)',
               })
     : undefined;
 
@@ -564,31 +575,31 @@ function SkillNode({ node, nodeState, lightTheme, reducedMotion, palette, branch
         color: isUnlocked
           ? palette.title
           : isLocked
-            ? '#94a3b8'
+            ? 'var(--muted-2)'
             : isInsufficient
-              ? '#475569'
-              : '#0f172a',
+              ? 'var(--muted)'
+              : 'var(--ink)',
       }
     : undefined;
 
   const bodyStyle = lightTheme
-    ? { color: isLocked ? '#94a3b8' : '#64748b' }
+    ? { color: isLocked ? 'var(--muted-2)' : 'var(--muted)' }
     : undefined;
 
   const costStyle = lightTheme
     ? (isAvailable
         ? { borderColor: palette.border, color: palette.title, background: palette.chipBg }
         : isInsufficient
-          ? { borderColor: 'rgba(31, 30, 29, 0.10)', color: '#6a6862', background: 'rgba(255, 255, 255, 0.88)' }
-          : { borderColor: 'rgba(31, 30, 29, 0.08)', color: '#8a8a86', background: 'rgba(250, 249, 246, 0.94)' })
+          ? { borderColor: 'var(--line)', color: 'var(--muted)', background: 'rgba(255, 255, 255, 0.88)' }
+          : { borderColor: 'var(--line)', color: 'var(--muted-2)', background: 'var(--card-bg-solid2)' })
     : undefined;
 
   return (
     <motion.div
       className={lightTheme
-        ? `relative rounded-xl p-3 border select-none transition-[transform,background-color,border-color,box-shadow] ${isAvailable ? 'cursor-pointer' : 'cursor-default'}`
+        ? `relative p-3 border select-none transition-[transform,background-color,border-color,box-shadow] ${isAvailable ? 'cursor-pointer' : 'cursor-default'}`
         : cardClass}
-      style={lightCardStyle}
+      style={lightTheme ? { ...lightCardStyle, borderRadius: 'var(--skin-radius-control,14px)' } : lightCardStyle}
       whileHover={isAvailable && !reducedMotion ? { scale: 1.02, y: -2 } : undefined}
       onClick={isAvailable ? onBuy : undefined}
       layout
@@ -597,10 +608,10 @@ function SkillNode({ node, nodeState, lightTheme, reducedMotion, palette, branch
         <motion.div
           animate={reducedMotion ? undefined : { opacity: [0.28, 0.52, 0.28] }}
           transition={reducedMotion ? undefined : { duration: 2, repeat: Infinity }}
-          className={`absolute inset-0 rounded-xl pointer-events-none ${
-            lightTheme ? '' : branchBorderColor.replace('border-', 'bg-').replace('500', '500/10')
+          className={`absolute inset-0 pointer-events-none ${
+            lightTheme ? '' : `rounded-xl ${branchBorderColor.replace('border-', 'bg-').replace('500', '500/10')}`
           }`}
-          style={lightTheme ? { background: palette.glow } : undefined}
+          style={lightTheme ? { background: palette.glow, borderRadius: 'var(--skin-radius-control,14px)' } : undefined}
         />
       )}
 
@@ -609,7 +620,7 @@ function SkillNode({ node, nodeState, lightTheme, reducedMotion, palette, branch
         <div className="flex items-center gap-2 flex-wrap mb-1">
           <span className={`mono inline-flex h-7 w-7 items-center justify-center rounded-full border text-[8px] font-semibold uppercase tracking-[0.14em] flex-shrink-0 ${isLocked ? 'opacity-60' : ''}`}
                 style={lightTheme
-                  ? { borderColor: isUnlocked || isAvailable ? palette.divider : 'rgba(31,30,29,0.08)', background: 'rgba(255,255,255,0.74)', color: isLocked ? '#94a3b8' : palette.title }
+                  ? { borderColor: isUnlocked || isAvailable ? palette.divider : 'var(--line)', background: 'rgba(255,255,255,0.74)', color: isLocked ? 'var(--muted-2)' : palette.title }
                   : { borderColor: isUnlocked || isAvailable ? 'rgba(var(--accent-rgb),0.18)' : 'rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.04)', color: isLocked ? '#64748b' : 'var(--accent-light)' }}>
             {isLocked ? 'KH' : getLabelMark(node.label)}
           </span>
@@ -638,7 +649,7 @@ function SkillNode({ node, nodeState, lightTheme, reducedMotion, palette, branch
         <div className="flex items-center justify-between mt-2">
           <div>
             {isLocked && node.requires.length > 0 && (
-              <p className={`text-xs ${lightTheme ? '' : 'text-slate-600'}`} style={lightTheme ? { color: '#94a3b8' } : undefined}>
+              <p className={`text-xs ${lightTheme ? '' : 'text-slate-600'}`} style={lightTheme ? { color: 'var(--muted-2)' } : undefined}>
                 Cần: {node.requires.map((r) => SKILL_LABELS[r] ?? r.replace(/_/g, ' ')).join(', ')}
               </p>
             )}
@@ -652,7 +663,7 @@ function SkillNode({ node, nodeState, lightTheme, reducedMotion, palette, branch
           {isUnlocked ? (
             <span className={`text-sm font-bold ml-auto ${lightTheme ? '' : branchColor}`} style={lightTheme ? { color: palette.title } : undefined}>✓</span>
           ) : (
-            <span className={`text-xs font-bold ml-auto px-2 py-0.5 rounded-full border ${
+            <span className={`mono text-xs font-bold tabular-nums ml-auto px-2 py-0.5 rounded-full border ${
               isAvailable
                 ? 'border-[rgba(var(--accent-rgb),0.18)] text-[var(--accent-light)] bg-white/[0.04]'
                 : isInsufficient
@@ -687,55 +698,59 @@ function PurchaseConfirmDialog({ node, sp, lightTheme, onConfirm, onCancel }) {
         animate={{ scale: 1, y: 0 }}
         exit={{ scale: 0.85, opacity: 0 }}
         onClick={(e) => e.stopPropagation()}
-        className={`w-full max-w-sm rounded-2xl p-6 shadow-2xl ${lightTheme ? '' : 'bg-white/[0.04] border border-white/8'}`}
+        className={`w-full max-w-sm p-6 ${lightTheme ? '' : 'bg-white/[0.04] border border-white/8 rounded-2xl shadow-2xl'}`}
         style={lightTheme ? {
-          background: 'rgba(255, 255, 255, 0.98)',
-          border: '1px solid rgba(31, 30, 29, 0.08)',
-          boxShadow: '0 26px 60px rgba(31, 30, 29, 0.12)',
+          background: 'var(--card-bg-solid)',
+          border: 'var(--skin-card-border-width,1px) solid var(--line)',
+          borderRadius: 'var(--skin-radius-card,18px)',
+          boxShadow: 'var(--skin-card-shadow)',
         } : undefined}
       >
         <div className="text-center mb-4">
           <span className="mono inline-flex h-14 w-14 items-center justify-center rounded-full border text-[12px] font-semibold uppercase tracking-[0.18em]"
-                style={lightTheme ? { borderColor: 'rgba(31,30,29,0.08)', background: 'rgba(244,242,236,0.94)', color: '#9a5a48' } : { borderColor: 'rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.04)', color: 'var(--accent-light)' }}>
+                style={lightTheme ? { borderColor: 'var(--line)', background: 'var(--card-bg-solid2)', color: 'var(--accent2)' } : { borderColor: 'rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.04)', color: 'var(--accent-light)' }}>
             {getLabelMark(node.label)}
           </span>
-          <h3 className="font-bold text-xl mt-2" style={lightTheme ? { color: '#1f1e1d' } : { color: '#ffffff' }}>{node.label}</h3>
+          <h3 className="font-bold text-xl mt-2" style={lightTheme ? { fontFamily: 'var(--skin-font-display)', fontWeight: 600, color: 'var(--ink)' } : { color: '#ffffff' }}>{node.label}</h3>
           <span className={`inline-block mt-1.5 ${tierBadgeProps.className}`} style={tierBadgeProps.style}>
             {tierStyle.label}
           </span>
-          <p className="text-sm mt-2" style={lightTheme ? { color: '#6a6862' } : { color: '#94a3b8' }}>{node.description}</p>
+          <p className="text-sm mt-2" style={lightTheme ? { color: 'var(--muted)' } : { color: '#94a3b8' }}>{node.description}</p>
         </div>
 
         <div
-          className={`flex items-center justify-center gap-2 mb-5 py-2.5 rounded-xl ${lightTheme ? '' : 'bg-slate-800'}`}
+          className={`flex items-center justify-center gap-2 mb-5 py-2.5 ${lightTheme ? '' : 'bg-slate-800 rounded-xl'}`}
           style={lightTheme ? {
-            background: 'rgba(201, 100, 66, 0.08)',
-            border: '1px solid rgba(201, 100, 66, 0.16)',
+            background: 'rgba(var(--accent-rgb), 0.1)',
+            border: '1px solid rgba(var(--accent-rgb), 0.16)',
+            borderRadius: 'var(--skin-radius-control,14px)',
           } : undefined}
         >
-          <span className="mono text-[10px] uppercase tracking-[0.18em]" style={lightTheme ? { color: '#9a5a48' } : { color: 'var(--accent-light)' }}>SP</span>
-          <span className="font-bold" style={lightTheme ? { color: '#1f1e1d' } : undefined}>{node.spCost} ĐKN</span>
-          <span className="text-sm" style={lightTheme ? { color: '#6a6862' } : undefined}>· còn {sp} ĐKN</span>
+          <span className="mono text-[10px] uppercase tracking-[0.18em]" style={lightTheme ? { color: 'var(--accent2)' } : { color: 'var(--accent-light)' }}>SP</span>
+          <span className="mono font-bold tabular-nums" style={lightTheme ? { color: 'var(--ink)' } : undefined}>{node.spCost} ĐKN</span>
+          <span className="text-sm" style={lightTheme ? { color: 'var(--muted)' } : undefined}>· còn {sp} ĐKN</span>
         </div>
 
         <div className="flex gap-3">
           <button
             onClick={onCancel}
-            className={`flex-1 py-2 rounded-xl text-sm font-medium transition-colors ${lightTheme ? '' : 'bg-white/[0.05] hover:bg-white/[0.08] text-[var(--ink)]'}`}
+            className={`flex-1 py-2 text-sm font-medium transition-colors ${lightTheme ? '' : 'bg-white/[0.05] hover:bg-white/[0.08] text-[var(--ink)] rounded-xl'}`}
             style={lightTheme ? {
-              background: 'rgba(241, 245, 249, 0.96)',
-              color: '#6a6862',
-              border: '1px solid rgba(31, 30, 29, 0.08)',
+              background: 'var(--card-bg-solid2)',
+              color: 'var(--muted)',
+              border: '1px solid var(--line)',
+              borderRadius: 'var(--skin-radius-control,14px)',
             } : undefined}
           >
             Hủy
           </button>
           <button
             onClick={onConfirm}
-            className={`flex-1 py-2 rounded-xl text-sm font-bold transition-colors ${lightTheme ? '' : 'bg-[rgba(var(--accent-rgb),0.9)] hover:bg-[rgba(var(--accent-rgb),0.82)] text-white'}`}
+            className={`flex-1 py-2 text-sm font-bold transition-colors ${lightTheme ? '' : 'bg-[rgba(var(--accent-rgb),0.9)] hover:bg-[rgba(var(--accent-rgb),0.82)] text-white rounded-xl'}`}
             style={lightTheme ? {
-              background: '#c96442',
+              background: 'var(--accent)',
               color: '#ffffff',
+              borderRadius: 'var(--skin-radius-control,14px)',
             } : undefined}
           >
             Mở Khóa
@@ -753,30 +768,31 @@ function SynergyPanel({ synergies, activeSynergies, branchCounts, lightTheme, re
 
   return (
     <div
-      className={`mb-5 rounded-2xl overflow-hidden ${lightTheme ? '' : 'border border-white/8'}`}
+      className={`mb-5 overflow-hidden ${lightTheme ? '' : 'border border-white/8 rounded-2xl'}`}
       style={lightTheme ? {
-        background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.78), rgba(250, 249, 246, 0.90))',
-        border: '1px solid rgba(31, 30, 29, 0.08)',
-        boxShadow: '0 18px 38px rgba(31, 30, 29, 0.05)',
+        background: 'var(--card-bg-solid)',
+        border: 'var(--skin-card-border-width,1px) solid var(--line)',
+        borderRadius: 'var(--skin-radius-card,18px)',
+        boxShadow: 'var(--skin-card-shadow)',
       } : { background: 'rgba(255,255,255,0.04)' }}
     >
       {/* Header */}
       <div
         className={`flex items-center justify-between px-4 py-3 ${lightTheme ? '' : 'border-b border-white/8'}`}
-        style={lightTheme ? { borderBottom: '1px solid rgba(31, 30, 29, 0.08)' } : undefined}
+        style={lightTheme ? { borderBottom: '1px solid var(--line)' } : undefined}
       >
         <div className="flex items-center gap-2">
-          <span className="mono inline-flex h-7 w-7 items-center justify-center rounded-full border text-[8px] font-semibold uppercase tracking-[0.14em]" style={lightTheme ? { borderColor: 'rgba(31,30,29,0.08)', background: 'rgba(255,255,255,0.74)', color: '#9a5a48' } : { borderColor: 'rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.04)', color: 'var(--accent-light)' }}>SG</span>
-          <span className="font-bold text-sm" style={lightTheme ? { color: '#1f1e1d' } : { color: 'var(--ink)' }}>Tổ hợp kỹ năng</span>
-          <span className="text-xs text-slate-500" style={lightTheme ? { color: '#6a6862' } : { color: 'var(--muted)' }}>({activeSynergies.length}/{synergies.length} kích hoạt)</span>
+          <span className="mono inline-flex h-7 w-7 items-center justify-center rounded-full border text-[8px] font-semibold uppercase tracking-[0.14em]" style={lightTheme ? { borderColor: 'var(--line)', background: 'rgba(255,255,255,0.74)', color: 'var(--accent2)' } : { borderColor: 'rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.04)', color: 'var(--accent-light)' }}>SG</span>
+          <span className="font-bold text-sm" style={lightTheme ? { fontFamily: 'var(--skin-font-display)', fontWeight: 600, color: 'var(--ink)' } : { color: 'var(--ink)' }}>Tổ hợp kỹ năng</span>
+          <span className="text-xs text-slate-500" style={lightTheme ? { color: 'var(--muted)' } : { color: 'var(--muted)' }}>({activeSynergies.length}/{synergies.length} kích hoạt)</span>
         </div>
         {totalBonus > 0 && (
           <motion.div
             initial={{ scale: 0.8 }}
             animate={{ scale: 1 }}
-            className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold"
+            className="mono flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold tabular-nums"
             style={lightTheme
-              ? { background: 'rgba(201, 100, 66, 0.08)', border: '1px solid rgba(201, 100, 66, 0.16)', color: '#9a5a48' }
+              ? { background: 'rgba(var(--accent-rgb), 0.1)', border: '1px solid rgba(var(--accent-rgb), 0.16)', color: 'var(--accent2)' }
               : { background: 'rgba(var(--accent-rgb),0.12)', border: '1px solid rgba(var(--accent-rgb),0.20)', color: 'var(--accent-light)' }}
           >
             +{(totalBonus * 100).toFixed(0)}% XP tổng
@@ -806,59 +822,60 @@ function SynergyPanel({ synergies, activeSynergies, branchCounts, lightTheme, re
           return (
             <motion.div
               key={syn.id}
-              animate={!reducedMotion && active ? { boxShadow: ['0 0 0px rgba(201,100,66,0)', '0 0 12px rgba(201,100,66,0.18)', '0 0 0px rgba(201,100,66,0)'] } : undefined}
+              animate={!reducedMotion && active ? { boxShadow: ['0 0 0px rgba(var(--accent-rgb),0)', '0 0 12px rgba(var(--accent-rgb),0.18)', '0 0 0px rgba(var(--accent-rgb),0)'] } : undefined}
               transition={!reducedMotion && active ? { duration: 2.5, repeat: Infinity } : undefined}
-              className="rounded-xl p-3 flex flex-col gap-1.5 relative overflow-hidden"
+              className="p-3 flex flex-col gap-1.5 relative overflow-hidden"
               style={{
+                borderRadius: 'var(--skin-radius-control,14px)',
                 background: active
                   ? (lightTheme
-                      ? 'linear-gradient(135deg, rgba(201,100,66,0.08), rgba(255,255,255,0.96))'
+                      ? 'rgba(var(--accent-rgb),0.1)'
                       : 'rgba(255,255,255,0.06)')
                   : (lightTheme
-                      ? 'linear-gradient(135deg, rgba(250,249,246,0.94), rgba(255,255,255,0.92))'
+                      ? 'var(--card-bg-solid2)'
                       : 'rgba(255,255,255,0.03)'),
                 border: active
-                  ? (lightTheme ? '1px solid rgba(201,100,66,0.18)' : '1px solid rgba(var(--accent-rgb),0.20)')
-                  : (lightTheme ? '1px solid rgba(31,30,29,0.08)' : '1px solid rgba(255,255,255,0.06)'),
+                  ? (lightTheme ? '1px solid rgba(var(--accent-rgb),0.18)' : '1px solid rgba(var(--accent-rgb),0.20)')
+                  : (lightTheme ? '1px solid var(--line)' : '1px solid rgba(255,255,255,0.06)'),
               }}
             >
               {active && (
                 <div className="absolute inset-0 pointer-events-none"
                      style={{ background: lightTheme
-                       ? 'radial-gradient(ellipse at 50% 0%, rgba(201,100,66,0.08) 0%, transparent 72%)'
+                       ? 'radial-gradient(ellipse at 50% 0%, rgba(var(--accent-rgb),0.08) 0%, transparent 72%)'
                        : 'radial-gradient(ellipse at 50% 0%, rgba(var(--accent-rgb),0.10) 0%, transparent 70%)' }} />
               )}
 
               <div className="flex items-center gap-2 relative z-10">
-                <span className="mono inline-flex h-6 w-6 items-center justify-center rounded-full border text-[7px] font-semibold uppercase tracking-[0.12em]" style={lightTheme ? { borderColor: 'rgba(31,30,29,0.08)', background: 'rgba(255,255,255,0.74)', color: active ? '#9a5a48' : '#6a6862' } : { borderColor: 'rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.04)', color: active ? 'var(--accent-light)' : '#94a3b8' }}>{getLabelMark(syn.label)}</span>
+                <span className="mono inline-flex h-6 w-6 items-center justify-center rounded-full border text-[7px] font-semibold uppercase tracking-[0.12em]" style={lightTheme ? { borderColor: 'var(--line)', background: 'rgba(255,255,255,0.74)', color: active ? 'var(--accent2)' : 'var(--muted)' } : { borderColor: 'rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.04)', color: active ? 'var(--accent-light)' : '#94a3b8' }}>{getLabelMark(syn.label)}</span>
                 <p
                   className={`text-xs font-semibold flex-1 truncate ${lightTheme ? '' : active ? 'text-[var(--accent-light)]' : 'text-slate-300'}`}
-                  style={lightTheme ? { color: active ? '#9a5a48' : '#433630' } : undefined}
+                  style={lightTheme ? { color: active ? 'var(--accent2)' : 'var(--ink)' } : undefined}
                 >
                   {syn.label}
                 </p>
                 {active
                   ? <span className="text-[var(--accent-light)] text-xs flex-shrink-0 font-bold">✓</span>
-                  : <span className={`text-[10px] flex-shrink-0 ${lightTheme ? '' : 'text-slate-600'}`} style={lightTheme ? { color: '#94a3b8' } : undefined}>{metCount}/{totalReq}</span>
+                  : <span className={`mono text-[10px] flex-shrink-0 tabular-nums ${lightTheme ? '' : 'text-slate-600'}`} style={lightTheme ? { color: 'var(--muted-2)' } : undefined}>{metCount}/{totalReq}</span>
                 }
               </div>
 
-              <p className={`text-[10px] relative z-10 leading-tight line-clamp-2 ${lightTheme ? '' : 'text-slate-500'}`} style={lightTheme ? { color: '#64748b' } : undefined}>{syn.desc}</p>
+              <p className={`text-[10px] relative z-10 leading-tight line-clamp-2 ${lightTheme ? '' : 'text-slate-500'}`} style={lightTheme ? { color: 'var(--muted)' } : undefined}>{syn.desc}</p>
 
               <div className="flex items-center gap-2 relative z-10">
                 <span
-                  className={`text-xs font-bold ${lightTheme ? '' : active ? 'text-[var(--accent-light)]' : 'text-slate-400'}`}
-                  style={lightTheme ? { color: active ? '#9a5a48' : '#6a6862' } : undefined}
+                  className={`mono text-xs font-bold tabular-nums ${lightTheme ? '' : active ? 'text-[var(--accent-light)]' : 'text-slate-400'}`}
+                  style={lightTheme ? { color: active ? 'var(--accent2)' : 'var(--muted)' } : undefined}
                 >
                   +{(syn.bonus * 100).toFixed(0)}% XP
                 </span>
                 {!active && progress > 0 && (
                   <div
                     className="flex-1 h-1 rounded-full overflow-hidden"
-                    style={{ background: lightTheme ? 'rgba(203, 213, 225, 0.82)' : 'var(--timer-track, #1e293b)' }}
+                    style={{ background: lightTheme ? 'var(--timer-track)' : 'var(--timer-track, #1e293b)' }}
                   >
                     <div className="h-full rounded-full transition-[width] duration-500"
-                         style={{ width: `${progress * 100}%`, background: lightTheme ? 'linear-gradient(90deg, #c96442, #d98d73)' : 'var(--accent)' }} />
+                         style={{ width: `${progress * 100}%`, background: lightTheme ? 'linear-gradient(90deg, var(--accent), var(--accent2))' : 'var(--accent)' }} />
                   </div>
                 )}
               </div>

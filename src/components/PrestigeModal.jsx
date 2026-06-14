@@ -42,22 +42,25 @@ function InventorySection({ items, title, subtitle, tone = 'neutral' }) {
 
   return (
     <section
-      className="rounded-[24px] border p-4"
+      className="border p-4"
       style={{
         borderColor: 'var(--line)',
-        background: 'rgba(255,255,255,0.82)',
+        borderWidth: 'var(--skin-card-border-width,1px)',
+        borderRadius: 'var(--skin-radius-card,18px)',
+        background: 'var(--card-bg-solid)',
+        boxShadow: 'var(--skin-card-shadow)',
       }}
     >
       <div className="mb-3">
         <p
-          className="text-[10px] font-semibold uppercase tracking-[0.24em]"
-          style={{ color: 'var(--muted)', fontFamily: MONO_FONT }}
+          className="mono text-[10px] font-semibold uppercase tracking-[0.2em]"
+          style={{ color: 'var(--muted-2)', fontFamily: MONO_FONT }}
         >
           {subtitle}
         </p>
         <h3
-          className="mt-1 text-[24px] font-medium tracking-[-0.03em]"
-          style={{ color: 'var(--ink)', fontFamily: DISPLAY_FONT }}
+          className="mt-1 text-[24px] tracking-[-0.03em]"
+          style={{ color: 'var(--ink)', fontFamily: 'var(--skin-font-display)', fontWeight: 600 }}
         >
           {title}
         </h3>
@@ -73,9 +76,10 @@ function InventorySection({ items, title, subtitle, tone = 'neutral' }) {
             }}
           >
             <div
-              className="mono flex h-9 w-9 shrink-0 items-center justify-center rounded-[14px] border text-[10px] font-semibold uppercase tracking-[0.14em]"
+              className="mono flex h-9 w-9 shrink-0 items-center justify-center border text-[10px] font-semibold uppercase tracking-[0.14em]"
               style={{
                 borderColor: theme.chipBorder,
+                borderRadius: 'var(--skin-radius-control,14px)',
                 background: theme.chipBg,
                 color: theme.chipText,
               }}
@@ -146,11 +150,13 @@ export default function PrestigeModal() {
           animate={{ y: 0, scale: 1, opacity: 1 }}
           exit={{ y: 16, scale: 0.97, opacity: 0 }}
           transition={{ duration: 0.28, ease: 'easeOut' }}
-          className="relative w-full max-w-3xl rounded-[34px] border p-6"
+          className="relative w-full max-w-3xl border p-6"
           style={{
-            background: 'rgba(255,255,255,0.97)',
+            background: 'var(--card-bg-solid)',
             borderColor: 'var(--line)',
-            boxShadow: '0 26px 72px rgba(31,30,29,0.16)',
+            borderWidth: 'var(--skin-card-border-width,1px)',
+            borderRadius: 'var(--skin-radius-card,18px)',
+            boxShadow: 'var(--skin-card-shadow)',
           }}
           onClick={(event) => event.stopPropagation()}
         >
@@ -163,14 +169,14 @@ export default function PrestigeModal() {
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
               <div className="max-w-2xl">
                 <p
-                  className="text-[10px] font-semibold uppercase tracking-[0.28em]"
-                  style={{ color: 'var(--muted)', fontFamily: MONO_FONT }}
+                  className="mono text-[10px] font-semibold uppercase tracking-[0.2em]"
+                  style={{ color: 'var(--muted-2)', fontFamily: MONO_FONT }}
                 >
                   Prestige
                 </p>
                 <h2
-                  className="mt-2 text-[40px] font-medium leading-none tracking-[-0.05em]"
-                  style={{ color: 'var(--ink)', fontFamily: DISPLAY_FONT }}
+                  className="mt-2 text-[40px] leading-none tracking-[-0.05em]"
+                  style={{ color: 'var(--ink)', fontFamily: 'var(--skin-font-display)', fontWeight: 600 }}
                 >
                   Bắt đầu một vòng mới
                 </h2>
@@ -184,7 +190,7 @@ export default function PrestigeModal() {
                   className="rounded-full border px-3 py-1.5 text-xs font-semibold"
                   style={{
                     borderColor: 'var(--line)',
-                    background: 'rgba(255,255,255,0.86)',
+                    background: 'var(--card-bg-solid)',
                     color: 'var(--muted)',
                   }}
                 >
@@ -194,7 +200,7 @@ export default function PrestigeModal() {
                   className="rounded-full border px-3 py-1.5 text-xs font-semibold"
                   style={{
                     borderColor: 'rgba(var(--accent-rgb),0.16)',
-                    background: 'rgba(var(--accent-rgb),0.08)',
+                    background: 'rgba(var(--accent-rgb),0.1)',
                     color: 'var(--accent2)',
                   }}
                 >
@@ -205,10 +211,11 @@ export default function PrestigeModal() {
 
             {!canPrestige && (
               <div
-                className="rounded-[22px] border px-4 py-3"
+                className="border px-4 py-3"
                 style={{
                   borderColor: 'rgba(var(--accent-rgb),0.18)',
-                  background: 'rgba(var(--accent-rgb),0.08)',
+                  borderRadius: 'var(--skin-radius-control,14px)',
+                  background: 'rgba(var(--accent-rgb),0.1)',
                 }}
               >
                 <p className="text-sm leading-6" style={{ color: 'var(--accent2)' }}>
@@ -238,15 +245,16 @@ export default function PrestigeModal() {
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -6 }}
-                  className="rounded-[22px] border px-4 py-3"
+                  className="border px-4 py-3"
                   style={{
                     borderColor: 'rgba(var(--accent-rgb),0.18)',
-                    background: 'rgba(var(--accent-rgb),0.08)',
+                    borderRadius: 'var(--skin-radius-control,14px)',
+                    background: 'rgba(var(--accent-rgb),0.1)',
                   }}
                 >
                   <p
-                    className="text-[10px] font-semibold uppercase tracking-[0.22em]"
-                    style={{ color: 'var(--muted)', fontFamily: MONO_FONT }}
+                    className="mono text-[10px] font-semibold uppercase tracking-[0.2em]"
+                    style={{ color: 'var(--muted-2)', fontFamily: MONO_FONT }}
                   >
                     Xác nhận lần cuối
                   </p>
@@ -261,10 +269,11 @@ export default function PrestigeModal() {
               <button
                 type="button"
                 onClick={handleClose}
-                className="flex-1 rounded-[18px] border px-5 py-3 text-sm font-semibold transition"
+                className="flex-1 border px-5 py-3 text-sm font-semibold transition"
                 style={{
                   borderColor: 'var(--line)',
-                  background: 'rgba(255,255,255,0.88)',
+                  borderRadius: 'var(--skin-radius-control,14px)',
+                  background: 'var(--card-bg-solid)',
                   color: 'var(--ink-2)',
                 }}
               >
@@ -276,8 +285,9 @@ export default function PrestigeModal() {
                 whileTap={canPrestige ? { scale: 0.99 } : {}}
                 onClick={canPrestige ? handlePrestige : undefined}
                 disabled={!canPrestige}
-                className="flex-1 rounded-[18px] border px-5 py-3 text-sm font-semibold transition"
+                className="flex-1 border px-5 py-3 text-sm font-semibold transition"
                 style={canPrestige ? {
+                  borderRadius: 'var(--skin-radius-control,14px)',
                   borderColor: confirmed ? 'rgba(31,30,29,0.12)' : 'rgba(var(--accent-rgb),0.16)',
                   background: confirmed
                     ? 'rgba(31,30,29,0.98)'
@@ -287,6 +297,7 @@ export default function PrestigeModal() {
                     ? '0 14px 28px rgba(31,30,29,0.12)'
                     : '0 14px 28px rgba(var(--accent-rgb),0.16)',
                 } : {
+                  borderRadius: 'var(--skin-radius-control,14px)',
                   borderColor: 'var(--line)',
                   background: 'rgba(244,242,236,0.86)',
                   color: 'var(--muted-2)',

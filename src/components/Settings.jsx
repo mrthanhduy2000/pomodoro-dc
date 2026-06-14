@@ -95,16 +95,18 @@ const DAILY_GOAL_TYPE_OPTIONS = [
 function paperCardStyle(lightTheme) {
   if (!lightTheme) {
     return {
-      background: 'var(--card-bg, rgba(24,21,17,0.92))',
-      border: '1px solid rgba(255,255,255,0.06)',
-      boxShadow: '0 14px 34px rgba(0, 0, 0, 0.18)',
+      background: 'var(--card-bg-solid, var(--card-bg, rgba(24,21,17,0.92)))',
+      border: 'var(--skin-card-border-width, 1px) solid var(--line, rgba(255,255,255,0.06))',
+      borderRadius: 'var(--skin-radius-card, 18px)',
+      boxShadow: 'var(--skin-card-shadow, 0 14px 34px rgba(0, 0, 0, 0.18))',
     };
   }
 
   return {
-    background: 'rgba(255, 255, 255, 0.84)',
-    border: '1px solid rgba(31, 30, 29, 0.08)',
-    boxShadow: '0 14px 32px rgba(31, 30, 29, 0.05)',
+    background: 'var(--card-bg-solid, rgba(255, 255, 255, 0.84))',
+    border: 'var(--skin-card-border-width, 1px) solid var(--line, rgba(31, 30, 29, 0.08))',
+    borderRadius: 'var(--skin-radius-card, 18px)',
+    boxShadow: 'var(--skin-card-shadow, 0 14px 32px rgba(31, 30, 29, 0.05))',
   };
 }
 
@@ -114,25 +116,29 @@ function choiceStyle(active, lightTheme) {
       ? {
           background: 'rgba(var(--accent-rgb), 0.16)',
           border: '1px solid rgba(var(--accent-rgb), 0.38)',
+          borderRadius: 'var(--skin-radius-control, 14px)',
           color: 'var(--accent-light)',
         }
       : {
           background: 'var(--item-bg, rgba(31, 27, 22, 0.82))',
-          border: '1px solid rgba(255,255,255,0.05)',
+          border: '1px solid var(--line, rgba(255,255,255,0.05))',
+          borderRadius: 'var(--skin-radius-control, 14px)',
           color: 'var(--muted)',
         };
   }
 
   return active
     ? {
-        background: 'rgba(201, 100, 66, 0.10)',
-        border: '1px solid rgba(201, 100, 66, 0.22)',
-        color: '#1f1e1d',
+        background: 'rgba(var(--accent-rgb), 0.1)',
+        border: '1px solid rgba(var(--accent-rgb), 0.22)',
+        borderRadius: 'var(--skin-radius-control, 14px)',
+        color: 'var(--ink, #1f1e1d)',
         boxShadow: '0 8px 18px rgba(31, 30, 29, 0.04)',
       }
     : {
-        background: 'rgba(255, 255, 255, 0.74)',
-        border: '1px solid rgba(31, 30, 29, 0.08)',
+        background: 'var(--item-bg-solid, rgba(255, 255, 255, 0.74))',
+        border: '1px solid var(--line, rgba(31, 30, 29, 0.08))',
+        borderRadius: 'var(--skin-radius-control, 14px)',
         color: '#6a6862',
       };
 }
@@ -214,18 +220,18 @@ export default function Settings() {
 
   return (
     <div className="w-full max-w-5xl mx-auto space-y-5 pb-6">
-      <div className="rounded-[30px] px-5 py-5" style={paperCardStyle(lightTheme)}>
+      <div className="px-5 py-5" style={paperCardStyle(lightTheme)}>
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div className="max-w-2xl">
             <p
               className="mono text-[11px] font-semibold uppercase tracking-[0.3em]"
-              style={lightTheme ? { color: '#9a5a48' } : { color: 'rgba(var(--accent-rgb), 0.8)' }}
+              style={lightTheme ? { color: 'var(--accent2, #9a5a48)' } : { color: 'var(--accent2, rgba(var(--accent-rgb), 0.8))' }}
             >
               Tùy chỉnh
             </p>
             <h2
               className="serif mt-2 text-3xl leading-tight md:text-[2.5rem]"
-              style={lightTheme ? { color: '#1f1e1d' } : { color: 'var(--ink)' }}
+              style={{ fontFamily: 'var(--skin-font-display)', fontWeight: 600, color: lightTheme ? 'var(--ink, #1f1e1d)' : 'var(--ink)' }}
             >
               Cài đặt trải nghiệm tập trung
             </h2>
@@ -241,15 +247,15 @@ export default function Settings() {
             {[`Giao diện ${activeThemeLabel}`, `Nền ${activeAmbient.label}`, `Gói âm ${activeSoundPack.label}`].map((item) => (
               <span
                 key={item}
-                className="rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em]"
+                className="mono rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em]"
                 style={lightTheme ? {
-                  background: 'rgba(201, 100, 66, 0.08)',
-                  border: '1px solid rgba(201, 100, 66, 0.18)',
-                  color: '#9a5a48',
+                  background: 'rgba(var(--accent-rgb), 0.1)',
+                  border: '1px solid rgba(var(--accent-rgb), 0.18)',
+                  color: 'var(--accent2, #9a5a48)',
                 } : {
                   background: 'rgba(var(--accent-rgb), 0.14)',
                   border: '1px solid rgba(var(--accent-rgb), 0.24)',
-                  color: 'var(--accent-light)',
+                  color: 'var(--accent2, var(--accent-light))',
                 }}
               >
                 {item}
@@ -308,7 +314,7 @@ export default function Settings() {
             <Divider lightTheme={lightTheme} />
 
             <div>
-              <p className="mono mb-2 text-[11px] font-semibold uppercase tracking-[0.22em]" style={lightTheme ? { color: '#9a5a48' } : { color: 'rgba(var(--accent-rgb), 0.8)' }}>
+              <p className="mono mb-2 text-[11px] font-semibold uppercase tracking-[0.22em]" style={lightTheme ? { color: 'var(--accent2, #9a5a48)' } : { color: 'var(--accent2, rgba(var(--accent-rgb), 0.8))' }}>
                 Mục tiêu ngày
               </p>
 
@@ -435,7 +441,7 @@ export default function Settings() {
             >
               <div className="mt-4 flex items-center justify-between">
                 <span className="text-xs" style={lightTheme ? { color: '#6a6862' } : { color: 'var(--muted)' }}>Âm lượng nền</span>
-                <span className="mono text-xs" style={lightTheme ? { color: '#1f1e1d' } : { color: 'var(--ink)' }}>{Math.round(ambientVolume * 100)}%</span>
+                <span className="mono text-xs tabular-nums" style={lightTheme ? { color: 'var(--ink, #1f1e1d)' } : { color: 'var(--ink)' }}>{Math.round(ambientVolume * 100)}%</span>
               </div>
               <input
                 type="range"
@@ -483,7 +489,7 @@ export default function Settings() {
                   <div>
                     <div className="flex items-center justify-between">
                       <span className="text-xs" style={lightTheme ? { color: '#6a6862' } : { color: 'var(--muted)' }}>Âm lượng chính</span>
-                      <span className="mono text-xs" style={lightTheme ? { color: '#1f1e1d' } : { color: 'var(--ink)' }}>{Math.round(masterVolume * 100)}%</span>
+                      <span className="mono text-xs tabular-nums" style={lightTheme ? { color: 'var(--ink, #1f1e1d)' } : { color: 'var(--ink)' }}>{Math.round(masterVolume * 100)}%</span>
                     </div>
                     <input
                       type="range"
@@ -497,13 +503,15 @@ export default function Settings() {
                     />
                   </div>
                   <div
-                    className="rounded-2xl px-3 py-3"
+                    className="px-3 py-3"
                     style={lightTheme ? {
-                      background: 'rgba(250, 249, 246, 0.94)',
-                      border: '1px solid rgba(31, 30, 29, 0.08)',
+                      background: 'var(--item-bg-solid, rgba(250, 249, 246, 0.94))',
+                      border: '1px solid var(--line, rgba(31, 30, 29, 0.08))',
+                      borderRadius: 'var(--skin-radius-control, 14px)',
                     } : {
                       background: 'var(--item-bg, rgba(31, 27, 22, 0.82))',
-                      border: '1px solid rgba(255,255,255,0.08)',
+                      border: '1px solid var(--line, rgba(255,255,255,0.08))',
+                      borderRadius: 'var(--skin-radius-control, 14px)',
                     }}
                   >
                     <p className="text-xs font-semibold" style={lightTheme ? { color: '#1f1e1d' } : { color: 'var(--ink-2)' }}>Âm thanh Pomodoro</p>
@@ -564,14 +572,16 @@ export default function Settings() {
               </p>
             ) : pushSupportStatus === 'needs-install' ? (
               <div
-                className="rounded-2xl px-4 py-4 text-sm leading-relaxed"
+                className="px-4 py-4 text-sm leading-relaxed"
                 style={lightTheme ? {
-                  background: 'rgba(201, 100, 66, 0.08)',
-                  border: '1px solid rgba(201, 100, 66, 0.18)',
+                  background: 'rgba(var(--accent-rgb), 0.08)',
+                  border: '1px solid rgba(var(--accent-rgb), 0.18)',
+                  borderRadius: 'var(--skin-radius-control, 14px)',
                   color: '#6a6862',
                 } : {
                   background: 'rgba(var(--accent-rgb), 0.12)',
                   border: '1px solid rgba(var(--accent-rgb), 0.2)',
+                  borderRadius: 'var(--skin-radius-control, 14px)',
                   color: 'var(--muted)',
                 }}
               >
@@ -588,13 +598,15 @@ export default function Settings() {
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                     onClick={install}
-                    className="mt-3 rounded-2xl px-4 py-3 text-sm font-semibold"
+                    className="mt-3 px-4 py-3 text-sm font-semibold"
                     style={lightTheme ? {
                       background: '#1f1e1d',
                       color: '#fffdf9',
+                      borderRadius: 'var(--skin-radius-control, 14px)',
                     } : {
                       background: 'rgba(255,255,255,0.08)',
                       color: 'var(--ink)',
+                      borderRadius: 'var(--skin-radius-control, 14px)',
                     }}
                   >
                     Cài app ra Home Screen
@@ -612,14 +624,16 @@ export default function Settings() {
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                     onClick={requestNotificationPermission}
-                    className="w-full rounded-2xl py-3 text-sm font-semibold"
+                    className="w-full py-3 text-sm font-semibold"
                     style={lightTheme ? {
-                      background: '#c96442',
+                      background: 'var(--accent, #c96442)',
                       color: '#fffdf9',
-                      boxShadow: '0 12px 28px rgba(201, 100, 66, 0.18)',
+                      borderRadius: 'var(--skin-radius-control, 14px)',
+                      boxShadow: '0 12px 28px rgba(var(--accent-rgb), 0.18)',
                     } : {
                       background: 'rgba(var(--accent-rgb), 0.88)',
                       color: 'var(--ink)',
+                      borderRadius: 'var(--skin-radius-control, 14px)',
                       boxShadow: '0 10px 22px rgba(var(--accent-rgb), 0.18)',
                     }}
                   >
@@ -665,7 +679,7 @@ export default function Settings() {
 
           <div className="mt-4 space-y-4">
             <div>
-              <p className="mono mb-2 text-[11px] font-semibold uppercase tracking-[0.22em]" style={lightTheme ? { color: '#9a5a48' } : { color: 'rgba(var(--accent-rgb), 0.8)' }}>
+              <p className="mono mb-2 text-[11px] font-semibold uppercase tracking-[0.22em]" style={lightTheme ? { color: 'var(--accent2, #9a5a48)' } : { color: 'var(--accent2, rgba(var(--accent-rgb), 0.8))' }}>
                 Không khí nền
               </p>
               <div className="grid gap-2 sm:grid-cols-2">
@@ -689,7 +703,7 @@ export default function Settings() {
             </div>
 
             <div>
-              <p className="mono mb-2 text-[11px] font-semibold uppercase tracking-[0.22em]" style={lightTheme ? { color: '#9a5a48' } : { color: 'rgba(var(--accent-rgb), 0.8)' }}>
+              <p className="mono mb-2 text-[11px] font-semibold uppercase tracking-[0.22em]" style={lightTheme ? { color: 'var(--accent2, #9a5a48)' } : { color: 'var(--accent2, rgba(var(--accent-rgb), 0.8))' }}>
                 Chủ đề UI
               </p>
               <div className="grid gap-2">
@@ -712,9 +726,9 @@ export default function Settings() {
                         <span
                           className="mono rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.18em]"
                           style={lightTheme ? {
-                            background: 'rgba(255, 255, 255, 0.72)',
-                            color: '#9a5a48',
-                            border: '1px solid rgba(201, 100, 66, 0.18)',
+                            background: 'rgba(var(--accent-rgb), 0.1)',
+                            color: 'var(--accent2, #9a5a48)',
+                            border: '1px solid rgba(var(--accent-rgb), 0.18)',
                           } : {
                             background: 'rgba(255,255,255,0.08)',
                             color: 'var(--ink)',
@@ -731,7 +745,7 @@ export default function Settings() {
             </div>
 
             <div>
-              <p className="mono mb-2 text-[11px] font-semibold uppercase tracking-[0.22em]" style={lightTheme ? { color: '#9a5a48' } : { color: 'rgba(var(--accent-rgb), 0.8)' }}>
+              <p className="mono mb-2 text-[11px] font-semibold uppercase tracking-[0.22em]" style={lightTheme ? { color: 'var(--accent2, #9a5a48)' } : { color: 'var(--accent2, rgba(var(--accent-rgb), 0.8))' }}>
                 Bộ giao diện
               </p>
               <div className="grid gap-2 sm:grid-cols-2">
@@ -756,7 +770,7 @@ export default function Settings() {
                       <div className="flex items-center justify-between gap-2">
                         <p className="text-sm font-semibold">{opt.label}</p>
                         {active && opt.ready && (
-                          <span className="mono rounded-full px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.16em]" style={lightTheme ? { background: 'rgba(255,255,255,0.72)', color: '#9a5a48', border: '1px solid rgba(201,100,66,0.18)' } : { background: 'rgba(255,255,255,0.08)', color: 'var(--ink)', border: '1px solid rgba(255,255,255,0.12)' }}>đang dùng</span>
+                          <span className="mono rounded-full px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.16em]" style={lightTheme ? { background: 'rgba(var(--accent-rgb),0.1)', color: 'var(--accent2, #9a5a48)', border: '1px solid rgba(var(--accent-rgb),0.18)' } : { background: 'rgba(255,255,255,0.08)', color: 'var(--ink)', border: '1px solid rgba(255,255,255,0.12)' }}>đang dùng</span>
                         )}
                         {!opt.ready && (
                           <span className="mono rounded-full px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.16em]" style={lightTheme ? { background: 'rgba(244,242,236,0.96)', color: '#9b9892', border: '1px solid #e8e6de' } : { background: 'rgba(255,255,255,0.05)', color: 'var(--muted-2)', border: '1px solid rgba(255,255,255,0.08)' }}>sắp ra</span>
@@ -801,14 +815,16 @@ export default function Settings() {
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={openPrestigeModal}
-              className="w-full rounded-2xl py-3 text-sm font-semibold"
+              className="w-full py-3 text-sm font-semibold"
               style={lightTheme ? {
-                background: '#c96442',
+                background: 'var(--accent, #c96442)',
                 color: '#fffdf9',
-                boxShadow: '0 10px 22px rgba(201, 100, 66, 0.16)',
+                borderRadius: 'var(--skin-radius-control, 14px)',
+                boxShadow: '0 10px 22px rgba(var(--accent-rgb), 0.16)',
               } : {
                 background: 'rgba(var(--accent-rgb), 0.88)',
                 color: 'var(--ink)',
+                borderRadius: 'var(--skin-radius-control, 14px)',
                 boxShadow: '0 10px 22px rgba(var(--accent-rgb), 0.18)',
               }}
             >
@@ -840,13 +856,15 @@ export default function Settings() {
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                     onClick={install}
-                    className="w-full rounded-2xl py-3 text-sm font-semibold"
+                    className="w-full py-3 text-sm font-semibold"
                     style={lightTheme ? {
                       background: '#1f1e1d',
                       color: '#faf9f6',
+                      borderRadius: 'var(--skin-radius-control, 14px)',
                     } : {
                       background: 'rgba(var(--accent-rgb), 0.88)',
                       color: 'var(--ink)',
+                      borderRadius: 'var(--skin-radius-control, 14px)',
                       boxShadow: '0 10px 22px rgba(var(--accent-rgb), 0.18)',
                     }}
                   >
@@ -891,25 +909,29 @@ export default function Settings() {
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={handleReset}
-            className={`w-full rounded-2xl py-3 text-sm font-semibold transition-all ${resetConfirm ? 'animate-pulse' : ''}`}
+            className={`w-full py-3 text-sm font-semibold transition-all ${resetConfirm ? 'animate-pulse' : ''}`}
             style={resetConfirm ? (
               lightTheme ? {
                 background: '#9f4a3e',
                 color: '#fffdf9',
+                borderRadius: 'var(--skin-radius-control, 14px)',
                 boxShadow: '0 14px 30px rgba(159, 74, 62, 0.22)',
               } : {
                 background: 'rgba(159, 74, 62, 0.92)',
                 color: '#fff8f4',
+                borderRadius: 'var(--skin-radius-control, 14px)',
                 boxShadow: '0 10px 22px rgba(159, 74, 62, 0.18)',
               }
             ) : (
               lightTheme ? {
                 background: 'rgba(159, 74, 62, 0.08)',
                 color: '#9f4a3e',
+                borderRadius: 'var(--skin-radius-control, 14px)',
                 border: '1px solid rgba(159, 74, 62, 0.18)',
               } : {
                 background: 'rgba(127,29,29,0.2)',
                 color: '#f87171',
+                borderRadius: 'var(--skin-radius-control, 14px)',
                 border: '1px solid rgba(239,68,68,0.2)',
               }
             )}
@@ -924,7 +946,7 @@ export default function Settings() {
 
 function Card({ children, lightTheme = false, className = '' }) {
   return (
-    <div className={`rounded-[28px] p-5 ${className}`} style={paperCardStyle(lightTheme)}>
+    <div className={`p-5 ${className}`} style={paperCardStyle(lightTheme)}>
       {children}
     </div>
   );
@@ -936,25 +958,28 @@ function SectionHeader({ icon, title, description, eyebrow, lightTheme = false }
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p
-            className="mono text-[11px] font-semibold uppercase tracking-[0.28em]"
-            style={lightTheme ? { color: '#9a5a48' } : { color: 'rgba(var(--accent-rgb), 0.8)' }}
+            className="mono text-[10px] font-semibold uppercase tracking-[0.2em]"
+            style={lightTheme ? { color: 'var(--muted-2, #9a5a48)' } : { color: 'var(--muted-2)' }}
           >
             {eyebrow}
           </p>
-          <h3 className="mt-2 text-[18px] font-semibold leading-tight" style={lightTheme ? { color: '#1f1e1d' } : { color: 'var(--ink)' }}>
+          <h3
+            className="mt-2 text-[18px] font-semibold leading-tight"
+            style={{ fontFamily: 'var(--skin-font-display)', fontWeight: 600, color: lightTheme ? 'var(--ink, #1f1e1d)' : 'var(--ink)' }}
+          >
             {title}
           </h3>
         </div>
         <span
-          className="flex h-8 min-w-8 items-center justify-center rounded-full px-2 text-[10px] font-semibold uppercase tracking-[0.18em]"
+          className="mono flex h-8 min-w-8 items-center justify-center rounded-full px-2 text-[10px] font-semibold uppercase tracking-[0.18em]"
           style={lightTheme ? {
-            background: 'rgba(201, 100, 66, 0.08)',
-            border: '1px solid rgba(201, 100, 66, 0.18)',
-            color: '#9a5a48',
+            background: 'rgba(var(--accent-rgb), 0.1)',
+            border: '1px solid rgba(var(--accent-rgb), 0.18)',
+            color: 'var(--accent2, #9a5a48)',
           } : {
             background: 'rgba(var(--accent-rgb), 0.12)',
             border: '1px solid rgba(var(--accent-rgb), 0.18)',
-            color: 'var(--accent-light)',
+            color: 'var(--accent2, var(--accent-light))',
           }}
         >
           {eyebrow.slice(0, 2)}
@@ -1046,13 +1071,15 @@ function NumberStepper({ label, sub, value, min, max, onChange, step = 1, disabl
 
   return (
     <div
-      className={`rounded-2xl px-3 py-3 ${disabled ? 'opacity-40' : ''} ${wide ? 'col-span-2' : ''}`}
+      className={`px-3 py-3 ${disabled ? 'opacity-40' : ''} ${wide ? 'col-span-2' : ''}`}
       style={lightTheme ? {
-        background: 'rgba(250, 249, 246, 0.92)',
-        border: '1px solid rgba(31, 30, 29, 0.08)',
+        background: 'var(--item-bg-solid, rgba(250, 249, 246, 0.92))',
+        border: '1px solid var(--line, rgba(31, 30, 29, 0.08))',
+        borderRadius: 'var(--skin-radius-control, 14px)',
       } : {
         background: 'var(--item-bg-solid, rgba(24, 21, 17, 0.96))',
-        border: '1px solid rgba(255,255,255,0.06)',
+        border: '1px solid var(--line, rgba(255,255,255,0.06))',
+        borderRadius: 'var(--skin-radius-control, 14px)',
       }}
     >
       <p className="mb-1.5 text-[11px]" style={lightTheme ? { color: '#6a6862' } : { color: 'var(--muted-2)' }}>
@@ -1109,7 +1136,7 @@ function NumberStepper({ label, sub, value, min, max, onChange, step = 1, disabl
                 adjustValue(-step);
               }
             }}
-            className="mono min-w-0 bg-transparent text-center text-lg font-bold leading-none outline-none"
+            className="mono min-w-0 bg-transparent text-center text-lg font-bold leading-none outline-none tabular-nums"
             style={{
               width: `${Math.max(3, draftValue.length || String(value).length)}ch`,
               color: lightTheme ? '#1f1e1d' : 'var(--ink)',

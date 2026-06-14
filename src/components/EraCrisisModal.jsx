@@ -28,8 +28,8 @@ function EditorialButton({ children, onClick, tone = 'ink' }) {
       whileHover={{ y: -1 }}
       whileTap={{ scale: 0.99 }}
       onClick={onClick}
-      className="rounded-[18px] border px-6 py-3 text-sm font-semibold"
-      style={styles}
+      className="border px-6 py-3 text-sm font-semibold"
+      style={{ borderRadius: 'var(--skin-radius-control,14px)', ...styles }}
     >
       {children}
     </motion.button>
@@ -63,16 +63,20 @@ function DecisionCard({
       whileHover={{ y: -2 }}
       whileTap={{ scale: 0.99 }}
       onClick={onClick}
-      className="w-full rounded-[24px] border px-4 py-4 text-left"
+      className="w-full border px-4 py-4 text-left"
       style={{
+        borderRadius: 'var(--skin-radius-card,18px)',
+        borderWidth: 'var(--skin-card-border-width,1px)',
         borderColor: theme.edge,
-        background: 'var(--panel)',
+        background: 'var(--card-bg-solid, var(--panel))',
+        boxShadow: 'var(--skin-card-shadow, 0 14px 32px rgba(31,30,29,0.07))',
       }}
     >
       <div className="flex items-start gap-3">
         <div
-          className="mono flex h-12 w-12 shrink-0 items-center justify-center rounded-[16px] border text-[11px] font-semibold uppercase tracking-[0.16em]"
+          className="mono flex h-12 w-12 shrink-0 items-center justify-center border text-[11px] font-semibold uppercase tracking-[0.16em]"
           style={{
+            borderRadius: 'var(--skin-radius-control,14px)',
             borderColor: theme.edge,
             background: theme.fill,
             color: theme.strong,
@@ -83,14 +87,14 @@ function DecisionCard({
         </div>
         <div className="min-w-0 flex-1">
           <p
-            className="text-[10px] font-semibold uppercase tracking-[0.2em]"
-            style={{ color: 'var(--muted)', fontFamily: MONO_FONT }}
+            className="mono text-[10px] uppercase tracking-[0.2em]"
+            style={{ color: 'var(--muted-2, var(--muted))', fontFamily: MONO_FONT }}
           >
             {eyebrow}
           </p>
           <h4
-            className="mt-1 text-[24px] font-medium leading-tight tracking-[-0.03em]"
-            style={{ color: 'var(--ink)', fontFamily: DISPLAY_FONT }}
+            className="mt-1 text-[24px] leading-tight tracking-[-0.03em]"
+            style={{ color: 'var(--ink)', fontFamily: 'var(--skin-font-display, ' + DISPLAY_FONT + ')', fontWeight: 600 }}
           >
             {title}
           </h4>
@@ -153,11 +157,13 @@ function EraCrisisContent() {
         animate={{ y: 0, scale: 1, opacity: 1 }}
         exit={{ y: 14, scale: 0.97, opacity: 0 }}
         transition={{ duration: 0.28, ease: 'easeOut' }}
-        className="relative w-full max-w-2xl rounded-[34px] border"
+        className="relative w-full max-w-2xl border"
         style={{
+          borderRadius: 'var(--skin-radius-card,18px)',
+          borderWidth: 'var(--skin-card-border-width,1px)',
           borderColor: 'var(--line)',
-          background: 'var(--panel-strong, var(--panel))',
-          boxShadow: '0 24px 62px rgba(31,30,29,0.14)',
+          background: 'var(--card-bg-solid, var(--panel-strong, var(--panel)))',
+          boxShadow: 'var(--skin-card-shadow, 0 24px 62px rgba(31,30,29,0.14))',
           overflow: 'hidden',
         }}
       >
@@ -174,8 +180,8 @@ function EraCrisisContent() {
               style={{ background: 'rgba(var(--accent-rgb),0.76)' }}
             />
             <p
-              className="text-[10px] font-semibold uppercase tracking-[0.28em]"
-              style={{ color: 'var(--muted)', fontFamily: MONO_FONT }}
+              className="mono text-[10px] font-semibold uppercase tracking-[0.28em]"
+              style={{ color: 'var(--muted-2, var(--muted))', fontFamily: MONO_FONT }}
             >
               Khủng hoảng kỷ nguyên
             </p>
@@ -250,14 +256,14 @@ function AnnounceView({ eraCrisis, onNext }) {
       </motion.div>
 
       <p
-        className="text-[10px] font-semibold uppercase tracking-[0.26em]"
-        style={{ color: 'var(--muted)', fontFamily: MONO_FONT }}
+        className="mono text-[10px] font-semibold uppercase tracking-[0.26em]"
+        style={{ color: 'var(--muted-2, var(--muted))', fontFamily: MONO_FONT }}
       >
         Biến cố lịch sử
       </p>
       <h2
-        className="mt-2 text-[38px] font-medium tracking-[-0.05em]"
-        style={{ color: 'var(--ink)', fontFamily: DISPLAY_FONT }}
+        className="mt-2 text-[38px] tracking-[-0.05em]"
+        style={{ color: 'var(--ink)', fontFamily: 'var(--skin-font-display, ' + DISPLAY_FONT + ')', fontWeight: 600 }}
       >
         {eraCrisis.name}
       </h2>
@@ -266,10 +272,11 @@ function AnnounceView({ eraCrisis, onNext }) {
       </p>
 
       <div
-        className="mx-auto mt-5 max-w-xl rounded-[22px] border px-4 py-3"
+        className="mx-auto mt-5 max-w-xl border px-4 py-3"
         style={{
+          borderRadius: 'var(--skin-radius-control,14px)',
           borderColor: 'rgba(var(--accent-rgb),0.16)',
-          background: 'rgba(var(--accent-rgb),0.08)',
+          background: 'rgba(var(--accent-rgb),0.1)',
         }}
       >
         <p className="text-sm leading-6" style={{ color: 'var(--accent2)' }}>
@@ -298,14 +305,14 @@ function ChooseView({ eraCrisis, onSacrifice, onChallenge }) {
     >
       <div className="text-center">
         <p
-          className="text-[10px] font-semibold uppercase tracking-[0.24em]"
-          style={{ color: 'var(--muted)', fontFamily: MONO_FONT }}
+          className="mono text-[10px] font-semibold uppercase tracking-[0.24em]"
+          style={{ color: 'var(--muted-2, var(--muted))', fontFamily: MONO_FONT }}
         >
           Chọn một hướng đi
         </p>
         <h3
-          className="mt-2 text-[32px] font-medium tracking-[-0.04em]"
-          style={{ color: 'var(--ink)', fontFamily: DISPLAY_FONT }}
+          className="mt-2 text-[32px] tracking-[-0.04em]"
+          style={{ color: 'var(--ink)', fontFamily: 'var(--skin-font-display, ' + DISPLAY_FONT + ')', fontWeight: 600 }}
         >
           Cách bạn vượt qua khủng hoảng
         </h3>
@@ -361,14 +368,14 @@ function ChallengeProgressView({ eraCrisis, timeLeft, onClose }) {
       </div>
 
       <p
-        className="text-[10px] font-semibold uppercase tracking-[0.24em]"
-        style={{ color: 'var(--muted)', fontFamily: MONO_FONT }}
+        className="mono text-[10px] font-semibold uppercase tracking-[0.24em]"
+        style={{ color: 'var(--muted-2, var(--muted))', fontFamily: MONO_FONT }}
       >
         Đang đương đầu
       </p>
       <h3
-        className="mt-2 text-[32px] font-medium tracking-[-0.04em]"
-        style={{ color: 'var(--ink)', fontFamily: DISPLAY_FONT }}
+        className="mt-2 text-[32px] tracking-[-0.04em]"
+        style={{ color: 'var(--ink)', fontFamily: 'var(--skin-font-display, ' + DISPLAY_FONT + ')', fontWeight: 600 }}
       >
         {eraCrisis.name}
       </h3>
@@ -376,10 +383,17 @@ function ChallengeProgressView({ eraCrisis, timeLeft, onClose }) {
         Hoàn thành {required} phiên từ {eraCrisis.challengeMinMinutes} phút trở lên để vượt qua biến cố này bằng chính nhịp tập trung của bạn.
       </p>
 
-      <div className="mt-5 rounded-[22px] border px-4 py-4" style={{ borderColor: 'var(--line)', background: 'rgba(255,255,255,0.82)' }}>
+      <div
+        className="mt-5 border px-4 py-4"
+        style={{
+          borderRadius: 'var(--skin-radius-control,14px)',
+          borderColor: 'var(--line)',
+          background: 'var(--card-bg-solid, rgba(255,255,255,0.82))',
+        }}
+      >
         <div className="flex items-center justify-between gap-3 text-sm font-semibold" style={{ color: 'var(--ink)' }}>
           <span>{done} / {required} phiên</span>
-          <span style={{ fontFamily: MONO_FONT, color: 'var(--muted)' }}>{Math.round(percent)}%</span>
+          <span className="mono tabular-nums" style={{ fontFamily: MONO_FONT, color: 'var(--muted)' }}>{Math.round(percent)}%</span>
         </div>
         <div className="mt-3 h-[3px] overflow-hidden rounded-full bg-[var(--line)]">
           <motion.div
@@ -392,15 +406,16 @@ function ChallengeProgressView({ eraCrisis, timeLeft, onClose }) {
       </div>
 
       <div
-        className="mt-4 rounded-[22px] border px-4 py-4 text-left"
+        className="mt-4 border px-4 py-4 text-left"
         style={{
+          borderRadius: 'var(--skin-radius-control,14px)',
           borderColor: 'rgba(91,122,82,0.18)',
           background: 'rgba(91,122,82,0.08)',
         }}
       >
         <p
-          className="text-[10px] font-semibold uppercase tracking-[0.2em]"
-          style={{ color: 'var(--muted)', fontFamily: MONO_FONT }}
+          className="mono text-[10px] font-semibold uppercase tracking-[0.2em]"
+          style={{ color: 'var(--muted-2, var(--muted))', fontFamily: MONO_FONT }}
         >
           Phần thưởng nếu hoàn thành
         </p>

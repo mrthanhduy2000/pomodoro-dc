@@ -417,22 +417,24 @@ export default function NotificationCenter({ onNavigate }) {
             }
             setNotificationCenterOpen();
           }}
-          className="group relative flex h-[48px] min-w-[54px] items-center justify-center rounded-[18px] border px-3.5 shadow-[0_8px_18px_rgba(31,30,29,0.08)] transition-transform hover:-translate-y-[1px] md:h-[42px] md:min-w-[46px] md:rounded-[16px] md:px-3"
+          className="group relative flex h-[48px] min-w-[54px] items-center justify-center border px-3.5 transition-transform hover:-translate-y-[1px] md:h-[42px] md:min-w-[46px] md:px-3"
           style={{
-            borderColor: 'var(--line)',
-            background: 'var(--panel)',
+            border: 'var(--skin-card-border-width,1px) solid var(--line)',
+            borderRadius: 'var(--skin-radius-control,14px)',
+            background: 'var(--card-bg-solid)',
             color: 'var(--ink)',
-            boxShadow: '0 8px 16px rgba(31,30,29,0.03)',
+            boxShadow: 'var(--skin-card-shadow)',
           }}
           aria-expanded={isOpen}
           aria-label="Mở trung tâm thông báo"
         >
           <span
-            className="flex h-8 w-8 items-center justify-center rounded-[11px] border md:h-7 md:w-7 md:rounded-[10px]"
+            className="flex h-8 w-8 items-center justify-center border md:h-7 md:w-7"
             style={{
               borderColor: 'rgba(var(--accent-rgb),0.18)',
-              background: 'rgba(var(--accent-rgb),0.08)',
+              background: 'rgba(var(--accent-rgb),0.1)',
               color: 'var(--accent2)',
+              borderRadius: 'var(--skin-radius-control,14px)',
             }}
           >
               <CenterIcon.bell size={14} />
@@ -460,12 +462,13 @@ export default function NotificationCenter({ onNavigate }) {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -10, scale: 0.98 }}
             transition={{ duration: 0.18, ease: 'easeOut' }}
-            className="pointer-events-auto absolute right-0 top-[calc(100%+10px)] w-[min(320px,calc(100vw-2rem))] overflow-hidden rounded-[24px] border"
+            className="pointer-events-auto absolute right-0 top-[calc(100%+10px)] w-[min(320px,calc(100vw-2rem))] overflow-hidden border"
             style={{
               maxHeight: 'min(64vh, 640px)',
-              borderColor: 'var(--line)',
-              background: 'var(--panel-strong)',
-              boxShadow: '0 20px 48px rgba(31,30,29,0.14)',
+              border: 'var(--skin-card-border-width,1px) solid var(--line)',
+              borderRadius: 'var(--skin-radius-card,18px)',
+              background: 'var(--card-bg-solid)',
+              boxShadow: 'var(--skin-card-shadow)',
               backdropFilter: 'blur(18px)',
             }}
           >
@@ -473,14 +476,14 @@ export default function NotificationCenter({ onNavigate }) {
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <div
-                    className="text-[9px] font-semibold uppercase tracking-[0.18em]"
-                    style={{ color: 'var(--muted)', fontFamily: MONO_FONT }}
+                    className="mono text-[10px] uppercase tracking-[0.2em]"
+                    style={{ color: 'var(--muted-2)', fontFamily: MONO_FONT }}
                   >
                     Trung tâm
                   </div>
                   <h2
-                    className="mt-1.5 text-[24px] font-medium leading-none tracking-[-0.03em]"
-                    style={{ color: 'var(--ink)', fontFamily: DISPLAY_FONT }}
+                    className="mt-1.5 text-[24px] font-semibold leading-none tracking-[-0.03em]"
+                    style={{ color: 'var(--ink)', fontFamily: 'var(--skin-font-display)' }}
                   >
                     Thông báo
                   </h2>
@@ -491,7 +494,7 @@ export default function NotificationCenter({ onNavigate }) {
                     <button
                       type="button"
                       onClick={clearUiNotifications}
-                      className="rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em]"
+                      className="mono rounded-full border px-2.5 py-1 text-[10px] uppercase tracking-[0.12em]"
                       style={{
                         borderColor: 'var(--line)',
                         color: 'var(--muted)',
@@ -525,8 +528,8 @@ export default function NotificationCenter({ onNavigate }) {
                 <div className="mb-2.5 flex items-center gap-2">
                   <CenterIcon.spark size={13} />
                   <span
-                    className="text-[9px] font-semibold uppercase tracking-[0.18em]"
-                    style={{ color: 'var(--muted)', fontFamily: MONO_FONT }}
+                    className="mono text-[10px] uppercase tracking-[0.2em]"
+                    style={{ color: 'var(--muted-2)', fontFamily: MONO_FONT }}
                   >
                     Có thể làm ngay
                   </span>
@@ -542,19 +545,21 @@ export default function NotificationCenter({ onNavigate }) {
                           onNavigate?.(item.action);
                           setNotificationCenterOpen(false);
                         }}
-                        className="flex w-full items-start gap-2.5 rounded-[18px] border px-3.5 py-3 text-left transition-transform hover:-translate-y-[1px]"
+                        className="flex w-full items-start gap-2.5 border px-3.5 py-3 text-left transition-transform hover:-translate-y-[1px]"
                         style={{
-                          borderColor: 'rgba(var(--accent-rgb),0.14)',
-                          background: 'var(--panel)',
-                          boxShadow: '0 8px 18px rgba(31,30,29,0.05)',
+                          border: 'var(--skin-card-border-width,1px) solid rgba(var(--accent-rgb),0.14)',
+                          borderRadius: 'var(--skin-radius-card,18px)',
+                          background: 'var(--card-bg-solid)',
+                          boxShadow: 'var(--skin-card-shadow)',
                         }}
                       >
                         <span
-                          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[12px] border"
+                          className="flex h-9 w-9 shrink-0 items-center justify-center border"
                           style={{
                             borderColor: 'rgba(var(--accent-rgb),0.18)',
-                            background: 'rgba(var(--accent-rgb),0.08)',
+                            background: 'rgba(var(--accent-rgb),0.1)',
                             color: 'var(--accent2)',
+                            borderRadius: 'var(--skin-radius-control,14px)',
                           }}
                         >
                           <item.Icon size={16} />
@@ -562,12 +567,12 @@ export default function NotificationCenter({ onNavigate }) {
 
                         <span className="min-w-0 flex-1">
                           <span
-                            className="text-[9px] font-semibold uppercase tracking-[0.18em]"
-                            style={{ color: 'var(--muted)', fontFamily: MONO_FONT }}
+                            className="mono text-[10px] uppercase tracking-[0.2em]"
+                            style={{ color: 'var(--muted-2)', fontFamily: MONO_FONT }}
                           >
                             {item.count} mục
                           </span>
-                          <span className="mt-1 block text-[16px] font-medium leading-tight" style={{ color: 'var(--ink)', fontFamily: DISPLAY_FONT }}>
+                          <span className="mt-1 block text-[16px] font-semibold leading-tight" style={{ color: 'var(--ink)', fontFamily: 'var(--skin-font-display)' }}>
                             {item.title}
                           </span>
                           <span className="mt-1.5 block text-[12px] leading-[1.45]" style={{ color: 'var(--muted)' }}>
@@ -576,11 +581,10 @@ export default function NotificationCenter({ onNavigate }) {
                         </span>
 
                         <span
-                          className="inline-flex items-center gap-1 rounded-full border px-2 py-1 text-[9px] font-semibold uppercase tracking-[0.12em]"
+                          className="mono inline-flex items-center gap-1 rounded-full px-2 py-1 text-[9px] uppercase tracking-[0.12em]"
                           style={{
-                            borderColor: 'var(--line)',
-                            color: 'var(--ink)',
-                            background: 'var(--item-bg-solid)',
+                            color: 'var(--accent2)',
+                            background: 'rgba(var(--accent-rgb),0.1)',
                             fontFamily: MONO_FONT,
                           }}
                         >
@@ -592,10 +596,12 @@ export default function NotificationCenter({ onNavigate }) {
                   </div>
                 ) : (
                   <div
-                    className="rounded-[18px] border px-3.5 py-4"
+                    className="border px-3.5 py-4"
                     style={{
-                      borderColor: 'var(--line)',
-                      background: 'var(--panel)',
+                      border: 'var(--skin-card-border-width,1px) solid var(--line)',
+                      borderRadius: 'var(--skin-radius-card,18px)',
+                      background: 'var(--card-bg-solid)',
+                      boxShadow: 'var(--skin-card-shadow)',
                     }}
                   >
                     <p className="text-[12px] leading-[1.55]" style={{ color: 'var(--muted)' }}>
@@ -610,8 +616,8 @@ export default function NotificationCenter({ onNavigate }) {
                   <div className="flex items-center gap-2">
                     <CenterIcon.bell size={13} />
                     <span
-                      className="text-[9px] font-semibold uppercase tracking-[0.18em]"
-                      style={{ color: 'var(--muted)', fontFamily: MONO_FONT }}
+                      className="mono text-[10px] uppercase tracking-[0.2em]"
+                      style={{ color: 'var(--muted-2)', fontFamily: MONO_FONT }}
                     >
                       Gần đây
                     </span>
@@ -619,10 +625,9 @@ export default function NotificationCenter({ onNavigate }) {
 
                   {unreadCount > 0 && (
                     <span
-                      className="rounded-full border px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.12em]"
+                      className="mono rounded-full px-2 py-0.5 text-[9px] uppercase tracking-[0.12em]"
                       style={{
-                        borderColor: 'rgba(var(--accent-rgb),0.16)',
-                        background: 'rgba(var(--accent-rgb),0.08)',
+                        background: 'rgba(var(--accent-rgb),0.1)',
                         color: 'var(--accent2)',
                         fontFamily: MONO_FONT,
                       }}
@@ -637,20 +642,22 @@ export default function NotificationCenter({ onNavigate }) {
                     {notificationFeed.map((item) => (
                       <div
                         key={item.id}
-                        className="rounded-[18px] border px-3.5 py-3"
+                        className="border px-3.5 py-3"
                         style={{
-                          borderColor: item.readAt ? 'var(--line)' : 'rgba(var(--accent-rgb),0.14)',
-                          background: item.readAt ? 'var(--panel)' : 'var(--panel-strong)',
-                          boxShadow: item.readAt ? 'none' : '0 8px 18px rgba(31,30,29,0.04)',
+                          border: `var(--skin-card-border-width,1px) solid ${item.readAt ? 'var(--line)' : 'rgba(var(--accent-rgb),0.14)'}`,
+                          borderRadius: 'var(--skin-radius-card,18px)',
+                          background: 'var(--card-bg-solid)',
+                          boxShadow: item.readAt ? 'none' : 'var(--skin-card-shadow)',
                         }}
                       >
                         <div className="flex items-start gap-3">
                           <span
-                            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[12px] border text-[16px]"
+                            className="flex h-9 w-9 shrink-0 items-center justify-center border text-[16px]"
                             style={{
                               borderColor: 'rgba(var(--accent-rgb),0.14)',
-                              background: 'rgba(var(--accent-rgb),0.08)',
+                              background: 'rgba(var(--accent-rgb),0.1)',
                               color: 'var(--accent2)',
+                              borderRadius: 'var(--skin-radius-control,14px)',
                             }}
                           >
                             {item.icon}
@@ -659,8 +666,8 @@ export default function NotificationCenter({ onNavigate }) {
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center justify-between gap-3">
                               <div
-                                className="text-[9px] font-semibold uppercase tracking-[0.16em]"
-                                style={{ color: 'var(--muted)', fontFamily: MONO_FONT }}
+                                className="mono text-[10px] uppercase tracking-[0.2em]"
+                                style={{ color: 'var(--muted-2)', fontFamily: MONO_FONT }}
                               >
                                 {item.category}
                               </div>
@@ -669,7 +676,7 @@ export default function NotificationCenter({ onNavigate }) {
                               </div>
                             </div>
 
-                            <div className="mt-1 text-[16px] font-medium leading-tight" style={{ color: 'var(--ink)', fontFamily: DISPLAY_FONT }}>
+                            <div className="mt-1 text-[16px] font-semibold leading-tight" style={{ color: 'var(--ink)', fontFamily: 'var(--skin-font-display)' }}>
                               {item.title}
                             </div>
                             <div className="mt-1 text-[12px] leading-[1.45]" style={{ color: 'var(--muted)' }}>
@@ -683,11 +690,10 @@ export default function NotificationCenter({ onNavigate }) {
                                   onNavigate?.(item.action);
                                   setNotificationCenterOpen(false);
                                 }}
-                                className="mt-2 inline-flex items-center gap-1 rounded-full border px-2 py-1 text-[9px] font-semibold uppercase tracking-[0.12em]"
+                                className="mono mt-2 inline-flex items-center gap-1 rounded-full px-2 py-1 text-[9px] uppercase tracking-[0.12em]"
                                 style={{
-                                  borderColor: 'var(--line)',
-                                  color: 'var(--ink)',
-                                  background: 'var(--item-bg-solid)',
+                                  color: 'var(--accent2)',
+                                  background: 'rgba(var(--accent-rgb),0.1)',
                                   fontFamily: MONO_FONT,
                                 }}
                               >
@@ -716,10 +722,12 @@ export default function NotificationCenter({ onNavigate }) {
                   </div>
                 ) : (
                   <div
-                    className="rounded-[18px] border px-3.5 py-4"
+                    className="border px-3.5 py-4"
                     style={{
-                      borderColor: 'var(--line)',
-                      background: 'var(--panel)',
+                      border: 'var(--skin-card-border-width,1px) solid var(--line)',
+                      borderRadius: 'var(--skin-radius-card,18px)',
+                      background: 'var(--card-bg-solid)',
+                      boxShadow: 'var(--skin-card-shadow)',
                     }}
                   >
                     <p className="text-[12px] leading-[1.55]" style={{ color: 'var(--muted)' }}>
@@ -746,22 +754,24 @@ export default function NotificationCenter({ onNavigate }) {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -8, scale: 0.98 }}
               transition={{ duration: 0.18, ease: 'easeOut' }}
-              className="pointer-events-auto overflow-hidden rounded-[18px] border"
+              className="pointer-events-auto overflow-hidden border"
               style={{
-                borderColor: 'rgba(var(--accent-rgb),0.16)',
-                background: 'var(--panel-strong)',
-                boxShadow: '0 14px 30px rgba(31,30,29,0.12)',
+                border: 'var(--skin-card-border-width,1px) solid rgba(var(--accent-rgb),0.16)',
+                borderRadius: 'var(--skin-radius-card,18px)',
+                background: 'var(--card-bg-solid)',
+                boxShadow: 'var(--skin-card-shadow)',
                 backdropFilter: 'blur(18px)',
               }}
             >
               <div className="flex items-start gap-2.5 px-3.5 py-3">
                 <div
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[12px] border text-[13px] font-semibold uppercase"
+                  className="mono flex h-9 w-9 shrink-0 items-center justify-center border text-[13px] font-semibold uppercase"
                   style={{
                     borderColor: 'rgba(var(--accent-rgb),0.16)',
-                    background: 'rgba(var(--accent-rgb),0.08)',
+                    background: 'rgba(var(--accent-rgb),0.1)',
                     color: 'var(--accent2)',
                     fontFamily: MONO_FONT,
+                    borderRadius: 'var(--skin-radius-control,14px)',
                   }}
                 >
                   {popup.icon}
@@ -779,12 +789,12 @@ export default function NotificationCenter({ onNavigate }) {
                   className="min-w-0 flex-1 text-left"
                 >
                   <div
-                    className="text-[9px] font-semibold uppercase tracking-[0.16em]"
-                    style={{ color: 'var(--muted)', fontFamily: MONO_FONT }}
+                    className="mono text-[10px] uppercase tracking-[0.2em]"
+                    style={{ color: 'var(--muted-2)', fontFamily: MONO_FONT }}
                   >
                     Mới
                   </div>
-                  <div className="mt-1 text-[16px] font-medium leading-tight" style={{ color: 'var(--ink)', fontFamily: DISPLAY_FONT }}>
+                  <div className="mt-1 text-[16px] font-semibold leading-tight" style={{ color: 'var(--ink)', fontFamily: 'var(--skin-font-display)' }}>
                     {popup.title}
                   </div>
                   <div className="mt-1 text-[12px] leading-[1.45]" style={{ color: 'var(--muted)' }}>

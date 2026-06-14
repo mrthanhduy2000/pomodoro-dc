@@ -31,19 +31,20 @@ function MetricPill({ label, value, tone = 'loss' }) {
   const isLoss = tone === 'loss';
   return (
     <div
-      className="rounded-[18px] border px-3 py-2 text-center"
+      className="border px-3 py-2 text-center"
       style={{
+        borderRadius: 'var(--skin-radius-control,14px)',
         borderColor: isLoss ? 'rgba(var(--accent-rgb),0.16)' : 'rgba(91,122,82,0.18)',
         background: isLoss ? 'rgba(var(--accent-rgb),0.07)' : 'rgba(91,122,82,0.08)',
       }}
     >
       <p
-        className="text-[10px] font-semibold uppercase tracking-[0.18em]"
-        style={{ color: 'var(--muted)', fontFamily: MONO_FONT }}
+        className="mono text-[10px] font-semibold uppercase tracking-[0.2em]"
+        style={{ color: 'var(--muted-2, var(--muted))', fontFamily: MONO_FONT }}
       >
         {label}
       </p>
-      <p className="mt-1 text-sm font-semibold" style={{ color: isLoss ? 'var(--accent2)' : 'var(--good)' }}>
+      <p className="mono mt-1 text-sm font-semibold tabular-nums" style={{ color: isLoss ? 'var(--accent2)' : 'var(--good)', fontFamily: MONO_FONT }}>
         {value}
       </p>
     </div>
@@ -114,17 +115,20 @@ function DisasterContent({ data, onClose }) {
         animate={{ y: 0, scale: 1, opacity: 1 }}
         exit={{ y: 10, scale: 0.97, opacity: 0 }}
         transition={{ duration: 0.26, ease: 'easeOut' }}
-        className="w-full max-w-md rounded-[32px] border p-6"
+        className="w-full max-w-md border p-6"
         style={{
-          background: 'rgba(255,255,255,0.97)',
+          borderRadius: 'var(--skin-radius-card,18px)',
+          borderWidth: 'var(--skin-card-border-width,1px)',
           borderColor: 'var(--line)',
-          boxShadow: '0 24px 62px rgba(31,30,29,0.14)',
+          background: 'var(--card-bg-solid, var(--panel-strong, var(--panel)))',
+          boxShadow: 'var(--skin-card-shadow, 0 24px 62px rgba(31,30,29,0.14))',
         }}
         onClick={(event) => event.stopPropagation()}
       >
         <div
-          className="mb-5 rounded-[24px] border px-4 py-4 text-center"
+          className="mb-5 border px-4 py-5 text-center"
           style={{
+            borderRadius: 'var(--skin-radius-card,18px)',
             borderColor: tone.edge,
             background: tone.fill,
           }}
@@ -133,7 +137,7 @@ function DisasterContent({ data, onClose }) {
             className="mono mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-full border text-[12px] font-semibold uppercase tracking-[0.2em]"
             style={{
               borderColor: tone.edge,
-              background: 'rgba(255,255,255,0.72)',
+              background: 'var(--card-bg-solid, rgba(255,255,255,0.72))',
               color: waived ? 'var(--good)' : 'var(--accent2)',
               fontFamily: MONO_FONT,
             }}
@@ -142,14 +146,14 @@ function DisasterContent({ data, onClose }) {
           </div>
 
           <p
-            className="text-[10px] font-semibold uppercase tracking-[0.24em]"
-            style={{ color: 'var(--muted)', fontFamily: MONO_FONT }}
+            className="mono text-[10px] font-semibold uppercase tracking-[0.2em]"
+            style={{ color: 'var(--muted-2, var(--muted))', fontFamily: MONO_FONT }}
           >
             {waived ? 'Bảo toàn tiến trình' : 'Biến cố phiên tập trung'}
           </p>
           <h2
-            className="mt-2 text-[32px] font-medium leading-none tracking-[-0.04em]"
-            style={{ color: 'var(--ink)', fontFamily: DISPLAY_FONT }}
+            className="mt-2 text-[32px] leading-none tracking-[-0.04em]"
+            style={{ color: 'var(--ink)', fontFamily: 'var(--skin-font-display, ' + DISPLAY_FONT + ')', fontWeight: 600 }}
           >
             {waived ? 'Sự tha thứ đã che chắn' : disaster.label}
           </h2>
@@ -177,15 +181,18 @@ function DisasterContent({ data, onClose }) {
 
         {!waived && (
           <div
-            className="mb-4 rounded-[24px] border px-4 py-4"
+            className="mb-4 border px-4 py-4"
             style={{
+              borderRadius: 'var(--skin-radius-card,18px)',
+              borderWidth: 'var(--skin-card-border-width,1px)',
               borderColor: 'var(--line)',
-              background: 'rgba(255,255,255,0.84)',
+              background: 'var(--card-bg-solid, rgba(255,255,255,0.84))',
+              boxShadow: 'var(--skin-card-shadow, 0 14px 32px rgba(31,30,29,0.07))',
             }}
           >
             <p
-              className="text-[10px] font-semibold uppercase tracking-[0.2em]"
-              style={{ color: 'var(--muted)', fontFamily: MONO_FONT }}
+              className="mono text-[10px] font-semibold uppercase tracking-[0.2em]"
+              style={{ color: 'var(--muted-2, var(--muted))', fontFamily: MONO_FONT }}
             >
               Tài nguyên bị trừ
             </p>
@@ -205,16 +212,16 @@ function DisasterContent({ data, onClose }) {
                         className="mono inline-flex h-8 w-8 items-center justify-center rounded-full border text-[10px] font-semibold uppercase tracking-[0.14em]"
                         style={{
                           borderColor: 'rgba(var(--accent-rgb),0.14)',
-                          background: 'rgba(var(--accent-rgb),0.07)',
+                          background: 'rgba(var(--accent-rgb),0.1)',
                           color: 'var(--accent2)',
                           fontFamily: MONO_FONT,
                         }}
                       >
                         {getResourceMark(id)}
                       </span>
-                      <span style={{ color: 'var(--muted)' }}>{getResourceLabel(id)}</span>
+                      <span style={{ color: 'var(--ink-2, var(--muted))' }}>{getResourceLabel(id)}</span>
                     </div>
-                    <span className="mono" style={{ color: 'var(--accent2)', fontWeight: 700, fontFamily: MONO_FONT }}>
+                    <span className="mono tabular-nums" style={{ color: 'var(--accent2)', fontWeight: 700, fontFamily: MONO_FONT }}>
                       −{amount.toLocaleString()}
                     </span>
                   </div>
@@ -234,8 +241,9 @@ function DisasterContent({ data, onClose }) {
 
         {waived && chargeConsumed && (
           <div
-            className="mb-4 rounded-[20px] border px-4 py-3"
+            className="mb-4 border px-4 py-3"
             style={{
+              borderRadius: 'var(--skin-radius-control,14px)',
               borderColor: 'rgba(91,122,82,0.18)',
               background: 'rgba(91,122,82,0.08)',
             }}
@@ -252,12 +260,14 @@ function DisasterContent({ data, onClose }) {
             whileHover={{ y: -1 }}
             whileTap={{ scale: 0.99 }}
             onClick={onClose}
-            className="rounded-[18px] border px-7 py-3 text-sm font-semibold"
+            className="border px-7 py-3 text-sm font-semibold"
             style={waived ? {
+              borderRadius: 'var(--skin-radius-control,14px)',
               borderColor: 'rgba(91,122,82,0.18)',
               background: 'rgba(91,122,82,0.12)',
               color: 'var(--good)',
             } : {
+              borderRadius: 'var(--skin-radius-control,14px)',
               borderColor: 'rgba(var(--accent-rgb),0.16)',
               background: 'rgba(31,30,29,0.98)',
               color: 'var(--canvas)',

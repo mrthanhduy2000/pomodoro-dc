@@ -46,18 +46,20 @@ export default function RankDisplay() {
 
   return (
     <section
-      className="rounded-[18px] border px-4 py-4"
+      className="border px-5 py-5"
       style={{
-        background: lightTheme ? 'rgba(255, 255, 255, 0.84)' : 'rgba(24, 21, 17, 0.9)',
+        background: lightTheme ? 'var(--card-bg-solid)' : 'rgba(24, 21, 17, 0.9)',
         borderColor: lightTheme ? 'var(--line)' : 'rgba(148, 163, 184, 0.14)',
-        boxShadow: lightTheme ? '0 10px 22px rgba(31, 30, 29, 0.04)' : '0 12px 28px rgba(0, 0, 0, 0.14)',
+        borderWidth: 'var(--skin-card-border-width, 1px)',
+        borderRadius: 'var(--skin-radius-card, 18px)',
+        boxShadow: lightTheme ? 'var(--skin-card-shadow)' : '0 12px 28px rgba(0, 0, 0, 0.14)',
       }}
     >
-      <div className="mb-3 flex items-center justify-between gap-3">
-        <div className="mono text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <div className="mono text-[10px] uppercase tracking-[0.2em]" style={{ color: 'var(--muted-2)' }}>
           Rank
         </div>
-        <span className="mono text-[11px] text-[var(--muted)]">
+        <span className="mono text-[11px] tabular-nums text-[var(--muted)]">
           Bậc {currentIdx + 1}/{ranks.length}
         </span>
       </div>
@@ -65,21 +67,24 @@ export default function RankDisplay() {
       <div>
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <div className="text-[11px] uppercase tracking-[0.14em] text-[var(--muted)]">
+            <div className="mono text-[10px] uppercase tracking-[0.2em]" style={{ color: 'var(--muted-2)' }}>
               Bậc hiện tại
             </div>
-            <div className="serif mt-1 text-[24px] font-medium leading-tight tracking-[-0.02em] text-[var(--ink)]">
+            <div
+              className="mt-1.5 text-[24px] font-semibold leading-tight tracking-[-0.02em] text-[var(--ink)]"
+              style={{ fontFamily: 'var(--skin-font-display)' }}
+            >
               {currentRank.label}
             </div>
-            <div className="mt-1 text-[12px] leading-snug text-[var(--muted)]">
+            <div className="mt-1.5 text-[12px] leading-snug text-[var(--muted)]">
               {currentRank.buffLabel}
             </div>
           </div>
-          <div className="text-right">
-            <div className="mono text-[12px] font-semibold" style={{ color: 'var(--accent)' }}>
+          <div className="shrink-0 text-right">
+            <div className="mono text-[15px] font-semibold tabular-nums" style={{ color: 'var(--accent)' }}>
               {isMaxRank ? 'MAX' : `+${xpInEra.toLocaleString()}`}
             </div>
-            <div className="text-[11px] text-[var(--muted)]">
+            <div className="mono mt-0.5 text-[10px] uppercase tracking-[0.16em] text-[var(--muted)]">
               EP trong kỷ
             </div>
           </div>
@@ -104,21 +109,24 @@ export default function RankDisplay() {
           <div>
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <div className="text-[11px] uppercase tracking-[0.14em] text-[var(--muted)]">
+                <div className="mono text-[10px] uppercase tracking-[0.2em]" style={{ color: 'var(--muted-2)' }}>
                   Bậc kế tiếp
                 </div>
-                <div className="serif mt-1 text-[20px] font-medium leading-tight tracking-[-0.02em]" style={{ color: canChallenge ? 'var(--accent2)' : 'var(--ink)' }}>
+                <div
+                  className="mt-1.5 text-[20px] font-semibold leading-tight tracking-[-0.02em]"
+                  style={{ fontFamily: 'var(--skin-font-display)', color: canChallenge ? 'var(--accent2)' : 'var(--ink)' }}
+                >
                   {nextRank.label}
                 </div>
-                <div className="mt-1 text-[12px] leading-snug text-[var(--muted)]">
+                <div className="mt-1.5 text-[12px] leading-snug text-[var(--muted)]">
                   {nextRank.buffLabel}
                 </div>
               </div>
-              <div className="text-right">
-                <div className="mono text-[12px] font-semibold" style={{ color: canChallenge ? 'var(--accent)' : 'var(--muted)' }}>
+              <div className="shrink-0 text-right">
+                <div className="mono text-[14px] font-semibold tabular-nums" style={{ color: canChallenge ? 'var(--accent)' : 'var(--muted)' }}>
                   {canChallenge ? 'Sẵn sàng' : `${remainingXP.toLocaleString()} XP`}
                 </div>
-                <div className="text-[11px] text-[var(--muted)]">mốc mở</div>
+                <div className="mono mt-0.5 text-[10px] uppercase tracking-[0.16em] text-[var(--muted)]">mốc mở</div>
               </div>
             </div>
 
@@ -160,13 +168,15 @@ export default function RankDisplay() {
                 <button
                   type="button"
                   onClick={() => initiateChallenge(activeBook)}
-                  className="whitespace-nowrap rounded-[10px] px-3.5 py-2 text-[12px] font-semibold"
+                  className="whitespace-nowrap px-3.5 py-2 text-[12px] font-semibold"
                   style={lightTheme ? {
+                    borderRadius: 'var(--skin-radius-control, 14px)',
                     background: 'var(--ink)',
                     color: 'var(--canvas)',
                     border: '1px solid rgba(31, 30, 29, 0.06)',
                     boxShadow: '0 10px 20px rgba(31, 30, 29, 0.12)',
                   } : {
+                    borderRadius: 'var(--skin-radius-control, 14px)',
                     background: 'rgba(var(--accent-rgb), 0.9)',
                     color: 'var(--ink)',
                     border: '1px solid rgba(var(--accent-rgb), 0.22)',
@@ -186,17 +196,23 @@ export default function RankDisplay() {
       )}
 
       {rankChallenge?.active && (
-        <div className="mt-4 rounded-[12px] border px-3 py-3" style={challengeStyle(lightTheme)}>
+        <div className="mt-4 border px-4 py-4" style={challengeStyle(lightTheme)}>
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <div className="mono text-[10px] uppercase tracking-[0.16em]" style={{ color: lightTheme ? 'var(--accent2)' : 'var(--muted)' }}>
+              <span
+                className="mono inline-flex items-center rounded-full px-2 py-0.5 text-[10px] uppercase tracking-[0.16em]"
+                style={{ background: 'rgba(var(--accent-rgb), 0.1)', color: 'var(--accent2)' }}
+              >
                 Đang thách đấu
-              </div>
-              <div className="mt-1 text-[14px] font-semibold" style={{ color: lightTheme ? 'var(--accent2)' : 'var(--ink)' }}>
+              </span>
+              <div
+                className="mt-1.5 text-[15px] font-semibold leading-tight tracking-[-0.01em]"
+                style={{ fontFamily: 'var(--skin-font-display)', color: lightTheme ? 'var(--accent2)' : 'var(--ink)' }}
+              >
                 {rankChallenge.targetRankLabel}
               </div>
             </div>
-            <div className="mono text-[11px] font-medium" style={{ color: lightTheme ? 'var(--accent2)' : 'var(--muted)' }}>
+            <div className="mono shrink-0 text-[11px] font-medium tabular-nums" style={{ color: lightTheme ? 'var(--accent2)' : 'var(--muted)' }}>
               {formatDeadlineRemaining(rankChallenge.deadline)}
             </div>
           </div>
@@ -215,8 +231,8 @@ export default function RankDisplay() {
           </div>
 
           <div className="mt-2 flex items-center justify-between gap-3 text-[12px] text-[var(--muted)]">
-            <span>{`${rankChallenge.sessionsCompleted}/${rankChallenge.sessionsRequired} phiên`}</span>
-            <span className="mono">{`≥${rankChallenge.minMinutes}'`}</span>
+            <span className="mono tabular-nums">{`${rankChallenge.sessionsCompleted}/${rankChallenge.sessionsRequired} phiên`}</span>
+            <span className="mono tabular-nums">{`≥${rankChallenge.minMinutes}'`}</span>
           </div>
         </div>
       )}
@@ -226,6 +242,7 @@ export default function RankDisplay() {
 
 function challengeStyle(lightTheme) {
   return {
+    borderRadius: 'var(--skin-radius-control, 14px)',
     background: lightTheme ? 'rgba(255, 247, 237, 0.92)' : 'rgba(255,255,255,0.04)',
     border: `1px solid ${lightTheme ? 'rgba(201, 100, 66, 0.18)' : 'rgba(148, 163, 184, 0.14)'}`,
   };

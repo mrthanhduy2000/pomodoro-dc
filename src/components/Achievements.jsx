@@ -20,8 +20,14 @@ const DEFAULT_UNLOCKED_BATCH = 24;
 const DEFAULT_LOCKED_BATCH = 24;
 const VI_COLLATOR = new Intl.Collator('vi-VN');
 const ACHIEVEMENT_LOOKUP = new Map(ACHIEVEMENTS.map((achievement) => [achievement.id, achievement]));
-const DISPLAY_FONT = '"Source Serif 4", Georgia, serif';
+const DISPLAY_FONT = 'var(--skin-font-display)';
 const MONO_FONT = '"JetBrains Mono", "SFMono-Regular", Menlo, monospace';
+const CARD_SURFACE = {
+  background: 'var(--card-bg-solid)',
+  border: 'var(--skin-card-border-width,1px) solid var(--line)',
+  borderRadius: 'var(--skin-radius-card,18px)',
+  boxShadow: 'var(--skin-card-shadow)',
+};
 const MotionSection = motion.section;
 const MotionAside = motion.aside;
 const MotionDiv = motion.div;
@@ -230,19 +236,16 @@ function AchievementCard({
 
   return (
     <div
-      className={[
-        'relative overflow-hidden rounded-[28px] border px-4 py-4 transition',
-        entry.isUnlocked
-          ? 'border-[var(--line)]'
-          : 'border-[rgba(217,214,204,0.8)]',
-      ].join(' ')}
+      className="relative overflow-hidden px-5 py-5 transition"
       style={{
         background: entry.isUnlocked
-          ? `rgba(255,255,255,0.97)`
-          : 'rgba(248,247,243,0.94)',
+          ? 'var(--card-bg-solid)'
+          : 'var(--card-bg-solid2)',
+        border: `var(--skin-card-border-width,1px) solid ${entry.isUnlocked ? 'var(--line)' : 'var(--line-2)'}`,
+        borderRadius: 'var(--skin-radius-card,18px)',
         boxShadow: entry.isUnlocked
-          ? '0 18px 44px rgba(31,30,29,0.06)'
-          : '0 10px 24px rgba(31,30,29,0.035)',
+          ? 'var(--skin-card-shadow)'
+          : 'none',
       }}
     >
       <div
@@ -254,11 +257,12 @@ function AchievementCard({
       <div className="flex items-start gap-4">
         <div
           className={[
-            'mono flex h-14 w-14 shrink-0 items-center justify-center rounded-[18px] border text-[10px] font-semibold uppercase tracking-[0.16em]',
-            entry.isUnlocked ? 'bg-[rgba(255,255,255,0.88)] text-[var(--ink)]' : 'bg-[rgba(255,255,255,0.68)] text-[var(--muted-2)]',
+            'mono flex h-14 w-14 shrink-0 items-center justify-center border text-[10px] font-semibold uppercase tracking-[0.16em]',
+            entry.isUnlocked ? 'bg-[var(--card-bg-solid)] text-[var(--ink)]' : 'bg-[var(--card-bg-solid2)] text-[var(--muted-2)]',
           ].join(' ')}
           style={{
-            borderColor: entry.isUnlocked ? withAlpha(tierSurface.line, 0.26) : 'rgba(217,214,204,0.92)',
+            borderColor: entry.isUnlocked ? withAlpha(tierSurface.line, 0.26) : 'var(--line-2)',
+            borderRadius: 'var(--skin-radius-control,14px)',
             boxShadow: entry.isUnlocked ? `0 12px 28px ${withAlpha(tierSurface.line, 0.1)}` : 'inset 0 1px 0 rgba(255,255,255,0.72)',
             fontFamily: MONO_FONT,
           }}
@@ -269,8 +273,8 @@ function AchievementCard({
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <h3
-              className="text-[25px] font-medium leading-tight tracking-[-0.03em] text-[var(--ink)]"
-              style={{ fontFamily: DISPLAY_FONT }}
+              className="text-[25px] leading-tight tracking-[-0.03em] text-[var(--ink)]"
+              style={{ fontFamily: DISPLAY_FONT, fontWeight: 600 }}
             >
               {entry.achievement.label}
             </h3>
@@ -315,8 +319,11 @@ function AchievementCard({
             ) : null}
           </div>
 
-          <div className="mt-3 rounded-[20px] border border-[var(--line)] bg-[rgba(244,242,236,0.76)] px-3 py-2.5">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
+          <div
+            className="mt-3 border border-[var(--line)] bg-[var(--card-bg-solid2)] px-3.5 py-3"
+            style={{ borderRadius: 'var(--skin-radius-control,14px)' }}
+          >
+            <p className="mono text-[10px] uppercase tracking-[0.2em] text-[var(--muted-2)]">
               Ghi chú tiến trình
             </p>
             <p className="mt-1 text-sm leading-6 text-[var(--ink-2)]">
@@ -491,21 +498,17 @@ export default function Achievements() {
           initial={{ opacity: 0, y: 18 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.26, ease: 'easeOut' }}
-          className="overflow-hidden rounded-[30px] border p-6"
-          style={{
-            borderColor: 'var(--line)',
-            background: 'rgba(255,255,255,0.95)',
-            boxShadow: '0 22px 60px rgba(31,30,29,0.08)',
-          }}
+          className="overflow-hidden p-6"
+          style={CARD_SURFACE}
         >
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div>
-              <p className="mono text-[10px] font-semibold uppercase tracking-[0.28em] text-[var(--muted)]">
+              <p className="mono text-[10px] uppercase tracking-[0.2em] text-[var(--muted-2)]">
                 Lưu trữ thành tích
               </p>
               <h2
-                className="mt-2 text-[40px] font-medium tracking-[-0.05em] text-[var(--ink)]"
-                style={{ fontFamily: DISPLAY_FONT }}
+                className="mt-2 text-[40px] tracking-[-0.05em] text-[var(--ink)]"
+                style={{ fontFamily: DISPLAY_FONT, fontWeight: 600 }}
               >
                 {dataset.totalUnlocked}/{dataset.totalAchievements} dấu đã đạt
               </h2>
@@ -542,11 +545,14 @@ export default function Achievements() {
           </div>
 
           <div className="mt-5 grid gap-3 md:grid-cols-3">
-            <div className="rounded-[20px] border p-4" style={{ borderColor: 'var(--line)', background: 'rgba(255,255,255,0.76)' }}>
-              <p className="mono text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">
+            <div
+              className="border p-4"
+              style={{ borderColor: 'var(--line)', background: 'var(--card-bg-solid2)', borderRadius: 'var(--skin-radius-control,14px)' }}
+            >
+              <p className="mono text-[10px] uppercase tracking-[0.2em] text-[var(--muted-2)]">
                 Gần nhất
               </p>
-              <p className="mt-2 text-[20px] font-medium text-[var(--ink)]" style={{ fontFamily: DISPLAY_FONT }}>
+              <p className="mt-2 text-[20px] text-[var(--ink)]" style={{ fontFamily: DISPLAY_FONT, fontWeight: 600 }}>
                 {latestAchievement ? latestAchievement.label : 'Chưa có dấu nào'}
               </p>
               <p className="mt-1 text-sm text-[var(--muted)]">
@@ -556,11 +562,14 @@ export default function Achievements() {
               </p>
             </div>
 
-            <div className="rounded-[20px] border p-4" style={{ borderColor: 'var(--line)', background: 'rgba(255,255,255,0.76)' }}>
-              <p className="mono text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">
+            <div
+              className="border p-4"
+              style={{ borderColor: 'var(--line)', background: 'var(--card-bg-solid2)', borderRadius: 'var(--skin-radius-control,14px)' }}
+            >
+              <p className="mono text-[10px] uppercase tracking-[0.2em] text-[var(--muted-2)]">
                 Theo tier
               </p>
-              <p className="mt-2 text-[20px] font-medium text-[var(--ink)]" style={{ fontFamily: DISPLAY_FONT }}>
+              <p className="mt-2 text-[20px] text-[var(--ink)]" style={{ fontFamily: DISPLAY_FONT, fontWeight: 600 }}>
                 {TIER_SEQUENCE.map((tier) => dataset.tierStats[tier]?.unlocked ?? 0).join(' · ')}
               </p>
               <p className="mt-1 text-sm text-[var(--muted)]">
@@ -568,11 +577,14 @@ export default function Achievements() {
               </p>
             </div>
 
-            <div className="rounded-[20px] border p-4" style={{ borderColor: 'var(--line)', background: 'rgba(255,255,255,0.76)' }}>
-              <p className="mono text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">
+            <div
+              className="border p-4"
+              style={{ borderColor: 'var(--line)', background: 'var(--card-bg-solid2)', borderRadius: 'var(--skin-radius-control,14px)' }}
+            >
+              <p className="mono text-[10px] uppercase tracking-[0.2em] text-[var(--muted-2)]">
                 Hiển thị
               </p>
-              <p className="mt-2 text-[20px] font-medium text-[var(--ink)]" style={{ fontFamily: DISPLAY_FONT }}>
+              <p className="mt-2 text-[20px] text-[var(--ink)]" style={{ fontFamily: DISPLAY_FONT, fontWeight: 600 }}>
                 {filteredUnlockedEntries.length} đã đạt / {filteredLockedEntries.length} chưa đạt
               </p>
               <p className="mt-1 text-sm text-[var(--muted)]">
@@ -586,21 +598,17 @@ export default function Achievements() {
           initial={{ opacity: 0, y: 18 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, ease: 'easeOut', delay: 0.04 }}
-          className="rounded-[30px] border p-5"
-          style={{
-            borderColor: 'var(--line)',
-            background: 'rgba(255,255,255,0.9)',
-            boxShadow: '0 20px 52px rgba(31,30,29,0.07)',
-          }}
+          className="p-5"
+          style={CARD_SURFACE}
         >
           <div className="flex items-center justify-between gap-3">
             <div>
-                <p className="mono text-[10px] font-semibold uppercase tracking-[0.28em] text-[var(--muted)]">
+                <p className="mono text-[10px] uppercase tracking-[0.2em] text-[var(--muted-2)]">
                   Dấu gần đây
                 </p>
               <h3
-                className="mt-2 text-[30px] font-medium tracking-[-0.04em] text-[var(--ink)]"
-                style={{ fontFamily: DISPLAY_FONT }}
+                className="mt-2 text-[30px] tracking-[-0.04em] text-[var(--ink)]"
+                style={{ fontFamily: DISPLAY_FONT, fontWeight: 600 }}
               >
                 Mới đạt gần đây
               </h3>
@@ -616,7 +624,10 @@ export default function Achievements() {
           </div>
 
           {latestThreeEntries.length === 0 ? (
-            <div className="mt-5 rounded-[24px] border border-dashed border-[var(--line-2)] bg-[rgba(255,255,255,0.72)] px-4 py-6 text-sm leading-6 text-[var(--muted)]">
+            <div
+              className="mt-5 border border-dashed border-[var(--line-2)] bg-[var(--card-bg-solid2)] px-4 py-6 text-sm leading-6 text-[var(--muted)]"
+              style={{ borderRadius: 'var(--skin-radius-card,18px)' }}
+            >
               Khi có phiên đầu tiên, khu này sẽ hiện dấu mới nhất cùng hai mốc đứng ngay sau nó.
             </div>
           ) : (
@@ -629,10 +640,10 @@ export default function Achievements() {
                     className="px-0 py-3 first:pt-0 last:pb-0"
                   >
                     <div className="flex items-start gap-3">
-                      <div className="mono mt-0.5 flex h-10 w-10 items-center justify-center rounded-[14px] border bg-[rgba(255,255,255,0.78)] text-[9px] font-semibold uppercase tracking-[0.14em]" style={{ borderColor: withAlpha(getTierSurface(entry.achievement.tier).line, 0.2), fontFamily: MONO_FONT }}>{getLabelMark(entry.achievement.label, 'DG')}</div>
+                      <div className="mono mt-0.5 flex h-10 w-10 items-center justify-center border bg-[var(--card-bg-solid2)] text-[9px] font-semibold uppercase tracking-[0.14em]" style={{ borderColor: withAlpha(getTierSurface(entry.achievement.tier).line, 0.2), borderRadius: 'var(--skin-radius-control,14px)', fontFamily: MONO_FONT }}>{getLabelMark(entry.achievement.label, 'DG')}</div>
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
-                          <p className="text-[16px] font-medium text-[var(--ink)]" style={{ fontFamily: DISPLAY_FONT }}>
+                          <p className="text-[16px] text-[var(--ink)]" style={{ fontFamily: DISPLAY_FONT, fontWeight: 600 }}>
                             {entry.achievement.label}
                           </p>
                           <span className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold ${getTierSurface(entry.achievement.tier).badge}`}>
@@ -653,16 +664,12 @@ export default function Achievements() {
       </div>
 
       <section
-        className="rounded-[28px] border p-5"
-        style={{
-          borderColor: 'var(--line)',
-          background: 'rgba(255,255,255,0.82)',
-          boxShadow: '0 20px 56px rgba(31,30,29,0.05)',
-        }}
+        className="p-5"
+        style={CARD_SURFACE}
       >
         <div className="space-y-4">
           <div>
-            <p className="mono text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">
+            <p className="mono text-[10px] uppercase tracking-[0.2em] text-[var(--muted-2)]">
               Lọc theo tier
             </p>
             <div className="mt-3 flex flex-wrap gap-2">
@@ -692,7 +699,7 @@ export default function Achievements() {
           </div>
 
           <div className="border-t pt-4" style={{ borderColor: 'var(--line)' }}>
-            <p className="mono text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">
+            <p className="mono text-[10px] uppercase tracking-[0.2em] text-[var(--muted-2)]">
               Lọc theo danh mục
             </p>
             <div className="mt-3 flex flex-wrap gap-2">
@@ -741,7 +748,10 @@ export default function Achievements() {
         </div>
 
         {filteredUnlockedEntries.length === 0 ? (
-          <div className="rounded-[28px] border border-dashed border-[var(--line-2)] bg-[rgba(255,255,255,0.8)] px-5 py-10 text-center text-sm text-[var(--muted)]">
+          <div
+            className="border border-dashed border-[var(--line-2)] bg-[var(--card-bg-solid)] px-5 py-10 text-center text-sm text-[var(--muted)]"
+            style={{ borderRadius: 'var(--skin-radius-card,18px)' }}
+          >
             Bộ lọc hiện tại chưa có dấu nào đã đạt.
           </div>
         ) : (
@@ -803,7 +813,10 @@ export default function Achievements() {
         </div>
 
         {filteredLockedEntries.length === 0 ? (
-          <div className="rounded-[28px] border border-dashed border-[var(--line-2)] bg-[rgba(255,255,255,0.8)] px-5 py-10 text-center text-sm text-[var(--muted)]">
+          <div
+            className="border border-dashed border-[var(--line-2)] bg-[var(--card-bg-solid)] px-5 py-10 text-center text-sm text-[var(--muted)]"
+            style={{ borderRadius: 'var(--skin-radius-card,18px)' }}
+          >
             Bộ lọc hiện tại không còn dấu nào ở trạng thái chờ.
           </div>
         ) : (

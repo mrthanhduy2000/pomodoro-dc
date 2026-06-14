@@ -28,7 +28,6 @@ import {
   getBuildingLevelMultiplier,
 } from '../engine/constants';
 
-const DISPLAY_FONT = '"Source Serif 4", Georgia, serif';
 const MONO_FONT = '"JetBrains Mono", "SFMono-Regular", Menlo, monospace';
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
@@ -67,9 +66,10 @@ function formatPercent(value = 0) {
 function paperPanel(lightTheme) {
   if (!lightTheme) return {};
   return {
-    background: 'rgba(255, 255, 255, 0.84)',
-    border: '1px solid rgba(31, 30, 29, 0.08)',
-    boxShadow: '0 12px 26px rgba(31, 30, 29, 0.05)',
+    background: 'var(--card-bg-solid)',
+    border: 'var(--skin-card-border-width,1px) solid var(--line)',
+    borderRadius: 'var(--skin-radius-card,18px)',
+    boxShadow: 'var(--skin-card-shadow)',
   };
 }
 
@@ -84,11 +84,12 @@ function TypeBadge({ type, lightTheme = false }) {
     };
     return (
       <span
-        className="rounded-full px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.14em]"
+        className="mono rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.16em]"
         style={{
-          background: 'rgba(255, 255, 255, 0.74)',
-          border: '1px solid rgba(31, 30, 29, 0.08)',
+          background: 'var(--card-bg-solid2)',
+          border: 'var(--skin-card-border-width,1px) solid var(--line)',
           color: accentMap[type] ?? '#68796a',
+          fontFamily: MONO_FONT,
         }}
       >
         {s.label}
@@ -112,11 +113,12 @@ function RarityBadge({ rarity, lightTheme = false }) {
     };
     return (
       <span
-        className="rounded-full px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.14em]"
+        className="mono rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.16em]"
         style={{
           background: 'rgba(31, 30, 29, 0.04)',
-          border: '1px solid rgba(31, 30, 29, 0.08)',
+          border: 'var(--skin-card-border-width,1px) solid var(--line)',
           color: accentMap[rarity] ?? '#6a6862',
+          fontFamily: MONO_FONT,
         }}
       >
         {s.label}
@@ -134,12 +136,12 @@ function PerkSummary({ perk, lightTheme = false }) {
   if (!perk) return null;
   return (
     <div
-      className="mt-1.5 rounded-[14px] px-3 py-2"
+      className="mt-1.5 px-3 py-2"
       style={lightTheme
-        ? { background: 'rgba(31, 30, 29, 0.04)', border: '1px solid rgba(31, 30, 29, 0.08)' }
-        : { background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}
+        ? { background: 'rgba(31, 30, 29, 0.04)', border: 'var(--skin-card-border-width,1px) solid var(--line)', borderRadius: 'var(--skin-radius-control,14px)' }
+        : { background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14 }}
     >
-      <p className="text-[11px] font-semibold uppercase tracking-[0.16em]" style={lightTheme ? { color: '#9a5a48' } : { color: '#f8d6a2' }}>
+      <p className="mono text-[10px] font-semibold uppercase tracking-[0.2em]" style={lightTheme ? { color: 'var(--accent2)', fontFamily: MONO_FONT } : { color: '#f8d6a2', fontFamily: MONO_FONT }}>
         {perk.family}
       </p>
       <p className="mt-0.5 text-xs font-semibold" style={lightTheme ? { color: '#1f1e1d' } : { color: '#f8fafc' }}>
@@ -186,10 +188,10 @@ function QueueSection({ queue, cancelCrafting, lightTheme }) {
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between gap-3">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.24em]" style={lightTheme ? { color: '#8a8a86', fontFamily: MONO_FONT } : { color: '#94a3b8', fontFamily: MONO_FONT }}>
+        <p className="mono text-[10px] font-semibold uppercase tracking-[0.2em]" style={lightTheme ? { color: 'var(--muted-2)', fontFamily: MONO_FONT } : { color: '#94a3b8', fontFamily: MONO_FONT }}>
           Hàng chờ xây dựng
         </p>
-        <span className="text-[11px]" style={lightTheme ? { color: '#8a8a86', fontFamily: MONO_FONT } : { color: '#64748b', fontFamily: MONO_FONT }}>
+        <span className="mono text-[11px] tabular-nums" style={lightTheme ? { color: 'var(--muted-2)', fontFamily: MONO_FONT } : { color: '#64748b', fontFamily: MONO_FONT }}>
           {queue.length}/{CRAFT_QUEUE_SLOTS}
         </span>
       </div>
@@ -206,8 +208,10 @@ function QueueSection({ queue, cancelCrafting, lightTheme }) {
             className="rounded-[24px] p-4 border"
             style={lightTheme
               ? {
-                  background: 'rgba(255, 255, 255, 0.82)',
-                  borderColor: 'rgba(201, 100, 66, 0.18)',
+                  background: 'var(--card-bg-solid)',
+                  border: 'var(--skin-card-border-width,1px) solid rgba(var(--accent-rgb),0.22)',
+                  borderRadius: 'var(--skin-radius-card,18px)',
+                  boxShadow: 'var(--skin-card-shadow)',
                 }
               : undefined}
           >
@@ -215,7 +219,7 @@ function QueueSection({ queue, cancelCrafting, lightTheme }) {
               <span className="text-xl flex-shrink-0">{bpDef.icon}</span>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
-                  <p className="font-semibold text-sm truncate" style={lightTheme ? { color: '#1f1e1d' } : { color: '#fcd34d' }}>{bpDef.label}</p>
+                  <p className="font-semibold text-sm truncate" style={lightTheme ? { color: 'var(--ink)', fontFamily: 'var(--skin-font-display)' } : { color: '#fcd34d' }}>{bpDef.label}</p>
                   {meta.rarity && <RarityBadge rarity={meta.rarity} lightTheme={lightTheme} />}
                   <TypeBadge type={eff.type} lightTheme={lightTheme} />
                 </div>
@@ -223,12 +227,12 @@ function QueueSection({ queue, cancelCrafting, lightTheme }) {
                   <div className="flex-1 h-2 rounded-full overflow-hidden" style={lightTheme ? { background: 'rgba(31, 30, 29, 0.08)' } : { background: '#334155' }}>
                     <motion.div
                       className="h-full rounded-full"
-                      style={lightTheme ? { background: '#c96442' } : undefined}
+                      style={lightTheme ? { background: 'var(--accent)' } : undefined}
                       initial={{ width: 0 }}
                       animate={{ width: `${pct}%` }}
                     />
                   </div>
-                  <span className="text-xs tabular-nums flex-shrink-0" style={lightTheme ? { color: '#6a6862' } : { color: '#94a3b8' }}>
+                  <span className="mono text-xs tabular-nums flex-shrink-0" style={lightTheme ? { color: 'var(--muted)', fontFamily: MONO_FONT } : { color: '#94a3b8', fontFamily: MONO_FONT }}>
                     {done}/{total} phiên
                   </span>
                 </div>
@@ -238,9 +242,9 @@ function QueueSection({ queue, cancelCrafting, lightTheme }) {
                 className="text-xs px-2.5 py-1 rounded-full transition-colors flex-shrink-0"
                 style={lightTheme
                   ? {
-                      color: '#8a3f24',
-                      background: 'rgba(248,235,228,0.86)',
-                      border: '1px solid rgba(201,100,66,0.16)',
+                      color: 'var(--accent2)',
+                      background: 'rgba(var(--accent-rgb),0.10)',
+                      border: 'var(--skin-card-border-width,1px) solid rgba(var(--accent-rgb),0.18)',
                     }
                   : undefined}
                 title="Hủy (hoàn 50% nguyên liệu)"
@@ -281,23 +285,23 @@ function ReadyCard({ bpId, bookResources, resourcesRefined, craftingQueue, onSta
         <span
           className="mono inline-flex h-9 w-9 items-center justify-center rounded-full border text-[8px] font-semibold uppercase tracking-[0.14em] flex-shrink-0"
           style={lightTheme
-            ? { borderColor: 'rgba(31,30,29,0.08)', background: 'rgba(244,242,236,0.94)', color: '#9a5a48', fontFamily: MONO_FONT }
+            ? { borderColor: 'var(--line)', background: 'var(--card-bg-solid2)', color: 'var(--accent2)', fontFamily: MONO_FONT }
             : { borderColor: 'rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.04)', color: 'var(--accent-light)', fontFamily: MONO_FONT }}
         >
           {getBpMark(bpDef.label)}
         </span>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap mb-0.5">
-            <p className="font-semibold text-sm" style={lightTheme ? { color: '#1f1e1d' } : { color: '#ffffff' }}>{bpDef.label}</p>
+            <p className="font-semibold text-sm" style={lightTheme ? { color: 'var(--ink)', fontFamily: 'var(--skin-font-display)' } : { color: '#ffffff' }}>{bpDef.label}</p>
             {meta.rarity && <RarityBadge rarity={meta.rarity} lightTheme={lightTheme} />}
             {eff.type && <TypeBadge type={eff.type} lightTheme={lightTheme} />}
           </div>
-          <p className="text-xs" style={lightTheme ? { color: '#6a6862' } : { color: '#94a3b8' }}>{bpDef.description}</p>
+          <p className="text-xs" style={lightTheme ? { color: 'var(--muted)' } : { color: '#94a3b8' }}>{bpDef.description}</p>
 
           {/* Hiệu ứng */}
           <div className="mt-1.5 space-y-0.5">
             <PerkSummary perk={eff.perk} lightTheme={lightTheme} />
-            <p className="text-xs" style={lightTheme ? { color: '#8a8a86' } : { color: '#64748b' }}>{meta.sessionsToComplete ?? 1} phiên để hoàn thành</p>
+            <p className="mono text-xs" style={lightTheme ? { color: 'var(--muted-2)', fontFamily: MONO_FONT } : { color: '#64748b' }}>{meta.sessionsToComplete ?? 1} phiên để hoàn thành</p>
           </div>
           {spec.cost && <ResourceCost era={meta.era} cost={spec.cost} bookResources={bookResources} lightTheme={lightTheme} />}
           {refinedCost > 0 && (
@@ -322,13 +326,13 @@ function ReadyCard({ bpId, bookResources, resourcesRefined, craftingQueue, onSta
           onClick={() => canAfford && onStart(bpId)}
           disabled={!canAfford}
           title={reason ?? ''}
-          className="w-full rounded-[16px] px-3 py-1.5 text-xs font-semibold transition-colors sm:w-auto sm:flex-shrink-0"
+          className="mono w-full rounded-[16px] px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.08em] transition-colors sm:w-auto sm:flex-shrink-0"
           style={lightTheme
               ? inQueue
-                ? { background: 'rgba(242,230,209,0.92)', color: '#8b6733', border: '1px solid rgba(176,125,59,0.2)', cursor: 'not-allowed' }
+                ? { background: 'rgba(242,230,209,0.92)', color: '#8b6733', border: '1px solid rgba(176,125,59,0.2)', borderRadius: 'var(--skin-radius-control,14px)', cursor: 'not-allowed', fontFamily: MONO_FONT }
               : canAfford
-                ? { background: 'rgba(31,30,29,0.98)', color: '#faf9f6', border: '1px solid rgba(31,30,29,0.12)', boxShadow: '0 12px 24px rgba(31,30,29,0.1)' }
-                : { background: 'rgba(244,242,236,0.92)', color: '#9b9892', border: '1px solid rgba(217,214,204,0.9)', cursor: 'not-allowed' }
+                ? { background: 'var(--ink)', color: 'var(--card-bg-solid)', border: 'var(--skin-card-border-width,1px) solid var(--ink)', borderRadius: 'var(--skin-radius-control,14px)', boxShadow: 'var(--skin-card-shadow)', fontFamily: MONO_FONT }
+                : { background: 'var(--card-bg-solid2)', color: 'var(--muted-2)', border: 'var(--skin-card-border-width,1px) solid var(--line)', borderRadius: 'var(--skin-radius-control,14px)', cursor: 'not-allowed', fontFamily: MONO_FONT }
             : undefined}
         >
           {inQueue ? 'Đang xây' : canAfford ? 'Bắt đầu xây' : 'Chưa đủ'}
@@ -359,15 +363,17 @@ function BuiltCard({ bpId, level, resourcesRefined, onUpgrade, lightTheme }) {
       className="rounded-[24px] p-4 flex flex-col gap-3 border sm:flex-row sm:items-center"
       style={lightTheme
         ? {
-            background: 'rgba(255, 255, 255, 0.82)',
-            borderColor: 'rgba(111, 123, 98, 0.18)',
+            background: 'var(--card-bg-solid)',
+            border: 'var(--skin-card-border-width,1px) solid var(--line)',
+            borderRadius: 'var(--skin-radius-card,18px)',
+            boxShadow: 'var(--skin-card-shadow)',
           }
         : undefined}
     >
       <span
         className="mono inline-flex h-9 w-9 items-center justify-center rounded-full border text-[8px] font-semibold uppercase tracking-[0.14em] flex-shrink-0"
         style={lightTheme
-          ? { borderColor: 'rgba(31,30,29,0.08)', background: 'rgba(244,242,236,0.94)', color: '#9a5a48', fontFamily: MONO_FONT }
+          ? { borderColor: 'var(--line)', background: 'var(--card-bg-solid2)', color: 'var(--accent2)', fontFamily: MONO_FONT }
           : { borderColor: 'rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.04)', color: 'var(--accent-light)', fontFamily: MONO_FONT }}
       >
         {getBpMark(bpDef.label)}
@@ -375,8 +381,8 @@ function BuiltCard({ bpId, level, resourcesRefined, onUpgrade, lightTheme }) {
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-0.5 flex-wrap">
           <p
-            className={lightTheme ? 'text-[1.06rem] font-medium leading-none tracking-[-0.02em]' : 'font-semibold text-sm'}
-            style={lightTheme ? { color: '#1f1e1d', fontFamily: DISPLAY_FONT } : { color: '#86efac' }}
+            className={lightTheme ? 'text-[1.06rem] font-semibold leading-none tracking-[-0.02em]' : 'font-semibold text-sm'}
+            style={lightTheme ? { color: 'var(--ink)', fontFamily: 'var(--skin-font-display)' } : { color: '#86efac' }}
           >
             {bpDef.label}
           </p>
@@ -384,12 +390,12 @@ function BuiltCard({ bpId, level, resourcesRefined, onUpgrade, lightTheme }) {
           {eff.type && <TypeBadge type={eff.type} lightTheme={lightTheme} />}
           <span className={`text-xs font-bold ${LEVEL_COLOR[lv]}`} style={lightTheme ? { color: lv === 1 ? '#6a6862' : lv === 2 ? '#7a6877' : '#9c7645', fontFamily: MONO_FONT } : { fontFamily: MONO_FONT }}>{LEVEL_LABEL[lv]}</span>
           {lv > 1 && (
-            <span className="text-xs" style={lightTheme ? { color: '#8a8a86', fontFamily: MONO_FONT } : { color: '#64748b', fontFamily: MONO_FONT }}>×{LEVEL_MULT[lv]} hiệu ứng</span>
+            <span className="mono text-xs tabular-nums" style={lightTheme ? { color: 'var(--muted-2)', fontFamily: MONO_FONT } : { color: '#64748b', fontFamily: MONO_FONT }}>×{LEVEL_MULT[lv]} hiệu ứng</span>
           )}
         </div>
         <PerkSummary perk={eff.perk} lightTheme={lightTheme} />
         {lv > 1 && (
-          <p className="mt-1 text-xs" style={lightTheme ? { color: '#8a8a86' } : { color: '#64748b' }}>
+          <p className="mt-1 text-xs" style={lightTheme ? { color: 'var(--muted-2)' } : { color: '#64748b' }}>
             Cấp công trình vẫn tăng thông số nền phía sau đặc quyền.
           </p>
         )}
@@ -402,8 +408,8 @@ function BuiltCard({ bpId, level, resourcesRefined, onUpgrade, lightTheme }) {
             className="w-full rounded-[14px] px-2.5 py-1 text-xs border transition-colors sm:w-auto"
             style={lightTheme
               ? canUpgrade
-                ? { background: 'rgba(243,236,239,0.88)', borderColor: 'rgba(166,137,149,0.2)', color: '#7a6877', boxShadow: '0 10px 22px rgba(31,30,29,0.05)' }
-                : { background: 'rgba(244,242,236,0.92)', borderColor: 'rgba(217,214,204,0.9)', color: '#9b9892', cursor: 'not-allowed' }
+                ? { background: 'rgba(243,236,239,0.88)', borderColor: 'rgba(166,137,149,0.2)', color: '#7a6877', borderRadius: 'var(--skin-radius-control,14px)', boxShadow: 'var(--skin-card-shadow)' }
+                : { background: 'var(--card-bg-solid2)', borderColor: 'var(--line)', color: 'var(--muted-2)', borderRadius: 'var(--skin-radius-control,14px)', cursor: 'not-allowed' }
               : undefined}
             title={`Nâng cấp → Lv.${lv + 1} (${upgradeCostLabel})`}
           >
@@ -511,19 +517,19 @@ export default function BuildingWorkshop() {
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
           {lightTheme && (
-            <p className="mono text-[11px] font-semibold uppercase tracking-[0.28em]" style={{ color: '#9a5a48' }}>
+            <p className="mono text-[10px] font-semibold uppercase tracking-[0.2em]" style={{ color: 'var(--muted-2)', fontFamily: MONO_FONT }}>
               Xưởng
             </p>
           )}
-          <h2 className={lightTheme ? 'serif text-[1.8rem] leading-none sm:text-[2rem]' : 'text-white font-bold text-[1.1rem] sm:text-lg'} style={lightTheme ? { color: '#1f1e1d' } : undefined}>Xưởng xây dựng</h2>
+          <h2 className={lightTheme ? 'serif text-[1.8rem] leading-none sm:text-[2rem]' : 'text-white font-bold text-[1.1rem] sm:text-lg'} style={lightTheme ? { color: 'var(--ink)', fontFamily: 'var(--skin-font-display)', fontWeight: 600 } : undefined}>Xưởng xây dựng</h2>
         </div>
         <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
           {activePerkLabels.map((label) => (
             <span
               key={label}
-              className="rounded-full px-2.5 sm:px-3 py-1 text-[10.5px] sm:text-xs"
+              className="rounded-full px-2.5 sm:px-3 py-1 text-[10.5px] sm:text-xs font-medium"
               style={lightTheme
-                ? { color: '#9a5a48', background: 'rgba(201, 100, 66, 0.08)', border: '1px solid rgba(201, 100, 66, 0.18)' }
+                ? { color: 'var(--accent2)', background: 'rgba(var(--accent-rgb),0.1)', border: 'var(--skin-card-border-width,1px) solid rgba(var(--accent-rgb),0.18)' }
                 : undefined}
             >
               {label}
@@ -579,7 +585,7 @@ export default function BuildingWorkshop() {
               -{formatPercent(totalCancelLossReduction)} thất thoát khi hủy
             </span>
           )}
-          <span className="rounded-full px-2.5 sm:px-3 py-1 text-[10.5px] sm:text-xs" style={lightTheme ? { color: '#9a5a48', background: 'rgba(201, 100, 66, 0.08)', border: '1px solid rgba(201, 100, 66, 0.18)' } : {}}>
+          <span className="mono rounded-full px-2.5 sm:px-3 py-1 text-[10.5px] sm:text-xs tabular-nums" style={lightTheme ? { color: 'var(--accent2)', background: 'rgba(var(--accent-rgb),0.1)', border: 'var(--skin-card-border-width,1px) solid rgba(var(--accent-rgb),0.18)', fontFamily: MONO_FONT } : {}}>
             {currentEraBuildings.length} đã xây
           </span>
         </div>
@@ -592,8 +598,8 @@ export default function BuildingWorkshop() {
             className="p-3 rounded-[18px] text-sm font-medium text-center"
             style={lightTheme
               ? toast.ok
-                ? { background: 'rgba(255,255,255,0.84)', border: '1px solid rgba(217,214,204,0.96)', color: '#5b7a52', boxShadow: '0 14px 28px rgba(31,30,29,0.05)' }
-                : { background: 'rgba(248,235,228,0.84)', border: '1px solid rgba(201,100,66,0.16)', color: '#8a3f24', boxShadow: '0 14px 28px rgba(31,30,29,0.05)' }
+                ? { background: 'var(--card-bg-solid)', border: 'var(--skin-card-border-width,1px) solid var(--line)', borderRadius: 'var(--skin-radius-card,18px)', color: '#5b7a52', boxShadow: 'var(--skin-card-shadow)' }
+                : { background: 'rgba(248,235,228,0.84)', border: 'var(--skin-card-border-width,1px) solid rgba(var(--accent-rgb),0.18)', borderRadius: 'var(--skin-radius-card,18px)', color: 'var(--accent2)', boxShadow: 'var(--skin-card-shadow)' }
               : undefined}
           >
             {toast.msg}
@@ -607,10 +613,10 @@ export default function BuildingWorkshop() {
       {/* Bản vẽ sẵn sàng xây */}
       <div className="space-y-2">
         <div className="flex items-center justify-between gap-3">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.24em]" style={lightTheme ? { color: '#8a8a86', fontFamily: MONO_FONT } : { color: '#94a3b8', fontFamily: MONO_FONT }}>
+          <p className="mono text-[10px] font-semibold uppercase tracking-[0.2em]" style={lightTheme ? { color: 'var(--muted-2)', fontFamily: MONO_FONT } : { color: '#94a3b8', fontFamily: MONO_FONT }}>
             Sẵn sàng xây
           </p>
-          <span className="text-[11px]" style={lightTheme ? { color: '#8a8a86', fontFamily: MONO_FONT } : { color: '#64748b', fontFamily: MONO_FONT }}>
+          <span className="mono text-[11px] tabular-nums" style={lightTheme ? { color: 'var(--muted-2)', fontFamily: MONO_FONT } : { color: '#64748b', fontFamily: MONO_FONT }}>
             {readyIds.length}
           </span>
         </div>
@@ -619,9 +625,9 @@ export default function BuildingWorkshop() {
             className={`text-center py-8 rounded-[24px] ${lightTheme ? '' : 'bg-slate-800/30 border border-slate-700/50'}`}
             style={lightTheme ? paperPanel(lightTheme) : undefined}
           >
-            <div className="mono mb-2 text-[12px] font-semibold uppercase tracking-[0.22em]" style={lightTheme ? { color: '#9a5a48', fontFamily: MONO_FONT } : { color: 'var(--accent-light)', fontFamily: MONO_FONT }}>BP</div>
-            <p className="text-sm" style={lightTheme ? { color: '#1f1e1d' } : { color: '#64748b' }}>Chưa có bản vẽ nào chờ được dựng lên.</p>
-            <p className="text-xs mt-1" style={lightTheme ? { color: '#6a6862' } : { color: '#475569' }}>
+            <div className="mono mb-2 text-[12px] font-semibold uppercase tracking-[0.22em]" style={lightTheme ? { color: 'var(--accent2)', fontFamily: MONO_FONT } : { color: 'var(--accent-light)', fontFamily: MONO_FONT }}>BP</div>
+            <p className="text-sm" style={lightTheme ? { color: 'var(--ink)' } : { color: '#64748b' }}>Chưa có bản vẽ nào chờ được dựng lên.</p>
+            <p className="text-xs mt-1" style={lightTheme ? { color: 'var(--muted)' } : { color: '#475569' }}>
               Đi sang mục Bản vẽ để mở thêm công trình bằng RP.
             </p>
           </div>
@@ -646,10 +652,10 @@ export default function BuildingWorkshop() {
       {currentEraBuildings.length > 0 && (
         <div className="space-y-2">
           <div className="flex items-center justify-between gap-3">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.24em]" style={lightTheme ? { color: '#8a8a86', fontFamily: MONO_FONT } : { color: '#94a3b8', fontFamily: MONO_FONT }}>
+            <p className="mono text-[10px] font-semibold uppercase tracking-[0.2em]" style={lightTheme ? { color: 'var(--muted-2)', fontFamily: MONO_FONT } : { color: '#94a3b8', fontFamily: MONO_FONT }}>
               Đã xây dựng
             </p>
-            <span className="text-[11px]" style={lightTheme ? { color: '#8a8a86', fontFamily: MONO_FONT } : { color: '#64748b', fontFamily: MONO_FONT }}>
+            <span className="mono text-[11px] tabular-nums" style={lightTheme ? { color: 'var(--muted-2)', fontFamily: MONO_FONT } : { color: '#64748b', fontFamily: MONO_FONT }}>
               {currentEraBuildings.length}
             </span>
           </div>

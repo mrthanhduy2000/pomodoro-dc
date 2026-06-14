@@ -56,13 +56,17 @@ export default function EraHUD() {
       className="flex-shrink-0 flex items-center px-4 gap-3"
       style={{
         height: '48px',
-        background: 'var(--panel-strong, var(--panel))',
-        borderBottom: '1px solid var(--line)',
+        background: 'var(--card-bg-solid, var(--panel-strong, var(--panel)))',
+        borderBottom: 'var(--skin-card-border-width,1px) solid var(--line)',
+        boxShadow: 'var(--skin-card-shadow)',
       }}
     >
       {/* Current stage */}
       <div className="flex items-center flex-shrink-0">
-        <span className="font-semibold text-sm leading-none whitespace-nowrap" style={{ color: 'var(--ink)' }}>
+        <span
+          className="font-semibold text-sm leading-none whitespace-nowrap"
+          style={{ fontFamily: 'var(--skin-font-display)', fontWeight: 600, color: 'var(--ink)' }}
+        >
           {stage.label}
         </span>
       </div>
@@ -78,7 +82,7 @@ export default function EraHUD() {
           />
         </div>
         <div className="flex-shrink-0 flex items-baseline gap-1.5">
-          <span className="text-xs font-mono font-semibold" style={{ color: 'var(--ink)' }}>
+          <span className="text-xs font-mono font-semibold tabular-nums" style={{ color: 'var(--ink)' }}>
             {xpInEra.toLocaleString()}
           </span>
           {activeBook < 15 && needed > 0 && (
@@ -97,10 +101,10 @@ export default function EraHUD() {
         <LevelRing level={level} expPct={expPct} />
         {prestige.count > 0 && (
           <span
-            className="mono inline-flex items-center rounded-full border px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.14em]"
+            className="mono inline-flex items-center rounded-full border px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.18em]"
             style={{
-              borderColor: 'rgba(var(--accent-rgb),0.16)',
-              background: 'rgba(var(--accent-rgb),0.08)',
+              borderColor: 'rgba(var(--accent-rgb),0.18)',
+              background: 'rgba(var(--accent-rgb),0.1)',
               color: 'var(--accent2)',
             }}
           >
@@ -162,18 +166,19 @@ function MiniStat({ mark, value, label, highlight, shieldState = null }) {
   return (
     <div className="flex items-center gap-1.5">
       <span
-        className="mono inline-flex h-6 w-6 items-center justify-center rounded-full border text-[8px] font-semibold uppercase tracking-[0.14em]"
+        className="mono inline-flex h-6 w-6 items-center justify-center rounded-full border text-[8px] font-semibold uppercase tracking-[0.18em]"
         style={{
-          borderColor: highlight ? 'rgba(var(--accent-rgb),0.16)' : 'var(--line)',
-          background: highlight ? 'rgba(var(--accent-rgb),0.08)' : 'rgba(255,255,255,0.58)',
+          borderColor: highlight ? 'rgba(var(--accent-rgb),0.18)' : 'var(--line)',
+          background: highlight ? 'rgba(var(--accent-rgb),0.1)' : 'var(--card-bg-solid, var(--panel))',
           color: highlight ? 'var(--accent2)' : 'var(--muted)',
+          boxShadow: 'var(--skin-card-shadow)',
         }}
       >
         {mark}
       </span>
       <div className="leading-tight">
         <div className="flex items-center gap-1">
-          <span className="text-xs font-bold font-mono leading-none" style={{ color: highlight ? 'var(--accent2)' : 'var(--ink)' }}>
+          <span className="text-xs font-bold font-mono leading-none tabular-nums" style={{ color: highlight ? 'var(--accent2)' : 'var(--ink)' }}>
             {value}
           </span>
           {shieldState && (
@@ -188,7 +193,7 @@ function MiniStat({ mark, value, label, highlight, shieldState = null }) {
             </span>
           )}
         </div>
-        <div className="text-[9px] uppercase tracking-wide leading-none" style={{ color: 'var(--muted-2)' }}>{label}</div>
+        <div className="mono text-[9px] uppercase tracking-[0.2em] leading-none" style={{ color: 'var(--muted-2)' }}>{label}</div>
       </div>
     </div>
   );

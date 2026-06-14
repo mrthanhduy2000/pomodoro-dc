@@ -91,31 +91,38 @@ export default function DailyMissions() {
   return (
     <div className="space-y-4">
       <QuietSection
+        eyebrow="Hôm nay"
         lightTheme={lightTheme}
         meta={(
-          <span className="mono text-[11px]" style={{ color: 'var(--muted)' }}>
+          <span
+            className="mono inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold tabular-nums"
+            style={{ background: 'rgba(var(--accent-rgb), 0.1)', color: 'var(--accent2)' }}
+          >
             {completedCount}/{Math.max(list.length, 0)}
           </span>
         )}
         title="Nhiệm vụ ngày"
       >
         <div className="space-y-3">
-          <div className="flex items-end justify-between gap-3 border-b pb-3" style={{ borderColor: 'var(--line)' }}>
+          <div className="flex items-end justify-between gap-3 border-b pb-4" style={{ borderColor: 'var(--line)' }}>
             <div>
-              <div className="mono text-[10px] uppercase tracking-[0.16em]" style={{ color: 'var(--muted)' }}>
+              <div className="mono text-[10px] uppercase tracking-[0.2em]" style={{ color: 'var(--muted-2)' }}>
                 Nhịp hiện tại
               </div>
-              <div className="serif mt-1 text-[22px] font-medium leading-tight tracking-[-0.02em] text-[var(--ink)]">
+              <div
+                className="mt-1.5 text-[22px] font-semibold leading-tight tracking-[-0.02em]"
+                style={{ fontFamily: 'var(--skin-font-display)', color: 'var(--ink)' }}
+              >
                 {streak.currentStreak > 0
                   ? `${streak.currentStreak} ngày liên tiếp`
                   : 'Bắt đầu lại một chuỗi mới'}
               </div>
             </div>
             <div className="text-right">
-              <div className="mono text-[12px] font-semibold" style={{ color: 'var(--accent)' }}>
+              <div className="mono text-[15px] font-semibold tabular-nums" style={{ color: 'var(--accent2)' }}>
                 {streak.currentStreak > 0 ? `+${streakBonusPct.toFixed(0)}%` : '0%'}
               </div>
-              <div className="text-[11px] text-[var(--muted)]">bonus ngày</div>
+              <div className="mono mt-0.5 text-[10px] uppercase tracking-[0.16em]" style={{ color: 'var(--muted)' }}>bonus ngày</div>
             </div>
           </div>
 
@@ -130,9 +137,9 @@ export default function DailyMissions() {
             ))}
           </div>
 
-          <div className="flex items-center justify-between gap-3 border-t pt-3" style={{ borderColor: 'var(--line)' }}>
+          <div className="flex items-center justify-between gap-3 border-t pt-4" style={{ borderColor: 'var(--line)' }}>
             <div className="min-w-0">
-              <div className="mono text-[10px] uppercase tracking-[0.16em] text-[var(--muted)]">
+              <div className="mono text-[10px] uppercase tracking-[0.2em]" style={{ color: 'var(--muted-2)' }}>
                 Còn lại
               </div>
               <div className="mt-1 text-[13px] leading-snug text-[var(--muted)]">
@@ -149,13 +156,15 @@ export default function DailyMissions() {
                   whileTap={reduceMotion ? undefined : { scale: 0.98 }}
                   type="button"
                   onClick={claimMissionAllBonus}
-                  className="whitespace-nowrap rounded-[10px] px-3.5 py-2 text-[12px] font-semibold"
+                  className="whitespace-nowrap px-4 py-2 text-[12px] font-semibold"
                   style={lightTheme ? {
+                    borderRadius: 'var(--skin-radius-control, 14px)',
                     background: 'var(--ink)',
                     color: 'var(--canvas)',
                     border: '1px solid rgba(31, 30, 29, 0.06)',
                     boxShadow: '0 10px 20px rgba(31, 30, 29, 0.12)',
                   } : {
+                    borderRadius: 'var(--skin-radius-control, 14px)',
                     background: 'rgba(var(--accent-rgb), 0.9)',
                     color: 'var(--ink)',
                     border: '1px solid rgba(var(--accent-rgb), 0.22)',
@@ -176,25 +185,34 @@ export default function DailyMissions() {
 
       {chain && (
         <QuietSection
+          eyebrow="Chuỗi tuần"
           lightTheme={lightTheme}
-        meta={(
-          <span className="mono text-[11px]" style={{ color: 'var(--muted)' }}>
+          meta={(
+            <span
+              className="mono inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold tabular-nums"
+              style={{ background: 'rgba(var(--accent-rgb), 0.1)', color: 'var(--accent2)' }}
+            >
               {chainStepsCompleted}/{chain.steps.length}
             </span>
           )}
           title="Nhiệm vụ tuần"
-      >
+        >
         <div className="space-y-3">
-          <div className="flex items-start justify-between gap-3 border-b pb-3" style={{ borderColor: 'var(--line)' }}>
+          <div className="flex items-start justify-between gap-3 border-b pb-4" style={{ borderColor: 'var(--line)' }}>
             <div className="min-w-0">
-              <div className="serif text-[20px] font-medium leading-tight tracking-[-0.02em] text-[var(--ink)]">{chain.title}</div>
+              <div
+                className="text-[20px] font-semibold leading-tight tracking-[-0.02em]"
+                style={{ fontFamily: 'var(--skin-font-display)', color: 'var(--ink)' }}
+              >
+                {chain.title}
+              </div>
               <div className="mt-1 text-[12px] leading-snug text-[var(--muted)]">{chain.flavor}</div>
             </div>
             <div className="text-right">
-              <div className="mono text-[12px] font-semibold" style={{ color: 'var(--accent)' }}>
+              <div className="mono text-[15px] font-semibold tabular-nums" style={{ color: 'var(--accent2)' }}>
                 +{weeklyBonusXP}
               </div>
-              <div className="text-[11px] text-[var(--muted)]">thưởng chuỗi</div>
+              <div className="mono mt-0.5 text-[10px] uppercase tracking-[0.16em]" style={{ color: 'var(--muted)' }}>thưởng chuỗi</div>
             </div>
           </div>
 
@@ -212,9 +230,9 @@ export default function DailyMissions() {
               ))}
             </div>
 
-            <div className="flex items-center justify-between gap-3 border-t pt-3" style={{ borderColor: 'var(--line)' }}>
+            <div className="flex items-center justify-between gap-3 border-t pt-4" style={{ borderColor: 'var(--line)' }}>
               <div className="min-w-0">
-                <div className="mono text-[10px] uppercase tracking-[0.16em] text-[var(--muted)]">
+                <div className="mono text-[10px] uppercase tracking-[0.2em]" style={{ color: 'var(--muted-2)' }}>
                   Trạng thái
                 </div>
                 <div className="mt-1 text-[13px] leading-snug text-[var(--muted)]">
@@ -233,10 +251,11 @@ export default function DailyMissions() {
                   whileTap={reduceMotion ? undefined : { scale: 0.98 }}
                   type="button"
                   onClick={claimWeeklyStep}
-                  className="whitespace-nowrap rounded-[10px] px-3.5 py-2 text-[12px] font-semibold"
+                  className="whitespace-nowrap px-4 py-2 text-[12px] font-semibold"
                   style={{
-                    background: 'rgba(201, 100, 66, 0.12)',
-                    border: '1px solid rgba(201, 100, 66, 0.18)',
+                    borderRadius: 'var(--skin-radius-control, 14px)',
+                    background: 'rgba(var(--accent-rgb), 0.1)',
+                    border: '1px solid rgba(var(--accent-rgb), 0.18)',
                     color: 'var(--accent2)',
                   }}
                 >
@@ -250,10 +269,10 @@ export default function DailyMissions() {
             </div>
 
             {(streakMissionEligible || unlockedSkills.ke_hoach_hoan_hao) && (
-              <div className="rounded-[12px] border px-3 py-2.5" style={noteCardStyle(lightTheme)}>
+              <div className="px-3.5 py-3" style={noteCardStyle(lightTheme)}>
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <div className="mono text-[10px] uppercase tracking-[0.16em] text-[var(--muted)]">
+                    <div className="mono text-[10px] uppercase tracking-[0.2em]" style={{ color: 'var(--muted-2)' }}>
                       Ghi chú thưởng
                     </div>
                     <div className="mt-1 text-[12px] leading-snug text-[var(--muted)]">
@@ -265,10 +284,10 @@ export default function DailyMissions() {
                   <div className="text-right">
                     {streakMissionEligible && (
                       <>
-                        <div className="mono text-[12px] font-semibold" style={{ color: 'var(--accent)' }}>
+                        <div className="mono text-[13px] font-semibold tabular-nums" style={{ color: 'var(--accent2)' }}>
                           +{missions.streakMissionClaimedToday ? 0 : streakMissionXP}
                         </div>
-                        <div className="text-[11px] text-[var(--muted)]">
+                        <div className="mono mt-0.5 text-[10px] uppercase tracking-[0.16em]" style={{ color: 'var(--muted)' }}>
                           {missions.streakMissionClaimedToday ? 'đã nhận' : 'streak XP'}
                         </div>
                       </>
@@ -284,19 +303,28 @@ export default function DailyMissions() {
   );
 }
 
-function QuietSection({ children, lightTheme, meta, title }) {
+function QuietSection({ children, eyebrow, lightTheme, meta, title }) {
   return (
     <section
-      className="rounded-[18px] border px-4 py-4"
+      className="px-5 py-5"
       style={{
-        background: lightTheme ? 'rgba(255, 255, 255, 0.84)' : 'rgba(24, 21, 17, 0.9)',
-        borderColor: lightTheme ? 'var(--line)' : 'rgba(148, 163, 184, 0.14)',
-        boxShadow: lightTheme ? '0 10px 22px rgba(31, 30, 29, 0.04)' : '0 12px 28px rgba(0, 0, 0, 0.14)',
+        background: 'var(--card-bg-solid)',
+        border: 'var(--skin-card-border-width, 1px) solid var(--line)',
+        borderRadius: 'var(--skin-radius-card, 18px)',
+        boxShadow: 'var(--skin-card-shadow)',
       }}
     >
-      <div className="mb-3 flex items-center justify-between gap-3">
-        <div className="mono text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
-          {title}
+      <div className="mb-4 flex items-end justify-between gap-3">
+        <div className="min-w-0">
+          <div className="mono text-[10px] uppercase tracking-[0.2em]" style={{ color: 'var(--muted-2)' }}>
+            {eyebrow ?? 'Nhật ký'}
+          </div>
+          <div
+            className="mt-1.5 text-[18px] font-semibold leading-tight tracking-[-0.01em]"
+            style={{ fontFamily: 'var(--skin-font-display)', color: 'var(--ink)' }}
+          >
+            {title}
+          </div>
         </div>
         {meta}
       </div>
@@ -321,10 +349,10 @@ function TodayMissionRow({ mission, reduceMotion, rewardXP }) {
           </div>
         </div>
         <div className="text-right">
-          <div className="mono text-[11px] font-semibold" style={{ color: done ? 'var(--good)' : 'var(--muted)' }}>
+          <div className="mono text-[11px] font-semibold tabular-nums" style={{ color: done ? 'var(--good)' : 'var(--muted)' }}>
             {done ? 'xong' : `${mission.progress}/${mission.goal}`}
           </div>
-          <div className="mt-1 text-[11px]" style={{ color: 'var(--accent)' }}>
+          <div className="mono mt-1 text-[11px] font-semibold tabular-nums" style={{ color: 'var(--accent2)' }}>
             +{rewardXP}
           </div>
         </div>
@@ -353,9 +381,9 @@ function WeeklyStepRow({ currentIndex, done, index, isCurrent, progress, step })
     <div className="px-0 py-3">
       <div className="flex items-start gap-3">
         <div
-          className="mono mt-[1px] flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold"
+          className="mono mt-[1px] flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold tabular-nums"
           style={{
-            background: done ? 'var(--ink)' : isCurrent ? 'rgba(201, 100, 66, 0.12)' : 'rgba(244, 242, 236, 0.96)',
+            background: done ? 'var(--ink)' : isCurrent ? 'rgba(var(--accent-rgb), 0.12)' : 'rgba(244, 242, 236, 0.96)',
             color: done ? 'var(--canvas)' : isCurrent ? 'var(--accent2)' : 'var(--muted)',
           }}
         >
@@ -369,7 +397,7 @@ function WeeklyStepRow({ currentIndex, done, index, isCurrent, progress, step })
             <div className="text-[11px] text-[var(--muted)]">
               {isCurrent ? `${progress}/${step.goal}` : done ? 'Đã chốt' : 'Đang chờ'}
             </div>
-            <div className="mono text-[11px]" style={{ color: isCurrent ? 'var(--accent)' : 'var(--muted)' }}>
+            <div className="mono text-[11px] tabular-nums" style={{ color: isCurrent ? 'var(--accent2)' : 'var(--muted)' }}>
               {isCurrent ? `${Math.round(pct)}%` : index < currentIndex ? '100%' : '0%'}
             </div>
           </div>
@@ -394,5 +422,6 @@ function noteCardStyle(lightTheme) {
   return {
     background: lightTheme ? 'rgba(250, 249, 246, 0.98)' : 'rgba(255,255,255,0.03)',
     border: `1px solid ${lightTheme ? 'var(--line)' : 'rgba(148, 163, 184, 0.12)'}`,
+    borderRadius: 'var(--skin-radius-control, 14px)',
   };
 }

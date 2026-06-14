@@ -83,9 +83,10 @@ function getDisplayedResearchCost(buildings, bpId) {
 function paperPanel(lightTheme) {
   if (!lightTheme) return {};
   return {
-    background: 'rgba(255, 255, 255, 0.84)',
-    border: '1px solid rgba(31, 30, 29, 0.08)',
-    boxShadow: '0 12px 26px rgba(31, 30, 29, 0.05)',
+    background: 'var(--card-bg-solid)',
+    border: 'var(--skin-card-border-width,1px) solid var(--line)',
+    borderRadius: 'var(--skin-radius-card,18px)',
+    boxShadow: 'var(--skin-card-shadow)',
   };
 }
 
@@ -228,12 +229,12 @@ function MyBlueprintsTab({ blueprints, research, buildings, activeBook, onSelect
   if (unlockedIds.size === 0) {
     return (
       <div
-        className={`text-center py-12 rounded-[24px] ${lightTheme ? '' : 'bg-slate-800/30 border border-slate-700/50'}`}
+        className={`text-center py-12 ${lightTheme ? '' : 'bg-slate-800/30 border border-slate-700/50 rounded-[24px]'}`}
         style={lightTheme ? paperPanel(lightTheme) : undefined}
       >
-        <div className="mono mb-3 text-[12px] font-semibold uppercase tracking-[0.22em]" style={lightTheme ? { color: '#9a5a48', fontFamily: MONO_FONT } : { color: '#cbd5e1', fontFamily: MONO_FONT }}>BP</div>
-        <p className="font-medium" style={lightTheme ? { color: '#1f1e1d' } : { color: '#cbd5e1' }}>Chưa có bản vẽ nào</p>
-        <p className="text-sm mt-1" style={lightTheme ? { color: '#6a6862' } : { color: '#64748b' }}>
+        <div className="mono mb-3 text-[10px] uppercase tracking-[0.2em]" style={lightTheme ? { color: 'var(--muted-2)', fontFamily: MONO_FONT } : { color: '#cbd5e1', fontFamily: MONO_FONT }}>BP</div>
+        <p className="font-semibold text-lg" style={lightTheme ? { color: 'var(--ink)', fontFamily: 'var(--skin-font-display)' } : { color: '#cbd5e1' }}>Chưa có bản vẽ nào</p>
+        <p className="text-sm mt-1" style={lightTheme ? { color: 'var(--muted)' } : { color: '#64748b' }}>
           Tập trung mỗi ngày để kiếm RP và nghiên cứu bản vẽ.
         </p>
       </div>
@@ -292,12 +293,14 @@ function MyBlueprintsTab({ blueprints, research, buildings, activeBook, onSelect
               animate={{ opacity: 1, scale: 1 }}
               whileHover={{ scale: 1.01 }}
               onClick={() => onSelectBp?.(id)}
-              className="rounded-[24px] p-4 border cursor-pointer transition-colors"
+              className={`p-4 cursor-pointer transition-colors ${lightTheme ? '' : 'rounded-[24px] border'}`}
               style={lightTheme
                 ? {
-                    background: 'rgba(255, 255, 255, 0.82)',
-                    borderColor: built ? 'rgba(111, 123, 98, 0.22)' : 'rgba(31, 30, 29, 0.08)',
-                    boxShadow: '0 10px 24px rgba(31, 30, 29, 0.05)',
+                    background: 'var(--card-bg-solid)',
+                    border: 'var(--skin-card-border-width,1px) solid var(--line)',
+                    borderColor: built ? 'rgba(var(--accent-rgb),0.28)' : 'var(--line)',
+                    borderRadius: 'var(--skin-radius-card,18px)',
+                    boxShadow: 'var(--skin-card-shadow)',
                   }
                 : undefined}
             >
@@ -312,7 +315,7 @@ function MyBlueprintsTab({ blueprints, research, buildings, activeBook, onSelect
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <p className="font-semibold text-sm" style={lightTheme ? { color: '#1f1e1d' } : { color: '#ffffff' }}>{def?.label ?? id}</p>
+                    <p className="font-semibold text-sm" style={lightTheme ? { color: 'var(--ink)', fontFamily: 'var(--skin-font-display)' } : { color: '#ffffff' }}>{def?.label ?? id}</p>
                     {def?.rarity && <RarityBadge rarity={def.rarity} lightTheme={lightTheme} />}
                     {eff?.type && <TypeBadge type={eff.type} lightTheme={lightTheme} />}
                     {built && (
@@ -326,7 +329,7 @@ function MyBlueprintsTab({ blueprints, research, buildings, activeBook, onSelect
                       </span>
                     )}
                   </div>
-                  <p className="text-xs mt-0.5 line-clamp-2" style={lightTheme ? { color: '#6a6862' } : { color: '#94a3b8' }}>{def?.description}</p>
+                  <p className="text-xs mt-0.5 line-clamp-2" style={lightTheme ? { color: 'var(--muted)' } : { color: '#94a3b8' }}>{def?.description}</p>
                   <PerkSummary perk={eff?.perk} lightTheme={lightTheme} />
                   {def?.rarity && (
                     <p className="text-xs mt-0.5" style={lightTheme ? { color: '#8a8a86' } : { color: '#64748b' }}>{RESEARCH_TRACK[def.rarity] ?? 'Đầu tư'}</p>
@@ -389,36 +392,38 @@ function ResearchTab({ research, blueprints, buildings, activeBook, researchBlue
     <div className="space-y-4">
       {/* RP balance */}
       <div
-        className={`flex flex-col gap-3 rounded-[22px] border px-4 py-4 sm:flex-row sm:items-center sm:justify-between ${
+        className={`flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between ${
           lightTheme
-            ? 'shadow-[0_16px_36px_rgba(31,30,29,0.05)]'
-            : 'border-white/8 bg-white/[0.04]'
+            ? ''
+            : 'rounded-[22px] border border-white/8 bg-white/[0.04]'
         }`}
         style={lightTheme ? {
-          background: 'rgba(255, 255, 255, 0.84)',
-          borderColor: 'rgba(31, 30, 29, 0.08)',
+          background: 'var(--card-bg-solid)',
+          border: 'var(--skin-card-border-width,1px) solid var(--line)',
+          borderRadius: 'var(--skin-radius-card,18px)',
+          boxShadow: 'var(--skin-card-shadow)',
         } : undefined}
       >
         <div className="flex items-center gap-3">
           <div
-            className={`flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl border text-xl ${
+            className={`flex h-12 w-12 flex-shrink-0 items-center justify-center border text-xl ${
               lightTheme
-                ? 'shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]'
-                : 'border-white/8 bg-white/[0.04] text-slate-200'
+                ? ''
+                : 'rounded-2xl border-white/8 bg-white/[0.04] text-slate-200'
             }`}
-            style={lightTheme ? { borderColor: 'rgba(201, 100, 66, 0.16)', background: 'rgba(201, 100, 66, 0.08)', color: '#9a5a48' } : undefined}
+            style={lightTheme ? { borderColor: 'rgba(var(--accent-rgb),0.2)', background: 'rgba(var(--accent-rgb),0.1)', color: 'var(--accent2)', borderRadius: 'var(--skin-radius-control,14px)' } : undefined}
           >
             <span className="mono text-[11px] font-semibold uppercase tracking-[0.18em]" style={{ fontFamily: MONO_FONT }}>RP</span>
           </div>
           <div>
-            <p className={`text-[11px] font-semibold uppercase tracking-[0.22em] ${lightTheme ? '' : 'text-slate-300'}`} style={lightTheme ? { color: '#9a5a48' } : undefined}>
+            <p className={`mono text-[10px] uppercase tracking-[0.2em] ${lightTheme ? '' : 'text-slate-300'}`} style={lightTheme ? { color: 'var(--muted-2)', fontFamily: MONO_FONT } : { fontFamily: MONO_FONT }}>
               Điểm Nghiên Cứu
             </p>
             <div className="mt-1 flex items-end gap-2">
-              <p className={`text-3xl font-black tabular-nums leading-none ${lightTheme ? '' : 'text-slate-100'}`} style={lightTheme ? { color: '#1f1e1d' } : undefined}>
+              <p className={`text-3xl font-black tabular-nums leading-none ${lightTheme ? '' : 'text-slate-100'}`} style={lightTheme ? { color: 'var(--ink)', fontFamily: MONO_FONT } : { fontFamily: MONO_FONT }}>
                 {currentRP.toLocaleString()}
               </p>
-              <span className={`pb-0.5 text-xs font-semibold uppercase tracking-[0.18em] ${lightTheme ? '' : 'text-slate-400'}`} style={lightTheme ? { color: '#9a5a48' } : undefined}>
+              <span className={`mono pb-0.5 text-xs uppercase tracking-[0.18em] ${lightTheme ? '' : 'text-slate-400'}`} style={lightTheme ? { color: 'var(--muted)', fontFamily: MONO_FONT } : { fontFamily: MONO_FONT }}>
                 RP
               </span>
             </div>
@@ -487,12 +492,14 @@ function ResearchTab({ research, blueprints, buildings, activeBook, researchBlue
             <div
               key={id}
               onClick={() => onSelectBp?.(id)}
-              className="rounded-[24px] p-4 border transition-colors cursor-pointer"
+              className={`p-4 transition-colors cursor-pointer ${lightTheme ? '' : 'rounded-[24px] border'}`}
               style={lightTheme
                 ? {
-                    background: 'rgba(255, 255, 255, 0.82)',
-                    borderColor: isResearched ? 'rgba(111, 123, 98, 0.22)' : 'rgba(31, 30, 29, 0.08)',
-                    boxShadow: '0 10px 24px rgba(31, 30, 29, 0.05)',
+                    background: 'var(--card-bg-solid)',
+                    border: 'var(--skin-card-border-width,1px) solid var(--line)',
+                    borderColor: isResearched ? 'rgba(var(--accent-rgb),0.28)' : 'var(--line)',
+                    borderRadius: 'var(--skin-radius-card,18px)',
+                    boxShadow: 'var(--skin-card-shadow)',
                   }
                 : undefined}
             >
@@ -507,7 +514,7 @@ function ResearchTab({ research, blueprints, buildings, activeBook, researchBlue
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap mb-1">
-                    <p className="font-semibold text-sm" style={lightTheme ? { color: '#1f1e1d' } : { color: '#ffffff' }}>{label}</p>
+                    <p className="font-semibold text-sm" style={lightTheme ? { color: 'var(--ink)', fontFamily: 'var(--skin-font-display)' } : { color: '#ffffff' }}>{label}</p>
                     {meta?.rarity && <RarityBadge rarity={meta.rarity} lightTheme={lightTheme} />}
                     {eff?.type && <TypeBadge type={eff.type} lightTheme={lightTheme} />}
                     {isResearched && (
@@ -521,7 +528,7 @@ function ResearchTab({ research, blueprints, buildings, activeBook, researchBlue
                       </span>
                     )}
                   </div>
-                  <p className="text-xs line-clamp-2" style={lightTheme ? { color: '#6a6862' } : { color: '#94a3b8' }}>{description}</p>
+                  <p className="text-xs line-clamp-2" style={lightTheme ? { color: 'var(--muted)' } : { color: '#94a3b8' }}>{description}</p>
 
                   {/* Hiệu ứng tóm tắt */}
                   <div className="mt-1.5 space-y-0.5">
@@ -548,19 +555,20 @@ function ResearchTab({ research, blueprints, buildings, activeBook, researchBlue
                     whileTap={canAffordRP ? { scale: 0.95 } : {}}
                     onClick={(e) => { e.stopPropagation(); canAffordRP && handleResearch(id, researchCost); }}
                     disabled={!canAffordRP}
-                    className="px-3 py-1.5 rounded-xl text-xs font-bold flex-shrink-0 transition-colors"
+                    className="px-3 py-1.5 text-xs font-bold flex-shrink-0 transition-colors"
                     style={canAffordRP
                       ? (lightTheme
                           ? {
-                              background: 'rgba(31,30,29,0.98)',
+                              background: 'var(--accent2)',
                               color: '#faf9f6',
-                              border: '1px solid rgba(31,30,29,0.12)',
-                              boxShadow: '0 10px 22px rgba(31,30,29,0.10)',
+                              border: '1px solid rgba(var(--accent-rgb),0.35)',
+                              borderRadius: 'var(--skin-radius-control,14px)',
+                              boxShadow: '0 10px 22px rgba(var(--accent-rgb),0.22)',
                             }
-                          : { background: 'rgba(var(--accent-rgb),0.9)', color: '#ffffff' })
+                          : { background: 'rgba(var(--accent-rgb),0.9)', color: '#ffffff', borderRadius: '12px' })
                       : (lightTheme
-                          ? { background: 'rgba(31, 30, 29, 0.06)', color: '#8a8a86', border: '1px solid rgba(31, 30, 29, 0.08)' }
-                          : { background: '#334155', color: '#64748b' })}
+                          ? { background: 'rgba(31, 30, 29, 0.06)', color: 'var(--muted-2)', border: '1px solid var(--line)', borderRadius: 'var(--skin-radius-control,14px)' }
+                          : { background: '#334155', color: '#64748b', borderRadius: '12px' })}
                   >
                     {canAffordRP ? 'Nghiên cứu' : `${researchCost.toLocaleString()} RP`}
                   </motion.button>
@@ -615,27 +623,27 @@ function BlueprintDetailPanel({ bpId, onClose, buildings, research, lightTheme }
         className={`w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl overflow-hidden shadow-2xl max-h-[90vh] flex flex-col ${lightTheme ? '' : 'bg-slate-900'}`}
         style={lightTheme
           ? {
-              background: 'rgba(255, 255, 255, 0.98)',
-              border: '1px solid rgba(31, 30, 29, 0.08)',
+              background: 'var(--card-bg-solid)',
+              border: 'var(--skin-card-border-width,1px) solid var(--line)',
               boxShadow: '0 24px 62px rgba(31, 30, 29, 0.14)',
             }
           : { border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(24,21,17,0.98)' }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center gap-3 px-5 pt-5 pb-4" style={{ borderBottom: lightTheme ? '1px solid rgba(31, 30, 29, 0.08)' : '1px solid rgba(255,255,255,0.06)' }}>
+        <div className="flex items-center gap-3 px-5 pt-5 pb-4" style={{ borderBottom: lightTheme ? '1px solid var(--line)' : '1px solid rgba(255,255,255,0.06)' }}>
           <div
-            className="mono flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-[18px] border text-[12px] font-semibold uppercase tracking-[0.18em]"
+            className="mono flex h-14 w-14 flex-shrink-0 items-center justify-center border text-[12px] font-semibold uppercase tracking-[0.18em]"
             style={lightTheme
-              ? { border: '1px solid rgba(31, 30, 29, 0.08)', background: 'rgba(244,242,236,0.94)', color: '#9a5a48', fontFamily: MONO_FONT }
-              : { border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.04)', color: '#cbd5e1', fontFamily: MONO_FONT }}
+              ? { border: '1px solid rgba(var(--accent-rgb),0.2)', background: 'rgba(var(--accent-rgb),0.1)', color: 'var(--accent2)', fontFamily: MONO_FONT, borderRadius: 'var(--skin-radius-control,14px)' }
+              : { border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.04)', color: '#cbd5e1', fontFamily: MONO_FONT, borderRadius: '18px' }}
           >
             {getBlueprintMark(def)}
           </div>
           <div className="flex-1 min-w-0">
             <p
-              className="truncate text-[30px] font-medium leading-tight tracking-[-0.03em]"
-              style={lightTheme ? { color: '#1f1e1d', fontFamily: DISPLAY_FONT } : { color: '#ffffff', fontFamily: DISPLAY_FONT }}
+              className="truncate text-[30px] font-semibold leading-tight tracking-[-0.03em]"
+              style={lightTheme ? { color: 'var(--ink)', fontFamily: 'var(--skin-font-display)' } : { color: '#ffffff', fontFamily: DISPLAY_FONT }}
             >
               {def?.label ?? bpId}
             </p>
@@ -689,8 +697,8 @@ function BlueprintDetailPanel({ bpId, onClose, buildings, research, lightTheme }
           )}
 
           {/* Effects */}
-          <div className="rounded-[22px] p-4 space-y-2" style={lightTheme ? { background: 'rgba(250, 249, 246, 0.94)', border: '1px solid rgba(31, 30, 29, 0.08)' } : { background: 'rgba(30,41,59,0.5)' }}>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] mb-1" style={lightTheme ? { color: '#8a8a86', fontFamily: MONO_FONT } : { color: '#94a3b8', fontFamily: MONO_FONT }}>Đặc quyền công trình</p>
+          <div className="p-4 space-y-2" style={lightTheme ? { background: 'rgba(var(--accent-rgb),0.04)', border: '1px solid var(--line)', borderRadius: 'var(--skin-radius-control,14px)' } : { background: 'rgba(30,41,59,0.5)', borderRadius: '22px' }}>
+            <p className="mono text-[10px] uppercase tracking-[0.2em] mb-1" style={lightTheme ? { color: 'var(--muted-2)', fontFamily: MONO_FONT } : { color: '#94a3b8', fontFamily: MONO_FONT }}>Đặc quyền công trình</p>
             <PerkSummary perk={perk} lightTheme={lightTheme} />
 
             <details className="pt-1">
@@ -760,10 +768,10 @@ function BlueprintDetailPanel({ bpId, onClose, buildings, research, lightTheme }
           </div>
 
           {/* Build info */}
-          <div className="rounded-[22px] p-4 space-y-2" style={lightTheme ? { background: 'rgba(250, 249, 246, 0.94)', border: '1px solid rgba(31, 30, 29, 0.08)' } : { background: 'rgba(30,41,59,0.5)' }}>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] mb-1" style={lightTheme ? { color: '#8a8a86', fontFamily: MONO_FONT } : { color: '#94a3b8', fontFamily: MONO_FONT }}>Thông tin xây dựng</p>
+          <div className="p-4 space-y-2" style={lightTheme ? { background: 'rgba(var(--accent-rgb),0.04)', border: '1px solid var(--line)', borderRadius: 'var(--skin-radius-control,14px)' } : { background: 'rgba(30,41,59,0.5)', borderRadius: '22px' }}>
+            <p className="mono text-[10px] uppercase tracking-[0.2em] mb-1" style={lightTheme ? { color: 'var(--muted-2)', fontFamily: MONO_FONT } : { color: '#94a3b8', fontFamily: MONO_FONT }}>Thông tin xây dựng</p>
             <div className="flex items-center gap-4 text-sm">
-              <span style={lightTheme ? { color: '#6a6862' } : { color: '#cbd5e1' }}>{meta?.sessionsToComplete ?? 1} phiên</span>
+              <span style={lightTheme ? { color: 'var(--muted)' } : { color: '#cbd5e1' }}>{meta?.sessionsToComplete ?? 1} phiên</span>
             </div>
 
             {/* Raw costs */}
@@ -803,8 +811,8 @@ function BlueprintDetailPanel({ bpId, onClose, buildings, research, lightTheme }
           </div>
 
           {/* Upgrade path */}
-          <div className="rounded-[22px] p-4" style={lightTheme ? { background: 'rgba(250, 249, 246, 0.94)', border: '1px solid rgba(31, 30, 29, 0.08)' } : { background: 'rgba(30,41,59,0.5)' }}>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] mb-2" style={lightTheme ? { color: '#8a8a86', fontFamily: MONO_FONT } : { color: '#94a3b8', fontFamily: MONO_FONT }}>Con đường nâng cấp</p>
+          <div className="p-4" style={lightTheme ? { background: 'rgba(var(--accent-rgb),0.04)', border: '1px solid var(--line)', borderRadius: 'var(--skin-radius-control,14px)' } : { background: 'rgba(30,41,59,0.5)', borderRadius: '22px' }}>
+            <p className="mono text-[10px] uppercase tracking-[0.2em] mb-2" style={lightTheme ? { color: 'var(--muted-2)', fontFamily: MONO_FONT } : { color: '#94a3b8', fontFamily: MONO_FONT }}>Con đường nâng cấp</p>
             <div className="space-y-2">
               {[
                 { from: 'Lv.1', to: 'Lv.2', color: lightTheme ? '#7a6877' : '#c4b5fd', costLabel: eraRef.t2Label ?? 'Tinh luyện', costAmount: getUpgradeRefinedCost(era, 1) },
@@ -822,10 +830,10 @@ function BlueprintDetailPanel({ bpId, onClose, buildings, research, lightTheme }
 
           {/* Research info */}
           {meta && (
-            <div className="rounded-[22px] p-4" style={lightTheme ? { background: 'rgba(250, 249, 246, 0.94)', border: '1px solid rgba(31, 30, 29, 0.08)' } : { background: 'rgba(30,41,59,0.5)' }}>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.22em] mb-2" style={lightTheme ? { color: '#8a8a86', fontFamily: MONO_FONT } : { color: '#94a3b8', fontFamily: MONO_FONT }}>Mở khóa bằng nghiên cứu</p>
+            <div className="p-4" style={lightTheme ? { background: 'rgba(var(--accent-rgb),0.04)', border: '1px solid var(--line)', borderRadius: 'var(--skin-radius-control,14px)' } : { background: 'rgba(30,41,59,0.5)', borderRadius: '22px' }}>
+              <p className="mono text-[10px] uppercase tracking-[0.2em] mb-2" style={lightTheme ? { color: 'var(--muted-2)', fontFamily: MONO_FONT } : { color: '#94a3b8', fontFamily: MONO_FONT }}>Mở khóa bằng nghiên cứu</p>
               <div className="flex items-center gap-3 text-sm">
-                <span style={lightTheme ? { color: '#9a5a48' } : { color: '#a5b4fc' }}>{researchCost.toLocaleString()} RP</span>
+                <span className="mono tabular-nums font-semibold" style={lightTheme ? { color: 'var(--accent2)' } : { color: '#a5b4fc' }}>{researchCost.toLocaleString()} RP</span>
                 {researchCost < (meta.rpCost ?? researchCost) && (
                   <span className="text-[11px]" style={lightTheme ? { color: '#6f7b62' } : { color: '#86efac' }}>Đã áp dụng giảm 25%</span>
                 )}
@@ -861,21 +869,21 @@ export default function BlueprintInventory() {
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
           {lightTheme && (
-            <p className="mono text-[11px] font-semibold uppercase tracking-[0.28em]" style={{ color: '#9a5a48' }}>
+            <p className="mono text-[10px] uppercase tracking-[0.2em]" style={{ color: 'var(--muted-2)' }}>
               Blueprints
             </p>
           )}
-          <h2 className={lightTheme ? 'serif text-[2rem] leading-none' : 'text-white font-bold text-lg'} style={lightTheme ? { color: '#1f1e1d' } : undefined}>
+          <h2 className={lightTheme ? 'text-[2rem] leading-none font-semibold' : 'text-white font-bold text-lg'} style={lightTheme ? { color: 'var(--ink)', fontFamily: 'var(--skin-font-display)' } : undefined}>
             Bản vẽ & nghiên cứu
           </h2>
         </div>
-        <span className="text-xs rounded-full px-3 py-1" style={lightTheme ? { color: '#9a5a48', background: 'rgba(201, 100, 66, 0.08)', border: '1px solid rgba(201, 100, 66, 0.18)' } : {}}>
+        <span className="mono text-[11px] uppercase tracking-[0.14em] rounded-full px-3 py-1" style={lightTheme ? { color: 'var(--accent2)', background: 'rgba(var(--accent-rgb),0.1)', border: '1px solid rgba(var(--accent-rgb),0.18)' } : {}}>
           {unlockedCount}/{Object.keys(CATALOG_FLAT).length} đã mở
         </span>
       </div>
 
       {/* Tab switcher */}
-      <div className={`flex gap-2 rounded-[18px] p-1.5 ${lightTheme ? '' : 'bg-slate-800'}`} style={lightTheme ? { background: 'rgba(255,255,255,0.74)', border: '1px solid rgba(31, 30, 29, 0.08)' } : undefined}>
+      <div className={`flex gap-2 p-1.5 ${lightTheme ? '' : 'rounded-[18px] bg-slate-800'}`} style={lightTheme ? { background: 'rgba(255,255,255,0.74)', border: 'var(--skin-card-border-width,1px) solid var(--line)', borderRadius: 'var(--skin-radius-card,18px)' } : undefined}>
         {[
           { key: 'research', label: 'Nghiên cứu' },
           { key: 'collection', label: `Đã mở (${unlockedCount})` },
@@ -883,18 +891,19 @@ export default function BlueprintInventory() {
           <button
             key={key}
             onClick={() => setTab(key)}
-            className="flex-1 rounded-[14px] py-2 text-sm font-medium transition-colors"
+            className={`flex-1 py-2 text-sm font-medium transition-colors ${lightTheme ? '' : 'rounded-[14px]'}`}
             style={tab === key
               ? (lightTheme
                   ? {
-                      background: 'rgba(244,242,236,0.98)',
-                      color: '#1f1e1d',
-                      border: '1px solid rgba(31,30,29,0.10)',
+                      background: 'var(--card-bg-solid)',
+                      color: 'var(--ink)',
+                      border: '1px solid var(--line)',
+                      borderRadius: 'var(--skin-radius-control,14px)',
                       boxShadow: '0 10px 18px rgba(31,30,29,0.05)',
                     }
                   : { background: '#4f46e5', color: '#ffffff' })
               : (lightTheme
-                  ? { color: '#6a6862' }
+                  ? { color: 'var(--muted)', borderRadius: 'var(--skin-radius-control,14px)' }
                   : { color: '#94a3b8' })}
           >
             {label}

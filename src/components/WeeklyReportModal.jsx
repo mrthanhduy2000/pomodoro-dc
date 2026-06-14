@@ -48,27 +48,40 @@ const HOUR_BLOCKS = [
   { label: '21-24h', start: 21, end: 24 },
 ];
 
-const DISPLAY_FONT = '"Source Serif 4", Georgia, serif';
+const DISPLAY_FONT = 'var(--skin-font-display, "Source Serif 4", Georgia, serif)';
 const PAPER_BG = 'var(--card-bg-solid, rgba(255,255,255,0.94))';
 const PAPER_BG_SOFT = 'var(--card-bg-solid2, rgba(244,242,236,0.96))';
-const LINE = 'var(--line-2, #d9d6cc)';
+const LINE = 'var(--line, #d9d6cc)';
 const INK = 'var(--ink, #1f1e1d)';
 const INK_SOFT = 'var(--ink-2, #3a3936)';
 const MUTED = 'var(--muted, #6a6862)';
 const MUTED_SOFT = 'var(--muted-2, #9b9892)';
 const ACCENT = 'var(--accent, #c96442)';
 const ACCENT_DEEP = 'var(--accent2, #8a3f24)';
+const ACCENT_TINT = 'rgba(var(--accent-rgb, 201,100,66), 0.1)';
+const ACCENT_TINT_SOFT = 'rgba(var(--accent-rgb, 201,100,66), 0.08)';
 const GOOD = 'var(--good, #5b7a52)';
 const GOOD_SOFT = 'var(--good-soft, #e5ecdf)';
 const WARN = 'var(--warn, #b07d3b)';
 const WARN_SOFT = 'var(--warn-soft, #f2e6d1)';
 
+// Skin-composable tokens (card surfaces share one radius/shadow scale per skin).
+const CARD_RADIUS = 'var(--skin-radius-card, 18px)';
+const CONTROL_RADIUS = 'var(--skin-radius-control, 14px)';
+const CARD_SHADOW = 'var(--skin-card-shadow, 0 1px 2px rgba(31,30,29,0.04), 0 10px 30px rgba(31,30,29,0.06))';
+const CARD_BORDER_WIDTH = 'var(--skin-card-border-width, 1px)';
+
+// Inverse "ink" button: always a dark surface with paper-colored text in both
+// light & dark themes (must not flip via --ink, which inverts in dark mode).
+const INVERSE_BG = 'var(--btn-inverse-bg, #1f1e1d)';
+const INVERSE_INK = 'var(--btn-inverse-ink, #faf9f6)';
+
 const GRADES = [
   { min: 1200, id: 'S', label: 'Huyền Thoại', color: WARN, bg: WARN_SOFT },
   { min: 900, id: 'A', label: 'Xuất Sắc', color: GOOD, bg: GOOD_SOFT },
-  { min: 600, id: 'B', label: 'Tốt', color: ACCENT_DEEP, bg: 'rgba(201,100,66,0.12)' },
+  { min: 600, id: 'B', label: 'Tốt', color: ACCENT_DEEP, bg: ACCENT_TINT },
   { min: 300, id: 'C', label: 'Trung Bình', color: INK_SOFT, bg: PAPER_BG },
-  { min: 60, id: 'D', label: 'Cần Cố Gắng', color: ACCENT, bg: 'rgba(201,100,66,0.08)' },
+  { min: 60, id: 'D', label: 'Cần Cố Gắng', color: ACCENT, bg: ACCENT_TINT_SOFT },
   { min: 0, id: 'F', label: 'Chưa Bắt Đầu', color: MUTED, bg: PAPER_BG_SOFT },
 ];
 
@@ -229,11 +242,22 @@ function buildActionPlan({ curr, prev, streak, peakBlock, topCategory }) {
 
 function SnapshotMetric({ label, value, note, color = INK }) {
   return (
-    <div className="rounded-[18px] border px-3 py-3" style={{ background: PAPER_BG, borderColor: LINE }}>
-      <p className="text-[10px] font-semibold uppercase tracking-[0.18em]" style={{ color: MUTED_SOFT }}>
+    <div
+      className="px-3 py-3"
+      style={{
+        background: PAPER_BG,
+        border: `${CARD_BORDER_WIDTH} solid ${LINE}`,
+        borderRadius: CARD_RADIUS,
+        boxShadow: CARD_SHADOW,
+      }}
+    >
+      <p className="mono text-[10px] uppercase tracking-[0.2em]" style={{ color: MUTED_SOFT }}>
         {label}
       </p>
-      <p className="mt-2 text-lg font-bold leading-none" style={{ color }}>
+      <p
+        className="mono mt-2 text-xl font-bold leading-none tabular-nums"
+        style={{ color }}
+      >
         {value}
       </p>
       <p className="mt-2 text-[11px] leading-snug" style={{ color: MUTED }}>
@@ -245,11 +269,22 @@ function SnapshotMetric({ label, value, note, color = INK }) {
 
 function HighlightCard({ eyebrow, value, caption, color = INK_SOFT }) {
   return (
-    <div className="rounded-[20px] border px-4 py-4" style={{ background: PAPER_BG, borderColor: LINE }}>
-      <p className="text-[10px] font-semibold uppercase tracking-[0.18em]" style={{ color: MUTED_SOFT }}>
+    <div
+      className="px-4 py-4"
+      style={{
+        background: PAPER_BG,
+        border: `${CARD_BORDER_WIDTH} solid ${LINE}`,
+        borderRadius: CARD_RADIUS,
+        boxShadow: CARD_SHADOW,
+      }}
+    >
+      <p className="mono text-[10px] uppercase tracking-[0.2em]" style={{ color: MUTED_SOFT }}>
         {eyebrow}
       </p>
-      <p className="mt-2 text-[1.2rem] font-semibold leading-tight" style={{ color, fontFamily: DISPLAY_FONT }}>
+      <p
+        className="mt-2 text-[1.2rem] font-semibold leading-tight"
+        style={{ color, fontFamily: DISPLAY_FONT }}
+      >
         {value}
       </p>
       <p className="mt-2 text-[11px] leading-snug" style={{ color: MUTED }}>
@@ -268,7 +303,7 @@ function DailyBars({ byDay }) {
         const isMax = byDay[index] === max && byDay[index] > 0;
         return (
           <div key={label} className="flex items-center gap-2.5">
-            <span className="w-5 flex-shrink-0 text-right text-[10px]" style={{ color: MUTED }}>
+            <span className="mono w-5 flex-shrink-0 text-right text-[10px] uppercase tracking-[0.08em]" style={{ color: MUTED }}>
               {label}
             </span>
             <div className="h-5 flex-1 overflow-hidden rounded-md" style={{ background: PAPER_BG }}>
@@ -283,7 +318,7 @@ function DailyBars({ byDay }) {
                 }}
               />
             </div>
-            <span className="w-10 flex-shrink-0 text-[10px]" style={{ color: byDay[index] > 0 ? MUTED : MUTED_SOFT }}>
+            <span className="mono w-10 flex-shrink-0 text-[10px] tabular-nums" style={{ color: byDay[index] > 0 ? MUTED : MUTED_SOFT }}>
               {byDay[index] > 0 ? fmtHours(byDay[index]) : '–'}
             </span>
           </div>
@@ -359,7 +394,7 @@ function CategoryBars({ catMinutes, sessionCategories }) {
               <span className="truncate text-[11px]" style={{ color }}>
                 {category?.label ?? 'Chưa phân loại'}
               </span>
-              <span className="flex-shrink-0 text-[11px] font-mono" style={{ color: MUTED }}>
+              <span className="mono flex-shrink-0 text-[11px] tabular-nums" style={{ color: MUTED }}>
                 {fmtHours(minutes)}
               </span>
             </div>
@@ -480,11 +515,12 @@ function WeeklyReportModalContent({
         animate={{ scale: 1, y: 0 }}
         exit={{ scale: 0.94, y: 24 }}
         transition={{ type: 'spring', damping: 24, stiffness: 300 }}
-        className="flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-[28px]"
+        className="flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden"
         style={{
           background: 'var(--modal-bg, rgba(255,255,255,0.96))',
-          border: `1px solid ${LINE}`,
-          boxShadow: '0 30px 80px rgba(31,30,29,0.14)',
+          border: `${CARD_BORDER_WIDTH} solid ${LINE}`,
+          borderRadius: 'calc(var(--skin-radius-card, 18px) + 10px)',
+          boxShadow: 'var(--skin-modal-shadow, var(--skin-card-shadow, 0 30px 80px rgba(31,30,29,0.14)))',
         }}
       >
         <div
@@ -493,7 +529,7 @@ function WeeklyReportModalContent({
         >
           <div className="flex items-start justify-between gap-4">
             <div>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.24em]" style={{ color: MUTED_SOFT }}>
+              <p className="mono text-[10px] uppercase tracking-[0.2em]" style={{ color: MUTED_SOFT }}>
                 Báo cáo tuần
               </p>
               <h2
@@ -502,7 +538,7 @@ function WeeklyReportModalContent({
               >
                 {summaryLabel}
               </h2>
-              <p className="mt-2 text-[12px] font-semibold" style={{ color: MUTED }}>
+              <p className="mono mt-2 text-[12px] tabular-nums" style={{ color: MUTED }}>
                 {weekRange}
               </p>
             </div>
@@ -517,7 +553,15 @@ function WeeklyReportModalContent({
             </button>
           </div>
 
-          <div className="grid grid-cols-2 gap-2 rounded-[20px] border p-1" style={{ background: PAPER_BG_SOFT, borderColor: LINE }}>
+          <div
+            className="grid grid-cols-2 gap-2 p-1"
+            style={{
+              background: PAPER_BG_SOFT,
+              border: `${CARD_BORDER_WIDTH} solid ${LINE}`,
+              borderRadius: CARD_RADIUS,
+              boxShadow: 'var(--skin-inset-shadow, inset 0 1px 2px rgba(31,30,29,0.04))',
+            }}
+          >
             {[
               { id: 'previous', label: 'Tuần trước' },
               { id: 'current', label: 'Tuần này' },
@@ -528,11 +572,12 @@ function WeeklyReportModalContent({
                   key={option.id}
                   type="button"
                   onClick={() => setSelectedMode(option.id)}
-                  className="rounded-xl px-3 py-2 text-xs font-bold transition-all"
+                  className="px-3 py-2 text-xs font-bold transition-all"
                   style={{
-                    background: active ? '#1f1e1d' : 'transparent',
-                    color: active ? '#faf9f6' : MUTED,
+                    background: active ? INVERSE_BG : 'transparent',
+                    color: active ? INVERSE_INK : MUTED,
                     border: active ? 'none' : `1px solid ${LINE}`,
+                    borderRadius: CONTROL_RADIUS,
                   }}
                 >
                   {option.label}
@@ -542,12 +587,17 @@ function WeeklyReportModalContent({
           </div>
 
           <section
-            className="rounded-[26px] border p-4 sm:p-5"
-            style={{ background: grade.bg, borderColor: `${grade.color}33` }}
+            className="p-4 sm:p-5"
+            style={{
+              background: grade.bg,
+              border: `${CARD_BORDER_WIDTH} solid ${grade.color}33`,
+              borderRadius: 'calc(var(--skin-radius-card, 18px) + 8px)',
+              boxShadow: CARD_SHADOW,
+            }}
           >
             <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
               <div className="min-w-0 flex-1">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.18em]" style={{ color: MUTED_SOFT }}>
+                <p className="mono text-[10px] uppercase tracking-[0.2em]" style={{ color: MUTED_SOFT }}>
                   Tập trung đã ghi nhận
                 </p>
                 <div className="mt-3 flex flex-wrap items-end gap-3">
@@ -558,9 +608,9 @@ function WeeklyReportModalContent({
                     {fmtHours(curr.totalMinutes)}
                   </h3>
                   <span
-                    className="rounded-full px-3 py-1 text-[11px] font-semibold"
+                    className="mono rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.06em] tabular-nums"
                     style={{
-                      background: minTrend !== null && minTrend >= 0 ? GOOD_SOFT : 'rgba(201,100,66,0.12)',
+                      background: minTrend !== null && minTrend >= 0 ? GOOD_SOFT : ACCENT_TINT,
                       color: minTrend === null ? MUTED : minTrend >= 0 ? GOOD : ACCENT_DEEP,
                     }}
                   >
@@ -573,13 +623,18 @@ function WeeklyReportModalContent({
               </div>
 
               <div
-                className="flex min-w-[108px] flex-col items-center rounded-[20px] px-4 py-3"
-                style={{ background: PAPER_BG, border: `1px solid ${grade.color}22` }}
+                className="flex min-w-[108px] flex-col items-center px-4 py-3"
+                style={{
+                  background: PAPER_BG,
+                  border: `${CARD_BORDER_WIDTH} solid ${grade.color}22`,
+                  borderRadius: CARD_RADIUS,
+                  boxShadow: CARD_SHADOW,
+                }}
               >
-                <span className="text-[2rem] font-black leading-none" style={{ color: grade.color }}>
+                <span className="text-[2rem] font-black leading-none" style={{ color: grade.color, fontFamily: DISPLAY_FONT }}>
                   {grade.id}
                 </span>
-                <span className="mt-1 text-[10px] font-semibold uppercase tracking-[0.16em]" style={{ color: grade.color }}>
+                <span className="mono mt-1 text-[10px] uppercase tracking-[0.16em]" style={{ color: grade.color }}>
                   {grade.label}
                 </span>
               </div>
@@ -596,7 +651,7 @@ function WeeklyReportModalContent({
                 />
               </div>
               <div className="space-y-1">
-                <div className="flex items-center justify-between gap-3 text-[11px]" style={{ color: INK_SOFT }}>
+                <div className="flex items-center justify-between gap-3 text-[11px] tabular-nums" style={{ color: INK_SOFT }}>
                   <span>Tuần đang xem: {fmtHours(curr.totalMinutes)}</span>
                   <span style={{ color: MUTED }}>Mốc trước: {fmtHours(prev.totalMinutes)}</span>
                 </div>
@@ -663,17 +718,28 @@ function WeeklyReportModalContent({
             />
           </section>
 
-          <section className="rounded-[22px] border p-4" style={{ background: PAPER_BG_SOFT, borderColor: LINE }}>
+          <section
+            className="p-4"
+            style={{
+              background: PAPER_BG_SOFT,
+              border: `${CARD_BORDER_WIDTH} solid ${LINE}`,
+              borderRadius: CARD_RADIUS,
+              boxShadow: CARD_SHADOW,
+            }}
+          >
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-xs font-bold uppercase tracking-wide" style={{ color: MUTED_SOFT }}>
+                <p className="mono text-[10px] uppercase tracking-[0.2em]" style={{ color: MUTED_SOFT }}>
                   Nhịp 7 ngày
                 </p>
                 <p className="mt-1 text-[12px]" style={{ color: MUTED }}>
                   Nhìn nhanh ngày nào đẩy được việc, ngày nào còn trống.
                 </p>
               </div>
-              <span className="rounded-full px-2.5 py-1 text-[10px] font-semibold" style={{ background: PAPER_BG, color: INK_SOFT }}>
+              <span
+                className="mono flex-shrink-0 px-2.5 py-1 text-[10px] font-semibold tabular-nums"
+                style={{ background: ACCENT_TINT, color: ACCENT_DEEP, borderRadius: CONTROL_RADIUS }}
+              >
                 TB/ngày hoạt động: {avgActiveDay > 0 ? fmtHours(avgActiveDay) : '–'}
               </span>
             </div>
@@ -683,8 +749,16 @@ function WeeklyReportModalContent({
           </section>
 
           <section className="grid grid-cols-1 gap-3 lg:grid-cols-[1.15fr_0.85fr]">
-            <div className="rounded-[22px] border p-4" style={{ background: PAPER_BG_SOFT, borderColor: LINE }}>
-              <p className="text-xs font-bold uppercase tracking-wide" style={{ color: MUTED_SOFT }}>
+            <div
+              className="p-4"
+              style={{
+                background: PAPER_BG_SOFT,
+                border: `${CARD_BORDER_WIDTH} solid ${LINE}`,
+                borderRadius: CARD_RADIUS,
+                boxShadow: CARD_SHADOW,
+              }}
+            >
+              <p className="mono text-[10px] uppercase tracking-[0.2em]" style={{ color: MUTED_SOFT }}>
                 Khung giờ hiệu quả
               </p>
               <p className="mt-1 text-[12px]" style={{ color: MUTED }}>
@@ -700,8 +774,16 @@ function WeeklyReportModalContent({
               </p>
             </div>
 
-            <div className="rounded-[22px] border p-4" style={{ background: PAPER_BG_SOFT, borderColor: LINE }}>
-              <p className="text-xs font-bold uppercase tracking-wide" style={{ color: MUTED_SOFT }}>
+            <div
+              className="p-4"
+              style={{
+                background: PAPER_BG_SOFT,
+                border: `${CARD_BORDER_WIDTH} solid ${LINE}`,
+                borderRadius: CARD_RADIUS,
+                boxShadow: CARD_SHADOW,
+              }}
+            >
+              <p className="mono text-[10px] uppercase tracking-[0.2em]" style={{ color: MUTED_SOFT }}>
                 Phân bổ danh mục
               </p>
               <p className="mt-1 text-[12px]" style={{ color: MUTED }}>
@@ -714,8 +796,16 @@ function WeeklyReportModalContent({
           </section>
 
           <section className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div className="rounded-[22px] border p-4" style={{ background: PAPER_BG_SOFT, borderColor: LINE }}>
-              <p className="text-xs font-bold uppercase tracking-wide" style={{ color: MUTED_SOFT }}>
+            <div
+              className="p-4"
+              style={{
+                background: PAPER_BG_SOFT,
+                border: `${CARD_BORDER_WIDTH} solid ${LINE}`,
+                borderRadius: CARD_RADIUS,
+                boxShadow: CARD_SHADOW,
+              }}
+            >
+              <p className="mono text-[10px] uppercase tracking-[0.2em]" style={{ color: MUTED_SOFT }}>
                 Ghi chú tuần
               </p>
               <div className="mt-4 space-y-3">
@@ -726,8 +816,16 @@ function WeeklyReportModalContent({
               </div>
             </div>
 
-            <div className="rounded-[22px] border p-4" style={{ background: PAPER_BG_SOFT, borderColor: LINE }}>
-              <p className="text-xs font-bold uppercase tracking-wide" style={{ color: MUTED_SOFT }}>
+            <div
+              className="p-4"
+              style={{
+                background: PAPER_BG_SOFT,
+                border: `${CARD_BORDER_WIDTH} solid ${LINE}`,
+                borderRadius: CARD_RADIUS,
+                boxShadow: CARD_SHADOW,
+              }}
+            >
+              <p className="mono text-[10px] uppercase tracking-[0.2em]" style={{ color: MUTED_SOFT }}>
                 Tuần tới nên làm gì
               </p>
               <div className="mt-4 space-y-3">
@@ -746,8 +844,13 @@ function WeeklyReportModalContent({
           <button
             type="button"
             onClick={dismissWeeklyReport}
-            className="w-full rounded-2xl py-3 text-sm font-bold transition-all"
-            style={{ background: '#1f1e1d', color: '#faf9f6' }}
+            className="w-full py-3 text-sm font-bold transition-all"
+            style={{
+              background: INVERSE_BG,
+              color: INVERSE_INK,
+              borderRadius: CONTROL_RADIUS,
+              boxShadow: CARD_SHADOW,
+            }}
           >
             {primaryCtaLabel}
           </button>
@@ -769,7 +872,7 @@ function RecordRow({ mark, label, value, highlight = false }) {
         </span>
         {label}
       </span>
-      <span className="text-[11px] font-bold font-mono" style={{ color: highlight ? WARN : INK_SOFT }}>
+      <span className="mono text-[11px] font-bold tabular-nums" style={{ color: highlight ? WARN : INK_SOFT }}>
         {value}
       </span>
     </div>

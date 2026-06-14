@@ -59,12 +59,13 @@ function getDisplayedRelicEvolutionCost(buildings = [], nextStageDef) {
   return Math.max(1, Math.round(baseCost * 0.7));
 }
 
-function paperCardStyle(lightTheme, accentBorder = 'rgba(31, 30, 29, 0.08)', accentShadow = 'rgba(31, 30, 29, 0.05)') {
+function paperCardStyle(lightTheme, accentBorder = 'var(--line)', accentShadow = 'rgba(31, 30, 29, 0.05)') {
   if (!lightTheme) return null;
   return {
-    background: 'rgba(255, 255, 255, 0.84)',
-    border: `1px solid ${accentBorder}`,
-    boxShadow: `0 12px 26px ${accentShadow}`,
+    background: 'var(--card-bg-solid)',
+    border: `var(--skin-card-border-width, 1px) solid ${accentBorder}`,
+    borderRadius: 'var(--skin-radius-card, 18px)',
+    boxShadow: 'var(--skin-card-shadow, 0 12px 26px ' + accentShadow + ')',
   };
 }
 
@@ -89,25 +90,25 @@ export default function RelicInventory() {
     <div className="space-y-5">
       <div>
         {lightTheme && (
-          <p className="mono text-[11px] font-semibold uppercase tracking-[0.28em]" style={{ color: '#9a5a48' }}>
+          <p className="mono text-[10px] uppercase tracking-[0.2em]" style={{ color: 'var(--muted-2)' }}>
             Di vật
           </p>
         )}
         <div className="mt-1 flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h2 className={lightTheme ? 'serif text-[2rem] leading-none' : 'text-white font-bold text-lg'} style={lightTheme ? { color: '#1f1e1d' } : undefined}>
+            <h2 className={lightTheme ? 'serif text-[2rem] leading-none' : 'text-white font-bold text-lg'} style={lightTheme ? { color: 'var(--ink)', fontFamily: 'var(--skin-font-display)', fontWeight: 600 } : undefined}>
               Di vật
             </h2>
-            <p className="mt-1 text-sm" style={lightTheme ? { color: '#6a6862' } : { color: '#94a3b8' }}>
+            <p className="mt-1 text-sm" style={lightTheme ? { color: 'var(--muted)' } : { color: '#94a3b8' }}>
               {relics.length}/{ALL_RELIC_DEFS.length} — chinh phục Khủng Hoảng Kỷ Nguyên để nhận buff vĩnh viễn.
             </p>
           </div>
           <div
             className="rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em]"
             style={lightTheme ? {
-              background: 'rgba(201, 100, 66, 0.08)',
-              border: '1px solid rgba(201, 100, 66, 0.18)',
-              color: '#9a5a48',
+              background: 'rgba(var(--accent-rgb), 0.1)',
+              border: '1px solid rgba(var(--accent-rgb), 0.2)',
+              color: 'var(--accent2)',
             } : {
               background: 'rgba(255,255,255,0.05)',
               border: '1px solid rgba(255,255,255,0.08)',
@@ -122,20 +123,20 @@ export default function RelicInventory() {
       {relics.length === 0 ? (
         <>
           <div
-            className={`rounded-[28px] px-6 py-10 text-center ${lightTheme ? '' : 'border border-white/8 bg-white/[0.03]'}`}
+            className={`px-6 py-10 text-center ${lightTheme ? '' : 'rounded-[var(--skin-radius-card,28px)] border border-white/8 bg-white/[0.03]'}`}
             style={paperCardStyle(lightTheme)}
           >
             <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full" style={lightTheme ? {
-              background: 'rgba(201, 100, 66, 0.08)',
-              border: '1px solid rgba(201, 100, 66, 0.18)',
-              color: '#9a5a48',
+              background: 'rgba(var(--accent-rgb), 0.1)',
+              border: '1px solid rgba(var(--accent-rgb), 0.2)',
+              color: 'var(--accent2)',
             } : undefined}>
               <span className="mono text-[12px] font-semibold uppercase tracking-[0.22em]">AR</span>
             </div>
-            <p className="text-base font-semibold" style={lightTheme ? { color: '#1f1e1d' } : { color: '#ffffff' }}>
+            <p className="text-base font-semibold" style={lightTheme ? { color: 'var(--ink)', fontFamily: 'var(--skin-font-display)' } : { color: '#ffffff' }}>
               Chưa có di vật nào
             </p>
-            <p className="mx-auto mt-2 max-w-xl text-sm leading-relaxed" style={lightTheme ? { color: '#6a6862' } : { color: '#94a3b8' }}>
+            <p className="mx-auto mt-2 max-w-xl text-sm leading-relaxed" style={lightTheme ? { color: 'var(--muted)' } : { color: '#94a3b8' }}>
               Chọn chế độ Đương Đầu khi Khủng Hoảng xuất hiện để chinh phục và nhận di vật cho kho lưu trữ này.
             </p>
           </div>
@@ -182,13 +183,13 @@ function RelicCard({ relic, stage, lightTheme }) {
     <motion.div
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      className={`rounded-[28px] p-5 ${lightTheme ? '' : `border ${token.darkCard}`}`}
+      className={`p-5 ${lightTheme ? '' : `rounded-[var(--skin-radius-card,28px)] border ${token.darkCard}`}`}
       style={lightTheme ? paperCardStyle(lightTheme, token.accentBorder, 'rgba(31, 30, 29, 0.05)') : undefined}
     >
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
         <div className="flex min-w-0 flex-1 items-start gap-4">
           <div
-            className="mono flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-[22px] text-[12px] font-semibold uppercase tracking-[0.18em]"
+            className="mono flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-[var(--skin-radius-control,22px)] text-[12px] font-semibold uppercase tracking-[0.18em]"
             style={lightTheme ? {
               background: token.accentSoft,
               border: `1px solid ${token.accentBorder}`,
@@ -204,8 +205,8 @@ function RelicCard({ relic, stage, lightTheme }) {
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
               <p
-                className={lightTheme ? 'text-[1.3rem] font-medium leading-none tracking-[-0.02em]' : 'text-base font-semibold'}
-                style={lightTheme ? { color: '#1f1e1d', fontFamily: '"Source Serif 4", Georgia, serif' } : { color: 'var(--ink)' }}
+                className={lightTheme ? 'text-[1.3rem] font-semibold leading-none tracking-[-0.02em]' : 'text-base font-semibold'}
+                style={lightTheme ? { color: 'var(--ink)', fontFamily: 'var(--skin-font-display)' } : { color: 'var(--ink)' }}
               >
                 {relic.label}
               </p>
@@ -221,7 +222,7 @@ function RelicCard({ relic, stage, lightTheme }) {
               </span>
             </div>
 
-            <p className="mt-1 text-sm leading-relaxed" style={lightTheme ? { color: '#6a6862' } : { color: '#cbd5e1' }}>
+            <p className="mt-1 text-sm leading-relaxed" style={lightTheme ? { color: 'var(--muted)' } : { color: '#cbd5e1' }}>
               {relic.description}
             </p>
 
@@ -231,10 +232,10 @@ function RelicCard({ relic, stage, lightTheme }) {
 
         <div className="w-full lg:max-w-[18rem]">
           <div className="flex items-center justify-between">
-            <p className="mono text-[11px] font-semibold uppercase tracking-[0.22em]" style={lightTheme ? { color: '#9a5a48' } : { color: '#94a3b8' }}>
+            <p className="mono text-[10px] uppercase tracking-[0.2em]" style={lightTheme ? { color: 'var(--muted-2)' } : { color: '#94a3b8' }}>
               Tiến hóa
             </p>
-            <span className="text-xs" style={lightTheme ? { color: '#6a6862' } : { color: '#64748b' }}>
+            <span className="text-xs" style={lightTheme ? { color: 'var(--muted)' } : { color: '#64748b' }}>
               {isMaxStage ? 'Tối đa' : `${token.label} → ${(STAGE_TOKENS[stage + 1] ?? token).label}`}
             </span>
           </div>
@@ -278,20 +279,20 @@ function RelicCard({ relic, stage, lightTheme }) {
 
           {!isMaxStage && nextStageDef && (
             <div
-              className="mt-4 rounded-2xl px-3 py-3"
+              className="mt-4 rounded-[var(--skin-radius-control,16px)] px-3 py-3"
               style={lightTheme ? {
-                background: 'rgba(250, 249, 246, 0.94)',
-                border: '1px solid rgba(31, 30, 29, 0.08)',
+                background: 'rgba(var(--accent-rgb), 0.05)',
+                border: '1px solid var(--line)',
               } : {
                 background: 'rgba(255,255,255,0.04)',
                 border: '1px solid rgba(255,255,255,0.08)',
               }}
             >
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="text-xs" style={lightTheme ? { color: '#6a6862' } : { color: '#94a3b8' }}>
+                <span className="mono text-[10px] uppercase tracking-[0.2em]" style={lightTheme ? { color: 'var(--muted)' } : { color: '#94a3b8' }}>
                   Chi phí tiến hóa
                 </span>
-                <span className="text-xs" style={lightTheme ? { color: refined.t2 >= refinedCost ? token.accent : '#9f4a3e' } : { color: refined.t2 >= refinedCost ? 'var(--accent-light)' : '#f87171' }}>
+                <span className="mono text-xs tabular-nums" style={lightTheme ? { color: refined.t2 >= refinedCost ? token.accent : '#9f4a3e' } : { color: refined.t2 >= refinedCost ? 'var(--accent-light)' : '#f87171' }}>
                   {Math.floor(refined.t2)}/{refinedCost} {refinedDef.t2Label}
                 </span>
               </div>
@@ -305,11 +306,11 @@ function RelicCard({ relic, stage, lightTheme }) {
                 whileTap={canEvolve ? { scale: 0.98 } : undefined}
                 onClick={() => canEvolve && evolveRelic(relic.id)}
                 disabled={!canEvolve}
-                className="mt-3 w-full rounded-2xl py-2.5 text-sm font-semibold transition-colors"
+                className="mt-3 w-full rounded-[var(--skin-radius-control,16px)] py-2.5 text-sm font-semibold transition-colors"
                 style={canEvolve ? (
                   lightTheme ? {
-                    background: 'rgba(31,30,29,0.98)',
-                    color: '#faf9f6',
+                    background: 'var(--ink)',
+                    color: 'var(--card-bg-solid)',
                     border: '1px solid rgba(31,30,29,0.12)',
                     boxShadow: '0 10px 22px rgba(31, 30, 29, 0.10)',
                   } : {
@@ -320,7 +321,7 @@ function RelicCard({ relic, stage, lightTheme }) {
                   lightTheme ? {
                     background: 'rgba(31, 30, 29, 0.06)',
                     color: '#8a8a86',
-                    border: '1px solid rgba(31, 30, 29, 0.08)',
+                    border: '1px solid var(--line)',
                   } : {
                     background: 'rgba(255,255,255,0.03)',
                     color: '#64748b',
@@ -334,7 +335,7 @@ function RelicCard({ relic, stage, lightTheme }) {
 
           {isMaxStage && (
             <div
-              className="mt-4 rounded-2xl px-3 py-3 text-sm font-semibold"
+              className="mt-4 rounded-[var(--skin-radius-control,16px)] px-3 py-3 text-sm font-semibold"
               style={lightTheme ? {
                 background: token.accentSoft,
                 border: `1px solid ${token.accentBorder}`,
@@ -398,10 +399,10 @@ function LockedRelics({ collectedIds, lightTheme }) {
   return (
     <section className="space-y-3">
       <div>
-        <p className="mono text-[11px] font-semibold uppercase tracking-[0.26em]" style={lightTheme ? { color: '#9a5a48' } : { color: '#64748b' }}>
+        <p className="mono text-[10px] uppercase tracking-[0.2em]" style={lightTheme ? { color: 'var(--muted-2)' } : { color: '#64748b' }}>
           Những gì còn ẩn
         </p>
-        <p className="mt-1 text-sm font-semibold" style={lightTheme ? { color: '#1f1e1d' } : { color: '#e2e8f0' }}>
+        <p className="mt-1 text-sm font-semibold" style={lightTheme ? { color: 'var(--ink)', fontFamily: 'var(--skin-font-display)' } : { color: '#e2e8f0' }}>
           Chưa thu thập
         </p>
       </div>
@@ -410,15 +411,17 @@ function LockedRelics({ collectedIds, lightTheme }) {
         {locked.map((relic) => (
           <div
             key={relic.id}
-            className={`rounded-2xl px-4 py-4 ${lightTheme ? '' : 'border border-white/8 bg-white/[0.03]'}`}
+            className={`px-4 py-4 ${lightTheme ? '' : 'rounded-[var(--skin-radius-card,18px)] border border-white/8 bg-white/[0.03]'}`}
             style={lightTheme ? {
-              background: 'rgba(255, 255, 255, 0.74)',
-              border: '1px solid rgba(31, 30, 29, 0.08)',
+              background: 'var(--card-bg-solid)',
+              border: 'var(--skin-card-border-width, 1px) solid var(--line)',
+              borderRadius: 'var(--skin-radius-card, 18px)',
+              boxShadow: 'var(--skin-card-shadow)',
             } : { background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}
           >
             <div className="flex items-start gap-4">
               <div
-                className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl text-2xl"
+                className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-[var(--skin-radius-control,14px)] text-2xl"
                 style={lightTheme ? {
                   background: 'rgba(31, 30, 29, 0.04)',
                   border: '1px solid rgba(31, 30, 29, 0.06)',
@@ -428,14 +431,14 @@ function LockedRelics({ collectedIds, lightTheme }) {
                 <span className="mono text-[10px] font-semibold uppercase tracking-[0.16em]">Ẩn</span>
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold" style={lightTheme ? { color: '#6a6862' } : { color: '#94a3b8' }}>
+                <p className="text-sm font-semibold" style={lightTheme ? { color: 'var(--muted)' } : { color: '#94a3b8' }}>
                   ??? (từ {relic.crisisName})
                 </p>
                 <p className="mt-1 text-xs leading-relaxed" style={lightTheme ? { color: '#8a8a86' } : { color: '#64748b' }}>
                   Chinh phục {relic.crisisName} ở chế độ Đương Đầu để mở khóa.
                 </p>
               </div>
-              <span className="mono text-[10px] font-semibold uppercase tracking-[0.16em]" style={lightTheme ? { color: '#9a5a48' } : { color: '#475569' }}>Khoá</span>
+              <span className="mono text-[10px] font-semibold uppercase tracking-[0.16em]" style={lightTheme ? { color: 'var(--accent2)' } : { color: '#475569' }}>Khoá</span>
             </div>
           </div>
         ))}

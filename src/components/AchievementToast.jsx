@@ -50,19 +50,21 @@ export default function AchievementToast() {
           animate={{ opacity: 1, y: 0,   x: '-50%' }}
           exit={{    opacity: 0, y: -56, x: '-50%' }}
           transition={{ type: 'spring', damping: 22, stiffness: 280 }}
-          className="fixed left-1/2 top-16 z-50 flex min-w-[260px] max-w-[360px] cursor-pointer items-center gap-3 rounded-[22px] px-4 py-3 select-none"
+          className="fixed left-1/2 top-16 z-50 flex min-w-[260px] max-w-[360px] cursor-pointer items-center gap-4 px-5 py-4 select-none"
           style={{
-            background: 'rgba(255,255,255,0.97)',
-            border: '1px solid var(--line)',
-            boxShadow: '0 18px 34px rgba(31,30,29,0.10)',
+            background: 'var(--card-bg-solid)',
+            border: 'var(--skin-card-border-width,1px) solid var(--line)',
+            borderRadius: 'var(--skin-radius-card,18px)',
+            boxShadow: 'var(--skin-card-shadow)',
           }}
           onClick={() => dismissAchievementNotification()}
         >
           <div
-            className="mono flex h-12 w-12 shrink-0 items-center justify-center rounded-[16px] border text-[10px] font-semibold uppercase tracking-[0.16em]"
+            className="mono flex h-12 w-12 shrink-0 items-center justify-center border text-[11px] font-semibold uppercase tracking-[0.16em]"
             style={{
+              borderRadius: 'var(--skin-radius-control,14px)',
               borderColor: 'rgba(var(--accent-rgb),0.18)',
-              background: 'rgba(var(--accent-rgb),0.08)',
+              background: 'rgba(var(--accent-rgb),0.10)',
               color: 'var(--accent2)',
             }}
           >
@@ -70,14 +72,14 @@ export default function AchievementToast() {
           </div>
           <div className="flex-1 min-w-0">
             <p
-              className="text-[10px] font-semibold uppercase tracking-[0.24em]"
-              style={{ color: 'var(--muted)', fontFamily: MONO_FONT }}
+              className="mono text-[10px] font-semibold uppercase tracking-[0.2em]"
+              style={{ color: 'var(--muted-2)', fontFamily: MONO_FONT }}
             >
               Thành tích mới
             </p>
             <p
-              className="mt-1 text-[22px] font-medium leading-tight text-[var(--ink)]"
-              style={{ fontFamily: DISPLAY_FONT }}
+              className="mt-1.5 text-[22px] leading-tight text-[var(--ink)]"
+              style={{ fontFamily: 'var(--skin-font-display, ' + DISPLAY_FONT + ')', fontWeight: 600 }}
             >
               {ach.label}
             </p>

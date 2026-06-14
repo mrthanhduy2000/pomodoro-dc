@@ -54,16 +54,18 @@ export default function LevelUpModal() {
             animate={{ y: 0, scale: 1, opacity: 1 }}
             exit={{ y: 16, scale: 0.97, opacity: 0 }}
             transition={{ duration: 0.28, ease: 'easeOut' }}
-            className="pointer-events-none mx-4 flex max-w-[420px] flex-col items-center gap-5 rounded-[34px] border px-8 py-9 text-center select-none"
+            className="pointer-events-none mx-4 flex max-w-[420px] flex-col items-center gap-5 border px-8 py-9 text-center select-none"
             style={{
-              background: 'rgba(255,255,255,0.97)',
+              background: 'var(--card-bg-solid)',
               borderColor: 'var(--line)',
-              boxShadow: '0 24px 58px rgba(31,30,29,0.12)',
+              borderWidth: 'var(--skin-card-border-width,1px)',
+              borderRadius: 'var(--skin-radius-card,18px)',
+              boxShadow: 'var(--skin-card-shadow, 0 24px 58px rgba(31,30,29,0.12))',
             }}
           >
             <p
-              className="text-[10px] font-semibold uppercase tracking-[0.28em]"
-              style={{ color: 'var(--muted)', fontFamily: MONO_FONT }}
+              className="mono text-[10px] font-semibold uppercase tracking-[0.2em]"
+              style={{ color: 'var(--muted-2)', fontFamily: MONO_FONT }}
             >
               Cấp độ mới
             </p>
@@ -84,8 +86,8 @@ export default function LevelUpModal() {
                 style={{ background: 'rgba(var(--accent-rgb),0.42)' }}
               />
               <span
-                className="relative text-[76px] font-medium leading-none"
-                style={{ color: 'var(--ink)', fontFamily: DISPLAY_FONT }}
+                className="relative text-[76px] font-semibold leading-none tabular-nums"
+                style={{ color: 'var(--ink)', fontFamily: 'var(--skin-font-display, ' + DISPLAY_FONT + ')' }}
               >
                 {current.newLevel}
               </span>
@@ -93,8 +95,8 @@ export default function LevelUpModal() {
 
             <div className="space-y-2">
               <h2
-                className="text-[34px] font-medium leading-none tracking-[-0.04em]"
-                style={{ color: 'var(--ink)', fontFamily: DISPLAY_FONT }}
+                className="text-[34px] font-semibold leading-none tracking-[-0.04em]"
+                style={{ color: 'var(--ink)', fontFamily: 'var(--skin-font-display, ' + DISPLAY_FONT + ')' }}
               >
                 Bạn vừa lên cấp
               </h2>
@@ -108,7 +110,7 @@ export default function LevelUpModal() {
                 className="rounded-full border px-4 py-1.5 text-sm font-semibold"
                 style={{
                   borderColor: 'rgba(var(--accent-rgb),0.16)',
-                  background: 'rgba(var(--accent-rgb),0.08)',
+                  background: 'rgba(var(--accent-rgb),0.1)',
                   color: 'var(--accent2)',
                 }}
               >
@@ -118,19 +120,21 @@ export default function LevelUpModal() {
 
             {current.spGained > 0 && (
               <div
-                className="flex w-full items-center gap-3 rounded-[22px] border px-4 py-3 text-left"
+                className="flex w-full items-center gap-3 border px-4 py-3 text-left"
                 style={{
                   borderColor: 'var(--line)',
-                  background: 'rgba(244,242,236,0.8)',
+                  background: 'var(--card-bg-solid2, rgba(244,242,236,0.8))',
+                  borderRadius: 'var(--skin-radius-control,14px)',
                 }}
               >
                 <div
-                  className="mono flex h-11 w-11 items-center justify-center rounded-[15px] border text-[10px] font-semibold uppercase tracking-[0.16em]"
+                  className="mono flex h-11 w-11 items-center justify-center border text-[10px] font-semibold uppercase tracking-[0.16em]"
                   style={{
                     borderColor: 'rgba(var(--accent-rgb),0.14)',
-                    background: 'rgba(var(--accent-rgb),0.08)',
+                    background: 'rgba(var(--accent-rgb),0.1)',
                     color: 'var(--accent2)',
                     fontFamily: MONO_FONT,
+                    borderRadius: 'var(--skin-radius-control,14px)',
                   }}
                 >
                   SP

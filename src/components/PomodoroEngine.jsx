@@ -161,30 +161,34 @@ export default function PomodoroEngine({
   const lightTheme = uiTheme === 'light';
   const paperCardStyle = lightTheme
     ? {
-        background: 'rgba(255, 255, 255, 0.86)',
-        border: '1px solid rgba(217, 214, 204, 0.95)',
-        boxShadow: '0 14px 34px rgba(31, 30, 29, 0.05)',
+        background: 'var(--card-bg-solid)',
+        border: 'var(--skin-card-border-width, 1px) solid var(--line)',
+        borderRadius: 'var(--skin-radius-card, 18px)',
+        boxShadow: 'var(--skin-card-shadow)',
       }
     : undefined;
   const paperInsetStyle = lightTheme
     ? {
-        background: 'rgba(244, 242, 236, 0.82)',
-        border: '1px solid rgba(217, 214, 204, 0.88)',
+        background: 'var(--card-bg-solid2)',
+        border: 'var(--skin-card-border-width, 1px) solid var(--line)',
+        borderRadius: 'var(--skin-radius-card, 18px)',
         boxShadow: 'none',
       }
     : undefined;
   const paperInputStyle = lightTheme
     ? {
         background: 'rgba(250, 249, 246, 0.98)',
-        border: '1px solid rgba(217, 214, 204, 0.88)',
-        color: '#1f1e1d',
+        border: '1px solid var(--line)',
+        borderRadius: 'var(--skin-radius-control, 14px)',
+        color: 'var(--ink)',
         boxShadow: 'none',
       }
     : undefined;
   const paperGoalInsetStyle = lightTheme
     ? {
-        background: 'rgba(255, 248, 243, 0.98)',
-        border: '1px solid rgba(201, 100, 66, 0.18)',
+        background: 'var(--accent-soft, rgba(255, 248, 243, 0.98))',
+        border: 'var(--skin-card-border-width, 1px) solid rgba(var(--accent-rgb), 0.18)',
+        borderRadius: 'var(--skin-radius-card, 18px)',
         boxShadow: 'none',
       }
     : undefined;
@@ -807,17 +811,20 @@ export default function PomodoroEngine({
   const sessionSetupCard = (
     <div className={`w-full overflow-hidden border backdrop-blur-2xl transition-[border-color,box-shadow,background-color,opacity] duration-300 ${
       immersiveMode
-        ? 'mt-3 md:mt-4 rounded-[28px] bg-white/[0.045] border-white/[0.10] shadow-[0_14px_38px_rgba(15,23,42,0.12)]'
-        : 'mt-3 md:mt-4 rounded-[26px] bg-white/[0.04] border-white/[0.09] shadow-[0_10px_26px_rgba(15,23,42,0.10)]'
-    } ${!isIdle || isBreakMode ? 'opacity-25 pointer-events-none' : ''}`} style={paperCardStyle}>
+        ? 'mt-3 md:mt-4 bg-white/[0.045] border-white/[0.10] shadow-[0_14px_38px_rgba(15,23,42,0.12)]'
+        : 'mt-3 md:mt-4 bg-white/[0.04] border-white/[0.09] shadow-[0_10px_26px_rgba(15,23,42,0.10)]'
+    } ${!isIdle || isBreakMode ? 'opacity-25 pointer-events-none' : ''}`} style={{ borderRadius: 'var(--skin-radius-card, 18px)', ...paperCardStyle }}>
       <div className={`flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between ${
         immersiveMode ? 'px-5 py-4 md:px-5' : 'px-4 py-4'
       }`}>
         <div className="min-w-0">
-          <p className={`mono text-[10px] font-bold uppercase tracking-[0.22em] whitespace-nowrap ${
-            lightTheme ? 'text-[var(--muted)]' : 'text-slate-400'
+          <p className={`mono text-[10px] uppercase tracking-[0.2em] whitespace-nowrap ${
+            lightTheme ? 'text-[var(--muted-2)]' : 'text-slate-400'
           }`}>Thiết lập phiên</p>
-          <p className={`mt-1 text-sm ${lightTheme ? 'text-[var(--muted)]' : 'text-slate-500'}`}>
+          <p
+            className={`mt-1.5 text-[15px] leading-snug ${lightTheme ? 'text-[var(--ink-2)]' : 'text-slate-500'}`}
+            style={lightTheme ? { fontFamily: 'var(--skin-font-display)' } : undefined}
+          >
             Chọn mode, thời lượng và mức kỷ luật trước khi bắt đầu.
           </p>
         </div>
@@ -833,15 +840,15 @@ export default function PomodoroEngine({
           ? 'px-5 py-4 md:grid-cols-[minmax(0,1.12fr)_minmax(0,0.88fr)] md:px-5'
           : 'px-4 py-4 md:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]'
       }`}>
-        <div className={`min-w-0 rounded-[22px] px-4 py-4 sm:py-3.5 ${
+        <div className={`min-w-0 px-4 py-4 sm:py-3.5 ${
           lightTheme
             ? 'border border-[var(--line)] bg-[rgba(244,242,236,0.82)]'
-            : 'border border-white/[0.07] bg-black/10'
+            : 'border border-white/[0.07] bg-black/10 rounded-[22px]'
         }`} style={paperInsetStyle}>
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
             <div className="min-w-0">
-              <p className={`mono text-[10px] font-bold uppercase tracking-[0.22em] whitespace-nowrap ${
-                lightTheme ? 'text-[var(--accent)]' : 'text-emerald-400'
+              <p className={`mono text-[10px] uppercase tracking-[0.2em] whitespace-nowrap ${
+                lightTheme ? 'text-[var(--muted-2)]' : 'text-emerald-400'
               }`}>
                 {isStopwatchMode ? 'Mốc tham chiếu' : 'Tập trung'}
               </p>
@@ -849,9 +856,9 @@ export default function PomodoroEngine({
                 {isStopwatchMode ? 'Dùng để neo mốc thưởng khi bấm giờ.' : 'Thời lượng countdown của phiên kế tiếp.'}
               </p>
             </div>
-            <div className={`flex items-center justify-between gap-3 self-stretch rounded-[18px] px-2 py-1.5 sm:self-auto sm:justify-start sm:gap-2 sm:rounded-none sm:px-0 sm:py-0 ${
+            <div className={`flex items-center justify-between gap-3 self-stretch rounded-[var(--skin-radius-control,14px)] px-2 py-1.5 sm:self-auto sm:justify-start sm:gap-2 sm:rounded-none sm:px-0 sm:py-0 ${
               lightTheme
-                ? 'bg-white/70 border border-[rgba(217,214,204,0.8)] sm:bg-transparent sm:border-transparent'
+                ? 'bg-white/70 border border-[var(--line)] sm:bg-transparent sm:border-transparent'
                 : 'bg-white/[0.04] border border-white/[0.08] sm:bg-transparent sm:border-transparent'
             }`}>
               <button
@@ -866,7 +873,7 @@ export default function PomodoroEngine({
               >
                 −
               </button>
-              <div className={`min-w-[4.5rem] rounded-[16px] border px-1.5 py-1 text-center transition-colors ${
+              <div className={`min-w-[4.5rem] rounded-[var(--skin-radius-control,14px)] border px-1.5 py-1 text-center transition-colors ${
                 lightTheme
                   ? 'border-transparent focus-within:border-[var(--line)] focus-within:bg-white'
                   : 'border-transparent focus-within:border-white/[0.14] focus-within:bg-white/[0.05]'
@@ -932,7 +939,7 @@ export default function PomodoroEngine({
             <button
               type="button"
               onClick={() => applyFocusMinutes(lengthSuggestion.minutes)}
-              className={`mt-4 flex w-full items-center justify-between gap-3 rounded-[16px] border px-3.5 py-2.5 text-left transition ${
+              className={`mt-4 flex w-full items-center justify-between gap-3 rounded-[var(--skin-radius-control,14px)] border px-3.5 py-2.5 text-left transition ${
                 lightTheme
                   ? 'border-[rgba(91,122,82,0.28)] bg-[rgba(229,236,223,0.6)] hover:bg-[rgba(229,236,223,0.95)]'
                   : 'border-emerald-300/20 bg-emerald-400/[0.07] hover:bg-emerald-400/[0.14]'
@@ -957,15 +964,15 @@ export default function PomodoroEngine({
           )}
         </div>
 
-        <div className={`min-w-0 rounded-[22px] px-4 py-3.5 ${
+        <div className={`min-w-0 px-4 py-3.5 ${
           lightTheme
             ? 'border border-[var(--line)] bg-[rgba(244,242,236,0.82)]'
-            : 'border border-white/[0.07] bg-black/10'
+            : 'border border-white/[0.07] bg-black/10 rounded-[22px]'
         }`} style={paperInsetStyle}>
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
-              <p className={`mono text-[10px] font-bold uppercase tracking-[0.22em] whitespace-nowrap ${
-                lightTheme ? 'text-[var(--muted)]' : 'text-sky-400'
+              <p className={`mono text-[10px] uppercase tracking-[0.2em] whitespace-nowrap ${
+                lightTheme ? 'text-[var(--muted-2)]' : 'text-sky-400'
               }`}>Nghỉ giải lao</p>
               {isStopwatchMode ? (
                 <>
@@ -1439,14 +1446,14 @@ export default function PomodoroEngine({
         ? `mx-auto max-w-[760px] lg:max-w-[780px] ${showShortcutHint ? 'pt-0' : 'pt-6 lg:pt-8'}`
         : ''
     }`}>
-      <div className={`w-full rounded-[24px] border backdrop-blur-2xl ${
+      <div className={`w-full border backdrop-blur-2xl ${
         useImmersiveHeroLayout
           ? 'bg-white/[0.045] border-white/[0.10] px-4 py-4 shadow-[0_12px_28px_rgba(15,23,42,0.10)]'
           : 'bg-white/[0.04] border-white/[0.09] px-3.5 py-3 shadow-[0_8px_22px_rgba(15,23,42,0.08)]'
-      }`} style={paperCardStyle}>
+      }`} style={{ borderRadius: 'var(--skin-radius-card, 18px)', ...paperCardStyle }}>
         <div className="flex items-center justify-between mb-2 px-0.5">
-          <span className={`mono text-xs font-semibold uppercase tracking-wide ${
-            lightTheme ? 'text-[var(--muted)]' : 'text-slate-500'
+          <span className={`mono text-[10px] uppercase tracking-[0.2em] ${
+            lightTheme ? 'text-[var(--muted-2)]' : 'text-slate-500'
           }`}>
             Ghi chú phiên
           </span>
@@ -1463,11 +1470,11 @@ export default function PomodoroEngine({
         />
       </div>
 
-      <div className="w-full rounded-[24px] px-3.5 py-3 backdrop-blur-2xl bg-white/[0.045] border border-white/[0.10] shadow-[0_12px_28px_rgba(15,23,42,0.10)]" style={paperCardStyle}>
+      <div className="w-full px-3.5 py-3 backdrop-blur-2xl bg-white/[0.045] border border-white/[0.10] shadow-[0_12px_28px_rgba(15,23,42,0.10)]" style={{ borderRadius: 'var(--skin-radius-card, 18px)', ...paperCardStyle }}>
         <div className="flex items-start justify-between gap-3 px-0.5">
           <div className="min-w-0">
-            <p className={`mono text-[10px] font-semibold uppercase tracking-[0.24em] ${
-              lightTheme ? 'text-[var(--muted)]' : 'text-slate-500'
+            <p className={`mono text-[10px] uppercase tracking-[0.2em] ${
+              lightTheme ? 'text-[var(--muted-2)]' : 'text-slate-500'
             }`}>
               Chuẩn bị phiên
             </p>
@@ -1490,12 +1497,12 @@ export default function PomodoroEngine({
 
         <Motion.div
           layout
-          className={`mt-3 rounded-[22px] border px-3.5 py-3 ${
+          className={`mt-3 border px-3.5 py-3 ${
             lightTheme
               ? ''
               : isSessionGoalValid
-                ? 'border-[rgba(var(--accent-rgb),0.18)] bg-white/[0.05]'
-                : 'border-white/8 bg-white/[0.04]'
+                ? 'rounded-[22px] border-[rgba(var(--accent-rgb),0.18)] bg-white/[0.05]'
+                : 'rounded-[22px] border-white/8 bg-white/[0.04]'
           }`}
           style={paperGoalInsetStyle}
         >
@@ -1504,7 +1511,7 @@ export default function PomodoroEngine({
               <div className="flex items-center gap-2">
                 <span className={`rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] ${
                   lightTheme
-                    ? 'bg-[rgba(201,100,66,0.10)] text-[var(--accent2)]'
+                    ? 'bg-[rgba(var(--accent-rgb),0.1)] text-[var(--accent2)]'
                     : 'bg-white/[0.08] text-[var(--accent-light)]'
                 }`}>
                   Bắt buộc

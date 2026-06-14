@@ -274,12 +274,13 @@ function LootDropContent({ reward, onClose, isLightTheme }) {
         animate={{ scale: 1,   y: 0  }}
         exit={{ scale: 0.8, opacity: 0 }}
         transition={{ type: 'spring', damping: 20, stiffness: 200 }}
-        className="relative flex w-full max-w-2xl flex-col overflow-hidden rounded-[32px] backdrop-blur-xl"
+        className="relative flex w-full max-w-2xl flex-col overflow-hidden backdrop-blur-xl"
         style={{
           maxHeight: '92vh',
-          background: palette.shellBg,
-          border: `1px solid ${palette.shellBorder}`,
-          boxShadow: palette.shellShadow,
+          borderRadius: 'var(--skin-radius-card,28px)',
+          background: 'var(--card-bg-solid)',
+          border: `var(--skin-card-border-width,1px) solid var(--line)`,
+          boxShadow: 'var(--skin-card-shadow)',
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -301,11 +302,12 @@ function LootDropContent({ reward, onClose, isLightTheme }) {
         >
           <div className="space-y-5">
             <section
-              className="relative overflow-hidden rounded-[28px] p-5 md:p-6"
+              className="relative overflow-hidden p-5 md:p-6"
               style={{
-                background: palette.heroBg,
-                border: `1px solid ${palette.shellBorder}`,
-                boxShadow: palette.heroShadow,
+                borderRadius: 'var(--skin-radius-card,18px)',
+                background: 'var(--card-bg-solid)',
+                border: `var(--skin-card-border-width,1px) solid var(--line)`,
+                boxShadow: 'var(--skin-card-shadow)',
               }}
             >
               <div
@@ -320,11 +322,11 @@ function LootDropContent({ reward, onClose, isLightTheme }) {
                 <div className="flex items-start justify-between gap-4">
                   <div className="min-w-0">
                     <div
-                      className="mb-3 inline-flex items-center gap-2 rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.24em]"
+                      className="mono mb-3 inline-flex items-center gap-2 rounded-full px-3 py-1 text-[10px] uppercase tracking-[0.2em]"
                       style={{
                         border: `1px solid ${palette.shellBorder}`,
                         background: palette.subCardBg,
-                        color: isLightTheme ? 'var(--muted)' : '#cbd5e1',
+                        color: isLightTheme ? 'var(--muted-2)' : '#cbd5e1',
                         fontFamily: MONO_FONT,
                       }}
                     >
@@ -332,8 +334,8 @@ function LootDropContent({ reward, onClose, isLightTheme }) {
                       Phiên Hoàn Tất
                     </div>
                     <h2
-                      className="text-[34px] font-medium leading-none tracking-[-0.05em] md:text-[2.5rem]"
-                      style={{ color: isLightTheme ? 'var(--ink)' : '#f8fafc', fontFamily: DISPLAY_FONT }}
+                      className="text-[34px] font-semibold leading-none tracking-[-0.04em] md:text-[2.5rem]"
+                      style={{ color: isLightTheme ? 'var(--ink)' : '#f8fafc', fontFamily: 'var(--skin-font-display, ' + DISPLAY_FONT + ')' }}
                     >
                       {resolvedPhase === 0 ? 'Đang tổng hợp phần thưởng' : 'Tổng kết phiên'}
                     </h2>
@@ -359,8 +361,9 @@ function LootDropContent({ reward, onClose, isLightTheme }) {
                       };
                     })() : { y: [0, -6, 0] }}
                     transition={{ duration: resolvedPhase === 0 ? 0.8 : 2.6, repeat: resolvedPhase === 0 ? 0 : Infinity, ease: 'easeInOut' }}
-                    className="mono flex h-20 w-20 flex-shrink-0 items-center justify-center rounded-[26px] text-[18px] font-semibold uppercase tracking-[0.18em]"
+                    className="mono flex h-20 w-20 flex-shrink-0 items-center justify-center text-[18px] font-semibold uppercase tracking-[0.18em]"
                     style={{
+                      borderRadius: 'var(--skin-radius-control,14px)',
                       background: palette.iconBoxBg,
                       border: `1px solid ${palette.iconBoxBorder}`,
                       boxShadow: isLightTheme ? '0 12px 28px rgba(31,30,29,0.08)' : `0 16px 38px ${accentGlow}`,
@@ -435,8 +438,9 @@ function LootDropContent({ reward, onClose, isLightTheme }) {
                       initial={{ opacity: 0, y: 8, scale: 0.96 }}
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       transition={{ delay: 0.15, type: 'spring', damping: 15 }}
-                      className="grid gap-3 rounded-[24px] p-4 md:grid-cols-[auto_1fr_auto]"
+                      className="grid gap-3 p-4 md:grid-cols-[auto_1fr_auto]"
                       style={{
+                        borderRadius: 'var(--skin-radius-card,18px)',
                         border: isLightTheme ? '1px solid rgba(201,100,66,0.14)' : '1px solid rgba(129,140,248,0.30)',
                         background: isLightTheme
                           ? 'linear-gradient(160deg, rgba(255,255,255,0.96), rgba(248,235,228,0.90))'
@@ -444,26 +448,27 @@ function LootDropContent({ reward, onClose, isLightTheme }) {
                       }}
                     >
                       <div
-                        className="mono flex h-14 w-14 items-center justify-center rounded-2xl text-[12px] font-semibold uppercase tracking-[0.14em]"
+                        className="mono flex h-14 w-14 items-center justify-center text-[12px] font-semibold uppercase tracking-[0.14em]"
                         style={isLightTheme ? {
-                          background: 'rgba(201,100,66,0.10)',
+                          borderRadius: 'var(--skin-radius-control,14px)',
+                          background: 'rgba(var(--accent-rgb),0.1)',
                           border: '1px solid rgba(201,100,66,0.16)',
                           color: 'var(--accent2)',
                           fontFamily: MONO_FONT,
-                        } : undefined}
+                        } : { borderRadius: 'var(--skin-radius-control,14px)' }}
                       >
                         BT+
                       </div>
                       <div className="min-w-0">
                         <p
-                          className="text-[10px] font-semibold uppercase tracking-[0.22em]"
-                          style={{ color: isLightTheme ? 'var(--muted)' : '#c7d2fe', fontFamily: MONO_FONT }}
+                          className="mono text-[10px] uppercase tracking-[0.2em]"
+                          style={{ color: isLightTheme ? 'var(--muted-2)' : '#c7d2fe', fontFamily: MONO_FONT }}
                         >
                           Biến cố tích cực
                         </p>
                         <p
-                          className="mt-1 text-[24px] font-medium leading-tight"
-                          style={{ color: isLightTheme ? 'var(--ink)' : '#ffffff', fontFamily: DISPLAY_FONT }}
+                          className="mt-1 text-[24px] font-semibold leading-tight"
+                          style={{ color: isLightTheme ? 'var(--ink)' : '#ffffff', fontFamily: 'var(--skin-font-display, ' + DISPLAY_FONT + ')' }}
                         >
                           {reward.positiveEvent.label}
                         </p>
@@ -500,24 +505,25 @@ function LootDropContent({ reward, onClose, isLightTheme }) {
                 <motion.section
                   initial={{ opacity: 0, y: 18 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="rounded-[28px] p-5"
+                  className="p-5"
                   style={{
-                    background: palette.panelBg,
-                    border: `1px solid ${palette.shellBorder}`,
-                    boxShadow: isLightTheme ? '0 18px 40px rgba(148,163,184,0.12)' : '0 20px 50px rgba(2,6,23,0.22)',
+                    borderRadius: 'var(--skin-radius-card,18px)',
+                    background: 'var(--card-bg-solid)',
+                    border: `var(--skin-card-border-width,1px) solid var(--line)`,
+                    boxShadow: 'var(--skin-card-shadow)',
                   }}
                 >
                   <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
                     <div>
                       <p
-                        className="text-[10px] font-semibold uppercase tracking-[0.24em]"
-                        style={{ color: isLightTheme ? 'var(--muted)' : '#94a3b8', fontFamily: MONO_FONT }}
+                        className="mono text-[10px] uppercase tracking-[0.2em]"
+                        style={{ color: isLightTheme ? 'var(--muted-2)' : '#94a3b8', fontFamily: MONO_FONT }}
                       >
                         Tài nguyên và nghiên cứu
                       </p>
                       <h3
-                        className="mt-1 text-[28px] font-medium leading-none"
-                        style={{ color: isLightTheme ? 'var(--ink)' : '#ffffff', fontFamily: DISPLAY_FONT }}
+                        className="mt-1 text-[28px] font-semibold leading-none"
+                        style={{ color: isLightTheme ? 'var(--ink)' : '#ffffff', fontFamily: 'var(--skin-font-display, ' + DISPLAY_FONT + ')' }}
                       >
                         Những gì phiên này mang về
                       </h3>
@@ -604,8 +610,8 @@ function LootDropContent({ reward, onClose, isLightTheme }) {
           }}
         >
           <div
-            className="mb-3 flex items-center justify-between gap-3 rounded-2xl px-4 py-3"
-            style={{ border: `1px solid ${palette.footerBorder}`, background: palette.footerCardBg }}
+            className="mb-3 flex items-center justify-between gap-3 px-4 py-3"
+            style={{ borderRadius: 'var(--skin-radius-control,14px)', border: `1px solid ${palette.footerBorder}`, background: palette.footerCardBg }}
           >
             <div>
               <p
@@ -619,11 +625,11 @@ function LootDropContent({ reward, onClose, isLightTheme }) {
               </p>
             </div>
             <div
-              className="hidden rounded-full px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.2em] md:inline-flex"
+              className="mono hidden rounded-full px-3 py-1.5 text-xs uppercase tracking-[0.2em] md:inline-flex"
               style={{
                 border: `1px solid ${palette.footerBorder}`,
                 background: palette.chipBg,
-                color: isLightTheme ? 'var(--muted)' : '#cbd5e1',
+                color: isLightTheme ? 'var(--muted-2)' : '#cbd5e1',
                 fontFamily: MONO_FONT,
               }}
             >
@@ -643,8 +649,9 @@ function LootDropContent({ reward, onClose, isLightTheme }) {
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={handleClaim}
-                className="w-full rounded-[22px] border py-4 text-[16px] font-semibold tracking-[0.01em]"
+                className="w-full border py-4 text-[16px] font-semibold tracking-[0.01em]"
                 style={{
+                  borderRadius: 'var(--skin-radius-control,14px)',
                   borderColor: 'rgba(31,30,29,0.12)',
                   background: isLightTheme
                     ? 'rgba(31,30,29,0.98)'
@@ -673,14 +680,14 @@ function XPCounter({ base, final, countDuration, bonusXP, xpPerMinute, lightThem
 
   return (
     <div
-      className="h-full rounded-[26px] p-5"
-      style={{ background: palette.panelBg, border: `1px solid ${palette.shellBorder}` }}
+      className="h-full p-5"
+      style={{ borderRadius: 'var(--skin-radius-card,18px)', background: 'var(--card-bg-solid)', border: `var(--skin-card-border-width,1px) solid var(--line)` }}
     >
       <div className="flex items-center justify-between gap-3">
         <div>
           <p
-            className="text-[10px] font-semibold uppercase tracking-[0.22em]"
-            style={{ color: lightTheme ? 'var(--muted)' : '#cbd5e1', fontFamily: MONO_FONT }}
+            className="mono text-[10px] uppercase tracking-[0.2em]"
+            style={{ color: lightTheme ? 'var(--muted-2)' : '#cbd5e1', fontFamily: MONO_FONT }}
           >
             Điểm kinh nghiệm
           </p>
@@ -689,8 +696,9 @@ function XPCounter({ base, final, countDuration, bonusXP, xpPerMinute, lightThem
           </p>
         </div>
         <div
-          className="mono flex h-12 w-12 items-center justify-center rounded-2xl text-[12px] font-semibold uppercase tracking-[0.18em]"
+          className="mono flex h-12 w-12 items-center justify-center text-[12px] font-semibold uppercase tracking-[0.18em]"
           style={{
+            borderRadius: 'var(--skin-radius-control,14px)',
             border: lightTheme ? '1px solid rgba(245,158,11,0.24)' : '1px solid rgba(250,204,21,0.2)',
             background: lightTheme ? 'rgba(245,158,11,0.08)' : 'rgba(250,204,21,0.1)',
             color: lightTheme ? 'var(--warn)' : '#fde68a',
@@ -706,13 +714,13 @@ function XPCounter({ base, final, countDuration, bonusXP, xpPerMinute, lightThem
           key={final}
           animate={isMultiplied ? { scale: [1, 1.08, 1] } : {}}
           transition={{ duration: 0.4 }}
-          className="text-5xl font-medium tracking-tight md:text-6xl"
-          style={{ color: lightTheme ? 'var(--ink)' : '#fde68a', fontFamily: DISPLAY_FONT }}
+          className="mono text-5xl font-medium tabular-nums tracking-tight md:text-6xl"
+          style={{ color: lightTheme ? 'var(--ink)' : '#fde68a', fontFamily: MONO_FONT }}
         >
           +{displayValue.toLocaleString()}
         </motion.span>
         <span
-          className="pb-2 text-sm font-semibold uppercase tracking-[0.26em]"
+          className="mono pb-2 text-sm uppercase tracking-[0.2em]"
           style={{ color: lightTheme ? 'var(--muted)' : '#94a3b8', fontFamily: MONO_FONT }}
         >
           XP
@@ -731,11 +739,11 @@ function XPCounter({ base, final, countDuration, bonusXP, xpPerMinute, lightThem
 function HeroStatCard({ label, value, hint, palette }) {
   return (
     <div
-      className="rounded-[22px] p-3.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]"
-      style={{ border: `1px solid ${palette.shellBorder}`, background: palette.subCardBg }}
+      className="p-3.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]"
+      style={{ borderRadius: 'var(--skin-radius-control,14px)', border: `1px solid ${palette.shellBorder}`, background: palette.subCardBg }}
     >
-      <p className="text-[10px] font-semibold uppercase tracking-[0.22em]" style={{ color: 'var(--muted)', fontFamily: MONO_FONT }}>{label}</p>
-      <p className="mt-2 text-[22px] font-medium md:text-[26px]" style={{ color: 'var(--ink)', fontFamily: DISPLAY_FONT }}>{value}</p>
+      <p className="mono text-[10px] uppercase tracking-[0.2em]" style={{ color: 'var(--muted-2)', fontFamily: MONO_FONT }}>{label}</p>
+      <p className="mt-2 text-[22px] font-semibold md:text-[26px]" style={{ color: 'var(--ink)', fontFamily: 'var(--skin-font-display, ' + DISPLAY_FONT + ')' }}>{value}</p>
       <p className="mt-1 text-xs leading-5" style={{ color: 'var(--muted)' }}>{hint}</p>
     </div>
   );
@@ -744,11 +752,11 @@ function HeroStatCard({ label, value, hint, palette }) {
 function MiniMetric({ label, value, palette }) {
   return (
     <div
-      className="rounded-2xl px-3 py-3"
-      style={{ border: `1px solid ${palette.shellBorder}`, background: palette.miniCardBg }}
+      className="px-3 py-3"
+      style={{ borderRadius: 'var(--skin-radius-control,14px)', border: `1px solid ${palette.shellBorder}`, background: palette.miniCardBg }}
     >
-      <p className="text-[10px] font-semibold uppercase tracking-[0.22em]" style={{ color: 'var(--muted)', fontFamily: MONO_FONT }}>{label}</p>
-      <p className="mt-1 text-lg font-semibold" style={{ color: 'var(--ink)', fontFamily: DISPLAY_FONT }}>{value}</p>
+      <p className="mono text-[10px] uppercase tracking-[0.2em]" style={{ color: 'var(--muted-2)', fontFamily: MONO_FONT }}>{label}</p>
+      <p className="mono mt-1 text-lg font-semibold tabular-nums" style={{ color: 'var(--ink)', fontFamily: MONO_FONT }}>{value}</p>
     </div>
   );
 }
@@ -773,8 +781,9 @@ function BonusPill({ icon, label, value, tone, lightTheme }) {
 function SupportRewardCard({ icon, label, value, accent, lightTheme, palette }) {
   return (
     <div
-      className="rounded-[22px] p-4"
+      className="p-4"
       style={{
+        borderRadius: 'var(--skin-radius-card,18px)',
         border: `1px solid ${palette.shellBorder}`,
         background: lightTheme
           ? 'rgba(255,255,255,0.92)'
@@ -783,22 +792,23 @@ function SupportRewardCard({ icon, label, value, accent, lightTheme, palette }) 
     >
       <div className="flex items-center gap-3">
         <div
-          className="mono flex h-11 w-11 items-center justify-center rounded-2xl text-[11px] font-semibold uppercase tracking-[0.16em]"
+          className="mono flex h-11 w-11 items-center justify-center text-[11px] font-semibold uppercase tracking-[0.16em]"
           style={lightTheme ? {
+            borderRadius: 'var(--skin-radius-control,14px)',
             border: '1px solid rgba(31,30,29,0.08)',
             background: 'rgba(255,255,255,0.80)',
             color: 'var(--ink)',
             fontFamily: MONO_FONT,
-          } : undefined}
+          } : { borderRadius: 'var(--skin-radius-control,14px)' }}
         >
           {icon}
         </div>
         <div>
           <p className="text-sm font-semibold" style={{ color: lightTheme ? 'var(--ink)' : '#ffffff' }}>{label}</p>
-          <p className="mt-0.5 text-xs uppercase tracking-[0.2em]" style={{ color: lightTheme ? 'var(--muted)' : '#94a3b8', fontFamily: MONO_FONT }}>Phụ trợ</p>
+          <p className="mono mt-0.5 text-xs uppercase tracking-[0.2em]" style={{ color: lightTheme ? 'var(--muted-2)' : '#94a3b8', fontFamily: MONO_FONT }}>Phụ trợ</p>
         </div>
       </div>
-      <p className="mt-4 text-lg font-medium" style={{ color: lightTheme ? 'var(--ink)' : '#ffffff', fontFamily: DISPLAY_FONT }}>{value}</p>
+      <p className="mt-4 text-lg font-semibold" style={{ color: lightTheme ? 'var(--ink)' : '#ffffff', fontFamily: 'var(--skin-font-display, ' + DISPLAY_FONT + ')' }}>{value}</p>
     </div>
   );
 }
@@ -814,27 +824,28 @@ function ResourceCascade({ resources, lightTheme, palette }) {
           initial={{ opacity: 0, scale: 0.5, y: 10 }}
           animate={{ opacity: 1, scale: 1,   y: 0  }}
           transition={{ delay: index * 0.12, type: 'spring', damping: 15 }}
-          className="flex items-center justify-between gap-3 rounded-2xl px-4 py-3 text-sm"
-          style={{ border: `1px solid ${palette.shellBorder}`, background: palette.subCardBg }}
+          className="flex items-center justify-between gap-3 px-4 py-3 text-sm"
+          style={{ borderRadius: 'var(--skin-radius-control,14px)', border: `1px solid ${palette.shellBorder}`, background: palette.subCardBg }}
         >
           <div className="flex min-w-0 items-center gap-3">
             <div
-              className="mono flex h-11 w-11 items-center justify-center rounded-2xl text-[10px] font-semibold uppercase tracking-[0.16em]"
+              className="mono flex h-11 w-11 items-center justify-center text-[10px] font-semibold uppercase tracking-[0.16em]"
               style={lightTheme ? {
+                borderRadius: 'var(--skin-radius-control,14px)',
                 border: '1px solid rgba(31,30,29,0.08)',
                 background: 'rgba(255,255,255,0.80)',
                 color: 'var(--ink)',
                 fontFamily: MONO_FONT,
-              } : undefined}
+              } : { borderRadius: 'var(--skin-radius-control,14px)' }}
             >
               <ResourceMark id={id} />
             </div>
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold" style={{ color: 'var(--ink)' }}>{ALL_RESOURCE_DEFS.find((r) => r.id === id)?.label ?? id}</p>
-              <p className="mt-0.5 text-xs uppercase tracking-[0.18em]" style={{ color: 'var(--muted)', fontFamily: MONO_FONT }}>Tài nguyên</p>
+              <p className="mono mt-0.5 text-xs uppercase tracking-[0.18em]" style={{ color: 'var(--muted-2)', fontFamily: MONO_FONT }}>Tài nguyên</p>
             </div>
           </div>
-          <div className="rounded-full border px-3 py-1.5 text-sm font-semibold" style={{ borderColor: 'var(--line)', background: 'rgba(255,255,255,0.8)', color: 'var(--ink-2)', fontFamily: MONO_FONT }}>
+          <div className="rounded-full border px-3 py-1.5 text-sm font-semibold tabular-nums" style={{ borderColor: 'var(--line)', background: 'rgba(255,255,255,0.8)', color: 'var(--ink-2)', fontFamily: MONO_FONT }}>
             +{amount.toLocaleString()}
           </div>
         </motion.div>
@@ -884,8 +895,9 @@ function SlotMachineReveal({ lightTheme }) {
     <motion.div
       initial={{ scale: 0.7, opacity: 0 }}
       animate={{ scale: settled ? [1.1, 1] : 1, opacity: 1 }}
-      className="rounded-[28px] p-5 text-center"
+      className="p-5 text-center"
       style={{
+        borderRadius: 'var(--skin-radius-card,18px)',
         border: lightTheme ? '1px solid rgba(var(--accent-rgb),0.18)' : '1px solid rgba(250,204,21,0.35)',
         background: lightTheme
           ? 'rgba(255,255,255,0.96)'
@@ -894,10 +906,10 @@ function SlotMachineReveal({ lightTheme }) {
       }}
     >
       <div
-        className="mb-3 inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em]"
+        className="mono mb-3 inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[10px] uppercase tracking-[0.2em]"
         style={{
           borderColor: lightTheme ? 'rgba(var(--accent-rgb),0.16)' : 'rgba(250,204,21,0.25)',
-          background: lightTheme ? 'rgba(var(--accent-rgb),0.08)' : 'rgba(250,204,21,0.10)',
+          background: lightTheme ? 'rgba(var(--accent-rgb),0.1)' : 'rgba(250,204,21,0.10)',
           color: lightTheme ? 'var(--accent2)' : '#fde68a',
           fontFamily: MONO_FONT,
         }}
@@ -914,15 +926,15 @@ function SlotMachineReveal({ lightTheme }) {
         }}
       >
         <span
-          className="text-[42px] font-medium leading-none"
-          style={{ color: lightTheme ? 'var(--ink)' : '#fde68a', fontFamily: DISPLAY_FONT }}
+          className="text-[42px] font-semibold leading-none"
+          style={{ color: lightTheme ? 'var(--ink)' : '#fde68a', fontFamily: 'var(--skin-font-display, ' + DISPLAY_FONT + ')' }}
         >
           ×3
         </span>
       </motion.div>
       {settled && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-          <p className="text-[28px] font-medium" style={{ color: lightTheme ? 'var(--ink)' : '#fde68a', fontFamily: DISPLAY_FONT }}>
+          <p className="text-[28px] font-semibold" style={{ color: lightTheme ? 'var(--ink)' : '#fde68a', fontFamily: 'var(--skin-font-display, ' + DISPLAY_FONT + ')' }}>
             Phần thưởng được nhân ba
           </p>
           <p className="mt-2 text-sm leading-6" style={{ color: lightTheme ? 'var(--accent2)' : 'rgba(254,240,138,0.84)' }}>
@@ -939,8 +951,9 @@ function LevelUpBanner({ newLevel, spGained, lightTheme }) {
     <motion.div
       initial={{ x: -60, opacity: 0 }}
       animate={{ x: 0, opacity: 1 }}
-      className="grid gap-3 rounded-[28px] p-5 md:grid-cols-[auto_1fr_auto]"
+      className="grid gap-3 p-5 md:grid-cols-[auto_1fr_auto]"
       style={{
+        borderRadius: 'var(--skin-radius-card,18px)',
         border: lightTheme ? '1px solid var(--line)' : '1px solid rgba(52,211,153,0.35)',
         background: lightTheme
           ? 'rgba(255,255,255,0.96)'
@@ -948,13 +961,13 @@ function LevelUpBanner({ newLevel, spGained, lightTheme }) {
         boxShadow: lightTheme ? '0 22px 48px rgba(31,30,29,0.08)' : '0 24px 60px rgba(16,185,129,0.14)',
       }}
     >
-      <div className="mono flex h-14 w-14 items-center justify-center rounded-2xl border text-[12px] font-semibold uppercase tracking-[0.18em]" style={lightTheme ? { borderColor: 'rgba(var(--accent-rgb),0.14)', background: 'rgba(var(--accent-rgb),0.08)', color: 'var(--accent2)', fontFamily: MONO_FONT } : { color: '#d1fae5', fontFamily: MONO_FONT } }>LV</div>
+      <div className="mono flex h-14 w-14 items-center justify-center border text-[12px] font-semibold uppercase tracking-[0.18em]" style={lightTheme ? { borderRadius: 'var(--skin-radius-control,14px)', borderColor: 'rgba(var(--accent-rgb),0.14)', background: 'rgba(var(--accent-rgb),0.1)', color: 'var(--accent2)', fontFamily: MONO_FONT } : { borderRadius: 'var(--skin-radius-control,14px)', color: '#d1fae5', fontFamily: MONO_FONT } }>LV</div>
       <div>
-        <p className="text-[10px] font-semibold uppercase tracking-[0.22em]" style={{ color: lightTheme ? 'var(--muted)' : 'rgba(167,243,208,0.7)', fontFamily: MONO_FONT }}>Thăng cấp</p>
-        <p className="mt-1 text-[28px] font-medium" style={{ color: lightTheme ? 'var(--ink)' : '#ffffff', fontFamily: DISPLAY_FONT }}>Đã lên cấp {newLevel}</p>
+        <p className="mono text-[10px] uppercase tracking-[0.2em]" style={{ color: lightTheme ? 'var(--muted-2)' : 'rgba(167,243,208,0.7)', fontFamily: MONO_FONT }}>Thăng cấp</p>
+        <p className="mt-1 text-[28px] font-semibold" style={{ color: lightTheme ? 'var(--ink)' : '#ffffff', fontFamily: 'var(--skin-font-display, ' + DISPLAY_FONT + ')' }}>Đã lên cấp {newLevel}</p>
         <p className="mt-1 text-sm leading-6" style={{ color: lightTheme ? 'var(--ink-2)' : 'rgba(209,250,229,0.82)' }}>+{spGained} điểm kỹ năng đã được thêm vào kho nâng cấp hiện tại.</p>
       </div>
-      <div className="rounded-full border px-4 py-2 text-sm font-semibold" style={lightTheme ? { borderColor: 'rgba(var(--accent-rgb),0.14)', background: 'rgba(var(--accent-rgb),0.08)', color: 'var(--accent2)', fontFamily: MONO_FONT } : { borderColor: 'rgba(110,231,183,0.25)', background: 'rgba(110,231,183,0.10)', color: '#d1fae5' }}>
+      <div className="rounded-full border px-4 py-2 text-sm font-semibold tabular-nums" style={lightTheme ? { borderColor: 'rgba(var(--accent-rgb),0.14)', background: 'rgba(var(--accent-rgb),0.1)', color: 'var(--accent2)', fontFamily: MONO_FONT } : { borderColor: 'rgba(110,231,183,0.25)', background: 'rgba(110,231,183,0.10)', color: '#d1fae5' }}>
         +{spGained} SP
       </div>
     </motion.div>
@@ -971,8 +984,9 @@ function EraChangeBanner({ newBook, lightTheme }) {
       initial={{ scale: 0.85, opacity: 0, y: 20 }}
       animate={{ scale: 1, opacity: 1, y: 0 }}
       transition={{ type: 'spring', damping: 12, stiffness: 180 }}
-      className="mt-4 rounded-2xl overflow-hidden text-center relative"
+      className="mt-4 overflow-hidden text-center relative"
       style={{
+        borderRadius: 'var(--skin-radius-card,18px)',
         background: lightTheme
           ? 'rgba(255,255,255,0.98)'
           : 'rgba(24,21,17,0.96)',
@@ -983,7 +997,7 @@ function EraChangeBanner({ newBook, lightTheme }) {
       <div className="p-5">
         <div className="flex justify-center mb-2">
           <span
-            className="text-[10px] font-semibold uppercase tracking-[0.18em] px-3 py-1 rounded-full"
+            className="mono text-[10px] uppercase tracking-[0.2em] px-3 py-1 rounded-full"
             style={{ background: `${accent}16`, color: lightTheme ? 'var(--accent2)' : accent, border: `1px solid ${accent}36`, fontFamily: MONO_FONT }}
           >
             Kỷ nguyên mới mở
@@ -992,8 +1006,9 @@ function EraChangeBanner({ newBook, lightTheme }) {
 
         <div className="mb-3 flex justify-center">
           <div
-            className="mono rounded-2xl border px-4 py-3 text-[12px] font-semibold uppercase tracking-[0.22em]"
+            className="mono border px-4 py-3 text-[12px] font-semibold uppercase tracking-[0.22em]"
             style={{
+              borderRadius: 'var(--skin-radius-control,14px)',
               borderColor: `${accent}36`,
               background: lightTheme ? 'rgba(255,255,255,0.8)' : `${accent}12`,
               color: lightTheme ? 'var(--accent2)' : '#f4efe7',
@@ -1005,10 +1020,10 @@ function EraChangeBanner({ newBook, lightTheme }) {
         </div>
 
         <motion.p
-          className="text-[32px] font-medium mb-0.5"
+          className="text-[32px] font-semibold mb-0.5"
           style={{
             color: lightTheme ? 'var(--ink)' : accent,
-            fontFamily: DISPLAY_FONT,
+            fontFamily: 'var(--skin-font-display, ' + DISPLAY_FONT + ')',
           }}
         >
           {meta?.label}
@@ -1018,8 +1033,8 @@ function EraChangeBanner({ newBook, lightTheme }) {
         {newResources.length > 0 && (
           <div className="mt-3 pt-3" style={{ borderTop: `1px solid ${accent}30` }}>
             <p
-              className="mb-2 text-xs uppercase tracking-wide"
-              style={{ color: lightTheme ? 'var(--muted)' : '#94a3b8', fontFamily: MONO_FONT }}
+              className="mono mb-2 text-[10px] uppercase tracking-[0.2em]"
+              style={{ color: lightTheme ? 'var(--muted-2)' : '#94a3b8', fontFamily: MONO_FONT }}
             >
               Tài nguyên mới mở khóa
             </p>

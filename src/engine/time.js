@@ -123,6 +123,20 @@ export function vietnamDayNumber(date = new Date()) {
   return Math.floor(startOfVietnamDayTs(date) / (24 * 60 * 60 * 1000));
 }
 
+/**
+ * localDateStrDaysAgo
+ * Ngày "YYYY-MM-DD" (giờ VN) của N ngày trước — để lập cửa sổ thời gian (ví dụ
+ * 28 ngày gần đây) mà không phải gọi Date trực tiếp trong component React.
+ *
+ * @param {number} n             số ngày lùi về
+ * @param {Date|number} [date]   mốc gốc, mặc định = now
+ * @returns {string}
+ */
+export function localDateStrDaysAgo(n, date = new Date()) {
+  const days = Math.max(0, Math.floor(Number(n) || 0));
+  return localDateStr(startOfVietnamDayTs(date) - days * 24 * 60 * 60 * 1000);
+}
+
 export function getVietnamHour(date = new Date()) {
   return getVietnamDateParts(date).hour;
 }

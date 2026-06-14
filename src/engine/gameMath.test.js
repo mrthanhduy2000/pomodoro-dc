@@ -11,6 +11,10 @@ import {
   getWeekdayHighlight,
   getWeeklyTrend,
   getAbandonHotspot,
+  getTodayPaceInsight,
+  getNeglectedCategory,
+  getDailyGoalCalibration,
+  getLateNightQualityDrop,
 } from './gameMath.js';
 
 // Giờ của mỗi phiên được lấy trực tiếp từ trường `hour` trong fixture, để test
@@ -281,4 +285,173 @@ test('coach insight: rotationSeed cycles through the top suggestions and carries
   assert.ok(k0.reason && k0.reason.length > 0);
   // Cùng seed → ổn định (không random).
   assert.equal(generateCoachInsight(history, { ...base, rotationSeed: 3 }).kind, 'length');
+});
+
+// ── Đợt 2: tín hiệu nâng cao ─────────────────────────────────────────────────
+
+const getEntryDayKey = (e) => e.dk;
+const getEntryDayNumber = (e) => e.dn;
+
+test('today-pace: sắp đạt mục tiêu (near) khi còn 1 phiên', () => {
+  const r = getTodayPaceInsight([], { metric: 'sessions', goal: 5, sessionsToday: 4 });
+  assert.ok(r);
+  assert.equal(r.status, 'near');
+  assert.equal(r.remaining, 1);
+});
+
+test('today-pace: đã đạt mục tiêu (met)', () => {
+  const r = getTodayPaceInsight([], { metric: 'sessions', goal: 5, sessionsToday: 5 });
+  assert.equal(r.status, 'met');
+});
+
+test('today-pace: chậm hơn nhịp thường ngày (behind) so với baseline tới giờ này', () => {
+  const history = [];
+  for (const dk of ['2026-06-10', '2026-06-11', '2026-06-12', '2026-06-13']) {
+    for (let i = 0; i < 3; i += 1) history.push({ dk, hour: 9, minutes: 25, completed: true });
+  }
+  const r = getTodayPaceInsight(history, {
+    metric: 'sessions', goal: 5, sessionsToday: 1, nowHour: 12,
+    getEntryHour, getEntryDayKey, todayKey: '2026-06-15',
+  });
+  assert.ok(r);
+  assert.equal(r.status, 'behind');
+  assert.equal(r.typical, 3);
+});
+
+test('today-pace: đúng nhịp & còn xa đích → null (không chém gió)', () => {
+  const history = [];
+  for (const dk of ['2026-06-10', '2026-06-11', '2026-06-12', '2026-06-13']) {
+    for (let i = 0; i < 3; i += 1) history.push({ dk, hour: 9, minutes: 25, completed: true });
+  }
+  const r = getTodayPaceInsight(history, {
+    metric: 'sessions', goal: 5, sessionsToday: 3, nowHour: 12,
+    getEntryHour, getEntryDayKey, todayKey: '2026-06-15',
+  });
+  assert.equal(r, null);
+});
+
+test('neglected category: tìm nhóm từng làm đều nhưng đã im lặng', () => {
+  const cat = (dn, label) => ({ dn, minutes: 30, completed: true, categoryId: 'A', categorySnapshot: { label } });
+  const history = [
+    cat(80, 'Đọc Sách'), cat(82, 'Đọc Sách'), cat(84, 'Đọc Sách'),
+    { dn: 98, minutes: 20, completed: true, categoryId: 'B', categorySnapshot: { label: 'Việc' } },
+    { dn: 99, minutes: 20, completed: true, categoryId: 'B', categorySnapshot: { label: 'Việc' } },
+    { dn: 100, minutes: 20, completed: true, categoryId: 'B', categorySnapshot: { label: 'Việc' } },
+  ];
+  const r = getNeglectedCategory(history, { nowDayNumber: 100, getEntryDayNumber });
+  assert.ok(r);
+  assert.equal(r.categoryId, 'A');
+  assert.equal(r.label, 'Đọc Sách');
+  assert.equal(r.daysSince, 16);
+});
+
+test('neglected category: KHÔNG nhắc loại đã bị xoá (activeCategoryIds)', () => {
+  const cat = (dn) => ({ dn, minutes: 30, completed: true, categoryId: 'A', categorySnapshot: { label: 'Đọc Sách' } });
+  const history = [
+    cat(80), cat(82), cat(84),
+    { dn: 100, minutes: 20, completed: true, categoryId: 'B', categorySnapshot: { label: 'Việc' } },
+    { dn: 99, minutes: 20, completed: true, categoryId: 'B', categorySnapshot: { label: 'Việc' } },
+    { dn: 98, minutes: 20, completed: true, categoryId: 'B', categorySnapshot: { label: 'Việc' } },
+  ];
+  // 'A' đã xoá khỏi danh sách loại → không được nhắc.
+  const r = getNeglectedCategory(history, { nowDayNumber: 100, getEntryDayNumber, activeCategoryIds: new Set(['B']) });
+  assert.equal(r, null);
+});
+
+test('goal calibration: quá khó → gợi ý hạ mục tiêu', () => {
+  const history = [];
+  for (let d = 1; d <= 10; d += 1) {
+    history.push({ dk: `2026-06-${String(d).padStart(2, '0')}`, minutes: 60, completed: true });
+  }
+  const r = getDailyGoalCalibration(history, { goalType: 'minutes', goalValue: 125, getEntryDayKey, todayKey: '2026-06-20' });
+  assert.ok(r);
+  assert.equal(r.verdict, 'too-hard');
+  assert.ok(r.suggested < 125);
+});
+
+test('goal calibration: quá dễ → gợi ý nâng mục tiêu', () => {
+  const history = [];
+  for (let d = 1; d <= 10; d += 1) {
+    for (let i = 0; i < 5; i += 1) history.push({ dk: `2026-06-${String(d).padStart(2, '0')}`, minutes: 25, completed: true });
+  }
+  const r = getDailyGoalCalibration(history, { goalType: 'sessions', goalValue: 3, getEntryDayKey, todayKey: '2026-06-20' });
+  assert.ok(r);
+  assert.equal(r.verdict, 'too-easy');
+  assert.ok(r.suggested > 3);
+});
+
+test('goal calibration: rào ngày-lịch (minDayKey) loại hết dữ liệu cũ → null', () => {
+  const history = [];
+  for (let d = 1; d <= 10; d += 1) {
+    history.push({ dk: `2026-06-${String(d).padStart(2, '0')}`, minutes: 60, completed: true });
+  }
+  const r = getDailyGoalCalibration(history, {
+    goalType: 'minutes', goalValue: 125, getEntryDayKey, todayKey: '2026-07-20', minDayKey: '2026-07-01',
+  });
+  assert.equal(r, null);
+});
+
+test('late-night quality: cảnh báo khi tỉ lệ đạt mục tiêu về khuya tụt rõ', () => {
+  const history = [];
+  for (let i = 0; i < 5; i += 1) history.push({ hour: 10, minutes: 30, completed: true, goalAchieved: true });
+  history.push({ hour: 23, minutes: 30, completed: true, goalAchieved: true });
+  for (let i = 0; i < 3; i += 1) history.push({ hour: 23, minutes: 30, completed: true, goalAchieved: false });
+  const r = getLateNightQualityDrop(history, { getEntryHour });
+  assert.ok(r);
+  assert.equal(r.lateStartHour, 22);
+  assert.equal(r.lateAttempts, 4);
+  assert.ok(r.lateGoalRate <= 0.26);
+});
+
+test('late-night quality: làm khuya vẫn tốt → null', () => {
+  const history = [];
+  for (let i = 0; i < 5; i += 1) history.push({ hour: 10, minutes: 30, completed: true, goalAchieved: true });
+  for (let i = 0; i < 4; i += 1) history.push({ hour: 23, minutes: 30, completed: true, goalAchieved: true });
+  assert.equal(getLateNightQualityDrop(history, { getEntryHour }), null);
+});
+
+test('brain: tín hiệu nhạy thời gian (pace-near) hiện NGAY, bỏ qua xoay vòng', () => {
+  const history = [];
+  for (let i = 0; i < 5; i += 1) history.push({ hour: 9, minutes: 25, goalAchieved: true, completed: true });
+  const base = { nowHour: 9, getEntryHour, metric: undefined };
+  const opts = { ...base, dailyGoalMetric: 'sessions', dailyGoal: 5, sessionsToday: 4 };
+  for (const seed of [0, 1, 2, 3]) {
+    assert.equal(generateCoachInsight(history, { ...opts, rotationSeed: seed }).kind, 'pace-near');
+  }
+});
+
+test('brain: goal-too-hard (có con số) thay thế tip chung chung', () => {
+  const history = [];
+  const push = (dk, n) => { for (let i = 0; i < n; i += 1) history.push({ dk, hour: 9, minutes: 30, goalAchieved: false, completed: true }); };
+  push('2026-06-01', 4); push('2026-06-02', 4);
+  for (let d = 3; d <= 10; d += 1) push(`2026-06-${String(d).padStart(2, '0')}`, 1);
+  const opts = {
+    nowHour: 9, getEntryHour, getEntryDayKey, todayKey: '2026-06-20',
+    dailyGoalMetric: 'sessions', dailyGoal: 4, sessionsToday: 1, // đúng nhịp → pace null, không chen ngang
+  };
+  // tip bị loại bỏ; goal-too-hard (hitRate 0.2 → không urgent) vẫn lọt và xuất hiện.
+  for (const seed of [0, 1, 2, 3]) {
+    assert.notEqual(generateCoachInsight(history, { ...opts, rotationSeed: seed }).kind, 'tip');
+  }
+  assert.equal(generateCoachInsight(history, { ...opts, rotationSeed: 0 }).kind, 'goal-too-hard');
+});
+
+test('brain: chống lặp — recentKinds đẩy câu vừa hiện xuống dưới', () => {
+  const history = [
+    session(1, { hour: 9, minutes: 40, goalAchieved: true }),
+    session(2, { hour: 9, minutes: 40, goalAchieved: true }),
+    session(3, { hour: 9, minutes: 50, goalAchieved: true }),
+    session(4, { hour: 9, minutes: 50, goalAchieved: true }),
+    session(5, { hour: 9, minutes: 30, goalAchieved: false }),
+    session(6, { hour: 20, minutes: 30, goalAchieved: false }),
+    session(7, { hour: 20, minutes: 30, goalAchieved: false }),
+    session(8, { hour: 20, minutes: 30, goalAchieved: false }),
+    session(9, { hour: 20, minutes: 30, goalAchieved: false }),
+    session(10, { hour: 20, minutes: 30, goalAchieved: false }),
+  ];
+  const base = { nowHour: 9, getEntryHour };
+  // Không có lịch sử gần đây → seed 0 là 'length' (như test xoay vòng).
+  assert.equal(generateCoachInsight(history, { ...base, rotationSeed: 0 }).kind, 'length');
+  // Vừa hiện 'length' hôm qua → bị trừ điểm, seed 0 nhường cho 'tip'.
+  assert.equal(generateCoachInsight(history, { ...base, rotationSeed: 0, recentKinds: ['length'] }).kind, 'tip');
 });

@@ -164,6 +164,10 @@ function subscribeRealtime() {
 
 export async function initSync() {
   if (initialized) return;
+  if (typeof localStorage !== 'undefined' && localStorage.getItem('__dc_demo_nosync') === '1') {
+    console.warn('[sync] DEMO mode: sync disabled');
+    return;
+  }
   initialized = true;
 
   try {

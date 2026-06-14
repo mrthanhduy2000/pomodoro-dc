@@ -1076,16 +1076,293 @@ export function getAbandonHotspot(history = [], opts = {}) {
   return { bucketId: worst.bucket.id, bucketLabel: worst.bucket.label, rate, attempts: worst.attempts };
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// TÍN HIỆU NÂNG CAO (đợt 2) — đều THUẦN, nhận getter giờ/ngày/tuần qua opts.
+// Thiết kế qua một workflow 10 agent (thiết kế → phản biện → tổng hợp) rồi ghép
+// tay tuần tự, áp các "fix bắt buộc" từ vòng phản biện.
+// ─────────────────────────────────────────────────────────────────────────────
+
+function medianOf(values) {
+  if (!values.length) return null;
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
+}
+
+function percentileOf(values, p) {
+  if (!values.length) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  const idx = Math.min(sorted.length - 1, Math.max(0, Math.round(p * (sorted.length - 1))));
+  return sorted[idx];
+}
+
+function roundGoalValue(value, goalType) {
+  if (goalType === 'minutes') return Math.min(600, Math.max(15, Math.round(value / 5) * 5));
+  return Math.min(20, Math.max(1, Math.round(value)));
+}
+
+export const TODAY_PACE_MIN_BASELINE_DAYS = 4;
+
 /**
- * generateCoachInsight
- * "Bộ não" coach MIỄN PHÍ — gom nhiều tín hiệu từ chính lịch sử người dùng (độ
- * dài phiên, tỉ lệ đạt mục tiêu, giờ vàng, ngày năng suất, xu hướng tuần, hay bỏ
- * giữa chừng…), chấm điểm độ hữu ích, rồi XOAY VÒNG trong nhóm tốt nhất theo
- * `rotationSeed` để mỗi ngày một lời khuyên khác — đỡ nhàm. Không gọi API.
+ * getTodayPaceInsight
+ * So tiến độ HÔM NAY với mục tiêu ngày & với "một ngày điển hình của chính bạn
+ * tính tới giờ này". Trả 'met' (đã đạt/vượt), 'near' (sắp đạt), 'behind' (chậm hơn
+ * nhịp thường ngày), 'ahead' (nhanh hơn), hoặc null khi không có gì đáng nói.
  *
  * @param {Array} history
- * @param {object} opts { nowHour, getEntryHour, getEntryWeekday, getEntryWeekKey,
- *   nowWeekKey, prevWeekKey, currentStreak, minSample, rotationSeed }
+ * @param {object} opts metric|goal|sessionsToday|minutesToday|nowHour|getEntryHour|getEntryDayKey|todayKey|minBaselineDays
+ * @returns {{kind,status,metric,goal,current,remaining,typical,ratio,sampleDays}|null}
+ */
+export function getTodayPaceInsight(history = [], opts = {}) {
+  const {
+    metric = 'sessions',
+    goal = 0,
+    sessionsToday = 0,
+    minutesToday = 0,
+    nowHour = 23,
+    getEntryHour = (e) => new Date(e?.timestamp ?? 0).getHours(),
+    getEntryDayKey = null,
+    todayKey = null,
+    minBaselineDays = TODAY_PACE_MIN_BASELINE_DAYS,
+  } = opts;
+
+  const useMinutes = metric === 'minutes';
+  const g = Math.max(0, Math.floor(Number(goal) || 0));
+  if (g <= 0) return null;
+
+  const current = Math.max(0, Math.floor(Number(useMinutes ? minutesToday : sessionsToday) || 0));
+  const remaining = g - current;
+  const mkMetric = useMinutes ? 'minutes' : 'sessions';
+
+  // 1) Đã đạt / vượt mục tiêu ngày
+  if (remaining <= 0) {
+    return { kind: 'today-pace', status: 'met', metric: mkMetric, goal: g, current, remaining: 0, typical: null, ratio: null, sampleDays: 0 };
+  }
+
+  // 2) Sắp đạt — còn rất ít
+  const nearThreshold = useMinutes ? Math.max(15, Math.round(g * 0.15)) : 1;
+  const nearGoal = remaining <= nearThreshold;
+
+  // 3) Baseline "một ngày điển hình tính tới giờ này" (chỉ khi đủ getter)
+  let typical = null;
+  let sampleDays = 0;
+  let ratio = null;
+  if (typeof getEntryDayKey === 'function' && todayKey) {
+    const h = ((Math.floor(Number(nowHour) || 0) % 24) + 24) % 24;
+    const perDay = new Map();
+    for (const e of coachCompletedSessions(history)) {
+      const dk = getEntryDayKey(e);
+      if (!dk || dk === todayKey) continue;
+      if (getEntryHour(e) > h) continue;           // chỉ phần tích tới cùng giờ
+      const cur = perDay.get(dk) ?? { count: 0, mins: 0 };
+      cur.count += 1;
+      cur.mins += e.minutes;
+      perDay.set(dk, cur);
+    }
+    sampleDays = perDay.size;
+    if (sampleDays >= minBaselineDays) {
+      const vals = [...perDay.values()].map((d) => (useMinutes ? d.mins : d.count));
+      const med = medianOf(vals);
+      if (med != null) typical = useMinutes ? Math.round(med / 5) * 5 : med;
+    }
+  }
+
+  const baselineUsable = typical != null && typical >= (useMinutes ? 10 : 1);
+  if (baselineUsable) ratio = current / typical;
+
+  // 4) Ưu tiên trạng thái: near > behind > ahead > on-track
+  if (nearGoal) return { kind: 'today-pace', status: 'near', metric: mkMetric, goal: g, current, remaining, typical, ratio, sampleDays };
+  if (baselineUsable && ratio <= 0.6) return { kind: 'today-pace', status: 'behind', metric: mkMetric, goal: g, current, remaining, typical, ratio, sampleDays };
+  if (baselineUsable && ratio >= 1.4) return { kind: 'today-pace', status: 'ahead', metric: mkMetric, goal: g, current, remaining, typical, ratio, sampleDays };
+  return null;
+}
+
+export const NEGLECT_WINDOW_DAYS = 28;
+export const NEGLECT_MIN_SESSIONS = 3;
+export const NEGLECT_MIN_SHARE = 0.18;
+export const NEGLECT_MIN_GAP_DAYS = 7;
+export const NEGLECT_MIN_MINUTES = 45;
+
+/**
+ * getNeglectedCategory
+ * LOẠI VIỆC bạn từng làm đều (đủ phiên + đủ tỉ trọng phút trong cửa sổ gần đây)
+ * nhưng đã im lặng nhiều ngày — để nhắc kéo về nhịp. Bỏ qua nhóm chưa phân loại,
+ * loại đã bị XOÁ (qua activeCategoryIds) và loại không còn nhãn thật.
+ *
+ * @param {Array} history
+ * @param {object} opts nowDayNumber|getEntryDayNumber|activeCategoryIds|windowDays|minSessions|minShare|minGapDays|minMinutes
+ * @returns {{categoryId,label,daysSince,minutes,sessions,share,windowDays}|null}
+ */
+export function getNeglectedCategory(history = [], opts = {}) {
+  const {
+    nowDayNumber,
+    getEntryDayNumber,
+    activeCategoryIds = null,
+    windowDays = NEGLECT_WINDOW_DAYS,
+    minSessions = NEGLECT_MIN_SESSIONS,
+    minShare = NEGLECT_MIN_SHARE,
+    minGapDays = NEGLECT_MIN_GAP_DAYS,
+    minMinutes = NEGLECT_MIN_MINUTES,
+  } = opts;
+  if (typeof getEntryDayNumber !== 'function' || !Number.isFinite(nowDayNumber)) return null;
+
+  const byCat = new Map();
+  let totalNamedMinutes = 0;
+  for (const e of coachCompletedSessions(history)) {
+    const catId = e.categoryId ?? null;
+    if (!catId) continue;                                    // bỏ nhóm chưa phân loại
+    if (activeCategoryIds && !activeCategoryIds.has(catId)) continue; // bỏ loại đã xoá
+    const day = getEntryDayNumber(e);
+    if (!Number.isFinite(day)) continue;
+    const ageDays = nowDayNumber - day;
+    if (ageDays < 0 || ageDays >= windowDays) continue;      // ngoài cửa sổ gần đây
+    const cur = byCat.get(catId) ?? { id: catId, minutes: 0, sessions: 0, lastDay: -Infinity, label: null };
+    cur.minutes += e.minutes;
+    cur.sessions += 1;
+    if (day > cur.lastDay) {
+      cur.lastDay = day;
+      cur.label = e.categorySnapshot?.label ?? cur.label;   // nhãn từ phiên mới nhất
+    }
+    byCat.set(catId, cur);
+    totalNamedMinutes += e.minutes;
+  }
+
+  if (byCat.size < 2 || totalNamedMinutes <= 0) return null;
+
+  let best = null;
+  let bestScore = -Infinity;
+  for (const cur of byCat.values()) {
+    if (!cur.label) continue;                                // chỉ nhắc khi có tên thật
+    const daysSince = nowDayNumber - cur.lastDay;
+    const share = cur.minutes / totalNamedMinutes;
+    if (cur.sessions < minSessions) continue;
+    if (cur.minutes < minMinutes) continue;                  // tránh nhóm bấm nghịch vài lần
+    if (share < minShare) continue;
+    if (daysSince < minGapDays) continue;
+    const score = daysSince * (0.5 + share);
+    if (score > bestScore || (score === bestScore && best && (daysSince > best.daysSince || (daysSince === best.daysSince && cur.minutes > best.minutes)))) {
+      bestScore = score;
+      best = { categoryId: cur.id, label: cur.label, daysSince, minutes: cur.minutes, sessions: cur.sessions, share, windowDays };
+    }
+  }
+  return best;
+}
+
+export const GOAL_CALIBRATION_MIN_DAYS = 8;
+
+/**
+ * getDailyGoalCalibration
+ * Mục tiêu NGÀY đang quá dễ ('too-easy' → gợi ý nâng) hay quá khó ('too-hard' →
+ * gợi ý hạ), kèm CON SỐ gợi ý. Có vùng đệm 25%–85% để tránh chỉnh tới lui. Lọc
+ * theo ngày-lịch (minDayKey) để không dính dữ liệu cũ nhiều tháng trước.
+ *
+ * @param {Array} history
+ * @param {object} opts goalType|goalValue|getEntryDayKey|todayKey|minDayKey|minDays|lookbackDays
+ * @returns {{verdict:'too-easy'|'too-hard',goalType,current,suggested,hitRate,median,daysCounted}|null}
+ */
+export function getDailyGoalCalibration(history = [], opts = {}) {
+  const {
+    goalType,
+    goalValue,
+    getEntryDayKey,
+    todayKey = null,
+    minDayKey = null,
+    minDays = GOAL_CALIBRATION_MIN_DAYS,
+    lookbackDays = 28,
+  } = opts;
+
+  if (goalType !== 'sessions' && goalType !== 'minutes') return null;
+  if (!Number.isFinite(goalValue) || goalValue <= 0) return null;
+  if (typeof getEntryDayKey !== 'function') return null;
+
+  const perDay = new Map();
+  for (const e of coachCompletedSessions(history)) {
+    const day = getEntryDayKey(e);
+    if (!day || day === todayKey) continue;
+    if (minDayKey && day < minDayKey) continue;              // rào ngày-lịch (recency)
+    const add = goalType === 'minutes' ? e.minutes : 1;
+    perDay.set(day, (perDay.get(day) ?? 0) + add);
+  }
+
+  const recentDays = [...perDay.keys()].sort((a, b) => (a < b ? 1 : -1)).slice(0, lookbackDays);
+  if (recentDays.length < minDays) return null;
+
+  const totals = recentDays.map((d) => perDay.get(d));
+  const daysCounted = totals.length;
+  const hitRate = totals.filter((t) => t >= goalValue).length / daysCounted;
+  const median = medianOf(totals) ?? 0;
+
+  if (hitRate >= 0.85 && median >= goalValue * 1.15) {
+    const suggested = roundGoalValue(Math.max(percentileOf(totals, 0.6), goalValue * 1.1), goalType);
+    if (suggested > goalValue) return { verdict: 'too-easy', goalType, current: goalValue, suggested, hitRate, median, daysCounted };
+    return null;
+  }
+  if (hitRate <= 0.25 && median <= goalValue * 0.7) {
+    const suggested = roundGoalValue(Math.min(percentileOf(totals, 0.75), goalValue * 0.9), goalType);
+    if (suggested < goalValue) return { verdict: 'too-hard', goalType, current: goalValue, suggested, hitRate, median, daysCounted };
+    return null;
+  }
+  return null;
+}
+
+/**
+ * getLateNightQualityDrop
+ * Tỉ lệ ĐẠT MỤC TIÊU về KHUYA (mặc định ≥22h hoặc <5h) tụt rõ so với ban ngày của
+ * chính bạn. CHỈ xét trục mục tiêu (bỏ trục "độ trọn vẹn" để không trùng
+ * getAbandonHotspot). Người làm khuya tốt sẽ không bị nhắc.
+ *
+ * @param {Array} history
+ * @param {object} opts getEntryHour|lateStartHour|minLate|minDay
+ * @returns {{lateGoalRate,dayGoalRate,goalDrop,lateAttempts,lateStartHour}|null}
+ */
+export function getLateNightQualityDrop(history = [], opts = {}) {
+  const {
+    getEntryHour = (e) => new Date(e?.timestamp ?? 0).getHours(),
+    lateStartHour = 22,
+    minLate = COACH_BUCKET_MIN_SAMPLE,
+    minDay = COACH_MIN_SAMPLE,
+  } = opts;
+
+  // Chốt mốc "muộn" trong [18,23]; ngoài khoảng thì về 22 (tránh day rỗng âm thầm).
+  let lateStart = Math.floor(Number(lateStartHour) || 22);
+  if (!(lateStart >= 18 && lateStart <= 23)) lateStart = 22;
+  const isLate = (h) => h >= lateStart || h < 5;
+
+  const late = { attempts: 0, goalTotal: 0, goalHit: 0 };
+  const day = { attempts: 0, goalTotal: 0, goalHit: 0 };
+  for (const e of (Array.isArray(history) ? history : [])) {
+    if (!e || !Number.isFinite(e.minutes) || e.minutes <= 0) continue;
+    if (isCancelledHistoryEntry(e) || e.completed === false) continue;   // chỉ phiên hoàn thành
+    const h = ((Math.floor(Number(getEntryHour(e)) || 0) % 24) + 24) % 24;
+    const g = isLate(h) ? late : day;
+    g.attempts += 1;
+    if (typeof e.goalAchieved === 'boolean') {
+      g.goalTotal += 1;
+      if (e.goalAchieved === true) g.goalHit += 1;
+    }
+  }
+
+  if (late.attempts < minLate || day.attempts < minDay) return null;
+  if (late.goalTotal < 3 || day.goalTotal < 3) return null;
+
+  const lateGoalRate = late.goalHit / late.goalTotal;
+  const dayGoalRate = day.goalHit / day.goalTotal;
+  const goalDrop = dayGoalRate - lateGoalRate;
+  if (goalDrop < 0.2 || lateGoalRate > 0.55) return null;
+
+  return { lateGoalRate, dayGoalRate, goalDrop, lateAttempts: late.attempts, lateStartHour: lateStart };
+}
+
+/**
+ * generateCoachInsight
+ * "Bộ não" coach MIỄN PHÍ — gom nhiều tín hiệu từ chính lịch sử người dùng, chấm
+ * điểm độ hữu ích, rồi: (a) nếu có tín hiệu NHẠY THỜI GIAN & cấp bách (nhịp hôm
+ * nay sắp đạt/đang chậm, mục tiêu quá sức) thì hiện NGAY (không xoay vòng); (b)
+ * còn lại thì trừ điểm chống-lặp theo `recentKinds` rồi XOAY VÒNG top-3 theo
+ * `rotationSeed` để mỗi ngày một câu. Không gọi API.
+ *
+ * @param {Array} history
+ * @param {object} opts xem phần destructure bên dưới
  * @returns {{kind:string, text:string, reason:(string|null)}}
  */
 export function generateCoachInsight(history = [], opts = {}) {
@@ -1099,6 +1376,19 @@ export function generateCoachInsight(history = [], opts = {}) {
     currentStreak = 0,
     minSample = COACH_MIN_SAMPLE,
     rotationSeed = 0,
+    // Nâng cấp đợt 2 — đều có default an toàn (không truyền = giữ hành vi cũ):
+    getEntryDayKey = null,
+    todayKey = null,
+    minDayKey = null,
+    getEntryDayNumber = null,
+    nowDayNumber = null,
+    dailyGoalMetric = null,
+    dailyGoal = 0,
+    sessionsToday = 0,
+    minutesToday = 0,
+    activeCategoryIds = null,
+    isSessionRunning = false,
+    recentKinds = [],
   } = opts;
 
   const completed = coachCompletedSessions(history);
@@ -1115,65 +1405,156 @@ export function generateCoachInsight(history = [], opts = {}) {
   const sug = suggestSessionLength(history, { nowHour, getEntryHour });
   if (sug) {
     candidates.push({
-      kind: 'length', score: 80,
+      kind: 'length', score: 80, sampleSize: sug.sampleSize,
       text: `${cap(sug.bucketLabel) || 'Giờ này'} bạn hợp phiên ~${sug.minutes}′${sug.categoryScoped ? ' (cùng loại việc)' : ''} — thử ngay bây giờ nhé.`,
       reason: `Dựa trên ${sug.sampleSize} phiên ${sug.basis === 'goal' ? 'đạt mục tiêu' : 'đã hoàn thành'} cùng buổi.`,
     });
   }
 
-  // 2) Tỉ lệ đạt mục tiêu
+  // 1b) NHỊP HÔM NAY so với mục tiêu ngày & một ngày điển hình (nhạy thời gian)
+  const pace = getTodayPaceInsight(history, {
+    metric: dailyGoalMetric, goal: dailyGoal, sessionsToday, minutesToday,
+    nowHour, getEntryHour, getEntryDayKey, todayKey,
+  });
+  if (pace) {
+    const unit = pace.metric === 'minutes' ? 'phút' : 'phiên';
+    const typ = pace.metric === 'minutes' ? pace.typical : Math.round(pace.typical ?? 0);
+    if (pace.status === 'near') {
+      candidates.push({ kind: 'pace-near', score: 88, timeSensitive: true, urgent: true, sampleSize: pace.sampleDays,
+        reason: `Hôm nay đã ${pace.current}/${pace.goal} ${unit}.`,
+        text: pace.metric === 'minutes'
+          ? `Chỉ còn ${pace.remaining} phút nữa là đạt mục tiêu ngày — một phiên ngắn ngay bây giờ là xong!`
+          : `Thêm ${pace.remaining} phiên nữa là đạt mục tiêu ngày (${pace.goal} ${unit}) — bắt đầu luôn nhé!` });
+    } else if (pace.status === 'behind') {
+      candidates.push({ kind: 'pace-behind', score: 76, timeSensitive: true, urgent: true, sampleSize: pace.sampleDays,
+        reason: `Tới giờ này hôm nay bạn thường đã ~${typ} ${unit}, giờ mới ${pace.current}.`,
+        text: `Tới giờ này hôm nay bạn thường làm nhiều hơn (~${typ} ${unit}) — vào một phiên ngay để bắt kịp nhịp NGÀY của bạn.` });
+    } else if (pace.status === 'met') {
+      candidates.push({ kind: 'pace-met', score: 56, sampleSize: pace.sampleDays,
+        reason: `Đã ${pace.current}/${pace.goal} ${unit} hôm nay.`,
+        text: `Đã đạt mục tiêu ngày rồi 🎉 Nghỉ ngơi xứng đáng, hoặc thêm một phiên nhẹ nếu còn hứng.` });
+    } else if (pace.status === 'ahead') {
+      candidates.push({ kind: 'pace-ahead', score: 54, sampleSize: pace.sampleDays,
+        reason: `Thường tới giờ này ~${typ} ${unit}, hôm nay đã ${pace.current}.`,
+        text: `Hôm nay bạn đang nhanh hơn nhịp thường ngày — phong độ tốt, giữ đà tới mục tiêu nhé!` });
+    }
+  }
+
+  // 2) Tỉ lệ đạt mục tiêu (tip có thể bị "goal-too-hard" cụ thể hơn thay thế — xem dưới)
   const withGoal = completed.filter((e) => typeof e.goalAchieved === 'boolean');
   if (withGoal.length >= minSample) {
     const hit = withGoal.filter((e) => e.goalAchieved === true).length;
     const rate = hit / withGoal.length;
     const pct = Math.round(rate * 100);
     if (rate <= 0.5) {
-      candidates.push({ kind: 'tip', score: 78, reason: `${hit}/${withGoal.length} phiên gần đây đạt mục tiêu.`, text: `Tỉ lệ đạt mục tiêu đang ${pct}%. Thử đặt mục tiêu nhỏ hơn cho mỗi phiên để dễ "đạt" và giữ động lực.` });
+      candidates.push({ kind: 'tip', score: 78, sampleSize: withGoal.length, reason: `${hit}/${withGoal.length} phiên gần đây đạt mục tiêu.`, text: `Tỉ lệ đạt mục tiêu đang ${pct}%. Thử đặt mục tiêu nhỏ hơn cho mỗi phiên để dễ "đạt" và giữ động lực.` });
     } else if (rate >= 0.8) {
-      candidates.push({ kind: 'praise', score: 58, reason: `${hit}/${withGoal.length} phiên đạt mục tiêu.`, text: `Bạn đạt mục tiêu ${pct}% số phiên gần đây — phong độ rất tốt, giữ nhịp này nhé.` });
+      candidates.push({ kind: 'praise', score: 58, sampleSize: withGoal.length, reason: `${hit}/${withGoal.length} phiên đạt mục tiêu.`, text: `Bạn đạt mục tiêu ${pct}% số phiên gần đây — phong độ rất tốt, giữ nhịp này nhé.` });
+    }
+  }
+
+  // 2b) Hiệu chỉnh độ khó MỤC TIÊU NGÀY (có CON SỐ gợi ý)
+  const calib = getDailyGoalCalibration(history, {
+    goalType: dailyGoalMetric, goalValue: dailyGoal, getEntryDayKey, todayKey, minDayKey,
+  });
+  if (calib) {
+    const unit = calib.goalType === 'minutes' ? 'phút' : 'phiên';
+    const pct = Math.round(calib.hitRate * 100);
+    if (calib.verdict === 'too-hard') {
+      candidates.push({ kind: 'goal-too-hard', score: 77, timeSensitive: true, urgent: calib.hitRate <= 0.15, sampleSize: calib.daysCounted,
+        reason: `Dựa trên ${calib.daysCounted} ngày gần đây: đạt ${pct}%, trung vị ${Math.round(calib.median)} ${unit}/ngày.`,
+        text: `Mục tiêu ngày đang hơi quá sức (đạt ${pct}%). Hạ từ ${calib.current} xuống ${calib.suggested} ${unit}/ngày để dễ "đạt" và giữ động lực.` });
+    } else if (calib.verdict === 'too-easy') {
+      candidates.push({ kind: 'goal-too-easy', score: 71, sampleSize: calib.daysCounted,
+        reason: `Dựa trên ${calib.daysCounted} ngày gần đây: đạt ${pct}%, trung vị ${Math.round(calib.median)} ${unit}/ngày.`,
+        text: `Mục tiêu ngày đang hơi dễ (đạt ${pct}%). Thử nâng từ ${calib.current} lên ${calib.suggested} ${unit}/ngày để bám phong độ thật.` });
     }
   }
 
   // 3) Hay bỏ phiên giữa chừng theo buổi
   const abandon = getAbandonHotspot(history, { getEntryHour });
   if (abandon) {
-    candidates.push({ kind: 'abandon', score: 74, reason: `${abandon.attempts} lần bắt đầu phiên trong buổi này.`, text: `${cap(abandon.bucketLabel)} bạn hay dừng phiên giữa chừng (${Math.round(abandon.rate * 100)}%). Thử đặt phiên ngắn hơn cho khung giờ này.` });
+    candidates.push({ kind: 'abandon', score: 74, sampleSize: abandon.attempts, reason: `${abandon.attempts} lần bắt đầu phiên trong buổi này.`, text: `${cap(abandon.bucketLabel)} bạn hay dừng phiên giữa chừng (${Math.round(abandon.rate * 100)}%). Thử đặt phiên ngắn hơn cho khung giờ này.` });
+  }
+
+  // 3b) Chất lượng đạt mục tiêu về KHUYA tụt so với ban ngày
+  const lateDrop = getLateNightQualityDrop(history, { getEntryHour });
+  if (lateDrop) {
+    candidates.push({ kind: 'late-quality', score: 73, sampleSize: lateDrop.lateAttempts,
+      reason: `Dựa trên ${lateDrop.lateAttempts} phiên muộn so với ban ngày; chênh ${Math.round(lateDrop.goalDrop * 100)} điểm % tỉ lệ đạt mục tiêu.`,
+      text: `Sau ${lateDrop.lateStartHour}h tỉ lệ đạt mục tiêu của bạn tụt còn ${Math.round(lateDrop.lateGoalRate * 100)}% (ban ngày ${Math.round(lateDrop.dayGoalRate * 100)}%) — khung muộn nên ưu tiên việc nhẹ, đừng để dành việc khó.` });
   }
 
   // 4) Xu hướng tuần này so với tuần trước
   const trend = getWeeklyTrend(history, { getEntryWeekKey, nowWeekKey, prevWeekKey });
   if (trend && trend.direction === 'down') {
-    candidates.push({ kind: 'trend-down', score: 72, reason: `${trend.thisMinutes}′ tuần này so với ${trend.prevMinutes}′ tuần trước.`, text: `Tuần này bạn tập trung ít hơn tuần trước ${Math.abs(trend.pct)}%. Một phiên ngắn ngay bây giờ sẽ kéo lại nhịp.` });
+    candidates.push({ kind: 'trend-down', score: 72, sampleSize: trend.thisN + trend.prevN, reason: `${trend.thisMinutes}′ tuần này so với ${trend.prevMinutes}′ tuần trước.`, text: `Tuần này bạn tập trung ít hơn tuần trước ${Math.abs(trend.pct)}%. Một phiên ngắn ngay bây giờ sẽ kéo lại nhịp.` });
   } else if (trend && trend.direction === 'up') {
-    candidates.push({ kind: 'trend-up', score: 66, reason: `${trend.thisMinutes}′ tuần này so với ${trend.prevMinutes}′ tuần trước.`, text: `Tuần này bạn tập trung nhiều hơn tuần trước ${trend.pct}% — đang lên phong độ, giữ đà nhé!` });
+    candidates.push({ kind: 'trend-up', score: 66, sampleSize: trend.thisN + trend.prevN, reason: `${trend.thisMinutes}′ tuần này so với ${trend.prevMinutes}′ tuần trước.`, text: `Tuần này bạn tập trung nhiều hơn tuần trước ${trend.pct}% — đang lên phong độ, giữ đà nhé!` });
   }
 
   // 5) Giờ vàng (tỉ lệ đạt mục tiêu cao nhất theo buổi)
   const golden = getGoldenHourBucket(history, { getEntryHour });
   if (golden) {
-    candidates.push({ kind: 'golden', score: 70, reason: `Tính trên ${golden.sampleSize} phiên có mục tiêu.`, text: `Giờ vàng của bạn là ${golden.bucketLabel} — đạt mục tiêu tới ${Math.round(golden.rate * 100)}%. Ưu tiên việc khó vào khung này.` });
+    candidates.push({ kind: 'golden', score: 70, sampleSize: golden.sampleSize, reason: `Tính trên ${golden.sampleSize} phiên có mục tiêu.`, text: `Giờ vàng của bạn là ${golden.bucketLabel} — đạt mục tiêu tới ${Math.round(golden.rate * 100)}%. Ưu tiên việc khó vào khung này.` });
+  }
+
+  // 5b) Loại việc bị bỏ bê — điểm ĐỘNG theo số ngày im lặng để lọt được top-3
+  const neglected = getNeglectedCategory(history, { nowDayNumber, getEntryDayNumber, activeCategoryIds });
+  if (neglected) {
+    candidates.push({ kind: 'category-neglect', score: 64 + Math.min(12, neglected.daysSince), sampleSize: neglected.sessions,
+      reason: `${neglected.daysSince} ngày chưa có phiên "${neglected.label}" (trước đó ${neglected.sessions} phiên/${neglected.windowDays} ngày).`,
+      text: `Đã ${neglected.daysSince} ngày bạn chưa làm "${neglected.label}" — nhóm này từng chiếm ~${Math.round(neglected.share * 100)}% thời gian. Dành phiên kế cho nó để khỏi nguội nhé.` });
   }
 
   // 6) Ngày năng suất nhất trong tuần
   const wd = getWeekdayHighlight(history, { getEntryWeekday });
   if (wd) {
-    candidates.push({ kind: 'weekday', score: 60, reason: `Chiếm ${Math.round(wd.share * 100)}% số phiên của bạn.`, text: `${wd.label} thường là ngày bạn làm nhiều nhất (${wd.count} phiên). Đặt việc quan trọng vào ngày này.` });
+    candidates.push({ kind: 'weekday', score: 60, sampleSize: wd.count, reason: `Chiếm ${Math.round(wd.share * 100)}% số phiên của bạn.`, text: `${wd.label} thường là ngày bạn làm nhiều nhất (${wd.count} phiên). Đặt việc quan trọng vào ngày này.` });
   }
 
   // 7) Nhắc chuỗi
   if (currentStreak >= 2) {
-    candidates.push({ kind: 'streak', score: 50, reason: null, text: `Chuỗi ${currentStreak} ngày đang đẹp — hoàn thành một phiên hôm nay để giữ lửa.` });
+    candidates.push({ kind: 'streak', score: 50, sampleSize: currentStreak, reason: null, text: `Chuỗi ${currentStreak} ngày đang đẹp — hoàn thành một phiên hôm nay để giữ lửa.` });
   }
 
   // 8) Mặc định
-  candidates.push({ kind: 'generic', score: 10, reason: null, text: `Bạn đã hoàn thành ${completed.length} phiên. Đặt một mục tiêu rõ ràng rồi bắt đầu phiên kế tiếp nhé.` });
+  candidates.push({ kind: 'generic', score: 10, sampleSize: 0, reason: null, text: `Bạn đã hoàn thành ${completed.length} phiên. Đặt một mục tiêu rõ ràng rồi bắt đầu phiên kế tiếp nhé.` });
 
-  // Chọn trong nhóm tốt nhất rồi xoay vòng theo `rotationSeed` (thường là số ngày)
-  // để mỗi ngày một lời khuyên khác nhau mà vẫn luôn ưu tiên cái hữu ích nhất.
-  candidates.sort((a, b) => b.score - a.score);
-  const pool = candidates.slice(0, Math.min(3, candidates.length));
+  // Loại trừ lẫn nhau: "goal-too-hard" có CON SỐ cụ thể → bỏ "tip" chung chung.
+  let pool = candidates;
+  if (pool.some((c) => c.kind === 'goal-too-hard')) pool = pool.filter((c) => c.kind !== 'tip');
+
+  // ƯU TIÊN CỨNG: tín hiệu nhạy thời gian & cấp bách (hôm nay) hiện NGAY, bỏ xoay
+  // vòng — để cú hích đúng-lúc không bị rotation giấu mất. Chỉ khi đang rảnh.
+  const urgent = pool.filter((c) => c.urgent && !isSessionRunning);
+  if (urgent.length) {
+    urgent.sort((a, b) => b.score - a.score);
+    const u = urgent[0];
+    return { kind: u.kind, text: u.text, reason: u.reason ?? null };
+  }
+
+  // Sắp theo điểm TĨNH (giữ thứ tự rotation cũ); chỉ tie CHÍNH XÁC mới phân giải
+  // bằng cỡ mẫu rồi tên kind (tất định) — không đụng các điểm khác nhau.
+  pool.sort((a, b) => (b.score - a.score)
+    || ((b.sampleSize ?? 0) - (a.sampleSize ?? 0))
+    || (a.kind < b.kind ? -1 : a.kind > b.kind ? 1 : 0));
+
+  // Chống lặp: trừ điểm cho kind vừa hiện gần đây (recentKinds[0] = gần nhất). Khi
+  // recentKinds rỗng (mặc định) thì không đổi gì → giữ hành vi & test cũ.
+  const recent = Array.isArray(recentKinds) ? recentKinds : [];
+  const penaltyOf = (kind) => {
+    const i = recent.indexOf(kind);
+    return i < 0 ? 0 : Math.max(0, 12 - i * 5);
+  };
+  const ranked = pool
+    .map((c, idx) => ({ c, idx, key: c.score - penaltyOf(c.kind) }))
+    .sort((a, b) => (b.key - a.key) || (a.idx - b.idx))
+    .map((x) => x.c);
+
+  const top = ranked.slice(0, Math.min(3, ranked.length));
   const seed = Number.isFinite(rotationSeed) ? Math.abs(Math.floor(rotationSeed)) : 0;
-  const chosen = pool[seed % pool.length];
+  const chosen = top[seed % top.length];
   return { kind: chosen.kind, text: chosen.text, reason: chosen.reason ?? null };
 }
 

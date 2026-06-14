@@ -9,7 +9,6 @@ import ResourceDisplay from './components/ResourceDisplay';
 import RankDisplay from './components/RankDisplay';
 import DailyMissions from './components/DailyMissions';
 import NotificationCenter from './components/NotificationCenter';
-import { DCPomodoroSidebarBrand } from './components/DCPomodoroBrand';
 import { RichTextView } from './components/RichText';
 import { useGameLoop } from './hooks/useGameLoop';
 import useGameStore from './store/gameStore';
@@ -1879,48 +1878,53 @@ function GlobalOverlays({
 function EditorialSidebar({ activeTab, isOpen, onOpenWeeklyReport, onSelect, onToggle }) {
   return (
     <Motion.aside
-      className="hidden border-r bg-[var(--canvas)] md:flex md:flex-col"
-      style={{ borderColor: 'var(--line)' }}
-      animate={{ width: isOpen ? 258 : 60 }}
+      className="hidden md:flex md:flex-col"
+      style={{ background: '#1b1a17', borderRight: '1px solid rgba(255,255,255,0.06)' }}
+      animate={{ width: isOpen ? 232 : 66 }}
       transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}
     >
-      <DCPomodoroSidebarBrand isOpen={isOpen} />
-
-      <nav className="mt-2 flex flex-1 flex-col gap-0.5 px-2">
+      {/* Thương hiệu */}
+      <div className={`flex items-center gap-2.5 px-3.5 pb-2 pt-4 ${isOpen ? '' : 'justify-center px-0'}`}>
+        <span
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[11px] text-[15px] font-bold"
+          style={{ background: 'var(--accent)', color: '#faf9f6', fontFamily: 'var(--skin-font-display)', boxShadow: '0 4px 12px rgba(var(--accent-rgb),0.4)' }}
+        >
+          DC
+        </span>
         {isOpen && (
-          <div className="px-2.5 pb-2">
-            <div className="mono text-[10px] uppercase tracking-[0.22em] text-[var(--muted)]">Điều hướng</div>
-          </div>
+          <span className="text-[15px] font-semibold leading-none" style={{ color: '#faf9f6', fontFamily: 'var(--skin-font-display)' }}>
+            Pomodoro
+          </span>
         )}
+      </div>
+
+      <div className="mx-3 mb-1 mt-1 h-px" style={{ background: 'rgba(255,255,255,0.07)' }} />
+
+      <nav className="mt-1 flex flex-1 flex-col gap-1 px-2.5">
         {DESKTOP_TABS.filter((tab) => tab.id !== 'settings').map((tab) => (
           <SidebarItem
             key={tab.id}
             active={activeTab === tab.id}
-            icon={<tab.Icon size={17} />}
+            icon={<tab.Icon size={18} />}
             isOpen={isOpen}
             label={tab.label}
             onClick={() => onSelect(tab.id)}
           />
         ))}
-        <div className="mx-2 my-3 h-px bg-[var(--line)]" />
-        {isOpen && (
-          <div className="px-2.5 pb-2">
-            <div className="mono text-[10px] uppercase tracking-[0.22em] text-[var(--muted)]">Hệ thống</div>
-          </div>
-        )}
+        <div className="mx-1.5 my-2 h-px" style={{ background: 'rgba(255,255,255,0.07)' }} />
         <SidebarItem
           active={activeTab === 'settings'}
-          icon={<AppIcon.settings size={17} />}
+          icon={<AppIcon.settings size={18} />}
           isOpen={isOpen}
           label="Cài đặt"
           onClick={() => onSelect('settings')}
         />
       </nav>
 
-      <div className="mt-auto flex flex-col gap-1 px-2 pb-3 pt-3">
+      <div className="mt-auto flex flex-col gap-1 px-2.5 pb-3 pt-3">
         <SidebarItem
           active={false}
-          icon={<AppIcon.report size={17} />}
+          icon={<AppIcon.report size={18} />}
           isOpen={isOpen}
           label="Báo cáo tuần"
           onClick={onOpenWeeklyReport}
@@ -1928,15 +1932,16 @@ function EditorialSidebar({ activeTab, isOpen, onOpenWeeklyReport, onSelect, onT
         <button
           type="button"
           onClick={onToggle}
-          className={`flex h-[34px] items-center rounded-[8px] text-[12.5px] text-[var(--muted-2)] transition-colors hover:bg-[var(--panel)] ${
-            isOpen ? 'gap-2.5 px-2.5 justify-start' : 'justify-center'
+          className={`flex h-9 items-center rounded-[11px] text-[12.5px] transition-colors hover:bg-[rgba(255,255,255,0.06)] ${
+            isOpen ? 'gap-2.5 px-3 justify-start' : 'justify-center'
           }`}
+          style={{ color: 'rgba(250,249,246,0.5)' }}
         >
           <Motion.span
             animate={{ rotate: isOpen ? 0 : 180 }}
             transition={{ duration: 0.2 }}
           >
-            <AppIcon.chevronLeft size={15} />
+            <AppIcon.chevronLeft size={16} />
           </Motion.span>
           {isOpen && <span>Thu gọn</span>}
         </button>
@@ -1951,33 +1956,28 @@ function SidebarItem({ active, icon, isOpen, label, onClick }) {
       type="button"
       onClick={onClick}
       title={!isOpen ? label : undefined}
-      className={`group relative flex min-h-[40px] items-center rounded-[12px] border text-left text-[13.5px] font-medium transition-colors hover:bg-[var(--panel)] ${
-        isOpen ? 'gap-2.5 px-2.5 justify-start' : 'justify-center'
+      className={`group flex items-center rounded-[12px] transition-colors hover:bg-[rgba(255,255,255,0.06)] ${
+        isOpen ? 'gap-3 px-1.5 py-1 justify-start' : 'justify-center py-1'
       }`}
-      style={{
-        background: active ? 'var(--panel-soft)' : 'transparent',
-        borderColor: active ? 'var(--line)' : 'transparent',
-        color: active ? 'var(--ink)' : 'var(--muted)',
-        boxShadow: 'none',
-      }}
     >
-      {active && (
-        <span
-          className="absolute inset-y-[7px] left-[-8px] w-[2px] rounded-full"
-          style={{ background: 'var(--accent)' }}
-        />
-      )}
       <span
-        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[9px] transition-colors"
+        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[11px] transition-colors"
         style={{
-          background: 'transparent',
-          color: active ? 'var(--ink)' : 'var(--muted)',
-          border: '1px solid transparent',
+          background: active ? 'var(--accent)' : 'transparent',
+          color: active ? '#faf9f6' : 'rgba(250,249,246,0.55)',
+          boxShadow: active ? '0 4px 12px rgba(var(--accent-rgb),0.4)' : 'none',
         }}
       >
         {icon}
       </span>
-      {isOpen && <span className="truncate">{label}</span>}
+      {isOpen && (
+        <span
+          className="truncate text-[13.5px] font-medium"
+          style={{ color: active ? '#faf9f6' : 'rgba(250,249,246,0.62)' }}
+        >
+          {label}
+        </span>
+      )}
     </button>
   );
 }

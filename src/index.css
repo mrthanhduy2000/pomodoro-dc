@@ -132,6 +132,8 @@ html, body, #root {
   --skin-card-shadow: 0 1px 2px rgba(31, 30, 29, 0.04), 0 12px 28px rgba(31, 30, 29, 0.06);
   --skin-surface-blur: 0px;
   --skin-accent-grad: none;
+  /* Nền giàu theo skin (gradient/radial) — tạo chiều sâu thay vì màu phẳng */
+  --app-bg: radial-gradient(135% 95% at 50% -12%, #fffdf9 0%, var(--canvas) 52%, var(--canvas-2) 100%);
 }
 /* Editorial — giấy ấm, dùng nguyên giá trị baseline ở :root */
 [data-skin="editorial"] {}
@@ -142,6 +144,7 @@ html, body, #root {
   --skin-card-shadow: 0 14px 40px rgba(214, 116, 79, 0.16);
   --skin-surface-blur: 14px;
   --skin-accent-grad: linear-gradient(90deg, #e0764f, #cf5a30);
+  --app-bg: linear-gradient(165deg, #fdf3ec 0%, #f7e1d2 46%, #efd1c2 100%);
   /* palette ấm */
   --canvas: #fdf3ec;
   --canvas-2: #f8e3d6;
@@ -172,6 +175,7 @@ html, body, #root {
   --skin-card-border-width: 2px;
   --skin-card-shadow: none;
   --skin-surface-blur: 0px;
+  --app-bg: var(--canvas);
   /* palette tương phản cao */
   --canvas: #f3efe7;
   --canvas-2: #ece7db;
@@ -209,6 +213,7 @@ html, body, #root {
 [data-theme="dark"] {
   --canvas: #151310;
   --canvas-2: #1b1814;
+  --app-bg: radial-gradient(135% 95% at 50% -12%, #211c16 0%, #151310 55%, #100d0a 100%);
   --panel: rgba(24, 21, 17, 0.92);
   --panel-soft: rgba(28, 24, 19, 0.94);
   --panel-strong: rgba(31, 27, 22, 0.98);
@@ -300,6 +305,7 @@ html, body, #root {
 /* Ink & Gold = nền dark + accent vàng đồng. Selector 2 thuộc tính để thắng
    [data-theme="dark"] bất kể thứ tự. App tự ép data-theme="dark" khi chọn skin này. */
 [data-theme="dark"][data-skin="inkgold"] {
+  --app-bg: radial-gradient(125% 95% at 50% -12%, #2c1f10 0%, #18120b 52%, #0e0b06 100%);
   --accent: #d9a441;
   --accent-light: #e2b85f;
   --accent2: #c96442;

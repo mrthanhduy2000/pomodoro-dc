@@ -1551,7 +1551,8 @@ export default function App() {
 
   return (
       <div
-        className="flex h-screen overflow-hidden bg-[var(--canvas)] text-[var(--ink)]"
+        className="flex h-screen overflow-hidden text-[var(--ink)]"
+        style={{ background: 'var(--app-bg, var(--canvas))' }}
         data-theme={uiSkin === 'inkgold' ? 'dark' : uiTheme}
         data-skin={uiSkin}
       >
@@ -1573,7 +1574,7 @@ export default function App() {
           </AppErrorBoundary>
         )}
 
-        <div className="flex min-w-0 flex-1 flex-col bg-[var(--canvas)]">
+        <div className="flex min-w-0 flex-1 flex-col">
           {!showFocusFullscreen && isDesktop && renderTopRail()}
 
           <main className={`min-h-0 flex-1 ${showFocusFullscreen ? 'overflow-y-auto overscroll-y-contain' : 'overflow-hidden'}`}>

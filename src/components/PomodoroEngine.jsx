@@ -1130,6 +1130,23 @@ export default function PomodoroEngine({
               style={{ background: immersiveGlow }}
             />
           )}
+          <motion.div
+            className="relative"
+            animate={
+              timerState === TIMER_STATES.FINISHED && !isBreakMode
+                ? { scale: [1, 1.06, 1] }
+                : timerState === TIMER_STATES.RUNNING && !isBreakMode
+                  ? { scale: [1, 1.018, 1] }
+                  : { scale: 1 }
+            }
+            transition={
+              timerState === TIMER_STATES.FINISHED && !isBreakMode
+                ? { duration: 0.7, ease: 'easeOut' }
+                : timerState === TIMER_STATES.RUNNING && !isBreakMode
+                  ? { duration: 5, repeat: Infinity, ease: 'easeInOut' }
+                  : { duration: 0.3 }
+            }
+          >
           <svg
             width={timerCanvasSize}
             height={timerCanvasSize}
@@ -1180,6 +1197,7 @@ export default function PomodoroEngine({
               />
             )}
           </svg>
+          </motion.div>
 
           <div className="absolute inset-0 flex flex-col items-center justify-center">
             <span className={`mono text-[10px] uppercase tracking-[0.22em] ${

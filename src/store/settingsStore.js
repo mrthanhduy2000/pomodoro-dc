@@ -72,6 +72,10 @@ const useSettingsStore = create(
       // 'light' | 'dark'
       uiTheme: 'light',
 
+      // ── UI Skin (bộ giao diện) ─────────────────────────────────────────
+      // 'editorial' (mặc định, hoàn chỉnh) | 'aurora' | 'inkgold' | 'swiss'
+      uiSkin: 'editorial',
+
       // ── Sound Pack ─────────────────────────────────────────────────────
       // 'classic' | 'nature' | 'synthwave' | 'minimal'
       soundPack: 'classic',
@@ -180,6 +184,10 @@ const useSettingsStore = create(
 
       setUiTheme: (theme) => set({ uiTheme: theme === 'dark' ? 'dark' : 'light' }),
 
+      setUiSkin: (skin) => set({
+        uiSkin: ['editorial', 'aurora', 'inkgold', 'swiss'].includes(skin) ? skin : 'editorial',
+      }),
+
       setSoundPack: (pack) => {
         soundEngine.setPack(pack);
         set({ soundPack: pack });
@@ -241,6 +249,7 @@ const useSettingsStore = create(
             ? clampDailyGoalMinutes(safeStored.dailyGoalMinutes)
             : DEFAULT_DAILY_GOAL.dailyGoalMinutes,
           uiTheme: safeStored.uiTheme === 'dark' ? 'dark' : 'light',
+          uiSkin: ['editorial', 'aurora', 'inkgold', 'swiss'].includes(safeStored.uiSkin) ? safeStored.uiSkin : 'editorial',
           ambientVolume,
         };
       },

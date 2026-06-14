@@ -66,6 +66,14 @@ const THEME_MODE_OPTIONS = [
   { value: 'dark', label: 'Tối hoàn toàn', note: 'Giữ nền tối ở mọi nơi' },
 ];
 
+// Bộ giao diện (skin). Editorial hoàn chỉnh; các skin khác đang hoàn thiện theo phase.
+const SKIN_OPTIONS = [
+  { value: 'editorial', label: 'Giấy & Đất nung', note: 'Ấm, đầm — bản hoàn chỉnh', ready: true, swatch: ['#faf9f6', '#c96442', '#5b7a52'] },
+  { value: 'aurora', label: 'Bình minh', note: 'Gradient kính mờ, hiện đại', ready: false, swatch: ['#fdf3ec', '#e0764f', '#cf5a30'] },
+  { value: 'inkgold', label: 'Mực & Vàng', note: 'Nền tối, điểm vàng đồng', ready: false, swatch: ['#151310', '#d9a441', '#c96442'] },
+  { value: 'swiss', label: 'Khối Thụy Sĩ', note: 'Tương phản, viền đậm', ready: false, swatch: ['#f3efe7', '#d6492f', '#15140f'] },
+];
+
 const UI_THEME_OPTIONS = [
   { value: 'light', label: 'Biên tập', note: 'Giấy ngà, nhiều khoảng thở' },
   { value: 'dark', label: 'Mực', note: 'Nền tối trung tính, vẫn giữ nhịp tối giản' },
@@ -151,6 +159,8 @@ export default function Settings() {
     setThemeMode,
     uiTheme,
     setUiTheme,
+    uiSkin,
+    setUiSkin,
     soundPack,
     setSoundPack,
     shortBreakDuration,
@@ -714,6 +724,45 @@ export default function Settings() {
                           đang dùng
                         </span>
                       )}
+                    </motion.button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div>
+              <p className="mono mb-2 text-[11px] font-semibold uppercase tracking-[0.22em]" style={lightTheme ? { color: '#9a5a48' } : { color: 'rgba(var(--accent-rgb), 0.8)' }}>
+                Bộ giao diện
+              </p>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {SKIN_OPTIONS.map((opt) => {
+                  const active = uiSkin === opt.value;
+                  return (
+                    <motion.button
+                      key={opt.value}
+                      type="button"
+                      disabled={!opt.ready}
+                      whileHover={opt.ready ? { scale: 1.02 } : undefined}
+                      whileTap={opt.ready ? { scale: 0.98 } : undefined}
+                      onClick={() => opt.ready && setUiSkin(opt.value)}
+                      className="rounded-2xl px-3 py-3 text-left transition-all"
+                      style={{ ...choiceStyle(active, lightTheme), opacity: opt.ready ? 1 : 0.5, cursor: opt.ready ? 'pointer' : 'not-allowed' }}
+                    >
+                      <div className="mb-2 flex items-center gap-1.5">
+                        {opt.swatch.map((c, i) => (
+                          <span key={i} className="h-4 w-4 rounded-full" style={{ background: c, border: '1px solid rgba(31,30,29,0.12)' }} />
+                        ))}
+                      </div>
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-sm font-semibold">{opt.label}</p>
+                        {active && opt.ready && (
+                          <span className="mono rounded-full px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.16em]" style={lightTheme ? { background: 'rgba(255,255,255,0.72)', color: '#9a5a48', border: '1px solid rgba(201,100,66,0.18)' } : { background: 'rgba(255,255,255,0.08)', color: 'var(--ink)', border: '1px solid rgba(255,255,255,0.12)' }}>đang dùng</span>
+                        )}
+                        {!opt.ready && (
+                          <span className="mono rounded-full px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.16em]" style={lightTheme ? { background: 'rgba(244,242,236,0.96)', color: '#9b9892', border: '1px solid #e8e6de' } : { background: 'rgba(255,255,255,0.05)', color: 'var(--muted-2)', border: '1px solid rgba(255,255,255,0.08)' }}>sắp ra</span>
+                        )}
+                      </div>
+                      <p className="mt-1 text-[11px]" style={lightTheme ? { color: '#6a6862' } : { color: 'var(--muted-2)' }}>{opt.note}</p>
                     </motion.button>
                   );
                 })}

@@ -1224,6 +1224,7 @@ export default function App() {
   ));
   const hydrateEngines = useSettingsStore((s) => s.hydrateEngines);
   const uiTheme = useSettingsStore((s) => s.uiTheme);
+  const uiSkin = useSettingsStore((s) => s.uiSkin);
   const dailyGoalType = useSettingsStore((s) => s.dailyGoalType);
   const dailyGoalSessions = useSettingsStore((s) => s.dailyGoalSessions);
   const dailyGoalMinutes = useSettingsStore((s) => s.dailyGoalMinutes);
@@ -1539,6 +1540,7 @@ export default function App() {
       <div
         className="flex h-screen overflow-hidden bg-[var(--canvas)] text-[var(--ink)]"
         data-theme={uiTheme}
+        data-skin={uiSkin}
       >
         {!showFocusFullscreen && (
           <AppErrorBoundary

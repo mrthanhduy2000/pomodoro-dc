@@ -118,6 +118,63 @@ html, body, #root {
   color-scheme: light;
 }
 
+/* ── Bộ tokens 4 giao diện (skin) ─────────────────────────────────────────────
+   Phase 1: kiến trúc + skin "editorial" (baseline = giống hiện tại).
+   Các skin khác định nghĩa sẵn token, sẽ bật & hoàn thiện ở các phase sau khi
+   component đã tiêu thụ các biến --skin-* này. */
+:root {
+  --skin-font-display: 'Source Serif 4', Georgia, serif;
+  --skin-radius-card: 18px;
+  --skin-radius-control: 14px;
+  --skin-card-bg: var(--card-bg-solid);
+  --skin-card-border-width: 1px;
+  --skin-card-border-color: var(--line);
+  --skin-card-shadow: 0 1px 2px rgba(31, 30, 29, 0.04), 0 12px 28px rgba(31, 30, 29, 0.06);
+  --skin-surface-blur: 0px;
+  --skin-accent-grad: none;
+}
+/* Editorial — giấy ấm, dùng nguyên giá trị baseline ở :root */
+[data-skin="editorial"] {}
+/* Aurora — kính mờ, gradient ấm */
+[data-skin="aurora"] {
+  --skin-radius-card: 24px;
+  --skin-radius-control: 18px;
+  --skin-card-bg: rgba(255, 255, 255, 0.55);
+  --skin-card-border-color: rgba(255, 255, 255, 0.7);
+  --skin-card-shadow: 0 14px 40px rgba(214, 116, 79, 0.16);
+  --skin-surface-blur: 14px;
+  --skin-accent-grad: linear-gradient(90deg, #e0764f, #cf5a30);
+  --accent: #e0764f;
+  --accent-light: #e89070;
+  --accent2: #cf5a30;
+  --accent-rgb: 224, 118, 79;
+}
+/* Swiss — phẳng, viền đậm, góc sắc, tiêu đề mono */
+[data-skin="swiss"] {
+  --skin-font-display: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --skin-radius-card: 6px;
+  --skin-radius-control: 6px;
+  --skin-card-bg: #fffdfa;
+  --skin-card-border-width: 2px;
+  --skin-card-border-color: #15140f;
+  --skin-card-shadow: none;
+  --skin-surface-blur: 0px;
+  --accent: #d6492f;
+  --accent2: #15140f;
+  --accent-rgb: 214, 73, 47;
+}
+/* Ink & Gold — nền tối, điểm vàng đồng (cần ghép data-theme="dark" khi bật) */
+[data-skin="inkgold"] {
+  --skin-radius-card: 18px;
+  --skin-card-bg: rgba(34, 29, 24, 0.96);
+  --skin-card-border-color: #34291f;
+  --skin-card-shadow: 0 14px 34px rgba(0, 0, 0, 0.4);
+  --skin-accent-grad: linear-gradient(90deg, #d9a441, #c96442);
+  --accent: #d9a441;
+  --accent2: #c96442;
+  --accent-rgb: 217, 164, 65;
+}
+
 [data-theme="dark"] {
   --canvas: #151310;
   --canvas-2: #1b1814;

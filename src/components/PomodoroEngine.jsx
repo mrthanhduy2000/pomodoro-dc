@@ -167,6 +167,13 @@ export default function PomodoroEngine({
         boxShadow: 'var(--skin-card-shadow)',
       }
     : undefined;
+  // Thẻ nổi bao đồng hồ (mọi skin/theme) — để màn Focus giống mockup: đồng hồ nằm trong một thẻ.
+  const timerCardStyle = {
+    background: 'var(--card-bg-solid)',
+    border: 'var(--skin-card-border-width, 1px) solid var(--line)',
+    borderRadius: 'var(--skin-radius-card, 18px)',
+    boxShadow: 'var(--skin-card-shadow)',
+  };
   const paperInsetStyle = lightTheme
     ? {
         background: 'var(--card-bg-solid2)',
@@ -1854,14 +1861,18 @@ export default function PomodoroEngine({
               ? 'justify-start'
               : 'min-h-[76vh] lg:min-h-[84vh] xl:min-h-[88vh] justify-center'
           }`}>
-            {timerStageContent}
+            <div className="mx-auto flex w-full max-w-[640px] flex-col items-center px-5 py-8 md:px-7 md:py-10" style={timerCardStyle}>
+              {timerStageContent}
+            </div>
           </div>
           {shortcutHint}
           {focusSupportContent}
         </>
       ) : (
         <>
-          {timerStageContent}
+          <div className="mx-auto flex w-full max-w-[640px] flex-col items-center px-5 py-8 md:px-7 md:py-10" style={timerCardStyle}>
+            {timerStageContent}
+          </div>
           {shortcutHint}
           {focusSupportContent}
         </>

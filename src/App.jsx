@@ -1741,11 +1741,7 @@ export default function App() {
 
                   {activeTab === 'stats' && (
                     <TabPane key="stats">
-                      <ShellPane
-                        title="Thống kê"
-                        subtitle="Các xu hướng theo ngày, theo chuỗi và theo lịch sử phiên được gom trong một workspace gọn hơn."
-                        topRail={!isDesktop && !showFocusFullscreen ? renderTopRail() : null}
-                      >
+                      <ShellPane topRail={!isDesktop && !showFocusFullscreen ? renderTopRail() : null}>
                         <DeferredTabContent>
                           <StatsDashboard />
                         </DeferredTabContent>
@@ -2199,21 +2195,32 @@ function ShellPane({ children, subtitle, title, topRail = null }) {
     <div className="h-full overflow-y-auto">
       {topRail}
       <div className="mx-auto max-w-[1120px] px-5 pb-28 pt-8 md:px-8 lg:px-12 lg:pb-8">
-        <div className="mb-7">
-          <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.16em] text-[var(--muted)]">
-            <AppIcon.spark size={14} />
-            <span>Workspace</span>
-          </div>
-          <h1 className="serif mt-3 text-[30px] font-medium leading-[1.06] tracking-[-0.03em] text-[var(--ink)] md:text-[36px]">
-            {title}
-          </h1>
-          <p className="mt-3 max-w-[700px] text-[14px] leading-[1.65] text-[var(--muted)]">
-            {subtitle}
-          </p>
-        </div>
-        <div className="border-t pt-5 md:pt-6" style={{ borderColor: 'var(--line)' }}>
-          {children}
-        </div>
+        {title ? (
+          <>
+            <div className="mb-6">
+              <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.18em] text-[var(--muted-2)]">
+                <AppIcon.spark size={13} />
+                <span>Workspace</span>
+              </div>
+              <h1
+                className="mt-2.5 text-[28px] font-semibold leading-[1.08] tracking-[-0.02em] text-[var(--ink)] md:text-[33px]"
+                style={{ fontFamily: 'var(--skin-font-display)' }}
+              >
+                {title}
+              </h1>
+              {subtitle && (
+                <p className="mt-2.5 max-w-[680px] text-[13.5px] leading-[1.6] text-[var(--muted)]">
+                  {subtitle}
+                </p>
+              )}
+            </div>
+            <div className="border-t pt-5 md:pt-6" style={{ borderColor: 'var(--line)' }}>
+              {children}
+            </div>
+          </>
+        ) : (
+          children
+        )}
       </div>
     </div>
   );

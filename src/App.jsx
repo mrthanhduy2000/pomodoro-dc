@@ -8,6 +8,7 @@ import PomodoroEngine from './components/PomodoroEngine';
 import ResourceDisplay from './components/ResourceDisplay';
 import RankDisplay from './components/RankDisplay';
 import DailyMissions from './components/DailyMissions';
+import FocusRail from './components/FocusRail';
 import NotificationCenter from './components/NotificationCenter';
 import { RichTextView } from './components/RichText';
 import { useGameLoop } from './hooks/useGameLoop';
@@ -1629,6 +1630,13 @@ export default function App() {
                     <div className="min-h-0 flex-1 overflow-y-auto">
                       {supportRailOpen ? (
                         <div className="space-y-4 p-4">
+                          <FocusRail
+                            sessionsCompletedToday={sessionsCompletedToday}
+                            focusMinutesToday={focusMinutesToday}
+                            dailyGoalType={dailyGoalType}
+                            dailyGoalSessions={dailyGoalSessions}
+                            dailyGoalMinutes={dailyGoalMinutes}
+                          />
                           <DailyMissions />
                           <ResourceDisplay />
                           <RankDisplay />

@@ -40,6 +40,7 @@ const PrestigeModal = createRecoverableLazy(() => import('./components/PrestigeM
 const LevelUpModal = createRecoverableLazy(() => import('./components/LevelUpModal.jsx'), 'level-up-modal');
 const WeeklyReportModal = createRecoverableLazy(() => import('./components/WeeklyReportModal.jsx'), 'weekly-report-modal');
 const AchievementToast = createRecoverableLazy(() => import('./components/AchievementToast.jsx'), 'achievement-toast');
+const OnboardingOverlay = createRecoverableLazy(() => import('./components/OnboardingOverlay.jsx'), 'onboarding-overlay');
 
 function createBoundaryLogger(scope) {
   return (error, errorInfo) => {
@@ -1829,6 +1830,9 @@ export default function App() {
           levelUpQueueLength={levelUpQueueLength}
           achievementQueueLength={achievementQueueLength}
         />
+        <Suspense fallback={null}>
+          <OnboardingOverlay />
+        </Suspense>
       </AppErrorBoundary>
     </div>
   );

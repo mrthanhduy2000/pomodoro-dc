@@ -45,6 +45,7 @@ import {
   getVietnamYear,
 } from '../engine/time';
 import {
+  GOAL_ACHIEVED_BONUS_RATE,
   FORGIVENESS_CANCELS_PER_WEEK,
   SIEU_TAP_TRUNG_CHARGES,
   SIEU_TAP_TRUNG_MIN_MIN,
@@ -3617,31 +3618,71 @@ const useGameStore = create(
 
       reviewCompletedSession: (sessionId, patch = {}) =>
         set((prev) => {
-          if (!sessionId || !prev.history.some((session) => session.id === sessionId)) return prev;
+          const previousSession = sessionId
+            ? (prev.history.find((session) => session.id === sessionId) ?? null)
+            : null;
+          if (!previousSession) return prev;
 
           const hasGoalAchieved = typeof patch.goalAchieved === 'boolean';
           const goal = typeof patch.goal === 'string' ? (patch.goal.trim() || null) : undefined;
           const nextNote = typeof patch.nextNote === 'string' ? (patch.nextNote.trim() || null) : undefined;
-          let previousSession = null;
+
+          // Thưởng mục tiêu thật: chỉ khi LẦN ĐẦU chấm "Đạt" cho một phiên đã
+          // hoàn thành (không phải phiên huỷ) và chưa từng cộng bonus. Bonus là
+          // % của chính XP/EP phiên đó kiếm được → nối thưởng game với việc thật.
+          const firstAchievement =
+            patch.goalAchieved === true
+            && previousSession.goalAchieved !== true
+            && !previousSession.goalBonusGranted
+            && !isCancelledHistoryEntry(previousSession);
+          const bonusXP = firstAchievement
+            ? Math.max(0, Math.round((previousSession.xpEarned ?? 0) * GOAL_ACHIEVED_BONUS_RATE))
+            : 0;
+          const bonusEP = firstAchievement
+            ? Math.max(0, Math.round((previousSession.epEarned ?? 0) * GOAL_ACHIEVED_BONUS_RATE))
+            : 0;
+          const grantBonus = firstAchievement && (bonusXP > 0 || bonusEP > 0);
+
           let updatedSession = null;
           const nextHistory = prev.history.map((session) => {
             if (session.id !== sessionId) return session;
-            previousSession = session;
             updatedSession = {
               ...session,
               ...(goal !== undefined ? { goal } : {}),
               ...(nextNote !== undefined ? { nextNote } : {}),
               ...(hasGoalAchieved ? { goalAchieved: patch.goalAchieved } : {}),
+              ...(grantBonus ? { goalBonusGranted: true, goalBonusXP: bonusXP, goalBonusEP: bonusEP } : {}),
             };
             return updatedSession;
           });
 
           if (!updatedSession) return prev;
           const currentHistoryStats = normalizeStoredHistoryStats(prev.historyStats, prev.history);
-
-          return {
+          const basePatch = {
             history: nextHistory,
             historyStats: applyHistoryReviewStatsDelta(currentHistoryStats, previousSession, updatedSession),
+          };
+
+          if (!grantBonus) return basePatch;
+
+          const rewardState = grantXPReward(prev, bonusXP, bonusEP);
+          return {
+            ...basePatch,
+            progress: rewardState.progress,
+            player: rewardState.player,
+            ui: {
+              ...prev.ui,
+              levelUpQueue: rewardState.levelsGained > 0
+                ? [
+                    ...prev.ui.levelUpQueue,
+                    {
+                      levelsGained: rewardState.levelsGained,
+                      newLevel: rewardState.newLevel,
+                      spGained: rewardState.spGained,
+                    },
+                  ]
+                : prev.ui.levelUpQueue,
+            },
           };
         }),
 

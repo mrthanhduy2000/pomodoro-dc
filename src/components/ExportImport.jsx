@@ -12,6 +12,20 @@ import { motion } from 'framer-motion';
 import useGameStore, { GAME_STORE_EXPORT_VERSION } from '../store/gameStore';
 import { formatVietnamOffsetISOString, localDateStr } from '../engine/time';
 import { EXPORT_FILENAME_PREFIX } from '../lib/appIdentity';
+import {
+  extractImportSummary,
+  formatFocusMinutes,
+  looksLikeGameExport,
+} from '../utils/importSummary';
+
+function formatExportedAt(iso) {
+  if (!iso) return null;
+  try {
+    return new Date(iso).toLocaleString('vi-VN');
+  } catch {
+    return String(iso);
+  }
+}
 
 export default function ExportImport() {
   const storeState   = useGameStore.getState;
@@ -19,6 +33,7 @@ export default function ExportImport() {
   const fileInputRef = useRef(null);
 
   const [importStatus, setImportStatus] = useState(null); // { type, message } | null
+  const [pendingImport, setPendingImport] = useState(null); // { parsed, summary, fileName } | null
 
   const handleExport = () => {
     const state = storeState();
@@ -83,6 +98,7 @@ export default function ExportImport() {
     fileInputRef.current?.click();
   };
 
+  // Bước 1: đọc + kiểm file, KHÔNG ghi đè ngay — chỉ mở hộp xác nhận kèm tóm tắt.
   const handleFileChange = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -90,11 +106,19 @@ export default function ExportImport() {
     try {
       const text   = await file.text();
       const parsed = JSON.parse(text);
-      const result = importData(parsed);
-      setImportStatus({
-        type: result.ok ? 'success' : 'error',
-        message: result.message,
-      });
+      if (!looksLikeGameExport(parsed)) {
+        setImportStatus({
+          type: 'error',
+          message: 'File này không giống bản sao lưu của app. Hãy chọn lại file đúng.',
+        });
+        setTimeout(() => setImportStatus(null), 3000);
+      } else {
+        setPendingImport({
+          parsed,
+          summary: extractImportSummary(parsed),
+          fileName: file.name,
+        });
+      }
     } catch (error) {
       console.error('[ExportImport] Failed to parse import file', { error, fileName: file.name });
       setImportStatus({
@@ -103,11 +127,27 @@ export default function ExportImport() {
           ? 'File JSON không hợp lệ. Hãy kiểm tra lại nội dung backup.'
           : 'Không thể đọc file đã chọn.',
       });
+      setTimeout(() => setImportStatus(null), 3000);
     }
 
     // Reset input so same file can be re-imported
     e.target.value = '';
+  };
+
+  // Bước 2: người dùng bấm xác nhận → mới thực sự ghi đè dữ liệu.
+  const handleConfirmImport = () => {
+    if (!pendingImport) return;
+    const result = importData(pendingImport.parsed);
+    setPendingImport(null);
+    setImportStatus({
+      type: result.ok ? 'success' : 'error',
+      message: result.message,
+    });
     setTimeout(() => setImportStatus(null), 3000);
+  };
+
+  const handleCancelImport = () => {
+    setPendingImport(null);
   };
 
   return (
@@ -194,6 +234,76 @@ export default function ExportImport() {
         onChange={handleFileChange}
         className="hidden"
       />
+
+      {/* Hộp xác nhận trước khi ghi đè dữ liệu */}
+      {pendingImport && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: 'rgba(31,30,29,0.45)', backdropFilter: 'blur(4px)' }}
+          onClick={handleCancelImport}
+        >
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-[420px] rounded-[28px] border px-5 py-5"
+            style={{ background: 'var(--card-bg-solid, rgba(255,255,255,0.98))', borderColor: 'var(--line-2, #d9d6cc)' }}
+          >
+            <p className="text-[10px] font-semibold uppercase tracking-[0.24em]" style={{ color: 'var(--muted-2, #9b9892)' }}>
+              Xác nhận khôi phục
+            </p>
+            <h3 className="mt-2 text-[1.4rem] font-semibold leading-tight" style={{ color: 'var(--ink, #1f1e1d)', fontFamily: '"Source Serif 4", Georgia, serif' }}>
+              Ghi đè toàn bộ dữ liệu hiện tại?
+            </h3>
+            <p className="mt-1 text-[12px] leading-5" style={{ color: 'var(--muted, #6a6862)' }}>
+              Bản sao lưu sắp nhập <span className="font-mono">{pendingImport.fileName}</span> chứa:
+            </p>
+
+            <div className="mt-3 space-y-1.5 rounded-[16px] px-3 py-3" style={{ background: 'var(--card-bg-solid2, rgba(244,242,236,0.96))' }}>
+              {[
+                pendingImport.summary.exportedAt ? ['Ngày sao lưu', formatExportedAt(pendingImport.summary.exportedAt)] : null,
+                ['Cấp độ', String(pendingImport.summary.level)],
+                ['Phiên hoàn thành', String(pendingImport.summary.sessions)],
+                ['Phiên trong lịch sử', String(pendingImport.summary.historyCount)],
+                ['Tổng giờ tập trung', formatFocusMinutes(pendingImport.summary.focusMinutes)],
+                pendingImport.summary.prestige ? ['Lần prestige', String(pendingImport.summary.prestige)] : null,
+                pendingImport.summary.relics ? ['Di vật', String(pendingImport.summary.relics)] : null,
+                pendingImport.summary.achievements ? ['Thành tựu', String(pendingImport.summary.achievements)] : null,
+              ].filter(Boolean).map(([label, value]) => (
+                <div key={label} className="flex items-center justify-between text-[13px]">
+                  <span style={{ color: 'var(--muted, #6a6862)' }}>{label}</span>
+                  <span className="font-semibold" style={{ color: 'var(--ink, #1f1e1d)' }}>{value}</span>
+                </div>
+              ))}
+            </div>
+
+            <p className="mt-3 rounded-[14px] px-3 py-2 text-[12px] leading-5" style={{ background: 'rgba(201,100,66,0.1)', color: 'var(--accent2, #8a3f24)' }}>
+              ⚠️ Toàn bộ tiến trình HIỆN TẠI trên thiết bị này sẽ bị thay thế và không thể hoàn tác.
+            </p>
+
+            <div className="mt-4 flex gap-2">
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={handleCancelImport}
+                className="flex-1 rounded-[16px] border px-3 py-2.5 text-xs font-bold"
+                style={{ background: 'var(--card-bg-solid2, rgba(244,242,236,0.96))', borderColor: 'var(--line-2, #d9d6cc)', color: 'var(--ink, #1f1e1d)' }}
+              >
+                Hủy
+              </motion.button>
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={handleConfirmImport}
+                className="flex-1 rounded-[16px] px-3 py-2.5 text-xs font-bold"
+                style={{ background: '#1f1e1d', color: '#faf9f6' }}
+              >
+                Ghi đè &amp; khôi phục
+              </motion.button>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 }

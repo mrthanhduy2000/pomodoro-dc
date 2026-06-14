@@ -1,12 +1,13 @@
 /**
  * EraHUD.jsx — Era status bar, 48px height, optimized for 13"
  */
-import React from 'react';
+import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import useGameStore from '../store/gameStore';
 import useSettingsStore from '../store/settingsStore';
 import { ERA_METADATA, ERA_THRESHOLDS } from '../engine/constants';
-import { getLevelProgress } from '../engine/gameMath';
+import { getLevelProgress, calculateStreakMilestoneProgress } from '../engine/gameMath';
+import { localWeekMondayStr } from '../engine/time';
 
 function getCurrentStage(eraMeta, totalEP) {
   for (let i = eraMeta.stages.length - 1; i >= 0; i--) {
@@ -23,9 +24,18 @@ export default function EraHUD() {
   const sessions      = useGameStore((s) => s.progress.sessionsCompleted);
   const focusMins     = useGameStore((s) => s.progress.totalFocusMinutes);
   const currentStreak = useGameStore((s) => s.streak.currentStreak);
+  const skipShieldUsedWeekKey = useGameStore((s) => s.streak.skipShieldUsedWeekKey);
+  const hasStreakShield = useGameStore((s) => !!s.player.unlockedSkills?.la_chan_streak);
   const prestige      = useGameStore((s) => s.prestige);
   const uiTheme       = useSettingsStore((s) => s.uiTheme);
   const lightTheme    = uiTheme === 'light';
+
+  // Lá chắn chuỗi: hiện trạng thái còn dùng được / đã dùng trong tuần này.
+  const shieldState = hasStreakShield
+    ? (skipShieldUsedWeekKey === localWeekMondayStr() ? 'used' : 'available')
+    : null;
+  // Mốc chuỗi kế tiếp — cho thấy đích gần thay vì con số trừu tượng.
+  const milestone = useMemo(() => calculateStreakMilestoneProgress(currentStreak), [currentStreak]);
 
   const eraMeta   = ERA_METADATA[activeBook];
   const stage     = getCurrentStage(eraMeta, totalEP);
@@ -104,8 +114,19 @@ export default function EraHUD() {
            style={{ borderColor: 'var(--line)' }}>
         <MiniStat value={sessions.toLocaleString()} label="phiên" mark="PH" />
         <MiniStat value={focusHours} label="giờ" mark="HR" />
-        {currentStreak >= 2 && (
-          <MiniStat value={currentStreak} label="chuỗi" mark="CH" highlight />
+        {currentStreak >= 1 && (
+          <div className="flex items-center gap-2">
+            <MiniStat value={currentStreak} label="chuỗi" mark="CH" highlight shieldState={shieldState} />
+            {milestone.nextMilestone && milestone.daysRemaining > 0 && (
+              <span
+                className="hidden text-[10px] leading-tight whitespace-nowrap sm:inline"
+                style={{ color: milestone.nextMilestone.permanent ? 'var(--accent2)' : 'var(--muted-2)' }}
+                title={`Còn ${milestone.daysRemaining} ngày tới ${milestone.nextMilestone.label}${milestone.nextMilestone.permanent ? ' — mở bonus VĨNH VIỄN' : ''}`}
+              >
+                →{milestone.daysRemaining}d {milestone.nextMilestone.label}
+              </span>
+            )}
+          </div>
         )}
       </div>
     </div>
@@ -137,7 +158,7 @@ function LevelRing({ level, expPct }) {
   );
 }
 
-function MiniStat({ mark, value, label, highlight }) {
+function MiniStat({ mark, value, label, highlight, shieldState = null }) {
   return (
     <div className="flex items-center gap-1.5">
       <span
@@ -151,8 +172,21 @@ function MiniStat({ mark, value, label, highlight }) {
         {mark}
       </span>
       <div className="leading-tight">
-        <div className="text-xs font-bold font-mono leading-none" style={{ color: highlight ? 'var(--accent2)' : 'var(--ink)' }}>
-          {value}
+        <div className="flex items-center gap-1">
+          <span className="text-xs font-bold font-mono leading-none" style={{ color: highlight ? 'var(--accent2)' : 'var(--ink)' }}>
+            {value}
+          </span>
+          {shieldState && (
+            <span
+              className="text-[11px] leading-none"
+              style={{ opacity: shieldState === 'available' ? 1 : 0.32 }}
+              title={shieldState === 'available'
+                ? 'Lá chắn chuỗi: còn dùng được tuần này (tha 1 ngày nghỉ)'
+                : 'Lá chắn chuỗi: đã dùng tuần này'}
+            >
+              🛡️
+            </span>
+          )}
         </div>
         <div className="text-[9px] uppercase tracking-wide leading-none" style={{ color: 'var(--muted-2)' }}>{label}</div>
       </div>

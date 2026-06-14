@@ -62,6 +62,10 @@ export const DEFAULT_DEEP_FOCUS_THRESHOLD = 26; // phút (mặc định)
 // tổng hành trình phải >= 365 ngày thay vì ngắn hơn.
 export const BASE_XP_PER_MINUTE = 1;
 export const BASE_EP_PER_MINUTE = 1;
+// Thưởng khi người chơi tự chấm phiên "Đạt mục tiêu": cộng thêm % vào XP và EP
+// mà phiên đó đã kiếm được. Nối phần thưởng game với việc thật làm xong, không
+// chỉ thưởng cho "ngồi đủ phút". Chỉ tính 1 lần cho mỗi phiên.
+export const GOAL_ACHIEVED_BONUS_RATE = 0.12;
 export const EP_MULTIPLIER_TIERS = [
   { min: 1,  max: 25,       multiplier: 1.0 },
   { min: 26, max: 59,       multiplier: 1.1 },
@@ -134,6 +138,14 @@ export const LA_CHAN_STREAK_PER_WEEK       = 1;
 export const BEN_VUNG_STREAK_THRESHOLD     = 30;
 export const BEN_VUNG_PERMANENT_ALLBONUS   = 0.05;
 export const BEN_VUNG_MIN_MINUTES          = 30;
+
+// Các mốc chuỗi để hiện "đích kế tiếp" cho người dùng (chỉ để hiển thị/động viên).
+// Mốc 30 trùng BEN_VUNG_STREAK_THRESHOLD — mở +5% allBonus VĨNH VIỄN.
+export const STREAK_MILESTONES = [
+  { days: 7,  label: 'mốc 7',  permanent: false },
+  { days: 14, label: 'mốc 14', permanent: false },
+  { days: BEN_VUNG_STREAK_THRESHOLD, label: 'Bền Vững', permanent: true },
+];
 
 // === NGHỈ NGƠI (volume & break) ===
 export const BREAK_EXTENSION_MINUTES                = 5;

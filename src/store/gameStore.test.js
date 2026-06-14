@@ -155,6 +155,67 @@ test('claimMissionAllBonus reconciles stale completed missions before awarding X
   assert.equal(state.player.totalEXP, 0);
 });
 
+test('marking a session achieved grants a one-time goal bonus (XP + EP)', () => {
+  resetStore();
+
+  useGameStore.setState({
+    history: [makeSession(1, { minutes: 25, xpEarned: 100, epEarned: 50 })],
+  });
+
+  const baseXP = useGameStore.getState().player.totalEXP;
+  const baseEP = useGameStore.getState().progress.totalEP;
+
+  useGameStore.getState().reviewCompletedSession(1, { goal: 'viết báo cáo', goalAchieved: true });
+
+  let state = useGameStore.getState();
+  let entry = state.history.find((h) => h.id === 1);
+  assert.equal(entry.goalAchieved, true);
+  assert.equal(entry.goalBonusGranted, true);
+  assert.equal(entry.goalBonusXP, 12); // round(100 * 0.12)
+  assert.equal(entry.goalBonusEP, 6); // round(50 * 0.12)
+  assert.equal(state.player.totalEXP, baseXP + 12);
+  assert.equal(state.progress.totalEP, baseEP + 6);
+
+  // Re-marking achieved must NOT grant the bonus again
+  useGameStore.getState().reviewCompletedSession(1, { goalAchieved: true });
+  state = useGameStore.getState();
+  assert.equal(state.player.totalEXP, baseXP + 12);
+  assert.equal(state.progress.totalEP, baseEP + 6);
+  assert.equal(state.history.find((h) => h.id === 1).goalBonusXP, 12);
+
+  // Toggling missed → achieved again still must NOT re-grant
+  useGameStore.getState().reviewCompletedSession(1, { goalAchieved: false });
+  useGameStore.getState().reviewCompletedSession(1, { goalAchieved: true });
+  state = useGameStore.getState();
+  assert.equal(state.player.totalEXP, baseXP + 12);
+  assert.equal(state.progress.totalEP, baseEP + 6);
+});
+
+test('cancelled sessions do not grant the goal bonus', () => {
+  resetStore();
+
+  useGameStore.setState({
+    history: [
+      {
+        ...makeSession(2, { xpEarned: 100, epEarned: 50 }),
+        status: 'cancelled',
+        cancelled: true,
+        completed: false,
+      },
+    ],
+  });
+
+  const baseXP = useGameStore.getState().player.totalEXP;
+  const baseEP = useGameStore.getState().progress.totalEP;
+
+  useGameStore.getState().reviewCompletedSession(2, { goalAchieved: true });
+
+  const state = useGameStore.getState();
+  assert.equal(state.player.totalEXP, baseXP);
+  assert.equal(state.progress.totalEP, baseEP);
+  assert.equal(state.history.find((h) => h.id === 2).goalBonusGranted, undefined);
+});
+
 test('deleting sessions revokes daily all-mission bonus XP when goals no longer qualify', () => {
   resetStore();
 

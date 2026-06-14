@@ -88,6 +88,9 @@ const useSettingsStore = create(
       continueTimingAfterPomodoro: false, // continue a Pomodoro as stopwatch after countdown reaches zero
       disableBreak:       false, // skip all breaks entirely
 
+      // ── Onboarding ─────────────────────────────────────────────────────
+      hasViewedInitialOnboarding: false, // overlay 3 thẻ chỉ hiện 1 lần cho người mới
+
       // ── Actions ────────────────────────────────────────────────────────
 
       setSoundEnabled: (enabled) => {
@@ -197,6 +200,7 @@ const useSettingsStore = create(
       setAutoStartBreak:     (v) => set({ autoStartBreak: v }),
       setContinueTimingAfterPomodoro: (v) => set({ continueTimingAfterPomodoro: v }),
       setDisableBreak:       (v) => set({ disableBreak: v }),
+      setHasViewedInitialOnboarding: (v) => set({ hasViewedInitialOnboarding: v !== false }),
 
       // ── Hydration sync ─────────────────────────────────────────────────
       // Called once on app mount to push persisted prefs back into singletons.

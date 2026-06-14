@@ -354,9 +354,15 @@ function getSessionReviewMeta(entry) {
   if (!goalText && typeof entry?.goalAchieved !== 'boolean') return null;
 
   if (entry?.goalAchieved === true) {
+    const bonusBits = [
+      entry?.goalBonusXP > 0 ? `+${entry.goalBonusXP} EXP` : null,
+      entry?.goalBonusEP > 0 ? `+${entry.goalBonusEP} EP` : null,
+    ].filter(Boolean);
     return {
       key: 'achieved',
-      label: 'Chạm mục tiêu đã đặt',
+      label: bonusBits.length
+        ? `Chạm mục tiêu đã đặt — thưởng ${bonusBits.join(' · ')}`
+        : 'Chạm mục tiêu đã đặt',
       shortLabel: 'Đúng nhịp',
       bg: 'rgba(201,100,66,0.10)',
       border: 'rgba(201,100,66,0.18)',

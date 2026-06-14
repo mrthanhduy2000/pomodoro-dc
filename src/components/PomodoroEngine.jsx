@@ -5,7 +5,8 @@ import useGameStore from '../store/gameStore';
 import { pushNow } from '../lib/syncService';
 import useSettingsStore from '../store/settingsStore';
 import { useTimer, formatTime, TIMER_MODES, TIMER_STATES } from '../hooks/useTimer';
-import { getComboDecayMs, getMultiplierTier } from '../engine/gameMath';
+import { getComboDecayMs, getMultiplierTier, suggestSessionLength } from '../engine/gameMath';
+import { getVietnamHour } from '../engine/time';
 import { FLOWTIME_BREAK_RULES, QUICK_FOCUS_PRESETS, getBreakPlan } from '../engine/breaks';
 import {
   DEFAULT_DEEP_FOCUS_THRESHOLD,
@@ -123,6 +124,7 @@ export default function PomodoroEngine({
   const buildings = useGameStore((s) => s.buildings);
   const buildingLevels = useGameStore((s) => s.buildingLevels ?? {});
   const sessionCategories = useGameStore((s) => s.sessionCategories);
+  const sessionHistory = useGameStore((s) => s.history);
   const pendingCategoryId = useGameStore((s) => s.pendingCategoryId);
   const setPendingCategory = useGameStore((s) => s.setPendingCategory);
   const pendingNote = useGameStore((s) => s.pendingNote);
@@ -383,6 +385,15 @@ export default function PomodoroEngine({
   const isIdle = timerState === TIMER_STATES.IDLE;
   const isActive = timerState === TIMER_STATES.RUNNING || timerState === TIMER_STATES.PAUSED;
   const isBreakMode = isOnBreak;
+  // Gợi ý độ dài phiên: học từ chính lịch sử người dùng theo buổi trong ngày.
+  const lengthSuggestion = useMemo(
+    () => suggestSessionLength(sessionHistory, {
+      nowHour: getVietnamHour(),
+      categoryId: pendingCategoryId,
+      getEntryHour: (entry) => getVietnamHour(new Date(entry?.timestamp ?? 0)),
+    }),
+    [sessionHistory, pendingCategoryId],
+  );
   const finishedSessionWillStartBreak = !disableBreak && (autoStartBreak || isStopwatchMode);
   const isCrisisBlockingStart = eraCrisis.active && eraCrisis.choiceMade !== 'challenge';
   const isExtensionWindowOpen = displaySeconds > 0 && displaySeconds <= SESSION_EXTENSION_WINDOW_SECONDS;
@@ -734,6 +745,8 @@ export default function PomodoroEngine({
     <SessionReviewCard
       completedGoalAchieved={completedGoalAchieved}
       goalText={reviewGoalText}
+      goalBonusXP={completedSessionReview?.goalBonusXP ?? 0}
+      goalBonusEP={completedSessionReview?.goalBonusEP ?? 0}
       onPick={handleSessionReview}
     />
   ) : null;
@@ -913,6 +926,35 @@ export default function PomodoroEngine({
             mode={isActive ? runtimeTimerMode : timerMode}
             onSelect={applyQuickPreset}
           />
+
+          {isIdle && !isBreakMode && !isStopwatchMode && lengthSuggestion
+            && lengthSuggestion.minutes !== timerConfig.focusMinutes && (
+            <button
+              type="button"
+              onClick={() => applyFocusMinutes(lengthSuggestion.minutes)}
+              className={`mt-4 flex w-full items-center justify-between gap-3 rounded-[16px] border px-3.5 py-2.5 text-left transition ${
+                lightTheme
+                  ? 'border-[rgba(91,122,82,0.28)] bg-[rgba(229,236,223,0.6)] hover:bg-[rgba(229,236,223,0.95)]'
+                  : 'border-emerald-300/20 bg-emerald-400/[0.07] hover:bg-emerald-400/[0.14]'
+              }`}
+            >
+              <span className="min-w-0">
+                <span className={`block text-[13px] font-semibold ${lightTheme ? 'text-[var(--good)]' : 'text-emerald-200'}`}>
+                  💡 {lengthSuggestion.bucketLabel} bạn thường hợp phiên ~{lengthSuggestion.minutes} phút
+                </span>
+                <span className={`mono mt-0.5 block text-[10px] uppercase tracking-[0.16em] ${lightTheme ? 'text-[var(--muted)]' : 'text-slate-500'}`}>
+                  dựa trên {lengthSuggestion.sampleSize} phiên{lengthSuggestion.categoryScoped ? ' cùng loại' : ''}
+                </span>
+              </span>
+              <span className={`shrink-0 rounded-full border px-3 py-1 text-xs font-semibold ${
+                lightTheme
+                  ? 'border-[rgba(91,122,82,0.3)] text-[var(--good)]'
+                  : 'border-emerald-300/30 text-emerald-200'
+              }`}>
+                Dùng {lengthSuggestion.minutes}′
+              </span>
+            </button>
+          )}
         </div>
 
         <div className={`min-w-0 rounded-[22px] px-4 py-3.5 ${
@@ -1161,10 +1203,17 @@ export default function PomodoroEngine({
                   Ghi nhận theo phút thực tế
                 </span>
                 {isContinuingAfterPomodoro && (
-                  <span className={`mt-0.5 text-[11px] ${lightTheme ? 'text-[var(--muted)]' : 'text-slate-400'}`}>
-                    {continuedPomodoroConfirmationPending
-                      ? 'Đã dừng ở mốc 15 phút thêm'
-                      : `Phiên đếm ngược ${currentSessionTargetMinutes} phút đã hoàn thành`}
+                  <span className="mt-1 flex flex-col items-center leading-tight">
+                    <span className={`text-[11px] font-semibold ${lightTheme ? 'text-[var(--accent)]' : 'text-[var(--accent-light)]'}`}>
+                      {continuedPomodoroConfirmationPending
+                        ? 'Đã thêm 15 phút nữa — tiếp tục hay dừng?'
+                        : `Xong ${currentSessionTargetMinutes}′ — đang tính giờ thêm`}
+                    </span>
+                    {!continuedPomodoroConfirmationPending && (
+                      <span className={`mt-0.5 text-[10px] ${lightTheme ? 'text-[var(--muted)]' : 'text-slate-400'}`}>
+                        Bấm Hết Phiên khi muốn dừng
+                      </span>
+                    )}
                   </span>
                 )}
               </>
@@ -2142,9 +2191,14 @@ function CategoryChip({ active, color, disabled, label, onClick }) {
   );
 }
 
-function SessionReviewCard({ completedGoalAchieved, goalText, onPick }) {
+function SessionReviewCard({ completedGoalAchieved, goalText, goalBonusXP = 0, goalBonusEP = 0, onPick }) {
   const uiTheme = useSettingsStore((s) => s.uiTheme);
   const lightTheme = uiTheme === 'light';
+  const showGoalBonus = completedGoalAchieved === true && (goalBonusXP > 0 || goalBonusEP > 0);
+  const bonusParts = [
+    goalBonusXP > 0 ? `+${goalBonusXP} EXP` : null,
+    goalBonusEP > 0 ? `+${goalBonusEP} EP` : null,
+  ].filter(Boolean);
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
@@ -2194,6 +2248,15 @@ function SessionReviewCard({ completedGoalAchieved, goalText, onPick }) {
           Chưa đạt
         </button>
       </div>
+      {showGoalBonus && (
+        <motion.p
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          className={`mt-3 text-center text-[13px] font-semibold ${lightTheme ? 'text-[var(--good)]' : 'text-emerald-300'}`}
+        >
+          🎯 Hoàn thành mục tiêu — thưởng {bonusParts.join(' · ')}
+        </motion.p>
+      )}
     </motion.div>
   );
 }

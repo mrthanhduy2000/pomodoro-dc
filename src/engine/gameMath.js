@@ -121,6 +121,7 @@ import {
   WARMUP_REDUCED_THRESHOLD,
   DA_NANG_RESOURCE_BONUS,
   CAN_BANG_RESOURCE_BONUS,
+  STREAK_MILESTONES,
 } from './constants';
 
 // ─── Hàm ngẫu nhiên ──────────────────────────────────────────────────────────
@@ -801,6 +802,133 @@ export function isCancelledHistoryEntry(entry) {
   return entry?.status === HISTORY_ENTRY_STATUS.CANCELLED
     || entry?.cancelled === true
     || (entry?.completed === false && Boolean(entry?.cancelledAt));
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GỢI Ý ĐỘ DÀI PHIÊN — học từ chính lịch sử của người dùng theo buổi trong ngày
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Cần ít nhất bấy nhiêu phiên "thành công" trong buổi mới đủ tự tin để gợi ý.
+export const SESSION_SUGGESTION_MIN_SAMPLE = 3;
+
+export const TIME_OF_DAY_BUCKETS = [
+  { id: 'sang',  label: 'buổi sáng',  startHour: 5,  endHour: 11 },
+  { id: 'trua',  label: 'buổi trưa',  startHour: 11, endHour: 13 },
+  { id: 'chieu', label: 'buổi chiều', startHour: 13, endHour: 18 },
+  { id: 'toi',   label: 'buổi tối',   startHour: 18, endHour: 23 },
+  { id: 'khuya', label: 'đêm khuya',  startHour: 23, endHour: 5 },
+];
+
+export function getTimeOfDayBucket(hour) {
+  const h = ((Math.floor(Number(hour) || 0) % 24) + 24) % 24;
+  for (const bucket of TIME_OF_DAY_BUCKETS) {
+    if (bucket.startHour < bucket.endHour) {
+      if (h >= bucket.startHour && h < bucket.endHour) return bucket;
+    } else if (h >= bucket.startHour || h < bucket.endHour) {
+      // Buổi vắt qua nửa đêm (đêm khuya 23h → 5h)
+      return bucket;
+    }
+  }
+  return TIME_OF_DAY_BUCKETS[0];
+}
+
+function medianRoundedTo5(values) {
+  if (!values.length) return null;
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  const med = sorted.length % 2 === 0
+    ? (sorted[mid - 1] + sorted[mid]) / 2
+    : sorted[mid];
+  return Math.round(med / 5) * 5;
+}
+
+/**
+ * suggestSessionLength
+ * Gợi ý độ dài phiên kế tiếp dựa trên các phiên TỪNG THÀNH CÔNG vào cùng buổi
+ * trong ngày. "Thành công" = đạt mục tiêu (nếu buổi đó đã có dữ liệu mục tiêu);
+ * nếu chưa có, coi mọi phiên hoàn thành (không bị huỷ) là thành công. Ưu tiên
+ * cùng loại việc khi đủ mẫu, nếu không thì lùi về mọi loại. Trả về null khi
+ * chưa đủ dữ liệu để tự tin gợi ý.
+ *
+ * @param {Array} history
+ * @param {object} opts
+ * @param {number} opts.nowHour              giờ hiện tại (0-23)
+ * @param {string|null} opts.categoryId      loại việc đang chọn (null = mọi loại)
+ * @param {(entry:any)=>number} opts.getEntryHour  lấy giờ của 1 phiên từ timestamp
+ * @returns {{minutes:number,bucketId:string,bucketLabel:string,sampleSize:number,basis:'goal'|'completed',categoryScoped:boolean}|null}
+ */
+export function suggestSessionLength(history = [], opts = {}) {
+  const {
+    nowHour = 0,
+    categoryId = null,
+    getEntryHour = (entry) => new Date(entry?.timestamp ?? 0).getHours(),
+  } = opts;
+  if (!Array.isArray(history) || history.length === 0) return null;
+
+  const bucket = getTimeOfDayBucket(nowHour);
+  const inBucket = history.filter((entry) => {
+    if (!entry || isCancelledHistoryEntry(entry) || entry.completed === false) return false;
+    if (!Number.isFinite(entry.minutes) || entry.minutes <= 0) return false;
+    return getTimeOfDayBucket(getEntryHour(entry)).id === bucket.id;
+  });
+  if (inBucket.length === 0) return null;
+
+  const pickSuccessful = (entries) => {
+    const hasGoalData = entries.some((e) => typeof e.goalAchieved === 'boolean');
+    const successful = hasGoalData
+      ? entries.filter((e) => e.goalAchieved === true)
+      : entries;
+    return { successful, basis: hasGoalData ? 'goal' : 'completed' };
+  };
+
+  let scoped = false;
+  let pool = inBucket;
+  if (categoryId != null) {
+    const sameCat = inBucket.filter((e) => (e.categoryId ?? null) === categoryId);
+    if (pickSuccessful(sameCat).successful.length >= SESSION_SUGGESTION_MIN_SAMPLE) {
+      pool = sameCat;
+      scoped = true;
+    }
+  }
+
+  const { successful, basis } = pickSuccessful(pool);
+  if (successful.length < SESSION_SUGGESTION_MIN_SAMPLE) return null;
+
+  const minutes = medianRoundedTo5(successful.map((e) => e.minutes));
+  if (!minutes || minutes <= 0) return null;
+
+  return {
+    minutes: Math.min(180, Math.max(1, minutes)),
+    bucketId: bucket.id,
+    bucketLabel: bucket.label,
+    sampleSize: successful.length,
+    basis,
+    categoryScoped: scoped,
+  };
+}
+
+/**
+ * calculateStreakMilestoneProgress
+ * Cho biết mốc chuỗi kế tiếp và còn bao nhiêu ngày — để hiện "đích gần" thay vì
+ * con số trừu tượng. Thuần, dễ test.
+ *
+ * @param {number} currentStreak
+ * @returns {{nextMilestone:object|null, daysRemaining:number, allMilestones:object[], hasUnlockedAll:boolean}}
+ */
+export function calculateStreakMilestoneProgress(currentStreak = 0) {
+  const streak = Math.max(0, Math.floor(Number(currentStreak) || 0));
+  const allMilestones = STREAK_MILESTONES.map((m) => ({
+    ...m,
+    daysRemaining: Math.max(0, m.days - streak),
+    isUnlocked: streak >= m.days,
+  }));
+  const nextMilestone = allMilestones.find((m) => !m.isUnlocked) ?? null;
+  return {
+    nextMilestone,
+    daysRemaining: nextMilestone ? nextMilestone.daysRemaining : 0,
+    allMilestones,
+    hasUnlockedAll: nextMilestone === null,
+  };
 }
 
 function getHistoryXP(entry) {

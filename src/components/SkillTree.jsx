@@ -19,6 +19,7 @@ import useGameStore       from '../store/gameStore';
 import useSettingsStore   from '../store/settingsStore';
 import soundEngine        from '../engine/soundEngine';
 import DailyMissions      from './DailyMissions';
+import { SkillGlyph, BranchGlyph, BoltGlyph } from './icons/Glyph';
 import {
   SKILL_TREE,
   SKILL_SYNERGIES,
@@ -236,12 +237,12 @@ export default function SkillTree({ onOpenAchievements }) {
               <div className="min-w-0">
                 <p className="mono text-[10px] uppercase tracking-[0.22em]" style={{ color: 'var(--muted-2)' }}>Cây kỹ năng</p>
                 <h3 className="mt-1 flex items-center gap-2 text-[1.45rem] font-semibold leading-tight" style={{ fontFamily: 'var(--skin-font-display)', color: 'var(--ink)' }}>
-                  <span aria-hidden>{selectedBranch.icon}</span>{selectedBranch.label}
+                  <BranchGlyph branch={activeBranch} size={24} />{selectedBranch.label}
                 </h3>
                 <p className="mt-1 text-[12px] leading-snug" style={{ color: 'var(--muted)' }}>{selectedBranch.focus}</p>
               </div>
               <div className="flex shrink-0 items-center gap-1.5 px-3 py-1.5" style={{ background: 'rgba(var(--accent-rgb), 0.1)', border: '1px solid rgba(var(--accent-rgb), 0.18)', borderRadius: 'var(--skin-radius-control,14px)' }}>
-                <span aria-hidden style={{ color: 'var(--accent2)' }}>⚡</span>
+                <span style={{ color: 'var(--accent2)', display: 'inline-flex' }}><BoltGlyph size={14} /></span>
                 <span className="mono text-[15px] font-bold tabular-nums" style={{ color: 'var(--ink)' }}>{sp}</span>
                 <span className="mono text-[10px] uppercase tracking-[0.18em]" style={{ color: 'var(--accent2)' }}>SP</span>
               </div>
@@ -263,7 +264,7 @@ export default function SkillTree({ onOpenAchievements }) {
                       ? { background: 'var(--ink)', color: 'var(--canvas)' }
                       : { background: 'rgba(var(--accent-rgb),0.06)', color: 'var(--muted)', border: '1px solid var(--line)' }}
                   >
-                    <span aria-hidden style={{ fontSize: '12px' }}>{b.icon}</span>
+                    <BranchGlyph branch={key} size={14} />
                     <span className="hidden sm:inline">{b.label}</span>
                     <span className="tabular-nums" style={{ opacity: 0.7 }}>{owned}/{b.nodes.length}</span>
                   </button>
@@ -479,7 +480,7 @@ function SkillNode({ node, nodeState, isLast, reducedMotion, onBuy }) {
             : undefined}
           transition={isAvailable && !reducedMotion ? { duration: 2.4, repeat: Infinity } : undefined}
         >
-          <span aria-hidden>{isLocked ? '🔒' : node.icon}</span>
+          <SkillGlyph id={node.id} locked={isLocked} size={20} />
         </motion.span>
         {!isLast && (
           <span
@@ -574,10 +575,10 @@ function RecentAchievements({ onOpen }) {
                 type="button"
                 onClick={onOpen}
                 title={tierLabel ? `${a.label} · ${tierLabel}` : a.label}
-                className="flex aspect-square items-center justify-center text-[22px] leading-none transition-transform hover:-translate-y-0.5"
+                className="flex aspect-square items-center justify-center transition-transform hover:-translate-y-0.5"
                 style={{ background: withAlpha(tint, 0.12), border: `1px solid ${withAlpha(tint, 0.3)}`, borderRadius: 'var(--skin-radius-control,14px)' }}
               >
-                <span aria-hidden>{a.icon}</span>
+                <span className="mono text-[13px] font-semibold tracking-[0.06em]" style={{ color: tint }}>{getLabelMark(a.label, 'TT')}</span>
               </button>
             );
           })}

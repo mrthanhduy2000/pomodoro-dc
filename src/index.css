@@ -280,11 +280,13 @@ html, body, #root {
 }
 /* Swiss — tương phản mạnh, viền đậm tối, tiêu đề mono */
 [data-skin="swiss"] {
-  --skin-font-display: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
-    --skin-radius-card: 6px;
-    --skin-radius-control: 6px;
-    --skin-card-border-width: 2px;
-    --skin-card-border-color: #15140f;
+  /* Grotesk thật (International Typographic Style) — không phải mono "code" nữa */
+  --skin-font-display: 'Helvetica Neue', 'Inter', Helvetica, Arial, sans-serif;
+    /* Góc vuông tuyệt đối — đặc trưng lưới Thụy Sĩ, không bo tròn */
+    --skin-radius-card: 0px;
+    --skin-radius-control: 0px;
+    --skin-card-border-width: 1.5px;
+    --skin-card-border-color: #14130e;
     --skin-card-bg: #fffdfa;
     --skin-card-shadow: none;
     --skin-surface-blur: 0px;
@@ -317,6 +319,12 @@ html, body, #root {
     /* đĩa đồng hồ trắng giấy, track xám trung tính rõ để thành vòng có cấu trúc */
     --timer-disc: #fffdfa;
     --timer-track: #d3cdbd;
+}
+/* Thụy Sĩ = cạnh cứng tuyệt đối: ép MỌI bo góc (mọi class rounded-* kể cả
+   rounded-3xl / rounded-[Npx] tuỳ biến) thành góc vuông cho đồng bộ với lưới.
+   Vòng tròn đồng hồ là <svg> nên không bị ảnh hưởng — vẫn là hình tròn chuẩn. */
+[data-skin="swiss"] [class*="rounded"] {
+  border-radius: 0 !important;
 }
 /* Ink & Gold — nền tối, điểm vàng đồng (cần ghép data-theme="dark" khi bật) */
 [data-skin="inkgold"] {

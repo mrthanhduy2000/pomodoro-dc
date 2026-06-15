@@ -1824,7 +1824,7 @@ export const MISSION_CATALOG = [
 export const WEEKLY_CHAINS = [
   {
     id:    'chain_genesis',
-    title: '🌋 Thuở Khai Thiên',
+    title: 'Thuở Khai Thiên',
     flavor: 'Nhen nhóm ngọn lửa văn minh đầu tiên',
     steps: [
       { id: 'wq_g1', label: 'Nhóm lửa — hoàn thành phiên đầu tiên',      type: 'sessions',         goal: 1,  rewardXP: 25 },
@@ -1836,7 +1836,7 @@ export const WEEKLY_CHAINS = [
   },
   {
     id:    'chain_civilization',
-    title: '🏛️ Bình Minh Văn Minh',
+    title: 'Bình Minh Văn Minh',
     flavor: 'Xây dựng nền tảng cho đế chế tương lai',
     steps: [
       { id: 'wq_c1', label: 'Đặt móng — khai mở tuần mới với 1 phiên',   type: 'sessions',      goal: 1,   rewardXP: 25  },
@@ -1848,7 +1848,7 @@ export const WEEKLY_CHAINS = [
   },
   {
     id:    'chain_industry',
-    title: '⚙️ Cuộc Cách Mạng',
+    title: 'Cuộc Cách Mạng',
     flavor: 'Vận hành guồng máy không ngừng nghỉ',
     steps: [
       { id: 'wq_i1', label: 'Nổ máy — hoàn thành 2 phiên đầu tuần',      type: 'sessions',       goal: 2,   rewardXP: 30  },
@@ -1860,7 +1860,7 @@ export const WEEKLY_CHAINS = [
   },
   {
     id:    'chain_digital',
-    title: '💡 Kỷ Nguyên Số',
+    title: 'Kỷ Nguyên Số',
     flavor: 'Kết nối trí tuệ với dòng chảy thông tin',
     steps: [
       { id: 'wq_d1', label: 'Boot up — khởi động tuần với 1 phiên',       type: 'sessions',         goal: 1,   rewardXP: 25  },
@@ -1872,7 +1872,7 @@ export const WEEKLY_CHAINS = [
   },
   {
     id:    'chain_cosmos',
-    title: '🚀 Chinh Phục Vũ Trụ',
+    title: 'Chinh Phục Vũ Trụ',
     flavor: 'Vượt qua giới hạn — khám phá vô tận',
     steps: [
       { id: 'wq_s1', label: 'Quỹ đạo thấp — 4 ngày có phiên tập trung',  type: 'daysActive',    goal: 4,   rewardXP: 75  },
@@ -1884,7 +1884,7 @@ export const WEEKLY_CHAINS = [
   },
   {
     id:    'chain_archivist',
-    title: '📚 Người Lưu Trữ',
+    title: 'Người Lưu Trữ',
     flavor: 'Tuần của ghi chép, kết nối và đúc kết',
     steps: [
       { id: 'wq_a1', label: 'Mở sổ — viết 1 ghi chú ít nhất 5 từ',        type: 'notes',            goal: 1,   rewardXP: 30  },
@@ -1896,7 +1896,7 @@ export const WEEKLY_CHAINS = [
   },
   {
     id:    'chain_ranger',
-    title: '🧭 Tuần Viễn Du',
+    title: 'Tuần Viễn Du',
     flavor: 'Đi xa bằng nhịp đều, không chỉ bằng một cú bứt tốc',
     steps: [
       { id: 'wq_r1', label: 'Rời trại — hoàn thành 2 phiên',                 type: 'sessions',         goal: 2,   rewardXP: 30  },
@@ -1908,7 +1908,7 @@ export const WEEKLY_CHAINS = [
   },
   {
     id:    'chain_harmony',
-    title: '⚖️ Nhịp Cân Bằng',
+    title: 'Nhịp Cân Bằng',
     flavor: 'Giữ nhịp bằng nhiều kiểu tập trung khác nhau',
     steps: [
       { id: 'wq_h1', label: 'Lấy đà — có 1 ngày gồm cả phiên ngắn và phiên dài', type: 'balancedDays',  goal: 1, rewardXP: 40  },

@@ -45,20 +45,20 @@ function usePWAInstall() {
 }
 
 const AMBIENT_OPTIONS = [
-  { value: 'none', label: 'Tắt', short: 'OFF', icon: '🔇' },
-  { value: 'rain', label: 'Mưa', short: 'RAIN', icon: '🌧️' },
-  { value: 'wind', label: 'Gió', short: 'WIND', icon: '🌬️' },
-  { value: 'forest', label: 'Rừng', short: 'FOREST', icon: '🌿' },
-  { value: 'coffee', label: 'Cà phê', short: 'CAFE', icon: '☕' },
-  { value: 'waves', label: 'Sóng biển', short: 'WAVES', icon: '🌊' },
-  { value: 'fireplace', label: 'Lò sưởi', short: 'FIRE', icon: '🔥' },
+  { value: 'none', label: 'Tắt', short: 'OFF' },
+  { value: 'rain', label: 'Mưa', short: 'RAIN' },
+  { value: 'wind', label: 'Gió', short: 'WIND' },
+  { value: 'forest', label: 'Rừng', short: 'FOREST' },
+  { value: 'coffee', label: 'Cà phê', short: 'CAFE' },
+  { value: 'waves', label: 'Sóng biển', short: 'WAVES' },
+  { value: 'fireplace', label: 'Lò sưởi', short: 'FIRE' },
 ];
 
 const SOUND_PACK_OPTIONS = [
-  { value: 'classic', label: 'Cổ điển', short: 'CL', icon: '🎺' },
-  { value: 'nature', label: 'Tự nhiên', short: 'NT', icon: '🌿' },
-  { value: 'synthwave', label: 'Tổng hợp', short: 'SW', icon: '🎛️' },
-  { value: 'minimal', label: 'Tối giản', short: 'MN', icon: '🔕' },
+  { value: 'classic', label: 'Cổ điển', short: 'CL' },
+  { value: 'nature', label: 'Tự nhiên', short: 'NT' },
+  { value: 'synthwave', label: 'Tổng hợp', short: 'SW' },
+  { value: 'minimal', label: 'Tối giản', short: 'MN' },
 ];
 
 const THEME_MODE_OPTIONS = [
@@ -270,7 +270,6 @@ export default function Settings() {
           <SectionHeader
             lightTheme={lightTheme}
             eyebrow="Rhythm"
-            icon="⏱️"
             title="Bộ hẹn giờ"
             description="Nhịp làm việc, khoảng nghỉ và cách app tự chuyển trạng thái."
           />
@@ -399,7 +398,6 @@ export default function Settings() {
           <SectionHeader
             lightTheme={lightTheme}
             eyebrow="Atmosphere"
-            icon="🌿"
             title="Âm nền tập trung"
             description="Chọn một không khí nền vừa đủ hiện diện, không lấn vào phần chữ và nhịp đếm."
           />
@@ -464,7 +462,6 @@ export default function Settings() {
           <SectionHeader
             lightTheme={lightTheme}
             eyebrow="Signals"
-            icon="🔊"
             title="Âm thanh hệ thống"
             description="Tiếng báo bắt đầu, đếm ngược cuối phiên và tín hiệu hoàn tất."
           />
@@ -529,7 +526,6 @@ export default function Settings() {
           <SectionHeader
             lightTheme={lightTheme}
             eyebrow="Pack"
-            icon="🎵"
             title="Gói âm thanh"
             description="Mỗi pack đổi chất liệu tiếng báo, không đổi bố cục hay nhịp vận hành."
           />
@@ -560,7 +556,6 @@ export default function Settings() {
           <SectionHeader
             lightTheme={lightTheme}
             eyebrow="Alerts"
-            icon="🔔"
             title="Thông báo"
             description="Tín hiệu ngoài tab khi một phiên vừa kết thúc hoặc đã tới lúc quay lại."
           />
@@ -672,7 +667,6 @@ export default function Settings() {
           <SectionHeader
             lightTheme={lightTheme}
             eyebrow="Surface"
-            icon="🎨"
             title="Giao diện"
             description="Chọn bề mặt nền và chủ đề UI. Bản sáng editorial vẫn là cấu hình hợp nhất với shell hiện tại."
           />
@@ -789,7 +783,6 @@ export default function Settings() {
           <SectionHeader
             lightTheme={lightTheme}
             eyebrow="Archive"
-            icon="💾"
             title="Dữ liệu"
             description="Xuất, nhập và sao lưu toàn bộ hành trình ngay trong trình duyệt."
           />
@@ -803,7 +796,6 @@ export default function Settings() {
             <SectionHeader
               lightTheme={lightTheme}
               eyebrow="Cycle"
-              icon="⭐"
               title="New Game+"
               description="Bắt đầu một vòng mới với chỉ số nền tốt hơn sau khi chạm ngưỡng EP yêu cầu."
             />
@@ -838,7 +830,6 @@ export default function Settings() {
             <SectionHeader
               lightTheme={lightTheme}
               eyebrow="Install"
-              icon="📱"
               title="Cài đặt app"
               description="Đưa DC Pomodoro lên thiết bị để mở nhanh và chạy như một ứng dụng riêng."
             />
@@ -880,7 +871,6 @@ export default function Settings() {
           <SectionHeader
             lightTheme={lightTheme}
             eyebrow="About"
-            icon="ℹ️"
             title="Giới thiệu"
             description="Tóm tắt sản phẩm và phạm vi lưu trữ hiện tại."
           />
@@ -898,7 +888,6 @@ export default function Settings() {
           <SectionHeader
             lightTheme={lightTheme}
             eyebrow="Reset"
-            icon="⚠️"
             title="Vùng nguy hiểm"
             description="Xóa vĩnh viễn toàn bộ tiến trình. Không có thao tác hoàn tác."
           />

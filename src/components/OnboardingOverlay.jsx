@@ -6,11 +6,13 @@
 import { motion } from 'framer-motion';
 import useGameStore from '../store/gameStore';
 import useSettingsStore from '../store/settingsStore';
+import { Glyph } from './icons/Glyph';
+import { SKILL_GLYPHS, FLAME_GLYPH } from './icons/glyphData';
 
 const STEPS = [
-  { icon: '🎯', title: 'Đặt mục tiêu rồi bấm Bắt đầu', body: 'Ghi đích đến cho phiên, chọn thời lượng (mặc định 25 phút) rồi tập trung tới khi hết giờ.' },
-  { icon: '🏛️', title: 'Hoàn thành để lớn lên', body: 'Mỗi phiên xong cho XP và tài nguyên — lên cấp, mở kỹ năng và bước qua các thời đại mới.' },
-  { icon: '🔥', title: 'Quay lại mỗi ngày', body: 'Hết giờ thì nghỉ ngắn rồi vào lại. Giữ chuỗi ngày liên tục để nhận thưởng lớn hơn.' },
+  { glyph: SKILL_GLYPHS.bac_thay_chien_luoc, title: 'Đặt mục tiêu rồi bấm Bắt đầu', body: 'Ghi đích đến cho phiên, chọn thời lượng (mặc định 25 phút) rồi tập trung tới khi hết giờ.' },
+  { glyph: SKILL_GLYPHS.kien_thuc_nen, title: 'Hoàn thành để lớn lên', body: 'Mỗi phiên xong cho XP và tài nguyên — lên cấp, mở kỹ năng và bước qua các thời đại mới.' },
+  { glyph: FLAME_GLYPH, title: 'Quay lại mỗi ngày', body: 'Hết giờ thì nghỉ ngắn rồi vào lại. Giữ chuỗi ngày liên tục để nhận thưởng lớn hơn.' },
 ];
 
 export default function OnboardingOverlay() {
@@ -52,10 +54,10 @@ export default function OnboardingOverlay() {
           {STEPS.map((step, i) => (
             <div key={step.title} className="flex items-start gap-3">
               <span
-                className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-[18px]"
-                style={{ background: lightTheme ? 'rgba(244,242,236,0.96)' : 'rgba(255,255,255,0.06)' }}
+                className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full"
+                style={{ background: lightTheme ? 'rgba(244,242,236,0.96)' : 'rgba(255,255,255,0.06)', color: lightTheme ? '#c96442' : '#e0764f' }}
               >
-                {step.icon}
+                <Glyph markup={step.glyph} size={18} />
               </span>
               <div className="min-w-0">
                 <p className="text-[14px] font-semibold leading-snug" style={{ color: lightTheme ? '#1f1e1d' : '#fafafa' }}>

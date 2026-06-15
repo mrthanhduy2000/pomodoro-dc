@@ -750,8 +750,6 @@ export default function PomodoroEngine({
     ? (breakIsLong ? 'var(--accent2)' : 'var(--accent)')
     : (breakIsLong ? '#60a5fa' : '#38bdf8');
   const strokeDashoffset = RING_CIRCUMFERENCE - (displayProgressPct / 100) * RING_CIRCUMFERENCE;
-  // Góc của "kim" tiến độ (0–360°) — đồng bộ với vòng cung tiến độ.
-  const progressAngle = (displayProgressPct / 100) * 360;
   const baseRingColor = isBreakMode
     ? breakRingColor
     : (RING_COLORS[timerState] ?? RING_COLORS[TIMER_STATES.IDLE]);
@@ -1180,27 +1178,6 @@ export default function PomodoroEngine({
           >
             <circle cx={SVG_SIZE / 2} cy={SVG_SIZE / 2} r={RING_RADIUS - RING_STROKE / 2 - 2} style={{ fill: 'var(--timer-disc, #0c1320)' }} />
             <circle cx={SVG_SIZE / 2} cy={SVG_SIZE / 2} r={RING_RADIUS} fill="none" style={{ stroke: 'var(--timer-track, #1e3a52)' }} strokeWidth={RING_STROKE} />
-            {/* Trường vòng đồng tâm Müller-Brockmann — bố cục tĩnh, chiều sâu */}
-            {[104, 84, 66, 50, 36].map((r) => (
-              <circle key={`cc-${r}`} cx={SVG_SIZE / 2} cy={SVG_SIZE / 2} r={r} fill="none" style={{ stroke: 'var(--timer-track, #1e3a52)' }} strokeWidth={1.3} opacity={0.5} />
-            ))}
-            {/* Thang chia 60 vạch (kiểu mặt đồng hồ đo) — vạch thứ 5 dài hơn */}
-            {Array.from({ length: 60 }).map((_, i) => {
-              const ang = (i * 6) * Math.PI / 180;
-              const major = i % 5 === 0;
-              const cx = SVG_SIZE / 2;
-              const r2 = RING_RADIUS - RING_STROKE - 3;
-              const r1 = r2 - (major ? 11 : 6);
-              return (
-                <line
-                  key={`tk-${i}`}
-                  x1={cx + r1 * Math.cos(ang)} y1={cx + r1 * Math.sin(ang)}
-                  x2={cx + r2 * Math.cos(ang)} y2={cx + r2 * Math.sin(ang)}
-                  style={{ stroke: major ? 'var(--muted-2)' : 'var(--line)' }}
-                  strokeWidth={major ? 1.6 : 1} opacity={major ? 0.5 : 0.26}
-                />
-              );
-            })}
             {isStopwatchMode && !isBreakMode ? (
               <circle
                 cx={SVG_SIZE / 2}
@@ -1228,17 +1205,6 @@ export default function PomodoroEngine({
                   stroke: { duration: 0.3 },
                 }}
               />
-            )}
-            {/* Kim tiến độ xuyên tâm — quét theo thời gian (ẩn ở chế độ bấm giờ mở) */}
-            {!(isStopwatchMode && !isBreakMode) && (
-              <g transform={`rotate(${progressAngle}, ${SVG_SIZE / 2}, ${SVG_SIZE / 2})`}>
-                <line
-                  x1={SVG_SIZE / 2 + 34} y1={SVG_SIZE / 2}
-                  x2={SVG_SIZE / 2 + RING_RADIUS - RING_STROKE - 2} y2={SVG_SIZE / 2}
-                  style={{ stroke: ringColor }} strokeWidth={2.4} strokeLinecap="round"
-                />
-                <circle cx={SVG_SIZE / 2 + RING_RADIUS - RING_STROKE / 2} cy={SVG_SIZE / 2} r={4.5} style={{ fill: ringColor }} />
-              </g>
             )}
           </svg>
           </motion.div>

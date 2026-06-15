@@ -3,35 +3,12 @@
  * AI Coach hiện là thẻ "tĩnh" dùng SỐ LIỆU THẬT (gợi ý độ dài phiên theo lịch sử) —
  * sẽ nối backend Claude ở bước sau. Tất cả skin-aware qua biến CSS.
  */
-import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import useGameStore from '../store/gameStore';
-import { calculateStreakMilestoneProgress, generateCoachInsight } from '../engine/gameMath';
-import {
-  getVietnamHour, getVietnamDayOfWeek, localWeekMondayStr, localPrevWeekMondayStr,
-  vietnamDayNumber, localDateStr, localDateStrDaysAgo,
-} from '../engine/time';
-
-// Bộ nhớ chống-lặp lời khuyên coach — lưu THEO THIẾT BỊ (localStorage), không đồng
-// bộ qua Supabase để tránh đua ghi giữa các máy. Chỉ ghi 1 lần mỗi ngày.
-const COACH_RECENT_KEY = 'dc-coach-recent';
-
-function readCoachRecentKinds() {
-  try {
-    const v = JSON.parse(localStorage.getItem(COACH_RECENT_KEY) || 'null');
-    return Array.isArray(v?.kinds) ? v.kinds : [];
-  } catch { return []; }
-}
-
-function recordCoachKind(kind, today) {
-  try {
-    const cur = JSON.parse(localStorage.getItem(COACH_RECENT_KEY) || 'null');
-    if (cur && cur.day === today) return;            // hôm nay đã ghi rồi
-    const prev = Array.isArray(cur?.kinds) ? cur.kinds : [];
-    const kinds = [kind, ...prev.filter((k) => k !== kind)].slice(0, 4);
-    localStorage.setItem(COACH_RECENT_KEY, JSON.stringify({ day: today, kinds }));
-  } catch { /* bỏ qua nếu localStorage không dùng được */ }
-}
+import { calculateStreakMilestoneProgress } from '../engine/gameMath';
+import { localWeekMondayStr } from '../engine/time';
+import useCoachInsight from '../hooks/useCoachInsight';
+import CoachCard from './CoachCard';
 
 const cardStyle = {
   background: 'var(--card-bg-solid)',
@@ -78,9 +55,6 @@ export default function FocusRail({
   const streak = useGameStore((s) => s.streak);
   const hasShield = useGameStore((s) => !!s.player.unlockedSkills?.la_chan_streak);
   const dailyTracking = useGameStore((s) => s.dailyTracking);
-  const history = useGameStore((s) => s.history);
-  const sessionCategories = useGameStore((s) => s.sessionCategories);
-  const [recentKinds] = useState(readCoachRecentKinds);
 
   const useMinutes = dailyGoalType === 'minutes';
   const goalValue = useMinutes ? dailyGoalMinutes : dailyGoalSessions;
@@ -94,38 +68,9 @@ export default function FocusRail({
   const shieldAvailable = hasShield && streak?.skipShieldUsedWeekKey !== localWeekMondayStr();
   const milestone = calculateStreakMilestoneProgress(currentStreak);
 
-  const entryDate = (e) => new Date(e?.timestamp ?? 0);
-  const today = vietnamDayNumber();
-  const activeCategoryIds = new Set((sessionCategories ?? []).map((c) => c.id));
-  const coach = generateCoachInsight(history ?? [], {
-    nowHour: getVietnamHour(),
-    getEntryHour: (e) => getVietnamHour(entryDate(e)),
-    getEntryWeekday: (e) => getVietnamDayOfWeek(entryDate(e)),
-    getEntryWeekKey: (e) => localWeekMondayStr(entryDate(e)),
-    nowWeekKey: localWeekMondayStr(),
-    prevWeekKey: localPrevWeekMondayStr(),
-    currentStreak,
-    // Nhịp hôm nay + hiệu chỉnh mục tiêu ngày
-    dailyGoalMetric: useMinutes ? 'minutes' : 'sessions',
-    dailyGoal: goalValue,
-    sessionsToday: sessionsCompletedToday,
-    minutesToday: focusMinutesToday,
-    // Loại việc bị bỏ bê (theo số-ngày VN) — chỉ xét loại còn tồn tại
-    getEntryDayKey: (e) => localDateStr(entryDate(e)),
-    todayKey: localDateStr(),
-    minDayKey: localDateStrDaysAgo(28),
-    getEntryDayNumber: (e) => vietnamDayNumber(entryDate(e)),
-    nowDayNumber: today,
-    activeCategoryIds,
-    // Chống lặp theo thiết bị + xoay vòng theo NGÀY
-    recentKinds,
-    rotationSeed: today,
+  const coach = useCoachInsight({
+    sessionsCompletedToday, focusMinutesToday, dailyGoalType, dailyGoalSessions, dailyGoalMinutes,
   });
-
-  // Ghi lại loại lời khuyên đã hiện hôm nay để mai đỡ lặp (1 lần/ngày, theo máy).
-  useEffect(() => {
-    if (coach?.kind) recordCoachKind(coach.kind, today);
-  }, [coach?.kind, today]);
 
   return (
     <div className="space-y-4">
@@ -175,22 +120,8 @@ export default function FocusRail({
         )}
       </motion.div>
 
-      {/* AI COACH (tĩnh, số liệu thật) */}
-      <motion.div
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="p-4"
-        style={{ background: '#1f1e1d', borderRadius: 'var(--skin-radius-card,18px)', border: '1px solid rgba(217,164,65,0.22)' }}
-      >
-        <div className="flex items-center gap-1.5">
-          <span style={{ color: '#d9a441' }}>✦</span>
-          <span className="mono text-[10px] uppercase tracking-[0.2em]" style={{ color: '#d9a441' }}>AI Coach</span>
-        </div>
-        <p className="mt-2 text-[12.5px] leading-relaxed" style={{ color: '#e8e4dc' }}>{coach.text}</p>
-        {coach.reason && (
-          <p className="mt-1.5 text-[11px] leading-snug" style={{ color: 'rgba(232,228,220,0.55)' }}>{coach.reason}</p>
-        )}
-      </motion.div>
+      {/* AI COACH (số liệu thật, local) */}
+      <CoachCard text={coach.text} reason={coach.reason} />
     </div>
   );
 }

@@ -285,36 +285,42 @@ html, body, #root {
     /* Góc vuông tuyệt đối — đặc trưng lưới Thụy Sĩ, không bo tròn */
     --skin-radius-card: 0px;
     --skin-radius-control: 0px;
-    --skin-card-border-width: 1.5px;
-    --skin-card-border-color: #14130e;
+    /* Viền 2px dày, gần đen tuyền — dựng lưới kiến trúc táo bạo */
+    --skin-card-border-width: 2px;
+    --skin-card-border-color: #100f0b;
     --skin-card-bg: #fffdfa;
     --skin-card-shadow: none;
     --skin-surface-blur: 0px;
     --skin-accent-grad: none;
-    /* FLAT warm-white nền — KHÔNG gradient, đúng brutalist-lite */
-    --app-bg: var(--canvas);
-    /* palette tương phản tối đa: nền giấy ấm, mực gần đen, đỏ-cam punchy */
+    /* NỀN = LƯỚI MODULAR Müller-Brockmann: cột dọc rõ + hàng ngang mảnh,
+       hiện ra ở lề/khe thẻ → cảm giác "thiết kế trên lưới", nghệ thuật & táo bạo */
+    --app-bg:
+      repeating-linear-gradient(90deg, transparent 0 87px, rgba(16, 15, 11, 0.05) 87px 88px),
+      repeating-linear-gradient(0deg, transparent 0 87px, rgba(16, 15, 11, 0.028) 87px 88px),
+      var(--canvas);
+    /* palette tương phản tối đa: nền giấy ấm, mực gần đen, đỏ Thụy Sĩ rực */
     --canvas: #f3efe7;
     --canvas-2: #ece7db;
     --panel: #fffdfa;
     --panel-soft: #f6f2ea;
     --panel-strong: #fffdfa;
-    --ink: #15140f;
-    --ink-2: #2a2820;
-    --muted: #5a564b;
-    --muted-2: #6e695e;
+    --ink: #100f0b;
+    --ink-2: #26241d;
+    --muted: #555146;
+    --muted-2: #6b665b;
     /* viền dày gần đen — dựng lưới grid mạnh thay cho bóng đổ */
-    --line: #15140f;
-    --line-2: #15140f;
+    --line: #100f0b;
+    --line-2: #100f0b;
     --card-bg: #fffdfa;
     --card-bg-solid: #fffdfa;
     --card-bg-solid2: #f3efe7;
     --modal-bg: #fffdfa;
-    --accent: #d6492f;
-    --accent-light: #e0613f;
-    --accent2: #15140f;
-    --accent-ink: #15140f;
-    --accent-rgb: 214, 73, 47;
+    /* đỏ Thụy Sĩ rực hơn, dứt khoát hơn */
+    --accent: #df3a1e;
+    --accent-light: #e85638;
+    --accent2: #100f0b;
+    --accent-ink: #100f0b;
+    --accent-rgb: 223, 58, 30;
     --good: #2f6f4a;
     /* đĩa đồng hồ trắng giấy, track xám trung tính rõ để thành vòng có cấu trúc */
     --timer-disc: #fffdfa;
@@ -325,6 +331,15 @@ html, body, #root {
    Vòng tròn đồng hồ là <svg> nên không bị ảnh hưởng — vẫn là hình tròn chuẩn. */
 [data-skin="swiss"] [class*="rounded"] {
   border-radius: 0 !important;
+}
+/* Chữ tiêu đề kiểu áp phích Thụy Sĩ: nặng & bó sát (Helvetica đậm, tracking âm)
+   → tương phản mạnh với nhãn mono nhỏ, tạo cảm giác poster nghệ thuật, táo bạo. */
+[data-skin="swiss"] h1,
+[data-skin="swiss"] h2,
+[data-skin="swiss"] h3,
+[data-skin="swiss"] h4 {
+  font-weight: 800 !important;
+  letter-spacing: -0.03em;
 }
 /* Ink & Gold — nền tối, điểm vàng đồng (cần ghép data-theme="dark" khi bật) */
 [data-skin="inkgold"] {

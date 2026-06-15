@@ -18,6 +18,7 @@ import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import useGameStore       from '../store/gameStore';
 import useSettingsStore   from '../store/settingsStore';
 import soundEngine        from '../engine/soundEngine';
+import DailyMissions      from './DailyMissions';
 import {
   SKILL_TREE,
   SKILL_SYNERGIES,
@@ -25,6 +26,8 @@ import {
   SO_DO_CHARGES,
   EXP_PER_LEVEL,
   SP_PER_LEVEL,
+  ACHIEVEMENTS,
+  ACHIEVEMENT_TIERS,
 } from '../engine/constants';
 import { getLevelProgress } from '../engine/gameMath';
 
@@ -66,32 +69,38 @@ const TIER_STYLE = {
   },
 };
 
-const makeLightBranchPalette = (title, rgb) => ({
-  title,
-  border: `rgba(${rgb}, 0.42)`,
-  divider: `rgba(${rgb}, 0.18)`,
-  glow: `rgba(${rgb}, 0.08)`,
-  chipBg: `rgba(${rgb}, 0.08)`,
-  chipBorder: `rgba(${rgb}, 0.16)`,
-  availableBg: `linear-gradient(135deg, rgba(${rgb}, 0.08), rgba(255, 255, 255, 0.92))`,
-  unlockedBg: `linear-gradient(135deg, rgba(${rgb}, 0.14), rgba(250, 249, 246, 0.96))`,
-  lineActive: `rgba(${rgb}, 0.30)`,
-  lineInactive: 'rgba(31, 30, 29, 0.08)',
-  shadow: `rgba(${rgb}, 0.08)`,
-});
-
-const BRANCH_LIGHT_PALETTES = {
-  THIEN_DINH: makeLightBranchPalette('#9a5a48', '201, 100, 66'),
-  Y_CHI: makeLightBranchPalette('#8d5c54', '141, 92, 84'),
-  NGHI_NGOI: makeLightBranchPalette('#68796a', '104, 121, 106'),
-  VAN_MAY: makeLightBranchPalette('#7a6877', '122, 104, 119'),
-  CHIEN_LUOC: makeLightBranchPalette('#9c7645', '156, 118, 69'),
-  THANG_HOA: makeLightBranchPalette('#667487', '102, 116, 135'),
-};
-
 const SKILL_LABELS = Object.fromEntries(
   Object.values(SKILL_TREE).flatMap((branch) => branch.nodes.map((node) => [node.id, node.label]))
 );
+
+const BRANCH_KEYS = Object.keys(SKILL_TREE);
+
+// Bản đồ tra cứu thành tựu theo id + tông màu bậc dịu mắt (hợp nền giấy ấm)
+const ACHIEVEMENT_BY_ID = Object.fromEntries(ACHIEVEMENTS.map((a) => [a.id, a]));
+const ACH_TIER_TINT = {
+  bronze: '#b27c50',
+  silver: '#a39e96',
+  gold: '#c39a58',
+  platinum: '#a68995',
+  diamond: '#839bb0',
+};
+
+function withAlpha(hex, alpha) {
+  const m = String(hex || '').replace('#', '');
+  if (m.length !== 6) return hex;
+  const r = parseInt(m.slice(0, 2), 16);
+  const g = parseInt(m.slice(2, 4), 16);
+  const b = parseInt(m.slice(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+// Thẻ chuẩn dùng chung — tự đổi theo skin (bo góc, viền, bóng)
+const CARD = {
+  background: 'var(--card-bg-solid)',
+  border: 'var(--skin-card-border-width,1px) solid var(--line)',
+  borderRadius: 'var(--skin-radius-card,18px)',
+  boxShadow: 'var(--skin-card-shadow)',
+};
 
 function getTierBadgeProps(tierStyle, lightTheme) {
   if (!lightTheme) {
@@ -122,7 +131,7 @@ function getLabelMark(label, fallback = 'NA') {
 
 // ─────────────────────────────────────────────────────────────────────────────
 
-export default function SkillTree() {
+export default function SkillTree({ onOpenAchievements }) {
   const uiTheme            = useSettingsStore((s) => s.uiTheme);
   const sp                 = useGameStore((s) => s.player.sp);
   const totalEXP           = useGameStore((s) => s.player.totalEXP);
@@ -136,6 +145,7 @@ export default function SkillTree() {
   const { progressPct, currentLevelEXP, nextLevelEXP } = getLevelProgress(totalEXP);
 
   const [confirmNode, setConfirmNode] = useState(null);
+  const [activeBranch, setActiveBranch] = useState(BRANCH_KEYS[0]);
   const prefersReducedMotion = useReducedMotion();
   const lightTheme = uiTheme === 'light';
 
@@ -186,86 +196,116 @@ export default function SkillTree() {
     return { activeSynergies: active, branchCounts: counts };
   }, [unlockedSkills]);
 
-  return (
-    <div className="w-full max-w-5xl mx-auto">
+  const selectedBranch = SKILL_TREE[activeBranch];
 
-      {/* ── Header: cấp + SP ──────────────────────────────────────────────── */}
-      <div
-        className={`p-3.5 sm:p-4 mb-4 sm:mb-5 ${lightTheme ? '' : 'bg-white/[0.04] border border-white/8 rounded-2xl'}`}
-        style={lightTheme ? {
-          background: 'var(--card-bg-solid)',
-          border: 'var(--skin-card-border-width,1px) solid var(--line)',
-          borderRadius: 'var(--skin-radius-card,18px)',
-          boxShadow: 'var(--skin-card-shadow)',
-        } : undefined}
-      >
-        <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
+  return (
+    <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-4">
+
+      {/* ── Tóm tắt tiến trình: cấp + XP ─────────────────────────────────── */}
+      <div className="px-5 py-4" style={CARD}>
+        <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            {lightTheme && (
-              <p className="mono text-[10px] uppercase tracking-[0.2em]" style={{ color: 'var(--muted-2)' }}>
-                Kỹ năng
-              </p>
-            )}
-            <div className="flex flex-wrap items-baseline gap-2">
-              <span className="serif text-[1.85rem] leading-none sm:text-3xl" style={lightTheme ? { fontFamily: 'var(--skin-font-display)', fontWeight: 600, color: 'var(--ink)' } : { color: 'var(--ink)' }}>
-                Cấp {level}
-              </span>
-              <span className="text-sm" style={lightTheme ? { color: 'var(--muted)' } : { color: 'var(--muted)' }}>
-                {currentLevelEXP.toLocaleString()} / {nextLevelEXP.toLocaleString()} XP
-              </span>
-            </div>
-            {lightTheme && (
-              <p className="mt-1 max-w-xl text-xs leading-relaxed" style={{ color: 'var(--muted)' }}>
-                Mỗi nhánh nên tạo ra một thay đổi rõ trong cách làm việc.
-              </p>
-            )}
-          </div>
-          <div className="flex items-center gap-3">
-            <span className="text-xs uppercase tracking-[0.16em]" style={lightTheme ? { color: 'var(--muted)' } : { color: 'var(--muted)' }}>{unlockedCount}/{totalNodes} kỹ năng</span>
-            <div
-              className={`flex items-center gap-2 px-4 py-1.5 ${lightTheme ? '' : 'bg-white/[0.05] border border-white/8 rounded-xl'}`}
-              style={lightTheme ? {
-                background: 'rgba(var(--accent-rgb), 0.1)',
-                border: '1px solid rgba(var(--accent-rgb), 0.18)',
-                borderRadius: 'var(--skin-radius-control,14px)',
-                boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.8)',
-              } : undefined}
-            >
-              <span className="mono text-[10px] uppercase tracking-[0.18em]" style={lightTheme ? { color: 'var(--accent2)' } : { color: 'var(--accent-light)' }}>SP</span>
-              <span className="mono font-bold text-xl tabular-nums" style={lightTheme ? { color: 'var(--ink)' } : { color: 'var(--ink)' }}>{sp}</span>
+            <p className="mono text-[10px] uppercase tracking-[0.22em]" style={{ color: 'var(--muted-2)' }}>Tiến trình</p>
+            <div className="mt-1 flex flex-wrap items-baseline gap-2">
+              <span className="text-[1.7rem] font-semibold leading-none" style={{ fontFamily: 'var(--skin-font-display)', color: 'var(--ink)' }}>Cấp {level}</span>
+              <span className="mono text-[12px] tabular-nums" style={{ color: 'var(--muted)' }}>{currentLevelEXP.toLocaleString()} / {nextLevelEXP.toLocaleString()} XP</span>
             </div>
           </div>
+          <span className="mono text-[11px] uppercase tracking-[0.16em] tabular-nums" style={{ color: 'var(--muted)' }}>{unlockedCount}/{totalNodes} kỹ năng</span>
         </div>
-        <div
-          className="w-full rounded-full h-2 overflow-hidden"
-          style={lightTheme ? { background: 'var(--timer-track)' } : { background: 'var(--timer-track)' }}
-        >
+        <div className="mt-3 h-2 w-full overflow-hidden rounded-full" style={{ background: 'var(--timer-track)' }}>
           <motion.div
             className="h-full rounded-full"
-            style={lightTheme ? { background: 'linear-gradient(90deg, var(--accent), var(--accent2))' } : { background: 'var(--accent)' }}
+            style={{ background: 'linear-gradient(90deg, var(--accent), var(--accent2))' }}
             animate={{ width: `${progressPct}%` }}
             transition={{ duration: 0.6, ease: 'easeOut' }}
           />
         </div>
-        <p className="mt-1 text-xs" style={lightTheme ? { color: 'var(--muted)' } : { color: 'var(--muted)' }}>
-          {EXP_PER_LEVEL.toLocaleString()} XP/cấp · {SP_PER_LEVEL} ĐKN mỗi cấp · Tổng 336 ĐKN để mở toàn bộ
+        <p className="mt-1.5 text-[11px]" style={{ color: 'var(--muted)' }}>
+          {EXP_PER_LEVEL.toLocaleString()} XP/cấp · {SP_PER_LEVEL} SP mỗi cấp
         </p>
       </div>
 
-      <BranchFocusStrip lightTheme={lightTheme} />
+      {/* ── Bố cục 2 cột: cây kỹ năng (trái) · ngữ cảnh (phải) ──────────── */}
+      <div className="grid gap-4 lg:grid-cols-[1.5fr_1fr]">
 
-      {/* ── Kỹ năng chủ động ─────────────────────────────────────────────── */}
-      {(unlockedSkills.sieu_tap_trung || unlockedSkills.so_do) && (
-        <ActiveAbilityBar
-          lightTheme={lightTheme}
-          unlockedSkills={unlockedSkills}
-          skillActivations={skillActivations}
-          onActivateSuperFocus={activateSuperFocus}
-          onActivateLuckyMode={activateLuckyMode}
-        />
-      )}
+        {/* TRÁI — Cây kỹ năng */}
+        <div className="flex flex-col gap-4">
+          <div className="px-5 py-5" style={CARD}>
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="mono text-[10px] uppercase tracking-[0.22em]" style={{ color: 'var(--muted-2)' }}>Cây kỹ năng</p>
+                <h3 className="mt-1 flex items-center gap-2 text-[1.45rem] font-semibold leading-tight" style={{ fontFamily: 'var(--skin-font-display)', color: 'var(--ink)' }}>
+                  <span aria-hidden>{selectedBranch.icon}</span>{selectedBranch.label}
+                </h3>
+                <p className="mt-1 text-[12px] leading-snug" style={{ color: 'var(--muted)' }}>{selectedBranch.focus}</p>
+              </div>
+              <div className="flex shrink-0 items-center gap-1.5 px-3 py-1.5" style={{ background: 'rgba(var(--accent-rgb), 0.1)', border: '1px solid rgba(var(--accent-rgb), 0.18)', borderRadius: 'var(--skin-radius-control,14px)' }}>
+                <span aria-hidden style={{ color: 'var(--accent2)' }}>⚡</span>
+                <span className="mono text-[15px] font-bold tabular-nums" style={{ color: 'var(--ink)' }}>{sp}</span>
+                <span className="mono text-[10px] uppercase tracking-[0.18em]" style={{ color: 'var(--accent2)' }}>SP</span>
+              </div>
+            </div>
 
-      {/* ── Bảng Tổ Hợp Synergy ──────────────────────────────────────────── */}
+            {/* Chọn nhánh */}
+            <div className="mt-4 flex flex-wrap gap-1.5">
+              {BRANCH_KEYS.map((key) => {
+                const b = SKILL_TREE[key];
+                const active = key === activeBranch;
+                const owned = branchCounts[key] ?? 0;
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => setActiveBranch(key)}
+                    className="mono inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-semibold transition-colors"
+                    style={active
+                      ? { background: 'var(--ink)', color: 'var(--canvas)' }
+                      : { background: 'rgba(var(--accent-rgb),0.06)', color: 'var(--muted)', border: '1px solid var(--line)' }}
+                  >
+                    <span aria-hidden style={{ fontSize: '12px' }}>{b.icon}</span>
+                    <span className="hidden sm:inline">{b.label}</span>
+                    <span className="tabular-nums" style={{ opacity: 0.7 }}>{owned}/{b.nodes.length}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Danh sách nút kỹ năng (nối nhau bằng đường mảnh) */}
+            <div className="mt-5">
+              {selectedBranch.nodes.map((node, i) => (
+                <SkillNode
+                  key={node.id}
+                  node={node}
+                  nodeState={getNodeState(node)}
+                  isLast={i === selectedBranch.nodes.length - 1}
+                  reducedMotion={prefersReducedMotion}
+                  onBuy={() => handleBuy(node)}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* Kỹ năng chủ động (chỉ hiện khi đã sở hữu) */}
+          {(unlockedSkills.sieu_tap_trung || unlockedSkills.so_do) && (
+            <ActiveAbilityBar
+              lightTheme={lightTheme}
+              unlockedSkills={unlockedSkills}
+              skillActivations={skillActivations}
+              onActivateSuperFocus={activateSuperFocus}
+              onActivateLuckyMode={activateLuckyMode}
+            />
+          )}
+        </div>
+
+        {/* PHẢI — Ngữ cảnh: nhiệm vụ ngày + chuỗi tuần + thành tựu */}
+        <div className="flex flex-col gap-4">
+          <DailyMissions />
+          <RecentAchievements onOpen={onOpenAchievements} />
+        </div>
+      </div>
+
+      {/* ── Tổ hợp kỹ năng (toàn chiều rộng) ─────────────────────────────── */}
       <SynergyPanel
         lightTheme={lightTheme}
         reducedMotion={prefersReducedMotion}
@@ -273,21 +313,6 @@ export default function SkillTree() {
         activeSynergies={activeSynergies}
         branchCounts={branchCounts}
       />
-
-      {/* ── Lưới 6 nhánh kỹ năng (3 cột × 2 hàng) ───────────────────────── */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-        {Object.entries(SKILL_TREE).map(([branchKey, branch]) => (
-          <SkillBranch
-            key={branchKey}
-            branch={branch}
-            palette={BRANCH_LIGHT_PALETTES[branchKey]}
-            lightTheme={lightTheme}
-            reducedMotion={prefersReducedMotion}
-            getNodeState={getNodeState}
-            onBuy={handleBuy}
-          />
-        ))}
-      </div>
 
       {/* ── Chú thích bậc độ ─────────────────────────────────────────────── */}
       <div className="flex flex-wrap gap-2 justify-center mt-5 pb-2">
@@ -428,254 +453,146 @@ function ActiveAbilityBar({ lightTheme, unlockedSkills, skillActivations, onActi
   );
 }
 
-function BranchFocusStrip({ lightTheme }) {
-  return (
-    <div
-      className={`mb-5 p-4 ${lightTheme ? '' : 'bg-white/[0.04] border border-white/8 rounded-2xl'}`}
-      style={lightTheme ? {
-        background: 'var(--card-bg-solid)',
-        border: 'var(--skin-card-border-width,1px) solid var(--line)',
-        borderRadius: 'var(--skin-radius-card,18px)',
-        boxShadow: 'var(--skin-card-shadow)',
-      } : { background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}
-    >
-      <div className="mb-3">
-        {lightTheme && (
-          <p className="mono text-[10px] uppercase tracking-[0.2em]" style={{ color: 'var(--muted-2)' }}>
-            Vai trò
-          </p>
-        )}
-        <p className="text-sm font-bold text-white" style={lightTheme ? { fontFamily: 'var(--skin-font-display)', fontWeight: 600, color: 'var(--ink)' } : { color: 'var(--ink)' }}>Vai trò từng nhánh</p>
-        <p className="text-xs text-slate-500" style={lightTheme ? { color: 'var(--muted)' } : { color: 'var(--muted)' }}>Đọc nhanh từng nhánh trước khi rót SP.</p>
-      </div>
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {Object.entries(SKILL_TREE).map(([branchKey, branch]) => {
-          const palette = BRANCH_LIGHT_PALETTES[branchKey];
-          return (
-            <div
-              key={branchKey}
-              className={`px-3.5 py-3 ${lightTheme ? '' : 'bg-white/[0.04] border border-white/8 rounded-2xl'}`}
-              style={lightTheme ? {
-                background: 'rgba(255, 255, 255, 0.66)',
-                border: `1px solid ${palette.divider}`,
-                borderRadius: 'var(--skin-radius-control,14px)',
-                boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.78)',
-              } : undefined}
-            >
-              <div className="mb-1.5 flex items-center gap-2">
-                <span className="mono inline-flex h-7 w-7 items-center justify-center rounded-full border text-[8px] font-semibold uppercase tracking-[0.14em]" style={lightTheme ? { borderColor: palette.divider, background: 'rgba(255,255,255,0.78)', color: palette.title } : { borderColor: 'rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.04)', color: 'var(--accent-light)' }}>{getLabelMark(branch.label)}</span>
-                <span className="text-sm font-semibold text-white" style={lightTheme ? { color: 'var(--ink)' } : { color: 'var(--ink)' }}>{branch.label}</span>
-              </div>
-              <p className="text-xs leading-relaxed text-slate-400" style={lightTheme ? { color: 'var(--muted)' } : { color: 'var(--muted)' }}>
-                {branch.focus}
-              </p>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
+// ─── SkillNode (một hàng trong cây, kiểu mockup) ──────────────────────────────
 
-// ─── SkillBranch ──────────────────────────────────────────────────────────────
-
-function SkillBranch({ branch, palette, lightTheme, reducedMotion, getNodeState, onBuy }) {
-  return (
-    <div
-      className={`p-3.5 sm:p-4 ${lightTheme ? '' : 'bg-white/[0.04] border border-white/8 rounded-2xl'}`}
-      style={lightTheme ? {
-        background: 'var(--card-bg-solid)',
-        border: `var(--skin-card-border-width,1px) solid ${palette.divider}`,
-        borderRadius: 'var(--skin-radius-card,18px)',
-        boxShadow: 'var(--skin-card-shadow)',
-      } : undefined}
-    >
-      <div
-        className={`flex items-center gap-2 mb-4 pb-3 ${lightTheme ? '' : 'border-b border-white/8'}`}
-        style={lightTheme ? { borderBottom: `1px solid ${palette.divider}` } : undefined}
-      >
-        <span className="mono inline-flex h-8 w-8 items-center justify-center rounded-full border text-[9px] font-semibold uppercase tracking-[0.14em]" style={lightTheme ? { borderColor: palette.divider, background: 'rgba(255,255,255,0.78)', color: palette.title } : { borderColor: 'rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.04)', color: 'var(--accent-light)' }}>{getLabelMark(branch.label)}</span>
-        <h3 className="font-bold text-lg" style={lightTheme ? { fontFamily: 'var(--skin-font-display)', fontWeight: 600, color: palette.title } : { color: 'var(--ink)' }}>{branch.label}</h3>
-      </div>
-      <div className="flex flex-col gap-3">
-        {branch.nodes.map((node, index) => (
-          <React.Fragment key={node.id}>
-            {index > 0 && (
-              <div className="flex justify-center">
-                <div
-                  className={`w-0.5 h-4 ${lightTheme ? '' : getNodeState(node) !== NODE_STATE.LOCKED ? 'bg-slate-500' : 'bg-slate-700'}`}
-                  style={lightTheme ? {
-                    background: getNodeState(node) !== NODE_STATE.LOCKED ? palette.lineActive : palette.lineInactive,
-                  } : undefined}
-                />
-              </div>
-            )}
-            <SkillNode
-              node={node}
-              nodeState={getNodeState(node)}
-              lightTheme={lightTheme}
-              reducedMotion={reducedMotion}
-              palette={palette}
-              branchColor={branch.color}
-              branchBorderColor={branch.borderColor}
-              onBuy={() => onBuy(node)}
-            />
-          </React.Fragment>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// ─── SkillNode ────────────────────────────────────────────────────────────────
-
-function SkillNode({ node, nodeState, lightTheme, reducedMotion, palette, branchColor, branchBorderColor, onBuy }) {
+function SkillNode({ node, nodeState, isLast, reducedMotion, onBuy }) {
   const isUnlocked     = nodeState === NODE_STATE.UNLOCKED;
   const isAvailable    = nodeState === NODE_STATE.AVAILABLE;
   const isLocked       = nodeState === NODE_STATE.LOCKED;
   const isInsufficient = nodeState === NODE_STATE.INSUFFICIENT_SP;
-  const tierStyle      = TIER_STYLE[node.tier] ?? TIER_STYLE.basic;
-  const tierBadgeProps = getTierBadgeProps(tierStyle, lightTheme);
 
-  const cardClass = [
-    'relative rounded-xl p-3 border cursor-default select-none',
-    isUnlocked     ? 'border-white/10 bg-white/[0.06]' : '',
-    isAvailable    ? 'border-[rgba(var(--accent-rgb),0.22)] bg-white/[0.05] cursor-pointer hover:bg-white/[0.07]' : '',
-    isInsufficient ? 'border-white/8 bg-white/[0.03] opacity-70' : '',
-    isLocked       ? 'border-white/8 bg-white/[0.02] opacity-40' : '',
-  ].join(' ');
-
-  const lightCardStyle = lightTheme
-    ? (isUnlocked
-        ? {
-            background: palette.unlockedBg,
-            borderColor: palette.border,
-            boxShadow: `0 12px 24px ${palette.shadow}`,
-          }
-        : isAvailable
-          ? {
-              background: palette.availableBg,
-              borderColor: palette.border,
-              boxShadow: `0 14px 28px ${palette.shadow}`,
-            }
-          : isInsufficient
-        ? {
-            background: 'var(--card-bg-solid2)',
-                borderColor: 'var(--line)',
-                boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.68)',
-              }
-            : {
-                background: 'var(--card-bg-solid2)',
-                borderColor: 'var(--line)',
-              })
-    : undefined;
-
-  const nameStyle = lightTheme
-    ? {
-        color: isUnlocked
-          ? palette.title
-          : isLocked
-            ? 'var(--muted-2)'
-            : isInsufficient
-              ? 'var(--muted)'
-              : 'var(--ink)',
-      }
-    : undefined;
-
-  const bodyStyle = lightTheme
-    ? { color: isLocked ? 'var(--muted-2)' : 'var(--muted)' }
-    : undefined;
-
-  const costStyle = lightTheme
-    ? (isAvailable
-        ? { borderColor: palette.border, color: palette.title, background: palette.chipBg }
-        : isInsufficient
-          ? { borderColor: 'var(--line)', color: 'var(--muted)', background: 'rgba(255, 255, 255, 0.88)' }
-          : { borderColor: 'var(--line)', color: 'var(--muted-2)', background: 'var(--card-bg-solid2)' })
-    : undefined;
+  const circleStyle = isUnlocked
+    ? { background: 'var(--accent)', color: '#fff', border: '1px solid var(--accent)' }
+    : isAvailable
+      ? { background: 'rgba(var(--accent-rgb),0.10)', color: 'var(--accent2)', border: '1.5px solid rgba(var(--accent-rgb),0.45)' }
+      : { background: 'var(--card-bg-solid2)', color: 'var(--muted-2)', border: '1px solid var(--line)' };
 
   return (
-    <motion.div
-      className={lightTheme
-        ? `relative p-3 border select-none transition-[transform,background-color,border-color,box-shadow] ${isAvailable ? 'cursor-pointer' : 'cursor-default'}`
-        : cardClass}
-      style={lightTheme ? { ...lightCardStyle, borderRadius: 'var(--skin-radius-control,14px)' } : lightCardStyle}
-      whileHover={isAvailable && !reducedMotion ? { scale: 1.02, y: -2 } : undefined}
-      onClick={isAvailable ? onBuy : undefined}
-      layout
-    >
-      {isAvailable && (
-        <motion.div
-          animate={reducedMotion ? undefined : { opacity: [0.28, 0.52, 0.28] }}
-          transition={reducedMotion ? undefined : { duration: 2, repeat: Infinity }}
-          className={`absolute inset-0 pointer-events-none ${
-            lightTheme ? '' : `rounded-xl ${branchBorderColor.replace('border-', 'bg-').replace('500', '500/10')}`
-          }`}
-          style={lightTheme ? { background: palette.glow, borderRadius: 'var(--skin-radius-control,14px)' } : undefined}
-        />
-      )}
-
-      <div className="relative z-10">
-        {/* Hàng trên: icon + tên + badge bậc */}
-        <div className="flex items-center gap-2 flex-wrap mb-1">
-          <span className={`mono inline-flex h-7 w-7 items-center justify-center rounded-full border text-[8px] font-semibold uppercase tracking-[0.14em] flex-shrink-0 ${isLocked ? 'opacity-60' : ''}`}
-                style={lightTheme
-                  ? { borderColor: isUnlocked || isAvailable ? palette.divider : 'var(--line)', background: 'rgba(255,255,255,0.74)', color: isLocked ? 'var(--muted-2)' : palette.title }
-                  : { borderColor: isUnlocked || isAvailable ? 'rgba(var(--accent-rgb),0.18)' : 'rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.04)', color: isLocked ? '#64748b' : 'var(--accent-light)' }}>
-            {isLocked ? 'KH' : getLabelMark(node.label)}
-          </span>
-          <span
-            className={`font-semibold text-sm ${
-              lightTheme ? '' : isUnlocked ? 'text-[var(--ink)]' : isLocked ? 'text-slate-600' : 'text-[var(--ink)]'
-            }`}
-            style={nameStyle}
-          >
-            {node.label}
-          </span>
-          <span {...tierBadgeProps}>
-            {tierStyle.label}
-          </span>
-        </div>
-
-        {/* Mô tả */}
-        <p
-          className={`text-xs leading-relaxed ${lightTheme ? '' : isLocked ? 'text-slate-700' : 'text-slate-400'}`}
-          style={bodyStyle}
+    <div className="flex gap-3.5">
+      {/* Cột trái: vòng tròn + đường nối */}
+      <div className="flex flex-col items-center">
+        <motion.span
+          className="relative z-10 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[17px] leading-none"
+          style={{ ...circleStyle, opacity: isLocked ? 0.6 : 1 }}
+          animate={isAvailable && !reducedMotion
+            ? { boxShadow: ['0 0 0 0 rgba(var(--accent-rgb),0)', '0 0 0 4px rgba(var(--accent-rgb),0.12)', '0 0 0 0 rgba(var(--accent-rgb),0)'] }
+            : undefined}
+          transition={isAvailable && !reducedMotion ? { duration: 2.4, repeat: Infinity } : undefined}
         >
-          {node.description}
-        </p>
+          <span aria-hidden>{isLocked ? '🔒' : node.icon}</span>
+        </motion.span>
+        {!isLast && (
+          <span
+            className="mt-1 w-px flex-1"
+            style={{ background: isUnlocked ? 'rgba(var(--accent-rgb),0.30)' : 'var(--line)', minHeight: '14px' }}
+          />
+        )}
+      </div>
 
-        {/* Footer: yêu cầu / SP / check */}
-        <div className="flex items-center justify-between mt-2">
-          <div>
-            {isLocked && node.requires.length > 0 && (
-              <p className={`text-xs ${lightTheme ? '' : 'text-slate-600'}`} style={lightTheme ? { color: 'var(--muted-2)' } : undefined}>
-                Cần: {node.requires.map((r) => SKILL_LABELS[r] ?? r.replace(/_/g, ' ')).join(', ')}
-              </p>
-            )}
-            {isInsufficient && (
-              <p className="text-xs text-amber-600">
-                Thiếu ĐKN — cần {node.spCost}
-              </p>
-            )}
+      {/* Cột phải: tên + mô tả + hành động */}
+      <div className={`min-w-0 flex-1 ${isLast ? '' : 'pb-5'}`}>
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <p className="text-[14px] font-semibold leading-tight" style={{ color: isLocked ? 'var(--muted-2)' : 'var(--ink)' }}>
+              {node.label}
+            </p>
+            <p className="mt-1 text-[12px] leading-snug" style={{ color: 'var(--muted)' }}>
+              {isLocked
+                ? (node.requires.length > 0
+                    ? `Cần mở: ${node.requires.map((r) => SKILL_LABELS[r] ?? r.replace(/_/g, ' ')).join(', ')}`
+                    : 'Cần mở nút trước')
+                : node.description}
+            </p>
           </div>
 
-          {isUnlocked ? (
-            <span className={`text-sm font-bold ml-auto ${lightTheme ? '' : branchColor}`} style={lightTheme ? { color: palette.title } : undefined}>✓</span>
-          ) : (
-            <span className={`mono text-xs font-bold tabular-nums ml-auto px-2 py-0.5 rounded-full border ${
-              isAvailable
-                ? 'border-[rgba(var(--accent-rgb),0.18)] text-[var(--accent-light)] bg-white/[0.04]'
-                : isInsufficient
-                  ? 'border-slate-600 text-slate-500 bg-slate-800'
-                  : 'border-slate-700 text-slate-600'
-            }`} style={costStyle}>
-              {node.spCost} ĐKN
-            </span>
-          )}
+          <div className="shrink-0 pt-0.5">
+            {isUnlocked ? (
+              <span className="mono inline-flex items-center gap-1 text-[11px] font-semibold" style={{ color: 'var(--good)' }}>
+                ✓ Đã mở
+              </span>
+            ) : isAvailable ? (
+              <motion.button
+                type="button"
+                onClick={onBuy}
+                whileHover={reducedMotion ? undefined : { y: -1 }}
+                whileTap={reducedMotion ? undefined : { scale: 0.97 }}
+                className="mono inline-flex items-center whitespace-nowrap rounded-full px-3 py-1.5 text-[11px] font-semibold tabular-nums transition-colors"
+                style={{ background: 'rgba(var(--accent-rgb),0.10)', border: '1px solid rgba(var(--accent-rgb),0.30)', color: 'var(--accent2)' }}
+              >
+                Mở · {node.spCost} SP
+              </motion.button>
+            ) : (
+              <span
+                className="mono inline-flex items-center whitespace-nowrap rounded-full px-3 py-1.5 text-[11px] font-semibold tabular-nums"
+                style={{ background: 'var(--card-bg-solid2)', border: '1px solid var(--line)', color: 'var(--muted-2)', opacity: isInsufficient ? 0.95 : 0.7 }}
+              >
+                {node.spCost} SP
+              </span>
+            )}
+          </div>
         </div>
       </div>
-    </motion.div>
+    </div>
+  );
+}
+
+// ─── RecentAchievements (thẻ "Thành tựu gần đây" cột phải) ─────────────────────
+
+function RecentAchievements({ onOpen }) {
+  const unlocked = useGameStore((s) => s.achievements?.unlocked ?? []);
+  const recent = useMemo(
+    () => unlocked.slice(-3).reverse().map((id) => ACHIEVEMENT_BY_ID[id]).filter(Boolean),
+    [unlocked],
+  );
+  const total = unlocked.length;
+  const more = Math.max(0, total - recent.length);
+
+  return (
+    <section className="px-5 py-5" style={CARD}>
+      <div className="mb-4 flex items-end justify-between gap-3">
+        <p className="mono text-[10px] uppercase tracking-[0.2em]" style={{ color: 'var(--muted-2)' }}>Thành tựu gần đây</p>
+        <span
+          className="mono inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold tabular-nums"
+          style={{ background: 'rgba(var(--accent-rgb), 0.1)', color: 'var(--accent2)' }}
+        >
+          {total} đã mở
+        </span>
+      </div>
+
+      {total === 0 ? (
+        <p className="text-[12px] leading-snug" style={{ color: 'var(--muted)' }}>
+          Chưa mở thành tựu nào. Hoàn thành phiên để bắt đầu sưu tầm huy hiệu.
+        </p>
+      ) : (
+        <div className="grid grid-cols-4 gap-2.5">
+          {recent.map((a) => {
+            const tint = ACH_TIER_TINT[a.tier] ?? '#c96442';
+            const tierLabel = ACHIEVEMENT_TIERS[a.tier]?.label;
+            return (
+              <button
+                key={a.id}
+                type="button"
+                onClick={onOpen}
+                title={tierLabel ? `${a.label} · ${tierLabel}` : a.label}
+                className="flex aspect-square items-center justify-center text-[22px] leading-none transition-transform hover:-translate-y-0.5"
+                style={{ background: withAlpha(tint, 0.12), border: `1px solid ${withAlpha(tint, 0.3)}`, borderRadius: 'var(--skin-radius-control,14px)' }}
+              >
+                <span aria-hidden>{a.icon}</span>
+              </button>
+            );
+          })}
+          <button
+            type="button"
+            onClick={onOpen}
+            title="Xem tất cả thành tựu"
+            className="mono flex aspect-square items-center justify-center text-[13px] font-semibold tabular-nums transition-transform hover:-translate-y-0.5"
+            style={{ background: 'rgba(var(--accent-rgb),0.08)', border: '1px dashed rgba(var(--accent-rgb),0.30)', color: 'var(--accent2)', borderRadius: 'var(--skin-radius-control,14px)' }}
+          >
+            {more > 0 ? `+${more}` : 'Xem'}
+          </button>
+        </div>
+      )}
+    </section>
   );
 }
 
@@ -727,8 +644,8 @@ function PurchaseConfirmDialog({ node, sp, lightTheme, onConfirm, onCancel }) {
           } : undefined}
         >
           <span className="mono text-[10px] uppercase tracking-[0.18em]" style={lightTheme ? { color: 'var(--accent2)' } : { color: 'var(--accent-light)' }}>SP</span>
-          <span className="mono font-bold tabular-nums" style={lightTheme ? { color: 'var(--ink)' } : undefined}>{node.spCost} ĐKN</span>
-          <span className="text-sm" style={lightTheme ? { color: 'var(--muted)' } : undefined}>· còn {sp} ĐKN</span>
+          <span className="mono font-bold tabular-nums" style={lightTheme ? { color: 'var(--ink)' } : undefined}>{node.spCost} SP</span>
+          <span className="text-sm" style={lightTheme ? { color: 'var(--muted)' } : undefined}>· còn {sp} SP</span>
         </div>
 
         <div className="flex gap-3">

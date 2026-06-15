@@ -340,12 +340,23 @@ function TodayMissionRow({ mission, reduceMotion, rewardXP }) {
   return (
     <div className="px-0 py-3">
       <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className={`text-[13px] leading-snug ${done ? 'line-through' : ''}`} style={{ color: done ? 'var(--muted-2)' : 'var(--ink)' }}>
-            {mission.label}
-          </div>
-          <div className="mt-1 text-[11px] text-[var(--muted)]">
-            {done ? 'Đã hoàn tất.' : `Tiến độ hiện tại: ${mission.progress}/${mission.goal}`}
+        <div className="flex min-w-0 items-start gap-2.5">
+          <span
+            className="mono mt-[2px] inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[9px] font-bold leading-none"
+            style={done
+              ? { background: 'var(--good)', color: 'var(--canvas)' }
+              : { border: '1.5px solid var(--line)', color: 'transparent' }}
+            aria-hidden
+          >
+            {done ? '✓' : ''}
+          </span>
+          <div className="min-w-0">
+            <div className={`text-[13px] leading-snug ${done ? 'line-through' : ''}`} style={{ color: done ? 'var(--muted-2)' : 'var(--ink)' }}>
+              {mission.label}
+            </div>
+            <div className="mt-1 text-[11px] text-[var(--muted)]">
+              {done ? 'Đã hoàn tất.' : `Tiến độ hiện tại: ${mission.progress}/${mission.goal}`}
+            </div>
           </div>
         </div>
         <div className="text-right">

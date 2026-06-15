@@ -1716,7 +1716,7 @@ export default function App() {
                         topRail={!isDesktop && !showFocusFullscreen ? renderTopRail() : null}
                       >
                         <DeferredTabContent>
-                          <SkillTree />
+                          <SkillTree onOpenAchievements={() => selectTab('achievements')} />
                         </DeferredTabContent>
                       </ShellPane>
                     </TabPane>

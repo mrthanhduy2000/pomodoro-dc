@@ -9,6 +9,7 @@ import { calculateStreakMilestoneProgress } from '../engine/gameMath';
 import { localWeekMondayStr } from '../engine/time';
 import useCoachInsight from '../hooks/useCoachInsight';
 import CoachCard from './CoachCard';
+import { FlameGlyph, ShieldGlyph } from './icons/Glyph';
 
 const cardStyle = {
   background: 'var(--card-bg-solid)',
@@ -97,9 +98,9 @@ export default function FocusRail({
           {hasShield && (
             <span
               title={shieldAvailable ? 'Lá chắn chuỗi: còn dùng tuần này' : 'Lá chắn chuỗi: đã dùng tuần này'}
-              style={{ opacity: shieldAvailable ? 1 : 0.32, color: 'var(--good)' }}
+              style={{ opacity: shieldAvailable ? 1 : 0.32, color: 'var(--good)', display: 'inline-flex' }}
             >
-              🛡️
+              <ShieldGlyph size={15} />
             </span>
           )}
         </div>
@@ -107,7 +108,7 @@ export default function FocusRail({
           <span className="text-[26px] font-semibold leading-none" style={{ fontFamily: 'var(--skin-font-display)', color: 'var(--accent2)' }}>
             {currentStreak}
           </span>
-          <span style={{ color: 'var(--accent)' }}>🔥</span>
+          <span style={{ color: 'var(--accent)', display: 'inline-flex' }}><FlameGlyph size={17} /></span>
           <span className="text-[12px]" style={{ color: 'var(--muted-2)' }}>ngày</span>
         </div>
         {milestone.nextMilestone && milestone.daysRemaining > 0 ? (
@@ -116,7 +117,7 @@ export default function FocusRail({
             {milestone.nextMilestone.permanent ? ' (bonus vĩnh viễn)' : ''}
           </div>
         ) : (
-          <div className="mt-1 text-[12px]" style={{ color: 'var(--good)' }}>Đã mở mọi mốc chuỗi 🎉</div>
+          <div className="mt-1 text-[12px]" style={{ color: 'var(--good)' }}>Đã mở mọi mốc chuỗi</div>
         )}
       </motion.div>
 

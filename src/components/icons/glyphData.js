@@ -75,3 +75,8 @@ export const SKILL_GLYPHS = {
 // ổ khóa (nút chưa mở) + tia sét nhỏ cho pill SP
 export const LOCK_GLYPH = `<rect x="5" y="10.5" width="14" height="9.5"/><path d="M8 10.5 V8 A4 4 0 0 1 16 8 V10.5"/><line x1="12" y1="14" x2="12" y2="16.5"/>`;
 export const BOLT_GLYPH = `<polygon points="13 3 7 13 11.5 13 10 21 17 10.5 12.5 10.5" fill="currentColor" stroke="none"/>`;
+
+// glyph dùng chung quanh app (thay emoji 🔥 ✦ 🛡️ 🎉)
+export const FLAME_GLYPH = `<path d="M12 3.5 C 16 8.5 16 13 12 19 C 8 13 8 8.5 12 3.5 Z"/><path d="M12 9.5 C 14 12 14 14.5 12 16.5 C 10 14.5 10 12 12 9.5 Z"/>`;
+export const SPARK_GLYPH = `<path d="M12 3 L13.4 10.6 L21 12 L13.4 13.4 L12 21 L10.6 13.4 L3 12 L10.6 10.6 Z"/>`;
+export const SHIELD_GLYPH = `<path d="M12 3 L19 6 V11 C19 16 16 19 12 21 C8 19 5 16 5 11 V6 Z"/>`;

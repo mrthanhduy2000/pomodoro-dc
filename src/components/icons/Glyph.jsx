@@ -1,5 +1,5 @@
 import React from 'react';
-import { SKILL_GLYPHS, BRANCH_GLYPHS, LOCK_GLYPH, BOLT_GLYPH } from './glyphData';
+import { SKILL_GLYPHS, BRANCH_GLYPHS, LOCK_GLYPH, BOLT_GLYPH, FLAME_GLYPH, SPARK_GLYPH, SHIELD_GLYPH } from './glyphData';
 
 /**
  * Glyph — vẽ một pictogram SVG tự thiết kế. Dùng currentColor nên tự đổi màu
@@ -34,4 +34,16 @@ export function BranchGlyph({ branch, size = 22 }) {
 
 export function BoltGlyph({ size = 13 }) {
   return <Glyph markup={BOLT_GLYPH} size={size} />;
+}
+
+export function FlameGlyph({ size = 16 }) {
+  return <Glyph markup={FLAME_GLYPH} size={size} />;
+}
+
+export function SparkGlyph({ size = 13 }) {
+  return <Glyph markup={SPARK_GLYPH} size={size} />;
+}
+
+export function ShieldGlyph({ size = 16 }) {
+  return <Glyph markup={SHIELD_GLYPH} size={size} />;
 }

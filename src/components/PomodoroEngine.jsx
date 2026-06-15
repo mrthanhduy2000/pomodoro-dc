@@ -2586,6 +2586,7 @@ function ActionButton({ children, className = '', disabled = false, onClick, siz
       type="button"
       disabled={disabled}
       title={title}
+      data-variant={variant}
       whileHover={disabled ? undefined : { scale: 1.03, y: -1 }}
       whileTap={disabled ? undefined : { scale: 0.97 }}
       onClick={onClick}

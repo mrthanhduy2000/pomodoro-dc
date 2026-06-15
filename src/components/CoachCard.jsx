@@ -3,6 +3,7 @@
  * Chỉ lo HIỂN THỊ; phần tính lời khuyên nằm ở hook useCoachInsight.
  */
 import { motion } from 'framer-motion';
+import { SparkGlyph } from './icons/Glyph';
 
 export default function CoachCard({ text, reason, className = '' }) {
   if (!text) return null;
@@ -14,7 +15,7 @@ export default function CoachCard({ text, reason, className = '' }) {
       style={{ background: '#1f1e1d', borderRadius: 'var(--skin-radius-card,18px)', border: '1px solid rgba(217,164,65,0.22)' }}
     >
       <div className="flex items-center gap-1.5">
-        <span style={{ color: '#d9a441' }}>✦</span>
+        <span style={{ color: '#d9a441', display: 'inline-flex' }}><SparkGlyph size={13} /></span>
         <span className="mono text-[10px] uppercase tracking-[0.2em]" style={{ color: '#d9a441' }}>AI Coach</span>
       </div>
       <p className="mt-2 text-[12.5px] leading-relaxed" style={{ color: '#e8e4dc' }}>{text}</p>

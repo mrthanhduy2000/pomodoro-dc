@@ -1984,7 +1984,7 @@ function EditorialSidebar({ activeTab, isOpen, onOpenWeeklyReport, onSelect, onT
           DC
         </span>
         {isOpen && (
-          <span className="text-[15px] font-semibold leading-none" style={{ color: '#faf9f6', fontFamily: 'var(--skin-font-display)' }}>
+          <span className="text-[15px] font-bold uppercase leading-none tracking-[0.08em]" style={{ color: '#faf9f6', fontFamily: 'var(--skin-font-display)' }}>
             Pomodoro
           </span>
         )}
@@ -2090,13 +2090,13 @@ function TopRail({
   return (
     <header
       className="shrink-0 border-b bg-[var(--canvas)] px-5 py-3 md:px-6"
-      style={{ borderColor: 'var(--line)' }}
+      style={{ borderColor: 'var(--line)', borderBottomWidth: '2px', borderTop: '3px solid var(--accent)' }}
     >
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
         <div className="flex items-start justify-between gap-3 md:hidden">
           <div>
-            <div className="mono text-[10px] uppercase tracking-[0.22em] text-[var(--muted)]">Kỷ {activeBook}</div>
-            <div className="serif mt-1 text-[17px] font-medium tracking-[-0.02em] text-[var(--ink)]">{eraLabel}</div>
+            <div className="mono text-[10px] uppercase tracking-[0.24em] text-[var(--muted)]">Kỷ {activeBook} · Cấp {level}</div>
+            <div className="mt-1 text-[20px] font-bold leading-none tracking-[-0.03em] text-[var(--ink)]" style={{ fontFamily: 'var(--skin-font-display)' }}>{eraLabel}</div>
           </div>
           <div
             className="rounded-full border px-3 py-1.5"
@@ -2110,9 +2110,9 @@ function TopRail({
           </div>
         </div>
 
-        <div className="hidden min-w-[190px] md:block">
-          <div className="mono text-[10px] uppercase tracking-[0.22em] text-[var(--muted)]">Kỷ {activeBook}</div>
-          <div className="serif mt-1 text-[17px] font-medium tracking-[-0.02em] text-[var(--ink)]">{eraLabel}</div>
+        <div className="hidden min-w-[220px] md:block">
+          <div className="mono text-[10px] uppercase tracking-[0.24em] text-[var(--muted)]">Kỷ {activeBook} · Cấp {level}</div>
+          <div className="mt-1 text-[23px] font-bold leading-none tracking-[-0.03em] text-[var(--ink)]" style={{ fontFamily: 'var(--skin-font-display)' }}>{eraLabel}</div>
         </div>
 
         <div

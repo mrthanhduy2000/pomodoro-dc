@@ -6,6 +6,7 @@
 import { useState } from 'react';
 import { SparkGlyph } from './icons/Glyph';
 import useCoachIntel from '../hooks/useCoachIntel';
+import useNoteThemes from '../hooks/useNoteThemes';
 
 const GOLD = '#d9a441';
 const CONF_LABEL = { cao: 'tin cậy cao', vừa: 'khá tin', thấp: 'tạm tính', insufficient: 'chưa đủ' };
@@ -34,6 +35,7 @@ function MetricCard({ metric }) {
 export default function FocusReport(goalProps) {
   const [open, setOpen] = useState(false);
   const { profile, predictions, report } = useCoachIntel(goalProps);
+  const themes = useNoteThemes();
 
   const metrics = [
     ['Giờ vàng', profile.chronotype],
@@ -130,6 +132,27 @@ export default function FocusReport(goalProps) {
                     Tất cả là quan sát từ lịch sử của bạn (tương quan), không phải kết luận hay lời tiên đoán.
                   </p>
                 </>
+              )}
+
+              {/* Chủ đề ghi chú — đọc-nghĩa chạy trên máy (engine semantic thuần) */}
+              {themes.ready && themes.themes.length > 0 && (
+                <div>
+                  <p className="mono mb-1 text-[10px] uppercase tracking-[0.18em]" style={{ color: 'var(--muted-2,var(--muted))' }}>Chủ đề ghi chú</p>
+                  <p className="mb-2 text-[11px] leading-snug" style={{ color: 'var(--muted)' }}>
+                    Gom theo nghĩa từ {themes.noteCount} ghi chú của bạn — đọc trên máy, không gửi đi đâu; có thể gom chưa chuẩn.
+                  </p>
+                  <div className="space-y-2">
+                    {themes.themes.map((t, i) => (
+                      <div key={i} className="flex items-start justify-between gap-2 rounded-xl p-3" style={{ background: 'var(--panel, rgba(0,0,0,0.04))' }}>
+                        <p className="text-[12.5px] leading-relaxed" style={{ color: 'var(--ink)' }}>{t.label}</p>
+                        <div className="flex shrink-0 flex-wrap justify-end gap-1">
+                          <Chip>{t.size} phiên</Chip>
+                          {t.goalRate != null && <Chip color={GOLD}>{Math.round(t.goalRate * 100)}% đạt</Chip>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               )}
             </div>
           </div>

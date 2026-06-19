@@ -291,7 +291,10 @@ export function predictBestWindow(history = [], opts = {}) {
     cur.total += 1; if (e.goalAchieved === true) cur.hit += 1;
     byBucket.set(b.id, cur);
   }
-  const ahead = [...byBucket.values()].filter((x) => x.bucket.startHour > nowHour && x.bucket.startHour < x.bucket.endHour);
+  // "Còn phía trước hôm nay" — buổi bình thường: bắt đầu sau giờ hiện tại.
+  // Buổi vắt qua nửa đêm (đêm khuya 23h→5h): còn phía trước nếu chưa tới giờ bắt đầu (nowHour < 23).
+  const isAheadToday = (b) => (b.startHour < b.endHour ? b.startHour > nowHour : nowHour < b.startHour);
+  const ahead = [...byBucket.values()].filter((x) => isAheadToday(x.bucket));
   if (!ahead.length) return { kind: 'best-window', status: 'none-left', reason: 'Hôm nay không còn khung giờ phía trước để gợi ý — để dành việc khó cho ngày mai nhé.' };
   const eligible = ahead.filter((x) => x.total >= minSample && x.hit / x.total >= 0.55);
   if (!eligible.length) return { kind: 'best-window', status: 'insufficient', reason: 'Chưa đủ dữ liệu để chọn khung giờ vàng còn lại hôm nay.' };

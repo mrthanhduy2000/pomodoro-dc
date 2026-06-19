@@ -95,6 +95,17 @@ test('predict best-window: hết buổi trong ngày → none-left; còn buổi t
   assert.equal(r.bucketId, 'toi');
 });
 
+test('predict best-window: buổi tối hỏi → đêm khuya (buổi vắt nửa đêm) vẫn được gợi ý', () => {
+  const h = [];
+  for (let i = 0; i < 5; i += 1) h.push(s({ hour: 23, minutes: 30, goalAchieved: i < 4 })); // đêm khuya 4/5 đạt
+  // nowHour=20: chỉ còn 'khuya' (23h) phía trước — trước khi sửa bị loại nên trả 'none-left'.
+  const r = predictBestWindow(h, { nowHour: 20, getEntryHour });
+  assert.equal(r.status, 'found');
+  assert.equal(r.bucketId, 'khuya');
+  // Đã qua 23h thì đêm khuya không còn "phía trước" nữa.
+  assert.equal(predictBestWindow(h, { nowHour: 23, getEntryHour }).status, 'none-left');
+});
+
 test('TRUNG THỰC: không câu chữ nào dùng từ nhân-quả (vì/nên/do/bởi/khiến/dẫn đến)', () => {
   const intel = buildCoachIntel(richHistory(), { ...richOpts, getEntryDayNumber: (e) => e.dn ?? 0, nowDayNumber: 200 });
   const strings = [];

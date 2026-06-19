@@ -7,6 +7,16 @@ import { useState } from 'react';
 import { SparkGlyph } from './icons/Glyph';
 import useCoachIntel from '../hooks/useCoachIntel';
 import useNoteThemes from '../hooks/useNoteThemes';
+import { themesFromVectors } from '../engine/semantic/semantic';
+
+// Chỉ mời bật tầng nơ-ron (118MB) trên DESKTOP không-phải-iOS (iPhone giữ bản TF-IDF
+// an toàn — transformers.js đang có lỗi crash iOS).
+function detectNeuralCapable() {
+  if (typeof navigator === 'undefined' || typeof window === 'undefined') return false;
+  if (/iP(hone|ad|od)/i.test(navigator.userAgent || '')) return false;
+  return (window.innerWidth || 0) >= 1024;
+}
+const NEURAL_TIMEOUT_MS = 180000;
 
 const GOLD = '#d9a441';
 const CONF_LABEL = { cao: 'tin cậy cao', vừa: 'khá tin', thấp: 'tạm tính', insufficient: 'chưa đủ' };
@@ -36,6 +46,30 @@ export default function FocusReport(goalProps) {
   const [open, setOpen] = useState(false);
   const { profile, predictions, report } = useCoachIntel(goalProps);
   const themes = useNoteThemes();
+  const [canNeural] = useState(detectNeuralCapable);
+  const [neuralStatus, setNeuralStatus] = useState('idle'); // idle|loading|ready|error
+  const [neuralProgress, setNeuralProgress] = useState(0);
+  const [neuralThemes, setNeuralThemes] = useState(null);
+
+  async function enableNeural() {
+    if (neuralStatus === 'loading') return;
+    setNeuralStatus('loading');
+    setNeuralProgress(0);
+    try {
+      const { embedTexts } = await import('../engine/semantic/embedder');
+      const onProgress = (p) => { if (p && typeof p.progress === 'number') setNeuralProgress(Math.round(p.progress)); };
+      const work = embedTexts(themes.texts, onProgress);
+      const timeout = new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), NEURAL_TIMEOUT_MS));
+      const vectors = await Promise.race([work, timeout]);
+      // Ngưỡng cosine cao hơn cho vector nơ-ron (đặc hơn TF-IDF).
+      setNeuralThemes(themesFromVectors(themes.items, vectors, { threshold: 0.55 }));
+      setNeuralStatus('ready');
+    } catch {
+      setNeuralStatus('error'); // tự lùi về bản TF-IDF (đang hiển thị)
+    }
+  }
+
+  const shownThemes = neuralStatus === 'ready' && neuralThemes ? neuralThemes : themes;
 
   const metrics = [
     ['Giờ vàng', profile.chronotype],
@@ -134,15 +168,18 @@ export default function FocusReport(goalProps) {
                 </>
               )}
 
-              {/* Chủ đề ghi chú — đọc-nghĩa chạy trên máy (engine semantic thuần) */}
-              {themes.ready && themes.themes.length > 0 && (
+              {/* Chủ đề ghi chú — đọc-nghĩa chạy trên máy (TF-IDF mặc định; nơ-ron tuỳ chọn) */}
+              {themes.ready && shownThemes.themes.length > 0 && (
                 <div>
-                  <p className="mono mb-1 text-[10px] uppercase tracking-[0.18em]" style={{ color: 'var(--muted-2,var(--muted))' }}>Chủ đề ghi chú</p>
+                  <div className="mb-1 flex items-center gap-1.5">
+                    <p className="mono text-[10px] uppercase tracking-[0.18em]" style={{ color: 'var(--muted-2,var(--muted))' }}>Chủ đề ghi chú</p>
+                    {neuralStatus === 'ready' && <Chip color={GOLD}>nơ-ron</Chip>}
+                  </div>
                   <p className="mb-2 text-[11px] leading-snug" style={{ color: 'var(--muted)' }}>
                     Gom theo nghĩa từ {themes.noteCount} ghi chú của bạn — đọc trên máy, không gửi đi đâu; có thể gom chưa chuẩn.
                   </p>
                   <div className="space-y-2">
-                    {themes.themes.map((t, i) => (
+                    {shownThemes.themes.map((t, i) => (
                       <div key={i} className="flex items-start justify-between gap-2 rounded-xl p-3" style={{ background: 'var(--panel, rgba(0,0,0,0.04))' }}>
                         <p className="text-[12.5px] leading-relaxed" style={{ color: 'var(--ink)' }}>{t.label}</p>
                         <div className="flex shrink-0 flex-wrap justify-end gap-1">
@@ -152,6 +189,27 @@ export default function FocusReport(goalProps) {
                       </div>
                     ))}
                   </div>
+
+                  {/* Tầng nơ-ron: chỉ desktop, opt-in, nạp lười, có fallback */}
+                  {canNeural && neuralStatus === 'idle' && (
+                    <button
+                      type="button"
+                      onClick={enableNeural}
+                      className="mt-2 w-full rounded-full py-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] transition-opacity hover:opacity-80"
+                      style={{ border: `1px solid ${GOLD}55`, color: GOLD, background: 'rgba(217,164,65,0.08)' }}
+                    >
+                      Đọc-nghĩa nâng cao (tải ~118MB, chạy trên máy)
+                    </button>
+                  )}
+                  {neuralStatus === 'loading' && (
+                    <p className="mt-2 text-[11px]" style={{ color: 'var(--muted)' }}>Đang tải mô hình AI… {neuralProgress > 0 ? `${neuralProgress}%` : ''} (lần đầu hơi lâu)</p>
+                  )}
+                  {neuralStatus === 'error' && (
+                    <p className="mt-2 text-[11px]" style={{ color: 'var(--muted)' }}>
+                      Không tải được mô hình — đang dùng bản gọn (vẫn chạy tốt).{' '}
+                      <button type="button" onClick={enableNeural} className="underline" style={{ color: GOLD }}>Thử lại</button>
+                    </p>
+                  )}
                 </div>
               )}
             </div>

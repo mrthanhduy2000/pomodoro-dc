@@ -41,6 +41,15 @@ export default defineConfig({
           if (id.includes('/zustand/')) {
             return 'vendor-state';
           }
+          // AI ngữ nghĩa on-device (nạp lười, opt-in) — tách CHUNK RIÊNG, không vào
+          // bundle chính. Chỉ tải khi người dùng bật ở FocusReport (dynamic import).
+          if (
+            id.includes('/@huggingface/transformers')
+            || id.includes('/onnxruntime-web')
+            || id.includes('/onnxruntime-common')
+          ) {
+            return 'vendor-transformers';
+          }
           return undefined;
         },
       },
@@ -102,6 +111,10 @@ export default defineConfig({
         importScripts: ['/push-worker.js'],
         // Pre-cache all built assets
         globPatterns: ['**/*.{js,css,html,svg,png,ico,woff,woff2}'],
+        // KHÔNG precache chunk AI nặng + onnxruntime wasm: chỉ tải KHI người dùng
+        // bật tính năng (runtime). Nếu không, service worker sẽ nuốt hàng chục MB
+        // vào precache cho CẢ người không bao giờ bật — hại app hằng ngày.
+        globIgnores: ['**/vendor-transformers*.js', '**/ort-*.{js,mjs,wasm}', '**/*.wasm'],
         skipWaiting: true,
 
         // Runtime caching rules

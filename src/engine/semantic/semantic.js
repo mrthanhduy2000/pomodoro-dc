@@ -144,15 +144,15 @@ function isUsableSession(e) {
 }
 
 /**
- * analyzeNoteThemes — mặt tiền: gom GHI CHÚ thành các CHỦ ĐỀ theo nghĩa.
- * @returns {{ready, noteCount, themes:[{label,size,minutes,goalRate}]}}
+ * collectNoteItems — rút các ghi chú dùng được (đã strip HTML) từ lịch sử, kèm
+ * minutes & goalAchieved. Trả {ready, items, texts}. Dùng chung cho cả TF-IDF lẫn
+ * tầng nơ-ron (nơ-ron nhúng đúng `texts` này rồi gọi themesFromVectors).
  */
-export function analyzeNoteThemes(history = [], opts = {}) {
+export function collectNoteItems(history = [], opts = {}) {
   const {
     getText = (e) => stripHtmlToText(e?.nextNote) || stripHtmlToText(e?.note),
-    maxNotes = 300, minNotes = 6, threshold = 0.2,
+    maxNotes = 300, minNotes = 6,
   } = opts;
-
   const items = [];
   for (const e of (Array.isArray(history) ? history : [])) {
     if (!isUsableSession(e)) continue;
@@ -161,11 +161,14 @@ export function analyzeNoteThemes(history = [], opts = {}) {
     items.push({ text, minutes: Number(e.minutes) || 0, goal: typeof e.goalAchieved === 'boolean' ? e.goalAchieved : null });
   }
   const recent = items.slice(-maxNotes);
-  if (recent.length < minNotes) return { ready: false, noteCount: recent.length, themes: [] };
+  return { ready: recent.length >= minNotes, items: recent, texts: recent.map((i) => i.text) };
+}
 
-  const texts = recent.map((i) => i.text);
-  const vectors = buildTfidfVectors(texts);
+/** themesFromVectors — gom cụm các vector (TF-IDF hoặc nơ-ron) thành chủ đề. */
+export function themesFromVectors(items, vectors, opts = {}) {
+  const { threshold = 0.2 } = opts;
   const labels = clusterByThreshold(vectors, { threshold });
+  const texts = items.map((i) => i.text);
   const groups = new Map();
   labels.forEach((cid, i) => { const g = groups.get(cid) ?? []; g.push(i); groups.set(cid, g); });
 
@@ -174,11 +177,23 @@ export function analyzeNoteThemes(history = [], opts = {}) {
     if (members.length < 2) continue; // chỉ tính là "chủ đề" khi có ≥2 phiên cùng nghĩa
     const { label } = labelCluster(members, vectors, texts);
     if (!label) continue;
-    const minutes = members.reduce((s, i) => s + recent[i].minutes, 0);
-    const withGoal = members.filter((i) => recent[i].goal !== null);
-    const goalRate = withGoal.length >= 3 ? withGoal.filter((i) => recent[i].goal === true).length / withGoal.length : null;
+    const minutes = members.reduce((s, i) => s + items[i].minutes, 0);
+    const withGoal = members.filter((i) => items[i].goal !== null);
+    const goalRate = withGoal.length >= 3 ? withGoal.filter((i) => items[i].goal === true).length / withGoal.length : null;
     themes.push({ label, size: members.length, minutes, goalRate });
   }
   themes.sort((a, b) => (b.size - a.size) || (b.minutes - a.minutes));
-  return { ready: true, noteCount: recent.length, themes: themes.slice(0, 6) };
+  return { ready: true, noteCount: items.length, themes: themes.slice(0, 6) };
+}
+
+/**
+ * analyzeNoteThemes — mặt tiền TF-IDF (mặc định, chạy ngay trên iPhone, 0 tải).
+ * @returns {{ready, noteCount, themes:[{label,size,minutes,goalRate}]}}
+ */
+export function analyzeNoteThemes(history = [], opts = {}) {
+  const { threshold = 0.2 } = opts;
+  const collected = collectNoteItems(history, opts);
+  if (!collected.ready) return { ready: false, noteCount: collected.items.length, themes: [] };
+  const vectors = buildTfidfVectors(collected.texts);
+  return themesFromVectors(collected.items, vectors, { threshold });
 }

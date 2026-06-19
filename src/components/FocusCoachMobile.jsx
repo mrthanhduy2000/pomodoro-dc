@@ -6,9 +6,15 @@
  */
 import useCoachInsight from '../hooks/useCoachInsight';
 import CoachCard from './CoachCard';
+import CoachChat from './CoachChat';
 
 export default function FocusCoachMobile({ hidden = false, ...goalProps }) {
   const coach = useCoachInsight(goalProps);
   if (hidden) return null;
-  return <CoachCard text={coach.text} reason={coach.reason} className="mt-4 lg:hidden" />;
+  return (
+    <div className="mt-4 lg:hidden">
+      <CoachCard text={coach.text} reason={coach.reason} />
+      <CoachChat {...goalProps} />
+    </div>
+  );
 }

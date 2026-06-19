@@ -9,6 +9,7 @@ import { calculateStreakMilestoneProgress } from '../engine/gameMath';
 import { localWeekMondayStr } from '../engine/time';
 import useCoachInsight from '../hooks/useCoachInsight';
 import CoachCard from './CoachCard';
+import CoachChat from './CoachChat';
 import { FlameGlyph, ShieldGlyph } from './icons/Glyph';
 
 const cardStyle = {
@@ -121,8 +122,17 @@ export default function FocusRail({
         )}
       </motion.div>
 
-      {/* AI COACH (số liệu thật, local) */}
-      <CoachCard text={coach.text} reason={coach.reason} />
+      {/* AI COACH (số liệu thật, local) + hỏi–đáp với Claude thật */}
+      <div>
+        <CoachCard text={coach.text} reason={coach.reason} />
+        <CoachChat
+          sessionsCompletedToday={sessionsCompletedToday}
+          focusMinutesToday={focusMinutesToday}
+          dailyGoalType={dailyGoalType}
+          dailyGoalSessions={dailyGoalSessions}
+          dailyGoalMinutes={dailyGoalMinutes}
+        />
+      </div>
     </div>
   );
 }

@@ -17,9 +17,14 @@ globalThis.window = {
   sessionStorage: createMemoryStorage(),
 };
 
-const [{ default: useGameStore }, { localDateStr }] = await Promise.all([
+const [
+  { default: useGameStore, GAME_STORE_SCHEMA_VERSION },
+  { localDateStr },
+  { PRESTIGE_EP_REQUIREMENT, TINH_THE_HARD_CAP },
+] = await Promise.all([
   import('./gameStore.js'),
   import('../engine/time.js'),
+  import('../engine/constants.js'),
 ]);
 
 const initialState = useGameStore.getInitialState();
@@ -258,4 +263,96 @@ test('deleting sessions revokes daily all-mission bonus XP when goals no longer 
   assert.equal(state.player.totalEXP, 0);
   assert.equal(state.progress.sessionsCompleted, 0);
   assert.equal(state.progress.totalFocusMinutes, 0);
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// BẢN CẬP NHẬT CỘNG HƯỞNG — store
+// ═══════════════════════════════════════════════════════════════════════════════
+
+test('Cộng Hưởng: evolveRelic — không TTCH = cũ; có TTCH thay tối đa 50%', () => {
+  // Không TTCH: trừ toàn bộ refined, không đụng tinhThe
+  resetStore();
+  useGameStore.setState({
+    relics: [{ id: 'mam_song_bat_diet' }],
+    relicEvolutions: {},
+    resourcesRefined: { 1: { t2: 100, t3: 0 } },
+    tinhThe: 12,
+    buildings: [],
+  });
+  assert.equal(useGameStore.getState().evolveRelic('mam_song_bat_diet'), true);
+  const a = useGameStore.getState();
+  assert.equal(a.relicEvolutions.mam_song_bat_diet, 1);
+  const fullCost = 100 - a.resourcesRefined[1].t2;
+  assert.ok(fullCost > 0);
+  assert.equal(a.tinhThe, 12);
+
+  // Có TTCH: trừ ít refined hơn + tiêu TTCH (2 TTCH / đơn vị refined)
+  resetStore();
+  useGameStore.setState({
+    relics: [{ id: 'mam_song_bat_diet' }],
+    relicEvolutions: {},
+    resourcesRefined: { 1: { t2: 100, t3: 0 } },
+    tinhThe: 12,
+    buildings: [],
+  });
+  assert.equal(useGameStore.getState().evolveRelic('mam_song_bat_diet', { ttchToSpend: true }), true);
+  const b = useGameStore.getState();
+  assert.equal(b.relicEvolutions.mam_song_bat_diet, 1);
+  const reducedCost = 100 - b.resourcesRefined[1].t2;
+  assert.ok(reducedCost < fullCost);                  // trả ít refined hơn
+  assert.ok(reducedCost >= Math.ceil(fullCost / 2));  // vẫn ≥50% bằng refined thật
+  assert.ok(b.tinhThe < 12);
+  assert.equal(12 - b.tinhThe, (fullCost - reducedCost) * 2);
+});
+
+test('Cộng Hưởng: evolveRelic từ chối nếu thiếu phần refined ≥50% dù đầy TTCH', () => {
+  resetStore();
+  useGameStore.setState({
+    relics: [{ id: 'mam_song_bat_diet' }],
+    relicEvolutions: {},
+    resourcesRefined: { 1: { t2: 0, t3: 0 } },  // không có refined thật
+    tinhThe: 12,
+    buildings: [],
+  });
+  assert.equal(useGameStore.getState().evolveRelic('mam_song_bat_diet', { ttchToSpend: true }), false);
+  assert.equal(useGameStore.getState().tinhThe, 12);  // không tiêu
+  assert.equal(useGameStore.getState().relicEvolutions.mam_song_bat_diet ?? 0, 0);
+});
+
+test('Cộng Hưởng: unlockSkill elite cộng hưởng tốn 11 SP (server tính lại, chống tamper)', () => {
+  resetStore();
+  useGameStore.setState((s) => ({
+    player: { ...s.player, sp: 11, unlockedSkills: { ...s.player.unlockedSkills, tap_trung_sieu_viet: true } },
+    relics: [{ id: 'mam_song_bat_diet' }],
+    relicEvolutions: { mam_song_bat_diet: 1 },
+  }));
+  // Dù UI truyền 22, giá thực = 11 nhờ cộng hưởng.
+  assert.equal(useGameStore.getState().unlockSkill('sieu_tap_trung', 22, ['tap_trung_sieu_viet']), true);
+  const st = useGameStore.getState();
+  assert.equal(st.player.unlockedSkills.sieu_tap_trung, true);
+  assert.equal(st.player.sp, 0);
+
+  // Không cổ vật → cần đủ 22; tamper-down truyền 11 vẫn bị chặn.
+  resetStore();
+  useGameStore.setState((s) => ({
+    player: { ...s.player, sp: 11, unlockedSkills: { ...s.player.unlockedSkills, tap_trung_sieu_viet: true } },
+    relics: [],
+    relicEvolutions: {},
+  }));
+  assert.equal(useGameStore.getState().unlockSkill('sieu_tap_trung', 11, ['tap_trung_sieu_viet']), false);
+  assert.equal(useGameStore.getState().player.unlockedSkills.sieu_tap_trung ?? false, false);
+});
+
+test('Cộng Hưởng: tinhThe khởi tạo 0, schema = 3, sống sót qua prestige', () => {
+  assert.equal(useGameStore.getInitialState().tinhThe, 0);
+  assert.equal(GAME_STORE_SCHEMA_VERSION, 3);
+
+  resetStore();
+  useGameStore.setState((s) => ({
+    tinhThe: 5,
+    progress: { ...s.progress, totalEP: PRESTIGE_EP_REQUIREMENT },
+  }));
+  assert.equal(useGameStore.getState().triggerPrestige(), true);
+  assert.equal(useGameStore.getState().tinhThe, 5);  // persist qua prestige
+  assert.ok(useGameStore.getState().tinhThe <= TINH_THE_HARD_CAP);
 });

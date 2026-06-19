@@ -102,6 +102,16 @@ import {
   normalizeRawResourceId,
   STORAGE_VAULT_XP_PER_MINUTE,
   STORAGE_VAULT_XP_PER_MINUTE_ENHANCED,
+  // Bản Cập Nhật Cộng Hưởng — Tinh Thể (TTCH)
+  SKILL_TREE,
+  TINH_THE_HARD_CAP,
+  TTCH_PER_DAILY_SWEEP,
+  TTCH_PER_CHAIN_STEP,
+  TTCH_PER_CHAIN_FINALE,
+  TTCH_PER_STREAK_MISSION,
+  TTCH_PER_REFINED,
+  TTCH_RELIC_SUBSIDY_CAP_PCT,
+  TTCH_TRUMP_PICK_COST,
 } from '../engine/constants';
 import {
   calculateRewards,
@@ -112,6 +122,9 @@ import {
   getComboDecayMs,
   HISTORY_ENTRY_STATUS,
   isCancelledHistoryEntry,
+  // Bản Cập Nhật Cộng Hưởng
+  clampRelicDisasterReduction,
+  getEffectiveSkillCost,
 } from '../engine/gameMath';
 import { inferAchievementUnlockTimes } from '../engine/achievementTimeline';
 import { countRichTextWords } from '../utils/richText';
@@ -131,7 +144,7 @@ import {
 } from '../engine/challengeEngine';
 
 export { GAME_STORE_STORAGE_KEY, GAME_STORE_EXPORT_VERSION };
-export const GAME_STORE_SCHEMA_VERSION = 2;
+export const GAME_STORE_SCHEMA_VERSION = 3;
 
 function isRecord(value) {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -1131,6 +1144,8 @@ const makeDefaultSkillActivations = () => ({
   luckyModeActive:       false,
   luckyModeChargesUsed:  0,
   lastResetDate:         null,  // 'YYYY-MM-DD' — reset charges hàng ngày
+  // Bản Cập Nhật Cộng Hưởng (transient, reset theo ngày qua lastResetDate)
+  surgeOverride:         null,  // 'so_do' | 'sieu_tap_trung' | 'jackpot' | null — Dồn Lực tự chọn
 });
 
 // ─── FACTORY: CATEGORY TRACKING ──────────────────────────────────────────────
@@ -2091,6 +2106,10 @@ function normalizePersistedGameState(persistedState, currentState, options = {})
       ? normalizeStoredRefined(persisted.resourcesRefined)
       : current.resourcesRefined,
     relicEvolutions: isRecord(persisted.relicEvolutions) ? persisted.relicEvolutions : current.relicEvolutions,
+    // TTCH: clamp [0, TINH_THE_HARD_CAP]; đây là đường nạp load-bearing (Supabase/import đi qua normalize).
+    tinhThe: Number.isFinite(persisted.tinhThe)
+      ? Math.max(0, Math.min(TINH_THE_HARD_CAP, Math.floor(persisted.tinhThe)))
+      : (current.tinhThe ?? 0),
     lastWeeklyReportDate: persisted.lastWeeklyReportDate ?? current.lastWeeklyReportDate,
     latestSessionUndo: persisted.latestSessionUndo ?? current.latestSessionUndo,
   };
@@ -2122,6 +2141,17 @@ function migratePersistedGameState(persistedState, fromVersion) {
       // Clean lên player object để không leak field tạm
       delete migratedPlayer._v2MigrationInfo;
     }
+  }
+
+  // V3: Bản Cập Nhật Cộng Hưởng — đảm bảo tinhThe hợp lệ (idempotent, backup-only;
+  // đường nạp web thật đi qua normalize chứ không qua migrate).
+  if (fromVersion < 3) {
+    next = {
+      ...next,
+      tinhThe: Number.isFinite(next.tinhThe)
+        ? Math.max(0, Math.min(TINH_THE_HARD_CAP, Math.floor(next.tinhThe)))
+        : 0,
+    };
   }
 
   return next;
@@ -3254,6 +3284,9 @@ const useGameStore = create(
       // ── Giai đoạn tiến hóa di vật ────────────────────────────────────────
       relicEvolutions: {},  // { [relicId]: stageNumber } — 0=base, 1=evolved, 2=legendary
 
+      // ── Tinh Thể Cộng Hưởng (TTCH) — tiền tệ thay-thế từ nhiệm vụ ─────────
+      tinhThe: 0,  // chỉ tiêu để thay thế (tiến hóa cổ vật / trả-trước charge), không bao giờ là sức mạnh trực tiếp
+
       // ── Snapshot undo an toàn cho phiên mới nhất ─────────────────────────
       latestSessionUndo: null,
 
@@ -3894,6 +3927,8 @@ const useGameStore = create(
           dailyGoalAchieved,
           nextSessionBuffs:         Array.isArray(state.player.skillBuffQueue) ? state.player.skillBuffQueue : [],
           keHoachWeeklyBuffActive,
+          // DỒN LỰC: ưu tiên trump người chơi tự chọn cho hôm nay (nếu có)
+          surgeOverride:            skillAct.surgeOverride ?? null,
         };
 
         // Tính toán phần thưởng phiên và gộp thêm bonus Wonder còn hoạt động.
@@ -4050,10 +4085,15 @@ const useGameStore = create(
           consecutiveCount: consecutiveSameCat,
         };
 
-        const consumedSuperFocus = skillAct.superFocusActive
-          && minutesFocused >= SIEU_TAP_TRUNG_MIN_MIN;
-        const consumedLuckyMode = skillAct.luckyModeActive
-          && minutesFocused >= SO_DO_MIN_MINUTES;
+        // DỒN LỰC: tiêu charge theo trump ĐÃ CHỌN.
+        // - Siêu Tập Trung (tất định): chỉ tiêu khi được chọn+áp dụng; nếu bị metering
+        //   chặn (Số Đỏ thắng) thì HOÀN charge.
+        // - Số Đỏ (ngẫu nhiên 40%): tiêu khi đã kích hoạt + đủ điều kiện DÙ trượt roll
+        //   (giữ hành vi cũ — không re-roll miễn phí); CHỈ hoàn khi bị metering chặn.
+        const luckyArmedEligible = skillAct.luckyModeActive && minutesFocused >= SO_DO_MIN_MINUTES;
+        const luckySuppressed    = reward.luckyBurstTriggered && reward.donLucChosen !== 'so_do';
+        const consumedSuperFocus = !!reward.sieuTapTrungApplied;
+        const consumedLuckyMode  = luckyArmedEligible && !luckySuppressed;
 
         // ─── Reset skill activations (chỉ tiêu charge khi phiên đủ điều kiện) ─
         const skillActivationsUpd = {
@@ -4175,7 +4215,7 @@ const useGameStore = create(
             epEarned:         finalSessionEP,
             tier:             reward.tierLabel,
             multiplier:       reward.multiplier,
-            jackpot:          reward.jackpotTriggered,
+            jackpot:          reward.jackpotApplied,
             resources:        reward.resources,
             rpEarned:         finalSessionRP,
             refinedEarned:    (reward.t2Drop ?? 0) + buildingPerkReward.refined,
@@ -4207,7 +4247,7 @@ const useGameStore = create(
             bestSessionMinutes: currentHistoryStats.bestSessionMinutes,
             bestSessionXP: currentHistoryStats.bestSessionXP,
             bestSessionId: currentHistoryStats.bestSessionId,
-            totalJackpots: currentHistoryStats.totalJackpots + (reward.jackpotTriggered ? 1 : 0),
+            totalJackpots: currentHistoryStats.totalJackpots + (reward.jackpotApplied ? 1 : 0),
             totalBlueprints: currentHistoryStats.totalBlueprints + (sessionWasBlueprint ? 1 : 0),
             cancelledSessions: currentHistoryStats.cancelledSessions,
             cancelledMinutes: currentHistoryStats.cancelledMinutes,
@@ -4447,6 +4487,11 @@ const useGameStore = create(
             research:         eraScopedState.research,
             craftingQueue:    eraScopedState.craftingQueue,
             resourcesRefined: refinedAfterCarry,
+            // Cộng Hưởng: nhiệm vụ streak trả thưởng → +1 TTCH (gated bởi streakMissionXP>0, 1 lần/ngày)
+            tinhThe: Math.min(
+              TINH_THE_HARD_CAP,
+              (prev.tinhThe ?? 0) + (streakMissionXP > 0 ? TTCH_PER_STREAK_MISSION : 0),
+            ),
             latestSessionUndo: prev.latestSessionUndo
               ? { ...prev.latestSessionUndo, sessionId }
               : null,
@@ -4735,14 +4780,14 @@ const useGameStore = create(
           return;
         }
 
-        // Tổng hợp disasterReduction từ di vật tiến hóa
+        // Tổng hợp disasterReduction từ di vật tiến hóa (D2: clamp tổng)
         const _cancelEvos     = state.relicEvolutions ?? {};
-        const disasterRedBuff = state.relics.reduce((acc, r) => {
+        const disasterRedBuff = clampRelicDisasterReduction(state.relics.reduce((acc, r) => {
           const stage = _cancelEvos[r.id] ?? 0;
           const evoDef = RELIC_EVOLUTION[r.id];
           const buff   = evoDef?.stages[stage]?.buff ?? r.buff ?? {};
           return acc + (buff.disasterReduction ?? 0);
-        }, 0);
+        }, 0));
 
         const result = applyDisasterPenalty(
           state.resources,
@@ -4847,14 +4892,25 @@ const useGameStore = create(
         if (REMOVED_SKILLS_V1_TO_V2[skillId]) return false;
 
         if (unlockedSkills[skillId]) return false;
-        if (sp < spCost) return false;
+
+        // B (Cộng Hưởng): KHÔNG tin spCost từ UI. Tra giá GỐC chuẩn từ SKILL_TREE,
+        // rồi áp giảm-nửa-giá nếu sở hữu cổ vật cộng hưởng (chống cả tamper-down lẫn
+        // tamper-up-discount).
+        let baseCost = spCost;
+        for (const branch of Object.values(SKILL_TREE)) {
+          const node = branch.nodes.find((n) => n.id === skillId);
+          if (node) { baseCost = node.spCost; break; }
+        }
+        const effectiveCost = getEffectiveSkillCost(skillId, baseCost, state.relics, state.relicEvolutions);
+
+        if (sp < effectiveCost) return false;
         const prereqsMet = requires.every((req) => unlockedSkills[req]);
         if (!prereqsMet) return false;
 
         set((prev) => ({
           player: {
             ...prev.player,
-            sp: prev.player.sp - spCost,
+            sp: prev.player.sp - effectiveCost,
             unlockedSkills: { ...prev.player.unlockedSkills, [skillId]: true },
           },
           latestSessionUndo: null,
@@ -4907,6 +4963,37 @@ const useGameStore = create(
             lastResetDate:   today,
             luckyModeActive: true,
           },
+          latestSessionUndo: null,
+        }));
+        return true;
+      },
+
+      /**
+       * setSurgeChoice — DỒN LỰC: tự chọn trump nào được áp dụng khi nhiều trump
+       * cùng kích hoạt trong một phiên. Đặt preference cho HÔM NAY (reset theo ngày).
+       * Đặt một lựa chọn mới (khác null) tốn TTCH_TRUMP_PICK_COST; xóa (null) miễn phí.
+       * Đây CHỈ là sắp xếp lại thứ tự trong số trump đang active — không tạo thêm sức mạnh.
+       */
+      setSurgeChoice: (pref) => {
+        const state = get();
+        const allowed = pref === null || ['so_do', 'sieu_tap_trung', 'jackpot'].includes(pref);
+        if (!allowed) return false;
+        const today   = localDateStr();
+        const sa      = state.skillActivations;
+        const saToday = sa.lastResetDate === today ? sa : makeDefaultSkillActivations();
+
+        if (pref === null) {
+          set(() => ({
+            skillActivations: { ...saToday, lastResetDate: today, surgeOverride: null },
+            latestSessionUndo: null,
+          }));
+          return true;
+        }
+        if (saToday.surgeOverride === pref) return true;  // đã chọn đúng — không tính phí lại
+        if ((state.tinhThe ?? 0) < TTCH_TRUMP_PICK_COST) return false;
+        set(() => ({
+          skillActivations: { ...saToday, lastResetDate: today, surgeOverride: pref },
+          tinhThe: Math.max(0, (state.tinhThe ?? 0) - TTCH_TRUMP_PICK_COST),
           latestSessionUndo: null,
         }));
         return true;
@@ -5241,6 +5328,8 @@ const useGameStore = create(
             missions: { ...activeMissions, bonusClaimedToday: true, bonusClaimedXP: allBonusXP },
             weeklyChain,
             dailyTracking,
+            // Cộng Hưởng: quét sạch nhiệm vụ ngày → +TTCH (gated bởi bonusClaimedToday)
+            tinhThe: Math.min(TINH_THE_HARD_CAP, (prev.tinhThe ?? 0) + TTCH_PER_DAILY_SWEEP),
             latestSessionUndo: null,
             ui: {
               ...prev.ui,
@@ -5308,6 +5397,11 @@ const useGameStore = create(
               stepProgress: nextStep ? getWeeklyStepProgress(nextStep, weeklySnapshot) : 0,
               bonusClaimed: isLastStep ? true : activeChain.bonusClaimed,
             },
+            // Cộng Hưởng: bước thường +1 TTCH, bước cuối (finale) +3 TTCH (mỗi bước mint 1 lần)
+            tinhThe: Math.min(
+              TINH_THE_HARD_CAP,
+              (prev.tinhThe ?? 0) + (isLastStep ? TTCH_PER_CHAIN_FINALE : TTCH_PER_CHAIN_STEP),
+            ),
             latestSessionUndo: null,
             ui: {
               ...prev.ui,
@@ -5623,7 +5717,7 @@ const useGameStore = create(
        * Tiến hóa di vật lên giai đoạn tiếp theo bằng nguyên liệu tinh luyện.
        * Returns true nếu thành công, false nếu không đủ điều kiện.
        */
-      evolveRelic: (relicId) => {
+      evolveRelic: (relicId, opts = {}) => {
         const state   = get();
         const evoDef  = RELIC_EVOLUTION[relicId];
         if (!evoDef) return false;
@@ -5636,7 +5730,18 @@ const useGameStore = create(
         const refined      = normalizeRefinedBag(state.resourcesRefined?.[era]);
         const refinedCost  = getWonderRelicEvolutionCost(state.buildings, nextStageDef);
 
-        if (refined.t2 < refinedCost) return false;
+        // Cộng Hưởng: tùy chọn trả MỘT PHẦN bằng TTCH (tối đa 50%, không bao giờ
+        // bỏ hết — người chơi vẫn phải có ≥50% chi phí bằng tinh luyện thật).
+        const useTTCH            = !!opts.ttchToSpend;
+        const maxTTCHCoverUnits  = useTTCH ? Math.floor(refinedCost * TTCH_RELIC_SUBSIDY_CAP_PCT) : 0;
+        const affordableFromTTCH = Math.floor((state.tinhThe ?? 0) / TTCH_PER_REFINED);
+        const ttchCoverUnits     = Math.min(maxTTCHCoverUnits, affordableFromTTCH);
+        const reducedRefinedCost = refinedCost - ttchCoverUnits;
+        const ttchSpent          = ttchCoverUnits * TTCH_PER_REFINED;
+
+        // Phần tinh luyện thật còn lại bắt buộc phải đủ (mặc định = toàn bộ refinedCost).
+        if (refined.t2 < reducedRefinedCost) return false;
+        if ((state.tinhThe ?? 0) < ttchSpent) return false;
 
         set((prev) => ({
           relicEvolutions: {
@@ -5645,8 +5750,9 @@ const useGameStore = create(
           },
           resourcesRefined: {
             ...prev.resourcesRefined,
-            [era]: spendUnifiedRefined(prev.resourcesRefined?.[era], refinedCost),
+            [era]: spendUnifiedRefined(prev.resourcesRefined?.[era], reducedRefinedCost),
           },
+          tinhThe: Math.max(0, (state.tinhThe ?? 0) - ttchSpent),
           latestSessionUndo: null,
         }));
         return true;
@@ -5874,6 +5980,7 @@ const useGameStore = create(
         buildingLevels:   state.buildingLevels,
         resourcesRefined: state.resourcesRefined,
         relicEvolutions:      state.relicEvolutions,
+        tinhThe:              state.tinhThe,
         lastWeeklyReportDate: state.lastWeeklyReportDate,
         buildingLastUsed:     state.buildingLastUsed,
         latestSessionUndo:    state.latestSessionUndo,

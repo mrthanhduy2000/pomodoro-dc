@@ -2043,6 +2043,58 @@ export const XP_FACTOR_HARD_CAP       = 4.25;
 // Realistic max ≈ 2.2; cap 2.5 cho headroom đặc biệt.
 export const EP_FACTOR_HARD_CAP       = 2.5;
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// BẢN CẬP NHẬT CỘNG HƯỞNG (Resonance Update)
+// Liên kết Kỹ năng ↔ Nhiệm vụ ↔ Kho báu thành một vòng lặp — KHÔNG lạm phát.
+// Mọi buff vẫn nằm trong pool cộng + trần cứng cũ; phần này chỉ thêm tiền tệ thay
+// thế (Tinh Thể), cổng giảm giá SP, "Dồn Lực" (gộp trump) và softcap chống phình.
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// ─── A. TINH THỂ CỘNG HƯỞNG (TTCH) — tiền tệ chỉ-để-thay-thế ────────────────
+// KHÔNG bao giờ được đọc trong calculateRewards (bất biến grep-được).
+export const TTCH_PER_DAILY_SWEEP        = 2;    // hoàn tất toàn bộ nhiệm vụ ngày
+export const TTCH_PER_CHAIN_STEP         = 1;    // mỗi bước chuỗi tuần (không phải bước cuối)
+export const TTCH_PER_CHAIN_FINALE       = 3;    // bước cuối chuỗi tuần
+export const TTCH_PER_STREAK_MISSION     = 1;    // khi nhận thưởng nhiệm vụ streak
+export const TINH_THE_HARD_CAP           = 12;   // tồn kho TTCH tối đa
+export const TTCH_PER_REFINED            = 2;    // 2 TTCH thay 1 đơn vị tinh luyện (t2-quy đổi)
+export const TTCH_RELIC_SUBSIDY_CAP_PCT  = 0.50; // TTCH gánh tối đa 50% chi phí tiến hóa cổ vật
+export const TTCH_TRUMP_PICK_COST        = 1;    // 1 TTCH để tự chọn trump nào áp dụng phiên này (Dồn Lực)
+// (Dự trữ — chưa wire) ý tưởng trả-trước-charge bằng TTCH; bỏ để giữ thiết kế tinh gọn.
+export const TTCH_PER_CHARGE_SUB         = 6;
+export const TRUMP_TT_BUYS_PER_DAY       = 1;
+
+// ─── B. CỘNG HƯỞNG CỔ VẬT ↔ KỸ NĂNG — cổng giảm giá SP (không thêm %) ─────────
+// Sở hữu cổ vật đúng kỷ ở bậc ≥ RESONANCE_HALF_STAGE → giảm nửa giá SP của skill
+// elite cùng nhánh. Giá luôn suy ra từ spCost truyền vào (không hard-code).
+export const RELIC_ELITE_RESONANCE = {
+  THIEN_DINH: { relicId: 'mam_song_bat_diet',  elite: 'sieu_tap_trung'   },
+  Y_CHI:      { relicId: 'ngon_duoc_khai_sang', elite: 'ben_vung'         },
+  NGHI_NGOI:  { relicId: 'la_chan_phong_kien',  elite: 'nhip_hoan_hao'    },
+  VAN_MAY:    { relicId: 'xuc_xac_ky_vong',     elite: 'so_do'            },
+  CHIEN_LUOC: { relicId: 'la_ban_da_vinci',     elite: 'ke_hoach_hoan_hao' },
+  THANG_HOA:  { relicId: 'loi_tri_tue',         elite: 'sieu_viet'        },
+};
+export const RESONANCE_HALF_STAGE   = 1;    // bậc cổ vật "Tiến Hóa" (index 1) trở lên
+export const RESONANCE_SP_DISCOUNT  = 0.5;  // hệ số nhân giá SP khi cộng hưởng (22→11)
+
+// ─── C. DỒN LỰC — gộp trump: tối đa 1 nhân-sau-trần mỗi phiên ─────────────────
+// Thứ tự ưu tiên mặc định khi nhiều trump cùng kích hoạt (bùng nổ XP cao nhất trước).
+export const DON_LUC_PRIORITY = ['so_do', 'sieu_tap_trung', 'jackpot'];
+
+// ─── D. SOFTCAP CHỐNG PHÌNH (no-op trên mọi build hiện tại) ───────────────────
+// D1: softcap XP% TỪNG NHÁNH. Knee đặt TRÊN tổng max thật của nhánh mạnh nhất
+// (THIEN_DINH = 0.05+0.08+0.08+0.15 = 0.36) nên hôm nay là no-op tuyệt đối.
+export const BRANCH_XP_SOFTCAP_KNEE = 0.40; // XP% mỗi nhánh tính đủ tới mốc này
+export const BRANCH_XP_DR_RATE      = 0.5;  // phần vượt mốc chỉ tính 50%
+// D2: softcap theo TỪNG loại buff cổ vật, đặt trên tổng Huyền Thoại thật (có chừa
+// headroom cho seed từ rank passive). Math.min trên TỔNG đã cộng — no-op hiện tại.
+export const RELIC_RESOURCE_BONUS_CAP    = 2.20; // tổng relic 1.88 + seed rank ~0.25
+export const RELIC_GACHA_BONUS_CAP       = 70;   // tổng relic 65
+export const RELIC_PITY_SEAL_CAP         = 35;   // tổng relic 32
+export const RELIC_DISASTER_REDUCTION_CAP = 0.55; // tổng relic 0.52
+export const RELIC_COMBO_WINDOW_CAP_HOURS = 18;   // tổng relic 16 (giờ từ cổ vật, chưa tính base skill)
+
 // ─── PARTICLE RAIN THRESHOLD ─────────────────────────────────────────────────
 export const PARTICLE_RAIN_EP_THRESHOLD = 50;      // show particles if finalEP >= this
 

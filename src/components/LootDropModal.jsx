@@ -101,7 +101,7 @@ function createRewardPalette(accentHex, lightTheme) {
 function resolveRewardPhase(phase, reward) {
   let currentPhase = phase;
   while (
-    (currentPhase === 4 && !reward.jackpotTriggered)
+    (currentPhase === 4 && !reward.jackpotApplied)
     || (currentPhase === 5 && !(reward.levelsGained > 0))
     || (currentPhase === 6 && !reward.eraChanged)
   ) {
@@ -187,7 +187,7 @@ function LootDropContent({ reward, onClose, isLightTheme }) {
   // ── Tự động chuyển giai đoạn + kích hoạt âm thanh ────────────────────────
   useEffect(() => {
     if (resolvedPhase === 0) soundEngine.playChestOpen();
-    if (resolvedPhase === 4 && reward.jackpotTriggered) soundEngine.playJackpot();
+    if (resolvedPhase === 4 && reward.jackpotApplied) soundEngine.playJackpot();
     if (resolvedPhase === 5 && reward.levelsGained > 0) {
       soundEngine.playLevelUp();
       notificationManager.notifyLevelUp(reward.newLevel);
@@ -218,7 +218,7 @@ function LootDropContent({ reward, onClose, isLightTheme }) {
     ? (displayFinalXP / reward.effectiveMinutes).toFixed(1)
     : '0.0';
   const bonusHighlights = [
-    reward.luckyBurstTriggered && {
+    reward.luckyBurstApplied && {
       icon: 'SD',
       label: 'Số Đỏ',
       value: 'XP / RP / thô ×2.5',
@@ -578,7 +578,7 @@ function LootDropContent({ reward, onClose, isLightTheme }) {
 
         {/* ── Giai đoạn 4: Slot Machine Đại Trúng Thưởng ─────────────── */}
         <AnimatePresence>
-          {resolvedPhase >= 4 && reward.jackpotTriggered && <SlotMachineReveal lightTheme={isLightTheme} />}
+          {resolvedPhase >= 4 && reward.jackpotApplied && <SlotMachineReveal lightTheme={isLightTheme} />}
         </AnimatePresence>
 
         {/* ── Giai đoạn 5: Băng-rôn Lên Cấp ──────────────────────────── */}

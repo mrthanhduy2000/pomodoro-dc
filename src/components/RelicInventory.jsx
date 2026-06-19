@@ -166,6 +166,9 @@ function RelicCard({ relic, stage, lightTheme }) {
   const evolveRelic = useGameStore((s) => s.evolveRelic);
   const resourcesRefined = useGameStore((s) => s.resourcesRefined);
   const buildings = useGameStore((s) => s.buildings);
+  const tinhThe = useGameStore((s) => s.tinhThe);
+
+  const [useTinhThe, setUseTinhThe] = React.useState(false);
 
   const evoDef = RELIC_EVOLUTION[relic.id];
   const maxStage = evoDef ? evoDef.stages.length - 1 : 0;
@@ -178,6 +181,7 @@ function RelicCard({ relic, stage, lightTheme }) {
   const canEvolve = !isMaxStage && refined.t2 >= refinedCost;
   const currentBuff = evoDef?.stages[stage]?.buff ?? relic.buff;
   const token = STAGE_TOKENS[stage] ?? STAGE_TOKENS[0];
+  const hasTinhThe = (tinhThe ?? 0) > 0;
 
   return (
     <motion.div
@@ -301,10 +305,30 @@ function RelicCard({ relic, stage, lightTheme }) {
                   Đã áp dụng giảm 30% từ kỳ quan hỗ trợ.
                 </p>
               )}
+              {hasTinhThe && (
+                <label
+                  className="mt-2 flex cursor-pointer items-center justify-between gap-2"
+                  style={{ userSelect: 'none' }}
+                >
+                  <span className="flex items-center gap-2 text-[11px]" style={{ color: 'var(--muted)' }}>
+                    <input
+                      type="checkbox"
+                      checked={useTinhThe}
+                      onChange={(e) => setUseTinhThe(e.target.checked)}
+                      className="h-3.5 w-3.5"
+                      style={{ accentColor: 'var(--accent2)' }}
+                    />
+                    Dùng Tinh Thể (giảm tối đa 50%)
+                  </span>
+                  <span className="mono text-[10px] tabular-nums" style={{ color: 'var(--accent2)' }}>
+                    {tinhThe} TTCH
+                  </span>
+                </label>
+              )}
               <motion.button
                 whileHover={canEvolve ? { scale: 1.02 } : undefined}
                 whileTap={canEvolve ? { scale: 0.98 } : undefined}
-                onClick={() => canEvolve && evolveRelic(relic.id)}
+                onClick={() => canEvolve && evolveRelic(relic.id, useTinhThe && hasTinhThe ? { ttchToSpend: true } : undefined)}
                 disabled={!canEvolve}
                 className="mt-3 w-full rounded-[var(--skin-radius-control,16px)] py-2.5 text-sm font-semibold transition-colors"
                 style={canEvolve ? (

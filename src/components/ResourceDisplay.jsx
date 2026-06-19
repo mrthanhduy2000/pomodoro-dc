@@ -35,6 +35,7 @@ export default function ResourceDisplay() {
   const allResources = useGameStore((s) => s.resources);
   const totalEP = useGameStore((s) => s.progress.totalEP);
   const researchRP = useGameStore((s) => s.research?.rp ?? 0);
+  const tinhThe = useGameStore((s) => s.tinhThe);
   const resourcesRefined = useGameStore((s) => s.resourcesRefined);
   const uiTheme = useSettingsStore((s) => s.uiTheme);
   const reduceMotion = useReducedMotion();
@@ -138,6 +139,7 @@ export default function ResourceDisplay() {
         ))}
         <ResourceTile label="RP" value={researchRP.toLocaleString()} accent />
         <ResourceTile label={refined.t2Label} value={refinedBag.t2.toLocaleString()} accent />
+        <ResourceTile label="💠 Tinh Thể" value={`${tinhThe ?? 0} / 12`} accent />
       </div>
 
       <div className="mt-4 border-t pt-3.5" style={{ borderColor: 'var(--line)' }}>

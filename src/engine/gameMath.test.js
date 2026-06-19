@@ -16,7 +16,17 @@ import {
   getDailyGoalCalibration,
   getLateNightQualityDrop,
   generateCoachBriefing,
+  // Bản Cập Nhật Cộng Hưởng
+  calculateRewards,
+  softcapBranchXP,
+  getEffectiveSkillCost,
+  clampRelicDisasterReduction,
+  getComboDecayMs,
 } from './gameMath.js';
+import {
+  SIEU_TAP_TRUNG_MULT,
+  SO_DO_MULTIPLIER,
+} from './constants.js';
 
 // Giờ của mỗi phiên được lấy trực tiếp từ trường `hour` trong fixture, để test
 // không phụ thuộc múi giờ máy chạy.
@@ -522,4 +532,92 @@ test('briefing: đang chạy phiên thì KHÔNG ép câu "bắt đầu phiên" l
   const opts = { nowHour: 9, getEntryHour, dailyGoalMetric: 'sessions', dailyGoal: 5, sessionsToday: 4 };
   assert.equal(generateCoachBriefing(briefHistory(), opts).kind, 'pace-near');
   assert.notEqual(generateCoachBriefing(briefHistory(), { ...opts, isSessionRunning: true }).kind, 'pace-near');
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// BẢN CẬP NHẬT CỘNG HƯỞNG — test bộ máy
+// ═══════════════════════════════════════════════════════════════════════════════
+
+test('softcapBranchXP: identity dưới knee, fold trên knee', () => {
+  // Knee = 0.40, DR rate = 0.5
+  assert.equal(softcapBranchXP(0), 0);
+  assert.equal(softcapBranchXP(0.36), 0.36);   // max thật của THIEN_DINH — no-op
+  assert.equal(softcapBranchXP(0.40), 0.40);   // đúng knee
+  assert.ok(Math.abs(softcapBranchXP(0.50) - 0.45) < 1e-9); // 0.40 + 0.10*0.5
+  assert.ok(Math.abs(softcapBranchXP(0.80) - 0.60) < 1e-9); // 0.40 + 0.40*0.5
+});
+
+test('getEffectiveSkillCost: elite cộng hưởng giảm nửa, còn lại giữ nguyên', () => {
+  const relics = [{ id: 'mam_song_bat_diet' }];
+  // có cổ vật đúng kỷ ở bậc >=1 → 22 thành 11
+  assert.equal(getEffectiveSkillCost('sieu_tap_trung', 22, relics, { mam_song_bat_diet: 1 }), 11);
+  assert.equal(getEffectiveSkillCost('sieu_tap_trung', 22, relics, { mam_song_bat_diet: 2 }), 11);
+  // bậc 0 (chưa tiến hóa) → không giảm
+  assert.equal(getEffectiveSkillCost('sieu_tap_trung', 22, relics, { mam_song_bat_diet: 0 }), 22);
+  // không sở hữu cổ vật → không giảm
+  assert.equal(getEffectiveSkillCost('sieu_tap_trung', 22, [], {}), 22);
+  // skill không phải elite cộng hưởng → giữ nguyên
+  assert.equal(getEffectiveSkillCost('vao_guong', 3, relics, { mam_song_bat_diet: 2 }), 3);
+});
+
+test('clampRelicDisasterReduction: clamp tổng, no-op dưới trần', () => {
+  assert.equal(clampRelicDisasterReduction(0.80), 0.55); // RELIC_DISASTER_REDUCTION_CAP
+  assert.equal(clampRelicDisasterReduction(0.52), 0.52); // tổng relic thật — no-op
+  assert.equal(clampRelicDisasterReduction(0), 0);
+});
+
+test('getComboDecayMs: clamp giờ combo từ cổ vật, KHÔNG thu nhỏ base skill', () => {
+  const HOUR = 3_600_000;
+  const decay30 = getComboDecayMs({}, [{ id: 'fake', buff: { comboWindowHours: 30 } }], {});
+  const decay18 = getComboDecayMs({}, [{ id: 'fake', buff: { comboWindowHours: 18 } }], {});
+  const decay16 = getComboDecayMs({}, [{ id: 'fake', buff: { comboWindowHours: 16 } }], {});
+  assert.equal(decay30, decay18);          // 30 bị clamp về 18 (RELIC_COMBO_WINDOW_CAP_HOURS)
+  assert.ok(decay16 < decay18);            // 16 dưới trần — không clamp
+  // base skill bo_nho_co_bap được cộng TRÊN phần đã clamp (không bị thu nhỏ)
+  const withSkill30  = getComboDecayMs({ bo_nho_co_bap: true }, [{ id: 'fake', buff: { comboWindowHours: 30 } }], {});
+  const withSkillNo  = getComboDecayMs({ bo_nho_co_bap: true }, [], {});
+  assert.equal(withSkill30 - withSkillNo, 18 * HOUR);
+});
+
+// — DỒN LỰC: tối đa 1 trump nhân-sau-trần mỗi phiên —
+function withStubbedRandom(value, fn) {
+  const orig = Math.random;
+  Math.random = () => value;
+  try { return fn(); } finally { Math.random = orig; }
+}
+
+test('Dồn Lực: 3 trump cùng kích hoạt → chỉ áp dụng 1 (ưu tiên Số Đỏ)', () => {
+  // rand()=0.001 < 0.025 (jackpot) và < 0.40 (Số Đỏ) → cả ba đều là ứng viên.
+  const skills = { dai_trung_thuong: true, sieu_tap_trung: true, so_do: true };
+  const ctx = { superFocusActive: true, luckyModeActive: true };
+  const r = withStubbedRandom(0.001, () => calculateRewards(60, skills, 0, {}, ctx));
+  assert.equal(r.donLucChosen, 'so_do');
+  assert.equal(r.jackpotApplied, false);
+  assert.equal(r.luckyBurstApplied, true);
+  assert.equal(r.sieuTapTrungApplied, false);
+  // XP = base(60) × tier(2.0, jackpot bị trung hòa) × Số Đỏ(2.5) = 300
+  assert.equal(r.finalXP, Math.round(60 * 2.0 * SO_DO_MULTIPLIER));
+  // KHÔNG phải tích chồng ×jackpot×sieu×sodo
+  assert.ok(r.finalXP < 60 * 2.0 * 2.5 * SIEU_TAP_TRUNG_MULT * SO_DO_MULTIPLIER);
+});
+
+test('Dồn Lực: override chọn Siêu Tập Trung khi đang active', () => {
+  const skills = { dai_trung_thuong: true, sieu_tap_trung: true, so_do: true };
+  const ctx = { superFocusActive: true, luckyModeActive: true, surgeOverride: 'sieu_tap_trung' };
+  const r = withStubbedRandom(0.001, () => calculateRewards(60, skills, 0, {}, ctx));
+  assert.equal(r.donLucChosen, 'sieu_tap_trung');
+  assert.equal(r.sieuTapTrungApplied, true);
+  assert.equal(r.jackpotApplied, false);
+  assert.equal(r.luckyBurstApplied, false);
+  // XP = base(60) × tier(2.0) × Siêu Tập Trung(1.7) = 204
+  assert.equal(r.finalXP, Math.round(Math.round(60 * 2.0 * 1) * SIEU_TAP_TRUNG_MULT));
+});
+
+test('Dồn Lực: một trump duy nhất → hành vi y như cũ (no-op metering)', () => {
+  // Chỉ Siêu Tập Trung active, không jackpot/Số Đỏ.
+  const skills = { sieu_tap_trung: true };
+  const ctx = { superFocusActive: true };
+  const r = calculateRewards(60, skills, 0, {}, ctx);
+  assert.equal(r.donLucChosen, 'sieu_tap_trung');
+  assert.equal(r.finalXP, Math.round(Math.round(60 * 2.0) * SIEU_TAP_TRUNG_MULT));
 });

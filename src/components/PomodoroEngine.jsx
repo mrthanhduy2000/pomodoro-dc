@@ -5,7 +5,7 @@ import useGameStore from '../store/gameStore';
 import { pushNow } from '../lib/syncService';
 import useSettingsStore from '../store/settingsStore';
 import { useTimer, formatTime, TIMER_MODES, TIMER_STATES } from '../hooks/useTimer';
-import { getComboDecayMs, getMultiplierTier, suggestSessionLength } from '../engine/gameMath';
+import { getComboDecayMs, getMultiplierTier, suggestSessionLength, clampRelicDisasterReduction } from '../engine/gameMath';
 import { getVietnamHour } from '../engine/time';
 import { FLOWTIME_BREAK_RULES, QUICK_FOCUS_PRESETS, getBreakPlan } from '../engine/breaks';
 import {
@@ -581,12 +581,12 @@ export default function PomodoroEngine({
   });
 
   const disasterReductionPreview = useMemo(() => (
-    relics.reduce((acc, relic) => {
+    clampRelicDisasterReduction(relics.reduce((acc, relic) => {
       const stage = relicEvolutions[relic.id] ?? 0;
       const evoDef = RELIC_EVOLUTION[relic.id];
       const buff = evoDef?.stages[stage]?.buff ?? relic.buff ?? {};
       return acc + (buff.disasterReduction ?? 0);
-    }, 0)
+    }, 0))
   ), [relicEvolutions, relics]);
 
   const cancelPenaltyWonderMultiplier = useMemo(

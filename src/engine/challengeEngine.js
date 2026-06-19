@@ -16,7 +16,12 @@
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
-import { RANK_SYSTEM, ERA_CRISES, DISASTER_PENALTY_RATE, RELIC_EVOLUTION, XP_SEAL_HARD_CAP } from './constants';
+import {
+  RANK_SYSTEM, ERA_CRISES, DISASTER_PENALTY_RATE, RELIC_EVOLUTION, XP_SEAL_HARD_CAP,
+  // Bản Cập Nhật Cộng Hưởng — softcap theo từng loại buff cổ vật (D2)
+  RELIC_RESOURCE_BONUS_CAP, RELIC_GACHA_BONUS_CAP, RELIC_PITY_SEAL_CAP,
+  RELIC_DISASTER_REDUCTION_CAP, RELIC_COMBO_WINDOW_CAP_HOURS,
+} from './constants';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // HELPER CHUNG
@@ -437,6 +442,16 @@ export function aggregateActiveBuffs(activeBook, ranks, relics = [], prestigeBon
 
   // Hard cap: xpSeal từ di vật ★★★ không vượt quá XP_SEAL_HARD_CAP
   accumulated.xpSeal = Math.min(accumulated.xpSeal, XP_SEAL_HARD_CAP);
+
+  // D2: softcap theo TỪNG loại buff, trên TỔNG đã cộng (no-op với loadout hiện tại).
+  // resourceBonus / gachaBonus / pitySeal được calculateRewards đọc trực tiếp từ đây.
+  accumulated.resourceBonus = Math.min(accumulated.resourceBonus, RELIC_RESOURCE_BONUS_CAP);
+  accumulated.gachaBonus    = Math.min(accumulated.gachaBonus,    RELIC_GACHA_BONUS_CAP);
+  accumulated.pitySeal      = Math.min(accumulated.pitySeal,      RELIC_PITY_SEAL_CAP);
+  // disasterReduction / comboWindowHours: clamp ở ĐÂY chỉ để hiển thị đồng nhất;
+  // hiệu ứng THẬT được clamp tại nơi tiêu thụ (clampRelicDisasterReduction + getComboDecayMs).
+  accumulated.disasterReduction = Math.min(accumulated.disasterReduction, RELIC_DISASTER_REDUCTION_CAP);
+  accumulated.comboWindowHours  = Math.min(accumulated.comboWindowHours,  RELIC_COMBO_WINDOW_CAP_HOURS);
 
   return accumulated;
 }

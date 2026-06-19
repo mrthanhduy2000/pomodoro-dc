@@ -30,7 +30,8 @@ import {
   ACHIEVEMENTS,
   ACHIEVEMENT_TIERS,
 } from '../engine/constants';
-import { getLevelProgress } from '../engine/gameMath';
+import { getLevelProgress, getEffectiveSkillCost } from '../engine/gameMath';
+import { RELIC_ELITE_RESONANCE } from '../engine/constants';
 
 const NODE_STATE = {
   LOCKED:          'LOCKED',
@@ -75,6 +76,19 @@ const SKILL_LABELS = Object.fromEntries(
 );
 
 const BRANCH_KEYS = Object.keys(SKILL_TREE);
+
+// Cộng hưởng Di Vật — bản đồ tra cứu theo elite: nhãn di vật cùng kỷ để gợi ý giảm giá
+const RELIC_LABELS_VI = {
+  mam_song_bat_diet:  'Mầm Sống Bất Diệt',
+  ngon_duoc_khai_sang: 'Ngọn Đuốc Khai Sáng',
+  la_chan_phong_kien:  'Lá Chắn Phong Kiến',
+  xuc_xac_ky_vong:     'Xúc Xắc Kỳ Vọng',
+  la_ban_da_vinci:     'La Bàn Da Vinci',
+  loi_tri_tue:         'Lõi Trí Tuệ',
+};
+const ELITE_RESONANCE_BY_SKILL = Object.fromEntries(
+  Object.values(RELIC_ELITE_RESONANCE).map((m) => [m.elite, m]),
+);
 
 // Bản đồ tra cứu thành tựu theo id + tông màu bậc dịu mắt (hợp nền giấy ấm)
 const ACHIEVEMENT_BY_ID = Object.fromEntries(ACHIEVEMENTS.map((a) => [a.id, a]));
@@ -142,6 +156,8 @@ export default function SkillTree({ onOpenAchievements }) {
   const skillActivations   = useGameStore((s) => s.skillActivations);
   const activateSuperFocus = useGameStore((s) => s.activateSuperFocus);
   const activateLuckyMode  = useGameStore((s) => s.activateLuckyMode);
+  const relics             = useGameStore((s) => s.relics);
+  const relicEvolutions    = useGameStore((s) => s.relicEvolutions);
 
   const { progressPct, currentLevelEXP, nextLevelEXP } = getLevelProgress(totalEXP);
 
@@ -154,9 +170,10 @@ export default function SkillTree({ onOpenAchievements }) {
     if (unlockedSkills[node.id]) return NODE_STATE.UNLOCKED;
     const prereqsMet = node.requires.every((req) => unlockedSkills[req]);
     if (!prereqsMet) return NODE_STATE.LOCKED;
-    if (sp < node.spCost) return NODE_STATE.INSUFFICIENT_SP;
+    const effectiveCost = getEffectiveSkillCost(node.id, node.spCost, relics, relicEvolutions);
+    if (sp < effectiveCost) return NODE_STATE.INSUFFICIENT_SP;
     return NODE_STATE.AVAILABLE;
-  }, [unlockedSkills, sp]);
+  }, [unlockedSkills, sp, relics, relicEvolutions]);
 
   const handleBuy = (node) => {
     if (getNodeState(node) !== NODE_STATE.AVAILABLE) return;
@@ -279,6 +296,7 @@ export default function SkillTree({ onOpenAchievements }) {
                   key={node.id}
                   node={node}
                   nodeState={getNodeState(node)}
+                  effectiveCost={getEffectiveSkillCost(node.id, node.spCost, relics, relicEvolutions)}
                   isLast={i === selectedBranch.nodes.length - 1}
                   reducedMotion={prefersReducedMotion}
                   onBuy={() => handleBuy(node)}
@@ -456,11 +474,18 @@ function ActiveAbilityBar({ lightTheme, unlockedSkills, skillActivations, onActi
 
 // ─── SkillNode (một hàng trong cây, kiểu mockup) ──────────────────────────────
 
-function SkillNode({ node, nodeState, isLast, reducedMotion, onBuy }) {
+function SkillNode({ node, nodeState, effectiveCost, isLast, reducedMotion, onBuy }) {
   const isUnlocked     = nodeState === NODE_STATE.UNLOCKED;
   const isAvailable    = nodeState === NODE_STATE.AVAILABLE;
   const isLocked       = nodeState === NODE_STATE.LOCKED;
   const isInsufficient = nodeState === NODE_STATE.INSUFFICIENT_SP;
+
+  // Cộng hưởng Di Vật (B): giá hiển thị = effectiveCost; nếu rẻ hơn → có giảm giá
+  const cost          = effectiveCost ?? node.spCost;
+  const isDiscounted  = cost < node.spCost;
+  const resonance     = ELITE_RESONANCE_BY_SKILL[node.id]; // chỉ có ở 6 elite
+  const showHint      = !!resonance && !isDiscounted && !isUnlocked;
+  const hintRelicLabel = resonance ? RELIC_LABELS_VI[resonance.relicId] : null;
 
   const circleStyle = isUnlocked
     ? { background: 'var(--accent)', color: '#fff', border: '1px solid var(--accent)' }
@@ -504,6 +529,13 @@ function SkillNode({ node, nodeState, isLast, reducedMotion, onBuy }) {
                     : 'Cần mở nút trước')
                 : node.description}
             </p>
+            {showHint && (
+              <p className="mt-1 text-[11px] leading-snug" style={{ color: 'var(--accent2)', opacity: 0.85 }}>
+                {hintRelicLabel
+                  ? `Tiến hóa "${hintRelicLabel}" để giảm nửa giá`
+                  : 'Tiến hóa di vật cùng kỷ để giảm nửa giá'}
+              </p>
+            )}
           </div>
 
           <div className="shrink-0 pt-0.5">
@@ -520,14 +552,21 @@ function SkillNode({ node, nodeState, isLast, reducedMotion, onBuy }) {
                 className="mono inline-flex items-center whitespace-nowrap rounded-full px-3 py-1.5 text-[11px] font-semibold tabular-nums transition-colors"
                 style={{ background: 'rgba(var(--accent-rgb),0.10)', border: '1px solid rgba(var(--accent-rgb),0.30)', color: 'var(--accent2)' }}
               >
-                Mở · {node.spCost} SP
+                Mở ·{' '}
+                {isDiscounted && (
+                  <span className="line-through opacity-60 mr-1" style={{ color: 'var(--muted)' }}>{node.spCost}</span>
+                )}
+                {cost} SP
               </motion.button>
             ) : (
               <span
                 className="mono inline-flex items-center whitespace-nowrap rounded-full px-3 py-1.5 text-[11px] font-semibold tabular-nums"
                 style={{ background: 'var(--card-bg-solid2)', border: '1px solid var(--line)', color: 'var(--muted-2)', opacity: isInsufficient ? 0.95 : 0.7 }}
               >
-                {node.spCost} SP
+                {isDiscounted && (
+                  <span className="line-through opacity-60 mr-1">{node.spCost}</span>
+                )}
+                {cost} SP
               </span>
             )}
           </div>

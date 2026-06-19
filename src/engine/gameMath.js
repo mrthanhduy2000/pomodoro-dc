@@ -114,6 +114,15 @@ import {
   COMBO_DECAY_MS,
   BO_NHO_CO_BAP_COMBO_HOURS,
   RELIC_EVOLUTION,
+  // Bản Cập Nhật Cộng Hưởng
+  DON_LUC_PRIORITY,
+  BRANCH_XP_SOFTCAP_KNEE,
+  BRANCH_XP_DR_RATE,
+  RELIC_ELITE_RESONANCE,
+  RESONANCE_HALF_STAGE,
+  RESONANCE_SP_DISCOUNT,
+  RELIC_DISASTER_REDUCTION_CAP,
+  RELIC_COMBO_WINDOW_CAP_HOURS,
   // Deprecated (giữ để backward compat trong cancel disaster + signature)
   Y_CHI_THEP_RETENTION,
   BAT_KHUAT_DISASTER_XP_PENALTY,
@@ -154,18 +163,70 @@ export function getActiveResources(totalEP) {
 }
 
 export function getComboDecayMs(unlockedSkills = {}, relics = [], relicEvolutions = {}) {
-  const relicComboHours = (relics ?? []).reduce((acc, relic) => {
+  const relicComboHoursRaw = (relics ?? []).reduce((acc, relic) => {
     const stage = relicEvolutions?.[relic.id] ?? 0;
     const evoDef = RELIC_EVOLUTION[relic.id];
     const buff = evoDef?.stages?.[stage]?.buff ?? relic.buff ?? {};
     return acc + (buff.comboWindowHours ?? 0);
   }, 0);
+  // D2: softcap giờ combo TỪ CỔ VẬT (clamp TRƯỚC khi cộng base skill, để hiệu ứng
+  // skill bo_nho_co_bap không bao giờ bị thu nhỏ). No-op với loadout hiện tại (≤16h).
+  const relicComboHours = Math.min(relicComboHoursRaw, RELIC_COMBO_WINDOW_CAP_HOURS);
 
   const baseComboDecayMs = unlockedSkills.bo_nho_co_bap
     ? BO_NHO_CO_BAP_COMBO_HOURS * 3_600_000
     : COMBO_DECAY_MS;
 
   return baseComboDecayMs + (relicComboHours * 3_600_000);
+}
+
+// ─── Helpers Bản Cập Nhật Cộng Hưởng ─────────────────────────────────────────
+
+/**
+ * softcapBranchXP — D1: nén XP% của MỘT nhánh theo diminishing-returns.
+ * Tới BRANCH_XP_SOFTCAP_KNEE tính đủ; phần vượt chỉ tính BRANCH_XP_DR_RATE.
+ * Knee đặt trên tổng max thật của mọi nhánh (≤0.36) nên hôm nay là no-op.
+ */
+export function softcapBranchXP(rawXp = 0) {
+  const r = Math.max(0, rawXp);
+  if (r <= BRANCH_XP_SOFTCAP_KNEE) return r;
+  return BRANCH_XP_SOFTCAP_KNEE + (r - BRANCH_XP_SOFTCAP_KNEE) * BRANCH_XP_DR_RATE;
+}
+
+/**
+ * clampRelicDisasterReduction — D2: trần cho TỔNG disasterReduction từ cổ vật.
+ * Dùng chung bởi mọi nơi tiêu thụ (penalty thật + preview) để đồng nhất.
+ */
+export function clampRelicDisasterReduction(sum = 0) {
+  return Math.min(Math.max(0, sum), RELIC_DISASTER_REDUCTION_CAP);
+}
+
+/**
+ * getEffectiveSkillCost — B: giá SP thực của một skill.
+ * Nếu skill là elite cùng nhánh với một cổ vật đang sở hữu ở bậc
+ * ≥ RESONANCE_HALF_STAGE → giảm còn Math.ceil(spCost × RESONANCE_SP_DISCOUNT).
+ * Giá luôn suy ra từ spCost truyền vào (không hard-code), nên không vỡ nếu đổi giá.
+ *
+ * @param {string} skillId
+ * @param {number} spCost — giá gốc của skill
+ * @param {Array}  relics — danh sách cổ vật đang sở hữu [{id,...}]
+ * @param {object} relicEvolutions — { relicId: stageIndex }
+ * @returns {number} giá SP thực
+ */
+export function getEffectiveSkillCost(skillId, spCost, relics = [], relicEvolutions = {}) {
+  const cost = Math.max(0, Math.round(spCost ?? 0));
+  if (!skillId) return cost;
+  // Tìm nhánh có elite trùng skillId
+  let mapping = null;
+  for (const branchMap of Object.values(RELIC_ELITE_RESONANCE)) {
+    if (branchMap.elite === skillId) { mapping = branchMap; break; }
+  }
+  if (!mapping) return cost;
+  const owned = (relics ?? []).some((r) => r?.id === mapping.relicId);
+  if (!owned) return cost;
+  const stage = relicEvolutions?.[mapping.relicId] ?? 0;
+  if (stage < RESONANCE_HALF_STAGE) return cost;
+  return Math.ceil(cost * RESONANCE_SP_DISCOUNT);
 }
 
 // ─── Bậc Hệ Số Nhân Tập Trung Sâu ────────────────────────────────────────────
@@ -321,6 +382,8 @@ export function calculateRewards(
     dailyGoalAchieved         = false, // settings + count check
     nextSessionBuffs          = [],    // [{type:'nguoi_lap_ke'|'cu_tri', sessionsRemaining}]
     keHoachWeeklyBuffActive   = false, // tuần kế nhận +10% allBonus
+    // Dồn Lực: người chơi tự chọn trump nào áp dụng phiên này (tùy chọn)
+    surgeOverride             = null,  // 'so_do' | 'sieu_tap_trung' | 'jackpot' | null
   } = sessionCtx;
 
   // ── 1. Bộ kỹ năng V2 không có Bẻ Cong Thời Gian → effectiveMinutes = minutes
@@ -344,16 +407,48 @@ export function calculateRewards(
     tierLabel = getTierLabel(multiplier);
   }
 
-  // ── 4. Jackpot — yêu cầu ≥45' (V2) ───────────────────────────────────────
+  // ── 4. Các trump nhân-sau-trần — DỒN LỰC: chọn TỐI ĐA 1 mỗi phiên ─────────
+  // Jackpot (ngẫu nhiên 45'+), Siêu Tập Trung (charge tay), Số Đỏ (charge tay, 40%).
+  // Roll vẫn diễn ra như cũ; metering chỉ quyết định trump NÀO được áp dụng.
   const jackpotTriggered = daiTrungThuong
     && minutesFocused >= DAI_TRUNG_THUONG_MIN_MINUTES
     && rand() < JACKPOT_CHANCE;
-  const jackpotXpFactor = jackpotTriggered ? JACKPOT_MULTIPLIER : 1;
-  const jackpotEpFactor = jackpotTriggered ? JACKPOT_EP_MULTIPLIER : 1;
-  const finalMultiplier  = multiplier * jackpotXpFactor;
+  const sieuTapTrungActive = superFocusActive && sieuTapTrung && minutesFocused >= SIEU_TAP_TRUNG_MIN_MIN;
+  const luckyBurstTriggered = luckyModeActive
+    && soDo
+    && minutesFocused >= SO_DO_MIN_MINUTES
+    && rand() < SO_DO_TRIGGER_CHANCE;
+
+  // Chọn đúng 1 trump: ưu tiên override hợp lệ, nếu không theo DON_LUC_PRIORITY.
+  const surgeCandidates = {
+    jackpot:        jackpotTriggered,
+    sieu_tap_trung: sieuTapTrungActive,
+    so_do:          luckyBurstTriggered,
+  };
+  let donLucChosen = null;
+  if (surgeOverride && surgeCandidates[surgeOverride]) {
+    donLucChosen = surgeOverride;
+  } else {
+    for (const trumpId of DON_LUC_PRIORITY) {
+      if (surgeCandidates[trumpId]) { donLucChosen = trumpId; break; }
+    }
+  }
+  const applyJackpot = donLucChosen === 'jackpot';
+  const applySieu    = donLucChosen === 'sieu_tap_trung';
+  const applyLucky   = donLucChosen === 'so_do';
+
+  // Trung hòa các trump KHÔNG được chọn TRƯỚC mọi consumer (XP/EP/resources/RP).
+  const jackpotXpFactor = applyJackpot ? JACKPOT_MULTIPLIER : 1;
+  const jackpotEpFactor = applyJackpot ? JACKPOT_EP_MULTIPLIER : 1;
+  const finalMultiplier = multiplier * jackpotXpFactor;
 
   // ── 5. Bonus từ kỹ năng — tách XP / EP / All ────────────────────────────
-  let skillXPBonus = 0;        // XP only
+  // D1: XP% được gom theo TỪNG NHÁNH (branchXp) rồi softcap riêng từng nhánh.
+  // synergyBonus và skillAllBonus KHÔNG nằm trong fold theo nhánh.
+  const branchXp = {
+    THIEN_DINH: 0, Y_CHI: 0, NGHI_NGOI: 0,
+    VAN_MAY: 0, CHIEN_LUOC: 0, THANG_HOA: 0,
+  };
   let skillEPBonus = 0;        // EP only
   let skillAllBonus = 0;       // both XP và EP
   let skillResourceBonus = 0;  // raw resources
@@ -363,28 +458,28 @@ export function calculateRewards(
 
   // — THIỀN ĐỊNH —
   if (vaoGuong && minutesFocused >= VAO_GUONG_MIN_MINUTES) {
-    skillXPBonus += VAO_GUONG_XP_BONUS;
+    branchXp.THIEN_DINH += VAO_GUONG_XP_BONUS;
   }
   if (chuyenCan && minutesFocused >= CHUYEN_CAN_MIN_MINUTES) {
-    skillXPBonus += CHUYEN_CAN_XP_BONUS;
+    branchXp.THIEN_DINH += CHUYEN_CAN_XP_BONUS;
   }
   if (daTapTrung && consecutiveSessionsToday > 0) {
-    skillXPBonus += Math.min(consecutiveSessionsToday, DA_TAP_TRUNG_MAX_STACKS) * DA_TAP_TRUNG_STACK_BONUS;
+    branchXp.THIEN_DINH += Math.min(consecutiveSessionsToday, DA_TAP_TRUNG_MAX_STACKS) * DA_TAP_TRUNG_STACK_BONUS;
   }
   if (tapTrungSieuViet && minutesFocused >= TAP_TRUNG_SV_MIN_MIN) {
-    skillXPBonus += TAP_TRUNG_SV_XP_BONUS;
+    branchXp.THIEN_DINH += TAP_TRUNG_SV_XP_BONUS;
     skillEPBonus += TAP_TRUNG_SV_EP_BONUS;
     chestGuaranteed = true;
   }
 
   // — Ý CHÍ —
   if (phucHoi && lastSessionCancelled && minutesFocused >= PHUC_HOI_MIN_MINUTES) {
-    skillXPBonus += PHUC_HOI_XP_BONUS;
+    branchXp.Y_CHI += PHUC_HOI_XP_BONUS;
     skillEPBonus += PHUC_HOI_EP_BONUS;
   }
   if (chuoiNgay && currentStreak > 0) {
     // Chuỗi Ngày là streak-based (trigger phụ) — áp dụng mọi phiên
-    skillXPBonus += Math.min(currentStreak, CHUOI_NGAY_MAX_DAYS) * CHUOI_NGAY_XP_PER_DAY;
+    branchXp.Y_CHI += Math.min(currentStreak, CHUOI_NGAY_MAX_DAYS) * CHUOI_NGAY_XP_PER_DAY;
   }
   if (benVung && benVungActive && minutesFocused >= BEN_VUNG_MIN_MINUTES) {
     skillAllBonus += BEN_VUNG_PERMANENT_ALLBONUS;
@@ -392,26 +487,26 @@ export function calculateRewards(
 
   // — NGHỈ NGƠI —
   if (napNangLuong && breakCompletedOnTime && minutesFocused >= NAP_NANG_LUONG_MIN_MINUTES) {
-    skillXPBonus += NAP_NANG_LUONG_XP_BONUS;
+    branchXp.NGHI_NGOI += NAP_NANG_LUONG_XP_BONUS;
   }
   if (tichPhien && sessionsCompletedToday >= TICH_PHIEN_AFTER_SESSIONS) {
-    skillXPBonus += TICH_PHIEN_XP_BONUS;
+    branchXp.NGHI_NGOI += TICH_PHIEN_XP_BONUS;
   }
   if (phienVangSang && isFirstSessionToday && minutesFocused >= PHIEN_VANG_SANG_MIN_MINUTES) {
-    skillXPBonus += PHIEN_VANG_SANG_XP_BONUS;
+    branchXp.NGHI_NGOI += PHIEN_VANG_SANG_XP_BONUS;
     skillEPBonus += PHIEN_VANG_SANG_EP_BONUS;
   }
   if (nhipSinhHoc
       && (sessionsCompletedToday + 1) >= NHIP_SINH_HOC_MIN_SESSIONS
       && minutesFocused >= NHIP_SINH_HOC_MIN_MINUTES) {
-    skillXPBonus += NHIP_SINH_HOC_XP_BONUS;
+    branchXp.NGHI_NGOI += NHIP_SINH_HOC_XP_BONUS;
   }
   if (nhipHoanHao && nhipHoanHaoActiveToday && minutesFocused >= NHIP_HOAN_HAO_MIN_MINUTES) {
-    skillXPBonus += NHIP_HOAN_HAO_XP_BONUS;
+    branchXp.NGHI_NGOI += NHIP_HOAN_HAO_XP_BONUS;
     skillEPBonus += NHIP_HOAN_HAO_EP_BONUS;
   }
 
-  // — VẬN MAY —
+  // — VẬN MAY —  (chỉ drops/resources, không cộng XP nhánh)
   if (banTayVang && minutesFocused >= BAN_TAY_VANG_MIN_MINUTES && rand() < BAN_TAY_VANG_RAW_CHANCE) {
     extraRawDrop += 1;
   }
@@ -429,21 +524,21 @@ export function calculateRewards(
   if (Array.isArray(nextSessionBuffs)) {
     for (const buff of nextSessionBuffs) {
       if (buff?.type === 'nguoi_lap_ke' && nguoiLapKe) {
-        skillXPBonus += NGUOI_LAP_KE_XP_BONUS;
+        branchXp.CHIEN_LUOC += NGUOI_LAP_KE_XP_BONUS;
       }
       if (buff?.type === 'cu_tri' && cuTri) {
-        skillXPBonus += CU_TRI_XP_BONUS;
+        branchXp.CHIEN_LUOC += CU_TRI_XP_BONUS;
       }
     }
   }
   if (coVan && dailyGoalAchieved) {
-    skillXPBonus += CO_VAN_XP_BONUS;
+    branchXp.CHIEN_LUOC += CO_VAN_XP_BONUS;
   }
   if (lichDay && hasSession45Today && hasSession60Today) {
     skillAllBonus += LICH_DAY_ALLBONUS;
   }
   if (bacThayCL && allDailyMissionsDone && minutesFocused >= BAC_THAY_CHIEN_LUOC_MIN_MIN) {
-    skillXPBonus += BAC_THAY_CHIEN_LUOC_XP_BONUS;
+    branchXp.CHIEN_LUOC += BAC_THAY_CHIEN_LUOC_XP_BONUS;
     skillRPBonus += BAC_THAY_CHIEN_LUOC_RP_BONUS;
     skillEPBonus += BAC_THAY_CHIEN_LUOC_EP_BONUS;
   }
@@ -453,16 +548,16 @@ export function calculateRewards(
 
   // — THĂNG HOA —
   if (kyUcKyNguyen && isFirstSessionInNewEra && minutesFocused >= KY_UC_KY_NGUYEN_MIN_MINUTES) {
-    skillXPBonus += KY_UC_KY_NGUYEN_XP_BONUS;
+    branchXp.THANG_HOA += KY_UC_KY_NGUYEN_XP_BONUS;
     skillEPBonus += KY_UC_KY_NGUYEN_EP_BONUS;
   }
   if (triTueTichLuy && erasCompleted > 0) {
     // Trí Tuệ Tích Luỹ là era-based (trigger phụ) — áp dụng mọi phiên
-    skillXPBonus += Math.min(erasCompleted, TRI_TUE_TICH_LUY_MAX_ERAS) * TRI_TUE_TICH_LUY_XP_PER_ERA;
+    branchXp.THANG_HOA += Math.min(erasCompleted, TRI_TUE_TICH_LUY_MAX_ERAS) * TRI_TUE_TICH_LUY_XP_PER_ERA;
   }
   if (bacThayKyNguyen && sessionsInCurrentEra > 0) {
     const stacks = Math.floor(sessionsInCurrentEra / BAC_THAY_KY_NGUYEN_SESSIONS);
-    skillXPBonus += Math.min(stacks * BAC_THAY_KY_NGUYEN_BONUS, BAC_THAY_KY_NGUYEN_MAX);
+    branchXp.THANG_HOA += Math.min(stacks * BAC_THAY_KY_NGUYEN_BONUS, BAC_THAY_KY_NGUYEN_MAX);
   }
 
   // ── 5b. Synergy bonus V2 (length-gated) ─────────────────────────────────
@@ -491,7 +586,11 @@ export function calculateRewards(
       activeSynergies.push(syn.id);
     }
   }
-  skillXPBonus += synergyBonus;
+  // D1: fold XP% mỗi nhánh qua softcap rồi cộng; synergyBonus KHÔNG fold.
+  let skillXPBonus = synergyBonus;
+  for (const branchKey of Object.keys(branchXp)) {
+    skillXPBonus += softcapBranchXP(branchXp[branchKey]);
+  }
 
   // ── 6. Tổng hợp modifier XP / EP ─────────────────────────────────────────
   // skillAllBonus áp dụng cả XP và EP
@@ -504,29 +603,21 @@ export function calculateRewards(
   // ── 7. XP cuối ───────────────────────────────────────────────────────────
   let finalXP = Math.round(baseXP * finalMultiplier * xpFactor);
 
-  // Siêu Tập Trung: yêu cầu phiên ≥45' (V2)
-  const sieuTapTrungActive = superFocusActive && sieuTapTrung && minutesFocused >= SIEU_TAP_TRUNG_MIN_MIN;
-  if (sieuTapTrungActive) {
+  // DỒN LỰC: chỉ áp dụng trump ĐÃ CHỌN. jackpot đã được trung hòa qua
+  // finalMultiplier; Siêu Tập Trung / Số Đỏ gate theo applySieu / applyLucky.
+  if (applySieu) {
     finalXP = Math.round(finalXP * SIEU_TAP_TRUNG_MULT);
   }
-
-  // Số Đỏ: yêu cầu phiên ≥45' (V2)
-  const luckyBurstTriggered = luckyModeActive
-    && soDo
-    && minutesFocused >= SO_DO_MIN_MINUTES
-    && rand() < SO_DO_TRIGGER_CHANCE;
-  if (luckyBurstTriggered) {
+  if (applyLucky) {
     finalXP = Math.round(finalXP * SO_DO_MULTIPLIER);
   }
 
   const progressEpMultiplier = getProgressEpMultiplier(minutesFocused);
   let finalEP = Math.round(effectiveMinutes * BASE_EP_PER_MINUTE * progressEpMultiplier * jackpotEpFactor * epFactor);
-  // Siêu Tập Trung EP boost
-  if (sieuTapTrungActive) {
+  if (applySieu) {
     finalEP = Math.round(finalEP * SIEU_TAP_TRUNG_EP_MULT);
   }
-  // Số Đỏ cũng buff EP (V2)
-  if (luckyBurstTriggered) {
+  if (applyLucky) {
     finalEP = Math.round(finalEP * SO_DO_MULTIPLIER);
   }
   const finalEXP = finalXP;
@@ -541,7 +632,7 @@ export function calculateRewards(
   const resources = {};
   for (const resDef of activeResources) {
     const amount = rollResourceDrop(resDef, effectiveMinutes, resMul);
-    resources[resDef.id] = luckyBurstTriggered
+    resources[resDef.id] = applyLucky
       ? Math.round(amount * SO_DO_MULTIPLIER)
       : amount;
   }
@@ -560,7 +651,7 @@ export function calculateRewards(
   let rpEarned = Math.round(
     effectiveMinutes * RP_PER_MINUTE_BASE * categoryMult * jackpotXpFactor * (1 + wonderRPBonus + researchBonus),
   );
-  if (luckyBurstTriggered) {
+  if (applyLucky) {
     rpEarned = Math.round(rpEarned * SO_DO_MULTIPLIER);
   }
 
@@ -573,11 +664,17 @@ export function calculateRewards(
     finalEP,
     finalEXP,
     multiplier: finalMultiplier,
-    tierLabel: jackpotTriggered ? `ĐẠI TRÚNG THƯỞNG! ${tierLabel}` : tierLabel,
+    tierLabel: applyJackpot ? `ĐẠI TRÚNG THƯỞNG! ${tierLabel}` : tierLabel,
     effectiveMinutes,
     bonusMinutes,
-    jackpotTriggered,
-    luckyBurstTriggered,
+    // DỒN LỰC: phân biệt "đã quay/đủ điều kiện" (raw) với "đã được áp dụng" (resolved).
+    jackpotTriggered,                  // raw: jackpot 2.5% có quay trúng không
+    jackpotApplied:      applyJackpot, // resolved: jackpot có thực sự áp dụng không
+    luckyBurstTriggered,               // raw: Số Đỏ 40% có quay trúng không
+    luckyBurstApplied:   applyLucky,   // resolved
+    sieuTapTrungActive,                // armed + đủ điều kiện (≥45', đã kích hoạt)
+    sieuTapTrungApplied: applySieu,    // resolved
+    donLucChosen,                      // 'so_do' | 'sieu_tap_trung' | 'jackpot' | null
     largeChest:       chestGuaranteed,
     resources,
     activeBook,

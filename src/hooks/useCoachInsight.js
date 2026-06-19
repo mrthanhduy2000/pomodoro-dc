@@ -8,7 +8,7 @@
  */
 import { useEffect, useState } from 'react';
 import useGameStore from '../store/gameStore';
-import { generateCoachInsight } from '../engine/gameMath';
+import { generateCoachBriefing } from '../engine/gameMath';
 import {
   getVietnamHour, getVietnamDayOfWeek, localWeekMondayStr, localPrevWeekMondayStr,
   vietnamDayNumber, localDateStr, localDateStrDaysAgo,
@@ -52,7 +52,7 @@ export default function useCoachInsight({
   const today = vietnamDayNumber();
   const activeCategoryIds = new Set((sessionCategories ?? []).map((c) => c.id));
 
-  const coach = generateCoachInsight(history ?? [], {
+  const coach = generateCoachBriefing(history ?? [], {
     nowHour: getVietnamHour(),
     getEntryHour: (e) => getVietnamHour(entryDate(e)),
     getEntryWeekday: (e) => getVietnamDayOfWeek(entryDate(e)),

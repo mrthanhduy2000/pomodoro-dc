@@ -1558,6 +1558,163 @@ export function generateCoachInsight(history = [], opts = {}) {
   return { kind: chosen.kind, text: chosen.text, reason: chosen.reason ?? null };
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// generateCoachBriefing — Coach local "cực thông minh": TỔNG HỢP nhiều tín hiệu
+// thành briefing 1-3 câu (chẩn đoán + tối đa 1 hành động), giọng tự nhiên, vẫn
+// THUẦN & MIỄN PHÍ. KHÔNG đụng generateCoachInsight (giữ test cũ). Thiết kế qua
+// workflow 2 agent (thiết kế + phản biện), đã áp các "must-fix": câu mảnh 1-câu
+// riêng, tối đa 1 hành động, khử trùng "buổi", từ nối nhẹ, KHÔNG bịa nhân-quả,
+// chống lặp theo recentKinds. (Đọc chủ đề ghi chú tiếng Việt: HOÃN — rủi ro từ cụt.)
+// ─────────────────────────────────────────────────────────────────────────────
+
+const BRIEFING_CONNECTORS = ['Nhân tiện,', 'Bên cạnh đó,'];
+const BRIEFING_ROLE_PRIORITY = { diagnosis: 0, praise: 1, observation: 2, action: 3 };
+
+function decapVi(s) {
+  return s ? s.charAt(0).toLowerCase() + s.slice(1) : s;
+}
+
+// Mỗi "ứng viên" có 1 câu mảnh hoàn chỉnh (KHÁC text 2-vế của insight cũ) + role.
+function buildBriefingCandidates(history, opts) {
+  const {
+    nowHour = 0,
+    getEntryHour = (e) => new Date(e?.timestamp ?? 0).getHours(),
+    getEntryWeekday = (e) => new Date(e?.timestamp ?? 0).getDay(),
+    getEntryWeekKey = null, nowWeekKey = null, prevWeekKey = null,
+    getEntryDayKey = null, todayKey = null, minDayKey = null,
+    getEntryDayNumber = null, nowDayNumber = null,
+    dailyGoalMetric = null, dailyGoal = 0, sessionsToday = 0, minutesToday = 0,
+    currentStreak = 0, activeCategoryIds = null, minSample = COACH_MIN_SAMPLE,
+  } = opts;
+  const completed = coachCompletedSessions(history);
+  const out = [];
+
+  const sug = suggestSessionLength(history, { nowHour, getEntryHour });
+  if (sug) out.push({ kind: 'length', role: 'action', score: 80, impliesAction: true, bucketId: sug.bucketId, reason: `Dựa trên ${sug.sampleSize} phiên ${sug.basis === 'goal' ? 'đạt mục tiêu' : 'đã hoàn thành'} cùng buổi.`, fragment: `Thử một phiên ~${sug.minutes}′ cho ${sug.bucketLabel}.` });
+
+  const pace = getTodayPaceInsight(history, { metric: dailyGoalMetric, goal: dailyGoal, sessionsToday, minutesToday, nowHour, getEntryHour, getEntryDayKey, todayKey });
+  if (pace) {
+    const unit = pace.metric === 'minutes' ? 'phút' : 'phiên';
+    const typ = pace.metric === 'minutes' ? pace.typical : Math.round(pace.typical ?? 0);
+    if (pace.status === 'near') out.push({ kind: 'pace-near', role: 'diagnosis', score: 88, urgent: true, timeSensitive: true, impliesAction: true, reason: `Hôm nay đã ${pace.current}/${pace.goal} ${unit}.`, fragment: pace.metric === 'minutes' ? `Chỉ còn ${pace.remaining} phút nữa là đạt mục tiêu ngày — làm nốt một phiên là xong!` : `Thêm ${pace.remaining} phiên nữa là đạt mục tiêu ngày — làm nốt là xong!` });
+    else if (pace.status === 'behind') out.push({ kind: 'pace-behind', role: 'diagnosis', score: 76, urgent: true, timeSensitive: true, impliesAction: true, reason: `Tới giờ này thường ~${typ} ${unit}, nay mới ${pace.current}.`, fragment: `Tới giờ này hôm nay bạn thường làm nhiều hơn (~${typ} ${unit}), nay mới ${pace.current} — thử vào một phiên để bắt kịp.` });
+    else if (pace.status === 'met') out.push({ kind: 'pace-met', role: 'praise', score: 56, reason: `Đã ${pace.current}/${pace.goal} ${unit} hôm nay.`, fragment: 'Bạn đã đạt mục tiêu ngày rồi — nghỉ ngơi xứng đáng nhé.' });
+    else if (pace.status === 'ahead') out.push({ kind: 'pace-ahead', role: 'praise', score: 54, reason: `Thường ~${typ} ${unit}, nay đã ${pace.current}.`, fragment: 'Hôm nay bạn đang nhanh hơn nhịp thường ngày — phong độ tốt.' });
+  }
+
+  const calib = getDailyGoalCalibration(history, { goalType: dailyGoalMetric, goalValue: dailyGoal, getEntryDayKey, todayKey, minDayKey });
+  let hasTooHard = false;
+  if (calib) {
+    const unit = calib.goalType === 'minutes' ? 'phút' : 'phiên';
+    const pct = Math.round(calib.hitRate * 100);
+    if (calib.verdict === 'too-hard') { hasTooHard = true; out.push({ kind: 'goal-too-hard', role: 'diagnosis', score: 77, urgent: calib.hitRate <= 0.15, timeSensitive: true, impliesAction: true, reason: `Dựa trên ${calib.daysCounted} ngày gần đây.`, fragment: `Mục tiêu ngày đang hơi quá sức (đạt ${pct}%) — thử hạ xuống ${calib.suggested} ${unit}/ngày.` }); }
+    else if (calib.verdict === 'too-easy') out.push({ kind: 'goal-too-easy', role: 'observation', score: 71, impliesAction: true, reason: `Dựa trên ${calib.daysCounted} ngày gần đây.`, fragment: `Mục tiêu ngày đang khá nhẹ (đạt ${pct}%) — có thể nâng lên ${calib.suggested} ${unit}/ngày.` });
+  }
+
+  const withGoal = completed.filter((e) => typeof e.goalAchieved === 'boolean');
+  if (withGoal.length >= minSample) {
+    const hit = withGoal.filter((e) => e.goalAchieved === true).length;
+    const pct = Math.round((hit / withGoal.length) * 100);
+    if (hit / withGoal.length <= 0.5 && !hasTooHard) out.push({ kind: 'tip', role: 'diagnosis', score: 78, reason: `${hit}/${withGoal.length} phiên đạt mục tiêu.`, fragment: `Gần đây tỉ lệ đạt mục tiêu của bạn khá thấp (${pct}%).` });
+    else if (hit / withGoal.length >= 0.8) out.push({ kind: 'praise', role: 'praise', score: 58, reason: `${hit}/${withGoal.length} phiên đạt mục tiêu.`, fragment: `Bạn đạt mục tiêu ${pct}% số phiên gần đây — phong độ rất vững.` });
+  }
+
+  const ab = getAbandonHotspot(history, { getEntryHour });
+  if (ab) out.push({ kind: 'abandon', role: 'diagnosis', score: 74, bucketId: ab.bucketId, reason: `${ab.attempts} lần bắt đầu trong buổi này.`, fragment: `Vào ${ab.bucketLabel} bạn hay bỏ phiên giữa chừng (${Math.round(ab.rate * 100)}%).` });
+
+  const late = getLateNightQualityDrop(history, { getEntryHour });
+  if (late) out.push({ kind: 'late-quality', role: 'diagnosis', score: 73, reason: `${late.lateAttempts} phiên muộn so với ban ngày.`, fragment: `Sau ${late.lateStartHour}h tỉ lệ đạt mục tiêu của bạn tụt rõ (còn ${Math.round(late.lateGoalRate * 100)}% so với ${Math.round(late.dayGoalRate * 100)}% ban ngày).` });
+
+  const tr = getWeeklyTrend(history, { getEntryWeekKey, nowWeekKey, prevWeekKey });
+  if (tr && tr.direction === 'down') out.push({ kind: 'trend-down', role: 'diagnosis', score: 72, reason: `${tr.thisMinutes}′ so với ${tr.prevMinutes}′ tuần trước.`, fragment: `Tuần này bạn tập trung ít hơn tuần trước ${Math.abs(tr.pct)}%.` });
+  else if (tr && tr.direction === 'up') out.push({ kind: 'trend-up', role: 'praise', score: 66, reason: `${tr.thisMinutes}′ so với ${tr.prevMinutes}′ tuần trước.`, fragment: `Tuần này bạn tập trung nhiều hơn tuần trước ${tr.pct}% — đang lên đà.` });
+
+  const golden = getGoldenHourBucket(history, { getEntryHour });
+  if (golden) out.push({ kind: 'golden', role: 'observation', score: 70, bucketId: golden.bucketId, reason: `Trên ${golden.sampleSize} phiên có mục tiêu.`, fragment: `Giờ vàng của bạn là ${golden.bucketLabel} — đạt mục tiêu tới ${Math.round(golden.rate * 100)}%.` });
+
+  if (typeof getEntryDayNumber === 'function' && Number.isFinite(nowDayNumber)) {
+    const neg = getNeglectedCategory(history, { nowDayNumber, getEntryDayNumber, activeCategoryIds });
+    if (neg) out.push({ kind: 'category-neglect', role: 'observation', score: 64 + Math.min(12, neg.daysSince), reason: `${neg.daysSince} ngày chưa làm "${neg.label}".`, fragment: `Đã ${neg.daysSince} ngày bạn chưa làm "${neg.label}" — nhóm từng chiếm ~${Math.round(neg.share * 100)}% thời gian.` });
+  }
+
+  const wd = getWeekdayHighlight(history, { getEntryWeekday });
+  if (wd) out.push({ kind: 'weekday', role: 'observation', score: 60, reason: `Chiếm ~${Math.round(wd.share * 100)}% số phiên.`, fragment: `${wd.label} thường là ngày bạn làm nhiều nhất (${wd.count} phiên).` });
+
+  if (currentStreak >= 2) out.push({ kind: 'streak', role: 'praise', score: 50, reason: null, fragment: `Chuỗi ${currentStreak} ngày đang đẹp — giữ lửa nhé.` });
+
+  return out;
+}
+
+function composeBriefing(candidates, opts = {}) {
+  const { rotationSeed = 0, recentKinds = [], isSessionRunning = false, maxFragments = 3 } = opts;
+  if (!candidates.length) return null;
+  const recent = Array.isArray(recentKinds) ? recentKinds : [];
+  const penaltyOf = (kind) => { const i = recent.indexOf(kind); return i < 0 ? 0 : Math.max(0, 12 - i * 5); };
+  const seed = Number.isFinite(rotationSeed) ? Math.abs(Math.floor(rotationSeed)) : 0;
+  const byKind = (a, b) => (a.kind < b.kind ? -1 : a.kind > b.kind ? 1 : 0);
+
+  const scored = candidates.map((c) => {
+    const bonus = isSessionRunning ? 0 : ((c.urgent ? 30 : 0) + (c.timeSensitive ? 10 : 0));
+    return { ...c, eff: c.score + bonus - penaltyOf(c.kind) };
+  }).sort((a, b) => (b.eff - a.eff) || byKind(a, b));
+
+  // Câu DẪN: khi đang rảnh → ưu tiên cứng tín hiệu cấp bách; khi ĐANG CHẠY phiên →
+  // không ép câu "bắt đầu phiên" (bỏ các mảnh hàm-ý-hành-động khỏi vị trí dẫn).
+  let leadPool = scored;
+  if (isSessionRunning) {
+    const calm = scored.filter((c) => !c.impliesAction);
+    if (calm.length) leadPool = calm;
+  }
+  const urgent = isSessionRunning ? [] : leadPool.filter((c) => c.urgent);
+  const lead = urgent.length
+    ? urgent[0]
+    : [...leadPool].sort((a, b) => (BRIEFING_ROLE_PRIORITY[a.role] - BRIEFING_ROLE_PRIORITY[b.role]) || (b.eff - a.eff) || byKind(a, b))[0];
+
+  const used = new Set([lead.kind]);
+  const buckets = new Set(lead.bucketId ? [lead.bucketId] : []);
+  const pieces = [lead];
+
+  // 1 mảnh "màu sắc" (observation/praise) khác trục buổi
+  const color = scored.find((c) => !used.has(c.kind) && (c.role === 'observation' || c.role === 'praise') && !(c.bucketId && buckets.has(c.bucketId)));
+  if (color && pieces.length < maxFragments) { pieces.push(color); used.add(color.kind); if (color.bucketId) buckets.add(color.bucketId); }
+
+  // Tối đa 1 hành động — chỉ khi câu dẫn CHƯA hàm ý hành động & không đang chạy phiên
+  if (!lead.impliesAction && !isSessionRunning && pieces.length < maxFragments) {
+    const action = scored.find((c) => !used.has(c.kind) && c.role === 'action' && !(c.bucketId && buckets.has(c.bucketId)));
+    if (action) { pieces.push(action); used.add(action.kind); }
+  }
+
+  let text = pieces[0].fragment;
+  for (let i = 1; i < pieces.length; i += 1) {
+    const p = pieces[i];
+    if (p.role === 'action') text += ` ${p.fragment}`;
+    else text += ` ${BRIEFING_CONNECTORS[seed % BRIEFING_CONNECTORS.length]} ${decapVi(p.fragment)}`;
+  }
+  return { kind: lead.kind, text: text.replace(/\s+/g, ' ').trim(), reason: lead.reason ?? null, parts: pieces.map((p) => p.kind) };
+}
+
+/**
+ * generateCoachBriefing
+ * Tầng coach local thông minh nhất hiện có: tổng hợp tín hiệu thành briefing tự
+ * nhiên. Trả {kind, text, reason, parts}. Cùng bộ opts như generateCoachInsight.
+ */
+export function generateCoachBriefing(history = [], opts = {}) {
+  const {
+    minSample = COACH_MIN_SAMPLE, rotationSeed = 0, recentKinds = [],
+    isSessionRunning = false, maxFragments = 3,
+  } = opts;
+  const completed = coachCompletedSessions(history);
+  if (completed.length < minSample) {
+    const left = Math.max(1, minSample - completed.length);
+    return { kind: 'onboarding', reason: null, parts: ['onboarding'], text: `Hoàn thành thêm ${left} phiên có mục tiêu để Coach học giờ vàng và độ dài lý tưởng của bạn.` };
+  }
+  const candidates = buildBriefingCandidates(history, opts);
+  if (!candidates.length) {
+    return { kind: 'generic', reason: null, parts: ['generic'], text: `Bạn đã hoàn thành ${completed.length} phiên. Đặt một mục tiêu rõ ràng rồi bắt đầu phiên kế tiếp nhé.` };
+  }
+  return composeBriefing(candidates, { rotationSeed, recentKinds, isSessionRunning, maxFragments });
+}
+
 function getHistoryXP(entry) {
   return entry?.xpEarned ?? entry?.epEarned ?? 0;
 }

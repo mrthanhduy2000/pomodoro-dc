@@ -18,10 +18,11 @@ function walk(dir, acc = []) {
 test('không file nào import TĨNH @huggingface/transformers hay embedder.js (ngoài embedder.js)', () => {
   const offenders = [];
   for (const f of walk('src')) {
-    if (f.endsWith('embedder.js')) continue;
     const src = readFileSync(f, 'utf8');
-    if (/\bfrom\s+['"]@huggingface\/transformers['"]/.test(src)) offenders.push(`${f} (transformers tĩnh)`);
-    if (/\bimport\b[^()\n]*\bfrom\s+['"][^'"]*\/embedder(\.js)?['"]/.test(src)) offenders.push(`${f} (embedder tĩnh)`);
+    if (!f.endsWith('embedder.js') && /\bfrom\s+['"]@huggingface\/transformers['"]/.test(src)) offenders.push(`${f} (transformers tĩnh)`);
+    if (!f.endsWith('embedder.js') && /\bimport\b[^()\n]*\bfrom\s+['"][^'"]*\/embedder(\.js)?['"]/.test(src)) offenders.push(`${f} (embedder tĩnh)`);
+    if (!f.endsWith('webllmEngine.js') && /\bfrom\s+['"]@mlc-ai\/web-llm['"]/.test(src)) offenders.push(`${f} (web-llm tĩnh)`);
+    if (!f.endsWith('webllmEngine.js') && /\bimport\b[^()\n]*\bfrom\s+['"][^'"]*\/webllmEngine(\.js)?['"]/.test(src)) offenders.push(`${f} (webllmEngine tĩnh)`);
   }
   assert.deepEqual(offenders, [], `Import tĩnh lọt vào bundle chính: ${offenders.join(', ')}`);
 });

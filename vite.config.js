@@ -50,6 +50,10 @@ export default defineConfig({
           ) {
             return 'vendor-transformers';
           }
+          // LLM thật chạy trên máy (WebLLM) — opt-in desktop, tách chunk riêng.
+          if (id.includes('/@mlc-ai/')) {
+            return 'vendor-webllm';
+          }
           return undefined;
         },
       },
@@ -114,7 +118,7 @@ export default defineConfig({
         // KHÔNG precache chunk AI nặng + onnxruntime wasm: chỉ tải KHI người dùng
         // bật tính năng (runtime). Nếu không, service worker sẽ nuốt hàng chục MB
         // vào precache cho CẢ người không bao giờ bật — hại app hằng ngày.
-        globIgnores: ['**/vendor-transformers*.js', '**/ort-*.{js,mjs,wasm}', '**/*.wasm'],
+        globIgnores: ['**/vendor-transformers*.js', '**/vendor-webllm*.js', '**/ort-*.{js,mjs,wasm}', '**/*.wasm'],
         skipWaiting: true,
 
         // Runtime caching rules

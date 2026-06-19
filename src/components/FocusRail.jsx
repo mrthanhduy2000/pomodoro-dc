@@ -11,6 +11,7 @@ import useCoachInsight from '../hooks/useCoachInsight';
 import CoachCard from './CoachCard';
 import CoachChat from './CoachChat';
 import FocusReport from './FocusReport';
+import CoachOffline from './CoachOffline';
 import { FlameGlyph, ShieldGlyph } from './icons/Glyph';
 
 const cardStyle = {
@@ -134,6 +135,13 @@ export default function FocusRail({
           dailyGoalMinutes={dailyGoalMinutes}
         />
         <FocusReport
+          sessionsCompletedToday={sessionsCompletedToday}
+          focusMinutesToday={focusMinutesToday}
+          dailyGoalType={dailyGoalType}
+          dailyGoalSessions={dailyGoalSessions}
+          dailyGoalMinutes={dailyGoalMinutes}
+        />
+        <CoachOffline
           sessionsCompletedToday={sessionsCompletedToday}
           focusMinutesToday={focusMinutesToday}
           dailyGoalType={dailyGoalType}

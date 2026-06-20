@@ -4,9 +4,9 @@
 - Tên: Đàm (non-coder, dùng Codex + Claude Code để code)
 - Giải thích đơn giản, tránh jargon kỹ thuật
 
-## ⚠️ Quy tắc BẮT BUỘC cho mọi phiên AI
-1. **TRƯỚC khi làm — điều kiện tiên quyết:** đọc `BAN_GIAO.md` (trạng thái + việc tiếp + nhật ký) **và** file này (`CLAUDE.md`). (Đã có hook tự chèn BAN_GIAO.md vào đầu mỗi phiên — xem `.claude/session-start-bangiao.sh` — nhưng vẫn phải đọc kỹ.)
-2. **SAU khi thay đổi bất cứ thứ gì** (code / tài liệu / deploy...): **cập nhật `BAN_GIAO.md`** — thêm 1 dòng vào mục "Nhật ký cập nhật" và chỉnh lại "Đã làm / Sẽ làm tiếp" — để phiên AI sau nắm được.
+## ⚠️ NGUYÊN TẮC ƯU TIÊN SỐ 1 (mọi phiên AI — quan trọng hơn mọi thứ khác)
+1. **TRƯỚC khi làm:** đọc `BAN_GIAO.md` + `CLAUDE.md` (file này), RỒI đọc các file liên quan tới việc sắp làm — hiểu rõ ngữ cảnh trước, đừng sửa mò. (Hook `.claude/session-start-bangiao.sh` tự chèn BAN_GIAO.md đầu mỗi phiên, nhưng vẫn phải đọc kỹ.)
+2. **SAU khi có cập nhật (dù nhỏ):** cập nhật ngay `CLAUDE.md` + `BAN_GIAO.md` **và các file liên quan khác** (README, ghi chú...) cho khớp. Làm xong việc mà chưa cập nhật tài liệu = **CHƯA XONG**.
 3. Bàn giao thiết kế chi tiết nằm ở thư mục memory:
    `/Users/damduy/.claude/projects/-Users-damduy-Downloads-Claude-Code-B-n-sao-Pomodoro-Game---USING/memory/`
    (đặc biệt `upgrade-roadmap.md` cho AI Coach, `ui-review-2026-06.md` cho UI, `resonance-update.md` cho game loop).

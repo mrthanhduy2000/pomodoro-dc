@@ -5,7 +5,7 @@
 - Giải thích đơn giản, tránh jargon kỹ thuật
 
 ## ⚠️ AI mới đọc trước
-- **Đọc `HANDOVER.md`** (cùng thư mục) để nắm trạng thái hiện tại + việc đang dở.
+- **Đọc `BAN_GIAO.md`** (cùng thư mục) để nắm trạng thái hiện tại + việc đang dở + nhật ký.
 - **Bàn giao chi tiết nằm ở thư mục memory**, KHÔNG nằm hết trong file này:
   `/Users/damduy/.claude/projects/-Users-damduy-Downloads-Claude-Code-B-n-sao-Pomodoro-Game---USING/memory/`
   (đặc biệt `upgrade-roadmap.md` cho AI Coach, `ui-review-2026-06.md` cho UI, `resonance-update.md` cho game loop).
@@ -60,10 +60,8 @@ Sửa code → git add . && git commit -m "mô tả" && git push
 ```
 Hoặc bấm đúp file `/Users/damduy/Desktop/🚀 Deploy App.command`
 
-## Việc chưa làm / đang dở
-- [x] ~~Thông báo iPhone khi hết phiên~~ — ĐÃ làm xong & deploy (xem README mục Web Push + `api/push/`).
-- [ ] Coach voice chưa nối vào sự kiện timer thật (phiên kết thúc/gián đoạn) → intent "remind" chưa kích hoạt.
-- [ ] Backlog UI: full-screen iPhone (notch che), nút đóng Loot modal, gom typography, reduced-motion toàn app — xem `ui-review-2026-06.md` trong memory.
+## Việc đang dở & sắp tới
+→ Xem **`BAN_GIAO.md`** (mục "Sẽ làm tiếp" + "Nhật ký cập nhật"). Web Push iPhone đã xong & deploy.
 
 ## KHÔNG làm những thứ này
 - ❌ Không biến Electron thành app chính riêng biệt.

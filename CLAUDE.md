@@ -4,12 +4,13 @@
 - Tên: Đàm (non-coder, dùng Codex + Claude Code để code)
 - Giải thích đơn giản, tránh jargon kỹ thuật
 
-## ⚠️ AI mới đọc trước
-- **Đọc `BAN_GIAO.md`** (cùng thư mục) để nắm trạng thái hiện tại + việc đang dở + nhật ký.
-- **Bàn giao chi tiết nằm ở thư mục memory**, KHÔNG nằm hết trong file này:
-  `/Users/damduy/.claude/projects/-Users-damduy-Downloads-Claude-Code-B-n-sao-Pomodoro-Game---USING/memory/`
-  (đặc biệt `upgrade-roadmap.md` cho AI Coach, `ui-review-2026-06.md` cho UI, `resonance-update.md` cho game loop).
-- Luôn chạy `git status` tươi — đừng tin ảnh chụp git cũ.
+## ⚠️ Quy tắc BẮT BUỘC cho mọi phiên AI
+1. **TRƯỚC khi làm — điều kiện tiên quyết:** đọc `BAN_GIAO.md` (trạng thái + việc tiếp + nhật ký) **và** file này (`CLAUDE.md`). (Đã có hook tự chèn BAN_GIAO.md vào đầu mỗi phiên — xem `.claude/session-start-bangiao.sh` — nhưng vẫn phải đọc kỹ.)
+2. **SAU khi thay đổi bất cứ thứ gì** (code / tài liệu / deploy...): **cập nhật `BAN_GIAO.md`** — thêm 1 dòng vào mục "Nhật ký cập nhật" và chỉnh lại "Đã làm / Sẽ làm tiếp" — để phiên AI sau nắm được.
+3. Bàn giao thiết kế chi tiết nằm ở thư mục memory:
+   `/Users/damduy/.claude/projects/-Users-damduy-Downloads-Claude-Code-B-n-sao-Pomodoro-Game---USING/memory/`
+   (đặc biệt `upgrade-roadmap.md` cho AI Coach, `ui-review-2026-06.md` cho UI, `resonance-update.md` cho game loop).
+4. Luôn chạy `git status` tươi — đừng tin ảnh chụp git cũ.
 
 ## Nền tảng hiện tại
 App chính chạy trên **web** tại `https://pomodoro-dc.vercel.app`.

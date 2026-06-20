@@ -2,6 +2,7 @@
 
 > Dành cho AI/người làm tiếp. File này trả lời: **đang ở đâu, làm gì tiếp, đã đổi những gì.**
 > Chi tiết kỹ thuật + quy tắc cấm: xem `CLAUDE.md`. Lịch sử thiết kế sâu: thư mục memory của Claude.
+> **Quy tắc:** mọi phiên AI phải đọc file này + `CLAUDE.md` TRƯỚC khi làm, và cập nhật file này (Nhật ký + Đã/Sẽ làm) NGAY SAU khi thay đổi gì.
 > Cập nhật lần cuối: **2026-06-20**.
 
 ---
@@ -18,7 +19,7 @@
 - **Gộp engine Coach về 1 nguồn** — hết bản chép đôi.
 
 ## 🔧 Đang làm
-- Gọn tài liệu bàn giao về đúng 2 file: `CLAUDE.md` + `BAN_GIAO.md` (file này).
+- (Trống — việc gần nhất đã xong. Xem "Sẽ làm tiếp".)
 
 ## 🔜 Sẽ làm tiếp (ưu tiên từ trên xuống)
 1. **Nối giọng Coach vào sự kiện timer thật** — để Coach biết lúc phiên kết thúc/bị gián đoạn (giờ mới chỉ phản chiếu trạng thái cả ngày).
@@ -35,6 +36,7 @@
 ## 🗒️ Nhật ký cập nhật
 > Mỗi lần xong việc đáng kể, thêm 1 dòng vào ĐẦU danh sách.
 
+- **2026-06-20** — Bắt buộc quy trình bàn giao: thêm hook tự chèn BAN_GIAO.md vào đầu MỖI phiên AI (`.claude/session-start-bangiao.sh` + `.claude/settings.local.json`), và ghi 2 quy tắc bắt buộc (đọc-trước / cập-nhật-sau) lên đầu CLAUDE.md.
 - **2026-06-20** — Gọn tài liệu về 2 file (CLAUDE.md + BAN_GIAO.md), đổi tên HANDOVER → BAN_GIAO.
 - **2026-06-20** — Gộp engine Coach về 1 nguồn (`ai-coach-sim/ai-coach.mjs` chỉ trỏ về `src/engine/coachVoice.js`). Verify: test sandbox 4104/4104 + `npm test` 131/131.
 - **2026-06-20** — Vá CLAUDE.md (thêm mục AI Coach, tick web push đã xong) + lập bàn giao đầu tiên.

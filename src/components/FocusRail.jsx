@@ -1,13 +1,16 @@
 /**
  * FocusRail.jsx — cột phải màn Tập trung theo mockup: 3 thẻ Hôm nay / Chuỗi / AI Coach.
- * AI Coach hiện là thẻ "tĩnh" dùng SỐ LIỆU THẬT (gợi ý độ dài phiên theo lịch sử) —
- * sẽ nối backend Claude ở bước sau. Tất cả skin-aware qua biến CSS.
+ * Thẻ AI Coach: câu chính là "giọng nói" theo tính cách (useCoachVoice + engine
+ * coachVoice), dòng phụ là phân tích số liệu thật (useCoachInsight). Có bộ chọn
+ * tính cách strict/zen/buddy. Tất cả skin-aware qua biến CSS.
  */
 import { motion } from 'framer-motion';
 import useGameStore from '../store/gameStore';
+import useSettingsStore from '../store/settingsStore';
 import { calculateStreakMilestoneProgress } from '../engine/gameMath';
 import { localWeekMondayStr } from '../engine/time';
 import useCoachInsight from '../hooks/useCoachInsight';
+import useCoachVoice from '../hooks/useCoachVoice';
 import CoachCard from './CoachCard';
 import CoachChat from './CoachChat';
 import FocusReport from './FocusReport';
@@ -76,6 +79,10 @@ export default function FocusRail({
     sessionsCompletedToday, focusMinutesToday, dailyGoalType, dailyGoalSessions, dailyGoalMinutes,
   });
 
+  const coachPersonality = useSettingsStore((s) => s.coachPersonality);
+  const setCoachPersonality = useSettingsStore((s) => s.setCoachPersonality);
+  const voice = useCoachVoice({ sessionsCompletedToday, focusMinutesToday, goalMet });
+
   return (
     <div className="space-y-4">
       {/* HÔM NAY */}
@@ -126,7 +133,13 @@ export default function FocusRail({
 
       {/* AI COACH (số liệu thật, local) + hỏi–đáp với Claude thật */}
       <div>
-        <CoachCard text={coach.text} reason={coach.reason} />
+        <CoachCard
+          text={voice.message}
+          reason={coach.text || coach.reason}
+          tone={voice.tone}
+          personality={coachPersonality}
+          onPersonalityChange={setCoachPersonality}
+        />
         <CoachChat
           sessionsCompletedToday={sessionsCompletedToday}
           focusMinutesToday={focusMinutesToday}

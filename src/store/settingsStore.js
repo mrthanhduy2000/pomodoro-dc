@@ -80,6 +80,10 @@ const useSettingsStore = create(
       // 'classic' | 'nature' | 'synthwave' | 'minimal'
       soundPack: 'classic',
 
+      // ── AI Coach ───────────────────────────────────────────────────────
+      // Tính cách của Coach: 'strict' (nghiêm khắc) | 'zen' (thiền) | 'buddy' (bạn thân)
+      coachPersonality: 'zen',
+
       // ── Timer Settings ─────────────────────────────────────────────────
       shortBreakDuration: DEFAULT_BREAK_PROFILE.shortBreakDuration,
       longBreakDuration:  DEFAULT_BREAK_PROFILE.longBreakDuration,
@@ -192,6 +196,10 @@ const useSettingsStore = create(
         soundEngine.setPack(pack);
         set({ soundPack: pack });
       },
+
+      setCoachPersonality: (p) => set({
+        coachPersonality: ['strict', 'zen', 'buddy'].includes(p) ? p : 'zen',
+      }),
 
       setShortBreakDuration: (n) => set({ shortBreakDuration: Math.min(60, Math.max(1, n)) }),
       setLongBreakDuration:  (n) => set({ longBreakDuration:  Math.min(90, Math.max(1, n)) }),

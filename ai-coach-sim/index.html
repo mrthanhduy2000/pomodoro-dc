@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AI Coach Pomodoro (giả lập LLM)</title>
+<style>
+  :root {
+    --bg: #0f1216; --card: #171c23; --line: #283039; --ink: #e8edf2;
+    --mut: #93a1b0; --accent: #6ea8fe; --good: #5fd0a0; --warn: #f0b86e; --bad: #e98a8a;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    display: flex; justify-content: center; padding: 28px 16px 60px;
+  }
+  .wrap { width: 100%; max-width: 720px; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  .sub { color: var(--mut); margin: 0 0 22px; font-size: 13px; }
+  .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 18px; }
+  label { display: block; font-size: 12px; color: var(--mut); margin-bottom: 6px; }
+  select, button {
+    width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line);
+    background: var(--card); color: var(--ink); font-size: 14px;
+  }
+  .persona { display: flex; gap: 8px; margin-bottom: 16px; }
+  .persona button { cursor: pointer; transition: .15s; }
+  .persona button.on { border-color: var(--accent); background: #1d2937; color: #cfe0ff; }
+  .ask {
+    background: var(--accent); color: #0c1320; border: none; font-weight: 700;
+    cursor: pointer; margin-bottom: 20px;
+  }
+  .ask:hover { filter: brightness(1.07); }
+  .chat { display: flex; flex-direction: column; gap: 10px; min-height: 60px; }
+  .bubble {
+    background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+    padding: 12px 14px; max-width: 90%; align-self: flex-start; animation: pop .18s ease;
+  }
+  @keyframes pop { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; } }
+  .bubble .msg { font-size: 16px; }
+  .bubble .meta { color: var(--mut); font-size: 11px; margin-top: 6px; }
+  .tag { display: inline-block; padding: 1px 7px; border-radius: 99px; background: #20303f; color: #bcd; margin-right: 6px; }
+  .score { display: grid; grid-template-columns: 90px 1fr 38px; gap: 8px; align-items: center; font-size: 12px; color: var(--mut); margin: 4px 0; }
+  .bar { height: 7px; border-radius: 6px; background: #222a33; overflow: hidden; }
+  .bar > i { display: block; height: 100%; border-radius: 6px; }
+  .panel { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; margin-top: 18px; }
+  .panel h3 { margin: 0 0 10px; font-size: 13px; color: var(--mut); font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>AI Coach Pomodoro</h1>
+  <p class="sub">Giả lập LLM bằng rule engine + kho câu. Không gọi API. Chọn ngữ cảnh và tính cách rồi bấm hỏi.</p>
+
+  <div class="persona" id="persona">
+    <button data-p="strict">Nghiêm khắc</button>
+    <button data-p="zen" class="on">Thiền (zen)</button>
+    <button data-p="buddy">Bạn thân</button>
+  </div>
+
+  <div class="controls">
+    <div>
+      <label>Ngữ cảnh</label>
+      <select id="scenario"></select>
+    </div>
+    <div>
+      <label>&nbsp;</label>
+      <button class="ask" id="ask">Coach nói gì?</button>
+    </div>
+  </div>
+
+  <div class="chat" id="chat"></div>
+
+  <div class="panel">
+    <h3>Bộ điểm ngữ cảnh (do tầng luật sinh)</h3>
+    <div id="scores"></div>
+  </div>
+</div>
+
+<script type="module">
+import { generateCoachMessage, scoreContext, createCoachMemory } from "./ai-coach.mjs";
+
+const SCENARIOS = [
+  { ten: "Bắt đầu ngày mới (chuỗi 5 ngày)", ctx: { phase:"focus", event:"session_start", sessions_today:0, interruptions:0, time_of_day:"morning", streak_days:5, total_focus_minutes:0 } },
+  { ten: "Vừa xong phiên thứ 4 liền mạch", ctx: { phase:"focus", event:"session_end", sessions_today:4, interruptions:0, time_of_day:"afternoon", streak_days:8, total_focus_minutes:100 } },
+  { ten: "Đang bị gián đoạn lần thứ 4", ctx: { phase:"focus", event:"interrupted", sessions_today:3, interruptions:4, time_of_day:"afternoon", streak_days:2, total_focus_minutes:80 } },
+  { ten: "Giờ nghỉ dài buổi tối", ctx: { phase:"long_break", event:"session_end", sessions_today:4, interruptions:0, time_of_day:"evening", streak_days:6, total_focus_minutes:110 } },
+  { ten: "Làm việc khuya, đã 5 phiên", ctx: { phase:"focus", event:"session_start", sessions_today:5, interruptions:1, time_of_day:"night", streak_days:4, total_focus_minutes:150 } },
+  { ten: "Phiên đầu tiên của người mới", ctx: { phase:"focus", event:"session_start", sessions_today:0, interruptions:0, time_of_day:"morning", streak_days:0, total_focus_minutes:0 } },
+  { ten: "Chuỗi vừa đứt (từng làm nhiều)", ctx: { phase:"focus", event:"session_start", sessions_today:0, interruptions:0, time_of_day:"morning", streak_days:0, total_focus_minutes:300 } },
+  { ten: "Hoàn thành, tổng 1 giờ 30 phút", ctx: { phase:"focus", event:"session_end", sessions_today:2, interruptions:0, time_of_day:"noon", streak_days:3, total_focus_minutes:90 } },
+];
+
+let personality = "zen";
+const memories = { strict: createCoachMemory(), zen: createCoachMemory(), buddy: createCoachMemory() };
+
+const $ = (s) => document.querySelector(s);
+const scenarioSel = $("#scenario");
+SCENARIOS.forEach((s, i) => {
+  const o = document.createElement("option");
+  o.value = i; o.textContent = s.ten; scenarioSel.appendChild(o);
+});
+
+$("#persona").addEventListener("click", (e) => {
+  const b = e.target.closest("button[data-p]");
+  if (!b) return;
+  personality = b.dataset.p;
+  [...$("#persona").children].forEach((x) => x.classList.toggle("on", x === b));
+});
+
+function colorFor(v) { return v >= 66 ? "var(--good)" : v >= 33 ? "var(--warn)" : "var(--bad)"; }
+
+function renderScores(ctx) {
+  const s = scoreContext(ctx);
+  const rows = [
+    ["Năng lượng", s.energy_level], ["Đà (momentum)", s.momentum],
+    ["Vất vả", s.struggle_score], ["Mệt mỏi", s.fatigue],
+  ];
+  $("#scores").innerHTML = rows.map(([k, v]) =>
+    `<div class="score"><span>${k}</span><span class="bar"><i style="width:${v}%;background:${colorFor(v)}"></i></span><span>${v}</span></div>`
+  ).join("");
+}
+
+function ask() {
+  const sc = SCENARIOS[+scenarioSel.value];
+  const out = generateCoachMessage(sc.ctx, personality, memories[personality]);
+  const div = document.createElement("div");
+  div.className = "bubble";
+  div.innerHTML = `<div class="msg">${out.message}</div>
+    <div class="meta"><span class="tag">${out.intent}</span><span class="tag">${out.tone}</span>${personality}</div>`;
+  const chat = $("#chat");
+  chat.prepend(div);
+  while (chat.children.length > 6) chat.removeChild(chat.lastChild);
+  renderScores(sc.ctx);
+}
+
+$("#ask").addEventListener("click", ask);
+scenarioSel.addEventListener("change", () => renderScores(SCENARIOS[+scenarioSel.value].ctx));
+renderScores(SCENARIOS[0].ctx);
+ask();
+</script>
+</body>
+</html>

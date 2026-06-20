@@ -68,9 +68,9 @@ Tầng trí nhớ và ngữ cảnh
 17. Anti-Repeat Tracker: `createCoachMemory`, `markUsed`, `isRecentlyUsed`
 18. Pattern Detector: `detectPatterns`
 
-Tầng QA và tinh chỉnh (ở `ai-coach.test.mjs` và `NATURALNESS-REPORT.md`)
+Tầng QA và tinh chỉnh (ở `ai-coach.test.mjs`)
 19. Test Phủ Luật: `ai-coach.test.mjs`
-20. Naturalness Review: `NATURALNESS-REPORT.md`
+20. Naturalness Review: đã soát tự nhiên hoá, sửa 6 lỗi mẫu (lộ đơn vị tiếng Việt, viết hoa sau số, vượt 2 câu, chồng tiểu từ, edge-case cướp intent nghỉ, điền số vô lý)
 
 ## Kết quả kiểm thử
 

@@ -75,7 +75,6 @@ Hoặc bấm đúp file `/Users/damduy/Desktop/🚀 Deploy App.command`
 - ❌ Không dùng localhost / serve-dist.mjs / LaunchAgent làm luồng chạy chính.
 - ❌ Không nhân đôi logic game giữa web và Electron. Logic chính nằm ở web app.
 - ❌ KHÔNG start phiên focus trên dev/localhost — dev dùng chung Supabase row với production, sẽ ghi đè dữ liệu thật của Đàm.
-- ❌ Đừng đọc/tin `CLAUDE.md` trong `.claude/worktrees/*` — đó là bản nháp cũ lỗi thời, không phải tài liệu hiện hành.
 
 ## Lưu ý kỹ thuật
 - `npm install` cần flag `--legacy-peer-deps`

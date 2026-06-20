@@ -27,3 +27,8 @@ dist-ssr
 *.sln
 *.sw?
 .vercel
+
+# Artifact cũ — giữ trên máy nhưng không đưa vào git (dọn 2026-06-20)
+backups/
+DC Pomodoro.app/
+DC Pomodoro - Logo System.html

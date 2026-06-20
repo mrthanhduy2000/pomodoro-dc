@@ -2,6 +2,8 @@
 
 Một coach trò chuyện cho app Pomodoro, mô phỏng một trợ lý AI thông minh mà **không gọi API nào cả**. Bên trong là rule engine + kho câu + template + chấm điểm ngữ cảnh. Viết bằng JavaScript thuần, không thư viện ngoài, không dùng localStorage hay sessionStorage.
 
+> ⚠️ **Nguồn duy nhất:** engine thật sống ở `src/engine/coachVoice.js` của app. File `ai-coach.mjs` ở đây chỉ **re-export** từ đó (không còn bản chép đôi). Muốn sửa câu/intent/tone → sửa `src/engine/coachVoice.js`, ĐỪNG dán lại nội dung vào `ai-coach.mjs`.
+
 ## Cách chạy
 
 - Kiểm thử và xem demo trong terminal:
@@ -38,7 +40,7 @@ const out = generateCoachMessage(
 - CoachOutput: `{ message, intent, tone }`
 - Hàm chính: `scoreContext`, `selectIntent`, `pickTemplate`, `fillTemplate`, `applyTone`, `generateCoachMessage`
 
-## Bản đồ 20 tầng (agent) trong `ai-coach.mjs`
+## Bản đồ 20 tầng (agent) trong `src/engine/coachVoice.js`
 
 Tầng sinh ngôn ngữ (NLG)
 1. Template Engine: `fillTemplate` (điền biến, lo đơn vị tiếng Việt thông minh)

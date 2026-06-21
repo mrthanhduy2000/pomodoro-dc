@@ -29,7 +29,7 @@ test('buildLLMPrompt: context rỗng → "(chưa có dữ liệu)"', () => {
 test('sanitizeLLMOutput: bỏ <think>, bỏ rỗng, cắt dài', () => {
   assert.equal(sanitizeLLMOutput('<think>nghĩ thầm</think> Xin chào.'), 'Xin chào.');
   assert.match(sanitizeLLMOutput(''), /chưa trả lời được/);
-  assert.ok(sanitizeLLMOutput('a'.repeat(3000)).length <= 1500);
+  assert.ok(sanitizeLLMOutput('a'.repeat(3000)).length <= 2200);
 });
 
 test('detectWebLLMCapable: iPhone/không GPU/màn nhỏ → false; desktop có GPU → true', () => {

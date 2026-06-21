@@ -52,12 +52,12 @@ App chính chạy trên **web** tại `https://pomodoro-dc.vercel.app`.
 App có cả một hệ "huấn luyện viên" và engine game thuần. Đây là phần lớn nhất dự án.
 - **3 tầng Coach tách biệt, người dùng tự bấm** (không có bộ tự chọn):
   - (a) *Hỏi Coach* — trả lời tức thì từ số liệu, KHÔNG cần mạng/API (`src/engine/qa/`, `coachIntel.js`). Cấm bịa số, cấm từ nhân-quả.
-  - (b) *Coach offline* — AI thật chạy trên máy (WebLLM, chỉ desktop, opt-in) — `src/engine/llm/`.
-  - (c) *Hỏi Claude* — gọi `api/coach.js` (Claude Haiku 4.5), CHỈ khi người dùng bấm. Mặc định KHÔNG bật vì chưa đặt `ANTHROPIC_API_KEY` → đừng tự đề xuất hướng trả phí.
-- **Giọng Coach theo tính cách** strict/zen/buddy: `src/engine/coachVoice.js` + `src/hooks/useCoachVoice.js`, tính cách lưu ở `settingsStore.coachPersonality` (mặc định `zen`).
+  - (b) *Coach offline* — AI thật (LLM Qwen2.5-3B) chạy trên máy qua WebLLM, chỉ desktop, opt-in — `src/engine/llm/`. **Một phong cách duy nhất: PHÂN TÍCH CHUYÊN SÂU, đọc số** (KHÔNG dùng giọng cảm xúc zen/buddy/strict — đó là tầng khác). Prompt 3 phần `[1] Quan sát · [2] Mẫu hình · [3] Thử nghiệm` + ví dụ vàng + tự-kiểm, ở `COACH_OFFLINE_SYSTEM` (`coachPrompt.js`). Nạp **bản số liệu giàu** `buildAnalystContext` (`coachContext.js`) — tái dùng cả `buildCoachIntel` (hồ sơ Wilson + dự đoán) + `getTodayPaceInsight` + `getLateNightQualityDrop`, mỗi % luôn kèm cỡ mẫu, bỏ tín hiệu thiếu mẫu. Hook riêng `useAnalystContext`. Giải mã: `temperature 0.4 · top_p 0.85 · frequency_penalty 0.3 · max_tokens 700` (`webllmEngine.js`). ⚠️ Đừng nhồi giọng cảm xúc vào tầng này; đừng đụng `buildCoachContext` (vẫn dùng cho Claude).
+  - (c) *Hỏi Claude* — gọi `api/coach.js` (Claude Haiku 4.5), CHỈ khi người dùng bấm. Mặc định KHÔNG bật vì chưa đặt `ANTHROPIC_API_KEY` → đừng tự đề xuất hướng trả phí. Dùng `buildCoachContext` (bản gọn) qua `useCoachContext`.
+- **Giọng Coach theo tính cách** strict/zen/buddy: `src/engine/coachVoice.js` + `src/hooks/useCoachVoice.js`, tính cách lưu ở `settingsStore.coachPersonality` (mặc định `zen`). ⚠️ CHỈ dùng cho **thẻ AI Coach (briefing)** — KHÔNG liên quan tới Coach offline (b) (tầng đó đã chốt một giọng phân tích).
 - **Engine game thuần** tách khỏi state: công thức ở `src/engine/gameMath.js` + `constants.js`, state ở `src/store/gameStore.js`. Sửa công thức → sửa ở engine, đừng nhồi vào store. Dữ liệu ngoài (Supabase/import) PHẢI đi qua `normalizePersistedGameState`.
 - ⚠️ Điểm nóng: `completeFocusSession` trong `gameStore.js` rất dài (~760 dòng) — sửa cẩn thận, dễ sinh bug "dùng giá trị cũ".
-- Luôn `npm test` trước khi commit (hiện 131 bài). Lưu ý: `npm test` chưa gồm `coachVoice.js` — engine giọng Coach có test riêng ở `ai-coach-sim/ai-coach.test.mjs` (chạy bằng `node ai-coach-sim/ai-coach.test.mjs`).
+- Luôn `npm test` trước khi commit (hiện 140 bài). Lưu ý: `npm test` chưa gồm `coachVoice.js` — engine giọng Coach có test riêng ở `ai-coach-sim/ai-coach.test.mjs` (chạy bằng `node ai-coach-sim/ai-coach.test.mjs`).
 
 ## Quy trình deploy
 ```

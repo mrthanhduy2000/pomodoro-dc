@@ -475,7 +475,7 @@ function focusRules(context, score) {
    ===== Agent 10: Rule Base Break =====
    Luật cho phiên nghỉ (short_break, long_break).
    ===================================================================== */
-function breakRules(context, score) {
+function breakRules(context) {
   const { phase, time_of_day, sessions_today = 0 } = context;
   if (phase !== "short_break" && phase !== "long_break") return null;
 

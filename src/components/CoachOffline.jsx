@@ -6,7 +6,7 @@
  */
 import { useState } from 'react';
 import { SparkGlyph } from './icons/Glyph';
-import useCoachContext from '../hooks/useCoachContext';
+import { useAnalystContext } from '../hooks/useCoachContext';
 import { buildLLMPrompt, sanitizeLLMOutput, detectWebLLMCapable, mapInitProgress, LLM_MODELS } from '../engine/llm/coachPrompt';
 
 const GOLD = '#d9a441';
@@ -19,7 +19,7 @@ export default function CoachOffline(goalProps) {
   const [progress, setProgress] = useState(0);
   const [text, setText] = useState('');
   const [modelId, setModelId] = useState(LLM_MODELS.default);
-  const buildContext = useCoachContext(goalProps);
+  const buildContext = useAnalystContext(goalProps);
 
   if (!capable) return null; // mobile/iOS/không WebGPU → giữ UI sạch
 
@@ -55,7 +55,7 @@ export default function CoachOffline(goalProps) {
         className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-full py-1.5 text-[11px] font-semibold uppercase tracking-[0.15em] transition-opacity hover:opacity-80"
         style={{ border: `1px solid ${GOLD}55`, color: GOLD, background: 'rgba(217,164,65,0.08)' }}
       >
-        <SparkGlyph size={12} /> Coach offline (AI trên máy)
+        <SparkGlyph size={12} /> Coach offline — phân tích chuyên sâu (AI trên máy)
       </button>
 
       {open && (
@@ -73,10 +73,10 @@ export default function CoachOffline(goalProps) {
               {status === 'idle' && (
                 <>
                   <p className="text-[13px] leading-relaxed" style={{ color: 'var(--ink)' }}>
-                    Một AI nhỏ chạy ngay trên máy bạn (offline) sẽ viết nhận xét từ số liệu tập trung của bạn.
+                    Một AI chạy ngay trên máy bạn (offline) sẽ phân tích chuyên sâu số liệu tập trung của bạn: đọc số, soi mẫu hình và đưa nhận định chi tiết — không bịa, thiếu dữ liệu thì nói chưa đủ.
                   </p>
                   <button type="button" onClick={() => writeComment(false)} className="rounded-xl px-3 py-2 text-[13px] font-semibold" style={{ background: 'var(--accent)', color: '#fff' }}>
-                    Viết nhận xét
+                    Phân tích chuyên sâu
                   </button>
                   <p className="text-[11px] leading-snug" style={{ color: 'var(--muted)' }}>
                     Tải mô hình ~1GB lần đầu (cần máy có card đồ hoạ / WebGPU), lần sau dùng ngay.
@@ -108,7 +108,7 @@ export default function CoachOffline(goalProps) {
 
               {(status === 'ready' || status === 'generating') && (
                 <p className="text-[11px] italic leading-snug" style={{ color: 'var(--muted)' }}>
-                  Đây là AI nhỏ chạy trên máy bạn (offline) — cùn và dễ sai hơn "Hỏi Coach" (Claude). Coi như gợi ý nhanh; cần lời khuyên chuẩn thì bấm "Hỏi Coach".
+                  Đây là AI chạy trên máy bạn (offline) — phân tích từ số liệu thật, nhưng vẫn dễ sai hơn "Hỏi Coach" (Claude). Cần lời khuyên chuẩn nhất thì bấm "Hỏi Coach".
                 </p>
               )}
             </div>

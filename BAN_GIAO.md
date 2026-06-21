@@ -3,13 +3,14 @@
 > Dành cho AI/người làm tiếp. File này trả lời: **đang ở đâu, làm gì tiếp, đã đổi những gì.**
 > Chi tiết kỹ thuật + quy tắc cấm: xem `CLAUDE.md`. Lịch sử thiết kế sâu: thư mục memory của Claude.
 > **NGUYÊN TẮC ƯU TIÊN SỐ 1:** (1) mọi phiên AI phải đọc file này + `CLAUDE.md` + các file liên quan TRƯỚC khi làm; (2) sau MỌI cập nhật dù nhỏ, phải cập nhật ngay file này + `CLAUDE.md` + các file liên quan khác.
-> Cập nhật lần cuối: **2026-06-20**.
+> Cập nhật lần cuối: **2026-06-21**.
 
 ---
 
 ## ✅ Đã làm (xong, đa số đã deploy)
 - **AI Coach 3 tầng**: (a) Hỏi Coach trả lời từ số liệu, không cần mạng; (b) Coach chạy AI ngay trên máy (chỉ desktop, tự bật khi đủ điều kiện); (c) Hỏi Claude qua mạng (chỉ khi bấm).
-- **Giọng Coach theo tính cách**: strict / zen / buddy.
+- **Coach offline (b) nâng cấp lớn**: chốt **một phong cách phân tích chuyên sâu, đọc số** (bỏ giọng cảm xúc ở tầng này); nạp bản số liệu giàu hơn (`buildAnalystContext` = hồ sơ sâu Wilson + dự đoán + nhịp hôm nay + phiên khuya, mỗi % kèm cỡ mẫu); prompt 3 phần `[1] Quan sát · [2] Mẫu hình · [3] Thử nghiệm` + tự-kiểm; giải mã tinh hơn (0.4 / top_p 0.85 / freq 0.3 / 700 token). Thông minh hơn các bản trước.
+- **Giọng Coach theo tính cách**: strict / zen / buddy — CHỈ cho thẻ AI Coach (briefing), không phải Coach offline (b).
 - **Cộng Hưởng**: nối Kỹ năng ↔ Nhiệm vụ ↔ Kho báu, có chặn lạm phát.
 - **Focus Intelligence**: hồ sơ + dự đoán "giờ vàng" + khuyến nghị + báo cáo.
 - **Đọc-nghĩa ghi chú** chạy ngay trên máy (gom chủ đề, tìm phiên giống nhau).
@@ -36,6 +37,9 @@
 ## 🗒️ Nhật ký cập nhật
 > Mỗi lần xong việc đáng kể, thêm 1 dòng vào ĐẦU danh sách.
 
+- **2026-06-21** — **Coach offline (LLM trên máy) nâng cấp trí tuệ** (workflow 7 agent: hiểu bài → 3 thiết kế → hợp nhất). Chốt **một phong cách phân tích chuyên sâu đọc-số** (bỏ giọng cảm xúc ở tầng này). Mới: `buildAnalystContext` (`coachContext.js`) nạp cả `buildCoachIntel` (hồ sơ Wilson + dự đoán) + `getTodayPaceInsight` + `getLateNightQualityDrop` — mỗi % kèm cỡ mẫu, bỏ tín hiệu thiếu mẫu, bỏ trùng ghi chú; hook `useAnalystContext`. Prompt 3 phần + ví dụ vàng + tự-kiểm (`COACH_OFFLINE_SYSTEM`); giải mã `0.4/top_p0.85/freq0.3/700` (`webllmEngine.js`); UI `CoachOffline.jsx` đổi sang "Phân tích chuyên sâu". KHÔNG đụng `buildCoachContext` (Claude vẫn dùng). +10 test thuần (`coachContext.analyst.test.js`) + nới cap sanitize→2200. Tiện tay: sửa 1 lỗi lint cũ ở `coachVoice.js` (bỏ tham số `score` thừa trong `breakRules`, không đổi hành vi). `npm test` 140/140, lint sạch, sim coachVoice 4104/4104.
+- **2026-06-21** — Sửa lỗi `predictBestWindow` (`coachIntel.js`) bỏ sót buổi đêm khuya (buổi vắt qua nửa đêm) + test (`9fbcd62`).
+- **2026-06-20** — "Hỏi Coach" trả lời OFFLINE không cần LLM (`src/engine/qa/` + `CoachChat.jsx`, `1e27505`).
 - **2026-06-20** — Nâng quy tắc tài liệu thành **NGUYÊN TẮC ƯU TIÊN SỐ 1**, mở rộng 2 vế: (1) đọc CLAUDE.md+BAN_GIAO.md+file liên quan trước khi làm; (2) sau mọi thay đổi dù nhỏ, cập nhật CLAUDE.md+BAN_GIAO.md+file liên quan khác. Ghi vào CLAUDE.md, hook, và bộ nhớ.
 - **2026-06-20** — Ghi cứng quy tắc "luôn cập nhật CLAUDE.md + BAN_GIAO.md sau mọi thay đổi" vào bộ nhớ cá nhân của Claude (loại feedback) để mọi phiên sau không quên.
 - **2026-06-20** — Dọn file thừa/lệch: xoá 2 worktree copy mâu thuẫn trong `.claude/`; xoá `NATURALNESS-REPORT.md` (gộp vào `ai-coach-sim/README.md`); gỡ `backups/`, `DC Pomodoro.app`, Logo html khỏi git (giữ trên máy + gitignore); bỏ dòng cảnh báo worktree trong CLAUDE.md.

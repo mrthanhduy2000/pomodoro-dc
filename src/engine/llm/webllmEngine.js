@@ -25,8 +25,10 @@ export async function generateOffline({ modelId, system, messages, onProgress, o
   const stream = await engine.chat.completions.create({
     messages: [{ role: 'system', content: system }, ...messages],
     stream: true,
-    temperature: 0.5,
-    max_tokens: 400,
+    temperature: 0.4,      // thấp hơn → bám số, ổn định hơn cho phân tích
+    top_p: 0.85,
+    frequency_penalty: 0.3, // giảm lặp chữ khi temperature thấp (chuẩn OpenAI, web-llm hỗ trợ)
+    max_tokens: 700,        // đủ chỗ cho bản phân tích 3 phần [1][2][3]
   });
   let out = '';
   for await (const chunk of stream) {

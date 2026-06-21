@@ -1,10 +1,10 @@
 /**
  * CoachCard — thẻ "AI Coach" tối màu (dùng chung cho cột phải desktop + màn mobile).
  * Chỉ lo HIỂN THỊ.
- * - text   : câu chính (giọng Coach MỘT giọng cố định, từ useCoachVoice)
- * - reason : dòng phụ (phân tích số liệu, từ useCoachInsight)
- * - tone   : sắc thái câu chính (vd "tĩnh tại"), hiện cạnh nhãn AI Coach
- * (Đã bỏ bộ chọn tính cách strict/zen/buddy — 2026-06-21, theo yêu cầu của Đàm.)
+ * - text   : câu chính = phân tích số liệu (từ useCoachInsight → generateCoachBriefing)
+ * - reason : dòng phụ = cỡ mẫu/số liệu nền (cùng nguồn)
+ * - tone   : nhãn nhỏ cạnh "AI Coach" (vd "đọc số")
+ * (2026-06-21: thẻ chuyển hẳn sang phong cách ĐỌC SỐ — bỏ giọng cảm xúc/strict/zen/buddy.)
  */
 import { motion } from 'framer-motion';
 import { SparkGlyph } from './icons/Glyph';

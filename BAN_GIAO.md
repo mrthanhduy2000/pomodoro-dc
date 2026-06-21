@@ -10,7 +10,7 @@
 ## ✅ Đã làm (xong, đa số đã deploy)
 - **AI Coach 3 tầng**: (a) Hỏi Coach trả lời từ số liệu, không cần mạng; (b) Coach chạy AI ngay trên máy (chỉ desktop, tự bật khi đủ điều kiện); (c) Hỏi Claude qua mạng (chỉ khi bấm).
 - **Coach offline (b) nâng cấp lớn**: chốt **một phong cách phân tích chuyên sâu, đọc số** (bỏ giọng cảm xúc ở tầng này); nạp bản số liệu giàu hơn (`buildAnalystContext` = hồ sơ sâu Wilson + dự đoán + nhịp hôm nay + phiên khuya, mỗi % kèm cỡ mẫu); prompt 3 phần `[1] Quan sát · [2] Mẫu hình · [3] Thử nghiệm` + tự-kiểm; giải mã tinh hơn (0.4 / top_p 0.85 / freq 0.3 / 700 token). Thông minh hơn các bản trước.
-- **Thẻ AI Coach (briefing)**: câu động viên ngắn 1 dòng. **(2026-06-21) Đã bỏ bộ chọn 3 giọng**, chốt MỘT giọng cố định (zen) — engine vẫn còn cả 3 nhưng chỉ zen được nối. Khác hẳn Coach offline (b).
+- **Thẻ AI Coach (briefing)**: **(2026-06-21) phong cách ĐỌC SỐ** — câu chính + dòng phụ đều là phân tích số liệu thật (`useCoachInsight` → `generateCoachBriefing`): chẩn đoán + 1 gợi ý theo số, kèm cỡ mẫu. Đã bỏ HẲN giọng cảm xúc (engine `coachVoice.js`/`useCoachVoice.js` giữ lại nhưng không nối UI). Khác hẳn Coach offline (b).
 - **Cộng Hưởng**: nối Kỹ năng ↔ Nhiệm vụ ↔ Kho báu, có chặn lạm phát.
 - **Focus Intelligence**: hồ sơ + dự đoán "giờ vàng" + khuyến nghị + báo cáo.
 - **Đọc-nghĩa ghi chú** chạy ngay trên máy (gom chủ đề, tìm phiên giống nhau).
@@ -32,14 +32,14 @@
 ## ⚠️ Nhớ kỹ (kẻo hỏng)
 - **Không bấm chạy phiên focus trên bản dev/localhost** — nó dùng chung dữ liệu với bản thật, sẽ ghi đè dữ liệu của Đàm.
 - **Coach mặc định miễn phí** — đừng tự bật hướng trả tiền (Claude API) trừ khi Đàm yêu cầu.
-- **Engine Coach chỉ có 1 nguồn**: muốn sửa câu/giọng → chỉ sửa `src/engine/coachVoice.js`.
+- **Sửa câu thẻ AI Coach (đọc số)** → `generateCoachBriefing` trong `src/engine/gameMath.js`. (Engine giọng cảm xúc `src/engine/coachVoice.js` giờ DORMANT — chỉ `ai-coach-sim` còn dùng; đừng sửa nó để mong thay đổi thẻ.)
 - Luôn `npm test` trước khi commit; luôn chạy `git status` tươi (đừng tin ảnh chụp cũ).
 - **Lịch sử git `main` từng bị xáo** (thao tác git song song): bản đang chạy là `eb44638` — chứa ĐỦ mọi việc gần đây (Hỏi Coach offline + fix đêm khuya + Coach offline analyst). Vài commit cũ (`1e27505`, `9fbcd62`) thành dangling, KHÔNG còn trong `git log` nhưng code vẫn nằm trong bản deploy. Đừng hoảng nếu không thấy chúng.
 
 ## 🗒️ Nhật ký cập nhật
 > Mỗi lần xong việc đáng kể, thêm 1 dòng vào ĐẦU danh sách.
 
-- **2026-06-21** — **Bỏ bộ chọn 3 giọng** (Nghiêm khắc/Thiền/Bạn thân) khỏi thẻ AI Coach briefing theo yêu cầu Đàm — chốt MỘT giọng cố định `FIXED_COACH_PERSONALITY='zen'` (`useCoachVoice.js`). Gỡ switcher + props khỏi `CoachCard.jsx`/`FocusRail.jsx`/`FocusCoachMobile.jsx` (xoá luôn import settingsStore + useGameStore thừa ở mobile). `settingsStore.coachPersonality` thành orphan (giữ field cho dữ liệu cũ). Engine `coachVoice.js` GIỮ nguyên cả 3 giọng (sim 4104/4104). LƯU Ý: đây là thẻ briefing — KHÁC Coach offline (LLM). `npm test` 140/140, lint sạch.
+- **2026-06-21** — **Thẻ AI Coach briefing → phong cách ĐỌC SỐ** (theo yêu cầu Đàm: muốn đọc/phân tích số liệu + gợi ý theo số, không cảm xúc). Bỏ HẲN giọng cảm xúc khỏi thẻ: `FocusRail.jsx` + `FocusCoachMobile.jsx` thôi dùng `useCoachVoice`, lấy `coach.text`/`coach.reason` từ `useCoachInsight` (→ `generateCoachBriefing`) làm câu chính + dòng phụ; `tone="đọc số"`. `useCoachVoice.js` + `engine/coachVoice.js` GIỮ lại nhưng dormant (không nơi nào trong `src/` import; sim 4104/4104 vẫn chạy). `settingsStore.coachPersonality` orphan. `npm test` 140/140, lint sạch. *(Cùng ngày trước đó đã thử bước trung gian: gỡ 3 nút + cố định giọng zen — nay thay luôn bằng đọc-số.)*
 - **2026-06-21** (deploy `eb44638`) — **Coach offline (LLM trên máy) nâng cấp trí tuệ** (workflow 7 agent: hiểu bài → 3 thiết kế → hợp nhất). Chốt **một phong cách phân tích chuyên sâu đọc-số** (bỏ giọng cảm xúc ở tầng này). Mới: `buildAnalystContext` (`coachContext.js`) nạp cả `buildCoachIntel` (hồ sơ Wilson + dự đoán) + `getTodayPaceInsight` + `getLateNightQualityDrop` — mỗi % kèm cỡ mẫu, bỏ tín hiệu thiếu mẫu, bỏ trùng ghi chú; hook `useAnalystContext`. Prompt 3 phần + ví dụ vàng + tự-kiểm (`COACH_OFFLINE_SYSTEM`); giải mã `0.4/top_p0.85/freq0.3/700` (`webllmEngine.js`); UI `CoachOffline.jsx` đổi sang "Phân tích chuyên sâu". KHÔNG đụng `buildCoachContext` (Claude vẫn dùng). +10 test thuần (`coachContext.analyst.test.js`) + nới cap sanitize→2200. Tiện tay: sửa 1 lỗi lint cũ ở `coachVoice.js` (bỏ tham số `score` thừa trong `breakRules`, không đổi hành vi). `npm test` 140/140, lint sạch, sim coachVoice 4104/4104. CHƯA verify output model 3B thật (cần Mac có WebGPU).
 - **2026-06-21** — Sửa lỗi `predictBestWindow` (`coachIntel.js`) bỏ sót buổi đêm khuya (buổi vắt qua nửa đêm) + test. *(Đã gộp vào `eb44638`; commit gốc `9fbcd62` giờ dangling sau khi main bị xáo lịch sử.)*
 - **2026-06-20** — "Hỏi Coach" trả lời OFFLINE không cần LLM (`src/engine/qa/` + `CoachChat.jsx`). *(Đã gộp vào `eb44638`; commit gốc `1e27505` giờ dangling.)*

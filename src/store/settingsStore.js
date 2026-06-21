@@ -82,8 +82,10 @@ const useSettingsStore = create(
 
       // ── AI Coach ───────────────────────────────────────────────────────
       // (ĐÃ NGỪNG DÙNG 2026-06-21) Trước đây là tính cách Coach strict/zen/buddy.
-      // Thẻ động viên giờ chốt MỘT giọng cố định trong useCoachVoice (FIXED_COACH_PERSONALITY).
-      // Giữ field cho dữ liệu cũ đã lưu; không UI/hook nào còn đọc/ghi nó.
+      // Thẻ AI Coach giờ chuyển hẳn sang phong cách ĐỌC SỐ (useCoachInsight →
+      // generateCoachBriefing); không còn giọng cảm xúc. Engine coachVoice.js +
+      // useCoachVoice.js giữ lại nhưng KHÔNG còn nối vào UI. Field này thành orphan
+      // (giữ cho dữ liệu cũ đã lưu; không UI/hook nào đọc/ghi).
       coachPersonality: 'zen',
 
       // ── Timer Settings ─────────────────────────────────────────────────

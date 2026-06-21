@@ -4,17 +4,20 @@
  * (strict | zen | buddy). Đây là phần "có hồn" bổ sung cho thẻ AI Coach, chạy
  * song song với useCoachInsight (phần phân tích số liệu), KHÔNG thay nó.
  *
- * - Tính cách đọc từ settingsStore (coachPersonality).
- * - Bộ nhớ chống lặp giữ ở mức module (theo từng tính cách), reset khi tải lại
- *   trang. Không dùng localStorage.
- * - Chỉ sinh câu mới khi ngữ cảnh đổi (tính cách, số phiên, đạt mục tiêu, buổi
- *   trong ngày, chuỗi...) để câu không nhảy loạn mỗi lần render.
+ * - GIỌNG CỐ ĐỊNH: thẻ động viên chỉ dùng MỘT giọng duy nhất (zen) — bỏ bộ chọn
+ *   strict/zen/buddy theo yêu cầu của Đàm (2026-06-21). Đổi giọng = sửa hằng
+ *   FIXED_COACH_PERSONALITY bên dưới.
+ * - Bộ nhớ chống lặp giữ ở mức module, reset khi tải lại trang. Không localStorage.
+ * - Chỉ sinh câu mới khi ngữ cảnh đổi (số phiên, đạt mục tiêu, buổi trong ngày,
+ *   chuỗi...) để câu không nhảy loạn mỗi lần render.
  */
 import { useMemo } from 'react';
 import useGameStore from '../store/gameStore';
-import useSettingsStore from '../store/settingsStore';
 import { getVietnamHour } from '../engine/time';
 import { generateCoachMessage, createCoachMemory } from '../engine/coachVoice';
+
+// Một giọng duy nhất cho thẻ động viên (calm). Muốn đổi → 'strict' | 'zen' | 'buddy'.
+const FIXED_COACH_PERSONALITY = 'zen';
 
 // Bộ nhớ chống lặp theo từng tính cách (sống suốt phiên dùng app).
 const VOICE_MEMORY = {
@@ -37,8 +40,7 @@ export default function useCoachVoice({
   goalMet = false,
 } = {}) {
   const streak = useGameStore((s) => s.streak);
-  const personalityRaw = useSettingsStore((s) => s.coachPersonality);
-  const personality = ['strict', 'zen', 'buddy'].includes(personalityRaw) ? personalityRaw : 'zen';
+  const personality = FIXED_COACH_PERSONALITY;
   const currentStreak = streak?.currentStreak ?? 0;
 
   const timeOfDay = hourToTimeOfDay(getVietnamHour());

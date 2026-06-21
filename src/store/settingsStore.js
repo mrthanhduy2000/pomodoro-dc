@@ -81,7 +81,9 @@ const useSettingsStore = create(
       soundPack: 'classic',
 
       // ── AI Coach ───────────────────────────────────────────────────────
-      // Tính cách của Coach: 'strict' (nghiêm khắc) | 'zen' (thiền) | 'buddy' (bạn thân)
+      // (ĐÃ NGỪNG DÙNG 2026-06-21) Trước đây là tính cách Coach strict/zen/buddy.
+      // Thẻ động viên giờ chốt MỘT giọng cố định trong useCoachVoice (FIXED_COACH_PERSONALITY).
+      // Giữ field cho dữ liệu cũ đã lưu; không UI/hook nào còn đọc/ghi nó.
       coachPersonality: 'zen',
 
       // ── Timer Settings ─────────────────────────────────────────────────

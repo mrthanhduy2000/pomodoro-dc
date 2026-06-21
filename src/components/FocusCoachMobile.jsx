@@ -4,8 +4,6 @@
  * Chỉ hiện khi CHƯA chạy phiên — để không phá màn "Focus tĩnh khi chạy".
  * Dùng chung logic qua useCoachInsight (phân tích) + useCoachVoice (giọng nói).
  */
-import useGameStore from '../store/gameStore';
-import useSettingsStore from '../store/settingsStore';
 import useCoachInsight from '../hooks/useCoachInsight';
 import useCoachVoice from '../hooks/useCoachVoice';
 import CoachCard from './CoachCard';
@@ -14,8 +12,6 @@ import FocusReport from './FocusReport';
 
 export default function FocusCoachMobile({ hidden = false, ...goalProps }) {
   const coach = useCoachInsight(goalProps);
-  const coachPersonality = useSettingsStore((s) => s.coachPersonality);
-  const setCoachPersonality = useSettingsStore((s) => s.setCoachPersonality);
 
   const {
     sessionsCompletedToday = 0,
@@ -38,8 +34,6 @@ export default function FocusCoachMobile({ hidden = false, ...goalProps }) {
         text={voice.message}
         reason={coach.text || coach.reason}
         tone={voice.tone}
-        personality={coachPersonality}
-        onPersonalityChange={setCoachPersonality}
       />
       <CoachChat {...goalProps} />
       <FocusReport {...goalProps} />

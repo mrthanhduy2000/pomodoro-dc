@@ -1,20 +1,16 @@
 /**
  * CoachCard — thẻ "AI Coach" tối màu (dùng chung cho cột phải desktop + màn mobile).
  * Chỉ lo HIỂN THỊ.
- * - text   : câu chính (giọng Coach theo tính cách, từ useCoachVoice)
+ * - text   : câu chính (giọng Coach MỘT giọng cố định, từ useCoachVoice)
  * - reason : dòng phụ (phân tích số liệu, từ useCoachInsight)
  * - tone   : sắc thái câu chính (vd "tĩnh tại"), hiện cạnh nhãn AI Coach
- * - personality + onPersonalityChange : nếu có thì hiện bộ chọn tính cách
+ * (Đã bỏ bộ chọn tính cách strict/zen/buddy — 2026-06-21, theo yêu cầu của Đàm.)
  */
 import { motion } from 'framer-motion';
 import { SparkGlyph } from './icons/Glyph';
 
-const PERSONA_LABELS = { strict: 'Nghiêm khắc', zen: 'Thiền', buddy: 'Bạn thân' };
-const PERSONA_ORDER = ['strict', 'zen', 'buddy'];
-
-export default function CoachCard({ text, reason, tone, personality, onPersonalityChange, className = '' }) {
+export default function CoachCard({ text, reason, tone, className = '' }) {
   if (!text) return null;
-  const showSwitcher = !!personality && typeof onPersonalityChange === 'function';
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }}
@@ -30,26 +26,6 @@ export default function CoachCard({ text, reason, tone, personality, onPersonali
             <span className="text-[10px]" style={{ color: 'rgba(217,164,65,0.7)' }}>· {tone}</span>
           )}
         </div>
-        {showSwitcher && (
-          <div className="flex gap-1">
-            {PERSONA_ORDER.map((p) => (
-              <button
-                key={p}
-                type="button"
-                onClick={() => onPersonalityChange(p)}
-                aria-pressed={p === personality}
-                className="rounded-full px-2 py-0.5 text-[10px] leading-none transition"
-                style={{
-                  border: `1px solid ${p === personality ? '#d9a441' : 'rgba(217,164,65,0.25)'}`,
-                  background: p === personality ? 'rgba(217,164,65,0.16)' : 'transparent',
-                  color: p === personality ? '#f0d9a8' : 'rgba(232,228,220,0.6)',
-                }}
-              >
-                {PERSONA_LABELS[p]}
-              </button>
-            ))}
-          </div>
-        )}
       </div>
       <p className="mt-2 text-[12.5px] leading-relaxed" style={{ color: '#e8e4dc' }}>{text}</p>
       {reason && (

@@ -80,14 +80,6 @@ const useSettingsStore = create(
       // 'classic' | 'nature' | 'synthwave' | 'minimal'
       soundPack: 'classic',
 
-      // ── AI Coach ───────────────────────────────────────────────────────
-      // (ĐÃ NGỪNG DÙNG 2026-06-21) Trước đây là tính cách Coach strict/zen/buddy.
-      // Thẻ AI Coach giờ chuyển hẳn sang phong cách ĐỌC SỐ (useCoachInsight →
-      // generateCoachBriefing); không còn giọng cảm xúc. Engine coachVoice.js +
-      // useCoachVoice.js giữ lại nhưng KHÔNG còn nối vào UI. Field này thành orphan
-      // (giữ cho dữ liệu cũ đã lưu; không UI/hook nào đọc/ghi).
-      coachPersonality: 'zen',
-
       // ── Timer Settings ─────────────────────────────────────────────────
       shortBreakDuration: DEFAULT_BREAK_PROFILE.shortBreakDuration,
       longBreakDuration:  DEFAULT_BREAK_PROFILE.longBreakDuration,
@@ -200,10 +192,6 @@ const useSettingsStore = create(
         soundEngine.setPack(pack);
         set({ soundPack: pack });
       },
-
-      setCoachPersonality: (p) => set({
-        coachPersonality: ['strict', 'zen', 'buddy'].includes(p) ? p : 'zen',
-      }),
 
       setShortBreakDuration: (n) => set({ shortBreakDuration: Math.min(60, Math.max(1, n)) }),
       setLongBreakDuration:  (n) => set({ longBreakDuration:  Math.min(90, Math.max(1, n)) }),

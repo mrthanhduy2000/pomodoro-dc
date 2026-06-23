@@ -1,6 +1,6 @@
 /**
- * coachPrompt.js — phần THUẦN (test được) của "Coach offline" (LLM chạy trên máy).
- * Dựng prompt từ bản tóm tắt số liệu (buildCoachContext), làm sạch output, dò khả
+ * coachPrompt.js — phần THUẦN (test được) của AI Coach (LLM Qwen chạy trên máy).
+ * Dựng prompt từ bản tóm tắt số liệu (buildAnalystContext), làm sạch output, dò khả
  * năng thiết bị, đổi tiến độ tải → %. KHÔNG chạm thư viện model (đó là webllmEngine.js).
  */
 

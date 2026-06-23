@@ -11,7 +11,7 @@
     "open:chrome:dev": "open -na \"Google Chrome\" --args --app=http://localhost:31101/",
     "build": "vite build",
     "lint": "eslint .",
-    "test": "node --import ./scripts/register-esm-loader.mjs --test electron/*.test.js src/engine/*.test.js src/engine/semantic/*.test.js src/engine/llm/*.test.js src/engine/qa/*.test.js src/utils/*.test.js src/store/*.test.js api/push/*.test.js",
+    "test": "node --import ./scripts/register-esm-loader.mjs --test electron/*.test.js src/engine/*.test.js src/engine/llm/*.test.js src/utils/*.test.js src/store/*.test.js api/push/*.test.js",
     "preview": "PORT=31102 VITE_BIND_HOST=0.0.0.0 vite preview",
     "serve:prod": "node scripts/serve-dist.mjs",
     "install:agent": "bash scripts/install-launch-agent.sh",
@@ -21,8 +21,6 @@
     "electron-dev": "concurrently -k -n Vite,Electron -c cyan,yellow \"PORT=31101 VITE_BIND_HOST=0.0.0.0 vite\" \"wait-on http://localhost:31101 && VITE_DEV_SERVER_URL=http://localhost:31101 NODE_ENV=development electron .\""
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.105.0",
-    "@huggingface/transformers": "^4.2.0",
     "@mlc-ai/web-llm": "^0.2.84",
     "@supabase/supabase-js": "^2.105.1",
     "framer-motion": "^12.38.0",

@@ -1,17 +1,14 @@
 /**
- * FocusRail.jsx — cột phải màn Tập trung theo mockup: 3 thẻ Hôm nay / Chuỗi / AI Coach.
- * Thẻ AI Coach: phong cách ĐỌC SỐ — câu chính + dòng phụ đều là phân tích số liệu
- * thật (useCoachInsight → generateCoachBriefing). Đã bỏ giọng cảm xúc (2026-06-21).
- * Tất cả skin-aware qua biến CSS.
+ * FocusRail.jsx — cột phải màn Tập trung: 3 thẻ Hôm nay / Chuỗi / AI Coach.
+ * Thẻ AI Coach: MỌI phản hồi do AI Qwen 3B chạy trên máy sinh (2 nút: Hỏi Coach +
+ * Coach offline). Chỉ hiện khi máy chạy được Qwen (desktop có WebGPU). Skin-aware.
  */
 import { motion } from 'framer-motion';
 import useGameStore from '../store/gameStore';
 import { calculateStreakMilestoneProgress } from '../engine/gameMath';
 import { localWeekMondayStr } from '../engine/time';
-import useCoachInsight from '../hooks/useCoachInsight';
-import CoachCard from './CoachCard';
+import { detectWebLLMCapable } from '../engine/llm/coachPrompt';
 import CoachChat from './CoachChat';
-import FocusReport from './FocusReport';
 import CoachOffline from './CoachOffline';
 import { FlameGlyph, ShieldGlyph } from './icons/Glyph';
 
@@ -73,9 +70,7 @@ export default function FocusRail({
   const shieldAvailable = hasShield && streak?.skipShieldUsedWeekKey !== localWeekMondayStr();
   const milestone = calculateStreakMilestoneProgress(currentStreak);
 
-  const coach = useCoachInsight({
-    sessionsCompletedToday, focusMinutesToday, dailyGoalType, dailyGoalSessions, dailyGoalMinutes,
-  });
+  const aiCapable = detectWebLLMCapable();
 
   return (
     <div className="space-y-4">
@@ -125,35 +120,29 @@ export default function FocusRail({
         )}
       </motion.div>
 
-      {/* AI COACH (số liệu thật, local) + hỏi–đáp với Claude thật */}
-      <div>
-        <CoachCard
-          text={coach.text}
-          reason={coach.reason}
-          tone="đọc số"
-        />
-        <CoachChat
-          sessionsCompletedToday={sessionsCompletedToday}
-          focusMinutesToday={focusMinutesToday}
-          dailyGoalType={dailyGoalType}
-          dailyGoalSessions={dailyGoalSessions}
-          dailyGoalMinutes={dailyGoalMinutes}
-        />
-        <FocusReport
-          sessionsCompletedToday={sessionsCompletedToday}
-          focusMinutesToday={focusMinutesToday}
-          dailyGoalType={dailyGoalType}
-          dailyGoalSessions={dailyGoalSessions}
-          dailyGoalMinutes={dailyGoalMinutes}
-        />
-        <CoachOffline
-          sessionsCompletedToday={sessionsCompletedToday}
-          focusMinutesToday={focusMinutesToday}
-          dailyGoalType={dailyGoalType}
-          dailyGoalSessions={dailyGoalSessions}
-          dailyGoalMinutes={dailyGoalMinutes}
-        />
-      </div>
+      {/* AI COACH — mọi phản hồi do Qwen 3B chạy trên máy sinh (chỉ desktop có WebGPU) */}
+      {aiCapable && (
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} style={cardStyle} className="p-4">
+          <div className={eyebrow} style={{ color: 'var(--muted-2)' }}>AI Coach</div>
+          <p className="mt-1.5 text-[12px] leading-snug" style={{ color: 'var(--muted)' }}>
+            Hỏi đáp & phân tích bằng AI Qwen chạy ngay trên máy bạn (offline).
+          </p>
+          <CoachChat
+            sessionsCompletedToday={sessionsCompletedToday}
+            focusMinutesToday={focusMinutesToday}
+            dailyGoalType={dailyGoalType}
+            dailyGoalSessions={dailyGoalSessions}
+            dailyGoalMinutes={dailyGoalMinutes}
+          />
+          <CoachOffline
+            sessionsCompletedToday={sessionsCompletedToday}
+            focusMinutesToday={focusMinutesToday}
+            dailyGoalType={dailyGoalType}
+            dailyGoalSessions={dailyGoalSessions}
+            dailyGoalMinutes={dailyGoalMinutes}
+          />
+        </motion.div>
+      )}
     </div>
   );
 }

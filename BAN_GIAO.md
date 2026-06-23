@@ -30,6 +30,7 @@
 4. *(khi cần)* Giới hạn lượt gọi `api/coach.js`; thêm `vercel.json` + file SQL cho bảng gốc Supabase.
 
 ## ⚠️ Nhớ kỹ (kẻo hỏng)
+- **PHÂN LOẠI LỆNH** (Đàm dặn 2026-06-21): **"nghiên cứu/tìm hiểu/đề xuất"** = CHỈ trình bày rồi DỪNG, KHÔNG tự sửa/commit/deploy (câu mơ hồ → coi là nghiên cứu, hỏi trước). **"làm/sửa/thêm/đổi/deploy"** = (1) giải thích ngắn gọn dễ hiểu công dụng TRƯỚC khi sửa → (2) làm → (3) giải thích đã sửa gì + ích gì → (4) TỰ ĐỘNG deploy Vercel (khỏi hỏi lại). Chi tiết: memory `ask-before-acting.md`.
 - **Không bấm chạy phiên focus trên bản dev/localhost** — nó dùng chung dữ liệu với bản thật, sẽ ghi đè dữ liệu của Đàm.
 - **Coach mặc định miễn phí** — đừng tự bật hướng trả tiền (Claude API) trừ khi Đàm yêu cầu.
 - **Sửa câu thẻ AI Coach (đọc số)** → `generateCoachBriefing` trong `src/engine/gameMath.js`. (Engine giọng cảm xúc `src/engine/coachVoice.js` giờ DORMANT — chỉ `ai-coach-sim` còn dùng; đừng sửa nó để mong thay đổi thẻ.)

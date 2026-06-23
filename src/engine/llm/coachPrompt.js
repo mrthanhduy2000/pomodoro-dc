@@ -4,10 +4,12 @@
  * năng thiết bị, đổi tiến độ tải → %. KHÔNG chạm thư viện model (đó là webllmEngine.js).
  */
 
-// Model prebuilt của @mlc-ai/web-llm (Qwen2.5 đa ngữ — tiếng Việt khá nhất nhóm nhỏ).
+// Model prebuilt của @mlc-ai/web-llm (Qwen2.5 đa ngữ — tiếng Việt tốt nhất nhóm chạy-trên-máy).
+// default = 7B: khôn hơn hẳn 3B + model lớn nên ÍT "trôi" sang tiếng Trung. Cần RAM ≥16GB.
+// light  = 3B: fallback khi 7B quá nặng/lỗi (nút "Thử mô hình nhỏ hơn").
 export const LLM_MODELS = {
-  default: 'Qwen2.5-3B-Instruct-q4f16_1-MLC', // ~1.0GB, ~2.5GB VRAM
-  light: 'Qwen2.5-1.5B-Instruct-q4f16_1-MLC', // ~0.9GB, ~1.6GB (cho máy yếu)
+  default: 'Qwen2.5-7B-Instruct-q4f16_1-MLC', // tải ~4.5GB lần đầu, ~5GB VRAM
+  light: 'Qwen2.5-3B-Instruct-q4f16_1-MLC',   // tải ~1.0GB, ~2.4GB VRAM
 };
 
 export const COACH_OFFLINE_SYSTEM = `Bạn là "Coach offline" — một NHÀ PHÂN TÍCH SỐ LIỆU NĂNG SUẤT chạy ngay trên máy của bạn. Vai trò DUY NHẤT: đọc bảng số liệu thật trong phần "=== DỮ LIỆU THẬT ===" và viết một bản phân tích chuyên sâu, chính xác, bám số. Bạn KHÔNG an ủi, KHÔNG động viên, KHÔNG dùng "giọng" cảm xúc (không zen, không bạn thân, không nghiêm khắc) — chỉ phân tích lạnh, rõ ràng, dựa trên số.

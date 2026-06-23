@@ -2,7 +2,8 @@
  * CoachOffline — "Coach offline": LLM thật CHẠY TRÊN MÁY (WebLLM/WebGPU) tự viết
  * nhận xét từ số liệu thật, KHÔNG cần mạng/khoá API. Đặt CẠNH "Hỏi Coach" (Claude),
  * KHÔNG thay thế. Tự ẩn nếu thiết bị không hợp (mobile/iOS/không WebGPU) → iPhone
- * không thấy gì. Tải mô hình ~1GB lần đầu. Trung thực: model nhỏ, yếu hơn "Hỏi Coach".
+ * không thấy gì. Mặc định Qwen 7B (~4.5GB tải lần đầu, cần RAM ≥16GB); nút "Thử mô
+ * hình nhỏ hơn" hạ về 3B. Trung thực: vẫn yếu hơn "Hỏi Coach" (Claude).
  */
 import { useState } from 'react';
 import { SparkGlyph } from './icons/Glyph';
@@ -10,7 +11,7 @@ import { useAnalystContext } from '../hooks/useCoachContext';
 import { buildLLMPrompt, sanitizeLLMOutput, hasForeignScript, detectWebLLMCapable, mapInitProgress, LLM_MODELS } from '../engine/llm/coachPrompt';
 
 const GOLD = '#d9a441';
-const LOAD_TIMEOUT_MS = 300000;
+const LOAD_TIMEOUT_MS = 900000; // 15 phút: đủ cho lần đầu tải ~4.5GB (Qwen 7B) trên mạng thường
 const MAX_LANG_RETRY = 1; // model nhỏ "trôi" sang chữ nước ngoài → viết lại tối đa 1 lần
 
 export default function CoachOffline(goalProps) {
@@ -90,7 +91,7 @@ export default function CoachOffline(goalProps) {
                     Phân tích chuyên sâu
                   </button>
                   <p className="text-[11px] leading-snug" style={{ color: 'var(--muted)' }}>
-                    Tải mô hình ~1GB lần đầu (cần máy có card đồ hoạ / WebGPU), lần sau dùng ngay.
+                    Tải mô hình ~4.5GB lần đầu (Qwen 7B, cần card đồ hoạ / WebGPU + RAM ≥16GB), lần sau dùng ngay. Nặng quá thì bấm “Thử mô hình nhỏ hơn”.
                   </p>
                 </>
               )}

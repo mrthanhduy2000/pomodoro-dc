@@ -25,9 +25,9 @@ export async function generateOffline({ modelId, system, messages, onProgress, o
   const stream = await engine.chat.completions.create({
     messages: [{ role: 'system', content: system }, ...messages],
     stream: true,
-    temperature: 0.3,      // thấp → bám số + giảm "trôi" sang tiếng nước ngoài (Qwen hay lỗi)
-    top_p: 0.8,            // cắt đuôi xác suất → bớt token lạ (chữ Hán nằm ở đuôi với ngữ cảnh Việt)
-    frequency_penalty: 0.2, // giảm lặp nhẹ, không đẩy model đi tìm token hiếm
+    temperature: 0.35,     // bám số nhưng đủ linh hoạt để phân tích sâu hơn (7B trôi rất ít)
+    top_p: 0.9,            // nới hơn 3B vì 7B ít sinh token lạ → câu giàu hơn; vẫn có lưới hasForeignScript
+    frequency_penalty: 0.2, // giảm lặp nhẹ
     max_tokens: 700,        // đủ chỗ cho bản phân tích 3 phần [1][2][3]
   });
   let out = '';

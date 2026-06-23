@@ -74,6 +74,37 @@ export function buildLLMPrompt(context, question = null, history = []) {
   return { system, messages: [...past, { role: 'user', content: q.slice(0, 2000) }] };
 }
 
+// System cho CHẾ ĐỘ CHAT (Hỏi Coach bằng AI 7B trên máy): trả lời ĐÚNG câu hỏi, hội
+// thoại tự nhiên — KHÔNG ép khuôn 3 phần như COACH_OFFLINE_SYSTEM. Giữ mọi lưới
+// trung thực + ép tiếng Việt + cấm nhân-quả + % kèm cỡ mẫu.
+export const COACH_CHAT_SYSTEM = `Bạn là "Coach" của app Pomodoro cá nhân — trợ lý PHÂN TÍCH SỐ LIỆU năng suất, trả lời câu hỏi của người dùng (tên Đàm), bám HẲN vào phần "=== DỮ LIỆU THẬT ===".
+
+NGÔN NGỮ — BẮT BUỘC: viết 100% TIẾNG VIỆT. Cấm chữ Hán/tiếng Trung, Pinyin, tiếng Anh. Đơn vị viết chữ Việt: "giờ", "phút", "phiên", "ngày" (không 小时/分钟/约). Xưng "mình", gọi người dùng là "bạn".
+
+QUY TẮC:
+- Chỉ dùng số có trong DỮ LIỆU; tuyệt đối không bịa số hay sự kiện; thiếu thì nói "chưa đủ dữ liệu".
+- Mỗi % phải kèm cỡ mẫu có sẵn cạnh nó (ví dụ "62% trên 21 phiên").
+- Chỉ nói tương quan; CẤM các từ nhân-quả: vì, nên, do, bởi, khiến, dẫn đến. Dùng "có vẻ", "thường", "đi cùng".
+- Trả lời ĐÚNG trọng tâm câu hỏi, 2–5 câu, tự nhiên như trò chuyện, không markdown rườm rà, không sáo rỗng.
+- Câu hỏi ngoài phạm vi số liệu tập trung (kiến thức chung, dịch thuật, chuyện phiếm): nói thẳng là ngoài khả năng của mình rồi mời hỏi về số liệu tập trung của bạn.
+
+TỰ KIỂM (thầm, không in ra): số mình viết có trong DỮ LIỆU không? % có kèm cỡ mẫu không? có chữ nước ngoài hay từ nhân-quả không? — sửa hết rồi mới trả lời.`;
+
+/**
+ * buildLLMChatPrompt — như buildLLMPrompt nhưng dùng COACH_CHAT_SYSTEM (hội thoại,
+ * không ép khuôn 3 phần). Dành cho "Hỏi Coach" chat với AI 7B trên máy.
+ */
+export function buildLLMChatPrompt(context, question, history = []) {
+  const ctx = String(context ?? '').slice(0, 6000) || '(chưa có dữ liệu)';
+  const system = `${COACH_CHAT_SYSTEM}\n\n=== DỮ LIỆU THẬT ===\n${ctx}\n=== HẾT ===`;
+  const q = String(question ?? '').trim() || 'Phân tích nhanh tình hình tập trung gần đây của mình giúp.';
+  const past = (Array.isArray(history) ? history : [])
+    .filter((m) => (m?.role === 'user' || m?.role === 'assistant') && typeof m?.content === 'string' && m.content.trim())
+    .slice(-6)
+    .map((m) => ({ role: m.role, content: m.content }));
+  return { system, messages: [...past, { role: 'user', content: q.slice(0, 2000) }] };
+}
+
 export function sanitizeLLMOutput(raw) {
   let s = String(raw ?? '');
   s = s.replace(/<think>[\s\S]*?<\/think>/gi, ' '); // Qwen có thể sinh reasoning

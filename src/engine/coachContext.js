@@ -11,6 +11,7 @@ import {
   getNeglectedCategory,
   getLateNightQualityDrop,
   getTodayPaceInsight,
+  getMultiWeekTrend,
   isCancelledHistoryEntry,
 } from './gameMath';
 import { buildFocusProfile, generatePredictions } from './coachIntel';
@@ -73,6 +74,28 @@ export function buildAnalystContext(history = [], opts = {}) {
   overview += ` Chuỗi hiện tại: ${currentStreak} ngày.`;
   lines.push(overview);
 
+  // [Chân dung của bạn] — tổng hợp đặc điểm ỔN ĐỊNH từ profile (đã tính sẵn) để Qwen
+  // HIỂU CHỦ. Mỗi mảnh tự gác qua status; mỗi % kèm cỡ mẫu ngay trong mảnh.
+  const portrait = [];
+  if (profile.chronotype.status !== 'insufficient') {
+    const c = profile.chronotype.value;
+    portrait.push(`nghiêng về ${c.bucketLabel} (đạt ${pctOf(c.rate)}% trên ${profile.chronotype.sampleSize} phiên có mục tiêu)`);
+  }
+  if (profile.idealLength.status !== 'insufficient') portrait.push(`hợp phiên ${profile.idealLength.value.label}`);
+  if (profile.consistency.status !== 'insufficient') {
+    const v = profile.consistency.value;
+    portrait.push(`giữ nhịp ~${pctOf(v.coverage)}% số ngày gần đây (${v.activeDays}/${v.windowDays} ngày)`);
+  }
+  if (profile.categoryPerformance.status !== 'insufficient') {
+    const top = profile.categoryPerformance.value.top[0];
+    portrait.push(`loại làm nhiều nhất "${top.label}" (${top.hours}h, ${top.sessions} phiên)`);
+  }
+  if (profile.deepWorkRatio.status !== 'insufficient') {
+    const d = profile.deepWorkRatio.value;
+    portrait.push(`phiên sâu ~${pctOf(d.ratio)}% (${d.deepCount}/${d.total})`);
+  }
+  if (portrait.length) lines.push(`Chân dung của bạn: ${portrait.join(', ')}. Đây là đặc điểm ổn định từ lịch sử của bạn, không phải lời tiên đoán.`);
+
   // [Hôm nay] — số thô + sắc thái nhịp so với ngày thường (khi có baseline)
   if (dailyGoal > 0) {
     const cur = dailyGoalMetric === 'minutes' ? minutesToday : sessionsToday;
@@ -96,6 +119,14 @@ export function buildAnalystContext(history = [], opts = {}) {
   if (profile.consistency.status !== 'insufficient') lines.push(`Đều đặn: ${profile.consistency.blurb}`);
   if (profile.deepWorkRatio.status !== 'insufficient') lines.push(`Phiên sâu: ${profile.deepWorkRatio.blurb}`);
   if (profile.momentum.status !== 'insufficient') lines.push(`Xu hướng tuần: ${profile.momentum.blurb}`);
+
+  // [Xu hướng dài hạn] — nhiều tuần (đang lên/xuống/giữ); chỉ khi ≥2 tuần có dữ liệu.
+  const mwt = getMultiWeekTrend(list, { getEntryWeekKey: opts.getEntryWeekKey, weekKeysDesc: opts.weekKeysDesc, minWeeks: 3 });
+  if (mwt) {
+    const dir = mwt.direction === 'up' ? 'đang đi lên' : mwt.direction === 'down' ? 'đang đi xuống' : 'đang giữ nhịp';
+    const series = `${mwt.weeklyMinutes.join('′ → ')}′`; // phút mỗi tuần CÓ dữ liệu, cũ → mới
+    lines.push(`Xu hướng dài hạn (${mwt.weeksWithData} tuần có dữ liệu trong ${mwt.weeksLookback} tuần gần đây): ${dir} (${series}). Đây là tương quan theo thời gian, không phải kết luận.`);
+  }
 
   // [Loại việc] — top theo giờ + tỉ lệ đạt từng loại (khi đủ mẫu)
   if (profile.categoryPerformance.status !== 'insufficient') {

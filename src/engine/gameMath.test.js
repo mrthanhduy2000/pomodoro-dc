@@ -9,6 +9,7 @@ import {
   getGoldenHourBucket,
   getWeekdayHighlight,
   getWeeklyTrend,
+  getMultiWeekTrend,
   getAbandonHotspot,
   getTodayPaceInsight,
   getNeglectedCategory,
@@ -372,6 +373,50 @@ test('late-night quality: làm khuya vẫn tốt → null', () => {
   for (let i = 0; i < 5; i += 1) history.push({ hour: 10, minutes: 30, completed: true, goalAchieved: true });
   for (let i = 0; i < 4; i += 1) history.push({ hour: 23, minutes: 30, completed: true, goalAchieved: true });
   assert.equal(getLateNightQualityDrop(history, { getEntryHour }), null);
+});
+
+// ── getMultiWeekTrend: xu hướng dài hạn nhiều tuần (getter tĩnh e.wk, không Date) ──
+const wkOf = (e) => e.wk;
+const weeks = ['W4', 'W3', 'W2', 'W1']; // GẦN→XA: W4 là tuần hiện tại, W1 xa nhất
+function weekHist(perWeek) { // perWeek: {W1: minutes, ...} → mỗi tuần 1 phiên với số phút đó
+  const h = [];
+  for (const [wk, m] of Object.entries(perWeek)) if (m > 0) h.push({ wk, minutes: m, completed: true });
+  return h;
+}
+test('multi-week trend: tăng dần qua 4 tuần → up, dãy cũ→mới đúng', () => {
+  const r = getMultiWeekTrend(weekHist({ W1: 300, W2: 360, W3: 440, W4: 520 }), { getEntryWeekKey: wkOf, weekKeysDesc: weeks });
+  assert.ok(r);
+  assert.equal(r.direction, 'up');
+  assert.deepEqual(r.weeklyMinutes, [300, 360, 440, 520]);
+  assert.equal(r.weeksWithData, 4);
+  assert.equal(r.weeksLookback, 4);
+  assert.ok(r.avgPctPerWeek >= 10);
+});
+test('multi-week trend: giảm dần → down', () => {
+  const r = getMultiWeekTrend(weekHist({ W1: 520, W2: 440, W3: 360, W4: 300 }), { getEntryWeekKey: wkOf, weekKeysDesc: weeks });
+  assert.equal(r.direction, 'down');
+});
+test('multi-week trend: ~đi ngang (chênh <10%) → flat', () => {
+  const r = getMultiWeekTrend(weekHist({ W1: 400, W2: 405, W3: 398, W4: 402 }), { getEntryWeekKey: wkOf, weekKeysDesc: weeks });
+  assert.equal(r.direction, 'flat');
+});
+test('multi-week trend: chỉ 1 tuần có dữ liệu → null', () => {
+  assert.equal(getMultiWeekTrend(weekHist({ W4: 400 }), { getEntryWeekKey: wkOf, weekKeysDesc: weeks }), null);
+});
+test('multi-week trend: thiếu getter/weekKeysDesc → null', () => {
+  assert.equal(getMultiWeekTrend(weekHist({ W3: 400, W4: 420 }), { weekKeysDesc: weeks }), null);
+  assert.equal(getMultiWeekTrend(weekHist({ W3: 400, W4: 420 }), { getEntryWeekKey: wkOf }), null);
+});
+test('multi-week trend: chỉ 2 tuần gần nhất có dữ liệu (tuần cũ TRỐNG) → null, KHÔNG báo "flat" sai', () => {
+  // Người mới/quay lại: W1,W2 trống, chỉ W3,W4 có phiên. <3 tuần CÓ dữ liệu → null (không in dòng sai).
+  assert.equal(getMultiWeekTrend(weekHist({ W3: 300, W4: 320 }), { getEntryWeekKey: wkOf, weekKeysDesc: weeks }), null);
+});
+test('multi-week trend: 3 tuần có dữ liệu (1 tuần cũ trống bị BỎ, không kéo lệch) → up đúng', () => {
+  const r = getMultiWeekTrend(weekHist({ W2: 100, W3: 150, W4: 200 }), { getEntryWeekKey: wkOf, weekKeysDesc: weeks });
+  assert.ok(r);
+  assert.equal(r.direction, 'up'); // KHÔNG bị 0' của W1 ép thành flat
+  assert.deepEqual(r.weeklyMinutes, [100, 150, 200]); // chỉ tuần CÓ dữ liệu, cũ→mới
+  assert.equal(r.weeksWithData, 3);
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════

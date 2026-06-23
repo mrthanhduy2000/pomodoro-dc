@@ -28,6 +28,9 @@ export function useAnalystContext({
     const useMinutes = dailyGoalType === 'minutes';
     const goalValue = useMinutes ? dailyGoalMinutes : dailyGoalSessions;
     const cats = sessionCategories ?? [];
+    // 4 key tuần GẦN→XA (tuần hiện tại trước) cho xu hướng dài hạn. Date ở hook (gọi
+    // lúc gửi) là an toàn — engine getMultiWeekTrend vẫn thuần.
+    const weekKeysDesc = [0, 1, 2, 3].map((i) => localWeekMondayStr(new Date(Date.now() - (i * 7 * 86400000))));
     return buildAnalystContext(history ?? [], {
       nowHour: getVietnamHour(),
       getEntryHour: (e) => getVietnamHour(entryDate(e)),
@@ -35,6 +38,7 @@ export function useAnalystContext({
       getEntryWeekKey: (e) => localWeekMondayStr(entryDate(e)),
       nowWeekKey: localWeekMondayStr(),
       prevWeekKey: localPrevWeekMondayStr(),
+      weekKeysDesc,
       getEntryDayKey: (e) => localDateStr(entryDate(e)),
       todayKey: localDateStr(),
       minDayKey: localDateStrDaysAgo(28),

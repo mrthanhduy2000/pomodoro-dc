@@ -1140,6 +1140,38 @@ export function getWeeklyTrend(history = [], opts = {}) {
 }
 
 /**
+ * getMultiWeekTrend — XU HƯỚNG DÀI HẠN nhiều tuần (vd 4 tuần): đang đi lên/xuống/giữ.
+ * THUẦN — KHÔNG gọi Date; nhận weekKeysDesc (mảng key tuần GẦN→XA, [0] = tuần hiện tại)
+ * + getEntryWeekKey qua opts (hook tự dựng key bằng giờ VN). So trung bình nửa-cũ vs
+ * nửa-mới của dãy phút theo tuần. Trả null khi <minWeeks tuần CÓ dữ liệu hoặc thiếu getter.
+ * @returns {{direction,weeklyMinutes,weeksWithData,weeksLookback,avgPctPerWeek}|null}
+ */
+export function getMultiWeekTrend(history = [], opts = {}) {
+  const { getEntryWeekKey, weekKeysDesc, minWeeks = 3 } = opts;
+  if (typeof getEntryWeekKey !== 'function' || !Array.isArray(weekKeysDesc) || weekKeysDesc.length < 2) return null;
+  const minutesByKey = new Map(weekKeysDesc.map((k) => [k, 0]));
+  for (const e of coachCompletedSessions(history)) {
+    const wk = getEntryWeekKey(e);
+    if (minutesByKey.has(wk)) minutesByKey.set(wk, minutesByKey.get(wk) + e.minutes);
+  }
+  // CHỈ xét tuần CÓ dữ liệu (tuần không mở app ≠ tuần làm 0 phút) → bỏ tuần trống,
+  // tránh số 0 "ma" kéo lệch hướng. Giữ thứ tự CŨ→MỚI.
+  const weeklyMinutes = [...weekKeysDesc].reverse()
+    .map((k) => Math.round(minutesByKey.get(k)))
+    .filter((m) => m > 0);
+  const weeksWithData = weeklyMinutes.length;
+  if (weeksWithData < minWeeks) return null; // cần ≥minWeeks tuần CÓ dữ liệu mới đủ "dài hạn"
+  const len = weeklyMinutes.length;
+  const half = Math.ceil(len / 2); // len lẻ: nửa cũ & nửa mới chồng phần tử giữa → không bỏ sót tuần nào
+  const avg = (arr) => arr.reduce((s, x) => s + x, 0) / arr.length;
+  const oldAvg = avg(weeklyMinutes.slice(0, half));
+  const newAvg = avg(weeklyMinutes.slice(len - half));
+  const avgPctPerWeek = oldAvg > 0 ? Math.round(((newAvg - oldAvg) / oldAvg) * 100) : 0; // oldAvg luôn >0 (đã lọc)
+  const direction = avgPctPerWeek >= 10 ? 'up' : avgPctPerWeek <= -10 ? 'down' : 'flat';
+  return { direction, weeklyMinutes, weeksWithData, weeksLookback: weekKeysDesc.length, avgPctPerWeek };
+}
+
+/**
  * getAbandonHotspot
  * Buổi bạn hay bỏ phiên giữa chừng nhất (tỉ lệ huỷ cao). Cần ≥4 lần bắt đầu trong
  * buổi và tỉ lệ huỷ ≥34% mới cảnh báo.

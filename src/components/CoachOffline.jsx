@@ -7,15 +7,16 @@
 import { useState } from 'react';
 import { SparkGlyph } from './icons/Glyph';
 import { useAnalystContext } from '../hooks/useCoachContext';
-import { buildLLMPrompt, sanitizeLLMOutput, detectWebLLMCapable, mapInitProgress, LLM_MODELS } from '../engine/llm/coachPrompt';
+import { buildLLMPrompt, sanitizeLLMOutput, hasForeignScript, detectWebLLMCapable, mapInitProgress, LLM_MODELS } from '../engine/llm/coachPrompt';
 
 const GOLD = '#d9a441';
 const LOAD_TIMEOUT_MS = 300000;
+const MAX_LANG_RETRY = 1; // model nhỏ "trôi" sang chữ nước ngoài → viết lại tối đa 1 lần
 
 export default function CoachOffline(goalProps) {
   const [capable] = useState(() => detectWebLLMCapable());
   const [open, setOpen] = useState(false);
-  const [status, setStatus] = useState('idle'); // idle|loading|generating|ready|error
+  const [status, setStatus] = useState('idle'); // idle|loading|generating|rewriting|ready|error|error-lang
   const [progress, setProgress] = useState(0);
   const [text, setText] = useState('');
   const [modelId, setModelId] = useState(LLM_MODELS.default);
@@ -33,14 +34,24 @@ export default function CoachOffline(goalProps) {
     try {
       const { generateOffline } = await import('../engine/llm/webllmEngine');
       const { system, messages } = buildLLMPrompt(buildContext());
-      const work = generateOffline({
-        modelId: useModel, system, messages,
-        onProgress: (p) => setProgress(mapInitProgress(p)),
-        onToken: (t) => { setStatus('generating'); setText(sanitizeLLMOutput(t)); },
-      });
-      const timeout = new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), LOAD_TIMEOUT_MS));
-      const finalText = await Promise.race([work, timeout]);
-      setText(sanitizeLLMOutput(finalText));
+      const run = () => {
+        const work = generateOffline({
+          modelId: useModel, system, messages,
+          onProgress: (p) => setProgress(mapInitProgress(p)),
+          onToken: (t) => { setStatus('generating'); setText(sanitizeLLMOutput(t)); },
+        });
+        const timeout = new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), LOAD_TIMEOUT_MS));
+        return Promise.race([work, timeout]);
+      };
+      let clean = sanitizeLLMOutput(await run());
+      // Nếu model lỡ "trôi" sang chữ nước ngoài (Hán/Trung…) → tự viết lại.
+      for (let i = 0; i < MAX_LANG_RETRY && hasForeignScript(clean); i += 1) {
+        setStatus('rewriting');
+        setText('');
+        clean = sanitizeLLMOutput(await run());
+      }
+      if (hasForeignScript(clean)) { setStatus('error-lang'); return; }
+      setText(clean);
       setStatus('ready');
     } catch {
       setStatus('error');
@@ -88,16 +99,22 @@ export default function CoachOffline(goalProps) {
                 <p className="text-[13px]" style={{ color: 'var(--muted)' }}>Đang tải AI về máy… {progress > 0 ? `${progress}%` : ''} (lần đầu hơi lâu)</p>
               )}
 
+              {status === 'rewriting' && (
+                <p className="text-[13px]" style={{ color: 'var(--muted)' }}>Model lỡ chèn chữ nước ngoài — đang viết lại bằng tiếng Việt…</p>
+              )}
+
               {(status === 'generating' || status === 'ready') && (
                 <p className="whitespace-pre-wrap text-[13px] leading-relaxed" style={{ color: 'var(--ink)' }}>
                   {text}{status === 'generating' ? ' ▍' : ''}
                 </p>
               )}
 
-              {status === 'error' && (
+              {(status === 'error' || status === 'error-lang') && (
                 <div className="space-y-2">
                   <p className="text-[12.5px] leading-relaxed" style={{ color: 'var(--ink)' }}>
-                    Không chạy được AI trên máy (thiếu WebGPU hoặc tải lỗi). Bạn vẫn có "Hỏi Coach" và "Xem phân tích" như thường.
+                    {status === 'error-lang'
+                      ? 'AI trên máy lỡ trả lời lẫn chữ nước ngoài (model nhỏ đôi khi bị vậy). Bấm "Thử lại" để viết lại bằng tiếng Việt, hoặc dùng "Hỏi Coach".'
+                      : 'Không chạy được AI trên máy (thiếu WebGPU hoặc tải lỗi). Bạn vẫn có "Hỏi Coach" và "Xem phân tích" như thường.'}
                   </p>
                   <div className="flex gap-2">
                     <button type="button" onClick={() => writeComment(false)} className="rounded-xl px-3 py-1.5 text-[12px] font-semibold" style={{ background: 'var(--accent)', color: '#fff' }}>Thử lại</button>

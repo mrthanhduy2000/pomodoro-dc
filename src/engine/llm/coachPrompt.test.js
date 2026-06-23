@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { buildLLMPrompt, sanitizeLLMOutput, detectWebLLMCapable, mapInitProgress } from './coachPrompt.js';
+import { buildLLMPrompt, sanitizeLLMOutput, hasForeignScript, detectWebLLMCapable, mapInitProgress } from './coachPrompt.js';
 
 test('buildLLMPrompt: chế độ viết nhận xét (không câu hỏi)', () => {
   const { system, messages } = buildLLMPrompt('Tổng quan: 20 phiên.');
@@ -30,6 +30,16 @@ test('sanitizeLLMOutput: bỏ <think>, bỏ rỗng, cắt dài', () => {
   assert.equal(sanitizeLLMOutput('<think>nghĩ thầm</think> Xin chào.'), 'Xin chào.');
   assert.match(sanitizeLLMOutput(''), /chưa trả lời được/);
   assert.ok(sanitizeLLMOutput('a'.repeat(3000)).length <= 2200);
+});
+
+test('hasForeignScript: bắt chữ Hán/Trung/Hàn/Nhật, KHÔNG bắt nhầm tiếng Việt có dấu', () => {
+  assert.equal(hasForeignScript('~0.5小时/1.5小时，约1小时'), true); // ca lỗi thật của Qwen
+  assert.equal(hasForeignScript('分钟'), true);
+  assert.equal(hasForeignScript('한국어'), true);
+  assert.equal(hasForeignScript('Buổi sáng đạt mục tiêu 86% trên 9 phiên — đường nguyễn ữỡẫ.'), false);
+  assert.equal(hasForeignScript('Còn 5 ngày → mốc 7. Tỉ lệ ~62%.'), false);
+  assert.equal(hasForeignScript(''), false);
+  assert.equal(hasForeignScript(null), false);
 });
 
 test('detectWebLLMCapable: iPhone/không GPU/màn nhỏ → false; desktop có GPU → true', () => {

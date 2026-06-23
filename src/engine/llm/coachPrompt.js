@@ -12,7 +12,7 @@ export const LLM_MODELS = {
 
 export const COACH_OFFLINE_SYSTEM = `Bạn là "Coach offline" — một NHÀ PHÂN TÍCH SỐ LIỆU NĂNG SUẤT chạy ngay trên máy của bạn. Vai trò DUY NHẤT: đọc bảng số liệu thật trong phần "=== DỮ LIỆU THẬT ===" và viết một bản phân tích chuyên sâu, chính xác, bám số. Bạn KHÔNG an ủi, KHÔNG động viên, KHÔNG dùng "giọng" cảm xúc (không zen, không bạn thân, không nghiêm khắc) — chỉ phân tích lạnh, rõ ràng, dựa trên số.
 
-NGÔN NGỮ: Tiếng Việt. Xưng "mình", gọi người dùng là "bạn". Chỉ viết tiếng Việt, không chèn tiếng Anh hay tiếng nước ngoài.
+NGÔN NGỮ — BẮT BUỘC TUYỆT ĐỐI: viết 100% TIẾNG VIỆT. CẤM mọi chữ Hán/tiếng Trung, Pinyin, tiếng Anh hay ký tự nước ngoài. Đơn vị PHẢI viết bằng chữ Việt: "giờ", "phút", "phiên", "ngày" — TUYỆT ĐỐI không dùng 小时/分钟/约/天 hay bất kỳ chữ Trung nào. Xưng "mình", gọi người dùng là "bạn".
 
 === QUY TẮC CỨNG (bạn là model nhỏ rất dễ sai — phải tuân TỪNG điều) ===
 1. CHỈ DÙNG SỐ TRONG DỮ LIỆU. Mọi con số bạn viết ra (phiên, giờ, phút, %, ngày, giờ trong ngày) PHẢI sao chép NGUYÊN VĂN từ phần "=== DỮ LIỆU THẬT ===". Cấm tự tính lại, cấm làm tròn khác đi, cấm cộng trừ nhân chia, cấm thêm bất kỳ số, ngày, giờ, loại việc nào không có trong DỮ LIỆU. Ngoài cặp nhãn "=== DỮ LIỆU THẬT ===" … "=== HẾT ===" coi như không tồn tại thông tin gì.
@@ -31,7 +31,7 @@ NGÔN NGỮ: Tiếng Việt. Xưng "mình", gọi người dùng là "bạn". Ch
 [3] THỬ NGHIỆM:
 1-2 gợi ý cụ thể — mỗi gợi ý nêu rõ khung giờ + số phút + loại việc (nếu có), và phải neo vào MỘT con số đã xuất hiện ở phần [2] hoặc [1]. Dùng "thử" hoặc "có thể thử", không ra lệnh, không hứa kết quả.
 
-TỰ KIỂM TRƯỚC KHI CHỐT (làm thầm, KHÔNG in phần tự kiểm ra): Mỗi con số mình vừa viết có nằm nguyên văn trong DỮ LIỆU không? Không có thì xoá. Mỗi % có kèm cỡ mẫu không? Không có thì xoá %. Có lỡ dùng từ nhân-quả (vì, nên, do, bởi, khiến, dẫn đến) không? Có thì đổi sang cụm tương quan. Sau khi tự kiểm, chỉ in ra 3 phần [1] [2] [3].
+TỰ KIỂM TRƯỚC KHI CHỐT (làm thầm, KHÔNG in phần tự kiểm ra): Mỗi con số mình vừa viết có nằm nguyên văn trong DỮ LIỆU không? Không có thì xoá. Mỗi % có kèm cỡ mẫu không? Không có thì xoá %. Có lỡ dùng từ nhân-quả (vì, nên, do, bởi, khiến, dẫn đến) không? Có thì đổi sang cụm tương quan. Có chữ nào KHÔNG phải tiếng Việt (chữ Hán/Trung, Pinyin, tiếng Anh) không? Có thì viết lại hoàn toàn bằng tiếng Việt (ví dụ "小时"→"giờ", "分钟"→"phút", "约"→"khoảng"). Sau khi tự kiểm, chỉ in ra 3 phần [1] [2] [3].
 
 === VÍ DỤ KHUÔN MẪU (chỉ học CÁCH TRÌNH BÀY — TUYỆT ĐỐI KHÔNG dùng lại bất kỳ con số nào trong ví dụ; chỉ dùng số ở phần "=== DỮ LIỆU THẬT ===" thật bên dưới) ===
 [DỮ LIỆU MẪU]
@@ -79,6 +79,16 @@ export function sanitizeLLMOutput(raw) {
   s = s.replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
   if (!s) return '(Coach offline chưa trả lời được — thử lại, hoặc bấm "Hỏi Coach").';
   return s.length > 2200 ? `${s.slice(0, 2197)}…` : s; // nới cho bản phân tích 3 phần (max_tokens 700)
+}
+
+/**
+ * hasForeignScript — model nhỏ (Qwen) đôi khi "trôi" sang chữ Hán/Trung (小时, 约…),
+ * Hàn, Nhật. Tiếng Việt chỉ dùng Latinh + dấu (đều nằm trong Latin/Latin-Extended),
+ * nên các dải CJK/Hangul/Kana dưới đây KHÔNG bao giờ xuất hiện trong câu Việt hợp lệ.
+ * Dùng để phát hiện rồi tự viết lại (CoachOffline.jsx). Trả true nếu có ký tự lạ.
+ */
+export function hasForeignScript(s) {
+  return /[\u3000-\u303f\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uac00-\ud7af\uf900-\ufaff\uff00-\uffef]/.test(String(s ?? ''));
 }
 
 export function detectWebLLMCapable(nav, win) {

@@ -5,11 +5,13 @@
  */
 
 // Model prebuilt của @mlc-ai/web-llm (Qwen2.5 đa ngữ — tiếng Việt tốt nhất nhóm chạy-trên-máy).
-// default = 7B: khôn hơn hẳn 3B + model lớn nên ÍT "trôi" sang tiếng Trung. Cần RAM ≥16GB.
-// light  = 3B: fallback khi 7B quá nặng/lỗi (nút "Thử mô hình nhỏ hơn").
+// CHỐT 1 MODEL cho gọn (2026-06-21, workflow 4 agent): Qwen2.5-3B — đủ khôn cho việc
+// DIỄN ĐẠT số đã-tính-sẵn, ~2.4GB nhẹ trên Mac 16GB, cùng họ 7B nên dùng lại nguyên
+// lưới chống "trôi" tiếng Trung. Dự phòng = chế độ ⚡Nhanh (luật, 0 byte), KHÔNG tải
+// model thứ 2. Muốn khôn hơn → 'Qwen2.5-7B…' (nặng ~4.5GB); muốn ít trôi hơn nữa →
+// 'gemma-2-2b-it-q4f16_1-MLC' (Google, nhẹ ~1.9GB, cần chỉnh lại lưới chống-trôi).
 export const LLM_MODELS = {
-  default: 'Qwen2.5-7B-Instruct-q4f16_1-MLC', // tải ~4.5GB lần đầu, ~5GB VRAM
-  light: 'Qwen2.5-3B-Instruct-q4f16_1-MLC',   // tải ~1.0GB, ~2.4GB VRAM
+  default: 'Qwen2.5-3B-Instruct-q4f16_1-MLC', // tải ~2.4GB, ~2.4GB VRAM (low-resource)
 };
 
 export const COACH_OFFLINE_SYSTEM = `Bạn là "Coach offline" — một NHÀ PHÂN TÍCH SỐ LIỆU NĂNG SUẤT chạy ngay trên máy của bạn. Vai trò DUY NHẤT: đọc bảng số liệu thật trong phần "=== DỮ LIỆU THẬT ===" và viết một bản phân tích chuyên sâu, chính xác, bám số. Bạn KHÔNG an ủi, KHÔNG động viên, KHÔNG dùng "giọng" cảm xúc (không zen, không bạn thân, không nghiêm khắc) — chỉ phân tích lạnh, rõ ràng, dựa trên số.
@@ -74,7 +76,7 @@ export function buildLLMPrompt(context, question = null, history = []) {
   return { system, messages: [...past, { role: 'user', content: q.slice(0, 2000) }] };
 }
 
-// System cho CHẾ ĐỘ CHAT (Hỏi Coach bằng AI 7B trên máy): trả lời ĐÚNG câu hỏi, hội
+// System cho CHẾ ĐỘ CHAT (Hỏi Coach bằng AI trên máy): trả lời ĐÚNG câu hỏi, hội
 // thoại tự nhiên — KHÔNG ép khuôn 3 phần như COACH_OFFLINE_SYSTEM. Giữ mọi lưới
 // trung thực + ép tiếng Việt + cấm nhân-quả + % kèm cỡ mẫu.
 export const COACH_CHAT_SYSTEM = `Bạn là "Coach" của app Pomodoro cá nhân — trợ lý PHÂN TÍCH SỐ LIỆU năng suất, trả lời câu hỏi của người dùng (tên Đàm), bám HẲN vào phần "=== DỮ LIỆU THẬT ===".
@@ -92,7 +94,7 @@ TỰ KIỂM (thầm, không in ra): số mình viết có trong DỮ LIỆU khô
 
 /**
  * buildLLMChatPrompt — như buildLLMPrompt nhưng dùng COACH_CHAT_SYSTEM (hội thoại,
- * không ép khuôn 3 phần). Dành cho "Hỏi Coach" chat với AI 7B trên máy.
+ * không ép khuôn 3 phần). Dành cho "Hỏi Coach" chat với AI trên máy.
  */
 export function buildLLMChatPrompt(context, question, history = []) {
   const ctx = String(context ?? '').slice(0, 6000) || '(chưa có dữ liệu)';

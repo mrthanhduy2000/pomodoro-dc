@@ -25,8 +25,8 @@ export async function generateOffline({ modelId, system, messages, onProgress, o
   const stream = await engine.chat.completions.create({
     messages: [{ role: 'system', content: system }, ...messages],
     stream: true,
-    temperature: 0.35,     // bám số nhưng đủ linh hoạt để phân tích sâu hơn (7B trôi rất ít)
-    top_p: 0.9,            // nới hơn 3B vì 7B ít sinh token lạ → câu giàu hơn; vẫn có lưới hasForeignScript
+    temperature: 0.3,      // thấp → bám số + giảm "trôi" tiếng Trung (3B dễ trôi hơn 7B)
+    top_p: 0.85,           // siết đuôi xác suất để bớt token lạ; vẫn có lưới hasForeignScript + viết-lại
     frequency_penalty: 0.2, // giảm lặp nhẹ
     max_tokens: 700,        // đủ chỗ cho bản phân tích 3 phần [1][2][3]
   });

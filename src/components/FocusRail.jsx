@@ -1,7 +1,7 @@
 /**
  * FocusRail.jsx — cột phải màn Tập trung: 3 thẻ Hôm nay / Chuỗi / AI Coach.
  * Thẻ AI Coach: MỌI phản hồi do AI Qwen 3B chạy trên máy sinh (2 nút: Hỏi Coach +
- * Coach offline). Chỉ hiện khi máy chạy được Qwen (desktop có WebGPU). Skin-aware.
+ * AI phân tích tổng thể). Chỉ hiện khi máy chạy được Qwen (desktop có WebGPU). Skin-aware.
  */
 import { motion } from 'framer-motion';
 import useGameStore from '../store/gameStore';

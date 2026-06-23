@@ -1,5 +1,5 @@
 /**
- * CoachOffline — "Coach offline": LLM thật CHẠY TRÊN MÁY (WebLLM/WebGPU) tự viết
+ * CoachOffline — "AI phân tích tổng thể": LLM thật CHẠY TRÊN MÁY (WebLLM/WebGPU) tự viết
  * nhận xét từ số liệu thật, KHÔNG cần mạng/khoá API. Đặt CẠNH "Hỏi Coach" (Claude),
  * KHÔNG thay thế. Tự ẩn nếu thiết bị không hợp (mobile/iOS/không WebGPU) → iPhone
  * không thấy gì. Một model duy nhất: Qwen 3B (~2.4GB tải lần đầu). Dự phòng khi lỗi =
@@ -65,7 +65,7 @@ export default function CoachOffline(goalProps) {
         className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-full py-1.5 text-[11px] font-semibold uppercase tracking-[0.15em] transition-opacity hover:opacity-80"
         style={{ border: `1px solid ${GOLD}55`, color: GOLD, background: 'rgba(217,164,65,0.08)' }}
       >
-        <SparkGlyph size={12} /> Coach offline — phân tích chuyên sâu (AI trên máy)
+        <SparkGlyph size={12} /> AI phân tích tổng thể (chạy trên máy)
       </button>
 
       {open && (
@@ -74,7 +74,7 @@ export default function CoachOffline(goalProps) {
             <div className="flex items-center justify-between px-4 py-3" style={{ borderBottom: '1px solid var(--line)' }}>
               <div className="flex items-center gap-1.5" style={{ color: GOLD }}>
                 <SparkGlyph size={14} />
-                <span className="mono text-[11px] uppercase tracking-[0.2em]">Coach offline</span>
+                <span className="mono text-[11px] uppercase tracking-[0.2em]">AI phân tích tổng thể</span>
               </div>
               <button type="button" onClick={() => setOpen(false)} className="text-[18px] leading-none" style={{ color: 'var(--muted)' }} aria-label="Đóng">×</button>
             </div>
@@ -83,10 +83,10 @@ export default function CoachOffline(goalProps) {
               {status === 'idle' && (
                 <>
                   <p className="text-[13px] leading-relaxed" style={{ color: 'var(--ink)' }}>
-                    Một AI chạy ngay trên máy bạn (offline) sẽ phân tích chuyên sâu số liệu tập trung của bạn: đọc số, soi mẫu hình và đưa nhận định chi tiết — không bịa, thiếu dữ liệu thì nói chưa đủ.
+                    Một AI chạy ngay trên máy bạn (offline) sẽ phân tích tổng thể số liệu tập trung của bạn: đọc số, soi mẫu hình và đưa nhận định toàn cảnh — không bịa, thiếu dữ liệu thì nói chưa đủ.
                   </p>
                   <button type="button" onClick={() => writeComment()} className="rounded-xl px-3 py-2 text-[13px] font-semibold" style={{ background: 'var(--accent)', color: '#fff' }}>
-                    Phân tích chuyên sâu
+                    Phân tích tổng thể
                   </button>
                   <p className="text-[11px] leading-snug" style={{ color: 'var(--muted)' }}>
                     Tải mô hình ~2.4GB lần đầu (Qwen 3B, cần card đồ hoạ / WebGPU), lần sau dùng ngay. Không chạy được thì vẫn có “Hỏi Coach” (⚡ Nhanh) không cần tải gì.
@@ -113,7 +113,7 @@ export default function CoachOffline(goalProps) {
                   <p className="text-[12.5px] leading-relaxed" style={{ color: 'var(--ink)' }}>
                     {status === 'error-lang'
                       ? 'AI trên máy lỡ trả lời lẫn chữ nước ngoài (model nhỏ đôi khi bị vậy). Bấm "Thử lại" để viết lại bằng tiếng Việt, hoặc dùng "Hỏi Coach".'
-                      : 'Không chạy được AI trên máy (thiếu WebGPU hoặc tải lỗi). Bạn vẫn có "Hỏi Coach" và "Xem phân tích" như thường.'}
+                      : 'Không chạy được AI trên máy (thiếu WebGPU hoặc tải lỗi). Bạn thử lại nhé.'}
                   </p>
                   <div className="flex gap-2">
                     <button type="button" onClick={() => writeComment()} className="rounded-xl px-3 py-1.5 text-[12px] font-semibold" style={{ background: 'var(--accent)', color: '#fff' }}>Thử lại</button>

@@ -14,7 +14,7 @@ export default function FocusCoachMobile({ hidden = false }) {
           AI Coach chạy bằng một mô hình AI ngay trên máy (offline) — điện thoại không đủ sức chạy.
         </p>
         <p className="mt-1.5 text-[11px] leading-snug" style={{ color: 'rgba(232,228,220,0.55)' }}>
-          Mở app trên máy tính để dùng AI Coach (hỏi đáp + phân tích chuyên sâu).
+          Mở app trên máy tính để dùng AI Coach (hỏi đáp + phân tích tổng thể).
         </p>
       </div>
     </div>

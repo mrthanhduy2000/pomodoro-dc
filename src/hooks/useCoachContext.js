@@ -1,6 +1,6 @@
 /**
  * useAnalystContext — trả về một hàm dựng "bản tóm tắt số liệu GIÀU" (chuỗi) từ trạng
- * thái store, để gửi cho AI Qwen trên máy (Coach offline + Hỏi Coach). Nạp tầng phân
+ * thái store, để gửi cho AI Qwen trên máy (AI phân tích tổng thể + Hỏi Coach). Nạp tầng phân
  * tích sâu (buildAnalystContext) + todayWeekday + hasSessionToday cho dự đoán giữ-chuỗi.
  * Hàm trả về được gọi LÚC GỬI (sự kiện), không phải lúc render → dùng helper giờ VN an toàn.
  */

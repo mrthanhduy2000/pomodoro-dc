@@ -2,15 +2,30 @@
  * CoachChat — "Hỏi Coach" = CHAT với AI Qwen 3B chạy ngay trên máy (offline, miễn phí).
  * MỘT AI duy nhất: mọi câu đều do Qwen trả lời (đã bỏ ⚡Nhanh theo luật + Hỏi Claude).
  * Qwen cần WebGPU → CHỈ chạy trên máy tính; iPhone (không WebGPU) ẩn hẳn (return null).
- * Dùng chung engine 3B singleton với "Coach offline" → đã tải thì xài lại ngay.
+ * Dùng chung engine 3B singleton với "AI phân tích tổng thể" → đã tải thì xài lại ngay.
+ * Có câu hỏi mẫu (lúc trống) + "Đề xuất tiếp theo" theo ngữ cảnh sau mỗi câu trả lời
+ * (engine coachSuggest.js, thuần luật — chỉ GỢI Ý câu hỏi, không phải câu trả lời).
  */
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { SparkGlyph } from './icons/Glyph';
 import { useAnalystContext } from '../hooks/useCoachContext';
 import { buildLLMChatPrompt, sanitizeLLMOutput, hasForeignScript, detectWebLLMCapable, mapInitProgress, LLM_MODELS } from '../engine/llm/coachPrompt';
+import { pickSuggestions, detectTopic } from '../engine/coachSuggest';
 
 const GOLD = '#d9a441';
 const LOAD_TIMEOUT_MS = 300000; // 5 phút: đủ cho lần đầu tải ~2.4GB (Qwen 3B)
+const STARTER_CHIPS = [
+  'Tổng quan tập trung của mình tới giờ thế nào?',
+  'Giờ vàng của mình là khung nào?',
+  'Giờ này mình nên làm việc khó hay việc nhẹ?',
+  'Mình hay bỏ phiên giữa chừng vào lúc nào?',
+  'Phiên dài bao nhiêu phút thì hợp với mình nhất?',
+  'Làm khuya thì chất lượng phiên của mình thế nào?',
+  'Mục tiêu mỗi ngày của mình có hợp lý không?',
+  'Có loại việc nào mình đang bỏ bê không?',
+  'Mình có đều đặn không, hay làm theo đợt?',
+  'Hôm nay mình đang đi đúng nhịp chưa?',
+];
 
 export default function CoachChat(goalProps) {
   const [capable] = useState(() => detectWebLLMCapable());
@@ -26,8 +41,6 @@ export default function CoachChat(goalProps) {
   useEffect(() => {
     if (listRef.current) listRef.current.scrollTop = listRef.current.scrollHeight;
   }, [messages, thinking, open]);
-
-  if (!capable) return null; // iPhone/không WebGPU → ẩn Coach (đã có dòng "mở trên máy tính" ở chỗ khác)
 
   // Cập nhật nội dung bong bóng assistant cuối (cho streaming).
   function updateLastAssistant(content) {
@@ -80,8 +93,23 @@ export default function CoachChat(goalProps) {
   }
 
   const lastAssistant = [...messages].reverse().find((m) => m.role === 'assistant');
-  const chips = messages.length === 0 ? ['Tuần này mình thế nào?', 'Giờ vàng của mình?', 'Giờ này nên làm gì?'] : [];
   const placeholder = progress > 0 && progress < 100 ? `Đang tải AI về máy… ${progress}%` : 'Đang nghĩ…';
+
+  // Chips: lúc trống = câu hỏi mẫu; sau khi Qwen trả lời xong = "Đề xuất tiếp theo"
+  // theo ngữ cảnh (chủ đề vừa hỏi + dữ liệu user có). Chỉ là gợi ý câu hỏi để bấm.
+  const answerReady = !thinking && lastAssistant && (lastAssistant.content ?? '').trim().length > 0;
+  const suggestions = useMemo(() => {
+    if (messages.length === 0 || !answerReady) return [];
+    const userMsgs = messages.filter((m) => m.role === 'user');
+    const askedIds = [...new Set(userMsgs.map((m) => detectTopic(m.content)).filter(Boolean))];
+    const lastQuestionText = userMsgs.length ? userMsgs[userMsgs.length - 1].content : '';
+    return pickSuggestions({ contextString: buildAnalyst(), lastQuestionText, askedIds });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [messages, answerReady]);
+  const chips = messages.length === 0 ? STARTER_CHIPS : suggestions;
+  const chipLabel = messages.length === 0 ? 'Câu hỏi gợi ý' : 'Đề xuất tiếp theo';
+
+  if (!capable) return null; // iPhone/không WebGPU → ẩn Coach (đã có dòng "mở trên máy tính" ở chỗ khác)
 
   return (
     <>
@@ -122,10 +150,13 @@ export default function CoachChat(goalProps) {
             </div>
 
             {chips.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 px-3 pb-1">
-                {chips.map((c, i) => (
-                  <button key={i} type="button" onClick={() => send(c)} disabled={busy} className="rounded-full px-2.5 py-1 text-[11px] disabled:opacity-40" style={{ border: '1px solid var(--line)', color: 'var(--ink-2,var(--ink))' }}>{c}</button>
-                ))}
+              <div className="px-3 pb-1">
+                <div className="mono mb-1 text-[9px] uppercase tracking-[0.18em]" style={{ color: 'var(--muted)' }}>{chipLabel}</div>
+                <div className="flex flex-wrap gap-1.5">
+                  {chips.map((c, i) => (
+                    <button key={i} type="button" onClick={() => send(c)} disabled={busy} className="rounded-full px-2.5 py-1 text-[11px] disabled:opacity-40" style={{ border: '1px solid var(--line)', color: 'var(--ink-2,var(--ink))' }}>{c}</button>
+                  ))}
+                </div>
               </div>
             )}
 

@@ -27,7 +27,7 @@ function stripHtml(value) {
 const pctOf = (x) => Math.round((Number(x) || 0) * 100);
 
 /**
- * buildAnalystContext — bản tóm tắt số liệu GIÀU cho AI Qwen trên máy (Coach offline +
+ * buildAnalystContext — bản tóm tắt số liệu GIÀU cho AI Qwen trên máy (AI phân tích tổng thể +
  * Hỏi Coach) ở phong cách PHÂN TÍCH CHUYÊN SÂU. Tái dùng tầng phân tích sâu
  * (buildFocusProfile + generatePredictions) + nhịp-hôm-nay (getTodayPaceInsight) + các
  * tín hiệu tương quan.

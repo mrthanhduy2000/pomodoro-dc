@@ -6,7 +6,13 @@
  */
 import { methodNotAllowed, readJsonBody, sendJson } from './_lib/http.js';
 
-const DEFAULT_MODEL = 'gemini-2.5-flash'; // free tier; đổi qua env GEMINI_MODEL nếu cần
+const DEFAULT_MODEL = 'gemini-2.5-flash'; // CHÍNH (free tier; đổi qua env GEMINI_MODEL)
+const FALLBACK_MODEL = 'gemini-2.5-flash-lite'; // DỰ PHÒNG khi chính quá tải/hết lượt (env GEMINI_MODEL_FALLBACK)
+
+// Lỗi từ Gemini đáng để THỬ MODEL KHÁC: 503 (quá tải), 500 (lỗi tạm), 429 (chạm giới hạn free).
+export function shouldFallback(status) {
+  return status === 503 || status === 500 || status === 429;
+}
 
 /** toGeminiBody — THUẦN: { system, messages:[{role,content}] } → body Gemini generateContent. */
 export function toGeminiBody(system, messages, opts = {}) {
@@ -36,6 +42,22 @@ export function extractGeminiText(data) {
   return '';
 }
 
+// Gọi 1 model; với model CHÍNH cho thử-lại 1 lần khi 503/500 (quá tải tạm thời). Trả Response.
+async function callModel(model, key, system, messages, opts, retry) {
+  const payload = JSON.stringify(toGeminiBody(system, messages, {
+    ...opts, thinkingBudget: model.includes('2.5') ? 0 : undefined, // 2.5 bật thinking mặc định → tắt
+  }));
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
+  let r;
+  const maxAttempts = retry ? 2 : 1;
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: payload });
+    if (r.ok || (r.status !== 503 && r.status !== 500) || attempt === maxAttempts - 1) break;
+    await new Promise((ok) => setTimeout(ok, 700));
+  }
+  return r;
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') return methodNotAllowed(res, ['POST']);
   const key = process.env.GEMINI_API_KEY;
@@ -47,18 +69,16 @@ export default async function handler(req, res) {
     if (!Array.isArray(messages) || messages.length === 0) {
       return sendJson(res, 400, { ok: false, error: 'no-messages' });
     }
-    const model = process.env.GEMINI_MODEL || DEFAULT_MODEL;
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
-    // 2.5-flash bật thinking mặc định → TẮT (thinkingBudget 0) cho tác vụ chép-lại-số.
-    const payload = JSON.stringify(toGeminiBody(system, messages, {
-      temperature, maxTokens, thinkingBudget: model.includes('2.5') ? 0 : undefined,
-    }));
-    // Gemini free đôi khi 503 (quá tải tạm thời) → thử lại 1 lần sau nhịp ngắn.
-    let r;
-    for (let attempt = 0; attempt < 2; attempt += 1) {
-      r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: payload });
-      if (r.ok || (r.status !== 503 && r.status !== 500) || attempt === 1) break;
-      await new Promise((ok) => setTimeout(ok, 700));
+    const primary = process.env.GEMINI_MODEL || DEFAULT_MODEL;
+    const fallback = process.env.GEMINI_MODEL_FALLBACK || FALLBACK_MODEL;
+    const opts = { temperature, maxTokens };
+
+    // CHÍNH (flash) + thử-lại 1 lần; nếu vẫn quá tải/hết-lượt → nhảy DỰ PHÒNG (flash-lite).
+    let usedModel = primary;
+    let r = await callModel(primary, key, system, messages, opts, true);
+    if (!r.ok && shouldFallback(r.status) && fallback && fallback !== primary) {
+      usedModel = fallback;
+      r = await callModel(fallback, key, system, messages, opts, false);
     }
     if (!r.ok) {
       const detail = await r.text().catch(() => '');
@@ -69,7 +89,7 @@ export default async function handler(req, res) {
     if (!text) {
       return sendJson(res, 502, { ok: false, error: 'empty', detail: JSON.stringify(data?.promptFeedback ?? {}).slice(0, 300) });
     }
-    return sendJson(res, 200, { ok: true, text, model });
+    return sendJson(res, 200, { ok: true, text, model: usedModel });
   } catch (error) {
     return sendJson(res, 500, { ok: false, error: error instanceof Error ? error.message : 'cloud-failed' });
   }

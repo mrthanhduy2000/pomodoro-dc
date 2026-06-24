@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { toGeminiBody, extractGeminiText } from './coach.js';
+import { toGeminiBody, extractGeminiText, shouldFallback } from './coach.js';
 
 test('toGeminiBody: map role assistant→model, system tách riêng, generationConfig mặc định', () => {
   const b = toGeminiBody('Bạn là Coach.', [
@@ -30,6 +30,14 @@ test('toGeminiBody: bỏ message rỗng; không system → không có system_ins
 test('toGeminiBody: thinkingBudget 0 → tắt thinking (tránh cụt câu ở 2.5-flash)', () => {
   const b = toGeminiBody('s', [{ role: 'user', content: 'a' }], { thinkingBudget: 0 });
   assert.deepEqual(b.generationConfig.thinkingConfig, { thinkingBudget: 0 });
+});
+
+test('shouldFallback: 503/500/429 → nhảy model dự phòng; 200/400 → không', () => {
+  assert.equal(shouldFallback(503), true);
+  assert.equal(shouldFallback(500), true);
+  assert.equal(shouldFallback(429), true);
+  assert.equal(shouldFallback(200), false);
+  assert.equal(shouldFallback(400), false);
 });
 
 test('extractGeminiText: ghép parts; thiếu/bị chặn → ""', () => {

@@ -1,60 +1,34 @@
 /**
- * CoachOffline — "AI phân tích tổng thể": LLM thật CHẠY TRÊN MÁY (WebLLM/WebGPU) tự viết
- * nhận xét từ số liệu thật, KHÔNG cần mạng/khoá API. Đặt CẠNH "Hỏi Coach" (Claude),
- * KHÔNG thay thế. Tự ẩn nếu thiết bị không hợp (mobile/iOS/không WebGPU) → iPhone
- * không thấy gì. Một model duy nhất: Qwen 3B (~2.4GB tải lần đầu). Dự phòng khi lỗi =
- * chế độ ⚡Nhanh ở "Hỏi Coach" (luật, 0 byte). Trung thực: vẫn yếu hơn "Hỏi Coach" (Claude).
+ * CoachOffline — "AI phân tích tổng thể": Gemini (đám mây, qua api/coach.js) viết bản phân
+ * tích 4 phần từ số liệu thật. Dùng CHUNG prompt + lưới chống-bịa với "Hỏi Coach". Chạy được
+ * mọi thiết bị (kể cả iPhone). Đã GỠ Qwen/WebLLM on-device — mất mạng/hết quota thì báo lỗi.
  */
 import { useState } from 'react';
 import { SparkGlyph } from './icons/Glyph';
 import { useAnalystContext } from '../hooks/useCoachContext';
-import { buildLLMPrompt, sanitizeLLMOutput, hasForeignScript, hasFabricatedNumbers, findMismatchedPairs, findFabricatedFractions, scrubFabricatedLines, detectWebLLMCapable, mapInitProgress, LLM_MODELS } from '../engine/llm/coachPrompt';
+import { buildLLMPrompt, sanitizeLLMOutput, hasForeignScript, hasFabricatedNumbers, findMismatchedPairs, findFabricatedFractions, scrubFabricatedLines } from '../engine/llm/coachPrompt';
 import { generateCloud } from '../engine/llm/cloudEngine';
 
 const GOLD = '#d9a441';
-const LOAD_TIMEOUT_MS = 300000; // 5 phút: đủ cho lần đầu tải ~2.4GB (Qwen 3B)
-const MAX_LANG_RETRY = 1; // model nhỏ "trôi" sang chữ nước ngoài → viết lại tối đa 1 lần
+const MAX_LANG_RETRY = 1; // lỡ "trôi" sang chữ nước ngoài → hỏi lại tối đa 1 lần (hiếm với Gemini)
 
 export default function CoachOffline(goalProps) {
-  const [capable] = useState(() => detectWebLLMCapable());
   const [open, setOpen] = useState(false);
-  const [status, setStatus] = useState('idle'); // idle|loading|generating|rewriting|ready|error|error-lang
-  const [progress, setProgress] = useState(0);
+  const [status, setStatus] = useState('idle'); // idle|generating|rewriting|ready|error|error-lang
   const [text, setText] = useState('');
   const buildContext = useAnalystContext(goalProps);
 
-  // Gemini đám mây chạy được cả iPhone → KHÔNG ẩn nữa. `capable` chỉ quyết định có Qwen
-  // trên máy làm dự phòng (khi đám mây lỗi) hay không.
-
   async function writeComment() {
-    if (status === 'loading' || status === 'generating') return;
-    const useModel = LLM_MODELS.default;
-    setStatus('loading');
-    setProgress(0);
+    if (status === 'generating') return;
+    setStatus('generating');
     setText('');
     try {
       const ctxStr = buildContext(); // gọi 1 lần, dùng chung dựng-prompt + soi-guard (tránh lệch số)
       const { system, messages } = buildLLMPrompt(ctxStr);
-      // Gemini (đám mây) TRƯỚC; lỗi → rơi về Qwen trên máy (chỉ desktop). iPhone → ném lỗi.
-      const run = async () => {
-        try {
-          setStatus('generating');
-          return await generateCloud({ system, messages, temperature: 0.3, maxTokens: 1200 });
-        } catch (cloudErr) {
-          if (!capable) throw cloudErr;
-          setStatus('loading');
-          const { generateOffline } = await import('../engine/llm/webllmEngine');
-          const work = generateOffline({
-            modelId: useModel, system, messages,
-            onProgress: (p) => setProgress(mapInitProgress(p)),
-            onToken: (t) => { setStatus('generating'); setText(sanitizeLLMOutput(t)); },
-          });
-          const timeout = new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), LOAD_TIMEOUT_MS));
-          return Promise.race([work, timeout]);
-        }
-      };
+      // Engine = Gemini (đám mây). /api/coach đã có thử-lại + nhảy model dự phòng.
+      const run = () => generateCloud({ system, messages, temperature: 0.3, maxTokens: 1200 });
       let clean = sanitizeLLMOutput(await run());
-      // Trôi chữ nước ngoài HOẶC bịa số → viết lại (BLIND) tối đa MAX_LANG_RETRY lần.
+      // Trôi chữ nước ngoài HOẶC bịa số → viết lại tối đa MAX_LANG_RETRY lần.
       const dirty = (s) => hasForeignScript(s) || hasFabricatedNumbers(s, ctxStr);
       for (let i = 0; i < MAX_LANG_RETRY && dirty(clean); i += 1) {
         setStatus('rewriting');
@@ -108,15 +82,15 @@ export default function CoachOffline(goalProps) {
                 </>
               )}
 
-              {status === 'loading' && (
-                <p className="text-[13px]" style={{ color: 'var(--muted)' }}>Đang tải AI về máy… {progress > 0 ? `${progress}%` : ''} (lần đầu hơi lâu)</p>
-              )}
-
               {status === 'rewriting' && (
                 <p className="text-[13px]" style={{ color: 'var(--muted)' }}>Vừa lỡ chen chữ nước ngoài, mình đang viết lại cho gọn bằng tiếng Việt…</p>
               )}
 
-              {(status === 'generating' || status === 'ready') && (
+              {status === 'generating' && !text && (
+                <p className="text-[13px]" style={{ color: 'var(--muted)' }}>Đang đọc số liệu của bạn để phân tích…</p>
+              )}
+
+              {(status === 'generating' || status === 'ready') && text && (
                 <p className="whitespace-pre-wrap text-[13px] leading-relaxed" style={{ color: 'var(--ink)' }}>
                   {text}{status === 'generating' ? ' ▍' : ''}
                 </p>
@@ -126,7 +100,7 @@ export default function CoachOffline(goalProps) {
                 <div className="space-y-2">
                   <p className="text-[12.5px] leading-relaxed" style={{ color: 'var(--ink)' }}>
                     {status === 'error-lang'
-                      ? 'AI dự phòng trên máy lỡ trả lời lẫn chữ nước ngoài. Bấm "Thử lại" nhé, hoặc dùng "Hỏi Coach".'
+                      ? 'AI lỡ trả lời lẫn chữ nước ngoài. Bấm "Thử lại" nhé.'
                       : 'Chưa phân tích được (mạng trục trặc / chưa cấu hình API / hết lượt miễn phí). Bạn thử lại nhé.'}
                   </p>
                   <div className="flex gap-2">

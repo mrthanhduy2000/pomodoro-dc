@@ -1,6 +1,6 @@
 /**
  * cloudEngine.js — gọi AI Coach trên ĐÁM MÂY (Gemini) qua cổng /api/coach. Key nằm ở
- * server (Vercel env), client KHÔNG giữ key. Nhận { system, messages } y như webllmEngine
+ * server (Vercel env), client KHÔNG giữ key. Nhận { system, messages } từ buildLLMChatPrompt/
  * để dùng CHUNG prompt + lưới chống-bịa. Chạy được cả iPhone (không cần WebGPU).
  * Lỗi (chưa cấu hình key / hết quota / mất mạng) → ném Error có .code để lớp UI rơi về Qwen.
  */

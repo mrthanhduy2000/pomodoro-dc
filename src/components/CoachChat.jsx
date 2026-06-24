@@ -9,13 +9,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { SparkGlyph } from './icons/Glyph';
 import { useAnalystContext } from '../hooks/useCoachContext';
-import { buildLLMChatPrompt, sanitizeLLMOutput, hasForeignScript, hasFabricatedNumbers, findFabricatedNumbers, findMismatchedPairs, findFabricatedFractions, buildCorrectionNote, appendCorrectionTurn, stripFabricatedSentences, detectWebLLMCapable, mapInitProgress, LLM_MODELS } from '../engine/llm/coachPrompt';
+import { buildLLMChatPrompt, sanitizeLLMOutput, hasForeignScript, hasFabricatedNumbers, findFabricatedNumbers, findMismatchedPairs, findFabricatedFractions, buildCorrectionNote, appendCorrectionTurn, stripFabricatedSentences } from '../engine/llm/coachPrompt';
 import { generateCloud } from '../engine/llm/cloudEngine';
 import { pickSuggestions, detectTopics } from '../engine/coachSuggest';
 
 const GOLD = '#d9a441';
-const LOAD_TIMEOUT_MS = 300000; // 5 phút: đủ cho lần đầu tải ~2.4GB (Qwen 3B)
-const CHAT_STORE_KEY = 'dc-coach-chat-v1'; // lưu hội thoại (desktop). KHÔNG nạp số cũ vào prompt.
+const CHAT_STORE_KEY = 'dc-coach-chat-v1'; // lưu hội thoại. KHÔNG nạp số cũ vào prompt.
 const STARTER_CHIPS = [
   'Tổng quan tập trung của mình tới giờ thế nào?',
   'Giờ vàng của mình là khung nào?',
@@ -30,7 +29,6 @@ const STARTER_CHIPS = [
 ];
 
 export default function CoachChat(goalProps) {
-  const [capable] = useState(() => detectWebLLMCapable());
   const [open, setOpen] = useState(false);
   // Nạp lại hội thoại cũ (desktop). Gắn cờ restored → KHÔNG đưa số cũ vào prompt (xem send()).
   const [messages, setMessages] = useState(() => {
@@ -44,7 +42,6 @@ export default function CoachChat(goalProps) {
   });
   const [input, setInput] = useState('');
   const [thinking, setThinking] = useState(false);
-  const [progress, setProgress] = useState(0);
   const [lastQuestion, setLastQuestion] = useState('');
   const [lastError, setLastError] = useState(false);
   const listRef = useRef(null);
@@ -66,10 +63,6 @@ export default function CoachChat(goalProps) {
       else localStorage.removeItem(CHAT_STORE_KEY);
     } catch { /* storage đầy/chặn → bỏ qua */ }
   }, [messages]);
-
-  // KHÔNG làm ấm Qwen nữa: Gemini (đám mây) là chính → không tải model nặng lên máy.
-  // Qwen chỉ tải khi đám mây lỗi (dự phòng). Đóng modal thì reset thanh tiến trình.
-  useEffect(() => { if (!open) setProgress(0); }, [open]);
 
   // Cập nhật nội dung bong bóng assistant cuối (cho streaming).
   function updateLastAssistant(content) {
@@ -95,30 +88,16 @@ export default function CoachChat(goalProps) {
       .map((m) => ({ role: m.role, content: m.content }));
     setMessages((m) => [...m, { role: 'user', content: q }, { role: 'assistant', content: '', viaLocal: true }]);
     setThinking(true);
-    setProgress(0);
     try {
       const ctxStr = buildAnalyst(); // dùng CHUNG cho cả dựng prompt LẪN soi guard (đừng gọi 2 lần — tránh lệch)
       const { system, messages: msgs } = buildLLMChatPrompt(ctxStr, q, history);
-      // Gemini (đám mây) TRƯỚC; lỗi (chưa có key / hết quota / mất mạng) → rơi về Qwen trên máy
-      // (chỉ desktop có WebGPU). iPhone không có Qwen → ném lỗi để catch ngoài hiện thông báo.
+      // Engine = Gemini (đám mây). Bản thân /api/coach đã có thử-lại + nhảy model dự phòng.
       const run = async (messagesToUse) => {
-        try {
-          return await generateCloud({ system, messages: messagesToUse, temperature: 0.3 });
-        } catch (cloudErr) {
-          if (!capable) throw cloudErr;
-          const { generateOffline } = await import('../engine/llm/webllmEngine');
-          const work = generateOffline({
-            modelId: LLM_MODELS.default, system, messages: messagesToUse,
-            onProgress: (p) => setProgress(mapInitProgress(p)),
-            onToken: (t) => updateLastAssistant(sanitizeLLMOutput(t)),
-          });
-          const timeout = new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), LOAD_TIMEOUT_MS));
-          return Promise.race([work, timeout]);
-        }
+        return generateCloud({ system, messages: messagesToUse, temperature: 0.3 });
       };
       let clean = sanitizeLLMOutput(await run(msgs));
       if (hasForeignScript(clean)) {
-        // Lỗi NGÔN NGỮ (trôi chữ Hán) → viết lại BLIND (nhiệt thấp thường tự ép lại tiếng Việt).
+        // Lỗi NGÔN NGỮ (lỡ chen chữ nước ngoài) → hỏi lại 1 lần (hiếm với Gemini).
         updateLastAssistant(''); clean = sanitizeLLMOutput(await run(msgs));
       } else {
         // Lỗi NỘI DUNG (số bịa) → viết lại CÓ-HƯỚNG-DẪN: chèn lượt chỉ-rõ token sai.
@@ -131,7 +110,7 @@ export default function CoachChat(goalProps) {
       }
       // Tuyến phòng thủ chót — KHÔNG nới guard:
       if (hasForeignScript(clean)) {
-        clean = 'Lần này AI trên máy lỡ chen vài chữ nước ngoài (model nhỏ thi thoảng vậy). Bạn hỏi lại giúp mình một câu nhé, lần sau thường ổn.';
+        clean = 'Lần này AI lỡ chen vài chữ nước ngoài. Bạn hỏi lại giúp mình một câu nhé.';
       } else if (hasFabricatedNumbers(clean, ctxStr) || findMismatchedPairs(clean, ctxStr).length > 0 || findFabricatedFractions(clean, ctxStr).length > 0) {
         // VẪN bịa số / ghép sai %↔cỡ-mẫu / phân số bịa → CỨU-CÂU: bỏ riêng câu bịa, giữ câu sạch.
         clean = stripFabricatedSentences(clean, ctxStr).clean;
@@ -141,13 +120,9 @@ export default function CoachChat(goalProps) {
       const code = err?.code || err?.message || '';
       let msg;
       if (code === 'no-key') {
-        msg = 'AI Coach đám mây chưa được bật (chưa cấu hình API key). Khi đã thêm key trên Vercel là dùng được ngay.';
+        msg = 'AI Coach chưa được bật (chưa cấu hình API key). Khi đã thêm key trên Vercel là dùng được ngay.';
       } else if (String(code).startsWith('gemini-4') || String(code).startsWith('http-4')) {
-        msg = 'AI Coach đám mây đang quá tải hoặc hết lượt miễn phí hôm nay. Bạn thử lại sau một chút nhé.';
-      } else if (code === 'no-webgpu' || code === 'no-adapter') {
-        msg = 'Mạng đang trục trặc và máy cũng chưa bật được AI dự phòng (WebGPU). Bạn kiểm tra mạng rồi bấm "Thử lại" nhé.';
-      } else if (code === 'timeout') {
-        msg = 'Phản hồi lâu quá (mạng yếu hoặc đang tải AI dự phòng). Bạn bấm "Thử lại" nhé.';
+        msg = 'AI Coach đang quá tải hoặc hết lượt miễn phí hôm nay. Bạn thử lại sau một chút nhé.';
       } else {
         msg = 'Chưa hỏi được Coach (mạng hoặc dịch vụ đang trục trặc). Bạn bấm "Thử lại" nhé.';
       }
@@ -155,7 +130,6 @@ export default function CoachChat(goalProps) {
       updateLastAssistant(msg);
     } finally {
       setThinking(false);
-      setProgress(0);
     }
   }
 
@@ -171,7 +145,7 @@ export default function CoachChat(goalProps) {
   }
 
   const lastAssistant = [...messages].reverse().find((m) => m.role === 'assistant');
-  const placeholder = progress > 0 && progress < 100 ? `Đang tải AI về máy… ${progress}%` : 'Đang xem số liệu của bạn…';
+  const placeholder = 'Đang xem số liệu của bạn…';
 
   // Chips: lúc trống = câu hỏi mẫu; sau khi Qwen trả lời xong = "Đề xuất tiếp theo"
   // theo ngữ cảnh (chủ đề vừa hỏi + dữ liệu user có). Chỉ là gợi ý câu hỏi để bấm.
@@ -196,8 +170,7 @@ export default function CoachChat(goalProps) {
   const chips = messages.length === 0 ? starterChips : suggestions;
   const chipLabel = messages.length === 0 ? 'Bạn có thể hỏi mình' : 'Đề xuất tiếp theo';
 
-  // Gemini đám mây chạy được CẢ iPhone → KHÔNG ẩn Coach nữa. `capable` chỉ quyết định
-  // có Qwen-trên-máy làm dự phòng hay không (khi đám mây lỗi).
+  // Coach chạy Gemini (đám mây) → hiện trên MỌI thiết bị (kể cả iPhone).
 
   return (
     <>
@@ -269,12 +242,8 @@ export default function CoachChat(goalProps) {
               </div>
             )}
 
-            {progress > 0 && progress < 100 && (
-              <div className="px-4 pt-1 text-[11px]" style={{ color: 'var(--muted)' }}>Đang tải AI về máy… {progress}%</div>
-            )}
-
             <div className="flex items-end gap-2 px-3 py-3" style={{ borderTop: '1px solid var(--line)' }}>
-              <textarea value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={onKeyDown} rows={1} placeholder="Chat với AI trên máy…" className="max-h-[120px] min-h-[40px] flex-1 resize-none rounded-xl px-3 py-2 text-[13px] outline-none" style={{ background: 'var(--panel, rgba(0,0,0,0.04))', color: 'var(--ink)', border: '1px solid var(--line)' }} />
+              <textarea value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={onKeyDown} rows={1} placeholder="Chat với AI Coach…" className="max-h-[120px] min-h-[40px] flex-1 resize-none rounded-xl px-3 py-2 text-[13px] outline-none" style={{ background: 'var(--panel, rgba(0,0,0,0.04))', color: 'var(--ink)', border: '1px solid var(--line)' }} />
               <button type="button" onClick={() => send()} disabled={!input.trim() || busy} className="rounded-xl px-3 py-2 text-[13px] font-semibold disabled:opacity-40" style={{ background: 'var(--accent)', color: '#fff' }}>Gửi</button>
             </div>
           </div>

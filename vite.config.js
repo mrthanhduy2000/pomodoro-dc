@@ -41,11 +41,6 @@ export default defineConfig({
           if (id.includes('/zustand/')) {
             return 'vendor-state';
           }
-          // AI thật chạy trên máy (Qwen qua WebLLM) — opt-in desktop, dynamic import,
-          // tách CHUNK RIÊNG, KHÔNG vào bundle chính (người không bật khỏi tải).
-          if (id.includes('/@mlc-ai/')) {
-            return 'vendor-webllm';
-          }
           return undefined;
         },
       },
@@ -107,10 +102,6 @@ export default defineConfig({
         importScripts: ['/push-worker.js'],
         // Pre-cache all built assets
         globPatterns: ['**/*.{js,css,html,svg,png,ico,woff,woff2}'],
-        // KHÔNG precache chunk AI nặng (WebLLM/Qwen) + wasm: chỉ tải KHI người dùng
-        // bật tính năng (runtime). Nếu không, service worker sẽ nuốt hàng chục MB
-        // vào precache cho CẢ người không bao giờ bật — hại app hằng ngày.
-        globIgnores: ['**/vendor-webllm*.js', '**/*.wasm'],
         skipWaiting: true,
 
         // Runtime caching rules

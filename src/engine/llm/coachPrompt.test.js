@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { buildLLMPrompt, buildLLMChatPrompt, sanitizeLLMOutput, hasForeignScript, detectWebLLMCapable, mapInitProgress } from './coachPrompt.js';
+import { buildLLMPrompt, buildLLMChatPrompt, sanitizeLLMOutput, hasForeignScript } from './coachPrompt.js';
 
 test('buildLLMPrompt: chế độ viết nhận xét (không câu hỏi)', () => {
   const { system, messages } = buildLLMPrompt('Tổng quan: 20 phiên.');
@@ -54,18 +54,3 @@ test('hasForeignScript: bắt chữ Hán/Trung/Hàn/Nhật, KHÔNG bắt nhầm 
   assert.equal(hasForeignScript(null), false);
 });
 
-test('detectWebLLMCapable: iPhone/không GPU/màn nhỏ → false; desktop có GPU → true', () => {
-  assert.equal(detectWebLLMCapable({ userAgent: 'iPhone', gpu: {} }, { innerWidth: 1280 }), false);
-  assert.equal(detectWebLLMCapable({ userAgent: 'Macintosh' }, { innerWidth: 1280 }), false); // không gpu
-  assert.equal(detectWebLLMCapable({ userAgent: 'Macintosh', gpu: {} }, { innerWidth: 800 }), false); // màn nhỏ
-  assert.equal(detectWebLLMCapable({ userAgent: 'Macintosh', gpu: {} }, { innerWidth: 1280 }), true);
-  assert.equal(detectWebLLMCapable(null, null), false);
-});
-
-test('mapInitProgress: 0/0.5/1 → 0/50/100; thiếu → 0', () => {
-  assert.equal(mapInitProgress({ progress: 0 }), 0);
-  assert.equal(mapInitProgress({ progress: 0.5 }), 50);
-  assert.equal(mapInitProgress({ progress: 1 }), 100);
-  assert.equal(mapInitProgress({}), 0);
-  assert.equal(mapInitProgress(null), 0);
-});

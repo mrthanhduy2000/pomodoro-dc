@@ -1,18 +1,9 @@
 /**
- * coachPrompt.js — phần THUẦN (test được) của AI Coach (LLM Qwen chạy trên máy).
- * Dựng prompt từ bản tóm tắt số liệu (buildAnalystContext), làm sạch output, dò khả
- * năng thiết bị, đổi tiến độ tải → %. KHÔNG chạm thư viện model (đó là webllmEngine.js).
+ * coachPrompt.js — phần THUẦN (test được) của AI Coach. "Bộ não đã đào tạo" model-agnostic:
+ * 2 prompt chuyên gia (COACH_CHAT_SYSTEM/COACH_OFFLINE_SYSTEM), dựng prompt từ bản tóm tắt
+ * số liệu (buildAnalystContext), làm sạch output, và LƯỚI CHỐNG-BỊA tất định. Engine sinh
+ * chữ giờ là GEMINI (đám mây, qua api/coach.js + cloudEngine.js) — đã GỠ Qwen/WebLLM on-device.
  */
-
-// Model prebuilt của @mlc-ai/web-llm (Qwen2.5 đa ngữ — tiếng Việt tốt nhất nhóm chạy-trên-máy).
-// CHỐT 1 MODEL cho gọn (2026-06-21, workflow 4 agent): Qwen2.5-3B — đủ khôn cho việc
-// DIỄN ĐẠT số đã-tính-sẵn, ~2.4GB nhẹ trên Mac 16GB, cùng họ 7B nên dùng lại nguyên
-// lưới chống "trôi" tiếng Trung. Dự phòng = chế độ ⚡Nhanh (luật, 0 byte), KHÔNG tải
-// model thứ 2. Muốn khôn hơn → 'Qwen2.5-7B…' (nặng ~4.5GB); muốn ít trôi hơn nữa →
-// 'gemma-2-2b-it-q4f16_1-MLC' (Google, nhẹ ~1.9GB, cần chỉnh lại lưới chống-trôi).
-export const LLM_MODELS = {
-  default: 'Qwen2.5-3B-Instruct-q4f16_1-MLC', // tải ~2.4GB, ~2.4GB VRAM (low-resource)
-};
 
 export const COACH_OFFLINE_SYSTEM = `Bạn là "AI phân tích tổng thể" — một CHUYÊN GIA PHÂN TÍCH NĂNG SUẤT chạy ngay trên máy của bạn. Vai trò DUY NHẤT: đọc bảng số liệu thật trong phần "=== DỮ LIỆU THẬT ===" và viết một bản phân tích tổng thể, chính xác, bám số, có CHIỀU SÂU của người đã theo dõi bạn lâu ngày. Bạn KHÔNG an ủi, KHÔNG động viên, KHÔNG dùng "giọng" cảm xúc (không zen, không bạn thân, không nghiêm khắc) — phân tích bình tĩnh, rõ ràng, bám số, viết thành câu liền mạch như một người đã theo dõi bạn lâu — sắc nhưng không khô, không cộc.
 
@@ -388,18 +379,4 @@ export function scrubFabricatedLines(answer, context, opts = {}) {
   const anyBody = filled.some((l) => l.trim() && !isLabel(l) && l.trim() !== 'ch\u01b0a \u0111\u1ee7 d\u1eef li\u1ec7u');
   if (!clean || !anyBody) clean = fallback;
   return { clean, removed };
-}
-
-export function detectWebLLMCapable(nav, win) {
-  const n = nav ?? (typeof navigator !== 'undefined' ? navigator : null);
-  const w = win ?? (typeof window !== 'undefined' ? window : null);
-  if (!n || !w) return false;
-  if (/iP(hone|ad|od)/i.test(n.userAgent || '')) return false; // iOS WebGPU yếu → giữ bản cũ
-  if (!('gpu' in n)) return false; // cần WebGPU
-  return (w.innerWidth || 0) >= 1024; // chỉ desktop
-}
-
-export function mapInitProgress(p) {
-  if (p && typeof p.progress === 'number') return Math.round(Math.min(1, Math.max(0, p.progress)) * 100);
-  return 0;
 }

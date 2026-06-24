@@ -9,7 +9,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { SparkGlyph } from './icons/Glyph';
 import { useAnalystContext } from '../hooks/useCoachContext';
-import { buildLLMChatPrompt, sanitizeLLMOutput, hasForeignScript, detectWebLLMCapable, mapInitProgress, LLM_MODELS } from '../engine/llm/coachPrompt';
+import { buildLLMChatPrompt, sanitizeLLMOutput, hasForeignScript, hasFabricatedNumbers, detectWebLLMCapable, mapInitProgress, LLM_MODELS } from '../engine/llm/coachPrompt';
 import { pickSuggestions, detectTopic } from '../engine/coachSuggest';
 
 const GOLD = '#d9a441';
@@ -66,7 +66,8 @@ export default function CoachChat(goalProps) {
     setProgress(0);
     try {
       const { generateOffline } = await import('../engine/llm/webllmEngine');
-      const { system, messages: msgs } = buildLLMChatPrompt(buildAnalyst(), q, history);
+      const ctxStr = buildAnalyst(); // dùng CHUNG cho cả dựng prompt LẪN soi guard (đừng gọi 2 lần — tránh lệch)
+      const { system, messages: msgs } = buildLLMChatPrompt(ctxStr, q, history);
       const run = () => {
         const work = generateOffline({
           modelId: LLM_MODELS.default, system, messages: msgs,
@@ -77,8 +78,15 @@ export default function CoachChat(goalProps) {
         return Promise.race([work, timeout]);
       };
       let clean = sanitizeLLMOutput(await run());
-      if (hasForeignScript(clean)) { updateLastAssistant(''); clean = sanitizeLLMOutput(await run()); }
-      if (hasForeignScript(clean)) clean = 'AI trên máy lỡ trả lời lẫn chữ nước ngoài — bạn thử hỏi lại nhé.';
+      // 2 lưới tất định: chữ nước ngoài + bịa số. Dính 1 trong 2 → viết lại tối đa 1 lần.
+      const dirty = (s) => hasForeignScript(s) || hasFabricatedNumbers(s, ctxStr);
+      if (dirty(clean)) { updateLastAssistant(''); clean = sanitizeLLMOutput(await run()); }
+      if (hasForeignScript(clean)) {
+        clean = 'AI trên máy lỡ trả lời lẫn chữ nước ngoài — bạn thử hỏi lại nhé.';
+      } else if (hasFabricatedNumbers(clean, ctxStr)) {
+        // VẪN bịa số sau 1 lần viết lại → KHÔNG hiển thị câu bịa (thà thiếu còn hơn sai).
+        clean = 'Câu này mình chưa đủ dữ liệu chắc chắn để trả lời bằng con số — bạn thử hỏi một chỉ số khác (giờ vàng, loại việc, hôm nay…) nhé.';
+      }
       updateLastAssistant(clean);
     } catch {
       updateLastAssistant('Chưa chạy được AI trên máy (cần card đồ hoạ/WebGPU, hoặc đang tải mô hình ~2.4GB lần đầu). Bạn thử lại nhé.');

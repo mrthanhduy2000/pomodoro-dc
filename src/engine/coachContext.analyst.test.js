@@ -82,7 +82,7 @@ test('GÁC MẪU NHỎ: ít phiên → không in tín hiệu cần đủ mẫu',
 
 test('phiên khuya (vắt nửa đêm) được nêu dạng tương quan, kèm cỡ mẫu', () => {
   const s = buildAnalystContext(richHistory(), opts);
-  assert.match(s, /Phiên sau 22h: tỉ lệ đạt \d+% so với ban ngày \d+% \(khuya trên \d+ phiên/);
+  assert.match(s, /Tỉ lệ đạt mục tiêu của phiên làm sau \d+ giờ đêm: \d+% \(khuya trên \d+ phiên có mục tiêu\), so với ban ngày \d+%/);
   assert.match(s, /Đây là tương quan, không phải kết luận/);
 });
 
@@ -105,11 +105,19 @@ test('CHÂN DUNG: có dòng "Chân dung của bạn" tổng hợp đặc điểm
   assert.match(portraitLine, /không phải lời tiên đoán/);
 });
 
+test('LOẠI VIỆC: tách dòng, tên loại trong ngoặc kép, KHÔNG dùng dấu "|" (chống đọc nhầm nhãn)', () => {
+  const s = buildAnalystContext(richHistory(), opts);
+  assert.match(s, /Loại việc dành nhiều thời gian nhất là "[^"]+":/);
+  const catLines = s.split('\n').filter((l) => l.startsWith('Loại việc'));
+  assert.ok(catLines.length >= 1, 'cần ít nhất 1 dòng loại việc');
+  for (const l of catLines) assert.doesNotMatch(l, /\|/, `dòng loại việc còn dấu "|": ${l}`);
+});
+
 test('XU HƯỚNG DÀI HẠN: hiện khi ≥3 tuần CÓ dữ liệu; bỏ tuần trống; bỏ khi <3 tuần', () => {
   const mk = (wk, m) => ({ wk, minutes: m, completed: true, goalAchieved: true, hour: 9, dk: `d-${wk}`, dn: 100, weekday: 1 });
   const h3 = [mk('W2', 100), mk('W3', 150), mk('W4', 200)]; // 3 tuần active, tăng dần; W1 trống
   const withTrend = buildAnalystContext(h3, { ...opts, weekKeysDesc: ['W4', 'W3', 'W2', 'W1'] });
-  assert.match(withTrend, /Xu hướng dài hạn \(3 tuần có dữ liệu trong 4 tuần gần đây\): đang đi lên \(100′ → 150′ → 200′\)/);
+  assert.match(withTrend, /Xu hướng dài hạn \(3 tuần có dữ liệu trong 4 tuần gần đây\): đang đi lên, mỗi tuần \(từ cũ đến mới\): 100 phút → 150 phút → 200 phút/);
   // chỉ 2 tuần active (richHistory: W1,W2) → <3 tuần CÓ dữ liệu → KHÔNG bịa dòng từ tuần trống
   assert.doesNotMatch(buildAnalystContext(richHistory(), { ...opts, weekKeysDesc: ['W2', 'W1', 'W0', 'Wx'] }), /Xu hướng dài hạn/);
   // không truyền weekKeysDesc → không có dòng

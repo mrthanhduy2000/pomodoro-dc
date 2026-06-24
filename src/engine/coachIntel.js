@@ -26,7 +26,7 @@ const CONSISTENCY_MIN_DAYS = 6;
 const PRED_STREAK_MIN_DAYS = 4;
 const PRED_STREAK_PCT_MIN_DAYS = 6;
 const WEEKDAY_LABELS = ['Chủ nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
-const BAND_LABEL = { ngan: 'ngắn (dưới 26′)', vua: 'vừa (26–44′)', sau: 'sâu (từ 45′)' };
+const BAND_LABEL = { ngan: 'ngắn (dưới 26 phút)', vua: 'vừa (26–44 phút)', sau: 'sâu (từ 45 phút)' };
 const BAND_MINUTES = { ngan: 20, vua: 35, sau: 50 };
 
 function isCompletedSession(e) {
@@ -167,7 +167,7 @@ export function buildFocusProfile(history = [], opts = {}) {
   // (6) So tuần — TÁI DÙNG getWeeklyTrend để khớp thẻ Coach
   let momentum;
   const tr = getWeeklyTrend(all, { getEntryWeekKey, nowWeekKey, prevWeekKey });
-  if (tr) momentum = { status: tr.direction === 'up' ? 'cao' : tr.direction === 'down' ? 'thấp' : 'vừa', value: { direction: tr.direction, thisMinutes: tr.thisMinutes, prevMinutes: tr.prevMinutes, pct: tr.pct }, sampleSize: tr.thisN + tr.prevN, blurb: `Tuần này bạn tập trung ${tr.pct >= 0 ? 'nhiều hơn' : 'ít hơn'} tuần trước ${Math.abs(tr.pct)}% (${tr.thisMinutes}′ so với ${tr.prevMinutes}′).` };
+  if (tr) momentum = { status: tr.direction === 'up' ? 'cao' : tr.direction === 'down' ? 'thấp' : 'vừa', value: { direction: tr.direction, thisMinutes: tr.thisMinutes, prevMinutes: tr.prevMinutes, pct: tr.pct }, sampleSize: tr.thisN + tr.prevN, blurb: `Tuần này bạn tập trung ${tr.pct >= 0 ? 'nhiều hơn' : 'ít hơn'} tuần trước ${Math.abs(tr.pct)}% (${tr.thisMinutes} phút so với ${tr.prevMinutes} phút).` };
   else momentum = insufficient('Chưa đủ dữ liệu hai tuần liên tiếp để so sánh.');
 
   return {

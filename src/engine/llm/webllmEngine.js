@@ -25,10 +25,10 @@ export async function generateOffline({ modelId, system, messages, onProgress, o
   const stream = await engine.chat.completions.create({
     messages: [{ role: 'system', content: system }, ...messages],
     stream: true,
-    temperature: 0.3,      // thấp → bám số + giảm "trôi" tiếng Trung (3B dễ trôi hơn 7B)
-    top_p: 0.85,           // siết đuôi xác suất để bớt token lạ; vẫn có lưới hasForeignScript + viết-lại
+    temperature: 0.2,      // RẤT thấp → bám số (đây là tác vụ CHÉP-LẠI-SỐ, không sáng tạo); giảm "trôi" tiếng Trung
+    top_p: 0.8,            // siết đuôi xác suất nơi token-số lạ hay xuất hiện; vẫn có lưới hasForeignScript + chống-bịa-số
     frequency_penalty: 0.2, // giảm lặp nhẹ
-    max_tokens: 700,        // đủ chỗ cho bản phân tích 3 phần [1][2][3]
+    max_tokens: 700,        // đủ chỗ cho bản phân tích 4 phần [1][2][3][4]
   });
   let out = '';
   for await (const chunk of stream) {

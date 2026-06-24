@@ -43,11 +43,11 @@ TỰ KIỂM TRƯỚC KHI CHỐT (làm thầm, KHÔNG in phần tự kiểm ra): 
 === VÍ DỤ KHUÔN MẪU (chỉ học CÁCH TRÌNH BÀY — TUYỆT ĐỐI KHÔNG dùng lại bất kỳ con số nào trong ví dụ; chỉ dùng số ở phần "=== DỮ LIỆU THẬT ===" thật bên dưới) ===
 [DỮ LIỆU MẪU]
 Tổng quan: 17 phiên hoàn thành, ~9 giờ tập trung, 2 phiên bị huỷ. Đạt mục tiêu 58% (trên 12 phiên có đặt mục tiêu). Chuỗi hiện tại: 3 ngày.
-Chân dung của bạn: nghiêng về buổi sáng (đạt 67% trên 9 phiên có mục tiêu), hợp phiên vừa (26–44′), giữ nhịp ~46% số ngày gần đây (13/28 ngày), loại làm nhiều nhất "Học" (4.5h, 9 phiên), phiên sâu ~22% (4/18). Đây là đặc điểm ổn định từ lịch sử của bạn, không phải lời tiên đoán.
+Chân dung của bạn: nghiêng về buổi sáng (đạt 67% trên 9 phiên có mục tiêu), hợp phiên vừa (26–44 phút), giữ nhịp ~46% số ngày gần đây (13/28 ngày), loại làm nhiều nhất là "Học" với 4.5 giờ qua 9 phiên, phiên sâu ~22% (4/18). Đây là đặc điểm ổn định từ lịch sử của bạn, không phải lời tiên đoán.
 Hôm nay: đang chậm hơn nhịp thường — 1/4 phiên, tới giờ này bạn thường làm ~3 phiên (trên 7 ngày gần đây).
-Xu hướng tuần: tuần này bạn tập trung nhiều hơn tuần trước 30% (520′ so với 400′).
-Xu hướng dài hạn (4 tuần có dữ liệu trong 4 tuần gần đây): đang đi lên (380′ → 420′ → 470′ → 520′). Đây là tương quan theo thời gian, không phải kết luận.
-Phiên sau 22h: tỉ lệ đạt 30% so với ban ngày 61% (khuya trên 5 phiên có mục tiêu). Đây là tương quan, không phải kết luận.
+Xu hướng tuần: tuần này bạn tập trung nhiều hơn tuần trước 30% (520 phút so với 400 phút).
+Xu hướng dài hạn (4 tuần có dữ liệu trong 4 tuần gần đây): đang đi lên, mỗi tuần (từ cũ đến mới): 380 phút → 420 phút → 470 phút → 520 phút. Đây là tương quan theo thời gian, không phải kết luận.
+Tỉ lệ đạt mục tiêu của phiên làm sau 22 giờ đêm: 30% (khuya trên 5 phiên có mục tiêu), so với ban ngày 61%. Đây là tương quan, không phải kết luận.
 Đều đặn: chưa đủ dữ liệu.
 
 [PHÂN TÍCH MẪU]
@@ -55,17 +55,17 @@ Phiên sau 22h: tỉ lệ đạt 30% so với ban ngày 61% (khuya trên 5 phiê
 Tới giờ bạn có 17 phiên hoàn thành, ~9 giờ tập trung, 2 phiên bị huỷ; chuỗi hiện tại 3 ngày. Tỉ lệ đạt mục tiêu chung là 58% trên 12 phiên có đặt mục tiêu. Hôm nay mới 1/4 phiên.
 
 [2] XU HƯỚNG:
-Tuần này đang nhỉnh hơn tuần trước, nhiều hơn 30% (520′ so với 400′), và nhìn dài hơn thì 4 tuần gần đây đang đi lên (380′ → 420′ → 470′ → 520′, trên 4 tuần có dữ liệu). Riêng hôm nay lại chậm hơn nhịp thường, mới 1/4 phiên trong khi tới giờ này bạn thường làm ~3 phiên trên 7 ngày gần đây.
+Tuần này đang nhỉnh hơn tuần trước, nhiều hơn 30% (520 phút so với 400 phút), và nhìn dài hơn thì 4 tuần gần đây đang đi lên (380 phút → 420 phút → 470 phút → 520 phút, trên 4 tuần có dữ liệu). Riêng hôm nay lại chậm hơn nhịp thường, mới 1/4 phiên trong khi tới giờ này bạn thường làm ~3 phiên trên 7 ngày gần đây.
 
 [3] CHÂN DUNG & MẪU HÌNH:
 - Bạn có vẻ là người của buổi sáng: khung sáng thường đi cùng tỉ lệ đạt mục tiêu cao nhất, 67% trên 9 phiên có mục tiêu.
-- Bạn hợp phiên vừa hơn phiên dài: dải 26–44′ là độ dài quen thuộc của bạn.
-- Khung sau 22h là điểm yếu: thường đi kèm tỉ lệ đạt thấp hơn ban ngày, 30% so với 61% (khuya trên 5 phiên có mục tiêu). Đây là tương quan, không phải kết luận.
+- Bạn hợp phiên vừa hơn phiên dài: dải 26–44 phút là độ dài quen thuộc của bạn.
+- Khung sau 22 giờ đêm là điểm yếu: thường đi kèm tỉ lệ đạt thấp hơn ban ngày, 30% so với 61% (khuya trên 5 phiên có mục tiêu). Đây là tương quan, không phải kết luận.
 - Mức đều đặn: chưa đủ dữ liệu.
 
 [4] THỬ NGHIỆM:
 - Có thể thử dồn việc khó vào buổi sáng theo phiên vừa khoảng 35 phút, bám mốc 67% trên 9 phiên ở trên.
-- Có thể thử để khung sau 22h cho việc nhẹ, neo vào mức 30% trên 5 phiên của khung khuya.
+- Có thể thử để khung sau 22 giờ đêm cho việc nhẹ, neo vào mức 30% trên 5 phiên của khung khuya.
 
 (Nhắc lại: trên đây CHỈ là khuôn mẫu trình bày. Tuyệt đối KHÔNG dùng lại bất kỳ con số nào trong ví dụ — chỉ dùng số ở phần "=== DỮ LIỆU THẬT ===" thật bên dưới.)`;
 
@@ -104,17 +104,18 @@ CHỌN ĐÚNG DÒNG theo câu hỏi (đừng bốc nhầm dòng):
 - tuần này / so với tuần trước → "Xu hướng tuần".
 - dạo này / mấy tuần nay / xu hướng dài / so với tháng trước / có đang lên không → "Xu hướng dài hạn" (+ "Xu hướng tuần" + "Tổng quan").
 - giờ này nên làm gì → "Khung giờ vàng còn lại hôm nay" + "Giờ vàng".
-- làm khuya / ban đêm → "Phiên sau …h".
+- làm khuya / ban đêm → dòng "Tỉ lệ đạt mục tiêu của phiên làm sau … giờ đêm".
 - hay bỏ dở → "Hay bỏ giữa chừng vào".
 - phiên dài bao lâu → "Độ dài hợp nhất".
 - phiên sâu → "Phiên sâu".
 - mục tiêu ngày hợp lý → "Mục tiêu ngày".
-- loại việc nhiều nhất → "Loại việc"; bỏ bê → "Loại bị bỏ bê".
+- loại việc nhiều nhất → dòng "Loại việc dành nhiều thời gian nhất là …"; hỏi MỘT loại cụ thể → dòng "Loại việc "<tên>": …" khớp đúng tên trong ngoặc kép; bỏ bê → "Loại bị bỏ bê".
 - đều đặn → "Đều đặn"; chuỗi → "Giữ chuỗi"; ngày năng suất → "Ngày năng suất nhất".
 Bỏ qua dòng không liên quan. Khi câu hỏi rộng, được nối 2 dòng để dựng "chân dung" nhưng vẫn gói gọn.
 
 QUY TẮC TRUNG THỰC (bạn là model nhỏ, rất dễ sai — tuân TỪNG điều):
-- CHỈ DÙNG SỐ TRONG DỮ LIỆU. Mọi con số (phiên, giờ, phút, %, ngày, giờ trong ngày, tuần) phải sao chép NGUYÊN VĂN từ bảng. Cấm tự tính, cấm làm tròn khác, cấm cộng trừ, cấm bịa thêm số/ngày/loại việc không có trong bảng. ĐỌC ĐÚNG GIÁ TRỊ: nội dung thật nằm SAU dấu hai chấm của mỗi dòng; nhãn trước dấu hai chấm (vd "Loại việc:", "Giờ vàng:") CHỈ là tên mục — chép NGUYÊN tên/giá trị ở phần sau (vd dòng "Loại việc: Làm Việc 2.3h" → nói "Làm Việc, 2.3 giờ"), đừng lấy nhãn làm nội dung.
+- CHỈ DÙNG SỐ TRONG DỮ LIỆU. Mọi con số (phiên, giờ, phút, %, ngày, giờ trong ngày, tuần) phải sao chép NGUYÊN VĂN từ bảng. Cấm tự tính, cấm làm tròn khác, cấm cộng trừ, cấm bịa thêm số/ngày/loại việc không có trong bảng. ĐỌC ĐÚNG GIÁ TRỊ: nội dung thật nằm SAU dấu hai chấm của mỗi dòng; chép NGUYÊN tên/giá trị ở phần sau (vd nếu bảng ghi dòng dạng "Loại việc dành nhiều thời gian nhất là "X": A giờ qua B phiên, đạt mục tiêu C% (trên B phiên)." thì trả lời "X, A giờ qua B phiên, đạt mục tiêu C% trên B phiên" — thay X/A/B/C bằng đúng chữ và số TRONG bảng, đừng lấy nhãn làm nội dung).
+- TÊN MỤC ≠ NỘI DUNG. Các chữ đứng TRƯỚC dấu hai chấm như "Loại việc", "Giờ vàng", "Xu hướng dài hạn", "Tỉ lệ đạt mục tiêu của…" CHỈ là tên mục — KHÔNG bao giờ là tên loại việc, KHÔNG bao giờ là một con số. Tên loại việc thật LUÔN nằm trong dấu ngoặc kép (vd "Học", "Làm Việc", "Đọc sách"). Khi được hỏi về một loại việc, chỉ gọi nó bằng cái tên nằm trong dấu ngoặc kép.
 - THIẾU THÌ NÓI THIẾU. Dòng ghi "chưa đủ", hoặc bảng không có thứ câu hỏi cần → nói thẳng "mình chưa đủ dữ liệu về …" rồi mời hỏi thứ khác. Không đoán.
 - MỌI % KÈM CỠ MẪU. Khi nêu một con số %, luôn kèm cụm cỡ mẫu đứng cạnh nó trong bảng ("trên 21 phiên", "trên 8 ngày", "trên 4 tuần", "qua 5 lần"). % nào không có cỡ mẫu thì KHÔNG nói con số % đó.
 - CHỈ NÓI TƯƠNG QUAN, KHÔNG NHÂN-QUẢ. Cấm tuyệt đối các từ: vì, nên (chỉ lý do), do, bởi, khiến, dẫn đến, làm cho, gây ra, kết quả là. Chỉ dùng: "có vẻ", "thường", "thường đi cùng", "đi cùng", "hay rơi vào", "tương quan với", "theo thời gian".
@@ -157,6 +158,60 @@ export function sanitizeLLMOutput(raw) {
  */
 export function hasForeignScript(s) {
   return /[\u3000-\u303f\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uac00-\ud7af\uf900-\ufaff\uff00-\uffef]/.test(String(s ?? ''));
+}
+
+// === L\u01af\u1edaI CH\u1eb6N-B\u1ecaA-S\u1ed0 (t\u1ea5t \u0111\u1ecbnh) ===========================================
+// Tuy\u1ebfn ph\u00f2ng th\u1ee7 CH\u00cdNH ch\u1ed1ng "H\u1ecfi Coach" b\u1ecba s\u1ed1. Nguy\u00ean t\u1eafc: m\u1ecdi con s\u1ed1 mang
+// \u0110\u01a0N V\u1eca-D\u1eee-LI\u1ec6U (gi\u1edd/ph\u00fat/phi\u00ean/ng\u00e0y/tu\u1ea7n/l\u1ea7n/%/h) m\u00e0 model vi\u1ebft ra PH\u1ea2I xu\u1ea5t
+// hi\u1ec7n trong b\u1ea3ng s\u1ed1 li\u1ec7u ("=== D\u1eee LI\u1ec6U TH\u1eacT ==="). S\u1ed1 kh\u00f4ng t\u00ecm th\u1ea5y \u2192 coi l\u00e0 B\u1ecaA.
+// S\u1ed1 tr\u1ea7n (kh\u00f4ng \u0111\u01a1n v\u1ecb) \u0111\u01b0\u1ee3c MI\u1ec4N TR\u1eea \u0111\u1ec3 kh\u1ecfi b\u00e1o nh\u1ea7m v\u0103n n\u00f3i ("3 nh\u1ecbp", "1 l\u1eddi khuy\u00ean").
+// Ch\u1ea1y \u0111\u01b0\u1ee3c \u1edf CI kh\u00f4ng-WebGPU (kh\u00f4ng c\u1ea7n model). KH\u00d4NG b\u1eaft "\u0111\u1ecdc nh\u1ea7m nh\u00e3n" (s\u1ed1 c\u00f3 th\u1eadt)
+// \u2014 c\u00e1i \u0111\u00f3 do prompt "\u0110\u1eccC \u0110\u00daNG GI\u00c1 TR\u1eca" + \u0111\u1ecbnh d\u1ea1ng b\u1ea3ng lo.
+const GUARD_UNIT = '(?:%|h(?![a-z\u00e0-\u1ef9])|\\s?(?:gi\u1edd|ph\u00fat|phi\u00ean|ng\u00e0y|tu\u1ea7n|l\u1ea7n))';
+const GUARD_NUM_UNIT = new RegExp(`(\\d[\\d.,]*)\\s*${GUARD_UNIT}`, 'giu');
+
+// Chu\u1ea9n ho\u00e1 \u0111\u1ec3 so kh\u1edbp b\u1ea5t ch\u1ea5p kh\u00e1c bi\u1ec7t v\u1eb7t (d\u1ea5u c\u00e1ch, 'h' vs ' gi\u1edd', d\u1ea5u ph\u1ea9y th\u1eadp ph\u00e2n).
+function normNumUnit(numRaw, unitRaw) {
+  const num = String(numRaw).replace(/,/g, '.').replace(/\.0+$/, '').replace(/(\.\d*?)0+$/, '$1');
+  let unit = String(unitRaw).trim().toLowerCase();
+  if (unit === 'h') unit = 'gi\u1edd';
+  return `${num} ${unit}`;
+}
+
+// Tr\u00edch m\u1ecdi c\u1eb7p (s\u1ed1 + \u0111\u01a1n v\u1ecb-d\u1eef-li\u1ec7u) trong m\u1ed9t \u0111o\u1ea1n \u2192 m\u1ea3ng chu\u1ed7i \u0111\u00e3 chu\u1ea9n ho\u00e1.
+function extractDataNumbers(text) {
+  const out = [];
+  for (const m of String(text ?? '').matchAll(GUARD_NUM_UNIT)) {
+    const num = m[1];
+    const unit = m[0].slice(m[0].indexOf(num) + num.length);
+    out.push(normNumUnit(num, unit));
+  }
+  return out;
+}
+
+/**
+ * findFabricatedNumbers \u2014 T\u1ea4T \u0110\u1ecaNH. Tr\u1ea3 v\u1ec1 m\u1ea3ng con s\u1ed1 (\u0111\u00e3 chu\u1ea9n ho\u00e1) m\u00e0 c\u00e2u tr\u1ea3 l\u1eddi n\u00eau
+ * K\u00c8M \u0111\u01a1n v\u1ecb-d\u1eef-li\u1ec7u nh\u01b0ng KH\u00d4NG c\u00f3 trong context. M\u1ea3ng r\u1ed7ng = s\u1ea1ch.
+ * @param {string} answer  c\u00e2u tr\u1ea3 l\u1eddi c\u1ee7a Coach
+ * @param {string} context chu\u1ed7i buildAnalystContext
+ */
+export function findFabricatedNumbers(answer, context) {
+  const ctx = String(context ?? '');
+  if (!ctx.trim()) return []; // kh\u00f4ng c\u00f3 d\u1eef li\u1ec7u n\u1ec1n \u0111\u1ec3 \u0111\u1ed1i chi\u1ebfu \u2192 kh\u00f4ng k\u1ebft t\u1ed9i
+  const ctxSet = new Set(extractDataNumbers(ctx));
+  const bad = [];
+  const seen = new Set();
+  for (const tok of extractDataNumbers(answer)) {
+    if (ctxSet.has(tok) || seen.has(tok)) continue;
+    seen.add(tok);
+    bad.push(tok);
+  }
+  return bad;
+}
+
+/** hasFabricatedNumbers \u2014 ti\u1ec7n \u00edch boolean cho l\u1edbp UI. */
+export function hasFabricatedNumbers(answer, context) {
+  return findFabricatedNumbers(answer, context).length > 0;
 }
 
 export function detectWebLLMCapable(nav, win) {

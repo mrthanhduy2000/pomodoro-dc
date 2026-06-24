@@ -99,9 +99,9 @@ export function detectSignals(contextString) {
   if (lines.some((l) => l.startsWith('đều đặn:') && !l.includes('chưa đủ'))) set.add('consistency');
   if (lineStarts('phiên sâu:')) set.add('deepWork');
   if (lineStarts('xu hướng tuần:')) set.add('momentum');
-  if (lineStarts('loại việc:')) set.add('category');
+  if (lineStarts('loại việc')) set.add('category'); // "Loại việc dành nhiều..." / "Loại việc "X":"
   if (has('hay bỏ giữa chừng vào')) set.add('abandon');
-  if (has('phiên sau') && has('so với ban ngày')) set.add('lateNight');
+  if (has('phiên làm sau') && has('so với ban ngày')) set.add('lateNight');
   if (has('mục tiêu ngày') && (has('hơi quá sức') || has('hơi nhẹ'))) set.add('goalCalibration');
   if (has('ngày năng suất nhất:')) set.add('weekday');
   if (has('loại bị bỏ bê:')) set.add('neglect');

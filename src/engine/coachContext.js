@@ -88,7 +88,7 @@ export function buildAnalystContext(history = [], opts = {}) {
   }
   if (profile.categoryPerformance.status !== 'insufficient') {
     const top = profile.categoryPerformance.value.top[0];
-    portrait.push(`loại làm nhiều nhất "${top.label}" (${top.hours}h, ${top.sessions} phiên)`);
+    portrait.push(`loại làm nhiều nhất là "${top.label}" với ${top.hours} giờ qua ${top.sessions} phiên`);
   }
   if (profile.deepWorkRatio.status !== 'insufficient') {
     const d = profile.deepWorkRatio.value;
@@ -124,18 +124,22 @@ export function buildAnalystContext(history = [], opts = {}) {
   const mwt = getMultiWeekTrend(list, { getEntryWeekKey: opts.getEntryWeekKey, weekKeysDesc: opts.weekKeysDesc, minWeeks: 3 });
   if (mwt) {
     const dir = mwt.direction === 'up' ? 'đang đi lên' : mwt.direction === 'down' ? 'đang đi xuống' : 'đang giữ nhịp';
-    const series = `${mwt.weeklyMinutes.join('′ → ')}′`; // phút mỗi tuần CÓ dữ liệu, cũ → mới
-    lines.push(`Xu hướng dài hạn (${mwt.weeksWithData} tuần có dữ liệu trong ${mwt.weeksLookback} tuần gần đây): ${dir} (${series}). Đây là tương quan theo thời gian, không phải kết luận.`);
+    const series = mwt.weeklyMinutes.map((m) => `${m} phút`).join(' → '); // mỗi tuần CÓ dữ liệu, cũ → mới
+    lines.push(`Xu hướng dài hạn (${mwt.weeksWithData} tuần có dữ liệu trong ${mwt.weeksLookback} tuần gần đây): ${dir}, mỗi tuần (từ cũ đến mới): ${series}. Đây là tương quan theo thời gian, không phải kết luận.`);
   }
 
-  // [Loại việc] — top theo giờ + tỉ lệ đạt từng loại (khi đủ mẫu)
+  // [Loại việc] — tách loại DẪN ĐẦU thành câu có chủ ngữ rõ + mỗi loại còn lại MỘT dòng
+  // riêng có TÊN LOẠI trong ngoặc kép (bỏ dấu '|') để Qwen 3B khỏi đọc nhãn "Loại việc"
+  // thành tên loại, và khỏi vơ số của loại này gán loại kia.
   if (profile.categoryPerformance.status !== 'insufficient') {
-    const txt = profile.categoryPerformance.value.top.map((c) => {
-      let s = `${c.label} ${c.hours}h, ${c.sessions} phiên`;
+    const cats = profile.categoryPerformance.value.top;
+    const fmtCat = (c) => {
+      let s = `${c.hours} giờ qua ${c.sessions} phiên`;
       if (c.goalRate != null) s += `, đạt mục tiêu ${pctOf(c.goalRate)}% (trên ${c.sessions} phiên)`;
       return s;
-    }).join(' | ');
-    lines.push(`Loại việc: ${txt}.`);
+    };
+    lines.push(`Loại việc dành nhiều thời gian nhất là "${cats[0].label}": ${fmtCat(cats[0])}.`);
+    for (const c of cats.slice(1)) lines.push(`Loại việc "${c.label}": ${fmtCat(c)}.`);
   }
 
   // [Tương quan thời điểm] — mỗi dòng tự kèm cỡ mẫu
@@ -143,7 +147,7 @@ export function buildAnalystContext(history = [], opts = {}) {
   if (ab) lines.push(`Hay bỏ giữa chừng vào ${ab.bucketLabel}: ${pctOf(ab.rate)}% (trên ${ab.attempts} lần bắt đầu).`);
 
   const late = getLateNightQualityDrop(list, { getEntryHour });
-  if (late) lines.push(`Phiên sau ${late.lateStartHour}h: tỉ lệ đạt ${pctOf(late.lateGoalRate)}% so với ban ngày ${pctOf(late.dayGoalRate)}% (khuya trên ${late.lateAttempts} phiên có mục tiêu). Đây là tương quan, không phải kết luận.`);
+  if (late) lines.push(`Tỉ lệ đạt mục tiêu của phiên làm sau ${late.lateStartHour} giờ đêm: ${pctOf(late.lateGoalRate)}% (khuya trên ${late.lateAttempts} phiên có mục tiêu), so với ban ngày ${pctOf(late.dayGoalRate)}%. Đây là tương quan, không phải kết luận.`);
 
   if (typeof getEntryDayKey === 'function' && todayKey && dailyGoal > 0) {
     const cal = getDailyGoalCalibration(list, { goalType: dailyGoalMetric, goalValue: dailyGoal, getEntryDayKey, todayKey, minDayKey: opts.minDayKey });

@@ -218,6 +218,40 @@ export function hasFabricatedNumbers(answer, context) {
   return findFabricatedNumbers(answer, context).length > 0;
 }
 
+// Tr\u00edch c\u1eb7p (ph\u1ea7n-tr\u0103m, c\u1ee1-m\u1eabu) tr\u00ean C\u00d9NG c\u1ee5m \u2014 HAI CHI\u1ec0U, cho ph\u00e9p ngo\u1eb7c/ph\u1ea9y/v\u00e0i ch\u1eef ch\u00e8n.
+// CH\u1ec8 b\u1eaft khi % \u0110\u1ee8NG C\u1ea0NH m\u1ed9t c\u1ee1 m\u1eabu "tr\u00ean N <\u0111v>" (chi\u1ec1u A) ho\u1eb7c "N <\u0111v> \u2026 (\u2026X%)" (chi\u1ec1u B).
+// % so-s\u00e1nh kh\u00f4ng c\u1ee1 m\u1eabu (91%/37%) v\u00e0 m\u1eabu ph\u00e2n s\u1ed1 (11/38) KH\u00d4NG kh\u1edbp \u2192 KH\u00d4NG \u00e9p c\u1eb7p (nghi th\u00ec tha).
+function extractPctSamplePairs(text) {
+  const out = [];
+  const norm = (s) => String(s).replace(/,/g, '.').replace(/\.0+$/, '');
+  const reA = /(\d[\d.,]*)\s*%[^\d%]{0,12}?tr\u00ean\s+(\d[\d.,]*)\s*(phi\u00ean|ng\u00e0y|tu\u1ea7n|l\u1ea7n)/giu;
+  const reB = /(\d[\d.,]*)\s*(phi\u00ean|ng\u00e0y|tu\u1ea7n|l\u1ea7n)[^\d%]{0,20}?\([^)]*?(\d[\d.,]*)\s*%\)/giu;
+  const s = String(text ?? '');
+  for (const m of s.matchAll(reA)) out.push(`${norm(m[1])}%|${norm(m[2])} ${m[3].toLowerCase()}`);
+  for (const m of s.matchAll(reB)) out.push(`${norm(m[3])}%|${norm(m[1])} ${m[2].toLowerCase()}`);
+  return out;
+}
+
+/**
+ * findMismatchedPairs \u2014 b\u1eaft ki\u1ec3u b\u1ecba tinh vi: % GH\u00c9P SAI c\u1ee1 m\u1eabu (c\u1ea3 hai s\u1ed1 \u0111\u1ec1u C\u00d3 trong b\u1ea3ng
+ * nh\u01b0ng \u1edf hai d\u00f2ng kh\u00e1c nhau, vd "\u0111\u1ea1t 79% tr\u00ean 18 phi\u00ean" khi 79% l\u00e0 t\u1ed5ng c\u00f2n 18 phi\u00ean l\u00e0 c\u1ee7a
+ * "H\u1ecdc"). Tr\u1ea3 m\u1ea3ng c\u1eb7p (chu\u1ea9n ho\u00e1) c\u00f3 trong answer m\u00e0 KH\u00d4NG c\u00f3 trong context. M\u1ea3ng r\u1ed7ng = s\u1ea1ch.
+ * C\u1ed1 t\u00ecnh B\u1ea2O TH\u1ee6 (ch\u1ec9 b\u1eaft c\u1eb7p k\u1ec1-nhau r\u00f5 r\u00e0ng) \u0111\u1ec3 tr\u00e1nh xo\u00e1 nh\u1ea7m c\u00e2u th\u1eadt.
+ */
+export function findMismatchedPairs(answer, context) {
+  const ctx = String(context ?? '');
+  if (!ctx.trim()) return [];
+  const ok = new Set(extractPctSamplePairs(ctx));
+  const bad = [];
+  const seen = new Set();
+  for (const p of extractPctSamplePairs(answer)) {
+    if (ok.has(p) || seen.has(p)) continue;
+    seen.add(p);
+    bad.push(p);
+  }
+  return bad;
+}
+
 // \u0110\u1ed5i token chu\u1ea9n-ho\u00e1 c\u1ee7a guard v\u1ec1 d\u1ea1ng \u0111\u1ecdc-\u0111\u01b0\u1ee3c cho c\u00e2u nh\u1eafc: "88 %" \u2192 "88%" (b\u1ecf space tr\u01b0\u1edbc %).
 function prettyGuardToken(tok) {
   return String(tok).replace(/\s+%$/, '%');
@@ -269,7 +303,7 @@ export function stripFabricatedSentences(answer, context, opts = {}) {
   const flush = () => {
     if (!buf) return;
     const core = buf.trim();
-    if (core && findFabricatedNumbers(core, ctx).length > 0) removed.push(core);
+    if (core && (findFabricatedNumbers(core, ctx).length > 0 || findMismatchedPairs(core, ctx).length > 0)) removed.push(core);
     else kept.push(buf);
     buf = '';
   };
@@ -303,7 +337,7 @@ export function scrubFabricatedLines(answer, context, opts = {}) {
   const out = [];
   for (const line of text.split('\n')) {
     if (isLabel(line) || !line.trim()) { out.push(line); continue; } // gi\u1eef nh\u00e3n + d\u00f2ng tr\u1ed1ng
-    if (findFabricatedNumbers(line, ctx).length > 0) { removed.push(line.trim()); continue; }
+    if (findFabricatedNumbers(line, ctx).length > 0 || findMismatchedPairs(line, ctx).length > 0) { removed.push(line.trim()); continue; }
     out.push(line);
   }
   const filled = [];

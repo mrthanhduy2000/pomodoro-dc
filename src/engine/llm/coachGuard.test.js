@@ -5,6 +5,7 @@ import {
   findFabricatedNumbers, hasFabricatedNumbers,
   buildCorrectionNote, appendCorrectionTurn,
   stripFabricatedSentences, scrubFabricatedLines,
+  findMismatchedPairs,
 } from './coachPrompt.js';
 
 // Bảng số liệu THẬT (rút từ lịch sử mẫu ~24 giờ) làm nền đối chiếu.
@@ -138,4 +139,36 @@ test('scrubFabricatedLines: phần [n] rỗng sau lọc → chèn "chưa đủ d
 });
 test('scrubFabricatedLines: ctx rỗng → nguyên văn', () => {
   assert.equal(scrubFabricatedLines(FOUR, '').clean, FOUR);
+});
+
+// ── findMismatchedPairs (% ghép SAI cỡ mẫu — cả hai số đều có thật) ─────────
+const PAIR_CTX = [
+  'Tổng quan: 38 phiên hoàn thành. Đạt mục tiêu 79% (trên 38 phiên có đặt mục tiêu).',
+  'Giờ vàng: buổi sáng — 100% (trên 20 phiên có mục tiêu).',
+  'Loại việc dành nhiều thời gian nhất là "Học": 13.3 giờ qua 18 phiên, đạt mục tiêu 100% (trên 18 phiên).',
+  'Loại việc "Làm Việc": 6.6 giờ qua 13 phiên, đạt mục tiêu 46% (trên 13 phiên).',
+  'Tỉ lệ đạt mục tiêu của phiên làm sau 22 giờ đêm: 0% (khuya trên 5 phiên có mục tiêu), so với ban ngày 91%.',
+  'Ngày năng suất nhất: Thứ Tư — 9 phiên (~21%).',
+].join('\n');
+
+test('findMismatchedPairs: paraphrase ĐÚNG cặp → KHÔNG báo nhầm', () => {
+  assert.deepEqual(findMismatchedPairs('Buổi sáng đạt 100% trên 20 phiên có mục tiêu.', PAIR_CTX), []);
+  assert.deepEqual(findMismatchedPairs('Học đạt 100% (trên 18 phiên).', PAIR_CTX), []);
+  assert.deepEqual(findMismatchedPairs('Làm Việc chỉ 46% trên 13 phiên.', PAIR_CTX), []);
+  assert.deepEqual(findMismatchedPairs('Khuya đạt 0% trên 5 phiên có mục tiêu.', PAIR_CTX), []);
+});
+
+test('findMismatchedPairs: % so sánh (không cỡ mẫu) + phân số → bỏ qua, không ép cặp', () => {
+  assert.deepEqual(findMismatchedPairs('so với ban ngày 91%.', PAIR_CTX), []);
+  assert.deepEqual(findMismatchedPairs('phiên sâu 29% (11/38).', PAIR_CTX), []);
+});
+
+test('findMismatchedPairs: GHÉP CHÉO %↔cỡ-mẫu (cả hai có thật, sai cặp) → BẮT', () => {
+  assert.deepEqual(findMismatchedPairs('Buổi sáng đạt 100% trên 38 phiên.', PAIR_CTX), ['100%|38 phiên']);
+  assert.deepEqual(findMismatchedPairs('Học đạt 46% trên 18 phiên.', PAIR_CTX), ['46%|18 phiên']);
+});
+
+test('findMismatchedPairs: ctx rỗng / answer rỗng → []', () => {
+  assert.deepEqual(findMismatchedPairs('đạt 79% trên 18 phiên', ''), []);
+  assert.deepEqual(findMismatchedPairs('', PAIR_CTX), []);
 });

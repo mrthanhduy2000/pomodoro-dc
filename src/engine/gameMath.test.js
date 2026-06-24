@@ -375,6 +375,32 @@ test('late-night quality: làm khuya vẫn tốt → null', () => {
   assert.equal(getLateNightQualityDrop(history, { getEntryHour }), null);
 });
 
+test('late-night: lateGoalTotal đếm phiên CÓ mục tiêu (≠ tổng phiên khuya) → cỡ mẫu % đúng', () => {
+  const history = [];
+  for (let i = 0; i < 6; i += 1) history.push({ hour: 10, minutes: 30, completed: true, goalAchieved: true });
+  history.push({ hour: 23, minutes: 30, completed: true, goalAchieved: true });
+  for (let i = 0; i < 4; i += 1) history.push({ hour: 23, minutes: 30, completed: true, goalAchieved: false });
+  for (let i = 0; i < 3; i += 1) history.push({ hour: 23, minutes: 30, completed: true }); // khuya, KHÔNG đặt mục tiêu
+  const r = getLateNightQualityDrop(history, { getEntryHour });
+  assert.ok(r);
+  assert.equal(r.lateAttempts, 8);   // tổng phiên khuya hoàn thành
+  assert.equal(r.lateGoalTotal, 5);  // chỉ phiên CÓ mục tiêu — mẫu số đúng cho lateGoalRate
+  assert.equal(r.dayGoalTotal, 6);
+});
+
+test('goal calibration: medianDisplay làm tròn (phút→bội 5; phiên→nguyên)', () => {
+  const h1 = [];
+  for (let d = 1; d <= 10; d += 1) h1.push({ dk: `2026-06-${String(d).padStart(2, '0')}`, minutes: 37, completed: true });
+  const r1 = getDailyGoalCalibration(h1, { goalType: 'minutes', goalValue: 125, getEntryDayKey, todayKey: '2026-06-20' });
+  assert.ok(r1);
+  assert.equal(r1.medianDisplay % 5, 0);
+  const h2 = [];
+  for (let d = 1; d <= 10; d += 1) for (let i = 0; i < 5; i += 1) h2.push({ dk: `2026-06-${String(d).padStart(2, '0')}`, minutes: 25, completed: true });
+  const r2 = getDailyGoalCalibration(h2, { goalType: 'sessions', goalValue: 3, getEntryDayKey, todayKey: '2026-06-20' });
+  assert.ok(r2);
+  assert.equal(r2.medianDisplay, Math.round(r2.median));
+});
+
 // ── getMultiWeekTrend: xu hướng dài hạn nhiều tuần (getter tĩnh e.wk, không Date) ──
 const wkOf = (e) => e.wk;
 const weeks = ['W4', 'W3', 'W2', 'W1']; // GẦN→XA: W4 là tuần hiện tại, W1 xa nhất

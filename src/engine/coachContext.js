@@ -67,7 +67,9 @@ export function buildAnalystContext(history = [], opts = {}) {
 
   // [Tổng quan] — kèm tỉ lệ đạt mục tiêu TỔNG (chỉ khi đủ phiên có mục tiêu)
   const t = profile.totals;
-  let overview = `Tổng quan: ${t.completed} phiên hoàn thành, ~${Math.round(t.minutes / 60)} giờ tập trung`;
+  // Dưới 60 phút → in theo PHÚT (tránh "~0 giờ" + 3B đọc số nguyên dễ hơn thập phân).
+  const focusBlurb = t.minutes < 60 ? `~${t.minutes} phút tập trung` : `~${Math.round(t.minutes / 60)} giờ tập trung`;
+  let overview = `Tổng quan: ${t.completed} phiên hoàn thành, ${focusBlurb}`;
   if (t.cancelled) overview += `, ${t.cancelled} phiên bị huỷ`;
   overview += '.';
   if (t.goalRate != null && t.withGoal > 0) overview += ` Đạt mục tiêu ${pctOf(t.goalRate)}% (trên ${t.withGoal} phiên có đặt mục tiêu).`;
@@ -147,11 +149,11 @@ export function buildAnalystContext(history = [], opts = {}) {
   if (ab) lines.push(`Hay bỏ giữa chừng vào ${ab.bucketLabel}: ${pctOf(ab.rate)}% (trên ${ab.attempts} lần bắt đầu).`);
 
   const late = getLateNightQualityDrop(list, { getEntryHour });
-  if (late) lines.push(`Tỉ lệ đạt mục tiêu của phiên làm sau ${late.lateStartHour} giờ đêm: ${pctOf(late.lateGoalRate)}% (khuya trên ${late.lateAttempts} phiên có mục tiêu), so với ban ngày ${pctOf(late.dayGoalRate)}%. Đây là tương quan, không phải kết luận.`);
+  if (late) lines.push(`Tỉ lệ đạt mục tiêu của phiên làm sau ${late.lateStartHour} giờ đêm: ${pctOf(late.lateGoalRate)}% (khuya trên ${late.lateGoalTotal} phiên có mục tiêu), so với ban ngày ${pctOf(late.dayGoalRate)}%. Đây là tương quan, không phải kết luận.`);
 
   if (typeof getEntryDayKey === 'function' && todayKey && dailyGoal > 0) {
     const cal = getDailyGoalCalibration(list, { goalType: dailyGoalMetric, goalValue: dailyGoal, getEntryDayKey, todayKey, minDayKey: opts.minDayKey });
-    if (cal) lines.push(`Mục tiêu ngày ${cal.verdict === 'too-hard' ? 'hơi quá sức' : 'hơi nhẹ'}: đạt ${pctOf(cal.hitRate)}% trên ${cal.daysCounted} ngày, trung vị ${Math.round(cal.median)} ${unit}/ngày (thử chỉnh về ${cal.suggested} ${unit}/ngày).`);
+    if (cal) lines.push(`Mục tiêu ngày ${cal.verdict === 'too-hard' ? 'hơi quá sức' : 'hơi nhẹ'}: đạt ${pctOf(cal.hitRate)}% trên ${cal.daysCounted} ngày, trung vị ${cal.medianDisplay} ${unit}/ngày (thử chỉnh về ${cal.suggested} ${unit}/ngày).`);
   }
 
   if (typeof opts.getEntryWeekday === 'function') {

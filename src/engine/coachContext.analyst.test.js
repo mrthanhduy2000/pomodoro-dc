@@ -40,6 +40,18 @@ test('rỗng → nói "chưa đủ dữ liệu", không bịa', () => {
   assert.match(s, /chưa đủ dữ liệu/i);
 });
 
+test('TỔNG QUAN: tổng < 60 phút → in theo "phút", KHÔNG ra "~0 giờ"', () => {
+  const tiny = [
+    { hour: 9, minutes: 12, completed: true, goalAchieved: true, dk: '2026-06-10', dn: 150, weekday: 1, wk: 'W2' },
+    { hour: 9, minutes: 12, completed: true, goalAchieved: true, dk: '2026-06-11', dn: 151, weekday: 2, wk: 'W2' },
+    { hour: 9, minutes: 12, completed: true, goalAchieved: true, dk: '2026-06-12', dn: 152, weekday: 3, wk: 'W2' },
+    { hour: 9, minutes: 12, completed: true, goalAchieved: true, dk: '2026-06-13', dn: 153, weekday: 4, wk: 'W2' },
+  ]; // 4 × 12 = 48 phút < 60
+  const s = buildAnalystContext(tiny, opts);
+  assert.match(s, /phút tập trung/);
+  assert.doesNotMatch(s, /~0 giờ/);
+});
+
 test('luôn có dòng "Tổng quan:" kèm "Chuỗi hiện tại:"', () => {
   const s = buildAnalystContext(richHistory(), opts);
   assert.match(s, /^Tổng quan: /m);

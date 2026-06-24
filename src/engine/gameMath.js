@@ -1423,12 +1423,12 @@ export function getDailyGoalCalibration(history = [], opts = {}) {
 
   if (hitRate >= 0.85 && median >= goalValue * 1.15) {
     const suggested = roundGoalValue(Math.max(percentileOf(totals, 0.6), goalValue * 1.1), goalType);
-    if (suggested > goalValue) return { verdict: 'too-easy', goalType, current: goalValue, suggested, hitRate, median, daysCounted };
+    if (suggested > goalValue) return { verdict: 'too-easy', goalType, current: goalValue, suggested, hitRate, median, medianDisplay: roundGoalValue(median, goalType), daysCounted };
     return null;
   }
   if (hitRate <= 0.25 && median <= goalValue * 0.7) {
     const suggested = roundGoalValue(Math.min(percentileOf(totals, 0.75), goalValue * 0.9), goalType);
-    if (suggested < goalValue) return { verdict: 'too-hard', goalType, current: goalValue, suggested, hitRate, median, daysCounted };
+    if (suggested < goalValue) return { verdict: 'too-hard', goalType, current: goalValue, suggested, hitRate, median, medianDisplay: roundGoalValue(median, goalType), daysCounted };
     return null;
   }
   return null;
@@ -1479,7 +1479,7 @@ export function getLateNightQualityDrop(history = [], opts = {}) {
   const goalDrop = dayGoalRate - lateGoalRate;
   if (goalDrop < 0.2 || lateGoalRate > 0.55) return null;
 
-  return { lateGoalRate, dayGoalRate, goalDrop, lateAttempts: late.attempts, lateStartHour: lateStart };
+  return { lateGoalRate, dayGoalRate, goalDrop, lateAttempts: late.attempts, lateGoalTotal: late.goalTotal, dayGoalTotal: day.goalTotal, lateStartHour: lateStart };
 }
 
 function getHistoryXP(entry) {

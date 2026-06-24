@@ -8,6 +8,7 @@
 
 export const CATALOG = [
   { id: 'overview', question: 'Tổng quan tập trung của mình tới giờ thế nào?' },
+  { id: 'portrait', question: 'Nhìn chung mình là kiểu người tập trung thế nào?' },
   { id: 'goalRate', question: 'Tỉ lệ đạt mục tiêu của mình ra sao?' },
   { id: 'todayPace', question: 'Hôm nay mình đang đi đúng nhịp chưa?' },
   { id: 'goldenHour', question: 'Giờ vàng của mình là khung nào?' },
@@ -17,6 +18,7 @@ export const CATALOG = [
   { id: 'abandon', question: 'Mình hay bỏ phiên giữa chừng vào lúc nào?' },
   { id: 'lateNight', question: 'Làm khuya thì chất lượng phiên của mình thế nào?' },
   { id: 'momentum', question: 'Tuần này so với tuần trước mình thế nào?' },
+  { id: 'longTrend', question: 'Mấy tuần nay xu hướng tập trung của mình ra sao?' },
   { id: 'weekday', question: 'Ngày nào trong tuần mình làm năng suất nhất?' },
   { id: 'category', question: 'Mình dành nhiều thời gian cho loại việc nào nhất?' },
   { id: 'neglect', question: 'Có loại việc nào mình đang bỏ bê không?' },
@@ -34,6 +36,8 @@ export const STRONG_SIGNALS = new Set(['abandon', 'lateNight', 'goalCalibration'
 // Quan hệ "nối tiếp chủ đề": nếu vừa hỏi X thì các id sau là gợi ý tiếp hợp lý.
 export const RELATED = {
   overview: [],
+  portrait: ['goldenHour', 'idealLength', 'category', 'overview'],
+  longTrend: ['momentum', 'overview'],
   goalRate: ['overview', 'goldenHour', 'idealLength', 'category'],
   todayPace: ['overview', 'streak', 'bestWindow', 'goalCalibration'],
   goldenHour: ['todayPace', 'bestWindow', 'lateNight', 'idealLength', 'nextSession'],
@@ -42,7 +46,7 @@ export const RELATED = {
   deepWork: ['idealLength', 'goldenHour'],
   abandon: ['idealLength', 'lateNight', 'todayPace'],
   lateNight: ['goldenHour', 'abandon', 'bestWindow'],
-  momentum: ['overview', 'weekday', 'streak', 'consistency'],
+  momentum: ['overview', 'weekday', 'streak', 'consistency', 'longTrend'],
   weekday: ['momentum', 'streak'],
   category: ['overview', 'neglect', 'goalRate', 'notesFollowup'],
   neglect: ['category', 'overview'],
@@ -63,6 +67,8 @@ export const KEYWORD_MAP = [
   ['deepWork', ['phien sau', '45 phut', 'tap trung sau', 'deep']],
   ['todayPace', ['hom nay', 'dung nhip', 'nhip hom nay', 'tien do hom nay']],
   ['streak', ['chuoi', 'streak', 'giu chuoi']],
+  ['portrait', ['kieu nguoi', 'nhin chung minh', 'minh la nguoi', 'diem manh', 'hieu minh']],
+  ['longTrend', ['may tuan nay', 'dao nay', 'xu huong dai', 'thang truoc', 'dang len khong']],
   ['momentum', ['tuan nay', 'tuan truoc', 'so voi tuan', 'xu huong']],
   ['weekday', ['ngay nao', 'thu may', 'nang suat nhat', 'ngay trong tuan']],
   ['goalCalibration', ['muc tieu ngay', 'muc tieu moi ngay', 'muc tieu hop ly', 'dat muc tieu bao']],
@@ -99,6 +105,8 @@ export function detectSignals(contextString) {
   if (lines.some((l) => l.startsWith('đều đặn:') && !l.includes('chưa đủ'))) set.add('consistency');
   if (lineStarts('phiên sâu:')) set.add('deepWork');
   if (lineStarts('xu hướng tuần:')) set.add('momentum');
+  if (lineStarts('xu hướng dài hạn')) set.add('longTrend');
+  if (lineStarts('chân dung của bạn')) set.add('portrait');
   if (lineStarts('loại việc')) set.add('category'); // "Loại việc dành nhiều..." / "Loại việc "X":"
   if (has('hay bỏ giữa chừng vào')) set.add('abandon');
   if (has('phiên làm sau') && has('so với ban ngày')) set.add('lateNight');
@@ -122,9 +130,27 @@ export function detectTopic(text) {
   return null;
 }
 
+// Từ khoá QUÁ CHUNG: dùng cho detectTopic (match đơn) nhưng BỎ khi gom askedIds đa-ý,
+// để câu gộp nhiều ý không bị 1 từ chung kéo nhầm cả chủ đề.
+const LOOSE_KW = new Set(['the nao', 'tinh hinh', 'tong the', 'noi chung', 'muon', 'deu khong', 'note']);
+
+/** detectTopics — TẤT CẢ chủ đề một câu (đa-ý) chạm tới, BỎ từ-khoá quá chung. Mảng id. */
+export function detectTopics(text) {
+  const t = String(text ?? '').trim();
+  if (!t) return [];
+  const hay = `${t.toLowerCase()} ${stripDiacritics(t.toLowerCase())}`;
+  const ids = [];
+  for (const [id, kws] of KEYWORD_MAP) {
+    if (kws.some((k) => !LOOSE_KW.has(k) && hay.includes(k))) ids.push(id);
+  }
+  return ids;
+}
+
 // Cổng: id chỉ được gợi ý nếu tín hiệu nền có trong dữ liệu.
 export const GATE = {
   overview: () => true,
+  portrait: (g) => g.has('portrait'),
+  longTrend: (g) => g.has('longTrend'),
   goalRate: (g) => g.has('goalRate'),
   todayPace: (g) => g.has('todayPace'),
   goldenHour: (g) => g.has('goldenHour'),
@@ -151,7 +177,7 @@ const priorityBonus = (id) => 0.001 * (N - CATALOG_ORDER.indexOf(id));
  * pickSuggestions — chọn 2-3 câu hỏi gợi ý tiếp theo (tất định, không LLM).
  * @returns {string[]} danh sách câu hỏi (0..3)
  */
-export function pickSuggestions({ contextString = '', lastQuestionText = '', askedIds = [] } = {}) {
+export function pickSuggestions({ contextString = '', lastQuestionText = '', askedIds = [], limit = 3 } = {}) {
   const sig = detectSignals(contextString);
   if (sig.size === 0) return []; // chưa có dữ liệu → ẩn phần đề xuất
   const asked = new Set(askedIds || []);
@@ -173,7 +199,7 @@ export function pickSuggestions({ contextString = '', lastQuestionText = '', ask
     .map((id) => ({ id, score: scoreOf(id) }))
     .sort((a, b) => (b.score - a.score) || (CATALOG_ORDER.indexOf(a.id) - CATALOG_ORDER.indexOf(b.id)));
 
-  const chosen = candidates.slice(0, 3).map((c) => c.id);
+  const chosen = candidates.slice(0, Math.max(1, limit)).map((c) => c.id);
 
   // Dự phòng cho đủ 2-3 nếu lọc còn quá ít.
   if (chosen.length < 2) {

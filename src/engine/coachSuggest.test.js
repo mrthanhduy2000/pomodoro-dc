@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { pickSuggestions, detectTopic, detectSignals, CATALOG } from './coachSuggest.js';
+import { pickSuggestions, detectTopic, detectTopics, detectSignals, CATALOG } from './coachSuggest.js';
 
 const Q = Object.fromEntries(CATALOG.map((c) => [c.id, c.question]));
 
@@ -9,6 +9,8 @@ const Q = Object.fromEntries(CATALOG.map((c) => [c.id, c.question]));
 const RICH = [
   'Tổng quan: 42 phiên hoàn thành, ~31 giờ tập trung, 6 phiên bị huỷ. Đạt mục tiêu 61% (trên 28 phiên có đặt mục tiêu). Chuỗi hiện tại: 5 ngày.',
   'Hôm nay: đang chậm hơn nhịp thường — 1/3 phiên, tới giờ này bạn thường làm ~2 phiên (trên 9 ngày gần đây).',
+  'Chân dung của bạn: nghiêng về buổi sáng (đạt 72% trên 18 phiên có mục tiêu), hợp phiên vừa (26 phút–44 phút). Đây là đặc điểm ổn định từ lịch sử của bạn, không phải lời tiên đoán.',
+  'Xu hướng dài hạn (3 tuần có dữ liệu trong 4 tuần gần đây): đang đi lên, mỗi tuần (từ cũ đến mới): 300 phút → 400 phút → 520 phút. Đây là tương quan theo thời gian, không phải kết luận.',
   'Giờ vàng: Bạn hay đạt mục tiêu vào buổi sáng nhất — 72% (trên 18 phiên có mục tiêu).',
   'Độ dài hợp nhất: Phiên vừa (26 phút–44 phút) thường đi cùng tỉ lệ đạt mục tiêu cao nhất của bạn — 68% (trên 19 phiên).',
   'Đều đặn: Trong 28 ngày gần đây bạn có hoạt động 16 ngày (57%).',
@@ -27,7 +29,7 @@ const RICH = [
 
 test('detectSignals: bối cảnh giàu bật đủ tín hiệu chính', () => {
   const sig = detectSignals(RICH);
-  const expected = ['overview', 'goalRate', 'todayPace', 'goldenHour', 'idealLength', 'consistency', 'deepWork', 'category', 'abandon', 'lateNight', 'goalCalibration', 'weekday', 'neglect', 'bestWindow', 'streak', 'notes'];
+  const expected = ['overview', 'portrait', 'longTrend', 'goalRate', 'todayPace', 'goldenHour', 'idealLength', 'consistency', 'deepWork', 'category', 'abandon', 'lateNight', 'goalCalibration', 'weekday', 'neglect', 'bestWindow', 'streak', 'notes'];
   for (const s of expected) {
     assert.ok(sig.has(s), `thiếu tín hiệu ${s}`);
   }
@@ -40,6 +42,32 @@ test('detectTopic: khớp cả có dấu lẫn không dấu', () => {
   assert.equal(detectTopic('lam khuya the nao'), 'lateNight');
   assert.equal(detectTopic('Mình hay bỏ giữa chừng không?'), 'abandon');
   assert.equal(detectTopic(''), null);
+});
+
+test('detectTopics: câu đa-ý trả NHIỀU id; bỏ từ-khoá quá chung', () => {
+  const multi = detectTopics('giờ vàng của mình là gì và phiên dài bao lâu hợp?');
+  assert.ok(multi.includes('goldenHour'), 'cần goldenHour');
+  assert.ok(multi.includes('idealLength'), 'cần idealLength');
+  // "thế nào"/"nói chung" là từ-khoá lỏng → KHÔNG kéo id rác; chỉ overview vì trúng "tổng quan"
+  assert.deepEqual(detectTopics('tổng quan thế nào?'), ['overview']);
+});
+
+test('detectTopic: chip mới longTrend / portrait định tuyến đúng', () => {
+  assert.equal(detectTopic('mấy tuần nay xu hướng thế nào'), 'longTrend');
+  assert.equal(detectTopic('nhìn chung mình là kiểu người nào'), 'portrait');
+});
+
+test('detectSignals: bật longTrend + portrait khi bảng có 2 dòng đó', () => {
+  const sig = detectSignals(RICH);
+  assert.ok(sig.has('longTrend'));
+  assert.ok(sig.has('portrait'));
+});
+
+test('pickSuggestions: limit nới số chip (default vẫn 2..3)', () => {
+  const six = pickSuggestions({ contextString: RICH, limit: 6 });
+  assert.ok(six.length >= 2 && six.length <= 6);
+  const def = pickSuggestions({ contextString: RICH });
+  assert.ok(def.length >= 2 && def.length <= 3);
 });
 
 test('tất định: gọi 2 lần cùng input → y hệt', () => {

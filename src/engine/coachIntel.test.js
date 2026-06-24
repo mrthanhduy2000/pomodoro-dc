@@ -86,6 +86,18 @@ test('predict streak: <4 ngày-cùng-thứ → insufficient; ≥6 → có %; đ�
   assert.equal(predictStreakKeep(many, { ...base, hasSessionToday: true }).status, 'secured');
 });
 
+test('predict streak: AT-RISK khi chuỗi≥3 + chưa làm hôm nay + tới giờ này thường đã làm', () => {
+  const many = [];
+  for (let i = 0; i < 6; i += 1) many.push(s({ hour: 9, dk: `t${i}`, weekday: 4 }));
+  const base = { todayWeekday: 4, nowHour: 15, getEntryHour, getEntryWeekday, getEntryDayKey, todayKey: 'today' };
+  const atRisk = predictStreakKeep(many, { ...base, currentStreak: 5 });
+  assert.equal(atRisk.atRisk, true);
+  assert.match(atRisk.reason, /đang treo/);
+  assert.match(atRisk.reason, /Chuỗi 5 ngày/);
+  assert.equal(predictStreakKeep(many, { ...base, currentStreak: 2 }).atRisk, false); // chuỗi ngắn → không treo
+  assert.equal(predictStreakKeep(many, { ...base, currentStreak: 5, hasSessionToday: true }).status, 'secured'); // đã làm → an toàn
+});
+
 test('predict best-window: hết buổi trong ngày → none-left; còn buổi tốt → found', () => {
   const h = [];
   for (let i = 0; i < 6; i += 1) h.push(s({ hour: 20, minutes: 40, goalAchieved: true })); // buổi tối (startHour 18)

@@ -40,7 +40,7 @@ test('buildLLMChatPrompt: system hội thoại + câu hỏi cuối + lọc histo
 
 test('sanitizeLLMOutput: bỏ <think>, bỏ rỗng, cắt dài', () => {
   assert.equal(sanitizeLLMOutput('<think>nghĩ thầm</think> Xin chào.'), 'Xin chào.');
-  assert.match(sanitizeLLMOutput(''), /chưa trả lời được/);
+  assert.match(sanitizeLLMOutput(''), /chưa kịp trả lời/);
   assert.ok(sanitizeLLMOutput('a'.repeat(3000)).length <= 2200);
 });
 

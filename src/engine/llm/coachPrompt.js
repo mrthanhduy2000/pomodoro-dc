@@ -14,7 +14,7 @@ export const LLM_MODELS = {
   default: 'Qwen2.5-3B-Instruct-q4f16_1-MLC', // tải ~2.4GB, ~2.4GB VRAM (low-resource)
 };
 
-export const COACH_OFFLINE_SYSTEM = `Bạn là "AI phân tích tổng thể" — một CHUYÊN GIA PHÂN TÍCH NĂNG SUẤT chạy ngay trên máy của bạn. Vai trò DUY NHẤT: đọc bảng số liệu thật trong phần "=== DỮ LIỆU THẬT ===" và viết một bản phân tích tổng thể, chính xác, bám số, có CHIỀU SÂU của người đã theo dõi bạn lâu ngày. Bạn KHÔNG an ủi, KHÔNG động viên, KHÔNG dùng "giọng" cảm xúc (không zen, không bạn thân, không nghiêm khắc) — chỉ phân tích lạnh, rõ ràng, dựa trên số.
+export const COACH_OFFLINE_SYSTEM = `Bạn là "AI phân tích tổng thể" — một CHUYÊN GIA PHÂN TÍCH NĂNG SUẤT chạy ngay trên máy của bạn. Vai trò DUY NHẤT: đọc bảng số liệu thật trong phần "=== DỮ LIỆU THẬT ===" và viết một bản phân tích tổng thể, chính xác, bám số, có CHIỀU SÂU của người đã theo dõi bạn lâu ngày. Bạn KHÔNG an ủi, KHÔNG động viên, KHÔNG dùng "giọng" cảm xúc (không zen, không bạn thân, không nghiêm khắc) — phân tích bình tĩnh, rõ ràng, bám số, viết thành câu liền mạch như một người đã theo dõi bạn lâu — sắc nhưng không khô, không cộc.
 
 NGÔN NGỮ — BẮT BUỘC TUYỆT ĐỐI: viết 100% TIẾNG VIỆT. CẤM mọi chữ Hán/tiếng Trung, Pinyin, tiếng Anh hay ký tự nước ngoài. Đơn vị PHẢI viết bằng chữ Việt: "giờ", "phút", "phiên", "ngày", "tuần" — TUYỆT ĐỐI không dùng 小时/分钟/约/天 hay bất kỳ chữ Trung nào. Xưng "mình", gọi người dùng là "bạn".
 
@@ -26,6 +26,8 @@ NGÔN NGỮ — BẮT BUỘC TUYỆT ĐỐI: viết 100% TIẾNG VIỆT. CẤM m
 3. MỌI % PHẢI KÈM CỠ MẪU. Khi nêu một con số %, luôn kèm cụm cỡ mẫu có sẵn ngay cạnh nó trong DỮ LIỆU ("62% trên 21 phiên", "trên 8 ngày", "trên 4 tuần", "qua 5 lần"). Nếu một con số % không đi kèm cỡ mẫu thì KHÔNG được viết con số % đó.
 4. CHỈ NÓI TƯƠNG QUAN. Cấm tuyệt đối các từ: vì, nên, do, bởi, khiến, dẫn đến, làm cho, gây ra, kết quả là. Chỉ được dùng ngôn ngữ quan sát: "có vẻ", "thường", "thường đi kèm", "đi cùng", "tương quan với", "hay rơi vào", "theo thời gian". Đây là quan sát từ lịch sử, không phải kết luận nguyên nhân.
 5. GỌN, SẠCH, CÓ CHẤT. Không chép lại nguyên bảng số — phải CHẮT LỌC thành nhận định, ưu tiên tín hiệu nổi bật, bỏ tín hiệu mờ nhạt. Không markdown rườm rà, không emoji, không thuật ngữ kỹ thuật, không câu mở/kết sáo rỗng. Chất chuyên gia nằm ở việc NỐI các con số thành một câu chuyện về thói quen, không phải ở việc liệt kê.
+
+GIỌNG VĂN: bốn nhãn [1][2][3][4] là khung cho người đọc dễ theo, nhưng BÊN TRONG mỗi phần hãy viết câu liền mạch, có mạch dẫn, đừng dồn thành các mẩu số rời nối bằng dấu phẩy. Phần [1] và [2] viết thành văn xuôi tự nhiên (không gạch đầu dòng). Ở [3], mỗi gạch đầu dòng vẫn là một nét chân dung gắn ĐÚNG MỘT dòng dữ liệu kèm số (luật cũ giữ nguyên), nhưng diễn đạt như một quan sát người-hiểu-người ("Bạn có vẻ là người của buổi sáng — …"), không phải nhãn dữ liệu cộc. Mục tiêu: nối các con số thành một câu chuyện ngắn về thói quen tập trung của bạn, vẫn chính xác từng số.
 
 === CẤU TRÚC BẮT BUỘC (trả lời đúng 4 phần, giữ NGUYÊN 4 nhãn này) ===
 [1] QUAN SÁT CHÍNH:
@@ -99,6 +101,8 @@ PHONG CÁCH CHUYÊN GIA — trả lời theo MẠCH 3 nhịp, gói trong 2–5 c
   (b) ĐẶT VÀO XU HƯỚNG / CHÂN DUNG: nối con số đó với một nét đặc trưng của bạn mà bảng có (dòng "Chân dung của bạn", giờ vàng, độ dài hợp, hướng đi tuần/nhiều tuần, độ đều, loại việc hay theo đuổi…) — cho thấy mình HIỂU thói quen của bạn, không chỉ đọc một ô số rời.
   (c) MỘT lời khuyên cá nhân hoá: tối đa MỘT việc đáng thử, neo thẳng vào con số vừa nêu và đặc điểm của bạn, mở bằng "có thể thử"/"thử". Không ra lệnh, không hứa kết quả. Câu thuần tra cứu (chỉ hỏi một con số) thì được bỏ (c).
 
+CÁCH VIẾT (rất quan trọng — đây là chỗ bạn hay nghe như máy): ba nhịp (a)(b)(c) ở trên là DÀN Ý TRONG ĐẦU, KHÔNG phải khuôn để đọc ra. Đừng tách câu trả lời thành ba mệnh đề rời nối bằng dấu phẩy; hãy viết thành 2–4 câu CHẢY LIỀN như một người am hiểu đang trò chuyện với bạn — con số là cái lõi, phần còn lại là mạch dẫn quanh nó. Mở đầu đi thẳng vào con số khớp câu hỏi, rồi đặt nó vào thói quen của bạn một cách tự nhiên (cách nối được phép: "thật ra", "điều đáng chú ý là", "nhìn rộng ra thì", "so với chính bạn", "đặt cạnh…" — KHÔNG dùng từ nhân-quả). Lời khuyên cuối, nếu có, gài vào mạch như gợi ý nhẹ ("có thể thử…", "hôm nào thử…"), đừng tách thành câu mệnh lệnh khô. Ấm vừa phải, điềm tĩnh, như người hiểu bạn — KHÔNG tâng bốc, KHÔNG an ủi sáo rỗng, KHÔNG zen/triết lý. NHƯNG dù viết mượt tới đâu: mỗi con số vẫn chép ĐÚNG TỪNG CHỮ từ bảng, mỗi % vẫn KÈM cỡ mẫu ngay cạnh nó, vẫn CẤM mọi từ nhân-quả — mượt là ở CÂU CHỮ NỐI, KHÔNG phải ở số.
+
 CHỌN ĐÚNG DÒNG theo câu hỏi (đừng bốc nhầm dòng):
 - nhìn chung mình là người thế nào / điểm mạnh-yếu / hiểu mình → "Chân dung của bạn" (+ nối thêm 1 dòng nổi nhất).
 - giờ vàng / khung tập trung tốt → "Giờ vàng".
@@ -150,7 +154,7 @@ export function sanitizeLLMOutput(raw) {
   s = s.replace(/<think>[\s\S]*?<\/think>/gi, ' '); // Qwen có thể sinh reasoning
   s = s.replace(/<[^>]*>/g, ' ');
   s = s.replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
-  if (!s) return '(AI phân tích tổng thể chưa trả lời được — thử lại, hoặc bấm "Hỏi Coach").';
+  if (!s) return 'Lần này AI trên máy chưa kịp trả lời. Bạn thử lại một nhịp nhé, hoặc mở "Hỏi Coach" để hỏi trực tiếp.';
   return s.length > 2200 ? `${s.slice(0, 2197)}…` : s; // nới cho bản phân tích 3 phần (max_tokens 700)
 }
 
@@ -226,10 +230,41 @@ function extractPctSamplePairs(text) {
   const norm = (s) => String(s).replace(/,/g, '.').replace(/\.0+$/, '');
   const reA = /(\d[\d.,]*)\s*%[^\d%]{0,12}?tr\u00ean\s+(\d[\d.,]*)\s*(phi\u00ean|ng\u00e0y|tu\u1ea7n|l\u1ea7n)/giu;
   const reB = /(\d[\d.,]*)\s*(phi\u00ean|ng\u00e0y|tu\u1ea7n|l\u1ea7n)[^\d%]{0,20}?\([^)]*?(\d[\d.,]*)\s*%\)/giu;
-  const s = String(text ?? '');
+  // Chuẩn hoá HAI CHIỀU (áp cho cả answer lẫn ctx) "… phần trăm" → "%" để paraphrase chữ vẫn khớp.
+  const s = String(text ?? '').replace(/\s*phần\s*trăm/giu, '%');
   for (const m of s.matchAll(reA)) out.push(`${norm(m[1])}%|${norm(m[2])} ${m[3].toLowerCase()}`);
   for (const m of s.matchAll(reB)) out.push(`${norm(m[3])}%|${norm(m[1])} ${m[2].toLowerCase()}`);
   return out;
+}
+
+// Trích cặp PHÂN SỐ N/M (số nguyên trần, vd "11/38", "25/28"). Lookbehind/lookahead loại số
+// thập phân ("13.3" không thành "13/3") để khỏi bắt nhầm. Trả mảng "N/M" đã bỏ khoảng trắng.
+function extractFractions(text) {
+  const out = [];
+  for (const m of String(text ?? '').matchAll(/(?<!\d[.,])(\d{1,4})\s*\/\s*(\d{1,4})(?![.,]?\d)/g)) {
+    out.push(`${m[1]}/${m[2]}`);
+  }
+  return out;
+}
+
+/**
+ * findFabricatedFractions — bắt cặp PHÂN SỐ N/M model bịa (vd "phiên sâu 7/18" khi bảng ghi
+ * "4/18"). Cả N lẫn M có thể đều có trong bảng ở chỗ khác nhưng GHÉP thành phân số SAI →
+ * findFabricatedNumbers (kiểm số rời) bỏ sót. Trả mảng "N/M" có trong answer mà KHÔNG có trong
+ * context. Bảo thủ: ctx rỗng → []. Mảng rỗng = sạch.
+ */
+export function findFabricatedFractions(answer, context) {
+  const ctx = String(context ?? '');
+  if (!ctx.trim()) return [];
+  const ok = new Set(extractFractions(ctx));
+  const bad = [];
+  const seen = new Set();
+  for (const f of extractFractions(answer)) {
+    if (ok.has(f) || seen.has(f)) continue;
+    seen.add(f);
+    bad.push(f);
+  }
+  return bad;
 }
 
 /**
@@ -281,7 +316,7 @@ export function appendCorrectionTurn(prevMessages, lastAnswer, correctionNote) {
 }
 
 const FABRICATION_FALLBACK =
-  'C\u00e2u n\u00e0y m\u00ecnh ch\u01b0a \u0111\u1ee7 d\u1eef li\u1ec7u ch\u1eafc ch\u1eafn \u0111\u1ec3 tr\u1ea3 l\u1eddi b\u1eb1ng con s\u1ed1 \u2014 b\u1ea1n th\u1eed h\u1ecfi m\u1ed9t ch\u1ec9 s\u1ed1 kh\u00e1c (gi\u1edd v\u00e0ng, lo\u1ea1i vi\u1ec7c, h\u00f4m nay\u2026) nh\u00e9.';
+  'Ch\u1ed7 n\u00e0y m\u00ecnh ch\u01b0a \u0111\u1ee7 d\u1eef li\u1ec7u ch\u1eafc ch\u1eafn \u0111\u1ec3 tr\u1ea3 l\u1eddi b\u1eb1ng con s\u1ed1, n\u00ean m\u00ecnh kh\u00f4ng \u0111o\u00e1n b\u1eeba \u0111\u00e2u. B\u1ea1n th\u1eed h\u1ecfi m\u00ecnh m\u1ed9t g\u00f3c kh\u00e1c nh\u00e9 \u2014 gi\u1edd v\u00e0ng, lo\u1ea1i vi\u1ec7c b\u1ea1n hay l\u00e0m, hay nh\u1ecbp h\u00f4m nay ch\u1eb3ng h\u1ea1n.';
 
 /**
  * stripFabricatedSentences \u2014 C\u1ee8U-C\u00c2U cho CHAT (CoachChat). B\u1ecf RI\u00caNG c\u00e2u ch\u1ee9a s\u1ed1-b\u1ecba, gi\u1eef c\u00e2u
@@ -303,7 +338,7 @@ export function stripFabricatedSentences(answer, context, opts = {}) {
   const flush = () => {
     if (!buf) return;
     const core = buf.trim();
-    if (core && (findFabricatedNumbers(core, ctx).length > 0 || findMismatchedPairs(core, ctx).length > 0)) removed.push(core);
+    if (core && (findFabricatedNumbers(core, ctx).length > 0 || findMismatchedPairs(core, ctx).length > 0 || findFabricatedFractions(core, ctx).length > 0)) removed.push(core);
     else kept.push(buf);
     buf = '';
   };
@@ -327,7 +362,7 @@ export function stripFabricatedSentences(answer, context, opts = {}) {
  */
 export function scrubFabricatedLines(answer, context, opts = {}) {
   const fallback = (opts && typeof opts.fallback === 'string' && opts.fallback.trim()) ||
-    'AI tr\u00ean m\u00e1y ch\u01b0a \u0111\u1ecdc s\u1ed1 ch\u1eafc ch\u1eafn \u2014 b\u1ea1n th\u1eed l\u1ea1i, ho\u1eb7c d\u00f9ng "H\u1ecfi Coach".';
+    'L\u1ea7n n\u00e0y AI tr\u00ean m\u00e1y ch\u01b0a b\u00e1m ch\u1eafc \u0111\u01b0\u1ee3c v\u00e0o s\u1ed1 li\u1ec7u, n\u00ean m\u00ecnh t\u1ea1m d\u1eebng \u1edf \u0111\u00e2y cho an to\u00e0n. B\u1ea1n th\u1eed l\u1ea1i nh\u00e9, ho\u1eb7c m\u1edf "H\u1ecfi Coach" \u0111\u1ec3 h\u1ecfi c\u1ee5 th\u1ec3 h\u01a1n.';
   const text = String(answer ?? '');
   if (!text.trim()) return { clean: fallback, removed: [] };
   const ctx = String(context ?? '');
@@ -337,7 +372,7 @@ export function scrubFabricatedLines(answer, context, opts = {}) {
   const out = [];
   for (const line of text.split('\n')) {
     if (isLabel(line) || !line.trim()) { out.push(line); continue; } // gi\u1eef nh\u00e3n + d\u00f2ng tr\u1ed1ng
-    if (findFabricatedNumbers(line, ctx).length > 0 || findMismatchedPairs(line, ctx).length > 0) { removed.push(line.trim()); continue; }
+    if (findFabricatedNumbers(line, ctx).length > 0 || findMismatchedPairs(line, ctx).length > 0 || findFabricatedFractions(line, ctx).length > 0) { removed.push(line.trim()); continue; }
     out.push(line);
   }
   const filled = [];

@@ -25,6 +25,7 @@ const CONSISTENCY_WINDOW = 28;
 const CONSISTENCY_MIN_DAYS = 6;
 const PRED_STREAK_MIN_DAYS = 4;
 const PRED_STREAK_PCT_MIN_DAYS = 6;
+export const STREAK_AT_RISK_MIN = 3; // chuỗi ≥ ngưỡng này + hôm nay chưa làm + thường-đã-làm → "đang treo"
 const WEEKDAY_LABELS = ['Chủ nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
 const BAND_LABEL = { ngan: 'ngắn (dưới 26 phút)', vua: 'vừa (26 phút–44 phút)', sau: 'sâu (từ 45 phút)' };
 const BAND_MINUTES = { ngan: 20, vua: 35, sau: 50 };
@@ -250,6 +251,7 @@ export function predictStreakKeep(history = [], opts = {}) {
     getEntryWeekday = (e) => new Date(e?.timestamp ?? 0).getDay(),
     getEntryDayKey = null, todayKey = null, minDayKey = null,
     hasSessionToday = false, minSampleDays = PRED_STREAK_MIN_DAYS,
+    currentStreak = 0, streakAtRiskMin = STREAK_AT_RISK_MIN,
   } = opts;
   const wdLabel = todayWeekday != null ? WEEKDAY_LABELS[((todayWeekday % 7) + 7) % 7] : 'hôm nay';
   if (hasSessionToday) return { kind: 'streak-keep', status: 'secured', sampleDays: 0, weekdayLabel: wdLabel, reason: 'Hôm nay bạn đã có phiên rồi — chuỗi đang an toàn.' };
@@ -272,12 +274,20 @@ export function predictStreakKeep(history = [], opts = {}) {
   const hit = sampleDays; // mọi ngày trong map đều có ≥1 phiên
   const beforeNow = [...days.values()].filter((d) => d.earliestHour <= nowHour).length;
   const showPct = sampleDays >= PRED_STREAK_PCT_MIN_DAYS;
+  // "Đang treo": hôm nay chưa làm (đã chắc vì tới đây tức !hasSessionToday) + chuỗi đủ dài +
+  // tới giờ này phần lớn các <thứ> bạn ĐÃ có phiên → nhấn đúng mức KHẨN, VẪN 1 dòng "Giữ chuỗi".
+  const atRisk = Number.isFinite(currentStreak) && currentStreak >= streakAtRiskMin
+    && sampleDays > 0 && (beforeNow / sampleDays) >= 0.6;
+  const pctTail = showPct ? ` (~${pct(hit / sampleDays)}%)` : '';
+  const reason = atRisk
+    ? `Chuỗi ${currentStreak} ngày đang treo: gần đây ${hit}/${sampleDays} ${wdLabel} bạn đều có ít nhất một phiên${pctTail}, và tới giờ này thường đã làm rồi. Làm một phiên gọn hôm nay là gần như chắc giữ được chuỗi.`
+    : `Gần đây ${hit}/${sampleDays} ${wdLabel} bạn đều có ít nhất một phiên${pctTail}. Làm một phiên gọn hôm nay là gần như chắc giữ được chuỗi.`;
   return {
-    kind: 'streak-keep', status: 'predicted',
+    kind: 'streak-keep', status: 'predicted', atRisk,
     sampleDays, hit, beforeNow, weekdayLabel: wdLabel,
     probability: showPct ? hit / sampleDays : null,
     confidence: confidenceLabel(sampleDays),
-    reason: `Gần đây ${hit}/${sampleDays} ${wdLabel} bạn đều có ít nhất một phiên${showPct ? ` (~${pct(hit / sampleDays)}%)` : ''}. Làm một phiên gọn hôm nay là gần như chắc giữ được chuỗi.`,
+    reason,
   };
 }
 

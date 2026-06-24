@@ -8,7 +8,7 @@
 import { useState } from 'react';
 import { SparkGlyph } from './icons/Glyph';
 import { useAnalystContext } from '../hooks/useCoachContext';
-import { buildLLMPrompt, sanitizeLLMOutput, hasForeignScript, hasFabricatedNumbers, findMismatchedPairs, scrubFabricatedLines, detectWebLLMCapable, mapInitProgress, LLM_MODELS } from '../engine/llm/coachPrompt';
+import { buildLLMPrompt, sanitizeLLMOutput, hasForeignScript, hasFabricatedNumbers, findMismatchedPairs, findFabricatedFractions, scrubFabricatedLines, detectWebLLMCapable, mapInitProgress, LLM_MODELS } from '../engine/llm/coachPrompt';
 
 const GOLD = '#d9a441';
 const LOAD_TIMEOUT_MS = 300000; // 5 phút: đủ cho lần đầu tải ~2.4GB (Qwen 3B)
@@ -53,7 +53,7 @@ export default function CoachOffline(goalProps) {
       }
       if (hasForeignScript(clean)) { setStatus('error-lang'); return; }
       // Số bịa HOẶC ghép sai %↔cỡ-mẫu còn sót → CỨU-CÂU lọc-DÒNG: bỏ riêng dòng bịa, giữ khung 4 phần.
-      if (hasFabricatedNumbers(clean, ctxStr) || findMismatchedPairs(clean, ctxStr).length > 0) clean = scrubFabricatedLines(clean, ctxStr).clean;
+      if (hasFabricatedNumbers(clean, ctxStr) || findMismatchedPairs(clean, ctxStr).length > 0 || findFabricatedFractions(clean, ctxStr).length > 0) clean = scrubFabricatedLines(clean, ctxStr).clean;
       setText(clean);
       setStatus('ready');
     } catch {
@@ -103,7 +103,7 @@ export default function CoachOffline(goalProps) {
               )}
 
               {status === 'rewriting' && (
-                <p className="text-[13px]" style={{ color: 'var(--muted)' }}>Model lỡ chèn chữ nước ngoài — đang viết lại bằng tiếng Việt…</p>
+                <p className="text-[13px]" style={{ color: 'var(--muted)' }}>Vừa lỡ chen chữ nước ngoài, mình đang viết lại cho gọn bằng tiếng Việt…</p>
               )}
 
               {(status === 'generating' || status === 'ready') && (

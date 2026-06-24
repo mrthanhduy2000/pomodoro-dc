@@ -5,7 +5,7 @@ import {
   findFabricatedNumbers, hasFabricatedNumbers,
   buildCorrectionNote, appendCorrectionTurn,
   stripFabricatedSentences, scrubFabricatedLines,
-  findMismatchedPairs,
+  findMismatchedPairs, findFabricatedFractions,
 } from './coachPrompt.js';
 
 // Bảng số liệu THẬT (rút từ lịch sử mẫu ~24 giờ) làm nền đối chiếu.
@@ -171,4 +171,21 @@ test('findMismatchedPairs: GHÉP CHÉO %↔cỡ-mẫu (cả hai có thật, sai 
 test('findMismatchedPairs: ctx rỗng / answer rỗng → []', () => {
   assert.deepEqual(findMismatchedPairs('đạt 79% trên 18 phiên', ''), []);
   assert.deepEqual(findMismatchedPairs('', PAIR_CTX), []);
+});
+
+test('findMismatchedPairs: "phần trăm" viết chữ vẫn khớp/ bắt như "%"', () => {
+  assert.deepEqual(findMismatchedPairs('Học đạt 100 phần trăm trên 18 phiên.', PAIR_CTX), []);
+  assert.deepEqual(findMismatchedPairs('Buổi sáng đạt 100 phần trăm trên 38 phiên.', PAIR_CTX), ['100%|38 phiên']);
+});
+
+// ── findFabricatedFractions (phân số N/M bịa) ───────────────────────────────
+const FRAC_CTX = 'Phiên sâu: 4/18 phiên là phiên sâu. Đều đặn: 13/28 ngày gần đây có hoạt động.';
+test('findFabricatedFractions: N/M khớp bảng → []; N/M bịa → bắt', () => {
+  assert.deepEqual(findFabricatedFractions('phiên sâu 4/18', FRAC_CTX), []);
+  assert.deepEqual(findFabricatedFractions('giữ nhịp 13/28 ngày', FRAC_CTX), []);
+  assert.deepEqual(findFabricatedFractions('phiên sâu 7/18', FRAC_CTX), ['7/18']);
+});
+test('findFabricatedFractions: KHÔNG hiểu số thập phân "13.3 giờ" thành phân số; ctx rỗng → []', () => {
+  assert.deepEqual(findFabricatedFractions('Học 13.3 giờ qua 18 phiên', FRAC_CTX), []);
+  assert.deepEqual(findFabricatedFractions('bất kỳ 9/9', ''), []);
 });

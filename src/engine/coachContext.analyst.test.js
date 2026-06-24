@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { buildAnalystContext } from './coachContext.js';
+import { buildAnalystContext, capContextLines, COACH_MAX_CONTEXT_LINES } from './coachContext.js';
 
 // Getter tĩnh để test thuần (không Date, không model). Mỗi entry mang sẵn hour/weekday/dk/dn/wk.
 const opts = {
@@ -115,6 +115,42 @@ test('CHÂN DUNG: có dòng "Chân dung của bạn" tổng hợp đặc điểm
   const portraitLine = s.split('\n').find((l) => l.startsWith('Chân dung của bạn:'));
   assert.match(portraitLine, SAMPLE_RE); // % trong dòng phải kèm cỡ mẫu
   assert.match(portraitLine, /không phải lời tiên đoán/);
+});
+
+test('CUỐI TUẦN vs TRONG TUẦN: hiện dòng khi chênh đáng kể, % kèm cỡ mẫu, không nhân-quả', () => {
+  const h = [];
+  for (let i = 0; i < 5; i += 1) h.push({ hour: 9, minutes: 40, completed: true, goalAchieved: true, weekday: 6, dk: `we${i}`, dn: 160 + i, wk: 'W2' });
+  for (let i = 0; i < 8; i += 1) h.push({ hour: 9, minutes: 40, completed: true, goalAchieved: i < 4, weekday: 3, dk: `wd${i}`, dn: 170 + i, wk: 'W2' });
+  const s = buildAnalystContext(h, opts);
+  assert.match(s, /^Cuối tuần so với trong tuần: /m);
+  const line = s.split('\n').find((l) => l.startsWith('Cuối tuần so với trong tuần:'));
+  assert.match(line, SAMPLE_RE);
+  assert.match(line, /Thứ Bảy và Chủ nhật/);
+});
+
+test('PHỤC HỒI sau ngày nghỉ: hiện dòng khi đủ gián đoạn, dạng N/M lần', () => {
+  const days = [180, 181, 183, 184, 186, 187, 189, 190, 192, 193];
+  const h = days.map((d) => ({ hour: 9, minutes: 30, completed: true, goalAchieved: true, weekday: 1, dk: `cb${d}`, dn: d, wk: 'W2' }));
+  const s = buildAnalystContext(h, opts); // opts.nowDayNumber=200, getEntryDayNumber=(e)=>e.dn
+  assert.match(s, /^Phục hồi sau ngày nghỉ: \d+\/\d+ lần/m);
+});
+
+test('CAP: cắt theo ƯU TIÊN — giữ bắt buộc + STRONG, bỏ "Ghi chú" trước, không vượt cap', () => {
+  const many = [
+    'Tổng quan: a', 'Chân dung của bạn: b', 'Hôm nay: c',
+    'Giờ vàng: d', 'Độ dài hợp nhất: e', 'Đều đặn: f', 'Phiên sâu: g',
+    'Xu hướng tuần: h', 'Xu hướng dài hạn: i', 'Loại việc dành nhiều thời gian nhất là "X": j',
+    'Loại việc "Y": k', 'Hay bỏ giữa chừng vào l', 'Tỉ lệ đạt mục tiêu của phiên làm sau 22 giờ đêm: m',
+    'Mục tiêu ngày n', 'Ngày năng suất nhất: o', 'Cuối tuần so với trong tuần: p',
+    'Loại bị bỏ bê: q', 'Phục hồi sau ngày nghỉ: r', 'Khung giờ vàng còn lại hôm nay: s',
+    'Giữ chuỗi: t', 'Ghi chú gần đây: u',
+  ];
+  const capped = capContextLines(many);
+  assert.ok(capped.length <= COACH_MAX_CONTEXT_LINES, `vượt cap: ${capped.length}`);
+  for (const p of ['Tổng quan', 'Chân dung của bạn', 'Hôm nay', 'Hay bỏ giữa chừng', 'Mục tiêu ngày', 'Loại bị bỏ bê']) {
+    assert.ok(capped.some((l) => l.startsWith(p)), `mất dòng bắt buộc/STRONG: ${p}`);
+  }
+  assert.ok(!capped.some((l) => l.startsWith('Ghi chú')), 'Ghi chú phải bị cắt đầu tiên');
 });
 
 test('LOẠI VIỆC: tách dòng, tên loại trong ngoặc kép, KHÔNG dùng dấu "|" (chống đọc nhầm nhãn)', () => {

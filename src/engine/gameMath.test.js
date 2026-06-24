@@ -15,6 +15,8 @@ import {
   getNeglectedCategory,
   getDailyGoalCalibration,
   getLateNightQualityDrop,
+  getWeekendVsWeekdayContrast,
+  getComebackRate,
   // Bản Cập Nhật Cộng Hưởng
   calculateRewards,
   softcapBranchXP,
@@ -399,6 +401,48 @@ test('goal calibration: medianDisplay làm tròn (phút→bội 5; phiên→nguy
   const r2 = getDailyGoalCalibration(h2, { goalType: 'sessions', goalValue: 3, getEntryDayKey, todayKey: '2026-06-20' });
   assert.ok(r2);
   assert.equal(r2.medianDisplay, Math.round(r2.median));
+});
+
+// ── getWeekendVsWeekdayContrast ───────────────────────────────────────────
+const wdOf = (e) => e.weekday;
+test('weekend vs weekday: cuối tuần đạt cao hơn ≥15đ% → basis goal', () => {
+  const h = [];
+  for (let i = 0; i < 5; i += 1) h.push({ weekday: 6, minutes: 30, completed: true, goalAchieved: i < 4 }); // T7: 80%
+  for (let i = 0; i < 10; i += 1) h.push({ weekday: 3, minutes: 30, completed: true, goalAchieved: i < 5 }); // T4: 50%
+  const r = getWeekendVsWeekdayContrast(h, { getEntryWeekday: wdOf });
+  assert.ok(r); assert.equal(r.basis, 'goal'); assert.equal(r.stronger, 'weekend');
+  assert.equal(r.weekendN, 5); assert.equal(r.weekdayN, 10);
+});
+test('weekend vs weekday: chênh tỉ-lệ nhỏ nhưng phút/phiên ≥20% → basis minutes', () => {
+  const h = [];
+  for (let i = 0; i < 5; i += 1) h.push({ weekday: 0, minutes: 60, completed: true, goalAchieved: i < 3 }); // CN 60'
+  for (let i = 0; i < 5; i += 1) h.push({ weekday: 2, minutes: 30, completed: true, goalAchieved: i < 3 }); // T3 30', cùng 60%
+  const r = getWeekendVsWeekdayContrast(h, { getEntryWeekday: wdOf });
+  assert.ok(r); assert.equal(r.basis, 'minutes'); assert.equal(r.stronger, 'weekend');
+});
+test('weekend vs weekday: một nhóm <4 phiên → null; thiếu getter → null', () => {
+  const tiny = [{ weekday: 6, minutes: 30, completed: true, goalAchieved: true }, { weekday: 3, minutes: 30, completed: true, goalAchieved: true }];
+  assert.equal(getWeekendVsWeekdayContrast(tiny, { getEntryWeekday: wdOf }), null);
+  assert.equal(getWeekendVsWeekdayContrast([], {}), null);
+});
+
+// ── getComebackRate ───────────────────────────────────────────────────────
+const dnOf = (e) => e.dn;
+test('comeback: 5/7 lần quay lại sau 1 ngày nghỉ', () => {
+  const days = [1, 2, 4, 5, 7, 8, 10, 11, 13, 14, 16, 17, 22];
+  const h = days.map((d) => ({ dn: d, minutes: 30, completed: true }));
+  const r = getComebackRate(h, { getEntryDayNumber: dnOf, nowDayNumber: 25, windowDays: 40 });
+  assert.ok(r); assert.equal(r.gaps, 7); assert.equal(r.comebacks, 5);
+});
+test('comeback: <4 lần gián đoạn → null; thiếu getter → null', () => {
+  const few = [1, 2, 4].map((d) => ({ dn: d, minutes: 30, completed: true }));
+  assert.equal(getComebackRate(few, { getEntryDayNumber: dnOf, nowDayNumber: 10, windowDays: 40 }), null);
+  assert.equal(getComebackRate([{ dn: 1 }], { nowDayNumber: 5 }), null);
+});
+test('comeback: nghỉ ≥2 ngày KHÔNG tính là quay-lại (comebacks=0)', () => {
+  const days = [1, 4, 7, 10, 13].map((d) => ({ dn: d, minutes: 30, completed: true }));
+  const r = getComebackRate(days, { getEntryDayNumber: dnOf, nowDayNumber: 20, windowDays: 40 });
+  assert.ok(r); assert.equal(r.comebacks, 0);
 });
 
 // ── getMultiWeekTrend: xu hướng dài hạn nhiều tuần (getter tĩnh e.wk, không Date) ──

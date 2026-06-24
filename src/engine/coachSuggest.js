@@ -20,11 +20,13 @@ export const CATALOG = [
   { id: 'momentum', question: 'Tuần này so với tuần trước mình thế nào?' },
   { id: 'longTrend', question: 'Mấy tuần nay xu hướng tập trung của mình ra sao?' },
   { id: 'weekday', question: 'Ngày nào trong tuần mình làm năng suất nhất?' },
+  { id: 'weekendVsWeekday', question: 'Cuối tuần với trong tuần mình khác nhau thế nào?' },
   { id: 'category', question: 'Mình dành nhiều thời gian cho loại việc nào nhất?' },
   { id: 'neglect', question: 'Có loại việc nào mình đang bỏ bê không?' },
   { id: 'goalCalibration', question: 'Mục tiêu mỗi ngày của mình có hợp lý không?' },
   { id: 'streak', question: 'Hôm nay mình có giữ được chuỗi không?' },
   { id: 'consistency', question: 'Mình có đều đặn không, hay làm theo đợt?' },
+  { id: 'comeback', question: 'Sau ngày nghỉ mình có quay lại đều không?' },
   { id: 'notesFollowup', question: "Mấy việc mình ghi 'định làm tiếp' thì sao rồi?" },
   { id: 'nextSession', question: 'Giờ này mình nên bắt đầu một phiên thế nào?' },
 ];
@@ -47,12 +49,14 @@ export const RELATED = {
   abandon: ['idealLength', 'lateNight', 'todayPace'],
   lateNight: ['goldenHour', 'abandon', 'bestWindow'],
   momentum: ['overview', 'weekday', 'streak', 'consistency', 'longTrend'],
-  weekday: ['momentum', 'streak'],
+  weekday: ['momentum', 'streak', 'weekendVsWeekday'],
+  weekendVsWeekday: ['weekday', 'momentum', 'overview'],
   category: ['overview', 'neglect', 'goalRate', 'notesFollowup'],
   neglect: ['category', 'overview'],
   goalCalibration: ['todayPace', 'overview', 'goalRate'],
-  streak: ['todayPace', 'weekday', 'momentum'],
-  consistency: ['momentum', 'streak', 'overview'],
+  streak: ['todayPace', 'weekday', 'momentum', 'comeback'],
+  consistency: ['momentum', 'streak', 'overview', 'comeback'],
+  comeback: ['streak', 'consistency', 'overview'],
   notesFollowup: ['category', 'neglect', 'todayPace'],
   nextSession: ['goldenHour', 'bestWindow', 'idealLength', 'todayPace'],
 };
@@ -70,12 +74,14 @@ export const KEYWORD_MAP = [
   ['portrait', ['kieu nguoi', 'nhin chung minh', 'minh la nguoi', 'diem manh', 'hieu minh']],
   ['longTrend', ['may tuan nay', 'dao nay', 'xu huong dai', 'thang truoc', 'dang len khong']],
   ['momentum', ['tuan nay', 'tuan truoc', 'so voi tuan', 'xu huong']],
+  ['weekendVsWeekday', ['cuoi tuan', 'weekend', 't7 cn', 'thu bay', 'cuoi tuan vs']],
   ['weekday', ['ngay nao', 'thu may', 'nang suat nhat', 'ngay trong tuan']],
   ['goalCalibration', ['muc tieu ngay', 'muc tieu moi ngay', 'muc tieu hop ly', 'dat muc tieu bao']],
   ['goalRate', ['ti le dat', 'dat muc tieu', 'ty le hoan thanh']],
   ['consistency', ['deu dan', 'theo dot', 'deu khong', 'lien tuc']],
   ['category', ['loai viec', 'loai nao', 'danh thoi gian', 'nhom viec', 'danh muc']],
   ['neglect', ['bo be', 'lau chua', 'bo quen']],
+  ['comeback', ['quay lai', 'sau ngay nghi', 'phuc hoi', 'nghi roi lam lai', 'gian doan']],
   ['notesFollowup', ['dinh lam tiep', 'ghi chu', 'note', 'viec con do']],
   ['nextSession', ['nen bat dau', 'phien the nao', 'bat dau phien']],
   ['overview', ['tong quan', 'the nao', 'tinh hinh', 'tong the', 'noi chung']],
@@ -112,6 +118,8 @@ export function detectSignals(contextString) {
   if (has('phiên làm sau') && has('so với ban ngày')) set.add('lateNight');
   if (has('mục tiêu ngày') && (has('hơi quá sức') || has('hơi nhẹ'))) set.add('goalCalibration');
   if (has('ngày năng suất nhất:')) set.add('weekday');
+  if (has('cuối tuần so với trong tuần')) set.add('weekendVsWeekday');
+  if (has('phục hồi sau ngày nghỉ')) set.add('comeback');
   if (has('loại bị bỏ bê:')) set.add('neglect');
   if (has('khung giờ vàng còn lại hôm nay:')) set.add('bestWindow');
   if (has('giữ chuỗi:') || set.has('todayPace')) set.add('streak');
@@ -161,6 +169,8 @@ export const GATE = {
   lateNight: (g) => g.has('lateNight'),
   momentum: (g) => g.has('momentum'),
   weekday: (g) => g.has('weekday'),
+  weekendVsWeekday: (g) => g.has('weekendVsWeekday'),
+  comeback: (g) => g.has('comeback'),
   category: (g) => g.has('category'),
   neglect: (g) => g.has('neglect'),
   goalCalibration: (g) => g.has('goalCalibration'),

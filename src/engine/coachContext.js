@@ -12,6 +12,8 @@ import {
   getLateNightQualityDrop,
   getTodayPaceInsight,
   getMultiWeekTrend,
+  getWeekendVsWeekdayContrast,
+  getComebackRate,
   isCancelledHistoryEntry,
 } from './gameMath';
 import { buildFocusProfile, generatePredictions } from './coachIntel';
@@ -26,6 +28,30 @@ function stripHtml(value) {
 }
 
 const pctOf = (x) => Math.round((Number(x) || 0) * 100);
+
+export const COACH_MAX_CONTEXT_LINES = 18; // bảng quá dài → Qwen 3B dễ loạn; cắt theo ƯU TIÊN
+
+// Ưu tiên giữ dòng (số NHỎ = giữ trước): bắt buộc → tín hiệu mạnh/đúng-lúc → phân tích lõi →
+// phụ → ghi chú (cắt đầu tiên). Cắt theo ưu tiên chứ KHÔNG slice mù cuối mảng.
+function linePriority(line) {
+  const l = String(line);
+  const s = (p) => l.startsWith(p);
+  if (s('Tổng quan') || s('Chân dung của bạn') || s('Hôm nay')) return 0;
+  if (s('Hay bỏ giữa chừng') || s('Tỉ lệ đạt mục tiêu của phiên làm sau') || s('Mục tiêu ngày')
+    || s('Loại bị bỏ bê') || s('Giữ chuỗi') || s('Khung giờ vàng còn lại')) return 1;
+  if (s('Giờ vàng') || s('Độ dài hợp nhất') || s('Xu hướng dài hạn') || s('Loại việc')) return 2;
+  if (s('Ghi chú gần đây')) return 4;
+  return 3; // Xu hướng tuần · Phiên sâu · Đều đặn · Ngày năng suất · Cuối tuần · Phục hồi…
+}
+export function capContextLines(lines, cap = COACH_MAX_CONTEXT_LINES) {
+  if (lines.length <= cap) return lines;
+  const keep = new Set(
+    lines.map((text, i) => ({ i, p: linePriority(text) }))
+      .sort((a, b) => (a.p - b.p) || (a.i - b.i))
+      .slice(0, cap).map((t) => t.i),
+  );
+  return lines.filter((_, i) => keep.has(i)); // giữ THỨ TỰ gốc của các dòng sống sót
+}
 
 /**
  * buildAnalystContext — bản tóm tắt số liệu GIÀU cho AI Qwen trên máy (AI phân tích tổng thể +
@@ -161,9 +187,25 @@ export function buildAnalystContext(history = [], opts = {}) {
     if (wd) lines.push(`Ngày năng suất nhất: ${wd.label} — ${wd.count} phiên (~${pctOf(wd.share)}%).`);
   }
 
+  // [Cuối tuần vs trong tuần] — chỉ hiện khi chênh đáng kể (gác chặt, tránh nhồi bảng)
+  if (typeof opts.getEntryWeekday === 'function') {
+    const wewd = getWeekendVsWeekdayContrast(list, { getEntryWeekday: opts.getEntryWeekday });
+    if (wewd && wewd.basis === 'goal') {
+      lines.push(`Cuối tuần so với trong tuần: tỉ lệ đạt mục tiêu cuối tuần (Thứ Bảy và Chủ nhật) ${pctOf(wewd.weekendGoalRate)}% trên ${wewd.weekendN} phiên, trong tuần ${pctOf(wewd.weekdayGoalRate)}% trên ${wewd.weekdayN} phiên. Đây là tương quan, không phải kết luận.`);
+    } else if (wewd) {
+      lines.push(`Cuối tuần so với trong tuần: trung bình mỗi phiên cuối tuần (Thứ Bảy và Chủ nhật) ${wewd.weekendAvgMin} phút qua ${wewd.weekendN} phiên, trong tuần ${wewd.weekdayAvgMin} phút qua ${wewd.weekdayN} phiên. Đây là tương quan, không phải kết luận.`);
+    }
+  }
+
   if (typeof opts.getEntryDayNumber === 'function' && Number.isFinite(opts.nowDayNumber)) {
     const neg = getNeglectedCategory(list, { nowDayNumber: opts.nowDayNumber, getEntryDayNumber: opts.getEntryDayNumber, activeCategoryIds: opts.activeCategoryIds });
     if (neg) lines.push(`Loại bị bỏ bê: "${neg.label}" — ${neg.daysSince} ngày chưa làm (từng chiếm ~${pctOf(neg.share)}% thời gian, ${neg.sessions} phiên).`);
+  }
+
+  // [Phục hồi sau ngày nghỉ] — tỉ lệ quay lại ngay sau 1 ngày trống (gác ≥4 lần)
+  if (typeof opts.getEntryDayNumber === 'function' && Number.isFinite(opts.nowDayNumber)) {
+    const cb = getComebackRate(list, { nowDayNumber: opts.nowDayNumber, getEntryDayNumber: opts.getEntryDayNumber });
+    if (cb) lines.push(`Phục hồi sau ngày nghỉ: ${cb.comebacks}/${cb.gaps} lần (${pctOf(cb.rate)}%, qua ${cb.gaps} lần nghỉ 1 ngày trong ${cb.windowDays} ngày gần đây). Đây là tương quan, không phải kết luận.`);
   }
 
   // [Dự đoán có thời điểm]
@@ -187,5 +229,5 @@ export function buildAnalystContext(history = [], opts = {}) {
   }
   if (notes.length) lines.push(`Ghi chú gần đây: ${notes.map((n) => `“${n.slice(0, 140)}”`).join(' | ')}`);
 
-  return lines.join('\n');
+  return capContextLines(lines).join('\n');
 }

@@ -1482,6 +1482,79 @@ export function getLateNightQualityDrop(history = [], opts = {}) {
   return { lateGoalRate, dayGoalRate, goalDrop, lateAttempts: late.attempts, lateGoalTotal: late.goalTotal, dayGoalTotal: day.goalTotal, lateStartHour: lateStart };
 }
 
+export const WEEKEND_MIN_PER_GROUP = 4;
+export const WEEKEND_MIN_GOALPCT_DIFF = 0.15; // chênh ≥15 điểm % tỉ lệ đạt mục tiêu
+export const WEEKEND_MIN_MINUTES_DIFF = 0.20; // hoặc chênh ≥20% phút/phiên
+
+/**
+ * getWeekendVsWeekdayContrast — so CUỐI TUẦN (T7=6, CN=0) với TRONG TUẦN (T2..T6) của CHÍNH
+ * bạn. THUẦN: nhận getEntryWeekday (0=CN..6=T7) qua opts. Gác: mỗi nhóm ≥minPerGroup phiên;
+ * chỉ trả khi chênh tỉ-lệ-đạt ≥15 điểm% (trục goal, cần cả 2 nhóm đủ phiên CÓ mục tiêu) HOẶC
+ * chênh phút/phiên ≥20% (trục minutes). Null nếu thiếu getter / thiếu mẫu / không nổi bật.
+ */
+export function getWeekendVsWeekdayContrast(history = [], opts = {}) {
+  const {
+    getEntryWeekday,
+    minPerGroup = WEEKEND_MIN_PER_GROUP,
+    minGoalDiff = WEEKEND_MIN_GOALPCT_DIFF,
+    minMinutesDiff = WEEKEND_MIN_MINUTES_DIFF,
+  } = opts;
+  if (typeof getEntryWeekday !== 'function') return null;
+  const isWeekend = (wd) => { const d = (((Math.floor(Number(wd) || 0)) % 7) + 7) % 7; return d === 0 || d === 6; };
+  const we = { n: 0, mins: 0, goalTotal: 0, goalHit: 0 };
+  const wk = { n: 0, mins: 0, goalTotal: 0, goalHit: 0 };
+  for (const e of coachCompletedSessions(history)) {
+    const g = isWeekend(getEntryWeekday(e)) ? we : wk;
+    g.n += 1; g.mins += e.minutes;
+    if (typeof e.goalAchieved === 'boolean') { g.goalTotal += 1; if (e.goalAchieved === true) g.goalHit += 1; }
+  }
+  if (we.n < minPerGroup || wk.n < minPerGroup) return null;
+  const weAvg = we.mins / we.n; const wkAvg = wk.mins / wk.n;
+  if (we.goalTotal >= minPerGroup && wk.goalTotal >= minPerGroup) {
+    const weR = we.goalHit / we.goalTotal; const wkR = wk.goalHit / wk.goalTotal;
+    if (Math.abs(weR - wkR) >= minGoalDiff) {
+      return { stronger: weR >= wkR ? 'weekend' : 'weekday', weekendGoalRate: weR, weekdayGoalRate: wkR,
+        weekendN: we.goalTotal, weekdayN: wk.goalTotal, weekendAvgMin: Math.round(weAvg), weekdayAvgMin: Math.round(wkAvg), basis: 'goal' };
+    }
+  }
+  const base = Math.max(weAvg, wkAvg);
+  if (base > 0 && Math.abs(weAvg - wkAvg) / base >= minMinutesDiff) {
+    return { stronger: weAvg >= wkAvg ? 'weekend' : 'weekday', weekendGoalRate: null, weekdayGoalRate: null,
+      weekendN: we.n, weekdayN: wk.n, weekendAvgMin: Math.round(weAvg), weekdayAvgMin: Math.round(wkAvg), basis: 'minutes' };
+  }
+  return null;
+}
+
+export const COMEBACK_WINDOW_DAYS = 28;
+export const COMEBACK_MIN_GAPS = 4; // ≥4 lần "nghỉ đúng 1 ngày" mới đủ tự tin
+
+/**
+ * getComebackRate — sau khi NGHỈ ĐÚNG 1 NGÀY (ngày D có phiên, D+1 trống), bạn có quay lại
+ * NGAY ngày kế (D+2) không? THUẦN: nhận getEntryDayNumber + nowDayNumber qua opts. Chỉ xét
+ * trong windowDays gần đây; chỉ tính cặp mà D+2 ≤ nowDayNumber (không tính ngày chưa tới).
+ * Gác ≥minGaps lần gián đoạn. Null nếu thiếu getter / thiếu mẫu.
+ */
+export function getComebackRate(history = [], opts = {}) {
+  const { nowDayNumber, getEntryDayNumber, windowDays = COMEBACK_WINDOW_DAYS, minGaps = COMEBACK_MIN_GAPS } = opts;
+  if (typeof getEntryDayNumber !== 'function' || !Number.isFinite(nowDayNumber)) return null;
+  const active = new Set();
+  for (const e of coachCompletedSessions(history)) {
+    const d = getEntryDayNumber(e);
+    if (!Number.isFinite(d)) continue;
+    if (nowDayNumber - d < 0 || nowDayNumber - d >= windowDays) continue;
+    active.add(d);
+  }
+  if (active.size < 3) return null;
+  let gaps = 0; let comebacks = 0;
+  for (const d of active) {
+    if (active.has(d + 1)) continue; // không phải khởi đầu gap 1-ngày
+    if (active.has(d + 2)) { gaps += 1; comebacks += 1; continue; } // nghỉ 1 ngày rồi quay lại
+    if (d + 2 <= nowDayNumber) gaps += 1; // nghỉ 1 ngày, CHƯA quay lại (D+2 đã tới mà trống)
+  }
+  if (gaps < minGaps) return null;
+  return { comebacks, gaps, rate: comebacks / gaps, windowDays };
+}
+
 function getHistoryXP(entry) {
   return entry?.xpEarned ?? entry?.epEarned ?? 0;
 }

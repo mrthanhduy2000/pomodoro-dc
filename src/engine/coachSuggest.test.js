@@ -21,6 +21,8 @@ const RICH = [
   'Tỉ lệ đạt mục tiêu của phiên làm sau 22 giờ đêm: 30% (khuya trên 6 phiên có mục tiêu), so với ban ngày 70%. Đây là tương quan, không phải kết luận.',
   'Mục tiêu ngày hơi quá sức: đạt 20% trên 15 ngày, trung vị 2 phiên/ngày (thử chỉnh về 2 phiên/ngày).',
   'Ngày năng suất nhất: Thứ Tư — 9 phiên (~21%).',
+  'Cuối tuần so với trong tuần: tỉ lệ đạt mục tiêu cuối tuần (Thứ Bảy và Chủ nhật) 75% trên 8 phiên, trong tuần 55% trên 20 phiên. Đây là tương quan, không phải kết luận.',
+  'Phục hồi sau ngày nghỉ: 5/7 lần (71%, qua 7 lần nghỉ 1 ngày trong 28 ngày gần đây). Đây là tương quan, không phải kết luận.',
   'Loại bị bỏ bê: "Đọc sách" — 12 ngày chưa làm (từng chiếm ~18% thời gian, 5 phiên).',
   'Khung giờ vàng còn lại hôm nay: Việc khó hôm nay hợp để dành cho buổi chiều — khung này tỉ lệ đạt mục tiêu của bạn cao (66%, trên 12 phiên).',
   'Giữ chuỗi: Gần đây 6/7 Thứ Tư bạn đều có ít nhất một phiên (~86%).',
@@ -29,7 +31,7 @@ const RICH = [
 
 test('detectSignals: bối cảnh giàu bật đủ tín hiệu chính', () => {
   const sig = detectSignals(RICH);
-  const expected = ['overview', 'portrait', 'longTrend', 'goalRate', 'todayPace', 'goldenHour', 'idealLength', 'consistency', 'deepWork', 'category', 'abandon', 'lateNight', 'goalCalibration', 'weekday', 'neglect', 'bestWindow', 'streak', 'notes'];
+  const expected = ['overview', 'portrait', 'longTrend', 'goalRate', 'todayPace', 'goldenHour', 'idealLength', 'consistency', 'deepWork', 'category', 'abandon', 'lateNight', 'goalCalibration', 'weekday', 'weekendVsWeekday', 'comeback', 'neglect', 'bestWindow', 'streak', 'notes'];
   for (const s of expected) {
     assert.ok(sig.has(s), `thiếu tín hiệu ${s}`);
   }
@@ -55,6 +57,11 @@ test('detectTopics: câu đa-ý trả NHIỀU id; bỏ từ-khoá quá chung', (
 test('detectTopic: chip mới longTrend / portrait định tuyến đúng', () => {
   assert.equal(detectTopic('mấy tuần nay xu hướng thế nào'), 'longTrend');
   assert.equal(detectTopic('nhìn chung mình là kiểu người nào'), 'portrait');
+});
+
+test('detectTopic: chip mới weekendVsWeekday / comeback định tuyến đúng', () => {
+  assert.equal(detectTopic('cuối tuần mình khác trong tuần không'), 'weekendVsWeekday');
+  assert.equal(detectTopic('sau ngày nghỉ mình có quay lại không'), 'comeback');
 });
 
 test('detectSignals: bật longTrend + portrait khi bảng có 2 dòng đó', () => {

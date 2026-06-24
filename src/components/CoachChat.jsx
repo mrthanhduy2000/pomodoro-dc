@@ -9,7 +9,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { SparkGlyph } from './icons/Glyph';
 import { useAnalystContext } from '../hooks/useCoachContext';
-import { buildLLMChatPrompt, sanitizeLLMOutput, hasForeignScript, hasFabricatedNumbers, findFabricatedNumbers, findMismatchedPairs, buildCorrectionNote, appendCorrectionTurn, stripFabricatedSentences, detectWebLLMCapable, mapInitProgress, LLM_MODELS } from '../engine/llm/coachPrompt';
+import { buildLLMChatPrompt, sanitizeLLMOutput, hasForeignScript, hasFabricatedNumbers, findFabricatedNumbers, findMismatchedPairs, findFabricatedFractions, buildCorrectionNote, appendCorrectionTurn, stripFabricatedSentences, detectWebLLMCapable, mapInitProgress, LLM_MODELS } from '../engine/llm/coachPrompt';
 import { pickSuggestions, detectTopics } from '../engine/coachSuggest';
 
 const GOLD = '#d9a441';
@@ -137,9 +137,9 @@ export default function CoachChat(goalProps) {
       }
       // Tuyến phòng thủ chót — KHÔNG nới guard:
       if (hasForeignScript(clean)) {
-        clean = 'AI trên máy lỡ trả lời lẫn chữ nước ngoài — bạn thử hỏi lại nhé.';
-      } else if (hasFabricatedNumbers(clean, ctxStr) || findMismatchedPairs(clean, ctxStr).length > 0) {
-        // VẪN bịa số HOẶC ghép sai %↔cỡ-mẫu → CỨU-CÂU: bỏ riêng câu bịa, giữ câu sạch.
+        clean = 'Lần này AI trên máy lỡ chen vài chữ nước ngoài (model nhỏ thi thoảng vậy). Bạn hỏi lại giúp mình một câu nhé, lần sau thường ổn.';
+      } else if (hasFabricatedNumbers(clean, ctxStr) || findMismatchedPairs(clean, ctxStr).length > 0 || findFabricatedFractions(clean, ctxStr).length > 0) {
+        // VẪN bịa số / ghép sai %↔cỡ-mẫu / phân số bịa → CỨU-CÂU: bỏ riêng câu bịa, giữ câu sạch.
         clean = stripFabricatedSentences(clean, ctxStr).clean;
       }
       updateLastAssistant(clean);
@@ -170,7 +170,7 @@ export default function CoachChat(goalProps) {
   }
 
   const lastAssistant = [...messages].reverse().find((m) => m.role === 'assistant');
-  const placeholder = progress > 0 && progress < 100 ? `Đang tải AI về máy… ${progress}%` : 'Đang nghĩ…';
+  const placeholder = progress > 0 && progress < 100 ? `Đang tải AI về máy… ${progress}%` : 'Đang xem số liệu của bạn…';
 
   // Chips: lúc trống = câu hỏi mẫu; sau khi Qwen trả lời xong = "Đề xuất tiếp theo"
   // theo ngữ cảnh (chủ đề vừa hỏi + dữ liệu user có). Chỉ là gợi ý câu hỏi để bấm.
@@ -193,7 +193,7 @@ export default function CoachChat(goalProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [messages.length, noData]);
   const chips = messages.length === 0 ? starterChips : suggestions;
-  const chipLabel = messages.length === 0 ? 'Câu hỏi gợi ý' : 'Đề xuất tiếp theo';
+  const chipLabel = messages.length === 0 ? 'Bạn có thể hỏi mình' : 'Đề xuất tiếp theo';
 
   if (!capable) return null; // iPhone/không WebGPU → ẩn Coach (đã có dòng "mở trên máy tính" ở chỗ khác)
 

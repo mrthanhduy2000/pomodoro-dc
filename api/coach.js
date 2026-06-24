@@ -6,7 +6,7 @@
  */
 import { methodNotAllowed, readJsonBody, sendJson } from './_lib/http.js';
 
-const DEFAULT_MODEL = 'gemini-2.0-flash'; // free tier; đổi qua env GEMINI_MODEL nếu cần
+const DEFAULT_MODEL = 'gemini-2.5-flash'; // free tier; đổi qua env GEMINI_MODEL nếu cần
 
 /** toGeminiBody — THUẦN: { system, messages:[{role,content}] } → body Gemini generateContent. */
 export function toGeminiBody(system, messages, opts = {}) {

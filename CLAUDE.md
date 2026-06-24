@@ -49,7 +49,7 @@ App chính chạy trên **web** tại `https://pomodoro-dc.vercel.app`.
 - `initSync()` gọi trong `App.jsx`, ở effect chạy sau khi store nạp xong (`storesHydrated`)
 
 ## Web Push iPhone (đã chạy; cần làm lại khi setup máy/dự án mới)
-- Biến môi trường trên Vercel: `WEB_PUSH_PUBLIC_KEY`, `WEB_PUSH_PRIVATE_KEY`, `WEB_PUSH_SUBJECT`, `SUPABASE_SERVICE_ROLE_KEY`, `CRON_SECRET`, **`GEMINI_API_KEY`** (AI Coach đám mây — lấy free ở aistudio.google.com; thiếu → Coach rơi về Qwen on-device; `GEMINI_MODEL` tuỳ chọn, mặc định `gemini-2.0-flash`). Xem `.env.example`. Khoá Supabase frontend đã hardcode, không cần đặt.
+- Biến môi trường trên Vercel: `WEB_PUSH_PUBLIC_KEY`, `WEB_PUSH_PRIVATE_KEY`, `WEB_PUSH_SUBJECT`, `SUPABASE_SERVICE_ROLE_KEY`, `CRON_SECRET`, **`GEMINI_API_KEY`** (AI Coach đám mây — lấy free ở aistudio.google.com; thiếu → Coach rơi về Qwen on-device; `GEMINI_MODEL` tuỳ chọn, mặc định `gemini-2.5-flash`). Xem `.env.example`. Khoá Supabase frontend đã hardcode, không cần đặt.
 - Tạo khoá Web Push: `npm run push:keys` → dán public/private vào biến môi trường Vercel.
 - Bảng + scheduler push nằm trong `supabase/*.sql` — chạy tay trong Supabase SQL editor (thiếu thì push hỏng).
 - Sửa push phía trình duyệt: `public/push-worker.js` (service worker) + `public/manifest.json` (PWA).
@@ -57,7 +57,7 @@ App chính chạy trên **web** tại `https://pomodoro-dc.vercel.app`.
 ## AI Coach + tầng engine (mảng lớn nhất, KHÔNG được bỏ qua)
 App có cả một hệ "huấn luyện viên" và engine game thuần. Đây là phần lớn nhất dự án.
 - ⚠️ **2 ENGINE (2026-06-24 — Đàm đổi hướng): GEMINI (đám mây) là CHÍNH + Qwen on-device làm DỰ PHÒNG.** Lý do: 3B yếu + ăn RAM/đĩa; Gemini khôn hơn, không tốn máy, **CHẠY CẢ iPhone**.
-  - **Cổng đám mây**: `api/coach.js` (Vercel serverless) giữ `GEMINI_API_KEY` ở server (KHÔNG lộ ra client), map `{system, messages}` → Gemini `generateContent`. Client gọi qua `src/engine/llm/cloudEngine.js` (`generateCloud`). Model mặc định `gemini-2.0-flash` (đổi qua env `GEMINI_MODEL`). Pure helpers `toGeminiBody`/`extractGeminiText` test ở `api/coach.test.js`.
+  - **Cổng đám mây**: `api/coach.js` (Vercel serverless) giữ `GEMINI_API_KEY` ở server (KHÔNG lộ ra client), map `{system, messages}` → Gemini `generateContent`. Client gọi qua `src/engine/llm/cloudEngine.js` (`generateCloud`). Model mặc định `gemini-2.5-flash` (đổi qua env `GEMINI_MODEL`). Pure helpers `toGeminiBody`/`extractGeminiText` test ở `api/coach.test.js`.
   - **Luồng**: CoachChat/CoachOffline gọi **Gemini trước**; lỗi (chưa có key / hết quota / mất mạng) → **rơi về Qwen trên máy** (chỉ desktop có WebGPU; iPhone không có Qwen → hiện thông báo lỗi nhẹ). KHÔNG còn warm-prefetch Qwen (không tải model nặng lên máy nữa) — Qwen chỉ tải khi đám mây hỏng.
   - **iPhone NAY DÙNG ĐƯỢC Coach** (qua Gemini): bỏ `if(!capable) return null`; `FocusRail` bỏ gate `aiCapable`; `FocusCoachMobile.jsx` render thẳng CoachChat+CoachOffline (App.jsx truyền goalProps). `detectWebLLMCapable` giờ CHỈ quyết định "có Qwen dự phòng không".
   - ⚠️ **MỌI prompt + lưới chống-bịa + tầng số liệu GIỮ NGUYÊN** (model-agnostic) → chuyển sang Gemini 100%, chạy tốt hơn (Gemini bám luật chuẩn hơn 3B). Cần `GEMINI_API_KEY` trong Vercel env (Đàm tự lấy free ở aistudio.google.com); thiếu key → tự rơi Qwen.

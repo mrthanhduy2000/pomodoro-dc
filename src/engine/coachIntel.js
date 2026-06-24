@@ -26,7 +26,7 @@ const CONSISTENCY_MIN_DAYS = 6;
 const PRED_STREAK_MIN_DAYS = 4;
 const PRED_STREAK_PCT_MIN_DAYS = 6;
 const WEEKDAY_LABELS = ['Chủ nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
-const BAND_LABEL = { ngan: 'ngắn (dưới 26 phút)', vua: 'vừa (26–44 phút)', sau: 'sâu (từ 45 phút)' };
+const BAND_LABEL = { ngan: 'ngắn (dưới 26 phút)', vua: 'vừa (26 phút–44 phút)', sau: 'sâu (từ 45 phút)' };
 const BAND_MINUTES = { ngan: 20, vua: 35, sau: 50 };
 
 function isCompletedSession(e) {

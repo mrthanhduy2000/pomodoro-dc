@@ -8,7 +8,7 @@
 import { useState } from 'react';
 import { SparkGlyph } from './icons/Glyph';
 import { useAnalystContext } from '../hooks/useCoachContext';
-import { buildLLMPrompt, sanitizeLLMOutput, hasForeignScript, detectWebLLMCapable, mapInitProgress, LLM_MODELS } from '../engine/llm/coachPrompt';
+import { buildLLMPrompt, sanitizeLLMOutput, hasForeignScript, hasFabricatedNumbers, scrubFabricatedLines, detectWebLLMCapable, mapInitProgress, LLM_MODELS } from '../engine/llm/coachPrompt';
 
 const GOLD = '#d9a441';
 const LOAD_TIMEOUT_MS = 300000; // 5 phút: đủ cho lần đầu tải ~2.4GB (Qwen 3B)
@@ -32,7 +32,8 @@ export default function CoachOffline(goalProps) {
     setText('');
     try {
       const { generateOffline } = await import('../engine/llm/webllmEngine');
-      const { system, messages } = buildLLMPrompt(buildContext());
+      const ctxStr = buildContext(); // gọi 1 lần, dùng chung dựng-prompt + soi-guard (tránh lệch số)
+      const { system, messages } = buildLLMPrompt(ctxStr);
       const run = () => {
         const work = generateOffline({
           modelId: useModel, system, messages,
@@ -43,13 +44,16 @@ export default function CoachOffline(goalProps) {
         return Promise.race([work, timeout]);
       };
       let clean = sanitizeLLMOutput(await run());
-      // Nếu model lỡ "trôi" sang chữ nước ngoài (Hán/Trung…) → tự viết lại.
-      for (let i = 0; i < MAX_LANG_RETRY && hasForeignScript(clean); i += 1) {
+      // Trôi chữ nước ngoài HOẶC bịa số → viết lại (BLIND) tối đa MAX_LANG_RETRY lần.
+      const dirty = (s) => hasForeignScript(s) || hasFabricatedNumbers(s, ctxStr);
+      for (let i = 0; i < MAX_LANG_RETRY && dirty(clean); i += 1) {
         setStatus('rewriting');
         setText('');
         clean = sanitizeLLMOutput(await run());
       }
       if (hasForeignScript(clean)) { setStatus('error-lang'); return; }
+      // Số bịa còn sót → CỨU-CÂU lọc-DÒNG: bỏ riêng dòng bịa, giữ khung 4 phần [1][2][3][4].
+      if (hasFabricatedNumbers(clean, ctxStr)) clean = scrubFabricatedLines(clean, ctxStr).clean;
       setText(clean);
       setStatus('ready');
     } catch {

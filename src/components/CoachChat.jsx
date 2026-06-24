@@ -9,7 +9,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { SparkGlyph } from './icons/Glyph';
 import { useAnalystContext } from '../hooks/useCoachContext';
-import { buildLLMChatPrompt, sanitizeLLMOutput, hasForeignScript, hasFabricatedNumbers, detectWebLLMCapable, mapInitProgress, LLM_MODELS } from '../engine/llm/coachPrompt';
+import { buildLLMChatPrompt, sanitizeLLMOutput, hasForeignScript, hasFabricatedNumbers, findFabricatedNumbers, buildCorrectionNote, appendCorrectionTurn, stripFabricatedSentences, detectWebLLMCapable, mapInitProgress, LLM_MODELS } from '../engine/llm/coachPrompt';
 import { pickSuggestions, detectTopic } from '../engine/coachSuggest';
 
 const GOLD = '#d9a441';
@@ -68,24 +68,34 @@ export default function CoachChat(goalProps) {
       const { generateOffline } = await import('../engine/llm/webllmEngine');
       const ctxStr = buildAnalyst(); // dùng CHUNG cho cả dựng prompt LẪN soi guard (đừng gọi 2 lần — tránh lệch)
       const { system, messages: msgs } = buildLLMChatPrompt(ctxStr, q, history);
-      const run = () => {
+      const run = (messagesToUse) => {
         const work = generateOffline({
-          modelId: LLM_MODELS.default, system, messages: msgs,
+          modelId: LLM_MODELS.default, system, messages: messagesToUse,
           onProgress: (p) => setProgress(mapInitProgress(p)),
           onToken: (t) => updateLastAssistant(sanitizeLLMOutput(t)),
         });
         const timeout = new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), LOAD_TIMEOUT_MS));
         return Promise.race([work, timeout]);
       };
-      let clean = sanitizeLLMOutput(await run());
-      // 2 lưới tất định: chữ nước ngoài + bịa số. Dính 1 trong 2 → viết lại tối đa 1 lần.
-      const dirty = (s) => hasForeignScript(s) || hasFabricatedNumbers(s, ctxStr);
-      if (dirty(clean)) { updateLastAssistant(''); clean = sanitizeLLMOutput(await run()); }
+      let clean = sanitizeLLMOutput(await run(msgs));
+      if (hasForeignScript(clean)) {
+        // Lỗi NGÔN NGỮ (trôi chữ Hán) → viết lại BLIND (nhiệt thấp thường tự ép lại tiếng Việt).
+        updateLastAssistant(''); clean = sanitizeLLMOutput(await run(msgs));
+      } else {
+        // Lỗi NỘI DUNG (số bịa) → viết lại CÓ-HƯỚNG-DẪN: chèn lượt chỉ-rõ token sai.
+        const bad = findFabricatedNumbers(clean, ctxStr);
+        if (bad.length) {
+          updateLastAssistant('');
+          const msgs2 = appendCorrectionTurn(msgs, clean, buildCorrectionNote(bad));
+          clean = sanitizeLLMOutput(await run(msgs2));
+        }
+      }
+      // Tuyến phòng thủ chót — KHÔNG nới guard:
       if (hasForeignScript(clean)) {
         clean = 'AI trên máy lỡ trả lời lẫn chữ nước ngoài — bạn thử hỏi lại nhé.';
       } else if (hasFabricatedNumbers(clean, ctxStr)) {
-        // VẪN bịa số sau 1 lần viết lại → KHÔNG hiển thị câu bịa (thà thiếu còn hơn sai).
-        clean = 'Câu này mình chưa đủ dữ liệu chắc chắn để trả lời bằng con số — bạn thử hỏi một chỉ số khác (giờ vàng, loại việc, hôm nay…) nhé.';
+        // VẪN bịa sau viết-lại → CỨU-CÂU: bỏ riêng câu bịa, giữ câu sạch (bỏ hết → fallback bên trong).
+        clean = stripFabricatedSentences(clean, ctxStr).clean;
       }
       updateLastAssistant(clean);
     } catch {

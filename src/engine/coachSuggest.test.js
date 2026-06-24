@@ -10,7 +10,7 @@ const RICH = [
   'Tổng quan: 42 phiên hoàn thành, ~31 giờ tập trung, 6 phiên bị huỷ. Đạt mục tiêu 61% (trên 28 phiên có đặt mục tiêu). Chuỗi hiện tại: 5 ngày.',
   'Hôm nay: đang chậm hơn nhịp thường — 1/3 phiên, tới giờ này bạn thường làm ~2 phiên (trên 9 ngày gần đây).',
   'Giờ vàng: Bạn hay đạt mục tiêu vào buổi sáng nhất — 72% (trên 18 phiên có mục tiêu).',
-  'Độ dài hợp nhất: Phiên vừa (26–44′) thường đi cùng tỉ lệ đạt mục tiêu cao nhất của bạn — 68% (trên 19 phiên).',
+  'Độ dài hợp nhất: Phiên vừa (26 phút–44 phút) thường đi cùng tỉ lệ đạt mục tiêu cao nhất của bạn — 68% (trên 19 phiên).',
   'Đều đặn: Trong 28 ngày gần đây bạn có hoạt động 16 ngày (57%).',
   'Phiên sâu: 9/42 phiên của bạn là phiên sâu (từ 45 phút) — 21%.',
   'Loại việc dành nhiều thời gian nhất là "Viết lách": 11.5 giờ qua 14 phiên, đạt mục tiêu 64% (trên 14 phiên).',

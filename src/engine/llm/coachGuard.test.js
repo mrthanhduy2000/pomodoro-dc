@@ -1,7 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { findFabricatedNumbers, hasFabricatedNumbers } from './coachPrompt.js';
+import {
+  findFabricatedNumbers, hasFabricatedNumbers,
+  buildCorrectionNote, appendCorrectionTurn,
+  stripFabricatedSentences, scrubFabricatedLines,
+} from './coachPrompt.js';
 
 // Bảng số liệu THẬT (rút từ lịch sử mẫu ~24 giờ) làm nền đối chiếu.
 const CTX = [
@@ -56,4 +60,82 @@ test('giờ trong ngày khớp bảng: "22 giờ" có trong dòng khuya → khô
 
 test('chuỗi xu hướng nhiều tuần: từng mốc "phút" đều khớp bảng', () => {
   assert.deepEqual(findFabricatedNumbers('mỗi tuần: 175 phút → 275 phút → 410 phút → 560 phút', CTX), []);
+});
+
+// ── Đơn vị "tiếng" (== giờ) ─────────────────────────────────────────────
+test('đơn vị "tiếng" coi như "giờ": 13.3 tiếng khớp 13.3 giờ trong bảng', () => {
+  assert.deepEqual(findFabricatedNumbers('Học làm 13.3 tiếng', CTX), []);
+});
+test('"99 tiếng" bịa → bắt, chuẩn hoá hiển thị "99 giờ"', () => {
+  assert.deepEqual(findFabricatedNumbers('bạn còn 99 tiếng nữa', CTX), ['99 giờ']);
+});
+
+// ── buildCorrectionNote ────────────────────────────────────────────────
+test('buildCorrectionNote: liệt kê đích danh, "88 %" → "88%", có cụm chốt', () => {
+  const note = buildCorrectionNote(['21 phiên', '88 %']);
+  assert.match(note, /"21 phiên"/);
+  assert.match(note, /"88%"/);
+  assert.match(note, /KHÔNG có trong bảng/);
+  assert.match(note, /chưa đủ dữ liệu/);
+});
+test('buildCorrectionNote rỗng/null → "" (gọi an toàn)', () => {
+  assert.equal(buildCorrectionNote([]), '');
+  assert.equal(buildCorrectionNote(null), '');
+});
+
+// ── appendCorrectionTurn ───────────────────────────────────────────────
+test('appendCorrectionTurn: note rỗng → giữ nguyên; có note → +2, không mutate', () => {
+  const msgs = [{ role: 'user', content: 'hỏi' }];
+  assert.equal(appendCorrectionTurn(msgs, 'câu cũ', ''), msgs);
+  const out = appendCorrectionTurn(msgs, 'câu cũ', 'note');
+  assert.equal(out.length, msgs.length + 2);
+  assert.deepEqual(out[out.length - 2], { role: 'assistant', content: 'câu cũ' });
+  assert.deepEqual(out[out.length - 1], { role: 'user', content: 'note' });
+  assert.equal(msgs.length, 1); // gốc không bị mutate
+});
+
+// ── stripFabricatedSentences (CỨU-CÂU cho chat) ─────────────────────────
+test('stripFabricatedSentences: giữ câu sạch, bỏ câu bịa', () => {
+  const a = 'Bạn có 79% trên 38 phiên. Khung 14 giờ đạt 88% trên 12 phiên.';
+  const { clean, removed } = stripFabricatedSentences(a, CTX);
+  assert.match(clean, /79% trên 38 phiên/);
+  assert.doesNotMatch(clean, /14 giờ/);
+  assert.equal(removed.length, 1);
+});
+test('stripFabricatedSentences: không cắt số thập phân "13.3 giờ" giữa câu', () => {
+  const a = 'Học chiếm 13.3 giờ qua 18 phiên, nhiều nhất.';
+  assert.deepEqual(stripFabricatedSentences(a, CTX).removed, []);
+});
+test('stripFabricatedSentences: toàn câu-bịa → fallback; rỗng → fallback; ctx rỗng → nguyên văn', () => {
+  assert.match(stripFabricatedSentences('Bạn có 50 phiên. Trung bình 3.7 giờ mỗi ngày.', CTX).clean, /chưa đủ dữ liệu/);
+  assert.match(stripFabricatedSentences('', CTX).clean, /chưa đủ dữ liệu/);
+  assert.equal(stripFabricatedSentences('99 phiên bừa', '').clean, '99 phiên bừa');
+});
+
+// ── scrubFabricatedLines (CỨU-CÂU cho bản 4 phần) ───────────────────────
+const FOUR = [
+  '[1] QUAN SÁT CHÍNH:',
+  'Bạn có 38 phiên, đạt 79% trên 38 phiên.',
+  '[2] XU HƯỚNG:',
+  'Tuần này hơn tuần trước, 560 phút so với 410 phút.',
+  '[3] CHÂN DUNG:',
+  'Khung 14 giờ đạt 88% trên 12 phiên.',
+  '[4] THỬ NGHIỆM:',
+  'Thử dồn việc khó buổi sáng.',
+].join('\n');
+
+test('scrubFabricatedLines: bỏ đúng dòng bịa, giữ nhãn + dòng sạch', () => {
+  const { clean, removed } = scrubFabricatedLines(FOUR, CTX);
+  assert.match(clean, /\[1\]/); assert.match(clean, /\[2\]/); assert.match(clean, /\[3\]/); assert.match(clean, /\[4\]/);
+  assert.doesNotMatch(clean, /14 giờ/);
+  assert.match(clean, /79% trên 38 phiên/);
+  assert.equal(removed.length, 1);
+});
+test('scrubFabricatedLines: phần [n] rỗng sau lọc → chèn "chưa đủ dữ liệu" (giữ nhãn)', () => {
+  const { clean } = scrubFabricatedLines(FOUR, CTX);
+  // [3] mất nội dung duy nhất (14 giờ bịa) → phải có "chưa đủ dữ liệu" ngay sau nhãn [3]
+  assert.match(clean, /\[3\][^\n]*\nchưa đủ dữ liệu/);
+});
+test('scrubFabricatedLines: ctx rỗng → nguyên văn', () => {
+  assert.equal(scrubFabricatedLines(FOUR, '').clean, FOUR);
 });

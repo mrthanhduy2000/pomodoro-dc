@@ -6,8 +6,11 @@
  */
 import { methodNotAllowed, readJsonBody, sendJson } from './_lib/http.js';
 
-const DEFAULT_MODEL = 'gemini-2.5-flash'; // CHÍNH (free tier; đổi qua env GEMINI_MODEL)
-const FALLBACK_MODEL = 'gemini-2.5-flash-lite'; // DỰ PHÒNG khi chính quá tải/hết lượt (env GEMINI_MODEL_FALLBACK)
+// CHUỖI MODEL: thử lần lượt, lỗi quá-tải/hết-lượt thì NHẢY sang model kế (dung lượng riêng).
+// 2.5-flash (khôn nhất) → 2.5-flash-lite (nhẹ) → 2.0-flash (đời cũ, RẤT ổn định, ít 503).
+const DEFAULT_MODEL = 'gemini-2.5-flash';
+const FALLBACK_MODEL = 'gemini-2.5-flash-lite';
+const FALLBACK_MODEL_2 = 'gemini-2.0-flash';
 
 // Lỗi từ Gemini đáng để THỬ MODEL KHÁC: 503 (quá tải), 500 (lỗi tạm), 429 (chạm giới hạn free).
 export function shouldFallback(status) {
@@ -42,26 +45,19 @@ export function extractGeminiText(data) {
   return '';
 }
 
-// Gọi 1 model; với model CHÍNH cho thử-lại 1 lần khi 503/500 (quá tải tạm thời). Trả Response.
-async function callModel(model, key, system, messages, opts, retry) {
+// Gọi MỘT model một lần. Trả Response (không retry — đổi model nhanh hơn là thử lại model đang sập).
+function callModelOnce(model, key, system, messages, opts) {
   const payload = JSON.stringify(toGeminiBody(system, messages, {
-    ...opts, thinkingBudget: model.includes('2.5') ? 0 : undefined, // 2.5 bật thinking mặc định → tắt
+    ...opts, thinkingBudget: model.includes('2.5') ? 0 : undefined, // chỉ 2.5 có "thinking" → tắt
   }));
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
-  let r;
-  const maxAttempts = retry ? 2 : 1;
-  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
-    r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: payload });
-    if (r.ok || (r.status !== 503 && r.status !== 500) || attempt === maxAttempts - 1) break;
-    await new Promise((ok) => setTimeout(ok, 700));
-  }
-  return r;
+  return fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: payload });
 }
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return methodNotAllowed(res, ['POST']);
   const key = process.env.GEMINI_API_KEY;
-  if (!key) return sendJson(res, 503, { ok: false, error: 'no-key' }); // chưa cấu hình → client rơi về Qwen
+  if (!key) return sendJson(res, 503, { ok: false, error: 'no-key' }); // chưa cấu hình
 
   try {
     const body = await readJsonBody(req);
@@ -69,16 +65,19 @@ export default async function handler(req, res) {
     if (!Array.isArray(messages) || messages.length === 0) {
       return sendJson(res, 400, { ok: false, error: 'no-messages' });
     }
-    const primary = process.env.GEMINI_MODEL || DEFAULT_MODEL;
-    const fallback = process.env.GEMINI_MODEL_FALLBACK || FALLBACK_MODEL;
     const opts = { temperature, maxTokens };
+    // CHUỖI model: thử lần lượt, gặp lỗi quá-tải/hết-lượt → nhảy model kế. Lỗi khác (key/400) → dừng.
+    const chain = [
+      process.env.GEMINI_MODEL || DEFAULT_MODEL,
+      process.env.GEMINI_MODEL_FALLBACK || FALLBACK_MODEL,
+      process.env.GEMINI_MODEL_FALLBACK2 || FALLBACK_MODEL_2,
+    ].filter((m, i, a) => m && a.indexOf(m) === i); // bỏ trùng
 
-    // CHÍNH (flash) + thử-lại 1 lần; nếu vẫn quá tải/hết-lượt → nhảy DỰ PHÒNG (flash-lite).
-    let usedModel = primary;
-    let r = await callModel(primary, key, system, messages, opts, true);
-    if (!r.ok && shouldFallback(r.status) && fallback && fallback !== primary) {
-      usedModel = fallback;
-      r = await callModel(fallback, key, system, messages, opts, false);
+    let r; let usedModel = chain[0];
+    for (const m of chain) {
+      usedModel = m;
+      r = await callModelOnce(m, key, system, messages, opts);
+      if (r.ok || !shouldFallback(r.status)) break; // thành công, hoặc lỗi không-phải-quá-tải → dừng
     }
     if (!r.ok) {
       const detail = await r.text().catch(() => '');

@@ -122,7 +122,9 @@ export default function CoachChat(goalProps) {
       if (code === 'no-key') {
         msg = 'AI Coach chưa được bật (chưa cấu hình API key). Khi đã thêm key trên Vercel là dùng được ngay.';
       } else if (String(code).startsWith('gemini-4') || String(code).startsWith('http-4')) {
-        msg = 'AI Coach đang quá tải hoặc hết lượt miễn phí hôm nay. Bạn thử lại sau một chút nhé.';
+        msg = 'Có thể đã hết lượt miễn phí hôm nay, hoặc API key chưa đúng. Thử lại sau hoặc kiểm tra key trên Vercel nhé.';
+      } else if (String(code).startsWith('gemini-5') || code === 'empty') {
+        msg = 'Bên Gemini đang quá tải (không phải lỗi mạng của bạn). Đợi một chút rồi bấm "Thử lại" nhé.';
       } else {
         msg = 'Chưa hỏi được Coach (mạng hoặc dịch vụ đang trục trặc). Bạn bấm "Thử lại" nhé.';
       }

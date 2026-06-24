@@ -6,11 +6,10 @@
 import { useState } from 'react';
 import { SparkGlyph } from './icons/Glyph';
 import { useAnalystContext } from '../hooks/useCoachContext';
-import { buildLLMPrompt, sanitizeLLMOutput, hasForeignScript, hasFabricatedNumbers, findMismatchedPairs, findFabricatedFractions, scrubFabricatedLines } from '../engine/llm/coachPrompt';
+import { buildLLMPrompt, sanitizeLLMOutput, hasForeignScript, hasFabricatedNumbers, findFabricatedNumbers, findMismatchedPairs, findFabricatedFractions, buildCorrectionNote, appendCorrectionTurn, scrubFabricatedLines } from '../engine/llm/coachPrompt';
 import { generateCloud } from '../engine/llm/cloudEngine';
 
 const GOLD = '#d9a441';
-const MAX_LANG_RETRY = 1; // lỡ "trôi" sang chữ nước ngoài → hỏi lại tối đa 1 lần (hiếm với Gemini)
 
 export default function CoachOffline(goalProps) {
   const [open, setOpen] = useState(false);
@@ -26,17 +25,24 @@ export default function CoachOffline(goalProps) {
       const ctxStr = buildContext(); // gọi 1 lần, dùng chung dựng-prompt + soi-guard (tránh lệch số)
       const { system, messages } = buildLLMPrompt(ctxStr);
       // Engine = Gemini (đám mây). /api/coach đã có thử-lại + nhảy model dự phòng.
-      const run = () => generateCloud({ system, messages, temperature: 0.3, maxTokens: 1200 });
-      let clean = sanitizeLLMOutput(await run());
-      // Trôi chữ nước ngoài HOẶC bịa số → viết lại tối đa MAX_LANG_RETRY lần.
-      const dirty = (s) => hasForeignScript(s) || hasFabricatedNumbers(s, ctxStr);
-      for (let i = 0; i < MAX_LANG_RETRY && dirty(clean); i += 1) {
-        setStatus('rewriting');
-        setText('');
-        clean = sanitizeLLMOutput(await run());
+      const run = (msgs) => generateCloud({ system, messages: msgs, temperature: 0.2, maxTokens: 1200 });
+      let clean = sanitizeLLMOutput(await run(messages));
+      if (hasForeignScript(clean)) {
+        // Lỗi NGÔN NGỮ (lỡ chen chữ nước ngoài) → viết lại BLIND 1 lần (hiếm với Gemini).
+        setStatus('rewriting'); setText('');
+        clean = sanitizeLLMOutput(await run(messages));
+      } else {
+        // Lỗi NỘI DUNG (số bịa) → viết lại CÓ-HƯỚNG-DẪN: chèn lượt chỉ ĐÍCH DANH số sai rồi
+        // chạy lần 2 (giống CoachChat — chính xác hơn viết-lại-mù vì model biết token nào nó bịa).
+        const bad = findFabricatedNumbers(clean, ctxStr);
+        if (bad.length) {
+          setStatus('rewriting'); setText('');
+          const msgs2 = appendCorrectionTurn(messages, clean, buildCorrectionNote(bad));
+          clean = sanitizeLLMOutput(await run(msgs2));
+        }
       }
       if (hasForeignScript(clean)) { setStatus('error-lang'); return; }
-      // Số bịa HOẶC ghép sai %↔cỡ-mẫu còn sót → CỨU-CÂU lọc-DÒNG: bỏ riêng dòng bịa, giữ khung 4 phần.
+      // Số bịa / ghép sai %↔cỡ-mẫu / phân số bịa còn sót → CỨU-CÂU lọc-DÒNG: bỏ riêng dòng bịa, giữ khung 4 phần.
       if (hasFabricatedNumbers(clean, ctxStr) || findMismatchedPairs(clean, ctxStr).length > 0 || findFabricatedFractions(clean, ctxStr).length > 0) clean = scrubFabricatedLines(clean, ctxStr).clean;
       setText(clean);
       setStatus('ready');
@@ -77,13 +83,13 @@ export default function CoachOffline(goalProps) {
                     Phân tích tổng thể
                   </button>
                   <p className="text-[11px] leading-snug" style={{ color: 'var(--muted)' }}>
-                    Chạy trên đám mây (nhanh, không tốn máy, dùng được cả điện thoại). Khi mất mạng trên máy tính sẽ tự dùng AI dự phòng ngay trên máy.
+                    Chạy trên đám mây (nhanh, không tốn máy, dùng được cả điện thoại). Cần mạng để hoạt động; mất mạng hay hết lượt thì báo lỗi để bạn thử lại.
                   </p>
                 </>
               )}
 
               {status === 'rewriting' && (
-                <p className="text-[13px]" style={{ color: 'var(--muted)' }}>Vừa lỡ chen chữ nước ngoài, mình đang viết lại cho gọn bằng tiếng Việt…</p>
+                <p className="text-[13px]" style={{ color: 'var(--muted)' }}>Đang rà lại cho bám đúng số liệu rồi viết lại cho chuẩn…</p>
               )}
 
               {status === 'generating' && !text && (

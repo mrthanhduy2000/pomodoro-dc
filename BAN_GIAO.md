@@ -3,7 +3,7 @@
 > Dành cho AI/người làm tiếp. File này trả lời: **đang ở đâu, làm gì tiếp, đã đổi những gì.**
 > Chi tiết kỹ thuật + quy tắc cấm: xem `CLAUDE.md`. Lịch sử thiết kế sâu: thư mục memory của Claude.
 > **NGUYÊN TẮC ƯU TIÊN SỐ 1:** (1) mọi phiên AI phải đọc file này + `CLAUDE.md` + các file liên quan TRƯỚC khi làm; (2) sau MỌI cập nhật dù nhỏ, phải cập nhật ngay file này + `CLAUDE.md` + các file liên quan khác.
-> Cập nhật lần cuối: **2026-06-24**.
+> Cập nhật lần cuối: **2026-06-25**.
 
 ---
 
@@ -16,22 +16,24 @@
 - **Đồng bộ Supabase** (game_state + timer_live cho menu bar Mac).
 
 ## 🔧 Đang làm
-- (Trống — việc gần nhất đã xong. Xem "Sẽ làm tiếp".)
+- **NÂNG CẤP TRÍ TUỆ AI COACH — chuỗi 6 mảng** (Đàm ra lệnh 2026-06-25 "làm toàn bộ, chuyên sâu", sau workflow đề-xuất 10 agent). Thứ tự phụ thuộc: **(1) Siết niềm tin ✅ XONG** — sửa nhiệt độ lệch 0.3→0.2/0.8, bộ chấm điểm lưới chống-bịa (`coachEval`), timeout client + `vercel.json` maxDuration, CoachOffline viết-lại-có-hướng-dẫn, dọn chữ cũ về Qwen. **(2) Tín hiệu "phiên trơn vs ngắt quãng"** (đọc `pauseCount` đang bị bỏ phí). **(3) Coach tự nhắc sau mỗi phiên** (qua push iPhone). **(4) Phân tích 4 phần có cấu trúc + model mạnh hơn**. **(5) Bộ nhớ lời khuyên** (cá nhân hoá — Đàm ưu tiên). **(6) Cảnh báo chuỗi sắp đứt** (cron tự đẩy). Mỗi mảng test xanh → deploy.
 
 ## 🔜 Sẽ làm tiếp (ưu tiên từ trên xuống)
-1. **Thử Coach offline + chat AI (Qwen 3B) thật trên Mac** (bấm "Phân tích chuyên sâu" / chế độ "AI trên máy" ở Hỏi Coach) — đã CHỐT 1 model 3B cho gọn (~2.4GB) nhưng CHƯA chạy thử thật. Cần soi: (a) 3B còn "trôi" chữ Hán nhiều không (3B trôi hơn 7B; đã có lưới hasForeignScript + viết-lại + decoding siết 0.3/0.85); (b) văn có cụt/bỏ mục [1][2][3] không. Nếu 3B "đuối/trôi" rõ → phương án B: `gemma-2-2b-it-q4f16_1-MLC` (Google, ~1.9GB, gần như không trôi tiếng Trung, NHƯNG khác họ Qwen → phải chỉnh lại lưới chống-trôi + ví dụ vàng). Muốn khôn hơn & chấp nhận nặng → quay lại `Qwen2.5-7B`.
+1. **Hoàn tất chuỗi 6 mảng nâng cấp AI Coach** (xem "Đang làm" — mảng 2→6).
 2. **Giao diện còn dở**: full-screen iPhone (tai thỏ che mép trên), nút đóng ✕ cho hộp phần thưởng, gom cỡ chữ cho đồng nhất, tắt hiệu ứng cho người nhạy chuyển động.
 
 ## ⚠️ Nhớ kỹ (kẻo hỏng)
 - **PHÂN LOẠI LỆNH** (Đàm dặn 2026-06-21): **"nghiên cứu/tìm hiểu/đề xuất"** = CHỈ trình bày rồi DỪNG, KHÔNG tự sửa/commit/deploy (câu mơ hồ → coi là nghiên cứu, hỏi trước). **"làm/sửa/thêm/đổi/deploy"** = (1) giải thích ngắn gọn dễ hiểu công dụng TRƯỚC khi sửa → (2) làm → (3) giải thích đã sửa gì + ích gì → (4) TỰ ĐỘNG deploy Vercel (khỏi hỏi lại). Chi tiết: memory `ask-before-acting.md`.
 - **Không bấm chạy phiên focus trên bản dev/localhost** — nó dùng chung dữ liệu với bản thật, sẽ ghi đè dữ liệu của Đàm.
-- **AI Coach = CHỈ Qwen trên máy** (Đàm chốt 2026-06-21): đã gỡ ⚡Nhanh/Claude/MiniLM/briefing-luật/giọng-cảm-xúc. ĐỪNG khôi phục trừ khi Đàm yêu cầu. Muốn đổi câu Coach → sửa PROMPT (`COACH_OFFLINE_SYSTEM`/`COACH_CHAT_SYSTEM` ở `coachPrompt.js`) hoặc SỐ LIỆU nạp vào (`buildAnalystContext` ở `coachContext.js`); đổi model → `LLM_MODELS`.
-- **BUILD-SAFETY:** `@mlc-ai/web-llm` chỉ import động trong `webllmEngine.js` (canh bởi `src/engine/llm/guard.test.js`); sau build verify `dist/sw.js` KHÔNG precache `vendor-webllm`/`.wasm`.
+- **AI Coach = CHỈ Gemini (đám mây)** (Đàm chốt 2026-06-24): đã gỡ ⚡Nhanh/Claude/MiniLM/briefing-luật/giọng-cảm-xúc + Qwen/WebLLM. ĐỪNG khôi phục trừ khi Đàm yêu cầu. Muốn đổi câu Coach → sửa PROMPT (`COACH_OFFLINE_SYSTEM`/`COACH_CHAT_SYSTEM` ở `coachPrompt.js`) hoặc SỐ LIỆU nạp vào (`buildAnalystContext` ở `coachContext.js`); đổi model → `DEFAULT_MODEL`/`FALLBACK_MODEL` ở `api/coach.js` (hoặc env `GEMINI_MODEL`).
+- **NIỀM TIN = TÀI SẢN QUÝ NHẤT:** lưới chống-bịa tất định (`coachPrompt.js`) phải chạy TRƯỚC mọi nội dung AI hiện ra / gửi push. Có bộ chấm điểm `coachEval.test.js` (đo BẮT %/BÁO NHẦM %) — sửa guard mà tụt điểm = phải xem lại. Quy tắc vàng: thà SÓT một câu bịa còn hơn BÁO NHẦM xoá oan câu thật (FPR phải = 0).
 - Luôn `npm test` trước khi commit; luôn chạy `git status` tươi (đừng tin ảnh chụp cũ).
 - **Lịch sử git `main` từng bị xáo** (thao tác git song song): bản đang chạy là `eb44638` — chứa ĐỦ mọi việc gần đây (Hỏi Coach offline + fix đêm khuya + Coach offline analyst). Vài commit cũ (`1e27505`, `9fbcd62`) thành dangling, KHÔNG còn trong `git log` nhưng code vẫn nằm trong bản deploy. Đừng hoảng nếu không thấy chúng.
 
 ## 🗒️ Nhật ký cập nhật
 > Mỗi lần xong việc đáng kể, thêm 1 dòng vào ĐẦU danh sách.
+
+- **2026-06-25** — **[Mảng 1/6] Siết NIỀM TIN cho AI Coach** (Đàm: "làm toàn bộ, chuyên sâu" sau workflow đề-xuất 10 agent). 5 việc: **(1) Sửa nhiệt độ lệch** — tài liệu ghi 0.2/0.8 nhưng code chạy 0.3/0.9; kéo về 0.2/0.8 ở `api/coach.js` (default) + 2 caller `CoachChat`/`CoachOffline` → model ít chế số/trôi. **(2) Bộ chấm điểm chống-bịa** `coachEval.test.js` + `coachEvalFixtures.js` (30 câu mẫu: 15 sạch + 15 bịa + 4 chữ-lạ) → đo BẮT %/BÁO NHẦM %; ngưỡng BÁO NHẦM=0 (siết), BẮT≥90%. Lần đầu: **BẮT 15/15 (100%), BÁO NHẦM 0/15 (0%)** — in ra mỗi lần `npm test`. **(3) Timeout** `cloudEngine.js` tự AbortController 28s (không treo vô tận → code 'timeout') + `vercel.json` `maxDuration:30` cho `/api/coach` (tránh Vercel cắt hàm trước khi model dự phòng kịp cứu; nền cho việc dùng model mạnh hơn ở mảng 4). **(4) CoachOffline viết-lại-CÓ-HƯỚNG-DẪN** (bắt số bịa → chèn lượt chỉ đích danh rồi chạy lần 2, như CoachChat) thay vì viết-lại-mù. **(5) Dọn chữ cũ** còn hứa "mất mạng tự dùng AI dự phòng trên máy" (Qwen đã gỡ) ở CoachChat/CoachOffline + comment header. `npm test` **178/178** (172→178: +4 coachEval, +1 topP, sửa 1 assertion temp), build OK. ⚠️ Verify bằng test (không mở dev — tránh đụng dữ liệu thật Supabase).
 
 - **2026-06-24** — **BẬT BILLING Gemini (paid tier) → CHẠY ỔN ĐỊNH, HẾT 429.** Đàm tự bật billing trên Google AI Studio/Cloud cho key. Đã verify cổng production 2 lượt: cả 2 OK trên `gemini-2.5-flash`, trả lời tiếng Việt tự nhiên, **không còn 429**. Trước đó 429 là do trần FREE thấp + đo/test nhiều trong ngày, KHÔNG phải bug. **Không cần sửa code** (billing nằm phía Google). Cập nhật CLAUDE.md + BAN_GIAO + memory. Chuỗi model giữ nguyên: gemini-2.5-flash → 2.5-flash-lite → 2.0-flash. ⚠️ Nên đặt budget cảnh báo ~$5/tháng cho an tâm; chi phí thực ~16–80k đ/tháng (dùng cá nhân vài câu/ngày).
 - **2026-06-24** — **GỠ HẲN Qwen2.5-3B + WebLLM, chỉ còn Gemini** (Đàm: "bỏ Qwen, giữ cấu trúc đã đào tạo để áp lên Gemini"). XOÁ `src/engine/llm/webllmEngine.js` + `guard.test.js`; gỡ `LLM_MODELS`/`detectWebLLMCapable`/`mapInitProgress` khỏi `coachPrompt.js` (+ test); gỡ dep `@mlc-ai/web-llm` (npm install --legacy-peer-deps; lockfile 0 @mlc); gỡ manualChunk `vendor-webllm` + globIgnores webllm/wasm trong `vite.config.js`. SỬA `CoachChat.jsx`/`CoachOffline.jsx`: bỏ nhánh fallback Qwen + `capable`/`progress`/warm-prefetch → chỉ `generateCloud`; làm sạch câu chữ UI. GIỮ NGUYÊN "bộ não": 2 prompt + toàn bộ lưới chống-bịa + tầng số liệu + coachSuggest (model-agnostic, áp lên Gemini). `npm test` 174/174 (−3: bỏ 2 test webllm-cap + guard.test.js), lint sạch, build OK, **không còn webllm trong bundle/precache, key không vào bundle**. Smoke-test preview: thẻ Coach render sạch, không lỗi (mấy lỗi console là trạng-thái HMR giữa chừng, đã hết sau khi build). Đánh đổi: mất mạng/hết quota = Coach ngừng (không còn dự phòng máy).

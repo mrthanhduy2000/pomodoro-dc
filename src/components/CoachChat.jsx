@@ -1,8 +1,8 @@
 /**
- * CoachChat — "Hỏi Coach" = CHAT với AI Qwen 3B chạy ngay trên máy (offline, miễn phí).
- * MỘT AI duy nhất: mọi câu đều do Qwen trả lời (đã bỏ ⚡Nhanh theo luật + Hỏi Claude).
- * Qwen cần WebGPU → CHỈ chạy trên máy tính; iPhone (không WebGPU) ẩn hẳn (return null).
- * Dùng chung engine 3B singleton với "AI phân tích tổng thể" → đã tải thì xài lại ngay.
+ * CoachChat — "Hỏi Coach" = CHAT với AI Coach (Gemini, đám mây qua /api/coach + cloudEngine).
+ * MỘT engine duy nhất cho cả "Hỏi Coach" lẫn "AI phân tích tổng thể"; dùng CHUNG prompt +
+ * lưới chống-bịa (coachPrompt.js). Chạy được MỌI thiết bị, kể cả iPhone (không cần WebGPU).
+ * Mất mạng / hết quota / chưa-có-key → báo lỗi + nút "Thử lại" (KHÔNG còn dự phòng on-device).
  * Có câu hỏi mẫu (lúc trống) + "Đề xuất tiếp theo" theo ngữ cảnh sau mỗi câu trả lời
  * (engine coachSuggest.js, thuần luật — chỉ GỢI Ý câu hỏi, không phải câu trả lời).
  */
@@ -93,7 +93,7 @@ export default function CoachChat(goalProps) {
       const { system, messages: msgs } = buildLLMChatPrompt(ctxStr, q, history);
       // Engine = Gemini (đám mây). Bản thân /api/coach đã có thử-lại + nhảy model dự phòng.
       const run = async (messagesToUse) => {
-        return generateCloud({ system, messages: messagesToUse, temperature: 0.3 });
+        return generateCloud({ system, messages: messagesToUse, temperature: 0.2 });
       };
       let clean = sanitizeLLMOutput(await run(msgs));
       if (hasForeignScript(clean)) {
@@ -204,7 +204,7 @@ export default function CoachChat(goalProps) {
             <div ref={listRef} className="min-h-[160px] flex-1 space-y-3 overflow-y-auto px-4 py-4">
               {messages.length === 0 && (
                 <p className="text-[13px] leading-relaxed" style={{ color: 'var(--muted)' }}>
-                  Chat với AI Coach — nó đọc số liệu tập trung thật của bạn để trả lời. Chạy trên đám mây (nhanh, không tốn máy); khi mất mạng trên máy tính sẽ tự dùng AI dự phòng ngay trên máy.
+                  Chat với AI Coach — nó đọc số liệu tập trung thật của bạn để trả lời. Chạy trên đám mây (nhanh, không tốn máy, dùng được cả điện thoại); cần mạng để hoạt động.
                 </p>
               )}
               {noData && (

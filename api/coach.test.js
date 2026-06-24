@@ -14,7 +14,8 @@ test('toGeminiBody: map role assistant→model, system tách riêng, generationC
   assert.equal(b.contents[0].role, 'user');
   assert.equal(b.contents[1].role, 'model'); // assistant → model
   assert.equal(b.contents[1].parts[0].text, 'buổi sáng.');
-  assert.equal(b.generationConfig.temperature, 0.3);
+  assert.equal(b.generationConfig.temperature, 0.2); // nhiệt độ THẤP cho tác vụ chép-lại-số
+  assert.equal(b.generationConfig.topP, 0.8);
   assert.equal(b.generationConfig.maxOutputTokens, 800);
 });
 

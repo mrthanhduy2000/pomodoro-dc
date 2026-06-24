@@ -23,8 +23,10 @@ export function toGeminiBody(system, messages, opts = {}) {
     .filter((m) => m && typeof m.content === 'string' && m.content.trim())
     .map((m) => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: String(m.content) }] }));
   const generationConfig = {
-    temperature: typeof opts.temperature === 'number' ? opts.temperature : 0.3,
-    topP: typeof opts.topP === 'number' ? opts.topP : 0.9,
+    // Tác vụ CHÉP-LẠI-SỐ → nhiệt độ THẤP (0.2/0.8) để model ít chế số/trôi. Khớp chủ trương
+    // tài liệu; callers (CoachChat/CoachOffline) cũng truyền 0.2. Nới lên chỉ ở commit riêng.
+    temperature: typeof opts.temperature === 'number' ? opts.temperature : 0.2,
+    topP: typeof opts.topP === 'number' ? opts.topP : 0.8,
     maxOutputTokens: typeof opts.maxTokens === 'number' ? opts.maxTokens : 800,
   };
   // Tắt "thinking" của Gemini 2.5 Flash: đây là tác vụ CHÉP-LẠI-SỐ, không cần suy luận dài;

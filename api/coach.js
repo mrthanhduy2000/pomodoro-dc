@@ -81,7 +81,7 @@ export default async function handler(req, res) {
     }
     if (!r.ok) {
       const detail = await r.text().catch(() => '');
-      return sendJson(res, 502, { ok: false, error: `gemini-${r.status}`, detail: detail.slice(0, 300) });
+      return sendJson(res, 502, { ok: false, error: `gemini-${r.status}`, model: usedModel, detail: detail.slice(0, 1200) });
     }
     const data = await r.json();
     const text = extractGeminiText(data);

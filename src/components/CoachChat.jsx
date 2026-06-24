@@ -10,6 +10,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { SparkGlyph } from './icons/Glyph';
 import { useAnalystContext } from '../hooks/useCoachContext';
 import { buildLLMChatPrompt, sanitizeLLMOutput, hasForeignScript, hasFabricatedNumbers, findFabricatedNumbers, findMismatchedPairs, findFabricatedFractions, buildCorrectionNote, appendCorrectionTurn, stripFabricatedSentences, detectWebLLMCapable, mapInitProgress, LLM_MODELS } from '../engine/llm/coachPrompt';
+import { generateCloud } from '../engine/llm/cloudEngine';
 import { pickSuggestions, detectTopics } from '../engine/coachSuggest';
 
 const GOLD = '#d9a441';
@@ -47,8 +48,6 @@ export default function CoachChat(goalProps) {
   const [lastQuestion, setLastQuestion] = useState('');
   const [lastError, setLastError] = useState(false);
   const listRef = useRef(null);
-  const warmedRef = useRef(false); // chỉ warm engine 1 lần mỗi phiên mở
-  const openRef = useRef(false);   // chặn cập nhật UI sau khi đóng modal
   const buildAnalyst = useAnalystContext(goalProps);
   const busy = thinking;
 
@@ -68,21 +67,9 @@ export default function CoachChat(goalProps) {
     } catch { /* storage đầy/chặn → bỏ qua */ }
   }, [messages]);
 
-  // Làm ấm engine khi user CHỦ ĐỘNG mở modal → câu đầu đỡ phải chờ tải ~2.4GB.
-  // KHÔNG prefetch lúc khởi động app, KHÔNG tự gửi câu nào; lỗi để dành lúc gửi xử lý.
-  useEffect(() => {
-    openRef.current = open;
-    if (!open) { setProgress(0); return; }
-    if (!capable || warmedRef.current) return;
-    warmedRef.current = true;
-    (async () => {
-      try {
-        const { ensureEngine } = await import('../engine/llm/webllmEngine');
-        await ensureEngine(LLM_MODELS.default, (p) => { if (openRef.current) setProgress(mapInitProgress(p)); });
-      } catch { /* để send() báo lỗi đầy đủ */ }
-      finally { if (openRef.current) setProgress(0); }
-    })();
-  }, [open, capable]);
+  // KHÔNG làm ấm Qwen nữa: Gemini (đám mây) là chính → không tải model nặng lên máy.
+  // Qwen chỉ tải khi đám mây lỗi (dự phòng). Đóng modal thì reset thanh tiến trình.
+  useEffect(() => { if (!open) setProgress(0); }, [open]);
 
   // Cập nhật nội dung bong bóng assistant cuối (cho streaming).
   function updateLastAssistant(content) {
@@ -110,17 +97,24 @@ export default function CoachChat(goalProps) {
     setThinking(true);
     setProgress(0);
     try {
-      const { generateOffline } = await import('../engine/llm/webllmEngine');
       const ctxStr = buildAnalyst(); // dùng CHUNG cho cả dựng prompt LẪN soi guard (đừng gọi 2 lần — tránh lệch)
       const { system, messages: msgs } = buildLLMChatPrompt(ctxStr, q, history);
-      const run = (messagesToUse) => {
-        const work = generateOffline({
-          modelId: LLM_MODELS.default, system, messages: messagesToUse,
-          onProgress: (p) => setProgress(mapInitProgress(p)),
-          onToken: (t) => updateLastAssistant(sanitizeLLMOutput(t)),
-        });
-        const timeout = new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), LOAD_TIMEOUT_MS));
-        return Promise.race([work, timeout]);
+      // Gemini (đám mây) TRƯỚC; lỗi (chưa có key / hết quota / mất mạng) → rơi về Qwen trên máy
+      // (chỉ desktop có WebGPU). iPhone không có Qwen → ném lỗi để catch ngoài hiện thông báo.
+      const run = async (messagesToUse) => {
+        try {
+          return await generateCloud({ system, messages: messagesToUse, temperature: 0.3 });
+        } catch (cloudErr) {
+          if (!capable) throw cloudErr;
+          const { generateOffline } = await import('../engine/llm/webllmEngine');
+          const work = generateOffline({
+            modelId: LLM_MODELS.default, system, messages: messagesToUse,
+            onProgress: (p) => setProgress(mapInitProgress(p)),
+            onToken: (t) => updateLastAssistant(sanitizeLLMOutput(t)),
+          });
+          const timeout = new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), LOAD_TIMEOUT_MS));
+          return Promise.race([work, timeout]);
+        }
       };
       let clean = sanitizeLLMOutput(await run(msgs));
       if (hasForeignScript(clean)) {
@@ -144,12 +138,19 @@ export default function CoachChat(goalProps) {
       }
       updateLastAssistant(clean);
     } catch (err) {
-      const code = err?.message || '';
-      const msg = (code === 'no-webgpu' || code === 'no-adapter')
-        ? 'Máy chưa bật được card đồ hoạ (WebGPU) nên AI trên máy không chạy được. Thử Chrome/Edge mới, hoặc bật "tăng tốc phần cứng" trong cài đặt trình duyệt.'
-        : code === 'timeout'
-          ? 'Tải mô hình lâu quá (~2.4GB lần đầu). Khi mạng ổn định, bấm "Thử lại" nhé.'
-          : 'Chưa chạy được AI trên máy. Bạn bấm "Thử lại" nhé.';
+      const code = err?.code || err?.message || '';
+      let msg;
+      if (code === 'no-key') {
+        msg = 'AI Coach đám mây chưa được bật (chưa cấu hình API key). Khi đã thêm key trên Vercel là dùng được ngay.';
+      } else if (String(code).startsWith('gemini-4') || String(code).startsWith('http-4')) {
+        msg = 'AI Coach đám mây đang quá tải hoặc hết lượt miễn phí hôm nay. Bạn thử lại sau một chút nhé.';
+      } else if (code === 'no-webgpu' || code === 'no-adapter') {
+        msg = 'Mạng đang trục trặc và máy cũng chưa bật được AI dự phòng (WebGPU). Bạn kiểm tra mạng rồi bấm "Thử lại" nhé.';
+      } else if (code === 'timeout') {
+        msg = 'Phản hồi lâu quá (mạng yếu hoặc đang tải AI dự phòng). Bạn bấm "Thử lại" nhé.';
+      } else {
+        msg = 'Chưa hỏi được Coach (mạng hoặc dịch vụ đang trục trặc). Bạn bấm "Thử lại" nhé.';
+      }
       setLastError(true);
       updateLastAssistant(msg);
     } finally {
@@ -195,7 +196,8 @@ export default function CoachChat(goalProps) {
   const chips = messages.length === 0 ? starterChips : suggestions;
   const chipLabel = messages.length === 0 ? 'Bạn có thể hỏi mình' : 'Đề xuất tiếp theo';
 
-  if (!capable) return null; // iPhone/không WebGPU → ẩn Coach (đã có dòng "mở trên máy tính" ở chỗ khác)
+  // Gemini đám mây chạy được CẢ iPhone → KHÔNG ẩn Coach nữa. `capable` chỉ quyết định
+  // có Qwen-trên-máy làm dự phòng hay không (khi đám mây lỗi).
 
   return (
     <>
@@ -214,7 +216,7 @@ export default function CoachChat(goalProps) {
             <div className="flex items-center justify-between px-4 py-3" style={{ borderBottom: '1px solid var(--line)' }}>
               <div className="flex items-center gap-1.5" style={{ color: GOLD }}>
                 <SparkGlyph size={14} />
-                <span className="mono text-[11px] uppercase tracking-[0.2em]">Hỏi Coach · AI trên máy</span>
+                <span className="mono text-[11px] uppercase tracking-[0.2em]">Hỏi Coach</span>
               </div>
               <div className="flex items-center gap-3">
                 {messages.length > 0 && (
@@ -227,7 +229,7 @@ export default function CoachChat(goalProps) {
             <div ref={listRef} className="min-h-[160px] flex-1 space-y-3 overflow-y-auto px-4 py-4">
               {messages.length === 0 && (
                 <p className="text-[13px] leading-relaxed" style={{ color: 'var(--muted)' }}>
-                  Chat với AI Qwen 3B chạy ngay trên máy bạn (offline). Nó đọc số liệu thật của bạn để trả lời. Lần đầu hơi lâu nếu chưa tải mô hình (~2.4GB).
+                  Chat với AI Coach — nó đọc số liệu tập trung thật của bạn để trả lời. Chạy trên đám mây (nhanh, không tốn máy); khi mất mạng trên máy tính sẽ tự dùng AI dự phòng ngay trên máy.
                 </p>
               )}
               {noData && (

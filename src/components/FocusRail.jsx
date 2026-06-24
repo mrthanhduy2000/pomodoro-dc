@@ -7,7 +7,6 @@ import { motion } from 'framer-motion';
 import useGameStore from '../store/gameStore';
 import { calculateStreakMilestoneProgress } from '../engine/gameMath';
 import { localWeekMondayStr } from '../engine/time';
-import { detectWebLLMCapable } from '../engine/llm/coachPrompt';
 import CoachChat from './CoachChat';
 import CoachOffline from './CoachOffline';
 import { FlameGlyph, ShieldGlyph } from './icons/Glyph';
@@ -70,8 +69,6 @@ export default function FocusRail({
   const shieldAvailable = hasShield && streak?.skipShieldUsedWeekKey !== localWeekMondayStr();
   const milestone = calculateStreakMilestoneProgress(currentStreak);
 
-  const aiCapable = detectWebLLMCapable();
-
   return (
     <div className="space-y-4">
       {/* HÔM NAY */}
@@ -120,12 +117,12 @@ export default function FocusRail({
         )}
       </motion.div>
 
-      {/* AI COACH — mọi phản hồi do Qwen 3B chạy trên máy sinh (chỉ desktop có WebGPU) */}
-      {aiCapable && (
+      {/* AI COACH — Gemini (đám mây) là chính; mất mạng trên máy thì rơi về Qwen dự phòng */}
+      {(
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} style={cardStyle} className="p-4">
           <div className={eyebrow} style={{ color: 'var(--muted-2)' }}>AI Coach</div>
           <p className="mt-1.5 text-[12px] leading-snug" style={{ color: 'var(--muted)' }}>
-            Hỏi đáp & phân tích bằng AI Qwen chạy ngay trên máy bạn (offline).
+            Hỏi đáp & phân tích từ số liệu thật của bạn.
           </p>
           <CoachChat
             sessionsCompletedToday={sessionsCompletedToday}

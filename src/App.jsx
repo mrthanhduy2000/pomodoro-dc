@@ -1627,7 +1627,14 @@ export default function App() {
                       </div>
                       {/* Thẻ AI Coach gọn cho ĐIỆN THOẠI (cột phải chỉ hiện trên màn rộng).
                           Ẩn khi đang chạy phiên để giữ màn Focus tĩnh. */}
-                      <FocusCoachMobile hidden={hasFocusSessionInProgress} />
+                      <FocusCoachMobile
+                        hidden={hasFocusSessionInProgress}
+                        sessionsCompletedToday={sessionsCompletedToday}
+                        focusMinutesToday={focusMinutesToday}
+                        dailyGoalType={dailyGoalType}
+                        dailyGoalSessions={dailyGoalSessions}
+                        dailyGoalMinutes={dailyGoalMinutes}
+                      />
                     </div>
                   </AppErrorBoundary>
                 </div>

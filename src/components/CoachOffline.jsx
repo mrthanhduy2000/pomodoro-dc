@@ -9,6 +9,7 @@ import { useState } from 'react';
 import { SparkGlyph } from './icons/Glyph';
 import { useAnalystContext } from '../hooks/useCoachContext';
 import { buildLLMPrompt, sanitizeLLMOutput, hasForeignScript, hasFabricatedNumbers, findMismatchedPairs, findFabricatedFractions, scrubFabricatedLines, detectWebLLMCapable, mapInitProgress, LLM_MODELS } from '../engine/llm/coachPrompt';
+import { generateCloud } from '../engine/llm/cloudEngine';
 
 const GOLD = '#d9a441';
 const LOAD_TIMEOUT_MS = 300000; // 5 phút: đủ cho lần đầu tải ~2.4GB (Qwen 3B)
@@ -22,7 +23,8 @@ export default function CoachOffline(goalProps) {
   const [text, setText] = useState('');
   const buildContext = useAnalystContext(goalProps);
 
-  if (!capable) return null; // mobile/iOS/không WebGPU → giữ UI sạch
+  // Gemini đám mây chạy được cả iPhone → KHÔNG ẩn nữa. `capable` chỉ quyết định có Qwen
+  // trên máy làm dự phòng (khi đám mây lỗi) hay không.
 
   async function writeComment() {
     if (status === 'loading' || status === 'generating') return;
@@ -31,17 +33,25 @@ export default function CoachOffline(goalProps) {
     setProgress(0);
     setText('');
     try {
-      const { generateOffline } = await import('../engine/llm/webllmEngine');
       const ctxStr = buildContext(); // gọi 1 lần, dùng chung dựng-prompt + soi-guard (tránh lệch số)
       const { system, messages } = buildLLMPrompt(ctxStr);
-      const run = () => {
-        const work = generateOffline({
-          modelId: useModel, system, messages,
-          onProgress: (p) => setProgress(mapInitProgress(p)),
-          onToken: (t) => { setStatus('generating'); setText(sanitizeLLMOutput(t)); },
-        });
-        const timeout = new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), LOAD_TIMEOUT_MS));
-        return Promise.race([work, timeout]);
+      // Gemini (đám mây) TRƯỚC; lỗi → rơi về Qwen trên máy (chỉ desktop). iPhone → ném lỗi.
+      const run = async () => {
+        try {
+          setStatus('generating');
+          return await generateCloud({ system, messages, temperature: 0.3, maxTokens: 1200 });
+        } catch (cloudErr) {
+          if (!capable) throw cloudErr;
+          setStatus('loading');
+          const { generateOffline } = await import('../engine/llm/webllmEngine');
+          const work = generateOffline({
+            modelId: useModel, system, messages,
+            onProgress: (p) => setProgress(mapInitProgress(p)),
+            onToken: (t) => { setStatus('generating'); setText(sanitizeLLMOutput(t)); },
+          });
+          const timeout = new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), LOAD_TIMEOUT_MS));
+          return Promise.race([work, timeout]);
+        }
       };
       let clean = sanitizeLLMOutput(await run());
       // Trôi chữ nước ngoài HOẶC bịa số → viết lại (BLIND) tối đa MAX_LANG_RETRY lần.
@@ -69,7 +79,7 @@ export default function CoachOffline(goalProps) {
         className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-full py-1.5 text-[11px] font-semibold uppercase tracking-[0.15em] transition-opacity hover:opacity-80"
         style={{ border: `1px solid ${GOLD}55`, color: GOLD, background: 'rgba(217,164,65,0.08)' }}
       >
-        <SparkGlyph size={12} /> AI phân tích tổng thể (chạy trên máy)
+        <SparkGlyph size={12} /> AI phân tích tổng thể
       </button>
 
       {open && (
@@ -87,13 +97,13 @@ export default function CoachOffline(goalProps) {
               {status === 'idle' && (
                 <>
                   <p className="text-[13px] leading-relaxed" style={{ color: 'var(--ink)' }}>
-                    Một AI chạy ngay trên máy bạn (offline) sẽ phân tích tổng thể số liệu tập trung của bạn: đọc số, soi mẫu hình và đưa nhận định toàn cảnh — không bịa, thiếu dữ liệu thì nói chưa đủ.
+                    AI Coach sẽ phân tích tổng thể số liệu tập trung của bạn: đọc số, soi mẫu hình và đưa nhận định toàn cảnh — không bịa, thiếu dữ liệu thì nói chưa đủ.
                   </p>
                   <button type="button" onClick={() => writeComment()} className="rounded-xl px-3 py-2 text-[13px] font-semibold" style={{ background: 'var(--accent)', color: '#fff' }}>
                     Phân tích tổng thể
                   </button>
                   <p className="text-[11px] leading-snug" style={{ color: 'var(--muted)' }}>
-                    Tải mô hình ~2.4GB lần đầu (Qwen 3B, cần card đồ hoạ / WebGPU), lần sau dùng ngay. Không chạy được thì vẫn có “Hỏi Coach” (⚡ Nhanh) không cần tải gì.
+                    Chạy trên đám mây (nhanh, không tốn máy, dùng được cả điện thoại). Khi mất mạng trên máy tính sẽ tự dùng AI dự phòng ngay trên máy.
                   </p>
                 </>
               )}
@@ -116,8 +126,8 @@ export default function CoachOffline(goalProps) {
                 <div className="space-y-2">
                   <p className="text-[12.5px] leading-relaxed" style={{ color: 'var(--ink)' }}>
                     {status === 'error-lang'
-                      ? 'AI trên máy lỡ trả lời lẫn chữ nước ngoài (model nhỏ đôi khi bị vậy). Bấm "Thử lại" để viết lại bằng tiếng Việt, hoặc dùng "Hỏi Coach".'
-                      : 'Không chạy được AI trên máy (thiếu WebGPU hoặc tải lỗi). Bạn thử lại nhé.'}
+                      ? 'AI dự phòng trên máy lỡ trả lời lẫn chữ nước ngoài. Bấm "Thử lại" nhé, hoặc dùng "Hỏi Coach".'
+                      : 'Chưa phân tích được (mạng trục trặc / chưa cấu hình API / hết lượt miễn phí). Bạn thử lại nhé.'}
                   </p>
                   <div className="flex gap-2">
                     <button type="button" onClick={() => writeComment()} className="rounded-xl px-3 py-1.5 text-[12px] font-semibold" style={{ background: 'var(--accent)', color: '#fff' }}>Thử lại</button>
@@ -127,7 +137,7 @@ export default function CoachOffline(goalProps) {
 
               {(status === 'ready' || status === 'generating') && (
                 <p className="text-[11px] italic leading-snug" style={{ color: 'var(--muted)' }}>
-                  Đây là AI chạy trên máy bạn (offline) — phân tích từ số liệu thật, nhưng vẫn dễ sai hơn "Hỏi Coach" (Claude). Cần lời khuyên chuẩn nhất thì bấm "Hỏi Coach".
+                  Phân tích từ số liệu thật của bạn. Muốn hỏi sâu từng điểm thì bấm "Hỏi Coach".
                 </p>
               )}
             </div>

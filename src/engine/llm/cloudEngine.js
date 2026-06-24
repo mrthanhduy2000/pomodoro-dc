@@ -10,7 +10,7 @@
  * (Server /api/coach đặt maxDuration 30s trong vercel.json, nên client chờ ngắn hơn một nhịp để
  * báo lỗi sạch trước khi Vercel cắt hàm.)
  */
-export async function generateCloud({ system, messages, temperature, maxTokens, signal, timeoutMs = 28000 } = {}) {
+export async function generateCloud({ system, messages, temperature, maxTokens, tier, signal, timeoutMs = 28000 } = {}) {
   // Không có signal ngoài → tự dựng controller để áp timeout (vẫn dọn timer ở finally).
   const ctrl = signal ? null : (typeof AbortController !== 'undefined' ? new AbortController() : null);
   const timer = ctrl ? setTimeout(() => ctrl.abort(), Math.max(1000, timeoutMs)) : null;
@@ -18,7 +18,7 @@ export async function generateCloud({ system, messages, temperature, maxTokens, 
     const res = await fetch('/api/coach', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ system, messages, temperature, maxTokens }),
+      body: JSON.stringify({ system, messages, temperature, maxTokens, tier }),
       signal: signal || ctrl?.signal,
     });
     let data = null;

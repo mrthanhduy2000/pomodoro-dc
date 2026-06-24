@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { toGeminiBody, extractGeminiText, shouldFallback } from './coach.js';
+import { toGeminiBody, extractGeminiText, shouldFallback, buildModelChain } from './coach.js';
 
 test('toGeminiBody: map role assistant→model, system tách riêng, generationConfig mặc định', () => {
   const b = toGeminiBody('Bạn là Coach.', [
@@ -31,6 +31,17 @@ test('toGeminiBody: bỏ message rỗng; không system → không có system_ins
 test('toGeminiBody: thinkingBudget 0 → tắt thinking (tránh cụt câu ở 2.5-flash)', () => {
   const b = toGeminiBody('s', [{ role: 'user', content: 'a' }], { thinkingBudget: 0 });
   assert.deepEqual(b.generationConfig.thinkingConfig, { thinkingBudget: 0 });
+});
+
+test('buildModelChain: deep thử pro TRƯỚC rồi rơi về flash; mặc định = chuỗi flash', () => {
+  const fast = buildModelChain(undefined, {});
+  assert.deepEqual(fast, ['gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-2.0-flash']);
+  const deep = buildModelChain('deep', {});
+  assert.equal(deep[0], 'gemini-2.5-pro'); // pro đứng đầu
+  assert.deepEqual(deep.slice(1), fast); // rồi rơi về nguyên chuỗi flash (lưới an toàn)
+  // env ghi đè + bỏ trùng (nếu DEEP trùng model flash thì không lặp)
+  assert.deepEqual(buildModelChain('deep', { GEMINI_MODEL_DEEP: 'gemini-2.5-flash' }), fast);
+  assert.deepEqual(buildModelChain('deep', { GEMINI_MODEL: 'x', GEMINI_MODEL_DEEP: 'y', GEMINI_MODEL_FALLBACK: 'z', GEMINI_MODEL_FALLBACK2: 'w' }), ['y', 'x', 'z', 'w']);
 });
 
 test('shouldFallback: 503/500/429 → nhảy model dự phòng; 200/400 → không', () => {

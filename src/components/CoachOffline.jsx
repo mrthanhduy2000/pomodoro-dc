@@ -24,8 +24,9 @@ export default function CoachOffline(goalProps) {
     try {
       const ctxStr = buildContext(); // gọi 1 lần, dùng chung dựng-prompt + soi-guard (tránh lệch số)
       const { system, messages } = buildLLMPrompt(ctxStr);
-      // Engine = Gemini (đám mây). /api/coach đã có thử-lại + nhảy model dự phòng.
-      const run = (msgs) => generateCloud({ system, messages: msgs, temperature: 0.2, maxTokens: 1200 });
+      // Engine = Gemini (đám mây). Bài 4 phần là việc KHÓ NHẤT → tier 'deep' (pro trước, rơi về
+      // flash nếu pro quá tải). /api/coach lo thử-lại + nhảy model dự phòng.
+      const run = (msgs) => generateCloud({ system, messages: msgs, temperature: 0.2, maxTokens: 1200, tier: 'deep' });
       let clean = sanitizeLLMOutput(await run(messages));
       if (hasForeignScript(clean)) {
         // Lỗi NGÔN NGỮ (lỡ chen chữ nước ngoài) → viết lại BLIND 1 lần (hiếm với Gemini).

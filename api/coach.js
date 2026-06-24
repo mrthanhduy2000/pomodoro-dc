@@ -11,10 +11,28 @@ import { methodNotAllowed, readJsonBody, sendJson } from './_lib/http.js';
 const DEFAULT_MODEL = 'gemini-2.5-flash';
 const FALLBACK_MODEL = 'gemini-2.5-flash-lite';
 const FALLBACK_MODEL_2 = 'gemini-2.0-flash';
+// Tầng "deep" cho bài PHÂN TÍCH 4 PHẦN (việc khó nhất): model MẠNH hơn, suy luận tốt hơn.
+// Đứng ĐẦU chuỗi nhưng vẫn rơi về flash nếu pro quá tải → vừa khôn vừa có lưới an toàn.
+const DEEP_MODEL = 'gemini-2.5-pro';
 
 // Lỗi từ Gemini đáng để THỬ MODEL KHÁC: 503 (quá tải), 500 (lỗi tạm), 429 (chạm giới hạn free).
 export function shouldFallback(status) {
   return status === 503 || status === 500 || status === 429;
+}
+
+/**
+ * buildModelChain — THUẦN: dựng CHUỖI model theo tầng. 'deep' (bài phân tích 4 phần) thử
+ * pro TRƯỚC rồi rơi về flash; mặc định (chat/nhắc) chỉ dùng chuỗi flash nhanh+rẻ. Bỏ trùng,
+ * giữ thứ tự. Env ghi đè: GEMINI_MODEL(_FALLBACK/_FALLBACK2/_DEEP).
+ */
+export function buildModelChain(tier, env = {}) {
+  const fast = [
+    env.GEMINI_MODEL || DEFAULT_MODEL,
+    env.GEMINI_MODEL_FALLBACK || FALLBACK_MODEL,
+    env.GEMINI_MODEL_FALLBACK2 || FALLBACK_MODEL_2,
+  ];
+  const chain = tier === 'deep' ? [env.GEMINI_MODEL_DEEP || DEEP_MODEL, ...fast] : fast;
+  return chain.filter((m, i, a) => m && a.indexOf(m) === i); // bỏ trùng, giữ thứ tự
 }
 
 /** toGeminiBody — THUẦN: { system, messages:[{role,content}] } → body Gemini generateContent. */
@@ -63,17 +81,14 @@ export default async function handler(req, res) {
 
   try {
     const body = await readJsonBody(req);
-    const { system, messages, temperature, maxTokens } = body || {};
+    const { system, messages, temperature, maxTokens, tier } = body || {};
     if (!Array.isArray(messages) || messages.length === 0) {
       return sendJson(res, 400, { ok: false, error: 'no-messages' });
     }
     const opts = { temperature, maxTokens };
-    // CHUỖI model: thử lần lượt, gặp lỗi quá-tải/hết-lượt → nhảy model kế. Lỗi khác (key/400) → dừng.
-    const chain = [
-      process.env.GEMINI_MODEL || DEFAULT_MODEL,
-      process.env.GEMINI_MODEL_FALLBACK || FALLBACK_MODEL,
-      process.env.GEMINI_MODEL_FALLBACK2 || FALLBACK_MODEL_2,
-    ].filter((m, i, a) => m && a.indexOf(m) === i); // bỏ trùng
+    // CHUỖI model theo tầng: 'deep' (phân tích 4 phần) thử pro trước; mặc định = flash nhanh.
+    // Thử lần lượt, gặp lỗi quá-tải/hết-lượt → nhảy model kế. Lỗi khác (key/400) → dừng.
+    const chain = buildModelChain(tier, process.env);
 
     let r; let usedModel = chain[0];
     for (const m of chain) {

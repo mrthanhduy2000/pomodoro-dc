@@ -7,6 +7,7 @@
  */
 import CoachChat from './CoachChat';
 import CoachOffline from './CoachOffline';
+import CoachNudge from './CoachNudge';
 
 export default function FocusCoachMobile({ hidden = false, ...goalProps }) {
   if (hidden) return null;
@@ -17,6 +18,7 @@ export default function FocusCoachMobile({ hidden = false, ...goalProps }) {
         <p className="mt-2 text-[12.5px] leading-relaxed" style={{ color: '#e8e4dc' }}>
           Hỏi đáp & phân tích từ số liệu thật của bạn (chạy trên đám mây, cần mạng).
         </p>
+        <CoachNudge {...goalProps} />
         <CoachChat {...goalProps} />
         <CoachOffline {...goalProps} />
       </div>

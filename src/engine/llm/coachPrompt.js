@@ -140,6 +140,28 @@ export function buildLLMChatPrompt(context, question, history = []) {
   return { system, messages: [...past, { role: 'user', content: q.slice(0, 2000) }] };
 }
 
+/**
+ * buildNudgeContext — ghép dòng "Phiên vừa xong" (số THẬT lấy từ store) vào ĐẦU bản tóm tắt
+ * số liệu. Nhờ vậy câu nhắc-sau-phiên được phép nhắc số của phiên vừa xong (vd "45 phút") mà
+ * lưới chống-bịa KHÔNG báo nhầm — vì con số đó GIỜ đã nằm trong context để đối chiếu.
+ * goalAchieved chỉ ghi khi rõ true/false (lúc mới xong thường null → bỏ, tránh nói sai).
+ */
+export function buildNudgeContext(analystContext, session = {}) {
+  const mins = Math.round(Number(session?.minutes));
+  const ctx = String(analystContext ?? '').trim();
+  if (!Number.isFinite(mins) || mins <= 0) return ctx;
+  const label = String(session?.categoryLabel ?? '').trim();
+  const cat = label ? `, loại "${label}"` : '';
+  const goal = session?.goalAchieved === true ? ', đạt mục tiêu'
+    : session?.goalAchieved === false ? ', chưa đạt mục tiêu' : '';
+  const line = `Phiên vừa xong: ${mins} phút${cat}${goal}.`;
+  return ctx ? `${line}\n${ctx}` : line;
+}
+
+// Câu lệnh cho lượt nhắc-sau-phiên: dùng CHUNG COACH_CHAT_SYSTEM (mọi luật trung thực giữ
+// nguyên) nhưng yêu cầu MỘT câu thật ngắn nói thẳng với người vừa xong phiên.
+export const NUDGE_INSTRUCTION = 'Mình VỪA XONG phiên ghi ở dòng "Phiên vừa xong" trên đầu dữ liệu. Hãy viết MỘT câu (tối đa 2 câu, thật ngắn, ấm) nói trực tiếp với mình: một nhận xét bám đúng số thật của phiên vừa xong, đặt nó vào thói quen của mình nếu hợp, có thể gợi ý nhẹ việc tiếp theo. Tuyệt đối không bịa số, mỗi % kèm cỡ mẫu, 100% tiếng Việt, không dùng từ nhân-quả.';
+
 export function sanitizeLLMOutput(raw) {
   let s = String(raw ?? '');
   s = s.replace(/<think>[\s\S]*?<\/think>/gi, ' '); // Qwen có thể sinh reasoning

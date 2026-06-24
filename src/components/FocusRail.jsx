@@ -9,6 +9,7 @@ import { calculateStreakMilestoneProgress } from '../engine/gameMath';
 import { localWeekMondayStr } from '../engine/time';
 import CoachChat from './CoachChat';
 import CoachOffline from './CoachOffline';
+import CoachNudge from './CoachNudge';
 import { FlameGlyph, ShieldGlyph } from './icons/Glyph';
 
 const cardStyle = {
@@ -124,6 +125,13 @@ export default function FocusRail({
           <p className="mt-1.5 text-[12px] leading-snug" style={{ color: 'var(--muted)' }}>
             Hỏi đáp & phân tích từ số liệu thật của bạn.
           </p>
+          <CoachNudge
+            sessionsCompletedToday={sessionsCompletedToday}
+            focusMinutesToday={focusMinutesToday}
+            dailyGoalType={dailyGoalType}
+            dailyGoalSessions={dailyGoalSessions}
+            dailyGoalMinutes={dailyGoalMinutes}
+          />
           <CoachChat
             sessionsCompletedToday={sessionsCompletedToday}
             focusMinutesToday={focusMinutesToday}

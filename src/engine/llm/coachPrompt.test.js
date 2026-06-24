@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { buildLLMPrompt, buildLLMChatPrompt, sanitizeLLMOutput, hasForeignScript } from './coachPrompt.js';
+import { buildLLMPrompt, buildLLMChatPrompt, buildNudgeContext, sanitizeLLMOutput, hasForeignScript, findFabricatedNumbers } from './coachPrompt.js';
 
 test('buildLLMPrompt: chế độ viết nhận xét (không câu hỏi)', () => {
   const { system, messages } = buildLLMPrompt('Tổng quan: 20 phiên.');
@@ -36,6 +36,19 @@ test('buildLLMChatPrompt: system hội thoại + câu hỏi cuối + lọc histo
   assert.match(system, /trợ lý PHÂN TÍCH SỐ LIỆU/); // dùng COACH_CHAT_SYSTEM, không phải khuôn 3 phần
   assert.equal(messages.at(-1).content, 'Giờ vàng của mình?');
   assert.ok(messages.every((m) => m.role === 'user' || m.role === 'assistant'));
+});
+
+test('buildNudgeContext: ghép "Phiên vừa xong" + số phiên đó được guard CHẤP NHẬN', () => {
+  const analyst = 'Tổng quan: 38 phiên hoàn thành, ~24 giờ tập trung.';
+  const ctx = buildNudgeContext(analyst, { minutes: 45, categoryLabel: 'Học', goalAchieved: true });
+  assert.match(ctx, /^Phiên vừa xong: 45 phút, loại "Học", đạt mục tiêu\./);
+  assert.match(ctx, /Tổng quan: 38 phiên/);
+  // "45 phút" GIỜ có trong context → câu nhắc nhắc "45 phút" KHÔNG bị coi là bịa
+  assert.deepEqual(findFabricatedNumbers('Phiên 45 phút vừa xong rất gọn.', ctx), []);
+  // minutes không hợp lệ → trả nguyên analyst (không thêm dòng)
+  assert.equal(buildNudgeContext(analyst, { minutes: 0 }), analyst);
+  // không có loại / goalAchieved null → bỏ phần đó
+  assert.match(buildNudgeContext(analyst, { minutes: 30 }), /^Phiên vừa xong: 30 phút\.\n/);
 });
 
 test('sanitizeLLMOutput: bỏ <think>, bỏ rỗng, cắt dài', () => {

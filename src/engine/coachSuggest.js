@@ -15,6 +15,7 @@ export const CATALOG = [
   { id: 'bestWindow', question: 'Giờ này mình nên làm việc khó hay việc nhẹ?' },
   { id: 'idealLength', question: 'Phiên dài bao nhiêu phút thì hợp với mình nhất?' },
   { id: 'deepWork', question: 'Mình hay làm phiên sâu (từ 45 phút) không?' },
+  { id: 'flow', question: 'Phiên của mình có hay bị tạm dừng, đứt quãng không?' },
   { id: 'abandon', question: 'Mình hay bỏ phiên giữa chừng vào lúc nào?' },
   { id: 'lateNight', question: 'Làm khuya thì chất lượng phiên của mình thế nào?' },
   { id: 'momentum', question: 'Tuần này so với tuần trước mình thế nào?' },
@@ -44,9 +45,10 @@ export const RELATED = {
   todayPace: ['overview', 'streak', 'bestWindow', 'goalCalibration'],
   goldenHour: ['todayPace', 'bestWindow', 'lateNight', 'idealLength', 'nextSession'],
   bestWindow: ['goldenHour', 'todayPace', 'lateNight', 'nextSession'],
-  idealLength: ['goldenHour', 'deepWork', 'abandon', 'nextSession'],
-  deepWork: ['idealLength', 'goldenHour'],
-  abandon: ['idealLength', 'lateNight', 'todayPace'],
+  idealLength: ['goldenHour', 'deepWork', 'abandon', 'nextSession', 'flow'],
+  deepWork: ['idealLength', 'goldenHour', 'flow'],
+  flow: ['abandon', 'idealLength', 'deepWork'],
+  abandon: ['idealLength', 'lateNight', 'todayPace', 'flow'],
   lateNight: ['goldenHour', 'abandon', 'bestWindow'],
   momentum: ['overview', 'weekday', 'streak', 'consistency', 'longTrend'],
   weekday: ['momentum', 'streak', 'weekendVsWeekday'],
@@ -69,6 +71,7 @@ export const KEYWORD_MAP = [
   ['abandon', ['bo giua chung', 'bo phien', 'huy phien', 'bo do']],
   ['idealLength', ['bao nhieu phut', 'do dai', 'dai bao', 'phien dai', 'may phut']],
   ['deepWork', ['phien sau', '45 phut', 'tap trung sau', 'deep']],
+  ['flow', ['lien mach', 'ngat quang', 'dut quang', 'tam dung', 'bi ngat', 'tron tru']],
   ['todayPace', ['hom nay', 'dung nhip', 'nhip hom nay', 'tien do hom nay']],
   ['streak', ['chuoi', 'streak', 'giu chuoi']],
   ['portrait', ['kieu nguoi', 'nhin chung minh', 'minh la nguoi', 'diem manh', 'hieu minh']],
@@ -110,6 +113,7 @@ export function detectSignals(contextString) {
   if (lineStarts('độ dài hợp nhất:')) set.add('idealLength');
   if (lines.some((l) => l.startsWith('đều đặn:') && !l.includes('chưa đủ'))) set.add('consistency');
   if (lineStarts('phiên sâu:')) set.add('deepWork');
+  if (lineStarts('phiên liền mạch')) set.add('flow');
   if (lineStarts('xu hướng tuần:')) set.add('momentum');
   if (lineStarts('xu hướng dài hạn')) set.add('longTrend');
   if (lineStarts('chân dung của bạn')) set.add('portrait');
@@ -165,6 +169,7 @@ export const GATE = {
   bestWindow: (g) => g.has('bestWindow') || g.has('goldenHour'),
   idealLength: (g) => g.has('idealLength'),
   deepWork: (g) => g.has('deepWork'),
+  flow: (g) => g.has('flow'),
   abandon: (g) => g.has('abandon'),
   lateNight: (g) => g.has('lateNight'),
   momentum: (g) => g.has('momentum'),

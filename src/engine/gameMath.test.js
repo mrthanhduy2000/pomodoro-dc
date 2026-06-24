@@ -17,6 +17,7 @@ import {
   getLateNightQualityDrop,
   getWeekendVsWeekdayContrast,
   getComebackRate,
+  getInterruptionPattern,
   // Bản Cập Nhật Cộng Hưởng
   calculateRewards,
   softcapBranchXP,
@@ -45,6 +46,30 @@ function session(id, { hour, minutes, goalAchieved = undefined, categoryId = nul
     ...(categoryId !== null ? { categoryId } : {}),
   };
 }
+
+test('getInterruptionPattern: đếm phiên trơn vs ngắt quãng, gác cỡ mẫu, BỎ phiên thiếu trường', () => {
+  const smooth = (id) => ({ id, minutes: 30, completed: true, pauseSegments: [] });
+  const broken = (id, n) => ({ id, minutes: 30, completed: true, pauseSegments: Array.from({ length: n }, () => ({})) });
+  const legacy = (id) => ({ id, minutes: 30, completed: true }); // phiên CŨ: KHÔNG có pauseSegments
+  const cancelled = (id) => ({ id, minutes: 30, completed: false, cancelled: true, status: 'cancelled', pauseSegments: [] });
+
+  const hist = [
+    smooth(1), smooth(2), smooth(3), smooth(4), smooth(5), smooth(6),
+    broken(7, 2), broken(8, 1),
+    legacy(9), legacy(10), // không tính (thiếu trường)
+    cancelled(11), // không tính (huỷ)
+  ];
+  const r = getInterruptionPattern(hist);
+  assert.equal(r.total, 8); // chỉ 8 phiên CÓ dữ liệu pauseSegments
+  assert.equal(r.smooth, 6);
+  assert.equal(r.interrupted, 2);
+  assert.equal(Math.round(r.smoothRate * 100), 75);
+
+  // Dưới cỡ mẫu (7 phiên có dữ liệu) → null
+  assert.equal(getInterruptionPattern(hist.slice(0, 7)), null);
+  // Toàn phiên cũ thiếu trường → null (KHÔNG coi là "trơn" để khỏi thổi phồng)
+  assert.equal(getInterruptionPattern(Array.from({ length: 8 }, (_, i) => legacy(i))), null);
+});
 
 test('getTimeOfDayBucket maps hours to the right part of day, including past midnight', () => {
   assert.equal(getTimeOfDayBucket(7).id, 'sang');

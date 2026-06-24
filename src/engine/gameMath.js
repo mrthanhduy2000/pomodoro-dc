@@ -1555,6 +1555,29 @@ export function getComebackRate(history = [], opts = {}) {
   return { comebacks, gaps, rate: comebacks / gaps, windowDays };
 }
 
+/**
+ * getInterruptionPattern — tín hiệu CHẤT LƯỢNG phiên: "liền mạch" (chạy hết không tạm dừng)
+ * vs "đứt quãng" (≥1 lần tạm dừng), dựa trên `pauseSegments` đã lưu sẵn MỖI phiên.
+ *
+ * ⚠️ CHỈ tính phiên CÓ dữ liệu tạm dừng (`Array.isArray(e.pauseSegments)`). Phiên cũ — tạo
+ * TRƯỚC khi tính năng lưu pauseSegments tồn tại — không có trường này → BỎ QUA, KHÔNG coi là
+ * "liền mạch" (kẻo thổi phồng tỉ lệ trơn). Gác mẫu: cần ≥ minSample phiên CÓ dữ liệu mới trả về.
+ * Thuần (không Date). Trả null nếu chưa đủ.
+ * @returns {{ total:number, smooth:number, interrupted:number, smoothRate:number } | null}
+ */
+export function getInterruptionPattern(history = [], opts = {}) {
+  const { minSample = 8 } = opts;
+  let total = 0; let smooth = 0; let interrupted = 0;
+  for (const e of coachCompletedSessions(history)) {
+    if (!Array.isArray(e.pauseSegments)) continue; // phiên cũ thiếu trường → không tính
+    total += 1;
+    if (e.pauseSegments.length === 0) smooth += 1;
+    else interrupted += 1;
+  }
+  if (total < minSample) return null;
+  return { total, smooth, interrupted, smoothRate: smooth / total };
+}
+
 function getHistoryXP(entry) {
   return entry?.xpEarned ?? entry?.epEarned ?? 0;
 }

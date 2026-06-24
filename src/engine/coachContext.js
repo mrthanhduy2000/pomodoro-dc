@@ -14,6 +14,7 @@ import {
   getMultiWeekTrend,
   getWeekendVsWeekdayContrast,
   getComebackRate,
+  getInterruptionPattern,
   isCancelledHistoryEntry,
 } from './gameMath';
 import { buildFocusProfile, generatePredictions } from './coachIntel';
@@ -147,6 +148,11 @@ export function buildAnalystContext(history = [], opts = {}) {
   if (profile.consistency.status !== 'insufficient') lines.push(`Đều đặn: ${profile.consistency.blurb}`);
   if (profile.deepWorkRatio.status !== 'insufficient') lines.push(`Phiên sâu: ${profile.deepWorkRatio.blurb}`);
   if (profile.momentum.status !== 'insufficient') lines.push(`Xu hướng tuần: ${profile.momentum.blurb}`);
+
+  // [Phiên trơn vs ngắt quãng] — chiều CHẤT LƯỢNG mới: đọc pauseSegments đã lưu sẵn mỗi phiên
+  // (trước nay Coach không hề thấy). Chỉ tính phiên CÓ dữ liệu (phiên cũ thiếu trường → bỏ).
+  const interruption = getInterruptionPattern(list);
+  if (interruption) lines.push(`Phiên liền mạch (chạy hết không tạm dừng): ${interruption.smooth}/${interruption.total} phiên (${pctOf(interruption.smoothRate)}%). Còn lại ${interruption.interrupted}/${interruption.total} phiên có tạm dừng giữa chừng. Đây là tương quan, không phải kết luận.`);
 
   // [Xu hướng dài hạn] — nhiều tuần (đang lên/xuống/giữ); chỉ khi ≥2 tuần có dữ liệu.
   const mwt = getMultiWeekTrend(list, { getEntryWeekKey: opts.getEntryWeekKey, weekKeysDesc: opts.weekKeysDesc, minWeeks: 3 });

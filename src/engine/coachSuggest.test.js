@@ -6,6 +6,8 @@ import { pickSuggestions, detectTopic, detectTopics, detectSignals, CATALOG } fr
 const Q = Object.fromEntries(CATALOG.map((c) => [c.id, c.question]));
 
 // Bối cảnh giàu — bật gần hết tín hiệu (đúng định dạng buildAnalystContext sinh ra).
+const FLOW_LINE = 'Phiên liền mạch (chạy hết không tạm dừng): 30/42 phiên (71%). Còn lại 12/42 phiên có tạm dừng giữa chừng. Đây là tương quan, không phải kết luận.';
+
 const RICH = [
   'Tổng quan: 42 phiên hoàn thành, ~31 giờ tập trung, 6 phiên bị huỷ. Đạt mục tiêu 61% (trên 28 phiên có đặt mục tiêu). Chuỗi hiện tại: 5 ngày.',
   'Hôm nay: đang chậm hơn nhịp thường — 1/3 phiên, tới giờ này bạn thường làm ~2 phiên (trên 9 ngày gần đây).',
@@ -28,6 +30,21 @@ const RICH = [
   'Giữ chuỗi: Gần đây 6/7 Thứ Tư bạn đều có ít nhất một phiên (~86%).',
   'Ghi chú gần đây: "(định làm tiếp) viết chương 3"',
 ].join('\n');
+
+test('flow (phiên trơn/ngắt quãng): bật tín hiệu + detectTopic + gợi ý theo độ-dài', () => {
+  const ctx = `${RICH}\n${FLOW_LINE}`;
+  assert.ok(detectSignals(ctx).has('flow'));
+  assert.equal(detectTopic('phiên của mình có hay bị ngắt quãng không'), 'flow');
+  assert.equal(detectTopic('mình làm có liền mạch không'), 'flow');
+  // RICH gốc (không có dòng phiên-liền-mạch) → KHÔNG bật flow
+  assert.ok(!detectSignals(RICH).has('flow'));
+  // Vừa hỏi về độ dài phiên → 'flow' nằm trong nhóm đề xuất tiếp (đã bật tín hiệu)
+  const sugg = pickSuggestions({ contextString: ctx, lastQuestionText: 'phiên dài bao nhiêu phút hợp với mình', limit: 6 });
+  assert.ok(sugg.includes(Q.flow));
+  // KHÔNG bật tín hiệu flow (RICH gốc) → KHÔNG bao giờ gợi 'flow'
+  const noFlow = pickSuggestions({ contextString: RICH, lastQuestionText: 'phiên dài bao nhiêu phút hợp với mình', limit: 8 });
+  assert.ok(!noFlow.includes(Q.flow));
+});
 
 test('detectSignals: bối cảnh giàu bật đủ tín hiệu chính', () => {
   const sig = detectSignals(RICH);

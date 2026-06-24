@@ -13,14 +13,17 @@ export function toGeminiBody(system, messages, opts = {}) {
   const contents = (Array.isArray(messages) ? messages : [])
     .filter((m) => m && typeof m.content === 'string' && m.content.trim())
     .map((m) => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: String(m.content) }] }));
-  const body = {
-    contents,
-    generationConfig: {
-      temperature: typeof opts.temperature === 'number' ? opts.temperature : 0.3,
-      topP: typeof opts.topP === 'number' ? opts.topP : 0.9,
-      maxOutputTokens: typeof opts.maxTokens === 'number' ? opts.maxTokens : 800,
-    },
+  const generationConfig = {
+    temperature: typeof opts.temperature === 'number' ? opts.temperature : 0.3,
+    topP: typeof opts.topP === 'number' ? opts.topP : 0.9,
+    maxOutputTokens: typeof opts.maxTokens === 'number' ? opts.maxTokens : 800,
   };
+  // Tắt "thinking" của Gemini 2.5 Flash: đây là tác vụ CHÉP-LẠI-SỐ, không cần suy luận dài;
+  // nếu để thinking ON nó ăn hết maxOutputTokens → câu trả lời bị cụt/rỗng. (0 = tắt hẳn.)
+  if (typeof opts.thinkingBudget === 'number') {
+    generationConfig.thinkingConfig = { thinkingBudget: opts.thinkingBudget };
+  }
+  const body = { contents, generationConfig };
   const sys = String(system ?? '').trim();
   if (sys) body.system_instruction = { parts: [{ text: sys }] };
   return body;
@@ -46,11 +49,17 @@ export default async function handler(req, res) {
     }
     const model = process.env.GEMINI_MODEL || DEFAULT_MODEL;
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
-    const r = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(toGeminiBody(system, messages, { temperature, maxTokens })),
-    });
+    // 2.5-flash bật thinking mặc định → TẮT (thinkingBudget 0) cho tác vụ chép-lại-số.
+    const payload = JSON.stringify(toGeminiBody(system, messages, {
+      temperature, maxTokens, thinkingBudget: model.includes('2.5') ? 0 : undefined,
+    }));
+    // Gemini free đôi khi 503 (quá tải tạm thời) → thử lại 1 lần sau nhịp ngắn.
+    let r;
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: payload });
+      if (r.ok || (r.status !== 503 && r.status !== 500) || attempt === 1) break;
+      await new Promise((ok) => setTimeout(ok, 700));
+    }
     if (!r.ok) {
       const detail = await r.text().catch(() => '');
       return sendJson(res, 502, { ok: false, error: `gemini-${r.status}`, detail: detail.slice(0, 300) });

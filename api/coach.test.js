@@ -24,6 +24,12 @@ test('toGeminiBody: bỏ message rỗng; không system → không có system_ins
   assert.ok(!('system_instruction' in b));
   assert.equal(b.generationConfig.temperature, 0.2);
   assert.equal(b.generationConfig.maxOutputTokens, 500);
+  assert.ok(!('thinkingConfig' in b.generationConfig)); // không truyền thinkingBudget → không có
+});
+
+test('toGeminiBody: thinkingBudget 0 → tắt thinking (tránh cụt câu ở 2.5-flash)', () => {
+  const b = toGeminiBody('s', [{ role: 'user', content: 'a' }], { thinkingBudget: 0 });
+  assert.deepEqual(b.generationConfig.thinkingConfig, { thinkingBudget: 0 });
 });
 
 test('extractGeminiText: ghép parts; thiếu/bị chặn → ""', () => {

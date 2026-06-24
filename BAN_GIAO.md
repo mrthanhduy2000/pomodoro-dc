@@ -16,7 +16,17 @@
 - **Đồng bộ Supabase** (game_state + timer_live cho menu bar Mac).
 
 ## 🔧 Đang làm
-- **NÂNG CẤP TRÍ TUỆ AI COACH — chuỗi 6 mảng** (Đàm ra lệnh 2026-06-25 "làm toàn bộ, chuyên sâu", sau workflow đề-xuất 10 agent). Thứ tự phụ thuộc: **(1) Siết niềm tin ✅ XONG** — sửa nhiệt độ lệch 0.3→0.2/0.8, bộ chấm điểm lưới chống-bịa (`coachEval`), timeout client + `vercel.json` maxDuration, CoachOffline viết-lại-có-hướng-dẫn, dọn chữ cũ về Qwen. **(2) Tín hiệu "phiên trơn vs ngắt quãng"** (đọc `pauseCount` đang bị bỏ phí). **(3) Coach tự nhắc sau mỗi phiên** (qua push iPhone). **(4) Phân tích 4 phần có cấu trúc + model mạnh hơn**. **(5) Bộ nhớ lời khuyên** (cá nhân hoá — Đàm ưu tiên). **(6) Cảnh báo chuỗi sắp đứt** (cron tự đẩy). Mỗi mảng test xanh → deploy.
+- (Trống — chuỗi 6 mảng nâng cấp AI Coach đã XONG & deploy hết, xem nhật ký bên dưới.)
+
+## ✅ NÂNG CẤP TRÍ TUỆ AI COACH — chuỗi 6 mảng (2026-06-25, XONG hết)
+> Đàm ra lệnh "làm toàn bộ, chuyên sâu" sau workflow đề-xuất 10 agent. Cả 6 mảng test xanh → deploy.
+1. **Siết niềm tin ✅** — nhiệt độ 0.3→0.2/0.8, bộ chấm điểm chống-bịa (`coachEval`), timeout 28s + `vercel.json` maxDuration, CoachOffline viết-lại-có-hướng-dẫn, dọn chữ Qwen cũ.
+2. **Tín hiệu "phiên trơn vs ngắt quãng" ✅** — `getInterruptionPattern` đọc `pauseSegments` (chiều chất lượng trước bị bỏ phí) + chip `flow`.
+3. **Coach tự nhắc sau mỗi phiên ✅** — `CoachNudge.jsx` (in-app, chủ động, bám số phiên vừa xong, qua guard).
+4. **Model mạnh hơn cho bài 4 phần ✅** — `buildModelChain` tier 'deep' = gemini-2.5-pro (rơi về flash).
+5. **Bộ nhớ lời khuyên ✅** — `coachAdviceMemory` (cá nhân hoá: nhớ lời khuyên chỉnh mục tiêu + theo dõi theo thời gian).
+6. **Cảnh báo chuỗi sắp đứt qua push ✅** — cron `api/coach-digest.js` 17:00 VN.
+- ⚠️ **CẦN ĐÀM THỬ TAY** (không test được trên dev): (a) câu nhắc-sau-phiên hiện sau khi xong PHIÊN THẬT; (b) bài "AI phân tích tổng thể" giờ chạy pro — xem có chậm/khác chất lượng không; (c) dòng "Ghi nhớ" lời khuyên hiện sau ≥3 ngày; (d) thông báo chuỗi-sắp-đứt: chiều nào quên làm sẽ nhận push (cần đã bật push iPhone).
 
 ## 🔜 Sẽ làm tiếp (ưu tiên từ trên xuống)
 1. **Hoàn tất chuỗi 6 mảng nâng cấp AI Coach** (xem "Đang làm" — mảng 2→6).
@@ -32,6 +42,8 @@
 
 ## 🗒️ Nhật ký cập nhật
 > Mỗi lần xong việc đáng kể, thêm 1 dòng vào ĐẦU danh sách.
+
+- **2026-06-25** — **[Mảng 6/6] Cảnh báo chuỗi sắp đứt qua PUSH** (Coach chủ động lúc người dùng VẮNG). CRON `api/coach-digest.js` + helpers thuần `api/_lib/coachDigest.js` (`evaluateStreakRisk`/`pickActiveBucketLabel`/`buildStreakNudgePayload`, test). Mỗi ngày 17:00 VN (`vercel.json` crons) đọc `game_state` từ Supabase; nếu chuỗi treo (còn chuỗi nhưng hôm nay chưa làm phiên nào) → đẩy thông báo giữ-chuỗi (kèm "buổi hay làm" nếu rõ). Tái dùng hạ tầng push sẵn có (không cần SQL mới). Bảo vệ `CRON_SECRET`. `npm test` **191/191** (+3), lint sạch, build OK, smoke-import endpoint OK. ⚠️ Vercel Hobby cron 1 lần/ngày; cần đã bật push iPhone + env (CRON_SECRET/SERVICE_ROLE/WEB_PUSH) sẵn có. **→ HOÀN TẤT chuỗi 6 mảng nâng cấp AI Coach.**
 
 - **2026-06-25** — **[Mảng 5/6] Bộ nhớ lời khuyên (cá nhân hoá — Đàm ưu tiên)**. `coachAdviceMemory.js` (thuần+test): Coach NHỚ lời khuyên chỉnh-mục-tiêu-ngày đã đưa + số liệu lúc đó (localStorage `dc-coach-advice-v1`), sau ≥3 ngày (cửa sổ 3–21 ngày) thêm dòng "Ghi nhớ: khoảng N ngày trước gợi ý chỉnh mục tiêu về X… (khi đó đạt A% trên B ngày)… đối chiếu hiện tại… tương quan". Biến Coach từ phân-tích-một-lần thành theo-dõi-theo-thời-gian. Nối ở hook `useCoachContext` (đọc bộ nhớ → dòng + ghi lời khuyên hiện tại parse từ context; write thưa/idempotent). THUẦN tương quan, KHÔNG nhân-quả (prompt cấm); mọi số nằm trong dòng → guard không báo nhầm. ⚠️ `parseGoalAdviceFromContext` parse dòng "Mục tiêu ngày…thử chỉnh về Z phiên/ngày" — đổi định dạng dòng đó phải sửa regex. `npm test` **188/188** (+6), lint sạch, build OK, eval vẫn 100%/0%. ⚠️ Dòng "Ghi nhớ" chỉ hiện sau ≥3 ngày kể từ lần đầu có gợi ý chỉnh mục tiêu (cần thời gian trôi để có "câu chuyện từ đó tới nay").
 

@@ -8,6 +8,10 @@ import { useCallback } from 'react';
 import useGameStore from '../store/gameStore';
 import { buildAnalystContext } from '../engine/coachContext';
 import {
+  loadAdviceMemory, saveAdviceMemory, recordGoalAdvice, pickGoalFollowup,
+  buildAdviceMemoryLine, parseGoalAdviceFromContext,
+} from '../engine/coachAdviceMemory';
+import {
   getVietnamHour, getVietnamDayOfWeek, localWeekMondayStr, localPrevWeekMondayStr,
   vietnamDayNumber, localDateStr, localDateStrDaysAgo,
 } from '../engine/time';
@@ -31,7 +35,12 @@ export function useAnalystContext({
     // 4 key tuần GẦN→XA (tuần hiện tại trước) cho xu hướng dài hạn. Date ở hook (gọi
     // lúc gửi) là an toàn — engine getMultiWeekTrend vẫn thuần.
     const weekKeysDesc = [0, 1, 2, 3].map((i) => localWeekMondayStr(new Date(Date.now() - (i * 7 * 86400000))));
-    return buildAnalystContext(history ?? [], {
+    // [Bộ nhớ lời khuyên] đọc bản ghi cũ → dòng "Ghi nhớ" nhắc lời khuyên ĐỦ CŨ (cá nhân hoá).
+    const now = Date.now();
+    const adviceRecords = loadAdviceMemory();
+    const adviceMemoryLine = buildAdviceMemoryLine(pickGoalFollowup(adviceRecords, now), now);
+    const ctx = buildAnalystContext(history ?? [], {
+      adviceMemoryLine,
       nowHour: getVietnamHour(),
       getEntryHour: (e) => getVietnamHour(entryDate(e)),
       getEntryWeekday: (e) => getVietnamDayOfWeek(entryDate(e)),
@@ -54,5 +63,13 @@ export function useAnalystContext({
       activeCategoryIds: new Set(cats.map((c) => c.id)),
       categoryLabelOf: (id) => cats.find((c) => c.id === id)?.label ?? null,
     });
+    // GHI NHỚ lời khuyên HIỆN TẠI (parse từ chính context) cho lần theo dõi sau — chỉ ghi khi
+    // ĐỔI (recordGoalAdvice tự gác cooldown/trùng → localStorage write rất thưa, idempotent).
+    const current = parseGoalAdviceFromContext(ctx);
+    if (current) {
+      const { list, changed } = recordGoalAdvice(adviceRecords, current, now);
+      if (changed) saveAdviceMemory(list);
+    }
+    return ctx;
   }, [history, streak, sessionCategories, sessionsCompletedToday, focusMinutesToday, dailyGoalType, dailyGoalSessions, dailyGoalMinutes]);
 }

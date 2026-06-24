@@ -39,7 +39,7 @@ function linePriority(line) {
   const s = (p) => l.startsWith(p);
   if (s('Tổng quan') || s('Chân dung của bạn') || s('Hôm nay')) return 0;
   if (s('Hay bỏ giữa chừng') || s('Tỉ lệ đạt mục tiêu của phiên làm sau') || s('Mục tiêu ngày')
-    || s('Loại bị bỏ bê') || s('Giữ chuỗi') || s('Khung giờ vàng còn lại')) return 1;
+    || s('Loại bị bỏ bê') || s('Giữ chuỗi') || s('Khung giờ vàng còn lại') || s('Ghi nhớ:')) return 1;
   if (s('Giờ vàng') || s('Độ dài hợp nhất') || s('Xu hướng dài hạn') || s('Loại việc')) return 2;
   if (s('Ghi chú gần đây')) return 4;
   return 3; // Xu hướng tuần · Phiên sâu · Đều đặn · Ngày năng suất · Cuối tuần · Phục hồi…
@@ -187,6 +187,10 @@ export function buildAnalystContext(history = [], opts = {}) {
     const cal = getDailyGoalCalibration(list, { goalType: dailyGoalMetric, goalValue: dailyGoal, getEntryDayKey, todayKey, minDayKey: opts.minDayKey });
     if (cal) lines.push(`Mục tiêu ngày ${cal.verdict === 'too-hard' ? 'hơi quá sức' : 'hơi nhẹ'}: đạt ${pctOf(cal.hitRate)}% trên ${cal.daysCounted} ngày, trung vị ${cal.medianDisplay} ${unit}/ngày (thử chỉnh về ${cal.suggested} ${unit}/ngày).`);
   }
+
+  // [Ghi nhớ lời khuyên] — cá nhân hoá: nhắc lại lời khuyên Coach từng đưa + số liệu LÚC ĐÓ để
+  // theo dõi thay đổi (THUẦN tương quan). Dòng dựng sẵn ở hook (coachAdviceMemory), engine vẫn thuần.
+  if (typeof opts.adviceMemoryLine === 'string' && opts.adviceMemoryLine.trim()) lines.push(opts.adviceMemoryLine.trim());
 
   if (typeof opts.getEntryWeekday === 'function') {
     const wd = getWeekdayHighlight(list, { getEntryWeekday: opts.getEntryWeekday });

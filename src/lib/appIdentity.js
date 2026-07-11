@@ -12,8 +12,10 @@ export const LEGACY_GAME_STORE_EXPORT_VERSIONS = [...LEGACY_GAME_STORE_STORAGE_K
 export const SETTINGS_STORAGE_KEY = `${APP_SLUG}-settings-v2`;
 export const LEGACY_SETTINGS_STORAGE_KEYS = [`${LEGACY_APP_SLUG}-settings-v2`];
 
-export const LAST_CLOUD_SYNC_KEY = `${APP_SLUG}:last-cloud-sync`;
-export const LEGACY_LAST_CLOUD_SYNC_KEYS = [`_${LEGACY_APP_SLUG}_last_cloud_sync`];
+// "First action wins": version do server (trigger Postgres) cấp phát, KHÔNG phải
+// đồng hồ máy khách — dùng làm điều kiện ghi có-kiểm-tra (compare-and-swap) trong
+// syncService.js. Xem supabase/game_state_version.sql.
+export const LAST_CLOUD_VERSION_KEY = `${APP_SLUG}:last-cloud-version`;
 
 export const GLOBAL_ERROR_HANDLERS_FLAG = '__dcPomodoroGlobalErrorHandlersInstalled';
 export const LEGACY_GLOBAL_ERROR_HANDLERS_FLAGS = ['__civjourneyGlobalErrorHandlersInstalled'];

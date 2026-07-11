@@ -3,7 +3,7 @@
 > Dành cho AI/người làm tiếp. File này trả lời: **đang ở đâu, làm gì tiếp, đã đổi những gì.**
 > Chi tiết kỹ thuật + quy tắc cấm: xem `CLAUDE.md`. Lịch sử thiết kế sâu: thư mục memory của Claude.
 > **NGUYÊN TẮC ƯU TIÊN SỐ 1:** (1) mọi phiên AI phải đọc file này + `CLAUDE.md` + các file liên quan TRƯỚC khi làm; (2) sau MỌI cập nhật dù nhỏ, phải cập nhật ngay file này + `CLAUDE.md` + các file liên quan khác.
-> Cập nhật lần cuối: **2026-07-11** (thêm cron giữ-nhịp-tim Supabase).
+> Cập nhật lần cuối: **2026-07-11** ("first action wins" — chống 2 máy giành nhau ghi đè khi đồng bộ).
 
 ---
 
@@ -42,6 +42,12 @@
 
 ## 🗒️ Nhật ký cập nhật
 > Mỗi lần xong việc đáng kể, thêm 1 dòng vào ĐẦU danh sách.
+
+- **2026-07-11** — **SỰ CỐ + FIX: "First action wins" — chống 2 máy giành nhau ghi đè khi đồng bộ.** Sau khi resume project (sự cố phía trên), điện thoại vừa hoàn thành 1 phiên "Học Đại Học 25p" nhưng lần đẩy dữ liệu đó bị lỗi mạng (đúng lúc project đang khôi phục) — thất bại ÂM THẦM, không tự thử lại. Sau đó laptop mở app, một thao tác vô hại (chuyển tab Thống kê) vẫn khiến nó đẩy state CŨ (không có phiên đó) lên đè lên đám mây — vì cơ chế cũ dùng "ai ghi cuối cùng thắng" (client tự ghi `updated_at`, không phải server). Khi thử khắc phục trực tiếp (bảo Đàm bấm nút trên điện thoại), 2 máy cùng mở app RỒI GIÀNH NHAU ghi liên tục → màn hình timer nhảy qua nhảy lại, lệnh Huỷ không ăn — phải bảo Đàm ĐÓNG HẲN 1 máy lại mới dừng được vòng lặp. **Kết quả: phiên "Học Đại Học 25p" đó bị mất khỏi bản đồng bộ chung** (có khả năng cao đã bị ghi đè mất luôn cả khỏi local điện thoại trong lúc giành giật, do một lần pull tự động chạy đúng lúc `isRunning` không chặn được).
+  - **NGUYÊN NHÂN GỐC** (Đàm chỉ đích danh + đặc tả rõ yêu cầu): sync cũ là "ai ghi cuối thắng" theo đồng hồ CLIENT, không có khái niệm thứ tự thao tác thật (server) → 2 máy mở cùng lúc = ăn may, có thể mất dữ liệu bất cứ lúc nào, không chỉ lúc lỗi mạng.
+  - **FIX: "First Action Wins"** qua compare-and-swap phía server. Thêm cột `version` (integer) vào `game_state` + trigger Postgres tự tăng mỗi lần UPDATE (`supabase/game_state_version.sql`, do SERVER cấp — không lệch giờ giữa máy). `src/lib/syncService.js` viết lại: mọi lần ghi kèm điều kiện `.eq('version', expectedVersion)`; ghi bị từ chối (0 dòng khớp, nghĩa là máy khác đã ghi trước) → máy đó THUA, tự `pullFromCloud()` nhận lại bản đã thắng, KHÔNG được phép ép ghi đè nữa (đúng yêu cầu "chỉ tồn tại 1 trạng thái duy nhất"). Guard cũ dựa vào `timerSession.isRunning` (thêm hồi tháng 6 để chống 1 bug khác) đã GỠ vì không còn cần — version là nguồn xác định thứ tự chính xác tuyệt đối, mạnh hơn suy đoán isRunning. Đổi `LAST_CLOUD_SYNC_KEY` (timestamp máy khách) → `LAST_CLOUD_VERSION_KEY` (số version từ server) trong `appIdentity.js`. Test thuần `shouldImportVersion` ở `src/lib/syncService.test.js`. `npm test` 195/195 (+2), lint sạch, build OK.
+  - ⚠️ **THỨ TỰ DEPLOY QUAN TRỌNG**: phải chạy `supabase/game_state_version.sql` trong SQL Editor TRƯỚC (hoặc gần như ngay khi) code mới lên Vercel — thiếu cột `version`, mọi lần ghi sẽ lỗi `column "version" does not exist` → sync ngừng hẳn tạm thời cho tới khi chạy SQL.
+  - ⚠️ **DỮ LIỆU MẤT THẬT**: phiên "Học Đại Học 25p" (~15:47–16:12 ngày 11/07/2026, +26 XP) coi như mất, không phục hồi qua sync được nữa (không tái tạo tay bằng SQL vì sẽ không đi qua đúng logic XP/streak/mission của game, dễ gây sai lệch số liệu khác). Bài học ghi vào memory `sync-first-action-wins.md`.
 
 - **2026-07-11** — **Thêm cron "giữ nhịp tim" cho Supabase** (tiếp theo sự cố pause bên dưới). Ngoài nguyên nhân "vượt hạn mức dung lượng" (đã xử lý), Supabase Free còn có thể tự pause project nếu ~7 ngày không có request API nào — rủi ro thật với app 1 người dùng. Thêm `api/keepalive.js` (Vercel Cron, `vercel.json` chạy 3h sáng mỗi ngày UTC) gọi 1 câu `select` cực nhẹ vào `game_state` qua `getAdminClient()` (đúng client Supabase, tính là hoạt động thật, không phải cron nội bộ Postgres). Bảo vệ bằng `CRON_SECRET` như các cron khác (`api/coach-digest.js`, `api/push/dispatch.js`). `npm test` 193/193 (+2 `isAuthorized`), lint sạch, build OK. Không cần biến môi trường mới (dùng lại `CRON_SECRET`+`SUPABASE_SERVICE_ROLE_KEY` đã có).
 

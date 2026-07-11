@@ -1,8 +1,7 @@
 import { supabase } from './supabase';
 import useGameStore, { GAME_STORE_EXPORT_VERSION } from '../store/gameStore';
 import {
-  LAST_CLOUD_SYNC_KEY,
-  LEGACY_LAST_CLOUD_SYNC_KEYS,
+  LAST_CLOUD_VERSION_KEY,
   readLocalStorageValue,
 } from './appIdentity';
 
@@ -12,6 +11,7 @@ let debounceTimer = null;
 let isImporting = false;
 let initialized = false;
 let realtimeChannel = null;
+let cachedKnownVersion = null;
 
 function getExportableState() {
   const s = useGameStore.getState();
@@ -62,17 +62,79 @@ function getExportableState() {
   };
 }
 
+// "First action wins": mỗi lần ghi vào Supabase, trigger phía server tự tăng
+// `version` lên 1 (xem supabase/game_state_version.sql) — do SERVER cấp, không
+// phải đồng hồ máy khách nên không bị lệch giờ giữa 2 thiết bị. Máy nào ghi tới
+// server TRƯỚC sẽ khớp version đang chờ và thắng; máy ghi SAU (dù thao tác trước
+// hay sau theo cảm giác người dùng) sẽ bị từ chối (0 dòng khớp điều kiện) và phải
+// nhận lại đúng bản đã thắng — KHÔNG bao giờ được phép ép ghi đè lên nhau nữa.
+export function shouldImportVersion(incomingVersion, knownVersion) {
+  return typeof incomingVersion === 'number' && incomingVersion > knownVersion;
+}
+
+function getKnownVersion() {
+  if (cachedKnownVersion != null) return cachedKnownVersion;
+  const stored = parseInt(readLocalStorageValue(LAST_CLOUD_VERSION_KEY) ?? '', 10);
+  cachedKnownVersion = Number.isFinite(stored) ? stored : -1;
+  return cachedKnownVersion;
+}
+
+function setKnownVersion(version) {
+  cachedKnownVersion = version;
+  try {
+    localStorage.setItem(LAST_CLOUD_VERSION_KEY, String(version));
+  } catch {
+    // localStorage không khả dụng (chế độ riêng tư...) — vẫn nhớ tạm trong bộ nhớ.
+  }
+}
+
+async function importCloudRow(row) {
+  isImporting = true;
+  const result = useGameStore.getState()._importGameData(row.data);
+  setTimeout(() => { isImporting = false; }, 0);
+  if (result.ok && typeof row.version === 'number') {
+    setKnownVersion(row.version);
+    console.log('[sync] imported cloud version', row.version);
+  }
+  return result;
+}
+
 async function pushToCloud() {
   try {
     const data = getExportableState();
-    const now = new Date().toISOString();
-    const { error } = await supabase
+    const expectedVersion = getKnownVersion();
+
+    if (expectedVersion < 0) {
+      // Máy này chưa từng đồng bộ — ghi thẳng để khởi tạo/lấy version đầu tiên.
+      const { data: rows, error } = await supabase
+        .from('game_state')
+        .upsert({ id: SYNC_ID, data })
+        .select('version');
+      if (error) throw error;
+      if (rows?.[0]) setKnownVersion(rows[0].version);
+      console.log('[sync] pushed to cloud (khởi tạo)');
+      return;
+    }
+
+    const { data: rows, error } = await supabase
       .from('game_state')
-      .upsert({ id: SYNC_ID, data, updated_at: now });
+      .update({ data })
+      .eq('id', SYNC_ID)
+      .eq('version', expectedVersion)
+      .select('version');
 
     if (error) throw error;
-    localStorage.setItem(LAST_CLOUD_SYNC_KEY, Date.now().toString());
-    console.log('[sync] pushed to cloud');
+
+    if (!rows || rows.length === 0) {
+      // Bị từ chối: một máy khác đã ghi trước — máy đó thắng, mình nhận lại bản của họ
+      // thay vì ép ghi đè (đúng tinh thần "first action wins").
+      console.warn('[sync] push bị từ chối (máy khác ghi trước) — nhận lại bản mới nhất');
+      await pullFromCloud();
+      return;
+    }
+
+    setKnownVersion(rows[0].version);
+    console.log('[sync] pushed to cloud, version', rows[0].version);
   } catch (err) {
     console.warn('[sync] push failed', err);
   }
@@ -86,41 +148,21 @@ function schedulePush() {
 
 export async function pushNow() {
   if (debounceTimer) clearTimeout(debounceTimer);
-  // Chặn realtime events cũ đến trong khi đang push (tránh cloud restore lại session vừa hủy)
-  localStorage.setItem(LAST_CLOUD_SYNC_KEY, Date.now().toString());
   await pushToCloud();
-}
-
-function isSameSession(localSession, cloudSession) {
-  return localSession?.startedAt && cloudSession?.startedAt &&
-    localSession.startedAt === cloudSession.startedAt;
 }
 
 async function pullFromCloud() {
   try {
     const { data, error } = await supabase
       .from('game_state')
-      .select('data, updated_at')
+      .select('data, version')
       .eq('id', SYNC_ID)
       .single();
 
     if (error || !data?.data) return;
 
-    const cloudTime = new Date(data.updated_at).getTime();
-    const lastSync = parseInt(readLocalStorageValue(LAST_CLOUD_SYNC_KEY, LEGACY_LAST_CLOUD_SYNC_KEYS) ?? '0', 10);
-
-    if (cloudTime > lastSync) {
-      const localSession = useGameStore.getState().timerSession;
-      const cloudSession = data.data?.timerSession;
-      if (localSession?.isRunning && !isSameSession(localSession, cloudSession)) return;
-
-      isImporting = true;
-      const result = useGameStore.getState()._importGameData(data.data);
-      setTimeout(() => { isImporting = false; }, 0);
-      if (result.ok) {
-        localStorage.setItem(LAST_CLOUD_SYNC_KEY, cloudTime.toString());
-        console.log('[sync] pulled update from cloud');
-      }
+    if (shouldImportVersion(data.version, getKnownVersion())) {
+      await importCloudRow(data);
     }
   } catch (err) {
     console.warn('[sync] pull failed', err);
@@ -128,23 +170,13 @@ async function pullFromCloud() {
 }
 
 function handleRealtimeUpdate(payload) {
-  const cloudData = payload.new;
-  if (!cloudData?.data) return;
-  const cloudTime = new Date(cloudData.updated_at).getTime();
-  const lastSync = parseInt(readLocalStorageValue(LAST_CLOUD_SYNC_KEY, LEGACY_LAST_CLOUD_SYNC_KEYS) ?? '0', 10);
-  if (cloudTime <= lastSync) return;
+  const row = payload.new;
+  if (!row?.data) return;
+  if (!shouldImportVersion(row.version, getKnownVersion())) return;
 
-  const localSession = useGameStore.getState().timerSession;
-  const cloudSession = cloudData.data?.timerSession;
-  if (localSession?.isRunning && !isSameSession(localSession, cloudSession)) return;
-
-  isImporting = true;
-  const result = useGameStore.getState()._importGameData(cloudData.data);
-  setTimeout(() => { isImporting = false; }, 0);
-  if (result.ok) {
-    localStorage.setItem(LAST_CLOUD_SYNC_KEY, cloudTime.toString());
-    console.log('[sync] real-time update received');
-  }
+  importCloudRow(row).then((result) => {
+    if (result.ok) console.log('[sync] real-time update received, version', row.version);
+  });
 }
 
 function subscribeRealtime() {
@@ -169,28 +201,20 @@ export async function initSync() {
   try {
     const { data, error } = await supabase
       .from('game_state')
-      .select('data, updated_at')
+      .select('data, version')
       .eq('id', SYNC_ID)
       .single();
 
     if (error || !data?.data || Object.keys(data.data).length === 0) {
       await pushToCloud();
-    } else {
-      const cloudTime = new Date(data.updated_at).getTime();
-      const lastSync = parseInt(readLocalStorageValue(LAST_CLOUD_SYNC_KEY, LEGACY_LAST_CLOUD_SYNC_KEYS) ?? '0', 10);
-
-      if (cloudTime > lastSync) {
-        const result = useGameStore.getState()._importGameData(data.data);
-        if (result.ok) {
-          localStorage.setItem(LAST_CLOUD_SYNC_KEY, cloudTime.toString());
-          console.log('[sync] pulled newer data from cloud');
-        } else {
-          console.warn('[sync] import failed:', result.message);
-          await pushToCloud();
-        }
-      } else {
+    } else if (shouldImportVersion(data.version, getKnownVersion())) {
+      const result = await importCloudRow(data);
+      if (!result.ok) {
+        console.warn('[sync] import failed:', result.message);
         await pushToCloud();
       }
+    } else {
+      await pushToCloud();
     }
   } catch (err) {
     console.warn('[sync] init failed', err);

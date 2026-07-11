@@ -43,6 +43,10 @@ App chính chạy trên **web** tại `https://pomodoro-dc.vercel.app`.
 | Bảng DB | `game_state` (id, data JSONB, updated_at) |
 | Timer tray sync | `timer_live` (id `singleton`) |
 
+## Vercel Hobby: giới hạn 12 Serverless Functions/deploy
+- ⚠️ **2026-07-11**: thêm `api/keepalive.js` làm deploy FAIL — lỗi "No more than 12 Serverless Functions can be added to a Deployment on the Hobby plan". Nguyên nhân: Vercel đếm CẢ file `*.test.js` nằm trực tiếp trong `api/`/`api/push/` như 1 function riêng (không tự biết đó là file test). Đã thêm `.vercelignore` (`api/**/*.test.js`) để loại chúng khỏi phần deploy (vẫn còn nguyên trong repo cho `npm test` chạy local/CI, không ảnh hưởng). Hiện tại: 10 function thật (coach, coach-digest, keepalive, 6 route dưới `api/push/`) — còn dư 2 trước khi lại chạm trần 12.
+- ⚠️ Thêm route API mới trong tương lai → kiểm tra lại tổng số file `.js` (không tính `_lib/`, không tính test đã bị `.vercelignore` loại) còn dưới 12 không, kẻo lại FAIL y hệt.
+
 ## Sync (đã hoàn chỉnh)
 - `src/lib/supabase.js` — Supabase client
 - `src/lib/syncService.js` — pull khi mở app, push debounced 5s

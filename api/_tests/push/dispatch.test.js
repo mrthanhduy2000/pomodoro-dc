@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { isSessionEndEvent } from './dispatch.js';
+import { isSessionEndEvent } from '../../push/dispatch.js';
 
 test('push dispatch accepts completed timer_live end events', () => {
   assert.equal(isSessionEndEvent({

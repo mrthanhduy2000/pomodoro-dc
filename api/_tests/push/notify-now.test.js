@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { isSessionEndEvent } from './notify-now.js';
+import { isSessionEndEvent } from '../../push/notify-now.js';
 
 test('legacy notify route accepts only explicit completed timer_live end events', () => {
   assert.equal(isSessionEndEvent({

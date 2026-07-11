@@ -1,1 +1,14 @@
-api/**/*.test.js
+# Lớp phòng thủ CHÍNH đã là cấu trúc thư mục: mọi test dưới api/ đều nằm trong
+# api/_tests/ (thư mục bắt đầu bằng "_" luôn bị Vercel bỏ qua khi tìm Serverless
+# Function — xem api/_lib/, và CLAUDE.md mục "Vercel Hobby: giới hạn 12
+# Serverless Functions/deploy"). File này là lớp phòng thủ THỨ 2, phòng khi lỡ
+# tạo nhầm file phụ trợ (test/mock/fixture/spec/stories/bench/e2e...) ngay dưới
+# api/ mà không cho vào api/_tests/ hay api/_lib/.
+api/**/*.test.*
+api/**/*.spec.*
+api/**/*.mock.*
+api/**/*.fixture.*
+api/**/*.fixtures.*
+api/**/*.stories.*
+api/**/*.bench.*
+api/**/*.e2e.*

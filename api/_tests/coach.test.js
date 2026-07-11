@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { toGeminiBody, extractGeminiText, shouldFallback, buildModelChain } from './coach.js';
+import { toGeminiBody, extractGeminiText, shouldFallback, buildModelChain } from '../coach.js';
 
 test('toGeminiBody: map role assistant→model, system tách riêng, generationConfig mặc định', () => {
   const b = toGeminiBody('Bạn là Coach.', [

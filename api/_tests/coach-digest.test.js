@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { evaluateStreakRisk, pickActiveBucketLabel, buildStreakNudgePayload } from './_lib/coachDigest.js';
+import { evaluateStreakRisk, pickActiveBucketLabel, buildStreakNudgePayload } from '../_lib/coachDigest.js';
 
 const sess = (dayNum, hour = 9, ok = true) => ({ day: dayNum, hour, minutes: 30, completed: ok, cancelled: !ok });
 const getDay = (e) => e.day;

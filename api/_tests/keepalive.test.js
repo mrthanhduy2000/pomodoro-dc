@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { isAuthorized } from './keepalive.js';
+import { isAuthorized } from '../keepalive.js';
 
 test('keepalive isAuthorized: không có CRON_SECRET → luôn cho qua', () => {
   delete process.env.CRON_SECRET;

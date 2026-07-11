@@ -3,7 +3,7 @@
 > Dành cho AI/người làm tiếp. File này trả lời: **đang ở đâu, làm gì tiếp, đã đổi những gì.**
 > Chi tiết kỹ thuật + quy tắc cấm: xem `CLAUDE.md`. Lịch sử thiết kế sâu: thư mục memory của Claude.
 > **NGUYÊN TẮC ƯU TIÊN SỐ 1:** (1) mọi phiên AI phải đọc file này + `CLAUDE.md` + các file liên quan TRƯỚC khi làm; (2) sau MỌI cập nhật dù nhỏ, phải cập nhật ngay file này + `CLAUDE.md` + các file liên quan khác.
-> Cập nhật lần cuối: **2026-06-25**.
+> Cập nhật lần cuối: **2026-07-11**.
 
 ---
 
@@ -42,6 +42,8 @@
 
 ## 🗒️ Nhật ký cập nhật
 > Mỗi lần xong việc đáng kể, thêm 1 dòng vào ĐẦU danh sách.
+
+- **2026-07-11** — **SỰ CỐ: đồng bộ 2 máy ngừng hoạt động — project Supabase tự tạm dừng vì phình dung lượng.** Đàm báo máy tính+laptop không còn đồng bộ. Điều tra: project Supabase bị Supabase tự PAUSE (miễn phí tự pause khi hạn mức bị vượt), dữ liệu vẫn an toàn (không phải bị xoá). Nguyên nhân gốc: bảng nội bộ `cron.job_run_details` phình tới **795 MB / 821 MB tổng dung lượng** (dữ liệu game thật `public.game_state` chỉ ~192 KB — không hề có vấn đề). Job `dc-pomodoro-push-dispatch` (đẩy thông báo push, xem `supabase/push_dispatch_scheduler.sql`) chạy mỗi 5 giây suốt ~2 tháng, mỗi lần tự ghi 1 dòng log vào `cron.job_run_details` mà chưa từng dọn → vượt hạn mức 0.5 GB của gói Free → Supabase tự pause project. **ĐÃ XỬ LÝ**: (1) Đàm bấm "Resume project" trên Supabase dashboard — khôi phục xong, dữ liệu nguyên vẹn. (2) Dọn log cũ (`DELETE` + `VACUUM FULL cron.job_run_details`) → Database Size tụt về 0.028 GB. (3) Thêm job tự-dọn log mỗi đêm (giữ 3 ngày gần nhất) — xem `supabase/cleanup_cron_logs.sql` — để không bao giờ phình lại. (4) Giữ nguyên tần suất job push-dispatch ở 5 giây (Đàm quyết định giữ nguyên, không giãn ra — job tự-dọn mỗi đêm là đủ để giữ dung lượng ổn định ở mức thấp). ⚠️ **Lưu ý cho phiên sau**: nếu Database Size lại báo gần 0.5 GB, kiểm tra `cron.job_run_details` trước tiên (không phải `game_state` — bảng đó luôn nhỏ). Nếu job tự-dọn (`cleanup-job-run-details`) từng bị mất do tạo lại project mới thì phải chạy lại `supabase/cleanup_cron_logs.sql`.
 
 - **2026-06-25** — **[Mảng 6/6] Cảnh báo chuỗi sắp đứt qua PUSH** (Coach chủ động lúc người dùng VẮNG). CRON `api/coach-digest.js` + helpers thuần `api/_lib/coachDigest.js` (`evaluateStreakRisk`/`pickActiveBucketLabel`/`buildStreakNudgePayload`, test). Mỗi ngày 17:00 VN (`vercel.json` crons) đọc `game_state` từ Supabase; nếu chuỗi treo (còn chuỗi nhưng hôm nay chưa làm phiên nào) → đẩy thông báo giữ-chuỗi (kèm "buổi hay làm" nếu rõ). Tái dùng hạ tầng push sẵn có (không cần SQL mới). Bảo vệ `CRON_SECRET`. `npm test` **191/191** (+3), lint sạch, build OK, smoke-import endpoint OK. ⚠️ Vercel Hobby cron 1 lần/ngày; cần đã bật push iPhone + env (CRON_SECRET/SERVICE_ROLE/WEB_PUSH) sẵn có. **→ HOÀN TẤT chuỗi 6 mảng nâng cấp AI Coach.**
 

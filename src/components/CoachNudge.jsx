@@ -16,12 +16,8 @@ import { useEffect, useRef, useState } from 'react';
 import { SparkGlyph } from './icons/Glyph';
 import useGameStore from '../store/gameStore';
 import { useAnalystContext } from '../hooks/useCoachContext';
-import {
-  buildLLMChatPrompt, buildNudgeContext, NUDGE_INSTRUCTION, sanitizeLLMOutput,
-  hasForeignScript, hasFabricatedNumbers, findMismatchedPairs, findFabricatedFractions,
-  stripFabricatedSentences,
-} from '../engine/llm/coachPrompt';
-import { generateCloud } from '../engine/llm/cloudEngine';
+import { buildLLMChatPrompt, buildNudgeContext, NUDGE_INSTRUCTION } from '../engine/coach/prompt';
+import { runGuardedCoachGeneration } from '../engine/coach/guardedGenerate';
 
 const GOLD = '#d9a441';
 const NUDGE_KEY = 'dc-coach-nudge-v1'; // id phiên đã nhắc (để mỗi phiên nhắc tối đa 1 lần)
@@ -66,12 +62,15 @@ export default function CoachNudge(goalProps) {
         };
         const ctx = buildNudgeContext(buildRef.current(), session);
         const { system, messages } = buildLLMChatPrompt(ctx, NUDGE_INSTRUCTION, []);
-        let clean = sanitizeLLMOutput(await generateCloud({ system, messages, temperature: 0.2, maxTokens: 160 }));
-        if (hasForeignScript(clean)) return; // chữ lạ → bỏ qua, không nhắc
-        if (hasFabricatedNumbers(clean, ctx) || findMismatchedPairs(clean, ctx).length > 0 || findFabricatedFractions(clean, ctx).length > 0) {
-          clean = stripFabricatedSentences(clean, ctx).clean; // CỨU-CÂU: bỏ riêng câu bịa
-        }
-        if (!aborted && clean && !hasForeignScript(clean)) setText(clean);
+        // Không thử-lại (allowGuidedRetry: false) — chạy nền, lỗi/chữ-lạ thì im lặng bỏ qua.
+        const result = await runGuardedCoachGeneration({
+          system,
+          messages,
+          ctxStr: ctx,
+          generateOptions: { maxTokens: 160 },
+          allowGuidedRetry: false,
+        });
+        if (!aborted && !result.foreignScriptError && result.text) setText(result.text);
       } catch { /* mạng/quota/timeout → im lặng, không phá trải nghiệm vừa xong phiên */ }
       finally { if (!aborted) setLoading(false); }
     })();

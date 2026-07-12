@@ -1,29 +1,6 @@
 import { methodNotAllowed, readJsonBody, sendJson } from '../_lib/http.js';
 import { upsertPushJob } from '../_lib/push.js';
-
-function buildFocusCompletePayload(focusMinutes) {
-  const roundedMinutes = Math.max(1, Math.round(focusMinutes || 0));
-  return {
-    title: '🎇 XONG PHIÊN TẬP TRUNG!',
-    body: `Phiên ${roundedMinutes} phút của Đàm đã xong. Mở app bấm nghỉ giải lao nha!`,
-    icon: '/icon-192.png',
-    badge: '/icon-192.png',
-    tag: 'dc-pomodoro-focus-complete',
-    url: '/',
-  };
-}
-
-function buildPomodoroContinuePayload(focusMinutes) {
-  const roundedMinutes = Math.max(1, Math.round(focusMinutes || 0));
-  return {
-    title: '⏱ Pomodoro đã hết',
-    body: `Phiên ${roundedMinutes} phút đã chuyển sang Bấm giờ thêm. Bấm Hết Phiên khi muốn chốt phiên.`,
-    icon: '/icon-192.png',
-    badge: '/icon-192.png',
-    tag: 'dc-pomodoro-continue',
-    url: '/',
-  };
-}
+import { buildFocusCompletePayload, buildPomodoroContinuePayload } from '../../src/engine/pushPayloads.js';
 
 function buildKnownPayload(kind, focusMinutes) {
   return kind === 'pomodoro-continue'

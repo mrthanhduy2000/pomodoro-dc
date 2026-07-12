@@ -1,5 +1,9 @@
 # DC Pomodoro
 
+> Đang sửa code / là AI session mới? Đọc `CLAUDE.md` (quy tắc + bối cảnh) và `BAN_GIAO.md` (đang
+> ở đâu) trước. Muốn biết file nằm ở đâu → `PROJECT_STRUCTURE.md`. Muốn biết bức tranh kiến trúc
+> lớn (luồng dữ liệu) → `ARCHITECTURE.md`.
+
 ## Current App Model
 
 The full app runs at:

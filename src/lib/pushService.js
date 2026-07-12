@@ -1,33 +1,9 @@
-import { APP_DISPLAY_NAME, APP_SLUG } from './appIdentity';
+import { APP_SLUG } from './appIdentity';
+import { buildFocusCompletePayload, buildPomodoroContinuePayload } from '../engine/pushPayloads';
 
 const PUSH_DEVICE_ID_KEY = `${APP_SLUG}:push-device-id`;
 export const FOCUS_COMPLETE_PUSH_JOB_KEY = `${APP_SLUG}:focus-complete`;
 export const POMODORO_CONTINUE_PUSH_JOB_KEY = `${APP_SLUG}:pomodoro-continue`;
-const FOCUS_COMPLETE_OWNER_NAME = 'Đàm';
-
-function createFocusCompleteNotificationPayload(focusMinutes) {
-  const roundedMinutes = Math.max(1, Math.round(focusMinutes || 0));
-  return {
-    title: '🎇 XONG PHIÊN TẬP TRUNG!',
-    body: `Phiên ${roundedMinutes} phút của ${FOCUS_COMPLETE_OWNER_NAME} đã xong. Mở app bấm nghỉ giải lao nha!`,
-    icon: '/icon-192.png',
-    badge: '/icon-192.png',
-    tag: 'dc-pomodoro-focus-complete',
-    url: '/',
-  };
-}
-
-function createPomodoroContinueNotificationPayload(focusMinutes) {
-  const roundedMinutes = Math.max(1, Math.round(focusMinutes || 0));
-  return {
-    title: '⏱ Pomodoro đã hết',
-    body: `Phiên ${roundedMinutes} phút đã chuyển sang Bấm giờ thêm. Bấm Hết Phiên khi muốn chốt phiên.`,
-    icon: '/icon-192.png',
-    badge: '/icon-192.png',
-    tag: 'dc-pomodoro-continue',
-    url: '/',
-  };
-}
 
 function canUseBrowserApis() {
   return typeof window !== 'undefined';
@@ -327,7 +303,7 @@ export async function scheduleFocusCompletePush({ endsAtMs, focusMinutes }) {
         jobKey: FOCUS_COMPLETE_PUSH_JOB_KEY,
         focusMinutes: Math.max(1, Math.round(focusMinutes || 0)),
         scheduledFor: new Date(endsAtMs).toISOString(),
-        payload: createFocusCompleteNotificationPayload(focusMinutes),
+        payload: buildFocusCompletePayload(focusMinutes),
       }),
     });
   } catch (error) {
@@ -350,7 +326,7 @@ export async function schedulePomodoroContinuePush({ endsAtMs, focusMinutes }) {
         jobKey: POMODORO_CONTINUE_PUSH_JOB_KEY,
         focusMinutes: Math.max(1, Math.round(focusMinutes || 0)),
         scheduledFor: new Date(endsAtMs).toISOString(),
-        payload: createPomodoroContinueNotificationPayload(focusMinutes),
+        payload: buildPomodoroContinuePayload(focusMinutes),
       }),
     });
   } catch (error) {

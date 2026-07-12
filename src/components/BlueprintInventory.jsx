@@ -14,7 +14,6 @@ import useSettingsStore from '../store/settingsStore';
 import {
   BLUEPRINT_CATALOG,
   BLUEPRINT_META,
-  BLUEPRINT_RARITY_LABEL,
   BUILDING_EFFECTS,
   WONDER_EFFECT_REGISTRY,
   BUILDING_SPECS,
@@ -27,6 +26,8 @@ import {
   getUpgradeRefinedCost,
   getBuildingLevelMultiplier,
 } from '../engine/constants';
+import { initialsFromLabel } from '../utils/labelMark';
+import { TypeBadge, RarityBadge, PerkSummary } from './shared/BadgeKit';
 
 const DISPLAY_FONT = '"Source Serif 4", Georgia, serif';
 const MONO_FONT = '"JetBrains Mono", "SFMono-Regular", Menlo, monospace';
@@ -44,12 +45,6 @@ const TYPE_STYLE = {
   economy:        { label: 'Kinh Tế',   color: 'text-amber-300',  bg: 'bg-amber-900/30',  border: 'border-amber-700/50' },
   defense:        { label: 'Ổn Định',   color: 'text-rose-300',   bg: 'bg-rose-900/30',   border: 'border-rose-700/50' },
   wonder:         { label: 'Kỳ Quan',   color: 'text-purple-300', bg: 'bg-purple-900/30', border: 'border-purple-700/50' },
-};
-
-const RARITY_STYLE = {
-  common: { label: BLUEPRINT_RARITY_LABEL.common, color: 'text-slate-200', bg: 'bg-slate-700/60', border: 'border-slate-500/50' },
-  rare:   { label: BLUEPRINT_RARITY_LABEL.rare,   color: 'text-cyan-200',  bg: 'bg-cyan-900/30',  border: 'border-cyan-700/50' },
-  epic:   { label: BLUEPRINT_RARITY_LABEL.epic,   color: 'text-fuchsia-200', bg: 'bg-fuchsia-900/30', border: 'border-fuchsia-700/50' },
 };
 
 const RESEARCH_TRACK = {
@@ -91,94 +86,7 @@ function paperPanel(lightTheme) {
 }
 
 function getBlueprintMark(def) {
-  const label = def?.label ?? def?.id ?? 'BP';
-  return label
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0])
-    .join('')
-    .toUpperCase();
-}
-
-function TypeBadge({ type, lightTheme = false }) {
-  const s = TYPE_STYLE[type] ?? TYPE_STYLE.infrastructure;
-  if (lightTheme) {
-    const accentMap = {
-      infrastructure: '#68796a',
-      economy: '#9c7645',
-      defense: '#8d5c54',
-      wonder: '#7a6877',
-    };
-    const accent = accentMap[type] ?? '#68796a';
-    return (
-      <span
-        className="rounded-full px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.14em]"
-        style={{
-          background: 'rgba(255, 255, 255, 0.72)',
-          border: '1px solid rgba(31, 30, 29, 0.08)',
-          color: accent,
-        }}
-      >
-        {s.label}
-      </span>
-    );
-  }
-  return (
-    <span className={`text-xs px-1.5 py-0.5 rounded-full border font-semibold ${s.color} ${s.bg} ${s.border}`}>
-      {s.label}
-    </span>
-  );
-}
-
-function RarityBadge({ rarity, lightTheme = false }) {
-  const s = RARITY_STYLE[rarity] ?? RARITY_STYLE.common;
-  if (lightTheme) {
-    const accentMap = {
-      common: '#6a6862',
-      rare: '#667487',
-      epic: '#7a6877',
-    };
-    return (
-      <span
-        className="rounded-full px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.14em]"
-        style={{
-          background: 'rgba(31, 30, 29, 0.04)',
-          border: '1px solid rgba(31, 30, 29, 0.08)',
-          color: accentMap[rarity] ?? '#6a6862',
-        }}
-      >
-        {s.label}
-      </span>
-    );
-  }
-  return (
-    <span className={`text-[11px] px-1.5 py-0.5 rounded-full border font-semibold ${s.color} ${s.bg} ${s.border}`}>
-      {s.label}
-    </span>
-  );
-}
-
-function PerkSummary({ perk, lightTheme = false }) {
-  if (!perk) return null;
-  return (
-    <div
-      className="mt-1.5 rounded-[14px] px-3 py-2"
-      style={lightTheme
-        ? { background: 'rgba(31, 30, 29, 0.04)', border: '1px solid rgba(31, 30, 29, 0.08)' }
-        : { background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}
-    >
-      <p className="text-[11px] font-semibold uppercase tracking-[0.16em]" style={lightTheme ? { color: '#9a5a48' } : { color: '#f8d6a2' }}>
-        {perk.family}
-      </p>
-      <p className="mt-0.5 text-xs font-semibold" style={lightTheme ? { color: '#1f1e1d' } : { color: '#f8fafc' }}>
-        {perk.label}
-      </p>
-      <p className="mt-0.5 text-xs leading-5" style={lightTheme ? { color: '#6a6862' } : { color: '#cbd5e1' }}>
-        {perk.summary}
-      </p>
-    </div>
-  );
+  return initialsFromLabel(def?.label ?? def?.id ?? 'BP');
 }
 
 // ─── RP progress bar ─────────────────────────────────────────────────────────
@@ -316,8 +224,8 @@ function MyBlueprintsTab({ blueprints, research, buildings, activeBook, onSelect
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 flex-wrap">
                     <p className="font-semibold text-sm" style={lightTheme ? { color: 'var(--ink)', fontFamily: 'var(--skin-font-display)' } : { color: '#ffffff' }}>{def?.label ?? id}</p>
-                    {def?.rarity && <RarityBadge rarity={def.rarity} lightTheme={lightTheme} />}
-                    {eff?.type && <TypeBadge type={eff.type} lightTheme={lightTheme} />}
+                    {def?.rarity && <RarityBadge rarity={def.rarity} lightTheme={lightTheme} variant="literal" />}
+                    {eff?.type && <TypeBadge type={eff.type} typeStyle={TYPE_STYLE} lightTheme={lightTheme} variant="literal" />}
                     {built && (
                       <span
                         className="text-xs px-1.5 py-0.5 rounded-full"
@@ -330,7 +238,7 @@ function MyBlueprintsTab({ blueprints, research, buildings, activeBook, onSelect
                     )}
                   </div>
                   <p className="text-xs mt-0.5 line-clamp-2" style={lightTheme ? { color: 'var(--muted)' } : { color: '#94a3b8' }}>{def?.description}</p>
-                  <PerkSummary perk={eff?.perk} lightTheme={lightTheme} />
+                  <PerkSummary perk={eff?.perk} lightTheme={lightTheme} variant="literal" />
                   {def?.rarity && (
                     <p className="text-xs mt-0.5" style={lightTheme ? { color: '#8a8a86' } : { color: '#64748b' }}>{RESEARCH_TRACK[def.rarity] ?? 'Đầu tư'}</p>
                   )}
@@ -515,8 +423,8 @@ function ResearchTab({ research, blueprints, buildings, activeBook, researchBlue
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap mb-1">
                     <p className="font-semibold text-sm" style={lightTheme ? { color: 'var(--ink)', fontFamily: 'var(--skin-font-display)' } : { color: '#ffffff' }}>{label}</p>
-                    {meta?.rarity && <RarityBadge rarity={meta.rarity} lightTheme={lightTheme} />}
-                    {eff?.type && <TypeBadge type={eff.type} lightTheme={lightTheme} />}
+                    {meta?.rarity && <RarityBadge rarity={meta.rarity} lightTheme={lightTheme} variant="literal" />}
+                    {eff?.type && <TypeBadge type={eff.type} typeStyle={TYPE_STYLE} lightTheme={lightTheme} variant="literal" />}
                     {isResearched && (
                       <span
                         className="text-xs px-1.5 py-0.5 rounded-full"
@@ -535,7 +443,7 @@ function ResearchTab({ research, blueprints, buildings, activeBook, researchBlue
                     {meta?.rarity && (
                       <p className="text-xs" style={lightTheme ? { color: '#8a8a86' } : { color: '#64748b' }}>{RESEARCH_TRACK[meta.rarity] ?? 'Đầu tư'}</p>
                     )}
-                    <PerkSummary perk={eff?.perk} lightTheme={lightTheme} />
+                    <PerkSummary perk={eff?.perk} lightTheme={lightTheme} variant="literal" />
                     <p className="text-xs" style={lightTheme ? { color: '#8a8a86' } : { color: '#64748b' }}>{meta.sessionsToComplete} phiên xây</p>
                   </div>
 
@@ -648,9 +556,9 @@ function BlueprintDetailPanel({ bpId, onClose, buildings, research, lightTheme }
               {def?.label ?? bpId}
             </p>
             <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-              {meta?.rarity && <RarityBadge rarity={meta.rarity} lightTheme={lightTheme} />}
+              {meta?.rarity && <RarityBadge rarity={meta.rarity} lightTheme={lightTheme} variant="literal" />}
               {eff?.type && (
-                <TypeBadge type={eff.type} lightTheme={lightTheme} />
+                <TypeBadge type={eff.type} typeStyle={TYPE_STYLE} lightTheme={lightTheme} variant="literal" />
               )}
               <span className="text-xs" style={lightTheme ? { color: '#8a8a86' } : { color: '#64748b' }}>Kỷ {era} — {eraMeta.label}</span>
               {isBuilt && (
@@ -699,7 +607,7 @@ function BlueprintDetailPanel({ bpId, onClose, buildings, research, lightTheme }
           {/* Effects */}
           <div className="p-4 space-y-2" style={lightTheme ? { background: 'rgba(var(--accent-rgb),0.04)', border: '1px solid var(--line)', borderRadius: 'var(--skin-radius-control,14px)' } : { background: 'rgba(30,41,59,0.5)', borderRadius: '22px' }}>
             <p className="mono text-[10px] uppercase tracking-[0.2em] mb-1" style={lightTheme ? { color: 'var(--muted-2)', fontFamily: MONO_FONT } : { color: '#94a3b8', fontFamily: MONO_FONT }}>Đặc quyền công trình</p>
-            <PerkSummary perk={perk} lightTheme={lightTheme} />
+            <PerkSummary perk={perk} lightTheme={lightTheme} variant="literal" />
 
             <details className="pt-1">
               <summary className="cursor-pointer text-xs font-semibold" style={lightTheme ? { color: '#8a8a86' } : { color: '#94a3b8' }}>

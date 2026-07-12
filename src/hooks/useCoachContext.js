@@ -6,11 +6,11 @@
  */
 import { useCallback } from 'react';
 import useGameStore from '../store/gameStore';
-import { buildAnalystContext } from '../engine/coachContext';
+import { buildAnalystContext } from '../engine/coach/coachContext';
 import {
   loadAdviceMemory, saveAdviceMemory, recordGoalAdvice, pickGoalFollowup,
   buildAdviceMemoryLine, parseGoalAdviceFromContext,
-} from '../engine/coachAdviceMemory';
+} from '../engine/coach/coachAdviceMemory';
 import {
   getVietnamHour, getVietnamDayOfWeek, localWeekMondayStr, localPrevWeekMondayStr,
   vietnamDayNumber, localDateStr, localDateStrDaysAgo,

@@ -5,7 +5,7 @@
  * hay làm" nếu rõ). Tái dùng hạ tầng push (getAdminClient/subscriptions/send). Bảo vệ bằng
  * CRON_SECRET (Vercel Cron tự gửi `Authorization: Bearer <CRON_SECRET>`). Thiếu env → lỗi nhẹ.
  */
-import { methodNotAllowed, sendJson } from './_lib/http.js';
+import { isCronAuthorized, methodNotAllowed, sendJson } from './_lib/http.js';
 import {
   getAdminClient, listActivePushSubscriptions, sendPushNotification,
   isExpiredPushSubscriptionError, disablePushSubscription,
@@ -14,12 +14,6 @@ import { evaluateStreakRisk, pickActiveBucketLabel, buildStreakNudgePayload } fr
 import { getVietnamHour, vietnamDayNumber } from '../src/engine/time.js';
 
 const SYNC_ID = 'singleton';
-
-function isAuthorized(req) {
-  const secret = process.env.CRON_SECRET;
-  if (!secret) return true; // chưa đặt secret → cho qua (giống dispatch.js)
-  return (req.headers.authorization ?? '') === `Bearer ${secret}`;
-}
 
 async function readGameState() {
   const admin = getAdminClient();
@@ -67,7 +61,7 @@ async function runDigest() {
 export default async function handler(req, res) {
   // Vercel Cron gửi GET (kèm Bearer CRON_SECRET); cũng cho POST (gọi tay).
   if (req.method !== 'GET' && req.method !== 'POST') return methodNotAllowed(res, ['GET', 'POST']);
-  if (!isAuthorized(req)) {
+  if (!isCronAuthorized(req)) {
     // GET không/sai secret → trả ping vô hại (không lộ dữ liệu); POST sai secret → 401.
     if (req.method === 'GET') return sendJson(res, 200, { ok: true, status: 'warm' });
     return sendJson(res, 401, { ok: false, error: 'Unauthorized.' });

@@ -9,9 +9,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { SparkGlyph } from './icons/Glyph';
 import { useAnalystContext } from '../hooks/useCoachContext';
-import { buildLLMChatPrompt, sanitizeLLMOutput, hasForeignScript, hasFabricatedNumbers, findFabricatedNumbers, findMismatchedPairs, findFabricatedFractions, buildCorrectionNote, appendCorrectionTurn, stripFabricatedSentences } from '../engine/llm/coachPrompt';
-import { generateCloud } from '../engine/llm/cloudEngine';
-import { pickSuggestions, detectTopics } from '../engine/coachSuggest';
+import { buildLLMChatPrompt } from '../engine/coach/prompt';
+import { runGuardedCoachGeneration } from '../engine/coach/guardedGenerate';
+import { pickSuggestions, detectTopics } from '../engine/coach/coachSuggest';
 
 const GOLD = '#d9a441';
 const CHAT_STORE_KEY = 'dc-coach-chat-v1'; // lưu hội thoại. KHÔNG nạp số cũ vào prompt.
@@ -92,29 +92,16 @@ export default function CoachChat(goalProps) {
       const ctxStr = buildAnalyst(); // dùng CHUNG cho cả dựng prompt LẪN soi guard (đừng gọi 2 lần — tránh lệch)
       const { system, messages: msgs } = buildLLMChatPrompt(ctxStr, q, history);
       // Engine = Gemini (đám mây). Bản thân /api/coach đã có thử-lại + nhảy model dự phòng.
-      const run = async (messagesToUse) => {
-        return generateCloud({ system, messages: messagesToUse, temperature: 0.2 });
-      };
-      let clean = sanitizeLLMOutput(await run(msgs));
-      if (hasForeignScript(clean)) {
-        // Lỗi NGÔN NGỮ (lỡ chen chữ nước ngoài) → hỏi lại 1 lần (hiếm với Gemini).
-        updateLastAssistant(''); clean = sanitizeLLMOutput(await run(msgs));
-      } else {
-        // Lỗi NỘI DUNG (số bịa) → viết lại CÓ-HƯỚNG-DẪN: chèn lượt chỉ-rõ token sai.
-        const bad = findFabricatedNumbers(clean, ctxStr);
-        if (bad.length) {
-          updateLastAssistant('');
-          const msgs2 = appendCorrectionTurn(msgs, clean, buildCorrectionNote(bad));
-          clean = sanitizeLLMOutput(await run(msgs2));
-        }
-      }
+      const result = await runGuardedCoachGeneration({
+        system,
+        messages: msgs,
+        ctxStr,
+        onBeforeRetry: () => updateLastAssistant(''),
+      });
       // Tuyến phòng thủ chót — KHÔNG nới guard:
-      if (hasForeignScript(clean)) {
-        clean = 'Lần này AI lỡ chen vài chữ nước ngoài. Bạn hỏi lại giúp mình một câu nhé.';
-      } else if (hasFabricatedNumbers(clean, ctxStr) || findMismatchedPairs(clean, ctxStr).length > 0 || findFabricatedFractions(clean, ctxStr).length > 0) {
-        // VẪN bịa số / ghép sai %↔cỡ-mẫu / phân số bịa → CỨU-CÂU: bỏ riêng câu bịa, giữ câu sạch.
-        clean = stripFabricatedSentences(clean, ctxStr).clean;
-      }
+      const clean = result.foreignScriptError
+        ? 'Lần này AI lỡ chen vài chữ nước ngoài. Bạn hỏi lại giúp mình một câu nhé.'
+        : result.text;
       updateLastAssistant(clean);
     } catch (err) {
       const code = err?.code || err?.message || '';

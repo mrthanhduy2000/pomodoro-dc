@@ -5,18 +5,12 @@
  * mỗi ngày (đặt lịch ở vercel.json) qua đúng client Supabase (không phải cron nội bộ Postgres)
  * để Supabase luôn thấy project "đang hoạt động". Bảo vệ bằng CRON_SECRET như các cron khác.
  */
-import { methodNotAllowed, sendJson } from './_lib/http.js';
+import { isCronAuthorized, methodNotAllowed, sendJson } from './_lib/http.js';
 import { getAdminClient } from './_lib/push.js';
-
-export function isAuthorized(req) {
-  const secret = process.env.CRON_SECRET;
-  if (!secret) return true;
-  return (req.headers.authorization ?? '') === `Bearer ${secret}`;
-}
 
 export default async function handler(req, res) {
   if (req.method !== 'GET' && req.method !== 'POST') return methodNotAllowed(res, ['GET', 'POST']);
-  if (!isAuthorized(req)) {
+  if (!isCronAuthorized(req)) {
     if (req.method === 'GET') return sendJson(res, 200, { ok: true, status: 'warm' });
     return sendJson(res, 401, { ok: false, error: 'Unauthorized.' });
   }

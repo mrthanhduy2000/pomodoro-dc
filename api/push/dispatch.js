@@ -1,35 +1,15 @@
-import { methodNotAllowed, readJsonBody, sendJson } from '../_lib/http.js';
+import { isCronAuthorized, methodNotAllowed, readJsonBody, sendJson } from '../_lib/http.js';
 import {
   claimDuePushJobs,
   disablePushSubscription,
   getPushJobStatus,
   isExpiredPushSubscriptionError,
+  isSessionEndEvent,
   listActivePushSubscriptions,
   markPushJobError,
   markPushJobSent,
   sendPushNotification,
 } from '../_lib/push.js';
-
-function isAuthorizedRequest(req) {
-  const secret = process.env.CRON_SECRET;
-  if (!secret) return true;
-  const authHeader = req.headers.authorization ?? '';
-  return authHeader === `Bearer ${secret}`;
-}
-
-// Supabase webhook fires on every timer_live UPDATE. Only a clear completed
-// reason may dispatch push; cancelled/reset sessions must never fall back to
-// shape-based guessing because late cancels look exactly like completions.
-export function isSessionEndEvent(body) {
-  return (
-    body?.type === 'UPDATE' &&
-    (body?.old_record?.is_running !== false) &&
-    body?.record?.ended_reason === 'completed' &&
-    body?.record?.is_break !== true &&
-    body?.record?.is_running === false &&
-    body?.record?.paused_seconds_remaining == null
-  );
-}
 
 async function runDispatch(graceSeconds) {
   const jobs = await claimDuePushJobs(10, graceSeconds);
@@ -106,7 +86,7 @@ export default async function handler(req, res) {
     return methodNotAllowed(res, ['GET', 'POST']);
   }
 
-  if (!isAuthorizedRequest(req)) {
+  if (!isCronAuthorized(req)) {
     return sendJson(res, 401, { ok: false, error: 'Unauthorized.' });
   }
 

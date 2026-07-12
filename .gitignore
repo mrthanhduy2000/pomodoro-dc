@@ -32,3 +32,6 @@ dist-ssr
 backups/
 DC Pomodoro.app/
 DC Pomodoro - Logo System.html
+
+# Kết quả chạy test thủ công (không có Playwright/E2E config trong repo) — lỡ commit 2026-07-11, đã dọn
+test-results/

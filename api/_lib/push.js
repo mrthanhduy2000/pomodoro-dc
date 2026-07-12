@@ -18,6 +18,21 @@ export function getPushConfig() {
   };
 }
 
+// Supabase webhook fires on every timer_live UPDATE. Only a clear completed
+// reason may dispatch push; cancelled/reset sessions must never fall back to
+// shape-based guessing because late cancels look exactly like completions.
+// Nguồn sự thật DUY NHẤT — trước đây bị chép tay khác luật ở dispatch.js/notify-now.js.
+export function isSessionEndEvent(body) {
+  return (
+    body?.type === 'UPDATE' &&
+    (body?.old_record?.is_running !== false) &&
+    body?.record?.ended_reason === 'completed' &&
+    body?.record?.is_break !== true &&
+    body?.record?.is_running === false &&
+    body?.record?.paused_seconds_remaining == null
+  );
+}
+
 function assertAdminConfigured() {
   if (!SUPABASE_SERVICE_ROLE_KEY) {
     throw new Error('Missing SUPABASE_SERVICE_ROLE_KEY.');
@@ -184,22 +199,6 @@ export async function getPushJobStatus(jobKey) {
 
   if (error) throw error;
   return data?.status ?? null;
-}
-
-export async function getDuePushJobs(limit = 10, graceSeconds = 0) {
-  const admin = getAdminClient();
-  const cutoff = new Date(Date.now() - graceSeconds * 1000).toISOString();
-
-  const { data, error } = await admin
-    .from('push_jobs')
-    .select('*')
-    .eq('status', 'scheduled')
-    .lte('scheduled_for', cutoff)
-    .order('scheduled_for', { ascending: true })
-    .limit(limit);
-
-  if (error) throw error;
-  return data ?? [];
 }
 
 export async function claimDuePushJobs(limit = 10, graceSeconds = 0) {

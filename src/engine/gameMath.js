@@ -1586,28 +1586,6 @@ function getHistoryMinutes(entry) {
   return Math.max(0, entry?.minutes ?? 0);
 }
 
-// ─── Thống kê rolling 7 ngày gần nhất ────────────────────────────────────────
-export function computeWeeklyStats(history) {
-  const days = {};
-  const now = Date.now();
-  for (let i = 6; i >= 0; i--) {
-    const d = localDateStr(now - i * 86_400_000);
-    days[d] = { date: d, xp: 0, minutes: 0, sessions: 0, completed: 0, cancelled: 0 };
-  }
-  for (const h of history) {
-    const d = localDateStr(new Date(h.timestamp));
-    if (days[d]) {
-      const isCancelled = isCancelledHistoryEntry(h);
-      days[d].xp       += getHistoryXP(h); // backward compat
-      days[d].minutes  += getHistoryMinutes(h);
-      days[d].sessions += 1;
-      days[d].completed += isCancelled ? 0 : 1;
-      days[d].cancelled += isCancelled ? 1 : 0;
-    }
-  }
-  return Object.values(days);
-}
-
 // ─── Thống kê tổng hợp ────────────────────────────────────────────────────────
 export function computeAllTimeStats(history, progress, player = null, historyStats = null) {
   const completedHistory = history.filter((entry) => !isCancelledHistoryEntry(entry));
@@ -1653,28 +1631,6 @@ export function computeAllTimeStats(history, progress, player = null, historySta
     cancelledSessions,
     cancelledMinutes,
   };
-}
-
-// ─── Thống kê rolling 7 ngày trước đó (từ 7 đến 13 ngày trước) ─────────────
-export function computePrevWeekStats(history) {
-  const days = {};
-  const now  = Date.now();
-  for (let i = 13; i >= 7; i--) {
-    const d = localDateStr(now - i * 86_400_000);
-    days[d] = { date: d, xp: 0, minutes: 0, sessions: 0, completed: 0, cancelled: 0 };
-  }
-  for (const h of history) {
-    const d = localDateStr(new Date(h.timestamp));
-    if (days[d]) {
-      const isCancelled = isCancelledHistoryEntry(h);
-      days[d].xp       += getHistoryXP(h);
-      days[d].minutes  += getHistoryMinutes(h);
-      days[d].sessions += 1;
-      days[d].completed += isCancelled ? 0 : 1;
-      days[d].cancelled += isCancelled ? 1 : 0;
-    }
-  }
-  return Object.values(days);
 }
 
 // ─── Heatmap dữ liệu (GitHub-style, N ngày gần nhất) ─────────────────────────

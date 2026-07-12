@@ -10,6 +10,7 @@ import React, { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import useGameStore from '../store/gameStore';
 import { ACHIEVEMENTS } from '../engine/constants';
+import { initialsFromLabel } from '../utils/labelMark';
 
 const ACH_LOOKUP = Object.fromEntries(ACHIEVEMENTS.map((a) => [a.id, a]));
 const DISPLAY_FONT = '"Source Serif 4", Georgia, serif';
@@ -17,13 +18,7 @@ const MONO_FONT = '"JetBrains Mono", "SFMono-Regular", Menlo, monospace';
 
 function getAchievementMark(ach) {
   if (!ach?.label) return 'DG';
-  return ach.label
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0])
-    .join('')
-    .toUpperCase();
+  return initialsFromLabel(ach.label);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

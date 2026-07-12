@@ -1348,7 +1348,6 @@ export default function App() {
   const breakStartedAt = useGameStore((s) => s.breakSession.startedAt);
   const breakTotalSeconds = useGameStore((s) => s.breakSession.totalSeconds);
   const breakIsRunning = useGameStore((s) => s.breakSession.isRunning);
-  const breakTrayWasActiveRef = useRef(false);
   const breakLiveWasActiveRef = useRef(false);
 
   useEffect(() => {
@@ -1370,24 +1369,6 @@ export default function App() {
     }
     breakLiveWasActiveRef.current = false;
   }, [breakIsRunning, breakStartedAt, breakTotalSeconds]);
-
-  useEffect(() => {
-    if (!window.electronAPI) {
-      breakTrayWasActiveRef.current = isOnBreak;
-      return;
-    }
-    if (isOnBreak) {
-      const mm = String(Math.floor(breakSecsLeft / 60)).padStart(2, '0');
-      const ss = String(breakSecsLeft % 60).padStart(2, '0');
-      window.electronAPI.updateTray({ state: 'BREAK', timeLeft: `${mm}:${ss}` });
-      breakTrayWasActiveRef.current = true;
-      return;
-    }
-    if (breakTrayWasActiveRef.current) {
-      window.electronAPI.updateTray({ state: 'IDLE', timeLeft: '' });
-    }
-    breakTrayWasActiveRef.current = false;
-  }, [isOnBreak, breakSecsLeft]);
 
   const activeBook = useGameStore((s) => s.progress.activeBook);
   const totalEP = useGameStore((s) => s.progress.totalEP);

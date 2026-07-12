@@ -14,6 +14,7 @@ import {
   normalizeRefinedBag,
   getRelicEvolutionRefinedCost,
 } from '../engine/constants';
+import { getLabelMark } from '../utils/labelMark';
 
 const ALL_RELIC_DEFS = Object.entries(ERA_CRISES)
   .sort(([a], [b]) => Number(a) - Number(b))
@@ -67,16 +68,6 @@ function paperCardStyle(lightTheme, accentBorder = 'var(--line)', accentShadow =
     borderRadius: 'var(--skin-radius-card, 18px)',
     boxShadow: 'var(--skin-card-shadow, 0 12px 26px ' + accentShadow + ')',
   };
-}
-
-function getRelicMark(label, fallback = 'RL') {
-  return String(label ?? fallback)
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0])
-    .join('')
-    .toUpperCase() || fallback;
 }
 
 export default function RelicInventory() {
@@ -203,7 +194,7 @@ function RelicCard({ relic, stage, lightTheme }) {
               color: 'var(--accent-light)',
             }}
           >
-            {getRelicMark(relic.label)}
+            {getLabelMark(relic.label, 'RL')}
           </div>
 
           <div className="min-w-0 flex-1">

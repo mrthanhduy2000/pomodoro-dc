@@ -13,6 +13,16 @@ import {
   normalizeRefinedBag,
   getUnifiedRefinedCost,
 } from '../engine/constants';
+import { Glyph } from './icons/Glyph';
+import {
+  NOTIF_BELL_GLYPH,
+  NOTIF_SPARK_GLYPH,
+  NOTIF_CHEVRON_GLYPH,
+  NOTIF_CLOSE_GLYPH,
+  NOTIF_SKILL_CATEGORY_GLYPH,
+  NOTIF_BLUEPRINT_CATEGORY_GLYPH,
+  NOTIF_WORKSHOP_CATEGORY_GLYPH,
+} from './icons/glyphData';
 
 const DISPLAY_FONT = '"Source Serif 4", Georgia, serif';
 const MONO_FONT = '"JetBrains Mono", "SFMono-Regular", Menlo, monospace';
@@ -30,67 +40,14 @@ const BLUEPRINT_LOOKUP = Object.fromEntries(
     .map((blueprint) => [blueprint.id, blueprint])
 );
 
-function Glyph({ size = 16, stroke = 1.7, children, fill = 'none' }) {
-  return (
-    <svg
-      aria-hidden="true"
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill={fill}
-      stroke="currentColor"
-      strokeWidth={stroke}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      {children}
-    </svg>
-  );
-}
-
 const CenterIcon = {
-  bell: (props) => (
-    <Glyph {...props}>
-      <path d="M6 9a6 6 0 1 1 12 0c0 6 2 7 2 7H4s2-1 2-7" />
-      <path d="M10 19a2 2 0 0 0 4 0" />
-    </Glyph>
-  ),
-  spark: (props) => (
-    <Glyph {...props}>
-      <path d="M12 3l2 5 5 2-5 2-2 5-2-5-5-2 5-2z" />
-    </Glyph>
-  ),
-  chevron: (props) => (
-    <Glyph {...props}>
-      <path d="M9 6l6 6-6 6" />
-    </Glyph>
-  ),
-  close: (props) => (
-    <Glyph {...props}>
-      <path d="M6 6l12 12M18 6L6 18" />
-    </Glyph>
-  ),
-  skill: (props) => (
-    <Glyph {...props}>
-      <path d="M12 3v18" />
-      <path d="M12 7c3 0 5-2 8-2" />
-      <path d="M12 11c-3 0-5-2-8-2" />
-      <path d="M12 15c3 0 5-2 8-2" />
-    </Glyph>
-  ),
-  blueprint: (props) => (
-    <Glyph {...props}>
-      <path d="M5 5h14v14H5z" />
-      <path d="M8 9h8M8 13h8M8 17h5" />
-    </Glyph>
-  ),
-  workshop: (props) => (
-    <Glyph {...props}>
-      <path d="M4 19h16" />
-      <path d="M6 19V9l6-4 6 4v10" />
-      <path d="M9 13h6" />
-    </Glyph>
-  ),
+  bell: (props) => <Glyph markup={NOTIF_BELL_GLYPH} {...props} />,
+  spark: (props) => <Glyph markup={NOTIF_SPARK_GLYPH} {...props} />,
+  chevron: (props) => <Glyph markup={NOTIF_CHEVRON_GLYPH} {...props} />,
+  close: (props) => <Glyph markup={NOTIF_CLOSE_GLYPH} {...props} />,
+  skill: (props) => <Glyph markup={NOTIF_SKILL_CATEGORY_GLYPH} {...props} />,
+  blueprint: (props) => <Glyph markup={NOTIF_BLUEPRINT_CATEGORY_GLYPH} {...props} />,
+  workshop: (props) => <Glyph markup={NOTIF_WORKSHOP_CATEGORY_GLYPH} {...props} />,
 };
 
 function describeSample(list = [], totalCount = 0) {

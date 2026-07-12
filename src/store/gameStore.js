@@ -2372,6 +2372,11 @@ function countCollectedBlueprints(research, blueprints = [], buildings = []) {
 }
 
 // ─── HELPER: Tạo snapshot cho kiểm tra thành tích ────────────────────────────
+// ⚠️ Có bản SONG SONG `buildAchievementSnapshotForReplay` ở src/engine/achievementTimeline.js
+// (tính lại field TƯƠNG TỰ nhưng bằng thuật toán TÍCH LUỸ-GIA-TĂNG cho việc suy luận ngày mở
+// khoá cũ, khác thuật toán "tính lại từ đầu mỗi lần gọi" ở đây). CỐ Ý KHÔNG gộp làm một (rủi ro
+// cao hơn lợi ích — 2 thuật toán phục vụ 2 mục đích khác nhau: real-time check vs replay lịch
+// sử). Thêm/đổi field thành tích ở ĐÂY thì kiểm tra luôn bên achievementTimeline.js kẻo lệch.
 function buildAchievementSnapshot(progress, relics, blueprints, research, history, rankSystem, streak, buildings, prestige, player) {
   const completedHistory = history.filter((h) => !isCancelledHistoryEntry(h));
   const getTs     = (h) => typeof h.timestamp === 'string' ? new Date(h.timestamp).getTime() : (h.timestamp ?? 0);

@@ -27,3 +27,11 @@ export function methodNotAllowed(res, methods) {
     error: `Method not allowed. Use: ${methods.join(', ')}`,
   });
 }
+
+// Dùng chung cho mọi cron route (coach-digest, keepalive, push/dispatch).
+// Vercel Cron tự gửi `Authorization: Bearer <CRON_SECRET>`; chưa đặt secret → cho qua.
+export function isCronAuthorized(req) {
+  const secret = process.env.CRON_SECRET;
+  if (!secret) return true;
+  return (req.headers.authorization ?? '') === `Bearer ${secret}`;
+}

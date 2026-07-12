@@ -206,6 +206,11 @@ function updateReplayAccumulator(accumulator, entry) {
   }
 }
 
+// ⚠️ Có bản SONG SONG `buildAchievementSnapshot` ở src/store/gameStore.js (tính lại field
+// TƯƠNG TỰ nhưng từ ĐẦU mỗi lần gọi, dùng cho kiểm tra thành tích real-time). File này dùng
+// thuật toán TÍCH LUỸ-GIA-TĂNG (accumulator) để suy luận ngày mở khoá cũ khi replay lịch sử —
+// CỐ Ý KHÔNG gộp chung (rủi ro cao hơn lợi ích, 2 mục đích khác nhau). Đổi field ở đây thì
+// kiểm tra luôn bên gameStore.js kẻo lệch.
 function buildAchievementSnapshotForReplay(progress, accumulator, streak, player, referenceTs) {
   const referenceYear = getVietnamYear(referenceTs);
   const thisYearStats = accumulator.yearStats.get(referenceYear) ?? createReplayYearStats();

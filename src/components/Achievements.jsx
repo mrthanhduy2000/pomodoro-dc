@@ -12,6 +12,7 @@ import {
   ACHIEVEMENT_TIERS,
 } from '../engine/constants';
 import { formatVietnamDateTime } from '../engine/time';
+import { getLabelMark } from '../utils/labelMark';
 import useGameStore from '../store/gameStore';
 
 const TIER_SEQUENCE = ['bronze', 'silver', 'gold', 'platinum', 'diamond'];
@@ -106,16 +107,6 @@ function getUnlockTimestamp(value) {
 
 function padOrder(value) {
   return String(value ?? 0).padStart(2, '0');
-}
-
-function getLabelMark(label, fallback = 'TC') {
-  return String(label ?? fallback)
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0])
-    .join('')
-    .toUpperCase() || fallback;
 }
 
 function formatUnlockLabel(unlockedAt) {

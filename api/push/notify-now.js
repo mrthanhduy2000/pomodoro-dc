@@ -2,45 +2,22 @@ import { methodNotAllowed, readJsonBody, sendJson } from '../_lib/http.js';
 import {
   disablePushSubscription,
   isExpiredPushSubscriptionError,
+  isSessionEndEvent,
   listActivePushSubscriptions,
   sendPushNotification,
   markPushJobSent,
 } from '../_lib/push.js';
+import { buildFocusCompletePayload } from '../../src/engine/pushPayloads.js';
 
 const FOCUS_JOB_KEY = 'dc-pomodoro:focus-complete';
 const LEGACY_PUSH_WEBHOOK_ENABLED = process.env.ENABLE_LEGACY_PUSH_WEBHOOK === 'true';
-
-// Supabase webhook fires on every timer_live UPDATE. Require an explicit
-// completed reason so cancelled/reset clears never look like finished sessions.
-export function isSessionEndEvent(body) {
-  return (
-    body?.type === 'UPDATE' &&
-    body?.old_record?.is_running === true &&
-    body?.old_record?.is_break !== true &&
-    body?.record?.ended_reason === 'completed' &&
-    body?.record?.is_break !== true &&
-    body?.record?.is_running === false &&
-    body?.record?.paused_seconds_remaining == null
-  );
-}
-
-function buildPayload(focusMinutes) {
-  return {
-    title: '🎇 XONG PHIÊN TẬP TRUNG!',
-    body: `Phiên ${focusMinutes} phút của Đàm đã xong. Mở app bấm nghỉ giải lao nha!`,
-    icon: '/icon-192.png',
-    badge: '/icon-192.png',
-    tag: 'dc-pomodoro-focus-complete',
-    url: '/',
-  };
-}
 
 async function sendToAll(focusMinutes) {
   const subscriptions = await listActivePushSubscriptions();
   let sent = 0;
   for (const row of subscriptions) {
     try {
-      await sendPushNotification(row.subscription, buildPayload(focusMinutes));
+      await sendPushNotification(row.subscription, buildFocusCompletePayload(focusMinutes));
       sent += 1;
     } catch (error) {
       if (isExpiredPushSubscriptionError(error)) {

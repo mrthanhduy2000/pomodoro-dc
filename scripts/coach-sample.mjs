@@ -5,7 +5,7 @@
  * nạp vào model có chuẩn không + thử lưới chống bịa số.
  *   chạy: node --import ./scripts/register-esm-loader.mjs scripts/coach-sample.mjs
  */
-import { buildAnalystContext } from '../src/engine/coachContext.js';
+import { buildAnalystContext } from '../src/engine/coach/coachContext.js';
 
 // 4 tuần, ~5 ngày/tuần, 2–3 phiên/ngày; buổi sáng đạt cao, khuya kém; nhiều loại việc.
 const CATS = {

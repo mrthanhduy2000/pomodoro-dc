@@ -12,6 +12,8 @@
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
+import { getOrCreateAudioContext } from './audioContext';
+
 // ── Pack parameter tables ─────────────────────────────────────────────────────
 const PACKS = {
   classic: {
@@ -94,11 +96,7 @@ class SoundEngine {
 
   // ── Lazy AudioContext init ──────────────────────────────────────────────
   _getCtx() {
-    if (!this._ctx) {
-      this._ctx = new (window.AudioContext || window.webkitAudioContext)();
-    }
-    if (this._ctx.state === 'suspended') this._ctx.resume();
-    return this._ctx;
+    return getOrCreateAudioContext(this);
   }
 
   // ── Low-level helpers ───────────────────────────────────────────────────

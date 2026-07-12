@@ -8,7 +8,7 @@ export const RICH_TEXT_TONES = [
 
 export const RICH_TEXT_TONE_MAP = Object.fromEntries(RICH_TEXT_TONES.map((tone) => [tone.id, tone]));
 
-const INLINE_PATTERNS = [
+export const INLINE_PATTERNS = [
   { type: 'link', regex: /\[([^\]\n]+)\]\(([^)\n]+)\)/ },
   { type: 'color', regex: /\{\{(red|yellow|green|blue|purple):([^}\n]+)\}\}/i },
   { type: 'underline', regex: /<u>([^<\n]+)<\/u>/i },
@@ -20,7 +20,7 @@ const INLINE_PATTERNS = [
   { type: 'italicUnderscore', regex: /_([^_\n]+)_/ },
 ];
 
-function findNextInlineToken(text) {
+export function findNextInlineToken(text) {
   let winner = null;
 
   for (const pattern of INLINE_PATTERNS) {

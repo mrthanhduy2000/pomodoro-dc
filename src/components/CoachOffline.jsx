@@ -6,8 +6,8 @@
 import { useState } from 'react';
 import { SparkGlyph } from './icons/Glyph';
 import { useAnalystContext } from '../hooks/useCoachContext';
-import { buildLLMPrompt, sanitizeLLMOutput, hasForeignScript, hasFabricatedNumbers, findFabricatedNumbers, findMismatchedPairs, findFabricatedFractions, buildCorrectionNote, appendCorrectionTurn, scrubFabricatedLines } from '../engine/llm/coachPrompt';
-import { generateCloud } from '../engine/llm/cloudEngine';
+import { buildLLMPrompt } from '../engine/coach/prompt';
+import { runGuardedCoachGeneration } from '../engine/coach/guardedGenerate';
 
 const GOLD = '#d9a441';
 
@@ -26,26 +26,16 @@ export default function CoachOffline(goalProps) {
       const { system, messages } = buildLLMPrompt(ctxStr);
       // Engine = Gemini (đám mây). Bài 4 phần là việc KHÓ NHẤT → tier 'deep' (pro trước, rơi về
       // flash nếu pro quá tải). /api/coach lo thử-lại + nhảy model dự phòng.
-      const run = (msgs) => generateCloud({ system, messages: msgs, temperature: 0.2, maxTokens: 1200, tier: 'deep' });
-      let clean = sanitizeLLMOutput(await run(messages));
-      if (hasForeignScript(clean)) {
-        // Lỗi NGÔN NGỮ (lỡ chen chữ nước ngoài) → viết lại BLIND 1 lần (hiếm với Gemini).
-        setStatus('rewriting'); setText('');
-        clean = sanitizeLLMOutput(await run(messages));
-      } else {
-        // Lỗi NỘI DUNG (số bịa) → viết lại CÓ-HƯỚNG-DẪN: chèn lượt chỉ ĐÍCH DANH số sai rồi
-        // chạy lần 2 (giống CoachChat — chính xác hơn viết-lại-mù vì model biết token nào nó bịa).
-        const bad = findFabricatedNumbers(clean, ctxStr);
-        if (bad.length) {
-          setStatus('rewriting'); setText('');
-          const msgs2 = appendCorrectionTurn(messages, clean, buildCorrectionNote(bad));
-          clean = sanitizeLLMOutput(await run(msgs2));
-        }
-      }
-      if (hasForeignScript(clean)) { setStatus('error-lang'); return; }
-      // Số bịa / ghép sai %↔cỡ-mẫu / phân số bịa còn sót → CỨU-CÂU lọc-DÒNG: bỏ riêng dòng bịa, giữ khung 4 phần.
-      if (hasFabricatedNumbers(clean, ctxStr) || findMismatchedPairs(clean, ctxStr).length > 0 || findFabricatedFractions(clean, ctxStr).length > 0) clean = scrubFabricatedLines(clean, ctxStr).clean;
-      setText(clean);
+      const result = await runGuardedCoachGeneration({
+        system,
+        messages,
+        ctxStr,
+        generateOptions: { maxTokens: 1200, tier: 'deep' },
+        stripGranularity: 'line', // CỨU-CÂU lọc-DÒNG: bỏ riêng dòng bịa, giữ khung 4 phần
+        onBeforeRetry: () => { setStatus('rewriting'); setText(''); },
+      });
+      if (result.foreignScriptError) { setStatus('error-lang'); return; }
+      setText(result.text);
       setStatus('ready');
     } catch {
       setStatus('error');

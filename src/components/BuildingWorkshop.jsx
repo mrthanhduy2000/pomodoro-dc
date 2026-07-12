@@ -17,7 +17,6 @@ import {
   BUILDING_EFFECTS,
   BLUEPRINT_CATALOG,
   BLUEPRINT_META,
-  BLUEPRINT_RARITY_LABEL,
   CRAFT_QUEUE_SLOTS,
   ERA_REFINED,
   ERA_METADATA,
@@ -27,6 +26,8 @@ import {
   getUpgradeRefinedCost,
   getBuildingLevelMultiplier,
 } from '../engine/constants';
+import { getLabelMark } from '../utils/labelMark';
+import { TypeBadge, RarityBadge, PerkSummary } from './shared/BadgeKit';
 
 const MONO_FONT = '"JetBrains Mono", "SFMono-Regular", Menlo, monospace';
 
@@ -36,27 +37,11 @@ function getBpDef(id) {
   return ALL_BLUEPRINTS.find((b) => b.id === id) ?? { id, label: id, icon: '', description: '' };
 }
 
-function getBpMark(label, fallback = 'BP') {
-  return String(label ?? fallback)
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0])
-    .join('')
-    .toUpperCase() || fallback;
-}
-
 const TYPE_STYLE = {
   infrastructure: { label: 'Hạ Tầng',  color: 'text-sky-300',    bg: 'bg-sky-900/40',    border: 'border-sky-700/60'  },
   economy:        { label: 'Kinh Tế',   color: 'text-amber-300',  bg: 'bg-amber-900/40',  border: 'border-amber-700/60'},
   defense:        { label: 'Ổn Định',   color: 'text-rose-300',   bg: 'bg-rose-900/40',   border: 'border-rose-700/60' },
   wonder:         { label: 'Kỳ Quan',   color: 'text-purple-300', bg: 'bg-purple-900/40', border: 'border-purple-700/60'},
-};
-
-const RARITY_STYLE = {
-  common: { label: BLUEPRINT_RARITY_LABEL.common, color: 'text-slate-200', bg: 'bg-slate-700/60', border: 'border-slate-500/50' },
-  rare:   { label: BLUEPRINT_RARITY_LABEL.rare,   color: 'text-cyan-200',  bg: 'bg-cyan-900/30',  border: 'border-cyan-700/50' },
-  epic:   { label: BLUEPRINT_RARITY_LABEL.epic,   color: 'text-fuchsia-200', bg: 'bg-fuchsia-900/30', border: 'border-fuchsia-700/50' },
 };
 
 function formatPercent(value = 0) {
@@ -73,86 +58,6 @@ function paperPanel(lightTheme) {
   };
 }
 
-function TypeBadge({ type, lightTheme = false }) {
-  const s = TYPE_STYLE[type] ?? TYPE_STYLE.infrastructure;
-  if (lightTheme) {
-    const accentMap = {
-      infrastructure: '#68796a',
-      economy: '#9c7645',
-      defense: '#8d5c54',
-      wonder: '#7a6877',
-    };
-    return (
-      <span
-        className="mono rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.16em]"
-        style={{
-          background: 'var(--card-bg-solid2)',
-          border: 'var(--skin-card-border-width,1px) solid var(--line)',
-          color: accentMap[type] ?? '#68796a',
-          fontFamily: MONO_FONT,
-        }}
-      >
-        {s.label}
-      </span>
-    );
-  }
-  return (
-    <span className={`text-xs px-1.5 py-0.5 rounded-full border font-semibold ${s.color} ${s.bg} ${s.border}`}>
-      {s.label}
-    </span>
-  );
-}
-
-function RarityBadge({ rarity, lightTheme = false }) {
-  const s = RARITY_STYLE[rarity] ?? RARITY_STYLE.common;
-  if (lightTheme) {
-    const accentMap = {
-      common: '#6a6862',
-      rare: '#667487',
-      epic: '#7a6877',
-    };
-    return (
-      <span
-        className="mono rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.16em]"
-        style={{
-          background: 'rgba(31, 30, 29, 0.04)',
-          border: 'var(--skin-card-border-width,1px) solid var(--line)',
-          color: accentMap[rarity] ?? '#6a6862',
-          fontFamily: MONO_FONT,
-        }}
-      >
-        {s.label}
-      </span>
-    );
-  }
-  return (
-    <span className={`text-[11px] px-1.5 py-0.5 rounded-full border font-semibold ${s.color} ${s.bg} ${s.border}`}>
-      {s.label}
-    </span>
-  );
-}
-
-function PerkSummary({ perk, lightTheme = false }) {
-  if (!perk) return null;
-  return (
-    <div
-      className="mt-1.5 px-3 py-2"
-      style={lightTheme
-        ? { background: 'rgba(31, 30, 29, 0.04)', border: 'var(--skin-card-border-width,1px) solid var(--line)', borderRadius: 'var(--skin-radius-control,14px)' }
-        : { background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14 }}
-    >
-      <p className="mono text-[10px] font-semibold uppercase tracking-[0.2em]" style={lightTheme ? { color: 'var(--accent2)', fontFamily: MONO_FONT } : { color: '#f8d6a2', fontFamily: MONO_FONT }}>
-        {perk.family}
-      </p>
-      <p className="mt-0.5 text-xs font-semibold" style={lightTheme ? { color: '#1f1e1d' } : { color: '#f8fafc' }}>
-        {perk.label}
-      </p>
-      <p className="mt-0.5 text-xs leading-5" style={lightTheme ? { color: '#6a6862' } : { color: '#cbd5e1' }}>
-        {perk.summary}
-      </p>
-    </div>
-  );
-}
 
 function ResourceCost({ era, cost, bookResources, lightTheme = false }) {
   const normalizedCost = normalizeRawCost(cost ?? {});
@@ -220,8 +125,8 @@ function QueueSection({ queue, cancelCrafting, lightTheme }) {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
                   <p className="font-semibold text-sm truncate" style={lightTheme ? { color: 'var(--ink)', fontFamily: 'var(--skin-font-display)' } : { color: '#fcd34d' }}>{bpDef.label}</p>
-                  {meta.rarity && <RarityBadge rarity={meta.rarity} lightTheme={lightTheme} />}
-                  <TypeBadge type={eff.type} lightTheme={lightTheme} />
+                  {meta.rarity && <RarityBadge rarity={meta.rarity} lightTheme={lightTheme} variant="skin" />}
+                  <TypeBadge type={eff.type} typeStyle={TYPE_STYLE} lightTheme={lightTheme} variant="skin" />
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="flex-1 h-2 rounded-full overflow-hidden" style={lightTheme ? { background: 'rgba(31, 30, 29, 0.08)' } : { background: '#334155' }}>
@@ -288,19 +193,19 @@ function ReadyCard({ bpId, bookResources, resourcesRefined, craftingQueue, onSta
             ? { borderColor: 'var(--line)', background: 'var(--card-bg-solid2)', color: 'var(--accent2)', fontFamily: MONO_FONT }
             : { borderColor: 'rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.04)', color: 'var(--accent-light)', fontFamily: MONO_FONT }}
         >
-          {getBpMark(bpDef.label)}
+          {getLabelMark(bpDef.label, 'BP')}
         </span>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap mb-0.5">
             <p className="font-semibold text-sm" style={lightTheme ? { color: 'var(--ink)', fontFamily: 'var(--skin-font-display)' } : { color: '#ffffff' }}>{bpDef.label}</p>
-            {meta.rarity && <RarityBadge rarity={meta.rarity} lightTheme={lightTheme} />}
-            {eff.type && <TypeBadge type={eff.type} lightTheme={lightTheme} />}
+            {meta.rarity && <RarityBadge rarity={meta.rarity} lightTheme={lightTheme} variant="skin" />}
+            {eff.type && <TypeBadge type={eff.type} typeStyle={TYPE_STYLE} lightTheme={lightTheme} variant="skin" />}
           </div>
           <p className="text-xs" style={lightTheme ? { color: 'var(--muted)' } : { color: '#94a3b8' }}>{bpDef.description}</p>
 
           {/* Hiệu ứng */}
           <div className="mt-1.5 space-y-0.5">
-            <PerkSummary perk={eff.perk} lightTheme={lightTheme} />
+            <PerkSummary perk={eff.perk} lightTheme={lightTheme} variant="skin" />
             <p className="mono text-xs" style={lightTheme ? { color: 'var(--muted-2)', fontFamily: MONO_FONT } : { color: '#64748b' }}>{meta.sessionsToComplete ?? 1} phiên để hoàn thành</p>
           </div>
           {spec.cost && <ResourceCost era={meta.era} cost={spec.cost} bookResources={bookResources} lightTheme={lightTheme} />}
@@ -376,7 +281,7 @@ function BuiltCard({ bpId, level, resourcesRefined, onUpgrade, lightTheme }) {
           ? { borderColor: 'var(--line)', background: 'var(--card-bg-solid2)', color: 'var(--accent2)', fontFamily: MONO_FONT }
           : { borderColor: 'rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.04)', color: 'var(--accent-light)', fontFamily: MONO_FONT }}
       >
-        {getBpMark(bpDef.label)}
+        {getLabelMark(bpDef.label, 'BP')}
       </span>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-0.5 flex-wrap">
@@ -386,14 +291,14 @@ function BuiltCard({ bpId, level, resourcesRefined, onUpgrade, lightTheme }) {
           >
             {bpDef.label}
           </p>
-          {BLUEPRINT_META[bpId]?.rarity && <RarityBadge rarity={BLUEPRINT_META[bpId].rarity} lightTheme={lightTheme} />}
-          {eff.type && <TypeBadge type={eff.type} lightTheme={lightTheme} />}
+          {BLUEPRINT_META[bpId]?.rarity && <RarityBadge rarity={BLUEPRINT_META[bpId].rarity} lightTheme={lightTheme} variant="skin" />}
+          {eff.type && <TypeBadge type={eff.type} typeStyle={TYPE_STYLE} lightTheme={lightTheme} variant="skin" />}
           <span className={`text-xs font-bold ${LEVEL_COLOR[lv]}`} style={lightTheme ? { color: lv === 1 ? '#6a6862' : lv === 2 ? '#7a6877' : '#9c7645', fontFamily: MONO_FONT } : { fontFamily: MONO_FONT }}>{LEVEL_LABEL[lv]}</span>
           {lv > 1 && (
             <span className="mono text-xs tabular-nums" style={lightTheme ? { color: 'var(--muted-2)', fontFamily: MONO_FONT } : { color: '#64748b', fontFamily: MONO_FONT }}>×{LEVEL_MULT[lv]} hiệu ứng</span>
           )}
         </div>
-        <PerkSummary perk={eff.perk} lightTheme={lightTheme} />
+        <PerkSummary perk={eff.perk} lightTheme={lightTheme} variant="skin" />
         {lv > 1 && (
           <p className="mt-1 text-xs" style={lightTheme ? { color: 'var(--muted-2)' } : { color: '#64748b' }}>
             Cấp công trình vẫn tăng thông số nền phía sau đặc quyền.

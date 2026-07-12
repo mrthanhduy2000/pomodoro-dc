@@ -637,24 +637,6 @@ export function useTimer({ focusMinutes, mode = TIMER_MODES.POMODORO }) {
   }, [finish]);
 
   useEffect(() => {
-    if (!window.electronAPI) return;
-
-    if (timerState === TIMER_STATES.RUNNING || timerState === TIMER_STATES.PAUSED) {
-      window.electronAPI.updateTray({
-        state: timerState,
-        mode: modeRef.current,
-        timeLeft: formatTime(visibleDisplaySeconds),
-        startedAt: startTimeRef.current ? new Date(startTimeRef.current).toISOString() : null,
-        totalSeconds: totalSecondsRef.current,
-        pausedSecondsRemaining: timerState === TIMER_STATES.PAUSED ? visibleDisplaySeconds : null,
-      });
-      return;
-    }
-
-    window.electronAPI.updateTray({ state: timerState, mode: modeRef.current, timeLeft: '' });
-  }, [timerState, visibleDisplaySeconds]);
-
-  useEffect(() => {
     timerStateRef.current = timerState;
   }, [timerState]);
 

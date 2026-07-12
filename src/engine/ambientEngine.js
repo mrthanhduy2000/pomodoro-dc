@@ -3,6 +3,8 @@
  * Zero asset files — all sounds generated algorithmically.
  */
 
+import { getOrCreateAudioContext } from './audioContext';
+
 // ─── Sound configs ────────────────────────────────────────────────────────────
 const CONFIGS = {
   rain: {
@@ -99,11 +101,7 @@ class AmbientEngine {
   }
 
   _getCtx() {
-    if (!this._ctx) {
-      this._ctx = new (window.AudioContext || window.webkitAudioContext)();
-    }
-    if (this._ctx.state === 'suspended') this._ctx.resume();
-    return this._ctx;
+    return getOrCreateAudioContext(this);
   }
 
   _buildNoiseBuffer(type, seconds = 6) {

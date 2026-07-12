@@ -80,3 +80,14 @@ export const BOLT_GLYPH = `<polygon points="13 3 7 13 11.5 13 10 21 17 10.5 12.5
 export const FLAME_GLYPH = `<path d="M12 3.5 C 16 8.5 16 13 12 19 C 8 13 8 8.5 12 3.5 Z"/><path d="M12 9.5 C 14 12 14 14.5 12 16.5 C 10 14.5 10 12 12 9.5 Z"/>`;
 export const SPARK_GLYPH = `<path d="M12 3 L13.4 10.6 L21 12 L13.4 13.4 L12 21 L10.6 13.4 L3 12 L10.6 10.6 Z"/>`;
 export const SHIELD_GLYPH = `<path d="M12 3 L19 6 V11 C19 16 16 19 12 21 C8 19 5 16 5 11 V6 Z"/>`;
+
+// glyph riêng cho NotificationCenter (trước đây có 1 component Glyph cục bộ
+// khác quy ước — nhận children JSX thay vì markup string — đã hợp nhất về đây,
+// GIỮ NGUYÊN từng path để không đổi hình ảnh hiển thị).
+export const NOTIF_BELL_GLYPH = `<path d="M6 9a6 6 0 1 1 12 0c0 6 2 7 2 7H4s2-1 2-7"/><path d="M10 19a2 2 0 0 0 4 0"/>`;
+export const NOTIF_SPARK_GLYPH = `<path d="M12 3l2 5 5 2-5 2-2 5-2-5-5-2 5-2z"/>`;
+export const NOTIF_CHEVRON_GLYPH = `<path d="M9 6l6 6-6 6"/>`;
+export const NOTIF_CLOSE_GLYPH = `<path d="M6 6l12 12M18 6L6 18"/>`;
+export const NOTIF_SKILL_CATEGORY_GLYPH = `<path d="M12 3v18"/><path d="M12 7c3 0 5-2 8-2"/><path d="M12 11c-3 0-5-2-8-2"/><path d="M12 15c3 0 5-2 8-2"/>`;
+export const NOTIF_BLUEPRINT_CATEGORY_GLYPH = `<path d="M5 5h14v14H5z"/><path d="M8 9h8M8 13h8M8 17h5"/>`;
+export const NOTIF_WORKSHOP_CATEGORY_GLYPH = `<path d="M4 19h16"/><path d="M6 19V9l6-4 6 4v10"/><path d="M9 13h6"/>`;

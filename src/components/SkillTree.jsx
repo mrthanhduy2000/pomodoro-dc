@@ -20,6 +20,7 @@ import useSettingsStore   from '../store/settingsStore';
 import soundEngine        from '../engine/soundEngine';
 import DailyMissions      from './DailyMissions';
 import { SkillGlyph, BranchGlyph, BoltGlyph } from './icons/Glyph';
+import { getLabelMark } from '../utils/labelMark';
 import {
   SKILL_TREE,
   SKILL_SYNERGIES,
@@ -132,16 +133,6 @@ function getTierBadgeProps(tierStyle, lightTheme) {
       borderColor: tierStyle.light.border,
     },
   };
-}
-
-function getLabelMark(label, fallback = 'NA') {
-  return String(label ?? fallback)
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0])
-    .join('')
-    .toUpperCase() || fallback;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

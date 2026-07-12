@@ -6,19 +6,8 @@ import {
   RICH_TEXT_TONES,
   countRichTextWords,
   trimRichTextToWordLimit,
+  findNextInlineToken,
 } from '../utils/richText';
-
-const INLINE_PATTERNS = [
-  { type: 'link', regex: /\[([^\]\n]+)\]\(([^)\n]+)\)/ },
-  { type: 'color', regex: /\{\{(red|yellow|green|blue|purple):([^}\n]+)\}\}/i },
-  { type: 'underline', regex: /<u>([^<\n]+)<\/u>/i },
-  { type: 'bold', regex: /\*\*([^*\n]+)\*\*/ },
-  { type: 'strike', regex: /~~([^~\n]+)~~/ },
-  { type: 'mark', regex: /==([^=\n]+)==/ },
-  { type: 'code', regex: /`([^`\n]+)`/ },
-  { type: 'italicStar', regex: /\*([^*\n]+)\*/ },
-  { type: 'italicUnderscore', regex: /_([^_\n]+)_/ },
-];
 
 const GUIDE_EXAMPLES = [
   { id: 'bold', label: 'ưu tiên', className: 'font-bold' },
@@ -66,20 +55,6 @@ function getSafeHref(url) {
   const trimmedUrl = String(url ?? '').trim();
   if (/^(https?:\/\/|mailto:|\/)/i.test(trimmedUrl)) return trimmedUrl;
   return null;
-}
-
-function findNextInlineToken(text) {
-  let winner = null;
-
-  for (const pattern of INLINE_PATTERNS) {
-    const match = pattern.regex.exec(text);
-    if (!match) continue;
-    if (!winner || match.index < winner.match.index) {
-      winner = { ...pattern, match };
-    }
-  }
-
-  return winner;
 }
 
 function renderInline(text, keyPrefix = 'inline') {

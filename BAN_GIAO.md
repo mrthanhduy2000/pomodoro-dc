@@ -6,8 +6,9 @@
 > chọn: `ARCHITECTURE_DECISIONS.md`. Nợ kỹ thuật: `TECH_DEBT.md`. Migration: `MIGRATION.md`. Tóm
 > tắt theo mốc: `CHANGELOG.md`.
 > **NGUYÊN TẮC ƯU TIÊN SỐ 1:** (1) mọi phiên AI phải đọc file này + `CLAUDE.md` + các file liên quan TRƯỚC khi làm; (2) sau MỌI cập nhật dù nhỏ, phải cập nhật ngay file này + `CLAUDE.md` + các file liên quan khác.
-> Cập nhật lần cuối: **2026-07-12** (thiết lập Project Governance Protocol — 3 thành phần dự án
-> [code/docs/knowledge] có giá trị ngang nhau, Definition of Done mới, 5 file tài liệu mới).
+> Cập nhật lần cuối: **2026-07-12** (thêm AI Engineering Playbook vào `CLAUDE.md` — quy trình 7
+> giai đoạn cho mọi task + "không giả định, luôn kiểm tra trước khi trả lời"; bổ sung Project
+> Governance Protocol — 3 thành phần dự án [code/docs/knowledge] giá trị ngang nhau, 5 file mới).
 
 ---
 
@@ -46,6 +47,27 @@
 
 ## 🗒️ Nhật ký cập nhật
 > Mỗi lần xong việc đáng kể, thêm 1 dòng vào ĐẦU danh sách.
+
+- **2026-07-12** — **Thêm AI Engineering Playbook (Operating Manual) — protocol vĩnh viễn THỨ HAI
+  cùng ngày, sau Project Governance Protocol bên dưới.** Đàm gửi tiếp một quy trình chi tiết cho
+  CÁCH một AI thực hiện từng task (khác Governance Protocol — cái đó quản lý "tài liệu nào cần
+  đồng bộ", cái này quản lý "làm task theo trình tự nào"). Đã tích hợp vào `CLAUDE.md` mục mới
+  "🛠️ AI ENGINEERING PLAYBOOK": quy trình chuẩn 7 giai đoạn (Hiểu yêu cầu→Audit→Thiết kế→Thực
+  hiện→Self Review→Validation→Knowledge Update), trình tự riêng theo loại task (Feature/Bug Fix/
+  Refactor/Architecture Change), vai trò AI phải đóng (Senior Engineer/Architect/Reviewer/QA/
+  Technical Writer/Maintainer), nguyên tắc kiến trúc (SRP/High Cohesion/Low Coupling/Reuse over
+  Rewrite/Composition over Duplication/Explicit over Implicit), quy tắc commit, và mục quan trọng
+  nhất: **"không giả định, không suy diễn"** — không chắc về codebase thì đọc code trước, code
+  chưa đủ thì đọc tài liệu, tài liệu chưa đủ thì NÓI RÕ điều còn thiếu thay vì tự đoán rồi trình
+  bày như sự thật (chính xác nguyên tắc chống-bịa đã áp dụng cho AI Coach, giờ áp dụng lại cho
+  chính AI đang code). **Tránh trùng lặp có chủ đích**: phần "Review"/"Session Handoff" của
+  Playbook trùng khá nhiều với Governance Protocol đã có — thay vì viết 2 checklist gần giống
+  nhau, đã HỢP NHẤT template "báo cáo bàn giao cuối phiên" thành 1 bản 11 mục duy nhất (thêm mục
+  "Đề xuất bước tiếp theo" từ bản Playbook vào bản Governance Protocol cũ, đổi số 10→11 mục), và
+  phần Review chỉ bổ sung 3 câu hỏi Playbook có mà Governance Protocol chưa có (ADR mới/Migration/
+  Lesson Learned) thay vì chép lại toàn bộ Self-audit checklist. Cập nhật kèm: `AI_ONBOARDING.md`
+  (thêm mục trỏ tới Playbook), memory `project-governance-protocol.md` (gộp cả 2 protocol vào 1
+  memory, sửa số đếm mục đã lệch). Không đổi code/hành vi app nào — thuần tài liệu + quy trình.
 
 - **2026-07-12** — **Thiết lập Project Governance Protocol** (Đàm ra lệnh, áp dụng vĩnh viễn cho
   mọi phiên tương lai). Nguyên tắc cốt lõi: dự án gồm 3 thành phần giá trị NGANG NHAU — Source

@@ -135,3 +135,13 @@ Một task chỉ hoàn thành khi: source code đúng + build/test/lint xanh + *
 BAN_GIAO.md luôn luôn). Chi tiết đầy đủ + bảng "loại thay đổi → tài liệu cần cập nhật" +
 checklist self-audit + mẫu báo cáo bàn giao cuối phiên: xem `CLAUDE.md` mục "Project Governance
 Protocol".
+
+## Quy trình làm việc từng bước (AI Engineering Playbook)
+
+Governance Protocol ở trên trả lời "tài liệu nào cần đồng bộ" — **`CLAUDE.md` mục "AI Engineering
+Playbook"** trả lời "làm MỘT task cụ thể theo trình tự nào" (7 giai đoạn: Hiểu yêu cầu → Audit →
+Thiết kế → Thực hiện → Self Review → Validation → Knowledge Update, cộng trình tự riêng cho từng
+loại task Feature/Bug Fix/Refactor/Architecture Change). Nguyên tắc đáng nhớ nhất: **"không giả
+định, không suy diễn"** — không chắc thì đọc code, code chưa đủ thì đọc tài liệu, tài liệu chưa đủ
+thì NÓI RÕ điều còn thiếu thay vì tự đoán rồi trình bày như sự thật (đúng tinh thần chống-bịa đã
+áp dụng cho AI Coach, giờ áp dụng lại cho chính AI đang code).

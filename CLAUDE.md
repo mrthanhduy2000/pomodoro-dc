@@ -74,10 +74,81 @@ những bài học này chỉ tồn tại trong cuộc hội thoại rồi biế
 
 ### Báo cáo bàn giao cuối phiên (khi hoàn thành một task đáng kể)
 1. Đã thay đổi gì · 2. Quyết định kiến trúc mới (nếu có) · 3. Tech debt đã xử lý · 4. Tech debt còn
-lại · 5. Tài liệu đã cập nhật · 6. Migration nếu có · 7. Giả định mới của hệ thống · 8. Bài học mới
-· 9. Việc phiên sau cần biết · 10. Việc tuyệt đối chưa nên làm + lý do. Mục nào không đổi → ghi rõ
-"Không có thay đổi" (đừng bỏ qua im lặng). Áp dụng mục này ở MỨC ĐỘ PHÙ HỢP với quy mô task — một
-sửa lỗi nhỏ không cần 10 mục đầy đủ, nhưng một task lớn (refactor, tính năng mới, sự cố) thì có.
+lại · 5. Migration nếu có · 6. Tài liệu đã cập nhật · 7. Giả định mới của hệ thống · 8. Bài học mới
+(Lesson Learned) · 9. Việc phiên sau cần biết · 10. Việc tuyệt đối chưa nên làm + lý do · 11. Đề
+xuất bước tiếp theo. Mục nào không đổi → ghi rõ "Không có thay đổi" (đừng bỏ qua im lặng). Áp dụng
+mục này ở MỨC ĐỘ PHÙ HỢP với quy mô task — một sửa lỗi nhỏ không cần đủ 11 mục, nhưng một task lớn
+(refactor, tính năng mới, sự cố) thì có.
+
+## 🛠️ AI ENGINEERING PLAYBOOK (Operating Manual — quy trình làm việc, 2026-07-12)
+
+> Đây là quy trình làm việc TIÊU CHUẨN cho mọi AI tiếp quản project (Claude Code/Codex/ChatGPT...),
+> không riêng phiên nào. Mục Governance Protocol ở trên quản lý "tài liệu có đồng bộ với code
+> không"; mục này quản lý "AI thực hiện MỘT task như thế nào, từng bước". Hai mục KHÔNG lặp lại
+> nhau — chỗ nào trùng, mục này trỏ ngược lên Governance Protocol thay vì chép lại (đúng tinh thần
+> "Composition over Duplication" ngay bên dưới).
+
+### Triết lý
+Không tối ưu cho việc hoàn thành nhanh — tối ưu cho khả năng bảo trì nhiều năm. Khi có nhiều cách
+giải quyết, ưu tiên phương án: đơn giản hơn, dễ bảo trì hơn, ít coupling hơn, ít nợ kỹ thuật hơn,
+khớp kiến trúc hiện tại hơn. Vai trò của AI khi làm việc ở đây không chỉ là "người viết code" —
+đồng thời là Senior Engineer, Software Architect, Reviewer, QA Engineer, Technical Writer, và
+Maintainer.
+
+### Quy trình chuẩn — 7 giai đoạn (không bỏ qua nếu không có lý do đặc biệt)
+1. **Hiểu yêu cầu** — xác định loại task (Feature/Bug Fix/Refactor/Performance/Documentation/
+   Architecture/Infrastructure/AI/Database/Deployment) + phạm vi ảnh hưởng đầy đủ TRƯỚC khi viết
+   dòng code nào.
+2. **Audit** — module đang chạy ra sao? đã có abstraction/helper/util tương tự chưa? có pattern
+   project đang dùng không? có ADR/Tech Debt/bug cũ nào liên quan không (xem
+   `ARCHITECTURE_DECISIONS.md`/`TECH_DEBT.md`)? Ưu tiên tái dùng cái đã có hơn viết mới.
+3. **Thiết kế** — thay đổi nhỏ thì làm luôn; thay đổi vừa/lớn phải tự phân tích phạm vi/ảnh hưởng/
+   dependency/migration/rollback/test strategy TRƯỚC. Ảnh hưởng kiến trúc → tạo entry mới trong
+   `ARCHITECTURE_DECISIONS.md` (theo đúng format ADR đã có).
+4. **Thực hiện** — không copy logic, không tạo abstraction/helper trùng cái đã có, không tăng
+   coupling/độ phức tạp nếu không cần. Phát hiện duplicate/dead code/naming lệch/module sai trách
+   nhiệm trong lúc làm → xử lý LUÔN nếu rủi ro thấp/trung bình, không đợi task khác.
+5. **Self Review** — tự soát logic/naming/readability/maintainability/architecture/performance/
+   security/consistency TRƯỚC khi commit.
+6. **Validation** — build + lint + test luôn luôn. Task đụng API/Database/Sync/Notification/AI/
+   Deployment/Realtime → phải kiểm tra CẢ LUỒNG liên quan, không chỉ file vừa sửa.
+7. **Knowledge Update** — dùng bảng "loại thay đổi → tài liệu cần cập nhật" ở mục Governance
+   Protocol phía trên (không lặp lại bảng ở đây).
+
+### Quy trình theo từng loại task
+- **Feature**: Audit → Thiết kế → Đánh giá ảnh hưởng → Code → Test → Documentation → Knowledge Update.
+- **Bug Fix**: Reproduce → Root Cause Analysis → Fix → Regression Test → Lesson Learned → Knowledge
+  Update. **Sửa nguyên nhân gốc, không sửa triệu chứng** — đúng tinh thần đã áp dụng cho mọi sự cố
+  production trong lịch sử dự án (xem `AI_HANDOFF_KNOWLEDGE.md` Phần 11).
+- **Refactor**: Audit → Risk Analysis → Refactor Plan → Refactor → Regression Test → Architecture
+  Review → Documentation.
+- **Architecture Change**: KHÔNG thực hiện ngay — đánh giá + phân tích trade-off + cân nhắc phương
+  án + viết `ARCHITECTURE_DECISIONS.md` TRƯỚC, rồi mới thay đổi.
+
+### Quy tắc kiến trúc (luôn ưu tiên)
+Single Responsibility · High Cohesion · Low Coupling · Reuse over Rewrite · Composition over
+Duplication · Explicit over Implicit. Không hy sinh kiến trúc để đổi lấy tốc độ hoàn thành.
+
+### Quy tắc về AI: không giả định, không suy diễn
+Không chắc chắn → kiểm tra source code. Source code chưa đủ → đọc tài liệu. Tài liệu chưa đủ → NÓI
+RÕ điều còn thiếu, không tự suy đoán rồi trình bày như sự thật. Đây CHÍNH XÁC là nguyên tắc chống-
+bịa đã áp dụng cho AI Coach (`src/engine/coach/guard.js`, xem `ARCHITECTURE.md` mục 3) — áp dụng
+lại cho chính AI đang code, không chỉ cho AI Coach của app.
+
+### Quy tắc Review (bổ sung, không lặp Self-audit ở Governance Protocol)
+Ngoài checklist Self-audit đã có ở trên, trước khi kết thúc task tự hỏi thêm: có ADR mới cần ghi
+không? có Migration cần ghi không? có cần ghi Lesson Learned không? Câu trả lời Có → xử lý trước
+khi kết thúc, không để lại cho phiên sau.
+
+### Quy tắc Commit
+Mỗi commit: mục tiêu rõ ràng, phạm vi rõ ràng, KHÔNG trộn nhiều thay đổi không liên quan, có thể
+rollback độc lập. Không tạo commit chỉ để "tiện tay".
+
+### Continuous Improvement
+Sau mỗi task, tự hỏi: project hiện sạch hơn/ít nợ kỹ thuật hơn/ít duplicate hơn/ít coupling hơn/
+tài liệu tốt hơn/AI sau dễ tiếp quản hơn so với TRƯỚC khi bắt đầu không? Nếu Không → cân nhắc làm
+thêm vài cải tiến nhỏ rủi ro thấp trước khi kết thúc. Thành công không đo bằng số dòng code viết ra
+— đo bằng việc project rõ ràng hơn, ổn định hơn, dễ phát triển hơn sau mỗi phiên.
 
 ## Nền tảng hiện tại
 App chính chạy trên **web** tại `https://pomodoro-dc.vercel.app`.

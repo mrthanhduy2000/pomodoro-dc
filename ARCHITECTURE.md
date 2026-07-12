@@ -3,6 +3,8 @@
 > Bức tranh LỚN: các mảnh ghép nào tồn tại, chúng nói chuyện với nhau ra sao, và VÌ SAO lại chia
 > lớp thế này. Muốn biết "file X nằm ở đâu" → xem `PROJECT_STRUCTURE.md`. Muốn biết quy tắc cấm/
 > chi tiết kỹ thuật từng tính năng → xem `CLAUDE.md`. Lịch sử "đã làm gì, khi nào" → `BAN_GIAO.md`.
+> Muốn hiểu sâu VÌ SAO một quyết định cụ thể được chọn (phương án nào bị loại, trade-off gì) →
+> `ARCHITECTURE_DECISIONS.md`. Nợ kỹ thuật đã biết → `TECH_DEBT.md`.
 
 ## 1. Bức tranh tổng thể
 
@@ -106,16 +108,43 @@ test hành vi (XP/streak/mission tính sai sẽ không có gì tự động bắ
 một app 1 người dùng — xem đề xuất "lần refactor tiếp theo" ở nhật ký `BAN_GIAO.md` ngày 2026-07-12
 nếu muốn làm tiếp, kèm điều kiện cần có trước khi làm an toàn.
 
-## 7. Quy tắc lâu dài (bắt buộc cho mọi thay đổi tương lai)
+## 7. Tầng lưu trữ (storage flow), database schema flow, và hướng phụ thuộc (dependency)
+
+**Storage — 3 tầng độc lập, mỗi tầng một mục đích**: `localStorage` (bản sao tức thời, luôn có sẵn
+kể cả offline) + Supabase `game_state` (bản đồng bộ đám mây, nguồn thật khi xung đột đa thiết bị)
++ file JSON export/import thủ công (bản sao lưu tay). Cả 3 đường ghi vào state sống đều PHẢI đi
+qua đúng MỘT hàm `normalizePersistedGameState` (gameStore.js) — phễu an toàn duy nhất chống dữ
+liệu hỏng/cũ/thiếu trường phá vỡ app. Xem `MIGRATION.md` cho lịch sử các lần schema version bump
+(0→1→2→3) đi qua phễu này.
+
+**Database schema — KHÔNG có migration tự động**: mọi thay đổi cấu trúc bảng Supabase (`game_state`,
+`timer_live`, `push_jobs`, `push_subscriptions`...) đòi hỏi chạy TAY một file `.sql` trong
+`supabase/` TRƯỚC KHI deploy code phụ thuộc vào nó — không dùng Prisma/Drizzle/ORM migration nào.
+Thiếu bước này khiến production lỗi ngay khi ghi vào cột chưa tồn tại (đã xảy ra thật — xem
+`MIGRATION.md` mục "First Action Wins"). Mọi thay đổi schema PHẢI được ghi vào `MIGRATION.md`.
+
+**Hướng phụ thuộc (dependency direction) — một chiều, không được đảo ngược**:
+`src/engine/` (thuần, 0 phụ thuộc React/Zustand/Date trực tiếp) ← `src/store/` (Zustand, phụ thuộc
+engine) ← `src/components/`/`src/hooks/` (React, phụ thuộc store + engine). `api/` là một nhánh
+riêng, ĐƯỢC PHÉP import trực tiếp từ `src/engine/` (tiền lệ: `api/coach-digest.js` import
+`src/engine/time.js`) vì các hàm đó thuần, không phụ thuộc DOM/browser. `src/engine/` KHÔNG BAO GIỜ
+được import từ `src/store/`/`src/components/` — vi phạm chiều này là dấu hiệu coupling sai hướng,
+ghi vào `TECH_DEBT.md` nếu phát hiện thay vì âm thầm bỏ qua.
+
+## 8. Quy tắc lâu dài (bắt buộc cho mọi thay đổi tương lai)
 
 1. **Đọc trước khi sửa**: `BAN_GIAO.md` + `CLAUDE.md` + file liên quan — xem NGUYÊN TẮC ƯU TIÊN
-   SỐ 1 trong `CLAUDE.md`.
+   SỐ 1 + Project Governance Protocol trong `CLAUDE.md`.
 2. **Phát hiện logic bị chép tay ≥2 nơi** → gộp thành 1 abstraction dùng chung (tham số hoá đúng
    khác biệt THẬT nếu có, đừng ép giống nhau nếu chúng thực sự khác — xem ví dụ `BadgeKit.jsx`
    dùng prop `variant` thay vì bắt 2 nơi trông giống hệt nhau).
 3. **Không tạo file/thư mục rời rạc** — đặt đúng vị trí theo cấu trúc ở `PROJECT_STRUCTURE.md`.
 4. **Sau MỌI thay đổi cấu trúc** (thêm/xoá/đổi tên file, đổi kiến trúc) → cập nhật ngay
-   `PROJECT_STRUCTURE.md` (+ `ARCHITECTURE.md` nếu đổi luồng dữ liệu) + `CLAUDE.md`/`BAN_GIAO.md`.
-   Chưa cập nhật tài liệu = chưa xong việc.
+   `PROJECT_STRUCTURE.md` (+ `ARCHITECTURE.md` nếu đổi luồng dữ liệu, + `MIGRATION.md` nếu có
+   migration thật, + `ARCHITECTURE_DECISIONS.md` nếu là một quyết định có trade-off đáng ghi) +
+   `CLAUDE.md`/`BAN_GIAO.md`. Chưa cập nhật tài liệu = chưa xong việc (xem Definition of Done ở
+   `CLAUDE.md`).
 5. **Không đổi hành vi khi refactor thuần tuý** — nếu phát hiện bug thật trong lúc dọn dẹp, sửa
    nhưng phải NÊU RÕ đó là sửa bug (không lẫn vào phần "chỉ di chuyển code").
+6. **Phát hiện nợ kỹ thuật mới trong lúc làm** → xử lý luôn nếu rủi ro thấp, nếu không phải ghi
+   vào `TECH_DEBT.md` (không được để chỉ tồn tại trong hội thoại rồi mất khi phiên kết thúc).

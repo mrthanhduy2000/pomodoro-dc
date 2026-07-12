@@ -83,10 +83,16 @@
 ├── scripts/                    # Công cụ dev chạy tay (không vào app) — xem CLAUDE.md mục nào còn dùng
 ├── supabase/                   # SQL chạy TAY trong Supabase SQL Editor (không tự động migrate)
 │
-├── CLAUDE.md                   # Quy tắc bắt buộc + bối cảnh kỹ thuật chi tiết cho mọi phiên AI
+├── CLAUDE.md                   # Quy tắc bắt buộc + Project Governance Protocol + bối cảnh kỹ thuật
 ├── BAN_GIAO.md                  # Nhật ký "đang ở đâu, làm gì tiếp" — đọc TRƯỚC CLAUDE.md mỗi phiên
 ├── ARCHITECTURE.md              # Bức tranh kiến trúc lớn (luồng dữ liệu, vì sao chia lớp thế này)
-└── PROJECT_STRUCTURE.md         # File này
+├── PROJECT_STRUCTURE.md         # File này
+├── ARCHITECTURE_DECISIONS.md    # ADR — vì sao từng quyết định kiến trúc được chọn (không chỉ thế nào)
+├── TECH_DEBT.md                 # Nợ kỹ thuật đã biết, có cấu trúc (priority/severity/risk/owner...)
+├── MIGRATION.md                 # Lịch sử migration THẬT (schema/API/path/workflow đổi)
+├── CHANGELOG.md                 # Tóm tắt chính thức theo mốc (không phải lịch sử commit)
+├── AI_ONBOARDING.md              # Đọc nhanh 10-15 phút cho AI mới
+└── AI_HANDOFF_KNOWLEDGE.md       # Bàn giao tri thức ĐẦY ĐỦ nhất, viết cho AI không đọc được code
 ```
 
 ## Quy tắc đặt file mới (để khỏi lại rối theo thời gian)
@@ -103,3 +109,25 @@
 - **Helper dùng chung giữa client (`src/`) và server (`api/`)** (vd nội dung thông báo push) →
   đặt trong `src/engine/` (file thuần, không import gì đặc thù Node/browser), cả hai phía cùng
   import từ đó — xem `src/engine/pushPayloads.js` làm ví dụ.
+
+## Quy tắc import (hiện trạng THẬT đã verify — không phải lý tưởng hoá)
+
+- **Chỉ dùng relative import** (`./foo`, `../engine/gameMath`) — repo KHÔNG cấu hình path alias
+  nào (không có `@/` trong `vite.config.js`, đã grep xác nhận 0 kết quả). Đừng tự ý thêm alias trừ
+  khi được yêu cầu rõ ràng — thêm giữa chừng sẽ tạo 2 phong cách import lẫn lộn trong cùng codebase.
+- **KHÔNG có file `index.js`/`index.jsx` barrel export nào trong `src/`** (đã grep xác nhận 0 kết
+  quả) — mỗi nơi import trực tiếp từ đường dẫn cụ thể của module cần dùng, không qua một điểm gom
+  re-export. Giữ nguyên quy ước này khi thêm thư mục mới (kể cả `src/engine/coach/`).
+- **Hướng import phải theo đúng chiều phụ thuộc** ở `ARCHITECTURE.md` mục 7: `src/engine/` không
+  bao giờ import từ `src/store/`/`src/components/`/`src/hooks/`.
+
+## Quy tắc đặt tên
+
+- **Component React** (`.jsx`) → PascalCase, tên file = tên component (`PomodoroEngine.jsx` export
+  `PomodoroEngine`).
+- **File logic thuần/hook/lib** (`.js`) → camelCase (`gameMath.js`, `useTimer.js`, `syncService.js`).
+- **Test** → luôn cùng tên file nguồn + hậu tố `.test.js` (`guard.js` → `guard.test.js`), đặt CẠNH
+  file nguồn (trừ `api/`, xem quy tắc test ở trên).
+- **Hằng số cấp module** → SCREAMING_SNAKE_CASE (`XP_FACTOR_HARD_CAP`, `COACH_MIN_SAMPLE`).
+- **Route API** → tên file = tên endpoint, camelCase hoặc kebab-case ngắn gọn khớp URL
+  (`coach-digest.js` → `/api/coach-digest`).

@@ -1,9 +1,13 @@
 # BÀN GIAO — Pomodoro DC
 
 > Dành cho AI/người làm tiếp. File này trả lời: **đang ở đâu, làm gì tiếp, đã đổi những gì.**
-> Chi tiết kỹ thuật + quy tắc cấm: xem `CLAUDE.md`. Lịch sử thiết kế sâu: thư mục memory của Claude.
+> Chi tiết kỹ thuật + quy tắc cấm + **Project Governance Protocol**: xem `CLAUDE.md`. Lịch sử
+> thiết kế sâu: thư mục memory của Claude + `AI_HANDOFF_KNOWLEDGE.md`. Vì sao 1 quyết định được
+> chọn: `ARCHITECTURE_DECISIONS.md`. Nợ kỹ thuật: `TECH_DEBT.md`. Migration: `MIGRATION.md`. Tóm
+> tắt theo mốc: `CHANGELOG.md`.
 > **NGUYÊN TẮC ƯU TIÊN SỐ 1:** (1) mọi phiên AI phải đọc file này + `CLAUDE.md` + các file liên quan TRƯỚC khi làm; (2) sau MỌI cập nhật dù nhỏ, phải cập nhật ngay file này + `CLAUDE.md` + các file liên quan khác.
-> Cập nhật lần cuối: **2026-07-12** (refactor kiến trúc toàn dự án — dọn trùng lặp, gom AI Coach vào `src/engine/coach/`, thêm `ARCHITECTURE.md`/`PROJECT_STRUCTURE.md`).
+> Cập nhật lần cuối: **2026-07-12** (thiết lập Project Governance Protocol — 3 thành phần dự án
+> [code/docs/knowledge] có giá trị ngang nhau, Definition of Done mới, 5 file tài liệu mới).
 
 ---
 
@@ -42,6 +46,25 @@
 
 ## 🗒️ Nhật ký cập nhật
 > Mỗi lần xong việc đáng kể, thêm 1 dòng vào ĐẦU danh sách.
+
+- **2026-07-12** — **Thiết lập Project Governance Protocol** (Đàm ra lệnh, áp dụng vĩnh viễn cho
+  mọi phiên tương lai). Nguyên tắc cốt lõi: dự án gồm 3 thành phần giá trị NGANG NHAU — Source
+  Code, Documentation, Project Knowledge — một task chỉ hoàn thành khi cả 3 nhất quán, KỂ CẢ khi
+  code/build/test/lint đều xanh. Thêm **Definition of Done** mới (source+build+test+lint+doc+
+  knowledge, thiếu 1 mục = chưa xong) và bảng "loại thay đổi → tài liệu cần cập nhật" vào
+  `CLAUDE.md`. **5 file tài liệu MỚI** (ánh xạ trực tiếp từ yêu cầu của Đàm, tránh trùng lặp với
+  `BAN_GIAO.md`/`AI_HANDOFF_KNOWLEDGE.md` đã có bằng cách phân vai rõ ràng ngay trong header mỗi
+  file): `ARCHITECTURE_DECISIONS.md` (ADR — vì sao 6 quyết định kiến trúc lớn được chọn, phương án
+  nào bị loại và tại sao), `TECH_DEBT.md` (7 mục nợ kỹ thuật đã biết, format có cấu trúc — đáng chú
+  ý nhất: nghi vấn 3 kỹ năng prestige nhánh Thăng Hoa có thể chưa được nối dây thật vào
+  `triggerPrestige()`, CẦN XÁC MINH trước khi Đàm đạt prestige lần đầu), `MIGRATION.md` (lịch sử
+  migration schema/path thật, vd bump schema version 0→3, đổi cơ chế sync), `CHANGELOG.md` (tóm
+  tắt CHÍNH THỨC ngắn gọn theo mốc, trỏ về nhật ký chi tiết ở đây cho ai cần sâu hơn), và
+  `AI_ONBOARDING.md` (bản đọc nhanh 10-15 phút, khác `AI_HANDOFF_KNOWLEDGE.md` là bản đầy đủ). Rà
+  soát nhẹ `README.md` (thêm 5 câu hỏi bắt buộc: project là gì/chạy/build/deploy/đọc tiếp gì),
+  `ARCHITECTURE.md` (thêm mục storage flow + database schema flow + hướng phụ thuộc), và
+  `PROJECT_STRUCTURE.md` (thêm quy tắc import — xác nhận KHÔNG có alias/barrel trong repo — và quy
+  tắc đặt tên). Không đổi code/hành vi app nào — thuần tài liệu + quy trình.
 
 - **2026-07-12** — **Refactor kiến trúc toàn dự án (Đàm yêu cầu "Senior Software Architect", 10 nguyên tắc rõ ràng — không sửa lỗi lẻ tẻ, ưu tiên kiến trúc).** KHÔNG đổi business logic (điểm/XP/streak/nhiệm vụ/timer/schema DB/API contract) — chỉ dọn trùng lặp + chuẩn hoá cấu trúc + giảm coupling. Tóm tắt (chi tiết đầy đủ: xem báo cáo bàn giao cuối do Claude viết ra trong phiên này, hoặc `git log` các commit cùng ngày):
   - **Xoá dead code**: `electron/preload.js`, `EraHUD.jsx`/`ParticleBackground.jsx`/`DCPomodoroBrand.jsx`, 9 file SVG `public/brand/`, `tray-icon.png`, `icons.svg`, `OverviewTabLegacy` (~772 dòng chết trong `StatsDashboard.jsx`), vài effect/hàm mồ côi.

@@ -19,6 +19,66 @@ Phân loại lệnh của Đàm thành 2 nhóm:
 4. Luôn chạy `git status` tươi — đừng tin ảnh chụp git cũ.
 5. Muốn biết **file nằm ở đâu** → `PROJECT_STRUCTURE.md`. Muốn biết **bức tranh kiến trúc lớn** (luồng dữ liệu, vì sao chia lớp thế này) → `ARCHITECTURE.md`. Cả hai PHẢI cập nhật cùng lúc với mọi thay đổi cấu trúc (đúng quy tắc số 2 ở trên).
 
+## 📋 PROJECT GOVERNANCE PROTOCOL (2026-07-12 — áp dụng vĩnh viễn, mọi phiên AI tương lai)
+
+Project gồm **3 thành phần giá trị ngang nhau**: (1) Source Code, (2) Documentation, (3) Project
+Knowledge (quyết định/lịch sử/bối cảnh). Code chỉ nói "hệ thống chạy thế nào" — chỉ tài liệu mới
+giữ được "vì sao nó chạy như vậy". Nếu 3 thành phần này lệch nhau, coi như CHƯA XONG việc dù code
+đã đúng/build/test/lint đều xanh.
+
+### Definition of Done (áp dụng mọi task, không ngoại lệ)
+✓ Source code đúng · ✓ Build thành công · ✓ Test thành công · ✓ Lint thành công ·
+✓ **Documentation đã đồng bộ** · ✓ **Project Knowledge đã đồng bộ**. Thiếu 1 mục = chưa xong.
+
+### Bảng: loại thay đổi → tài liệu PHẢI cập nhật
+Sau mỗi thay đổi, tự hỏi: có ảnh hưởng kiến trúc/module/workflow/AI/notification/sync/timer/store/
+API/database/build/deploy/folder/naming/dependency/testing/performance không? Nếu CÓ, tự xác định
+(không đợi Đàm nhắc) tài liệu nào trong bảng sau cần sửa:
+
+| Tài liệu | Vai trò (KHÔNG lẫn với các file khác) | Khi nào phải sửa |
+|---|---|---|
+| `README.md` | CHỈ trang giới thiệu: project là gì/chạy thế nào/build thế nào/deploy thế nào/đọc tiếp gì. KHÔNG nhồi kiến trúc sâu vào đây. | Đổi cách chạy/build/deploy, hoặc thêm tài liệu mới cần trỏ tới |
+| `ARCHITECTURE.md` | Bức tranh lớn: layer/module/dependency/state flow/AI flow/sync flow/notification flow/storage flow/database flow | Bất kỳ FLOW nào đổi |
+| `PROJECT_STRUCTURE.md` | Cây thư mục + quy tắc tạo module/chia folder/import/shared module/đặt tên | Đổi cấu trúc thư mục, thêm quy ước mới |
+| `CHANGELOG.md` | Tóm tắt CHÍNH THỨC, ngắn gọn theo mốc (mục đích/phạm vi/ảnh hưởng/tương thích) — KHÔNG phải lịch sử commit | Mọi thay đổi quan trọng (không phải mọi commit nhỏ) |
+| `MIGRATION.md` | Chỉ ghi khi đổi API/module/đường dẫn/workflow/state/storage/database/folder | CHỈ khi có migration thật — không có thì không cần ghi |
+| `ARCHITECTURE_DECISIONS.md` | "Bộ nhớ kiến trúc" — mỗi quyết định: Ngày/Bối cảnh/Vấn đề/Phương án cân nhắc/Lý do loại bỏ/Giải pháp chọn/Trade-off/Ảnh hưởng/Điều kiện xem lại | Quyết định có ≥2 phương án thật sự cân nhắc + trade-off thật + ảnh hưởng lâu dài |
+| `TECH_DEBT.md` | Mọi nợ kỹ thuật đã biết (đủ 14 trường: Tên/Module/Priority/Severity/Impact/Root Cause/Current Risk/Future Risk/Recommended Solution/Estimated Complexity/Blocking Conditions/Review Trigger/Owner/Status) | Phát hiện nợ mới mà rủi ro thấp thì xử lý luôn; rủi ro trung bình/cao hoặc ngoài phạm vi task hiện tại → PHẢI ghi vào đây, không bỏ qua |
+| `AI_ONBOARDING.md` | Đọc nhanh 10-15 phút — nếu AI mới cần audit cả codebase mới hiểu project thì file này CHƯA đạt yêu cầu | Đổi module quan trọng nhất/rủi ro cao/bài học lớn mới |
+| `AI_HANDOFF_KNOWLEDGE.md` | Bàn giao tri thức ĐẦY ĐỦ nhất (domain/flow/ADR/tech debt chi tiết) — để bàn giao cho AI khác hoàn toàn không có quyền đọc code | Thay đổi lớn ảnh hưởng nhiều phần của tài liệu này |
+| `BAN_GIAO.md` | Trạng thái hiện tại + nhật ký CHI TIẾT từng việc — luôn cập nhật, đây là NGUYÊN TẮC ƯU TIÊN SỐ 1 có sẵn | MỌI thay đổi dù nhỏ |
+
+### Ngưỡng "Maintenance Sprint"
+Khi `TECH_DEBT.md` có **≥8-10 mục Priority High/Critical**, HOẶC một module đã trải qua ≥3 lần vá
+lỗi/refactor nhỏ mà chưa từng refactor triệt để, hãy CHỦ ĐỘNG đề xuất mở một "Maintenance Sprint"
+(nêu rõ mục tiêu/phạm vi/lợi ích/rủi ro/tiêu chí hoàn thành) thay vì tiếp tục cộng thêm tính năng
+mới. Trạng thái ngưỡng hiện tại: xem đầu `TECH_DEBT.md`.
+
+### Tính nhất quán kiến trúc (tự hỏi trước khi tạo mới)
+Trước khi tạo folder/module/service/hook/component/store/helper/abstraction/API/utility mới, tự
+hỏi: có tăng coupling không? có làm project khó hiểu hơn không? có tạo thêm 1 pattern mới trong khi
+pattern tương tự đã tồn tại không (tái sử dụng được không)? có tạo thêm nợ kỹ thuật mới không? Nếu
+có cách nhất quán hơn (khớp quy ước đã có ở `PROJECT_STRUCTURE.md`) → ưu tiên cách đó.
+
+### Self-audit trước khi kết thúc task
+Kiểm tra: code/test/lint/build, dead code, duplicate logic, unused imports/dependencies,
+documentation, kiến trúc, tính nhất quán folder/naming/import, technical debt, knowledge update.
+Vấn đề rủi ro thấp/trung bình phát hiện được → xử lý luôn, không cần đợi Đàm yêu cầu (rủi ro cao →
+báo trước theo quy tắc "HỎI TRƯỚC KHI LÀM" ở trên).
+
+### Bảo tồn kinh nghiệm (Knowledge Preservation)
+Nếu trong lúc làm việc phát hiện: kinh nghiệm mới, bài học mới, bug đặc biệt, edge case, giới hạn
+của framework/Supabase/Electron/Vercel/AI/Browser — tự hỏi "thông tin này có giúp phiên sau tránh
+lặp lại sai lầm không?". Nếu có, PHẢI bổ sung vào tài liệu phù hợp (bảng ở trên) — không được để
+những bài học này chỉ tồn tại trong cuộc hội thoại rồi biến mất khi phiên kết thúc.
+
+### Báo cáo bàn giao cuối phiên (khi hoàn thành một task đáng kể)
+1. Đã thay đổi gì · 2. Quyết định kiến trúc mới (nếu có) · 3. Tech debt đã xử lý · 4. Tech debt còn
+lại · 5. Tài liệu đã cập nhật · 6. Migration nếu có · 7. Giả định mới của hệ thống · 8. Bài học mới
+· 9. Việc phiên sau cần biết · 10. Việc tuyệt đối chưa nên làm + lý do. Mục nào không đổi → ghi rõ
+"Không có thay đổi" (đừng bỏ qua im lặng). Áp dụng mục này ở MỨC ĐỘ PHÙ HỢP với quy mô task — một
+sửa lỗi nhỏ không cần 10 mục đầy đủ, nhưng một task lớn (refactor, tính năng mới, sự cố) thì có.
+
 ## Nền tảng hiện tại
 App chính chạy trên **web** tại `https://pomodoro-dc.vercel.app`.
 

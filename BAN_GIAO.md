@@ -6,9 +6,13 @@
 > chọn: `ARCHITECTURE_DECISIONS.md`. Nợ kỹ thuật: `TECH_DEBT.md`. Migration: `MIGRATION.md`. Tóm
 > tắt theo mốc: `CHANGELOG.md`.
 > **NGUYÊN TẮC ƯU TIÊN SỐ 1:** (1) mọi phiên AI phải đọc file này + `CLAUDE.md` + các file liên quan TRƯỚC khi làm; (2) sau MỌI cập nhật dù nhỏ, phải cập nhật ngay file này + `CLAUDE.md` + các file liên quan khác.
-> Cập nhật lần cuối: **2026-07-12** (thêm AI Engineering Playbook vào `CLAUDE.md` — quy trình 7
-> giai đoạn cho mọi task + "không giả định, luôn kiểm tra trước khi trả lời"; bổ sung Project
-> Governance Protocol — 3 thành phần dự án [code/docs/knowledge] giá trị ngang nhau, 5 file mới).
+> Cập nhật lần cuối: **2026-07-13** (Giai đoạn A — dựng "lưới an toàn" characterization/behavior
+> test cho 3 đường quan trọng nhất: `completeFocusSession`, `syncService` push/pull, và
+> `cancelFocusSession`; +29 bài test, KHÔNG đổi hành vi runtime. Trước đó 2026-07-12: thêm AI
+> Engineering Playbook + Project Governance Protocol vào `CLAUDE.md`).
+> **Roadmap POS (A→B→C→D) là nguyên tắc ưu tiên cao nhất** — đang ở **Giai đoạn A** (ổn định kiến
+> trúc); CẤM mở rộng AI/gamification/Life-Analytics/Knowledge-Graph tới khi qua cổng A. Xem memory
+> `phase-roadmap-pos.md`.
 
 ---
 
@@ -35,7 +39,13 @@
 
 ## 🔜 Sẽ làm tiếp (ưu tiên từ trên xuống)
 1. **Giao diện còn dở**: full-screen iPhone (tai thỏ che mép trên), nút đóng ✕ cho hộp phần thưởng, gom cỡ chữ cho đồng nhất, tắt hiệu ứng cho người nhạy chuyển động.
-2. **(Tuỳ chọn, không gấp)** Tách nhỏ `gameStore.js`/`completeFocusSession` — hoãn có chủ đích ở đợt refactor 2026-07-12 vì rủi ro cao hơn lợi ích cho app 1 người dùng; chỉ làm nếu sau này thêm nhiều tính năng mới cần đụng thường xuyên vào đó (xem `ARCHITECTURE.md` mục 6).
+2. **(Giai đoạn A, còn dở)** Hoàn tất "lưới an toàn" test: đã có characterization cho
+   `completeFocusSession`/`cancelFocusSession` + behavior cho `syncService` (2026-07-13). Còn thiếu:
+   các nhánh early-return phạt (khủng-hoảng/thăng-cấp thất bại) + ma trận waive-bằng-than-lượng +
+   test bảo tồn dữ liệu qua `triggerPrestige` (mọi khoá persist) — xem NOTE trong 3 file test mới.
+3. **(Tuỳ chọn, không gấp)** Tách nhỏ `gameStore.js`/`completeFocusSession` — hoãn có chủ đích ở đợt
+   refactor 2026-07-12 vì rủi ro cao hơn lợi ích; NAY đã có characterization golden-master làm lưới
+   an toàn nên rủi ro tách giảm, nhưng vẫn chỉ làm khi thật cần (xem `ARCHITECTURE.md` mục 6).
 
 ## ⚠️ Nhớ kỹ (kẻo hỏng)
 - **PHÂN LOẠI LỆNH** (Đàm dặn 2026-06-21): **"nghiên cứu/tìm hiểu/đề xuất"** = CHỈ trình bày rồi DỪNG, KHÔNG tự sửa/commit/deploy (câu mơ hồ → coi là nghiên cứu, hỏi trước). **"làm/sửa/thêm/đổi/deploy"** = (1) giải thích ngắn gọn dễ hiểu công dụng TRƯỚC khi sửa → (2) làm → (3) giải thích đã sửa gì + ích gì → (4) TỰ ĐỘNG deploy Vercel (khỏi hỏi lại). Chi tiết: memory `ask-before-acting.md`.
@@ -47,6 +57,33 @@
 
 ## 🗒️ Nhật ký cập nhật
 > Mỗi lần xong việc đáng kể, thêm 1 dòng vào ĐẦU danh sách.
+
+- **2026-07-13** — **Giai đoạn A: dựng "lưới an toàn" test cho 3 đường quan trọng nhất (đòn bẩy #1
+  của roadmap POS — làm TRƯỚC khi sửa logic quan trọng).** Đàm ra lệnh chỉ thêm characterization/
+  behavior test, KHÔNG refactor/không sửa bug/không đổi API. Đã thêm 3 file test (+29 bài, tổng
+  208→237, xanh hết, lint sạch, build OK, **không đổi 1 dòng code app nào**):
+  • `src/store/gameStore.completeFocusSession.test.js` (15 bài) — khóa đường-tiền: XP (qua đẳng
+    thức `base = xp − missionBonus − streakMission − buildingPerk` để độc-lập-ngày), EP, tier/hệ số,
+    tài nguyên/RP/refined, level-up (ngưỡng `EXP_PER_LEVEL`), loot, overclock hoàn gốc, combo, RNG
+    tất định (stub `Math.random`), edge 0 phút, category tracking.
+  • `src/lib/syncService.behavior.test.js` (8 bài) — khóa push/pull/CAS: upsert khởi tạo, update
+    thắng (`.eq(version)`), **thua→re-pull nhận lại bản thắng** (đúng đoạn từng mất phiên thật), nuốt
+    lỗi Supabase, initSync (cloud mới/rỗng/không-mới-hơn), shouldImportVersion. Mock singleton
+    `supabase` + spy `_importGameData`; re-import "tươi" mỗi test để reset state module. **Test #7
+    khóa CHỦ ĐÍCH hành vi rủi ro C1** (nhánh else initSync đẩy local vô điều kiện) làm đặc tả hiện
+    trạng — bản vá C1 tương lai phải cập nhật test này.
+  • `src/store/gameStore.cancelFocusSession.test.js` (6 bài) — khóa phạt/rollback: non-strict không
+    trừ tài nguyên, strict trừ theo trần + mở disaster modal, recordSession:false, mất EP giam +
+    reset staking, kẹp progressRatio [0,1], tất định.
+  - Phương pháp: PROBE trước (quan sát hành vi thật, xác nhận tất định qua 2 lần chạy) → mới chốt
+    golden. KHÔNG đoán. Bug phát hiện được → chỉ ghi NOTE trong file test, KHÔNG sửa (ngoài phạm vi).
+  - Bài học kỹ thuật (để phiên sau đỡ vấp): (1) test đụng `syncService` sẽ nạp client Supabase THẬT
+    → tạo 1 `MessagePort` giữ event loop sống → phải `unref()` handle trong `after()` kẻo `npm test`
+    treo; (2) `setKnownVersion` ghi qua `localStorage` trần còn `getKnownVersion` đọc
+    `window.localStorage` — mock phải trỏ CHUNG 1 store (trong trình duyệt là cùng object); (3) tổng
+    XP một phiên dính bonus nhiệm vụ seed-theo-NGÀY nên KHÔNG hardcode được — phải khóa phần `base`.
+  - Deploy: commit + push theo đúng quy tắc "làm" (test-only nên **bundle production KHÔNG đổi** —
+    Vite không đóng gói `*.test.js`; đẩy chỉ để lưu lịch sử + giữ CI xanh, app không đổi hành vi).
 
 - **2026-07-12** — **Thêm AI Engineering Playbook (Operating Manual) — protocol vĩnh viễn THỨ HAI
   cùng ngày, sau Project Governance Protocol bên dưới.** Đàm gửi tiếp một quy trình chi tiết cho

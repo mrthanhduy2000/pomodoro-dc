@@ -39,12 +39,17 @@
   bao phủ đầy đủ TRƯỚC khi tách.
 - **Estimated Complexity**: Cao — cần thiết kế lại ranh giới + viết bộ test hồi quy đầy đủ trước
   khi động vào bất kỳ dòng nào.
-- **Blocking Conditions**: chưa có bộ test hành vi đủ dày để tách an toàn; quy mô 1 người dùng
-  hiện tại khiến lợi ích "dễ đọc hơn" chưa vượt rủi ro "giới thiệu bug âm thầm".
+- **Blocking Conditions**: ĐÃ GIẢM (2026-07-13) — nay có bộ characterization golden-master
+  `gameStore.completeFocusSession.test.js` (15 bài) khóa XP/EP/level/loot/RNG/nhiều loại phiên +
+  `gameStore.cancelFocusSession.test.js` (6 bài) làm lưới an toàn cho việc tách. CÒN THIẾU để phủ
+  đầy đủ trước khi tách sâu: các nhánh early-return phạt (khủng-hoảng/thăng-cấp thất bại) + ma trận
+  waive-bằng-than-lượng (xem NOTE trong file test). Quy mô 1 người dùng vẫn khiến lợi ích "dễ đọc
+  hơn" chưa vượt rủi ro, nên vẫn hoãn tách.
 - **Review Trigger**: hàm vượt ~900-1000 dòng, HOẶC cần thêm một hệ thống gameplay lớn mới phải
   cắm vào đúng điểm nối này.
 - **Owner**: (chưa gán — dự án 1 người dùng, không có ownership phân vai)
-- **Status**: Open — hoãn có chủ đích (xem `ARCHITECTURE_DECISIONS.md` ADR-006).
+- **Status**: Open — hoãn có chủ đích (xem `ARCHITECTURE_DECISIONS.md` ADR-006). 2026-07-13: đã có
+  lưới characterization (một phần) → an toàn hơn nếu sau này quyết định tách.
 
 ---
 

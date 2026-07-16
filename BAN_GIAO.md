@@ -60,6 +60,12 @@
 ## 🗒️ Nhật ký cập nhật
 > Mỗi lần xong việc đáng kể, thêm 1 dòng vào ĐẦU danh sách.
 
+- **2026-07-17 (b)** — **Quy tắc mới vĩnh viễn: TECHNICAL ADVISOR REPORT.** Đàm yêu cầu: sau MỖI
+  task hoàn thành, ngoài báo cáo thường phải kèm phần "TECHNICAL ADVISOR REPORT" 9 mục viết cho
+  một AI Technical Advisor độc lập (GPT) đánh giá kiến trúc — ngắn, đủ ngữ cảnh, ≤1-2 trang A4,
+  không marketing/tự khen/lặp changelog. Format chuẩn đã ghi vào `CLAUDE.md` (mục mới trong
+  Governance Protocol, ngay sau "Báo cáo bàn giao cuối phiên") + memory `technical-advisor-report.md`.
+
 - **2026-07-17** — **Giai đoạn A, lưới an toàn ĐỢT 2 (+16 bài, tổng 237→253; chỉ-thêm-test, không
   đụng code app).** Làm nốt phần Priority 1/3 còn thiếu so với đợt 1:
   • `gameMath.test.js` +6 bài `computeLevelUps` (ngưỡng đúng 6000, nhiều cấp một lần, giữa cấp,

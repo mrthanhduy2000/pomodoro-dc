@@ -80,6 +80,24 @@ xuất bước tiếp theo. Mục nào không đổi → ghi rõ "Không có tha
 mục này ở MỨC ĐỘ PHÙ HỢP với quy mô task — một sửa lỗi nhỏ không cần đủ 11 mục, nhưng một task lớn
 (refactor, tính năng mới, sự cố) thì có.
 
+### TECHNICAL ADVISOR REPORT (bắt buộc từ 2026-07-17, sau MỖI task hoàn thành)
+Ngoài báo cáo thường, PHẢI kèm một phần tiêu đề "TECHNICAL ADVISOR REPORT" — viết cho một **AI
+Technical Advisor độc lập (GPT)** đánh giá kiến trúc, KHÔNG phải cho Đàm. Ngắn gọn nhưng đủ ngữ
+cảnh; tối đa ~1-2 trang A4; không văn dài/không marketing/không tự khen/không lặp changelog.
+Đúng 9 mục theo thứ tự:
+1. **Objective** — "tôi được yêu cầu làm gì?" (≤5 dòng).
+2. **What changed** — chính xác file tạo mới / sửa / xoá; file lớn thì ghi module bị ảnh hưởng.
+3. **Architectural decisions** — QUAN TRỌNG NHẤT: vì sao chọn A thay vì B, vì sao chưa refactor,
+   vì sao test trước, vì sao giữ tương thích, vì sao hoãn việc gì.
+4. **Assumptions** — mọi giả định đã dùng (API không đổi, version luôn tăng, 1 phiên active...).
+   Không có → "None."
+5. **Risks introduced** — rủi ro MỚI do thay đổi này. Không có → "None."
+6. **Remaining blockers** — blocker còn chặn Giai đoạn hiện tại (≤10 dòng).
+7. **Roadmap impact** — chấm từng mục: God File · Duplicate · Test · Sync · Technical Debt ·
+   AI Coach Stability, theo thang: Not affected / Slightly improved / Improved / Completed.
+8. **Confidence** — % tự tin; DƯỚI 90% phải giải thích lý do.
+9. **Questions for Technical Advisor** — ≤5 câu hỏi kiến trúc/hướng đi chưa chắc. Không có → "None."
+
 ## 🛠️ AI ENGINEERING PLAYBOOK (Operating Manual — quy trình làm việc, 2026-07-12)
 
 > Đây là quy trình làm việc TIÊU CHUẨN cho mọi AI tiếp quản project (Claude Code/Codex/ChatGPT...),

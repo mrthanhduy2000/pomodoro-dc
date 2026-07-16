@@ -24,10 +24,13 @@ import {
   getEffectiveSkillCost,
   clampRelicDisasterReduction,
   getComboDecayMs,
+  computeLevelUps,
 } from './gameMath.js';
 import {
   SIEU_TAP_TRUNG_MULT,
   SO_DO_MULTIPLIER,
+  EXP_PER_LEVEL,
+  SP_PER_LEVEL,
 } from './constants.js';
 
 // Giờ của mỗi phiên được lấy trực tiếp từ trường `hour` trong fixture, để test
@@ -600,4 +603,69 @@ test('Dồn Lực: một trump duy nhất → hành vi y như cũ (no-op meterin
   const r = calculateRewards(60, skills, 0, {}, ctx);
   assert.equal(r.donLucChosen, 'sieu_tap_trung');
   assert.equal(r.finalXP, Math.round(Math.round(60 * 2.0) * SIEU_TAP_TRUNG_MULT));
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// computeLevelUps — CHARACTERIZATION (lưới an toàn Giai đoạn A, 2026-07-17)
+// Hàm thuần quyết định lên cấp + cấp SP: level = floor(totalEXP / EXP_PER_LEVEL).
+// Đây là nơi cấp phát Điểm Kỹ Năng thật của người dùng — khóa hành vi hiện tại.
+// ═══════════════════════════════════════════════════════════════════════════════
+
+test('computeLevelUps: chưa chạm ngưỡng → không lên cấp, không SP', () => {
+  const r = computeLevelUps(0, EXP_PER_LEVEL - 1);
+  assert.deepEqual(r, {
+    newLevel: 0,
+    newTotalEXP: EXP_PER_LEVEL - 1,
+    levelsGained: 0,
+    spGained: 0,
+  });
+});
+
+test('computeLevelUps: chạm ĐÚNG ngưỡng → lên đúng 1 cấp + SP_PER_LEVEL', () => {
+  const r = computeLevelUps(0, EXP_PER_LEVEL);
+  assert.deepEqual(r, {
+    newLevel: 1,
+    newTotalEXP: EXP_PER_LEVEL,
+    levelsGained: 1,
+    spGained: SP_PER_LEVEL,
+  });
+});
+
+test('computeLevelUps: vượt nhiều ngưỡng một lần → cộng dồn cấp + SP tương ứng', () => {
+  // 5999 + 12001 = 18000 = đúng 3 cấp (18000/6000)
+  const r = computeLevelUps(EXP_PER_LEVEL - 1, 2 * EXP_PER_LEVEL + 1);
+  assert.equal(r.newTotalEXP, 3 * EXP_PER_LEVEL);
+  assert.equal(r.newLevel, 3);
+  assert.equal(r.levelsGained, 3);
+  assert.equal(r.spGained, 3 * SP_PER_LEVEL);
+});
+
+test('computeLevelUps: đã ở giữa cấp, cộng thêm không đủ → giữ nguyên cấp', () => {
+  const r = computeLevelUps(EXP_PER_LEVEL + 100, 200);
+  assert.equal(r.newLevel, 1);
+  assert.equal(r.levelsGained, 0);
+  assert.equal(r.spGained, 0);
+  assert.equal(r.newTotalEXP, EXP_PER_LEVEL + 300);
+});
+
+test('computeLevelUps: XP thêm bằng 0 → không đổi gì (idempotent với 0)', () => {
+  const r = computeLevelUps(2 * EXP_PER_LEVEL + 5, 0);
+  assert.deepEqual(r, {
+    newLevel: 2,
+    newTotalEXP: 2 * EXP_PER_LEVEL + 5,
+    levelsGained: 0,
+    spGained: 0,
+  });
+});
+
+test('computeLevelUps: XP âm (đặc tả hiện trạng) → có thể TỤT cấp và SP ÂM', () => {
+  // NOTE đặc tả: hàm không kẹp giá trị âm — trừ XP xuyên ngưỡng cho levelsGained/
+  // spGained ÂM. Hiện production không gọi với XP âm (completeFocusSession luôn
+  // cộng dương) nên đây là hành vi tiềm ẩn được ĐÓNG BĂNG để ai tái dùng hàm này
+  // cho luồng trừ-XP (vd xoá phiên) phải ý thức rõ. KHÔNG sửa trong Giai đoạn A.
+  const r = computeLevelUps(EXP_PER_LEVEL, -1);
+  assert.equal(r.newLevel, 0);
+  assert.equal(r.levelsGained, -1);
+  assert.equal(r.spGained, -SP_PER_LEVEL);
+  assert.equal(r.newTotalEXP, EXP_PER_LEVEL - 1);
 });

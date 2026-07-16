@@ -6,10 +6,11 @@
 > chọn: `ARCHITECTURE_DECISIONS.md`. Nợ kỹ thuật: `TECH_DEBT.md`. Migration: `MIGRATION.md`. Tóm
 > tắt theo mốc: `CHANGELOG.md`.
 > **NGUYÊN TẮC ƯU TIÊN SỐ 1:** (1) mọi phiên AI phải đọc file này + `CLAUDE.md` + các file liên quan TRƯỚC khi làm; (2) sau MỌI cập nhật dù nhỏ, phải cập nhật ngay file này + `CLAUDE.md` + các file liên quan khác.
-> Cập nhật lần cuối: **2026-07-13** (Giai đoạn A — dựng "lưới an toàn" characterization/behavior
-> test cho 3 đường quan trọng nhất: `completeFocusSession`, `syncService` push/pull, và
-> `cancelFocusSession`; +29 bài test, KHÔNG đổi hành vi runtime. Trước đó 2026-07-12: thêm AI
-> Engineering Playbook + Project Governance Protocol vào `CLAUDE.md`).
+> Cập nhật lần cuối: **2026-07-17** (Giai đoạn A — hoàn tất đợt 2 "lưới an toàn": +16 bài test cho
+> `computeLevelUps`, bảo-toàn-tài-sản qua `triggerPrestige` (kèm ĐÓNG BĂNG bug #3 bằng test),
+> streak nối/đứt chuỗi, `unlockSkill` cơ bản, sync retry-sau-lỗi. Tổng 253 bài. KHÔNG đổi hành vi
+> runtime. Trước đó 2026-07-13: đợt 1 lưới an toàn +29 bài cho `completeFocusSession`/`syncService`/
+> `cancelFocusSession`).
 > **Roadmap POS (A→B→C→D) là nguyên tắc ưu tiên cao nhất** — đang ở **Giai đoạn A** (ổn định kiến
 > trúc); CẤM mở rộng AI/gamification/Life-Analytics/Knowledge-Graph tới khi qua cổng A. Xem memory
 > `phase-roadmap-pos.md`.
@@ -39,10 +40,11 @@
 
 ## 🔜 Sẽ làm tiếp (ưu tiên từ trên xuống)
 1. **Giao diện còn dở**: full-screen iPhone (tai thỏ che mép trên), nút đóng ✕ cho hộp phần thưởng, gom cỡ chữ cho đồng nhất, tắt hiệu ứng cho người nhạy chuyển động.
-2. **(Giai đoạn A, còn dở)** Hoàn tất "lưới an toàn" test: đã có characterization cho
-   `completeFocusSession`/`cancelFocusSession` + behavior cho `syncService` (2026-07-13). Còn thiếu:
-   các nhánh early-return phạt (khủng-hoảng/thăng-cấp thất bại) + ma trận waive-bằng-than-lượng +
-   test bảo tồn dữ liệu qua `triggerPrestige` (mọi khoá persist) — xem NOTE trong 3 file test mới.
+2. **(Giai đoạn A, gần xong)** Lưới an toàn test: đợt 1 (2026-07-13) phủ `completeFocusSession`/
+   `cancelFocusSession`/`syncService`; đợt 2 (2026-07-17) phủ nốt `computeLevelUps`, bảo-toàn-tài-sản
+   qua `triggerPrestige`, streak, `unlockSkill`, sync-retry. CÒN THIẾU (nhỏ): các nhánh early-return
+   phạt (khủng-hoảng/thăng-cấp thất bại — cần dùng action khởi tạo thật làm builder) + ma trận
+   waive-bằng-than-lượng + nhánh safeCancelPerk — xem NOTE trong các file test.
 3. **(Tuỳ chọn, không gấp)** Tách nhỏ `gameStore.js`/`completeFocusSession` — hoãn có chủ đích ở đợt
    refactor 2026-07-12 vì rủi ro cao hơn lợi ích; NAY đã có characterization golden-master làm lưới
    an toàn nên rủi ro tách giảm, nhưng vẫn chỉ làm khi thật cần (xem `ARCHITECTURE.md` mục 6).
@@ -57,6 +59,23 @@
 
 ## 🗒️ Nhật ký cập nhật
 > Mỗi lần xong việc đáng kể, thêm 1 dòng vào ĐẦU danh sách.
+
+- **2026-07-17** — **Giai đoạn A, lưới an toàn ĐỢT 2 (+16 bài, tổng 237→253; chỉ-thêm-test, không
+  đụng code app).** Làm nốt phần Priority 1/3 còn thiếu so với đợt 1:
+  • `gameMath.test.js` +6 bài `computeLevelUps` (ngưỡng đúng 6000, nhiều cấp một lần, giữa cấp,
+    XP=0, và ĐẶC TẢ hiện trạng: XP âm cho levelsGained/spGained ÂM — không kẹp, ghi NOTE).
+  • `gameStore.prestige.test.js` (MỚI, 5 bài) — bảo toàn tài sản qua Thăng Hoa: khoá TỪNG khoá
+    whitelist sống sót (relics/relicEvolutions/achievements+unlockTimes/history/historyStats/
+    savedNotes/sessionCategories/lastWeeklyReportDate/timerConfig/tinhThe + phát hiện `buildings`
+    sống sót "ngầm" vì không nằm trong reset-state), khoá TỪNG khoá bị reset, sổ prestige
+    (count/+5%/history), dưới ngưỡng 111000 EP → false không đổi gì, và **ĐÓNG BĂNG BUG #3**:
+    3 skill Thăng Hoa (kien_thuc_nen/ke_thua/sieu_viet) mở rồi vẫn mất sạch + SP về 0 khi prestige
+    — test khẳng định hành vi "hứa mà không làm" hiện tại; khi sửa #3 test này PHẢI đổi có ý thức.
+  • `gameStore.completeFocusSession.test.js` +2 bài streak (hôm qua 5→hôm nay 6 kèm longestStreak;
+    bỏ 3 ngày→về 1). • `gameStore.test.js` +2 bài `unlockSkill` cơ bản (trừ đúng 22 SP; thiếu SP →
+    từ chối, không trừ oan). • `syncService.behavior.test.js` +1 bài retry (push lỗi bị nuốt →
+    pushNow kế tiếp vẫn CAS đúng version cũ và thắng — lỗi không đầu độc trạng thái module).
+  - Không phát hiện bug MỚI; bug đã biết #3 nay bị đóng băng bằng test. Lint sạch, build OK.
 
 - **2026-07-13** — **Giai đoạn A: dựng "lưới an toàn" test cho 3 đường quan trọng nhất (đòn bẩy #1
   của roadmap POS — làm TRƯỚC khi sửa logic quan trọng).** Đàm ra lệnh chỉ thêm characterization/

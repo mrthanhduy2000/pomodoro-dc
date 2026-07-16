@@ -221,6 +221,27 @@ test('sync: initSync khi cloud KHÔNG mới hơn ⇒ đẩy local (đặc tả h
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// 7b) RETRY: lỗi Supabase KHÔNG đầu độc trạng thái — lần push kế tiếp thành công
+// ═══════════════════════════════════════════════════════════════════════════════
+test('sync: sau một lần push lỗi, pushNow tiếp theo vẫn CAS đúng version và thắng bình thường', async () => {
+  resetMocks(5);
+  resultQueue = [
+    { data: null, error: { message: 'network down' } }, // lần 1: lỗi (bị nuốt)
+    { data: [{ version: 6 }], error: null },             // lần 2: thành công
+  ];
+  const { pushNow } = await loadFreshSync();
+
+  await assert.doesNotReject(pushNow());
+  assert.equal(storedKnownVersion(), '5', 'lỗi ⇒ version giữ nguyên');
+
+  await pushNow(); // retry
+  const q = queryLog[queryLog.length - 1];
+  assert.equal(eqOf(q, 'version'), 5, 'retry vẫn CAS với version đang giữ (không bị lệch bởi lần lỗi)');
+  assert.equal(storedKnownVersion(), '6', 'retry thắng ⇒ nhận version mới');
+  assert.equal(importCalls.length, 0);
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // 8) shouldImportVersion — bổ sung biên (predicate thuần quyết định thắng/thua)
 // ═══════════════════════════════════════════════════════════════════════════════
 test('sync: shouldImportVersion chỉ import khi version đến LỚN HƠN version đang giữ', async () => {

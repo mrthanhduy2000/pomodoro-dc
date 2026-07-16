@@ -106,8 +106,12 @@
 - **Review Trigger**: nên làm SỚM, lý tưởng là trước khi Đàm tự nhiên đạt prestige lần đầu trong
   quá trình chơi thật.
 - **Owner**: (chưa gán)
-- **Status**: Open — CHƯA XÁC MINH, ưu tiên cao hơn 2 mục God File ở trên vì ảnh hưởng trực tiếp
-  trải nghiệm người dùng thật.
+- **Status**: Open — **ĐÃ XÁC MINH LÀ THẬT** (audit 2026-07-13: grep toàn repo + đọc
+  `triggerPrestige` — cả 3 perk chưa-wire hoàn toàn, 4 hằng hậu thuẫn chỉ nằm trong chuỗi mô tả).
+  2026-07-17: hành vi hiện tại đã bị **ĐÓNG BĂNG bằng characterization test**
+  (`gameStore.prestige.test.js`, bài "[ĐẶC TẢ BUG #3]") — khi sửa mục này (nối dây HOẶC sửa mô
+  tả), test đó PHẢI được cập nhật kèm. Ưu tiên cao hơn 2 mục God File ở trên vì ảnh hưởng trực
+  tiếp trải nghiệm người dùng thật.
 
 ---
 

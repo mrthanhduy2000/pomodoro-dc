@@ -356,3 +356,35 @@ test('Cộng Hưởng: tinhThe khởi tạo 0, schema = 3, sống sót qua prest
   assert.equal(useGameStore.getState().tinhThe, 5);  // persist qua prestige
   assert.ok(useGameStore.getState().tinhThe <= TINH_THE_HARD_CAP);
 });
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// unlockSkill — cơ bản (lưới an toàn Giai đoạn A: SP là tài sản, không mất oan)
+// (Chi phí thật của sieu_tap_trung = 22 SP khi không có cộng hưởng — đã xác lập
+//  ở test "unlockSkill elite cộng hưởng" phía trên.)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+test('unlockSkill: đủ SP + đủ điều kiện ⇒ mở khoá và trừ ĐÚNG chi phí', () => {
+  resetStore();
+  useGameStore.setState((s) => ({
+    player: { ...s.player, sp: 22, unlockedSkills: { ...s.player.unlockedSkills, tap_trung_sieu_viet: true } },
+    relics: [],
+    relicEvolutions: {},
+  }));
+  assert.equal(useGameStore.getState().unlockSkill('sieu_tap_trung', 22, ['tap_trung_sieu_viet']), true);
+  const s = useGameStore.getState();
+  assert.equal(s.player.unlockedSkills.sieu_tap_trung, true);
+  assert.equal(s.player.sp, 0); // trừ đúng 22, không hơn không kém
+});
+
+test('unlockSkill: thiếu SP ⇒ từ chối, SP và cây kỹ năng KHÔNG đổi', () => {
+  resetStore();
+  useGameStore.setState((s) => ({
+    player: { ...s.player, sp: 21, unlockedSkills: { ...s.player.unlockedSkills, tap_trung_sieu_viet: true } },
+    relics: [],
+    relicEvolutions: {},
+  }));
+  assert.equal(useGameStore.getState().unlockSkill('sieu_tap_trung', 22, ['tap_trung_sieu_viet']), false);
+  const s = useGameStore.getState();
+  assert.equal(s.player.unlockedSkills.sieu_tap_trung ?? false, false);
+  assert.equal(s.player.sp, 21); // tài sản không bị trừ oan khi giao dịch thất bại
+});

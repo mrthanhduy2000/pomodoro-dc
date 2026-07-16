@@ -80,23 +80,32 @@ xuất bước tiếp theo. Mục nào không đổi → ghi rõ "Không có tha
 mục này ở MỨC ĐỘ PHÙ HỢP với quy mô task — một sửa lỗi nhỏ không cần đủ 11 mục, nhưng một task lớn
 (refactor, tính năng mới, sự cố) thì có.
 
-### TECHNICAL ADVISOR REPORT (bắt buộc từ 2026-07-17, sau MỖI task hoàn thành)
+### TECHNICAL ADVISOR REPORT (bắt buộc từ 2026-07-17, sau MỖI task hoàn thành; bổ sung cùng ngày: mục 0 + mục 10 + viết 100% tiếng Việt)
 Ngoài báo cáo thường, PHẢI kèm một phần tiêu đề "TECHNICAL ADVISOR REPORT" — viết cho một **AI
 Technical Advisor độc lập (GPT)** đánh giá kiến trúc, KHÔNG phải cho Đàm. Ngắn gọn nhưng đủ ngữ
 cảnh; tối đa ~1-2 trang A4; không văn dài/không marketing/không tự khen/không lặp changelog.
-Đúng 9 mục theo thứ tự:
-1. **Objective** — "tôi được yêu cầu làm gì?" (≤5 dòng).
-2. **What changed** — chính xác file tạo mới / sửa / xoá; file lớn thì ghi module bị ảnh hưởng.
-3. **Architectural decisions** — QUAN TRỌNG NHẤT: vì sao chọn A thay vì B, vì sao chưa refactor,
-   vì sao test trước, vì sao giữ tương thích, vì sao hoãn việc gì.
-4. **Assumptions** — mọi giả định đã dùng (API không đổi, version luôn tăng, 1 phiên active...).
-   Không có → "None."
-5. **Risks introduced** — rủi ro MỚI do thay đổi này. Không có → "None."
-6. **Remaining blockers** — blocker còn chặn Giai đoạn hiện tại (≤10 dòng).
-7. **Roadmap impact** — chấm từng mục: God File · Duplicate · Test · Sync · Technical Debt ·
-   AI Coach Stability, theo thang: Not affected / Slightly improved / Improved / Completed.
-8. **Confidence** — % tự tin; DƯỚI 90% phải giải thích lý do.
-9. **Questions for Technical Advisor** — ≤5 câu hỏi kiến trúc/hướng đi chưa chắc. Không có → "None."
+**NGÔN NGỮ: 100% tiếng Việt** (cả tiêu đề mục lẫn nội dung). CHỈ giữ tiếng Anh cho: tên file/
+class/hàm/biến, commit hash, API, framework, và thuật ngữ không có cách dịch tự nhiên (CAS,
+debounce, snapshot, whitelist...).
+Đúng 11 mục theo thứ tự:
+0. **Vì sao làm task này lúc này?** (≤10 dòng) — thuộc Priority nào của Roadmap A · gỡ blocker
+   nào · cải thiện điều kiện chuyển Phase nào · nếu KHÔNG làm thì rủi ro gì · vì sao ROI cao hơn
+   các task tồn đọng khác. Nếu KHÔNG phải task ROI cao nhất → giải thích vì sao vẫn làm.
+1. **Mục tiêu** — "tôi được yêu cầu làm gì?" (≤5 dòng).
+2. **Đã thay đổi gì** — chính xác file tạo mới / sửa / xoá; file lớn thì ghi module bị ảnh hưởng.
+3. **Quyết định kiến trúc** — QUAN TRỌNG NHẤT: vì sao chọn A thay vì B, vì sao chưa refactor,
+   vì sao test trước, vì sao giữ tương thích ngược, vì sao hoãn việc gì.
+4. **Giả định** — mọi giả định đã dùng (API không đổi, version luôn tăng, 1 phiên active...).
+   Không có → "Không có."
+5. **Rủi ro mới phát sinh** — rủi ro MỚI do thay đổi này. Không có → "Không có."
+6. **Blocker còn lại** — những gì còn chặn Giai đoạn hiện tại (≤10 dòng).
+7. **Tác động lên Roadmap** — chấm TỪNG mục: God File · Duplicate · Test · Sync · Nợ kỹ thuật ·
+   Độ ổn định AI Coach, theo thang: Không ảnh hưởng / Cải thiện nhẹ / Cải thiện / Hoàn thành.
+8. **Độ tự tin** — %; DƯỚI 90% phải giải thích lý do.
+9. **Câu hỏi cho Technical Advisor** — ≤5 câu hỏi kiến trúc/hướng đi chưa chắc. Không có → "Không có."
+10. **Đề xuất task tiếp theo** — đúng MỘT task (không phải danh sách): vì sao quan trọng nhất ·
+    điều kiện Phase A nào tiến thêm · hoàn thành xong mở khoá điều gì. Nhiều lựa chọn ngang nhau
+    → nêu trade-off rồi CHỌN MỘT.
 
 ## 🛠️ AI ENGINEERING PLAYBOOK (Operating Manual — quy trình làm việc, 2026-07-12)
 

@@ -13,8 +13,9 @@
 > mà không được refactor triệt để, phải CHỦ ĐỘNG đề xuất mở một "Maintenance Sprint" (nêu rõ mục
 > tiêu/phạm vi/lợi ích/rủi ro/tiêu chí hoàn thành) thay vì tiếp tục cộng thêm tính năng mới.
 >
-> **Trạng thái ngưỡng hiện tại (2026-07-12)**: 0 mục High/Critical → CHƯA đạt ngưỡng đề xuất
-> Maintenance Sprint. Mục có Priority cao nhất hiện tại là Medium-High (mục #3).
+> **Trạng thái ngưỡng hiện tại (2026-07-17)**: 0 mục Priority High/Critical (mục #8 và #9 có
+> Severity cao nhưng Priority Medium) → CHƯA đạt ngưỡng đề xuất Maintenance Sprint. Mục có
+> Priority cao nhất hiện tại là Medium-High (mục #3).
 
 ---
 
@@ -203,3 +204,55 @@
 - **Review Trigger**: khi cần thêm một dependency mới mà xung đột trở nên khó quản lý hơn.
 - **Owner**: (chưa gán)
 - **Status**: Open — chấp nhận sống chung, không cấp bách.
+
+---
+
+## #8 — Sync: mất dữ liệu khi hai máy sửa các trường KHÁC NHAU lúc offline
+
+- **Module**: `src/lib/syncService.js` (+ giao thức lưu nguyên khối JSONB của `game_state`)
+- **Priority**: Medium
+- **Severity**: High (khi xảy ra là mất dữ liệu thật, không tự khôi phục được)
+- **Impact**: cơ chế "First Action Wins" so version trên CẢ KHỐI state, không merge theo trường.
+  Hai máy cùng sửa (dù ở trường khác nhau) giữa hai lần đồng bộ → máy đẩy sau bị từ chối và phải
+  nhận lại bản của máy thắng, mất trọn phần sửa của mình.
+- **Root Cause**: quyết định kiến trúc có chủ đích (ADR "First Action Wins") — chọn nhất quán +
+  đơn giản thay vì merge, vì merge cần thiết kế xung đột riêng cho từng slice.
+- **Current Risk**: đã GIẢM đáng kể sau bản vá C1 (2026-07-17): flush khi rời app thu hẹp cửa sổ
+  "thay đổi chưa đẩy" từ vô hạn xuống mili-giây. Rủi ro còn lại tập trung ở kịch bản OFFLINE
+  (push thất bại vì mất mạng, không có retry) — đúng lớp sự cố đã xảy ra thật 2026-07-11.
+- **Future Risk**: tăng nếu sau này có thêm thiết bị thứ 3 hoặc nhiều người dùng.
+- **Recommended Solution**: merge theo trường / 3-way merge, HOẶC lớp backup-recovery riêng. Đã
+  cân nhắc và LOẠI phương án "snapshot trước mỗi lần import" (đề xuất A4) bằng phân tích định
+  lượng: `history` và `savedNotes` đều bị chặn ở 2000 mục, mỗi mục history ~35 trường (~500-800
+  byte JSON) ⇒ state ở mức trần ~2-2,5 MB; một bản sao đầy đủ đẩy tổng lên ~4-5 MB, chạm hạn mức
+  localStorage ~5 MB của Safari, trong khi đường ghi persist KHÔNG bắt `QuotaExceededError`
+  (xem #9) ⇒ cơ chế an toàn có thể trở thành nguồn mất dữ liệu diện rộng hơn.
+- **Estimated Complexity**: Cao (đổi giao thức + cần môi trường E2E 2 thiết bị, xem #4).
+- **Blocking Conditions**: chưa có E2E 2 thiết bị để kiểm chứng merge; Giai đoạn A cấm mở rộng.
+- **Review Trigger**: khi làm tính năng backup/recovery sau Giai đoạn A, hoặc khi xuất hiện sự cố
+  mất dữ liệu thật lần nữa, hoặc khi có thiết bị/người dùng thứ 3.
+- **Owner**: (chưa gán)
+- **Status**: Open — đã giảm rủi ro bằng bản vá C1, giới hạn được ghi nhận công khai trong
+  `ARCHITECTURE.md` mục 2 (không giả vờ đã xử lý xong).
+
+---
+
+## #9 — Persist localStorage không bắt `QuotaExceededError`
+
+- **Module**: `src/lib/appIdentity.js` (`createLegacyCompatibleJSONStorage`, `storage.setItem`)
+- **Priority**: Medium
+- **Severity**: High (nếu xảy ra thì app ngừng lưu được state cục bộ)
+- **Impact**: `storage.setItem(name, value)` gọi trần, không có `try/catch`. Khi localStorage đầy
+  (state ở mức trần ~2-2,5 MB, cộng các khoá khác), lỗi ném thẳng vào trong zustand persist.
+- **Root Cause**: đường ghi được viết cho trường hợp bình thường; hạn mức chưa từng bị chạm nên
+  chưa lộ ra.
+- **Current Risk**: thấp hiện tại (state thật còn xa mức trần 2000 mục).
+- **Future Risk**: tăng dần theo số phiên tích luỹ; sẽ tăng vọt nếu có thêm bất kỳ cơ chế nào ghi
+  bản sao state vào localStorage (chính là lý do #8 loại phương án snapshot).
+- **Recommended Solution**: bọc `try/catch` quanh `setItem`, ghi log rõ ràng và có đường xử lý
+  (cảnh báo người dùng / dọn bớt dữ liệu cũ) thay vì để ném lỗi.
+- **Estimated Complexity**: Thấp.
+- **Blocking Conditions**: không có — chỉ nằm ngoài phạm vi bản vá C1 nên không "tiện tay sửa luôn".
+- **Review Trigger**: khi làm backup/recovery, hoặc khi thấy lỗi lưu state trong log production.
+- **Owner**: (chưa gán)
+- **Status**: Open — phát hiện trong lúc phân tích bản vá C1 (2026-07-17), chưa xử lý.

@@ -6,7 +6,10 @@
 > chọn: `ARCHITECTURE_DECISIONS.md`. Nợ kỹ thuật: `TECH_DEBT.md`. Migration: `MIGRATION.md`. Tóm
 > tắt theo mốc: `CHANGELOG.md`.
 > **NGUYÊN TẮC ƯU TIÊN SỐ 1:** (1) mọi phiên AI phải đọc file này + `CLAUDE.md` + các file liên quan TRƯỚC khi làm; (2) sau MỌI cập nhật dù nhỏ, phải cập nhật ngay file này + `CLAUDE.md` + các file liên quan khác.
-> Cập nhật lần cuối: **2026-07-17** (Giai đoạn A — hoàn tất đợt 2 "lưới an toàn": +16 bài test cho
+> Cập nhật lần cuối: **2026-07-17** (Giai đoạn A — **đã ĐÓNG blocker Critical C1 của lớp đồng bộ**:
+> vá 4 đường mất dữ liệu trong `syncService.js` (flush khi rời app · chặn state trắng ghi đè cloud ·
+> bịt đường ghi không-CAS · báo to khi thiếu cột `version`), 261 bài test. Trước đó cùng ngày:
+> hoàn tất đợt 2 "lưới an toàn": +16 bài test cho
 > `computeLevelUps`, bảo-toàn-tài-sản qua `triggerPrestige` (kèm ĐÓNG BĂNG bug #3 bằng test),
 > streak nối/đứt chuỗi, `unlockSkill` cơ bản, sync retry-sau-lỗi. Tổng 253 bài. KHÔNG đổi hành vi
 > runtime. Trước đó 2026-07-13: đợt 1 lưới an toàn +29 bài cho `completeFocusSession`/`syncService`/
@@ -59,6 +62,22 @@
 
 ## 🗒️ Nhật ký cập nhật
 > Mỗi lần xong việc đáng kể, thêm 1 dòng vào ĐẦU danh sách.
+
+- **2026-07-17 (c)** — **ĐÓNG BLOCKER CRITICAL C1 (đồng bộ).** Đây là task THỰC THI đầu tiên đi
+  qua đủ quy trình "Observe → Design → phản biện → Advisor duyệt → Implement": bản thiết kế bị
+  chính mình bác 2 lỗi (tín hiệu `debounceTimer` luôn bật; bẫy lỗi đặt sai chỗ vì `pullFromCloud`
+  không throw) + 1 lỗ (nhánh ghi không-CAS), rồi Advisor loại tiếp 2 đề xuất thừa (snapshot
+  trước import; thêm `savedNotes` vào heuristic — chứng minh được `savedNotes` chỉ là phép chiếu
+  của `history`). Sửa **duy nhất `src/lib/syncService.js`**: (a) `debounceTimer` về `null` khi nổ/
+  huỷ; (b) rời app (`hidden`/`pagehide`) → đẩy ngay nếu còn thay đổi chờ; (c) `hasMeaningfulState()`
+  chặn state trắng ghi đè cloud ở CẢ nhánh else của `initSync` LẪN nhánh `known < 0` (đường ghi
+  duy nhất không có CAS — nay đọc cloud trước, lỗi thì hoãn ghi); (d) lỗi `42703` → `console.error`
+  chỉ đích danh file SQL cần chạy; (e) nạp bản cloud thì huỷ lịch push mồ côi + cảnh báo. Test
+  253→**261** (8 bài mới cho sync, 2 bài cũ sửa vì đặc tả hành vi cũ, + stub chặn debounce 5s thật
+  để hết flaky). Lint sạch, build OK. **KHÔNG** làm snapshot A4 — đã ghi `TECH_DEBT.md` #8 kèm
+  phân tích dung lượng; phát hiện thêm #9 (persist không bắt `QuotaExceededError`). Giới hạn còn
+  lại có chủ đích: xung đột offline khác-trường vẫn mất phần của máy thua (ghi rõ ở
+  `ARCHITECTURE.md` mục 2, không giả vờ đã xử lý).
 
 - **2026-07-17 (b)** — **Quy tắc mới vĩnh viễn: TECHNICAL ADVISOR REPORT.** Đàm yêu cầu: sau MỖI
   task hoàn thành, ngoài báo cáo thường phải kèm phần "TECHNICAL ADVISOR REPORT" viết cho một AI

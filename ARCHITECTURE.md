@@ -53,6 +53,25 @@ mở cùng lúc là ăn may, có thể mất dữ liệu thật (đã xảy ra 2
 Nhờ vậy thứ tự "ai thao tác trước" được máy chủ phân xử chính xác tuyệt đối, không phải suy đoán
 qua cờ `isRunning` như cách cũ (đã gỡ).
 
+**Bốn lưới an toàn quanh cơ chế đó (bản vá C1, 2026-07-17)** — vá đúng các đường có thể mất dữ
+liệu mà bản thân CAS không đỡ được:
+
+- **Flush khi rời app**: mọi thay đổi đi qua debounce 5 giây; rời app trong 5 giây đó thì trên iOS
+  tab bị đóng băng nên timer KHÔNG bao giờ nổ. Nay `visibilitychange → hidden` và `pagehide` đẩy
+  ngay — nhưng CHỈ khi thật sự còn thay đổi đang chờ (không ghi mù mỗi lần ẩn app).
+- **Không cho state trắng đè cloud**: `hasMeaningfulState()` (thuần, export để test) nhận diện
+  state "có tài sản thật" (history / sessionsCompleted / totalEXP / prestige.count). Local trắng
+  mà cloud có dữ liệu → NHẬN lại cloud, không đẩy. Local có dữ liệu thật → vẫn đẩy như cũ, vì đó
+  chính là đường hồi phục cho thay đổi offline chưa kịp đẩy.
+- **Đường ghi không-CAS được bịt**: nhánh "chưa biết version" (`known < 0`) trước đây upsert thẳng.
+  Nay đọc cloud trước; cloud có dữ liệu → nhận về; đọc lỗi → hoãn ghi (fail-safe, không ghi mù).
+- **Thiếu cột `version` báo to**: lỗi Postgres `42703` lúc khởi động → `console.error` chỉ đích danh
+  `supabase/game_state_version.sql`, thay vì để sync chết âm thầm.
+
+Giới hạn CÒN LẠI (có chủ đích, không phải bỏ sót): hai máy sửa các trường KHÁC NHAU khi đang
+offline thì máy thua vẫn mất phần của mình — vá thật cần merge theo trường, thuộc giai đoạn sau
+(xem `TECH_DEBT.md` #8).
+
 ## 3. AI Coach — model-agnostic, tách "bộ não" khỏi "công cụ sinh chữ"
 
 `src/engine/coach/` là toàn bộ phần THUẦN (test được, không phụ thuộc model nào cụ thể):

@@ -6,7 +6,12 @@
 > chọn: `ARCHITECTURE_DECISIONS.md`. Nợ kỹ thuật: `TECH_DEBT.md`. Migration: `MIGRATION.md`. Tóm
 > tắt theo mốc: `CHANGELOG.md`.
 > **NGUYÊN TẮC ƯU TIÊN SỐ 1:** (1) mọi phiên AI phải đọc file này + `CLAUDE.md` + các file liên quan TRƯỚC khi làm; (2) sau MỌI cập nhật dù nhỏ, phải cập nhật ngay file này + `CLAUDE.md` + các file liên quan khác.
-> Cập nhật lần cuối: **2026-07-17** (Giai đoạn A — **đã ĐÓNG blocker Critical C1 của lớp đồng bộ**:
+> Cập nhật lần cuối: **2026-08-05** — 3 việc trong ngày đều là **cấu hình máy + tài liệu, KHÔNG đổi
+> một dòng code ứng dụng nào**: (a) sửa "app biến mất khỏi thanh menu Mac" + bật tự khởi động;
+> (b) dọn sạch dấu vết dự án đời cũ trên máy; (c) diệt bản sao `AGENTS.md` và cấm nhân bản tài liệu
+> quy tắc theo từng công cụ AI. Vì vậy **trạng thái kỹ thuật bên dưới vẫn nguyên như 2026-07-17**.
+>
+> Mốc kỹ thuật gần nhất: **2026-07-17** (Giai đoạn A — **đã ĐÓNG blocker Critical C1 của lớp đồng bộ**:
 > vá 4 đường mất dữ liệu trong `syncService.js` (flush khi rời app · chặn state trắng ghi đè cloud ·
 > bịt đường ghi không-CAS · báo to khi thiếu cột `version`), 261 bài test. Trước đó cùng ngày:
 > hoàn tất đợt 2 "lưới an toàn": +16 bài test cho
@@ -62,6 +67,20 @@
 
 ## 🗒️ Nhật ký cập nhật
 > Mỗi lần xong việc đáng kể, thêm 1 dòng vào ĐẦU danh sách.
+
+- **2026-08-05 (c)** — **Dọn 2 file lạc chưa commit + diệt gốc nạn nhân bản tài liệu quy tắc.**
+  `git status` tồn đọng `AGENTS.md` + `.codex/` từ 31/7 (do Codex tạo, không phải Claude).
+  `AGENTS.md` khi đó là BẢN SAO nguyên văn 288 dòng của `CLAUDE.md`, tạo bằng cách thay máy móc
+  "Claude"→"Codex" → sinh câu vô nghĩa ("dùng Codex + Codex để code", "Hỏi Codex") và **đường dẫn
+  không tồn tại** (`.Codex/session-start-bangiao.sh`, `/Users/damduy/.Codex/projects/...`); tệ hơn,
+  chỉ sau 5 ngày nó đã **trôi khỏi bản gốc** — thiếu nguyên mục "App menu bar Mac — 3 cái bẫy", tức
+  Codex đọc nó sẽ không biết những bẫy đó và dẫm lại. **Xử lý gốc, không vá**: viết lại `AGENTS.md`
+  thành **con trỏ ~40 dòng** trỏ về `CLAUDE.md` (kèm 3 điều nguy hiểm nhất để không cần đọc hết mới
+  biết) — bỏ 288 dòng trùng lặp, từ nay chỉ còn MỘT nguồn quy tắc. Thêm quy tắc số 6 vào
+  "NGUYÊN TẮC ƯU TIÊN SỐ 1": **cấm tạo bản sao tài liệu quy tắc cho từng công cụ AI**. `.codex/`
+  cho vào `.gitignore` cạnh `.claude` (cùng loại: cấu hình cục bộ chứa đường dẫn tuyệt đối của máy
+  Đàm, vô dụng ở máy khác) → `git status` sạch trở lại. `PROJECT_STRUCTURE.md` bổ sung dòng
+  `AGENTS.md`. **KHÔNG đụng code ứng dụng** — 261 bài test + build vẫn xanh.
 
 - **2026-08-05 (b)** — **Dọn sạch mọi dấu vết dự án đời cũ trên máy (Đàm yêu cầu).** Chuyển Thùng
   rác 10 mục: thư mục dự án cũ `Downloads/Claude Code/Pomodoro Game - USING` (đã rỗng ruột, chỉ còn

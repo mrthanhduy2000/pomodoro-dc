@@ -1,6 +1,10 @@
 # Runtime & build cache
 .runtime
+
+# Cấu hình công cụ AI cục bộ — chứa đường dẫn tuyệt đối của máy Đàm, không dùng được ở máy khác.
+# Quy tắc/tài liệu thật thì KHÔNG nằm ở đây mà ở CLAUDE.md + AGENTS.md (đều được commit).
 .claude
+.codex
 
 # Logs
 logs

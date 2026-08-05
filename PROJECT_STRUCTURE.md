@@ -84,6 +84,8 @@
 ├── supabase/                   # SQL chạy TAY trong Supabase SQL Editor (không tự động migrate)
 │
 ├── CLAUDE.md                   # Quy tắc bắt buộc + Project Governance Protocol + bối cảnh kỹ thuật
+│                               #   NGUỒN SỰ THẬT DUY NHẤT về quy tắc, cho MỌI AI (không riêng Claude)
+├── AGENTS.md                    # Điểm vào cho Codex — CHỈ là con trỏ sang CLAUDE.md, KHÔNG chép nội dung
 ├── BAN_GIAO.md                  # Nhật ký "đang ở đâu, làm gì tiếp" — đọc TRƯỚC CLAUDE.md mỗi phiên
 ├── ARCHITECTURE.md              # Bức tranh kiến trúc lớn (luồng dữ liệu, vì sao chia lớp thế này)
 ├── PROJECT_STRUCTURE.md         # File này

@@ -18,6 +18,7 @@ Phân loại lệnh của Đàm thành 2 nhóm:
    (đặc biệt `upgrade-roadmap.md` cho AI Coach, `ui-review-2026-06.md` cho UI, `resonance-update.md` cho game loop).
 4. Luôn chạy `git status` tươi — đừng tin ảnh chụp git cũ.
 5. Muốn biết **file nằm ở đâu** → `PROJECT_STRUCTURE.md`. Muốn biết **bức tranh kiến trúc lớn** (luồng dữ liệu, vì sao chia lớp thế này) → `ARCHITECTURE.md`. Cả hai PHẢI cập nhật cùng lúc với mọi thay đổi cấu trúc (đúng quy tắc số 2 ở trên).
+6. ⚠️ **File này là NGUỒN SỰ THẬT DUY NHẤT về quy tắc, cho MỌI AI** (Claude Code, Codex, ChatGPT...) — tên file có chữ "CLAUDE" chỉ vì lịch sử, KHÔNG có nghĩa quy tắc chỉ dành cho Claude. `AGENTS.md` (điểm vào của Codex) **chỉ là con trỏ trỏ về đây**, tuyệt đối KHÔNG chép nội dung sang. **TUYỆT ĐỐI không tạo bản sao tài liệu quy tắc cho từng công cụ AI** — đã thử 2026-07-31 và thất bại: bản sao sinh câu vô nghĩa + đường dẫn `.Codex/` không tồn tại, rồi trôi khỏi bản gốc chỉ sau 5 ngày (thiếu nguyên mục "3 cái bẫy menu bar"). Đây chính là điều quy tắc **Composition over Duplication** ở mục Playbook cấm. Chi tiết: `AGENTS.md`.
 
 ## 📋 PROJECT GOVERNANCE PROTOCOL (2026-07-12 — áp dụng vĩnh viễn, mọi phiên AI tương lai)
 

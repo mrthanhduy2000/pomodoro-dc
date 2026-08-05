@@ -63,6 +63,18 @@
 ## 🗒️ Nhật ký cập nhật
 > Mỗi lần xong việc đáng kể, thêm 1 dòng vào ĐẦU danh sách.
 
+- **2026-08-05 (b)** — **Dọn sạch mọi dấu vết dự án đời cũ trên máy (Đàm yêu cầu).** Chuyển Thùng
+  rác 10 mục: thư mục dự án cũ `Downloads/Claude Code/Pomodoro Game - USING` (đã rỗng ruột, chỉ còn
+  18MB log — KHÔNG phải git repo, không có mã nguồn nào, đã kiểm trước khi xoá); applet
+  `DC Pomodoro.app` (724K, không nằm trong git); 2 backup dữ liệu game (`dc-pomodoro-backup-2026-06-24.json`,
+  `civjourney-backup-2026-04-23.json`); 2 file thiết kế đời CivJourney; 2 thư mục phiên Claude của
+  đường dẫn dự án cũ; 2 log của luồng localhost. **Dùng Thùng rác thay vì xoá vĩnh viễn** để còn
+  đường lùi (nhất là 2 file backup dữ liệu thật). Đã quét lại toàn máy: chỉ còn MỘT thư mục dự án.
+  ⚠️ **KHÔNG đụng tới** `~/Library/Application Scripts/com.macpomodoro` và
+  `~/Library/Mobile Documents/iCloud~com~limepresso~pomodorofree` — đó là app Pomodoro của hãng
+  khác, không liên quan dự án. Cũng giữ `~/Library/Application Support/pomodoro-game` (dữ liệu
+  Electron của app tray đang chạy). Đã xác nhận app menu bar vẫn chạy sau khi dọn.
+
 - **2026-08-05** — **Sửa "app biến mất khỏi thanh menu Mac" + bật tự khởi động.** KHÔNG đụng một
   dòng code ứng dụng nào (chỉ cấu hình máy + tài liệu). Nguyên nhân: app tray Electron không hề
   chạy (đã tắt từ lần khởi động lại máy nào đó). **3 bài học đắt, đã ghi vào `CLAUDE.md` mục

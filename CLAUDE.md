@@ -264,6 +264,15 @@ App có cả một hệ "huấn luyện viên" và engine game thuần. Đây l�
 - ⚠️ Điểm nóng: `completeFocusSession` trong `gameStore.js` rất dài (~760 dòng) — sửa cẩn thận, dễ sinh bug "dùng giá trị cũ".
 - Luôn `npm test` trước khi commit (xem số bài thật ở dòng cuối output — glob hiện tại: `electron/*.test.js src/engine/*.test.js src/engine/coach/*.test.js src/utils/*.test.js src/store/*.test.js src/lib/*.test.js src/components/*.test.js api/_tests/*.test.js api/_tests/push/*.test.js api/_tests/_lib/*.test.js`, xem `package.json`) + `npm run build`. Công cụ mắt-soi bảng số liệu model nhận: `node --import ./scripts/register-esm-loader.mjs scripts/coach-sample.mjs` (dựng lịch sử mẫu ~24 giờ + in `buildAnalystContext`). Điểm số chống-bịa in ra bởi `src/engine/coach/eval.test.js`.
 
+## App menu bar Mac (Electron tray) — cách bật, và 3 cái bẫy đã trả giá (2026-08-05)
+- **Chạy bằng gì**: `node_modules/electron/dist/Electron.app/Contents/MacOS/Electron <đường-dẫn-dự-án>` (binary chạy thẳng). KHÔNG có bản `.app` đóng gói nào cho app tray.
+- ⚠️ **BẪY 1 — `DC Pomodoro.app` trong thư mục dự án KHÔNG PHẢI app menu bar.** Nó là applet AppleScript ĐỜI CŨ: khởi động `serve-dist.mjs` ở `localhost:31105` rồi mở Chrome — đúng luồng localhost đã bị cấm ở mục "KHÔNG làm những thứ này". Nó còn trỏ vào thư mục cũ `Pomodoro Game - USING` (KHÔNG có "Bản sao"). Mở nó KHÔNG làm hiện icon tray. Đừng nhầm.
+- ⚠️ **BẪY 2 — launchd KHÔNG chạy được đường dẫn có ký tự tiếng Việt.** Trỏ `ProgramArguments` thẳng vào đường dẫn chứa "Bản sao…" thì job luôn thoát **mã 78 (EX_CONFIG)**, KHÔNG có stderr, dù `plutil -lint` OK và `test -x` báo file tồn tại (bash chuẩn hoá NFC/NFD, launchd thì không). **Cùng họ với cái bẫy NFC/NFD làm test nạp hai bản React.** Cách vá: LaunchAgent chỉ trỏ tới script bọc ở đường dẫn **thuần ASCII** — `~/Library/Application Support/dc-pomodoro-tray.sh` — script đó mới `cd` vào thư mục có dấu (bash xử lý đúng). Log cũng phải để ở đường dẫn ASCII (`~/Library/Logs/dc-pomodoro-tray.*.log`).
+- **Tự khởi động**: LaunchAgent `~/Library/LaunchAgents/com.dcpomodoro.tray.plist` (`RunAtLoad` bật, **`KeepAlive` TẮT** để nút "Thoát" trong menu tray thoát được thật, không bị bật lại ngay).
+- ⚠️ **BẪY 3 — `main.js` KHÔNG có khoá chống chạy trùng** (`requestSingleInstanceLock`). Chạy 2 lần = **2 biểu tượng** trên thanh menu. Trước khi nạp LaunchAgent phải `pkill` bản đang chạy tay.
+- **Không có phiên nào chạy thì tray chỉ hiện icon trơn** (`updateTrayTitle` đặt tiêu đề rỗng) — đó là bình thường, không phải hỏng. Có phiên mới hiện `🍅 mm:ss`.
+- (Đã dọn 2026-08-05) LaunchAgent cũ `com.civjourney.localhost` (chạy `serve-dist.mjs` cho luồng localhost) đã gỡ khỏi launchd và chuyển plist vào Thùng rác.
+
 ## Quy trình deploy
 ```
 Sửa code → git add . && git commit -m "mô tả" && git push

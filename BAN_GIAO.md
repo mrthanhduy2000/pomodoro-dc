@@ -63,6 +63,21 @@
 ## 🗒️ Nhật ký cập nhật
 > Mỗi lần xong việc đáng kể, thêm 1 dòng vào ĐẦU danh sách.
 
+- **2026-08-05** — **Sửa "app biến mất khỏi thanh menu Mac" + bật tự khởi động.** KHÔNG đụng một
+  dòng code ứng dụng nào (chỉ cấu hình máy + tài liệu). Nguyên nhân: app tray Electron không hề
+  chạy (đã tắt từ lần khởi động lại máy nào đó). **3 bài học đắt, đã ghi vào `CLAUDE.md` mục
+  "App menu bar Mac"**: (1) `DC Pomodoro.app` trong thư mục dự án KHÔNG phải app tray — nó là
+  applet AppleScript đời cũ chạy `serve-dist.mjs` ở localhost:31105 và trỏ vào thư mục cũ
+  `Pomodoro Game - USING`; mở nó không làm hiện icon (tôi đã nhầm đúng chỗ này lúc chẩn đoán đầu);
+  (2) **launchd không chạy được đường dẫn có chữ tiếng Việt** — luôn thoát mã 78 không stderr, dù
+  `plutil -lint` OK và `test -x` thấy file; đây CÙNG HỌ với bẫy NFC/NFD làm test nạp hai bản React
+  → phải bọc qua script ASCII `~/Library/Application Support/dc-pomodoro-tray.sh`; (3) `main.js`
+  không có khoá chống chạy trùng nên chạy 2 lần = 2 icon. Kết quả: LaunchAgent
+  `com.dcpomodoro.tray` (RunAtLoad bật, KeepAlive tắt để nút "Thoát" còn tác dụng), đã xác minh
+  bằng ảnh chụp màn hình thật (icon hiện, đếm ngược `🍅 22:34` khớp phiên đang chạy trên web, chỉ
+  1 icon). Đã gỡ sạch LaunchAgent cũ `com.civjourney.localhost` (plist vào Thùng rác, khôi phục
+  được) — nó thuộc luồng localhost đã bị cấm.
+
 - **2026-07-17 (c)** — **ĐÓNG BLOCKER CRITICAL C1 (đồng bộ).** Đây là task THỰC THI đầu tiên đi
   qua đủ quy trình "Observe → Design → phản biện → Advisor duyệt → Implement": bản thiết kế bị
   chính mình bác 2 lỗi (tín hiệu `debounceTimer` luôn bật; bẫy lỗi đặt sai chỗ vì `pullFromCloud`

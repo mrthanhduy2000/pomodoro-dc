@@ -165,8 +165,13 @@ function createTray() {
   iconNormal = iconNormal.resize({ width: 18, height: 18 });
   iconNormal.setTemplateImage(true);
 
-  iconEmpty = nativeImage.createFromPath(path.join(__dirname, '../public/tray-empty.png'));
-  iconEmpty.setTemplateImage(true);
+  // Ảnh RỖNG THẬT (kích thước 0x0), dùng khi tiêu đề đã có emoji 🍅/⏱/☕/⏸ nên
+  // không cần icon nữa.
+  // ⚠️ ĐỪNG thay bằng file PNG trong suốt: trước 2026-08-10 chỗ này nạp
+  // `public/tray-empty.png` 16x16 alpha=0. Trong suốt nên không NHÌN thấy, nhưng
+  // macOS vẫn chừa đủ 16 điểm ảnh chỗ cho nó → sinh ra khoảng trắng ngay trước
+  // quả cà chua / cốc cà phê trên thanh menu. `createEmpty()` không chiếm chỗ nào.
+  iconEmpty = nativeImage.createEmpty();
 
   tray = new Tray(iconNormal);
   tray.setToolTip('DC Pomodoro');

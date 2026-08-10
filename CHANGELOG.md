@@ -12,6 +12,18 @@
 
 ---
 
+## 2026-08-10 — Sửa khoảng trắng thừa trên icon thanh menu Mac
+
+- **Mục đích**: bỏ khoảng trắng nằm ngay trước 🍅 (đang tập trung) và ☕ (đang giải lao) trên thanh
+  menu Mac.
+- **Phạm vi**: `electron/main.js` (1 dòng: `nativeImage.createEmpty()` thay cho việc nạp một PNG
+  trong suốt) + xoá asset `public/tray-empty.png`. KHÔNG đụng web app.
+- **Ảnh hưởng**: thuần hiển thị của app tray; không đổi logic timer, không đổi dữ liệu, không đổi
+  API. 261 test giữ nguyên và vẫn xanh.
+- **Tương thích**: không cần migration. Cần khởi động lại app tray để thấy thay đổi.
+- **Bài học**: "ảnh trong suốt" không bằng "không có ảnh" — macOS vẫn chừa chỗ cho ảnh 16x16 dù
+  alpha = 0 (`CLAUDE.md`, BẪY 4).
+
 ## 2026-07-17 — Giai đoạn A: bản vá C1 (đóng blocker Critical của lớp đồng bộ)
 
 - **Mục đích**: bịt 4 đường mất dữ liệu quanh cơ chế "First Action Wins" mà compare-and-swap

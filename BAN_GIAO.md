@@ -6,10 +6,16 @@
 > chọn: `ARCHITECTURE_DECISIONS.md`. Nợ kỹ thuật: `TECH_DEBT.md`. Migration: `MIGRATION.md`. Tóm
 > tắt theo mốc: `CHANGELOG.md`.
 > **NGUYÊN TẮC ƯU TIÊN SỐ 1:** (1) mọi phiên AI phải đọc file này + `CLAUDE.md` + các file liên quan TRƯỚC khi làm; (2) sau MỌI cập nhật dù nhỏ, phải cập nhật ngay file này + `CLAUDE.md` + các file liên quan khác.
-> Cập nhật lần cuối: **2026-08-05** — 3 việc trong ngày đều là **cấu hình máy + tài liệu, KHÔNG đổi
-> một dòng code ứng dụng nào**: (a) sửa "app biến mất khỏi thanh menu Mac" + bật tự khởi động;
-> (b) dọn sạch dấu vết dự án đời cũ trên máy; (c) diệt bản sao `AGENTS.md` và cấm nhân bản tài liệu
-> quy tắc theo từng công cụ AI. Vì vậy **trạng thái kỹ thuật bên dưới vẫn nguyên như 2026-07-17**.
+> Cập nhật lần cuối: **2026-08-10** — sửa khoảng trắng thừa trước icon 🍅/☕ trên thanh menu Mac
+> (`electron/main.js`, đúng 1 dòng; xoá `public/tray-empty.png`). Chỉ đụng app tray, KHÔNG đụng web
+> app. Trước đó 2026-08-05 có 3 việc **cấu hình máy + tài liệu, KHÔNG đổi dòng code ứng dụng nào**:
+> (a) sửa "app biến mất khỏi thanh menu Mac" + bật tự khởi động; (b) dọn sạch dấu vết dự án đời cũ
+> trên máy; (c) diệt bản sao `AGENTS.md` và cấm nhân bản tài liệu quy tắc theo từng công cụ AI.
+> Vì vậy **trạng thái kỹ thuật của web app bên dưới vẫn nguyên như 2026-07-17**.
+>
+> ⏳ **Đang dở (chưa commit vào luồng chạy):** `src/hooks/useTimer.test.js` — 41 bài characterization
+> test cho `useTimer.js`, **tất cả đều xanh**, nhưng CHƯA nối vào `npm test` vì tiến trình test
+> không tự thoát khi chạy riêng file này. Xem mục "Sẽ làm tiếp".
 >
 > Mốc kỹ thuật gần nhất: **2026-07-17** (Giai đoạn A — **đã ĐÓNG blocker Critical C1 của lớp đồng bộ**:
 > vá 4 đường mất dữ liệu trong `syncService.js` (flush khi rời app · chặn state trắng ghi đè cloud ·
@@ -67,6 +73,17 @@
 
 ## 🗒️ Nhật ký cập nhật
 > Mỗi lần xong việc đáng kể, thêm 1 dòng vào ĐẦU danh sách.
+
+- **2026-08-10** — **Sửa khoảng trắng thừa trước icon trên thanh menu Mac.** Đàm báo: đang trong
+  phiên pomodoro thì có khoảng trắng trước 🍅, đang giải lao thì có vệt trắng cạnh ☕. Nguyên nhân:
+  khi có phiên chạy, tray bỏ icon để chỉ hiện chữ, nhưng chỗ "bỏ icon" lại nạp
+  `public/tray-empty.png` — file 16x16 **trong suốt hoàn toàn** (đã kiểm alpha: toàn bộ = 0).
+  Không nhìn thấy, nhưng macOS vẫn chừa đủ 16 điểm ảnh chỗ cho nó. Vá: `nativeImage.createEmpty()`
+  (ảnh 0x0, không chiếm chỗ) ở `electron/main.js`; xoá hẳn `public/tray-empty.png` (không còn ai
+  dùng). Sửa đúng 1 dòng code, cả 2 đường hiện tiêu đề (`updateTrayTitle` +
+  `applyRendererTrayUpdate`) đều dùng chung biến `iconEmpty` nên khỏi sửa 2 chỗ. Đã khởi động lại
+  LaunchAgent và **chụp màn hình xác nhận bằng mắt**: khoảng trắng đã hết. 261 test + lint + build
+  xanh. Bài học ghi vào `CLAUDE.md` thành **BẪY 4**: "ảnh trong suốt" KHÔNG bằng "không có ảnh".
 
 - **2026-08-05 (c)** — **Dọn 2 file lạc chưa commit + diệt gốc nạn nhân bản tài liệu quy tắc.**
   `git status` tồn đọng `AGENTS.md` + `.codex/` từ 31/7 (do Codex tạo, không phải Claude).

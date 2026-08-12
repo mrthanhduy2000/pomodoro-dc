@@ -263,7 +263,14 @@ export default function CityScene3D({
       }
 
       function onPointerMove(event) {
-        if (event.pointerId !== dragPointer) return;
+        if (event.pointerId !== dragPointer) {
+          // KHÔNG kéo ⇒ chỉ rê chuột qua. Đổi con trỏ khi nó nằm trên một công trình: đây là cách
+          // DUY NHẤT trên máy tính để biết cảnh này bấm được, mà không phải in thêm một dòng chữ
+          // hướng dẫn nào lên màn hình. Phép dò là toán thuần trên dăm cái hộp — rẻ hơn nhiều so
+          // với một khung hình, nên rê chuột liên tục cũng không tốn gì đáng kể.
+          if (onPickRef.current) updateHoverCursor(event);
+          return;
+        }
         orbit.drag(event.clientX - lastX, event.clientY - lastY);
         lastX = event.clientX;
         lastY = event.clientY;
@@ -282,12 +289,10 @@ export default function CityScene3D({
         publishStats();
       }
 
-      /** Ngón tay ở đâu trên màn hình → công trình nào trong thành phố. */
-      function reportPick(event) {
-        const report = onPickRef.current;
-        if (!report) return;
+      /** Ngón tay ở đâu trên màn hình → công trình nào trong thành phố (hoặc `null`). */
+      function pickAt(event) {
         const box = canvas.getBoundingClientRect();
-        if (!box.width || !box.height) return;
+        if (!box.width || !box.height) return null;
 
         // Toạ độ thiết bị chuẩn hoá: (−1,−1) góc dưới-trái → (1,1) góc trên-phải.
         pickPointer.set(
@@ -297,7 +302,20 @@ export default function CityScene3D({
         raycaster.setFromCamera(pickPointer, camera);
         // Phần khó (tia cắt hộp, chọn cái gần nhất) nằm ở engine THUẦN và test được — ở đây chỉ
         // làm đúng một việc mà three.js buộc phải làm hộ: đổi điểm ảnh thành một tia.
-        report(pickNearest(raycaster.ray, city.pickTargets) ?? null);
+        return pickNearest(raycaster.ray, city.pickTargets) ?? null;
+      }
+
+      function reportPick(event) {
+        const report = onPickRef.current;
+        if (report) report(pickAt(event));
+      }
+
+      let hoverCursor = '';
+      function updateHoverCursor(event) {
+        const next = pickAt(event) ? 'pointer' : 'grab';
+        // Chỉ ghi khi ĐỔI: gán `style.cursor` mỗi lần chuột nhích là một phép ghi DOM mỗi vài
+        // mili-giây, đúng kiểu chi phí lặt vặt mà không ai để ý cho tới lúc quạt máy kêu.
+        if (next !== hoverCursor) { hoverCursor = next; canvas.style.cursor = next; }
       }
 
       function onWheel(event) {

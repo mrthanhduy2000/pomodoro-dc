@@ -93,6 +93,19 @@
 ## 🗒️ Nhật ký cập nhật
 > Mỗi lần xong việc đáng kể, thêm 1 dòng vào ĐẦU danh sách.
 
+- **2026-08-12 (Phase 3L)** — **NÓI CHO ĐÀM BIẾT LÀ CHẠM ĐƯỢC.**
+  ⚠️ **Một tính năng không ai biết là một tính năng không tồn tại.** Chạm-vào-công-trình dựng xong
+  ở Phase 3K nhưng KHÔNG có gì trên màn hình nói rằng nó tồn tại — cảnh 3D trông y hệt một bức
+  tranh, và không ai đi chạm thử vào một bức tranh. Suýt nữa thì cả Phase 3K nằm im.
+  - Dòng nhắc dưới cảnh: *"Kéo để xoay · chạm vào công trình để xem chi tiết"*.
+  - Trên máy tính thêm **con trỏ đổi hình** khi rê chuột qua một công trình (`pointer` ↔ `grab`) —
+    dùng lại đúng phép dò của Phase 3K, là toán thuần trên dăm cái hộp nên rê chuột liên tục cũng
+    không tốn gì; chỉ ghi `style.cursor` khi GIÁ TRỊ ĐỔI, không ghi mỗi lần chuột nhích.
+  - Cả hai đều tắt ở lớp nền trang chủ. Đã thêm test khoá `chrome={false}` cho `CityBackdrop` —
+    đó là công tắc gom mọi thứ chữ nghĩa của `CityStage` (câu báo lùi-2D, HUD, và nay là dòng
+    nhắc); mất nó thì một dòng hướng dẫn kỹ thuật nổi lên ngay sau lưng đồng hồ đếm ngược.
+  - Test **449 xanh** (thêm assertion vào bài sẵn có, không thêm bài mới), lint sạch, build xanh.
+
 - **2026-08-12 (Phase 3K)** — **CHẠM VÀO CÔNG TRÌNH ĐỂ BIẾT NÓ LÀ AI.**
   Đàm: *"game hoá lên… đột phá hơn"*. Cho tới trước Phase này, thành phố 3D là một BỨC TRANH —
   kéo xoay được, đẹp, nhưng không chạm được vào bất cứ thứ gì. Nay chạm vào một căn nhà thì nó tự

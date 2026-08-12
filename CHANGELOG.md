@@ -12,6 +12,17 @@
 
 ---
 
+## 2026-08-12 — Thành Phố (Phase 3L): nói cho Đàm biết là chạm được
+
+- **Mục đích**: Phase 3K dựng xong tính năng chạm nhưng không có gì trên màn hình nói rằng nó tồn
+  tại — cảnh 3D trông y hệt một bức tranh. Một tính năng không ai biết là một tính năng không có.
+- **Phạm vi**: `CityStage` thêm dòng nhắc dưới cảnh; `CityScene3D` đổi con trỏ khi rê chuột qua
+  công trình (máy tính); test khoá `chrome={false}` ở `CityBackdrop`.
+- **Ảnh hưởng**: chỉ tab Thành Phố. Lớp nền trang chủ không có dòng nhắc lẫn đổi con trỏ.
+- **Tương thích**: giữ nguyên hoàn toàn.
+
+---
+
 ## 2026-08-12 — Thành Phố (Phase 3K): chạm vào công trình để biết nó là ai
 
 - **Mục đích**: Đàm yêu cầu *"game hoá lên… đột phá hơn"*. Trước Phase này thành phố 3D là một bức

@@ -172,6 +172,19 @@ export default function CityStage({
         !fill && <CityCanvas2D layout={layout} dimmed={dimmed} />
       )}
 
+      {/*
+        ⚠️ MỘT TÍNH NĂNG KHÔNG AI BIẾT LÀ MỘT TÍNH NĂNG KHÔNG TỒN TẠI. Chạm-vào-công-trình được
+        dựng xong ở Phase 3K nhưng KHÔNG có gì trên màn hình nói rằng nó tồn tại: cảnh 3D trông y
+        hệt một bức tranh, và không ai đi chạm thử vào một bức tranh. Trên máy tính còn có con trỏ
+        đổi hình khi rê qua nhà; trên iPhone — tức là máy Đàm dùng hằng ngày — thì KHÔNG có gì cả.
+        Một dòng chữ nhỏ rẻ hơn nhiều so với việc để cả tính năng nằm im.
+      */}
+      {chrome && mode === '3d' && interactive && (
+        <p className="text-[11px]" style={{ color: 'var(--muted-2)' }}>
+          Kéo để xoay · chạm vào công trình để xem chi tiết
+        </p>
+      )}
+
       {/* Khi 3D bỏ cuộc GIỮA CHỪNG, phải nói cho Đàm biết — nếu không anh chỉ thấy hình đột nhiên
           đổi kiểu mà không hiểu vì sao, rồi tưởng app hỏng. */}
       {chrome && failure && (

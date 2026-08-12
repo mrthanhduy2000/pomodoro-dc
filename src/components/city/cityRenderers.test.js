@@ -222,6 +222,11 @@ test('LỚP NỀN TRANG CHỦ không được nuốt thao tác của Đàm', () 
     'lớp nền trang chủ phải truyền interactive={false}');
   assert.match(backdrop.source, /pointer-events-none/,
     'lớp nền trang chủ phải có pointer-events-none');
+  // `chrome={false}` là công tắc gom MỌI thứ chữ nghĩa của `CityStage`: câu báo đã-lùi-về-2D, bảng
+  // HUD, và dòng nhắc "kéo để xoay". Mất nó thì một dòng hướng dẫn kỹ thuật nổi lên ngay sau lưng
+  // đồng hồ đếm ngược — vừa vô nghĩa với Đàm vừa phá đúng sự yên tĩnh mà màn hình đó tồn tại để giữ.
+  assert.match(backdrop.source, /chrome=\{false\}/,
+    'lớp nền trang chủ phải truyền chrome={false}');
 });
 
 test('LỚP NỀN TRANG CHỦ đứng yên khi đang chạy phiên — luật pin, không phải sở thích', () => {

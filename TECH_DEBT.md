@@ -13,9 +13,13 @@
 > mà không được refactor triệt để, phải CHỦ ĐỘNG đề xuất mở một "Maintenance Sprint" (nêu rõ mục
 > tiêu/phạm vi/lợi ích/rủi ro/tiêu chí hoàn thành) thay vì tiếp tục cộng thêm tính năng mới.
 >
-> **Trạng thái ngưỡng hiện tại (2026-07-17)**: 0 mục Priority High/Critical (mục #8 và #9 có
-> Severity cao nhưng Priority Medium) → CHƯA đạt ngưỡng đề xuất Maintenance Sprint. Mục có
-> Priority cao nhất hiện tại là Medium-High (mục #3).
+> **Trạng thái ngưỡng hiện tại (2026-08-12)**: 0 mục Priority High/Critical → CHƯA đạt ngưỡng đề
+> xuất Maintenance Sprint. Mục có Priority cao nhất hiện tại là Medium-High (mục #3).
+> ⚠️ Nhưng có một tín hiệu thuộc vế THỨ HAI của ngưỡng (một module bị vá nhiều lần mà chưa refactor
+> triệt để): **`palette3d.js` đã qua 4 đợt vá mỹ thuật** (3C ánh sáng · 3G bảng quét · 3M sắc độ
+> đêm · 3N màu mái) và `daylight.js` qua 3 đợt (3D · 3G · 3M). Cả bốn đợt đều tìm ra lỗi THẬT bằng
+> phép đo, nên chưa phải "vá đi vá lại một chỗ" — nhưng nếu có đợt thứ 5 cùng loại thì nên dừng lại
+> xem xét tổng thể tầng màu thay vì vá tiếp.
 
 ---
 
@@ -256,6 +260,47 @@
 - **Review Trigger**: khi làm backup/recovery, hoặc khi thấy lỗi lưu state trong log production.
 - **Owner**: (chưa gán)
 - **Status**: Open — phát hiện trong lúc phân tích bản vá C1 (2026-07-17), chưa xử lý.
+
+---
+
+## #12 — Lễ mừng bị TÍNH VÀO giờ nghỉ: nghỉ tự động chạy trước khi lễ mừng xong
+
+- **Module**: `src/hooks/useTimer.js` (2 chỗ: dòng ~610 và ~1089) ↔ `src/components/city/CityGrowthMoment.jsx` (`MOMENT_MS`) ↔ `src/App.jsx` (`RewardSequence`)
+- **Priority**: Medium
+- **Severity**: Low-Medium
+- **Impact**: Với cấu hình MẶC ĐỊNH (`autoStartBreak: true`, `settingsStore.js:92`), phiên nghỉ bắt
+  đầu đếm sau **500 ms**, trong khi lễ mừng "thành phố lớn lên" chạy **3 200 ms** và hộp thoại phần
+  thưởng chỉ hiện ra SAU đó. Nghĩa là đồng hồ nghỉ đã chạy **2 700 ms trước khi lễ mừng kết thúc**,
+  rồi tiếp tục chạy suốt lúc Đàm đọc hộp phần thưởng. Tổng thiệt hại thực tế ~8–18 giây trên một
+  phiên nghỉ 5 phút (~3–6%).
+  Vấn đề KHÔNG nằm ở con số đó mà ở ý nghĩa: **phần thưởng của việc đã làm xong đang bị trừ vào
+  thời gian nghỉ.** Lễ mừng lẽ ra là tiền công, không phải khoản Đàm tự trả.
+- **Root Cause**: Phase 4′ cắm lễ mừng vào TẦNG HIỂN THỊ (`App.jsx`) — đúng theo thiết kế, để không
+  phải sửa store và không phá 3 bài test đang khẳng định `lootModalOpen` bật đồng bộ. Nhưng
+  `useTimer` thì không hề biết tầng hiển thị đang chạy một lễ mừng, nên nó vẫn hẹn giờ 500 ms như
+  thời chưa có lễ mừng. Độ trễ 500 ms đó có từ TRƯỚC Phase 4′ và chưa ai chỉnh lại cho khớp.
+- **Current Risk**: thấp — không mất dữ liệu, không sai số liệu thống kê (phiên nghỉ vẫn được ghi
+  đúng độ dài của nó), chỉ là Đàm được nghỉ ít hơn vài giây so với ý định.
+- **Future Risk**: trung bình — nếu lễ mừng dài thêm (hoặc thêm màn khác chen vào giữa: mở khoá kỷ
+  mới, thành tích…), phần bị trừ sẽ lớn dần mà không có gì cảnh báo. Không có bài test nào canh
+  quan hệ giữa `MOMENT_MS` và độ trễ 500 ms, nên nó sẽ trôi âm thầm.
+- **Recommended Solution**: KHÔNG nên nối thẳng `useTimer` vào tầng thành phố (sẽ tạo coupling đúng
+  thứ mà kiến trúc Phase 4′ cố tránh). Hai hướng sạch hơn:
+  (a) đưa độ trễ ra thành hằng số dùng chung, đặt `≥ MOMENT_MS`, kèm bài test khoá
+  `delay >= MOMENT_MS` — rẻ nhất, nhưng làm chậm cả trường hợp KHÔNG có lễ mừng (lễ mừng chỉ chạy
+  khi thật sự có công trình tiến triển);
+  (b) để tầng hiển thị phát một tín hiệu "lễ mừng xong" mà `useTimer` chờ, có timeout dự phòng —
+  đúng hơn về ngữ nghĩa, nhưng đắt hơn và đụng vào hot spot.
+  Cần Đàm quyết vì đây là thay đổi HÀNH VI đồng hồ trên app production, không phải sửa lỗi hiển thị.
+- **Estimated Complexity**: (a) thấp · (b) trung bình
+- **Blocking Conditions**: `useTimer.js` là hot spot (`CLAUDE.md`); 41 bài characterization test cho
+  `useTimer` hiện CHƯA nối vào `npm test` (xem "Đang dở" ở `BAN_GIAO.md`) — nên sửa hành vi đồng hồ
+  lúc này là sửa mà không có lưới. Nối bộ test đó vào trước thì an toàn hơn nhiều.
+- **Review Trigger**: khi Đàm phản hồi về nhịp một phiên thật; hoặc khi lễ mừng/`MOMENT_MS` đổi;
+  hoặc khi thêm bất kỳ màn nào chen giữa "phiên xong" và "bắt đầu nghỉ".
+- **Owner**: (chưa gán)
+- **Status**: Open — phát hiện 2026-08-12 khi rà lại mục "nhịp phiên" của `/goal`. Chưa xử lý vì là
+  thay đổi hành vi đồng hồ production + đang thiếu lưới test (xem Blocking Conditions).
 
 ---
 

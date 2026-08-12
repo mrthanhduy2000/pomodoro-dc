@@ -99,6 +99,17 @@
 ## 🗒️ Nhật ký cập nhật
 > Mỗi lần xong việc đáng kể, thêm 1 dòng vào ĐẦU danh sách.
 
+- **2026-08-12 (rà nhịp phiên)** — **PHÁT HIỆN: LỄ MỪNG ĐANG BỊ TÍNH VÀO GIỜ NGHỈ.** Rà mục "nhịp
+  một phiên thật" của `/goal` và tìm ra một lỗi ĐO ĐƯỢC, không cần thiết bị: với cấu hình MẶC ĐỊNH
+  (`autoStartBreak: true`), phiên nghỉ bắt đầu đếm sau **500 ms**, trong khi lễ mừng chạy
+  **3 200 ms** và hộp phần thưởng chỉ hiện SAU đó ⇒ đồng hồ nghỉ chạy **2 700 ms trước khi lễ mừng
+  kết thúc**, rồi chạy tiếp suốt lúc Đàm đọc hộp phần thưởng (~8–18 giây trên 5 phút, ~3–6%).
+  Ý nghĩa mới là chỗ đáng nói: **phần thưởng đang bị trừ vào thời gian nghỉ.**
+  ⚠️ **CHƯA SỬA — CÓ CHỦ Ý.** Đây là thay đổi HÀNH VI ĐỒNG HỒ trên app production, mà `useTimer.js`
+  là hot spot và 41 bài characterization test của nó hiện CHƯA nối vào `npm test` (xem "Đang dở"
+  ngay đầu file này) ⇒ sửa lúc này là sửa mà không có lưới. Đã ghi đầy đủ 14 trường vào
+  **`TECH_DEBT.md` mục #12** kèm 2 phương án và lý do cần Đàm quyết. Không "tiện tay" sửa hot spot.
+
 - **2026-08-12 (Phase 3O)** — **KHOÁ LỜI HỨA GAME HOÁ CỐT LÕI BẰNG SỐ, KHÔNG BẰNG GHI CHÚ.**
   Lượt XÁC MINH (không thêm tính năng): đóng hai lỗ hổng nghiệm thu tự tạo ra ở 3M/3N.
   - **Theme tối, 15 kỷ**: đo lại sau 3N — cặp mái gần nhau nhất **8,4** lúc trưa và **7,1** lúc đêm,

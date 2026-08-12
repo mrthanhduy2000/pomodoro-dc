@@ -10,15 +10,14 @@
  * là lúc dễ vi phạm nhất — một lần lỡ `import` tĩnh ở file ngoài sẽ kéo ~130 KB vào chunk chính và
  * làm hỏng cả cơ chế nạp lười lẫn đường lui 2D. Đặt lưới TRƯỚC khi bước lên dây, không phải sau.
  *
- * Đặt ở `src/components/` (không phải `src/components/city/`) vì glob test trong `package.json`
- * chỉ quét MỘT cấp — và vì đây là luật của cả cây `city/`, không của riêng file nào trong đó.
+ * Bài test QUÉT CẢ CÂY `src/`, không chỉ thư mục này — vi phạm có thể nằm ở bất cứ đâu.
  */
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readdir, readFile } from 'node:fs/promises';
 
-const SRC = new URL('../', import.meta.url);
+const SRC = new URL('../../', import.meta.url);
 
 /** Mọi file mã nguồn trong `src/`, trả về `{ path: 'components/city/...', source }`. */
 async function readSourceFiles() {

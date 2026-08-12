@@ -259,7 +259,7 @@
 
 ---
 
-## #10 — Glob test chỉ quét MỘT cấp: test đặt trong thư mục con sẽ im lặng không bao giờ chạy
+## #10 — ✅ [ĐÃ XỬ LÝ] Glob test chỉ quét MỘT cấp: test đặt trong thư mục con sẽ im lặng không bao giờ chạy
 
 - **Module**: `package.json` (script `test`)
 - **Priority**: Low-Medium
@@ -286,10 +286,17 @@
   (b) Thêm một bài test tự canh: quét mọi `*.test.js` trong `src/` + `api/` rồi khẳng định mỗi file
   đều khớp ít nhất một mẫu trong glob của `package.json` — sai là đỏ ngay, không cần đổi bộ chạy.
 - **Estimated Complexity**: Thấp.
-- **Blocking Conditions**: không có — nằm ngoài phạm vi Phase 3-2D (phase đó thuần hiển thị) nên
-  không "tiện tay sửa luôn".
-- **Review Trigger**: lần tới có ai muốn đặt một file test vào thư mục con của `src/components/`
-  hoặc `src/engine/` (vd khi Phase 3A thêm `city/render3d/`).
+- **Blocking Conditions**: không có.
+- **Review Trigger**: (đã kích hoạt ngay trong ngày — xem Status).
 - **Owner**: (chưa gán)
-- **Status**: Open — phát hiện khi thêm test ranh giới kiến trúc cho màn hình Thành Phố
-  (2026-08-12), chưa xử lý.
+- **Status**: ✅ **RESOLVED 2026-08-12**, cùng ngày phát hiện. "Review Trigger" ghi ở trên nổ ngay
+  ở Phase 3A: cần đặt test cạnh `src/engine/city3d/` và `city/render3d/`, tức phải né glob một lần
+  nữa hoặc sửa dứt điểm. Đã chọn sửa dứt điểm bằng **hướng (a)**, sau khi chứng minh nó an toàn:
+  glob nay là `'electron/**/*.test.js' 'src/**/*.test.js' 'api/**/*.test.js'` — **đặt trong dấu
+  nháy đơn để `sh` KHÔNG đụng vào**, để chính `node --test` mở rộng (node hiểu `**` đệ quy thật,
+  POSIX `sh` thì không). Trước khi đổi đã đối chiếu **tập hợp file** của glob cũ và glob mới bằng
+  `fs.globSync`: **31 file, giống hệt nhau, 0 mất 0 thêm**, và `npm test` giữ nguyên 315 bài — nên
+  đây là thay thế tương đương chứng minh được, không phải đổi liều. Từ nay đặt test cạnh file
+  nguồn ở BẤT KỲ độ sâu nào cũng chạy, đúng quy ước chính thức ở `PROJECT_STRUCTURE.md`.
+  ⚠️ Ràng buộc còn lại: cú pháp nháy đơn này cần shell kiểu POSIX (Mac/Linux — đúng môi trường dự
+  án); chạy `npm test` từ `cmd.exe` của Windows sẽ không mở rộng đúng.

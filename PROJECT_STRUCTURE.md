@@ -126,7 +126,10 @@
   (`city/render2d/`, `city/render3d/`), và thứ chỉ đúng với một cách thì nằm TRONG thư mục đó
   (`tokens2d.js` là bảng màu `rgba()` + phép chiếu isometric — WebGL không dùng lại được). Thư mục
   cha chỉ giữ phần dùng chung. Lý do đầy đủ: ADR-008.
-- **Test** luôn đặt CẠNH file nguồn, cùng tên + `.test.js` (vd `guard.js` → `guard.test.js`).
+- **Test** luôn đặt CẠNH file nguồn, cùng tên + `.test.js` (vd `guard.js` → `guard.test.js`), ở
+  **bất kỳ độ sâu nào** — glob trong `package.json` quét đệ quy nên thêm thư mục mới KHÔNG cần sửa
+  `package.json`. (Trước 2026-08-12 glob chỉ quét một cấp và test trong thư mục con sẽ im lặng
+  không bao giờ chạy — xem `TECH_DEBT.md` #10.)
   Riêng test của `api/` bắt buộc đặt trong `api/_tests/` (mirror cấu trúc `api/`) — xem lý do ở
   `CLAUDE.md` mục "Vercel Hobby: giới hạn 12 Serverless Functions".
 - **Route API mới** → thêm file trực tiếp trong `api/` hoặc `api/push/`, rồi đếm lại tổng số

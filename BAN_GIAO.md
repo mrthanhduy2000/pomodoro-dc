@@ -85,6 +85,22 @@
 ## 🗒️ Nhật ký cập nhật
 > Mỗi lần xong việc đáng kể, thêm 1 dòng vào ĐẦU danh sách.
 
+- **2026-08-12 (công cụ)** — **Sửa glob test: từ nay test đặt ở thư mục con cũng chạy.**
+  Trước đây `npm test` liệt kê tay từng thư mục và mỗi mục chỉ quét **một cấp**
+  (`src/components/*.test.js`). File test đặt trong thư mục con (`src/components/city/…`,
+  `src/engine/city3d/…`) sẽ **không bao giờ chạy mà cũng không báo lỗi gì** — nguy hiểm hơn test
+  đỏ, vì nó tạo cảm giác an toàn giả. Ghi vào `TECH_DEBT #10` lúc phát hiện, rồi **xử lý dứt điểm
+  ngay cùng ngày** khi Phase 3A cần đặt test cạnh `city/render3d/` và đụng đúng cái bẫy đó.
+  - Glob nay là `'electron/**/*.test.js' 'src/**/*.test.js' 'api/**/*.test.js'`, **để trong nháy
+    đơn** cho chính `node --test` mở rộng. ⚠️ Bỏ nháy là hỏng: POSIX `sh` không có globstar nên
+    `**` co lại thành `*`, và `src/**/*.test.js` sẽ **mất** các test ở cấp trên.
+  - Đổi có chứng minh, không đổi liều: đối chiếu **tập hợp file** cũ ↔ mới bằng `fs.globSync` →
+    **31 file, giống hệt, 0 mất 0 thêm**; `npm test` giữ nguyên 315 bài.
+  - Nhờ vậy đã chuyển `cityRenderers.test.js` về đúng chỗ (`src/components/city/`), cạnh thứ nó
+    canh gác — đúng quy ước "test nằm cạnh file nguồn" của `PROJECT_STRUCTURE.md`.
+  - Từ nay **thêm thư mục mới KHÔNG cần sửa `package.json`** nữa. Tài liệu: `CLAUDE.md` ·
+    `PROJECT_STRUCTURE.md` · `TECH_DEBT.md` #10 (Resolved).
+
 - **2026-08-12 (Phase 3-2D)** — **THÀNH PHỐ: tab hiện ra, Đàm nhìn thấy thành phố lần đầu.**
   Thuần hiển thị: **0 dòng đụng `store/`, `engine/`, `hooks/`, `lib/`**, không thêm thư viện nào.
   - Tab mới "Thành Phố" nạp lười (chunk riêng ~14 KB, không nặng lần mở app đầu). Sửa `App.jsx`

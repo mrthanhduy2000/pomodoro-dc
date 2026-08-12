@@ -93,6 +93,32 @@
 ## 🗒️ Nhật ký cập nhật
 > Mỗi lần xong việc đáng kể, thêm 1 dòng vào ĐẦU danh sách.
 
+- **2026-08-12 (Phase 3J)** — **THANH CHUYỂN KỶ TỰ KÉO KỶ ĐANG XEM VÀO TẦM MẮT.**
+  Một lỗi *chỉ lộ ra khi chơi lâu*, nên gần như không thể bắt bằng mắt lúc đang làm: các kỷ đã đi
+  qua xếp TRƯỚC kỷ hiện tại trong thanh cuộn ngang, nên càng nhiều kỷ thì cái nút DUY NHẤT Đàm
+  quan tâm càng bị đẩy ra ngoài màn hình. **Đo trên bản build thật ở kỷ 7**: nội dung 999px trong
+  khung 952px ⇒ nút "Kỷ 7 · đang xây" cụt mất 47px ở MỌI lần mở tab; tới kỷ 15 thì khuất hẳn, mở
+  tab lên chỉ thấy một dãy "thất truyền" xám.
+  - **Hai cái bẫy đã dẫm phải trong lúc sửa, cả hai đều "chạy thử thấy đúng":**
+    (a) `scrollIntoView` kéo luôn cả khung cha ⇒ mở tab thì trang tự nhảy xuống giữa chừng — phải
+    tự tính `scrollLeft` của riêng thanh này. (b) `offsetLeft` tính từ `offsetParent`, mà thanh này
+    `position: static` nên offsetParent là một khung ở tận ngoài: số đo ra **1151 trong khi toàn bộ
+    nội dung thanh chỉ rộng 999**. Ở kỷ hiện tại (nút cuối) sai số đó bị kẹp về đúng mép phải nên
+    trông vẫn đúng — **thử ở kỷ hiện tại sẽ KHÔNG thấy sai**, chỉ các kỷ giữa mới cuộn quá tay.
+    Phải đo bằng `getBoundingClientRect`.
+  - ⚠️ **Bài học lớn nhất: căn một lần là không đủ.** Bản vá đầu tiên đã đúng công thức mà vẫn
+    KHÔNG chạy — vì lần chạy đầu rơi vào lúc font riêng của skin chưa nạp xong, các nút còn hẹp,
+    thanh chưa tràn khỏi khung nên `max = 0` và hàm thoát ra. Font nạp xong thì chữ nở ra, thanh
+    mới tràn — lúc đó không còn ai gọi lại. Phải gắn `ResizeObserver`. **Chỉ phát hiện được nhờ đo
+    thẳng trên trang thật** (`scrollLeft` vẫn bằng 0 sau khi đã build và deploy code đúng) — nhìn
+    code thì bản vá đầu tiên hoàn toàn hợp lý.
+  - Test khoá cả 5 điều trên (`cityRenderers.test.js`), **đã kiểm chứng nó ĐỎ thật** khi đổi ngược
+    về `offsetLeft`. Thêm helper `codeOnly()` bỏ chú thích trước khi so — dự án này viết chú thích
+    dài và hay giải thích ngay tại chỗ *vì sao KHÔNG dùng* thứ bị cấm, nên so trên nguyên văn file
+    thì chính lời giải thích làm test đỏ (đã dính đúng một lần), và người sửa sẽ bị dụ đi xoá chú
+    thích thay vì xoá lỗi.
+  - Test **434 xanh**, lint sạch, build xanh.
+
 - **2026-08-12 (Phase 3I)** — **BẢNG "ĐANG XÂY": CÒN BAO XA, VÀ ĐI TỚI ĐÓ ĐỂ LÀM GÌ.**
   Phase 3H dựng được giàn giáo trong cảnh, nhưng nhìn giàn giáo thì Đàm chỉ biết "chỗ này sắp có
   nhà" — đẹp, mà không hành động được. Nay dưới cảnh có một bảng liệt kê công trình đang xây, mỗi

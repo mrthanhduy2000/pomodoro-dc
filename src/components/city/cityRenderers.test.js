@@ -41,6 +41,22 @@ function under(prefix) {
   return SOURCES.filter((file) => file.path.startsWith(prefix));
 }
 
+/**
+ * Bỏ chú thích, chỉ giữ MÃ CHẠY THẬT.
+ *
+ * ⚠️ Bắt buộc cho mọi bài kiểu "cấm dùng thứ X". Dự án này viết chú thích rất dài và thường giải
+ * thích ngay tại chỗ *vì sao KHÔNG dùng* thứ bị cấm — nên nếu so thẳng trên nguyên văn file thì
+ * chính lời giải thích sẽ làm bài test đỏ, và người sửa sẽ bị dụ đi xoá chú thích thay vì xoá lỗi.
+ * (Đã dính đúng một lần với `scrollIntoView` ở `EraSwitcher.jsx`.)
+ */
+function codeOnly(source) {
+  return source
+    .replace(/\/\*[\s\S]*?\*\//g, ' ')
+    .split('\n')
+    .filter((line) => !/^\s*(\/\/|\*)/.test(line))
+    .join('\n');
+}
+
 test('lưới an toàn của chính bài test: quét được cây src/ và thấy các file Thành Phố', () => {
   // Nếu cách quét hỏng (đổi cấu trúc, đổi tên thư mục), mọi bài dưới sẽ PASS RỖNG một cách âm thầm.
   assert.ok(SOURCES.length > 50, `quét được quá ít file (${SOURCES.length}) — cách quét có thể đã hỏng`);
@@ -133,6 +149,38 @@ test('mặt trời KHÔNG được đứng sau lưng camera — đây là bẫy 
 
   // Và phải ở TRÊN đường chân trời — nắng từ dưới đất hắt lên thì không còn là mặt trời nữa.
   assert.ok(sy / slen > 0.2, `mặt trời quá thấp hoặc nằm dưới mặt đất (y = ${(sy / slen).toFixed(2)})`);
+});
+
+test('THANH CHUYỂN KỶ phải tự kéo kỷ đang xem vào tầm mắt — và đo cho đúng', () => {
+  // ⚠️ Bài này khoá lại một lỗi CHỈ LỘ RA KHI CHƠI LÂU, nên gần như không thể bắt bằng mắt lúc
+  // phát triển: các kỷ đã đi qua xếp TRƯỚC kỷ hiện tại trong thanh cuộn ngang, nên càng nhiều kỷ
+  // thì nút DUY NHẤT Đàm quan tâm càng bị đẩy ra ngoài. Đo trên bản build ở kỷ 7: nội dung 999px
+  // trong khung 952px ⇒ nút "Kỷ 7 · đang xây" cụt mất 47px ở MỌI lần mở tab. Tới kỷ 15 thì khuất
+  // hẳn, mở tab lên chỉ thấy một dãy "thất truyền" xám.
+  const found = SOURCES.find((f) => f.path === 'components/city/EraSwitcher.jsx');
+  assert.ok(found, 'không thấy EraSwitcher.jsx');
+  const rail = { source: codeOnly(found.source) };
+
+  assert.match(rail.source, /scrollTo\(/, 'thanh chuyển kỷ không tự cuộn tới kỷ đang xem');
+
+  // ⚠️ KHÔNG được dùng `scrollIntoView`: thanh này nằm trong một khung cuộn khác, và
+  // `scrollIntoView` kéo luôn cả khung cha ⇒ mở tab Thành Phố thì trang tự nhảy xuống giữa chừng.
+  assert.doesNotMatch(rail.source, /scrollIntoView/,
+    'scrollIntoView kéo cả khung cha — phải tự tính scrollLeft của riêng thanh này');
+
+  // ⚠️ KHÔNG được đo bằng `offsetLeft`: thanh này `position: static` nên `offsetParent` là một
+  // khung cha ở tận ngoài, và số đo CỘNG THÊM khoảng cách từ mép trang (đo thật: 1151 trong khi
+  // toàn bộ nội dung thanh chỉ rộng 999). Ở kỷ cuối sai số đó bị kẹp về mép phải nên trông vẫn
+  // đúng — nên nếu ai đó "đơn giản hoá" lại thành offsetLeft, thử ở kỷ hiện tại sẽ KHÔNG thấy sai.
+  assert.doesNotMatch(rail.source, /\.offsetLeft/,
+    'offsetLeft tính từ offsetParent chứ không từ thanh cuộn ⇒ cuộn quá tay ở các kỷ giữa');
+  assert.match(rail.source, /getBoundingClientRect/, 'phải đo bằng getBoundingClientRect');
+
+  // Và phải căn LẠI khi kích thước đổi: lần chạy đầu rơi vào lúc font riêng của skin chưa nạp
+  // xong, các nút còn hẹp, thanh chưa tràn ⇒ không có gì để cuộn. Font nạp xong thì chữ nở ra,
+  // thanh mới tràn — nếu không ai gọi lại thì lỗi quay về nguyên vẹn.
+  assert.match(rail.source, /ResizeObserver/,
+    'căn một lần rồi thôi ⇒ font nạp xong là hỏng lại (đã trả giá đúng một lần)');
 });
 
 test('LỚP NỀN TRANG CHỦ không được nuốt thao tác của Đàm', () => {

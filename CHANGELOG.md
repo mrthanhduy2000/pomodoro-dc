@@ -12,6 +12,18 @@
 
 ---
 
+## 2026-08-12 — Thành Phố (Phase 3J): thanh chuyển kỷ tự kéo kỷ đang xem vào tầm mắt
+
+- **Mục đích**: sửa một lỗi chỉ lộ ra khi chơi lâu — các kỷ đã đi qua xếp trước kỷ hiện tại trong
+  thanh cuộn ngang, nên nút Đàm quan tâm bị đẩy dần ra ngoài màn hình (đo thật ở kỷ 7: cụt 47px).
+- **Phạm vi**: `EraSwitcher` tự tính `scrollLeft` để căn nút đang xem vào giữa, căn lại qua
+  `ResizeObserver` khi font nạp xong; thêm test khoá ở `cityRenderers.test.js` + helper `codeOnly()`
+  bỏ chú thích trước khi so mã nguồn.
+- **Ảnh hưởng**: chỉ màn hình Thành Phố. Không đụng state, dữ liệu, hay bộ vẽ.
+- **Tương thích**: giữ nguyên hoàn toàn.
+
+---
+
 ## 2026-08-12 — Thành Phố (Phase 3I): bảng "Đang xây" — còn bao xa và đi tới đó để làm gì
 
 - **Mục đích**: Phase 3H dựng được giàn giáo trong cảnh, nhưng nhìn giàn giáo thì chỉ biết "chỗ này

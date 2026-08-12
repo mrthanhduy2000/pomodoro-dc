@@ -123,11 +123,24 @@
   - **Hệ quả cần nhớ cho MỌI phiên sau**: mọi đầu tư thêm vào lễ mừng/hiệu ứng thành phố hiện chỉ
     chạm tới **5% số phiên** trước khi tới được Đàm. Chưa xử lý #14 thì các phase kiểu 3R/3S sau này
     đều lãi thấp một cách có hệ thống.
-  - **4 hướng đã cân nhắc** (chi tiết + đánh đổi ở #14): (a) tăng số ô hàng đợi — **LOẠI**, làm mọi
-    thứ xây xong nhanh hơn nên im lặng tới SỚM hơn; (b) bỏ lọc theo kỷ hiện tại; (c) **nâng cấp
-    công trình đã xây Lv.1→2→3 — ứng viên mạnh nhất**, hạ tầng đã có sẵn trong `buildingSpec`
-    (`hRange`) và `CLAUDE.md` §4.3 đã mô tả; (d) nói thật khi xưởng trống — rẻ nhưng rủi ro nhắc
-    nhở phiền, chỉ nên đi kèm (b) hoặc (c).
+  - **Các hướng đã cân nhắc** (chi tiết + đánh đổi ở #14): (a) tăng số ô hàng đợi — **LOẠI**, làm
+    mọi thứ xây xong nhanh hơn nên im lặng tới SỚM hơn; (b) bỏ lọc theo kỷ hiện tại; (d) nói thật
+    khi xưởng trống; (e) tăng `sessionsToComplete`.
+  - ⚠️ **TỰ ĐÍNH CHÍNH NGAY TRONG PHASE — đây là lỗi tôi suýt để lại trong sổ.** Bản đầu của #14
+    khuyến nghị **(c) nâng cấp công trình Lv.1→2→3** là "ứng viên mạnh nhất". **SAI.** Kiểm bằng
+    mã: `upgradeBuilding` (`gameStore.js:5717`) là hành động **TỨC THÌ**, trả bằng tài nguyên tinh
+    luyện, **KHÔNG tốn phiên nào** ⇒ nó là bể chứa TÀI NGUYÊN chứ không phải bể chứa PHIÊN, không
+    thêm một bước xây nào. Cơ chế nâng cấp **đã tồn tại đầy đủ và đang chạy** (`buildingLevels` ·
+    UI ở `BuildingWorkshop.jsx`/`BlueprintInventory.jsx` · `levelBoost` ở `buildingSpec.js:48`) —
+    chỉ là nó không liên quan tới vấn đề này. *Chính đầu file `TECH_DEBT.md` cảnh báo "sổ khẳng
+    định đã có sẵn X thì phải kiểm bằng lệnh trước khi tin" — tôi vừa vi phạm đúng cảnh báo đó khi
+    viết #14 dựa vào trí nhớ về `CLAUDE.md` §4.3 thay vì đọc mã.*
+  - ⚠️ **SỐ HỌC PHŨ PHÀNG (quan trọng hơn mọi phương án trên)**: 4 428 phiên vs 420 bước xây. Muốn
+    chỉ MỘT NỬA số phiên có lễ mừng thì cần ~2 200 bước xây — **gấp hơn 5 lần**. Không tinh chỉnh
+    nhỏ nào làm nổi. ⇒ Câu hỏi đúng KHÔNG phải "vá thế nào" mà là: **thành phố có nên là phần
+    thưởng của TỪNG PHIÊN không, hay nó vốn là phần thưởng của CẢ THÁNG** — còn từng phiên đã có
+    hộp vật phẩm + XP + chuỗi ngày lo? Nếu là vế sau thì #14 không phải lỗi mà là kỳ vọng đặt sai
+    chỗ, và việc cần làm là **thôi đổ thêm công vào lễ mừng**, chứ không phải chỉnh kinh tế.
 
 - **2026-08-12 (Phase 3S)** — **NHÌN BẰNG MẮT VÀO CHÍNH THẺ VỪA SỬA — hai lỗi không phép đo nào bắt
   được.** Dựng lại thẻ lễ mừng bằng **CSS đã build thật** trong Chromium headless (đủ 8 tổ hợp

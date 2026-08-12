@@ -12,6 +12,23 @@
 
 ---
 
+## 2026-08-12 — Thành Phố (Phase 3K): chạm vào công trình để biết nó là ai
+
+- **Mục đích**: Đàm yêu cầu *"game hoá lên… đột phá hơn"*. Trước Phase này thành phố 3D là một bức
+  tranh — kéo xoay được, nhưng không chạm được vào bất cứ thứ gì. Nay chạm vào một căn nhà thì nó
+  tự nói tên, loại, độ hiếm, cấp và đặc quyền đang mang lại; chạm vào giàn giáo thì nói còn mấy
+  phiên nữa và sẽ mở khoá gì.
+- **Phạm vi**: `engine/city3d/pick.js` (MỚI, thuần: hộp bao + tia cắt hộp) + test;
+  `sceneGraph` xuất thêm `pickTargets` (dữ liệu thuần, 0 lệnh vẽ); `CityScene3D` thêm `onPick`;
+  `CityStage` hiện thẻ nổi; `BuildingCard.jsx` (MỚI); `computeCityLayout` thêm `perk` cho công
+  trình đã xây; dòng danh sách tương ứng được tô sáng theo lựa chọn.
+- **Ảnh hưởng**: **không phá vỡ tối ưu một-lệnh-vẽ** — cả thành phố vẫn gộp thành một khối hình
+  học, việc dò va chạm làm bằng toán chứ không bằng `Raycaster`. Lớp nền trang chủ KHÔNG chạm được
+  (hai lớp chặn + test). Bộ vẽ 2D không có tính năng này, đúng vai trò "đường lui".
+- **Tương thích**: giữ nguyên hoàn toàn. `perk`/`pickTargets` là dữ liệu thêm; không đụng state.
+
+---
+
 ## 2026-08-12 — Thành Phố (Phase 3J): thanh chuyển kỷ tự kéo kỷ đang xem vào tầm mắt
 
 - **Mục đích**: sửa một lỗi chỉ lộ ra khi chơi lâu — các kỷ đã đi qua xếp trước kỷ hiện tại trong

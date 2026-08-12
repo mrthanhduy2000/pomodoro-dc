@@ -17,6 +17,7 @@
  */
 
 import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react';
+import { AnimatePresence } from 'framer-motion';
 
 import useSettingsStore from '../../store/settingsStore';
 import {
@@ -26,6 +27,7 @@ import {
 } from '../../engine/city3d/renderMode';
 import CityCanvas2D from './render2d/CityCanvas2D';
 import CityPerfHud from './CityPerfHud';
+import BuildingCard from './BuildingCard';
 
 const CityScene3D = lazy(() => import('./render3d/CityScene3D'));
 
@@ -71,6 +73,11 @@ export default function CityStage({
   still = false,
   fill = false,
   interactive = true,
+  // ── CHẠM VÀO CÔNG TRÌNH (Phase 3K) ──────────────────────────────────────────
+  /** `{ kind, bpId }` do bộ vẽ 3D báo về → gọi lên trên để lưu lựa chọn. */
+  onPick,
+  /** Phần tử của `layout.buildings` / `layout.scaffolds` đang được chọn, đã kèm `kind`. */
+  selection = null,
 }) {
   const preference = useSettingsStore((s) => s.cityRenderMode);
   const showHud = useSettingsStore((s) => s.cityPerfHud);
@@ -123,20 +130,40 @@ export default function CityStage({
   return (
     <div className={fill ? 'h-full' : 'flex flex-col gap-2'}>
       {mode === '3d' ? (
-        <Suspense fallback={fill ? null : <StagePlaceholder />}>
-          <CityScene3D
-            layout={layout}
-            dimmed={dimmed}
-            reduceMotion={reduceMotion}
-            sessionCount={sessionCount}
-            streakLength={streakLength}
-            onStats={setStats}
-            onFallback={handleFallback}
-            still={still}
-            fill={fill}
-            interactive={interactive}
-          />
-        </Suspense>
+        // `relative` để thẻ thông tin nổi ĐÈ LÊN cảnh. Đặt thẻ ở dưới cảnh thì trên iPhone nó rơi
+        // xuống dưới mép màn hình: chạm vào nhà xong chẳng thấy gì xảy ra, phải cuộn mới biết.
+        <div className={`relative ${fill ? 'h-full' : ''}`}>
+          <Suspense fallback={fill ? null : <StagePlaceholder />}>
+            <CityScene3D
+              layout={layout}
+              dimmed={dimmed}
+              reduceMotion={reduceMotion}
+              sessionCount={sessionCount}
+              streakLength={streakLength}
+              onStats={setStats}
+              onFallback={handleFallback}
+              still={still}
+              fill={fill}
+              interactive={interactive}
+              onPick={interactive ? onPick : undefined}
+            />
+          </Suspense>
+
+          {/* ⚠️ `pointer-events-none` trên lớp bọc, `pointer-events-auto` trên chính thẻ: thiếu
+              luật này thì cả vùng trống quanh thẻ nuốt mất thao tác kéo xoay của Đàm. */}
+          <div className="pointer-events-none absolute inset-x-2 bottom-2 flex justify-start">
+            <AnimatePresence>
+              {selection && (
+                <BuildingCard
+                  item={selection}
+                  era={layout.era}
+                  reduceMotion={reduceMotion}
+                  onClose={() => onPick?.(null)}
+                />
+              )}
+            </AnimatePresence>
+          </div>
+        </div>
       ) : (
         // ⚠️ Ở chế độ lớp nền, máy không chạy được 3D thì KHÔNG vẽ gì cả. Bản 2D isometric là một
         // hình minh hoạ sắc nét, có viền — đặt sau lưng đồng hồ đếm ngược nó đọc ra "cái ảnh dán

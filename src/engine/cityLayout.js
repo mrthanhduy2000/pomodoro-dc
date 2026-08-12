@@ -328,6 +328,15 @@ export function computeCityLayout({ built, levels, era, stats, pending } = {}) {
       icon:   meta.icon,
       rarity: meta.rarity,
       type:   meta.type,
+      // ĐẶC QUYỀN công trình này đang mang lại. Cùng nguồn với `reward` của giàn giáo, chỉ khác:
+      // giàn giáo hứa (`label` ngắn cho một dòng danh sách), còn công trình đã xây thì đang TRẢ
+      // thật, nên kèm luôn `summary` để thẻ thông tin nói được nó làm gì.
+      perk:   BUILDING_EFFECTS[bpId]?.perk
+        ? {
+          label: BUILDING_EFFECTS[bpId].perk.label ?? null,
+          summary: BUILDING_EFFECTS[bpId].perk.summary ?? null,
+        }
+        : null,
     };
   });
 

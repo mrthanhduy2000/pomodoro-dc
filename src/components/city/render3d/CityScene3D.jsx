@@ -17,12 +17,13 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { PerspectiveCamera, WebGLRenderer, PCFSoftShadowMap } from 'three';
+import { PerspectiveCamera, Raycaster, Vector2, WebGLRenderer, PCFSoftShadowMap } from 'three';
 
 import { buildScenePalette } from '../../../engine/city3d/palette3d';
 import { deriveDaylight } from '../../../engine/city3d/daylight';
 import { cityOrbitOptions, createOrbit } from '../../../engine/city3d/orbit';
 import { createRenderLoop } from '../../../engine/city3d/renderLoop';
+import { pickNearest } from '../../../engine/city3d/pick';
 import { ERA_METADATA } from '../../../engine/constants';
 import { getVietnamHour } from '../../../engine/time';
 import { applyPaintedLook, createCityScene } from './sceneGraph';
@@ -65,6 +66,12 @@ export default function CityScene3D({
   fill = false,
   /** Nhận thao tác kéo/lăn chuột. Lớp nền phải TẮT — nếu không nó nuốt cú cuộn trang của Đàm. */
   interactive = true,
+  /**
+   * Chạm vào một công trình → gọi với `{ kind, bpId }`; chạm vào chỗ trống → gọi với `null`.
+   * ⚠️ Chỉ hoạt động khi `interactive`. Lớp nền trang chủ không nhận thao tác nào, nên nó cũng
+   * không thể chạm — đúng ý: ở đó thành phố là khung cảnh, không phải thứ để bấm.
+   */
+  onPick,
 }) {
   const hostRef = useRef(null);
   const runtimeRef = useRef(null);
@@ -77,8 +84,10 @@ export default function CityScene3D({
   // chỉ vì một hàm mới được tạo.
   const onStatsRef = useRef(onStats);
   const onFallbackRef = useRef(onFallback);
+  const onPickRef = useRef(onPick);
   useEffect(() => { onStatsRef.current = onStats; }, [onStats]);
   useEffect(() => { onFallbackRef.current = onFallback; }, [onFallback]);
+  useEffect(() => { onPickRef.current = onPick; }, [onPick]);
 
   const giveUp = useCallback((reason, error) => {
     setFailed(true);
@@ -161,6 +170,11 @@ export default function CityScene3D({
       const camera = new PerspectiveCamera(38, 1, 0.5, layout.gridSize * 8);
       const orbit = createOrbit(cityOrbitOptions(layout.gridSize));
 
+      // Dùng LẠI hai đối tượng này cho mọi cú chạm. Tạo mới mỗi lần chạm thì chẳng chết ai, nhưng
+      // đây là file mà cả bộ dọn rác lẫn nhịp vẽ đều đang được giữ gìn từng chút một.
+      const raycaster = new Raycaster();
+      const pickPointer = new Vector2();
+
       function applyCamera() {
         const eye = orbit.getPosition();
         const target = orbit.getTarget();
@@ -217,16 +231,33 @@ export default function CityScene3D({
       // (`visibilitychange`), và tắt sạch khi bật giảm chuyển động.
       if (city.isAnimated) loop.beginSustained('cư-dân');
 
-      // ── Tương tác: kéo để xoay ──────────────────────────────────────────────
+      // ── Tương tác: kéo để xoay, CHẠM để xem công trình ──────────────────────
       let dragPointer = null;
       let lastX = 0;
       let lastY = 0;
+      // Chỗ ngón tay ĐẶT XUỐNG và tổng quãng đường nó đi — dùng để phân biệt "chạm" với "kéo".
+      let downX = 0;
+      let downY = 0;
+      let travelled = 0;
+
+      /**
+       * Ngón tay nhích bao nhiêu điểm ảnh thì coi là ĐANG KÉO chứ không phải chạm.
+       *
+       * ⚠️ Không được để 0. Không ai chạm màn hình cảm ứng mà giữ yên tuyệt đối được — ngón tay
+       * luôn trượt vài điểm ảnh khi nhấc lên. Để 0 thì trên iPhone gần như KHÔNG BAO GIỜ chạm
+       * trúng, còn trên máy tính (chuột đứng yên thật) lại chạy tốt — đúng kiểu lỗi chỉ Đàm gặp
+       * còn người viết code thì không.
+       */
+      const TAP_SLOP = 8;
 
       function onPointerDown(event) {
         if (dragPointer !== null) return;
         dragPointer = event.pointerId;
         lastX = event.clientX;
         lastY = event.clientY;
+        downX = event.clientX;
+        downY = event.clientY;
+        travelled = 0;
         canvas.setPointerCapture?.(event.pointerId);
         loop.beginSustained('drag');
       }
@@ -236,6 +267,10 @@ export default function CityScene3D({
         orbit.drag(event.clientX - lastX, event.clientY - lastY);
         lastX = event.clientX;
         lastY = event.clientY;
+        // ⚠️ Giữ khoảng cách XA NHẤT đã rời khỏi điểm đặt tay, không lấy khoảng cách lúc nhấc tay.
+        // Kéo xoay một vòng rồi thả về đúng chỗ cũ là một cú KÉO — nhưng đo ở thời điểm nhấc tay
+        // thì nó ra 0, và thành phố sẽ bật lên một thẻ thông tin mà Đàm không hề yêu cầu.
+        travelled = Math.max(travelled, Math.hypot(event.clientX - downX, event.clientY - downY));
       }
 
       function endDrag(event) {
@@ -243,7 +278,26 @@ export default function CityScene3D({
         dragPointer = null;
         canvas.releasePointerCapture?.(event.pointerId);
         loop.endSustained('drag');
+        if (event.type === 'pointerup' && travelled <= TAP_SLOP) reportPick(event);
         publishStats();
+      }
+
+      /** Ngón tay ở đâu trên màn hình → công trình nào trong thành phố. */
+      function reportPick(event) {
+        const report = onPickRef.current;
+        if (!report) return;
+        const box = canvas.getBoundingClientRect();
+        if (!box.width || !box.height) return;
+
+        // Toạ độ thiết bị chuẩn hoá: (−1,−1) góc dưới-trái → (1,1) góc trên-phải.
+        pickPointer.set(
+          ((event.clientX - box.left) / box.width) * 2 - 1,
+          -(((event.clientY - box.top) / box.height) * 2 - 1),
+        );
+        raycaster.setFromCamera(pickPointer, camera);
+        // Phần khó (tia cắt hộp, chọn cái gần nhất) nằm ở engine THUẦN và test được — ở đây chỉ
+        // làm đúng một việc mà three.js buộc phải làm hộ: đổi điểm ảnh thành một tia.
+        report(pickNearest(raycaster.ray, city.pickTargets) ?? null);
       }
 
       function onWheel(event) {

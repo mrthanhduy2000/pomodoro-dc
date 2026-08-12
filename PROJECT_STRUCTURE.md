@@ -17,6 +17,10 @@
 │   │   │   ├── CityViewShell.jsx # KHUNG: chuyển kỷ, số liệu, trạng thái rỗng. KHÔNG biết bộ vẽ
 │   │   │   │                     #   nào đang chạy — bộ vẽ vào qua `children` và TỰ định kích thước
 │   │   │   ├── EraSwitcher.jsx   # Thanh chuyển giữa các kỷ trong bảo tàng
+│   │   │   │                     #   ⚠️ Tự cuộn kỷ đang xem vào tầm mắt, và phải căn LẠI qua
+│   │   │   │                     #   ResizeObserver (font nạp xong mới tràn) — xem BAN_GIAO 3J
+│   │   │   ├── BuildingCard.jsx  # Thẻ hiện ra khi CHẠM vào một công trình trong cảnh 3D.
+│   │   │   │                     #   Thuần trình bày — nhận sẵn phần tử của layout, không tra cứu
 │   │   │   ├── cityTokens.js     # Token DÙNG CHUNG mọi bộ vẽ: eraTint/eraSolid/cardStyle
 │   │   │   ├── render2d/         # Bộ vẽ SVG isometric — nền VĨNH VIỄN, không phải bản nháp:
 │   │   │   │                     #   đường lui khi máy không có WebGL / mất context / Đàm chọn 2D
@@ -89,6 +93,10 @@
 │   │   │   ├── residents.js       # CƯ DÂN: dân số suy từ tiến độ, tuyến đi bám ĐƯỜNG SÁ
 │   │   │   │                      #   ⚠️ residentAt(route, TIME) — chuyển động là hàm của thời
 │   │   │   │                      #   gian, không phải biến cộng dồn (test được + rời tab đúng)
+│   │   │   ├── pick.js            # CHẠM VÀO CÔNG TRÌNH: hộp bao + tia cắt hộp, THUẦN
+│   │   │   │                      #   ⚠️ Không dùng Raycaster của three: cả thành phố gộp thành
+│   │   │   │                      #   MỘT mesh (1 lệnh vẽ), ném tia vào đó chỉ biết trúng "thành
+│   │   │   │                      #   phố" chứ không biết trúng CĂN NÀO (xem ARCHITECTURE.md)
 │   │   │   └── budget.js          # Trần tam giác — biến ngân sách hiệu năng thành test tự kiểm
 │   │   ├── achievementTimeline.js # Suy luận ngày mở khoá thành tích cũ (replay lịch sử)
 │   │   ├── audioContext.js    # Khởi tạo/resume AudioContext dùng chung cho soundEngine/ambientEngine

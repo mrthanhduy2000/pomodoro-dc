@@ -93,6 +93,43 @@
 ## 🗒️ Nhật ký cập nhật
 > Mỗi lần xong việc đáng kể, thêm 1 dòng vào ĐẦU danh sách.
 
+- **2026-08-12 (Phase 3K)** — **CHẠM VÀO CÔNG TRÌNH ĐỂ BIẾT NÓ LÀ AI.**
+  Đàm: *"game hoá lên… đột phá hơn"*. Cho tới trước Phase này, thành phố 3D là một BỨC TRANH —
+  kéo xoay được, đẹp, nhưng không chạm được vào bất cứ thứ gì. Nay chạm vào một căn nhà thì nó tự
+  nói tên · loại · độ hiếm · cấp · **đặc quyền nó đang mang lại**; chạm vào giàn giáo thì nói
+  **còn mấy phiên nữa** và **sẽ mở khoá gì**. Chạm ra chỗ trống thì thẻ tự đóng.
+  - ⚠️ **KHÔNG dùng `Raycaster.intersectObjects` của three.js, và đây là quyết định đáng nhớ
+    nhất.** Cả thành phố được gộp vào ĐÚNG MỘT khối hình học để chỉ tốn một lệnh vẽ — ném tia vào
+    khối đó thì chỉ biết trúng "thành phố", không biết trúng CĂN NÀO. Muốn biết thì phải tách 75
+    mesh riêng, tức là **vứt bỏ đúng cái tối ưu lớn nhất của cả bộ vẽ** để phục vụ một cú chạm mỗi
+    vài phút. Cách đã chọn: `sceneGraph` xuất thêm `pickTargets` — **dữ liệu thuần**, mỗi công
+    trình một hộp bao; **0 tam giác, 0 lệnh vẽ, không cần dọn ở `dispose()`**. Phần khó (tia cắt
+    hộp kiểu "slab", chọn cái gần camera nhất) nằm ở `engine/city3d/pick.js`, THUẦN, 13 bài test
+    chạy bằng `node --test`. `CityScene3D` chỉ làm đúng việc three buộc phải làm hộ: đổi toạ độ
+    điểm ảnh thành một tia.
+  - ⚠️ **Và KHÔNG chỉ cắt tia với mặt đất rồi quy ra ô lưới** (cách rẻ hơn, từng định làm): cảnh
+    nhìn xiên, nên chạm vào NÓC một toà tháp thì tia đi tiếp và cắt mặt đất ở tận ô phía SAU nó.
+    Càng nhà cao càng lệch. Hộp bao đúng với cả nhà cao lẫn nhà thấp.
+  - ⚠️ **`TAP_SLOP = 8` điểm ảnh — đừng để 0.** Không ai chạm màn hình cảm ứng mà giữ yên tuyệt
+    đối được; ngón tay luôn trượt vài điểm ảnh khi nhấc lên. Để 0 thì trên iPhone gần như KHÔNG
+    BAO GIỜ chạm trúng, còn trên máy tính (chuột đứng yên thật) lại chạy tốt — **đúng kiểu lỗi chỉ
+    Đàm gặp còn người viết code thì không**. Và phải đo khoảng cách XA NHẤT đã rời khỏi điểm đặt
+    tay, chứ không đo lúc nhấc tay: kéo xoay một vòng rồi thả về chỗ cũ vẫn là một cú KÉO.
+    Đã kiểm thật: kéo 150px → không mở thẻ · nhích 4px → vẫn mở thẻ · chạm 3/3 lần đều đúng.
+  - **Lớp nền trang chủ KHÔNG chạm được** (hai lớp chặn + test): một thẻ thông tin bật lên sau
+    lưng đồng hồ đếm ngược vì lỡ chạm là đúng thứ phá mất sự yên tĩnh mà màn hình đó tồn tại để
+    giữ. Thẻ nổi cũng phải `pointer-events-none` ở lớp bọc + `pointer-events-auto` ở chính thẻ —
+    thiếu là cả dải trống hai bên thẻ nuốt mất thao tác kéo xoay (đã có test khoá).
+  - **Dòng trong danh sách bên dưới được tô sáng theo lựa chọn** — nếu không, chạm vào một khối
+    nhà xong Đàm vẫn không biết nó ứng với dòng nào; nối lại thì hình và chữ thành CÙNG một thứ
+    nhìn theo hai cách.
+  - **Bài học công cụ**: `--window-size=390,844` của headless Chromium **KHÔNG** cho ra khung
+    390px — headless kẹp cửa sổ ở tối thiểu 500px, đo mới biết. Nghĩa là mọi ảnh chụp "iPhone"
+    trước đó đều rộng hơn máy thật 110px, đúng quãng làm một bố cục chật trông thoải mái. Phải
+    dùng `Emulation.setDeviceMetricsOverride` qua CDP. Đo lại ở 390px thật: **không tràn ngang**
+    (`scrollWidth === clientWidth === 390`), thẻ thông tin vừa khung.
+  - Test **449 xanh** (thêm 15 bài), lint sạch, build xanh, `vendor-three` vẫn 131 KB gzip.
+
 - **2026-08-12 (Phase 3J)** — **THANH CHUYỂN KỶ TỰ KÉO KỶ ĐANG XEM VÀO TẦM MẮT.**
   Một lỗi *chỉ lộ ra khi chơi lâu*, nên gần như không thể bắt bằng mắt lúc đang làm: các kỷ đã đi
   qua xếp TRƯỚC kỷ hiện tại trong thanh cuộn ngang, nên càng nhiều kỷ thì cái nút DUY NHẤT Đàm

@@ -41,6 +41,7 @@ import {
 
 import { buildBuildingSpec, buildScaffoldSpec } from '../../../engine/city3d/buildingSpec';
 import { buildPropSpec } from '../../../engine/city3d/propSpec';
+import { placeBounds, specBounds } from '../../../engine/city3d/pick';
 import { RESIDENT_HEIGHT, buildResidents, residentAt } from '../../../engine/city3d/residents';
 import { sunDirectionAt } from '../../../engine/city3d/daylight';
 import { buildMergedGeometry } from './geometryFactory';
@@ -338,6 +339,22 @@ export function createCityScene({
   ));
 
   // ── Công trình: mỗi cái một hình dáng riêng, tất cả trong MỘT lệnh vẽ ──────
+  //
+  // `pickTargets` là danh sách hộp bao để biết ngón tay đang chỉ vào CĂN NÀO — xem
+  // `engine/city3d/pick.js` giải thích vì sao phải tính bằng toán chứ không ném tia vào mesh.
+  // Nó chỉ là DỮ LIỆU, không phải đối tượng GPU: không thêm một lệnh vẽ nào, không thêm một
+  // tam giác nào, và cảnh nào không cần chạm thì cứ việc bỏ qua mảng này.
+  const pickTargets = [];
+  const addPickTarget = (placement, ref) => {
+    const bounds = placeBounds(specBounds(placement.spec), {
+      x: placement.x, z: placement.z, y: placement.y, scale: placement.scale,
+      // Nới vùng chạm: ngón tay trên iPhone không trỏ được vào đúng một điểm, mà nhà cấp 1 ở xa
+      // chỉ chiếm vài chục điểm ảnh. Xem giải thích đầy đủ ở `placeBounds`.
+      pad: TILE_UNIT * 0.12,
+    });
+    if (bounds) pickTargets.push({ ...ref, box: bounds });
+  };
+
   const buildings = layout.buildings ?? [];
   const placements = buildings.map((building) => {
     const { x, z } = cellToWorld(building.x, building.y, gridSize);
@@ -357,13 +374,21 @@ export function createCityScene({
     };
   });
 
+  buildings.forEach((building, index) => {
+    addPickTarget(placements[index], { kind: 'building', bpId: building.bpId });
+  });
+
   // Công trình đang xây (nếu bố cục có) → giàn giáo dựng cao dần theo tiến độ.
   for (const scaffold of layout.scaffolds ?? []) {
     const { x, z } = cellToWorld(scaffold.x, scaffold.y, gridSize);
-    placements.push({
+    const placement = {
       x, z, y: 0, ry: 0, scale: BUILDING_SCALE,
       spec: buildScaffoldSpec({ bpId: scaffold.bpId, era: layout.era, progress: scaffold.progress }),
-    });
+    };
+    placements.push(placement);
+    // Giàn giáo cũng chạm được: đó chính là công trình Đàm đang chờ, nên nó phải là thứ dễ hỏi
+    // "còn bao lâu nữa?" nhất trong cả cảnh — chứ không phải thứ duy nhất không bấm được.
+    addPickTarget(placement, { kind: 'scaffold', bpId: scaffold.bpId });
   }
 
   // ── Cảnh vật: cây, đá, đèn, mặt nước, ruộng ──────────────────────────────
@@ -639,6 +664,12 @@ export function createCityScene({
     updateResidents,
     /** Có gì đang chuyển động không — bên gọi dùng để quyết định có cần vẽ liên tục hay không. */
     isAnimated: residents.length > 0,
+    /**
+     * Hộp bao để dò xem ngón tay chỉ vào công trình nào (`engine/city3d/pick.js`).
+     * ⚠️ Chỉ là DỮ LIỆU — không phải đối tượng GPU, không tốn lệnh vẽ nào, không cần dọn ở
+     * `dispose()`. Cảnh nào không cần chạm thì bỏ qua mảng này là xong.
+     */
+    pickTargets,
     stats: {
       groundTiles: groundCells.length,
       roads: roads.length,

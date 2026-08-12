@@ -18,6 +18,17 @@ import { cardStyle, eraSolid } from './cityTokens';
 
 const eyebrow = 'mono text-[10px] uppercase tracking-[0.2em]';
 
+/**
+ * Tô nhẹ dòng ứng với công trình Đàm vừa chạm trong cảnh 3D.
+ *
+ * ⚠️ Đây là nửa còn lại của cú chạm, không phải trang trí: chạm vào một khối nhà mà chỉ có thẻ nổi
+ * lên thì Đàm vẫn không biết nó là dòng nào trong danh sách bên dưới. Nối hai chỗ lại thì hình và
+ * chữ trở thành CÙNG MỘT thứ được nhìn theo hai cách, chứ không phải hai bảng rời nhau.
+ */
+const rowHighlight = (on) => (on
+  ? { background: 'var(--canvas-2)', boxShadow: 'inset 2px 0 0 var(--accent)' }
+  : undefined);
+
 function Stat({ label, value }) {
   return (
     <div>
@@ -66,7 +77,9 @@ function EmptyState({ icon, title, children }) {
  * @param {Function} props.onSelectEra
  * @param {React.ReactNode} props.children  BỘ VẼ — khung này không biết nó là 2D hay 3D
  */
-export default function CityViewShell({ eras, viewing, layout, stats, onSelectEra, children }) {
+export default function CityViewShell({
+  eras, viewing, layout, stats, onSelectEra, selectedId = null, children,
+}) {
   const reduceMotion = useReducedMotion();
 
   const scaffolds = layout.scaffolds ?? [];
@@ -173,7 +186,7 @@ export default function CityViewShell({ eras, viewing, layout, stats, onSelectEr
               // Cái gần xong nhất nằm đầu danh sách ⇒ nó cũng là cái đáng làm nổi bật.
               const next = index === 0;
               return (
-                <li key={item.bpId} className="flex flex-col gap-1">
+                <li key={item.bpId} className="flex flex-col gap-1" style={rowHighlight(item.bpId === selectedId)}>
                   <div className="flex items-baseline gap-2 text-[12px]">
                     <span aria-hidden="true">{item.icon}</span>
                     <span
@@ -226,7 +239,11 @@ export default function CityViewShell({ eras, viewing, layout, stats, onSelectEr
           <div className={eyebrow} style={{ color: 'var(--muted-2)' }}>Công trình trong thành phố</div>
           <ul className="mt-2 flex flex-col gap-1.5">
             {layout.buildings.map((building) => (
-              <li key={building.bpId} className="flex items-center gap-2 text-[12px]">
+              <li
+                key={building.bpId}
+                className="flex items-center gap-2 rounded-[8px] px-1.5 py-0.5 text-[12px]"
+                style={rowHighlight(building.bpId === selectedId)}
+              >
                 <span aria-hidden="true">{building.icon}</span>
                 <span style={{ color: 'var(--ink-2)' }}>{building.label}</span>
                 {building.level > 1 && (

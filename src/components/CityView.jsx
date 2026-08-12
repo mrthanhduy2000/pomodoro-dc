@@ -35,6 +35,11 @@ export default function CityView() {
 
   const reduceMotion = useReducedMotion();
   const [viewingEra, setViewingEra] = useState(activeBook);
+  // Công trình Đàm vừa chạm vào — chỉ giữ `{ kind, bpId }`, KHÔNG giữ cả object. Bố cục được tính
+  // lại mỗi khi thành phố đổi, nên giữ nguyên object cũ nghĩa là thẻ thông tin sẽ hiện số liệu
+  // của một phiên bản thành phố không còn tồn tại (rõ nhất ở giàn giáo: "còn 3 phiên" đứng im
+  // trong khi phiên vừa xong đã kéo nó xuống 2).
+  const [picked, setPicked] = useState(null);
 
   const eras = useMemo(
     () => listVisitableEras(cityArchive, activeBook),
@@ -80,13 +85,23 @@ export default function CityView() {
     [builtKey, levelsKey, era, sessionCount, streakLength, pendingKey],
   );
 
+  // Tra lại trong bố cục MỚI NHẤT ở mỗi lượt vẽ ⇒ thẻ thông tin luôn nói con số hiện tại. Công
+  // trình biến mất (đổi kỷ, xây xong thành nhà thật) ⇒ `undefined` ⇒ thẻ tự đóng, không cần dọn.
+  const selection = useMemo(() => {
+    if (!picked?.bpId) return null;
+    const list = picked.kind === 'scaffold' ? layout.scaffolds : layout.buildings;
+    const found = (list ?? []).find((entry) => entry.bpId === picked.bpId);
+    return found ? { ...found, kind: picked.kind } : null;
+  }, [picked, layout]);
+
   return (
     <CityViewShell
       eras={eras}
       viewing={viewing}
       layout={layout}
       stats={{ sessionCount, streakLength }}
-      onSelectEra={setViewingEra}
+      onSelectEra={(next) => { setPicked(null); setViewingEra(next); }}
+      selectedId={selection?.bpId ?? null}
     >
       <CityStage
         layout={layout}
@@ -94,6 +109,8 @@ export default function CityView() {
         reduceMotion={!!reduceMotion}
         sessionCount={sessionCount}
         streakLength={streakLength}
+        onPick={setPicked}
+        selection={selection}
       />
     </CityViewShell>
   );

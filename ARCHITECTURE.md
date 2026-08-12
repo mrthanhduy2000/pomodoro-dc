@@ -168,7 +168,18 @@ biến ô lưới thành hình. `CityViewShell.jsx` là KHUNG (chuyển kỷ, s�
 Có HAI bộ vẽ: `city/render2d/` (SVG isometric) và `city/render3d/` (three.js). `render3d/` là **nơi
 duy nhất được phép `import 'three'`** — luật này giữ cho `src/engine/` tiếp tục test được bằng
 `node --test` (không DOM, không WebGL), và có test đọc mã nguồn canh nó
-(`components/city/cityRenderers.test.js`). Bộ vẽ 2D **không phải bản nháp sẽ xoá**: nó là đường lui
+(`components/city/cityRenderers.test.js`).
+
+**Chạm vào công trình (2026-08-12)** đi ngược lại đúng ba chặng đó và **không phá vỡ chặng nào**:
+cả thành phố vẫn gộp vào MỘT khối hình học (một lệnh vẽ), nên không thể ném tia vào mesh để biết
+trúng căn nào — muốn vậy phải tách 75 mesh riêng, tức vứt bỏ chính tối ưu lớn nhất của bộ vẽ. Thay
+vào đó `sceneGraph` xuất thêm `pickTargets`: **dữ liệu thuần**, mỗi công trình một hộp bao, không
+tam giác nào, không lệnh vẽ nào, không cần dọn ở `dispose()`. Phần khó (tia cắt hộp, chọn cái gần
+camera nhất) nằm ở `engine/city3d/pick.js` — thuần, test bằng `node --test`. `CityScene3D` chỉ làm
+đúng việc mà three.js buộc phải làm hộ: đổi toạ độ điểm ảnh thành một tia. Bộ vẽ 2D không có tính
+năng này, và đó là chấp nhận được — nó là đường lui, không phải bản song song đầy đủ.
+
+Bộ vẽ 2D **không phải bản nháp sẽ xoá**: nó là đường lui
 thường trực khi máy không có WebGL, khi trình duyệt mất context, hoặc khi Đàm tự chọn tắt 3D.
 Xem ADR-008.
 

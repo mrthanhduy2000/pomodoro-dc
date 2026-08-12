@@ -183,6 +183,34 @@ test('THANH CHUYỂN KỶ phải tự kéo kỷ đang xem vào tầm mắt — v
     'căn một lần rồi thôi ⇒ font nạp xong là hỏng lại (đã trả giá đúng một lần)');
 });
 
+test('THẺ THÔNG TIN nổi trên cảnh không được nuốt thao tác kéo xoay', () => {
+  // ⚠️ Cùng họ với bài "lớp nền không nuốt thao tác" ngay dưới, và cũng cùng kiểu nguy hiểm: thẻ
+  // được đặt trong một lớp bọc phủ KÍN đáy cảnh. Thiếu `pointer-events-none` ở lớp bọc thì cả dải
+  // trống hai bên thẻ vẫn chặn ngón tay — Đàm kéo xoay ở nửa dưới thành phố sẽ thấy nó "cứng đờ"
+  // mà không có lỗi nào để lần ra. Và thiếu `pointer-events-auto` ở CHÍNH thẻ thì ngược lại: nút
+  // đóng bấm không được.
+  const stage = SOURCES.find((f) => f.path === 'components/city/CityStage.jsx');
+  const card = SOURCES.find((f) => f.path === 'components/city/BuildingCard.jsx');
+  assert.ok(stage && card, 'không thấy CityStage.jsx hoặc BuildingCard.jsx');
+
+  assert.match(stage.source, /pointer-events-none[^"'`]*absolute/,
+    'lớp bọc thẻ thông tin phải có pointer-events-none');
+  assert.match(card.source, /pointer-events-auto/,
+    'chính thẻ phải có pointer-events-auto, nếu không nút đóng bấm không được');
+});
+
+test('LỚP NỀN TRANG CHỦ không được chạm vào công trình', () => {
+  // Trang chủ là chỗ để LÀM VIỆC. Một thẻ thông tin bật lên sau lưng đồng hồ đếm ngược vì Đàm lỡ
+  // chạm vào màn hình là đúng thứ phá mất sự yên tĩnh mà màn hình đó tồn tại để giữ. Hai lớp chặn:
+  // `CityBackdrop` không truyền `onPick`, và `CityStage` chỉ chuyển tiếp khi `interactive`.
+  const backdrop = SOURCES.find((f) => f.path === 'components/city/CityBackdrop.jsx');
+  const stage = SOURCES.find((f) => f.path === 'components/city/CityStage.jsx');
+  assert.doesNotMatch(codeOnly(backdrop.source), /onPick/,
+    'lớp nền trang chủ truyền onPick ⇒ chạm vào nền sẽ bật thẻ thông tin giữa phiên tập trung');
+  assert.match(stage.source, /onPick=\{interactive \? onPick : undefined\}/,
+    'CityStage phải chặn onPick khi không nhận thao tác — lưới an toàn thứ hai');
+});
+
 test('LỚP NỀN TRANG CHỦ không được nuốt thao tác của Đàm', () => {
   // ⚠️ Đây là bài "một dòng mất thì cả trang chủ hỏng, mà chạy thử vẫn thấy đẹp". `CityScene3D`
   // đăng ký `wheel` với `passive: false` và có `preventDefault` — nếu lớp nền bật `interactive`

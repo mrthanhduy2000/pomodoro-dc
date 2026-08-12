@@ -313,6 +313,33 @@ test('giàn giáo cao dần theo tiến độ, và đủ 0..1 đều dựng đư
   for (let i = 1; i < heights.length; i += 1) {
     assert.ok(heights[i] > heights[i - 1], `tiến độ tăng mà giàn giáo không cao thêm (bước ${i})`);
   }
+
+  // ⚠️ HƯỚNG THÔI CHƯA ĐỦ — PHẢI KHOÁ CẢ ĐỘ LỚN.
+  // Đoạn trên chỉ đòi "cao hơn bước trước". Một bản sửa làm giàn giáo lớn lên 1,02 lần từ đầu tới
+  // cuối vẫn thoả sạch, trong khi mắt thì KHÔNG THẤY GÌ — mà "nhìn thấy thành phố lớn lên sau mỗi
+  // phiên" chính là lời hứa game hoá cốt lõi nhất của cả dự án. Đây đúng cái bẫy "ngưỡng chỉ chặn
+  // một phía thì là cái phễu" đã gặp ở mặt đất ban đêm, chỉ khác chỗ: ở đây phễu nằm ở ĐỘ LỚN.
+  // Số 3 lấy từ giá trị đo được thật (3,48 lần) và đặt DƯỚI nó, đúng nguyên tắc hàng rào phải nằm
+  // dưới giá trị đang chạy nhưng trên vùng hỏng.
+  const ratio = heights[heights.length - 1] / heights[0];
+  assert.ok(ratio >= 3,
+    `giàn giáo chỉ lớn lên ${ratio.toFixed(2)} lần từ lúc khởi công tới lúc sắp xong `
+    + '⇒ mắt không đọc ra "mỗi phiên xây thêm được một ít", lời hứa game hoá thành lời suông');
+
+  // ⚠️ VÀ NHỮNG PHIÊN CUỐI CÙNG KHÔNG ĐƯỢC "CHẾT".
+  // Khung gỗ CỐ Ý bị kẹp ở `fullHeight` (giàn giáo luôn vượt lên trên phần đã xây, nên khi tường
+  // xây gần tới nơi thì khung hết chỗ cao thêm) — từ khoảng 78% tiến độ trở đi, chiều cao tổng
+  // đứng yên. Điều đó CHẤP NHẬN ĐƯỢC, nhưng chỉ với đúng một điều kiện: phải còn thứ khác đổi,
+  // nếu không thì 1–2 phiên cuối — đúng lúc hồi hộp nhất — sẽ không thấy gì nhúc nhích.
+  // Thứ đổi là bức tường đá bên trong dâng lên cho đầy khung. Bài này khoá điều đó.
+  const stoneHeight = (progress) => {
+    const spec = buildScaffoldSpec({ bpId: 'bp_dang_xay', era: 6, progress });
+    return spec.parts.filter((p) => p.role === 'stone').reduce((max, p) => Math.max(max, p.h), 0);
+  };
+  assert.ok(stoneHeight(1) > stoneHeight(0.8) * 1.1,
+    `từ 80% tới xong, tường trong lòng giàn giáo chỉ dâng từ ${stoneHeight(0.8).toFixed(3)} lên `
+    + `${stoneHeight(1).toFixed(3)} ⇒ mấy phiên cuối cùng không có gì nhúc nhích`);
+
   // Tiến độ rác không được làm nổ
   for (const progress of [NaN, -1, 5, null, undefined]) {
     const spec = buildScaffoldSpec({ bpId: 'x', era: 3, progress });

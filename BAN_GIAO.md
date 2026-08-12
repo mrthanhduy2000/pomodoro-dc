@@ -99,6 +99,29 @@
 ## 🗒️ Nhật ký cập nhật
 > Mỗi lần xong việc đáng kể, thêm 1 dòng vào ĐẦU danh sách.
 
+- **2026-08-12 (Phase 3O)** — **KHOÁ LỜI HỨA GAME HOÁ CỐT LÕI BẰNG SỐ, KHÔNG BẰNG GHI CHÚ.**
+  Lượt XÁC MINH (không thêm tính năng): đóng hai lỗ hổng nghiệm thu tự tạo ra ở 3M/3N.
+  - **Theme tối, 15 kỷ**: đo lại sau 3N — cặp mái gần nhau nhất **8,4** lúc trưa và **7,1** lúc đêm,
+    phủ **9/12 múi màu**. Đạt. (Cảnh ban ngày vốn không phụ thuộc theme — `isDark` khi có `daylight`
+    nghĩa là "trời đêm", không phải "theme tối".)
+  - **Giàn giáo có thật sự lớn lên không** — mệnh đề game hoá cốt lõi nhất của dự án. Đo hàm thuần:
+    **cao gấp 3,48 lần** từ khởi công tới sắp xong (0,426 → 1,480). ✅ Đúng như thiết kế.
+  - ⚠️ **SUÝT SỬA MỘT THỨ KHÔNG HỎNG.** Ảnh `--pending 4` cho ra bốn công trường trông cao gần bằng
+    nhau, nhìn như lỗi. Truy ra thì **fixture của chính công cụ xem thử** đặt `sessionsRemaining:
+    i+1` ⇒ bốn công trường chỉ trải tiến độ **50%–88%**, không phải 0%→100%. Lỗi ở CÁI THƯỚC, không
+    ở sản phẩm. **Bài học: fixture của công cụ dev cũng phải bị nghi ngờ như mã sản phẩm** — một
+    công cụ soi lỗi mà tự nó sai thì tệ hơn không có (đúng họ với cái bẫy `--hour` một-giá-trị đã
+    ghi ở đầu `scripts/city-preview.mjs`).
+  - **Đã siết bài test `giàn giáo cao dần theo tiến độ`** (`buildingSpec.test.js`): bài cũ chỉ khoá
+    HƯỚNG ("cao hơn bước trước") nên một bản sửa làm giàn giáo lớn lên **1,02 lần** vẫn xanh sạch
+    trong khi mắt không thấy gì. Đây ĐÚNG cái bẫy "ngưỡng một phía là cái phễu" của 3M, chỉ khác là
+    phễu nằm ở ĐỘ LỚN. Thêm 2 khẳng định: (a) tỉ lệ lớn lên đầu→cuối **≥ 3 lần**; (b) từ 80% tới
+    xong, **tường đá trong lòng giàn giáo phải dâng thêm ≥10%** — vì khung gỗ CỐ Ý kẹp ở
+    `fullHeight` từ ~78% (giàn giáo luôn vượt lên trên phần đã xây), nên nếu không có (b) thì 1–2
+    phiên cuối, đúng lúc hồi hộp nhất, sẽ không có gì nhúc nhích.
+  - **Cả hai khẳng định đã chứng minh ĐỎ** bằng cách bơm đúng hai hồi quy tương ứng vào
+    `buildingSpec.js` rồi khôi phục. **479 bài test.** Không đổi dòng mã sản phẩm nào.
+
 - **2026-08-12 (Phase 3N)** — **15 KỶ NAY RA 15 MÀU MÁI, KHÔNG CÒN HAI CỤM.**
   Cùng bảng quét của 3M còn phơi ra lỗi thứ hai, và lỗi này đánh thẳng vào phần thưởng tiến trình.
   - **Số đo lúc chưa sửa**: 15 góc màu mái dồn vào **ĐÚNG HAI CỤM** — 9°–55° (9 kỷ) và 329°–342°

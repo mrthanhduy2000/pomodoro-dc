@@ -12,6 +12,21 @@
 
 ---
 
+## 2026-08-12 — Thành Phố (Phase 3O): khoá lời hứa game hoá bằng số
+
+- **Mục đích**: "thành phố lớn lên sau MỖI phiên" là mệnh đề game hoá cốt lõi nhất của dự án, mà
+  cho tới nay nó chỉ được bảo vệ bằng một đoạn ghi chú. Phiên này đã hai lần cho thấy ghi chú
+  không kèm số đo thì trôi.
+- **Phạm vi**: chỉ `src/engine/city3d/buildingSpec.test.js`. **Không đổi dòng mã sản phẩm nào.**
+- **Xác minh**: theme tối giữ nguyên chất lượng sau Phase 3N (cặp mái gần nhau nhất 8,4 lúc trưa /
+  7,1 lúc đêm, phủ 9/12 múi màu); giàn giáo lớn lên 3,48 lần từ khởi công tới sắp xong.
+- **Đã siết**: bài test cũ chỉ khoá HƯỚNG nên bản sửa làm giàn giáo lớn lên 1,02 lần vẫn xanh.
+  Thêm khoá ĐỘ LỚN (≥3 lần) và khoá "mấy phiên cuối không được đứng yên" (tường đá trong lòng giàn
+  giáo phải dâng thêm ≥10% từ mốc 80% tới lúc xong).
+- **Ảnh hưởng**: không đổi hành vi, không đổi hình ảnh, không đổi state. Chỉ tăng độ chặt của lưới
+  an toàn.
+- **Test**: giữ **479** bài; hai khẳng định mới đã chứng minh ĐỎ trước hai hồi quy tương ứng.
+
 ## 2026-08-12 — Thành Phố (Phase 3N): 15 kỷ ra 15 màu mái
 
 - **Mục đích**: phần thưởng của việc đi qua 15 kỷ nằm ở chỗ thành phố TRÔNG KHÁC ĐI. Đo ra thì nó

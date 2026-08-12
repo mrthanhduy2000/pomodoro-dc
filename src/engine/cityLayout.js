@@ -20,7 +20,7 @@
  * được.)
  */
 
-import { BLUEPRINT_CATALOG } from './constants';
+import { BLUEPRINT_CATALOG, BUILDING_EFFECTS } from './constants';
 
 // ─── HẰNG SỐ LƯỚI ────────────────────────────────────────────────────────────
 export const CITY_GRID_SIZE = 12;      // lưới 12×12 = 144 ô
@@ -33,7 +33,14 @@ const GROUND_VARIANTS = 4;
 const PROP_VARIANTS = 3;
 
 // ─── TRA CỨU BẢN VẼ (dựng 1 lần lúc nạp module, thuần) ──────────────────────
-/** bpId → { era, rank, label, icon, rarity } — `rank` là thứ tự cố định trong kỷ (0..4). */
+/**
+ * bpId → { era, rank, label, icon, rarity, type } — `rank` là thứ tự cố định trong kỷ (0..4).
+ *
+ * `type` (`infrastructure` | `economy` | `defense` | `wonder`) lấy từ `BUILDING_EFFECTS`. Nó nằm ở
+ * đây vì đó là thuộc tính BẢN CHẤT của bản vẽ, giống `rarity` — và vì bộ vẽ 3D cần cả ba trục
+ * (kỷ × loại × độ hiếm) để chọn hình khối. Để bộ vẽ tự tra `BUILDING_EFFECTS` một lần nữa là nhân
+ * đôi cùng một phép tra cứu ở hai tầng khác nhau.
+ */
 const BLUEPRINT_LOOKUP = {};
 for (const [eraKey, list] of Object.entries(BLUEPRINT_CATALOG)) {
   const era = Number(eraKey);
@@ -44,6 +51,7 @@ for (const [eraKey, list] of Object.entries(BLUEPRINT_CATALOG)) {
       label:  bp.label,
       icon:   bp.icon,
       rarity: bp.rarity,
+      type:   BUILDING_EFFECTS[bp.id]?.type ?? 'infrastructure',
     };
   });
 }
@@ -315,6 +323,7 @@ export function computeCityLayout({ built, levels, era, stats } = {}) {
       label:  meta.label,
       icon:   meta.icon,
       rarity: meta.rarity,
+      type:   meta.type,
     };
   });
 

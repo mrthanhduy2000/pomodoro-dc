@@ -14,7 +14,16 @@ const TAU = Math.PI * 2;
 /** Giới hạn góc nhìn. Không được chạm 0 hay 90° — camera sẽ chui xuống dưới sàn hoặc lật. */
 export const MIN_PITCH = 0.18;                 // ~10°, gần ngang tầm mắt
 export const MAX_PITCH = Math.PI / 2 - 0.08;   // ~85°, gần nhìn thẳng từ trên xuống
-export const DEFAULT_PITCH = 0.72;             // ~41°, góc isometric quen thuộc của bộ vẽ 2D
+/**
+ * ~34°. Thấp hơn góc isometric 41° của bộ vẽ 2D, và đó là CHỦ Ý.
+ *
+ * ⚠️ Ở 41°, tầm nhìn dọc 38° trải từ 22° tới 60° BÊN DƯỚI đường chân trời — nghĩa là không có
+ * lấy một mảnh trời nào lọt vào khung hình. Cả buổi chỉnh màu bầu trời đã trôi đi vì chuyện này:
+ * bảng màu vẫn ra đúng màu xanh, chỉ là bầu trời chưa bao giờ được nhìn thấy. Ở 34° thì dải trên
+ * cùng của khung hình vượt qua đường chân trời và bầu trời hiện ra sau thành phố — đó là thứ biến
+ * "nhìn xuống một mô hình" thành "đứng nhìn một vùng đất".
+ */
+export const DEFAULT_PITCH = 0.6;
 export const DEFAULT_YAW = Math.PI / 4;        // 45° — cùng hướng nhìn với bộ vẽ 2D
 
 export function clampPitch(value) {

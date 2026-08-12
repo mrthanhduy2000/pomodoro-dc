@@ -96,7 +96,10 @@ export default function CityScene3D({
       const city = createCityScene({ layout, palette, dimmed });
       city.sun.shadow.mapSize.setScalar(isMobile ? SHADOW_MAP_MOBILE : SHADOW_MAP_DESKTOP);
 
-      const camera = new PerspectiveCamera(38, 1, 0.5, layout.gridSize * 6);
+      // ⚠️ Mặt phẳng xa 8 × gridSize, KHÔNG phải 6. Vòm trời ở `sceneGraph.js` có bán kính
+      // 3,6 × gridSize và camera lùi được tới 3,1 × gridSize — tổng 6,7 phải NHỎ HƠN mặt phẳng xa,
+      // nếu không nửa vòm phía sau bị cắt và bầu trời chuyển sắc biến mất, chỉ còn màu nền phẳng.
+      const camera = new PerspectiveCamera(38, 1, 0.5, layout.gridSize * 8);
       const orbit = createOrbit({
         distance: layout.gridSize * 1.85,
         minDistance: layout.gridSize * 0.95,

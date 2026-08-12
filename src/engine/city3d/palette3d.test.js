@@ -61,17 +61,53 @@ test('luminance: phân biệt được nền sáng với nền tối', () => {
   assert.ok(luminance(parseCssColor('#14110d')) < 0.5, 'nền theme tối phải được nhận là tối');
 });
 
+/** Duyệt mọi màu trong bảng, kể cả màu nằm trong nhóm con (`roles`, `lights`, `sky2`). */
+function eachColor(node, visit, path = '') {
+  for (const [key, value] of Object.entries(node)) {
+    if (key === 'isDark') continue;
+    const here = path ? `${path}.${key}` : key;
+    if (value && typeof value === 'object') eachColor(value, visit, here);
+    else visit(here, value);
+  }
+}
+
 test('buildScenePalette: mọi màu là số hợp lệ, kể cả khi KHÔNG đọc được token nào', () => {
   const palette = buildScenePalette();          // gọi trần — mô phỏng lúc DOM chưa sẵn sàng
-  const colorKeys = Object.keys(palette).filter((k) => k !== 'isDark');
+  let count = 0;
 
-  assert.ok(colorKeys.length >= 8, 'thiếu màu trong bảng');
-  for (const key of colorKeys) {
-    const value = palette[key];
+  eachColor(palette, (path, value) => {
+    count += 1;
     assert.ok(Number.isInteger(value) && value >= 0 && value <= 0xffffff,
-      `"${key}" không phải màu hợp lệ: ${value}`);
-  }
+      `"${path}" không phải màu hợp lệ: ${value}`);
+  });
+
+  assert.ok(count >= 20, `thiếu màu trong bảng (đếm được ${count})`);
   assert.equal(typeof palette.isDark, 'boolean');
+});
+
+test('buildScenePalette: đủ vai màu cho ngôn ngữ hình khối, không vai nào thiếu', () => {
+  // Mô tả hình học nói bằng VAI ("mái", "gỗ", "vàng"); thiếu một vai thì khối mang vai đó sẽ nhận
+  // `undefined` và three vẽ ra màu đen — một lỗi im lặng, chỉ lộ ra khi nhìn tận mắt đúng cái kỷ
+  // có dùng vai đó. Test này bắt trước.
+  const palette = buildScenePalette({ tokens: FALLBACK_TOKENS, eraColor: '#a78bfa' });
+  const needed = ['wall', 'wall2', 'roof', 'trim', 'wood', 'stone', 'gold', 'glass', 'leaf', 'dark'];
+  for (const role of needed) {
+    assert.ok(Number.isInteger(palette.roles?.[role]), `thiếu vai màu "${role}"`);
+  }
+});
+
+test('buildScenePalette: ba nguồn sáng khác nhiệt độ — nắng ẤM hơn trời', () => {
+  // Đây là thứ làm cảnh 3D thôi trông như đồ hoạ máy tính: mặt hướng nắng ngả vàng, mặt khuất ngả
+  // xanh. Nếu ai đó "dọn dẹp" cho ba nguồn sáng cùng màu trắng thì cảnh phẳng lại ngay mà build
+  // vẫn xanh — nên phải khoá bằng test.
+  const palette = buildScenePalette({ tokens: FALLBACK_TOKENS, eraColor: '#4ade80' });
+  const toRgb = (n) => ({ r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 });
+  const warmth = (n) => { const c = toRgb(n); return c.r - c.b; };
+
+  assert.ok(warmth(palette.lights.sun) > warmth(palette.lights.skyDome) + 20,
+    'nắng phải ấm hơn ánh trời rõ rệt');
+  assert.ok(warmth(palette.lights.bounce) > warmth(palette.lights.skyDome),
+    'ánh đất hắt lên phải ấm hơn ánh trời');
 });
 
 test('buildScenePalette: theme sáng và theme tối cho ra bảng màu KHÁC nhau', () => {

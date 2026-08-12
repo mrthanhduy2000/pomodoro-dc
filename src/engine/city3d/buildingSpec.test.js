@@ -202,6 +202,47 @@ test('kỳ quan luôn đối xứng tuyệt đối, kể cả ở kỷ có nét 
   assert.ok(Math.abs(sumX) < 1e-9 && Math.abs(sumZ) < 1e-9, 'bốn tháp góc không đối xứng qua tâm');
 });
 
+test('TỈ LỆ: không công trình nào cao vống thành ống khói', () => {
+  // ⚠️ Bài test này sinh ra từ một lỗi thật nhìn thấy trên ảnh chụp thử: "Kho Lúa" của kỷ 2 mang
+  // loại `defense`, mà nguyên mẫu phòng thủ lại cho tháp góc CAO HƠN thân chính — kết quả là hai
+  // cái ống khói đứng giữa một ngôi làng mái tranh. Lỗi thuộc loại nguy hiểm nhất: mọi test đều
+  // xanh, ngân sách tam giác vẫn ổn, chỉ có mắt người mới bắt được. Khoá tỉ lệ lại là cách biến
+  // "nhìn thấy sai" thành "máy tự chặn".
+  //
+  // Trần 2,4 cho phần lớn các kỷ. Ba kỷ được nới lên 3,2 vì CHIỀU CAO CHÍNH LÀ BẢN SẮC của
+  // chúng, không phải lỗi tỉ lệ: kỷ 11 (Phố Wall — đúng thời điểm nhà chọc trời ra đời, và ngữ
+  // pháp của nó có `spire`), kỷ 14 (tháp kính) và kỷ 15 (khối lơ lửng). Danh sách này là một
+  // phát biểu về mỹ thuật, nên nó nằm ở test chứ không lẫn vào mã dựng hình.
+  const CAP = 2.4;
+  const TALL_ERAS = new Set([11, 14, 15]);
+
+  for (const bp of ALL_BLUEPRINTS) {
+    const spec = buildBuildingSpec({ ...bp, level: 3 });
+    const ratio = spec.height / (spec.span || 1);
+    const cap = TALL_ERAS.has(bp.era) ? 3.2 : CAP;
+    assert.ok(
+      ratio <= cap,
+      `${bp.bpId} (kỷ ${bp.era}, ${bp.type}/${bp.rarity}): cao ${spec.height.toFixed(2)} / rộng ${spec.span.toFixed(2)} = ${ratio.toFixed(2)} — vượt trần ${cap}`,
+    );
+  }
+});
+
+test('TỈ LỆ: tháp góc không được cao hơn thân chính quá một tầng', () => {
+  // Khoá chính cái luật vừa nêu ở `archetypes.js`, để lần sau ai sửa bảng mặt bằng thì biết ngay.
+  for (const type of Object.keys(ARCHETYPES)) {
+    for (const rarity of ['common', 'rare', 'epic']) {
+      const masses = getMassing(type, rarity);
+      const mainStories = Math.max(...masses.filter((m) => !m.low && !m.tower).map((m) => m.s), 0);
+      for (const tower of masses.filter((m) => m.tower)) {
+        assert.ok(
+          tower.s <= mainStories + 1,
+          `${type}/${rarity}: tháp góc ${tower.s} tầng trên thân ${mainStories} tầng — chênh quá 1`,
+        );
+      }
+    }
+  }
+});
+
 // ─── 5. NGÂN SÁCH ────────────────────────────────────────────────────────────
 
 test('NGÂN SÁCH: không công trình nào vượt trần tam giác', () => {

@@ -38,9 +38,16 @@ function signed(key) {
  * hình ảnh cho việc Đàm nâng cấp, nếu không thì cấp 3 chỉ là một con số trong bảng.
  */
 function massHeight(mass, style, archetype, rarity, level) {
-  const stories = mass.s + (mass.low ? 0 : Math.max(0, level - 1));
-  return stories * style.storyHeight * archetype.heightScale * getRarityScale(rarity)
-    * (mass.low ? 0.34 : 1);
+  // ⚠️ Nâng cấp là HỆ SỐ NHÂN, không phải "cộng thêm một tầng cho mọi mảng nhà". Bản đầu cộng
+  // tầng, và với kỳ quan epic (7 mảng, mảng cao nhất 4 tầng) thì cấp 3 làm công trình vọt lên gấp
+  // rưỡi rồi đâm ra khỏi khung hình. Nhân thì mọi mảng lớn lên CÙNG tỉ lệ — công trình cao lên
+  // thật mà vẫn giữ nguyên dáng.
+  // 0,15 chứ không phải 0,2: hệ số này nhân chồng lên hệ số loại VÀ hệ số độ hiếm, nên mỗi phần
+  // trăm ở đây bị khuếch đại ba lần. Vẫn đủ để cấp 3 cao hơn cấp 1 khoảng một phần ba — nhìn ra
+  // ngay bằng mắt, mà không làm công trình vống lên thành tháp.
+  const levelBoost = 1 + (Math.max(1, level) - 1) * 0.15;
+  return mass.s * style.storyHeight * archetype.heightScale * getRarityScale(rarity)
+    * levelBoost * (mass.low ? 0.34 : 1);
 }
 
 // ─── MÁI ─────────────────────────────────────────────────────────────────────
@@ -110,17 +117,26 @@ function emitRoof(out, { w, d, top, x, z }, style, ctx) {
     }
 
     case 'dome': {
-      // Tang trống + chỏm vòm + chóp vàng. Ba khối, nhưng đây là hình bóng đặc trưng nhất của kỷ
-      // Phục Hưng — chính cái Đàm lấy làm chuẩn thẩm mỹ.
-      const drum = Math.min(w, d) * 0.62;
-      out.push(prism({ x, z, y: top, w: drum, d: drum, h: pitch * 0.42, sides: 8, role: 'trim' }));
+      // Tang trống + vòm + chóp. Hình bóng đặc trưng nhất của kỷ Phục Hưng — chính cái Đàm lấy
+      // làm chuẩn thẩm mỹ, nên nó đáng bốn khối thay vì ba.
+      // ⚠️ Vòm phải dựng bằng HAI đoạn chồng nhau (thóp ít rồi thóp nhiều). Bản đầu dùng một đoạn
+      // `taper: 0.28` và ra một cái nón nhọn trông như mũ sinh nhật — đường cong của mái vòm nằm ở
+      // chỗ nó phình ra ở dưới rồi mới thu lại ở trên, một đoạn thẳng không diễn tả nổi.
+      const drum = Math.min(w, d) * 0.78;
+      const cornice = pitch * 0.26;
+      out.push(prism({ x, z, y: top, w: drum * 1.12, d: drum * 1.12, h: cornice * 0.5, sides: 8, role: 'trim' }));
+      out.push(prism({ x, z, y: top + cornice * 0.5, w: drum, d: drum, h: cornice, sides: 8, role: 'trim' }));
       out.push(prism({
-        x, z, y: top + pitch * 0.42, w: drum * 1.06, d: drum * 1.06, h: pitch * 0.78,
-        sides: 8, taper: 0.28, role: 'roof',
+        x, z, y: top + cornice * 1.5, w: drum * 1.04, d: drum * 1.04, h: pitch * 0.42,
+        sides: 8, taper: 0.82, role: 'roof',
       }));
       out.push(prism({
-        x, z, y: top + pitch * 1.2, w: drum * 0.16, d: drum * 0.16, h: pitch * 0.34,
-        sides: 6, taper: 0, role: 'gold',
+        x, z, y: top + cornice * 1.5 + pitch * 0.42, w: drum * 0.85, d: drum * 0.85, h: pitch * 0.46,
+        sides: 8, taper: 0.24, role: 'roof',
+      }));
+      out.push(prism({
+        x, z, y: top + cornice * 1.5 + pitch * 0.88, w: drum * 0.2, d: drum * 0.2, h: pitch * 0.3,
+        sides: 6, taper: 0.2, role: 'gold',
       }));
       break;
     }

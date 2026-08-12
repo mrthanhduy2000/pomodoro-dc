@@ -39,3 +39,6 @@ DC Pomodoro - Logo System.html
 
 # Kết quả chạy test thủ công (không có Playwright/E2E config trong repo) — lỡ commit 2026-07-11, đã dọn
 test-results/
+
+# ảnh xem thử Thành Phố 3D (scripts/city-preview.mjs) — chỉ để soi bằng mắt lúc phát triển
+.city-preview/

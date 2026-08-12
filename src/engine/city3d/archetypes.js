@@ -78,16 +78,21 @@ export const ARCHETYPES = {
       common: [
         { x: 0, z: 0, w: 0.66, d: 0.66, s: 1, role: 'stone' },
       ],
+      // ⚠️ THÁP GÓC KHÔNG ĐƯỢC CAO HƠN THÂN CHÍNH QUÁ MỘT TẦNG.
+      // Bản đầu để tháp 3 tầng trên thân 2 tầng (và 4 trên 3 ở hạng epic), kết quả đo được là
+      // tỉ lệ cao/rộng 2,33 — và ảnh chụp thử kỷ 2 cho ra hai cái ống khói đứng giữa làng.
+      // Càng tệ vì "Kho Lúa" cũng mang loại `defense`: một vựa thóc mà mọc tháp canh cao vống.
+      // Công trình phòng thủ phải NẶNG và THẤP; sức mạnh nằm ở bề dày, không ở chiều cao.
       rare: [
-        { x: 0, z: 0, w: 0.78, d: 0.78, s: 2, role: 'stone' },
-        { x: -0.42, z: -0.42, w: 0.28, d: 0.28, s: 3, role: 'stone', tower: true },
+        { x: 0, z: 0, w: 0.86, d: 0.86, s: 2, role: 'stone' },
+        { x: -0.46, z: -0.46, w: 0.3, d: 0.3, s: 2, role: 'stone', tower: true },
       ],
       epic: [
-        { x: 0, z: 0, w: 0.96, d: 0.96, s: 3, role: 'stone' },
-        { x: -0.56, z: -0.56, w: 0.32, d: 0.32, s: 4, role: 'stone', tower: true },
-        { x: 0.56, z: -0.56, w: 0.32, d: 0.32, s: 4, role: 'stone', tower: true },
-        { x: -0.56, z: 0.56, w: 0.32, d: 0.32, s: 4, role: 'stone', tower: true },
-        { x: 0.56, z: 0.56, w: 0.32, d: 0.32, s: 4, role: 'stone', tower: true },
+        { x: 0, z: 0, w: 1.12, d: 1.12, s: 2, role: 'stone' },
+        { x: -0.62, z: -0.62, w: 0.34, d: 0.34, s: 3, role: 'stone', tower: true },
+        { x: 0.62, z: -0.62, w: 0.34, d: 0.34, s: 3, role: 'stone', tower: true },
+        { x: -0.62, z: 0.62, w: 0.34, d: 0.34, s: 3, role: 'stone', tower: true },
+        { x: 0.62, z: 0.62, w: 0.34, d: 0.34, s: 3, role: 'stone', tower: true },
       ],
     },
   },
@@ -100,24 +105,34 @@ export const ARCHETYPES = {
    */
   wonder: {
     label: 'kỳ quan',
-    heightScale: 1.45,
+    // ⚠️ 1.0 chứ không phải 1.45. Bản đầu để 1.45 và ảnh chụp thử cho ra một cây cột khổng lồ đâm
+    // thẳng ra khỏi khung hình — kỳ quan phải là ĐIỂM NHẤN của thành phố, không phải thứ che mất
+    // thành phố. Mốc ngắm: cao khoảng một phần ba bề ngang lưới (12 ô), tức ~4 đơn vị.
+    // ⚠️ 0,68 — con số này đã phải hạ HAI LẦN sau khi nhìn ảnh chụp thử. Thủ phạm là các hệ số
+    // NHÂN CHỒNG NHAU: số tầng × chiều cao tầng × hệ số loại × hệ số độ hiếm × hệ số nâng cấp ×
+    // hệ số phóng to. Mỗi hệ số nhìn riêng đều hợp lý, nhân lại thành gần gấp đôi. Mốc kiểm bằng
+    // mắt: kỳ quan phải ra dáng CUNG ĐIỆN (bè, có bệ, có vòm), không phải THÁP.
+    heightScale: 0.68,
     symmetric: true,
     masses: {
       common: [
-        { x: 0, z: 0, w: 0.72, d: 0.72, s: 2 },
+        { x: 0, z: 0, w: 0.78, d: 0.78, s: 2 },
       ],
       rare: [
         { x: 0, z: 0, w: 0.96, d: 0.96, s: 1, role: 'stone', low: true },
-        { x: 0, z: 0, w: 0.7, d: 0.7, s: 3 },
+        { x: 0, z: 0, w: 0.76, d: 0.76, s: 3 },
       ],
       epic: [
-        { x: 0, z: 0, w: 1.66, d: 1.66, s: 1, role: 'stone', low: true },
-        { x: 0, z: 0, w: 1.2, d: 1.2, s: 1, role: 'trim', low: true },
-        { x: 0, z: 0, w: 0.86, d: 0.86, s: 4 },
-        { x: -0.62, z: -0.62, w: 0.2, d: 0.2, s: 5, role: 'trim', tower: true },
-        { x: 0.62, z: -0.62, w: 0.2, d: 0.2, s: 5, role: 'trim', tower: true },
-        { x: -0.62, z: 0.62, w: 0.2, d: 0.2, s: 5, role: 'trim', tower: true },
-        { x: 0.62, z: 0.62, w: 0.2, d: 0.2, s: 5, role: 'trim', tower: true },
+        { x: 0, z: 0, w: 1.72, d: 1.72, s: 1, role: 'stone', low: true },
+        { x: 0, z: 0, w: 1.44, d: 1.44, s: 1, role: 'trim', low: true },
+        { x: 0, z: 0, w: 1.16, d: 1.16, s: 3 },
+        // Tháp góc THẤP, MẬP, và đứng HẲN RA NGOÀI thân chính (±0,66 so với nửa bề ngang 0,58).
+        // Bản đầu để `s: 5, w: 0.2` và ra bốn cây sào; bản sau đặt sát quá nên chúng dính vào
+        // tường thành gờ trang trí. Tháp canh phải đọc ra là bốn khối RIÊNG ở bốn góc.
+        { x: -0.66, z: -0.66, w: 0.3, d: 0.3, s: 2, role: 'trim', tower: true },
+        { x: 0.66, z: -0.66, w: 0.3, d: 0.3, s: 2, role: 'trim', tower: true },
+        { x: -0.66, z: 0.66, w: 0.3, d: 0.3, s: 2, role: 'trim', tower: true },
+        { x: 0.66, z: 0.66, w: 0.3, d: 0.3, s: 2, role: 'trim', tower: true },
       ],
     },
   },

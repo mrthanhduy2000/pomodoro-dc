@@ -1,47 +1,58 @@
 /**
  * sceneGraph.js — dựng cảnh 3D từ bố cục trừu tượng mà `computeCityLayout` trả về.
  *
- * ⚠️ Phase 3A CỐ Ý dừng ở hình khối thô (hộp): mục tiêu của phase này là ĐO XEM iPhone có kham
- * nổi không, chứ không phải làm đẹp. Nhưng phải đo trên đúng TẢI THẬT — 144 ô nền, số công trình
- * thật, bóng đổ bật — chứ đo 5 cái hộp thì con số chẳng dự đoán được gì. Ngôn ngữ hình khối chi
- * tiết (mái, cửa sổ, 3 trục kỷ × loại × độ hiếm) là việc của Phase 3B.
- *
- * Ba luật hiệu năng, đều là chỗ dễ mất nhiều nhất:
- *   1. **Cả thành phố = 3 lệnh vẽ.** Nền, đường, công trình mỗi thứ một `InstancedMesh`; nếu vẽ
- *      rời từng ô thì riêng nền đã 144 lệnh.
- *   2. **Một material duy nhất cho cả ba.** Đổi material là nguyên nhân tốn lệnh vẽ lớn nhất.
- *      Màu riêng từng khối đi qua `setColorAt` (màu theo THỰC THỂ), không qua material.
+ * Bốn luật hiệu năng, đều là chỗ dễ mất nhiều nhất:
+ *   1. **Nền và đường đi qua `InstancedMesh`** — 144 ô nền vẽ rời là 144 lệnh vẽ; gộp còn 1.
+ *   2. **Toàn bộ công trình gộp thành MỘT khối hình học** (`geometryFactory.js`). ~750 khối nhỏ
+ *      vẫn chỉ là 1 lệnh vẽ. Đây là thứ cho phép mỗi công trình có hình dáng riêng mà không phải
+ *      trả giá bằng lệnh vẽ — nếu không thì "75 công trình khác nhau" đồng nghĩa với 75 lệnh vẽ.
+ *   3. **Một material duy nhất cho công trình.** Màu đi qua thuộc tính màu ĐỈNH (`vertexColors`),
+ *      không qua material. Nền/đường dùng material riêng vì chúng lấy màu qua `setColorAt`.
  *      ⚠️ Đã kiểm mã nguồn three 0.185.1: `WebGLProgram` định nghĩa `USE_COLOR` khi
- *      `vertexColors || instancingColor`, nên `setColorAt` chạy được mà KHÔNG cần bật
- *      `vertexColors` trên material — bật thừa sẽ làm mọi mesh thường không có thuộc tính `color`
- *      hoá đen.
- *   3. **Bóng đổ KHÔNG tự cập nhật** (`shadow.autoUpdate = false`). Mặc định của three là `true`,
+ *      `vertexColors || instancingColor` — nên `setColorAt` chạy được mà KHÔNG cần bật
+ *      `vertexColors`, còn khối gộp thì BẮT BUỘC phải bật.
+ *   4. **Bóng đổ KHÔNG tự cập nhật** (`shadow.autoUpdate = false`). Mặc định của three là `true`,
  *      tức là vẽ lại toàn bộ shadow map MỖI khung hình — nó âm thầm phá vỡ render-on-demand vì
  *      khung hình nào cũng trở nên đắt như khung đầu tiên.
  */
 
 import {
   AmbientLight,
+  BackSide,
   BoxGeometry,
+  BufferAttribute,
   Color,
   DirectionalLight,
   Fog,
+  HemisphereLight,
   InstancedMesh,
   Matrix4,
+  Mesh,
+  MeshBasicMaterial,
   MeshLambertMaterial,
   Quaternion,
   Scene,
+  SphereGeometry,
   Vector3,
 } from 'three';
+
+import { buildBuildingSpec, buildScaffoldSpec } from '../../../engine/city3d/buildingSpec';
+import { buildPropSpec } from '../../../engine/city3d/propSpec';
+import { buildMergedGeometry } from './geometryFactory';
+
+/**
+ * Hệ số phóng to công trình so với ô lưới.
+ * ⚠️ Lớn hơn 1 là CỐ Ý: tầng mô tả nghĩ theo đơn vị "một ô", nhưng năm công trình rải trên lưới
+ * 12×12 mà mỗi cái chỉ chiếm đúng một ô thì thành phố trông như năm hạt đậu trên bàn cờ (đã thấy
+ * tận mắt ở ảnh chụp thử đầu tiên). Các khu đất cách nhau ít nhất 2,8 ô nên 1,3 vẫn an toàn
+ * tuyệt đối — kỳ quan rộng nhất (1,7 ô) nở ra 2,2 ô, vẫn chưa chạm hàng xóm.
+ */
+const BUILDING_SCALE = 1.3;
 
 /** Một ô lưới = 1 đơn vị thế giới. Giữ số tròn để mọi phép tính đọc được bằng mắt. */
 export const TILE_UNIT = 1;
 
 const GROUND_THICKNESS = 0.22;
-const BUILDING_BASE_HEIGHT = 0.9;
-const BUILDING_LEVEL_STEP = 0.55;
-const BUILDING_FOOTPRINT = 0.78;
-
 /** Số tam giác của một hộp — dùng để tính ngân sách hiển thị trên HUD. */
 const TRIANGLES_PER_BOX = 12;
 
@@ -51,12 +62,6 @@ export function cellToWorld(x, y, gridSize) {
   return { x: (x - half) * TILE_UNIT, z: (y - half) * TILE_UNIT };
 }
 
-/** Chiều cao khối nhà theo cấp — nâng cấp phải NHÌN THẤY được là cao lên. */
-export function buildingHeight(level) {
-  const safeLevel = Number.isFinite(level) ? Math.max(1, level) : 1;
-  return BUILDING_BASE_HEIGHT + (safeLevel - 1) * BUILDING_LEVEL_STEP;
-}
-
 /**
  * Dựng toàn bộ cảnh.
  *
@@ -64,20 +69,30 @@ export function buildingHeight(level) {
  * @param {object} input.layout    kết quả `computeCityLayout(...)`
  * @param {object} input.palette   kết quả `buildScenePalette(...)` — các màu ở dạng SỐ
  * @param {boolean} [input.dimmed] thành phố đã niêm phong → làm nhạt cho có vẻ "quá khứ"
+ * @param {boolean} [input.lowDetail] máy yếu → bỏ chi tiết trang trí, giữ nguyên hình bóng
  */
-export function createCityScene({ layout, palette, dimmed = false }) {
+export function createCityScene({ layout, palette, dimmed = false, lowDetail = false }) {
   const gridSize = layout.gridSize;
   const scene = new Scene();
   scene.background = new Color(palette.background);
 
-  // Sương mù nhẹ theo chiều sâu: vừa tạo cảm giác không gian, vừa giấu mép lưới ở xa.
-  scene.fog = new Fog(palette.background, gridSize * 1.1, gridSize * 2.9);
+  // Sương mù bắt đầu ngay sau rìa thành phố. Nó không chỉ giấu mép lưới: đây là "phối cảnh không
+  // khí" — thủ pháp mà hội hoạ dùng để tạo chiều sâu, vật càng xa càng nhạt và ngả về màu chân
+  // trời. Trên màn hình phẳng, đó là tín hiệu chiều sâu rẻ nhất và mạnh nhất.
+  // ⚠️ Bắt đầu SAU rìa thành phố. Bản đầu để `gridSize * 1.05` (≈12,6) trong khi camera đứng cách
+  // 22 — nghĩa là sương phủ lên gần hết thành phố chứ không phải chỉ phần xa, và ảnh chụp thử ra
+  // một màn sương trắng đục. Phối cảnh không khí chỉ đẹp khi nó tác động ở RÌA.
+  // Sương phải ĐỦ DÀY ở rìa bãi đất bao quanh (bán kính ~36) để mép của nó tan hẳn vào chân trời;
+  // nếu không sẽ thấy một đường cắt thẳng băng giữa đất và trời.
+  scene.fog = new Fog(palette.sky2?.horizon ?? palette.background, gridSize * 1.7, gridSize * 3.4);
 
   // three KHÔNG tự giải phóng bộ nhớ GPU — mọi thứ tạo ra ở đây phải tự dọn trong `dispose`.
   const disposables = [];
   const track = (resource) => { disposables.push(resource); return resource; };
+  const meshes = [];
+  const addMesh = (mesh) => { if (mesh) { scene.add(mesh); meshes.push(mesh); } return mesh; };
 
-  const material = track(new MeshLambertMaterial({
+  const tileMaterial = track(new MeshLambertMaterial({
     transparent: dimmed,
     opacity: dimmed ? 0.62 : 1,
   }));
@@ -89,15 +104,9 @@ export function createCityScene({ layout, palette, dimmed = false }) {
   const scale = new Vector3(1, 1, 1);
   const tint = new Color();
 
-  /**
-   * Gộp một danh sách khối thành MỘT `InstancedMesh`.
-   * @param {Array} items
-   * @param {THREE.BoxGeometry} geometry
-   * @param {(item:object, index:number) => {x:number,y:number,z:number,height:number,color:number}} place
-   */
   function buildInstances(items, geometry, place, { castShadow, receiveShadow }) {
     if (items.length === 0) return null;
-    const mesh = new InstancedMesh(geometry, material, items.length);
+    const mesh = new InstancedMesh(geometry, tileMaterial, items.length);
     mesh.castShadow = castShadow;
     mesh.receiveShadow = receiveShadow;
 
@@ -112,16 +121,78 @@ export function createCityScene({ layout, palette, dimmed = false }) {
 
     mesh.instanceMatrix.needsUpdate = true;
     if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
-    scene.add(mesh);
     return mesh;
   }
 
+  // ── Vòm trời chuyển sắc ───────────────────────────────────────────────────
+  // Một mảng nền phẳng làm cả cảnh trông như dán lên giấy. Vòm trời đổi màu từ đỉnh xuống chân
+  // trời cho không gian có "trên" và "dưới" — và vì nó nằm sau sương mù cùng màu chân trời, thành
+  // phố tan dần vào trời thay vì bị cắt bằng một đường viền.
+  // ⚠️ BÁN KÍNH VÒM TRỜI BỊ KẸP GIỮA HAI ĐIỀU KIỆN, VÀ CHÚNG TỪNG MÂU THUẪN NHAU:
+  //   (a) phải LỚN HƠN khoảng camera lùi xa nhất (`maxDistance` = gridSize × 3,1 ≈ 37) — nếu không
+  //       thì thu nhỏ hết cỡ sẽ đưa camera ra ngoài vòm và trời biến mất;
+  //   (b) mặt SAU của vòm phải nằm trong tầm nhìn: khoảng camera + bán kính < `camera.far`.
+  // Bản đầu để bán kính 4,4 × gridSize (52,8) với `camera.far` = 6 × gridSize (72): 37 + 52,8 = 90
+  // > 72, nên nửa vòm phía xa bị cắt sạch và thứ hiện ra là `scene.background` phẳng lì. Nhìn ảnh
+  // chụp thử tưởng "màu trời chọn sai", thật ra là trời KHÔNG HỀ ĐƯỢC VẼ.
+  // Đã nới `camera.far` lên 8 × gridSize (xem `CityScene3D.jsx`) để hai điều kiện cùng thoả:
+  // 37 < 43,2 và 37 + 43,2 = 80,2 < 96.
+  const SKY_RADIUS = gridSize * 3.6;
+  const skyGeometry = track(new SphereGeometry(SKY_RADIUS, 16, 10));
+  const skyPos = skyGeometry.attributes.position;
+  const skyColors = new Float32Array(skyPos.count * 3);
+  const topColor = new Color(palette.sky2?.top ?? palette.background);
+  const horizonColor = new Color(palette.sky2?.horizon ?? palette.background);
+  for (let i = 0; i < skyPos.count; i += 1) {
+    // Chuyển sắc theo chiều cao. Số mũ 1,2 (gần tuyến tính) chứ không phải bình phương: camera
+    // nhìn hơi chúc xuống nên dải trời lọt vào khung chỉ là phần NGAY TRÊN đường chân trời — dồn
+    // màu xanh lên cao thì nó nằm ngoài tầm nhìn và bầu trời chỉ còn một mảng nhợt.
+    const t = Math.max(0, Math.min(1, (skyPos.getY(i) / SKY_RADIUS) * 0.5 + 0.5));
+    tint.copy(horizonColor).lerp(topColor, Math.pow(t, 1.2));
+    skyColors[i * 3] = tint.r;
+    skyColors[i * 3 + 1] = tint.g;
+    skyColors[i * 3 + 2] = tint.b;
+  }
+  skyGeometry.setAttribute('color', new BufferAttribute(skyColors, 3));
+  const skyMaterial = track(new MeshBasicMaterial({
+    vertexColors: true,
+    side: BackSide,     // nhìn vòm từ BÊN TRONG
+    fog: false,         // trời không được chịu sương mù, nếu không nó tự xoá chính mình
+    depthWrite: false,
+  }));
+  const skyMesh = new Mesh(skyGeometry, skyMaterial);
+  scene.add(skyMesh);
+  meshes.push(skyMesh);
+
+  // ── Vùng đất bao quanh ────────────────────────────────────────────────────
+  // ⚠️ ĐÂY LÀ THỨ TÁCH "MỘT NƠI CHỐN" KHỎI "MÔ HÌNH TRÊN BÀN".
+  // Lưới 12×12 kết thúc bằng một mép vuông sắc lẹm, và ảnh chụp thử cho thấy đúng cảm giác một
+  // miếng bìa đặt giữa hư không — dù mọi thứ TRÊN miếng bìa đó đều đã đẹp. Một mặt đất rộng chạy
+  // xa khỏi lưới, đậm hơn chút và tan vào sương ở rìa, làm thành phố trở thành một điểm TRONG một
+  // vùng đất thay vì một vật thể lơ lửng. Rẻ đúng 12 tam giác.
+  const outskirtsSize = gridSize * 6;
+  const outskirtsGeometry = track(new BoxGeometry(outskirtsSize, GROUND_THICKNESS, outskirtsSize));
+  const outskirtsMaterial = track(new MeshLambertMaterial({
+    color: palette.outskirts ?? palette.groundAlt,
+  }));
+  const outskirts = new Mesh(outskirtsGeometry, outskirtsMaterial);
+  // Thấp hơn nền thành phố một chút → lưới thành phố thành một thềm đất cao, có gờ.
+  outskirts.position.y = -GROUND_THICKNESS - 0.06;
+  // ⚠️ KHÔNG nhận bóng, và đây KHÔNG phải tối ưu hiệu năng — nó là bắt buộc để đúng.
+  // Khung bóng đổ chỉ bó quanh lưới 12×12 (`reach` bên dưới), còn mặt đất này rộng gấp bảy lần.
+  // Mọi điểm nằm NGOÀI khung đó tra vào bản đồ bóng sẽ lấy nhầm giá trị ở mép và bị coi là đang
+  // trong bóng — kết quả là cả vùng đất quanh thành phố tối đen (đã thấy tận mắt ở ảnh chụp thử).
+  // Ngoài lưới cũng chẳng có gì đổ bóng, nên tắt là vừa đúng vừa rẻ.
+  outskirts.receiveShadow = false;
+  scene.add(outskirts);
+  meshes.push(outskirts);
+
   // ── Nền: 144 ô → MỘT lệnh vẽ ──────────────────────────────────────────────
   const groundCells = layout.ground ?? [];
-  const groundColors = [palette.ground, palette.groundAlt];
-  const groundMesh = buildInstances(
+  const groundColors = palette.groundShades ?? [palette.ground, palette.groundAlt];
+  addMesh(buildInstances(
     groundCells,
-    track(new BoxGeometry(TILE_UNIT * 0.98, GROUND_THICKNESS, TILE_UNIT * 0.98)),
+    track(new BoxGeometry(TILE_UNIT * 0.99, GROUND_THICKNESS, TILE_UNIT * 0.99)),
     (cell) => {
       const { x, z } = cellToWorld(cell.x, cell.y, gridSize);
       return {
@@ -133,49 +204,113 @@ export function createCityScene({ layout, palette, dimmed = false }) {
     },
     // Ô nền phẳng: nhận bóng thì đẹp, đổ bóng lên nhau thì chẳng thấy gì mà rất tốn.
     { castShadow: false, receiveShadow: true },
-  );
+  ));
 
   // ── Đường sá ──────────────────────────────────────────────────────────────
   const roads = (layout.props ?? []).filter((prop) => prop.kind === 'road');
-  const roadMesh = buildInstances(
+  addMesh(buildInstances(
     roads,
     track(new BoxGeometry(TILE_UNIT, GROUND_THICKNESS, TILE_UNIT)),
     (road) => {
       const { x, z } = cellToWorld(road.x, road.y, gridSize);
       return {
         x, z,
-        y: -GROUND_THICKNESS / 2 + 0.012,   // nhô lên tí xíu để không chọi mặt nền
+        y: -GROUND_THICKNESS / 2 + 0.014,   // nhô lên tí xíu để không chọi mặt nền
         height: 1,
-        color: palette.edge,
+        color: palette.road ?? palette.roles?.stone ?? palette.edge,
       };
     },
     { castShadow: false, receiveShadow: true },
-  );
+  ));
 
-  // ── Công trình ────────────────────────────────────────────────────────────
+  // ── Công trình: mỗi cái một hình dáng riêng, tất cả trong MỘT lệnh vẽ ──────
   const buildings = layout.buildings ?? [];
-  const buildingMesh = buildInstances(
-    buildings,
-    track(new BoxGeometry(BUILDING_FOOTPRINT, 1, BUILDING_FOOTPRINT)),
-    (building) => {
-      const height = buildingHeight(building.level);
-      const { x, z } = cellToWorld(building.x, building.y, gridSize);
-      return {
-        x, z,
-        y: height / 2,
-        height,
-        color: building.rarity === 'epic' ? palette.roof : palette.wall,
-      };
-    },
-    { castShadow: true, receiveShadow: true },
-  );
+  const placements = buildings.map((building) => {
+    const { x, z } = cellToWorld(building.x, building.y, gridSize);
+    return {
+      x, z, y: 0,
+      scale: BUILDING_SCALE,
+      // Xoay cả công trình theo bội số 90° cho phố khỏi xếp hàng răm rắp. Bội số của góc vuông
+      // chứ không phải góc bất kỳ: nhà quay chéo so với lưới đường trông như bị đặt ẩu.
+      ry: ((building.x + building.y) % 4) * (Math.PI / 2),
+      spec: buildBuildingSpec({
+        bpId: building.bpId,
+        era: layout.era,
+        type: building.type,
+        rarity: building.rarity,
+        level: building.level,
+      }),
+    };
+  });
 
-  // ── Ánh sáng ──────────────────────────────────────────────────────────────
-  const ambient = new AmbientLight(palette.sky, palette.isDark ? 1.25 : 1.05);
+  // Công trình đang xây (nếu bố cục có) → giàn giáo dựng cao dần theo tiến độ.
+  for (const scaffold of layout.scaffolds ?? []) {
+    const { x, z } = cellToWorld(scaffold.x, scaffold.y, gridSize);
+    placements.push({
+      x, z, y: 0, ry: 0, scale: BUILDING_SCALE,
+      spec: buildScaffoldSpec({ bpId: scaffold.bpId, era: layout.era, progress: scaffold.progress }),
+    });
+  }
+
+  // ── Cảnh vật: cây, đá, đèn, mặt nước, ruộng ──────────────────────────────
+  // `deriveProps` đã sinh sẵn danh sách này từ Phase 1 (bộ vẽ 2D dùng từ lâu) nhưng bộ vẽ 3D
+  // trước nay mới chỉ đọc mỗi đường sá. Gộp chúng vào CÙNG khối hình học với công trình để không
+  // tốn thêm lệnh vẽ nào — chúng đều đứng yên nên chẳng có lý do gì phải tách ra.
+  const scatter = (layout.props ?? []).filter((prop) => prop.kind !== 'road');
+  for (const prop of scatter) {
+    const { x, z } = cellToWorld(prop.x, prop.y, gridSize);
+    placements.push({
+      x, z, y: 0,
+      // Xoay tự do — cây cối mà thẳng hàng theo lưới thì lộ ngay ra là máy đặt.
+      ry: (prop.variant + prop.x * 0.7 + prop.y * 1.3) % (Math.PI * 2),
+      spec: buildPropSpec({
+        kind: prop.kind,
+        era: layout.era,
+        seed: `${layout.era}|${prop.kind}|${prop.x}|${prop.y}|${prop.variant}`,
+      }),
+    });
+  }
+
+  const merged = buildMergedGeometry(placements, palette, { skipDeco: lowDetail });
+  let buildingTriangles = 0;
+  if (merged) {
+    track(merged.geometry);
+    buildingTriangles = merged.triangles;
+    const buildingMaterial = track(new MeshLambertMaterial({
+      vertexColors: true,
+      transparent: dimmed,
+      opacity: dimmed ? 0.62 : 1,
+    }));
+    const mesh = new Mesh(merged.geometry, buildingMaterial);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    addMesh(mesh);
+  }
+
+  // ── Ánh sáng: BA nguồn, cố ý khác nhiệt độ ────────────────────────────────
+  // Đây là phần rẻ nhất mà ăn tiền nhất. Một đèn trắng duy nhất cho ra cảnh "đồ hoạ máy tính";
+  // nắng ẤM xiên + trời LẠNH rọi xuống + đất ẤM hắt lên cho ra ba sắc khác nhau trên ba mặt của
+  // cùng một khối, mà không tốn thêm một lệnh vẽ nào. Chính là cách hội hoạ dựng khối bằng màu.
+  // ⚠️ TỈ LỆ GIỮA BA NGUỒN LÀ THỨ PHẢI GIỮ, KHÔNG PHẢI ĐỘ SÁNG TỔNG.
+  // Bản đầu để đèn nền 0,92 + ambient 0,22 + nắng 1,15 — gần như nguồn nào cũng mạnh ngang nhau,
+  // và ảnh chụp thử ra một cảnh phẳng lì không thấy bóng đâu. "Sáng đều" là kẻ thù của việc nhìn
+  // ra hình khối: mắt đọc được khối là nhờ ba mặt của nó KHÁC ĐỘ SÁNG. Nắng phải áp đảo, đèn nền
+  // chỉ vừa đủ để mặt khuất còn màu chứ không đen kịt.
+  const hemisphere = new HemisphereLight(
+    palette.lights?.skyDome ?? palette.sky,
+    palette.lights?.bounce ?? palette.ground,
+    palette.isDark ? 0.62 : 0.5,
+  );
+  scene.add(hemisphere);
+
+  const ambient = new AmbientLight(palette.lights?.bounce ?? palette.sky, palette.isDark ? 0.16 : 0.1);
   scene.add(ambient);
 
-  const sun = new DirectionalLight(palette.sun, palette.isDark ? 1.15 : 1.35);
-  sun.position.set(gridSize * 0.5, gridSize * 0.95, gridSize * 0.35);
+  const sun = new DirectionalLight(palette.lights?.sun ?? palette.sun, palette.isDark ? 1.55 : 1.9);
+  // Góc THẤP và xiên: bóng dài, mặt bên bắt sáng khác hẳn mặt trên. Nắng đứng bóng (từ đỉnh đầu
+  // rọi xuống) là ánh sáng tệ nhất để nhìn ra hình khối — mọi mặt đứng đều tối bằng nhau, và đó
+  // đúng là thứ ánh sáng mà một cảnh 3D mặc định hay rơi vào.
+  sun.position.set(gridSize * 0.78, gridSize * 0.54, gridSize * 0.46);
   sun.castShadow = true;
 
   // ⚠️ ĐÂY LÀ DÒNG QUAN TRỌNG NHẤT CẢ FILE. Mặc định của three là `true` = vẽ lại shadow map mỗi
@@ -192,11 +327,10 @@ export function createCityScene({ layout, palette, dimmed = false }) {
   sun.shadow.camera.bottom = -reach;
   sun.shadow.camera.near = 1;
   sun.shadow.camera.far = gridSize * 3;
-  sun.shadow.bias = -0.0016;            // chống sọc vằn tự-đổ-bóng trên mặt nền phẳng
+  sun.shadow.bias = -0.0014;            // chống sọc vằn tự-đổ-bóng trên mặt nền phẳng
+  sun.shadow.normalBias = 0.02;         // chống hở chân bóng ở mặt nghiêng (mái dốc)
   scene.add(sun);
   scene.add(sun.target);
-
-  const meshes = [groundMesh, roadMesh, buildingMesh].filter(Boolean);
 
   let disposed = false;
   function dispose() {
@@ -206,7 +340,7 @@ export function createCityScene({ layout, palette, dimmed = false }) {
     disposed = true;
     for (const mesh of meshes) {
       scene.remove(mesh);
-      mesh.dispose();
+      mesh.dispose?.();
     }
     for (const resource of disposables.splice(0)) resource.dispose?.();
     scene.clear();
@@ -220,8 +354,9 @@ export function createCityScene({ layout, palette, dimmed = false }) {
       groundTiles: groundCells.length,
       roads: roads.length,
       buildings: buildings.length,
+      props: scatter.length,
       drawCalls: meshes.length,
-      triangles: (groundCells.length + roads.length + buildings.length) * TRIANGLES_PER_BOX,
+      triangles: buildingTriangles + (groundCells.length + roads.length) * TRIANGLES_PER_BOX,
     },
     /** Gọi khi cảnh đổi hình dạng (đổi kỷ, xây thêm nhà) — bóng mới được vẽ lại. */
     invalidateShadows() { sun.shadow.needsUpdate = true; },

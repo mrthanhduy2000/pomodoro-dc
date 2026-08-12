@@ -212,6 +212,36 @@ bốn thứ dưới đây khoá lẫn nhau, đổi một cái phải soi lại b
 4. **Bảng màu theo theme** (`palette3d.js`): hai theme là hai CẢNH khác nhau (nắng chiều ấm ↔ chạng
    vạng xanh lam), không phải một cảnh vặn nhỏ độ sáng. Theme tối giảm mạnh độ tươi — ánh sáng yếu
    thì mắt mất khả năng phân biệt màu.
+5. **Giờ trong ngày** (`engine/city3d/daylight.js`, Phase 3D) là trục THỨ NĂM cắt ngang cả bốn thứ
+   trên: cùng một thành phố, mở lúc 6 giờ sáng và 11 giờ đêm phải ra hai bức khác hẳn. Sáu chặng
+   rời rạc (không nội suy — cảnh chỉ dựng lại khi bố cục đổi, nội suy sẽ tính cho một thứ không ai
+   thấy chuyển động). ⚠️ **"Theme tối" ≠ "trời đã tối"**: theme là sở thích của Đàm, giờ là sự
+   thật — nên giờ đêm ép cảnh sang bảng màu tối ở CẢ hai theme, nếu không thì ai để theme sáng sẽ
+   vĩnh viễn thấy giữa trưa.
+
+⚠️ **BẦU TRỜI KHÔNG ĐƯỢC PHA BẰNG CÁCH XOAY GÓC MÀU** — họ lỗi này đã lộ ra BA lần trong cùng một
+Phase, mỗi lần ở một chỗ khác nhau, và cả ba lần chỉ ảnh chụp mới thấy chứ đọc code thì không:
+cộng thẳng offset độ (`skyShift`) · nội suy góc màu về đích cố định · pha sắc kỷ bằng `mixHue`. Gốc
+rễ giống hệt nhau: nội suy góc màu luôn đi ĐƯỜNG NGẮN trên vòng tròn màu, mà hai đầu màu của bầu
+trời (cam bình minh ↔ lam) nằm gần như ĐỐI DIỆN nhau — đường ngắn đó chạy xuyên qua vùng TÍM, và
+khi hai đầu cách nhau đúng ~180° thì hướng đi còn lật ngẫu nhiên. Kết quả từng thấy: chân trời giữa
+trưa hồng phấn, đỉnh trời bình minh tím sen, đèn bán cầu tím. Cách đúng là cách của người vẽ: từ
+cam sang lam thì **đi qua màu xám**, tức trộn trong RGB (`skyward` ở `palette3d.js` — cả ba bước
+nền → sắc kỷ → sắc chặng đều trộn RGB). Góc màu vẫn tốt cho VẬT LIỆU (tường/mái/đá, nơi các góc
+màu gần nhau nên không bao giờ lật hướng). Khoá bằng test quét 24 giờ × 2 theme × 6 kỷ ở
+`palette3d.test.js`.
+
+⚠️ **BAN ĐÊM BỊ LÀM TỐI HAI LẦN** — và đây là cái bẫy số học đã cho ra một ảnh chụp mặt đất
+`#030401` (gần đúng số 0). Giờ đêm vừa chuyển SƠN sang bảng màu tối (~2,9×) vừa làm MÀU ĐÈN tối đi
+(đèn bán cầu lấy màu từ chính bầu trời đêm, ~2×) — nhân lại là ~5,8× trong khi `fillEnergy` lúc đó
+chỉ bù 1,45×. Nguyên tắc rút ra: **cường độ đèn phải bù cho cả độ đậm của MÀU đèn**, hai thứ đó
+nhân nhau chứ không thay thế nhau.
+
+⚠️ **VAI MÀU KHÔNG CHỈ LÀ "MÀU GÌ", CÒN LÀ "ĐƯỢC ĐỐI XỬ THẾ NÀO"** (`parts.js`). Khi vai chỉ dùng
+để tra màu thì cửa kính và mặt nước dùng chung vai `glass` là tiện. Ngày vai bắt đầu quyết định
+HÀNH VI — ban đêm mọi khối vai `glass` tách sang khối tự phát sáng để làm ô cửa sáng đèn — thì việc
+dùng chung lập tức thành lỗi: cái ao biến thành một tấm vàng rực giữa thành phố tối. Thêm vai mới
+(`water`) rẻ hơn nhiều so với thêm một danh sách ngoại lệ phải nhớ cập nhật.
 
 Viền tối góc làm bằng **lớp gradient CSS**, KHÔNG phải post-processing: post-processing đòi thêm
 thư viện + khung đệm toàn màn hình + vẽ lại mọi điểm ảnh mỗi khung hình, tức là khoản đắt nhất có

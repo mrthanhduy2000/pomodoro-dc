@@ -21,6 +21,7 @@ import {
   parseCssColor,
   rgbToHexNumber,
 } from './palette3d.js';
+import { DAY_PHASES, deriveDaylight } from './daylight.js';
 
 test('parseCssColor: đọc đúng các dạng getComputedStyle thật sự trả về', () => {
   assert.deepEqual(parseCssColor('#c96442'), { r: 201, g: 100, b: 66 });
@@ -91,7 +92,7 @@ test('buildScenePalette: đủ vai màu cho ngôn ngữ hình khối, không vai
   // có dùng vai đó. Test này bắt trước.
   const palette = buildScenePalette({ tokens: FALLBACK_TOKENS, eraColor: '#a78bfa' });
   const needed = [
-    'wall', 'wall2', 'roof', 'trim', 'wood', 'stone', 'gold', 'glass', 'leaf', 'dark',
+    'wall', 'wall2', 'roof', 'trim', 'wood', 'stone', 'gold', 'glass', 'water', 'leaf', 'dark',
     // `skin` KHÔNG nằm trong `PART_ROLES` (không khối kiến trúc nào dùng) — nó là màu đầu cư dân,
     // dùng thẳng ở `sceneGraph.js`. Khoá ở đây vì thiếu nó thì đầu người thành màu đen mà không có
     // test nào khác bắt được.
@@ -150,4 +151,58 @@ test('buildScenePalette: eraColor rác vẫn ra bảng màu dùng được (dữ
   const palette = buildScenePalette({ tokens: FALLBACK_TOKENS, eraColor: 'không-phải-màu' });
   assert.ok(Number.isInteger(palette.roof));
   assert.notEqual(palette.roof, palette.background, 'lùi về accent chứ không được sập thành một màu');
+});
+
+test('buildScenePalette: bầu trời KHÔNG BAO GIỜ ngả tím sen — ở mọi giờ, mọi theme, mọi kỷ', () => {
+  // ⚠️ Bài này khoá lại một lỗi CHỈ NHÌN ẢNH MỚI THẤY, đọc code thì không: chân trời giữa trưa ra
+  // `#e0b8c9` (hồng) và đỉnh trời lúc bình minh ra `#cf63c2` (tím sen). Nguyên nhân nằm ở phép
+  // trộn: nội suy GÓC MÀU luôn đi đường ngắn trên vòng tròn màu, mà từ lam sang cam thì đường
+  // ngắn chạy xuyên qua vùng tím. Nay trộn trong RGB nên luôn đi qua màu trung tính.
+  //
+  // "Tím sen" ở đây định nghĩa được bằng máy: đỏ và lam đều CAO hơn lục. Bầu trời thật không bao
+  // giờ như vậy — trời hồng lúc hoàng hôn là đỏ > lục > lam (giảm dần đều), không phải lục trũng
+  // xuống giữa. Nhờ vậy bài test bắt được cả những chặng ai đó thêm về sau.
+  //
+  // ⚠️ NGƯỠNG 10 CHỨ KHÔNG PHẢI 18, và con số này lấy từ chính hai màu đã gây lỗi: `#cf63c2`
+  // (đỉnh trời bình minh) chấm 95 điểm — dễ bắt; nhưng `#e0b8c9` (chân trời trưa) chỉ chấm 17.
+  // Để ngưỡng 18 thì bài test vẫn XANH trên đúng cái ảnh hồng đã phải sửa — tức là một cái lưới
+  // thủng ngay chỗ cần vá. Màu hiện tại chấm cao nhất là −6, nên 10 vẫn còn rất rộng cửa.
+  //
+  // ⚠️ CHỈ XÉT NHỮNG MÀU ĐỦ SÁNG ĐỂ MẮT ĐỌC RA SẮC (kênh mạnh nhất ≥ 90). Không phải để nới tay:
+  // ở theme tối lúc bình minh, chân trời ra `#483445` — chấm 17 điểm "tím" nhưng kênh mạnh nhất
+  // chỉ 72, và trong ảnh chụp thật thì vùng đó KHÔNG hề đọc ra màu tím, chỉ ra nâu sẫm (màu quá
+  // tối thì mắt gần như mất khả năng phân biệt sắc — cùng hiệu ứng Purkinje đã ghi ở `palette3d.js`),
+  // lại còn bị quầng nắng và lớp tối góc phủ lên trên. Bắt cả những màu đó là báo nhầm, mà báo
+  // nhầm thì lần sau người ta sẽ tắt bài test này đi. Hai màu đã gây lỗi thật đều rất sáng
+  // (`#e0b8c9` kênh mạnh nhất 224, `#cf63c2` là 207) nên vẫn nằm gọn trong tầm bắt — đã xác minh
+  // bằng cách tạm khôi phục phép trộn cũ và thấy bài test này ĐỎ.
+  const toRgb = (n) => ({ r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 });
+  const magenta = (n) => {
+    const { r, g, b } = toRgb(n);
+    if (Math.max(r, g, b) < 90) return false;
+    return Math.min(r, b) - g > 10;
+  };
+
+  for (let hour = 0; hour < 24; hour += 1) {
+    for (const tokens of [FALLBACK_TOKENS, { ...FALLBACK_TOKENS, canvas1: '#12100e', canvas2: '#1b1815', ink: '#f2ece1' }]) {
+      for (const eraColor of ['#4ade80', '#c96442', '#38bdf8', '#a78bfa', '#b3306b', '#facc15']) {
+        const p = buildScenePalette({ tokens, eraColor, daylight: deriveDaylight(hour) });
+        for (const [name, value] of [
+          ['chân trời', p.sky2.horizon], ['đỉnh trời', p.sky2.top], ['đèn bán cầu', p.lights.skyDome],
+        ]) {
+          assert.ok(!magenta(value), `${hour} giờ · kỷ ${eraColor} · ${name} ra tím sen: `
+            + `#${value.toString(16).padStart(6, '0')}`);
+        }
+      }
+    }
+  }
+});
+
+test('buildScenePalette: đèn cửa sổ giữ NGUYÊN sắc nến ở mọi kỷ — lửa không đổi màu theo thời đại', () => {
+  const lamps = new Set(
+    ['#4ade80', '#38bdf8', '#a78bfa', '#b3306b'].map((eraColor) => (
+      buildScenePalette({ tokens: FALLBACK_TOKENS, eraColor, daylight: deriveDaylight(22) }).lights.lamp
+    )),
+  );
+  assert.equal(lamps.size, 1, 'màu đèn trong nhà đổi theo kỷ ⇒ có chỗ lỡ pha sắc kỷ vào lửa');
 });

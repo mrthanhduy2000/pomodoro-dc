@@ -28,11 +28,25 @@ export const PART_ROLES = [
   'wood',    // gỗ, giàn giáo, cột kèo
   'stone',   // đá, móng, tường thành
   'gold',    // điểm nhấn quý: chóp, tượng, biển hiệu
-  'glass',   // cửa sổ, kính
+  'glass',   // cửa sổ, kính — ⚠️ BAN ĐÊM VAI NÀY TỰ PHÁT SÁNG (xem `glowRole` ở `sceneGraph.js`)
+  'water',   // mặt ao hồ — TÁCH KHỎI `glass` có lý do, xem ngay dưới
   'leaf',    // cây cối
   'dark',    // bóng sâu, cửa ra vào, khe hở
 ];
 
+/**
+ * ⚠️ VÌ SAO `water` PHẢI RIÊNG, KHÔNG DÙNG CHUNG `glass` NHƯ TRƯỚC — lỗi đã thấy tận mắt trong ảnh
+ * chụp lúc 6 giờ sáng: giữa thành phố tối om nổi lên một TẤM VÀNG RỰC hình chữ nhật to bằng cả một
+ * ô lưới. Đó là cái ao. Ban đêm mọi khối mang vai `glass` được tách sang khối "tự phát sáng" để
+ * làm ô cửa sáng đèn — mà mặt nước cũng đang mượn vai `glass`, nên cái ao được đối xử y như một ô
+ * cửa và biến thành hộp đèn.
+ *
+ * Bài học chung: **một vai màu KHÔNG chỉ là "màu gì" — nó còn là "được đối xử thế nào".** Ngày nào
+ * vai chỉ dùng để tra màu thì kính và nước dùng chung là tiện; ngày vai bắt đầu quyết định hành vi
+ * (phát sáng / không phát sáng) thì việc dùng chung lập tức thành lỗi. Cửa sổ tự phát sáng vì
+ * trong nhà có đèn; mặt nước thì chỉ PHẢN CHIẾU — không có đèn nào thì nó tối, đúng như mọi vật
+ * khác. Thêm vai mới rẻ hơn nhiều so với thêm một danh sách ngoại lệ phải nhớ cập nhật.
+ */
 const ROLE_SET = new Set(PART_ROLES);
 
 /** Số cạnh cho phép của lăng trụ. Dưới 3 thì không thành khối; trên 12 thì tốn tam giác vô ích. */

@@ -68,6 +68,9 @@ export default function CityPerfHud({ stats, mode, reason }) {
             value={stats ? `${stats.groundTiles} · ${stats.buildings}` : '—'}
           />
           <Row label="Cư dân" value={stats?.residents ?? '—'} />
+          {/* Đèn trong nhà hắt ra sân — chỉ có ban đêm, và là nguồn sáng duy nhất tính tiền theo
+              từng điểm ảnh. Ban ngày luôn là 0; thấy khác 0 giữa trưa là có gì đó sai giờ. */}
+          <Row label="Đèn đêm" value={stats?.lamps ?? '—'} />
           <Row
             label="Bóng · điểm ảnh"
             value={stats ? `${stats.shadowMap}px · ${stats.pixelRatio}×` : '—'}

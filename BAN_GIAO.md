@@ -16,7 +16,8 @@
 > lệnh *"hãy tiếp tục xây dựng sản phẩm và không dừng lại"* — tức là qua cổng bằng QUYẾT ĐỊNH của
 > chủ dự án, không phải bằng con số đo. ⚠️ **Mọi lưới an toàn hiệu năng vẫn còn nguyên, KHÔNG được
 > gỡ**: watchdog FPS, ba cửa lùi về 2D, trần 30 khung/giây, dừng khi rời tab. Nhận xét của Đàm:
-> *"quá đơn giản và không đẹp"* → đang chạy tiếp **Phase 3B (mỹ thuật)**.
+> *"quá đơn giản và không đẹp"* → đã chạy tiếp **Phase 3B (hình khối + cư dân) · 3C (ánh sáng) ·
+> 3D (giờ trong ngày, đèn cửa sổ, vũng sáng đêm)**. **412 bài test.**
 > Trước đó 2026-08-10: sửa khoảng trắng thừa trước icon 🍅/☕ trên thanh menu Mac (`electron/main.js`,
 > đúng 1 dòng; xoá `public/tray-empty.png`) — chỉ đụng app tray. Trước đó 2026-08-05 có 3 việc
 > **cấu hình máy + tài liệu, KHÔNG đổi dòng code ứng dụng nào**: (a) sửa "app biến mất khỏi thanh
@@ -103,6 +104,46 @@
   nhánh rồi báo "đã deploy".** Gộp lần này là **fast-forward, 0 xung đột** (main đang ở `2c24e0f`,
   là tổ tiên trực tiếp) — `2c24e0f..4f371ad`. Đã chạy lại 360 test + lint + build ngay trước khi
   push, và đếm lại Serverless Function: **10/12**, còn dư 2.
+
+- **2026-08-12 (Phase 3D)** — **THÀNH PHỐ ĐỔI THEO GIỜ: mở app lúc nào là ra cảnh lúc đó.**
+  Đàm: *"nhiều animation lên và nhiều hiệu ứng hơn"*. Đây là hiệu ứng đắt giá nhất trong cả nhánh
+  3D tính theo tỉ lệ công/kết quả: **không thêm một hình khối nào, không thêm một byte state nào**,
+  mà thành phố thôi là một tấm ảnh và thành một NƠI CHỐN đang trôi qua thời gian cùng Đàm.
+  - **6 chặng trong ngày** (`engine/city3d/daylight.js`, THUẦN — nhận GIỜ làm tham số, không đụng
+    `Date`): rạng sáng · sáng · trưa · chiều · chạng vạng · đêm. Mỗi chặng đổi hướng + độ ấm +
+    cường độ nắng, cường độ đèn nền, sắc trời, và **cửa sổ có sáng đèn hay không**. Lấy **giờ Việt
+    Nam**, không phải giờ máy. KHÔNG nội suy giữa hai chặng — cảnh chỉ dựng lại khi bố cục đổi, nội
+    suy sẽ tốn công tính cho một thứ không ai ngồi nhìn nó chuyển động.
+  - **Ô cửa sáng đèn** ban đêm: tách riêng thành khối vật liệu tự phát sáng (`MeshBasicMaterial`,
+    tắt sương mù) — ban ngày không tách nên **không tốn thêm lệnh vẽ nào**.
+  - **Vũng sáng ấm hắt xuống chân công trình** (tối đa 3 đèn, điện thoại 2). Đây là chi tiết biến
+    cảnh đêm từ "có đèn" thành "có người ở": ô cửa tự phát sáng thì KHÔNG rọi ra ngoài, nên nếu
+    thiếu vũng sáng này thì cửa sáng trưng mà chân tường vẫn tối om, đọc ra như hình dán.
+  - ⚠️ **BA LỖI CHỈ ẢNH CHỤP MỚI THẤY — cả ba đều lint/test xanh:**
+    1. **Đêm gần như ĐEN THUI** (đo được mặt đất `#030401`). Đêm bị làm tối ở hai chỗ độc lập rồi
+       nhân dồn lên nhau: sơn chuyển sang bảng màu tối (~2,9×) **và** màu đèn bán cầu lấy từ chính
+       bầu trời đêm nên cũng tối (~2×) — tổng ~5,8× trong khi hệ số bù mới có 1,45×.
+       ⇒ Bài học: **cường độ đèn phải bù cho cả độ đậm của MÀU đèn** (hai thứ nhân nhau).
+    2. **Bầu trời ngả hồng/tím sen** — chân trời trưa `#e0b8c9`, đỉnh trời bình minh `#cf63c2`, đèn
+       bán cầu `#45395f`. Cùng MỘT gốc rễ, lộ ra **ba lần ở ba chỗ khác nhau**: nội suy góc màu
+       luôn đi đường ngắn trên vòng tròn màu, mà cam bình minh ↔ lam nằm gần như đối diện nhau nên
+       đường ngắn chạy xuyên qua vùng TÍM. ⇒ Sửa vào GỐC: đường dựng màu trời nay **không còn phép
+       xoay góc màu nào**, cả ba bước đều trộn trong RGB (đi qua màu xám, đúng cách người vẽ làm).
+    3. **Cái ao biến thành hộp đèn** — một tấm vàng rực giữa thành phố tối. Mặt nước đang mượn
+       chung vai màu `glass` với cửa sổ, mà ban đêm vai `glass` được đối xử là "tự phát sáng".
+       ⇒ Bài học: **vai màu không chỉ là "màu gì", còn là "được đối xử thế nào"**; đã tách vai
+       `water` riêng (rẻ hơn một danh sách ngoại lệ phải nhớ cập nhật).
+  - **Công cụ soi lỗi cũng có lỗi, và nó nguy hiểm hơn cả ba lỗi trên**: `scripts/city-preview.mjs`
+    nhận `--hour` nhiều lần nhưng chỉ vẽ giờ CUỐI, hai file kia vẫn nằm nguyên trên đĩa từ lần chạy
+    trước. Tôi đã mở đúng hai file cũ đó, tưởng là bản mới, và kết luận sai rằng bản vá không ăn
+    thua. **Một công cụ im lặng đưa dữ liệu cũ còn tệ hơn không có công cụ.** Đã sửa để vẽ đủ mọi
+    giờ được truyền vào.
+  - **Khoá lại bằng test** (412 bài, +18): quét bầu trời 24 giờ × 2 theme × 6 kỷ để bắt sắc tím ·
+    tỉ lệ đèn nền đêm/trưa ≥ 3 · đèn sân chỉ bật khi cửa sổ sáng · mặt nước không mang vai `glass`.
+    ⚠️ Bài test bầu trời **đã được xác minh là ĐỎ trên code cũ** rồi mới nhận — một bài test chưa
+    từng thấy màu đỏ thì chưa chứng minh được nó bắt được gì.
+  - Đã chạy: **412 test xanh · lint sạch · build xanh** (`vendor-three` 130,8 KB gzip, vẫn dưới trần
+    135 KB của cổng 3A).
 
 - **2026-08-12 (Phase 3C)** — **ÁNH SÁNG PHỤC HƯNG: cùng hình khối đó, nhìn ra tranh.**
   Đàm: *"làm đẹp như các bức tranh phục hưng"*. Phase này KHÔNG thêm một hình khối nào — chỉ đổi

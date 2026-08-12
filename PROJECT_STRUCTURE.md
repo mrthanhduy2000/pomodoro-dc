@@ -75,6 +75,12 @@
 │   │   │   │                      #   + quy mô theo 3 ĐỘ HIẾM
 │   │   │   ├── buildingSpec.js    # NƠI 3 TRỤC GẶP NHAU: (kỷ × loại × độ hiếm) → mô tả hình học
 │   │   │   ├── propSpec.js        # Cây, đá, đèn, mặt nước, ruộng
+│   │   │   │                      #   ⚠️ Mặt nước dùng vai màu RIÊNG (`water`), KHÔNG dùng chung
+│   │   │   │                      #   `glass` với cửa sổ — vai `glass` ban đêm TỰ PHÁT SÁNG, ao
+│   │   │   │                      #   mà mượn vai đó sẽ thành hộp đèn (xem parts.js)
+│   │   │   ├── daylight.js        # 6 CHẶNG TRONG NGÀY: hướng/độ ấm/cường độ nắng, đèn nền, sắc
+│   │   │   │                      #   trời, đèn cửa sổ, đèn hắt ra sân. THUẦN — nhận GIỜ làm tham
+│   │   │   │                      #   số, không đụng `Date` (tầng ngoài lo lấy giờ Việt Nam)
 │   │   │   ├── residents.js       # CƯ DÂN: dân số suy từ tiến độ, tuyến đi bám ĐƯỜNG SÁ
 │   │   │   │                      #   ⚠️ residentAt(route, TIME) — chuyển động là hàm của thời
 │   │   │   │                      #   gian, không phải biến cộng dồn (test được + rời tab đúng)

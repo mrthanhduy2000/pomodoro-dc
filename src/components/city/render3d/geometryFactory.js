@@ -152,8 +152,15 @@ function emitGable(sink, part, transform, rgb) {
  * @param {boolean} [options.skipDeco] bỏ chi tiết trang trí (máy yếu) — hình bóng vẫn nguyên vẹn
  * @returns {{geometry:BufferGeometry, triangles:number}|null} `null` khi không có gì để vẽ
  */
-export function buildMergedGeometry(placements, palette, { skipDeco = false } = {}) {
+export function buildMergedGeometry(placements, palette, { skipDeco = false, glowRole = null } = {}) {
   const sink = createSink();
+  // ⚠️ KHỐI THỨ HAI CHO NHỮNG PHẦN "TỰ PHÁT SÁNG" (đèn cửa sổ ban đêm).
+  // Không thể làm đèn cửa sổ bằng cách cho màu thật sáng ở khối chính: vật liệu Lambert NHÂN màu
+  // với ánh sáng chiếu tới, nên một mặt tường quay lưng với nắng thì màu nào cũng ra tối — đúng
+  // những ô cửa sổ cần sáng nhất lại là những ô tối nhất. Tách chúng ra một khối riêng dùng vật
+  // liệu KHÔNG nhận ánh sáng (`MeshBasicMaterial`) thì màu hiện đúng như đã ghi, bất kể đèn đóm —
+  // và đó chính là cảm giác "ô cửa đang sáng đèn". Giá: thêm ĐÚNG một lệnh vẽ cho cả thành phố.
+  const glowSink = glowRole ? createSink() : null;
   const roles = palette?.roles ?? {};
 
   // Đổi mã màu → giá trị tuyến tính đúng MỘT LẦN cho mỗi vai, không phải mỗi đỉnh.
@@ -208,19 +215,31 @@ export function buildMergedGeometry(placements, palette, { skipDeco = false } = 
         h: part.h * scale,
       };
 
-      const rgb = colorFor(part.role);
-      if (part.shape === 'gable') emitGable(sink, scaled, transform, rgb);
-      else emitPrism(sink, scaled, transform, rgb);
+      const glowing = glowSink !== null && part.role === glowRole;
+      const target = glowing ? glowSink : sink;
+      const rgb = colorFor(glowing ? 'glassLit' : part.role);
+      if (part.shape === 'gable') emitGable(target, scaled, transform, rgb);
+      else emitPrism(target, scaled, transform, rgb);
     }
   }
 
-  if (sink.triangles === 0) return null;
+  if (sink.triangles === 0 && (!glowSink || glowSink.triangles === 0)) return null;
 
+  return {
+    geometry: toGeometry(sink),
+    triangles: sink.triangles,
+    glowGeometry: glowSink ? toGeometry(glowSink) : null,
+    glowTriangles: glowSink ? glowSink.triangles : 0,
+  };
+}
+
+/** Bể tam giác → `BufferGeometry`. `null` nếu rỗng (đừng tạo khối 0 tam giác rồi đi vẽ nó). */
+function toGeometry(sink) {
+  if (!sink || sink.triangles === 0) return null;
   const geometry = new BufferGeometry();
   geometry.setAttribute('position', new BufferAttribute(new Float32Array(sink.pos), 3));
   geometry.setAttribute('normal', new BufferAttribute(new Float32Array(sink.nor), 3));
   geometry.setAttribute('color', new BufferAttribute(new Float32Array(sink.col), 3));
   geometry.computeBoundingSphere();
-
-  return { geometry, triangles: sink.triangles };
+  return geometry;
 }

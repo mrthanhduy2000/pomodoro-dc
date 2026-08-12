@@ -12,6 +12,29 @@
 
 ---
 
+## 2026-08-12 — Thành Phố (Phase 3D): thành phố đổi theo giờ trong ngày
+
+- **Mục đích**: Đàm yêu cầu *"nhiều animation lên và nhiều hiệu ứng hơn"*. Cho tới trước Phase này,
+  thành phố trông y hệt nhau ở mọi thời điểm — mở lúc 6 giờ sáng hay 11 giờ đêm cũng là đúng một
+  bức ảnh. Nay mỗi lần mở app là một cảnh khác, mà **không thêm một hình khối nào và không thêm một
+  byte nào vào state**.
+- **Phạm vi**: 6 chặng trong ngày (rạng sáng/sáng/trưa/chiều/chạng vạng/đêm) đổi hướng + độ ấm +
+  cường độ nắng, đèn nền, sắc trời · ô cửa **sáng đèn** ban đêm · **vũng sáng ấm** hắt xuống chân
+  công trình ban đêm · vai màu riêng cho mặt nước. Lấy **giờ Việt Nam**, không phải giờ máy.
+  Không đụng dữ liệu, không đụng state, không đụng cân bằng game.
+- **Ba lỗi mỹ thuật đã sửa — cả ba đều lint/test xanh, chỉ ảnh chụp mới thấy**: (a) cảnh đêm gần
+  như đen thui vì đêm bị làm tối ở hai chỗ độc lập rồi nhân dồn lên nhau; (b) bầu trời ngả hồng và
+  tím sen vì nội suy góc màu đi đường ngắn xuyên qua vùng tím — đã sửa vào gốc bằng cách bỏ hẳn
+  phép xoay góc màu khỏi đường dựng màu trời; (c) mặt nước biến thành hộp đèn vì dùng chung vai màu
+  với cửa kính, mà vai đó ban đêm được đối xử là "tự phát sáng".
+- **Ảnh hưởng**: `npm test` **394 → 412**. Chunk `vendor-three` 130,8 KB gzip — không đổi, vẫn dưới
+  trần 135 KB của cổng hiệu năng 3A. Mọi lưới an toàn hiệu năng giữ nguyên; đèn điểm là nguồn sáng
+  duy nhất tính theo điểm ảnh nên có ngân sách riêng (điện thoại 2, máy bàn 3) và hiện trên HUD.
+- **Tương thích**: hoàn toàn ngược. Không truyền tham số giờ ⇒ ánh sáng trung tính y như trước.
+  Không cần chạy SQL, không cần migration.
+
+---
+
 ## 2026-08-12 — Thành Phố (Phase 3C): ánh sáng Phục Hưng
 
 - **Mục đích**: Đàm yêu cầu *"làm đẹp như các bức tranh phục hưng"*. Phase này **không thêm một hình

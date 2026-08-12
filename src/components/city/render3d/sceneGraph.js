@@ -32,6 +32,7 @@ import {
   MeshBasicMaterial,
   MeshLambertMaterial,
   NeutralToneMapping,
+  PointLight,
   Quaternion,
   Scene,
   SphereGeometry,
@@ -41,6 +42,7 @@ import {
 import { buildBuildingSpec, buildScaffoldSpec } from '../../../engine/city3d/buildingSpec';
 import { buildPropSpec } from '../../../engine/city3d/propSpec';
 import { RESIDENT_HEIGHT, buildResidents, residentAt } from '../../../engine/city3d/residents';
+import { sunDirectionAt } from '../../../engine/city3d/daylight';
 import { buildMergedGeometry } from './geometryFactory';
 
 /**
@@ -144,13 +146,27 @@ export function cellToWorld(x, y, gridSize) {
  * @param {boolean} [input.lowDetail] máy yếu → bỏ chi tiết trang trí, giữ nguyên hình bóng
  * @param {object}  [input.stats]     `{sessionCount, streakLength}` — suy ra dân số
  * @param {boolean} [input.still]     true → không có cư dân đi lại (giảm chuyển động / bảo tàng)
+ * @param {number}  [input.maxLamps] tối đa mấy đèn trong nhà hắt ra sân (chỉ có ban đêm). Điện
+ *                                    thoại nên truyền số nhỏ hơn — xem ghi chú ngân sách ở dưới.
+ * @param {object}  [input.daylight]  kết quả `deriveDaylight(giờ VN)` — giờ nào trong ngày.
+ *                                    Không truyền ⇒ ánh sáng trung tính như trước, mọi chỗ gọi cũ
+ *                                    giữ nguyên kết quả.
  */
 export function createCityScene({
-  layout, palette, dimmed = false, lowDetail = false, stats = {}, still = false,
+  layout, palette, dimmed = false, lowDetail = false, stats = {}, still = false, daylight = null,
+  maxLamps = 3,
 }) {
   const gridSize = layout.gridSize;
   const scene = new Scene();
   scene.background = new Color(palette.background);
+
+  // Hướng nắng THỰC TẾ của cảnh này: phương vị giữ nguyên (đó là thứ Phase 3C đã sửa và không được
+  // đụng vào), chỉ cao độ đổi theo giờ — sáng sớm/chiều muộn bóng dài, giữa trưa bóng ngắn.
+  const sunDir = daylight
+    ? new Vector3().copy(sunDirectionAt(SUN_DIRECTION, daylight.sunAltitude))
+    : SUN_DIRECTION.clone();
+  const sunEnergy = Number.isFinite(daylight?.sunEnergy) ? daylight.sunEnergy : 1;
+  const fillEnergy = Number.isFinite(daylight?.fillEnergy) ? daylight.fillEnergy : 1;
 
   // Sương mù bắt đầu ngay sau rìa thành phố. Nó không chỉ giấu mép lưới: đây là "phối cảnh không
   // khí" — thủ pháp mà hội hoạ dùng để tạo chiều sâu, vật càng xa càng nhạt và ngả về màu chân
@@ -241,7 +257,7 @@ export function createCityScene({
     // Phục Hưng dựng cả bức tranh quanh nó, và ở đây nó tốn đúng một phép nhân vô hướng, tính
     // MỘT LẦN lúc dựng cảnh chứ không phải mỗi khung hình.
     skyVertex.set(skyPos.getX(i), skyPos.getY(i), skyPos.getZ(i)).normalize();
-    const toSun = Math.max(0, skyVertex.dot(SUN_DIRECTION));
+    const toSun = Math.max(0, skyVertex.dot(sunDir));
     // Mũ 6 = quầng rộng và mềm chứ không phải một cái đĩa nhỏ. Mặt trời KHÔNG được vẽ thành hình
     // tròn rõ nét: một đĩa sáng trên nền phẳng trông như lỗi, còn quầng sáng khuếch tán thì đọc ra
     // "hôm nay nắng, và nắng đến từ phía kia".
@@ -369,20 +385,47 @@ export function createCityScene({
     });
   }
 
-  const merged = buildMergedGeometry(placements, palette, { skipDeco: lowDetail });
+  const merged = buildMergedGeometry(placements, palette, {
+    skipDeco: lowDetail,
+    // Trời đã tối ⇒ tách ô cửa ra khối "tự phát sáng" riêng. Ban ngày `null` ⇒ không tách, không
+    // tốn thêm lệnh vẽ nào.
+    glowRole: daylight?.windowsLit ? 'glass' : null,
+  });
   let buildingTriangles = 0;
   if (merged) {
-    track(merged.geometry);
-    buildingTriangles = merged.triangles;
-    const buildingMaterial = track(new MeshLambertMaterial({
-      vertexColors: true,
-      transparent: dimmed,
-      opacity: dimmed ? 0.62 : 1,
-    }));
-    const mesh = new Mesh(merged.geometry, buildingMaterial);
-    mesh.castShadow = true;
-    mesh.receiveShadow = true;
-    addMesh(mesh);
+    buildingTriangles = merged.triangles + merged.glowTriangles;
+    if (merged.geometry) {
+      track(merged.geometry);
+      const buildingMaterial = track(new MeshLambertMaterial({
+        vertexColors: true,
+        transparent: dimmed,
+        opacity: dimmed ? 0.62 : 1,
+      }));
+      const mesh = new Mesh(merged.geometry, buildingMaterial);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      addMesh(mesh);
+    }
+
+    if (merged.glowGeometry) {
+      track(merged.glowGeometry);
+      // ⚠️ `MeshBasicMaterial` = KHÔNG nhận ánh sáng. Đó chính là điểm: màu hiện ra y nguyên nên ô
+      // cửa sáng đều nhau ở cả bốn mặt công trình, kể cả mặt quay lưng với trăng. Đèn trong nhà
+      // không quan tâm mặt trời ở đâu.
+      const glowMaterial = track(new MeshBasicMaterial({
+        vertexColors: true,
+        transparent: dimmed,
+        opacity: dimmed ? 0.62 : 1,
+        // Không chịu sương mù: ô cửa ở xa vẫn phải là một chấm sáng, không tan thành màu chân trời.
+        // Đây đúng là cách một thành phố về đêm nhìn từ xa — sương xoá được khối nhà, không xoá
+        // được đốm đèn.
+        fog: false,
+      }));
+      const glowMesh = new Mesh(merged.glowGeometry, glowMaterial);
+      glowMesh.castShadow = false;      // ô cửa sáng mà đổ bóng thì thành ra vô lý
+      glowMesh.receiveShadow = false;
+      addMesh(glowMesh);
+    }
   }
 
   // ── Cư dân ────────────────────────────────────────────────────────────────
@@ -498,20 +541,22 @@ export function createCityScene({
   const hemisphere = new HemisphereLight(
     palette.lights?.skyDome ?? palette.sky,
     palette.lights?.bounce ?? palette.ground,
-    palette.isDark ? 0.78 : 0.34,
+    (palette.isDark ? 0.78 : 0.34) * fillEnergy,
   );
   scene.add(hemisphere);
 
-  const ambient = new AmbientLight(palette.lights?.bounce ?? palette.sky, palette.isDark ? 0.26 : 0.07);
+  const ambient = new AmbientLight(palette.lights?.bounce ?? palette.sky,
+    (palette.isDark ? 0.26 : 0.07) * fillEnergy);
   scene.add(ambient);
 
-  const sun = new DirectionalLight(palette.lights?.sun ?? palette.sun, palette.isDark ? 1.72 : 2.15);
+  const sun = new DirectionalLight(palette.lights?.sun ?? palette.sun,
+    (palette.isDark ? 1.72 : 2.15) * sunEnergy);
   // Hướng lấy từ `SUN_DIRECTION` — CÙNG hướng đã nướng quầng sáng vào vòm trời ở trên. Nắng mạnh
   // hơn bản trước (1,9 → 2,15) vì đèn nền đã bị hạ xuống: giữ TỔNG sáng gần như cũ nhưng kéo rộng
   // khoảng cách giữa mặt hứng nắng và mặt khuất — đó chính là chiaroscuro.
   // 1,4 × lưới: đủ xa để cả thành phố nằm gọn giữa `near` và `far` của khung bóng (1 … 3 × lưới),
   // kể cả công trình cao nhất ở góc xa nhất.
-  sun.position.copy(SUN_DIRECTION).multiplyScalar(gridSize * 1.4);
+  sun.position.copy(sunDir).multiplyScalar(gridSize * 1.4);
   sun.castShadow = true;
 
   // ⚠️ ĐÂY LÀ DÒNG QUAN TRỌNG NHẤT CẢ FILE. Mặc định của three là `true` = vẽ lại shadow map mỗi
@@ -532,6 +577,46 @@ export function createCityScene({
   sun.shadow.normalBias = 0.02;         // chống hở chân bóng ở mặt nghiêng (mái dốc)
   scene.add(sun);
   scene.add(sun.target);
+
+  // ── Đèn trong nhà hắt ra sân (chỉ khi trời tối) ───────────────────────────
+  // Ô cửa sáng ở trên vẽ bằng vật liệu TỰ PHÁT SÁNG — nó rực lên nhưng không rọi ra ngoài một tí
+  // nào, nên chân tường vẫn tối om và cả dãy cửa đọc ra như hình dán trên một khối đen. Vài vũng
+  // sáng ấm dưới chân công trình là chi tiết biến bức tranh đêm từ "có đèn" thành "có người ở".
+  //
+  // ⚠️ NGÂN SÁCH: đèn điểm là nguồn sáng DUY NHẤT trong cảnh này tính tiền theo TỪNG ĐIỂM ẢNH —
+  // hai nguồn kia (bán cầu, ambient) rẻ như nhau ở mọi độ phân giải, còn mỗi đèn điểm thêm một
+  // vòng lặp vào shader của MỌI mặt nó với tới. Ban đêm lại đúng lúc cảnh vẽ liên tục 30 khung/giây
+  // vì cư dân đang đi, nên chi phí này là chi phí THẬT, không phải chỉ ở khung đầu.
+  // Vì vậy: số lượng do bên gọi quyết (`maxLamps`, điện thoại truyền số nhỏ hơn), chỉ đặt ở những
+  // công trình LỚN nhất — chỗ mắt nhìn vào, và `distance` hữu hạn để three loại sớm các mặt ngoài
+  // tầm. Bớt đèn thì vẫn còn ô cửa sáng, chỉ thiếu vũng sáng dưới chân — mất ít, đổi lại chắc chắn.
+  const lampEnergy = Number.isFinite(daylight?.lampEnergy) ? daylight.lampEnergy : 0;
+  const lampBudget = lowDetail ? 0 : Math.max(0, Math.floor(maxLamps));
+  let lampCount = 0;
+  if (lampEnergy > 0 && lampBudget > 0 && buildings.length > 0) {
+    const lampColor = palette.lights?.lamp ?? palette.roles?.glassLit ?? palette.sun;
+    // Chọn theo cấp rồi tới độ hiếm: công trình to nhất là nơi đáng sáng đèn nhất. Sắp xếp trên
+    // BẢN SAO — `layout.buildings` là dữ liệu dùng chung, đảo thứ tự nó sẽ làm bố cục nhảy lung tung.
+    const RARITY_WEIGHT = { epic: 3, rare: 2, common: 1 };
+    const lit = [...buildings]
+      .sort((a, b) => (
+        (b.level ?? 1) - (a.level ?? 1)
+        || (RARITY_WEIGHT[b.rarity] ?? 0) - (RARITY_WEIGHT[a.rarity] ?? 0)
+        // Chốt bằng toạ độ để thứ tự TẤT ĐỊNH: cùng một thành phố phải sáng đúng những ô đó,
+        // mọi lần mở app — đúng bất biến "bảo tàng bất động" của ADR-007.
+        || a.x - b.x || a.y - b.y
+      ))
+      .slice(0, lampBudget);
+    for (const building of lit) {
+      const { x, z } = cellToWorld(building.x, building.y, gridSize);
+      const lamp = new PointLight(lampColor, 5.2 * lampEnergy, gridSize * 0.62, 2);
+      // Đặt THẤP (0,45) chứ không đặt trên nóc: ánh sáng phải liếm xuống mặt đường và chân tường
+      // hàng xóm thì mới thành vũng sáng; treo cao thì nó chỉ rọi lên mái chính công trình đó.
+      lamp.position.set(x, 0.45, z);
+      scene.add(lamp);
+      lampCount += 1;
+    }
+  }
 
   let disposed = false;
   function dispose() {
@@ -560,6 +645,9 @@ export function createCityScene({
       buildings: buildings.length,
       props: scatter.length,
       residents: residents.length,
+      // Đèn điểm là nguồn sáng DUY NHẤT ở đây tính tiền theo từng điểm ảnh — hiện lên HUD để lúc
+      // Đàm chụp màn hình báo máy nóng, ta biết ngay lúc đó có mấy cái đang bật.
+      lamps: lampCount,
       drawCalls: meshes.length,
       triangles: buildingTriangles
         + (groundCells.length + roads.length) * TRIANGLES_PER_BOX

@@ -47,6 +47,13 @@ function parseArgs(argv) {
     // Cần thiết vì ở khoảng nhìn thật, một cư dân cao 0,2 ô chỉ chiếm vài điểm ảnh — không đủ để
     // phân biệt "hình người" với "vệt nhiễu".
     zoom: 1,
+    // Giờ Việt Nam giả lập để soi từng chặng trong ngày (0–23). Rỗng = giữa trưa trung tính.
+    // ⚠️ LÀ MẢNG, và đây là sửa một cái bẫy đã cắn thật: bản đầu để `hour` là MỘT số, nên
+    // `--hour 6 --hour 12 --hour 22` chỉ vẽ mỗi giờ 22 rồi in đúng một dòng "✓" — mà hai file kia
+    // vẫn nằm sẵn trên đĩa từ lần chạy trước. Tôi đã mở đúng hai file CŨ đó, tưởng là bản mới, và
+    // kết luận rằng bản vá bầu trời không ăn thua. Công cụ soi lỗi mà im lặng đưa dữ liệu cũ thì
+    // còn tệ hơn không có công cụ. Nay nhận nhiều giờ và vẽ đủ từng giờ một.
+    hours: [],
   };
   for (let i = 0; i < argv.length; i += 1) {
     const key = argv[i];
@@ -58,6 +65,7 @@ function parseArgs(argv) {
     else if (key === '--width') { args.width = Number(value); i += 1; }
     else if (key === '--height') { args.height = Number(value); i += 1; }
     else if (key === '--zoom') { args.zoom = Number(value); i += 1; }
+    else if (key === '--hour') { args.hours.push(Number(value)); i += 1; }
   }
   return args;
 }
@@ -74,10 +82,11 @@ function run(cmd, cmdArgs, options = {}) {
  * Mã nguồn trang xem thử. Được gói thành MỘT file bằng chính Vite của dự án, nên nó dùng đúng
  * phiên bản three và đúng các module thật — nếu bản gói lỗi thì bản chạy thật cũng lỗi.
  */
-function entrySource({ era, level, theme, zoom = 1 }) {
+function entrySource({ era, level, theme, zoom = 1, hour = null }) {
   return `
 import { computeCityLayout } from '${ROOT}/src/engine/cityLayout.js';
 import { buildScenePalette } from '${ROOT}/src/engine/city3d/palette3d.js';
+import { deriveDaylight } from '${ROOT}/src/engine/city3d/daylight.js';
 import { applyPaintedLook, createCityScene } from '${ROOT}/src/components/city/render3d/sceneGraph.js';
 import { cityOrbitOptions, createOrbit } from '${ROOT}/src/engine/city3d/orbit.js';
 import { BLUEPRINT_CATALOG, ERA_METADATA } from '${ROOT}/src/engine/constants.js';
@@ -87,6 +96,7 @@ const ERA = ${era};
 const LEVEL = ${level};
 const IS_DARK = ${theme === 'dark'};
 const ZOOM = ${zoom};
+const HOUR = ${hour === null ? 'null' : hour};
 
 const built = BLUEPRINT_CATALOG[ERA].map((bp) => bp.id);
 const levels = Object.fromEntries(built.map((id) => [id, LEVEL]));
@@ -94,11 +104,15 @@ const layout = computeCityLayout({ built, levels, era: ERA, stats: { sessionCoun
 
 // Token màu lấy thẳng từ giá trị mặc định của hai theme trong src/index.css — trang này không có
 // cây DOM của app nên không đọc được biến CSS thật.
+// Giờ TRUYỀN VÀO chứ không đọc đồng hồ thật: trang xem thử phải chụp được mọi chặng trong ngày,
+// không phải chỉ chặng đang diễn ra lúc chạy lệnh.
+const daylight = HOUR === null ? null : deriveDaylight(HOUR);
 const palette = buildScenePalette({
   tokens: IS_DARK
     ? { canvas2: '#1d1c1a', ink: '#f2efe6', line: '#33312d', accent: '#c96442' }
     : { canvas2: '#f4f2ec', ink: '#1f1e1d', line: '#e8e6de', accent: '#c96442' },
   eraColor: ERA_METADATA[ERA]?.accentColor,
+  daylight,
 });
 
 const canvas = document.getElementById('stage');
@@ -114,7 +128,7 @@ renderer.shadowMap.needsUpdate = true;
 
 // ⚠️ Truyền ĐÚNG bộ số mà app truyền, không để mặc định: dân số suy ra từ đây, và một trang xem
 // thử vẽ thành phố vắng hơn thật thì nó không còn kiểm chứng được thứ cần kiểm chứng.
-const city = createCityScene({ layout, palette, stats: { sessionCount: 40, streakLength: 9 } });
+const city = createCityScene({ layout, palette, daylight, stats: { sessionCount: 40, streakLength: 9 } });
 city.sun.shadow.mapSize.setScalar(1024);
 
 // Đẩy đồng hồ tới một thời điểm giữa chừng. Ở t = 0 mọi cư dân đều đứng ở đầu tuyến của mình —
@@ -248,22 +262,30 @@ async function main() {
   mkdirSync(OUT_DIR, { recursive: true });
   const eras = args.all ? Array.from({ length: 15 }, (_, i) => i + 1) : [args.era];
 
+  // Không truyền `--hour` ⇒ một lượt với giờ trung tính (`null`), y như trước.
+  const hours = args.hours.length > 0 ? args.hours : [null];
+
   for (const era of eras) {
-    const options = { ...args, era };
-    const bundlePath = await buildBundle(options);
+    for (const hour of hours) {
+      const options = { ...args, era, hour };
+      const bundlePath = await buildBundle(options);
 
-    const { server, port } = await serve({
-      '/index.html': { type: 'text/html; charset=utf-8', body: pageHtml(options) },
-      '/preview.js': { type: 'text/javascript; charset=utf-8', body: readFileSync(bundlePath) },
-    });
+      const { server, port } = await serve({
+        '/index.html': { type: 'text/html; charset=utf-8', body: pageHtml(options) },
+        '/preview.js': { type: 'text/javascript; charset=utf-8', body: readFileSync(bundlePath) },
+      });
 
-    const pngPath = resolve(OUT_DIR, `city-era${String(era).padStart(2, '0')}-${args.theme}.png`);
-    try {
-      await shoot(chrome, `http://127.0.0.1:${port}/index.html`, pngPath, options);
-    } finally {
-      server.close();
+      // Giờ nằm trong TÊN FILE: không có nó thì chụp 6 chặng trong ngày sẽ đè lên nhau và chỉ còn
+      // chặng cuối, đúng lúc cần so sánh chúng cạnh nhau nhất.
+      const hourTag = hour === null ? '' : `-h${String(hour).padStart(2, '0')}`;
+      const pngPath = resolve(OUT_DIR, `city-era${String(era).padStart(2, '0')}-${args.theme}${hourTag}.png`);
+      try {
+        await shoot(chrome, `http://127.0.0.1:${port}/index.html`, pngPath, options);
+      } finally {
+        server.close();
+      }
+      console.log(`✓ kỷ ${era} · ${hour === null ? 'giờ trung tính' : `${hour} giờ`} → ${pngPath}`);
     }
-    console.log(`✓ kỷ ${era} → ${pngPath}`);
   }
 
   rmSync(WORK_DIR, { recursive: true, force: true });

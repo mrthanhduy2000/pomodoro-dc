@@ -98,7 +98,7 @@ function lamp(_seed, era) {
  */
 function water() {
   return [
-    prism({ x: 0, y: -0.02, z: 0, w: 0.9, d: 0.9, h: 0.06, sides: 4, role: 'glass' }),
+    prism({ x: 0, y: -0.02, z: 0, w: 0.9, d: 0.9, h: 0.06, sides: 4, role: 'water' }),
     prism({ x: 0, y: -0.03, z: 0, w: 0.98, d: 0.98, h: 0.035, sides: 4, role: 'stone' }),
   ];
 }

@@ -20,9 +20,11 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { PerspectiveCamera, WebGLRenderer, PCFSoftShadowMap } from 'three';
 
 import { buildScenePalette } from '../../../engine/city3d/palette3d';
+import { deriveDaylight } from '../../../engine/city3d/daylight';
 import { cityOrbitOptions, createOrbit } from '../../../engine/city3d/orbit';
 import { createRenderLoop } from '../../../engine/city3d/renderLoop';
 import { ERA_METADATA } from '../../../engine/constants';
+import { getVietnamHour } from '../../../engine/time';
 import { applyPaintedLook, createCityScene } from './sceneGraph';
 import { readThemeSignature, readThemeTokens } from './themeBridge';
 
@@ -106,9 +108,20 @@ export default function CityScene3D({
       renderer.shadowMap.autoUpdate = false;
 
       const isMobile = Math.min(window.innerWidth, window.innerHeight) < 768;
+
+      // ⚠️ ĐỌC ĐỒNG HỒ ĐÚNG MỘT LẦN, TẠI ĐÂY. `deriveDaylight` là hàm thuần nhận GIỜ (test được với
+      // bất kỳ giờ nào, không cần giả lập `Date`); việc lấy giờ thật là của tầng ngoài — đúng ranh
+      // giới engine/tầng-ngoài mà cả dự án đang giữ.
+      // ⚠️ Và phải là GIỜ VIỆT NAM, không phải giờ máy: một cái máy để nhầm múi giờ không được biến
+      // buổi chiều của Đàm thành nửa đêm.
+      // Cảnh giữ nguyên chặng cho tới lần dựng lại kế tiếp — cố ý: theo dõi đồng hồ từng phút để
+      // đổi màu trời là tốn pin cho một thứ không ai ngồi nhìn.
+      const daylight = deriveDaylight(getVietnamHour());
+
       const palette = buildScenePalette({
         tokens: readThemeTokens(canvas),
         eraColor: ERA_METADATA[layout.era]?.accentColor,
+        daylight,
       });
       // An toàn trong thân effect: `darkScene` KHÔNG nằm trong danh sách phụ thuộc, nên đổi nó
       // chỉ sinh thêm một lượt render chứ không dựng lại cảnh (càng không thành vòng lặp).
@@ -119,6 +132,12 @@ export default function CityScene3D({
         palette,
         dimmed,
         stats: { sessionCount, streakLength },
+        daylight,
+        // Điện thoại bớt một đèn đêm. Đèn điểm là thứ duy nhất ở đây tính tiền theo từng điểm ảnh,
+        // mà iPhone của Đàm vừa có mật độ điểm ảnh cao vừa là máy phải giữ mát suốt phiên 25 phút.
+        // Dùng CHUNG tín hiệu `isMobile` với cỡ shadow map ngay dưới — một máy đã đáng hạ bóng thì
+        // cũng đáng bớt đèn, để hai ngưỡng không trôi khỏi nhau theo thời gian.
+        maxLamps: isMobile ? 2 : 3,
         // Bảo tàng (kỷ đã niêm phong) đứng yên tuyệt đối — đúng tinh thần "bảo tàng bất động";
         // và khi Đàm bật giảm chuyển động ở mức hệ điều hành thì KHÔNG có gì được nhúc nhích.
         still: dimmed || reduceMotion,

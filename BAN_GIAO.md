@@ -93,6 +93,49 @@
 ## 🗒️ Nhật ký cập nhật
 > Mỗi lần xong việc đáng kể, thêm 1 dòng vào ĐẦU danh sách.
 
+- **2026-08-12 (Phase 3G)** — **QUÉT ĐỦ 15 KỶ × 6 CHẶNG NGÀY, VÀ VÁ 6 LỖI MỸ THUẬT NÓ PHƠI RA.**
+  Đàm: *"quét đủ 15 kỷ × 6 chặng ngày đi… đánh bóng mọi thứ lên, mọi thứ phải hoàn hảo và không bị
+  chán"*. Làm được đúng thế: 90 ô × 2 theme = **180 cảnh**, xem tận mắt từng ô.
+
+  **⚠️ BÀI HỌC LỚN NHẤT — công cụ soi quyết định thứ soi được.** Trước đây mỗi lần chụp một ảnh
+  rời, và soi kiểu đó **không hề bắt được lỗi nào trong 6 lỗi dưới đây**, dù chúng đã chạy trên
+  production nhiều ngày. Lý do: cả 6 đều là lỗi **so sánh** — một mặt đất màu cỏ trông vẫn "bình
+  thường" cho tới khi đặt cạnh mặt đất đất-son của kỷ bên; một chân trời xám chỉ lộ ra khi nằm
+  giữa chân trời hồng của bình minh và chân trời hồng của hoàng hôn. Xếp 90 ô vào **một tấm ảnh**
+  là thứ biến chúng từ vô hình thành hiển nhiên. `scripts/city-preview.mjs --sweep` (một bundle,
+  MỘT WebGL context dùng lại, ~21 giây cho 5 kỷ) là công cụ, không phải sản phẩm phụ.
+
+  **6 lỗi, mà hoá ra 4 trong số đó là CÙNG MỘT LỖI:**
+  1. **Mái nhà tím sen rực ở 6/15 kỷ** (kỷ 5, 6, 8, 11, 12, 15 — đo được góc màu 305–342° ở độ tươi
+     0,50). 2. **Mặt đất màu cỏ nhân tạo ở 7/15 kỷ** (102–117°) trong khi kỷ 7 và 11, *cùng họ màu
+     lam-tím*, lại ra đất nâu. 3. **Ô cửa kính ngả tím** ở kỷ sắc cam. 4. **Ánh trăng màu XANH LỤC**
+     (`#93beb4`) — sống sót lâu vì chỉ hiện lúc 19–4 giờ.
+     → Cả bốn là **cùng một cái bẫy `mixHue` đã cắn dự án lần thứ tư**: nội suy GÓC MÀU luôn đi
+     đường ngắn trên vòng tròn màu, mà (a) từ lam sang đất nung thì đường ngắn **chạy xuyên qua
+     vùng tím**, và (b) hai góc cách nhau ~180° thì **hướng đi lật ngẫu nhiên**. Ba lần trước đều
+     vá riêng lẻ đúng chỗ vừa phát hiện. Lần này vá **PHÉP PHA**: mọi sắc kỷ nay trộn trong RGB
+     (`blend`/`material` trong `palette3d.js`) — đi qua màu XÁM đúng như người vẽ pha bột màu, nên
+     **không đầu vào nào còn đẻ ra được màu tím và không còn chỗ nào để lật hướng.** Phần thưởng
+     kèm theo chính là thứ làm ra "chất tranh": trộn RGB tự bạc màu ở giữa, nên kỷ có sắc đối lập
+     ra mái TRẦM (xám tía, mận chín, rượu vang) còn kỷ sắc gần ra mái TƯƠI (đất nung, vàng đất) —
+     15 kỷ 15 sắc mái, không sắc nào rơi ra ngoài dải vật liệu có thật.
+  5. **Theme tối thì GIỮA TRƯA cũng tối như nửa đêm** — lỗi nặng nhất. `isDark` cũ trả lời hai câu
+     hỏi khác nhau bằng một biến. Nguyên tắc chốt lại: **thành phố là một Ô CỬA SỔ** — cảnh nhìn
+     qua cửa sổ không tối đi vì ta sơn tường phòng màu đen. Nay có `daylight` ⇒ **đồng hồ quyết**;
+     không có (bảo tàng, chỗ gọi cũ) ⇒ vẫn theo theme y như trước. Đóng luôn `TECH_DEBT #11`.
+  6. **Chân trời 8 giờ sáng ra XÁM CHẾT** (đo được độ tươi **0,06**) còn bình minh thì ĐỈNH trời ra
+     nâu ô-liu — vì cả vòm trời dùng chung một đích. Tách thành `skyHue` (đỉnh, luôn lạnh) và
+     `horizonHue` (chân, luôn giữ hơi ấm — trừ đêm). Thêm: **vùng đất ngoài phố** (chiếm nhiều
+     diện tích hơn cả trời lẫn thành phố cộng lại) nay pha về đúng màu chân trời của chặng, tức
+     phối cảnh không khí thật; **mặt nước** thôi là miếng dán lam bất biến (`#7f9ebd` y hệt ở 5
+     chặng) mà bắt lửa theo chân trời; **đèn cửa sổ** mờ dần theo `lampEnergy` thay vì sáng y hệt
+     lúc 6 giờ sáng và 10 giờ đêm; giữa trưa hạ cao độ nắng 0,92→0,84 và đèn nền 0,92→0,80 để khối
+     có lại mặt sáng/mặt tối (cột 12 giờ trước đây phẳng nhất, nhạt nhất cả bảng).
+
+  **Nghiệm thu**: 425 test xanh (+7 bài mới), lint sạch, build xanh. ⚠️ **Cả 5 bài test mới đều đã
+  được xác minh ĐỎ trên code cũ trước khi nhận** — một bài test mỹ thuật chưa từng đỏ thì không
+  chứng minh được gì. Đã chụp lại và soi đủ 180 cảnh sau khi vá.
+
 - **2026-08-12 (deploy)** — **Gộp cả 4 commit Thành Phố vào `main` → lên production.**
   ⚠️ **Bài học vận hành, dễ mất thời gian nếu quên**: cả 4 commit ban đầu chỉ nằm ở nhánh
   `claude/xay-san-pham-huong-nay-nasr3n`. Đàm chờ 5 phút không thấy gì đổi trên

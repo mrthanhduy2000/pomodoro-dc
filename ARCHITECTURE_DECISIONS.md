@@ -11,6 +11,61 @@
 
 ---
 
+## ADR-009 — Thành Phố là một Ô CỬA SỔ: đồng hồ quyết độ sáng cảnh, theme chỉ quyết cái khung — và sắc kỷ trộn trong RGB, không xoay góc màu
+
+- **Ngày**: 2026-08-12
+- **Bối cảnh**: Đàm yêu cầu quét đủ 15 kỷ × 6 chặng ngày rồi "đánh bóng mọi thứ lên". Bản quét 180
+  cảnh (90 ô × 2 theme) phơi ra 6 lỗi mỹ thuật mà **soi từng ảnh rời chưa bao giờ bắt được**, dù
+  chúng đã chạy trên production nhiều ngày.
+- **Vấn đề**: hai câu hỏi kiến trúc, không phải hai con số cần chỉnh.
+  1. `isDark` đang trả lời HAI câu hỏi khác nhau bằng một biến: *"giao diện đang dùng bảng màu
+     nào?"* và *"ngoài trời có tối không?"*. Hệ quả: để theme tối thì giữa trưa cảnh cũng tối như
+     nửa đêm — cả 15 kỷ ở cột 12 giờ đều là một mảng đen kịt.
+  2. Sắc riêng của kỷ (góc màu chạy khắp vòng tròn màu) đang được pha vào các sắc NEO của vật liệu
+     bằng cách **nội suy góc màu**. Đây là lần thứ TƯ cái bẫy này cắn dự án, ở vai màu thứ tư.
+- **Phương án đã cân nhắc — câu hỏi (1)**:
+  1. Thêm trường `skyLightness` vào từng chặng trong `DAYLIGHT_PROFILES` (chính là "Recommended
+     Solution" đã ghi sẵn ở `TECH_DEBT #11`).
+  2. Bỏ hẳn ảnh hưởng của theme lên cảnh 3D, luôn dùng bảng màu sáng.
+  3. Đổi Ý NGHĨA của `isDark`: có `daylight` ⇒ **đồng hồ quyết**; không có ⇒ vẫn theo theme.
+- **Lý do loại bỏ (1)**: nó chữa đúng cái triệu chứng đã ghi trong sổ nợ (bầu trời) và bỏ sót mặt
+  đất, tường, mái — vốn cùng một gốc. Vá xong sẽ vẫn còn một thành phố tối om dưới một bầu trời
+  sáng, tức là tệ hơn cả trước khi vá.
+- **Lý do loại bỏ (2)**: mất luôn cảnh đêm ở theme sáng — tức là mất phần lớn giá trị của Phase 3D
+  với người để theme sáng, đúng cái lỗi đối xứng mà ta đang đi sửa.
+- **Giải pháp chọn — (3), và nguyên tắc đứng sau nó**: *thành phố là một Ô CỬA SỔ.* Cảnh nhìn qua
+  cửa sổ không tối đi vì ta sơn tường phòng màu đen. **Theme quyết định cái KHUNG** (nền thẻ, viền,
+  lớp tối góc, lớp phủ giữ chữ đọc được ở trang chủ — tất cả giữ nguyên); **đồng hồ quyết định độ
+  sáng BÊN TRONG khung**. Nhánh "không có `daylight`" giữ nguyên hành vi cũ, nên bảo tàng và mọi
+  màn hình cũ không đổi một byte nào.
+- **Phương án đã cân nhắc — câu hỏi (2)**:
+  1. Sửa số cho từng kỷ bị hỏng (6 kỷ mái tím, 7 kỷ đất cỏ).
+  2. Kẹp góc lệch của sắc kỷ vào một dải hẹp quanh sắc neo (`clamp`).
+  3. Trộn trong RGB thay vì nội suy góc màu.
+- **Lý do loại bỏ (1)**: đã làm ba lần rồi, và lỗi mọc lại ở vai màu thứ tư. Nó cũng sẽ mọc lại ở
+  kỷ thứ 16 hoặc ở vai màu tiếp theo ai đó thêm vào.
+- **Lý do loại bỏ (2)**: đo thử thì 4 kỷ (5, 8, 11, 15) đều đụng trần kẹp và ra **cùng một màu mái**
+  — tức là chữa được màu xấu bằng cách xoá mất bản sắc của 4 kỷ.
+- **Giải pháp chọn — (3)**: một phép pha duy nhất (`blend`) cho cả bảng màu. Đường thẳng nối hai màu
+  trong RGB luôn cắt qua vùng trung tính — đúng cách người vẽ pha bột màu, và cũng đúng cách các
+  hoạ sĩ Phục Hưng pha màu bổ túc. Không có khái niệm "hướng đi" nên không có gì để lật; không đầu
+  vào nào đẻ ra được màu tím.
+- **Trade-off**:
+  - Người để theme tối nay thấy một thành phố SÁNG trong thẻ vào ban ngày. Đây là cái giá có chủ ý,
+    và nó đúng với ẩn dụ ô cửa sổ; nếu Đàm thấy chói thì nút vặn nằm ở lớp phủ/độ mờ của KHUNG, chứ
+    không phải quay lại làm tối cả cảnh.
+  - Trộn RGB **tự bạc màu** ở giữa: kỷ có sắc đối lập với sắc neo sẽ ra màu TRẦM hơn hẳn kỷ có sắc
+    gần. Nghe như mất mát, nhưng đo lại đủ 15 kỷ thì đó chính là thứ cho ra 15 sắc mái phân biệt
+    được (đất nung, ngói đỏ, vàng đất, đồng xanh, xám tía, mận chín, rượu vang) mà không sắc nào
+    rơi ra ngoài dải vật liệu có thật. `mixHue` vẫn giữ lại và vẫn đúng cho hai góc màu GẦN nhau.
+- **Ảnh hưởng**: đóng `TECH_DEBT #11`. `DAYLIGHT_PROFILES` thêm `horizonHue`/`horizonPull` (đỉnh
+  trời và chân trời có đích riêng — đỉnh luôn lạnh, chân luôn giữ hơi ấm trừ ban đêm). 5 bài test
+  mới, **tất cả đã xác minh ĐỎ trên code cũ** trước khi nhận.
+- **Điều kiện xem lại**: nếu Đàm phản hồi rằng thành phố sáng quá trong theme tối ban ngày; hoặc
+  nếu thêm chặng ngày mới / kỷ thứ 16 mà bảng quét lộ ra sắc lạ.
+
+---
+
 ## ADR-008 — Thành Phố: tách KHUNG màn hình khỏi BỘ VẼ, và giữ bộ vẽ 2D làm nền vĩnh viễn (không phải bản nháp)
 
 - **Ngày**: 2026-08-12

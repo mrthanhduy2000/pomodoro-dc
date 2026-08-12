@@ -12,6 +12,24 @@
 
 ---
 
+## 2026-08-12 — Thành Phố (Phase 3G): quét đủ 15 kỷ × 6 chặng ngày và vá mỹ thuật
+
+- **Mục đích**: Đàm yêu cầu *"quét đủ 15 kỷ × 6 chặng ngày đi… đánh bóng mọi thứ lên"*. Quét 90 ô
+  × 2 theme = 180 cảnh và xem tận mắt từng ô.
+- **Phạm vi**: `scripts/city-preview.mjs` thêm chế độ `--sweep` (ghép nhiều cảnh vào MỘT bảng liên
+  hoàn, một bundle, một WebGL context dùng lại); `palette3d.js` + `daylight.js` vá 6 lỗi mỹ thuật.
+  Không đụng dữ liệu game, không đụng state, không thêm dependency.
+- **Ảnh hưởng**: 4 trong 6 lỗi (mái tím sen ở 6/15 kỷ · mặt đất màu cỏ nhân tạo ở 7/15 kỷ · kính
+  ngả tím · ánh trăng xanh lục) hoá ra là **cùng một cái bẫy nội suy góc màu, lần thứ tư**. Vá vào
+  PHÉP PHA chứ không vá từng con số: sắc kỷ nay trộn trong RGB, nên cả họ lỗi này không thể tái
+  xuất hiện với bất kỳ kỷ hay vai màu nào thêm về sau. Hai lỗi còn lại: theme tối làm giữa trưa
+  cũng tối như nửa đêm (nay đồng hồ quyết độ sáng cảnh, không phải theme — đóng `TECH_DEBT #11`),
+  và cả vòm trời dùng chung một đích màu (nay đỉnh trời và chân trời có đích riêng).
+- **Tương thích**: giữ nguyên hoàn toàn. Mọi chỗ gọi `buildScenePalette` KHÔNG truyền `daylight`
+  (bảo tàng và các màn hình cũ) vẫn cho ra kết quả theo theme y như trước.
+
+---
+
 ## 2026-08-12 — Thành Phố (Phase 3F): thành phố ra trang chủ
 
 - **Mục đích**: Đàm yêu cầu *"đem nó ra trang chủ hoặc làm cái gì đó đột phá hơn nữa"*. Trước Phase

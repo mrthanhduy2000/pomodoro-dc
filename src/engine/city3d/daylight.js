@@ -43,7 +43,8 @@ const PHASE_BY_HOUR = [
  *  • `sunEnergy`    cường độ nắng, nhân vào đèn mặt trời.
  *  • `fillEnergy`   cường độ đèn nền. ⚠️ Ban đêm phải cao hơn ban ngày RẤT NHIỀU — xem ghi chú
  *                   "tối hai lần" ngay dưới bảng.
- *  • `skyHue`/`skyPull` bầu trời bị KÉO về góc màu nào, mạnh bao nhiêu (0–1).
+ *  • `skyHue`/`skyPull`         ĐỈNH trời bị kéo về góc màu nào, mạnh bao nhiêu (0–1).
+ *  • `horizonHue`/`horizonPull` CHÂN trời bị kéo về góc màu nào, mạnh bao nhiêu (0–1).
  *  • `skySaturation` hệ số nhân độ tươi bầu trời.
  *  • `windowsLit`   có bật đèn cửa sổ không.
  *  • `lampEnergy`   độ mạnh của những vũng sáng ấm hắt xuống chân công trình (0 = không có đèn).
@@ -74,22 +75,35 @@ const PHASE_BY_HOUR = [
  * phát sáng nên nó KHÔNG rọi ra ngoài — ô cửa sáng trưng mà chân tường vẫn tối om, đọc ra "hình dán"
  * chứ không ra "trong nhà có người". Vài vũng sáng ấm hắt xuống quanh chân công trình là chi tiết
  * duy nhất biến bức tranh đêm thành một nơi CÓ NGƯỜI Ở.
+ *
+ * ⚠️ VÌ SAO ĐỈNH TRỜI VÀ CHÂN TRỜI CÓ ĐÍCH RIÊNG (`skyHue` vs `horizonHue`) — sửa sau bản quét đủ
+ * 15 kỷ × 6 chặng, và là lỗi lộ ra ngay ở cột đầu tiên của bảng quét.
+ * Trước đây cả vòm trời chung MỘT đích, chân trời kéo đủ sức còn đỉnh trời chỉ 0,45 sức. Hệ quả
+ * đo được: 8 giờ sáng chân trời ra `#cad0d0` — độ tươi **0,06**, tức một dải XÁM CHẾT, vì sắc ấm
+ * 40° bị kéo nửa đường sang lam 202° thì rơi đúng vào vùng trung tính ở giữa. Còn lúc bình minh/
+ * hoàng hôn thì ngược lại: đích ấm kéo cả ĐỈNH trời sang nâu, ra một mái vòm nâu-ô-liu.
+ * Sự thật về bầu trời: **đỉnh trời LUÔN lạnh, chân trời LUÔN là chỗ giữ hơi ấm** — kể cả giữa
+ * trưa (mù nhiệt vàng nhạt) lẫn giữa đêm (chỉ khi đó chân trời mới lạnh theo). Một đích chung
+ * không thể diễn tả nổi hai vai ngược nhau đó, nên tách hẳn thành hai đích. Nhờ vậy `skyPull` nay
+ * kéo được MẠNH cho đỉnh trời mà không kéo chân trời xuống xám.
  */
 export const DAYLIGHT_PROFILES = {
-  dawn:      { sunAltitude: 0.22, sunWarmth:  0.85, sunEnergy: 0.72, fillEnergy: 0.95, skyHue:  22, skyPull: 0.50, skySaturation: 1.15, windowsLit: true,  lampEnergy: 0.35 },
-  // ⚠️ `skyPull` của hai chặng giữa ngày ĐÃ TĂNG (0,18→0,50 và 0,30→0,65) sau khi đổi cách trộn.
-  // Không phải đổi ý về mỹ thuật: cách trộn cũ đi vòng qua màu tím nên chỉ cần kéo NHẸ là chân
-  // trời đã ngả hồng rõ, phải ghìm số lại. Cách trộn mới đi qua màu trung tính, nên kéo nhẹ chỉ
-  // cho ra màu XÁM nhạt nhẽo — muốn chân trời trưa ra sắc lam mờ sương thì phải kéo mạnh hẳn.
-  // Bài học: đổi cách trộn màu thì mọi con số đã hiệu chỉnh theo cách trộn cũ đều phải xem lại —
-  // cùng họ với bài học "đổi tone mapping không phải một dòng độc lập" ở `sceneGraph.js`.
-  morning:   { sunAltitude: 0.55, sunWarmth:  0.40, sunEnergy: 0.95, fillEnergy: 1.00, skyHue: 202, skyPull: 0.50, skySaturation: 1.00, windowsLit: false, lampEnergy: 0    },
-  noon:      { sunAltitude: 0.92, sunWarmth:  0.05, sunEnergy: 1.10, fillEnergy: 0.92, skyHue: 210, skyPull: 0.65, skySaturation: 0.92, windowsLit: false, lampEnergy: 0    },
-  afternoon: { sunAltitude: 0.48, sunWarmth:  0.55, sunEnergy: 1.00, fillEnergy: 1.00, skyHue:  34, skyPull: 0.30, skySaturation: 1.05, windowsLit: false, lampEnergy: 0    },
-  dusk:      { sunAltitude: 0.18, sunWarmth:  1.00, sunEnergy: 0.78, fillEnergy: 1.05, skyHue:  16, skyPull: 0.55, skySaturation: 1.25, windowsLit: true,  lampEnergy: 0.60 },
-  // Đêm: kéo mạnh về LAM SÂU (232°), không phải lục lam. Nắng yếu nhưng KHÔNG tắt — đó là ánh
-  // trăng, và không có nó thì công trình mất hết hình khối, chỉ còn những ô cửa sáng lơ lửng.
-  night:     { sunAltitude: 0.40, sunWarmth: -0.70, sunEnergy: 0.42, fillEnergy: 3.40, skyHue: 232, skyPull: 0.72, skySaturation: 0.85, windowsLit: true,  lampEnergy: 1.00 },
+  //           cao độ nắng    hơi ấm       nắng        đèn nền     ĐỈNH trời          CHÂN trời              tươi   cửa sổ  đèn sân
+  dawn:      { sunAltitude: 0.22, sunWarmth:  0.85, sunEnergy: 0.72, fillEnergy: 0.95, skyHue: 232, skyPull: 0.42, horizonHue:  18, horizonPull: 0.70, skySaturation: 1.15, windowsLit: true,  lampEnergy: 0.35 },
+  morning:   { sunAltitude: 0.55, sunWarmth:  0.40, sunEnergy: 0.95, fillEnergy: 1.00, skyHue: 206, skyPull: 0.58, horizonHue:  44, horizonPull: 0.26, skySaturation: 1.02, windowsLit: false, lampEnergy: 0    },
+  // ⚠️ Giữa trưa KHÔNG kéo cao độ nắng lên sát đỉnh đầu nữa (0,92 → 0,84). Nghe thì "trưa là mặt
+  // trời trên đỉnh đầu", nhưng ở 0,92 bóng đổ ngắn gần bằng không và mọi khối mất hết mặt tối —
+  // cả bảng quét thì cột 12 giờ là cột PHẲNG NHẤT, nhạt nhẽo nhất, đúng thứ Đàm gọi là "bị chán".
+  // Hạ một chút thì bóng vẫn ngắn (vẫn đọc ra giữa trưa) mà khối lại có mặt sáng/mặt tối trở lại.
+  // Đèn nền cũng hạ theo (0,92 → 0,80): giữa trưa trời quang thì bóng SÂU, không phải bị đèn nền
+  // xoá mờ — đây chính là chiaroscuro, đúng nguyên lý đã ghi ở `sceneGraph.js`.
+  noon:      { sunAltitude: 0.84, sunWarmth:  0.05, sunEnergy: 1.10, fillEnergy: 0.80, skyHue: 212, skyPull: 0.70, horizonHue:  48, horizonPull: 0.22, skySaturation: 1.00, windowsLit: false, lampEnergy: 0    },
+  afternoon: { sunAltitude: 0.48, sunWarmth:  0.55, sunEnergy: 1.00, fillEnergy: 1.00, skyHue: 214, skyPull: 0.44, horizonHue:  34, horizonPull: 0.52, skySaturation: 1.05, windowsLit: false, lampEnergy: 0    },
+  dusk:      { sunAltitude: 0.18, sunWarmth:  1.00, sunEnergy: 0.78, fillEnergy: 1.05, skyHue: 238, skyPull: 0.46, horizonHue:  10, horizonPull: 0.78, skySaturation: 1.25, windowsLit: true,  lampEnergy: 0.60 },
+  // Đêm: chặng DUY NHẤT mà chân trời cũng lạnh theo đỉnh trời — kéo cả hai về LAM SÂU (không phải
+  // lục lam, không phải tím). Nắng yếu nhưng KHÔNG tắt — đó là ánh trăng, và không có nó thì công
+  // trình mất hết hình khối, chỉ còn những ô cửa sáng lơ lửng.
+  night:     { sunAltitude: 0.40, sunWarmth: -0.70, sunEnergy: 0.42, fillEnergy: 3.40, skyHue: 232, skyPull: 0.80, horizonHue: 226, horizonPull: 0.74, skySaturation: 0.85, windowsLit: true,  lampEnergy: 1.00 },
 };
 
 /** Giờ (0–23) → tên chặng. Giờ rác → 'noon' (chặng trung tính nhất, không bao giờ trông như lỗi). */

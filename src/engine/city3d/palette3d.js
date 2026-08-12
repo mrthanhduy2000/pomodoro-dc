@@ -124,8 +124,19 @@ export function hslToRgb({ h, s, l }) {
 
 /**
  * Trộn hai góc màu theo ĐƯỜNG NGẮN trên vòng tròn màu.
- * Trộn thẳng như số thường sẽ đi vòng qua nửa kia của vòng: pha vàng (45°) với tím (300°) ra
- * xanh lá (172°) — sai hẳn họ màu, mà lại "chạy được" nên rất dễ lọt.
+ *
+ * ⚠️ CHỈ DÙNG ĐƯỢC KHI HAI GÓC MÀU GẦN NHAU (lệch dưới ~90°). Với hai góc xa nhau thì hàm này là
+ * một cái bẫy, và cái bẫy đó đã cắn dự án này BỐN LẦN ở bốn chỗ khác nhau (bầu trời, đèn bán cầu,
+ * mái nhà, ánh trăng). Hai lý do, cùng gốc:
+ *   • **Đường ngắn đi xuyên qua vùng tím.** Từ lam (215°) sang đất nung (16°) thì đường ngắn chạy
+ *     215→270→320→360, nên "pha 60% đất nung vào lam" cho ra **tím sen** — xa cả hai màu gốc.
+ *   • **Gần đối xứng thì HƯỚNG ĐI thành ngẫu nhiên.** Hai góc cách nhau ~180° nằm đúng chỗ hai
+ *     đường dài bằng nhau; lệch một độ là lật hướng. Đó là vì sao mặt đất kỷ 5 ra cỏ xanh còn
+ *     kỷ 7 ra đất nâu, dù cả hai kỷ đều có sắc lam-tím và đáng lẽ phải giống nhau.
+ *
+ * ⇒ Muốn pha sắc kỷ (góc màu chạy khắp vòng) vào một sắc NEO, dùng `blend` trong
+ * `buildScenePalette` — nó trộn trong RGB, tức đi qua màu XÁM đúng như người vẽ pha bột màu, nên
+ * không có đầu vào nào làm ra được màu tím và không có chỗ nào để lật hướng.
  */
 export function mixHue(a, b, t) {
   const k = Math.min(1, Math.max(0, t));
@@ -155,16 +166,76 @@ export function buildScenePalette({ tokens, eraColor, daylight } = {}) {
   // ── Giờ trong ngày ────────────────────────────────────────────────────────
   // ⚠️ "THEME TỐI" VÀ "TRỜI ĐÃ TỐI" LÀ HAI CHUYỆN KHÁC NHAU, và gộp chúng là cái bẫy dễ mắc nhất
   // ở đây. Theme là SỞ THÍCH của Đàm (anh có thể để theme sáng lúc 11 giờ đêm); giờ là SỰ THẬT về
-  // thời điểm. Cảnh phải tối đi vào ban đêm ở CẢ hai theme — nếu không thì Đàm để theme sáng sẽ
-  // vĩnh viễn thấy giữa trưa, và cả tính năng này biến mất với anh.
+  // thời điểm.
+  //
+  // ⚠️ BẢN QUÉT 15 KỶ × 6 CHẶNG PHƠI RA MỘT NỬA CÒN THIẾU CỦA CHÍNH CÂU TRÊN, và đó là lỗi NẶNG
+  // NHẤT cả bảng: luật cũ (`theme tối HOẶC trời tối`) mới chỉ lo được một chiều — theme sáng lúc
+  // nửa đêm thì cảnh tối đi (đúng). Chiều ngược lại thì hỏng hoàn toàn: **để theme tối thì giữa
+  // trưa cũng tối như nửa đêm**. Cả 15 kỷ ở cột 12 giờ của bảng quét theme tối đều ra một mảng
+  // đen kịt, không đọc nổi hình khối.
+  //
+  // Cách nghĩ đúng: **thành phố là một Ô CỬA SỔ.** Cảnh nhìn qua cửa sổ không tối đi vì ta sơn
+  // tường phòng màu đen — nó tối đi khi ngoài trời tối. Theme quyết định KHUNG cửa (nền thẻ, viền,
+  // lớp tối góc), còn ĐỘ SÁNG BÊN TRONG khung thì do đồng hồ quyết, không do sở thích giao diện.
+  // Nên: có `daylight` ⇒ ĐỒNG HỒ quyết; không có (bảo tàng, các chỗ gọi cũ) ⇒ lùi về theme y như
+  // trước, nhờ vậy mọi chỗ gọi không truyền `daylight` giữ nguyên kết quả từng byte.
   const nightByClock = daylight?.phase === 'night';
-  const isDark = luminance(base) < 0.5 || nightByClock;
+  const isDark = daylight ? nightByClock : luminance(base) < 0.5;
 
   // Dịch góc màu + độ tươi của bầu trời theo chặng trong ngày. Mặc định (không truyền `daylight`)
   // là trung tính tuyệt đối, nên mọi chỗ gọi cũ giữ nguyên kết quả.
+  // ⚠️ ĐỈNH TRỜI VÀ CHÂN TRỜI CÓ ĐÍCH RIÊNG — xem lý do đầy đủ ở `daylight.js`. Tóm tắt: đỉnh trời
+  // luôn lạnh, chân trời là chỗ giữ hơi ấm; ép chung một đích thì giữa trưa chân trời ra xám chết
+  // (đo được độ tươi 0,06) còn bình minh thì đỉnh trời ra nâu ô-liu.
   const skyHue = Number.isFinite(daylight?.skyHue) ? daylight.skyHue : null;
   const skyPull = Number.isFinite(daylight?.skyPull) ? daylight.skyPull : 0;
+  const horizonHue = Number.isFinite(daylight?.horizonHue) ? daylight.horizonHue : skyHue;
+  const horizonPull = Number.isFinite(daylight?.horizonPull) ? daylight.horizonPull : skyPull;
   const skySat = Number.isFinite(daylight?.skySaturation) ? daylight.skySaturation : 1;
+  // Sắc kỷ chỉ đóng góp GÓC MÀU. Độ tươi và độ đậm của nó bị bỏ đi có chủ đích: `accentColor`
+  // trong `ERA_METADATA` là màu chọn cho CHỮ trên nền tối (rất tươi, rất sáng), dùng thẳng lên
+  // mặt tường sẽ ra thành phố nhựa dẻo. Ở đây chỉ mượn "kỷ này thuộc họ xanh lá / cam / tím".
+  const eraHue = rgbToHsl(era).h;
+
+  /**
+   * ⭐ PHÉP PHA MÀU DUY NHẤT CỦA CẢ BẢNG: một sắc NEO của vật liệu, pha thêm một phần sắc kỷ,
+   * **trộn trong RGB** — tức đi qua màu xám, đúng như người vẽ pha bột màu trên bảng.
+   *
+   * ⚠️ ĐÂY LÀ BẢN VÁ CHO CẢ MỘT HỌ LỖI, KHÔNG PHẢI MỘT LỖI. Cùng cái bẫy "xoay góc màu" đã cắn dự
+   * án này BỐN lần ở bốn chỗ trông chẳng liên quan gì nhau, và bản quét đủ 15 kỷ × 6 chặng mới
+   * phơi hết ra một lượt (số đo thật, kỷ nào cũng kiểm được lại):
+   *   • **Mái nhà** `mixHue(eraHue, 16, 0.6)` — kỷ 5/6/8/11/12/15 ra góc màu 305–342°, tức MÁI
+   *     TÍM SEN RỰC. Vì đường ngắn từ lam 215° sang đất nung 16° chạy xuyên qua vùng tím.
+   *   • **Mặt đất** `mixHue(78, eraHue, 0.22)` — kỷ 5/6/8/12/13/14/15 ra 102–117°, tức CỎ NHÂN TẠO
+   *     xanh rực; còn kỷ 7/11 lại ra đất nâu. Cùng họ màu lam-tím mà ra hai kết quả ngược nhau, chỉ
+   *     vì chúng nằm hai bên cái mốc 180° nơi hướng đi bị lật.
+   *   • **Ô cửa kính** `mixHue(eraHue, 214, 0.7)` — kỷ 4 (cam) ra 266°, tím.
+   *   • **Ánh trăng** `mixHue(48, 218, 0.7)` — ra 167°, tức **trăng màu XANH LỤC**.
+   * Sửa từng con số cho từng kỷ thì lỗi sẽ mọc lại ở kỷ thứ 16, hoặc ở vai màu tiếp theo ai đó
+   * thêm vào. Sửa PHÉP PHA thì cả họ lỗi biến mất vĩnh viễn: trộn RGB không có khái niệm "hướng
+   * đi", nên không có gì để lật, và đường thẳng nối hai màu luôn cắt qua vùng trung tính nên
+   * không đầu vào nào đẻ ra được màu tím.
+   *
+   * Phần thưởng kèm theo, và nó chính là thứ làm ra "chất tranh": trộn RGB **tự bạc màu** ở giữa.
+   * Kỷ có sắc đối lập với sắc neo thì ra màu TRẦM (mái xám tía, xám nâu), kỷ có sắc gần thì ra màu
+   * TƯƠI (mái đất nung, mái vàng đất). Đó đúng là cách một hoạ sĩ pha màu bổ túc, và nó cho 15 kỷ
+   * 15 sắc mái phân biệt được mà không kỷ nào rơi ra khỏi dải màu vật liệu thật.
+   *
+   * @param {number} hue    góc màu NEO của vật liệu
+   * @param {number} eraMix pha bao nhiêu phần sắc kỷ vào (0 = không pha)
+   * @param {number} sat    độ tươi (dùng chung cho cả hai màu đem trộn, nên trộn chỉ đổi SẮC)
+   * @param {number} l      độ đậm (cũng dùng chung, vì lý do trên)
+   */
+  const blend = (hue, eraMix, sat, l) => {
+    const rgb = hslToRgb({ h: hue, s: sat, l });
+    return eraMix > 0 ? mixRgb(rgb, hslToRgb({ h: eraHue, s: sat, l }), eraMix) : rgb;
+  };
+
+  /** Vai màu vật liệu = neo + sắc kỷ, chọn độ đậm theo trời sáng hay trời tối. */
+  const material = (hue, eraMix, sat, lightLight, lightDark) => (
+    rgbToHexNumber(blend(hue, eraMix, sat, isDark ? lightDark : lightLight))
+  );
+
   /**
    * Kéo một màu trời về phía sắc trời của chặng — **đi vòng qua màu TRUNG TÍNH, không đi vòng qua
    * màu tím.** Không có `daylight` ⇒ giữ nguyên y hệt bản cũ.
@@ -197,27 +268,29 @@ export function buildScenePalette({ tokens, eraColor, daylight } = {}) {
    * @param {number} hue      góc màu nền của bầu trời
    * @param {number} eraMix   pha bao nhiêu phần sắc kỷ vào (0 = không pha)
    * @param {number} sat      độ tươi
-   * @param {number} lightL   độ đậm ở theme sáng
-   * @param {number} lightD   độ đậm ở theme tối
-   * @param {number} strength hệ số nhân vào `skyPull` (đỉnh trời dùng nhỏ hơn chân trời — xem dưới)
+   * @param {number} lightL   độ đậm ở trời sáng
+   * @param {number} lightD   độ đậm ở trời tối
+   * @param {string} band     `'top'` = theo đích ĐỈNH trời · `'horizon'` = theo đích CHÂN trời
+   * @param {number} strength hệ số nhân vào sức kéo (dùng cho những thứ chỉ ăn theo trời một phần)
    */
-  const skyward = (hue, eraMix, sat, lightL, lightD, strength = 1) => {
+  const skyward = (hue, eraMix, sat, lightL, lightD, band = 'top', strength = 1) => {
     const l = isDark ? lightD : lightL;
     // Giữ cùng độ tươi và độ đậm cho cả ba màu đem trộn: nhờ vậy phép trộn chỉ đổi SẮC, không vô
     // tình làm bầu trời sáng lên hay tối đi — độ đậm đã do `lightL`/`lightD` quyết một mình.
-    let rgb = hslToRgb({ h: hue, s: sat, l });
-    if (eraMix > 0) rgb = mixRgb(rgb, hslToRgb({ h: eraHue, s: sat, l }), eraMix);
-    if (skyHue === null) return rgbToHexNumber(rgb);
-    const t = Math.min(1, Math.max(0, skyPull * strength));
-    return rgbToHexNumber(mixRgb(rgb, hslToRgb({ h: skyHue, s: sat, l }), t));
+    const rgb = blend(hue, eraMix, sat, l);
+    const target = band === 'horizon' ? horizonHue : skyHue;
+    const pull = band === 'horizon' ? horizonPull : skyPull;
+    if (target === null) return rgbToHexNumber(rgb);
+    const t = Math.min(1, Math.max(0, pull * strength));
+    return rgbToHexNumber(mixRgb(rgb, hslToRgb({ h: target, s: sat, l }), t));
   };
   // Hơi ấm của nắng: −1 lạnh … +1 ấm. Đổi GÓC MÀU của mặt trời và của ánh sáng dội lại từ đất.
   const warmth = Number.isFinite(daylight?.sunWarmth) ? daylight.sunWarmth : 0.3;
-
-  // Sắc kỷ chỉ đóng góp GÓC MÀU. Độ tươi và độ đậm của nó bị bỏ đi có chủ đích: `accentColor`
-  // trong `ERA_METADATA` là màu chọn cho CHỮ trên nền tối (rất tươi, rất sáng), dùng thẳng lên
-  // mặt tường sẽ ra thành phố nhựa dẻo. Ở đây chỉ mượn "kỷ này thuộc họ xanh lá / cam / tím".
-  const eraHue = rgbToHsl(era).h;
+  /**
+   * Đèn trong nhà đang cháy mạnh cỡ nào (0 = tắt … 1 = đêm sâu). Không có `daylight` ⇒ 1, để mọi
+   * chỗ gọi cũ giữ nguyên kết quả từng byte (khi đó cửa sổ cũng không hề được bật, xem `sceneGraph`).
+   */
+  const glow = Number.isFinite(daylight?.lampEnergy) ? daylight.lampEnergy : 1;
 
   // Vai màu = (góc màu, độ tươi, độ đậm). Nhiệt độ được cài vào từng vai:
   // mái ngả về đỏ đất nung (16°), đá ngả về vàng ấm (40°), kính ngả về xanh lạnh (205°),
@@ -236,14 +309,22 @@ export function buildScenePalette({ tokens, eraColor, daylight } = {}) {
   // bất cứ thứ gì xây bằng vật liệu thật. Vật liệu xây dựng của MỌI thời đại đều nằm trong dải ấm
   // (đất nung, vôi vữa, đá vôi, bê tông, gỗ) — bản sắc của kỷ nằm ở MÁI, ở chi tiết và ở HÌNH
   // DÁNG, không nằm ở màu tường. Trộn 0,18 giữ đủ để 15 kỷ vẫn khác nhau khi đặt cạnh nhau.
-  const wallHue = mixHue(36, eraHue, 0.18);
+  const WALL_ANCHOR = 36;
+  /** Bao nhiêu phần sắc kỷ được phép ngấm vào tường. Thấp có chủ ý — xem đoạn ghi chú ngay trên. */
+  const WALL_ERA = 0.18;
 
   const roles = {
-    wall:  paint(wallHue, isDark ? 0.24 : 0.23, 0.70, 0.44),
-    wall2: paint(wallHue, isDark ? 0.20 : 0.19, 0.62, 0.37),
-    roof:  paint(mixHue(eraHue, 16, 0.6), isDark ? 0.48 : 0.50, 0.39, 0.32),
-    trim:  paint(wallHue, isDark ? 0.14 : 0.13, 0.76, 0.54),
-    stone: paint(mixHue(wallHue, 40, 0.6), 0.12, 0.60, 0.42),
+    wall:  material(WALL_ANCHOR, WALL_ERA, isDark ? 0.24 : 0.23, 0.70, 0.44),
+    wall2: material(WALL_ANCHOR, WALL_ERA, isDark ? 0.20 : 0.19, 0.62, 0.37),
+    // ⚠️ MÁI LÀ CHỖ SẮC KỶ ĐƯỢC NÓI TO NHẤT — và cũng là chỗ đã ra tím sen ở 6/15 kỷ trước khi đổi
+    // sang trộn RGB (xem `blend`). Neo ở đất nung 16°, cho sắc kỷ 40 phần trăm. Kết quả đo lại đủ
+    // 15 kỷ: đất nung, ngói đỏ, vàng đất, đồng xanh, xám tía, mận chín, rượu vang — 15 sắc khác
+    // nhau, không sắc nào rơi ra ngoài dải vật liệu lợp mái có thật.
+    roof:  material(16, 0.40, isDark ? 0.48 : 0.50, 0.39, 0.32),
+    trim:  material(WALL_ANCHOR, WALL_ERA, isDark ? 0.14 : 0.13, 0.76, 0.54),
+    // Đá vôi/đá xây: gần như trung tính, chỉ ngấm một chút sắc kỷ. Đá lấy ở đâu thì màu nấy, nó
+    // không đổi theo thời đại nhiều như ngói.
+    stone: material(39, 0.08, 0.12, 0.60, 0.42),
     wood:  paint(26, isDark ? 0.36 : 0.42, 0.34, 0.29),
     gold:  paint(44, isDark ? 0.60 : 0.66, 0.58, 0.50),
     // ⚠️ CỬA SỔ LÀ LỖ THỦNG, KHÔNG PHẢI TẤM NHỰA XANH.
@@ -252,14 +333,30 @@ export function buildScenePalette({ tokens, eraColor, daylight } = {}) {
     // "không đẹp". Nhìn từ ngoài vào ban ngày, cửa sổ gần như ĐEN: bên trong tối hơn ngoài trời
     // rất nhiều, kính chỉ hắt lại một chút sắc trời. Hạ độ đậm xuống sâu và cắt gần hết độ tươi
     // thì mặt tiền lập tức có CHIỀU SÂU — mắt đọc ra hốc lõm thay vì hình dán.
-    glass: paint(mixHue(eraHue, 214, 0.7), isDark ? 0.20 : 0.16, 0.26, 0.14),
+    glass: material(214, 0.30, isDark ? 0.20 : 0.16, 0.26, 0.14),
     // Mặt nước: SÁNG hơn kính hẳn một quãng và tươi hơn. Trước đây ao mượn chung vai `glass` nên
     // nó tối như một ô cửa — mà ao thì NGỬA LÊN TRỜI, nó nhận trọn ánh sáng bầu trời và phải là
-    // mảng sáng nhất mặt đất, đúng như mọi vũng nước ngoài đời. Neo ở 202° (lam trời) chứ không
-    // pha sắc kỷ: nước thời nào cũng phản chiếu cùng một bầu trời.
-    water: paint(mixHue(202, eraHue, 0.12), isDark ? 0.26 : 0.32, 0.62, 0.34),
-    leaf:  paint(mixHue(88, eraHue, 0.2), isDark ? 0.19 : 0.38, 0.33, 0.28),
-    dark:  paint(eraHue, 0.24, 0.19, 0.09),
+    // mảng sáng nhất mặt đất, đúng như mọi vũng nước ngoài đời.
+    //
+    // ⚠️ VÀ VÌ ĐÚNG LÝ DO ĐÓ, NƯỚC PHẢI ĐI THEO BẦU TRỜI — `skyward`, không phải `material`. Bản
+    // quét bắt được: mặt nước ra ĐÚNG MỘT MÀU `#7f9ebd` ở cả 6 giờ sáng, 8 giờ, 12 giờ, 15 giờ lẫn
+    // 18 giờ. Một mảng lam nhạt y hệt nhau suốt cả ngày, trong khi trời quanh nó đổi từ hồng sang
+    // lam sang vàng cam — nên mắt không đọc ra "mặt nước" mà đọc ra "miếng dán màu lam". Ao thì
+    // không có màu riêng: nó chỉ là bầu trời nhìn từ dưới lên. Nay bình minh nước ánh hồng, giữa
+    // trưa nước lam trong, hoàng hôn nước ánh cam, đêm nước lam sâu — miễn phí, vì đã có sẵn đích
+    // trời của từng chặng.
+    //
+    // ⚠️ BÁM CHÂN TRỜI, KHÔNG BÁM ĐỈNH TRỜI — thử cả hai rồi mới chốt. Bám đỉnh trời nghe có lý
+    // hơn về mặt vật lý (nhìn từ trên cao xuống thì ao hắt lại khoảng trời ngay trên đầu nó),
+    // nhưng đo ra thì cả ngày nước chỉ đổi từ `#8298bd` sang `#819ebd` — mắt không thấy gì, vì
+    // đỉnh trời thì chặng nào ban ngày cũng lam. Mà đúng cái khoảnh khắc mặt nước ĐẸP nhất ngoài
+    // đời — bình minh và hoàng hôn, khi ao bắt lửa cả một mảng cam hồng — lại là lúc sắc ấm nằm ở
+    // DẢI SÁT CHÂN TRỜI. Chọn cái đọc ra được bằng mắt.
+    water: skyward(202, 0.12, isDark ? 0.26 : 0.32, 0.62, 0.34, 'horizon', 0.8),
+    leaf:  material(88, 0.20, isDark ? 0.19 : 0.38, 0.33, 0.28),
+    // Bóng tối sâu nhất. Gần như đen ở mọi kỷ nên góc màu hầu như không đọc ra, nhưng vẫn pha bằng
+    // `material` cho nhất quán — không để sót một chỗ nào dùng thẳng sắc kỷ chưa qua bảng pha.
+    dark:  material(24, 0.45, 0.24, 0.19, 0.09),
     // Da người. KHÔNG pha sắc kỷ vào — người thì thời nào cũng cùng một màu, và đây chính là chỗ
     // để mắt bám vào: một chấm ấm, nhạt, KHÔNG thuộc họ màu của công trình xung quanh, nhờ vậy
     // đọc ra "người" giữa một rừng tường và mái. Sáng hơn hẳn ở cả hai theme vì ở cỡ vài điểm ảnh,
@@ -270,14 +367,38 @@ export function buildScenePalette({ tokens, eraColor, daylight } = {}) {
     // ánh sáng cảnh. Vì vậy nó phải là màu của **ánh đèn nhìn từ xa** — vàng ấm, sáng nhưng không
     // trắng loá. Chọn trắng thì cả thành phố thành bảng đèn LED; chọn quá trầm thì không ai thấy
     // là đèn. Cố ý KHÔNG pha sắc kỷ: bóng đèn thời nào cũng vàng.
-    glassLit: rgbToHexNumber(hslToRgb({ h: 44, s: 0.72, l: 0.66 })),
+    //
+    // ⚠️ ĐỘ SÁNG PHẢI ĐI THEO CHẶNG, KHÔNG PHẢI BẬT/TẮT — bản quét bắt được ở cột bình minh.
+    // Vì vật liệu này không nhận ánh sáng cảnh, một ô cửa lúc 6 giờ sáng sáng Y HỆT lúc 10 giờ
+    // đêm. Trên nền trời đã hửng sáng thì nó không còn đọc ra "trong nhà có đèn" nữa mà thành
+    // **vệt vàng chói loà**, át hết cả công trình — nhìn kỷ 14 và 15 ở cột 6 giờ của bản quét cũ
+    // là thấy ngay: cả thành phố trông như đang cháy. Ngoài đời thì ngược lại, trời càng sáng thì
+    // đèn trong nhà càng chìm đi, dù bóng đèn chẳng đổi gì cả — cái đổi là TƯƠNG QUAN với xung
+    // quanh. Buộc độ sáng vào `lampEnergy` (rạng sáng 0,35 · chạng vạng 0,60 · đêm 1,00) là diễn
+    // đạt đúng tương quan đó, và tái dùng luôn con số đã có thay vì đẻ thêm một nút vặn mới.
+    glassLit: rgbToHexNumber(hslToRgb({ h: 44, s: 0.72, l: 0.30 + 0.36 * glow })),
   };
 
   // ⚠️ Mặt đất lấy sắc ĐẤT làm gốc rồi mới pha CHÚT sắc kỷ vào, chứ KHÔNG phải ngược lại.
   // Trộn theo chiều ngược (từ sắc kỷ về phía xanh lá) là một cái bẫy: với kỷ tím (kỷ 7, 275°)
   // đường ngắn nhất tới 90° đi vòng qua 0° nên mặt đất ra màu HỒNG — đúng thứ ảnh chụp thử đã
-  // phơi ra. Neo vào 78° thì mọi kỷ đều có mặt đất ra đất, chỉ khác nhau sắc thái.
-  const groundHue = mixHue(78, eraHue, 0.22);
+  // phơi ra.
+  //
+  // ⚠️ NHƯNG NEO 78° VẪN CÒN SAI, và bản quét đủ 15 kỷ mới bắt được — đây là chỗ chỉ so sánh cạnh
+  // nhau mới thấy. Hai chuyện:
+  //   (1) 78° là VÀNG-LỤC, và khi kỷ có sắc lam/lục kéo thêm lên nữa thì mặt đất ra 102–117°, tức
+  //       màu CỎ NHÂN TẠO xanh rực (kỷ 5, 6, 8, 12, 13, 14, 15 — gần nửa trò chơi). Nền của một
+  //       bức tranh phong cảnh cổ điển không bao giờ là màu diệp lục: nó là ô-liu, đất son, đất
+  //       nung — vàng ĐẤT, không phải vàng LÁ. Hạ neo xuống 58° và giảm độ tươi thì cả 15 kỷ về
+  //       đúng dải đất.
+  //   (2) Việc kỷ 5 ra cỏ xanh còn kỷ 7 ra đất nâu — dù cả hai đều là kỷ sắc lam-tím — là do phép
+  //       xoay góc màu lật hướng ở mốc 180°. Nay pha bằng `blend` (RGB) nên không còn hướng nào để
+  //       lật: các kỷ họ lam đều cho ra đất ô-liu xám, khác nhau ở sắc độ chứ không nhảy sang họ
+  //       màu khác.
+  const GROUND_ANCHOR = 58;
+  const GROUND_ERA = 0.22;
+  /** Độ tươi mặt đất. Trời sáng đã hạ 0,26 → 0,20 để hết "bãi cỏ sân bóng". */
+  const groundSat = isDark ? 0.12 : 0.20;
 
   // ⚠️ CHÂN TRỜI PHẢI CÓ MÀU, không được nhợt. Bản đầu lấy `l: 0.86` và ảnh chụp thử ra một mảng
   // xám tím phẳng lì — bầu trời chiếm gần một nửa khung hình nên nó nhợt là cả bức nhợt theo.
@@ -300,14 +421,14 @@ export function buildScenePalette({ tokens, eraColor, daylight } = {}) {
   // `skyShift` dịch góc màu theo chặng trong ngày: dương = về phía vàng-hồng (bình minh, hoàng
   // hôn), âm = về phía lam (đêm). Đây là thứ làm 6 giờ sáng khác 12 giờ trưa khác 10 giờ đêm.
   const horizon = isDark
-    ? skyward(224, 0.14, Math.min(0.75, 0.34 * skySat), 0.80, 0.27)
-    : skyward(40, 0.18, Math.min(0.75, 0.42 * skySat), 0.80, 0.26);
+    ? skyward(224, 0.14, Math.min(0.75, 0.34 * skySat), 0.80, 0.27, 'horizon')
+    : skyward(40, 0.18, Math.min(0.75, 0.42 * skySat), 0.80, 0.26, 'horizon');
 
   return {
     // ── giữ nguyên các khoá cũ để không phá chỗ đang dùng ────────────────────
     background: horizon,
-    ground:     paint(groundHue, isDark ? 0.12 : 0.26, 0.55, 0.286),
-    groundAlt:  paint(groundHue, isDark ? 0.10 : 0.24, 0.51, 0.276),
+    ground:     material(GROUND_ANCHOR, GROUND_ERA, groundSat,        0.55, 0.286),
+    groundAlt:  material(GROUND_ANCHOR, GROUND_ERA, groundSat - 0.02, 0.51, 0.276),
 
     /**
      * Bốn sắc nền, chênh nhau RẤT ÍT.
@@ -335,14 +456,14 @@ export function buildScenePalette({ tokens, eraColor, daylight } = {}) {
      * sai", còn một bãi cỏ xám-lục thì đọc ra "trời đang tối".
      */
     groundShades: [
-      paint(groundHue,     isDark ? 0.12 : 0.26, 0.536, 0.286),
-      paint(groundHue - 4, isDark ? 0.11 : 0.25, 0.528, 0.280),
-      paint(groundHue + 4, isDark ? 0.13 : 0.27, 0.544, 0.290),
-      paint(groundHue + 2, isDark ? 0.10 : 0.24, 0.522, 0.276),
+      material(GROUND_ANCHOR,     GROUND_ERA, groundSat,        0.536, 0.286),
+      material(GROUND_ANCHOR - 4, GROUND_ERA, groundSat - 0.01, 0.528, 0.280),
+      material(GROUND_ANCHOR + 4, GROUND_ERA, groundSat + 0.01, 0.544, 0.290),
+      material(GROUND_ANCHOR + 2, GROUND_ERA, groundSat - 0.02, 0.522, 0.276),
     ],
 
     /** Mặt đường: NHẠT hơn đất rõ rệt — đá lát bạc màu vì bị giẫm, và mắt cần đọc ra lối đi. */
-    road: paint(mixHue(groundHue, 40, 0.5), 0.10, 0.68, 0.42),
+    road: material(48, 0.10, 0.10, 0.68, 0.42),
 
     /**
      * Vùng đất ngoài thành phố. Pha sẵn một phần về phía màu chân trời để nó tự LÙI RA SAU thay
@@ -350,11 +471,20 @@ export function buildScenePalette({ tokens, eraColor, daylight } = {}) {
      * chỉ là nướng sẵn vào màu để chỗ gần camera cũng đã nhạt rồi.
      */
     outskirts: rgbToHexNumber(mixRgb(
-      // Ngả XANH LÁ hơn lưới thành phố (+22°) và nhạt hơn: đồng cỏ ngoài phố, không phải phần
+      // Ngả XANH LÁ hơn lưới thành phố (+14°) và nhạt hơn: đồng cỏ ngoài phố, không phải phần
       // kéo dài của chính thành phố. Khác sắc thì mắt mới đọc ra ranh giới "trong phố / ngoài phố".
-      hslToRgb({ h: groundHue + 22, s: isDark ? 0.16 : 0.19, l: isDark ? 0.18 : 0.56 }),
-      hslToRgb({ h: mixHue(38, eraHue, 0.2), s: isDark ? 0.24 : 0.30, l: isDark ? 0.20 : 0.86 }),
-      0.34,
+      blend(GROUND_ANCHOR + 14, GROUND_ERA, isDark ? 0.16 : 0.19, isDark ? 0.18 : 0.56),
+      // ⚠️ PHA VỀ ĐÚNG MÀU CHÂN TRỜI CỦA CHẶNG NÀY, không phải về một màu ấm chốt cứng.
+      // Bản quét chỉ ra một chuyện chỉ thấy được khi nhìn nguyên khung hình chứ không nhìn từng
+      // vai màu: **vùng đất ngoài phố chiếm nhiều diện tích hơn cả bầu trời lẫn thành phố cộng
+      // lại**, mà nó lại là thứ DUY NHẤT trong cảnh không hề đổi theo giờ. Kết quả là 6 chặng
+      // trong ngày đều bị cùng một mảng xanh-vàng nhờ nhờ đè lên, và cả bảng quét trông nhàn nhạt
+      // giống nhau dù trời, nắng, bóng đổ đều đã đổi đúng.
+      // Pha về màu chân trời vừa sửa được điều đó, vừa CHÍNH LÀ phối cảnh không khí thật: vật càng
+      // xa càng tan vào màu bầu khí quyển. Nay bình minh đồng ngả hồng, giữa trưa ngả vàng nhạt,
+      // đêm ngả lam sâu — miễn phí, và đúng cùng nguyên lý mà sương mù đang dùng.
+      { r: (horizon >> 16) & 255, g: (horizon >> 8) & 255, b: horizon & 255 },
+      0.42,
     )),
     wall:       roles.wall,
     roof:       roles.roof,
@@ -380,17 +510,31 @@ export function buildScenePalette({ tokens, eraColor, daylight } = {}) {
       // ⚠️ HƠI ẤM NẰM Ở GÓC MÀU + ĐỘ TƯƠI, KHÔNG Ở ĐỘ ĐẬM. `warmth` = +1 kéo nắng về 30° (vàng cam
       // bình minh/hoàng hôn) và tươi lên; = −1 kéo về 218° (xanh lam của ánh trăng) — vẫn giữ
       // nguyên độ sáng, nên đêm không tự dưng tối thêm một lần nữa ngoài phần `sunEnergy` đã lo.
-      sun: paint(
-        warmth >= 0 ? mixHue(48, 30, warmth) : mixHue(48, 218, -warmth),
-        Math.min(0.72, Math.max(0.08, (isDark ? 0.40 : 0.30) + warmth * 0.22)),
-        0.88, 0.66,
-      ),
+      // ⚠️ ÁNH TRĂNG TỪNG RA MÀU XANH LỤC, và không ai thấy vì nó chỉ xuất hiện lúc 19–4 giờ.
+      // `mixHue(48, 218, 0.7)` — từ vàng nắng 48° sang lam trăng 218° — hai góc cách nhau 170°,
+      // tức sát ngay cái mốc 180° nơi đường ngắn lật hướng. Nó chọn đường đi LÊN, xuyên qua vùng
+      // lục, và dừng lại ở 167°: đo được màu đèn đêm là `#93beb4`, một thứ **xanh bạc hà**. Cả
+      // cảnh đêm vì thế ngả lục nhợt thay vì lam bạc. Nay trộn trong RGB: vàng sang lam đi qua
+      // xám, ra đúng thứ ánh trăng phải là — trắng hơi lạnh, không lục.
+      sun: rgbToHexNumber(mixRgb(
+        hslToRgb({
+          h: 48,
+          s: Math.min(0.72, Math.max(0.08, (isDark ? 0.40 : 0.30) + warmth * 0.22)),
+          l: isDark ? 0.66 : 0.88,
+        }),
+        hslToRgb({
+          h: warmth >= 0 ? 30 : 218,
+          s: Math.min(0.72, Math.max(0.08, (isDark ? 0.40 : 0.30) + warmth * 0.22)),
+          l: isDark ? 0.66 : 0.88,
+        }),
+        Math.abs(warmth),
+      )),
       // Kéo NHẸ hơn bầu trời (0,6): đèn bán cầu nhuộm màu lên MỌI mặt hướng lên trên, nên kéo mạnh
       // như trời thì cả mặt đất bị nhuộm theo và thành phố mất màu riêng của nó.
-      skyDome:  skyward(206, 0.2, Math.min(0.7, (isDark ? 0.34 : 0.30) * skySat), 0.78, 0.32, 0.6),
+      skyDome:  skyward(206, 0.2, Math.min(0.7, (isDark ? 0.34 : 0.30) * skySat), 0.78, 0.32, 'top', 0.6),
       // Ánh sáng dội lại từ mặt đất mang theo hơi ấm của nắng — trưa gắt thì đất hắt lên vàng hơn,
       // đêm thì gần như không hắt gì có màu.
-      bounce:   paint(mixHue(34, eraHue, 0.25), Math.min(0.6, Math.max(0.06, (isDark ? 0.30 : 0.28) + warmth * 0.12)), 0.56, 0.22),
+      bounce:   material(34, 0.25, Math.min(0.6, Math.max(0.06, (isDark ? 0.30 : 0.28) + warmth * 0.12)), 0.56, 0.22),
       // Ánh đèn hắt ra từ trong nhà. Neo cứng ở sắc nến (38°) và KHÔNG pha sắc kỷ, KHÔNG kéo theo
       // bầu trời: lửa cháy màu gì thì mọi thời đại nó cháy màu đó. Đây cũng chính là thứ giữ cho
       // cảnh đêm không thành một bức đơn sắc lam — vũng ấm dưới chân tường tương phản với ánh
@@ -404,12 +548,14 @@ export function buildScenePalette({ tokens, eraColor, daylight } = {}) {
      * cũng là cách bức tranh có "trên" và "dưới" thay vì một mảng nền.
      */
     sky2: {
-      // ⚠️ ĐỈNH TRỜI CHỈ NHẬN 0,45 phần sức kéo mà chân trời nhận — KHÔNG phải để né lỗi tím (chỗ
-      // trộn đã lo việc đó), mà vì bầu trời thật hoạt động đúng như vậy: lúc bình minh và hoàng
-      // hôn, sắc cam chỉ nằm ở DẢI THẤP sát chân trời, còn trên đỉnh đầu vẫn là lam sẫm ngả tím
-      // than. Kéo cả vòm về cam thì được một mái vòm cam phẳng lì, mất hẳn chiều "trên–dưới" mà
-      // cả đoạn ghi chú `sky2` ngay dưới đây nói tới.
-      top:     skyward(210, 0.12, Math.min(0.8, (isDark ? 0.44 : 0.46) * skySat), 0.60, 0.17, 0.45),
+      // ⚠️ ĐỈNH TRỜI NAY KÉO ĐỦ SỨC (bỏ hệ số 0,45 cũ) — vì nó đã có ĐÍCH RIÊNG, không còn phải
+      // dùng chung đích với chân trời nữa. Hệ số 0,45 ngày trước chỉ là cách ghìm bớt để đỉnh trời
+      // đỡ bị đích ẤM của chân trời kéo sang nâu lúc bình minh/hoàng hôn: chữa triệu chứng, và giá
+      // phải trả là giữa trưa đỉnh trời cũng không xanh nổi. Nay `daylight` khai riêng `skyHue`
+      // cho đỉnh và `horizonHue` cho chân, nên mỗi dải đi về đúng chỗ của nó: trên đầu luôn lam
+      // (sẫm lúc bình minh/hoàng hôn, trong veo lúc trưa), sát chân trời luôn ấm — trừ ban đêm là
+      // chặng duy nhất cả hai cùng lam.
+      top:     skyward(210, 0.12, Math.min(0.8, (isDark ? 0.44 : 0.46) * skySat), 0.60, 0.17, 'top'),
       horizon,
     },
 

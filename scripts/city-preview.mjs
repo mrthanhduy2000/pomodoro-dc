@@ -54,6 +54,14 @@ function parseArgs(argv) {
     // kết luận rằng bản vá bầu trời không ăn thua. Công cụ soi lỗi mà im lặng đưa dữ liệu cũ thì
     // còn tệ hơn không có công cụ. Nay nhận nhiều giờ và vẽ đủ từng giờ một.
     hours: [],
+    // Chế độ QUÉT: dựng MỘT trang, vẽ tuần tự mọi tổ hợp (kỷ × giờ) rồi ghép thành BẢNG LIÊN HOÀN.
+    // ⚠️ Vì sao không chụp 90 ảnh rời: mỗi ảnh rời phải gói lại bundle + mở lại Chromium (~8 giây),
+    // tức là hơn 10 phút cho một lượt quét đủ 15 kỷ × 6 chặng — đủ lâu để không ai quét nữa, mà một
+    // công cụ không ai chạy thì bằng không có. Gộp vào một trang: một bundle, MỘT WebGL context
+    // dùng lại cho mọi cảnh, một lần mở trình duyệt. Và quan trọng hơn cả tốc độ: xếp cạnh nhau
+    // trong CÙNG một tấm ảnh thì mắt so sánh được, mà mỹ thuật thì chỉ so sánh mới thấy sai.
+    sweep: false,
+    cell: 300,
   };
   for (let i = 0; i < argv.length; i += 1) {
     const key = argv[i];
@@ -66,6 +74,9 @@ function parseArgs(argv) {
     else if (key === '--height') { args.height = Number(value); i += 1; }
     else if (key === '--zoom') { args.zoom = Number(value); i += 1; }
     else if (key === '--hour') { args.hours.push(Number(value)); i += 1; }
+    else if (key === '--sweep') args.sweep = true;
+    else if (key === '--cell') { args.cell = Number(value); i += 1; }
+    else if (key === '--eras') { args.eraList = String(value).split(',').map(Number); i += 1; }
   }
   return args;
 }
@@ -159,10 +170,130 @@ document.body.dataset.ready = '1';
 `;
 }
 
+/**
+ * Mã nguồn trang QUÉT — vẽ nhiều cảnh vào MỘT bảng liên hoàn.
+ *
+ * ⚠️ MỘT WebGL CONTEXT DÙNG LẠI CHO MỌI Ô, KHÔNG PHẢI MỖI Ô MỘT CONTEXT. Trình duyệt chỉ cho sống
+ * khoảng 16 context cùng lúc rồi âm thầm thu hồi cái cũ nhất — quét 90 ô kiểu đó sẽ ra một bảng mà
+ * 74 ô đầu trống trơn, và không có lỗi nào hiện ra. Ở đây: vẽ một cảnh → sao chép điểm ảnh sang
+ * canvas 2D của bảng → DỌN cảnh → dựng cảnh kế tiếp trên đúng context cũ.
+ */
+function sweepSource({ level, theme, cell, combos }) {
+  return `
+import { computeCityLayout } from '${ROOT}/src/engine/cityLayout.js';
+import { buildScenePalette } from '${ROOT}/src/engine/city3d/palette3d.js';
+import { deriveDaylight } from '${ROOT}/src/engine/city3d/daylight.js';
+import { applyPaintedLook, createCityScene } from '${ROOT}/src/components/city/render3d/sceneGraph.js';
+import { cityOrbitOptions, createOrbit } from '${ROOT}/src/engine/city3d/orbit.js';
+import { BLUEPRINT_CATALOG, ERA_METADATA } from '${ROOT}/src/engine/constants.js';
+import { PerspectiveCamera, WebGLRenderer, PCFSoftShadowMap } from 'three';
+
+const LEVEL = ${level};
+const IS_DARK = ${theme === 'dark'};
+const CELL_W = ${cell};
+const CELL_H = Math.round(${cell} * 0.62);
+const LABEL_H = 22;
+const COMBOS = ${JSON.stringify(combos)};
+
+const hours = [...new Set(COMBOS.map((c) => c.hour))];
+const eras  = [...new Set(COMBOS.map((c) => c.era))];
+
+const sheet = document.getElementById('sheet');
+const ctx = sheet.getContext('2d');
+sheet.width  = hours.length * CELL_W + 64;
+sheet.height = eras.length * (CELL_H + LABEL_H) + 34;
+ctx.fillStyle = IS_DARK ? '#141311' : '#e9e6de';
+ctx.fillRect(0, 0, sheet.width, sheet.height);
+
+// Một canvas WebGL DUY NHẤT, kích thước đúng một ô.
+const stage = document.createElement('canvas');
+stage.width = CELL_W;
+stage.height = CELL_H;
+const renderer = new WebGLRenderer({ canvas: stage, antialias: true });
+renderer.setPixelRatio(1);
+applyPaintedLook(renderer);
+renderer.setSize(CELL_W, CELL_H, false);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = PCFSoftShadowMap;
+renderer.shadowMap.autoUpdate = false;
+
+const camera = new PerspectiveCamera(38, CELL_W / CELL_H, 0.5, 200);
+const tokens = IS_DARK
+  ? { canvas2: '#1d1c1a', ink: '#f2efe6', line: '#33312d', accent: '#c96442' }
+  : { canvas2: '#f4f2ec', ink: '#1f1e1d', line: '#e8e6de', accent: '#c96442' };
+
+const ink = IS_DARK ? '#cfc9bb' : '#3a362f';
+ctx.textBaseline = 'middle';
+
+// Hàng tiêu đề: giờ.
+ctx.font = '600 13px system-ui, sans-serif';
+ctx.fillStyle = ink;
+hours.forEach((hour, col) => {
+  const phase = deriveDaylight(hour).phase;
+  ctx.fillText(hour + 'h · ' + phase, 60 + col * CELL_W + 6, 16);
+});
+
+const notes = [];
+
+eras.forEach((era, row) => {
+  const y = 30 + row * (CELL_H + LABEL_H);
+  ctx.save();
+  ctx.font = '600 12px system-ui, sans-serif';
+  ctx.fillStyle = ink;
+  ctx.translate(14, y + CELL_H / 2);
+  ctx.textAlign = 'center';
+  ctx.fillText('Kỷ ' + era, 0, 0);
+  ctx.restore();
+
+  const built = BLUEPRINT_CATALOG[era].map((bp) => bp.id);
+  const levels = Object.fromEntries(built.map((id) => [id, LEVEL]));
+  const layout = computeCityLayout({ built, levels, era, stats: { sessionCount: 40, streakLength: 9 } });
+
+  hours.forEach((hour, col) => {
+    const daylight = deriveDaylight(hour);
+    const palette = buildScenePalette({ tokens, eraColor: ERA_METADATA[era]?.accentColor, daylight });
+    const city = createCityScene({
+      layout, palette, daylight, stats: { sessionCount: 40, streakLength: 9 },
+    });
+    city.sun.shadow.mapSize.setScalar(512);
+    renderer.shadowMap.needsUpdate = true;
+    city.updateResidents(17.5);
+
+    const orbitOptions = cityOrbitOptions(layout.gridSize);
+    const orbit = createOrbit(orbitOptions);
+    const eye = orbit.getPosition();
+    const target = orbit.getTarget();
+    camera.far = layout.gridSize * 8;
+    camera.updateProjectionMatrix();
+    camera.position.set(eye.x, eye.y, eye.z);
+    camera.lookAt(target.x, target.y, target.z);
+
+    renderer.render(city.scene, camera);
+    ctx.drawImage(stage, 60 + col * CELL_W, y);
+
+    notes.push({ era, hour, ...city.stats });
+    // ⚠️ DỌN NGAY. Không dọn thì 90 cảnh cùng nằm trong bộ nhớ GPU và những ô cuối sẽ trống.
+    city.dispose();
+  });
+
+  ctx.font = '11px system-ui, sans-serif';
+  ctx.fillStyle = ink;
+  ctx.fillText(ERA_METADATA[era]?.label ?? '?', 60, y + CELL_H + LABEL_H / 2);
+});
+
+renderer.dispose();
+document.getElementById('info').textContent =
+  notes.length + ' ô · ' + eras.length + ' kỷ × ' + hours.length + ' chặng';
+document.title = 'READY ' + JSON.stringify(notes.slice(0, 3));
+document.body.dataset.ready = '1';
+window.__SWEEP_NOTES__ = notes;
+`;
+}
+
 async function buildBundle(options) {
   mkdirSync(WORK_DIR, { recursive: true });
   const entryPath = resolve(WORK_DIR, 'entry.js');
-  writeFileSync(entryPath, entrySource(options), 'utf8');
+  writeFileSync(entryPath, options.sweep ? sweepSource(options) : entrySource(options), 'utf8');
 
   const configPath = resolve(WORK_DIR, 'vite.preview.config.mjs');
   writeFileSync(configPath, `
@@ -181,6 +312,28 @@ export default defineConfig({
 
   await run('node', ['node_modules/vite/bin/vite.js', 'build', '--config', configPath], { cwd: ROOT });
   return resolve(WORK_DIR, 'dist/preview.js');
+}
+
+/**
+ * Trang cho chế độ QUÉT. Khác trang thường ở một điểm phải nói rõ:
+ * ⚠️ **Ô trong bảng liên hoàn KHÔNG có lớp viền tối góc (vignette)** — lớp đó là CSS phủ lên canvas,
+ * mà ở đây 90 ô được sao chép vào một canvas 2D chung nên không mang theo lớp phủ được. Nghĩa là
+ * bảng quét hơi SÁNG HƠN và hơi PHẲNG HƠN cảnh thật ở bốn góc. Chấp nhận có chủ ý: bảng này dùng để
+ * so sánh 90 ô với NHAU (bắt kỷ nào lệch màu, chặng nào tối/sáng bất thường), còn muốn soi một cảnh
+ * đúng như Đàm thấy thì dùng chế độ chụp một ảnh — nó có đủ vignette.
+ */
+function sweepPageHtml({ theme }) {
+  return `<!doctype html>
+<html><head><meta charset="utf-8"><title>đang quét…</title>
+<style>
+  body { margin:0; background:${theme === 'dark' ? '#141311' : '#e9e6de'}; font-family: system-ui, sans-serif; }
+  #wrap { padding:8px; }
+  #info { margin-top:6px; font-size:12px; color:${theme === 'dark' ? '#cfc9bb' : '#4a463f'}; }
+  canvas { display:block; }
+</style></head>
+<body><div id="wrap"><canvas id="sheet"></canvas><div id="info">…</div></div>
+<script type="module" src="/preview.js"></script>
+</body></html>`;
 }
 
 function pageHtml({ width, height, theme }) {
@@ -260,10 +413,39 @@ async function main() {
   }
 
   mkdirSync(OUT_DIR, { recursive: true });
-  const eras = args.all ? Array.from({ length: 15 }, (_, i) => i + 1) : [args.era];
+  const eras = args.eraList ?? (args.all ? Array.from({ length: 15 }, (_, i) => i + 1) : [args.era]);
 
   // Không truyền `--hour` ⇒ một lượt với giờ trung tính (`null`), y như trước.
   const hours = args.hours.length > 0 ? args.hours : [null];
+
+  // ── Chế độ QUÉT: một trang, một lần mở trình duyệt, một bảng liên hoàn ───────
+  if (args.sweep) {
+    const sweepHours = args.hours.length > 0 ? args.hours : [6, 8, 12, 15, 18, 22];
+    const combos = eras.flatMap((era) => sweepHours.map((hour) => ({ era, hour })));
+    const options = { ...args, combos };
+    const bundlePath = await buildBundle(options);
+
+    const { server, port } = await serve({
+      '/index.html': { type: 'text/html; charset=utf-8', body: sweepPageHtml(options) },
+      '/preview.js': { type: 'text/javascript; charset=utf-8', body: readFileSync(bundlePath) },
+    });
+
+    const cellH = Math.round(args.cell * 0.62);
+    const tag = `${eras[0]}-${eras[eras.length - 1]}`;
+    const pngPath = resolve(OUT_DIR, `sweep-${args.theme}-ky${tag}.png`);
+    try {
+      await shoot(chrome, `http://127.0.0.1:${port}/index.html`, pngPath, {
+        width: sweepHours.length * args.cell + 64,
+        // +40: chỗ cho hàng tiêu đề giờ và dòng chữ số liệu ở dưới cùng.
+        height: eras.length * (cellH + 22) + 40,
+      });
+    } finally {
+      server.close();
+    }
+    console.log(`✓ quét ${eras.length} kỷ × ${sweepHours.length} chặng → ${pngPath}`);
+    rmSync(WORK_DIR, { recursive: true, force: true });
+    return;
+  }
 
   for (const era of eras) {
     for (const hour of hours) {

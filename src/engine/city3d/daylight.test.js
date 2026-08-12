@@ -28,7 +28,7 @@ test('giờ rác → chặng trung tính, KHÔNG ném lỗi và không ra undefi
 test('mọi chặng đều khai đủ trường — thiếu một trường là một đèn nhận NaN', () => {
   const needed = [
     'sunAltitude', 'sunWarmth', 'sunEnergy', 'fillEnergy',
-    'skyHue', 'skyPull', 'skySaturation', 'windowsLit', 'lampEnergy',
+    'skyHue', 'skyPull', 'horizonHue', 'horizonPull', 'skySaturation', 'windowsLit', 'lampEnergy',
   ];
   for (const phase of DAY_PHASES) {
     const profile = DAYLIGHT_PROFILES[phase];
@@ -106,16 +106,45 @@ test('bầu trời bị KÉO VỀ MỘT ĐÍCH, không phải cộng thêm N đ�
     const profile = DAYLIGHT_PROFILES[phase];
     assert.ok(!('skyShift' in profile),
       `chặng "${phase}" quay lại dùng skyShift (cộng offset) — xem lý do ở daylight.js`);
-    assert.ok(profile.skyHue >= 0 && profile.skyHue < 360, `skyHue của "${phase}" ngoài [0,360)`);
-    assert.ok(profile.skyPull >= 0 && profile.skyPull <= 1, `skyPull của "${phase}" ngoài [0,1]`);
+    for (const key of ['skyHue', 'horizonHue']) {
+      assert.ok(profile[key] >= 0 && profile[key] < 360, `${key} của "${phase}" ngoài [0,360)`);
+    }
+    for (const key of ['skyPull', 'horizonPull']) {
+      assert.ok(profile[key] >= 0 && profile[key] <= 1, `${key} của "${phase}" ngoài [0,1]`);
+    }
   }
 
   // Đêm phải kéo về LAM SÂU (200–260°), không phải lục lam (<200°) và không phải tím (>270°).
   const night = DAYLIGHT_PROFILES.night;
   assert.ok(night.skyHue > 200 && night.skyHue < 260, `trời đêm ở góc màu ${night.skyHue}° — không phải lam sâu`);
-  // Bình minh và hoàng hôn phải kéo về vùng ẤM (cam/vàng), tức góc màu nhỏ.
-  assert.ok(DAYLIGHT_PROFILES.dawn.skyHue < 60, 'bình minh phải kéo về sắc ấm');
-  assert.ok(DAYLIGHT_PROFILES.dusk.skyHue < 60, 'hoàng hôn phải kéo về sắc ấm');
+  // Bình minh và hoàng hôn phải kéo CHÂN TRỜI về vùng ẤM (cam/vàng), tức góc màu nhỏ.
+  assert.ok(DAYLIGHT_PROFILES.dawn.horizonHue < 60, 'bình minh phải kéo chân trời về sắc ấm');
+  assert.ok(DAYLIGHT_PROFILES.dusk.horizonHue < 60, 'hoàng hôn phải kéo chân trời về sắc ấm');
+});
+
+test('ĐỈNH trời luôn lạnh, CHÂN trời giữ hơi ấm — trừ ban đêm là chặng duy nhất cả hai cùng lạnh', () => {
+  // ⚠️ Bài này khoá lại lỗi mà chỉ BẢN QUÉT đủ 15 kỷ × 6 chặng mới bắt được, vì nó chỉ hiện ra khi
+  // xếp 6 chặng cạnh nhau: hồi cả vòm trời dùng chung MỘT đích, chân trời 8 giờ sáng ra `#cad0d0`
+  // — độ tươi 0,06, một dải XÁM CHẾT — vì sắc ấm 40° bị kéo nửa đường sang lam 202° thì rơi đúng
+  // vào vùng trung tính ở giữa. Đồng thời bình minh/hoàng hôn thì đích ấm lại kéo cả ĐỈNH trời
+  // sang nâu ô-liu. Một đích chung không diễn tả nổi hai vai ngược nhau.
+  //
+  // "Lạnh" và "ấm" định nghĩa được bằng máy: lạnh = góc màu trong [180, 280) (lục lam → lam →
+  // chàm); ấm = ngoài [90, 300) (đỏ → cam → vàng). Nhờ vậy bài test bắt được cả những chặng ai đó
+  // thêm về sau, không chỉ sáu chặng đang có.
+  const cold = (h) => h >= 180 && h < 280;
+  const warm = (h) => h < 90 || h >= 300;
+
+  for (const phase of DAY_PHASES) {
+    const { skyHue, horizonHue } = DAYLIGHT_PROFILES[phase];
+    assert.ok(cold(skyHue), `đỉnh trời chặng "${phase}" ở ${skyHue}° — đỉnh trời phải luôn lạnh`);
+    if (phase === 'night') {
+      assert.ok(cold(horizonHue), 'ban đêm chân trời cũng phải lạnh theo đỉnh trời');
+    } else {
+      assert.ok(warm(horizonHue),
+        `chân trời chặng "${phase}" ở ${horizonHue}° — ban ngày chân trời là chỗ giữ hơi ấm`);
+    }
+  }
 });
 
 test('sunDirectionAt: giữ NGUYÊN phương vị, chỉ đổi cao độ', () => {

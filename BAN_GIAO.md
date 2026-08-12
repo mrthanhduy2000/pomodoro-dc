@@ -99,6 +99,27 @@
 ## 🗒️ Nhật ký cập nhật
 > Mỗi lần xong việc đáng kể, thêm 1 dòng vào ĐẦU danh sách.
 
+- **2026-08-12 (Phase 4′-d)** — **NỐI HAI ĐẦU: PHIÊN THẬT CỦA STORE → CÂU CHỮ HIỆN RA.**
+  ⚠️ **Phát hiện một CHỖ HỞ mà cả hai lớp test cũ đều không bịt được.** Phase 4′ có hai lớp kiểm:
+  (a) test engine đưa giàn giáo TỰ TAY DỰNG vào → chứng minh engine tính đúng, KHÔNG chứng minh
+  store có đưa cho engine đúng thứ đó; (b) soi bằng trình duyệt thì BƠM THẲNG `pendingReward` qua
+  `window.__store` → chứng minh giao diện hiện đúng, nhưng cũng bơm tay luôn cái trường đáng lẽ
+  phải kiểm. **Chỗ hở nằm chính giữa**: đổi tên trường, đổi thứ tự dọn hàng đợi, hay lọc nhầm kỷ —
+  cả hai lớp kia đều KHÔNG đỏ, còn Đàm thì hoàn thành một công trình mà không có lễ mừng nào.
+  - `gameStore.cityMoment.test.js` (MỚI, 6 bài) chạy ĐÚNG đường thật: gọi `completeFocusSession()`
+    rồi lấy state SAU ĐÓ nuôi thẳng vào `computeCityLayout` + `buildGrowthMoment`/`buildFocusTease`.
+    **Không một fixture tự chế nào.** Đã xác minh: gỡ dòng `newlyBuiltIds` khỏi store ⇒ **2 bài ĐỎ**
+    ngay (trước đó không có bài nào đỏ cả).
+  - Bịt luôn một bất biến an toàn chưa ai kiểm: bài 6 đọc `localStorage` sau một phiên thật và
+    khẳng định **`pendingReward` KHÔNG bị lưu xuống đĩa** — tức `ui` vẫn nằm ngoài `partialize`,
+    đúng điều kiện đã ghi ở ADR-010 (không thêm byte nào vào JSONB đang tranh chấp CAS). Ai đó đưa
+    `ui` vào phần được lưu thì từ nay sẽ đỏ ngay.
+  - **Đã tự kiểm hai nguyên nhân làm Vercel FAIL BUILD trong lịch sử dự án** (thứ tôi kiểm được từ
+    xa, khác với việc xác nhận "Ready"): **10/12** Serverless Function, và mọi đường dẫn trong
+    `vercel.json` (2 `functions` + 2 `crons`) đều trỏ tới file CÓ THẬT. Cả hai cửa tử của sự cố
+    `8ee264d` đang sạch.
+  - Test **477 xanh** (+6), lint sạch, build xanh.
+
 - **2026-08-12 (Phase 4′-c)** — **KHÉP NỐT ĐẦU VÒNG LẶP: LÚC BẤM BẮT ĐẦU, MÀN HÌNH NÓI PHIÊN NÀY
   ĐỂ LÀM GÌ.** Phase 4′ khép được ĐUÔI vòng lặp (xong phiên → thấy thành phố lớn lên), nhưng ĐẦU
   vòng lặp vẫn phẳng: lúc bấm "Bắt đầu", không có gì nói 25 phút sắp tới để làm gì cho thành phố.

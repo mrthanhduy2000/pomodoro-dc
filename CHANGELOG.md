@@ -12,6 +12,18 @@
 
 ---
 
+## 2026-08-12 — Thành Phố (Phase 4′-d): test nối phiên thật của store với câu chữ hiện ra
+
+- **Mục đích**: bịt chỗ hở giữa hai lớp test cũ. Test engine dùng giàn giáo tự dựng; phép soi
+  trình duyệt bơm thẳng `pendingReward`. Không lớp nào chứng minh `completeFocusSession` thật sự
+  sinh ra `newlyBuiltIds` — đổi tên trường hay lọc nhầm kỷ thì không có gì đỏ.
+- **Phạm vi**: `src/store/gameStore.cityMoment.test.js` (MỚI, 6 bài). Không đổi một dòng code chạy.
+- **Ảnh hưởng**: chỉ thêm lưới an toàn. Bao gồm một bài khoá bất biến "`pendingReward` không được
+  lưu xuống đĩa" (điều kiện an toàn của ADR-010, trước nay chưa ai kiểm).
+- **Tương thích**: giữ nguyên hoàn toàn.
+
+---
+
 ## 2026-08-12 — Thành Phố (Phase 4′-c): lúc bấm Bắt đầu, màn hình nói phiên này để làm gì
 
 - **Mục đích**: Phase 4′ khép ĐUÔI vòng lặp (xong phiên → thấy thành phố lớn lên); phase này khép

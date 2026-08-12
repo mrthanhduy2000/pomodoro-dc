@@ -12,6 +12,23 @@
 
 ---
 
+## 2026-08-12 — Thành Phố (Phase 4′): 3,2 giây được NHÌN THẤY thành phố lớn lên
+
+- **Mục đích**: khép kín vòng lặp "làm việc → thấy thành quả". Trước Phase này, đúng khoảnh khắc
+  đáng giá nhất — lúc chuông báo hết 25 phút — Đàm chỉ thấy một hộp thoại vật phẩm; thành phố có
+  lớn lên thật nhưng anh không được nhìn thấy nó lớn lên.
+- **Phạm vi**: `engine/cityMoment.js` (MỚI, thuần) + test; `hooks/useCityGrowthMoment.js` (MỚI);
+  `components/city/CityGrowthMoment.jsx` (MỚI); `App.jsx` thêm `RewardSequence`;
+  `gameStore` thêm đúng một trường hiển thị `pendingReward.newlyBuiltIds`;
+  `utils/runtimeRecovery.js` thêm `createRecoverableLazy(...).preload()` + test.
+- **Ảnh hưởng**: store, engine game, cân bằng — **không đổi**. `lootModalOpen` vẫn bật đồng bộ y
+  như cũ; chỉ phần HIỂN THỊ được chen thêm một chặng. Không thêm byte nào lên Supabase.
+- **Trung thực hơn hiệu ứng**: thành phố không đổi gì thì KHÔNG có khoảnh khắc nào — đi thẳng vào
+  phần thưởng, không khen rỗng.
+- **Tương thích**: giữ nguyên hoàn toàn. Bật "giảm chuyển động" ở mức hệ điều hành ⇒ bỏ qua sạch.
+
+---
+
 ## 2026-08-12 — Thành Phố (Phase 3L): nói cho Đàm biết là chạm được
 
 - **Mục đích**: Phase 3K dựng xong tính năng chạm nhưng không có gì trên màn hình nói rằng nó tồn

@@ -4580,6 +4580,10 @@ const useGameStore = create(
                 buildingPerkBonusXP: buildingPerkReward.xp,
                 buildingPerkBonusRefined: buildingPerkReward.refined,
                 acceleratedCraftingIds,
+                // ⚠️ CHỈ để KHOẢNH KHẮC THÀNH PHỐ (`engine/cityMoment.js`) biết công trình nào vừa
+                // xong. `ui` KHÔNG nằm trong `partialize` nên trường này không lên Supabase, tức
+                // không thêm một byte nào vào JSONB đang tranh chấp CAS.
+                newlyBuiltIds: activeNewlyBuilt,
                 positiveEventRPBonus,
                 rpEarned: finalSessionRP,
               },

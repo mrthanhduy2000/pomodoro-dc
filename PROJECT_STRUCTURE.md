@@ -21,6 +21,10 @@
 │   │   │   │                     #   ResizeObserver (font nạp xong mới tràn) — xem BAN_GIAO 3J
 │   │   │   ├── BuildingCard.jsx  # Thẻ hiện ra khi CHẠM vào một công trình trong cảnh 3D.
 │   │   │   │                     #   Thuần trình bày — nhận sẵn phần tử của layout, không tra cứu
+│   │   │   ├── CityGrowthMoment.jsx # 3,2 GIÂY THÀNH PHỐ LỚN LÊN, chen giữa "hết phiên" và hộp
+│   │   │   │                     #   thoại phần thưởng. ⚠️ Đứng CHẶN TRƯỚC màn hình phần thưởng
+│   │   │   │                     #   của một phiên THẬT ⇒ mọi thứ hỏng-theo-hướng-mở (ADR-010).
+│   │   │   │                     #   KHÔNG dựng cảnh 3D ở đây (context WebGL thứ hai)
 │   │   │   ├── cityTokens.js     # Token DÙNG CHUNG mọi bộ vẽ: eraTint/eraSolid/cardStyle
 │   │   │   ├── render2d/         # Bộ vẽ SVG isometric — nền VĨNH VIỄN, không phải bản nháp:
 │   │   │   │                     #   đường lui khi máy không có WebGL / mất context / Đàm chọn 2D
@@ -70,6 +74,9 @@
 │   │   │                     #   vĩnh viễn + xây thêm nhà không làm xê dịch nhà cũ.
 │   │   ├── cityArchive.js     # THÀNH PHỐ PIXEL: "bảo tàng" các kỷ đã niêm phong (ghi lại công
 │   │   │                     #   trình bị cắt khi lên kỷ, thay vì để mất hẳn)
+│   │   ├── cityMoment.js      # Điều đáng nói nhất về thành phố NGAY SAU phiên vừa xong.
+│   │   │                     #   ⚠️ Trả `null` khi thành phố không đổi gì — thà im lặng còn hơn
+│   │   │                     #   một câu chúc mừng rỗng (cùng luật chống-bịa với AI Coach)
 │   │   ├── city3d/            # Logic THUẦN của bộ vẽ 3D — cấm import three, cấm DOM
 │   │   │   ├── renderMode.js      # Luật chọn 3D/2D (FAIL-CLOSED: không chắc → 2D)
 │   │   │   ├── renderLoop.js      # Nhịp khung hình: đứng yên = 0 nhịp rAF + trần FPS khi có hoạt hoạ
@@ -107,6 +114,7 @@
 │   ├── hooks/                 # React hook — cầu nối giữa store và engine/component
 │   │   ├── useTimer.js         # LỚN — toàn bộ state machine đồng hồ Pomodoro/Stopwatch
 │   │   ├── useCoachContext.js  # build bảng số liệu cho AI Coach (gọi engine/coach/coachContext.js)
+│   │   ├── useCityGrowthMoment.js # Cầu nối store → engine/cityMoment.js. Chỉ tính khi được bật
 │   │   └── useGameLoop.js
 │   ├── lib/                   # Tích hợp dịch vụ ngoài (KHÔNG phải logic game thuần)
 │   │   ├── supabase.js         # Supabase client (anon key, hardcode — không cần .env)
@@ -123,7 +131,9 @@
 │       ├── labelMark.js         # Sinh ký hiệu 1-2 chữ cho badge tròn (dùng ở 7 nơi)
 │       ├── richText.js          # Parser rich-text (bold/italic/link/màu...) dùng bởi RichText.jsx
 │       ├── importSummary.js     # Đọc tóm tắt file backup khi import
-│       └── runtimeRecovery.js   # Bẫy lỗi runtime (crash recovery)
+│       └── runtimeRecovery.js   # Bẫy lỗi runtime (crash recovery) + `createRecoverableLazy`.
+│                               #   Có `preload()`: nạp trước gói mã khi biết sắp cần (không hiện
+│                               #   gì) — xem ADR-010
 │
 ├── api/                       # Vercel Serverless Functions — MỖI file .js trực tiếp trong đây
 │   │                          #   (trừ thư mục bắt đầu bằng "_") = 1 Serverless Function thật.

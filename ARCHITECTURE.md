@@ -127,6 +127,38 @@ test hành vi (XP/streak/mission tính sai sẽ không có gì tự động bắ
 một app 1 người dùng — xem đề xuất "lần refactor tiếp theo" ở nhật ký `BAN_GIAO.md` ngày 2026-07-12
 nếu muốn làm tiếp, kèm điều kiện cần có trước khi làm an toàn.
 
+### 6.1 Luồng "phiên vừa xong" — vì sao có một màn chen giữa
+
+```
+useTimer.commitCompletedSession()
+        │  (KHÔNG đổi — vẫn đồng bộ y như trước)
+        ▼
+gameStore.completeFocusSession()  ── đặt ui.lootModalOpen = true NGAY LẬP TỨC
+        │                            (ba bài test khẳng định điều này)
+        ▼
+App.jsx <GlobalOverlays> ── {lootModalOpen && <RewardSequence />}
+        │
+        ├─ useCityGrowthMoment → engine/cityMoment.buildGrowthMoment()
+        │        │
+        │        ├── có công trình vừa xong / có giàn giáo vừa cao thêm ⇒ trả về một khoảnh khắc
+        │        └── thành phố KHÔNG đổi gì ⇒ trả `null`  (im lặng, không khen rỗng)
+        │
+        ├─ CÓ khoảnh khắc & Đàm không bật giảm chuyển động
+        │        └→ <CityGrowthMoment> 3,2 giây → onDone → LootDropModal
+        │           (song song: LootDropModal.preload() nạp sẵn gói mã)
+        │
+        └─ MỌI trường hợp khác → <LootDropModal> NGAY
+```
+
+**Luật của tầng này (ADR-010)**: trạng thái của một hoạt hoạ 3 giây **không phải dữ liệu** — nó là
+vòng đời của một component. Store không biết gì về khoảnh khắc này, nên không có cờ nào có thể kẹt
+ở trạng thái bật và chặn mất phần thưởng vĩnh viễn. Cổng **hỏng theo hướng MỞ**: phần thưởng hiện ra
+TRỪ KHI khoảnh khắc đang thật sự chạy.
+
+⚠️ `ui.pendingReward.newlyBuiltIds` là trường **chỉ để hiển thị**: `ui` không nằm trong `partialize`
+của store, nên nó không lên Supabase — không thêm một byte nào vào JSONB đang tranh chấp CAS
+(xem mục 2).
+
 ## 7. Tầng lưu trữ (storage flow), database schema flow, và hướng phụ thuộc (dependency)
 
 **Storage — 3 tầng độc lập, mỗi tầng một mục đích**: `localStorage` (bản sao tức thời, luôn có sẵn

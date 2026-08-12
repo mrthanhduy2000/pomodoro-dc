@@ -17,7 +17,13 @@
 > chủ dự án, không phải bằng con số đo. ⚠️ **Mọi lưới an toàn hiệu năng vẫn còn nguyên, KHÔNG được
 > gỡ**: watchdog FPS, ba cửa lùi về 2D, trần 30 khung/giây, dừng khi rời tab. Nhận xét của Đàm:
 > *"quá đơn giản và không đẹp"* → đã chạy tiếp **Phase 3B (hình khối + cư dân) · 3C (ánh sáng) ·
-> 3D (giờ trong ngày, đèn cửa sổ, vũng sáng đêm) · 3F (thành phố ra TRANG CHỦ)**. **418 bài test.**
+> 3D (giờ trong ngày, đèn cửa sổ, vũng sáng đêm) · 3F (thành phố ra TRANG CHỦ)**.
+> Rồi lệnh *"quét đủ 15 kỷ × 6 chặng ngày… game hoá lên… không bị chán"* → **3G** (vá 6 lỗi mỹ
+> thuật từ bản quét 180 cảnh) · **3H** (giàn giáo công trình đang xây) · **3I** (bảng "Đang xây":
+> còn bao xa, mở khoá gì) · **3J** (thanh chuyển kỷ tự kéo vào tầm mắt) · **3K** (chạm vào công
+> trình để biết nó là ai) · **3L** (nói cho Đàm biết là chạm được) · **4′** (3,2 giây được NHÌN
+> THẤY thành phố lớn lên sau mỗi phiên — mắt xích cuối của vòng lặp "làm việc → thấy thành quả").
+> **462 bài test.**
 > Trước đó 2026-08-10: sửa khoảng trắng thừa trước icon 🍅/☕ trên thanh menu Mac (`electron/main.js`,
 > đúng 1 dòng; xoá `public/tray-empty.png`) — chỉ đụng app tray. Trước đó 2026-08-05 có 3 việc
 > **cấu hình máy + tài liệu, KHÔNG đổi dòng code ứng dụng nào**: (a) sửa "app biến mất khỏi thanh
@@ -92,6 +98,47 @@
 
 ## 🗒️ Nhật ký cập nhật
 > Mỗi lần xong việc đáng kể, thêm 1 dòng vào ĐẦU danh sách.
+
+- **2026-08-12 (Phase 4′)** — **3,2 GIÂY ĐƯỢC NHÌN THẤY THÀNH PHỐ LỚN LÊN.**
+  Đàm: *"mọi thứ phải hoàn hảo và không bị chán"*. Ba phase trước đã làm thành phố **đọc được**
+  (còn bao xa) và **sờ được** (chạm vào xem) — nhưng đúng khoảnh khắc đáng giá nhất, lúc chuông báo
+  hết 25 phút, Đàm vẫn chỉ thấy một hộp thoại vật phẩm. Thành phố có lớn lên thật, chỉ là **anh
+  không được nhìn thấy nó lớn lên**. Đây là mắt xích cuối của vòng lặp "làm việc → thấy thành quả".
+  - Sau mỗi phiên, nếu thành phố THẬT SỰ có gì đổi: một thẻ hiện lên 3,2 giây — biểu tượng công
+    trình, tên nó, và **thanh tiến độ chạy từ vạch của phiên trước tới vạch bây giờ**. Đó mới là
+    nội dung cảm xúc: mắt nhìn thấy cái nấc vừa nhích lên, chứ không phải đọc một con số.
+  - ⚠️ **TRUNG THỰC HƠN HIỆU ỨNG**: `buildGrowthMoment` trả `null` khi thành phố không đổi gì —
+    đi thẳng vào phần thưởng, không khen rỗng. Một lời khen sai MỘT lần thì mọi lời khen sau đều
+    mất giá (cùng nguyên tắc chống-bịa của AI Coach). Vạch xuất phát đọc `acceleratedCraftingIds`
+    để biết phiên này đẩy 1 hay 2 bước — không đoán.
+  - ⚠️ **ĐIỂM CẮM**: KHÔNG đụng store. `lootModalOpen` vẫn bật đồng bộ (ba bài test hiện có khẳng
+    định), chỉ phần HIỂN THỊ được chen thêm một chặng qua `RewardSequence` trong `App.jsx`. Lý do
+    đầy đủ + hai phương án bị loại: **ADR-010**.
+  - ⚠️ **CỔNG HỎNG THEO HƯỚNG MỞ**: phần thưởng hiện ra TRỪ KHI khoảnh khắc đang thật sự chạy.
+    Không có gì để khoe · bật giảm chuyển động · dữ liệu lạ — mọi nhánh đều dẫn thẳng tới phần
+    thưởng. Cộng: một chạm là bỏ qua, và đồng hồ bảo hiểm 3,2 giây.
+  - **ĐÃ SOI TẬN MẮT bằng trình duyệt thật** (Chromium + CDP, Supabase bị chặn ở tầng DNS nên
+    không có đường nào ghi vào dữ liệu thật): (A) có công trường ⇒ khoảnh khắc chặn trước phần
+    thưởng; (B) tự nhường chỗ, đo được **giữ sóng 3070 ms** (mã đặt 3200); (C) không có gì để khoe
+    ⇒ phần thưởng hiện NGAY. **3/3 đạt, chạy lại 2 lần đều đạt**, không lần nào hiện cả hai.
+  - ⚠️ **HAI BÀI HỌC ĐO LƯỜNG (nhớ kỹ, đã trả giá cả hai)**:
+    (a) **Đọc đồng hồ, đừng đếm nhịp.** Bản đo đầu đếm số lần lấy mẫu rồi nhân 100 ms — nhưng mỗi
+    lần lấy mẫu còn tốn một vòng gọi CDP dài ngắn tuỳ máy đang bận, nên CÙNG một đoạn code cho ra
+    "3,2 giây" ở lần chạy này và "0,4 giây" ở lần chạy sau. Suýt nữa thì đi sửa một con bug không
+    tồn tại.
+    (b) **`innerText` trả về chữ ĐÃ áp `text-transform`.** Nhãn `LootDropModal` có class
+    `uppercase`, nên tìm đúng chuỗi gốc `'Phiên Hoàn Tất'` KHÔNG khớp — phép thử báo "phần thưởng
+    không hiện" trong khi nó đang hiện chình ình. So chữ trên DOM thì phải bỏ phân biệt hoa/thường.
+  - **Đã vá luôn một hồi quy do chính phase này gây ra**: đo bằng máy thấy gói mã của màn phần
+    thưởng chỉ **bắt đầu tải SAU khi khoảnh khắc kết thúc** — tức là ta vừa đẩy nó lùi 3,2 giây so
+    với trước, và trên mạng yếu cái giá đó là một khoảng trắng ngay sau 25 phút làm việc thật.
+    `createRecoverableLazy` nay có `preload()`; đo lại: gói phần thưởng bắt đầu tải ở mốc **326 ms**,
+    xong từ lâu trước khi khoảnh khắc hết.
+  - ⚠️ **KHÔNG dựng cảnh 3D trong khoảnh khắc này** — trang chủ đã giữ một WebGL context cho lớp
+    nền; mở context thứ hai đúng lúc máy vừa chạy xong 25 phút là cách nhanh nhất để iOS thu hồi
+    cả hai.
+  - Test **462 xanh** (+13: 10 bài `cityMoment` + 3 bài `runtimeRecovery`), lint sạch, build xanh.
+    Gói `CityGrowthMoment` tách riêng 2,22 KB (1,06 KB gzip) — không làm gói chính to thêm.
 
 - **2026-08-12 (Phase 3L)** — **NÓI CHO ĐÀM BIẾT LÀ CHẠM ĐƯỢC.**
   ⚠️ **Một tính năng không ai biết là một tính năng không tồn tại.** Chạm-vào-công-trình dựng xong

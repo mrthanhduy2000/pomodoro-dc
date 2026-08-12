@@ -41,7 +41,9 @@ const PROP_VARIANTS = 3;
  * (kỷ × loại × độ hiếm) để chọn hình khối. Để bộ vẽ tự tra `BUILDING_EFFECTS` một lần nữa là nhân
  * đôi cùng một phép tra cứu ở hai tầng khác nhau.
  */
-const BLUEPRINT_LOOKUP = {};
+// ⚠️ XUẤT RA (2026-08-12) để `cityMoment.js` tra cứu tên/biểu tượng công trình mà không phải dựng
+// bảng thứ hai từ `BLUEPRINT_CATALOG` — đúng lý do bảng này tồn tại ngay từ đầu (xem ghi chú trên).
+export const BLUEPRINT_LOOKUP = {};
 for (const [eraKey, list] of Object.entries(BLUEPRINT_CATALOG)) {
   const era = Number(eraKey);
   list.forEach((bp, rank) => {

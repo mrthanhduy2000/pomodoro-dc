@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, Suspense } from 'react';
-import { AnimatePresence, motion as Motion } from 'framer-motion';
+import { AnimatePresence, motion as Motion, useReducedMotion } from 'framer-motion';
 import { initSync } from './lib/syncService';
 import { clearTimerLive, updateTimerLive } from './lib/timerLiveService';
 
@@ -13,6 +13,7 @@ import FocusCoachMobile from './components/FocusCoachMobile';
 import NotificationCenter from './components/NotificationCenter';
 import { RichTextView } from './components/RichText';
 import { useGameLoop } from './hooks/useGameLoop';
+import useCityGrowthMoment from './hooks/useCityGrowthMoment';
 import useGameStore from './store/gameStore';
 import useSettingsStore from './store/settingsStore';
 import { ERA_METADATA, ERA_THRESHOLDS } from './engine/constants';
@@ -41,6 +42,7 @@ const CityView = createRecoverableLazy(() => import('./components/CityView.jsx')
 const CityBackdrop = createRecoverableLazy(() => import('./components/city/CityBackdrop.jsx'), 'city-backdrop');
 const Settings = createRecoverableLazy(() => import('./components/Settings.jsx'), 'settings');
 const LootDropModal = createRecoverableLazy(() => import('./components/LootDropModal.jsx'), 'loot-drop-modal');
+const CityGrowthMoment = createRecoverableLazy(() => import('./components/city/CityGrowthMoment.jsx'), 'city-growth-moment');
 const DisasterModal = createRecoverableLazy(() => import('./components/DisasterModal.jsx'), 'disaster-modal');
 const EraCrisisModal = createRecoverableLazy(() => import('./components/EraCrisisModal.jsx'), 'era-crisis-modal');
 const PrestigeModal = createRecoverableLazy(() => import('./components/PrestigeModal.jsx'), 'prestige-modal');
@@ -1952,6 +1954,42 @@ export default function App() {
   );
 }
 
+/**
+ * RewardSequence — thứ tự hiện ra sau khi một phiên hoàn thành:
+ * **khoảnh khắc thành phố lớn lên (nếu có) → hộp thoại phần thưởng**.
+ *
+ * ⚠️ ĐIỂM CẮM ĐÃ CHỌN RẤT KỸ: `lootModalOpen` trong store vẫn bật ĐỒNG BỘ y như cũ (ba bài test ở
+ * `completeFocusSession.test.js` khẳng định điều đó) — ta CHỈ hoãn phần HIỂN THỊ. Sửa store để hoãn
+ * là cách chắc chắn làm vỡ ba bài test đó, và đụng vào đúng hàm dài nhất dự án.
+ *
+ * ⚠️ VÌ SAO LÀ MỘT COMPONENT RIÊNG chứ không phải vài dòng trong `GlobalOverlays`: nó được dựng
+ * MỚI mỗi lần hộp thoại phần thưởng bật, nên `seen` tự khởi động lại ở `false` — không cần một
+ * `useEffect` đi dọn state, tức là không có chỗ nào để quên dọn. Vòng đời của React làm hộ.
+ *
+ * ⚠️ CỔNG NÀY HỎNG THEO HƯỚNG MỞ: phần thưởng hiện ra TRỪ KHI khoảnh khắc đang thật sự chạy.
+ * Không có gì thật để khoe · Đàm bật giảm chuyển động · khoảnh khắc đã xong — mọi nhánh đều dẫn
+ * thẳng tới phần thưởng. Không có đường nào để màn hình phần thưởng biến mất.
+ */
+function RewardSequence() {
+  const growth = useCityGrowthMoment(true);
+  const reduceMotion = useReducedMotion();
+  const [seen, setSeen] = useState(false);
+  const showMoment = !!growth && !seen && !reduceMotion;
+
+  // ⚠️ NẠP TRƯỚC gói mã của màn phần thưởng NGAY BÂY GIỜ, trong lúc khoảnh khắc đang chạy.
+  // Đo bằng máy (bản Phase 4′): trước khi có dòng này, gói `loot-drop-modal` chỉ bắt đầu tải SAU
+  // khi khoảnh khắc kết thúc — tức là ta vừa đẩy nó lùi 3,2 giây so với trước. Trên mạng yếu, cái
+  // giá đó là một khoảng trắng ngay sau 25 phút làm việc thật. Tải song song thì lúc cần đã có sẵn.
+  useEffect(() => { LootDropModal.preload?.(); }, []);
+
+  if (showMoment) {
+    return (
+      <CityGrowthMoment moment={growth.moment} era={growth.era} onDone={() => setSeen(true)} />
+    );
+  }
+  return <LootDropModal />;
+}
+
 function GlobalOverlays({
   lootModalOpen,
   disasterModalOpen,
@@ -1977,7 +2015,7 @@ function GlobalOverlays({
 
   return (
     <Suspense fallback={null}>
-      {lootModalOpen && <LootDropModal />}
+      {lootModalOpen && <RewardSequence />}
       {disasterModalOpen && <DisasterModal />}
       {eraCrisisModalOpen && <EraCrisisModal />}
       {prestigeModalOpen && <PrestigeModal />}

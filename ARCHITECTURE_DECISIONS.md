@@ -11,6 +11,61 @@
 
 ---
 
+## ADR-010 — Khoảnh khắc "thành phố lớn lên" chen ở TẦNG HIỂN THỊ, không hoãn `lootModalOpen` trong store; và cổng phải hỏng theo hướng MỞ
+
+- **Ngày**: 2026-08-12
+- **Bối cảnh**: Đàm ra lệnh *"mọi thứ phải hoàn hảo và không bị chán"*. Sau Phase 3H–3L thành phố đã
+  ĐỌC được (biết còn bao xa) và SỜ được (chạm vào xem), nhưng đúng khoảnh khắc đáng giá nhất — lúc
+  chuông báo hết 25 phút — Đàm vẫn chỉ thấy một hộp thoại vật phẩm. Thành phố có lớn lên thật, chỉ
+  là **anh không được nhìn thấy nó lớn lên**. Vòng lặp "làm việc → thấy thành quả" đứt đúng ở mắt
+  xích cuối.
+- **Vấn đề**: chèn một màn 3,2 giây vào GIỮA "phiên vừa xong" và "hộp thoại phần thưởng" — mà cái
+  đứng sau là **màn hình phần thưởng của một phiên làm việc THẬT**. Chèn hỏng thì không mất một hiệu
+  ứng đẹp, mà mất 25 phút công sức của Đàm.
+- **Phương án đã cân nhắc**:
+  1. Hoãn ngay trong store: `completeFocusSession` đặt `lootModalOpen: true` **chậm lại** 3,2 giây.
+  2. Thêm một cờ mới vào store (`growthMomentOpen`) rồi cho `LootDropModal` đợi cờ đó tắt.
+  3. Chặn ở TẦNG HIỂN THỊ: store không đổi một dòng nào; một component `RewardSequence` quyết định
+     đang hiện cái nào.
+- **Lý do loại bỏ (1)**: `lootModalOpen` bật ĐỒNG BỘ là một hành vi đang được **ba bài test khẳng
+  định** (`completeFocusSession.test.js`). Làm nó thành bất đồng bộ nghĩa là sửa đúng hàm dài nhất
+  dự án (~760 dòng, đã ghi là điểm nóng ở `ARCHITECTURE.md` mục 6) để đổi lấy một hiệu ứng hình
+  ảnh. Đây chính là kiểu đánh đổi mà Playbook cấm: hy sinh phần lõi ổn định cho phần trang trí.
+- **Lý do loại bỏ (2)**: thêm trạng thái vào store nghĩa là thêm một thứ **có thể kẹt ở trạng thái
+  bật**. Một cờ "đang chạy lễ mừng" mà quên tắt (thoát app giữa chừng, lỗi render, hết pin) sẽ chặn
+  hộp thoại phần thưởng **vĩnh viễn**, kể cả sau khi khởi động lại app.
+- **Giải pháp chọn — (3), và nguyên tắc đứng sau nó**: *trạng thái của một hoạt hoạ 3 giây không
+  phải là dữ liệu; nó là vòng đời của một component.* `RewardSequence` được React dựng MỚI mỗi lần
+  `lootModalOpen` đi từ tắt sang bật, nên biến "đã xem chưa" tự khởi động lại — không có `useEffect`
+  nào đi dọn, tức là **không có chỗ nào để quên dọn**. Không thêm một byte nào vào store, nên cũng
+  không thêm gì vào JSONB đang tranh chấp CAS.
+- **Nguyên tắc thứ hai — HỎNG THEO HƯỚNG MỞ**: cổng được viết sao cho phần thưởng hiện ra **TRỪ KHI**
+  khoảnh khắc đang thật sự chạy, chứ không phải "hiện ra KHI khoảnh khắc đã xong". Không có gì thật
+  để khoe · Đàm bật giảm chuyển động · dữ liệu lạ · engine trả `null` — mọi nhánh đều dẫn thẳng tới
+  phần thưởng. Cộng thêm hai lưới: một chạm là bỏ qua, và một đồng hồ bảo hiểm 3,2 giây.
+- **Nguyên tắc thứ ba — TRUNG THỰC HƠN HIỆU ỨNG**: `buildGrowthMoment` trả `null` khi thành phố
+  **không** đổi gì. Thà không có khoảnh khắc nào còn hơn một câu chúc mừng rỗng — đúng nguyên tắc
+  chống-bịa mà AI Coach đang sống bằng nó (`engine/coach/guard.js`). Vì cùng lẽ đó, vạch xuất phát
+  của thanh tiến độ đọc `acceleratedCraftingIds` để biết phiên này đẩy 1 hay 2 bước, thay vì đoán.
+- **Trade-off**:
+  - Đàm phải chờ thêm ~3 giây trước khi thấy phần thưởng. Đây là cái giá CÓ CHỦ Ý; nút vặn là hằng
+    số `MOMENT_MS` và một cú chạm bỏ qua bất cứ lúc nào.
+  - Khi một công trình VỪA XONG, thanh chạy từ 0 % chứ không từ vạch thật của phiên trước — vì hàng
+    đợi đã dọn mục đó đi rồi, con số cũ không còn tồn tại ở đâu cả. Thà chạy từ 0 (một sự kiện
+    "xong rồi") còn hơn bịa ra một vạch xuất phát.
+  - Khoảnh khắc **không dựng cảnh 3D**. Trang chủ đã giữ một WebGL context cho lớp nền; mở context
+    thứ hai đúng lúc máy vừa chạy xong 25 phút là cách nhanh nhất để iOS thu hồi cả hai.
+- **Ảnh hưởng**: `createRecoverableLazy` được bổ sung `preload()` — đo bằng máy cho thấy nếu không
+  có nó, gói mã của màn phần thưởng chỉ **bắt đầu tải SAU khi khoảnh khắc kết thúc**, tức là ta vừa
+  đẩy nó lùi 3,2 giây so với trước. Nay hai việc chạy song song (đo được: gói phần thưởng bắt đầu
+  tải ở mốc 326 ms, xong trước khi khoảnh khắc hết). Store, engine game, cân bằng: không đổi.
+- **Điều kiện xem lại**: nếu Đàm thấy 3,2 giây là dài (vặn `MOMENT_MS`); nếu sau này có nhu cầu cho
+  khoảnh khắc dựng cảnh 3D thật (phải đo lại việc thu hồi context trên iPhone TRƯỚC); hoặc nếu xuất
+  hiện một màn hình thứ ba cũng muốn chen vào chuỗi này — lúc đó `RewardSequence` nên thành một
+  danh sách các chặng có thứ tự, chứ không phải thêm một `if` nữa.
+
+---
+
 ## ADR-009 — Thành Phố là một Ô CỬA SỔ: đồng hồ quyết độ sáng cảnh, theme chỉ quyết cái khung — và sắc kỷ trộn trong RGB, không xoay góc màu
 
 - **Ngày**: 2026-08-12

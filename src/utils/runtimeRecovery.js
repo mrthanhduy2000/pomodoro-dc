@@ -167,7 +167,7 @@ export function markRuntimeRecoverySuccess(scope = 'global') {
 }
 
 export function createRecoverableLazy(importer, scope) {
-  return lazy(() =>
+  const load = () =>
     importer().catch(async (error) => {
       const recovered = await attemptRuntimeRecovery(error, `lazy:${scope}`);
       if (recovered) {
@@ -175,6 +175,22 @@ export function createRecoverableLazy(importer, scope) {
       }
 
       throw error;
-    }),
-  );
+    });
+
+  const Component = lazy(load);
+
+  /**
+   * NẠP TRƯỚC gói mã, KHÔNG hiện gì cả.
+   *
+   * Dùng khi biết chắc vài giây nữa sẽ cần tới màn hình này: tải song song ngay bây giờ thì lúc
+   * cần nó đã nằm sẵn trong bộ nhớ. `import()` của trình duyệt tự nhớ module đã tải, nên gọi thêm
+   * lần nữa KHÔNG tải lại lần thứ hai — `lazy` ở trên sẽ nhận ngay kết quả có sẵn.
+   *
+   * ⚠️ Nuốt lỗi có chủ ý: đây chỉ là nạp trước cho nhanh. Mạng hỏng thì cứ để lần render THẬT gặp
+   * lỗi và đi qua đường hồi phục sẵn có — ném lỗi từ một lời gọi ngầm thì chẳng ai bắt, mà lại
+   * thành lỗi "unhandled rejection" nổ ra giữa màn hình.
+   */
+  Component.preload = () => { load().catch(() => {}); };
+
+  return Component;
 }

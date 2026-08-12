@@ -12,6 +12,20 @@
 
 ---
 
+## 2026-08-12 — UX (Phase 3S): nhìn bằng mắt vào thẻ lễ mừng
+
+- **Mục đích**: Phase 3R sửa NỘI DUNG bằng số đo; phase này nhìn HÌNH DẠNG bằng mắt — dựng lại thẻ
+  bằng CSS đã build thật trong Chromium headless, đủ 8 tổ hợp theme × skin.
+- **Lỗi 1**: kiểu chữ đảo ngược tầm quan trọng — câu cột mốc (phần thay đổi mỗi phiên, mang cảm
+  xúc) ở 10px in hoa; tên công trình + số đếm lùi (phần lặp lại) ở 15px in đậm. Đã đảo: cột mốc
+  17px đậm, tên công trình 11,5px mờ.
+- **Lỗi 2**: "Sắp hoàn thành" đọc lướt lẫn với "Công trình đã hoàn thành", mà hai câu rơi vào hai
+  phiên liền nhau. Đổi thành "Đã làm đủ số phiên".
+- **Phạm vi**: `src/components/city/CityGrowthMoment.jsx` (kiểu chữ), `src/engine/cityMoment.js`
+  (một chuỗi), `src/engine/cityMoment.test.js`. Không đổi state, không cần chạy SQL.
+- **Xác minh**: không câu nào tràn hoặc xuống dòng xấu ở cả 8 tổ hợp.
+- **Test**: 484 → **485** bài.
+
 ## 2026-08-12 — Vòng lặp (Phase 3R): màn thưởng thôi là một hằng số
 
 - **Mục đích**: xử lý chữ "chán" bằng SỐ ĐO thay vì cảm tính. Phần đo được của nó: nếu màn thưởng

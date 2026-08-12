@@ -76,7 +76,11 @@ function growthHeadline(remaining, from, to, knowsTotal) {
   if (remaining === 1) return 'Chỉ còn một phiên nữa';
   // Hàng đợi đã về 0 mà công trình chưa được báo là vừa xong — trạng thái chuyển tiếp, nhưng Đàm
   // vẫn đọc được nó. Dòng phụ đã nói "sắp xong" từ lâu; câu mừng thì bấy lâu vẫn chung chung.
-  if (remaining === 0) return 'Sắp hoàn thành';
+  // ⚠️ CHỌN CHỮ CÓ CHỦ Ý: KHÔNG dùng "Sắp hoàn thành" — đọc lướt thì nó lẫn với câu của nhánh
+  // hoàn thành thật ("Công trình đã hoàn thành"), mà hai câu này rơi vào hai phiên LIỀN NHAU nên
+  // lẫn là chuyện chắc chắn xảy ra. "Đã làm đủ số phiên" vừa đúng nguyên văn điều đang xảy ra
+  // (remaining = 0), vừa không thể nhầm với "công trình đã xong".
+  if (remaining === 0) return 'Đã làm đủ số phiên';
   if (!knowsTotal) return 'Thành phố vừa lớn lên';
   // Vạch xuất phát bằng 0 ⇒ trước phiên này công trình chưa nhích một nấc nào: đây là phiên đầu.
   if (from <= 0) return 'Vừa khởi công';

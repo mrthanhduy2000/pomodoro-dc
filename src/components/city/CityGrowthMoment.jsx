@@ -82,15 +82,23 @@ export default function CityGrowthMoment({ moment, era, onDone }) {
           {moment.icon}
         </motion.div>
 
+        {/*
+          ⚠️ THỨ TỰ TO/NHỎ Ở ĐÂY LÀ CÓ CHỦ Ý — ĐÃ TỪNG NGƯỢC LẠI, ĐỪNG ĐỔI VỀ.
+          Trước 2026-08-12 (Phase 3S), câu CỘT MỐC nằm ở dòng nhãn 10px in hoa, còn tên công trình
+          + số đếm lùi nằm ở dòng 15px in đậm. Tức là bố cục nói TO đúng phần LẶP LẠI mỗi phiên,
+          và thì thầm đúng phần THAY ĐỔI. Phase 3R vừa làm câu cột mốc đa dạng lên (2 câu → 5 câu)
+          thì chính kiểu chữ lại bóp nghẹt cải tiến đó.
+          Nay đảo lại: cột mốc là TIN, nên nó to; tên công trình là BỐI CẢNH, nên nó nhỏ và mờ.
+        */}
         <div
-          className="mono mt-3 text-[10px] uppercase tracking-[0.2em]"
-          style={{ color: accent }}
+          className="mt-3 text-[17px] font-semibold leading-snug"
+          style={{ color: 'var(--ink)', fontFamily: 'var(--skin-font-display, inherit)' }}
         >
           {moment.headline}
         </div>
         <div
-          className="mt-1.5 text-[15px] font-semibold leading-snug"
-          style={{ color: 'var(--ink)', fontFamily: 'var(--skin-font-display, inherit)' }}
+          className="mono mt-1.5 text-[11.5px] leading-snug"
+          style={{ color: 'var(--muted)' }}
         >
           {moment.detail}
         </div>

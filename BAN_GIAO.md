@@ -110,6 +110,27 @@
 ## 🗒️ Nhật ký cập nhật
 > Mỗi lần xong việc đáng kể, thêm 1 dòng vào ĐẦU danh sách.
 
+- **2026-08-12 (Phase 3S)** — **NHÌN BẰNG MẮT VÀO CHÍNH THẺ VỪA SỬA — hai lỗi không phép đo nào bắt
+  được.** Dựng lại thẻ lễ mừng bằng **CSS đã build thật** trong Chromium headless (đủ 8 tổ hợp
+  theme × skin) rồi soi.
+  - **Lỗi 1 — bố cục nói TO đúng phần LẶP, thì thầm đúng phần THAY ĐỔI.** Câu cột mốc (thứ Phase 3R
+    vừa làm cho đa dạng, thứ mang cảm xúc) nằm ở dòng nhãn **10px in hoa**; còn tên công trình +
+    số đếm lùi (phần lặp mỗi phiên) thì **15px in đậm**. Kiểu chữ đang bóp nghẹt chính cải tiến vừa
+    làm. **Đã đảo**: cột mốc → 17px đậm (là TIN); tên công trình → 11,5px `mono` mờ (là BỐI CẢNH).
+  - **Lỗi 2 — "Sắp hoàn thành" đọc lướt lẫn với "Công trình đã hoàn thành"**, mà hai câu này rơi
+    vào **hai phiên LIỀN NHAU** ⇒ lẫn là chắc chắn. Đổi thành **"Đã làm đủ số phiên"** (đúng
+    nguyên văn `remaining = 0`, không thể nhầm với "đã xong"). Có bài test cấm câu lúc-chưa-xong
+    dùng lại chữ "hoàn thành" (484 → **485**).
+  - ⚠️ **LẦN THỨ NĂM: NGHI NGỜ ĐỒ NGHỀ CỨU KHỎI MỘT KẾT LUẬN SAI.** Ảnh chụp cho thấy dấu tiếng
+    Việt **rời hẳn ra** ở dòng `mono` ("Đền Thờ Phô ̉ Linh Hôǹ") — trông y như một lỗi font thật.
+    Kiểm ra: `dist` KHÔNG có `@font-face` nào, JetBrains Mono nạp từ **Google Fonts lúc chạy**;
+    máy chụp ảnh không có mạng nên rơi về font mono của Linux vốn dựng dấu kém. **Trên máy Đàm chữ
+    hiện đúng.** Suýt nữa báo một lỗi không tồn tại — và tệ hơn, suýt gỡ `mono` khỏi 265 chỗ đang
+    dùng đúng.
+  - **Đo kèm**: không câu mừng nào tràn hoặc xuống dòng ở cả 8 tổ hợp; câu dài nhất
+    (cột mốc + Tăng tốc + tên dài nhất) xuống 2 dòng, không tràn — đóng lại đúng rủi ro tôi tự nêu
+    ở báo cáo Phase 3R.
+
 - **2026-08-12 (Phase 3R)** — **MÀN THƯỞNG THÔI LÀ MỘT HẰNG SỐ: 2 câu → 5 câu, câu lặp nhiều nhất
   82% → 33%.** Đây là lần đầu chữ **"chán"** được xử lý bằng SỐ ĐO thay vì cảm tính.
   - **Đo ra lỗi**: `buildGrowthMoment` nhánh giàn giáo trả đúng MỘT câu cứng `'Thành phố vừa lớn

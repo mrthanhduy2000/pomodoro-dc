@@ -149,6 +149,21 @@ test('MẠCH CỦA MỘT CÔNG TRÌNH: khởi công → qua nửa → còn một
   assert.ok(arc.indexOf('Đã qua nửa chặng') < arc.indexOf('Chỉ còn một phiên nữa'), 'còn-một-phiên phải là cột mốc cuối');
 });
 
+test('HAI PHIÊN CUỐI phải PHÂN BIỆT ĐƯỢC — "gần xong" không được đọc giống "đã xong"', () => {
+  // ⚠️ Tìm ra bằng MẮT, không phải bằng phép đo: bản đầu của Phase 3R đặt câu 'Sắp hoàn thành'
+  // cho trạng thái hàng đợi về 0. Nó rơi vào phiên NGAY TRƯỚC câu 'Công trình đã hoàn thành', mà
+  // đọc lướt thì hai câu này gần như một. Đàm không biết được là công trình đã xong hay chưa —
+  // đúng thứ mà cả màn hình này sinh ra để trả lời.
+  const [zero] = scaffoldsFor([{ bpId: ERA6[0], sessionsRemaining: 0 }]);
+  const nearly = buildGrowthMoment({ scaffolds: [zero] }).headline;
+  const done = buildGrowthMoment({ newlyBuilt: [ERA6[0]] }).headline;
+
+  assert.notEqual(nearly, done);
+  assert.ok(!nearly.includes('hoàn thành'),
+    `câu lúc CHƯA xong ("${nearly}") dùng lại đúng chữ "hoàn thành" của câu lúc ĐÃ xong ("${done}") `
+    + '⇒ đọc lướt là lẫn. Chọn chữ khác, đừng chỉ thêm/bớt một từ.');
+});
+
 test('TĂNG TỐC phải được NÓI RA — đặc quyền chạy im lặng thì như không có', () => {
   // Đặc quyền này xưa nay chỉ đổi vạch xuất phát của thanh tiến độ. Đàm thấy cú nhảy dài hơn nhưng
   // không có gì nói cho anh biết vì sao — một sự thật đang bị giấu, không phải lời khen thêm.

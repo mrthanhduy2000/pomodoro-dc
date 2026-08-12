@@ -11,6 +11,53 @@
 
 ---
 
+## ADR-007 — Thành Phố Pixel: toạ độ SUY RA từ id, không lưu vào state; và đặt nhà theo "khu đất cố định" thay vì dò xoắn ốc
+
+- **Ngày**: 2026-08-12
+- **Bối cảnh**: xây lớp hình ảnh "Thành Phố Pixel" — mỗi công trình đã xây hiện thành một căn nhà
+  trên lưới isometric 12×12. Đàm chọn **mô hình BẢO TÀNG**: qua kỷ mới thì xây thành phố MỚI, thành
+  phố cũ được niêm phong để ghé thăm bất cứ lúc nào (có thể là nhiều năm sau).
+- **Vấn đề**: cần một cách xác định "căn nhà A đứng ở ô nào". Hai câu hỏi tách biệt: (a) lưu toạ độ
+  hay suy ra? (b) khi hai căn nhà rơi vào cùng một ô thì giải quyết thế nào?
+- **Phương án đã cân nhắc**:
+  1. **Lưu toạ độ** vào state cho từng công trình của từng kỷ.
+  2. **Suy ra toạ độ** bằng băm tất định từ chính `bpId`, va chạm thì **dò xoắn ốc** theo danh sách
+     `bpId` đã sắp xếp (đề xuất ban đầu của spec).
+  3. **Suy ra toạ độ**, nhưng mỗi bản vẽ có **khu đất riêng** suy từ thứ hạng cố định của nó trong
+     `BLUEPRINT_CATALOG` của kỷ đó (mỗi kỷ đúng 5 bản vẽ → 5 khu đất rời nhau).
+- **Lý do loại bỏ phương án (1)**: thêm ~15–20 KB vào state cho 15 kỷ, đẩy sát trần localStorage
+  (`TECH_DEBT #9`, đường ghi persist chưa bắt `QuotaExceededError`), thêm 15 nhánh dữ liệu cho cơ
+  chế đồng bộ nguyên-khối (`TECH_DEBT #8`), và quan trọng nhất: mất/hỏng dữ liệu = mất luôn bố cục
+  thành phố cũ. Lợi ích duy nhất — kéo thả tự sắp xếp — gần như vô dụng với một thành phố ĐÃ BỊ
+  NIÊM PHONG, không ai xây thêm nữa.
+- **Lý do loại bỏ phương án (2)**: dò xoắn ốc chỉ giữ được bất biến "bảo tàng bất động" (xây thêm
+  nhà mới KHÔNG làm xê dịch nhà cũ) khi KHÔNG có va chạm. Xác suất ít nhất một va chạm với 5 công
+  trình trên 144 ô là **~7%** — không hiếm. Khi va chạm xảy ra, một căn nhà xây SAU có thể chiếm ô
+  của căn nhà xây TRƯỚC và đẩy nó đi chỗ khác, tức thành phố tự động đậy sau lưng người dùng. Đây
+  đúng là rủi ro #5 trong bảng rủi ro của spec, và bất biến này được chính spec gọi là "bất biến
+  quan trọng nhất".
+- **Giải pháp được chọn**: phương án (3) — suy ra toạ độ, đặt nhà vào khu đất riêng theo thứ hạng
+  bản vẽ. Vì các khu đất không giao nhau, hai công trình cùng một kỷ KHÔNG BAO GIỜ tranh nhau một
+  ô ⇒ vị trí mỗi căn nhà chỉ phụ thuộc **chính id của nó**, không phụ thuộc việc có bao nhiêu căn
+  khác đang đứng cạnh. Bất biến trở thành đúng TUYỆT ĐỐI thay vì đúng ~93%. Chữ ký
+  `placeBuilding(bpId, occupiedSet)` giữ nguyên như spec và dò xoắn ốc vẫn còn — nhưng chỉ làm lưới
+  an toàn cho id lạ đến từ dữ liệu cloud hỏng, với dữ liệu hợp lệ nó không bao giờ phải chạy.
+- **Trade-off**: (a) mất khả năng kéo thả sắp xếp nhà — chấp nhận vì thành phố cũ đã niêm phong;
+  nếu sau này Đàm thật sự muốn kéo thả, chỉ cần lưu **phần lệch** so với vị trí mặc định, không
+  phải làm lại từ đầu. (b) Bố cục bị ràng buộc vào 5 khu đất cố định nên ít "ngẫu nhiên tự nhiên"
+  hơn — bù lại thành phố luôn trải đều, không bao giờ dồn cục một góc. (c) Thêm một phụ thuộc ngầm:
+  **thứ tự các phần tử trong `BLUEPRINT_CATALOG[era]` trở thành dữ liệu có ý nghĩa hình ảnh** —
+  đảo thứ tự 5 bản vẽ trong một kỷ sẽ làm thành phố kỷ đó đổi bố cục.
+- **Ảnh hưởng**: `src/engine/cityLayout.js` không bao giờ được dùng `Math.random`/`Date`; mọi thay
+  đổi thuật toán băm/khu đất sẽ **đổi bố cục của MỌI thành phố cũ** — coi như thay đổi phá vỡ tương
+  thích về mặt hình ảnh, phải cân nhắc như đổi schema. Test `cityLayout.test.js` khoá cả 3 bất biến
+  (tất định · bảo tàng bất động · không phụ thuộc thứ tự đầu vào).
+- **Điều kiện xem xét lại**: nếu Đàm yêu cầu kéo thả sắp xếp nhà (→ thêm lớp "phần lệch" lưu riêng,
+  giữ nguyên hàm suy ra làm vị trí mặc định), hoặc nếu một kỷ nào đó có số bản vẽ khác 5 (khi ấy
+  bảng khu đất phải mở rộng tương ứng).
+
+---
+
 ## ADR-006 — Không tách nhỏ `gameStore.js` trong đợt refactor kiến trúc toàn diện
 
 - **Ngày**: 2026-07-12

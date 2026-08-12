@@ -74,6 +74,26 @@
 ## 🗒️ Nhật ký cập nhật
 > Mỗi lần xong việc đáng kể, thêm 1 dòng vào ĐẦU danh sách.
 
+- **2026-08-12 (Phase 1/6)** — **THÀNH PHỐ PIXEL: nền móng thuần, chưa ai nhìn thấy gì.** Theo
+  `SPEC Thành Phố Pixel` Đàm duyệt cùng ngày (Đàm **miễn trừ cổng Giai đoạn A** cho hạng mục
+  gamification này — quyết định 0.2 của spec). Thêm 2 file engine THUẦN + 2 file test, **0 dòng
+  thay đổi ở `store/`, `components/`, `hooks/`** — app chạy y hệt trước.
+  - `src/engine/cityLayout.js` — suy ra bố cục thành phố từ danh sách công trình bằng băm tất định
+    (FNV-1a), **KHÔNG lưu toạ độ vào state** (quyết định 0.3: thành phố kỷ cũ dựng lại y nguyên
+    sau nhiều năm, tốn 0 byte, không đụng `TECH_DEBT #8`/`#9`).
+  - `src/engine/cityArchive.js` — "bảo tàng": `mergeCityArchive` / `normalizeCityArchive` /
+    `listVisitableEras`. Chưa nối vào store (Phase 2).
+  - **+36 bài test** (261 → **297 bài, 0 fail**), lint + build xanh.
+  - ⚠️ **Chệch spec CÓ CHỦ Ý, đã ghi ADR-010**: spec đề nghị đặt nhà bằng "dò xoắn ốc theo bpId đã
+    sắp xếp". Cách đó chỉ giữ được bất biến "bảo tàng bất động" khi KHÔNG va chạm — mà 5 công trình
+    trên lưới 144 ô va chạm ~7%, tức bảo tàng có thể tự xê dịch. Đã thay bằng **khu đất riêng theo
+    thứ hạng bản vẽ trong kỷ** (mỗi kỷ đúng 5 bản vẽ → 5 zone rời nhau) ⇒ vị trí mỗi nhà chỉ phụ
+    thuộc chính id của nó, bất biến đúng TUYỆT ĐỐI. Chữ ký `placeBuilding(bpId, occupiedSet)` giữ
+    nguyên như spec, dò xoắn ốc vẫn còn làm lưới an toàn cho id lạ.
+  - ⚠️ **Spec ghi sai số bài test nền**: spec nói nền là 302 bài (và chê tài liệu cũ ghi 261 là
+    sai). Đo thật ngày 2026-08-12: **261 bài** — tức tài liệu cũ ĐÚNG, spec sai. Mốc nghiệm thu
+    "≥323 bài" của spec vì vậy không dùng được; mốc thật tương đương là ≥283.
+
 - **2026-08-10** — **Sửa khoảng trắng thừa trước icon trên thanh menu Mac.** Đàm báo: đang trong
   phiên pomodoro thì có khoảng trắng trước 🍅, đang giải lao thì có vệt trắng cạnh ☕. Nguyên nhân:
   khi có phiên chạy, tray bỏ icon để chỉ hiện chữ, nhưng chỗ "bỏ icon" lại nạp

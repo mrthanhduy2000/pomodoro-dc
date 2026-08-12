@@ -110,6 +110,25 @@
 ## 🗒️ Nhật ký cập nhật
 > Mỗi lần xong việc đáng kể, thêm 1 dòng vào ĐẦU danh sách.
 
+- **2026-08-12 (Phase 3P)** — **DỰNG LƯỚI CHO NHỊP PHIÊN, KHÔNG TỰ Ý ĐỔI HÀNH VI ĐỒNG HỒ.**
+  Trả phần đầu tiên của nợ #13 và dựng hàng rào cho #12, mà KHÔNG đổi một hành vi nào.
+  - **Hai con số vô danh nay có TÊN và về tầng THUẦN**: `GROWTH_MOMENT_MS` (3 200) chuyển từ
+    `components/city/CityGrowthMoment.jsx` → **`engine/cityMoment.js`**; `BREAK_START_DELAY_MS`
+    (500) rút khỏi 2 chỗ viết cứng trong `hooks/useTimer.js` → **`engine/timerSession.js`**.
+    `CityGrowthMoment.jsx` xuất lại `MOMENT_MS` nên mọi chỗ đang import không phải sửa.
+  - **Vì sao phải về tầng thuần**: chừng nào hai số còn nằm ở hai tầng không nói chuyện được với
+    nhau (một trong component có `framer-motion`, một trong hook React) thì **không bài test
+    `node --test` nào canh nổi quan hệ giữa chúng** — mà chính khoảng lệch đó là nội dung của #12.
+  - **Bài test mới "NHỊP MỘT PHIÊN"** (`timerSession.test.js`): **CHỐT khoảng bị trừ ở 2 700 ms**.
+    Đây là bài test *chặn nợ phình to*, KHÔNG phải bài test *mọi thứ đã đúng* — nói rõ điều đó ngay
+    trong chú thích để phiên sau không hiểu nhầm là đã xong. Kèm 3 chốt phụ để nó không bị "thoả"
+    bằng cách phá thứ khác (lễ mừng không được ngắn dưới 2 s, không vượt trần 3,5 s, độ trễ > 0).
+  - **Đã chứng minh ĐỎ**: nâng lễ mừng lên 5 000 ms (mô phỏng việc thêm màn mở khoá kỷ mới) ⇒ bài
+    test đỏ ngay. **480 bài test.**
+  - ⚠️ **KHÔNG đổi giá trị 500 ms** — đó là thay đổi hành vi đồng hồ production, thuộc quyền quyết
+    của Đàm (phương án A/B ở `TECH_DEBT.md` #12). Việc của phiên này chỉ là làm cho khoản nợ **nhìn
+    thấy được và không tự lớn lên**.
+
 - **2026-08-12 (rà nhịp phiên)** — **PHÁT HIỆN: LỄ MỪNG ĐANG BỊ TÍNH VÀO GIỜ NGHỈ.** Rà mục "nhịp
   một phiên thật" của `/goal` và tìm ra một lỗi ĐO ĐƯỢC, không cần thiết bị: với cấu hình MẶC ĐỊNH
   (`autoStartBreak: true`), phiên nghỉ bắt đầu đếm sau **500 ms**, trong khi lễ mừng chạy

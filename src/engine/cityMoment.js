@@ -65,6 +65,18 @@ function joinNames(names) {
  *            progress:number, fromProgress:number, bpId:string}|null}
  *          `null` = không có gì thật để khoe
  */
+/**
+ * Lễ mừng "thành phố lớn lên" chạy bao lâu (mili-giây).
+ *
+ * ⚠️ VÌ SAO CON SỐ NÀY NẰM Ở TẦNG ENGINE THUẦN chứ không nằm trong component vẽ nó.
+ * Nó không chỉ là tham số hoạt hoạ — nó là một mốc trong NHỊP của một phiên, và nó có quan hệ với
+ * một con số ở tận `timerSession.js` (`BREAK_START_DELAY_MS`, độ trễ trước khi phiên nghỉ bắt đầu
+ * đếm). Chừng nào hai số đó còn nằm ở hai tầng không nói chuyện được với nhau thì không bài test
+ * nào canh nổi quan hệ giữa chúng — mà chính khoảng lệch đó đang khiến lễ mừng bị tính vào giờ
+ * nghỉ (xem `TECH_DEBT.md` #12). Đưa cả hai về tầng thuần là điều kiện để có hàng rào.
+ */
+export const GROWTH_MOMENT_MS = 3200;
+
 export function buildGrowthMoment({ newlyBuilt = [], scaffolds = [], acceleratedIds = [] } = {}) {
   // ── 1. Có công trình VỪA XONG — tin lớn nhất có thể có ────────────────────
   const built = (Array.isArray(newlyBuilt) ? newlyBuilt : [])

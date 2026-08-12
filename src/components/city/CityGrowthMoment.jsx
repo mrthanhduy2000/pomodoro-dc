@@ -18,10 +18,16 @@
 import { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 
+import { GROWTH_MOMENT_MS } from '../../engine/cityMoment';
 import { eraSolid } from './cityTokens';
 
-/** Tổng thời gian màn này chiếm sóng. Kế hoạch cho trần 3,5 s — giữ dưới trần. */
-export const MOMENT_MS = 3200;
+/**
+ * Tổng thời gian màn này chiếm sóng. Kế hoạch cho trần 3,5 s — giữ dưới trần.
+ * ⚠️ Con số THẬT nay nằm ở `engine/cityMoment.js` (tầng thuần), không phải ở đây — vì nó có quan
+ * hệ với độ trễ bắt đầu nghỉ bên `timerSession.js`, và quan hệ đó cần một bài test canh. Ở đây chỉ
+ * xuất lại để mọi chỗ đang `import { MOMENT_MS }` không phải sửa.
+ */
+export const MOMENT_MS = GROWTH_MOMENT_MS;
 
 export default function CityGrowthMoment({ moment, era, onDone }) {
   const [filled, setFilled] = useState(false);

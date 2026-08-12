@@ -11,6 +11,20 @@ export const TIMER_END_REASONS = {
 
 export const CONTINUED_POMODORO_CONFIRM_SECONDS = 15 * 60;
 
+/**
+ * Phiên xong → chờ bao lâu rồi mới cho phiên NGHỈ bắt đầu đếm (mili-giây).
+ *
+ * ⚠️ CON SỐ NÀY CÓ TỪ TRƯỚC KHI CÓ LỄ MỪNG, VÀ CHƯA ĐƯỢC CHỈNH LẠI CHO KHỚP.
+ * 500 ms vốn chỉ để màn hình kịp chuyển trạng thái. Nhưng từ Phase 4′, giữa "phiên xong" và "Đàm
+ * thật sự bắt đầu nghỉ" còn chen vào lễ mừng `GROWTH_MOMENT_MS` = 3 200 ms rồi mới tới hộp phần
+ * thưởng. Nghĩa là đồng hồ nghỉ đang chạy 2 700 ms TRƯỚC KHI lễ mừng kết thúc, rồi chạy tiếp suốt
+ * lúc đọc hộp phần thưởng — tức **phần thưởng đang bị trừ vào thời gian nghỉ**.
+ * Đây là nợ đã ghi ở `TECH_DEBT.md` #12, CHƯA sửa vì đổi giá trị này là đổi HÀNH VI ĐỒNG HỒ trên
+ * app production và cần Đàm chọn phương án. Việc đặt tên cho nó ở đây là bước chuẩn bị: một con số
+ * có tên và nằm cạnh bài test thì không trôi được nữa (xem `timerSession.test.js`).
+ */
+export const BREAK_START_DELAY_MS = 500;
+
 export function resolveContinueAfterPomodoro(timerSession = {}, fallback = false) {
   if (typeof timerSession?.continueAfterPomodoro === 'boolean') {
     return timerSession.continueAfterPomodoro;

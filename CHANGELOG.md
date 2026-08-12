@@ -12,6 +12,18 @@
 
 ---
 
+## 2026-08-12 — Nhịp phiên (Phase 3P): dựng lưới cho hai con số quyết định nhịp
+
+- **Mục đích**: làm cho khoản nợ "lễ mừng bị tính vào giờ nghỉ" (`TECH_DEBT.md` #12) nhìn thấy được
+  và không thể âm thầm phình to — mà không tự ý đổi hành vi đồng hồ.
+- **Phạm vi**: `src/engine/cityMoment.js` (+`GROWTH_MOMENT_MS`), `src/engine/timerSession.js`
+  (+`BREAK_START_DELAY_MS`), `src/components/city/CityGrowthMoment.jsx` (xuất lại `MOMENT_MS`),
+  `src/hooks/useTimer.js` (2 literal `500` → hằng số có tên), `src/engine/timerSession.test.js`.
+- **Ảnh hưởng**: **không đổi hành vi** — mọi giá trị giữ nguyên (3 200 ms và 500 ms). Chỉ đổi chỗ
+  khai báo và thêm hàng rào. Không đổi state, không cần chạy SQL.
+- **Tương thích**: `MOMENT_MS` vẫn xuất từ `CityGrowthMoment.jsx` như cũ.
+- **Test**: 479 → **480** bài. Bài mới đã chứng minh ĐỎ khi kéo dài lễ mừng lên 5 000 ms.
+
 ## 2026-08-12 — Thành Phố (Phase 3O): khoá lời hứa game hoá bằng số
 
 - **Mục đích**: "thành phố lớn lên sau MỖI phiên" là mệnh đề game hoá cốt lõi nhất của dự án, mà

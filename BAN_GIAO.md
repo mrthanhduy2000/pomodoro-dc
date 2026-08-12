@@ -110,6 +110,25 @@
 ## 🗒️ Nhật ký cập nhật
 > Mỗi lần xong việc đáng kể, thêm 1 dòng vào ĐẦU danh sách.
 
+- **2026-08-12 (Phase 3T)** — **MÔ PHỎNG 365 NGÀY: 95% SỐ PHIÊN KHÔNG CÓ LỄ MỪNG NÀO.** Phát hiện
+  lớn nhất trong ngày, và lớn hơn hẳn hai thứ vừa sửa ở 3R/3S. **Chỉ NGHIÊN CỨU + ghi sổ, KHÔNG
+  sửa** — mọi phương án đều đổi cân bằng kinh tế nên phải để Đàm chọn (`TECH_DEBT.md` **#14**).
+  - **Cách tìm ra**: tôi vừa viết trong báo cáo 3S rằng *"một màn hình chỉ nhàm sau nhiều ngày lặp,
+    việc đó không mô phỏng được"*. Sai — repo đã có sẵn **`scripts/simulate-pacing.mjs`** mô phỏng
+    trọn 365 ngày, mà xưa nay chỉ dùng để cân KINH TẾ, chưa phiên AI nào dùng nó soi TRẢI NGHIỆM.
+  - **Số đo**: 370 ngày × 12 phiên = **4 428 phiên**; cả game chỉ có **420 bước xây** (75 bản vẽ),
+    mỗi phiên tiêu 2 bước (`CRAFT_QUEUE_SLOTS = 2`, mỗi phiên đẩy MỌI ô) ⇒ **215 phiên có lễ mừng
+    (4,9%)**, **4 213 phiên im lặng (95%)**. Xấu dần theo kỷ: **kỷ 1 im lặng 81% → kỷ 15 im lặng
+    98%** (thời gian ở mỗi kỷ tăng từ 4 lên 69 ngày, số bản vẽ mỗi kỷ vẫn là 5).
+  - **Hệ quả cần nhớ cho MỌI phiên sau**: mọi đầu tư thêm vào lễ mừng/hiệu ứng thành phố hiện chỉ
+    chạm tới **5% số phiên** trước khi tới được Đàm. Chưa xử lý #14 thì các phase kiểu 3R/3S sau này
+    đều lãi thấp một cách có hệ thống.
+  - **4 hướng đã cân nhắc** (chi tiết + đánh đổi ở #14): (a) tăng số ô hàng đợi — **LOẠI**, làm mọi
+    thứ xây xong nhanh hơn nên im lặng tới SỚM hơn; (b) bỏ lọc theo kỷ hiện tại; (c) **nâng cấp
+    công trình đã xây Lv.1→2→3 — ứng viên mạnh nhất**, hạ tầng đã có sẵn trong `buildingSpec`
+    (`hRange`) và `CLAUDE.md` §4.3 đã mô tả; (d) nói thật khi xưởng trống — rẻ nhưng rủi ro nhắc
+    nhở phiền, chỉ nên đi kèm (b) hoặc (c).
+
 - **2026-08-12 (Phase 3S)** — **NHÌN BẰNG MẮT VÀO CHÍNH THẺ VỪA SỬA — hai lỗi không phép đo nào bắt
   được.** Dựng lại thẻ lễ mừng bằng **CSS đã build thật** trong Chromium headless (đủ 8 tổ hợp
   theme × skin) rồi soi.

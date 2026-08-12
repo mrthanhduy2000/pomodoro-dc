@@ -13,8 +13,11 @@
 > mà không được refactor triệt để, phải CHỦ ĐỘNG đề xuất mở một "Maintenance Sprint" (nêu rõ mục
 > tiêu/phạm vi/lợi ích/rủi ro/tiêu chí hoàn thành) thay vì tiếp tục cộng thêm tính năng mới.
 >
-> **Trạng thái ngưỡng hiện tại (2026-08-12)**: 0 mục Priority High/Critical → CHƯA đạt ngưỡng đề
-> xuất Maintenance Sprint. Có **2 mục Medium-High** (#3 và #13).
+> **Trạng thái ngưỡng hiện tại (2026-08-12, cập nhật cuối ngày)**: **1 mục Priority High** (#14) →
+> vẫn CHƯA đạt ngưỡng 8–10 mục để đề xuất Maintenance Sprint. Có **2 mục Medium-High** (#3 và #13).
+> ⚠️ **#14 là nợ THIẾT KẾ, không phải nợ mã** — không có gì hỏng, nhưng nó chặn giá trị của mọi đầu
+> tư về sau vào lớp thành phố (95% số phiên không thấy lễ mừng). Nó **cần Đàm chọn hướng** trước
+> khi bất kỳ phiên AI nào động vào, vì mọi phương án đều đổi cân bằng kinh tế.
 > ⚠️ **Cảnh báo quy trình từ mục #13**: một khoản nợ đã bị TÀI LIỆU CHE MẤT nhiều tháng — sổ ghi
 > "lưới test đã có, chỉ chưa cắm vào" trong khi thực tế chưa từng có file nào. Khi đọc bất kỳ mục
 > nào trong sổ này mà nó khẳng định "đã có sẵn X", hãy **kiểm bằng lệnh trước khi tin** (`git log
@@ -264,6 +267,64 @@
 - **Review Trigger**: khi làm backup/recovery, hoặc khi thấy lỗi lưu state trong log production.
 - **Owner**: (chưa gán)
 - **Status**: Open — phát hiện trong lúc phân tích bản vá C1 (2026-07-17), chưa xử lý.
+
+---
+
+## #14 — **95% số phiên tập trung KHÔNG có lễ mừng nào** — và càng chơi lâu càng im lặng
+
+- **Module**: cân bằng game — `src/engine/constants.js` (`CRAFT_QUEUE_SLOTS`, `sessionsToComplete`)
+  + `advanceCraftingQueueWithPerks` (`gameStore.js:1494`). KHÔNG phải lỗi của `cityMoment.js`.
+- **Priority**: **High**
+- **Severity**: High
+- **Impact**: đây là **nguyên nhân lớn nhất còn lại của chữ "chán"**, lớn hơn hẳn hai thứ vừa sửa ở
+  Phase 3R/3S. Toàn bộ công sức làm lễ mừng đẹp, đa dạng, đúng cột mốc chỉ chạm tới **~5% số phiên**.
+  95% còn lại Đàm làm xong 25 phút thật và thành phố **không nói gì cả**.
+- **SỐ ĐO** (dựng từ chính `scripts/simulate-pacing.mjs` của repo — 12 phiên/ngày, 370 ngày tới
+  Prestige = 4 428 phiên; ghép với `sessionsToComplete` thật của 75 bản vẽ = 420 bước xây):
+
+  | | phiên | tỉ lệ |
+  |---|---|---|
+  | Có lễ mừng | 215 | **4,9 %** |
+  | Im lặng | 4 213 | **95 %** |
+
+  Và nó **xấu dần theo kỷ**: kỷ 1 im lặng 81% → kỷ 5: 93% → kỷ 10: 95% → **kỷ 15: 98%**. Thứ đáng
+  lẽ thưởng cho việc chơi lâu thì càng chơi lâu càng tắt.
+  ⚠️ Đây đã là **trường hợp TỐT NHẤT**: giả định Đàm LUÔN giữ đủ cả 2 ô hàng đợi. Giữ 1 ô thì số
+  phiên có lễ mừng tăng gấp đôi nhưng vẫn dưới 10%.
+- **Root Cause**: ba hằng số nhân nhau, không cái nào sai một mình.
+  (1) `CRAFT_QUEUE_SLOTS = 2` và **mỗi phiên đẩy MỌI ô tiến 1 bước** ⇒ một phiên tiêu 2 bước xây.
+  (2) Tổng bước xây cả game chỉ có **420** (75 bản vẽ × trung bình 5,6 phiên).
+  (3) Hàng đợi bị **lọc theo KỶ HIỆN TẠI** (`gameStore.js:1258`) ⇒ chỉ được xây 5 bản vẽ của kỷ
+  đang ở; xây hết là im lặng cho tới khi lên kỷ mới, mà **thời gian ở mỗi kỷ tăng dần** (kỷ 1: 4
+  ngày → kỷ 15: 69 ngày) trong khi số bản vẽ mỗi kỷ giữ nguyên 5.
+- **Current Risk**: cao về TRẢI NGHIỆM, bằng 0 về kỹ thuật — không có gì hỏng, không mất dữ liệu,
+  không lỗi. Đây là nợ THIẾT KẾ, không phải nợ mã.
+- **Future Risk**: cao. Mọi đầu tư thêm vào lễ mừng/thành phố đều bị chia cho 5% trước khi tới được
+  người dùng. Nếu không xử lý, mọi phase kiểu 3R/3S sau này đều lãi thấp một cách có hệ thống.
+- **Recommended Solution**: ⚠️ **KHÔNG được AI tự quyết** — mọi phương án đều đổi cân bằng kinh tế
+  mà Đàm đã tinh chỉnh, nên theo Playbook (*Architecture Change: đánh giá + trade-off + ADR TRƯỚC,
+  rồi mới đổi*) và quy tắc "HỎI TRƯỚC KHI LÀM". Bốn hướng đã cân nhắc, kèm đánh đổi thật:
+  - **(a) Tăng `CRAFT_QUEUE_SLOTS` 2 → 3–4.** Rẻ nhất, một hằng số. NHƯNG làm mọi thứ xây xong
+    NHANH HƠN ⇒ im lặng tới sớm hơn. **Làm nặng thêm vấn đề, không nhẹ đi.** Loại.
+  - **(b) Bỏ lọc theo kỷ hiện tại** — cho xây bản vẽ của kỷ CŨ chưa xây. Mở thêm rất nhiều bước
+    xây cho các kỷ dài về sau. Đánh đổi: phá ý niệm "mỗi kỷ một thành phố" của ADR-007; cần đọc
+    kỹ `cityArchive` trước.
+  - **(c) Nâng cấp công trình đã xây** (Lv.1→2→3 đã có sẵn trong `buildingSpec`, `hRange`, và
+    `CLAUDE.md` §4.3 đã mô tả!). **Ứng viên mạnh nhất**: hạ tầng đã tồn tại, đúng tinh thần "thành
+    phố lớn lên", và nhân số bước xây lên gấp ~3 mà không phá kiến trúc kỷ.
+  - **(d) Chấp nhận, nhưng nói thật ở màn thưởng** khi xưởng trống (kiểu `tone:'idle'` mà
+    `buildFocusTease` đã có). RẺ nhưng RỦI RO: `CityGrowthMoment` là lớp phủ chặn 3,2 s — nhắc
+    "xưởng trống" sau MỌI phiên còn tệ hơn im lặng. Chỉ nên làm nếu gắn kèm (b) hoặc (c).
+- **Estimated Complexity**: (a) Trivial · (b) Medium · (c) **Medium-High** · (d) Low
+- **Blocking Conditions**: **cần Đàm chọn hướng.** Đây là quyết định thiết kế game, không phải
+  quyết định kỹ thuật. Nếu chọn (c) thì nên viết ADR trước.
+- **Review Trigger**: trước bất kỳ đầu tư nào thêm vào lễ mừng / hiệu ứng thành phố — nếu chưa xử
+  lý mục này thì khoản đầu tư đó chỉ chạm tới 5% số phiên.
+- **Owner**: (chưa gán — chờ Đàm chọn hướng)
+- **Status**: Open — phát hiện 2026-08-12 (Phase 3T) khi tự vấn "một màn hình nhàm đi sau bao nhiêu
+  ngày lặp thì có mô phỏng được không". Câu trả lời hoá ra là CÓ: repo đã có sẵn
+  `scripts/simulate-pacing.mjs` mô phỏng trọn 365 ngày mà chưa phiên AI nào dùng nó để soi trải
+  nghiệm — nó xưa nay chỉ dùng để cân kinh tế.
 
 ---
 

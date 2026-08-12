@@ -237,6 +237,23 @@ màu gần nhau nên không bao giờ lật hướng). Khoá bằng test quét 2
 chỉ bù 1,45×. Nguyên tắc rút ra: **cường độ đèn phải bù cho cả độ đậm của MÀU đèn**, hai thứ đó
 nhân nhau chứ không thay thế nhau.
 
+**Thành phố ra TRANG CHỦ — một bộ vẽ, hai vai trò (2026-08-12, Phase 3F)**: `city/CityBackdrop.jsx`
+đặt chính cảnh 3D đó làm lớp nền mờ phía sau đồng hồ ở trang Tập Trung. Nó KHÔNG dựng cảnh riêng —
+vẫn thuê `CityStage`, chỉ bật bốn công tắc (`chrome`/`still`/`fill`/`interactive`). Đây là chỗ dễ
+sinh bản sao thứ hai nhất trong cả dự án, mà bản sao đó sẽ phải nhớ vá song song mọi thứ về sau
+(đường lùi 2D, watchdog FPS, dọn WebGL context, giờ trong ngày) — có test đọc mã nguồn khoá lại ở
+`components/city/cityRenderers.test.js`.
+
+⚠️ **Luật ở trang chủ NGẶT HƠN ở tab Thành Phố, và lý do là thời lượng chứ không phải thẩm mỹ**:
+tab Thành Phố mở vài chục giây, trang chủ mở 25 phút liền. Nên ở lớp nền: **đang chạy phiên ⇒ đứng
+yên tuyệt đối** (0 nhịp rAF, không phải "vẽ lại cùng một hình"), **điện thoại ⇒ luôn đứng yên** (dải
+thành phố ló ra sau thẻ đồng hồ quá hẹp để mắt nhận ra chuyển động, trong khi giá phải trả y hệt
+máy bàn), **không nhận thao tác** (bật `interactive` thì `wheel` với `passive:false` sẽ nuốt cú cuộn
+trang), và **hỏng thì biến mất không một lời** (`fallback={() => null}` — mọi chỗ khác trong app
+hiện bảng báo lỗi, riêng chỗ này thì không, vì thứ nó nằm phía sau là công cụ chính của cả app).
+Máy không chạy được 3D ⇒ KHÔNG lùi về bản 2D ở đây: bản 2D isometric là hình minh hoạ sắc nét có
+viền, đặt sau lưng đồng hồ nó đọc ra "ảnh dán nhầm chỗ" chứ không ra "khung cảnh".
+
 ⚠️ **VAI MÀU KHÔNG CHỈ LÀ "MÀU GÌ", CÒN LÀ "ĐƯỢC ĐỐI XỬ THẾ NÀO"** (`parts.js`). Khi vai chỉ dùng
 để tra màu thì cửa kính và mặt nước dùng chung vai `glass` là tiện. Ngày vai bắt đầu quyết định
 HÀNH VI — ban đêm mọi khối vai `glass` tách sang khối tự phát sáng để làm ô cửa sáng đèn — thì việc

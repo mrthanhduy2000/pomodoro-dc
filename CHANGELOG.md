@@ -12,6 +12,25 @@
 
 ---
 
+## 2026-08-12 — Thành Phố (Phase 3F): thành phố ra trang chủ
+
+- **Mục đích**: Đàm yêu cầu *"đem nó ra trang chủ hoặc làm cái gì đó đột phá hơn nữa"*. Trước Phase
+  này, thành phố nằm trong một tab riêng — nghĩa là thứ Đàm xây được gần như vô hình đúng vào lúc
+  anh đang xây nó. Nay nó là lớp nền mờ phía sau đồng hồ ở trang Tập Trung.
+- **Phạm vi**: `CityBackdrop.jsx` (mới) thuê lại `CityStage` chứ không dựng cảnh riêng;
+  `CityStage`/`CityScene3D` nhận thêm 4 công tắc để cùng một bộ vẽ đóng hai vai. Cài đặt mới
+  `cityHomeBackdrop` (mặc định bật). Không đụng dữ liệu game, không đụng logic timer.
+- **Luật hiệu năng riêng cho trang chủ** (ngặt hơn tab Thành Phố vì thời lượng — 25 phút so với vài
+  chục giây): đang chạy phiên ⇒ thành phố đứng yên tuyệt đối; điện thoại ⇒ luôn đứng yên; lớp nền
+  không nhận thao tác; hỏng thì biến mất không một lời thay vì hiện bảng báo lỗi; máy không chạy
+  được 3D thì trả về nền trơn chứ không lùi về bản vẽ 2D.
+- **Ảnh hưởng**: `npm test` **412 → 418**. `settingsStore` **version 7 → 8** (tự động, không cần
+  thao tác gì). Chunk chính **134,54 KB gzip** — chỉ +0,1 KB, nhờ nạp lười lớp nền.
+- **Tương thích**: hoàn toàn ngược. Tắt cài đặt là trang chủ trở lại y như trước. Bản lưu cũ mặc
+  định BẬT tính năng mới. Không cần chạy SQL, không cần migration dữ liệu.
+
+---
+
 ## 2026-08-12 — Thành Phố (Phase 3D): thành phố đổi theo giờ trong ngày
 
 - **Mục đích**: Đàm yêu cầu *"nhiều animation lên và nhiều hiệu ứng hơn"*. Cho tới trước Phase này,

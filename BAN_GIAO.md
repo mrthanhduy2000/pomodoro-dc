@@ -17,7 +17,7 @@
 > chủ dự án, không phải bằng con số đo. ⚠️ **Mọi lưới an toàn hiệu năng vẫn còn nguyên, KHÔNG được
 > gỡ**: watchdog FPS, ba cửa lùi về 2D, trần 30 khung/giây, dừng khi rời tab. Nhận xét của Đàm:
 > *"quá đơn giản và không đẹp"* → đã chạy tiếp **Phase 3B (hình khối + cư dân) · 3C (ánh sáng) ·
-> 3D (giờ trong ngày, đèn cửa sổ, vũng sáng đêm)**. **412 bài test.**
+> 3D (giờ trong ngày, đèn cửa sổ, vũng sáng đêm) · 3F (thành phố ra TRANG CHỦ)**. **418 bài test.**
 > Trước đó 2026-08-10: sửa khoảng trắng thừa trước icon 🍅/☕ trên thanh menu Mac (`electron/main.js`,
 > đúng 1 dòng; xoá `public/tray-empty.png`) — chỉ đụng app tray. Trước đó 2026-08-05 có 3 việc
 > **cấu hình máy + tài liệu, KHÔNG đổi dòng code ứng dụng nào**: (a) sửa "app biến mất khỏi thanh
@@ -104,6 +104,42 @@
   nhánh rồi báo "đã deploy".** Gộp lần này là **fast-forward, 0 xung đột** (main đang ở `2c24e0f`,
   là tổ tiên trực tiếp) — `2c24e0f..4f371ad`. Đã chạy lại 360 test + lint + build ngay trước khi
   push, và đếm lại Serverless Function: **10/12**, còn dư 2.
+
+- **2026-08-12 (Phase 3F)** — **THÀNH PHỐ RA TRANG CHỦ.**
+  Đàm: *"đem nó ra trang chủ hoặc làm cái gì đó đột phá hơn nữa"*. Đây là thay đổi ít code nhất mà
+  nặng ký nhất của cả nhánh 3D: **thứ Đàm xây được trước nay gần như vô hình đúng vào lúc anh đang
+  xây nó** — thành phố nằm trong một tab riêng, mà lúc đang tập trung thì không ai đi mở tab khác.
+  Đưa nó ra sau lưng đồng hồ đếm ngược thì vòng lặp khép kín: làm việc → thấy thành phố lớn lên →
+  muốn làm tiếp. Không thêm tính năng nào, chỉ đổi chỗ đứng.
+  - `components/city/CityBackdrop.jsx` — **thuê lại `CityStage`, KHÔNG dựng cảnh riêng.** `CityStage`
+    và `CityScene3D` nhận thêm 4 công tắc (`chrome`/`still`/`fill`/`interactive`) để cùng một bộ vẽ
+    đóng được hai vai: màn hình để NGẮM (tab Thành Phố) và khung cảnh để LÀM VIỆC PHÍA TRƯỚC.
+  - ⚠️ **Luật ở trang chủ ngặt hơn tab Thành Phố — vì THỜI LƯỢNG, không phải thẩm mỹ.** Tab Thành
+    Phố mở vài chục giây; trang chủ mở 25 phút liền. Nên: **đang chạy phiên ⇒ đứng yên tuyệt đối**
+    (0 nhịp rAF; vừa để tiết kiệm pin vừa để không có gì nhúc nhích sau lưng đồng hồ kéo mắt Đàm);
+    **điện thoại ⇒ luôn đứng yên** kể cả lúc rảnh (dải thành phố ló ra sau thẻ đồng hồ trên màn hẹp
+    quá mỏng để mắt nhận ra chuyển động, mà giá phải trả thì y hệt máy bàn — đây đúng chỗ bỏ hoạt
+    hoạ đi không mất gì); **không nhận thao tác** (`interactive={false}` — `wheel` của bộ vẽ đăng ký
+    `passive:false` và có `preventDefault`, bật lên là nuốt cú cuộn trang); **hỏng thì biến mất
+    không một lời** (`fallback={() => null}`, khác mọi chỗ khác trong app — thứ nó nằm phía sau là
+    công cụ chính, không được để một lớp trang trí làm mất cái đồng hồ).
+  - **Máy yếu ⇒ KHÔNG lùi về bản 2D ở đây**, chỉ trả về nền trơn. Bản 2D isometric là hình minh hoạ
+    sắc nét có viền — đặt sau lưng đồng hồ nó đọc ra "ảnh dán nhầm chỗ" chứ không ra "khung cảnh".
+    Tab Thành Phố thì vẫn luôn có đủ bản 2D như cũ.
+  - **Nạp LƯỜI** dù nằm ngay màn hình đầu: nạp tĩnh đo được **+4,9 KB gzip** vào chunk chính, tức
+    làm chậm đúng thứ phải hiện ra trước nhất (cái đồng hồ). Sau khi cho lười: chunk chính
+    **134,54 KB gzip**, tức +0,1 KB so với trước Phase 3F.
+  - Cài đặt mới `cityHomeBackdrop` (mặc định BẬT), `settingsStore` **version 7 → 8**.
+    ⚠️ Bản lưu cũ chuẩn hoá bằng `!== false` chứ KHÔNG phải `=== true` — viết `=== true` (phản xạ
+    tự nhiên, và đúng cho `cityPerfHud` ngay bên cạnh vì cái đó mặc định TẮT) sẽ làm tính năng mới
+    tắt sẵn với đúng những người đã dùng app từ trước, nghĩa là với chính Đàm. Đã có test riêng
+    (`settingsStore.migrate.test.js`) và **đã xác minh nó ĐỎ khi viết `=== true`**.
+  - **Đã soi bằng ảnh chụp thật của app đã build** (Mac 1680, laptop 1280, iPhone 390 · cả 2 theme).
+    Dựng một khung chụp riêng có **chặn Supabase ở tầng phân giải tên miền** để phiên chụp tuyệt đối
+    không thể ghi gì lên dữ liệu thật. Kết quả: bề ngang Mac cho ra hai dải thành phố sáng đèn ôm
+    hai bên thẻ đồng hồ, chữ đọc rõ ở cả hai theme. (Nhân tiện xác nhận: hiện tượng tràn ngang trên
+    khung 390px là **có sẵn từ trước**, chụp với lớp nền TẮT ra y hệt — không phải do Phase 3F.)
+  - **418 test** (+6) · lint sạch · build xanh.
 
 - **2026-08-12 (Phase 3D)** — **THÀNH PHỐ ĐỔI THEO GIỜ: mở app lúc nào là ra cảnh lúc đó.**
   Đàm: *"nhiều animation lên và nhiều hiệu ứng hơn"*. Đây là hiệu ứng đắt giá nhất trong cả nhánh

@@ -34,6 +34,11 @@ const Achievements = createRecoverableLazy(() => import('./components/Achievemen
 const StatsDashboard = createRecoverableLazy(() => import('./components/StatsDashboard.jsx'), 'stats-dashboard');
 const BuildingWorkshop = createRecoverableLazy(() => import('./components/BuildingWorkshop.jsx'), 'building-workshop');
 const CityView = createRecoverableLazy(() => import('./components/CityView.jsx'), 'city-view');
+// ⚠️ Lớp nền thành phố ở trang chủ cũng nạp LƯỜI, dù nó nằm ngay màn hình đầu tiên. Nạp tĩnh sẽ
+// kéo cả `CityStage` + bộ vẽ 2D + bảng số liệu vào chunk chính (đo được +4,9 KB gzip) và làm chậm
+// đúng thứ phải hiện ra trước nhất: cái đồng hồ. Thành phố chỉ là khung cảnh — nó hiện sau vài
+// phần trăm giây cũng không sao, mà bấm được nút Bắt đầu ngay thì có sao.
+const CityBackdrop = createRecoverableLazy(() => import('./components/city/CityBackdrop.jsx'), 'city-backdrop');
 const Settings = createRecoverableLazy(() => import('./components/Settings.jsx'), 'settings');
 const LootDropModal = createRecoverableLazy(() => import('./components/LootDropModal.jsx'), 'loot-drop-modal');
 const DisasterModal = createRecoverableLazy(() => import('./components/DisasterModal.jsx'), 'disaster-modal');
@@ -1588,48 +1593,57 @@ export default function App() {
               </AppErrorBoundary>
             ) : activeTab === 'focus' ? (
               <div className="flex h-full min-h-0">
-                <div className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto scroll-pb-[calc(env(safe-area-inset-bottom)+7.4rem)]">
-                  {!isDesktop && !showFocusFullscreen && !hasFocusSessionInProgress && renderTopRail()}
-                  <AppErrorBoundary
-                    area="trang tập trung"
-                    description="Khu vực timer chính gặp lỗi. Các phần khác của app vẫn được giữ lại."
-                    onError={FOCUS_PANEL_ERROR_LOGGER}
-                    resetKeys={[activeTab, isDesktop, isWideViewport, focusFullscreen]}
-                    variant="section"
-                  >
-                    <div className="mx-auto max-w-[860px] px-5 pb-[calc(env(safe-area-inset-bottom)+7.4rem)] pt-8 md:px-8 md:pb-28 lg:px-12 lg:pb-8 xl:px-16">
-                      <FocusIntro
-                        greeting={greeting}
-                        sessionsCompletedToday={sessionsCompletedToday}
-                        focusMinutesToday={focusMinutesToday}
-                        weekdayLabel={weekdayLabel}
-                        dailyGoalType={dailyGoalType}
-                        dailyGoalSessions={dailyGoalSessions}
-                        dailyGoalMinutes={dailyGoalMinutes}
-                        hasFocusSessionInProgress={hasFocusSessionInProgress}
-                        isFocusSessionPaused={isFocusSessionPaused}
-                      />
-                      <div className="mt-6">
-                        <PomodoroEngine
-                          immersiveMode={isWideViewport}
-                          onEnterFullScreen={() => {
-                            selectTab('focus');
-                            setFocusFullscreen(true);
-                          }}
+                {/* ⚠️ Thêm một lớp bọc `relative` chỉ để LỚP NỀN THÀNH PHỐ có chỗ neo. Không đặt lớp
+                    nền vào thẳng vùng cuộn bên trong được: nó sẽ cuộn theo nội dung và chỉ phủ được
+                    đúng một màn hình đầu, phần dưới trơ ra nền trắng. Neo ở ngoài vùng cuộn thì
+                    thành phố đứng yên như một khung cảnh thật phía sau. */}
+                <div className="relative min-h-0 min-w-0 flex-1">
+                  <Suspense fallback={null}>
+                    <CityBackdrop hasFocusSessionInProgress={hasFocusSessionInProgress} />
+                  </Suspense>
+                  <div className="relative h-full min-h-0 min-w-0 overflow-x-hidden overflow-y-auto scroll-pb-[calc(env(safe-area-inset-bottom)+7.4rem)]">
+                    {!isDesktop && !showFocusFullscreen && !hasFocusSessionInProgress && renderTopRail()}
+                    <AppErrorBoundary
+                      area="trang tập trung"
+                      description="Khu vực timer chính gặp lỗi. Các phần khác của app vẫn được giữ lại."
+                      onError={FOCUS_PANEL_ERROR_LOGGER}
+                      resetKeys={[activeTab, isDesktop, isWideViewport, focusFullscreen]}
+                      variant="section"
+                    >
+                      <div className="mx-auto max-w-[860px] px-5 pb-[calc(env(safe-area-inset-bottom)+7.4rem)] pt-8 md:px-8 md:pb-28 lg:px-12 lg:pb-8 xl:px-16">
+                        <FocusIntro
+                          greeting={greeting}
+                          sessionsCompletedToday={sessionsCompletedToday}
+                          focusMinutesToday={focusMinutesToday}
+                          weekdayLabel={weekdayLabel}
+                          dailyGoalType={dailyGoalType}
+                          dailyGoalSessions={dailyGoalSessions}
+                          dailyGoalMinutes={dailyGoalMinutes}
+                          hasFocusSessionInProgress={hasFocusSessionInProgress}
+                          isFocusSessionPaused={isFocusSessionPaused}
+                        />
+                        <div className="mt-6">
+                          <PomodoroEngine
+                            immersiveMode={isWideViewport}
+                            onEnterFullScreen={() => {
+                              selectTab('focus');
+                              setFocusFullscreen(true);
+                            }}
+                          />
+                        </div>
+                        {/* Thẻ AI Coach gọn cho ĐIỆN THOẠI (cột phải chỉ hiện trên màn rộng).
+                            Ẩn khi đang chạy phiên để giữ màn Focus tĩnh. */}
+                        <FocusCoachMobile
+                          hidden={hasFocusSessionInProgress}
+                          sessionsCompletedToday={sessionsCompletedToday}
+                          focusMinutesToday={focusMinutesToday}
+                          dailyGoalType={dailyGoalType}
+                          dailyGoalSessions={dailyGoalSessions}
+                          dailyGoalMinutes={dailyGoalMinutes}
                         />
                       </div>
-                      {/* Thẻ AI Coach gọn cho ĐIỆN THOẠI (cột phải chỉ hiện trên màn rộng).
-                          Ẩn khi đang chạy phiên để giữ màn Focus tĩnh. */}
-                      <FocusCoachMobile
-                        hidden={hasFocusSessionInProgress}
-                        sessionsCompletedToday={sessionsCompletedToday}
-                        focusMinutesToday={focusMinutesToday}
-                        dailyGoalType={dailyGoalType}
-                        dailyGoalSessions={dailyGoalSessions}
-                        dailyGoalMinutes={dailyGoalMinutes}
-                      />
-                    </div>
-                  </AppErrorBoundary>
+                    </AppErrorBoundary>
+                  </div>
                 </div>
 
                 <AppErrorBoundary

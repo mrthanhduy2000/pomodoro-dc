@@ -59,6 +59,18 @@ export default function CityStage({
   // vào một object: object mới ở mỗi lượt render sẽ khiến `CityScene3D` dựng lại cả cảnh WebGL.
   sessionCount = 0,
   streakLength = 0,
+  // ── Chế độ LỚP NỀN (Phase 3F: thành phố ra trang chủ) ───────────────────────
+  /**
+   * `chrome = false` ⇒ bỏ bảng số liệu và câu báo "đã lùi về 2D".
+   * ⚠️ Không phải để giấu lỗi: ở tab Thành Phố, việc lùi về 2D là chuyện Đàm CẦN biết (nếu không
+   * anh chỉ thấy hình đột nhiên đổi kiểu rồi tưởng app hỏng). Còn ở trang chủ, thành phố chỉ là
+   * khung cảnh — một dòng chữ lỗi kỹ thuật nổi lên sau lưng cái đồng hồ đếm ngược thì vừa vô
+   * nghĩa với anh vừa phá mất chính sự yên tĩnh mà màn hình đó tồn tại để giữ.
+   */
+  chrome = true,
+  still = false,
+  fill = false,
+  interactive = true,
 }) {
   const preference = useSettingsStore((s) => s.cityRenderMode);
   const showHud = useSettingsStore((s) => s.cityPerfHud);
@@ -109,9 +121,9 @@ export default function CityStage({
   const reason = failure ?? decision.reason;
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className={fill ? 'h-full' : 'flex flex-col gap-2'}>
       {mode === '3d' ? (
-        <Suspense fallback={<StagePlaceholder />}>
+        <Suspense fallback={fill ? null : <StagePlaceholder />}>
           <CityScene3D
             layout={layout}
             dimmed={dimmed}
@@ -120,21 +132,28 @@ export default function CityStage({
             streakLength={streakLength}
             onStats={setStats}
             onFallback={handleFallback}
+            still={still}
+            fill={fill}
+            interactive={interactive}
           />
         </Suspense>
       ) : (
-        <CityCanvas2D layout={layout} dimmed={dimmed} />
+        // ⚠️ Ở chế độ lớp nền, máy không chạy được 3D thì KHÔNG vẽ gì cả. Bản 2D isometric là một
+        // hình minh hoạ sắc nét, có viền — đặt sau lưng đồng hồ đếm ngược nó đọc ra "cái ảnh dán
+        // nhầm chỗ" chứ không ra "khung cảnh". Lùi về nền trơn là lựa chọn ĐẸP hơn ở đây, còn tab
+        // Thành Phố thì vẫn luôn có bản 2D đầy đủ.
+        !fill && <CityCanvas2D layout={layout} dimmed={dimmed} />
       )}
 
       {/* Khi 3D bỏ cuộc GIỮA CHỪNG, phải nói cho Đàm biết — nếu không anh chỉ thấy hình đột nhiên
           đổi kiểu mà không hiểu vì sao, rồi tưởng app hỏng. */}
-      {failure && (
+      {chrome && failure && (
         <p className="text-[11px]" style={{ color: 'var(--muted)' }}>
           Đã chuyển về bản vẽ 2D: {FAILURE_LABEL[failure] ?? 'bản 3D gặp sự cố'}.
         </p>
       )}
 
-      {showHud && (
+      {chrome && showHud && (
         <CityPerfHud
           stats={stats}
           mode={mode}

@@ -179,6 +179,8 @@ export default function Settings() {
     setCityRenderMode,
     cityPerfHud,
     setCityPerfHud,
+    cityHomeBackdrop,
+    setCityHomeBackdrop,
     soundPack,
     setSoundPack,
     shortBreakDuration,
@@ -828,6 +830,15 @@ export default function Settings() {
                     </motion.button>
                   );
                 })}
+              </div>
+              <div className="mt-3">
+                <ToggleRow
+                  lightTheme={lightTheme}
+                  label="Thành phố làm nền trang chủ"
+                  description="Hiện thành phố mờ phía sau đồng hồ ở trang Tập Trung, để bạn thấy thứ mình đang xây ngay trong lúc làm việc. Trong phiên thì thành phố đứng yên cho đỡ phân tâm và đỡ tốn pin. Máy không chạy được 3D sẽ tự bỏ qua."
+                  value={cityHomeBackdrop}
+                  onChange={setCityHomeBackdrop}
+                />
               </div>
               <div className="mt-3">
                 <ToggleRow

@@ -134,3 +134,35 @@ test('mặt trời KHÔNG được đứng sau lưng camera — đây là bẫy 
   // Và phải ở TRÊN đường chân trời — nắng từ dưới đất hắt lên thì không còn là mặt trời nữa.
   assert.ok(sy / slen > 0.2, `mặt trời quá thấp hoặc nằm dưới mặt đất (y = ${(sy / slen).toFixed(2)})`);
 });
+
+test('LỚP NỀN TRANG CHỦ không được nuốt thao tác của Đàm', () => {
+  // ⚠️ Đây là bài "một dòng mất thì cả trang chủ hỏng, mà chạy thử vẫn thấy đẹp". `CityScene3D`
+  // đăng ký `wheel` với `passive: false` và có `preventDefault` — nếu lớp nền bật `interactive`
+  // thì cú cuộn trang trên trang Tập Trung bị nuốt mất, và trên điện thoại thì cả trang không
+  // cuộn nổi nữa. Lỗi kiểu này không lộ ra ở lint, cũng không lộ ra ở ảnh chụp.
+  const backdrop = SOURCES.find((f) => f.path === 'components/city/CityBackdrop.jsx');
+  assert.ok(backdrop, 'không thấy CityBackdrop.jsx');
+  assert.match(backdrop.source, /interactive=\{false\}/,
+    'lớp nền trang chủ phải truyền interactive={false}');
+  assert.match(backdrop.source, /pointer-events-none/,
+    'lớp nền trang chủ phải có pointer-events-none');
+});
+
+test('LỚP NỀN TRANG CHỦ đứng yên khi đang chạy phiên — luật pin, không phải sở thích', () => {
+  // Trang chủ là màn hình mở lâu nhất trong cả app (25 phút mỗi phiên). Cư dân đi lại ở đó nghĩa
+  // là vẽ 30 khung/giây suốt phiên — đúng thứ mà cả cổng hiệu năng Phase 3A sinh ra để chặn.
+  const backdrop = SOURCES.find((f) => f.path === 'components/city/CityBackdrop.jsx');
+  assert.match(backdrop.source, /still=\{hasFocusSessionInProgress/,
+    'lớp nền phải đứng yên khi đang chạy phiên');
+});
+
+test('LỚP NỀN TRANG CHỦ vẫn là NGƯỜI THUÊ của CityStage, không phải bản sao thứ hai', () => {
+  // Cám dỗ lớn nhất ở Phase 3F là chép `CityStage`/`CityScene3D` ra một bản "rút gọn cho nền".
+  // Làm vậy thì mọi bản vá sau này (đường lùi 2D, watchdog FPS, dọn context, giờ trong ngày) phải
+  // nhớ sửa ở hai nơi — và lần quên đầu tiên sẽ là một lỗi không ai truy ra.
+  const backdrop = SOURCES.find((f) => f.path === 'components/city/CityBackdrop.jsx');
+  assert.match(backdrop.source, /from\s+['"]\.\/CityStage['"]/,
+    'lớp nền phải dùng lại CityStage chứ không tự dựng cảnh riêng');
+  assert.doesNotMatch(backdrop.source, /from\s+['"]three['"]/,
+    'lớp nền không được import three — đó là việc của render3d/');
+});

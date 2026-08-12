@@ -54,6 +54,17 @@ export default function CityScene3D({
   streakLength = 0,
   onStats,
   onFallback,
+  // ── Ba công tắc dưới đây sinh ra cho LỚP NỀN Ở TRANG CHỦ (Phase 3F) ──────────
+  // ⚠️ Cùng một cảnh, hai vai trò khác hẳn nhau — và đó chính là lý do phải có tham số chứ KHÔNG
+  // được tách một bản sao thứ hai của file này: tab Thành Phố là chỗ để NGẮM (chuyển động chính là
+  // nội dung, kéo xoay được, khung hình giữ tỉ lệ cố định); trang chủ là chỗ để LÀM VIỆC (thành
+  // phố chỉ là khung cảnh phía sau — không được nuốt thao tác, không được ăn pin suốt 25 phút).
+  /** Đứng yên tuyệt đối: không cư dân, vẽ xong khung đầu là hết nhịp rAF. */
+  still = false,
+  /** Lấp đầy CHIỀU CAO ô chứa thay vì giữ tỉ lệ khung 1 : 0,62. */
+  fill = false,
+  /** Nhận thao tác kéo/lăn chuột. Lớp nền phải TẮT — nếu không nó nuốt cú cuộn trang của Đàm. */
+  interactive = true,
 }) {
   const hostRef = useRef(null);
   const runtimeRef = useRef(null);
@@ -140,7 +151,7 @@ export default function CityScene3D({
         maxLamps: isMobile ? 2 : 3,
         // Bảo tàng (kỷ đã niêm phong) đứng yên tuyệt đối — đúng tinh thần "bảo tàng bất động";
         // và khi Đàm bật giảm chuyển động ở mức hệ điều hành thì KHÔNG có gì được nhúc nhích.
-        still: dimmed || reduceMotion,
+        still: dimmed || reduceMotion || still,
       });
       city.sun.shadow.mapSize.setScalar(isMobile ? SHADOW_MAP_MOBILE : SHADOW_MAP_DESKTOP);
 
@@ -159,7 +170,11 @@ export default function CityScene3D({
 
       function resize() {
         const width = Math.max(1, host.clientWidth);
-        const height = Math.max(1, Math.round(width * 0.62));   // tỉ lệ khung cố định, hợp cả 2 hướng
+        // `fill`: bám đúng chiều cao ô chứa (lớp nền trang chủ, cao thấp tuỳ màn hình).
+        // Mặc định: tỉ lệ khung cố định 1 : 0,62 — hợp cả màn dọc lẫn màn ngang.
+        const height = fill
+          ? Math.max(1, host.clientHeight)
+          : Math.max(1, Math.round(width * 0.62));
         renderer.setSize(width, height, false);
         camera.aspect = width / height;
         camera.updateProjectionMatrix();
@@ -269,11 +284,17 @@ export default function CityScene3D({
         });
       }
 
-      canvas.addEventListener('pointerdown', onPointerDown);
-      canvas.addEventListener('pointermove', onPointerMove);
-      canvas.addEventListener('pointerup', endDrag);
-      canvas.addEventListener('pointercancel', endDrag);
-      canvas.addEventListener('wheel', onWheel, { passive: false });
+      // ⚠️ Lớp nền KHÔNG gắn một trình xử lý thao tác nào. Chỉ đặt `pointer-events: none` lên thẻ
+      // bọc là chưa đủ an tâm: `wheel` ở đây đăng ký `passive: false` và có `preventDefault`, nên
+      // nếu vì lý do nào đó nó vẫn nhận được sự kiện thì cú cuộn trang của Đàm bị nuốt mất. Không
+      // gắn thì không có gì để nuốt.
+      if (interactive) {
+        canvas.addEventListener('pointerdown', onPointerDown);
+        canvas.addEventListener('pointermove', onPointerMove);
+        canvas.addEventListener('pointerup', endDrag);
+        canvas.addEventListener('pointercancel', endDrag);
+        canvas.addEventListener('wheel', onWheel, { passive: false });
+      }
       canvas.addEventListener('webglcontextlost', onContextLost);
       document.addEventListener('visibilitychange', onVisibility);
 
@@ -342,21 +363,25 @@ export default function CityScene3D({
     // chúng thì bật "giảm chuyển động" xong cư dân vẫn đi, và xong thêm 20 phiên mà phố vẫn vắng
     // như cũ cho tới lần đổi kỷ kế tiếp. Dựng lại cảnh ở đây rẻ và hiếm — cả ba đều là số nguyên
     // đổi vài lần mỗi ngày, không phải object mới mỗi lượt render.
-  }, [layout, dimmed, failed, giveUp, reduceMotion, sessionCount, streakLength]);
+  }, [layout, dimmed, failed, giveUp, reduceMotion, sessionCount, streakLength,
+    still, fill, interactive]);
 
   if (failed) return null;
 
   return (
     <div
-      className="relative w-full overflow-hidden rounded-[14px]"
-      style={{ background: 'var(--canvas-2)' }}
+      className={`relative w-full overflow-hidden ${fill ? 'h-full' : 'rounded-[14px]'}`}
+      style={{ background: fill ? 'transparent' : 'var(--canvas-2)' }}
     >
       <div
         ref={hostRef}
-        className="w-full"
-        style={{ cursor: 'grab' }}
-        role="img"
-        aria-label={`Thành phố 3D có ${layout.buildings.length} công trình`}
+        className={fill ? 'h-full w-full' : 'w-full'}
+        style={interactive ? { cursor: 'grab' } : undefined}
+        // Lớp nền là TRANG TRÍ, không phải nội dung: gắn nhãn cho nó chỉ làm trình đọc màn hình
+        // đọc thừa một câu vô nghĩa giữa lúc Đàm đang tìm nút Bắt đầu.
+        role={fill ? undefined : 'img'}
+        aria-hidden={fill ? 'true' : undefined}
+        aria-label={fill ? undefined : `Thành phố 3D có ${layout.buildings.length} công trình`}
       />
       {/*
         VIỀN TỐI GÓC (vignette) — thứ rẻ nhất trong cả phase mà đổi được nhiều nhất về "chất tranh".

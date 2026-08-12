@@ -99,6 +99,9 @@ const useSettingsStore = create(
       // byte nào vào khối JSONB đang chịu cơ chế CAS "First Action Wins".
       cityRenderMode: 'auto',   // 'auto' | '3d' | '2d' — xem engine/city3d/renderMode.js
       cityPerfHud: false,       // bảng số liệu hiệu năng, để đo cổng Phase 3A
+      // Thành phố làm lớp nền ở trang chủ. Mặc định BẬT (Đàm chọn "bật hết hiệu ứng"); vẫn tự tắt
+      // ở máy không chạy được 3D và khi bật "giảm chuyển động" của hệ điều hành.
+      cityHomeBackdrop: true,
 
       // ── Onboarding ─────────────────────────────────────────────────────
       hasViewedInitialOnboarding: false, // overlay 3 thẻ chỉ hiện 1 lần cho người mới
@@ -219,6 +222,7 @@ const useSettingsStore = create(
       setHasViewedInitialOnboarding: (v) => set({ hasViewedInitialOnboarding: v !== false }),
       setCityRenderMode: (mode) => set({ cityRenderMode: normalizeRenderMode(mode) }),
       setCityPerfHud:    (v) => set({ cityPerfHud: v === true }),
+      setCityHomeBackdrop: (v) => set({ cityHomeBackdrop: v === true }),
 
       // ── Hydration sync ─────────────────────────────────────────────────
       // Called once on app mount to push persisted prefs back into singletons.
@@ -265,10 +269,14 @@ const useSettingsStore = create(
           // WebGL hay không — chuẩn hoá ngay tại cửa.
           cityRenderMode: normalizeRenderMode(safeStored.cityRenderMode),
           cityPerfHud: safeStored.cityPerfHud === true,
+          // ⚠️ `!== false` chứ không phải `=== true`: mặc định là BẬT, nên bản lưu cũ (chưa có
+          // trường này ⇒ `undefined`) phải hiểu là bật, không phải tắt.
+          cityHomeBackdrop: safeStored.cityHomeBackdrop !== false,
         };
       },
       // 6 → 7 (2026-08-12): thêm `cityRenderMode` + `cityPerfHud` cho màn hình Thành Phố 3D.
-      version: 7,
+      // 7 → 8 (2026-08-12): thêm `cityHomeBackdrop` — thành phố làm lớp nền ở trang chủ (Phase 3F).
+      version: 8,
     },
   ),
 );

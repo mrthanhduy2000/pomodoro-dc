@@ -150,6 +150,21 @@
 
 ---
 
+## 2026-08-12 — `settingsStore` version 7 → 8 (thêm `cityHomeBackdrop`)
+
+- **Nội dung**: thêm trường `cityHomeBackdrop` (thành phố làm lớp nền ở trang chủ, xem Phase 3F).
+- **Vì sao ghi vào đây dù chỉ là một cài đặt hiển thị**: bước migrate này có một chi tiết dễ làm
+  sai và sai thì KHÔNG có gì báo. Mặc định của trường là **BẬT**, nên bản lưu cũ (không có trường
+  này ⇒ `undefined`) phải chuẩn hoá bằng `!== false`. Nếu viết `=== true` — phản xạ tự nhiên, và
+  đúng cho `cityPerfHud` ngay bên cạnh vì cái đó mặc định TẮT — thì tính năng mới sẽ **tắt sẵn với
+  đúng những người đã dùng app từ trước**, tức là với chính Đàm, còn máy mới cài thì lại thấy bình
+  thường. Đã khoá bằng `src/store/settingsStore.migrate.test.js`.
+- **Phá vỡ tương thích ngược?**: Không. `settingsStore` là local-only (không lên Supabase), migrate
+  chạy tự động lúc mở app.
+- **Cần làm gì**: không cần làm gì. Không có SQL, không có thao tác thủ công.
+
+---
+
 ## Ghi chú vận hành
 
 - File này chỉ có giá trị nếu được cập nhật NGAY khi một migration thật xảy ra — một migration

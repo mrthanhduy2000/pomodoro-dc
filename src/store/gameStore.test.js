@@ -343,9 +343,11 @@ test('Cộng Hưởng: unlockSkill elite cộng hưởng tốn 11 SP (server tí
   assert.equal(useGameStore.getState().player.unlockedSkills.sieu_tap_trung ?? false, false);
 });
 
-test('Cộng Hưởng: tinhThe khởi tạo 0, schema = 3, sống sót qua prestige', () => {
+test('Cộng Hưởng: tinhThe khởi tạo 0, schema đã bump có chủ ý, sống sót qua prestige', () => {
   assert.equal(useGameStore.getInitialState().tinhThe, 0);
-  assert.equal(GAME_STORE_SCHEMA_VERSION, 3);
+  // Tripwire: mỗi lần bump schema PHẢI là hành động có chủ ý + ghi vào MIGRATION.md.
+  // 3 → 4 (2026-08-12): thêm `cityArchive` — bảo tàng Thành Phố Pixel.
+  assert.equal(GAME_STORE_SCHEMA_VERSION, 4);
 
   resetStore();
   useGameStore.setState((s) => ({

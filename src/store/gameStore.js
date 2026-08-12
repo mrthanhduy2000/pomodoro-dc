@@ -44,6 +44,7 @@ import {
   getVietnamMonthIndex,
   getVietnamYear,
 } from '../engine/time';
+import { mergeCityArchive, normalizeCityArchive } from '../engine/cityArchive';
 import {
   GOAL_ACHIEVED_BONUS_RATE,
   FORGIVENESS_CANCELS_PER_WEEK,
@@ -144,7 +145,7 @@ import {
 } from '../engine/challengeEngine';
 
 export { GAME_STORE_STORAGE_KEY, GAME_STORE_EXPORT_VERSION };
-export const GAME_STORE_SCHEMA_VERSION = 3;
+export const GAME_STORE_SCHEMA_VERSION = 4;
 
 function isRecord(value) {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -1234,7 +1235,19 @@ function filterRecordByAllowedIds(record = {}, allowedIds = new Set()) {
   );
 }
 
-function pruneEraScopedBlueprintState(state, activeBook) {
+/**
+ * Cắt bỏ mọi thứ thuộc kỷ CŨ khỏi state đang chơi (luật cân bằng game — KHÔNG được đổi).
+ *
+ * @param {object} state
+ * @param {number} activeBook
+ * @param {{epAtSeal:number, sealedAt:string, sessionCount:number}|null} [sealContext]
+ *        Có giá trị → công trình vừa bị cắt được GHI LẠI vào bảo tàng `cityArchive` trước khi mất.
+ *        ⚠️ Mặc định `null` là CÓ CHỦ Ý: trong 5 chỗ gọi hàm này, chỉ ĐÚNG MỘT chỗ là "đường lên
+ *        kỷ thật" (`completeFocusSession`) mới được niêm phong. Bốn chỗ còn lại (hydrate lúc nạp
+ *        app, hoàn tác phiên, 2 nhánh dev/cheat) chạy đi chạy lại nhiều lần — niêm phong ở đó thì
+ *        một lần nạp app lỗi có thể ghi bẩn vào bảo tàng.
+ */
+function pruneEraScopedBlueprintState(state, activeBook, sealContext = null) {
   const currentBook = Number.isFinite(activeBook) ? activeBook : 1;
   const blueprints = Array.isArray(state.blueprints)
     ? state.blueprints.filter((blueprint) => isCurrentEraBlueprint(getEraScopedBlueprintId(blueprint), currentBook))
@@ -1249,6 +1262,14 @@ function pruneEraScopedBlueprintState(state, activeBook) {
     : [];
   const allowedBuildingIds = new Set(buildings);
 
+  // ── BẢO TÀNG: chỉ GHI LẠI thứ vừa bị cắt, KHÔNG đổi một chút nào hành vi cắt ở trên ──────
+  const removedBuildings = Array.isArray(state.buildings)
+    ? state.buildings.filter((bpId) => !isCurrentEraBlueprint(bpId, currentBook))
+    : [];
+  const cityArchive = sealContext
+    ? mergeCityArchive(state.cityArchive, removedBuildings, state.buildingLevels, sealContext)
+    : (state.cityArchive ?? {});
+
   return {
     ...state,
     blueprints,
@@ -1258,9 +1279,16 @@ function pruneEraScopedBlueprintState(state, activeBook) {
     buildingHP: filterRecordByAllowedIds(state.buildingHP, allowedBuildingIds),
     buildingLastUsed: filterRecordByAllowedIds(state.buildingLastUsed, allowedBuildingIds),
     buildingLevels: filterRecordByAllowedIds(state.buildingLevels, allowedBuildingIds),
+    cityArchive,
   };
 }
 
+/**
+ * ⚠️ WHITELIST 7 KHOÁ — CỐ Ý **KHÔNG** chuyển tiếp `cityArchive`, đừng thêm vào cho "nhất quán".
+ * Ba đường dùng hàm này (hoàn tác phiên, 2 nhánh dev/cheat) không bao giờ được ghi vào bảo tàng;
+ * chính việc whitelist chặn `cityArchive` ở đây là lớp bảo vệ cuối cùng nếu ai đó lỡ truyền
+ * `sealContext` vào nhầm chỗ.
+ */
 function pickEraScopedBlueprintPatch(state, activeBook) {
   const scoped = pruneEraScopedBlueprintState(state, activeBook);
   return {
@@ -2102,6 +2130,9 @@ function normalizePersistedGameState(persistedState, currentState, options = {})
     buildingHP: isRecord(persisted.buildingHP) ? persisted.buildingHP : current.buildingHP,
     buildingLastUsed: isRecord(persisted.buildingLastUsed) ? persisted.buildingLastUsed : current.buildingLastUsed,
     buildingLevels: isRecord(persisted.buildingLevels) ? persisted.buildingLevels : current.buildingLevels,
+    cityArchive: isRecord(persisted.cityArchive)
+      ? normalizeCityArchive(persisted.cityArchive)
+      : current.cityArchive,
     resourcesRefined: hasPersistedKey('resourcesRefined')
       ? normalizeStoredRefined(persisted.resourcesRefined)
       : current.resourcesRefined,
@@ -2153,6 +2184,11 @@ function migratePersistedGameState(persistedState, fromVersion) {
         : 0,
     };
   }
+
+  // V4: Bảo tàng Thành Phố Pixel — save cũ KHÔNG có `cityArchive`. Không cần biến đổi gì ở đây:
+  // `normalizePersistedGameState` đã trả về `{}` mặc định cho trường thiếu. Bump version chỉ để
+  // đánh dấu mốc schema (xem `MIGRATION.md`). Bảo tàng bắt đầu ghi từ kỷ đang chơi trở đi — các
+  // thành phố kỷ CŨ đã bị xoá vĩnh viễn từ trước bản vá này, không có cách nào khôi phục.
 
   return next;
 }
@@ -3283,6 +3319,12 @@ const useGameStore = create(
       // ── Cấp độ công trình (Lv.1/Lv.2/Lv.3) ───────────────────────────────
       buildingLevels: {},  // { [bpId]: 1|2|3 }
 
+      // ── BẢO TÀNG THÀNH PHỐ: các kỷ đã đi qua, niêm phong để ghé thăm ─────
+      // Chỉ để NGẮM — không perk, không tài nguyên, không ảnh hưởng cân bằng game.
+      // { [era 1..15]: { built: string[], levels: {}, sealedAt, epAtSeal, sessionCount } }
+      // Toạ độ KHÔNG lưu ở đây — `computeCityLayout` suy ra khi vẽ (xem ADR-007).
+      cityArchive: {},
+
       // ── Nguyên liệu tinh luyện theo kỷ (giữ shape cũ để tương thích) ────
       resourcesRefined: makeDefaultResourcesRefined(),
 
@@ -4401,6 +4443,10 @@ const useGameStore = create(
             }
           }
 
+          // ĐƯỜNG LÊN KỶ THẬT — chỗ DUY NHẤT được niêm phong thành phố kỷ cũ vào bảo tàng.
+          // `sessionCount` phải chụp lại ở đây vì `eraTracking` chỉ giữ số liệu kỷ ĐANG chơi:
+          // ngay dòng dưới `eraTrackingUpd` đã reset `sessionsInCurrentEra` về 1, sau đó không còn
+          // nguồn nào biết kỷ vừa đóng lại đã làm bao nhiêu phiên.
           const eraScopedState = pruneEraScopedBlueprintState({
             blueprints: newBlueprints,
             research: { ...prev.research, rp: newResearchRP },
@@ -4409,7 +4455,14 @@ const useGameStore = create(
             buildingHP: prev.buildingHP,
             buildingLastUsed: prev.buildingLastUsed,
             buildingLevels: prev.buildingLevels,
-          }, finalBook);
+            cityArchive: prev.cityArchive,
+          }, finalBook, eraChanged
+            ? {
+                epAtSeal:     finalTotalEP,
+                sealedAt:     localDateStr(),
+                sessionCount: prev.eraTracking?.sessionsInCurrentEra ?? 0,
+              }
+            : null);
           const activeNewlyBuilt = newlyBuilt.filter((bpId) => isCurrentEraBlueprint(bpId, finalBook));
           const activeAcceleratedCraftingIds = acceleratedCraftingIds.filter((bpId) => isCurrentEraBlueprint(bpId, finalBook));
 
@@ -4479,6 +4532,7 @@ const useGameStore = create(
             buildingHP:    eraScopedState.buildingHP,
             buildingLastUsed: eraScopedState.buildingLastUsed,
             buildingLevels: eraScopedState.buildingLevels,
+            cityArchive:   eraScopedState.cityArchive,
             forgiveness:   { ...prev.forgiveness, chargesRemaining: forgivenessChargesRemaining },
             staking:       makeDefaultStaking(),
             prestige:      prev.prestige,
@@ -5983,6 +6037,7 @@ const useGameStore = create(
         craftingQueue:    state.craftingQueue,
         buildingHP:       state.buildingHP,
         buildingLevels:   state.buildingLevels,
+        cityArchive:      state.cityArchive,
         resourcesRefined: state.resourcesRefined,
         relicEvolutions:      state.relicEvolutions,
         tinhThe:              state.tinhThe,

@@ -10,6 +10,33 @@
 
 ---
 
+## 2026-08-12 — `GAME_STORE_SCHEMA_VERSION` bump 3 → 4: thêm `cityArchive` (bảo tàng Thành Phố Pixel)
+
+- **Đổi gì**: state game có thêm đúng MỘT trường mới ở cấp cao nhất — `cityArchive`, hình dạng
+  `{ [era 1..15]: { built: string[], levels: {[bpId]: 1|2|3}, sealedAt: 'YYYY-MM-DD',
+  epAtSeal: number, sessionCount: number } }`. Khi lên kỷ mới, `pruneEraScopedBlueprintState`
+  vẫn CẮT công trình kỷ cũ y hệt như trước (cân bằng game không đổi một chút nào), nhưng nay GHI
+  LẠI thứ bị cắt vào đây trước khi vứt đi.
+- **Vì sao**: xây lớp hình ảnh "Thành Phố Pixel". Trước bản vá này, thành phố của mỗi kỷ bị xoá
+  vĩnh viễn lúc lên kỷ, không có bản sao nào ở `history`/`achievements`/file export.
+- **Phá vỡ tương thích ngược?**: **KHÔNG.** Save cũ thiếu `cityArchive` → `normalizePersistedGameState`
+  trả về `{}` mặc định, app chạy bình thường. `migratePersistedGameState` không cần biến đổi gì cho
+  `fromVersion < 4`; bump version chỉ để đánh dấu mốc. Chiều ngược lại (bản cũ đọc save mới) cũng
+  an toàn: trường lạ bị bỏ qua, chỉ mất bảo tàng.
+- **⚠️ Giới hạn phải nói thẳng**: các thành phố kỷ CŨ (trước 2026-08-12) đã mất vĩnh viễn, KHÔNG
+  khôi phục được. Bảo tàng chỉ bắt đầu ghi từ kỷ đang chơi trở đi. Kỷ quá khứ không có bản ghi
+  hiển thị là "Thành phố thất truyền" (`isLost: true`) — trạng thái rỗng CÓ CHỦ Ý, không phải bug.
+- **Ba danh sách trường phải sửa cùng lúc** (đây là loại lỗi "quên 1 chỗ" rất dễ mắc — mỗi nơi tự
+  liệt kê tay danh sách trường được lưu, KHÔNG dùng chung một nguồn):
+  1. `partialize` (`gameStore.js`) → lưu vào localStorage;
+  2. `handleExport` (`components/ExportImport.jsx`) → file backup JSON;
+  3. `getExportableState` (`lib/syncService.js`) → gói đồng bộ Supabase (Đàm chốt 2026-08-12: bảo
+     tàng PHẢI đồng bộ sang iPhone, nếu không nó chỉ tồn tại trên đúng cái máy đã lên kỷ).
+  Có test tự động đọc mã nguồn cả 3 nơi để bắt lỗi bỏ sót: `gameStore.cityArchive.test.js`.
+- **KHÔNG cần chạy SQL Supabase**: thay đổi nằm gọn trong khối JSONB `data` của bảng `game_state`,
+  không thêm cột mới. Cơ chế CAS "First Action Wins" không bị đụng tới.
+- **Cần làm gì**: không cần hành động gì thêm — tự động khi nạp app lần đầu sau deploy.
+
 ## 2026-07-12 — Gom `src/engine/llm/` vào `src/engine/coach/`, tách `coachPrompt.js` thành `prompt.js` + `guard.js`
 
 - **Đổi gì**: toàn bộ AI Coach engine (từng rải rác giữa `src/engine/llm/` và `src/engine/` gốc)

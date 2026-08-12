@@ -55,6 +55,10 @@ function getExportableState() {
     craftingQueue: s.craftingQueue,
     buildingHP: s.buildingHP,
     buildingLevels: s.buildingLevels,
+    // Bảo tàng Thành Phố Pixel — thiếu dòng này thì bảo tàng chỉ tồn tại trên đúng cái máy đã lên
+    // kỷ, iPhone sẽ thấy trống (Đàm chốt 2026-08-12: phải đồng bộ). Chỉ là thêm một trường vào
+    // gói dữ liệu, KHÔNG đụng gì tới cơ chế CAS "First Action Wins".
+    cityArchive: s.cityArchive,
     resourcesRefined: s.resourcesRefined,
     relicEvolutions: s.relicEvolutions,
     lastWeeklyReportDate: s.lastWeeklyReportDate,

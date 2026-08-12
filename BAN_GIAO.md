@@ -74,6 +74,25 @@
 ## 🗒️ Nhật ký cập nhật
 > Mỗi lần xong việc đáng kể, thêm 1 dòng vào ĐẦU danh sách.
 
+- **2026-08-12 (Phase 2/6)** — **THÀNH PHỐ PIXEL: niêm phong thành phố kỷ cũ thay vì xoá (schema 3→4).**
+  Phase DUY NHẤT đụng vào state đã lưu. **Cân bằng game không đổi một chút nào** — công trình kỷ cũ
+  vẫn bị cắt y hệt, chỉ được sao chép sang kho `cityArchive` chỉ-để-ngắm trước khi bị vứt.
+  - 6 thay đổi trong `gameStore.js`: state `cityArchive: {}` · `pruneEraScopedBlueprintState` nhận
+    thêm tham số `sealContext` (mặc định `null`) · `completeFocusSession` là chỗ DUY NHẤT truyền
+    `sealContext` · `normalizePersistedGameState` · `partialize` · `GAME_STORE_SCHEMA_VERSION` 3→4.
+  - ⚠️ **PHÁT HIỆN QUAN TRỌNG — spec bỏ sót 2 trong 3 danh sách trường được lưu.** Dự án có **BA**
+    danh sách viết tay riêng biệt, không dùng chung nguồn nào: `partialize` (localStorage),
+    `handleExport` ở `ExportImport.jsx` (file backup JSON), `getExportableState` ở `syncService.js`
+    (đồng bộ Supabase). Spec chỉ nhắc `partialize`, lại còn CẤM đụng `syncService.js` — làm y spec
+    thì **bảo tàng chỉ tồn tại trên đúng cái máy đã lên kỷ, iPhone thấy trống, cài lại app là mất
+    sạch**. Đã hỏi và **Đàm chốt: phải đồng bộ** → thêm đúng 1 dòng vào mỗi nơi (KHÔNG đụng gì tới
+    cơ chế CAS "First Action Wins"). Có test tự động ĐỌC MÃ NGUỒN cả 3 nơi để bắt lỗi bỏ sót về sau.
+  - +12 bài test mới (`src/store/gameStore.cityArchive.test.js`), gồm 2 bài chống-hồi-quy-cân-bằng.
+    Sửa 1 bài cũ (`gameStore.test.js`) vốn khoá cứng `SCHEMA_VERSION === 3` — nay là tripwire cho 4.
+  - **297 → 309 bài test, 0 fail.** Lint + build xanh. KHÔNG cần chạy SQL Supabase.
+  - Tài liệu: `MIGRATION.md` (schema 3→4) · `ARCHITECTURE.md` (mục 7: bảo tàng + cảnh báo 3 danh
+    sách trường) · `CHANGELOG.md` · `ARCHITECTURE_DECISIONS.md` ADR-007.
+
 - **2026-08-12 (Phase 1/6)** — **THÀNH PHỐ PIXEL: nền móng thuần, chưa ai nhìn thấy gì.** Theo
   `SPEC Thành Phố Pixel` Đàm duyệt cùng ngày (Đàm **miễn trừ cổng Giai đoạn A** cho hạng mục
   gamification này — quyết định 0.2 của spec). Thêm 2 file engine THUẦN + 2 file test, **0 dòng

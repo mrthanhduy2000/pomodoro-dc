@@ -79,6 +79,7 @@ export default function ExportImport() {
       craftingQueue: state.craftingQueue,
       buildingHP:   state.buildingHP,
       buildingLevels: state.buildingLevels,
+      cityArchive:  state.cityArchive,   // bảo tàng Thành Phố Pixel (xem MIGRATION.md schema 3→4)
       resourcesRefined: state.resourcesRefined,
       relicEvolutions: state.relicEvolutions,
       lastWeeklyReportDate: state.lastWeeklyReportDate,

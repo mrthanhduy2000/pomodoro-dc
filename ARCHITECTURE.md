@@ -136,6 +136,22 @@ qua đúng MỘT hàm `normalizePersistedGameState` (gameStore.js) — phễu an
 liệu hỏng/cũ/thiếu trường phá vỡ app. Xem `MIGRATION.md` cho lịch sử các lần schema version bump
 (0→1→2→3) đi qua phễu này.
 
+⚠️ **Ba danh sách trường được lưu, viết tay riêng biệt — sửa một chỗ phải sửa cả ba**: `partialize`
+(gameStore → localStorage), `handleExport` (`ExportImport.jsx` → file backup JSON), và
+`getExportableState` (`syncService.js` → gói đồng bộ Supabase). Không có nguồn chung nào ràng buộc
+chúng khớp nhau, nên thêm một trường state mới mà chỉ sửa 1-2 chỗ sẽ tạo ra lỗi âm thầm kiểu "dữ
+liệu có trên máy này nhưng không bao giờ sang máy kia". Xem `MIGRATION.md` mục schema 3→4 (thêm
+`cityArchive`) làm ví dụ, và test tự động đối chiếu cả 3 nơi ở `gameStore.cityArchive.test.js`.
+
+**Bảo tàng Thành Phố (`cityArchive`) — tách "hiệu lực chơi" khỏi "dấu vết lịch sử"**: khi lên kỷ
+mới, `pruneEraScopedBlueprintState` CẮT toàn bộ công trình kỷ cũ khỏi state đang chơi (luật cân
+bằng, không đổi). Từ 2026-08-12, thứ bị cắt được GHI LẠI vào `cityArchive` để ghé thăm — chỉ để
+NGẮM, không perk, không tài nguyên, không ảnh hưởng cân bằng. Hàm này được gọi ở 5 chỗ nhưng **chỉ
+đúng một chỗ** (`completeFocusSession`, đường lên kỷ thật) được truyền `sealContext` để niêm phong;
+4 chỗ còn lại (hydrate lúc nạp app, hoàn tác phiên, 2 nhánh dev) chạy đi chạy lại nên tuyệt đối
+không được ghi vào bảo tàng. **Toạ độ thành phố KHÔNG được lưu** — `src/engine/cityLayout.js` suy
+ra từ chính id công trình bằng băm tất định, xem ADR-007.
+
 **Database schema — KHÔNG có migration tự động**: mọi thay đổi cấu trúc bảng Supabase (`game_state`,
 `timer_live`, `push_jobs`, `push_subscriptions`...) đòi hỏi chạy TAY một file `.sql` trong
 `supabase/` TRƯỚC KHI deploy code phụ thuộc vào nó — không dùng Prisma/Drizzle/ORM migration nào.

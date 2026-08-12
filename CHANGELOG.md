@@ -12,6 +12,24 @@
 
 ---
 
+## 2026-08-12 — Thành Phố (Phase 3H): công trình đang xây → thành phố lớn lên sau MỖI phiên
+
+- **Mục đích**: Đàm yêu cầu *"game hoá lên… không bị chán"*. Trước Phase này thành phố chỉ đổi khi
+  một công trình HOÀN THÀNH — rẻ nhất 4 phiên, đắt nhất 11 phiên — nên Đàm có thể làm việc cả tuần
+  mà thành phố không nhúc nhích. Nay công trình đang xây hiện thành giàn giáo mọc cao thêm một nấc
+  sau mỗi phiên.
+- **Phạm vi**: `computeCityLayout` nhận thêm tham số tuỳ chọn `pending` (đúng shape `craftingQueue`)
+  và trả thêm `scaffolds`; `CityView`/`CityBackdrop` truyền vào; `buildScaffoldSpec` sửa hình cho ra
+  cái lồng thay vì cái cổng; bộ vẽ 2D thêm hình giàn giáo. Không đụng state, không thêm dependency.
+- **Ảnh hưởng**: 90% hạ tầng vốn đã có sẵn từ các Phase trước (`craftingQueue`, `sessionsToComplete`,
+  `buildScaffoldSpec`, `sceneGraph` đọc `layout.scaffolds`) — thiếu đúng một mắt xích là bố cục
+  chưa bao giờ sinh ra `scaffolds`, nên `?? []` luôn rỗng và tính năng im lặng không tồn tại.
+  Bảo tàng KHÔNG có giàn giáo (bất biến "bảo tàng bất động", ADR-007).
+- **Tương thích**: giữ nguyên hoàn toàn — có test khoá "không truyền `pending` ⇒ bố cục giống hệt
+  bản cũ từng byte".
+
+---
+
 ## 2026-08-12 — Thành Phố (Phase 3G): quét đủ 15 kỷ × 6 chặng ngày và vá mỹ thuật
 
 - **Mục đích**: Đàm yêu cầu *"quét đủ 15 kỷ × 6 chặng ngày đi… đánh bóng mọi thứ lên"*. Quét 90 ô

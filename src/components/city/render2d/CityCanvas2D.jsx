@@ -50,6 +50,10 @@ export default function CityCanvas2D({ layout, dimmed = false }) {
   const risen = [
     ...layout.buildings.map((item) => ({ kind: 'building', item })),
     ...risenProps.map((item) => ({ kind: 'prop', item })),
+    // Công trình đang xây. Trộn vào CÙNG danh sách rồi mới sắp theo chiều sâu — tách ra vẽ sau sẽ
+    // làm giàn giáo luôn đè lên cây và nhà đứng trước nó, đúng cái lỗi isometric kinh điển mà
+    // `byIsometricDepth` sinh ra để tránh.
+    ...(layout.scaffolds ?? []).map((item) => ({ kind: 'scaffold', item })),
   ].sort((a, b) => (a.item.x + a.item.y) - (b.item.x + b.item.y));
 
   // Khung ngoài do CHÍNH bộ vẽ quyết định — mỗi bộ vẽ có nhu cầu khác nhau (SVG cần chiều rộng

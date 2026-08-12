@@ -82,6 +82,7 @@ export default function CityBackdrop({ hasFocusSessionInProgress = false }) {
 
   const buildings      = useGameStore((s) => s.buildings);
   const buildingLevels = useGameStore((s) => s.buildingLevels);
+  const craftingQueue  = useGameStore((s) => s.craftingQueue);
   const activeBook     = useGameStore((s) => s.progress.activeBook);
   const sessionsInEra  = useGameStore((s) => s.eraTracking?.sessionsInCurrentEra);
   const currentStreak  = useGameStore((s) => s.streak?.currentStreak);
@@ -96,6 +97,12 @@ export default function CityBackdrop({ hasFocusSessionInProgress = false }) {
   // mà `computeCityLayout` thì không rẻ và `CityScene3D` dựng lại CẢ CẢNH WEBGL khi `layout` đổi.
   const builtKey  = Array.isArray(buildings) ? buildings.join(',') : '';
   const levelsKey = Object.entries(buildingLevels ?? {}).map(([id, lv]) => `${id}:${lv}`).sort().join(',');
+  // ⚠️ Đây mới là chỗ giàn giáo có sức nặng thật. Ở tab Thành Phố thì Đàm phải chủ động đi xem;
+  // còn ở đây nó nằm ngay sau lưng đồng hồ đếm ngược — tức là **cái nấc vừa mọc lên sau phiên vừa
+  // rồi nằm đúng trong tầm mắt lúc anh bấm Bắt đầu phiên kế tiếp.** Đó chính là vòng lặp mà cả
+  // Phase 3F dựng ra, và giàn giáo là thứ khép nó lại ở nhịp MỖI PHIÊN thay vì mỗi tuần.
+  const pendingKey = (Array.isArray(craftingQueue) ? craftingQueue : [])
+    .map((item) => `${item?.bpId}:${item?.sessionsRemaining}`).join(',');
 
   const layout = useMemo(
     () => computeCityLayout({
@@ -103,9 +110,10 @@ export default function CityBackdrop({ hasFocusSessionInProgress = false }) {
       levels: buildingLevels,
       era: activeBook,
       stats: { sessionCount, streakLength },
+      pending: craftingQueue,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [builtKey, levelsKey, activeBook, sessionCount, streakLength],
+    [builtKey, levelsKey, activeBook, sessionCount, streakLength, pendingKey],
   );
 
   if (!enabled) return null;

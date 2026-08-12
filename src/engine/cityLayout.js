@@ -288,9 +288,13 @@ function byIsometricDepth(a, b) {
  * @param {Record<string, number>} [input.levels]  { [bpId]: 1|2|3 } — thiếu thì mặc định 1
  * @param {number} input.era                1..15
  * @param {object} [input.stats]            { sessionCount, streakLength } — thiếu vẫn chạy
- * @returns {{era:number, gridSize:number, buildings:Array, props:Array, ground:Array, isEmpty:boolean}}
+ * @param {Array}  [input.pending]          hàng đợi xây dựng, ĐÚNG shape của `craftingQueue` trong
+ *                                          store: `{ bpId, sessionsRemaining }`. Thiếu ⇒ không có
+ *                                          giàn giáo nào, và kết quả GIỐNG HỆT bản cũ từng byte.
+ * @returns {{era:number, gridSize:number, buildings:Array, props:Array, scaffolds:Array,
+ *            ground:Array, isEmpty:boolean}}
  */
-export function computeCityLayout({ built, levels, era, stats } = {}) {
+export function computeCityLayout({ built, levels, era, stats, pending } = {}) {
   const eraNum = Number.isFinite(era) ? era : 1;
   const levelMap = levels && typeof levels === 'object' ? levels : {};
   const sessionCount = safeCount(stats?.sessionCount);
@@ -327,6 +331,47 @@ export function computeCityLayout({ built, levels, era, stats } = {}) {
     };
   });
 
+  // ── Công trình ĐANG XÂY → giàn giáo ───────────────────────────────────────
+  //
+  // ⚠️ VÌ SAO ĐÂY LÀ THỨ ĐÁNG GIÁ NHẤT MÀ BỐ CỤC NÀY CÓ THỂ THÊM, DÙ CHỈ LÀ MẤY CÁI CỘT GỖ:
+  // trước nó, thành phố chỉ đổi khi một công trình HOÀN THÀNH — mà công trình rẻ nhất cũng ngốn 4
+  // phiên, đắt nhất 11 phiên. Nghĩa là Đàm có thể làm việc cả tuần liền và thành phố **không hề
+  // nhúc nhích một pixel nào**. Vòng lặp "làm việc → thấy thành phố lớn lên" đứt đúng ở quãng dài
+  // nhất, tức là đúng lúc cần nó nhất. Giàn giáo mọc cao thêm một nấc sau MỖI phiên thì phần
+  // thưởng nhìn thấy được xuất hiện ở mỗi phiên, chứ không phải mỗi tuần.
+  //
+  // ⚠️ ĐẶT GIÀN GIÁO TRƯỚC KHI GỌI `deriveProps`, và thứ tự này là bắt buộc: `deriveProps` né các ô
+  // trong `occupied`, nên nếu đặt sau thì cây cối sẽ mọc ngay giữa công trường.
+  //
+  // ⚠️ NHẬN THẲNG SHAPE CỦA `craftingQueue` (`sessionsRemaining`), KHÔNG bắt bên gọi tự tính sẵn
+  // `progress`. Tri thức "còn mấy phiên nữa trên tổng bao nhiêu" chỉ nên nằm ở MỘT chỗ; để hai
+  // màn hình (tab Thành Phố và lớp nền trang chủ) tự tính thì sớm muộn chúng sẽ tính lệch nhau và
+  // cùng một công trình hiện hai độ cao khác nhau ở hai chỗ.
+  const pendingSeen = new Set();
+  const scaffolds = (Array.isArray(pending) ? pending : [])
+    .filter((item) => {
+      const bpId = item?.bpId;
+      const meta = BLUEPRINT_LOOKUP[bpId];
+      if (!meta || meta.era !== eraNum) return false;
+      // Đã xây xong rồi thì công trình thật đứng đó, không thể còn giàn giáo. Ca này xảy ra thật
+      // khi state hơi lệch nhau một nhịp (phiên vừa xong, hàng đợi chưa kịp dọn).
+      if (seen.has(bpId) || pendingSeen.has(bpId)) return false;
+      pendingSeen.add(bpId);
+      return true;
+    })
+    .map((item) => {
+      const { x, y } = placeBuilding(item.bpId, occupied);
+      occupied.add(cellKey(x, y));
+      const total = BUILDING_EFFECTS[item.bpId]?.sessionsToComplete;
+      const remaining = safeCount(item.sessionsRemaining);
+      // Thiếu `sessionsToComplete` (dữ liệu lạ) ⇒ tiến độ 0, tức một cọc mốc thấp — vẫn thấy là
+      // "chỗ này sắp có nhà", chỉ là không biết sắp xong tới đâu. KHÔNG đoán bừa một tỉ lệ.
+      const progress = Number.isFinite(total) && total > 0
+        ? Math.min(1, Math.max(0, 1 - remaining / total))
+        : 0;
+      return { bpId: item.bpId, x, y, progress, label: BLUEPRINT_LOOKUP[item.bpId].label };
+    });
+
   const props = deriveProps({
     era: eraNum,
     buildingCount: buildings.length,
@@ -340,7 +385,10 @@ export function computeCityLayout({ built, levels, era, stats } = {}) {
     gridSize:  CITY_GRID_SIZE,
     buildings: buildings.sort(byIsometricDepth),
     props:     props.sort(byIsometricDepth),
+    scaffolds: scaffolds.sort(byIsometricDepth),
     ground:    buildGround(eraNum),
+    // ⚠️ "Trống" vẫn CHỈ tính công trình đã xây. Một bãi đất chỉ có giàn giáo thì đúng là chưa có
+    // gì để khoe — và `CityBackdrop` dựa vào cờ này để quyết định có vẽ lớp nền ở trang chủ không.
     isEmpty:   buildings.length === 0,
   };
 }

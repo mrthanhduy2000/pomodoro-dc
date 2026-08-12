@@ -155,7 +155,12 @@ ra từ chính id công trình bằng băm tất định, xem ADR-007.
 **Luồng vẽ Thành Phố — bố cục TRỪU TƯỢNG tách khỏi cách vẽ (2026-08-12)**: một chiều, 3 chặng.
 (1) `CityView.jsx` chọn NGUỒN dữ liệu — kỷ hiện tại lấy state sống, kỷ đã niêm phong lấy ảnh chụp
 trong `cityArchive`; đây là chỗ dễ sai nhất cả màn hình. (2) `computeCityLayout` (engine thuần) trả
-về **ô lưới `(x, y)`, không phải pixel** — cùng một bố cục dùng được cho mọi cách vẽ. (3) Bộ vẽ
+về **ô lưới `(x, y)`, không phải pixel** — cùng một bố cục dùng được cho mọi cách vẽ. Bố cục gồm
+`buildings` (đã xây) · `props` (cảnh vật) · **`scaffolds` (đang xây)** · `ground`. `scaffolds` nhận
+THẲNG shape của `craftingQueue` trong store (`{ bpId, sessionsRemaining }`) và tự quy ra tiến độ —
+cố ý không bắt bên gọi tính sẵn, để hai màn hình (tab Thành Phố và lớp nền trang chủ) không thể
+tính lệch nhau. ⚠️ Giàn giáo được đặt chỗ TRƯỚC khi sinh cảnh vật, nếu không cây sẽ mọc giữa công
+trường. (3) Bộ vẽ
 biến ô lưới thành hình. `CityViewShell.jsx` là KHUNG (chuyển kỷ, số liệu, trạng thái rỗng) và
 **không biết bộ vẽ nào đang chạy** — bộ vẽ vào qua `children` và tự quyết định kích thước của mình.
 Có HAI bộ vẽ: `city/render2d/` (SVG isometric) và `city/render3d/` (three.js). `render3d/` là **nơi

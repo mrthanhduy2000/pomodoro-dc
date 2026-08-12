@@ -12,7 +12,7 @@ import {
   hashId,
   placeBuilding,
 } from './cityLayout.js';
-import { BLUEPRINT_CATALOG } from './constants.js';
+import { BLUEPRINT_CATALOG, BUILDING_EFFECTS } from './constants.js';
 
 // Bộ 5 bản vẽ có thật của kỷ 1 (dùng id thật để test bám sát dữ liệu game).
 const ERA_1 = BLUEPRINT_CATALOG[1].map((bp) => bp.id);
@@ -252,4 +252,114 @@ test('cả 15 kỷ đều dựng được thành phố đầy đủ, không va c
       assert.ok(['common', 'rare', 'epic'].includes(building.rarity), `kỷ ${era} rarity lạ`);
     }
   }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GIÀN GIÁO — công trình ĐANG XÂY (Phase 3H)
+//
+// Vì sao đáng có cả một cụm test: trước tính năng này, thành phố chỉ đổi khi một công trình HOÀN
+// THÀNH — mà rẻ nhất cũng 4 phiên, đắt nhất 11 phiên. Đàm có thể làm việc cả tuần mà thành phố
+// không nhúc nhích một pixel. Giàn giáo là thứ trả phần thưởng nhìn thấy được về nhịp MỖI PHIÊN.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Vài bpId có thật của kỷ 6, kèm số phiên cần để xây xong. */
+const ERA6 = BLUEPRINT_CATALOG[6].map((bp) => bp.id);
+const totalFor = (bpId) => BUILDING_EFFECTS[bpId].sessionsToComplete;
+
+test('GIÀN GIÁO — KHÔNG truyền `pending` ⇒ bố cục giống hệt bản cũ TỪNG BYTE', () => {
+  // ⚠️ Đây là bài quan trọng nhất cụm, và nó có từ trước khi viết dòng code nào (rủi ro #31 của kế
+  // hoạch). `computeCityLayout` là hàm mà TOÀN BỘ vị trí mọi thứ trong thành phố suy ra từ đó, và
+  // ADR-007 hứa "bảo tàng bất động": thành phố kỷ cũ phải trông y hệt mãi mãi. Thêm một tham số
+  // vào hàm này mà lỡ làm xê dịch dù một cái cây thì lời hứa đó vỡ trong im lặng — không có màn
+  // hình nào báo lỗi, chỉ là những thành phố cũ lặng lẽ khác đi.
+  const args = { built: ERA6, levels: {}, era: 6, stats: { sessionCount: 40, streakLength: 9 } };
+  const before = computeCityLayout(args);
+  for (const pending of [undefined, null, [], 'rác', 42, {}]) {
+    const after = computeCityLayout({ ...args, pending });
+    assert.equal(
+      JSON.stringify({ ...after, scaffolds: undefined }),
+      JSON.stringify({ ...before, scaffolds: undefined }),
+      `pending = ${JSON.stringify(pending)} làm xê dịch bố cục`,
+    );
+    assert.deepEqual(after.scaffolds, [], 'không có gì đang xây mà vẫn ra giàn giáo');
+  }
+});
+
+test('GIÀN GIÁO — tiến độ đi lên sau mỗi phiên, và luôn nằm trong [0,1]', () => {
+  const bpId = ERA6[4];                       // công trình đắt nhất kỷ 6 (9 phiên) — thấy rõ nhất
+  const total = totalFor(bpId);
+  const progressAt = (sessionsRemaining) => computeCityLayout({
+    built: [], era: 6, pending: [{ bpId, sessionsRemaining }],
+  }).scaffolds[0].progress;
+
+  assert.equal(progressAt(total), 0, 'vừa đặt móng mà đã có tiến độ');
+  assert.equal(progressAt(1), (total - 1) / total);
+
+  let prev = -1;
+  for (let remaining = total; remaining >= 1; remaining -= 1) {
+    const now = progressAt(remaining);
+    assert.ok(now > prev, `còn ${remaining} phiên: tiến độ không tăng (${now} ≤ ${prev})`);
+    assert.ok(now >= 0 && now <= 1, `tiến độ ${now} ngoài [0,1]`);
+    prev = now;
+  }
+
+  // Dữ liệu lệch (còn nhiều phiên hơn cả tổng, hoặc số âm) vẫn phải ra giá trị dùng được — cái này
+  // đi thẳng vào hình học, một `NaN` ở đây là một công trình cao vô hạn hoặc biến mất.
+  for (const remaining of [total + 99, -5, NaN, undefined, 'ba']) {
+    const p = computeCityLayout({ built: [], era: 6, pending: [{ bpId, sessionsRemaining: remaining }] })
+      .scaffolds[0].progress;
+    assert.ok(Number.isFinite(p) && p >= 0 && p <= 1, `sessionsRemaining=${remaining} → tiến độ ${p}`);
+  }
+});
+
+test('GIÀN GIÁO — không bao giờ chồng lên công trình, cảnh vật hay giàn giáo khác', () => {
+  // Cây mọc giữa công trường, hay hai giàn giáo lồng vào nhau, là loại lỗi chỉ lộ ra khi nhìn tận
+  // mắt đúng cái ô đó — mà `deriveProps` thì né theo `occupied`, nên thứ tự đặt là chỗ dễ sai.
+  const layout = computeCityLayout({
+    built: ERA6.slice(0, 2),
+    era: 6,
+    stats: { sessionCount: 60, streakLength: 12 },
+    pending: ERA6.slice(2).map((bpId, i) => ({ bpId, sessionsRemaining: i + 1 })),
+  });
+
+  assert.equal(layout.scaffolds.length, 3, 'thiếu giàn giáo cho công trình đang xây');
+  const cells = [...layout.buildings, ...layout.props, ...layout.scaffolds].map((o) => `${o.x},${o.y}`);
+  assert.equal(new Set(cells).size, cells.length, 'có ô bị hai vật thể cùng chiếm');
+
+  for (const s of layout.scaffolds) {
+    assert.ok(s.x >= 0 && s.x < CITY_GRID_SIZE && s.y >= 0 && s.y < CITY_GRID_SIZE,
+      `giàn giáo ${s.bpId} ra ngoài lưới`);
+    assert.equal(typeof s.label, 'string');
+  }
+});
+
+test('GIÀN GIÁO — bỏ qua bpId lạ, khác kỷ, trùng nhau, và ĐÃ XÂY XONG', () => {
+  const built = [ERA6[0]];
+  const layout = computeCityLayout({
+    built,
+    era: 6,
+    pending: [
+      { bpId: ERA6[0], sessionsRemaining: 2 },     // đã xây xong rồi → không thể còn giàn giáo
+      { bpId: ERA6[1], sessionsRemaining: 2 },
+      { bpId: ERA6[1], sessionsRemaining: 3 },     // trùng
+      { bpId: BLUEPRINT_CATALOG[9][0].id, sessionsRemaining: 2 },  // khác kỷ
+      { bpId: 'bp_không_có_thật', sessionsRemaining: 2 },
+      null, undefined, {},
+    ],
+  });
+  assert.deepEqual(layout.scaffolds.map((s) => s.bpId), [ERA6[1]]);
+
+  // ⚠️ "Đã xây xong" là ca xảy ra THẬT, không phải phòng xa: ngay sau phiên làm công trình hoàn
+  // thành, có một nhịp mà `buildings` đã có id đó còn `craftingQueue` chưa kịp dọn. Vẽ cả hai thì
+  // căn nhà mới toanh mọc lên trong lòng một bộ giàn giáo — đúng lúc đáng ăn mừng nhất.
+});
+
+test('GIÀN GIÁO — bãi đất chỉ có công trình đang xây vẫn tính là TRỐNG', () => {
+  // `CityBackdrop` dựa vào `isEmpty` để quyết định có vẽ lớp nền ở trang chủ không. Bốn cái cọc gỗ
+  // sau lưng đồng hồ đếm ngược thì đọc ra "lỗi hiển thị", không đọc ra "thành phố của bạn".
+  const layout = computeCityLayout({
+    built: [], era: 6, pending: [{ bpId: ERA6[0], sessionsRemaining: 3 }],
+  });
+  assert.equal(layout.isEmpty, true);
+  assert.equal(layout.scaffolds.length, 1, 'vẫn phải dựng giàn giáo — chỉ là không tính vào "có gì"');
 });

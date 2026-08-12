@@ -535,31 +535,65 @@ export function buildScaffoldSpec({ bpId, era, progress = 0 } = {}) {
   const parts = [];
 
   const w = 0.66;
+  const post = w * 0.42;
   const fullHeight = style.storyHeight * 2;
-  const height = Math.max(0.12, fullHeight * t);
+  // ⚠️ CỘT GIÀN GIÁO LUÔN CAO HƠN PHẦN ĐÃ XÂY, kể cả lúc mới khởi công — đó là điều khiến mắt đọc
+  // ra "công trường" thay vì "cái nhà lùn". Ngoài đời giàn giáo bao giờ cũng vượt lên trên chỗ thợ
+  // đang làm; và ở đây nó còn kiêm một việc nữa: cho thấy công trình này SẼ CAO TỚI ĐÂU, tức là
+  // biến giàn giáo thành một lời hứa nhìn thấy được chứ không chỉ là một thanh tiến độ.
+  const built = Math.max(0.10, fullHeight * t);
+  const height = Math.min(fullHeight, built + fullHeight * 0.22);
 
-  // Bốn cột góc dựng cao dần theo tiến độ.
+  // Bốn cột góc.
   for (let i = 0; i < 4; i += 1) {
-    const sx = i % 2 === 0 ? -1 : 1;
-    const sz = i < 2 ? -1 : 1;
     parts.push(prism({
-      x: sx * w * 0.42, z: sz * w * 0.42, y: 0, w: 0.045, h: height, sides: 4, role: 'wood',
+      x: (i % 2 === 0 ? -1 : 1) * post, z: (i < 2 ? -1 : 1) * post,
+      y: 0, w: 0.045, h: height, sides: 4, role: 'wood',
     }));
   }
-  // Giằng ngang: mỗi phiên xong lại thêm một tầng giằng → tiến độ NHÌN THẤY được.
-  const rungs = Math.max(1, Math.round(t * 4));
+
+  // ⚠️ GIẰNG PHẢI KHÉP KÍN BỐN MẶT, KHÔNG PHẢI HAI. Bản đầu chỉ đặt giằng ở hai mặt đối nhau, và
+  // ảnh chụp thử cho ra thứ trông y như một CÁI CỔNG dựng giữa đồng: từ góc nhìn của app, hai mặt
+  // còn lại trống hoác nên mắt không khép được khối, và cả cụm đọc ra hình phẳng. Thêm hai thanh
+  // xoay 90° (`ry`) là đủ để nó thành cái lồng — rẻ, và đây đúng là chỗ chi tiết đổi được ý nghĩa
+  // chứ không chỉ làm đẹp thêm.
+  const rungs = Math.max(1, Math.round(t * 3));
   for (let i = 0; i < rungs; i += 1) {
-    const y = height * ((i + 1) / (rungs + 0.4));
-    parts.push(prism({ x: 0, z: -w * 0.42, y, w: w * 0.92, d: 0.035, h: 0.035, sides: 4, role: 'wood' }));
-    parts.push(prism({ x: 0, z: w * 0.42, y, w: w * 0.92, d: 0.035, h: 0.035, sides: 4, role: 'wood' }));
+    const y = height * ((i + 1) / (rungs + 0.5));
+    for (let side = 0; side < 4; side += 1) {
+      const along = side < 2;                     // 2 thanh dọc trục X, 2 thanh dọc trục Z
+      const sign = side % 2 === 0 ? -1 : 1;
+      parts.push(prism({
+        x: along ? 0 : sign * post,
+        z: along ? sign * post : 0,
+        y,
+        w: w * 0.92, d: 0.035, h: 0.035, sides: 4,
+        ry: along ? 0 : Math.PI / 2,
+        role: 'wood',
+      }));
+    }
   }
-  // Phần tường đã xây xong, nhô lên trong lòng giàn giáo.
-  if (t > 0.15) {
+
+  // Phần tường đã xây xong, nhô lên trong lòng giàn giáo. Dùng ĐÚNG hình khối thân của kỷ (số cạnh,
+  // độ thóp) — nên ngay từ lúc còn là công trường, Đàm đã nhận ra được đây sắp là nhà kiểu gì.
+  if (t > 0.12) {
     parts.push(prism({
-      x: 0, z: 0, y: 0, w: w * 0.72, d: w * 0.72, h: height * 0.72,
+      x: 0, z: 0, y: 0, w: w * 0.66, d: w * 0.66, h: built,
       sides: style.bodySides, taper: style.bodyTaper, role: 'stone',
     }));
   }
+
+  // Đống vật liệu tập kết dưới chân — chi tiết nhỏ nhất mà lại là thứ nói to nhất rằng "chỗ này CÓ
+  // NGƯỜI ĐANG LÀM". Vơi dần khi công trình gần xong: sắp hoàn thành thì vật liệu đã lên tường hết.
+  const piles = t < 0.85 ? 2 : 1;
+  for (let i = 0; i < piles; i += 1) {
+    parts.push(prism({
+      x: (i === 0 ? -1 : 1) * post * 1.34, z: post * (i === 0 ? 1.24 : -0.9),
+      y: 0, w: 0.11 - i * 0.02, d: 0.09, h: 0.05 + (1 - t) * 0.05,
+      sides: 4, role: 'wood',
+    }));
+  }
+
   void id;
 
   return {

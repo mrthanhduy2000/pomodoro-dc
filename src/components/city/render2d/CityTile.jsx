@@ -94,6 +94,49 @@ function Field({ palette }) {
   );
 }
 
+/**
+ * Công trình ĐANG XÂY — giàn giáo dựng cao dần theo `progress` (0..1).
+ *
+ * ⚠️ VÌ SAO BỘ VẼ 2D CŨNG PHẢI CÓ, DÙ NÓ CHỈ LÀ ĐƯỜNG LÙI: giàn giáo không phải đồ trang trí, nó
+ * là **phần thưởng cho phiên vừa xong**. Nếu máy nào đó lùi về 2D (không có WebGL2, mất context,
+ * Đàm tự chọn tắt 3D) mà thành phố lại đứng im suốt cả tuần cho tới lúc một công trình hoàn thành,
+ * thì đúng người dùng máy yếu nhất là người mất đi vòng lặp động viên — trong khi họ chẳng làm gì
+ * sai cả. Hai bộ vẽ được phép khác nhau về ĐỘ ĐẸP, không được khác nhau về NỘI DUNG.
+ */
+function Scaffold({ item, palette }) {
+  const t = Math.min(1, Math.max(0, item.progress ?? 0));
+  const h = 8 + t * 20;                 // cột giàn giáo
+  const built = h * 0.72;               // phần tường đã xây, luôn thấp hơn cột
+  const halfW = 9;
+  const rungs = Math.max(1, Math.round(t * 3));
+
+  return (
+    <>
+      {/* phần đã xây, nằm trong lòng giàn giáo */}
+      {t > 0.12 && (
+        <rect
+          x={-halfW * 0.62} y={-built} width={halfW * 1.24} height={built}
+          fill={palette.wallLeft} stroke={palette.edge} strokeWidth="0.5"
+        />
+      )}
+      {/* hai cột + các thanh giằng — mỗi phiên xong lại thêm một tầng giằng */}
+      <path
+        d={`M${-halfW} 0 L${-halfW} ${-h} M${halfW} 0 L${halfW} ${-h}`}
+        stroke={palette.accent} strokeWidth="1.6" strokeLinecap="round"
+      />
+      {Array.from({ length: rungs }, (_, i) => {
+        const y = -h * ((i + 1) / (rungs + 0.5));
+        return (
+          <path
+            key={i} d={`M${-halfW} ${y} L${halfW} ${y}`}
+            stroke={palette.accent} strokeWidth="1.1" strokeLinecap="round" opacity="0.85"
+          />
+        );
+      })}
+    </>
+  );
+}
+
 const PROP_SHAPES = { tree: Tree, rock: Rock, lamp: Lamp, water: Water, field: Field };
 
 // ─── CÔNG TRÌNH ──────────────────────────────────────────────────────────────
@@ -167,6 +210,15 @@ export default function CityTile({ kind, item, palette, dimmed = false }) {
       <g transform={`translate(${cx} ${cy})`}>
         <title>{`${item.label} · Lv.${item.level}`}</title>
         <Building item={item} palette={palette} dimmed={dimmed} />
+      </g>
+    );
+  }
+
+  if (kind === 'scaffold') {
+    return (
+      <g transform={`translate(${cx} ${cy})`} opacity={dimmed ? 0.5 : 0.95}>
+        <title>{`${item.label} · đang xây (${Math.round((item.progress ?? 0) * 100)}%)`}</title>
+        <Scaffold item={item} palette={palette} />
       </g>
     );
   }

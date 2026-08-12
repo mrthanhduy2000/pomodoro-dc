@@ -28,6 +28,7 @@ export default function CityView() {
   const buildings       = useGameStore((s) => s.buildings);
   const buildingLevels  = useGameStore((s) => s.buildingLevels);
   const cityArchive     = useGameStore((s) => s.cityArchive);
+  const craftingQueue   = useGameStore((s) => s.craftingQueue);
   const activeBook      = useGameStore((s) => s.progress.activeBook);
   const sessionsInEra   = useGameStore((s) => s.eraTracking?.sessionsInCurrentEra);
   const currentStreak   = useGameStore((s) => s.streak?.currentStreak);
@@ -53,8 +54,19 @@ export default function CityView() {
   const sessionCount = isCurrent ? (sessionsInEra ?? 0) : (viewing?.sessionCount ?? 0);
   const streakLength = isCurrent ? (currentStreak ?? 0) : 0;
 
+  // ⚠️ GIÀN GIÁO CHỈ CÓ Ở KỶ HIỆN TẠI. Bảo tàng là ẢNH CHỤP lúc niêm phong, và ở một thành phố đã
+  // niêm phong thì chẳng còn ai đang xây gì nữa — dựng giàn giáo lên đó là nói dối về quá khứ, đúng
+  // thứ bất biến "bảo tàng bất động" mà ADR-007 dựng lên. (`craftingQueue` trong store vốn đã được
+  // gạn theo kỷ hiện tại, và `computeCityLayout` cũng lọc theo kỷ lần nữa — nhưng cả hai lớp đó
+  // đều là lưới an toàn, còn Ý ĐỊNH thì phải nói rõ ngay tại chỗ này.)
+  const pending = isCurrent ? craftingQueue : null;
+
   const builtKey  = Array.isArray(built) ? built.join(',') : '';
   const levelsKey = Object.entries(levels ?? {}).map(([id, lv]) => `${id}:${lv}`).sort().join(',');
+  // Khoá theo NỘI DUNG chứ không theo danh tính mảng: mỗi lượt render store trả về một mảng mới,
+  // mà `layout` đổi thì `CityScene3D` dựng lại CẢ CẢNH WebGL.
+  const pendingKey = (Array.isArray(pending) ? pending : [])
+    .map((item) => `${item?.bpId}:${item?.sessionsRemaining}`).join(',');
 
   const layout = useMemo(
     () => computeCityLayout({
@@ -62,9 +74,10 @@ export default function CityView() {
       levels,
       era,
       stats: { sessionCount, streakLength },
+      pending,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [builtKey, levelsKey, era, sessionCount, streakLength],
+    [builtKey, levelsKey, era, sessionCount, streakLength, pendingKey],
   );
 
   return (

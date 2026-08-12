@@ -62,6 +62,10 @@ function parseArgs(argv) {
     // trong CÙNG một tấm ảnh thì mắt so sánh được, mà mỹ thuật thì chỉ so sánh mới thấy sai.
     sweep: false,
     cell: 300,
+    // Số công trình ĐANG XÂY (giàn giáo). Lấy từ CUỐI danh sách bản vẽ của kỷ và cho tiến độ so le
+    // nhau, để một ảnh là thấy đủ các nấc dựng — chứ chụp mỗi công trường cùng một tiến độ thì
+    // không kiểm chứng được thứ cần kiểm chứng ("mỗi phiên xong lại nhô lên một nấc").
+    pending: 0,
   };
   for (let i = 0; i < argv.length; i += 1) {
     const key = argv[i];
@@ -77,6 +81,7 @@ function parseArgs(argv) {
     else if (key === '--sweep') args.sweep = true;
     else if (key === '--cell') { args.cell = Number(value); i += 1; }
     else if (key === '--eras') { args.eraList = String(value).split(',').map(Number); i += 1; }
+    else if (key === '--pending') { args.pending = Number(value); i += 1; }
   }
   return args;
 }
@@ -93,7 +98,7 @@ function run(cmd, cmdArgs, options = {}) {
  * Mã nguồn trang xem thử. Được gói thành MỘT file bằng chính Vite của dự án, nên nó dùng đúng
  * phiên bản three và đúng các module thật — nếu bản gói lỗi thì bản chạy thật cũng lỗi.
  */
-function entrySource({ era, level, theme, zoom = 1, hour = null }) {
+function entrySource({ era, level, theme, zoom = 1, hour = null, pending = 0 }) {
   return `
 import { computeCityLayout } from '${ROOT}/src/engine/cityLayout.js';
 import { buildScenePalette } from '${ROOT}/src/engine/city3d/palette3d.js';
@@ -108,10 +113,19 @@ const LEVEL = ${level};
 const IS_DARK = ${theme === 'dark'};
 const ZOOM = ${zoom};
 const HOUR = ${hour === null ? 'null' : hour};
+const PENDING = ${pending};
 
-const built = BLUEPRINT_CATALOG[ERA].map((bp) => bp.id);
+const allIds = BLUEPRINT_CATALOG[ERA].map((bp) => bp.id);
+// Mấy bản vẽ cuối chuyển sang ĐANG XÂY, mỗi cái một tiến độ khác nhau (còn 1, 2, 3… phiên nữa)
+// để một ảnh là soi được cả dải nấc dựng.
+const built = PENDING > 0 ? allIds.slice(0, Math.max(0, allIds.length - PENDING)) : allIds;
+const pendingQueue = PENDING > 0
+  ? allIds.slice(built.length).map((bpId, i) => ({ bpId, sessionsRemaining: i + 1 }))
+  : [];
 const levels = Object.fromEntries(built.map((id) => [id, LEVEL]));
-const layout = computeCityLayout({ built, levels, era: ERA, stats: { sessionCount: 40, streakLength: 9 } });
+const layout = computeCityLayout({
+  built, levels, era: ERA, stats: { sessionCount: 40, streakLength: 9 }, pending: pendingQueue,
+});
 
 // Token màu lấy thẳng từ giá trị mặc định của hai theme trong src/index.css — trang này không có
 // cây DOM của app nên không đọc được biến CSS thật.
@@ -165,6 +179,7 @@ renderer.render(city.scene, camera);
 document.title = 'READY ' + JSON.stringify(city.stats);
 document.getElementById('info').textContent =
   'Kỷ ' + ERA + ' — ' + (ERA_METADATA[ERA]?.label ?? '?') + ' · cấp ' + LEVEL
+  + ' · ' + pendingQueue.length + ' công trường'
   + ' · ' + city.stats.drawCalls + ' lệnh vẽ · ' + city.stats.triangles.toLocaleString('vi-VN') + ' tam giác';
 document.body.dataset.ready = '1';
 `;

@@ -93,6 +93,54 @@
 ## 🗒️ Nhật ký cập nhật
 > Mỗi lần xong việc đáng kể, thêm 1 dòng vào ĐẦU danh sách.
 
+- **2026-08-12 (Phase 3H)** — **THÀNH PHỐ LỚN LÊN SAU MỖI PHIÊN, KHÔNG PHẢI MỖI TUẦN.**
+  Đàm: *"game hoá lên… không bị chán"*. Đây là chỗ chữ "chán" có một nguyên nhân đo được, không
+  phải cảm giác: trước tính năng này thành phố **chỉ đổi khi một công trình HOÀN THÀNH** — mà công
+  trình rẻ nhất ngốn 4 phiên, đắt nhất 11 phiên. Nghĩa là Đàm hoàn toàn có thể làm việc cả tuần
+  liền và thành phố **không nhúc nhích một pixel nào**. Vòng lặp "làm việc → thấy thành phố lớn
+  lên" đứt đúng ở quãng dài nhất, tức là đúng lúc cần nó nhất.
+  Nay công trình đang xây hiện thành **giàn giáo gỗ**, mỗi phiên xong lại mọc cao thêm một nấc và
+  thêm một tầng giằng. Đặt ở lớp nền trang chủ (Phase 3F) thì nấc vừa mọc nằm **đúng trong tầm mắt
+  lúc Đàm bấm Bắt đầu phiên kế tiếp**.
+  - ⚠️ **Hoá ra 90% đã có sẵn từ trước mà không ai nối lại.** `craftingQueue` đã lưu
+    `{bpId, sessionsRemaining}` từ lâu; `BUILDING_EFFECTS[].sessionsToComplete` đã có; `sceneGraph`
+    đã đọc `layout.scaffolds`; `buildScaffoldSpec` đã viết xong và đã có test. Thiếu **đúng một
+    thứ**: `computeCityLayout` chưa bao giờ sinh ra `scaffolds`, nên `layout.scaffolds ?? []` luôn
+    rỗng và cả tính năng im lặng không tồn tại. Bài học: `?? []` là chỗ một tính năng chết mà
+    không ai nhận ra — nó không hỏng, nó chỉ *không có gì*.
+  - **Nhận thẳng shape của `craftingQueue`**, không bắt bên gọi tự tính `progress`: tri thức "còn
+    mấy phiên trên tổng bao nhiêu" chỉ nên nằm một chỗ, nếu không tab Thành Phố và lớp nền trang
+    chủ sẽ có ngày hiện hai độ cao khác nhau cho cùng một công trình.
+  - **Bảo tàng KHÔNG có giàn giáo** — thành phố đã niêm phong thì chẳng còn ai đang xây gì; dựng
+    giàn giáo lên đó là nói dối về quá khứ (bất biến "bảo tàng bất động", ADR-007). Ba lớp chặn:
+    store đã gạn theo kỷ, `CityView` chỉ truyền `pending` khi đang xem kỷ hiện tại, và
+    `computeCityLayout` lọc theo kỷ lần nữa.
+  - **Bộ vẽ 2D cũng có giàn giáo.** Hai bộ vẽ được phép khác nhau về ĐỘ ĐẸP, không được khác nhau
+    về NỘI DUNG — nếu không thì đúng người dùng máy yếu nhất (phải lùi về 2D) là người mất vòng
+    lặp động viên, trong khi họ chẳng làm gì sai.
+  - **Sửa hình giàn giáo sau khi nhìn ảnh chụp**: bản đầu chỉ có giằng ở hai mặt đối nhau và ảnh
+    chụp ra thứ trông y như **một cái cổng dựng giữa đồng** — mắt không khép được khối. Thêm hai
+    thanh xoay 90° (`ry`) thành cái lồng, cho cột luôn cao hơn phần đã xây (giàn giáo thật bao giờ
+    cũng vượt lên trên chỗ thợ đang làm, và nó cho thấy công trình SẼ cao tới đâu), thêm đống vật
+    liệu dưới chân vơi dần khi sắp xong.
+  - **Test**: 430 bài (+5), có bài khoá **"không truyền `pending` ⇒ bố cục giống hệt TỪNG BYTE"** —
+    rủi ro #31 của kế hoạch, vì đây là hàm quyết định vị trí MỌI THỨ và ADR-007 hứa bảo tàng bất
+    động. Cùng bài khoá ca "vừa xây xong nhưng hàng đợi chưa kịp dọn" (xảy ra thật, một nhịp sau
+    phiên hoàn thành) — nếu không, căn nhà mới toanh sẽ mọc lên trong lòng một bộ giàn giáo đúng
+    lúc đáng ăn mừng nhất.
+
+- **2026-08-12 (công cụ)** — **`scripts/png-probe.mjs`: ĐO màu điểm ảnh thật trên ảnh đã chụp.**
+  Tự giải mã PNG bằng `zlib` có sẵn của Node, KHÔNG thêm dependency. Ra đời vì một nghi ngờ đúng:
+  **bảng màu và màu hiện lên màn hình là hai thứ khác nhau**, giữa chúng còn cường độ đèn (nắng
+  2,15 — nhân màu gốc lên hơn hai lần), phép kẹp kênh khi tràn 255, rồi tone mapping.
+  ⚠️ **Số đo cụ thể, và nó là một giới hạn phải nhớ**: mái kỷ 6 trong bảng màu là `#77425a`
+  (độ tươi 0,29) nhưng **trên màn hình đo được `#5a1733` — độ tươi 0,59, tức GẤP ĐÔI**. Mặt phẳng
+  (mặt đất) thì khớp gần như hoàn hảo (`#98957b` → `#8e896d`); chênh lệch nằm ở các mặt DỐC như
+  mái, vì chúng nhận ít sáng hơn nhiều.
+  ⇒ **Các bài test mỹ thuật ở `palette3d.test.js` canh ĐẦU VÀO, không chứng minh được thứ Đàm nhìn
+  thấy.** Chúng vẫn đáng giá (bắt được cả 6 lỗi Phase 3G), nhưng đừng đọc chúng như một lời bảo
+  đảm về màn hình. Muốn chắc thì chụp rồi `node scripts/png-probe.mjs <ảnh> --top 10`.
+
 - **2026-08-12 (Phase 3G)** — **QUÉT ĐỦ 15 KỶ × 6 CHẶNG NGÀY, VÀ VÁ 6 LỖI MỸ THUẬT NÓ PHƠI RA.**
   Đàm: *"quét đủ 15 kỷ × 6 chặng ngày đi… đánh bóng mọi thứ lên, mọi thứ phải hoàn hảo và không bị
   chán"*. Làm được đúng thế: 90 ô × 2 theme = **180 cảnh**, xem tận mắt từng ô.

@@ -159,8 +159,10 @@ về **ô lưới `(x, y)`, không phải pixel** — cùng một bố cục dù
 `buildings` (đã xây) · `props` (cảnh vật) · **`scaffolds` (đang xây)** · `ground`. `scaffolds` nhận
 THẲNG shape của `craftingQueue` trong store (`{ bpId, sessionsRemaining }`) và tự quy ra tiến độ —
 cố ý không bắt bên gọi tính sẵn, để hai màn hình (tab Thành Phố và lớp nền trang chủ) không thể
-tính lệch nhau. ⚠️ Giàn giáo được đặt chỗ TRƯỚC khi sinh cảnh vật, nếu không cây sẽ mọc giữa công
-trường. (3) Bộ vẽ
+tính lệch nhau. Mỗi giàn giáo mang theo đủ ba thứ một màn hình cần để nói thành câu: `progress`
+(vẽ hình), `remaining`/`total` (**còn bao xa** — số phiên, thứ hành động được), và `reward` (nhãn
+đặc quyền sẽ mở khoá — **đi tới đó để làm gì**). ⚠️ Giàn giáo được đặt chỗ TRƯỚC khi sinh cảnh vật,
+nếu không cây sẽ mọc giữa công trường. (3) Bộ vẽ
 biến ô lưới thành hình. `CityViewShell.jsx` là KHUNG (chuyển kỷ, số liệu, trạng thái rỗng) và
 **không biết bộ vẽ nào đang chạy** — bộ vẽ vào qua `children` và tự quyết định kích thước của mình.
 Có HAI bộ vẽ: `city/render2d/` (SVG isometric) và `city/render3d/` (three.js). `render3d/` là **nơi

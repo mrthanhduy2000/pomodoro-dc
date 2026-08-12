@@ -363,3 +363,61 @@ test('GIÀN GIÁO — bãi đất chỉ có công trình đang xây vẫn tính 
   assert.equal(layout.isEmpty, true);
   assert.equal(layout.scaffolds.length, 1, 'vẫn phải dựng giàn giáo — chỉ là không tính vào "có gì"');
 });
+
+test('GIÀN GIÁO — mang theo SỐ PHIÊN CÒN LẠI, không chỉ tỉ lệ phần trăm', () => {
+  // ⚠️ Màn hình cần nói được "còn 2 phiên nữa" — một con số Đàm hành động được NGAY HÔM NAY — chứ
+  // không phải "đã xong 67%", thứ nghe thì chính xác mà chẳng bảo anh phải làm gì. Tính ở engine
+  // để tab Thành Phố và lớp nền trang chủ không thể nói hai con số khác nhau cho cùng một công
+  // trình.
+  const bpId = ERA6[2];
+  const total = totalFor(bpId);
+  const [s] = computeCityLayout({
+    built: [], era: 6, pending: [{ bpId, sessionsRemaining: 2 }],
+  }).scaffolds;
+
+  assert.equal(s.remaining, 2);
+  assert.equal(s.total, total);
+  assert.equal(typeof s.icon, 'string', 'thiếu icon ⇒ danh sách "Đang xây" mất biểu tượng');
+
+  // Dữ liệu lệch không được rò ra màn hình dưới dạng số vô nghĩa ("còn 99 phiên" khi tổng có 6,
+  // hay "còn -3 phiên"). Kẹp ở engine, đúng chỗ mọi màn hình cùng đi qua.
+  const clamped = (sessionsRemaining) => computeCityLayout({
+    built: [], era: 6, pending: [{ bpId, sessionsRemaining }],
+  }).scaffolds[0].remaining;
+  assert.equal(clamped(total + 99), total, 'còn nhiều phiên hơn cả tổng');
+  assert.equal(clamped(-4), 0, 'số phiên còn lại âm');
+  assert.equal(clamped('ba'), 0, 'số phiên còn lại là chuỗi');
+});
+
+test('GIÀN GIÁO — mang theo PHẦN THƯỞNG sẽ mở khoá, để "còn 2 phiên" có nghĩa', () => {
+  // "Còn 2 phiên" trả lời được CÒN BAO XA. Không có dòng này thì Đàm vẫn không biết ĐI TỚI ĐÓ ĐỂ
+  // LÀM GÌ — và một thanh tiến độ không nói phần thưởng thì chỉ là một thanh tiến độ.
+  //
+  // Bài này cũng khoá luôn một thứ dễ vỡ âm thầm: nếu ai đó đổi `perk.label` thành `perk.name`
+  // trong `constants.js`, `reward` sẽ lặng lẽ thành `null` ở CẢ 75 công trình mà không bài test
+  // nào kêu — dòng "Mở khoá:" biến mất khỏi màn hình và không ai biết vì sao.
+  let seen = 0;
+  for (let era = 1; era <= 15; era += 1) {
+    for (const bp of BLUEPRINT_CATALOG[era]) {
+      const [s] = computeCityLayout({
+        built: [], era, pending: [{ bpId: bp.id, sessionsRemaining: 1 }],
+      }).scaffolds;
+      assert.ok(s, `kỷ ${era} · ${bp.id} không dựng được giàn giáo`);
+      assert.equal(typeof s.reward, 'string', `kỷ ${era} · ${bp.id} thiếu nhãn phần thưởng`);
+      assert.ok(s.reward.length > 0 && s.reward.length <= 40,
+        `nhãn phần thưởng của ${bp.id} dài ${s.reward.length} ký tự — một dòng danh sách sẽ tràn`);
+      seen += 1;
+    }
+  }
+  assert.equal(seen, 75, 'phải quét đủ 75 công trình của 15 kỷ');
+});
+
+test('GIÀN GIÁO — dữ liệu lạ thì reward là null chứ KHÔNG ném lỗi', () => {
+  // Bản vẽ có thật nhưng chưa khai `BUILDING_EFFECTS` (hoặc khai thiếu `perk`) là chuyện có thể
+  // xảy ra khi thêm kỷ mới. Lúc đó thà mất một dòng chữ còn hơn vỡ cả màn hình Thành Phố.
+  const layout = computeCityLayout({
+    built: [], era: 6, pending: [{ bpId: ERA6[0], sessionsRemaining: 1 }, { bpId: 'bp_khong_ton_tai' }],
+  });
+  assert.equal(layout.scaffolds.length, 1, 'bản vẽ không tồn tại phải bị bỏ, không được dựng giàn giáo');
+  assert.ok('reward' in layout.scaffolds[0], 'trường reward phải luôn có mặt');
+});

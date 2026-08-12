@@ -93,6 +93,34 @@
 ## 🗒️ Nhật ký cập nhật
 > Mỗi lần xong việc đáng kể, thêm 1 dòng vào ĐẦU danh sách.
 
+- **2026-08-12 (Phase 3I)** — **BẢNG "ĐANG XÂY": CÒN BAO XA, VÀ ĐI TỚI ĐÓ ĐỂ LÀM GÌ.**
+  Phase 3H dựng được giàn giáo trong cảnh, nhưng nhìn giàn giáo thì Đàm chỉ biết "chỗ này sắp có
+  nhà" — đẹp, mà không hành động được. Nay dưới cảnh có một bảng liệt kê công trình đang xây, mỗi
+  dòng nói **còn mấy phiên** + thanh tiến độ + **mở khoá đặc quyền gì**.
+  - **Nói bằng SỐ PHIÊN, không phải phần trăm.** "Đã xong 67%" nghe thì chính xác mà chẳng bảo anh
+    phải làm gì; "còn 2 phiên" là một mục tiêu cho chiều nay. Kẹp ở engine (`remaining` luôn nằm
+    trong `[0, total]`) để dữ liệu lệch một nhịp không rò ra màn hình thành "còn 99 phiên".
+  - **Dòng "Mở khoá: …" là nửa còn lại của câu.** Số phiên trả lời CÒN BAO XA; không có nhãn phần
+    thưởng thì vẫn thiếu ĐI TỚI ĐÓ ĐỂ LÀM GÌ, và thanh tiến độ chỉ còn là một thanh tiến độ. Lấy
+    `perk.label` (ngắn) chứ không lấy `perk.summary` (dài cả câu, nhét vào một dòng sẽ tràn). Có
+    test quét đủ **75 công trình của 15 kỷ**, khoá luôn cả độ dài ≤40 ký tự — nếu ai đó đổi
+    `perk.label` thành tên khác trong `constants.js` thì `reward` sẽ lặng lẽ thành `null` ở CẢ 75
+    công trình mà không bài test nào kêu (lại đúng cái bẫy `?? []` của Phase 3H).
+  - **Gần xong nhất nằm trên đầu**, in đậm + số phiên tô màu kỷ. ⚠️ Sắp xếp bằng một BẢN SAO
+    (`buildQueueOrder`) — `layout.scaffolds` đã được sắp theo chiều sâu đẳng cự cho bộ vẽ, đảo tại
+    chỗ sẽ làm nhà đằng trước che nhà đằng sau. Hoà nhau thì so `bpId` để danh sách không tự nhảy
+    chỗ giữa hai lần vẽ.
+  - **Hai chỗ khác cùng sửa cho khỏi nói dối**: ô số liệu thứ tư đổi từ "Cảnh vật" (bao nhiêu cái
+    cây thì cũng thế) sang "Đang xây" khi có công trường; và trạng thái "Bãi đất trống" nay chỉ
+    hiện khi **vừa không có công trình vừa không có công trường** — trước đó lần đầu Đàm khởi công,
+    mở tab lên xem thành quả thì nhận đúng chữ "chưa có gì".
+  - **Công cụ mới `scratchpad/shoot.mjs`** (lái Chromium qua CDP): bấm được vào tab rồi mới chụp,
+    và cuộn tới đúng chữ cần soi (`--tab city --queue --find "Đang xây" --phone/--dark`). Bản cũ
+    `shoot-home.mjs` dùng cờ `--screenshot` nên chỉ chụp được trang đầu — mà tab của app là
+    `useState` trong React, **không seed qua localStorage được**. ⚠️ Vẫn giữ nguyên chặn Supabase ở
+    tầng phân giải tên miền. Đã soi tận mắt: sáng/tối/iPhone 390px đều gọn.
+  - Test **433 xanh** (thêm 2 bài), lint sạch, build xanh.
+
 - **2026-08-12 (Phase 3H)** — **THÀNH PHỐ LỚN LÊN SAU MỖI PHIÊN, KHÔNG PHẢI MỖI TUẦN.**
   Đàm: *"game hoá lên… không bị chán"*. Đây là chỗ chữ "chán" có một nguyên nhân đo được, không
   phải cảm giác: trước tính năng này thành phố **chỉ đổi khi một công trình HOÀN THÀNH** — mà công

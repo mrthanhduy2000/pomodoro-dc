@@ -12,6 +12,22 @@
 
 ---
 
+## 2026-08-12 — Thành Phố (Phase 3I): bảng "Đang xây" — còn bao xa và đi tới đó để làm gì
+
+- **Mục đích**: Phase 3H dựng được giàn giáo trong cảnh, nhưng nhìn giàn giáo thì chỉ biết "chỗ này
+  sắp có nhà". Phase này biến nó thành một mục tiêu cho hôm nay: bảng liệt kê công trình đang xây,
+  mỗi dòng nói **còn mấy phiên** và **mở khoá đặc quyền gì**.
+- **Phạm vi**: `computeCityLayout` trả thêm `reward` (nhãn `perk.label`) trên mỗi giàn giáo;
+  `CityViewShell` thêm bảng "Đang xây" (xếp gần-xong-lên-đầu, thanh tiến độ có `role="progressbar"`),
+  ô số liệu thứ tư đổi từ "Cảnh vật" sang "Đang xây" khi có công trường, và trạng thái "Bãi đất
+  trống" không còn che mất công trường đầu tiên. Không đụng state, không thêm dependency.
+- **Ảnh hưởng**: trả lời được câu "làm nốt phiên này thì được gì" — trước đây không màn hình nào
+  trong app trả lời được. Bảo tàng không có bảng này (kỷ đã niêm phong thì không còn gì đang xây).
+- **Tương thích**: giữ nguyên hoàn toàn — `reward` là trường mới, thiếu dữ liệu thì bằng `null` và
+  dòng chữ tự biến mất.
+
+---
+
 ## 2026-08-12 — Thành Phố (Phase 3H): công trình đang xây → thành phố lớn lên sau MỖI phiên
 
 - **Mục đích**: Đàm yêu cầu *"game hoá lên… không bị chán"*. Trước Phase này thành phố chỉ đổi khi

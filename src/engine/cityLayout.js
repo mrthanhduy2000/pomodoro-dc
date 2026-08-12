@@ -369,7 +369,22 @@ export function computeCityLayout({ built, levels, era, stats, pending } = {}) {
       const progress = Number.isFinite(total) && total > 0
         ? Math.min(1, Math.max(0, 1 - remaining / total))
         : 0;
-      return { bpId: item.bpId, x, y, progress, label: BLUEPRINT_LOOKUP[item.bpId].label };
+      const meta = BLUEPRINT_LOOKUP[item.bpId];
+      return {
+        bpId: item.bpId, x, y, progress,
+        label: meta.label,
+        icon: meta.icon,
+        // ⚠️ Đem theo cả SỐ PHIÊN CÒN LẠI, không chỉ tỉ lệ. Màn hình cần nói được "còn 2 phiên nữa"
+        // — một con số Đàm hành động được ngay hôm nay — chứ không phải "đã xong 67%", thứ nghe thì
+        // chính xác mà chẳng bảo anh phải làm gì. Tính ở đây để mọi màn hình nói cùng một con số.
+        remaining: Math.max(0, Number.isFinite(total) ? Math.min(remaining, total) : remaining),
+        total: Number.isFinite(total) && total > 0 ? total : null,
+        // PHẦN THƯỞNG — nhãn ngắn của đặc quyền công trình sẽ mở khoá ("Cả xưởng tăng tốc",
+        // "-25% RP bản vẽ kỷ 6-10"). Thiếu số phiên còn lại thì Đàm biết CÒN BAO XA; thiếu dòng này
+        // thì anh vẫn không biết ĐI TỚI ĐÓ ĐỂ LÀM GÌ. Lấy `label` chứ không lấy `summary` vì summary
+        // dài cả câu, nhét vào một dòng danh sách sẽ tràn — chỗ đọc summary là màn Kho báu.
+        reward: BUILDING_EFFECTS[item.bpId]?.perk?.label ?? null,
+      };
     });
 
   const props = deriveProps({

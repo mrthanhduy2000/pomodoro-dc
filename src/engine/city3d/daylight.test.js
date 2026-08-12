@@ -83,6 +83,23 @@ test('ban đêm dùng đèn nền GẤP NHIỀU LẦN ban ngày — vì đêm b�
   assert.ok(ratio >= 3, `đèn nền đêm chỉ gấp ${ratio.toFixed(2)} lần trưa ⇒ thành phố sẽ đen thui`);
 });
 
+test('ĐÊM PHẢI CÓ HƯỚNG SÁNG: ánh trăng không được để đèn nền dìm chết', () => {
+  // Bài test anh em với bài ngay trên, và nó chặn ĐÚNG cái bẫy mà bài trên tạo ra.
+  // Bài trên bắt `fillEnergy` đêm phải GẤP ≥3 lần trưa. Nhưng đèn nền là ánh sáng KHÔNG HƯỚNG —
+  // nó rọi đều vào mọi mặt, kể cả mặt lẽ ra phải khuất. Cứ nhắm mắt tăng đèn nền cho qua bài trên
+  // thì được một thành phố đêm sáng hơn nhưng PHẲNG LÌ, không đọc ra hình khối nữa.
+  // Đo được ở bảng quét lúc chưa sửa: nắng 1,72 × 0,42 = 0,72 trong khi đèn nền 0,78 × 3,40 = 2,65
+  // — ánh sáng không hướng gấp 3,7 lần ánh sáng có hướng, và dải động của cột đêm rớt xuống 0,129
+  // so với 0,474 lúc giữa trưa. Đêm vừa tối nhất vừa phẳng nhất.
+  // Sự thật ngược lại: đêm chỉ có MỘT nguồn sáng cứng là mặt trăng ⇒ đêm là chặng chiaroscuro
+  // mạnh nhất trong ngày, không phải yếu nhất.
+  const night = DAYLIGHT_PROFILES.night;
+  const ratio = night.sunEnergy / night.fillEnergy;
+  assert.ok(ratio >= 0.35,
+    `đêm có ánh trăng ${night.sunEnergy} so với đèn nền ${night.fillEnergy} (tỉ lệ ${ratio.toFixed(2)}) `
+    + '⇒ ánh sáng không hướng đang dìm chết nguồn tạo khối, thành phố đêm sẽ phẳng lì');
+});
+
 test('đèn trong nhà chỉ hắt ra khi trời đã tối — và luôn đi kèm cửa sổ sáng', () => {
   for (const phase of DAY_PHASES) {
     const profile = DAYLIGHT_PROFILES[phase];

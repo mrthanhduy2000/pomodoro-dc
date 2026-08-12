@@ -12,6 +12,23 @@
 
 ---
 
+## 2026-08-12 — Thành Phố (Phase 3M): đêm không còn là một ô đen
+
+- **Mục đích**: quét lại đủ 15 kỷ × 6 chặng ngày rồi ĐO BẰNG MÁY, thay vì nghiệm thu bằng mắt.
+- **Phạm vi**: `src/engine/city3d/daylight.js` + `src/engine/city3d/palette3d.js` (đều thuần) và
+  hai bài test khoá tương ứng. Không đụng store, không đụng đồng bộ, không đụng AI Coach.
+- **Lỗi tìm ra**: cảnh đêm có độ sáng trung vị 0,023 (≈ 6/255) và dải động 0,129 — vừa tối nhất
+  vừa phẳng nhất trong 6 chặng; độ lệch giữa 15 kỷ lúc đêm chỉ 0,010 nên **ban đêm mọi kỷ trông
+  giống hệt nhau**. Nguyên nhân: đêm bị làm tối ở BA tầng nhân nhau (màu đèn · nắng yếu · sơn hạ
+  sắc độ), trong khi hai lần vá trước chỉ cộng thêm đèn nền — sai tầng.
+- **Đã sửa**: ánh trăng 0,42 → 1,15 · đèn nền 3,40 → 2,60 · sắc độ đêm mặt đất 0,286 → 0,40 và
+  vùng ngoài phố 0,18 → 0,34.
+- **Ảnh hưởng**: trung vị 0,023 → 0,058 (+152%), dải động 0,129 → 0,170. Năm chặng còn lại giữ
+  nguyên từng byte. Không đổi cân bằng game, không đổi state, không cần chạy SQL.
+- **Tương thích**: hoàn toàn ngược tương thích. Đường không truyền `daylight` (bảo tàng + theme
+  tối) cũng sáng lên theo, đúng hướng cải thiện.
+- **Test**: 477 → **478** bài. Hai hàng rào mới đều đã chứng minh ĐỎ trước giá trị cũ.
+
 ## 2026-08-12 — Thành Phố (Phase 4′-d): test nối phiên thật của store với câu chữ hiện ra
 
 - **Mục đích**: bịt chỗ hở giữa hai lớp test cũ. Test engine dùng giàn giáo tự dựng; phép soi

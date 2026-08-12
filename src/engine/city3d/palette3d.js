@@ -455,11 +455,25 @@ export function buildScenePalette({ tokens, eraColor, daylight } = {}) {
      * ứng Purkinje). Một bãi cỏ xanh RỰC dưới bầu trời chạng vạng đọc ra "đồ hoạ game chỉnh
      * sai", còn một bãi cỏ xám-lục thì đọc ra "trời đang tối".
      */
+    /**
+     * ⚠️ SẮC ĐỘ BAN ĐÊM ĐÃ ĐƯỢC NÂNG (0,286 → 0,40) — VÌ ĐÊM ĐANG BỊ LÀM TỐI TỚI BA LẦN.
+     * Bảng quét đo bằng máy: dải thành phố lúc 22 giờ có độ sáng trung vị 0,029, giữa trưa 0,456.
+     * Tối gấp 15 lần, trong khi đèn đóm chỉ chênh nhau 1,6 lần. Truy ra thì đêm bị nhân ba tầng
+     * độc lập, mỗi tầng đều "hợp lý" khi nhìn riêng:
+     *   (1) MÀU ĐÈN lấy từ bầu trời đêm — trời đêm đậm nên ánh sáng chiếu vào cũng đậm theo;
+     *   (2) NẮNG yếu đi (ánh trăng thay mặt trời);
+     *   (3) SƠN cũng bị hạ sắc độ ở nhánh `isDark` — chính là mấy con số ngay dưới đây.
+     * Tầng (1) và (2) LÀ ban đêm, đúng và phải giữ. Tầng (3) là đếm thêm một lần nữa cho cùng một
+     * chuyện: mặt đất ban đêm KHÔNG đổi màu sơn, nó chỉ được chiếu ít ánh sáng hơn thôi. Hạ cả sơn
+     * là mô tả một thành phố xây bằng vật liệu khác vào ban đêm.
+     * Đây cũng là lý do hai lần vá trước (bơm `fillEnergy` 1,45 → 3,40) không ăn thua: chúng cộng
+     * thêm vào tầng (1) trong khi thủ phạm nằm ở tầng (3), mà (3) thì NHÂN chứ không CỘNG.
+     */
     groundShades: [
-      material(GROUND_ANCHOR,     GROUND_ERA, groundSat,        0.536, 0.286),
-      material(GROUND_ANCHOR - 4, GROUND_ERA, groundSat - 0.01, 0.528, 0.280),
-      material(GROUND_ANCHOR + 4, GROUND_ERA, groundSat + 0.01, 0.544, 0.290),
-      material(GROUND_ANCHOR + 2, GROUND_ERA, groundSat - 0.02, 0.522, 0.276),
+      material(GROUND_ANCHOR,     GROUND_ERA, groundSat,        0.536, 0.400),
+      material(GROUND_ANCHOR - 4, GROUND_ERA, groundSat - 0.01, 0.528, 0.392),
+      material(GROUND_ANCHOR + 4, GROUND_ERA, groundSat + 0.01, 0.544, 0.406),
+      material(GROUND_ANCHOR + 2, GROUND_ERA, groundSat - 0.02, 0.522, 0.386),
     ],
 
     /** Mặt đường: NHẠT hơn đất rõ rệt — đá lát bạc màu vì bị giẫm, và mắt cần đọc ra lối đi. */
@@ -473,7 +487,11 @@ export function buildScenePalette({ tokens, eraColor, daylight } = {}) {
     outskirts: rgbToHexNumber(mixRgb(
       // Ngả XANH LÁ hơn lưới thành phố (+14°) và nhạt hơn: đồng cỏ ngoài phố, không phải phần
       // kéo dài của chính thành phố. Khác sắc thì mắt mới đọc ra ranh giới "trong phố / ngoài phố".
-      blend(GROUND_ANCHOR + 14, GROUND_ERA, isDark ? 0.16 : 0.19, isDark ? 0.18 : 0.56),
+      // Sắc độ đêm 0,18 → 0,34, cùng lý do "tối ba lần" đã ghi ở `groundShades` ngay trên. Vùng
+      // đất ngoài phố là mảng LỚN NHẤT khung hình, nên nó đen là cả bức đen — và vì nó còn được pha
+      // 42% về màu chân trời (dòng dưới), ban đêm nó vốn đã tự ngả lam sâu rồi, không cần hạ sơn
+      // thêm lần nữa mới ra đêm.
+      blend(GROUND_ANCHOR + 14, GROUND_ERA, isDark ? 0.16 : 0.19, isDark ? 0.34 : 0.56),
       // ⚠️ PHA VỀ ĐÚNG MÀU CHÂN TRỜI CỦA CHẶNG NÀY, không phải về một màu ấm chốt cứng.
       // Bản quét chỉ ra một chuyện chỉ thấy được khi nhìn nguyên khung hình chứ không nhìn từng
       // vai màu: **vùng đất ngoài phố chiếm nhiều diện tích hơn cả bầu trời lẫn thành phố cộng

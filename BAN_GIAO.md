@@ -99,6 +99,43 @@
 ## 🗒️ Nhật ký cập nhật
 > Mỗi lần xong việc đáng kể, thêm 1 dòng vào ĐẦU danh sách.
 
+- **2026-08-12 (Phase 3M)** — **ĐÊM KHÔNG CÒN LÀ MỘT Ô ĐEN.** Quét lại đủ **15 kỷ × 6 chặng ngày**
+  (90 cảnh, ảnh `.city-preview/sweep-light-ky1-15.png`) rồi **ĐO BẰNG MÁY** thay vì nhìn bằng mắt —
+  và phép đo phơi ra một lỗi mà 3 phase mỹ thuật trước đều không thấy:
+  - **Số đo lúc chưa sửa**: dải THÀNH PHỐ (55% dưới khung hình) lúc 22 giờ có độ sáng trung vị
+    **0,023** (≈ 6/255 — một nửa diện tích đen đặc), trong khi bình minh/hoàng hôn được 0,22 và
+    giữa trưa 0,456. **Dải động** (p95−p05) đêm 0,129 so với trưa 0,474 ⇒ đêm vừa TỐI NHẤT vừa
+    PHẲNG NHẤT. **Độ lệch giữa 15 kỷ lúc đêm chỉ 0,010** — thấp nhất trong 6 chặng, tức **ban đêm
+    cả 15 kỷ trông y hệt nhau**: mất sạch phần thưởng của việc đi hết 15 kỷ, đúng vào khung giờ
+    Đàm hay làm phiên khuya.
+  - **Nguyên nhân gốc — đêm bị làm tối tới BA tầng nhân nhau**, mỗi tầng nhìn riêng đều hợp lý:
+    (1) màu đèn lấy từ bầu trời đêm (trời đậm ⇒ ánh sáng đậm theo); (2) nắng yếu đi vì là ánh
+    trăng; (3) **SƠN cũng bị hạ sắc độ ở nhánh `isDark`**. Tầng (1)(2) LÀ ban đêm, đúng. Tầng (3)
+    là đếm thêm một lần nữa cho cùng một chuyện — mặt đất ban đêm không đổi màu sơn, nó chỉ được
+    chiếu ít sáng hơn. ⚠️ Đây là lý do **hai lần vá trước (bơm `fillEnergy` 1,45 → 3,40) không ăn
+    thua**: chúng CỘNG vào tầng (1) trong khi thủ phạm ở tầng (3), mà (3) thì NHÂN.
+  - **Lỗi thứ hai, ngược chiều**: nắng đêm 1,72 × 0,42 = 0,72 trong khi đèn nền 0,78 × 3,40 = 2,65
+    ⇒ **ánh sáng KHÔNG HƯỚNG gấp 3,7 lần ánh sáng CÓ HƯỚNG**. Đó là định nghĩa của một bức phẳng.
+    Sự thật ngược lại: đêm chỉ có MỘT nguồn sáng cứng (mặt trăng) ⇒ **đêm là chặng chiaroscuro
+    mạnh nhất trong ngày**, không phải yếu nhất.
+  - **Đã sửa** (`daylight.js` + `palette3d.js`, đều là engine THUẦN): ánh trăng `sunEnergy`
+    0,42 → **1,15**; đèn nền `fillEnergy` 3,40 → **2,60** (vẫn gấp 3,25 lần giữa trưa, vẫn qua bài
+    test khoá tỉ lệ cũ); sắc độ đêm của `groundShades` 0,286 → **0,40** và `outskirts` 0,18 → **0,34**.
+  - **Kết quả đo lại**: trung vị **0,023 → 0,058** (+152%), trung bình 0,049 → 0,085, dải động
+    0,129 → **0,170**, độ lệch giữa các kỷ 0,010 → 0,012. **Năm chặng còn lại KHÔNG đổi một byte**
+    (0,203/0,313/0,414/0,300/0,204 y hệt trước) — thay đổi được chặn gọn trong nhánh `isDark`.
+  - **Hai hàng rào MỚI, đã chứng minh ĐỎ trước giá trị cũ rồi mới XANH sau khi sửa** (478 bài):
+    (a) `daylight.test.js` — "ĐÊM PHẢI CÓ HƯỚNG SÁNG": `sunEnergy/fillEnergy ≥ 0,35`, chặn đúng
+    cái bẫy mà bài test cũ ("đèn nền đêm phải gấp ≥3 lần trưa") vô tình tạo ra; (b) `palette3d.test.js`
+    — ngưỡng sáng trưa/đêm đổi từ **một phía** sang **hai phía** `(1,25 … 1,75)`.
+  - ⚠️ **BÀI HỌC LỚN NHẤT PHIÊN NÀY — "một ngưỡng chỉ chặn một phía thì không phải hàng rào, nó là
+    cái phễu."** Bài test cũ chỉ đòi "trưa sáng hơn đêm ≥1,6 lần", nên mặt đất đêm càng tối thì
+    càng thoả — lỗi đen thui đi qua hàng rào mà không bài nào đỏ. Ngưỡng mới phải đặt **dưới giá
+    trị hỏng thật** (1,93) mới có nghĩa; chọn 1,75 vì lý do đó, không phải vì số tròn.
+  - ⚠️ **Bài học thứ hai**: **"tối quá" và "phẳng quá" là hai bệnh khác nhau, và thuốc chữa bệnh
+    này làm nặng thêm bệnh kia.** Chỉ đo tổng độ sáng thì vĩnh viễn không phân biệt được — phải đo
+    thêm **dải động**. Công cụ đo nằm ở `scripts/city-preview.mjs --sweep` + `scripts/png-probe.mjs`.
+
 - **2026-08-12 (Phase 4′-d)** — **NỐI HAI ĐẦU: PHIÊN THẬT CỦA STORE → CÂU CHỮ HIỆN RA.**
   ⚠️ **Phát hiện một CHỖ HỞ mà cả hai lớp test cũ đều không bịt được.** Phase 4′ có hai lớp kiểm:
   (a) test engine đưa giàn giáo TỰ TAY DỰNG vào → chứng minh engine tính đúng, KHÔNG chứng minh

@@ -363,9 +363,25 @@ test('THÀNH PHỐ LÀ Ô CỬA SỔ: để theme tối thì giữa trưa vẫn 
     const night = buildScenePalette({ tokens, eraColor: '#c084fc', daylight: deriveDaylight(22) });
     assert.equal(noon.isDark, false, 'giữa trưa mà bảng màu tự nhận là trời tối');
     assert.equal(night.isDark, true, 'nửa đêm mà bảng màu tự nhận là trời sáng');
-    assert.ok(lum(noon.groundShades[0]) > lum(night.groundShades[0]) * 1.6,
+    // ⚠️ HAI ĐẦU, KHÔNG PHẢI MỘT. Bản đầu bài test này chỉ chặn MỘT phía ("trưa phải sáng hơn đêm
+    // ít nhất 1,6 lần") — và chính sự một-phía đó đã để lọt lỗi ngược lại: mặt đất đêm có tối tới
+    // mức ĐEN THUI thì bài test vẫn xanh, vì đen thì càng thoả "trưa sáng hơn đêm". Bảng quét đo
+    // được đúng chuyện đó: dải thành phố lúc 22 giờ có độ sáng trung vị 0,029 (≈ 6/255), tức một
+    // nửa diện tích thành phố đen đặc, mà không bài test nào đỏ.
+    // Bài học: **một ngưỡng chỉ chặn một phía thì không phải hàng rào, nó là cái phễu** — nó lùa
+    // giá trị chạy về phía không bị chặn. Chặn cả hai đầu thì "đêm" mới có nghĩa là đêm chứ không
+    // trôi dần thành đen.
+    const ratio = lum(noon.groundShades[0]) / lum(night.groundShades[0]);
+    assert.ok(ratio > 1.25,
       `mặt đất giữa trưa (${readColor(noon.groundShades[0]).hex}) không sáng hơn nửa đêm `
-      + `(${readColor(night.groundShades[0]).hex}) đủ nhiều`);
+      + `(${readColor(night.groundShades[0]).hex}) đủ nhiều — chênh ${ratio.toFixed(2)} lần`);
+    // Ngưỡng 1,75 KHÔNG phải con số tròn cho đẹp: giá trị đã ship (sắc độ đêm 0,286) cho ra tỉ lệ
+    // 1,93 — tức là bài test này, nếu để ngưỡng rộng hơn 1,93, vẫn sẽ xanh trước đúng cái lỗi nó
+    // sinh ra để bắt. Ngưỡng phải nằm DƯỚI giá trị hỏng thật thì hàng rào mới có nghĩa.
+    assert.ok(ratio < 1.75,
+      `mặt đất nửa đêm (${readColor(night.groundShades[0]).hex}) tối hơn giữa trưa tới `
+      + `${ratio.toFixed(2)} lần ⇒ thành phố sẽ chìm hẳn. Nhớ rằng SƠN chỉ là tầng thứ ba: đèn đã `
+      + 'tự tối đi vì màu lấy từ trời đêm, nắng đã tự yếu đi vì là ánh trăng.');
   }
 
   // Nhưng KHÔNG truyền `daylight` (bảo tàng, và mọi chỗ gọi cũ) thì vẫn theo theme y như trước —

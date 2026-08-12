@@ -103,7 +103,32 @@ export const DAYLIGHT_PROFILES = {
   // Đêm: chặng DUY NHẤT mà chân trời cũng lạnh theo đỉnh trời — kéo cả hai về LAM SÂU (không phải
   // lục lam, không phải tím). Nắng yếu nhưng KHÔNG tắt — đó là ánh trăng, và không có nó thì công
   // trình mất hết hình khối, chỉ còn những ô cửa sáng lơ lửng.
-  night:     { sunAltitude: 0.40, sunWarmth: -0.70, sunEnergy: 0.42, fillEnergy: 3.40, skyHue: 232, skyPull: 0.80, horizonHue: 226, horizonPull: 0.74, skySaturation: 0.85, windowsLit: true,  lampEnergy: 1.00 },
+  //
+  // ⚠️ "TỐI HAI LẦN" LẦN THỨ BA — VÀ LẦN NÀY NGUYÊN NHÂN NGƯỢC VỚI HAI LẦN TRƯỚC.
+  // Bảng quét đủ 15 kỷ × 6 chặng, đo bằng máy chứ không bằng mắt, cho ra con số này: dải THÀNH PHỐ
+  // (55% dưới khung hình) lúc 22 giờ có độ sáng trung vị **0,023** — tức khoảng 6/255, một nửa
+  // diện tích thành phố đen đặc. Bình minh và hoàng hôn cùng phép đo ấy được 0,22. Đêm tối gấp 9
+  // lần hai chặng "cũng tối" kia, chứ không phải tối hơn một chút.
+  // Nhưng chi tiết quan trọng hơn nằm ở DẢI ĐỘNG (p95 − p05): đêm 0,129, bình minh 0,202, trưa
+  // 0,474. Đêm vừa tối nhất VỪA PHẲNG NHẤT. Và độ lệch giữa 15 kỷ lúc đêm chỉ 0,010 — thấp nhất
+  // trong sáu chặng: **ban đêm cả 15 kỷ trông y hệt nhau**, tức là mất sạch phần thưởng của việc
+  // đi hết 15 kỷ, đúng vào khung giờ Đàm hay làm phiên khuya nhất.
+  //
+  // Truy nguyên: hai lần trước sửa bằng cách BƠM ĐÈN NỀN (1,45 → 3,40). Nhưng đèn nền là ánh sáng
+  // KHÔNG HƯỚNG — nó rọi đều vào mọi mặt, kể cả mặt lẽ ra phải khuất. Tính ra thì lúc 22 giờ:
+  //     nắng (có hướng) = 1,72 × 0,42 = 0,72     đèn nền (không hướng) = 0,78 × 3,40 = 2,65
+  // Ánh sáng không hướng đang GẤP 3,7 LẦN ánh sáng có hướng. Đó chính là định nghĩa của một bức
+  // phẳng, và nó giải thích trọn vẹn cả hai con số đo được: bơm thêm đèn nền chỉ kéo mọi thứ về
+  // giữa thang xám mà không dựng lại được hình khối.
+  // Sự thật về đêm thật thì ngược hẳn: **đêm là lúc CHIARoSCURO MẠNH NHẤT trong ngày**, vì chỉ có
+  // đúng một nguồn sáng cứng là mặt trăng. Đêm phải là chặng NHIỀU hướng sáng nhất, không phải ít
+  // nhất. Nên lần này đổi TỈ LỆ chứ không đổi tổng: ánh trăng 0,42 → 1,15 (thành nguồn tạo khối
+  // thật sự), đèn nền 3,40 → 2,60 (vẫn gấp 3,25 lần giữa trưa — vẫn bù đủ cho việc màu đèn bán cầu
+  // lấy từ bầu trời đêm vốn đã đậm, xem bài test khoá tỉ lệ ở `daylight.test.js`).
+  // Bài học tổng quát, khác với bài học của hai lần trước: **"tối quá" và "phẳng quá" là hai bệnh
+  // khác nhau, và thuốc chữa bệnh này làm nặng thêm bệnh kia.** Đo tổng độ sáng thì không bao giờ
+  // phân biệt được hai bệnh đó — phải đo thêm dải động mới thấy.
+  night:     { sunAltitude: 0.40, sunWarmth: -0.70, sunEnergy: 1.15, fillEnergy: 2.60, skyHue: 232, skyPull: 0.80, horizonHue: 226, horizonPull: 0.74, skySaturation: 0.85, windowsLit: true,  lampEnergy: 1.00 },
 };
 
 /** Giờ (0–23) → tên chặng. Giờ rác → 'noon' (chặng trung tính nhất, không bao giờ trông như lỗi). */

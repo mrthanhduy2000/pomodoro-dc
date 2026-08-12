@@ -14,16 +14,26 @@ export const CONTINUED_POMODORO_CONFIRM_SECONDS = 15 * 60;
 /**
  * Phiên xong → chờ bao lâu rồi mới cho phiên NGHỈ bắt đầu đếm (mili-giây).
  *
- * ⚠️ CON SỐ NÀY CÓ TỪ TRƯỚC KHI CÓ LỄ MỪNG, VÀ CHƯA ĐƯỢC CHỈNH LẠI CHO KHỚP.
- * 500 ms vốn chỉ để màn hình kịp chuyển trạng thái. Nhưng từ Phase 4′, giữa "phiên xong" và "Đàm
- * thật sự bắt đầu nghỉ" còn chen vào lễ mừng `GROWTH_MOMENT_MS` = 3 200 ms rồi mới tới hộp phần
- * thưởng. Nghĩa là đồng hồ nghỉ đang chạy 2 700 ms TRƯỚC KHI lễ mừng kết thúc, rồi chạy tiếp suốt
- * lúc đọc hộp phần thưởng — tức **phần thưởng đang bị trừ vào thời gian nghỉ**.
- * Đây là nợ đã ghi ở `TECH_DEBT.md` #12, CHƯA sửa vì đổi giá trị này là đổi HÀNH VI ĐỒNG HỒ trên
- * app production và cần Đàm chọn phương án. Việc đặt tên cho nó ở đây là bước chuẩn bị: một con số
- * có tên và nằm cạnh bài test thì không trôi được nữa (xem `timerSession.test.js`).
+ * ⚠️ ĐÃ ĐỔI 500 → 3 200 (2026-08-12). ĐÂY LÀ THAY ĐỔI HÀNH VI, ĐỌC KỸ TRƯỚC KHI ĐỘNG VÀO.
+ * 500 ms là con số có từ TRƯỚC khi có lễ mừng — hồi đó nó chỉ cần đủ để màn hình kịp chuyển trạng
+ * thái. Nhưng từ Phase 4′, giữa "phiên xong" và "Đàm thật sự bắt đầu nghỉ" còn chen vào lễ mừng
+ * 3 200 ms rồi mới tới hộp phần thưởng. Hệ quả đo được: đồng hồ nghỉ chạy **2 700 ms trước khi lễ
+ * mừng kết thúc**, rồi chạy tiếp suốt lúc đọc hộp phần thưởng — khoảng 8–18 giây trên một phiên
+ * nghỉ 5 phút. Con số không lớn; điều sai là VỀ NGUYÊN TẮC: **phần thưởng cho việc vừa làm xong
+ * đang bị trừ vào thời gian nghỉ.** Lễ mừng là tiền công, không phải khoản người dùng tự trả.
+ *
+ * ⚠️ VÌ SAO KHÔNG `import { GROWTH_MOMENT_MS }` TỪ `cityMoment.js` CHO KHỎI TRÙNG SỐ.
+ * Vì đó sẽ là tầng ĐỒNG HỒ phụ thuộc tầng THÀNH PHỐ — đồng hồ phải chạy đúng kể cả khi không có
+ * thành phố nào (và lễ mừng CHỈ xuất hiện khi có công trình tiến triển). Ràng buộc giữa hai số
+ * được canh bằng BÀI TEST (`timerSession.test.js`, bài "NHỊP MỘT PHIÊN") chứ không bằng import —
+ * đúng chỗ để một ràng buộc xuyên tầng nên nằm.
+ *
+ * ⚠️ ĐÁNH ĐỔI ĐÃ CÂN NHẮC: những phiên KHÔNG có lễ mừng nay cũng chờ 3,2 s mới vào nghỉ. Chấp nhận
+ * được vì cả hai trường hợp người dùng đều đang nhìn hộp phần thưởng, không nhìn đồng hồ; và vì
+ * lệch về phía "được nghỉ đủ" thì an toàn hơn lệch về phía "bị ăn bớt".
+ * Muốn quay lại: đổi đúng dòng dưới về 500 (bài test sẽ ĐỎ và nhắc lại toàn bộ lý do ở trên).
  */
-export const BREAK_START_DELAY_MS = 500;
+export const BREAK_START_DELAY_MS = 3200;
 
 export function resolveContinueAfterPomodoro(timerSession = {}, fallback = false) {
   if (typeof timerSession?.continueAfterPomodoro === 'boolean') {

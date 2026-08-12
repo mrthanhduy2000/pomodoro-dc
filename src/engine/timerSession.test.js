@@ -197,34 +197,32 @@ test('legacy stopwatch restore can be inferred as continued Pomodoro from config
   }), false);
 });
 
-test('NHỊP MỘT PHIÊN: lễ mừng đang bị tính vào giờ nghỉ — bài test này CHỐT khoảng lệch lại', () => {
-  // ⚠️ ĐÂY LÀ BÀI TEST "CHẶN NỢ PHÌNH TO", KHÔNG PHẢI BÀI TEST "MỌI THỨ ĐÃ ĐÚNG".
-  // Sự thật hiện tại: phiên nghỉ bắt đầu đếm sau `BREAK_START_DELAY_MS` = 500 ms, trong khi lễ
-  // mừng "thành phố lớn lên" chiếm sóng `GROWTH_MOMENT_MS` = 3 200 ms rồi mới tới hộp phần thưởng.
-  // ⇒ đồng hồ nghỉ chạy 2 700 ms TRƯỚC KHI lễ mừng kết thúc, rồi chạy tiếp suốt lúc Đàm đọc hộp
-  // phần thưởng. Tức **phần thưởng cho việc vừa làm xong đang bị trừ vào thời gian nghỉ.**
+test('NHỊP MỘT PHIÊN: lễ mừng KHÔNG được tính vào giờ nghỉ', () => {
+  // ⚠️ LỊCH SỬ CỦA BÀI TEST NÀY — đọc để đừng vô tình quay ngược.
+  // Bản đầu (Phase 3P) là bài "CHỐT NỢ": lúc đó `BREAK_START_DELAY_MS` còn là 500 ms trong khi lễ
+  // mừng chiếm 3 200 ms, nên đồng hồ nghỉ chạy 2 700 ms TRƯỚC KHI lễ mừng kết thúc. Nợ đã ghi ở
+  // `TECH_DEBT.md` #12 và bài test chỉ chặn cho nó khỏi phình to.
+  // Nay (Phase 3Q) nợ ĐÃ TRẢ: độ trễ vào nghỉ nâng lên cho phủ trọn lễ mừng, nên bài test đổi từ
+  // "chốt mức nợ" sang khẳng định BẤT BIẾN THẬT.
   //
-  // Vì sao không sửa luôn ở đây: đổi `BREAK_START_DELAY_MS` là đổi HÀNH VI ĐỒNG HỒ trên app
-  // production, mà `useTimer.js` là hot spot và hiện chưa có lưới test hành vi (`TECH_DEBT.md` #13).
-  // Hai phương án đã ghi ở `TECH_DEBT.md` #12 và cần Đàm chọn — không phải việc AI tự quyết.
+  // Bất biến: **đồng hồ nghỉ không được bắt đầu đếm trước khi lễ mừng kết thúc.** Người dùng chưa
+  // nghỉ khi còn đang xem phần thưởng của mình; tính khoảng đó vào giờ nghỉ là bắt họ trả tiền cho
+  // chính phần thưởng của họ.
   //
-  // Vậy bài test này làm gì? Nó CHỐT khoảng lệch ở mức hiện tại. Nợ kỹ thuật nguy hiểm nhất là nợ
-  // âm thầm lớn lên: chỉ cần ai đó kéo dài lễ mừng (thêm màn mở khoá kỷ mới, thêm thành tích...)
-  // là khoảng bị trừ tăng theo mà không một dấu hiệu nào. Có bài này thì lần đó sẽ ĐỎ, và người
-  // sửa buộc phải đọc `TECH_DEBT.md` #12 rồi ra quyết định TỈNH TÁO thay vì vô tình làm nặng thêm.
-  const stolenMs = GROWTH_MOMENT_MS - BREAK_START_DELAY_MS;
+  // ⚠️ Hai hằng số CỐ Ý không import lẫn nhau (tầng đồng hồ không được phụ thuộc tầng thành phố —
+  // đồng hồ phải chạy đúng cả khi không có lễ mừng nào). Ràng buộc giữa chúng sống ở ĐÂY.
+  assert.ok(BREAK_START_DELAY_MS >= GROWTH_MOMENT_MS,
+    `đồng hồ nghỉ bắt đầu sau ${BREAK_START_DELAY_MS} ms trong khi lễ mừng còn chạy tới `
+    + `${GROWTH_MOMENT_MS} ms ⇒ ${GROWTH_MOMENT_MS - BREAK_START_DELAY_MS} ms đầu của giờ nghỉ bị `
+    + 'lễ mừng ăn mất. Xem TECH_DEBT.md #12 trước khi nới ngưỡng này.');
 
-  assert.ok(stolenMs <= 2700,
-    `khoảng bị trừ vào giờ nghỉ đã tăng lên ${stolenMs} ms (trước là 2700). `
-    + 'Ai đó vừa kéo dài lễ mừng hoặc rút ngắn độ trễ vào nghỉ. Đọc TECH_DEBT.md #12 TRƯỚC khi '
-    + 'nới ngưỡng này — nới cho qua chính là cách khoản nợ đó lớn lên mà không ai biết.');
-
-  // Hai chốt chặn cơ bản, để bài trên không bao giờ được "thoả" bằng cách làm hỏng thứ khác:
-  // rút lễ mừng về 0 thì `stolenMs` cũng nhỏ đi, nhưng lúc đó lễ mừng coi như không còn.
+  // Ba chốt chặn để bất biến trên không bao giờ được "thoả" bằng cách phá thứ khác — rút lễ mừng
+  // về 0 cũng làm nó đúng, nhưng lúc đó lễ mừng coi như không còn.
   assert.ok(GROWTH_MOMENT_MS >= 2000,
     `lễ mừng chỉ còn ${GROWTH_MOMENT_MS} ms — ngắn tới mức không kịp nhìn thấy thành phố lớn lên`);
   assert.ok(GROWTH_MOMENT_MS <= 3500,
     `lễ mừng ${GROWTH_MOMENT_MS} ms vượt trần 3,5 s của kế hoạch — chen ngang chứ không còn là thưởng`);
-  assert.ok(BREAK_START_DELAY_MS > 0,
-    'độ trễ vào nghỉ bằng 0 ⇒ phiên nghỉ đá vào đúng lúc màn hình đang chuyển trạng thái');
+  // Và không được kéo dài vô tội vạ: chờ quá lâu mới vào nghỉ thì thành đứng hình.
+  assert.ok(BREAK_START_DELAY_MS <= GROWTH_MOMENT_MS + 800,
+    `chờ ${BREAK_START_DELAY_MS} ms mới bắt đầu nghỉ — dài hơn lễ mừng quá nhiều, màn hình như treo`);
 });

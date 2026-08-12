@@ -12,6 +12,22 @@
 
 ---
 
+## 2026-08-12 — Nhịp phiên (Phase 3Q): lễ mừng không còn bị trừ vào giờ nghỉ
+
+- **Mục đích**: xử lý dứt điểm `TECH_DEBT.md` #12. Lễ mừng 3 200 ms chen giữa "hết phiên" và hộp
+  phần thưởng, nhưng đồng hồ nghỉ lại bắt đầu chạy từ mốc 500 ms ⇒ **2 700 ms cuối của lễ mừng, và
+  cả lúc đọc hộp phần thưởng, đang bị tính là thời gian nghỉ.** Phần thưởng cho việc vừa làm xong
+  bị trừ vào khoản người dùng được hưởng.
+- **Phạm vi**: một dòng ở `src/engine/timerSession.js` (`BREAK_START_DELAY_MS` 500 → 3 200) +
+  `src/engine/timerSession.test.js`. **Không đổi dòng mã giao diện nào.**
+- **Ảnh hưởng**: phiên nghỉ 5 phút nay được nghỉ đủ 5 phút. Đánh đổi đã cân nhắc: phiên KHÔNG có lễ
+  mừng cũng chờ 3,2 s mới vào nghỉ (cả hai trường hợp người dùng đều đang nhìn hộp phần thưởng).
+  Không đổi state, không cần chạy SQL, không ảnh hưởng cân bằng game.
+- **Vì sao không `import` chéo hai hằng số**: tầng đồng hồ không được phụ thuộc tầng thành phố —
+  đồng hồ phải chạy đúng cả khi không có lễ mừng nào. Ràng buộc canh bằng test, không bằng import.
+- **Test**: giữ **480** bài; bài "NHỊP MỘT PHIÊN" đổi từ khoá-giá-trị sang khoá-BẤT-BIẾN
+  (`BREAK_START_DELAY_MS >= GROWTH_MOMENT_MS`), đã chứng minh ĐỎ theo cả hai hướng hồi quy.
+
 ## 2026-08-12 — Nhịp phiên (Phase 3P): dựng lưới cho hai con số quyết định nhịp
 
 - **Mục đích**: làm cho khoản nợ "lễ mừng bị tính vào giờ nghỉ" (`TECH_DEBT.md` #12) nhìn thấy được

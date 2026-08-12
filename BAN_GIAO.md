@@ -110,6 +110,26 @@
 ## 🗒️ Nhật ký cập nhật
 > Mỗi lần xong việc đáng kể, thêm 1 dòng vào ĐẦU danh sách.
 
+- **2026-08-12 (Phase 3Q)** — **TRẢ NỢ #12: LỄ MỪNG KHÔNG CÒN BỊ TÍNH VÀO GIỜ NGHỈ.**
+  `BREAK_START_DELAY_MS` **500 → 3 200 ms** (`engine/timerSession.js`), phủ trọn lễ mừng.
+  - **Trước**: phiên xong → 0,5 s sau đồng hồ nghỉ đã chạy, trong khi lễ mừng còn 3,2 s rồi mới tới
+    hộp phần thưởng ⇒ **2 700 ms giờ nghỉ bị lễ mừng ăn mất**, cộng thời gian đọc hộp phần thưởng,
+    tổng ~8–18 giây trên một phiên nghỉ 5 phút. Sai về nguyên tắc: **phần thưởng bị trừ vào giờ
+    nghỉ** — lễ mừng là tiền công, không phải khoản Đàm tự trả.
+  - **Bài test đổi vai**: từ *chốt mức nợ* (Phase 3P) sang khẳng định **bất biến thật**
+    `BREAK_START_DELAY_MS >= GROWTH_MOMENT_MS`. **Đã chứng minh ĐỎ cả HAI chiều**: hạ độ trễ về 500
+    ⇒ đỏ; kéo lễ mừng lên 5 000 mà quên chỉnh độ trễ ⇒ cũng đỏ.
+  - ⚠️ **Hai hằng số CỐ Ý không import lẫn nhau**: tầng đồng hồ KHÔNG được phụ thuộc tầng thành phố
+    (đồng hồ phải chạy đúng cả khi không có lễ mừng nào — lễ mừng chỉ xuất hiện khi có công trình
+    tiến triển). Ràng buộc xuyên tầng sống ở BÀI TEST, không ở câu `import`.
+  - ⚠️ **Đánh đổi đã cân nhắc**: phiên KHÔNG có lễ mừng nay cũng chờ 3,2 s mới vào nghỉ. Chấp nhận
+    vì cả hai trường hợp người dùng đều đang nhìn hộp phần thưởng chứ không nhìn đồng hồ; và lệch
+    về phía "được nghỉ đủ" an toàn hơn lệch về phía "bị ăn bớt". Muốn quay lại: đổi đúng MỘT dòng
+    về 500 (bài test sẽ đỏ và nhắc lại toàn bộ lý do).
+  - **Đã kiểm an toàn trước khi đổi**: không logic đồng hồ nào phụ thuộc việc cửa sổ `FINISHED`
+    phải ngắn; trong 3,2 s đó màn hình hiện "Hoàn thành" (đúng thứ nên hiện lúc đang ăn mừng), và
+    `pendingBreakTimeoutRef` vẫn được `reset()`/`cancel()` dọn như cũ. **480 bài test.**
+
 - **2026-08-12 (Phase 3P)** — **DỰNG LƯỚI CHO NHỊP PHIÊN, KHÔNG TỰ Ý ĐỔI HÀNH VI ĐỒNG HỒ.**
   Trả phần đầu tiên của nợ #13 và dựng hàng rào cho #12, mà KHÔNG đổi một hành vi nào.
   - **Hai con số vô danh nay có TÊN và về tầng THUẦN**: `GROWTH_MOMENT_MS` (3 200) chuyển từ

@@ -1,5 +1,13 @@
 /**
- * cityMoment.js — KHOẢNH KHẮC THÀNH PHỐ LỚN LÊN, ngay sau khi một phiên hoàn thành.
+ * cityMoment.js — ĐIỀU ĐÁNG NÓI VỀ THÀNH PHỐ, ở hai đầu của một phiên làm việc:
+ *   • `buildFocusTease`   — TRƯỚC/TRONG phiên: phiên này đang đẩy cái gì tới đâu.
+ *   • `buildGrowthMoment` — NGAY SAU phiên: thành phố vừa lớn lên như thế nào.
+ *
+ * Hai hàm dùng CHUNG một phép chọn "công trường gần xong nhất", nên chúng nằm cùng một file thay
+ * vì chép phép sắp xếp đó ra hai nơi rồi để chúng trôi khỏi nhau — hai màn hình mà nói về hai công
+ * trình khác nhau thì Đàm sẽ tưởng app đang đếm hai thứ.
+ *
+ * ── KHOẢNH KHẮC THÀNH PHỐ LỚN LÊN, ngay sau khi một phiên hoàn thành ──
  *
  * ⚠️ VÌ SAO TỒN TẠI:
  * Sau Phase 3H–3L, thành phố đã ĐỌC ĐƯỢC (biết còn bao xa, biết được gì) và SỜ ĐƯỢC (chạm vào
@@ -26,6 +34,17 @@ function stepBack(scaffold, steps) {
   if (!Number.isFinite(total) || total <= 0) return 0;
   const remainingBefore = (Number.isFinite(scaffold.remaining) ? scaffold.remaining : 0) + steps;
   return clamp01(1 - remainingBefore / total);
+}
+
+/**
+ * Công trường GẦN XONG NHẤT — dùng chung cho cả hai đầu của một phiên.
+ * Cùng thứ tự với bảng "Đang xây" ở tab Thành Phố: ít phiên còn lại nhất trước, hoà thì theo id
+ * cho tất định (không có `Date`/`Math.random` nào ở đây).
+ */
+function pickNearestScaffold(scaffolds) {
+  return (Array.isArray(scaffolds) ? scaffolds : [])
+    .filter((item) => item && typeof item.bpId === 'string')
+    .sort((a, b) => (a.remaining - b.remaining) || a.bpId.localeCompare(b.bpId))[0];
 }
 
 /** Ghép danh sách tên thành một cụm đọc được: "A", "A và B", "A, B và C". */
@@ -69,9 +88,7 @@ export function buildGrowthMoment({ newlyBuilt = [], scaffolds = [], accelerated
   // ── 2. Không thì: giàn giáo vừa cao thêm một nấc ──────────────────────────
   // Lấy cái GẦN XONG NHẤT, cùng thứ tự với bảng "Đang xây" ở tab Thành Phố — hai màn hình phải
   // nói về cùng một công trình, nếu không Đàm sẽ tưởng app đang đếm hai thứ khác nhau.
-  const nearest = (Array.isArray(scaffolds) ? scaffolds : [])
-    .filter((item) => item && typeof item.bpId === 'string')
-    .sort((a, b) => (a.remaining - b.remaining) || a.bpId.localeCompare(b.bpId))[0];
+  const nearest = pickNearestScaffold(scaffolds);
 
   if (nearest) {
     return {
@@ -95,5 +112,68 @@ export function buildGrowthMoment({ newlyBuilt = [], scaffolds = [], accelerated
   // ── 3. Thành phố KHÔNG đổi gì ⇒ im lặng ──────────────────────────────────
   // Không có công trường nào thì phiên vừa rồi thật sự không làm thành phố nhúc nhích. Hiện một
   // câu chúc mừng ở đây là nói dối, và chỉ cần nói dối một lần là mọi khoảnh khắc sau đều rỗng.
+  return null;
+}
+
+/**
+ * ĐIỀU ĐÁNG NÓI TRƯỚC/TRONG PHIÊN: 25 phút sắp tới đang đẩy cái gì tới đâu.
+ *
+ * ⚠️ VÌ SAO TỒN TẠI: `buildGrowthMoment` khép được đuôi vòng lặp (xong phiên → thấy thành quả),
+ * nhưng ĐẦU vòng lặp vẫn phẳng — lúc bấm "Bắt đầu", màn hình không nói gì về việc phiên này để
+ * làm gì cho thành phố. Thẻ "Chuỗi" đã làm đúng việc này cho streak từ lâu ("Còn N ngày → mốc"),
+ * còn thành phố thì chưa có gì tương đương. Đó là chỗ phẳng cuối cùng của chữ "chán".
+ *
+ * ⚠️ CÙNG LUẬT TRUNG THỰC với `buildGrowthMoment`: chỉ nói điều ĐANG đúng.
+ *   • Có công trường ⇒ nói còn bao xa; sắp xong thì nói to hơn (đó mới là lúc đáng bấm Bắt đầu).
+ *   • Xưởng trống mà Đàm ĐÃ từng xây ⇒ nói thẳng cái giá: phiên xong lúc này không đẩy công
+ *     trình nào tiến thêm. Đây là sự thật, không phải lời hối thúc.
+ *   • Chưa từng xây gì ⇒ IM LẶNG. Người mới chưa có xưởng để mà trống; nhắc lúc này là cằn nhằn.
+ *
+ * ⚠️ KHÔNG hứa hẹn gì về NGUYÊN LIỆU. Việc bản vẽ nào đủ nguyên liệu để khởi công là luật riêng
+ * của `BuildingWorkshop` (đã unlock · đúng kỷ · chưa xây · đủ tài nguyên). Chép luật đó sang đây
+ * là tạo ra một bản sao sẽ trôi khỏi bản gốc — và một lời mời "xây đi" mà bấm vào thì không đủ
+ * nguyên liệu còn tệ hơn im lặng.
+ *
+ * @param {object} input
+ * @param {Array}   [input.scaffolds] `layout.scaffolds` — công trình đang xây
+ * @param {boolean} [input.hasBuilt]  Đàm đã từng hoàn thành ít nhất một công trình chưa
+ * @returns {{tone:'imminent'|'progress'|'idle', icon:string, text:string, bpId:string|null,
+ *            progress:number}|null}  `null` = không có gì đáng nói
+ */
+export function buildFocusTease({ scaffolds = [], hasBuilt = false } = {}) {
+  const nearest = pickNearestScaffold(scaffolds);
+
+  if (nearest) {
+    const remaining = Number.isFinite(nearest.remaining) ? nearest.remaining : 0;
+    // `remaining <= 1` gộp cả 0: hàng đợi có thể đã về 0 mà chưa kịp dọn, và với người dùng thì
+    // "còn 0 phiên" với "còn 1 phiên" đều có nghĩa là PHIÊN TỚI LÀ XONG.
+    if (remaining <= 1) {
+      return {
+        tone: 'imminent',
+        icon: nearest.icon ?? '🏗️',
+        text: `Phiên tới hoàn thành ${nearest.label}`,
+        bpId: nearest.bpId,
+        progress: clamp01(nearest.progress),
+      };
+    }
+    return {
+      tone: 'progress',
+      icon: nearest.icon ?? '🏗️',
+      text: `Đang xây ${nearest.label} · còn ${remaining} phiên`,
+      bpId: nearest.bpId,
+      progress: clamp01(nearest.progress),
+    };
+  }
+
+  if (hasBuilt) {
+    return {
+      tone: 'idle',
+      icon: '🏚️',
+      text: 'Xưởng đang trống — phiên xong lúc này không đẩy công trình nào tiến thêm',
+      bpId: null,
+      progress: 0,
+    };
+  }
+
   return null;
 }

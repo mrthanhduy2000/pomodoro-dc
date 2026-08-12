@@ -12,6 +12,21 @@
 
 ---
 
+## 2026-08-12 — Thành Phố (Phase 4′-c): lúc bấm Bắt đầu, màn hình nói phiên này để làm gì
+
+- **Mục đích**: Phase 4′ khép ĐUÔI vòng lặp (xong phiên → thấy thành phố lớn lên); phase này khép
+  ĐẦU vòng lặp. Một dòng ngay dưới lời chào: đang xây gì, còn mấy phiên — và khi phiên tới là
+  phiên hoàn thành thì nói to hẳn lên.
+- **Phạm vi**: `engine/cityMoment.js` thêm `buildFocusTease` (thuần) + 6 bài test;
+  `components/city/FocusCityTease.jsx` (MỚI); `App.jsx` cắm vào cột giữa, trên đồng hồ;
+  `hooks/useCityGrowthMoment.js` → `hooks/useCityMoment.js` (hai hook dùng chung một snapshot).
+- **Ảnh hưởng**: chỉ màn Tập trung, thêm một dòng chữ tĩnh. Store, engine game, cân bằng: không
+  đổi. Không có gì đáng nói ⇒ không render gì (im lặng là mặc định).
+- **Trung thực**: không hứa hẹn gì về nguyên liệu, và im lặng hoàn toàn với người chưa từng xây.
+- **Tương thích**: giữ nguyên hoàn toàn.
+
+---
+
 ## 2026-08-12 — Sửa thứ tự lớp: chuông thông báo nổi trên mọi hộp thoại
 
 - **Mục đích**: chuông ở `z-[75]` cao hơn TẤT CẢ hộp thoại của app (z-50/60/70), nên mỗi lần một

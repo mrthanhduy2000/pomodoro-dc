@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { buildGrowthMoment } from './cityMoment.js';
+import { buildFocusTease, buildGrowthMoment } from './cityMoment.js';
 import { computeCityLayout } from './cityLayout.js';
 import { BLUEPRINT_CATALOG } from './constants.js';
 
@@ -118,4 +118,67 @@ test('dữ liệu rác không được ném lỗi — đây là màn hình chạ
     { scaffolds: [null, undefined, {}] }]) {
     assert.doesNotThrow(() => buildGrowthMoment(bad));
   }
+});
+
+// ─── buildFocusTease — điều đáng nói TRƯỚC/TRONG phiên ───────────────────────
+
+test('TRƯỚC PHIÊN: sắp xong thì phải nói TO — đó mới là lúc đáng bấm Bắt đầu', () => {
+  // Cả nội dung cảm xúc của tính năng này nằm ở đây. "Còn 4 phiên" là thông tin; "phiên tới là
+  // xong" là một lý do để bắt đầu ngay bây giờ. Gộp hai thứ vào cùng một câu là mất phần thứ hai.
+  const one = buildFocusTease({ scaffolds: scaffoldsFor([{ bpId: ERA6[0], sessionsRemaining: 1 }]) });
+  assert.equal(one.tone, 'imminent');
+  assert.match(one.text, /Phiên tới hoàn thành/);
+  assert.doesNotMatch(one.text, /còn 1 phiên/);
+
+  const far = buildFocusTease({ scaffolds: scaffoldsFor([{ bpId: ERA6[0], sessionsRemaining: 4 }]) });
+  assert.equal(far.tone, 'progress');
+  assert.match(far.text, /còn 4 phiên/);
+});
+
+test('TRƯỚC PHIÊN: "còn 0 phiên" cũng là sắp xong, không phải một câu cụt', () => {
+  const zero = buildFocusTease({ scaffolds: scaffoldsFor([{ bpId: ERA6[0], sessionsRemaining: 0 }]) });
+  assert.equal(zero.tone, 'imminent');
+  assert.doesNotMatch(zero.text, /còn 0/);
+});
+
+test('TRƯỚC PHIÊN: nói về ĐÚNG công trình mà bảng "Đang xây" xếp đầu', () => {
+  // Hai màn hình nói về hai công trình khác nhau thì Đàm sẽ tưởng app đang đếm hai thứ.
+  const scaffolds = scaffoldsFor([
+    { bpId: ERA6[0], sessionsRemaining: 5 },
+    { bpId: ERA6[1], sessionsRemaining: 2 },
+  ]);
+  const tease = buildFocusTease({ scaffolds });
+  const moment = buildGrowthMoment({ scaffolds });
+  assert.equal(tease.bpId, ERA6[1]);
+  assert.equal(tease.bpId, moment.bpId, 'hai đầu của một phiên đang nói về hai công trình khác nhau');
+});
+
+test('XƯỞNG TRỐNG: người ĐÃ từng xây thì được nghe sự thật; người MỚI thì được yên', () => {
+  // ⚠️ Đây là bài giữ cho tính năng này không biến thành cằn nhằn. Người mới chưa có xưởng để mà
+  // trống — nhắc lúc đó là trách móc một việc họ còn chưa biết là có.
+  const veteran = buildFocusTease({ scaffolds: [], hasBuilt: true });
+  assert.equal(veteran.tone, 'idle');
+  assert.match(veteran.text, /không đẩy công trình nào tiến thêm/);
+
+  assert.equal(buildFocusTease({ scaffolds: [], hasBuilt: false }), null);
+  assert.equal(buildFocusTease({}), null);
+  assert.equal(buildFocusTease(), null, 'gọi không tham số cũng không được ném lỗi');
+});
+
+test('TRƯỚC PHIÊN: KHÔNG hứa hẹn gì về nguyên liệu', () => {
+  // Luật "bản vẽ nào khởi công được" là của BuildingWorkshop (unlock · đúng kỷ · chưa xây · đủ
+  // tài nguyên). Một lời mời "xây đi" mà bấm vào thì không đủ nguyên liệu còn tệ hơn im lặng.
+  const idle = buildFocusTease({ scaffolds: [], hasBuilt: true });
+  for (const word of [/nguyên liệu/i, /đủ/i, /hãy /i, /xây ngay/i]) {
+    assert.doesNotMatch(idle.text, word, `câu xưởng-trống đang hứa hẹn điều nó không kiểm được: ${word}`);
+  }
+});
+
+test('TRƯỚC PHIÊN: tiến độ nằm trong [0,1] và dữ liệu rác không ném lỗi', () => {
+  for (const bad of [{ scaffolds: 'x' }, { scaffolds: [null, undefined, {}] },
+    { scaffolds: [{ bpId: 'x', label: 'X', remaining: NaN, progress: 9 }] }]) {
+    assert.doesNotThrow(() => buildFocusTease(bad));
+  }
+  const odd = buildFocusTease({ scaffolds: [{ bpId: 'x', label: 'X', remaining: 3, progress: 9 }] });
+  assert.ok(odd.progress >= 0 && odd.progress <= 1);
 });

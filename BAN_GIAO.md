@@ -99,6 +99,37 @@
 ## 🗒️ Nhật ký cập nhật
 > Mỗi lần xong việc đáng kể, thêm 1 dòng vào ĐẦU danh sách.
 
+- **2026-08-12 (Phase 4′-c)** — **KHÉP NỐT ĐẦU VÒNG LẶP: LÚC BẤM BẮT ĐẦU, MÀN HÌNH NÓI PHIÊN NÀY
+  ĐỂ LÀM GÌ.** Phase 4′ khép được ĐUÔI vòng lặp (xong phiên → thấy thành phố lớn lên), nhưng ĐẦU
+  vòng lặp vẫn phẳng: lúc bấm "Bắt đầu", không có gì nói 25 phút sắp tới để làm gì cho thành phố.
+  Thẻ "Chuỗi" đã làm đúng việc này cho streak từ lâu (*"Còn N ngày → mốc"*), còn thành phố thì
+  chưa có gì tương đương. Đó là chỗ phẳng cuối cùng của chữ "chán".
+  - Một DÒNG ngay dưới lời chào, trên đồng hồ. Ba giọng:
+    · `Đang xây Thư Viện Khoa Học · còn 2 phiên` (bình thường)
+    · **`Phiên tới hoàn thành Thư Viện Khoa Học`** (màu nhấn, đậm — đây mới là lúc đáng bấm Bắt đầu)
+    · `Xưởng đang trống — phiên xong lúc này không đẩy công trình nào tiến thêm`
+  - ⚠️ **IM LẶNG với người MỚI**: chưa từng xây gì thì KHÔNG hiện câu "xưởng trống". Người mới chưa
+    có xưởng để mà trống; nhắc lúc đó là trách móc một việc họ còn chưa biết là có.
+  - ⚠️ **KHÔNG hứa hẹn gì về nguyên liệu.** Luật "bản vẽ nào khởi công được" là của
+    `BuildingWorkshop` (unlock · đúng kỷ · chưa xây · đủ tài nguyên). Chép sang đây là tạo bản sao
+    sẽ trôi khỏi bản gốc — và một lời mời "xây đi" mà bấm vào thì không đủ nguyên liệu còn tệ hơn
+    im lặng. Có bài test cấm mọi từ hứa hẹn trong câu đó.
+  - ⚠️ **HAI BÀI HỌC VỀ CHỖ ĐẶT (đều do ảnh chụp khung 390px chỉ ra, không phải suy luận)**:
+    (a) **`FocusRail` là `hidden … lg:flex` — CHỈ hiện trên màn rộng.** Đặt thẻ ở cột phải là đặt
+    vào chỗ Đàm KHÔNG BAO GIỜ nhìn thấy, vì anh làm việc chủ yếu trên iPhone. Phải đặt ở cột giữa.
+    (b) Đặt SAU `PomodoroEngine` thì nằm **dưới nếp gấp** — thẻ đồng hồ cao gần hết màn iPhone.
+    Ảnh chụp lần đầu không thấy dòng nào cả. Đã chuyển lên NGAY DƯỚI lời chào, trước đồng hồ.
+  - **Dọn nợ luôn**: `useCityGrowthMoment.js` đổi thành `useCityMoment.js` chứa CẢ HAI hook, dùng
+    chung một `useCitySnapshot` — thay vì chép đoạn "khoá theo nội dung + dựng bố cục" lần thứ ba
+    trong dự án. Engine cũng gộp: `pickNearestScaffold` dùng chung cho cả hai đầu phiên, nên hai
+    màn hình không thể nói về hai công trình khác nhau (có test khoá đúng điều đó).
+  - **Chi phí đã biết, chấp nhận có chủ ý**: trang chủ nay dựng bố cục thành phố 2 lần (lớp nền 3D
+    + dòng này). Hook không chia sẻ được `useMemo` giữa hai component nếu không dựng context/cache
+    — mà cả hai đều memo theo NỘI DUNG nên chỉ tính lại mỗi phiên một lần, không phải mỗi lượt
+    render. Không đáng dựng thêm một tầng context cho việc đó.
+  - Đã soi bằng trình duyệt thật ở khung iPhone 390px: **cả ba giọng đều ra đúng chữ**. Test
+    **471 xanh** (+6), lint sạch, build xanh. Gói riêng 1,01 KB (0,58 KB gzip).
+
 - **2026-08-12 (Phase 4′-b)** — **CHUÔNG THÔNG BÁO NỔI TRÊN MỌI HỘP THOẠI SUỐT BAO LÂU NAY.**
   Chụp một ảnh khung iPhone của lễ mừng Phase 4′ để xem có tràn không, thì thấy **cái chuông sáng
   trưng nổi lên trên lớp mờ**. Đo lại bằng `elementFromPoint` trong trình duyệt thật: chuông ở

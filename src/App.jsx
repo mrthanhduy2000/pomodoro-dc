@@ -13,7 +13,7 @@ import FocusCoachMobile from './components/FocusCoachMobile';
 import NotificationCenter from './components/NotificationCenter';
 import { RichTextView } from './components/RichText';
 import { useGameLoop } from './hooks/useGameLoop';
-import useCityGrowthMoment from './hooks/useCityGrowthMoment';
+import { useCityGrowthMoment } from './hooks/useCityMoment';
 import useGameStore from './store/gameStore';
 import useSettingsStore from './store/settingsStore';
 import { ERA_METADATA, ERA_THRESHOLDS } from './engine/constants';
@@ -43,6 +43,7 @@ const CityBackdrop = createRecoverableLazy(() => import('./components/city/CityB
 const Settings = createRecoverableLazy(() => import('./components/Settings.jsx'), 'settings');
 const LootDropModal = createRecoverableLazy(() => import('./components/LootDropModal.jsx'), 'loot-drop-modal');
 const CityGrowthMoment = createRecoverableLazy(() => import('./components/city/CityGrowthMoment.jsx'), 'city-growth-moment');
+const FocusCityTease = createRecoverableLazy(() => import('./components/city/FocusCityTease.jsx'), 'focus-city-tease');
 const DisasterModal = createRecoverableLazy(() => import('./components/DisasterModal.jsx'), 'disaster-modal');
 const EraCrisisModal = createRecoverableLazy(() => import('./components/EraCrisisModal.jsx'), 'era-crisis-modal');
 const PrestigeModal = createRecoverableLazy(() => import('./components/PrestigeModal.jsx'), 'prestige-modal');
@@ -1624,6 +1625,19 @@ export default function App() {
                           hasFocusSessionInProgress={hasFocusSessionInProgress}
                           isFocusSessionPaused={isFocusSessionPaused}
                         />
+                        {/*
+                          Một dòng: phiên này đang đẩy công trình nào tới đâu.
+                          ⚠️ ĐẶT NGAY DƯỚI LỜI CHÀO, TRƯỚC đồng hồ — không phải sau. Thẻ đồng hồ
+                          cao gần hết màn iPhone, nên bất cứ thứ gì đặt sau nó đều nằm DƯỚI nếp gấp
+                          và Đàm sẽ không thấy đúng vào lúc cần thấy. Ảnh chụp khung 390px cho thấy
+                          rõ điều đó. Ở đây nó đứng cạnh câu "còn N phiên nữa là đủ nhịp hôm nay" —
+                          hai câu cùng trả lời một câu hỏi: bấm Bắt đầu bây giờ thì được gì.
+                          ⚠️ Cột GIỮA chứ không phải `FocusRail`: cột phải là `hidden … lg:flex`,
+                          tức trên iPhone không bao giờ hiện.
+                        */}
+                        <Suspense fallback={null}>
+                          <FocusCityTease />
+                        </Suspense>
                         <div className="mt-6">
                           <PomodoroEngine
                             immersiveMode={isWideViewport}

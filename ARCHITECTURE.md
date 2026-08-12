@@ -127,7 +127,27 @@ test hành vi (XP/streak/mission tính sai sẽ không có gì tự động bắ
 một app 1 người dùng — xem đề xuất "lần refactor tiếp theo" ở nhật ký `BAN_GIAO.md` ngày 2026-07-12
 nếu muốn làm tiếp, kèm điều kiện cần có trước khi làm an toàn.
 
-### 6.1 Luồng "phiên vừa xong" — vì sao có một màn chen giữa
+### 6.1 Vòng lặp một phiên — hai đầu đều phải nói được "để làm gì"
+
+```
+        ĐẦU PHIÊN                                    ĐUÔI PHIÊN
+   (màn Tập trung, trên đồng hồ)              (ngay khi chuông báo hết giờ)
+   useCityFocusTease                          useCityGrowthMoment
+        │                                            │
+   engine/cityMoment.buildFocusTease           engine/cityMoment.buildGrowthMoment
+        │                                            │
+   "Phiên tới hoàn thành X"                    lễ mừng 3,2 giây → phần thưởng
+```
+
+Cả hai đi qua **cùng một** `pickNearestScaffold`, nên hai đầu của một phiên luôn nói về **cùng một
+công trình** — có bài test khoá đúng điều đó. Cả hai theo cùng luật trung thực: không có gì thật để
+nói thì trả `null` và màn hình im lặng.
+
+⚠️ **Chỗ đặt là một quyết định kiến trúc, không phải chuyện thẩm mỹ**: `FocusRail` (cột phải) là
+`hidden … lg:flex` — chỉ hiện trên màn rộng. Mọi thứ Đàm cần thấy hằng ngày phải nằm ở **cột giữa**,
+vì anh làm việc chủ yếu trên iPhone.
+
+### 6.2 Luồng "phiên vừa xong" — vì sao có một màn chen giữa
 
 ```
 useTimer.commitCompletedSession()

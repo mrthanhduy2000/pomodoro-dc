@@ -78,8 +78,10 @@
 │   │   │                     #   vĩnh viễn + xây thêm nhà không làm xê dịch nhà cũ.
 │   │   ├── cityArchive.js     # THÀNH PHỐ PIXEL: "bảo tàng" các kỷ đã niêm phong (ghi lại công
 │   │   │                     #   trình bị cắt khi lên kỷ, thay vì để mất hẳn)
-│   │   ├── cityMoment.js      # Điều đáng nói nhất về thành phố NGAY SAU phiên vừa xong.
-│   │   │                     #   ⚠️ Trả `null` khi thành phố không đổi gì — thà im lặng còn hơn
+│   │   ├── cityMoment.js      # Điều đáng nói về thành phố ở CẢ HAI đầu một phiên: buildFocusTease
+│   │   │                     #   (trước — phiên này đẩy cái gì tới đâu) + buildGrowthMoment (sau —
+│   │   │                     #   thành phố vừa lớn lên thế nào). Chung một phép chọn công trường.
+│   │   │                     #   ⚠️ Trả `null` khi không có gì thật để nói — thà im lặng còn hơn
 │   │   │                     #   một câu chúc mừng rỗng (cùng luật chống-bịa với AI Coach)
 │   │   ├── city3d/            # Logic THUẦN của bộ vẽ 3D — cấm import three, cấm DOM
 │   │   │   ├── renderMode.js      # Luật chọn 3D/2D (FAIL-CLOSED: không chắc → 2D)
@@ -118,7 +120,9 @@
 │   ├── hooks/                 # React hook — cầu nối giữa store và engine/component
 │   │   ├── useTimer.js         # LỚN — toàn bộ state machine đồng hồ Pomodoro/Stopwatch
 │   │   ├── useCoachContext.js  # build bảng số liệu cho AI Coach (gọi engine/coach/coachContext.js)
-│   │   ├── useCityGrowthMoment.js # Cầu nối store → engine/cityMoment.js. Chỉ tính khi được bật
+│   │   ├── useCityMoment.js   # Cầu nối store → engine/cityMoment.js, CẢ HAI đầu của một phiên:
+│   │   │                     #   useCityFocusTease (trước) + useCityGrowthMoment (sau). Dùng chung
+│   │   │                     #   một snapshot memo theo NỘI DUNG
 │   │   └── useGameLoop.js
 │   ├── lib/                   # Tích hợp dịch vụ ngoài (KHÔNG phải logic game thuần)
 │   │   ├── supabase.js         # Supabase client (anon key, hardcode — không cần .env)

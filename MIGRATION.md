@@ -10,6 +10,23 @@
 
 ---
 
+## 2026-08-12 — `settingsStore` version 6 → 7: thêm `cityRenderMode` + `cityPerfHud`
+
+- **Đổi gì**: `src/store/settingsStore.js` có thêm 2 trường — `cityRenderMode`
+  (`'auto' | '3d' | '2d'`, mặc định `'auto'`) và `cityPerfHud` (boolean, mặc định `false`).
+- **Vì sao**: tab Thành Phố nay có 2 bộ vẽ (SVG và three.js). Đàm cần ép được một chế độ khi cần,
+  và cần bảng số liệu hiệu năng để đo cổng Phase 3A ngay trên iPhone.
+- **⚠️ Vì sao đặt ở `settingsStore` chứ KHÔNG phải `gameStore`**: (a) đây là sở thích của TỪNG MÁY
+  — Mac chạy 3D được, iPhone có thể không, ép chung một giá trị cho cả hai là sai; (b) `settingsStore`
+  **không** đồng bộ lên Supabase, nên nó thêm **0 byte** vào khối JSONB `game_state` đang chịu cơ
+  chế CAS "First Action Wins" (ADR-004). Nhét vào `gameStore` sẽ vừa sai ngữ nghĩa vừa tạo thêm một
+  nguồn tranh chấp ghi giữa 2 máy.
+- **Phá vỡ tương thích ngược?**: **KHÔNG.** Store này không có `partialize` nên trường mới tự được
+  lưu; save cũ thiếu 2 trường → nhận giá trị mặc định. Hàm `migrate` chuẩn hoá ngay tại cửa
+  (`normalizeRenderMode`) để giá trị rác — bản cũ, hoặc ai đó sửa tay localStorage — không lọt tới
+  chỗ quyết định có dựng WebGL hay không.
+- **Cần làm gì**: không cần hành động gì thêm.
+
 ## 2026-08-12 — `GAME_STORE_SCHEMA_VERSION` bump 3 → 4: thêm `cityArchive` (bảo tàng Thành Phố Pixel)
 
 - **Đổi gì**: state game có thêm đúng MỘT trường mới ở cấp cao nhất — `cityArchive`, hình dạng

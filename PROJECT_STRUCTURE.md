@@ -23,7 +23,13 @@
 │   │   │   │   ├── CityCanvas2D.jsx # Gộp 144 ô nền thành 4 <path> (ngân sách ≤200 phần tử DOM)
 │   │   │   │   ├── CityTile.jsx     # MỘT vật thể nổi (nhà/cảnh vật). Ô nền KHÔNG đi qua đây
 │   │   │   │   └── tokens2d.js      # Kích thước ô + bảng màu rgba() + phép chiếu — CHỈ hợp SVG/CSS
-│   │   │   └── render3d/         # (kế hoạch) Bộ vẽ three.js — NƠI DUY NHẤT được import 'three'
+│   │   │   ├── CityStage.jsx     # CHỌN bộ vẽ + tự lùi về 2D khi 3D hỏng. Nạp LƯỜI render3d
+│   │   │   ├── CityPerfHud.jsx   # Bảng FPS/lệnh vẽ/tam giác — để đo cổng hiệu năng Phase 3A
+│   │   │   └── render3d/         # Bộ vẽ three.js — ⚠️ NƠI DUY NHẤT được import 'three'
+│   │   │       ├── CityScene3D.jsx # Vỏ React: vòng đời, resize, mất context. KHÔNG chứa logic 3D
+│   │   │       ├── sceneGraph.js   # Dựng cảnh: cả thành phố = 3 lệnh vẽ (InstancedMesh)
+│   │   │       ├── themeBridge.js  # Đọc CSS var từ đúng div [data-theme] (KHÔNG documentElement)
+│   │   │       └── capability.js   # Dò WebGL2 bằng cách TẠO THỬ context rồi huỷ ngay
 │   │   ├── Coach*.jsx         # 3 lối vào AI Coach: CoachChat (hỏi-đáp), CoachOffline (phân tích
 │   │   │                     #   tổng thể), CoachNudge (tự nhắc sau phiên) — logic AI thật nằm ở
 │   │   │                     #   src/engine/coach/, các file này chỉ là UI + gọi engine.
@@ -52,6 +58,11 @@
 │   │   │                     #   vĩnh viễn + xây thêm nhà không làm xê dịch nhà cũ.
 │   │   ├── cityArchive.js     # THÀNH PHỐ PIXEL: "bảo tàng" các kỷ đã niêm phong (ghi lại công
 │   │   │                     #   trình bị cắt khi lên kỷ, thay vì để mất hẳn)
+│   │   ├── city3d/            # Logic THUẦN của bộ vẽ 3D — cấm import three, cấm DOM
+│   │   │   ├── renderMode.js      # Luật chọn 3D/2D (FAIL-CLOSED: không chắc → 2D)
+│   │   │   ├── renderLoop.js      # Nhịp khung hình: đứng yên = 0 nhịp rAF (luật pin)
+│   │   │   ├── orbit.js           # Toán camera xoay (tự viết, KHÔNG dùng OrbitControls)
+│   │   │   └── palette3d.js       # Token màu CSS → số cho WebGL
 │   │   ├── achievementTimeline.js # Suy luận ngày mở khoá thành tích cũ (replay lịch sử)
 │   │   ├── audioContext.js    # Khởi tạo/resume AudioContext dùng chung cho soundEngine/ambientEngine
 │   │   ├── soundEngine.js / ambientEngine.js # Âm thanh 100% procedural (Web Audio API)

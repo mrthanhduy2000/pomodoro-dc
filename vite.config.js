@@ -41,6 +41,14 @@ export default defineConfig({
           if (id.includes('/zustand/')) {
             return 'vendor-state';
           }
+          // three.js — bộ vẽ 3D của màn hình Thành Phố (src/components/city/render3d/).
+          // ⚠️ Nhánh này không chỉ để chia nhỏ chunk: nó làm cho việc LỠ TAY import tĩnh `three`
+          // ở một file ngoài render3d/ TRỞ NÊN NHÌN THẤY ĐƯỢC — chunk `vendor-three` sẽ biến mất
+          // khỏi output và ~130 KB rơi thẳng vào chunk chính. Có test canh luật này ở
+          // src/components/cityRenderers.test.js. Xem ADR-008.
+          if (id.includes('/three/')) {
+            return 'vendor-three';
+          }
           return undefined;
         },
       },
@@ -102,6 +110,11 @@ export default defineConfig({
         importScripts: ['/push-worker.js'],
         // Pre-cache all built assets
         globPatterns: ['**/*.{js,css,html,svg,png,ico,woff,woff2}'],
+        // ⚠️ three.js KHÔNG được precache: globPatterns ở trên gom MỌI file .js, nên nếu không
+        // loại ra thì mỗi lần mở app đều tải sẵn ~130 KB cho một tab Đàm có thể không bấm vào —
+        // đúng thứ mà việc nạp lười sinh ra để tránh. Đổi lại phải có luật runtimeCaching bên
+        // dưới, nếu không tab 3D sẽ không mở được khi mất mạng.
+        globIgnores: ['**/vendor-three-*.js'],
         skipWaiting: true,
 
         // Runtime caching rules
@@ -130,6 +143,24 @@ export default defineConfig({
               expiration: {
                 maxEntries: 32,
                 maxAgeSeconds: 30 * 24 * 60 * 60, // 30 days
+              },
+            },
+          },
+          {
+            // three.js — BÙ lại cho `globIgnores` ở trên. Không precache nữa, nhưng lần đầu Đàm mở
+            // tab Thành Phố thì file được giữ lại, những lần sau (kể cả khi mất mạng) dùng bản đã
+            // lưu. CacheFirst hợp ở đây vì tên file có băm nội dung — đổi phiên bản là đổi tên,
+            // không bao giờ phải lo bản cũ bị giữ lại nhầm. maxEntries 2 để bản cũ tự rụng.
+            urlPattern: /\/assets\/vendor-three-.*\.js$/,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'dc-pomodoro-three',
+              cacheableResponse: {
+                statuses: [0, 200],
+              },
+              expiration: {
+                maxEntries: 2,
+                maxAgeSeconds: 90 * 24 * 60 * 60, // 90 days
               },
             },
           },

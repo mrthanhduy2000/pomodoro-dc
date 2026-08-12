@@ -12,6 +12,7 @@ import soundEngine from '../engine/soundEngine';
 import ambientEngine from '../engine/ambientEngine';
 import notificationManager from '../engine/notifications';
 import { DEFAULT_QUICK_FOCUS_PRESET } from '../engine/breaks';
+import { normalizeRenderMode } from '../engine/city3d/renderMode';
 import {
   disablePushSubscription,
   ensurePushSubscription,
@@ -91,6 +92,13 @@ const useSettingsStore = create(
       autoStartBreak:     true,  // auto-start break after focus ends
       continueTimingAfterPomodoro: false, // continue a Pomodoro as stopwatch after countdown reaches zero
       disableBreak:       false, // skip all breaks entirely
+
+      // ── Thành Phố ──────────────────────────────────────────────────────
+      // ⚠️ Ở ĐÂY chứ KHÔNG phải gameStore: đây là sở thích hiển thị của TỪNG MÁY (Mac chạy 3D
+      // được, iPhone có thể không), và store này không đồng bộ lên Supabase nên không thêm một
+      // byte nào vào khối JSONB đang chịu cơ chế CAS "First Action Wins".
+      cityRenderMode: 'auto',   // 'auto' | '3d' | '2d' — xem engine/city3d/renderMode.js
+      cityPerfHud: false,       // bảng số liệu hiệu năng, để đo cổng Phase 3A
 
       // ── Onboarding ─────────────────────────────────────────────────────
       hasViewedInitialOnboarding: false, // overlay 3 thẻ chỉ hiện 1 lần cho người mới
@@ -209,6 +217,8 @@ const useSettingsStore = create(
       setContinueTimingAfterPomodoro: (v) => set({ continueTimingAfterPomodoro: v }),
       setDisableBreak:       (v) => set({ disableBreak: v }),
       setHasViewedInitialOnboarding: (v) => set({ hasViewedInitialOnboarding: v !== false }),
+      setCityRenderMode: (mode) => set({ cityRenderMode: normalizeRenderMode(mode) }),
+      setCityPerfHud:    (v) => set({ cityPerfHud: v === true }),
 
       // ── Hydration sync ─────────────────────────────────────────────────
       // Called once on app mount to push persisted prefs back into singletons.
@@ -251,9 +261,14 @@ const useSettingsStore = create(
           uiTheme: safeStored.uiTheme === 'dark' ? 'dark' : 'light',
           uiSkin: ['editorial', 'aurora', 'inkgold', 'swiss'].includes(safeStored.uiSkin) ? safeStored.uiSkin : 'editorial',
           ambientVolume,
+          // Giá trị rác (bản cũ, sửa tay localStorage) không được lọt tới chỗ quyết định có dựng
+          // WebGL hay không — chuẩn hoá ngay tại cửa.
+          cityRenderMode: normalizeRenderMode(safeStored.cityRenderMode),
+          cityPerfHud: safeStored.cityPerfHud === true,
         };
       },
-      version: 6,
+      // 6 → 7 (2026-08-12): thêm `cityRenderMode` + `cityPerfHud` cho màn hình Thành Phố 3D.
+      version: 7,
     },
   ),
 );

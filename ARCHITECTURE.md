@@ -158,11 +158,32 @@ trong `cityArchive`; đây là chỗ dễ sai nhất cả màn hình. (2) `compu
 về **ô lưới `(x, y)`, không phải pixel** — cùng một bố cục dùng được cho mọi cách vẽ. (3) Bộ vẽ
 biến ô lưới thành hình. `CityViewShell.jsx` là KHUNG (chuyển kỷ, số liệu, trạng thái rỗng) và
 **không biết bộ vẽ nào đang chạy** — bộ vẽ vào qua `children` và tự quyết định kích thước của mình.
-Hôm nay chỉ có `city/render2d/` (SVG isometric); `city/render3d/` (three.js) là bước kế tiếp và sẽ
-là **nơi duy nhất được phép `import 'three'`** — luật này giữ cho `src/engine/` tiếp tục test được
-bằng `node --test` (không DOM, không WebGL). Bộ vẽ 2D **không phải bản nháp sẽ xoá**: nó là đường
-lui thường trực khi máy không có WebGL, khi trình duyệt mất context, hoặc khi Đàm tự chọn tắt 3D.
+Có HAI bộ vẽ: `city/render2d/` (SVG isometric) và `city/render3d/` (three.js). `render3d/` là **nơi
+duy nhất được phép `import 'three'`** — luật này giữ cho `src/engine/` tiếp tục test được bằng
+`node --test` (không DOM, không WebGL), và có test đọc mã nguồn canh nó
+(`components/city/cityRenderers.test.js`). Bộ vẽ 2D **không phải bản nháp sẽ xoá**: nó là đường lui
+thường trực khi máy không có WebGL, khi trình duyệt mất context, hoặc khi Đàm tự chọn tắt 3D.
 Xem ADR-008.
+
+**Ai chọn bộ vẽ, và ba cửa lùi (2026-08-12)**: `city/CityStage.jsx` gom toàn bộ tri thức "khi nào
+3D, khi nào 2D". Luật quyết định là hàm THUẦN `decideRenderMode` (`engine/city3d/renderMode.js`),
+**fail-closed**: chưa dò xong / không có WebGL2 / máy chắc chắn yếu / đang tiết kiệm dữ liệu → 2D.
+⚠️ Nguyên tắc dễ làm hỏng nhất ở đây: **thiếu thông tin KHÔNG phải bằng chứng máy yếu** — Safari
+không có `deviceMemory` lẫn `connection`, coi `undefined` là "yếu" thì mọi iPhone đều rớt, tức giết
+đúng mục tiêu mà nhánh 3D sinh ra để phục vụ. Ba cửa lùi, cửa nào cũng phải dẫn về 2D chứ không dẫn
+tới màn hình trống: (1) dò trước khi dựng, (2) dựng thất bại, (3) đang chạy thì hỏng (mất context /
+FPS thấp kéo dài).
+
+**Luật pin của cảnh 3D**: KHÔNG có vòng lặp thường trực. `engine/city3d/renderLoop.js` chỉ đặt một
+nhịp `requestAnimationFrame` khi thật sự có gì đổi (`invalidate`, gộp nhiều lời gọi thành một
+khung), hoặc khi đang có hoạt hoạ thật (`beginSustained`/`endSustained`, đếm tham chiếu). Thành phố
+đứng yên ⇒ **không một nhịp rAF nào tồn tại** — không phải "có nhịp nhưng bỏ qua không vẽ". Hai hệ
+quả bắt buộc nhớ: (a) **FPS chỉ đo được trong lúc có hoạt hoạ** — đo lúc đứng yên sẽ ra 0 và
+watchdog hạ 2D oan; (b) **bóng đổ phải tắt tự-cập-nhật** (`shadow.autoUpdate = false` ở cả
+`DirectionalLight` lẫn `renderer.shadowMap`), vì mặc định của three là vẽ lại shadow map MỖI khung
+hình — nó âm thầm biến mọi khung hình thành đắt như khung đầu tiên. Ngoài ra `pause`/`resume` (rời
+tab) là hai hàm KHÁC `stop` (tháo cảnh): `stop` là vĩnh viễn, gọi nhầm khi rời tab thì quay lại
+thấy thành phố đóng băng.
 
 **Database schema — KHÔNG có migration tự động**: mọi thay đổi cấu trúc bảng Supabase (`game_state`,
 `timer_live`, `push_jobs`, `push_subscriptions`...) đòi hỏi chạy TAY một file `.sql` trong

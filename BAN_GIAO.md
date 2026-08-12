@@ -9,9 +9,12 @@
 > Cập nhật lần cuối: **2026-08-12** — **THÀNH PHỐ, 3 phase liên tiếp trong ngày**: (1) engine thuần
 > suy ra bố cục thành phố từ danh sách công trình; (2) **bảo tàng** — thành phố kỷ cũ được niêm
 > phong thay vì xoá vĩnh viễn (`GAME_STORE_SCHEMA_VERSION` **3 → 4**, tương thích ngược, KHÔNG cần
-> chạy SQL); (3) **tab "Thành Phố" hiện ra**, vẽ bằng SVG. **315 bài test.** Cân bằng game KHÔNG
-> đổi. Kế hoạch tiếp theo Đàm đã duyệt: thay bộ vẽ bằng **3D thật (three.js)** — Phase 3A dựng
-> khung + đo hiệu năng trên iPhone rồi DỪNG cho Đàm quyết.
+> chạy SQL); (3) **tab "Thành Phố" hiện ra**, vẽ bằng SVG; (4) **Phase 3A — bộ vẽ 3D thật
+> (three.js)** + bảng đo hiệu năng trong app. **360 bài test.** Cân bằng game KHÔNG đổi, chunk
+> chính KHÔNG to thêm.
+> 🔴 **ĐANG CHỜ ĐÀM**: cổng hiệu năng Phase 3A — bật "Hiện bảng số liệu hiệu năng" trong Cài đặt,
+> mở tab Thành Phố trên iPhone thật, KÉO XOAY vài giây rồi chụp màn hình gửi lại. Chưa qua cổng thì
+> KHÔNG làm tiếp Phase 3B.
 > Trước đó 2026-08-10: sửa khoảng trắng thừa trước icon 🍅/☕ trên thanh menu Mac (`electron/main.js`,
 > đúng 1 dòng; xoá `public/tray-empty.png`) — chỉ đụng app tray. Trước đó 2026-08-05 có 3 việc
 > **cấu hình máy + tài liệu, KHÔNG đổi dòng code ứng dụng nào**: (a) sửa "app biến mất khỏi thanh
@@ -45,13 +48,19 @@
 - **Đồng bộ Supabase** (game_state + timer_live cho menu bar Mac).
 
 ## 🔧 Đang làm
-- **THÀNH PHỐ 3D** (kế hoạch Đàm duyệt 2026-08-12, mở rộng từ `SPEC V2 Thành Phố 3D`). Phase 1, 2,
-  3-2D đã xong & push. **Bước kế tiếp: Phase 3A** — dựng khung 3D trắng (three.js, ghim
-  `three@0.185.1`) + HUD đo hiệu năng ngay trong app, rồi **DỪNG cho Đàm đo trên iPhone thật**:
-  FPS ≥ 30 khi xoay, khung hình đầu < 1,5 s, pin tụt < 4 % sau 10 phút, chunk `vendor-three`
-  ≤ 135 KB gzip. **Trượt cổng ⇒ bỏ hẳn nhánh 3D, giữ bản 2D, không tiếc** — đó là lý do bản 2D
-  được commit trước làm nền (ADR-008). Hai lựa chọn Đàm đã chốt: mỹ thuật **Townscaper** (khối bo
-  tròn, pastel ấm, bóng mềm) · hiệu ứng **bật tối đa** ngay từ đầu.
+- **THÀNH PHỐ 3D** (kế hoạch Đàm duyệt 2026-08-12, mở rộng từ `SPEC V2 Thành Phố 3D`).
+  Phase 1, 2, 3-2D, **3A đã xong & push**. 🔴 **ĐANG DỪNG Ở CỔNG HIỆU NĂNG — chờ Đàm đo.**
+  - Đã đạt sẵn (đo được trên máy build): chunk `vendor-three` = **130,16 KB gzip** ≤ ngưỡng 135;
+    chunk chính không to thêm; three KHÔNG bị precache nhưng vẫn chạy offline.
+  - **Cần Đàm đo trên iPhone thật**: ≥30 khung/giây khi kéo xoay · không nóng rõ rệt sau 5 phút ·
+    pin tụt <4% sau 10 phút. Cách đo: Cài đặt → bật *"Hiện bảng số liệu hiệu năng"* → mở tab Thành
+    Phố → **KÉO XOAY** vài giây → chụp màn hình. (Đứng yên thì FPS hiện 0 — đó là ĐÚNG, vì cảnh chỉ
+    vẽ khi có gì đổi.)
+  - **Qua cổng** → Phase 3B: ngôn ngữ hình khối 3 trục (kỷ × loại × độ hiếm) + giàn giáo công trình
+    đang xây. Hai lựa chọn Đàm đã chốt: mỹ thuật **Townscaper** (khối bo tròn, pastel ấm, bóng mềm)
+    · hiệu ứng **bật tối đa** ngay từ đầu.
+  - **Trượt cổng** ⇒ bỏ hẳn nhánh 3D, đặt Cài đặt về "Luôn 2D", ghi số đo vào `TECH_DEBT.md`.
+    Không mất gì — đó chính là lý do bản 2D được commit trước làm nền (ADR-008).
 
 ## ✅ NÂNG CẤP TRÍ TUỆ AI COACH — chuỗi 6 mảng (2026-06-25, code XONG hết; mảng 6 MỚI THỰC SỰ LÊN PRODUCTION 2026-07-11)
 > Đàm ra lệnh "làm toàn bộ, chuyên sâu" sau workflow đề-xuất 10 agent. Cả 6 mảng test xanh, code đã commit đủ.
@@ -84,6 +93,48 @@
 
 ## 🗒️ Nhật ký cập nhật
 > Mỗi lần xong việc đáng kể, thêm 1 dòng vào ĐẦU danh sách.
+
+- **2026-08-12 (Phase 3A)** — **THÀNH PHỐ 3D THẬT (three.js) + bảng đo hiệu năng. ⚠️ ĐANG CHỜ ĐÀM ĐO.**
+  Phase này CỐ Ý xấu: hình khối còn là hộp thô. Mục tiêu là **đo xem iPhone có kham nổi không**
+  trước khi đầu tư vào mỹ thuật (Phase 3B). Nhưng đo trên đúng TẢI THẬT — 144 ô nền, số công trình
+  thật, bóng đổ bật — chứ đo 5 cái hộp thì con số chẳng dự đoán được gì.
+  - **Thêm đúng 1 thư viện**: `three@0.185.1` — ghim cứng KHÔNG có `^` (đổi phiên bản three là đổi
+    cả hành vi WebGL, không được để npm tự nâng). Đã kiểm: thư viện này **0 dependency con**.
+  - **Chunk chính KHÔNG to thêm**: 134,4 KB gzip, y hệt trước khi thêm three. three nằm ở chunk
+    riêng `vendor-three` (130,16 KB gzip) chỉ tải khi thật sự mở bản 3D. Đã xác minh bằng cách đọc
+    `dist/sw.js`: **0/45 mục precache** là three, nhưng có luật `CacheFirst` bù lại nên tab 3D vẫn
+    mở được khi mất mạng. Thiếu MỘT trong hai vế là hỏng: thiếu `globIgnores` thì tải 130 KB mỗi
+    lần mở app; thiếu `runtimeCaching` thì mất mạng là tab 3D trắng.
+  - **Kiến trúc**: 4 file THUẦN ở `src/engine/city3d/` (`renderMode` luật chọn 3D/2D · `renderLoop`
+    nhịp khung hình · `orbit` toán camera · `palette3d` màu) — test được bằng `node --test` không
+    cần trình duyệt. `components/city/render3d/` là NƠI DUY NHẤT được `import 'three'`.
+  - ⚠️ **LUẬT PIN — quan trọng nhất cả phase**: KHÔNG có vòng lặp thường trực. Cách thường thấy là
+    chạy `setAnimationLoop` 60 lần/giây rồi bên trong kiểm tra cờ "có gì đổi không" — vòng đó **vẫn
+    đánh thức CPU 60 lần mỗi giây** dù thành phố đứng yên tuyệt đối. Ở đây: đứng yên ⇒ **0 nhịp
+    rAF**. Hai hệ quả BẮT BUỘC nhớ: (a) **FPS chỉ đo được lúc đang kéo xoay** — đo lúc đứng yên ra
+    0 và watchdog sẽ hạ 2D oan; (b) **bóng đổ phải tắt tự-cập-nhật** (`shadow.autoUpdate = false` ở
+    CẢ đèn lẫn renderer), vì mặc định của three là vẽ lại shadow map MỖI khung hình — nó âm thầm
+    biến mọi khung hình thành đắt như khung đầu tiên. Cả thành phố gộp còn **3 lệnh vẽ**.
+  - **Ba cửa lùi về 2D**, cửa nào cũng phải dẫn về hình chứ không dẫn tới màn hình trống: không có
+    WebGL2 → 2D ngay · dựng cảnh thất bại → 2D · đang chạy mà mất context / quá chậm → tự chuyển
+    về 2D **kèm một dòng nói rõ vì sao** (không nói thì Đàm chỉ thấy hình đột nhiên đổi kiểu).
+  - ⚠️ **FAIL-CLOSED, nhưng "thiếu thông tin ≠ máy yếu"**: Safari không có `deviceMemory` lẫn
+    `connection`. Nếu coi `undefined` là "yếu" thì **mọi iPhone đều rớt xuống 2D** — tức giết đúng
+    mục tiêu mà cả nhánh 3D sinh ra để phục vụ. Chỉ loại khi biết CHẮC là yếu. Có test khoá.
+  - **2 lỗi thật do test bắt được, đã sửa**: (1) **kéo dọc bị đảo chiều** so với quy ước
+    `OrbitControls` (kéo xuống phải nghiêng về góc nhìn từ trên) — kiểu bug người dùng cảm thấy
+    ngay nhưng đọc code không thấy; (2) **rời tab gọi `stop()`** mà `stop()` là VĨNH VIỄN ⇒ quay
+    lại tab là thành phố đóng băng, không cách nào cứu. Đã tách `pause`/`resume` riêng.
+  - **315 → 360 bài test, 0 fail.** Lint + build xanh. `settingsStore` version 6 → 7 (thêm
+    `cityRenderMode` + `cityPerfHud`) — đặt ở đây chứ KHÔNG phải `gameStore` vì đây là sở thích của
+    TỪNG MÁY, và store này không lên Supabase nên thêm **0 byte** vào khối JSONB đang chịu CAS.
+  - Tài liệu: `ARCHITECTURE.md` (luật pin + 3 cửa lùi) · `PROJECT_STRUCTURE.md` · `MIGRATION.md`
+    (settingsStore 6→7) · `CHANGELOG.md`.
+  - 🔴 **VIỆC CỦA ĐÀM — cổng chặn, chưa qua thì KHÔNG làm tiếp Phase 3B**: vào Cài đặt bật *"Hiện
+    bảng số liệu hiệu năng"*, mở tab Thành Phố trên **iPhone thật**, **KÉO XOAY** thành phố vài
+    giây rồi chụp màn hình gửi lại. Đạt = **≥30 khung/giây** · máy không nóng rõ rệt sau 5 phút ·
+    pin tụt **<4%** sau 10 phút. **Trượt ⇒ bỏ hẳn nhánh 3D, giữ bản 2D, không tiếc** — đó chính là
+    lý do bản 2D được commit trước làm nền (ADR-008).
 
 - **2026-08-12 (công cụ)** — **Sửa glob test: từ nay test đặt ở thư mục con cũng chạy.**
   Trước đây `npm test` liệt kê tay từng thư mục và mỗi mục chỉ quét **một cấp**

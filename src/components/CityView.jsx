@@ -16,12 +16,13 @@
  */
 
 import { useMemo, useState } from 'react';
+import { useReducedMotion } from 'framer-motion';
 
 import useGameStore from '../store/gameStore';
 import { computeCityLayout } from '../engine/cityLayout';
 import { listVisitableEras } from '../engine/cityArchive';
 import CityViewShell from './city/CityViewShell';
-import CityCanvas2D from './city/render2d/CityCanvas2D';
+import CityStage from './city/CityStage';
 
 export default function CityView() {
   const buildings       = useGameStore((s) => s.buildings);
@@ -31,6 +32,7 @@ export default function CityView() {
   const sessionsInEra   = useGameStore((s) => s.eraTracking?.sessionsInCurrentEra);
   const currentStreak   = useGameStore((s) => s.streak?.currentStreak);
 
+  const reduceMotion = useReducedMotion();
   const [viewingEra, setViewingEra] = useState(activeBook);
 
   const eras = useMemo(
@@ -73,7 +75,7 @@ export default function CityView() {
       stats={{ sessionCount, streakLength }}
       onSelectEra={setViewingEra}
     >
-      <CityCanvas2D layout={layout} dimmed={!isCurrent} />
+      <CityStage layout={layout} dimmed={!isCurrent} reduceMotion={!!reduceMotion} />
     </CityViewShell>
   );
 }

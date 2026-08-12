@@ -79,6 +79,14 @@ const UI_THEME_OPTIONS = [
   { value: 'dark', label: 'Mực', note: 'Nền tối trung tính, vẫn giữ nhịp tối giản' },
 ];
 
+// Cách vẽ tab Thành Phố. Lựa chọn này là của TỪNG MÁY (Mac có thể chạy 3D mà iPhone thì không),
+// nên nó nằm ở settingsStore — không đồng bộ lên Supabase. Luật quyết định: engine/city3d/renderMode.js
+const CITY_RENDER_OPTIONS = [
+  { value: 'auto', label: 'Tự động', note: 'Máy chạy nổi 3D thì dùng 3D, không thì tự lùi về 2D. Khuyên dùng.' },
+  { value: '3d', label: 'Luôn 3D', note: 'Ép dùng bản 3D. Đẹp hơn nhưng tốn pin hơn.' },
+  { value: '2d', label: 'Luôn 2D', note: 'Bản vẽ phẳng, nhẹ nhất, không dùng tới card đồ hoạ.' },
+];
+
 const DAILY_GOAL_TYPE_OPTIONS = [
   {
     value: 'sessions',
@@ -167,6 +175,10 @@ export default function Settings() {
     setUiTheme,
     uiSkin,
     setUiSkin,
+    cityRenderMode,
+    setCityRenderMode,
+    cityPerfHud,
+    setCityPerfHud,
     soundPack,
     setSoundPack,
     shortBreakDuration,
@@ -774,6 +786,57 @@ export default function Settings() {
                     </motion.button>
                   );
                 })}
+              </div>
+            </div>
+
+            <div>
+              <p className="mono mb-2 text-[11px] font-semibold uppercase tracking-[0.22em]" style={lightTheme ? { color: 'var(--accent2, #9a5a48)' } : { color: 'var(--accent2, rgba(var(--accent-rgb), 0.8))' }}>
+                Thành Phố
+              </p>
+              <div className="grid gap-2">
+                {CITY_RENDER_OPTIONS.map((opt) => {
+                  const active = cityRenderMode === opt.value;
+                  return (
+                    <motion.button
+                      key={opt.value}
+                      whileHover={{ scale: 1.01 }}
+                      whileTap={{ scale: 0.99 }}
+                      onClick={() => setCityRenderMode(opt.value)}
+                      className="flex items-start justify-between gap-3 rounded-2xl px-3 py-3 text-left transition-all"
+                      style={choiceStyle(active, lightTheme)}
+                    >
+                      <div>
+                        <p className="text-sm font-semibold">{opt.label}</p>
+                        <p className="mt-1 text-[11px]" style={lightTheme ? { color: '#6a6862' } : { color: 'var(--muted-2)' }}>{opt.note}</p>
+                      </div>
+                      {active && (
+                        <span
+                          className="mono rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.18em]"
+                          style={lightTheme ? {
+                            background: 'rgba(var(--accent-rgb), 0.1)',
+                            color: 'var(--accent2, #9a5a48)',
+                            border: '1px solid rgba(var(--accent-rgb), 0.18)',
+                          } : {
+                            background: 'rgba(255,255,255,0.08)',
+                            color: 'var(--ink)',
+                            border: '1px solid rgba(255,255,255,0.12)',
+                          }}
+                        >
+                          đang dùng
+                        </span>
+                      )}
+                    </motion.button>
+                  );
+                })}
+              </div>
+              <div className="mt-3">
+                <ToggleRow
+                  lightTheme={lightTheme}
+                  label="Hiện bảng số liệu hiệu năng"
+                  description="Hiện khung/giây, số lệnh vẽ, số tam giác ngay trong tab Thành Phố. Dùng để kiểm tra máy có chạy nổi bản 3D không — chụp màn hình gửi lại là đủ."
+                  value={cityPerfHud}
+                  onChange={setCityPerfHud}
+                />
               </div>
             </div>
           </div>

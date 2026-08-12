@@ -26,6 +26,18 @@ export const SLOW_FPS_THRESHOLD = 24;
 export const SLOW_SAMPLES_TO_GIVE_UP = 3;
 
 /**
+ * Ngưỡng "chậm" khi có giới hạn nhịp khung hình.
+ *
+ * ⚠️ KHÔNG ĐƯỢC dùng thẳng `SLOW_FPS_THRESHOLD` khi đã tự giới hạn nhịp: đặt trần 30 khung/giây
+ * rồi lại coi dưới 24 là máy yếu thì chỉ cần trượt nhẹ vài khung là watchdog hạ xuống 2D — máy
+ * hoàn toàn khoẻ mà bị đuổi khỏi 3D. Ngưỡng phải tính THEO trần mình tự đặt.
+ */
+export function slowThresholdFor(targetFps) {
+  if (!Number.isFinite(targetFps) || targetFps <= 0) return SLOW_FPS_THRESHOLD;
+  return Math.min(SLOW_FPS_THRESHOLD, targetFps * 0.7);
+}
+
+/**
  * @param {object} deps
  * @param {Function} deps.render        vẽ đúng MỘT khung hình
  * @param {Function} deps.requestFrame  `requestAnimationFrame`
@@ -34,10 +46,16 @@ export const SLOW_SAMPLES_TO_GIVE_UP = 3;
  * @param {Function} [deps.onSlow]      gọi khi máy chậm dai dẳng → nên hạ về 2D
  * @param {Function} [deps.onError]     gọi khi `render` ném lỗi (vòng lặp tự dừng, không quay vòng lỗi)
  */
-export function createRenderLoop({ render, requestFrame, cancelFrame, now, onSlow, onError }) {
+export function createRenderLoop({ render, requestFrame, cancelFrame, now, onSlow, onError, targetFps = null }) {
   let handle = null;
   let stopped = false;
   const sustained = new Set();
+
+  // Giới hạn nhịp khung hình trong chế độ sustained. Trên màn 120 Hz, vẽ 120 khung/giây cho vài
+  // chấm người đi bộ là gấp đôi công việc mà mắt không thấy khác gì — chỉ khác cái pin.
+  const frameInterval = Number.isFinite(targetFps) && targetFps > 0 ? 1000 / targetFps : 0;
+  const slowThreshold = slowThresholdFor(targetFps);
+  let lastRenderAt = null;
 
   // Số liệu cho HUD
   let fps = 0;
@@ -51,6 +69,9 @@ export function createRenderLoop({ render, requestFrame, cancelFrame, now, onSlo
   function resetSampleWindow() {
     windowStart = null;
     windowFrames = 0;
+    // Quên luôn mốc vẽ gần nhất. Nếu giữ lại, một hoạt hoạ bắt đầu ngay sau khi hoạt hoạ trước
+    // kết thúc sẽ bị bỏ mất khung hình đầu tiên vì tưởng "vừa vẽ xong rồi".
+    lastRenderAt = null;
   }
 
   function schedule() {
@@ -82,7 +103,7 @@ export function createRenderLoop({ render, requestFrame, cancelFrame, now, onSlo
     windowStart = startedAt;
     windowFrames = 0;
 
-    if (fps >= SLOW_FPS_THRESHOLD) {
+    if (fps >= slowThreshold) {
       slowStreak = 0;
       return;
     }
@@ -98,6 +119,17 @@ export function createRenderLoop({ render, requestFrame, cancelFrame, now, onSlo
     if (stopped) return;
 
     const startedAt = now();
+
+    // Chưa tới lượt vẽ ⇒ trả nhịp này lại cho trình duyệt, KHÔNG vẽ và KHÔNG tính vào FPS.
+    // ⚠️ Chỉ áp dụng trong sustained: một `invalidate()` (đổi kỷ, kéo xong camera) phải được vẽ
+    // NGAY, nếu không sẽ có độ trễ nhìn thấy được ở thao tác rời rạc.
+    if (frameInterval > 0 && sustained.size > 0 && lastRenderAt !== null
+        && startedAt - lastRenderAt < frameInterval * 0.9) {
+      schedule();
+      return;
+    }
+    lastRenderAt = startedAt;
+
     try {
       render();
     } catch (error) {

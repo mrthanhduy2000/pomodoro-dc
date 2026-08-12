@@ -27,7 +27,10 @@
 │   │   │   ├── CityPerfHud.jsx   # Bảng FPS/lệnh vẽ/tam giác — để đo cổng hiệu năng Phase 3A
 │   │   │   └── render3d/         # Bộ vẽ three.js — ⚠️ NƠI DUY NHẤT được import 'three'
 │   │   │       ├── CityScene3D.jsx # Vỏ React: vòng đời, resize, mất context. KHÔNG chứa logic 3D
-│   │   │       ├── sceneGraph.js   # Dựng cảnh: cả thành phố = 3 lệnh vẽ (InstancedMesh)
+│   │   │       ├── sceneGraph.js   # Dựng cảnh: nền/đường/trời/đất + ánh sáng 3 nguồn + cư dân
+│   │   │       ├── geometryFactory.js # Mô tả hình học THUẦN → MỘT BufferGeometry đã gộp.
+│   │   │       │                   #   Mọi công trình + cảnh vật = 1 lệnh vẽ, nên "75 công trình
+│   │   │       │                   #   khác nhau" KHÔNG đồng nghĩa với 75 lệnh vẽ
 │   │   │       ├── themeBridge.js  # Đọc CSS var từ đúng div [data-theme] (KHÔNG documentElement)
 │   │   │       └── capability.js   # Dò WebGL2 bằng cách TẠO THỬ context rồi huỷ ngay
 │   │   ├── Coach*.jsx         # 3 lối vào AI Coach: CoachChat (hỏi-đáp), CoachOffline (phân tích
@@ -60,9 +63,22 @@
 │   │   │                     #   trình bị cắt khi lên kỷ, thay vì để mất hẳn)
 │   │   ├── city3d/            # Logic THUẦN của bộ vẽ 3D — cấm import three, cấm DOM
 │   │   │   ├── renderMode.js      # Luật chọn 3D/2D (FAIL-CLOSED: không chắc → 2D)
-│   │   │   ├── renderLoop.js      # Nhịp khung hình: đứng yên = 0 nhịp rAF (luật pin)
+│   │   │   ├── renderLoop.js      # Nhịp khung hình: đứng yên = 0 nhịp rAF + trần FPS khi có hoạt hoạ
 │   │   │   ├── orbit.js           # Toán camera xoay (tự viết, KHÔNG dùng OrbitControls)
-│   │   │   └── palette3d.js       # Token màu CSS → số cho WebGL
+│   │   │   ├── palette3d.js       # Token màu CSS → số cho WebGL, + vai màu cho ngôn ngữ hình khối
+│   │   │   │                      #   ⚠️ NGOẠI LỆ DUY NHẤT của luật "cấm hex, chỉ CSS var":
+│   │   │   │                      #   WebGL không đọc được biến CSS (xem ARCHITECTURE.md)
+│   │   │   ├── parts.js           # TỪ VỰNG hình khối: prism (đa giác + thóp) và gable. CHỈ 2 hình
+│   │   │   │                      #   nguyên thuỷ — hộp/chóp/trụ/nón/vòm đều là prism đổi tham số
+│   │   │   ├── eraStyle.js        # NGỮ PHÁP theo 15 kỷ: vật liệu, kiểu mái, cửa sổ, mô-típ
+│   │   │   ├── archetypes.js      # Bóng dáng theo 4 LOẠI (hạ tầng/kinh tế/phòng thủ/kỳ quan)
+│   │   │   │                      #   + quy mô theo 3 ĐỘ HIẾM
+│   │   │   ├── buildingSpec.js    # NƠI 3 TRỤC GẶP NHAU: (kỷ × loại × độ hiếm) → mô tả hình học
+│   │   │   ├── propSpec.js        # Cây, đá, đèn, mặt nước, ruộng
+│   │   │   ├── residents.js       # CƯ DÂN: dân số suy từ tiến độ, tuyến đi bám ĐƯỜNG SÁ
+│   │   │   │                      #   ⚠️ residentAt(route, TIME) — chuyển động là hàm của thời
+│   │   │   │                      #   gian, không phải biến cộng dồn (test được + rời tab đúng)
+│   │   │   └── budget.js          # Trần tam giác — biến ngân sách hiệu năng thành test tự kiểm
 │   │   ├── achievementTimeline.js # Suy luận ngày mở khoá thành tích cũ (replay lịch sử)
 │   │   ├── audioContext.js    # Khởi tạo/resume AudioContext dùng chung cho soundEngine/ambientEngine
 │   │   ├── soundEngine.js / ambientEngine.js # Âm thanh 100% procedural (Web Audio API)

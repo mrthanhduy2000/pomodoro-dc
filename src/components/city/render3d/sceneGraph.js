@@ -23,6 +23,7 @@ import {
   BufferAttribute,
   Color,
   DirectionalLight,
+  DynamicDrawUsage,
   Fog,
   HemisphereLight,
   InstancedMesh,
@@ -38,6 +39,7 @@ import {
 
 import { buildBuildingSpec, buildScaffoldSpec } from '../../../engine/city3d/buildingSpec';
 import { buildPropSpec } from '../../../engine/city3d/propSpec';
+import { RESIDENT_HEIGHT, buildResidents, residentAt } from '../../../engine/city3d/residents';
 import { buildMergedGeometry } from './geometryFactory';
 
 /**
@@ -53,8 +55,21 @@ const BUILDING_SCALE = 1.3;
 export const TILE_UNIT = 1;
 
 const GROUND_THICKNESS = 0.22;
+
+/**
+ * Đường nhô cao hơn mặt nền bao nhiêu. Đủ để không chọi mặt (z-fighting) mà mắt không thấy bậc.
+ * ⚠️ Tách thành hằng số vì CƯ DÂN cũng phải đứng trên đúng mặt phẳng này. Để hai nơi tự viết số
+ * riêng thì chỉ cần một lần chỉnh là cả thành phố lún nửa bàn chân xuống đường mà không ai hiểu
+ * vì sao.
+ */
+const ROAD_LIFT = 0.014;
+/** Cao độ MẶT TRÊN của đường — nơi bàn chân cư dân chạm vào. */
+const ROAD_SURFACE_Y = ROAD_LIFT;
 /** Số tam giác của một hộp — dùng để tính ngân sách hiển thị trên HUD. */
 const TRIANGLES_PER_BOX = 12;
+
+/** Trục đứng, dùng lại cho mọi phép xoay người — tạo mới trong vòng lặp là rác cho bộ dọn. */
+const UP = new Vector3(0, 1, 0);
 
 /** Ô lưới (x, y) → toạ độ thế giới, gốc toạ độ đặt giữa thành phố. */
 export function cellToWorld(x, y, gridSize) {
@@ -70,8 +85,12 @@ export function cellToWorld(x, y, gridSize) {
  * @param {object} input.palette   kết quả `buildScenePalette(...)` — các màu ở dạng SỐ
  * @param {boolean} [input.dimmed] thành phố đã niêm phong → làm nhạt cho có vẻ "quá khứ"
  * @param {boolean} [input.lowDetail] máy yếu → bỏ chi tiết trang trí, giữ nguyên hình bóng
+ * @param {object}  [input.stats]     `{sessionCount, streakLength}` — suy ra dân số
+ * @param {boolean} [input.still]     true → không có cư dân đi lại (giảm chuyển động / bảo tàng)
  */
-export function createCityScene({ layout, palette, dimmed = false, lowDetail = false }) {
+export function createCityScene({
+  layout, palette, dimmed = false, lowDetail = false, stats = {}, still = false,
+}) {
   const gridSize = layout.gridSize;
   const scene = new Scene();
   scene.background = new Color(palette.background);
@@ -215,7 +234,7 @@ export function createCityScene({ layout, palette, dimmed = false, lowDetail = f
       const { x, z } = cellToWorld(road.x, road.y, gridSize);
       return {
         x, z,
-        y: -GROUND_THICKNESS / 2 + 0.014,   // nhô lên tí xíu để không chọi mặt nền
+        y: -GROUND_THICKNESS / 2 + ROAD_LIFT,   // nhô lên tí xíu để không chọi mặt nền
         height: 1,
         color: palette.road ?? palette.roles?.stone ?? palette.edge,
       };
@@ -287,6 +306,95 @@ export function createCityScene({ layout, palette, dimmed = false, lowDetail = f
     addMesh(mesh);
   }
 
+  // ── Cư dân ────────────────────────────────────────────────────────────────
+  // Một thành phố không có người là một mô hình kiến trúc. Vài chấm di chuyển giữa những khối nhà
+  // đó biến nó thành NƠI CÓ NGƯỜI Ở — và biến "mở khoá thêm một công trình" thành "chỗ này đông
+  // hơn tuần trước". Toàn bộ cộng đồng đi qua MỘT `InstancedMesh` = một lệnh vẽ.
+  const residents = still ? [] : buildResidents(layout, stats);
+  let bodyMesh = null;
+  let headMesh = null;
+  /** Đặt lại vị trí cả cộng đồng theo thời gian. `null` khi thành phố không có ai. */
+  let placeResidents = null;
+  if (residents.length > 0) {
+    // ⚠️ HAI KHỐI, KHÔNG PHẢI MỘT — và đây là khác biệt giữa "cư dân" với "viên gạch màu".
+    // Bản đầu dùng đúng một hộp cho cả người. Ảnh chụp gần cho thấy kết quả: những viên gạch màu
+    // trôi trên đường, không ai đọc ra là người. Thứ làm mắt nhận ra dáng người ở cỡ vài điểm ảnh
+    // KHÔNG phải tay chân hay mặt mũi — mà là một chấm NHỎ HƠN, SÁNG HƠN đặt trên một khối lớn
+    // hơn, tối hơn. Đó là toàn bộ ngôn ngữ của quân cờ vua và của hình nhân Lego.
+    // Giá: 12 tam giác mỗi người, thêm ĐÚNG một lệnh vẽ cho cả cộng đồng (đầu ai cũng một màu nên
+    // không cần màu theo thực thể).
+    const HEAD_HEIGHT = RESIDENT_HEIGHT * 0.28;
+    const BODY_HEIGHT = RESIDENT_HEIGHT - HEAD_HEIGHT;
+
+    const residentMaterial = track(new MeshLambertMaterial({
+      transparent: dimmed,
+      opacity: dimmed ? 0.62 : 1,
+    }));
+
+    const bodyGeometry = track(new BoxGeometry(0.085, BODY_HEIGHT, 0.085));
+    bodyMesh = new InstancedMesh(bodyGeometry, residentMaterial, residents.length);
+
+    const headGeometry = track(new BoxGeometry(0.062, HEAD_HEIGHT, 0.062));
+    headMesh = new InstancedMesh(headGeometry, residentMaterial, residents.length);
+
+    const skin = palette.roles?.skin ?? palette.roles?.trim ?? palette.wall;
+    for (const mesh of [bodyMesh, headMesh]) {
+      // Người quá nhỏ để đổ bóng ra hồn, nhưng NHẬN bóng thì có: đi vào bóng nhà là tối đi.
+      mesh.castShadow = false;
+      mesh.receiveShadow = true;
+      // ⚠️ Ma trận đổi mỗi khung hình — báo cho three biết để nó khỏi cố tối ưu bộ đệm tĩnh.
+      mesh.instanceMatrix.setUsage(DynamicDrawUsage);
+    }
+
+    // Màu áo: lấy quanh vai `roof`/`gold`/`wood` để cư dân thuộc cùng họ màu với thành phố họ ở.
+    const shirtRoles = ['roof', 'gold', 'wood', 'trim'];
+    residents.forEach((_route, index) => {
+      bodyMesh.setColorAt(index, tint.setHex(
+        palette.roles?.[shirtRoles[index % shirtRoles.length]] ?? palette.roof,
+      ));
+      headMesh.setColorAt(index, tint.setHex(skin));
+    });
+    if (bodyMesh.instanceColor) bodyMesh.instanceColor.needsUpdate = true;
+    if (headMesh.instanceColor) headMesh.instanceColor.needsUpdate = true;
+    addMesh(bodyMesh);
+    addMesh(headMesh);
+
+    // Gọi mỗi khung hình khi có hoạt hoạ.
+    // ⚠️ Nhận THỜI GIAN làm tham số chứ không tự cộng dồn — nhờ vậy rời tab nửa tiếng rồi quay lại
+    // thì thành phố hiện ra ở đúng trạng thái đáng lẽ phải có, thay vì đứng im từ lúc bị đóng băng.
+    placeResidents = (timeSeconds) => {
+      for (let i = 0; i < residents.length; i += 1) {
+        const spot = residentAt(residents[i], timeSeconds);
+        if (!spot) continue;
+        const { x, z } = cellToWorld(spot.x, spot.y, gridSize);
+        rotation.setFromAxisAngle(UP, -spot.angle);
+        scale.set(1, 1, 1);
+
+        // Chân đặt lên MẶT ĐƯỜNG, không phải mặt nền. Đường nhô cao hơn nền một chút (xem khối
+        // đường phía trên) — bỏ qua chênh lệch này thì cư dân lún nửa bàn chân xuống mặt đường.
+        const feet = ROAD_SURFACE_Y + spot.bob;
+
+        position.set(x, feet + BODY_HEIGHT / 2, z);
+        matrix.compose(position, rotation, scale);
+        bodyMesh.setMatrixAt(i, matrix);
+
+        position.set(x, feet + BODY_HEIGHT + HEAD_HEIGHT / 2, z);
+        matrix.compose(position, rotation, scale);
+        headMesh.setMatrixAt(i, matrix);
+      }
+      bodyMesh.instanceMatrix.needsUpdate = true;
+      headMesh.instanceMatrix.needsUpdate = true;
+      // Trả quaternion về đơn vị: các chỗ khác trong file này dùng chung biến `rotation` và
+      // ngầm giả định nó không xoay.
+      rotation.identity();
+    };
+  }
+
+  function updateResidents(timeSeconds) {
+    placeResidents?.(timeSeconds);
+  }
+  updateResidents(0);
+
   // ── Ánh sáng: BA nguồn, cố ý khác nhiệt độ ────────────────────────────────
   // Đây là phần rẻ nhất mà ăn tiền nhất. Một đèn trắng duy nhất cho ra cảnh "đồ hoạ máy tính";
   // nắng ẤM xiên + trời LẠNH rọi xuống + đất ẤM hắt lên cho ra ba sắc khác nhau trên ba mặt của
@@ -350,13 +458,20 @@ export function createCityScene({ layout, palette, dimmed = false, lowDetail = f
     scene,
     sun,
     dispose,
+    updateResidents,
+    /** Có gì đang chuyển động không — bên gọi dùng để quyết định có cần vẽ liên tục hay không. */
+    isAnimated: residents.length > 0,
     stats: {
       groundTiles: groundCells.length,
       roads: roads.length,
       buildings: buildings.length,
       props: scatter.length,
+      residents: residents.length,
       drawCalls: meshes.length,
-      triangles: buildingTriangles + (groundCells.length + roads.length) * TRIANGLES_PER_BOX,
+      triangles: buildingTriangles
+        + (groundCells.length + roads.length) * TRIANGLES_PER_BOX
+        // × 2: mỗi cư dân là HAI hộp (thân + đầu).
+        + residents.length * TRIANGLES_PER_BOX * 2,
     },
     /** Gọi khi cảnh đổi hình dạng (đổi kỷ, xây thêm nhà) — bóng mới được vẽ lại. */
     invalidateShadows() { sun.shadow.needsUpdate = true; },

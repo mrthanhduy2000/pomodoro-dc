@@ -14,6 +14,7 @@ import assert from 'node:assert/strict';
 
 import {
   createRenderLoop,
+  slowThresholdFor,
   FPS_SAMPLE_MS,
   SLOW_FPS_THRESHOLD,
   SLOW_SAMPLES_TO_GIVE_UP,
@@ -314,4 +315,55 @@ test('cửa sổ đo FPS không rò từ lần sustained này sang lần sau', (
   // watchdog nổ oan ngay lập tức.
   assert.ok(loop.getStats().fps === 0 || loop.getStats().fps > SLOW_FPS_THRESHOLD,
     `FPS rò từ phiên trước (${loop.getStats().fps})`);
+});
+
+// ─── Giới hạn nhịp khung hình (cho hoạt hoạ cư dân) ──────────────────────────
+
+test('giới hạn nhịp: màn 120 Hz chỉ vẽ đúng số khung đã đặt trần', () => {
+  // Không có trần thì cư dân đi bộ được vẽ 120 lần/giây trên iPhone ProMotion — gấp đôi công việc
+  // mà mắt không thấy khác gì, chỉ khác cái pin.
+  const browser = createFakeBrowser({ frameGapMs: 8, frameCostMs: 1 });   // 125 nhịp/giây
+  const loop = mount(browser, { targetFps: 30 });
+
+  loop.beginSustained('cư-dân');
+  browser.run(125);                    // ~1 giây thời gian máy
+
+  const rendered = browser.renders;
+  assert.ok(rendered <= 40, `vẽ ${rendered} khung trong 1 giây, đáng lẽ ~30`);
+  assert.ok(rendered >= 20, `chỉ vẽ ${rendered} khung — bóp quá tay, hoạt hoạ sẽ giật`);
+});
+
+test('giới hạn nhịp KHÔNG áp cho invalidate — thao tác rời rạc phải vẽ ngay', () => {
+  // Đổi kỷ, đổi theme, thả tay sau khi kéo camera: những việc này phải hiện ra tức thì. Nếu trần
+  // nhịp cũng chặn chúng thì sẽ có độ trễ nhìn thấy được ở mọi thao tác.
+  const browser = createFakeBrowser({ frameGapMs: 8, frameCostMs: 1 });
+  const loop = mount(browser, { targetFps: 30 });
+
+  const before = browser.renders;
+  loop.invalidate();
+  browser.step();
+  assert.equal(browser.renders, before + 1, 'invalidate phải vẽ ngay, không đợi tới lượt');
+
+  loop.invalidate();
+  browser.step();
+  assert.equal(browser.renders, before + 2, 'invalidate thứ hai ngay sau đó cũng phải vẽ');
+});
+
+test('ngưỡng "máy chậm" phải tính THEO trần nhịp, không dùng cứng 24', () => {
+  // ⚠️ Đây là cái bẫy: đặt trần 30 khung/giây rồi vẫn coi dưới 24 là máy yếu thì chỉ cần trượt
+  // vài khung là watchdog hạ xuống 2D — máy hoàn toàn khoẻ mà bị đuổi khỏi 3D.
+  assert.equal(slowThresholdFor(null), SLOW_FPS_THRESHOLD, 'không có trần thì giữ ngưỡng gốc');
+  assert.equal(slowThresholdFor(30), 21, '30 × 0,7');
+  assert.ok(slowThresholdFor(30) < 30, 'ngưỡng phải THẤP HƠN trần, nếu không watchdog nổ liên tục');
+  assert.ok(slowThresholdFor(120) <= SLOW_FPS_THRESHOLD, 'trần cao không được đẩy ngưỡng lên trên 24');
+});
+
+test('giới hạn nhịp không làm watchdog nổ oan trên máy khoẻ', () => {
+  const browser = createFakeBrowser({ frameGapMs: 8, frameCostMs: 1 });
+  let gaveUp = false;
+  const loop = mount(browser, { targetFps: 30, onSlow: () => { gaveUp = true; } });
+
+  loop.beginSustained('cư-dân');
+  browser.run(700);                    // ~5,6 giây — thừa sức chốt nhiều mẫu FPS
+  assert.equal(gaveUp, false, 'máy 125 Hz mà bị coi là yếu chỉ vì ta tự bóp nhịp xuống 30');
 });

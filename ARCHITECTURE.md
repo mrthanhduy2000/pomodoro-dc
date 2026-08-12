@@ -185,6 +185,36 @@ hình — nó âm thầm biến mọi khung hình thành đắt như khung đầ
 tab) là hai hàm KHÁC `stop` (tháo cảnh): `stop` là vĩnh viễn, gọi nhầm khi rời tab thì quay lại
 thấy thành phố đóng băng.
 
+**Ngôn ngữ hình khối 3 trục — vì sao mô tả hình học lại là ENGINE THUẦN (2026-08-12)**: hình dáng
+một công trình là hàm của **(kỷ × loại × độ hiếm × cấp)**, cả ba trục đều đã có sẵn trong dữ liệu
+game (`ERA_METADATA`, `BUILDING_EFFECTS[].type`, `BLUEPRINT_CATALOG[].rarity`) — 15 × 4 × 3 = **75
+công trình khác nhau thật** mà không phải bịa thêm một byte dữ liệu nào. Chuỗi: `parts.js` (từ
+vựng: chỉ 2 hình nguyên thuỷ) → `eraStyle.js` + `archetypes.js` (ngữ pháp) → `buildingSpec.js` (mô
+tả hình học thuần) → `render3d/geometryFactory.js` (**nơi duy nhất** biết three tồn tại). Ranh giới
+này KHÔNG phải hình thức: nó cho phép `node --test` kiểm được những thứ mà mắt người kiểm rất tệ —
+trần tam giác, tỉ lệ cao/rộng, "hai kỷ bất kỳ phải khác nhau", "cùng id thì hình vĩnh viễn không
+đổi". Biến thể tất định đi qua `hashId` DÙNG CHUNG với `cityLayout.js`, nên nhà không bao giờ đổi
+dáng giữa hai lần mở app — mở rộng ADR-007 từ vị trí sang hình dáng.
+⚠️ **Gộp hình học là thứ làm cho điều đó rẻ**: toàn bộ công trình + cảnh vật gộp thành MỘT
+`BufferGeometry`, màu đi qua thuộc tính màu ĐỈNH chứ không qua material. Nhờ vậy "mỗi công trình
+một hình dáng riêng" tốn đúng **1 lệnh vẽ**, không phải 75.
+
+**Cư dân — chuyển động là hàm của THỜI GIAN (2026-08-12)**: `engine/city3d/residents.js` thuần.
+Dân số **suy ra** từ (số công trình, số phiên, độ dài chuỗi), không lưu vào state — cùng nguyên tắc
+với toạ độ (ADR-007) và cảnh vật, nên thêm **0 byte** vào khối JSONB đang chịu CAS. `residentAt(route,
+time)` nhận thời điểm làm THAM SỐ thay vì cộng dồn vào biến trạng thái; hệ quả quan trọng nhất
+không phải "test được" mà là: rời tab nửa tiếng rồi quay lại, thành phố hiện ra ở đúng trạng thái
+đáng lẽ phải có thay vì đứng im từ lúc trình duyệt đóng băng nó.
+⚠️ **Tuyến đi phải bám quan hệ KỀ NHAU thật, không bám thứ tự mảng `roadCells`** — mảng đó đã bị
+`computeCityLayout` sắp theo chiều sâu isometric cho bộ vẽ 2D xếp lớp, nên hai phần tử liền nhau có
+thể ở hai đầu thành phố (test bắt được bước nhảy 3,6 ô).
+⚠️ **Cư dân PHÁ luật "đứng yên = 0 nhịp rAF" một cách có chủ ý** — tab Thành Phố là màn hình mở ra
+để NGẮM, chuyển động chính là nội dung của nó. Đổi lại phải có đủ ba lớp bảo vệ pin: **trần
+30 khung/giây** (`targetFps` của `renderLoop`), dừng hẳn khi rời tab, và tắt sạch khi bật "giảm
+chuyển động" của hệ điều hành hoặc khi xem bảo tàng. Đặt trần thì **ngưỡng watchdog phải tính theo
+trần** (`slowThresholdFor` = min(24, trần × 0,7)); giữ nguyên 24 sẽ đuổi máy khoẻ xuống 2D chỉ vì
+trượt vài khung.
+
 **Database schema — KHÔNG có migration tự động**: mọi thay đổi cấu trúc bảng Supabase (`game_state`,
 `timer_live`, `push_jobs`, `push_subscriptions`...) đòi hỏi chạy TAY một file `.sql` trong
 `supabase/` TRƯỚC KHI deploy code phụ thuộc vào nó — không dùng Prisma/Drizzle/ORM migration nào.

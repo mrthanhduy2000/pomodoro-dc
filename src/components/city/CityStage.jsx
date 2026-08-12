@@ -51,7 +51,15 @@ function StagePlaceholder() {
   );
 }
 
-export default function CityStage({ layout, dimmed = false, reduceMotion = false }) {
+export default function CityStage({
+  layout,
+  dimmed = false,
+  reduceMotion = false,
+  // Dân số suy ra từ hai số này (xem `engine/city3d/residents.js`). Truyền SỐ RỜI xuống thay vì gói
+  // vào một object: object mới ở mỗi lượt render sẽ khiến `CityScene3D` dựng lại cả cảnh WebGL.
+  sessionCount = 0,
+  streakLength = 0,
+}) {
   const preference = useSettingsStore((s) => s.cityRenderMode);
   const showHud = useSettingsStore((s) => s.cityPerfHud);
 
@@ -108,6 +116,8 @@ export default function CityStage({ layout, dimmed = false, reduceMotion = false
             layout={layout}
             dimmed={dimmed}
             reduceMotion={reduceMotion}
+            sessionCount={sessionCount}
+            streakLength={streakLength}
             onStats={setStats}
             onFallback={handleFallback}
           />

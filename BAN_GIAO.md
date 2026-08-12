@@ -12,9 +12,11 @@
 > chạy SQL); (3) **tab "Thành Phố" hiện ra**, vẽ bằng SVG; (4) **Phase 3A — bộ vẽ 3D thật
 > (three.js)** + bảng đo hiệu năng trong app. **360 bài test.** Cân bằng game KHÔNG đổi, chunk
 > chính KHÔNG to thêm.
-> 🔴 **ĐANG CHỜ ĐÀM**: cổng hiệu năng Phase 3A — bật "Hiện bảng số liệu hiệu năng" trong Cài đặt,
-> mở tab Thành Phố trên iPhone thật, KÉO XOAY vài giây rồi chụp màn hình gửi lại. Chưa qua cổng thì
-> KHÔNG làm tiếp Phase 3B.
+> ✅ **CỔNG HIỆU NĂNG 3A ĐÃ QUA** (2026-08-12, Đàm quyết): Đàm đã xem bản 3D trên máy thật và ra
+> lệnh *"hãy tiếp tục xây dựng sản phẩm và không dừng lại"* — tức là qua cổng bằng QUYẾT ĐỊNH của
+> chủ dự án, không phải bằng con số đo. ⚠️ **Mọi lưới an toàn hiệu năng vẫn còn nguyên, KHÔNG được
+> gỡ**: watchdog FPS, ba cửa lùi về 2D, trần 30 khung/giây, dừng khi rời tab. Nhận xét của Đàm:
+> *"quá đơn giản và không đẹp"* → đang chạy tiếp **Phase 3B (mỹ thuật)**.
 > Trước đó 2026-08-10: sửa khoảng trắng thừa trước icon 🍅/☕ trên thanh menu Mac (`electron/main.js`,
 > đúng 1 dòng; xoá `public/tray-empty.png`) — chỉ đụng app tray. Trước đó 2026-08-05 có 3 việc
 > **cấu hình máy + tài liệu, KHÔNG đổi dòng code ứng dụng nào**: (a) sửa "app biến mất khỏi thanh
@@ -49,18 +51,14 @@
 
 ## 🔧 Đang làm
 - **THÀNH PHỐ 3D** (kế hoạch Đàm duyệt 2026-08-12, mở rộng từ `SPEC V2 Thành Phố 3D`).
-  Phase 1, 2, 3-2D, **3A đã xong & push**. 🔴 **ĐANG DỪNG Ở CỔNG HIỆU NĂNG — chờ Đàm đo.**
-  - Đã đạt sẵn (đo được trên máy build): chunk `vendor-three` = **130,16 KB gzip** ≤ ngưỡng 135;
+  Phase 1, 2, 3-2D, 3A, **3B-1/3B-2/3B-3 đã xong & push**. ✅ Cổng hiệu năng đã qua (Đàm quyết).
+  - Đã đạt sẵn (đo được trên máy build): chunk `vendor-three` = **130,66 KB gzip** ≤ ngưỡng 135;
     chunk chính không to thêm; three KHÔNG bị precache nhưng vẫn chạy offline.
-  - **Cần Đàm đo trên iPhone thật**: ≥30 khung/giây khi kéo xoay · không nóng rõ rệt sau 5 phút ·
-    pin tụt <4% sau 10 phút. Cách đo: Cài đặt → bật *"Hiện bảng số liệu hiệu năng"* → mở tab Thành
-    Phố → **KÉO XOAY** vài giây → chụp màn hình. (Đứng yên thì FPS hiện 0 — đó là ĐÚNG, vì cảnh chỉ
-    vẽ khi có gì đổi.)
-  - **Qua cổng** → Phase 3B: ngôn ngữ hình khối 3 trục (kỷ × loại × độ hiếm) + giàn giáo công trình
-    đang xây. Hai lựa chọn Đàm đã chốt: mỹ thuật **Townscaper** (khối bo tròn, pastel ấm, bóng mềm)
-    · hiệu ứng **bật tối đa** ngay từ đầu.
-  - **Trượt cổng** ⇒ bỏ hẳn nhánh 3D, đặt Cài đặt về "Luôn 2D", ghi số đo vào `TECH_DEBT.md`.
-    Không mất gì — đó chính là lý do bản 2D được commit trước làm nền (ADR-008).
+  - **Đàm yêu cầu tiếp** (nguyên văn): *"tối ưu hình ảnh và cộng đồng cư dân, hãy cố gắng làm đẹp
+    như các bức tranh phục hưng, nhiều animation lên và nhiều hiệu ứng hơn, đem nó ra trang chủ
+    hoặc làm cái gì đó đột phá hơn nữa"*. Chia thành: **3B** hình khối + cư dân (XONG) · **3C**
+    ánh sáng/màu Phục Hưng · **3D** hiệu ứng sống động · **3F** đem thành phố ra trang chủ.
+  - Lưới an toàn KHÔNG được gỡ dù đã qua cổng: watchdog FPS, ba cửa lùi 2D, trần 30 khung/giây.
 
 ## ✅ NÂNG CẤP TRÍ TUỆ AI COACH — chuỗi 6 mảng (2026-06-25, code XONG hết; mảng 6 MỚI THỰC SỰ LÊN PRODUCTION 2026-07-11)
 > Đàm ra lệnh "làm toàn bộ, chuyên sâu" sau workflow đề-xuất 10 agent. Cả 6 mảng test xanh, code đã commit đủ.
@@ -106,7 +104,46 @@
   là tổ tiên trực tiếp) — `2c24e0f..4f371ad`. Đã chạy lại 360 test + lint + build ngay trước khi
   push, và đếm lại Serverless Function: **10/12**, còn dư 2.
 
-- **2026-08-12 (Phase 3A)** — **THÀNH PHỐ 3D THẬT (three.js) + bảng đo hiệu năng. ⚠️ ĐANG CHỜ ĐÀM ĐO.**
+- **2026-08-12 (Phase 3B-3)** — **CƯ DÂN: thành phố có người ở.**
+  Đàm xem bản 3A rồi nói *"quá đơn giản và không đẹp"* + *"tối ưu hình ảnh và **cộng đồng cư dân**"*.
+  Đây là mảng "cộng đồng cư dân" trong câu đó.
+  - **Dân số SUY RA, không lưu vào state** — cùng nguyên tắc với cảnh vật và với toạ độ (ADR-007):
+    `deriveResidentCount` = f(số công trình, số phiên, độ dài chuỗi). **0 byte** thêm vào khối JSONB
+    đang chịu CAS trên Supabase, và không bao giờ lệch giữa hai máy. Trần 28 người (ngưỡng hiệu
+    năng, không phải con số đẹp). Đường cong dốc lúc đầu rồi thoải: 0→4 người phải cảm nhận được ở
+    những phiên đầu tiên (lúc dễ bỏ cuộc nhất), 20→24 thì gần như không ai đếm.
+  - ⚠️ **CHUYỂN ĐỘNG LÀ HÀM CỦA THỜI GIAN, không phải biến cộng dồn.** `residentAt(route, time)`
+    nhận thời điểm làm tham số. Ba cái lợi, cái thứ ba mới là lý do thật: (a) test được — đưa vào
+    t = 12,5 giây thì biết chắc người ở đâu; (b) bỏ lỡ khung hình không làm thành phố trôi chậm
+    lại; (c) **Đàm rời tab nửa tiếng rồi quay lại, thành phố hiện ra ở đúng trạng thái ĐÁNG LẼ phải
+    có** thay vì đứng im từ lúc bị đóng băng.
+  - ⚠️ **BUG ĐÃ BỊ TEST BẮT — cư dân bay xuyên qua nhà.** Bản đầu đi theo THỨ TỰ MẢNG `roadCells`,
+    nhưng mảng đó đã bị `computeCityLayout` sắp lại theo **chiều sâu isometric** (để bộ vẽ 2D xếp
+    lớp đúng) — hai phần tử liền nhau trong mảng hoàn toàn có thể nằm ở hai đầu thành phố. Test đo
+    được bước nhảy **3,6 ô**. Đã sửa: dựng `roadSet` + quan hệ kề-nhau 4 hướng thật rồi mới đi, khép
+    kín tuyến bằng cách đi ngược lại chính lộ trình (tính kề nhau được bảo đảm miễn phí).
+  - ⚠️ **HAI KHỐI MỚI RA HÌNH NGƯỜI, MỘT KHỐI THÌ KHÔNG.** Bản đầu dùng đúng một hộp; ảnh chụp gần
+    cho thấy những **viên gạch màu** trôi trên đường. Thứ làm mắt nhận ra dáng người ở cỡ vài điểm
+    ảnh không phải tay chân — mà là **một chấm NHỎ HƠN, SÁNG HƠN đặt trên một khối lớn hơn, tối
+    hơn** (ngôn ngữ của quân cờ vua và hình nhân Lego). Thêm vai màu `skin` vào bảng màu, **không
+    pha sắc kỷ** (người thời nào cũng một màu, và chính vì nó KHÔNG thuộc họ màu công trình nên mắt
+    mới bám vào được). Giá: 12 tam giác + 1 lệnh vẽ cho cả cộng đồng.
+  - ⚠️ **ĐÁNH ĐỔI CÓ CHỦ Ý VỚI LUẬT PIN.** Cư dân đi lại ⇒ phải vẽ liên tục ⇒ phá luật "đứng yên =
+    0 nhịp rAF" của Phase 3A. Chấp nhận, vì tab Thành Phố là màn hình Đàm mở ra để NGẮM và chuyển
+    động chính là nội dung của nó. **Ba lớp bảo vệ pin thay thế**: (a) **trần 30 khung/giây**
+    (`targetFps` mới ở `renderLoop`) — trên iPhone ProMotion không có trần này là vẽ gấp bốn lần
+    công việc cần thiết; (b) dừng hẳn khi rời tab; (c) tắt sạch khi bật "giảm chuyển động" của hệ
+    điều hành, và trong bảo tàng (kỷ đã niêm phong đứng yên tuyệt đối).
+  - ⚠️ **NGƯỠNG WATCHDOG PHẢI TÍNH THEO TRẦN MÌNH TỰ ĐẶT.** Đặt trần 30 rồi vẫn coi dưới 24 là máy
+    yếu thì chỉ cần trượt vài khung là watchdog hạ xuống 2D — máy hoàn toàn khoẻ mà bị đuổi khỏi
+    3D. `slowThresholdFor(targetFps)` = min(24, trần × 0,7).
+  - **375 → 393 bài test** (+8 cư dân, +10 nhịp khung hình). Lint + build xanh.
+  - Hai chỗ dễ sai đã bịt: `useEffect` phải có `reduceMotion`/`sessionCount`/`streakLength` trong
+    danh sách phụ thuộc (cả ba đọc lúc DỰNG cảnh, không có đường cập nhật sau) — và ba prop đó phải
+    là **SỐ RỜI**, không gói thành object (object mới mỗi lượt render cha ⇒ dựng lại cả cảnh WebGL
+    vài lần mỗi giây). Cao độ chân người dùng chung hằng số `ROAD_LIFT` với mặt đường.
+
+- **2026-08-12 (Phase 3A)** — **THÀNH PHỐ 3D THẬT (three.js) + bảng đo hiệu năng. ✅ ĐÃ QUA CỔNG.**
   Phase này CỐ Ý xấu: hình khối còn là hộp thô. Mục tiêu là **đo xem iPhone có kham nổi không**
   trước khi đầu tư vào mỹ thuật (Phase 3B). Nhưng đo trên đúng TẢI THẬT — 144 ô nền, số công trình
   thật, bóng đổ bật — chứ đo 5 cái hộp thì con số chẳng dự đoán được gì.
@@ -142,11 +179,13 @@
     TỪNG MÁY, và store này không lên Supabase nên thêm **0 byte** vào khối JSONB đang chịu CAS.
   - Tài liệu: `ARCHITECTURE.md` (luật pin + 3 cửa lùi) · `PROJECT_STRUCTURE.md` · `MIGRATION.md`
     (settingsStore 6→7) · `CHANGELOG.md`.
-  - 🔴 **VIỆC CỦA ĐÀM — cổng chặn, chưa qua thì KHÔNG làm tiếp Phase 3B**: vào Cài đặt bật *"Hiện
-    bảng số liệu hiệu năng"*, mở tab Thành Phố trên **iPhone thật**, **KÉO XOAY** thành phố vài
-    giây rồi chụp màn hình gửi lại. Đạt = **≥30 khung/giây** · máy không nóng rõ rệt sau 5 phút ·
-    pin tụt **<4%** sau 10 phút. **Trượt ⇒ bỏ hẳn nhánh 3D, giữ bản 2D, không tiếc** — đó chính là
-    lý do bản 2D được commit trước làm nền (ADR-008).
+  - ✅ **CỔNG ĐÃ QUA** — nhưng qua bằng **quyết định của Đàm**, không bằng số đo: Đàm xem trên máy
+    thật rồi ra lệnh *"hãy tiếp tục xây dựng sản phẩm và không dừng lại"*. ⚠️ **Vì cổng không được
+    đóng bằng số, mọi lưới an toàn phải giữ NGUYÊN** — watchdog FPS, ba cửa lùi 2D, trần 30
+    khung/giây, dừng khi rời tab. Nếu sau này máy Đàm nóng/tụt pin thì đường lùi vẫn còn đủ, và
+    bản 2D vẫn nằm đó làm nền (ADR-008). Muốn có số thật thì bật *"Hiện bảng số liệu hiệu năng"*
+    trong Cài đặt rồi mở tab Thành Phố — nay có cư dân đi lại nên FPS hiện số thật, không cần kéo
+    xoay như trước nữa.
 
 - **2026-08-12 (công cụ)** — **Sửa glob test: từ nay test đặt ở thư mục con cũng chạy.**
   Trước đây `npm test` liệt kê tay từng thư mục và mỗi mục chỉ quét **một cấp**

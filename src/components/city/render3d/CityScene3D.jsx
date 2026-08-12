@@ -33,10 +33,23 @@ const MAX_PIXEL_RATIO = 2;
 const SHADOW_MAP_DESKTOP = 1024;
 const SHADOW_MAP_MOBILE = 512;
 
+/**
+ * Trần nhịp khung hình cho hoạt hoạ cư dân.
+ * 30 là điểm cân bằng: đủ mượt để mắt đọc ra "đang đi bộ", và bằng đúng một phần tư công việc so
+ * với màn 120 Hz của iPhone đời mới. Người đi bộ không phải trò bắn súng — thêm khung hình ở đây
+ * không đổi lấy gì ngoài nhiệt máy.
+ */
+const ANIMATION_FPS = 30;
+
 export default function CityScene3D({
   layout,
   dimmed = false,
   reduceMotion = false,
+  // ⚠️ Nhận SỐ RỜI chứ không nhận một object `stats`. Cảnh WebGL được dựng lại mỗi khi phụ thuộc
+  // của effect đổi, mà một object mới được tạo ở mỗi lượt render cha sẽ đổi danh tính LIÊN TỤC —
+  // tức là dựng lại cả cảnh 3D vài lần mỗi giây. Số nguyên thì so sánh bằng giá trị, luôn ổn định.
+  sessionCount = 0,
+  streakLength = 0,
   onStats,
   onFallback,
 }) {
@@ -93,7 +106,15 @@ export default function CityScene3D({
         eraColor: ERA_METADATA[layout.era]?.accentColor,
       });
 
-      const city = createCityScene({ layout, palette, dimmed });
+      const city = createCityScene({
+        layout,
+        palette,
+        dimmed,
+        stats: { sessionCount, streakLength },
+        // Bảo tàng (kỷ đã niêm phong) đứng yên tuyệt đối — đúng tinh thần "bảo tàng bất động";
+        // và khi Đàm bật giảm chuyển động ở mức hệ điều hành thì KHÔNG có gì được nhúc nhích.
+        still: dimmed || reduceMotion,
+      });
       city.sun.shadow.mapSize.setScalar(isMobile ? SHADOW_MAP_MOBILE : SHADOW_MAP_DESKTOP);
 
       // ⚠️ Mặt phẳng xa 8 × gridSize, KHÔNG phải 6. Vòm trời ở `sceneGraph.js` có bán kính
@@ -121,8 +142,14 @@ export default function CityScene3D({
         camera.updateProjectionMatrix();
       }
 
+      // Mốc thời gian gốc của hoạt hoạ. Dùng đồng hồ TUYỆT ĐỐI chứ không cộng dồn từng khung:
+      // nhờ vậy bỏ lỡ khung hình (máy bận, tab bị treo) không làm thành phố trôi chậm lại, và
+      // quay lại tab sau nửa tiếng thì cư dân đang ở đúng chỗ đáng lẽ phải tới.
+      const startedAt = performance.now();
+
       let shadowsDirty = true;
       function renderFrame() {
+        if (city.isAnimated) city.updateResidents((performance.now() - startedAt) / 1000);
         applyCamera();
         if (shadowsDirty) {
           // Chỉ vẽ lại bóng đúng khung hình cần. Bật `autoUpdate` lên một nhịp rồi tắt ngay là
@@ -138,9 +165,19 @@ export default function CityScene3D({
         requestFrame: (cb) => window.requestAnimationFrame(cb),
         cancelFrame: (id) => window.cancelAnimationFrame(id),
         now: () => performance.now(),
+        // ⚠️ Trần nhịp khung hình. Cư dân đi bộ ở 30 khung/giây trông y hệt ở 120 — chỉ khác cái
+        // pin. Trên iPhone ProMotion, không có trần này thì mở tab Thành Phố là vẽ gấp bốn lần
+        // công việc cần thiết. Ngưỡng watchdog tự tính theo trần (xem `slowThresholdFor`).
+        targetFps: ANIMATION_FPS,
         onSlow: ({ fps }) => giveUp('slow', new Error(`FPS thấp kéo dài (${Math.round(fps)})`)),
         onError: (error) => giveUp('render-error', error),
       });
+
+      // Cư dân đi lại ⇒ phải vẽ liên tục. Đây là ĐÁNH ĐỔI CÓ CHỦ Ý với luật "đứng yên = 0 nhịp
+      // rAF": tab Thành Phố là màn hình Đàm mở ra để NGẮM, chuyển động chính là nội dung của nó.
+      // Ba lớp bảo vệ pin vẫn còn nguyên: trần 30 khung/giây, dừng hẳn khi rời tab
+      // (`visibilitychange`), và tắt sạch khi bật giảm chuyển động.
+      if (city.isAnimated) loop.beginSustained('cư-dân');
 
       // ── Tương tác: kéo để xoay ──────────────────────────────────────────────
       let dragPointer = null;
@@ -193,6 +230,10 @@ export default function CityScene3D({
           loop.pause();
         } else {
           loop.resume();
+          // ⚠️ `pause()` xoá SẠCH các hoạt hoạ đang chạy (đúng — ngón tay đâu còn trên màn hình
+          // khi Đàm chuyển sang app khác). Nhưng cư dân thì không phải thao tác của người dùng,
+          // nên phải tự bật lại; quên bước này thì quay lại tab sẽ thấy một thành phố chết đứng.
+          if (city.isAnimated) loop.beginSustained('cư-dân');
         }
       }
 
@@ -273,12 +314,12 @@ export default function CityScene3D({
       if (runtimeRef.current === runtime) runtimeRef.current = null;
     };
     // Dựng lại cảnh khi bố cục đổi (đổi kỷ, xây thêm nhà) hoặc khi đổi giữa "đang xây"/"đã niêm phong".
-  }, [layout, dimmed, failed, giveUp]);
-
-  // Bật/tắt giảm chuyển động không cần dựng lại cảnh — chỉ đổi cách vẽ khung tiếp theo.
-  useEffect(() => {
-    runtimeRef.current?.invalidate();
-  }, [reduceMotion]);
+    // ⚠️ `reduceMotion`, `sessionCount`, `streakLength` PHẢI có mặt: cả ba đều được đọc lúc dựng
+    // cảnh (`still`, dân số) và cảnh không có đường nào cập nhật chúng sau khi đã dựng xong. Thiếu
+    // chúng thì bật "giảm chuyển động" xong cư dân vẫn đi, và xong thêm 20 phiên mà phố vẫn vắng
+    // như cũ cho tới lần đổi kỷ kế tiếp. Dựng lại cảnh ở đây rẻ và hiếm — cả ba đều là số nguyên
+    // đổi vài lần mỗi ngày, không phải object mới mỗi lượt render.
+  }, [layout, dimmed, failed, giveUp, reduceMotion, sessionCount, streakLength]);
 
   if (failed) return null;
 

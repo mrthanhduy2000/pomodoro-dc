@@ -188,6 +188,11 @@ export function buildScenePalette({ tokens, eraColor } = {}) {
     glass: paint(mixHue(eraHue, 205, 0.55), isDark ? 0.40 : 0.36, 0.52, 0.42),
     leaf:  paint(mixHue(88, eraHue, 0.2), isDark ? 0.34 : 0.38, 0.33, 0.23),
     dark:  paint(eraHue, 0.24, 0.19, 0.09),
+    // Da người. KHÔNG pha sắc kỷ vào — người thì thời nào cũng cùng một màu, và đây chính là chỗ
+    // để mắt bám vào: một chấm ấm, nhạt, KHÔNG thuộc họ màu của công trình xung quanh, nhờ vậy
+    // đọc ra "người" giữa một rừng tường và mái. Sáng hơn hẳn ở cả hai theme vì ở cỡ vài điểm ảnh,
+    // độ SÁNG là thứ duy nhất phân biệt được, không phải sắc.
+    skin:  paint(30, 0.30, 0.78, 0.66),
   };
 
   // ⚠️ Mặt đất lấy sắc ĐẤT làm gốc rồi mới pha CHÚT sắc kỷ vào, chứ KHÔNG phải ngược lại.

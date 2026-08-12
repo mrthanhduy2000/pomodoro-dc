@@ -41,7 +41,13 @@ function findChrome() {
 }
 
 function parseArgs(argv) {
-  const args = { era: 7, level: 3, theme: 'light', all: false, width: 1100, height: 700 };
+  const args = {
+    era: 7, level: 3, theme: 'light', all: false, width: 1100, height: 700,
+    // Hệ số khoảng cách camera. 1 = đúng khoảng app dùng; nhỏ hơn = lại gần để soi chi tiết.
+    // Cần thiết vì ở khoảng nhìn thật, một cư dân cao 0,2 ô chỉ chiếm vài điểm ảnh — không đủ để
+    // phân biệt "hình người" với "vệt nhiễu".
+    zoom: 1,
+  };
   for (let i = 0; i < argv.length; i += 1) {
     const key = argv[i];
     const value = argv[i + 1];
@@ -51,6 +57,7 @@ function parseArgs(argv) {
     else if (key === '--theme') { args.theme = value; i += 1; }
     else if (key === '--width') { args.width = Number(value); i += 1; }
     else if (key === '--height') { args.height = Number(value); i += 1; }
+    else if (key === '--zoom') { args.zoom = Number(value); i += 1; }
   }
   return args;
 }
@@ -67,7 +74,7 @@ function run(cmd, cmdArgs, options = {}) {
  * Mã nguồn trang xem thử. Được gói thành MỘT file bằng chính Vite của dự án, nên nó dùng đúng
  * phiên bản three và đúng các module thật — nếu bản gói lỗi thì bản chạy thật cũng lỗi.
  */
-function entrySource({ era, level, theme }) {
+function entrySource({ era, level, theme, zoom = 1 }) {
   return `
 import { computeCityLayout } from '${ROOT}/src/engine/cityLayout.js';
 import { buildScenePalette } from '${ROOT}/src/engine/city3d/palette3d.js';
@@ -79,6 +86,7 @@ import { PerspectiveCamera, WebGLRenderer, PCFSoftShadowMap } from 'three';
 const ERA = ${era};
 const LEVEL = ${level};
 const IS_DARK = ${theme === 'dark'};
+const ZOOM = ${zoom};
 
 const built = BLUEPRINT_CATALOG[ERA].map((bp) => bp.id);
 const levels = Object.fromEntries(built.map((id) => [id, LEVEL]));
@@ -102,13 +110,20 @@ renderer.shadowMap.type = PCFSoftShadowMap;
 renderer.shadowMap.autoUpdate = false;
 renderer.shadowMap.needsUpdate = true;
 
-const city = createCityScene({ layout, palette });
+// ⚠️ Truyền ĐÚNG bộ số mà app truyền, không để mặc định: dân số suy ra từ đây, và một trang xem
+// thử vẽ thành phố vắng hơn thật thì nó không còn kiểm chứng được thứ cần kiểm chứng.
+const city = createCityScene({ layout, palette, stats: { sessionCount: 40, streakLength: 9 } });
 city.sun.shadow.mapSize.setScalar(1024);
+
+// Đẩy đồng hồ tới một thời điểm giữa chừng. Ở t = 0 mọi cư dân đều đứng ở đầu tuyến của mình —
+// đúng chỗ dễ trùng nhau nhất, tức là ảnh chụp sẽ nói dối theo hướng lạc quan về chuyện họ có
+// TRẢI ĐỀU trên phố hay không.
+city.updateResidents(17.5);
 
 const camera = new PerspectiveCamera(38, canvas.width / canvas.height, 0.5, layout.gridSize * 8);
 const orbit = createOrbit({
-  distance: layout.gridSize * 1.85,
-  minDistance: layout.gridSize * 0.95,
+  distance: layout.gridSize * 1.85 * ZOOM,
+  minDistance: layout.gridSize * 0.95 * Math.min(1, ZOOM),
   maxDistance: layout.gridSize * 3.1,
 });
 const eye = orbit.getPosition();

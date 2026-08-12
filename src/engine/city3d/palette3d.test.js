@@ -90,7 +90,13 @@ test('buildScenePalette: đủ vai màu cho ngôn ngữ hình khối, không vai
   // `undefined` và three vẽ ra màu đen — một lỗi im lặng, chỉ lộ ra khi nhìn tận mắt đúng cái kỷ
   // có dùng vai đó. Test này bắt trước.
   const palette = buildScenePalette({ tokens: FALLBACK_TOKENS, eraColor: '#a78bfa' });
-  const needed = ['wall', 'wall2', 'roof', 'trim', 'wood', 'stone', 'gold', 'glass', 'leaf', 'dark'];
+  const needed = [
+    'wall', 'wall2', 'roof', 'trim', 'wood', 'stone', 'gold', 'glass', 'leaf', 'dark',
+    // `skin` KHÔNG nằm trong `PART_ROLES` (không khối kiến trúc nào dùng) — nó là màu đầu cư dân,
+    // dùng thẳng ở `sceneGraph.js`. Khoá ở đây vì thiếu nó thì đầu người thành màu đen mà không có
+    // test nào khác bắt được.
+    'skin',
+  ];
   for (const role of needed) {
     assert.ok(Number.isInteger(palette.roles?.[role]), `thiếu vai màu "${role}"`);
   }

@@ -75,7 +75,13 @@ export default function CityView() {
       stats={{ sessionCount, streakLength }}
       onSelectEra={setViewingEra}
     >
-      <CityStage layout={layout} dimmed={!isCurrent} reduceMotion={!!reduceMotion} />
+      <CityStage
+        layout={layout}
+        dimmed={!isCurrent}
+        reduceMotion={!!reduceMotion}
+        sessionCount={sessionCount}
+        streakLength={streakLength}
+      />
     </CityViewShell>
   );
 }

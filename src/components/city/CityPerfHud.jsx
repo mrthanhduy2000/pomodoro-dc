@@ -6,9 +6,14 @@
  * một cổng "hãy đo FPS đi" mà không có công cụ đo thì không thực hiện được — nó sẽ thành cái cổng
  * ai cũng gật bừa cho qua. Bảng này để Đàm chỉ cần **chụp màn hình gửi lại**.
  *
- * ⚠️ FPS = 0 lúc đứng yên là ĐÚNG, không phải hỏng: cảnh chỉ vẽ khi có gì đó đổi (render-on-demand).
- * Muốn thấy FPS thật thì phải KÉO XOAY thành phố — chữ dưới bảng nói rõ điều này, vì nếu không Đàm
- * sẽ tưởng máy mình hỏng.
+ * ⚠️ FPS = 0 KHÔNG phải lúc nào cũng là hỏng. Cảnh chỉ vẽ khi có gì đó đổi (render-on-demand), nên
+ * một thành phố đứng yên tuyệt đối thì đúng là 0. Từ khi có CƯ DÂN đi lại thì thành phố có người là
+ * vẽ liên tục ⇒ số này phải có. Còn 0 ở đây nghĩa là: chưa có nhà nào (chưa có ai ở), hoặc Đàm đang
+ * xem bảo tàng, hoặc đã bật "giảm chuyển động". Chữ dưới bảng nói đúng trường hợp đang xảy ra, vì
+ * nếu chỉ nói chung chung thì Đàm sẽ tưởng máy mình hỏng.
+ *
+ * ⚠️ TRẦN 30 KHUNG/GIÂY: cư dân bị giới hạn nhịp (xem `ANIMATION_FPS` ở `CityScene3D.jsx`), nên
+ * thấy đúng ~30 là ĐẠT chứ không phải "chỉ được một nửa 60". Đừng sửa ngưỡng ở đây thành 60.
  */
 
 const eyebrow = 'mono text-[9px] uppercase tracking-[0.18em]';
@@ -62,14 +67,15 @@ export default function CityPerfHud({ stats, mode, reason }) {
             label="Nền · nhà"
             value={stats ? `${stats.groundTiles} · ${stats.buildings}` : '—'}
           />
+          <Row label="Cư dân" value={stats?.residents ?? '—'} />
           <Row
             label="Bóng · điểm ảnh"
             value={stats ? `${stats.shadowMap}px · ${stats.pixelRatio}×` : '—'}
           />
           <p className="mt-0.5 text-[10px] leading-relaxed" style={{ color: 'var(--muted)' }}>
             {measured
-              ? 'Số khung/giây chỉ đo trong lúc bạn đang kéo xoay. Từ 30 trở lên là đạt.'
-              : 'Thành phố đứng yên thì không vẽ khung nào — đó là cách tiết kiệm pin, không phải lỗi. Hãy KÉO XOAY thành phố vài giây rồi xem lại số này.'}
+              ? 'Cư dân đang đi lại nên thành phố vẽ liên tục. Nhịp vẽ được giới hạn ở 30 khung/giây để đỡ tốn pin — thấy khoảng 30 là ĐẠT, không phải thiếu.'
+              : 'Chưa có khung hình nào được vẽ. Bình thường khi thành phố đứng yên tuyệt đối: chưa có công trình nào, đang xem bảo tàng, hoặc bạn đã bật "giảm chuyển động". Hãy KÉO XOAY thành phố vài giây rồi xem lại số này.'}
           </p>
         </>
       ) : (

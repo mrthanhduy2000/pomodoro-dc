@@ -99,6 +99,28 @@
 ## 🗒️ Nhật ký cập nhật
 > Mỗi lần xong việc đáng kể, thêm 1 dòng vào ĐẦU danh sách.
 
+- **2026-08-12 (Phase 4′-b)** — **CHUÔNG THÔNG BÁO NỔI TRÊN MỌI HỘP THOẠI SUỐT BAO LÂU NAY.**
+  Chụp một ảnh khung iPhone của lễ mừng Phase 4′ để xem có tràn không, thì thấy **cái chuông sáng
+  trưng nổi lên trên lớp mờ**. Đo lại bằng `elementFromPoint` trong trình duyệt thật: chuông ở
+  `z-[75]`, mà **TẤT CẢ hộp thoại của app đều thấp hơn** (z-50: phần thưởng/thảm hoạ/khủng hoảng/
+  thăng hoa/báo cáo tuần · z-[60]: Coach, thăng cấp, hướng dẫn · z-[70]: lễ mừng). Tức là **lỗi
+  này CÓ SẴN TỪ LÂU và ảnh hưởng tới cả màn hình phần thưởng** — không phải do Phase 4′ gây ra;
+  Phase 4′ chỉ là cái làm nó lộ ra.
+  - Sửa đúng MỘT chỗ: chuông `z-[75]` → **`z-[45]`**. Vẫn cao hơn mọi nội dung trang thường
+    (z-1/z-2) và thanh nổi đáy màn (z-40), nhưng thấp hơn sàn của dải hộp thoại (z-50).
+  - Khoá bằng `src/components/notificationLayer.test.js` (3 bài, **đã xác minh ĐỎ** trên số cũ):
+    bài 2 **quét cả thư mục** `*Modal.jsx` nên một hộp thoại mới ra đời với z quá thấp sẽ bị bắt
+    ngay, không cần ai nhớ sửa test.
+  - ⚠️ **BÀI HỌC — bài test suýt phát tín hiệu an toàn GIẢ**: regex đọc lớp z ban đầu đặt `\b` sau
+    `]`, mà `]` lẫn dấu cách đứng sau đều không phải ký tự từ ⇒ **mọi lớp dạng `z-[70]` lặng lẽ
+    biến mất**, bài quét sẽ XANH trong khi chẳng đo gì cả. Bắt được nhờ chạy thử trên số cũ và
+    thấy nó KHÔNG đỏ như đáng lẽ phải thế. Quy tắc: bài test mới nào cũng phải xem nó ĐỎ một lần.
+  - ⚠️ **BÀI HỌC — `{/* … */}` không đứng cạnh phần tử gốc được**: đặt chú thích JSX ngay trước
+    `<div>` trong `return ( … )` là **hai nút gốc** ⇒ build FAIL. Chú thích giải thích cho cả
+    component thì để dạng `//` phía trên `return`.
+  - Test **465 xanh** (+3), lint sạch, build xanh. Đã soi lại trong trình duyệt: chuông nay nằm
+    dưới cả lễ mừng lẫn màn hình phần thưởng, và vẫn bấm được bình thường khi không có hộp thoại.
+
 - **2026-08-12 (Phase 4′)** — **3,2 GIÂY ĐƯỢC NHÌN THẤY THÀNH PHỐ LỚN LÊN.**
   Đàm: *"mọi thứ phải hoàn hảo và không bị chán"*. Ba phase trước đã làm thành phố **đọc được**
   (còn bao xa) và **sờ được** (chạm vào xem) — nhưng đúng khoảnh khắc đáng giá nhất, lúc chuông báo

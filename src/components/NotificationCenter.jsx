@@ -361,8 +361,18 @@ export default function NotificationCenter({ onNavigate }) {
     popupTimersRef.current.clear();
   }, []);
 
+  // ⚠️ `z-[45]` — PHẢI NẰM DƯỚI MỌI HỘP THOẠI (2026-08-12).
+  // Chuông là đồ trang trí thường trực; hộp thoại là thứ CHẶN màn hình. Trước đây chuông để
+  // `z-[75]`, tức là cao hơn TẤT CẢ hộp thoại của app (z-50: phần thưởng/thảm hoạ/khủng hoảng/
+  // thăng hoa/báo cáo tuần · z-[60]: Coach, thăng cấp, hướng dẫn · z-[70]: lễ mừng thành phố) —
+  // nên mỗi lần một hộp thoại mở ra, cái chuông vẫn sáng trưng nổi lên trên lớp mờ, và bấm vào
+  // được. Nhìn thấy lần đầu ở ảnh chụp khung iPhone của lễ mừng Phase 4′, nhưng nó đã có sẵn từ
+  // lâu và ảnh hưởng tới CẢ màn hình phần thưởng.
+  // 45 là chỗ đúng: vẫn cao hơn mọi nội dung trang thường (z-1/z-2) và hơn thanh nổi đáy màn
+  // (z-40), nhưng thấp hơn sàn của dải hộp thoại (z-50). Thêm hộp thoại mới thì đừng dùng z dưới
+  // 50 — bài test `notificationLayer.test.js` khoá bất biến này.
   return (
-    <div ref={rootRef} className="relative z-[75] flex items-center justify-end">
+    <div ref={rootRef} className="relative z-[45] flex items-center justify-end">
       <div className="pointer-events-auto">
         <button
           type="button"

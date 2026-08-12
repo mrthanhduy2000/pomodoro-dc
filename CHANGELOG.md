@@ -12,6 +12,20 @@
 
 ---
 
+## 2026-08-12 — Sửa thứ tự lớp: chuông thông báo nổi trên mọi hộp thoại
+
+- **Mục đích**: chuông ở `z-[75]` cao hơn TẤT CẢ hộp thoại của app (z-50/60/70), nên mỗi lần một
+  hộp thoại mở ra thì chuông vẫn sáng trưng trên lớp mờ và bấm vào được. Lỗi có sẵn từ lâu, ảnh
+  hưởng cả màn hình phần thưởng; chỉ lộ ra khi chụp ảnh khung iPhone của lễ mừng Phase 4′.
+- **Phạm vi**: `NotificationCenter.jsx` đổi `z-[75]` → `z-[45]` (một dòng);
+  `notificationLayer.test.js` (MỚI) khoá bất biến "chuông luôn dưới dải hộp thoại", có quét cả
+  thư mục nên hộp thoại thêm sau này cũng được kiểm.
+- **Ảnh hưởng**: chuông vẫn nằm trên nội dung trang thường và thanh nổi đáy màn; chỉ chìm xuống
+  khi có hộp thoại đang chặn màn hình.
+- **Tương thích**: giữ nguyên hoàn toàn.
+
+---
+
 ## 2026-08-12 — Thành Phố (Phase 4′): 3,2 giây được NHÌN THẤY thành phố lớn lên
 
 - **Mục đích**: khép kín vòng lặp "làm việc → thấy thành quả". Trước Phase này, đúng khoảnh khắc

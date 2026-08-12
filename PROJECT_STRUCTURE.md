@@ -9,6 +9,10 @@
 ```
 ├── src/                      # App React (Vite + PWA) — chạy trên web, dùng chung với Electron
 │   ├── components/           # Component React, mỗi file = 1 màn hình hoặc 1 mảnh UI lớn
+│   │   │                     # ⚠️ THỨ TỰ LỚP (z-index): đồ trang trí thường trực (chuông thông
+│   │   │                     #   báo) < z-50 · MỌI hộp thoại ≥ z-50. Khoá bằng
+│   │   │                     #   `notificationLayer.test.js` — thêm hộp thoại mới thì đừng dùng
+│   │   │                     #   z dưới 50, kẻo chuông nổi lên trên lớp mờ và bấm được
 │   │   ├── shared/           # Component/style dùng chung GIỮA NHIỀU file components khác
 │   │   │   └── BadgeKit.jsx      # TypeBadge/RarityBadge/PerkSummary (BuildingWorkshop + BlueprintInventory)
 │   │   ├── icons/            # Bộ icon SVG tự vẽ (thay emoji), 1 component Glyph + data tách riêng

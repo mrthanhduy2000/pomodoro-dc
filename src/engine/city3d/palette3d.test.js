@@ -411,3 +411,56 @@ test('ĐÈN CỬA SỔ mờ dần khi trời sáng lên — đèn không nhận 
   }).roles.glassLit).h));
   assert.equal(new Set(hues).size, 1, `sắc đèn đổi theo giờ: ${hues.join(' / ')}`);
 });
+
+test('MÁI NHÀ: 15 KỶ PHẢI RA 15 MÀU — đi hết 15 kỷ mà thành phố không đổi thì đi để làm gì', () => {
+  // ⚠️ BÀI TEST NÀY SINH RA TỪ MỘT KHẲNG ĐỊNH SAI TRONG CHÍNH TÀI LIỆU CỦA DỰ ÁN.
+  // Ghi chú cũ ở vai màu `roof` viết: "Kết quả đo lại đủ 15 kỷ: đất nung, ngói đỏ, vàng đất, đồng
+  // xanh, xám tía, mận chín, rượu vang — 15 sắc khác nhau". Đo thật thì ngược lại hoàn toàn:
+  //   • 15 góc màu mái dồn vào ĐÚNG HAI CỤM — 9°–55° (9 kỷ) và 329°–342° (6 kỷ); cả khoảng
+  //     60°–320° của vòng tròn màu bỏ trống.
+  //   • kỷ 5 ↔ 11 ↔ 12 cách nhau **0°**; kỷ 2 ↔ 9 cách 1°; kỷ 6 ↔ 15 cách 4°.
+  //   • kỷ 8 (sắc kỷ 198° lam) và kỷ 10 (sắc kỷ 0° đỏ) — hai sắc cách nhau 198° — ra hai mái cách
+  //     nhau 1°. Phép dựng đang XOÁ bản sắc kỷ chứ không diễn đạt nó.
+  // Bài học đáng giữ hơn cả con số: **một khẳng định về mỹ thuật mà không kèm số đo thì là dự
+  // đoán, và dự đoán thì trôi.** Nay có bài test, nó không trôi được nữa.
+  //
+  // Vì sao đây là lỗi NẶNG chứ không phải chuyện thẩm mỹ vặt: toàn bộ phần thưởng của việc đi qua
+  // 15 kỷ nằm ở chỗ thành phố TRÔNG KHÁC ĐI. Kỷ 15 là đích của cả hành trình mà lại trùng màu với
+  // kỷ 6 thì đúng nghĩa "đi hết cũng như không".
+  const roofs = ERA_ACCENTS.map((eraColor) => readColor(
+    buildScenePalette({ tokens: LIGHT_TOKENS, eraColor, daylight: deriveDaylight(12) }).roof,
+  ));
+
+  // Khoảng cách màu có TRỌNG SỐ theo độ nhạy của mắt (lục > đỏ > lam) — sát cảm nhận hơn khoảng
+  // cách RGB trần, và quan trọng hơn: nó bắt được cả cặp khác góc màu nhưng cùng độ xám.
+  const distance = (a, b) => Math.sqrt(
+    0.3 * (a.r - b.r) ** 2 + 0.59 * (a.g - b.g) ** 2 + 0.11 * (a.b - b.b) ** 2,
+  );
+
+  let worst = Infinity;
+  let worstPair = '';
+  for (let i = 0; i < roofs.length; i += 1) {
+    for (let j = i + 1; j < roofs.length; j += 1) {
+      const d = distance(roofs[i], roofs[j]);
+      if (d < worst) { worst = d; worstPair = `kỷ ${i + 1} ↔ kỷ ${j + 1}`; }
+    }
+  }
+  // Ngưỡng 6 nằm DƯỚI giá trị đang chạy (8,4) và TRÊN hẳn giá trị hỏng đã ship (0,0) — cùng
+  // nguyên tắc "hàng rào phải nằm dưới giá trị hỏng thật" đã ghi ở bài test mặt đất ban đêm.
+  assert.ok(worst >= 6,
+    `hai kỷ ra gần như cùng một màu mái (${worstPair}, cách nhau ${worst.toFixed(1)}) `
+    + '⇒ xây xong cả một kỷ mà thành phố trông y như cũ');
+
+  // Và không được dồn cụm: chia vòng tròn màu thành 12 múi 30°, 15 kỷ phải phủ được ít nhất 6 múi.
+  // Bản hỏng chỉ phủ 3 múi (0°–60° và 300°–360°).
+  const buckets = new Set(roofs.map((c) => Math.floor(c.h / 30)));
+  assert.ok(buckets.size >= 6,
+    `15 mái chỉ nằm trong ${buckets.size} múi màu (múi: ${[...buckets].sort((a, b) => a - b).join(',')}) `
+    + '⇒ cả bảng màu dồn về một hai họ, kỷ nào cũng na ná kỷ nào');
+
+  // Trần độ tươi: giữ đúng hướng mỹ thuật trầm (Townscaper). Mái không được thành nhựa dẻo.
+  for (let i = 0; i < roofs.length; i += 1) {
+    assert.ok(roofs[i].s <= 0.66,
+      `mái kỷ ${i + 1} tươi ${roofs[i].s.toFixed(2)} — rực quá, rơi khỏi dải vật liệu lợp thật`);
+  }
+});

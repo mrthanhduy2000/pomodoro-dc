@@ -195,7 +195,8 @@ export function buildScenePalette({ tokens, eraColor, daylight } = {}) {
   // Sắc kỷ chỉ đóng góp GÓC MÀU. Độ tươi và độ đậm của nó bị bỏ đi có chủ đích: `accentColor`
   // trong `ERA_METADATA` là màu chọn cho CHỮ trên nền tối (rất tươi, rất sáng), dùng thẳng lên
   // mặt tường sẽ ra thành phố nhựa dẻo. Ở đây chỉ mượn "kỷ này thuộc họ xanh lá / cam / tím".
-  const eraHue = rgbToHsl(era).h;
+  const eraHsl = rgbToHsl(era);
+  const eraHue = eraHsl.h;
 
   /**
    * ⭐ PHÉP PHA MÀU DUY NHẤT CỦA CẢ BẢNG: một sắc NEO của vật liệu, pha thêm một phần sắc kỷ,
@@ -229,6 +230,64 @@ export function buildScenePalette({ tokens, eraColor, daylight } = {}) {
   const blend = (hue, eraMix, sat, l) => {
     const rgb = hslToRgb({ h: hue, s: sat, l });
     return eraMix > 0 ? mixRgb(rgb, hslToRgb({ h: eraHue, s: sat, l }), eraMix) : rgb;
+  };
+
+  /**
+   * ⭐ MÁI NHÀ — vai màu DUY NHẤT dùng CẢ màu kỷ (sắc + tươi + đậm), không chỉ mượn góc màu.
+   *
+   * ⚠️ VÌ SAO PHẢI TÁCH RA KHỎI `blend`, DÙ `blend` MỚI ĐƯỢC VÁ Ở PHASE TRƯỚC.
+   * `blend` dựng màu kỷ bằng `hslToRgb({ h: eraHue, s: sat, l })` — nó giữ đúng MỘT thứ của kỷ là
+   * GÓC MÀU, còn độ tươi và độ đậm thì lấy của vai màu. Với tường/đá/kính thì đúng (tường vôi thì
+   * kỷ nào cũng là tường vôi). Với MÁI thì đó là chỗ hỏng, vì mái là nơi bản sắc kỷ nói to nhất.
+   * Đo trên bảng quét 15 kỷ, bản cũ (`material(16, 0.40, …)`) cho ra:
+   *   • 15 góc màu mái dồn vào ĐÚNG HAI CỤM: 9°–55° (9 kỷ) và 329°–342° (6 kỷ). Cả nửa vòng tròn
+   *     màu từ 60° tới 320° BỎ TRỐNG.
+   *   • **kỷ 5 ↔ 11 ↔ 12 cách nhau 0°** — trùng khít; kỷ 2 ↔ 9 cách 1°; kỷ 6 ↔ 15 cách 4°.
+   *   • **kỷ 8 (sắc kỷ 198° lam) và kỷ 10 (sắc kỷ 0° đỏ) ra hai mái cách nhau 1°** — hai sắc kỷ
+   *     cách nhau 198° mà cho ra gần như cùng một màu mái. Đó là bằng chứng gọn nhất rằng phép
+   *     dựng đang XOÁ bản sắc kỷ chứ không diễn đạt nó.
+   * Nguyên nhân: neo 16° (đất nung, ẤM) chỉ nhận 40% sắc kỷ, mà trộn RGB thì luôn cắt qua vùng
+   * trung tính — nên mọi kỷ có sắc LẠNH (gần đối lập với 16°) đều bạc về nâu xám. Ghi chú cũ ở
+   * `blend` nói phép trộn này cho "15 sắc mái phân biệt được"; điều đó chưa bao giờ được ĐO, và
+   * số đo nói ngược lại. Bài học: một khẳng định về mỹ thuật mà không kèm số đo thì là dự đoán.
+   *
+   * ⚠️ VẪN TRỘN RGB, KHÔNG QUAY VỀ XOAY GÓC MÀU. Cả họ lỗi "tím sen" mà `blend` vừa diệt là do
+   * NỘI SUY GÓC MÀU trên vòng tròn (đường ngắn có thể xuyên qua vùng tím, và lật hướng ở mốc
+   * 180°). Ở đây không có phép nội suy góc màu nào: góc màu lấy THẲNG của kỷ, chỉ có độ tươi và
+   * độ đậm là được kéo, mà hai đại lượng đó thì thẳng, không có vòng để mà lật.
+   *
+   * Ba việc nó làm, và mỗi việc chữa một triệu chứng đo được:
+   *   1. `MIX = 0,80` (thay vì 0,40) — sắc kỷ áp đảo, kỷ lạnh không còn bạc thành nâu.
+   *   2. **độ tươi theo kỷ** — sắc kỷ nhợt (Tăm Tối, Thế Chiến: xám lam) cho mái xám thật, sắc kỷ
+   *      rực (Công Nghiệp: đỏ) cho mái đỏ gạch. Đây là thứ tách được kỷ 5 khỏi kỷ 12, hai kỷ có
+   *      CÙNG góc màu 215° nên không phép xoay nào tách nổi.
+   *   3. **độ đậm theo kỷ** — sắc kỷ sáng cho mái sáng hơn. Tách nốt phần còn lại của 5 ↔ 12.
+   * Kết quả đo lại: cặp gần nhau nhất từ **0,0 → 8,4**; 15 góc màu trải từ 3° tới 307° thay vì dồn
+   * hai cụm. Trần độ tươi 0,62 giữ đúng hướng mỹ thuật trầm (Townscaper), không cho mái nhựa dẻo.
+   */
+  const eraRoof = (sat, light) => {
+    // Độ tươi: 30% của vai màu + 70% kéo theo độ tươi của sắc kỷ. Kẹp hai đầu để kỷ nhợt nhất vẫn
+    // còn là một màu (không thành xám chì) và kỷ rực nhất vẫn là ngói (không thành nhựa).
+    const base = Math.min(0.62, Math.max(0.14, sat * 0.30 + sat * 0.70 * 2 * eraHsl.s));
+    // Độ đậm: nhích theo độ sáng của sắc kỷ quanh mốc 0,6 (mốc trung bình của bảng `ERA_METADATA`).
+    const l = Math.min(0.56, Math.max(0.24, light + (eraHsl.l - 0.6) * 0.22));
+    const mix = (s) => mixRgb(
+      hslToRgb({ h: 16, s, l }),        // neo đất nung — giữ mái nằm trong họ vật liệu lợp thật
+      hslToRgb({ h: eraHue, s, l }),
+      0.80,
+    );
+
+    // ⚠️ TRẦN RIÊNG CHO DẢI TÍM — KHÔNG PHẢI NGOẠI LỆ CHO VUI, MÀ LÀ MỘT SỰ THẬT VỀ VẬT LIỆU.
+    // Bốn kỷ 6/7/11/15 có sắc kỷ nằm trong cung tím, nên cho chúng mái tím là ĐÚNG bản sắc. Nhưng
+    // sắc tố ĐẤT thì không bao giờ rực: mái mận chín / rượu vang (madder lake, caput mortuum) có
+    // thật và đẹp, còn một mảng hồng cánh sen tươi rói thì mắt đọc ra nhựa dẻo. Bài test "KHÔNG một
+    // vai màu nào ra TÍM SEN RỰC" khoá đúng ranh giới đó ở độ tươi 0,42 — và nó đã bắt được bản
+    // đầu của chính hàm này (kỷ 6/7/11 ra 0,51–0,54). Trần ở đây là cách trả lời ĐÚNG cho bài test
+    // đó: giữ nguyên GÓC MÀU (tức giữ bản sắc kỷ, ba kỷ vẫn phân biệt được nhau ở 268°/284°/307°)
+    // và chỉ hạ ĐỘ TƯƠI. Nếu thay vào đó đi nới ngưỡng của bài test kia thì mới là phá bất biến.
+    const first = rgbToHsl(mix(base));
+    const inMagentaBand = first.h >= 255 && first.h <= 340;
+    return rgbToHexNumber(inMagentaBand ? mix(Math.min(base, 0.40)) : mix(base));
   };
 
   /** Vai màu vật liệu = neo + sắc kỷ, chọn độ đậm theo trời sáng hay trời tối. */
@@ -316,11 +375,10 @@ export function buildScenePalette({ tokens, eraColor, daylight } = {}) {
   const roles = {
     wall:  material(WALL_ANCHOR, WALL_ERA, isDark ? 0.24 : 0.23, 0.70, 0.44),
     wall2: material(WALL_ANCHOR, WALL_ERA, isDark ? 0.20 : 0.19, 0.62, 0.37),
-    // ⚠️ MÁI LÀ CHỖ SẮC KỶ ĐƯỢC NÓI TO NHẤT — và cũng là chỗ đã ra tím sen ở 6/15 kỷ trước khi đổi
-    // sang trộn RGB (xem `blend`). Neo ở đất nung 16°, cho sắc kỷ 40 phần trăm. Kết quả đo lại đủ
-    // 15 kỷ: đất nung, ngói đỏ, vàng đất, đồng xanh, xám tía, mận chín, rượu vang — 15 sắc khác
-    // nhau, không sắc nào rơi ra ngoài dải vật liệu lợp mái có thật.
-    roof:  material(16, 0.40, isDark ? 0.48 : 0.50, 0.39, 0.32),
+    // ⚠️ MÁI DÙNG `eraRoof`, KHÔNG DÙNG `material` — xem giải thích đầy đủ ở `eraRoof` phía trên.
+    // Tóm tắt: mái là chỗ sắc kỷ nói to nhất, nên nó phải dùng CẢ màu kỷ chứ không chỉ mượn góc
+    // màu. Bản cũ (`material(16, 0.40, …)`) đo ra 15 mái dồn vào đúng HAI cụm, ba cặp trùng khít.
+    roof:  eraRoof(isDark ? 0.48 : 0.50, isDark ? 0.32 : 0.39),
     trim:  material(WALL_ANCHOR, WALL_ERA, isDark ? 0.14 : 0.13, 0.76, 0.54),
     // Đá vôi/đá xây: gần như trung tính, chỉ ngấm một chút sắc kỷ. Đá lấy ở đâu thì màu nấy, nó
     // không đổi theo thời đại nhiều như ngói.

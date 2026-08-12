@@ -12,6 +12,22 @@
 
 ---
 
+## 2026-08-12 — Thành Phố (Phase 3N): 15 kỷ ra 15 màu mái
+
+- **Mục đích**: phần thưởng của việc đi qua 15 kỷ nằm ở chỗ thành phố TRÔNG KHÁC ĐI. Đo ra thì nó
+  gần như không khác.
+- **Phạm vi**: `src/engine/city3d/palette3d.js` (thuần) + bài test khoá. Không đụng
+  `ERA_METADATA.accentColor` — màu nhận diện kỷ dùng khắp giao diện giữ nguyên từng byte.
+- **Lỗi tìm ra**: 15 góc màu mái dồn vào đúng hai cụm (9°–55° và 329°–342°), bỏ trống 60°–320°.
+  Kỷ 5 ↔ 11 ↔ 12 cách nhau 0°; kỷ 8 (sắc lam 198°) và kỷ 10 (sắc đỏ 0°) ra hai mái cách nhau 1°.
+  Nguyên nhân: vai màu mái chỉ giữ GÓC MÀU của kỷ và vứt bỏ độ tươi + độ đậm, lại neo vào một sắc
+  ấm cố định nên mọi kỷ lạnh đều bạc thành nâu xám.
+- **Đã sửa**: thêm `eraRoof()` dùng cả ba thành phần của màu kỷ; sắc kỷ 0,40 → 0,80; kèm trần
+  riêng cho dải tím để không phá bất biến "không có màu tím sen rực".
+- **Ảnh hưởng**: cặp kỷ gần nhau nhất 0,0 → 8,4; 15 mái trải từ 3° tới 307°. Chỉ đổi hình ảnh tab
+  Thành Phố; không đổi cân bằng game, không đổi state, không cần chạy SQL.
+- **Test**: 478 → **479** bài.
+
 ## 2026-08-12 — Thành Phố (Phase 3M): đêm không còn là một ô đen
 
 - **Mục đích**: quét lại đủ 15 kỷ × 6 chặng ngày rồi ĐO BẰNG MÁY, thay vì nghiệm thu bằng mắt.

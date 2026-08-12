@@ -99,6 +99,39 @@
 ## 🗒️ Nhật ký cập nhật
 > Mỗi lần xong việc đáng kể, thêm 1 dòng vào ĐẦU danh sách.
 
+- **2026-08-12 (Phase 3N)** — **15 KỶ NAY RA 15 MÀU MÁI, KHÔNG CÒN HAI CỤM.**
+  Cùng bảng quét của 3M còn phơi ra lỗi thứ hai, và lỗi này đánh thẳng vào phần thưởng tiến trình.
+  - **Số đo lúc chưa sửa**: 15 góc màu mái dồn vào **ĐÚNG HAI CỤM** — 9°–55° (9 kỷ) và 329°–342°
+    (6 kỷ); cả khoảng **60°–320° của vòng tròn màu bỏ trống**. **kỷ 5 ↔ 11 ↔ 12 cách nhau 0°**
+    (trùng khít), kỷ 2 ↔ 9 cách 1°, kỷ 6 ↔ 15 cách 4°. Nặng nhất: **kỷ 8 (sắc kỷ 198° LAM) và kỷ
+    10 (sắc kỷ 0° ĐỎ) ra hai mái cách nhau 1°** — hai sắc kỷ cách nhau 198° mà cho ra gần như cùng
+    một màu. Xác nhận bằng mắt ở cỡ thật: ảnh kỷ 6 (Phong Kiến) và kỷ 15 (Trí Tuệ Nhân Tạo) có mái
+    mận **y hệt nhau**, chỉ khác hình dáng.
+  - **Nguyên nhân gốc**: vai màu `roof` dùng `material(16, 0.40, …)` → `blend` dựng màu kỷ bằng
+    `hslToRgb({ h: eraHue, s: sat, l })`, tức **chỉ giữ GÓC MÀU của kỷ, vứt bỏ độ tươi và độ đậm**.
+    Thêm nữa neo 16° (đất nung, ẤM) chỉ nhận 40% sắc kỷ, mà trộn RGB luôn cắt qua vùng trung tính
+    ⇒ mọi kỷ có sắc LẠNH (gần đối lập 16°) đều bạc về nâu xám. Kỷ 5 và 12 thì vô phương: chúng có
+    **cùng góc màu 215°** (`#94a3b8` xám lam nhạt vs `#64748b` xám lam đậm), khác nhau ĐÚNG ở độ
+    tươi và độ đậm — hai thứ đang bị vứt.
+  - ⚠️ **Ghi chú cũ ở `roof` khẳng định phép trộn này cho "15 sắc mái phân biệt được".** Điều đó
+    **chưa bao giờ được ĐO**, và số đo nói ngược lại. **Bài học: một khẳng định về mỹ thuật mà
+    không kèm số đo thì là dự đoán, và dự đoán thì trôi.**
+  - **Đã sửa**: thêm `eraRoof()` trong `palette3d.js` — vai màu DUY NHẤT dùng CẢ màu kỷ: sắc kỷ
+    0,40 → **0,80**; **độ tươi theo kỷ** (kỷ nhợt → mái xám thật, kỷ rực → mái đỏ gạch); **độ đậm
+    theo kỷ**. ⚠️ **VẪN TRỘN RGB, KHÔNG quay lại xoay góc màu** — cả họ lỗi "tím sen" là do nội suy
+    góc màu; ở đây góc màu lấy THẲNG của kỷ, chỉ kéo độ tươi/độ đậm (hai đại lượng thẳng, không có
+    vòng để lật).
+  - ⚠️ **Trần riêng cho dải tím (255°–340°, hạ độ tươi về ≤0,40)**: bản đầu của `eraRoof` làm **ĐỎ
+    bài test "KHÔNG một vai màu nào ra TÍM SEN RỰC"** (kỷ 6/7/11 ra 0,51–0,54 > ngưỡng 0,42). Cách
+    trả lời ĐÚNG là giữ nguyên GÓC MÀU (ba kỷ vẫn phân biệt được ở 268°/284°/307°) và chỉ hạ ĐỘ
+    TƯƠI — **không được đi nới ngưỡng của bài test kia**, vì đó mới là phá bất biến.
+  - **Kết quả**: cặp gần nhau nhất **0,0 → 8,4**; 15 góc màu trải từ **3° tới 307°** thay vì hai
+    cụm. Đúng chất từng kỷ: Tăm Tối xám lam ảm đạm · Khám Phá xanh biển · Công Nghiệp đỏ gạch ·
+    Thế Chiến xám bê tông · Trí Tuệ Nhân Tạo chàm sâu, **khác hẳn** Phong Kiến tím.
+  - **Hàng rào mới** (`palette3d.test.js`, đã chứng minh ĐỎ trước phép dựng cũ): khoảng cách màu
+    nhỏ nhất giữa 15 mái ≥ 6 · 15 mái phải phủ ≥ 6 múi màu 30° (bản hỏng chỉ phủ 3) · không mái nào
+    tươi quá 0,66. **479 bài test.**
+
 - **2026-08-12 (Phase 3M)** — **ĐÊM KHÔNG CÒN LÀ MỘT Ô ĐEN.** Quét lại đủ **15 kỷ × 6 chặng ngày**
   (90 cảnh, ảnh `.city-preview/sweep-light-ky1-15.png`) rồi **ĐO BẰNG MÁY** thay vì nhìn bằng mắt —
   và phép đo phơi ra một lỗi mà 3 phase mỹ thuật trước đều không thấy:

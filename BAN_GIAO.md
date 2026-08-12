@@ -110,6 +110,36 @@
 ## 🗒️ Nhật ký cập nhật
 > Mỗi lần xong việc đáng kể, thêm 1 dòng vào ĐẦU danh sách.
 
+- **2026-08-12 (Phase 3R)** — **MÀN THƯỞNG THÔI LÀ MỘT HẰNG SỐ: 2 câu → 5 câu, câu lặp nhiều nhất
+  82% → 33%.** Đây là lần đầu chữ **"chán"** được xử lý bằng SỐ ĐO thay vì cảm tính.
+  - **Đo ra lỗi**: `buildGrowthMoment` nhánh giàn giáo trả đúng MỘT câu cứng `'Thành phố vừa lớn
+    lên'`. Chạy qua toàn bộ **75 bản vẽ = 420 phiên xây**: cả game chỉ có **2 câu mừng**, **82% số
+    phiên** đọc lại đúng 4 chữ đó. Nhịp ~4 phiên/ngày ⇒ Đàm gặp lại nó **hơn 3 lần MỖI NGÀY**. Màn
+    thưởng mà là hằng số thì nó thôi làm phần thưởng — đó chính là "chán" ở dạng đo được.
+  - **Đã sửa** (`engine/cityMoment.js`, thuần): thêm `growthHeadline()` sinh câu theo **cột mốc
+    THẬT** của công trình — *Vừa khởi công · Đã qua nửa chặng · Chỉ còn một phiên nữa · Sắp hoàn
+    thành · Thành phố vừa lớn lên*. Kết quả: 5 câu, câu lặp nhiều nhất còn **33%**, và chúng xếp
+    thành một **mạch** (khởi công → qua nửa → còn một phiên → hoàn thành) chứ không phải 5 câu rời.
+  - ⚠️ **RÀNG BUỘC KHÔNG ĐƯỢC PHÁ — đọc trước khi "cải tiến" chỗ này**: cách chữa nhàm chán rẻ nhất
+    là rắc lời khen ngẫu nhiên ("Tuyệt vời!"). **TUYỆT ĐỐI KHÔNG.** Luật trung thực của file này
+    đứng TRÊN luật đa dạng. Mọi câu đều là **mệnh đề ĐÚNG suy ra từ số liệu đã có**, không thêm một
+    dữ kiện mới nào. Có bài test canh riêng việc này (xem dưới).
+  - **Tiện tay trả một sự thật đang bị giấu**: đặc quyền **"Tăng tốc"** xưa nay chỉ lặng lẽ đổi vạch
+    xuất phát của thanh tiến độ — Đàm trả giá cho nó mà không lần nào thấy nó làm việc. Nay dòng phụ
+    ghi rõ `· Tăng tốc đẩy thêm 1 bước` khi nó vừa có tác dụng.
+  - **Lỗ hổng phụ tìm ra khi đo**: trạng thái `còn 0 phiên` (hàng đợi chưa kịp dọn) vẫn rơi vào câu
+    chung chung dù dòng phụ đã ghi "sắp xong" từ lâu → nay có câu riêng `'Sắp hoàn thành'`.
+  - **4 bài test mới** (480 → **484**), **đã chứng minh ĐỎ cả hai hướng**: (a) trả `growthHeadline`
+    về câu cứng như bản đã chạy thật ⇒ đỏ *"cả game chỉ có 2 câu mừng cho 420 phiên xây"*; (b) rắc
+    câu cho đủ đa dạng nhưng nói SAI sự thật ⇒ bài "CỘT MỐC PHẢI ĐÚNG" bắt được ngay. Ngưỡng 50%
+    đặt **DƯỚI** giá trị hỏng đã từng chạy thật (82%) — đúng bài học "ngưỡng đặt trên giá trị hỏng
+    thì chỉ là cái phễu", phiên này đã trả giá 3 lần cho nó.
+  - ⚠️ **BÀI HỌC LẶP LẠI LẦN THỨ TƯ — dev-tool phải bị nghi ngờ như mã sản phẩm**: bản đo đầu tiên
+    dùng `bpId` tôi tự bịa (`bp_nha_kho`) nên nhánh "công trình hoàn thành" im lặng; bản thứ hai thì
+    mô hình phiên cuối là *giàn giáo còn 0 phiên* thay vì *hoàn thành*, báo 51% thay vì 33%. Cả hai
+    lần đều **suýt dẫn tới kết luận sai**. Đã sửa: bài test dựng lịch sử bằng `computeCityLayout` +
+    `BUILDING_EFFECTS` thật, và phiên cuối đi qua đúng nhánh `newlyBuilt`.
+
 - **2026-08-12 (Phase 3Q)** — **TRẢ NỢ #12: LỄ MỪNG KHÔNG CÒN BỊ TÍNH VÀO GIỜ NGHỈ.**
   `BREAK_START_DELAY_MS` **500 → 3 200 ms** (`engine/timerSession.js`), phủ trọn lễ mừng.
   - **Trước**: phiên xong → 0,5 s sau đồng hồ nghỉ đã chạy, trong khi lễ mừng còn 3,2 s rồi mới tới

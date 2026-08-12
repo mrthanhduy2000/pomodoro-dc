@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 
 import { buildFocusTease, buildGrowthMoment } from './cityMoment.js';
 import { computeCityLayout } from './cityLayout.js';
-import { BLUEPRINT_CATALOG } from './constants.js';
+import { BLUEPRINT_CATALOG, BUILDING_EFFECTS } from './constants.js';
 
 const ERA6 = BLUEPRINT_CATALOG[6].map((bp) => bp.id);
 const scaffoldsFor = (pending) => computeCityLayout({ built: [], era: 6, pending }).scaffolds;
@@ -58,6 +58,111 @@ test('GIÀN GIÁO sắp xong (còn 0 phiên) KHÔNG được viết "còn 0 phi�
   });
   assert.match(moment.detail, /sắp xong/);
   assert.doesNotMatch(moment.detail, /còn 0/);
+});
+
+// ─── Cột mốc: màn thưởng KHÔNG được là một hằng số ───────────────────────────
+
+/** Mọi câu mừng Đàm đọc khi xây trọn MỘT công trình thật, từ phiên đầu tới phiên áp chót. */
+function headlinesAcrossLifecycle(bpId, era) {
+  const total = BUILDING_EFFECTS[bpId]?.sessionsToComplete;
+  if (!Number.isFinite(total) || total <= 0) return [];
+  const out = [];
+  for (let remaining = total - 1; remaining >= 1; remaining -= 1) {
+    const scaffolds = computeCityLayout({ built: [], era, pending: [{ bpId, sessionsRemaining: remaining }] }).scaffolds;
+    const moment = buildGrowthMoment({ scaffolds });
+    if (moment) out.push(moment.headline);
+  }
+  // ⚠️ Phiên CUỐI là lúc công trình hoàn thành ⇒ `newlyBuilt`, không phải một giàn giáo "còn 0
+  // phiên". Bỏ sót nhánh này thì phép đo đang bỏ qua đúng khoảnh khắc đáng giá nhất và báo bi quan
+  // hơn sự thật — dev-tool cũng phải bị nghi ngờ như mã sản phẩm.
+  const done = buildGrowthMoment({ newlyBuilt: [bpId] });
+  if (done) out.push(done.headline);
+  return out;
+}
+
+const ALL_BLUEPRINTS = Object.entries(BLUEPRINT_CATALOG)
+  .flatMap(([era, list]) => list.map((bp) => ({ bpId: bp.id, era: Number(era) })));
+
+test('MÀN THƯỞNG KHÔNG ĐƯỢC LÀ HẰNG SỐ — đo trên toàn bộ 75 bản vẽ', () => {
+  // ⚠️ ĐÂY LÀ BÀI ĐO CHỮ "CHÁN", phần đo được của nó.
+  // Trước 2026-08-12 nhánh giàn giáo trả đúng MỘT câu cứng. Đo ra: cả game chỉ có 2 câu mừng và
+  // 82% số phiên đọc lại đúng 4 chữ "Thành phố vừa lớn lên" — với nhịp ~4 phiên/ngày thì Đàm gặp
+  // nó hơn 3 lần MỖI NGÀY. Một phần thưởng lặp lại y hệt thì thôi làm phần thưởng.
+  //
+  // ⚠️ NGƯỠNG ĐẶT Ở ĐÂU VÀ VÌ SAO: 50% nằm DƯỚI giá trị hỏng đã từng chạy thật (82%). Ngưỡng đặt
+  // trên giá trị hỏng thì chỉ là cái phễu — nó cho lọt qua đúng cái lỗi mà nó mang tên. Bài học
+  // này phiên 2026-08-12 đã trả giá ba lần (độ sáng nền đêm, tách mái, độ lớn giàn giáo).
+  const headlines = ALL_BLUEPRINTS.flatMap(({ bpId, era }) => headlinesAcrossLifecycle(bpId, era));
+  assert.ok(headlines.length > 300, `chỉ dựng được ${headlines.length} phiên mẫu — bộ đo hỏng, không phải sản phẩm đạt`);
+
+  const counts = new Map();
+  headlines.forEach((h) => counts.set(h, (counts.get(h) ?? 0) + 1));
+  const dominant = Math.max(...counts.values()) / headlines.length;
+
+  assert.ok(counts.size >= 3,
+    `cả game chỉ có ${counts.size} câu mừng cho ${headlines.length} phiên xây — màn thưởng là một hằng số`);
+  assert.ok(dominant <= 0.5,
+    `${Math.round(dominant * 100)}% số phiên đọc cùng một câu mừng (trần 50%). Ai đó vừa gộp các cột `
+    + 'mốc lại làm một. Đọc lại `growthHeadline` trong cityMoment.js trước khi nới ngưỡng này.');
+});
+
+test('CỘT MỐC PHẢI ĐÚNG — không được khen một cái mốc chưa xảy ra', () => {
+  // ⚠️ Bài này canh thứ NGƯỢC LẠI với bài trên, và nó quan trọng hơn.
+  // Cách chữa nhàm chán rẻ nhất là rắc câu ngẫu nhiên cho đủ đa dạng — làm vậy thì bài đo ở trên
+  // vẫn XANH trong khi app bắt đầu nói dối. Luật trung thực của file này (xem đầu file) đứng trên
+  // luật đa dạng: mỗi câu mừng phải là một mệnh đề ĐÚNG về đúng phiên vừa xong.
+  for (const { bpId, era } of ALL_BLUEPRINTS) {
+    const total = BUILDING_EFFECTS[bpId]?.sessionsToComplete;
+    if (!Number.isFinite(total)) continue;
+    for (let remaining = total - 1; remaining >= 0; remaining -= 1) {
+      const scaffolds = computeCityLayout({ built: [], era, pending: [{ bpId, sessionsRemaining: remaining }] }).scaffolds;
+      const m = buildGrowthMoment({ scaffolds });
+      if (!m) continue;
+      const where = `${bpId} (còn ${remaining}/${total})`;
+
+      if (m.headline === 'Chỉ còn một phiên nữa') {
+        assert.equal(remaining, 1, `${where}: nói "chỉ còn một phiên" mà thật ra còn ${remaining}`);
+      }
+      if (m.headline === 'Vừa khởi công') {
+        assert.equal(m.fromProgress, 0, `${where}: nói "vừa khởi công" mà trước đó đã có tiến độ ${m.fromProgress}`);
+      }
+      if (m.headline === 'Đã qua nửa chặng') {
+        assert.ok(m.fromProgress < 0.5 && m.progress >= 0.5,
+          `${where}: nói "qua nửa chặng" nhưng thật ra đi từ ${m.fromProgress} tới ${m.progress}`);
+      }
+    }
+  }
+});
+
+test('MẠCH CỦA MỘT CÔNG TRÌNH: khởi công → qua nửa → còn một phiên', () => {
+  // Cái làm người ta quay lại không phải sự đa dạng, mà là cảm giác ĐANG ĐI TỚI ĐÂU ĐÓ. Ba cột mốc
+  // này phải xuất hiện đúng MỘT lần mỗi công trình và đúng thứ tự — nếu không thì chúng chỉ là ba
+  // câu khác nhau chứ không thành một mạch.
+  const six = ALL_BLUEPRINTS.find(({ bpId }) => BUILDING_EFFECTS[bpId]?.sessionsToComplete === 6);
+  const arc = headlinesAcrossLifecycle(six.bpId, six.era);
+
+  assert.equal(arc.filter((h) => h === 'Vừa khởi công').length, 1, 'khởi công phải đúng một lần');
+  assert.equal(arc.filter((h) => h === 'Đã qua nửa chặng').length, 1, 'qua nửa chặng phải đúng một lần');
+  assert.equal(arc.filter((h) => h === 'Chỉ còn một phiên nữa').length, 1, 'còn-một-phiên phải đúng một lần');
+  assert.equal(arc[0], 'Vừa khởi công', 'phiên đầu tiên phải là khởi công');
+  assert.ok(arc.indexOf('Vừa khởi công') < arc.indexOf('Đã qua nửa chặng'), 'qua nửa chặng phải sau khởi công');
+  assert.ok(arc.indexOf('Đã qua nửa chặng') < arc.indexOf('Chỉ còn một phiên nữa'), 'còn-một-phiên phải là cột mốc cuối');
+});
+
+test('TĂNG TỐC phải được NÓI RA — đặc quyền chạy im lặng thì như không có', () => {
+  // Đặc quyền này xưa nay chỉ đổi vạch xuất phát của thanh tiến độ. Đàm thấy cú nhảy dài hơn nhưng
+  // không có gì nói cho anh biết vì sao — một sự thật đang bị giấu, không phải lời khen thêm.
+  const [s] = scaffoldsFor([{ bpId: ERA6[0], sessionsRemaining: 3 }]);
+  const plain = buildGrowthMoment({ scaffolds: [s] });
+  const fast = buildGrowthMoment({ scaffolds: [s], acceleratedIds: [ERA6[0]] });
+
+  assert.doesNotMatch(plain.detail, /Tăng tốc/, 'phiên thường KHÔNG được nhận công của Tăng tốc');
+  assert.match(fast.detail, /Tăng tốc/, 'Tăng tốc đẩy thêm một bước mà không nói gì');
+  assert.ok(fast.detail.startsWith(plain.detail), 'phần tin gốc (còn bao nhiêu phiên) không được mất đi');
+
+  // Đẩy nhanh công trình KHÁC thì không được ăn theo.
+  const other = buildGrowthMoment({ scaffolds: [s], acceleratedIds: [ERA6[1]] });
+  assert.doesNotMatch(other.detail, /Tăng tốc/);
 });
 
 test('tiến độ luôn nằm trong [0,1] kể cả khi dữ liệu vào hỏng', () => {

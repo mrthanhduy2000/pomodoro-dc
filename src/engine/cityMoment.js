@@ -47,6 +47,43 @@ function pickNearestScaffold(scaffolds) {
     .sort((a, b) => (a.remaining - b.remaining) || a.bpId.localeCompare(b.bpId))[0];
 }
 
+/**
+ * CÂU MỪNG cho một phiên đẩy giàn giáo lên một nấc — nói ĐÚNG cột mốc vừa đi qua.
+ *
+ * ⚠️ VÌ SAO TỒN TẠI (đo được, không phải cảm tính):
+ * Trước 2026-08-12, nhánh này trả đúng MỘT câu cứng "Thành phố vừa lớn lên". Đo trên toàn bộ 75
+ * bản vẽ = 420 phiên xây: cả game chỉ có **2 câu mừng**, và **82% số phiên đọc đúng 4 chữ đó**.
+ * Với nhịp ~4 phiên/ngày thì Đàm gặp lại nó hơn 3 lần MỖI NGÀY. Màn thưởng mà là hằng số thì nó
+ * thôi làm phần thưởng — đó chính là chữ "chán" ở dạng đo được.
+ *
+ * ⚠️ RÀNG BUỘC KHÔNG ĐƯỢC PHÁ: luật trung thực của cả file này (xem đầu file). Cách chữa nhàm
+ * chán RẺ nhất là rắc lời khen ngẫu nhiên ("Tuyệt vời!", "Bạn giỏi quá!") — TUYỆT ĐỐI KHÔNG.
+ * Một lời khen rỗng làm mọi lời khen sau đó mất giá, đúng nguyên tắc chống-bịa mà AI Coach đang
+ * sống bằng nó. Vì vậy mọi câu ở đây đều là **mệnh đề ĐÚNG suy ra từ số liệu đã có**, không thêm
+ * một dữ kiện nào mới: vừa khởi công · vừa qua nửa chặng · còn đúng một phiên. Không có gì để nói
+ * khác thì quay về câu cũ, chứ không bịa ra một cái mốc không tồn tại.
+ *
+ * ⚠️ THỨ TỰ ƯU TIÊN là thứ tự "tin nào đáng nói nhất", không phải thứ tự thời gian:
+ * "còn đúng một phiên" thắng tất cả vì đó là lúc đáng bấm Bắt đầu lần nữa nhất. Với công trình
+ * 2 phiên thì phiên 1 vừa là khởi công vừa là "còn một phiên" — nói cái sau mới có ích.
+ *
+ * @param {number} remaining  số phiên còn lại SAU phiên vừa xong
+ * @param {number} from       tiến độ TRƯỚC phiên này (đã tính cả đặc quyền Tăng tốc)
+ * @param {number} to         tiến độ SAU phiên này
+ * @param {boolean} knowsTotal  có biết tổng số phiên không — thiếu thì mọi cột mốc đều vô nghĩa
+ */
+function growthHeadline(remaining, from, to, knowsTotal) {
+  if (remaining === 1) return 'Chỉ còn một phiên nữa';
+  // Hàng đợi đã về 0 mà công trình chưa được báo là vừa xong — trạng thái chuyển tiếp, nhưng Đàm
+  // vẫn đọc được nó. Dòng phụ đã nói "sắp xong" từ lâu; câu mừng thì bấy lâu vẫn chung chung.
+  if (remaining === 0) return 'Sắp hoàn thành';
+  if (!knowsTotal) return 'Thành phố vừa lớn lên';
+  // Vạch xuất phát bằng 0 ⇒ trước phiên này công trình chưa nhích một nấc nào: đây là phiên đầu.
+  if (from <= 0) return 'Vừa khởi công';
+  if (from < 0.5 && to >= 0.5) return 'Đã qua nửa chặng';
+  return 'Thành phố vừa lớn lên';
+}
+
 /** Ghép danh sách tên thành một cụm đọc được: "A", "A và B", "A, B và C". */
 function joinNames(names) {
   if (names.length <= 1) return names[0] ?? '';
@@ -103,21 +140,29 @@ export function buildGrowthMoment({ newlyBuilt = [], scaffolds = [], accelerated
   const nearest = pickNearestScaffold(scaffolds);
 
   if (nearest) {
+    // Đặc quyền "Tăng tốc" đẩy công trình này thêm 1 bước trong phiên vừa rồi hay không.
+    const accelerated = (Array.isArray(acceleratedIds) ? acceleratedIds : []).includes(nearest.bpId);
+    // ⚠️ Vạch XUẤT PHÁT của thanh tiến độ phải là con số THẬT của phiên trước, không phải đoán.
+    // Bình thường một phiên = một bước; Tăng tốc thì lùi 2 bước. Vẽ nhảy sai một bước thì cái
+    // thanh này đang nói dối về đúng thứ nó sinh ra để khoe.
+    const fromProgress = stepBack(nearest, accelerated ? 2 : 1);
+    const progress = clamp01(nearest.progress);
+    const knowsTotal = Number.isFinite(nearest.total) && nearest.total > 0;
+    const base = nearest.remaining > 0
+      ? `${nearest.label} · còn ${nearest.remaining} phiên`
+      : `${nearest.label} · sắp xong`;
+
     return {
       kind: 'scaffold',
       bpId: nearest.bpId,
       icon: nearest.icon ?? '🏗️',
-      headline: 'Thành phố vừa lớn lên',
-      detail: nearest.remaining > 0
-        ? `${nearest.label} · còn ${nearest.remaining} phiên`
-        : `${nearest.label} · sắp xong`,
-      progress: clamp01(nearest.progress),
-      // ⚠️ Vạch XUẤT PHÁT của thanh tiến độ phải là con số THẬT của phiên trước, không phải đoán.
-      // Bình thường một phiên = một bước; nhưng đặc quyền "Tăng tốc" đẩy thêm 1 bước nữa, và
-      // `acceleratedIds` cho biết đích danh công trình nào được đẩy. Vẽ nhảy sai một bước thì cái
-      // thanh này đang nói dối về đúng thứ nó sinh ra để khoe.
-      fromProgress: stepBack(nearest, (Array.isArray(acceleratedIds) ? acceleratedIds : [])
-        .includes(nearest.bpId) ? 2 : 1),
+      headline: growthHeadline(nearest.remaining, fromProgress, progress, knowsTotal),
+      // Nói ra khi Tăng tốc VỪA có tác dụng. Đặc quyền này xưa nay chạy hoàn toàn im lặng — Đàm
+      // trả giá cho nó mà không lần nào thấy nó làm việc; cú nhảy dài trên thanh tiến độ thì có
+      // thấy nhưng không biết vì sao. Đây là một sự thật đang bị giấu, không phải lời khen thêm.
+      detail: accelerated ? `${base} · Tăng tốc đẩy thêm 1 bước` : base,
+      progress,
+      fromProgress,
     };
   }
 

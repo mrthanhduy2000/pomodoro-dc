@@ -12,6 +12,25 @@
 
 ---
 
+## 2026-08-12 — Vòng lặp (Phase 3R): màn thưởng thôi là một hằng số
+
+- **Mục đích**: xử lý chữ "chán" bằng SỐ ĐO thay vì cảm tính. Phần đo được của nó: nếu màn thưởng
+  nói cùng một câu mọi lần thì nó là hằng số, không phải phần thưởng.
+- **Lỗi đo ra**: nhánh giàn giáo của `buildGrowthMoment` trả đúng một câu cứng. Chạy qua toàn bộ 75
+  bản vẽ = 420 phiên xây: cả game chỉ có **2 câu mừng**, **82% số phiên** đọc lại đúng 4 chữ "Thành
+  phố vừa lớn lên" — với nhịp ~4 phiên/ngày là hơn 3 lần mỗi ngày.
+- **Phạm vi**: `src/engine/cityMoment.js` (thuần) + `src/engine/cityMoment.test.js`. Không đụng
+  component, không đụng state, không cần chạy SQL.
+- **Đã sửa**: thêm `growthHeadline()` sinh câu theo cột mốc THẬT của công trình — *Vừa khởi công ·
+  Đã qua nửa chặng · Chỉ còn một phiên nữa · Sắp hoàn thành · Thành phố vừa lớn lên*. Kèm: đặc
+  quyền "Tăng tốc" nay được nói ra ở dòng phụ thay vì chạy im lặng.
+- **Ảnh hưởng**: 2 câu → **5 câu**; câu lặp nhiều nhất **82% → 33%**; và chúng xếp thành một mạch
+  (khởi công → qua nửa → còn một phiên → hoàn thành) chứ không phải 5 câu rời rạc.
+- **Ràng buộc giữ nguyên**: luật trung thực của `cityMoment.js` đứng TRÊN luật đa dạng — mọi câu là
+  mệnh đề đúng suy ra từ số liệu đã có, không một lời khen rỗng nào. Có bài test canh riêng.
+- **Test**: 480 → **484** bài; đã chứng minh ĐỎ cả hai hướng (quay về câu cứng ⇒ đỏ; nói bừa cho đủ
+  đa dạng ⇒ cũng đỏ).
+
 ## 2026-08-12 — Nhịp phiên (Phase 3Q): lễ mừng không còn bị trừ vào giờ nghỉ
 
 - **Mục đích**: xử lý dứt điểm `TECH_DEBT.md` #12. Lễ mừng 3 200 ms chen giữa "hết phiên" và hộp

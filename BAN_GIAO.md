@@ -94,6 +94,18 @@
 ## 🗒️ Nhật ký cập nhật
 > Mỗi lần xong việc đáng kể, thêm 1 dòng vào ĐẦU danh sách.
 
+- **2026-08-12 (deploy)** — **Gộp cả 4 commit Thành Phố vào `main` → lên production.**
+  ⚠️ **Bài học vận hành, dễ mất thời gian nếu quên**: cả 4 commit ban đầu chỉ nằm ở nhánh
+  `claude/xay-san-pham-huong-nay-nasr3n`. Đàm chờ 5 phút không thấy gì đổi trên
+  `pomodoro-dc.vercel.app` và tưởng deploy hỏng. **Vercel CHỈ cập nhật production khi có push vào
+  `main`**; push vào nhánh khác chỉ sinh bản Preview (lại còn thường bắt đăng nhập Vercel mới xem
+  được trên iPhone — gói Hobby). Trang Overview của Vercel có nói thẳng điều này ở dòng *"To update
+  your Production Deployment, push to the `main` branch"*, nhưng rất dễ lướt qua.
+  ⇒ **Từ nay: xong việc mà Đàm cần THẤY trên máy thật thì phải hỏi gộp vào `main`, đừng dừng ở
+  nhánh rồi báo "đã deploy".** Gộp lần này là **fast-forward, 0 xung đột** (main đang ở `2c24e0f`,
+  là tổ tiên trực tiếp) — `2c24e0f..4f371ad`. Đã chạy lại 360 test + lint + build ngay trước khi
+  push, và đếm lại Serverless Function: **10/12**, còn dư 2.
+
 - **2026-08-12 (Phase 3A)** — **THÀNH PHỐ 3D THẬT (three.js) + bảng đo hiệu năng. ⚠️ ĐANG CHỜ ĐÀM ĐO.**
   Phase này CỐ Ý xấu: hình khối còn là hộp thô. Mục tiêu là **đo xem iPhone có kham nổi không**
   trước khi đầu tư vào mỹ thuật (Phase 3B). Nhưng đo trên đúng TẢI THẬT — 144 ô nền, số công trình

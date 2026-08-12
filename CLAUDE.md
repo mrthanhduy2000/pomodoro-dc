@@ -277,11 +277,16 @@ App có cả một hệ "huấn luyện viên" và engine game thuần. Đây l�
 
 ## Quy trình deploy
 ```
-Sửa code → git add . && git commit -m "mô tả" && git push
+Sửa code → git add . && git commit -m "mô tả" → git push origin main
 → Vercel tự deploy trong ~2 phút
 → Mọi thiết bị thấy bản mới
 ```
 Hoặc bấm đúp file `/Users/damduy/Desktop/🚀 Deploy App.command`
+
+- ⚠️ **PHẢI LÀ NHÁNH `main`, không phải nhánh nào khác** (bài học 2026-08-12, mất công chờ vô ích): Vercel **chỉ cập nhật production khi có push vào `main`**. Push vào nhánh khác (vd nhánh tính năng `claude/...` mà phiên Claude Code trên web tự tạo) chỉ sinh một bản **Preview** ở URL riêng — `pomodoro-dc.vercel.app` KHÔNG đổi gì cả, và bản Preview của gói Hobby thường bắt đăng nhập Vercel mới xem được trên Safari iPhone. Chính trang Overview của Vercel có ghi *"To update your Production Deployment, push to the `main` branch"* nhưng rất dễ lướt qua.
+  - ⇒ **Quy tắc cho MỌI AI**: làm xong thứ Đàm cần THẤY trên máy thật mà đang ở nhánh phụ → **hỏi Đàm cho gộp vào `main`**, đừng dừng ở nhánh rồi báo "đã deploy xong". Nhánh phụ = code đã an toàn trên GitHub, KHÔNG có nghĩa là đã lên production.
+  - Cách gộp an toàn: `git fetch origin main` → kiểm `git merge-base --is-ancestor origin/main <nhánh>` (trả về true là gộp thẳng được, không xung đột) → `git checkout -B main origin/main && git merge --ff-only <nhánh> && git push origin main`.
+- ⚠️ **Push xong PHẢI mở tab Deployments xác nhận "Ready"** — code xanh + commit thành công KHÔNG có nghĩa là đã thực sự lên production (xem sự cố `8ee264d` ở mục "Vercel Hobby: giới hạn 12 Serverless Functions").
 
 ## Việc đang dở & sắp tới
 → Xem **`BAN_GIAO.md`** (mục "Sẽ làm tiếp" + "Nhật ký cập nhật"). Web Push iPhone đã xong & deploy.

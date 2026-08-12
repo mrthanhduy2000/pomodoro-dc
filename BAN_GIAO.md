@@ -6,12 +6,17 @@
 > chọn: `ARCHITECTURE_DECISIONS.md`. Nợ kỹ thuật: `TECH_DEBT.md`. Migration: `MIGRATION.md`. Tóm
 > tắt theo mốc: `CHANGELOG.md`.
 > **NGUYÊN TẮC ƯU TIÊN SỐ 1:** (1) mọi phiên AI phải đọc file này + `CLAUDE.md` + các file liên quan TRƯỚC khi làm; (2) sau MỌI cập nhật dù nhỏ, phải cập nhật ngay file này + `CLAUDE.md` + các file liên quan khác.
-> Cập nhật lần cuối: **2026-08-10** — sửa khoảng trắng thừa trước icon 🍅/☕ trên thanh menu Mac
-> (`electron/main.js`, đúng 1 dòng; xoá `public/tray-empty.png`). Chỉ đụng app tray, KHÔNG đụng web
-> app. Trước đó 2026-08-05 có 3 việc **cấu hình máy + tài liệu, KHÔNG đổi dòng code ứng dụng nào**:
-> (a) sửa "app biến mất khỏi thanh menu Mac" + bật tự khởi động; (b) dọn sạch dấu vết dự án đời cũ
-> trên máy; (c) diệt bản sao `AGENTS.md` và cấm nhân bản tài liệu quy tắc theo từng công cụ AI.
-> Vì vậy **trạng thái kỹ thuật của web app bên dưới vẫn nguyên như 2026-07-17**.
+> Cập nhật lần cuối: **2026-08-12** — **THÀNH PHỐ, 3 phase liên tiếp trong ngày**: (1) engine thuần
+> suy ra bố cục thành phố từ danh sách công trình; (2) **bảo tàng** — thành phố kỷ cũ được niêm
+> phong thay vì xoá vĩnh viễn (`GAME_STORE_SCHEMA_VERSION` **3 → 4**, tương thích ngược, KHÔNG cần
+> chạy SQL); (3) **tab "Thành Phố" hiện ra**, vẽ bằng SVG. **315 bài test.** Cân bằng game KHÔNG
+> đổi. Kế hoạch tiếp theo Đàm đã duyệt: thay bộ vẽ bằng **3D thật (three.js)** — Phase 3A dựng
+> khung + đo hiệu năng trên iPhone rồi DỪNG cho Đàm quyết.
+> Trước đó 2026-08-10: sửa khoảng trắng thừa trước icon 🍅/☕ trên thanh menu Mac (`electron/main.js`,
+> đúng 1 dòng; xoá `public/tray-empty.png`) — chỉ đụng app tray. Trước đó 2026-08-05 có 3 việc
+> **cấu hình máy + tài liệu, KHÔNG đổi dòng code ứng dụng nào**: (a) sửa "app biến mất khỏi thanh
+> menu Mac" + bật tự khởi động; (b) dọn sạch dấu vết dự án đời cũ trên máy; (c) diệt bản sao
+> `AGENTS.md` và cấm nhân bản tài liệu quy tắc theo từng công cụ AI.
 >
 > ⏳ **Đang dở (chưa commit vào luồng chạy):** `src/hooks/useTimer.test.js` — 41 bài characterization
 > test cho `useTimer.js`, **tất cả đều xanh**, nhưng CHƯA nối vào `npm test` vì tiến trình test
@@ -40,7 +45,13 @@
 - **Đồng bộ Supabase** (game_state + timer_live cho menu bar Mac).
 
 ## 🔧 Đang làm
-- (Trống — chuỗi 6 mảng nâng cấp AI Coach đã XONG & deploy hết, xem nhật ký bên dưới.)
+- **THÀNH PHỐ 3D** (kế hoạch Đàm duyệt 2026-08-12, mở rộng từ `SPEC V2 Thành Phố 3D`). Phase 1, 2,
+  3-2D đã xong & push. **Bước kế tiếp: Phase 3A** — dựng khung 3D trắng (three.js, ghim
+  `three@0.185.1`) + HUD đo hiệu năng ngay trong app, rồi **DỪNG cho Đàm đo trên iPhone thật**:
+  FPS ≥ 30 khi xoay, khung hình đầu < 1,5 s, pin tụt < 4 % sau 10 phút, chunk `vendor-three`
+  ≤ 135 KB gzip. **Trượt cổng ⇒ bỏ hẳn nhánh 3D, giữ bản 2D, không tiếc** — đó là lý do bản 2D
+  được commit trước làm nền (ADR-008). Hai lựa chọn Đàm đã chốt: mỹ thuật **Townscaper** (khối bo
+  tròn, pastel ấm, bóng mềm) · hiệu ứng **bật tối đa** ngay từ đầu.
 
 ## ✅ NÂNG CẤP TRÍ TUỆ AI COACH — chuỗi 6 mảng (2026-06-25, code XONG hết; mảng 6 MỚI THỰC SỰ LÊN PRODUCTION 2026-07-11)
 > Đàm ra lệnh "làm toàn bộ, chuyên sâu" sau workflow đề-xuất 10 agent. Cả 6 mảng test xanh, code đã commit đủ.
@@ -74,6 +85,35 @@
 ## 🗒️ Nhật ký cập nhật
 > Mỗi lần xong việc đáng kể, thêm 1 dòng vào ĐẦU danh sách.
 
+- **2026-08-12 (Phase 3-2D)** — **THÀNH PHỐ: tab hiện ra, Đàm nhìn thấy thành phố lần đầu.**
+  Thuần hiển thị: **0 dòng đụng `store/`, `engine/`, `hooks/`, `lib/`**, không thêm thư viện nào.
+  - Tab mới "Thành Phố" nạp lười (chunk riêng ~14 KB, không nặng lần mở app đầu). Sửa `App.jsx`
+    đúng 5 chỗ: import lười · icon `AppIcon.city` · 2 danh sách tab · khối render.
+    ⚠️ **CỐ Ý không cho vào nhóm 4 tab chính của iPhone** (`MOBILE_PRIMARY_IDS`) — thanh dưới giữ
+    nguyên 4 nút, "Thành Phố" nằm trong nút "Thêm".
+  - `src/components/city/` chia làm **KHUNG** (`CityViewShell.jsx`: chuyển kỷ, số liệu, 2 trạng
+    thái rỗng) và **BỘ VẼ** (`render2d/CityCanvas2D.jsx` + `CityTile.jsx` + `tokens2d.js`).
+    Khung KHÔNG biết bộ vẽ nào đang chạy — bộ vẽ vào qua `children` và tự định kích thước.
+  - Hiệu năng: 144 ô nền gộp thành **4 phần tử SVG** (không phải 144), đường sá gộp thành 1. Chỉ
+    nhà + cảnh vật nổi mới là phần tử riêng. Không quét lại `history` khi render (`TECH_DEBT #6`).
+  - **309 → 315 bài test, 0 fail.** Lint + build xanh. Phase này không thêm logic thuần nào (mọi
+    thứ mới đều là JSX, bố cục đã được 36 bài của Phase 1 khoá), nên 6 bài mới
+    (`src/components/cityRenderers.test.js`) không test hành vi mà **đọc thẳng mã nguồn để khoá
+    ranh giới kiến trúc** — cùng thủ pháp đã dùng cho "3 danh sách trường được lưu" ở Phase 2.
+    Khoá 5 luật: chỉ `render3d/` được `import 'three'` · khung không import bộ vẽ · hai bộ vẽ không
+    import lẫn nhau · bộ vẽ không đọc store · `tokens2d` không rò ra ngoài `render2d/`.
+    ⚠️ **Viết NGAY BÂY GIỜ dù three.js chưa tồn tại** — đúng lúc Phase 3A thêm nó vào mới là lúc dễ
+    vi phạm nhất, một lần lỡ `import` tĩnh ở file ngoài là ~130 KB rơi vào chunk chính. Đã thử phá
+    hoại 2 lần để xác nhận test fail thật, không phải pass rỗng (có cả 1 bài tự canh cách quét).
+  - ⚠️ **Quyết định kiến trúc — ADR-008**: **bộ vẽ 2D là nền VĨNH VIỄN, không phải bản nháp.** Kế
+    hoạch 3D (three.js) đã duyệt, nhưng WebGL không phải thứ chắc chắn có: máy có thể không hỗ trợ
+    WebGL2, iOS hay **mất context giữa chừng** khi thiếu bộ nhớ, Đàm có thể tự tắt 3D cho đỡ tốn
+    pin, và cổng hiệu năng Phase 3A có thể TRƯỢT. Trong mọi tình huống đó màn hình vẫn phải hiện
+    được. Vì vậy KHÔNG xoá bản 2D kể cả khi 3D chạy tốt.
+  - Tài liệu: `ARCHITECTURE_DECISIONS.md` ADR-008 · `ARCHITECTURE.md` (mục 7: luồng vẽ 3 chặng) ·
+    `PROJECT_STRUCTURE.md` (cây `city/` + 2 quy tắc đặt file mới) · `CHANGELOG.md`.
+    Sửa luôn 1 lỗi tài liệu: dòng Phase 1 bên dưới ghi "ADR-010" trong khi bản ghi thật là ADR-007.
+
 - **2026-08-12 (Phase 2/6)** — **THÀNH PHỐ PIXEL: niêm phong thành phố kỷ cũ thay vì xoá (schema 3→4).**
   Phase DUY NHẤT đụng vào state đã lưu. **Cân bằng game không đổi một chút nào** — công trình kỷ cũ
   vẫn bị cắt y hệt, chỉ được sao chép sang kho `cityArchive` chỉ-để-ngắm trước khi bị vứt.
@@ -103,7 +143,7 @@
   - `src/engine/cityArchive.js` — "bảo tàng": `mergeCityArchive` / `normalizeCityArchive` /
     `listVisitableEras`. Chưa nối vào store (Phase 2).
   - **+36 bài test** (261 → **297 bài, 0 fail**), lint + build xanh.
-  - ⚠️ **Chệch spec CÓ CHỦ Ý, đã ghi ADR-010**: spec đề nghị đặt nhà bằng "dò xoắn ốc theo bpId đã
+  - ⚠️ **Chệch spec CÓ CHỦ Ý, đã ghi ADR-007**: spec đề nghị đặt nhà bằng "dò xoắn ốc theo bpId đã
     sắp xếp". Cách đó chỉ giữ được bất biến "bảo tàng bất động" khi KHÔNG va chạm — mà 5 công trình
     trên lưới 144 ô va chạm ~7%, tức bảo tàng có thể tự xê dịch. Đã thay bằng **khu đất riêng theo
     thứ hạng bản vẽ trong kỷ** (mỗi kỷ đúng 5 bản vẽ → 5 zone rời nhau) ⇒ vị trí mỗi nhà chỉ phụ

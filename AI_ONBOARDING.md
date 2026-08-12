@@ -87,6 +87,10 @@ Priority High/Critical** — chưa tới ngưỡng đề xuất Maintenance Spri
   (achievementTimeline.js) — trông giống trùng lặp nhưng phục vụ 2 mục đích thuật toán khác nhau
   (xem ADR-001).
 - Đừng nới lỏng ngưỡng BÁO NHẦM=0% của bộ chấm điểm AI Coach (`src/engine/coach/eval.test.js`).
+- Đừng `import 'three'` ở bất kỳ đâu ngoài `src/components/city/render3d/`, và đừng cho
+  `CityViewShell.jsx` biết bộ vẽ nào đang chạy. Bộ vẽ 2D (`city/render2d/`) là **đường lui thường
+  trực**, không phải bản nháp sẽ xoá — xem ADR-008. Có test đọc mã nguồn canh cả 5 luật này
+  (`src/components/cityRenderers.test.js`), phá luật là đỏ ngay.
 - Đừng bắt đầu một phiên tập trung THẬT trên dev/localhost — dev dùng CHUNG dòng Supabase với
   production, sẽ ghi đè dữ liệu thật.
 - Đừng biến Electron thành app chính riêng biệt hay nhân đôi logic game vào đó.

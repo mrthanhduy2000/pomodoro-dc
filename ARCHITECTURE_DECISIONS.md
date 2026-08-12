@@ -11,6 +11,50 @@
 
 ---
 
+## ADR-008 — Thành Phố: tách KHUNG màn hình khỏi BỘ VẼ, và giữ bộ vẽ 2D làm nền vĩnh viễn (không phải bản nháp)
+
+- **Ngày**: 2026-08-12
+- **Bối cảnh**: sau khi bộ vẽ 2D isometric (SVG) chạy được, Đàm duyệt kế hoạch thay nó bằng 3D thật
+  (three.js) cộng lớp thời gian/cảm giác. Câu hỏi đặt ra ngay trước khi commit bản 2D: **có nên
+  commit nó không, hay bỏ đi và làm thẳng 3D?**
+- **Vấn đề**: WebGL không phải thứ chắc chắn có. Máy có thể không hỗ trợ WebGL2, trình duyệt có thể
+  **mất context giữa chừng** (`webglcontextlost` — hay xảy ra trên iOS khi máy thiếu bộ nhớ), người
+  dùng có thể tự chọn tắt 3D để tiết kiệm pin, và bản thân cổng hiệu năng của Phase 3A có thể
+  TRƯỢT. Trong mọi tình huống đó màn hình Thành Phố vẫn phải hiện ra được một cái gì đó.
+- **Phương án đã cân nhắc**:
+  1. **Vứt bản 2D**, làm thẳng 3D; nếu 3D hỏng thì hiện thông báo lỗi.
+  2. **Giữ bản 2D nhưng coi là code tạm**, sau này 3D chạy tốt thì xoá.
+  3. **Giữ bản 2D làm chế độ ngang hàng vĩnh viễn**, và tách kiến trúc thành KHUNG (`CityViewShell`)
+     + BỘ VẼ (`render2d/`, sau này `render3d/`) để hai bộ vẽ thay nhau mà khung không đổi.
+- **Lý do loại bỏ phương án (1)**: biến một sự cố tạm thời của trình duyệt thành một màn hình chết.
+  Tệ hơn, nó đặt toàn bộ giá trị của 4 Phase trước vào tay một cổng hiệu năng chưa đo — trượt cổng
+  là mất trắng.
+- **Lý do loại bỏ phương án (2)**: "code tạm rồi xoá" chỉ đúng khi có ngày xoá thật. Ở đây đường lui
+  là **yêu cầu vận hành thường trực**, không phải giai đoạn chuyển tiếp — gọi nó là tạm sẽ khiến
+  phiên sau bỏ bê nó, đúng lúc cần nhất thì nó đã mục.
+- **Giải pháp được chọn**: phương án (3). `CityViewShell.jsx` giữ thanh chuyển kỷ, tiêu đề, bảng số
+  liệu, danh sách công trình và **hai trạng thái rỗng** (thất truyền / bãi đất trống); bộ vẽ được
+  truyền vào qua `children`. Khung **không biết** bộ vẽ nào đang chạy, và **bộ vẽ tự quyết định kích
+  thước của mình** (SVG cần chiều rộng tối thiểu + cuộn ngang; canvas 3D sẽ cần tỉ lệ cố định) —
+  nên khung không phải chứa `if` cho từng chế độ.
+- **Trade-off**: (a) thêm một tầng component và một lần truyền props cho thứ hiện chỉ có MỘT bộ vẽ —
+  chấp nhận vì bộ vẽ thứ hai đã nằm trong kế hoạch đã duyệt, không phải suy đoán. (b) Hai bộ vẽ
+  nghĩa là hai chỗ phải sửa khi ngôn ngữ hình ảnh đổi — giảm nhẹ bằng cách để **bố cục trừu tượng
+  dùng chung** (`computeCityLayout` trả ô lưới `(x,y)`, không trả pixel), hai bộ vẽ chỉ khác nhau ở
+  bước cuối. (c) Token thiết kế phải tách làm hai: `cityTokens.js` (dùng chung) và
+  `render2d/tokens2d.js` (bảng màu `rgba()` + phép chiếu isometric — mẹo compositing chỉ đúng trong
+  SVG/CSS, WebGL không dùng lại được).
+- **Ảnh hưởng**: `src/components/city/render3d/` sẽ là **nơi DUY NHẤT** được phép `import 'three'` —
+  luật này kiểm tra được bằng grep và là thứ giữ cho `src/engine/` tiếp tục test được bằng
+  `node --test` (không DOM, không WebGL). Mọi thay đổi ở khung phải giữ nguyên giao kèo "khung cấp
+  một ô trống, không áp kích thước".
+- **Điều kiện xem xét lại**: nếu cổng hiệu năng Phase 3A trượt và nhánh 3D bị bỏ hẳn, tầng tách này
+  trở thành thừa — khi đó có thể gộp `CityViewShell` ngược vào `CityView` (một thao tác nhỏ, không
+  mất dữ liệu). Ngược lại, nếu sau nhiều tháng 3D chạy ổn trên MỌI thiết bị Đàm dùng, vẫn **không**
+  xoá bộ vẽ 2D — nó là đường lui cho `webglcontextlost`, không phải bản nháp.
+
+---
+
 ## ADR-007 — Thành Phố Pixel: toạ độ SUY RA từ id, không lưu vào state; và đặt nhà theo "khu đất cố định" thay vì dò xoắn ốc
 
 - **Ngày**: 2026-08-12

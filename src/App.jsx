@@ -33,6 +33,7 @@ const BlueprintInventory = createRecoverableLazy(() => import('./components/Blue
 const Achievements = createRecoverableLazy(() => import('./components/Achievements.jsx'), 'achievements');
 const StatsDashboard = createRecoverableLazy(() => import('./components/StatsDashboard.jsx'), 'stats-dashboard');
 const BuildingWorkshop = createRecoverableLazy(() => import('./components/BuildingWorkshop.jsx'), 'building-workshop');
+const CityView = createRecoverableLazy(() => import('./components/CityView.jsx'), 'city-view');
 const Settings = createRecoverableLazy(() => import('./components/Settings.jsx'), 'settings');
 const LootDropModal = createRecoverableLazy(() => import('./components/LootDropModal.jsx'), 'loot-drop-modal');
 const DisasterModal = createRecoverableLazy(() => import('./components/DisasterModal.jsx'), 'disaster-modal');
@@ -134,6 +135,14 @@ const AppIcon = {
       <path d="M22 20H2" />
     </Glyph>
   ),
+  city: (props) => (
+    <Glyph {...props}>
+      <path d="M3 21h18" />
+      <path d="M5 21V11l4-3 4 3v10" />
+      <path d="M13 21V7l3-2 3 2v14" />
+      <path d="M8 14h2M16 11h1" />
+    </Glyph>
+  ),
   settings: (props) => (
     <Glyph {...props}>
       <circle cx="12" cy="12" r="3" />
@@ -188,6 +197,7 @@ const DESKTOP_TABS = [
   { id: 'skills', label: 'Kỹ năng', shortLabel: 'Kỹ năng', Icon: AppIcon.skills },
   { id: 'collection', label: 'Kho báu', shortLabel: 'Kho báu', Icon: AppIcon.vault },
   { id: 'achievements', label: 'Thành tích', shortLabel: 'Thành tích', Icon: AppIcon.trophy },
+  { id: 'city', label: 'Thành Phố', shortLabel: 'Thành Phố', Icon: AppIcon.city },
   { id: 'stats', label: 'Thống kê', shortLabel: 'Thống kê', Icon: AppIcon.stats },
   { id: 'settings', label: 'Cài đặt', shortLabel: 'Cài đặt', Icon: AppIcon.settings },
 ];
@@ -198,11 +208,13 @@ const MOBILE_TABS = [
   { id: 'skills', label: 'Kỹ năng', shortLabel: 'Kỹ năng', Icon: AppIcon.skills },
   { id: 'collection', label: 'Kho báu', shortLabel: 'Kho báu', Icon: AppIcon.vault },
   { id: 'achievements', label: 'Thành tích', shortLabel: 'Thành tích', Icon: AppIcon.trophy },
+  { id: 'city', label: 'Thành Phố', shortLabel: 'Thành Phố', Icon: AppIcon.city },
   { id: 'stats', label: 'Thống kê', shortLabel: 'Thống kê', Icon: AppIcon.stats },
   { id: 'settings', label: 'Cài đặt', shortLabel: 'Cài đặt', Icon: AppIcon.settings },
 ];
 
-// Mobile: 4 tab chính luôn hiện + nút "Thêm" mở 3 tab phụ → đỡ chật trên iPhone.
+// Mobile: 4 tab chính luôn hiện + nút "Thêm" mở các tab phụ → đỡ chật trên iPhone.
+// "Thành Phố" CỐ Ý không nằm trong nhóm chính: thanh dưới iPhone giữ đúng 4 nút.
 const MOBILE_PRIMARY_IDS = ['focus', 'missions', 'skills', 'stats'];
 const MOBILE_PRIMARY_TABS = MOBILE_TABS.filter((t) => MOBILE_PRIMARY_IDS.includes(t.id));
 const MOBILE_SECONDARY_TABS = MOBILE_TABS.filter((t) => !MOBILE_PRIMARY_IDS.includes(t.id));
@@ -1740,6 +1752,20 @@ export default function App() {
                       >
                         <DeferredTabContent>
                           <Achievements />
+                        </DeferredTabContent>
+                      </ShellPane>
+                    </TabPane>
+                  )}
+
+                  {activeTab === 'city' && (
+                    <TabPane key="city">
+                      <ShellPane
+                        title="Thành Phố"
+                        subtitle="Mỗi công trình đã xây là một căn nhà. Qua kỷ mới, thành phố cũ được niêm phong để ghé thăm lại."
+                        topRail={!isDesktop && !showFocusFullscreen ? renderTopRail() : null}
+                      >
+                        <DeferredTabContent>
+                          <CityView />
                         </DeferredTabContent>
                       </ShellPane>
                     </TabPane>

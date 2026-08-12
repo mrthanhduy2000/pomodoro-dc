@@ -256,3 +256,40 @@
 - **Review Trigger**: khi làm backup/recovery, hoặc khi thấy lỗi lưu state trong log production.
 - **Owner**: (chưa gán)
 - **Status**: Open — phát hiện trong lúc phân tích bản vá C1 (2026-07-17), chưa xử lý.
+
+---
+
+## #10 — Glob test chỉ quét MỘT cấp: test đặt trong thư mục con sẽ im lặng không bao giờ chạy
+
+- **Module**: `package.json` (script `test`)
+- **Priority**: Low-Medium
+- **Severity**: Medium
+- **Impact**: câu lệnh test liệt kê tay từng thư mục và mỗi mục chỉ có `*.test.js` — **một cấp**
+  (vd `src/components/*.test.js`). Một file test đặt trong thư mục con (`src/components/city/`,
+  `src/components/city/render2d/`, `src/components/icons/`, `src/components/shared/`) sẽ **không
+  bao giờ được chạy, mà cũng không báo lỗi gì**. Đây là loại hỏng nguy hiểm hơn test đỏ: nó tạo
+  cảm giác an toàn giả — người viết tin là có lưới, thực tế không có. Hiện chưa có file test nào
+  rơi vào bẫy này (đã kiểm), nhưng số thư mục con trong `src/components/` đang tăng.
+- **Root Cause**: glob viết tay, thêm dần theo từng lần có thư mục mới; POSIX `sh` không có
+  `globstar` nên `**` không mở rộng đệ quy như trực giác — `src/components/**/*.test.js` thực chất
+  chỉ ra đúng MỘT cấp con và sẽ **làm mất** các test đang chạy ở cấp trên.
+- **Current Risk**: thấp — chưa file nào bị bỏ sót. Đã né tạm bằng cách đặt
+  `src/components/cityRenderers.test.js` ở cấp trên (kèm chú thích giải thích vì sao nó không nằm
+  cạnh thứ nó kiểm tra).
+- **Future Risk**: trung bình và tăng dần. Kế hoạch Thành Phố 3D sẽ thêm `city/render3d/` cùng
+  nhiều module con; đặt test cạnh file nguồn là **quy ước chính thức của dự án**
+  (`PROJECT_STRUCTURE.md`), nên khả năng ai đó làm đúng quy ước rồi mất test là có thật.
+- **Recommended Solution**: hai hướng, ưu tiên hướng (b) vì không đụng vào bộ chạy test.
+  (a) Đổi sang `node --test --test-... 'src/**/*.test.js'` với glob do CHÍNH node mở rộng (đặt
+  trong dấu nháy để `sh` không đụng vào) — gọn nhưng phải kiểm lại kỹ danh sách file thực tế được
+  chọn, vì đây là đường sống của mọi lưới an toàn.
+  (b) Thêm một bài test tự canh: quét mọi `*.test.js` trong `src/` + `api/` rồi khẳng định mỗi file
+  đều khớp ít nhất một mẫu trong glob của `package.json` — sai là đỏ ngay, không cần đổi bộ chạy.
+- **Estimated Complexity**: Thấp.
+- **Blocking Conditions**: không có — nằm ngoài phạm vi Phase 3-2D (phase đó thuần hiển thị) nên
+  không "tiện tay sửa luôn".
+- **Review Trigger**: lần tới có ai muốn đặt một file test vào thư mục con của `src/components/`
+  hoặc `src/engine/` (vd khi Phase 3A thêm `city/render3d/`).
+- **Owner**: (chưa gán)
+- **Status**: Open — phát hiện khi thêm test ranh giới kiến trúc cho màn hình Thành Phố
+  (2026-08-12), chưa xử lý.

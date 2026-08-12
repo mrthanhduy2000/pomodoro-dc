@@ -152,6 +152,18 @@ NGẮM, không perk, không tài nguyên, không ảnh hưởng cân bằng. Hà
 không được ghi vào bảo tàng. **Toạ độ thành phố KHÔNG được lưu** — `src/engine/cityLayout.js` suy
 ra từ chính id công trình bằng băm tất định, xem ADR-007.
 
+**Luồng vẽ Thành Phố — bố cục TRỪU TƯỢNG tách khỏi cách vẽ (2026-08-12)**: một chiều, 3 chặng.
+(1) `CityView.jsx` chọn NGUỒN dữ liệu — kỷ hiện tại lấy state sống, kỷ đã niêm phong lấy ảnh chụp
+trong `cityArchive`; đây là chỗ dễ sai nhất cả màn hình. (2) `computeCityLayout` (engine thuần) trả
+về **ô lưới `(x, y)`, không phải pixel** — cùng một bố cục dùng được cho mọi cách vẽ. (3) Bộ vẽ
+biến ô lưới thành hình. `CityViewShell.jsx` là KHUNG (chuyển kỷ, số liệu, trạng thái rỗng) và
+**không biết bộ vẽ nào đang chạy** — bộ vẽ vào qua `children` và tự quyết định kích thước của mình.
+Hôm nay chỉ có `city/render2d/` (SVG isometric); `city/render3d/` (three.js) là bước kế tiếp và sẽ
+là **nơi duy nhất được phép `import 'three'`** — luật này giữ cho `src/engine/` tiếp tục test được
+bằng `node --test` (không DOM, không WebGL). Bộ vẽ 2D **không phải bản nháp sẽ xoá**: nó là đường
+lui thường trực khi máy không có WebGL, khi trình duyệt mất context, hoặc khi Đàm tự chọn tắt 3D.
+Xem ADR-008.
+
 **Database schema — KHÔNG có migration tự động**: mọi thay đổi cấu trúc bảng Supabase (`game_state`,
 `timer_live`, `push_jobs`, `push_subscriptions`...) đòi hỏi chạy TAY một file `.sql` trong
 `supabase/` TRƯỚC KHI deploy code phụ thuộc vào nó — không dùng Prisma/Drizzle/ORM migration nào.

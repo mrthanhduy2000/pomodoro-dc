@@ -12,6 +12,18 @@
 │   │   ├── shared/           # Component/style dùng chung GIỮA NHIỀU file components khác
 │   │   │   └── BadgeKit.jsx      # TypeBadge/RarityBadge/PerkSummary (BuildingWorkshop + BlueprintInventory)
 │   │   ├── icons/            # Bộ icon SVG tự vẽ (thay emoji), 1 component Glyph + data tách riêng
+│   │   ├── CityView.jsx      # Tab Thành Phố — CHỈ lấy dữ liệu + chọn bộ vẽ, giữ mỏng có chủ ý
+│   │   ├── city/             # Màn hình Thành Phố. Luật: KHUNG tách khỏi BỘ VẼ (ADR-008)
+│   │   │   ├── CityViewShell.jsx # KHUNG: chuyển kỷ, số liệu, trạng thái rỗng. KHÔNG biết bộ vẽ
+│   │   │   │                     #   nào đang chạy — bộ vẽ vào qua `children` và TỰ định kích thước
+│   │   │   ├── EraSwitcher.jsx   # Thanh chuyển giữa các kỷ trong bảo tàng
+│   │   │   ├── cityTokens.js     # Token DÙNG CHUNG mọi bộ vẽ: eraTint/eraSolid/cardStyle
+│   │   │   ├── render2d/         # Bộ vẽ SVG isometric — nền VĨNH VIỄN, không phải bản nháp:
+│   │   │   │                     #   đường lui khi máy không có WebGL / mất context / Đàm chọn 2D
+│   │   │   │   ├── CityCanvas2D.jsx # Gộp 144 ô nền thành 4 <path> (ngân sách ≤200 phần tử DOM)
+│   │   │   │   ├── CityTile.jsx     # MỘT vật thể nổi (nhà/cảnh vật). Ô nền KHÔNG đi qua đây
+│   │   │   │   └── tokens2d.js      # Kích thước ô + bảng màu rgba() + phép chiếu — CHỈ hợp SVG/CSS
+│   │   │   └── render3d/         # (kế hoạch) Bộ vẽ three.js — NƠI DUY NHẤT được import 'three'
 │   │   ├── Coach*.jsx         # 3 lối vào AI Coach: CoachChat (hỏi-đáp), CoachOffline (phân tích
 │   │   │                     #   tổng thể), CoachNudge (tự nhắc sau phiên) — logic AI thật nằm ở
 │   │   │                     #   src/engine/coach/, các file này chỉ là UI + gọi engine.
@@ -108,6 +120,12 @@
   `src/engine/coach/` nếu liên quan AI Coach). KHÔNG nhồi vào `gameStore.js` hay component.
 - **Component dùng CHUNG từ 2 file trở lên** → `src/components/shared/`. Component chỉ 1 nơi dùng
   thì cứ để trong chính file đó hoặc file component tương ứng.
+- **Một màn hình lớn cần nhiều mảnh riêng của nó** → thư mục cùng tên chữ thường cạnh file màn hình
+  (`CityView.jsx` + `city/`), KHÔNG đổ vào `shared/` (chỗ đó dành cho thứ dùng chung THẬT).
+- **Nhiều cách trình bày cùng một dữ liệu** (2D/3D, in/màn hình…) → mỗi cách MỘT thư mục con
+  (`city/render2d/`, `city/render3d/`), và thứ chỉ đúng với một cách thì nằm TRONG thư mục đó
+  (`tokens2d.js` là bảng màu `rgba()` + phép chiếu isometric — WebGL không dùng lại được). Thư mục
+  cha chỉ giữ phần dùng chung. Lý do đầy đủ: ADR-008.
 - **Test** luôn đặt CẠNH file nguồn, cùng tên + `.test.js` (vd `guard.js` → `guard.test.js`).
   Riêng test của `api/` bắt buộc đặt trong `api/_tests/` (mirror cấu trúc `api/`) — xem lý do ở
   `CLAUDE.md` mục "Vercel Hobby: giới hạn 12 Serverless Functions".

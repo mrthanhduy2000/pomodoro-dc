@@ -178,15 +178,21 @@ export function buildScenePalette({ tokens, eraColor } = {}) {
   const wallHue = mixHue(36, eraHue, 0.18);
 
   const roles = {
-    wall:  paint(wallHue, isDark ? 0.24 : 0.23, 0.70, 0.36),
-    wall2: paint(wallHue, isDark ? 0.20 : 0.19, 0.62, 0.30),
-    roof:  paint(mixHue(eraHue, 16, 0.6), isDark ? 0.48 : 0.50, 0.39, 0.27),
-    trim:  paint(wallHue, isDark ? 0.14 : 0.13, 0.76, 0.46),
-    stone: paint(mixHue(wallHue, 40, 0.6), 0.12, 0.60, 0.34),
-    wood:  paint(26, isDark ? 0.36 : 0.42, 0.34, 0.24),
+    wall:  paint(wallHue, isDark ? 0.24 : 0.23, 0.70, 0.44),
+    wall2: paint(wallHue, isDark ? 0.20 : 0.19, 0.62, 0.37),
+    roof:  paint(mixHue(eraHue, 16, 0.6), isDark ? 0.48 : 0.50, 0.39, 0.32),
+    trim:  paint(wallHue, isDark ? 0.14 : 0.13, 0.76, 0.54),
+    stone: paint(mixHue(wallHue, 40, 0.6), 0.12, 0.60, 0.42),
+    wood:  paint(26, isDark ? 0.36 : 0.42, 0.34, 0.29),
     gold:  paint(44, isDark ? 0.60 : 0.66, 0.58, 0.50),
-    glass: paint(mixHue(eraHue, 205, 0.55), isDark ? 0.40 : 0.36, 0.52, 0.42),
-    leaf:  paint(mixHue(88, eraHue, 0.2), isDark ? 0.34 : 0.38, 0.33, 0.23),
+    // ⚠️ CỬA SỔ LÀ LỖ THỦNG, KHÔNG PHẢI TẤM NHỰA XANH.
+    // Bản trước để `l: 0.52` với độ tươi 0,36 và ảnh chụp cho ra những phiến xanh cô-ban dán lên
+    // mặt tường — dấu hiệu "đồ hoạ game" rõ nhất trong cả khung hình, và đúng thứ Đàm gọi là
+    // "không đẹp". Nhìn từ ngoài vào ban ngày, cửa sổ gần như ĐEN: bên trong tối hơn ngoài trời
+    // rất nhiều, kính chỉ hắt lại một chút sắc trời. Hạ độ đậm xuống sâu và cắt gần hết độ tươi
+    // thì mặt tiền lập tức có CHIỀU SÂU — mắt đọc ra hốc lõm thay vì hình dán.
+    glass: paint(mixHue(eraHue, 214, 0.7), isDark ? 0.20 : 0.16, 0.26, 0.14),
+    leaf:  paint(mixHue(88, eraHue, 0.2), isDark ? 0.19 : 0.38, 0.33, 0.28),
     dark:  paint(eraHue, 0.24, 0.19, 0.09),
     // Da người. KHÔNG pha sắc kỷ vào — người thì thời nào cũng cùng một màu, và đây chính là chỗ
     // để mắt bám vào: một chấm ấm, nhạt, KHÔNG thuộc họ màu của công trình xung quanh, nhờ vậy
@@ -210,13 +216,24 @@ export function buildScenePalette({ tokens, eraColor } = {}) {
   // hồng, tường hồng) và kết quả là một bức đục ngầu dù từng thứ riêng lẻ đều đúng. Tranh sống
   // nhờ TƯƠNG PHẢN ẤM–LẠNH: vật thể ấm đứng trên nền lạnh. Bầu trời có màu lạnh ở mọi thời đại,
   // nên nó là chỗ giữ vế "lạnh"; sắc kỷ chỉ được phép nhuộm 18%.
-  const horizon = paint(mixHue(38, eraHue, 0.2), isDark ? 0.24 : 0.30, 0.86, 0.20);
+  // ⚠️ LẦN 2 (Phase 3C) — VẪN CÒN NHỢT. `l: 0.86` với độ tươi 0,30 cho ra một dải kem xám, và vì
+  // màu này đồng thời LÀ MÀU SƯƠNG MÙ nên nó nhợt kéo theo cả vùng đất xa nhợt luôn: hơn một phần
+  // ba khung hình chìm trong sữa. Kéo xuống 0,80 và tươi lên 0,42 thì chân trời thành ÁNH VÀNG ẤM
+  // — vừa ra "nắng chiều", vừa cho vùng đất xa một màu để tan vào thay vì một mảng trắng.
+  // ⚠️ LẦN 3 — HAI THEME PHẢI LÀ HAI CẢNH KHÁC NHAU, KHÔNG PHẢI MỘT CẢNH VẶN NHỎ ĐỘ SÁNG.
+  // Dùng chung góc màu ấm (40°) cho cả hai thì theme tối ra một bầu trời NÂU-Ô-LIU xỉn: nó không
+  // đọc ra "buổi tối", nó đọc ra "ảnh bị thiếu sáng". Trời đêm thật ngả XANH LAM sâu — và vì đây
+  // cũng là màu sương mù, đổi nó thì cả vùng đất xa cũng ngả lam theo, đúng kiểu chạng vạng.
+  // Theme sáng giữ ánh vàng ấm của nắng chiều. Cùng một thành phố, hai thời điểm trong ngày.
+  const horizon = isDark
+    ? paint(mixHue(224, eraHue, 0.14), 0.34, 0.80, 0.27)
+    : paint(mixHue(40, eraHue, 0.18), 0.42, 0.80, 0.26);
 
   return {
     // ── giữ nguyên các khoá cũ để không phá chỗ đang dùng ────────────────────
     background: horizon,
-    ground:     paint(groundHue, isDark ? 0.24 : 0.26, 0.55, 0.23),
-    groundAlt:  paint(groundHue, isDark ? 0.22 : 0.24, 0.51, 0.21),
+    ground:     paint(groundHue, isDark ? 0.12 : 0.26, 0.55, 0.286),
+    groundAlt:  paint(groundHue, isDark ? 0.10 : 0.24, 0.51, 0.276),
 
     /**
      * Bốn sắc nền, chênh nhau RẤT ÍT.
@@ -224,16 +241,34 @@ export function buildScenePalette({ tokens, eraColor } = {}) {
      * chúng đủ lớn để ảnh chụp thử ra một BÀN CỜ VUA. Mặt đất thật không có ô: nó có mảng đậm
      * mảng nhạt không đều. Bốn sắc sát nhau cho ra đúng cảm giác đó, và vì chúng vẫn khác nhau
      * nên mặt đất không bị phẳng lì một màu.
+     *
+     * ⚠️ LẦN 2 (Phase 3C): vẫn còn ra bàn cờ. Nguyên nhân đã hiểu rõ hơn — mắt người cực nhạy với
+     * chênh lệch ĐỘ SÁNG và khá thờ ơ với chênh lệch GÓC MÀU. Bốn sắc cũ chênh nhau 0,045 độ sáng
+     * (0,505 → 0,55): nghe thì nhỏ, nhưng ở đúng vùng giữa thang sáng thì đó là ranh giới nhìn
+     * thấy được, và vì mỗi ô là một hình vuông đều tăm tắp nên mắt lập tức nối chúng thành lưới.
+     * Cách chữa: **siết độ sáng lại còn ~0,018, bù chênh lệch sang GÓC MÀU**.
+     *
+     * ⚠️ LẦN 3 — VÀ ĐÂY LÀ BÀI HỌC ĐÁNG NHỚ NHẤT: lần 2 dùng ±9° góc màu, nhìn ổn **dưới tone
+     * mapping AgX**. Nhưng khi đổi sang `Neutral` (giữ được độ tươi), đúng ±9° đó lập tức hiện
+     * nguyên hình thành bàn cờ xanh–vàng. Không phải bảng màu sai — mà là **bảng màu và tone
+     * mapping không phải hai thứ tách rời**: AgX bạc màu nên nó vẫn đang âm thầm che giúp một khác
+     * biệt vốn quá lớn. Đổi tone mapping thì PHẢI soi lại mọi chỗ dựa vào chênh lệch góc màu nhỏ.
+     * Nay ±4°: vừa đủ để mặt đất không phẳng lì, chưa đủ để mắt nối thành lưới.
+     *
+     * ⚠️ THEME TỐI DÙNG ĐỘ TƯƠI THẤP HƠN HẲN (0,12 so với 0,26) — không phải để "cho tối"
+     * mà vì đúng như vậy: trong ánh sáng yếu, mắt người mất dần khả năng phân biệt màu (hiệu
+     * ứng Purkinje). Một bãi cỏ xanh RỰC dưới bầu trời chạng vạng đọc ra "đồ hoạ game chỉnh
+     * sai", còn một bãi cỏ xám-lục thì đọc ra "trời đang tối".
      */
     groundShades: [
-      paint(groundHue, isDark ? 0.24 : 0.26, 0.55, 0.23),
-      paint(groundHue, isDark ? 0.22 : 0.24, 0.52, 0.215),
-      paint(groundHue + 6, isDark ? 0.23 : 0.25, 0.535, 0.225),
-      paint(groundHue - 5, isDark ? 0.21 : 0.23, 0.505, 0.205),
+      paint(groundHue,     isDark ? 0.12 : 0.26, 0.536, 0.286),
+      paint(groundHue - 4, isDark ? 0.11 : 0.25, 0.528, 0.280),
+      paint(groundHue + 4, isDark ? 0.13 : 0.27, 0.544, 0.290),
+      paint(groundHue + 2, isDark ? 0.10 : 0.24, 0.522, 0.276),
     ],
 
     /** Mặt đường: NHẠT hơn đất rõ rệt — đá lát bạc màu vì bị giẫm, và mắt cần đọc ra lối đi. */
-    road: paint(mixHue(groundHue, 40, 0.5), 0.10, 0.68, 0.34),
+    road: paint(mixHue(groundHue, 40, 0.5), 0.10, 0.68, 0.42),
 
     /**
      * Vùng đất ngoài thành phố. Pha sẵn một phần về phía màu chân trời để nó tự LÙI RA SAU thay
@@ -279,7 +314,7 @@ export function buildScenePalette({ tokens, eraColor } = {}) {
      * cũng là cách bức tranh có "trên" và "dưới" thay vì một mảng nền.
      */
     sky2: {
-      top:     paint(mixHue(210, eraHue, 0.18), isDark ? 0.40 : 0.46, 0.60, 0.13),
+      top:     paint(mixHue(210, eraHue, 0.18), isDark ? 0.44 : 0.46, 0.60, 0.17),
       horizon,
     },
 

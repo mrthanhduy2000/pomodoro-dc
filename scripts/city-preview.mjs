@@ -78,8 +78,8 @@ function entrySource({ era, level, theme, zoom = 1 }) {
   return `
 import { computeCityLayout } from '${ROOT}/src/engine/cityLayout.js';
 import { buildScenePalette } from '${ROOT}/src/engine/city3d/palette3d.js';
-import { createCityScene } from '${ROOT}/src/components/city/render3d/sceneGraph.js';
-import { createOrbit } from '${ROOT}/src/engine/city3d/orbit.js';
+import { applyPaintedLook, createCityScene } from '${ROOT}/src/components/city/render3d/sceneGraph.js';
+import { cityOrbitOptions, createOrbit } from '${ROOT}/src/engine/city3d/orbit.js';
 import { BLUEPRINT_CATALOG, ERA_METADATA } from '${ROOT}/src/engine/constants.js';
 import { PerspectiveCamera, WebGLRenderer, PCFSoftShadowMap } from 'three';
 
@@ -104,6 +104,8 @@ const palette = buildScenePalette({
 const canvas = document.getElementById('stage');
 const renderer = new WebGLRenderer({ canvas, antialias: true });
 renderer.setPixelRatio(1);
+// Dùng CHUNG cấu hình nhìn với app — nếu không, trang xem thử sẽ vẽ ra một thành phố khác.
+applyPaintedLook(renderer);
 renderer.setSize(canvas.width, canvas.height, false);
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = PCFSoftShadowMap;
@@ -121,10 +123,12 @@ city.sun.shadow.mapSize.setScalar(1024);
 city.updateResidents(17.5);
 
 const camera = new PerspectiveCamera(38, canvas.width / canvas.height, 0.5, layout.gridSize * 8);
+// Dùng CHUNG bộ tham số camera với app; ZOOM chỉ để soi chi tiết, mặc định 1 = đúng khung app.
+const orbitOptions = cityOrbitOptions(layout.gridSize);
 const orbit = createOrbit({
-  distance: layout.gridSize * 1.85 * ZOOM,
-  minDistance: layout.gridSize * 0.95 * Math.min(1, ZOOM),
-  maxDistance: layout.gridSize * 3.1,
+  ...orbitOptions,
+  distance: orbitOptions.distance * ZOOM,
+  minDistance: orbitOptions.minDistance * Math.min(1, ZOOM),
 });
 const eye = orbit.getPosition();
 const target = orbit.getTarget();
@@ -172,9 +176,24 @@ function pageHtml({ width, height, theme }) {
   body { margin:0; background:${theme === 'dark' ? '#141311' : '#e9e6de'}; font-family: system-ui, sans-serif; }
   #wrap { padding:16px; }
   #info { margin-top:10px; font-size:13px; color:${theme === 'dark' ? '#cfc9bb' : '#4a463f'}; }
+  /* ⚠️ PHẢI GIỐNG HỆT lớp vignette trong CityScene3D.jsx. Không có nó thì trang xem thử
+     chụp ra một thành phố KHÁC với thành phố Đàm nhìn thấy — mà một công cụ mắt-soi nói dối
+     còn tệ hơn không có công cụ nào. Đổi bên này phải đổi bên kia. */
+  #frame { position:relative; display:inline-block; line-height:0; }
+  #vignette {
+    position:absolute; inset:0; pointer-events:none;
+    background: ${theme === 'dark'
+      ? `radial-gradient(ellipse 82% 74% at 50% 44%,
+      rgba(10,8,14,0) 48%, rgba(10,8,14,0.10) 78%, rgba(10,8,14,0.24) 100%)`
+      : `radial-gradient(ellipse 76% 68% at 50% 44%,
+      rgba(42,28,15,0) 42%, rgba(42,28,15,0.16) 74%, rgba(42,28,15,0.42) 100%)`};
+  }
 </style></head>
 <body><div id="wrap">
-  <canvas id="stage" width="${width}" height="${height}"></canvas>
+  <div id="frame">
+    <canvas id="stage" width="${width}" height="${height}"></canvas>
+    <div id="vignette"></div>
+  </div>
   <div id="info">…</div>
 </div>
 <script type="module" src="/preview.js"></script>

@@ -20,10 +20,10 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { PerspectiveCamera, WebGLRenderer, PCFSoftShadowMap } from 'three';
 
 import { buildScenePalette } from '../../../engine/city3d/palette3d';
-import { createOrbit } from '../../../engine/city3d/orbit';
+import { cityOrbitOptions, createOrbit } from '../../../engine/city3d/orbit';
 import { createRenderLoop } from '../../../engine/city3d/renderLoop';
 import { ERA_METADATA } from '../../../engine/constants';
-import { createCityScene } from './sceneGraph';
+import { applyPaintedLook, createCityScene } from './sceneGraph';
 import { readThemeSignature, readThemeTokens } from './themeBridge';
 
 /** Giới hạn tỉ lệ điểm ảnh. Màn Retina 3x mà vẽ đủ 3x thì tốn gấp 9 lần mà mắt gần như không thấy. */
@@ -56,6 +56,9 @@ export default function CityScene3D({
   const hostRef = useRef(null);
   const runtimeRef = useRef(null);
   const [failed, setFailed] = useState(false);
+  // Theme của cảnh, do chính bảng màu quyết định (`palette.isDark`) chứ không đoán lại từ DOM.
+  // Chỉ dùng cho lớp viền tối bên dưới — xem giải thích ở đó.
+  const [darkScene, setDarkScene] = useState(false);
 
   // Giữ callback trong ref: chúng đổi mỗi lần render cha, mà ta KHÔNG muốn dựng lại cả cảnh WebGL
   // chỉ vì một hàm mới được tạo.
@@ -94,6 +97,8 @@ export default function CityScene3D({
         failIfMajorPerformanceCaveat: true,
       });
       renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, MAX_PIXEL_RATIO));
+      // Nén dải sáng thay vì cắt phẳng — xem `applyPaintedLook`. Dùng chung với trang xem thử.
+      applyPaintedLook(renderer);
       renderer.shadowMap.enabled = true;
       renderer.shadowMap.type = PCFSoftShadowMap;
       // ⚠️ Đôi với `shadow.autoUpdate = false` ở `sceneGraph.js`: shadow map chỉ được vẽ lại khi
@@ -105,6 +110,9 @@ export default function CityScene3D({
         tokens: readThemeTokens(canvas),
         eraColor: ERA_METADATA[layout.era]?.accentColor,
       });
+      // An toàn trong thân effect: `darkScene` KHÔNG nằm trong danh sách phụ thuộc, nên đổi nó
+      // chỉ sinh thêm một lượt render chứ không dựng lại cảnh (càng không thành vòng lặp).
+      setDarkScene(palette.isDark);
 
       const city = createCityScene({
         layout,
@@ -121,11 +129,7 @@ export default function CityScene3D({
       // 3,6 × gridSize và camera lùi được tới 3,1 × gridSize — tổng 6,7 phải NHỎ HƠN mặt phẳng xa,
       // nếu không nửa vòm phía sau bị cắt và bầu trời chuyển sắc biến mất, chỉ còn màu nền phẳng.
       const camera = new PerspectiveCamera(38, 1, 0.5, layout.gridSize * 8);
-      const orbit = createOrbit({
-        distance: layout.gridSize * 1.85,
-        minDistance: layout.gridSize * 0.95,
-        maxDistance: layout.gridSize * 3.1,
-      });
+      const orbit = createOrbit(cityOrbitOptions(layout.gridSize));
 
       function applyCamera() {
         const eye = orbit.getPosition();
@@ -325,11 +329,48 @@ export default function CityScene3D({
 
   return (
     <div
-      ref={hostRef}
-      className="w-full overflow-hidden rounded-[14px]"
-      style={{ background: 'var(--canvas-2)', cursor: 'grab' }}
-      role="img"
-      aria-label={`Thành phố 3D có ${layout.buildings.length} công trình`}
-    />
+      className="relative w-full overflow-hidden rounded-[14px]"
+      style={{ background: 'var(--canvas-2)' }}
+    >
+      <div
+        ref={hostRef}
+        className="w-full"
+        style={{ cursor: 'grab' }}
+        role="img"
+        aria-label={`Thành phố 3D có ${layout.buildings.length} công trình`}
+      />
+      {/*
+        VIỀN TỐI GÓC (vignette) — thứ rẻ nhất trong cả phase mà đổi được nhiều nhất về "chất tranh".
+
+        ⚠️ VÌ SAO LÀ MỘT LỚP CSS CHỨ KHÔNG PHẢI POST-PROCESSING: cách "đúng bài" của đồ hoạ 3D là
+        dựng thêm một lượt vẽ hậu kỳ (EffectComposer). Nó đòi thêm thư viện, thêm một khung đệm
+        toàn màn hình, và **vẽ lại toàn bộ điểm ảnh mỗi khung hình** — trên iPhone đó là khoản đắt
+        nhất có thể thêm vào, đúng thứ luật pin cấm. Một lớp gradient CSS đứng yên cho ra hiệu quả
+        thị giác gần như y hệt với giá bằng KHÔNG: trình duyệt vẽ nó một lần rồi ghép ở tầng
+        compositor, không đụng tới GPU của cảnh 3D và không tốn thêm khung hình nào.
+
+        Vì sao nó làm cảnh trông như tranh: người vẽ sơn dầu luôn dìm bốn góc xuống để dồn mắt vào
+        vùng sáng ở giữa — và lớp vecni ngả nâu của tranh cổ cũng đúng là đậm dần ra rìa. Ở đây
+        dùng đen NGẢ NÂU ẤM (#2a1c0f) chứ không phải đen thuần: đen thuần cho cảm giác "hỏng màn
+        hình", nâu ấm cho cảm giác "vecni cũ".
+        `pointer-events: none` là BẮT BUỘC — thiếu nó thì lớp này nuốt hết thao tác kéo xoay.
+
+        ⚠️ ĐẬM NHẠT PHẢI THEO THEME, và đây là lỗi đã thấy tận mắt ở ảnh chụp: cùng một độ đậm
+        0,42 đặt lên theme sáng thì ra "vecni cũ", đặt lên theme tối thì bốn góc thành ĐEN ĐẶC —
+        cảnh vốn đã tối sẵn, dìm thêm nữa là mất luôn. Viền tối là thứ tương đối với nền nó phủ
+        lên, không phải một con số tuyệt đối.
+      */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background: darkScene
+            ? 'radial-gradient(ellipse 82% 74% at 50% 44%,'
+              + ' rgba(10,8,14,0) 48%, rgba(10,8,14,0.10) 78%, rgba(10,8,14,0.24) 100%)'
+            : 'radial-gradient(ellipse 76% 68% at 50% 44%,'
+              + ' rgba(42,28,15,0) 42%, rgba(42,28,15,0.16) 74%, rgba(42,28,15,0.42) 100%)',
+        }}
+      />
+    </div>
   );
 }

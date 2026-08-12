@@ -104,6 +104,48 @@
   là tổ tiên trực tiếp) — `2c24e0f..4f371ad`. Đã chạy lại 360 test + lint + build ngay trước khi
   push, và đếm lại Serverless Function: **10/12**, còn dư 2.
 
+- **2026-08-12 (Phase 3C)** — **ÁNH SÁNG PHỤC HƯNG: cùng hình khối đó, nhìn ra tranh.**
+  Đàm: *"làm đẹp như các bức tranh phục hưng"*. Phase này KHÔNG thêm một hình khối nào — chỉ đổi
+  cách ánh sáng và màu được diễn giải. Đó cũng là điều đáng ghi nhớ nhất: **thứ làm cảnh 3D đẹp lên
+  hầu như không nằm ở mô hình.**
+  - ⚠️ **LỖI LỚN NHẤT, VÀ KHÔNG AI ĐỌC CODE MÀ THẤY ĐƯỢC: mặt trời đứng sau lưng camera.**
+    Hướng nắng cũ `(0,78 · 0,54 · 0,46)` đọc lên rất hợp lý ("nắng xiên từ trên cao"). Nhưng camera
+    mặc định ở phương vị 45°, còn hướng đó ở ~60° ⇒ **tích vô hướng với trục nhìn = −0,98**, tức là
+    đèn flash máy ảnh chiếu thẳng vào mặt vật. Mọi mặt quay về phía ta sáng đều nhau, bóng đổ trốn
+    hết ra sau công trình, hình khối bẹp dí — **toàn bộ công dựng dáng nhà ở Phase 3B bị vô hiệu
+    bởi đúng MỘT vector**. Sửa: phương vị 150° (vuông góc trục nhìn) ⇒ mỗi khối có một mặt sáng,
+    một mặt khuất, bóng rạch chéo qua khung hình. **Đã khoá bằng test** (`cityRenderers.test.js`) —
+    lint/build/test hành vi đều không bắt được loại lỗi này, chỉ một phép tính hình học mới bắt được.
+  - **Tone mapping** — mặc định three là `NoToneMapping`, tức là mọi giá trị vượt 1,0 bị CẮT PHẲNG:
+    tường hứng nắng và mái hứng nắng cùng thành một mảng bệt. Đã thử cả ba: `ACESFilmic` (ngả lạnh,
+    rút hết hơi ấm) · `AgX` (nén đẹp nhưng **bạc màu có chủ đích** → thành phố pastel như sữa, đúng
+    cái ngược lại với tranh Phục Hưng) · **`Neutral`** (giữ độ tươi ở vùng giữa) ← chọn cái này.
+  - ⚠️ **BÀI HỌC KÈM: đổi tone mapping KHÔNG phải một dòng độc lập.** Nó đổi cách MỌI màu hiện ra.
+    Đúng lần đổi AgX → Neutral đã làm lộ ra một bàn cờ xanh–vàng ở mặt đất mà AgX vốn đang che
+    giúp (chênh lệch góc màu ±9° quá lớn, đã siết còn ±4°). Đổi tone mapping ⇒ phải soi lại mọi chỗ
+    dựa vào chênh lệch màu nhỏ.
+  - **Viền tối góc (vignette)** — thứ rẻ nhất mà đổi được nhiều nhất về "chất tranh": người vẽ sơn
+    dầu luôn dìm bốn góc để dồn mắt vào vùng sáng giữa. Làm bằng **một lớp gradient CSS**, KHÔNG
+    phải post-processing: post-processing đòi thêm thư viện, thêm khung đệm toàn màn hình, và vẽ
+    lại toàn bộ điểm ảnh MỖI khung hình — khoản đắt nhất có thể thêm vào iPhone. Lớp CSS đứng yên
+    cho hiệu quả gần như y hệt với giá bằng **không**.
+  - ⚠️ **CHIAROSCURO LÀ KHOẢNG CÁCH SÁNG–TỐI, KHÔNG PHẢI "TỐI ĐI"** — trả giá bằng một ảnh chụp gần
+    như đen kịt. Lần đầu hạ đèn nền cho CẢ HAI theme; theme sáng đẹp hẳn lên, theme tối thành không
+    đọc nổi (bảng màu tối vốn đã đặt tường ở 0,36). Ở theme tối, muốn giữ khoảng cách đó thì phải
+    kéo vùng sáng LÊN ⇒ cần **NHIỀU** đèn nền hơn theme sáng, không phải ít hơn.
+  - **Hai theme nay là hai CẢNH khác nhau, không phải một cảnh vặn nhỏ độ sáng**: theme sáng = nắng
+    chiều ấm (chân trời vàng 40°); theme tối = **chạng vạng, trời xanh lam sâu** (224°) + mặt đất
+    **giảm độ tươi mạnh** (0,26 → 0,12, đúng hiệu ứng Purkinje: ánh sáng yếu thì mắt mất khả năng
+    phân biệt màu). Viền tối cũng nhẹ hơn hẳn ở theme tối — nó là thứ tương đối với nền nó phủ lên.
+  - **Cửa sổ nay là LỖ THỦNG, không phải tấm nhựa xanh** — độ đậm 0,52 → 0,26, độ tươi 0,36 → 0,16.
+    Nhìn từ ngoài vào ban ngày, cửa sổ gần như đen; đó là thứ cho mặt tiền chiều sâu.
+  - **Camera lại gần** (1,85 → 1,5 × lưới): lưới luôn 12×12 nhưng mỗi kỷ chỉ có 5 bản vẽ, nên rìa
+    **vĩnh viễn** là đất trống — ở 1,85 thì khung hình bị chiếm bởi đúng phần không có gì để nhìn.
+    Tham số camera nay ở `cityOrbitOptions()` (một nguồn sự thật, dùng chung với trang xem thử).
+  - **Quầng sáng mặt trời nướng sẵn vào màu đỉnh của vòm trời** — tính MỘT LẦN lúc dựng cảnh, 0 chi
+    phí mỗi khung hình. Vòm trời lên 32×16 để quầng không lộ mảng tam giác.
+  - **393 → 394 bài test.** Lint + build xanh. Chunk chính KHÔNG to thêm (134,44 KB gzip).
+
 - **2026-08-12 (Phase 3B-3)** — **CƯ DÂN: thành phố có người ở.**
   Đàm xem bản 3A rồi nói *"quá đơn giản và không đẹp"* + *"tối ưu hình ảnh và **cộng đồng cư dân**"*.
   Đây là mảng "cộng đồng cư dân" trong câu đó.

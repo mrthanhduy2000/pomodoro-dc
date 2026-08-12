@@ -17,6 +17,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readdir, readFile } from 'node:fs/promises';
 
+import { DEFAULT_PITCH, DEFAULT_YAW, orbitPosition } from '../../engine/city3d/orbit.js';
+
 const SRC = new URL('../../', import.meta.url);
 
 /** Mọi file mã nguồn trong `src/`, trả về `{ path: 'components/city/...', source }`. */
@@ -91,4 +93,44 @@ test('token riêng của bộ vẽ 2D không rò ra ngoài render2d/', () => {
     .filter((path) => !path.startsWith('components/city/render2d/'));
 
   assert.deepEqual(offenders, [], 'tokens2d chỉ dành cho bộ vẽ 2D — phần dùng chung nằm ở cityTokens.js');
+});
+
+test('mặt trời KHÔNG được đứng sau lưng camera — đây là bẫy "nhìn code không thấy sai"', () => {
+  // ⚠️ VÌ SAO BÀI NÀY TỒN TẠI (Phase 3C):
+  // `sceneGraph.js` từng đặt hướng nắng là (0,78 · 0,54 · 0,46) — đọc lên hoàn toàn hợp lý, kiểu
+  // "nắng xiên từ trên cao xuống". Nhưng camera mặc định đứng ở phương vị 45°, mà hướng đó cũng ở
+  // phương vị ~60°: mặt trời rơi đúng SAU LƯNG người xem. Kết quả là đèn flash máy ảnh — mọi mặt
+  // quay về phía ta sáng đều nhau, bóng đổ trốn hết ra sau công trình, hình khối bẹp dí. Toàn bộ
+  // công dựng dáng nhà ở Phase 3B bị vô hiệu bởi đúng MỘT vector.
+  //
+  // Không lint nào, không test hành vi nào bắt được chuyện này: code chạy đúng, cảnh vẫn hiện ra,
+  // chỉ là nó xấu. Thứ duy nhất bắt được là một phép tính hình học trên chính hai con số đó.
+  const scene = SOURCES.find((file) => file.path === 'components/city/render3d/sceneGraph.js');
+  assert.ok(scene, 'không tìm thấy sceneGraph.js');
+
+  const match = scene.source.match(
+    /const\s+SUN_DIRECTION\s*=\s*new\s+Vector3\(\s*(-?[\d.]+)\s*,\s*(-?[\d.]+)\s*,\s*(-?[\d.]+)\s*\)/,
+  );
+  assert.ok(match, 'không đọc được SUN_DIRECTION — đổi cách khai báo thì phải sửa cả bài test này');
+  const [sx, sy, sz] = match.slice(1, 4).map(Number);
+  const slen = Math.hypot(sx, sy, sz);
+
+  // Hướng nhìn của camera mặc định, dựng từ chính `orbit.js` (thuần, import thẳng được).
+  const eye = orbitPosition({
+    yaw: DEFAULT_YAW, pitch: DEFAULT_PITCH, distance: 1, target: { x: 0, y: 0, z: 0 },
+  });
+  const flen = Math.hypot(eye.x, eye.y, eye.z);
+  // Camera nhìn VỀ gốc toạ độ ⇒ hướng nhìn = −vị trí.
+  const forward = { x: -eye.x / flen, y: -eye.y / flen, z: -eye.z / flen };
+
+  const alignment = (sx * forward.x + sy * forward.y + sz * forward.z) / slen;
+
+  // −1 = nắng ngay sau lưng (chiếu thẳng vào mặt vật, bẹt nhất). +1 = nắng ngược sáng hoàn toàn.
+  // Yêu cầu |alignment| ≤ 0,55: nắng phải đủ LỆCH SANG BÊN để mỗi khối có một mặt sáng và một mặt
+  // khuất. Ngưỡng nới tay có chủ ý — bài này canh cái BẪY, không áp đặt một góc nắng cụ thể.
+  assert.ok(Math.abs(alignment) <= 0.55,
+    `nắng gần như thẳng trục nhìn (tích vô hướng ${alignment.toFixed(2)}) ⇒ cảnh sẽ bẹt như chụp đèn flash`);
+
+  // Và phải ở TRÊN đường chân trời — nắng từ dưới đất hắt lên thì không còn là mặt trời nữa.
+  assert.ok(sy / slen > 0.2, `mặt trời quá thấp hoặc nằm dưới mặt đất (y = ${(sy / slen).toFixed(2)})`);
 });

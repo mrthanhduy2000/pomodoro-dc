@@ -199,6 +199,24 @@ dáng giữa hai lần mở app — mở rộng ADR-007 từ vị trí sang hìn
 `BufferGeometry`, màu đi qua thuộc tính màu ĐỈNH chứ không qua material. Nhờ vậy "mỗi công trình
 một hình dáng riêng" tốn đúng **1 lệnh vẽ**, không phải 75.
 
+**Ánh sáng và màu là một hệ THỐNG NHẤT, không phải các nút chỉnh rời (2026-08-12, Phase 3C)**:
+bốn thứ dưới đây khoá lẫn nhau, đổi một cái phải soi lại ba cái còn lại.
+1. **Hướng nắng** (`SUN_DIRECTION`, `sceneGraph.js`) phải LỆCH SANG BÊN so với hướng nhìn mặc định
+   của camera (`DEFAULT_YAW` ở `orbit.js`). Nắng trùng trục nhìn = đèn flash: mọi mặt sáng đều
+   nhau, bóng trốn ra sau, hình khối bẹp. Đây là lỗi **không lộ ra khi đọc code** (vector trông
+   hoàn toàn hợp lý), nên có test hình học khoá lại ở `components/city/cityRenderers.test.js`.
+2. **Tone mapping** (`applyPaintedLook`) quyết định dải sáng bị CẮT hay bị NÉN — và nó đổi cách mọi
+   màu trong bảng hiện ra. Đổi nó ⇒ phải soi lại mọi chỗ dựa vào chênh lệch màu nhỏ.
+3. **Tỉ lệ nắng / đèn nền** là thứ tạo chiaroscuro. ⚠️ Chiaroscuro là KHOẢNG CÁCH sáng–tối, không
+   phải "tối đi": theme tối cần NHIỀU đèn nền hơn theme sáng, vì phải kéo vùng sáng lên.
+4. **Bảng màu theo theme** (`palette3d.js`): hai theme là hai CẢNH khác nhau (nắng chiều ấm ↔ chạng
+   vạng xanh lam), không phải một cảnh vặn nhỏ độ sáng. Theme tối giảm mạnh độ tươi — ánh sáng yếu
+   thì mắt mất khả năng phân biệt màu.
+
+Viền tối góc làm bằng **lớp gradient CSS**, KHÔNG phải post-processing: post-processing đòi thêm
+thư viện + khung đệm toàn màn hình + vẽ lại mọi điểm ảnh mỗi khung hình, tức là khoản đắt nhất có
+thể thêm vào — đúng thứ luật pin cấm. Lớp CSS đứng yên cho hiệu quả gần như y hệt với giá bằng 0.
+
 **Cư dân — chuyển động là hàm của THỜI GIAN (2026-08-12)**: `engine/city3d/residents.js` thuần.
 Dân số **suy ra** từ (số công trình, số phiên, độ dài chuỗi), không lưu vào state — cùng nguyên tắc
 với toạ độ (ADR-007) và cảnh vật, nên thêm **0 byte** vào khối JSONB đang chịu CAS. `residentAt(route,

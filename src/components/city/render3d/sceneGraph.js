@@ -31,6 +31,7 @@ import {
   Mesh,
   MeshBasicMaterial,
   MeshLambertMaterial,
+  NeutralToneMapping,
   Quaternion,
   Scene,
   SphereGeometry,
@@ -70,6 +71,62 @@ const TRIANGLES_PER_BOX = 12;
 
 /** Trục đứng, dùng lại cho mọi phép xoay người — tạo mới trong vòng lặp là rác cho bộ dọn. */
 const UP = new Vector3(0, 1, 0);
+
+/**
+ * Hướng mặt trời (đã chuẩn hoá): phương vị 150°, cao 30°.
+ *
+ * ⚠️ ĐÂY LÀ LỖI LỚN NHẤT MÀ PHASE 3C SỬA, VÀ NÓ KHÔNG HỀ LỘ RA KHI ĐỌC CODE.
+ * Bản trước để `(0.78, 0.54, 0.46)` — nghe rất hợp lý, "nắng xiên từ trên cao". Nhưng camera mặc
+ * định đứng ở phương vị 45° (`DEFAULT_YAW`), mà hướng đó cũng ở phương vị ~60°: tức là **mặt trời
+ * gần như đứng ngay sau lưng người xem** (tích vô hướng với hướng nhìn = −0,98). Đó là kiểu chiếu
+ * sáng tệ nhất có thể chọn: đèn flash máy ảnh. Mọi mặt quay về phía ta đều được rọi đều nhau, bóng
+ * đổ trốn hết ra sau công trình, và hình khối bẹp dí. Bao nhiêu công dựng dáng nhà ở Phase 3B bị
+ * xoá sạch bởi đúng một vector đặt sai — mà nhìn code thì không có gì sai cả.
+ *
+ * Phương vị 150° đặt mặt trời **vuông góc với hướng nhìn** (tích vô hướng ≈ −0,10) và lệch hẳn
+ * sang phải. Hệ quả: mỗi công trình có MỘT mặt hứng nắng và MỘT mặt khuất, bóng đổ rạch chéo qua
+ * khung hình thay vì trốn ra sau. Đây chính là kiểu ánh sáng mà tranh Phục Hưng dựng hình bằng nó,
+ * và cũng là lý do người chụp ảnh không bao giờ để nắng sau lưng.
+ *
+ * ⚠️ MỘT NGUỒN SỰ THẬT cho cả đèn lẫn quầng sáng nướng vào vòm trời. Để hai nơi tự đặt hướng riêng
+ * thì quầng sáng sẽ nằm một phía còn bóng đổ ngả phía khác — sai kiểu mắt thấy ngay mà đọc code
+ * thì không.
+ */
+const SUN_DIRECTION = new Vector3(0.433, 0.5, -0.75).normalize();
+
+/**
+ * Cách RENDERER diễn giải ánh sáng thành điểm ảnh. Gọi ngay sau khi tạo renderer.
+ *
+ * ⚠️ VÌ SAO ĐÂY LÀ MỘT HÀM RIÊNG VÀ ĐƯỢC XUẤT RA: `scripts/city-preview.mjs` tạo renderer của
+ * riêng nó. Để hai nơi tự viết cấu hình riêng thì trang xem thử sẽ dần vẽ ra một thành phố KHÁC
+ * với thành phố Đàm nhìn thấy — và một công cụ mắt-soi nói dối còn tệ hơn không có công cụ nào.
+ *
+ * ⚠️ VÌ SAO TONE MAPPING LÀ THỨ ĐÁNG GIÁ NHẤT TRONG CẢ PHASE NÀY (đúng 2 dòng):
+ * Mặc định của three là `NoToneMapping` — mọi giá trị sáng vượt 1,0 bị **CẮT PHẲNG**. Hậu quả:
+ * mặt tường hứng nắng và mặt mái hứng nắng cùng biến thành một mảng trắng bệt như nhau, mất sạch
+ * sắc độ đúng ở chỗ mắt nhìn vào nhiều nhất. Đó chính là thứ làm một cảnh WebGL trông "rẻ tiền".
+ * Tone mapping NÉN dải sáng lại thay vì cắt, nên vùng sáng vẫn còn màu và còn phân biệt được —
+ * đúng cái mà người vẽ sơn dầu làm khi họ không có màu nào sáng bằng ánh nắng thật.
+ *
+ * ⚠️ CHỌN `Neutral`, SAU KHI ĐÃ THỬ CẢ `ACESFilmic` LẪN `AgX` VÀ NHÌN ẢNH CHỤP:
+ *   • `ACESFilmic` — chuẩn phim ảnh, nhưng kéo mọi thứ ngả xanh-lạnh. Một cảnh lấy tông đất ấm làm
+ *     gốc bị nó rút sạch hơi ấm.
+ *   • `AgX` — nén rất đẹp ở vùng sáng, nhưng **bạc màu có chủ đích** (nó vốn sinh ra cho phim, nơi
+ *     người ta grade màu lại ở khâu sau). Ảnh chụp thử ra một thành phố pastel như sữa: đúng cái
+ *     ngược lại với "tranh Phục Hưng", vốn sống bằng màu đất SÂU và ĐẶC (đất nung, hoàng thổ, son,
+ *     lục lam).
+ *   • `Neutral` (Khronos PBR Neutral) — nén vùng sáng nhưng GIỮ độ tươi ở vùng giữa. Đây đúng là
+ *     thứ cần: sáng thì không cháy, mà màu thì không nhạt.
+ *
+ * ⚠️ BÀI HỌC KÈM THEO: đổi tone mapping KHÔNG phải một dòng độc lập — nó đổi cách MỌI màu trong
+ * bảng màu hiện ra. Đúng lần đổi này đã làm lộ ra một bàn cờ xanh–vàng ở mặt đất mà AgX vốn đang
+ * che giúp (xem `groundShades` trong `palette3d.js`).
+ */
+export function applyPaintedLook(renderer) {
+  renderer.toneMapping = NeutralToneMapping;
+  // Hơi >1 để bù phần `Neutral` nén ở vùng sáng; cao hơn nữa thì trời bắt đầu bạc.
+  renderer.toneMappingExposure = 1.2;
+}
 
 /** Ô lưới (x, y) → toạ độ thế giới, gốc toạ độ đặt giữa thành phố. */
 export function cellToWorld(x, y, gridSize) {
@@ -157,17 +214,39 @@ export function createCityScene({
   // Đã nới `camera.far` lên 8 × gridSize (xem `CityScene3D.jsx`) để hai điều kiện cùng thoả:
   // 37 < 43,2 và 37 + 43,2 = 80,2 < 96.
   const SKY_RADIUS = gridSize * 3.6;
-  const skyGeometry = track(new SphereGeometry(SKY_RADIUS, 16, 10));
+  // 32×16 chứ không phải 16×10: vầng sáng mặt trời bên dưới được NƯỚNG VÀO MÀU ĐỈNH, nên độ mịn
+  // của nó bị giới hạn bởi số đỉnh. Ở 16×10 quầng sáng lộ rõ các mảng tam giác. 960 tam giác cho
+  // cả bầu trời vẫn là rẻ mạt so với thứ nó đổi lại.
+  const skyGeometry = track(new SphereGeometry(SKY_RADIUS, 32, 16));
   const skyPos = skyGeometry.attributes.position;
   const skyColors = new Float32Array(skyPos.count * 3);
   const topColor = new Color(palette.sky2?.top ?? palette.background);
   const horizonColor = new Color(palette.sky2?.horizon ?? palette.background);
+  // Màu quầng sáng quanh mặt trời — lấy thẳng màu nắng cho nhất quán với nguồn sáng thật.
+  const glowColor = new Color(palette.lights?.sun ?? palette.sun);
+  const skyVertex = new Vector3();
   for (let i = 0; i < skyPos.count; i += 1) {
-    // Chuyển sắc theo chiều cao. Số mũ 1,2 (gần tuyến tính) chứ không phải bình phương: camera
-    // nhìn hơi chúc xuống nên dải trời lọt vào khung chỉ là phần NGAY TRÊN đường chân trời — dồn
-    // màu xanh lên cao thì nó nằm ngoài tầm nhìn và bầu trời chỉ còn một mảng nhợt.
+    // ⚠️ SỐ MŨ NÀY QUYẾT ĐỊNH BẦU TRỜI CÓ RA HỒN KHÔNG, và bản trước để SAI HƯỚNG.
+    // Camera chúc xuống, nên dải trời lọt vào khung chỉ là phần NGAY TRÊN đường chân trời — tức
+    // là toàn bộ bầu trời Đàm nhìn thấy nằm gọn trong khoảng t ≈ 0,50–0,67. Với số mũ 1,2 thì ở
+    // đó đã pha 43–61% màu xanh đỉnh trời, và kết quả là một mảng oải hương xam xám: mất cả hơi
+    // ấm của chân trời lẫn chiều sâu của trời xanh, chỉ còn đúng phần nhợt ở giữa hai thứ.
+    // Số mũ 2,6 dồn màu ấm bám SÁT chân trời (t = 0,5 chỉ pha 16% xanh) rồi mới chuyển nhanh lên
+    // xanh — nên trong đúng dải nhìn thấy được có cả ánh vàng ở đáy lẫn màu chuyển lên trên.
     const t = Math.max(0, Math.min(1, (skyPos.getY(i) / SKY_RADIUS) * 0.5 + 0.5));
-    tint.copy(horizonColor).lerp(topColor, Math.pow(t, 1.2));
+    tint.copy(horizonColor).lerp(topColor, Math.pow(t, 2.6));
+
+    // Quầng sáng quanh mặt trời. Trời thật KHÔNG đều màu theo vành đai — nó sáng bừng lên quanh
+    // hướng mặt trời rồi tối dần ra xa. Đây là thứ Claude Lorrain và cả trường phái phong cảnh
+    // Phục Hưng dựng cả bức tranh quanh nó, và ở đây nó tốn đúng một phép nhân vô hướng, tính
+    // MỘT LẦN lúc dựng cảnh chứ không phải mỗi khung hình.
+    skyVertex.set(skyPos.getX(i), skyPos.getY(i), skyPos.getZ(i)).normalize();
+    const toSun = Math.max(0, skyVertex.dot(SUN_DIRECTION));
+    // Mũ 6 = quầng rộng và mềm chứ không phải một cái đĩa nhỏ. Mặt trời KHÔNG được vẽ thành hình
+    // tròn rõ nét: một đĩa sáng trên nền phẳng trông như lỗi, còn quầng sáng khuếch tán thì đọc ra
+    // "hôm nay nắng, và nắng đến từ phía kia".
+    tint.lerp(glowColor, Math.pow(toSun, 6) * (palette.isDark ? 0.30 : 0.55));
+
     skyColors[i * 3] = tint.r;
     skyColors[i * 3 + 1] = tint.g;
     skyColors[i * 3 + 2] = tint.b;
@@ -404,21 +483,35 @@ export function createCityScene({
   // và ảnh chụp thử ra một cảnh phẳng lì không thấy bóng đâu. "Sáng đều" là kẻ thù của việc nhìn
   // ra hình khối: mắt đọc được khối là nhờ ba mặt của nó KHÁC ĐỘ SÁNG. Nắng phải áp đảo, đèn nền
   // chỉ vừa đủ để mặt khuất còn màu chứ không đen kịt.
+  // ⚠️ LẦN 2 (Phase 3C) — HẠ ĐÈN NỀN, KHÔNG PHẢI TĂNG NẮNG. Đàm muốn "như tranh Phục Hưng", mà
+  // đặc trưng số một của tranh thời đó là **chiaroscuro**: vùng sáng và vùng tối cách nhau XA,
+  // hình khối hiện ra nhờ khoảng cách đó. Đèn nền là thứ trực tiếp giết chiaroscuro — nó rọi vào
+  // đúng những mặt mà lẽ ra phải tối, kéo mọi thứ về giữa thang sáng. Tăng nắng mà không hạ đèn
+  // nền thì chỉ được một bức sáng hơn, KHÔNG sâu hơn.
+  //
+  // ⚠️ NHƯNG CHỈ ĐÚNG VỚI THEME SÁNG — và bài học này phải trả giá bằng một ảnh chụp gần như đen
+  // kịt. Lần đầu hạ đèn nền cho CẢ HAI theme, kết quả ở theme tối là một thành phố không đọc nổi:
+  // bảng màu tối vốn đã đặt tường ở độ đậm 0,36 và mặt đất 0,22, hạ tiếp đèn nền thì không còn gì
+  // để nhìn. **Chiaroscuro là KHOẢNG CÁCH giữa sáng và tối, không phải "tối đi".** Ở theme tối,
+  // muốn giữ khoảng cách đó thì phải kéo vùng sáng LÊN, nghĩa là cần NHIỀU đèn nền hơn theme sáng
+  // chứ không phải ít hơn.
   const hemisphere = new HemisphereLight(
     palette.lights?.skyDome ?? palette.sky,
     palette.lights?.bounce ?? palette.ground,
-    palette.isDark ? 0.62 : 0.5,
+    palette.isDark ? 0.78 : 0.34,
   );
   scene.add(hemisphere);
 
-  const ambient = new AmbientLight(palette.lights?.bounce ?? palette.sky, palette.isDark ? 0.16 : 0.1);
+  const ambient = new AmbientLight(palette.lights?.bounce ?? palette.sky, palette.isDark ? 0.26 : 0.07);
   scene.add(ambient);
 
-  const sun = new DirectionalLight(palette.lights?.sun ?? palette.sun, palette.isDark ? 1.55 : 1.9);
-  // Góc THẤP và xiên: bóng dài, mặt bên bắt sáng khác hẳn mặt trên. Nắng đứng bóng (từ đỉnh đầu
-  // rọi xuống) là ánh sáng tệ nhất để nhìn ra hình khối — mọi mặt đứng đều tối bằng nhau, và đó
-  // đúng là thứ ánh sáng mà một cảnh 3D mặc định hay rơi vào.
-  sun.position.set(gridSize * 0.78, gridSize * 0.54, gridSize * 0.46);
+  const sun = new DirectionalLight(palette.lights?.sun ?? palette.sun, palette.isDark ? 1.72 : 2.15);
+  // Hướng lấy từ `SUN_DIRECTION` — CÙNG hướng đã nướng quầng sáng vào vòm trời ở trên. Nắng mạnh
+  // hơn bản trước (1,9 → 2,15) vì đèn nền đã bị hạ xuống: giữ TỔNG sáng gần như cũ nhưng kéo rộng
+  // khoảng cách giữa mặt hứng nắng và mặt khuất — đó chính là chiaroscuro.
+  // 1,4 × lưới: đủ xa để cả thành phố nằm gọn giữa `near` và `far` của khung bóng (1 … 3 × lưới),
+  // kể cả công trình cao nhất ở góc xa nhất.
+  sun.position.copy(SUN_DIRECTION).multiplyScalar(gridSize * 1.4);
   sun.castShadow = true;
 
   // ⚠️ ĐÂY LÀ DÒNG QUAN TRỌNG NHẤT CẢ FILE. Mặc định của three là `true` = vẽ lại shadow map mỗi

@@ -60,6 +60,32 @@ export function orbitPosition({ yaw, pitch, distance, target = { x: 0, y: 0, z: 
  * @param {{x:number,y:number,z:number}} [options.target]
  * @param {number} [options.dragSpeed]    radian trên mỗi pixel kéo
  */
+/**
+ * Khoảng cách camera theo cỡ lưới — MỘT nguồn sự thật cho cả app lẫn trang xem thử.
+ *
+ * ⚠️ 1,5 chứ không phải 1,85 (Phase 3C). Lưới luôn là 12×12 nhưng mỗi kỷ chỉ có 5 bản vẽ, nên
+ * thành phố **không bao giờ** phủ kín lưới — phần rìa vĩnh viễn là đất trống. Ở 1,85 thì ảnh chụp
+ * ra một mảng đất mênh mông với dúm nhà bé tí ở giữa: khung hình bị chiếm bởi đúng phần không có
+ * gì để nhìn. Lại gần thì phần trống bị cắt bớt và công trình chiếm chỗ xứng đáng của nó.
+ * Vẫn giữ nguyên quyền thu nhỏ tới `maxDistance` nếu Đàm muốn ngắm toàn cảnh.
+ */
+export const CAMERA_DISTANCE_FACTOR = 1.5;
+export const CAMERA_MIN_FACTOR = 0.9;
+export const CAMERA_MAX_FACTOR = 3.1;
+
+/**
+ * Bộ tham số camera chuẩn của màn hình Thành Phố.
+ * ⚠️ Tồn tại để `CityScene3D.jsx` và `scripts/city-preview.mjs` KHÔNG tự viết số riêng — trang xem
+ * thử mà đóng khung khác app thì nó thôi kiểm chứng được thứ cần kiểm chứng.
+ */
+export function cityOrbitOptions(gridSize) {
+  return {
+    distance: gridSize * CAMERA_DISTANCE_FACTOR,
+    minDistance: gridSize * CAMERA_MIN_FACTOR,
+    maxDistance: gridSize * CAMERA_MAX_FACTOR,
+  };
+}
+
 export function createOrbit({
   distance = 26,
   minDistance = 12,

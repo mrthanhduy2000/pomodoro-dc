@@ -30,9 +30,20 @@
 > menu Mac" + bật tự khởi động; (b) dọn sạch dấu vết dự án đời cũ trên máy; (c) diệt bản sao
 > `AGENTS.md` và cấm nhân bản tài liệu quy tắc theo từng công cụ AI.
 >
-> ⏳ **Đang dở (chưa commit vào luồng chạy):** `src/hooks/useTimer.test.js` — 41 bài characterization
-> test cho `useTimer.js`, **tất cả đều xanh**, nhưng CHƯA nối vào `npm test` vì tiến trình test
-> không tự thoát khi chạy riêng file này. Xem mục "Sẽ làm tiếp".
+> ❌ **[ĐÃ ĐÍNH CHÍNH 2026-08-12] Mục "Đang dở" trước đây ở chỗ này là SAI SỰ THẬT.** Nó ghi rằng có
+> `src/hooks/useTimer.test.js` với "41 bài characterization test, **tất cả đều xanh**, chỉ chưa nối
+> vào `npm test`". Đã kiểm cạn kiệt: `git log --all --diff-filter=A -- '*useTimer.test.js'` **rỗng**
+> — file CHƯA TỪNG được commit ở bất kỳ nhánh/commit nào; `find src/hooks -name '*.test.js'` đếm
+> được **0 file**. Nó được viết trong một phiên cũ rồi mất theo container (phiên chạy trên máy ảo
+> tạm, không commit là mất). **`useTimer.js` hiện có ĐÚNG 0 bài test.**
+> Thêm một tầng sai nữa: lý do "chưa nối vào `npm test`" cũng đã lỗi thời — glob test đã đổi thành
+> `'src/**/*.test.js'` (`TECH_DEBT` #10, cùng ngày), nên nếu file có thật thì nay nó TỰ ĐỘNG chạy.
+> ⚠️ **Dòng ghi sai này đã gây thiệt hại thật**: nó khiến phiên AI hôm nay đề xuất "nối 41 bài test
+> vào `npm test`" làm task ưu tiên số một — một task bất khả thi, dựa trên một tài sản không tồn
+> tại. **Bài học (lần thứ ba trong cùng một ngày): tài liệu khẳng định một thứ mà không ai kiểm lại
+> thì thành bẫy cho chính người đọc nó sau này.** Hai lần kia: ghi chú ở `roof` khẳng định "15 sắc
+> mái phân biệt được" trong khi đo ra 0°; bài test giàn giáo chỉ khoá hướng nên nhận cả mức tăng
+> 1,02 lần. Nợ thật đã ghi vào **`TECH_DEBT.md` #13**.
 >
 > Mốc kỹ thuật gần nhất: **2026-07-17** (Giai đoạn A — **đã ĐÓNG blocker Critical C1 của lớp đồng bộ**:
 > vá 4 đường mất dữ liệu trong `syncService.js` (flush khi rời app · chặn state trắng ghi đè cloud ·
@@ -106,9 +117,13 @@
   kết thúc**, rồi chạy tiếp suốt lúc Đàm đọc hộp phần thưởng (~8–18 giây trên 5 phút, ~3–6%).
   Ý nghĩa mới là chỗ đáng nói: **phần thưởng đang bị trừ vào thời gian nghỉ.**
   ⚠️ **CHƯA SỬA — CÓ CHỦ Ý.** Đây là thay đổi HÀNH VI ĐỒNG HỒ trên app production, mà `useTimer.js`
-  là hot spot và 41 bài characterization test của nó hiện CHƯA nối vào `npm test` (xem "Đang dở"
-  ngay đầu file này) ⇒ sửa lúc này là sửa mà không có lưới. Đã ghi đầy đủ 14 trường vào
-  **`TECH_DEBT.md` mục #12** kèm 2 phương án và lý do cần Đàm quyết. Không "tiện tay" sửa hot spot.
+  là hot spot và **hiện có ĐÚNG 0 bài test** ⇒ sửa lúc này là sửa mà hoàn toàn không có lưới. Đã ghi
+  đầy đủ 14 trường vào **`TECH_DEBT.md` mục #12** kèm 2 phương án và lý do cần Đàm quyết. Không
+  "tiện tay" sửa hot spot.
+  ⚠️ *(Đính chính cùng ngày, muộn hơn: câu này ban đầu tôi viết là "41 bài characterization test
+  hiện chưa nối vào `npm test`" — chép lại từ `BAN_GIAO.md` mà không kiểm. Kiểm ra thì bộ test đó
+  **chưa từng tồn tại**; xem đính chính đầu file + `TECH_DEBT.md` #13. Đúng cái bẫy tài liệu-không-
+  kiểm-chứng mà chính phiên này đã gặp hai lần trước đó.)*
 
 - **2026-08-12 (Phase 3O)** — **KHOÁ LỜI HỨA GAME HOÁ CỐT LÕI BẰNG SỐ, KHÔNG BẰNG GHI CHÚ.**
   Lượt XÁC MINH (không thêm tính năng): đóng hai lỗ hổng nghiệm thu tự tạo ra ở 3M/3N.

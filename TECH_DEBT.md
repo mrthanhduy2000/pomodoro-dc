@@ -14,7 +14,11 @@
 > tiêu/phạm vi/lợi ích/rủi ro/tiêu chí hoàn thành) thay vì tiếp tục cộng thêm tính năng mới.
 >
 > **Trạng thái ngưỡng hiện tại (2026-08-12)**: 0 mục Priority High/Critical → CHƯA đạt ngưỡng đề
-> xuất Maintenance Sprint. Mục có Priority cao nhất hiện tại là Medium-High (mục #3).
+> xuất Maintenance Sprint. Có **2 mục Medium-High** (#3 và #13).
+> ⚠️ **Cảnh báo quy trình từ mục #13**: một khoản nợ đã bị TÀI LIỆU CHE MẤT nhiều tháng — sổ ghi
+> "lưới test đã có, chỉ chưa cắm vào" trong khi thực tế chưa từng có file nào. Khi đọc bất kỳ mục
+> nào trong sổ này mà nó khẳng định "đã có sẵn X", hãy **kiểm bằng lệnh trước khi tin** (`git log
+> --all --diff-filter=A -- '<đường dẫn>'` / `find`). Sổ nợ mà ghi sai thì còn nguy hơn không có sổ.
 > ⚠️ Nhưng có một tín hiệu thuộc vế THỨ HAI của ngưỡng (một module bị vá nhiều lần mà chưa refactor
 > triệt để): **`palette3d.js` đã qua 4 đợt vá mỹ thuật** (3C ánh sáng · 3G bảng quét · 3M sắc độ
 > đêm · 3N màu mái) và `daylight.js` qua 3 đợt (3D · 3G · 3M). Cả bốn đợt đều tìm ra lỗi THẬT bằng
@@ -263,6 +267,46 @@
 
 ---
 
+## #13 — `useTimer.js` (1 100+ dòng, hot spot) có ĐÚNG 0 bài test — và tài liệu từng ghi ngược lại
+
+- **Module**: `src/hooks/useTimer.js`
+- **Priority**: **Medium-High**
+- **Severity**: High
+- **Impact**: `useTimer` là trái tim của app — đếm giờ, hoàn tất phiên, nghỉ tự động, khôi phục sau
+  khi đóng tab, đồng bộ trạng thái tray. Nó gọi `commitCompletedSession` → `completeFocusSession`
+  (God function, mục #1). **Không một dòng nào của nó được test bao phủ**: `find src/hooks -name
+  '*.test.js'` = 0 file. Mọi thay đổi liên quan nhịp phiên (gồm cả mục #12) hiện đều là sửa mù.
+- **Root Cause (hai tầng, tầng thứ hai mới là tầng nguy hiểm)**:
+  (1) Hook React có nhiều tác dụng phụ theo thời gian ⇒ khó test bằng `node --test` thuần, nên bị
+  hoãn nhiều lần.
+  (2) ⚠️ **Tài liệu đã che mất khoản nợ này suốt nhiều tháng.** `BAN_GIAO.md` ghi ở mục "Đang dở"
+  rằng đã có `src/hooks/useTimer.test.js` với "41 bài characterization test, **tất cả đều xanh**",
+  chỉ vướng chuyện chưa nối vào `npm test`. Kiểm cạn kiệt ngày 2026-08-12:
+  `git log --all --diff-filter=A -- '*useTimer.test.js'` **rỗng** ⇒ file chưa từng được commit ở
+  bất kỳ đâu. Nó được viết trong một phiên chạy trên container tạm rồi mất khi container bị thu
+  hồi. Hệ quả: mọi phiên AI đọc `BAN_GIAO.md` đều tin rằng "lưới đã có, chỉ cần cắm vào" — trong
+  khi thực tế là **chưa có gì cả**. Chính phiên 2026-08-12 đã đề xuất "nối 41 bài test vào
+  `npm test`" làm task ưu tiên số một trước khi phát hiện ra sự thật.
+- **Current Risk**: trung bình-cao — mã đã chạy ổn định nhiều tháng nên rủi ro *tĩnh* thấp, nhưng
+  rủi ro *khi sửa* thì cao và hiện đang chặn mục #12.
+- **Future Risk**: cao — mọi điều chỉnh nhịp phiên về sau (gần như chắc chắn sẽ có, sau khi Đàm
+  chạy phiên thật và phản hồi) đều đâm vào đúng chỗ không có lưới này.
+- **Recommended Solution**: KHÔNG cố test cả hook một lượt. Làm theo đúng khuôn đã dùng thành công
+  ở `syncService` (hàm thuần `shouldImportVersion` + `hasMeaningfulState` tách ra test riêng): rút
+  các quyết định THUẦN ra khỏi hook rồi test chúng — đường nghỉ tự động là ứng viên số một
+  (`shouldStartBreakAfterCompletion` đã thuần sẵn; độ trễ 500 ms nên thành hằng số có tên, đặt cạnh
+  `MOMENT_MS`, kèm test khoá quan hệ giữa hai số đó). Bao phủ đủ để gỡ chặn #12 TRƯỚC, không cần
+  characterization đầy đủ ngay.
+- **Estimated Complexity**: Medium (phần thuần) · High (characterization đầy đủ cả hook)
+- **Blocking Conditions**: không có blocker kỹ thuật — chỉ cần quyết định làm. Việc test hook React
+  đầy đủ thì cần thêm công cụ render, nhưng phần THUẦN thì không cần gì thêm.
+- **Review Trigger**: trước bất kỳ thay đổi hành vi nào của `useTimer`, gồm cả mục #12.
+- **Owner**: (chưa gán)
+- **Status**: Open — phát hiện 2026-08-12 khi định thực hiện chính task "nối bộ test đã có" và
+  phát hiện bộ test đó không tồn tại.
+
+---
+
 ## #12 — Lễ mừng bị TÍNH VÀO giờ nghỉ: nghỉ tự động chạy trước khi lễ mừng xong
 
 - **Module**: `src/hooks/useTimer.js` (2 chỗ: dòng ~610 và ~1089) ↔ `src/components/city/CityGrowthMoment.jsx` (`MOMENT_MS`) ↔ `src/App.jsx` (`RewardSequence`)
@@ -293,9 +337,11 @@
   đúng hơn về ngữ nghĩa, nhưng đắt hơn và đụng vào hot spot.
   Cần Đàm quyết vì đây là thay đổi HÀNH VI đồng hồ trên app production, không phải sửa lỗi hiển thị.
 - **Estimated Complexity**: (a) thấp · (b) trung bình
-- **Blocking Conditions**: `useTimer.js` là hot spot (`CLAUDE.md`); 41 bài characterization test cho
-  `useTimer` hiện CHƯA nối vào `npm test` (xem "Đang dở" ở `BAN_GIAO.md`) — nên sửa hành vi đồng hồ
-  lúc này là sửa mà không có lưới. Nối bộ test đó vào trước thì an toàn hơn nhiều.
+- **Blocking Conditions**: `useTimer.js` là hot spot (`CLAUDE.md`) và **hiện có ĐÚNG 0 bài test**
+  (xem mục #13 — bản ghi cũ nói có "41 bài đã xanh, chỉ chưa nối vào `npm test`" là SAI, file chưa
+  từng tồn tại). Sửa hành vi đồng hồ lúc này là sửa mà **hoàn toàn không có lưới**, chứ không phải
+  "có lưới nhưng chưa cắm". ⇒ Điều kiện gỡ chặn nay là **viết** test bao phủ đường nghỉ tự động
+  (mục #13), không phải "nối" gì cả.
 - **Review Trigger**: khi Đàm phản hồi về nhịp một phiên thật; hoặc khi lễ mừng/`MOMENT_MS` đổi;
   hoặc khi thêm bất kỳ màn nào chen giữa "phiên xong" và "bắt đầu nghỉ".
 - **Owner**: (chưa gán)

@@ -13,6 +13,7 @@
 
 import { motion, useReducedMotion } from 'framer-motion';
 
+import { summarizeMuseum } from '../../engine/cityCompletion';
 import { deriveResidentCount } from '../../engine/city3d/residents';
 import EraSwitcher from './EraSwitcher';
 import { cardStyle, eraSolid } from './cityTokens';
@@ -112,6 +113,10 @@ export default function CityViewShell({
     streakLength:  stats.streakLength,
   });
 
+  // ĐIỂM TỔNG CỦA CẢ BẢO TÀNG — "tôi đã đi được bao xa" trên toàn hành trình, không phải trong kỷ
+  // này. Suy ra từ chính danh sách kỷ đã có, không lưu một byte nào.
+  const museum = summarizeMuseum(eras);
+
   return (
     <div className="flex flex-col gap-3">
       <EraSwitcher eras={eras} viewingEra={era} onSelect={onSelectEra} />
@@ -173,9 +178,35 @@ export default function CityViewShell({
             // chính Đàm cũng không biết. "3/5" thì cùng ô đó tự đọc ra "còn 2 nữa là trọn vẹn".
             { label: 'Công trình', value: scoreText ?? layout.buildings.length },
             { label: 'Phiên trong kỷ', value: stats.sessionCount },
+            // ⚠️ Ô NÀY TỪNG LÀ "CHUỖI NGÀY", VÀ ĐÓ LÀ MỘT Ô BỊ LÃNG PHÍ — soi bằng mắt mới thấy
+            // (2026-08-13, Phase 4H). Thanh tiêu đề của app đã hiện "CHUỖI 4" ở ngay trên đầu MỌI
+            // tab (`App.jsx`, `TinyStat label="Chuỗi"`), nên trên màn hình này con số 4 xuất hiện
+            // HAI LẦN cách nhau vài phân — chiếm mất một trong bốn ô số liệu để nói lại một điều
+            // vừa nói. Đây đúng luật mà chính ô "Cư dân" ngay bên dưới đã dùng để giành lại chỗ:
+            // *hai chỗ nói cùng một chuyện thì chỗ nói ít hơn phải nhường.*
+            //
+            // Thay bằng ĐIỂM TỔNG BẢO TÀNG, và đây không phải một con số mới nghĩ ra:
+            // `summarizeMuseum` đã được viết, ghi chú đầy đủ và có bài test từ Phase 4B — docstring
+            // của nó tự gọi mình là *"con số duy nhất trả lời 'tôi đã đi được bao xa'"* — nhưng
+            // **chưa màn hình nào từng gọi tới nó**. Nó nằm chết trong engine suốt từ đó.
+            // ⚠️ BÀI HỌC: bài test tầng engine chứng minh hàm CHẠY ĐÚNG, nó **không** chứng minh
+            // hàm CÓ AI GỌI. Một tính năng đã xong 90% mà thiếu đúng dòng nối thì không có gì đỏ
+            // lên — cả 551 bài test vẫn xanh. Xem `cityViewShellWiring.test.js`.
+            //
+            // Vì sao con số này đáng một trong bốn ô: kỷ cũ niêm phong VĨNH VIỄN (ADR-007), nên
+            // "6/8 kỷ trọn vẹn" là điểm số DUY NHẤT trong app không sửa lại được nữa. Nó cũng là
+            // chỗ duy nhất gộp những ngôi sao ★ rải rác trên thanh chuyển kỷ thành một con số —
+            // trước đây muốn biết mình được mấy sao thì phải tự cuộn thanh đó mà đếm.
             {
-              label: isCurrent ? 'Chuỗi ngày' : 'EP lúc niêm phong',
-              value: isCurrent ? stats.streakLength : (viewing?.epAtSeal ?? 0),
+              label: isCurrent ? 'Kỷ trọn vẹn' : 'EP lúc niêm phong',
+              // `countedEras === 0` chỉ xảy ra khi MỌI kỷ đều thất truyền (tài khoản có từ trước
+              // khi bảo tàng được dựng, xem `MIGRATION.md` schema 3→4). "0/0" là một con số vô
+              // nghĩa và lại còn trách oan, nên ca đó lùi về chuỗi ngày như cũ.
+              value: isCurrent
+                ? (museum.countedEras > 0
+                    ? `${museum.completeEras}/${museum.countedEras}`
+                    : stats.streakLength)
+                : (viewing?.epAtSeal ?? 0),
             },
             // DÂN SỐ. Con số này vốn đã được tính để sinh người đi lại trong cảnh 3D
             // (`deriveResidentCount`), nhưng trước nay chỉ hiện trong BẢNG ĐO HIỆU NĂNG — một bảng

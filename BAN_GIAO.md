@@ -6,7 +6,18 @@
 > chọn: `ARCHITECTURE_DECISIONS.md`. Nợ kỹ thuật: `TECH_DEBT.md`. Migration: `MIGRATION.md`. Tóm
 > tắt theo mốc: `CHANGELOG.md`.
 > **NGUYÊN TẮC ƯU TIÊN SỐ 1:** (1) mọi phiên AI phải đọc file này + `CLAUDE.md` + các file liên quan TRƯỚC khi làm; (2) sau MỌI cập nhật dù nhỏ, phải cập nhật ngay file này + `CLAUDE.md` + các file liên quan khác.
-> Cập nhật lần cuối: **2026-08-13** — **Phase 4G**: **CÔNG CỤ CHẤM ĐIỂM TỰ BỊA RA 5 LỖI KHÔNG CÓ
+> Cập nhật lần cuối: **2026-08-13** — **Phase 4H**: **MỘT CON SỐ ĐÃ VIẾT XONG, ĐÃ CÓ TEST, MÀ
+> CHƯA MÀN HÌNH NÀO GỌI TỚI.** `summarizeMuseum` (engine, Phase 4B) tự giới thiệu là *"con số duy
+> nhất trả lời tôi đã đi được bao xa"* — `grep` cả cây `src/` ra đúng HAI chỗ: dòng định nghĩa và
+> bài test của chính nó. Nó nằm chết trong engine từ đó tới nay mà **không có gì đỏ lên**: build
+> xanh, lint sạch, 551 test xanh, không cảnh báo "unused" (vì hàm CÓ được dùng — bởi test của nó).
+> Cùng lúc, ô số liệu thứ ba của màn Thành Phố đang hiện **"Chuỗi ngày 4"**, đúng con số mà thanh
+> tiêu đề đã hiện **"CHUỖI 4"** cách đó vài phân — một trong bốn ô dùng để nói lại điều vừa nói.
+> Nay ô đó là **"KỶ TRỌN VẸN 6/8"**: gộp những ngôi sao ★ rải rác trên thanh chuyển kỷ thành một
+> con số, và vì kỷ cũ niêm phong vĩnh viễn (ADR-007) thì đây là **điểm số duy nhất trong app không
+> sửa lại được nữa**. 0 byte lưu thêm, 0 thay đổi cân bằng. **553 bài test.**
+>
+> Trước đó cùng ngày — **Phase 4G**: **CÔNG CỤ CHẤM ĐIỂM TỰ BỊA RA 5 LỖI KHÔNG CÓ
 > THẬT — ĐÃ VÁ TẬN GỐC.** `sweep-score.mjs` chép lại công thức hình học của `city-preview.mjs` kèm
 > mặc định cỡ ô **260**, trong khi bên kia dựng ảnh ở cỡ **300**. Cỡ ô không phải tuỳ chọn của phép
 > đo — nó là sự thật về tấm ảnh; đoán sai thì tới hàng cuối lệch **420px**, tức đang chấm màu của

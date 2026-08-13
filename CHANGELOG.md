@@ -12,6 +12,21 @@
 
 ---
 
+## 2026-08-13 — Điểm tổng bảo tàng: một con số đã viết xong nhưng chưa từng lên màn hình
+
+- **Mục đích**: `summarizeMuseum` (engine, Phase 4B) có ghi chú, có test, tự nhận là *"con số duy
+  nhất trả lời tôi đã đi được bao xa"* — nhưng chưa màn hình nào gọi tới. Cùng lúc, ô số liệu thứ
+  ba của màn Thành Phố hiện lại đúng con số chuỗi mà thanh tiêu đề đã hiện.
+- **Phạm vi**: `src/components/city/CityViewShell.jsx` (nối engine vào ô số liệu) ·
+  `src/components/city/cityViewShellWiring.test.js` (MỚI, 2 bài đọc-mã-nguồn).
+- **Ảnh hưởng**: ô thứ ba của màn Thành Phố nay là **"Kỷ trọn vẹn — 6/8"** thay cho "Chuỗi ngày".
+  Suy ra từ dữ liệu đã có, **không lưu thêm byte nào**, **không đổi cân bằng game**. Kỷ đã niêm
+  phong vẫn giữ nguyên ô "EP lúc niêm phong".
+- **Tương thích**: hoàn toàn tương thích ngược. Tài khoản có mọi kỷ đều "thất truyền" (schema 3→4)
+  vẫn thấy chuỗi ngày như cũ.
+
+---
+
 ## 2026-08-13 — Công cụ chấm bản quét từng bịa ra 5 lỗi không có thật
 
 - **Mục đích**: `sweep-score.mjs` (mới ở mốc dưới) tự đoán hình học tấm ảnh bằng một mặc định cỡ ô

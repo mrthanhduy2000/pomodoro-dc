@@ -110,6 +110,33 @@
 ## 🗒️ Nhật ký cập nhật
 > Mỗi lần xong việc đáng kể, thêm 1 dòng vào ĐẦU danh sách.
 
+- **2026-08-13 (soát sau 3W, KHÔNG sửa mã sản phẩm)** — **HỎI TIẾP CÂU CỦA REVIEW TRIGGER: thành quả
+  Phase 3V có tới được TRANG CHỦ không?** Câu trả lời đo được: **gần như không.**
+  - **Số đo** (ảnh chụp app đã build, bề ngang 1280, hai dải thành phố lộ ra hai bên thẻ đồng hồ):
+    cả 6 chặng ngày ra gần như cùng một mảng trắng ngà, độ tươi **0,02–0,12**; cặp cách nhau XA
+    NHẤT — giữa trưa ↔ ban đêm, hai cực của cả ngày — chỉ **14/255** (ngưỡng "mắt không phân biệt
+    được" là 12). Toàn bộ hành trình màu 178° mà 3V dựng lên **không tới được màn hình Đàm nhìn
+    nhiều nhất**.
+  - **Nguyên nhân KHÔNG phải `BACKDROP_OPACITY`** mà là lớp phủ giữ-chữ-đọc-được: nó pha về
+    `var(--canvas)` — một màu **PHẲNG** — ở 55–92%. Pha về màu phẳng thì **độ tươi tụt theo đúng tỉ
+    lệ đó**, còn hình khối (tín hiệu ĐỘ SÁNG) thì sống sót ⇒ lớp phủ lọc mất đúng cái vòng ngày dựa
+    vào, và giữ lại đúng cái không thiếu cũng được.
+  - ⚠️ **KHÔNG TỰ SỬA.** Chú thích tại chỗ ghi rõ đây là đánh đổi có chủ đích (*"đẹp và dùng được
+    đối đầu nhau, dùng được phải thắng"*), và người viết đã cân nhắc rồi mới chọn con số. Đã ghi
+    thành `TECH_DEBT.md` **#16** kèm ba lựa chọn và một quan sát có thể mở đường (chữ chỉ nằm ở dải
+    TRÊN; đồng hồ và cột phải đều nằm trong thẻ ĐẶC ⇒ có thể giữ nguyên phần trên mà cho nhạt nhanh
+    hơn ở phần dưới). **Chờ Đàm quyết.**
+  - ⚠️ **CÔNG CỤ CHỤP LẠI NÓI DỐI — LẦN THỨ BẢY TRONG PHIÊN NÀY, và lần này suýt báo một lỗi NẶNG
+    không hề có.** Chụp khung điện thoại bằng `--window-size=390,844`: ảnh ra đúng 390 điểm ảnh
+    ngang và trông như app **tràn ngang thảm hại** (chữ cụt giữa câu, thanh dưới mất nút). Đo bằng
+    số thì `window.innerWidth` thật là **500** — Chromium headless có SÀN 500px — nên trang dàn ở
+    500 rồi bị cắt còn 390. Sự thật: `scrollWidth === innerWidth` và **không một phần tử nào vượt
+    mép phải**, ở cả 390-giả lẫn 1280. **App không hề tràn.** Muốn khung điện thoại thật phải dùng
+    CDP `Emulation.setDeviceMetricsOverride`. Đã ghi vào `CLAUDE.md` kèm luật: **luôn in kèm
+    `window.innerWidth` THẬT vào mỗi lần chụp**, nếu không thì mọi kết luận về bố cục hẹp đều dựa
+    trên một bề ngang bịa.
+  - **Không đổi một dòng mã sản phẩm nào** — chỉ tài liệu (`TECH_DEBT.md` #16, `CLAUDE.md`, file này).
+
 - **2026-08-13 (Phase 3W)** — **BẢO VỆ CHÍNH THÀNH QUẢ CỦA 3V: hai đường rò rỉ mà 3V vừa mở ra.**
   Phase này sinh ra từ đúng một câu trong `TECH_DEBT.md` #14: *"Review Trigger: trước bất kỳ đầu tư
   nào thêm vào hiệu ứng thành phố"*. Tôi vừa đầu tư (3V), nên phải hỏi: **thành quả đó có thật sự

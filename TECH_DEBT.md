@@ -13,9 +13,13 @@
 > mà không được refactor triệt để, phải CHỦ ĐỘNG đề xuất mở một "Maintenance Sprint" (nêu rõ mục
 > tiêu/phạm vi/lợi ích/rủi ro/tiêu chí hoàn thành) thay vì tiếp tục cộng thêm tính năng mới.
 >
-> **Trạng thái ngưỡng hiện tại (2026-08-13, cập nhật sau Phase 3V)**: **1 mục Priority High** (#14)
-> → vẫn CHƯA đạt ngưỡng 8–10 mục để đề xuất Maintenance Sprint. Còn **2 mục Medium-High** (#3, #13)
-> — #15 đã đóng.
+> **Trạng thái ngưỡng hiện tại (2026-08-13, cập nhật sau Phase 3W)**: **1 mục Priority High** (#14)
+> → vẫn CHƯA đạt ngưỡng 8–10 mục để đề xuất Maintenance Sprint. Còn **2 mục Medium-High** (#3, #13),
+> thêm **1 mục Medium** (#16) — #15 đã đóng.
+> ⚠️ **HAI mục đang CHỜ ĐÀM QUYẾT, không phải chờ AI làm**: #14 (95% phiên im lặng — cân bằng game)
+> và #16 (vòng ngày vô hình ở trang chủ — đánh đổi thẩm mỹ). Cả hai đều có Review Trigger chặn các
+> khoản đầu tư kế tiếp, nên **để lâu thì mọi phase mỹ thuật/lễ mừng sau đều lãi thấp một cách có hệ
+> thống**. Đây là chỗ đáng hỏi Đàm trước khi làm thêm việc mới.
 > ⚠️ **Vế THỨ HAI của ngưỡng ĐÃ CHẠM và đã được XỬ LÝ MỘT PHẦN**: `palette3d.js` đã qua **5 đợt** vá
 > mỹ thuật (3C · 3G · 3M · 3N · 3V). Phase 3V không vá riêng bầu trời mà **sửa đúng phép toán dùng
 > chung** (`skyward()` chuyển từ trộn RGB sang xoay sắc, cùng khuôn đã dùng cho mái nhà ở 3N) — tức
@@ -274,6 +278,55 @@
 - **Review Trigger**: khi làm backup/recovery, hoặc khi thấy lỗi lưu state trong log production.
 - **Owner**: (chưa gán)
 - **Status**: Open — phát hiện trong lúc phân tích bản vá C1 (2026-07-17), chưa xử lý.
+
+---
+
+## #16 — **Vòng ngày của thành phố gần như VÔ HÌNH ở trang chủ** — nơi Đàm nhìn nhiều nhất
+
+- **Module**: `src/components/city/CityBackdrop.jsx` — cụ thể là **lớp phủ giữ-chữ-đọc-được**, KHÔNG
+  phải `BACKDROP_OPACITY` và KHÔNG phải lỗi của `daylight.js`/`palette3d.js`.
+- **Priority**: Medium · **Severity**: Low (không có gì hỏng) · **Estimated Complexity**: Low về mã
+- **SỐ ĐO** (ảnh chụp app đã build, bề ngang 1280, đo hai dải thành phố lộ ra hai bên thẻ đồng hồ,
+  y = 300–800):
+
+  | chặng | màu trung bình | sắc | tươi | sáng |
+  |---|---|---|---|---|
+  | bình minh | `#d6d3cc` | 39° | 0,11 | 0,82 |
+  | sáng | `#d9d8d3` | 49° | 0,07 | 0,84 |
+  | giữa trưa | `#dddcd7` | 48° | 0,09 | 0,86 |
+  | chiều | `#dad7d0` | 42° | 0,12 | 0,84 |
+  | hoàng hôn | `#d7d3cc` | 37° | 0,11 | 0,82 |
+  | đêm | `#cececc` | 49° | 0,02 | 0,80 |
+
+  Cặp cách nhau **XA NHẤT** — giữa trưa ↔ ban đêm, tức hai cực của cả ngày — chỉ **14/255**. Đó là
+  mức CAO NHẤT, không phải thấp nhất. Ngưỡng "mắt gần như không phân biệt được" là 12.
+- **Root Cause**: lớp phủ pha về `var(--canvas)` — một màu **PHẲNG** — ở 55–92% tuỳ độ cao. Pha bất
+  kỳ màu nào về phía một màu phẳng thì **độ tươi tụt theo đúng tỉ lệ đó**, trong khi hình khối (tín
+  hiệu ĐỘ SÁNG) vẫn sống sót. Mà vòng ngày là tín hiệu **SẮC** gần như thuần tuý ⇒ lớp phủ lọc đúng
+  cái cần giữ và giữ đúng cái không thiếu cũng được.
+- **Impact**: `CityBackdrop` sinh ra để "đem thành phố ra trang chủ" (Phase 3F), và Phase 3V vừa bỏ
+  công dựng cả một hành trình màu 178° cho sáu chặng ngày. Ở tab Thành Phố thì thấy rõ; ở TRANG CHỦ
+  — màn hình Đàm nhìn nhiều nhất, và là nơi cái đồng hồ chạy suốt 25 phút — nó gần như không tới.
+- **⚠️ ĐÂY LÀ THIẾT KẾ CÓ CHỦ ĐÍCH, KHÔNG PHẢI SƠ SUẤT.** Chú thích tại chỗ ghi thẳng: *"đây là chỗ
+  mà 'đẹp' và 'dùng được' đối đầu nhau trực diện, và dùng được phải thắng"* — lớp phủ đậm ở TRÊN vì
+  đó là nơi có tiêu đề và lời chào nằm trực tiếp trên nền. **Không được tự ý chỉnh.**
+- **Quan sát có thể mở đường** (chưa kiểm bằng ảnh, cần đo trước khi tin): chữ nằm trên nền chỉ ở
+  **dải trên cùng** (lời chào + "phần việc hôm nay"); đồng hồ đếm ngược nằm trong một thẻ ĐẶC, và
+  cột phải cũng là các thẻ đặc. Nếu đúng vậy thì có thể giữ NGUYÊN mốc 92% ở trên (bảo vệ chữ y
+  hệt) mà cho lớp phủ nhạt nhanh hơn ở phần dưới — nơi không có chữ nào. Phải đo tương phản chữ
+  trước/sau, và phải kiểm cả khung điện thoại bằng CDP `Emulation.setDeviceMetricsOverride` (⚠️
+  `--window-size=390` KHÔNG cho ra bề ngang 390 — Chromium headless có sàn 500px, xem `CLAUDE.md`).
+- **Blocking Conditions**: **cần Đàm quyết** — đây là đánh đổi thẩm mỹ trên chính màn hình làm việc
+  của anh, và người viết `CityBackdrop` đã cân nhắc rồi mới chọn con số hiện tại. Ba lựa chọn:
+  (a) giữ nguyên — thành phố là khung cảnh mờ, vòng ngày để dành cho tab Thành Phố;
+  (b) cho lớp phủ nhạt nhanh hơn ở phần KHÔNG có chữ, giữ nguyên phần có chữ (đo tương phản để
+      chứng minh chữ không khó đọc hơn một chút nào);
+  (c) đổi lớp phủ từ "pha về màu phẳng" sang một cách chỉ hạ ĐỘ SÁNG mà giữ ĐỘ TƯƠI.
+- **Review Trigger**: trước bất kỳ đầu tư nào thêm vào bảng màu/ánh sáng thành phố — nếu chưa xử lý
+  mục này thì khoản đầu tư đó chỉ tới được tab Thành Phố, không tới trang chủ.
+- **Owner**: (chưa gán — chờ Đàm chọn hướng)
+- **Status**: Open — phát hiện 2026-08-13 khi tự hỏi "thành quả Phase 3V có thật sự tới màn hình
+  Đàm không". Câu hỏi đó đến từ chính Review Trigger của mục #14.
 
 ---
 

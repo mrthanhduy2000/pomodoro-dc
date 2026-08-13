@@ -42,23 +42,47 @@ import { decodePng, describe } from './png-probe.mjs';
 const argv = process.argv.slice(2);
 const FILE = argv.find((a) => !a.startsWith('--'));
 const SELFTEST = argv.includes('--selftest');
-const CELL_W = Number(argv[argv.indexOf('--cell') + 1]) || 260;
+const VERBOSE = argv.includes('--eras');
 
 if (!FILE) {
-  console.error('Dùng: node scripts/sweep-score.mjs <ảnh quét .png> [--cell 260] [--selftest]');
+  console.error('Dùng: node scripts/sweep-score.mjs <ảnh quét .png> [--eras] [--selftest]');
   process.exit(1);
 }
 
-// ── Hình học lấy THẲNG từ `city-preview.mjs`, không dò bằng màu ───────────────────────────────
-const PAD = 8;                                  // #wrap { padding: 8px }
-const X0 = PAD + 60;                            // ctx.drawImage(..., 60 + col*CELL_W, y)
-const Y0 = PAD + 30;                            // y = 30 + row*(CELL_H + LABEL_H)
-const CELL_H = Math.round(CELL_W * 0.62);
-const LABEL_H = 22;
+// ── Hình học ĐỌC TỪ HỒ SƠ ĐI KÈM ẢNH, không tự đoán và không dò bằng màu ──────────────────────
+// ⚠️ ĐÂY LÀ BẢN VÁ CHO CÁI BẪY THỨ NĂM, và nó là cái bẫy tệ nhất trong năm cái: file này TỪNG chép
+// lại công thức hình học của `city-preview.mjs` kèm mặc định `--cell 260`, trong khi mặc định bên
+// đó là **300**. Hai bản sao của một luật ⇒ bản sai im lặng. Hàng 0 vẫn trúng ô (sai số dồn theo
+// từng hàng), nên phép tự-kiểm cũ — vốn chỉ so hai Ô CÙNG NẰM Ở HÀNG 0 — vẫn báo ✓ trong khi 14
+// hàng dưới lấy mẫu lệch sang hàng khác và cả dải nhãn. Số bịa ra: "5/105 cặp kỷ + 1/15 cặp chặng
+// dưới ngưỡng, trung vị 106,4". ⇒ Hai luật rút ra, cả hai đều đã có tiền lệ trong dự án:
+//   • Một luật chỉ được có MỘT công thức. Nay `city-preview.mjs` ghi thẳng bộ số nó đã dùng.
+//   • Phép tự-kiểm phải chạm tới TỪNG chiều mà nó muốn bảo chứng. So hai ô cùng hàng thì không thể
+//     phát hiện sai bước NHẢY HÀNG — đúng họ với "duyệt danh sách theo thứ tự" ở `daylight.test.js`.
+const GEOM_PATH = FILE.replace(/\.png$/, '.geom.json');
+let geom;
+try {
+  geom = JSON.parse(readFileSync(GEOM_PATH, 'utf8'));
+} catch {
+  console.error(`✗ Không đọc được hồ sơ hình học: ${GEOM_PATH}`);
+  console.error('  Ảnh quét PHẢI đi kèm file .geom.json do `city-preview.mjs --sweep` ghi ra.');
+  console.error('  Ảnh cũ (dựng trước 2026-08-13) không có file này — hãy quét lại:');
+  console.error('    node scripts/city-preview.mjs --sweep --all');
+  console.error('  ⚠️ ĐỪNG chữa bằng cách đoán lại `--cell`: chính việc đoán đã bịa ra số sai một lần.');
+  process.exit(2);
+}
+
+const CELL_W = geom.cellW;
+const CELL_H = geom.cellH;
+const LABEL_H = geom.labelH;
+const X0 = geom.pad + geom.xLabel;
+const Y0 = geom.pad + geom.yHeader;
 const ROW_STRIDE = CELL_H + LABEL_H;
 
-const PHASES = ['bình minh 6h', 'sáng 8h', 'trưa 12h', 'chiều 15h', 'hoàng hôn 18h', 'đêm 22h'];
-const ERAS = 15;
+const PHASE_NAME = { 6: 'bình minh 6h', 8: 'sáng 8h', 12: 'trưa 12h', 15: 'chiều 15h', 18: 'hoàng hôn 18h', 22: 'đêm 22h' };
+const PHASES = geom.hours.map((h) => PHASE_NAME[h] ?? `${h}h`);
+const ERA_LIST = geom.eras;
+const ERAS = ERA_LIST.length;
 
 // Ba dải theo chiều cao ô. Camera chúc xuống nên: trên là trời, giữa là thành phố, dưới là đất.
 const BANDS = [
@@ -107,14 +131,34 @@ function sceneVector(col, row) {
 
 const dist = (a, b) => Math.sqrt(a.reduce((s, v, i) => s + (v - b[i]) ** 2, 0) / (a.length / 3));
 
-// ── Cổng tự-kiểm hình học: sai toạ độ thì mọi số bên dưới vô nghĩa ─────────────────────────────
-const dawnSky = mean(pixelsIn(0, 0, BANDS[0]));
-const nightSky = mean(pixelsIn(5, 0, BANDS[0]));
-const dawnL = describe(...dawnSky.map(Math.round)).l;
-const nightL = describe(...nightSky.map(Math.round)).l;
-console.log(`ảnh ${png.width}×${png.height} · ô ${CELL_W}×${CELL_H} · gốc (${X0},${Y0})`);
-console.log(`tự-kiểm hình học: trời bình minh L=${dawnL} · trời đêm L=${nightL}`
-  + (dawnL > nightL + 0.15 ? '  ✓ hợp lý' : '  ✗ SAI — toạ độ ô có thể lệch, đừng tin số bên dưới'));
+// ── Cổng tự-kiểm hình học ─────────────────────────────────────────────────────────────────────
+// ⚠️ PHẢI CHẠM TỚI HÀNG CUỐI. Bản cũ so hai ô CÙNG NẰM Ở HÀNG 0, nên nó bảo chứng được bước nhảy
+// CỘT mà không bảo chứng gì cho bước nhảy HÀNG — đúng chiều đã sai thật. Nay so đêm-vs-bình-minh ở
+// **mọi hàng**: bước nhảy hàng lệch thì các hàng cuối rơi vào dải nhãn hoặc ô hàng kế, và tương
+// phản ngày/đêm ở đó sụp ngay.
+console.log(`ảnh ${png.width}×${png.height} · ô ${CELL_W}×${CELL_H} · gốc (${X0},${Y0}) · `
+  + `${ERAS} kỷ × ${PHASES.length} chặng · hồ sơ ${GEOM_PATH.split('/').pop()}`);
+
+const needW = X0 + PHASES.length * CELL_W;
+const needH = Y0 + ERAS * ROW_STRIDE;
+if (png.width < needW || png.height < needH) {
+  console.error(`✗ Ảnh nhỏ hơn hồ sơ mô tả (cần ≥ ${needW}×${needH}) — ảnh và hồ sơ không cùng một lượt quét.`);
+  process.exit(2);
+}
+
+const dawnCol = geom.hours.indexOf(6);
+const nightCol = geom.hours.indexOf(22);
+if (dawnCol >= 0 && nightCol >= 0) {
+  const bad = [];
+  for (let row = 0; row < ERAS; row += 1) {
+    const dL = describe(...mean(pixelsIn(dawnCol, row, BANDS[0])).map(Math.round)).l;
+    const nL = describe(...mean(pixelsIn(nightCol, row, BANDS[0])).map(Math.round)).l;
+    if (!(dL > nL + 0.15)) bad.push(`kỷ ${ERA_LIST[row]} (bình minh L=${dL} · đêm L=${nL})`);
+  }
+  console.log(`tự-kiểm hình học: trời bình minh sáng hơn trời đêm ở ${ERAS - bad.length}/${ERAS} hàng`
+    + (bad.length ? `  ✗ SAI Ở ${bad.join(', ')} — toạ độ ô lệch, ĐỪNG tin số bên dưới` : '  ✓ hợp lý'));
+  if (bad.length) process.exit(2);
+}
 if (SELFTEST) console.log('⚠️ --selftest: ĐÃ BỎ bộ lọc "8% tươi nhất" — số cặp-kỷ phải TỆ ĐI rõ rệt.');
 
 // ── 1. Sáu chặng ngày có phân biệt được không? (15 cặp, trung bình trên 15 kỷ) ─────────────────
@@ -143,10 +187,27 @@ const eraVec = Array.from({ length: ERAS }, (_, row) => {
   const perPhase = PHASES.map((_, col) => roofColor(col, row));
   return perPhase[0].map((_, k) => perPhase.reduce((s, v) => s + v[k], 0) / PHASES.length);
 });
+// ⚠️ IN KÈM ĐỘ SÁNG CỦA MÀU ĐO ĐƯỢC — đây là bài học đắt nhất của chính bộ lọc này (2026-08-13):
+// bản trước lọc bằng độ tươi TƯƠNG ĐỐI `(max−min)/max`, mà mẫu số là `max` nên **pixel càng TỐI
+// càng dễ đạt điểm cao** ⇒ nó lấy mặt mái KHUẤT TRONG BÓNG và in ra 15 màu gần đen ở giữa TRƯA.
+// `--selftest` không bắt được, vì nó chỉ chứng minh bộ lọc CÓ tác dụng chứ không chứng minh nó
+// chọn ĐÚNG THỨ. Cách duy nhất nhận ra: in ra thứ nó chọn rồi nhìn. 15 con số quanh 20–60 giữa
+// trưa là báo động; mái đang nắng phải ở khoảng 80–130.
+if (VERBOSE) {
+  console.log('\n── MÀU MÁI ĐO ĐƯỢC TỪNG KỶ (trung bình 6 chặng) ──');
+  eraVec.forEach((v, i) => {
+    const [r, g, b] = v.map(Math.round);
+    const d = describe(r, g, b);
+    console.log(`  kỷ ${String(ERA_LIST[i]).padStart(2)}  rgb(${String(r).padStart(3)},`
+      + `${String(g).padStart(3)},${String(b).padStart(3)})  ${d.hex}  `
+      + `sáng ${String(Math.round((r + g + b) / 3)).padStart(3)}  tươi ${chroma(v).toFixed(0).padStart(3)}`);
+  });
+}
+
 const eraPairs = [];
 for (let i = 0; i < ERAS; i += 1) {
   for (let j = i + 1; j < ERAS; j += 1) {
-    eraPairs.push({ a: i + 1, b: j + 1, d: dist(eraVec[i], eraVec[j]) });
+    eraPairs.push({ a: ERA_LIST[i], b: ERA_LIST[j], d: dist(eraVec[i], eraVec[j]) });
   }
 }
 eraPairs.sort((x, y) => x.d - y.d);

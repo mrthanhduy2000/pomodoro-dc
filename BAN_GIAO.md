@@ -6,7 +6,20 @@
 > chọn: `ARCHITECTURE_DECISIONS.md`. Nợ kỹ thuật: `TECH_DEBT.md`. Migration: `MIGRATION.md`. Tóm
 > tắt theo mốc: `CHANGELOG.md`.
 > **NGUYÊN TẮC ƯU TIÊN SỐ 1:** (1) mọi phiên AI phải đọc file này + `CLAUDE.md` + các file liên quan TRƯỚC khi làm; (2) sau MỌI cập nhật dù nhỏ, phải cập nhật ngay file này + `CLAUDE.md` + các file liên quan khác.
-> Cập nhật lần cuối: **2026-08-13** — **Phase 4F**: **QUÉT ĐỦ 15 KỶ × 6 CHẶNG, VÀ CHẤM NÓ BẰNG SỐ.**
+> Cập nhật lần cuối: **2026-08-13** — **Phase 4G**: **CÔNG CỤ CHẤM ĐIỂM TỰ BỊA RA 5 LỖI KHÔNG CÓ
+> THẬT — ĐÃ VÁ TẬN GỐC.** `sweep-score.mjs` chép lại công thức hình học của `city-preview.mjs` kèm
+> mặc định cỡ ô **260**, trong khi bên kia dựng ảnh ở cỡ **300**. Cỡ ô không phải tuỳ chọn của phép
+> đo — nó là sự thật về tấm ảnh; đoán sai thì tới hàng cuối lệch **420px**, tức đang chấm màu của
+> một kỷ khác. Nó in ra một bộ số bịa rất thuyết phục (*"5/105 cặp kỷ + 1/15 cặp chặng hỏng, trung
+> vị 106,4"*, kể cả một lỗi bình-minh↔hoàng-hôn mà Phase 3Y đã sửa xong), còn phép tự-kiểm thì vẫn
+> báo ✓ vì nó **chỉ đọc hàng 0** — nơi sai số bằng 0. Nay: mỗi ảnh quét đi kèm hồ sơ `.geom.json`
+> do chính bên dựng ghi ra, bên chấm **từ chối chạy nếu thiếu**, tự-kiểm chạy đủ **15/15 hàng**, và
+> `--eras` in màu mái + độ sáng từng kỷ. Số thật: **0/15 cặp chặng và 2/105 cặp kỷ** dưới ngưỡng.
+> Đồng thời đo được **CƠ CHẾ** của `TECH_DEBT #19` (cả hai cặp hỏng vì cùng một nguyên nhân: đường
+> ống render **nén độ đậm ~5× và góc màu vùng ấm ~8×**, trong khi khuếch đại độ tươi ~2×) → mục #19
+> nay có hướng sửa cụ thể thay vì mò. **551 bài test.**
+>
+> Trước đó cùng ngày — **Phase 4F**: **QUÉT ĐỦ 15 KỶ × 6 CHẶNG, VÀ CHẤM NÓ BẰNG SỐ.**
 > Công cụ mới `scripts/sweep-score.mjs` so được cả 15 cặp chặng ngày lẫn cả 105 cặp kỷ (mắt chỉ
 > so được ô kề nhau). Kết quả: **15/15 cặp chặng ĐẠT**, nhưng **2/105 cặp kỷ KHÔNG đạt** — kỷ 5↔12
 > và kỷ 4↔10 nhìn gần như cùng một màu. **Cố ý chưa sửa** → `TECH_DEBT #19` (sửa nó là "đợt vá thứ

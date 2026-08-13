@@ -457,7 +457,32 @@ async function main() {
     } finally {
       server.close();
     }
+
+    // ⚠️ HỒ SƠ HÌNH HỌC ĐI KÈM ẢNH — MỘT LUẬT MỘT CÔNG THỨC.
+    // `sweep-score.mjs` phải biết mỗi ô nằm ở đâu để lấy mẫu. Trước đây nó TỰ ĐOÁN bằng cách chép
+    // lại công thức ở file này kèm một mặc định `--cell 260` — trong khi mặc định ở ĐÂY là 300.
+    // Hai bản sao của cùng một luật, và bản sai thì im lặng: hàng 0 vẫn trúng (lệch dồn từ hàng 1
+    // trở đi), nên phép tự-kiểm "trời bình minh sáng hơn trời đêm" — vốn chỉ đọc HÀNG 0 — vẫn báo
+    // ✓ trong khi 14 hàng dưới đang lấy mẫu lệch tới hàng khác. Kết quả bịa ra hẳn 5 cặp kỷ trùng
+    // nhau và 1 cặp chặng trùng nhau, tức vừa báo nhầm vừa che mất số thật.
+    // ⇒ Nay ảnh nào cũng đi kèm đúng bộ số đã DÙNG để dựng nó. Bên chấm điểm KHÔNG được đoán nữa.
+    const geomPath = pngPath.replace(/\.png$/, '.geom.json');
+    writeFileSync(geomPath, `${JSON.stringify({
+      png: pngPath.split('/').pop(),
+      pad: 8,          // #wrap { padding: 8px } trong `sweepPageHtml`
+      xLabel: 60,      // ctx.drawImage(stage, 60 + col * CELL_W, y)
+      yHeader: 30,     // y = 30 + row * (CELL_H + LABEL_H)
+      cellW: args.cell,
+      cellH,
+      labelH: 22,
+      eras,
+      hours: sweepHours,
+      theme: args.theme,
+      level: args.level,
+    }, null, 2)}\n`);
+
     console.log(`✓ quét ${eras.length} kỷ × ${sweepHours.length} chặng → ${pngPath}`);
+    console.log(`  hồ sơ hình học → ${geomPath}  (sweep-score.mjs đọc file này, không tự đoán)`);
     // ⚠️ NÓI THẲNG RA, VÌ CÁI TÊN CỜ `--theme` GÂY HIỂU NHẦM — và nó đã lừa được một phiên AI thật
     // (2026-08-13): tôi dựng cả hai theme rồi báo cáo "đã kiểm đủ 180 ô", trong khi phép so từng
     // điểm ảnh cho ra **0/421.200 điểm bên trong các ô khác nhau** giữa hai tấm; chỉ có KHUNG

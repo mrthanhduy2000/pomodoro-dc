@@ -12,6 +12,21 @@
 
 ---
 
+## 2026-08-13 — Công cụ chấm bản quét từng bịa ra 5 lỗi không có thật
+
+- **Mục đích**: `sweep-score.mjs` (mới ở mốc dưới) tự đoán hình học tấm ảnh bằng một mặc định cỡ ô
+  khác với mặc định của công cụ dựng ảnh. Sai lệch dồn theo từng hàng nên nó chấm nhầm sang kỷ
+  khác, và in ra một bộ số sai trông rất hợp lý.
+- **Phạm vi**: `scripts/city-preview.mjs` (ghi kèm hồ sơ `.geom.json`) · `scripts/sweep-score.mjs`
+  (đọc hồ sơ, từ chối chạy nếu thiếu; tự-kiểm đủ 15 hàng; thêm `--eras` in màu mái từng kỷ) ·
+  `TECH_DEBT.md` (#19: đính chính + bổ sung cơ chế đo được).
+- **Ảnh hưởng**: chỉ công cụ phát triển — **không đụng mã chạy trên máy Đàm**. Số nghiệm thu mỹ
+  thuật nay tái lập được. Số thật: 0/15 cặp chặng và 2/105 cặp kỷ dưới ngưỡng mắt.
+- **Tương thích**: ảnh quét cũ (không có `.geom.json`) không chấm được nữa — phải quét lại. Cố ý:
+  thà từ chối còn hơn đoán sai.
+
+---
+
 ## 2026-08-13 — Quét đủ 15 kỷ × 6 chặng, và lần đầu CHẤM được bản quét bằng số
 
 - **Mục đích**: bảng quét 90 ô đã có từ Phase 3G, nhưng xưa nay chỉ được đọc bằng mắt — mà mắt chỉ

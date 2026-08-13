@@ -12,6 +12,23 @@
 
 ---
 
+## 2026-08-13 — Ba kỷ cuối cùng cũng có mái mang màu của chúng (105/105 cặp kỷ phân biệt được)
+
+- **Mục đích**: kỷ 12–14 đều dùng `roof: 'flat'`, mà nhánh `'flat'` chỉ đẩy đúng một khối với vai
+  `trim` — vai TRUNG TÍNH họ tường. Nghĩa là **ba kỷ ấy chưa bao giờ hiện lấy một milimét vuông vai
+  `roof` nào**: bảng màu đúng, ánh sáng đúng, nhưng không có bề mặt nào để màu kỷ nói ra.
+- **Vì sao mọi bài test đều xanh**: bài "15 kỷ phải ra 15 màu mái" đo MÀU TRONG BẢNG, không hỏi màu
+  ấy có được đem VẼ RA hay không. Hai câu hỏi khác nhau, và khoảng trống giữa chúng đủ chỗ cho ba kỷ.
+- **Phạm vi**: `src/engine/city3d/buildingSpec.js` (nhánh `case 'flat'`: giữ gờ chắn mái trung tính
+  ở vành ngoài, thêm tấm phủ hẹp hơn mang vai `roof` trong lòng — đúng cấu tạo mái bằng ngoài đời),
+  `buildingSpec.test.js` (+1 bài, đã thử ngược và thấy đỏ).
+- **Kết quả**: số cặp kỷ dưới ngưỡng mắt **5/105 → 0/105**; cặp gần nhau nhất 6,0 → **12,6**; trung
+  vị 28,2. Cùng với 15/15 cặp chặng ngày (nhỏ nhất 29,5) ⇒ **90 ô của bản quét không còn ô nào
+  trùng ô nào**. `TECH_DEBT` #18 đóng ngay trong ngày mở.
+- **Ảnh hưởng**: thuần mỹ thuật. 510 test xanh, lint sạch, build xanh.
+
+---
+
 ## 2026-08-13 — 15 kỷ: bớt được ba cặp thành phố trông giống hệt nhau
 
 - **Mục đích**: bản quét 15 × 6 mới chỉ được chấm bằng "tản sắc giữa 15 kỷ" — một ĐỘ LỆCH CHUẨN.

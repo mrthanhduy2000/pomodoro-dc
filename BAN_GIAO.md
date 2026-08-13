@@ -118,6 +118,35 @@
 ## 🗒️ Nhật ký cập nhật
 > Mỗi lần xong việc đáng kể, thêm 1 dòng vào ĐẦU danh sách.
 
+- **2026-08-13 (Phase 4A — thành phố)** — **BA KỶ CUỐI CÙNG CŨNG CÓ MÁI MANG MÀU CỦA CHÚNG.**
+  `TECH_DEBT` #18 mở và ĐÓNG trong cùng ngày. **510 bài test.**
+  - **Vấn đề**: kỷ 12/13/14 đều `roof: 'flat'`, mà nhánh `'flat'` trong `buildingSpec.js` đẩy ĐÚNG
+    MỘT khối với vai `trim` — vai TRUNG TÍNH thuộc họ tường (chỉ ngấm 0,18 sắc kỷ). Tức ba kỷ ấy
+    **chưa bao giờ hiện lấy một milimét vuông vai `roof` nào**. Trên bản quét, ba hàng ấy là ba
+    hàng nhà trắng-xám giống hệt nhau.
+  - ⚠️ **VÌ SAO CẢ MỘT TẦNG TEST BẢNG MÀU DÀY THẾ VẪN XANH — bài học đáng giữ nhất của phase này.**
+    Bài "15 kỷ phải ra 15 màu mái" đo **MÀU TRONG BẢNG**; nó không hỏi màu ấy có được đem **VẼ RA**
+    hay không. Hai câu hỏi khác nhau, và khoảng trống giữa chúng đủ chỗ cho ba kỷ nằm lọt. ⇒ Luật:
+    **một bài test về BẢNG MÀU không bao giờ thay thế được một bài test về việc màu đó có xuất hiện
+    trong HÌNH HỌC hay không.** Cùng họ với bài học "bảng màu ≠ màu trên màn hình", nhưng ở một
+    tầng còn sớm hơn: lần này màu thậm chí không có bề mặt nào để bắt đầu hành trình tới màn hình.
+  - **Sửa**: giữ nguyên gờ chắn mái trung tính ở vành ngoài (bê tông/đá ốp — có thật), thêm một
+    **tấm phủ hẹp hơn (0,94) mang vai `roof`** nằm trong lòng nó. Đúng cấu tạo mái bằng ngoài đời:
+    diềm parapet một vật liệu, sàn mái chống thấm một vật liệu khác. Nhìn từ góc camera chúc xuống
+    thì sàn mái là mảng rất to. ⚠️ Tấm phủ PHẢI hẹp hơn gờ — bằng hoặc rộng hơn thì nó nuốt mất gờ
+    và khối lại trông như bị cắt cụt, đúng cái bệnh mà gờ chắn mái sinh ra để chữa.
+  - **Kết quả đo** (105 cặp kỷ, dải thành phố, trung bình 6 chặng):
+    | | đầu phiên | sau `eraRoof` 0,55 | sau tấm phủ |
+    |---|---|---|---|
+    | cặp DƯỚI ngưỡng mắt | 5/105 | 4/105 | **0/105** |
+    | cặp gần nhau nhất | 6,0 | 6,0 | **12,6** |
+    ⇒ Cộng với 15/15 cặp chặng ngày (nhỏ nhất 29,5): **cả 90 ô của bản quét không còn ô nào trùng
+    ô nào.** Đây là câu trả lời đo được cho "không bị chán" trên CẢ HAI trục — thời gian trong ngày
+    và tiến trình 15 kỷ.
+  - **Bài test khoá lại**: mọi bản vẽ × mọi kỷ × cả 3 cấp phải có ít nhất một phần mang vai `roof`,
+    cộng một bài riêng cho các kỷ mái bằng. Thử ngược (gỡ tấm phủ) ⇒ **đỏ, gọi đích danh kỷ 12**.
+  - **Không đụng**: state, cân bằng game, SQL, schema.
+
 - **2026-08-13 (Phase 3Z — thành phố)** — **15 KỶ: BỚT ĐƯỢC BA CẶP TRÔNG GIỐNG HỆT NHAU.**
   - **Vấn đề, tìm ra bằng đúng bài học của Phase 3Y**: vừa sửa xong "6 chặng ngày phải khác nhau"
     bằng cách duyệt đủ mọi cặp, em quay sang hỏi cùng câu đó cho 15 KỶ — và thấy mình đang chấm

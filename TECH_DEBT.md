@@ -13,7 +13,7 @@
 > mà không được refactor triệt để, phải CHỦ ĐỘNG đề xuất mở một "Maintenance Sprint" (nêu rõ mục
 > tiêu/phạm vi/lợi ích/rủi ro/tiêu chí hoàn thành) thay vì tiếp tục cộng thêm tính năng mới.
 >
-> **Trạng thái ngưỡng hiện tại (2026-08-13, cập nhật sau khi ĐÓNG #17)**: **1 mục Priority High**
+> **Trạng thái ngưỡng hiện tại (2026-08-13, cập nhật sau khi ĐÓNG #17 và #18)**: **1 mục Priority High**
 > (#14) → vẫn CHƯA đạt ngưỡng 8–10 mục để đề xuất Maintenance Sprint. Còn **2 mục Medium-High**
 > (#3, #13). **#15, #16 và #17 đều đã đóng** — không còn mục nào chờ Đàm chọn hướng mỹ thuật.
 > ⚠️ **#17 LÀ VÍ DỤ THỨ HAI CỦA ĐÚNG CÁI BẪY MÀ BÀI HỌC #16 DƯỚI ĐÂY CẢNH BÁO** — và lần này nặng
@@ -292,33 +292,36 @@
 
 ---
 
-## #18 — Kỷ 12–14 gần như không có MÁI, nên bản sắc kỷ không có chỗ để nói
+## #18 — ĐÃ ĐÓNG (2026-08-13) · Kỷ 12–14 không hề có bề mặt nào mang màu kỷ
 
-- **Module**: `src/engine/city3d/buildingSpec.js` / `archetypes.js` (ngữ pháp hình khối theo kỷ),
-  liên đới `src/engine/city3d/palette3d.js` (`eraRoof`).
-- **Priority**: Medium · **Severity**: Low-Medium (thuần mỹ thuật, không ảnh hưởng dữ liệu)
-- **Impact — đo trên bản quét 15 kỷ × 6 chặng (2026-08-13, sau khi đã sửa hệ số độ sáng mái)**:
-  duyệt đủ **105 cặp kỷ** trên màu dải thành phố, còn **4 cặp** dưới ngưỡng mắt (~12/255), và ba
-  trong bốn cặp đó đều dính kỷ 12 hoặc 13: `12↔13 = 6,4` · `5↔12 = 6,0` · `5↔13 = 11,5` ·
-  `7↔12 = 11,9`. Trung vị của cả 105 cặp là 27,6 — tức phần còn lại rất khoẻ.
-- **Root Cause — KHÔNG phải màu, mà là HÌNH.** Ở tầng thuần, màu mái kỷ 12 (`#4e576a`, 221°) và
-  kỷ 13 (`#3c7d83`, 185°) cách nhau thừa sức phân biệt, và bài test mái đủ-105-cặp đang XANH. Nhưng
-  nhìn ảnh thì kỷ 12–14 là những khối hộp hiện đại **mái bằng, gần như không có diện tích mái**,
-  trong khi kỷ 1–11 có mái dốc/mái vòm chiếm mảng lớn. Sắc kỷ nói to nhất ở mái (đó là cả lý do
-  `roof` dùng `eraRoof` thay vì `material`) — mà mấy kỷ này thì gần như không có mái để nói.
-  ⇒ Đây là ví dụ rõ của bài học "màu ĐÚNG ở bảng màu không có nghĩa là màu ĐẾN ĐƯỢC mắt người xem".
-- **Current Risk**: thấp. Đây là 3 kỷ ở cuối hành trình, Đàm chưa tới.
-- **Future Risk**: kỷ càng về sau càng là phần thưởng cho công sức nhiều tháng; ba kỷ liền nhau mà
-  trông như một thì đúng chỗ phần thưởng phải lớn nhất lại mỏng nhất.
-- **Recommended Solution**: cho kiến trúc hiện đại một bề mặt khác để mang sắc kỷ thay cho mái —
-  ví dụ dải diềm/mặt kính ở tầng trên cùng, hoặc màu khung cửa. **KHÔNG** giải quyết bằng cách bơm
-  độ tươi mái (mái bằng thì có tô rực cũng không ai thấy), và **KHÔNG** bằng cách đổi `accentColor`
-  trong `ERA_METADATA` (những màu đó còn dùng cho huy hiệu kỷ khắp giao diện — đổi là đổi cả app,
-  đó mới thật sự là việc cần Đàm quyết).
-- **Estimated Complexity**: Trung bình (đụng ngữ pháp hình khối, cần quét lại + đo lại).
-- **Blocking Conditions**: không có — làm được bất cứ lúc nào.
-- **Review Trigger**: lần tới có đợt vá mỹ thuật thành phố, hoặc khi Đàm tới gần kỷ 12.
-- **Owner**: (chưa gán) · **Status**: Open — phát hiện 2026-08-13 khi duyệt đủ 105 cặp kỷ.
+- **Module**: `src/engine/city3d/buildingSpec.js` — nhánh `case 'flat'` của `roofParts`.
+- **Priority / Severity**: Medium / Low-Medium (thuần mỹ thuật) — **đã xử lý xong trong ngày**.
+- **Triệu chứng**: duyệt đủ 105 cặp kỷ trên ảnh thật, kỷ 12 ↔ 13 chỉ cách **6,4/255** (ngưỡng mắt
+  ~12), và ba trong bốn cặp yếu nhất đều dính kỷ 12 hoặc 13.
+- **Root Cause — KHÔNG phải màu, và đây là chỗ đáng học.** Nhánh `'flat'` đẩy ĐÚNG MỘT khối với
+  `role: 'trim'` — vai TRUNG TÍNH thuộc họ tường, chỉ ngấm 0,18 sắc kỷ. Ba kỷ 12/13/14 đều dùng
+  `roof: 'flat'`, nghĩa là **cả ba chưa bao giờ hiện lấy một milimét vuông vai `roof` nào**. Bảng
+  màu hoàn toàn đúng, ánh sáng hoàn toàn đúng, bài test "15 kỷ ra 15 màu mái" xanh suốt — vì nó đo
+  MÀU TRONG BẢNG chứ không hỏi màu ấy có được đem VẼ RA hay không.
+  ⇒ **Một bài test về BẢNG MÀU không bao giờ thay thế được một bài test về việc màu đó có xuất hiện
+  trong HÌNH HỌC hay không. Hai câu hỏi khác nhau, và khoảng trống giữa chúng đủ chỗ cho ba kỷ.**
+- **Giải pháp đã làm**: giữ nguyên gờ chắn mái trung tính ở vành ngoài (đó là bê tông/đá ốp thật),
+  thêm một **tấm phủ hẹp hơn (0,94) mang vai `roof`** nằm trong lòng nó — đúng cấu tạo mái bằng
+  ngoài đời: diềm parapet một vật liệu, sàn mái chống thấm một vật liệu khác. Nhìn từ góc camera
+  chúc xuống của thành phố này thì sàn mái là một mảng RẤT to.
+- **KẾT QUẢ ĐO LẠI** (105 cặp kỷ, dải thành phố, trung bình 6 chặng):
+
+  | | trước phiên này | sau `eraRoof` 0,55 | sau tấm phủ mái bằng |
+  |---|---|---|---|
+  | số cặp DƯỚI ngưỡng mắt | 5/105 | 4/105 | **0/105** ✅ |
+  | cặp gần nhau nhất | 6,0 | 6,0 | **12,6** |
+  | trung vị 105 cặp | 27,9 | 27,6 | **28,2** |
+
+  ⇒ **Cả 105 cặp kỷ nay đều phân biệt được**, cùng với cả 15 cặp chặng ngày (nhỏ nhất 29,5).
+- **Bài test khoá lại** (`buildingSpec.test.js`): mọi bản vẽ × mọi kỷ × cả 3 cấp đều phải có ít
+  nhất một phần mang vai `roof`, cộng một bài riêng cho các kỷ mái bằng. Đã thử ngược (gỡ tấm phủ)
+  và thấy **báo đỏ, gọi đích danh kỷ 12**.
+- **Status**: **CLOSED 2026-08-13.** 510/510 test xanh · lint sạch · build xanh.
 
 ---
 

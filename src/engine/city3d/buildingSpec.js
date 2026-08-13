@@ -75,10 +75,34 @@ function emitRoof(out, { w, d, top, x, z }, style, ctx) {
       }));
       break;
 
-    case 'flat':
+    case 'flat': {
       // Mái bằng vẫn phải có GỜ CHẮN MÁI, nếu không khối hộp cụt ngọn trông như bị cắt dở.
-      out.push(prism({ x, z, y: top, w: rw, d: rd, h: pitch * 0.5, sides: 4, role: 'trim' }));
+      //
+      // ⚠️ VÀ NÓ PHẢI CÓ MỘT TẤM PHỦ MANG MÀU KỶ — sửa 2026-08-13, `TECH_DEBT.md` #18.
+      // Bản cũ chỉ đẩy ĐÚNG MỘT khối với `role: 'trim'`, mà `trim` là vai TRUNG TÍNH (họ tường,
+      // chỉ ngấm 0,18 sắc kỷ). Nghĩa là ba kỷ 12/13/14 — cả ba đều `roof: 'flat'` — **chưa bao giờ
+      // hiện lấy một milimét vuông màu mái nào**. Bản sắc kỷ nằm ở vai `roof`, mà mấy kỷ ấy không
+      // có chỗ nào dùng vai `roof` cả.
+      // Hệ quả đo được trên bản quét 15 kỷ × 6 chặng: kỷ 12 ↔ 13 chỉ cách nhau 6,4/255 (ngưỡng mắt
+      // ~12) dù MÀU mái của hai kỷ ở tầng thuần đã tách bạch thừa sức. Đây là ví dụ sạch của bài
+      // học *"màu đúng ở bảng màu không có nghĩa là màu ĐẾN ĐƯỢC mắt người xem"*: lỗi không nằm ở
+      // bảng màu, không nằm ở ánh sáng, mà ở chỗ **không có bề mặt nào để màu ấy nói ra**.
+      //
+      // Cách sửa đúng với kiến trúc hiện đại thật: nhà mái bằng có **diềm mái (parapet) bằng bê
+      // tông/đá ốp** bao quanh, còn mặt sàn mái bên trong thì phủ vật liệu chống thấm — hai vật
+      // liệu khác nhau, và nhìn từ trên cao xuống (đúng góc camera của thành phố này) thì mặt sàn
+      // mái là một mảng RẤT to. Nên: giữ nguyên gờ trung tính ở vành ngoài, đặt thêm một tấm phủ
+      // hẹp hơn một chút mang vai `roof` nằm trong lòng nó.
+      // ⚠️ Tấm phủ phải HẸP HƠN gờ (0,94) — bằng hoặc rộng hơn thì nó nuốt mất cái gờ và khối lại
+      // trông như bị cắt cụt, đúng cái bệnh mà gờ chắn mái sinh ra để chữa.
+      const lip = Math.max(0.05, pitch * 0.28);
+      out.push(prism({ x, z, y: top, w: rw, d: rd, h: lip, sides: 4, role: 'trim' }));
+      out.push(prism({
+        x, z, y: top + lip, w: rw * 0.94, d: rd * 0.94,
+        h: Math.max(0.05, pitch * 0.34), sides: 4, role: 'roof',
+      }));
       break;
+    }
 
     case 'stepped': {
       let cw = rw;

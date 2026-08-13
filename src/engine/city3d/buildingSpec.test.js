@@ -352,3 +352,34 @@ test('giàn giáo tất định như công trình hoàn thiện', () => {
   const b = JSON.stringify(buildScaffoldSpec({ bpId: 'bp_x', era: 9, progress: 0.6 }));
   assert.equal(a, b);
 });
+
+test('MỌI KỶ ĐỀU PHẢI CÓ BỀ MẶT MANG MÀU KỶ — kể cả kỷ mái bằng', () => {
+  // ⚠️ BÀI NÀY SINH RA TỪ `TECH_DEBT.md` #18, và nó bắt một loại lỗi mà TOÀN BỘ tầng bảng màu
+  // không thể nhìn thấy: **màu đúng, ánh sáng đúng, nhưng KHÔNG CÓ BỀ MẶT NÀO ĐỂ MÀU ẤY NÓI RA.**
+  // Ba kỷ 12/13/14 đều dùng `roof: 'flat'`, mà nhánh 'flat' của `roofParts` khi đó chỉ đẩy đúng
+  // MỘT khối với vai `trim` — vai TRUNG TÍNH thuộc họ tường, chỉ ngấm 0,18 sắc kỷ. Nghĩa là ba kỷ
+  // ấy chưa bao giờ hiện lấy một milimét vuông vai `roof` nào.
+  // Bài test màu mái ("15 kỷ phải ra 15 màu") vẫn XANH suốt, vì nó đo MÀU trong bảng chứ không hỏi
+  // màu ấy có được đem vẽ ra hay không. Đo trên ảnh thật thì kỷ 12 ↔ 13 chỉ cách 6,4/255 (ngưỡng
+  // mắt ~12). Sau khi thêm tấm phủ mang vai `roof`: **0/105 cặp kỷ còn dưới ngưỡng** (trước là 5).
+  // ⇒ Bài học đáng giữ: một bài test về BẢNG MÀU không bao giờ thay thế được một bài test về việc
+  // màu đó có xuất hiện trong HÌNH HỌC hay không. Hai câu hỏi khác nhau.
+  for (const bp of ALL_BLUEPRINTS) {
+    for (const level of [1, 2, 3]) {
+      const spec = buildBuildingSpec({ ...bp, level });
+      assert.ok(spec.parts.some((part) => part.role === 'roof'),
+        `kỷ ${bp.era} · bản vẽ "${bp.bpId}" cấp ${level} (kiểu mái "${getEraStyle(bp.era).roof}") `
+        + 'không có phần nào mang vai `roof` ⇒ sắc kỷ không có bề mặt nào để hiện ra, và kỷ này sẽ '
+        + 'trông giống mọi kỷ mái bằng khác dù bảng màu của nó hoàn toàn đúng');
+    }
+  }
+
+  // Và khoá luôn cái nhánh đã hỏng, để không ai lặng lẽ bỏ tấm phủ đi lần nữa.
+  const flatEras = Object.keys(ERA_STYLES).map(Number).filter((e) => getEraStyle(e).roof === 'flat');
+  assert.ok(flatEras.length >= 3, 'bảng kỷ đổi rồi — xem lại bài test này');
+  for (const era of flatEras) {
+    const bp = ALL_BLUEPRINTS.find((b) => b.era === era);
+    const roofParts = buildBuildingSpec({ ...bp, level: 1 }).parts.filter((p) => p.role === 'roof');
+    assert.ok(roofParts.length > 0, `kỷ mái bằng ${era} lại mất tấm phủ mang màu kỷ`);
+  }
+});

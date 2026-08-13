@@ -358,12 +358,30 @@ export function buildScenePalette({ tokens, eraColor, daylight } = {}) {
     const RAD = Math.PI / 180;
     const x = (1 - t) * Math.cos(base.h * RAD) + t * Math.cos(target * RAD);
     const y = (1 - t) * Math.sin(base.h * RAD) + t * Math.sin(target * RAD);
-    // Hai sắc ĐỐI NHAU ĐÚNG 180° ở t = 0,5 thì hai vector triệt tiêu và `atan2(0, 0)` trả về 0°
-    // (ĐỎ) — một màu chẳng liên quan gì tới cả hai đầu. Quá ngắn thì bỏ phép xoay, chọn hẳn một bên.
-    const hueOut = Math.hypot(x, y) < 1e-6
+    // ĐỘ DÀI của vector tổng chính là "phép trộn này có ý nghĩa tới đâu": hai sắc cùng hướng thì
+    // dài 1, hai sắc ĐỐI NHAU thì triệt tiêu về 0.
+    const mag = Math.hypot(x, y);
+    // Hai sắc đối nhau đúng 180° ở t = 0,5 thì `atan2(0, 0)` trả về 0° (ĐỎ) — một màu chẳng liên
+    // quan gì tới cả hai đầu. Quá ngắn thì bỏ phép xoay, chọn hẳn một bên.
+    const hueOut = mag < 1e-6
       ? (t >= 0.5 ? target : base.h)
       : ((Math.atan2(y, x) / RAD) % 360 + 360) % 360;
-    return rgbToHexNumber(hslToRgb({ h: hueOut, s: base.s, l: base.l }));
+    // ⚠️ VÀ ĐÂY LÀ THỨ TRẢ LẠI LỜI BẢO ĐẢM "BẦU TRỜI KHÔNG BAO GIỜ TÍM" — đừng gỡ.
+    // Xoay sắc thì reo được màu xanh, nhưng nó mang về một tật của phép nội suy góc: hướng đi luôn
+    // men theo CUNG NGẮN của vòng tròn màu, mà cung ngắn giữa lam (≈213°) và cam bình minh (18°)
+    // chạy XUYÊN QUA VÙNG TÍM. Bản đầu của Phase 3V trả lại NGUYÊN độ tươi gốc cho mọi trường hợp,
+    // và bài test quét đủ 15 kỷ bắt ngay: 5 giờ sáng, kỷ 6 (sắc kỷ tím `#a78bfa`), mặt nước ra
+    // `#bd818e` — hồng phấn ngả tím. Đó là LẦN THỨ TƯ của cùng một họ lỗi (xem `ARCHITECTURE.md`).
+    // Chữa bằng chính `mag`: khi hai sắc gần đối nhau thì vector tổng NGẮN, nghĩa là phép trộn gần
+    // như vô nghĩa — lúc đó phải NHẠT DẦN VỀ XÁM, đúng "cách của người vẽ" mà bản trộn RGB ngày
+    // trước làm được. Khi lực kéo đủ mạnh về một phía (`mag` cao) thì giữ nguyên độ tươi, nên bầu
+    // trời xanh giữa trưa KHÔNG mất gì.
+    // ⚠️ Mốc 0,5 chọn theo số đo, không theo cảm tính: giữa trưa `mag` = 0,70 và bình minh 0,98 —
+    // cả hai vượt mốc nên giữ nguyên độ tươi (đúng bộ số đã đo và đã duyệt bằng mắt); còn ca hỏng
+    // ở trên chỉ `mag` = 0,18 nên bị kéo xuống còn hơn một phần ba độ tươi. Buổi sáng nằm sát mốc
+    // (0,45) nên bị nhạt ~10% — đã bù lại bằng `morning.skySaturation` ở `daylight.js`.
+    const chromaSafe = Math.min(1, mag / 0.5);
+    return rgbToHexNumber(hslToRgb({ h: hueOut, s: base.s * chromaSafe, l: base.l }));
   };
   // Hơi ấm của nắng: −1 lạnh … +1 ấm. Đổi GÓC MÀU của mặt trời và của ánh sáng dội lại từ đất.
   const warmth = Number.isFinite(daylight?.sunWarmth) ? daylight.sunWarmth : 0.3;

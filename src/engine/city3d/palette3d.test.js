@@ -183,12 +183,31 @@ test('buildScenePalette: bầu trời KHÔNG BAO GIỜ ngả tím sen — ở m�
     return Math.min(r, b) - g > 10;
   };
 
+  // ⚠️ MỞ RỘNG 2026-08-13 (Phase 3V) — VÀ NAY BÀI NÀY QUAN TRỌNG HƠN TRƯỚC NHIỀU.
+  // Khi viết, bài này chỉ là lưới thứ hai: phép trộn RGB đã khiến màu tím **bất khả thi về cấu
+  // tạo** (đường thẳng nối hai màu trong RGB luôn cắt qua vùng trung tính). Phase 3V đổi
+  // `skyward()` sang XOAY SẮC bằng vector — vì trộn RGB tuy diệt được tím nhưng cũng giết luôn bầu
+  // trời XANH (`TECH_DEBT.md` #15). ⇒ **Lời bảo đảm bằng cấu tạo KHÔNG CÒN NỮA**; từ nay chỉ còn
+  // bài test này giữ. Tính tay: nền ấm 40° kéo về đích lam 232° ở lực kéo 0,5 cho ra **316°**,
+  // đúng họ màu `#cf63c2` của lần hỏng thứ hai. Bộ tham số hiện tại không rơi vào đó (sáng 0,72 →
+  // 204°, trưa 0,85 → 215°, đêm thì nền đã lam sẵn) — nhưng "hiện không rơi" ≠ "không thể rơi".
+  // Đã xác minh bằng cách tạm đặt `afternoon.horizonHue: 232, horizonPull: 0.50` → bài này ĐỎ với
+  // `#dc82be` (320°), khớp con số tính tay.
+  //
+  // Hai chỗ mở rộng, và cả hai đều là lỗ hổng bài này TỰ CẢNH BÁO ở khối chú thích ngay dưới:
+  //   • **đủ 15 màu kỷ THẬT** thay cho 6 màu mẫu — chính file này ghi "bộ mẫu 5–6 màu cũ đã chạy
+  //     XANH suốt trong khi 6/15 kỷ đang có mái tím sen". Cái lưới bỏ sót hai phần ba số ô.
+  //   • **thêm MẶT NƯỚC** — nó cũng do `skyward()` sinh ra (bám chân trời), nên nó ngả tím theo
+  //     đúng cùng một cơ chế, mà trước nay không ai soi.
+  // (`ERA_ACCENTS` khai bên dưới file: `node:test` chạy thân bài sau khi nạp xong module, nên
+  //  tham chiếu ngược lên đây là an toàn.)
   for (let hour = 0; hour < 24; hour += 1) {
     for (const tokens of [FALLBACK_TOKENS, { ...FALLBACK_TOKENS, canvas1: '#12100e', canvas2: '#1b1815', ink: '#f2ece1' }]) {
-      for (const eraColor of ['#4ade80', '#c96442', '#38bdf8', '#a78bfa', '#b3306b', '#facc15']) {
+      for (const eraColor of ERA_ACCENTS) {
         const p = buildScenePalette({ tokens, eraColor, daylight: deriveDaylight(hour) });
         for (const [name, value] of [
           ['chân trời', p.sky2.horizon], ['đỉnh trời', p.sky2.top], ['đèn bán cầu', p.lights.skyDome],
+          ['mặt nước', p.roles.water],
         ]) {
           assert.ok(!magenta(value), `${hour} giờ · kỷ ${eraColor} · ${name} ra tím sen: `
             + `#${value.toString(16).padStart(6, '0')}`);

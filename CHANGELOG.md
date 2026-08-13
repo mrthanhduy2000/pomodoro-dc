@@ -12,6 +12,28 @@
 
 ---
 
+## 2026-08-13 — Bền vững (Phase 3W): bầu trời đi theo đồng hồ, và không bao giờ ngả tím
+
+- **Mục đích**: bảo vệ chính thành quả của Phase 3V trước hai đường rò rỉ mà nó vừa mở ra.
+- **Lỗi 1 — bầu trời đứng im khi mở lại app**: `CityScene3D` đọc đồng hồ đúng một lần lúc dựng
+  cảnh, và danh sách phụ thuộc không có gì liên quan tới thời gian. Phần lớn trường hợp được
+  `sessionCount` cứu (xong phiên là dựng lại), nhưng **iPhone (PWA) chỉ ĐÓNG BĂNG tab chứ không
+  đóng hẳn** ⇒ mở app buổi sáng, mở lại lúc tối vẫn thấy bầu trời buổi sáng. Cùng họ lỗi với "BẢN
+  VÁ C1" ở `syncService.js`, nên dùng lại cùng tín hiệu: `visibilitychange`. Cố ý KHÔNG hẹn giờ
+  định kỳ, để không có nguy cơ cảnh dựng lại giữa một phiên tập trung.
+- **Lỗi 2 — Phase 3V làm mất một lời bảo đảm**: phép trộn RGB cũ khiến màu tím **bất khả thi về
+  cấu tạo**; xoay sắc thì không. Bài test quét đủ 15 kỷ bắt được `#bd818e` (mặt nước 5 giờ sáng, kỷ
+  6 sắc tím) — **lần thứ tư của họ lỗi đã hỏng ba lần trước đó**. Đã trả lại lời bảo đảm bằng cấu
+  tạo: độ tươi nhân với độ dài vector chroma (`s × min(1, |v| / 0,5)`) ⇒ hai sắc gần đối nhau thì
+  nhạt về xám, còn lực kéo mạnh thì giữ nguyên độ tươi. Bầu trời xanh không mất gì (đo lại: sáng
+  203°/0,15 · trưa 211°/0,17, y như trước).
+- **Phạm vi**: `src/components/city/render3d/CityScene3D.jsx` (+ test mới),
+  `src/engine/city3d/palette3d.js`, `src/engine/city3d/daylight.js` (bù độ tươi buổi sáng),
+  `src/engine/city3d/palette3d.test.js` (mở rộng bài chống-tím), `ARCHITECTURE.md`. Không đụng
+  state, không cần chạy SQL, không thêm dependency.
+- **Test**: 485 → **488** bài. Mọi khẳng định mới đều đã thử NGƯỢC với mã hỏng và thấy báo đỏ —
+  trong đó bài `visibilitychange` bản đầu **xanh oan** vì bám nhầm một bộ nghe khác trong cùng file.
+
 ## 2026-08-13 — Mỹ thuật (Phase 3V): trời ban ngày cuối cùng cũng xanh
 
 - **Mục đích**: đóng `TECH_DEBT.md` #15. Trước đó 5/6 chặng ngày cho ra cùng một sắc trời cam-nâu
@@ -28,8 +50,10 @@
   không cần chạy SQL, không thêm dependency.
 - **Kết quả đo**: đỉnh trời cả ngày nay là `27° · 203° · 211° · 37° · 18° · 223°` — bốn chặng ban
   ngày trải **178°** thay vì 22°. Giữa trưa ra `#7d8fa3`, xanh trời thật.
-- **Xác minh**: dựng và ĐO đủ **180 ô** (15 kỷ × 6 chặng × 2 theme) — không ô nào đen/xám/cháy, 6/6
-  chặng phân biệt được ở cả hai theme, đêm không hề tối hoặc phẳng thêm (chênh +0,005, trong nhiễu).
+- **Xác minh**: dựng và ĐO đủ **90 ô** (15 kỷ × 6 chặng) — không ô nào đen/xám/cháy, 6/6 chặng
+  phân biệt được, đêm không hề tối hoặc phẳng thêm (chênh +0,005, trong nhiễu).
+  ⚠️ **Đính chính (Phase 3W)**: bản đầu ghi "180 ô × 2 theme"; đo từng điểm ảnh cho thấy nội dung
+  3D của hai theme GIỐNG HỆT nhau khi đã truyền giờ, nên con số thật là 90.
 - **Tương thích**: `skyward(…, t = 0)` cho ra byte y hệt bản cũ ⇒ mọi chỗ gọi không kéo màu đều
   không đổi một pixel.
 - **Kèm theo**: `eslint.config.js` bỏ qua `.city-preview` (ESLint không tự đọc `.gitignore`, nên

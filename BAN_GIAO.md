@@ -110,6 +110,49 @@
 ## 🗒️ Nhật ký cập nhật
 > Mỗi lần xong việc đáng kể, thêm 1 dòng vào ĐẦU danh sách.
 
+- **2026-08-13 (Phase 3W)** — **BẢO VỆ CHÍNH THÀNH QUẢ CỦA 3V: hai đường rò rỉ mà 3V vừa mở ra.**
+  Phase này sinh ra từ đúng một câu trong `TECH_DEBT.md` #14: *"Review Trigger: trước bất kỳ đầu tư
+  nào thêm vào hiệu ứng thành phố"*. Tôi vừa đầu tư (3V), nên phải hỏi: **thành quả đó có thật sự
+  tới được màn hình Đàm không, và nó có bền không?**
+  - **RÒ RỈ 1 — bầu trời ĐỨNG IM khi mở lại app.** `CityScene3D` đọc đồng hồ đúng MỘT LẦN lúc dựng
+    cảnh; danh sách phụ thuộc của effect **không có gì liên quan tới thời gian**. Phần lớn trường
+    hợp được `sessionCount` cứu (xong một phiên là dựng lại ⇒ đọc lại đồng hồ). Trường hợp KHÔNG
+    được cứu: **iPhone (PWA) chỉ ĐÓNG BĂNG tab chứ không đóng hẳn** — mở app buổi sáng, cất máy, mở
+    lại lúc tối thì React không mount lại, và Đàm thấy bầu trời buổi sáng giữa đêm. Đây đúng họ lỗi
+    tầng đồng bộ đã phải vá ("BẢN VÁ C1" ở `syncService.js`: timer debounce KHÔNG BAO GIỜ nổ trên
+    iOS vì tab bị đóng băng) ⇒ dùng lại đúng tín hiệu đó: `visibilitychange`, chỉ SO SÁNH tên chặng
+    nên `setState` gần như luôn bị React bỏ qua. **CỐ Ý không hẹn giờ định kỳ**: đổi lại là không
+    có nguy cơ cảnh dựng lại GIỮA một phiên tập trung (chớp hình lúc đang tập trung tệ hơn bầu trời
+    trễ vài phút). Ca còn hở: app mở + đang hiện suốt nhiều giờ mà không xong phiên nào.
+  - ⚠️ **BÀI TEST ĐẦU TIÊN CỦA TÔI XANH OAN.** Viết `/addEventListener\(\s*'visibilitychange'/` rồi
+    thử gỡ sạch bộ nghe — **vẫn xanh**, vì trong cùng file còn một bộ nghe `visibilitychange` KHÁC
+    (lo việc dừng vòng lặp vẽ). Đúng bẫy "ngưỡng một phía là cái phễu chứ không phải hàng rào". Đã
+    siết lại cho bám đúng tên hàm xử lý, rồi thử NGƯỢC với **4 biến thể hỏng** — cả 4 đều đỏ đúng
+    chỗ. **Quy tắc: một bài test chưa từng thấy đỏ thì chưa phải là một bài test.**
+  - **RÒ RỈ 2 — Phase 3V ĐÃ LÀM MẤT MỘT LỜI BẢO ĐẢM, và tôi suýt không nhận ra.** `ARCHITECTURE.md`
+    ghi thẳng *"BẦU TRỜI KHÔNG ĐƯỢC PHA BẰNG CÁCH XOAY GÓC MÀU"* — kết luận mua bằng BA lần hỏng
+    liên tiếp. Phép trộn RGB cũ khiến màu tím **bất khả thi về cấu tạo**; xoay sắc thì không. Tính
+    tay: nền ấm 40° kéo về đích lam 232° ở lực kéo 0,5 ra **316°**, đúng họ màu `#cf63c2` của lần
+    hỏng thứ hai. Bộ tham số hiện tại không rơi vào đó — nhưng **"hiện không rơi" ≠ "không thể
+    rơi"**, và khi mở rộng bài test chống-tím từ 6 màu kỷ mẫu lên **đủ 15 kỷ thật** thì nó bắt ngay
+    `#bd818e` (mặt nước 5 giờ sáng, kỷ 6 sắc tím): **LẦN THỨ TƯ của cùng họ lỗi, do chính 3V gây
+    ra.**
+  - **Cách trả lại lời bảo đảm** (một dòng, và nó là phát biểu chính xác hơn của cùng ý "đi qua màu
+    xám"): **độ dài vector tổng chính là mức độ CÓ NGHĨA của phép trộn** — hai sắc cùng hướng thì
+    dài 1, gần đối nhau thì triệt tiêu. Nhân độ tươi với `min(1, |v| / 0,5)` ⇒ ca mơ hồ nhạt về
+    xám, ca kéo mạnh giữ nguyên. Mốc 0,5 chọn theo SỐ ĐO: trưa `|v|` = 0,70 và bình minh 0,98 (giữ
+    nguyên), ca hỏng chỉ 0,18 (nhạt còn hơn một phần ba). Buổi sáng sát mốc (0,45) nên nhạt ~10% →
+    đã bù bằng `morning.skySaturation` 1,18 → 1,32. Đo lại: **sáng 203°/0,15 · trưa 211°/0,17 — y
+    như trước khi vá.** Bầu trời xanh không mất gì.
+  - **KHÔNG thêm bài test trùng.** Bản đầu tôi viết hẳn một bài chống-tím mới, rồi phát hiện đã có
+    sẵn hai bài. Đã XOÁ bài mới và **mở rộng bài cũ** (đủ 15 kỷ + soi thêm mặt nước) — đúng luật
+    "Composition over Duplication", và cũng vá đúng lỗ hổng mà chính file test đó tự cảnh báo
+    (*"bộ mẫu 5–6 màu cũ đã chạy XANH suốt trong khi 6/15 kỷ đang có mái tím sen"*).
+  - `ARCHITECTURE.md` đã sửa: đoạn cũ nay mâu thuẫn với mã, nên ghi rõ "cùng kết luận, đường khác",
+    kèm lý do vì sao đơn thuốc cũ (trộn RGB) gây bệnh thứ hai. **Tài liệu mâu thuẫn với mã còn nguy
+    hơn không có tài liệu.**
+  - Test **488** bài (485 → +3), lint sạch, build xanh, quét lại đủ 90 ô.
+
 - **2026-08-13 (Phase 3V)** — **TRỜI BAN NGÀY CUỐI CÙNG CŨNG XANH. `TECH_DEBT.md` #15 ĐÃ ĐÓNG.**
   Đây là phần sửa cho lỗi mà Phase 3U (ngay dưới) tìm ra nhưng chưa động tới.
   - **Sửa ở ĐÂU**: `skyward()` trong `src/engine/city3d/palette3d.js` (phép trộn màu) +
@@ -128,8 +171,8 @@
        phải khai cao hơn đích thật ~15°: đặt 210°/216° mới đo ra 203°/211°.
   - **Số đo trước → sau** (kỷ 7, theme sáng, đỉnh trời giữa khung): `26°/40°/41°/38°/19°/224°` →
     `27°/203°/211°/37°/18°/223°`. Bốn chặng ban ngày trải **178°** thay vì 22°. Giữa trưa `#7d8fa3`.
-  - **Xác minh đủ 180 ô** (15 kỷ × 6 chặng × 2 theme): không ô nào đen/xám/cháy; 6/6 chặng phân
-    biệt được ở CẢ HAI theme; **đêm không tối hoặc phẳng thêm** (dựng lại khung đêm bằng mã TRƯỚC
+  - **Xác minh đủ 90 ô** (15 kỷ × 6 chặng): không ô nào đen/xám/cháy; 6/6 chặng phân biệt được;
+    ⚠️ **ĐÍNH CHÍNH ở Phase 3W: chỗ này bản đầu ghi "180 ô × 2 theme" — SAI, xem mục 3W bên trên;** **đêm không tối hoặc phẳng thêm** (dựng lại khung đêm bằng mã TRƯỚC
     Phase 3V để so trực tiếp: chênh +0,005 độ sáng, +0,002 dải động — nằm trong nhiễu).
   - ⚠️ **CÔNG CỤ ĐO CỦA TÔI TỪNG NÓI DỐI, và suýt làm tôi chữa một bệnh không có.** Phép dò mép
     tấm bảng quét "chạy tới khi khác màu nền" chạy quá đà tới (68, 38) thay vì (8, 8), vì nền tấm

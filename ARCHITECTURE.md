@@ -296,10 +296,29 @@ rễ giống hệt nhau: nội suy góc màu luôn đi ĐƯỜNG NGẮN trên v�
 trời (cam bình minh ↔ lam) nằm gần như ĐỐI DIỆN nhau — đường ngắn đó chạy xuyên qua vùng TÍM, và
 khi hai đầu cách nhau đúng ~180° thì hướng đi còn lật ngẫu nhiên. Kết quả từng thấy: chân trời giữa
 trưa hồng phấn, đỉnh trời bình minh tím sen, đèn bán cầu tím. Cách đúng là cách của người vẽ: từ
-cam sang lam thì **đi qua màu xám**, tức trộn trong RGB (`skyward` ở `palette3d.js` — cả ba bước
-nền → sắc kỷ → sắc chặng đều trộn RGB). Góc màu vẫn tốt cho VẬT LIỆU (tường/mái/đá, nơi các góc
-màu gần nhau nên không bao giờ lật hướng). Khoá bằng test quét 24 giờ × 2 theme × 6 kỷ ở
-`palette3d.test.js`.
+cam sang lam thì **đi qua màu xám**. Góc màu vẫn tốt cho VẬT LIỆU (tường/mái/đá, nơi các góc màu
+gần nhau nên không bao giờ lật hướng).
+
+⚠️ **CẬP NHẬT 2026-08-13 (Phase 3V) — CÙNG KẾT LUẬN, NHƯNG NAY ĐẠT BẰNG ĐƯỜNG KHÁC. Đoạn trên tả
+đúng LỖI nhưng đơn thuốc của nó (trộn RGB) hoá ra gây một bệnh thứ hai.** "Đi qua màu xám" diệt
+được màu tím, nhưng nó cũng diệt luôn màu XANH: trưa khai `horizonHue: 205` với lực kéo mạnh nhất
+ngày mà đỉnh trời vẫn ra `#b1a790` — **41° vàng nâu** — vì đường thẳng nối hai sắc gần đối nhau
+trong RGB dừng lại ở vùng trung tính chứ không tới được sắc đích. Cả năm chặng ban ngày nằm gọn
+trong dải 19°–41°, chỉ đêm thoát ra (`TECH_DEBT.md` #15). Nên `skyward` nay **xoay sắc bằng vector
+chroma**, và giữ nguyên lời hứa "không bao giờ tím" bằng một cơ chế khác — vẫn là cơ chế "đi qua
+màu xám", chỉ là phát biểu chính xác hơn:
+
+> **Độ dài của vector tổng chính là mức độ CÓ NGHĨA của phép trộn.** Hai sắc cùng hướng → dài 1 →
+> giữ nguyên độ tươi. Hai sắc gần ĐỐI NHAU → vector triệt tiêu → **độ tươi bị kéo về xám**, đúng
+> chỗ mà phép nội suy góc màu ngày trước cho ra màu tím rực. Một dòng: `s × min(1, |v| / 0,5)`.
+
+Vì sao tin được rằng lần này khác: bản đầu của Phase 3V **thiếu** đúng dòng đó, và bài test quét đủ
+15 kỷ bắt ngay ra `#bd818e` (nước lúc 5 giờ, kỷ 6 sắc tím) — **lần thứ TƯ của cùng họ lỗi**. Tức
+là đường xoay sắc thật sự có nguy cơ đó, và dòng chặn kia đã được thử ngược cho thấy nó chặn thật.
+
+⇒ Luật hiện hành: **bầu trời được xoay sắc, NHƯNG độ tươi phải nhạt dần theo độ mơ hồ của phép
+trộn.** Khoá bằng test quét 24 giờ × 2 theme × **đủ 15 kỷ thật** (mở rộng từ 6 kỷ mẫu — chính bộ
+mẫu cũ đã để lọt lỗi mái tím ở 6/15 kỷ), soi cả **mặt nước** ở `palette3d.test.js`.
 
 ⚠️ **BAN ĐÊM BỊ LÀM TỐI HAI LẦN** — và đây là cái bẫy số học đã cho ra một ảnh chụp mặt đất
 `#030401` (gần đúng số 0). Giờ đêm vừa chuyển SƠN sang bảng màu tối (~2,9×) vừa làm MÀU ĐÈN tối đi

@@ -80,6 +80,33 @@ export default function CityScene3D({
   // Chỉ dùng cho lớp viền tối bên dưới — xem giải thích ở đó.
   const [darkScene, setDarkScene] = useState(false);
 
+  // ⚠️ CHẶNG NGÀY PHẢI ĐI THEO ĐỒNG HỒ KHI ĐÀM MỞ LẠI APP — nếu không thì lời hứa "mỗi lần mở app
+  // là một cảnh khác" (`daylight.js`) BỊ VỠ đúng ở cách Đàm dùng nhiều nhất.
+  // Cảnh đọc đồng hồ đúng một lần lúc dựng, rồi giữ nguyên tới lần dựng lại kế tiếp. Danh sách phụ
+  // thuộc của effect chính KHÔNG có gì liên quan tới thời gian, nên phần lớn trường hợp được
+  // `sessionCount` cứu (xong một phiên là dựng lại ⇒ đọc lại đồng hồ). Trường hợp KHÔNG được cứu:
+  // **iPhone (PWA) chỉ ĐÓNG BĂNG tab chứ không đóng hẳn.** Mở app buổi sáng, cất máy, mở lại lúc
+  // tối → React KHÔNG mount lại, cảnh giữ nguyên bầu trời buổi sáng giữa đêm.
+  // Đây đúng họ lỗi mà tầng đồng bộ đã phải vá (`syncService.js`, "BẢN VÁ C1": timer debounce
+  // KHÔNG BAO GIỜ nổ trên iOS vì tab bị đóng băng) — cùng nền tảng, cùng nguyên nhân, nên dùng lại
+  // đúng tín hiệu đó: `visibilitychange`.
+  // ⚠️ CHỈ SO SÁNH TÊN CHẶNG, không so giờ: giá trị chỉ đổi tối đa 6 lần/ngày nên `setState` gần
+  // như luôn bị React bỏ qua ⇒ không có lượt render thừa, không có cảnh dựng lại thừa.
+  // ⚠️ CỐ Ý KHÔNG hẹn giờ định kỳ. Trường hợp duy nhất còn hở là app mở + đang hiện suốt nhiều giờ
+  // mà không xong phiên nào — tức đang có người nhìn một app đứng yên. Đổi lại, không có nguy cơ
+  // cảnh dựng lại GIỮA một phiên tập trung (chớp hình lúc đang tập trung tệ hơn bầu trời trễ vài
+  // phút). Ghi rõ đánh đổi ở đây để phiên sau đừng "sửa" bằng cách thêm `setInterval`.
+  const [dayPhase, setDayPhase] = useState(() => deriveDaylight(getVietnamHour()).phase);
+  useEffect(() => {
+    const recheck = () => {
+      if (document.visibilityState !== 'visible') return;
+      const now = deriveDaylight(getVietnamHour()).phase;
+      setDayPhase((prev) => (prev === now ? prev : now));
+    };
+    document.addEventListener('visibilitychange', recheck);
+    return () => document.removeEventListener('visibilitychange', recheck);
+  }, []);
+
   // Giữ callback trong ref: chúng đổi mỗi lần render cha, mà ta KHÔNG muốn dựng lại cả cảnh WebGL
   // chỉ vì một hàm mới được tạo.
   const onStatsRef = useRef(onStats);
@@ -435,8 +462,12 @@ export default function CityScene3D({
     // chúng thì bật "giảm chuyển động" xong cư dân vẫn đi, và xong thêm 20 phiên mà phố vẫn vắng
     // như cũ cho tới lần đổi kỷ kế tiếp. Dựng lại cảnh ở đây rẻ và hiếm — cả ba đều là số nguyên
     // đổi vài lần mỗi ngày, không phải object mới mỗi lượt render.
+    // ⚠️ `dayPhase` nằm trong danh sách này để cảnh dựng lại KHI SANG CHẶNG NGÀY MỚI — xem khối
+    // giải thích ở chỗ khai báo `dayPhase`. Nó KHÔNG được dùng trong thân effect (thân effect đọc
+    // đồng hồ tươi qua `getVietnamHour()`, là nguồn sự thật duy nhất); có mặt ở đây thuần tuý làm
+    // TÍN HIỆU dựng lại. Bỏ nó ra = bầu trời đứng im khi mở lại app trên iPhone.
   }, [layout, dimmed, failed, giveUp, reduceMotion, sessionCount, streakLength,
-    still, fill, interactive]);
+    still, fill, interactive, dayPhase]);
 
   if (failed) return null;
 

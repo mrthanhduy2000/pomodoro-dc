@@ -5,7 +5,12 @@ import reactRefresh from 'eslint-plugin-react-refresh'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['dist', '.runtime', 'backups', '.claude', 'DC Pomodoro.app']),
+  // ⚠️ `.city-preview` PHẢI có mặt ở đây, không chỉ ở `.gitignore` — ESLint KHÔNG tự đọc `.gitignore`.
+  // Bẫy đã cắn thật (2026-08-13): `scripts/city-preview.mjs` gói tạm cả three.js vào
+  // `.city-preview/.build/dist/preview.js` trong lúc dựng ảnh rồi mới xoá. Chạy `npm run lint` đúng
+  // lúc đó thì ra **29 lỗi** (`no-undef`, `rules-of-hooks`…) — toàn bộ nằm trong RUỘT three.js, không
+  // phải code của dự án. Ai không biết sẽ tưởng mình vừa làm hỏng gì đó và đi "sửa" nhầm chỗ.
+  globalIgnores(['dist', '.runtime', 'backups', '.claude', '.city-preview', 'DC Pomodoro.app']),
   {
     files: ['**/*.js'],
     extends: [

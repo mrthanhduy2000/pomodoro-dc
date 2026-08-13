@@ -341,7 +341,29 @@ export function buildScenePalette({ tokens, eraColor, daylight } = {}) {
     const pull = band === 'horizon' ? horizonPull : skyPull;
     if (target === null) return rgbToHexNumber(rgb);
     const t = Math.min(1, Math.max(0, pull * strength));
-    return rgbToHexNumber(mixRgb(rgb, hslToRgb({ h: target, s: sat, l }), t));
+    // ⚠️ XOAY SẮC BẰNG VECTOR, KHÔNG TRỘN TRONG RGB — đây là bản vá 2026-08-13, đọc trước khi đổi.
+    // Hai đầu đem trộn có CÙNG độ tươi và CÙNG độ đậm (xem chú thích ngay trên), chỉ khác SẮC. Vậy
+    // phép đúng là xoay sắc. Nhưng `mixRgb` thì kéo thẳng qua giữa không gian RGB, mà đường thẳng
+    // nối hai sắc gần ĐỐI NHAU (ấm 40° ↔ lạnh 205°) đi xuyên qua vùng TRUNG TÍNH ⇒ ra XÁM chứ
+    // không ra sắc đích. Đo thật lúc phát hiện: giữa trưa đặt `skyHue: 212` lực kéo 0,70 — mạnh
+    // nhất cả ngày — mà đỉnh trời vẫn ra `#b1a790`, tức **41° vàng nâu**; ép lực kéo lên còn tệ hơn
+    // (0,78 → `#9ca7a3`, 157° lục-lam, độ tươi 0,05). Cùng đúng họ lỗi đã sửa cho MÁI NHÀ ở
+    // Phase 3N: **trộn RGB thì đi qua trung tính, và trung tính giết bản sắc.**
+    // Cách chữa: coi sắc là một VECTOR trên vòng tròn màu, nội suy HƯỚNG của nó, rồi **trả lại
+    // nguyên độ tươi và độ đậm của gốc**. Hướng cư xử y như trực giác (bên nào nặng cân hơn thì
+    // thắng, nên cảnh ĐÊM giữ nguyên như trước), còn độ tươi thì không bao giờ bị bóp chết nữa.
+    // ⚠️ `t === 0` cho ra ĐÚNG TỪNG BYTE như bản cũ (sắc/tươi/đậm đều là của gốc) — nhờ vậy mọi
+    // chỗ không khai `pull` giữ nguyên kết quả, và bài test khoá điều đó.
+    const base = rgbToHsl(rgb);
+    const RAD = Math.PI / 180;
+    const x = (1 - t) * Math.cos(base.h * RAD) + t * Math.cos(target * RAD);
+    const y = (1 - t) * Math.sin(base.h * RAD) + t * Math.sin(target * RAD);
+    // Hai sắc ĐỐI NHAU ĐÚNG 180° ở t = 0,5 thì hai vector triệt tiêu và `atan2(0, 0)` trả về 0°
+    // (ĐỎ) — một màu chẳng liên quan gì tới cả hai đầu. Quá ngắn thì bỏ phép xoay, chọn hẳn một bên.
+    const hueOut = Math.hypot(x, y) < 1e-6
+      ? (t >= 0.5 ? target : base.h)
+      : ((Math.atan2(y, x) / RAD) % 360 + 360) % 360;
+    return rgbToHexNumber(hslToRgb({ h: hueOut, s: base.s, l: base.l }));
   };
   // Hơi ấm của nắng: −1 lạnh … +1 ấm. Đổi GÓC MÀU của mặt trời và của ánh sáng dội lại từ đất.
   const warmth = Number.isFinite(daylight?.sunWarmth) ? daylight.sunWarmth : 0.3;
@@ -478,9 +500,19 @@ export function buildScenePalette({ tokens, eraColor, daylight } = {}) {
   // Theme sáng giữ ánh vàng ấm của nắng chiều. Cùng một thành phố, hai thời điểm trong ngày.
   // `skyShift` dịch góc màu theo chặng trong ngày: dương = về phía vàng-hồng (bình minh, hoàng
   // hôn), âm = về phía lam (đêm). Đây là thứ làm 6 giờ sáng khác 12 giờ trưa khác 10 giờ đêm.
+  // ⚠️ ĐỘ ĐẬM 0,80 → 0,70 VÀ ĐỘ TƯƠI 0,42 → 0,60 (theme sáng) — ĐỌC TRƯỚC KHI KÉO NGƯỢC LẠI.
+  // Ánh xạ tông màu `Neutral` (xem `applyPaintedLook` ở `sceneGraph.js`) NÉN VÙNG SÁNG. Bầu trời ở
+  // độ đậm 0,80 nằm đúng giữa vùng bị nén, nên mọi độ tươi khai ở đây đều bị bóp gần hết trước khi
+  // tới mắt. Đo thật (2026-08-13, kỷ 7, giữa trưa): bảng màu cho `#bfd1dd` — 204° lam, tươi 0,31 —
+  // mà ảnh dựng ra `#9ca8a5`, tức **164° tươi 0,06**. Chính chú thích ở `applyPaintedLook` đã cảnh
+  // báo "cao hơn nữa thì trời bắt đầu bạc"; đây là mặt còn lại của cùng hiện tượng.
+  // Hạ độ đậm đưa bầu trời RA KHỎI vùng nén, rồi nâng độ tươi bù phần vẫn bị nén.
+  // ⚠️ Đây là bài học "BẢNG MÀU ≠ MÀU TRÊN MÀN HÌNH" đã ghi ở `CLAUDE.md`, lần này theo chiều
+  // NGƯỢC với vụ mái nhà (mái thì màn hình TƯƠI GẤP ĐÔI bảng; trời thì màn hình NHẠT ĐI 5 lần).
+  // ⇒ Sửa xong PHẢI chụp lại và đo đầu RA, không được tin bảng.
   const horizon = isDark
-    ? skyward(224, 0.14, Math.min(0.75, 0.34 * skySat), 0.80, 0.27, 'horizon')
-    : skyward(40, 0.18, Math.min(0.75, 0.42 * skySat), 0.80, 0.26, 'horizon');
+    ? skyward(224, 0.14, Math.min(0.75, 0.44 * skySat), 0.72, 0.27, 'horizon')
+    : skyward(40, 0.18, Math.min(0.78, 0.60 * skySat), 0.70, 0.26, 'horizon');
 
   return {
     // ── giữ nguyên các khoá cũ để không phá chỗ đang dùng ────────────────────

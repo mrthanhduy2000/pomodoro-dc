@@ -13,13 +13,16 @@
 > mà không được refactor triệt để, phải CHỦ ĐỘNG đề xuất mở một "Maintenance Sprint" (nêu rõ mục
 > tiêu/phạm vi/lợi ích/rủi ro/tiêu chí hoàn thành) thay vì tiếp tục cộng thêm tính năng mới.
 >
-> **Trạng thái ngưỡng hiện tại (2026-08-13)**: **1 mục Priority High** (#14) → vẫn CHƯA đạt ngưỡng
-> 8–10 mục để đề xuất Maintenance Sprint. Có **3 mục Medium-High** (#3, #13, #15).
-> ⚠️ **Vế THỨ HAI của ngưỡng nay đã CHẠM**: `palette3d.js` đã qua **5 đợt** vá mỹ thuật (3C · 3G ·
-> 3M · 3N · và nay #15 chỉ đích danh `skyward()` trong cùng file). Ghi chú bên dưới đã đặt sẵn mốc
-> "nếu có đợt thứ 5 cùng loại thì nên dừng lại xem xét tổng thể tầng màu thay vì vá tiếp" — mốc đó
-> đã tới. **Khuyến nghị: làm #15 như một đợt xem xét TỔNG THỂ phép trộn màu (RGB → HSL) cho cả mái,
-> trời và mặt đất một lượt**, thay vì vá riêng bầu trời rồi vài tuần sau lại vá thứ khác cùng bệnh.
+> **Trạng thái ngưỡng hiện tại (2026-08-13, cập nhật sau Phase 3V)**: **1 mục Priority High** (#14)
+> → vẫn CHƯA đạt ngưỡng 8–10 mục để đề xuất Maintenance Sprint. Còn **2 mục Medium-High** (#3, #13)
+> — #15 đã đóng.
+> ⚠️ **Vế THỨ HAI của ngưỡng ĐÃ CHẠM và đã được XỬ LÝ MỘT PHẦN**: `palette3d.js` đã qua **5 đợt** vá
+> mỹ thuật (3C · 3G · 3M · 3N · 3V). Phase 3V không vá riêng bầu trời mà **sửa đúng phép toán dùng
+> chung** (`skyward()` chuyển từ trộn RGB sang xoay sắc, cùng khuôn đã dùng cho mái nhà ở 3N) — tức
+> đã đi theo khuyến nghị "xem xét tổng thể" thay vì vá điểm.
+> **Phần CHƯA làm của khuyến nghị đó**: mặt đất và nước vẫn còn vài chỗ trộn RGB. Chưa thấy triệu
+> chứng nào ở 180 ô vừa quét, nên KHÔNG mở mục nợ mới — nhưng nếu xuất hiện **đợt vá thứ 6** cho
+> `palette3d.js` thì lần đó phải là một đợt rà soát toàn bộ phép trộn màu còn lại, không vá tiếp.
 > ⚠️ **#14 là nợ THIẾT KẾ, không phải nợ mã** — không có gì hỏng, nhưng nó chặn giá trị của mọi đầu
 > tư về sau vào lớp thành phố (95% số phiên không thấy lễ mừng). Nó **cần Đàm chọn hướng** trước
 > khi bất kỳ phiên AI nào động vào, vì mọi phương án đều đổi cân bằng kinh tế.
@@ -274,7 +277,18 @@
 
 ---
 
-## #15 — **Trời ban ngày KHÔNG BAO GIỜ xanh**: cả ngày chỉ là dốc sáng–tối, không phải hành trình màu
+## #15 — ✅ **ĐÃ XỬ LÝ (2026-08-13, Phase 3V)** — Trời ban ngày KHÔNG BAO GIỜ xanh: cả ngày chỉ là dốc sáng–tối, không phải hành trình màu
+
+> **KẾT QUẢ**: đo lại cùng phép đo, cùng kỷ 7, cùng điểm lấy mẫu — đỉnh trời cả ngày nay là
+> `27° · 203° · 211° · 37° · 18° · 223°`, thay cho `26° · 40° · 41° · 38° · 19° · 224°`. Bốn chặng
+> ban ngày không còn nằm gọn trong một dải cam-nâu 22°; chúng trải **178°**. Giữa trưa ra
+> `#7d8fa3` — xanh trời thật. Đã kiểm đủ **180 ô** (15 kỷ × 6 chặng × 2 theme): không ô nào đen,
+> xám hay cháy; 6/6 chặng vẫn phân biệt được ở cả hai theme. Chi tiết cách sửa: xem chú thích dài
+> ngay trên dòng `noon` trong `src/engine/city3d/daylight.js`. Bài test khoá: bài 81
+> `daylight.test.js` (đã thử NGƯỢC với bộ số hỏng cũ → báo đỏ đúng như mong đợi, 38° < 90°).
+>
+> **Giữ nguyên toàn bộ phần chẩn đoán bên dưới** — nó là bằng chứng cho bài học "chỉnh tham số
+> không chữa nổi một phép toán sai", và hai thí nghiệm thất bại ở đó vẫn còn giá trị cảnh báo.
 
 - **Module**: `src/components/city/render3d/sceneGraph.js` (số mũ pha vòm trời) + `skyward()` trong
   `src/engine/city3d/palette3d.js` (phép trộn màu). **KHÔNG phải lỗi của `daylight.js`** — bảng ở
@@ -327,10 +341,26 @@
 - **Review Trigger**: trước bất kỳ thay đổi nào ở `skyward()`, số mũ vòm trời, hoặc
   `DAYLIGHT_PROFILES`.
 - **Owner**: (chưa gán)
-- **Status**: Open — phát hiện 2026-08-13 (Phase 3U) khi quét lại đủ 15 kỷ × 6 chặng trên mã hiện
-  tại. ⚠️ Mắt tôi ban đầu chẩn "3 chặng ban ngày giống hệt nhau" — **phép đo BÁC BỎ điều đó** (6/6
-  chặng vẫn phân biệt được, khoảng cách nhỏ nhất 17/255) nhưng lại lộ ra lỗi thật và chính xác hơn:
-  không phải "giống nhau", mà là **cùng một SẮC, chỉ khác ĐỘ SÁNG**.
+- **Status**: ✅ **RESOLVED 2026-08-13 (Phase 3V)** — phát hiện cùng ngày ở Phase 3U khi quét lại đủ
+  15 kỷ × 6 chặng trên mã hiện tại. ⚠️ Mắt tôi ban đầu chẩn "3 chặng ban ngày giống hệt nhau" —
+  **phép đo BÁC BỎ điều đó** (6/6 chặng vẫn phân biệt được, khoảng cách nhỏ nhất 17/255) nhưng lại
+  lộ ra lỗi thật và chính xác hơn: không phải "giống nhau", mà là **cùng một SẮC, chỉ khác ĐỘ SÁNG**.
+- **CÁCH SỬA THẬT SỰ ĐÃ DÙNG** (khác một chút so với mục "Recommended Solution" ở trên — ghi lại vì
+  chỗ khác nhau chính là phần học được):
+  1. `skyward()` xoay sắc bằng **vector chroma** (cộng hai vector đơn vị theo góc rồi `atan2`), giữ
+     nguyên độ tươi/độ sáng gốc. Cách này tự tránh được đúng cái bẫy mà mục trên cảnh báo — sắc
+     gần đối nhau thì vector tổng ngắn lại chứ không quét qua lục/tía. Trường hợp suy biến (hai
+     vector triệt tiêu) đã có nhánh riêng. `t === 0` ra byte y hệt bản cũ ⇒ chỗ nào không kéo thì
+     không đổi một pixel.
+  2. **Không chỉ là phép trộn.** Còn hai tầng nữa mới ra màu trên màn hình, và nếu bỏ qua thì sửa
+     đúng toán vẫn ra trời xám: (a) `NeutralToneMapping` phơi sáng 1,2 nén mạnh vùng sáng, mà chân
+     trời để độ sáng 0,80 thì nằm đúng giữa vùng bị nén ⇒ độ tươi ra màn hình chỉ còn **1/5** —
+     phải hạ độ sáng xuống 0,70/0,72 và nâng độ tươi lên 0,60/0,44; (b) nắng ấm nhân vào trời làm
+     sắc lạnh tụt **13–22°** về phía lục ⇒ hai chặng sáng/trưa phải khai cao hơn đích thật ~15°.
+- **Nợ CÒN LẠI, có chủ đích**: số mũ `t^2.6` ở `sceneGraph.js` **không đụng tới**. Chú thích tại chỗ
+  ghi rõ nó được nâng từ 1,2 lên để cứu lỗi "mảng oải hương xam xám"; sửa nó là mở lại một lỗi cũ
+  để đổi lấy một cải thiện mà đường khác đã đạt được rồi. Vẫn đúng là **màu trời ban ngày do
+  `horizonHue` quyết định, không phải `skyHue`** — ai chỉnh bảng `DAYLIGHT_PROFILES` phải nhớ điều đó.
 
 ---
 

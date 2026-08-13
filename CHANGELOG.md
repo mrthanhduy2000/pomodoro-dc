@@ -12,6 +12,31 @@
 
 ---
 
+## 2026-08-13 — Mỹ thuật (Phase 3V): trời ban ngày cuối cùng cũng xanh
+
+- **Mục đích**: đóng `TECH_DEBT.md` #15. Trước đó 5/6 chặng ngày cho ra cùng một sắc trời cam-nâu
+  (26°/40°/41°/38°/19°), chỉ đêm mới thoát ra — nghĩa là "thành phố đổi theo giờ" thực chất chỉ đổi
+  ĐỘ SÁNG, tín hiệu thị giác yếu nhất.
+- **Nguyên nhân gốc (ba tầng nhân nhau, phải sửa cả ba)**: (1) `skyward()` trộn màu trong không
+  gian RGB nên sắc ấm pha sắc lạnh đi qua vùng trung tính — **cùng họ lỗi đã sửa cho mái nhà ở
+  Phase 3N**; (2) `NeutralToneMapping` nén vùng sáng, mà chân trời để độ sáng 0,80 thì nằm đúng
+  giữa vùng bị nén ⇒ độ tươi ra màn hình chỉ còn 1/5 bảng màu; (3) nắng ấm nhân vào trời kéo sắc
+  lạnh tụt 13–22° về phía lục.
+- **Phạm vi**: `src/engine/city3d/palette3d.js` (`skyward()` xoay sắc bằng vector chroma; độ
+  sáng/độ tươi chân trời), `src/engine/city3d/daylight.js` (chỉnh 2 chặng sáng/trưa),
+  `src/engine/city3d/daylight.test.js` (bài 81 viết lại thành bất biến thật). Không đụng state,
+  không cần chạy SQL, không thêm dependency.
+- **Kết quả đo**: đỉnh trời cả ngày nay là `27° · 203° · 211° · 37° · 18° · 223°` — bốn chặng ban
+  ngày trải **178°** thay vì 22°. Giữa trưa ra `#7d8fa3`, xanh trời thật.
+- **Xác minh**: dựng và ĐO đủ **180 ô** (15 kỷ × 6 chặng × 2 theme) — không ô nào đen/xám/cháy, 6/6
+  chặng phân biệt được ở cả hai theme, đêm không hề tối hoặc phẳng thêm (chênh +0,005, trong nhiễu).
+- **Tương thích**: `skyward(…, t = 0)` cho ra byte y hệt bản cũ ⇒ mọi chỗ gọi không kéo màu đều
+  không đổi một pixel.
+- **Kèm theo**: `eslint.config.js` bỏ qua `.city-preview` (ESLint không tự đọc `.gitignore`, nên
+  chạy lint đúng lúc đang dựng ảnh sẽ ra 29 lỗi giả từ ruột three.js).
+- **Test**: **485** bài, giữ nguyên số lượng — bài 81 được viết lại chứ không thêm mới, và đã thử
+  NGƯỢC với bộ số hỏng cũ để chắc chắn nó báo đỏ (38° < 90°).
+
 ## 2026-08-12 — UX (Phase 3S): nhìn bằng mắt vào thẻ lễ mừng
 
 - **Mục đích**: Phase 3R sửa NỘI DUNG bằng số đo; phase này nhìn HÌNH DẠNG bằng mắt — dựng lại thẻ

@@ -90,32 +90,55 @@ const PHASE_BY_HOUR = [
 export const DAYLIGHT_PROFILES = {
   //           cao độ nắng    hơi ấm       nắng        đèn nền     ĐỈNH trời          CHÂN trời              tươi   cửa sổ  đèn sân
   dawn:      { sunAltitude: 0.22, sunWarmth:  0.85, sunEnergy: 0.72, fillEnergy: 0.95, skyHue: 232, skyPull: 0.42, horizonHue:  18, horizonPull: 0.70, skySaturation: 1.15, windowsLit: true,  lampEnergy: 0.35 },
-  morning:   { sunAltitude: 0.55, sunWarmth:  0.40, sunEnergy: 0.95, fillEnergy: 1.00, skyHue: 206, skyPull: 0.58, horizonHue:  44, horizonPull: 0.26, skySaturation: 1.02, windowsLit: false, lampEnergy: 0    },
+  morning:   { sunAltitude: 0.55, sunWarmth:  0.40, sunEnergy: 0.95, fillEnergy: 1.00, skyHue: 218, skyPull: 0.58, horizonHue: 210, horizonPull: 0.72, skySaturation: 1.18, windowsLit: false, lampEnergy: 0    },
   // ⚠️ Giữa trưa KHÔNG kéo cao độ nắng lên sát đỉnh đầu nữa (0,92 → 0,84). Nghe thì "trưa là mặt
   // trời trên đỉnh đầu", nhưng ở 0,92 bóng đổ ngắn gần bằng không và mọi khối mất hết mặt tối —
   // cả bảng quét thì cột 12 giờ là cột PHẲNG NHẤT, nhạt nhẽo nhất, đúng thứ Đàm gọi là "bị chán".
   // Hạ một chút thì bóng vẫn ngắn (vẫn đọc ra giữa trưa) mà khối lại có mặt sáng/mặt tối trở lại.
   // Đèn nền cũng hạ theo (0,92 → 0,80): giữa trưa trời quang thì bóng SÂU, không phải bị đèn nền
   // xoá mờ — đây chính là chiaroscuro, đúng nguyên lý đã ghi ở `sceneGraph.js`.
-  // ⚠️ TRỜI BAN NGÀY KHÔNG BAO GIỜ XANH — LỖI ĐÃ ĐỊNH VỊ CHÍNH XÁC, CHƯA SỬA. Xem `TECH_DEBT.md` #15.
-  // Đo trên ảnh chụp thật (2026-08-13, kỷ 7, theme sáng): đỉnh trời giữa trưa ra `#b1a790`, **góc
-  // màu 41°** (vàng nâu) — trong khi dòng dưới ghi `skyHue: 212` với lực kéo 0,70, MẠNH NHẤT trong
-  // ngày. Màu xanh đó KHÔNG HỀ tới được mắt Đàm. Hai nguyên nhân chồng lên nhau:
+  // ⚠️ TRỜI BAN NGÀY KHÔNG BAO GIỜ XANH — ĐÃ SỬA XONG 2026-08-13 (Phase 3V, `TECH_DEBT.md` #15 đóng).
+  // Ghi lại đầy đủ vì đây là loại lỗi CHỈ lộ ra khi đo, và ba con số dưới đây là bằng chứng.
+  //
+  // TRIỆU CHỨNG (đo trên ảnh chụp thật, kỷ 7, theme sáng): đỉnh trời giữa trưa ra `#b1a790`, **góc
+  // màu 41°** — vàng nâu — trong khi bảng này ghi `skyHue: 212` với lực kéo 0,70, MẠNH NHẤT trong
+  // ngày. Cả ngày đo được 26°/40°/41°/38°/19°/224°: năm chặng ban ngày đều nâu, chỉ đêm mới xanh.
+  // Tức là bốn chặng ban ngày thực chất chỉ là MỘT chặng đổi độ sáng — đúng thứ Đàm gọi là "bị chán".
+  //
+  // HAI NGUYÊN NHÂN CHỒNG LÊN NHAU (phải sửa cả hai, sửa một cái thì vẫn hỏng):
   //   (1) `sceneGraph.js` trộn vòm trời theo `t^2.6`, mà camera chúc xuống nên dải trời LỌT VÀO
   //       KHUNG chỉ nằm ở t ≈ 0,50–0,67 ⇒ `0,5^2,6 = 0,17`. Tức **bầu trời nhìn thấy được là
   //       64–84% MÀU CHÂN TRỜI**. `skyHue` cai quản đỉnh vòm — chỗ gần như không bao giờ hiện ra.
   //       ⇒ Ai quyết định màu trời ban ngày là `horizonHue`, KHÔNG phải `skyHue`.
   //   (2) `skyward()` (`palette3d.js`) trộn bằng **`mixRgb`**. Sắc ấm 40° pha sắc lạnh 205° trong
   //       không gian RGB thì đi qua vùng TRUNG TÍNH — cùng họ lỗi đã sửa cho MÁI NHÀ ở Phase 3N.
-  // ⚠️ ĐÃ THỬ VÀ THẤT BẠI — ĐỪNG THỬ LẠI HAI CÁCH NÀY:
+  //       Đã đổi `skyward()` sang XOAY SẮC bằng vector chroma (cộng hai vector đơn vị theo góc rồi
+  //       lấy `atan2`), giữ nguyên độ tươi/độ sáng gốc. `t === 0` vẫn ra byte y hệt bản cũ — cố ý,
+  //       để mọi chỗ gọi mà không kéo thì không đổi một pixel nào.
+  //
+  // ⚠️ ĐÃ THỬ VÀ THẤT BẠI — ĐỪNG THỬ LẠI HAI CÁCH NÀY (đều là chỉnh số mà không sửa phép trộn):
   //   • `horizonHue: 205, horizonPull: 0.42` → ra `#a6a69a`, 61°, độ tươi **0,06** (xám, không xanh).
-  //   • `horizonHue:  48, horizonPull: 0.22` → ra `#9ca7a3`, **157°** lục-lam, độ tươi **0,05**.
-  //   Càng kéo mạnh càng lạc sang lục rồi chết ở xám. **Chỉnh số trong bảng này KHÔNG chữa được** —
-  //   phải sửa phép toán màu ở `skyward()` (xoay sắc trong không gian HSL như đã làm cho mái nhà),
-  //   và vì chỗ đó dùng chung cho 15 kỷ × 6 chặng × 2 theme × 4 skin nên phải kiểm đủ bảng quét
-  //   trước khi phát hành. Giữ nguyên giá trị cũ cho tới khi có một phase riêng làm việc đó.
-  noon:      { sunAltitude: 0.84, sunWarmth:  0.05, sunEnergy: 1.10, fillEnergy: 0.80, skyHue: 212, skyPull: 0.70, horizonHue:  48, horizonPull: 0.22, skySaturation: 1.00, windowsLit: false, lampEnergy: 0    },
-  afternoon: { sunAltitude: 0.48, sunWarmth:  0.55, sunEnergy: 1.00, fillEnergy: 1.00, skyHue: 214, skyPull: 0.44, horizonHue:  34, horizonPull: 0.52, skySaturation: 1.05, windowsLit: false, lampEnergy: 0    },
+  //   • `horizonHue: 205, horizonPull: 0.85` → ra `#9ca7a3`, **157°** lục-lam, độ tươi **0,05**.
+  //   Càng kéo mạnh càng lạc sang lục rồi chết ở xám. Bài học: **chỉnh tham số không chữa nổi một
+  //   phép toán sai** — phải sửa đúng chỗ toán, rồi mới chỉnh tham số.
+  //
+  // ⚠️ CÒN MỘT TẦNG NỮA MỚI RA MÀU TRÊN MÀN HÌNH — đúng bài học "BẢNG MÀU ≠ MÀU TRÊN MÀN HÌNH" ở
+  // `CLAUDE.md`, nhưng lần này lệch theo chiều NGƯỢC với mái nhà. Mái nhà render ra tươi GẤP ĐÔI
+  // bảng màu; bầu trời thì render ra nhạt đi **5 lần** — vì `NeutralToneMapping` ở phơi sáng 1,2 nén
+  // mạnh vùng sáng, mà chân trời để độ sáng 0,80 thì nằm đúng giữa vùng bị nén. Nên `palette3d.js`
+  // đã hạ độ sáng chân trời xuống 0,70/0,72 và nâng độ tươi lên 0,60/0,44 để thoát vùng nén.
+  //
+  // ⚠️ VÀ GÓC MÀU ĐẶT VÀO ≠ GÓC MÀU ĐO ĐƯỢC. Nắng ấm nhân vào bầu trời làm sắc lạnh TỤT xuống phía
+  // lục: đặt 195° thì đo ra 173°, đặt 205° đo ra 192° (lệch −13 tới −22°); ngược lại sắc ấm thì hơi
+  // tăng (đặt 18° đo ra 27°). Vì vậy hai chặng sáng/trưa phải đặt CAO HƠN đích thật khoảng 15°:
+  // đặt 210°/216° thì đo ra **203°/211°** — xanh trời thật. Ai chỉnh bảng này về sau nhớ trừ hao.
+  //
+  // KẾT QUẢ SAU KHI SỬA (cùng phép đo, cùng kỷ 7): 27° · **203°** · **211°** · 37° · 18° · 223°.
+  // Một ngày nay là một HÀNH TRÌNH MÀU thật, và bài test 81 ở `daylight.test.js` khoá lại điều đó
+  // bằng luật "các chặng BAN NGÀY phải trải ít nhất 90° góc màu" — luật này đã được thử NGƯỢC với
+  // bộ số hỏng cũ và báo đỏ đúng như mong đợi (bộ cũ chỉ trải 38°).
+  noon:      { sunAltitude: 0.84, sunWarmth:  0.05, sunEnergy: 1.10, fillEnergy: 0.80, skyHue: 224, skyPull: 0.70, horizonHue: 216, horizonPull: 0.85, skySaturation: 1.16, windowsLit: false, lampEnergy: 0    },
+  afternoon: { sunAltitude: 0.48, sunWarmth:  0.55, sunEnergy: 1.00, fillEnergy: 1.00, skyHue: 214, skyPull: 0.44, horizonHue:  34, horizonPull: 0.60, skySaturation: 1.05, windowsLit: false, lampEnergy: 0    },
   dusk:      { sunAltitude: 0.18, sunWarmth:  1.00, sunEnergy: 0.78, fillEnergy: 1.05, skyHue: 238, skyPull: 0.46, horizonHue:  10, horizonPull: 0.78, skySaturation: 1.25, windowsLit: true,  lampEnergy: 0.60 },
   // Đêm: chặng DUY NHẤT mà chân trời cũng lạnh theo đỉnh trời — kéo cả hai về LAM SÂU (không phải
   // lục lam, không phải tím). Nắng yếu nhưng KHÔNG tắt — đó là ánh trăng, và không có nó thì công

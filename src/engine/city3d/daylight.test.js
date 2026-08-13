@@ -139,28 +139,60 @@ test('bầu trời bị KÉO VỀ MỘT ĐÍCH, không phải cộng thêm N đ�
   assert.ok(DAYLIGHT_PROFILES.dusk.horizonHue < 60, 'hoàng hôn phải kéo chân trời về sắc ấm');
 });
 
-test('ĐỈNH trời luôn lạnh, CHÂN trời giữ hơi ấm — trừ ban đêm là chặng duy nhất cả hai cùng lạnh', () => {
-  // ⚠️ Bài này khoá lại lỗi mà chỉ BẢN QUÉT đủ 15 kỷ × 6 chặng mới bắt được, vì nó chỉ hiện ra khi
-  // xếp 6 chặng cạnh nhau: hồi cả vòm trời dùng chung MỘT đích, chân trời 8 giờ sáng ra `#cad0d0`
-  // — độ tươi 0,06, một dải XÁM CHẾT — vì sắc ấm 40° bị kéo nửa đường sang lam 202° thì rơi đúng
-  // vào vùng trung tính ở giữa. Đồng thời bình minh/hoàng hôn thì đích ấm lại kéo cả ĐỈNH trời
-  // sang nâu ô-liu. Một đích chung không diễn tả nổi hai vai ngược nhau.
+test('ĐỈNH trời luôn lạnh · BÌNH MINH và HOÀNG HÔN luôn ấm · và MỘT NGÀY PHẢI LÀ HÀNH TRÌNH MÀU', () => {
+  // ⚠️ BÀI NÀY ĐÃ ĐỔI VAI NGÀY 2026-08-13 (Phase 3V). ĐỌC LỊCH SỬ TRƯỚC KHI KÉO NGƯỢC.
+  // Bản cũ bắt MỌI chặng ban ngày phải có chân trời ẤM. Nghe hợp lý, và nó ra đời để chữa một lỗi
+  // THẬT (chân trời 8 giờ sáng từng ra `#cad0d0`, độ tươi 0,06 — xám chết). Nhưng bản quét đủ 15 kỷ
+  // × 6 chặng ngày 2026-08-13 đo ra hậu quả của chính luật đó: **5/6 chặng nằm gọn trong dải sắc
+  // 19°–41° (cam-nâu), chỉ ĐÊM (224°) thoát ra.** Cả một ngày chỉ đổi ĐỘ SÁNG chứ không đổi SẮC —
+  // mà độ sáng là tín hiệu thị giác yếu nhất. Luật "ban ngày luôn ấm" chính là thứ làm mọi chặng
+  // ban ngày trông như nhau.
   //
-  // "Lạnh" và "ấm" định nghĩa được bằng máy: lạnh = góc màu trong [180, 280) (lục lam → lam →
-  // chàm); ấm = ngoài [90, 300) (đỏ → cam → vàng). Nhờ vậy bài test bắt được cả những chặng ai đó
-  // thêm về sau, không chỉ sáu chặng đang có.
+  // Sự thật đúng hơn: chân trời VÀNG RỰC là dấu hiệu MẶT TRỜI THẤP — tức bình minh/hoàng hôn. Giữa
+  // trưa mặt trời trên cao thì chân trời là màn mù XANH NHẠT, và ánh sáng buổi SÁNG lạnh hơn buổi
+  // CHIỀU (kiến thức hội hoạ cổ điển, không phải sở thích).
+  // ⇒ Giữ nguyên hai điều ĐÚNG (đỉnh trời luôn lạnh · bình minh và hoàng hôn luôn ấm), bỏ điều SAI
+  // ("mọi chặng ban ngày đều ấm"), và THÊM một bất biến MẠNH HƠN: một ngày phải đi qua nhiều sắc.
   const cold = (h) => h >= 180 && h < 280;
   const warm = (h) => h < 90 || h >= 300;
 
   for (const phase of DAY_PHASES) {
-    const { skyHue, horizonHue } = DAYLIGHT_PROFILES[phase];
+    const { skyHue } = DAYLIGHT_PROFILES[phase];
     assert.ok(cold(skyHue), `đỉnh trời chặng "${phase}" ở ${skyHue}° — đỉnh trời phải luôn lạnh`);
-    if (phase === 'night') {
-      assert.ok(cold(horizonHue), 'ban đêm chân trời cũng phải lạnh theo đỉnh trời');
-    } else {
-      assert.ok(warm(horizonHue),
-        `chân trời chặng "${phase}" ở ${horizonHue}° — ban ngày chân trời là chỗ giữ hơi ấm`);
-    }
+  }
+  // Mặt trời thấp ⇒ chân trời ấm. Ba chặng này KHÔNG được nguội đi.
+  for (const phase of ['dawn', 'dusk']) {
+    assert.ok(warm(DAYLIGHT_PROFILES[phase].horizonHue),
+      `chặng "${phase}" có mặt trời thấp — chân trời PHẢI ấm`);
+  }
+  assert.ok(cold(DAYLIGHT_PROFILES.night.horizonHue), 'ban đêm chân trời phải lạnh theo đỉnh trời');
+
+  // ⚠️ BẤT BIẾN MỚI, VÀ LÀ LÝ DO CHÍNH BÀI NÀY TỒN TẠI: MỘT NGÀY LÀ HÀNH TRÌNH MÀU.
+  // Người quyết định màu trời Đàm THẬT SỰ nhìn thấy là `horizonHue`, KHÔNG phải `skyHue` — vì
+  // camera chúc xuống nên dải trời lọt khung là 64–84% màu chân trời (xem `daylight.js` và
+  // `TECH_DEBT.md` #15). Vì vậy bất biến phải canh trên `horizonHue`.
+  // ⚠️ CHỈ TÍNH CÁC CHẶNG BAN NGÀY — LOẠI 'night'. Đây không phải chi tiết vụn: ĐÊM xưa nay đã ở
+  // 226°, nên nếu để nó vào phép tính thì bộ giá trị HỎNG cũ (18/44/48/34/10 + 226) cũng cho ra
+  // độ trải 144° và bài test vẫn XANH — tức là một cái phễu, không phải hàng rào. Bỏ đêm ra thì
+  // bộ cũ chỉ còn trải 38°, đúng bằng mức "cả ngày một sắc" mà bài này sinh ra để bắt.
+  const arc = (a, b) => { const d = Math.abs(a - b) % 360; return d > 180 ? 360 - d : d; };
+  const dayHorizons = DAY_PHASES.filter((p) => p !== 'night')
+    .map((p) => DAYLIGHT_PROFILES[p].horizonHue);
+  const spread = Math.max(...dayHorizons.map((a) => Math.max(...dayHorizons.map((b) => arc(a, b)))));
+  assert.ok(spread >= 90,
+    `chân trời các chặng BAN NGÀY chỉ trải trong ${Math.round(spread)}° — một ngày mà không đổi sắc `
+    + 'thì chỉ còn là dốc sáng–tối, và đó chính là "chán" ở dạng đo được. Xem TECH_DEBT.md #15.');
+
+  // Và không được "thoả" bất biến trên bằng cách cho hai chặng LIỀN NHAU trùng sắc.
+  for (let i = 1; i < DAY_PHASES.length; i += 1) {
+    const a = DAYLIGHT_PROFILES[DAY_PHASES[i - 1]];
+    const b = DAYLIGHT_PROFILES[DAY_PHASES[i]];
+    const sameHue = arc(a.horizonHue, b.horizonHue) < 8;
+    const samePull = Math.abs(a.horizonPull - b.horizonPull) < 0.08;
+    assert.ok(!(sameHue && samePull),
+      `chặng "${DAY_PHASES[i - 1]}" và "${DAY_PHASES[i]}" có chân trời gần như y hệt `
+      + `(${a.horizonHue}°/${a.horizonPull} vs ${b.horizonHue}°/${b.horizonPull}) — hai chặng liền `
+      + 'nhau mà không phân biệt được thì thực chất chỉ là một chặng.');
   }
 });
 

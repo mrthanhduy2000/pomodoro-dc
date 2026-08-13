@@ -110,6 +110,47 @@
 ## 🗒️ Nhật ký cập nhật
 > Mỗi lần xong việc đáng kể, thêm 1 dòng vào ĐẦU danh sách.
 
+- **2026-08-13 (Phase 3V)** — **TRỜI BAN NGÀY CUỐI CÙNG CŨNG XANH. `TECH_DEBT.md` #15 ĐÃ ĐÓNG.**
+  Đây là phần sửa cho lỗi mà Phase 3U (ngay dưới) tìm ra nhưng chưa động tới.
+  - **Sửa ở ĐÂU**: `skyward()` trong `src/engine/city3d/palette3d.js` (phép trộn màu) +
+    `DAYLIGHT_PROFILES` trong `src/engine/city3d/daylight.js` (2 chặng sáng/trưa) + bài 81 ở
+    `daylight.test.js`. **KHÔNG** đụng `sceneGraph.js` — xem "nợ còn lại có chủ đích" bên dưới.
+  - **BA tầng chồng lên nhau, sửa một tầng thì vẫn hỏng** (đây mới là bài học, không phải con số):
+    1. `skyward()` trộn màu trong **không gian RGB** ⇒ sắc ấm 40° pha sắc lạnh 205° đi qua vùng
+       TRUNG TÍNH, ra xám. **Đúng họ lỗi đã sửa cho MÁI NHÀ ở Phase 3N.** Nay xoay sắc bằng
+       **vector chroma** (cộng hai vector đơn vị theo góc rồi `atan2`), giữ nguyên tươi/sáng gốc.
+    2. **`NeutralToneMapping` nén vùng sáng.** Chân trời để độ sáng 0,80 rơi đúng giữa vùng bị nén
+       ⇒ độ tươi ra màn hình chỉ còn **1/5** bảng màu. Hạ xuống 0,70/0,72 và nâng tươi lên
+       0,60/0,44 mới thoát ra. ⚠️ Lệch **ngược chiều** với mái nhà (mái render ra tươi GẤP ĐÔI
+       bảng màu) — nên "bảng màu ≠ màu trên màn hình" không có một hệ số chung, phải đo từng chỗ.
+    3. **Góc màu đặt vào ≠ góc màu đo được.** Nắng ấm nhân vào trời kéo sắc lạnh tụt **13–22°** về
+       phía lục (đặt 195° đo ra 173°); sắc ấm thì hơi tăng (đặt 18° đo ra 27°). Hai chặng sáng/trưa
+       phải khai cao hơn đích thật ~15°: đặt 210°/216° mới đo ra 203°/211°.
+  - **Số đo trước → sau** (kỷ 7, theme sáng, đỉnh trời giữa khung): `26°/40°/41°/38°/19°/224°` →
+    `27°/203°/211°/37°/18°/223°`. Bốn chặng ban ngày trải **178°** thay vì 22°. Giữa trưa `#7d8fa3`.
+  - **Xác minh đủ 180 ô** (15 kỷ × 6 chặng × 2 theme): không ô nào đen/xám/cháy; 6/6 chặng phân
+    biệt được ở CẢ HAI theme; **đêm không tối hoặc phẳng thêm** (dựng lại khung đêm bằng mã TRƯỚC
+    Phase 3V để so trực tiếp: chênh +0,005 độ sáng, +0,002 dải động — nằm trong nhiễu).
+  - ⚠️ **CÔNG CỤ ĐO CỦA TÔI TỪNG NÓI DỐI, và suýt làm tôi chữa một bệnh không có.** Phép dò mép
+    tấm bảng quét "chạy tới khi khác màu nền" chạy quá đà tới (68, 38) thay vì (8, 8), vì nền tấm
+    bảng TRÙNG màu nền trang. Mỗi ô bị lấy mẫu lệch 60px sang phải + 30px xuống dưới, dính cả dải
+    nhãn giữa hai hàng — dải đó **sáng trưng ở theme sáng và đen kịt ở theme tối**, nên số đo sai
+    theo hai chiều NGƯỢC nhau tuỳ theme và bịa ra một "lỗi đêm phẳng chỉ ở theme tối". Toạ độ thật
+    lấy thẳng từ CSS của trang (`#wrap { padding: 8px }`), không dò. **Đây là lần thứ SÁU trong
+    phiên này một công cụ đo/fixture tự viết ra sai lệch** — quy tắc: nghi ngờ công cụ đo đúng như
+    nghi ngờ mã sản phẩm, và số đo nào gây bất ngờ thì kiểm chính công cụ TRƯỚC khi kiểm mã.
+  - **Đêm KHÔNG hỏng, đã kiểm riêng**: cờ "phẳng" ở 12/15 ô đêm là do ngưỡng tôi đặt sai cho một
+    cảnh đêm (đêm tối thì tương phản tuyệt đối thấp là ĐÚNG). Phép đo có ý nghĩa là **15 kỷ có còn
+    khác nhau không** — tản sắc giữa các kỷ lúc đêm 28,2°, tản sáng 0,008, ngang bằng năm chặng
+    kia ⇒ Phase 3M đã chữa được thật. Không mở nợ mới.
+  - **Nợ còn lại CÓ CHỦ ĐÍCH**: số mũ `t^2.6` ở `sceneGraph.js` không đụng — chú thích tại chỗ ghi
+    rõ nó được nâng từ 1,2 lên để cứu lỗi "mảng oải hương xam xám"; sửa nó là mở lại một lỗi cũ để
+    đổi lấy cải thiện mà đường khác đã đạt được rồi.
+  - **Kèm theo (rủi ro thấp, xử lý luôn)**: `eslint.config.js` bỏ qua `.city-preview`. ESLint KHÔNG
+    tự đọc `.gitignore`, nên chạy `npm run lint` đúng lúc đang dựng ảnh xem thử sẽ ra **29 lỗi giả**
+    nằm trong ruột three.js được gói tạm — đủ để một phiên sau tưởng mình vừa làm hỏng gì đó.
+  - Test **485** bài (giữ nguyên số — bài 81 viết lại chứ không thêm), lint sạch, build xanh.
+
 - **2026-08-13 (Phase 3U)** — **QUÉT LẠI ĐỦ 15 KỶ × 6 CHẶNG TRÊN MÃ HIỆN TẠI: trời ban ngày KHÔNG
   BAO GIỜ xanh.** Tìm ra lỗi, **ĐỊNH VỊ chính xác nguyên nhân, nhưng CHƯA SỬA** — xem `TECH_DEBT.md`
   **#15**. Hai thử nghiệm sửa đã được **HOÀN TÁC**; mã sản phẩm giữ nguyên từng byte.

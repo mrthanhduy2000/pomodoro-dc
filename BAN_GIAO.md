@@ -110,6 +110,33 @@
 ## 🗒️ Nhật ký cập nhật
 > Mỗi lần xong việc đáng kể, thêm 1 dòng vào ĐẦU danh sách.
 
+- **2026-08-13 (Phase 3U)** — **QUÉT LẠI ĐỦ 15 KỶ × 6 CHẶNG TRÊN MÃ HIỆN TẠI: trời ban ngày KHÔNG
+  BAO GIỜ xanh.** Tìm ra lỗi, **ĐỊNH VỊ chính xác nguyên nhân, nhưng CHƯA SỬA** — xem `TECH_DEBT.md`
+  **#15**. Hai thử nghiệm sửa đã được **HOÀN TÁC**; mã sản phẩm giữ nguyên từng byte.
+  - **Vì sao quét lại**: từ lần quét trước (3G) đã đổi bảng màu (3N) và ánh sáng đêm (3M) — bảng cũ
+    không còn nói về mã đang chạy.
+  - **Mắt chẩn SAI, phép đo sửa lại**: nhìn bảng quét tôi kết luận "3 chặng ban ngày giống hệt
+    nhau". Đo thì **6/6 chặng vẫn phân biệt được** (khoảng cách nhỏ nhất 17/255). Nhưng phép đo lộ
+    ra lỗi thật và chính xác hơn: **5/6 chặng nằm gọn trong dải sắc 19°–41° (cam-nâu), chỉ ĐÊM
+    (224°) thoát ra.** Cả ngày chỉ đổi ĐỘ SÁNG (0,46 → 0,60 → 0,46) chứ không đổi SẮC — mà độ sáng
+    là tín hiệu thị giác yếu nhất. Không phải "giống nhau", mà là **cùng một sắc, khác độ sáng**.
+  - **Nguyên nhân (hai tầng nhân nhau)**: (1) `sceneGraph.js` pha vòm trời theo `t^2.6`, camera chúc
+    xuống nên dải trời lọt khung chỉ ở `t ≈ 0,50–0,67` ⇒ `0,5^2,6 = 0,17`, tức **trời nhìn thấy được
+    là 64–84% MÀU CHÂN TRỜI**. ⇒ **`horizonHue` mới là người quyết định màu trời ban ngày, KHÔNG
+    phải `skyHue`** — giữa trưa khai `skyHue: 212, skyPull: 0.70` (mạnh nhất ngày) mà hoàn toàn vô
+    hiệu. (2) `skyward()` trộn bằng **`mixRgb`** — ấm 40° pha lạnh 205° trong RGB thì đi qua vùng
+    trung tính, **đúng họ lỗi đã sửa cho MÁI NHÀ ở Phase 3N**.
+  - ⚠️ **HAI CÁCH ĐÃ THỬ VÀ THẤT BẠI, ĐỪNG THỬ LẠI**: `horizonPull 0.42` → `#a6a69a` 61° tươi 0,06
+    (xám); `horizonPull 0.78` → `#9ca7a3` **157° lục-lam** tươi 0,05. Càng kéo mạnh càng lạc sang
+    lục rồi chết ở xám ⇒ **chỉnh số trong `DAYLIGHT_PROFILES` KHÔNG chữa được**, phải sửa phép toán.
+  - **Vì sao DỪNG chứ không sửa tiếp**: `skyward()` dùng chung cho **180 ô** (15 kỷ × 6 chặng × 2
+    theme) và còn nhân với 4 skin. Phát hành một phép toán màu mới chỉnh dở còn tệ hơn giữ nguyên.
+    Cần một phase riêng, không làm kèm việc khác.
+  - ⚠️ **NGƯỠNG MAINTENANCE SPRINT — VẾ THỨ HAI NAY ĐÃ CHẠM**: `palette3d.js` đã qua **5 đợt** vá mỹ
+    thuật (3C · 3G · 3M · 3N · nay #15). Chính sổ nợ đã đặt sẵn mốc "đợt thứ 5 thì dừng lại xem xét
+    tổng thể tầng màu thay vì vá tiếp" — mốc đó đã tới. **Khuyến nghị: làm #15 như một đợt xem xét
+    TỔNG THỂ phép trộn màu (RGB → HSL) cho cả mái, trời và mặt đất một lượt.**
+
 - **2026-08-12 (Phase 3T)** — **MÔ PHỎNG 365 NGÀY: 95% SỐ PHIÊN KHÔNG CÓ LỄ MỪNG NÀO.** Phát hiện
   lớn nhất trong ngày, và lớn hơn hẳn hai thứ vừa sửa ở 3R/3S. **Chỉ NGHIÊN CỨU + ghi sổ, KHÔNG
   sửa** — mọi phương án đều đổi cân bằng kinh tế nên phải để Đàm chọn (`TECH_DEBT.md` **#14**).

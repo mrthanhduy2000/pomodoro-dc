@@ -97,6 +97,23 @@ export const DAYLIGHT_PROFILES = {
   // Hạ một chút thì bóng vẫn ngắn (vẫn đọc ra giữa trưa) mà khối lại có mặt sáng/mặt tối trở lại.
   // Đèn nền cũng hạ theo (0,92 → 0,80): giữa trưa trời quang thì bóng SÂU, không phải bị đèn nền
   // xoá mờ — đây chính là chiaroscuro, đúng nguyên lý đã ghi ở `sceneGraph.js`.
+  // ⚠️ TRỜI BAN NGÀY KHÔNG BAO GIỜ XANH — LỖI ĐÃ ĐỊNH VỊ CHÍNH XÁC, CHƯA SỬA. Xem `TECH_DEBT.md` #15.
+  // Đo trên ảnh chụp thật (2026-08-13, kỷ 7, theme sáng): đỉnh trời giữa trưa ra `#b1a790`, **góc
+  // màu 41°** (vàng nâu) — trong khi dòng dưới ghi `skyHue: 212` với lực kéo 0,70, MẠNH NHẤT trong
+  // ngày. Màu xanh đó KHÔNG HỀ tới được mắt Đàm. Hai nguyên nhân chồng lên nhau:
+  //   (1) `sceneGraph.js` trộn vòm trời theo `t^2.6`, mà camera chúc xuống nên dải trời LỌT VÀO
+  //       KHUNG chỉ nằm ở t ≈ 0,50–0,67 ⇒ `0,5^2,6 = 0,17`. Tức **bầu trời nhìn thấy được là
+  //       64–84% MÀU CHÂN TRỜI**. `skyHue` cai quản đỉnh vòm — chỗ gần như không bao giờ hiện ra.
+  //       ⇒ Ai quyết định màu trời ban ngày là `horizonHue`, KHÔNG phải `skyHue`.
+  //   (2) `skyward()` (`palette3d.js`) trộn bằng **`mixRgb`**. Sắc ấm 40° pha sắc lạnh 205° trong
+  //       không gian RGB thì đi qua vùng TRUNG TÍNH — cùng họ lỗi đã sửa cho MÁI NHÀ ở Phase 3N.
+  // ⚠️ ĐÃ THỬ VÀ THẤT BẠI — ĐỪNG THỬ LẠI HAI CÁCH NÀY:
+  //   • `horizonHue: 205, horizonPull: 0.42` → ra `#a6a69a`, 61°, độ tươi **0,06** (xám, không xanh).
+  //   • `horizonHue:  48, horizonPull: 0.22` → ra `#9ca7a3`, **157°** lục-lam, độ tươi **0,05**.
+  //   Càng kéo mạnh càng lạc sang lục rồi chết ở xám. **Chỉnh số trong bảng này KHÔNG chữa được** —
+  //   phải sửa phép toán màu ở `skyward()` (xoay sắc trong không gian HSL như đã làm cho mái nhà),
+  //   và vì chỗ đó dùng chung cho 15 kỷ × 6 chặng × 2 theme × 4 skin nên phải kiểm đủ bảng quét
+  //   trước khi phát hành. Giữ nguyên giá trị cũ cho tới khi có một phase riêng làm việc đó.
   noon:      { sunAltitude: 0.84, sunWarmth:  0.05, sunEnergy: 1.10, fillEnergy: 0.80, skyHue: 212, skyPull: 0.70, horizonHue:  48, horizonPull: 0.22, skySaturation: 1.00, windowsLit: false, lampEnergy: 0    },
   afternoon: { sunAltitude: 0.48, sunWarmth:  0.55, sunEnergy: 1.00, fillEnergy: 1.00, skyHue: 214, skyPull: 0.44, horizonHue:  34, horizonPull: 0.52, skySaturation: 1.05, windowsLit: false, lampEnergy: 0    },
   dusk:      { sunAltitude: 0.18, sunWarmth:  1.00, sunEnergy: 0.78, fillEnergy: 1.05, skyHue: 238, skyPull: 0.46, horizonHue:  10, horizonPull: 0.78, skySaturation: 1.25, windowsLit: true,  lampEnergy: 0.60 },

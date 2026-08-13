@@ -13,8 +13,13 @@
 > mà không được refactor triệt để, phải CHỦ ĐỘNG đề xuất mở một "Maintenance Sprint" (nêu rõ mục
 > tiêu/phạm vi/lợi ích/rủi ro/tiêu chí hoàn thành) thay vì tiếp tục cộng thêm tính năng mới.
 >
-> **Trạng thái ngưỡng hiện tại (2026-08-12, cập nhật cuối ngày)**: **1 mục Priority High** (#14) →
-> vẫn CHƯA đạt ngưỡng 8–10 mục để đề xuất Maintenance Sprint. Có **2 mục Medium-High** (#3 và #13).
+> **Trạng thái ngưỡng hiện tại (2026-08-13)**: **1 mục Priority High** (#14) → vẫn CHƯA đạt ngưỡng
+> 8–10 mục để đề xuất Maintenance Sprint. Có **3 mục Medium-High** (#3, #13, #15).
+> ⚠️ **Vế THỨ HAI của ngưỡng nay đã CHẠM**: `palette3d.js` đã qua **5 đợt** vá mỹ thuật (3C · 3G ·
+> 3M · 3N · và nay #15 chỉ đích danh `skyward()` trong cùng file). Ghi chú bên dưới đã đặt sẵn mốc
+> "nếu có đợt thứ 5 cùng loại thì nên dừng lại xem xét tổng thể tầng màu thay vì vá tiếp" — mốc đó
+> đã tới. **Khuyến nghị: làm #15 như một đợt xem xét TỔNG THỂ phép trộn màu (RGB → HSL) cho cả mái,
+> trời và mặt đất một lượt**, thay vì vá riêng bầu trời rồi vài tuần sau lại vá thứ khác cùng bệnh.
 > ⚠️ **#14 là nợ THIẾT KẾ, không phải nợ mã** — không có gì hỏng, nhưng nó chặn giá trị của mọi đầu
 > tư về sau vào lớp thành phố (95% số phiên không thấy lễ mừng). Nó **cần Đàm chọn hướng** trước
 > khi bất kỳ phiên AI nào động vào, vì mọi phương án đều đổi cân bằng kinh tế.
@@ -22,11 +27,10 @@
 > "lưới test đã có, chỉ chưa cắm vào" trong khi thực tế chưa từng có file nào. Khi đọc bất kỳ mục
 > nào trong sổ này mà nó khẳng định "đã có sẵn X", hãy **kiểm bằng lệnh trước khi tin** (`git log
 > --all --diff-filter=A -- '<đường dẫn>'` / `find`). Sổ nợ mà ghi sai thì còn nguy hơn không có sổ.
-> ⚠️ Nhưng có một tín hiệu thuộc vế THỨ HAI của ngưỡng (một module bị vá nhiều lần mà chưa refactor
-> triệt để): **`palette3d.js` đã qua 4 đợt vá mỹ thuật** (3C ánh sáng · 3G bảng quét · 3M sắc độ
-> đêm · 3N màu mái) và `daylight.js` qua 3 đợt (3D · 3G · 3M). Cả bốn đợt đều tìm ra lỗi THẬT bằng
-> phép đo, nên chưa phải "vá đi vá lại một chỗ" — nhưng nếu có đợt thứ 5 cùng loại thì nên dừng lại
-> xem xét tổng thể tầng màu thay vì vá tiếp.
+> *(Lịch sử của mốc trên, giữ lại để thấy nó tới từ đâu: `palette3d.js` qua 3C ánh sáng · 3G bảng
+> quét · 3M sắc độ đêm · 3N màu mái — bốn đợt, đều tìm ra lỗi THẬT bằng phép đo, nên khi đó CHƯA
+> phải "vá đi vá lại một chỗ"; `daylight.js` qua 3 đợt 3D · 3G · 3M. Mốc đặt ra khi đó là "đợt thứ
+> 5 cùng loại thì dừng xem xét tổng thể" — #15 chính là đợt thứ 5 đó.)*
 
 ---
 
@@ -267,6 +271,66 @@
 - **Review Trigger**: khi làm backup/recovery, hoặc khi thấy lỗi lưu state trong log production.
 - **Owner**: (chưa gán)
 - **Status**: Open — phát hiện trong lúc phân tích bản vá C1 (2026-07-17), chưa xử lý.
+
+---
+
+## #15 — **Trời ban ngày KHÔNG BAO GIỜ xanh**: cả ngày chỉ là dốc sáng–tối, không phải hành trình màu
+
+- **Module**: `src/components/city/render3d/sceneGraph.js` (số mũ pha vòm trời) + `skyward()` trong
+  `src/engine/city3d/palette3d.js` (phép trộn màu). **KHÔNG phải lỗi của `daylight.js`** — bảng ở
+  đó ghi đúng ý đồ, chỉ là ý đồ không tới được màn hình.
+- **Priority**: **Medium-High**
+- **Severity**: Medium
+- **Impact**: đây là phần đo được của "chán" ở lớp HÌNH ẢNH, song sinh với #14 ở lớp phần thưởng.
+  Đàm mở app nhiều lần mỗi ngày; nếu 5/6 chặng ngày cho ra cùng một sắc trời thì thành phố không
+  còn là "nơi chốn đang trôi qua thời gian" như `daylight.js` tự nhận, mà chỉ là một ảnh chụp được
+  chỉnh sáng-tối.
+- **SỐ ĐO** (kỷ 7, theme sáng, đo đỉnh trời ở giữa khung, y = 12%):
+
+  | chặng | màu ra | sắc | tươi |
+  |---|---|---|---|
+  | bình minh | `#8e7969` | 26° | 0,15 |
+  | sáng | `#a29781` | 40° | 0,15 |
+  | **giữa trưa** | `#b1a790` | **41°** | 0,18 |
+  | chiều | `#a1957f` | 38° | 0,15 |
+  | hoàng hôn | `#8e7468` | 19° | 0,15 |
+  | đêm | `#1b2238` | 224° | 0,35 |
+
+  **5/6 chặng nằm gọn trong dải 19°–41° (cam-nâu); chỉ ĐÊM thoát ra.** Cả ngày chỉ đổi độ sáng
+  (0,46 → 0,60 → 0,46) — mà độ sáng là tín hiệu thị giác yếu nhất.
+- **Root Cause (hai tầng nhân nhau)**:
+  (1) **Dải trời nhìn thấy được là 64–84% MÀU CHÂN TRỜI.** `sceneGraph.js` pha vòm trời theo
+  `t^2.6`; camera chúc xuống nên phần trời lọt khung chỉ ở `t ≈ 0,50–0,67`, mà `0,5^2,6 = 0,17`.
+  ⇒ `skyHue` (đỉnh vòm) gần như KHÔNG BAO GIỜ hiện ra. Giữa trưa khai `skyHue: 212, skyPull: 0.70`
+  — lực kéo mạnh nhất cả ngày — nhưng vô hiệu, vì người quyết định màu trời ban ngày là
+  `horizonHue`, và giữa trưa nó là `48°` (vàng ấm) với lực kéo chỉ `0,22`.
+  ⚠️ Số mũ 2,6 KHÔNG phải lỗi ẩu — chú thích tại chỗ ghi rõ nó được nâng từ 1,2 lên để cứu một lỗi
+  khác ("mảng oải hương xam xám"). Sửa mù số mũ sẽ làm sống lại lỗi cũ.
+  (2) **`skyward()` trộn bằng `mixRgb`.** Sắc ấm 40° pha sắc lạnh 205° trong RGB thì đi qua vùng
+  TRUNG TÍNH — **đúng họ lỗi đã sửa cho MÁI NHÀ ở Phase 3N** (15 kỷ ra 2 cụm màu).
+- **⚠️ ĐÃ THỬ VÀ THẤT BẠI — đừng lặp lại** (đo thật, 2026-08-13):
+  - `noon.horizonHue: 205, horizonPull: 0.42` → `#a6a69a`, 61°, tươi **0,06** → xám, không xanh.
+  - `noon.horizonHue: 205, horizonPull: 0.78` → `#9ca7a3`, **157° lục-lam**, tươi **0,05**.
+  - Càng kéo mạnh càng lạc sang lục rồi chết ở xám. ⇒ **Chỉnh số trong `DAYLIGHT_PROFILES` KHÔNG
+    chữa được.** Cả hai thử nghiệm đã được HOÀN TÁC; mã hiện tại giữ nguyên giá trị cũ.
+- **Current Risk**: thấp về kỹ thuật (không có gì hỏng), trung bình về trải nghiệm.
+- **Future Risk**: trung bình. Mỗi phase mỹ thuật về sau đều đâm vào cùng phép trộn sai này.
+- **Recommended Solution**: sửa `skyward()` cho xoay sắc trong **không gian HSL** thay vì trộn RGB —
+  đúng khuôn đã dùng thành công cho mái nhà ở Phase 3N (`eraRoof` trong `palette3d.js`). ⚠️ Cẩn
+  trọng: sắc nền và đích ở nhiều chặng gần như ĐỐI NHAU (40° vs 205°/226°), nên phép nội suy sắc
+  ngây thơ sẽ đi qua LỤC hoặc TÍA ở quãng giữa — cần chọn mô hình cho `pull` (ví dụ: lấy thẳng sắc
+  đích, để `pull` điều khiển ĐỘ TƯƠI) rồi **tinh chỉnh lại cả 6 chặng**.
+- **Estimated Complexity**: **Medium-High** — phép toán thì nhỏ, nhưng phải tinh chỉnh lại 6 chặng
+  và kiểm đủ **180 ô** (15 kỷ × 6 chặng × 2 theme) bằng `--sweep --all` trước khi phát hành.
+- **Blocking Conditions**: không có blocker kỹ thuật. Cần một phase riêng, KHÔNG làm kèm việc khác —
+  đây là loại thay đổi mà "sửa một chỗ, hỏng ba chỗ" đã xảy ra nhiều lần trong lịch sử tầng màu.
+- **Review Trigger**: trước bất kỳ thay đổi nào ở `skyward()`, số mũ vòm trời, hoặc
+  `DAYLIGHT_PROFILES`.
+- **Owner**: (chưa gán)
+- **Status**: Open — phát hiện 2026-08-13 (Phase 3U) khi quét lại đủ 15 kỷ × 6 chặng trên mã hiện
+  tại. ⚠️ Mắt tôi ban đầu chẩn "3 chặng ban ngày giống hệt nhau" — **phép đo BÁC BỎ điều đó** (6/6
+  chặng vẫn phân biệt được, khoảng cách nhỏ nhất 17/255) nhưng lại lộ ra lỗi thật và chính xác hơn:
+  không phải "giống nhau", mà là **cùng một SẮC, chỉ khác ĐỘ SÁNG**.
 
 ---
 

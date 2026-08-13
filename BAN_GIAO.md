@@ -118,6 +118,43 @@
 ## 🗒️ Nhật ký cập nhật
 > Mỗi lần xong việc đáng kể, thêm 1 dòng vào ĐẦU danh sách.
 
+- **2026-08-13 (Phase 3Z — thành phố)** — **15 KỶ: BỚT ĐƯỢC BA CẶP TRÔNG GIỐNG HỆT NHAU.**
+  - **Vấn đề, tìm ra bằng đúng bài học của Phase 3Y**: vừa sửa xong "6 chặng ngày phải khác nhau"
+    bằng cách duyệt đủ mọi cặp, em quay sang hỏi cùng câu đó cho 15 KỶ — và thấy mình đang chấm
+    chúng bằng một ĐỘ LỆCH CHUẨN ("tản sắc giữa 15 kỷ"). Số gộp thì giấu được: duyệt đủ **105 cặp**
+    ra **5 cặp** mái gần như cùng màu, gần nhất là kỷ 5 ↔ 12 = 8,4.
+  - **Nguyên nhân**: `ERA_METADATA` có hai kỷ gần như cùng sắc — kỷ 5 `#94a3b8` và kỷ 12 `#64748b`,
+    **cùng góc màu 215°**, chỉ khác độ sáng (0,65 vs 0,47). `eraRoof` nén chênh lệch đó lại còn
+    **0,22 lần** ⇒ trên mái chỉ còn 0,04, mắt không thấy. Nâng lên 0,55 ⇒ **5 cặp → 2 cặp**. Không
+    phải nới hằng số cho vừa ý: đúng với chính lý do `roof` dùng `eraRoof` thay `material` —
+    *"mái phải dùng CẢ màu kỷ"*, mà độ sáng cũng là một phần của màu.
+  - **Bắt thêm một lỗi CÙNG HỌ với lỗi đã sửa buổi sáng**: `eraRoof` chặn mái-tím-rực bằng **cửa sổ
+    góc màu** (255°–340°), còn bài test định nghĩa dải tím bằng **quan hệ kênh** (đỏ và lam đều cao
+    hơn lục). Một luật, hai công thức ⇒ có khe, và khe đó cắn thật: mái kỷ 15 ở **247°** lọt ra
+    ngoài cửa sổ nên không bị hạ tươi, ra `#4b40a3` tươi 0,44 (trần 0,42). Nay hai bên dùng chung
+    đúng một phép thử. ⇒ **Đây là lần thứ HAI trong một ngày cùng một hình dạng sai** (lần đầu:
+    `horizonHue < 60` vs hàm `warm()` quấn vòng). Đáng thành luật: *một luật chỉ được có MỘT công
+    thức; thấy hai chỗ cùng phát biểu một luật thì gộp lại ngay, đừng chờ nó cắn.*
+  - **Bài test mạnh thêm**: bài "15 kỷ phải ra 15 màu" vốn chỉ canh cặp GẦN NHẤT — lại là một số
+    gộp, và nó đứng yên dù có 1 cặp hay 5 cặp sát nhau. Nay canh cả SỐ LƯỢNG cặp dưới ngưỡng (≤2).
+    Đã thử ngược với hệ số cũ: **báo đỏ, gọi tên đủ cả 5 cặp**.
+  - ⚠️ **VÀ MỘT LẦN NỮA PHẢI NGHI NGỜ CHÍNH CÔNG CỤ ĐO (lần thứ 11).** Phép đo đầu tiên của em lấy
+    TRUNG BÌNH cả dải thành phố và kết luận **"70/105 cặp kỷ trùng nhau"** — nghe khủng khiếp, và
+    SAI. Mái chỉ chiếm khoảng một phần mười diện tích dải đó; phần còn lại là mặt đất và trời lọt
+    giữa các khối, giống hệt nhau ở mọi kỷ ⇒ tín hiệu bị pha loãng ~10 lần. Lọc lấy 8% pixel tươi
+    nhất (tức mái) thì con số thật là **5/105**. Đã cắm `--selftest` (bỏ bộ lọc ⇒ phải quay về kết
+    quả pha loãng 67/105) để chứng minh công cụ đang thật sự lọc. Bằng chứng độc lập giúp em nghi
+    ngờ đúng chỗ: tầng thuần đã có sẵn bài duyệt 105 cặp màu mái, và nó báo cặp gần nhất 8,4 —
+    mâu thuẫn hẳn với "70 cặp trùng". **Hai phép đo cãi nhau thì phải truy tới cùng, không được
+    chọn cái nào nghe hợp ý.**
+  - **Còn lại → `TECH_DEBT` #18 (mở mới)**: kỷ 12–14 là khối hộp hiện đại **mái bằng**, gần như
+    không có diện tích mái để sắc kỷ nói ra. Nên dù màu mái ở tầng thuần đã tách bạch, trên ảnh ba
+    kỷ này vẫn na ná nhau (12↔13 = 6,4). Đây là vấn đề **HÌNH KHỐI, không phải màu** — sửa bằng
+    cách cho kiến trúc hiện đại một bề mặt khác mang sắc kỷ (diềm/mặt kính tầng trên). ⚠️ KHÔNG
+    sửa bằng cách đổi `accentColor` trong `ERA_METADATA`: những màu đó còn dùng cho huy hiệu kỷ
+    khắp giao diện, đổi là đổi cả app — **đó** mới thật sự là việc cần Đàm quyết.
+  - **Không đụng**: state, cân bằng game, SQL, schema. 509 test xanh, lint sạch, build xanh.
+
 - **2026-08-13 (Phase 3Y — thành phố)** — **SÁU CHẶNG NGÀY, SÁU BỨC TRANH: BÌNH MINH THÔI TRÙNG
   KHÍT HOÀNG HÔN.** (`TECH_DEBT` #17 ĐÓNG. 505 → **509 bài test**, lint sạch, build xanh.)
   - **Vấn đề, và nó chỉ lộ ra khi đổi phép đo**: bản quét 15 kỷ × 6 chặng trước đó được chấm bằng

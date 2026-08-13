@@ -458,12 +458,26 @@ test('MÁI NHÀ: 15 KỶ PHẢI RA 15 MÀU — đi hết 15 kỷ mà thành ph�
 
   let worst = Infinity;
   let worstPair = '';
+  const close = [];
   for (let i = 0; i < roofs.length; i += 1) {
     for (let j = i + 1; j < roofs.length; j += 1) {
       const d = distance(roofs[i], roofs[j]);
       if (d < worst) { worst = d; worstPair = `kỷ ${i + 1} ↔ kỷ ${j + 1}`; }
+      if (d < 12) close.push(`kỷ ${i + 1}↔${j + 1} (${d.toFixed(1)})`);
     }
   }
+
+  // ⚠️ MỘT SỐ NHỎ NHẤT LÀ SỐ TÓM TẮT, VÀ SỐ TÓM TẮT THÌ GIẤU ĐƯỢC RẤT NHIỀU (thêm 2026-08-13).
+  // Bài này vốn chỉ canh cặp GẦN NHAU NHẤT. Nhưng "cặp gần nhất = 8,4" vẫn đúng y nguyên dù có
+  // MỘT cặp sát nhau hay có NĂM cặp — mà năm cặp thì nghĩa là một phần ba hành trình 15 kỷ không
+  // cho Đàm thấy gì mới. Đo thật hồi đó: **5 cặp** nằm dưới ngưỡng mắt (~12), trong đó kỷ 5 ↔ 12
+  // chỉ 8,4 vì hai kỷ ấy dùng gần như cùng một sắc (`#94a3b8` và `#64748b` — cùng 215°, chỉ khác
+  // độ sáng) mà `eraRoof` khi đó nén độ sáng lại còn 0,22 lần. Nâng hệ số ⇒ còn **2 cặp**.
+  // Cùng bài học với "duyệt đủ mọi cặp" ở `daylight.test.js`: đừng để một con số gộp đứng thay cho
+  // cả phân bố.
+  assert.ok(close.length <= 2,
+    `có ${close.length} cặp kỷ ra mái gần như giống nhau (${close.join(' · ')}) — mỗi cặp như vậy là `
+    + 'một lần Đàm xây xong cả một kỷ mà thành phố không cho anh thấy gì mới');
   // Ngưỡng 6 nằm DƯỚI giá trị đang chạy (8,4) và TRÊN hẳn giá trị hỏng đã ship (0,0) — cùng
   // nguyên tắc "hàng rào phải nằm dưới giá trị hỏng thật" đã ghi ở bài test mặt đất ban đêm.
   assert.ok(worst >= 6,

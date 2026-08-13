@@ -270,7 +270,17 @@ export function buildScenePalette({ tokens, eraColor, daylight } = {}) {
     // còn là một màu (không thành xám chì) và kỷ rực nhất vẫn là ngói (không thành nhựa).
     const base = Math.min(0.62, Math.max(0.14, sat * 0.30 + sat * 0.70 * 2 * eraHsl.s));
     // Độ đậm: nhích theo độ sáng của sắc kỷ quanh mốc 0,6 (mốc trung bình của bảng `ERA_METADATA`).
-    const l = Math.min(0.56, Math.max(0.24, light + (eraHsl.l - 0.6) * 0.22));
+    // ⚠️ HỆ SỐ 0,55 CHỨ KHÔNG PHẢI 0,22 — sửa 2026-08-13 sau khi duyệt đủ 105 CẶP kỷ.
+    // Bảng `ERA_METADATA` có hai kỷ dùng gần như cùng một sắc: kỷ 5 `#94a3b8` và kỷ 12 `#64748b`
+    // đều là xám-lam **góc màu 215°**, chỉ khác ĐỘ SÁNG (0,65 vs 0,47). Với hệ số 0,22 thì chênh
+    // lệch 0,18 ấy bị nén còn **0,04** trên mái ⇒ hai kỷ ra gần như cùng một mái (đo được 8,4 —
+    // cặp gần nhau nhất trong cả 105 cặp). Nâng hệ số lên 0,55 thì chênh lệch còn lại ~0,10, đủ
+    // để mắt đọc ra: số cặp mái nằm dưới ngưỡng nhìn-thấy-khác-nhau tụt từ **5 xuống 2**.
+    // Đây KHÔNG phải nới một hằng số cho vừa ý: nó đúng với chính lý do `roof` dùng `eraRoof` thay
+    // vì `material` — *"mái phải dùng CẢ màu kỷ chứ không chỉ mượn góc màu"*. Độ sáng cũng là một
+    // phần của màu, mà bản cũ gần như vứt bỏ nó. Cận trên/dưới vẫn kẹp ở [0,24 … 0,56] nên mái
+    // không bao giờ rơi ra khỏi dải vật liệu lợp thật.
+    const l = Math.min(0.56, Math.max(0.24, light + (eraHsl.l - 0.6) * 0.55));
     const mix = (s) => mixRgb(
       hslToRgb({ h: 16, s, l }),        // neo đất nung — giữ mái nằm trong họ vật liệu lợp thật
       hslToRgb({ h: eraHue, s, l }),
@@ -285,9 +295,17 @@ export function buildScenePalette({ tokens, eraColor, daylight } = {}) {
     // đầu của chính hàm này (kỷ 6/7/11 ra 0,51–0,54). Trần ở đây là cách trả lời ĐÚNG cho bài test
     // đó: giữ nguyên GÓC MÀU (tức giữ bản sắc kỷ, ba kỷ vẫn phân biệt được nhau ở 268°/284°/307°)
     // và chỉ hạ ĐỘ TƯƠI. Nếu thay vào đó đi nới ngưỡng của bài test kia thì mới là phá bất biến.
-    const first = rgbToHsl(mix(base));
-    const inMagentaBand = first.h >= 255 && first.h <= 340;
-    return rgbToHexNumber(inMagentaBand ? mix(Math.min(base, 0.40)) : mix(base));
+    // ⚠️ ĐIỀU KIỆN PHẢI GIỐNG HỆT BÀI TEST, KHÔNG ĐƯỢC PHÁT BIỂU LẠI BẰNG CÔNG THỨC KHÁC.
+    // Bản cũ chặn theo CỬA SỔ GÓC MÀU `h >= 255 && h <= 340`, trong khi bài test "KHÔNG một vai màu
+    // nào ra TÍM SEN RỰC" lại định nghĩa "vào dải tím" bằng quan hệ kênh: **đỏ và lam đều cao hơn
+    // lục**. Hai cách nói CHỒNG NHAU nhưng không TRÙNG nhau, và cái khe giữa chúng đã cắn thật: mái
+    // kỷ 15 ra góc màu **247°** — ngoài cửa sổ nên không bị hạ tươi — mà vẫn thoả điều kiện kênh
+    // của bài test, ra `#4b40a3` tươi 0,44 (trần 0,42). Đúng họ với lỗi `horizonHue < 60` vs hàm
+    // `warm()` ở `daylight.test.js` cùng ngày: **một luật mà hai công thức thì bản lỏng hơn sẽ âm
+    // thầm để lọt.** Nay dùng chung đúng một phép thử với bài test.
+    const inMagentaBand = (rgb) => Math.min(rgb.r, rgb.b) - rgb.g > 10;
+    const first = mix(base);
+    return rgbToHexNumber(inMagentaBand(first) ? mix(Math.min(base, 0.40)) : first);
   };
 
   /** Vai màu vật liệu = neo + sắc kỷ, chọn độ đậm theo trời sáng hay trời tối. */

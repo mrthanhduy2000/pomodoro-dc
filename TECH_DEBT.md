@@ -292,6 +292,36 @@
 
 ---
 
+## #18 — Kỷ 12–14 gần như không có MÁI, nên bản sắc kỷ không có chỗ để nói
+
+- **Module**: `src/engine/city3d/buildingSpec.js` / `archetypes.js` (ngữ pháp hình khối theo kỷ),
+  liên đới `src/engine/city3d/palette3d.js` (`eraRoof`).
+- **Priority**: Medium · **Severity**: Low-Medium (thuần mỹ thuật, không ảnh hưởng dữ liệu)
+- **Impact — đo trên bản quét 15 kỷ × 6 chặng (2026-08-13, sau khi đã sửa hệ số độ sáng mái)**:
+  duyệt đủ **105 cặp kỷ** trên màu dải thành phố, còn **4 cặp** dưới ngưỡng mắt (~12/255), và ba
+  trong bốn cặp đó đều dính kỷ 12 hoặc 13: `12↔13 = 6,4` · `5↔12 = 6,0` · `5↔13 = 11,5` ·
+  `7↔12 = 11,9`. Trung vị của cả 105 cặp là 27,6 — tức phần còn lại rất khoẻ.
+- **Root Cause — KHÔNG phải màu, mà là HÌNH.** Ở tầng thuần, màu mái kỷ 12 (`#4e576a`, 221°) và
+  kỷ 13 (`#3c7d83`, 185°) cách nhau thừa sức phân biệt, và bài test mái đủ-105-cặp đang XANH. Nhưng
+  nhìn ảnh thì kỷ 12–14 là những khối hộp hiện đại **mái bằng, gần như không có diện tích mái**,
+  trong khi kỷ 1–11 có mái dốc/mái vòm chiếm mảng lớn. Sắc kỷ nói to nhất ở mái (đó là cả lý do
+  `roof` dùng `eraRoof` thay vì `material`) — mà mấy kỷ này thì gần như không có mái để nói.
+  ⇒ Đây là ví dụ rõ của bài học "màu ĐÚNG ở bảng màu không có nghĩa là màu ĐẾN ĐƯỢC mắt người xem".
+- **Current Risk**: thấp. Đây là 3 kỷ ở cuối hành trình, Đàm chưa tới.
+- **Future Risk**: kỷ càng về sau càng là phần thưởng cho công sức nhiều tháng; ba kỷ liền nhau mà
+  trông như một thì đúng chỗ phần thưởng phải lớn nhất lại mỏng nhất.
+- **Recommended Solution**: cho kiến trúc hiện đại một bề mặt khác để mang sắc kỷ thay cho mái —
+  ví dụ dải diềm/mặt kính ở tầng trên cùng, hoặc màu khung cửa. **KHÔNG** giải quyết bằng cách bơm
+  độ tươi mái (mái bằng thì có tô rực cũng không ai thấy), và **KHÔNG** bằng cách đổi `accentColor`
+  trong `ERA_METADATA` (những màu đó còn dùng cho huy hiệu kỷ khắp giao diện — đổi là đổi cả app,
+  đó mới thật sự là việc cần Đàm quyết).
+- **Estimated Complexity**: Trung bình (đụng ngữ pháp hình khối, cần quét lại + đo lại).
+- **Blocking Conditions**: không có — làm được bất cứ lúc nào.
+- **Review Trigger**: lần tới có đợt vá mỹ thuật thành phố, hoặc khi Đàm tới gần kỷ 12.
+- **Owner**: (chưa gán) · **Status**: Open — phát hiện 2026-08-13 khi duyệt đủ 105 cặp kỷ.
+
+---
+
 ## #17 — ĐÃ ĐÓNG (2026-08-13) · Bình minh và hoàng hôn là CÙNG MỘT BỨC ẢNH
 
 > ⚠️ **MỤC NÀY TỪNG CHẨN ĐOÁN SAI, VÀ CÁI SAI ĐÓ ĐÁNG GHI LẠI HƠN CẢ LỖI.** Bản đầu (viết cùng

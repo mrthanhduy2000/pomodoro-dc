@@ -12,6 +12,29 @@
 
 ---
 
+## 2026-08-13 — 15 kỷ: bớt được ba cặp thành phố trông giống hệt nhau
+
+- **Mục đích**: bản quét 15 × 6 mới chỉ được chấm bằng "tản sắc giữa 15 kỷ" — một ĐỘ LỆCH CHUẨN.
+  Số gộp đó có thể rất khoẻ trong khi vẫn có vài cặp kỷ trùng khít. Duyệt đủ **105 cặp** thì lộ ra
+  **5 cặp** mái gần như cùng một màu, trong đó kỷ 5 ↔ kỷ 12 chỉ cách 8,4.
+- **Nguyên nhân**: `ERA_METADATA` có hai kỷ dùng gần như cùng một sắc (`#94a3b8` và `#64748b` —
+  cùng góc màu 215°, chỉ khác độ sáng 0,65 vs 0,47), mà `eraRoof` khi đó nén chênh lệch độ sáng lại
+  chỉ còn **0,22 lần** ⇒ trên mái chỉ còn 0,04. Nâng hệ số lên 0,55 (mái diễn đạt CẢ màu kỷ chứ
+  không chỉ góc màu — đúng lý do `roof` dùng `eraRoof` thay vì `material`): **5 cặp → 2 cặp**.
+- **Kèm một lỗi cùng họ**: `eraRoof` chặn "mái tím rực" bằng CỬA SỔ GÓC MÀU (255°–340°) trong khi
+  bài test định nghĩa dải tím bằng QUAN HỆ KÊNH (đỏ và lam đều cao hơn lục). Hai cách nói một luật
+  ⇒ có khe: mái kỷ 15 ở 247° lọt qua cửa sổ mà vẫn phạm luật (tươi 0,44 / trần 0,42). Nay dùng
+  chung đúng một phép thử. (Cùng ngày đã sửa một khe y hệt ở `daylight.test.js`.)
+- **Bài test mạnh thêm**: bài "15 kỷ phải ra 15 màu" vốn chỉ canh cặp GẦN NHẤT — một số gộp khác.
+  Nay canh cả SỐ LƯỢNG cặp nằm dưới ngưỡng mắt (≤2). Đã thử ngược với hệ số cũ và thấy nó báo đỏ,
+  gọi tên đủ 5 cặp.
+- **Còn lại, đã ghi thành `TECH_DEBT` #18**: kỷ 12–14 là khối hộp hiện đại **mái bằng**, gần như
+  không có diện tích mái để sắc kỷ nói — nên dù màu mái ở tầng thuần đã tách bạch, trên ảnh ba kỷ
+  này vẫn na ná nhau. Đó là vấn đề HÌNH KHỐI, không phải màu.
+- **Ảnh hưởng**: thuần mỹ thuật. 509 test xanh, lint sạch, build xanh.
+
+---
+
 ## 2026-08-13 — Sáu chặng ngày, sáu bức tranh: bình minh thôi trùng khít hoàng hôn
 
 - **Mục đích**: đo lại bản quét 15 kỷ × 6 chặng bằng phép đo CẢ CẢNH (vector 9 chiều: dải trời +

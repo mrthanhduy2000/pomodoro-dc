@@ -63,7 +63,18 @@ const SETTLE = Number(arg('--settle', 3500));
 // Giờ VN = UTC+7 ⇒ đặt đồng hồ ở UTC tương ứng để `Intl` (Asia/Ho_Chi_Minh) đọc ra giờ mong muốn.
 const FAKE_EPOCH = HOUR === null ? null : Date.UTC(2026, 7, 13, (HOUR - 7 + 24) % 24, 30, 0);
 
-const GAME = {
+/**
+ * Trạng thái game để chụp.
+ *
+ * ⚠️ MẶC ĐỊNH LÀ MỘT TÀI KHOẢN GẦN NHƯ RỖNG — cố tình giữ để chụp nhanh, NHƯNG nó là màn hình của
+ * NGÀY ĐẦU TIÊN, không phải màn hình Đàm đang dùng. Muốn soi đúng thứ Đàm thấy thì phải truyền
+ * `--fixture` (sinh bằng
+ * `node --import ./scripts/register-esm-loader.mjs scripts/make-fixture.mjs --out fixture.json`).
+ * Kết luận "đẹp/chán/tràn" rút ra từ bản mặc định gần như luôn sai, vì phần lớn màn hình chỉ lộ
+ * khuyết điểm khi có nhiều dữ liệu.
+ */
+const FIXTURE = arg('--fixture', null);
+const GAME = FIXTURE ? JSON.parse(readFileSync(FIXTURE, 'utf8')) : {
   state: {
     buildings: ['bp_xuong_hoa', 'bp_truong_dai_hoc', 'bp_nha_bao_tang', 'bp_thu_vien_kh', 'bp_cung_dien_ph'],
     buildingLevels: { bp_xuong_hoa: 2, bp_truong_dai_hoc: 3, bp_nha_bao_tang: 1, bp_thu_vien_kh: 2, bp_cung_dien_ph: 3 },

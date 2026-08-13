@@ -12,6 +12,30 @@
 
 ---
 
+## 2026-08-13 — Trang chủ: app thôi mắng Đàm ngay lúc vừa mở lên
+
+- **Mục đích**: ô "Mục tiêu phiên" chỉ biết HAI trạng thái — `isSessionGoalValid` đúng hoặc sai.
+  "Sai" gộp chung hai hoàn cảnh khác hẳn nhau: *chưa gõ chữ nào* và *gõ dở rồi dừng*. Hệ quả: mỗi
+  lần mở app, thứ đầu tiên đập vào mắt là nhãn **"Thiếu mục tiêu"** + một dòng chữ **đậm màu cảnh
+  báo** (`--accent2` = `#8a3f24`) nói *"Cần nhập mục tiêu trước khi bắt đầu phiên"* — trên một ô
+  Đàm còn chưa chạm vào. Đúng màn hình anh mở nhiều nhất trong ngày.
+- **Phạm vi**: `src/components/sessionGoalState.js` (mới, thuần + 10 bài test) — ba trạng thái
+  `empty` / `partial` / `ready` với ba tông riêng; `src/components/PomodoroEngine.jsx` dùng nó cho
+  **cả hai** khối giao diện (thẻ "Chuẩn bị phiên" gọn và mục "Mục tiêu phiên" mở rộng), nên hai
+  khối không thể lệch nhau nữa.
+- **Đổi giọng, KHÔNG đổi luật**: nhãn `Thiếu mục tiêu` → `Chưa đặt mục tiêu` (mô tả sự việc thay vì
+  quy kết khiếm khuyết), màu từ cảnh báo → chữ phụ trung tính (đo được: `rgb(106,104,98)`); câu
+  dưới ô đổi thành *"Phiên này bạn định chốt xong việc gì? Viết một dòng từ 10 ký tự là bắt đầu
+  được."* — vẫn nêu đủ ngưỡng. Nút Bắt đầu vẫn bị vô hiệu hoá và vẫn ghi "Cần điền mục tiêu phiên",
+  nên không mất một chút thông tin nào. Trạng thái *đã gõ dở* GIỮ NGUYÊN màu nhắc — lúc đó "thiếu"
+  mới là mô tả đúng.
+- **Kèm một lỗi đơn vị**: bộ đếm `0/10` đếm KÝ TỰ nhưng nhãn dưới nó ghi "tối thiểu **từ**" — đọc
+  ra thành "tối thiểu 10 TỪ", gấp nhiều lần luật thật. Đổi thành "ký tự tối thiểu".
+- **Ảnh hưởng / tương thích**: thuần hiển thị. Không đụng `handleStartSession`, không đụng ngưỡng
+  10 ký tự, không đụng state, không migration.
+- **Test**: 495 → **505 xanh**. Bài quan trọng nhất (`empty` và `partial` không được cùng tông) đã
+  được **thử ngược**: ép về logic hai-trạng-thái cũ ⇒ đỏ ngay, đúng thông điệp mong đợi.
+
 ## 2026-08-13 — Công cụ + sửa nhãn: thanh tiêu đề thôi gọi EP là XP
 
 - **Mục đích**: mọi đợt soi giao diện trước nay đều chạy trên một tài khoản gần như RỖNG — tức là

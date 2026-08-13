@@ -27,9 +27,9 @@ import {
 import StakePanel from './StakePanel';
 import { RichNoteEditor } from './RichText';
 import { countRichTextWords, trimRichTextToWordLimit } from '../utils/richText';
+import { SESSION_GOAL_MIN_CHARS, deriveSessionGoalState, sessionGoalHint } from './sessionGoalState';
 
 const NOTE_WORD_LIMIT = 3000;
-const SESSION_GOAL_MIN_CHARS = 10;
 const SESSION_EXTENSION_SECONDS = 60;
 const SESSION_EXTENSION_WINDOW_SECONDS = 5 * 60;
 const SESSION_EXTENSION_IDLE_GRACE_MS = 30 * 1000;
@@ -438,16 +438,31 @@ export default function PomodoroEngine({
   }, [extendCurrentSession, sessionStartedAt]);
 
   const noteWordCount = countRichTextWords(pendingNote);
-  const sessionGoalText = pendingSessionGoal.trim();
-  const sessionGoalCharCount = sessionGoalText.length;
-  const isSessionGoalValid = sessionGoalCharCount >= SESSION_GOAL_MIN_CHARS;
-  const sessionGoalRemainingChars = Math.max(SESSION_GOAL_MIN_CHARS - sessionGoalCharCount, 0);
-  const sessionGoalProgressPct = Math.min((sessionGoalCharCount / SESSION_GOAL_MIN_CHARS) * 100, 100);
-  const sessionPrepStatusLabel = sessionGoalCharCount === 0
-    ? 'Thiếu mục tiêu'
-    : isSessionGoalValid
-      ? 'Sẵn sàng bắt đầu'
-      : `Thiếu ${sessionGoalRemainingChars} ký tự`;
+  // ⚠️ BA trạng thái, không phải hai — xem `sessionGoalState.js`. Trước đây ô CHƯA GÕ GÌ và ô GÕ DỞ
+  // dùng chung một bộ class cảnh báo, nên mỗi lần mở app là một dòng chữ đậm màu cảnh báo trên một
+  // ô Đàm còn chưa chạm vào.
+  const goalState = deriveSessionGoalState(pendingSessionGoal);
+  const sessionGoalText = goalState.text;
+  const sessionGoalCharCount = goalState.charCount;
+  const isSessionGoalValid = goalState.isReady;
+  const sessionGoalProgressPct = goalState.progressPct;
+  const sessionPrepStatusLabel = goalState.badgeLabel;
+  // Tông → class. Ô trống ở theme sáng nay dùng đúng màu chữ phụ như mọi dòng chỉ dẫn khác; ở theme
+  // tối thì nhánh "chưa đủ" vốn đã trung tính sẵn, nên chỉ cần tách riêng nhánh sáng.
+  const goalBadgeClass = goalState.tone === 'good'
+    ? lightTheme
+      ? 'border border-[rgba(91,122,82,0.18)] bg-[rgba(229,236,223,0.92)] text-[var(--good)]'
+      : 'border border-[rgba(var(--accent-rgb),0.18)] bg-white/[0.05] text-[var(--accent-light)]'
+    : goalState.tone === 'warn'
+      ? lightTheme
+        ? 'border border-[rgba(201,100,66,0.14)] bg-[rgba(201,100,66,0.08)] text-[var(--accent2)]'
+        : 'border border-white/8 bg-white/[0.05] text-[var(--muted)]'
+      : lightTheme
+        ? 'border border-[var(--line)] bg-[var(--panel-soft)] text-[var(--muted)]'
+        : 'border border-white/8 bg-white/[0.05] text-[var(--muted)]';
+  const goalHintClass = goalState.tone === 'warn'
+    ? lightTheme ? 'font-semibold text-[var(--accent2)]' : 'font-semibold text-red-300'
+    : lightTheme ? 'text-[var(--muted)]' : 'text-slate-500';
   const showSessionReview = Boolean(lastCompletedSessionId && completedSessionReview && !isActive);
   const completedGoalAchieved = completedSessionReview?.goalAchieved ?? null;
   const reviewGoalText = completedSessionReview?.goal?.trim() || sessionGoalText;
@@ -1523,15 +1538,7 @@ export default function PomodoroEngine({
               Chốt một đích đến rõ ràng trước khi bấm bắt đầu. Ghi chú cho lần sau chỉ để giữ mạch chuyển tiếp.
             </p>
           </div>
-          <span className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-semibold ${
-            isSessionGoalValid
-              ? lightTheme
-                ? 'border border-[rgba(91,122,82,0.18)] bg-[rgba(229,236,223,0.92)] text-[var(--good)]'
-                : 'border border-[rgba(var(--accent-rgb),0.18)] bg-white/[0.05] text-[var(--accent-light)]'
-              : lightTheme
-                ? 'border border-[rgba(201,100,66,0.14)] bg-[rgba(201,100,66,0.08)] text-[var(--accent2)]'
-                : 'border border-white/8 bg-white/[0.05] text-[var(--muted)]'
-          }`}>
+          <span className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-semibold ${goalBadgeClass}`}>
             {sessionPrepStatusLabel}
           </span>
         </div>
@@ -1573,8 +1580,11 @@ export default function PomodoroEngine({
               <p className={`mono text-[10px] ${lightTheme ? 'text-[var(--muted-2)]' : 'text-slate-500'}`}>
                 {sessionGoalCharCount}/{SESSION_GOAL_MIN_CHARS}
               </p>
+              {/* ⚠️ Bộ đếm ngay trên là `sessionGoalCharCount` — KÝ TỰ, không phải TỪ. Nhãn cũ ghi
+                  "tối thiểu từ" nên "0/10" đọc thành "tối thiểu 10 TỪ", gấp nhiều lần luật thật và
+                  đủ để làm người ta nản trước khi gõ chữ đầu tiên. */}
               <p className={`mt-1 text-[10px] ${lightTheme ? 'text-[var(--muted-2)]' : 'text-slate-600'}`}>
-                tối thiểu từ
+                ký tự tối thiểu
               </p>
             </div>
           </div>
@@ -1611,16 +1621,8 @@ export default function PomodoroEngine({
               style={{ ...paperInputStyle, scrollbarWidth: 'none' }}
             />
             <div className="mt-2 flex items-start justify-between gap-3">
-              <p className={`max-w-[32rem] text-[11px] leading-5 ${
-                isSessionGoalValid
-                  ? lightTheme ? 'text-[var(--muted)]' : 'text-slate-500'
-                  : lightTheme ? 'font-semibold text-[var(--accent2)]' : 'font-semibold text-red-300'
-              }`}>
-                {sessionGoalCharCount === 0
-                  ? `Cần nhập mục tiêu trước khi bắt đầu phiên. Tối thiểu ${SESSION_GOAL_MIN_CHARS} ký tự.`
-                  : isSessionGoalValid
-                    ? 'Mục tiêu đã đủ rõ để mở phiên mới.'
-                    : `Mục tiêu còn thiếu ${sessionGoalRemainingChars} ký tự để có thể bắt đầu.`}
+              <p className={`max-w-[32rem] text-[11px] leading-5 ${goalHintClass}`}>
+                {sessionGoalHint(goalState, 'compact')}
               </p>
               {sessionGoalText && (
                 <button
@@ -1695,15 +1697,7 @@ export default function PomodoroEngine({
               Chỉ cần một đích đến đủ cụ thể để bạn biết phiên này có chốt được hay không.
             </p>
           </div>
-          <span className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-semibold ${
-            isSessionGoalValid
-              ? lightTheme
-                ? 'border border-[rgba(91,122,82,0.18)] bg-[rgba(229,236,223,0.92)] text-[var(--good)]'
-                : 'border border-[rgba(var(--accent-rgb),0.18)] bg-white/[0.05] text-[var(--accent-light)]'
-              : lightTheme
-                ? 'border border-[rgba(201,100,66,0.14)] bg-[rgba(201,100,66,0.08)] text-[var(--accent2)]'
-                : 'border border-white/8 bg-white/[0.05] text-[var(--muted)]'
-          }`}>
+          <span className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-semibold ${goalBadgeClass}`}>
             {sessionPrepStatusLabel}
           </span>
         </div>
@@ -1724,16 +1718,8 @@ export default function PomodoroEngine({
         />
 
         <div className="mt-3 flex flex-wrap items-start justify-between gap-3">
-          <p className={`max-w-[36rem] text-[12px] leading-[1.7] ${
-            isSessionGoalValid
-              ? lightTheme ? 'text-[var(--muted)]' : 'text-slate-500'
-              : lightTheme ? 'font-semibold text-[var(--accent2)]' : 'font-semibold text-red-300'
-          }`}>
-            {sessionGoalCharCount === 0
-              ? `Cần nhập mục tiêu trước khi bắt đầu phiên. Tối thiểu ${SESSION_GOAL_MIN_CHARS} ký tự.`
-              : isSessionGoalValid
-                ? 'Mục tiêu đã đủ rõ. Bạn có thể quay lên và bắt đầu phiên bất cứ lúc nào.'
-                : `Mục tiêu còn thiếu ${sessionGoalRemainingChars} ký tự để có thể bắt đầu.`}
+          <p className={`max-w-[36rem] text-[12px] leading-[1.7] ${goalHintClass}`}>
+            {sessionGoalHint(goalState, 'expanded')}
           </p>
           {sessionGoalText && (
             <button

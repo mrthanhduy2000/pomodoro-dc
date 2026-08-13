@@ -110,6 +110,33 @@
 ## 🗒️ Nhật ký cập nhật
 > Mỗi lần xong việc đáng kể, thêm 1 dòng vào ĐẦU danh sách.
 
+- **2026-08-13 (trang chủ)** — **APP THÔI MẮNG ĐÀM NGAY LÚC VỪA MỞ LÊN.**
+  - **Vấn đề**: ô "Mục tiêu phiên" chỉ có HAI trạng thái (`isSessionGoalValid` đúng/sai). "Sai" gộp
+    chung *chưa gõ chữ nào* với *gõ dở rồi dừng*. Nên mỗi lần mở app, thứ đầu tiên đập vào mắt là
+    nhãn **"Thiếu mục tiêu"** + một dòng **đậm màu cảnh báo** `#8a3f24` — trên một ô anh còn chưa
+    chạm vào. Thông tin đúng, GIỌNG sai, và sai ở đúng màn hình mở nhiều nhất trong ngày.
+  - **Sửa**: tách ra `src/components/sessionGoalState.js` (thuần, 10 bài test) với BA trạng thái
+    `empty`/`partial`/`ready` + ba tông. `PomodoroEngine.jsx` dùng chung nó cho **cả hai** khối
+    (thẻ gọn + mục mở rộng) nên hai khối không thể lệch nhau nữa. Nhãn `Thiếu mục tiêu` →
+    `Chưa đặt mục tiêu`; câu dưới ô → *"Phiên này bạn định chốt xong việc gì? Viết một dòng từ 10
+    ký tự là bắt đầu được."* ⚠️ **Không giấu thông tin**: câu vẫn nêu ngưỡng, nút Bắt đầu vẫn vô
+    hiệu hoá kèm nhãn "Cần điền mục tiêu phiên", và trạng thái *đã gõ dở* GIỮ NGUYÊN màu nhắc.
+  - **Kèm một lỗi đơn vị**: bộ đếm `0/10` đếm KÝ TỰ nhưng nhãn ghi "tối thiểu **từ**" → đọc thành
+    "tối thiểu 10 TỪ". Đã đổi thành "ký tự tối thiểu".
+  - **505 bài test** (495 → 505). Bài chính đã **thử ngược**: ép về logic hai-trạng-thái cũ ⇒ đỏ.
+  - ⚠️ **CÔNG CỤ ĐO LẠI NÓI DỐI — LẦN THỨ 10, VÀ LẦN NÀY SUÝT LÀM TÔI BỎ QUA MỘT PHÉP ĐO ĐÚNG.**
+    `measure.mjs` (scratchpad) `Page.navigate` tới trang gieo dữ liệu, mà trang đó tự
+    `location.replace('/index.html')` — ngữ cảnh JS bị huỷ rồi dựng lại. Đo quá sớm thì
+    `document.body` là **null**, mọi `querySelectorAll` trả rỗng, và công cụ báo *"không thấy chỗ
+    nào bị bóp"* rất thuyết phục **trong khi nó chưa hề nhìn thấy trang**. Đã vá: đợi tới khi có
+    `<main>` + `innerText` > 200 ký tự, và **không có thì THOÁT LỖI chứ không trả rỗng**.
+    ⇒ Luật chung: *một công cụ đo không tìm thấy gì phải chứng minh được rằng nó đã NHÌN.*
+  - **Và một lần tôi tự sửa mình**: nhìn ảnh chụp tôi tưởng chữ "countdown" bị cắt cụt thành
+    "countdow" (lỗi tràn). Đo bằng `canvas.measureText` với đúng font đang dùng: cột rộng 80px, từ
+    dài nhất 54px ⇒ **không hề bị bẻ đôi**, tôi đọc nhầm ảnh. Câu đó có bị BÓP thật (7 từ / 4 dòng
+    trong cột 80px ở thẻ "Thiết lập phiên", máy bàn 1280) nhưng chỉ là chật, không phải cụt — nên
+    KHÔNG sửa vội. ⇒ Bài học: *"trông giống lỗi tràn" và "là lỗi tràn" cách nhau đúng một phép đo.*
+
 - **2026-08-13 (công cụ + sửa nhãn)** — **DỰNG TÀI KHOẢN "ĐÃ CHƠI 6 THÁNG", VÀ NÓ TÌM RA NGAY MỘT
   LỖI SỐNG LÂU NGAY TRÊN THANH TIÊU ĐỀ.**
   - **Vì sao dựng**: mọi đợt soi giao diện từ trước tới nay đều chạy trên tài khoản gần như rỗng

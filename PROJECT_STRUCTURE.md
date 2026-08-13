@@ -62,6 +62,10 @@
 │   │   │                     #   Hàm định dạng thuần đã tách ra statsFormatters.js cạnh nó.
 │   │   ├── PomodoroEngine.jsx # Khung chính chứa đồng hồ Pomodoro/Stopwatch (UI, logic timer
 │   │   │                     #   thật nằm ở src/hooks/useTimer.js)
+│   │   ├── sessionGoalState.js # BA trạng thái ô "Mục tiêu phiên" (empty/partial/ready) — thuần.
+│   │   │                     #   Tách ra vì hai trạng thái là KHÔNG đủ: ô chưa gõ gì mà bị dán
+│   │   │                     #   màu cảnh báo thì app thành ra mắng người dùng ngay lúc mở lên.
+│   │   │                     #   Cả 2 khối giao diện mục tiêu đều đọc file này ⇒ không lệch nhau.
 │   │   └── ...                # Các màn hình còn lại: Achievements, SkillTree, BuildingWorkshop,
 │   │                          #   BlueprintInventory, RelicInventory, Settings, DailyMissions...
 │   ├── engine/                # Logic THUẦN (không JSX, không Zustand) — công thức game, dễ test

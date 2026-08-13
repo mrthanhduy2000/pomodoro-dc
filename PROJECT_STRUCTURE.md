@@ -167,6 +167,10 @@
 ├── electron/                   # App phụ Mac (menu bar/tray) — mở URL Vercel, đọc timer từ Supabase
 ├── public/                     # Asset tĩnh (icon, service worker push-worker.js, manifest PWA)
 ├── scripts/                    # Công cụ dev chạy tay (không vào app) — xem CLAUDE.md mục nào còn dùng
+│   └── shot.mjs                #   CHỤP MÀN HÌNH ĐÁNG TIN (qua CDP). ⚠️ DÙNG CÁI NÀY, đừng tự dựng
+│                               #   lệnh Chromium mới: `--virtual-time-budget` đóng băng hoạt hoạ rAF
+│                               #   (khối framer-motion biến mất im lặng) và `--window-size` không
+│                               #   cho ra khung điện thoại thật (sàn 500px). Xem CLAUDE.md.
 ├── supabase/                   # SQL chạy TAY trong Supabase SQL Editor (không tự động migrate)
 │
 ├── CLAUDE.md                   # Quy tắc bắt buộc + Project Governance Protocol + bối cảnh kỹ thuật

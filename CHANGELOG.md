@@ -12,6 +12,32 @@
 
 ---
 
+## 2026-08-13 — Công cụ + sửa nhãn: thanh tiêu đề thôi gọi EP là XP
+
+- **Mục đích**: mọi đợt soi giao diện trước nay đều chạy trên một tài khoản gần như RỖNG — tức là
+  xem màn hình của NGÀY ĐẦU TIÊN trong khi Đàm đang sống ở tháng thứ sáu. Dựng một fixture "đã chơi
+  6 tháng" để soi đúng thứ Đàm thấy.
+- **Công cụ mới**: `scripts/make-fixture.mjs` (534 phiên · 312 giờ · 20.888 EP → kỷ 8 · cấp 4 ·
+  7 kỷ đã niêm phong trong bảo tàng · 1 công trình đang xây 3/6 phiên). Chạy dưới
+  `register-esm-loader` để dùng **công thức thật** (`calculateRewards`/`getActiveBook`/
+  `mergeCityArchive`) thay vì chép lại tỉ giá; `Math.random` được thay bằng một dòng số có hạt
+  giống nên vẫn tất định (hai lần chạy ra hai file y hệt). `scripts/shot.mjs` nhận thêm `--fixture`.
+- **Bản nháp đầu của chính công cụ này đã tự mâu thuẫn** — bịa tỉ giá rồi ép cứng kỷ 7, làm thanh
+  tiến độ hiện "41.390 / 18.500" (tiến độ vượt quá vạch đích của nó). Luật rút ra và đã ghi vào đầu
+  file: **mọi con số mà giao diện đem SO với một con số khác đều phải được SUY RA, không được bịa.**
+- **Lỗi thật tìm được nhờ fixture**: 3 chỗ trên màn hình dán nhãn **XP** cho một đại lượng là **EP**
+  — `App.jsx` (thanh tiến trình kỷ ở tiêu đề, thấy trên MỌI màn hình, mọi thiết bị) và
+  `RankDisplay.jsx` ×2 ("… XP trong kỷ này để mở thử thách"). Cả ba đều đọc từ `progress.totalEP`
+  và `ERA_THRESHOLDS`, tức cùng đơn vị mà `ResourceDisplay`/`PrestigeModal`/`StakePanel` đều gọi là
+  EP. Bằng chứng là nhầm chứ không phải cố ý: ngay trong `RankDisplay.jsx`, nhãn "EP trong kỷ" bên
+  cạnh vẫn luôn ghi đúng.
+- **Vì sao lỗi này sống lâu**: trên tài khoản mới nó chỉ là "0 / 1.300" — vô hại. Chỉ khi có số
+  thật mới lộ: cấp 4 mà thanh "XP" báo 20.888.
+- **Phạm vi**: `src/App.jsx` (1 chuỗi), `src/components/RankDisplay.jsx` (2 chuỗi + đổi tên biến
+  cục bộ `xpInEra`/`remainingXP` → `epInEra`/`remainingEP` để lỗi không quay lại). Không đụng công
+  thức, không đụng state, không migration.
+- **Test**: 495 xanh, không đổi số bài (đây là sửa nhãn hiển thị, không có logic mới để khoá).
+
 ## 2026-08-13 — Trang chủ (Phase 3X): vòng ngày cuối cùng cũng tới được màn hình Đàm nhìn nhiều nhất
 
 - **Mục đích**: Phase 3V dựng cả một hành trình màu 178° cho sáu chặng ngày, nhưng ở TRANG CHỦ —

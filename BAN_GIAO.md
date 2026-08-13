@@ -110,6 +110,34 @@
 ## 🗒️ Nhật ký cập nhật
 > Mỗi lần xong việc đáng kể, thêm 1 dòng vào ĐẦU danh sách.
 
+- **2026-08-13 (công cụ + sửa nhãn)** — **DỰNG TÀI KHOẢN "ĐÃ CHƠI 6 THÁNG", VÀ NÓ TÌM RA NGAY MỘT
+  LỖI SỐNG LÂU NGAY TRÊN THANH TIÊU ĐỀ.**
+  - **Vì sao dựng**: mọi đợt soi giao diện từ trước tới nay đều chạy trên tài khoản gần như rỗng
+    (0 XP · 0/360 thành tích · 0 kỹ năng). Tức là suốt thời gian qua tôi kết luận "đẹp/chán/tràn"
+    dựa trên **màn hình của NGÀY ĐẦU TIÊN**, còn Đàm thì đang sống ở tháng thứ sáu.
+  - **Công cụ**: `scripts/make-fixture.mjs` — 534 phiên · 312 giờ · 20.888 EP → **kỷ 8** · cấp 4 ·
+    **7 kỷ đã niêm phong trong bảo tàng** · 1 công trình đang xây 3/6 phiên. Nạp vào ảnh chụp bằng
+    `node scripts/shot.mjs --fixture <file>`.
+  - ⚠️ **BẢN NHÁP ĐẦU CỦA CHÍNH CÔNG CỤ NÀY ĐÃ NÓI DỐI (lần thứ 9)**: nó bịa tỉ giá phần thưởng
+    (11 XP/phút) rồi lại ép cứng `activeBook: 7`, làm thanh tiến độ hiện **"41.390 / 18.500"** —
+    một tiến độ VƯỢT QUÁ vạch đích của chính nó. Nhìn thoáng qua y hệt một lỗi app. Kèm theo là ba
+    tên khoá bịa (`progress.totalXP`, `player.xp`, `player.totalFocusMinutes` — không khoá nào tồn
+    tại trong `gameStore`, app đọc ra 0) và `streak.lastSessionDate` (đúng phải là `lastActiveDate`).
+    ⇒ **Luật đã ghi vào đầu file đó: mọi con số mà giao diện đem SO với một con số khác đều phải
+    được SUY RA, không được bịa.** Nay dùng thẳng `calculateRewards`/`getActiveBook`/
+    `mergeCityArchive` của app (chạy dưới `register-esm-loader`, thay `Math.random` bằng dòng số có
+    hạt giống nên vẫn tất định — đã kiểm md5 hai lần chạy).
+  - **Lỗi THẬT tìm được ngay trong lần soi đầu tiên**: **3 chỗ dán nhãn "XP" cho một đại lượng là
+    "EP"** — `App.jsx` (thanh "Tiến trình kỷ" ở tiêu đề, hiện trên **mọi** màn hình, mọi thiết bị)
+    và `RankDisplay.jsx` ×2. Cả ba đọc từ `progress.totalEP` + `ERA_THRESHOLDS`, cùng đơn vị mà
+    `ResourceDisplay`/`PrestigeModal`/`StakePanel` đều gọi là EP. Bằng chứng là nhầm chứ không phải
+    cố ý: ngay trong `RankDisplay.jsx`, nhãn "EP trong kỷ" ngay bên cạnh vẫn luôn ghi đúng.
+    Đã sửa 3 chuỗi + đổi tên biến cục bộ (`xpInEra`→`epInEra`, `remainingXP`→`remainingEP`) để lỗi
+    không quay lại. **495 bài test xanh** (sửa nhãn, không có logic mới để khoá).
+  - **Vì sao nó sống lâu mà không ai thấy**: trên tài khoản mới, dòng đó chỉ là "0 / 1.300" — vô
+    hại. Phải có số thật mới lộ ra "cấp 4 mà thanh XP báo 20.888". **Bài học: một lỗi nhãn chỉ hiện
+    hình khi dữ liệu đủ lớn; tài khoản rỗng che được nhiều thứ hơn ta tưởng.**
+
 - **2026-08-13 (Phase 3X)** — **VÒNG NGÀY CUỐI CÙNG CŨNG TỚI ĐƯỢC TRANG CHỦ.** Xử lý xong
   `TECH_DEBT` #16, và điều đáng ghi nhất là **nó không phải một đánh đổi như tôi đã ghi hôm trước.**
   - **Tôi đã sai ở đâu**: hôm trước tôi đọc chú thích trong `CityBackdrop.jsx` (*"đẹp và dùng được

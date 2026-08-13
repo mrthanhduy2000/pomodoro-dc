@@ -36,13 +36,19 @@ export default function RankDisplay() {
   if (!currentRank) return null;
 
   const isMaxRank = currentIdx >= ranks.length - 1;
+  // ⚠️ ĐƠN VỊ Ở ĐÂY LÀ **EP** (Điểm Tiến Hoá), KHÔNG PHẢI XP — mọi thứ dưới đây bắt nguồn từ
+  // `totalEP`. Tên biến cũ viết chữ "xp" (xpInEra / remainingXP) chính là lý do hai dòng chữ hiện
+  // ra màn hình từng ghi nhầm "XP" — đọc code thấy chữ xp thì viết chữ XP. Bằng chứng nó là nhầm
+  // chứ không phải cố ý: ngay trong file này, nhãn ở dòng "EP trong kỷ" bên dưới vẫn luôn ghi EP.
+  // Đổi tên biến là cách rẻ nhất để lỗi đó không quay lại. (`RANK_XP_RATIOS`/`getEraXPRange` giữ
+  // nguyên tên vì là API dùng chung nhiều nơi — đổi tên chúng là một task riêng, xem `TECH_DEBT.md`.)
   const { start: eraStart, gap: eraGap } = getEraXPRange(activeBook);
-  const xpInEra = Math.max(0, totalEP - eraStart);
-  const xpRequired = nextRank ? Math.floor(eraGap * (RANK_XP_RATIOS[currentIdx + 1] ?? 1)) : 0;
-  const xpGateMet = xpInEra >= xpRequired;
-  const xpGatePct = xpRequired > 0 ? Math.max(0, Math.min(100, (xpInEra / xpRequired) * 100)) : 100;
-  const remainingXP = Math.max(0, xpRequired - xpInEra);
-  const canChallenge = !isMaxRank && xpGateMet && !rankChallenge?.active && !eraCrisis.active;
+  const epInEra = Math.max(0, totalEP - eraStart);
+  const epRequired = nextRank ? Math.floor(eraGap * (RANK_XP_RATIOS[currentIdx + 1] ?? 1)) : 0;
+  const epGateMet = epInEra >= epRequired;
+  const epGatePct = epRequired > 0 ? Math.max(0, Math.min(100, (epInEra / epRequired) * 100)) : 100;
+  const remainingEP = Math.max(0, epRequired - epInEra);
+  const canChallenge = !isMaxRank && epGateMet && !rankChallenge?.active && !eraCrisis.active;
 
   return (
     <section
@@ -82,7 +88,7 @@ export default function RankDisplay() {
           </div>
           <div className="shrink-0 text-right">
             <div className="mono text-[15px] font-semibold tabular-nums" style={{ color: 'var(--accent)' }}>
-              {isMaxRank ? 'MAX' : `+${xpInEra.toLocaleString()}`}
+              {isMaxRank ? 'MAX' : `+${epInEra.toLocaleString()}`}
             </div>
             <div className="mono mt-0.5 text-[10px] uppercase tracking-[0.16em] text-[var(--muted)]">
               EP trong kỷ
@@ -94,10 +100,10 @@ export default function RankDisplay() {
           <motion.div
             className="h-full rounded-full"
             initial={reduceMotion ? false : { width: 0 }}
-            animate={reduceMotion ? undefined : { width: `${Math.max(0, Math.min(100, (xpInEra / eraGap) * 100))}%` }}
+            animate={reduceMotion ? undefined : { width: `${Math.max(0, Math.min(100, (epInEra / eraGap) * 100))}%` }}
             transition={reduceMotion ? undefined : { duration: 0.45, ease: 'easeOut' }}
             style={{
-              width: reduceMotion ? `${Math.max(0, Math.min(100, (xpInEra / eraGap) * 100))}%` : undefined,
+              width: reduceMotion ? `${Math.max(0, Math.min(100, (epInEra / eraGap) * 100))}%` : undefined,
               background: 'var(--ink)',
             }}
           />
@@ -124,7 +130,7 @@ export default function RankDisplay() {
               </div>
               <div className="shrink-0 text-right">
                 <div className="mono text-[14px] font-semibold tabular-nums" style={{ color: canChallenge ? 'var(--accent)' : 'var(--muted)' }}>
-                  {canChallenge ? 'Sẵn sàng' : `${remainingXP.toLocaleString()} XP`}
+                  {canChallenge ? 'Sẵn sàng' : `${remainingEP.toLocaleString()} EP`}
                 </div>
                 <div className="mono mt-0.5 text-[10px] uppercase tracking-[0.16em] text-[var(--muted)]">mốc mở</div>
               </div>
@@ -134,10 +140,10 @@ export default function RankDisplay() {
               <motion.div
                 className="h-full rounded-full"
                 initial={reduceMotion ? false : { width: 0 }}
-                animate={reduceMotion ? undefined : { width: `${xpGatePct}%` }}
+                animate={reduceMotion ? undefined : { width: `${epGatePct}%` }}
                 transition={reduceMotion ? undefined : { duration: 0.45, ease: 'easeOut' }}
                 style={{
-                  width: reduceMotion ? `${xpGatePct}%` : undefined,
+                  width: reduceMotion ? `${epGatePct}%` : undefined,
                   background: 'var(--accent)',
                 }}
               />
@@ -161,7 +167,7 @@ export default function RankDisplay() {
                     ? 'Tạm khóa trong lúc khủng hoảng kỷ nguyên còn hiệu lực.'
                     : canChallenge
                       ? 'Bạn đã đủ điều kiện để bắt đầu.'
-                      : `Còn ${remainingXP.toLocaleString()} XP trong kỷ này để mở thử thách.`}
+                      : `Còn ${remainingEP.toLocaleString()} EP trong kỷ này để mở thử thách.`}
                 </div>
               </div>
               {canChallenge ? (

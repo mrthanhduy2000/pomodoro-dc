@@ -2199,7 +2199,14 @@ function TopRail({
           <div className="flex items-center justify-between gap-3">
             <span className="mono whitespace-nowrap text-[10px] uppercase tracking-[0.2em] text-[var(--muted)]">Tiến trình kỷ</span>
             <span className="mono whitespace-nowrap text-[11.5px] text-[var(--muted)]">
-              {totalEP.toLocaleString()} / {eraEnd.toLocaleString()} XP
+              {/* ⚠️ ĐƠN VỊ Ở ĐÂY LÀ **EP**, KHÔNG PHẢI XP. Hai con số này là `progress.totalEP` và
+                  `ERA_THRESHOLDS[…]` — cùng một đơn vị mà `ResourceDisplay`/`PrestigeModal`/
+                  `StakePanel` đều gọi là EP. Chữ "XP" ở đây từng nói dối suốt một thời gian dài mà
+                  không ai thấy, vì trên một tài khoản mới thì nó chỉ là "0 / 1.300" — vô hại. Chỉ
+                  khi soi bằng fixture "đã chơi 6 tháng" (`scripts/make-fixture.mjs`) mới lộ ra:
+                  cấp 4 mà thanh XP báo 20.888, trong khi cấp 4 chỉ cần 24.000 XP — hai đại lượng
+                  khác nhau bị dán cùng một nhãn ngay trên thanh tiêu đề, chỗ dễ thấy nhất app. */}
+              {totalEP.toLocaleString()} / {eraEnd.toLocaleString()} EP
             </span>
           </div>
           <div className="mt-2.5 h-[3px] overflow-hidden rounded-full bg-[var(--line)]">

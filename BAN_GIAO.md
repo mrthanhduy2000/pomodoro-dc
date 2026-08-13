@@ -151,10 +151,30 @@
     DẢI cho thấy: đổi màu trời xong thì dải TRỜI tách được (13,0) nhưng dải THÀNH PHỐ vẫn chỉ cách
     **8,7/255** (góc màu 51° vs 44° — bảy độ). Truy ra: thứ nhuộm màu lên thành phố là ĐÈN MẶT TRỜI,
     mà màu đèn mặt trời do đúng `sunWarmth` quyết định — thứ buộc phải ấm ở cả hai đầu ngày. Ngõ cụt
-    hoàn toàn. Sương thoát ra được vì **nó lấy MÀU CHÂN TRỜI**, nên nó quét sắc của buổi sớm lên
-    chính những công trình ở xa. ⇒ **Muốn đổi màu của VẬT thì phải đổi thứ CHIẾU vào vật (hoặc thứ
-    PHỦ lên vật), không phải thứ đứng SAU vật.** Và: đo tổng cả cảnh chỉ ra một con số nhỏ mà không
-    nói được nhỏ Ở ĐÂU — phải đo theo từng dải mới truy ra được nguyên nhân.
+    hoàn toàn. Sương thoát ra được vì **nó lấy MÀU CHÂN TRỜI**, nên nó sơn lại cả mảng NỀN phía sau
+    và quanh thành phố — khoảng một phần bảy khung hình.
+  - ⚠️ **VÀ ĐÂY LÀ CHỖ TÔI SUÝT GHI SAI VÀO TÀI LIỆU, ĐÁNG NHỚ HƠN CẢ CÁCH SỬA.** Chú thích đầu tôi
+    viết là sương "quét sắc của buổi sớm lên chính những công trình ở xa nên cuối cùng chạm được
+    vào dải THÀNH PHỐ". Nghe cực kỳ xuôi tai — và sai hẳn dấu. Tắt riêng sương ra rồi bật lại (giữ
+    nguyên mọi tham số khác) rồi đo theo từng dải:
+    | dải | không sương | có sương |
+    |---|---|---|
+    | nền / chân trời | 12,9 | **74,6** |
+    | THÀNH PHỐ | 8,4 | **3,3** ← GIẢM |
+    | mặt đất | 7,2 | 7,2 |
+    | cả cảnh | 17,2 | **75,1** |
+    Toàn bộ khoảng cách đến từ phần NỀN, không từ các công trình — **đúng như thiết kế**, vì sương
+    cố ý bắt đầu SAU rìa thành phố nên nó không chạm vào nhà ở gần (dải thành phố còn hơi giảm vì
+    sương kéo mấy căn ở xa nhạt về phía màu chân trời). Và nhà cửa ở gần trông na ná nhau ở hai đầu
+    ngày là **đúng vật lý**, không phải thiếu sót: cùng một mặt trời thấp, cùng một thứ ánh sáng ấm.
+    Ngoài đời cũng thế — thứ cho ta biết đang là sáng hay chiều là bầu trời, là sương, là đèn đường
+    đã bật hay chưa, không phải màu bức tường trước mặt.
+    ⇒ **Bài học: "sửa đúng" KHÔNG chứng minh "hiểu đúng vì sao".** Con số tổng 5,9 → 75,1 xác nhận
+    việc sửa có tác dụng, nên rất dễ dừng lại ở đó và viết ra một cơ chế nghe hợp lý mà chưa hề đo.
+    Phải đo TỪNG DẢI mới biết cơ chế thật.
+  - ⇒ Bài học kèm theo: **muốn đổi màu của VẬT thì phải đổi thứ CHIẾU vào vật (hoặc thứ PHỦ lên
+    vật), không phải thứ đứng SAU vật.** Và: đo tổng cả cảnh chỉ ra một con số nhỏ mà không nói
+    được nhỏ Ở ĐÂU — phải đo theo từng dải mới truy ra được nguyên nhân.
   - **Kết quả đo lại** (cùng bản quét, cùng phép đo): bình minh ↔ hoàng hôn **5,9 → 75,1**. Cặp gần
     nhau nhất trong cả ngày **5,9 → 29,8** (8h ↔ 12h). Cả 15 cặp nay đều trên ngưỡng mắt (~12), cặp
     yếu nhất gấp 2,5 lần ngưỡng. Chặng chiều (lỗi thật của nó là ĐỤC chứ không TRÙNG) cũng đã sửa:

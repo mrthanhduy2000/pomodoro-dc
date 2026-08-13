@@ -128,7 +128,7 @@ export const DAYLIGHT_PROFILES = {
   // nó đã được cân đúng để bắt cả màu hồng nhạt. Nới nó ra để lấy một bình minh hồng là đánh đổi
   // một lỗi CHẮC CHẮN sẽ quay lại lấy một sắc màu ĐẸP HƠN MỘT CHÚT — không đáng.
   // Và hoá ra không cần: phần lớn khoảng cách giữa hai chặng đến từ SƯƠNG chứ không từ góc màu
-  // (thêm sương: 18,0 → 73,0; đổi chân trời hồng chỉ đóng góp ~5). Bình minh vàng nhạt + sương dày
+  // (tắt riêng sương rồi bật lại: 17,2 → 75,1). Bình minh vàng nhạt + sương dày
   // vẫn tách bạch hoàn toàn với hoàng hôn cam đỏ + đèn sáng: **75,1/255**.
   //
   // ⚠️ MỘT NƯỚC ĐI ĐÃ THỬ VÀ ĐÃ BỊ TEST BẮT — GIỮ LẠI ĐỂ ĐỪNG AI THỬ LẠI. Bản nháp hạ hẳn
@@ -288,8 +288,29 @@ export function deriveDaylight(hour) {
  * lớp mờ ở nền xa.
  *
  * Điều khiến nó hiệu quả về mặt kỹ thuật: màn sương lấy MÀU CHÂN TRỜI (xem `sceneGraph.js`), nên
- * kéo sương lại gần không chỉ làm mờ — nó **quét sắc hồng của bình minh lên chính những công trình
- * ở xa**. Tức là cuối cùng cũng chạm được vào dải THÀNH PHỐ, thứ mà đổi màu trời không chạm tới.
+ * kéo sương lại gần không chỉ làm mờ — nó **sơn lại toàn bộ phần nền phía sau và quanh thành phố**
+ * bằng sắc của buổi đó, một mảng chiếm khoảng một phần bảy khung hình.
+ *
+ * ⚠️ ĐO CHÍNH XÁC SƯƠNG LÀM GÌ — VÀ NÓ **KHÔNG** LÀM GÌ. Tắt riêng sương (giữ nguyên mọi tham số
+ * khác) rồi bật lại, đo theo từng dải, trung bình 15 kỷ:
+ *
+ *     dải             không sương → có sương
+ *     NỀN/CHÂN TRỜI      12,9  →  74,6     (#796b47 nâu ô-liu sẫm  →  #c7ad83 vàng nhạt)
+ *     THÀNH PHỐ           8,4  →   3,3     ← GIẢM, không tăng
+ *     MẶT ĐẤT             7,2  →   7,2     ← không đổi
+ *     cả cảnh            17,2  →  75,1
+ *
+ * Tức **toàn bộ khoảng cách đến từ phần NỀN, không phải từ các công trình.** Điều này ĐÚNG NHƯ
+ * THIẾT KẾ chứ không phải thiếu sót: sương cố ý bắt đầu SAU rìa thành phố, nên nó không chạm vào
+ * những căn nhà ở gần. (Dải thành phố còn hơi GIẢM vì sương kéo mấy căn ở xa nhạt về phía màu chân
+ * trời, làm trung bình khoảng giữa khung hình của bình minh xích lại gần hoàng hôn một chút.)
+ * Và việc các công trình ở gần trông na ná nhau ở hai đầu ngày là **đúng vật lý**, không phải lỗi:
+ * cùng một mặt trời thấp, cùng một thứ ánh sáng ấm chiếu vào. Ngoài đời cũng vậy — thứ cho ta biết
+ * đang là sáng hay chiều là BẦU TRỜI, là SƯƠNG, là đèn đường đã bật hay chưa; không phải màu bức
+ * tường trước mặt.
+ * ⚠️ Ghi lại vì đã suýt viết ngược: bản chú thích đầu tiên khẳng định sương "quét sắc lên chính
+ * những công trình ở xa nên cuối cùng chạm được vào dải THÀNH PHỐ". Nghe rất hợp lý, và SAI —
+ * đo ra thì dải đó đi từ 8,4 xuống 3,3. Một cơ chế nghe xuôi tai vẫn phải đo mới được viết ra.
  *
  * ⚠️ ĐỪNG KÉO MẠNH HƠN NỮA. Bản đầu của `sceneGraph.js` để sương bắt đầu ở `gridSize * 1.05`
  * (≈12,6 trong khi camera đứng cách 22) và ảnh chụp ra một màn trắng đục phủ gần hết thành phố.

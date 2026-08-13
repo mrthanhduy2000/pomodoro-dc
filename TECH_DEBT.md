@@ -341,9 +341,17 @@
 - **Giải pháp đã làm** — tách hai chặng ở NĂM trục cùng lúc, neo vào một sự thật khí quyển duy
   nhất (*qua đêm thì bụi lắng xuống, hơi nước đọng lại*):
   - **Sương theo giờ** (`haze`, trường mới + hàm thuần `fogRangeFor`). Trước đây sương là hằng số.
-    Đây là thứ đóng góp phần lớn kết quả: **18,0 → 73,0**. Lý do nó hiệu quả: sương lấy MÀU CHÂN
-    TRỜI, nên nó là cách duy nhất chạm được vào dải THÀNH PHỐ — mọi cách đổi màu trời khác chỉ đổi
-    được tấm phông phía sau.
+    Đây là thứ đóng góp gần như toàn bộ kết quả — tắt riêng nó ra rồi bật lại (giữ nguyên mọi tham
+    số khác): **17,2 → 75,1**. Lý do nó hiệu quả: sương lấy MÀU CHÂN TRỜI, nên nó sơn lại cả mảng
+    nền phía sau và quanh thành phố bằng sắc của buổi đó.
+    ⚠️ **ĐO CHÍNH XÁC NÓ LÀM GÌ, VÀ KHÔNG LÀM GÌ** — nền/chân trời **12,9 → 74,6**; dải THÀNH PHỐ
+    **8,4 → 3,3** (GIẢM, không tăng); mặt đất 7,2 → 7,2 (không đổi). Toàn bộ khoảng cách đến từ
+    phần NỀN, không từ các công trình — đúng như thiết kế, vì sương cố ý bắt đầu SAU rìa thành phố.
+    Và việc nhà cửa ở gần trông na ná nhau ở hai đầu ngày là **đúng vật lý** (cùng một mặt trời
+    thấp, cùng một thứ ánh sáng ấm), không phải thiếu sót: ngoài đời cũng vậy, thứ cho ta biết đang
+    là sáng hay chiều là bầu trời và sương, không phải màu bức tường trước mặt.
+    ⚠️ Bản chú thích đầu tiên viết ngược điều này ("sương quét sắc lên chính những công trình ở xa
+    nên cuối cùng chạm được vào dải THÀNH PHỐ") — nghe rất xuôi tai, và SAI. Đã đo lại và sửa.
   - Đỉnh trời tách 202° (lam sạch) vs 252° (tím chàm — "đai sao Kim").
   - Chân trời: bình minh vàng nhạt 34°/0,62/1,00 · hoàng hôn cam đỏ đậm 8°/0,88/1,46.
   - Nắng: 0,50 vs 1,06 · đèn sân: 0,16 vs 0,78.

@@ -25,10 +25,12 @@
   `haze` thay vì hằng số), `src/engine/city3d/daylight.test.js` (+4 bài).
 - **Thay đổi lớn nhất là SƯƠNG THEO GIỜ.** Trước đây sương mù là một hằng số nên buổi nào cũng
   trong veo như nhau. Nay sáng sớm có sương dày (`haze` 0,90), chiều tà trời quang (0,08) — neo vào
-  một sự thật khí quyển: qua đêm thì bụi lắng xuống và hơi nước đọng lại. Nó hiệu quả vì **sương
-  lấy MÀU CHÂN TRỜI**, nên đây là cách duy nhất chạm được vào dải THÀNH PHỐ; mọi cách đổi màu trời
-  khác chỉ đổi được tấm phông phía sau (đo được: đổi màu trời xong, dải thành phố vẫn cách nhau
-  vỏn vẹn 8,7/255).
+  một sự thật khí quyển: qua đêm thì bụi lắng xuống và hơi nước đọng lại. Tắt riêng sương ra rồi
+  bật lại (giữ nguyên mọi tham số khác): **17,2 → 75,1**, tức nó đóng góp gần như toàn bộ kết quả.
+  Đo theo từng dải cho thấy nó làm gì và KHÔNG làm gì: nền/chân trời **12,9 → 74,6**, dải thành phố
+  **8,4 → 3,3** (giảm), mặt đất không đổi. Toàn bộ khoảng cách đến từ phần NỀN — đúng như thiết kế,
+  vì sương cố ý bắt đầu sau rìa thành phố. Nhà cửa ở gần trông na ná nhau ở hai đầu ngày là đúng
+  vật lý (cùng một mặt trời thấp), không phải thiếu sót.
 - **Kết quả đo**: bình minh ↔ hoàng hôn **5,9 → 75,1**. Cặp gần nhau nhất trong cả ngày **5,9 →
   29,8**. Cả 15 cặp nay đều trên ngưỡng mắt, cặp yếu nhất gấp 2,5 lần ngưỡng.
 - **Bài test mới khoá lại**: duyệt ĐỦ 15 cặp (không chỉ cặp kề nhau) trên khoảng cách hồ sơ đa-trục,

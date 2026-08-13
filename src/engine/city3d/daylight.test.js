@@ -287,11 +287,16 @@ test('PHÉP ĐO NÀY PHẢI CÒN BẮT ĐƯỢC ĐÚNG CÁI LỖI ĐÃ SINH RA N
 });
 
 test('SƯƠNG SỚM: bình minh phải là chặng nhiều sương nhất, và sương phải phủ vào ĐÚNG phần xa', () => {
-  // Vì sao sương lại quan trọng tới mức có bài test riêng: nó là thứ DUY NHẤT tách được bình minh
-  // khỏi hoàng hôn ở dải THÀNH PHỐ. Màu nắng hai buổi buộc phải giống nhau (mặt trời thấp ⇒ ánh
-  // sáng ấm, ở cả hai đầu ngày — vật lý), nên đổi màu trời chỉ đổi được tấm phông phía sau: đo ra
-  // dải thành phố vẫn cách nhau vỏn vẹn 8,7/255. Sương lấy MÀU CHÂN TRỜI nên nó quét sắc của buổi
-  // sớm lên chính các công trình ở xa — sau khi thêm, cả cảnh nhảy từ 18,0 lên 75,1/255.
+  // Vì sao sương quan trọng tới mức có bài test riêng: nó gánh gần như TOÀN BỘ khoảng cách giữa
+  // bình minh và hoàng hôn. Màu nắng hai buổi buộc phải giống nhau (mặt trời thấp ⇒ ánh sáng ấm, ở
+  // cả hai đầu ngày — vật lý), nên mọi cách chỉnh ánh sáng đều tắc. Tắt riêng sương rồi bật lại,
+  // giữ nguyên mọi tham số khác, đo theo từng dải (trung bình 15 kỷ):
+  //     nền/chân trời  12,9 → 74,6   ·   THÀNH PHỐ  8,4 → 3,3   ·   mặt đất  7,2 → 7,2
+  //     cả cảnh        17,2 → 75,1
+  // ⚠️ Khoảng cách nằm HẾT ở phần NỀN, không ở các công trình — và đó là ĐÚNG THIẾT KẾ, vì sương
+  // cố ý bắt đầu SAU rìa thành phố nên không chạm nhà ở gần. Nhà ở gần trông giống nhau ở hai đầu
+  // ngày cũng đúng vật lý, không phải thiếu sót. (Chú thích đầu tiên ở chỗ này viết ngược — bảo
+  // rằng sương chạm được vào dải THÀNH PHỐ. Nghe xuôi tai, nhưng đo ra là 8,4 → 3,3.)
   assert.ok(DAYLIGHT_PROFILES.dawn.haze > DAYLIGHT_PROFILES.dusk.haze * 3,
     'bình minh phải nhiều sương hơn hẳn hoàng hôn — qua một đêm hơi nước mới đọng lại sát mặt đất');
   assert.ok(DAYLIGHT_PROFILES.noon.haze < 0.2, 'giữa trưa mà mù mịt thì không còn ra giữa trưa');

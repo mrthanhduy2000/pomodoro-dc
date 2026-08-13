@@ -240,6 +240,23 @@
 - **Hướng import phải theo đúng chiều phụ thuộc** ở `ARCHITECTURE.md` mục 7: `src/engine/` không
   bao giờ import từ `src/store/`/`src/components/`/`src/hooks/`.
 
+## Bộ công cụ soi bằng MẮT và chấm bằng SỐ (đủ bộ, dùng cùng nhau)
+
+| Lệnh | Trả lời câu hỏi gì |
+|---|---|
+| `node scripts/shot.mjs --phone --out a.png` | app trông thế nào ở bề ngang THẬT (kèm `--tab`, `--full`, `--crop`, `--dark`, `--hour`) |
+| `node scripts/shot.mjs --phone --fit` | có nút nào chữ tràn / bị xén / bị dấu "…" cắt không |
+| `node scripts/shot.mjs --phone --fit --el "<chữ>"` | font-size/padding/overflow THẬT của một phần tử (dùng khi `--fit` và mắt bất đồng) |
+| `node scripts/city-preview.mjs --sweep --all` | dựng bảng 15 kỷ × 6 chặng ngày thành MỘT tấm ảnh |
+| `node scripts/sweep-score.mjs <ảnh quét>` | **chấm** bảng đó: 15 cặp chặng + 105 cặp kỷ, cặp nào dưới ngưỡng mắt |
+| `node scripts/png-probe.mjs <ảnh> --top 10` | màu THẬT trên màn hình tại một điểm/vùng |
+
+⚠️ **`--sweep` mà không `sweep-score` thì mới đi được nửa đường**: mắt chỉ so được các ô KỀ NHAU,
+nên hai lỗi nặng nhất từng lọt qua đều là hai ô nằm ở HAI ĐẦU bảng (bình minh ↔ hoàng hôn ở Phase
+3Y; kỷ 12 ↔ 13 ở `TECH_DEBT #18`). Máy so được cả 105 cặp.
+⚠️ Bản quét đã truyền `--hours` thì **đồng hồ quyết bảng màu, `--theme` chỉ đổi khung ngoài** —
+nội dung 3D của theme sáng và tối GIỐNG HỆT nhau, đừng chạy hai lần rồi đếm thành hai lượt quét.
+
 ## Quy tắc Tailwind: KHÔNG chồng lớp cùng thuộc tính lên một component có sẵn "size"
 
 ⚠️ **Bài học 2026-08-13 (Phase 4E), đã trả giá một lần và suýt trả lần hai.** Dự án KHÔNG cài

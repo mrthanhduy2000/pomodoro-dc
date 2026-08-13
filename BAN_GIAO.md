@@ -6,7 +6,15 @@
 > chọn: `ARCHITECTURE_DECISIONS.md`. Nợ kỹ thuật: `TECH_DEBT.md`. Migration: `MIGRATION.md`. Tóm
 > tắt theo mốc: `CHANGELOG.md`.
 > **NGUYÊN TẮC ƯU TIÊN SỐ 1:** (1) mọi phiên AI phải đọc file này + `CLAUDE.md` + các file liên quan TRƯỚC khi làm; (2) sau MỌI cập nhật dù nhỏ, phải cập nhật ngay file này + `CLAUDE.md` + các file liên quan khác.
-> Cập nhật lần cuối: **2026-08-13** — **Phase 4E**: **ĐÁNH BÓNG CHỮ TRÊN MÀN HÌNH, ĐO BẰNG SỐ.**
+> Cập nhật lần cuối: **2026-08-13** — **Phase 4F**: **QUÉT ĐỦ 15 KỶ × 6 CHẶNG, VÀ CHẤM NÓ BẰNG SỐ.**
+> Công cụ mới `scripts/sweep-score.mjs` so được cả 15 cặp chặng ngày lẫn cả 105 cặp kỷ (mắt chỉ
+> so được ô kề nhau). Kết quả: **15/15 cặp chặng ĐẠT**, nhưng **2/105 cặp kỷ KHÔNG đạt** — kỷ 5↔12
+> và kỷ 4↔10 nhìn gần như cùng một màu. **Cố ý chưa sửa** → `TECH_DEBT #19` (sửa nó là "đợt vá thứ
+> 6" cho `palette3d.js`, mà luật bắt phải làm thành đợt rà soát tử tế). Cũng đính chính con số
+> "0/105" của `TECH_DEBT #18` và đóng nốt rủi ro cỡ chữ nút chính mà Phase 4E tự khai.
+> **551 bài test.**
+>
+> Trước đó cùng ngày — **Phase 4E**: **ĐÁNH BÓNG CHỮ TRÊN MÀN HÌNH, ĐO BẰNG SỐ.**
 > Quét cả 7 màn hình × 2 bề ngang (390px điện thoại thật + 1280px máy bàn) và sửa 4 chỗ hiện sai:
 > Xưởng in **"-4/2 phiên"** (số âm) · nút chính trang chủ bị **xén chữ** ở 390px · 4 thẻ preset cắt
 > mô tả ("Vào việc …") · tên hợp lực cắt thành "Bậc Thầy…". Bài học đắt nhất: bản vá đầu cho nút
@@ -137,6 +145,28 @@
 ## 🗒️ Nhật ký cập nhật
 > Mỗi lần xong việc đáng kể, thêm 1 dòng vào ĐẦU danh sách.
 
+- **2026-08-13 (Phase 4F — quét đủ 15 kỷ × 6 chặng, và CHẤM nó bằng số)** — **551 bài test**, lint
+  sạch, build xanh.
+  - **Đã quét đủ 90 ô** (`node scripts/city-preview.mjs --sweep --all`) và — quan trọng hơn — **chấm
+    được nó bằng số** nhờ công cụ mới `scripts/sweep-score.mjs`. Trước nay bảng quét chỉ được nhìn
+    bằng mắt, mà mắt chỉ so được các ô KỀ NHAU; đúng vì thế mà hai lỗi nặng nhất trong lịch sử dự án
+    đều là hai ô nằm ở HAI ĐẦU bảng.
+  - **KẾT QUẢ**: **15/15 cặp chặng ngày ĐẠT** (cặp gần nhất 32,8 — công của Phase 3Y vẫn giữ vững),
+    nhưng **2/105 cặp kỷ KHÔNG đạt**: kỷ 5 ↔ kỷ 12 = **9,5** và kỷ 4 ↔ kỷ 10 = **10,2** (ngưỡng mắt
+    12; cặp gần thứ ba đã là 13,4; trung vị 44,6). Ổn định qua hai cỡ ô 260 và 300 ⇒ không phải nhiễu.
+  - **Điều bất ngờ đáng ghi**: bảng màu GỐC của hai cặp đó **không hề gần nhau** (kỷ 5 ↔ 12 cách 140,
+    kỷ 4 ↔ 10 cách 100), trong khi cặp gần nhau NHẤT trong bảng gốc (kỷ 6 ↔ 7, cách 43,5) lại render
+    ra ĐẠT. ⇒ chính đường ống render nén hai cặp này, và nén không đều — nên **một bài test trên
+    bảng màu không thể bắt được lỗi này**, chỉ phép đo trên ảnh thật mới bắt được.
+  - **CỐ Ý CHƯA SỬA** → ghi thành **`TECH_DEBT` #19**. Lý do: `palette3d.js` đã qua 5 đợt vá mỹ
+    thuật, và chính sổ nợ đặt luật "đợt thứ 6 phải là một đợt RÀ SOÁT toàn bộ phép trộn màu, không
+    vá điểm". Sửa nhanh hai kỷ ở đây đúng là cái bị cấm. ⚠️ Cũng **đừng chữa bằng cách đổi
+    `accentColor`** — màu đó là bản sắc kỷ dùng khắp app và đang đúng về ý nghĩa.
+  - **Đính chính `TECH_DEBT` #18**: dòng "0/105 ✅" của nó chỉ đúng với phép đo lúc đó, không phải
+    lời bảo đảm chung — vì nó **không ghi lại công cụ đã đo**. Việc #18 tuyên bố đã làm thì vẫn đứng.
+  - **Đóng nốt rủi ro tự khai của Phase 4E**: nút chính trang chủ từng bị hạ xuống `compactMobile`
+    (chữ 10px — bộ dành cho hàng 4–5 nút lúc phiên đang chạy). Thêm `size="compactPrimary"` đúng cho
+    hàng 2 nút lúc chưa bắt đầu: đo lại **13px, đệm 12px, không tràn**, và kiểm bằng ảnh.
 - **2026-08-13 (Phase 4E — UI/UX, đo bằng số)** — **BỐN CHỖ CHỮ HIỆN SAI TRÊN MÀN HÌNH, VÀ BỐN KIỂU
   NÓI DỐI MỚI CỦA CHÍNH CÔNG CỤ ĐO.** **551 bài test** (+3), lint sạch, build xanh.
   - **Vì sao làm**: sau Phase 4D (cơ chế game), phần còn thiếu của lời Đàm dặn là **UX/UI + đánh

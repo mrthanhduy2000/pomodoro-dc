@@ -12,6 +12,25 @@
 
 ---
 
+## 2026-08-13 — Quét đủ 15 kỷ × 6 chặng, và lần đầu CHẤM được bản quét bằng số
+
+- **Mục đích**: bảng quét 90 ô đã có từ Phase 3G, nhưng xưa nay chỉ được đọc bằng mắt — mà mắt chỉ
+  so được các ô kề nhau. Cần một phép chấm so được **cả 15 cặp chặng ngày và cả 105 cặp kỷ**.
+- **Phạm vi**: `scripts/sweep-score.mjs` (MỚI) · `PomodoroEngine.jsx` (thêm `sizeMap.compactPrimary`)
+  · `TECH_DEBT.md` (#19 mới + đính chính #18).
+- **Kết quả đo**: **15/15 cặp chặng ngày ĐẠT** (gần nhất 32,8) · **2/105 cặp kỷ KHÔNG đạt** —
+  kỷ 5 ↔ 12 = 9,5 và kỷ 4 ↔ 10 = 10,2 (ngưỡng mắt 12, cặp gần thứ ba đã là 13,4, trung vị 44,6).
+- **Cố ý CHƯA sửa hai cặp đó** → `TECH_DEBT #19`: sửa chúng chính là "đợt vá thứ 6" cho
+  `palette3d.js` mà sổ nợ bắt phải làm thành một đợt rà soát toàn bộ, không vá điểm.
+- **Phát hiện đáng ghi**: bảng màu gốc của hai cặp đó cách nhau RẤT XA (140 và 100), còn cặp gần
+  nhau nhất trong bảng gốc lại render ra đạt ⇒ lỗi nằm ở đường ống render, và **một bài test trên
+  bảng màu không thể bắt được nó**.
+- **Đóng nốt rủi ro của mốc trước**: nút chính trang chủ có `size` riêng (`compactPrimary`, 13px)
+  thay vì mượn bộ dành cho hàng 4–5 nút (10px).
+- **Tương thích**: thuần hiển thị + công cụ ⇒ **không có migration**. 551 test xanh.
+
+---
+
 ## 2026-08-13 — Đánh bóng chữ trên màn hình: bốn chỗ hiện sai, và bốn kiểu nói dối của công cụ đo
 
 - **Mục đích**: một lượt soi UI/UX bằng SỐ (không bằng cảm nhận) trên cả khung điện thoại 390px và

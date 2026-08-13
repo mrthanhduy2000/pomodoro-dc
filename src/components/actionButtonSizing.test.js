@@ -115,8 +115,8 @@ test('Nút chính ở trang chủ dùng `size="compactMobile"` — đây là ch�
   // Thẻ mở GẦN NHẤT phía trước nhãn mới là thẻ chứa nó.
   const owner = actionButtonTags(code).filter((t) => t.start < labelAt).pop();
   assert.ok(owner, 'Nhãn không nằm trong thẻ <ActionButton> nào.');
-  assert.match(owner.attrs, /size="compactMobile"/,
-    'Nút chính ở khung điện thoại PHẢI dùng `size="compactMobile"`. Đo được ở bản không có nó:\n'
+  assert.match(owner.attrs, /size="compact(?:Primary|Mobile)"/,
+    'Nút chính ở khung điện thoại PHẢI dùng một `size` compact. Đo được ở bản không có nó:\n'
     + 'font 18px + padding 28px trong một khung rộng 186px ⇒ chữ cần 209px ⇒ bị xén.');
 });
 

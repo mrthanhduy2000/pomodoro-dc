@@ -13,9 +13,12 @@
 > mà không được refactor triệt để, phải CHỦ ĐỘNG đề xuất mở một "Maintenance Sprint" (nêu rõ mục
 > tiêu/phạm vi/lợi ích/rủi ro/tiêu chí hoàn thành) thay vì tiếp tục cộng thêm tính năng mới.
 >
-> **Trạng thái ngưỡng hiện tại (2026-08-13, cập nhật sau khi ĐÓNG #17 và #18)**: **1 mục Priority High**
+> **Trạng thái ngưỡng hiện tại (2026-08-13, cập nhật sau Phase 4F)**: **1 mục Priority High**
 > (#14) → vẫn CHƯA đạt ngưỡng 8–10 mục để đề xuất Maintenance Sprint. Còn **2 mục Medium-High**
-> (#3, #13). **#15, #16 và #17 đều đã đóng** — không còn mục nào chờ Đàm chọn hướng mỹ thuật.
+> (#3, #13) và **1 mục Medium mới là #19** (hai cặp kỷ render ra gần trùng màu — cố ý CHƯA sửa, vì
+> sửa nó chính là "đợt vá thứ 6" cho `palette3d.js` mà luật dưới đây bắt phải làm thành một đợt rà
+> soát tử tế thay vì vá điểm). **#15, #16 và #17 đều đã đóng** — không còn mục nào chờ Đàm chọn
+> hướng mỹ thuật.
 > ⚠️ **#17 LÀ VÍ DỤ THỨ HAI CỦA ĐÚNG CÁI BẪY MÀ BÀI HỌC #16 DƯỚI ĐÂY CẢNH BÁO** — và lần này nặng
 > hơn: mục đó không chỉ ghi nhầm một lỗi thành "đánh đổi cần Đàm quyết", nó còn **chẩn đoán nhầm
 > hẳn chặng ngày** (đổ cho chặng chiều, trong khi cặp hỏng thật là bình minh ↔ hoàng hôn). Nguyên
@@ -292,7 +295,62 @@
 
 ---
 
+## #19 — Hai cặp kỷ vẫn gần như CÙNG MỘT MÀU trên màn hình, dù bảng màu gốc cách nhau rất xa
+
+- **Module**: `src/engine/city3d/palette3d.js` (phép pha sắc kỷ vào mái) — KHÔNG phải
+  `ERA_METADATA[*].accentColor`.
+- **Priority / Severity**: Medium / Low-Medium (thuần mỹ thuật, không có gì hỏng).
+- **SỐ ĐO** (2026-08-13, bằng `scripts/sweep-score.mjs` MỚI — quét đủ 15 kỷ × 6 chặng, đo màu MÁI
+  bằng 8% điểm ảnh tươi nhất của dải thành phố, trung bình trên 6 chặng; ổn định qua hai cỡ ô 260
+  và 300 nên không phải nhiễu):
+
+  | | khoảng cách | ghi chú |
+  |---|---|---|
+  | kỷ 5 ↔ kỷ 12 | **9,5** | hai cặp gần nhau nhất, cách hẳn phần còn lại |
+  | kỷ 4 ↔ kỷ 10 | **10,2** | |
+  | cặp gần thứ ba (kỷ 3 ↔ kỷ 10) | 13,4 | |
+  | trung vị 105 cặp | 44,6 | |
+  | 15 cặp CHẶNG NGÀY | gần nhất 32,8 | ✅ toàn bộ đạt, Phase 3Y vẫn giữ |
+
+- **Root Cause — và đây là chỗ đáng học**: bảng màu gốc của hai cặp này **KHÔNG hề gần nhau**. Đo
+  bằng redmean trên chính `accentColor`: kỷ 5 (`#94a3b8`) ↔ kỷ 12 (`#64748b`) cách **140**, kỷ 4
+  (`#fb923c`) ↔ kỷ 10 (`#f87171`) cách **100** — trong khi cặp gần nhau NHẤT trong bảng gốc là kỷ 6
+  ↔ kỷ 7 (43,5), mà cặp đó lại render ra ĐẠT. ⇒ **Chính đường ống render nén hai cặp này lại**, và
+  nén không đều: cặp gần nhất trong bảng thì render ra tách được, cặp xa trong bảng lại render ra
+  trùng nhau. Đúng bài học đã ghi ở `CLAUDE.md`: *"BẢNG MÀU ≠ MÀU TRÊN MÀN HÌNH"*, và **không có
+  một hệ số chung** — phải đo từng chỗ.
+- **VÌ SAO CHƯA SỬA TRONG PHIÊN NÀY (cố ý, không phải bỏ quên)**: `palette3d.js` đã qua **5 đợt** vá
+  mỹ thuật (3C · 3G · 3M · 3N · 3V), và chính file `TECH_DEBT.md` này đã đặt ra luật: *"nếu xuất
+  hiện đợt vá thứ 6 cho `palette3d.js` thì lần đó phải là một đợt rà soát toàn bộ phép trộn màu còn
+  lại, không vá tiếp"*. Sửa nhanh hai kỷ ở đây đúng là **đợt thứ 6 kiểu vá điểm** mà luật cấm. Vậy
+  nên: ghi lại đầy đủ số đo, để dành cho một đợt rà soát tử tế.
+  ⚠️ Và **đừng chữa bằng cách đổi `accentColor`**: màu đó là bản sắc kỷ dùng khắp app (thẻ kỷ, thẻ
+  công trình, thẻ lễ mừng, bộ vẽ 2D), lại đang đúng về ý nghĩa (kỷ 5 "Tăm Tối" xám, kỷ 12 "Thế
+  Chiến" xám thép). Vấn đề nằm ở chỗ pha, không nằm ở chỗ chọn màu.
+- **Recommended Solution** (cho đợt rà soát): xem lại toàn bộ phép trộn còn dùng RGB tuyến tính
+  trong `palette3d.js` (mặt đất, nước, và phần pha sắc kỷ vào mái ở vùng ÍT TƯƠI) — kỳ vọng: xoay
+  sắc thay vì trộn RGB, đúng khuôn `skyward()` đã làm ở 3V và màu mái ở 3N. Nghiệm thu bằng
+  `sweep-score.mjs` → **0/105 cặp kỷ dưới ngưỡng**.
+- **Current Risk**: thấp — chỉ là hai cặp trong mười lăm kỷ nhìn na ná nhau. **Future Risk**: trung
+  bình — phần thưởng của việc đi hết 15 kỷ là *thấy thành phố đổi khác*; mỗi cặp trùng làm mất một
+  nấc trong hành trình đó.
+- **Blocking Conditions**: không có blocker kỹ thuật; chỉ là phải làm thành MỘT đợt rà soát, không
+  vá điểm.
+- **Review Trigger**: lần tới ai định sửa `palette3d.js` vì bất kỳ lý do gì → gộp mục này vào.
+- **Owner**: (chưa gán) · **Status**: **Open** (phát hiện 2026-08-13, Phase 4F).
+
+---
+
 ## #18 — ĐÃ ĐÓNG (2026-08-13) · Kỷ 12–14 không hề có bề mặt nào mang màu kỷ
+
+> ⚠️ **ĐÍNH CHÍNH (2026-08-13, cùng ngày, muộn hơn)**: dòng "0/105 ✅" trong bảng bên dưới **chỉ
+> đúng với phép đo lúc đó**, không phải một lời bảo đảm chung. Đo lại bằng `scripts/sweep-score.mjs`
+> (công cụ mới, có `--selftest` chứng minh bộ lọc mái thật sự chạy: bỏ lọc thì tụt về 51/105) ra
+> **2/105 cặp dưới ngưỡng**. Hai phép đo khác nhau ở cách chuẩn hoá khoảng cách và ở ranh giới dải,
+> nên **không cái nào "sai"** — nhưng con số 0/105 không được đọc như "đã xong vĩnh viễn". Việc mà
+> #18 tuyên bố là đã làm (kỷ mái bằng nay có bề mặt mang màu kỷ) thì vẫn đúng và vẫn đứng. Phần còn
+> lại chuyển sang **#19**. 👉 Bài học: **một con số nghiệm thu phải đi kèm CÔNG CỤ đã đo ra nó** —
+> ghi mỗi kết quả mà không ghi cách đo thì phiên sau không thể tái lập, và sẽ tưởng là đã đóng.
 
 - **Module**: `src/engine/city3d/buildingSpec.js` — nhánh `case 'flat'` của `roofParts`.
 - **Priority / Severity**: Medium / Low-Medium (thuần mỹ thuật) — **đã xử lý xong trong ngày**.

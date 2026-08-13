@@ -1331,7 +1331,7 @@ export default function PomodoroEngine({
                 disabled={!isSessionGoalValid && !isCrisisBlockingStart}
                 onClick={handleStartSession}
                 variant="primary"
-                size="compactMobile"
+                size="compactPrimary"
                 className={compactTimerActionButtonClassName}
                 title={isCrisisBlockingStart
                   ? 'Cần xử lý Khủng hoảng Kỷ Nguyên trước khi bắt đầu phiên mới'
@@ -1351,7 +1351,7 @@ export default function PomodoroEngine({
                 <ActionButton
                   onClick={onEnterFullScreen}
                   variant="soft"
-                  size="compactMobile"
+                  size="compactPrimary"
                   className={compactTimerActionButtonClassName}
                 >
                   Full Screen
@@ -2559,9 +2559,21 @@ function ActionButton({ children, className = '', disabled = false, onClick, siz
         danger: 'text-[var(--accent-light)] bg-white/[0.05] border-[rgba(var(--accent-rgb),0.18)] shadow-[0_4px_16px_rgba(0,0,0,0.12)] hover:bg-white/[0.08]',
       };
 
+  // ⚠️ MỖI `size` LÀ MỘT BỘ TRỌN VẸN, CỐ Ý — đừng "gọn hơn" bằng cách để nơi gọi chồng thêm lớp.
+  // `sizeMap[size] ?? sizeMap.default` chỉ phát ra ĐÚNG MỘT bộ, nên không có hai lớp nào cùng khai
+  // một thuộc tính để mà tranh nhau. Dự án không có `tailwind-merge`, và Tailwind quyết lớp nào
+  // thắng theo thứ tự trong BẢNG KIỂU chứ không theo thứ tự viết trong `className` — đã có một lần
+  // thua mà không hay biết (xem chú thích ở nút "Cần điền mục tiêu"). Cần cỡ khác ⇒ THÊM một mục
+  // vào đây. Có test canh: `components/actionButtonSizing.test.js`.
   const sizeMap = {
     default: 'px-7 py-3.5 text-lg font-bold leading-none whitespace-nowrap',
+    // Cho HÀNG 4–5 NÚT lúc phiên đang chạy: mỗi nút chỉ được ~70px nên phải bóp rất mạnh.
     compactMobile: 'min-w-0 w-full px-1 py-2.5 text-[10px] font-semibold leading-[1.05] tracking-[-0.03em] whitespace-normal sm:w-auto sm:px-7 sm:py-3.5 sm:text-lg sm:font-bold sm:leading-none sm:tracking-normal sm:whitespace-nowrap',
+    // Cho HÀNG 2 NÚT lúc chưa bắt đầu. Đo thật ở 390px: nút chính được **186px** — rộng gấp 2,7
+    // lần một ô của hàng 4–5 nút, nên dùng `compactMobile` ở đây là bóp chữ xuống 10px một cách
+    // không cần thiết cho nút QUAN TRỌNG NHẤT màn hình. 13px vẫn vừa (đo lại sau khi đổi), lại
+    // trên ngưỡng cỡ chữ dễ đọc trên điện thoại.
+    compactPrimary: 'min-w-0 w-full px-3 py-3 text-[13px] font-semibold leading-tight tracking-[-0.01em] whitespace-normal sm:w-auto sm:px-7 sm:py-3.5 sm:text-lg sm:font-bold sm:leading-none sm:tracking-normal sm:whitespace-nowrap',
   };
 
   return (

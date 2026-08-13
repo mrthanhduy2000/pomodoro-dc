@@ -6,7 +6,18 @@
 > chọn: `ARCHITECTURE_DECISIONS.md`. Nợ kỹ thuật: `TECH_DEBT.md`. Migration: `MIGRATION.md`. Tóm
 > tắt theo mốc: `CHANGELOG.md`.
 > **NGUYÊN TẮC ƯU TIÊN SỐ 1:** (1) mọi phiên AI phải đọc file này + `CLAUDE.md` + các file liên quan TRƯỚC khi làm; (2) sau MỌI cập nhật dù nhỏ, phải cập nhật ngay file này + `CLAUDE.md` + các file liên quan khác.
-> Cập nhật lần cuối: **2026-08-13** — **Phase 4B**: **TRỌN VẸN KỶ**. Mỗi kỷ có đúng 5 công trình
+> Cập nhật lần cuối: **2026-08-13** — **Phase 4E**: **ĐÁNH BÓNG CHỮ TRÊN MÀN HÌNH, ĐO BẰNG SỐ.**
+> Quét cả 7 màn hình × 2 bề ngang (390px điện thoại thật + 1280px máy bàn) và sửa 4 chỗ hiện sai:
+> Xưởng in **"-4/2 phiên"** (số âm) · nút chính trang chủ bị **xén chữ** ở 390px · 4 thẻ preset cắt
+> mô tả ("Vào việc …") · tên hợp lực cắt thành "Bậc Thầy…". Bài học đắt nhất: bản vá đầu cho nút
+> chính **không hề ăn thua** — lớp Tailwind truyền qua `className` THUA `sizeMap` của component mà
+> không có gì báo đỏ. Đồng thời vá **4 kiểu nói dối mới** của chính công cụ đo `shot.mjs`.
+> **551 bài test.**
+>
+> Trước đó cùng ngày — **Phase 4D**: **DI SẢN DANG DỞ** — công trình khởi công trước khi lên kỷ nay
+> xây tiếp được, xong thì vào bảo tàng (không perk, 0 thay đổi cân bằng). ADR-011. **542 bài test.**
+>
+> Trước đó cùng ngày — **Phase 4B**: **TRỌN VẸN KỶ**. Mỗi kỷ có đúng 5 công trình
 > nhưng cả app không chỗ nào nói ra con số 5 đó ("Công trình: 3" — ba trên mấy?). Nay thanh chuyển
 > kỷ hiện `3/5` + gắn **★** cho kỷ xây trọn vẹn, danh sách công trình thành **bảng sưu tập đủ 5 ô**,
 > ô thống kê thứ tư hiện **dân số** (trước chỉ nằm trong bảng gỡ lỗi). Engine thuần mới
@@ -125,6 +136,43 @@
 
 ## 🗒️ Nhật ký cập nhật
 > Mỗi lần xong việc đáng kể, thêm 1 dòng vào ĐẦU danh sách.
+
+- **2026-08-13 (Phase 4E — UI/UX, đo bằng số)** — **BỐN CHỖ CHỮ HIỆN SAI TRÊN MÀN HÌNH, VÀ BỐN KIỂU
+  NÓI DỐI MỚI CỦA CHÍNH CÔNG CỤ ĐO.** **551 bài test** (+3), lint sạch, build xanh.
+  - **Vì sao làm**: sau Phase 4D (cơ chế game), phần còn thiếu của lời Đàm dặn là **UX/UI + đánh
+    bóng**. Cách làm ở đây là soi bằng SỐ chứ không bằng cảm nhận: quét cả 7 màn hình × 2 bề ngang
+    (390px điện thoại thật, 1280px máy bàn), rồi kiểm lại từng phát hiện bằng ảnh chụp cắt sát.
+  - **Lỗi 1 — Xưởng in ra "-4/2 phiên" (số âm).** Gốc: `cityLayout.js` và `BuildingWorkshop.jsx`
+    mỗi nơi TỰ chia lại tiến độ, lại tra **hai bảng khác nhau** (`BUILDING_EFFECTS` vs
+    `BLUEPRINT_META`) và không kẹp biên. ⇒ Tách `src/engine/craftProgress.js` (`describeCraftProgress`,
+    6 bài test) làm **công thức duy nhất**, hai nơi cùng gọi. Nay in `0/2 phiên`. Đây đúng luật
+    **"một luật chỉ được có một công thức"** đã ghi ở `CLAUDE.md`.
+  - **Lỗi 2 — nút chính trang chủ bị xén chữ ở 390px, và bản vá đầu KHÔNG HỀ ăn thua.** Truyền
+    `px-2.5 text-[11px]` qua `className` của `ActionButton` rồi đo thấy "sạch" nên tôi tin. Hỏi
+    thẳng trình duyệt thì nút vẫn chạy **font 18px + padding 28px** — `px-7 text-lg` trong
+    `sizeMap.default` THẮNG, vì Tailwind xếp theo thứ tự BẢNG KIỂU chứ không theo thứ tự viết, mà
+    dự án không có `tailwind-merge`. Sửa đúng: dùng `size="compactMobile"` component đã có sẵn
+    (cũng cho chữ xuống dòng ở khung hẹp). Cùng lỗi ở nút "Full Screen". Khoá lại bằng
+    `src/components/actionButtonSizing.test.js` — 3 bài đọc mã nguồn, **cả 3 đã thử-cho-đỏ**.
+  - **Lỗi 3 — bốn thẻ preset cắt mô tả** ("Vào việc …", "Nhịp hằng …"). Đo: thẻ chỉ rộng ~131px ở
+    390px và ~130px ở 1280px (nó nằm trong bảng "Thời lượng countdown" hẹp), chừa cho mô tả 60–65px
+    trong khi chữ cần 77–79px. ⚠️ Đã thử vá bằng breakpoint `sm:` và **sai**: `sm:` hỏi bề ngang
+    MÀN HÌNH, còn thứ quyết định ở đây là bề ngang CỦA THẺ — máy bàn lại cho thẻ HẸP HƠN điện thoại.
+    ⇒ xếp dọc ở mọi bề ngang.
+  - **Lỗi 4 — tên hợp lực ở tab Kỹ năng bị cắt** ("Bậc Thầy…"): 74px chỗ trống, tên cần 131px. Tên
+    riêng thì cho **xuống 2 dòng**, không cắt bằng dấu "…".
+  - **Công cụ `scripts/shot.mjs` — 4 kiểu nói dối mới, đều đã vá** (chi tiết ở chú thích đầu file
+    và ở `CLAUDE.md`): (5) lớp trang trí `position:absolute` của framer-motion bị tính thành "chữ
+    tràn" (nút "Pomo" báo thừa 31px — suýt ghi thành một mục nợ kỹ thuật ma); (6) cổng "app đã mọc
+    ra chưa" chỉ vá cho `--fit`, và bản "đợi DOM đứng yên" bị vỏ HTML tĩnh lừa (28 phần tử, 0 nút,
+    "ổn định" hoàn hảo lúc React chưa chạy); (7) băng cuộn ngang bị đếm là "bị xén" (7 báo động giả
+    ở thanh chuyển kỷ + dải tab Thống kê); (8) cổng yếu ⇒ đo TRƯỚC khi web font về ⇒ số đo chữ sai.
+    Thêm 2 cờ: `--el "<chữ>"` (in font-size/padding/overflow THẬT của một phần tử — chính nó vạch
+    ra lỗi 2) và `--crop "@<chữ>"`/`--crop "x,y,w,h"` (cắt vùng, khỏi đọc ảnh dài 3000px).
+  - **Kết quả quét cuối**: cả 7 màn hình × 2 bề ngang đều sạch (`✓ … không nút nào có chữ tràn hoặc
+    bị xén`), và 4 chỗ trên đã kiểm lại bằng ảnh chụp thật.
+  - **Không đổi**: state, schema, cân bằng game, luồng đồng bộ ⇒ **không có migration**. TECH_DEBT
+    không có mục mới (hai thứ định ghi thì một cái đã sửa, một cái là báo động giả của công cụ).
 
 - **2026-08-13 (Phase 4D — thành phố)** — **"DI SẢN DANG DỞ": CÔNG TRÌNH XÂY DỞ CỦA KỶ CŨ KHÔNG CÒN
   BỐC HƠI KHI LÊN KỶ.** **542 bài test**, lint sạch, build xanh.

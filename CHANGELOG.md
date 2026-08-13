@@ -12,6 +12,34 @@
 
 ---
 
+## 2026-08-13 — Đánh bóng chữ trên màn hình: bốn chỗ hiện sai, và bốn kiểu nói dối của công cụ đo
+
+- **Mục đích**: một lượt soi UI/UX bằng SỐ (không bằng cảm nhận) trên cả khung điện thoại 390px và
+  máy bàn 1280px, ở cả 7 màn hình chính. Mọi phát hiện đều phải đo được và kiểm lại được bằng ảnh.
+- **Bốn lỗi hiển thị đã sửa**:
+  1. Xưởng chế tạo in **"-4/2 phiên"** (số âm). Gốc: hai nơi tự chia lại tiến độ, lại tra hai bảng
+     khác nhau và không kẹp biên ⇒ tách `src/engine/craftProgress.js` làm **công thức duy nhất**;
+     `cityLayout.js` và `BuildingWorkshop.jsx` cùng gọi nó. Nay in `0/2 phiên`.
+  2. Nút chính trang chủ ở 390px chạy **font 18px + padding 28px** trong khung 186px ⇒ chữ bị xén.
+     Gốc: lớp `px-2.5 text-[11px]` truyền qua `className` **thua** `px-7 text-lg` của `sizeMap`
+     trong `ActionButton` (Tailwind xếp theo bảng kiểu, dự án không có `tailwind-merge`). Sửa đúng
+     cách: dùng `size="compactMobile"` đã có sẵn. Cùng lỗi ở nút "Full Screen".
+  3. Bốn thẻ preset (`Khởi động`/`Chuẩn`/…) cắt mô tả thành "Vào việc …", "Nhịp hằng …" — ở CẢ
+     390px lẫn 1280px, vì thẻ luôn nằm trong cột hẹp ~130px. Chuyển sang xếp dọc ở mọi bề ngang.
+  4. Tên hợp lực ở tab Kỹ năng cắt thành "Bậc Thầy…" — cho xuống 2 dòng thay vì cắt (tên riêng).
+- **Công cụ đo (`scripts/shot.mjs`) — vá 4 kiểu nói dối mới** (số 5–8, nối tiếp 4 kiểu đã ghi
+  trước đó): lớp trang trí `position:absolute` bị tính thành "chữ tràn" · cổng "app đã mọc ra
+  chưa" chỉ vá cho một nhánh, và bản "đợi DOM đứng yên" bị vỏ HTML tĩnh lừa · băng cuộn ngang bị
+  đếm là "bị xén" (7 báo động giả) · đo trước khi web font về nên số đo chữ sai. Thêm cờ `--el`
+  (in style THẬT của một phần tử) và `--crop` (cắt vùng / cắt quanh một chuỗi chữ).
+- **Lưới giữ về sau**: `src/components/actionButtonSizing.test.js` (3 bài đọc mã nguồn, đều đã
+  thử-cho-đỏ) + `src/engine/craftProgress.test.js` (6 bài, gồm quét cả 75 bản vẽ và bài canh hai
+  bảng `BLUEPRINT_META`/`BUILDING_EFFECTS` không được lệch nhau).
+- **Tương thích**: thuần hiển thị + công cụ. KHÔNG đổi state, schema, hay cân bằng game ⇒ **không
+  có migration**. 551 test xanh · lint sạch · build xanh.
+
+---
+
 ## 2026-08-13 — Di sản dang dở: công trình xây dở của kỷ cũ không còn bốc hơi khi lên kỷ
 
 - **Mục đích**: Đàm chọn cơ chế *"Cho xây tiếp công trình kỷ cũ"*. Sau khi Phase 4B gắn ngôi sao

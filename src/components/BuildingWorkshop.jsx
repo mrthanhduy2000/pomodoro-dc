@@ -12,6 +12,7 @@ import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import useGameStore from '../store/gameStore';
 import { blueprintEraOf, countActiveCrafting } from '../engine/eraLegacy';
+import { describeCraftProgress } from '../engine/craftProgress';
 import useSettingsStore from '../store/settingsStore';
 import {
   BUILDING_SPECS,
@@ -114,9 +115,16 @@ function QueueSection({ queue, activeBook, cancelCrafting, lightTheme }) {
         const bpDef = getBpDef(item.bpId);
         const meta  = BLUEPRINT_META[item.bpId] ?? {};
         const eff   = BUILDING_EFFECTS[item.bpId] ?? {};
-        const total = meta.sessionsToComplete ?? 1;
-        const done  = total - item.sessionsRemaining;
-        const pct   = Math.round((done / total) * 100);
+        // ⚠️ DÙNG CHUNG công thức với giàn giáo trong thành phố 3D (`engine/craftProgress.js`,
+        // Phase 4E). Bản tự tính tại chỗ trước đây — `total = meta.sessionsToComplete ?? 1` rồi
+        // `done = total - remaining` — KHÔNG kẹp biên, nên một mục có `sessionsRemaining` lớn hơn
+        // tổng (cloud lệch / file import cũ / bản cân bằng rút ngắn số phiên) hiện thẳng ra màn
+        // hình là **"-4/2 phiên"** kèm thanh rỗng. Nó còn đọc `BLUEPRINT_META` trong khi engine đọc
+        // `BUILDING_EFFECTS` — hai bảng, cùng một con số.
+        const { total, done, pct, remaining } = describeCraftProgress(item.bpId, item.sessionsRemaining);
+        // `total === null` = bản vẽ lạ (dữ liệu lệch). Mẫu số không có thật thì đừng in mẫu số —
+        // "3/ phiên" là một dòng hỏng, còn "còn 3 phiên" vẫn là câu Đàm dùng được.
+        const progressText = total === null ? `còn ${remaining} phiên` : `${done}/${total} phiên`;
         return (
           <div
             key={item.bpId}
@@ -162,7 +170,7 @@ function QueueSection({ queue, activeBook, cancelCrafting, lightTheme }) {
                     />
                   </div>
                   <span className="mono text-xs tabular-nums flex-shrink-0" style={lightTheme ? { color: 'var(--muted)', fontFamily: MONO_FONT } : { color: '#94a3b8', fontFamily: MONO_FONT }}>
-                    {done}/{total} phiên
+                    {progressText}
                   </span>
                 </div>
               </div>

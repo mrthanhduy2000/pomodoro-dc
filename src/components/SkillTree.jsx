@@ -796,8 +796,17 @@ function SynergyPanel({ synergies, activeSynergies, branchCounts, lightTheme, re
 
               <div className="flex items-center gap-2 relative z-10">
                 <span className="mono inline-flex h-6 w-6 items-center justify-center rounded-full border text-[7px] font-semibold uppercase tracking-[0.12em]" style={lightTheme ? { borderColor: 'var(--line)', background: 'rgba(255,255,255,0.74)', color: active ? 'var(--accent2)' : 'var(--muted)' } : { borderColor: 'rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.04)', color: active ? 'var(--accent-light)' : '#94a3b8' }}>{getLabelMark(syn.label)}</span>
+                {/*
+                  ⚠️ TÊN HỢP LỰC ĐƯỢC XUỐNG DÒNG, KHÔNG CẮT BẰNG DẤU … — đây là TÊN RIÊNG, cắt đi
+                  thì mất luôn thứ để gọi nó. Đo ở 390px (lưới 2 cột): chỗ cho tên chỉ **74px**,
+                  trong khi "Người Nhịp Đều" cần 106px và "Bậc Thầy Vạn Năng" cần 131px ⇒ hiện ra
+                  "Bậc Thầy…". Cho phép 2 dòng thì cả hai vừa (131/74 < 2), lưới vẫn 2 cột nên
+                  không loãng, và các thẻ trong cùng hàng vẫn cao bằng nhau (grid tự kéo).
+                  `line-clamp-2` vẫn là lưới an toàn cho cái tên nào đó dài bất thường sau này.
+                  Đo lại: `node scripts/shot.mjs --phone --fit --tab "Kỹ năng"`.
+                */}
                 <p
-                  className={`text-xs font-semibold flex-1 truncate ${lightTheme ? '' : active ? 'text-[var(--accent-light)]' : 'text-slate-300'}`}
+                  className={`text-xs font-semibold flex-1 min-w-0 leading-tight line-clamp-2 break-words ${lightTheme ? '' : active ? 'text-[var(--accent-light)]' : 'text-slate-300'}`}
                   style={lightTheme ? { color: active ? 'var(--accent2)' : 'var(--ink)' } : undefined}
                 >
                   {syn.label}

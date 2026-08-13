@@ -1314,11 +1314,25 @@ export default function PomodoroEngine({
               exit={{ opacity: 0, scale: 0.9 }}
               className="grid w-full grid-cols-[minmax(0,1.72fr)_minmax(112px,0.88fr)] items-stretch gap-2 sm:flex sm:w-auto sm:gap-3"
             >
+              {/* ⚠️ PHẢI DÙNG `size="compactMobile"`, ĐỪNG NHÉT `px-…`/`text-…` VÀO `className`.
+                  Bài học đắt (2026-08-13): bản trước truyền `px-2.5 text-[11px]` qua `className`
+                  và tôi tưởng đã sửa xong. Hỏi thẳng trình duyệt thì nút vẫn đang chạy
+                  **`font-size: 18px`, `padding: 28px`** — tức `text-lg`/`px-7` của khuôn nút THẮNG.
+                  Lý do: Tailwind quyết lớp nào thắng theo THỨ TỰ TRONG BẢNG KIỂU, không theo thứ tự
+                  viết trong `className`; dự án lại không có `tailwind-merge`. ⇒ Hai lớp cùng khai
+                  một thuộc tính là một canh bạc, và ở đây tôi thua mà không hay.
+                  `ActionButton` đã có sẵn lối đúng: `sizeMap[size] ?? sizeMap.default` chỉ phát ra
+                  MỘT bộ, nên không có gì để đánh nhau. `compactMobile` còn cho chữ XUỐNG DÒNG ở
+                  khung hẹp (`whitespace-normal`) rồi trở lại một dòng từ `sm:` — hơn hẳn cắt bằng
+                  dấu "…". `className` chỉ giữ những lớp KHÔNG đụng hàng: `min-w-0 w-full`.
+                  Kiểm bằng: `node scripts/shot.mjs --phone --fit`
+                  và `node scripts/shot.mjs --phone --fit --el "Cần điền mục tiêu"`. */}
               <ActionButton
                 disabled={!isSessionGoalValid && !isCrisisBlockingStart}
                 onClick={handleStartSession}
                 variant="primary"
-                className="min-w-0 w-full whitespace-nowrap px-2.5 py-3 text-[11px] font-semibold leading-none tracking-[-0.025em] sm:w-auto sm:px-7 sm:py-3.5 sm:text-lg sm:font-bold sm:tracking-normal"
+                size="compactMobile"
+                className={compactTimerActionButtonClassName}
                 title={isCrisisBlockingStart
                   ? 'Cần xử lý Khủng hoảng Kỷ Nguyên trước khi bắt đầu phiên mới'
                   : isSessionGoalValid
@@ -1329,13 +1343,16 @@ export default function PomodoroEngine({
                   ? 'Xử lý khủng hoảng'
                   : isSessionGoalValid
                     ? 'Bắt đầu phiên'
-                    : 'Cần điền mục tiêu phiên'}
+                    // "phiên" ở cuối là chữ thừa: cả màn hình này đang nói về một phiên, và ô nhập
+                    // ngay bên dưới đã ghi rõ "MỤC TIÊU PHIÊN". Bỏ nó đi thì nhãn vừa khung 390px.
+                    : 'Cần điền mục tiêu'}
               </ActionButton>
               {canEnterFullScreen && (
                 <ActionButton
                   onClick={onEnterFullScreen}
                   variant="soft"
-                  className="w-full px-2.5 py-3 text-[12px] font-semibold leading-none whitespace-nowrap sm:w-auto sm:px-7 sm:py-3.5 sm:text-lg sm:font-bold"
+                  size="compactMobile"
+                  className={compactTimerActionButtonClassName}
                 >
                   Full Screen
                 </ActionButton>
@@ -2077,7 +2094,21 @@ function QuickPresets({ className = '', activePresetId, disabled, mode, onSelect
                 transition={{ type: 'spring', stiffness: 420, damping: 34 }}
               />
             )}
-            <span className="flex min-w-0 items-start justify-between gap-2">
+            {/*
+              ⚠️ XẾP DỌC Ở MỌI BỀ NGANG — ĐỪNG CHIA TRÁI–PHẢI. Bản trước chia đôi hàng ngang (số
+              phút bên trái, tên + mô tả bên phải). Đo thật: thẻ này KHÔNG BAO GIỜ rộng, vì lưới
+              là `minmax(120px,1fr)` và nó luôn nằm trong một cột hẹp — 390px cho thẻ ~131px, còn
+              1280px thì thẻ nằm trong bảng "Thời lượng countdown" chỉ ~130px. Trừ đệm còn ~103px,
+              số phút ăn ~33px + khoảng cách 8px ⇒ mô tả chỉ còn **60–65px**, trong khi "Vào việc
+              nhanh" cần 77px và "Nhịp hằng ngày" cần 79px ⇒ hiện ra "Vào việc …", "Nhịp hằn…" —
+              nhãn cố định viết sẵn trong mã bị cắt ngang từ, trông như app hỏng.
+              ⚠️ ĐÃ THỬ cách vá theo breakpoint (`sm:flex-row`) và nó SAI: `sm:` hỏi bề ngang MÀN
+              HÌNH, còn thứ quyết định ở đây là bề ngang CỦA THẺ. Hai đại lượng đó không liên quan
+              nhau ở chỗ này — máy bàn 1280 lại cho thẻ HẸP HƠN điện thoại. Nên xếp dọc luôn.
+              ⚠️ `truncate` KHÔNG được gỡ — nó vẫn là lưới an toàn cho những bề ngang chưa từng đo.
+              Đo lại bằng: `node scripts/shot.mjs --fit --phone` (các dòng bắt đầu bằng "…").
+            */}
+            <span className="flex min-w-0 flex-col gap-0.5">
               <span className={`font-mono text-lg font-bold tabular-nums ${
                 active
                   ? lightTheme
@@ -2089,7 +2120,7 @@ function QuickPresets({ className = '', activePresetId, disabled, mode, onSelect
               }`}>
                 {preset.focusMinutes}'
               </span>
-              <span className="min-w-0 text-right">
+              <span className="min-w-0">
                 <span className={`block truncate text-[11px] font-semibold leading-4 ${
                   active
                     ? lightTheme ? 'text-[var(--ink)]' : 'text-white'

@@ -21,6 +21,7 @@
  */
 
 import { BLUEPRINT_CATALOG, BUILDING_EFFECTS } from './constants';
+import { describeCraftProgress } from './craftProgress';
 
 // ─── HẰNG SỐ LƯỚI ────────────────────────────────────────────────────────────
 export const CITY_GRID_SIZE = 12;      // lưới 12×12 = 144 ô
@@ -373,13 +374,11 @@ export function computeCityLayout({ built, levels, era, stats, pending } = {}) {
     .map((item) => {
       const { x, y } = placeBuilding(item.bpId, occupied);
       occupied.add(cellKey(x, y));
-      const total = BUILDING_EFFECTS[item.bpId]?.sessionsToComplete;
-      const remaining = safeCount(item.sessionsRemaining);
-      // Thiếu `sessionsToComplete` (dữ liệu lạ) ⇒ tiến độ 0, tức một cọc mốc thấp — vẫn thấy là
-      // "chỗ này sắp có nhà", chỉ là không biết sắp xong tới đâu. KHÔNG đoán bừa một tỉ lệ.
-      const progress = Number.isFinite(total) && total > 0
-        ? Math.min(1, Math.max(0, 1 - remaining / total))
-        : 0;
+      // ⚠️ TIẾN ĐỘ TÍNH Ở `craftProgress.js`, KHÔNG tính tại chỗ nữa (Phase 4E). Trước đây chính
+      // con số này được tính ở đây MỘT KIỂU (kẹp đủ mọi biên) và ở `BuildingWorkshop.jsx` một kiểu
+      // KHÁC (không kẹp gì) — nên cùng một công trình lệch dữ liệu hiện "-4/2 phiên" ở Xưởng trong
+      // khi ở đây vẫn vẽ đúng. Một luật chỉ được có một công thức.
+      const { total, remaining, ratio: progress } = describeCraftProgress(item.bpId, item.sessionsRemaining);
       const meta = BLUEPRINT_LOOKUP[item.bpId];
       return {
         bpId: item.bpId, x, y, progress,
@@ -388,8 +387,8 @@ export function computeCityLayout({ built, levels, era, stats, pending } = {}) {
         // ⚠️ Đem theo cả SỐ PHIÊN CÒN LẠI, không chỉ tỉ lệ. Màn hình cần nói được "còn 2 phiên nữa"
         // — một con số Đàm hành động được ngay hôm nay — chứ không phải "đã xong 67%", thứ nghe thì
         // chính xác mà chẳng bảo anh phải làm gì. Tính ở đây để mọi màn hình nói cùng một con số.
-        remaining: Math.max(0, Number.isFinite(total) ? Math.min(remaining, total) : remaining),
-        total: Number.isFinite(total) && total > 0 ? total : null,
+        remaining,
+        total,
         // PHẦN THƯỞNG — nhãn ngắn của đặc quyền công trình sẽ mở khoá ("Cả xưởng tăng tốc",
         // "-25% RP bản vẽ kỷ 6-10"). Thiếu số phiên còn lại thì Đàm biết CÒN BAO XA; thiếu dòng này
         // thì anh vẫn không biết ĐI TỚI ĐÓ ĐỂ LÀM GÌ. Lấy `label` chứ không lấy `summary` vì summary

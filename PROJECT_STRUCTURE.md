@@ -95,6 +95,12 @@
 │   │   │                     #   khi lên kỷ thì xây tiếp được, nhưng xong thì chỉ vào cityArchive
 │   │   │                     #   (KHÔNG vào buildings ⇒ không perk, 0 thay đổi cân bằng). Xem
 │   │   │                     #   ADR-011. ⚠️ chấm theo kỷ SAU phiên, không phải kỷ trước.
+│   │   ├── craftProgress.js   # MỘT công thức duy nhất cho "đã xong mấy / còn mấy phiên" của công
+│   │   │                     #   trình đang chế tạo. ⚠️ Trước đây cityLayout.js và
+│   │   │                     #   BuildingWorkshop.jsx mỗi nơi tự tính, lại tra hai bảng KHÁC nhau
+│   │   │                     #   (BUILDING_EFFECTS vs BLUEPRINT_META) và không kẹp biên ⇒ Xưởng in
+│   │   │                     #   ra "-4/2 phiên". Mọi nơi cần con số này PHẢI gọi
+│   │   │                     #   describeCraftProgress, đừng tự chia lại.
 │   │   ├── cityMoment.js      # Điều đáng nói về thành phố ở CẢ HAI đầu một phiên: buildFocusTease
 │   │   │                     #   (trước — phiên này đẩy cái gì tới đâu) + buildGrowthMoment (sau —
 │   │   │                     #   thành phố vừa lớn lên thế nào). Chung một phép chọn công trường.
@@ -233,6 +239,23 @@
   re-export. Giữ nguyên quy ước này khi thêm thư mục mới (kể cả `src/engine/coach/`).
 - **Hướng import phải theo đúng chiều phụ thuộc** ở `ARCHITECTURE.md` mục 7: `src/engine/` không
   bao giờ import từ `src/store/`/`src/components/`/`src/hooks/`.
+
+## Quy tắc Tailwind: KHÔNG chồng lớp cùng thuộc tính lên một component có sẵn "size"
+
+⚠️ **Bài học 2026-08-13 (Phase 4E), đã trả giá một lần và suýt trả lần hai.** Dự án KHÔNG cài
+`tailwind-merge`. Khi một component đã tự khai lớp kích thước (ví dụ `ActionButton` với
+`sizeMap.default = 'px-7 py-3.5 text-lg font-bold …'`) mà nơi gọi truyền thêm `px-2.5 text-[11px]`
+qua `className`, thì **lớp nào thắng do THỨ TỰ TRONG BẢNG KIỂU sinh ra quyết định, không phải thứ
+tự viết trong chuỗi**. Ở ca thật: lớp truyền thêm THUA, nút chạy `font-size: 18px` + `padding:
+28px` trong một khung 186px ⇒ chữ bị xén — mà build xanh, lint xanh, không có gì báo động.
+
+- ✅ **Đúng**: dùng prop `size` (thêm một mục vào `sizeMap` nếu cần) — `sizeMap[size] ?? sizeMap
+  .default` chỉ phát ra MỘT bộ nên không có gì để đánh nhau.
+- ✅ `className` chỉ nên chứa lớp KHÔNG đụng hàng với `sizeMap`: `min-w-0 w-full`, màu, bo góc…
+- ❌ Đừng truyền `px-…`/`py-…`/`text-<cỡ>`/`font-…`/`leading-…`/`whitespace-…` qua `className`.
+- Có lưới tự động: `src/components/actionButtonSizing.test.js` (đọc mã nguồn, cả 3 bài đã được
+  thử-cho-đỏ). Kiểm bằng mắt/bằng số: `node scripts/shot.mjs --phone --fit` và
+  `node scripts/shot.mjs --phone --fit --el "<chữ trên nút>"` (in ra font-size/padding THẬT).
 
 ## Quy tắc đặt tên
 

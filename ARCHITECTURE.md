@@ -233,6 +233,16 @@ một phần thưởng thuần lịch sử lại thành cái bẫy; (c) `withEra
 **MỌI kỷ**, không riêng kỷ hiện tại — chặn lại thì bảng sưu tập ghi "chưa xây" ngay bên dưới cái
 giàn giáo mà cảnh 3D đang dựng.
 
+**Tiến độ chế tạo có ĐÚNG MỘT công thức (2026-08-13)**: `describeCraftProgress`
+(`src/engine/craftProgress.js`, thuần) là nơi DUY NHẤT quy `{ bpId, sessionsRemaining }` ra
+`{ total, remaining, done, ratio, pct }`. `cityLayout.js` (để dựng giàn giáo cao dần) và
+`BuildingWorkshop.jsx` (để in "3/5 phiên") cùng gọi nó. ⚠️ Vì sao phải gom: trước đây hai nơi tự
+chia lại, **lại tra hai bảng khác nhau** (`BUILDING_EFFECTS.sessionsToComplete` vs
+`BLUEPRINT_META.sessionsToComplete`) và không kẹp biên ⇒ Xưởng in ra **"-4/2 phiên"**. Hai bảng
+hiện khớp nhau 75/75 và có bài test canh cho khỏi lệch, nhưng "hiện đang khớp" không phải là một
+bảo đảm — nên nơi đọc chỉ được có một. Bản vẽ lạ (`total === null`) thì **đừng in mẫu số**: "còn 3
+phiên" vẫn là câu dùng được, "3/ phiên" thì không.
+
 **Luồng vẽ Thành Phố — bố cục TRỪU TƯỢNG tách khỏi cách vẽ (2026-08-12)**: một chiều, 3 chặng.
 (1) `CityView.jsx` chọn NGUỒN dữ liệu — kỷ hiện tại lấy state sống, kỷ đã niêm phong lấy ảnh chụp
 trong `cityArchive`; đây là chỗ dễ sai nhất cả màn hình. (2) `computeCityLayout` (engine thuần) trả

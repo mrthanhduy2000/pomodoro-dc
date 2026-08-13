@@ -13,13 +13,19 @@
 > mà không được refactor triệt để, phải CHỦ ĐỘNG đề xuất mở một "Maintenance Sprint" (nêu rõ mục
 > tiêu/phạm vi/lợi ích/rủi ro/tiêu chí hoàn thành) thay vì tiếp tục cộng thêm tính năng mới.
 >
-> **Trạng thái ngưỡng hiện tại (2026-08-13, cập nhật sau Phase 3W)**: **1 mục Priority High** (#14)
-> → vẫn CHƯA đạt ngưỡng 8–10 mục để đề xuất Maintenance Sprint. Còn **2 mục Medium-High** (#3, #13),
-> thêm **1 mục Medium** (#16) — #15 đã đóng.
-> ⚠️ **HAI mục đang CHỜ ĐÀM QUYẾT, không phải chờ AI làm**: #14 (95% phiên im lặng — cân bằng game)
-> và #16 (vòng ngày vô hình ở trang chủ — đánh đổi thẩm mỹ). Cả hai đều có Review Trigger chặn các
-> khoản đầu tư kế tiếp, nên **để lâu thì mọi phase mỹ thuật/lễ mừng sau đều lãi thấp một cách có hệ
-> thống**. Đây là chỗ đáng hỏi Đàm trước khi làm thêm việc mới.
+> **Trạng thái ngưỡng hiện tại (2026-08-13, cập nhật sau Phase 3X)**: **1 mục Priority High** (#14)
+> → vẫn CHƯA đạt ngưỡng 8–10 mục để đề xuất Maintenance Sprint. Còn **2 mục Medium-High** (#3, #13)
+> — #15 và #16 đều đã đóng.
+> ⚠️ **CÒN MỘT mục đang CHỜ ĐÀM QUYẾT, không phải chờ AI làm**: #14 (95% phiên im lặng — cân bằng
+> game). Review Trigger của nó chặn các khoản đầu tư kế tiếp vào lễ mừng, nên **để lâu thì mọi phase
+> lễ mừng sau đều lãi thấp một cách có hệ thống**. Đây là chỗ đáng hỏi Đàm trước khi làm thêm.
+> ⚠️ **BÀI HỌC TỪ #16 — ĐỌC TRƯỚC KHI GHI MỘT MỤC NỢ MỚI LÀ "ĐÁNH ĐỔI CẦN NGƯỜI QUYẾT"**: #16 từng
+> được ghi vào đây là *"đánh đổi thẩm mỹ, chờ Đàm quyết"*, vì chú thích tại chỗ tuyên bố nó có chủ
+> đích. Nhưng chú thích ấy tuyên bố **HAI** ý định, không phải một — và ý định thứ hai (*"thành phố
+> lộ ra rõ nhất ở khoảng trống phía dưới, đúng chỗ chẳng có chữ gì"*) **đang không đạt**. Đo chỗ chữ
+> thật đứng thì hoá ra không có gì phải đánh đổi cả. ⇒ Trước khi kết luận "cần người quyết", hãy
+> kiểm xem mã có đang làm ĐÚNG điều nó tự nhận không; một trade-off chỉ có thật khi cả hai vế đều
+> đã đạt và phải hy sinh một vế.
 > ⚠️ **Vế THỨ HAI của ngưỡng ĐÃ CHẠM và đã được XỬ LÝ MỘT PHẦN**: `palette3d.js` đã qua **5 đợt** vá
 > mỹ thuật (3C · 3G · 3M · 3N · 3V). Phase 3V không vá riêng bầu trời mà **sửa đúng phép toán dùng
 > chung** (`skyward()` chuyển từ trộn RGB sang xoay sắc, cùng khuôn đã dùng cho mái nhà ở 3N) — tức
@@ -281,7 +287,7 @@
 
 ---
 
-## #16 — **Vòng ngày của thành phố gần như VÔ HÌNH ở trang chủ** — nơi Đàm nhìn nhiều nhất
+## #16 — ✅ **ĐÃ XỬ LÝ (2026-08-13, Phase 3X)** — Vòng ngày của thành phố gần như VÔ HÌNH ở trang chủ, nơi Đàm nhìn nhiều nhất
 
 - **Module**: `src/components/city/CityBackdrop.jsx` — cụ thể là **lớp phủ giữ-chữ-đọc-được**, KHÔNG
   phải `BACKDROP_OPACITY` và KHÔNG phải lỗi của `daylight.js`/`palette3d.js`.
@@ -307,26 +313,46 @@
 - **Impact**: `CityBackdrop` sinh ra để "đem thành phố ra trang chủ" (Phase 3F), và Phase 3V vừa bỏ
   công dựng cả một hành trình màu 178° cho sáu chặng ngày. Ở tab Thành Phố thì thấy rõ; ở TRANG CHỦ
   — màn hình Đàm nhìn nhiều nhất, và là nơi cái đồng hồ chạy suốt 25 phút — nó gần như không tới.
-- **⚠️ ĐÂY LÀ THIẾT KẾ CÓ CHỦ ĐÍCH, KHÔNG PHẢI SƠ SUẤT.** Chú thích tại chỗ ghi thẳng: *"đây là chỗ
-  mà 'đẹp' và 'dùng được' đối đầu nhau trực diện, và dùng được phải thắng"* — lớp phủ đậm ở TRÊN vì
-  đó là nơi có tiêu đề và lời chào nằm trực tiếp trên nền. **Không được tự ý chỉnh.**
-- **Quan sát có thể mở đường** (chưa kiểm bằng ảnh, cần đo trước khi tin): chữ nằm trên nền chỉ ở
-  **dải trên cùng** (lời chào + "phần việc hôm nay"); đồng hồ đếm ngược nằm trong một thẻ ĐẶC, và
-  cột phải cũng là các thẻ đặc. Nếu đúng vậy thì có thể giữ NGUYÊN mốc 92% ở trên (bảo vệ chữ y
-  hệt) mà cho lớp phủ nhạt nhanh hơn ở phần dưới — nơi không có chữ nào. Phải đo tương phản chữ
-  trước/sau, và phải kiểm cả khung điện thoại bằng CDP `Emulation.setDeviceMetricsOverride` (⚠️
-  `--window-size=390` KHÔNG cho ra bề ngang 390 — Chromium headless có sàn 500px, xem `CLAUDE.md`).
-- **Blocking Conditions**: **cần Đàm quyết** — đây là đánh đổi thẩm mỹ trên chính màn hình làm việc
-  của anh, và người viết `CityBackdrop` đã cân nhắc rồi mới chọn con số hiện tại. Ba lựa chọn:
-  (a) giữ nguyên — thành phố là khung cảnh mờ, vòng ngày để dành cho tab Thành Phố;
-  (b) cho lớp phủ nhạt nhanh hơn ở phần KHÔNG có chữ, giữ nguyên phần có chữ (đo tương phản để
-      chứng minh chữ không khó đọc hơn một chút nào);
-  (c) đổi lớp phủ từ "pha về màu phẳng" sang một cách chỉ hạ ĐỘ SÁNG mà giữ ĐỘ TƯƠI.
-- **Review Trigger**: trước bất kỳ đầu tư nào thêm vào bảng màu/ánh sáng thành phố — nếu chưa xử lý
-  mục này thì khoản đầu tư đó chỉ tới được tab Thành Phố, không tới trang chủ.
-- **Owner**: (chưa gán — chờ Đàm chọn hướng)
-- **Status**: Open — phát hiện 2026-08-13 khi tự hỏi "thành quả Phase 3V có thật sự tới màn hình
-  Đàm không". Câu hỏi đó đến từ chính Review Trigger của mục #14.
+- **⚠️ (Đánh giá BAN ĐẦU, giữ lại vì bài học nằm ở chỗ nó SAI ở đâu.)** Lúc mới phát hiện, mục này
+  kết luận "đây là thiết kế có chủ đích, không được tự ý chỉnh", dựa vào chú thích tại chỗ: *"đây là
+  chỗ mà 'đẹp' và 'dùng được' đối đầu nhau trực diện, và dùng được phải thắng"*.
+  **Phần đúng**: dải đậm ở TRÊN đúng là có chủ đích và tuyệt đối không được đụng — điều đó giữ
+  nguyên tới hôm nay. **Phần sai**: từ đó suy ra rằng *cả hồ sơ* là một đánh đổi đã cân nhắc, nên
+  bất kỳ thay đổi nào cũng phải do Đàm quyết. Thực tế mốc "dải đậm kết thúc ở đâu" chưa từng được
+  đo — nó dựa trên niềm tin rằng mặt đồng hồ nằm trên nền, mà đồng hồ thì nằm trong thẻ đặc.
+  ⇒ **Bài học**: một chú thích chứng minh ý định, KHÔNG chứng minh rằng con số đi kèm đã được đo.
+- **✅ GIẢI PHÁP ĐÃ LÀM (2026-08-13, Phase 3X) — và hoá ra KHÔNG HỀ có đánh đổi nào để mà quyết.**
+  Mục này ban đầu ghi "chờ Đàm chọn 1 trong 3 hướng", vì chú thích tại chỗ tuyên bố đánh đổi có chủ
+  đích. Đọc kỹ lại thì chú thích ấy tuyên bố **HAI** ý định: (1) chữ phải đọc được — ĐẠT; và
+  (2) *"thành phố lộ ra rõ nhất ở khoảng trống phía dưới — đúng chỗ chẳng có chữ gì"* — **KHÔNG
+  ĐẠT**. Không có xung đột giữa hai vế; chỉ có vế thứ hai chưa được thực hiện.
+- **NGUYÊN NHÂN GỐC THẬT SỰ — một niềm tin sai về chỗ chữ đứng, không phải một con số chọn ẩu.**
+  Chú thích cũ ghi dải đậm ở trên là *"nơi có tiêu đề và mặt đồng hồ"*. Đo bằng `textmap3.mjs`
+  (có bài kiểm ngược để chứng minh bộ phân loại còn phân loại được) thì:
+  - mặt đồng hồ `25:00` **KHÔNG nằm trên nền** — nó ở trong một thẻ ĐẶC (`rgb(255,253,250)`), tại
+    **82%** chiều cao lớp phủ. Lớp phủ chưa từng bảo vệ nó, và cũng không cần;
+  - chữ THẬT SỰ trên nền chỉ là khối lời chào: máy bàn **7%→21%**, điện thoại **31%→48%**.
+  ⇒ Từ mốc đó trở xuống, lớp phủ không làm gì cho khả năng đọc — nó chỉ xoá thành phố. Mà ở 38% nó
+  vẫn còn 80%, ở 72% vẫn còn 55%.
+- **Cách sửa**: tách hồ sơ mốc thuần ra `src/components/city/cityBackdropScrim.js` (chuỗi CSS nằm
+  trong JSX thì không bài test nào chạm tới được), **hai hồ sơ theo khung** — dùng lại đúng
+  `useIsPhone()` mà `CityBackdrop` đã có sẵn cho `still`, không thêm hạ tầng. Giữ nguyên (thực tế là
+  đậm hơn một chút) tới mốc bảo vệ 28%/55%, rồi thả nhanh về 0 ở vùng không có chữ.
+- **BẰNG CHỨNG (đo trên điểm ảnh thật, trước ↔ sau, cả 6 chặng ngày)**:
+  - vòng ngày: cặp xa nhau nhất **14,0 → 25,0 / 255** (ngưỡng nhìn ra được là 12) — từ dưới ngưỡng
+    lên gần gấp đôi ngưỡng;
+  - dải CÓ CHỮ: lệch tối đa **0,43/255**, và **sáng hơn ở cả 6/6 chặng, không chặng nào tối đi** ⇒
+    tương phản chữ không giảm một phần nghìn nào (pha thêm về nền sáng thì chữ tối càng nổi);
+  - dải KHÔNG CHỮ: lệch **22–33/255** ⇒ thành phố mở ra thật, không phải thay đổi lấy lệ.
+- **Khoá bằng test**: `cityBackdropScrim.test.js` (7 bài) giữ nguyên hồ sơ CŨ làm mốc và quét **từng
+  phần trăm một** — vì `linear-gradient` nội suy giữa các mốc, hai hồ sơ có thể bằng nhau ở mọi mốc
+  mà vẫn cắt nhau ở GIỮA (kiểm mốc là cái phễu, không phải hàng rào). Đã thử ngược với hồ sơ cố ý
+  nhạt hơn ⇒ đỏ ngay tại **1%**.
+- **Review Trigger**: **đổi bố cục trang chủ** (thêm chữ đặt thẳng lên nền, hoặc dời khối lời chào)
+  ⇒ phải đo lại bằng `textmap3.mjs` và cập nhật `TEXT_ENDS_PCT`. Sai chỗ này **không có gì đỏ cả**,
+  chỉ là chữ khó đọc dần.
+- **Owner**: đã xử lý · **Status**: ✅ **RESOLVED (2026-08-13, Phase 3X)** — phát hiện khi tự hỏi
+  "thành quả Phase 3V có thật sự tới màn hình Đàm không", câu hỏi đến từ chính Review Trigger của #14.
 
 ---
 

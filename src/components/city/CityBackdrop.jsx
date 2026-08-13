@@ -35,6 +35,7 @@ import useSettingsStore from '../../store/settingsStore';
 import { computeCityLayout } from '../../engine/cityLayout';
 import AppErrorBoundary from '../AppErrorBoundary';
 import CityStage from './CityStage';
+import { buildScrimGradient } from './cityBackdropScrim';
 
 /**
  * Độ mờ của lớp nền. Thấp có chủ ý — đây là KHUNG CẢNH, không phải nội dung.
@@ -157,25 +158,26 @@ export default function CityBackdrop({ hasFocusSessionInProgress = false }) {
       {/*
         LỚP PHỦ GIỮ CHỮ ĐỌC ĐƯỢC — bắt buộc, không phải trang trí.
 
-        ⚠️ Đây là chỗ mà "đẹp" và "dùng được" đối đầu nhau trực diện, và dùng được phải thắng: nền
-        càng rõ thì chữ càng khó đọc, mà chữ ở đây là ĐỒNG HỒ ĐẾM NGƯỢC — thứ Đàm nhìn nhiều nhất
-        trong cả app. Dải chuyển sắc đậm ở TRÊN (nơi có tiêu đề và mặt đồng hồ) và nhạt dần xuống
-        DƯỚI, nên thành phố lộ ra rõ nhất ở khoảng trống phía dưới — đúng chỗ chẳng có chữ gì.
+        Nền càng rõ thì chữ càng khó đọc, nên dải chuyển sắc đậm ở TRÊN (nơi có lời chào nằm trực
+        tiếp trên nền) và nhạt dần xuống DƯỚI, để thành phố lộ ra rõ nhất ở khoảng trống phía dưới
+        — đúng chỗ chẳng có chữ gì.
 
-        Dùng `var(--canvas)` chứ KHÔNG phải một mã màu cố định: app có 2 theme × 4 skin, một màu
-        chốt cứng sẽ sai ở 7/8 tổ hợp. `color-mix` cho phép lấy chính màu nền của theme rồi pha
-        loãng — vẫn đúng luật "chỉ dùng biến CSS" mà không cần thêm token mới.
+        ⚠️ Ý ĐỊNH ĐÓ CÓ TỪ ĐẦU NHƯNG TRƯỚC 2026-08-13 KHÔNG ĐẠT, vì các mốc chuyển sắc được chọn
+        theo một niềm tin SAI về chỗ chữ đứng: chú thích cũ tưởng mặt đồng hồ nằm trên nền, đo ra
+        thì nó nằm trong một thẻ ĐẶC ở tận 82% chiều cao — lớp phủ chưa từng bảo vệ nó. Hậu quả:
+        sáu chặng ngày ở trang chủ chỉ cách nhau tối đa 14/255 (ngưỡng nhìn ra được là 12).
+
+        Toàn bộ số đo, hai hồ sơ mốc, và LUẬT "không bao giờ nhạt hơn bản cũ ở chỗ có chữ" nằm ở
+        `cityBackdropScrim.js` — tách ra vì một chuỗi CSS trong JSX thì không bài test nào chạm tới,
+        mà đây đúng là thứ sai được theo kiểu đo được. Luật đó do `cityBackdropScrim.test.js` khoá.
       */}
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-0"
-        style={{
-          background: 'linear-gradient(to bottom,'
-            + ' color-mix(in srgb, var(--canvas) 92%, transparent) 0%,'
-            + ' color-mix(in srgb, var(--canvas) 80%, transparent) 38%,'
-            + ' color-mix(in srgb, var(--canvas) 55%, transparent) 72%,'
-            + ' color-mix(in srgb, var(--canvas) 34%, transparent) 100%)',
-        }}
+        // Khung điện thoại có hồ sơ riêng: thẻ đồng hồ chiếm gần hết bề ngang nên khối lời chào bị
+        // đẩy xuống tận 31–48% chiều cao, thay vì 7–21% như trên máy bàn. Một hồ sơ dùng chung cho
+        // cả hai thì hoặc thừa tối trên máy bàn, hoặc thiếu che trên điện thoại.
+        style={{ background: buildScrimGradient(isPhone) }}
       />
     </AppErrorBoundary>
   );

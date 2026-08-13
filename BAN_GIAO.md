@@ -110,6 +110,36 @@
 ## 🗒️ Nhật ký cập nhật
 > Mỗi lần xong việc đáng kể, thêm 1 dòng vào ĐẦU danh sách.
 
+- **2026-08-13 (Phase 3X)** — **VÒNG NGÀY CUỐI CÙNG CŨNG TỚI ĐƯỢC TRANG CHỦ.** Xử lý xong
+  `TECH_DEBT` #16, và điều đáng ghi nhất là **nó không phải một đánh đổi như tôi đã ghi hôm trước.**
+  - **Tôi đã sai ở đâu**: hôm trước tôi đọc chú thích trong `CityBackdrop.jsx` (*"đẹp và dùng được
+    đối đầu nhau, dùng được phải thắng"*), kết luận "đánh đổi có chủ đích, phải chờ Đàm quyết", rồi
+    DỪNG. Đọc kỹ lại thì chú thích ấy tuyên bố **HAI** ý định: (1) chữ đọc được — ĐẠT; (2) *"thành
+    phố lộ ra rõ nhất ở khoảng trống phía dưới, đúng chỗ chẳng có chữ gì"* — **KHÔNG ĐẠT**. Không
+    có xung đột nào để đánh đổi; chỉ có một vế chưa được thực hiện. ⇒ Bài học đã ghi vào `CLAUDE.md`:
+    **một chú thích chứng minh Ý ĐỊNH, không chứng minh rằng CON SỐ đi kèm đã được đo.**
+  - **Đo chỗ chữ thật đứng** (`textmap3.mjs`, có bài kiểm ngược): mặt đồng hồ `25:00` **không nằm
+    trên nền** — nó ở trong một thẻ ĐẶC tại **82%** chiều cao lớp phủ, tức lớp phủ chưa từng bảo vệ
+    nó. Chữ thật sự trên nền chỉ là khối lời chào: máy bàn **7%→21%**, điện thoại **31%→48%**.
+  - ⚠️ **Bộ đo đầu tiên NÓI DỐI (lần thứ 8 trong dự án)**: bản đầu đi ngược lên tận `<body>` nên
+    chạm phải lớp bọc trang có nền đục ⇒ xếp **mọi** chữ vào "trong thẻ", ra kết quả "0 chữ trên
+    nền" — nghe rất tiện cho kết luận tôi muốn, và đúng vì thế mà phải nghi. Ranh giới đúng là
+    **phần tử cha của lớp phủ**. Đã thêm `--selftest` để bộ phân loại tự chứng minh nó còn phân
+    loại được.
+  - **Đã làm**: tách hồ sơ mốc thuần ra `src/components/city/cityBackdropScrim.js`, **hai hồ sơ**
+    theo khung màn hình (dùng lại `useIsPhone()` mà `CityBackdrop` đã có sẵn cho `still` — không
+    thêm hạ tầng gì mới). Giữ nguyên (thực tế đậm hơn chút) tới mốc bảo vệ **28%/55%**, rồi thả
+    nhanh về 0 ở vùng không có chữ.
+  - **KẾT QUẢ ĐO (điểm ảnh thật, trước ↔ sau, cả 6 chặng)**: vòng ngày **14,0 → 25,0/255** (ngưỡng
+    12) · dải CÓ CHỮ lệch tối đa **0,43/255** và **sáng hơn ở 6/6 chặng, không chặng nào tối đi** ⇒
+    tương phản chữ không giảm một phần nghìn nào · dải KHÔNG CHỮ lệch **22–33/255**. Đã soi mắt cả
+    theme sáng/tối và khung điện thoại: thấy rõ thành phố hoàng hôn, không có vệt cắt ngang nào.
+  - **Test 488 → 495 xanh** · lint sạch · build xanh. Bài khoá quét **từng phần trăm một** (vì
+    `linear-gradient` nội suy GIỮA các mốc — kiểm mốc là cái phễu, không phải hàng rào) và đã thử
+    ngược với hồ sơ cố ý nhạt hơn ⇒ **đỏ ngay tại 1%**.
+  - **Còn lại cho Đàm**: chỉ còn `TECH_DEBT` #14 (95% phiên im lặng — cân bằng game) là thật sự cần
+    anh quyết, cộng việc xác nhận Vercel "Ready" và chạy thử một phiên 25 phút trên iPhone.
+
 - **2026-08-13 (soát sau 3W, KHÔNG sửa mã sản phẩm)** — **HỎI TIẾP CÂU CỦA REVIEW TRIGGER: thành quả
   Phase 3V có tới được TRANG CHỦ không?** Câu trả lời đo được: **gần như không.**
   - **Số đo** (ảnh chụp app đã build, bề ngang 1280, hai dải thành phố lộ ra hai bên thẻ đồng hồ):

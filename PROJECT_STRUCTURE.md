@@ -41,6 +41,11 @@
 │   │   │   ├── CityBackdrop.jsx  # THÀNH PHỐ RA TRANG CHỦ: lớp nền mờ sau đồng hồ ở trang Tập
 │   │   │   │                     #   Trung. ⚠️ Đang chạy phiên (và mọi lúc trên điện thoại) thì
 │   │   │   │                     #   ĐỨNG YÊN — luật pin, xem ghi chú trong file
+│   │   │   ├── cityBackdropScrim.js # Hồ sơ mốc THUẦN của lớp phủ giữ-chữ-đọc-được (2 hồ sơ: máy
+│   │   │   │                     #   bàn / điện thoại, vì chữ đứng ở hai độ sâu khác nhau).
+│   │   │   │                     #   ⚠️ Tách khỏi JSX vì một chuỗi CSS trong JSX thì KHÔNG bài
+│   │   │   │                     #   test nào chạm tới được, mà đây là thứ sai được theo kiểu đo
+│   │   │   │                     #   được — đổi bố cục trang chủ thì phải đo lại (textmap3.mjs)
 │   │   │   ├── CityPerfHud.jsx   # Bảng FPS/lệnh vẽ/tam giác — để đo cổng hiệu năng Phase 3A
 │   │   │   └── render3d/         # Bộ vẽ three.js — ⚠️ NƠI DUY NHẤT được import 'three'
 │   │   │       ├── CityScene3D.jsx # Vỏ React: vòng đời, resize, mất context. KHÔNG chứa logic 3D

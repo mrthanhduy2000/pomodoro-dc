@@ -12,6 +12,34 @@
 
 ---
 
+## 2026-08-13 — Trang chủ (Phase 3X): vòng ngày cuối cùng cũng tới được màn hình Đàm nhìn nhiều nhất
+
+- **Mục đích**: Phase 3V dựng cả một hành trình màu 178° cho sáu chặng ngày, nhưng ở TRANG CHỦ —
+  nơi cái đồng hồ chạy suốt 25 phút — sáu chặng chỉ cách nhau **tối đa 14/255**, dưới ngưỡng mắt
+  phân biệt được (12). Tức thành quả đó gần như không tới được người dùng.
+- **Nguyên nhân gốc — một niềm tin sai, không phải một con số chọn ẩu**: lớp phủ giữ-chữ-đọc-được
+  đặt mốc đậm theo giả định rằng mặt đồng hồ nằm trực tiếp trên nền. Đo thật thì `25:00` nằm trong
+  một thẻ ĐẶC ở **82%** chiều cao — lớp phủ chưa từng bảo vệ nó. Chữ thật sự trên nền chỉ là khối
+  lời chào: máy bàn 7%→21%, điện thoại 31%→48%. Từ đó trở xuống lớp phủ không làm gì cho khả năng
+  đọc, nó chỉ xoá thành phố — mà ở 38% nó vẫn còn 80%.
+- **KHÔNG phải một cuộc đánh đổi**: mục nợ này ban đầu được ghi là "đánh đổi thẩm mỹ, chờ Đàm
+  quyết". Chú thích tại chỗ thật ra tuyên bố HAI ý định, và ý định thứ hai (*"thành phố lộ ra rõ
+  nhất ở khoảng trống phía dưới, đúng chỗ chẳng có chữ gì"*) đang không đạt. Sửa cho nó đạt thì
+  không phải hy sinh vế nào.
+- **Phạm vi**: `src/components/city/cityBackdropScrim.js` (mới, thuần + 7 bài test),
+  `src/components/city/CityBackdrop.jsx` (thay chuỗi gradient chốt cứng bằng hồ sơ theo khung màn
+  hình, dùng lại `useIsPhone()` đã có sẵn). Không đụng `daylight.js`/`palette3d.js` — bầu trời vốn
+  đã đúng từ 3V.
+- **Kết quả đo (điểm ảnh thật, trước ↔ sau, 6 chặng)**: vòng ngày **14,0 → 25,0/255**; dải CÓ CHỮ
+  lệch tối đa **0,43/255** và **sáng hơn ở cả 6/6 chặng, không chặng nào tối đi** (tương phản chữ
+  không giảm một phần nghìn nào); dải KHÔNG CHỮ lệch **22–33/255**.
+- **Ảnh hưởng / tương thích**: chỉ là lớp trang trí, không đụng dữ liệu, không đụng state, không
+  migration. Đàm vẫn tắt được hẳn trong Cài đặt (`cityHomeBackdrop`).
+- **Test**: 488 → **495 xanh**. Bài khoá quét TỪNG PHẦN TRĂM (không chỉ tại các mốc, vì
+  `linear-gradient` nội suy ở giữa) và đã được thử ngược: hồ sơ cố ý nhạt hơn ⇒ đỏ ngay tại 1%.
+
+---
+
 ## 2026-08-13 — Bền vững (Phase 3W): bầu trời đi theo đồng hồ, và không bao giờ ngả tím
 
 - **Mục đích**: bảo vệ chính thành quả của Phase 3V trước hai đường rò rỉ mà nó vừa mở ra.

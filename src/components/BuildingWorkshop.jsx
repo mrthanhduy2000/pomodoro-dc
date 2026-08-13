@@ -11,7 +11,9 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import useGameStore from '../store/gameStore';
-import { blueprintEraOf, countActiveCrafting } from '../engine/eraLegacy';
+import {
+  blueprintEraOf, countActiveCrafting, countLegacyCrafting, listRestorableBlueprints,
+} from '../engine/eraLegacy';
 import { describeCraftProgress } from '../engine/craftProgress';
 import useSettingsStore from '../store/settingsStore';
 import {
@@ -20,6 +22,7 @@ import {
   BLUEPRINT_CATALOG,
   BLUEPRINT_META,
   CRAFT_QUEUE_SLOTS,
+  LEGACY_QUEUE_SLOTS,
   ERA_REFINED,
   ERA_METADATA,
   normalizeRawCost,
@@ -197,7 +200,7 @@ function QueueSection({ queue, activeBook, cancelCrafting, lightTheme }) {
 }
 
 // ─── Card bản vẽ sẵn sàng xây ─────────────────────────────────────────────────
-function ReadyCard({ bpId, bookResources, resourcesRefined, craftingQueue, onStart, lightTheme }) {
+function ReadyCard({ bpId, bookResources, resourcesRefined, craftingQueue, onStart, lightTheme, restoration = false }) {
   const bpDef = getBpDef(bpId);
   const spec  = BUILDING_SPECS[bpId] ?? {};
   const meta  = BLUEPRINT_META[bpId] ?? {};
@@ -237,7 +240,19 @@ function ReadyCard({ bpId, bookResources, resourcesRefined, craftingQueue, onSta
 
           {/* Hiệu ứng */}
           <div className="mt-1.5 space-y-0.5">
-            <PerkSummary perk={eff.perk} lightTheme={lightTheme} variant="skin" />
+            {/* ⚠️ THẺ TRÙNG TU KHÔNG ĐƯỢC KHOE ĐẶC QUYỀN — bắt được bằng cách SOI ẢNH CHỤP,
+                không phải bằng test (2026-08-13, ADR-012). `ReadyCard` dùng chung cho cả hai
+                diện, mà công trình kỷ cũ khi xong sẽ vào BẢO TÀNG chứ không vào `buildings`
+                ⇒ `BUILDING_EFFECTS` KHÔNG bao giờ có hiệu lực. Để nguyên khối perk thì thẻ
+                đang hứa "mỗi phiên thứ 3 tặng 90 XP" cho một thứ vĩnh viễn không tặng gì —
+                một lời nói dối im lặng, và Đàm chỉ phát hiện ra sau khi đã trả nguyên liệu. */}
+            {restoration
+              ? (
+                <p className="text-xs" style={{ color: 'var(--muted)' }}>
+                  Xong sẽ đứng trong bảo tàng kỷ {meta.era} · không có đặc quyền
+                </p>
+                )
+              : <PerkSummary perk={eff.perk} lightTheme={lightTheme} variant="skin" />}
             <p className="mono text-xs" style={lightTheme ? { color: 'var(--muted-2)', fontFamily: MONO_FONT } : { color: '#64748b' }}>{meta.sessionsToComplete ?? 1} phiên để hoàn thành</p>
           </div>
           {spec.cost && <ResourceCost era={meta.era} cost={spec.cost} bookResources={bookResources} lightTheme={lightTheme} />}
@@ -368,6 +383,7 @@ export default function BuildingWorkshop() {
   const buildingLevels   = useGameStore((s) => s.buildingLevels ?? {});
   const resourcesRefined = useGameStore((s) => s.resourcesRefined ?? {});
   const activeBook       = useGameStore((s) => s.progress.activeBook);
+  const cityArchive      = useGameStore((s) => s.cityArchive);
   const uiTheme          = useSettingsStore((s) => s.uiTheme);
   const lightTheme       = uiTheme === 'light';
 
@@ -396,6 +412,25 @@ export default function BuildingWorkshop() {
       && BLUEPRINT_META[id]?.era === activeBook
       && !currentEraBuildings.includes(id)
   );
+
+  // ── TRÙNG TU DI SẢN (ADR-012) ────────────────────────────────────────────────────────────
+  // Bản vẽ của kỷ ĐÃ ĐÓNG mà thành phố cũ còn thiếu. Xây xong nó vào BẢO TÀNG, không sinh đặc
+  // quyền — nên đây thuần tuý là đường để chạm tới ngôi sao ★ của một kỷ đã qua.
+  const restorables = listRestorableBlueprints({ activeBook, cityArchive, queue: craftingQueue });
+  const legacyBusy = countLegacyCrafting(craftingQueue, activeBook) >= LEGACY_QUEUE_SLOTS;
+
+  // ⚠️ XẾP KỶ GẦN TRỌN VẸN NHẤT LÊN ĐẦU, và CẮT còn 6 thẻ.
+  // Không cắt thì màn hình ra tới ~70 thẻ, nhấn chìm mục "Sẵn sàng xây" (nhiều nhất 5 thẻ) của kỷ
+  // đang chơi — tức việc phụ che mất việc chính. Còn xếp theo "kỷ cũ nhất trước" thì một kỷ đang ở
+  // 4/5 (chỉ còn ĐÚNG MỘT công trình là được sao) có thể nằm tít dưới đáy. Sắp theo "còn thiếu ít
+  // nhất" thì thứ Đàm thấy đầu tiên luôn là ngôi sao gần tầm tay nhất.
+  const remainingByEra = restorables.reduce((acc, bp) => {
+    acc[bp.era] = (acc[bp.era] ?? 0) + 1;
+    return acc;
+  }, {});
+  const restoreList = [...restorables]
+    .sort((a, b) => (remainingByEra[a.era] - remainingByEra[b.era]) || (a.era - b.era))
+    .slice(0, 6);
 
   const handleStart = (bpId) => {
     const ok = startCrafting(bpId);
@@ -584,6 +619,63 @@ export default function BuildingWorkshop() {
           </div>
         )}
       </div>
+
+      {/*
+        TRÙNG TU DI SẢN (ADR-012) — đường DUY NHẤT để chạm tới ngôi sao ★ của một kỷ đã qua.
+        Chỉ hiện khi thật sự có việc để làm: kỷ 1 thì mục này không tồn tại, và khi bảo tàng đã
+        trọn vẹn hết thì nó tự biến mất thay vì đứng đó nói "không còn gì".
+      */}
+      {restorables.length > 0 && (
+        <div className="space-y-2">
+          <div className="flex items-center justify-between gap-3">
+            <p className="mono text-[10px] font-semibold uppercase tracking-[0.2em]" style={lightTheme ? { color: 'var(--muted-2)', fontFamily: MONO_FONT } : { color: '#94a3b8', fontFamily: MONO_FONT }}>
+              Trùng tu di sản
+            </p>
+            <span className="mono text-[11px] tabular-nums" style={lightTheme ? { color: 'var(--muted-2)', fontFamily: MONO_FONT } : { color: '#64748b', fontFamily: MONO_FONT }}>
+              {restorables.length}
+            </span>
+          </div>
+          <p className="text-[11px] leading-relaxed" style={{ color: 'var(--muted)' }}>
+            Công trình của kỷ đã qua. Xây xong nó đứng trong <strong>bảo tàng</strong> của kỷ đó —
+            không thêm đặc quyền, nhưng đưa kỷ ấy tới gần dấu ★ trọn vẹn. Chỉ tiêu được nguyên liệu
+            còn sót lại của chính kỷ đó, mà thứ ấy thì không kiếm thêm được nữa.
+          </p>
+
+          {legacyBusy ? (
+            // Không vẽ nút chết: một hàng nút bấm-không-ăn-thua khó chịu hơn hẳn một dòng chữ nói
+            // rõ vì sao. Thẻ đang trùng tu đã nằm ngay trong "Hàng chờ xây dựng" phía trên.
+            <div
+              className="rounded-[24px] px-4 py-3 text-[12px]"
+              style={lightTheme ? paperPanel(lightTheme) : undefined}
+            >
+              <span style={{ color: 'var(--muted)' }}>
+                Đang trùng tu một công trình rồi — xong cái đó thì mở tiếp cái nữa.
+              </span>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-3">
+              {restoreList.map((bp) => (
+                <ReadyCard
+                  key={bp.bpId}
+                  bpId={bp.bpId}
+                  bookResources={getBookResources(bp.bpId)}
+                  resourcesRefined={getEraRefined(bp.bpId)}
+                  craftingQueue={craftingQueue}
+                  onStart={handleStart}
+                  lightTheme={lightTheme}
+                  restoration
+                />
+              ))}
+              {restorables.length > restoreList.length && (
+                <p className="text-[11px]" style={{ color: 'var(--muted-2)' }}>
+                  Còn {restorables.length - restoreList.length} công trình nữa ở các kỷ khác — xếp
+                  kỷ gần trọn vẹn nhất lên trước.
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Công trình đã xây */}
       {currentEraBuildings.length > 0 && (

@@ -45,7 +45,9 @@ import {
   getVietnamYear,
 } from '../engine/time';
 import { mergeCityArchive, normalizeCityArchive } from '../engine/cityArchive';
-import { countActiveCrafting, pickLegacyCompletions, splitCraftingQueue } from '../engine/eraLegacy';
+import {
+  canRestoreBlueprint, countActiveCrafting, pickLegacyCompletions, splitCraftingQueue,
+} from '../engine/eraLegacy';
 import {
   GOAL_ACHIEVED_BONUS_RATE,
   FORGIVENESS_CANCELS_PER_WEEK,
@@ -92,6 +94,7 @@ import {
   STREAK_BONUS_PER_DAY,
   STREAK_MAX_BONUS_DAYS,
   CRAFT_QUEUE_SLOTS,
+  LEGACY_QUEUE_SLOTS,
   RELIC_EVOLUTION,
   T2_CRAFT_COST,
   getBuildingLevelMultiplier,
@@ -5673,19 +5676,42 @@ const useGameStore = create(
         const meta  = BLUEPRINT_META[bpId];
         const spec  = BUILDING_SPECS[bpId];
         if (!meta || !spec) return false;
-        if (!isCurrentEraBlueprint(bpId, state.progress.activeBook)) return false;
 
-        const isResearched = (state.research?.researched ?? []).includes(bpId)
-          || state.blueprints.some((b) => b.id === bpId);
-        if (!isResearched) return false;
+        // ── HAI DIỆN KHỞI CÔNG (ADR-012) ────────────────────────────────────────────────────
+        // Kỷ HIỆN TẠI: y như cũ, không đổi một luật nào.
+        // Kỷ ĐÃ ĐÓNG: diện "trùng tu di sản" — công trình xong sẽ vào BẢO TÀNG của kỷ đó, KHÔNG
+        // vào `buildings` nên KHÔNG sinh đặc quyền (đường đi đó đã có sẵn từ Phase 4D,
+        // `pickLegacyCompletions`). Ba thứ giữ cho nó không bị lạm dụng: ô riêng
+        // `LEGACY_QUEUE_SLOTS`, nguyên liệu kỷ cũ không kiếm lại được, và không có perk.
+        const isRestoration = !isCurrentEraBlueprint(bpId, state.progress.activeBook);
+        if (isRestoration) {
+          if (!canRestoreBlueprint({
+            bpId,
+            activeBook:  state.progress.activeBook,
+            cityArchive: state.cityArchive,
+            queue:       state.craftingQueue,
+            legacySlots: LEGACY_QUEUE_SLOTS,
+          })) return false;
+        } else {
+          // ⚠️ Cổng nghiên cứu chỉ áp cho kỷ hiện tại. Với kỷ đã đóng thì RP không kiếm lại được
+          // nữa, nên đòi nghiên-cứu-trước = khoá vĩnh viễn ngôi sao ★ của kỷ đó — xem giải thích
+          // đầy đủ ở `listRestorableBlueprints` (`engine/eraLegacy.js`).
+          const isResearched = (state.research?.researched ?? []).includes(bpId)
+            || state.blueprints.some((b) => b.id === bpId);
+          if (!isResearched) return false;
 
-        if (state.buildings.includes(bpId)) return false; // đã xây rồi
+          if (state.buildings.includes(bpId)) return false; // đã xây rồi
+        }
         if ((state.craftingQueue ?? []).some((q) => q.bpId === bpId)) return false;
         // ⚠️ ĐẾM BẰNG `countActiveCrafting`, KHÔNG dùng `.length` — từ Phase 4D hàng đợi có thể
         // chứa "di sản" của kỷ cũ đang xây dở. Di sản KHÔNG sinh đặc quyền, nên nó cũng không được
         // chiếm ô: bắt Đàm hy sinh 1 trong 2 ô xây dựng để đổi lấy một ngôi sao trong bảo tàng là
         // một cái bẫy, và nó dạy đúng bài học ngược với thứ tính năng này muốn.
-        if (countActiveCrafting(state.craftingQueue, state.progress.activeBook) >= CRAFT_QUEUE_SLOTS) return false;
+        // ⚠️ Trùng tu KHÔNG đi qua cổng này — nó có ô riêng, đã kiểm ở `canRestoreBlueprint` phía
+        // trên. Bắt nó chờ ô của kỷ hiện tại thì lại đúng cái bẫy Phase 4D đã gỡ: hy sinh sức mạnh
+        // thật để đổi lấy một dòng lịch sử.
+        if (!isRestoration
+          && countActiveCrafting(state.craftingQueue, state.progress.activeBook) >= CRAFT_QUEUE_SLOTS) return false;
 
         // Kiểm tra và trừ nguyên liệu T1
         const bookKey  = `book${meta.era}`;

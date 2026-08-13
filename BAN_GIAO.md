@@ -6,7 +6,19 @@
 > chọn: `ARCHITECTURE_DECISIONS.md`. Nợ kỹ thuật: `TECH_DEBT.md`. Migration: `MIGRATION.md`. Tóm
 > tắt theo mốc: `CHANGELOG.md`.
 > **NGUYÊN TẮC ƯU TIÊN SỐ 1:** (1) mọi phiên AI phải đọc file này + `CLAUDE.md` + các file liên quan TRƯỚC khi làm; (2) sau MỌI cập nhật dù nhỏ, phải cập nhật ngay file này + `CLAUDE.md` + các file liên quan khác.
-> Cập nhật lần cuối: **2026-08-13** — **Phase 4H**: **MỘT CON SỐ ĐÃ VIẾT XONG, ĐÃ CÓ TEST, MÀ
+> Cập nhật lần cuối: **2026-08-13** — **Phase 4I**: **TRÙNG TU DI SẢN (ADR-012)** — Đàm chọn
+> hướng (b2) cho `TECH_DEBT #14`. Bản vẽ của kỷ ĐÃ QUA nay khởi công lại được; xây xong nó đứng
+> trong **bảo tàng** của kỷ đó, đưa kỷ ấy tới gần dấu ★. **Không thêm một chút sức mạnh nào**
+> (không perk) và **không lưu thêm trường state nào**. Ba lớp chống lạm dụng: ô riêng
+> `LEGACY_QUEUE_SLOTS = 1` · nguyên liệu kỷ cũ **không bao giờ kiếm lại được** (`mergeResources`
+> chỉ cộng vào `book${activeBook}`) · không sinh `BUILDING_EFFECTS`. Chính lớp thứ hai là thứ trả
+> lời mối lo mà ADR-011 dùng để TỪ CHỐI đúng phương án này: ngôi sao ★ vẫn còn sức nặng, chỉ đổi
+> câu hỏi từ *"xây kịp không"* sang *"để dành đủ không"*. Bỏ cổng nghiên-cứu cho kỷ cũ (RP kỷ cũ
+> không kiếm lại được ⇒ đòi nó là khoá ★ vĩnh viễn); cổng của kỷ hiện tại giữ nguyên, có test canh.
+> ⚠️ Soi ảnh chụp bắt được một lời nói dối im lặng: thẻ trùng tu dùng chung `ReadyCard` nên đang
+> **khoe đặc quyền** cho một thứ vĩnh viễn không tặng gì — đã sửa. **570 bài test.**
+>
+> Trước đó cùng ngày — **Phase 4H**: **MỘT CON SỐ ĐÃ VIẾT XONG, ĐÃ CÓ TEST, MÀ
 > CHƯA MÀN HÌNH NÀO GỌI TỚI.** `summarizeMuseum` (engine, Phase 4B) tự giới thiệu là *"con số duy
 > nhất trả lời tôi đã đi được bao xa"* — `grep` cả cây `src/` ra đúng HAI chỗ: dòng định nghĩa và
 > bài test của chính nó. Nó nằm chết trong engine từ đó tới nay mà **không có gì đỏ lên**: build

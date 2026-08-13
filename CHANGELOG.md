@@ -12,6 +12,21 @@
 
 ---
 
+## 2026-08-13 — Trùng tu di sản: xây bù công trình của kỷ đã qua (ADR-012)
+
+- **Mục đích**: `TECH_DEBT #14` đo được 95% số phiên tập trung không có lễ mừng nào, vì cả game chỉ
+  có 420 bước xây. Đàm chọn hướng (b2): mở cho xây bù bản vẽ kỷ cũ, công trình xong đứng trong bảo
+  tàng của kỷ đó.
+- **Phạm vi**: `engine/constants.js` (`LEGACY_QUEUE_SLOTS`) · `engine/eraLegacy.js` (3 hàm thuần
+  mới) · `store/gameStore.js` (`startCrafting` tách hai diện) · `components/BuildingWorkshop.jsx`
+  (mục "Trùng tu di sản") · `ARCHITECTURE_DECISIONS.md` (ADR-012, thay phần bị từ chối ở ADR-011).
+- **Ảnh hưởng**: **KHÔNG đổi sức mạnh nhân vật** — công trình trùng tu không sinh đặc quyền. Giới
+  hạn: mỗi lúc 1 công trình, và chỉ tiêu được nguyên liệu còn sót của chính kỷ đó (thứ không bao
+  giờ kiếm lại được). Kỷ đã bị vắt kiệt nguyên liệu thì vẫn không trùng tu được — đó là thiết kế.
+- **Tương thích**: hoàn toàn tương thích ngược, **không thêm trường state nào**, không cần migration.
+
+---
+
 ## 2026-08-13 — Điểm tổng bảo tàng: một con số đã viết xong nhưng chưa từng lên màn hình
 
 - **Mục đích**: `summarizeMuseum` (engine, Phase 4B) có ghi chú, có test, tự nhận là *"con số duy

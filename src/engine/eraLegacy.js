@@ -32,11 +32,23 @@
  * trong bảo tàng là một cái bẫy, không phải một lựa chọn. (Và nó cũng sẽ khiến người chơi học được
  * bài "đừng bao giờ xây dở khi sắp lên kỷ" — đúng ngược với điều tính năng này muốn.)
  *
- * ⚠️ **KHÔNG THỂ LẠM DỤNG**: `startCrafting` đã chặn sẵn bản vẽ không thuộc kỷ hiện tại, nên tập
+ * ⚠️ ~~**KHÔNG THỂ LẠM DỤNG**: `startCrafting` đã chặn sẵn bản vẽ không thuộc kỷ hiện tại, nên tập
  * "di sản" chỉ có thể gồm những thứ Đàm ĐÃ khởi công và ĐÃ trả nguyên liệu trước khi kỷ đóng lại.
- * Nó tự cạn: xây xong là hết, không sinh thêm được.
+ * Nó tự cạn: xây xong là hết, không sinh thêm được.~~
+ * ⚠️ **CÂU TRÊN ĐÃ HẾT ĐÚNG TỪ 2026-08-13 (ADR-012 — "TRÙNG TU DI SẢN").** Đàm chọn mở cho xây bù
+ * bản vẽ kỷ cũ, tức chính cái chặn mà câu đó dựa vào đã bị gỡ. Đây đúng cái bẫy đã ghi ở
+ * `CLAUDE.md`: *một luật mới làm cho điều kiện cũ hết đúng*, và mệnh đề cũ thì không tự đỏ lên —
+ * nó chỉ nằm đó nói sai. Nay lời hứa "không thể lạm dụng" được giữ bằng **BA** thứ khác, mỗi thứ
+ * chặn một đường:
+ *   1. `LEGACY_QUEUE_SLOTS = 1` — mỗi lúc chỉ trùng tu được MỘT công trình (`constants.js`).
+ *   2. **Nguyên liệu kỷ cũ KHÔNG BAO GIỜ kiếm lại được.** `mergeResources` chỉ cộng thưởng vào
+ *      `book${activeBook}`, nên túi `book5` của Đàm đóng băng đúng lúc anh rời kỷ 5. Trùng tu chỉ
+ *      tiêu được phần dư người-Đàm-ngày-xưa để lại ⇒ hữu hạn, và **những quyết định lúc đó vẫn còn
+ *      nguyên sức nặng** — đúng tinh thần mà ADR-011 lo mất.
+ *   3. Không sinh đặc quyền (`BUILDING_EFFECTS`) — y như di sản dang dở. Sức mạnh không đổi.
  */
 
+import { listEraBlueprints } from './cityCompletion';
 import { BLUEPRINT_LOOKUP } from './cityLayout';
 
 /** Kỷ của một bản vẽ; id lạ → `null` (KHÔNG ném lỗi — đây là đường nạp load-bearing). */
@@ -79,6 +91,71 @@ export function splitCraftingQueue(queue, activeBook) {
  */
 export function countActiveCrafting(queue, activeBook) {
   return splitCraftingQueue(queue, activeBook).active.length;
+}
+
+/**
+ * Số ô TRÙNG TU đang bị chiếm — đếm mọi mục thuộc kỷ đã đóng (ADR-012).
+ *
+ * ⚠️ Đếm CẢ "di sản dang dở" (thứ đã khởi công trước khi kỷ đóng, Phase 4D) lẫn công trình mới
+ * khởi công theo diện trùng tu — cố ý, và đây KHÔNG phải lấy lại thứ gì đã hứa: di sản dang dở vẫn
+ * không đụng tới 2 ô của kỷ hiện tại. Nó chỉ có nghĩa là "đang có một công trường trong bảo tàng
+ * rồi thì chưa mở thêm cái thứ hai". Gộp chung như vậy giữ cho luật chỉ có MỘT công thức — tách ra
+ * thì phải lưu thêm cờ "cái này khởi công theo diện nào", tức thêm state cho một khác biệt mà
+ * người chơi không nhìn thấy.
+ */
+export function countLegacyCrafting(queue, activeBook) {
+  return splitCraftingQueue(queue, activeBook).legacy.length;
+}
+
+/**
+ * Những bản vẽ kỷ CŨ còn có thể trùng tu — tức thành phố cũ còn thiếu chúng.
+ *
+ * @param {object} args
+ * @param {number} args.activeBook   kỷ đang chơi
+ * @param {object} [args.cityArchive] bảo tàng — `{ [era]: { built: string[] } }`
+ * @param {Array}  [args.queue]      `craftingQueue`, để không chào lại thứ đang xây
+ * @returns {Array<{bpId,label,icon,rarity,era}>} xếp theo kỷ tăng dần, trong kỷ giữ thứ tự catalog
+ *
+ * ⚠️ **KHÔNG XÉT `research.researched`** — và đây là một quyết định, không phải bỏ sót.
+ * `pruneEraScopedBlueprintState` xoá danh sách đã-nghiên-cứu của kỷ cũ, mà RP của kỷ cũ thì không
+ * kiếm lại được. Nếu bắt phải nghiên-cứu-trước thì một bản vẽ Đàm chưa kịp nghiên cứu ở kỷ 5 sẽ
+ * **vĩnh viễn** không thể xây, tức ngôi sao ★ của kỷ đó vĩnh viễn ngoài tầm với — đúng cái bất công
+ * mà Phase 4D sinh ra để xoá bỏ, chỉ đổi chỗ. Bỏ cổng nghiên cứu KHÔNG cho thêm sức mạnh nào (trùng
+ * tu không sinh đặc quyền) và vẫn phải trả đủ nguyên liệu, thứ đã hữu hạn sẵn.
+ *
+ * ⚠️ Kỷ THẤT TRUYỀN (đi qua trước khi có bảo tàng) không có entry trong `cityArchive`, nên
+ * `built` rỗng ⇒ cả 5 bản vẽ đều hiện ra. ĐÚNG như mong muốn: đó là những kỷ trống trơn nhất, và
+ * trùng tu là đường DUY NHẤT để chúng thôi là một dãy ô xám.
+ */
+export function listRestorableBlueprints({ activeBook, cityArchive, queue } = {}) {
+  const current = Number.isFinite(activeBook) ? activeBook : 1;
+  const archive = (cityArchive && typeof cityArchive === 'object') ? cityArchive : {};
+  const inQueue = new Set(
+    (Array.isArray(queue) ? queue : []).map((item) => item?.bpId).filter(Boolean),
+  );
+
+  const out = [];
+  for (let era = 1; era < current; era += 1) {
+    const built = new Set(Array.isArray(archive[era]?.built) ? archive[era].built : []);
+    for (const bp of listEraBlueprints(era)) {
+      if (built.has(bp.bpId) || inQueue.has(bp.bpId)) continue;
+      out.push({ ...bp, era });
+    }
+  }
+  return out;
+}
+
+/**
+ * Bản vẽ này có đủ điều kiện KHỞI CÔNG theo diện trùng tu không? (chỉ xét phần thuộc về kỷ/bảo
+ * tàng — nguyên liệu và các luật chung do `startCrafting` lo, đúng chỗ nó vốn lo.)
+ */
+export function canRestoreBlueprint({ bpId, activeBook, cityArchive, queue, legacySlots } = {}) {
+  const era = blueprintEraOf(bpId);
+  const current = Number.isFinite(activeBook) ? activeBook : 1;
+  if (era === null || era >= current) return false;
+  if (countLegacyCrafting(queue, current) >= (Number.isFinite(legacySlots) ? legacySlots : 1)) return false;
+  return listRestorableBlueprints({ activeBook: current, cityArchive, queue })
+    .some((bp) => bp.bpId === bpId);
 }
 
 /**

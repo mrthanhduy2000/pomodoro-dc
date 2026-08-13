@@ -77,6 +77,19 @@ export const EP_MULTIPLIER_TIERS = [
 export const RP_PER_MINUTE_BASE    = 2;    // RP cơ bản mỗi phút tập trung
 export const RP_CATEGORY_MULT      = 2;    // ×2 RP cho danh mục đầu tiên trong ngày
 export const CRAFT_QUEUE_SLOTS     = 2;    // số ô hàng đợi xây dựng tối đa
+/**
+ * Số công trình TRÙNG TU (kỷ cũ) được xây cùng lúc — ô RIÊNG, không lấn 2 ô ở trên (ADR-012).
+ *
+ * ⚠️ VÌ SAO PHẢI CÓ CON SỐ NÀY, VÀ VÌ SAO NÓ LÀ 1. Phase 4D hứa "di sản không chiếm ô", và lời hứa
+ * đó đúng **vì lúc ấy tập di sản không thể lớn thêm** — `startCrafting` chặn bản vẽ ngoài kỷ hiện
+ * tại nên di sản chỉ gồm thứ đã khởi công trước khi kỷ đóng, và nó tự cạn. Trùng tu (ADR-012) gỡ
+ * đúng cái chặn đó, nên mệnh đề "tự cạn" HẾT ĐÚNG: không có trần riêng thì Đàm xếp được cả 70 bản
+ * vẽ kỷ cũ vào hàng đợi một lượt, và mỗi phiên đẩy MỌI ô tiến 1 nấc ⇒ cả bảo tàng mọc lên cùng lúc,
+ * phần thưởng loãng thành vô nghĩa.
+ * Chọn 1 (không phải 2) vì trùng tu KHÔNG sinh đặc quyền: nó là việc phụ chạy nền, không được phép
+ * cạnh tranh sự chú ý với công trình của kỷ đang chơi.
+ */
+export const LEGACY_QUEUE_SLOTS    = 1;
 export const T2_CRAFT_COST         = 8;    // 8 nguyên liệu thô → 1 nguyên liệu tinh luyện
 export const T2_DROP_THRESHOLD_MIN = 45;   // phút min để T2 rớt tự nhiên
 export const T2_DROP_AMOUNT        = 1;    // lượng T2 rớt mỗi phiên đủ ngưỡng

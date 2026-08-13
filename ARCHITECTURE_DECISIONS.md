@@ -11,6 +11,65 @@
 
 ---
 
+## ADR-012 — "Trùng tu di sản": mở cho xây bù bản vẽ kỷ cũ — thay thế phần bị TỪ CHỐI ở ADR-011, và cái giá không phải là ô hàng đợi mà là NGUYÊN LIỆU KHÔNG KIẾM LẠI ĐƯỢC
+
+- **Ngày**: 2026-08-13
+- **Bối cảnh**: `TECH_DEBT #14` đo được **95% số phiên tập trung không có lễ mừng nào**, và càng
+  chơi lâu càng im lặng (kỷ 1: 81% → kỷ 15: 98%). Nguyên nhân gốc là số BƯỚC XÂY của cả game chỉ
+  có 420, trong khi tới Prestige là ~4 428 phiên. Đàm đã chọn hướng (b) — "bỏ lọc theo kỷ hiện
+  tại" — và trong phiên này chọn tiếp cách hiện thực **(b2)**: công trình kỷ cũ mọc thẳng vào BẢO
+  TÀNG của kỷ đó, không mọc trong thành phố đang chơi.
+- **Vấn đề**: ADR-011 đã **cân nhắc và LOẠI BỎ** đúng phương án này (phương án (4) trong mục đó),
+  với lý do: *"'trọn vẹn kỷ' mất sạch ý nghĩa — cái sao ★ chỉ đáng giá vì nó chấm điểm cho quyết
+  định anh đã đưa ra LÚC ĐÓ"*. Lý do ấy KHÔNG sai, nên ADR này phải trả lời nó, không được lờ đi.
+  ADR-011 cũng đã ghi sẵn điều kiện xem lại: *"nếu Đàm muốn xây bù các kỷ cũ từ đầu → phải viết
+  ADR mới"*. Điều kiện đó nay đã xảy ra.
+- **Phương án đã cân nhắc**:
+  1. Giữ nguyên ADR-011 (không cho xây bù) → `TECH_DEBT #14` không có đường xử lý nào còn lại.
+  2. Cho xây bù, **tính vào 2 ô hàng đợi** của kỷ hiện tại.
+  3. Cho xây bù, **ô riêng `LEGACY_QUEUE_SLOTS = 1`**, giữ cổng nguyên liệu. ← **CHỌN**
+  4. Cho xây bù không giới hạn (không ô riêng).
+- **Lý do loại bỏ (2)**: đúng cái bẫy Phase 4D vừa gỡ. Trùng tu KHÔNG sinh đặc quyền, nên bắt hy
+  sinh một ô xây dựng thật để đổi lấy một dòng lịch sử là ép Đàm chọn giữa sức mạnh và sưu tập —
+  và người chơi lý trí sẽ luôn chọn sức mạnh, tức tính năng chết ngay khi ra đời.
+- **Lý do loại bỏ (4)**: mỗi phiên đẩy MỌI ô trong hàng đợi tiến 1 nấc. Không có trần thì Đàm xếp
+  cả ~70 bản vẽ kỷ cũ vào một lượt và cả bảo tàng mọc lên đồng thời — phần thưởng loãng thành vô
+  nghĩa, và nó biến 420 bước xây thành một con số vô hạn.
+- **Giải pháp được chọn** — và **cách nó trả lời mối lo của ADR-011**: cái giữ cho ngôi sao ★ còn
+  sức nặng KHÔNG phải là cấm xây bù, mà là **nguyên liệu**. `mergeResources` chỉ cộng thưởng vào
+  `book${activeBook}`, nên túi `book5` **đóng băng vĩnh viễn** đúng lúc Đàm rời kỷ 5 — không một
+  đường nào trong game nạp lại được nó. Trùng tu chỉ tiêu được phần dư mà **người-Đàm-ngày-xưa để
+  lại**. Nghĩa là những quyết định lúc đó *vẫn* còn nguyên sức nặng, chỉ đổi hình thức: trước là
+  "xây kịp hay không", nay là "để dành đủ hay không". Một kỷ bị vắt kiệt nguyên liệu thì vẫn không
+  bao giờ chạm được ★, đúng như ADR-011 muốn.
+- **Ba lớp chống lạm dụng** (mỗi lớp chặn một đường, không lớp nào thừa):
+  1. `LEGACY_QUEUE_SLOTS = 1` — mỗi lúc một công trường trong bảo tàng.
+  2. Nguyên liệu kỷ cũ hữu hạn, không tái tạo (đoạn trên).
+  3. Không sinh `BUILDING_EFFECTS` — sức mạnh không đổi một điểm nào. Đường đi này đã có sẵn từ
+     Phase 4D (`pickLegacyCompletions`), ADR này không phải viết mới.
+- **Bỏ cổng NGHIÊN CỨU cho kỷ cũ** (quyết định con, cố ý): `pruneEraScopedBlueprintState` xoá
+  `research.researched` của kỷ cũ, mà RP kỷ cũ thì không kiếm lại được. Đòi nghiên-cứu-trước ⇒ bản
+  vẽ nào chưa kịp nghiên cứu sẽ **vĩnh viễn** không xây được ⇒ ★ của kỷ đó vĩnh viễn ngoài tầm —
+  đúng cái bất công mà Phase 4D sinh ra để xoá, chỉ đổi chỗ. Bỏ cổng này KHÔNG cho thêm sức mạnh
+  (không có perk) và KHÔNG bỏ cái giá (vẫn trả đủ nguyên liệu). ⚠️ Cổng nghiên cứu của **kỷ hiện
+  tại** giữ NGUYÊN — có bài test riêng canh việc nó không bị nới lây.
+- **Trade-off**: (a) một kỷ đã niêm phong nay có thể có công trường mới mọc lên — bảo tàng bớt
+  "tĩnh" hơn nữa so với ADR-007 gốc (ADR-011 đã nới lần một, đây là lần hai, và đây là **giới hạn**:
+  công trình đã đứng thì vẫn không bao giờ xê dịch); (b) ★ nay có nghĩa "trọn vẹn", không còn hàm ý
+  "trọn vẹn NGAY LÚC ĐÓ" — chấp nhận, đổi lại nó thành mục tiêu **với tới được**, mà một mục tiêu
+  với tới được thì tạo động lực còn một mục tiêu đã khoá thì chỉ tạo tiếc nuối; (c) tính năng có
+  thể **không dùng được** với một kỷ đã bị vắt kiệt nguyên liệu — đó là tính năng, không phải lỗi.
+- **Ảnh hưởng**: `engine/constants.js` (`LEGACY_QUEUE_SLOTS`) · `engine/eraLegacy.js`
+  (`countLegacyCrafting`, `listRestorableBlueprints`, `canRestoreBlueprint`; sửa lại đoạn ghi chú
+  "không thể lạm dụng" đã hết đúng) · `store/gameStore.js` (`startCrafting` tách hai diện) ·
+  `components/BuildingWorkshop.jsx` (mục "Trùng tu di sản"; `ReadyCard` nhận cờ `restoration` để
+  **không khoe đặc quyền** — bắt được bằng cách soi ảnh chụp, không phải bằng test).
+  Test: `engine/eraLegacyRestore.test.js` (9) + `store/gameStore.restore.test.js` (8).
+  **KHÔNG có migration**: không thêm trường state nào, không đổi schema.
+- **Điều kiện xem xét lại**: nếu đo lại `TECH_DEBT #14` mà tỉ lệ phiên im lặng vẫn trên ~80%, thì
+  ô riêng =1 là quá chặt và phải xét nâng; nếu Đàm thấy bảo tàng mọc quá nhanh thì hạ cổng nguyên
+  liệu thay vì siết ô.
+
 ## ADR-011 — "Di sản dang dở": công trình kỷ cũ được xây tiếp, nhưng phần thưởng chỉ là LỊCH SỬ — nới bất biến của ADR-007 từ "bảo tàng bất động" thành "bảo tàng không xê dịch"
 
 - **Ngày**: 2026-08-13

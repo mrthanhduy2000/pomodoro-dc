@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion';
 
 import useGameStore from '../store/gameStore';
+import { countActiveCrafting } from '../engine/eraLegacy';
 import {
   BLUEPRINT_CATALOG,
   BLUEPRINT_META,
@@ -156,7 +157,10 @@ export default function NotificationCenter({ onNavigate }) {
   }, [activeBook, blueprints, buildings, research]);
 
   const buildableBlueprints = useMemo(() => {
-    if ((craftingQueue?.length ?? 0) >= CRAFT_QUEUE_SLOTS) return [];
+    // ⚠️ ĐẾM Ô BẰNG `countActiveCrafting`, KHÔNG dùng `.length` — từ Phase 4D hàng đợi có thể
+    // chứa "di sản" của kỷ đã đóng, và di sản KHÔNG chiếm ô. Dùng `.length` thì một di sản
+    // đang xây dở sẽ âm thầm tắt hết gợi ý "có thể xây ngay" dù ô vẫn còn trống.
+    if (countActiveCrafting(craftingQueue, activeBook) >= CRAFT_QUEUE_SLOTS) return [];
 
     const ownedIds = new Set((blueprints ?? []).map((item) => item.id));
     const researchedIds = new Set(research?.researched ?? []);
@@ -182,7 +186,7 @@ export default function NotificationCenter({ onNavigate }) {
       })
       .map(([bpId]) => BLUEPRINT_LOOKUP[bpId])
       .filter(Boolean);
-  }, [blueprints, buildings, craftingQueue, research, resources, resourcesRefined]);
+  }, [activeBook, blueprints, buildings, craftingQueue, research, resources, resourcesRefined]);
 
   const opportunities = useMemo(() => {
     const nextItems = [];

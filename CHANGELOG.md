@@ -12,6 +12,36 @@
 
 ---
 
+## 2026-08-13 — Di sản dang dở: công trình xây dở của kỷ cũ không còn bốc hơi khi lên kỷ
+
+- **Mục đích**: Đàm chọn cơ chế *"Cho xây tiếp công trình kỷ cũ"*. Sau khi Phase 4B gắn ngôi sao
+  "trọn vẹn kỷ", luật cũ (lên kỷ = cắt sạch hàng đợi) dạy đúng một bài học ngược: **đừng bao giờ
+  khởi công khi sắp lên kỷ** — tức app tự thưởng cho việc ngừng làm việc.
+- **Phạm vi**: `src/engine/eraLegacy.js` (MỚI, thuần: `blueprintEraOf` · `splitCraftingQueue` ·
+  `countActiveCrafting` · `pickLegacyCompletions`) + test 10 bài · `gameStore.js`
+  (`pruneEraScopedBlueprintState` giữ nhánh legacy · `completeFocusSession` ghi bổ sung vào
+  `cityArchive` + thông báo riêng · `startCrafting` đếm ô theo kỷ hiện tại) · `BuildingWorkshop.jsx`
+  (nhãn "DI SẢN KỶ N", số ô `n/2` không tính di sản) · `NotificationCenter.jsx` · `CityView.jsx` ·
+  `cityCompletion.js` · `EraSwitcher.jsx`.
+- **Kết quả**: công trình đã khởi công trước khi lên kỷ nay sống sót và xây tiếp; hoàn thành thì
+  được ghi vào bảo tàng của kỷ sinh ra nó. Ngôi sao của một kỷ đã niêm phong lại **với tới được** —
+  nhưng chỉ với những gì đã bắt đầu, không khởi công mới.
+- **KHÔNG đổi cân bằng game**: di sản hoàn thành **không** vào `buildings` ⇒ không perk
+  `BUILDING_EFFECTS`, không tài nguyên. Phần thưởng thuần tuý là lịch sử. Di sản cũng **không chiếm
+  ô hàng đợi** (`CRAFT_QUEUE_SLOTS` vẫn là 2 ô cho kỷ hiện tại).
+- **Nới bất biến ADR-007** từ "bảo tàng bất động" thành **"bảo tàng không xê dịch"** — xem ADR-011.
+  Vế được bảo vệ (nhà xây sau không đẩy nhà xây trước) vẫn nguyên vẹn vì `computeCityLayout` đặt nhà
+  theo khu đất cố định.
+- **Hai lỗi bắt được bằng mắt, cùng một họ (không có gì đỏ lên)**: bảng sưu tập ghi "chưa xây" ngay
+  bên dưới giàn giáo đang dựng, và thanh chuyển kỷ vẽ "Kỷ 7 · 4/5 đứng chết vĩnh viễn" giống hệt
+  "Kỷ 7 · 4/5 còn cách ngôi sao ba phiên". Cả hai đều là gác thừa bằng `isCurrent` — một cái luật
+  đúng cho tới Phase 4D thì hết đúng.
+- **Tương thích**: KHÔNG đổi schema, KHÔNG thêm trường state ⇒ **không có migration**. Dữ liệu cũ
+  chạy nguyên vẹn.
+- **Test**: 542 bài, xanh (thêm 16: 10 tầng thuần `eraLegacy` + 5 hành vi qua `completeFocusSession` + 1 canh mã nguồn thanh chuyển kỷ).
+
+---
+
 ## 2026-08-13 — Quét lại 15 kỷ × 6 chặng: con số "0/105" trong tài liệu là số của vùng tối
 
 - **Mục đích**: quét lại đủ 90 cảnh để kiểm mọi thay đổi đồ hoạ gần đây. Bảng "màu mái đo được" in

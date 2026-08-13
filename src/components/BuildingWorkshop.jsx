@@ -11,6 +11,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import useGameStore from '../store/gameStore';
+import { blueprintEraOf, countActiveCrafting } from '../engine/eraLegacy';
 import useSettingsStore from '../store/settingsStore';
 import {
   BUILDING_SPECS,
@@ -88,8 +89,12 @@ function ResourceCost({ era, cost, bookResources, lightTheme = false }) {
 }
 
 // ─── Hàng đợi xây dựng ────────────────────────────────────────────────────────
-function QueueSection({ queue, cancelCrafting, lightTheme }) {
+function QueueSection({ queue, activeBook, cancelCrafting, lightTheme }) {
   if (queue.length === 0) return null;
+  // ⚠️ SỐ Ô PHẢI ĐẾM BẰNG `countActiveCrafting`, KHÔNG dùng `queue.length` — từ Phase 4D hàng đợi
+  // có thể chứa "di sản" của kỷ đã đóng, mà di sản KHÔNG chiếm ô. Dùng `.length` thì màn hình sẽ
+  // báo "3/2" — một con số vô nghĩa khiến Đàm tưởng app hỏng.
+  const usedSlots = countActiveCrafting(queue, activeBook);
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between gap-3">
@@ -97,10 +102,15 @@ function QueueSection({ queue, cancelCrafting, lightTheme }) {
           Hàng chờ xây dựng
         </p>
         <span className="mono text-[11px] tabular-nums" style={lightTheme ? { color: 'var(--muted-2)', fontFamily: MONO_FONT } : { color: '#64748b', fontFamily: MONO_FONT }}>
-          {queue.length}/{CRAFT_QUEUE_SLOTS}
+          {usedSlots}/{CRAFT_QUEUE_SLOTS}
         </span>
       </div>
       {queue.map((item) => {
+        const itemEra = blueprintEraOf(item.bpId);
+        // "Di sản": công trình của một kỷ ĐÃ ĐÓNG, vẫn xây tiếp được nhưng khi xong sẽ vào BẢO
+        // TÀNG chứ không sinh đặc quyền. Phải nói rõ ngay trên thẻ — nếu không, Đàm sẽ chờ một
+        // đặc quyền không bao giờ tới.
+        const isLegacy = Number.isFinite(itemEra) && Number.isFinite(activeBook) && itemEra < activeBook;
         const bpDef = getBpDef(item.bpId);
         const meta  = BLUEPRINT_META[item.bpId] ?? {};
         const eff   = BUILDING_EFFECTS[item.bpId] ?? {};
@@ -127,6 +137,20 @@ function QueueSection({ queue, cancelCrafting, lightTheme }) {
                   <p className="font-semibold text-sm truncate" style={lightTheme ? { color: 'var(--ink)', fontFamily: 'var(--skin-font-display)' } : { color: '#fcd34d' }}>{bpDef.label}</p>
                   {meta.rarity && <RarityBadge rarity={meta.rarity} lightTheme={lightTheme} variant="skin" />}
                   <TypeBadge type={eff.type} typeStyle={TYPE_STYLE} lightTheme={lightTheme} variant="skin" />
+                  {isLegacy && (
+                    <span
+                      className="mono shrink-0 rounded-full px-1.5 py-0.5 text-[9px] uppercase tracking-[0.12em]"
+                      style={{
+                        color: 'var(--muted)',
+                        background: 'var(--canvas-2)',
+                        border: '1px solid var(--line-2)',
+                        fontFamily: MONO_FONT,
+                      }}
+                      title={`Công trình kỷ ${itemEra} — xây xong sẽ vào bảo tàng, không mang lại đặc quyền`}
+                    >
+                      di sản kỷ {itemEra}
+                    </span>
+                  )}
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="flex-1 h-2 rounded-full overflow-hidden" style={lightTheme ? { background: 'rgba(31, 30, 29, 0.08)' } : { background: '#334155' }}>
@@ -513,7 +537,7 @@ export default function BuildingWorkshop() {
       </AnimatePresence>
 
       {/* Hàng đợi xây dựng */}
-      <QueueSection queue={craftingQueue} cancelCrafting={cancelCrafting} lightTheme={lightTheme} />
+      <QueueSection queue={craftingQueue} activeBook={activeBook} cancelCrafting={cancelCrafting} lightTheme={lightTheme} />
 
       {/* Bản vẽ sẵn sàng xây */}
       <div className="space-y-2">

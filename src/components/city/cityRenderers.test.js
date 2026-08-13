@@ -272,3 +272,24 @@ test('DẤU "TRỌN VẸN" KHÔNG ĐƯỢC TÔ BẰNG MÀU KỶ — đã đo, kh
       `${path}: dấu "trọn vẹn" phải dùng var(--accent) (hoặc #fff trên nút đang chọn)`);
   }
 });
+
+test('"ĐANG XÂY" TRÊN THANH KỶ KHÔNG ĐƯỢC GÁC BẰNG `isCurrent` — kỷ cũ nay cũng xây được', () => {
+  // Cùng một họ lỗi đã cắn hai lần trong Phase 4D: `pending` bị chặn ở kỷ hiện tại (bảng sưu tập
+  // ghi "chưa xây" trong khi giàn giáo đứng ngay trong cảnh), rồi tới dòng chữ này. Cả hai lần đều
+  // KHÔNG có gì đỏ lên — code chạy đúng theo cái luật cũ, chỉ là luật cũ đã hết đúng.
+  //
+  // Vì sao nó quan trọng hơn một dòng chữ: "Kỷ 7 · 4/5" đứng chết vĩnh viễn và "Kỷ 7 · 4/5" còn
+  // cách ngôi sao ba phiên là HAI TÌNH HUỐNG NGƯỢC NHAU, mà thanh này lại vẽ chúng giống hệt. Đó
+  // đúng là câu hỏi cả thanh sinh ra để trả lời: kỷ nào còn đáng quay lại.
+  //
+  // Cám dỗ tái phạm: `era.isCurrent` nằm sẵn ngay trong vòng lặp, viết lại thành gác một-điều-kiện
+  // là "gọn hơn" — nên phải có thứ cản.
+  const file = SOURCES.find((f) => f.path === 'components/city/EraSwitcher.jsx');
+  assert.ok(file, 'không thấy EraSwitcher.jsx');
+  const code = codeOnly(file.source);
+
+  assert.doesNotMatch(code, /\{\s*era\.isCurrent\s*&&\s*<span[^>]*>·\s*đang xây/,
+    'nhãn "đang xây" đang gác bằng mỗi `era.isCurrent` — di sản dang dở ở kỷ cũ sẽ tàng hình');
+  assert.match(code, /state\s*===\s*'building'/,
+    'EraSwitcher phải nhìn vào slot trạng thái "building" để biết kỷ cũ còn đang xây');
+});

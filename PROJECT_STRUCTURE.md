@@ -91,6 +91,10 @@
 │   │   │                     #   trả lời "đã xây mấy trên mấy, còn thiếu cái nào". Suy ra từ
 │   │   │                     #   BLUEPRINT_CATALOG, KHÔNG lưu. ⚠️ mẫu số PHẢI tự đếm, cấm viết
 │   │   │                     #   cứng số 5 (có test khoá).
+│   │   ├── eraLegacy.js       # THÀNH PHỐ PIXEL: "di sản dang dở" — công trình đã khởi công trước
+│   │   │                     #   khi lên kỷ thì xây tiếp được, nhưng xong thì chỉ vào cityArchive
+│   │   │                     #   (KHÔNG vào buildings ⇒ không perk, 0 thay đổi cân bằng). Xem
+│   │   │                     #   ADR-011. ⚠️ chấm theo kỷ SAU phiên, không phải kỷ trước.
 │   │   ├── cityMoment.js      # Điều đáng nói về thành phố ở CẢ HAI đầu một phiên: buildFocusTease
 │   │   │                     #   (trước — phiên này đẩy cái gì tới đâu) + buildGrowthMoment (sau —
 │   │   │                     #   thành phố vừa lớn lên thế nào). Chung một phép chọn công trường.

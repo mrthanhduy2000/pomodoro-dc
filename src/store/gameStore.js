@@ -45,6 +45,7 @@ import {
   getVietnamYear,
 } from '../engine/time';
 import { mergeCityArchive, normalizeCityArchive } from '../engine/cityArchive';
+import { countActiveCrafting, pickLegacyCompletions, splitCraftingQueue } from '../engine/eraLegacy';
 import {
   GOAL_ACHIEVED_BONUS_RATE,
   FORGIVENESS_CANCELS_PER_WEEK,
@@ -251,6 +252,30 @@ function makeWorkshopCompletedNotification(bpIds = []) {
     icon: firstIcon,
     category: 'workshop',
     action: { tab: 'collection', collectionTab: 'workshop' },
+  };
+}
+
+/**
+ * Công trình của một kỷ ĐÃ ĐÓNG vừa xây xong (Phase 4D — "di sản dang dở").
+ *
+ * ⚠️ CỐ Ý KHÔNG dùng chung `makeWorkshopCompletedNotification`: câu của hàm đó kết bằng *"hiệu ứng
+ * công trình đang có hiệu lực"*, mà di sản thì **không** sinh hiệu ứng nào. Dùng lại cho tiện ở
+ * đây là để app nói một câu sai — và là kiểu sai tệ nhất, vì Đàm sẽ tưởng mình vừa mạnh lên rồi
+ * lên kế hoạch dựa trên một đặc quyền không tồn tại.
+ * Cũng vì thế `action` trỏ về TAB THÀNH PHỐ chứ không về Xưởng: chỗ để ngắm nó là bảo tàng.
+ */
+function makeLegacyCompletedNotification(entries = []) {
+  const identities = entries.map((entry) => getBlueprintIdentity(entry.bpId));
+  const eras = [...new Set(entries.map((entry) => entry.era))].sort((a, b) => a - b);
+  const summary = describeNames(identities.map((item) => item.label));
+  return {
+    title: 'Xây xong công trình dang dở',
+    body: `${summary} đã hoàn tất và được ghi vào thành phố ${eras.length > 1 ? 'các kỷ' : 'kỷ'} `
+      + `${eras.join(', ')} trong bảo tàng. Công trình kỷ cũ không mang lại đặc quyền — nó hoàn `
+      + 'thiện lịch sử của bạn.',
+    icon: identities[0]?.icon ?? '🏛️',
+    category: 'workshop',
+    action: { tab: 'city' },
   };
 }
 
@@ -1254,9 +1279,20 @@ function pruneEraScopedBlueprintState(state, activeBook, sealContext = null) {
     : [];
   const research = normalizeStoredResearch(state.research);
   const researched = research.researched.filter((bpId) => isCurrentEraBlueprint(bpId, currentBook));
-  const craftingQueue = Array.isArray(state.craftingQueue)
-    ? state.craftingQueue.filter((item) => isCurrentEraBlueprint(item?.bpId, currentBook))
-    : [];
+  // ⚠️ HÀNG ĐỢI XÂY DỰNG **KHÔNG** BỊ CẮT THEO KỶ (đổi 2026-08-13, Phase 4D — "di sản dang dở").
+  // Trước đây dòng này lọc `isCurrentEraBlueprint`, nghĩa là một công trình đang xây tới phiên thứ
+  // 8/11 sẽ biến mất KHÔNG MỘT LỜI BÁO đúng lúc Đàm lên kỷ. Nay nó được giữ lại và xây tiếp; khi
+  // xong, nó vào BẢO TÀNG của kỷ nó thuộc về chứ không vào `buildings` — xem `engine/eraLegacy.js`.
+  // Cân bằng game KHÔNG đổi vì `buildings` vẫn bị cắt theo kỷ y như cũ ngay bên dưới.
+  //
+  // ⚠️ THỨ TỰ `active` TRƯỚC, `legacy` SAU LÀ CÓ TẢI TRỌNG, không phải cho gọn mắt: đặc quyền
+  // `craft_haste_first` (`advanceCraftingQueueWithPerks`) tăng tốc đúng **`index === 0`**. Xếp di
+  // sản lên đầu thì một đặc quyền của kỷ HIỆN TẠI bị chuyển sang thúc một công trình chỉ có giá
+  // trị lịch sử — tức cân bằng game đổi thật, đúng thứ tính năng này cam kết không đụng tới.
+  // (Khi hàng đợi kỷ hiện tại RỖNG thì index 0 rơi vào di sản — chấp nhận, vì lúc đó đặc quyền
+  // vốn không có gì để thúc, không ai mất gì cả.)
+  const { active: activeQueue, legacy: legacyQueue } = splitCraftingQueue(state.craftingQueue, currentBook);
+  const craftingQueue = [...activeQueue, ...legacyQueue];
   const buildings = Array.isArray(state.buildings)
     ? state.buildings.filter((bpId) => isCurrentEraBlueprint(bpId, currentBook))
     : [];
@@ -4447,6 +4483,26 @@ const useGameStore = create(
           // `sessionCount` phải chụp lại ở đây vì `eraTracking` chỉ giữ số liệu kỷ ĐANG chơi:
           // ngay dòng dưới `eraTrackingUpd` đã reset `sessionsInCurrentEra` về 1, sau đó không còn
           // nguồn nào biết kỷ vừa đóng lại đã làm bao nhiêu phiên.
+          // ── DI SẢN DANG DỞ: công trình của kỷ ĐÃ ĐÓNG vừa xây xong (Phase 4D) ──────────────
+          // Nó KHÔNG vào `buildings` (dòng dưới `pruneEraScopedBlueprintState` gạn sẵn theo kỷ, nên
+          // không sinh đặc quyền — cân bằng game không đổi). Nhưng nếu chỉ để vậy thì nó biến mất
+          // hẳn: tám phiên tập trung thật đổi lấy con số không. Ghi vào bảo tàng của ĐÚNG kỷ nó
+          // thuộc về, để thành phố cũ có thêm căn nhà và bảng "trọn vẹn kỷ" chạm tới được 5/5.
+          //
+          // ⚠️ `sealedAt: null` là CHÌA KHOÁ, không phải giá trị thiếu. `mergeCityArchive` đọc nó
+          // như "lần ghi này KHÔNG phải một lần niêm phong": ngày niêm phong / EP lúc niêm phong /
+          // số phiên của kỷ cũ đều được GIỮ NGUYÊN. Truyền một ngày thật vào đây sẽ ghi đè lịch sử
+          // của kỷ đó bằng ngày hôm nay — tức bảo tàng nói dối về quá khứ.
+          const legacyCompletions = pickLegacyCompletions(newlyBuilt, finalBook);
+          const archiveWithLegacy = legacyCompletions.length > 0
+            ? mergeCityArchive(
+              prev.cityArchive,
+              legacyCompletions.map((entry) => entry.bpId),
+              prev.buildingLevels,
+              { sealedAt: null, epAtSeal: 0, sessionCount: 0 },
+            )
+            : prev.cityArchive;
+
           const eraScopedState = pruneEraScopedBlueprintState({
             blueprints: newBlueprints,
             research: { ...prev.research, rp: newResearchRP },
@@ -4455,7 +4511,7 @@ const useGameStore = create(
             buildingHP: prev.buildingHP,
             buildingLastUsed: prev.buildingLastUsed,
             buildingLevels: prev.buildingLevels,
-            cityArchive: prev.cityArchive,
+            cityArchive: archiveWithLegacy,
           }, finalBook, eraChanged
             ? {
                 epAtSeal:     finalTotalEP,
@@ -4495,6 +4551,7 @@ const useGameStore = create(
               state.rankChallenge?.targetRankIdx,
             ) : null,
             activeNewlyBuilt.length > 0 ? makeWorkshopCompletedNotification(activeNewlyBuilt) : null,
+            legacyCompletions.length > 0 ? makeLegacyCompletedNotification(legacyCompletions) : null,
             activeAcceleratedCraftingIds.length > 0 ? {
               title: 'Xưởng tăng tốc',
               body: `${activeAcceleratedCraftingIds.length} công trình tiến thêm 1 bước nhờ đặc quyền.`,
@@ -5624,7 +5681,11 @@ const useGameStore = create(
 
         if (state.buildings.includes(bpId)) return false; // đã xây rồi
         if ((state.craftingQueue ?? []).some((q) => q.bpId === bpId)) return false;
-        if ((state.craftingQueue ?? []).length >= CRAFT_QUEUE_SLOTS) return false;
+        // ⚠️ ĐẾM BẰNG `countActiveCrafting`, KHÔNG dùng `.length` — từ Phase 4D hàng đợi có thể
+        // chứa "di sản" của kỷ cũ đang xây dở. Di sản KHÔNG sinh đặc quyền, nên nó cũng không được
+        // chiếm ô: bắt Đàm hy sinh 1 trong 2 ô xây dựng để đổi lấy một ngôi sao trong bảo tàng là
+        // một cái bẫy, và nó dạy đúng bài học ngược với thứ tính năng này muốn.
+        if (countActiveCrafting(state.craftingQueue, state.progress.activeBook) >= CRAFT_QUEUE_SLOTS) return false;
 
         // Kiểm tra và trừ nguyên liệu T1
         const bookKey  = `book${meta.era}`;

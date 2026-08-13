@@ -184,3 +184,26 @@ test('PHÉP ĐO NÀY PHẢI CÒN BẮT ĐƯỢC ĐÚNG CÁI LỖI ĐÃ SINH RA N
   assert.equal(almost.isComplete, false,
     'gộp cái đang xây vào "đã xây" sẽ gắn sao sớm một phiên — sao phải rơi ĐÚNG lúc căn nhà hiện ra');
 });
+
+
+test('DI SẢN: kỷ ĐÃ NIÊM PHONG vẫn nhận trạng thái "đang xây" từ hàng đợi', () => {
+  // Từ Phase 4D, một công trình của kỷ đã đóng có thể vẫn đang xây dở (`engine/eraLegacy.js`).
+  // Chặn hàng đợi lại ở kỷ hiện tại sẽ khiến bảng sưu tập ghi "chưa xây" cho đúng cái công trình
+  // mà cảnh 3D đang dựng giàn giáo ngay bên trên — hai chỗ trên cùng một màn hình nói ngược nhau.
+  // (Lỗi này đã có thật và chỉ lộ ra khi soi bằng mắt, không bài test nào bắt được.)
+  const legacyId = BLUEPRINT_CATALOG[1][2].id;
+  const out = withEraCompletion(
+    [
+      { era: 1, built: [BLUEPRINT_CATALOG[1][0].id], isCurrent: false, isLost: false },
+      { era: 2, built: [], isCurrent: true, isLost: false },
+    ],
+    { built: [], pending: [{ bpId: legacyId, sessionsRemaining: 3 }] },
+  );
+
+  assert.equal(out[0].completion.slots[2].state, 'building',
+    'công trình kỷ cũ đang xây dở phải hiện là "đang xây", không phải "chưa xây"');
+  assert.equal(out[0].completion.done, 1, 'nhưng nó VẪN chưa được tính là đã xây');
+  // Hàng đợi của kỷ khác không được rò sang: kỷ 2 chỉ có bản vẽ kỷ 2.
+  assert.ok(out[1].completion.slots.every((slot) => slot.state === 'empty'),
+    'mục kỷ 1 trong hàng đợi không được làm bẩn bảng sưu tập của kỷ 2');
+});

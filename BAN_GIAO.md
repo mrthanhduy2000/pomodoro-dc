@@ -126,6 +126,72 @@
 ## 🗒️ Nhật ký cập nhật
 > Mỗi lần xong việc đáng kể, thêm 1 dòng vào ĐẦU danh sách.
 
+- **2026-08-13 (Phase 4D — thành phố)** — **"DI SẢN DANG DỞ": CÔNG TRÌNH XÂY DỞ CỦA KỶ CŨ KHÔNG CÒN
+  BỐC HƠI KHI LÊN KỶ.** **542 bài test**, lint sạch, build xanh.
+  - **Vì sao làm**: đây là cơ chế **Đàm tự chọn** khi được hỏi ("Cho xây tiếp công trình kỷ cũ").
+    Sau khi Phase 4B gắn ngôi sao "trọn vẹn kỷ", luật cũ (`pruneEraScopedBlueprintState` cắt sạch
+    `craftingQueue` của kỷ cũ) không còn trung lập nữa — nó dạy đúng một bài học: **đừng bao giờ
+    khởi công khi sắp lên kỷ**. Tức app tự thưởng cho việc NGỪNG làm việc, ở đúng đoạn Đàm đang chạy
+    tốt nhất. Đó là phản-mục-tiêu của cả sản phẩm.
+  - **Cách làm** (`src/engine/eraLegacy.js`, MỚI, thuần, 10 bài test): hàng đợi được
+    `splitCraftingQueue` tách làm hai — mục của kỷ hiện tại và mục của kỷ ĐÃ QUA. **Cả hai đều được
+    giữ, cả hai đều xây tiếp.** Khác biệt nằm ở lúc HOÀN THÀNH: `pickLegacyCompletions` lọc ra thứ
+    thuộc kỷ cũ, và chúng được ghi bổ sung vào `cityArchive` (`mergeCityArchive` với
+    `sealedAt: null`) **thay vì** vào `buildings`.
+  - ⚠️ **KHÔNG ĐỔI MỘT ĐƠN VỊ CÂN BẰNG NÀO** — đây là điều kiện để không phải hỏi Đàm: di sản hoàn
+    thành không vào `buildings` ⇒ không perk `BUILDING_EFFECTS`, không tài nguyên, không EP thêm.
+    Phần thưởng thuần tuý là LỊCH SỬ: `4/5` nhích lên `5/5`, ngôi sao sáng lên. Và **không khởi công
+    mới được** ở kỷ cũ — cửa vẫn đóng, chỉ những gì đã bắt đầu mới được đi hết. Nên cơ chế này bị
+    chặn trên và giảm dần một chiều, không thể khai thác.
+  - ⚠️ **DI SẢN KHÔNG CHIẾM Ô HÀNG ĐỢI** (`countActiveCrafting` chỉ đếm kỷ hiện tại): một phần
+    thưởng thuần lịch sử mà lại khoá mất 1 trong 2 ô xây dựng thì nó thành cái BẪY, và người chơi
+    vẫn học đúng bài học sai mà tính năng này sinh ra để xoá.
+  - ⚠️ **TÔI ĐÃ VIẾT MỘT CHÚ THÍCH SAI, VÀ CHỈ PHÁT HIỆN VÌ THỬ NGƯỢC BÀI TEST.** Chú thích đầu
+    tiên (ở `eraLegacy.js` + `eraLegacy.test.js` + tài liệu) khẳng định: chấm theo kỷ TRƯỚC phiên
+    thì công trình vừa xong **mất trắng**. Nghe cực kỳ xuôi tai — và **sai**. Thử ngược thật (sửa
+    `finalBook` thành kỷ trước phiên rồi chạy `gameStore.eraLegacy.test.js`) thì bài đó **VẪN
+    XANH**: ở ca lên kỷ, `pruneEraScopedBlueprintState` được gọi kèm `sealContext`, nên chính lần
+    **NIÊM PHONG** đã ghi công trình vừa xong vào `cityArchive[7]` — nó tới bảo tàng bằng đường
+    khác. Gỡ riêng đường di sản: vẫn xanh. Gỡ riêng niêm phong: vẫn xanh. **Gỡ CẢ HAI mới đỏ.**
+    ⇒ Đây là **hai lưới ĐỘC LẬP** che cùng một ca. Giá trị thật của `finalBook` không phải "cứu dữ
+    liệu" mà là làm tầng di sản **TỰ ĐỦ** — không âm thầm dựa vào việc lần niêm phong có quét trúng
+    công trình đó hay không. Ca mà tầng di sản là lưới DUY NHẤT: công trình kỷ cũ xây xong ở một
+    phiên **không** lên kỷ (bài test đó đã thử ngược ra ĐỎ).
+    ⇒ **Bài học**: *một bài test xanh không cho biết có BAO NHIÊU thứ đang giữ nó xanh.* Chỉ thử
+    ngược mới đếm được. Và cùng họ với bài học "cơ chế nghe hợp lý vẫn phải ĐO rồi mới được viết
+    ra" ở Phase 3Y — lần đó là sương mù, lần này là kỷ nguyên; cả hai lần **kết quả đúng nhưng lời
+    giải thích sai**, và lời giải thích sai mới là thứ phiên sau kế thừa. Đã sửa lại cả 5 chỗ.
+  - **Nới bất biến ADR-007** từ *"bảo tàng bất động"* thành **"bảo tàng không xê dịch"** (ADR-011).
+    Không phải nới bừa: bất biến gốc mua đúng một thứ — *nhà xây sau không đẩy nhà xây trước đi chỗ
+    khác* — mà `computeCityLayout` đặt nhà theo **khu đất cố định suy từ thứ hạng bản vẽ**, nên thêm
+    một căn không thể xê dịch căn nào. Vế bị nới và vế được bảo vệ là hai vế khác nhau.
+  - ⚠️ **HAI LỖI BẮT ĐƯỢC BẰNG MẮT, CÙNG MỘT HỌ — và không có gì đỏ lên cả.** Cả hai đều là **gác
+    thừa bằng `isCurrent`**, một cái luật đúng cho tới Phase 4D thì hết đúng:
+    (a) bảng sưu tập ghi **"chưa xây"** cho `Thư Viện Khoa Học` trong khi cảnh 3D đang dựng giàn
+    giáo của chính nó **ngay bên trên** — hai chỗ trên cùng một màn hình nói ngược nhau
+    (`withEraCompletion` chặn `pending` lại ở kỷ hiện tại);
+    (b) thanh chuyển kỷ vẽ **"Kỷ 7 · 4/5"** đứng chết vĩnh viễn **giống hệt** "Kỷ 7 · 4/5 còn cách
+    ngôi sao ba phiên" — mà "kỷ nào còn đáng quay lại" đúng là câu hỏi cả thanh đó sinh ra để trả
+    lời. Nay thành `Kỷ 7 · 4/5 · đang xây`, phân biệt hẳn với `Kỷ 4 · 4/5` (đã đóng vĩnh viễn).
+    ⇒ **Bài học**: khi một luật mới làm cho điều kiện cũ hết đúng, phải đi TÌM MỌI CHỖ phát biểu lại
+    điều kiện ấy, không chỉ chỗ đầu tiên nghĩ ra. Cùng họ với "một luật chỉ được có một công thức".
+  - **Khoá lại bằng test (+16 bài)**: `eraLegacy.test.js` (10, tầng thuần) ·
+    **`gameStore.eraLegacy.test.js` (5, MỚI — chạy THẬT qua `completeFocusSession`)** ·
+    `cityCompletion.test.js` (+1: kỷ đã niêm phong vẫn nhận trạng thái "đang xây") ·
+    `cityArchive.test.js` (+1: ghi bổ sung KHÔNG được ghi đè `sealedAt`/`epAtSeal`/`sessionCount`) ·
+    `cityRenderers.test.js` (+1: đọc mã nguồn, cấm gác nhãn "đang xây" bằng mỗi `isCurrent`).
+    **Mọi phép canh mới đều đã thử ngược và thấy ĐỎ trước khi tin** — và chính việc thử ngược là
+    thứ lộ ra chú thích sai ở gạch đầu dòng trên.
+  - ⚠️ **Một bất biến ngầm được ghi ra thành chữ**: thứ tự `[...activeQueue, ...legacyQueue]` trong
+    `pruneEraScopedBlueprintState` là CÓ TẢI TRỌNG — đặc quyền `craft_haste_first` tăng tốc đúng
+    `index === 0`, nên xếp di sản lên đầu sẽ chuyển một đặc quyền của kỷ hiện tại sang thúc một công
+    trình chỉ có giá trị lịch sử (cân bằng đổi thật). Đã có test hành vi khoá, đã thử ngược ra đỏ.
+  - **Công cụ**: `scripts/shot.mjs` thêm `--click "<nhãn>"` (lặp được) để chụp đúng một kỷ trong bảo
+    tàng. ⚠️ Nhãn phải lấy y nguyên chuỗi mà chính công cụ in ra khi báo lỗi — `textContent` gộp
+    khoảng trắng nên là `"Kỷ 7· 4/5· đang xây"`, không phải chuỗi nhìn thấy trên màn hình.
+    ⚠️ `shot.mjs` phục vụ thư mục `dist/` và **KHÔNG tự build** — sửa mã xong phải `npm run build`
+    rồi mới chụp, nếu không sẽ soi nhầm bản cũ và kết luận "chưa sửa được".
+
 - **2026-08-13 (Phase 4C — thành phố)** — **QUÉT LẠI 15 KỶ × 6 CHẶNG, VÀ CON SỐ "0/105" TRONG TÀI
   LIỆU HOÁ RA LÀ SỐ CỦA VÙNG TỐI.** **524 bài test.**
   - **Bối cảnh**: quét lại đủ 15 kỷ × 6 chặng để kiểm mọi thay đổi đồ hoạ gần đây. Chặng ngày vẫn

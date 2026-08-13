@@ -214,6 +214,25 @@ biết-quá-khứ. Thay vào đó `withEraCompletion(eras, { built, pending })` 
 "Composition over Duplication" áp cho tầng dữ liệu. Kết quả dùng chung cho cả thanh chuyển kỷ và
 khung màn hình, nên hai chỗ không thể nói hai con số khác nhau.
 
+**"Di sản dang dở" — công trình sống sót qua ranh giới kỷ (2026-08-13, ADR-011)**: trước đây
+`pruneEraScopedBlueprintState` cắt SẠCH `craftingQueue` của kỷ cũ khi lên kỷ, nên khởi công sát ngày
+lên kỷ là mất trắng tiến độ. Nay hàng đợi được `splitCraftingQueue` (`src/engine/eraLegacy.js`, thuần)
+tách làm hai: mục của kỷ hiện tại (`active`) và mục của kỷ ĐÃ QUA (`legacy`) — cả hai đều được giữ,
+cả hai đều xây tiếp bằng phiên tập trung. Khác biệt nằm ở **lúc hoàn thành**: `completeFocusSession`
+gọi `pickLegacyCompletions(newlyBuilt, finalBook)`, và những gì thuộc kỷ cũ được ghi bổ sung vào
+`cityArchive` (qua `mergeCityArchive` với `sealedAt: null` — giữ nguyên mốc niêm phong gốc) **thay vì**
+vào `buildings`. Hệ quả cố ý: **không perk `BUILDING_EFFECTS`, không tài nguyên, 0 đơn vị cân bằng
+thay đổi** — phần thưởng duy nhất là con số `4/5` nhích lên `5/5` và ngôi sao sáng lên.
+⚠️ Ba chỗ dễ sai: (a) phải chấm theo **kỷ SAU phiên** (`finalBook`) chứ không phải kỷ trước — một
+phiên có thể vừa xây xong vừa lên kỷ, và công trình của kỷ vừa rời khỏi thì đúng nghĩa là di sản.
+(Đã ĐO 2026-08-13: ở ca ấy lần **niêm phong** cũng ghi công trình đó vào bảo tàng, nên đây là lưới
+thứ hai chứ không phải lưới duy nhất — giá trị của `finalBook` là làm tầng di sản TỰ ĐỦ, không dựa
+ngầm vào phạm vi quét của lần niêm phong. Ca mà nó là lưới duy nhất: xây xong ở phiên KHÔNG lên kỷ.)
+(b) di sản **không chiếm ô hàng đợi** (`countActiveCrafting` chỉ đếm kỷ hiện tại), nếu không
+một phần thưởng thuần lịch sử lại thành cái bẫy; (c) `withEraCompletion` phải truyền `pending` cho
+**MỌI kỷ**, không riêng kỷ hiện tại — chặn lại thì bảng sưu tập ghi "chưa xây" ngay bên dưới cái
+giàn giáo mà cảnh 3D đang dựng.
+
 **Luồng vẽ Thành Phố — bố cục TRỪU TƯỢNG tách khỏi cách vẽ (2026-08-12)**: một chiều, 3 chặng.
 (1) `CityView.jsx` chọn NGUỒN dữ liệu — kỷ hiện tại lấy state sống, kỷ đã niêm phong lấy ảnh chụp
 trong `cityArchive`; đây là chỗ dễ sai nhất cả màn hình. (2) `computeCityLayout` (engine thuần) trả

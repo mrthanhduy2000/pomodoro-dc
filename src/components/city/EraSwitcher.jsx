@@ -7,6 +7,13 @@
  *   • kỷ THẤT TRUYỀN    → thành phố đã đi qua trước khi bảo tàng được dựng (2026-08-12).
  *     Đây là trạng thái rỗng CÓ CHỦ Ý, không phải lỗi — xem `MIGRATION.md` schema 3→4.
  *
+ * ⚠️ "· đang xây" TRẢ LỜI ĐÚNG MỘT CÂU: **con số bên trái còn nhúc nhích được nữa không?** Trước
+ * Phase 4D câu đó chỉ đúng với kỷ đang chơi, nên dòng chữ này gác bằng `isCurrent` — tiện và, lúc
+ * ấy, đúng. Từ khi có "di sản dang dở" (`engine/eraLegacy.js`) thì một kỷ ĐÃ NIÊM PHONG cũng có thể
+ * đang xây dở, và gác cũ biến hai thứ khác hẳn nhau thành một: "Kỷ 7 · 4/5" đứng chết vĩnh viễn
+ * trông y hệt "Kỷ 7 · 4/5" đang cách ngôi sao đúng ba phiên. Mà đó lại chính là câu hỏi cả thanh
+ * này sinh ra để trả lời — **kỷ nào còn đáng quan tâm**.
+ *
  * ⚠️ VÌ SAO PHẢI CÓ MẪU SỐ (2026-08-13): trước đây nút chỉ hiện số trần — "Kỷ 3 · 2". Hai trên
  * mấy? Không ai biết, kể cả Đàm. Cả thanh này là một hàng số không đọc được, nên nó chỉ dùng để
  * CHUYỂN kỷ chứ không nói được điều gì về những kỷ đã qua. Thêm mẫu số thì đúng thanh đó thành một
@@ -100,6 +107,9 @@ export default function EraSwitcher({ eras, viewingEra, onSelect }) {
         const total = era.completion?.total ?? 0;
         const complete = !!era.completion?.isComplete;
         const score = total > 0 ? `${done}/${total}` : null;
+        // Kỷ hiện tại thì luôn còn mở; kỷ cũ chỉ còn mở khi có "di sản dang dở" đang xây.
+        const open = era.isCurrent
+          || (era.completion?.slots ?? []).some((slot) => slot.state === 'building');
 
         return (
           <button
@@ -147,7 +157,7 @@ export default function EraSwitcher({ eras, viewingEra, onSelect }) {
                         ★
                       </span>
                     )}
-                    {era.isCurrent && <span style={{ opacity: 0.75 }}>· đang xây</span>}
+                    {open && <span style={{ opacity: 0.75 }}>· đang xây</span>}
                   </>
                 )}
             </span>

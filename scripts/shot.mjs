@@ -59,6 +59,12 @@ const HEIGHT = Number(arg('--height', PHONE ? 844 : 900));
 const DPR = Number(arg('--dpr', 2));
 const HOUR = argv.indexOf('--hour') >= 0 ? Number(arg('--hour')) : null;
 const SETTLE = Number(arg('--settle', 3500));
+// `--click "<nhãn>"` — bấm thêm một nút SAU khi đã vào tab (lặp lại được để đi sâu nhiều cấp).
+// ⚠️ Vì sao cần: nhiều màn hình chỉ hiện ra sau một cú bấm và trạng thái đó nằm trong `useState`
+// của React, KHÔNG nằm trong localStorage — nên không có cách nào gieo sẵn bằng `--fixture`. Ví dụ
+// tab con "Xưởng" trong Kho báu (`App.jsx` `collectionTab`). Thiếu cờ này thì mọi thứ nằm sau một
+// cú bấm đều KHÔNG BAO GIỜ được soi bằng mắt — và đó đúng là chỗ lỗi hay nấp.
+const CLICKS = argv.reduce((out, flag, i) => (flag === '--click' ? [...out, argv[i + 1]] : out), []);
 
 // Giờ VN = UTC+7 ⇒ đặt đồng hồ ở UTC tương ứng để `Intl` (Asia/Ho_Chi_Minh) đọc ra giờ mong muốn.
 const FAKE_EPOCH = HOUR === null ? null : Date.UTC(2026, 7, 13, (HOUR - 7 + 24) % 24, 30, 0);
@@ -217,6 +223,28 @@ if (TAB) {
     process.exit(1);   // thà hỏng to còn hơn giao một tấm ảnh sai màn hình
   }
   await sleep(SETTLE);
+}
+
+for (const label of CLICKS) {
+  const ok = await evaluate(`(function(){
+    var want=${JSON.stringify(label)}, hit=null;
+    document.querySelectorAll('button,a,[role="tab"]').forEach(function(el){
+      if(hit) return;
+      if((el.textContent||'').replace(/\\s+/g,' ').trim()===want) hit=el;
+    });
+    if(hit){ hit.click(); return true; }
+    return false;
+  })()`);
+  if (!ok) {
+    // Hỏng TO chứ không âm thầm giao một tấm ảnh của màn hình khác — cùng lý do với nhánh tab.
+    const seen = await evaluate(`JSON.stringify(Array.from(document.querySelectorAll('button,a,[role="tab"]'))
+      .map(function(e){return (e.textContent||'').replace(/\\s+/g,' ').trim();})
+      .filter(function(t){return t && t.length<24;}).slice(0,30))`);
+    console.error(`✗ KHÔNG tìm thấy nút "${label}" để bấm. Các nhãn đang có: ${seen}`);
+    ws.close(); chrome.kill(); server.close();
+    process.exit(1);
+  }
+  await sleep(1200);
 }
 
 // LUÔN in bề ngang thật: mọi kết luận về bố cục phải dựa trên số này, không phải cỡ ảnh.

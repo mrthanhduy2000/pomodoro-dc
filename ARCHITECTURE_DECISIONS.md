@@ -11,6 +11,66 @@
 
 ---
 
+## ADR-011 — "Di sản dang dở": công trình kỷ cũ được xây tiếp, nhưng phần thưởng chỉ là LỊCH SỬ — nới bất biến của ADR-007 từ "bảo tàng bất động" thành "bảo tàng không xê dịch"
+
+- **Ngày**: 2026-08-13
+- **Bối cảnh**: Phase 4B gắn mẫu số vào mọi kỷ (`3/5`) và gắn sao ★ cho kỷ xây trọn vẹn — biến bảo
+  tàng từ album ảnh thành bảng thành tích. Ngay sau đó lộ ra một hệ quả không ai thiết kế: cho tới
+  lúc ấy, khởi công một công trình sát ngày lên kỷ là **tự phạt mình**. `pruneEraScopedBlueprintState`
+  cắt sạch hàng đợi của kỷ cũ, nên bao nhiêu phiên đã đổ vào đó bốc hơi, và ngôi sao của kỷ ấy đóng
+  lại vĩnh viễn. Đàm được hỏi và chọn thẳng: *"Cho xây tiếp công trình kỷ cũ"*.
+- **Vấn đề**: bảo tàng là quá khứ đã niêm phong (ADR-007). Cho một công trình mọc lên trong đó là
+  chạm vào bất biến quan trọng nhất của cả lớp Thành Phố. Vậy nới tới đâu thì vẫn còn là bảo tàng?
+- **Phương án đã cân nhắc**:
+  1. **Không làm gì** — giữ luật cũ, coi việc mất tiến độ là "chi phí của việc lên kỷ".
+  2. **Xây tiếp và cho công trình vào `buildings` như bình thường** — tức nó có hiệu lực thật.
+  3. **Xây tiếp, nhưng thành quả chỉ ghi vào `cityArchive`** — vào bảo tàng, không vào state chơi.
+  4. Cho **khởi công lại** bản vẽ kỷ cũ bất cứ lúc nào (mở hẳn cửa quay về xây bù các kỷ trước).
+- **Lý do loại bỏ (1)**: nó không trung lập. Sau Phase 4B, luật cũ dạy đúng một bài học — *"đừng bao
+  giờ bắt đầu thứ gì khi sắp lên kỷ"* — tức app tự thưởng cho việc NGỪNG làm việc ở đúng đoạn Đàm
+  đang chạy tốt nhất. Đó là phản-mục-tiêu của cả sản phẩm.
+- **Lý do loại bỏ (2)**: `BUILDING_EFFECTS` là perk có hiệu lực vĩnh viễn. Cho công trình kỷ 5 sống
+  tiếp ở kỷ 9 là phá thẳng luật cân bằng "mỗi kỷ chỉ hưởng công trình của kỷ mình" —
+  `pruneEraScopedBlueprintState` tồn tại chính vì luật đó. Sửa cân bằng game là việc phải hỏi Đàm,
+  và anh không hề yêu cầu điều đó.
+- **Lý do loại bỏ (4)**: mở cửa quay lại xây bù mọi kỷ cũ thì "trọn vẹn kỷ" mất sạch ý nghĩa — cái
+  làm ngôi sao đáng giá là **nó KHÔNG lấy lại được**. Còn nữa: 15 kỷ × 5 bản vẽ thành một danh sách
+  việc vặt dài dằng dặc, đúng thứ Đàm bảo là *"chán"*.
+- **Giải pháp được chọn**: phương án (3), có biên rõ ràng. Một công trình **đã khởi công trước khi
+  lên kỷ** thì sống sót qua ranh giới kỷ và xây tiếp bằng chính những phiên tập trung sau đó; lúc
+  hoàn thành, nó **không** vào `buildings` (⇒ không perk, không tài nguyên, **không một đơn vị cân
+  bằng nào đổi**) mà được ghi bổ sung vào `cityArchive` của kỷ sinh ra nó. Phần thưởng thuần tuý là
+  lịch sử: con số `4/5` nhích lên `5/5`, ngôi sao sáng lên. Không khởi công mới được — cửa vẫn đóng,
+  chỉ những gì đã bắt đầu mới được đi hết.
+  - Tầng thuần `src/engine/eraLegacy.js` (`blueprintEraOf` · `splitCraftingQueue` ·
+    `countActiveCrafting` · `pickLegacyCompletions`), test riêng 10 bài.
+  - Ghi bổ sung dùng lại `mergeCityArchive` với `sealedAt: null` — hàm đã sẵn có, và có test khoá
+    rằng nó **không** ghi đè `sealedAt`/`epAtSeal`/`sessionCount` của lần niêm phong thật.
+  - **Di sản KHÔNG chiếm ô hàng đợi** (`CRAFT_QUEUE_SLOTS = 2`): một phần thưởng thuần lịch sử mà
+    lại chặn mất một ô xây dựng thì nó là cái BẪY, và người chơi vẫn học đúng bài học sai ở (1).
+- **Nới bất biến ADR-007**: từ *"thành phố cũ không bao giờ đổi sau khi niêm phong"* thành **"công
+  trình đã có không bao giờ xê dịch; có thể ghi THÊM một công trình đã khởi công từ trước"**. Đây
+  KHÔNG phải nới lỏng bừa: bất biến gốc bảo vệ đúng một thứ — *nhà xây sau không được đẩy nhà xây
+  trước đi chỗ khác* — mà `computeCityLayout` đặt nhà theo **khu đất cố định suy từ thứ hạng bản
+  vẽ**, nên thêm nhà không thể xê dịch nhà nào. Vế bị nới là vế "bất động", vế được bảo vệ là vế
+  "không xê dịch", và chỉ vế thứ hai mới là thứ ADR-007 thật sự mua bằng phương án (3) của nó.
+- **Trade-off**: (a) một kỷ đã niêm phong nay có thể có giàn giáo đứng trong đó — trông "kém tĩnh
+  lặng" hơn một bảo tàng thuần tuý, nhưng giấu nó đi mới là nói dối (Đàm đang đổ phiên vào đúng
+  công trình ấy). (b) Hàng đợi có thể phình quá 2 mục nếu Đàm khởi công 2 cái rồi lên kỷ — chấp
+  nhận, vì nó **bị chặn trên**: không khởi công mới được ở kỷ cũ, nên số di sản không bao giờ vượt
+  quá số đã bắt đầu, và nó giảm dần một chiều. (c) Thêm một khái niệm mới cho người chơi phải hiểu
+  — bù bằng nhãn "DI SẢN KỶ N" ngay trong hàng đợi và chữ "· đang xây" trên thanh chuyển kỷ.
+- **Ảnh hưởng**: `gameStore.js` (`pruneEraScopedBlueprintState` giữ lại nhánh legacy ·
+  `completeFocusSession` ghi bổ sung + sinh thông báo riêng · `startCrafting` đếm ô theo kỷ hiện
+  tại) · `BuildingWorkshop.jsx` · `NotificationCenter.jsx` · `CityView.jsx` ·
+  `cityCompletion.js` (`pending` áp cho MỌI kỷ) · `EraSwitcher.jsx`. **Không đổi schema, không đổi
+  cân bằng, không thêm trường state nào** — nên không có migration.
+- **Điều kiện xem xét lại**: nếu Đàm muốn xây bù các kỷ cũ từ đầu (→ đó là phương án (4), phải viết
+  ADR mới đảo ngược bản này và tính lại ý nghĩa của ngôi sao), hoặc nếu số di sản tồn đọng có lúc
+  nào đó lớn tới mức hàng đợi khó đọc (→ gom nhóm hiển thị, không sửa luật).
+
+---
+
 ## ADR-010 — Khoảnh khắc "thành phố lớn lên" chen ở TẦNG HIỂN THỊ, không hoãn `lootModalOpen` trong store; và cổng phải hỏng theo hướng MỞ
 
 - **Ngày**: 2026-08-12

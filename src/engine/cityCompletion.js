@@ -58,7 +58,10 @@ export function listEraBlueprints(era) {
  * @param {string[]} [args.built]    bpId đã xây (state sống nếu là kỷ hiện tại, ảnh chụp nếu là
  *                                   kỷ đã niêm phong)
  * @param {Array}    [args.pending]  hàng đợi đang xây — `[{ bpId }]`, shape của `craftingQueue`.
- *                                   CHỈ có ở kỷ hiện tại; bảo tàng thì không còn ai đang xây gì.
+ *                                   ⚠️ Từ Phase 4D ("di sản dang dở") thì **kỷ ĐÃ NIÊM PHONG cũng
+ *                                   có thể đang xây** — truyền cả hàng đợi vào cho mọi kỷ là an
+ *                                   toàn, vì `slots` chỉ dựng từ bản vẽ của chính kỷ này nên mục
+ *                                   của kỷ khác không thể khớp.
  * @returns {{
  *   era:number, total:number, done:number, ratio:number, isComplete:boolean,
  *   slots: Array<{bpId,label,icon,rarity,state:'built'|'building'|'empty'}>,
@@ -118,22 +121,23 @@ export function summarizeEraCompletion({ era, built, pending } = {}) {
  * @param {Array}    eras         kết quả `listVisitableEras(...)`
  * @param {object}   [live]
  * @param {string[]} [live.built]    công trình của kỷ HIỆN TẠI, lấy từ state sống
- * @param {Array}    [live.pending]  hàng đợi đang xây của kỷ hiện tại
+ * @param {Array}    [live.pending]  hàng đợi đang xây — dùng cho MỌI kỷ, không riêng kỷ hiện tại
  * @returns {Array} cùng mảng đó, mỗi phần tử thêm khoá `completion`
  */
 export function withEraCompletion(eras, live = {}) {
   if (!Array.isArray(eras)) return [];
-  return eras.map((entry) => {
-    const isCurrent = !!entry?.isCurrent;
-    return {
-      ...entry,
-      completion: summarizeEraCompletion({
-        era:     entry?.era,
-        built:   isCurrent ? live.built   : entry?.built,
-        pending: isCurrent ? live.pending : null,
-      }),
-    };
-  });
+  return eras.map((entry) => ({
+    ...entry,
+    // ⚠️ `built` PHẢI đổi nguồn theo kỷ (state sống vs ảnh chụp bảo tàng), nhưng `pending` thì
+    // KHÔNG: từ Phase 4D, một công trình của kỷ đã niêm phong vẫn có thể đang xây dở. Chặn hàng
+    // đợi lại ở kỷ hiện tại sẽ khiến bảng sưu tập ghi "chưa xây" cho đúng cái công trình mà cảnh
+    // 3D đang dựng giàn giáo ngay bên trên — hai chỗ trên cùng một màn hình nói ngược nhau.
+    completion: summarizeEraCompletion({
+      era:     entry?.era,
+      built:   entry?.isCurrent ? live.built : entry?.built,
+      pending: live.pending,
+    }),
+  }));
 }
 
 /**

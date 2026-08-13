@@ -72,12 +72,19 @@ export default function CityView() {
   const sessionCount = isCurrent ? (sessionsInEra ?? 0) : (viewing?.sessionCount ?? 0);
   const streakLength = isCurrent ? (currentStreak ?? 0) : 0;
 
-  // ⚠️ GIÀN GIÁO CHỈ CÓ Ở KỶ HIỆN TẠI. Bảo tàng là ẢNH CHỤP lúc niêm phong, và ở một thành phố đã
-  // niêm phong thì chẳng còn ai đang xây gì nữa — dựng giàn giáo lên đó là nói dối về quá khứ, đúng
-  // thứ bất biến "bảo tàng bất động" mà ADR-007 dựng lên. (`craftingQueue` trong store vốn đã được
-  // gạn theo kỷ hiện tại, và `computeCityLayout` cũng lọc theo kỷ lần nữa — nhưng cả hai lớp đó
-  // đều là lưới an toàn, còn Ý ĐỊNH thì phải nói rõ ngay tại chỗ này.)
-  const pending = isCurrent ? craftingQueue : null;
+  // ⚠️ GIÀN GIÁO NAY CÓ Ở CẢ KỶ CŨ — nhưng CHỈ vì nó đã thành sự thật, không phải vì tiện.
+  //
+  // Trước Phase 4D, dòng này là `isCurrent ? craftingQueue : null` với lý do: bảo tàng là ẢNH CHỤP
+  // lúc niêm phong, ở thành phố đã đóng thì chẳng còn ai xây gì, dựng giàn giáo lên đó là NÓI DỐI
+  // về quá khứ. Lý do ấy đúng — cho tới khi "di sản dang dở" (`engine/eraLegacy.js`) làm cho việc
+  // xây tiếp ở kỷ cũ trở thành chuyện có thật. Nay giấu giàn giáo đi mới là nói dối: Đàm đang bỏ
+  // phiên vào một công trình mà thành phố duy nhất có thể cho anh thấy nó lại không cho.
+  //
+  // ⚠️ Bất biến "bảo tàng bất động" (ADR-007) KHÔNG bị phá: `computeCityLayout` đặt công trình vào
+  // khu đất cố định theo `rank`, nên thêm một căn nhà không xê dịch căn nào đã có. Truyền cả hàng
+  // đợi vào là an toàn vì chính `computeCityLayout` lọc theo `era` — kỷ nào chỉ thấy giàn giáo của
+  // kỷ đó.
+  const pending = craftingQueue;
 
   const builtKey  = Array.isArray(built) ? built.join(',') : '';
   const levelsKey = Object.entries(levels ?? {}).map(([id, lv]) => `${id}:${lv}`).sort().join(',');

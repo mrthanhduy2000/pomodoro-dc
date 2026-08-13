@@ -205,7 +205,10 @@ export default function CityViewShell({
         ⚠️ Đặt TRÊN danh sách công trình đã xây, có chủ ý: cái đã xong là phần thưởng đã lĩnh, cái
         đang xây mới là thứ đang chờ chính anh — mà thứ đang chờ thì phải nằm trên.
       */}
-      {!isLost && isCurrent && scaffolds.length > 0 && (
+      {/* ⚠️ KHÔNG còn gác `isCurrent` (đổi Phase 4D). Kỷ đã niêm phong nay cũng có thể đang xây dở
+          một "di sản"; cảnh 3D bên trên đã dựng giàn giáo cho nó, nên giấu bảng này đi thì Đàm
+          thấy giàn giáo mà không có chỗ nào nói còn mấy phiên nữa. */}
+      {!isLost && scaffolds.length > 0 && (
         <div className="p-3 sm:p-4" style={cardStyle}>
           <div className="flex items-baseline justify-between gap-2">
             <div className={eyebrow} style={{ color: 'var(--muted-2)' }}>Đang xây</div>

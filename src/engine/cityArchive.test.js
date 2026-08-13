@@ -176,3 +176,25 @@ test('sessionCount ghi đúng vào entry; thiếu → mặc định 0, không n�
   assert.equal(noSeal[1].sealedAt, null);
   assert.deepEqual(noSeal[1].built, ERA_1);
 });
+
+test('GHI BỔ SUNG (`sealedAt: null`) KHÔNG được ghi đè lịch sử niêm phong của kỷ', () => {
+  // ⚠️ Đây là hợp đồng mà "di sản dang dở" (Phase 4D, `engine/eraLegacy.js`) dựa vào để tồn tại.
+  // Khi Đàm xây xong một công trình của kỷ ĐÃ ĐÓNG, ta gọi lại `mergeCityArchive` để thêm căn nhà
+  // đó vào bảo tàng — nhưng lần ghi ấy KHÔNG phải một lần niêm phong. Nếu nó ghi đè `sealedAt` /
+  // `epAtSeal` / `sessionCount` thì bảo tàng sẽ nói dối về quá khứ: một thành phố niêm phong từ
+  // tháng trước bỗng mang ngày hôm nay, và số EP lúc niêm phong nhảy sang số EP hiện tại.
+  const sealed = mergeCityArchive({}, ['bp_hang_dong'], { bp_hang_dong: 2 }, {
+    sealedAt: '2026-01-15', epAtSeal: 1234, sessionCount: 40,
+  });
+
+  const restored = mergeCityArchive(sealed, ['bp_bep_lua'], {}, {
+    sealedAt: null, epAtSeal: 0, sessionCount: 0,
+  });
+
+  assert.equal(restored[1].sealedAt, '2026-01-15', 'ngày niêm phong bị ghi đè');
+  assert.equal(restored[1].epAtSeal, 1234, 'EP lúc niêm phong bị ghi đè');
+  assert.equal(restored[1].sessionCount, 40, 'số phiên của kỷ bị ghi đè');
+  assert.deepEqual(restored[1].built, ['bp_hang_dong', 'bp_bep_lua'], 'căn nhà mới phải được thêm vào');
+  assert.equal(restored[1].levels.bp_hang_dong, 2, 'cấp công trình cũ phải giữ nguyên');
+  assert.equal(restored[1].levels.bp_bep_lua, 1, 'công trình vừa xây xong vào ở cấp 1');
+});

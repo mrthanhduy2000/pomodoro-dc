@@ -13,10 +13,17 @@
 
 import { motion, useReducedMotion } from 'framer-motion';
 
+import { deriveResidentCount } from '../../engine/city3d/residents';
 import EraSwitcher from './EraSwitcher';
 import { cardStyle, eraSolid } from './cityTokens';
 
 const eyebrow = 'mono text-[10px] uppercase tracking-[0.2em]';
+
+/** Nhãn phụ của một ô trong bảng sưu tập. Ô đã xây không cần nhãn — cấp Lv. đã nói thay. */
+const SLOT_NOTE = {
+  building: 'đang xây',
+  empty:    'chưa xây',
+};
 
 /**
  * Tô nhẹ dòng ứng với công trình Đàm vừa chạm trong cảnh 3D.
@@ -88,6 +95,23 @@ export default function CityViewShell({
   const isCurrent = !!viewing?.isCurrent;
   const isLost = !!viewing?.isLost;
 
+  // BẢNG SƯU TẬP của kỷ đang xem (`engine/cityCompletion.js`). Suy ra, không lưu.
+  const completion = viewing?.completion ?? null;
+  const scoreText = completion?.total > 0 ? `${completion.done}/${completion.total}` : null;
+
+  // Cấp công trình chỉ có trong `layout.buildings`; bảng sưu tập chỉ biết bản vẽ nào đã xây. Ghép
+  // hai nguồn ở đây thay vì bắt tầng engine gánh thêm khái niệm "cấp" — cấp là chuyện của thành
+  // phố, còn sưu tập là chuyện của catalog.
+  const levelOf = new Map(layout.buildings.map((building) => [building.bpId, building.level]));
+
+  // ⚠️ CÙNG CÔNG THỨC với dân số trong cảnh 3D (`buildResidents` gọi đúng hàm này). Tự nhân chia
+  // lại ở đây thì sớm muộn hai chỗ nói hai con số khác nhau về cùng một thành phố.
+  const residents = deriveResidentCount({
+    buildingCount: layout.buildings.length,
+    sessionCount:  stats.sessionCount,
+    streakLength:  stats.streakLength,
+  });
+
   return (
     <div className="flex flex-col gap-3">
       <EraSwitcher eras={eras} viewingEra={era} onSelect={onSelectEra} />
@@ -145,18 +169,26 @@ export default function CityViewShell({
       {!isLost && (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           {[
-            { label: 'Công trình', value: layout.buildings.length },
+            // ⚠️ CÓ MẪU SỐ. "Công trình: 3" là một con số không hành động được — 3 trên mấy thì
+            // chính Đàm cũng không biết. "3/5" thì cùng ô đó tự đọc ra "còn 2 nữa là trọn vẹn".
+            { label: 'Công trình', value: scoreText ?? layout.buildings.length },
             { label: 'Phiên trong kỷ', value: stats.sessionCount },
             {
               label: isCurrent ? 'Chuỗi ngày' : 'EP lúc niêm phong',
               value: isCurrent ? stats.streakLength : (viewing?.epAtSeal ?? 0),
             },
-            // ⚠️ Ô thứ tư ĐỔI NGHĨA khi có công trường: "Cảnh vật" là một con số Đàm chẳng làm gì
-            // được với nó (bao nhiêu cái cây thì cũng thế), còn "Đang xây" là thứ đang chờ chính
-            // anh. Chỗ đắt giá nhất trên màn hình thì phải dành cho thông tin hành động được.
-            scaffolds.length > 0
-              ? { label: 'Đang xây', value: scaffolds.length }
-              : { label: 'Cảnh vật', value: layout.props.length },
+            // DÂN SỐ. Con số này vốn đã được tính để sinh người đi lại trong cảnh 3D
+            // (`deriveResidentCount`), nhưng trước nay chỉ hiện trong BẢNG ĐO HIỆU NĂNG — một bảng
+            // gỡ lỗi phải vào Cài đặt bật lên mới thấy. Một thành phố đông dần lên là phần thưởng;
+            // để phần thưởng nằm trong bảng gỡ lỗi thì coi như không có phần thưởng.
+            //
+            // ⚠️ Ô này TỪNG đổi nghĩa thành "Đang xây: N" khi có công trường. Đo bằng mắt
+            // (2026-08-13) thì thấy nó THỪA: điều kiện hiện nó trùng khít với điều kiện hiện thẻ
+            // "Đang xây" ngay bên dưới, mà thẻ đó nói đủ tên công trình + còn mấy phiên + mở khoá
+            // gì. Hai chỗ nói cùng một chuyện thì chỗ nói ít hơn phải nhường. Và vì công trường
+            // gần như LÚC NÀO cũng có, ô đổi-nghĩa đó khiến dân số thực tế vẫn vô hình.
+            // ("Cảnh vật" — số cây cối — thì đã nhường chỗ từ trước: con số chẳng nói lên điều gì.)
+            { label: 'Cư dân', value: residents },
           ].map((stat) => (
             <div key={stat.label} className="px-3 py-2.5" style={cardStyle}>
               <Stat label={stat.label} value={stat.value} />
@@ -234,23 +266,69 @@ export default function CityViewShell({
         </div>
       )}
 
-      {!isLost && layout.buildings.length > 0 && (
+      {/*
+        BẢNG SƯU TẬP — trước đây chỗ này chỉ liệt kê những gì ĐÃ xây, nên nó là một tấm biên lai:
+        đọc xong biết mình có gì, không biết mình thiếu gì. Nay nó liệt kê ĐỦ cả 5 bản vẽ của kỷ,
+        ô chưa xây để mờ. Cùng một danh sách, nhưng nó thôi làm biên lai và thành một tấm bản đồ:
+        mở lên là thấy ngay còn bao nhiêu chỗ trống, và mỗi chỗ trống có TÊN.
+
+        ⚠️ Với kỷ đã niêm phong, những ô mờ đó VĨNH VIỄN mờ (ADR-007: bảo tàng bất động). Đó chính
+        là thứ khiến ngôi sao "trọn vẹn" đáng giá — nếu lúc nào cũng quay lại xây bù được thì nó
+        chỉ là chuyện sớm muộn, không phải thành tích.
+
+        ⚠️ Vẫn hiện cả khi chưa xây gì. Đúng lúc thành phố trống trơn mới là lúc cần nhất một danh
+        sách nói "đây là 5 thứ sẽ mọc lên ở đây" — chứ không phải một khoảng trắng.
+      */}
+      {!isLost && completion?.total > 0 && (
         <div className="p-3 sm:p-4" style={cardStyle}>
-          <div className={eyebrow} style={{ color: 'var(--muted-2)' }}>Công trình trong thành phố</div>
+          <div className="flex items-baseline justify-between gap-2">
+            <div className={eyebrow} style={{ color: 'var(--muted-2)' }}>Công trình trong thành phố</div>
+            {/* ⚠️ Dấu "trọn vẹn" dùng `--accent`, KHÔNG dùng màu kỷ — xem phần đo tương phản ở đầu
+                `EraSwitcher.jsx`: màu kỷ 9/kỷ 3 chỉ đạt ~1,5:1 trên nền thẻ sáng. Ở ĐÂY còn nặng
+                hơn bên thanh chuyển kỷ, vì chính con số "5/5" đổi màu theo — tức màu tệ làm mất
+                luôn thứ mang thông tin, chứ không chỉ mất phần trang trí. */}
+            <div className="mono flex items-baseline gap-1 text-[11px]">
+              <span style={{ color: completion.isComplete ? 'var(--accent)' : 'var(--muted)' }}>
+                {scoreText}
+              </span>
+              {completion.isComplete && (
+                <span style={{ color: 'var(--accent)' }} title="Trọn vẹn — đã xây đủ mọi công trình của kỷ này">
+                  ★ trọn vẹn
+                </span>
+              )}
+            </div>
+          </div>
+
           <ul className="mt-2 flex flex-col gap-1.5">
-            {layout.buildings.map((building) => (
-              <li
-                key={building.bpId}
-                className="flex items-center gap-2 rounded-[8px] px-1.5 py-0.5 text-[12px]"
-                style={rowHighlight(building.bpId === selectedId)}
-              >
-                <span aria-hidden="true">{building.icon}</span>
-                <span style={{ color: 'var(--ink-2)' }}>{building.label}</span>
-                {building.level > 1 && (
-                  <span className="mono text-[10px]" style={{ color: 'var(--muted)' }}>Lv.{building.level}</span>
-                )}
-              </li>
-            ))}
+            {completion.slots.map((slot) => {
+              const built = slot.state === 'built';
+              const level = levelOf.get(slot.bpId) ?? 1;
+              return (
+                <li
+                  key={slot.bpId}
+                  className="flex items-center gap-2 rounded-[8px] px-1.5 py-0.5 text-[12px]"
+                  style={rowHighlight(slot.bpId === selectedId)}
+                >
+                  {/* Ô chưa xây vẫn giữ biểu tượng, chỉ mờ đi — một cái bóng của thứ sắp tới đọc
+                      ra "chỗ này còn trống" rõ hơn nhiều so với một dấu chấm hỏi chung chung. */}
+                  <span aria-hidden="true" style={{ opacity: built ? 1 : 0.35 }}>{slot.icon}</span>
+                  <span
+                    className="min-w-0 flex-1 truncate"
+                    style={{ color: built ? 'var(--ink-2)' : 'var(--muted-2)' }}
+                  >
+                    {slot.label}
+                  </span>
+                  {built && level > 1 && (
+                    <span className="mono shrink-0 text-[10px]" style={{ color: 'var(--muted)' }}>Lv.{level}</span>
+                  )}
+                  {!built && (
+                    <span className="shrink-0 text-[11px]" style={{ color: 'var(--muted-2)' }}>
+                      {SLOT_NOTE[slot.state]}
+                    </span>
+                  )}
+                </li>
+              );
+            })}
           </ul>
         </div>
       )}

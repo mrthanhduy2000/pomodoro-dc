@@ -12,6 +12,33 @@
 
 ---
 
+## 2026-08-13 — Trọn vẹn kỷ: mỗi kỷ có 5 công trình, và giờ Đàm nhìn thấy con số 5 đó
+
+- **Mục đích**: mỗi kỷ có đúng 5 bản vẽ, nhưng cả app không chỗ nào nói ra con số ấy. Màn hình
+  Thành Phố hiện "Công trình: 3" và thanh chuyển kỷ hiện "Kỷ 3 · 2" — hai trên mấy thì không ai
+  biết. Một con số không có mẫu số thì không phải mục tiêu; nó chỉ là một con số.
+- **Phạm vi**: `src/engine/cityCompletion.js` (MỚI, thuần: `listEraBlueprints`,
+  `summarizeEraCompletion`, `withEraCompletion`, `summarizeMuseum`) + test 13 bài ·
+  `CityView.jsx` (ghép state sống vào danh sách kỷ) · `EraSwitcher.jsx` (chip hiện `3/5`, kỷ trọn
+  vẹn được gắn ★) · `CityViewShell.jsx` (ô "Công trình" có mẫu số · danh sách công trình đổi thành
+  **bảng sưu tập đủ 5 ô**, ô chưa xây để mờ · ô thống kê thứ tư nay hiện **dân số**).
+- **Kết quả**: bảo tàng thôi làm album ảnh và thành bảng thành tích — kỷ nào xây trọn vẹn được gắn
+  sao VĨNH VIỄN (kỷ cũ niêm phong không sửa lại được, ADR-007). Màn hình "bãi đất trống" của một kỷ
+  mới thôi là ngõ cụt: nó liệt kê sẵn 5 thứ sắp mọc lên ở đó.
+- **Hai lỗi bắt được khi soi bằng mắt (không có gì đỏ lên)**: (1) ô thống kê "Đang xây: N" TRÙNG
+  hoàn toàn với thẻ "Đang xây" ngay bên dưới, và vì công trường gần như lúc nào cũng có nên nó
+  khiến dân số vĩnh viễn vô hình → bỏ ô thừa; (2) ngôi sao tô bằng màu kỷ chỉ đạt **1,49:1** tương
+  phản (kỷ 9) trên nền thẻ sáng → đổi sang `var(--accent)` (2,97–7,43:1 qua 8 tổ hợp theme × skin),
+  khoá bằng một bài test đã thử ngược và thấy đỏ.
+- **Công cụ**: `scripts/make-fixture.mjs` từng cấm mọi kỷ xây kín 5/5 (để luôn còn giàn giáo mà
+  soi) — hệ quả là **cả bảo tàng ra một dãy "4/5" giống hệt nhau** và trạng thái "trọn vẹn" gần như
+  không tồn tại để nhìn thấy. Nay chỉ chừa chỗ cho giàn giáo ở kỷ ĐANG chơi.
+- **Tương thích**: KHÔNG đổi state, KHÔNG đổi schema, KHÔNG thêm byte nào vào JSONB Supabase (mọi
+  con số đều suy ra từ catalog + danh sách công trình). Cân bằng game KHÔNG đổi.
+- **Test**: 509 → **524** bài, xanh.
+
+---
+
 ## 2026-08-13 — Ba kỷ cuối cùng cũng có mái mang màu của chúng (105/105 cặp kỷ phân biệt được)
 
 - **Mục đích**: kỷ 12–14 đều dùng `roof: 'flat'`, mà nhánh `'flat'` chỉ đẩy đúng một khối với vai

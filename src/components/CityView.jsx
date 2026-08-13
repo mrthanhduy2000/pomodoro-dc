@@ -21,6 +21,7 @@ import { useReducedMotion } from 'framer-motion';
 import useGameStore from '../store/gameStore';
 import { computeCityLayout } from '../engine/cityLayout';
 import { listVisitableEras } from '../engine/cityArchive';
+import { withEraCompletion } from '../engine/cityCompletion';
 import CityViewShell from './city/CityViewShell';
 import CityStage from './city/CityStage';
 
@@ -41,9 +42,21 @@ export default function CityView() {
   // trong khi phiên vừa xong đã kéo nó xuống 2).
   const [picked, setPicked] = useState(null);
 
+  // ⚠️ KHOÁ THEO NỘI DUNG của state SỐNG, không theo danh tính mảng — store trả về mảng mới ở mỗi
+  // lượt render. Hai khoá này CỐ Ý tách khỏi `builtKey`/`pendingKey` bên dưới: mấy khoá kia đi theo
+  // kỷ ĐANG XEM (có thể là một kỷ trong bảo tàng), còn bảng sưu tập của kỷ HIỆN TẠI thì luôn phải
+  // đọc state sống dù Đàm đang ngắm kỷ nào.
+  const liveBuiltKey = Array.isArray(buildings) ? buildings.join(',') : '';
+  const livePendingKey = (Array.isArray(craftingQueue) ? craftingQueue : [])
+    .map((item) => item?.bpId).join(',');
+
   const eras = useMemo(
-    () => listVisitableEras(cityArchive, activeBook),
-    [cityArchive, activeBook],
+    () => withEraCompletion(listVisitableEras(cityArchive, activeBook), {
+      built:   buildings,
+      pending: craftingQueue,
+    }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [cityArchive, activeBook, liveBuiltKey, livePendingKey],
   );
 
   // Kỷ đang xem có thể biến mất khỏi danh sách (vd nhận dữ liệu mới từ cloud) → lùi về kỷ hiện tại.

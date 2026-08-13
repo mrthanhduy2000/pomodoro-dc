@@ -6,7 +6,15 @@
 > chọn: `ARCHITECTURE_DECISIONS.md`. Nợ kỹ thuật: `TECH_DEBT.md`. Migration: `MIGRATION.md`. Tóm
 > tắt theo mốc: `CHANGELOG.md`.
 > **NGUYÊN TẮC ƯU TIÊN SỐ 1:** (1) mọi phiên AI phải đọc file này + `CLAUDE.md` + các file liên quan TRƯỚC khi làm; (2) sau MỌI cập nhật dù nhỏ, phải cập nhật ngay file này + `CLAUDE.md` + các file liên quan khác.
-> Cập nhật lần cuối: **2026-08-13** — **Phase 3Y**: đo lại bản quét 15 kỷ × 6 chặng bằng phép đo
+> Cập nhật lần cuối: **2026-08-13** — **Phase 4B**: **TRỌN VẸN KỶ**. Mỗi kỷ có đúng 5 công trình
+> nhưng cả app không chỗ nào nói ra con số 5 đó ("Công trình: 3" — ba trên mấy?). Nay thanh chuyển
+> kỷ hiện `3/5` + gắn **★** cho kỷ xây trọn vẹn, danh sách công trình thành **bảng sưu tập đủ 5 ô**,
+> ô thống kê thứ tư hiện **dân số** (trước chỉ nằm trong bảng gỡ lỗi). Engine thuần mới
+> `src/engine/cityCompletion.js`, KHÔNG lưu một byte nào. Soi bằng mắt bắt thêm 2 lỗi im lặng: ô
+> "Đang xây: N" trùng thẻ ngay dưới nó, và ★ tô màu kỷ chỉ đạt **1,49:1** tương phản ở theme sáng.
+> **524 bài test.**
+>
+> Trước đó cùng ngày — **Phase 3Y**: đo lại bản quét 15 kỷ × 6 chặng bằng phép đo
 > CẢ CẢNH (thay vì chỉ đo góc màu dải trời) và bắt được lỗi mà mọi bài test đều bỏ lọt: **bình minh
 > và hoàng hôn là CÙNG MỘT BỨC ẢNH** (5,9/255, dưới ngưỡng mắt ~12). Sửa bằng **sương theo giờ**
 > (`haze` + `fogRangeFor`) → **75,1/255**; cả 15 cặp chặng nay đều trên ngưỡng. `TECH_DEBT` #17
@@ -117,6 +125,47 @@
 
 ## 🗒️ Nhật ký cập nhật
 > Mỗi lần xong việc đáng kể, thêm 1 dòng vào ĐẦU danh sách.
+
+- **2026-08-13 (Phase 4B — thành phố)** — **TRỌN VẸN KỶ: mỗi kỷ có 5 công trình, và giờ Đàm nhìn
+  thấy con số 5 đó.** Đây là phần "game hoá" + "UX/UI" của lệnh `/goal`. **524 bài test.**
+  - **Vấn đề**: mỗi kỷ có đúng 5 bản vẽ (2 common + 2 rare + 1 epic, đều 15/15 kỷ), nhưng **cả app
+    không chỗ nào nói ra con số 5**. Màn Thành Phố hiện "Công trình: 3", thanh chuyển kỷ hiện
+    "Kỷ 3 · 2". Ba trên mấy? Không ai biết, kể cả Đàm. **Một con số không có mẫu số thì không phải
+    mục tiêu** — nó không bảo được anh còn phải làm gì, nên chẳng có lý do gì để làm thêm phiên nữa
+    ngoài thói quen. Và vì kỷ cũ niêm phong VĨNH VIỄN (ADR-007), cái mẫu số ấy còn tạo ra thứ bảo
+    tàng đang thiếu: **một điểm số không sửa lại được**.
+  - **Đã làm**: `src/engine/cityCompletion.js` (MỚI, thuần, +13 bài test) — `listEraBlueprints` ·
+    `summarizeEraCompletion` (3 trạng thái ô: đã xây / đang xây / chưa xây) · `withEraCompletion`
+    (ghép state sống vào danh sách kỷ) · `summarizeMuseum`. Giao diện: thanh chuyển kỷ hiện `3/5`
+    và gắn **★** cho kỷ trọn vẹn; ô thống kê "Công trình" có mẫu số; **danh sách công trình đổi
+    thành bảng sưu tập đủ 5 ô** (ô chưa xây để mờ, vẫn giữ biểu tượng như một cái bóng của thứ sắp
+    tới); ô thống kê thứ tư nay hiện **dân số**.
+  - ⚠️ **KHÔNG lưu một byte nào**: mọi con số suy ra từ `BLUEPRINT_CATALOG` + danh sách công trình,
+    đúng nguyên tắc đã dùng cho cảnh vật và cư dân. Không đụng state, không đụng schema, không đụng
+    cân bằng game.
+  - ⚠️ **MẪU SỐ TỰ ĐẾM TỪ CATALOG, KHÔNG VIẾT CỨNG SỐ 5** — có bài test khoá riêng. Viết cứng là
+    gài mìn: ngày nào một kỷ có bản vẽ thứ 6, màn hình sẽ gắn sao "trọn vẹn" cho một thành phố còn
+    thiếu nhà, và **không có gì đỏ lên cả**.
+  - ⚠️ **HAI LỖI CHỈ SOI BẰNG MẮT MỚI RA** (build xanh, lint sạch, test xanh ở cả hai):
+    1. Ô thống kê "Đang xây: N" TRÙNG khít với thẻ "Đang xây" ngay bên dưới (cùng điều kiện hiện,
+       mà thẻ nói đủ tên + còn mấy phiên + mở khoá gì). Tệ hơn: vì công trường gần như LÚC NÀO cũng
+       có, cái ô đổi-nghĩa ấy khiến dân số **vĩnh viễn vô hình**. → bỏ ô thừa, luôn hiện dân số.
+    2. **Ngôi sao tô bằng màu kỷ gần như tàng hình ở theme sáng.** Đo tương phản
+       `ERA_METADATA.accentColor` trên nền thẻ: kỷ 9 `#a3e635` = **1,49:1**, kỷ 3 `#facc15` = 1,51:1
+       (ngưỡng ký hiệu là 3:1). `--accent` đo được 2,97–7,43:1 qua cả 8 tổ hợp theme × skin → đổi
+       sang `--accent`, khoá bằng bài test ở `cityRenderers.test.js` (đã thử ngược và thấy đỏ).
+       ⇒ **Bài học**: cái chấm tròn màu kỷ bên cạnh vẫn giữ màu kỷ, và đó KHÔNG phải thiếu nhất
+       quán — nó là trang trí thuần (số kỷ ghi ngay cạnh), còn ngôi sao thì MANG THÔNG TIN. Ngưỡng
+       tương phản áp cho thứ mang thông tin, không áp cho thứ trang trí.
+  - ⚠️ **LẦN THỨ 12 CÔNG CỤ DEV NÓI DỐI** — `scripts/make-fixture.mjs` có `notBuilt.length > 1` với
+    lý do chính đáng ("chừa một bản vẽ để còn `craftingQueue` mà soi giàn giáo"), nhưng nó áp cho
+    MỌI kỷ, kể cả kỷ đã niêm phong nơi chẳng còn ai đang xây gì. Hệ quả: **không kỷ nào có thể đạt
+    5/5**, cả bảo tàng ra một dãy "4/5" giống hệt nhau, và trạng thái "trọn vẹn" gần như không tồn
+    tại để mà nhìn thấy. Đúng bài học "một trade-off chỉ có thật khi cả hai vế đều đã đạt": vế thứ
+    hai không hề cần cái giá đó. → nay chỉ chừa chỗ cho giàn giáo ở kỷ ĐANG chơi, một lần ở cuối.
+  - **Đã soi bằng mắt** 5 trạng thái: máy bàn sáng · máy bàn tối 22h · iPhone 390px THẬT (không
+    tràn ngang) · kỷ trọn vẹn 5/5 · kỷ mới toanh 0/5. Màn "bãi đất trống" thôi là ngõ cụt — nó liệt
+    kê sẵn 5 thứ sắp mọc lên ở đó.
 
 - **2026-08-13 (Phase 4A — thành phố)** — **BA KỶ CUỐI CÙNG CŨNG CÓ MÁI MANG MÀU CỦA CHÚNG.**
   `TECH_DEBT` #18 mở và ĐÓNG trong cùng ngày. **510 bài test.**

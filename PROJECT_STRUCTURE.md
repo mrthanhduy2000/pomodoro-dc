@@ -87,6 +87,10 @@
 │   │   │                     #   vĩnh viễn + xây thêm nhà không làm xê dịch nhà cũ.
 │   │   ├── cityArchive.js     # THÀNH PHỐ PIXEL: "bảo tàng" các kỷ đã niêm phong (ghi lại công
 │   │   │                     #   trình bị cắt khi lên kỷ, thay vì để mất hẳn)
+│   │   ├── cityCompletion.js  # THÀNH PHỐ PIXEL: "trọn vẹn kỷ" — mỗi kỷ có đúng 5 bản vẽ; file này
+│   │   │                     #   trả lời "đã xây mấy trên mấy, còn thiếu cái nào". Suy ra từ
+│   │   │                     #   BLUEPRINT_CATALOG, KHÔNG lưu. ⚠️ mẫu số PHẢI tự đếm, cấm viết
+│   │   │                     #   cứng số 5 (có test khoá).
 │   │   ├── cityMoment.js      # Điều đáng nói về thành phố ở CẢ HAI đầu một phiên: buildFocusTease
 │   │   │                     #   (trước — phiên này đẩy cái gì tới đâu) + buildGrowthMoment (sau —
 │   │   │                     #   thành phố vừa lớn lên thế nào). Chung một phép chọn công trường.

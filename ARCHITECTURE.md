@@ -204,6 +204,16 @@ NGẮM, không perk, không tài nguyên, không ảnh hưởng cân bằng. Hà
 không được ghi vào bảo tàng. **Toạ độ thành phố KHÔNG được lưu** — `src/engine/cityLayout.js` suy
 ra từ chính id công trình bằng băm tất định, xem ADR-007.
 
+**Bảng sưu tập "trọn vẹn kỷ" — một lớp GHÉP THÊM, không sửa lớp có sẵn (2026-08-13)**:
+`src/engine/cityCompletion.js` trả lời "kỷ này đã xây mấy trên mấy, còn thiếu cái nào", suy ra từ
+`BLUEPRINT_CATALOG` + danh sách công trình. ⚠️ Nó **không** được nhét vào `listVisitableEras`
+(`cityArchive.js`): hàm đó cố ý chỉ biết về BẢO TÀNG, tức quá khứ đã niêm phong, nên kỷ ĐANG chơi
+luôn có `built: []` ở đó. Nhét state sống vào là kéo một tầng biết-hiện-tại vào một tầng cố ý chỉ
+biết-quá-khứ. Thay vào đó `withEraCompletion(eras, { built, pending })` ghép ở NGOÀI, trong
+`CityView.jsx` — nơi đã sẵn có tri thức "kỷ hiện tại lấy state sống, kỷ cũ lấy ảnh chụp". Đây là
+"Composition over Duplication" áp cho tầng dữ liệu. Kết quả dùng chung cho cả thanh chuyển kỷ và
+khung màn hình, nên hai chỗ không thể nói hai con số khác nhau.
+
 **Luồng vẽ Thành Phố — bố cục TRỪU TƯỢNG tách khỏi cách vẽ (2026-08-12)**: một chiều, 3 chặng.
 (1) `CityView.jsx` chọn NGUỒN dữ liệu — kỷ hiện tại lấy state sống, kỷ đã niêm phong lấy ảnh chụp
 trong `cityArchive`; đây là chỗ dễ sai nhất cả màn hình. (2) `computeCityLayout` (engine thuần) trả

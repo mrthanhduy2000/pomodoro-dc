@@ -2,10 +2,29 @@
  * EraSwitcher.jsx — thanh chuyển giữa các kỷ trong bảo tàng.
  *
  * Ba trạng thái một nút có thể mang:
- *   • kỷ ĐANG chơi      → "Đang xây"
- *   • kỷ đã niêm phong  → số công trình đã lưu
+ *   • kỷ ĐANG chơi      → "3/5 · đang xây"
+ *   • kỷ đã niêm phong  → "3/5", hoặc "5/5 ★" nếu xây trọn vẹn
  *   • kỷ THẤT TRUYỀN    → thành phố đã đi qua trước khi bảo tàng được dựng (2026-08-12).
  *     Đây là trạng thái rỗng CÓ CHỦ Ý, không phải lỗi — xem `MIGRATION.md` schema 3→4.
+ *
+ * ⚠️ VÌ SAO PHẢI CÓ MẪU SỐ (2026-08-13): trước đây nút chỉ hiện số trần — "Kỷ 3 · 2". Hai trên
+ * mấy? Không ai biết, kể cả Đàm. Cả thanh này là một hàng số không đọc được, nên nó chỉ dùng để
+ * CHUYỂN kỷ chứ không nói được điều gì về những kỷ đã qua. Thêm mẫu số thì đúng thanh đó thành một
+ * bảng thành tích: liếc một cái là thấy kỷ nào mình làm trọn vẹn, kỷ nào bỏ dở — và vì kỷ cũ niêm
+ * phong VĨNH VIỄN (ADR-007), những con số đó không sửa được nữa.
+ *
+ * ⚠️ Ngôi sao dùng "★" (U+2605) chứ KHÔNG dùng emoji ⭐. Emoji được font màu của hệ điều hành vẽ,
+ * bề rộng lệch hẳn so với chữ và khác nhau giữa iPhone với Mac — thanh này cuộn ngang và có cả một
+ * cơ chế tự căn theo bề rộng nút (xem `align` bên dưới), nên một ký tự đổi cỡ tuỳ máy là đúng thứ
+ * làm phép căn đó sai. "★" là chữ thường, ăn theo đúng `font-size` và màu của nút.
+ *
+ * ⚠️ NGÔI SAO DÙNG `--accent`, KHÔNG DÙNG MÀU KỶ — đã ĐO, không phải đoán (2026-08-13). Bản đầu
+ * tô sao bằng `eraSolid(era)` cho hợp màu kỷ; đo tương phản trên nền thẻ của cả 8 tổ hợp
+ * theme × skin thì kỷ 9 (`#a3e635`, xanh chanh) chỉ đạt **1,49:1** và kỷ 3 (`#facc15`, vàng)
+ * 1,51:1 ở theme sáng — tức gần như tàng hình đúng chỗ đáng lẽ phải là phần thưởng. `--accent` đo
+ * được 2,97:1 (tệ nhất, skin sáng thứ hai) tới 7,43:1, tốt hơn gấp đôi ở ca xấu nhất.
+ * Cái dấu chấm tròn bên cạnh thì VẪN giữ màu kỷ, và đó không phải sự thiếu nhất quán: nó là trang
+ * trí thuần (số kỷ đã ghi ngay cạnh), còn ngôi sao thì mang thông tin.
  */
 
 import { useEffect, useRef } from 'react';
@@ -77,7 +96,10 @@ export default function EraSwitcher({ eras, viewingEra, onSelect }) {
     >
       {eras.map((era) => {
         const active = era.era === viewingEra;
-        const count = era.isCurrent ? null : era.built.length;
+        const done = era.completion?.done ?? 0;
+        const total = era.completion?.total ?? 0;
+        const complete = !!era.completion?.isComplete;
+        const score = total > 0 ? `${done}/${total}` : null;
 
         return (
           <button
@@ -88,7 +110,9 @@ export default function EraSwitcher({ eras, viewingEra, onSelect }) {
             aria-current={active ? 'true' : undefined}
             title={era.isLost
               ? `${era.label} — thành phố thất truyền`
-              : `${era.label}${era.sealedAt ? ` — niêm phong ${era.sealedAt}` : ''}`}
+              : `${era.label}${score ? ` — đã xây ${score} công trình` : ''}`
+                + (complete ? ' · trọn vẹn' : '')
+                + (era.sealedAt ? ` · niêm phong ${era.sealedAt}` : '')}
             className="shrink-0 rounded-full px-3 py-1.5 text-[11px] transition-colors"
             style={{
               background: active ? 'var(--accent)' : 'var(--card-bg-solid)',
@@ -106,9 +130,26 @@ export default function EraSwitcher({ eras, viewingEra, onSelect }) {
                 }}
               />
               <span>Kỷ {era.era}</span>
-              {era.isCurrent && <span style={{ opacity: 0.75 }}>· đang xây</span>}
-              {!era.isCurrent && !era.isLost && <span style={{ opacity: 0.75 }}>· {count}</span>}
-              {era.isLost && <span style={{ opacity: 0.75 }}>· thất truyền</span>}
+              {era.isLost
+                ? <span style={{ opacity: 0.75 }}>· thất truyền</span>
+                : (
+                  <>
+                    {score && <span className="mono" style={{ opacity: 0.75 }}>· {score}</span>}
+                    {/* Ngôi sao là phần thưởng duy nhất trong app KHÔNG lấy lại được nữa sau khi
+                        kỷ niêm phong — nên nó phải nổi hơn phần chữ quanh nó, kể cả trên nút đang
+                        được chọn (nền `--accent`, chữ trắng). */}
+                    {complete && (
+                      <span
+                        aria-label="trọn vẹn"
+                        title="Trọn vẹn — đã xây đủ mọi công trình của kỷ này"
+                        style={{ color: active ? '#fff' : 'var(--accent)', opacity: 1 }}
+                      >
+                        ★
+                      </span>
+                    )}
+                    {era.isCurrent && <span style={{ opacity: 0.75 }}>· đang xây</span>}
+                  </>
+                )}
             </span>
           </button>
         );

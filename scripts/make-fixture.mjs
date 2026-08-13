@@ -263,12 +263,21 @@ function playthrough(unlockedSkills) {
         nextNote: null, breakCompletedOnTime: rand() < 0.7, breakCompletedAt: finishedAt + 300000,
       });
 
-      // Xây công trình của kỷ hiện tại. ⚠️ CỐ Ý chừa lại ít nhất MỘT bản vẽ chưa xây
-      // (`length > 1`): thành phố xây kín 5/5 thì `craftingQueue` rỗng, và cả mảng "Đang xây" +
-      // giàn giáo 3D (Phase 3H/3I) — đúng phần game hoá Đàm quan tâm — sẽ không có gì để soi.
+      // Xây công trình của kỷ hiện tại.
+      //
+      // ⚠️ LẦN THỨ 12 CÔNG CỤ DEV NÓI DỐI (2026-08-13). Chỗ này từng là `notBuilt.length > 1` với
+      // lý do "chừa một bản vẽ chưa xây để còn `craftingQueue` mà soi giàn giáo". Ý định đúng,
+      // nhưng nó áp cho MỌI kỷ — kể cả kỷ đã niêm phong, nơi chẳng còn ai đang xây gì. Hệ quả:
+      // **không kỷ nào trong fixture có thể đạt 5/5**, và cả bảo tàng ra một dãy "4/5" giống hệt
+      // nhau. Một fixture đều tăm tắp thì không kiểm được thứ gì thay đổi theo kỷ — trạng thái
+      // "trọn vẹn" gần như không tồn tại để mà nhìn thấy, và một tính năng hỏng vẫn trông bình
+      // thường. Đúng bài học "một trade-off chỉ có thật khi cả hai vế đều đã đạt": ở đây vế thứ
+      // hai (giàn giáo) không hề cần cái giá đó, vì nó chỉ liên quan tới kỷ ĐANG chơi.
+      // ⇒ Nay cho kỷ xây kín thoải mái; việc chừa chỗ cho giàn giáo được xử lý MỘT LẦN ở cuối,
+      // đúng chỗ nó có nghĩa (xem "CHỪA CHỖ CHO GIÀN GIÁO" bên dưới).
       const catalog = BLUEPRINT_CATALOG[String(era)] ?? [];
       const notBuilt = catalog.filter((bp) => !buildings.includes(bp.id));
-      if (notBuilt.length > 1 && rand() < 0.16) {
+      if (notBuilt.length > 0 && rand() < 0.16) {
         const bp = notBuilt[Math.floor(rand() * notBuilt.length)];
         buildings = [...buildings, bp.id];
         buildingLevels = { ...buildingLevels, [bp.id]: 1 };
@@ -295,6 +304,19 @@ function playthrough(unlockedSkills) {
       }
     }
     if (dayHadSession) activeDays.push(localDateStr(new Date(dayStart)));
+  }
+
+  // ── CHỪA CHỖ CHO GIÀN GIÁO — một lần duy nhất, đúng chỗ nó có nghĩa ─────────────────────────
+  // Kỷ ĐANG chơi mà xây kín 5/5 thì `craftingQueue` rỗng, và cả mảng "Đang xây" + giàn giáo 3D
+  // (Phase 3H/3I) không có gì để soi. Nhả lại đúng MỘT công trình ở đây thay vì cấm mọi kỷ xây kín
+  // như bản cũ: kỷ đã niêm phong nay được phép trọn vẹn, nên bảo tàng có cả 4/5 lẫn 5/5 để nhìn.
+  const liveCatalog = BLUEPRINT_CATALOG[String(era)] ?? [];
+  if (liveCatalog.length > 0 && buildings.length >= liveCatalog.length) {
+    const dropped = buildings[buildings.length - 1];
+    buildings = buildings.slice(0, -1);
+    buildingLevels = Object.fromEntries(
+      Object.entries(buildingLevels).filter(([id]) => id !== dropped),
+    );
   }
 
   return {

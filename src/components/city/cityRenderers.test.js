@@ -247,3 +247,28 @@ test('LỚP NỀN TRANG CHỦ vẫn là NGƯỜI THUÊ của CityStage, không p
   assert.doesNotMatch(backdrop.source, /from\s+['"]three['"]/,
     'lớp nền không được import three — đó là việc của render3d/');
 });
+
+test('DẤU "TRỌN VẸN" KHÔNG ĐƯỢC TÔ BẰNG MÀU KỶ — đã đo, không phải sở thích', () => {
+  // ⚠️ Lỗi này KHÔNG có gì đỏ lên: code chạy đúng, build xanh, lint sạch — chỉ là ngôi sao gần như
+  // tàng hình ở theme sáng. Đo thật (2026-08-13) tương phản của `ERA_METADATA.accentColor` trên nền
+  // thẻ: kỷ 9 `#a3e635` = 1,49:1 và kỷ 3 `#facc15` = 1,51:1, trong khi `--accent` đạt 2,97–7,43:1
+  // qua cả 8 tổ hợp theme × skin. Phần thưởng mà không nhìn thấy thì không phải phần thưởng.
+  //
+  // Cám dỗ tái phạm rất cao: `eraSolid` đã có sẵn ngay trong hai file này (dùng cho chấm tròn, cho
+  // thanh tiến độ) nên đổi lại "cho hợp màu kỷ" chỉ mất một chữ. Bài test này là thứ duy nhất cản.
+  const targets = [
+    ['components/city/EraSwitcher.jsx',   /aria-label="trọn vẹn"[\s\S]{0,240}?>/],
+    ['components/city/CityViewShell.jsx', /isComplete\s*\?\s*'[^']+'\s*:/],
+  ];
+
+  for (const [path, region] of targets) {
+    const file = SOURCES.find((f) => f.path === path);
+    assert.ok(file, `không thấy ${path}`);
+    const match = codeOnly(file.source).match(region);
+    assert.ok(match, `${path}: không tìm thấy chỗ tô màu dấu "trọn vẹn" — đổi cấu trúc thì sửa cả bài test này`);
+    assert.doesNotMatch(match[0], /eraSolid/,
+      `${path}: dấu "trọn vẹn" đang tô bằng màu kỷ — kỷ 9/kỷ 3 chỉ đạt ~1,5:1 trên nền thẻ sáng`);
+    assert.match(match[0], /var\(--accent\)|#fff/,
+      `${path}: dấu "trọn vẹn" phải dùng var(--accent) (hoặc #fff trên nút đang chọn)`);
+  }
+});

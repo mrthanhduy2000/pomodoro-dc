@@ -475,9 +475,42 @@ test('MÁI NHÀ: 15 KỶ PHẢI RA 15 MÀU — đi hết 15 kỷ mà thành ph�
   // độ sáng) mà `eraRoof` khi đó nén độ sáng lại còn 0,22 lần. Nâng hệ số ⇒ còn **2 cặp**.
   // Cùng bài học với "duyệt đủ mọi cặp" ở `daylight.test.js`: đừng để một con số gộp đứng thay cho
   // cả phân bố.
-  assert.ok(close.length <= 2,
+  // ⚠️⚠️ ĐỌC KỸ TRƯỚC KHI TIN CON SỐ CỦA BÀI TEST NÀY (đo lại 2026-08-13, Phase 4C).
+  // Ngưỡng 12 ở trên là **ngưỡng mắt phân biệt được trên ĐIỂM ẢNH ĐÃ DỰNG**. Đem nó áp thẳng vào
+  // BẢNG MÀU là đúng cái lỗi "một luật hai công thức" — và lần này nó đã bị bắt quả tang bằng số:
+  //
+  //   cặp bài test NÀY kêu (bảng màu)   →  đo trên ảnh chụp thật
+  //     kỷ 8 ↔ 13   6,9                 →  19,3   (mắt thấy khác nhau rõ)
+  //     kỷ 6 ↔  7   9,9                 →  >20
+  //     kỷ 1 ↔ 14  11,9                 →  >20
+  //   cặp THẬT SỰ trùng trên màn hình   →  bài test này chấm bao nhiêu
+  //     kỷ 5 ↔ 12   7,2 ❌              →  19,3 — KHÔNG hề bị kêu
+  //     kỷ 3 ↔ 12  10,1 ❌              →  >20  — KHÔNG hề bị kêu
+  //     kỷ 5 ↔  7  11,1 ❌              →  17,5 — KHÔNG hề bị kêu
+  //
+  // Hai tập hợp **rời nhau hoàn toàn**. Nghĩa là ở tầng này, con số vừa BÁO NHẦM vừa BỎ SÓT — nó
+  // KHÔNG phải lời bảo đảm về thứ Đàm nhìn thấy, nó chỉ là dây bẫy chống sập bảng màu.
+  // ⇒ Cho phép 3 (thay vì 2) KHÔNG phải nới ngưỡng cho tiện: con số của TẦNG CÓ THẨM QUYỀN — ảnh
+  // chụp thật — đi từ **3/105 cặp dưới ngưỡng xuống 0/105**, cặp gần nhất 7,2 → 14,1. Muốn biết
+  // Đàm thật sự thấy gì thì chụp rồi đo, đừng đọc con số dưới đây:
+  //   node scripts/city-preview.mjs --sweep --theme light --eras 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
+  assert.ok(close.length <= 3,
     `có ${close.length} cặp kỷ ra mái gần như giống nhau (${close.join(' · ')}) — mỗi cặp như vậy là `
     + 'một lần Đàm xây xong cả một kỷ mà thành phố không cho anh thấy gì mới');
+
+  // ⚠️ ĐỔI LẠI CHO VIỆC NỚI SỐ ĐẾM Ở TRÊN: thêm một phép canh PHÂN BỐ, thứ bài này chưa từng có.
+  // Số đếm "bao nhiêu cặp dưới 12" chỉ nhìn cái đuôi; nó vẫn xanh khi cả 105 cặp cùng tụt xuống
+  // sát 12. Trung vị thì bắt được đúng kiểu sập từ từ ấy. Hàng rào 34 nằm DƯỚI giá trị đang chạy
+  // (46,2) và TRÊN hẳn giá trị của bản hỏng đã từng ship (bảng cũ dồn 15 góc màu vào hai cụm).
+  const sorted = [];
+  for (let i = 0; i < roofs.length; i += 1) {
+    for (let j = i + 1; j < roofs.length; j += 1) sorted.push(distance(roofs[i], roofs[j]));
+  }
+  sorted.sort((a, b) => a - b);
+  const median = sorted[Math.floor(sorted.length / 2)];
+  assert.ok(median >= 34,
+    `trung vị khoảng cách giữa 105 cặp mái tụt còn ${median.toFixed(1)} (cần ≥ 34) — cả bảng màu `
+    + 'đang co lại về một cụm, kiểu hỏng mà phép đếm "bao nhiêu cặp dưới 12" không bắt được');
   // Ngưỡng 6 nằm DƯỚI giá trị đang chạy (8,4) và TRÊN hẳn giá trị hỏng đã ship (0,0) — cùng
   // nguyên tắc "hàng rào phải nằm dưới giá trị hỏng thật" đã ghi ở bài test mặt đất ban đêm.
   assert.ok(worst >= 6,

@@ -12,6 +12,30 @@
 
 ---
 
+## 2026-08-13 — Quét lại 15 kỷ × 6 chặng: con số "0/105" trong tài liệu là số của vùng tối
+
+- **Mục đích**: quét lại đủ 90 cảnh để kiểm mọi thay đổi đồ hoạ gần đây. Bảng "màu mái đo được" in
+  ra gần như ĐEN ở giữa trưa — số đo gây bất ngờ thì kiểm công cụ trước.
+- **Lần thứ 13 công cụ dev nói dối**: bộ lọc "8% pixel tươi nhất" dùng độ tươi TƯƠNG ĐỐI
+  (`(max−min)/max`), mà mẫu số là `max` nên pixel càng tối càng dễ thắng ⇒ nó lấy **mặt mái khuất
+  trong bóng** chứ không lấy mái nắng. Con số "0/105 · gần nhất 12,6" đã ghi vào `CLAUDE.md` là số
+  của vùng tối, SAI. `--selftest` không bắt được vì nó chỉ hỏi "bỏ lọc thì số có tụt không" — một
+  phép tự kiểm chứng minh bộ lọc CÓ tác dụng, không chứng minh nó có tác dụng ĐÚNG.
+- **Sự thật**: 3/105 cặp kỷ dưới ngưỡng mắt (5↔12 = 7,2 · 3↔12 = 10,1 · 5↔7 = 11,1). Hai kỷ xám-lam
+  độ tươi thấp bị nắng ấm + ánh phản từ cỏ rửa trôi hết sắc lam, ra cùng một mảng olive.
+- **Phạm vi**: `src/engine/city3d/palette3d.js` (`eraRoof`: hệ số nền độ tươi 0,30 → 0,52 — chỉ
+  chạm 3/15 kỷ vì 12 kỷ kia đã chạm trần từ trước), `palette3d.test.js` (nới số đếm 2 → 3 kèm phép
+  canh PHÂN BỐ mới: trung vị ≥ 34), `CLAUDE.md`/`BAN_GIAO.md` (sửa con số sai).
+- **Kết quả**: 0/105 cặp dưới ngưỡng (thật) · cặp gần nhất 7,2 → **14,1** · trung vị 28,2 → **39,6**.
+  Chặng ngày giữ nguyên: 0/15 cặp dưới ngưỡng, gần nhất 29,5.
+- **Phát hiện sâu hơn**: bài test tầng bảng màu và phép đo trên ảnh kêu **hai tập cặp rời nhau hoàn
+  toàn** — tầng thuần vừa báo nhầm vừa bỏ sót. Ngưỡng 12 là ngưỡng mắt trên điểm ảnh đã dựng, áp
+  thẳng vào bảng màu là lỗi "một luật hai công thức".
+- **Tương thích**: chỉ đổi màu hiển thị, KHÔNG đụng state/schema/cân bằng game.
+- **Test**: 524 bài, xanh.
+
+---
+
 ## 2026-08-13 — Trọn vẹn kỷ: mỗi kỷ có 5 công trình, và giờ Đàm nhìn thấy con số 5 đó
 
 - **Mục đích**: mỗi kỷ có đúng 5 bản vẽ, nhưng cả app không chỗ nào nói ra con số ấy. Màn hình

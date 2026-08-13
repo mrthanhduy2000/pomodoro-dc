@@ -266,9 +266,22 @@ export function buildScenePalette({ tokens, eraColor, daylight } = {}) {
    * hai cụm. Trần độ tươi 0,62 giữ đúng hướng mỹ thuật trầm (Townscaper), không cho mái nhựa dẻo.
    */
   const eraRoof = (sat, light) => {
-    // Độ tươi: 30% của vai màu + 70% kéo theo độ tươi của sắc kỷ. Kẹp hai đầu để kỷ nhợt nhất vẫn
-    // còn là một màu (không thành xám chì) và kỷ rực nhất vẫn là ngói (không thành nhựa).
-    const base = Math.min(0.62, Math.max(0.14, sat * 0.30 + sat * 0.70 * 2 * eraHsl.s));
+    // Độ tươi: một phần của vai màu + phần còn lại kéo theo độ tươi của sắc kỷ. Kẹp hai đầu để kỷ
+    // nhợt nhất vẫn còn là một màu (không thành xám chì) và kỷ rực nhất vẫn là ngói (không nhựa).
+    //
+    // ⚠️ HỆ SỐ NỀN 0,52 CHỨ KHÔNG PHẢI 0,30 — sửa 2026-08-13 sau khi đo trên ẢNH CHỤP THẬT, không
+    // phải trên bảng màu. Với 0,30 thì **13/15 kỷ đã chạm trần 0,62 rồi**, tức chính cái trần mới
+    // là thứ quyết định độ tươi của chúng; chỉ đúng hai kỷ xám-lam (kỷ 5 `#94a3b8` s=0,20 và kỷ 12
+    // `#64748b` s=0,16) rơi xuống 0,29/0,26 — và ĐÓ mới là vấn đề. Bảng màu thì hai kỷ ấy vẫn cách
+    // nhau đủ xa, nhưng trên màn hình giữa trưa, một mái lam nhợt bị nắng ấm + ánh phản từ cỏ rửa
+    // trôi hết phần lam và ra **cùng một mảng olive**: đo được kỷ 5 `#5d6545` ↔ kỷ 12 `#6b714d`,
+    // cách nhau **7,2/255** — dưới hẳn ngưỡng mắt (~12). Nâng nền lên 0,52 thì hai kỷ ấy lên
+    // 0,40/0,37, đủ chroma để sắc lam sống sót qua tầng ánh sáng.
+    // ⚠️ ĐÂY KHÔNG PHẢI NỚI HẰNG SỐ CHO VỪA Ý: nó chỉ chạm tới **3/15 kỷ** (5, 12, và 14 nhích từ
+    // 0,601 lên đúng cùng trần với 12 kỷ kia). Mười hai kỷ còn lại ra số y hệt trước, vì chúng đã
+    // bị trần kẹp từ trước. Tức là thay đổi này KHÔNG làm cả thành phố tươi hơn — nó chỉ kéo hai
+    // kỷ bị bỏ rơi ở đáy lên ngang hàng.
+    const base = Math.min(0.62, Math.max(0.14, sat * 0.52 + sat * 0.70 * 2 * eraHsl.s));
     // Độ đậm: nhích theo độ sáng của sắc kỷ quanh mốc 0,6 (mốc trung bình của bảng `ERA_METADATA`).
     // ⚠️ HỆ SỐ 0,55 CHỨ KHÔNG PHẢI 0,22 — sửa 2026-08-13 sau khi duyệt đủ 105 CẶP kỷ.
     // Bảng `ERA_METADATA` có hai kỷ dùng gần như cùng một sắc: kỷ 5 `#94a3b8` và kỷ 12 `#64748b`

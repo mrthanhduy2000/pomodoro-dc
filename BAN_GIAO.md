@@ -126,6 +126,40 @@
 ## 🗒️ Nhật ký cập nhật
 > Mỗi lần xong việc đáng kể, thêm 1 dòng vào ĐẦU danh sách.
 
+- **2026-08-13 (Phase 4C — thành phố)** — **QUÉT LẠI 15 KỶ × 6 CHẶNG, VÀ CON SỐ "0/105" TRONG TÀI
+  LIỆU HOÁ RA LÀ SỐ CỦA VÙNG TỐI.** **524 bài test.**
+  - **Bối cảnh**: quét lại đủ 15 kỷ × 6 chặng để kiểm mọi thay đổi đồ hoạ gần đây. Chặng ngày vẫn
+    khoẻ (cặp gần nhất 8h ↔ 12h = 29,5/255, 0/15 cặp dưới ngưỡng). Nhưng bảng "màu mái đo được"
+    in ra **`#010e0a`, `#05041a`… gần như ĐEN ở giữa TRƯA** — một con số gây bất ngờ, mà luật của
+    dự án là *số đo nào gây bất ngờ thì kiểm CÔNG CỤ trước*.
+  - ⚠️ **LẦN THỨ 13 CÔNG CỤ DEV NÓI DỐI — và nó nằm ngay trong bản vá của lần thứ 11.** Bộ lọc
+    "8% pixel tươi nhất" dùng `sat = (max−min)/max` — độ tươi TƯƠNG ĐỐI, mẫu số là `max`, nên pixel
+    càng TỐI càng dễ thắng (`#010e0a` ra sat 0,93). Bộ lọc "lấy mái" thật ra lấy **mặt mái khuất
+    trong bóng**. ⇒ Con số **"0/105 · gần nhất 12,6 · trung vị 28,2"** đã ghi vào `CLAUDE.md` là số
+    của VÙNG TỐI, **SAI**. Đã sửa lại tài liệu.
+  - ⚠️ **VÌ SAO `--selftest` KHÔNG BẮT ĐƯỢC** (bài học đáng giữ hơn con số): phép tự kiểm chỉ hỏi
+    "bỏ bộ lọc thì số có tụt không". Số CÓ tụt nên nó xanh. **Một phép tự kiểm chứng minh bộ lọc CÓ
+    tác dụng, không chứng minh nó có tác dụng ĐÚNG.** Bản mới in kèm **độ sáng** của màu đo được —
+    15 con số quanh 20–60 giữa trưa là báo động không thể lướt qua.
+  - **Sự thật sau khi đo đúng (chroma tuyệt đối `max−min`)**: **3/105 cặp dưới ngưỡng mắt** —
+    kỷ 5↔12 = 7,2 · kỷ 3↔12 = 10,1 · kỷ 5↔7 = 11,1. Nguyên nhân: kỷ 5 (`#94a3b8`) và kỷ 12
+    (`#64748b`) là hai kỷ xám-lam độ tươi rất thấp (s = 0,20 và 0,16); giữa trưa, nắng ấm + ánh
+    phản từ cỏ **rửa trôi hết phần lam** và cả hai ra cùng một mảng olive.
+  - **Sửa**: nâng hệ số nền độ tươi mái `0,30 → 0,52` trong `eraRoof` (`palette3d.js`). ⚠️ Đây
+    KHÔNG phải nới hằng số cho vừa ý: **13/15 kỷ đã chạm trần 0,62 từ trước**, nên thay đổi này chỉ
+    chạm tới đúng 3 kỷ (5, 12, và 14 nhích lên đúng cùng trần với 12 kỷ kia). Thành phố KHÔNG tươi
+    hơn — chỉ hai kỷ bị bỏ rơi ở đáy được kéo lên ngang hàng.
+  - **Kết quả đo lại trên ảnh chụp thật**: **0/105 cặp dưới ngưỡng** · cặp gần nhất 7,2 → **14,1** ·
+    trung vị 28,2 → **39,6**. Cả 90 ô của bản quét phân biệt được.
+  - ⚠️ **PHÁT HIỆN SÂU HƠN — hai tầng đo kêu HAI TẬP CẶP RỜI NHAU HOÀN TOÀN.** `palette3d.test.js`
+    kêu kỷ 8↔13 · 6↔7 · 1↔14; đo trên ảnh thì cả ba đều **≥19** (mắt thấy khác rõ). Ngược lại ba
+    cặp thật sự trùng trên màn hình thì bài test **không hề kêu**. Tức con số ở tầng bảng màu vừa
+    BÁO NHẦM vừa BỎ SÓT. Ngưỡng 12 vốn là ngưỡng mắt trên ĐIỂM ẢNH ĐÃ DỰNG — đem áp thẳng vào bảng
+    màu chính là lỗi "một luật hai công thức". Đã ghi rõ vào bài test + `CLAUDE.md`.
+  - **Đổi lại cho việc nới số đếm 2 → 3 ở bài test tầng thuần**: thêm một phép canh **PHÂN BỐ**
+    (trung vị ≥ 34, đang chạy 46,2) — thứ bài đó chưa từng có. Phép đếm đuôi vẫn xanh khi cả 105
+    cặp cùng tụt sát ngưỡng; trung vị thì bắt được kiểu sập từ từ ấy. Đã thử ngược và thấy đỏ.
+
 - **2026-08-13 (Phase 4B — thành phố)** — **TRỌN VẸN KỶ: mỗi kỷ có 5 công trình, và giờ Đàm nhìn
   thấy con số 5 đó.** Đây là phần "game hoá" + "UX/UI" của lệnh `/goal`. **524 bài test.**
   - **Vấn đề**: mỗi kỷ có đúng 5 bản vẽ (2 common + 2 rare + 1 epic, đều 15/15 kỷ), nhưng **cả app

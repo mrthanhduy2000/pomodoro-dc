@@ -13,9 +13,9 @@
 > mà không được refactor triệt để, phải CHỦ ĐỘNG đề xuất mở một "Maintenance Sprint" (nêu rõ mục
 > tiêu/phạm vi/lợi ích/rủi ro/tiêu chí hoàn thành) thay vì tiếp tục cộng thêm tính năng mới.
 >
-> **Trạng thái ngưỡng hiện tại (2026-08-13, cập nhật sau Phase 3X)**: **1 mục Priority High** (#14)
-> → vẫn CHƯA đạt ngưỡng 8–10 mục để đề xuất Maintenance Sprint. Còn **2 mục Medium-High** (#3, #13)
-> — #15 và #16 đều đã đóng.
+> **Trạng thái ngưỡng hiện tại (2026-08-13, cập nhật sau khi thêm #17)**: **1 mục Priority High**
+> (#14) → vẫn CHƯA đạt ngưỡng 8–10 mục để đề xuất Maintenance Sprint. Còn **2 mục Medium-High**
+> (#3, #13) và **1 mục Medium chờ Đàm chọn hướng mỹ thuật** (#17) — #15 và #16 đều đã đóng.
 > ⚠️ **CÒN MỘT mục đang CHỜ ĐÀM QUYẾT, không phải chờ AI làm**: #14 (95% phiên im lặng — cân bằng
 > game). Review Trigger của nó chặn các khoản đầu tư kế tiếp vào lễ mừng, nên **để lâu thì mọi phase
 > lễ mừng sau đều lãi thấp một cách có hệ thống**. Đây là chỗ đáng hỏi Đàm trước khi làm thêm.
@@ -284,6 +284,57 @@
 - **Review Trigger**: khi làm backup/recovery, hoặc khi thấy lỗi lưu state trong log production.
 - **Owner**: (chưa gán)
 - **Status**: Open — phát hiện trong lúc phân tích bản vá C1 (2026-07-17), chưa xử lý.
+
+---
+
+## #17 — Chặng CHIỀU (14–16h) là chặng xấu nhất trong ngày, và nó trùng đúng giờ Đàm hay làm việc
+
+- **Module**: `src/engine/city3d/daylight.js` — `DAYLIGHT_PROFILES.afternoon`
+  (`horizonHue: 34, horizonPull: 0.60, skySaturation: 1.05`).
+- **Priority**: Medium
+- **Severity**: Medium (thuần mỹ thuật, không ảnh hưởng dữ liệu/hiệu năng)
+- **Impact — ĐO TRÊN BẢN QUÉT ĐỦ 15 KỶ × 6 CHẶNG** (2026-08-13, `sweepstats.mjs`, trung bình 15 kỷ,
+  vùng trời 8–22% khung hình):
+
+  | chặng | màu trời | góc màu | độ tươi | độ sáng ĐẤT |
+  |---|---|---|---|---|
+  | 6h bình minh | `#775e40` | 33° | 0,30 | 14 |
+  | 8h sáng | `#648287` | **189°** | 0,15 | 21 |
+  | 12h trưa | `#768c99` | **202°** | 0,15 | 31 |
+  | **15h chiều** | **`#8f7f56`** | **43°** | 0,25 | 20 |
+  | 18h hoàng hôn | `#78563e` | 25° | 0,32 | 15 |
+  | 22h đêm | `#121f32` | 216° | 0,47 | 8 |
+
+  Ba chặng ẤM — bình minh 33°, **chiều 43°**, hoàng hôn 25° — nằm gọn trong **20° góc màu**. Tức
+  một nửa số chặng trong ngày rơi vào CÙNG MỘT HỌ MÀU, chỉ khác độ sáng. Sáu chặng nhưng mắt chỉ
+  đọc ra ba cảnh: ấm, xanh, lam đêm.
+- **Root Cause**: chú thích đầu `daylight.js` tuyên bố ý đồ *"chiều vàng"*. Nhưng "vàng" ở độ tươi
+  **0,25** trên nền độ sáng 0,45 thì ra `#8f7f56` — **kaki đục**, không phải vàng; chính chặng
+  hoàng hôn còn tươi hơn (0,32). Và về vật lý thì 14–16h ở Việt Nam trời VẪN XANH; cái ấm lên là
+  ÁNH SÁNG chiếu vào vật, không phải bầu trời. Mà vế ánh sáng thì hồ sơ này ĐÃ có sẵn
+  (`sunWarmth: 0.55`, `sunAltitude: 0.48` — nắng thấp và ấm). Tức bầu trời đang làm lại lần thứ hai
+  một việc đã được làm đúng chỗ khác.
+- **Current Risk**: thấp về kỹ thuật; nhưng đây là khung giờ làm việc chính, nên là cảnh Đàm nhìn
+  NHIỀU NHẤT trong sáu chặng.
+- **Future Risk**: mọi đợt đầu tư mỹ thuật sau vào thành phố đều bị chiết khấu ở chặng này.
+- **Recommended Solution** — ⚠️ **CÓ HAI HƯỚNG THẬT SỰ KHÁC NHAU, CẦN ĐÀM CHỌN, KHÔNG PHẢI VIỆC AI
+  TỰ QUYẾT** (đây là hướng mỹ thuật, không phải lỗi đúng/sai):
+  - **(a) Chiều VẪN XANH, chỉ nhạt và hơi mù hơn trưa** — `horizonHue` 34° → ~200° (nhớ trừ hao
+    −15° theo ghi chú đã có), `horizonPull` ~0,58, `skySaturation` lên ~1,18. Được: sáu chặng ra
+    sáu cảnh; đúng thực tế 14–16h; cái ấm vẫn còn nguyên ở ÁNH SÁNG chiếu lên tường/mái. Mất: bớt
+    một mảng ấm trong ngày.
+  - **(b) Chiều VÀNG THẬT, đúng như chú thích đã hứa** — giữ 34° nhưng nâng độ tươi hẳn lên (`pull`
+    ~0,75, `skySaturation` ~1,25) để ra vàng chứ không ra kaki. Được: giữ ý đồ cũ. Mất: chiều và
+    hoàng hôn vẫn chung một họ màu — vấn đề "sáu chặng, ba cảnh" chỉ đỡ chứ không hết.
+  - Cả hai đều KHÔNG phá bài test 81 (`daylight.test.js`) vì độ trải ban ngày vẫn ≥90°; nhưng
+    hướng (a) nên kèm một bất biến MỚI: *ba chặng ẤM không được nằm trong cùng 30°* — chính là thứ
+    bài test hiện tại không bắt được.
+- **Estimated Complexity**: Thấp (vài con số + 1 bài test mới). Chi phí thật nằm ở việc chụp lại
+  bản quét 15 × 6 và đo lại.
+- **Blocking Conditions**: **CHỜ ĐÀM CHỌN (a) hay (b)** — đây là hướng mỹ thuật.
+- **Review Trigger**: lần tới có bất kỳ đợt vá mỹ thuật nào cho thành phố.
+- **Owner**: (chưa gán)
+- **Status**: Open — phát hiện 2026-08-13 khi chạy bản quét đủ 15 kỷ × 6 chặng theo yêu cầu của Đàm.
 
 ---
 

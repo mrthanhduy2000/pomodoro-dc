@@ -58,6 +58,17 @@
  * ⚠️ `--end` mặc định là một ngày CỐ ĐỊNH (để tất định). Chuỗi ngày chỉ còn sống nếu `--end` là
  * hôm nay: khi nạp, store chạy `refreshStreakIfExpired` và cắt chuỗi nếu `lastActiveDate` đã cũ.
  * Muốn soi giao diện chuỗi ngày thì sinh lại với `--end <hôm nay>`.
+ *
+ * ⚠️ BA GIỚI HẠN ĐÃ BIẾT — ghi ra để phiên sau đừng tưởng là lỗi app:
+ *   1. **Phiên của NGÀY CUỐI rải từ ~8h tới ~21h.** Chụp bằng `shot.mjs --hour 12` thì những phiên
+ *      sau 12h nằm ở TƯƠNG LAI so với đồng hồ giả ⇒ dòng "hôm nay vẫn là 0 phiên" ở trang chủ là
+ *      ĐÚNG với dữ liệu, không phải lỗi đếm. Muốn soi màn hình "đã làm mấy phiên hôm nay" thì chụp
+ *      với `--hour 21` trở lên, hoặc bỏ `--hour`.
+ *   2. **Không gieo `missions`** ⇒ thẻ "Nhiệm vụ ngày" hiện `0/0`. Nhiệm vụ do store tự sinh theo
+ *      ngày, không thuộc phạm vi một fixture soi giao diện.
+ *   3. **`goalAchieved: null`** ở mọi phiên ⇒ mảng "Đạt mục tiêu" hiện `0%` trên `0/0`. Đây đúng là
+ *      thứ `completeFocusSession` ghi khi phiên không có mục tiêu, nên là dữ liệu THẬT chứ không
+ *      phải thiếu sót — nhưng nhớ điều đó trước khi báo cáo một "lỗi thống kê".
  */
 import { writeFileSync } from 'node:fs';
 import {

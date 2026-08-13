@@ -5,6 +5,7 @@ import {
   DAYLIGHT_PROFILES,
   DAY_PHASES,
   deriveDaylight,
+  fogRangeFor,
   phaseForHour,
   sunDirectionAt,
 } from './daylight.js';
@@ -29,6 +30,7 @@ test('mọi chặng đều khai đủ trường — thiếu một trường là 
   const needed = [
     'sunAltitude', 'sunWarmth', 'sunEnergy', 'fillEnergy',
     'skyHue', 'skyPull', 'horizonHue', 'horizonPull', 'skySaturation', 'windowsLit', 'lampEnergy',
+    'haze',
   ];
   for (const phase of DAY_PHASES) {
     const profile = DAYLIGHT_PROFILES[phase];
@@ -134,9 +136,17 @@ test('bầu trời bị KÉO VỀ MỘT ĐÍCH, không phải cộng thêm N đ�
   // Đêm phải kéo về LAM SÂU (200–260°), không phải lục lam (<200°) và không phải tím (>270°).
   const night = DAYLIGHT_PROFILES.night;
   assert.ok(night.skyHue > 200 && night.skyHue < 260, `trời đêm ở góc màu ${night.skyHue}° — không phải lam sâu`);
-  // Bình minh và hoàng hôn phải kéo CHÂN TRỜI về vùng ẤM (cam/vàng), tức góc màu nhỏ.
-  assert.ok(DAYLIGHT_PROFILES.dawn.horizonHue < 60, 'bình minh phải kéo chân trời về sắc ấm');
-  assert.ok(DAYLIGHT_PROFILES.dusk.horizonHue < 60, 'hoàng hôn phải kéo chân trời về sắc ấm');
+  // Bình minh và hoàng hôn phải kéo CHÂN TRỜI về vùng ẤM.
+  // ⚠️ "ẤM" LÀ MỘT CUNG TRÒN, KHÔNG PHẢI MỘT KHOẢNG SỐ. Bản cũ viết `< 60` — nghe thì gọn, nhưng
+  // vòng màu quấn vòng: 330° (hồng phấn) ấm y như 30° (cam), chỉ là nằm bên kia mốc 0. Điều kiện
+  // `< 60` vì thế NHỐT cả bình minh lẫn hoàng hôn vào chung một múi 60° hẹp — và đó chính là thứ
+  // ép hai chặng phải giống nhau (xem `TECH_DEBT.md` #17). Ngay trong file này, bài "hành trình
+  // màu" ở dưới đã có sẵn hàm `warm()` biết quấn vòng; hai chỗ cùng phát biểu MỘT luật mà bằng hai
+  // công thức khác nhau thì bản chặt hơn sẽ âm thầm thắng. Nay dùng chung một định nghĩa.
+  // ⚠️ Và nhớ trừ hao đầu vào ≠ đầu ra: đặt 312° thì đo trên ảnh ra **351°** — sắc hồng-đỏ, ấm rõ.
+  const warmArc = (h) => h < 90 || h >= 300;
+  assert.ok(warmArc(DAYLIGHT_PROFILES.dawn.horizonHue), 'bình minh phải kéo chân trời về sắc ấm');
+  assert.ok(warmArc(DAYLIGHT_PROFILES.dusk.horizonHue), 'hoàng hôn phải kéo chân trời về sắc ấm');
 });
 
 test('ĐỈNH trời luôn lạnh · BÌNH MINH và HOÀNG HÔN luôn ấm · và MỘT NGÀY PHẢI LÀ HÀNH TRÌNH MÀU', () => {
@@ -193,6 +203,130 @@ test('ĐỈNH trời luôn lạnh · BÌNH MINH và HOÀNG HÔN luôn ấm · v�
       `chặng "${DAY_PHASES[i - 1]}" và "${DAY_PHASES[i]}" có chân trời gần như y hệt `
       + `(${a.horizonHue}°/${a.horizonPull} vs ${b.horizonHue}°/${b.horizonPull}) — hai chặng liền `
       + 'nhau mà không phân biệt được thì thực chất chỉ là một chặng.');
+  }
+});
+
+/**
+ * Khoảng cách giữa hai hồ sơ ánh sáng, tính trên TOÀN BỘ tham số cùng lúc.
+ *
+ * Mỗi trục chia cho khoảng biến thiên thật của nó để không trục nào át trục nào (`fillEnergy` chạy
+ * từ 0,8 tới 2,6 còn `skyPull` chỉ từ 0 tới 1 — không chuẩn hoá thì đèn nền một mình quyết định
+ * tất cả). Hai góc màu tính theo CUNG TRÒN, vì 350° và 10° cách nhau 20° chứ không phải 340°.
+ */
+const PROFILE_AXES = [
+  ['sunAltitude', 1], ['sunWarmth', 2], ['sunEnergy', 1.5], ['fillEnergy', 2.6],
+  ['skyPull', 1], ['horizonPull', 1], ['skySaturation', 1], ['lampEnergy', 1], ['haze', 1],
+];
+function profileDistance(a, b) {
+  const arc = (x, y) => { const d = Math.abs(x - y) % 360; return d > 180 ? 360 - d : d; };
+  let sum = 0;
+  for (const [key, span] of PROFILE_AXES) sum += ((a[key] - b[key]) / span) ** 2;
+  for (const key of ['skyHue', 'horizonHue']) sum += (arc(a[key], b[key]) / 180) ** 2;
+  return Math.sqrt(sum);
+}
+
+/**
+ * Ngưỡng "hai chặng còn phân biệt được". KHÔNG phải con số nhặt đại — nó được HIỆU CHUẨN với phép
+ * đo pixel trên bản quét thật 15 kỷ × 6 chặng ngày 2026-08-13 (xem `TECH_DEBT.md` #17):
+ *
+ *     khoảng cách hồ sơ   0,31  ↔  ảnh thật   5,9/255   (bộ số HỎNG cũ: bình minh ≡ hoàng hôn)
+ *     khoảng cách hồ sơ   0,52  ↔  ảnh thật  29,8/255   (cặp gần nhất của bộ số hiện tại)
+ *     khoảng cách hồ sơ   1,28  ↔  ảnh thật  75,1/255   (bình minh ↔ hoàng hôn sau khi sửa)
+ *
+ * Xếp hạng 15 cặp theo thang thuần số này và theo thang pixel cho hệ số Spearman **0,854** — tức
+ * thang thuần số nói gần đúng thứ mắt thấy, đủ để làm hàng rào. Nội suy hai mốc đầu thì ngưỡng mắt
+ * phân biệt được (~12/255) rơi vào khoảng hồ sơ **0,36**. Chọn 0,40: trên mức bộ hỏng cũ (0,31),
+ * trên cả mức mắt-phân-biệt (0,36), mà vẫn dưới cặp gần nhất hiện tại (0,52) một quãng an toàn.
+ */
+const MIN_PROFILE_DISTANCE = 0.40;
+
+test('KHÔNG CÓ HAI CHẶNG NÀO LÀ CÙNG MỘT BỨC ẢNH — duyệt ĐỦ MỌI CẶP, không chỉ cặp kề nhau', () => {
+  // ⚠️ BÀI NÀY SINH RA TỪ MỘT LỖI ĐÃ CHẠY TRÊN MÁY ĐÀM NHIỀU NGÀY, và điều đáng học không phải là
+  // lỗi mà là VÌ SAO CẢ MỘT FILE TEST DÀY THẾ NÀY VẪN ĐỂ LỌT.
+  // Bài "hai chặng LIỀN NHAU không được giống nhau" ở trên duyệt `for (i = 1; i < DAY_PHASES.length)`
+  // — tức chỉ các cặp KỀ NHAU: dawn↔morning, morning↔noon, …, dusk↔night. `dawn` và `dusk` nằm ở
+  // hai đầu danh sách nên KHÔNG BAO GIỜ được đem so với nhau. Chúng giống hệt nhau (đo được 5,9/255
+  // trong khi ngưỡng mắt là ~12) suốt thời gian đó mà mọi bài test đều xanh.
+  // Đây là lần thứ HAI đúng cái bẫy này xuất hiện trong CHÍNH file này (lần trước: bài "hành trình
+  // màu" tính cả `night` nên bộ số hỏng vẫn qua — xem ghi chú "bỏ đêm ra"). Cùng một hình dạng sai:
+  // **một điều kiện chỉ soát MỘT PHẦN không gian thì là cái phễu, không phải hàng rào.**
+  // ⇒ Luật rút ra và nay đã cắm thành mã: bất biến kiểu "các thứ này phải khác nhau" thì phải duyệt
+  // TỔ HỢP ĐÔI, không được duyệt danh sách theo thứ tự.
+  const worst = { pair: null, d: Infinity };
+  for (let i = 0; i < DAY_PHASES.length; i += 1) {
+    for (let j = i + 1; j < DAY_PHASES.length; j += 1) {
+      const d = profileDistance(DAYLIGHT_PROFILES[DAY_PHASES[i]], DAYLIGHT_PROFILES[DAY_PHASES[j]]);
+      if (d < worst.d) { worst.d = d; worst.pair = `${DAY_PHASES[i]}↔${DAY_PHASES[j]}`; }
+    }
+  }
+  assert.ok(worst.d >= MIN_PROFILE_DISTANCE,
+    `cặp "${worst.pair}" chỉ cách nhau ${worst.d.toFixed(2)} (cần ≥ ${MIN_PROFILE_DISTANCE}) — hai chặng `
+    + 'trong ngày đang là cùng một bức ảnh. Mở app lúc này hay lúc kia cũng vậy, và đó chính là '
+    + '"chán" ở dạng đo được. Xem TECH_DEBT.md #17.');
+});
+
+test('PHÉP ĐO NÀY PHẢI CÒN BẮT ĐƯỢC ĐÚNG CÁI LỖI ĐÃ SINH RA NÓ', () => {
+  // ⚠️ MỘT BÀI TEST CHƯA TỪNG THẤY ĐỎ THÌ KHÔNG PHẢI LÀ BÀI TEST. Bài ngay trên xanh — nhưng nó
+  // xanh vì bộ số đã đúng, hay vì phép đo quá dễ dãi? Không có cách nào biết, trừ khi cho nó ăn lại
+  // đúng bộ số hỏng ngày xưa. Nên bộ số ấy được giữ nguyên xi ở đây làm mẫu đối chứng vĩnh viễn.
+  // Nhờ vậy, nếu về sau ai nới ngưỡng hoặc bỏ bớt trục cho "tiện", bài này đỏ NGAY — cái phễu
+  // không thể lặng lẽ quay lại lần thứ ba.
+  const brokenDawn = { sunAltitude: 0.22, sunWarmth: 0.85, sunEnergy: 0.72, fillEnergy: 0.95, skyHue: 232, skyPull: 0.42, horizonHue: 18, horizonPull: 0.70, skySaturation: 1.15, lampEnergy: 0.35, haze: 0 };
+  const brokenDusk = { sunAltitude: 0.18, sunWarmth: 1.00, sunEnergy: 0.78, fillEnergy: 1.05, skyHue: 238, skyPull: 0.46, horizonHue: 10, horizonPull: 0.78, skySaturation: 1.25, lampEnergy: 0.60, haze: 0 };
+
+  const d = profileDistance(brokenDawn, brokenDusk);
+  assert.ok(d < MIN_PROFILE_DISTANCE,
+    `bộ số hỏng cũ đo được ${d.toFixed(2)} — LỌT qua ngưỡng ${MIN_PROFILE_DISTANCE}. Phép đo đã bị nới `
+    + 'tay tới mức không còn bắt nổi chính cái lỗi nó sinh ra để bắt (ảnh thật của cặp đó cách nhau '
+    + '5,9/255, tức mắt thường nhìn ra CÙNG MỘT BỨC ẢNH).');
+
+  // Và bộ số hiện tại phải bỏ xa bộ hỏng — không chỉ "vừa đủ qua ngưỡng".
+  const fixed = profileDistance(DAYLIGHT_PROFILES.dawn, DAYLIGHT_PROFILES.dusk);
+  assert.ok(fixed > d * 2.5,
+    `bình minh↔hoàng hôn nay chỉ ${fixed.toFixed(2)} so với ${d.toFixed(2)} của bộ hỏng — chưa đủ xa`);
+});
+
+test('SƯƠNG SỚM: bình minh phải là chặng nhiều sương nhất, và sương phải phủ vào ĐÚNG phần xa', () => {
+  // Vì sao sương lại quan trọng tới mức có bài test riêng: nó là thứ DUY NHẤT tách được bình minh
+  // khỏi hoàng hôn ở dải THÀNH PHỐ. Màu nắng hai buổi buộc phải giống nhau (mặt trời thấp ⇒ ánh
+  // sáng ấm, ở cả hai đầu ngày — vật lý), nên đổi màu trời chỉ đổi được tấm phông phía sau: đo ra
+  // dải thành phố vẫn cách nhau vỏn vẹn 8,7/255. Sương lấy MÀU CHÂN TRỜI nên nó quét sắc của buổi
+  // sớm lên chính các công trình ở xa — sau khi thêm, cả cảnh nhảy từ 18,0 lên 75,1/255.
+  assert.ok(DAYLIGHT_PROFILES.dawn.haze > DAYLIGHT_PROFILES.dusk.haze * 3,
+    'bình minh phải nhiều sương hơn hẳn hoàng hôn — qua một đêm hơi nước mới đọng lại sát mặt đất');
+  assert.ok(DAYLIGHT_PROFILES.noon.haze < 0.2, 'giữa trưa mà mù mịt thì không còn ra giữa trưa');
+
+  // ⚠️ CẬN TRÊN CỦA SƯƠNG, và nó có một ảnh chụp thất bại đứng sau. Bản đầu của `sceneGraph.js` để
+  // sương bắt đầu ở `gridSize * 1.05` trong khi camera đứng cách `gridSize * 1.83` — sương phủ gần
+  // hết thành phố, ra một màn trắng đục. Bài này khoá lại: dù `haze` = 1 thì sương vẫn phải bắt đầu
+  // SAU rìa thành phố (bán kính ~0,71 × lưới), chừa phần gần sắc nét.
+  const grid = 12;
+  for (const phase of DAY_PHASES) {
+    const { near, far } = fogRangeFor(DAYLIGHT_PROFILES[phase].haze, grid);
+    assert.ok(near > grid * 0.85, `chặng "${phase}" có sương tràn vào giữa thành phố (bắt đầu ở ${near})`);
+    assert.ok(far > near, `chặng "${phase}" có sương tan trước khi kịp bắt đầu`);
+  }
+  const dense = fogRangeFor(1, grid);
+  assert.ok(dense.near > grid * 0.85, 'sương dày nhất vẫn phải bắt đầu sau rìa thành phố');
+});
+
+test('fogRangeFor: đầu vào rác không được biến thành phố thành màn trắng hay thành NaN', () => {
+  for (const bad of [undefined, null, NaN, -5, 99, 'dày', {}]) {
+    const { near, far } = fogRangeFor(bad, 12);
+    assert.ok(Number.isFinite(near) && Number.isFinite(far), `haze ${bad} cho ra NaN`);
+    assert.ok(near > 0 && far > near, `haze ${bad} cho ra khoảng sương vô nghĩa`);
+  }
+  // Lưới rác cũng phải ra một khoảng dùng được — cảnh 3D không được vỡ vì một con số hỏng.
+  for (const bad of [undefined, 0, -3, NaN]) {
+    const { near, far } = fogRangeFor(0.5, bad);
+    assert.ok(near > 0 && far > near, `gridSize ${bad} cho ra khoảng sương vô nghĩa`);
+  }
+  // Càng nhiều sương thì màn sương càng lại gần — đơn điệu, không đảo chiều giữa chừng.
+  let prev = Infinity;
+  for (const h of [0, 0.25, 0.5, 0.75, 1]) {
+    const { near } = fogRangeFor(h, 12);
+    assert.ok(near < prev, `sương dày lên mà màn sương lại lùi ra xa (haze ${h})`);
+    prev = near;
   }
 });
 

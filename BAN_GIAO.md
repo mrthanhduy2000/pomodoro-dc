@@ -6,7 +6,15 @@
 > chọn: `ARCHITECTURE_DECISIONS.md`. Nợ kỹ thuật: `TECH_DEBT.md`. Migration: `MIGRATION.md`. Tóm
 > tắt theo mốc: `CHANGELOG.md`.
 > **NGUYÊN TẮC ƯU TIÊN SỐ 1:** (1) mọi phiên AI phải đọc file này + `CLAUDE.md` + các file liên quan TRƯỚC khi làm; (2) sau MỌI cập nhật dù nhỏ, phải cập nhật ngay file này + `CLAUDE.md` + các file liên quan khác.
-> Cập nhật lần cuối: **2026-08-12** — **THÀNH PHỐ, 3 phase liên tiếp trong ngày**: (1) engine thuần
+> Cập nhật lần cuối: **2026-08-13** — **Phase 3Y**: đo lại bản quét 15 kỷ × 6 chặng bằng phép đo
+> CẢ CẢNH (thay vì chỉ đo góc màu dải trời) và bắt được lỗi mà mọi bài test đều bỏ lọt: **bình minh
+> và hoàng hôn là CÙNG MỘT BỨC ẢNH** (5,9/255, dưới ngưỡng mắt ~12). Sửa bằng **sương theo giờ**
+> (`haze` + `fogRangeFor`) → **75,1/255**; cả 15 cặp chặng nay đều trên ngưỡng. `TECH_DEBT` #17
+> ĐÓNG (và được viết lại — chẩn đoán đầu của nó đổ nhầm cho chặng chiều). **509 bài test.**
+> Cùng ngày, trước đó: trang chủ thôi mắng lúc vừa mở app · thanh tiêu đề thôi gọi EP là XP ·
+> Phase 3V/3W/3X (trời ban ngày xanh · bầu trời theo đồng hồ · vòng ngày ra trang chủ).
+>
+> Trước đó **2026-08-12** — **THÀNH PHỐ, 3 phase liên tiếp trong ngày**: (1) engine thuần
 > suy ra bố cục thành phố từ danh sách công trình; (2) **bảo tàng** — thành phố kỷ cũ được niêm
 > phong thay vì xoá vĩnh viễn (`GAME_STORE_SCHEMA_VERSION` **3 → 4**, tương thích ngược, KHÔNG cần
 > chạy SQL); (3) **tab "Thành Phố" hiện ra**, vẽ bằng SVG; (4) **Phase 3A — bộ vẽ 3D thật
@@ -109,6 +117,64 @@
 
 ## 🗒️ Nhật ký cập nhật
 > Mỗi lần xong việc đáng kể, thêm 1 dòng vào ĐẦU danh sách.
+
+- **2026-08-13 (Phase 3Y — thành phố)** — **SÁU CHẶNG NGÀY, SÁU BỨC TRANH: BÌNH MINH THÔI TRÙNG
+  KHÍT HOÀNG HÔN.** (`TECH_DEBT` #17 ĐÓNG. 505 → **509 bài test**, lint sạch, build xanh.)
+  - **Vấn đề, và nó chỉ lộ ra khi đổi phép đo**: bản quét 15 kỷ × 6 chặng trước đó được chấm bằng
+    GÓC MÀU của dải trời. Chấm lại bằng phép đo CẢ CẢNH (vector 9 chiều: dải trời + dải thành phố +
+    dải đất, mỗi dải 3 kênh, trung bình 15 kỷ) thì ra con số này: **bình minh ↔ hoàng hôn = 5,9/255**,
+    trong khi ngưỡng mắt phân biệt được là ~12 và mọi cặp khác đều ≥33. Tức trong sáu chặng ngày thì
+    **có hai chặng là cùng một bức ảnh** — mở app lúc 6 giờ sáng hay 6 giờ chiều cũng vậy.
+  - **Vì sao không bài test nào bắt được**: bài *"hai chặng liền nhau không được giống nhau"* duyệt
+    `DAY_PHASES` **theo thứ tự**, tức chỉ các cặp KỀ NHAU. `dawn` ở đầu, `dusk` ở cuối ⇒ không bao
+    giờ được đem so với nhau. **Lần thứ HAI cùng hình dạng sai này xuất hiện trong chính file test
+    đó.** ⇒ Luật nay đã thành mã: *bất biến kiểu "các thứ này phải khác nhau" phải duyệt TỔ HỢP ĐÔI,
+    không được duyệt danh sách theo thứ tự — duyệt theo thứ tự là cái phễu, không phải hàng rào.*
+  - **Đường đi tới lời giải, gồm cả hai ngõ cụt** (giữ lại vì cả hai đều bị TEST chặn, không phải
+    bị tôi tự nghĩ ra):
+    1. Hạ `dawn.sunWarmth` 0,85 → 0,22 cho nắng sớm LẠNH → bài *"nắng ẤM lúc bình minh/hoàng hôn"*
+       **đỏ**, và nó đúng còn tôi sai: mặt trời thấp thì ánh sáng xuyên quãng khí quyển dài, ở CẢ
+       HAI đầu ngày. Cái "mát" của buổi sớm nằm ở BẦU TRỜI và SƯƠNG, không ở đĩa mặt trời.
+    2. Đẩy chân trời bình minh sang hồng sen 312° → bài *"bầu trời KHÔNG BAO GIỜ ngả tím sen"*
+       (`palette3d.test.js`) **đỏ** với `#d189a5` (28 điểm, lưới cấm ở 10). Quét cả vòng màu: cửa
+       an toàn chỉ mở từ **16°** trở đi, và thứ chạm trần TRƯỚC TIÊN là **MẶT NƯỚC** (nó cũng bám
+       chân trời qua `skyward`) chứ không phải bầu trời. **Không nới lưới đó** — nó sinh ra từ hai
+       màu hỏng có thật, và đổi một lỗi chắc chắn quay lại lấy một sắc màu đẹp hơn chút thì không
+       đáng.
+  - **Lời giải thật: SƯƠNG THEO GIỜ** (trường mới `haze` + hàm thuần `fogRangeFor`, `sceneGraph.js`
+    đọc nó thay vì hằng số). Trước nay sương mù là một hằng số nên buổi nào cũng trong veo như nhau.
+    Nay sáng sớm sương dày (0,90), chiều tà trời quang (0,08) — neo vào **một** sự thật khí quyển
+    duy nhất: *qua đêm thì bụi lắng xuống và hơi nước đọng lại*. Cùng sự thật đó cũng giải thích
+    luôn chân trời (bình minh vàng nhạt vì khí sạch · hoàng hôn cam đỏ đậm vì cả ngày bụi bốc lên)
+    và đỉnh trời (lam sạch 202° vs tím chàm 252° — "đai sao Kim").
+  - ⚠️ **VÌ SAO SƯƠNG LÀ THỨ DUY NHẤT ĂN THUA — bài học đáng nhớ nhất của phase này.** Đo theo TỪNG
+    DẢI cho thấy: đổi màu trời xong thì dải TRỜI tách được (13,0) nhưng dải THÀNH PHỐ vẫn chỉ cách
+    **8,7/255** (góc màu 51° vs 44° — bảy độ). Truy ra: thứ nhuộm màu lên thành phố là ĐÈN MẶT TRỜI,
+    mà màu đèn mặt trời do đúng `sunWarmth` quyết định — thứ buộc phải ấm ở cả hai đầu ngày. Ngõ cụt
+    hoàn toàn. Sương thoát ra được vì **nó lấy MÀU CHÂN TRỜI**, nên nó quét sắc của buổi sớm lên
+    chính những công trình ở xa. ⇒ **Muốn đổi màu của VẬT thì phải đổi thứ CHIẾU vào vật (hoặc thứ
+    PHỦ lên vật), không phải thứ đứng SAU vật.** Và: đo tổng cả cảnh chỉ ra một con số nhỏ mà không
+    nói được nhỏ Ở ĐÂU — phải đo theo từng dải mới truy ra được nguyên nhân.
+  - **Kết quả đo lại** (cùng bản quét, cùng phép đo): bình minh ↔ hoàng hôn **5,9 → 75,1**. Cặp gần
+    nhau nhất trong cả ngày **5,9 → 29,8** (8h ↔ 12h). Cả 15 cặp nay đều trên ngưỡng mắt (~12), cặp
+    yếu nhất gấp 2,5 lần ngưỡng. Chặng chiều (lỗi thật của nó là ĐỤC chứ không TRÙNG) cũng đã sửa:
+    độ tươi 1,05 → 1,30, sắc 34° → 44°.
+  - **Bài test mới (4 bài)**: (1) duyệt ĐỦ 15 cặp trên khoảng cách hồ sơ đa-trục, ngưỡng 0,40 —
+    **hiệu chuẩn với phép đo pixel thật**, không nhặt đại: 0,31↔5,9px · 0,52↔29,8px · 1,28↔75,1px,
+    xếp hạng 15 cặp hai thang cho Spearman **0,854**; (2) **bài đối chứng nhốt sẵn bộ số hỏng cũ**
+    và bắt buộc phép đo phải CÒN bắt được nó — nếu về sau ai nới ngưỡng hoặc bỏ bớt trục cho tiện
+    thì đỏ ngay, cái phễu không thể lặng lẽ quay lại lần thứ ba; (3)+(4) sương: bình minh phải nhiều
+    sương nhất, và dù `haze` = 1 thì sương vẫn phải bắt đầu SAU rìa thành phố (khoá lại ảnh chụp
+    "màn trắng đục" đã từng xảy ra), cộng bài đầu-vào-rác.
+  - ⚠️ **ĐÃ SỬA MỘT MỤC NỢ CHẨN ĐOÁN SAI, KHÔNG PHẢI CHỈ ĐÓNG NÓ.** `TECH_DEBT` #17 bản đầu (viết
+    sớm hơn vài giờ cùng ngày) đặt tên là *"Chặng CHIỀU là chặng xấu nhất trong ngày"*, kết luận có
+    **hai hướng mỹ thuật cần Đàm chọn**, rồi DỪNG chờ. Cả ba đều sai: chiều không phải chặng tệ nhất
+    (nó cách hoàng hôn 37,6 — rõ ràng), không có hai hướng nào, và không có gì để chờ. Nguyên nhân:
+    **đo một trục rồi kết luận về cả bức tranh** — vừa báo nhầm (chiều bị kết tội oan) vừa bỏ sót
+    (cặp hỏng thật thoát), mà cái sau nguy hiểm hơn vì nó im lặng. Và việc "chờ Đàm chọn" vi phạm
+    đúng luật dự án đã ghi ở Phase 3X: *một trade-off chỉ có thật khi CẢ HAI vế đều đã đạt và buộc
+    phải hy sinh một vế* — ở đây không vế nào đạt, tức là LỖI, mà sửa lỗi thì không cần xin phép.
+  - **Không đụng**: state, cân bằng game, SQL, schema, `src/engine/coach/**`, `api/**`.
 
 - **2026-08-13 (trang chủ)** — **APP THÔI MẮNG ĐÀM NGAY LÚC VỪA MỞ LÊN.**
   - **Vấn đề**: ô "Mục tiêu phiên" chỉ có HAI trạng thái (`isSessionGoalValid` đúng/sai). "Sai" gộp

@@ -13,9 +13,14 @@
 > mà không được refactor triệt để, phải CHỦ ĐỘNG đề xuất mở một "Maintenance Sprint" (nêu rõ mục
 > tiêu/phạm vi/lợi ích/rủi ro/tiêu chí hoàn thành) thay vì tiếp tục cộng thêm tính năng mới.
 >
-> **Trạng thái ngưỡng hiện tại (2026-08-13, cập nhật sau khi thêm #17)**: **1 mục Priority High**
+> **Trạng thái ngưỡng hiện tại (2026-08-13, cập nhật sau khi ĐÓNG #17)**: **1 mục Priority High**
 > (#14) → vẫn CHƯA đạt ngưỡng 8–10 mục để đề xuất Maintenance Sprint. Còn **2 mục Medium-High**
-> (#3, #13) và **1 mục Medium chờ Đàm chọn hướng mỹ thuật** (#17) — #15 và #16 đều đã đóng.
+> (#3, #13). **#15, #16 và #17 đều đã đóng** — không còn mục nào chờ Đàm chọn hướng mỹ thuật.
+> ⚠️ **#17 LÀ VÍ DỤ THỨ HAI CỦA ĐÚNG CÁI BẪY MÀ BÀI HỌC #16 DƯỚI ĐÂY CẢNH BÁO** — và lần này nặng
+> hơn: mục đó không chỉ ghi nhầm một lỗi thành "đánh đổi cần Đàm quyết", nó còn **chẩn đoán nhầm
+> hẳn chặng ngày** (đổ cho chặng chiều, trong khi cặp hỏng thật là bình minh ↔ hoàng hôn). Nguyên
+> nhân: đo đúng MỘT trục (góc màu của dải trời) rồi kết luận về cả bức tranh. Đọc phần đóng khung
+> ở đầu #17 trước khi viết bất kỳ mục nợ mỹ thuật nào.
 > ⚠️ **CÒN MỘT mục đang CHỜ ĐÀM QUYẾT, không phải chờ AI làm**: #14 (95% phiên im lặng — cân bằng
 > game). Review Trigger của nó chặn các khoản đầu tư kế tiếp vào lễ mừng, nên **để lâu thì mọi phase
 > lễ mừng sau đều lãi thấp một cách có hệ thống**. Đây là chỗ đáng hỏi Đàm trước khi làm thêm.
@@ -287,54 +292,91 @@
 
 ---
 
-## #17 — Chặng CHIỀU (14–16h) là chặng xấu nhất trong ngày, và nó trùng đúng giờ Đàm hay làm việc
+## #17 — ĐÃ ĐÓNG (2026-08-13) · Bình minh và hoàng hôn là CÙNG MỘT BỨC ẢNH
 
-- **Module**: `src/engine/city3d/daylight.js` — `DAYLIGHT_PROFILES.afternoon`
-  (`horizonHue: 34, horizonPull: 0.60, skySaturation: 1.05`).
-- **Priority**: Medium
-- **Severity**: Medium (thuần mỹ thuật, không ảnh hưởng dữ liệu/hiệu năng)
-- **Impact — ĐO TRÊN BẢN QUÉT ĐỦ 15 KỶ × 6 CHẶNG** (2026-08-13, `sweepstats.mjs`, trung bình 15 kỷ,
-  vùng trời 8–22% khung hình):
+> ⚠️ **MỤC NÀY TỪNG CHẨN ĐOÁN SAI, VÀ CÁI SAI ĐÓ ĐÁNG GHI LẠI HƠN CẢ LỖI.** Bản đầu (viết cùng
+> ngày, sớm hơn vài giờ) đặt tên mục là *"Chặng CHIỀU là chặng xấu nhất trong ngày"*, kết luận
+> rằng có **hai hướng mỹ thuật khác hẳn nhau cần Đàm chọn**, rồi DỪNG LẠI chờ. Cả ba phần đều sai:
+> chặng chiều không phải chặng tệ nhất, không có hai hướng nào cả, và không có gì để chờ.
+>
+> **Vì sao sai: đo một trục rồi kết luận về cả bức tranh.** Bản đầu đo GÓC MÀU của dải trời, thấy
+> ba chặng ấm (bình minh 33° · chiều 43° · hoàng hôn 25°) nằm gọn trong 20°, và suy ra "một nửa số
+> chặng trong ngày là cùng một cảnh". Nhưng góc màu chỉ là MỘT trong ba thành phần của màu, và dải
+> trời chỉ là MỘT trong ba dải của khung hình. Đo lại bằng vector 9 chiều (trời + thành phố + đất,
+> mỗi dải 3 kênh, trung bình 15 kỷ) thì bức tranh lật ngược hẳn:
+>
+> | cặp chặng | khoảng cách cả cảnh (0–255) | kết luận |
+> |---|---|---|
+> | **bình minh ↔ hoàng hôn** | **5,9** | dưới ngưỡng mắt (~12) ⇒ **ĐÚNG LÀ MỘT BỨC ẢNH** |
+> | chiều ↔ hoàng hôn | 37,6 | cách nhau rõ |
+> | chiều ↔ bình minh | 42,1 | cách nhau rõ |
+>
+> Tức chặng chiều chưa bao giờ là vấn đề "trùng lặp" — nó chỉ ĐỤC (độ tươi 0,25, ra kaki chứ không
+> ra vàng), là một lỗi nhỏ và có một cách sửa đúng duy nhất. Còn cặp thật sự trùng nhau thì bản đầu
+> **không hề nhắc tới**, vì hai chặng đó góc màu 33° và 25° — trông đã "khác nhau 8°" trên bảng.
+>
+> ⇒ **Bài học, và nó tổng quát hơn mỹ thuật:** khi kết luận là *"hai thứ này giống nhau"*, phép đo
+> phải phủ HẾT những gì mắt nhìn thấy. Đo một trục thì sẽ vừa **báo nhầm** (chiều bị kết tội oan)
+> vừa **bỏ sót** (bình minh ↔ hoàng hôn thoát). Và cái sau nguy hiểm hơn nhiều, vì nó im lặng.
+>
+> **Và vì sao việc "chờ Đàm chọn" là sai:** dự án đã có sẵn luật cho đúng tình huống này
+> (`CLAUDE.md`, bài học Phase 3X) — *"một trade-off chỉ có thật khi CẢ HAI vế đều đã đạt và buộc
+> phải hy sinh một vế"*. Ở đây không vế nào đạt: chú thích hứa "chiều vàng" mà ra kaki, tức là một
+> **lỗi**, và sửa lỗi thì không cần xin phép. Đưa cho Đàm một lựa chọn giả rồi dừng lại chỉ làm mất
+> thời gian của anh và để nguyên bức tranh hỏng trên máy anh thêm một vòng nữa.
 
-  | chặng | màu trời | góc màu | độ tươi | độ sáng ĐẤT |
-  |---|---|---|---|---|
-  | 6h bình minh | `#775e40` | 33° | 0,30 | 14 |
-  | 8h sáng | `#648287` | **189°** | 0,15 | 21 |
-  | 12h trưa | `#768c99` | **202°** | 0,15 | 31 |
-  | **15h chiều** | **`#8f7f56`** | **43°** | 0,25 | 20 |
-  | 18h hoàng hôn | `#78563e` | 25° | 0,32 | 15 |
-  | 22h đêm | `#121f32` | 216° | 0,47 | 8 |
+- **Module**: `src/engine/city3d/daylight.js` (`DAYLIGHT_PROFILES`), `daylight.test.js`,
+  `src/components/city/render3d/sceneGraph.js` (sương mù).
+- **Priority / Severity**: Medium / Medium (thuần mỹ thuật) — **đã xử lý xong**.
+- **Root Cause**: hồ sơ `dawn` và `dusk` không được THIẾT KẾ riêng, chúng được chép ra từ nhau rồi
+  chỉnh vài phần trăm ở mỗi tham số (cao độ 0,22 vs 0,18 · ấm 0,85 vs 1,00 · chân trời 18° vs 10° ·
+  lực kéo 0,70 vs 0,78 · tươi 1,15 vs 1,25). Không ai chọn cho chúng giống nhau.
+- **Vì sao không bài test nào bắt được**: bài *"hai chặng liền nhau không được giống nhau"* duyệt
+  danh sách `DAY_PHASES` **theo thứ tự**, tức chỉ các cặp KỀ NHAU. `dawn` ở đầu và `dusk` ở cuối
+  nên không bao giờ được đem so với nhau. **Đây là lần thứ HAI cùng một hình dạng sai xuất hiện
+  trong chính file test đó** (lần trước: bài "hành trình màu" tính cả `night` nên bộ số hỏng vẫn
+  qua). Luật rút ra, nay đã thành mã: **bất biến kiểu "các thứ này phải khác nhau" phải duyệt TỔ
+  HỢP ĐÔI, không được duyệt danh sách theo thứ tự** — duyệt theo thứ tự là cái phễu, không phải
+  hàng rào.
+- **Giải pháp đã làm** — tách hai chặng ở NĂM trục cùng lúc, neo vào một sự thật khí quyển duy
+  nhất (*qua đêm thì bụi lắng xuống, hơi nước đọng lại*):
+  - **Sương theo giờ** (`haze`, trường mới + hàm thuần `fogRangeFor`). Trước đây sương là hằng số.
+    Đây là thứ đóng góp phần lớn kết quả: **18,0 → 73,0**. Lý do nó hiệu quả: sương lấy MÀU CHÂN
+    TRỜI, nên nó là cách duy nhất chạm được vào dải THÀNH PHỐ — mọi cách đổi màu trời khác chỉ đổi
+    được tấm phông phía sau.
+  - Đỉnh trời tách 202° (lam sạch) vs 252° (tím chàm — "đai sao Kim").
+  - Chân trời: bình minh vàng nhạt 34°/0,62/1,00 · hoàng hôn cam đỏ đậm 8°/0,88/1,46.
+  - Nắng: 0,50 vs 1,06 · đèn sân: 0,16 vs 0,78.
+  - **Chặng chiều** (lỗi thật của nó — đục chứ không trùng): độ tươi 1,05 → 1,30, sắc 34° → 44°.
+- **Hai nước đi đã thử và ĐÃ BỊ TEST BẮT** (giữ lại để đừng ai thử lại):
+  1. Hạ `dawn.sunWarmth` xuống 0,22 cho nắng sớm LẠNH → bài *"nắng ẤM lúc bình minh/hoàng hôn"* đỏ,
+     và nó đúng: mặt trời thấp thì ánh sáng xuyên quãng khí quyển dài — ở CẢ HAI đầu ngày. Cái
+     "mát" của buổi sớm nằm ở BẦU TRỜI và SƯƠNG, không ở đĩa mặt trời.
+  2. Đẩy chân trời bình minh sang hồng sen 312° → bài *"bầu trời KHÔNG BAO GIỜ ngả tím sen"*
+     (`palette3d.test.js`) đỏ với `#d189a5` (28 điểm, lưới cấm ở 10). Quét cả vòng màu: cửa an
+     toàn chỉ mở từ **16°**, và thứ chạm trần trước tiên là **MẶT NƯỚC** chứ không phải bầu trời.
+     Không nới lưới đó — nó sinh ra từ hai màu hỏng có thật. Và hoá ra không cần: sương mới là
+     nguồn khoảng cách chính.
+- **KẾT QUẢ ĐO LẠI** (cùng phép đo, cùng bản quét 15 kỷ × 6 chặng):
 
-  Ba chặng ẤM — bình minh 33°, **chiều 43°**, hoàng hôn 25° — nằm gọn trong **20° góc màu**. Tức
-  một nửa số chặng trong ngày rơi vào CÙNG MỘT HỌ MÀU, chỉ khác độ sáng. Sáu chặng nhưng mắt chỉ
-  đọc ra ba cảnh: ấm, xanh, lam đêm.
-- **Root Cause**: chú thích đầu `daylight.js` tuyên bố ý đồ *"chiều vàng"*. Nhưng "vàng" ở độ tươi
-  **0,25** trên nền độ sáng 0,45 thì ra `#8f7f56` — **kaki đục**, không phải vàng; chính chặng
-  hoàng hôn còn tươi hơn (0,32). Và về vật lý thì 14–16h ở Việt Nam trời VẪN XANH; cái ấm lên là
-  ÁNH SÁNG chiếu vào vật, không phải bầu trời. Mà vế ánh sáng thì hồ sơ này ĐÃ có sẵn
-  (`sunWarmth: 0.55`, `sunAltitude: 0.48` — nắng thấp và ấm). Tức bầu trời đang làm lại lần thứ hai
-  một việc đã được làm đúng chỗ khác.
-- **Current Risk**: thấp về kỹ thuật; nhưng đây là khung giờ làm việc chính, nên là cảnh Đàm nhìn
-  NHIỀU NHẤT trong sáu chặng.
-- **Future Risk**: mọi đợt đầu tư mỹ thuật sau vào thành phố đều bị chiết khấu ở chặng này.
-- **Recommended Solution** — ⚠️ **CÓ HAI HƯỚNG THẬT SỰ KHÁC NHAU, CẦN ĐÀM CHỌN, KHÔNG PHẢI VIỆC AI
-  TỰ QUYẾT** (đây là hướng mỹ thuật, không phải lỗi đúng/sai):
-  - **(a) Chiều VẪN XANH, chỉ nhạt và hơi mù hơn trưa** — `horizonHue` 34° → ~200° (nhớ trừ hao
-    −15° theo ghi chú đã có), `horizonPull` ~0,58, `skySaturation` lên ~1,18. Được: sáu chặng ra
-    sáu cảnh; đúng thực tế 14–16h; cái ấm vẫn còn nguyên ở ÁNH SÁNG chiếu lên tường/mái. Mất: bớt
-    một mảng ấm trong ngày.
-  - **(b) Chiều VÀNG THẬT, đúng như chú thích đã hứa** — giữ 34° nhưng nâng độ tươi hẳn lên (`pull`
-    ~0,75, `skySaturation` ~1,25) để ra vàng chứ không ra kaki. Được: giữ ý đồ cũ. Mất: chiều và
-    hoàng hôn vẫn chung một họ màu — vấn đề "sáu chặng, ba cảnh" chỉ đỡ chứ không hết.
-  - Cả hai đều KHÔNG phá bài test 81 (`daylight.test.js`) vì độ trải ban ngày vẫn ≥90°; nhưng
-    hướng (a) nên kèm một bất biến MỚI: *ba chặng ẤM không được nằm trong cùng 30°* — chính là thứ
-    bài test hiện tại không bắt được.
-- **Estimated Complexity**: Thấp (vài con số + 1 bài test mới). Chi phí thật nằm ở việc chụp lại
-  bản quét 15 × 6 và đo lại.
-- **Blocking Conditions**: **CHỜ ĐÀM CHỌN (a) hay (b)** — đây là hướng mỹ thuật.
-- **Review Trigger**: lần tới có bất kỳ đợt vá mỹ thuật nào cho thành phố.
-- **Owner**: (chưa gán)
-- **Status**: Open — phát hiện 2026-08-13 khi chạy bản quét đủ 15 kỷ × 6 chặng theo yêu cầu của Đàm.
+  | cặp | trước | sau |
+  |---|---|---|
+  | **bình minh ↔ hoàng hôn** | **5,9** ❌ | **75,1** ✅ |
+  | cặp GẦN NHAU NHẤT trong cả ngày | 5,9 ❌ | **29,8** (8h ↔ 12h) ✅ |
+  | chiều ↔ hoàng hôn | 37,6 | 44,0 |
+  | chiều ↔ bình minh | 42,1 | 46,6 |
+
+  Ngưỡng mắt phân biệt được là ~12 ⇒ **cả 15 cặp nay đều trên ngưỡng, cặp yếu nhất gấp 2,5 lần.**
+- **Còn lại một quan sát, KHÔNG phải nợ**: ba chặng ấm vẫn chung họ màu (bình minh 38° · chiều 46° ·
+  hoàng hôn 20°, trải 26°). Bản đầu coi đó là bằng chứng "ba chặng là một cảnh" — sai, vì chúng
+  khác nhau ở ĐỘ SÁNG và SƯƠNG chứ không ở góc màu: độ sáng trời 0,65 · 0,48 · 0,38, và bình minh
+  có sương dày còn hoàng hôn thì trong. Đo cả cảnh thì cặp gần nhất trong bộ ba là 44,0 — gấp 3,7
+  lần ngưỡng mắt. **Cùng họ màu ≠ cùng một cảnh.**
+- **Bài test mới khoá lại** (`daylight.test.js`): duyệt ĐỦ 15 cặp trên khoảng cách hồ sơ đa-trục
+  (ngưỡng 0,40, hiệu chuẩn với phép đo pixel — Spearman 0,854), **cộng một bài đối chứng nhốt sẵn
+  bộ số hỏng cũ** và bắt buộc phép đo phải còn bắt được nó. Nhờ vậy nếu về sau ai nới ngưỡng hoặc
+  bỏ bớt trục cho tiện thì đỏ ngay — cái phễu không thể lặng lẽ quay lại lần thứ ba.
+- **Status**: **CLOSED 2026-08-13.** 509/509 test xanh · lint sạch · build xanh.
 
 ---
 

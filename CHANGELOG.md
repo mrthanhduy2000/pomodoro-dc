@@ -12,6 +12,35 @@
 
 ---
 
+## 2026-08-13 — Sáu chặng ngày, sáu bức tranh: bình minh thôi trùng khít hoàng hôn
+
+- **Mục đích**: đo lại bản quét 15 kỷ × 6 chặng bằng phép đo CẢ CẢNH (vector 9 chiều: dải trời +
+  dải thành phố + dải đất, trung bình 15 kỷ) thay vì chỉ đo góc màu dải trời. Kết quả lật ngược
+  chẩn đoán cũ: **bình minh và hoàng hôn cách nhau 5,9/255** — dưới ngưỡng mắt phân biệt được
+  (~12) — tức trong sáu chặng ngày thì có hai chặng là **cùng một bức ảnh**. Mở app lúc 6 giờ sáng
+  hay 6 giờ chiều cũng vậy. Không bài test nào bắt được vì bài "hai chặng liền nhau phải khác
+  nhau" chỉ duyệt các cặp KỀ NHAU trong danh sách, mà `dawn`/`dusk` nằm ở hai đầu.
+- **Phạm vi**: `src/engine/city3d/daylight.js` (trường mới `haze` + hàm thuần `fogRangeFor`, chỉnh
+  hồ sơ `dawn`/`dusk`/`afternoon`), `src/components/city/render3d/sceneGraph.js` (sương mù đọc
+  `haze` thay vì hằng số), `src/engine/city3d/daylight.test.js` (+4 bài).
+- **Thay đổi lớn nhất là SƯƠNG THEO GIỜ.** Trước đây sương mù là một hằng số nên buổi nào cũng
+  trong veo như nhau. Nay sáng sớm có sương dày (`haze` 0,90), chiều tà trời quang (0,08) — neo vào
+  một sự thật khí quyển: qua đêm thì bụi lắng xuống và hơi nước đọng lại. Nó hiệu quả vì **sương
+  lấy MÀU CHÂN TRỜI**, nên đây là cách duy nhất chạm được vào dải THÀNH PHỐ; mọi cách đổi màu trời
+  khác chỉ đổi được tấm phông phía sau (đo được: đổi màu trời xong, dải thành phố vẫn cách nhau
+  vỏn vẹn 8,7/255).
+- **Kết quả đo**: bình minh ↔ hoàng hôn **5,9 → 75,1**. Cặp gần nhau nhất trong cả ngày **5,9 →
+  29,8**. Cả 15 cặp nay đều trên ngưỡng mắt, cặp yếu nhất gấp 2,5 lần ngưỡng.
+- **Bài test mới khoá lại**: duyệt ĐỦ 15 cặp (không chỉ cặp kề nhau) trên khoảng cách hồ sơ đa-trục,
+  ngưỡng hiệu chuẩn với phép đo pixel thật (Spearman 0,854). Kèm **một bài đối chứng nhốt sẵn bộ số
+  hỏng cũ** và bắt buộc phép đo phải còn bắt được nó — nếu về sau ai nới ngưỡng cho tiện thì đỏ ngay.
+- **Ảnh hưởng / tương thích**: thuần mỹ thuật. KHÔNG đụng state, KHÔNG đụng cân bằng game, KHÔNG
+  cần chạy SQL, KHÔNG đổi schema. `TECH_DEBT.md` **#17 đã ĐÓNG** (và mục đó được viết lại vì chẩn
+  đoán ban đầu của nó sai — nó đổ lỗi cho chặng chiều).
+- **Test**: 505 → **509 bài, tất cả xanh**; lint sạch; build xanh.
+
+---
+
 ## 2026-08-13 — Trang chủ: app thôi mắng Đàm ngay lúc vừa mở lên
 
 - **Mục đích**: ô "Mục tiêu phiên" chỉ biết HAI trạng thái — `isSessionGoalValid` đúng hoặc sai.

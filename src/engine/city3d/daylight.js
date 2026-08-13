@@ -48,6 +48,8 @@ const PHASE_BY_HOUR = [
  *  • `skySaturation` hệ số nhân độ tươi bầu trời.
  *  • `windowsLit`   có bật đèn cửa sổ không.
  *  • `lampEnergy`   độ mạnh của những vũng sáng ấm hắt xuống chân công trình (0 = không có đèn).
+ *  • `haze`         0 = trời quang … 1 = sương dày. Kéo màn sương lại GẦN, tức là phủ lên phần xa
+ *                   của chính thành phố chứ không chỉ giấu mép lưới. Xem `fogRangeFor` bên dưới.
  *
  * ⚠️ VÌ SAO LÀ "KÉO VỀ MỘT ĐÍCH" CHỨ KHÔNG PHẢI "CỘNG THÊM N ĐỘ" — đây là lỗi đã thấy tận mắt ở
  * ảnh chụp. Bản đầu dùng `skyShift` cộng thẳng vào góc màu. Nhưng góc màu XUẤT PHÁT của bầu trời
@@ -89,8 +91,73 @@ const PHASE_BY_HOUR = [
  */
 export const DAYLIGHT_PROFILES = {
   //           cao độ nắng    hơi ấm       nắng        đèn nền     ĐỈNH trời          CHÂN trời              tươi   cửa sổ  đèn sân
-  dawn:      { sunAltitude: 0.22, sunWarmth:  0.85, sunEnergy: 0.72, fillEnergy: 0.95, skyHue: 232, skyPull: 0.42, horizonHue:  18, horizonPull: 0.70, skySaturation: 1.15, windowsLit: true,  lampEnergy: 0.35 },
-  morning:   { sunAltitude: 0.55, sunWarmth:  0.40, sunEnergy: 0.95, fillEnergy: 1.00, skyHue: 218, skyPull: 0.58, horizonHue: 210, horizonPull: 0.72, skySaturation: 1.32, windowsLit: false, lampEnergy: 0    },
+  // ⚠️ BÌNH MINH VÀ HOÀNG HÔN TỪNG LÀ MỘT BỨC ẢNH — ĐÃ SỬA 2026-08-13, `TECH_DEBT.md` #17.
+  // Đo trên bản quét đủ 15 kỷ × 6 chặng, KHÔNG đo dải trời mà đo CẢ CẢNH (trời + thành phố + đất,
+  // vector 9 chiều, trung bình 15 kỷ): khoảng cách bình minh ↔ hoàng hôn = **5,9/255**, trong khi
+  // ngưỡng mắt phân biệt được là ~12 và mọi cặp chặng khác đều ≥33. Tức trong sáu chặng thì có hai
+  // chặng là CÙNG MỘT ẢNH — mở app lúc 6 giờ sáng hay 6 giờ chiều cũng vậy.
+  //
+  // ⚠️ VÌ SAO KHÔNG BÀI TEST NÀO BẮT ĐƯỢC: bài "hai chặng LIỀN NHAU không được giống nhau" chỉ duyệt
+  // các cặp KỀ NHAU trong `DAY_PHASES` (dawn↔morning, …, dusk↔night). `dawn` và `dusk` nằm ở hai đầu
+  // danh sách nên KHÔNG BAO GIỜ được đem so với nhau. Lại đúng kiểu "cái phễu, không phải hàng rào"
+  // mà chính file test này đã từng dính một lần (xem ghi chú "bỏ đêm ra" ở `daylight.test.js`).
+  // Nay đã thêm bài duyệt ĐỦ MỌI CẶP.
+  //
+  // NGUYÊN NHÂN GỐC: hai hồ sơ này vốn chỉ khác nhau vài phần trăm ở MỌI tham số —
+  // cao độ 0,22 vs 0,18 · ấm 0,85 vs 1,00 · chân trời 18° vs 10° · lực kéo 0,70 vs 0,78 ·
+  // tươi 1,15 vs 1,25. Không ai CHỌN cho chúng giống nhau; chúng giống nhau vì được chép ra từ nhau.
+  //
+  // HƯỚNG SỬA lấy từ chính tri thức mà `daylight.test.js` đã ghi (dòng "ánh sáng buổi SÁNG lạnh hơn
+  // buổi CHIỀU" — kiến thức hội hoạ cổ điển, không phải sở thích), và neo vào MỘT sự thật khí quyển
+  // duy nhất giải thích được cả hai chặng: **qua một đêm thì bụi lắng xuống và hơi nước đọng lại**.
+  //   • Bình minh = không khí SẠCH nên chân trời VÀNG NHẠT (không đỏ nổi) · nhiều SƯƠNG sát đất ·
+  //     đỉnh trời lam sạch · nắng yếu · đèn đường đang TẮT dần.
+  //   • Hoàng hôn = cả ngày bụi bốc lên nên chân trời CAM ĐỎ ĐẬM · trời QUANG dưới thấp (bụi nằm
+  //     trên cao, trong bầu trời) · đỉnh trời ngả tím chàm · nắng gắt xiên · đèn đã BẬT hết.
+  // Nhờ vậy hai chặng tách nhau ở NĂM trục cùng lúc (sắc · độ tươi · sương · tỉ lệ nắng/đèn nền ·
+  // đèn đường), chứ không chỉ ở một con số góc màu — một trục thì rất dễ bị các tầng sau (tone
+  // mapping, kẹp kênh) nuốt mất, đúng bài học "BẢNG MÀU ≠ MÀU TRÊN MÀN HÌNH" ở `CLAUDE.md`.
+  //
+  // ⚠️ ĐÃ THỬ "BÌNH MINH HỒNG" VÀ PHẢI BỎ — ĐỪNG THỬ LẠI MÀ KHÔNG ĐỌC ĐOẠN NÀY.
+  // Chính đầu file này viết *"bình minh hồng"*, nên bản sửa đầu đẩy chân trời sang 312° (hồng sen).
+  // Đo thì rất đẹp trên giấy — nhưng bài **"bầu trời KHÔNG BAO GIỜ ngả tím sen"** ở
+  // `palette3d.test.js` báo đỏ: chân trời ra `#d189a5`, chấm 28 điểm tím trong khi lưới cấm ở 10.
+  // Quét cả vòng màu thì cửa an toàn chỉ mở từ **16°** trở đi, và thứ chạm trần trước tiên KHÔNG
+  // phải bầu trời mà là **MẶT NƯỚC** (nó cũng bám chân trời qua `skyward`, nên nó ngả tím theo).
+  // ⇒ Không nới lưới đó. Nó ra đời từ hai màu hỏng có thật (`#cf63c2`, `#e0b8c9`) và ngưỡng 10 của
+  // nó đã được cân đúng để bắt cả màu hồng nhạt. Nới nó ra để lấy một bình minh hồng là đánh đổi
+  // một lỗi CHẮC CHẮN sẽ quay lại lấy một sắc màu ĐẸP HƠN MỘT CHÚT — không đáng.
+  // Và hoá ra không cần: phần lớn khoảng cách giữa hai chặng đến từ SƯƠNG chứ không từ góc màu
+  // (thêm sương: 18,0 → 73,0; đổi chân trời hồng chỉ đóng góp ~5). Bình minh vàng nhạt + sương dày
+  // vẫn tách bạch hoàn toàn với hoàng hôn cam đỏ + đèn sáng: **75,1/255**.
+  //
+  // ⚠️ MỘT NƯỚC ĐI ĐÃ THỬ VÀ ĐÃ BỊ TEST BẮT — GIỮ LẠI ĐỂ ĐỪNG AI THỬ LẠI. Bản nháp hạ hẳn
+  // `sunWarmth` bình minh xuống 0,22 (nắng sớm LẠNH) cho tách xa hoàng hôn. Bài test "nắng ẤM lúc
+  // bình minh/hoàng hôn" báo đỏ ngay, và nó ĐÚNG còn tôi sai: `sunWarmth` là màu của ĐĨA MẶT TRỜI,
+  // mà mặt trời thấp thì ánh sáng phải xuyên qua quãng khí quyển dài — ở CẢ HAI đầu ngày. Sáng sớm
+  // nhìn "mát" là do BẦU TRỜI và do sương, không phải do đĩa mặt trời đổi màu.
+  // ⇒ Giữ nắng bình minh ẤM (0,62), nhưng ấm ÍT HƠN hoàng hôn (1,00) — đúng câu "ánh sáng buổi SÁNG
+  // lạnh hơn buổi CHIỀU" mà chính file test đã ghi. Tách hai chặng bằng những trục KHÁC, không bằng
+  // cách nói sai một sự thật vật lý.
+  //
+  // ⚠️ VÀ ĐÂY LÀ CHỖ THẬT SỰ QUYẾT ĐỊNH — TÌM RA BẰNG PHÉP ĐO THEO TỪNG DẢI, KHÔNG PHẢI BẰNG MẮT.
+  // Sau khi đã đẩy chân trời bình minh đi thật xa hoàng hôn, đo lại từng dải thì ra:
+  // dải TRỜI đã tách được (13,3/255) nhưng dải THÀNH PHỐ chỉ cách 9,2 và dải ĐẤT 9,0 —
+  // và quan trọng hơn con số là GÓC MÀU: thành phố lúc bình minh 48°, lúc hoàng hôn 45°. Ba độ.
+  // Tức là **cả thành phố lẫn mặt đất vẫn y hệt nhau**, chỉ có tấm phông sau lưng là đổi.
+  // Truy ra thì cơ chế rất rõ: đèn bán cầu (thứ nhuộm màu lên mọi mặt ngửa lên trời, tức là lên
+  // toàn bộ thành phố) lấy màu từ `skyward(..., 'top', ...)` — tức từ **`skyHue` (ĐỈNH trời)**,
+  // KHÔNG phải từ `horizonHue`. Mà đỉnh trời bình minh 232° so với hoàng hôn 238° thì cách nhau
+  // đúng 6°. Toàn bộ công sức đẩy chân trời chỉ chạm tới cái phông, không chạm tới thành phố.
+  // ⇒ Bài học tổng quát, đáng giá hơn cả lần sửa này: **muốn đổi màu của VẬT thì phải đổi thứ
+  // CHIẾU vào vật, không phải thứ đứng SAU vật.** Đo theo từng dải mới thấy; đo tổng cả cảnh chỉ
+  // ra một con số nhỏ mà không nói được nhỏ ở đâu.
+  // Nên đỉnh trời hai chặng nay tách hẳn, và tách theo đúng sự thật khí quyển: sáng sớm không khí
+  // sạch (bụi đã lắng qua đêm) ⇒ đỉnh trời LAM SẠCH, hơi ngả lục lam; chiều tà bụi và hơi nước bốc
+  // lên cả ngày ⇒ đỉnh trời ngả TÍM CHÀM (chính là dải bóng Trái Đất mà dân chụp ảnh gọi là "đai
+  // sao Kim"). Cả hai vẫn nằm gọn trong vùng "đỉnh trời phải lạnh" mà bài test đang khoá.
+  dawn:      { sunAltitude: 0.28, sunWarmth:  0.62, sunEnergy: 0.50, fillEnergy: 1.02, skyHue: 202, skyPull: 0.58, horizonHue:  34, horizonPull: 0.62, skySaturation: 1.00, windowsLit: true,  lampEnergy: 0.16, haze: 0.90 },
+  morning:   { sunAltitude: 0.55, sunWarmth:  0.40, sunEnergy: 0.95, fillEnergy: 1.00, skyHue: 218, skyPull: 0.58, horizonHue: 210, horizonPull: 0.72, skySaturation: 1.32, windowsLit: false, lampEnergy: 0, haze: 0.34    },
   // ⚠️ Giữa trưa KHÔNG kéo cao độ nắng lên sát đỉnh đầu nữa (0,92 → 0,84). Nghe thì "trưa là mặt
   // trời trên đỉnh đầu", nhưng ở 0,92 bóng đổ ngắn gần bằng không và mọi khối mất hết mặt tối —
   // cả bảng quét thì cột 12 giờ là cột PHẲNG NHẤT, nhạt nhẽo nhất, đúng thứ Đàm gọi là "bị chán".
@@ -137,9 +204,17 @@ export const DAYLIGHT_PROFILES = {
   // Một ngày nay là một HÀNH TRÌNH MÀU thật, và bài test 81 ở `daylight.test.js` khoá lại điều đó
   // bằng luật "các chặng BAN NGÀY phải trải ít nhất 90° góc màu" — luật này đã được thử NGƯỢC với
   // bộ số hỏng cũ và báo đỏ đúng như mong đợi (bộ cũ chỉ trải 38°).
-  noon:      { sunAltitude: 0.84, sunWarmth:  0.05, sunEnergy: 1.10, fillEnergy: 0.80, skyHue: 224, skyPull: 0.70, horizonHue: 216, horizonPull: 0.85, skySaturation: 1.16, windowsLit: false, lampEnergy: 0    },
-  afternoon: { sunAltitude: 0.48, sunWarmth:  0.55, sunEnergy: 1.00, fillEnergy: 1.00, skyHue: 214, skyPull: 0.44, horizonHue:  34, horizonPull: 0.60, skySaturation: 1.05, windowsLit: false, lampEnergy: 0    },
-  dusk:      { sunAltitude: 0.18, sunWarmth:  1.00, sunEnergy: 0.78, fillEnergy: 1.05, skyHue: 238, skyPull: 0.46, horizonHue:  10, horizonPull: 0.78, skySaturation: 1.25, windowsLit: true,  lampEnergy: 0.60 },
+  noon:      { sunAltitude: 0.84, sunWarmth:  0.05, sunEnergy: 1.10, fillEnergy: 0.80, skyHue: 224, skyPull: 0.70, horizonHue: 216, horizonPull: 0.85, skySaturation: 1.16, windowsLit: false, lampEnergy: 0, haze: 0.06    },
+  // ⚠️ CHIỀU: giữ nguyên Ý ĐỒ "chiều vàng", nhưng bản cũ KHÔNG đạt được nó — đo ra `#8f7f56`, độ
+  // tươi **0,25**, tức kaki đục chứ không phải vàng; chính hoàng hôn còn tươi hơn (0,32). Nâng độ
+  // tươi và đẩy sắc từ 34° lên 44° (nắng-vàng thay vì đất-nâu). ⚠️ KHÔNG đổi chiều thành xanh:
+  // phép đo cả-cảnh cho thấy chiều vốn ĐÃ tách bạch với mọi chặng khác (gần nhất là 37,6/255) —
+  // vấn đề của nó là ĐỤC, không phải TRÙNG. Sửa đúng bệnh, không sửa bệnh tưởng tượng.
+  afternoon: { sunAltitude: 0.48, sunWarmth:  0.55, sunEnergy: 1.00, fillEnergy: 1.00, skyHue: 214, skyPull: 0.44, horizonHue:  44, horizonPull: 0.56, skySaturation: 1.30, windowsLit: false, lampEnergy: 0, haze: 0.16    },
+  // Hoàng hôn: đẩy về phía ĐỎ và ĐẬM hơn hẳn bình minh. `fillEnergy` HẠ (1,05 → 0,88) là chủ ý —
+  // chiều tà thì nắng xiên gắt và bóng sâu, ngược hẳn với sương sớm mờ đều của bình minh; đây chính
+  // là trục "tỉ lệ nắng / đèn nền" mà `night` đã dùng để thoát khỏi bệnh "phẳng" (xem ghi chú đêm).
+  dusk:      { sunAltitude: 0.16, sunWarmth:  1.00, sunEnergy: 1.06, fillEnergy: 0.90, skyHue: 252, skyPull: 0.50, horizonHue:   8, horizonPull: 0.88, skySaturation: 1.46, windowsLit: true,  lampEnergy: 0.78, haze: 0.08 },
   // Đêm: chặng DUY NHẤT mà chân trời cũng lạnh theo đỉnh trời — kéo cả hai về LAM SÂU (không phải
   // lục lam, không phải tím). Nắng yếu nhưng KHÔNG tắt — đó là ánh trăng, và không có nó thì công
   // trình mất hết hình khối, chỉ còn những ô cửa sáng lơ lửng.
@@ -168,7 +243,7 @@ export const DAYLIGHT_PROFILES = {
   // Bài học tổng quát, khác với bài học của hai lần trước: **"tối quá" và "phẳng quá" là hai bệnh
   // khác nhau, và thuốc chữa bệnh này làm nặng thêm bệnh kia.** Đo tổng độ sáng thì không bao giờ
   // phân biệt được hai bệnh đó — phải đo thêm dải động mới thấy.
-  night:     { sunAltitude: 0.40, sunWarmth: -0.70, sunEnergy: 1.15, fillEnergy: 2.60, skyHue: 232, skyPull: 0.80, horizonHue: 226, horizonPull: 0.74, skySaturation: 0.85, windowsLit: true,  lampEnergy: 1.00 },
+  night:     { sunAltitude: 0.40, sunWarmth: -0.70, sunEnergy: 1.15, fillEnergy: 2.60, skyHue: 232, skyPull: 0.80, horizonHue: 226, horizonPull: 0.74, skySaturation: 0.85, windowsLit: true,  lampEnergy: 1.00, haze: 0.40 },
 };
 
 /** Giờ (0–23) → tên chặng. Giờ rác → 'noon' (chặng trung tính nhất, không bao giờ trông như lỗi). */
@@ -193,6 +268,42 @@ export function phaseForHour(hour) {
 export function deriveDaylight(hour) {
   const phase = phaseForHour(hour);
   return { phase, ...DAYLIGHT_PROFILES[phase] };
+}
+
+/**
+ * Màn sương bắt đầu và kết thúc ở khoảng cách nào, theo độ dày sương của chặng.
+ *
+ * ⚠️ VÌ SAO SƯƠNG LÀ THỨ CUỐI CÙNG TÁCH ĐƯỢC BÌNH MINH KHỎI HOÀNG HÔN — và vì sao mọi cách khác
+ * đều đã thất bại trước đó. Đo theo từng dải cho thấy dải THÀNH PHỐ hai chặng chỉ cách nhau 8,7/255
+ * (góc màu 51° so với 44°). Truy tiếp thì thấy thứ nhuộm màu lên thành phố KHÔNG phải bầu trời mà
+ * là ĐÈN MẶT TRỜI, và màu đèn mặt trời do đúng một tham số quyết định: `sunWarmth`. Mà `sunWarmth`
+ * thì **buộc phải ấm ở cả hai đầu ngày** — mặt trời thấp thì ánh sáng xuyên qua quãng khí quyển dài,
+ * đó là vật lý, không phải lựa chọn mỹ thuật (bài test đã bắt đúng khi tôi thử nói ngược lại).
+ * ⇒ Ngõ cụt: không có cách nào làm ánh nắng bình minh khác màu ánh nắng hoàng hôn mà vẫn trung thực.
+ *
+ * Nhưng đời thật vẫn phân biệt được hai buổi đó từ xa, và thứ phân biệt KHÔNG phải màu nắng — là
+ * **SƯƠNG**. Qua một đêm, hơi nước đọng lại sát mặt đất: sáng sớm là buổi duy nhất trong ngày có
+ * sương phủ. Chiều tà thì bụi và hơi nước đã bốc lên cao, nằm trong BẦU TRỜI (nên trời chiều đậm
+ * màu) chứ không nằm dưới thấp. Đây cũng là lý do mọi bức tranh phong cảnh buổi sớm đều có một
+ * lớp mờ ở nền xa.
+ *
+ * Điều khiến nó hiệu quả về mặt kỹ thuật: màn sương lấy MÀU CHÂN TRỜI (xem `sceneGraph.js`), nên
+ * kéo sương lại gần không chỉ làm mờ — nó **quét sắc hồng của bình minh lên chính những công trình
+ * ở xa**. Tức là cuối cùng cũng chạm được vào dải THÀNH PHỐ, thứ mà đổi màu trời không chạm tới.
+ *
+ * ⚠️ ĐỪNG KÉO MẠNH HƠN NỮA. Bản đầu của `sceneGraph.js` để sương bắt đầu ở `gridSize * 1.05`
+ * (≈12,6 trong khi camera đứng cách 22) và ảnh chụp ra một màn trắng đục phủ gần hết thành phố.
+ * Hệ số dưới đây cố ý chỉ cho sương dày nhất (bình minh, 0,90) tới `1.7 − 0.9×0.42 ≈ 1.32`
+ * (≈15,8) — phủ phần XA của thành phố, để phần gần vẫn sắc nét.
+ *
+ * @param {number} haze 0 = trời quang … 1 = sương dày
+ * @param {number} gridSize cạnh lưới thành phố
+ * @returns {{near:number, far:number}} khoảng cách bắt đầu / tan hẳn của sương
+ */
+export function fogRangeFor(haze, gridSize) {
+  const size = Number.isFinite(gridSize) && gridSize > 0 ? gridSize : 12;
+  const h = Math.min(1, Math.max(0, Number.isFinite(haze) ? haze : 0));
+  return { near: size * (1.7 - h * 0.42), far: size * (3.4 - h * 0.95) };
 }
 
 /**

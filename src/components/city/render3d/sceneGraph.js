@@ -43,7 +43,7 @@ import { buildBuildingSpec, buildScaffoldSpec } from '../../../engine/city3d/bui
 import { buildPropSpec } from '../../../engine/city3d/propSpec';
 import { placeBounds, specBounds } from '../../../engine/city3d/pick';
 import { RESIDENT_HEIGHT, buildResidents, residentAt } from '../../../engine/city3d/residents';
-import { sunDirectionAt } from '../../../engine/city3d/daylight';
+import { fogRangeFor, sunDirectionAt } from '../../../engine/city3d/daylight';
 import { buildMergedGeometry } from './geometryFactory';
 
 /**
@@ -177,7 +177,12 @@ export function createCityScene({
   // một màn sương trắng đục. Phối cảnh không khí chỉ đẹp khi nó tác động ở RÌA.
   // Sương phải ĐỦ DÀY ở rìa bãi đất bao quanh (bán kính ~36) để mép của nó tan hẳn vào chân trời;
   // nếu không sẽ thấy một đường cắt thẳng băng giữa đất và trời.
-  scene.fog = new Fog(palette.sky2?.horizon ?? palette.background, gridSize * 1.7, gridSize * 3.4);
+  // ⚠️ ĐỘ DÀY SƯƠNG ĐỔI THEO GIỜ (2026-08-13). Trước đây sương là một hằng số, nên buổi nào cũng
+  // trong veo như nhau — và đó chính là thứ đã làm bình minh với hoàng hôn thành một bức ảnh: màu
+  // nắng hai buổi buộc phải giống nhau (vật lý), nên nếu sương cũng giống nhau thì không còn gì
+  // khác. Sáng sớm là buổi DUY NHẤT có sương đọng; xem giải thích đầy đủ ở `fogRangeFor`.
+  const fogRange = fogRangeFor(daylight?.haze ?? 0, gridSize);
+  scene.fog = new Fog(palette.sky2?.horizon ?? palette.background, fogRange.near, fogRange.far);
 
   // three KHÔNG tự giải phóng bộ nhớ GPU — mọi thứ tạo ra ở đây phải tự dọn trong `dispose`.
   const disposables = [];

@@ -334,6 +334,25 @@ Ba điều ràng buộc lẫn nhau ở đây, đổi một cái phải soi hai c
    chạy mỗi khung hình, nó phá vỡ render-on-demand (đứng yên = 0 nhịp rAF), thứ đắt nhất phải giữ
    trên iPhone. Nướng sẵn tốn 0 đồng lúc chạy.
 
+**MẶT ĐẤT KHÔNG CÒN PHẲNG (2026-08-14, Phase 7B)** — `engine/city3d/terrain.js`, thuần như mọi thứ
+khác trong `city3d/`. Xem ADR-014 cho lý do chọn **thềm bậc** thay vì dốc liên tục và **bệ kè** thay
+vì san phẳng đất. Ba điểm về LUỒNG DỮ LIỆU đáng nhớ ở tầng kiến trúc:
+1. **Cao độ là hàm của DUY NHẤT `(era, gridSize)`** — `buildTerrain` cố tình không nhận danh sách
+   công trình. Đây là cùng một bất biến đã giữ cho VỊ TRÍ ô đất (ADR-007) và THỨ TỰ mở đường
+   (Phase 6C): thứ gì thuộc về "vùng đất" thì không được đổi theo tiến độ của Đàm, nếu không mỗi
+   căn nhà mới xây sẽ làm cả quả đồi nhích và nhà cũ lún — **im lặng**, không có gì báo.
+2. **Bước CĂNG TRƯỜNG là chỗ chịu lực**, không phải các hàm hình dạng. Trên lưới 12×12 chỉ có ~9
+   giá trị mắt lưới nhiễu độc lập, nên luật số lớn không áp dụng được và phân bố thô bị dồn cục:
+   5/15 kỷ sập về 1–2 bậc dù khai 4–5 bậc. Chuẩn hoá min→0/max→1 rồi chia bậc bằng `floor` (KHÔNG
+   phải `round` — ô biên của `round` chỉ rộng bằng nửa ô giữa) mới làm mọi kỷ dùng đủ số bậc mình
+   khai. Đã khoá bằng test, và đó là bài đỏ khi gỡ bước căng.
+3. **SÁU chỗ trong `sceneGraph.js` phải hỏi `terrain`** (ô nền · đường · công trình · bệ kè · cảnh
+   vật · cư dân). Quên một chỗ thì thứ đó lơ lửng hoặc lún, và build/lint/test đều xanh — đúng loại
+   vi phạm chỉ test **đọc mã nguồn** mới chặn nổi (`sceneGraphWiring.test.js`, bảng `GROUND_ANCHORS`).
+   Camera cũng phải bù, và bù theo **ĐƠN VỊ THẾ GIỚI** chứ không trộn vào `massScale`: đo được 1 đơn
+   vị `massScale` ≈ 5 đơn vị thế giới, nên quy đổi qua cỡ lưới là quy đổi bằng một con số chẳng liên
+   quan (bản đầu bù thiếu ~4 lần và ảnh vẫn "trông có vẻ đúng").
+
 **Ánh sáng và màu là một hệ THỐNG NHẤT, không phải các nút chỉnh rời (2026-08-12, Phase 3C)**:
 bốn thứ dưới đây khoá lẫn nhau, đổi một cái phải soi lại ba cái còn lại.
 1. **Hướng nắng** (`SUN_DIRECTION`, `sceneGraph.js`) phải LỆCH SANG BÊN so với hướng nhìn mặc định

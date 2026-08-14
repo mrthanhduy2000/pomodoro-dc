@@ -11,6 +11,68 @@
 
 ---
 
+## ADR-014 — Địa hình Thành Phố 3D dùng THỀM BẬC do kỷ quyết định (không phải dốc liên tục, không phải ngẫu nhiên), và nhà vắt qua mép thềm thì kê MÓNG chứ không san phẳng đất
+
+- **Ngày**: 2026-08-14
+- **Bối cảnh**: yêu cầu của Đàm cho Thành Phố 3D nêu đích danh *"terrain must have elevation, cây
+  cối và địa hình tự nhiên"* và *"clear foreground/midground/background"*. Trước Phase 7B mặt đất
+  là 144 ô hộp **phẳng tuyệt đối ở cao độ 0** cho cả 15 kỷ — tức trục "địa hình" hoàn toàn không
+  tồn tại, và mọi kỷ dùng chung đúng một mặt bàn.
+- **Vấn đề**: có ba câu hỏi độc lập phải trả lời cùng lúc, và trả lời sai bất kỳ câu nào cũng làm
+  hỏng hai câu còn lại.
+  1. **Dốc liên tục hay bậc thềm?** Nền là 144 khối HỘP và công trình là khối ĐÁY PHẲNG.
+  2. **Cao độ phụ thuộc vào gì?** Nếu phụ thuộc dữ liệu người chơi thì đất sẽ xê dịch.
+  3. **Nhà vắt qua mép thềm thì xử lý sao?** Một góc nhà treo lơ lửng là lỗi nhìn thấy ngay.
+- **Phương án đã cân nhắc**:
+  1. **Dốc liên tục** (mặt lưới nội suy trơn) + san phẳng ô đất dưới mỗi công trình.
+  2. **Thềm bậc** + san phẳng ô đất dưới mỗi công trình.
+  3. **Thềm bậc** + công trình đứng ở cao độ CAO NHẤT dưới bóng mình, phần hụt lấp bằng **bệ kè**.
+  4. Địa hình sinh theo dữ liệu người chơi (số phiên, chuỗi ngày) cho "có cảm giác lớn lên".
+- **Lý do loại bỏ**:
+  - **(1)** dốc liên tục buộc phải đổi nền từ hộp sang mặt lưới, và mọi công trình đáy phẳng sẽ hở
+    khe ở mép dốc hoặc cắm chìm một góc. Đây là ràng buộc HÌNH HỌC, không phải lựa chọn mỹ thuật.
+  - **(1) và (2)** — san phẳng ô đất: phản xạ đầu tiên, và nó sai vì **mạng đường**. Con đường chạy
+    ngay cạnh ô vừa bị san sẽ hụt đúng một bậc, tức mạng đường (Phase 5C/6C) gãy làm đôi ở đúng chỗ
+    đông đúc nhất — đổi một lỗi nhìn thấy lấy một lỗi khác nhìn thấy rõ hơn.
+  - **(4)** vi phạm bất biến "bảo tàng bất động" của ADR-007: mỗi lần Đàm xây xong một căn nhà thì
+    cả quả đồi sẽ nhích, nhà cũ lún hoặc nhô mà **không có gì báo**. Cùng lý do đã khiến VỊ TRÍ ô
+    đất và THỨ TỰ mở đường đều chỉ phụ thuộc `hashId`, không phụ thuộc tiến độ.
+- **Giải pháp được chọn**: phương án **(3)**.
+  - `src/engine/city3d/terrain.js` — THUẦN, không import three, không `Math.random`, không `Date`.
+    Cao độ là hàm của **DUY NHẤT `era` và `gridSize`**; `buildTerrain` cố tình KHÔNG nhận danh sách
+    công trình (có test gọi kèm dữ liệu rác để chứng minh kết quả không đổi).
+  - Mỗi kỷ khai 3 tham số trong `ERA_TERRAIN`: `shape` (plain/rolling/valley/ridge/coast/dune),
+    `terraces` (số bậc), `relief` (độ cao mỗi bậc), **cộng một trường `note` bắt buộc** giải thích
+    địa hình bằng một nơi CÓ THẬT ở đúng nước của kỷ đó — cùng luật với `country`/`landmark` ở
+    `eraStyle.js`: con số không có lời giải thích là con số tuỳ hứng, và tuỳ hứng chính là thứ đã
+    sinh ra "15 kỷ cao bằng nhau" ở Phase 5B.
+  - **Bước CĂNG TRƯỜNG (chuẩn hoá min→0, max→1) rồi mới chia bậc bằng `floor`** là chỗ chịu lực
+    thật sự của cả file. Không có nó thì trên lưới 12×12 chỉ có ~9 giá trị mắt lưới độc lập, luật
+    số lớn không áp dụng được, và 5/15 kỷ sập về 1–2 bậc dù khai 4–5 bậc.
+  - Công trình vắt mép thềm nhận thêm một khối **bệ kè** đi vào CÙNG khối hình học gộp ⇒ **không
+    tốn thêm lệnh vẽ nào**, chỉ 12 tam giác, và chỉ sinh ra khi thật sự có phần hụt.
+  - Camera bù theo địa hình bằng **ĐƠN VỊ THẾ GIỚI** (`TERRAIN_TO_DISTANCE`/`TERRAIN_TO_TARGET_Y`),
+    KHÔNG trộn vào `massScale`: đo được 1 đơn vị `massScale` ≈ 5 đơn vị thế giới, nên quy đổi qua
+    cỡ lưới là quy đổi bằng một con số chẳng liên quan (bản đầu bù thiếu ~4 lần).
+- **Trade-off**:
+  - Thềm bậc **nhìn ra là bậc** — kỷ dốc (5, 7, 8) đọc gần với ruộng bậc thang hơn là đồi tự nhiên.
+    Chấp nhận: nó nhất quán với ngôn ngữ khối vuông của cả cảnh, và là thứ DUY NHẤT hợp lệ về hình
+    học với nền hộp + nhà đáy phẳng.
+  - Địa hình cố định theo kỷ ⇒ **không** dùng được làm phần thưởng tiến độ. Đó là cái giá của bất
+    biến "đất không xê dịch", và là cái giá đúng.
+  - Đo được: độ phân biệt 6 chặng ngày tụt nhẹ **37,1 → 32,6** (ngưỡng mắt 12, vẫn 0/15 cặp dưới
+    ngưỡng) — mặt bên thềm là mặt khuất nắng nên nó làm dịu bớt biên độ màu của cả cảnh.
+- **Ảnh hưởng**: **sáu** chỗ trong `sceneGraph.js` phải hỏi `terrain` (ô nền · đường · công trình +
+  móng · cảnh vật · cư dân), và quên một chỗ là **im lặng hoàn toàn** — build xanh, lint sạch, mọi
+  test khác xanh, chỉ có một cái cây trôi giữa không trung. Đã khoá bằng `sceneGraphWiring.test.js`
+  (bảng `GROUND_ANCHORS`, cả 7 assert đều đã thử ngược và thấy đỏ).
+- **Điều kiện xem xét lại**: nếu sau này nền được đổi từ 144 hộp sang một mặt lưới thật (ví dụ khi
+  làm sông/hồ/bờ biển có mặt nước), thì ràng buộc hình học sinh ra quyết định này biến mất và
+  phương án (1) đáng cân nhắc lại — nhưng lúc đó phải giải quyết lại bài toán "nhà đáy phẳng trên
+  mặt dốc", nhiều khả năng vẫn bằng chính bệ kè này.
+
+---
+
 ## ADR-013 — Thành Phố 3D dùng vật liệu PBR có bản đồ môi trường, thay cho một `MeshLambertMaterial` dùng chung; và giữ kiến trúc gộp-hình-học bằng NHÓM vật liệu chứ không bằng nhiều khối
 
 - **Ngày**: 2026-08-14

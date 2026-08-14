@@ -21,6 +21,8 @@ import {
   MIN_PITCH,
   clampPitch,
   cityOrbitOptions,
+  TERRAIN_TO_DISTANCE,
+  TERRAIN_TO_TARGET_Y,
   createOrbit,
   orbitPosition,
   wrapYaw,
@@ -166,9 +168,19 @@ test('KHÔNG CẮT NGỌN: công trình cao nhất của mọi kỷ đều nằm
   // Hình học: camera nhìn xuống một góc `pitch`; khung hình trải `fov/2` về mỗi phía. Mép TRÊN
   // khung hình vì vậy nằm ở `pitch − fov/2` (tính từ phương ngang, hướng xuống). Một điểm nằm cao
   // hơn góc đó thì KHÔNG lọt vào ảnh.
-  const [{ buildBuildingSpec }, { BLUEPRINT_CATALOG, BUILDING_EFFECTS }] = await Promise.all([
+  //
+  // ⚠️ BỔ SUNG 2026-08-14 (Phase 7B) — VÌ SAO BÀI NÀY PHẢI CỘNG THÊM ĐỘ CAO ĐỊA HÌNH.
+  // Bài viết lần đầu dựa trên một mệnh đề khi đó đúng: "thứ cao nhất thành phố = nóc công trình
+  // cao nhất". Địa hình có cao độ làm mệnh đề ấy SAI — kỷ 5 nâng nền lên 2,70 đơn vị, tức nóc nhà
+  // thật sự ở 5,52 chứ không phải 2,82. Nếu để nguyên, bài test vẫn XANH trong khi ảnh chụp bị cắt
+  // ngọn, đúng hình dạng sai của Phase 4D: một luật mới làm điều kiện cũ hết đúng, mà bài test cũ
+  // thì canh điều kiện cũ nên không đỏ. Đo lại sau khi cộng: biên hẹp nhất tụt từ 30,6° xuống 22,1°
+  // ở kỷ 5 — vẫn qua, nhưng đó là nhờ `TERRAIN_TO_DISTANCE`/`TERRAIN_TO_TARGET_Y` bù vào, và chính
+  // phép cộng này mới là thứ chứng minh hai hằng số ấy có tác dụng.
+  const [{ buildBuildingSpec }, { BLUEPRINT_CATALOG, BUILDING_EFFECTS }, { buildTerrain }] = await Promise.all([
     import('./buildingSpec.js'),
     import('../constants.js'),
+    import('./terrain.js'),
   ]);
 
   const GRID = 12;
@@ -191,18 +203,59 @@ test('KHÔNG CẮT NGỌN: công trình cao nhất của mọi kỷ đều nằm
       level: 3,
     }).height));
 
+    // Kỳ quan đứng ở khu đất trung tâm, nên nền dưới chân nó là thềm ở giữa lưới. `footprint` với
+    // bề rộng 3 ô = đúng cách `sceneGraph.js` đặt công trình: đứng ở cao độ CAO NHẤT dưới bóng mình.
+    const groundLift = buildTerrain({ era, gridSize: GRID })
+      .footprint(Math.floor(GRID / 2), Math.floor(GRID / 2), 3).top;
+    const roof = tallest + groundLift;
+
     const horizontal = Math.hypot(eye.x, eye.z);
-    const angleToRoof = Math.atan2(eye.y - tallest, horizontal);
+    const angleToRoof = Math.atan2(eye.y - roof, horizontal);
     const topEdge = pitch - halfFov;
 
     assert.ok(angleToRoof > topEdge + MARGIN,
-      `kỷ ${era}: nóc công trình cao nhất (${tallest.toFixed(2)} đơn vị) nằm ở `
+      `kỷ ${era}: nóc công trình cao nhất (cao ${tallest.toFixed(2)} + đồi ${groundLift.toFixed(2)} `
+      + `= ${roof.toFixed(2)} đơn vị) nằm ở `
       + `${((angleToRoof * 180) / Math.PI).toFixed(1)}° trong khi mép trên khung hình ở `
       + `${((topEdge * 180) / Math.PI).toFixed(1)}° ⇒ bị cắt ngọn`);
   }
 });
 
-test('KỶ THẤP GIỮ NGUYÊN KHUNG SÁT — "không thu quá xa rồi bị mờ"', () => {
+test('ĐỐI CHỨNG: gỡ phần bù địa hình khỏi camera thì kỷ dốc nhất PHẢI cắt ngọn', () => {
+  // ⚠️ Không có bài này thì bài trên chỉ đang MAY MẮN, và tôi sẽ không biết.
+  // Bài trên xanh với `TERRAIN_TO_DISTANCE`/`TERRAIN_TO_TARGET_Y` hiện tại — nhưng nó cũng xanh nếu
+  // hai hằng số đó bằng 0 mà biên vốn đã rộng sẵn. Bài này dựng lại đúng phép tính ấy với camera
+  // KHÔNG bù địa hình, rồi đòi kết quả phải THẤT BẠI. Cùng kỷ luật với ô "trường phẳng lì" ở
+  // `terrain.test.js`: một ngưỡng không có ca đối chứng là một ngưỡng ai cũng hạ được cho tiện.
+  //
+  // Kỷ 5 (Burg Eltz trên mỏm đá) là kỷ dốc nhất: 5 thềm × 1,35 = 2,70 đơn vị.
+  const GRID = 12;
+  const ERA = 5;
+  const TALLEST = 2.82;      // nóc kỳ quan kỷ 5 ở cấp 3, đo bằng `buildBuildingSpec` (bài trên)
+  const LIFT = 2.70;         // `terrainMaxHeight(5)`
+  const halfFov = ((CITY_CAMERA_FOV / 2) * Math.PI) / 180;
+
+  // Camera KHÔNG bù địa hình = đúng công thức trước Phase 7B: chỉ theo `massScale`.
+  // ⚠️ Gỡ bằng chính hằng số đã cộng vào, KHÔNG chép lại con số — chép lại là "một luật hai công
+  // thức", và cái chép lại sẽ đứng yên khi ai đó chỉnh hằng số thật.
+  const opts = cityOrbitOptions(GRID, ERA);
+  const naive = {
+    ...opts,
+    distance: opts.distance - LIFT * TERRAIN_TO_DISTANCE,
+    target: { ...opts.target, y: opts.target.y - LIFT * TERRAIN_TO_TARGET_Y },
+  };
+  const { yaw, pitch, distance, target } = createOrbit(naive).getState();
+  const eye = orbitPosition({ yaw, pitch, distance, target });
+  const angleToRoof = Math.atan2(eye.y - (TALLEST + LIFT), Math.hypot(eye.x, eye.z));
+  const topEdge = pitch - halfFov;
+
+  assert.ok(angleToRoof <= topEdge + (3 * Math.PI) / 180,
+    'camera KHÔNG bù địa hình mà vẫn lọt khung ⇒ phần bù không phải thứ đang giữ bài trên xanh, '
+    + 'và hai hằng số TERRAIN_TO_* đang là số trang trí');
+});
+
+test('KỶ THẤP GIỮ NGUYÊN KHUNG SÁT — "không thu quá xa rồi bị mờ"', async () => {
+  const { terrainMaxHeight } = await import('./terrain.js');
   // Vế thứ hai của yêu cầu Đàm, và nó ngược chiều với bài test trên. Bài trên một mình vẫn xanh
   // nếu ta lùi camera thật xa cho MỌI kỷ — mà đó đúng là thứ Đàm vừa bảo bỏ đi. Hai bài kẹp nhau
   // mới thành một hàng rào: vừa đủ xa để không cắt ngọn, vừa đủ gần để nhìn ra chi tiết.
@@ -212,11 +265,21 @@ test('KỶ THẤP GIỮ NGUYÊN KHUNG SÁT — "không thu quá xa rồi bị m�
   // (a) Kỷ nhà THẤP phải tiến VÀO GẦN hơn mức sát, không chỉ "không lùi ra". Đây là nửa dễ quên
   // của yêu cầu: bản đầu kẹp `Math.max(0, …)` nên camera chỉ biết lùi, và kỷ 1 — nơi mọi người bắt
   // đầu — giữ nguyên khoảng cách đóng cho nhà cao gấp ba, ra một bãi cỏ mênh mông.
+  //
+  // ⚠️ ĐO PHẦN `massScale` RIÊNG, KHÔNG ĐO TỔNG (sửa 2026-08-14, Phase 7B). Bản đầu đòi
+  // `opts.distance < BASE` trên con số TỔNG, và nó đỏ ngay khi địa hình ra đời: kỷ 1 là Göbekli
+  // Tepe — một GÒ ĐẤT cao 1,50 đơn vị — nên camera lùi thêm 1,88 là ĐÚNG, thành phố đã được nâng
+  // lên thật. Bài test khi đó đang đòi một điều đã hết đúng (cùng hình dạng sai với Phase 4D).
+  // Thứ bài này thật sự muốn canh là *nhà thấp thì khung phải sát hơn*, tức phần đóng góp của
+  // `massScale`. Nên trừ đúng phần địa hình ra rồi mới so — trừ bằng hằng số thật, không chép số.
   for (const era of [1, 2]) {
     const opts = cityOrbitOptions(GRID, era);
-    assert.ok(opts.distance < BASE,
-      `kỷ ${era} nhà rất thấp mà camera vẫn đứng xa như kỷ nhà cao (${opts.distance.toFixed(2)})`);
-    assert.equal(opts.target.y, 0, `kỷ ${era}: nâng điểm ngắm lên vô cớ ⇒ mặt đất tụt khỏi khung`);
+    const massOnly = opts.distance - terrainMaxHeight(era) * TERRAIN_TO_DISTANCE;
+    assert.ok(massOnly < BASE,
+      `kỷ ${era} nhà rất thấp mà camera vẫn đứng xa như kỷ nhà cao (${massOnly.toFixed(2)})`);
+    const targetMassOnly = opts.target.y - terrainMaxHeight(era) * TERRAIN_TO_TARGET_Y;
+    assert.ok(Math.abs(targetMassOnly) < 1e-9,
+      `kỷ ${era}: nâng điểm ngắm lên vô cớ ⇒ mặt đất tụt khỏi khung (${targetMassOnly.toFixed(3)})`);
   }
 
   // (b) Hai TRẦN kẹp hai đầu. Không kỷ nào được lùi quá 1,35 lần mức sát (đo được cao nhất 1,29)

@@ -6,7 +6,61 @@
 > chọn: `ARCHITECTURE_DECISIONS.md`. Nợ kỹ thuật: `TECH_DEBT.md`. Migration: `MIGRATION.md`. Tóm
 > tắt theo mốc: `CHANGELOG.md`.
 > **NGUYÊN TẮC ƯU TIÊN SỐ 1:** (1) mọi phiên AI phải đọc file này + `CLAUDE.md` + các file liên quan TRƯỚC khi làm; (2) sau MỌI cập nhật dù nhỏ, phải cập nhật ngay file này + `CLAUDE.md` + các file liên quan khác.
-> Cập nhật lần cuối: **2026-08-14** — **Phase 7A**: **VẬT LIỆU THẬT — đá ra đá, kính ra kính, kim
+> Cập nhật lần cuối: **2026-08-14** — **Phase 7B**: **MẶT ĐẤT CÓ CAO ĐỘ — 15 kỷ, 15 vùng đất.**
+> Bước THỨ HAI trong thứ tự Đàm chốt (*Visual Foundation → **Terrain/City** → Roads → Historical
+> Architecture → Living City → Pomodoro → Polish*). Trước bản này mặt đất là 144 ô hộp **phẳng
+> tuyệt đối ở cao độ 0** cho cả 15 kỷ — trục "địa hình" hoàn toàn không tồn tại.
+>
+> **Đã làm.** Module thuần mới `src/engine/city3d/terrain.js`. Mỗi kỷ một trường cao độ **THỀM BẬC**
+> khai bằng 3 tham số (`shape` · `terraces` · `relief`) cộng một trường `note` **BẮT BUỘC** giải
+> thích địa hình bằng một nơi CÓ THẬT ở đúng nước của kỷ đó: gò Göbekli Tepe (kỷ 1) · đồng bằng phù
+> sa sông Nin (2) · Lưỡng Hà phẳng tuyệt đối (3) · kinh thành Trung Hoa (4) · mỏm đá Burg Eltz —
+> dốc nhất (5) · làng Bắc Bộ ven sông (6) · đồi Toscana (7) · Lisbon "bảy quả đồi" (8) · lòng chảo
+> sông Seine (9) · thung lũng Manchester (10) · tấm granite Manhattan (11) · thảo nguyên Nga (12) ·
+> đô thị Nhật kẹp giữa núi (13) · đất LẤN BIỂN Marina Bay, phẳng có chủ đích (14) · đụn cát Dubai
+> (15). `sceneGraph.js` bám địa hình ở **sáu** chỗ và sinh **bệ kè** cho nhà vắt qua mép thềm.
+> `orbit.js` bù khoảng cách + điểm ngắm camera theo độ cao đất. Xem **ADR-014**.
+>
+> **Ba quyết định đáng nhớ.** (a) **THỀM chứ không phải DỐC** — nền là 144 ô HỘP và công trình là
+> khối ĐÁY PHẲNG, dốc liên tục sẽ hở khe hoặc cắm chìm một góc; đây là ràng buộc hình học, không
+> phải lựa chọn mỹ thuật. (b) **Cao độ là hàm của DUY NHẤT `(era, gridSize)`** — `buildTerrain` cố
+> tình KHÔNG nhận danh sách công trình, vì nếu đất đổi theo tiến độ thì mỗi căn nhà Đàm xây xong sẽ
+> làm cả quả đồi nhích và nhà cũ lún **mà không có gì báo** (cùng bất biến với ADR-007). (c) **Nhà
+> vắt mép thềm thì KÊ MÓNG, không san phẳng đất** — san phẳng thì con đường chạy ngay cạnh hụt đúng
+> một bậc và mạng đường (Phase 5C/6C) gãy làm đôi ở chỗ đông nhất; bệ kè lại thêm đúng loại chi tiết
+> kiến trúc cảnh đang thiếu, và nó đi vào cùng khối hình học gộp nên **tốn 0 lệnh vẽ**.
+>
+> **Giá phải trả: gần như bằng 0.** Nền vẫn đúng 144 ô trong MỘT `InstancedMesh` (chỉ đổi `y` + hệ
+> số cao mỗi thể hiện) ⇒ **không thêm lệnh vẽ nào**; bệ kè ≤ 60 tam giác trên tổng ~5.000. Không
+> đụng state, không đụng schema, không migration. Test **612 → 625**.
+>
+> ⚠️ **BÀI HỌC LỚN NHẤT PHIÊN NÀY — ba lần đoán sai nguyên nhân, và cả ba lần đều nghe rất có lý.**
+> Yêu cầu: mọi kỷ phải DÙNG ĐỦ số bậc mình khai. Đo lần 1: **4 kỷ phẳng lì**, 15 kỷ chỉ ra 11 trường
+> khác nhau — hàm hình dạng gánh luôn cả biên độ rồi `Math.round(0.35 × 1)` **làm tròn về 0**. Đo
+> lần 2: kỷ 8 có **85% số ô cùng một bậc** — trục dốc viết `(x + y)`, mà tổng hai biến đều có **phân
+> bố tam giác**. Đo lần 3: vẫn 5 kỷ dồn cục, và đây mới là nguyên nhân THẬT — lưới 12×12 với ô nhiễu
+> 4,5 chỉ có **~9 giá trị độc lập**, tức cỡ mẫu là 9 chứ không phải 144, nên **luật số lớn không áp
+> dụng được** bất kể chỉnh hàm khéo tới đâu. Vá gốc: **căng trường ra trọn 0..1 rồi mới chia bậc**,
+> chia bằng `floor` chứ không `round` (ô biên của `round` chỉ rộng bằng NỬA ô giữa).
+> ⚠️ Và phần khó chịu nhất: bản vá thứ ba **NUỐT LUÔN** hai lỗi đầu — sau khi có bước căng thì nhân
+> hệ số nào vào hàm hình dạng cũng ra kết quả y hệt từng con số. Nghĩa là hai bài test tôi viết cho
+> hai lỗi ấy **thành vô dụng mà vẫn xanh**, và chú thích của chúng thành lời nói dối. Đã thử ngược
+> rồi viết lại cho đúng. Cùng họ với Phase 3Y: **sửa đúng KHÔNG chứng minh hiểu đúng.**
+>
+> ⚠️ **PHÁT HIỆN KÈM THEO — CHƯA SỬA, CẦN ĐÀM QUYẾT (`TECH_DEBT #24`).** Viết công cụ mới
+> `scripts/frame-fit.mjs` để kiểm khung hình, và nó đo ra **14/15 kỷ có công trình bị mép khung hình
+> CẮT** (nặng nhất kỷ 2, biên −0,513; ở khung vuông kiểu iPhone là **15/15**). Đối chứng `--flat`
+> chứng minh đây là lỗi **có từ Phase 5A**, KHÔNG phải do 7B — địa hình thực ra làm khung hình **đỡ**
+> đi (hệ số cần thiết 2,01 → 1,78). Nguyên nhân: Phase 5A hạ `CAMERA_DISTANCE_FACTOR` 1,5 → 1,18 để
+> chữa đúng lời Đàm *"không thu quá xa rồi bị mờ"*, và lần đó chỉ kiểm **một trục, mép TRÊN, một
+> công trình**. Sửa triệt để nghĩa là mở khung ~1,5 lần — tức đi ngược chính yêu cầu của Đàm ⇒ đây
+> là **đánh đổi thật, không phải lỗi để tự sửa**, đã ghi 3 hướng để Đàm chọn.
+> ⚠️ Và công cụ ấy **nói dối ngay lần chạy đầu** (lần thứ 17 trong dự án): vector `right` ngược dấu
+> ⇒ nhãn mép ĐẢO ("mép TRÊN" trong khi ảnh rõ ràng cắt ở mép DƯỚI), trong khi **các con số thì vẫn
+> đúng tuyệt đối** vì phép đo lấy trị tuyệt đối. Loại nói dối này rất dễ được tin vì phần dễ kiểm
+> nhất của nó lại đúng. Ảnh chụp là thứ bắt được nó.
+>
+> **Phase 7A** (ngay trước đó): **VẬT LIỆU THẬT — đá ra đá, kính ra kính, kim
 > loại ra kim loại.** Đàm ra yêu cầu nâng cấp TOÀN DIỆN Thành phố 3D vì nó *"còn giống
 > low-poly/prototype"*, đích đến là **premium stylized 3D realism**, và nói rõ *"vật liệu phải đọc
 > ra rõ là đá, gạch, gỗ, đất nung, ngói, bê tông, kim loại"*. Thứ tự Đàm chốt: **Visual Foundation →
@@ -412,6 +466,16 @@
 - ⚠️ **CẦN ĐÀM THỬ TAY** (không test được trên dev): (a) câu nhắc-sau-phiên hiện sau khi xong PHIÊN THẬT; (b) bài "AI phân tích tổng thể" giờ chạy pro — xem có chậm/khác chất lượng không; (c) dòng "Ghi nhớ" lời khuyên hiện sau ≥3 ngày; (d) thông báo chuỗi-sắp-đứt: **từ nay** (11/7) chiều nào quên làm sẽ nhận push (cần đã bật push iPhone) — đây là lần đầu tiên thực sự có cơ hội chạy thật.
 
 ## 🔜 Sẽ làm tiếp (ưu tiên từ trên xuống)
+0. **NHÁNH THÀNH PHỐ 3D — thứ tự Đàm đã chốt, KHÔNG được nhảy bước.**
+   *Visual Foundation (**7A ✅**) → Terrain/City (**7B: địa hình ✅ · mật độ + khu dân cư CHƯA**) →
+   Roads → Historical Architecture → Living City → Pomodoro → Polish.*
+   **Việc kế tiếp = "mật độ + khu dân cư"**: thêm nhà dân nhỏ/vừa/lớn, cửa hàng, xưởng, kho, công
+   trình phụ, và quy hoạch **ngoại vi → khu dân cư → trung tâm → landmark**. Đây là thứ Đàm phàn nàn
+   rõ nhất còn lại — đất vẫn trống nhiều, 5 công trình cho cả một lưới 12×12.
+   ⚠️ **Hai việc PHẢI làm TRƯỚC khi thêm nhà**: (a) Đàm đo lại cổng hiệu năng iPhone (`TECH_DEBT #23`)
+   — phase này thêm hình học THẬT nên nếu không đo trước sẽ không tách được thủ phạm khi máy nóng;
+   (b) Đàm chọn hướng cho `TECH_DEBT #24` (khung hình đang cắt công trình) — thành phố càng dày thì
+   phần bị xén càng nhiều, và chỉnh bố cục + chỉnh khung một lần rẻ hơn hai lần.
 1. **Giao diện còn dở**: full-screen iPhone (tai thỏ che mép trên), nút đóng ✕ cho hộp phần thưởng, gom cỡ chữ cho đồng nhất, tắt hiệu ứng cho người nhạy chuyển động.
 2. **(Giai đoạn A, gần xong)** Lưới an toàn test: đợt 1 (2026-07-13) phủ `completeFocusSession`/
    `cancelFocusSession`/`syncService`; đợt 2 (2026-07-17) phủ nốt `computeLevelUps`, bảo-toàn-tài-sản
@@ -432,6 +496,40 @@
 
 ## 🗒️ Nhật ký cập nhật
 > Mỗi lần xong việc đáng kể, thêm 1 dòng vào ĐẦU danh sách.
+
+- **2026-08-14 (Phase 7B — mặt đất có cao độ: 15 kỷ, 15 vùng đất)** — **625 bài test**, lint sạch,
+  build xanh. Không đụng state/schema, không migration.
+  - **Module thuần mới `src/engine/city3d/terrain.js`** (+ 10 bài test riêng). Mỗi kỷ một trường cao
+    độ **thềm bậc** = `shape` × `terraces` × `relief`, cộng `note` bắt buộc giải thích bằng một nơi
+    có thật ở đúng nước của kỷ. 15/15 kỷ ra 15 trường khác nhau; mọi kỷ dùng đủ số bậc mình khai.
+  - **`sceneGraph.js` bám đất ở SÁU chỗ** (ô nền · đường · công trình · bệ kè · cảnh vật · cư dân) —
+    quên chỗ nào cũng **im lặng hoàn toàn**, nên đã khoá bằng bảng `GROUND_ANCHORS` trong
+    `sceneGraphWiring.test.js`; cả 7 assert mới đều đã thử ngược và thấy đỏ.
+  - **`orbit.js` bù camera theo ĐƠN VỊ THẾ GIỚI**, không trộn vào `massScale`. Bản đầu viết
+    `massScale + terrainMaxHeight / gridSize` — nghe gọn và **sai 4 lần**: đo thật thì 1 đơn vị
+    `massScale` ≈ **5 đơn vị thế giới**, nên chia cho cỡ lưới (12) là quy đổi bằng một con số chẳng
+    liên quan; kỷ 8 được lùi thêm 0,8 trong khi nhà bị nâng lên 2,4.
+  - **Bài `KHÔNG CẮT NGỌN` cũ có tiền đề đã hết đúng** — nó dựa trên mệnh đề *"thứ cao nhất thành
+    phố = nóc công trình"*, mà địa hình làm mệnh đề ấy sai (kỷ 5 nâng nền 2,70 đơn vị). Để nguyên
+    thì test **vẫn xanh trong khi ảnh bị cắt ngọn** — đúng hình dạng sai của Phase 4D. Đã cộng thêm
+    cao độ đất, và thêm một bài **ĐỐI CHỨNG** đòi camera-không-bù PHẢI cắt ngọn (nếu không thì hai
+    hằng số `TERRAIN_TO_*` chỉ là số trang trí). Thử ngược: bài đối chứng bắt được cả cách "sửa" sai
+    lầm là zoom cả 15 kỷ ra xa.
+  - **Bài `KỶ THẤP GIỮ KHUNG SÁT` cũng phải sửa tiền đề**: nó đòi kỷ 1 đứng gần hơn mức sát, nhưng
+    kỷ 1 là **Göbekli Tepe — một GÒ ĐẤT cao 1,50 đơn vị**, nên camera lùi thêm là ĐÚNG. Nay đo phần
+    `massScale` riêng (trừ phần địa hình bằng chính hằng số đã cộng, không chép lại số).
+  - **Đo được**: 6 chặng ngày tụt nhẹ 37,1 → **32,6** (ngưỡng mắt 12, vẫn 0/15 dưới ngưỡng). Biên
+    khung theo chiều cao ở kỷ dốc nhất: 30,6° → **22,1°**, vẫn cách mép trên 6,7°.
+  - **Đã kiểm `sweep-score` KHÔNG bị 7B làm tệ đi**: chấm bản quét địa hình phẳng ra **đúng cùng ba
+    kỷ lệch** (5 · 11 · 14) và cùng lý do từ chối ⇒ `TECH_DEBT #22` vẫn nguyên trạng, không phải hồi
+    quy mới. Đây là đo, không phải đoán.
+  - **Nợ mới `TECH_DEBT #24`** (Medium-High, chờ Đàm quyết): 14/15 kỷ có công trình bị mép khung
+    hình cắt — **có từ Phase 5A**, đã chứng minh bằng đối chứng `--flat`. Công cụ mới
+    `scripts/frame-fit.mjs` (có `--selftest` chạm cả hai trục dọc/ngang).
+  - ⚠️ **`TECH_DEBT #23` vẫn CHƯA đo** (cổng hiệu năng iPhone sau PBR). Mục đó khuyến nghị đo TRƯỚC
+    7B; thực tế 7B chạy trước. Chấp nhận được vì 7B **không thêm lệnh vẽ nào** và ≤ 60 tam giác, nên
+    hai thay đổi vẫn tách được — nhưng điều này **hết đúng ở phase tăng mật độ nhà**, chỗ đó phải đo
+    trước.
 
 - **2026-08-13 (Phase 4F — quét đủ 15 kỷ × 6 chặng, và CHẤM nó bằng số)** — **551 bài test**, lint
   sạch, build xanh.

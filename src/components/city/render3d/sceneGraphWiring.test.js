@@ -112,6 +112,64 @@ test('KIM LOẠI PHẢI CÓ BẢN ĐỒ MÔI TRƯỜNG — thiếu nó thì mái
   );
 });
 
+/**
+ * SÁU CHỖ BÁM ĐẤT. Kể từ Phase 7B mặt đất KHÔNG CÒN PHẲNG, nên mọi thứ đứng trên nó phải hỏi
+ * `terrain` xem chỗ ấy cao bao nhiêu. Quên một chỗ thì thứ đó **lơ lửng hoặc lún**, và:
+ * build xanh · lint sạch · mọi test khác xanh · không một cảnh báo nào. Triệu chứng duy nhất là
+ * một cái cây trôi giữa không trung mà phải soi ảnh mới thấy.
+ *
+ * ⚠️ Đây đúng hình dạng sai của Phase 4D ("một luật mới làm điều kiện cũ hết đúng ⇒ phải đi tìm
+ * MỌI chỗ phát biểu lại điều kiện ấy"). Điều kiện cũ là *"y của mọi thứ trên mặt đất = 0"*, và nó
+ * được phát biểu lại ở sáu nơi. Bảng dưới đây là danh sách đầy đủ đó, viết ra để lần sau ai thêm
+ * chỗ thứ bảy thì có nơi mà đối chiếu.
+ */
+const GROUND_ANCHORS = [
+  { name: 'ô nền', pattern: /const h = terrain\.heightAt\(cell\.x, cell\.y\)/,
+    hurt: 'thềm không nhô lên — cả địa hình biến mất, mặt đất phẳng lì như trước Phase 7B' },
+  { name: 'đường sá', pattern: /const h = terrain\.heightAt\(road\.x, road\.y\)/,
+    hurt: 'đường nằm ở cao độ 0 trong khi đất đã nhô lên ⇒ phố chui xuyên vào trong đồi' },
+  { name: 'công trình + móng', pattern: /terrain\.footprint\(cell\.x, cell\.y, span\)/,
+    hurt: 'nhà đứng ở cao độ 0 ⇒ nhà trên đồi bị chôn tới nóc, nhà dưới thung lũng bay lơ lửng' },
+  { name: 'cảnh vật', pattern: /y: terrain\.heightAt\(prop\.x, prop\.y\)/,
+    hurt: 'cây/thùng/đèn cắm ở cao độ 0 ⇒ cây mọc xuyên qua sườn đồi hoặc treo giữa trời' },
+  { name: 'cư dân', pattern: /terrain\.heightAt\(spot\.x, spot\.y\) \+ ROAD_SURFACE_Y/,
+    hurt: 'người đi bộ lún dưới mặt đường hoặc đi trên không' },
+];
+
+test('SÁU CHỖ BÁM ĐẤT: mọi thứ đứng trên mặt đất đều phải hỏi `terrain`', () => {
+  assert.ok(
+    /const terrain = buildTerrain\(\{ era: layout\.era, gridSize \}\)/.test(CODE),
+    'Không còn dựng địa hình cho cảnh. Cả Phase 7B biến mất mà không có gì đỏ.',
+  );
+  for (const anchor of GROUND_ANCHORS) {
+    assert.ok(
+      anchor.pattern.test(CODE),
+      `Chỗ bám đất "${anchor.name}" không còn hỏi \`terrain\`. Hậu quả: ${anchor.hurt}. `
+      + '⚠️ Sai chỗ này KHÔNG có gì đỏ lên — chỉ có mắt nhìn vào ảnh chụp mới bắt được.',
+    );
+  }
+});
+
+test('CÔNG TRÌNH ĐỨNG Ở CAO ĐỘ CAO NHẤT DƯỚI BÓNG MÌNH, và phần hụt phải thành MÓNG', () => {
+  // Hai nửa của cùng một luật, và nửa thứ hai là nửa dễ mất. Nếu chỉ lấy `top` mà bỏ `drop` thì
+  // nhà vắt qua mép thềm sẽ có góc TREO LƠ LỬNG — nhìn thấy rõ, nhưng không test nào bắt.
+  assert.ok(
+    /const \{ top, drop \} = terrain\.footprint\(/.test(CODE),
+    'Không còn đọc CẢ `top` lẫn `drop`. Bỏ `drop` ⇒ nhà trên sườn đồi treo một góc giữa không khí.',
+  );
+  assert.ok(
+    /const plinth = drop > 0 \?/.test(CODE),
+    'Khối móng không còn được sinh ra khi có phần hụt.',
+  );
+  // ⚠️ Móng phải đi vào CÙNG danh sách `placements` — nếu không nó chỉ là dữ liệu chết, và đây đúng
+  // là bẫy Phase 4H (`summarizeMuseum` có test riêng, test xanh, không ai gọi).
+  assert.ok(
+    /placements\.push\(\.\.\.plinths\)/.test(CALLS),
+    'Móng được TÍNH nhưng không được ĐƯA VÀO cảnh — đúng bẫy Phase 4H: hàm chạy đúng, có test '
+    + 'riêng, và không ai gọi. Không có gì đỏ, chỉ có mấy góc nhà treo lơ lửng.',
+  );
+});
+
 test('BẦU TRỜI PHẢN CHIẾU PHẢI LÀ BẦU TRỜI ĐANG NHÌN THẤY — một luật, một hàm', () => {
   // Vẽ vòm trời bằng một công thức rồi nướng bản đồ phản chiếu bằng công thức khác là đúng cái bẫy
   // `sweep-score.mjs` ↔ `city-preview.mjs` ở Phase 4G: hai bên lệch nhau thì kính sẽ phản chiếu một

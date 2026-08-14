@@ -12,6 +12,38 @@
 
 ---
 
+## 2026-08-14 — Mặt đất có cao độ: 15 kỷ, 15 vùng đất (Phase 7B)
+
+**Mục đích.** Bước thứ hai trong thứ tự Đàm đã chốt cho Thành phố 3D (*Visual Foundation → Terrain
+/City → …*). Yêu cầu nêu đích danh *"terrain must have elevation"* và *"clear foreground/midground
+/background"*. Trước bản này mặt đất là 144 ô hộp **phẳng tuyệt đối ở cao độ 0** cho cả 15 kỷ — tức
+trục "địa hình" hoàn toàn không tồn tại và mọi kỷ dùng chung một mặt bàn.
+
+**Phạm vi.** Module thuần mới `engine/city3d/terrain.js`: mỗi kỷ một trường cao độ **thềm bậc**,
+khai bằng 3 tham số (`shape` / `terraces` / `relief`) cộng một trường `note` **bắt buộc** giải thích
+địa hình bằng một nơi có thật ở đúng nước của kỷ đó (gò Göbekli Tepe · đồng bằng sông Nin · mỏm đá
+Burg Eltz · đồi Toscana · bảy quả đồi Lisbon · lòng chảo sông Seine · granite Manhattan · thảo
+nguyên Nga · đất lấn biển Marina Bay · đụn cát Dubai…). `sceneGraph.js` bám địa hình ở **sáu** chỗ
+và sinh **bệ kè** cho công trình vắt qua mép thềm. `orbit.js` bù khoảng cách + điểm ngắm camera theo
+độ cao địa hình, tính bằng **đơn vị thế giới**. Xem **ADR-014**.
+
+**Ảnh hưởng.** Không đụng state, không đụng schema, không migration. **Không thêm lệnh vẽ nào**:
+nền vẫn là một `InstancedMesh` 144 ô (chỉ đổi `y` + hệ số cao mỗi thể hiện), bệ kè đi vào cùng khối
+hình học gộp của công trình (≤ 60 tam giác trên tổng ~5.000). Test 612 → **625**.
+
+**Đo được.** 15/15 kỷ ra 15 trường cao độ khác nhau; mọi kỷ dùng đủ số bậc mình khai. Độ phân biệt
+6 chặng ngày tụt nhẹ 37,1 → **32,6** (ngưỡng mắt 12; vẫn 0/15 cặp dưới ngưỡng) — mặt bên thềm khuất
+nắng nên làm dịu biên độ màu. Biên khung hình theo chiều cao: kỷ dốc nhất (kỷ 5) tụt từ 30,6° xuống
+**22,1°**, vẫn cách mép trên 6,7°.
+
+**Phát hiện kèm theo (chưa sửa — cần Đàm quyết).** Công cụ mới `scripts/frame-fit.mjs` đo ra
+**14/15 kỷ có công trình bị mép khung hình cắt**, và đối chứng `--flat` cho thấy đây là lỗi **có từ
+Phase 5A**, không phải do 7B (địa hình thực ra làm khung hình đỡ đi: hệ số cần thiết 2,01 → 1,78).
+Sửa triệt để nghĩa là mở khung ~1,5 lần, tức đi ngược yêu cầu *"không thu quá xa rồi bị mờ"* của
+chính Đàm ⇒ ghi thành `TECH_DEBT.md` **#24** với ba hướng để Đàm chọn.
+
+---
+
 ## 2026-08-14 — Vật liệu thật: đá ra đá, kính ra kính, kim loại ra kim loại (Phase 7A)
 
 **Mục đích.** Đàm yêu cầu nâng cấp toàn diện Thành phố 3D vì nó *"còn giống low-poly/prototype"*,

@@ -10,6 +10,7 @@
  */
 
 import { getEraStyle } from './eraStyle';
+import { terrainMaxHeight } from './terrain';
 
 const TAU = Math.PI * 2;
 
@@ -105,6 +106,13 @@ const MIN_DISTANCE_RATIO = 0.88;
 const LIFT_TO_DISTANCE = 0.34;
 /** Nâng điểm ngắm lên bao nhiêu (× cỡ lưới) cho mỗi đơn vị `massScale` vượt ngưỡng. */
 const LIFT_TO_TARGET_Y = 0.15;
+/**
+ * Lùi camera thêm bao nhiêu cho mỗi ĐƠN VỊ THẾ GIỚI mà địa hình nâng công trình lên.
+ * Đơn vị thế giới, không phải × cỡ lưới — xem lý do đầy đủ trong `cityOrbitOptions`.
+ */
+export const TERRAIN_TO_DISTANCE = 1.25;
+/** Nâng điểm ngắm thêm bao nhiêu cho mỗi đơn vị thế giới địa hình nâng lên. */
+export const TERRAIN_TO_TARGET_Y = 0.55;
 
 /**
  * Bộ tham số camera chuẩn của màn hình Thành Phố.
@@ -134,15 +142,36 @@ export function cityOrbitOptions(gridSize, era) {
     CAMERA_DISTANCE_FACTOR * MIN_DISTANCE_RATIO,
     CAMERA_DISTANCE_FACTOR + lift * LIFT_TO_DISTANCE,
   );
+
+  /**
+   * ⚠️ ĐỊA HÌNH LÀ CHIỀU THỨ HAI CỦA CÙNG MỘT LỖI CẮT NGỌN, và nó phải cộng theo ĐƠN VỊ THẾ GIỚI,
+   * KHÔNG được trộn vào `massScale`.
+   *
+   * Bản đầu tôi viết `scale = massScale + terrainMaxHeight / gridSize` — nghe rất gọn, và **sai 4
+   * lần**. Lý do: một đơn vị `massScale` không phải một đơn vị chiều cao. Đo thật thì `massScale`
+   * 0,70 cho ra công trình cao 3,66 đơn vị, tức **1 đơn vị `massScale` ≈ 5 đơn vị thế giới**; chia
+   * cao độ đất cho cỡ lưới (12) là quy đổi bằng một con số chẳng liên quan gì. Kết quả: kỷ 8 được
+   * lùi thêm 0,8 trong khi nhà bị nâng lên 2,4 — bù chưa tới một phần ba, và ảnh chụp ra một thành
+   * phố bị cắt cả mép trái lẫn mép trên.
+   *
+   * Cộng thẳng theo đơn vị thế giới thì không cần biết hệ số quy đổi nào cả. Hai hằng số dưới đây
+   * chọn bằng cách dựng ảnh rồi nhìn, không phải bằng suy luận — cùng kỷ luật với `ENV_DIFFUSE`.
+   */
+  const terrainLift = terrainMaxHeight(era);
+
   return {
-    distance: gridSize * factor,
+    distance: gridSize * factor + terrainLift * TERRAIN_TO_DISTANCE,
     minDistance: gridSize * CAMERA_MIN_FACTOR,
     maxDistance: gridSize * CAMERA_MAX_FACTOR,
     // Ngắm cao hơn mặt đất một chút ở kỷ cao: nếu chỉ lùi xa mà vẫn ngắm chân tường thì tháp vẫn
     // chạy lên mép trên, chỉ là chậm hơn.
     // ⚠️ CHỈ nâng, không bao giờ HẠ: điểm ngắm âm sẽ kéo đường chân trời lên giữa khung và cắt mất
     // dải trời — thứ đã tốn cả một phase (3V/3W) mới đưa được vào khung hình.
-    target: { x: 0, y: gridSize * Math.max(0, lift) * LIFT_TO_TARGET_Y, z: 0 },
+    target: {
+      x: 0,
+      y: gridSize * Math.max(0, lift) * LIFT_TO_TARGET_Y + terrainLift * TERRAIN_TO_TARGET_Y,
+      z: 0,
+    },
   };
 }
 

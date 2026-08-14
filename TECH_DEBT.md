@@ -13,9 +13,10 @@
 > mà không được refactor triệt để, phải CHỦ ĐỘNG đề xuất mở một "Maintenance Sprint" (nêu rõ mục
 > tiêu/phạm vi/lợi ích/rủi ro/tiêu chí hoàn thành) thay vì tiếp tục cộng thêm tính năng mới.
 >
-> **Trạng thái ngưỡng hiện tại (2026-08-14, cập nhật sau Phase 7A)**: **1 mục Priority High**
-> (#14) → vẫn CHƯA đạt ngưỡng 8–10 mục để đề xuất Maintenance Sprint. Còn **2 mục Medium-High**
-> (#3, #13) và **3 mục Medium**: **#23** (cổng hiệu năng iPhone chưa đo lại sau khi đổi sang PBR —
+> **Trạng thái ngưỡng hiện tại (2026-08-14, cập nhật sau Phase 7B)**: **1 mục Priority High**
+> (#14) → vẫn CHƯA đạt ngưỡng 8–10 mục để đề xuất Maintenance Sprint. Còn **3 mục Medium-High**
+> (#3, #13, và **#24** — MỚI: 14/15 kỷ có công trình bị mép khung hình cắt, đã đo đủ, chờ Đàm chọn
+> hướng) và **3 mục Medium**: **#23** (cổng hiệu năng iPhone chưa đo lại sau khi đổi sang PBR —
 > MỚI, sinh ra từ chính Phase 7A), **#22** (công cụ `sweep-score.mjs` không còn chấm được 15 kỷ) và
 > **#19** (nay đang **treo chờ #22**: hai con số nghiệm thu của nó đo trên bảng mái CŨ, đã bị Phase
 > 6B thay hẳn, mà chưa đo lại được). **#15, #16, #17 và #20 đều đã đóng** — không còn mục nào chờ
@@ -762,6 +763,60 @@
 
 ---
 
+## #24 — MỌI KỶ ĐỀU CÓ CÔNG TRÌNH BỊ MÉP KHUNG HÌNH CẮT — và không ai đo cho tới hôm nay
+
+- **Module**: `src/engine/city3d/orbit.js` (`cityOrbitOptions`) — đo bằng `scripts/frame-fit.mjs`
+- **Priority**: Medium-High
+- **Severity**: Medium
+- **Impact**: đo được ở tỉ lệ khung 1,30 (dáng thẻ cảnh trên máy bàn): **14/15 kỷ có ít nhất một
+  công trình lọt ra ngoài mép khung hình**, chủ yếu mép DƯỚI và mép TRÁI. Nặng nhất là kỷ 2
+  (`bp_kho_lua`, biên **−0,513** — tức nhô ra ngoài hơn nửa nửa-khung) và kỷ 3 (−0,474). Ở tỉ lệ
+  khung VUÔNG (1,0 — gần với thẻ cảnh trên iPhone) thì là **15/15**. Hậu quả với Đàm: ở gần như mọi
+  kỷ, một trong năm công trình anh vừa đánh đổi hàng chục phiên tập trung để xây bị xén mất một
+  phần ngay trong khung mặc định.
+- **Root Cause**: **KHÔNG phải do Phase 7B.** Đã đo đối chứng bằng `--flat` (địa hình phẳng như
+  trước 7B): vẫn **14/15** kỷ bị cắt, và hệ số khoảng cách cần thiết còn CAO HƠN (2,01 so với 1,78
+  sau khi có địa hình) — tức địa hình + phần bù camera của nó làm khung hình **đỡ** đi, không tệ
+  hơn. Nguyên nhân gốc có từ Phase 5A: `CAMERA_DISTANCE_FACTOR` hạ 1,5 → **1,18** để chữa đúng lời
+  Đàm *"thu phóng cho vừa đủ thôi, không thu quá xa rồi bị mờ"*. Lần đó chỉ kiểm "nóc công trình
+  cao nhất có lọt khung không" (bài `KHÔNG CẮT NGỌN` trong `orbit.test.js`) — **một trục, mép TRÊN,
+  một công trình**. Bốn mép còn lại và bốn công trình còn lại chưa bao giờ được đo. Đúng bài học đã
+  ghi ở Phase 3Y: *đo một trục thì vừa BÁO NHẦM vừa BỎ SÓT, và cái bỏ sót nguy hiểm hơn vì im lặng.*
+- **Current Risk**: thẩm mỹ, không phải chức năng — app chạy đúng, chạm-để-xem-công-trình vẫn đúng,
+  và Đàm **kéo/thu phóng được** để nhìn trọn. Nhưng khung MẶC ĐỊNH là thứ anh thấy mỗi lần mở tab,
+  và một toà nhà bị xén nửa dưới là đúng cái cảm giác "prototype" mà cả nhánh Phase 7 đang đi chữa.
+- **Future Risk**: yêu cầu của Đàm cho các phase sau là **thêm nhà dân, cửa hàng, xưởng, khu dân cư
+  lấp đầy lưới**. Thành phố càng phủ kín 12×12 thì phần bị xén càng nhiều, và lúc đó việc mở khung
+  sẽ không còn là một lựa chọn mà là bắt buộc — nên quyết sớm thì rẻ hơn.
+- **Recommended Solution**: ⚠️ **CẦN ĐÀM QUYẾT — đây là đánh đổi thật, không phải lỗi để tự sửa.**
+  Hai vế đều đã đạt và loại trừ nhau: khung sát ⇒ nhìn rõ chi tiết kiến trúc; khung rộng ⇒ không
+  xén. Ba hướng:
+  - **(a) Mở khung cho vừa hết** — `CAMERA_DISTANCE_FACTOR` 1,18 → **1,78** (khung 1,3) hoặc
+    **2,23** (khung vuông). Hết xén hoàn toàn, nhưng công trình nhỏ đi ~1,5 lần, tức quay lại đúng
+    cái "mờ" Đàm đã bảo bỏ.
+  - **(b) Khung theo TỈ LỆ MÀN HÌNH** — máy bàn (khung bè ngang) giữ sát, điện thoại (khung vuông)
+    mở rộng. Đúng hơn về nguyên tắc vì nguyên nhân một phần nằm ở FOV ngang, nhưng `cityOrbitOptions`
+    hiện chưa biết tỉ lệ khung; phải truyền thêm tham số.
+  - **(c) Co thành phố lại thay vì lùi camera** — kéo 5 khu đất về gần tâm hơn trong `cityLayout.js`.
+    Giữ nguyên độ lớn công trình trên màn hình, nhưng **đụng bố cục** nên phải cân với ADR-007 và
+    với kế hoạch tăng mật độ sắp tới. Có lẽ là hướng đúng nhất về lâu dài.
+- **Estimated Complexity**: (a) Low (~15 phút, một hằng số) · (b) Medium (~1–2 giờ) · (c) Medium-High
+  (đụng bố cục, cần đo lại nhiều thứ).
+- **Blocking Conditions**: không chặn gì. NÊN quyết trước khi làm phase tăng mật độ nhà, vì lúc đó
+  vừa phải chỉnh bố cục vừa phải chỉnh khung — làm một lần rẻ hơn hai lần.
+- **Review Trigger**: khi bắt đầu phase "mật độ / khu dân cư"; hoặc ngay khi Đàm thấy khó chịu.
+- **Owner**: cần Đàm chọn hướng (a)/(b)/(c)
+- **Status**: Open — đã đo đầy đủ, đã có công cụ tái lập, chờ Đàm quyết.
+- ⚠️ **CÔNG CỤ ĐÃ ĐO RA CÁC CON SỐ TRÊN** (bắt buộc ghi kèm — bài học `TECH_DEBT #18`):
+  `node --import ./scripts/register-esm-loader.mjs scripts/frame-fit.mjs 1.3`
+  (thêm `--flat` để lấy đối chứng địa hình phẳng, `--selftest` để chứng minh công cụ còn phản ứng
+  đúng trên CẢ HAI trục dọc/ngang). ⚠️ Công cụ này đã nói dối ngay lần chạy đầu — vector `right` viết
+  ngược dấu nên **nhãn mép đảo hoàn toàn** (báo "mép TRÊN" trong khi ảnh chụp rõ ràng cắt ở mép
+  DƯỚI); độ lớn thì vẫn đúng. Chi tiết ở đầu `frame-fit.mjs`. Lần thứ 17 công cụ tự chế nói dối
+  trong dự án này, và lần này con mắt bắt được nó.
+
+---
+
 ## #23 — Cổng hiệu năng iPhone của Phase 3A chưa được đo lại sau khi cả cảnh chuyển sang PBR
 
 - **Module**: `src/components/city/render3d/sceneGraph.js` + `CityPerfHud.jsx`
@@ -792,6 +847,16 @@
 - **Review Trigger**: trước khi bắt đầu Phase 7B (mật độ/địa hình); hoặc ngay khi Đàm thấy máy nóng.
 - **Owner**: cần Đàm đo (AI không chạm được vào iPhone thật)
 - **Status**: Open — chưa đo.
+- ⚠️ **CẬP NHẬT 2026-08-14 — PHASE 7B ĐÃ LÀM MÀ CHƯA CÓ SỐ ĐO NÀY, ghi ra để không ai tưởng là đã
+  đo.** Mục này khuyến nghị "nên đo TRƯỚC khi làm 7B" để hai thay đổi khỏi chồng lên nhau; thực tế
+  7B chạy trước khi Đàm kịp đo. Lý do chấp nhận được, và đây là lập luận để phản biện chứ không phải
+  để trấn an: **7B gần như không tốn thêm gì cho GPU**. Nền vẫn đúng 144 ô hộp trong MỘT
+  `InstancedMesh` — địa hình chỉ đổi `y` và hệ số cao của từng thể hiện, không thêm ô, không thêm
+  lệnh vẽ. Bệ kè đi vào CÙNG khối hình học gộp của công trình (không thêm lệnh vẽ) và chỉ tốn 12
+  tam giác mỗi cái, tối đa 5 cái một kỷ ⇒ **≤ 60 tam giác** trên tổng ~5.000. Nếu iPhone có nóng
+  thì thủ phạm gần như chắc chắn vẫn là PBR của 7A, không phải địa hình — nên hai thay đổi trên
+  thực tế VẪN tách được. Điều này KHÔNG còn đúng ở phase tăng mật độ nhà sắp tới: chỗ đó thêm hình
+  học thật, nên **phải đo trước.**
 
 ---
 

@@ -135,6 +135,16 @@
 │   │   │   │                      #   ⚠️ `wallMaterial`/`roofMaterial` là BỀ MẶT (nhám/bóng), tách
 │   │   │   │                      #   hẳn khỏi `wallColor`/`roofColor` (sắc). Cùng bài học "một
 │   │   │   │                      #   trường gánh hai việc" của `storyHeight` ở Phase 5B
+│   │   │   ├── terrain.js         # ĐỊA HÌNH: 15 kỷ = 15 trường cao độ THỀM BẬC (ADR-014)
+│   │   │   │                      #   ⚠️ Cao độ là hàm của DUY NHẤT (era, gridSize) — cố tình KHÔNG
+│   │   │   │                      #   nhận danh sách công trình, nếu không thì mỗi lần Đàm xây xong
+│   │   │   │                      #   một căn nhà cả quả đồi sẽ nhích và nhà cũ lún mà không có gì
+│   │   │   │                      #   báo (cùng bất biến "không xê dịch" với ADR-007)
+│   │   │   │                      #   ⚠️ THỀM chứ không phải DỐC: nền là 144 ô HỘP và công trình là
+│   │   │   │                      #   khối ĐÁY PHẲNG — dốc liên tục sẽ hở khe / cắm chìm góc
+│   │   │   │                      #   ⚠️ Mỗi kỷ phải có `note` giải thích bằng một nơi CÓ THẬT, y
+│   │   │   │                      #   như `country`/`landmark`: số không có lời giải thích là số
+│   │   │   │                      #   tuỳ hứng — thứ đã sinh ra "15 kỷ cao bằng nhau" ở Phase 5B
 │   │   │   ├── archetypes.js      # Bóng dáng theo 4 LOẠI (hạ tầng/kinh tế/phòng thủ/kỳ quan)
 │   │   │   │                      #   + quy mô theo 3 ĐỘ HIẾM
 │   │   │   ├── signature.js       # CHỮ KÝ KIẾN TRÚC: mỗi kỷ MỘT bộ phận lấy từ công trình CÓ THẬT
@@ -277,6 +287,7 @@
 | `node scripts/city-preview.mjs --sweep --all` | dựng bảng 15 kỷ × 6 chặng ngày thành MỘT tấm ảnh |
 | `node scripts/sweep-score.mjs <ảnh quét>` | **chấm** bảng đó: 15 cặp chặng + 105 cặp kỷ, cặp nào dưới ngưỡng mắt |
 | `node scripts/png-probe.mjs <ảnh> --top 10` | màu THẬT trên màn hình tại một điểm/vùng |
+| `node --import ./scripts/register-esm-loader.mjs scripts/frame-fit.mjs 1.3` | công trình nào đang bị **mép khung hình cắt**, và phải lùi camera bao nhiêu thì hết (`--flat` = đối chứng địa hình phẳng · `--selftest`) |
 
 ⚠️ **`--sweep` mà không `sweep-score` thì mới đi được nửa đường**: mắt chỉ so được các ô KỀ NHAU,
 nên hai lỗi nặng nhất từng lọt qua đều là hai ô nằm ở HAI ĐẦU bảng (bình minh ↔ hoàng hôn ở Phase

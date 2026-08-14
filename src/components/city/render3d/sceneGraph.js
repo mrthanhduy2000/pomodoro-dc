@@ -43,6 +43,8 @@ import {
 import { materialProfile } from '../../../engine/city3d/materials';
 import { buildBuildingSpec, buildScaffoldSpec } from '../../../engine/city3d/buildingSpec';
 import { buildPropSpec } from '../../../engine/city3d/propSpec';
+import { prism, specSpan } from '../../../engine/city3d/parts';
+import { buildTerrain } from '../../../engine/city3d/terrain';
 import { placeBounds, specBounds } from '../../../engine/city3d/pick';
 import { RESIDENT_HEIGHT, buildResidents, residentAt } from '../../../engine/city3d/residents';
 import { fogRangeFor, sunDirectionAt } from '../../../engine/city3d/daylight';
@@ -397,6 +399,14 @@ export function createCityScene({
     return mesh;
   }
 
+  // ── ĐỊA HÌNH ──────────────────────────────────────────────────────────────
+  // ⚠️ MỌI THỨ ĐỨNG TRÊN ĐẤT ĐỀU PHẢI HỎI Ở ĐÂY, KHÔNG ĐƯỢC AI TỰ GIẢ ĐỊNH y = 0.
+  // Có SÁU chỗ đặt vật lên mặt đất trong file này (nền · đường · công trình · giàn giáo · cảnh
+  // vật · cư dân). Quên một chỗ thì thứ đó lơ lửng hoặc lún vào đồi — và nó KHÔNG đỏ ở đâu cả,
+  // chỉ là một cái cây mọc giữa không trung ở đúng một kỷ. Đây chính là hình dạng lỗi mà Phase 4D
+  // đã trả giá ("một luật mới làm điều kiện cũ hết đúng ⇒ phải tìm MỌI chỗ phát biểu lại nó").
+  const terrain = buildTerrain({ era: layout.era, gridSize });
+
   // ── Vòm trời chuyển sắc ───────────────────────────────────────────────────
   // Một mảng nền phẳng làm cả cảnh trông như dán lên giấy. Vòm trời đổi màu từ đỉnh xuống chân
   // trời cho không gian có "trên" và "dưới" — và vì nó nằm sau sương mù cùng màu chân trời, thành
@@ -459,13 +469,23 @@ export function createCityScene({
   const groundColors = palette.groundShades ?? [palette.ground, palette.groundAlt];
   addMesh(buildInstances(
     groundCells,
-    track(new BoxGeometry(TILE_UNIT * 0.99, GROUND_THICKNESS, TILE_UNIT * 0.99)),
+    // ⚠️ RỘNG ĐÚNG 1,0 CHỨ KHÔNG PHẢI 0,99 — và khe 1% ấy vô hại suốt thời mặt đất còn phẳng.
+    // Khi thềm bậc ra đời, mặt BÊN của ô nền cao lên tới nửa đơn vị, và khe hở biến mỗi ô thành
+    // một khối hộp rời có viền đen bao quanh: cả quả đồi đọc ra như một chồng lego thay vì một
+    // sườn dốc. Ô sát nhau đúng 1,0 thì các mặt trên cùng cao độ liền thành một mặt duy nhất.
+    track(new BoxGeometry(TILE_UNIT, GROUND_THICKNESS, TILE_UNIT)),
     (cell) => {
       const { x, z } = cellToWorld(cell.x, cell.y, gridSize);
+      const h = terrain.heightAt(cell.x, cell.y);
+      // ⚠️ Ô nền KHÔNG chỉ được nâng lên — nó phải DÀI RA để chân vẫn chạm đáy cũ. Chỉ nâng thì
+      // mỗi thềm thành một phiến đá bay, nhìn thấu xuống dưới. Kéo dài ra thì mặt bên của ô trở
+      // thành VÁCH THỀM, và chính cái vách ấy mới là thứ đọc ra "đây là một quả đồi".
+      // Hộp gốc cao `GROUND_THICKNESS`; muốn mặt trên ở `h` và đáy vẫn ở `-GROUND_THICKNESS`:
+      const height = (h + GROUND_THICKNESS) / GROUND_THICKNESS;
       return {
         x, z,
-        y: -GROUND_THICKNESS / 2,
-        height: 1,
+        y: (h - GROUND_THICKNESS) / 2,
+        height,
         color: groundColors[cell.variant % groundColors.length],
       };
     },
@@ -483,9 +503,12 @@ export function createCityScene({
       // Thứ bậc đường: `variant` 0 = đại lộ/ngã tư (rộng hết ô) · 1 = phố dọc (hẹp bề ngang) ·
       // 2 = phố ngang (hẹp bề sâu). Xem `ROAD_CELLS` trong `cityLayout.js`.
       const lane = road.variant === 1 || road.variant === 2;
+      const h = terrain.heightAt(road.x, road.y);
       return {
         x, z,
-        y: -GROUND_THICKNESS / 2 + ROAD_LIFT,   // nhô lên tí xíu để không chọi mặt nền
+        // Đường bám theo thềm. Chỗ đổi thềm thì mặt đường thành một BẬC — và đó đúng là thứ mọi
+        // thành phố trên đồi đều có: bậc thang giữa hai phố. Không cần làm dốc nối.
+        y: h - GROUND_THICKNESS / 2 + ROAD_LIFT,   // nhô lên tí xíu để không chọi mặt nền
         height: 1,
         sx: road.variant === 1 ? LANE_WIDTH : 1,
         sz: road.variant === 2 ? LANE_WIDTH : 1,
@@ -517,22 +540,51 @@ export function createCityScene({
   };
 
   const buildings = layout.buildings ?? [];
+
+  /**
+   * Đặt một công trình lên địa hình, và sinh kèm khối MÓNG khi nó vắt qua mép thềm.
+   *
+   * ⚠️ VÌ SAO KHÔNG SAN PHẲNG Ô ĐẤT DƯỚI CHÂN NÓ — đó là phản xạ đầu tiên và nó sai: san phẳng thì
+   * con đường chạy ngay cạnh sẽ hụt một bậc so với ô vừa bị san, và mạng đường gãy làm đôi ở đúng
+   * chỗ đông đúc nhất. Thay vào đó công trình đứng ở cao độ CAO NHẤT dưới bóng mình (không bao giờ
+   * có góc treo) và phần hụt được lấp bằng một bệ kè — đúng cách nhà trên sườn đồi được xây ngoài
+   * đời, và nó thêm đúng loại chi tiết kiến trúc mà cảnh đang thiếu.
+   *
+   * Móng đi vào CÙNG khối hình học gộp nên **không tốn thêm lệnh vẽ nào**; nó chỉ tốn 12 tam giác,
+   * và chỉ sinh ra khi thật sự có phần hụt.
+   */
+  function groundPlacement(cell, spec, extra = {}) {
+    const { x, z } = cellToWorld(cell.x, cell.y, gridSize);
+    const span = Math.max(1, Math.round(specSpan(spec.parts) * BUILDING_SCALE));
+    const { top, drop } = terrain.footprint(cell.x, cell.y, span);
+    const placement = { x, z, y: top, scale: BUILDING_SCALE, spec, ...extra };
+    const plinth = drop > 0 ? {
+      x, z, y: top - drop, ry: 0, scale: 1,
+      spec: {
+        parts: [prism({
+          y: 0, w: span * 0.92, d: span * 0.92, h: drop,
+          sides: 4, taper: 1, role: 'stone',
+        })],
+      },
+    } : null;
+    return { placement, plinth };
+  }
+
+  const plinths = [];
   const placements = buildings.map((building) => {
-    const { x, z } = cellToWorld(building.x, building.y, gridSize);
-    return {
-      x, z, y: 0,
-      scale: BUILDING_SCALE,
+    const built = groundPlacement(building, buildBuildingSpec({
+      bpId: building.bpId,
+      era: layout.era,
+      type: building.type,
+      rarity: building.rarity,
+      level: building.level,
+    }), {
       // Xoay cả công trình theo bội số 90° cho phố khỏi xếp hàng răm rắp. Bội số của góc vuông
       // chứ không phải góc bất kỳ: nhà quay chéo so với lưới đường trông như bị đặt ẩu.
       ry: ((building.x + building.y) % 4) * (Math.PI / 2),
-      spec: buildBuildingSpec({
-        bpId: building.bpId,
-        era: layout.era,
-        type: building.type,
-        rarity: building.rarity,
-        level: building.level,
-      }),
-    };
+    });
+    if (built.plinth) plinths.push(built.plinth);
+    return built.placement;
   });
 
   buildings.forEach((building, index) => {
@@ -541,11 +593,13 @@ export function createCityScene({
 
   // Công trình đang xây (nếu bố cục có) → giàn giáo dựng cao dần theo tiến độ.
   for (const scaffold of layout.scaffolds ?? []) {
-    const { x, z } = cellToWorld(scaffold.x, scaffold.y, gridSize);
-    const placement = {
-      x, z, y: 0, ry: 0, scale: BUILDING_SCALE,
-      spec: buildScaffoldSpec({ bpId: scaffold.bpId, era: layout.era, progress: scaffold.progress }),
-    };
+    const built = groundPlacement(scaffold, buildScaffoldSpec({
+      bpId: scaffold.bpId, era: layout.era, progress: scaffold.progress,
+    }), { ry: 0 });
+    const { placement } = built;
+    // ⚠️ Giàn giáo cũng cần MÓNG như công trình thật: nó đang chiếm đúng khu đất ấy, và nếu chỉ
+    // công trình xong mới có bệ kè thì đúng lúc xây xong sẽ thấy cả toà nhà nhảy lên một bậc.
+    if (built.plinth) plinths.push(built.plinth);
     placements.push(placement);
     // Giàn giáo cũng chạm được: đó chính là công trình Đàm đang chờ, nên nó phải là thứ dễ hỏi
     // "còn bao lâu nữa?" nhất trong cả cảnh — chứ không phải thứ duy nhất không bấm được.
@@ -560,7 +614,8 @@ export function createCityScene({
   for (const prop of scatter) {
     const { x, z } = cellToWorld(prop.x, prop.y, gridSize);
     placements.push({
-      x, z, y: 0,
+      // Cảnh vật nhỏ (cây, đá, đèn) chỉ chiếm một ô nên không cần móng — nó ngồi thẳng lên thềm.
+      x, z, y: terrain.heightAt(prop.x, prop.y),
       // Xoay tự do — cây cối mà thẳng hàng theo lưới thì lộ ngay ra là máy đặt.
       ry: (prop.variant + prop.x * 0.7 + prop.y * 1.3) % (Math.PI * 2),
       spec: buildPropSpec({
@@ -570,6 +625,10 @@ export function createCityScene({
       }),
     });
   }
+
+  // Móng xếp SAU cùng: chúng chỉ là khối lấp, không phải thứ chạm vào được, nên phải nằm ngoài
+  // vùng chỉ số mà `addPickTarget` đã bám theo (`placements[index]`).
+  placements.push(...plinths);
 
   const merged = buildMergedGeometry(placements, palette, {
     skipDeco: lowDetail,
@@ -699,7 +758,10 @@ export function createCityScene({
 
         // Chân đặt lên MẶT ĐƯỜNG, không phải mặt nền. Đường nhô cao hơn nền một chút (xem khối
         // đường phía trên) — bỏ qua chênh lệch này thì cư dân lún nửa bàn chân xuống mặt đường.
-        const feet = ROAD_SURFACE_Y + spot.bob;
+        // ⚠️ Cư dân là chỗ THỨ SÁU phải hỏi địa hình, và là chỗ dễ quên nhất vì nó nằm trong một
+        // hàm chạy mỗi khung hình chứ không nằm cạnh năm chỗ kia. Quên thì cả thành phố đi bộ
+        // xuyên qua sườn đồi ở cao độ 0.
+        const feet = terrain.heightAt(spot.x, spot.y) + ROAD_SURFACE_Y + spot.bob;
 
         position.set(x, feet + BODY_HEIGHT / 2, z);
         matrix.compose(position, rotation, scale);

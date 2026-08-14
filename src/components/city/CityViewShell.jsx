@@ -15,6 +15,7 @@ import { motion, useReducedMotion } from 'framer-motion';
 
 import { summarizeMuseum } from '../../engine/cityCompletion';
 import { deriveResidentCount } from '../../engine/city3d/residents';
+import { getEraStyle } from '../../engine/city3d/eraStyle';
 import EraSwitcher from './EraSwitcher';
 import { cardStyle, eraSolid } from './cityTokens';
 
@@ -117,12 +118,17 @@ export default function CityViewShell({
   // này. Suy ra từ chính danh sách kỷ đã có, không lưu một byte nào.
   const museum = summarizeMuseum(eras);
 
+  // ĐẤT NƯỚC BIỂU TƯỢNG của kỷ đang xem. Lấy thẳng từ bảng ngữ pháp đang dựng hình, KHÔNG chép lại
+  // thành một bảng riêng ở tầng giao diện: chép ra là ngày nào đó đổi kiểu mái mà quên đổi nhãn,
+  // rồi màn hình khoe "kiến trúc Ý" trong khi thành phố đang dựng mái chồng Á Đông.
+  const eraStyle = getEraStyle(era);
+
   return (
     <div className="flex flex-col gap-3">
       <EraSwitcher eras={eras} viewingEra={era} onSelect={onSelectEra} />
 
       <div className="overflow-hidden p-3 sm:p-4" style={cardStyle}>
-        <div className="mb-3 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+        <div className="mb-1.5 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
           <div className="flex items-center gap-2">
             <span
               className="inline-block h-2.5 w-2.5 shrink-0 rounded-full"
@@ -144,6 +150,22 @@ export default function CityViewShell({
                   : `Đã niêm phong${viewing?.sealedAt ? ` ngày ${viewing.sealedAt}` : ''}`)}
           </div>
         </div>
+
+        {/*
+          MỘT DÒNG NÓI RA "THÀNH PHỐ NÀY LẤY MẪU TỪ ĐÂU".
+          Đàm: *"mỗi kỷ có thể lấy một đất nước làm biểu tượng"*. Hình khối đã theo đúng nước ấy từ
+          `eraStyle.js`, nhưng nếu không nói ra thì Đàm phải TỰ ĐOÁN — mà đoán ra "Bồ Đào Nha" từ
+          một cái kho có cột buồm thì gần như không ai làm được. Một dòng chữ biến công sức dựng
+          hình thành thứ đọc được, và biến việc lên kỷ mới thành "được đi thăm một nước mới".
+          Kỷ thất truyền thì giấu: ở đó không có thành phố nào để mà nói nó giống nước nào.
+        */}
+        {!isLost && eraStyle.country && (
+          <p className="mb-3 text-[11px] leading-snug" style={{ color: 'var(--muted)' }}>
+            Kiến trúc lấy mẫu từ{' '}
+            <span className="font-semibold" style={{ color: 'var(--ink)' }}>{eraStyle.country}</span>
+            {' '}· {eraStyle.landmark}
+          </p>
+        )}
 
         {isLost ? (
           <EmptyState icon="🏛️" title="Thành phố thất truyền">

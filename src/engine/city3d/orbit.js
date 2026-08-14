@@ -9,6 +9,8 @@
  * Quy ước góc: `yaw` xoay quanh trục đứng, `pitch` là độ cao nhìn xuống.
  */
 
+import { getEraStyle } from './eraStyle';
+
 const TAU = Math.PI * 2;
 
 /** Giới hạn góc nhìn. Không được chạm 0 hay 90° — camera sẽ chui xuống dưới sàn hoặc lật. */
@@ -84,15 +86,63 @@ export const CAMERA_MIN_FACTOR = 0.72;
 export const CAMERA_MAX_FACTOR = 3.1;
 
 /**
+ * Góc mở DỌC của ống kính, độ. Ba nơi từng viết cứng số 38 (`CityScene3D.jsx` và hai chỗ trong
+ * `scripts/city-preview.mjs`), nghĩa là trang xem thử có thể lặng lẽ đóng khung khác app — đúng cái
+ * bẫy "một luật ba công thức". Đưa về một chỗ để bài test "khung hình không cắt ngọn" bên dưới đo
+ * đúng ống kính mà Đàm nhìn qua, chứ không đo một ống kính giả định.
+ */
+export const CITY_CAMERA_FOV = 38;
+
+/**
+ * Mốc "kỷ cao trung bình". Kỷ trên mốc thì camera lùi ra cho khỏi cắt ngọn; kỷ DƯỚI mốc thì camera
+ * tiến vào gần hơn — nhà đã thấp mà khung hình vẫn giữ nguyên thì cả thành phố thành một dúm nhỏ
+ * giữa bãi đất trống, đúng cái "thu quá xa rồi bị mờ" mà Đàm phàn nàn.
+ */
+const TALL_ERA_THRESHOLD = 0.7;
+/** Không kỷ nào được tiến vào gần hơn mức này (× mức sát) — chừa đường cho kỷ thấp hơn sau này. */
+const MIN_DISTANCE_RATIO = 0.88;
+/** Lùi thêm bao nhiêu (× cỡ lưới) cho mỗi đơn vị `massScale` vượt ngưỡng. */
+const LIFT_TO_DISTANCE = 0.34;
+/** Nâng điểm ngắm lên bao nhiêu (× cỡ lưới) cho mỗi đơn vị `massScale` vượt ngưỡng. */
+const LIFT_TO_TARGET_Y = 0.15;
+
+/**
  * Bộ tham số camera chuẩn của màn hình Thành Phố.
  * ⚠️ Tồn tại để `CityScene3D.jsx` và `scripts/city-preview.mjs` KHÔNG tự viết số riêng — trang xem
  * thử mà đóng khung khác app thì nó thôi kiểm chứng được thứ cần kiểm chứng.
+ *
+ * ⚠️ THAM SỐ `era` THÊM 2026-08-14, VÀ NÓ SỬA MỘT LỖI CẮT NGỌN CÓ THẬT.
+ * Khi `massScale` ra đời (xem `eraStyle.js`), chiều cao công trình trải từ 0,36 tới 1,72 lần — tức
+ * kỷ 15 cao gấp gần 5 lần kỷ 1. Một khung hình cố định thì **không thể** vừa cả hai: đóng sát cho
+ * túp lều thì tháp kính bị cắt mất nóc, mà đóng rộng cho tháp thì túp lều lại thành một chấm nhỏ
+ * giữa bãi đất — đúng cái "thu quá xa rồi bị mờ" mà Đàm vừa yêu cầu bỏ đi.
+ * Tính ra được (lưới 12, pitch 34°, FOV dọc 38°): mép TRÊN khung hình nằm ở 15° dưới đường chân
+ * trời, còn nóc tháp kỷ 15 ở 13,7° — lọt ra ngoài đúng 1,3°. Không nhiều, nhưng đủ để cắt cụt cái
+ * thứ đáng xem nhất của kỷ cuối cùng.
+ * ⇒ Khung hình co giãn theo chính con số đã sinh ra chiều cao ấy (`massScale`), chứ không phải một
+ * hằng số đoán mò song song — đúng luật "một luật chỉ được có một công thức". Kỷ thấp giữ y nguyên
+ * khung sát: `lift` bằng 0 tuyệt đối, không phải "gần bằng 0".
  */
-export function cityOrbitOptions(gridSize) {
+export function cityOrbitOptions(gridSize, era) {
+  const scale = getEraStyle(era)?.massScale ?? 1;
+  // `lift` ÂM ở kỷ nhà thấp — đó là nửa thứ hai của yêu cầu, và là nửa dễ quên. Bản đầu kẹp
+  // `Math.max(0, …)` nên chỉ biết lùi ra, không biết tiến vào: kỷ 1 (nhà cao bằng 0,36 mức cũ) vẫn
+  // đứng nguyên khoảng cách đóng cho nhà cao gấp ba, và ảnh quét ra một bãi cỏ mênh mông với mấy
+  // cái lều bằng đầu ngón tay.
+  const lift = scale - TALL_ERA_THRESHOLD;
+  const factor = Math.max(
+    CAMERA_DISTANCE_FACTOR * MIN_DISTANCE_RATIO,
+    CAMERA_DISTANCE_FACTOR + lift * LIFT_TO_DISTANCE,
+  );
   return {
-    distance: gridSize * CAMERA_DISTANCE_FACTOR,
+    distance: gridSize * factor,
     minDistance: gridSize * CAMERA_MIN_FACTOR,
     maxDistance: gridSize * CAMERA_MAX_FACTOR,
+    // Ngắm cao hơn mặt đất một chút ở kỷ cao: nếu chỉ lùi xa mà vẫn ngắm chân tường thì tháp vẫn
+    // chạy lên mép trên, chỉ là chậm hơn.
+    // ⚠️ CHỈ nâng, không bao giờ HẠ: điểm ngắm âm sẽ kéo đường chân trời lên giữa khung và cắt mất
+    // dải trời — thứ đã tốn cả một phase (3V/3W) mới đưa được vào khung hình.
+    target: { x: 0, y: gridSize * Math.max(0, lift) * LIFT_TO_TARGET_Y, z: 0 },
   };
 }
 

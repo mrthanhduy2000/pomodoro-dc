@@ -12,6 +12,25 @@
 
 ---
 
+## 2026-08-14 — 15 kỷ, 15 dáng nhà, 15 đất nước (Phase 5A + 5B)
+
+- **Mục đích**: Đàm phản hồi sau khi nhìn thành phố thật — đêm quá tối, camera thu quá xa nên chi
+  tiết bị mờ, và *"không thể nào nhà hiện đại lại giống nhà thời đồ đồng được"*. Đo lại thì kỷ 1 và
+  kỷ 14 chênh nhau đúng 13% chiều cao.
+- **Phạm vi**: `engine/city3d/daylight.js` (độ sáng đêm) · `engine/city3d/orbit.js` (khung hình
+  theo kỷ + `CITY_CAMERA_FOV`) · `engine/city3d/eraStyle.js` (`massScale`/`spread`/`country`/
+  `landmark` cho 15 kỷ, sửa dáng lều kỷ 1) · `engine/city3d/buildingSpec.js` (nối hai hệ số vào
+  chiều cao, mặt bằng, chi tiết đặc trưng và giàn giáo) · `components/city/CityViewShell.jsx`
+  (dòng "Kiến trúc lấy mẫu từ …") · `CityScene3D.jsx` + `scripts/city-preview.mjs` (dùng chung FOV).
+- **Ảnh hưởng**: chiều cao 15 kỷ trải từ 1,88 lên **3,16 lần**; không kỷ nào bị cắt ngọn; kỷ nhà
+  thấp được đóng khung gần hơn mức Phase 5A. Ngân sách tam giác GIẢM (2.592 → 2.208 cho công trình
+  nặng nhất) vì nhà thấp thôi sinh nhiều hàng cửa sổ vô nghĩa.
+- **Tương thích**: KHÔNG đổi state, KHÔNG đổi schema, KHÔNG đổi cân bằng game. Thành phố cũ trong
+  bảo tàng vẫn dựng lại từ đúng dữ liệu cũ — chỉ tỉ lệ hình khối đổi, đúng như mọi lần chỉnh mỹ
+  thuật trước đây.
+
+---
+
 ## 2026-08-13 — Trùng tu di sản: xây bù công trình của kỷ đã qua (ADR-012)
 
 - **Mục đích**: `TECH_DEBT #14` đo được 95% số phiên tập trung không có lễ mừng nào, vì cả game chỉ

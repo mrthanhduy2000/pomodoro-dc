@@ -21,7 +21,7 @@ import { PerspectiveCamera, Raycaster, Vector2, WebGLRenderer, PCFSoftShadowMap 
 
 import { buildScenePalette } from '../../../engine/city3d/palette3d';
 import { deriveDaylight } from '../../../engine/city3d/daylight';
-import { cityOrbitOptions, createOrbit } from '../../../engine/city3d/orbit';
+import { CITY_CAMERA_FOV, cityOrbitOptions, createOrbit } from '../../../engine/city3d/orbit';
 import { createRenderLoop } from '../../../engine/city3d/renderLoop';
 import { pickNearest } from '../../../engine/city3d/pick';
 import { ERA_METADATA } from '../../../engine/constants';
@@ -194,8 +194,8 @@ export default function CityScene3D({
       // ⚠️ Mặt phẳng xa 8 × gridSize, KHÔNG phải 6. Vòm trời ở `sceneGraph.js` có bán kính
       // 3,6 × gridSize và camera lùi được tới 3,1 × gridSize — tổng 6,7 phải NHỎ HƠN mặt phẳng xa,
       // nếu không nửa vòm phía sau bị cắt và bầu trời chuyển sắc biến mất, chỉ còn màu nền phẳng.
-      const camera = new PerspectiveCamera(38, 1, 0.5, layout.gridSize * 8);
-      const orbit = createOrbit(cityOrbitOptions(layout.gridSize));
+      const camera = new PerspectiveCamera(CITY_CAMERA_FOV, 1, 0.5, layout.gridSize * 8);
+      const orbit = createOrbit(cityOrbitOptions(layout.gridSize, layout.era));
 
       // Dùng LẠI hai đối tượng này cho mọi cú chạm. Tạo mới mỗi lần chạm thì chẳng chết ai, nhưng
       // đây là file mà cả bộ dọn rác lẫn nhịp vẽ đều đang được giữ gìn từng chút một.

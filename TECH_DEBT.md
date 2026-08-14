@@ -295,6 +295,40 @@
 
 ---
 
+## #20 — Mái kỷ 1 (lều da thú) ra màu XANH LÁ, sai họ vật liệu — không phải lỗi phân biệt, mà lỗi NGHĨA
+
+- **Module**: `src/engine/city3d/palette3d.js` (hàm `eraRoof`) đọc `ERA_METADATA[1].accentColor`
+  = `#4ade80`. KHÔNG phải `eraStyle.js` — hình khối đã sửa xong ở Phase 5B.
+- **Priority / Severity**: Low-Medium / Low (thuần mỹ thuật, không có gì hỏng, không ai mất dữ liệu).
+- **Impact**: Kỷ 1 là kỷ **mọi người dùng đều đi qua đầu tiên** và là ấn tượng đầu về cả màn Thành
+  Phố. Mái nón xanh lá trên nền cỏ xanh làm cụm lều đọc ra là **bụi cây / cây thông**, chứ không
+  phải chỗ có người ở. Phase 5B đã sửa được phần lớn bằng hình khối (bỏ vành mái thò ra, dựng lều
+  nón cao sát đất — trước đó nó đọc ra là *cây nấm*), nhưng sắc xanh vẫn còn.
+- **Root Cause**: `accentColor` của mỗi kỷ mang HAI vai không liên quan nhau — vừa là màu nhận diện
+  của kỷ trên toàn app (thanh chuyển kỷ, chấm tròn, biểu đồ), vừa là nguồn góc màu cho MÁI trong
+  cảnh 3D. Hai vai đó chỉ tình cờ hợp nhau ở 14 kỷ. Đây đúng cùng một hình dạng sai với bài học
+  Phase 5B ngay bên trên (`storyHeight` gánh hai việc) — chỉ khác là lần này hai vai nằm ở hai
+  **module** khác nhau nên khó thấy hơn.
+- **Current Risk**: Không có. Cảnh vẫn dựng đúng, test vẫn xanh, 15 kỷ vẫn phân biệt được với nhau.
+- **Future Risk**: Ai đó "sửa cho hợp lý" bằng cách đổi thẳng `ERA_METADATA[1].accentColor` sẽ đổi
+  màu nhận diện của kỷ 1 trên **toàn bộ app**, và gần như chắc chắn làm đỏ bài duyệt 105 cặp mái ở
+  `palette3d.test.js` — vì bảng màu đó đã được tinh chỉnh qua năm đợt đo.
+- **Recommended Solution**: Thêm một trường TUỲ CHỌN `roofHue` trong `eraStyle.js` (nơi đã giữ mọi
+  quyết định vật liệu của kỷ), để `eraRoof` ưu tiên nó và lùi về `accentColor` khi không có. Kỷ 1
+  đặt ~28° (da thú / rơm rạ). Cách này KHÔNG đụng `accentColor`, nên màu nhận diện của kỷ trên toàn
+  app giữ nguyên, và nó tách đúng hai vai đang bị trộn.
+- **Estimated Complexity**: Thấp (một trường + một nhánh `??`), nhưng PHẢI chạy lại phép duyệt 105
+  cặp mái + quét ảnh 15 kỷ để chắc chắn không đẩy kỷ 1 vào sát một kỷ khác.
+- **Blocking Conditions**: Nên gộp vào **cùng một đợt rà soát `palette3d.js`** với #19 thay vì vá
+  riêng — đúng luật "đợt vá thứ 6 thì phải rà soát tử tế, không vá điểm" đã ghi ở đầu file này.
+- **Review Trigger**: Khi mở đợt rà soát `palette3d.js` cho #19, HOẶC khi Đàm nhắc lại rằng kỷ đầu
+  trông không giống chỗ có người ở.
+- **Owner**: chưa ai nhận.
+- **Status**: MỞ — phát hiện 2026-08-14 (Phase 5B), cố ý CHƯA sửa trong phase đó vì phạm vi của
+  phase là HÌNH KHỐI, và đụng vào bảng màu là mở một mặt trận khác hẳn.
+
+---
+
 ## #19 — Hai cặp kỷ vẫn gần như CÙNG MỘT MÀU trên màn hình, dù bảng màu gốc cách nhau rất xa
 
 - **Module**: `src/engine/city3d/palette3d.js` (phép pha sắc kỷ vào mái) — KHÔNG phải

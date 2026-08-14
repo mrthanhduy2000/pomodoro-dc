@@ -195,7 +195,16 @@ test('kỳ quan luôn đối xứng tuyệt đối, kể cả ở kỷ có nét 
   assert.ok(spec.parts.some((p) => p.deco && p.ry !== 0), 'trang trí phải được phép lệch tự nhiên');
 
   // Bốn tháp góc phải đối xứng từng đôi một qua tâm.
-  const towers = structural.filter((p) => Math.abs(p.x) > 0.5 && Math.abs(p.z) > 0.5 && p.role === 'trim');
+  // ⚠️ NHẬN DIỆN THÁP BẰNG VAI + "CÓ LỆCH TÂM", KHÔNG BẰNG NGƯỠNG TUYỆT ĐỐI.
+  // Bản cũ lọc `Math.abs(p.x) > 0.5`, hợp lý khi mọi kỷ có cùng bề ngang. Khi `spread` ra đời
+  // (2026-08-14), kỷ 1 co lại còn 0,72 nên bốn tháp lùi về ±0,475 — LỌT DƯỚI ngưỡng, và bài test
+  // đỏ với thông báo "kỳ quan epic phải có 4 tháp góc" trong khi bốn tháp vẫn còn nguyên và vẫn
+  // đối xứng hoàn hảo. Tức PHÉP ĐO hỏng chứ không phải mã hỏng — đúng cái luật của dự án này:
+  // *số đo nào gây bất ngờ thì kiểm CÔNG CỤ trước, kiểm mã sau.* Trong danh sách khối kết cấu,
+  // vai `trim` mà lệch khỏi tâm theo CẢ HAI trục thì chỉ có thể là tháp góc (bệ và thân đều nằm
+  // đúng tâm), nên phép lọc này không phụ thuộc kỷ nào đang dựng.
+  const towers = structural.filter((p) => p.role === 'trim'
+    && Math.abs(p.x) > 1e-6 && Math.abs(p.z) > 1e-6);
   assert.ok(towers.length >= 4, 'kỳ quan epic phải có 4 tháp góc');
   const sumX = towers.reduce((s, p) => s + p.x, 0);
   const sumZ = towers.reduce((s, p) => s + p.z, 0);
@@ -301,6 +310,66 @@ test('bảng ngữ pháp 15 kỷ: đủ trường, giá trị nằm trong danh m
 test('kỷ lạ vẫn tra được ngữ pháp mặc định', () => {
   for (const era of [0, 16, -3, NaN, undefined, 'bảy']) {
     assert.ok(getEraStyle(era), `kỷ ${era} không tra được`);
+  }
+});
+
+test('MỖI KỶ MỘT ĐẤT NƯỚC, và 15 nước không được trùng nhau', () => {
+  // Đàm: *"mỗi kỷ có thể lấy một đất nước làm biểu tượng — ví dụ thời phục hưng có thể lấy nhà của
+  // Ý hoặc Pháp"*. Bài test khoá cả hai vế: có đủ, và KHÔNG TRÙNG. Vế thứ hai mới là vế dễ vỡ —
+  // hai kỷ cùng lấy một nước thì hành trình 15 kỷ mất đi đúng cái cảm giác "đi vòng quanh thế
+  // giới" mà nó được sinh ra để tạo, và không có gì đỏ lên khi điều đó xảy ra.
+  const seen = new Map();
+  for (let era = 1; era <= 15; era += 1) {
+    const style = getEraStyle(era);
+    assert.ok(style.country && style.country.trim(), `kỷ ${era}: thiếu đất nước biểu tượng`);
+    assert.ok(style.landmark && style.landmark.trim(), `kỷ ${era}: thiếu công trình lấy làm mẫu`);
+    assert.ok(!seen.has(style.country),
+      `kỷ ${era} và kỷ ${seen.get(style.country)} cùng lấy "${style.country}" làm biểu tượng`);
+    seen.set(style.country, era);
+  }
+  // Hai nước Đàm nêu đích danh phải nằm đúng chỗ anh nêu.
+  assert.equal(getEraStyle(7).country, 'Ý', 'kỷ Phục Hưng phải là Ý — Đàm nêu đích danh');
+  assert.equal(getEraStyle(9).country, 'Pháp', 'kỷ Khai Sáng phải là Pháp — Đàm nêu đích danh');
+});
+
+test('NHÀ HIỆN ĐẠI KHÔNG ĐƯỢC GIỐNG NHÀ THỜI ĐỒ ĐỒNG: 15 kỷ phải trải chiều cao thật sự', () => {
+  // ⚠️ ĐÂY LÀ BÀI TEST QUAN TRỌNG NHẤT CỦA FILE NÀY, và nó sinh ra từ một câu của Đàm chứ không
+  // phải từ một lỗi crash: *"không thể nào nhà hiện đại lại giống nhà thời đồ đồng được"*.
+  // Đo lúc đó: kỷ 1 cao trung bình 1,81 · kỷ 14 cao 2,05 — chênh 13%, cả bảng trải 1,88 lần, và
+  // lâu đài kỷ 5 (2,28) còn CAO HƠN cao ốc kính. Mọi bài test đều xanh, ngân sách tam giác vẫn
+  // thừa, không một dòng lint nào đỏ. Đúng loại lỗi chỉ mắt người mới bắt được — nên nó phải được
+  // đổi thành một con số máy tự canh, y như đã làm với "công trình cao vống thành ống khói".
+  const avg = [];
+  for (let era = 1; era <= 15; era += 1) {
+    const bps = ALL_BLUEPRINTS.filter((b) => b.era === era);
+    const hs = bps.map((b) => buildBuildingSpec({ ...b, level: 3 }).height);
+    avg[era] = hs.reduce((s, h) => s + h, 0) / hs.length;
+  }
+
+  // (a) Cả bảng phải trải đủ rộng. Ngưỡng 2,8 đặt DƯỚI giá trị đo được (3,27) và TRÊN hẳn vùng
+  // hỏng (1,88) — hàng rào, không phải cái phễu.
+  const lo = Math.min(...avg.slice(1));
+  const hi = Math.max(...avg.slice(1));
+  assert.ok(hi / lo >= 2.8,
+    `15 kỷ chỉ trải ${(hi / lo).toFixed(2)} lần chiều cao — thấp nhất ${lo.toFixed(2)}, cao nhất `
+    + `${hi.toFixed(2)}. Dưới 2,8 thì mắt đọc ra "cùng một thành phố tô màu khác"`);
+
+  // (b) VÀ PHẢI ĐÚNG CHIỀU. Vế (a) một mình vẫn xanh nếu túp lều là thứ cao nhất bảng — đúng cái
+  // trạng thái hỏng có thật ở trên (kỷ 5 cao hơn kỷ 14). Nên phải nêu đích danh: tháp kính cao
+  // hơn lều da thú, và cao hơn nhiều.
+  assert.ok(avg[14] >= avg[1] * 2.5,
+    `tháp kính kỷ 14 cao ${avg[14].toFixed(2)} còn lều da thú kỷ 1 cao ${avg[1].toFixed(2)} `
+    + '⇒ chưa tới 2,5 lần, vẫn là đúng lời phàn nàn của Đàm');
+  assert.ok(avg[15] > avg[14] && avg[14] > avg[13],
+    'ba kỷ cuối phải cao dần — đó là phần thưởng nhìn thấy được của việc đi hết 15 kỷ');
+
+  // (c) Và bốn kỷ đầu — giai đoạn Đàm gặp NHIỀU NHẤT vì ai cũng bắt đầu từ đó — phải thấp hơn hẳn
+  // mức trung bình, nếu không thì "thành phố lớn lên theo thời gian" không có điểm xuất phát thấp.
+  const overall = avg.slice(1).reduce((s, h) => s + h, 0) / 15;
+  for (const era of [1, 2]) {
+    assert.ok(avg[era] < overall * 0.85,
+      `kỷ ${era} cao ${avg[era].toFixed(2)}, gần bằng mức trung bình ${overall.toFixed(2)} — `
+      + 'thời tiền sử mà không thấp hơn hẳn thì cả hành trình mất điểm xuất phát');
   }
 });
 

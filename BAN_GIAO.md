@@ -6,7 +6,27 @@
 > chọn: `ARCHITECTURE_DECISIONS.md`. Nợ kỹ thuật: `TECH_DEBT.md`. Migration: `MIGRATION.md`. Tóm
 > tắt theo mốc: `CHANGELOG.md`.
 > **NGUYÊN TẮC ƯU TIÊN SỐ 1:** (1) mọi phiên AI phải đọc file này + `CLAUDE.md` + các file liên quan TRƯỚC khi làm; (2) sau MỌI cập nhật dù nhỏ, phải cập nhật ngay file này + `CLAUDE.md` + các file liên quan khác.
-> Cập nhật lần cuối: **2026-08-13** — **Phase 4I**: **TRÙNG TU DI SẢN (ADR-012)** — Đàm chọn
+> Cập nhật lần cuối: **2026-08-14** — **Phase 5B**: **15 KỶ NAY CÓ 15 DÁNG NHÀ THẬT, VÀ MỖI KỶ
+> LẤY MỘT ĐẤT NƯỚC LÀM BIỂU TƯỢNG.** Đàm nhìn thành phố rồi nói *"không thể nào nhà hiện đại lại
+> giống nhà thời đồ đồng được"*. Đo ra thì anh đúng đến mức khó tin: kỷ 1 (lều da thú) cao trung
+> bình **1,81**, kỷ 14 (tháp kính) cao **2,05** — chênh 13%; cả bảng chỉ trải **1,88 lần** và còn
+> SAI CHIỀU (lâu đài kỷ 5 cao hơn cao ốc kính). Nguyên nhân gốc: `storyHeight` gánh HAI việc mâu
+> thuẫn — vừa là "một tầng cao bao nhiêu" (chia ra số hàng cửa sổ) vừa là hệ số chiều cao tổng, mà
+> lều và nhà chọc trời có chiều cao TẦNG gần bằng nhau ngoài đời; thứ khác nhau giữa chúng là SỐ
+> TẦNG, và trước nay không ai ghi nó. Nay tách đôi: thêm `massScale` + `spread` cho cả 15 kỷ →
+> trải **3,16 lần**, kỷ 14 cao gấp **2,96 lần** kỷ 1. Thêm `country`/`landmark` (15 nước KHÔNG
+> trùng nhau; kỷ 7 = Ý, kỷ 9 = Pháp — đúng hai nước Đàm nêu đích danh) và một dòng "Kiến trúc lấy
+> mẫu từ …" trên màn Thành Phố. Ảnh quét bắt thêm hai lỗi im lặng: tháp kỷ 11/14/15 **bị cắt mất
+> nóc** (khung hình cố định không thể vừa cả lều lẫn tháp) → camera nay co giãn theo chính
+> `massScale`, kỷ thấp còn tiến VÀO gần hơn; và lều kỷ 1 đọc ra thành **cây nấm** (mái nón thò
+> vành 0,16 trên thân thóp) → nay là lều nón cao sát đất. Gộp `CITY_CAMERA_FOV` (số 38 từng viết
+> cứng ở 3 nơi). **575 bài test.**
+>
+> Trước đó — **Phase 5A**: đêm sáng lên (`fillEnergy` 2,60 → 4,60 · `sunEnergy` 1,25 → 2,05, giữ
+> tỉ lệ 0,45 > ngưỡng 0,35 của bài "đêm phải có HƯỚNG sáng") và camera lại gần
+> (`CAMERA_DISTANCE_FACTOR` 1,5 → 1,18 · `CAMERA_MIN_FACTOR` 0,9 → 0,72).
+>
+> Trước đó — **Phase 4I**: **TRÙNG TU DI SẢN (ADR-012)** — Đàm chọn
 > hướng (b2) cho `TECH_DEBT #14`. Bản vẽ của kỷ ĐÃ QUA nay khởi công lại được; xây xong nó đứng
 > trong **bảo tàng** của kỷ đó, đưa kỷ ấy tới gần dấu ★. **Không thêm một chút sức mạnh nào**
 > (không perk) và **không lưu thêm trường state nào**. Ba lớp chống lạm dụng: ô riêng

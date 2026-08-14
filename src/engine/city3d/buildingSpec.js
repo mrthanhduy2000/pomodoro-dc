@@ -46,8 +46,12 @@ function massHeight(mass, style, archetype, rarity, level) {
   // trăm ở đây bị khuếch đại ba lần. Vẫn đủ để cấp 3 cao hơn cấp 1 khoảng một phần ba — nhìn ra
   // ngay bằng mắt, mà không làm công trình vống lên thành tháp.
   const levelBoost = 1 + (Math.max(1, level) - 1) * 0.15;
-  return mass.s * style.storyHeight * archetype.heightScale * getRarityScale(rarity)
-    * levelBoost * (mass.low ? 0.34 : 1);
+  // ⚠️ `massScale` là hệ số "nền văn minh này xây cao tới đâu" — xem chú thích dài ở đầu
+  // `eraStyle.js`. Trước ngày 2026-08-14 hệ số này KHÔNG tồn tại, và hậu quả đo được là kỷ 1 (lều
+  // da thú) cao trung bình 1,81 còn kỷ 14 (tháp kính) cao 2,05 — chênh đúng 13%, tức là hai thứ ấy
+  // gần như cùng một chiều cao. `?? 1` để một kỷ thiếu trường vẫn dựng được như cũ.
+  return mass.s * style.storyHeight * (style.massScale ?? 1) * archetype.heightScale
+    * getRarityScale(rarity) * levelBoost * (mass.low ? 0.34 : 1);
 }
 
 // ─── MÁI ─────────────────────────────────────────────────────────────────────
@@ -465,6 +469,14 @@ export function buildBuildingSpec({ bpId, era, type, rarity = 'common', level = 
   const masses = getMassing(type, rarity);
   const safeLevel = Number.isFinite(level) ? Math.max(1, Math.min(3, Math.floor(level))) : 1;
 
+  // Bề ngang theo kỷ. Đi CẶP với `massScale`: một mình chiều cao chưa tách được túp lều khỏi tháp
+  // kính, vì cái quyết định hình bóng là TỈ LỆ cao/rộng. Lều thì vừa thấp vừa nhỏ (0,42 × 0,80),
+  // tháp kính vừa cao vừa mảnh (1,30 × 0,80) — cùng bề ngang mà chiều cao gấp ba.
+  // ⚠️ Nhân vào cả `w`/`d` của thân nhà LẪN toạ độ lệch tâm `x`/`z`: chỉ phóng to khối mà giữ
+  // nguyên khoảng cách giữa chúng thì các mảng nhà chồng lên nhau (kỷ 3 `spread` 1,18 là ca nặng
+  // nhất, hai mảng phụ của hạ tầng epic sẽ ăn vào thân chính).
+  const spread = Number.isFinite(style.spread) && style.spread > 0 ? style.spread : 1;
+
   const parts = [];
   // Độ lệch "tay làm": kỷ tiền sử để khối xiêu vẹo tự nhiên, kỷ hiện đại thẳng băng.
   // ⚠️ Kỳ quan luôn ĐỐI XỨNG tuyệt đối dù ở kỷ nào — công trình trung tâm mà xiêu vẹo thì cả
@@ -479,10 +491,10 @@ export function buildBuildingSpec({ bpId, era, type, rarity = 'common', level = 
     const jitterZ = rough ? signed(`${id}|jz|${index}`) * rough * 0.06 : 0;
     const jitterR = rough ? signed(`${id}|jr|${index}`) * rough * 0.14 : 0;
 
-    const x = mass.x + jitterX;
-    const z = mass.z + jitterZ;
-    const w = mass.w * (rough ? 1 + signed(`${id}|jw|${index}`) * rough * 0.08 : 1);
-    const d = mass.d * (rough ? 1 + signed(`${id}|jd|${index}`) * rough * 0.08 : 1);
+    const x = mass.x * spread + jitterX;
+    const z = mass.z * spread + jitterZ;
+    const w = mass.w * spread * (rough ? 1 + signed(`${id}|jw|${index}`) * rough * 0.08 : 1);
+    const d = mass.d * spread * (rough ? 1 + signed(`${id}|jd|${index}`) * rough * 0.08 : 1);
     const height = massHeight(mass, style, archetype, rarity, safeLevel);
     const base = 0;
     const top = base + height;
@@ -531,7 +543,10 @@ export function buildBuildingSpec({ bpId, era, type, rarity = 'common', level = 
     const main = masses.find((m) => !m.low) ?? masses[0];
     const mainHeight = massHeight(main, style, archetype, rarity, safeLevel);
     const motifCtx = {
-      bpId: id, w: main.w, d: main.d, x: main.x, z: main.z,
+      // ⚠️ Chi tiết đặc trưng cũng phải nhân `spread`. Bỏ sót chỗ này thì hàng cột của kỷ 3 (bè
+      // 1,18) đứng thụt vào giữa mặt tiền, còn cột buồm của kỷ 14 (mảnh 0,80) chọc ra ngoài tường.
+      bpId: id, w: main.w * spread, d: main.d * spread,
+      x: main.x * spread, z: main.z * spread,
       base: 0, top: mainHeight,
     };
     for (const name of style.motifs.slice(0, budget)) {
@@ -558,14 +573,23 @@ export function buildScaffoldSpec({ bpId, era, progress = 0 } = {}) {
   const t = Math.min(1, Math.max(0, Number.isFinite(progress) ? progress : 0));
   const parts = [];
 
-  const w = 0.66;
+  // Giàn giáo mang ĐÚNG tỉ lệ của kỷ: công trường kỷ 1 là một cái khung con con, công trường kỷ 15
+  // là một cái lồng cao vống. Nếu bỏ qua hai hệ số này thì mọi kỷ có chung một cái khung, và lúc
+  // công trình dựng xong nó sẽ "nhảy" đột ngột sang một kích cỡ khác hẳn.
+  const spread = Number.isFinite(style.spread) && style.spread > 0 ? style.spread : 1;
+  const w = 0.66 * spread;
   const post = w * 0.42;
-  const fullHeight = style.storyHeight * 2;
+  const fullHeight = style.storyHeight * 2 * (style.massScale ?? 1);
   // ⚠️ CỘT GIÀN GIÁO LUÔN CAO HƠN PHẦN ĐÃ XÂY, kể cả lúc mới khởi công — đó là điều khiến mắt đọc
   // ra "công trường" thay vì "cái nhà lùn". Ngoài đời giàn giáo bao giờ cũng vượt lên trên chỗ thợ
   // đang làm; và ở đây nó còn kiêm một việc nữa: cho thấy công trình này SẼ CAO TỚI ĐÂU, tức là
   // biến giàn giáo thành một lời hứa nhìn thấy được chứ không chỉ là một thanh tiến độ.
-  const built = Math.max(0.10, fullHeight * t);
+  // ⚠️ Sàn tối thiểu phải là TỈ LỆ, không phải một con số tuyệt đối. Bản cũ ghi cứng `0.10`, đúng
+  // 7,6% chiều cao của kỷ 6 — con số duy nhất bài test đo tới. Khi `massScale` ra đời, cùng cái sàn
+  // ấy thành 24% chiều cao của kỷ 1 (lều thấp), làm giàn giáo kỷ đó gần như không lớn lên nữa, mà
+  // "nhìn thấy thành phố lớn lên sau mỗi phiên" mới là lời hứa game hoá cốt lõi. Để tỉ lệ thì mọi
+  // kỷ đều lớn lên đúng 3,38 lần, không phụ thuộc kỷ nào đang chơi.
+  const built = Math.max(fullHeight * 0.076, fullHeight * t);
   const height = Math.min(fullHeight, built + fullHeight * 0.22);
 
   // Bốn cột góc.

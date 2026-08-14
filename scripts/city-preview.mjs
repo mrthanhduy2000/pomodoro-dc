@@ -104,7 +104,7 @@ import { computeCityLayout } from '${ROOT}/src/engine/cityLayout.js';
 import { buildScenePalette } from '${ROOT}/src/engine/city3d/palette3d.js';
 import { deriveDaylight } from '${ROOT}/src/engine/city3d/daylight.js';
 import { applyPaintedLook, createCityScene } from '${ROOT}/src/components/city/render3d/sceneGraph.js';
-import { cityOrbitOptions, createOrbit } from '${ROOT}/src/engine/city3d/orbit.js';
+import { CITY_CAMERA_FOV, cityOrbitOptions, createOrbit } from '${ROOT}/src/engine/city3d/orbit.js';
 import { BLUEPRINT_CATALOG, ERA_METADATA } from '${ROOT}/src/engine/constants.js';
 import { PerspectiveCamera, WebGLRenderer, PCFSoftShadowMap } from 'three';
 
@@ -161,9 +161,9 @@ city.sun.shadow.mapSize.setScalar(1024);
 // TRẢI ĐỀU trên phố hay không.
 city.updateResidents(17.5);
 
-const camera = new PerspectiveCamera(38, canvas.width / canvas.height, 0.5, layout.gridSize * 8);
+const camera = new PerspectiveCamera(CITY_CAMERA_FOV, canvas.width / canvas.height, 0.5, layout.gridSize * 8);
 // Dùng CHUNG bộ tham số camera với app; ZOOM chỉ để soi chi tiết, mặc định 1 = đúng khung app.
-const orbitOptions = cityOrbitOptions(layout.gridSize);
+const orbitOptions = cityOrbitOptions(layout.gridSize, layout.era);
 const orbit = createOrbit({
   ...orbitOptions,
   distance: orbitOptions.distance * ZOOM,
@@ -199,7 +199,7 @@ import { computeCityLayout } from '${ROOT}/src/engine/cityLayout.js';
 import { buildScenePalette } from '${ROOT}/src/engine/city3d/palette3d.js';
 import { deriveDaylight } from '${ROOT}/src/engine/city3d/daylight.js';
 import { applyPaintedLook, createCityScene } from '${ROOT}/src/components/city/render3d/sceneGraph.js';
-import { cityOrbitOptions, createOrbit } from '${ROOT}/src/engine/city3d/orbit.js';
+import { CITY_CAMERA_FOV, cityOrbitOptions, createOrbit } from '${ROOT}/src/engine/city3d/orbit.js';
 import { BLUEPRINT_CATALOG, ERA_METADATA } from '${ROOT}/src/engine/constants.js';
 import { PerspectiveCamera, WebGLRenderer, PCFSoftShadowMap } from 'three';
 
@@ -232,7 +232,7 @@ renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = PCFSoftShadowMap;
 renderer.shadowMap.autoUpdate = false;
 
-const camera = new PerspectiveCamera(38, CELL_W / CELL_H, 0.5, 200);
+const camera = new PerspectiveCamera(CITY_CAMERA_FOV, CELL_W / CELL_H, 0.5, 200);
 const tokens = IS_DARK
   ? { canvas2: '#1d1c1a', ink: '#f2efe6', line: '#33312d', accent: '#c96442' }
   : { canvas2: '#f4f2ec', ink: '#1f1e1d', line: '#e8e6de', accent: '#c96442' };
@@ -274,7 +274,7 @@ eras.forEach((era, row) => {
     renderer.shadowMap.needsUpdate = true;
     city.updateResidents(17.5);
 
-    const orbitOptions = cityOrbitOptions(layout.gridSize);
+    const orbitOptions = cityOrbitOptions(layout.gridSize, layout.era);
     const orbit = createOrbit(orbitOptions);
     const eye = orbit.getPosition();
     const target = orbit.getTarget();

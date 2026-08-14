@@ -12,6 +12,21 @@
 
 ---
 
+## 2026-08-14 — Đường sá thành mạng lưới thật (Phase 5C)
+
+- **Mục đích**: Đàm — *"đường đi cũng nên phức tạp hơn"*. Mạng cũ là một dấu cộng: 23 ô trên lưới
+  144 ô.
+- **Phạm vi**: `engine/cityLayout.js` (`ROAD_CELLS` bốn trục, ba hạng đường, tách
+  `MAX_SCATTER_PROPS` khỏi `MAX_PROPS`) · `components/city/render3d/sceneGraph.js` (`LANE_WIDTH`,
+  `buildInstances` nhận thêm `sx`/`sz` tuỳ chọn).
+- **Ảnh hưởng**: 44 ô đường chia thành phố thành các ô phố; mỗi công trình có mặt tiền quay ra
+  đường; số phiên có thứ nhúc nhích trên bản đồ tăng 23 → 44. Ngân sách DOM của bộ vẽ 2D dự phòng
+  nới 200 → 230, phần tăng nằm trọn ở đa giác phẳng; số cảnh vật KHỐI siết lại 48 → 34.
+- **Tương thích**: KHÔNG đổi state, KHÔNG đổi schema, KHÔNG đổi cân bằng game. Đường sá vốn được
+  SUY RA từ số phiên chứ không lưu, nên thành phố cũ trong bảo tàng tự có mạng đường mới.
+
+---
+
 ## 2026-08-14 — 15 kỷ, 15 dáng nhà, 15 đất nước (Phase 5A + 5B)
 
 - **Mục đích**: Đàm phản hồi sau khi nhìn thành phố thật — đêm quá tối, camera thu quá xa nên chi

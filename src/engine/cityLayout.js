@@ -27,7 +27,19 @@ import { describeCraftProgress } from './craftProgress';
 export const CITY_GRID_SIZE = 12;      // lưới 12×12 = 144 ô
 export const TILE_W = 64;              // bề rộng ô isometric (px)
 export const TILE_H = 32;              // bề cao ô isometric (px) — tỉ lệ 2:1
-export const MAX_PROPS = 48;           // trần cảnh vật, chống rớt khung hình
+/**
+ * Trần CẢNH VẬT KHỐI (cây, ruộng, đá, đèn, nước) — thứ trần này sinh ra để bảo vệ.
+ * ⚠️ KHÔNG tính ô đường vào đây: đường là ô nền PHẲNG, gom hết vào một `InstancedMesh` duy nhất,
+ * cùng lớp chi phí với 144 ô nền vốn đã luôn được vẽ. Gộp chung hai thứ khác hẳn nhau về chi phí
+ * là cách chắc chắn nhất để một thay đổi ở bên này bóp nghẹt bên kia trong im lặng — đúng chuyện
+ * đã suýt xảy ra khi mạng đường tăng từ 23 lên 44 ô (2026-08-14).
+ */
+export const MAX_SCATTER_PROPS = 34;
+/**
+ * Trần TỔNG (đường + cảnh vật). Vẫn giữ để bài test cũ còn một hàng rào tuyệt đối, và để một lỗi
+ * nào đó ở tầng đường không thể sinh ra hàng trăm ô.
+ */
+export const MAX_PROPS = 96;
 
 /** Số biến thể hình ảnh cho mỗi loại ô nền / cảnh vật. */
 const GROUND_VARIANTS = 4;
@@ -71,24 +83,64 @@ const BUILDING_ZONES = [
   { x: 5, y: 5, w: 3, h: 3 },   // hạng 4 — trung tâm (kỳ quan)
 ];
 
-/** Trục đường: cột x=4 và hàng y=4 — hai đường này không cắt qua zone công trình nào. */
-const ROAD_AXIS = 4;
+/**
+ * Mạng đường. Đàm 2026-08-14: *"đường đi cũng nên phức tạp hơn"* — và anh đúng: trước đó cả thành
+ * phố chỉ có **một dấu cộng** (cột x=4 + hàng y=4), tức 23 ô đường trên lưới 144 ô. Một dấu cộng
+ * thì không đọc ra là thành phố; nó đọc ra là hai con đường mòn cắt nhau giữa đồng.
+ *
+ * ⚠️ VÌ SAO CHỌN ĐÚNG BỐN TRỤC NÀY, KHÔNG PHẢI VẼ ĐƯỜNG NGOẰN NGOÈO CHO "TỰ NHIÊN":
+ * Năm khu đất công trình nằm ở `BUILDING_ZONES` — bốn góc (x/y trong 1–3 và 8–10) và trung tâm
+ * (5–7). Bốn đường thẳng x ∈ {4, 8} và y ∈ {4, 8} là bộ trục DUY NHẤT vừa chia lưới thành các ô
+ * phố đều nhau, vừa **chạy sát mép mọi khu đất** — nghĩa là mỗi công trình đều có mặt tiền quay ra
+ * đường, đúng như một thành phố thật. Đường ngoằn ngoèo sinh bằng băm thì "tự nhiên" hơn nhưng sẽ
+ * cắt qua giữa các khu đất và biến mặt tiền thành ngõ cụt.
+ *
+ * `ROAD_MAIN_AXIS` (4) là trục CHÍNH — hai đại lộ xuyên suốt; `ROAD_CROSS_AXIS` (8) là trục PHỤ.
+ *
+ * `variant` KHÔNG phải nhãn trang trí — bộ vẽ 3D đọc nó để quyết bề rộng mặt đường:
+ *   `0` đại lộ / ngã tư — rộng hết ô
+ *   `1` phố DỌC (chạy theo trục y) — hẹp bề ngang, chừa hai mép cỏ
+ *   `2` phố NGANG (chạy theo trục x) — hẹp bề sâu
+ * Nhờ hai bề rộng khác nhau mà mắt đọc ra thứ bậc *đại lộ ↔ ngõ phố*; nếu mọi đường cùng một bề
+ * rộng thì thêm bao nhiêu ô cũng chỉ ra một tấm lưới đều tăm tắp, không ra một thành phố.
+ */
+const ROAD_MAIN_AXIS = 4;
+const ROAD_CROSS_AXIS = 8;
 
 /**
  * Các ô đường, sắp xếp từ TRUNG TÂM ra NGOÀI. Đường được "mở" dần theo số phiên, nên thành phố
  * trông như đang lớn lên thay vì hiện ra trọn vẹn ngay từ phiên đầu.
+ *
+ * ⚠️ Thứ tự này KHÔNG chỉ để đẹp — nó là một phần của lời hứa "mỗi phiên thấy thành phố lớn thêm":
+ * mỗi phiên mở thêm ĐÚNG MỘT ô đường (xem `roadBudget` bên dưới). Mạng cũ có 23 ô nên hết chuyện
+ * để mở sau 23 phiên; mạng mới có 44 ô, tức gần gấp đôi số phiên có thứ nhúc nhích.
  */
 const ROAD_CELLS = (() => {
+  const seen = new Set();
   const cells = [];
+  const add = (x, y, variant) => {
+    const key = cellKey(x, y);
+    if (seen.has(key)) return;
+    seen.add(key);
+    cells.push({ x, y, variant });
+  };
+  // ⚠️ NGÃ TƯ CỦA HAI PHỐ PHỤ PHẢI ĐẶT TRƯỚC, và phải mang vai đại lộ (rộng hết ô). Nếu để nó rơi
+  // vào một trong hai phố hẹp thì mặt đường bị THẮT LẠI đúng chỗ giao nhau, trông như đường cụt.
+  add(ROAD_CROSS_AXIS, ROAD_CROSS_AXIS, 0);
   for (let i = 0; i < CITY_GRID_SIZE; i += 1) {
-    cells.push({ x: ROAD_AXIS, y: i });
-    if (i !== ROAD_AXIS) cells.push({ x: i, y: ROAD_AXIS });
+    add(ROAD_MAIN_AXIS, i, 0);          // đại lộ dọc
+    add(i, ROAD_MAIN_AXIS, 0);          // đại lộ ngang
+    add(ROAD_CROSS_AXIS, i, 1);         // phố dọc  — hẹp bề ngang
+    add(i, ROAD_CROSS_AXIS, 2);         // phố ngang — hẹp bề sâu
   }
   const mid = (CITY_GRID_SIZE - 1) / 2;
   return cells.sort((a, b) => {
     const da = Math.abs(a.x - mid) + Math.abs(a.y - mid);
     const db = Math.abs(b.x - mid) + Math.abs(b.y - mid);
     if (da !== db) return da - db;
+    // Đại lộ mở trước phố nhánh ở cùng khoảng cách — thành phố mọc ra từ trục chính, không phải
+    // từ mấy mẩu vỉa hè rời rạc.
+    if (a.variant !== b.variant) return a.variant - b.variant;
     if (a.y !== b.y) return a.y - b.y;
     return a.x - b.x;
   });
@@ -221,20 +273,29 @@ export function deriveProps({ era, buildingCount, sessionCount, streakLength, oc
   // (1) Đường sá — mở dần từ trung tâm ra ngoài theo số phiên. Chưa có công trình nào thì chưa có
   //     đường (bãi đất trống mới khai hoang).
   const roadBudget = nBuild > 0 ? Math.min(ROAD_CELLS.length, nSession) : 0;
+  let roadsPlaced = 0;
   for (const cell of ROAD_CELLS) {
-    if (props.length >= roadBudget) break;
+    if (roadsPlaced >= roadBudget) break;
     const key = cellKey(cell.x, cell.y);
     if (taken.has(key)) continue;
     taken.add(key);
-    props.push({ kind: 'road', x: cell.x, y: cell.y, variant: cell.x === ROAD_AXIS ? 0 : 1 });
+    props.push({ kind: 'road', x: cell.x, y: cell.y, variant: cell.variant });
+    roadsPlaced += 1;
   }
 
-  // (2) Cây cối / ruộng / đá / đèn / nước — rải theo băm, không bao giờ vượt trần MAX_PROPS.
+  // (2) Cây cối / ruộng / đá / đèn / nước — rải theo băm, không bao giờ vượt trần riêng của mình.
+  // ⚠️ TRẦN CỦA CẢNH VẬT ĐẾM RIÊNG, KHÔNG TRỪ PHẦN ĐƯỜNG.
+  // Bản cũ trừ chung một trần `MAX_PROPS` cho cả hai, và nó ổn khi mạng đường chỉ có 23 ô. Mạng
+  // mới có 44 ô ⇒ nếu vẫn trừ chung thì tới phiên thứ 44 đường ăn gần hết trần và **cây cối biến
+  // mất dần** đúng lúc thành phố đông đúc nhất — một cái bẫy im lặng, không có gì đỏ lên.
+  // Tách trần là ĐÚNG với chi phí thật chứ không phải nới cho tiện: đường là ô nền PHẲNG, gom vào
+  // một `InstancedMesh` duy nhất cùng lớp chi phí với 144 ô nền vốn đã luôn vẽ; còn cây/đá/đèn mới
+  // là vật thể khối, và chính chúng là thứ trần `MAX_PROPS` sinh ra để bảo vệ.
   const scatterBudget = Math.min(
-    MAX_PROPS - props.length,
+    MAX_SCATTER_PROPS,
     2 * nBuild + Math.floor(nSession / 2) + Math.floor(nStreak / 2),
   );
-  for (let i = 0; props.length < roadBudget + scatterBudget; i += 1) {
+  for (let i = 0; props.length < roadsPlaced + scatterBudget; i += 1) {
     // chặn vòng lặp vô hạn khi lưới gần kín
     if (i > CITY_GRID_SIZE * CITY_GRID_SIZE) break;
     const seed = `p|${eraNum}|${i}`;

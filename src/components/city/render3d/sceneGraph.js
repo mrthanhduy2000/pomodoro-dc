@@ -69,6 +69,14 @@ const GROUND_THICKNESS = 0.22;
 const ROAD_LIFT = 0.014;
 /** Cao độ MẶT TRÊN của đường — nơi bàn chân cư dân chạm vào. */
 const ROAD_SURFACE_Y = ROAD_LIFT;
+/**
+ * Bề rộng NGÕ PHỐ so với đại lộ. 0,64 chứ không phải 0,85: chênh lệch nhỏ hơn thì ở cỡ hiển thị
+ * thật (thẻ cảnh cao ~300px trên điện thoại) mắt không đọc ra hai hạng đường, và cả mạng lưới lại
+ * quay về "tấm lưới đều tăm tắp" — đúng thứ mà việc thêm đường sinh ra để chữa.
+ * Cũng KHÔNG hẹp hơn nữa: dưới ~0,55 thì ngõ mảnh như sợi chỉ và cư dân đi bộ trên đó sẽ lộ ra
+ * ngoài mép đường (họ vẫn đi đúng tâm ô).
+ */
+const LANE_WIDTH = 0.64;
 /** Số tam giác của một hộp — dùng để tính ngân sách hiển thị trên HUD. */
 const TRIANGLES_PER_BOX = 12;
 
@@ -211,7 +219,10 @@ export function createCityScene({
     items.forEach((item, index) => {
       const spec = place(item, index);
       position.set(spec.x, spec.y, spec.z);
-      scale.set(1, spec.height, 1);
+      // `sx`/`sz` tuỳ chọn — mặc định 1 nên mọi chỗ gọi cũ giữ nguyên hành vi. Thêm vào để mặt
+      // đường phân biệt được ĐẠI LỘ với NGÕ PHỐ bằng bề rộng; bề rộng đọc được từ xa hơn nhiều so
+      // với chênh lệch màu, ở đúng cỡ hiển thị mà thành phố này sống.
+      scale.set(spec.sx ?? 1, spec.height, spec.sz ?? 1);
       matrix.compose(position, rotation, scale);
       mesh.setMatrixAt(index, matrix);
       mesh.setColorAt(index, tint.setHex(spec.color));
@@ -333,11 +344,20 @@ export function createCityScene({
     track(new BoxGeometry(TILE_UNIT, GROUND_THICKNESS, TILE_UNIT)),
     (road) => {
       const { x, z } = cellToWorld(road.x, road.y, gridSize);
+      // Thứ bậc đường: `variant` 0 = đại lộ/ngã tư (rộng hết ô) · 1 = phố dọc (hẹp bề ngang) ·
+      // 2 = phố ngang (hẹp bề sâu). Xem `ROAD_CELLS` trong `cityLayout.js`.
+      const lane = road.variant === 1 || road.variant === 2;
       return {
         x, z,
         y: -GROUND_THICKNESS / 2 + ROAD_LIFT,   // nhô lên tí xíu để không chọi mặt nền
         height: 1,
-        color: palette.road ?? palette.roles?.stone ?? palette.edge,
+        sx: road.variant === 1 ? LANE_WIDTH : 1,
+        sz: road.variant === 2 ? LANE_WIDTH : 1,
+        // Ngõ phố tối hơn đại lộ một chút — đại lộ mòn hơn vì đi lại nhiều. Chênh lệch nhỏ thôi:
+        // bề rộng mới là thứ mắt đọc, màu chỉ để nhấn thêm.
+        color: lane
+          ? (palette.roles?.stone ?? palette.road ?? palette.edge)
+          : (palette.road ?? palette.roles?.stone ?? palette.edge),
       };
     },
     { castShadow: false, receiveShadow: true },

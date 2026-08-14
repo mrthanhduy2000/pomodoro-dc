@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import {
   CITY_GRID_SIZE,
   MAX_PROPS,
+  MAX_SCATTER_PROPS,
   TILE_H,
   TILE_W,
   cellToScreen,
@@ -180,10 +181,16 @@ test('deriveProps không bao giờ vượt MAX_PROPS dù số liệu lớn đế
     const props = deriveProps({ era: 1, buildingCount: 5, sessionCount, streakLength: 5000 });
     assert.ok(props.length <= MAX_PROPS, `vượt trần với sessionCount=${sessionCount}: ${props.length}`);
   }
-  // ngân sách DOM: 144 nền + 5 nhà + 48 cảnh vật = 197 < 200
+  // ⚠️ NGÂN SÁCH DOM: 144 nền + 5 nhà + (≤44 ô đường + ≤34 cảnh vật) = tối đa 227.
+  // Trần cũ là 200, ứng với mạng đường hình dấu cộng 23 ô. Mạng đường mới (2026-08-14, Đàm:
+  // *"đường đi cũng nên phức tạp hơn"*) có 44 ô, nên trần phải lên theo — nhưng KHÔNG phải nới
+  // cho vừa ý: con số này canh **bộ vẽ 2D dự phòng** (`render2d/`), nơi mỗi phần tử là một nút
+  // SVG. Phần tăng thêm nằm trọn ở ô ĐƯỜNG, tức các đa giác phẳng không viền, rẻ nhất trong cả
+  // cảnh; và ở bộ vẽ 3D thì chúng gộp vào đúng MỘT `InstancedMesh`, không thêm một lệnh vẽ nào.
+  // Số cảnh vật KHỐI (thứ đắt thật) đã bị siết lại còn 34, thấp hơn mức 48 trước đây.
   const layout = computeCityLayout({ built: ERA_1, era: 1, stats: { sessionCount: 1e6, streakLength: 1e6 } });
   const domBudget = layout.ground.length + layout.buildings.length + layout.props.length;
-  assert.ok(domBudget <= 200, `ngân sách DOM vượt 200: ${domBudget}`);
+  assert.ok(domBudget <= 230, `ngân sách DOM vượt 230: ${domBudget}`);
 });
 
 test('cảnh vật đông dần theo số phiên (thành phố lớn lên)', () => {
@@ -420,4 +427,80 @@ test('GIÀN GIÁO — dữ liệu lạ thì reward là null chứ KHÔNG ném l�
   });
   assert.equal(layout.scaffolds.length, 1, 'bản vẽ không tồn tại phải bị bỏ, không được dựng giàn giáo');
   assert.ok('reward' in layout.scaffolds[0], 'trường reward phải luôn có mặt');
+});
+
+// ─── 13. MẠNG ĐƯỜNG ─────────────────────────────────────────────────────────
+
+test('MẠNG ĐƯỜNG là một mạng lưới, không phải một dấu cộng', () => {
+  // Đàm 2026-08-14: *"đường đi cũng nên phức tạp hơn"*. Trước đó cả thành phố chỉ có cột x=4 và
+  // hàng y=4 — 23 ô trên lưới 144 ô, tức hai con đường mòn cắt nhau giữa đồng.
+  const props = deriveProps({ era: 1, buildingCount: 5, sessionCount: 1e6, streakLength: 100 });
+  const roads = props.filter((p) => p.kind === 'road');
+
+  // (a) ĐỦ NHIỀU. 40 là hàng rào đặt dưới giá trị thật (44 trừ vài ô bị công trình chiếm) và trên
+  //     hẳn vùng hỏng (23 của mạng cũ).
+  assert.ok(roads.length >= 40,
+    `chỉ có ${roads.length} ô đường — mạng cũ đã có 23, thêm chừng này thì mắt không nhận ra`);
+
+  // (b) VÀ ĐỦ RỘNG THEO CẢ HAI CHIỀU. Vế (a) một mình vẫn xanh nếu ai đó kéo dài một con đường
+  //     duy nhất; thứ làm nên "mạng lưới" là có nhiều đường SONG SONG cắt nhau.
+  const cols = new Set(roads.map((r) => r.x));
+  const rows = new Set(roads.map((r) => r.y));
+  const fullCols = [...cols].filter((x) => roads.filter((r) => r.x === x).length >= 10);
+  const fullRows = [...rows].filter((y) => roads.filter((r) => r.y === y).length >= 10);
+  assert.ok(fullCols.length >= 2 && fullRows.length >= 2,
+    `chỉ có ${fullCols.length} trục dọc và ${fullRows.length} trục ngang chạy suốt — `
+    + 'chưa chia được thành phố thành các ô phố');
+
+  // (c) BA HẠNG ĐƯỜNG phải cùng có mặt. `variant` không phải nhãn trang trí: bộ vẽ 3D đọc nó để
+  //     quyết bề rộng mặt đường (`LANE_WIDTH` trong `sceneGraph.js`). Nếu mọi ô cùng một hạng thì
+  //     thêm bao nhiêu đường cũng chỉ ra một tấm lưới đều tăm tắp.
+  const variants = new Set(roads.map((r) => r.variant));
+  for (const v of [0, 1, 2]) {
+    assert.ok(variants.has(v), `thiếu hẳn hạng đường ${v} ⇒ mất thứ bậc đại lộ ↔ ngõ phố`);
+  }
+
+  // (d) KHÔNG ô đường nào đè lên công trình.
+  const layout = computeCityLayout({ built: ERA_1, era: 1, stats: { sessionCount: 1e6, streakLength: 100 } });
+  const houses = new Set(layout.buildings.map((b) => `${b.x},${b.y}`));
+  for (const road of layout.props.filter((p) => p.kind === 'road')) {
+    assert.ok(!houses.has(`${road.x},${road.y}`), `ô đường (${road.x},${road.y}) đè lên công trình`);
+  }
+});
+
+test('MỖI PHIÊN MỞ THÊM ĐÚNG MỘT Ô ĐƯỜNG — thành phố lớn lên nhìn thấy được', () => {
+  // Đây là lời hứa game hoá cốt lõi ("mỗi phiên hoàn thành thì phải có nhà xây lên hay gì đó") ở
+  // dạng rẻ nhất: kể cả khi hàng đợi xây rỗng, phiên nào cũng có MỘT thứ đổi trên bản đồ.
+  const countRoads = (sessionCount) => deriveProps({
+    era: 1, buildingCount: 5, sessionCount, streakLength: 0,
+  }).filter((p) => p.kind === 'road').length;
+
+  let previous = countRoads(1);
+  for (let n = 2; n <= 30; n += 1) {
+    const now = countRoads(n);
+    assert.ok(now >= previous, `phiên ${n} làm MẤT đường (${previous} → ${now})`);
+    previous = now;
+  }
+  // …và tới phiên 30 thì phải nhiều hơn hẳn phiên 1, không phải nhích một hai ô.
+  assert.ok(countRoads(30) >= countRoads(1) + 20,
+    `từ phiên 1 tới phiên 30 chỉ mở thêm ${countRoads(30) - countRoads(1)} ô đường`);
+
+  // Chưa có công trình nào thì chưa có đường — bãi đất trống mới khai hoang.
+  assert.equal(
+    deriveProps({ era: 1, buildingCount: 0, sessionCount: 50, streakLength: 0 })
+      .filter((p) => p.kind === 'road').length,
+    0,
+  );
+});
+
+test('CẢNH VẬT KHÔNG BỊ ĐƯỜNG BÓP NGHẸT khi mạng đường mở rộng', () => {
+  // ⚠️ Cái bẫy im lặng của phase này: trần cũ trừ CHUNG cho đường và cảnh vật. Mạng đường tăng từ
+  // 23 lên 44 ô ⇒ nếu vẫn trừ chung thì tới phiên thứ 44 đường ăn gần hết trần và cây cối biến
+  // mất dần đúng lúc thành phố đông đúc nhất, mà không có gì đỏ lên.
+  const props = deriveProps({ era: 1, buildingCount: 5, sessionCount: 1e6, streakLength: 1e6 });
+  const scatter = props.filter((p) => p.kind !== 'road');
+  assert.ok(scatter.length >= 30,
+    `thành phố đông nhất mà chỉ còn ${scatter.length} cảnh vật — đường đã nuốt mất trần chung`);
+  assert.ok(scatter.length <= MAX_SCATTER_PROPS,
+    `cảnh vật khối vượt trần riêng: ${scatter.length} > ${MAX_SCATTER_PROPS}`);
 });

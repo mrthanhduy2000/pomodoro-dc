@@ -6,7 +6,20 @@
 > chọn: `ARCHITECTURE_DECISIONS.md`. Nợ kỹ thuật: `TECH_DEBT.md`. Migration: `MIGRATION.md`. Tóm
 > tắt theo mốc: `CHANGELOG.md`.
 > **NGUYÊN TẮC ƯU TIÊN SỐ 1:** (1) mọi phiên AI phải đọc file này + `CLAUDE.md` + các file liên quan TRƯỚC khi làm; (2) sau MỌI cập nhật dù nhỏ, phải cập nhật ngay file này + `CLAUDE.md` + các file liên quan khác.
-> Cập nhật lần cuối: **2026-08-14** — **Phase 5B**: **15 KỶ NAY CÓ 15 DÁNG NHÀ THẬT, VÀ MỖI KỶ
+> Cập nhật lần cuối: **2026-08-14** — **Phase 5C**: **ĐƯỜNG SÁ THÀNH MẠNG LƯỚI THẬT.** Đàm:
+> *"đường đi cũng nên phức tạp hơn"*. Trước đó cả thành phố chỉ có **một dấu cộng** — cột x=4 +
+> hàng y=4, 23 ô trên lưới 144 ô, đọc ra là hai con đường mòn cắt nhau giữa đồng. Nay bốn trục
+> x ∈ {4, 8} và y ∈ {4, 8} = **44 ô**, chia lưới thành các ô phố đều nhau và **chạy sát mép cả năm
+> khu đất** nên công trình nào cũng có mặt tiền quay ra đường. Ba hạng đường (`variant` 0 đại lộ /
+> 1 phố dọc / 2 phố ngang) và bộ vẽ 3D đọc `variant` để đổi **bề rộng** mặt đường (`LANE_WIDTH`
+> 0,64) — bề rộng đọc được từ xa hơn nhiều so với chênh lệch màu ở cỡ hiển thị thật. ⚠️ Cái bẫy đã
+> gỡ trong lúc làm: trần `MAX_PROPS` trừ CHUNG cho đường và cảnh vật, nên mạng đường to gấp đôi sẽ
+> **bóp nghẹt cây cối** đúng lúc thành phố đông nhất mà không có gì đỏ lên. Nay tách
+> `MAX_SCATTER_PROPS = 34` (cảnh vật khối — thứ trần đó sinh ra để bảo vệ) khỏi ô đường (nền phẳng,
+> gom vào một `InstancedMesh` cùng lớp chi phí với 144 ô nền vốn đã luôn vẽ). Mỗi phiên vẫn mở đúng
+> một ô đường ⇒ số phiên "có thứ nhúc nhích trên bản đồ" tăng từ 23 lên 44. **578 bài test.**
+>
+> Trước đó cùng ngày — **Phase 5B**: **15 KỶ NAY CÓ 15 DÁNG NHÀ THẬT, VÀ MỖI KỶ
 > LẤY MỘT ĐẤT NƯỚC LÀM BIỂU TƯỢNG.** Đàm nhìn thành phố rồi nói *"không thể nào nhà hiện đại lại
 > giống nhà thời đồ đồng được"*. Đo ra thì anh đúng đến mức khó tin: kỷ 1 (lều da thú) cao trung
 > bình **1,81**, kỷ 14 (tháp kính) cao **2,05** — chênh 13%; cả bảng chỉ trải **1,88 lần** và còn

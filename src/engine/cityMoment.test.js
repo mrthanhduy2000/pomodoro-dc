@@ -302,3 +302,61 @@ test('TRƯỚC PHIÊN: tiến độ nằm trong [0,1] và dữ liệu rác khôn
   const odd = buildFocusTease({ scaffolds: [{ bpId: 'x', label: 'X', remaining: 3, progress: 9 }] });
   assert.ok(odd.progress >= 0 && odd.progress <= 1);
 });
+
+// ─── XƯỞNG TRỐNG: thành phố vẫn nhúc nhích, và nay nó nói ra ─────────────────
+
+test('XƯỞNG TRỐNG mà vẫn có tin thật: mỗi phiên mở thêm một đoạn đường', () => {
+  // Đàm 2026-08-14: *"mỗi phiên hoàn thành thì phải có nhà xây lên hay gì đó"*.
+  // Trước bản này, nhánh 3 trả `null` — tức 95% số phiên (con số đo được ở `TECH_DEBT #14`) kết
+  // thúc trong im lặng hoàn toàn. Cách chữa RẺ là in một câu động viên chung chung, và luật trung
+  // thực ở đầu `cityMoment.js` cấm đúng điều đó. Cách chữa ĐÚNG là hỏi lại câu chưa ai hỏi:
+  // *phiên vừa rồi có thật sự không đổi gì không?* — không hề, mạng đường vẫn mở thêm một ô.
+  const moment = buildGrowthMoment({
+    newlyBuilt: [], scaffolds: [], acceleratedIds: [],
+    era: 1, buildingCount: 5, sessionCount: 12, streakLength: 6,
+  });
+  assert.ok(moment, 'xưởng trống ⇒ vẫn im lặng, yêu cầu của Đàm chưa được đáp ứng');
+  assert.equal(moment.kind, 'tick');
+  assert.ok(moment.detail.includes('đường'), `câu nói không nhắc tới thứ vừa đổi: "${moment.detail}"`);
+  // Thanh tiến độ phải NHÍCH — đó là toàn bộ nội dung cảm xúc của màn này.
+  assert.ok(moment.progress > moment.fromProgress,
+    'thanh tiến độ đứng yên ⇒ màn hình khoe một thứ không nhúc nhích');
+});
+
+test('KHÔNG KHOE THỨ KHÔNG XẢY RA: mạng đường mở hết thì nhánh đường tự tắt', () => {
+  // ⚠️ Đây là vế giữ cho nhánh mới không thành một lời khen rỗng. Nó KHÔNG dựa vào ai đó nhớ sửa
+  // một hằng số: hàm đo lại bằng chính `deriveProps` đang dựng thành phố, nên ngày mạng đường mở
+  // hết là ngày nhánh ấy tự im.
+  const late = buildGrowthMoment({
+    newlyBuilt: [], scaffolds: [], acceleratedIds: [],
+    era: 1, buildingCount: 5, sessionCount: 500, streakLength: 200,
+  });
+  assert.ok(!late || !late.detail.includes('đường'),
+    `phiên thứ 500 vẫn khoe "mở thêm đường" trong khi mạng đã kín: "${late?.detail}"`);
+
+  // Và chưa có công trình nào thì tuyệt đối im lặng — chưa có đường, chưa có cư dân, chưa có gì.
+  assert.equal(buildGrowthMoment({
+    newlyBuilt: [], scaffolds: [], acceleratedIds: [],
+    era: 1, buildingCount: 0, sessionCount: 9, streakLength: 3,
+  }), null);
+});
+
+test('CÔNG TRƯỜNG VẪN THẮNG ĐƯỜNG SÁ — tin lớn hơn phải nói trước', () => {
+  const withScaffold = buildGrowthMoment({
+    newlyBuilt: [],
+    scaffolds: [{ bpId: 'bp_x', label: 'Lều Đá', icon: '🛖', remaining: 2, total: 5, progress: 0.6 }],
+    era: 1, buildingCount: 5, sessionCount: 12, streakLength: 6,
+  });
+  assert.equal(withScaffold.kind, 'scaffold', 'đường sá chen lên trước công trường đang xây');
+
+  const withBuilt = buildGrowthMoment({
+    newlyBuilt: [ERA6[0]], scaffolds: [], acceleratedIds: [],
+    era: 1, buildingCount: 5, sessionCount: 12, streakLength: 6,
+  });
+  assert.equal(withBuilt.kind, 'built', 'công trình vừa xong mà lại đi khoe một đoạn đường');
+});
+
+test('CHỖ GỌI CŨ KHÔNG PHẢI SỬA GÌ: thiếu số liệu ⇒ im lặng như hành vi cũ', () => {
+  assert.equal(buildGrowthMoment({ newlyBuilt: [], scaffolds: [], acceleratedIds: [] }), null);
+  assert.equal(buildGrowthMoment(), null);
+});

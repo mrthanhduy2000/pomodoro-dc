@@ -24,7 +24,8 @@
  * THUẦN: không đọc store, không đụng `Date`, không DOM. Test bằng `node --test`.
  */
 
-import { BLUEPRINT_LOOKUP } from './cityLayout.js';
+import { BLUEPRINT_LOOKUP, ROAD_CELL_COUNT, deriveProps } from './cityLayout.js';
+import { deriveResidentCount } from './city3d/residents.js';
 
 const clamp01 = (value) => (Number.isFinite(value) ? Math.min(1, Math.max(0, value)) : 0);
 
@@ -118,7 +119,12 @@ function joinNames(names) {
  */
 export const GROWTH_MOMENT_MS = 3200;
 
-export function buildGrowthMoment({ newlyBuilt = [], scaffolds = [], acceleratedIds = [] } = {}) {
+export function buildGrowthMoment({
+  newlyBuilt = [], scaffolds = [], acceleratedIds = [],
+  // Bốn tham số dưới đây chỉ phục vụ nhánh 3 (xưởng trống). Thiếu chúng thì nhánh đó im lặng đúng
+  // như hành vi cũ — nên mọi chỗ gọi cũ không phải sửa gì.
+  era, buildingCount, sessionCount, streakLength,
+} = {}) {
   // ── 1. Có công trình VỪA XONG — tin lớn nhất có thể có ────────────────────
   const built = (Array.isArray(newlyBuilt) ? newlyBuilt : [])
     .map((bpId) => ({ bpId, meta: BLUEPRINT_LOOKUP[bpId] }))
@@ -170,9 +176,93 @@ export function buildGrowthMoment({ newlyBuilt = [], scaffolds = [], accelerated
     };
   }
 
-  // ── 3. Thành phố KHÔNG đổi gì ⇒ im lặng ──────────────────────────────────
-  // Không có công trường nào thì phiên vừa rồi thật sự không làm thành phố nhúc nhích. Hiện một
-  // câu chúc mừng ở đây là nói dối, và chỉ cần nói dối một lần là mọi khoảnh khắc sau đều rỗng.
+  // ── 3. Xưởng trống — nhưng thành phố VẪN nhúc nhích, và đó là sự thật bị bỏ quên ─────
+  const tick = buildTickMoment({ era, buildingCount, sessionCount, streakLength });
+  if (tick) return tick;
+
+  // ── 4. Thành phố KHÔNG đổi gì ⇒ im lặng ──────────────────────────────────
+  // Hiện một câu chúc mừng ở đây là nói dối, và chỉ cần nói dối một lần là mọi khoảnh khắc sau
+  // đều rỗng.
+  return null;
+}
+
+/**
+ * ĐIỀU ĐÃ THẬT SỰ ĐỔI TRÊN BẢN ĐỒ khi xưởng trống — nhánh trả lời cho yêu cầu của Đàm ngày
+ * 2026-08-14: *"mỗi phiên hoàn thành thì phải có nhà xây lên hay gì đó"*.
+ *
+ * ⚠️ VÌ SAO NHÁNH NÀY TRƯỚC ĐÂY KHÔNG THỂ TỒN TẠI, VÀ VÌ SAO NAY THÌ ĐƯỢC:
+ * `TECH_DEBT #14` đo được **95% số phiên không có lễ mừng nào** — vì cả game chỉ có 420 bước xây,
+ * còn lại là những phiên xưởng trống. Cách chữa RẺ là in một câu động viên chung chung, và luật
+ * trung thực ở đầu file cấm đúng điều đó. Nhưng câu hỏi thật ra chưa bao giờ được hỏi cho tới hôm
+ * nay: *phiên vừa rồi có thật sự không đổi gì không?* Không hề — mỗi phiên vẫn mở thêm **một ô
+ * đường**, và cứ vài phiên lại thêm cư dân hoặc cảnh vật. Những thứ đó luôn có thật, chỉ là chưa
+ * ai nói ra.
+ *
+ * ⚠️ KHÔNG TỰ SUY LUẬN "chắc là có thêm đường" — ĐO. Hàm gọi lại đúng `deriveProps` và
+ * `deriveResidentCount` mà thành phố đang dùng để dựng hình, với `sessionCount` và
+ * `sessionCount − 1`, rồi so hai kết quả. Nhờ vậy nó KHÔNG THỂ khoe một thứ không xảy ra: ngày
+ * mạng đường mở hết 44 ô, nhánh đường tự tắt mà không cần ai nhớ sửa. Đây chính là luật
+ * "một luật một công thức" áp cho lời khen.
+ *
+ * Thứ tự ưu tiên = thứ tự dễ nhìn thấy trên bản đồ: đường (đổi hình dạng thành phố) → cư dân
+ * (người biết đi) → cảnh vật (cây cối).
+ */
+function buildTickMoment({ era, buildingCount, sessionCount, streakLength } = {}) {
+  const n = Number.isFinite(sessionCount) ? Math.floor(sessionCount) : 0;
+  const built = Number.isFinite(buildingCount) ? Math.floor(buildingCount) : 0;
+  // Chưa có công trình nào thì chưa có đường, chưa có cư dân — và cũng chưa có gì để khoe.
+  if (n < 1 || built < 1) return null;
+
+  const shared = { era, buildingCount: built, streakLength };
+  const before = deriveProps({ ...shared, sessionCount: n - 1 });
+  const after = deriveProps({ ...shared, sessionCount: n });
+  const roadsBefore = before.filter((p) => p.kind === 'road').length;
+  const roadsAfter = after.filter((p) => p.kind === 'road').length;
+
+  if (roadsAfter > roadsBefore && ROAD_CELL_COUNT > 0) {
+    return {
+      kind: 'tick',
+      bpId: null,
+      icon: '🛣️',
+      headline: 'Thành phố mở rộng',
+      detail: `Vừa mở thêm một đoạn đường · ${roadsAfter}/${ROAD_CELL_COUNT} ô đường`,
+      progress: roadsAfter / ROAD_CELL_COUNT,
+      fromProgress: roadsBefore / ROAD_CELL_COUNT,
+    };
+  }
+
+  const peopleBefore = deriveResidentCount({ buildingCount: built, sessionCount: n - 1, streakLength });
+  const peopleAfter = deriveResidentCount({ buildingCount: built, sessionCount: n, streakLength });
+  if (peopleAfter > peopleBefore) {
+    return {
+      kind: 'tick',
+      bpId: null,
+      icon: '👥',
+      headline: 'Thành phố đông thêm',
+      // ⚠️ `progress` = `fromProgress` ⇒ component GIẤU thanh tiến độ. Cố ý: dân số không có mẫu
+      // số nào cả, nên một cái thanh ở đây sẽ ngụ ý "sắp đầy" — một điều không ai từng nói.
+      detail: peopleAfter - peopleBefore > 1
+        ? `Thêm ${peopleAfter - peopleBefore} cư dân · tổng ${peopleAfter} người`
+        : `Thêm một cư dân · tổng ${peopleAfter} người`,
+      progress: 0,
+      fromProgress: 0,
+    };
+  }
+
+  const scatterBefore = before.length - roadsBefore;
+  const scatterAfter = after.length - roadsAfter;
+  if (scatterAfter > scatterBefore) {
+    return {
+      kind: 'tick',
+      bpId: null,
+      icon: '🌳',
+      headline: 'Thành phố xanh thêm',
+      detail: `Vừa mọc thêm ${scatterAfter - scatterBefore} mảng cảnh vật quanh phố`,
+      progress: 0,
+      fromProgress: 0,
+    };
+  }
+
   return null;
 }
 

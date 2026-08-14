@@ -146,6 +146,14 @@ const ROAD_CELLS = (() => {
   });
 })();
 
+/**
+ * Tổng số ô đường của mạng lưới — MẪU SỐ để nói "đã mở được bao nhiêu".
+ * ⚠️ Suy ra từ chính `ROAD_CELLS`, KHÔNG viết cứng: `cityMoment.js` dùng số này làm mẫu số cho
+ * thanh tiến độ sau mỗi phiên, và một mẫu số viết cứng sẽ nói dối ngay lần đầu ai đó thêm một
+ * trục đường mới.
+ */
+export const ROAD_CELL_COUNT = ROAD_CELLS.length;
+
 /** Bảng loại cảnh vật rải rác + trọng số (tổng = 20). Thứ tự cố định → tất định. */
 const SCATTER_KINDS = [
   { kind: 'tree',  weight: 8 },

@@ -12,6 +12,21 @@
 
 ---
 
+## 2026-08-14 — Xưởng trống không còn nghĩa là im lặng (Phase 5D)
+
+- **Mục đích**: Đàm — *"mỗi phiên hoàn thành thì phải có nhà xây lên hay gì đó"*. `TECH_DEBT #14`
+  đo được 95% số phiên kết thúc không có lễ mừng nào.
+- **Phạm vi**: `engine/cityMoment.js` (nhánh 3 `buildTickMoment`) · `engine/cityLayout.js`
+  (`ROAD_CELL_COUNT`) · `hooks/useCityMoment.js` (truyền thêm số phiên + chuỗi) ·
+  `components/city/CityGrowthMoment.jsx` (ẩn thanh tiến độ khi không có cú nhích).
+- **Ảnh hưởng**: ca xưởng-trống đi từ 0% lên 100% trong 44 phiên đầu mỗi kỷ. Không thêm một byte
+  state nào — mọi câu đều SUY RA từ số phiên đã có, và được ĐO lại bằng chính hàm dựng thành phố
+  nên không thể khoe một thứ không xảy ra.
+- **Tương thích**: bốn tham số mới của `buildGrowthMoment` đều tuỳ chọn; thiếu chúng thì hành vi
+  giống hệt bản cũ. KHÔNG đổi state, KHÔNG đổi schema, KHÔNG đổi cân bằng game.
+
+---
+
 ## 2026-08-14 — Đường sá thành mạng lưới thật (Phase 5C)
 
 - **Mục đích**: Đàm — *"đường đi cũng nên phức tạp hơn"*. Mạng cũ là một dấu cộng: 23 ô trên lưới

@@ -70,6 +70,11 @@ export function useCityGrowthMoment(active) {
   const snapshot = useCitySnapshot(active);
   const pendingReward = useGameStore((s) => s.ui.pendingReward);
 
+  // Số liệu cho nhánh "xưởng trống" của `buildGrowthMoment` — thành phố vẫn mở thêm đường / đông
+  // thêm cư dân sau MỖI phiên, kể cả khi không có công trình nào đang xây.
+  const sessionsInEra = useGameStore((s) => s.eraTracking?.sessionsInCurrentEra);
+  const currentStreak = useGameStore((s) => s.streak?.currentStreak);
+
   const newlyBuilt = Array.isArray(pendingReward?.newlyBuiltIds) ? pendingReward.newlyBuiltIds : [];
   const acceleratedIds = Array.isArray(pendingReward?.acceleratedCraftingIds)
     ? pendingReward.acceleratedCraftingIds : [];
@@ -79,8 +84,12 @@ export function useCityGrowthMoment(active) {
     if (!snapshot) return null;
     const moment = buildGrowthMoment({
       newlyBuilt, scaffolds: snapshot.layout.scaffolds, acceleratedIds,
+      era: snapshot.era,
+      buildingCount: snapshot.layout.buildings.length,
+      sessionCount: sessionsInEra ?? 0,
+      streakLength: currentStreak ?? 0,
     });
     return moment ? { moment, era: snapshot.era } : null;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [snapshot, rewardKey]);
+  }, [snapshot, rewardKey, sessionsInEra, currentStreak]);
 }

@@ -6,7 +6,21 @@
 > chọn: `ARCHITECTURE_DECISIONS.md`. Nợ kỹ thuật: `TECH_DEBT.md`. Migration: `MIGRATION.md`. Tóm
 > tắt theo mốc: `CHANGELOG.md`.
 > **NGUYÊN TẮC ƯU TIÊN SỐ 1:** (1) mọi phiên AI phải đọc file này + `CLAUDE.md` + các file liên quan TRƯỚC khi làm; (2) sau MỌI cập nhật dù nhỏ, phải cập nhật ngay file này + `CLAUDE.md` + các file liên quan khác.
-> Cập nhật lần cuối: **2026-08-14** — **Phase 5C**: **ĐƯỜNG SÁ THÀNH MẠNG LƯỚI THẬT.** Đàm:
+> Cập nhật lần cuối: **2026-08-14** — **Phase 5D**: **XƯỞNG TRỐNG KHÔNG CÒN NGHĨA LÀ IM LẶNG.**
+> Đàm: *"mỗi phiên hoàn thành thì phải có nhà xây lên hay gì đó"*. `TECH_DEBT #14` đo được **95%
+> số phiên không có lễ mừng nào** — nhánh 3 của `buildGrowthMoment` trả thẳng `null` khi xưởng
+> trống. Cách chữa RẺ là in một câu động viên chung chung, và luật trung thực ở đầu `cityMoment.js`
+> cấm đúng điều đó. Cách chữa ĐÚNG là hỏi lại câu chưa ai hỏi: *phiên vừa rồi có thật sự không đổi
+> gì không?* — **không hề**: mỗi phiên vẫn mở thêm một ô đường, vài phiên lại thêm cư dân hoặc
+> cảnh vật. Nay nhánh 3 **ĐO** (gọi lại đúng `deriveProps`/`deriveResidentCount` đang dựng thành
+> phố, với `sessionCount` và `sessionCount − 1`, rồi so hai kết quả) chứ không suy đoán — nên nó
+> KHÔNG THỂ khoe một thứ không xảy ra, và ngày mạng đường mở hết thì nhánh đó **tự tắt** mà không
+> cần ai nhớ sửa. Đo được: ca xưởng-trống nay **44/44 phiên đầu mỗi kỷ đều có tin thật** (trước là
+> 0), tính trên 80 phiên đầu thì 55–69% tuỳ số công trình. Thanh tiến độ **tự ẩn** khi không có cú
+> nhích (nhánh cư dân/cảnh vật không có mẫu số — vẽ thanh rỗng ở đó là bịa ra một lời chê giữa màn
+> khen). **582 bài test.**
+>
+> Trước đó cùng ngày — **Phase 5C**: **ĐƯỜNG SÁ THÀNH MẠNG LƯỚI THẬT.** Đàm:
 > *"đường đi cũng nên phức tạp hơn"*. Trước đó cả thành phố chỉ có **một dấu cộng** — cột x=4 +
 > hàng y=4, 23 ô trên lưới 144 ô, đọc ra là hai con đường mòn cắt nhau giữa đồng. Nay bốn trục
 > x ∈ {4, 8} và y ∈ {4, 8} = **44 ô**, chia lưới thành các ô phố đều nhau và **chạy sát mép cả năm

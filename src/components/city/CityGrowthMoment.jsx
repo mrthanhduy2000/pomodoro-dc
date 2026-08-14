@@ -103,6 +103,14 @@ export default function CityGrowthMoment({ moment, era, onDone }) {
           {moment.detail}
         </div>
 
+        {/*
+          ⚠️ KHÔNG CÓ THANH NÀO CÒN HƠN MỘT THANH KHÔNG NHÚC NHÍCH.
+          Nhánh "xưởng trống" (thêm cư dân / thêm cảnh vật) không có mẫu số nào cả — nó trả
+          `from === to === 0`. Vẽ một cái thanh rỗng ở đó thì mắt đọc ra "tiến độ 0%", tức bịa ra
+          một lời chê ngay giữa màn khen. Toàn bộ nội dung cảm xúc của thanh này là CÚ NHÍCH; không
+          có cú nhích thì nó không có việc gì để làm.
+        */}
+        {to > from && (
         <div
           className="mt-4 h-2 w-full overflow-hidden rounded-full"
           style={{ background: 'var(--line-2)' }}
@@ -123,6 +131,7 @@ export default function CityGrowthMoment({ moment, era, onDone }) {
             transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
           />
         </div>
+        )}
 
         <div className="mt-3 text-[11px]" style={{ color: 'var(--muted)' }}>
           Chạm để tiếp tục

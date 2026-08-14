@@ -14,6 +14,7 @@ import assert from 'node:assert/strict';
 
 import {
   FALLBACK_TOKENS,
+  ROOF_MAX_SATURATION,
   buildScenePalette,
   cssColorToNumber,
   luminance,
@@ -446,8 +447,14 @@ test('MÁI NHÀ: 15 KỶ PHẢI RA 15 MÀU — đi hết 15 kỷ mà thành ph�
   // Vì sao đây là lỗi NẶNG chứ không phải chuyện thẩm mỹ vặt: toàn bộ phần thưởng của việc đi qua
   // 15 kỷ nằm ở chỗ thành phố TRÔNG KHÁC ĐI. Kỷ 15 là đích của cả hành trình mà lại trùng màu với
   // kỷ 6 thì đúng nghĩa "đi hết cũng như không".
-  const roofs = ERA_ACCENTS.map((eraColor) => readColor(
-    buildScenePalette({ tokens: LIGHT_TOKENS, eraColor, daylight: deriveDaylight(12) }).roof,
+  // ⚠️ TRUYỀN `era` — ĐÂY LÀ THAY ĐỔI QUAN TRỌNG NHẤT CỦA BÀI TEST NÀY (2026-08-14, Phase 6B).
+  // Trước đây bài này dựng bảng màu KHÔNG có `era`, tức nó đo đường suy-mái-từ-màu-nhấn-giao-diện.
+  // Từ Phase 6B, mái lấy màu từ `roofColor` — VẬT LIỆU LỢP THẬT của kỷ (ngói terracotta Duomo, đá
+  // phiến Rhine, đồng oxy hoá, bê tông Nakagin…). Không sửa dòng này thì bài test vẫn xanh, vẫn
+  // canh cẩn thận, và canh đúng một đường mà **màn hình của Đàm không còn chạy nữa** — kiểu hỏng
+  // im lặng nhất trong cả họ, vì nó trông y hệt một bài test đang làm việc.
+  const roofs = ERA_ACCENTS.map((eraColor, i) => readColor(
+    buildScenePalette({ tokens: LIGHT_TOKENS, eraColor, era: i + 1, daylight: deriveDaylight(12) }).roof,
   ));
 
   // Khoảng cách màu có TRỌNG SỐ theo độ nhạy của mắt (lục > đỏ > lam) — sát cảm nhận hơn khoảng
@@ -508,25 +515,103 @@ test('MÁI NHÀ: 15 KỶ PHẢI RA 15 MÀU — đi hết 15 kỷ mà thành ph�
   }
   sorted.sort((a, b) => a - b);
   const median = sorted[Math.floor(sorted.length / 2)];
-  assert.ok(median >= 34,
-    `trung vị khoảng cách giữa 105 cặp mái tụt còn ${median.toFixed(1)} (cần ≥ 34) — cả bảng màu `
-    + 'đang co lại về một cụm, kiểu hỏng mà phép đếm "bao nhiêu cặp dưới 12" không bắt được');
+  // ⚠️ HÀNG RÀO 34 → 52 (2026-08-14, Phase 6B). Không phải siết cho vui: đây là cách KHOÁ LẠI phần
+  // vừa được cải thiện, đúng luật "hàng rào phải nằm DƯỚI giá trị đang chạy và TRÊN giá trị hỏng đã
+  // từng ship". Đo cùng lúc, cùng công thức, cùng giờ 12:00, chỉ khác có truyền `era` hay không:
+  //     đường CŨ (mái suy từ màu nhấn giao diện):  trung vị 46,2
+  //     đường MỚI (mái là vật liệu lợp thật):      trung vị 62,7
+  // Để nguyên 34 thì ngày nào ai đó lỡ bỏ `era` ở một chỗ gọi, bảng màu tụt về đúng bản cũ mà
+  // KHÔNG có gì đỏ — 46,2 vẫn qua cửa 34 thoải mái.
+  assert.ok(median >= 52,
+    `trung vị khoảng cách giữa 105 cặp mái tụt còn ${median.toFixed(1)} (cần ≥ 52) — cả bảng màu `
+    + 'đang co lại về một cụm, kiểu hỏng mà phép đếm "bao nhiêu cặp dưới 12" không bắt được. '
+    + 'Ngờ trước tiên: có chỗ gọi `buildScenePalette` quên truyền `era` ⇒ mái tụt về đường cũ.');
   // Ngưỡng 6 nằm DƯỚI giá trị đang chạy (8,4) và TRÊN hẳn giá trị hỏng đã ship (0,0) — cùng
   // nguyên tắc "hàng rào phải nằm dưới giá trị hỏng thật" đã ghi ở bài test mặt đất ban đêm.
   assert.ok(worst >= 6,
     `hai kỷ ra gần như cùng một màu mái (${worstPair}, cách nhau ${worst.toFixed(1)}) `
     + '⇒ xây xong cả một kỷ mà thành phố trông y như cũ');
 
-  // Và không được dồn cụm: chia vòng tròn màu thành 12 múi 30°, 15 kỷ phải phủ được ít nhất 6 múi.
-  // Bản hỏng chỉ phủ 3 múi (0°–60° và 300°–360°).
+  // ─── HÀNG RÀO "KHÔNG ĐƯỢC DỒN CỤM" — VIẾT LẠI HẲN 2026-08-14, VÀ ĐÂY LÀ LÝ DO ────────────────
+  // Bản cũ chia vòng tròn màu thành 12 múi 30° rồi đòi 15 kỷ phủ ≥ 6 múi. Nghe rất hợp lý. Đo hai
+  // đường cạnh nhau thì nó **thưởng cho đúng cái lỗi vừa phải đi sửa**:
+  //     đường CŨ (mái suy từ màu nhấn giao diện):  9 múi ✅   trung vị 46,2   trải độ sáng 0,18
+  //     đường MỚI (mái là vật liệu lợp thật):      6 múi      trung vị 62,7   trải độ sáng 0,40
+  // Đường cũ ăn điểm CAO HƠN ở phép đếm múi, trong khi nó chính là thứ đẻ ra mái tím cho đình làng
+  // Bắc Bộ và mái tím cho vòm Duomo. Lý do rất vật lý: **vật liệu lợp có thật không trải khắp vòng
+  // tròn màu.** Đất nung, gạch bùn, rơm rạ, gỗ hun, ngói men — tất cả nằm gọn trong 13°–46°; ra
+  // ngoài dải đó chỉ có đồng oxy hoá (166°), kính (191°) và đá phiến (204°–218°). Không có mái màu
+  // tím sen, không có mái màu hồng cánh sen. Đòi phủ 6 múi là đòi bịa ra vật liệu không tồn tại.
+  // ⚠️ Tệ hơn: phép đếm ấy tính cả những kỷ mà **góc màu là nhiễu chứ không phải tín hiệu** — bê
+  // tông Nakagin (kỷ 13) độ tươi 0,04 và bê tông quân sự (kỷ 12) độ tươi 0,10 vẫn được đếm như hai
+  // "màu" đầy đủ, mà một mảng xám thì góc màu của nó gần như là số ngẫu nhiên. Bản mới vừa đủ 6 múi
+  // và có tới ba kỷ chỉ cách mép múi 1°–3° ⇒ một cú chỉnh màu vô hại cũng làm test đỏ oan.
+  // ⇒ Giữ lại phép đếm múi làm SÀN YẾU (bắt ca "cả 15 mái cùng một họ nâu"), và thêm trục thật sự
+  //   phân biệt vật liệu: **ĐỘ SÁNG**. Đá phiến Wales lợp nhà máy (0,28) với bê tông đúc sẵn (0,68)
+  //   khác nhau ở chỗ đậm–nhạt, không ở chỗ góc màu.
   const buckets = new Set(roofs.map((c) => Math.floor(c.h / 30)));
-  assert.ok(buckets.size >= 6,
+  assert.ok(buckets.size >= 4,
     `15 mái chỉ nằm trong ${buckets.size} múi màu (múi: ${[...buckets].sort((a, b) => a - b).join(',')}) `
-    + '⇒ cả bảng màu dồn về một hai họ, kỷ nào cũng na ná kỷ nào');
+    + '⇒ cả bảng vật liệu dồn về một họ. Đây là SÀN YẾU: nó KHÔNG bảo chứng 15 kỷ phân biệt được '
+    + '(đường cũ hỏng từng đạt 9 múi) — việc đó do trung vị + trải độ sáng bên dưới lo.');
+
+  const lightness = roofs.map((c) => c.l);
+  const lightSpread = Math.max(...lightness) - Math.min(...lightness);
+  assert.ok(lightSpread >= 0.30,
+    `15 mái chỉ trải ${lightSpread.toFixed(2)} về độ sáng (cần ≥ 0,30) — mọi mái cùng một độ đậm thì `
+    + 'thành phố thành một mảng phẳng dù góc màu có khác nhau. Đường cũ hỏng chỉ trải 0,18; đường '
+    + 'vật liệu thật trải 0,40 vì đá phiến nhà máy (0,28) và bê tông đúc sẵn (0,68) là hai đầu thật.');
 
   // Trần độ tươi: giữ đúng hướng mỹ thuật trầm (Townscaper). Mái không được thành nhựa dẻo.
+  // ⚠️ `import` thẳng hằng số của mã sản phẩm, KHÔNG chép lại số 0,66 vào đây — trước 2026-08-14 hai
+  // bên giữ hai số (mã kẹp 0,70, test canh 0,66) và ngói lưu ly kỷ 4 rơi đúng vào khe đó.
+  //
+  // ⚠️ DUNG SAI 1/255 LÀ DUNG SAI CỦA PHÉP LÀM TRÒN, KHÔNG PHẢI CỦA MỸ THUẬT. Mã kẹp độ tươi ở đầu
+  // VÀO rồi mới đổi sang màu; bài này đo ở đầu RA, sau khi ba kênh đã bị làm tròn về số nguyên
+  // 0–255. Hai chỗ ấy cách nhau đúng một phép làm tròn, nên gõ `<= 0,66` chằn chặn thì ngói lưu ly
+  // kỷ 4 (`#cf9e17`, kỷ duy nhất chạm trần) đo ra **0,661376** và test đỏ vì một thứ không ai nhìn
+  // thấy được. Đo đủ 15 kỷ × 24 giờ × 2 theme: chỗ vượt nhiều nhất là **0,00138 — tức 0,35 đơn vị
+  // của một kênh màu**. Dung sai này KHÔNG che nổi lỗi thật: một mái bị đặt tươi 0,80 sẽ vượt 0,14,
+  // gấp **100 lần** dung sai.
+  const QUANTISATION_SLACK = 1 / 255;
   for (let i = 0; i < roofs.length; i += 1) {
-    assert.ok(roofs[i].s <= 0.66,
-      `mái kỷ ${i + 1} tươi ${roofs[i].s.toFixed(2)} — rực quá, rơi khỏi dải vật liệu lợp thật`);
+    assert.ok(roofs[i].s <= ROOF_MAX_SATURATION + QUANTISATION_SLACK,
+      `mái kỷ ${i + 1} tươi ${roofs[i].s.toFixed(3)} — rực quá, rơi khỏi dải vật liệu lợp thật `
+      + `(trần ${ROOF_MAX_SATURATION}, đã cộng dung sai làm tròn ${QUANTISATION_SLACK.toFixed(4)})`);
   }
+});
+
+test('ĐỐI CHỨNG: bộ hàng rào mới PHẢI còn bắt được bảng mái hỏng đã từng chạy thật', () => {
+  // ⚠️ VÌ SAO CÓ BÀI NÀY. Bài trên vừa **nới** một hàng rào (múi màu 6 → 4). `CLAUDE.md` có luật
+  // riêng cho đúng tình huống ấy: *"nhốt sẵn bộ giá trị HỎNG cũ vào một bài đối chứng bắt buộc phép
+  // đo phải còn bắt được nó — đó là cách duy nhất giữ cho ngưỡng không bị nới dần cho tiện"*.
+  // May mắn là ở đây bản hỏng KHÔNG cần dựng lại bằng tay: nó vẫn còn sống trong mã, chính là nhánh
+  // chạy khi không truyền `era` (đường lùi cho bảo tàng và các chỗ gọi cũ). Gọi đúng nhánh đó rồi
+  // bắt bộ hàng rào mới phải kêu lên — nếu không kêu, nghĩa là vừa nới quá tay.
+  const broken = ERA_ACCENTS.map((eraColor) => readColor(
+    buildScenePalette({ tokens: LIGHT_TOKENS, eraColor, daylight: deriveDaylight(12) }).roof,
+  ));
+  const distance = (a, b) => Math.sqrt(
+    0.3 * (a.r - b.r) ** 2 + 0.59 * (a.g - b.g) ** 2 + 0.11 * (a.b - b.b) ** 2,
+  );
+
+  const ds = [];
+  for (let i = 0; i < broken.length; i += 1) {
+    for (let j = i + 1; j < broken.length; j += 1) ds.push(distance(broken[i], broken[j]));
+  }
+  ds.sort((a, b) => a - b);
+  const median = ds[Math.floor(ds.length / 2)];
+  const lightness = broken.map((c) => c.l);
+  const lightSpread = Math.max(...lightness) - Math.min(...lightness);
+
+  // Bản hỏng phải TRƯỢT ít nhất một hàng rào — và phải trượt ở đúng hai trục mới thêm, vì trục cũ
+  // (đếm múi màu) thì nó ĐẠT: 9 múi, cao hơn cả bản đúng. Đó chính là bằng chứng phép đếm ấy không
+  // đủ tư cách làm hàng rào chính.
+  assert.ok(median < 52,
+    `bản mái hỏng cũ nay đạt trung vị ${median.toFixed(1)} ≥ 52 ⇒ hàng rào trung vị đã mất tác dụng`);
+  assert.ok(lightSpread < 0.30,
+    `bản mái hỏng cũ nay trải độ sáng ${lightSpread.toFixed(2)} ≥ 0,30 ⇒ hàng rào độ sáng đã mất tác dụng`);
+  assert.ok(new Set(broken.map((c) => Math.floor(c.h / 30))).size >= 4,
+    'bản hỏng cũ ĐẠT phép đếm múi màu — nếu ngày nào nó trượt luôn cả phép này thì hãy xoá bài đối '
+    + 'chứng, vì lúc đó phép đếm múi mới thật sự là hàng rào có ích');
 });

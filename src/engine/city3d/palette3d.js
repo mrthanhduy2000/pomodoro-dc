@@ -8,7 +8,37 @@
  * chỉ thêm một bước dịch sang số ở đây. Tuyệt đối không bịa bảng màu riêng cho 3D.
  *
  * Phần đọc CSS (cần DOM) nằm ở `components/city/render3d/themeBridge.js`.
+ *
+ * ⚠️ MÀU MÁI KHÔNG LẤY TỪ `accentColor` NỮA (2026-08-14, Phase 6B) — và đây là ĐÚNG CÁI BỆNH của
+ * Phase 5B lặp lại ở một trường khác: **một trường gánh hai việc**. `ERA_METADATA[era].accentColor`
+ * sinh ra để làm màu NHẤN GIAO DIỆN (chấm tròn trên thanh chuyển kỷ, chữ trên nền tối), rồi bị dùng
+ * luôn làm VẬT LIỆU LỢP MÁI. Hai thứ ấy không có một lý do nào phải giống nhau, và hậu quả nhìn
+ * thấy được trên bản quét ngày 2026-08-14:
+ *   • kỷ 6 (Việt Nam · đình làng, ngói âm dương nâu đỏ) — accent `#a78bfa` ⇒ **mái TÍM**;
+ *   • kỷ 7 (Ý · Duomo Firenze, mà vòm ngói ĐỎ terracotta là chi tiết nổi tiếng nhất của nó) —
+ *     accent `#c084fc` ⇒ **mái TÍM**;
+ *   • kỷ 1 (lều da thú) — accent `#4ade80` ⇒ **mái XANH LÁ**, lẫn hẳn vào cỏ, nhìn cả 6 chặng ngày
+ *     đều không ra được đâu là nhà;
+ *   • kỷ 11 (đồng oxy hoá) hồng, kỷ 13 (bê tông) xanh cyan, kỷ 9 (kẽm Paris) xanh chanh.
+ * ⇒ `eraStyle.js` nay có `roofColor` — vật liệu lợp THẬT của nước biểu tượng, và mỗi giá trị phải
+ * trả lời được *"mái công trình ấy ngoài đời làm bằng gì?"*. Sắc kỷ (`accentColor`) VẪN dùng cho
+ * tường/gờ/mặt đất, nên tổng thể thành phố vẫn ngả về sắc của kỷ; chỉ riêng mái là nói sự thật về
+ * vật liệu. Không truyền `era` ⇒ lùi về hành vi cũ từng byte (bảo tàng, mọi chỗ gọi cũ).
  */
+
+import { getEraStyle } from './eraStyle';
+
+/**
+ * Trần độ tươi của MÁI — hướng mỹ thuật trầm (Townscaper): mái là vật liệu lợp, không phải nhựa dẻo.
+ *
+ * ⚠️ CON SỐ NÀY TỪNG ĐƯỢC PHÁT BIỂU Ở HAI CHỖ VỚI HAI GIÁ TRỊ (phát hiện 2026-08-14): mã kẹp
+ * `Math.min(0.70, …)` còn `palette3d.test.js` canh `s <= 0.66`. Đúng cái bẫy **"một luật chỉ được có
+ * một công thức"** đã ghi ở `CLAUDE.md` — hai công thức tương đương trên giấy thì gần như luôn lệch
+ * nhau ở biên, và ở đây biên ấy có thật: ngói lưu ly kỷ 4 (`#cf9e17`, Tử Cấm Thành) là vật liệu tươi
+ * nhất bảng, ra đúng 0,70 — tức nó lọt qua mã và bị test bắt, hai bên nói ngược nhau về cùng một
+ * mái. Nay chỉ còn MỘT số: mã kẹp bằng hằng số này, bài test `import` chính nó.
+ */
+export const ROOF_MAX_SATURATION = 0.66;
 
 /** Màu dự phòng khi đọc CSS thất bại — trùng token mặc định của theme sáng ở `src/index.css`. */
 export const FALLBACK_TOKENS = {
@@ -157,11 +187,20 @@ export function mixHue(a, b, t) {
  * @returns {{background:number, ground:number, groundAlt:number, wall:number, roof:number,
  *            edge:number, sky:number, sun:number, isDark:boolean}}
  */
-export function buildScenePalette({ tokens, eraColor, daylight } = {}) {
+export function buildScenePalette({ tokens, eraColor, era: eraNumber, daylight } = {}) {
   const t = { ...FALLBACK_TOKENS, ...(tokens ?? {}) };
   const base = parseCssColor(t.canvas2) ?? parseCssColor(FALLBACK_TOKENS.canvas2);
   const era = parseCssColor(eraColor) ?? parseCssColor(t.accent) ?? parseCssColor(FALLBACK_TOKENS.accent);
   const ink = parseCssColor(t.ink) ?? parseCssColor(FALLBACK_TOKENS.ink);
+
+  // ⚠️ VẬT LIỆU LỢP MÁI — tra ở ĐÚNG MỘT CHỖ, ngay đây, chứ không bắt từng bên gọi tự truyền vào.
+  // Có ba chỗ gọi `buildScenePalette` (`CityScene3D.jsx` và hai chỗ trong `city-preview.mjs`); bắt
+  // cả ba nhớ truyền `roofColor` là dựng sẵn cái bẫy "một luật ba chỗ phát biểu" mà dự án này đã
+  // trả giá nhiều lần — chỉ cần một chỗ quên là trang xem thử đóng khung khác app, và không có gì
+  // đỏ lên. Truyền `era` thì bảng màu tự tra.
+  const roofSource = Number.isFinite(eraNumber)
+    ? (parseCssColor(getEraStyle(eraNumber)?.roofColor) ?? era)
+    : era;
 
   // ── Giờ trong ngày ────────────────────────────────────────────────────────
   // ⚠️ "THEME TỐI" VÀ "TRỜI ĐÃ TỐI" LÀ HAI CHUYỆN KHÁC NHAU, và gộp chúng là cái bẫy dễ mắc nhất
@@ -265,6 +304,7 @@ export function buildScenePalette({ tokens, eraColor, daylight } = {}) {
    * Kết quả đo lại: cặp gần nhau nhất từ **0,0 → 8,4**; 15 góc màu trải từ 3° tới 307° thay vì dồn
    * hai cụm. Trần độ tươi 0,62 giữ đúng hướng mỹ thuật trầm (Townscaper), không cho mái nhựa dẻo.
    */
+  const roofHsl = rgbToHsl(roofSource);
   const eraRoof = (sat, light) => {
     // Độ tươi: một phần của vai màu + phần còn lại kéo theo độ tươi của sắc kỷ. Kẹp hai đầu để kỷ
     // nhợt nhất vẫn còn là một màu (không thành xám chì) và kỷ rực nhất vẫn là ngói (không nhựa).
@@ -281,7 +321,31 @@ export function buildScenePalette({ tokens, eraColor, daylight } = {}) {
     // 0,601 lên đúng cùng trần với 12 kỷ kia). Mười hai kỷ còn lại ra số y hệt trước, vì chúng đã
     // bị trần kẹp từ trước. Tức là thay đổi này KHÔNG làm cả thành phố tươi hơn — nó chỉ kéo hai
     // kỷ bị bỏ rơi ở đáy lên ngang hàng.
-    const base = Math.min(0.62, Math.max(0.14, sat * 0.52 + sat * 0.70 * 2 * eraHsl.s));
+    // ⚠️ HAI ĐƯỜNG TÍNH, VÀ ĐÂY LÀ LÝ DO — không phải một ngoại lệ cho tiện.
+    // Cả cụm công thức bên dưới sinh ra để làm MỘT việc: ghìm một màu NHẤN GIAO DIỆN (rất tươi,
+    // rất sáng, chọn cho chữ trên nền tối) xuống thành một thứ trông như vật liệu lợp. Khi nguồn
+    // ĐÃ LÀ vật liệu lợp thật thì đúng cái phép ghìm ấy quay ra bóp méo sự thật — đo được:
+    // bê tông Nakagin `#c3beb6` (độ tươi 0,10, độ sáng 0,74) đi qua nó ra `#9e7e50`, tức một mảng
+    // NÂU; champagne Dubai `#d0c295` ra vàng kim. Nguyên nhân số học: nền `sat * 0.52` đẩy mọi
+    // vật liệu XÁM lên độ tươi ≥ 0,26, mà xám thì cả điểm hay của nó là KHÔNG tươi.
+    // ⇒ Có `era` (biết vật liệu) → đi thẳng, chỉ nhân độ sáng theo theme. Không có → giữ nguyên
+    // đường cũ từng byte, nên bảo tàng và mọi chỗ gọi cũ không đổi một pixel nào.
+    if (Number.isFinite(eraNumber)) {
+      // `light` là 0,39 ở theme sáng và 0,32 ở theme tối ⇒ tỉ số 0,82: theme tối làm mái tối đi
+      // khoảng một phần năm, đủ để chìm vào nền tối mà không mất màu.
+      const ls = Math.min(0.68, Math.max(0.14, roofHsl.l * (light / 0.39)));
+      const ss = Math.min(ROOF_MAX_SATURATION, Math.max(0.04, roofHsl.s));
+      const direct = hslToRgb({ h: roofHsl.h, s: ss, l: ls });
+      // Lưới chặn tím sen vẫn giữ nguyên và vẫn dùng ĐÚNG phép thử của bài test (quan hệ kênh, KHÔNG
+      // phải cửa sổ góc màu) — xem đoạn dài ở cuối hàm. Không vật liệu nào trong bảng nằm ở dải tím,
+      // nhưng bỏ lưới đi thì ngày ai đó thêm một kỷ mái tím rực sẽ không có gì chặn.
+      if (Math.min(direct.r, direct.b) - direct.g > 10) {
+        return rgbToHexNumber(hslToRgb({ h: roofHsl.h, s: Math.min(ss, 0.40), l: ls }));
+      }
+      return rgbToHexNumber(direct);
+    }
+
+    const base = Math.min(0.62, Math.max(0.14, sat * 0.52 + sat * 0.70 * 2 * roofHsl.s));
     // Độ đậm: nhích theo độ sáng của sắc kỷ quanh mốc 0,6 (mốc trung bình của bảng `ERA_METADATA`).
     // ⚠️ HỆ SỐ 0,55 CHỨ KHÔNG PHẢI 0,22 — sửa 2026-08-13 sau khi duyệt đủ 105 CẶP kỷ.
     // Bảng `ERA_METADATA` có hai kỷ dùng gần như cùng một sắc: kỷ 5 `#94a3b8` và kỷ 12 `#64748b`
@@ -293,11 +357,17 @@ export function buildScenePalette({ tokens, eraColor, daylight } = {}) {
     // vì `material` — *"mái phải dùng CẢ màu kỷ chứ không chỉ mượn góc màu"*. Độ sáng cũng là một
     // phần của màu, mà bản cũ gần như vứt bỏ nó. Cận trên/dưới vẫn kẹp ở [0,24 … 0,56] nên mái
     // không bao giờ rơi ra khỏi dải vật liệu lợp thật.
-    const l = Math.min(0.56, Math.max(0.24, light + (eraHsl.l - 0.6) * 0.55));
+    const l = Math.min(0.56, Math.max(0.24, light + (roofHsl.l - 0.6) * 0.55));
+    // ⚠️ NEO ĐẤT NUNG CHỈ CÒN NGẤM 0,06 KHI ĐÃ CÓ VẬT LIỆU THẬT (trước là 0,20).
+    // Cái neo `h: 16` sinh ra để kéo một màu NHẤN GIAO DIỆN bất kỳ về "họ vật liệu lợp"; khi nguồn
+    // đã CHÍNH LÀ vật liệu lợp thì neo ấy chỉ còn là một lớp bụi ấm làm sai lệch sự thật — nó kéo
+    // đá phiến Wales và kẽm Paris ngả nâu, đúng thứ vừa mất công đi sửa. Không có `era` (bảo tàng,
+    // chỗ gọi cũ) thì giữ nguyên 0,20 để kết quả cũ không đổi một byte.
+    const anchorMix = Number.isFinite(eraNumber) ? 0.94 : 0.80;
     const mix = (s) => mixRgb(
       hslToRgb({ h: 16, s, l }),        // neo đất nung — giữ mái nằm trong họ vật liệu lợp thật
-      hslToRgb({ h: eraHue, s, l }),
-      0.80,
+      hslToRgb({ h: roofHsl.h, s, l }),
+      anchorMix,
     );
 
     // ⚠️ TRẦN RIÊNG CHO DẢI TÍM — KHÔNG PHẢI NGOẠI LỆ CHO VUI, MÀ LÀ MỘT SỰ THẬT VỀ VẬT LIỆU.

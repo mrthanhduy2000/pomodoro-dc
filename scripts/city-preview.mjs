@@ -137,6 +137,7 @@ const palette = buildScenePalette({
     ? { canvas2: '#1d1c1a', ink: '#f2efe6', line: '#33312d', accent: '#c96442' }
     : { canvas2: '#f4f2ec', ink: '#1f1e1d', line: '#e8e6de', accent: '#c96442' },
   eraColor: ERA_METADATA[ERA]?.accentColor,
+  era: ERA,
   daylight,
 });
 
@@ -266,7 +267,7 @@ eras.forEach((era, row) => {
 
   hours.forEach((hour, col) => {
     const daylight = deriveDaylight(hour);
-    const palette = buildScenePalette({ tokens, eraColor: ERA_METADATA[era]?.accentColor, daylight });
+    const palette = buildScenePalette({ tokens, eraColor: ERA_METADATA[era]?.accentColor, era, daylight });
     const city = createCityScene({
       layout, palette, daylight, stats: { sessionCount: 40, streakLength: 9 },
     });

@@ -21,6 +21,7 @@ import { ERA_STYLES, getEraStyle, ROOF_KINDS, WINDOW_KINDS } from './eraStyle.js
 import { ARCHETYPES, getMassing } from './archetypes.js';
 import { MAX_SIDES, MIN_SIDES, PART_ROLES, countTriangles } from './parts.js';
 import { SIGNATURE_KINDS, emitSignature } from './signature.js';
+import { parseCssColor } from './palette3d.js';
 import {
   MAX_TRIANGLES_PER_BUILDING,
   MAX_TRIANGLES_PER_CITY,
@@ -331,6 +332,44 @@ test('MỖI KỶ MỘT ĐẤT NƯỚC, và 15 nước không được trùng nha
   // Hai nước Đàm nêu đích danh phải nằm đúng chỗ anh nêu.
   assert.equal(getEraStyle(7).country, 'Ý', 'kỷ Phục Hưng phải là Ý — Đàm nêu đích danh');
   assert.equal(getEraStyle(9).country, 'Pháp', 'kỷ Khai Sáng phải là Pháp — Đàm nêu đích danh');
+});
+
+test('MỖI KỶ PHẢI KHAI MỘT MÀU VẬT LIỆU LỢP ĐỌC ĐƯỢC — thiếu là lặng lẽ tụt về bảng màu cũ', () => {
+  // ⚠️ BÀI NÀY CANH DỮ LIỆU NGƯỜI VIẾT RA, KHÔNG CANH MÃ — và đó là chỗ thật sự hở.
+  // `palette3d.js` tra màu mái bằng `parseCssColor(getEraStyle(era)?.roofColor) ?? era`. Dấu `??`
+  // ấy là một đường lùi cần thiết (dữ liệu cloud hỏng thì vẫn phải ra được bảng màu), nhưng nó
+  // cũng có nghĩa là: một kỷ **thiếu** `roofColor`, hoặc gõ sai màu, sẽ lặng lẽ quay về đúng con
+  // bug mà Phase 6B vừa đi sửa — mái suy từ MÀU NHẤN GIAO DIỆN — cho riêng kỷ đó. Không ném lỗi,
+  // không cảnh báo, không lint, không build đỏ. Triệu chứng duy nhất: đình làng Bắc Bộ lợp mái tím.
+  // ⚠️ Và các hàng rào ở `palette3d.test.js` KHÔNG bắt được ca này: hỏng MỘT kỷ trong 15 thì trung
+  // vị 105 cặp gần như không nhúc nhích. Một bài test đo cả bảng thì mù với lỗi của một ô.
+  const seen = new Map();
+  for (let era = 1; era <= 15; era += 1) {
+    const { roofColor } = getEraStyle(era);
+    const rgb = parseCssColor(roofColor);
+    assert.ok(rgb, `kỷ ${era}: \`roofColor\` = ${JSON.stringify(roofColor)} không đọc được ⇒ mái kỷ này `
+      + 'sẽ lặng lẽ suy từ màu nhấn giao diện, đúng con bug Phase 6B vừa sửa');
+
+    // Trùng màu vật liệu = hai kỷ lợp cùng một thứ. Có thể đúng ngoài đời (nhiều nước dùng ngói
+    // đất nung), nhưng trùng ĐÚNG TỪNG BYTE thì là chép-dán, không phải lựa chọn.
+    assert.ok(!seen.has(roofColor),
+      `kỷ ${era} và kỷ ${seen.get(roofColor)} khai y hệt \`roofColor: '${roofColor}'\``);
+    seen.set(roofColor, era);
+  }
+
+  // Vật liệu lợp có thật thì không rực như màu nhấn giao diện. Canh ở ĐẦU VÀO (thứ người viết gõ),
+  // khác hẳn bài trần độ tươi ở `palette3d.test.js` vốn canh ĐẦU RA sau khi mã đã kẹp — kẹp xong
+  // thì con số nào cũng vừa, nên chỉ canh đầu ra là canh chính cái kẹp chứ không canh dữ liệu.
+  for (let era = 1; era <= 15; era += 1) {
+    const { r, g, b } = parseCssColor(getEraStyle(era).roofColor);
+    const mx = Math.max(r, g, b) / 255;
+    const mn = Math.min(r, g, b) / 255;
+    const l = (mx + mn) / 2;
+    const s = mx === mn ? 0 : (mx - mn) / (1 - Math.abs(2 * l - 1));
+    assert.ok(s <= 0.85,
+      `kỷ ${era} khai \`roofColor\` tươi ${s.toFixed(2)} — đó là màu nhấn giao diện chứ không phải `
+      + 'vật liệu lợp. Ngói men rực nhất bảng (kỷ 4, Tử Cấm Thành) cũng chỉ 0,80.');
+  }
 });
 
 test('NHÀ HIỆN ĐẠI KHÔNG ĐƯỢC GIỐNG NHÀ THỜI ĐỒ ĐỒNG: 15 kỷ phải trải chiều cao thật sự', () => {

@@ -30,6 +30,28 @@
  * ⚠️ `--selftest` LÀ BẮT BUỘC KHI NGHI NGỜ: nó bỏ bộ lọc "8% tươi nhất" đi. Nếu con số KHÔNG nhảy
  * về mức pha loãng thì bộ lọc chưa hề chạy và mọi kết luận bên dưới là rác.
  *
+ * ══════════════════════════════════════════════════════════════════════════════════════════════
+ * ⚠️⚠️ CÁI BẪY THỨ NĂM (2026-08-14, Phase 6B) — VÀ NÓ GIẾT CHÍNH BỘ LỌC Ở BẪY SỐ 2 BÊN TRÊN
+ * ══════════════════════════════════════════════════════════════════════════════════════════════
+ * Bộ lọc "8% điểm ảnh TƯƠI NHẤT ≈ mái" đứng trên MỘT giả định không hề được viết ra: **mái là thứ
+ * tươi nhất trong khung hình.** Giả định ấy đúng suốt thời kỳ mái được suy ra từ `accentColor` —
+ * một màu NHẤN GIAO DIỆN, chọn cho chữ nổi trên nền, nên bao giờ cũng rực hơn mọi thứ khác.
+ *
+ * Phase 6B đổi mái sang **vật liệu lợp thật** (`roofColor` trong `eraStyle.js`): đá phiến xám lam,
+ * bê tông xám gần trung tính, đồng oxy hoá. Giả định lập tức hết đúng, và bộ lọc quay ra chấm
+ * **cỏ nắng lọt giữa các khối nhà** — thứ tươi nhất còn lại. Đo thật lúc phát hiện (bản quét 8 kỷ,
+ * chặng trưa): cả tám kỷ ra cùng một sắc ô-liu, kể cả đá phiến lam kỷ 5 (`#586a89` → đo `#4b5745`)
+ * và đồng xanh lục kỷ 11 (`#3e9883` → đo `#5d6b4c`). Từ bộ số rác đó nó in ra một kết luận rất
+ * thuyết phục: *"✗ kỷ 3 ↔ kỷ 10: 6,7 — dưới ngưỡng mắt"* — trong khi kỷ 3 là gạch bùn nâu vàng
+ * SÁNG và kỷ 10 là đá phiến gần ĐEN, hai thứ không ai nhầm được.
+ *
+ * ⇒ **Bài học chung, quan trọng hơn cái bẫy cụ thể**: `--selftest` chỉ chứng minh bộ lọc CÓ tác
+ * dụng, không chứng minh nó chọn ĐÚNG THỨ (đã ghi ở `CLAUDE.md`, Phase 4C). Cách duy nhất biết nó
+ * chọn đúng là **đối chiếu thứ nó chọn với một sự thật độc lập**. Ở đây có sẵn một sự thật như
+ * vậy: `eraStyle.js` KHAI màu vật liệu của từng kỷ. Nên nay tool tự kiểm — đo ra một sắc lệch hẳn
+ * so với vật liệu kỷ đó tự khai thì nó **TỪ CHỐI CHẤM** và nói rõ vì sao, thay vì in một con số.
+ * Một công cụ im lặng còn dùng được; một công cụ nói dối tự tin thì tệ hơn không có.
+ *
  * Dùng:
  *   node scripts/city-preview.mjs --sweep --all --theme light --cell 260
  *   node scripts/sweep-score.mjs .city-preview/sweep-light-ky1-15.png
@@ -38,6 +60,7 @@
 
 import { readFileSync } from 'node:fs';
 import { decodePng, describe } from './png-probe.mjs';
+import { getEraStyle } from '../src/engine/city3d/eraStyle.js';
 
 const argv = process.argv.slice(2);
 const FILE = argv.find((a) => !a.startsWith('--'));
@@ -202,6 +225,57 @@ if (VERBOSE) {
       + `${String(g).padStart(3)},${String(b).padStart(3)})  ${d.hex}  `
       + `sáng ${String(Math.round((r + g + b) / 3)).padStart(3)}  tươi ${chroma(v).toFixed(0).padStart(3)}`);
   });
+}
+
+// ── CỔNG TIN CẬY CỦA BỘ LỌC MÁI (thêm 2026-08-14 — xem "cái bẫy thứ năm" ở đầu file) ──────────
+// Bộ lọc chỉ đáng tin nếu thứ nó chọn THẬT SỰ là mái. Sự thật độc lập để đối chiếu: `eraStyle.js`
+// khai màu vật liệu của từng kỷ. So GÓC MÀU (không so độ sáng — ánh sáng cảnh làm mái sáng/tối đi
+// rất nhiều, đó là chuyện bình thường; nhưng ánh sáng KHÔNG biến đá phiến lam thành cỏ ô-liu).
+// Chỉ xét những kỷ có vật liệu đủ tươi để góc màu còn là tín hiệu — bê tông xám thì góc màu của nó
+// gần như là số ngẫu nhiên, đem so là tự bịa ra lỗi.
+const hueGap = (a, b) => { const d = Math.abs(a - b) % 360; return d > 180 ? 360 - d : d; };
+const trust = [];
+for (let i = 0; i < ERAS; i += 1) {
+  const declared = getEraStyle(ERA_LIST[i])?.roofColor;
+  if (!declared) continue;
+  const dr = parseInt(declared.slice(1, 3), 16);
+  const dg = parseInt(declared.slice(3, 5), 16);
+  const db = parseInt(declared.slice(5, 7), 16);
+  if (Math.max(dr, dg, db) - Math.min(dr, dg, db) < 25) continue; // vật liệu xám ⇒ bỏ qua, không kết tội
+  const want = describe(dr, dg, db).h;
+  const got = describe(...eraVec[i].map(Math.round)).h;
+  trust.push({ era: ERA_LIST[i], want: Math.round(want), got: Math.round(got), gap: hueGap(want, got) });
+}
+// ⚠️ MỘT KỶ LỆCH LÀ ĐỦ KẾT LUẬN — ĐỪNG ĐỔI THÀNH "quá nửa số kỷ" (đã thử, và nó KHÔNG nổ).
+// Lý do nằm ở chỗ bất đối xứng này: bộ lọc hỏng vì nó chấm nhầm CỎ, mà cỏ có sắc ô-liu ~60°. Các
+// vật liệu ẤM (gạch bùn 30°, ngói âm dương 15°, terracotta 18°) tình cờ nằm gần ngay đó, nên khi bộ
+// lọc chấm nhầm cỏ thì chúng vẫn "khớp" — kỷ 6 lệch đúng 2°, kỷ 3 lệch 13°. Tức đa số kỷ KHÔNG có
+// khả năng phát hiện lỗi này; chỉ vật liệu LẠNH mới phơi ra được, và lúc đó nó phơi ra rất rõ (đá
+// phiến kỷ 5 lệch 156°, đồng oxy hoá kỷ 11 lệch 103°). Đòi "quá nửa" là đòi bằng chứng từ những kỷ
+// về mặt cấu tạo không thể cung cấp — cùng họ với bài học "phép tự-kiểm phải chạm tới ĐÚNG CHIỀU
+// nó muốn bảo chứng" (Phase 4G).
+// Ngưỡng 60°: ánh sáng cảnh có kéo góc màu thật, nhưng đo được nhiều nhất ~22° (nắng ấm kéo sắc
+// lạnh về phía lục — `CLAUDE.md`, Phase 3V). 60° nằm trên hẳn mức đó và dưới hẳn 103°.
+const strayed = trust.filter((t) => t.gap > 60);
+if (strayed.length) {
+  console.log('\n── 15 KỶ · ✋ TỪ CHỐI CHẤM: bộ lọc mái không tìm thấy mái ──');
+  console.log(`  ${strayed.length}/${trust.length} kỷ có vật liệu đủ tươi để đối chiếu đang lệch góc màu > 60°`);
+  for (const t of strayed) {
+    console.log(`    kỷ ${String(t.era).padStart(2)}: khai ${String(t.want).padStart(3)}° · `
+      + `đo được ${String(t.got).padStart(3)}° · lệch ${Math.round(t.gap)}°`);
+  }
+  const ok = trust.filter((t) => t.gap <= 60);
+  if (ok.length) {
+    console.log(`  (${ok.length} kỷ còn lại "khớp" — nhưng đó là vật liệu ẤM, nằm sẵn gần sắc ô-liu của`);
+    console.log('   cỏ, nên chúng khớp cả khi bộ lọc chấm nhầm cỏ. Đừng đọc thành "phần lớn vẫn ổn".)');
+  }
+  console.log('  ⇒ Bộ lọc "8% điểm ảnh tươi nhất" đang chấm CỎ/ĐẤT chứ không phải mái (xem "cái bẫy');
+  console.log('    thứ năm" ở đầu file). Mọi con số cặp-kỷ sinh ra từ đây là RÁC — KHÔNG in ra, vì');
+  console.log('    một con số sai mà tự tin thì nguy hiểm hơn hẳn việc không có số nào.');
+  console.log('  ⇒ Phần chấm 6 CHẶNG NGÀY ở trên KHÔNG dùng bộ lọc này (nó đo cả cảnh 9 chiều) nên');
+  console.log('    vẫn dùng được bình thường. Tình trạng + đường sửa: `TECH_DEBT.md` #22.');
+  console.log('');
+  process.exit(phaseBad.length ? 1 : 0);
 }
 
 const eraPairs = [];

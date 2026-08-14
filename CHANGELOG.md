@@ -12,6 +12,40 @@
 
 ---
 
+## 2026-08-14 — Mái nhà là VẬT LIỆU LỢP, không phải màu nhấn giao diện (Phase 6B)
+
+**Mục đích.** Đàm: *"phải ra nét đặc trưng và ra signature"*. Phase 6A cho mỗi kỷ một bộ phận chép
+từ công trình có thật — nhưng đình làng Bắc Bộ đang lợp mái **TÍM**, và vòm Duomo Firenze cũng
+**TÍM**. Một chữ ký kiến trúc lợp sai màu vật liệu thì không còn là chữ ký.
+
+**Nguyên nhân gốc.** Đúng lại hình dạng sai của Phase 5B (`storyHeight` gánh hai việc), lần này ở
+`accentColor`: một trường vừa là **màu nhận diện kỷ trên toàn app** (thanh chuyển kỷ, chấm tròn,
+biểu đồ) vừa là **nguồn màu mái trong cảnh 3D**. Màu nhấn giao diện được chọn để chữ nổi trên nền,
+nên nó rực và trải khắp vòng tròn màu — vật liệu lợp thì không.
+
+**Phạm vi.** `eraStyle.js` thêm `roofColor` cho **cả 15 kỷ**, mỗi kỷ khai đúng vật liệu của công
+trình có thật ở nước biểu tượng (ngói terracotta Duomo · đá phiến sông Rhine · ngói âm dương Bắc Bộ
+· mái kẽm Paris · đồng oxy hoá New York · bê tông đúc sẵn Nakagin · thép mạ champagne Dubai…).
+`palette3d.js` tra màu này ở **một chỗ duy nhất** trong `buildScenePalette`, nên không chỗ gọi nào
+quên được. `accentColor` **giữ nguyên** ⇒ màu nhận diện kỷ trên toàn app không đổi một pixel.
+
+**Ảnh hưởng đo được** (bảng màu, giữa trưa, theme sáng): trung vị 105 cặp mái **46,2 → 62,7** ·
+trải độ sáng **0,18 → 0,40** · cặp gần nhất 6,9 → 10,9. Đóng `TECH_DEBT #20`.
+
+**Hàng rào đổi theo.** Phép đếm "15 mái phủ mấy múi màu" bị bỏ khỏi vai trò hàng rào chính vì nó
+**thưởng cho đúng bản hỏng** (đường cũ ăn 9 múi, đường vật liệu thật chỉ 6 — vật liệu lợp có thật
+không trải khắp vòng tròn màu, chúng phân biệt nhau bằng ĐỘ SÁNG). Thay bằng: trung vị ≥ 52 · trải
+độ sáng ≥ 0,30 · **một bài đối chứng** nhốt sẵn bảng mái hỏng cũ và bắt bộ hàng rào phải còn bắt
+được nó. Trần độ tươi gộp về một hằng số `ROOF_MAX_SATURATION` (trước đó mã kẹp 0,70 còn test canh
+0,66 — một luật hai công thức).
+
+**Nợ mới.** Việc sửa này làm **hỏng công cụ đo** `sweep-score.mjs`: bộ lọc "8% điểm ảnh tươi nhất ≈
+mái" đứng trên giả định ngầm *"mái là thứ tươi nhất khung hình"*, nay chấm nhầm **cỏ**. Công cụ đã
+được cắm cổng tự kiểm và nay **TỪ CHỐI CHẤM** phần cặp-kỷ thay vì in số sai → `TECH_DEBT #22`.
+
+**Tương thích.** Không có migration, không đụng state, không thêm dependency. Bảo tàng kỷ cũ giữ
+nguyên vị trí; màu mái đổi — đây là thay đổi hình ảnh có chủ đích.
+
 ## 2026-08-14 — Chữ ký kiến trúc: mỗi kỷ một công trình có thật (Phase 6A)
 
 **Mục đích.** Đàm: *"phải ra nét đặc trưng và ra signature"*. Phase 5B đã tách được 15 kỷ theo TỈ LỆ

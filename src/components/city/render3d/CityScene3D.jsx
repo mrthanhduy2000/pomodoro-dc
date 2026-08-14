@@ -168,6 +168,10 @@ export default function CityScene3D({
       const palette = buildScenePalette({
         tokens: readThemeTokens(canvas),
         eraColor: ERA_METADATA[layout.era]?.accentColor,
+        // ⚠️ `era` (số) KHÁC `eraColor` (sắc kỷ dùng cho tường/đất): nó cho bảng màu tra được VẬT
+        // LIỆU LỢP MÁI thật của kỷ. Thiếu nó thì mái lùi về dùng `accentColor` — tức đình làng
+        // Việt lại ra mái tím. Xem đầu `palette3d.js`.
+        era: layout.era,
         daylight,
       });
       // An toàn trong thân effect: `darkScene` KHÔNG nằm trong danh sách phụ thuộc, nên đổi nó

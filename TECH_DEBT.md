@@ -13,12 +13,16 @@
 > mà không được refactor triệt để, phải CHỦ ĐỘNG đề xuất mở một "Maintenance Sprint" (nêu rõ mục
 > tiêu/phạm vi/lợi ích/rủi ro/tiêu chí hoàn thành) thay vì tiếp tục cộng thêm tính năng mới.
 >
-> **Trạng thái ngưỡng hiện tại (2026-08-13, cập nhật sau Phase 4F)**: **1 mục Priority High**
+> **Trạng thái ngưỡng hiện tại (2026-08-14, cập nhật sau Phase 6B)**: **1 mục Priority High**
 > (#14) → vẫn CHƯA đạt ngưỡng 8–10 mục để đề xuất Maintenance Sprint. Còn **2 mục Medium-High**
-> (#3, #13) và **1 mục Medium mới là #19** (hai cặp kỷ render ra gần trùng màu — cố ý CHƯA sửa, vì
-> sửa nó chính là "đợt vá thứ 6" cho `palette3d.js` mà luật dưới đây bắt phải làm thành một đợt rà
-> soát tử tế thay vì vá điểm). **#15, #16 và #17 đều đã đóng** — không còn mục nào chờ Đàm chọn
-> hướng mỹ thuật.
+> (#3, #13) và **2 mục Medium**: **#22** (công cụ `sweep-score.mjs` không còn chấm được 15 kỷ —
+> MỚI, sinh ra từ chính Phase 6B) và **#19** (nay đang **treo chờ #22**: hai con số nghiệm thu của
+> nó đo trên bảng mái CŨ, đã bị Phase 6B thay hẳn, mà chưa đo lại được). **#15, #16, #17 và #20 đều
+> đã đóng** — không còn mục nào chờ Đàm chọn hướng mỹ thuật.
+> ⚠️ **#22 là ví dụ sạch nhất trong cả file này của một luật đáng nhớ**: *sửa đúng mã sản phẩm vẫn
+> có thể làm HỎNG công cụ đo*, vì công cụ đo bao giờ cũng đứng trên vài giả định không được viết ra
+> về thứ nó đang đo. Ở đây giả định ngầm là *"mái là thứ tươi nhất khung hình"* — đúng suốt thời kỳ
+> mái suy từ màu nhấn giao diện, và chết ngay khi mái thành vật liệu lợp thật.
 > ⚠️ **#17 LÀ VÍ DỤ THỨ HAI CỦA ĐÚNG CÁI BẪY MÀ BÀI HỌC #16 DƯỚI ĐÂY CẢNH BÁO** — và lần này nặng
 > hơn: mục đó không chỉ ghi nhầm một lỗi thành "đánh đổi cần Đàm quyết", nó còn **chẩn đoán nhầm
 > hẳn chặng ngày** (đổ cho chặng chiều, trong khi cặp hỏng thật là bình minh ↔ hoàng hôn). Nguyên
@@ -297,7 +301,34 @@
 
 ---
 
-## #20 — Mái kỷ 1 (lều da thú) ra màu XANH LÁ, sai họ vật liệu — không phải lỗi phân biệt, mà lỗi NGHĨA
+## #20 — ✅ **ĐÃ XỬ LÝ (2026-08-14, Phase 6B)** — Mái kỷ 1 (lều da thú) ra màu XANH LÁ, sai họ vật liệu — không phải lỗi phân biệt, mà lỗi NGHĨA
+
+> ✅ **ĐÃ ĐÓNG — và giải pháp đi XA HƠN đề xuất ghi ở dưới, một cách có chủ đích.**
+> Mục này đề xuất thêm một trường `roofHue` **tuỳ chọn** cho riêng kỷ 1. Khi bắt tay vào làm thì
+> thấy chẩn đoán ở phần *Root Cause* dưới đây đúng nhưng CHƯA đủ rộng: `accentColor` không chỉ làm
+> hỏng kỷ 1 — nó làm hỏng **cả bảng**. Đo được cùng lúc: mái đình làng Bắc Bộ (kỷ 6) ra **TÍM**,
+> mái vòm Duomo Firenze (kỷ 7) cũng **TÍM**, bê tông Nakagin (kỷ 13) ra **XANH LƠ**, mái kẽm Paris
+> (kỷ 9) ra **XANH NÕN CHUỐI**. Vá riêng kỷ 1 thì 14 kỷ kia vẫn sai, và món nợ sẽ quay lại lần nữa.
+> ⇒ Đã làm đúng thứ mục này gọi tên: **tách hẳn hai vai**. Thêm `roofColor` **bắt buộc cho cả 15
+> kỷ** trong `eraStyle.js` — mỗi kỷ khai đúng vật liệu lợp của công trình có thật ở nước biểu tượng
+> của nó (kỷ 1 `#745339` da thú & gỗ hun khói · kỷ 7 `#c5572b` ngói terracotta · kỷ 11 `#3e9883`
+> đồng oxy hoá · kỷ 13 `#ccc9c7` bê tông đúc sẵn…). `accentColor` giữ NGUYÊN, nên màu nhận diện kỷ
+> trên toàn app không đổi một pixel.
+> **Đo lại sau khi sửa** (bảng màu, giữa trưa, theme sáng): trung vị 105 cặp **46,2 → 62,7** ·
+> trải độ sáng **0,18 → 0,40** · cặp gần nhất 6,9 → 10,9. Bốn hàng rào ở `palette3d.test.js` đều
+> qua, cộng một **bài đối chứng** mới nhốt sẵn bảng mái hỏng cũ và bắt bộ hàng rào phải còn bắt
+> được nó.
+> ⚠️ **Ba bài học rút ra, đều đã ghi vào chỗ tương ứng:**
+> 1. Phép đếm "15 mái phủ được mấy múi màu 30°" **thưởng cho đúng cái lỗi này** — đường hỏng ăn 9
+>    múi, đường vật liệu thật chỉ 6. Vật liệu lợp có thật không trải khắp vòng tròn màu; chúng phân
+>    biệt nhau bằng ĐỘ SÁNG. Hàng rào đã đổi theo (`palette3d.test.js`).
+> 2. Trần độ tươi từng được phát biểu ở **hai** chỗ với **hai** số (mã kẹp 0,70, test canh 0,66) —
+>    nay là một hằng số `ROOF_MAX_SATURATION` mà bài test `import` thẳng.
+> 3. Việc sửa này **làm hỏng công cụ đo** `sweep-score.mjs` → xem mục **#22** ngay đầu file.
+
+<details>
+<summary>Nội dung gốc của mục (giữ nguyên để đối chiếu)</summary>
+
 
 - **Module**: `src/engine/city3d/palette3d.js` (hàm `eraRoof`) đọc `ERA_METADATA[1].accentColor`
   = `#4ade80`. KHÔNG phải `eraStyle.js` — hình khối đã sửa xong ở Phase 5B.
@@ -329,9 +360,24 @@
 - **Status**: MỞ — phát hiện 2026-08-14 (Phase 5B), cố ý CHƯA sửa trong phase đó vì phạm vi của
   phase là HÌNH KHỐI, và đụng vào bảng màu là mở một mặt trận khác hẳn.
 
+</details>
+
 ---
 
 ## #19 — Hai cặp kỷ vẫn gần như CÙNG MỘT MÀU trên màn hình, dù bảng màu gốc cách nhau rất xa
+
+> ⚠️ **HAI CON SỐ NGHIỆM THU CỦA MỤC NÀY NAY ĐÃ CŨ — ĐỪNG TRÍCH LẠI (2026-08-14, Phase 6B).**
+> "kỷ 5↔12 = 9,5" và "kỷ 4↔10 = 10,2" được đo khi mái còn **suy ra từ `accentColor`**. Phase 6B
+> thay hẳn NGUỒN của màu mái sang `roofColor` (vật liệu lợp thật) — kỷ 5 nay là đá phiến `#586a89`,
+> kỷ 12 là bê tông quân sự `#717b65`, hai thứ chẳng liên quan gì tới hai màu đã đo. Tức mục này
+> đang mô tả một bảng màu **không còn tồn tại**.
+> ⚠️ Và **chưa đo lại được**: đúng lần sửa ấy làm hỏng bộ lọc mái của `sweep-score.mjs` (mục #22),
+> nên công cụ nay TỪ CHỐI chấm phần cặp-kỷ. Mục này vì vậy **treo, chờ #22 xong** — không phải
+> "vẫn còn 2 cặp trùng", mà là **chưa biết**. Ghi rõ ra đây thay vì để hai con số cũ nằm im trông
+> như số còn đúng: đó chính là cái bẫy mà phần ĐÍNH CHÍNH ngay bên dưới đã dạy một lần rồi.
+> Ở tầng bảng màu (không phải điểm ảnh) thì đã đo lại được và số có tốt lên: trung vị 105 cặp
+> 46,2 → 62,7, cặp gần nhất 6,9 → 10,9. Nhưng đó là tầng khác, **không thay lời cho phép đo trên
+> ảnh** — đúng bài học "bài test bảng màu và phép đo trên ảnh kêu hai tập cặp rời nhau hoàn toàn".
 
 - **Module**: `src/engine/city3d/palette3d.js` (phép pha sắc kỷ vào mái) — KHÔNG phải
   `ERA_METADATA[*].accentColor`.
@@ -712,6 +758,60 @@
   ghi rõ nó được nâng từ 1,2 lên để cứu lỗi "mảng oải hương xam xám"; sửa nó là mở lại một lỗi cũ
   để đổi lấy một cải thiện mà đường khác đã đạt được rồi. Vẫn đúng là **màu trời ban ngày do
   `horizonHue` quyết định, không phải `skyHue`** — ai chỉnh bảng `DAYLIGHT_PROFILES` phải nhớ điều đó.
+
+---
+
+## #22 — `sweep-score.mjs` KHÔNG còn chấm được 15 kỷ: bộ lọc "8% tươi nhất" chấm nhầm CỎ, không phải mái
+
+- **Module**: `scripts/sweep-score.mjs` (hàm `roofColor`)
+- **Priority**: Medium
+- **Severity**: Medium
+- **Impact**: mất một nửa năng lực của công cụ chấm bản quét — phần **6 chặng ngày** vẫn chạy tốt
+  (nó đo cả cảnh 9 chiều, không dùng bộ lọc này), nhưng phần **so 105 cặp kỷ** thì không đo được
+  nữa. Không ảnh hưởng gì tới app chạy trên máy Đàm; đây thuần là nợ ở tầng công cụ dev.
+- **Root Cause**: bộ lọc đứng trên một giả định **chưa bao giờ được viết ra**: *"mái là thứ tươi
+  nhất trong khung hình"*. Giả định ấy đúng suốt thời kỳ mái được suy từ `accentColor` — một màu
+  NHẤN GIAO DIỆN, chọn cho chữ nổi trên nền, nên luôn rực hơn mọi thứ khác. **Phase 6B đổi mái sang
+  vật liệu lợp thật** (đá phiến xám lam, bê tông gần trung tính, đồng oxy hoá) và giả định lập tức
+  hết đúng: thứ tươi nhất còn lại trong khung hình là **cỏ nắng lọt giữa các khối nhà**.
+- **SỐ ĐO** (2026-08-14, bản quét 8 kỷ × 6 chặng, chặng trưa):
+
+  | kỷ | vật liệu khai trong `eraStyle.js` | bộ lọc đo ra | lệch góc màu |
+  |---|---|---|---|
+  | 5 | `#586a89` đá phiến xám lam (218°) | `#4b5745` ô-liu (60°) | **158°** |
+  | 11 | `#3e9883` đồng oxy hoá (166°) | `#5d6b4c` ô-liu (62°) | **104°** |
+  | 6 | `#844433` ngói âm dương (15°) | `#572409` (17°) | 2° — "khớp" |
+  | 3 | `#c59e79` gạch bùn (30°) | `#6a5625` (43°) | 13° — "khớp" |
+
+  ⚠️ **Bất đối xứng ở hai dòng cuối mới là phần đáng nhớ**: các vật liệu ẤM nằm sẵn gần sắc ô-liu
+  của cỏ, nên khi bộ lọc chấm nhầm cỏ thì chúng vẫn "khớp". Tức **đa số kỷ về mặt cấu tạo không có
+  khả năng phát hiện lỗi này**; chỉ vật liệu LẠNH mới phơi ra được. Vì vậy cổng kiểm dùng luật
+  "MỘT kỷ lệch > 60° là đủ kết luận", KHÔNG phải "quá nửa số kỷ" (đã thử luật quá-nửa: nó **không
+  nổ**, vì chỉ 2/6 kỷ có đủ tư cách tố cáo).
+- **Current Risk**: đã chặn. Công cụ nay **TỪ CHỐI CHẤM** phần cặp-kỷ và in ra đúng lý do, thay vì
+  in một con số. Trước khi vá, nó in ra `✗ kỷ 3 ↔ kỷ 10: 6,7 — dưới ngưỡng mắt` — trong khi kỷ 3 là
+  gạch bùn nâu vàng SÁNG và kỷ 10 là đá phiến gần ĐEN, hai thứ không ai nhầm được. Một phiên sau
+  rất có thể đã mất cả ngày đi chữa cái không hỏng.
+- **Future Risk**: nếu ai đó gỡ cổng kiểm cho "đỡ vướng", công cụ quay lại nói dối tự tin.
+- **Recommended Solution**: thay bộ chọn mái bằng thứ **không giả định gì về màu**. Đã thử và loại
+  ba hướng trong cùng phiên, ghi lại để phiên sau khỏi thử lại:
+  1. *8% điểm ảnh SÁNG nhất* → cả 8 kỷ ra `#908a78` gần y hệt nhau (đang chấm nền/đường sáng).
+  2. *Điểm đầu tiên khác nền trời khi quét dọc từ trên xuống* → bắt đúng **đường chân trời** ở mọi
+     cột (n=1168 đều tăm tắp ở cả 8 kỷ), không phải nóc nhà.
+  3. *Như (2) nhưng chỉ lấy cột nhô lên trên chân trời* → sập về n=0 ở 6/8 kỷ (mốc chân trời lấy
+     theo phân vị bị chính các khối nhà kéo lệch).
+  Hướng còn chưa thử và có vẻ đúng nhất: cho `city-preview.mjs` dựng thêm **một lượt ảnh mặt-nạ**
+  (mái tô màu cờ, mọi thứ khác đen) rồi ghi kèm như `.geom.json` — lúc đó việc "đâu là mái" là dữ
+  kiện do bên DỰNG cung cấp, không phải bên ĐO đoán. Đúng tinh thần bài học Phase 4G: *"cỡ ô không
+  phải tuỳ chọn của phép đo, nó là sự thật về tấm ảnh"*.
+- **Estimated Complexity**: Medium (~nửa ngày) — phải sửa cả `city-preview.mjs` lẫn `sweep-score.mjs`.
+- **Blocking Conditions**: không chặn gì. Bảng màu vật liệu vẫn được canh ở tầng thuần bằng 5 hàng
+  rào ở `palette3d.test.js` (cặp gần nhất · số cặp dưới 12 · trung vị ≥ 52 · trải độ sáng ≥ 0,30 ·
+  trần độ tươi) **cộng một bài đối chứng** bắt bộ hàng rào phải còn bắt được bảng mái hỏng cũ, và
+  ở tầng dữ liệu bằng bài `MỖI KỶ PHẢI KHAI MỘT MÀU VẬT LIỆU LỢP ĐỌC ĐƯỢC` (`buildingSpec.test.js`).
+- **Review Trigger**: lần tới cần đo màu mái trên ảnh chụp thật; hoặc khi thêm/sửa `roofColor`.
+- **Owner**: chưa ai
+- **Status**: Open — đã chặn không cho nói dối, CHƯA khôi phục được năng lực đo.
 
 ---
 

@@ -6,7 +6,56 @@
 > chọn: `ARCHITECTURE_DECISIONS.md`. Nợ kỹ thuật: `TECH_DEBT.md`. Migration: `MIGRATION.md`. Tóm
 > tắt theo mốc: `CHANGELOG.md`.
 > **NGUYÊN TẮC ƯU TIÊN SỐ 1:** (1) mọi phiên AI phải đọc file này + `CLAUDE.md` + các file liên quan TRƯỚC khi làm; (2) sau MỌI cập nhật dù nhỏ, phải cập nhật ngay file này + `CLAUDE.md` + các file liên quan khác.
-> Cập nhật lần cuối: **2026-08-14** — **Phase 6A**: **CHỮ KÝ KIẾN TRÚC — mỗi kỷ một bộ phận lấy
+> Cập nhật lần cuối: **2026-08-14** — **Phase 6B**: **MÁI NHÀ LÀ VẬT LIỆU LỢP, KHÔNG PHẢI MÀU
+> NHẤN GIAO DIỆN.** Phase 6A vừa cho mỗi kỷ một bộ phận chép từ công trình có thật — rồi nhìn vào
+> bản quét thì **đình làng Bắc Bộ (kỷ 6) đang lợp mái TÍM, và vòm Duomo Firenze (kỷ 7) cũng TÍM**.
+> Thêm: bê tông Nakagin (kỷ 13) ra **xanh lơ**, mái kẽm Paris (kỷ 9) ra **xanh nõn chuối**, lều da
+> thú kỷ 1 ra **xanh lá** nên cụm lều đọc thành bụi cây. Một chữ ký kiến trúc lợp sai vật liệu thì
+> không còn là chữ ký.
+> **Nguyên nhân gốc — đúng lại hình dạng sai của Phase 5B, chỉ khác chỗ**: `accentColor` gánh HAI
+> việc không liên quan nhau — vừa là màu nhận diện kỷ trên toàn app (thanh chuyển kỷ, chấm tròn,
+> biểu đồ), vừa là nguồn góc màu cho MÁI trong cảnh 3D. Màu nhấn giao diện được chọn để chữ nổi
+> trên nền nên nó rực và rải khắp vòng tròn màu; vật liệu lợp thì không có màu tím, không có màu
+> hồng sen. Hai vai ấy chỉ tình cờ hợp nhau ở vài kỷ. Đã tách hẳn: `eraStyle.js` thêm `roofColor`
+> **bắt buộc cho cả 15 kỷ**, mỗi kỷ khai đúng vật liệu của công trình có thật ở nước biểu tượng
+> (kỷ 7 `#c5572b` ngói terracotta · kỷ 6 `#844433` ngói âm dương · kỷ 5 `#586a89` đá phiến sông
+> Rhine · kỷ 9 `#9ea8b3` mái kẽm Paris · kỷ 11 `#3e9883` đồng oxy hoá · kỷ 13 `#ccc9c7` bê tông đúc
+> sẵn · kỷ 15 `#d0c295` thép mạ champagne). `palette3d.js` tra ở **một chỗ duy nhất** trong
+> `buildScenePalette` nên không chỗ gọi nào quên được; `accentColor` **giữ nguyên** ⇒ màu nhận diện
+> kỷ trên toàn app không đổi một pixel. **Đo lại** (bảng màu, giữa trưa, theme sáng): trung vị 105
+> cặp **46,2 → 62,7**, trải độ sáng **0,18 → 0,40**, cặp gần nhất 6,9 → 10,9. Đóng `TECH_DEBT #20`.
+>
+> ⚠️ **BA BÀI HỌC CỦA PHASE NÀY, và cả ba đều về PHÉP ĐO chứ không về mã:**
+> **(1) Một hàng rào có thể đang THƯỞNG cho đúng cái lỗi ta phải đi sửa.** Bài test mái có phép đếm
+> *"15 mái phải phủ ≥ 6 múi màu 30°"*, nghe rất hợp lý. Đo hai đường cạnh nhau: đường CŨ (hỏng) ăn
+> **9 múi**, đường vật liệu thật chỉ **6** — tức bản hỏng ĂN ĐIỂM CAO HƠN. Lý do rất vật lý: đất
+> nung, gạch bùn, rơm rạ, gỗ hun, ngói men đều nằm gọn trong 13°–46°; ra ngoài dải đó chỉ có đồng
+> oxy hoá, kính và đá phiến. **Đòi phủ 6 múi là đòi bịa ra vật liệu không tồn tại.** Tệ hơn, phép
+> đếm ấy tính cả những kỷ mà góc màu là NHIỄU (bê tông kỷ 13 độ tươi 0,04 vẫn được đếm như một
+> "màu" đầy đủ). Đã hạ nó xuống làm sàn yếu, và thay bằng trục thật sự phân biệt vật liệu: **ĐỘ
+> SÁNG** (đá phiến nhà máy 0,28 ↔ bê tông đúc sẵn 0,68). Vì đây là một lần **NỚI** ngưỡng nên có
+> kèm **bài đối chứng** nhốt sẵn bảng mái hỏng cũ, bắt bộ hàng rào phải còn bắt được nó — may mắn
+> là bản hỏng vẫn còn sống trong mã (nhánh chạy khi không truyền `era`), khỏi phải dựng lại tay.
+> **(2) Sửa đúng mã sản phẩm vẫn có thể làm HỎNG công cụ đo.** `sweep-score.mjs` lọc "8% điểm ảnh
+> TƯƠI NHẤT của dải thành phố ≈ mái" — đứng trên một giả định **chưa bao giờ được viết ra**: *mái
+> là thứ tươi nhất khung hình*. Đúng suốt thời kỳ mái suy từ màu nhấn giao diện, và **chết ngay**
+> khi mái thành đá phiến/bê tông. Nó quay ra chấm **cỏ nắng lọt giữa các khối nhà**: cả 8 kỷ ra
+> cùng một sắc ô-liu, kể cả đá phiến lam kỷ 5 (`#586a89` → đo `#4b5745`) và đồng xanh lục kỷ 11
+> (`#3e9883` → đo `#5d6b4c`). Rồi từ bộ số rác đó nó in ra một kết luận rất thuyết phục: *"✗ kỷ 3 ↔
+> kỷ 10: 6,7 — dưới ngưỡng mắt"*, trong khi kỷ 3 là gạch bùn nâu vàng SÁNG còn kỷ 10 là đá phiến
+> gần ĐEN. Đã cắm cổng tự kiểm (đối chiếu sắc đo được với vật liệu kỷ đó tự khai) và nay công cụ
+> **TỪ CHỐI CHẤM** phần cặp-kỷ, nói rõ vì sao → `TECH_DEBT #22`. *Một công cụ im lặng còn dùng
+> được; một công cụ nói dối tự tin thì tệ hơn không có.*
+> **(3) Cổng tự kiểm phải hỏi những kỷ CÓ KHẢ NĂNG tố cáo, chứ không hỏi đa số.** Bản đầu của cổng
+> viết luật "quá nửa số kỷ lệch thì từ chối" — và nó **KHÔNG NỔ**. Vì bộ lọc chấm nhầm CỎ (sắc
+> ô-liu ~60°), mà các vật liệu ẤM nằm sẵn ngay cạnh đó: kỷ 6 lệch đúng **2°**, kỷ 3 lệch **13°** —
+> chúng "khớp" hoàn hảo cả khi bộ lọc đang chấm cỏ. Chỉ vật liệu LẠNH mới phơi được lỗi, và lúc đó
+> phơi rất rõ (kỷ 5 lệch **158°**, kỷ 11 lệch **104°**). Tức **đa số kỷ về mặt cấu tạo không có khả
+> năng phát hiện lỗi này**; đòi "quá nửa" là đòi bằng chứng từ những nhân chứng mù. Luật đúng:
+> **MỘT kỷ lệch > 60° là đủ kết luận.** Cùng họ với bài học Phase 4G *"phép tự-kiểm phải chạm tới
+> TỪNG CHIỀU nó muốn bảo chứng"*.
+>
+> **Phase 6A** (ngay trước đó): **CHỮ KÝ KIẾN TRÚC — mỗi kỷ một bộ phận lấy
 > từ công trình CÓ THẬT.** Đàm: *"phải ra nét đặc trưng và ra signature"*. Phase 5B đã cho 15 kỷ 15
 > tỉ lệ khác nhau, nhưng đó chỉ sửa được HÌNH BÓNG nhìn từ xa; lại gần thì vẫn là hộp đội mái, vì
 > hai tầng chi tiết hiện có đều không lấp nổi khoảng đó: `roof` chỉ có **9** giá trị và `windows`

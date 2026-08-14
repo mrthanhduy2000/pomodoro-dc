@@ -6,7 +6,55 @@
 > chọn: `ARCHITECTURE_DECISIONS.md`. Nợ kỹ thuật: `TECH_DEBT.md`. Migration: `MIGRATION.md`. Tóm
 > tắt theo mốc: `CHANGELOG.md`.
 > **NGUYÊN TẮC ƯU TIÊN SỐ 1:** (1) mọi phiên AI phải đọc file này + `CLAUDE.md` + các file liên quan TRƯỚC khi làm; (2) sau MỌI cập nhật dù nhỏ, phải cập nhật ngay file này + `CLAUDE.md` + các file liên quan khác.
-> Cập nhật lần cuối: **2026-08-14** — **Phase 6B**: **MÁI NHÀ LÀ VẬT LIỆU LỢP, KHÔNG PHẢI MÀU
+> Cập nhật lần cuối: **2026-08-14** — **Phase 6C**: **ĐƯỜNG VÀNH ĐAI, VÀ CÂU BÁO NÓI RA ĐÚNG CON
+> ĐƯỜNG VỪA MỞ.** Đàm: *"mở rộng thêm, làm cầu kỳ lên"*. Nhưng việc này chọn theo SỐ ĐO, không theo
+> cảm tính — đo nhánh "xưởng trống" của `buildGrowthMoment` (ca chiếm ~85% số phiên thật):
+>
+> | mốc phiên trong kỷ | TRƯỚC | SAU |
+> |---|---|---|
+> | 1–44 | **100 %** | **100 %** |
+> | 45–60 | 38 % | **100 %** |
+> | 61–88 | 6 % | **73 %** |
+> | 89–120 | 3 % | 3 % |
+> | 121+ | **0 %** | **0 %** |
+> | tổng qua 200 phiên | **26,3 %** | **40,7 %** |
+>
+> ⇒ **Mạng đường LÀ động cơ của cảm giác "có gì đó mọc lên"**, và nó tắt đúng ở phiên 44 = số ô của
+> mạng lưới. Cư dân và cảnh vật chỉ kéo lê thêm vài chục phiên rồi cũng hết.
+> **Đã làm**: vành đai chạy đúng viền lưới (x/y ∈ {0, 11} — dải DUY NHẤT không chạm khu đất công
+> trình nào; mọi vòng trong hơn sẽ cắt ngang giữa các lô và biến mặt tiền thành ngõ cụt), đưa mạng
+> đường **44 → 80 ô**. Hàm mới `describeRoadCell(x, y)` đặt tên từng đoạn, nên câu báo sau mỗi phiên
+> nay nói *"Vừa mở thêm một đoạn đại lộ ngang"* · *"một đoạn phố dọc"* · *"một khúc cua vành đai"* ·
+> *"một ngã tư mới"* — **8 cách gọi** thay vì "một đoạn đường" lặp 80 lần, cộng một cột mốc riêng
+> khi vành đai khép kín (*"Mạng đường đã hoàn chỉnh · đủ 80/80 ô đường"*).
+> ⚠️ **NÓI CHO ĐÚNG CÁI NÀY MUA ĐƯỢC GÌ**: nó **kéo dài** quãng "phiên nào cũng thấy có gì mọc lên"
+> từ phiên 44 lên phiên 80 — nó **KHÔNG** chữa cái đuôi. Từ phiên 121 vẫn im lặng tuyệt đối, y như
+> trước; với kỷ 15 (840 phiên) thì 80 ô đường vẫn chỉ phủ 10% chặng đường. `TECH_DEBT #14` vì vậy
+> vẫn MỞ, và câu hỏi CÓ/KHÔNG cho Đàm vẫn nguyên vẹn.
+>
+> ⚠️ **BẤT BIẾN QUAN TRỌNG NHẤT CỦA PHASE NÀY, và nó KHÔNG nhìn thấy được trong ảnh chụp**: 44 ô
+> đường cũ phải giữ **y nguyên thứ tự mở**. `ROAD_CELLS` xếp theo khoảng cách tới tâm, nên nếu chỉ
+> thả vành đai vào rồi để phép xếp đó lo, ô giữa cạnh viền `(0,5)` (cách tâm 6) sẽ **chen lên
+> trước** đoạn cuối đại lộ `(4,11)` (cách tâm 7) — nghĩa là một người đã chơi tới phiên 30 sẽ mở
+> app sau deploy và thấy phố mình **tự sắp xếp lại**. Không có gì đỏ lên, không ai mất dữ liệu, chỉ
+> là một buổi sáng thành phố khác đi. Trường `tier` chặn đúng điều đó, và có bài test riêng khoá
+> lại (đã thử-cho-đỏ: gỡ phép xếp theo `tier` thì bài test bắt được ngay).
+> ⚠️ **Bài học kèm — "nằm trên viền" KHÔNG bằng "là vành đai"**: bản đầu của bài test ấy dùng phép
+> thử hình học `x === 0 || y === 0 || …` và nó đỏ ngay, kêu tên ô `(4, 0)`. Ô đó nằm trên viền thật,
+> nhưng nó là **đầu mút của đại lộ dọc** chạy từ tâm ra tới mép — thuộc mạng cũ, mở từ lâu. Phép đo
+> sai chứ không phải mã sai. Nay bài test dùng thẳng `describeRoadCell` làm nguồn sự thật, thay vì
+> phát biểu lại cùng một luật bằng công thức thứ hai.
+>
+> **Dọn kèm — ba hằng số chép tay đã lặng lẽ hết đúng khi đường lên 80:** `MAX_PROPS = 96` (80 + 34
+> cảnh vật = 114) và ngân sách DOM `230` trong bài test — **cả hai nay suy ra từ nguồn**, nên lần
+> sau ai thêm một trục đường thì chúng tự đi theo. Và `city-preview.mjs` ghim cứng `sessionCount:
+> 40` ở **bốn** chỗ: với mạng 44 ô thì `40` tình cờ cho ra thành phố gần đủ đường, nhưng với 80 ô
+> thì **mọi bản quét chỉ còn thấy đúng một nửa mạng đường mà không có gì báo cho người soi biết** —
+> họ sẽ nhìn một thành phố thiếu vành đai rồi kết luận là vành đai không chạy. Nay có cờ
+> `--sessions N`, và con số đó được ghi vào hồ sơ `.geom.json` như một **sự thật về tấm ảnh** (đúng
+> bài học `--cell` ở Phase 4G).
+>
+> **Phase 6B** (ngay trước đó): **MÁI NHÀ LÀ VẬT LIỆU LỢP, KHÔNG PHẢI MÀU
 > NHẤN GIAO DIỆN.** Phase 6A vừa cho mỗi kỷ một bộ phận chép từ công trình có thật — rồi nhìn vào
 > bản quét thì **đình làng Bắc Bộ (kỷ 6) đang lợp mái TÍM, và vòm Duomo Firenze (kỷ 7) cũng TÍM**.
 > Thêm: bê tông Nakagin (kỷ 13) ra **xanh lơ**, mái kẽm Paris (kỷ 9) ra **xanh nõn chuối**, lều da

@@ -35,11 +35,6 @@ export const TILE_H = 32;              // bề cao ô isometric (px) — tỉ l�
  * đã suýt xảy ra khi mạng đường tăng từ 23 lên 44 ô (2026-08-14).
  */
 export const MAX_SCATTER_PROPS = 34;
-/**
- * Trần TỔNG (đường + cảnh vật). Vẫn giữ để bài test cũ còn một hàng rào tuyệt đối, và để một lỗi
- * nào đó ở tầng đường không thể sinh ra hàng trăm ô.
- */
-export const MAX_PROPS = 96;
 
 /** Số biến thể hình ảnh cho mỗi loại ô nền / cảnh vật. */
 const GROUND_VARIANTS = 4;
@@ -103,9 +98,41 @@ const BUILDING_ZONES = [
  *   `2` phố NGANG (chạy theo trục x) — hẹp bề sâu
  * Nhờ hai bề rộng khác nhau mà mắt đọc ra thứ bậc *đại lộ ↔ ngõ phố*; nếu mọi đường cùng một bề
  * rộng thì thêm bao nhiêu ô cũng chỉ ra một tấm lưới đều tăm tắp, không ra một thành phố.
+ *
+ * ── ĐƯỜNG VÀNH ĐAI (thêm 2026-08-14, Phase 6C) ────────────────────────────────────────────────
+ * Đàm: *"mở rộng thêm, làm cầu kỳ lên"*. Nhưng lý do làm việc này KHÔNG phải mỹ thuật — nó là
+ * **con số đo được**. Đo `buildGrowthMoment` qua 200 phiên × 5 kỷ × 3 mức công trình, nhánh
+ * "xưởng trống" (ca chiếm ~85% số phiên thật):
+ *
+ *   | mốc phiên | nói được điều gì đó | tin gì            |
+ *   |---|---|---|
+ *   | 1–44      | **100 %**           | 🛣️ mở đường       |
+ *   | 45–60     | 38 %                | 🌳 cảnh vật, 👥 cư dân |
+ *   | 61–88     | 6 %                 | 👥 cư dân          |
+ *   | 89–120    | 3 %                 | 👥 cư dân          |
+ *   | 121+      | **0 %**             | — im lặng hoàn toàn |
+ *
+ * ⇒ **Mạng đường LÀ động cơ của cảm giác "có gì đó mọc lên"**, và nó tắt đúng ở phiên 44. Mọi thứ
+ * còn lại (cư dân, cảnh vật) chỉ đủ kéo lê thêm vài chục phiên rồi cũng hết. Vành đai kéo mốc
+ * 100% từ phiên 44 lên phiên 80 — nhân đôi quãng đường mà mỗi phiên đều có thứ để chỉ vào.
+ *
+ * ⚠️ VÌ SAO ĐẶT VÀNH ĐAI Ở ĐÚNG VIỀN NGOÀI (x/y ∈ {0, 11}), KHÔNG PHẢI VÒNG TRONG:
+ * `BUILDING_ZONES` chiếm x/y ∈ 1–3 và 8–10 (bốn góc) + 5–7 (trung tâm). Hàng/cột 0 và 11 là dải
+ * DUY NHẤT không chạm khu đất nào — mọi vòng khác sẽ cắt ngang qua giữa các lô và biến mặt tiền
+ * thành ngõ cụt, đúng lý do đã loại "đường ngoằn ngoèo cho tự nhiên" ở đoạn trên.
+ *
+ * ⚠️ VÀNH ĐAI MỞ SAU TOÀN BỘ MẠNG CŨ (`tier`), KHÔNG trộn lẫn theo khoảng cách. Nếu chỉ xếp theo
+ * khoảng cách tới tâm thì ô giữa cạnh viền (`(0,5)` — cách tâm 6) sẽ chen lên trước đoạn cuối của
+ * đại lộ (`(4,11)` — cách tâm 7), tức vành đai mọc lỗ chỗ khi lưới trong còn dang dở. Thành phố
+ * thật lớn từ trong ra ngoài, và **quan trọng hơn**: giữ `tier` nghĩa là **44 ô đầu tiên vẫn y
+ * nguyên thứ tự cũ**, nên thành phố Đàm đang có KHÔNG bị sắp xếp lại. Bất biến này có bài test
+ * riêng khoá lại.
  */
 const ROAD_MAIN_AXIS = 4;
 const ROAD_CROSS_AXIS = 8;
+/** Viền ngoài cùng của lưới — nơi duy nhất không chạm khu đất công trình nào. */
+const RING_LOW = 0;
+const RING_HIGH = CITY_GRID_SIZE - 1;
 
 /**
  * Các ô đường, sắp xếp từ TRUNG TÂM ra NGOÀI. Đường được "mở" dần theo số phiên, nên thành phố
@@ -118,23 +145,40 @@ const ROAD_CROSS_AXIS = 8;
 const ROAD_CELLS = (() => {
   const seen = new Set();
   const cells = [];
-  const add = (x, y, variant) => {
+  const add = (x, y, variant, tier) => {
     const key = cellKey(x, y);
     if (seen.has(key)) return;
     seen.add(key);
-    cells.push({ x, y, variant });
+    cells.push({ x, y, variant, tier });
   };
   // ⚠️ NGÃ TƯ CỦA HAI PHỐ PHỤ PHẢI ĐẶT TRƯỚC, và phải mang vai đại lộ (rộng hết ô). Nếu để nó rơi
   // vào một trong hai phố hẹp thì mặt đường bị THẮT LẠI đúng chỗ giao nhau, trông như đường cụt.
-  add(ROAD_CROSS_AXIS, ROAD_CROSS_AXIS, 0);
+  add(ROAD_CROSS_AXIS, ROAD_CROSS_AXIS, 0, 0);
   for (let i = 0; i < CITY_GRID_SIZE; i += 1) {
-    add(ROAD_MAIN_AXIS, i, 0);          // đại lộ dọc
-    add(i, ROAD_MAIN_AXIS, 0);          // đại lộ ngang
-    add(ROAD_CROSS_AXIS, i, 1);         // phố dọc  — hẹp bề ngang
-    add(i, ROAD_CROSS_AXIS, 2);         // phố ngang — hẹp bề sâu
+    add(ROAD_MAIN_AXIS, i, 0, 0);       // đại lộ dọc
+    add(i, ROAD_MAIN_AXIS, 0, 0);       // đại lộ ngang
+    add(ROAD_CROSS_AXIS, i, 1, 0);      // phố dọc  — hẹp bề ngang
+    add(i, ROAD_CROSS_AXIS, 2, 0);      // phố ngang — hẹp bề sâu
+  }
+  // ── VÀNH ĐAI (tier 1) ──
+  // Bốn góc đặt TRƯỚC và mang vai đại lộ, đúng cùng lý do với ngã tư hai phố phụ ở trên: góc là
+  // chỗ đoạn dọc gặp đoạn ngang, để nó rơi vào một trong hai bề hẹp thì mặt đường thắt lại ngay
+  // khúc cua — trông như đường cụt chứ không như một vành đai chạy vòng.
+  for (const cx of [RING_LOW, RING_HIGH]) {
+    for (const cy of [RING_LOW, RING_HIGH]) add(cx, cy, 0, 1);
+  }
+  for (let i = 0; i < CITY_GRID_SIZE; i += 1) {
+    add(RING_LOW, i, 1, 1);             // vành đai cạnh trái  — đoạn dọc
+    add(RING_HIGH, i, 1, 1);            // vành đai cạnh phải  — đoạn dọc
+    add(i, RING_LOW, 2, 1);             // vành đai cạnh trên  — đoạn ngang
+    add(i, RING_HIGH, 2, 1);            // vành đai cạnh dưới  — đoạn ngang
   }
   const mid = (CITY_GRID_SIZE - 1) / 2;
   return cells.sort((a, b) => {
+    // ⚠️ `tier` XẾP TRƯỚC khoảng cách — xem giải thích ở khối chú thích của mạng đường. Đây cũng
+    // chính là thứ giữ cho 44 ô của mạng cũ y nguyên thứ tự, nên thành phố Đàm đang có không bị
+    // sắp xếp lại khi vành đai ra đời.
+    if (a.tier !== b.tier) return a.tier - b.tier;
     const da = Math.abs(a.x - mid) + Math.abs(a.y - mid);
     const db = Math.abs(b.x - mid) + Math.abs(b.y - mid);
     if (da !== db) return da - db;
@@ -147,12 +191,69 @@ const ROAD_CELLS = (() => {
 })();
 
 /**
+ * TÊN của đoạn đường đi qua ô này — để câu báo sau mỗi phiên nói được *cái gì* vừa mở, thay vì
+ * "vừa mở thêm một đoạn đường" lặp lại 80 lần.
+ *
+ * ⚠️ THUẦN SUY RA TỪ TOẠ ĐỘ, không có bảng tên nào chép tay. Nếu ai đó đổi `ROAD_MAIN_AXIS` hay
+ * thêm một trục mới mà quên sửa hàm này, tên sẽ sai — nên hàm nằm NGAY CẠNH chỗ dựng mạng đường,
+ * không nằm ở `cityMoment.js`. Cùng lý do `ROAD_CELL_COUNT` suy ra từ `ROAD_CELLS` chứ không viết
+ * cứng: một cái tên viết ở xa nguồn của nó là một lời nói dối đang chờ ngày tới.
+ *
+ * ⚠️ Trả về một CỤM đầy đủ (đã gồm mạo từ) chứ không phải một danh từ trần, vì tiếng Việt ghép
+ * khác nhau tuỳ loại: *"một đoạn đại lộ ngang"* nhưng *"một ngã tư mới"* — ghép sai thì câu đọc
+ * ra rất sượng, mà đây là câu Đàm gặp lại sau mỗi phiên.
+ *
+ * @returns {string} cụm để nối sau chữ "Vừa mở thêm ".
+ */
+export function describeRoadCell(x, y) {
+  const onMainV  = x === ROAD_MAIN_AXIS;
+  const onMainH  = y === ROAD_MAIN_AXIS;
+  const onCrossV = x === ROAD_CROSS_AXIS;
+  const onCrossH = y === ROAD_CROSS_AXIS;
+
+  // Giao của hai trục bất kỳ ⇒ ngã tư. Nói "một đoạn đại lộ" ở đây thì đúng nhưng bỏ mất tin hay
+  // nhất: chỗ này vừa NỐI hai con đường vào nhau.
+  if ((onMainV || onCrossV) && (onMainH || onCrossH)) return 'một ngã tư mới';
+  if (onMainV) return 'một đoạn đại lộ dọc';
+  if (onMainH) return 'một đoạn đại lộ ngang';
+  if (onCrossV) return 'một đoạn phố dọc';
+  if (onCrossH) return 'một đoạn phố ngang';
+
+  // ── VÀNH ĐAI ──
+  // ⚠️ CHIA NHỎ CÓ LÝ DO ĐO ĐƯỢC, không phải cho phong phú. Vành đai chiếm 36/80 ô, nên nếu cả 36
+  // ô dùng chung một câu thì Đàm đọc đúng một dòng chữ suốt 36 phiên liền — tái diễn y hệt cái
+  // bệnh mà `cityMoment.js` đã đo và chữa một lần rồi ("82% số phiên đọc đúng 4 chữ"). Ba cách gọi
+  // dưới đây đều SUY TỪ TOẠ ĐỘ, không thêm một dữ kiện nào không có thật.
+  // ⚠️ KHÔNG dùng phương hướng (bắc/nam/đông/tây): lưới thành phố không có hướng nào cả, và camera
+  // 3D thì xoay được — "phía bắc" nghe hay hơn nhưng nó là một điều bịa.
+  const vertical = x === RING_LOW || x === RING_HIGH;
+  const horizontal = y === RING_LOW || y === RING_HIGH;
+  if (vertical && horizontal) return 'một khúc cua vành đai';
+  return vertical ? 'một đoạn vành đai dọc' : 'một đoạn vành đai ngang';
+}
+
+/**
  * Tổng số ô đường của mạng lưới — MẪU SỐ để nói "đã mở được bao nhiêu".
  * ⚠️ Suy ra từ chính `ROAD_CELLS`, KHÔNG viết cứng: `cityMoment.js` dùng số này làm mẫu số cho
  * thanh tiến độ sau mỗi phiên, và một mẫu số viết cứng sẽ nói dối ngay lần đầu ai đó thêm một
  * trục đường mới.
  */
 export const ROAD_CELL_COUNT = ROAD_CELLS.length;
+
+/**
+ * Trần TỔNG (đường + cảnh vật) — hàng rào tuyệt đối để một lỗi ở tầng nào cũng không sinh ra hàng
+ * trăm ô.
+ *
+ * ⚠️ NAY LÀ TỔNG SUY RA, KHÔNG PHẢI SỐ VIẾT CỨNG — và đây là lý do, không phải nới cho tiện.
+ * Trước 2026-08-14 nó là `96`, chọn hồi mạng đường có 44 ô (44 + 34 = 78, dư 18). Vành đai đưa
+ * đường lên 80 ⇒ 80 + 34 = 114, tức con số 96 **đã lặng lẽ hết đúng** và bài test trần sẽ đỏ.
+ * Đó chính xác là kiểu số cũ đi trong im lặng mà cả file này đã gặp nhiều lần (`ROAD_CELL_COUNT`
+ * cũng từng phải chuyển sang suy-ra vì lý do y hệt).
+ * ⚠️ ĐỌC CHO ĐÚNG NÓ CÒN BẮT ĐƯỢC GÌ: vì là tổng đúng bằng hai trần thành phần, nó **không** còn
+ * bắt được lỗi "một tầng vượt trần của chính tầng đó" — hai trần kia mới làm việc ấy. Việc nó còn
+ * làm được: chặn ca hai danh sách bị nối nhầm, và cho bên gọi một con số để cấp phát bộ đệm.
+ */
+export const MAX_PROPS = ROAD_CELL_COUNT + MAX_SCATTER_PROPS;
 
 /** Bảng loại cảnh vật rải rác + trọng số (tổng = 20). Thứ tự cố định → tất định. */
 const SCATTER_KINDS = [

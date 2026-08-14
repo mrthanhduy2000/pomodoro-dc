@@ -7,9 +7,11 @@ import {
   MAX_SCATTER_PROPS,
   TILE_H,
   TILE_W,
+  ROAD_CELL_COUNT,
   cellToScreen,
   computeCityLayout,
   deriveProps,
+  describeRoadCell,
   hashId,
   placeBuilding,
 } from './cityLayout.js';
@@ -17,6 +19,8 @@ import { BLUEPRINT_CATALOG, BUILDING_EFFECTS } from './constants.js';
 
 // Bộ 5 bản vẽ có thật của kỷ 1 (dùng id thật để test bám sát dữ liệu game).
 const ERA_1 = BLUEPRINT_CATALOG[1].map((bp) => bp.id);
+/** Số công trình tối đa hiện cùng lúc trong một kỷ — đếm từ dữ liệu thật, không viết cứng số 5. */
+const BUILDINGS_PER_ERA = BLUEPRINT_CATALOG[1].length;
 const ERA_2 = BLUEPRINT_CATALOG[2].map((bp) => bp.id);
 
 function allCells(layout) {
@@ -181,16 +185,20 @@ test('deriveProps không bao giờ vượt MAX_PROPS dù số liệu lớn đế
     const props = deriveProps({ era: 1, buildingCount: 5, sessionCount, streakLength: 5000 });
     assert.ok(props.length <= MAX_PROPS, `vượt trần với sessionCount=${sessionCount}: ${props.length}`);
   }
-  // ⚠️ NGÂN SÁCH DOM: 144 nền + 5 nhà + (≤44 ô đường + ≤34 cảnh vật) = tối đa 227.
-  // Trần cũ là 200, ứng với mạng đường hình dấu cộng 23 ô. Mạng đường mới (2026-08-14, Đàm:
-  // *"đường đi cũng nên phức tạp hơn"*) có 44 ô, nên trần phải lên theo — nhưng KHÔNG phải nới
-  // cho vừa ý: con số này canh **bộ vẽ 2D dự phòng** (`render2d/`), nơi mỗi phần tử là một nút
-  // SVG. Phần tăng thêm nằm trọn ở ô ĐƯỜNG, tức các đa giác phẳng không viền, rẻ nhất trong cả
-  // cảnh; và ở bộ vẽ 3D thì chúng gộp vào đúng MỘT `InstancedMesh`, không thêm một lệnh vẽ nào.
-  // Số cảnh vật KHỐI (thứ đắt thật) đã bị siết lại còn 34, thấp hơn mức 48 trước đây.
+  // ⚠️ NGÂN SÁCH DOM — SUY RA, KHÔNG VIẾT CỨNG (đổi 2026-08-14, Phase 6C).
+  // Con số này canh **bộ vẽ 2D dự phòng** (`render2d/`), nơi mỗi phần tử là một nút SVG thật.
+  // Nó đã phải nới HAI lần vì cùng một lý do — 200 (mạng đường dấu cộng 23 ô) → 230 (mạng lưới 44
+  // ô) → và lần này vành đai đưa đường lên 80. Ba lần cùng một hình dạng thì đó không còn là sự
+  // trùng hợp: **một hằng số nghiệm thu chép tay từ các hằng số khác thì chắc chắn sẽ trôi khỏi
+  // chúng.** Nay nó tính thẳng từ nguồn, nên lần sau ai thêm một trục đường, bài test tự đi theo
+  // và chỉ đỏ khi có lỗi THẬT (một tầng vượt trần của chính nó).
+  // Vì sao nới là ĐÚNG chứ không phải cho vừa ý: phần tăng thêm nằm trọn ở ô ĐƯỜNG — đa giác
+  // phẳng, không viền, rẻ nhất trong cả cảnh; ở bộ vẽ 3D chúng gộp vào đúng MỘT `InstancedMesh`,
+  // không thêm một lệnh vẽ nào. Số cảnh vật KHỐI (thứ đắt thật) vẫn bị siết ở 34, không nhúc nhích.
+  const maxDom = CITY_GRID_SIZE * CITY_GRID_SIZE + BUILDINGS_PER_ERA + MAX_PROPS;
   const layout = computeCityLayout({ built: ERA_1, era: 1, stats: { sessionCount: 1e6, streakLength: 1e6 } });
   const domBudget = layout.ground.length + layout.buildings.length + layout.props.length;
-  assert.ok(domBudget <= 230, `ngân sách DOM vượt 230: ${domBudget}`);
+  assert.ok(domBudget <= maxDom, `ngân sách DOM vượt ${maxDom}: ${domBudget}`);
 });
 
 test('cảnh vật đông dần theo số phiên (thành phố lớn lên)', () => {
@@ -466,6 +474,98 @@ test('MẠNG ĐƯỜNG là một mạng lưới, không phải một dấu cộn
   for (const road of layout.props.filter((p) => p.kind === 'road')) {
     assert.ok(!houses.has(`${road.x},${road.y}`), `ô đường (${road.x},${road.y}) đè lên công trình`);
   }
+});
+
+test('VÀNH ĐAI mở SAU toàn bộ mạng cũ — thành phố Đàm đang có không được tự sắp xếp lại', () => {
+  // ⚠️ ĐÂY LÀ BÀI TEST QUAN TRỌNG NHẤT CỦA PHASE 6C, và nó canh một thứ **không nhìn thấy được
+  // trong ảnh chụp**: tính TƯƠNG THÍCH NGƯỢC của một thành phố đang chạy thật.
+  // `ROAD_CELLS` xếp theo khoảng cách tới tâm. Nếu vành đai chỉ được thả vào rồi để phép xếp đó
+  // lo, thì ô giữa cạnh viền `(0,5)` (cách tâm 6) sẽ CHEN LÊN TRƯỚC đoạn cuối đại lộ `(4,11)`
+  // (cách tâm 7) — nghĩa là với một người đã chơi tới phiên 30, thứ tự 30 ô đường của họ đổi hẳn
+  // và thành phố **tự sắp xếp lại** sau một lần deploy. Không có gì đỏ lên, không ai mất dữ liệu,
+  // chỉ là một buổi sáng mở app thấy phố mình khác đi.
+  // Trường `tier` chặn đúng điều đó. Bài này khoá nó bằng cách: 44 ô đầu tiên (đúng bằng cỡ mạng
+  // cũ) phải KHÔNG có ô nào nằm trên viền — tức toàn bộ mạng cũ mở xong rồi vành đai mới bắt đầu.
+  const OLD_NETWORK_SIZE = 44;
+  // ⚠️ "NẰM TRÊN VIỀN" KHÔNG BẰNG "LÀ VÀNH ĐAI" — bản đầu của bài test này dùng phép thử hình học
+  // `x === 0 || y === 0 || …` và nó ĐỎ ngay, kêu tên ô `(4, 0)`. Ô đó nằm trên viền thật, nhưng nó
+  // là **đầu mút của đại lộ dọc** chạy từ tâm ra tới mép — thuộc mạng cũ, tier 0, mở từ lâu. Phép
+  // đo sai chứ không phải mã sai (đúng luật "số đo nào gây bất ngờ thì kiểm CÔNG CỤ trước").
+  // Nguồn sự thật duy nhất cho câu hỏi "ô này thuộc con đường nào" là `describeRoadCell` — dùng
+  // luôn nó, thay vì phát biểu lại cùng một luật bằng một công thức thứ hai.
+  const onRing = (c) => describeRoadCell(c.x, c.y).includes('vành đai');
+
+  // Dựng lại THỨ TỰ MỞ bằng cách tăng dần `sessionCount` rồi ghi lại ô nào mới xuất hiện — thay vì
+  // đọc thẳng `ROAD_CELLS` (không xuất ra ngoài). Cách này còn hơn ở chỗ nó đo đúng thứ Đàm gặp:
+  // thứ tự SAU khi đã trừ những ô bị công trình chiếm.
+  const order = [];
+  for (let n = 1; n <= ROAD_CELL_COUNT + 5; n += 1) {
+    const roads = deriveProps({ era: 1, buildingCount: 5, sessionCount: n, streakLength: 0 })
+      .filter((p) => p.kind === 'road');
+    const seen = new Set(order.map((c) => `${c.x},${c.y}`));
+    for (const r of roads) if (!seen.has(`${r.x},${r.y}`)) order.push(r);
+  }
+
+  const early = order.slice(0, OLD_NETWORK_SIZE - 8); // trừ hao vài ô bị công trình chiếm
+  const strays = early.filter(onRing);
+  assert.equal(strays.length, 0,
+    `${strays.length} ô vành đai (vd ${strays[0] && `${strays[0].x},${strays[0].y}`}) chen vào `
+    + `${OLD_NETWORK_SIZE} ô đầu ⇒ thành phố của người đang chơi sẽ tự sắp xếp lại sau deploy`);
+
+  // Và vành đai PHẢI có thật ở cuối — nếu không thì bài trên xanh một cách vô nghĩa (không có
+  // vành đai thì đương nhiên không có ô nào chen vào).
+  assert.ok(order.filter(onRing).length >= 30,
+    `chỉ có ${order.filter(onRing).length} ô vành đai — mạng lưới chưa hề mở rộng ra viền`);
+  assert.ok(ROAD_CELL_COUNT >= 76,
+    `mạng đường chỉ có ${ROAD_CELL_COUNT} ô — vành đai đáng lẽ phải đưa nó lên khoảng 80`);
+});
+
+test('TÊN ĐOẠN ĐƯỜNG nói đúng loại đường của ô đó', () => {
+  // Câu báo sau mỗi phiên nay nói *cái gì* vừa mở ("vừa mở thêm một đoạn đại lộ ngang") thay vì
+  // "một đoạn đường" lặp lại 80 lần. Cái tên đó chỉ có giá trị nếu nó ĐÚNG — một cái tên sai còn
+  // tệ hơn không có tên, đúng luật trung thực của `cityMoment.js`.
+  assert.equal(describeRoadCell(4, 0), 'một đoạn đại lộ dọc');
+  assert.equal(describeRoadCell(0, 4), 'một đoạn đại lộ ngang');
+  assert.equal(describeRoadCell(8, 2), 'một đoạn phố dọc');
+  assert.equal(describeRoadCell(2, 8), 'một đoạn phố ngang');
+  assert.equal(describeRoadCell(0, 6), 'một đoạn vành đai dọc');
+  assert.equal(describeRoadCell(11, 6), 'một đoạn vành đai dọc');
+  assert.equal(describeRoadCell(6, 0), 'một đoạn vành đai ngang');
+  assert.equal(describeRoadCell(6, 11), 'một đoạn vành đai ngang');
+  // Bốn góc vành đai là chỗ đoạn dọc gặp đoạn ngang — đường ở đó BẺ CUA chứ không CẮT NHAU, nên
+  // gọi là "ngã tư" sẽ sai. Đủ cả bốn góc vì mỗi góc là một tổ hợp `RING_LOW`/`RING_HIGH` riêng.
+  assert.equal(describeRoadCell(0, 0), 'một khúc cua vành đai');
+  assert.equal(describeRoadCell(0, 11), 'một khúc cua vành đai');
+  assert.equal(describeRoadCell(11, 0), 'một khúc cua vành đai');
+  assert.equal(describeRoadCell(11, 11), 'một khúc cua vành đai');
+  // Giao của hai trục bất kỳ ⇒ ngã tư. Đủ CẢ BỐN tổ hợp, vì mỗi tổ hợp đi qua một nhánh `if` khác
+  // nhau và bỏ sót một nhánh thì tên rơi về "đại lộ"/"phố" — nghe vẫn hợp lý nên không ai để ý.
+  assert.equal(describeRoadCell(4, 4), 'một ngã tư mới');
+  assert.equal(describeRoadCell(4, 8), 'một ngã tư mới');
+  assert.equal(describeRoadCell(8, 4), 'một ngã tư mới');
+  assert.equal(describeRoadCell(8, 8), 'một ngã tư mới');
+
+  // ⚠️ MỌI ô đường thật đều phải có tên — không ô nào rơi ra ngoài bảng. Đây là vế bảo vệ cho việc
+  // hàm này suy tên từ TOẠ ĐỘ: thêm một trục đường mới mà quên sửa hàm thì ô của nó sẽ lặng lẽ
+  // mang tên "đường vành đai" dù nó nằm giữa thành phố.
+  const roads = deriveProps({ era: 1, buildingCount: 5, sessionCount: 1e6, streakLength: 100 })
+    .filter((p) => p.kind === 'road');
+  for (const r of roads) {
+    const name = describeRoadCell(r.x, r.y);
+    assert.ok(typeof name === 'string' && name.startsWith('một'), `ô (${r.x},${r.y}) không có tên`);
+    if (name.includes('vành đai')) {
+      assert.ok(r.x === 0 || r.y === 0 || r.x === CITY_GRID_SIZE - 1 || r.y === CITY_GRID_SIZE - 1,
+        `ô (${r.x},${r.y}) nằm giữa thành phố nhưng bị gọi là vành đai`);
+    }
+  }
+
+  // ⚠️ VÀ KHÔNG ĐƯỢC CHỈ CÓ MỘT CÁI TÊN. 36/80 ô là vành đai; nếu cả 36 dùng chung một câu thì Đàm
+  // đọc đúng một dòng chữ suốt 36 phiên liền — tái diễn đúng cái bệnh mà `cityMoment.js` đã đo và
+  // chữa một lần ("82% số phiên đọc đúng 4 chữ"). Đây là hàng rào chống việc gộp lại cho gọn.
+  const names = new Set(roads.map((r) => describeRoadCell(r.x, r.y)));
+  assert.ok(names.size >= 6,
+    `mạng đường chỉ có ${names.size} cách gọi (${[...names].join(' · ')}) — chưa đủ để 80 phiên `
+    + 'mở đường không đọc ra như một câu lặp lại');
 });
 
 test('MỖI PHIÊN MỞ THÊM ĐÚNG MỘT Ô ĐƯỜNG — thành phố lớn lên nhìn thấy được', () => {

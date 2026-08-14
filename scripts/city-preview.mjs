@@ -66,6 +66,14 @@ function parseArgs(argv) {
     // nhau, để một ảnh là thấy đủ các nấc dựng — chứ chụp mỗi công trường cùng một tiến độ thì
     // không kiểm chứng được thứ cần kiểm chứng ("mỗi phiên xong lại nhô lên một nấc").
     pending: 0,
+    // Số phiên đã hoàn thành TRONG KỶ — quyết mạng đường mở tới đâu và có bao nhiêu cảnh vật.
+    // ⚠️ THÊM 2026-08-14 (Phase 6C) VÌ MỘT LÝ DO CỤ THỂ: con số này trước đây viết cứng `40` ở
+    // BỐN chỗ trong file, và mạng đường lúc đó có 44 ô — nên `40` tình cờ cho ra một thành phố
+    // gần đủ đường. Vành đai đưa mạng lên 80 ô, tức mọi bản quét dựng ở `40` chỉ còn thấy ĐÚNG
+    // MỘT NỬA mạng đường, và **không có gì báo cho người soi biết điều đó** — họ sẽ nhìn một
+    // thành phố thiếu vành đai rồi kết luận là vành đai không chạy. Đúng họ với bài học `--cell`
+    // ở Phase 4G: một tham số mà công cụ tự đoán thì sớm muộn cũng đoán sai.
+    sessions: 40,
   };
   for (let i = 0; i < argv.length; i += 1) {
     const key = argv[i];
@@ -82,6 +90,7 @@ function parseArgs(argv) {
     else if (key === '--cell') { args.cell = Number(value); i += 1; }
     else if (key === '--eras') { args.eraList = String(value).split(',').map(Number); i += 1; }
     else if (key === '--pending') { args.pending = Number(value); i += 1; }
+    else if (key === '--sessions') { args.sessions = Number(value); i += 1; }
   }
   return args;
 }
@@ -98,7 +107,7 @@ function run(cmd, cmdArgs, options = {}) {
  * Mã nguồn trang xem thử. Được gói thành MỘT file bằng chính Vite của dự án, nên nó dùng đúng
  * phiên bản three và đúng các module thật — nếu bản gói lỗi thì bản chạy thật cũng lỗi.
  */
-function entrySource({ era, level, theme, zoom = 1, hour = null, pending = 0 }) {
+function entrySource({ era, level, theme, zoom = 1, hour = null, pending = 0, sessions = 40 }) {
   return `
 import { computeCityLayout } from '${ROOT}/src/engine/cityLayout.js';
 import { buildScenePalette } from '${ROOT}/src/engine/city3d/palette3d.js';
@@ -114,6 +123,7 @@ const IS_DARK = ${theme === 'dark'};
 const ZOOM = ${zoom};
 const HOUR = ${hour === null ? 'null' : hour};
 const PENDING = ${pending};
+const SESSIONS = ${sessions};
 
 const allIds = BLUEPRINT_CATALOG[ERA].map((bp) => bp.id);
 // Mấy bản vẽ cuối chuyển sang ĐANG XÂY, mỗi cái một tiến độ khác nhau (còn 1, 2, 3… phiên nữa)
@@ -124,7 +134,7 @@ const pendingQueue = PENDING > 0
   : [];
 const levels = Object.fromEntries(built.map((id) => [id, LEVEL]));
 const layout = computeCityLayout({
-  built, levels, era: ERA, stats: { sessionCount: 40, streakLength: 9 }, pending: pendingQueue,
+  built, levels, era: ERA, stats: { sessionCount: SESSIONS, streakLength: 9 }, pending: pendingQueue,
 });
 
 // Token màu lấy thẳng từ giá trị mặc định của hai theme trong src/index.css — trang này không có
@@ -154,7 +164,7 @@ renderer.shadowMap.needsUpdate = true;
 
 // ⚠️ Truyền ĐÚNG bộ số mà app truyền, không để mặc định: dân số suy ra từ đây, và một trang xem
 // thử vẽ thành phố vắng hơn thật thì nó không còn kiểm chứng được thứ cần kiểm chứng.
-const city = createCityScene({ layout, palette, daylight, stats: { sessionCount: 40, streakLength: 9 } });
+const city = createCityScene({ layout, palette, daylight, stats: { sessionCount: SESSIONS, streakLength: 9 } });
 city.sun.shadow.mapSize.setScalar(1024);
 
 // Đẩy đồng hồ tới một thời điểm giữa chừng. Ở t = 0 mọi cư dân đều đứng ở đầu tuyến của mình —
@@ -194,7 +204,7 @@ document.body.dataset.ready = '1';
  * 74 ô đầu trống trơn, và không có lỗi nào hiện ra. Ở đây: vẽ một cảnh → sao chép điểm ảnh sang
  * canvas 2D của bảng → DỌN cảnh → dựng cảnh kế tiếp trên đúng context cũ.
  */
-function sweepSource({ level, theme, cell, combos }) {
+function sweepSource({ level, theme, cell, combos, sessions = 40 }) {
   return `
 import { computeCityLayout } from '${ROOT}/src/engine/cityLayout.js';
 import { buildScenePalette } from '${ROOT}/src/engine/city3d/palette3d.js';
@@ -206,6 +216,7 @@ import { PerspectiveCamera, WebGLRenderer, PCFSoftShadowMap } from 'three';
 
 const LEVEL = ${level};
 const IS_DARK = ${theme === 'dark'};
+const SESSIONS = ${sessions};
 const CELL_W = ${cell};
 const CELL_H = Math.round(${cell} * 0.62);
 const LABEL_H = 22;
@@ -263,13 +274,13 @@ eras.forEach((era, row) => {
 
   const built = BLUEPRINT_CATALOG[era].map((bp) => bp.id);
   const levels = Object.fromEntries(built.map((id) => [id, LEVEL]));
-  const layout = computeCityLayout({ built, levels, era, stats: { sessionCount: 40, streakLength: 9 } });
+  const layout = computeCityLayout({ built, levels, era, stats: { sessionCount: SESSIONS, streakLength: 9 } });
 
   hours.forEach((hour, col) => {
     const daylight = deriveDaylight(hour);
     const palette = buildScenePalette({ tokens, eraColor: ERA_METADATA[era]?.accentColor, era, daylight });
     const city = createCityScene({
-      layout, palette, daylight, stats: { sessionCount: 40, streakLength: 9 },
+      layout, palette, daylight, stats: { sessionCount: SESSIONS, streakLength: 9 },
     });
     city.sun.shadow.mapSize.setScalar(512);
     renderer.shadowMap.needsUpdate = true;
@@ -480,6 +491,11 @@ async function main() {
       hours: sweepHours,
       theme: args.theme,
       level: args.level,
+      // ⚠️ `sessions` NẰM TRONG HỒ SƠ, không phải chỉ trong đầu người chạy lệnh. Nó quyết mạng
+      // đường mở tới đâu, tức nó là một SỰ THẬT VỀ TẤM ẢNH — đúng loại dữ kiện mà bài học `--cell`
+      // (Phase 4G) bắt phải ghi kèm thay vì để bên đọc đoán. Nhìn một bản quét dựng ở 40 phiên rồi
+      // kết luận "vành đai không chạy" là lỗi hoàn toàn có thể xảy ra nếu con số này không đi kèm.
+      sessions: args.sessions,
     }, null, 2)}\n`);
 
     console.log(`✓ quét ${eras.length} kỷ × ${sweepHours.length} chặng → ${pngPath}`);

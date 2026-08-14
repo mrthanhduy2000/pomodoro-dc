@@ -12,6 +12,34 @@
 
 ---
 
+## 2026-08-14 — Đường vành đai, và câu báo nói ra đúng con đường vừa mở (Phase 6C)
+
+**Mục đích.** Đàm: *"mở rộng thêm, làm cầu kỳ lên"*. Nhưng việc này chọn theo SỐ ĐO chứ không theo
+cảm tính: đo nhánh "xưởng trống" của `buildGrowthMoment` (ca chiếm ~85% số phiên thật) thì phiên
+1–44 nói được **100%**, rồi sập xuống 38% → 6% → 3% → **0% từ phiên 121**. Mạng đường LÀ động cơ của
+cảm giác "có gì đó mọc lên", và nó tắt đúng ở phiên 44 — số ô của mạng lưới.
+
+**Phạm vi.** `cityLayout.js`: thêm vành đai chạy đúng viền lưới (x/y ∈ {0, 11} — dải duy nhất không
+chạm khu đất công trình nào), đưa mạng đường **44 → 80 ô**. Thêm trường `tier` để vành đai mở SAU
+toàn bộ mạng cũ. Hàm mới `describeRoadCell(x, y)` đặt tên cho từng đoạn; `cityMoment.js` dùng nó nên
+câu báo nay nói *"Vừa mở thêm một đoạn đại lộ ngang"* / *"một khúc cua vành đai"* / *"một ngã tư
+mới"* thay vì "một đoạn đường" lặp 80 lần — 8 cách gọi, cộng một cột mốc riêng khi vành đai khép
+kín (*"Mạng đường đã hoàn chỉnh"*).
+
+**Ảnh hưởng đo được**: quãng "phiên nào cũng có gì đó mọc lên" kéo từ phiên 44 lên **phiên 80**; tỉ
+lệ nói-được qua 200 phiên **26,3% → 40,7%**. ⚠️ Nhưng nó **không** chữa cái đuôi: từ phiên 121 vẫn
+im lặng tuyệt đối. `TECH_DEBT #14` vì vậy vẫn mở, và câu hỏi CÓ/KHÔNG cho Đàm vẫn nguyên vẹn.
+
+**Tương thích — bất biến quan trọng nhất của phase này.** 44 ô đường cũ giữ **y nguyên thứ tự mở**,
+nên thành phố Đàm đang có không bị sắp xếp lại sau deploy. Nếu chỉ thả vành đai vào rồi để phép xếp
+theo khoảng cách lo, ô giữa cạnh viền sẽ chen lên trước đoạn cuối đại lộ và người đã chơi tới phiên
+30 sẽ thấy phố mình khác đi. Có bài test riêng khoá điều này (đã thử-cho-đỏ).
+
+**Dọn kèm.** Hai hằng số nghiệm thu chép tay (`MAX_PROPS = 96`, ngân sách DOM `230`) đã hết đúng khi
+đường lên 80 — nay cả hai **suy ra từ nguồn**. `city-preview.mjs` thêm cờ `--sessions` (trước đó ghim
+cứng `40` ở bốn chỗ, tức mọi bản quét chỉ còn thấy nửa mạng đường mà không báo gì), và ghi con số ấy
+vào hồ sơ `.geom.json`.
+
 ## 2026-08-14 — Mái nhà là VẬT LIỆU LỢP, không phải màu nhấn giao diện (Phase 6B)
 
 **Mục đích.** Đàm: *"phải ra nét đặc trưng và ra signature"*. Phase 6A cho mỗi kỷ một bộ phận chép

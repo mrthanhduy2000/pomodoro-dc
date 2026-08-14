@@ -24,7 +24,9 @@
  * THUẦN: không đọc store, không đụng `Date`, không DOM. Test bằng `node --test`.
  */
 
-import { BLUEPRINT_LOOKUP, ROAD_CELL_COUNT, deriveProps } from './cityLayout.js';
+import {
+  BLUEPRINT_LOOKUP, ROAD_CELL_COUNT, deriveProps, describeRoadCell,
+} from './cityLayout.js';
 import { deriveResidentCount } from './city3d/residents.js';
 
 const clamp01 = (value) => (Number.isFinite(value) ? Math.min(1, Math.max(0, value)) : 0);
@@ -220,12 +222,28 @@ function buildTickMoment({ era, buildingCount, sessionCount, streakLength } = {}
   const roadsAfter = after.filter((p) => p.kind === 'road').length;
 
   if (roadsAfter > roadsBefore && ROAD_CELL_COUNT > 0) {
+    // ⚠️ TÌM ĐÚNG Ô VỪA MỞ, KHÔNG SUY RA TỪ SỐ ĐẾM. Cám dỗ là viết `ROAD_CELLS[roadsAfter - 1]` —
+    // ngắn hơn và *gần như* luôn đúng. Nhưng `deriveProps` BỎ QUA những ô đường trùng chỗ với một
+    // công trình đã đặt (`taken`), nên chỉ số trong danh sách và số ô thật sự đặt được lệch nhau
+    // ngay khi thành phố có nhà — tức nó sai đúng ở mọi ca thực tế, và sai một cách im lặng: vẫn
+    // ra một cái tên hợp lý, chỉ là tên của con đường khác.
+    const seenBefore = new Set(before.filter((p) => p.kind === 'road').map((p) => `${p.x},${p.y}`));
+    const opened = after.find((p) => p.kind === 'road' && !seenBefore.has(`${p.x},${p.y}`));
+    const what = opened ? describeRoadCell(opened.x, opened.y) : 'một đoạn đường';
+    // CỘT MỐC: ô đường CUỐI CÙNG của cả mạng lưới. Đây là dòng chữ cuối cùng về đường mà Đàm còn
+    // được đọc trong kỷ này — sau đó nhánh đường tắt hẳn. Nói thẳng ra thì nó là một cái đích vừa
+    // chạm tới; để nguyên câu "vừa mở thêm một đoạn…" thì cái đích ấy trôi qua không ai biết.
+    // ⚠️ Vẫn là mệnh đề ĐÚNG suy từ số liệu (`roadsAfter === ROAD_CELL_COUNT`), không phải lời khen
+    // rỗng — đúng luật trung thực ở đầu file.
+    const complete = roadsAfter >= ROAD_CELL_COUNT;
     return {
       kind: 'tick',
       bpId: null,
       icon: '🛣️',
-      headline: 'Thành phố mở rộng',
-      detail: `Vừa mở thêm một đoạn đường · ${roadsAfter}/${ROAD_CELL_COUNT} ô đường`,
+      headline: complete ? 'Mạng đường đã hoàn chỉnh' : 'Thành phố mở rộng',
+      detail: complete
+        ? `Vành đai vừa khép kín · đủ ${ROAD_CELL_COUNT}/${ROAD_CELL_COUNT} ô đường`
+        : `Vừa mở thêm ${what} · ${roadsAfter}/${ROAD_CELL_COUNT} ô đường`,
       progress: roadsAfter / ROAD_CELL_COUNT,
       fromProgress: roadsBefore / ROAD_CELL_COUNT,
     };

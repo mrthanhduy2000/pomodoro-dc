@@ -20,6 +20,7 @@ import { buildBuildingSpec, buildScaffoldSpec } from './buildingSpec.js';
 import { ERA_STYLES, getEraStyle, ROOF_KINDS, WINDOW_KINDS } from './eraStyle.js';
 import { ARCHETYPES, getMassing } from './archetypes.js';
 import { MAX_SIDES, MIN_SIDES, PART_ROLES, countTriangles } from './parts.js';
+import { SIGNATURE_KINDS, emitSignature } from './signature.js';
 import {
   MAX_TRIANGLES_PER_BUILDING,
   MAX_TRIANGLES_PER_CITY,
@@ -451,4 +452,133 @@ test('MỌI KỶ ĐỀU PHẢI CÓ BỀ MẶT MANG MÀU KỶ — kể cả kỷ 
     const roofParts = buildBuildingSpec({ ...bp, level: 1 }).parts.filter((p) => p.role === 'roof');
     assert.ok(roofParts.length > 0, `kỷ mái bằng ${era} lại mất tấm phủ mang màu kỷ`);
   }
+});
+
+// ─── CHỮ KÝ KIẾN TRÚC (Phase 6A) ─────────────────────────────────────────────
+
+test('CHỮ KÝ: mỗi kỷ đúng một chữ ký, 15 kỷ không kỷ nào trùng, và tất cả đều dựng được', () => {
+  // ⚠️ VÌ SAO PHẢI CANH TÍNH KHÔNG-TRÙNG Ở ĐÂY: `roof` chỉ có 9 giá trị và `windows` có 7, nên hai
+  // trục ấy BUỘC phải dùng lại cho 15 kỷ (`cone` dùng chung kỷ 1+2, `flat` chung 12/13/14). Chữ ký
+  // là trục DUY NHẤT có đủ giá trị cho mỗi kỷ một cái, nên nếu ai đó lỡ tay để hai kỷ trùng chữ ký
+  // thì tầng này mất luôn lý do tồn tại — mà build vẫn xanh và ảnh chụp vẫn "trông ổn".
+  const eras = Object.keys(ERA_STYLES).map(Number);
+  const names = eras.map((era) => getEraStyle(era).signature);
+  for (const [i, name] of names.entries()) {
+    assert.equal(typeof name, 'string', `kỷ ${eras[i]} thiếu chữ ký`);
+    assert.ok(SIGNATURE_KINDS.includes(name),
+      `kỷ ${eras[i]} khai chữ ký "${name}" mà signature.js không dựng được`);
+  }
+  assert.equal(new Set(names).size, names.length,
+    `có kỷ dùng chung chữ ký: ${names.join(', ')}`);
+
+  // Và mọi chữ ký dựng được đều phải có kỷ dùng — một hàm không ai gọi là đúng cái bẫy Phase 4H.
+  for (const kind of SIGNATURE_KINDS) {
+    assert.ok(names.includes(kind), `chữ ký "${kind}" viết ra mà không kỷ nào dùng`);
+  }
+});
+
+test('CHỮ KÝ: hiện ở MỌI hạng, kể cả `common` — không còn công trình nào là hộp trơn', () => {
+  // ⚠️ ĐÂY LÀ LÝ DO TẦNG CHỮ KÝ RA ĐỜI. `RARITY_MOTIF_BUDGET.common = 0` nghĩa là 2 trong 5 công
+  // trình mỗi kỷ (30 trong 75 căn của cả game) trước đây KHÔNG có lấy một chi tiết đặc trưng nào.
+  // Bài test này đo đúng điều đó: gỡ dòng `emitSignature` trong `buildingSpec.js` thì nó đỏ.
+  const commons = ALL_BLUEPRINTS.filter((bp) => bp.rarity === 'common');
+  assert.ok(commons.length >= 30, 'bảng bản vẽ đổi rồi — xem lại bài test này');
+  for (const bp of commons) {
+    const probe = [];
+    const emitted = emitSignature(probe, getEraStyle(bp.era).signature, {
+      bpId: bp.bpId, era: bp.era, style: getEraStyle(bp.era),
+      w: 0.86, d: 0.68, x: 0, z: 0, base: 0, top: 0.5, symmetric: false,
+    });
+    assert.ok(emitted && probe.length > 0, `kỷ ${bp.era}: chữ ký không dựng ra khối nào`);
+
+    const spec = buildBuildingSpec({ ...bp, level: 1 });
+    // Khối kết cấu (không `deco`) phải nhiều hơn hẳn phần thân+mái trần trụi. Thân + gờ chân +
+    // mái + cửa ra vào = khoảng 4; có chữ ký thì luôn từ 6 trở lên.
+    const structural = spec.parts.filter((p) => !p.deco);
+    assert.ok(structural.length >= 6,
+      `kỷ ${bp.era} · "${bp.bpId}" hạng common chỉ có ${structural.length} khối kết cấu `
+      + '⇒ vẫn là hộp trơn, chữ ký chưa tới được hạng này');
+  }
+});
+
+test('CHỮ KÝ: kỳ quan của MỌI kỷ vẫn đối xứng tuyệt đối sau khi thêm chữ ký', () => {
+  // ⚠️ Bài "kỳ quan đối xứng" ở trên chỉ soi kỷ 1. Chữ ký là khối KẾT CẤU đặt lệch tâm ở nhiều kỷ
+  // (tháp Đức, ống khói Anh, tháp chuông Ý), nên nguy cơ làm lệch kỳ quan nay có ở CẢ 15 kỷ chứ
+  // không riêng kỷ có `rough` cao. Duyệt đủ 15 — đúng luật "bất biến kiểu 'các thứ này phải …' thì
+  // phải duyệt hết, đừng duyệt mẫu".
+  //
+  // ⚠️ VÀ PHÉP ĐO PHẢI ĐO ĐÚNG THỨ NÓ MUỐN BẢO CHỨNG — bài này đã sai HAI LẦN trước khi đúng, và cả
+  // hai lần đều là *phép đo hỏng*, không phải mã hỏng. Ghi lại vì cách sai rất dễ lặp:
+  //   (1) Bản đầu canh `ry === 0` cho MỌI khối kết cấu → đỏ ở kỷ 5. Thủ phạm là mái `gable` nằm
+  //       ĐÚNG TÂM quay nóc 90° — vẫn cân hai bên y như cũ. Xoay một khối ở tâm không phá gì.
+  //   (2) Bản thứ hai chỉ canh khối LỆCH TÂM → đỏ ở kỷ 15 với `ry = π/4`. Đó là vòng xuyến Dubai:
+  //       tám tấm kính quanh một vòng tròn, mỗi tấm quay để quay mặt ra ngoài. Cả vòng đối xứng
+  //       hoàn hảo — cấm xoay ở đây là cấm luôn hình vòng.
+  //   (3) Bản thứ ba đòi mỗi khối lệch tâm có bạn ĐỐI XỨNG QUA TÂM → đỏ ở kỷ 3 với một khối `dark`
+  //       ở (0 · +0,684). Đó là CỬA RA VÀO. Mặt tiền nào cũng có cửa ở phía trước và không có cửa
+  //       ở phía sau — đòi đối xứng trước–sau là đòi một thứ chính kiến trúc thật không có.
+  // ⇒ Bất biến ĐÚNG là **đối xứng TRÁI–PHẢI qua mặt phẳng x = 0**: đó mới là thứ mắt đọc ra khi
+  // nhìn một cung điện, và cũng là thứ cầu thang ziggurat / hiên Panthéon / cửa ra vào đều tôn
+  // trọng. Khối ở `(x, z)` quay `ry` phải có bạn ở `(−x, z)` quay `−ry` (so theo modulo π vì hộp
+  // quay `ry` và `ry + π` trông y hệt). Phép này bắt đúng lỗi thật vừa tìm ra — bốn tháp góc kỷ 5
+  // có bạn đúng vị trí nhưng nóc mái lệch nhau π/2 — mà không kết tội oan cái vòng lẫn cái cửa.
+  const EPS = 1e-6;
+  const modPi = (a) => {
+    const m = a % Math.PI;
+    return m < 0 ? m + Math.PI : m;
+  };
+  for (const bp of ALL_BLUEPRINTS.filter((b) => b.type === 'wonder')) {
+    const spec = buildBuildingSpec({ ...bp, level: 1 });
+    const structural = spec.parts.filter((q) => !q.deco);
+    const offAxis = structural.filter((p) => Math.abs(p.x) > EPS);
+
+    for (const p of offAxis) {
+      const twin = structural.find((q) => q !== p
+        && Math.abs(q.x + p.x) < 1e-9 && Math.abs(q.z - p.z) < 1e-9
+        && q.role === p.role && q.shape === p.shape
+        && Math.abs(modPi(q.ry) - modPi(-p.ry)) < 1e-9);
+      assert.ok(twin,
+        `kỷ ${bp.era}: khối kết cấu ${p.shape}/${p.role} ở (${p.x.toFixed(3)}, ${p.z.toFixed(3)}) `
+        + `xoay ${p.ry.toFixed(4)} KHÔNG có khối đối xứng trái–phải — kỳ quan đứng giữa thành phố `
+        + 'mà lệch thì cả bố cục mất điểm tựa');
+    }
+
+    // Và tổng lệch tâm phải bằng 0 — phép canh tổng thể, rẻ, bắt được ca "thừa một khối lẻ".
+    const sumX = structural.reduce((s, p) => s + p.x, 0);
+    assert.ok(Math.abs(sumX) < 1e-9,
+      `kỷ ${bp.era}: kỳ quan lệch ${sumX.toFixed(4)} theo trục X sau khi thêm chữ ký`);
+    // Trục Z cố ý KHÔNG canh tổng: cầu thang ziggurat và hiên Panthéon đều nằm ở mặt TRƯỚC — đó là
+    // đối xứng trái–phải của một mặt tiền, đúng như công trình thật, không phải lỗi.
+  }
+});
+
+test('CHỮ KÝ: tên lạ thì công trình vẫn dựng bình thường, không nổ', () => {
+  // Dữ liệu hỏng từ cloud có thể mang một `era` lạ; `getEraStyle` đã lo phần đó, nhưng nếu ai đó
+  // đổi tên một chữ ký mà quên sửa bảng kỷ thì màn Thành Phố không được trắng.
+  const out = [];
+  assert.equal(emitSignature(out, 'khong-co-that', { bpId: 'x', w: 1, d: 1, x: 0, z: 0, base: 0, top: 1 }), false);
+  assert.equal(out.length, 0);
+  assert.equal(emitSignature(out, 'tstone', null), false);
+});
+
+test('BỀ NGANG: không công trình nào phình ra quá khu đất của nó (bánh cóc, không được tệ thêm)', () => {
+  // ⚠️ SỐ ĐO, KHÔNG PHẢI ƯỚC ĐOÁN (2026-08-14): đo cả 75 bản vẽ ở cấp 3 thì công trình rộng nhất
+  // là `bp_thanh_quan_viet` (kỷ 6, kỳ quan epic) — **3,687 ô** trên một khu đất rộng 3 ô. Thủ phạm
+  // là chi tiết `courtyard` (`w * 1.1` đặt lệch `d * 0.82`), và nó **đã có từ trước Phase 6A** —
+  // đo lại trên đúng commit trước đó ra cùng con số. Phân bố: 5/75 vượt 2,6 · 2/75 vượt 3,0.
+  //
+  // ⚠️ VÌ SAO KHOÁ Ở 3,7 CHỨ KHÔNG PHẢI Ở CON SỐ "ĐÚNG": chưa ai NHÌN xem 3,687 có thật sự làm hai
+  // công trình cắm vào nhau trên màn hình không — và luật của dự án này là *nhìn rồi mới kết luận*,
+  // không suy từ số. Nên đây là một cái BÁNH CÓC: nó không nói "3,687 là đúng", nó chỉ bảo đảm con
+  // số ấy KHÔNG ÂM THẦM PHÌNH THÊM trong khi chờ soi bằng mắt. Xem `TECH_DEBT.md` #21.
+  const SPAN_RATCHET = 3.7;
+  let worst = { span: 0 };
+  for (const bp of ALL_BLUEPRINTS) {
+    const spec = buildBuildingSpec({ ...bp, level: 3 });
+    if (spec.span > worst.span) worst = { ...bp, span: spec.span };
+    assert.ok(spec.span <= SPAN_RATCHET,
+      `kỷ ${bp.era} · "${bp.bpId}" rộng ${spec.span.toFixed(3)} ô, vượt bánh cóc ${SPAN_RATCHET} `
+      + '— một thay đổi vừa rồi làm công trình phình thêm; xem TECH_DEBT #21 trước khi nới số này');
+  }
+  console.log(`   [bề ngang] rộng nhất: ${worst.bpId} kỷ ${worst.era} — ${worst.span.toFixed(3)} / ${SPAN_RATCHET} ô`);
 });

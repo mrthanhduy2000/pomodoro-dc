@@ -12,6 +12,29 @@
 
 ---
 
+## 2026-08-14 — Chữ ký kiến trúc: mỗi kỷ một công trình có thật (Phase 6A)
+
+**Mục đích.** Đàm: *"phải ra nét đặc trưng và ra signature"*. Phase 5B đã tách được 15 kỷ theo TỈ LỆ
+(cao/rộng), tức sửa được hình bóng nhìn từ xa. Lại gần thì vẫn là hộp đội mái.
+
+**Phạm vi.** File mới `src/engine/city3d/signature.js` — trục thứ ba của ngôn ngữ hình khối, sau
+`eraStyle` (nét vẽ) và `archetypes` (khối tích). Mỗi kỷ một bộ phận chép từ công trình có thật của
+nước biểu tượng; `eraStyle.js` thêm trường `signature` và hàm `roofRise` (dùng chung công thức mái
+với `buildingSpec`, để chữ ký đặt đúng chỗ những thứ NẰM TRÊN mái).
+
+**Vì sao cần một trục nữa.** `roof` chỉ có 9 giá trị và `windows` có 7 cho 15 kỷ ⇒ buộc phải dùng
+lại. `motifs` thì chỉ dựng ở hạng rare/epic ⇒ 30 trong 75 căn nhà của cả game không có lấy một chi
+tiết đặc trưng nào. Chữ ký khác cả hai: mỗi kỷ một cái riêng, và hiện ở mọi hạng.
+
+**Ảnh hưởng.** Công trình hạng `common` từ ~4 khối lên 6–35 khối. Ngân sách tam giác 2.208 → 2.384
+trên trần 8.000 (30%). Không đụng state, không thêm dependency.
+
+**Lỗi vá kèm.** Bốn tháp góc của kỳ quan kỷ 5 và kỷ 8 mỗi cái quay nóc mái một hướng — lỗi đối xứng
+có thật, chạy nhiều tháng, không có gì đỏ lên vì bài test đối xứng cũ chỉ soi kỷ 1 (mái nón).
+
+**Tương thích.** Không có migration. Bảo tàng kỷ cũ dựng lại y hệt về VỊ TRÍ; HÌNH DÁNG có thêm chữ
+ký — đây là thay đổi hình ảnh có chủ đích, không phải mất dữ liệu.
+
 ## 2026-08-14 — Xưởng trống không còn nghĩa là im lặng (Phase 5D)
 
 - **Mục đích**: Đàm — *"mỗi phiên hoàn thành thì phải có nhà xây lên hay gì đó"*. `TECH_DEBT #14`

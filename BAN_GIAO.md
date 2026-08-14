@@ -6,7 +6,32 @@
 > chọn: `ARCHITECTURE_DECISIONS.md`. Nợ kỹ thuật: `TECH_DEBT.md`. Migration: `MIGRATION.md`. Tóm
 > tắt theo mốc: `CHANGELOG.md`.
 > **NGUYÊN TẮC ƯU TIÊN SỐ 1:** (1) mọi phiên AI phải đọc file này + `CLAUDE.md` + các file liên quan TRƯỚC khi làm; (2) sau MỌI cập nhật dù nhỏ, phải cập nhật ngay file này + `CLAUDE.md` + các file liên quan khác.
-> Cập nhật lần cuối: **2026-08-14** — **Phase 5D**: **XƯỞNG TRỐNG KHÔNG CÒN NGHĨA LÀ IM LẶNG.**
+> Cập nhật lần cuối: **2026-08-14** — **Phase 6A**: **CHỮ KÝ KIẾN TRÚC — mỗi kỷ một bộ phận lấy
+> từ công trình CÓ THẬT.** Đàm: *"phải ra nét đặc trưng và ra signature"*. Phase 5B đã cho 15 kỷ 15
+> tỉ lệ khác nhau, nhưng đó chỉ sửa được HÌNH BÓNG nhìn từ xa; lại gần thì vẫn là hộp đội mái, vì
+> hai tầng chi tiết hiện có đều không lấp nổi khoảng đó: `roof` chỉ có **9** giá trị và `windows`
+> có **7** cho 15 kỷ ⇒ buộc phải dùng lại (kỷ 1+2 chung `cone`, kỷ 12/13/14 chung `flat`); còn
+> `motifs` thì `RARITY_MOTIF_BUDGET.common = 0` ⇒ **30 trong 75 căn nhà của cả game là hộp trơn,
+> không một chi tiết nào**. File mới `src/engine/city3d/signature.js` là trục thứ ba: **mỗi kỷ MỘT
+> chữ ký, không kỷ nào dùng chung, và dựng ở MỌI hạng kể cả `common`** — cột đá chữ T Göbekli Tepe ·
+> gờ cavetto Ai Cập · cầu thang ziggurat Ur · đấu củng Trung Hoa · tháp tròn Burg Eltz · **đầu đao
+> đình làng Việt** · tháp chuông Giotto + nhà rửa tội bát giác · tháp Belém · hiên cột Panthéon ·
+> ống khói Manchester · **bồn nước gỗ trên mái New York** · ụ súng Stalingrad · viên nang Nakagin
+> có cửa TRÒN · sàn trời Marina Bay · vòng xuyến Bảo tàng Tương Lai. Đo được: công trình hạng
+> `common` đi từ ~4 khối lên **6–35 khối**; ngân sách tam giác 2.208 → **2.384 / 8.000 (30%)**.
+> ⚠️ **Và nó lôi ra một lỗi ĐỐI XỨNG có thật, chạy nhiều tháng không ai thấy**: bốn tháp góc của kỳ
+> quan kỷ 5 và kỷ 8 (hai kỷ mái `gable`) mỗi cái quay nóc mái một hướng khác nhau, vì hàm băm lấy
+> khoá theo `x|z` của TỪNG mảng nhà. Bài test đối xứng cũ chỉ soi kỷ 1 (mái `cone`, không có nóc để
+> mà quay) nên chưa bao giờ chạm tới. Đã vá tận gốc (`emitRoof` nhận `ctx.symmetric`).
+> ⚠️ **Bài test đối xứng mới đã sai HAI LẦN trước khi đúng, cả hai đều là PHÉP ĐO hỏng chứ không
+> phải mã hỏng** — ghi lại vì cách sai rất dễ lặp: canh `ry === 0` thì kết tội oan mái `gable` nằm
+> đúng tâm; canh "đối xứng qua TÂM" thì kết tội oan **cửa ra vào** (mặt tiền nào cũng có cửa trước
+> và không có cửa sau). Bất biến đúng là **đối xứng TRÁI–PHẢI qua mặt phẳng x = 0**.
+> Kèm số đo mới: công trình rộng nhất là `bp_thanh_quan_viet` **3,687 ô** trên khu đất 3 ô — lỗi
+> **có sẵn từ trước** (đo lại trên đúng commit cũ ra cùng số), thủ phạm là chi tiết `courtyard`.
+> Đã khoá bằng bánh cóc 3,7 + `TECH_DEBT #21`. **587 bài test.**
+>
+> Trước đó cùng ngày — **Phase 5D**: **XƯỞNG TRỐNG KHÔNG CÒN NGHĨA LÀ IM LẶNG.**
 > Đàm: *"mỗi phiên hoàn thành thì phải có nhà xây lên hay gì đó"*. `TECH_DEBT #14` đo được **95%
 > số phiên không có lễ mừng nào** — nhánh 3 của `buildGrowthMoment` trả thẳng `null` khi xưởng
 > trống. Cách chữa RẺ là in một câu động viên chung chung, và luật trung thực ở đầu `cityMoment.js`

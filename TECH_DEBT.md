@@ -715,6 +715,42 @@
 
 ---
 
+## #21 — Công trình rộng nhất **3,687 ô** trên một khu đất rộng **3 ô** — chưa ai NHÌN xem nó có cắm vào nhà bên không
+
+- **Module**: `src/engine/city3d/archetypes.js` (`masses`) + `buildingSpec.js` (chi tiết `courtyard`)
+- **Priority**: Low
+- **Severity**: Low
+- **Impact**: nếu thật sự tràn thì hai công trình cạnh nhau có thể lồng vào nhau ở kỷ 6 và kỷ 9 —
+  xấu, nhưng không mất dữ liệu và không ảnh hưởng hiệu năng.
+- **SỐ ĐO** (2026-08-14, Phase 6A — đo cả 75 bản vẽ ở cấp 3, tái lập được bằng
+  `buildingSpec.test.js` bài "BỀ NGANG"): rộng nhất `bp_thanh_quan_viet` (kỷ 6, kỳ quan epic)
+  **3,687 ô**; thứ nhì `bp_quoc_hoi` (kỷ 9) 3,019. Phân bố: **5/75 vượt 2,6 · 2/75 vượt 3,0**.
+- **Root Cause**: chi tiết `courtyard` đặt một khối rộng `w * 1.1` lệch hẳn `d * 0.82` khỏi tâm, nên
+  hình bao nở ra gần gấp đôi. `archetypes.js` ghi mốc thiết kế là *"kỳ quan được phép trải tới
+  ~1.7 ô"* — tức con số thật đang gấp hơn hai lần mốc mà chính file đó tự đặt ra.
+- **⚠️ CÓ TỪ TRƯỚC PHASE 6A**: đo lại trên đúng commit `f324683` (trước khi thêm chữ ký) ra **cùng
+  con số 3,687**. Chữ ký kiến trúc KHÔNG làm nó tệ thêm.
+- **Current Risk**: thấp — không có gì hỏng, không ai từng kêu.
+- **Future Risk**: trung bình. Mọi lần thêm chi tiết mới vào `emitMotif`/`emitSignature` đều có thể
+  đẩy con số này lên mà **không có gì đỏ lên**, vì trước hôm nay không hề có phép đo nào cho bề
+  ngang (chỉ có phép đo TỈ LỆ cao/rộng, mà tỉ lệ thì tràn ngang vẫn giữ nguyên).
+- **Recommended Solution**: ⚠️ **ĐỪNG SỬA TRƯỚC KHI NHÌN.** Luật của dự án này là *nhìn rồi mới kết
+  luận về mỹ thuật*, và chưa ai chụp một thành phố kỷ 6 đủ 5 công trình để xem hai khu đất có thật
+  sự chạm nhau không. Có thể hoá ra sân đình tràn sang ô bên lại **đẹp** (thành phố thật thì nhà
+  cũng không dừng đúng ranh giới lô đất). Trình tự đúng: dựng fixture kỷ 6 đủ 5 công trình → chụp →
+  nếu chồng lấn xấu thì kẹp `courtyard` lại, nếu không thì đóng mục này và sửa lại mốc "~1.7 ô" ở
+  `archetypes.js` cho khớp sự thật.
+- **Estimated Complexity**: Trivial (kẹp một hằng số) — phần khó là quyết định có nên kẹp không.
+- **Blocking Conditions**: cần một lần soi bằng mắt, không cần Đàm quyết.
+- **Review Trigger**: bất kỳ ai chạm vào `emitMotif`/`emitSignature`/`archetypes.masses` — bánh cóc
+  3,7 ở `buildingSpec.test.js` sẽ đỏ nếu con số phình thêm.
+- **Owner**: (chưa gán)
+- **Status**: Open — phát hiện 2026-08-14 khi thêm chữ ký kiến trúc, đúng lúc đi tìm xem chữ ký có
+  làm công trình phình ra không. Nó không, nhưng phép đo dựng để kiểm điều đó lại tìm ra một thứ
+  khác đã nằm sẵn ở đó.
+
+---
+
 ## #14 — **95% số phiên tập trung KHÔNG có lễ mừng nào** — và càng chơi lâu càng im lặng
 
 - **Module**: cân bằng game — `src/engine/constants.js` (`CRAFT_QUEUE_SLOTS`, `sessionsToComplete`)

@@ -118,6 +118,14 @@
 │   │   │   ├── eraStyle.js        # NGỮ PHÁP theo 15 kỷ: vật liệu, kiểu mái, cửa sổ, mô-típ
 │   │   │   ├── archetypes.js      # Bóng dáng theo 4 LOẠI (hạ tầng/kinh tế/phòng thủ/kỳ quan)
 │   │   │   │                      #   + quy mô theo 3 ĐỘ HIẾM
+│   │   │   ├── signature.js       # CHỮ KÝ KIẾN TRÚC: mỗi kỷ MỘT bộ phận lấy từ công trình CÓ THẬT
+│   │   │   │                      #   của nước biểu tượng (cột chữ T Göbekli Tepe · cầu thang
+│   │   │   │                      #   ziggurat · đấu củng · đầu đao đình Việt · tháp chuông Giotto
+│   │   │   │                      #   · bồn nước mái NY · viên nang Nakagin · vòng xuyến Dubai…)
+│   │   │   │                      #   ⚠️ TRỤC DUY NHẤT có đủ 15 giá trị cho 15 kỷ: `roof` chỉ có 9
+│   │   │   │                      #   và `windows` có 7 nên hai trục ấy BUỘC phải dùng lại
+│   │   │   │                      #   ⚠️ Dựng ở MỌI hạng kể cả `common` — khác `motifs` (chỉ
+│   │   │   │                      #   rare/epic, tức 30/75 căn trước đây là hộp trơn)
 │   │   │   ├── buildingSpec.js    # NƠI 3 TRỤC GẶP NHAU: (kỷ × loại × độ hiếm) → mô tả hình học
 │   │   │   ├── propSpec.js        # Cây, đá, đèn, mặt nước, ruộng
 │   │   │   │                      #   ⚠️ Mặt nước dùng vai màu RIÊNG (`water`), KHÔNG dùng chung

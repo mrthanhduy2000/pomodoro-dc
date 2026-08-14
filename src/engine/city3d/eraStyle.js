@@ -74,6 +74,7 @@ export const ERA_STYLES = {
   1: {
     name: 'đá thô & lều da thú',
     country: 'Thổ Nhĩ Kỳ', landmark: 'cự thạch Göbekli Tepe',
+    signature: 'tstone',
     // ⚠️ `eaves` 0,04 và `roofPitch` 0,95 — KHÔNG phải 0,16 / 0,62. Ảnh quét ngày 2026-08-14 cho
     // thấy lều kỷ 1 đọc ra thành CÂY NẤM (hay cái ô che nắng): mái nón thò ra khỏi tường 0,16 tạo
     // đúng cái vành mũ nấm, còn thân thóp 0,74 thì thành cái cuống. Lều da thú thật là một khối
@@ -89,6 +90,7 @@ export const ERA_STYLES = {
   2: {
     name: 'vách đất & mái tranh',
     country: 'Ai Cập', landmark: 'làng ven sông Nin',
+    signature: 'batter',
     bodySides: 4, bodyTaper: 0.94, storyHeight: 0.66,
     massScale: 0.46, spread: 0.98,
     roof: 'cone', roofPitch: 0.72, eaves: 0.2,
@@ -99,6 +101,7 @@ export const ERA_STYLES = {
   3: {
     name: 'gạch bùn & giật cấp',
     country: 'Iraq', landmark: 'ziggurat thành Ur',
+    signature: 'ziggurStair',
     bodySides: 4, bodyTaper: 0.86, storyHeight: 0.6,
     massScale: 0.78, spread: 1.18,
     roof: 'stepped', roofPitch: 0.3, eaves: 0.06,
@@ -109,6 +112,7 @@ export const ERA_STYLES = {
   4: {
     name: 'mái chồng diềm cong',
     country: 'Trung Quốc', landmark: 'điện mái chồng, đấu củng',
+    signature: 'dougong',
     bodySides: 4, bodyTaper: 1, storyHeight: 0.68,
     massScale: 0.72, spread: 1.1,
     roof: 'tiered', roofPitch: 0.34, eaves: 0.34,
@@ -119,6 +123,7 @@ export const ERA_STYLES = {
   5: {
     name: 'đá tảng & mái dốc đứng',
     country: 'Đức', landmark: 'lâu đài đá Burg Eltz',
+    signature: 'turret',
     bodySides: 4, bodyTaper: 0.97, storyHeight: 0.72,
     massScale: 0.7, spread: 0.96,
     roof: 'gable', roofPitch: 0.92, eaves: 0.12,
@@ -135,6 +140,7 @@ export const ERA_STYLES = {
     // Nay có thêm nét thứ ba tách hẳn: đình làng Việt BÈ NGANG hơn và THẤP hơn điện Hán.
     name: 'ngói âm dương & sân trong',
     country: 'Việt Nam', landmark: 'đình làng Bắc Bộ',
+    signature: 'daoDinh',
     bodySides: 4, bodyTaper: 0.92, storyHeight: 0.66,
     massScale: 0.68, spread: 1.16,
     roof: 'tiered', roofPitch: 0.4, eaves: 0.4,
@@ -146,6 +152,7 @@ export const ERA_STYLES = {
     // Kỷ Phục Hưng — đúng cái hình mẫu thẩm mỹ Đàm nhắc tới, và cũng đúng nước anh nêu làm ví dụ.
     name: 'vòm & cột & đối xứng',
     country: 'Ý', landmark: 'vòm Duomo Firenze',
+    signature: 'campanile',
     bodySides: 4, bodyTaper: 1, storyHeight: 0.74,
     massScale: 0.74, spread: 1.02,
     roof: 'dome', roofPitch: 0.56, eaves: 0.22,
@@ -156,6 +163,7 @@ export const ERA_STYLES = {
   8: {
     name: 'kho cảng & cột buồm',
     country: 'Bồ Đào Nha', landmark: 'bến cảng Lisboa',
+    signature: 'belem',
     bodySides: 4, bodyTaper: 0.98, storyHeight: 0.7,
     massScale: 0.64, spread: 1.12,
     roof: 'gable', roofPitch: 0.52, eaves: 0.24,
@@ -167,6 +175,7 @@ export const ERA_STYLES = {
     // Nước thứ hai Đàm nêu làm ví dụ. Tân cổ điển Pháp: fronton tam giác trên hàng cột.
     name: 'tân cổ điển & fronton',
     country: 'Pháp', landmark: 'điện Panthéon Paris',
+    signature: 'portico',
     bodySides: 4, bodyTaper: 1, storyHeight: 0.76,
     massScale: 0.92, spread: 1,
     roof: 'pyramid', roofPitch: 0.28, eaves: 0.26,
@@ -177,6 +186,7 @@ export const ERA_STYLES = {
   10: {
     name: 'gạch nung & ống khói',
     country: 'Anh', landmark: 'nhà máy gạch đỏ Manchester',
+    signature: 'stack',
     bodySides: 4, bodyTaper: 1, storyHeight: 0.7,
     massScale: 0.9, spread: 1.16,
     roof: 'sawtooth', roofPitch: 0.3, eaves: 0.1,
@@ -187,6 +197,7 @@ export const ERA_STYLES = {
   11: {
     name: 'mặt tiền đồ sộ mạ vàng',
     country: 'Mỹ', landmark: 'New York thời Mạ Vàng',
+    signature: 'watertower',
     bodySides: 4, bodyTaper: 1, storyHeight: 0.8,
     massScale: 0.86, spread: 0.94,
     roof: 'stepped', roofPitch: 0.24, eaves: 0.2,
@@ -197,6 +208,7 @@ export const ERA_STYLES = {
   12: {
     name: 'bê tông & lô cốt',
     country: 'Nga', landmark: 'lô cốt Stalingrad',
+    signature: 'pillbox',
     bodySides: 4, bodyTaper: 0.96, storyHeight: 0.6,
     massScale: 1.02, spread: 1.1,
     roof: 'flat', roofPitch: 0.12, eaves: 0.14,
@@ -209,6 +221,7 @@ export const ERA_STYLES = {
     // ghép + ăng-ten": tháp nang Nakagin đúng là những viên hộp bê tông cắm quanh một lõi.
     name: 'khối bê tông & ăng-ten',
     country: 'Nhật Bản', landmark: 'tháp nang Nakagin',
+    signature: 'capsule',
     bodySides: 4, bodyTaper: 1, storyHeight: 0.66,
     massScale: 1.24, spread: 0.92,
     roof: 'flat', roofPitch: 0.1, eaves: 0.08,
@@ -219,6 +232,7 @@ export const ERA_STYLES = {
   14: {
     name: 'kính & cao tầng',
     country: 'Singapore', landmark: 'tháp kính Marina Bay',
+    signature: 'skydeck',
     bodySides: 4, bodyTaper: 1, storyHeight: 0.84,
     massScale: 1.36, spread: 0.8,
     roof: 'flat', roofPitch: 0.08, eaves: 0.05,
@@ -229,6 +243,7 @@ export const ERA_STYLES = {
   15: {
     name: 'khối lơ lửng & vòng sáng',
     country: 'UAE', landmark: 'Bảo tàng Tương Lai Dubai',
+    signature: 'torus',
     bodySides: 8, bodyTaper: 0.9, storyHeight: 0.8,
     massScale: 1.72, spread: 0.76,
     roof: 'blade', roofPitch: 0.16, eaves: 0.3,
@@ -237,6 +252,20 @@ export const ERA_STYLES = {
     rough: 0,
   },
 };
+
+/**
+ * Chiều cao phần mái nhô lên trên đỉnh tường, tính từ độ dốc của kỷ và mặt bằng khối.
+ *
+ * ⚠️ Ở ĐÂY VÌ NÓ PHẢI CÓ ĐÚNG MỘT CÔNG THỨC. `emitRoof` (`buildingSpec.js`) dùng con số này để dựng
+ * mái; `signature.js` cũng cần nó để đặt những thứ NẰM TRÊN MÁI (bồn nước kỷ 11, sàn trời kỷ 14).
+ * Hai bên tự tính lấy thì sớm muộn sẽ lệch nhau, và triệu chứng là một cái bồn nước lửng lơ giữa
+ * không trung hoặc chôn nửa trong mái — đúng loại lỗi "một luật hai công thức" mà dự án này đã trả
+ * giá nhiều lần (xem `CLAUDE.md`).
+ */
+export function roofRise(style, w, d) {
+  const pitch = Number.isFinite(style?.roofPitch) ? style.roofPitch : 0.3;
+  return Math.max(0.08, pitch) * Math.max(Number.isFinite(w) ? w : 1, Number.isFinite(d) ? d : 1);
+}
 
 /** Kỷ mặc định khi gặp số kỷ lạ (dữ liệu hỏng từ cloud) — thà ra một căn nhà thường còn hơn nổ. */
 const DEFAULT_ERA = 2;

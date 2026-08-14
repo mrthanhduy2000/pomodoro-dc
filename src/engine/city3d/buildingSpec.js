@@ -17,6 +17,7 @@ import { hashId } from '../cityLayout';
 import { gable, prism, countSpecTriangles, specHeight, specSpan } from './parts';
 import { getEraStyle } from './eraStyle';
 import { getArchetype, getMassing, getMotifBudget, getRarityScale } from './archetypes';
+import { emitSignature } from './signature';
 
 /** Bề dày mảng tường phụ / gờ / diềm. Đủ để bắt sáng, đủ mỏng để không ăn vào khối chính. */
 const TRIM_THICKNESS = 0.055;
@@ -75,7 +76,14 @@ function emitRoof(out, { w, d, top, x, z }, style, ctx) {
       out.push(gable({
         x, z, y: top, w: rw, d: rd, h: pitch, role: 'roof',
         // Xoay 90° cho một phần công trình để dãy nhà không cùng quay một hướng như xếp hàng.
-        ry: unit(`${ctx.bpId}|ridge|${x}|${z}`) > 0.55 ? Math.PI / 2 : 0,
+        //
+        // ⚠️ TRỪ KỲ QUAN — lỗi thật, phát hiện 2026-08-14 khi bài test đối xứng được mở rộng ra cả
+        // 15 kỷ. Hàm băm ở đây lấy khoá theo `x|z` của TỪNG MẢNG NHÀ, mà kỳ quan epic có bốn tháp
+        // góc ở bốn toạ độ khác nhau ⇒ bốn cái mái quay bốn hướng độc lập nhau. Trên màn hình đó là
+        // một toà cung điện đối xứng hoàn hảo đội bốn cái mái lệch pha. Bài test cũ không bắt được
+        // vì nó chỉ soi kỷ 1 (mái `cone`, không có nóc để mà quay); chỉ hai kỷ mái `gable` (5 và 8)
+        // dính, và cả hai đều đã chạy như vậy nhiều tháng mà không có gì đỏ lên.
+        ry: !ctx.symmetric && unit(`${ctx.bpId}|ridge|${x}|${z}`) > 0.55 ? Math.PI / 2 : 0,
       }));
       break;
 
@@ -514,7 +522,11 @@ export function buildBuildingSpec({ bpId, era, type, rarity = 'common', level = 
       sides: style.bodySides, ry: jitterR, role: 'stone',
     }));
 
-    const ctx = { bpId: id, era, rarity, level: safeLevel, w, d, x, z, base, top, style };
+    const ctx = {
+      bpId: id, era, rarity, level: safeLevel, w, d, x, z, base, top, style,
+      // ⚠️ `emitRoof` cần biết đây có phải kỳ quan không — xem lý do ở nhánh `gable`.
+      symmetric: Boolean(archetype.symmetric),
+    };
 
     if (!mass.low) {
       // ⚠️ Tháp góc KHÔNG gắn cửa sổ. Chúng chỉ rộng ~0.2 ô: nhồi cửa sổ vào đó vừa không nhìn ra
@@ -531,6 +543,28 @@ export function buildBuildingSpec({ bpId, era, type, rarity = 'common', level = 
     }
   });
 
+  // ── CHỮ KÝ KIẾN TRÚC — bộ phận lấy từ một công trình CÓ THẬT của nước biểu tượng ──────────
+  //
+  // ⚠️ ĐẶT TRƯỚC KHỐI `deco` VÀ KHÔNG ĐƯỢC ĐÁNH DẤU `deco`: chữ ký là CĂN CƯỚC của kỷ, không phải
+  // trang trí. Bỏ nó đi thì kỷ 5 hết là lâu đài Đức và kỷ 13 hết là Nakagin — tức công trình đổi
+  // danh tính, đúng ranh giới "kết cấu vs trang trí" mà chú thích dưới đây định nghĩa.
+  //
+  // ⚠️ VÀ NÓ DỰNG Ở MỌI HẠNG, KỂ CẢ `common`. Đây là điểm khác quan trọng nhất so với `motifs`:
+  // `RARITY_MOTIF_BUDGET.common = 0` nghĩa là 2 trong 5 công trình mỗi kỷ (30 trong 75 căn của cả
+  // game) hiện KHÔNG có lấy một chi tiết đặc trưng nào — chúng là hộp trơn đội mái. Độ hiếm nên
+  // quyết định công trình BỀ THẾ tới đâu, không nên quyết định nó có thuộc về kỷ nào hay không.
+  const mainMass = masses.find((m) => !m.low) ?? masses[0];
+  const mainMassHeight = massHeight(mainMass, style, archetype, rarity, safeLevel);
+  const mainCtx = {
+    bpId: id, era, rarity, style,
+    w: mainMass.w * spread, d: mainMass.d * spread,
+    x: mainMass.x * spread, z: mainMass.z * spread,
+    base: 0, top: mainMassHeight,
+    // Kỳ quan đứng giữa thành phố ⇒ chữ ký phải cân hai bên và tuyệt đối không xoay.
+    symmetric: Boolean(archetype.symmetric),
+  };
+  emitSignature(parts, style.signature, mainCtx);
+
   // ── Chi tiết đặc trưng của kỷ, số lượng theo độ hiếm ──────────────────────
   // ⚠️ Mọi khối sinh ra từ đây trở xuống được đánh dấu `deco: true`. Đó KHÔNG phải cờ phục vụ
   // test: nó tách "kết cấu" (thân, mái, tháp — bỏ đi là công trình biến dạng) khỏi "trang trí"
@@ -540,17 +574,11 @@ export function buildBuildingSpec({ bpId, era, type, rarity = 'common', level = 
   const structuralCount = parts.length;
   const budget = getMotifBudget(rarity);
   if (budget > 0) {
-    const main = masses.find((m) => !m.low) ?? masses[0];
-    const mainHeight = massHeight(main, style, archetype, rarity, safeLevel);
-    const motifCtx = {
-      // ⚠️ Chi tiết đặc trưng cũng phải nhân `spread`. Bỏ sót chỗ này thì hàng cột của kỷ 3 (bè
-      // 1,18) đứng thụt vào giữa mặt tiền, còn cột buồm của kỷ 14 (mảnh 0,80) chọc ra ngoài tường.
-      bpId: id, w: main.w * spread, d: main.d * spread,
-      x: main.x * spread, z: main.z * spread,
-      base: 0, top: mainHeight,
-    };
+    // ⚠️ Chi tiết đặc trưng cũng phải nhân `spread` — đã lo sẵn trong `mainCtx` ở trên. Bỏ sót chỗ
+    // này thì hàng cột của kỷ 3 (bè 1,18) đứng thụt vào giữa mặt tiền, còn cột buồm của kỷ 14
+    // (mảnh 0,80) chọc ra ngoài tường.
     for (const name of style.motifs.slice(0, budget)) {
-      emitMotif(parts, name, motifCtx);
+      emitMotif(parts, name, mainCtx);
     }
   }
   for (let i = structuralCount; i < parts.length; i += 1) parts[i].deco = true;

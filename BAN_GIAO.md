@@ -15,10 +15,21 @@
 > cảnh vật. Nay nhánh 3 **ĐO** (gọi lại đúng `deriveProps`/`deriveResidentCount` đang dựng thành
 > phố, với `sessionCount` và `sessionCount − 1`, rồi so hai kết quả) chứ không suy đoán — nên nó
 > KHÔNG THỂ khoe một thứ không xảy ra, và ngày mạng đường mở hết thì nhánh đó **tự tắt** mà không
-> cần ai nhớ sửa. Đo được: ca xưởng-trống nay **44/44 phiên đầu mỗi kỷ đều có tin thật** (trước là
-> 0), tính trên 80 phiên đầu thì 55–69% tuỳ số công trình. Thanh tiến độ **tự ẩn** khi không có cú
-> nhích (nhánh cư dân/cảnh vật không có mẫu số — vẽ thanh rỗng ở đó là bịa ra một lời chê giữa màn
-> khen). **582 bài test.**
+> cần ai nhớ sửa. Thanh tiến độ **tự ẩn** khi không có cú nhích (nhánh cư dân/cảnh vật không có mẫu
+> số — vẽ thanh rỗng ở đó là bịa ra một lời chê giữa màn khen). **582 bài test.**
+> ⚠️ **ĐÍNH CHÍNH CÙNG NGÀY — con số nghiệm thu đầu tiên tôi ghi ở đây là ƯỚC LƯỢNG, không phải số
+> đo.** Bản đầu viết *"44/44 phiên đầu mỗi kỷ… tính trên 80 phiên đầu thì 55–69% tuỳ số công
+> trình"*. Chạy `buildGrowthMoment` thật qua 200 phiên × 4 kỷ × 3 mức công trình thì ra **55% phẳng
+> lì ở cả 12 cấu hình** — cái khoảng "55–69%" **chưa từng tồn tại**, và số công trình **không hề**
+> ảnh hưởng. Ghép với nhịp thật của `scripts/simulate-pacing.mjs` (370 ngày × 12 phiên = 4 440
+> phiên, `eraEntryDays` thật): nhánh mới nói được ở **660/4 440 phiên = 14,9%** — tức mỗi kỷ đúng
+> **44 phiên đầu** (số ô đường), rồi im. Và nó **xấu dần y hệt hình dạng của `#14`**: kỷ 1 nói được
+> 92% số phiên → kỷ 7: 24% → **kỷ 15: 5%**, vì mạng đường cố định 44 ô còn kỷ thì dài dần (48 phiên
+> → 840 phiên). ⇒ Im lặng đi từ 95% xuống khoảng **80–85%** (không chốt được con số chính xác vì
+> phần chồng lấn với 215 phiên vốn đã có lễ mừng chưa được mô phỏng chung). **`TECH_DEBT #14` VẪN
+> MỞ** — xem số đo đầy đủ ở đó. 👉 Bài học lặp lại đúng cái đã ghi ở Phase 4C: **một con số nghiệm
+> thu phải đi kèm CÔNG CỤ đã đo ra nó**; số nào viết ra mà không chạy được lệnh để tái lập thì phải
+> coi là chưa đo.
 >
 > Trước đó cùng ngày — **Phase 5C**: **ĐƯỜNG SÁ THÀNH MẠNG LƯỚI THẬT.** Đàm:
 > *"đường đi cũng nên phức tạp hơn"*. Trước đó cả thành phố chỉ có **một dấu cộng** — cột x=4 +

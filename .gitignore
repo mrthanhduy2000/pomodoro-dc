@@ -42,3 +42,9 @@ test-results/
 
 # ảnh xem thử Thành Phố 3D (scripts/city-preview.mjs) — chỉ để soi bằng mắt lúc phát triển
 .city-preview/
+
+# ảnh chụp màn hình để soi bằng mắt (scripts/shot.mjs, mặc định --out shot.png ở gốc repo).
+# ⚠️ Quy trình deploy của dự án là `git add . && git commit` (xem CLAUDE.md mục "Quy trình deploy"),
+# nên một file PNG lạc ở gốc repo sẽ bị nuốt vào commit mà không ai để ý. Chỉ chặn ĐÚNG tên mặc
+# định ở gốc — `--out <tên khác>` vẫn theo dõi được bình thường nếu thật sự muốn lưu.
+/shot.png

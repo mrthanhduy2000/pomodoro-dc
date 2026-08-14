@@ -164,7 +164,7 @@ renderer.shadowMap.needsUpdate = true;
 
 // ⚠️ Truyền ĐÚNG bộ số mà app truyền, không để mặc định: dân số suy ra từ đây, và một trang xem
 // thử vẽ thành phố vắng hơn thật thì nó không còn kiểm chứng được thứ cần kiểm chứng.
-const city = createCityScene({ layout, palette, daylight, stats: { sessionCount: SESSIONS, streakLength: 9 } });
+const city = createCityScene({ layout, palette, daylight, renderer, stats: { sessionCount: SESSIONS, streakLength: 9 } });
 city.sun.shadow.mapSize.setScalar(1024);
 
 // Đẩy đồng hồ tới một thời điểm giữa chừng. Ở t = 0 mọi cư dân đều đứng ở đầu tuyến của mình —
@@ -280,7 +280,7 @@ eras.forEach((era, row) => {
     const daylight = deriveDaylight(hour);
     const palette = buildScenePalette({ tokens, eraColor: ERA_METADATA[era]?.accentColor, era, daylight });
     const city = createCityScene({
-      layout, palette, daylight, stats: { sessionCount: SESSIONS, streakLength: 9 },
+      layout, palette, daylight, renderer, stats: { sessionCount: SESSIONS, streakLength: 9 },
     });
     city.sun.shadow.mapSize.setScalar(512);
     renderer.shadowMap.needsUpdate = true;
@@ -424,6 +424,12 @@ async function shoot(chrome, url, pngPath, { width, height }) {
     '--use-angle=swiftshader',
     '--enable-unsafe-swiftshader',
     '--hide-scrollbars',
+    // ⚠️ CHUYỂN `console.*` CỦA TRANG RA stderr. Thiếu dòng này thì mọi cảnh báo phía trình duyệt
+    // biến mất không dấu vết — và một công cụ mắt-soi im lặng nuốt cảnh báo thì đúng bằng một công
+    // cụ nói dối. Đã trả giá: bản đồ môi trường hỏng hoàn toàn mà ảnh vẫn ra, vẫn "đẹp hơn", nên
+    // không ai biết. Chỉ khi vặn một hằng số lên mức phi lý mà ảnh không đổi mới lộ.
+    '--enable-logging=stderr',
+    '--log-level=0',
     `--window-size=${width + 34},${height + 80}`,
     '--virtual-time-budget=12000',
     `--screenshot=${pngPath}`,

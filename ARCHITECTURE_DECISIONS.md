@@ -11,6 +11,69 @@
 
 ---
 
+## ADR-013 — Thành Phố 3D dùng vật liệu PBR có bản đồ môi trường, thay cho một `MeshLambertMaterial` dùng chung; và giữ kiến trúc gộp-hình-học bằng NHÓM vật liệu chứ không bằng nhiều khối
+
+- **Ngày**: 2026-08-14
+- **Bối cảnh**: Đàm yêu cầu nâng cấp toàn diện Thành Phố 3D vì nó *"còn giống low-poly/prototype"*,
+  và nói rõ đích đến là **premium stylized 3D realism**, với yêu cầu cụ thể *"vật liệu phải đọc ra
+  rõ là đá, gạch, gỗ, đất nung, ngói, bê tông, kim loại"*. Trước đó cả thành phố dùng **đúng một**
+  `MeshLambertMaterial({vertexColors: true})`.
+- **Vấn đề**: Lambert là mô hình **thuần khuếch tán** — nó không có số hạng phản xạ gương nào. Nghĩa
+  là dù có tô bao nhiêu màu đi nữa thì **về mặt toán học mọi bề mặt trong thành phố vẫn là CÙNG MỘT
+  bề mặt**, chỉ khác sắc. Không có cách nào để kính đọc ra khác đá, hay kẽm đọc ra khác ngói, vì
+  thứ phân biệt chúng ngoài đời (độ bóng, độ nhám, phản chiếu) đơn giản là không tồn tại trong công
+  thức. Đây là **nguyên nhân gốc** của cảm giác "khối màu phẳng" — không phải số tam giác, không
+  phải bảng màu, cả hai thứ đã được đầu tư nhiều Phase trước đó mà cảm giác vẫn còn.
+- **Phương án đã cân nhắc**:
+  1. Giữ Lambert, bù bằng texture ảnh (gạch, gỗ, đá).
+  2. Giữ Lambert, bù bằng nhiều hình khối nhỏ hơn (khắc rãnh gạch bằng hình học).
+  3. `MeshStandardMaterial` (PBR) — **một** vật liệu cho cả thành phố, chỉnh `roughness` trung bình.
+  4. `MeshStandardMaterial` theo **HỌ vật liệu**, một khối hình học nhiều **nhóm** (`addGroup`). ← **CHỌN**
+  5. `MeshStandardMaterial` theo họ, **mỗi họ một khối hình học riêng**.
+- **Lý do loại bỏ (1)**: texture phải tải về, phải sinh UV cho hình học đang dựng theo thủ tục, và
+  chunk PWA đã precache 1,7 MB. Nó cũng đi ngược hướng mỹ thuật đã chốt (khối cắt gọt, pháp tuyến
+  phẳng theo mặt) — dán ảnh gạch lên khối stylized cho ra thứ trông rẻ tiền hơn, không đắt hơn.
+- **Lý do loại bỏ (2)**: đắt tuyến tính theo số công trình mà vẫn không giải quyết được vấn đề thật
+  — hai bề mặt vẫn phản ứng với ánh sáng y hệt nhau, chỉ là một cái nhiều rãnh hơn.
+- **Lý do loại bỏ (3)**: giải quyết được "trông có chất liệu hơn" nhưng KHÔNG giải quyết được yêu
+  cầu thật của Đàm là *phân biệt được* các chất liệu. Một `roughness` trung bình cho cả thành phố
+  chỉ là Lambert bóng hơn.
+- **Lý do loại bỏ (5)**: mỗi khối là một lệnh vẽ và một lần dựng `BufferGeometry` — nó phá kiến
+  trúc gộp-hình-học đã dựng từ Phase 3B mà **không đổi lấy được gì** so với (4): `addGroup` cho ra
+  đúng cùng số lệnh vẽ, trên một khối duy nhất, tức ít việc dọn dẹp hơn khi tab bị unmount.
+- **Giải pháp được chọn**: bảng **15 HỌ vật liệu** ở `engine/city3d/materials.js` (thuần, có test),
+  mỗi kỷ tự khai `wallMaterial`/`roofMaterial`. `geometryFactory` gom tam giác theo họ rồi phát ra
+  các nhóm; `sceneGraph` dựng mảng vật liệu **từ chính `families` mà nhà máy trả về**. Kèm hai thứ
+  đi cùng bắt buộc:
+  - **Bản đồ môi trường nướng từ chính bầu trời đang nhìn thấy** (`PMREMGenerator.fromScene` trên
+    một quả cầu 16×8 tô bằng **cùng hàm** `paintSkyGradient` vẽ vòm trời). ⚠️ Đây **không phải điểm
+    tô thêm**: kim loại gần như không có thành phần khuếch tán, nên `metalness: 0.9` mà không có gì
+    để phản chiếu sẽ render ra **ĐEN**. Bản đồ môi trường là ĐIỀU KIỆN CẦN của quyết định này.
+  - **Bóng tiếp xúc nướng sẵn vào màu đỉnh** (`contactShade`, tối dần về phía mặt đất). Chọn cách
+    này thay vì một lượt SSAO vì SSAO là một lượt hậu kỳ chạy **mỗi khung hình** — nó phá vỡ
+    render-on-demand (đứng yên = 0 nhịp rAF), thứ đắt nhất phải giữ trên iPhone. Nướng sẵn tốn 0
+    đồng lúc chạy.
+- **Trade-off**: (a) số lệnh vẽ cho công trình đi từ 1 lên **5–7** (một lệnh mỗi họ; đã khoá trần
+  ≤8 bằng test cho cả 15 kỷ) — vẫn nằm sâu trong ngân sách, và rẻ hơn nhiều so với 750 lệnh của
+  cách vẽ rời từng khối; (b) dựng cảnh tốn thêm một lần nướng PMREM; (c) `MeshStandardMaterial`
+  đắt hơn Lambert cho mỗi điểm ảnh — cổng hiệu năng iPhone ở Phase 3A cần đo lại nếu Đàm thấy máy
+  nóng lên.
+- **Ảnh hưởng**: `eraStyle.js` (thêm 2 trường × 15 kỷ), `geometryFactory.js`, `sceneGraph.js`,
+  `CityScene3D.jsx` + `scripts/city-preview.mjs` (cả hai phải truyền `renderer` vào — thiếu thì
+  kim loại đen). Không đụng state, không đụng dữ liệu đã lưu, không thêm dependency.
+- **Điều kiện xem lại**: nếu iPhone của Đàm nóng lên hoặc tụt pin rõ so với trước → đo lại bằng HUD
+  hiệu năng, và nếu cần thì hạ `metalness` để bỏ hẳn nướng PMREM ở chế độ máy yếu (`lowDetail`).
+- ⚠️ **BÀI HỌC ĐI KÈM, ghi ở đây vì nó là bài học KIẾN TRÚC chứ không phải mẹo vặt**: bản đầu gắn
+  bản đồ môi trường bằng `scene.environment` rồi trông cậy `material.envMapIntensity` để chỉnh mạnh
+  yếu. **three BỎ QUA `envMapIntensity` hoàn toàn trên đường đó.** Vặn từ 0 lên 1,0 rồi 3,0 mà ảnh
+  không đổi một điểm ảnh nào. Suốt nửa buổi tôi tin là mình đang chỉnh một cái núm, trong khi cái
+  núm không nối vào đâu cả — và mọi kết luận rút ra trong quãng đó đều vô giá trị. Cách phát hiện:
+  **vặn núm tới một giá trị VÔ LÝ rồi đòi một hậu quả VÔ LÝ** (tô quả cầu dò màu đỏ chói: nếu cả
+  thành phố đỏ lên kể cả khi cường độ khai bằng 0 thì núm chắc chắn không nối). Một thay đổi làm
+  ảnh đổi "một chút" **không chứng minh được gì** — nó là hình dạng của cả nhiễu lẫn tín hiệu.
+
+---
+
 ## ADR-012 — "Trùng tu di sản": mở cho xây bù bản vẽ kỷ cũ — thay thế phần bị TỪ CHỐI ở ADR-011, và cái giá không phải là ô hàng đợi mà là NGUYÊN LIỆU KHÔNG KIẾM LẠI ĐƯỢC
 
 - **Ngày**: 2026-08-13

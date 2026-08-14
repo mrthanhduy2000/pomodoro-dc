@@ -184,6 +184,10 @@ export default function CityScene3D({
         dimmed,
         stats: { sessionCount, streakLength },
         daylight,
+        // ⚠️ CẢNH CẦN RENDERER để nướng bản đồ môi trường (PMREM) từ chính bầu trời của nó. Thiếu
+        // tham số này thì cảnh vẫn dựng được nhưng mọi bề mặt kim loại sẽ ĐEN — xem
+        // `createSkyEnvironment` ở `sceneGraph.js`.
+        renderer,
         // Điện thoại bớt một đèn đêm. Đèn điểm là thứ duy nhất ở đây tính tiền theo từng điểm ảnh,
         // mà iPhone của Đàm vừa có mật độ điểm ảnh cao vừa là máy phải giữ mát suốt phiên 25 phút.
         // Dùng CHUNG tín hiệu `isMobile` với cỡ shadow map ngay dưới — một máy đã đáng hạ bóng thì

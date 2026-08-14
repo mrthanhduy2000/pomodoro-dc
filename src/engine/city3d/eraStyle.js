@@ -31,6 +31,15 @@
  * kỷ thì phải trả lời được "công trình có thật nào ở nước ấy trông như vậy?" — nếu không trả lời
  * được thì con số ấy là tuỳ hứng, và tuỳ hứng chính là thứ đã sinh ra 15 kỷ cao bằng nhau ở trên.
  * 15 nước KHÔNG trùng nhau, để thanh chuyển kỷ đọc ra một hành trình vòng quanh thế giới.
+ *
+ * ⚠️ `wallMaterial`/`roofMaterial` THÊM NGÀY 2026-08-14 (Phase 7A) — và đây LẠI LÀ đúng cái bẫy
+ * "một trường gánh hai việc" của Phase 5B, lần này rơi vào `roofColor`. Một mã màu chỉ nói được
+ * *"mái này màu gì"*; nó KHÔNG nói được *"mái này bóng hay nhám"*. Mà mắt người phân biệt ngói men
+ * lưu ly với mái tranh chủ yếu qua vế thứ hai — hai thứ đó có thể cùng một sắc vàng. Trước đây cả
+ * thành phố dùng chung một vật liệu khuếch tán thuần (Lambert), nên **về mặt toán học** kính, kẽm,
+ * rơm và bùn là CÙNG MỘT BỀ MẶT. Đó chính là nguyên nhân gốc của cảm giác "khối màu phẳng".
+ * Hai trường mới trỏ sang `materials.js`; luật ràng buộc y hệt `country`/`landmark`: khai vật liệu
+ * nào thì phải trả lời được *"công trình có thật ở nước ấy lợp bằng gì?"*.
  */
 
 /**
@@ -76,6 +85,7 @@ export const ERA_STYLES = {
     country: 'Thổ Nhĩ Kỳ', landmark: 'cự thạch Göbekli Tepe',
     signature: 'tstone',
     roofColor: '#745339',   // da thú & gỗ hun khói — nâu sẫm, KHÔNG phải xanh lá
+    wallMaterial: 'stone', roofMaterial: 'thatch',   // đá xếp khô + da thú căng trên khung gỗ
     // ⚠️ `eaves` 0,04 và `roofPitch` 0,95 — KHÔNG phải 0,16 / 0,62. Ảnh quét ngày 2026-08-14 cho
     // thấy lều kỷ 1 đọc ra thành CÂY NẤM (hay cái ô che nắng): mái nón thò ra khỏi tường 0,16 tạo
     // đúng cái vành mũ nấm, còn thân thóp 0,74 thì thành cái cuống. Lều da thú thật là một khối
@@ -93,6 +103,7 @@ export const ERA_STYLES = {
     country: 'Ai Cập', landmark: 'làng ven sông Nin',
     signature: 'batter',
     roofColor: '#c5a159',   // mái tranh sông Nin — rơm khô rám nắng
+    wallMaterial: 'mudbrick', roofMaterial: 'thatch',   // gạch bùn phơi nắng + mái lá cọ
     bodySides: 4, bodyTaper: 0.94, storyHeight: 0.66,
     massScale: 0.46, spread: 0.98,
     roof: 'cone', roofPitch: 0.72, eaves: 0.2,
@@ -105,6 +116,7 @@ export const ERA_STYLES = {
     country: 'Iraq', landmark: 'ziggurat thành Ur',
     signature: 'ziggurStair',
     roofColor: '#c59e79',   // gạch bùn phơi nắng thành Ur — nâu vàng, ẤM hẳn so với bê tông kỷ 13
+    wallMaterial: 'mudbrick', roofMaterial: 'mudbrick',   // ziggurat không lợp — chính nó là gạch
     bodySides: 4, bodyTaper: 0.86, storyHeight: 0.6,
     massScale: 0.78, spread: 1.18,
     roof: 'stepped', roofPitch: 0.3, eaves: 0.06,
@@ -117,6 +129,7 @@ export const ERA_STYLES = {
     country: 'Trung Quốc', landmark: 'điện mái chồng, đấu củng',
     signature: 'dougong',
     roofColor: '#cf9e17',   // ngói lưu ly men VÀNG hoàng gia — màu chỉ hoàng cung mới được dùng
+    wallMaterial: 'wood', roofMaterial: 'glazed',   // khung gỗ sơn son + ngói men BÓNG như sứ
     bodySides: 4, bodyTaper: 1, storyHeight: 0.68,
     massScale: 0.72, spread: 1.1,
     roof: 'tiered', roofPitch: 0.34, eaves: 0.34,
@@ -129,6 +142,7 @@ export const ERA_STYLES = {
     country: 'Đức', landmark: 'lâu đài đá Burg Eltz',
     signature: 'turret',
     roofColor: '#586a89',   // đá phiến (slate) lâu đài sông Rhine — xám lam TRUNG
+    wallMaterial: 'stone', roofMaterial: 'slate',   // đá tảng + đá phiến chẻ
     bodySides: 4, bodyTaper: 0.97, storyHeight: 0.72,
     massScale: 0.7, spread: 0.96,
     roof: 'gable', roofPitch: 0.92, eaves: 0.12,
@@ -147,6 +161,7 @@ export const ERA_STYLES = {
     country: 'Việt Nam', landmark: 'đình làng Bắc Bộ',
     signature: 'daoDinh',
     roofColor: '#844433',   // ngói âm dương Bắc Bộ — nâu đỏ ám rêu
+    wallMaterial: 'wood', roofMaterial: 'tile',   // cột lim + ngói nung KHÔNG men (khác hẳn kỷ 4)
     bodySides: 4, bodyTaper: 0.92, storyHeight: 0.66,
     massScale: 0.68, spread: 1.16,
     roof: 'tiered', roofPitch: 0.4, eaves: 0.4,
@@ -160,6 +175,7 @@ export const ERA_STYLES = {
     country: 'Ý', landmark: 'vòm Duomo Firenze',
     signature: 'campanile',
     roofColor: '#c5572b',   // ngói terracotta vòm Duomo — chi tiết NỔI TIẾNG NHẤT của nó
+    wallMaterial: 'plaster', roofMaterial: 'tile',   // tường trát vôi Toscana + ngói terracotta
     bodySides: 4, bodyTaper: 1, storyHeight: 0.74,
     massScale: 0.74, spread: 1.02,
     roof: 'dome', roofPitch: 0.56, eaves: 0.22,
@@ -172,6 +188,7 @@ export const ERA_STYLES = {
     country: 'Bồ Đào Nha', landmark: 'bến cảng Lisboa',
     signature: 'belem',
     roofColor: '#ce8e64',   // ngói đỏ cam Lisboa — sáng và bạc màu hơn terracotta Ý
+    wallMaterial: 'plaster', roofMaterial: 'tile',   // tường quét vôi ven cảng + ngói đỏ
     bodySides: 4, bodyTaper: 0.98, storyHeight: 0.7,
     massScale: 0.64, spread: 1.12,
     roof: 'gable', roofPitch: 0.52, eaves: 0.24,
@@ -185,6 +202,7 @@ export const ERA_STYLES = {
     country: 'Pháp', landmark: 'điện Panthéon Paris',
     signature: 'portico',
     roofColor: '#9ea8b3',   // mái kẽm Paris — xám lam SÁNG, đặc sản mái nhà Paris
+    wallMaterial: 'stone', roofMaterial: 'metal',   // đá vôi Lutèce + mái KẼM — kim loại thật
     bodySides: 4, bodyTaper: 1, storyHeight: 0.76,
     massScale: 0.92, spread: 1,
     roof: 'pyramid', roofPitch: 0.28, eaves: 0.26,
@@ -197,6 +215,7 @@ export const ERA_STYLES = {
     country: 'Anh', landmark: 'nhà máy gạch đỏ Manchester',
     signature: 'stack',
     roofColor: '#40494f',   // đá phiến Wales lợp nhà máy — xám gần đen, TỐI nhất bảng
+    wallMaterial: 'brick', roofMaterial: 'slate',   // gạch nung đỏ Manchester + đá phiến Wales
     bodySides: 4, bodyTaper: 1, storyHeight: 0.7,
     massScale: 0.9, spread: 1.16,
     roof: 'sawtooth', roofPitch: 0.3, eaves: 0.1,
@@ -209,6 +228,7 @@ export const ERA_STYLES = {
     country: 'Mỹ', landmark: 'New York thời Mạ Vàng',
     signature: 'watertower',
     roofColor: '#3e9883',   // đồng oxy hoá (verdigris) — mái đồng New York thời Mạ Vàng
+    wallMaterial: 'stone', roofMaterial: 'metal',   // đá granite mặt tiền + mái ĐỒNG đã hoá gỉ
     bodySides: 4, bodyTaper: 1, storyHeight: 0.8,
     massScale: 0.86, spread: 0.94,
     roof: 'stepped', roofPitch: 0.24, eaves: 0.2,
@@ -221,6 +241,7 @@ export const ERA_STYLES = {
     country: 'Nga', landmark: 'lô cốt Stalingrad',
     signature: 'pillbox',
     roofColor: '#717b65',   // bê tông quân sự — xám ngả ô-liu
+    wallMaterial: 'concrete', roofMaterial: 'concrete',   // bê tông đổ liền khối, không lợp gì
     bodySides: 4, bodyTaper: 0.96, storyHeight: 0.6,
     massScale: 1.02, spread: 1.1,
     roof: 'flat', roofPitch: 0.12, eaves: 0.14,
@@ -235,6 +256,7 @@ export const ERA_STYLES = {
     country: 'Nhật Bản', landmark: 'tháp nang Nakagin',
     signature: 'capsule',
     roofColor: '#ccc9c7',   // bê tông đúc sẵn Nakagin — xám gần TRUNG TÍNH (tách khỏi gạch bùn kỷ 3)
+    wallMaterial: 'concrete', roofMaterial: 'concrete',   // nang bê tông ĐÚC SẴN, mịn hơn kỷ 12
     bodySides: 4, bodyTaper: 1, storyHeight: 0.66,
     massScale: 1.24, spread: 0.92,
     roof: 'flat', roofPitch: 0.1, eaves: 0.08,
@@ -247,6 +269,7 @@ export const ERA_STYLES = {
     country: 'Singapore', landmark: 'tháp kính Marina Bay',
     signature: 'skydeck',
     roofColor: '#4aa1b5',   // kính phản quang lam ngọc Marina Bay
+    wallMaterial: 'glass', roofMaterial: 'glass',   // vách kính liền từ chân lên nóc
     bodySides: 4, bodyTaper: 1, storyHeight: 0.84,
     massScale: 1.36, spread: 0.8,
     roof: 'flat', roofPitch: 0.08, eaves: 0.05,
@@ -259,6 +282,7 @@ export const ERA_STYLES = {
     country: 'UAE', landmark: 'Bảo tàng Tương Lai Dubai',
     signature: 'torus',
     roofColor: '#d0c295',   // thép mạ champagne + thư pháp vàng — Bảo tàng Tương Lai
+    wallMaterial: 'glass', roofMaterial: 'metal',   // vỏ kính + vành THÉP MẠ champagne
     bodySides: 8, bodyTaper: 0.9, storyHeight: 0.8,
     massScale: 1.72, spread: 0.76,
     roof: 'blade', roofPitch: 0.16, eaves: 0.3,

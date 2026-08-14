@@ -30,8 +30,9 @@ import {
   Matrix4,
   Mesh,
   MeshBasicMaterial,
-  MeshLambertMaterial,
+  MeshStandardMaterial,
   NeutralToneMapping,
+  PMREMGenerator,
   PointLight,
   Quaternion,
   Scene,
@@ -39,6 +40,7 @@ import {
   Vector3,
 } from 'three';
 
+import { materialProfile } from '../../../engine/city3d/materials';
 import { buildBuildingSpec, buildScaffoldSpec } from '../../../engine/city3d/buildingSpec';
 import { buildPropSpec } from '../../../engine/city3d/propSpec';
 import { placeBounds, specBounds } from '../../../engine/city3d/pick';
@@ -57,6 +59,31 @@ const BUILDING_SCALE = 1.3;
 
 /** Một ô lưới = 1 đơn vị thế giới. Giữ số tròn để mọi phép tính đọc được bằng mắt. */
 export const TILE_UNIT = 1;
+
+/**
+ * Bề mặt KHUẾCH TÁN hưởng bao nhiêu phần ánh sáng từ bản đồ môi trường.
+ *
+ * ⚠️ VÌ SAO KHÔNG PHẢI 1,0 (giá trị "đúng vật lý"): bản đồ môi trường là một nguồn sáng bao quanh,
+ * và nguồn sáng bao quanh thì rọi gần như ĐỀU vào mọi mặt — tức là nó làm đúng cái việc mà Phase 3C
+ * đã tốn công triệt tiêu: kéo mặt khuất sáng lên ngang mặt hứng nắng, giết chiaroscuro.
+ *
+ * ⚠️ CHỌN 0,12 BẰNG PHÉP ĐO, KHÔNG BẰNG CẢM GIÁC. Đo trên kỷ 5 và kỷ 12, dải giữa của ảnh chụp
+ * thật (độ sáng tb · độ tươi tb · khoảng cách sáng–tối P90−P10, thang 100):
+ *
+ *     nền cũ (Lambert)   33,7 · 21,2 · 39      ← mốc phải giữ
+ *     ENV = 0            32,4 · 24,5 · 43      ← PBR không môi trường: đậm hơn cả nền cũ
+ *     ENV = 0,12         35,3 · 20,3 · 38      ← chọn cái này
+ *     ENV = 0,20         37,0 · 18,1 · 36
+ *     ENV = 1,00         51,3 · 14,4 · 29      ← sáng +52%, tươi −32%, chiaroscuro −26%
+ *
+ * Cột 1,00 chính là thứ đã lỡ chạy suốt nửa buổi vì `envMapIntensity` không được nối (xem chú thích
+ * ở chỗ dựng `envMap`), và nó cho ra đúng một thành phố "pastel như sữa" — thất bại mà dự án đã
+ * từng từ chối một lần khi thử tone mapping AgX.
+ * ⇒ Việc của bản đồ môi trường ở đây là làm cho VẬT LIỆU KHÁC NHAU, không phải để thắp sáng lại
+ * thành phố. Kim loại/kính KHÔNG dùng số này — chúng sống bằng phản chiếu nên lấy trọn 1,0; xem
+ * chỗ dựng vật liệu công trình.
+ */
+const ENV_DIFFUSE = 0.12;
 
 const GROUND_THICKNESS = 0.22;
 
@@ -146,6 +173,100 @@ export function cellToWorld(x, y, gridSize) {
 }
 
 /**
+ * Sơn dải chuyển sắc bầu trời vào MÀU ĐỈNH của một quả cầu.
+ *
+ * ⚠️ HÀM NÀY CÓ HAI NGƯỜI DÙNG, VÀ ĐÓ CHÍNH LÀ LÝ DO NÓ TỒN TẠI: vòm trời NHÌN THẤY được, và quả
+ * cầu thăm dò dùng để nướng bản đồ môi trường (`createSkyEnvironment`). Nếu hai bên tự viết công
+ * thức riêng thì thứ phản chiếu trên mặt kính sẽ là một bầu trời KHÁC với bầu trời ở sau lưng nó —
+ * đúng loại lỗi "một luật hai công thức" mà dự án đã trả giá nhiều lần, và lần này nó còn khó thấy
+ * hơn nữa vì phản chiếu thì mờ, ai nhìn cũng chỉ thấy "hơi sai sai".
+ *
+ * ⚠️ SỐ MŨ 2,6 QUYẾT ĐỊNH BẦU TRỜI CÓ RA HỒN KHÔNG, và bản trước để SAI HƯỚNG.
+ * Camera chúc xuống, nên dải trời lọt vào khung chỉ là phần NGAY TRÊN đường chân trời — tức toàn
+ * bộ bầu trời Đàm nhìn thấy nằm gọn trong khoảng t ≈ 0,50–0,67. Với số mũ 1,2 thì ở đó đã pha
+ * 43–61% màu xanh đỉnh trời, và kết quả là một mảng oải hương xam xám: mất cả hơi ấm của chân trời
+ * lẫn chiều sâu của trời xanh. Số mũ 2,6 dồn màu ấm bám SÁT chân trời (t = 0,5 chỉ pha 16% xanh)
+ * rồi mới chuyển nhanh lên xanh.
+ *
+ * `groundColor` (chỉ quả cầu thăm dò truyền) sơn nửa DƯỚI thành màu đất. Bỏ nó đi thì kim loại và
+ * kính sẽ phản chiếu bầu trời ở CẢ mặt hướng xuống — một mái kẽm sáng loá từ bên dưới, thứ không
+ * bao giờ xảy ra ngoài đời và đọc ra ngay là "đồ hoạ máy tính".
+ */
+function paintSkyGradient(geometry, radius, {
+  top, horizon, glow, glowStrength, sunDir, groundColor = null,
+}) {
+  const pos = geometry.attributes.position;
+  const colors = new Float32Array(pos.count * 3);
+  const tint = new Color();
+  const vertex = new Vector3();
+  for (let i = 0; i < pos.count; i += 1) {
+    const t = Math.max(0, Math.min(1, (pos.getY(i) / radius) * 0.5 + 0.5));
+    tint.copy(horizon).lerp(top, Math.pow(t, 2.6));
+
+    // Quầng sáng quanh mặt trời. Trời thật KHÔNG đều màu theo vành đai — nó sáng bừng lên quanh
+    // hướng mặt trời rồi tối dần ra xa. Mũ 6 = quầng rộng và mềm chứ không phải một cái đĩa nhỏ:
+    // một đĩa sáng rõ nét trông như lỗi, còn quầng khuếch tán thì đọc ra "nắng đến từ phía kia".
+    vertex.set(pos.getX(i), pos.getY(i), pos.getZ(i)).normalize();
+    const toSun = Math.max(0, vertex.dot(sunDir));
+    tint.lerp(glow, Math.pow(toSun, 6) * glowStrength);
+
+    if (groundColor && t < 0.5) tint.lerp(groundColor, Math.min(1, (0.5 - t) * 5));
+
+    colors[i * 3] = tint.r;
+    colors[i * 3 + 1] = tint.g;
+    colors[i * 3 + 2] = tint.b;
+  }
+  geometry.setAttribute('color', new BufferAttribute(colors, 3));
+}
+
+/**
+ * Nướng một BẢN ĐỒ MÔI TRƯỜNG bé xíu từ chính bầu trời của cảnh này.
+ *
+ * ⚠️ ĐÂY KHÔNG PHẢI PHẦN THƯỞNG THÊM — NÓ LÀ ĐIỀU KIỆN CẦN ĐỂ ĐƯỢC KHAI KIM LOẠI.
+ * Kim loại gần như không có thành phần khuếch tán: toàn bộ màu của nó đến từ thứ nó phản chiếu.
+ * Không có bản đồ môi trường thì `metalness: 0.9` cho ra khối ĐEN THUI — và nó đen một cách rất
+ * thuyết phục, trông như "vật liệu tối màu" chứ không như lỗi. Mái kẽm kỷ 9, mái đồng kỷ 11, chóp
+ * vàng ở mọi kỷ đều phụ thuộc vào hàm này.
+ *
+ * ⚠️ RẺ VÌ NHỎ VÀ VÌ CHỈ LÀM MỘT LẦN: quả cầu 16×8 (chỉ để lấy màu chung quanh, không lấy chi
+ * tiết) → PMREM ra một cubemap đã làm mờ sẵn theo từng mức nhám. Sau khi nướng xong thì cả quả cầu
+ * lẫn cảnh tạm đều bỏ đi; thứ giữ lại là một texture duy nhất.
+ *
+ * @returns {{texture:object, dispose:function}|null} `null` khi không có renderer (test, SSR)
+ */
+function createSkyEnvironment(renderer, skyLook, groundColor) {
+  if (!renderer || typeof renderer.getContext !== 'function') return null;
+  let pmrem = null;
+  let target = null;
+  const probeGeometry = new SphereGeometry(8, 16, 8);
+  const probeMaterial = new MeshBasicMaterial({ vertexColors: true, side: BackSide, fog: false });
+  try {
+    paintSkyGradient(probeGeometry, 8, { ...skyLook, groundColor });
+    const probeScene = new Scene();
+    probeScene.add(new Mesh(probeGeometry, probeMaterial));
+    pmrem = new PMREMGenerator(renderer);
+    target = pmrem.fromScene(probeScene, 0.06);
+  } catch (error) {
+    // Máy không dựng nổi PMREM (WebGL1 cũ, context lỗi) → chạy tiếp KHÔNG có môi trường. Vật liệu
+    // vẫn hiện, chỉ là kim loại sẽ tối. Thà xấu còn hơn màn hình trắng.
+    //
+    // ⚠️ PHẢI KÊU TO. Bản đầu của hàm này nuốt lỗi im lặng, và hậu quả đúng bằng một buổi đi lạc:
+    // môi trường KHÔNG hề được tạo, nhưng cảnh vẫn dựng ra ảnh trông "khá hơn hẳn" (nhờ PBR), nên
+    // tôi tin là nó đang chạy. Chỉ khi vặn `ENV_DIFFUSE` lên 3,0 mà ảnh KHÔNG đổi một điểm ảnh nào
+    // mới lộ ra. Một đường lui im lặng biến "tính năng hỏng" thành "tính năng vô hình" — và thứ vô
+    // hình thì không ai đi sửa. Cùng họ với bài học `--hour` ở `city-preview.mjs`.
+    console.warn('[city3d] không nướng được bản đồ môi trường — kim loại sẽ tối:', error);
+    target = null;
+  } finally {
+    pmrem?.dispose();
+    probeGeometry.dispose();
+    probeMaterial.dispose();
+  }
+  if (!target) return null;
+  return { texture: target.texture, dispose: () => target.dispose() };
+}
+
+/**
  * Dựng toàn bộ cảnh.
  *
  * @param {object} input
@@ -163,7 +284,7 @@ export function cellToWorld(x, y, gridSize) {
  */
 export function createCityScene({
   layout, palette, dimmed = false, lowDetail = false, stats = {}, still = false, daylight = null,
-  maxLamps = 3,
+  maxLamps = 3, renderer = null,
 }) {
   const gridSize = layout.gridSize;
   const scene = new Scene();
@@ -198,7 +319,50 @@ export function createCityScene({
   const meshes = [];
   const addMesh = (mesh) => { if (mesh) { scene.add(mesh); meshes.push(mesh); } return mesh; };
 
-  const tileMaterial = track(new MeshLambertMaterial({
+  const skyLook = {
+    top: new Color(palette.sky2?.top ?? palette.background),
+    horizon: new Color(palette.sky2?.horizon ?? palette.background),
+    // Màu quầng sáng quanh mặt trời — lấy thẳng màu nắng cho nhất quán với nguồn sáng thật.
+    glow: new Color(palette.lights?.sun ?? palette.sun),
+    glowStrength: palette.isDark ? 0.30 : 0.55,
+    sunDir,
+  };
+
+  // ⚠️ MÔI TRƯỜNG PHẢN CHIẾU — dựng Ở ĐÂY, TRƯỚC MỌI VẬT LIỆU, dù vòm trời nhìn thấy được thì mãi
+  // bên dưới mới dựng. Lý do: nó phải có mặt lúc từng vật liệu ra đời để gắn vào (`envMap`), mà nó
+  // chỉ cần `skyLook` chứ không cần cái vòm. Đặt chung chỗ với vòm trời cho "hợp lý về mặt kể
+  // chuyện" thì mọi vật liệu tạo trước đó sẽ nhận `undefined` — im lặng, và mất sạch phản chiếu.
+  // Không có nó thì mọi `metalness` khai ở `materials.js` sẽ ra khối đen. Có nó thì mặt kính kỷ 14
+  // hắt màu trời, mái kẽm kỷ 9 loáng bạc, chóp vàng ánh lên — tức là vật liệu bắt đầu KHÁC NHAU
+  // thay vì chỉ khác màu.
+  const environment = createSkyEnvironment(
+    renderer, skyLook, new Color(palette.outskirts ?? palette.groundAlt ?? palette.ground),
+  );
+  if (environment) track(environment);
+  /**
+   * Bản đồ môi trường gắn vào TỪNG vật liệu, KHÔNG gắn vào `scene.environment`.
+   *
+   * ⚠️ ĐÂY LÀ MỘT CÁI BẪY ĐÃ CẮN THẬT, và nó cắn theo kiểu tệ nhất — im lặng.
+   * Bản đầu đặt `scene.environment = texture` rồi trông cậy vào `material.envMapIntensity` để chỉnh
+   * mạnh yếu. Kết quả: **`envMapIntensity` bị bỏ qua hoàn toàn.** Vặn nó từ 0 lên 1,0 rồi lên 3,0
+   * mà ảnh không đổi một điểm ảnh nào. Nhưng nhuộm đỏ chính bản đồ môi trường thì cả thành phố đỏ
+   * lên ngay — kể cả khi `envMapIntensity = 0`. Nghĩa là môi trường vẫn rọi ở mức 1,0 bất kể ta
+   * khai gì. Đường đi mà `envMapIntensity` thật sự có hiệu lực là khi vật liệu mang `envMap` của
+   * CHÍNH NÓ.
+   * ⚠️ BÀI HỌC RỘNG HƠN CẢ CHUYỆN THREE.JS: cái "0" ấy trông y hệt một tính năng đang chạy đúng —
+   * cảnh vẫn đẹp lên (nhờ PBR), chỉ là một núm vặn không nối vào đâu cả. Cách duy nhất phát hiện
+   * là **vặn núm tới mức PHI LÝ rồi đòi thấy hậu quả phi lý**. Núm nào chỉnh mà ảnh "hơi khác một
+   * chút" thì không chứng minh được gì — mắt luôn tìm thấy khác biệt nó muốn thấy.
+   */
+  const envMap = environment?.texture ?? null;
+
+  // Mặt đất, mặt đường, vùng đất bao quanh: nhám gần như tuyệt đối. Chúng KHÔNG được bóng — một
+  // con đường bắt sáng là con đường vừa mưa xong, và cả 15 kỷ đều không mưa.
+  const tileMaterial = track(new MeshStandardMaterial({
+    roughness: 0.96,
+    metalness: 0,
+    envMap,
+    envMapIntensity: ENV_DIFFUSE,
     transparent: dimmed,
     opacity: dimmed ? 0.62 : 1,
   }));
@@ -251,40 +415,8 @@ export function createCityScene({
   // của nó bị giới hạn bởi số đỉnh. Ở 16×10 quầng sáng lộ rõ các mảng tam giác. 960 tam giác cho
   // cả bầu trời vẫn là rẻ mạt so với thứ nó đổi lại.
   const skyGeometry = track(new SphereGeometry(SKY_RADIUS, 32, 16));
-  const skyPos = skyGeometry.attributes.position;
-  const skyColors = new Float32Array(skyPos.count * 3);
-  const topColor = new Color(palette.sky2?.top ?? palette.background);
-  const horizonColor = new Color(palette.sky2?.horizon ?? palette.background);
-  // Màu quầng sáng quanh mặt trời — lấy thẳng màu nắng cho nhất quán với nguồn sáng thật.
-  const glowColor = new Color(palette.lights?.sun ?? palette.sun);
-  const skyVertex = new Vector3();
-  for (let i = 0; i < skyPos.count; i += 1) {
-    // ⚠️ SỐ MŨ NÀY QUYẾT ĐỊNH BẦU TRỜI CÓ RA HỒN KHÔNG, và bản trước để SAI HƯỚNG.
-    // Camera chúc xuống, nên dải trời lọt vào khung chỉ là phần NGAY TRÊN đường chân trời — tức
-    // là toàn bộ bầu trời Đàm nhìn thấy nằm gọn trong khoảng t ≈ 0,50–0,67. Với số mũ 1,2 thì ở
-    // đó đã pha 43–61% màu xanh đỉnh trời, và kết quả là một mảng oải hương xam xám: mất cả hơi
-    // ấm của chân trời lẫn chiều sâu của trời xanh, chỉ còn đúng phần nhợt ở giữa hai thứ.
-    // Số mũ 2,6 dồn màu ấm bám SÁT chân trời (t = 0,5 chỉ pha 16% xanh) rồi mới chuyển nhanh lên
-    // xanh — nên trong đúng dải nhìn thấy được có cả ánh vàng ở đáy lẫn màu chuyển lên trên.
-    const t = Math.max(0, Math.min(1, (skyPos.getY(i) / SKY_RADIUS) * 0.5 + 0.5));
-    tint.copy(horizonColor).lerp(topColor, Math.pow(t, 2.6));
+  paintSkyGradient(skyGeometry, SKY_RADIUS, skyLook);
 
-    // Quầng sáng quanh mặt trời. Trời thật KHÔNG đều màu theo vành đai — nó sáng bừng lên quanh
-    // hướng mặt trời rồi tối dần ra xa. Đây là thứ Claude Lorrain và cả trường phái phong cảnh
-    // Phục Hưng dựng cả bức tranh quanh nó, và ở đây nó tốn đúng một phép nhân vô hướng, tính
-    // MỘT LẦN lúc dựng cảnh chứ không phải mỗi khung hình.
-    skyVertex.set(skyPos.getX(i), skyPos.getY(i), skyPos.getZ(i)).normalize();
-    const toSun = Math.max(0, skyVertex.dot(sunDir));
-    // Mũ 6 = quầng rộng và mềm chứ không phải một cái đĩa nhỏ. Mặt trời KHÔNG được vẽ thành hình
-    // tròn rõ nét: một đĩa sáng trên nền phẳng trông như lỗi, còn quầng sáng khuếch tán thì đọc ra
-    // "hôm nay nắng, và nắng đến từ phía kia".
-    tint.lerp(glowColor, Math.pow(toSun, 6) * (palette.isDark ? 0.30 : 0.55));
-
-    skyColors[i * 3] = tint.r;
-    skyColors[i * 3 + 1] = tint.g;
-    skyColors[i * 3 + 2] = tint.b;
-  }
-  skyGeometry.setAttribute('color', new BufferAttribute(skyColors, 3));
   const skyMaterial = track(new MeshBasicMaterial({
     vertexColors: true,
     side: BackSide,     // nhìn vòm từ BÊN TRONG
@@ -303,8 +435,12 @@ export function createCityScene({
   // vùng đất thay vì một vật thể lơ lửng. Rẻ đúng 12 tam giác.
   const outskirtsSize = gridSize * 6;
   const outskirtsGeometry = track(new BoxGeometry(outskirtsSize, GROUND_THICKNESS, outskirtsSize));
-  const outskirtsMaterial = track(new MeshLambertMaterial({
+  const outskirtsMaterial = track(new MeshStandardMaterial({
     color: palette.outskirts ?? palette.groundAlt,
+    roughness: 0.98,
+    metalness: 0,
+    envMap,
+    envMapIntensity: ENV_DIFFUSE,
   }));
   const outskirts = new Mesh(outskirtsGeometry, outskirtsMaterial);
   // Thấp hơn nền thành phố một chút → lưới thành phố thành một thềm đất cao, có gờ.
@@ -440,17 +576,32 @@ export function createCityScene({
     // Trời đã tối ⇒ tách ô cửa ra khối "tự phát sáng" riêng. Ban ngày `null` ⇒ không tách, không
     // tốn thêm lệnh vẽ nào.
     glowRole: daylight?.windowsLit ? 'glass' : null,
+    era: layout.era,
   });
   let buildingTriangles = 0;
   if (merged) {
     buildingTriangles = merged.triangles + merged.glowTriangles;
     if (merged.geometry) {
       track(merged.geometry);
-      const buildingMaterial = track(new MeshLambertMaterial({
-        vertexColors: true,
-        transparent: dimmed,
-        opacity: dimmed ? 0.62 : 1,
-      }));
+      // ⚠️ MẢNG VẬT LIỆU DỰNG TỪ CHÍNH `merged.families`, KHÔNG tự liệt kê lại.
+      // Nhà máy hình học đã đánh số nhóm theo thứ tự mảng đó; liệt kê lại ở đây là tạo ra công
+      // thức thứ hai cho cùng một luật, và triệu chứng sẽ là mái nhà mang độ bóng của mặt nước —
+      // mắt thấy ngay mà đọc code thì không, vì hai bên đều "đúng" theo cách hiểu riêng.
+      const buildingMaterial = merged.families.map((family) => {
+        const profile = materialProfile(family);
+        return track(new MeshStandardMaterial({
+          vertexColors: true,
+          roughness: profile.roughness,
+          metalness: profile.metalness,
+          envMap,
+          // Kim loại và kính SỐNG bằng phản chiếu → cho ăn trọn môi trường. Bề mặt khuếch tán chỉ
+          // lấy một phần: để nguyên 1,0 thì ánh trời tràn vào làm nhạt hết bảng màu đất đã dựng
+          // công phu suốt các Phase trước — đúng cái bẫy "sáng đều là kẻ thù của hình khối".
+          envMapIntensity: profile.metalness > 0.15 ? 1 : ENV_DIFFUSE,
+          transparent: dimmed,
+          opacity: dimmed ? 0.62 : 1,
+        }));
+      });
       const mesh = new Mesh(merged.geometry, buildingMaterial);
       mesh.castShadow = true;
       mesh.receiveShadow = true;
@@ -498,7 +649,11 @@ export function createCityScene({
     const HEAD_HEIGHT = RESIDENT_HEIGHT * 0.28;
     const BODY_HEIGHT = RESIDENT_HEIGHT - HEAD_HEIGHT;
 
-    const residentMaterial = track(new MeshLambertMaterial({
+    const residentMaterial = track(new MeshStandardMaterial({
+      roughness: 0.88,          // vải vóc, không phải nhựa
+      metalness: 0,
+      envMap,
+      envMapIntensity: ENV_DIFFUSE,
       transparent: dimmed,
       opacity: dimmed ? 0.62 : 1,
     }));
@@ -588,15 +743,30 @@ export function createCityScene({
   // để nhìn. **Chiaroscuro là KHOẢNG CÁCH giữa sáng và tối, không phải "tối đi".** Ở theme tối,
   // muốn giữ khoảng cách đó thì phải kéo vùng sáng LÊN, nghĩa là cần NHIỀU đèn nền hơn theme sáng
   // chứ không phải ít hơn.
+  //
+  // ⚠️ LẦN 3 (Phase 7A) — BẢN ĐỒ MÔI TRƯỜNG **THAY MỘT PHẦN** ĐÈN NỀN, KHÔNG CỘNG THÊM VÀO.
+  // **Bản đồ môi trường CHÍNH LÀ một đèn nền.** Nó rọi từ mọi phía, y hệt `AmbientLight` +
+  // `HemisphereLight`. Thêm nó mà giữ nguyên hai cái kia là bật ba đèn nền cùng lúc, và cái giá
+  // phải trả là độ tươi cùng chiaroscuro — hai thứ Phase 3C đã tốn cả một phase để giành lấy.
+  // ⇒ Hạ hai đèn cũ (0,34/0,07 → 0,10/0,02 ở theme sáng) rồi để môi trường bù vào phần thiếu ở
+  // mức nhỏ (`ENV_DIFFUSE` = 0,12, chọn bằng phép đo — xem bảng số ở chỗ khai hằng số đó).
+  // Đổi lại được một thứ tốt hơn hẳn: đèn nền cũ rọi ĐỀU mọi hướng (thông tin bằng 0 về không
+  // gian), còn môi trường thì trên là trời, dưới là đất, một bên có quầng mặt trời — cùng một mức
+  // sáng nhưng mặt nào của khối cũng ăn một sắc khác. Sáng bao quanh mà vẫn đọc ra hình khối.
+  //
+  // ⚠️ ĐỪNG SUY RA CẶP SỐ NÀY TỪ LÝ THUYẾT RỒI TIN. Lần đầu tôi hạ đúng hai con số này với lý lẽ
+  // nghe rất vững ("môi trường là đèn nền thứ ba"), đo lại thì độ sáng gần như KHÔNG nhúc nhích —
+  // vì thủ phạm thật lúc đó là `envMapIntensity` chưa được nối, môi trường đang rọi ở mức 1,0.
+  // Lý lẽ đúng + con số sai vẫn ra một bản vá vô dụng. Chỉnh đèn thì phải chụp rồi đo, mọi lần.
   const hemisphere = new HemisphereLight(
     palette.lights?.skyDome ?? palette.sky,
     palette.lights?.bounce ?? palette.ground,
-    (palette.isDark ? 0.78 : 0.34) * fillEnergy,
+    (palette.isDark ? 0.34 : 0.10) * fillEnergy,
   );
   scene.add(hemisphere);
 
   const ambient = new AmbientLight(palette.lights?.bounce ?? palette.sky,
-    (palette.isDark ? 0.26 : 0.07) * fillEnergy);
+    (palette.isDark ? 0.10 : 0.02) * fillEnergy);
   scene.add(ambient);
 
   const sun = new DirectionalLight(palette.lights?.sun ?? palette.sun,
@@ -704,7 +874,11 @@ export function createCityScene({
       // Đèn điểm là nguồn sáng DUY NHẤT ở đây tính tiền theo từng điểm ảnh — hiện lên HUD để lúc
       // Đàm chụp màn hình báo máy nóng, ta biết ngay lúc đó có mấy cái đang bật.
       lamps: lampCount,
-      drawCalls: meshes.length,
+      // ⚠️ KHÔNG CÒN BẰNG `meshes.length` TỪ PHASE 7A. Khối công trình nay chia nhóm theo họ vật
+      // liệu, và MỖI NHÓM là một lệnh vẽ riêng. Để nguyên phép đếm cũ thì HUD sẽ báo một con số
+      // nhỏ hơn sự thật đúng ở chỗ Đàm dựa vào nó để biết máy có gánh nổi không — một cái đồng hồ
+      // đo nói dối theo hướng trấn an là loại đồng hồ tệ nhất.
+      drawCalls: meshes.length + Math.max(0, (merged?.families?.length ?? 1) - 1),
       triangles: buildingTriangles
         + (groundCells.length + roads.length) * TRIANGLES_PER_BOX
         // × 2: mỗi cư dân là HAI hộp (thân + đầu).

@@ -6,7 +6,79 @@
 > chọn: `ARCHITECTURE_DECISIONS.md`. Nợ kỹ thuật: `TECH_DEBT.md`. Migration: `MIGRATION.md`. Tóm
 > tắt theo mốc: `CHANGELOG.md`.
 > **NGUYÊN TẮC ƯU TIÊN SỐ 1:** (1) mọi phiên AI phải đọc file này + `CLAUDE.md` + các file liên quan TRƯỚC khi làm; (2) sau MỌI cập nhật dù nhỏ, phải cập nhật ngay file này + `CLAUDE.md` + các file liên quan khác.
-> Cập nhật lần cuối: **2026-08-14** — **Phase 6C**: **ĐƯỜNG VÀNH ĐAI, VÀ CÂU BÁO NÓI RA ĐÚNG CON
+> Cập nhật lần cuối: **2026-08-14** — **Phase 7A**: **VẬT LIỆU THẬT — đá ra đá, kính ra kính, kim
+> loại ra kim loại.** Đàm ra yêu cầu nâng cấp TOÀN DIỆN Thành phố 3D vì nó *"còn giống
+> low-poly/prototype"*, đích đến là **premium stylized 3D realism**, và nói rõ *"vật liệu phải đọc
+> ra rõ là đá, gạch, gỗ, đất nung, ngói, bê tông, kim loại"*. Thứ tự Đàm chốt: **Visual Foundation →
+> Terrain/City → Roads → Historical Architecture → Living City → Pomodoro → Polish**, và **không
+> được chuyển bước khi kết quả còn low-poly/blocky/empty/prototype**. Đây là bước ĐẦU TIÊN.
+>
+> **Nguyên nhân gốc (không phải số tam giác, không phải bảng màu).** Cả thành phố dùng đúng **một**
+> `MeshLambertMaterial`. Lambert là mô hình **thuần khuếch tán** — không có số hạng phản xạ gương
+> nào. Nghĩa là **về mặt toán học mọi bề mặt trong thành phố là CÙNG MỘT bề mặt**, chỉ khác sắc.
+> Không có cách nào để kính đọc ra khác đá, hay kẽm khác ngói, vì thứ phân biệt chúng ngoài đời
+> (bóng/nhám/phản chiếu) đơn giản **không tồn tại trong công thức**. Bao nhiêu Phase đầu tư vào bảng
+> màu (3N, 6B) và hình khối (5B, 6A) cũng không chạm tới được chỗ này.
+>
+> **Đã làm.** Module thuần mới `src/engine/city3d/materials.js`: bảng **15 HỌ vật liệu** (mái tranh,
+> gỗ, gạch bùn, gạch nung, đá, vữa, ngói, ngói men, đá phiến, bê tông, kim loại, vàng, kính, nước,
+> lá) mỗi họ khai `roughness`/`metalness`; hàm tra `vai màu × kỷ → họ`; đường cong **bóng tiếp xúc**.
+> `eraStyle.js` thêm `wallMaterial`/`roofMaterial` **bắt buộc cho cả 15 kỷ**, khai theo công trình
+> có thật ở nước biểu tượng (kỷ 4 gỗ sơn son + ngói MEN · kỷ 6 cột lim + ngói nung KHÔNG men · kỷ 9
+> đá vôi + mái KẼM · kỷ 11 granite + đồng GỈ · kỷ 12–13 bê tông · kỷ 14 kính · kỷ 15 kính + vành
+> THÉP MẠ). `geometryFactory.js` gom tam giác **theo họ** rồi phát ra các **nhóm**
+> (`geometry.addGroup`) — giữ nguyên kiến trúc gộp-hình-học, chỉ đi từ 1 lệnh vẽ lên **5–7**, thay
+> vì 750 nếu vẽ rời từng khối. `sceneGraph.js` dựng mảng vật liệu **từ chính `families` nhà máy trả
+> về** (không tự liệt kê lại), và nướng **bản đồ môi trường** từ chính bầu trời đang nhìn thấy.
+>
+> ⚠️ **KIM LOẠI KHÔNG CÓ BẢN ĐỒ MÔI TRƯỜNG THÌ RA ĐEN — đây là điều kiện CẦN, không phải điểm tô
+> thêm.** Kim loại gần như không có thành phần khuếch tán: màu nó hiện ra hầu hết là thứ nó phản
+> chiếu. Bản đồ nướng bằng `PMREMGenerator.fromScene` trên một quả cầu 16×8 tô bằng **cùng hàm**
+> `paintSkyGradient` vẽ vòm trời (một luật một công thức — nếu không thì kính phản chiếu một bầu
+> trời khác với bầu trời ngay sau lưng nó). Hệ quả: `CityScene3D.jsx` và **cả hai** chỗ gọi trong
+> `scripts/city-preview.mjs` đều phải truyền `renderer` vào; quên một chỗ thì trang xem thử lặng lẽ
+> đóng khung khác app.
+>
+> ⚠️ **BÀI HỌC LỚN NHẤT PHIÊN NÀY — mất nửa buổi chỉnh một cái núm không nối vào đâu cả.** Sau khi
+> chuyển sang PBR, bảng màu **nhạt hẳn**: sáng 33,8 → 52,2 (+54%), tươi 24,4 → 16,1 (−34%),
+> chiaroscuro 40,3 → 30,3 (−25%) — đúng thất bại "pastel như sữa" mà dự án đã bác một lần. Giả
+> thuyết rất hợp lý: *"môi trường đang làm đèn nền thứ ba"* ⇒ hạ đèn bán cầu 0,34 → 0,10, đèn nền
+> 0,07 → 0,02. Đo lại: **52,2 → 51,0** — gần như không nhúc nhích. **Lý lẽ đúng, con số vô dụng.**
+> Thủ phạm thật: gắn bản đồ bằng `scene.environment` thì **three BỎ QUA `material.envMapIntensity`
+> hoàn toàn** — môi trường luôn rọi ở mức 1,0 bất kể khai gì. Phát hiện bằng **phép thử vô lý**: tô
+> quả cầu dò ĐỎ CHÓI rồi chạy với cường độ khai bằng **0**; cả thành phố **vẫn đỏ** (tươi 53,0) ⇒
+> cái núm chắc chắn không nối. ⇒ **(a)** một thay đổi làm ảnh đổi "một chút" là hình dạng của cả
+> nhiễu lẫn tín hiệu — chỉ hậu quả VÔ LÝ mới phân biệt được; **(b)** `catch` im lặng biến tính năng
+> HỎNG thành tính năng VÔ HÌNH (chính khối `catch` tôi tự viết đã giấu lỗi — nay là `console.warn`);
+> **(c)** lý lẽ đúng + số sai vẫn ra bản vá vô dụng ⇒ mọi thay đổi ánh sáng phải **chụp-rồi-đo**.
+> `ENV_DIFFUSE = 0,12` chọn bằng bảng đo, không bằng cảm giác (0 → 32,4/24,5/43 · **0,12 →
+> 35,3/20,3/38** · 0,20 → 37,0/18,1/36 · 1,00 → 51,3/14,4/29). Đáng ghi: PBR **không** có môi trường
+> đã tốt hơn Lambert ở cả ba con số.
+>
+> ⚠️ **BÀI HỌC THỨ HAI — cùng một lỗi cắn BA LẦN trong đúng một file test tôi vừa viết.** Bài
+> `sceneGraphWiring.test.js` canh "hàm X có được gọi không" bằng regex, mà `/tênHàm\(/` **khớp luôn
+> dòng `function tênHàm(`** — nên gỡ sạch mọi lời GỌI vẫn không đỏ. Lần 1 `paintSkyGradient`; lần 2
+> `createSkyEnvironment`; lần 3 **ngay trong cái assert vừa viết ra để vá lần 2**. Vá theo triệu
+> chứng thì chỗ thứ tư sẽ lại quên ⇒ vá GỐC: lọc mọi dòng định nghĩa hàm ra hằng số `CALLS`, mọi
+> phép kiểm "có được gọi không" đều hỏi trên đó. Kèm hai bài phụ: **(a)** assert "có ít nhất một
+> chỗ" là cái phễu chứ không phải hàng rào (`/envMap,/` xanh oan vì file có 4 vật liệu mang
+> `envMap`; gỡ đúng cái DUY NHẤT chứa kim loại vẫn còn 3 cái kia đỡ) ⇒ phải hỏi ĐÍCH DANH khối cần
+> canh; **(b)** phép thử ngược phải **kiểm bằng `diff`** xem file có đổi thật không — hai lần "thử
+> ngược không đỏ" đầu tiên hoá ra là do regex sửa file bị trượt vì thụt lề, tức tôi suýt kết luận
+> sai về chính bài test của mình.
+>
+> **Test**: 591 → **612** (+21: `materials.test.js` 10 bài, `geometryFactory.test.js` 7 bài,
+> `sceneGraphWiring.test.js` 4 bài). **Cả 13 bài đã thử-cho-đỏ**: 5 kiểu phá `geometryFactory` và 8
+> kiểu phá `sceneGraph` đều đỏ đúng bài cần đỏ. Lint sạch, build xanh. Không đụng state, không đụng
+> dữ liệu đã lưu, không thêm dependency. Quyết định ghi ở **ADR-013**.
+>
+> ⚠️ **NÓI CHO ĐÚNG PHASE NÀY MUA ĐƯỢC GÌ**: nó chữa **bề mặt**, và chỉ bề mặt. Nhìn ảnh quét 15 kỷ
+> thì mái tranh kỷ 1 nay lì hoàn toàn, mái kẽm kỷ 9 có vệt sáng gương trượt trên mặt, kính kỷ 15
+> bóng dịu — ba thứ trước đây đọc ra y hệt nhau. Nhưng **đất vẫn còn trống nhiều** và mật độ nhà vẫn
+> thưa, đúng thứ Đàm phàn nàn. Đó là việc của **Phase 7B (Terrain có cao độ) và 7C (mật độ + khu
+> dân cư)**, chưa làm.
+>
+> **Phase 6C** (ngay trước đó): **ĐƯỜNG VÀNH ĐAI, VÀ CÂU BÁO NÓI RA ĐÚNG CON
 > ĐƯỜNG VỪA MỞ.** Đàm: *"mở rộng thêm, làm cầu kỳ lên"*. Nhưng việc này chọn theo SỐ ĐO, không theo
 > cảm tính — đo nhánh "xưởng trống" của `buildGrowthMoment` (ca chiếm ~85% số phiên thật):
 >

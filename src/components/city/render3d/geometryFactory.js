@@ -7,9 +7,23 @@
  * con số tam giác nào. Gộp lại còn đúng 1 lệnh. Đổi lại: đổi bố cục thì phải dựng lại cả khối
  * hình học, nhưng chuyện đó chỉ xảy ra khi Đàm xây xong một công trình hoặc đổi kỷ.
  *
+ * ⚠️ TỪ PHASE 7A: MỘT KHỐI HÌNH HỌC, NHIỀU **NHÓM** VẬT LIỆU (`addGroup`).
+ * Một khối hình học chỉ nhận được một vật liệu — mà cả thành phố dùng chung một vật liệu chính là
+ * nguyên nhân gốc của cảm giác "khối màu phẳng" (đọc `engine/city3d/materials.js` để hiểu vì sao).
+ * `addGroup` cho phép chia khối thành nhiều đoạn, mỗi đoạn một vật liệu. Giá phải trả: mỗi nhóm là
+ * MỘT lệnh vẽ. Nên tam giác được gom theo **họ vật liệu** (≤15 họ, một kỷ điển hình dùng 5–7) chứ
+ * KHÔNG phải theo vai màu (11 vai) hay theo khối (750 khối). 5–7 lệnh vẽ cho cả thành phố vẫn nằm
+ * sâu trong ngân sách; 750 thì không.
+ *
+ * ⚠️ THỨ TỰ NHÓM PHẢI KHỚP MẢNG VẬT LIỆU BÊN `sceneGraph.js`. Hàm này trả về `families` — danh
+ * sách tên họ theo đúng thứ tự `materialIndex` đã đánh. Bên kia BẮT BUỘC dựng mảng vật liệu từ
+ * chính mảng đó, không được tự liệt kê lại: hai bên tự sắp xếp riêng thì mái sẽ mang vật liệu của
+ * mặt nước — lỗi mắt thấy ngay nhưng đọc code thì không, vì cả hai bên đều "đúng" theo cách riêng.
+ *
  * ⚠️ KHÔNG ĐÁNH CHỈ MỤC (non-indexed) VÀ ĐÓ LÀ CỐ Ý: mỗi mặt có bộ đỉnh riêng nên pháp tuyến
  * PHẲNG theo từng mặt. Đây chính là vẻ "khối cắt gọt" của hướng mỹ thuật đã chọn — dùng chung đỉnh
  * sẽ làm pháp tuyến bị bình quân hoá, khối trở nên tròn nhũn và mất hết cạnh bắt sáng.
+ * (Hệ quả có lợi: với hình học không chỉ mục, `addGroup(start, count, i)` đếm thẳng theo ĐỈNH.)
  *
  * ⚠️ MÀU ĐI QUA `THREE.Color`, KHÔNG tự chia 255. three ≥ r152 bật `ColorManagement` mặc định:
  * `setHex` hiểu số vào là sRGB rồi lưu ra giá trị TUYẾN TÍNH, đúng thứ mà thuộc tính màu đỉnh cần.
@@ -17,6 +31,9 @@
  */
 
 import { BufferAttribute, BufferGeometry, Color } from 'three';
+
+import { getEraStyle } from '../../../engine/city3d/eraStyle';
+import { MATERIAL_ORDER, contactShade, materialFamilyFor } from '../../../engine/city3d/materials';
 
 /** Bộ đệm tích luỹ trong lúc dựng. Mảng JS thường rồi mới đổ sang Float32Array một lần. */
 function createSink() {
@@ -27,8 +44,12 @@ function createSink() {
  * Đẩy một tam giác kèm pháp tuyến tự tính.
  * Thứ tự đỉnh quyết định mặt nào là mặt NGOÀI — sai thứ tự thì mặt đó biến mất khi nhìn từ ngoài
  * (bị loại vì quay lưng) mà lại hiện ra khi nhìn từ trong. Mọi lời gọi bên dưới đều đã kiểm thứ tự.
+ *
+ * `shade = true` ⇒ nướng BÓNG TIẾP XÚC vào màu đỉnh: càng gần mặt đất càng tối. Đây là thứ làm
+ * công trình NGỒI trên đất thay vì nổi lều bều, và nó tốn 0 đồng lúc chạy vì tính sẵn một lần ở
+ * đây. Ô cửa sáng đèn truyền `false` — chúng tự phát sáng, tối chân thì thành vô lý.
  */
-function pushTriangle(sink, a, b, c, rgb) {
+function pushTriangle(sink, a, b, c, rgb, shade) {
   const ux = b[0] - a[0];
   const uy = b[1] - a[1];
   const uz = b[2] - a[2];
@@ -45,7 +66,8 @@ function pushTriangle(sink, a, b, c, rgb) {
   for (const p of [a, b, c]) {
     sink.pos.push(p[0], p[1], p[2]);
     sink.nor.push(nx, ny, nz);
-    sink.col.push(rgb.r, rgb.g, rgb.b);
+    const k = shade ? contactShade(p[1]) : 1;
+    sink.col.push(rgb.r * k, rgb.g * k, rgb.b * k);
   }
   sink.triangles += 1;
 }
@@ -69,7 +91,7 @@ function place(px, py, pz, transform) {
  * thì hộp vuông (n = 4) sẽ rộng hơn ý định 41%, và mọi công trình sẽ lấn sang ô bên cạnh.
  * Góc bắt đầu `π/n` là thứ làm mặt phẳng quay ra trước thay vì một góc nhọn chĩa vào người xem.
  */
-function emitPrism(sink, part, transform, rgb) {
+function emitPrism(sink, part, transform, rgb, shade) {
   const n = part.sides;
   const half = Math.PI / n;
   const rx = (part.w / 2) / Math.cos(half);
@@ -97,30 +119,30 @@ function emitPrism(sink, part, transform, rgb) {
     // Thóp về một điểm: mặt bên là tam giác, không có mặt trên.
     const apex = place(0, top, 0, transform);
     for (let i = 0; i < n; i += 1) {
-      pushTriangle(sink, bottom[i], apex, bottom[(i + 1) % n], rgb);
+      pushTriangle(sink, bottom[i], apex, bottom[(i + 1) % n], rgb, shade);
     }
   } else {
     const upper = ring(taper, top);
     for (let i = 0; i < n; i += 1) {
       const j = (i + 1) % n;
-      pushTriangle(sink, bottom[i], upper[i], upper[j], rgb);
-      pushTriangle(sink, bottom[i], upper[j], bottom[j], rgb);
+      pushTriangle(sink, bottom[i], upper[i], upper[j], rgb, shade);
+      pushTriangle(sink, bottom[i], upper[j], bottom[j], rgb, shade);
     }
     // Mặt trên: quạt tam giác theo chiều NGƯỢC vòng để pháp tuyến hướng lên.
     for (let i = 1; i < n - 1; i += 1) {
-      pushTriangle(sink, upper[0], upper[i + 1], upper[i], rgb);
+      pushTriangle(sink, upper[0], upper[i + 1], upper[i], rgb, shade);
     }
   }
 
   // Mặt đáy: chiều thuận → pháp tuyến hướng xuống. Vẫn phải vẽ vì camera hạ được xuống thấp và
   // khối lơ lửng (kỷ 15) thì nhìn thấy đáy thật.
   for (let i = 1; i < n - 1; i += 1) {
-    pushTriangle(sink, bottom[0], bottom[i], bottom[i + 1], rgb);
+    pushTriangle(sink, bottom[0], bottom[i], bottom[i + 1], rgb, shade);
   }
 }
 
 /** Mái dốc hai phía. Nóc chạy dọc trục X cục bộ; `ry` của khối lo phần xoay. */
-function emitGable(sink, part, transform, rgb) {
+function emitGable(sink, part, transform, rgb, shade) {
   const hw = part.w / 2;
   const hd = part.d / 2;
   const y0 = part.y;
@@ -133,14 +155,14 @@ function emitGable(sink, part, transform, rgb) {
   const R0 = place(-hw, y1, 0, transform);
   const R1 = place(hw, y1, 0, transform);
 
-  pushTriangle(sink, D, C, R1, rgb);      // mặt dốc hướng +Z
-  pushTriangle(sink, D, R1, R0, rgb);
-  pushTriangle(sink, B, A, R0, rgb);      // mặt dốc hướng −Z
-  pushTriangle(sink, B, R0, R1, rgb);
-  pushTriangle(sink, B, R1, C, rgb);      // đầu hồi +X
-  pushTriangle(sink, A, D, R0, rgb);      // đầu hồi −X
-  pushTriangle(sink, A, B, C, rgb);       // đáy
-  pushTriangle(sink, A, C, D, rgb);
+  pushTriangle(sink, D, C, R1, rgb, shade);      // mặt dốc hướng +Z
+  pushTriangle(sink, D, R1, R0, rgb, shade);
+  pushTriangle(sink, B, A, R0, rgb, shade);      // mặt dốc hướng −Z
+  pushTriangle(sink, B, R0, R1, rgb, shade);
+  pushTriangle(sink, B, R1, C, rgb, shade);      // đầu hồi +X
+  pushTriangle(sink, A, D, R0, rgb, shade);      // đầu hồi −X
+  pushTriangle(sink, A, B, C, rgb, shade);       // đáy
+  pushTriangle(sink, A, C, D, rgb, shade);
 }
 
 /**
@@ -150,10 +172,22 @@ function emitGable(sink, part, transform, rgb) {
  * @param {object} palette kết quả `buildScenePalette` — cần `palette.roles`
  * @param {object} [options]
  * @param {boolean} [options.skipDeco] bỏ chi tiết trang trí (máy yếu) — hình bóng vẫn nguyên vẹn
- * @returns {{geometry:BufferGeometry, triangles:number}|null} `null` khi không có gì để vẽ
+ * @param {number}  [options.era] kỷ của thành phố — quyết định vật liệu tường/mái/diềm
+ * @returns {{geometry:BufferGeometry, triangles:number, families:string[]}|null}
+ *          `null` khi không có gì để vẽ. `families[i]` là họ vật liệu của nhóm `materialIndex = i`.
  */
-export function buildMergedGeometry(placements, palette, { skipDeco = false, glowRole = null } = {}) {
-  const sink = createSink();
+export function buildMergedGeometry(
+  placements, palette, { skipDeco = false, glowRole = null, era = null } = {},
+) {
+  const style = getEraStyle(era);
+  // Một bể riêng cho MỖI họ vật liệu. Tạo lười (chỉ khi họ đó thật sự có tam giác) để một kỷ dùng
+  // 6 họ không phải trả giá cho 15 nhóm rỗng.
+  const sinks = new Map();
+  const sinkFor = (family) => {
+    let s = sinks.get(family);
+    if (!s) { s = createSink(); sinks.set(family, s); }
+    return s;
+  };
   // ⚠️ KHỐI THỨ HAI CHO NHỮNG PHẦN "TỰ PHÁT SÁNG" (đèn cửa sổ ban đêm).
   // Không thể làm đèn cửa sổ bằng cách cho màu thật sáng ở khối chính: vật liệu Lambert NHÂN màu
   // với ánh sáng chiếu tới, nên một mặt tường quay lưng với nắng thì màu nào cũng ra tối — đúng
@@ -216,21 +250,65 @@ export function buildMergedGeometry(placements, palette, { skipDeco = false, glo
       };
 
       const glowing = glowSink !== null && part.role === glowRole;
-      const target = glowing ? glowSink : sink;
+      const target = glowing ? glowSink : sinkFor(materialFamilyFor(part.role, style));
       const rgb = colorFor(glowing ? 'glassLit' : part.role);
-      if (part.shape === 'gable') emitGable(target, scaled, transform, rgb);
-      else emitPrism(target, scaled, transform, rgb);
+      // Ô cửa sáng đèn KHÔNG nhận bóng tiếp xúc — chúng tự phát sáng.
+      const shade = !glowing;
+      if (part.shape === 'gable') emitGable(target, scaled, transform, rgb, shade);
+      else emitPrism(target, scaled, transform, rgb, shade);
     }
   }
 
-  if (sink.triangles === 0 && (!glowSink || glowSink.triangles === 0)) return null;
+  let triangles = 0;
+  for (const s of sinks.values()) triangles += s.triangles;
+  if (triangles === 0 && (!glowSink || glowSink.triangles === 0)) return null;
+
+  const merged = mergeSinks(sinks);
 
   return {
-    geometry: toGeometry(sink),
-    triangles: sink.triangles,
-    glowGeometry: glowSink ? toGeometry(glowSink) : null,
+    geometry: merged.geometry,
+    families: merged.families,
+    triangles,
+    glowGeometry: toGeometry(glowSink),
     glowTriangles: glowSink ? glowSink.triangles : 0,
   };
+}
+
+/**
+ * Nối các bể theo họ thành MỘT khối hình học có nhóm vật liệu.
+ *
+ * ⚠️ DUYỆT THEO `MATERIAL_ORDER`, KHÔNG duyệt theo thứ tự chèn của `Map`. Thứ tự chèn phụ thuộc
+ * vào việc khối nào tình cờ được dựng trước — tức là nó đổi khi Đàm xây thêm một công trình. Một
+ * thứ tự "ổn định trong hầu hết trường hợp" là loại lỗi tệ nhất: nó chạy đúng suốt lúc phát triển
+ * rồi sai đúng lúc người dùng làm điều gì đó bình thường.
+ */
+function mergeSinks(sinks) {
+  const families = [];
+  const pos = [];
+  const nor = [];
+  const col = [];
+  const groups = [];
+
+  for (const family of MATERIAL_ORDER) {
+    const sink = sinks.get(family);
+    if (!sink || sink.triangles === 0) continue;
+    const start = pos.length / 3;
+    for (let i = 0; i < sink.pos.length; i += 1) pos.push(sink.pos[i]);
+    for (let i = 0; i < sink.nor.length; i += 1) nor.push(sink.nor[i]);
+    for (let i = 0; i < sink.col.length; i += 1) col.push(sink.col[i]);
+    groups.push({ start, count: sink.triangles * 3, index: families.length });
+    families.push(family);
+  }
+
+  if (families.length === 0) return { geometry: null, families };
+
+  const geometry = new BufferGeometry();
+  geometry.setAttribute('position', new BufferAttribute(new Float32Array(pos), 3));
+  geometry.setAttribute('normal', new BufferAttribute(new Float32Array(nor), 3));
+  geometry.setAttribute('color', new BufferAttribute(new Float32Array(col), 3));
+  for (const g of groups) geometry.addGroup(g.start, g.count, g.index);
+  geometry.computeBoundingSphere();
+  return { geometry, families };
 }
 
 /** Bể tam giác → `BufferGeometry`. `null` nếu rỗng (đừng tạo khối 0 tam giác rồi đi vẽ nó). */

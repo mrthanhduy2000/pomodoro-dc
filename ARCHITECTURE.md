@@ -306,7 +306,33 @@ trần tam giác, tỉ lệ cao/rộng, "hai kỷ bất kỳ phải khác nhau",
 dáng giữa hai lần mở app — mở rộng ADR-007 từ vị trí sang hình dáng.
 ⚠️ **Gộp hình học là thứ làm cho điều đó rẻ**: toàn bộ công trình + cảnh vật gộp thành MỘT
 `BufferGeometry`, màu đi qua thuộc tính màu ĐỈNH chứ không qua material. Nhờ vậy "mỗi công trình
-một hình dáng riêng" tốn đúng **1 lệnh vẽ**, không phải 75.
+một hình dáng riêng" tốn **5–7 lệnh vẽ** cho cả thành phố, không phải 750.
+
+**BỀ MẶT là một trục ĐỘC LẬP với màu (2026-08-14, Phase 7A)** — và đây là lớp cuối cùng của chuỗi
+trên. Trước Phase 7A cả thành phố dùng đúng **một** `MeshLambertMaterial`. Lambert thuần khuếch
+tán: không có số hạng phản xạ gương, nên **về mặt toán học mọi bề mặt là cùng một bề mặt**, chỉ
+khác sắc — kính không thể đọc ra khác đá, kẽm không thể đọc ra khác ngói, dù bảng màu có công phu
+tới đâu. Đó là nguyên nhân gốc của cảm giác "khối màu phẳng", không phải số tam giác. Xem ADR-013.
+Chuỗi nay dài thêm một mắt: `materials.js` (thuần — bảng 15 **họ** vật liệu: nhám/kim loại; tra
+`vai màu × kỷ → họ`) → `geometryFactory.js` gom tam giác **theo họ** rồi phát ra các **nhóm**
+(`geometry.addGroup`) → `sceneGraph.js` dựng mảng vật liệu **từ chính `families` nhà máy trả về**.
+Ba điều ràng buộc lẫn nhau ở đây, đổi một cái phải soi hai cái kia:
+1. **Thứ tự nhóm phải theo `MATERIAL_ORDER`, không theo thứ tự khối được dựng** — thứ tự chèn vào
+   `Map` đổi khi Đàm xây thêm một công trình; một thứ tự "ổn định trong hầu hết trường hợp" là loại
+   lỗi tệ nhất. Hai bên tự liệt kê riêng ⇒ mái mang độ bóng của mặt nước, mắt thấy ngay mà đọc code
+   thì không. Khoá bằng `geometryFactory.test.js` + `sceneGraphWiring.test.js`.
+2. **Kim loại BẮT BUỘC có bản đồ môi trường** — nó gần như không có thành phần khuếch tán, nên
+   `metalness: 0.9` mà không có gì để phản chiếu sẽ render ra **ĐEN**, không phải "kém bóng đi".
+   Bản đồ được nướng bằng `PMREMGenerator.fromScene` trên một quả cầu tô bằng **cùng hàm**
+   `paintSkyGradient` vẽ vòm trời — một luật một công thức, nếu không thì kính phản chiếu một bầu
+   trời khác với bầu trời ngay sau lưng nó.
+   ⚠️ Bản đồ phải gắn vào **từng vật liệu** (`envMap`), KHÔNG gắn qua `scene.environment`: đi đường
+   đó thì three **bỏ qua `envMapIntensity` hoàn toàn** và môi trường rọi ở mức 1,0 bất kể ta khai
+   gì — cả bảng màu đất công phu của các Phase trước bạc phếch như sữa. Đã đo: vặn núm từ 0 lên 3,0
+   mà ảnh không đổi một điểm ảnh nào.
+3. **Bóng tiếp xúc nướng SẴN vào màu đỉnh** (`contactShade`), không dùng lượt SSAO — SSAO là hậu kỳ
+   chạy mỗi khung hình, nó phá vỡ render-on-demand (đứng yên = 0 nhịp rAF), thứ đắt nhất phải giữ
+   trên iPhone. Nướng sẵn tốn 0 đồng lúc chạy.
 
 **Ánh sáng và màu là một hệ THỐNG NHẤT, không phải các nút chỉnh rời (2026-08-12, Phase 3C)**:
 bốn thứ dưới đây khoá lẫn nhau, đổi một cái phải soi lại ba cái còn lại.

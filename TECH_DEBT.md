@@ -13,12 +13,13 @@
 > mà không được refactor triệt để, phải CHỦ ĐỘNG đề xuất mở một "Maintenance Sprint" (nêu rõ mục
 > tiêu/phạm vi/lợi ích/rủi ro/tiêu chí hoàn thành) thay vì tiếp tục cộng thêm tính năng mới.
 >
-> **Trạng thái ngưỡng hiện tại (2026-08-14, cập nhật sau Phase 6B)**: **1 mục Priority High**
+> **Trạng thái ngưỡng hiện tại (2026-08-14, cập nhật sau Phase 7A)**: **1 mục Priority High**
 > (#14) → vẫn CHƯA đạt ngưỡng 8–10 mục để đề xuất Maintenance Sprint. Còn **2 mục Medium-High**
-> (#3, #13) và **2 mục Medium**: **#22** (công cụ `sweep-score.mjs` không còn chấm được 15 kỷ —
-> MỚI, sinh ra từ chính Phase 6B) và **#19** (nay đang **treo chờ #22**: hai con số nghiệm thu của
-> nó đo trên bảng mái CŨ, đã bị Phase 6B thay hẳn, mà chưa đo lại được). **#15, #16, #17 và #20 đều
-> đã đóng** — không còn mục nào chờ Đàm chọn hướng mỹ thuật.
+> (#3, #13) và **3 mục Medium**: **#23** (cổng hiệu năng iPhone chưa đo lại sau khi đổi sang PBR —
+> MỚI, sinh ra từ chính Phase 7A), **#22** (công cụ `sweep-score.mjs` không còn chấm được 15 kỷ) và
+> **#19** (nay đang **treo chờ #22**: hai con số nghiệm thu của nó đo trên bảng mái CŨ, đã bị Phase
+> 6B thay hẳn, mà chưa đo lại được). **#15, #16, #17 và #20 đều đã đóng** — không còn mục nào chờ
+> Đàm chọn hướng mỹ thuật.
 > ⚠️ **#22 là ví dụ sạch nhất trong cả file này của một luật đáng nhớ**: *sửa đúng mã sản phẩm vẫn
 > có thể làm HỎNG công cụ đo*, vì công cụ đo bao giờ cũng đứng trên vài giả định không được viết ra
 > về thứ nó đang đo. Ở đây giả định ngầm là *"mái là thứ tươi nhất khung hình"* — đúng suốt thời kỳ
@@ -758,6 +759,39 @@
   ghi rõ nó được nâng từ 1,2 lên để cứu lỗi "mảng oải hương xam xám"; sửa nó là mở lại một lỗi cũ
   để đổi lấy một cải thiện mà đường khác đã đạt được rồi. Vẫn đúng là **màu trời ban ngày do
   `horizonHue` quyết định, không phải `skyHue`** — ai chỉnh bảng `DAYLIGHT_PROFILES` phải nhớ điều đó.
+
+---
+
+## #23 — Cổng hiệu năng iPhone của Phase 3A chưa được đo lại sau khi cả cảnh chuyển sang PBR
+
+- **Module**: `src/components/city/render3d/sceneGraph.js` + `CityPerfHud.jsx`
+- **Priority**: Medium
+- **Severity**: Medium
+- **Impact**: chưa biết. Cổng 3A (≥30 FPS khi xoay · <1,5 s tới khung hình đầu · không nóng máy sau
+  5 phút · pin tụt <4% sau 10 phút) đã đo ĐẠT trên iPhone thật của Đàm — nhưng **đo trên bản
+  Lambert**. Phase 7A đổi ba thứ đều tốn thêm GPU: (a) `MeshStandardMaterial` đắt hơn Lambert cho
+  MỖI ĐIỂM ẢNH (thêm phép tính BRDF + tra bản đồ môi trường); (b) mỗi lần dựng cảnh nay nướng thêm
+  một lượt PMREM; (c) công trình đi từ 1 lệnh vẽ lên 5–7.
+- **Root Cause**: không phải lỗi — là hệ quả có chủ đích của ADR-013. Vấn đề là **con số nghiệm thu
+  cũ nay đã hết hiệu lực mà không có gì báo**, đúng họ với bài học `TECH_DEBT #18` ("một con số
+  nghiệm thu phải đi kèm công cụ đã đo ra nó" — ở đây thêm một vế: *và đi kèm PHIÊN BẢN nó đo*).
+- **Current Risk**: thấp trên máy Mac (ảnh dựng 15 kỷ vẫn ~21 s như trước, không chậm đi rõ rệt).
+  Rủi ro thật nằm ở iPhone, nơi chưa ai đo. Đáng chú ý: chi phí (b) và (c) là **một lần mỗi lần
+  dựng cảnh**, còn (a) là **mỗi khung hình** — nên nếu có vấn đề thì nó sẽ hiện ra ở FPS lúc xoay
+  camera, không phải ở thời gian tới khung hình đầu.
+- **Future Risk**: nếu Phase 7B/7C tăng mật độ nhà như Đàm yêu cầu mà chưa đo lại nền này, thì lúc
+  máy nóng lên sẽ không biết thủ phạm là vật liệu hay mật độ — hai thay đổi chồng lên nhau, không
+  tách được. **Nên đo TRƯỚC khi làm 7B.**
+- **Recommended Solution**: Đàm bật HUD hiệu năng trong Cài đặt, mở tab Thành Phố trên iPhone, xoay
+  camera ~10 giây rồi chụp màn hình. Nếu FPS < 30: hạ `metalness` về 0 ở chế độ `lowDetail` để bỏ
+  hẳn nướng PMREM cho máy yếu (đường lui đã có sẵn — `createSkyEnvironment` trả `null` là hợp lệ,
+  cảnh vẫn chạy, chỉ mất phản chiếu kim loại).
+- **Estimated Complexity**: Low (đo: ~5 phút của Đàm; vá nếu cần: ~1 giờ).
+- **Blocking Conditions**: không chặn gì đang chạy. **Nên** chặn Phase 7B để hai thay đổi không
+  chồng lên nhau.
+- **Review Trigger**: trước khi bắt đầu Phase 7B (mật độ/địa hình); hoặc ngay khi Đàm thấy máy nóng.
+- **Owner**: cần Đàm đo (AI không chạm được vào iPhone thật)
+- **Status**: Open — chưa đo.
 
 ---
 

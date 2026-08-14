@@ -12,6 +12,36 @@
 
 ---
 
+## 2026-08-14 — Vật liệu thật: đá ra đá, kính ra kính, kim loại ra kim loại (Phase 7A)
+
+**Mục đích.** Đàm yêu cầu nâng cấp toàn diện Thành phố 3D vì nó *"còn giống low-poly/prototype"*,
+đích đến là **premium stylized 3D realism**, với yêu cầu cụ thể *"vật liệu phải đọc ra rõ là đá,
+gạch, gỗ, đất nung, ngói, bê tông, kim loại"*. Đây là bước đầu tiên (Visual Foundation) trong thứ
+tự Đàm đã chốt.
+
+**Nguyên nhân gốc.** Cả thành phố dùng đúng một `MeshLambertMaterial` — mô hình thuần khuếch tán,
+không có số hạng phản xạ gương. Nghĩa là *về mặt toán học* mọi bề mặt là cùng một bề mặt, chỉ khác
+sắc; không bảng màu nào chữa được. Xem **ADR-013**.
+
+**Phạm vi.** Module thuần mới `engine/city3d/materials.js` (15 họ vật liệu + tra vai→họ + đường
+cong bóng tiếp xúc). `eraStyle.js` thêm `wallMaterial`/`roofMaterial` bắt buộc cho cả 15 kỷ, khai
+theo công trình có thật ở nước biểu tượng. `geometryFactory.js` gom tam giác theo họ rồi phát ra
+nhóm vật liệu (`addGroup`) — giữ kiến trúc gộp-hình-học, chỉ đi từ 1 lệnh vẽ lên 5–7 (thay vì 750
+nếu vẽ rời). `sceneGraph.js` chuyển sang `MeshStandardMaterial` (PBR) + nướng bản đồ môi trường từ
+chính bầu trời đang nhìn thấy, và nướng sẵn bóng tiếp xúc vào màu đỉnh (không dùng SSAO — SSAO chạy
+mỗi khung hình, phá vỡ render-on-demand).
+
+**Ảnh hưởng.** Vật liệu nay phân biệt được bằng mắt: mái tranh kỷ 1 lì hoàn toàn, mái kẽm kỷ 9 có
+vệt sáng gương trượt trên mặt, kính kỷ 15 bóng dịu. ⚠️ Kim loại **bắt buộc** có bản đồ môi trường —
+thiếu nó thì `metalness: 0.9` render ra ĐEN, nên `CityScene3D.jsx` và cả hai chỗ gọi trong
+`scripts/city-preview.mjs` đều phải truyền `renderer` vào `createCityScene`.
+
+**Tương thích.** Không đụng state, không đụng dữ liệu đã lưu, không thêm dependency, không migration.
+Test 591 → 612. ⚠️ `MeshStandardMaterial` đắt hơn Lambert cho mỗi điểm ảnh — nếu iPhone nóng lên thì
+đo lại bằng HUD hiệu năng (cổng Phase 3A).
+
+---
+
 ## 2026-08-14 — Đường vành đai, và câu báo nói ra đúng con đường vừa mở (Phase 6C)
 
 **Mục đích.** Đàm: *"mở rộng thêm, làm cầu kỳ lên"*. Nhưng việc này chọn theo SỐ ĐO chứ không theo

@@ -50,9 +50,20 @@
 │   │   │   └── render3d/         # Bộ vẽ three.js — ⚠️ NƠI DUY NHẤT được import 'three'
 │   │   │       ├── CityScene3D.jsx # Vỏ React: vòng đời, resize, mất context. KHÔNG chứa logic 3D
 │   │   │       ├── sceneGraph.js   # Dựng cảnh: nền/đường/trời/đất + ánh sáng 3 nguồn + cư dân
-│   │   │       ├── geometryFactory.js # Mô tả hình học THUẦN → MỘT BufferGeometry đã gộp.
-│   │   │       │                   #   Mọi công trình + cảnh vật = 1 lệnh vẽ, nên "75 công trình
-│   │   │       │                   #   khác nhau" KHÔNG đồng nghĩa với 75 lệnh vẽ
+│   │   │       │                   #   + NƯỚNG BẢN ĐỒ MÔI TRƯỜNG từ chính bầu trời đang nhìn thấy
+│   │   │       │                   #   (`paintSkyGradient` dùng chung cho vòm trời và quả cầu dò —
+│   │   │       │                   #   một luật một công thức). ⚠️ Kim loại KHÔNG có bản đồ này thì
+│   │   │       │                   #   render ra ĐEN, không phải "kém đẹp đi" — xem ADR-013
+│   │   │       ├── sceneGraphWiring.test.js # Test ĐỌC MÃ NGUỒN: canh đường dây không thể quan sát
+│   │   │       │                   #   lúc chạy nếu không dựng cả WebGL (mảng vật liệu có lấy từ
+│   │   │       │                   #   `merged.families` không · có còn là PBR không · kim loại có
+│   │   │       │                   #   `envMap` không). Cùng khuôn `cityViewShellWiring.test.js`
+│   │   │       ├── geometryFactory.js # Mô tả hình học THUẦN → MỘT BufferGeometry đã gộp, chia
+│   │   │       │                   #   NHÓM theo họ vật liệu (`addGroup`). Mọi công trình = 1 khối
+│   │   │       │                   #   hình học nhưng 5–7 lệnh vẽ (một lệnh mỗi họ), KHÔNG phải 750
+│   │   │       │                   #   ⚠️ Thứ tự nhóm PHẢI theo `MATERIAL_ORDER`, không theo thứ tự
+│   │   │       │                   #   khối được dựng — thứ tự ấy đổi khi Đàm xây thêm một công trình
+│   │   │       │                   #   Cũng là nơi NƯỚNG SẴN bóng tiếp xúc vào màu đỉnh (0đ lúc chạy)
 │   │   │       ├── themeBridge.js  # Đọc CSS var từ đúng div [data-theme] (KHÔNG documentElement)
 │   │   │       └── capability.js   # Dò WebGL2 bằng cách TẠO THỬ context rồi huỷ ngay
 │   │   ├── Coach*.jsx         # 3 lối vào AI Coach: CoachChat (hỏi-đáp), CoachOffline (phân tích
@@ -115,7 +126,15 @@
 │   │   │   │                      #   WebGL không đọc được biến CSS (xem ARCHITECTURE.md)
 │   │   │   ├── parts.js           # TỪ VỰNG hình khối: prism (đa giác + thóp) và gable. CHỈ 2 hình
 │   │   │   │                      #   nguyên thuỷ — hộp/chóp/trụ/nón/vòm đều là prism đổi tham số
+│   │   │   ├── materials.js       # BỀ MẶT: bảng 15 HỌ vật liệu (nhám/kim loại) + tra vai→họ +
+│   │   │   │                      #   đường cong bóng tiếp xúc. ⚠️ `MATERIAL_ORDER` là HỢP ĐỒNG
+│   │   │   │                      #   giữa `geometryFactory` (đánh số nhóm) và `sceneGraph` (dựng
+│   │   │   │                      #   mảng vật liệu) — hai bên tự sắp riêng thì mái mang độ bóng
+│   │   │   │                      #   của mặt nước, mắt thấy ngay mà đọc code thì không
 │   │   │   ├── eraStyle.js        # NGỮ PHÁP theo 15 kỷ: vật liệu, kiểu mái, cửa sổ, mô-típ
+│   │   │   │                      #   ⚠️ `wallMaterial`/`roofMaterial` là BỀ MẶT (nhám/bóng), tách
+│   │   │   │                      #   hẳn khỏi `wallColor`/`roofColor` (sắc). Cùng bài học "một
+│   │   │   │                      #   trường gánh hai việc" của `storyHeight` ở Phase 5B
 │   │   │   ├── archetypes.js      # Bóng dáng theo 4 LOẠI (hạ tầng/kinh tế/phòng thủ/kỳ quan)
 │   │   │   │                      #   + quy mô theo 3 ĐỘ HIẾM
 │   │   │   ├── signature.js       # CHỮ KÝ KIẾN TRÚC: mỗi kỷ MỘT bộ phận lấy từ công trình CÓ THẬT

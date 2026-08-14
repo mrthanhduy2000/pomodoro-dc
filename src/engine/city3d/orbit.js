@@ -68,9 +68,19 @@ export function orbitPosition({ yaw, pitch, distance, target = { x: 0, y: 0, z: 
  * ra một mảng đất mênh mông với dúm nhà bé tí ở giữa: khung hình bị chiếm bởi đúng phần không có
  * gì để nhìn. Lại gần thì phần trống bị cắt bớt và công trình chiếm chỗ xứng đáng của nó.
  * Vẫn giữ nguyên quyền thu nhỏ tới `maxDistance` nếu Đàm muốn ngắm toàn cảnh.
+ *
+ * ⚠️ **1,18 CHỨ KHÔNG PHẢI 1,5 (2026-08-14, Đàm: "thu phóng cho vừa đủ thôi, không thu quá xa rồi
+ * bị mờ").** Lập luận Phase 3C ở trên vẫn đúng — chỉ là nó chưa đi đủ xa. Ở 1,5 thì trên khung
+ * điện thoại (thẻ cảnh chỉ cao ~300px), một căn nhà cao 3 ô lưới chiếm chưa tới 60px chiều cao;
+ * mà chi tiết kiến trúc phân biệt kỷ này với kỷ kia — độ dốc mái, hàng cột, vòm cửa — nằm ở cỡ vài
+ * điểm ảnh, tức **bị khử răng cưa xoá sạch trước khi tới mắt**. Cái Đàm gọi là "mờ" chính là chỗ
+ * đó: không phải ảnh out nét, mà là chi tiết nhỏ hơn một điểm ảnh.
+ * ⚠️ VÀ NÂNG LUÔN `CAMERA_MIN_FACTOR` 0,9 → 0,72: mức thu-gần-nhất cũ vẫn còn xa hơn mức mặc định
+ * MỚI, nên nếu chỉ hạ mặc định thì Đàm sẽ không kéo gần thêm được nữa — một cái trần vô hình.
+ * Trần XA (`MAX`) giữ nguyên 3,1: ai muốn ngắm toàn cảnh vẫn ngắm được.
  */
-export const CAMERA_DISTANCE_FACTOR = 1.5;
-export const CAMERA_MIN_FACTOR = 0.9;
+export const CAMERA_DISTANCE_FACTOR = 1.18;
+export const CAMERA_MIN_FACTOR = 0.72;
 export const CAMERA_MAX_FACTOR = 3.1;
 
 /**

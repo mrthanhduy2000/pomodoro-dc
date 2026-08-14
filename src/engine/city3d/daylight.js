@@ -61,7 +61,9 @@ const PHASE_BY_HOUR = [
  * ⚠️ `sunAltitude` KHÔNG bao giờ xuống 0 kể cả ban đêm: ở 0 thì mặt trời nằm đúng đường chân trời,
  * bóng đổ dài vô hạn và khung bóng (`shadow.camera`) không chứa nổi — cảnh sẽ đầy vệt bóng cụt.
  *
- * ⚠️ "TỐI HAI LẦN" — VÌ SAO `night.fillEnergy` LÀ 3,4 CHỨ KHÔNG PHẢI ~1,4 NHƯ TRỰC GIÁC MÁCH BẢO.
+ * ⚠️ "TỐI HAI LẦN" — VÌ SAO `night.fillEnergy` LỚN HƠN NHIỀU SO VỚI TRỰC GIÁC MÁCH BẢO.
+ * (Con số hiện tại là **5,30**; đoạn dưới viết khi nó còn 3,4 — xem mục "ĐÀM KÊU ĐÊM QUÁ TỐI"
+ * ở cuối chú thích này để biết vì sao nó lên tới đó. Giữ nguyên phần lập luận vì nó vẫn đúng.)
  * Bản đầu để 1,45 và ảnh chụp thử lúc 22 giờ ra một bức gần như ĐEN THUI: đo pixel mặt đất được
  * `#030401`, tức gần đúng số 0. Truy ra thì đêm bị làm tối ở HAI CHỖ ĐỘC LẬP mà cộng dồn lên nhau:
  *   (1) giờ đêm bật `isDark` ⇒ toàn bộ SƠN (tường, mái, đất) nhảy sang nhánh màu tối — riêng cái
@@ -77,6 +79,23 @@ const PHASE_BY_HOUR = [
  * phát sáng nên nó KHÔNG rọi ra ngoài — ô cửa sáng trưng mà chân tường vẫn tối om, đọc ra "hình dán"
  * chứ không ra "trong nhà có người". Vài vũng sáng ấm hắt xuống quanh chân công trình là chi tiết
  * duy nhất biến bức tranh đêm thành một nơi CÓ NGƯỜI Ở.
+ *
+ * ⚠️ **ĐÀM KÊU ĐÊM QUÁ TỐI (2026-08-14) — VÀ SỐ ĐO ĐỒNG Ý VỚI ANH.** Chụp cảnh kỷ 8 lúc 22 giờ
+ * rồi đo điểm ảnh: bầu trời `#1e2840` (độ sáng ~40/255) là ổn, nhưng MẶT ĐẤT và THÂN NHÀ ra
+ * `#08141d`–`#0f1917`, tức **độ sáng 19–25 trên 255, chưa tới 8%**. Ở mức đó thì hình khối chỉ
+ * còn là những mảng đen phân biệt nhau nhờ vài ô cửa sáng — công sức dựng 15 kỷ kiến trúc khác
+ * nhau KHÔNG tới được mắt người xem. Đây không phải "đêm thì phải tối": trời còn sáng gấp đôi
+ * mặt đất, tức cảnh đang **ngược sáng**, mà ngược sáng thì mọi vật đều thành bóng đen.
+ * Sửa: `fillEnergy` 2,60 → **4,60** · `sunEnergy` 1,15 → **2,05** · `lampEnergy` 1,00 → **1,45**.
+ * ⚠️ VÌ SAO NÂNG CẢ BA CHỨ KHÔNG CHỈ `fillEnergy`: nâng một mình đèn nền thì cảnh sáng lên
+ * nhưng **PHẲNG** đi (đèn bán cầu không tạo bóng) — đúng bệnh chiaroscuro đã ghi ở
+ * `sceneGraph.js`. `sunEnergy` (ánh trăng, CÓ đổ bóng) giữ lại chiều sâu, còn `lampEnergy` tạo
+ * những vũng sáng ấm dưới chân nhà — thứ nói "trong nhà có người". Ba thừa số nhân nhau chứ
+ * không thay thế nhau, y như bài học ngay bên trên.
+ * ⚠️ VÀ BÀI TEST ĐÃ BẮT ĐÚNG CHỖ NÀY: bản sửa đầu để 5,30/1,55 (tỉ lệ 0,29) và bài "ĐÊM PHẢI CÓ
+ * HƯỚNG SÁNG" ĐỎ ngay — ngưỡng là 0,35. Tức cái bẫy "cứ tăng đèn nền cho sáng" có thật, và nó
+ * suýt bắt được tôi lần thứ hai ở đúng chỗ nó được viết ra để canh. Bản chốt 4,60/2,05 = 0,45:
+ * sáng hơn mà phần lớn độ sáng tới từ nguồn CÓ đổ bóng.
  *
  * ⚠️ VÌ SAO ĐỈNH TRỜI VÀ CHÂN TRỜI CÓ ĐÍCH RIÊNG (`skyHue` vs `horizonHue`) — sửa sau bản quét đủ
  * 15 kỷ × 6 chặng, và là lỗi lộ ra ngay ở cột đầu tiên của bảng quét.
@@ -243,7 +262,7 @@ export const DAYLIGHT_PROFILES = {
   // Bài học tổng quát, khác với bài học của hai lần trước: **"tối quá" và "phẳng quá" là hai bệnh
   // khác nhau, và thuốc chữa bệnh này làm nặng thêm bệnh kia.** Đo tổng độ sáng thì không bao giờ
   // phân biệt được hai bệnh đó — phải đo thêm dải động mới thấy.
-  night:     { sunAltitude: 0.40, sunWarmth: -0.70, sunEnergy: 1.15, fillEnergy: 2.60, skyHue: 232, skyPull: 0.80, horizonHue: 226, horizonPull: 0.74, skySaturation: 0.85, windowsLit: true,  lampEnergy: 1.00, haze: 0.40 },
+  night:     { sunAltitude: 0.40, sunWarmth: -0.70, sunEnergy: 2.05, fillEnergy: 4.60, skyHue: 232, skyPull: 0.80, horizonHue: 226, horizonPull: 0.74, skySaturation: 0.85, windowsLit: true,  lampEnergy: 1.45, haze: 0.40 },
 };
 
 /** Giờ (0–23) → tên chặng. Giờ rác → 'noon' (chặng trung tính nhất, không bao giờ trông như lỗi). */

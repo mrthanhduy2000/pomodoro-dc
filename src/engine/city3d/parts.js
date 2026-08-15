@@ -134,9 +134,80 @@ export function gable({
 }
 
 /**
+ * ─── CẠNH VÁT (Phase 8B) ─────────────────────────────────────────────────────
+ *
+ * ⚠️ VÌ SAO CẦN. Audit Phase 8A đặt tên ba nguyên nhân làm thành phố đọc ra "low-poly"; Phase 8A
+ * sửa hai, còn lại cái NẶNG NHẤT: cả hệ thống không có một cạnh vát nào, nên mọi cạnh là góc 90°
+ * trần trụi. Ngoài đời gần như không tồn tại cạnh nhọn tuyệt đối — đá mòn, gỗ bào, bê tông đổ
+ * khuôn đều có một dải hẹp ở mép, và chính dải ấy **bắt một vệt sáng** khi ánh sáng quét qua. Vệt
+ * sáng viền đó mới là thứ nói cho mắt biết "đây là một vật có khối lượng" chứ không phải một hình
+ * tô màu. Đây là lý do một khối vát 300 tam giác trông đặc hơn một khối nhọn 3.000 tam giác.
+ *
+ * ⚠️ VÌ SAO KÍCH THƯỚC VÁT LÀ MỘT **TỈ LỆ**, KHÔNG PHẢI MỘT SỐ. Một dải vát rộng 0,02 đơn vị đặt
+ * lên thân nhà rộng 1,0 là mép vát 2% — vừa mắt. Đặt đúng con số ấy lên một gờ tầng DÀY 0,022 thì
+ * nó **nuốt gần trọn** cái gờ, và cái gờ vừa dựng ở Phase 8A biến mất. Đây đúng bài học đã trả giá
+ * ở Phase 7D và 5B: một hằng số tuyệt đối áp lên những khối chênh nhau hàng chục lần thì sớm muộn
+ * cũng sai ở một đầu. Nên: vát = `cạnh mỏng nhất × BEVEL_RATIO`, chặn trên bởi `BEVEL_MAX`.
+ *
+ * ⚠️ VÀ NGƯỠNG NHÌN-THẤY-ĐƯỢC LÀ THỨ GIỮ NGÂN SÁCH. Đo ra: **cạnh mỏng nhất của khối TRUNG VỊ chỉ
+ * là 0,035** (kính và gờ mảnh chiếm đa số) → vát ra 0,005, tức dưới nửa điểm ảnh ở khoảng cách
+ * nhìn thường. Vát chúng là trả 2,3 lần tam giác để đổi lấy thứ không ai thấy. Bỏ qua khối quá mỏng
+ * thì chi phí còn **×1,24** và chỉ ~18% số khối được vát — đúng những khối to tạo nên hình bóng.
+ * Cái ngưỡng này KHÔNG phải một cách "tối ưu": nó là phát biểu rằng một dải hẹp hơn một điểm ảnh
+ * thì không phải một dải.
+ *
+ * ⚠️ HÀM NÀY PHẢI ĐƯỢC GỌI TRÊN KHỐI **CHƯA NHÂN TỈ LỆ**. `sceneGraph.js` phóng mọi công trình lên
+ * `BUILDING_SCALE = 1.3`; nếu nhà máy hình học quyết định dựa trên số ĐÃ nhân còn `countTriangles`
+ * quyết định trên số CHƯA nhân, hai bên sẽ bất đồng ở đúng dải khối nằm sát ngưỡng — và bất đồng
+ * đó im lặng, chỉ hiện ra dưới dạng ngân sách nói dối. Một luật, một công thức: quyết định ở đây,
+ * nhà máy chỉ nhân bề rộng dải vát với tỉ lệ.
+ */
+
+/** Dải vát rộng bao nhiêu phần cạnh mỏng nhất của khối. */
+export const BEVEL_RATIO = 0.15;
+/**
+ * Trần tuyệt đối — thân nhà to mấy thì mép vát cũng chỉ là một dải hẹp, không phải một mặt cắt.
+ *
+ * ⚠️ CHỌN BẰNG BẢNG ĐO, KHÔNG BẰNG CẢM GIÁC (đúng cách đã dùng cho `ENV_DIFFUSE` ở Phase 7A). Dựng
+ * cùng một cảnh kỷ 11 lúc 16 giờ có vát và không vát rồi đếm điểm ảnh đổi ĐỦ ĐỂ MẮT THẤY (>24/765):
+ *     0,020 → 3,3%   ·   **0,035 → 3,8%**   ·   0,050 → 4,4%   ·   0,070 → 4,9%
+ * Lợi ích tăng đều nhưng giảm dần, còn **chi phí tam giác thì KHÔNG đổi theo con số này** (vẫn
+ * đúng ba vành mặt bên) — nên thứ chặn tay không phải hiệu năng mà là mỹ thuật: 0,070 trên một
+ * mảng nhà rộng 0,5 là ăn 14% mỗi bên, lúc ấy nó thôi là cái mép vát và bắt đầu là một khối thóp
+ * khác hẳn. Mép vát của kiến trúc thật rơi vào khoảng 2–5% bề mặt; 0,035 trên thân nhà rộng 1 đơn
+ * vị là 3,5%, nằm giữa dải đó.
+ */
+export const BEVEL_MAX = 0.035;
+/** Hẹp hơn mức này thì dưới một điểm ảnh ở khoảng cách nhìn thường ⇒ không vát, khỏi tốn. */
+export const BEVEL_MIN_VISIBLE = 0.006;
+
+/**
+ * Bề rộng dải vát của MỘT khối, đơn vị ô lưới. `0` nghĩa là khối này không vát.
+ * Thuần và tất định — cùng một khối luôn ra cùng một con số, vĩnh viễn (bất biến bảo tàng).
+ */
+export function bevelWidth(part) {
+  if (!part || part.shape === 'gable') return 0;
+  // Khối thóp về MỘT ĐIỂM (chóp, nón, kim tự tháp) đã nhọn theo thiết kế — vát đỉnh nhọn là cắt
+  // cụt cái chóp, tức phá đúng hình bóng mà nó sinh ra để tạo.
+  if (!(part.taper > 0)) return 0;
+  const thinnest = Math.min(part.w ?? 0, part.d ?? 0, part.h ?? 0);
+  if (!(thinnest > 0)) return 0;
+  const width = Math.min(BEVEL_MAX, thinnest * BEVEL_RATIO);
+  return width >= BEVEL_MIN_VISIBLE ? width : 0;
+}
+
+/**
  * Số tam giác của MỘT khối. Đây là con số dùng cho cả ngân sách hiệu năng lẫn bảng HUD, nên nó
- * phải khớp CHÍNH XÁC với số tam giác nhà máy hình học thật sự sinh ra — có test đối chiếu hai
- * bên, vì một ngân sách tự tính riêng mà lệch với thực tế thì còn tệ hơn không có ngân sách.
+ * phải khớp CHÍNH XÁC với số tam giác nhà máy hình học thật sự sinh ra — một ngân sách tự tính
+ * riêng mà lệch với thực tế thì còn tệ hơn không có ngân sách.
+ *
+ * ⚠️ CÂU TRÊN TỪNG NÓI DỐI SUỐT TỪ PHASE 3B. Nó viết là "có test đối chiếu hai bên", nhưng bài
+ * test duy nhất tồn tại chỉ so hàm này với **những con số viết cứng**, trên những khối không hề có
+ * `w`/`d`/`h` — nó chưa bao giờ chạm vào nhà máy hình học, nên hai bên có thể lệch tuỳ ý mà không
+ * gì đỏ lên. Bài đối chiếu THẬT nay nằm ở `render3d/geometryFactory.test.js` ("NGÂN SÁCH KHÔNG NÓI
+ * DỐI"): nó dựng cả 15 kỷ rồi đếm thẳng từ bộ đệm đỉnh của khối hình học. Phase 8B mới làm chuyện
+ * này thành nguy hiểm thật, vì kể từ đây **một khối đổi số tam giác tuỳ theo kích thước của chính
+ * nó** — hai bên buộc phải đọc chung một `bevelWidth`, không được ai tự suy ra.
  */
 export function countTriangles(part) {
   if (!part) return 0;
@@ -149,7 +220,9 @@ export function countTriangles(part) {
     // thóp về một điểm: mặt bên thành tam giác, không còn mặt trên
     return n + (n - 2);
   }
-  return 2 * n + 2 * (n - 2);
+  // Vát hai đầu ⇒ mặt bên chia làm BA vành (dải vát dưới · thân · dải vát trên) thay vì một.
+  const bands = bevelWidth(part) > 0 ? 3 : 1;
+  return bands * 2 * n + 2 * (n - 2);
 }
 
 /** Tổng tam giác của một danh sách khối. */

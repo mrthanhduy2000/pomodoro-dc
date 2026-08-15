@@ -330,6 +330,18 @@ tự `gờ mái > chân tường > gờ tầng`, và bệ cửa sổ phải thò
 bằng assert chứ không để nằm rời như bốn con số. Vì sao chọn hình khối thật thay vì bản đồ pháp
 tuyến: **ADR-017**. Giá: kỷ nặng nhất 23% → **41%** trần tam giác.
 
+**CẠNH VÁT — và vì sao nó buộc hai tầng phải đọc CHUNG một hàm (2026-08-15, Phase 8B)**: `parts.js`
+vẫn chỉ có hai hình cơ bản, nhưng lăng trụ nay có thể mọc thêm hai vành mặt bên hẹp ở hai đầu. Vì
+hình học ở đây **không đánh chỉ mục** (mỗi mặt có pháp tuyến phẳng riêng — xem đầu `geometryFactory.js`),
+hai vành ấy tự có pháp tuyến nghiêng ~45° và bắt sáng khác hẳn mặt tường bên cạnh: đó chính là vệt
+sáng viền, không cần thêm đèn, vật liệu hay ảnh nào. ⚠️ **Hệ quả kiến trúc quan trọng hơn cả hiệu
+ứng**: kể từ đây **một khối đổi số tam giác tuỳ theo kích thước của chính nó**, nên `bevelWidth()`
+phải là nguồn DUY NHẤT cho cả `countTriangles` (tầng thuần, nuôi ngân sách + HUD) lẫn `emitPrism`
+(nhà máy), và cả hai phải hỏi trên khối **CHƯA nhân `BUILDING_SCALE = 1.3`**. Hỏi trên số đã nhân ở
+một bên thôi là đủ để khối nằm sát ngưỡng được vát mà không được đếm — bảng ngân sách sẽ nói dối
+trong im lặng. Đã khoá bằng bài "NGÂN SÁCH KHÔNG NÓI DỐI" (`geometryFactory.test.js`), bài đối chiếu
+mà chú thích đã hứa từ Phase 3B nhưng chưa từng tồn tại. Chọn bề rộng: **ADR-018**.
+
 **BỀ MẶT là một trục ĐỘC LẬP với màu (2026-08-14, Phase 7A)** — và đây là lớp cuối cùng của chuỗi
 trên. Trước Phase 7A cả thành phố dùng đúng **một** `MeshLambertMaterial`. Lambert thuần khuếch
 tán: không có số hạng phản xạ gương, nên **về mặt toán học mọi bề mặt là cùng một bề mặt**, chỉ

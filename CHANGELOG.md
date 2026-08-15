@@ -12,6 +12,28 @@
 
 ---
 
+## 2026-08-15 — Cạnh vát: khối thôi sắc như dao, và một bài test đã hứa suốt 6 tháng (Phase 8B)
+
+**Mục đích.** Nguyên nhân gốc **số 1** trong ba cái audit Phase 8A đặt tên: cả hệ thống chỉ có hai
+hình cơ bản, không một cạnh vát nào. Ngoài đời cạnh nhọn tuyệt đối gần như không tồn tại, và chính
+dải hẹp ở mép là thứ bắt vệt sáng viền — thứ nói cho mắt biết "vật này có khối lượng".
+
+**Phạm vi.** `parts.js` thêm `bevelWidth()` (thuần) + `countTriangles` biết đếm khối vát;
+`geometryFactory.js` dựng ba vành mặt bên thay vì một. Bề rộng vát = tỉ lệ theo cạnh mỏng nhất, và
+khối quá mỏng để thấy thì **không vát** — xem **ADR-018**.
+
+**Ảnh hưởng.** ×1,24 tam giác công trình (kỷ nặng nhất 18.532 → 22.948), ~18% số khối được vát.
+Đo trên ảnh: **3,8% khung hình đổi đủ để mắt thấy**. Không thêm lệnh vẽ, không đụng state/schema.
+**653 bài test** (+3), lint sạch, build xanh.
+
+**Kèm theo — vá một lỗ hổng có từ Phase 3B.** Chú thích của `countTriangles` khẳng định *"có test
+đối chiếu hai bên"*, nhưng bài duy nhất tồn tại chỉ so hàm ấy với **những con số viết cứng**, trên
+khối không có `w`/`d`/`h`; nó chưa bao giờ chạm vào nhà máy hình học. Nay đã có bài đối chiếu thật
+(dựng cả 15 kỷ rồi đếm thẳng từ bộ đệm đỉnh). Phase 8B mới làm chuyện đó thành nguy hiểm thật, vì
+kể từ đây một khối đổi số tam giác tuỳ kích thước của chính nó.
+
+---
+
 ## 2026-08-15 — Tường thôi phẳng: chân tường, gờ mái, gờ tầng, bệ cửa sổ (Phase 8A)
 
 **Mục đích.** Đàm ra chỉ thị mới, và nó bác thẳng cách làm cũ: *"không coi các thay đổi palette,

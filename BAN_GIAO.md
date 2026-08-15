@@ -6,7 +6,20 @@
 > chọn: `ARCHITECTURE_DECISIONS.md`. Nợ kỹ thuật: `TECH_DEBT.md`. Migration: `MIGRATION.md`. Tóm
 > tắt theo mốc: `CHANGELOG.md`.
 > **NGUYÊN TẮC ƯU TIÊN SỐ 1:** (1) mọi phiên AI phải đọc file này + `CLAUDE.md` + các file liên quan TRƯỚC khi làm; (2) sau MỌI cập nhật dù nhỏ, phải cập nhật ngay file này + `CLAUDE.md` + các file liên quan khác.
-> Cập nhật lần cuối: **2026-08-15** — **Phase 8A**: **TƯỜNG THÔI PHẲNG.** Đàm ra chỉ thị mới, bác
+> Cập nhật lần cuối: **2026-08-15** — **Phase 8B**: **CẠNH VÁT — KHỐI THÔI SẮC NHƯ DAO.** Nguyên
+> nhân gốc **số 1** trong ba cái audit Phase 8A đặt tên. Ngoài đời cạnh nhọn tuyệt đối gần như không
+> tồn tại; dải hẹp ở mép là thứ **bắt vệt sáng viền**, và vệt ấy mới nói cho mắt biết "vật này có
+> khối lượng". Bề rộng vát = **tỉ lệ** theo cạnh mỏng nhất (không phải một số cố định — số cố định
+> 0,02 sẽ nuốt trọn cái gờ dày 0,022 vừa dựng ở 8A), và khối quá mỏng để thấy thì **không vát**.
+> Giá: **×1,24** tam giác công trình; đo trên ảnh: **3,8% khung hình đổi đủ để mắt thấy**.
+> **653 bài test**, lint sạch, build xanh. Xem **ADR-018**.
+> ⚠️ **VÁ MỘT LỖ HỔNG CÓ TỪ PHASE 3B**: chú thích của `countTriangles` khẳng định *"có test đối
+> chiếu hai bên"* — nhưng bài duy nhất tồn tại chỉ so hàm ấy với **những con số viết cứng**, trên
+> khối không có `w`/`d`/`h`, và chưa bao giờ `import` nhà máy hình học. Suốt 6 tháng ngân sách có
+> thể lệch tuỳ ý mà không gì đỏ. Nay đã có bài đối chiếu thật (dựng cả 15 kỷ, đếm thẳng từ bộ đệm
+> đỉnh). Bài học ở `CLAUDE.md`.
+>
+> **(Phase 8A, ngay trước đó)** **TƯỜNG THÔI PHẲNG.** Đàm ra chỉ thị mới, bác
 > thẳng cách làm cũ: *"không coi các thay đổi palette, màu đường, terrain hoặc thêm vài nhà hiện tại
 > là đã hoàn thành Visual Foundation"* — thành phố vẫn *"quá pixel, hình hộp, low-poly, vật liệu
 > phẳng"*. Audit đo ra anh đúng theo nghĩa đen: nhà dân nhỏ nhất là **12 khối, trong đó thân nhà
@@ -530,6 +543,37 @@
 
 ## 🗒️ Nhật ký cập nhật
 > Mỗi lần xong việc đáng kể, thêm 1 dòng vào ĐẦU danh sách.
+
+- **2026-08-15 (Phase 8B — cạnh vát)** — **653 bài test** (650 → 653), lint sạch, build xanh,
+  không đụng state/schema, **không thêm lệnh vẽ**.
+  - **Việc**: nguyên nhân gốc số 1 của audit 8A. `parts.js` thêm `bevelWidth()` thuần;
+    `geometryFactory.emitPrism` dựng **ba vành mặt bên** (dải vát dưới · thân · dải vát trên) thay
+    vì một. Vì hình học không đánh chỉ mục nên hai dải vát tự có pháp tuyến nghiêng ~45° và bắt
+    sáng khác mặt tường — **đó chính là vệt sáng viền**, không thêm đèn/vật liệu/ảnh nào.
+  - **Vì sao là TỈ LỆ chứ không phải một số**: bề rộng cố định 0,02 đặt lên gờ tầng dày 0,022 sẽ
+    **nuốt gần trọn** cái gờ vừa dựng ở 8A. Đúng bẫy Phase 7D/5B. Nên vát = `cạnh mỏng nhất × 0,15`,
+    chặn trên bởi `BEVEL_MAX`, và **bỏ hẳn** nếu hẹp hơn `BEVEL_MIN_VISIBLE`.
+  - **Ngưỡng nhìn-thấy-được là thứ giữ ngân sách**: đo ra cạnh mỏng nhất của khối TRUNG VỊ chỉ
+    **0,035** (kính + gờ mảnh chiếm đa số) → vát ra 0,005, dưới nửa điểm ảnh. Vát tất = **×2,32**;
+    bỏ khối quá mỏng = **×1,24**, chỉ ~18% khối được vát. Kỷ nặng nhất 18.532 → 22.948 tam giác
+    công trình (cả cảnh ~29.000 = 48% trần).
+  - **`BEVEL_MAX` chọn bằng BẢNG ĐO, không bằng cảm giác** (0,020→3,3% · **0,035→3,8%** ·
+    0,050→4,4% · 0,070→4,9% khung hình đổi đủ thấy). Nới nó **không tốn thêm tam giác** — thứ chặn
+    tay là mỹ thuật: quá 5% bề mặt thì mép vát thôi là mép và thành một khối thóp khác.
+  - ⚠️ **LỖ HỔNG 6 THÁNG**: chú thích `countTriangles` hứa *"có test đối chiếu hai bên"*; bài duy
+    nhất tồn tại chỉ so với **hằng số viết tay**, trên khối không có `w`/`d`/`h`, chưa bao giờ nạp
+    nhà máy hình học. Không cắn ai chỉ vì mỗi khối khi ấy có số tam giác CỐ ĐỊNH — 8B làm số tam
+    giác phụ thuộc kích thước khối, và lỗ hổng lập tức nguy hiểm thật. Đã viết bài đối chiếu thật.
+  - ⚠️ **SUÝT ĐI CHỮA MỘT BỆNH KHÔNG CÓ**: ảnh cận cảnh kỷ 7 cho ra màu áp đảo `#131826` (l=0,11,
+    xanh lam) trong khi bảng màu ghi tường `#c4b4a1` (l=0,70, nâu ấm) — trông y hệt một lỗi ánh
+    sáng nghiêm trọng. Đo lại ở **khoảng cách thường** thì lành mạnh (l=0,65/0,53/0,63 ở 9/12/16
+    giờ): cái tối kia là bóng đổ của chính cái tháp lấp đầy khung hình ở mức zoom 0,30, tức một
+    hiện vật của cách tôi đóng khung, không phải lỗi. **Đo trước khi kết luận.**
+  - **Nhìn ảnh**: kỷ 11 (New York, giật cấp) lúc 16 giờ — mép vát sáng chạy dọc viền mái đồng và
+    các khối giật cấp, đọc ra rõ. Kỷ 7 cận cảnh thì tinh tế hơn nhiều (mặt cong của mái vòm).
+  - **CÒN LẠI**: mặt đất vẫn là bàn cờ 144 ô vuông — và nó **không** đi qua `geometryFactory` (là
+    `InstancedMesh` riêng ở `sceneGraph.js`) nên cạnh vát 8B **không chạm tới nó**. `TECH_DEBT #28`
+    nay chỉ còn phần này.
 
 - **2026-08-15 (Phase 8A — tường thôi phẳng)** — **650 bài test** (646 → 650), lint sạch, build
   xanh, **không đụng state/schema**. Đàm ra chỉ thị mới và nó bác thẳng cách làm cũ: *"không coi các

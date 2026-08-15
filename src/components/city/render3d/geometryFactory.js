@@ -34,6 +34,7 @@ import { BufferAttribute, BufferGeometry, Color } from 'three';
 
 import { getEraStyle } from '../../../engine/city3d/eraStyle';
 import { MATERIAL_ORDER, contactShade, materialFamilyFor } from '../../../engine/city3d/materials';
+import { bevelWidth } from '../../../engine/city3d/parts';
 
 /** Bộ đệm tích luỹ trong lúc dựng. Mảng JS thường rồi mới đổ sang Float32Array một lần. */
 function createSink() {
@@ -91,7 +92,7 @@ function place(px, py, pz, transform) {
  * thì hộp vuông (n = 4) sẽ rộng hơn ý định 41%, và mọi công trình sẽ lấn sang ô bên cạnh.
  * Góc bắt đầu `π/n` là thứ làm mặt phẳng quay ra trước thay vì một góc nhọn chĩa vào người xem.
  */
-function emitPrism(sink, part, transform, rgb, shade) {
+function emitPrism(sink, part, transform, rgb, shade, bevel = 0) {
   const n = part.sides;
   const half = Math.PI / n;
   const rx = (part.w / 2) / Math.cos(half);
@@ -99,41 +100,67 @@ function emitPrism(sink, part, transform, rgb, shade) {
   const top = part.y + part.h;
   const taper = part.taper;
 
-  const ring = (radiusScale, y) => {
+  // ⚠️ `inset` ĐO THEO MẶT, KHÔNG THEO BÁN KÍNH. `rx` là bán kính đường tròn NGOẠI tiếp, còn mặt
+  // phẳng của khối nằm gần tâm hơn thế đúng một hệ số `cos(π/n)`. Muốn dải vát rộng đúng `bevel`
+  // khi nhìn vuông góc vào mặt tường (nghĩa duy nhất đọc được), phải chia ngược lại — y hệt lý do
+  // `rx` chia cho `cos(half)` ở ngay trên. Bỏ bước này thì mép vát của hộp vuông hẹp đi 29%, và
+  // hẹp đi đúng ở chỗ ngưỡng nhìn-thấy-được vừa được tính toán cẩn thận để không rơi xuống dưới.
+  const ring = (radiusScale, y, inset = 0) => {
+    const ax = Math.max(0, rx * radiusScale - inset / Math.cos(half));
+    const az = Math.max(0, rz * radiusScale - inset / Math.cos(half));
     const out = [];
     for (let i = 0; i < n; i += 1) {
       const angle = half + (i * 2 * Math.PI) / n;
-      out.push(place(
-        Math.cos(angle) * rx * radiusScale,
-        y,
-        Math.sin(angle) * rz * radiusScale,
-        transform,
-      ));
+      out.push(place(Math.cos(angle) * ax, y, Math.sin(angle) * az, transform));
     }
     return out;
   };
 
-  const bottom = ring(1, part.y);
+  /** Một vành mặt bên nối hai vòng đỉnh. Thứ tự đỉnh đã kiểm: pháp tuyến hướng RA NGOÀI. */
+  const band = (lower, upper) => {
+    for (let i = 0; i < n; i += 1) {
+      const j = (i + 1) % n;
+      pushTriangle(sink, lower[i], upper[i], upper[j], rgb, shade);
+      pushTriangle(sink, lower[i], upper[j], lower[j], rgb, shade);
+    }
+  };
 
   if (taper <= 0) {
-    // Thóp về một điểm: mặt bên là tam giác, không có mặt trên.
+    // Thóp về một điểm: mặt bên là tam giác, không có mặt trên. Không vát (xem `bevelWidth`).
+    const bottom = ring(1, part.y);
     const apex = place(0, top, 0, transform);
     for (let i = 0; i < n; i += 1) {
       pushTriangle(sink, bottom[i], apex, bottom[(i + 1) % n], rgb, shade);
     }
-  } else {
-    const upper = ring(taper, top);
-    for (let i = 0; i < n; i += 1) {
-      const j = (i + 1) % n;
-      pushTriangle(sink, bottom[i], upper[i], upper[j], rgb, shade);
-      pushTriangle(sink, bottom[i], upper[j], bottom[j], rgb, shade);
-    }
-    // Mặt trên: quạt tam giác theo chiều NGƯỢC vòng để pháp tuyến hướng lên.
     for (let i = 1; i < n - 1; i += 1) {
-      pushTriangle(sink, upper[0], upper[i + 1], upper[i], rgb, shade);
+      pushTriangle(sink, bottom[0], bottom[i], bottom[i + 1], rgb, shade);
     }
+    return;
   }
 
+  // ── VÁT CẠNH ─────────────────────────────────────────────────────────────────
+  // Không vát: hai vòng đỉnh, một vành mặt bên (như trước Phase 8B).
+  // Có vát:   bốn vòng đỉnh, BA vành — dải vát dưới · thân · dải vát trên. Vì hình học ở đây KHÔNG
+  // đánh chỉ mục (mỗi mặt có bộ đỉnh riêng, pháp tuyến phẳng theo mặt — xem chú thích đầu file),
+  // hai dải vát tự có pháp tuyến riêng nghiêng ~45°, nên chúng bắt sáng khác hẳn mặt tường bên
+  // cạnh. **Đó chính là vệt sáng viền** — không cần thêm đèn, thêm vật liệu hay thêm ảnh nào.
+  const bottom = ring(1, part.y, bevel);
+  const upper = ring(taper, top, bevel);
+
+  if (bevel > 0) {
+    const lowKnee = ring(1, part.y + bevel);
+    const highKnee = ring(taper, top - bevel);
+    band(bottom, lowKnee);
+    band(lowKnee, highKnee);
+    band(highKnee, upper);
+  } else {
+    band(bottom, upper);
+  }
+
+  // Mặt trên: quạt tam giác theo chiều NGƯỢC vòng để pháp tuyến hướng lên.
+  for (let i = 1; i < n - 1; i += 1) {
+    pushTriangle(sink, upper[0], upper[i + 1], upper[i], rgb, shade);
+  }
   // Mặt đáy: chiều thuận → pháp tuyến hướng xuống. Vẫn phải vẽ vì camera hạ được xuống thấp và
   // khối lơ lửng (kỷ 15) thì nhìn thấy đáy thật.
   for (let i = 1; i < n - 1; i += 1) {
@@ -254,8 +281,13 @@ export function buildMergedGeometry(
       const rgb = colorFor(glowing ? 'glassLit' : part.role);
       // Ô cửa sáng đèn KHÔNG nhận bóng tiếp xúc — chúng tự phát sáng.
       const shade = !glowing;
+      // ⚠️ QUYẾT ĐỊNH VÁT LẤY TỪ KHỐI **CHƯA NHÂN TỈ LỆ** — `bevelWidth(part)` chứ không phải
+      // `bevelWidth(scaled)`. `countTriangles` bên tầng thuần cũng đọc khối chưa nhân, nên hỏi
+      // cùng một câu trên cùng một dữ liệu là cách duy nhất giữ hai bên không bao giờ lệch. Hỏi
+      // trên số đã nhân 1,3 thì những khối nằm sát ngưỡng sẽ được vát ở đây mà không được đếm ở
+      // kia, và cái lệch đó im lặng: nó chỉ hiện ra dưới dạng bảng ngân sách báo sai.
       if (part.shape === 'gable') emitGable(target, scaled, transform, rgb, shade);
-      else emitPrism(target, scaled, transform, rgb, shade);
+      else emitPrism(target, scaled, transform, rgb, shade, bevelWidth(part) * scale);
     }
   }
 

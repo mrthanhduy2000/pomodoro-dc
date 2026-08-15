@@ -13,15 +13,15 @@
 > mà không được refactor triệt để, phải CHỦ ĐỘNG đề xuất mở một "Maintenance Sprint" (nêu rõ mục
 > tiêu/phạm vi/lợi ích/rủi ro/tiêu chí hoàn thành) thay vì tiếp tục cộng thêm tính năng mới.
 >
-> **Trạng thái ngưỡng hiện tại (2026-08-15, cập nhật sau Phase 8A)**: **1 mục Priority High**
+> **Trạng thái ngưỡng hiện tại (2026-08-15, cập nhật sau Phase 8B)**: **1 mục Priority High**
 > (#14) → vẫn CHƯA đạt ngưỡng 8–10 mục để đề xuất Maintenance Sprint. Còn **4 mục Medium-High**
-> (#3, #13, **#28** — MỚI: cạnh khối vẫn sắc như dao + mặt đất vẫn là bàn cờ ô vuông, hai trong ba
-> nguyên nhân gốc của "nhìn như low-poly", đang xử lý ở Phase 8B — và **#24**: 14/15 kỷ có công
+> (#3, #13, **#28** — mặt đất vẫn là bàn cờ ô vuông; phần "cạnh khối sắc như dao" của mục này đã
+> ĐÓNG ở Phase 8B — và **#24**: 14/15 kỷ có công
 > trình bị mép khung hình cắt, đã đo đủ, chờ Đàm chọn hướng), **4 mục Medium** và **2 mục Low** (#25 — nhà dân nhỏ nhất ở 3 kỷ không có cửa sổ; **#27**
 > — MỚI: 3 cặp kỷ có mặt đường gần trùng nhau vào BAN ĐÊM, đều cách nhau ≥3 kỷ, đã đo đủ và có
 > chủ đích chưa xử lý).
 > ⚠️ **#26 và #23 đóng được bằng CÙNG MỘT lần đo, và Phase 8A vừa làm nó GẤP HƠN**: sau 7C cảnh
-> nặng nhất là 21.244 tam giác; sau **8A là 24.532 (23% → 41%** trần 60.000). Cổng hiệu năng iPhone
+> nặng nhất là 21.244 tam giác; sau **8A là 24.532 (41%)**, sau **8B là ~29.000 (48%)** trần 60.000. Cổng hiệu năng iPhone
 > **chưa được cân lại kể từ trước Phase 7A** — tức đã ba phase liền cộng tải lên một con số chưa ai
 > kiểm. Một ảnh chụp HUD trên máy Đàm đóng cả hai. ⚠️ Đàm đã chỉ thị rõ **không được lấy blocker
 > này làm lý do dừng cải thiện hình ảnh** — nên vẫn làm tiếp, nhưng phải đo ngay khi có điều kiện,
@@ -1331,35 +1331,34 @@
 
 ---
 
-## #28 — Mặt đất vẫn là bàn cờ ô vuông phẳng, và mọi cạnh vẫn sắc như dao
+## #28 — Mặt đất vẫn là bàn cờ ô vuông phẳng  *(phần "cạnh sắc" đã ĐÓNG ở Phase 8B)*
 
 - **Module**: `src/components/city/render3d/geometryFactory.js` (cạnh) + `sceneGraph.js` (ô nền),
   phát hiện bằng ảnh chụp ở Phase 8A
 - **Priority**: Medium-High
 - **Severity**: Medium
-- **Impact**: hai trong ba nguyên nhân gốc mà audit Phase 8A đặt tên, **chưa xử lý**.
-  (a) **Cạnh sắc**: cả hệ thống chỉ có ĐÚNG HAI hình cơ bản (`prism`, `gable`), không có vát cạnh
-  (bevel/chamfer) nào, nên mọi cạnh là góc 90° trần trụi không bắt được vệt sáng viền — đây là thứ
-  làm ảnh đọc ra "low-poly" mạnh nhất, mạnh hơn cả số lượng khối.
+- **Impact**: ~~(a) **Cạnh sắc**~~ → **ĐÃ ĐÓNG ở Phase 8B** (`bevelWidth` + ba vành mặt bên; ×1,24
+  tam giác, 3,8% khung hình đổi đủ để mắt thấy — xem ADR-018). Còn lại:
   (b) **Bàn cờ**: nhìn ảnh kỷ 7 ở khoảng cách thường thấy rõ mặt đất là 144 ô vuông phẳng, mỗi ô
-  một sắc độ hơi khác — đúng thứ Đàm gọi là *"grid 12×12 với object đặt trong từng ô"*.
-- **Root Cause**: (a) tầng hình học được viết tối giản từ Phase 3B khi ngân sách tam giác còn là
-  ẩn số; (b) ô nền là `InstancedMesh` của một khối hộp — rẻ và đúng lúc mặt đất còn phẳng, nhưng
-  Phase 7B đã cho mặt đất cao độ mà ô nền vẫn giữ nguyên cách dựng cũ.
+  một sắc độ hơi khác — đúng thứ Đàm gọi là *"grid 12×12 với object đặt trong từng ô"*. ⚠️ Mặt đất
+  **không** đi qua `geometryFactory` (nó là `InstancedMesh` riêng ở `sceneGraph.js`), nên cạnh vát
+  của Phase 8B **không chạm tới nó** — đừng tưởng vát cạnh đã sửa luôn phần này.
+- **Root Cause**: ô nền là `InstancedMesh` của một khối hộp — rẻ và đúng lúc mặt đất còn phẳng,
+  nhưng Phase 7B đã cho mặt đất cao độ mà ô nền vẫn giữ nguyên cách dựng cũ.
 - **Current Risk**: thấp về kỹ thuật (không có gì hỏng), cao về mục tiêu — đây chính là điều Đàm
   đang phàn nàn, và Definition of Done của anh nói rõ *"nếu câu trả lời vẫn là pixel / blocky /
   low-poly / flat, hãy tiếp tục sửa nền tảng thay vì đánh dấu phase hoàn thành"*.
-- **Future Risk**: vát cạnh cho MỌI khối là khoảng **×4 tam giác** — ở mức 41% trần hiện tại thì
-  không đủ chỗ. Làm ẩu chỗ này sẽ đẩy thẳng qua trần và làm nóng iPhone của Đàm.
-- **Recommended Solution**: **Phase 8B** — chỉ vát những khối lớn tạo hình bóng chính (trên một
-  ngưỡng kích thước), bỏ qua gờ/bệ/kính đã nhỏ sẵn. Đo lại tam giác sau mỗi bước, không vát tất.
-  Phần (b) tách riêng sau, ưu tiên thấp hơn.
-- **Estimated Complexity**: (a) trung bình · (b) trung bình
+- **Future Risk**: gộp 144 ô thành một lưới liền có cao độ sẽ làm ô nền hết là `InstancedMesh` —
+  phải cân lại lệnh vẽ. Ngược lại, để nguyên thì mọi công sức làm mặt đất và ánh sáng vẫn bị một
+  lưới ô vuông đè lên trên.
+- **Recommended Solution**: gộp mặt đất thành một lưới liền (mỗi ô 2 tam giác nhưng dùng chung
+  đỉnh ở mép) hoặc phá nhịp ô vuông bằng biến thiên cao độ/màu trong từng ô. Đo lệnh vẽ trước–sau.
+- **Estimated Complexity**: trung bình
 - **Blocking Conditions**: không có blocker cứng. Nhưng cần đo cổng hiệu năng (#23/#26) để biết còn
   bao nhiêu chỗ trống thật.
-- **Review Trigger**: ngay ở Phase 8B
+- **Review Trigger**: khi quay lại mảng "thành phố phải có quy mô" trong chỉ thị của Đàm
 - **Owner**: chưa gán
-- **Status**: **Open** — (a) là việc kế tiếp, (b) xếp sau
+- **Status**: **Open** (phần "cạnh sắc" đã đóng ở Phase 8B)
 
 ---
 

@@ -5,7 +5,7 @@ import { buildMergedGeometry } from './geometryFactory.js';
 import { MATERIAL_ORDER, contactShade, materialFamilyFor } from '../../../engine/city3d/materials.js';
 import { getEraStyle } from '../../../engine/city3d/eraStyle.js';
 import { buildBuildingSpec } from '../../../engine/city3d/buildingSpec.js';
-import { gable, prism } from '../../../engine/city3d/parts.js';
+import { bevelWidth, countSpecTriangles, gable, prism } from '../../../engine/city3d/parts.js';
 import { buildScenePalette } from '../../../engine/city3d/palette3d.js';
 
 /**
@@ -200,4 +200,74 @@ test('cả 15 kỷ đều dựng được, và không kỷ nào vượt ngân s�
       `kỷ ${era} cần ${merged.families.length} lệnh vẽ (${merged.families.join(', ')}) — quá 8`,
     );
   }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CẠNH VÁT (Phase 8B) — và cái test đối chiếu mà chú thích đã HỨA suốt từ Phase 3B
+// ─────────────────────────────────────────────────────────────────────────────
+
+test('NGÂN SÁCH KHÔNG NÓI DỐI: số tam giác tầng thuần đếm = số tam giác nhà máy thật sự dựng', () => {
+  // ⚠️ BÀI NÀY ĐÁNG LẼ PHẢI CÓ TỪ PHASE 3B. Chú thích của `countTriangles` (`parts.js`) khẳng định
+  // *"có test đối chiếu hai bên, vì một ngân sách tự tính riêng mà lệch với thực tế thì còn tệ hơn
+  // không có ngân sách"* — nhưng bài duy nhất tồn tại chỉ so `countTriangles` với **những con số
+  // viết cứng** (`countTriangles({shape:'prism', sides:4, taper:1}) === 12`), trên những khối
+  // KHÔNG HỀ CÓ `w`/`d`/`h`, tức những khối không thể tồn tại trong thành phố thật. Nó chưa bao giờ
+  // chạm vào nhà máy hình học. Suốt thời gian đó, hai bên có thể lệch nhau tuỳ ý mà không gì đỏ:
+  // ngân sách vẫn in ra một con số, chỉ là con số ấy nói về một thành phố khác.
+  //
+  // Phase 8B làm chuyện đó thành nguy hiểm thật, vì vát cạnh khiến MỘT KHỐI ĐỔI SỐ TAM GIÁC tuỳ
+  // theo kích thước của chính nó — hai bên phải cùng đọc một luật, hoặc bảng ngân sách thành rác.
+  for (let era = 1; era <= 15; era += 1) {
+    const parts = [];
+    for (const rarity of ['common', 'rare', 'epic']) {
+      for (const type of ['infrastructure', 'economy', 'defense', 'wonder', 'house']) {
+        parts.push(...buildBuildingSpec({ bpId: `bp-${era}-${type}-${rarity}`, era, type, rarity, level: 3 }).parts);
+      }
+    }
+    const merged = buildMergedGeometry(placement(parts), PALETTE, { era });
+    // Đếm từ chính bộ đệm đỉnh — 3 đỉnh một tam giác. Đây là "sự thật trên GPU", không phải một
+    // con số nhà máy tự khai.
+    const thật = merged.geometry.getAttribute('position').count / 3;
+    assert.equal(thật, countSpecTriangles(parts),
+      `kỷ ${era}: nhà máy dựng ${thật} tam giác nhưng tầng thuần đếm ${countSpecTriangles(parts)}`);
+    assert.equal(merged.triangles, thật, `kỷ ${era}: con số nhà máy tự khai lệch với bộ đệm đỉnh`);
+  }
+});
+
+test('KHỐI TO ĐƯỢC VÁT, KHỐI MỎNG THÌ KHÔNG — và khối mỏng phải giữ NGUYÊN hình cũ', () => {
+  // Vát một cái gờ dày 0,022 bằng dải vát 0,020 là nuốt gần trọn cái gờ vừa dựng ở Phase 8A.
+  const to = prism({ w: 1, d: 1, h: 1, role: 'wall' });
+  const mỏng = prism({ w: 1, d: 1, h: 0.022, role: 'trim' });
+  assert.ok(bevelWidth(to) > 0, 'thân nhà 1×1×1 phải được vát');
+  assert.equal(bevelWidth(mỏng), 0, 'gờ mảnh 0,022 không được vát');
+
+  const đỉnh = (p) => buildMergedGeometry(placement([p]), PALETTE, { era: 9 })
+    .geometry.getAttribute('position').count / 3;
+  assert.equal(đỉnh(mỏng), 12, 'khối không vát phải giữ đúng 12 tam giác như trước Phase 8B');
+  assert.equal(đỉnh(to), 28, 'khối vát = 3 vành mặt bên (6×4) + 2 mặt đáy/trên (2×2)');
+});
+
+test('DẢI VÁT NẰM ĐÚNG BÊN TRONG KHỐI — không phình ra, không thủng', () => {
+  // ⚠️ Vát mà làm khối PHÌNH RA thì nhà sẽ lấn sang ô bên cạnh, và bài "bề ngang" ở
+  // `buildingSpec.test.js` sẽ không bắt được vì nó đo tầng MÔ TẢ, không đo hình thật.
+  const p = prism({ w: 1, d: 1, h: 1, sides: 4, role: 'wall' });
+  const pos = buildMergedGeometry(placement([p]), PALETTE, { era: 9 })
+    .geometry.getAttribute('position');
+  let maxX = -Infinity; let minY = Infinity; let maxY = -Infinity;
+  for (let i = 0; i < pos.count; i += 1) {
+    maxX = Math.max(maxX, Math.abs(pos.getX(i)));
+    minY = Math.min(minY, pos.getY(i));
+    maxY = Math.max(maxY, pos.getY(i));
+  }
+  assert.ok(maxX <= 0.5 + 1e-9, `khối phình ra ${maxX.toFixed(4)} > nửa bề ngang 0,5`);
+  assert.ok(Math.abs(minY) < 1e-9, 'đáy khối phải đúng y = 0');
+  assert.ok(Math.abs(maxY - 1) < 1e-9, 'đỉnh khối phải đúng y = chiều cao');
+
+  // Và dải vát phải THẬT SỰ hẹp lại ở hai đầu — nếu không thì ba vành chỉ là ba bản sao chồng nhau
+  // (tốn tam giác mà không có mép vát nào), một cách hỏng mà số tam giác không hề phát hiện được.
+  let mépĐáy = 0;
+  for (let i = 0; i < pos.count; i += 1) {
+    if (Math.abs(pos.getY(i)) < 1e-9) mépĐáy = Math.max(mépĐáy, Math.abs(pos.getX(i)));
+  }
+  assert.ok(mépĐáy < 0.5 - 1e-6, `vòng đáy rộng ${mépĐáy.toFixed(4)} — không hề thóp vào, tức không có dải vát`);
 });

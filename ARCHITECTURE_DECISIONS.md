@@ -11,6 +11,42 @@
 
 ---
 
+## ADR-018 — Cạnh vát theo TỈ LỆ khối + một ngưỡng nhìn-thấy-được, không vát đều tay
+
+- **Ngày**: 2026-08-15 (Phase 8B)
+- **Bối cảnh**: nguyên nhân gốc số 1 mà audit Phase 8A đặt tên — cả hệ thống chỉ có hai hình cơ
+  bản, không một cạnh vát nào, nên mọi cạnh là góc 90° trần trụi. Ngoài đời gần như không có cạnh
+  nhọn tuyệt đối; dải hẹp ở mép chính là thứ **bắt vệt sáng viền**, và vệt ấy mới nói cho mắt biết
+  "vật này có khối lượng".
+- **Vấn đề**: vát thì tốn tam giác, mà Phase 8A vừa đẩy kỷ nặng nhất lên 41% trần.
+- **Phương án cân nhắc**:
+  1. **Vát đều mọi khối** một bề rộng cố định.
+  2. **Vát theo ngưỡng KÍCH THƯỚC tuyệt đối** (chỉ khối lớn hơn X).
+  3. **Vát rộng theo TỈ LỆ cạnh mỏng nhất, bỏ qua khối quá mỏng để thấy** ← chọn.
+- **Lý do loại bỏ**:
+  - (1) đo ra **×2,32 tam giác** — quá đắt. Và tệ hơn: một bề rộng cố định 0,02 đặt lên gờ tầng
+    DÀY 0,022 sẽ **nuốt gần trọn cái gờ** vừa dựng ở Phase 8A. Đúng cái bẫy "một hằng số tuyệt đối
+    áp lên những khối chênh nhau hàng chục lần" đã trả giá ở Phase 7D và 5B.
+  - (2) đỡ hơn nhưng vẫn là một con số tuỳ hứng, và nó trả lời sai câu hỏi: thứ quyết định "vát có
+    nhìn thấy không" không phải khối TO hay NHỎ mà là **dải vát rộng bao nhiêu ĐIỂM ẢNH**.
+- **Giải pháp chọn**: `bevelWidth = min(BEVEL_MAX, cạnh_mỏng_nhất × BEVEL_RATIO)`, và **bỏ vát hẳn**
+  nếu kết quả `< BEVEL_MIN_VISIBLE`. Ngưỡng đó không phải một phép "tối ưu" — nó là phát biểu rằng
+  *một dải hẹp hơn một điểm ảnh thì không phải một dải*. Đo ra: cạnh mỏng nhất của khối TRUNG VỊ chỉ
+  là 0,035 (kính và gờ mảnh chiếm đa số), nên ngưỡng này loại đúng phần đông đảo mà vô hình.
+- **Trade-off**: chi phí còn **×1,24** (kỷ nặng nhất 18.532 → 22.948 tam giác công trình), chỉ ~18%
+  số khối được vát — đúng những khối to tạo nên hình bóng. Hiệu quả đo được: **3,8% khung hình đổi
+  đủ để mắt thấy**, chênh lớn nhất 408/765. Khiêm tốn nhưng thật, và tập trung đúng ở các cạnh.
+- **Ảnh hưởng**: `bevelWidth` phải là **nguồn duy nhất** cho cả `countTriangles` (tầng thuần) lẫn
+  `emitPrism` (nhà máy), và cả hai phải hỏi trên khối **CHƯA nhân `BUILDING_SCALE`** — hỏi trên số
+  đã nhân 1,3 thì khối nằm sát ngưỡng sẽ được vát mà không được đếm, và bảng ngân sách nói dối
+  trong im lặng. Đã khoá bằng bài "NGÂN SÁCH KHÔNG NÓI DỐI".
+- **Điều kiện xem lại**: `BEVEL_MAX` chọn từ bảng đo (0,020→3,3% · **0,035→3,8%** · 0,050→4,4% ·
+  0,070→4,9%); **nới nó KHÔNG tốn thêm tam giác**, thứ chặn tay là mỹ thuật — quá 5% bề mặt thì mép
+  vát thôi là mép và bắt đầu là một khối thóp khác. Muốn rẻ hơn thì hạ `BEVEL_MIN_VISIBLE`… ngược
+  lại: NÂNG nó lên để loại thêm khối.
+
+---
+
 ## ADR-017 — Chiều sâu mặt tường dựng bằng HÌNH KHỐI THẬT, không bằng bản đồ pháp tuyến
 
 - **Ngày**: 2026-08-15 (Phase 8A)

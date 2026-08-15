@@ -11,6 +11,58 @@
 
 ---
 
+## ADR-019 — Mặt đất là MỘT TẤM LƯỚI LIỀN, và điều đó ĐẢO NGƯỢC một nửa lập luận "phải là thềm bậc"
+
+- **Ngày**: 2026-08-15 (Phase 8C)
+- **Bối cảnh**: Đàm nhìn ảnh chụp rồi gọi thẳng tên vấn đề lớn nhất còn lại: *"terrain như các bậc
+  thang… grid rõ… toàn cảnh giống prototype/editor hơn là một thế giới 3D"*, và cho phép rõ ràng:
+  *"nếu architecture hiện tại phụ thuộc vào grid 12x12 khiến terrain luôn giống board game, hãy
+  tìm cách giữ data/progression nhưng thay đổi cách render/composition"*.
+- **Vấn đề**: mặt đất **là** 144 khối hộp `InstancedMesh` riêng lẻ. Ba hệ quả, cả ba đều không thể
+  chỉnh khéo mà thoát: (1) hộp không dốc được ⇒ chênh cao độ CHỈ có thể là bậc; (2) hộp có mặt bên
+  ⇒ mỗi ô bốn cạnh đứng; (3) 144 ô mỗi ô một sắc phẳng ⇒ mắt đọc ra hàng lối ngay. `palette3d.js`
+  đã ba lần vá triệu chứng (3) bằng cách siết bốn sắc nền xuống ±4° góc màu — vá đúng, nhưng vá
+  vào lá chứ không vào gốc.
+- **Điều đáng ghi nhất — MỘT LẬP LUẬN CŨ BỊ LẬT, CÓ CHỦ ĐÍCH**: `terrain.js` mở đầu bằng một khối
+  chú thích dài giải thích *"vì sao PHẢI là thềm bậc chứ không phải dốc liên tục"*, và lập luận ấy
+  **hoàn toàn đúng** — nhưng nó đứng trên đúng một tiền đề: *"nền thành phố là 144 ô hộp"*. Phase
+  8C gỡ chính tiền đề đó, nên kết luận đi theo nó mất hiệu lực. ⚠️ Đây KHÔNG phải "quyết định cũ
+  sai": nó đúng trong suốt thời gian tiền đề còn đúng. Cùng hình dạng với Phase 4D
+  ("một luật mới làm điều kiện cũ hết đúng").
+- **Phương án cân nhắc**:
+  - (a) **Giữ hộp, phá nhịp bằng màu/cao độ trong từng ô** — rẻ nhất, không đụng kiến trúc. Loại:
+    mặt bên của hộp vẫn còn, nên cái bậc vẫn còn; chỉ là bậc được sơn khéo hơn. Đây đúng thứ Đàm
+    cấm (*"không được chỉ tăng saturation, đổi palette… để giả vờ cải thiện chất lượng"*).
+  - (b) **Bỏ hẳn lưới 12×12, sinh địa hình tự do** — hợp mỹ thuật nhất. Loại: lưới là nơi
+    `cityLayout.js` đặt công trình (ADR-007, bất biến "bảo tàng bất động"), phá nó là phá cả
+    progression. Đàm cũng đã chỉ đường khác: giữ data, đổi cách render.
+  - (c) **Giữ nguyên DỮ LIỆU bậc thềm, lấy mẫu MƯỢT nó lên một lưới đỉnh liền** ← CHỌN.
+- **Giải pháp**: `terrain.js` thêm `smoothHeightAt` (nội suy `smoothstep` giữa các tâm ô) và
+  `surfaceHeightAt` (thêm vùng đất thoải ra ngoài lưới). `render3d/terrainMesh.js` dựng hai tấm
+  lưới liền — đất và đường — với pháp tuyến MƯỢT tính từ sai phân trường cao độ.
+  - **Bất biến khoá cả thiết kế**: tại toạ độ NGUYÊN, `smoothHeightAt` trả về **đúng** `heightAt`.
+    Nhà, cây, cư dân đều đứng ở `heightAt`; lệch một phần nghìn là cả thành phố lơ lửng hoặc lún,
+    im lặng. Có test riêng, đã thử ngược.
+  - **Dữ liệu bậc thềm không đổi một con số** — `cells`/`footprint`/`drop`/ADR-007 nguyên vẹn.
+- **Vì sao MẶT ĐƯỜNG là tấm RIÊNG, không phải nhóm vật liệu trong tấm đất**: bản đầu làm cách kia
+  và nó sai về HÌNH HỌC. Nhét đường vào lưới đất ⇒ bề rộng ngõ bị làm tròn về bội của một ô con
+  (1/3); mà muốn ngõ nằm CÂN GIỮA ô thì số ô con phải cùng chẵn-lẻ với `SUB`, tức chỉ còn 1/3
+  (mảnh như sợi chỉ) hoặc 3/3 (bằng đại lộ, mất thứ bậc đường). Lấy 2/3 thì đúng bề rộng nhưng
+  **lệch tâm 1/6 ô**, và cư dân đi đúng tâm ô sẽ đi sát mép đường. Đó là ràng buộc chẵn-lẻ, không
+  phải sai số — không có cách chỉnh khéo nào thoát. Cái giá bị đồn thổi của việc tách ra hoá ra
+  bằng **không**: hai nhóm vật liệu trong một khối hình học vốn đã là hai lệnh vẽ.
+- **Trade-off (đo, không đoán)**: lệnh vẽ **KHÔNG đổi** (2 → 2). Tam giác địa hình **2.330 →
+  7.130** (+4.800), cả cảnh **~29.000 → ~36.100 = 60%** của trần 60.000. Đây là khoản chi lớn nhất
+  của cả mảng 8, và nó chưa được đo trên iPhone thật (TECH_DEBT #23/#26 — nay gấp hơn một bậc).
+  Núm hạ tải rẻ nhất nếu cần: `SUB` 3 → 2 trả lại 3.610 tam giác.
+- **Ảnh hưởng**: `palette3d.js` không còn bị buộc phải siết sắc nền — biến thiên màu nay chạy theo
+  trường liên tục tần số ~2,9 ô, vắt ngang các ô, nên không có hàng lối nào để mắt nối. Đây là lý
+  do `MOTTLE_AMPLITUDE = 0,30` được phép lớn gấp nhiều lần trần ±0,018 cũ.
+- **Điều kiện xem lại**: nếu đo iPhone cho thấy không gánh nổi (hạ `SUB`), hoặc nếu sau này lưới
+  thành phố thôi là 12×12 cố định.
+
+---
+
 ## ADR-018 — Cạnh vát theo TỈ LỆ khối + một ngưỡng nhìn-thấy-được, không vát đều tay
 
 - **Ngày**: 2026-08-15 (Phase 8B)

@@ -370,7 +370,16 @@ Ba điều ràng buộc lẫn nhau ở đây, đổi một cái phải soi hai c
 
 **MẶT ĐẤT KHÔNG CÒN PHẲNG (2026-08-14, Phase 7B)** — `engine/city3d/terrain.js`, thuần như mọi thứ
 khác trong `city3d/`. Xem ADR-014 cho lý do chọn **thềm bậc** thay vì dốc liên tục và **bệ kè** thay
-vì san phẳng đất. Ba điểm về LUỒNG DỮ LIỆU đáng nhớ ở tầng kiến trúc:
+vì san phẳng đất.
+
+⚠️ **VÀ NỬA ĐẦU CỦA ADR-014 ĐÃ BỊ ĐẢO NGƯỢC Ở PHASE 8C (ADR-019) — đọc cả hai, đừng đọc mỗi cái cũ.**
+Lập luận "phải là thềm bậc" đứng trên tiền đề *"nền thành phố là 144 ô hộp"*; Phase 8C gỡ chính tiền
+đề đó, nên **cách VẼ** nay là hai tấm lưới liền (`render3d/terrainMesh.js`) lấy mẫu mượt từ
+`surfaceHeightAt`. **DỮ LIỆU bậc thềm không đổi một con số** — `cells`/`footprint`/`drop` nguyên vẹn,
+và công trình vẫn đứng trên thềm (chúng là khối đáy phẳng, vẫn cần mặt bằng). Bất biến giữ hai vế
+khớp nhau: tại toạ độ NGUYÊN, `smoothHeightAt` trả về **đúng** `heightAt`.
+
+Ba điểm về LUỒNG DỮ LIỆU đáng nhớ ở tầng kiến trúc:
 1. **Cao độ là hàm của DUY NHẤT `(era, gridSize)`** — `buildTerrain` cố tình không nhận danh sách
    công trình. Đây là cùng một bất biến đã giữ cho VỊ TRÍ ô đất (ADR-007) và THỨ TỰ mở đường
    (Phase 6C): thứ gì thuộc về "vùng đất" thì không được đổi theo tiến độ của Đàm, nếu không mỗi
@@ -380,9 +389,13 @@ vì san phẳng đất. Ba điểm về LUỒNG DỮ LIỆU đáng nhớ ở t�
    5/15 kỷ sập về 1–2 bậc dù khai 4–5 bậc. Chuẩn hoá min→0/max→1 rồi chia bậc bằng `floor` (KHÔNG
    phải `round` — ô biên của `round` chỉ rộng bằng nửa ô giữa) mới làm mọi kỷ dùng đủ số bậc mình
    khai. Đã khoá bằng test, và đó là bài đỏ khi gỡ bước căng.
-3. **SÁU chỗ trong `sceneGraph.js` phải hỏi `terrain`** (ô nền · đường · công trình · bệ kè · cảnh
-   vật · cư dân). Quên một chỗ thì thứ đó lơ lửng hoặc lún, và build/lint/test đều xanh — đúng loại
-   vi phạm chỉ test **đọc mã nguồn** mới chặn nổi (`sceneGraphWiring.test.js`, bảng `GROUND_ANCHORS`).
+3. **SÁU chỗ phải hỏi `terrain`** (ô nền · đường · công trình · bệ kè · cảnh vật · cư dân). Quên
+   một chỗ thì thứ đó lơ lửng hoặc lún, và build/lint/test đều xanh — đúng loại vi phạm chỉ test
+   **đọc mã nguồn** mới chặn nổi (`sceneGraphWiring.test.js`, bảng `GROUND_ANCHORS`).
+   ⚠️ Từ Phase 8C danh sách này **trải trên HAI file**: hai chỗ đầu (nền, đường) đã sang
+   `render3d/terrainMesh.js`, bốn chỗ còn lại vẫn ở `sceneGraph.js`. Bảng `GROUND_ANCHORS` vì vậy
+   ghi kèm TÊN FILE cho từng hàng — để nguyên bảng cũ thì hai hàng ấy đỏ trong khi mã hoàn toàn
+   đúng (phép đo già đi, không phải mã hỏng).
    Camera cũng phải bù, và bù theo **ĐƠN VỊ THẾ GIỚI** chứ không trộn vào `massScale`: đo được 1 đơn
    vị `massScale` ≈ 5 đơn vị thế giới, nên quy đổi qua cỡ lưới là quy đổi bằng một con số chẳng liên
    quan (bản đầu bù thiếu ~4 lần và ảnh vẫn "trông có vẻ đúng").

@@ -1,7 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { ERA_TERRAIN, TERRACE_STEP, buildTerrain, eraTerrainProfile } from './terrain.js';
+import {
+  APRON_DROP, APRON_EDGE, ERA_TERRAIN, TERRACE_STEP, buildTerrain, eraTerrainProfile,
+} from './terrain.js';
 
 const ERAS = Array.from({ length: 15 }, (_, i) => i + 1);
 const GRID = 12;
@@ -104,8 +106,11 @@ test('ĐẤT KHÔNG ĐƯỢC XÊ DỊCH: cùng một kỷ thì địa hình y h�
 });
 
 test('cao độ luôn là BỘI SỐ NGUYÊN của một bậc thềm — không có dốc liên tục', () => {
-  // Nền là 144 ô hộp và công trình là khối đáy phẳng; một cao độ lẻ giữa hai bậc sẽ cho ra ô nền
-  // xuyên vào nhau hoặc hở khe. Thềm bậc không phải lựa chọn mỹ thuật, nó là điều kiện hình học.
+  // ⚠️ LÝ DO CỦA BÀI NÀY ĐÃ ĐỔI Ở PHASE 8C, DÙ LUẬT THÌ KHÔNG. Lý do CŨ là "nền là 144 ô hộp, cao
+  // độ lẻ sẽ cho ô nền xuyên nhau hoặc hở khe" — vế ấy chết rồi, mặt đất nay là một tấm lưới liền
+  // và nó dốc được tuỳ ý. Nhưng CÔNG TRÌNH vẫn là khối đáy phẳng, và chúng vẫn đứng theo bảng cao
+  // độ này; thềm bậc là thứ cho một toà nhà rộng 3 ô có mặt đất bằng phẳng để đặt xuống. Giữ bài
+  // test, sửa lời giải thích — một lời giải thích sai là thứ phiên sau kế thừa rồi dựa vào.
   for (const era of ERAS) {
     const terrain = buildTerrain({ era, gridSize: GRID });
     const unit = TERRACE_STEP * eraTerrainProfile(era).relief;
@@ -170,5 +175,111 @@ test('mỗi kỷ phải GIẢI THÍCH ĐƯỢC địa hình của mình bằng m
       `kỷ ${era} thiếu lời giải thích địa hình (đang là ${JSON.stringify(profile.note)})`,
     );
     assert.ok(profile.terraces >= 1 && profile.relief >= 0, `kỷ ${era} có tham số vô lý`);
+  }
+});
+
+test('MẶT ĐẤT MƯỢT PHẢI ĐI QUA ĐÚNG TÂM Ô — nếu không, cả thành phố lơ lửng hoặc lún', () => {
+  // ⚠️ ĐÂY LÀ BẤT BIẾN ĐẮT NHẤT CỦA PHASE 8C, và nó hỏng trong im lặng tuyệt đối.
+  // Nhà, giàn giáo, cây, cư dân đều đứng ở `heightAt` của ô mình. Mặt đất thì nay được vẽ bằng
+  // `smoothHeightAt`. Hai hàm ấy PHẢI bằng nhau tại toạ độ nguyên — không phải "gần bằng", mà
+  // bằng đúng: lệch 2% thôi là mỗi căn nhà trong thành phố hụt hoặc lún vài phân, và không có gì
+  // đỏ lên, không có cảnh báo nào, chỉ có một tấm ảnh trông hơi sai mà không ai chỉ ra được sai ở
+  // đâu. Đúng hình dạng lỗi "sáu chỗ bám đất" của Phase 7B, lần này nhỏ hơn nên khó thấy hơn.
+  for (const era of ERAS) {
+    const terrain = buildTerrain({ era, gridSize: GRID });
+    for (const cell of terrain.cells) {
+      assert.equal(
+        terrain.smoothHeightAt(cell.x, cell.y), terrain.heightAt(cell.x, cell.y),
+        `kỷ ${era} ô (${cell.x},${cell.y}): mặt đất mượt lệch khỏi cao độ mà mọi vật đang đứng`,
+      );
+    }
+  }
+});
+
+test('MẶT ĐẤT PHẢI THẬT SỰ DỐC GIỮA HAI TÂM Ô — không được lén quay về bậc thang', () => {
+  // Bài trên đòi hai hàm khớp nhau ở tâm ô. Chỉ mình nó thì `smoothHeightAt = heightAt` (làm tròn
+  // về ô gần nhất) cũng qua cửa — mà đó CHÍNH LÀ bậc thang, tức cả Phase 8C bị hoàn tác mà test
+  // vẫn xanh. Nên phải hỏi thêm: giữa hai ô chênh nhau một bậc, điểm chính giữa có nằm ở KHOẢNG
+  // GIỮA không.
+  let checked = 0;
+  for (const era of ERAS) {
+    const terrain = buildTerrain({ era, gridSize: GRID });
+    for (let y = 0; y < GRID; y += 1) {
+      for (let x = 0; x < GRID - 1; x += 1) {
+        const a = terrain.heightAt(x, y); const b = terrain.heightAt(x + 1, y);
+        if (a === b) continue;
+        const mid = terrain.smoothHeightAt(x + 0.5, y);
+        assert.ok(
+          Math.abs(mid - (a + b) / 2) < 1e-9,
+          `kỷ ${era} giữa ô (${x},${y}) và (${x + 1},${y}): điểm giữa ở ${mid}, đáng lẽ ${(a + b) / 2}`,
+        );
+        checked += 1;
+      }
+    }
+  }
+  assert.ok(checked >= 50, `chỉ kiểm được ${checked} chỗ chênh bậc — bài test này đang chạy không`);
+});
+
+test('RA KHỎI `APRON_EDGE` THÌ MẶT ĐẤT PHẲNG ĐÚNG `-APRON_DROP`', () => {
+  // ⚠️ Đây là LỜI HỨA VỚI `sceneGraph.js`: tấm ván vùng ngoài ngồi ở đúng cao độ ấy, nên nếu rìa
+  // tấm địa hình còn gợn thì chỗ giáp sẽ là một đường răng cưa hở cả gầm — vòng quanh thành phố,
+  // và im lặng. Kiểm ở NHIỀU hướng vì bán kính chuyển tiếp bị nhiễu nhân vào: chỗ nào nhiễu lớn
+  // nhất mới là chỗ chạm trần, và đúng chỗ đó mới lộ lỗi.
+  for (const era of ERAS) {
+    const terrain = buildTerrain({ era, gridSize: GRID });
+    for (let t = 0; t <= 24; t += 1) {
+      const along = -0.5 + (GRID * t) / 24;
+      const out = GRID - 0.5 + APRON_EDGE + 0.01;
+      for (const [u, v] of [[-0.5 - APRON_EDGE - 0.01, along], [out, along],
+        [along, -0.5 - APRON_EDGE - 0.01], [along, out]]) {
+        assert.ok(
+          Math.abs(terrain.surfaceHeightAt(u, v) + APRON_DROP) < 1e-9,
+          `kỷ ${era} tại (${u.toFixed(2)},${v.toFixed(2)}): rìa ở ${terrain.surfaceHeightAt(u, v)}, `
+          + `đáng lẽ ${-APRON_DROP} — sẽ hở một khe giữa địa hình và tấm ván vùng ngoài`,
+        );
+      }
+    }
+  }
+});
+
+test('VÙNG ĐẤT NGOÀI PHẢI THẤP HƠN CAO NGUYÊN, và ranh giới phải LƯỢN chứ không vuông', () => {
+  // Hai nửa của cùng một điều Đàm yêu cầu ("irregular silhouettes"). Nửa (a): thành phố phải nằm
+  // TRÊN một cao nguyên, không phải trên một cái khay. Nửa (b): bán kính chuyển tiếp bị nhiễu nhân
+  // vào, nên nếu nó ra một hằng số thì mép lại vuông vức — và một mép vuông hoàn hảo chính là dấu
+  // hiệu số một để mắt đọc ra "bàn cờ".
+  for (const era of ERAS) {
+    const terrain = buildTerrain({ era, gridSize: GRID });
+    const rim = [];
+    for (let t = 0; t <= 40; t += 1) {
+      const along = -0.5 + (GRID * t) / 40;
+      // Đi ra ngoài đúng 1 ô rồi đo tụt bao nhiêu — số này chính là "ranh giới nằm ở đâu".
+      rim.push(terrain.smoothHeightAt(0, Math.min(GRID - 1, Math.max(0, along)))
+        - terrain.surfaceHeightAt(-1.5, along));
+    }
+    const lo = Math.min(...rim); const hi = Math.max(...rim);
+    assert.ok(hi > 0.02, `kỷ ${era}: vùng ngoài không hề thấp hơn cao nguyên`);
+    assert.ok(
+      hi - lo > 0.05,
+      `kỷ ${era}: mức tụt ở rìa gần như không đổi (${lo.toFixed(3)}..${hi.toFixed(3)}) — ranh giới `
+      + 'đang là một hình vuông đều tăm tắp, đúng thứ làm cảnh đọc ra bàn cờ',
+    );
+  }
+});
+
+test('`tintAt` phải TẤT ĐỊNH, nằm trong 0..1, và đổi theo cả hai trục', () => {
+  // Vết loang là thứ giữ cho mặt đất KHÔNG phẳng lì ở 5 kỷ đồng bằng (nơi độ dốc bằng 0 nên tầng
+  // "sườn dốc lộ đất" không đóng góp gì). Nó trả một hằng số thì 5 kỷ ấy về lại một mảng màu chết.
+  for (const era of [1, 7, 12, 15]) {
+    const terrain = buildTerrain({ era, gridSize: GRID });
+    const seen = new Set();
+    for (let j = 0; j <= 12; j += 1) {
+      for (let i = 0; i <= 12; i += 1) {
+        const v = terrain.tintAt(i, j);
+        assert.ok(v >= 0 && v <= 1, `kỷ ${era} tintAt(${i},${j}) = ${v} — ngoài 0..1`);
+        assert.equal(v, terrain.tintAt(i, j), 'không tất định');
+        seen.add(v.toFixed(4));
+      }
+    }
+    assert.ok(seen.size >= 30, `kỷ ${era}: vết loang chỉ có ${seen.size} giá trị — gần như phẳng`);
   }
 });

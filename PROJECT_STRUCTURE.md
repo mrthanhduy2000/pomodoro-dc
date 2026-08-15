@@ -49,7 +49,15 @@
 │   │   │   ├── CityPerfHud.jsx   # Bảng FPS/lệnh vẽ/tam giác — để đo cổng hiệu năng Phase 3A
 │   │   │   └── render3d/         # Bộ vẽ three.js — ⚠️ NƠI DUY NHẤT được import 'three'
 │   │   │       ├── CityScene3D.jsx # Vỏ React: vòng đời, resize, mất context. KHÔNG chứa logic 3D
-│   │   │       ├── sceneGraph.js   # Dựng cảnh: nền/đường/trời/đất + ánh sáng 3 nguồn + cư dân
+│   │   │       ├── terrainMesh.js  # MẶT ĐẤT + MẶT ĐƯỜNG: mỗi thứ MỘT tấm lưới liền có cao độ ở
+│   │   │       │                   #   từng đỉnh, pháp tuyến MƯỢT (ngược hẳn công trình — xem
+│   │   │       │                   #   ADR-019). Thay 144 khối hộp của thời trước Phase 8C.
+│   │   │       │                   #   ⚠️ Đường là tấm RIÊNG vì ràng buộc chẵn-lẻ: nhét chung lưới
+│   │   │       │                   #   thì ngõ phố không thể vừa đúng bề rộng vừa cân giữa ô
+│   │   │       ├── terrainMesh.test.js # Hình học THẬT (không đọc mã nguồn): có đỉnh đúng tâm mỗi ô
+│   │   │       │                   #   không · mặt đất có lén quay về bậc thang không · đường có bám
+│   │   │       │                   #   sườn dốc không · ngõ có cân giữa không · ngân sách tam giác
+│   │   │       ├── sceneGraph.js   # Dựng cảnh: trời/đất + ánh sáng 3 nguồn + công trình + cư dân
 │   │   │       │                   #   + NƯỚNG BẢN ĐỒ MÔI TRƯỜNG từ chính bầu trời đang nhìn thấy
 │   │   │       │                   #   (`paintSkyGradient` dùng chung cho vòm trời và quả cầu dò —
 │   │   │       │                   #   một luật một công thức). ⚠️ Kim loại KHÔNG có bản đồ này thì

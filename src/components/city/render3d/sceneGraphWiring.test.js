@@ -19,6 +19,7 @@ import { fileURLToPath } from 'node:url';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const SOURCE = readFileSync(join(HERE, 'sceneGraph.js'), 'utf8');
+const TERRAIN_SOURCE = readFileSync(join(HERE, 'terrainMesh.js'), 'utf8');
 
 /**
  * Bỏ chú thích, chỉ giữ phần MÃ.
@@ -36,6 +37,7 @@ function codeOnly(source) {
 }
 
 const CODE = codeOnly(SOURCE);
+const TERRAIN_CODE = codeOnly(TERRAIN_SOURCE);
 
 /**
  * `CODE` nhưng đã BỎ MỌI DÒNG ĐỊNH NGHĨA HÀM — dùng cho mọi phép kiểm "hàm X có được GỌI không".
@@ -122,17 +124,22 @@ test('KIM LOẠI PHẢI CÓ BẢN ĐỒ MÔI TRƯỜNG — thiếu nó thì mái
  * MỌI chỗ phát biểu lại điều kiện ấy"). Điều kiện cũ là *"y của mọi thứ trên mặt đất = 0"*, và nó
  * được phát biểu lại ở sáu nơi. Bảng dưới đây là danh sách đầy đủ đó, viết ra để lần sau ai thêm
  * chỗ thứ bảy thì có nơi mà đối chiếu.
+ *
+ * ⚠️ TỪ PHASE 8C DANH SÁCH NÀY TRẢI TRÊN HAI FILE, nên mỗi hàng phải nói rõ nó sống ở đâu. Nền và
+ * đường đã rời `sceneGraph.js` sang `terrainMesh.js` (mặt đất thôi là 144 khối hộp). Để nguyên bảng
+ * cũ thì hai hàng ấy đỏ trong khi mã hoàn toàn đúng — **phép đo già đi, không phải mã hỏng**, đúng
+ * loại đã cắn ở `buildingSpec.test.js` (`seen.size === 4`) và Phase 5B (ngưỡng `|x| > 0.5`).
  */
 const GROUND_ANCHORS = [
-  { name: 'ô nền', pattern: /const h = terrain\.heightAt\(cell\.x, cell\.y\)/,
-    hurt: 'thềm không nhô lên — cả địa hình biến mất, mặt đất phẳng lì như trước Phase 7B' },
-  { name: 'đường sá', pattern: /const h = terrain\.heightAt\(road\.x, road\.y\)/,
+  { name: 'ô nền', file: 'terrainMesh.js', pattern: /const heightAt = \(u, v\) => terrain\.surfaceHeightAt\(u, v\)/,
+    hurt: 'toàn bộ lưới đỉnh nằm ở cao độ 0 — cả địa hình biến mất, mặt đất phẳng lì như trước Phase 7B' },
+  { name: 'đường sá', file: 'terrainMesh.js', pattern: /kit\.heightAt\(u, v\) \+ ROAD_LIFT/,
     hurt: 'đường nằm ở cao độ 0 trong khi đất đã nhô lên ⇒ phố chui xuyên vào trong đồi' },
-  { name: 'công trình + móng', pattern: /terrain\.footprint\(cell\.x, cell\.y, span\)/,
+  { name: 'công trình + móng', file: 'sceneGraph.js', pattern: /terrain\.footprint\(cell\.x, cell\.y, span\)/,
     hurt: 'nhà đứng ở cao độ 0 ⇒ nhà trên đồi bị chôn tới nóc, nhà dưới thung lũng bay lơ lửng' },
-  { name: 'cảnh vật', pattern: /y: terrain\.heightAt\(prop\.x, prop\.y\)/,
+  { name: 'cảnh vật', file: 'sceneGraph.js', pattern: /y: terrain\.heightAt\(prop\.x, prop\.y\)/,
     hurt: 'cây/thùng/đèn cắm ở cao độ 0 ⇒ cây mọc xuyên qua sườn đồi hoặc treo giữa trời' },
-  { name: 'cư dân', pattern: /terrain\.heightAt\(spot\.x, spot\.y\) \+ ROAD_SURFACE_Y/,
+  { name: 'cư dân', file: 'sceneGraph.js', pattern: /terrain\.heightAt\(spot\.x, spot\.y\) \+ ROAD_SURFACE_Y/,
     hurt: 'người đi bộ lún dưới mặt đường hoặc đi trên không' },
 ];
 
@@ -141,13 +148,35 @@ test('SÁU CHỖ BÁM ĐẤT: mọi thứ đứng trên mặt đất đều ph�
     /const terrain = buildTerrain\(\{ era: layout\.era, gridSize \}\)/.test(CODE),
     'Không còn dựng địa hình cho cảnh. Cả Phase 7B biến mất mà không có gì đỏ.',
   );
+  const sources = { 'sceneGraph.js': CODE, 'terrainMesh.js': TERRAIN_CODE };
   for (const anchor of GROUND_ANCHORS) {
     assert.ok(
-      anchor.pattern.test(CODE),
-      `Chỗ bám đất "${anchor.name}" không còn hỏi \`terrain\`. Hậu quả: ${anchor.hurt}. `
+      anchor.pattern.test(sources[anchor.file]),
+      `Chỗ bám đất "${anchor.name}" (${anchor.file}) không còn hỏi \`terrain\`. Hậu quả: ${anchor.hurt}. `
       + '⚠️ Sai chỗ này KHÔNG có gì đỏ lên — chỉ có mắt nhìn vào ảnh chụp mới bắt được.',
     );
   }
+});
+
+test('HAI TẤM ĐỊA HÌNH PHẢI ĐƯỢC DỰNG THẬT VÀO CẢNH', () => {
+  // ⚠️ Đúng bẫy Phase 4H một lần nữa: `terrainMesh.js` có test riêng chạy đủ, engine `terrain.js`
+  // vẫn tính đủ 15 vùng đất — và nếu `sceneGraph.js` quên gọi thì màn hình chỉ còn một tấm ván
+  // vuông trơ trọi với năm công trình bay lơ lửng bên trên. Không lint nào bắt được.
+  for (const fn of ['buildTerrainSurface', 'buildRoadSurface']) {
+    assert.ok(
+      new RegExp(`${fn}\\(\\{ terrain, gridSize, layout, palette \\}\\)`).test(CALLS),
+      `Cảnh không còn gọi \`${fn}\` với \`terrain\` thật.`,
+    );
+  }
+  // ⚠️ VÀ TẤM VÁN VÙNG NGOÀI PHẢI ĐỌC `APRON_DROP`, KHÔNG ĐƯỢC VIẾT TAY MỘT SỐ SONG SONG. Đây đúng
+  // bài học Phase 7D ("một con số tuyệt đối không diễn đạt được một luật nói về QUAN HỆ"): mặt trên
+  // tấm ván phải TRÙNG đáy vùng đất thoải, nên nó buộc phải suy từ chính con số sinh ra đáy ấy. Viết
+  // tay thì lần sau ai chỉnh `APRON_DROP` sẽ tạo một vết nứt vòng quanh thành phố, im lặng.
+  assert.ok(
+    /outskirts\.position\.y = -APRON_DROP - GROUND_THICKNESS \/ 2/.test(CALLS),
+    'Tấm ván vùng ngoài không còn ngồi theo `APRON_DROP` — mặt trên của nó sẽ cắt ngang vùng đất '
+    + 'thoải như một lưỡi dao, hoặc tụt xuống để hở cả gầm.',
+  );
 });
 
 test('CÔNG TRÌNH ĐỨNG Ở CAO ĐỘ CAO NHẤT DƯỚI BÓNG MÌNH, và phần hụt phải thành MÓNG', () => {
@@ -237,19 +266,24 @@ test('MẶT ĐƯỜNG PHẢI DÙNG VẬT LIỆU CỦA KỶ, không dùng chung v
     'Mặt đường không còn tra vật liệu theo kỷ.',
   );
 
-  // ⚠️ HỎI ĐÍCH DANH KHỐI CẦN CANH, không hỏi "có ít nhất một chỗ dùng roadMaterial". Phép đếm
-  // gộp là cái phễu chứ không phải hàng rào: file này có nhiều `InstancedMesh`, nên chỉ cần một
-  // chỗ khác tình cờ nhận vật liệu là assert vẫn xanh dù đúng khối đường đã tuột mất.
-  const roadBlock = CALLS.slice(CALLS.indexOf("prop.kind === 'road'"));
-  const body = roadBlock.slice(0, roadBlock.indexOf('\n  ));'));
-  assert.ok(body.length > 0, 'không tìm thấy khối dựng đường — bài test này đã lạc chỗ, sửa nó trước');
-  assert.match(body, /material:\s*roadMaterial/, 'Khối đường không được truyền vật liệu riêng.');
+  // ⚠️ HỎI ĐÍCH DANH TẤM ĐƯỜNG, không hỏi "có ít nhất một chỗ dùng roadMaterial". Phép đếm gộp là
+  // cái phễu chứ không phải hàng rào: cảnh này có nhiều mesh, nên chỉ cần một chỗ khác tình cờ nhận
+  // vật liệu là assert vẫn xanh dù đúng tấm đường đã tuột mất.
+  assert.match(
+    CALLS, /\[road3d, roadMaterial\]/,
+    'Tấm đường không còn được ghép với vật liệu riêng của nó.',
+  );
+  assert.ok(
+    !/\[road3d, tileMaterial\]/.test(CALLS),
+    'Tấm đường đang dùng chung vật liệu với mặt đất — đúng thứ Phase 7D đi sửa.',
+  );
 
   // NGÕ PHỐ cũng phải đi qua bảng màu đường. Trước Phase 7D nó lấy `roles.stone` (màu đá xây
   // tường), nên 2/3 số ô đường không đổi theo kỷ — mà nhìn ảnh thì vẫn tưởng đã sửa xong.
-  assert.match(body, /palette\.roadLane/, 'Ngõ phố không còn suy từ mặt đường của kỷ.');
+  // ⚠️ Câu hỏi này nay thuộc về `terrainMesh.js` (nơi tô màu mặt đường), không còn ở `sceneGraph.js`.
+  assert.match(TERRAIN_CODE, /palette\?\.roadLane/, 'Ngõ phố không còn suy từ mặt đường của kỷ.');
   assert.ok(
-    !/roles\?\.stone/.test(body),
+    !/roles\?\.stone/.test(TERRAIN_CODE),
     'Ngõ phố vẫn đang mượn màu đá xây tường — đúng chỗ rò rỉ mà Phase 7D sinh ra để bịt.',
   );
 });

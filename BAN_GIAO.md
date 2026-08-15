@@ -6,7 +6,30 @@
 > chọn: `ARCHITECTURE_DECISIONS.md`. Nợ kỹ thuật: `TECH_DEBT.md`. Migration: `MIGRATION.md`. Tóm
 > tắt theo mốc: `CHANGELOG.md`.
 > **NGUYÊN TẮC ƯU TIÊN SỐ 1:** (1) mọi phiên AI phải đọc file này + `CLAUDE.md` + các file liên quan TRƯỚC khi làm; (2) sau MỌI cập nhật dù nhỏ, phải cập nhật ngay file này + `CLAUDE.md` + các file liên quan khác.
-> Cập nhật lần cuối: **2026-08-15** — **Phase 8B**: **CẠNH VÁT — KHỐI THÔI SẮC NHƯ DAO.** Nguyên
+> Cập nhật lần cuối: **2026-08-15** — **Phase 8C**: **MẶT ĐẤT THÔI LÀ BÀN CỜ.** Đàm gọi thẳng đây
+> là *"vấn đề rất lớn"*: *"terrain như các bậc thang… grid rõ… toàn cảnh giống prototype/editor hơn
+> là một thế giới 3D"*. Nguyên nhân gốc gọn trong một câu: mặt đất **là** 144 khối hộp riêng lẻ.
+> Hộp không dốc được (chênh cao độ chỉ có thể là BẬC), hộp có mặt bên (mỗi ô bốn cạnh đứng), và
+> 144 ô mỗi ô một sắc phẳng thì mắt đọc ra ngay hàng lối. Nay mặt đất và mặt đường mỗi thứ là **MỘT
+> tấm lưới liền** (`render3d/terrainMesh.js`) lấy mẫu mượt từ `surfaceHeightAt`, pháp tuyến mượt,
+> có vùng đất thoải bao quanh nên mép thôi là hình vuông sắc lẹm. **DỮ LIỆU bậc thềm không đổi một
+> con số** — đúng như Đàm cho phép (*"giữ data/progression nhưng thay đổi cách render"*).
+> **665 bài test** (+11, tất cả đã thử ngược), lint sạch, build xanh. **TECH_DEBT #28 đóng cả hai
+> phần.** Xem **ADR-019**.
+> ⚠️ **GIÁ PHẢI TRẢ, ĐO CHỨ KHÔNG ĐOÁN**: lệnh vẽ **KHÔNG đổi** (2 → 2), nhưng tam giác địa hình
+> **2.330 → 7.130**, cả cảnh **~29.000 → ~36.100 = 60%** trần 60.000. Đây là khoản chi lớn nhất của
+> cả mảng 8 và là **phase thứ TƯ liên tiếp** cộng tải lên một con số chưa ai đo trên iPhone thật →
+> `TECH_DEBT #23/#26` nay là mục cần đo GẤP NHẤT. Núm hạ tải rẻ nhất: `SUB` 3 → 2 ở `terrainMesh.js`
+> trả lại 3.610 tam giác.
+> ⚠️ **HAI LỖI CỦA PHASE NÀY ĐỀU DO BÀI TEST BẮT, KHÔNG DO ĐỌC MÃ**: (1) lưới đỉnh neo lệch nửa ô
+> nên **không đỉnh nào nằm đúng tâm ô** — mà tâm ô là chỗ nhà/cây/cư dân đứng; ảnh vẫn đẹp, không
+> gì đỏ. (2) bản đầu nhét mặt đường vào chung lưới đất, và **ràng buộc chẵn-lẻ** khiến ngõ phố
+> không thể vừa đúng bề rộng vừa cân giữa ô — phải tách tấm riêng, cái giá hoá ra bằng không.
+> ⚠️ **CÒN LẠI, ĐÃ NÓI THẲNG VỚI ĐÀM**: trong danh sách của anh mới xong mục **terrain**. **Cây vẫn
+> là nón + trụ** (anh gọi đích danh), vật liệu mặt đường vẫn là một màu phẳng, và bóng đổ vẫn là
+> mảng đen cạnh cứng. Chưa được coi Visual Foundation là xong.
+>
+> **(Phase 8B, ngay trước đó)** **CẠNH VÁT — KHỐI THÔI SẮC NHƯ DAO.** Nguyên
 > nhân gốc **số 1** trong ba cái audit Phase 8A đặt tên. Ngoài đời cạnh nhọn tuyệt đối gần như không
 > tồn tại; dải hẹp ở mép là thứ **bắt vệt sáng viền**, và vệt ấy mới nói cho mắt biết "vật này có
 > khối lượng". Bề rộng vát = **tỉ lệ** theo cạnh mỏng nhất (không phải một số cố định — số cố định
@@ -544,6 +567,20 @@
 ## 🗒️ Nhật ký cập nhật
 > Mỗi lần xong việc đáng kể, thêm 1 dòng vào ĐẦU danh sách.
 
+- **2026-08-15 (Phase 8C — mặt đất thôi là bàn cờ)** — **665 bài test** (653 → 665), lint sạch,
+  build xanh. Đổi `engine/city3d/terrain.js` (thêm `smoothHeightAt`/`surfaceHeightAt`/`tintAt` +
+  `APRON_CELLS`/`APRON_DROP`/`APRON_EDGE`), file mới `render3d/terrainMesh.js` +
+  `terrainMesh.test.js`, `sceneGraph.js` (bỏ 2 khối `InstancedMesh` + hàm `buildInstances`; tấm ván
+  vùng ngoài ngồi theo `APRON_DROP`; `ROAD_LIFT`/`LANE_WIDTH` chuyển nhà sang `terrainMesh.js` để
+  không có hai con số song song). `sceneGraphWiring.test.js`: bảng `GROUND_ANCHORS` nay ghi kèm TÊN
+  FILE cho từng hàng vì luật "sáu chỗ bám đất" đã trải trên hai file.
+  - **Quyết định kiến trúc (ADR-019)**: một nửa lập luận của ADR-014 bị **đảo ngược có chủ đích** —
+    "phải là thềm bậc" đứng trên tiền đề "nền là 144 ô hộp", và phase này gỡ chính tiền đề đó. Bản
+    ghi cũ giữ nguyên, bản mới nói rõ đảo ngược cái gì và vì sao.
+  - **Bất biến mới, khoá bằng test**: tại toạ độ NGUYÊN, `smoothHeightAt` trả về **đúng**
+    `heightAt` — lệch một phần nghìn là cả thành phố lơ lửng hoặc lún, im lặng.
+  - **Đã sửa kèm**: chú thích bài test "cao độ là bội số của bậc thềm" còn kể lý do CŨ (144 ô hộp);
+    luật vẫn đúng nhưng lý do đã chết, và một lời giải thích sai là thứ phiên sau kế thừa rồi dựa vào.
 - **2026-08-15 (Phase 8B — cạnh vát)** — **653 bài test** (650 → 653), lint sạch, build xanh,
   không đụng state/schema, **không thêm lệnh vẽ**.
   - **Việc**: nguyên nhân gốc số 1 của audit 8A. `parts.js` thêm `bevelWidth()` thuần;

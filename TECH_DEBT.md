@@ -13,19 +13,21 @@
 > mà không được refactor triệt để, phải CHỦ ĐỘNG đề xuất mở một "Maintenance Sprint" (nêu rõ mục
 > tiêu/phạm vi/lợi ích/rủi ro/tiêu chí hoàn thành) thay vì tiếp tục cộng thêm tính năng mới.
 >
-> **Trạng thái ngưỡng hiện tại (2026-08-15, cập nhật sau Phase 8B)**: **1 mục Priority High**
-> (#14) → vẫn CHƯA đạt ngưỡng 8–10 mục để đề xuất Maintenance Sprint. Còn **4 mục Medium-High**
-> (#3, #13, **#28** — mặt đất vẫn là bàn cờ ô vuông; phần "cạnh khối sắc như dao" của mục này đã
-> ĐÓNG ở Phase 8B — và **#24**: 14/15 kỷ có công
-> trình bị mép khung hình cắt, đã đo đủ, chờ Đàm chọn hướng), **4 mục Medium** và **2 mục Low** (#25 — nhà dân nhỏ nhất ở 3 kỷ không có cửa sổ; **#27**
-> — MỚI: 3 cặp kỷ có mặt đường gần trùng nhau vào BAN ĐÊM, đều cách nhau ≥3 kỷ, đã đo đủ và có
+> **Trạng thái ngưỡng hiện tại (2026-08-15, cập nhật sau Phase 8C)**: **1 mục Priority High**
+> (#14) → vẫn CHƯA đạt ngưỡng 8–10 mục để đề xuất Maintenance Sprint. Còn **3 mục Medium-High**
+> (#3, #13, và **#24**: 14/15 kỷ có công trình bị mép khung hình cắt, đã đo đủ, chờ Đàm chọn
+> hướng). **#28 đã ĐÓNG CẢ HAI PHẦN** — cạnh sắc ở Phase 8B, bàn cờ ô vuông ở Phase 8C.
+> Còn **4 mục Medium** và **2 mục Low** (#25 — nhà dân nhỏ nhất ở 3 kỷ không có cửa sổ; **#27**
+> — 3 cặp kỷ có mặt đường gần trùng nhau vào BAN ĐÊM, đều cách nhau ≥3 kỷ, đã đo đủ và có
 > chủ đích chưa xử lý).
-> ⚠️ **#26 và #23 đóng được bằng CÙNG MỘT lần đo, và Phase 8A vừa làm nó GẤP HƠN**: sau 7C cảnh
-> nặng nhất là 21.244 tam giác; sau **8A là 24.532 (41%)**, sau **8B là ~29.000 (48%)** trần 60.000. Cổng hiệu năng iPhone
-> **chưa được cân lại kể từ trước Phase 7A** — tức đã ba phase liền cộng tải lên một con số chưa ai
-> kiểm. Một ảnh chụp HUD trên máy Đàm đóng cả hai. ⚠️ Đàm đã chỉ thị rõ **không được lấy blocker
-> này làm lý do dừng cải thiện hình ảnh** — nên vẫn làm tiếp, nhưng phải đo ngay khi có điều kiện,
-> và Phase 8B (vát cạnh) PHẢI cân nhắc chi phí tam giác chứ không được vát tất.
+> ⚠️ **#26 và #23 đóng được bằng CÙNG MỘT lần đo, và mảng 8 đã làm nó GẤP HƠN BỐN LẦN**: sau 7C
+> cảnh nặng nhất là 21.244 tam giác; **8A → 24.532 (41%)**, **8B → ~29.000 (48%)**, **8C → ~36.100
+> (60%)** trần 60.000. Cổng hiệu năng iPhone **chưa được cân lại kể từ trước Phase 7A** — tức đã
+> BỐN phase liền cộng tải lên một con số chưa ai kiểm, và phase mới nhất là phase đắt nhất
+> (+4.800 tam giác cho địa hình). Một ảnh chụp HUD trên máy Đàm đóng cả hai. ⚠️ Đàm đã chỉ thị rõ
+> **không được lấy blocker này làm lý do dừng cải thiện hình ảnh** — nên vẫn làm tiếp, nhưng đây
+> nay là mục cần đo GẤP NHẤT: nếu iPhone không gánh nổi thì `SUB = 3` ở `terrainMesh.js` là cái núm
+> hạ tải rẻ nhất (SUB 3 → 2 cắt 6.498 xuống 2.888, tức trả lại gần hết khoản chi của 8C).
 > Bốn mục Medium: **#26**, **#23** (cổng hiệu năng iPhone chưa đo lại sau khi đổi sang PBR),
 > **#22** (công cụ `sweep-score.mjs` không còn chấm được 15 kỷ) và
 > **#19** (nay đang **treo chờ #22**: hai con số nghiệm thu của nó đo trên bảng mái CŨ, đã bị Phase
@@ -1331,7 +1333,7 @@
 
 ---
 
-## #28 — Mặt đất vẫn là bàn cờ ô vuông phẳng  *(phần "cạnh sắc" đã ĐÓNG ở Phase 8B)*
+## #28 — ✅ [ĐÃ XỬ LÝ 2026-08-15] Mặt đất vẫn là bàn cờ ô vuông phẳng
 
 - **Module**: `src/components/city/render3d/geometryFactory.js` (cạnh) + `sceneGraph.js` (ô nền),
   phát hiện bằng ảnh chụp ở Phase 8A
@@ -1358,7 +1360,18 @@
   bao nhiêu chỗ trống thật.
 - **Review Trigger**: khi quay lại mảng "thành phố phải có quy mô" trong chỉ thị của Đàm
 - **Owner**: chưa gán
-- **Status**: **Open** (phần "cạnh sắc" đã đóng ở Phase 8B)
+- **Status**: ✅ **ĐÃ ĐÓNG CẢ HAI PHẦN.** (a) cạnh sắc → Phase 8B (ADR-018). (b) bàn cờ → **Phase
+  8C** (ADR-019): mặt đất và mặt đường mỗi thứ là MỘT tấm lưới liền lấy mẫu từ `surfaceHeightAt`
+  (`render3d/terrainMesh.js`), thay cho 144 + ~52 khối hộp. Dữ liệu thềm bậc **không đổi một con
+  số** — chỉ cách vẽ đổi, đúng như Đàm cho phép (*"giữ data/progression nhưng thay đổi cách render"*).
+  - **Đã trả lời câu hỏi "Future Risk" ở trên bằng số đo**: lệnh vẽ **KHÔNG đổi** (2 trước, 2 sau —
+    tấm liền cũng chỉ là 1 lệnh vẽ như `InstancedMesh`). Tam giác thì có: địa hình **2.330 → 7.130**
+    (6.498 đất + ~630 đường), tức +4.800 = **+8% ngân sách**; cả cảnh ~29.000 → **~36.100 = 60%**
+    của trần 60.000. Đây là khoản chi lớn nhất từ đầu mảng 8 và nó **chưa được đo trên iPhone thật**
+    — xem #23/#26, nay gấp hơn một bậc.
+  - **Đi kèm**: `terrain.js` thêm `smoothHeightAt`/`surfaceHeightAt`/`tintAt` + vùng đất thoải
+    (`APRON_*`) để mép lưới thôi là một hình vuông sắc lẹm; mặt đất thêm hai tầng biến thiên (vết
+    loang tần số ~2,9 ô + sườn dốc lộ đất). 11 bài test mới, tất cả đã thử ngược.
 
 ---
 

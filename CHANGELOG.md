@@ -12,6 +12,37 @@
 
 ---
 
+## 2026-08-15 — Mặt đất thôi là bàn cờ: một tấm lưới liền thay 144 khối hộp (Phase 8C)
+
+**Mục đích.** Thứ Đàm gọi thẳng là *"vấn đề rất lớn"*: *"terrain như các bậc thang… grid rõ… toàn
+cảnh giống prototype/editor hơn là một thế giới 3D"*. Nguyên nhân gốc nằm gọn trong một câu: mặt
+đất **là** 144 khối hộp riêng lẻ. Hộp không dốc được (chênh cao độ chỉ có thể là BẬC), hộp có mặt
+bên (mỗi ô bốn cạnh đứng), và 144 ô mỗi ô một sắc phẳng thì mắt đọc ra ngay hàng lối.
+
+**Phạm vi.** `terrain.js` thêm `smoothHeightAt`/`surfaceHeightAt`/`tintAt` + vùng đất thoải quanh
+cao nguyên (`APRON_*`). File mới `render3d/terrainMesh.js` dựng hai tấm lưới liền — đất và đường —
+pháp tuyến MƯỢT tính từ sai phân trường cao độ. `sceneGraph.js` bỏ hai khối `InstancedMesh` và hàm
+`buildInstances`; tấm ván vùng ngoài nay ngồi theo `APRON_DROP` thay vì một con số viết tay.
+Mặt đất thêm hai tầng biến thiên: **vết loang** ở tần số không liên quan lưới, và **sườn dốc lộ
+đất**. Xem **ADR-019** — trong đó có việc một nửa lập luận của ADR-014 bị đảo ngược **có chủ đích**.
+
+**Tương thích.** **Dữ liệu bậc thềm không đổi một con số** — `cells`/`footprint`/`drop`/ADR-007
+nguyên vẹn, không đụng state/schema/Supabase. Chỉ cách VẼ đổi, đúng như Đàm cho phép (*"giữ
+data/progression nhưng thay đổi cách render"*).
+
+**Ảnh hưởng.** Lệnh vẽ **KHÔNG đổi** (2 → 2). Tam giác địa hình **2.330 → 7.130**, cả cảnh
+**~29.000 → ~36.100 = 60%** trần 60.000 — khoản chi lớn nhất của cả mảng 8, chưa đo trên iPhone
+thật (TECH_DEBT #23/#26, nay gấp hơn một bậc). **665 bài test** (+11, tất cả đã thử ngược), lint
+sạch, build xanh. **TECH_DEBT #28 đóng cả hai phần.**
+
+**Hai lỗi do chính bài test mới bắt được, không phải do đọc mã.** (1) Lưới đỉnh ban đầu neo ở
+`-0,5 - padSteps × du` — cái `-0,5` không chia hết cho bước lưới 1/3, nên **không đỉnh nào nằm đúng
+tâm ô**, và tâm ô là chỗ nhà/cây/cư dân đứng: cả thành phố lệch vài phần nghìn, ảnh vẫn đẹp, không
+gì đỏ. (2) Bản đầu nhét mặt đường vào chung lưới đất; ràng buộc chẵn-lẻ khiến ngõ phố không thể vừa
+đúng bề rộng vừa cân giữa ô — phải tách thành tấm riêng, và cái giá hoá ra bằng không.
+
+---
+
 ## 2026-08-15 — Cạnh vát: khối thôi sắc như dao, và một bài test đã hứa suốt 6 tháng (Phase 8B)
 
 **Mục đích.** Nguyên nhân gốc **số 1** trong ba cái audit Phase 8A đặt tên: cả hệ thống chỉ có hai

@@ -2,7 +2,9 @@
  * sceneGraph.js — dựng cảnh 3D từ bố cục trừu tượng mà `computeCityLayout` trả về.
  *
  * Bốn luật hiệu năng, đều là chỗ dễ mất nhiều nhất:
- *   1. **Nền và đường đi qua `InstancedMesh`** — 144 ô nền vẽ rời là 144 lệnh vẽ; gộp còn 1.
+ *   1. **Nền và đường mỗi thứ MỘT tấm lưới liền** (`terrainMesh.js`) — 1 lệnh vẽ mỗi tấm. Tới
+ *      Phase 8B chúng là `InstancedMesh` 144 ô hộp, cũng 1 lệnh vẽ; đổi vì HÌNH HỌC chứ không vì
+ *      hiệu năng (hộp không dốc được ⇒ đồi luôn ra bậc thang).
  *   2. **Toàn bộ công trình gộp thành MỘT khối hình học** (`geometryFactory.js`). ~750 khối nhỏ
  *      vẫn chỉ là 1 lệnh vẽ. Đây là thứ cho phép mỗi công trình có hình dáng riêng mà không phải
  *      trả giá bằng lệnh vẽ — nếu không thì "75 công trình khác nhau" đồng nghĩa với 75 lệnh vẽ.
@@ -45,11 +47,12 @@ import { getEraStyle } from '../../../engine/city3d/eraStyle';
 import { buildBuildingSpec, buildScaffoldSpec } from '../../../engine/city3d/buildingSpec';
 import { buildPropSpec } from '../../../engine/city3d/propSpec';
 import { prism, specSpan } from '../../../engine/city3d/parts';
-import { buildTerrain } from '../../../engine/city3d/terrain';
+import { APRON_DROP, buildTerrain } from '../../../engine/city3d/terrain';
 import { placeBounds, specBounds } from '../../../engine/city3d/pick';
 import { RESIDENT_HEIGHT, buildResidents, residentAt } from '../../../engine/city3d/residents';
 import { fogRangeFor, sunDirectionAt } from '../../../engine/city3d/daylight';
 import { buildMergedGeometry } from './geometryFactory';
+import { ROAD_LIFT, buildRoadSurface, buildTerrainSurface } from './terrainMesh';
 
 /**
  * Hệ số phóng to công trình so với ô lưới.
@@ -91,22 +94,12 @@ const ENV_DIFFUSE = 0.12;
 const GROUND_THICKNESS = 0.22;
 
 /**
- * Đường nhô cao hơn mặt nền bao nhiêu. Đủ để không chọi mặt (z-fighting) mà mắt không thấy bậc.
- * ⚠️ Tách thành hằng số vì CƯ DÂN cũng phải đứng trên đúng mặt phẳng này. Để hai nơi tự viết số
- * riêng thì chỉ cần một lần chỉnh là cả thành phố lún nửa bàn chân xuống đường mà không ai hiểu
- * vì sao.
+ * Cao độ MẶT TRÊN của đường — nơi bàn chân cư dân chạm vào.
+ * ⚠️ NHẬP từ `terrainMesh.js` chứ không viết lại: nơi DỰNG mặt đường mới là nơi biết nó cao bao
+ * nhiêu. Hai con số song song thì chỉ cần một lần chỉnh là cả thành phố lún nửa bàn chân xuống
+ * mặt đường mà không ai hiểu vì sao.
  */
-const ROAD_LIFT = 0.014;
-/** Cao độ MẶT TRÊN của đường — nơi bàn chân cư dân chạm vào. */
 const ROAD_SURFACE_Y = ROAD_LIFT;
-/**
- * Bề rộng NGÕ PHỐ so với đại lộ. 0,64 chứ không phải 0,85: chênh lệch nhỏ hơn thì ở cỡ hiển thị
- * thật (thẻ cảnh cao ~300px trên điện thoại) mắt không đọc ra hai hạng đường, và cả mạng lưới lại
- * quay về "tấm lưới đều tăm tắp" — đúng thứ mà việc thêm đường sinh ra để chữa.
- * Cũng KHÔNG hẹp hơn nữa: dưới ~0,55 thì ngõ mảnh như sợi chỉ và cư dân đi bộ trên đó sẽ lộ ra
- * ngoài mép đường (họ vẫn đi đúng tâm ô).
- */
-const LANE_WIDTH = 0.64;
 /** Số tam giác của một hộp — dùng để tính ngân sách hiển thị trên HUD. */
 const TRIANGLES_PER_BOX = 12;
 
@@ -364,6 +357,10 @@ export function createCityScene({
   const tileMaterial = track(new MeshStandardMaterial({
     roughness: 0.96,
     metalness: 0,
+    // ⚠️ TỪ PHASE 8C MÀU ĐI QUA ĐỈNH, KHÔNG QUA `setColorAt` NỮA. Mặt đất thôi là 144 khối hộp có
+    // màu riêng từng khối; nó là MỘT tấm liền, và màu nội suy dọc theo các đỉnh chính là thứ xoá
+    // được cái bàn cờ. Bỏ dòng này thì tấm lưới ra màu trắng trơn — im lặng, không lỗi.
+    vertexColors: true,
     envMap,
     envMapIntensity: ENV_DIFFUSE,
     transparent: dimmed,
@@ -386,40 +383,19 @@ export function createCityScene({
    * "khối màu phẳng" mà `materials.js` sinh ra để chữa. Đất nện rời (nhám 0,99) không bao giờ bắt
    * được vệt sáng; bê tông đúc (0,90) thì có, dù rất mờ. Chênh lệch nhỏ, nhưng nó là chênh lệch
    * DUY NHẤT phân biệt được "chưa lát" với "đã lát" khi cả hai cùng nằm phẳng dưới đất.
-   * Giá phải trả: đúng MỘT lệnh vẽ (mặt đường vốn đã là một `InstancedMesh` riêng từ trước).
+   * Giá phải trả: đúng MỘT lệnh vẽ (mặt đường vốn đã là một mảng riêng từ trước — `InstancedMesh`
+   * tới Phase 8B, một tấm lưới bám sườn dốc từ Phase 8C).
    */
   const roadProfile = materialProfile(getEraStyle(layout.era)?.roadMaterial);
   const roadMaterial = track(new MeshStandardMaterial({
     roughness: roadProfile.roughness,
     metalness: roadProfile.metalness,
+    vertexColors: true,
     envMap,
     envMapIntensity: ENV_DIFFUSE,
     transparent: dimmed,
     opacity: dimmed ? 0.62 : 1,
   }));
-
-  function buildInstances(items, geometry, place, { castShadow, receiveShadow, material }) {
-    if (items.length === 0) return null;
-    const mesh = new InstancedMesh(geometry, material ?? tileMaterial, items.length);
-    mesh.castShadow = castShadow;
-    mesh.receiveShadow = receiveShadow;
-
-    items.forEach((item, index) => {
-      const spec = place(item, index);
-      position.set(spec.x, spec.y, spec.z);
-      // `sx`/`sz` tuỳ chọn — mặc định 1 nên mọi chỗ gọi cũ giữ nguyên hành vi. Thêm vào để mặt
-      // đường phân biệt được ĐẠI LỘ với NGÕ PHỐ bằng bề rộng; bề rộng đọc được từ xa hơn nhiều so
-      // với chênh lệch màu, ở đúng cỡ hiển thị mà thành phố này sống.
-      scale.set(spec.sx ?? 1, spec.height, spec.sz ?? 1);
-      matrix.compose(position, rotation, scale);
-      mesh.setMatrixAt(index, matrix);
-      mesh.setColorAt(index, tint.setHex(spec.color));
-    });
-
-    mesh.instanceMatrix.needsUpdate = true;
-    if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
-    return mesh;
-  }
 
   // ── ĐỊA HÌNH ──────────────────────────────────────────────────────────────
   // ⚠️ MỌI THỨ ĐỨNG TRÊN ĐẤT ĐỀU PHẢI HỎI Ở ĐÂY, KHÔNG ĐƯỢC AI TỰ GIẢ ĐỊNH y = 0.
@@ -475,8 +451,14 @@ export function createCityScene({
     envMapIntensity: ENV_DIFFUSE,
   }));
   const outskirts = new Mesh(outskirtsGeometry, outskirtsMaterial);
-  // Thấp hơn nền thành phố một chút → lưới thành phố thành một thềm đất cao, có gờ.
-  outskirts.position.y = -GROUND_THICKNESS - 0.06;
+  // ⚠️ MẶT TRÊN CỦA TẤM VÁN NÀY PHẢI TRÙNG KHÍT ĐÁY VÙNG ĐẤT THOẢI (`-APRON_DROP`), KHÔNG PHẢI MỘT
+  // CON SỐ TỰ CHỌN. Trước Phase 8C nó nằm ở `-GROUND_THICKNESS - 0.06` để tạo một cái gờ — đúng khi
+  // lưới thành phố còn là một khay vuông có thành. Nay tấm địa hình tự thoải xuống rồi PHẲNG đúng
+  // `-APRON_DROP` từ `APRON_EDGE` trở ra, nên hai mặt chỉ nối liền được nếu chúng đồng phẳng. Để
+  // nguyên số cũ thì tấm ván (-0,28) nhô lên trên đáy thoải (-0,62) và cắt ngang vùng đất như một
+  // lưỡi dao. Đây là loại quan hệ mà dự án đã trả giá ở Phase 7D: một chú thích có chữ "hơn"/"khớp
+  // với" thì con số ấy phải ĐỌC từ cái mốc thật, không được viết tay song song.
+  outskirts.position.y = -APRON_DROP - GROUND_THICKNESS / 2;
   // ⚠️ KHÔNG nhận bóng, và đây KHÔNG phải tối ưu hiệu năng — nó là bắt buộc để đúng.
   // Khung bóng đổ chỉ bó quanh lưới 12×12 (`reach` bên dưới), còn mặt đất này rộng gấp bảy lần.
   // Mọi điểm nằm NGOÀI khung đó tra vào bản đồ bóng sẽ lấy nhầm giá trị ở mép và bị coi là đang
@@ -486,66 +468,33 @@ export function createCityScene({
   scene.add(outskirts);
   meshes.push(outskirts);
 
-  // ── Nền: 144 ô → MỘT lệnh vẽ ──────────────────────────────────────────────
+  // ── MẶT ĐẤT + MẶT ĐƯỜNG: MỘT TẤM LIỀN ─────────────────────────────────────
+  //
+  // ⚠️ TRƯỚC PHASE 8C CHỖ NÀY LÀ 144 KHỐI HỘP, VÀ ĐÓ LÀ NGUYÊN NHÂN GỐC CỦA "TERRAIN NHƯ CÁC BẬC
+  // THANG". Đàm nhìn ảnh chụp rồi nói đúng ba chữ mô tả trọn vấn đề: *"grid rõ"*. Không phải vì màu
+  // sai hay ánh sáng thiếu — mà vì mặt đất **là** một cái lưới: hộp thì không dốc được (chênh cao
+  // độ chỉ có thể là BẬC), hộp thì có mặt bên (mỗi ô bốn cạnh đứng), và 144 ô mỗi ô một sắc phẳng
+  // thì mắt đọc ra ngay hàng lối. Nay là MỘT tấm lưới đỉnh liền: xem `terrainMesh.js`.
+  //
+  // Hai con số này vẫn giữ nguyên vai trò cũ — HUD đếm chúng, và chúng vẫn là dữ liệu bố cục thật.
   const groundCells = layout.ground ?? [];
-  const groundColors = palette.groundShades ?? [palette.ground, palette.groundAlt];
-  addMesh(buildInstances(
-    groundCells,
-    // ⚠️ RỘNG ĐÚNG 1,0 CHỨ KHÔNG PHẢI 0,99 — và khe 1% ấy vô hại suốt thời mặt đất còn phẳng.
-    // Khi thềm bậc ra đời, mặt BÊN của ô nền cao lên tới nửa đơn vị, và khe hở biến mỗi ô thành
-    // một khối hộp rời có viền đen bao quanh: cả quả đồi đọc ra như một chồng lego thay vì một
-    // sườn dốc. Ô sát nhau đúng 1,0 thì các mặt trên cùng cao độ liền thành một mặt duy nhất.
-    track(new BoxGeometry(TILE_UNIT, GROUND_THICKNESS, TILE_UNIT)),
-    (cell) => {
-      const { x, z } = cellToWorld(cell.x, cell.y, gridSize);
-      const h = terrain.heightAt(cell.x, cell.y);
-      // ⚠️ Ô nền KHÔNG chỉ được nâng lên — nó phải DÀI RA để chân vẫn chạm đáy cũ. Chỉ nâng thì
-      // mỗi thềm thành một phiến đá bay, nhìn thấu xuống dưới. Kéo dài ra thì mặt bên của ô trở
-      // thành VÁCH THỀM, và chính cái vách ấy mới là thứ đọc ra "đây là một quả đồi".
-      // Hộp gốc cao `GROUND_THICKNESS`; muốn mặt trên ở `h` và đáy vẫn ở `-GROUND_THICKNESS`:
-      const height = (h + GROUND_THICKNESS) / GROUND_THICKNESS;
-      return {
-        x, z,
-        y: (h - GROUND_THICKNESS) / 2,
-        height,
-        color: groundColors[cell.variant % groundColors.length],
-      };
-    },
-    // Ô nền phẳng: nhận bóng thì đẹp, đổ bóng lên nhau thì chẳng thấy gì mà rất tốn.
-    { castShadow: false, receiveShadow: true },
-  ));
-
-  // ── Đường sá ──────────────────────────────────────────────────────────────
   const roads = (layout.props ?? []).filter((prop) => prop.kind === 'road');
-  addMesh(buildInstances(
-    roads,
-    track(new BoxGeometry(TILE_UNIT, GROUND_THICKNESS, TILE_UNIT)),
-    (road) => {
-      const { x, z } = cellToWorld(road.x, road.y, gridSize);
-      // Thứ bậc đường: `variant` 0 = đại lộ/ngã tư (rộng hết ô) · 1 = phố dọc (hẹp bề ngang) ·
-      // 2 = phố ngang (hẹp bề sâu). Xem `ROAD_CELLS` trong `cityLayout.js`.
-      const lane = road.variant === 1 || road.variant === 2;
-      const h = terrain.heightAt(road.x, road.y);
-      return {
-        x, z,
-        // Đường bám theo thềm. Chỗ đổi thềm thì mặt đường thành một BẬC — và đó đúng là thứ mọi
-        // thành phố trên đồi đều có: bậc thang giữa hai phố. Không cần làm dốc nối.
-        y: h - GROUND_THICKNESS / 2 + ROAD_LIFT,   // nhô lên tí xíu để không chọi mặt nền
-        height: 1,
-        sx: road.variant === 1 ? LANE_WIDTH : 1,
-        sz: road.variant === 2 ? LANE_WIDTH : 1,
-        // Ngõ phố tối hơn đại lộ một chút — nhà hai bên che bớt trời. Chênh lệch nhỏ thôi: bề rộng
-        // mới là thứ mắt đọc, màu chỉ để nhấn thêm.
-        // ⚠️ CẢ HAI đều suy từ `roadColor` của kỷ. Trước đây ngõ lấy `roles.stone` (màu ĐÁ XÂY
-        // TƯỜNG) nên 2/3 số ô đường không hề đổi theo thời đại — xem chú thích `roadLane` ở
-        // `palette3d.js`.
-        color: lane
-          ? (palette.roadLane ?? palette.road ?? palette.edge)
-          : (palette.road ?? palette.edge),
-      };
-    },
-    { castShadow: false, receiveShadow: true, material: roadMaterial },
-  ));
+
+  const ground3d = buildTerrainSurface({ terrain, gridSize, layout, palette });
+  const road3d = buildRoadSurface({ terrain, gridSize, layout, palette });
+  for (const [surface, material] of [[ground3d, tileMaterial], [road3d, roadMaterial]]) {
+    if (!surface) continue;
+    track(surface.geometry);
+    const mesh = new Mesh(surface.geometry, material);
+    // Đồi KHÔNG đổ bóng lên chính nó ở phiên này: khung bóng bó sát lưới 12×12, mà tấm đất trải
+    // rộng hơn nhiều ⇒ mọi điểm ngoài khung sẽ tra nhầm mép bản đồ bóng và tối đen cả vùng ngoài
+    // (đúng lỗi đã thấy tận mắt với `outskirts`). Nhận bóng thì có — đó là bóng công trình in lên
+    // sườn dốc, và chính nó nói cho mắt biết mặt đất đang nghiêng.
+    mesh.castShadow = false;
+    mesh.receiveShadow = true;
+    addMesh(mesh);
+  }
+  const surfaceTriangles = (ground3d?.triangles ?? 0) + (road3d?.triangles ?? 0);
 
   // ── Công trình: mỗi cái một hình dáng riêng, tất cả trong MỘT lệnh vẽ ──────
   //
@@ -997,7 +946,11 @@ export function createCityScene({
       // đo nói dối theo hướng trấn an là loại đồng hồ tệ nhất.
       drawCalls: meshes.length + Math.max(0, (merged?.families?.length ?? 1) - 1),
       triangles: buildingTriangles
-        + (groundCells.length + roads.length) * TRIANGLES_PER_BOX
+        // ⚠️ ĐẾM THẲNG TỪ TẤM ĐỊA HÌNH, KHÔNG QUY RA "SỐ Ô × 12" NỮA. Từ Phase 8C mặt đất là một
+        // lưới đỉnh liền, và số tam giác của nó KHÔNG còn tỉ lệ với số ô — nó tỉ lệ với bình phương
+        // độ mịn. Giữ công thức cũ thì HUD sẽ báo 1.728 trong khi thực tế gần 7.000, tức một cái
+        // đồng hồ đo nói dối theo hướng trấn an, đúng loại đã bị gọi tên ở `drawCalls` ngay trên.
+        + surfaceTriangles
         // × 2: mỗi cư dân là HAI hộp (thân + đầu).
         + residents.length * TRIANGLES_PER_BOX * 2,
     },

@@ -336,14 +336,55 @@ export function deriveDaylight(hour) {
  * Hệ số dưới đây cố ý chỉ cho sương dày nhất (bình minh, 0,90) tới `1.7 − 0.9×0.42 ≈ 1.32`
  * (≈15,8) — phủ phần XA của thành phố, để phần gần vẫn sắc nét.
  *
+ * ⚠️ **VÀ ĐÂY LÀ CHỖ MỘT KẾT LUẬN ĐÚNG ĐÃ HẾT ĐÚNG — Phase 9A ĐO RA.** Mọi lập luận bên trên vẫn
+ * chuẩn từng chữ, nhưng nó chỉ nói về ĐẦU GẦN của sương (bắt đầu ở đâu để thành phố còn sắc nét).
+ * Không dòng nào từng hỏi về ĐẦU XA — và đầu xa mới là chỗ hỏng. Sương tuyến tính có một mặt phẳng
+ * `far`: qua khỏi nó thì mọi thứ bị thay bằng ĐÚNG một màu, không phải nhạt đi mà **biến mất**. Đo
+ * bằng cách sơn sương màu hồng cánh sen rồi chụp: đỉnh khung hình ra `#e803e6`, tức **95–100% sương
+ * nguyên chất**. Nghĩa là ~25% mỗi tấm ảnh là một mảng phẳng lì MỘT màu — và bất cứ thứ gì dựng ra
+ * ở ngoài đó (núi, đồi, rặng cây) đều tàng hình tuyệt đối.
+ *
+ * ⇒ Đổi sang **sương LUỸ THỪA (`FogExp2`)**, và lý do là lý do KIẾN TRÚC chứ không phải khẩu vị:
+ * hệ số `1 − e^(−(dρ)²)` tiến tới 1 nhưng **không bao giờ chạm 1**, nên không tồn tại khoảng cách
+ * nào mà cảnh vật bị xoá sạch. Rặng núi gần đậm hơn rặng núi xa, và cả hai vẫn còn đó — đó CHÍNH
+ * là "phối cảnh không khí", thứ duy nhất tạo ra cảm giác lớp gần / lớp giữa / lớp xa. Một mặt phẳng
+ * `far` thì theo định nghĩa không thể có lớp nào nằm sau nó.
+ *
+ * ⚠️ HAI CÂU TỰ TRẤN AN TÔI VIẾT Ở TRÊN ĐỀU KHÔNG SỐNG SÓT QUA PHÉP ĐO — sửa lại tại chỗ thay vì
+ * xoá, vì cách chúng sai mới là phần đáng học (cùng họ với *"ổn định qua hai cỡ ô 260 và 300"* ở
+ * Phase 4G, chỉ khác là lần này tôi tự viết ra trong chính phiên đang sửa).
+ *   · *"tiến tới 1 nhưng KHÔNG BAO GIỜ chạm 1, nên không có khoảng cách nào cảnh vật bị xoá sạch"*
+ *     — đúng về mặt toán, VÔ NGHĨA về mặt nhìn. Ở mật độ đầu tiên tôi chọn, mép thế giới ra **93%
+ *     sương** trong một ngày thường. 93% với 100% thì mắt không phân biệt được: dãy núi vẫn bị xoá,
+ *     chỉ là bằng một tiệm cận thay vì một mặt phẳng. Cái sai không nằm ở mô hình sương mà ở MẬT ĐỘ,
+ *     và câu nói kia đã che mất điều đó — nó khiến tôi tin việc đổi mô hình là đủ.
+ *   · *"`FogExp2` ở mật độ 0,011 chỉ phủ ~6%"* — con số ấy đo ở `haze = 0` (trời quang tuyệt đối),
+ *     rồi được viết ra như thể đúng chung. Ngày thường `haze ≈ 0,3` ⇒ mật độ 0,0171 ⇒ **14%** phủ
+ *     lên chính thành phố. Một con số đúng trong MỘT điều kiện, viết như thể đúng mọi điều kiện.
+ *
+ * ⇒ Nay mật độ được chọn từ BA CÁI MỐC ĐO ĐƯỢC chứ không phải một hằng số nghe hợp lý. Ngày thường
+ * (`haze` 0,3), theo khoảng cách từ camera:
+ *
+ *     thành phố (26 đv)   ~7%   ← phải gần như trong veo: đây là thứ Đàm đang nhìn
+ *     vành đất gần (40)   ~16%  ← đủ để tách khỏi thành phố, chưa đủ để mất chi tiết
+ *     rặng núi xa (70)    ~40%  ← lùi hẳn ra sau mà VẪN ĐỌC ĐƯỢC hình
+ *     mép thế giới (95)   ~61%  ← xa nhất vẫn còn là đất, không phải một mảng sơn
+ *
+ * Ba mốc ấy mới là điều muốn nói; hai hệ số dưới đây chỉ là nghiệm của chúng. Đổi số thì đo lại
+ * bảng này, đừng chỉnh cho tới lúc "nhìn thấy đỡ" — bài học "mọi thay đổi ánh sáng phải chụp-rồi-đo"
+ * (Phase 7A). Có bài test canh cả ba mốc ở `daylight.test.js`.
+ *
  * @param {number} haze 0 = trời quang … 1 = sương dày
  * @param {number} gridSize cạnh lưới thành phố
- * @returns {{near:number, far:number}} khoảng cách bắt đầu / tan hẳn của sương
+ * @returns {number} mật độ sương cho `FogExp2` (đơn vị: 1 / khoảng cách thế giới)
  */
-export function fogRangeFor(haze, gridSize) {
+export function fogDensityFor(haze, gridSize) {
   const size = Number.isFinite(gridSize) && gridSize > 0 ? gridSize : 12;
   const h = Math.min(1, Math.max(0, Number.isFinite(haze) ? haze : 0));
-  return { near: size * (1.7 - h * 0.42), far: size * (3.4 - h * 0.95) };
+  // Tỉ lệ NGHỊCH với cỡ lưới: mật độ là "sương trên mỗi đơn vị khoảng cách", nên một thế giới lớn
+  // gấp đôi phải có mật độ bằng một nửa mới cho ra cùng một bức ảnh. Viết thẳng một hằng số ở đây
+  // là đúng bài học Phase 7D: một con số tuyệt đối không diễn đạt được một luật nói về QUAN HỆ.
+  return (0.080 + h * 0.140) / size;
 }
 
 /**

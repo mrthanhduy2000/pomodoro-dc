@@ -12,6 +12,29 @@
 
 ---
 
+## 2026-08-15 — Thế giới không kết thúc ở rìa thành phố: chân trời theo kỷ (Phase 9A)
+
+**Mục đích.** Xoá nốt cảm giác "mô hình đặt trên bàn". Đo trên ảnh chụp: ra khỏi lưới 3,4 ô, thế
+giới là **một tấm ván phẳng 72×72 tô một màu, đúng 12 tam giác** — trong khi `terrain.js` đã khai
+sẵn từ Phase 7B rằng kỷ 13 *"kẹp giữa núi"*, kỷ 7 *"đồi Toscana nối nhau"*, kỷ 8 *"thành phố bảy
+quả đồi"*. Dữ liệu địa lý có sẵn; tầng vẽ chưa bao giờ đọc tới nó.
+
+**Phạm vi.** Một mô-đun thuần mới `city3d/horizon.js` (bảng 15 kỷ + trường cao độ fBm) · tấm vẽ mới
+`buildHorizonSurface` thay tấm ván cũ · đổi mô hình sương từ tuyến tính sang `FogExp2` · hạ pha
+sương nướng-sẵn trong `outskirts` 0,42 → 0,15 · một công cụ đo mới `scripts/depth-score.mjs`.
+
+**Ảnh hưởng.** Số lớp không gian ở dải xa **0 → 55**. Ba thứ phải sửa cùng lúc chứ không tách được:
+sương tuyến tính có mặt phẳng `far` (đo bằng cách sơn sương hồng cánh sen: đỉnh khung **95–100%
+sương nguyên chất**) nên dựng núi trước khi sửa sương thì núi tàng hình hoàn toàn; và `outskirts`
+pha sẵn 42% màu trời khiến cả dãy núi được sơn bằng màu TRỜI (lệch **147°** góc màu so với mặt đất
+thành phố), đọc ra là sương/nước chứ không phải đất.
+
+**Tương thích.** Không đụng state, không đụng dữ liệu lưu, không migration. Chỉ tầng hiển thị 3D.
+Chi tiết quyết định: **ADR-022** (chân trời độc lập với `relief`) và **ADR-023** (phối cảnh không khí
+là việc của sương, đảo ngược một nửa quyết định cũ về `outskirts`).
+
+---
+
 ## 2026-08-15 — Cây thôi là hình nón trên que: thảm thực vật có ngữ pháp 15 kỷ (Phase 8D)
 
 **Mục đích.** Đàm chỉ đích danh mắt xích còn lại: *"cây cone + cylinder hiện là một trong những yếu

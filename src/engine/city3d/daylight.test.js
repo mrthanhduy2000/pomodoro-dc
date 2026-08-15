@@ -5,7 +5,7 @@ import {
   DAYLIGHT_PROFILES,
   DAY_PHASES,
   deriveDaylight,
-  fogRangeFor,
+  fogDensityFor,
   phaseForHour,
   sunDirectionAt,
 } from './daylight.js';
@@ -305,34 +305,79 @@ test('SƯƠNG SỚM: bình minh phải là chặng nhiều sương nhất, và s
   // sương bắt đầu ở `gridSize * 1.05` trong khi camera đứng cách `gridSize * 1.83` — sương phủ gần
   // hết thành phố, ra một màn trắng đục. Bài này khoá lại: dù `haze` = 1 thì sương vẫn phải bắt đầu
   // SAU rìa thành phố (bán kính ~0,71 × lưới), chừa phần gần sắc nét.
+  // Phase 9A: cùng một lời hứa ("phần gần phải sắc nét"), nay phát biểu bằng ngôn ngữ của `FogExp2`
+  // — hệ số sương tại rìa gần thành phố. Công thức là của three, chép đúng: `1 − e^(−(dρ)²)`.
   const grid = 12;
+  const fogAt = (d, density) => 1 - Math.exp(-((d * density) ** 2));
+  // ⚠️ NGƯỠNG ĐÃ SIẾT MẠNH (0,45 → 0,20) VÌ NGƯỠNG CŨ LÀ MỘT CÁI PHỄU, KHÔNG PHẢI HÀNG RÀO. Mật độ
+  // đầu tiên của Phase 9A phủ 18% lên thành phố và 76% lên rặng núi — tức đúng cái màn sữa mà bài
+  // test này sinh ra để ngăn — và nó qua CẢ HAI ngưỡng cũ một cách thoải mái. Một ngưỡng nới rộng
+  // "cho chắc" thì không bao giờ đỏ, và một bài test không bao giờ đỏ thì chưa phải test.
+  const CITY_EDGE = grid * 1.9;      // rìa gần thành phố tính từ camera (đo ở `orbit.js`: ~23 đơn vị)
   for (const phase of DAY_PHASES) {
-    const { near, far } = fogRangeFor(DAYLIGHT_PROFILES[phase].haze, grid);
-    assert.ok(near > grid * 0.85, `chặng "${phase}" có sương tràn vào giữa thành phố (bắt đầu ở ${near})`);
-    assert.ok(far > near, `chặng "${phase}" có sương tan trước khi kịp bắt đầu`);
+    const density = fogDensityFor(DAYLIGHT_PROFILES[phase].haze, grid);
+    assert.ok(fogAt(CITY_EDGE, density) < 0.20,
+      `chặng "${phase}" có sương tràn vào giữa thành phố (${(fogAt(CITY_EDGE, density) * 100).toFixed(0)}%)`);
   }
-  const dense = fogRangeFor(1, grid);
-  assert.ok(dense.near > grid * 0.85, 'sương dày nhất vẫn phải bắt đầu sau rìa thành phố');
+  assert.ok(fogAt(CITY_EDGE, fogDensityFor(0, grid)) < 0.05,
+    'trời quang mà rìa thành phố đã mờ thì cả ngày sẽ chẳng có lúc nào nhìn rõ');
+
+  // ⚠️ NỬA THỨ HAI CỦA LỜI HỨA, VÀ LÀ NỬA MÀ BẢN CŨ KHÔNG HỀ CÓ. Sương phải làm vùng xa NHẠT ĐI
+  // chứ không được XOÁ nó — nếu không thì chân trời (Phase 9A) là mã chết ngay từ lúc sinh ra, y
+  // như cơ chế "lùm cây" của Phase 8D. Đo trên bản cũ: đỉnh khung 95–100% sương nguyên chất.
+  const FAR_RIDGE = grid * 4.2;      // rặng núi xa nhất, tính từ camera
+  for (const phase of DAY_PHASES) {
+    const opacity = fogAt(FAR_RIDGE, fogDensityFor(DAYLIGHT_PROFILES[phase].haze, grid));
+    assert.ok(opacity < 0.70,
+      `chặng "${phase}" xoá sạch rặng núi xa (${(opacity * 100).toFixed(0)}% sương) ⇒ chân trời là mã chết`);
+  }
+
+  // ⚠️ VÀ MỘT CẬN DƯỚI, vì mọi assert bên trên đều là "phải NHỎ HƠN" — đặt mật độ về 0 thì cả bài
+  // này xanh mướt, mà lúc đó phối cảnh không khí biến mất sạch và thế giới lại phẳng như bìa các-
+  // tông. Sương phải THẬT SỰ làm việc ở xa, không chỉ "không làm hại ở gần".
+  assert.ok(fogAt(FAR_RIDGE, fogDensityFor(0.4, grid)) > 0.15,
+    'sương gần như không tồn tại ở rặng núi xa ⇒ mất hẳn phối cảnh không khí, thế giới lại phẳng');
+
+  // ⚠️ ĐỐI CHỨNG: NHỐT SẴN BỘ SỐ HỎNG CŨ — VÀ PHẢI SO THEO TỪNG CHẶNG, KHÔNG SO VỚI MỘT NGƯỠNG CHUNG.
+  // Bản đầu của chính đối chứng này viết `fogAt(CITY_EDGE, OLD_DENSITY) >= 0.20` và nó ĐỎ ngay —
+  // đúng việc nó sinh ra để làm. Truy ra thì hai ngưỡng tuyệt đối ở trên VẪN là phễu ở chặng
+  // "morning": mật độ cũ phủ 15% lên rìa thành phố (dưới 0,20) và 56% lên rặng núi (dưới 0,70), tức
+  // lọt lưới. Mà siết thêm nữa thì lại đá vào bình minh — chặng CỐ Ý nhiều sương (14% / 53%). Không
+  // có một ngưỡng tuyệt đối nào tách được "bình minh mới" khỏi "buổi sáng cũ", vì hai thứ đó thật sự
+  // gần nhau về con số; thứ phân biệt chúng là **cùng một chặng thì bản mới phải trong hơn bản cũ**.
+  // Đó là một QUAN HỆ, nên phải viết thành một quan hệ (bài học Phase 7D), không phải một hằng số.
+  const oldDensity = (h) => (0.135 + h * 0.235) / grid;
+  for (const phase of DAY_PHASES) {
+    const haze = DAYLIGHT_PROFILES[phase].haze;
+    const gain = fogAt(FAR_RIDGE, oldDensity(haze)) - fogAt(FAR_RIDGE, fogDensityFor(haze, grid));
+    assert.ok(gain > 0.15,
+      `chặng "${phase}": sương ở rặng núi xa chỉ trong hơn bản cũ ${(gain * 100).toFixed(0)} điểm `
+      + '⇒ mật độ đang trôi ngược về bộ số đã cho ra tấm ảnh màn sữa ở kỷ 13');
+  }
 });
 
-test('fogRangeFor: đầu vào rác không được biến thành phố thành màn trắng hay thành NaN', () => {
+test('fogDensityFor: đầu vào rác không được biến thành phố thành màn trắng hay thành NaN', () => {
   for (const bad of [undefined, null, NaN, -5, 99, 'dày', {}]) {
-    const { near, far } = fogRangeFor(bad, 12);
-    assert.ok(Number.isFinite(near) && Number.isFinite(far), `haze ${bad} cho ra NaN`);
-    assert.ok(near > 0 && far > near, `haze ${bad} cho ra khoảng sương vô nghĩa`);
+    const density = fogDensityFor(bad, 12);
+    assert.ok(Number.isFinite(density), `haze ${bad} cho ra NaN`);
+    assert.ok(density > 0, `haze ${bad} cho ra mật độ sương vô nghĩa`);
   }
-  // Lưới rác cũng phải ra một khoảng dùng được — cảnh 3D không được vỡ vì một con số hỏng.
+  // Lưới rác cũng phải ra một mật độ dùng được — cảnh 3D không được vỡ vì một con số hỏng.
   for (const bad of [undefined, 0, -3, NaN]) {
-    const { near, far } = fogRangeFor(0.5, bad);
-    assert.ok(near > 0 && far > near, `gridSize ${bad} cho ra khoảng sương vô nghĩa`);
+    assert.ok(fogDensityFor(0.5, bad) > 0, `gridSize ${bad} cho ra mật độ sương vô nghĩa`);
   }
-  // Càng nhiều sương thì màn sương càng lại gần — đơn điệu, không đảo chiều giữa chừng.
-  let prev = Infinity;
+  // Càng nhiều sương thì mật độ càng cao — đơn điệu, không đảo chiều giữa chừng.
+  let prev = 0;
   for (const h of [0, 0.25, 0.5, 0.75, 1]) {
-    const { near } = fogRangeFor(h, 12);
-    assert.ok(near < prev, `sương dày lên mà màn sương lại lùi ra xa (haze ${h})`);
-    prev = near;
+    const density = fogDensityFor(h, 12);
+    assert.ok(density > prev, `sương dày lên mà mật độ lại giảm (haze ${h})`);
+    prev = density;
   }
+  // ⚠️ MẬT ĐỘ PHẢI TỈ LỆ NGHỊCH VỚI CỠ LƯỚI. Đây là bài học Phase 7D viết lại cho sương: "sương dày
+  // bao nhiêu" là một QUAN HỆ với kích thước thế giới, không phải một con số đứng một mình. Bỏ phép
+  // chia cho `size` thì lưới lớn gấp đôi sẽ mù gấp bốn — và không có gì đỏ lên ở đâu cả.
+  assert.ok(Math.abs(fogDensityFor(0.3, 24) - fogDensityFor(0.3, 12) / 2) < 1e-12,
+    'lưới lớn gấp đôi phải cho mật độ đúng một nửa, nếu không cùng một cảnh sẽ mù đi khi lưới to ra');
 });
 
 test('sunDirectionAt: giữ NGUYÊN phương vị, chỉ đổi cao độ', () => {

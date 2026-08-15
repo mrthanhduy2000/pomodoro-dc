@@ -54,6 +54,30 @@ export const APRON_DROP = 0.62;
 export const APRON_EDGE = 3.4;
 
 /**
+ * Số ô con trên MỘT ô thành phố của tấm địa hình.
+ *
+ * ⚠️ SỐNG Ở ĐÂY (tầng thuần) CHỨ KHÔNG Ở `terrainMesh.js`, VÀ ĐÓ LÀ MỘT BẢN VÁ, KHÔNG PHẢI SỞ
+ * THÍCH. `horizon.js` cần biết tấm địa hình phủ TỚI ĐÂU để nối liền vào; Phase 9A bản đầu tự suy
+ * lại con số ấy bằng tay (`(size−1)/2 + 0,5 + APRON_EDGE` = 9,4) trong khi tấm đất thật phủ tới
+ * **9,5** — vì `padSteps` có phép LÀM TRÒN LÊN mà bản suy tay không có. Chênh 0,1 đơn vị ấy, cộng
+ * thêm một phép làm tròn nữa ở lưới chân trời, mở ra một khe hở 0,5 đơn vị chạy vòng quanh thành
+ * phố; trên ảnh chụp nó hiện thành hai cái nêm sáng chói ở hai góc dưới khung hình.
+ * Đúng bài học "MỘT LUẬT CHỈ ĐƯỢC CÓ MỘT CÔNG THỨC": hai công thức tương đương trên giấy thì gần
+ * như luôn lệch nhau ở biên, và biên chính là chỗ hai tấm phải gặp nhau.
+ */
+export const TERRAIN_SUB = 3;
+
+/**
+ * Tấm địa hình thành phố phủ ra tới đâu, tính bằng ĐƠN VỊ THẾ GIỚI kể từ tâm.
+ * Đây là chỗ `horizon.js` phải bắt đầu — không sớm hơn (chồng lấn, chọi mặt), không muộn hơn (hở).
+ */
+export function terrainSurfaceReach(gridSize = 12) {
+  const size = Number.isFinite(gridSize) && gridSize > 0 ? gridSize : 12;
+  const padSteps = Math.ceil((0.5 + APRON_EDGE) * TERRAIN_SUB);
+  return (size - 1) / 2 + padSteps / TERRAIN_SUB;
+}
+
+/**
  * Kiểu địa hình — mỗi kiểu là một cách BIẾN ĐỔI trường nhiễu, không phải bảng cao độ chép tay.
  *
  * Mỗi hàm ở đây chỉ trả lời DUY NHẤT một câu: **"chỗ nào cao hơn chỗ nào"**. Câu "cao bao nhiêu"
@@ -163,8 +187,14 @@ function latticeValue(seed, ix, iy) {
   return (hashId(`t|${seed}|${ix}|${iy}`) % 4096) / 4095;
 }
 
-/** Nhiễu giá trị nội suy song tuyến, làm mượt bằng smoothstep. Trả 0..1. */
-function valueNoise(seed, gx, gy) {
+/**
+ * Nhiễu giá trị nội suy song tuyến, làm mượt bằng smoothstep. Trả 0..1.
+ *
+ * ⚠️ XUẤT RA NGOÀI TỪ PHASE 9A — `horizon.js` (địa hình vùng xa) dùng CHUNG đúng hàm này, không
+ * chép lại. Hai bản nhiễu "tương đương trên giấy" thì mặt đất gần và mặt đất xa sẽ có hai kiểu gợn
+ * khác nhau, và chỗ giáp giữa chúng sẽ lộ ra một đường — đúng luật "một luật một công thức".
+ */
+export function valueNoise(seed, gx, gy) {
   const x0 = Math.floor(gx);
   const y0 = Math.floor(gy);
   const sx = smoothstep(gx - x0);

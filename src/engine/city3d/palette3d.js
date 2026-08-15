@@ -800,17 +800,37 @@ export function buildScenePalette({ tokens, eraColor, era: eraNumber, daylight }
     })),
 
     /**
-     * Vùng đất ngoài thành phố. Pha sẵn một phần về phía màu chân trời để nó tự LÙI RA SAU thay
-     * vì tranh chỗ với lưới thành phố — cùng nguyên lý phối cảnh không khí mà sương mù đang dùng,
-     * chỉ là nướng sẵn vào màu để chỗ gần camera cũng đã nhạt rồi.
+     * Vùng đất ngoài thành phố.
+     *
+     * ⚠️ PHA VỀ CHÂN TRỜI ĐÃ TỤT TỪ 0,42 XUỐNG 0,15 (Phase 9A) — VÀ ĐÂY LÀ MỘT KẾT LUẬN CŨ HẾT
+     * ĐÚNG VÌ TIỀN ĐỀ CỦA NÓ BỊ GỠ Ở PHASE KHÁC, không phải một lần chỉnh cho hợp mắt. Con số 0,42
+     * ra đời khi vùng đất ngoài phố là **một tấm ván phẳng 72×72, đúng 12 tam giác**, và nó gánh
+     * HAI việc mà tấm ván ấy không tự làm nổi: (a) lùi ra sau — ván phẳng không có sương thật nên
+     * phải nướng sẵn phối cảnh không khí vào màu; (b) đổi theo giờ — ván phẳng không có sườn dốc
+     * nào để hứng nắng, nên nếu không pha màu chân trời vào thì nó là thứ DUY NHẤT trong cảnh đứng
+     * im suốt 6 chặng ngày. Cả hai lý do đều đúng, và cả hai đều đã CHẾT ở Phase 9A:
+     *   · `FogExp2` thật (`daylight.js`) nay lo việc lùi ra sau, và lo ĐÚNG — theo khoảng cách thật
+     *     chứ không phải một hằng số áp đều cho cả vùng gần lẫn vùng xa;
+     *   · vùng đất ngoài phố nay là địa hình thật có sườn dốc, nên nắng/bóng/trời tự vẽ nó đổi màu
+     *     theo giờ mà không cần pha sẵn.
+     * Giữ 0,42 sau khi có sương thật là **tính phối cảnh không khí hai lần**, và nó gây một hậu quả
+     * đo được: `outskirts` ra `#90a2a8` (góc màu ~193°, xanh lơ) trong khi mặt đất thành phố là
+     * `#a09871` (~46°, khaki ấm) — lệch **147°**. Cả dãy núi vì thế được sơn bằng màu TRỜI chứ không
+     * phải màu ĐẤT, và trên ảnh chụp nó đọc ra là sương/nước chứ không phải đất.
+     * Chừa lại 0,15 vì vẫn còn một việc THẬT: vành đất sát thành phố nằm ở chỗ sương gần như bằng
+     * không, mà nó thì đã đủ xa để mắt mong thấy một chút hơi lam. Đó là một quãng ngắn, nên một
+     * lượng nhỏ — không phải gần một nửa.
      */
     outskirts: rgbToHexNumber(mixRgb(
       // Ngả XANH LÁ hơn lưới thành phố (+14°) và nhạt hơn: đồng cỏ ngoài phố, không phải phần
       // kéo dài của chính thành phố. Khác sắc thì mắt mới đọc ra ranh giới "trong phố / ngoài phố".
       // Sắc độ đêm 0,18 → 0,34, cùng lý do "tối ba lần" đã ghi ở `groundShades` ngay trên. Vùng
-      // đất ngoài phố là mảng LỚN NHẤT khung hình, nên nó đen là cả bức đen — và vì nó còn được pha
-      // 42% về màu chân trời (dòng dưới), ban đêm nó vốn đã tự ngả lam sâu rồi, không cần hạ sơn
-      // thêm lần nữa mới ra đêm.
+      // đất ngoài phố là mảng LỚN NHẤT khung hình, nên nó đen là cả bức đen.
+      // ⚠️ Câu cũ ở đây nói *"vì còn được pha 42% về màu chân trời nên ban đêm nó tự ngả lam sâu
+      // rồi, không cần hạ sơn thêm"*. Câu ấy đã hết đúng cùng lúc với con số 0,42 (xem khối chú
+      // thích ngay trên): nay chỉ còn pha 0,15, nên **màu lam của đêm phải đến từ ÁNH SÁNG chứ
+      // không từ nước sơn** — ánh trăng lạnh ở `lights` + sương `FogExp2` nhuộm theo màu chân trời
+      // đêm. Đó cũng là đường đúng, vì nó nhuộm theo khoảng cách thật thay vì áp đều.
       blend(GROUND_ANCHOR + 14, GROUND_ERA, isDark ? 0.16 : 0.19, isDark ? 0.34 : 0.56),
       // ⚠️ PHA VỀ ĐÚNG MÀU CHÂN TRỜI CỦA CHẶNG NÀY, không phải về một màu ấm chốt cứng.
       // Bản quét chỉ ra một chuyện chỉ thấy được khi nhìn nguyên khung hình chứ không nhìn từng
@@ -822,7 +842,7 @@ export function buildScenePalette({ tokens, eraColor, era: eraNumber, daylight }
       // xa càng tan vào màu bầu khí quyển. Nay bình minh đồng ngả hồng, giữa trưa ngả vàng nhạt,
       // đêm ngả lam sâu — miễn phí, và đúng cùng nguyên lý mà sương mù đang dùng.
       { r: (horizon >> 16) & 255, g: (horizon >> 8) & 255, b: horizon & 255 },
-      0.42,
+      0.15,
     )),
     wall:       roles.wall,
     roof:       roles.roof,

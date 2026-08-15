@@ -382,6 +382,34 @@ Ba điều ràng buộc lẫn nhau ở đây, đổi một cái phải soi hai c
    chạy mỗi khung hình, nó phá vỡ render-on-demand (đứng yên = 0 nhịp rAF), thứ đắt nhất phải giữ
    trên iPhone. Nướng sẵn tốn 0 đồng lúc chạy.
 
+**THẾ GIỚI KHÔNG KẾT THÚC Ở RÌA THÀNH PHỐ (2026-08-15, Phase 9A)** — `engine/city3d/horizon.js`
+(thuần) + `render3d/terrainMesh.js#buildHorizonSurface` (vẽ). Xem **ADR-022** và **ADR-023**.
+
+Luồng: `buildHorizon({era, gridSize})` → `heightAt(x, z)` (toạ độ THẾ GIỚI, không phải toạ độ ô) →
+`buildHorizonSurface` lấy mẫu thành lưới đỉnh → một `Mesh` duy nhất trong `sceneGraph.js`, thay chỗ
+tấm ván phẳng 12 tam giác cũ.
+
+Bốn ràng buộc ở tầng kiến trúc, mỗi cái đều đã trả giá một lần trong chính phase đó:
+1. **Chỗ giáp hai tấm là một CON SỐ DÙNG CHUNG, không được suy lại bằng tay.** `terrainSurfaceReach()`
+   (`terrain.js`) là nguồn duy nhất; `buildHorizon` đọc nó rồi chia bước lưới TỪ nó (`innerEdge /
+   HORIZON_INNER_STEPS`) để chắc chắn có một đỉnh nằm đúng trên chỗ giáp. Bản đầu suy tay ra 9,4
+   trong khi thật là 9,5 ⇒ một khe hở 0,5 đơn vị chạy vòng quanh thành phố.
+2. **Thứ tự bắt buộc: sửa SƯƠNG trước, dựng NÚI sau.** Sương tuyến tính cũ có mặt phẳng `far` và bão
+   hoà 95–100% ở đúng vùng này, nên núi dựng trước sẽ tàng hình hoàn toàn — ship một cơ chế đã chết
+   kèm một chú thích dài giải thích nó chạy ra sao (bẫy Phase 8D). Nay là `FogExp2`, mật độ chọn từ
+   ba mốc đo được chứ không phải một hằng số (xem `fogDensityFor` ở `daylight.js`).
+3. **Hai tấm phải chia chung LUẬT MÀU, không chỉ chung cao độ.** `applyBareEarth` (sườn dốc lộ đất)
+   và trường vết loang `terrain.tintAt` đều dùng chung cho cả hai. Bản đầu để tấm núi tự nghĩ ra một
+   luật riêng (sáng dần theo độ cao) và mắt đọc ra một cái bệ với một cái hào, dù hình học khớp
+   tuyệt đối.
+4. **Tấm núi KHÔNG nhận bóng và KHÔNG đổ bóng** — vì đúng, không phải vì nhanh: khung bóng đổ chỉ bó
+   quanh lưới 12×12, điểm ngoài khung tra nhầm mép bản đồ bóng ⇒ cả dãy núi đen kịt.
+
+Đo bằng `scripts/depth-score.mjs` (đếm số lần ĐỔI CHIỀU độ sáng ở dải trên — một dốc màu mượt có
+biên độ lớn mà 0 lớp, nên biên độ một mình không nói được gì): **0 → 55 lớp không gian**.
+
+---
+
 **MẶT ĐẤT KHÔNG CÒN PHẲNG (2026-08-14, Phase 7B)** — `engine/city3d/terrain.js`, thuần như mọi thứ
 khác trong `city3d/`. Xem ADR-014 cho lý do chọn **thềm bậc** thay vì dốc liên tục và **bệ kè** thay
 vì san phẳng đất.

@@ -153,6 +153,20 @@
 │   │   │   │                      #   tới tâm (ngoại vi/dân cư/trung tâm); mỗi 2 phiên mọc thêm 1
 │   │   │   │                      #   căn, mọc từ trong ra. Nhà dân đi qua ĐÚNG buildingSpec.js —
 │   │   │   │                      #   không có bộ sinh riêng — nên tự thừa hưởng mái/vật liệu kỷ.
+│   │   │   ├── horizon.js         # CHÂN TRỜI 15 KỶ (Phase 9A, ADR-022): vùng đất NGOÀI thành phố
+│   │   │   │                      #   — núi/đồi/thảo nguyên/đụn cát. Bảng 5 trường mỗi kỷ:
+│   │   │   │                      #   `rise` (đỉnh cao nhất) · `grain` (cỡ khối núi) · `rough`
+│   │   │   │                      #   (độ gồ ghề bề mặt) · `ridged` (sống núi sắc hay đồi tròn) ·
+│   │   │   │                      #   `near` (núi áp sát hay lùi xa) + `note` bắt buộc nhắc tên
+│   │   │   │                      #   nước mà `eraStyle.js` khai (CÓ TEST BẮT — chống trôi hai bảng)
+│   │   │   │                      #   ⚠️ ĐỘC LẬP với `relief` của `terrain.js`: đất thành phố và núi
+│   │   │   │                      #   VÂY QUANH là hai đại lượng khác nhau (Kyoto phẳng ↔ núi cao;
+│   │   │   │                      #   Manhattan phẳng ↔ không núi) — xem ADR-022
+│   │   │   │                      #   ⚠️ fBm NHIỀU TẦNG, không phải một tầng nhiễu: một tầng chỉ có
+│   │   │   │                      #   một cỡ hình ⇒ ra "bong bóng tròn xoe", không ra dãy núi.
+│   │   │   │                      #   Số tầng thật đọc ở `buildHorizon(...).octaves` (3–4), bị SÀN
+│   │   │   │                      #   Nyquist cắt chứ không phải `MAX_OCTAVES` cắt
+│   │   │   │                      #   ⚠️ Cùng bất biến "không phụ thuộc tiến độ" như `terrain.js`
 │   │   │   ├── terrain.js         # ĐỊA HÌNH: 15 kỷ = 15 trường cao độ THỀM BẬC (ADR-014)
 │   │   │   │                      #   ⚠️ Cao độ là hàm của DUY NHẤT (era, gridSize) — cố tình KHÔNG
 │   │   │   │                      #   nhận danh sách công trình, nếu không thì mỗi lần Đàm xây xong

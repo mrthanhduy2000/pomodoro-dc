@@ -44,7 +44,9 @@
 
 import { BufferAttribute, BufferGeometry, Color } from 'three';
 
-import { APRON_CELLS, APRON_EDGE } from '../../../engine/city3d/terrain';
+import {
+  APRON_CELLS, APRON_DROP, APRON_EDGE, TERRAIN_SUB,
+} from '../../../engine/city3d/terrain';
 
 /**
  * Số ô con trên MỘT ô thành phố, cho tấm ĐẤT.
@@ -54,7 +56,7 @@ import { APRON_CELLS, APRON_EDGE } from '../../../engine/city3d/terrain';
  * giữa hai thềm, rộng đúng 1 ô — 3 mẫu ngang qua một đường cong `smoothstep` đã đủ để mắt đọc ra
  * đường cong thay vì cái bậc, và mọi mẫu thêm sau đó chỉ làm mượt thứ đã mượt.
  */
-const SUB = 3;
+const SUB = TERRAIN_SUB;
 
 /**
  * Số ô con trên một ô ĐƯỜNG. Nhỏ hơn nhiều vì mặt đường ngắn (một ô) và gần như phẳng trong lòng
@@ -102,8 +104,45 @@ const EARTH_WARM = 1.18;
 /** Dốc gắt nhất thì pha bao nhiêu phần đất trần. Không pha trọn 100% — cỏ vẫn bám thành vệt. */
 const EARTH_MIX = 0.72;
 
+/** Đỉnh cao nhạt hơn chân bao nhiêu lần (đá lộ, cây thưa). */
+const PEAK_PALE = 1.22;
+/** …và lạnh hơn: kênh lam nhân lên, kênh đỏ chia xuống theo đúng hệ số này. Ngược `EARTH_WARM`. */
+const PEAK_COOL = 1.10;
+/** Đỉnh cao nhất pha tối đa bao nhiêu phần màu đá. Thấp thôi — đây là gợi ý độ cao, không phải tuyết. */
+const PEAK_MIX = 0.55;
+
 function lerp(a, b, t) { return a + (b - a) * t; }
 function smoothstep(t) { return t * t * (3 - 2 * t); }
+
+/**
+ * SƯỜN DỐC LỘ ĐẤT — luật màu dùng chung cho CẢ HAI tấm địa hình. Sửa `out` tại chỗ.
+ *
+ * ⚠️ VÌ SAO PHẢI TÁCH RA THÀNH MỘT HÀM, CHỨ KHÔNG CHÉP SANG TẤM KIA. Đây là "một luật một công
+ * thức" áp cho hai mặt phải đọc ra là CÙNG MỘT VÙNG ĐẤT. Bản đầu của Phase 9A để tấm núi tự nghĩ ra
+ * một luật màu riêng — sáng dần lên theo ĐỘ CAO, pha về `palette.edge` — và hậu quả đo được trên ảnh
+ * chụp là hai mảnh đất liền nhau về hình học mà chỏi hẳn nhau về màu: mặt đất thành phố `#626855`
+ * (khaki ấm, sáng 0,37) đụng vào chân núi `#7a8876` (lam lục nhạt, sáng 0,50). Mắt đọc ra một cái
+ * bệ và một cái hào, chứ không đọc ra một phong cảnh.
+ *
+ * Và luật ĐÚNG là luật này chứ không phải luật kia: chú thích của chính `groundColorAt` đã ghi đây
+ * là *"tầng quan trọng nhất… thứ DUY NHẤT nói cho mắt biết mặt đất đang NGHIÊNG"*. Một dãy núi thì
+ * cần điều đó hơn bất cứ chỗ nào khác trong cảnh — mà nó lại là chỗ duy nhất không có.
+ *
+ * @param {number[]} out    màu RGB 0..1, bị sửa tại chỗ
+ * @param {number[]} normal pháp tuyến tại chính điểm ấy
+ */
+function applyBareEarth(out, normal) {
+  // `normal[1]` = cosin góc nghiêng: 1 khi phẳng, 0,71 ở 45°. Ngưỡng 0,22 ⇒ lộ hết đất quanh 38°.
+  const steep = smoothstep(Math.min(1, Math.max(0, (1 - (normal?.[1] ?? 1)) / SLOPE_FULL)));
+  if (steep <= 0) return;
+  for (let i = 0; i < 3; i += 1) {
+    // ĐẤT TRẦN SUY TỪ CHÍNH MÀU NỀN, không phải một màu mới khai riêng: tối hơn và ấm hơn.
+    // Khai một hằng số màu ở đây là gài mìn — 15 kỷ có 15 nền khác nhau (cỏ, cát, đá, tuyết),
+    // một màu đất chốt cứng sẽ đúng ở vài kỷ và chỏi hẳn ở số còn lại.
+    const bare = out[i] * EARTH_DARKEN * (i === 0 ? EARTH_WARM : (i === 2 ? 1 / EARTH_WARM : 1));
+    out[i] = lerp(out[i], Math.min(1, bare), steep * EARTH_MIX);
+  }
+}
 
 /** Bước lấy mẫu để ước lượng độ dốc tại một điểm bất kỳ. Nhỏ hơn một ô con của tấm đất. */
 const GRAD_EPS = 0.08;
@@ -173,17 +212,7 @@ function surfaceKit({ terrain, gridSize, layout, palette }) {
     for (let i = 0; i < 3; i += 1) out[i] = Math.min(1, out[i] * mottle);
 
     // ── Tầng 3: sườn dốc lộ đất ──────────────────────────────────────────────
-    // `normal[1]` = cosin góc nghiêng: 1 khi phẳng, 0,71 ở 45°. Ngưỡng 0,22 ⇒ lộ hết đất quanh 38°.
-    const steep = smoothstep(Math.min(1, Math.max(0, (1 - (normal?.[1] ?? 1)) / SLOPE_FULL)));
-    if (steep > 0) {
-      for (let i = 0; i < 3; i += 1) {
-        // ĐẤT TRẦN SUY TỪ CHÍNH MÀU NỀN, không phải một màu mới khai riêng: tối hơn và ấm hơn.
-        // Khai một hằng số màu ở đây là gài mìn — 15 kỷ có 15 nền khác nhau (cỏ, cát, đá, tuyết),
-        // một màu đất chốt cứng sẽ đúng ở vài kỷ và chỏi hẳn ở số còn lại.
-        const bare = out[i] * EARTH_DARKEN * (i === 0 ? EARTH_WARM : (i === 2 ? 1 / EARTH_WARM : 1));
-        out[i] = lerp(out[i], Math.min(1, bare), steep * EARTH_MIX);
-      }
-    }
+    applyBareEarth(out, normal);
 
     // Ra khỏi lưới thì nhạt dần về màu vùng ngoài — cùng lý do với `surfaceHeightAt`.
     const outside = Math.max(0, Math.max(-0.5 - u, u - (gridSize - 0.5)),
@@ -333,6 +362,118 @@ export function buildRoadSurface({ terrain, gridSize, layout, palette }) {
         push(ua, va); push(ub, vb); push(ub, va);
         sink.tris += 2;
       }
+    }
+  }
+
+  return finish(sink);
+}
+
+/**
+ * Dựng VÙNG ĐẤT XA — dãy núi / đồi / thảo nguyên bao quanh thành phố.
+ *
+ * ⚠️ ĐÂY LÀ THỨ THAY THẾ TẤM VÁN PHẲNG 72×72 (12 tam giác) của `sceneGraph.js`, không phải thứ đắp
+ * thêm lên nó. Giữ cả hai thì mặt ván sẽ chọi với chân núi ở đúng cao độ `-APRON_DROP`.
+ *
+ * ⚠️ LƯỚI ĐỈNH PHẢI NEO VÀO `innerEdge`, KHÔNG ĐƯỢC NEO VÀO MÉP NGOÀI. Đây đúng là cái bẫy mà
+ * `buildTerrainSurface` đã trả giá một lần (xem chú thích `u0` ở trên): nếu chia đều từ mép ngoài
+ * vào thì `innerEdge` rơi vào giữa hai đỉnh, và chỗ giáp với tấm đất thành phố sẽ có một hàng đỉnh
+ * lệch — tức một khe hở chạy vòng quanh thành phố, mảnh nhưng nhìn thấy được khi trời sáng.
+ *
+ * ⚠️ VÀ NÓ KHÔNG NHẬN BÓNG, KHÔNG ĐỔ BÓNG — vì đúng, chứ không phải vì nhanh. Khung bóng đổ chỉ bó
+ * quanh lưới 12×12; mọi điểm ngoài khung tra vào bản đồ bóng sẽ lấy nhầm giá trị ở mép và bị coi là
+ * đang trong bóng, làm cả dãy núi tối đen (đã thấy tận mắt với tấm ván cũ).
+ *
+ * @returns {{geometry:BufferGeometry, triangles:number}|null}
+ */
+export function buildHorizonSurface({ horizon, palette, terrain, gridSize }) {
+  if (!horizon || typeof horizon.heightAt !== 'function') return null;
+
+  // Trường vết loang DÙNG CHUNG với tấm đất thành phố. Tuỳ chọn: thiếu `terrain` thì tấm núi vẫn
+  // dựng được (chỉ mất một tầng chi tiết), vì đây là tầng trang trí chứ không phải hình học.
+  const half = Number.isFinite(gridSize) && gridSize > 0 ? (gridSize - 1) / 2 : 5.5;
+  const mottleAt = typeof terrain?.tintAt === 'function'
+    ? (x, z) => 1 + (terrain.tintAt(x + half, z + half) - 0.5) * 2 * MOTTLE_AMPLITUDE
+    : null;
+
+  const scratch = new Color();
+  const rgbOf = (hex) => { scratch.setHex(hex); return [scratch.r, scratch.g, scratch.b]; };
+  // ⚠️ ĐÚNG CÁI MÀU MÀ TẤM ĐẤT THÀNH PHỐ NHẠT DẦN VỀ (`outerRgb` ở `surfaceKit`). Hai tấm gặp nhau
+  // ở chỗ giáp, nên chúng phải khởi hành từ cùng một màu — nếu không thì dù cao độ khớp tuyệt đối,
+  // mắt vẫn thấy một đường viền chạy vòng quanh thành phố.
+  const baseRgb = rgbOf(palette?.outskirts ?? palette?.groundAlt ?? palette?.ground ?? 0x888888);
+  // Đỉnh cao BẠC hơn chân núi — đá lộ, cây thưa, hứng nhiều ánh trời hơn. Đây KHÔNG phải tuyết.
+  //
+  // ⚠️ SUY TỪ CHÍNH MÀU NỀN, KHÔNG LẤY `palette.edge`. Bản đầu lấy `edge` (`#d2d0cb`, sáng 0,82 —
+  // gần như trắng, và nó là màu VIỀN GIAO DIỆN chứ không phải màu đá) nên đỉnh núi ngả trắng xanh
+  // và cả dãy đọc ra là sương. Cùng đúng lý lẽ mà `applyBareEarth` đã ghi ngay trên: 15 kỷ có 15
+  // nền khác nhau, một màu đỉnh chốt cứng sẽ đúng ở vài kỷ và chỏi ở số còn lại.
+  const peakRgb = baseRgb.map((c, i) => Math.min(1,
+    c * PEAK_PALE * (i === 2 ? PEAK_COOL : (i === 0 ? 1 / PEAK_COOL : 1))));
+
+  // ⚠️ BƯỚC LƯỚI ĐỌC TỪ CHÍNH TRƯỜNG CAO ĐỘ, KHÔNG TỰ CHỌN. `buildHorizon` đã chia bước sao cho có
+  // ĐÚNG một đỉnh nằm trên chỗ giáp, và nó cũng dùng chính con số ấy để không khai nhiều chi tiết
+  // hơn mức lưới chở nổi. Tự chọn một bước ở đây là hai công thức cho một luật — bản đầu làm vậy
+  // và mở ra một khe hở 0,5 đơn vị vòng quanh thành phố (hai cái nêm sáng ở góc dưới khung hình).
+  const inner = horizon.innerEdge;
+  const reach = horizon.reach;
+  const step = horizon.step;
+  const rings = Math.ceil((reach - inner) / step);
+  const n = Math.round(inner / step);          // đúng `HORIZON_INNER_STEPS`, không còn làm tròn oan
+  const total = n + rings;                     // chỉ số lớn nhất theo mỗi trục
+  const coord = (i) => i * step;
+
+  const sink = createSink();
+  const EPS = step * 0.35;
+
+  // Pháp tuyến bằng SAI PHÂN TRUNG TÂM của chính trường cao độ — cùng lý do với tấm đất: lấy theo
+  // tam giác thì mỗi mặt một hướng và quả núi thành tấm giấy gấp.
+  const normalAt = (x, z) => {
+    const sx = (horizon.heightAt(x - EPS, z) - horizon.heightAt(x + EPS, z)) / (2 * EPS);
+    const sz = (horizon.heightAt(x, z - EPS) - horizon.heightAt(x, z + EPS)) / (2 * EPS);
+    const len = Math.hypot(sx, 1, sz) || 1;
+    return [sx / len, 1 / len, sz / len];
+  };
+
+  const cap = Math.max(1e-6, horizon.maxHeight);
+  const push = (ix, iz) => {
+    const x = coord(ix); const z = coord(iz);
+    const y = horizon.heightAt(x, z);
+    const nrm = normalAt(x, z);
+    // `lift` = 0 ở chân, 1 ở đỉnh cao nhất mà kỷ này CÓ THỂ đạt. Chia cho trần của kỷ chứ không cho
+    // một hằng số chung: kỷ thảo nguyên cao nhất 0,8 đơn vị mà đem chia cho 6 thì cả vùng đất ra
+    // đúng một màu, còn chia cho trần của chính nó thì mấy gợn sóng thấp vẫn đọc được.
+    const lift = Math.min(1, Math.max(0, (y + APRON_DROP) / cap));
+    const t = smoothstep(lift) * PEAK_MIX;
+    const col = [
+      lerp(baseRgb[0], peakRgb[0], t),
+      lerp(baseRgb[1], peakRgb[1], t),
+      lerp(baseRgb[2], peakRgb[2], t),
+    ];
+
+    // ── Vết loang — CÙNG TRƯỜNG NHIỄU với tấm đất thành phố ────────────────────
+    // Không phải một nguồn nhiễu thứ hai: mảng đậm nhạt phải chạy LIỀN qua chỗ giáp, nếu không thì
+    // chính chỗ nối lại là chỗ duy nhất mắt tìm ra được vì hai bên có hai kiểu lấm tấm khác nhau.
+    // `tintAt` nhận toạ độ Ô nên phải đổi hệ ở đây (`toCell`), không đưa toạ độ thế giới vào thẳng.
+    if (mottleAt) {
+      const m = mottleAt(x, z);
+      for (let i = 0; i < 3; i += 1) col[i] = Math.min(1, col[i] * m);
+    }
+
+    // ── Sườn dốc lộ đất — ĐÚNG luật của tấm kia, không phải một luật riêng ─────
+    applyBareEarth(col, nrm);
+
+    sink.pos.push(x, y, z);
+    sink.nor.push(nrm[0], nrm[1], nrm[2]);
+    sink.col.push(col[0], col[1], col[2]);
+  };
+
+  for (let jz = -total; jz < total; jz += 1) {
+    for (let ix = -total; ix < total; ix += 1) {
+      // Bỏ hẳn phần lòng trong — tấm đất thành phố đã tả nó rồi, và vẽ chồng lên là chọi mặt.
+      if (Math.abs(ix) < n && Math.abs(jz) < n) continue;
+      push(ix, jz); push(ix, jz + 1); push(ix + 1, jz + 1);
+      push(ix, jz); push(ix + 1, jz + 1); push(ix + 1, jz);
+      sink.tris += 2;
     }
   }
 

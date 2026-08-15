@@ -170,7 +170,7 @@ test('SÁU CHỖ BÁM ĐẤT: mọi thứ đứng trên mặt đất đều ph�
   }
 });
 
-test('HAI TẤM ĐỊA HÌNH PHẢI ĐƯỢC DỰNG THẬT VÀO CẢNH', () => {
+test('BA TẤM ĐỊA HÌNH PHẢI ĐƯỢC DỰNG THẬT VÀO CẢNH', () => {
   // ⚠️ Đúng bẫy Phase 4H một lần nữa: `terrainMesh.js` có test riêng chạy đủ, engine `terrain.js`
   // vẫn tính đủ 15 vùng đất — và nếu `sceneGraph.js` quên gọi thì màn hình chỉ còn một tấm ván
   // vuông trơ trọi với năm công trình bay lơ lửng bên trên. Không lint nào bắt được.
@@ -180,15 +180,44 @@ test('HAI TẤM ĐỊA HÌNH PHẢI ĐƯỢC DỰNG THẬT VÀO CẢNH', () => {
       `Cảnh không còn gọi \`${fn}\` với \`terrain\` thật.`,
     );
   }
-  // ⚠️ VÀ TẤM VÁN VÙNG NGOÀI PHẢI ĐỌC `APRON_DROP`, KHÔNG ĐƯỢC VIẾT TAY MỘT SỐ SONG SONG. Đây đúng
-  // bài học Phase 7D ("một con số tuyệt đối không diễn đạt được một luật nói về QUAN HỆ"): mặt trên
-  // tấm ván phải TRÙNG đáy vùng đất thoải, nên nó buộc phải suy từ chính con số sinh ra đáy ấy. Viết
-  // tay thì lần sau ai chỉnh `APRON_DROP` sẽ tạo một vết nứt vòng quanh thành phố, im lặng.
+
+  // ⚠️ TẤM THỨ BA (Phase 9A) — VÀ NÓ THAY THẾ MỘT BÀI TEST CŨ ĐÃ HẾT HIỆU LỰC, có chủ đích.
+  // Bài cũ canh `outskirts.position.y = -APRON_DROP - GROUND_THICKNESS / 2`, tức canh chỗ ngồi của
+  // một TẤM VÁN PHẲNG. Lập luận của nó đúng từng chữ, nhưng nó đứng trên tiền đề "vùng đất ngoài
+  // lưới là một khối hộp"; Phase 9A gỡ chính tiền đề đó (nay là địa hình thật có núi), nên kết luận
+  // đi theo nó cũng hết hiệu lực — đúng hình dạng đã ghi ở `terrain.js`/ADR-019. Lời hứa THẬT thì
+  // không đổi: hai tấm phải gặp nhau ở đúng `-APRON_DROP`. Nay nó được khoá ở nơi đúng hơn nhiều —
+  // `horizon.test.js` đo CAO ĐỘ THẬT ở chỗ giáp, thay vì đọc một dòng gán toạ độ.
   assert.ok(
-    /outskirts\.position\.y = -APRON_DROP - GROUND_THICKNESS \/ 2/.test(CALLS),
-    'Tấm ván vùng ngoài không còn ngồi theo `APRON_DROP` — mặt trên của nó sẽ cắt ngang vùng đất '
-    + 'thoải như một lưỡi dao, hoặc tụt xuống để hở cả gầm.',
+    /buildHorizon\(\{ era: layout\.era, gridSize \}\)/.test(CALLS),
+    'Cảnh không còn dựng vùng đất xa ⇒ thế giới lại kết thúc bằng một mảng phẳng một màu.',
   );
+  // ⚠️ KHOÁ TIỀN TỐ, KHÔNG KHOÁ TRỌN DANH SÁCH THAM SỐ. Bản đầu viết `\(\{ horizon, palette \}\)`
+  // và nó đỏ ngay lần đầu có người thêm một tham số CHÍNH ĐÁNG (`terrain` — để tấm núi dùng chung
+  // trường vết loang với tấm đất). Một bài test canh "hàm này có được gọi với thứ nó cần không" mà
+  // lại đỏ khi hàm nhận THÊM thứ nó cần thì đang canh sai điều: nó khoá một chữ ký, trong khi lời
+  // hứa thật là "`horizon` vừa tính xong phải được đưa vào tấm vẽ". Bỏ `horizon` đi vẫn đỏ như cũ.
+  assert.ok(
+    /buildHorizonSurface\(\{ horizon, palette[,}]/.test(CALLS),
+    'Vùng đất xa được TÍNH nhưng không được VẼ — đúng bẫy Phase 4H: hàm chạy đủ, không ai gọi.',
+  );
+  // ⚠️ VÀ NÓ KHÔNG ĐƯỢC NHẬN BÓNG. Khung bóng đổ chỉ bó quanh lưới 12×12; mọi điểm ngoài khung tra
+  // vào bản đồ bóng sẽ lấy nhầm giá trị ở mép và bị coi là đang trong bóng ⇒ cả dãy núi đen kịt.
+  // Đã thấy tận mắt với tấm ván cũ, nên đây là một lỗi ĐÃ XẢY RA, không phải một giả định.
+  assert.ok(
+    /outskirts\.receiveShadow = false/.test(CALLS),
+    'Vùng đất xa nhận bóng ⇒ nằm ngoài khung bóng nên sẽ bị tô đen toàn bộ.',
+  );
+});
+
+test('SƯƠNG MÙ KHÔNG ĐƯỢC CÓ MẶT PHẲNG `far` — nếu có, vùng đất xa là mã chết', () => {
+  // ⚠️ Bài test của một lỗi ĐÃ ĐO ĐƯỢC, không phải một lo xa. Sương tuyến tính (`Fog`) có tham số
+  // `far`: qua khỏi nó, cảnh vật không nhạt đi mà bị THAY bằng đúng một màu. Sơn sương màu hồng
+  // cánh sen rồi chụp thì đỉnh khung hình ra `#e803e6` — 95–100% sương nguyên chất. Nghĩa là dựng
+  // núi ra ngoài đó cũng vô nghĩa: chúng tàng hình tuyệt đối, y như cơ chế "lùm cây" chết yểu ở
+  // Phase 8D. `FogExp2` tiến tới 1 nhưng không bao giờ chạm 1 ⇒ luôn còn lớp sau lớp.
+  assert.ok(/new FogExp2\(/.test(CALLS), 'Sương quay lại dùng mặt phẳng `far` ⇒ xoá sạch vùng đất xa.');
+  assert.ok(!/new Fog\(/.test(CALLS), 'Vẫn còn một `new Fog(` tuyến tính đâu đó trong cảnh.');
 });
 
 test('CÔNG TRÌNH ĐỨNG Ở CAO ĐỘ CAO NHẤT DƯỚI BÓNG MÌNH, và phần hụt phải thành MÓNG', () => {

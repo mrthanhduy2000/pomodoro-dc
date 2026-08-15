@@ -6,32 +6,45 @@
 > chọn: `ARCHITECTURE_DECISIONS.md`. Nợ kỹ thuật: `TECH_DEBT.md`. Migration: `MIGRATION.md`. Tóm
 > tắt theo mốc: `CHANGELOG.md`.
 > **NGUYÊN TẮC ƯU TIÊN SỐ 1:** (1) mọi phiên AI phải đọc file này + `CLAUDE.md` + các file liên quan TRƯỚC khi làm; (2) sau MỌI cập nhật dù nhỏ, phải cập nhật ngay file này + `CLAUDE.md` + các file liên quan khác.
-> Cập nhật lần cuối: **2026-08-15** — **Phase 8D**: **CÂY THÔI LÀ HÌNH NÓN TRÊN QUE.** Đàm chỉ
-> đích danh mắt xích còn lại: *"cây cone + cylinder hiện là một trong những yếu tố khiến cảnh vẫn
-> giống prototype"*, đích rất cụ thể — *"nhìn vào phải nhận ra **cây**, không phải 'hình nón màu
-> xanh trên một cái que'"*, và **không được rải đều trên lưới**.
-> **NGUYÊN NHÂN GỐC là THIẾU KIẾN TRÚC, không phải lỗi mã.** Hình dáng cây nằm trong ba nhánh `if`
-> viết cứng giữa hàm `tree()` của `propSpec.js`. Đo được: **40 hạt giống ra ĐÚNG MỘT cấu trúc khối**
-> (hạt chỉ đổi được chiều cao), **cả 15 kỷ chỉ 3 mẫu cây**. Nhà cửa từ Phase 3B đã có ngữ pháp ba
-> trục để thoát đúng cái bẫy này; thảm thực vật chưa bao giờ được cho một ngữ pháp nào. Nay có:
+> Cập nhật lần cuối: **2026-08-15** — **Phase 9A**: **THẾ GIỚI KHÔNG CÒN KẾT THÚC Ở RÌA THÀNH PHỐ.**
+> Đo trên ảnh chụp: ra khỏi lưới 3,4 ô, thế giới là **một tấm ván phẳng 72×72 tô một màu, đúng 12
+> tam giác** — trong khi `terrain.js` đã khai sẵn từ Phase 7B rằng kỷ 13 *"kẹp giữa núi"*, kỷ 7
+> *"đồi Toscana nối nhau"*, kỷ 8 *"thành phố bảy quả đồi"*. **Dữ liệu địa lý có sẵn; tầng vẽ chưa
+> bao giờ đọc tới nó.** Nay có `city3d/horizon.js` (bảng 15 kỷ + trường cao độ fBm) +
+> `buildHorizonSurface`. **703 bài test** (+15, tất cả đã thử ngược), lint sạch, build xanh.
+> Xem **ADR-022** + **ADR-023**.
+> ⚠️ **VÌ SAO KHÔNG PHẢI CHỈ "THIẾU NÚI"**: camera chúi 34,4° trừ nửa FOV dọc 19° ⇒ **mép TRÊN khung
+> hình nằm 15,4° DƯỚI tầm mắt**, nên **0% khung hình là trời** (chứng minh bằng cách sơn vòm trời đỏ
+> chói rồi chụp — đỉnh khung vẫn nguyên màu đất). Cả bức ảnh vì thế chỉ có HAI lớp: thành phố, và
+> một mảng phẳng chiếm ~25% mỗi tấm. Đó chính là cảm giác "mô hình đặt trên bàn". Đo bằng
+> `scripts/depth-score.mjs`: số lớp không gian ở dải xa **0 → 55**.
+> ⚠️ **THỨ TỰ BẮT BUỘC, ĐỪNG ĐẢO: sửa SƯƠNG trước, dựng NÚI sau.** Sương tuyến tính cũ có mặt phẳng
+> `far` và bão hoà **95–100%** ở đúng vùng này (đo bằng cách sơn sương hồng cánh sen). Dựng núi
+> trước thì núi **tàng hình hoàn toàn** — ship một cơ chế ĐÃ CHẾT kèm chú thích dài giải thích nó
+> chạy ra sao, đúng bẫy Phase 8D.
+> ⚠️ **BA LẦN "MỘT TRƯỜNG GÁNH HAI VIỆC" TRONG MỘT PHASE**: (1) `relief` không thể vừa tả đất thành
+> phố vừa tả núi vây quanh — Kyoto lòng thung PHẲNG mà núi quanh CAO ngất, Manhattan phẳng và cũng
+> chẳng có núi ⇒ hai đại lượng ĐỘC LẬP (lần thứ 5); (2) `grain` không thể vừa trả lời "khối núi to
+> bằng nào" vừa trả lời "mặt gồ ghề tới đâu" — đụn cát Sahara rất LỚN mà mặt cực TRƠN ⇒ tách ra
+> `rough` (lần thứ 6); (3) `outskirts` không thể vừa là màu ĐẤT vừa là phối cảnh không khí nướng
+> sẵn ⇒ hạ pha 0,42 → 0,15 và để `FogExp2` lo theo khoảng cách thật (ADR-023).
+> ⚠️ **BỐN LỖI, cả bốn chỉ lộ ra khi ĐO chứ không khi đọc mã**: chỗ giáp suy tay 9,4 thay vì 9,5 ⇒
+> **khe hở 0,5 đơn vị** vòng quanh thành phố · ô nhiễu 1,01 trong khi lưới lấy mẫu mỗi 2,0 ⇒ **mảng
+> tam giác sắc lẹm** đúng vẻ low-poly cả phase sinh ra để xoá · một tầng nhiễu ra **bong bóng tròn
+> xoe như sáp chảy** (địa hình thật là phân dạng ⇒ phải fBm) · tấm núi tự nghĩ ra luật màu riêng ⇒
+> mắt đọc ra **một cái bệ và một cái hào** dù hình học khớp tuyệt đối.
+>
+> **(Phase 8D, ngay trước đó)** **CÂY THÔI LÀ HÌNH NÓN TRÊN QUE.** Đàm chỉ đích danh: *"cây cone +
+> cylinder hiện là một trong những yếu tố khiến cảnh vẫn giống prototype"*. Nguyên nhân gốc là
+> **THIẾU KIẾN TRÚC**, không phải lỗi mã: hình cây nằm trong ba nhánh `if` viết cứng giữa `tree()`
+> của `propSpec.js` ⇒ **40 hạt giống ra ĐÚNG MỘT cấu trúc khối**, cả 15 kỷ chỉ 3 mẫu. Nay có
 > `city3d/floraStyle.js` (BẢNG 15 kỷ) + `city3d/flora.js` (7 LOÀI) + `propSpec.js` (chỉ còn GHÉP).
-> **688 bài test** (+23, tất cả đã thử ngược), lint sạch, build xanh. Xem **ADR-020** + **ADR-021**.
-> ⚠️ **LUẬT CHỐNG-PRIMITIVE, ghi một lần cho mọi phiên sau**: tán là **NHIỀU THUỲ chồng lấn lệch
-> tâm**, KHÔNG phải một khối lồi. Một khối lồi tất yếu cho viền trơn + đúng một dải sáng-tối + đối
-> xứng xoay hoàn hảo + chỗ nối thân-tán sắc lẻm. **Tăng `sides` không chữa được — càng mượt càng
-> giống hình học.** Ba thuỳ tốn 132 tam giác thay vì 44 và sửa cả bốn tật.
-> ⚠️ **CHI PHÍ GẦN NHƯ BẰNG KHÔNG, và đó KHÔNG phải may mắn**: trung bình **30.656 → 30.769 tam
-> giác (+0,4%)**, lệnh vẽ **không đổi** (11–13). Cây đắt hơn hẳn, nhưng **trần phủ xanh** (ADR-021)
-> trả lại đúng chỗ đó. Đây là phase đầu tiên của cả mảng 8 KHÔNG cộng thêm tải.
-> ⚠️ **BỐN LỖI CỦA PHASE NÀY, ba do chính bài test mới bắt chứ không do đọc mã**: (1) `bush` nằm
-> chung bảng loài với cây ⇒ "bụi" ở kỷ 1 ra **5 khối, 212 tam giác, cao 0,94** — một cái cây hoàn
-> chỉnh; **một bảng gánh hai việc**, lần thứ tư. (2) `sides`/`taper` viết cứng ở `cypress`,
-> `streetTree`, `banyan`, `bush` ⇒ mỗi lần đều "40 hạt chỉ 2–4 dáng"; sửa ba chỗ vẫn sót chỗ thứ
-> tư. (3) núm LOD **chỉ cắn ở 5/10 hạt** với `palm` và `cypress` — một cái núm không nối vào đâu vẫn
-> "chạy" bình thường (đúng hình dạng sai của Phase 7A). (4) cả cơ chế lùm **là mã chết**, chứng minh
-> bằng phép thử ngược: bật/tắt thì chỉ số phân tán đứng yên tới hai chữ số thập phân.
-> ⚠️ **CÒN LẠI, NÓI THẲNG**: cọ nhìn từ đúng trên xuống vẫn dẹt thành dấu "✳" (vì `parts.js` không
-> nghiêng được khối); bóng đổ vẫn là mảng đen cạnh cứng; mặt đường vẫn một màu phẳng.
+> **688 bài test.** Xem **ADR-020** + **ADR-021**. **Luật chống-primitive**: tán là **NHIỀU THUỲ
+> chồng lấn lệch tâm**, không phải một khối lồi — **tăng `sides` không chữa được, càng mượt càng
+> giống hình học**. Chi phí gần bằng không (+0,4% tam giác) nhờ trần phủ xanh của ADR-021.
+> Bốn lỗi, ba do bài test bắt: `bush` chung bảng với cây (một bảng gánh hai việc, lần thứ tư) ·
+> `sides`/`taper` viết cứng ở bốn chỗ · núm LOD chỉ cắn 5/10 hạt · **cả cơ chế lùm là mã chết**,
+> chứng minh bằng thử ngược (bật/tắt thì chỉ số phân tán đứng yên tới hai chữ số).
 >
 > **(Phase 8C, ngay trước đó)** **MẶT ĐẤT THÔI LÀ BÀN CỜ.** Đàm gọi thẳng đây
 > là *"vấn đề rất lớn"*: *"terrain như các bậc thang… grid rõ… toàn cảnh giống prototype/editor hơn
@@ -593,6 +606,37 @@
 
 ## 🗒️ Nhật ký cập nhật
 > Mỗi lần xong việc đáng kể, thêm 1 dòng vào ĐẦU danh sách.
+
+- **2026-08-15 (Phase 9A — thế giới không kết thúc ở rìa thành phố)** — **703 bài test** (688 → 703),
+  lint sạch, build xanh. File MỚI: `engine/city3d/horizon.js` + `horizon.test.js` +
+  `scripts/depth-score.mjs`. Sửa: `daylight.js` (sương tuyến tính → `FogExp2`, mật độ chọn từ ba mốc
+  đo được), `terrain.js` (export `terrainSurfaceReach`/`TERRAIN_SUB`/`valueNoise` để hai tấm dùng
+  chung một chỗ giáp), `palette3d.js` (`outskirts` hạ pha sương nướng-sẵn 0,42 → 0,15),
+  `terrainMesh.js` (`buildHorizonSurface` + tách `applyBareEarth` dùng chung), `sceneGraph.js`,
+  `daylight.test.js` + `sceneGraphWiring.test.js`.
+  - **Quyết định kiến trúc**: **ADR-022** (chân trời là trường cao độ RIÊNG theo kỷ, độc lập với
+    `relief` — lần thứ NĂM của "một trường gánh hai việc") và **ADR-023** (phối cảnh không khí là
+    việc của SƯƠNG theo khoảng cách thật, không nướng sẵn vào nước sơn — đảo ngược một nửa quyết
+    định cũ về `outskirts`, vì cả hai tiền đề của nó đã bị Phase 9A gỡ bỏ).
+  - **Đo được**: số lớp không gian ở dải xa **0 → 55** (`scripts/depth-score.mjs`), biên độ 0 → 0,241.
+    fBm thật sự chạy: độ cong ở cỡ lưới kỷ 13 **0,0111 so với 0,0038** khi ép một tầng (gấp 2,9 lần),
+    trong khi thảo nguyên/đụn cát đứng yên — đúng như `rough` thấp phải thế.
+  - **BỐN lỗi của phase này, và cả bốn đều chỉ lộ ra khi ĐO chứ không khi đọc mã**: (1) chỗ giáp hai
+    tấm suy tay ra 9,4 trong khi thật là 9,5 ⇒ **khe hở 0,5 đơn vị** vòng quanh thành phố, hiện lên
+    ảnh thành hai cái nêm sáng; (2) ô nhiễu 1,01 trong khi lưới lấy mẫu mỗi 2,0 ⇒ dãy núi ra **mảng
+    tam giác sắc lẹm**, đúng vẻ low-poly cả phase sinh ra để xoá; (3) một tầng nhiễu ra **bong bóng
+    tròn xoe như sáp chảy** — địa hình thật là phân dạng, phải fBm; (4) tấm núi tự nghĩ ra một luật
+    màu riêng ⇒ mặt đất thành phố `#626855` đụng chân núi `#7a8876`, mắt đọc ra **một cái bệ và một
+    cái hào** dù hình học khớp tuyệt đối.
+  - **Ba bài học đã ghi vào `CLAUDE.md`**: ngưỡng nới rộng "cho chắc" là một cái PHỄU (hai bài test
+    sương cho mật độ màn-sữa đi qua thoải mái) · "tiến tới 1 nhưng không bao giờ chạm 1" đúng về
+    toán và vô nghĩa về nhìn (93% với 100% thì mắt không phân biệt được) · phép đo phải chạm đúng
+    đại lượng mình định nói, nếu không nó **CHÊ OAN** một cơ chế đang chạy tốt (lần thứ 19 công cụ
+    tự chế nói dối — và là lần đầu nó nói dối theo hướng chê oan).
+  - **Còn nợ**: chưa đo hiệu năng trên iPhone sau khi cộng thêm ~43k tam giác (gộp vào TECH_DEBT
+    #23/#26 đang chờ Đàm). Kỷ 15 (sa mạc Dubai) nhìn vẫn hơi ngả lam ở chặng sáng — `outskirts` suy
+    từ một gốc màu ngả lục, chưa phải màu cát; chưa sửa vì nó là câu hỏi về bảng màu theo kỷ, không
+    phải về chân trời.
 
 - **2026-08-15 (Phase 8D — cây thôi là hình nón trên que)** — **688 bài test** (665 → 688), lint
   sạch, build xanh. File MỚI: `engine/city3d/floraStyle.js` + `flora.js` + hai file test của chúng.

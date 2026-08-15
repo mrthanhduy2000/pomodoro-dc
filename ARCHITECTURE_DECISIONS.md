@@ -11,6 +11,78 @@
 
 ---
 
+## ADR-023 — Phối cảnh không khí là việc của SƯƠNG (theo khoảng cách thật), không nướng sẵn vào nước sơn — đảo ngược một nửa quyết định cũ về `outskirts`
+
+- **Ngày**: 2026-08-15 (Phase 9A)
+- **Bối cảnh**: Phase 9A thay tấm ván phẳng vùng ngoài bằng địa hình thật (ADR-022). Ngay ảnh chụp
+  đầu tiên lộ ra một chuyện không liên quan gì tới hình học: cả dãy núi được sơn bằng màu TRỜI chứ
+  không phải màu ĐẤT, nên nó đọc ra là sương/nước. Đo: `outskirts` = `#90a2a8` (góc màu ~193°, xanh
+  lơ) trong khi mặt đất thành phố = `#a09871` (~46°, khaki ấm) — **lệch 147°**.
+- **Vấn đề**: `outskirts` pha sẵn **42%** về màu chân trời. Quyết định ấy ĐÚNG khi nó ra đời, và
+  đúng vì hai lý do rõ ràng: tấm ván phẳng 12 tam giác (a) không có sương thật nên không tự lùi ra
+  sau được, và (b) không có sườn dốc nào để hứng nắng nên nếu không pha màu chân trời thì nó là thứ
+  DUY NHẤT trong cảnh đứng im suốt 6 chặng ngày. **Cả hai tiền đề đều bị Phase 9A gỡ bỏ** — đúng
+  hình dạng bài học Phase 8C: một kết luận hết đúng mà không ai động vào nó. Giữ nguyên 42% sau khi
+  đã có `FogExp2` thật là **tính phối cảnh không khí hai lần**, và lần thứ hai thì tính sai, vì một
+  hằng số áp đều cho cả vành đất sát thành phố lẫn rặng núi ngoài cùng.
+- **Phương án đã cân nhắc**:
+  1. *Giữ 42%, chỉnh riêng màu tấm núi cho ấm lên.* Bác: hai tấm gặp nhau ở chỗ giáp, nên chúng phải
+     khởi hành từ CÙNG một màu; tách ra là tự tạo một đường viền chạy vòng quanh thành phố.
+  2. *Thêm một vai màu mới `outland` (màu đất, không pha sương) và để `outskirts` nguyên.* Bác: đúng
+     câu hỏi mà `CLAUDE.md` bắt tự hỏi trước khi tạo mới — *"có tạo thêm một pattern mới trong khi
+     pattern tương tự đã tồn tại không?"*. Hai vai màu gần như trùng nghĩa sẽ trôi khỏi nhau.
+  3. **(CHỌN)** *Hạ pha về chân trời 0,42 → 0,15 và để sương lo phần còn lại.*
+- **Giải pháp**: `outskirts` trở lại là một màu ĐẤT. Chừa 0,15 vì vẫn còn một việc thật — vành đất
+  sát thành phố nằm ở chỗ sương gần bằng không, mà nó đã đủ xa để mắt mong thấy chút hơi lam.
+- **Đánh đổi**: màu lam của ĐÊM nay phải đến từ ánh sáng (ánh trăng lạnh + sương nhuộm theo màu chân
+  trời đêm) chứ không từ nước sơn. Đó là đường đúng hơn nhưng nó **dời một sự phụ thuộc**, nên chú
+  thích cũ khẳng định *"ban đêm nó vốn đã tự ngả lam sâu rồi"* đã được sửa tại chỗ thay vì xoá.
+- **Ảnh hưởng đo được**: chỗ giáp hai tấm hết chỏi — trước: `#626855` (sáng 0,37) đụng `#7a8876`
+  (sáng 0,50); sau: hai bên cùng họ màu đất, mắt đọc ra một phong cảnh liền thay vì một cái bệ và
+  một cái hào.
+- **Điều kiện xem lại**: nếu sau này có ai bỏ `FogExp2` hoặc hạ mật độ về gần 0, thì tiền đề của
+  chính ADR này biến mất và phải xem lại con số 0,15 — không phải chỉnh nó, mà hỏi lại vì sao.
+
+---
+
+## ADR-022 — Chân trời là một TRƯỜNG CAO ĐỘ RIÊNG theo kỷ, độc lập với `relief` của mặt đất thành phố
+
+- **Ngày**: 2026-08-15 (Phase 9A)
+- **Bối cảnh**: `terrain.js` khai thẳng cho kỷ 13 *"đô thị Nhật kẹp giữa núi"*, kỷ 7 *"đồi Toscana
+  nối nhau"*, kỷ 8 *"Lisbon thành phố bảy quả đồi"*. Chụp ảnh ra thì **không có lấy một quả đồi
+  nào**: ra khỏi lưới 3,4 ô, thế giới là một tấm ván phẳng 72×72 tô một màu, 12 tam giác. Dữ liệu
+  địa lý đã nằm sẵn trong dự án từ Phase 7B; tầng vẽ vứt nó đi.
+- **Vấn đề**: hệ quả không chỉ là "thiếu núi". Camera chúi 34,4° trừ nửa FOV dọc 19° ⇒ **mép trên
+  khung hình nằm 15,4° DƯỚI tầm mắt**, nên 0% khung hình là trời (đã chứng minh bằng cách sơn vòm
+  trời đỏ chói rồi chụp). Cả bức ảnh vì thế chỉ có HAI lớp: thành phố, và một mảng phẳng chiếm ~25%
+  mỗi tấm ảnh. Đó chính là cảm giác "mô hình đặt trên bàn" mà Đàm yêu cầu xoá.
+- **Phương án đã cân nhắc**:
+  1. *Nhân `ERA_TERRAIN[era].relief` lên để mặt đất tự nhô thành núi ở xa.* Bác, và đây là lần thứ
+     NĂM của cùng một bài học "một trường gánh hai việc". Hỏi đúng câu hỏi cũ — *"ngoài đời hai thứ
+     này có luôn đi cùng nhau không?"*: Kyoto lòng thung gần phẳng mà núi quanh cao ngất (thấp↔cao)
+     · Manhattan nền phẳng và cũng chẳng có núi (thấp↔thấp) · Burg Eltz mỏm đá dốc nhất 15 kỷ, đồi
+     rừng quanh cũng cao (cao↔cao) · Dubai thành phố san phẳng, đụn cát xa thì có sóng (thấp↔vừa).
+     Bốn tổ hợp đủ cả bốn góc ⇒ hai đại lượng ĐỘC LẬP, và không cách chỉnh khéo nào thoát ra được.
+  2. *Dựng vòm ảnh nền (skybox) vẽ sẵn dãy núi.* Bác: 15 kỷ × 6 chặng ngày = 90 tấm ảnh phải nuôi,
+     và chúng sẽ không bao giờ khớp với ánh sáng/sương đang tính động.
+  3. **(CHỌN)** *Một mô-đun thuần riêng `city3d/horizon.js`*, bảng 15 kỷ, trường cao độ fBm.
+- **Giải pháp**: `HORIZON_STYLES` 5 trường (`rise`/`grain`/`rough`/`ridged`/`near`) + `buildHorizon`
+  trả về `heightAt`. Hai điểm phải nói rõ vì cả hai đều đã trả giá trong chính phase này:
+  (a) **fBm chứ không phải một tầng nhiễu** — một tầng chỉ có đúng một cỡ hình nên ra "bong bóng
+  tròn xoe như sáp chảy"; (b) **`grain` và `rough` là hai trường** (cỡ khối núi ≠ độ gồ ghề bề mặt)
+  — lần thứ SÁU của "một trường gánh hai việc", vì một đụn cát Sahara rất LỚN mà mặt cực TRƠN.
+- **Đánh đổi**: (a) +43k tam giác (cảnh ~74k) — chấp nhận theo đúng chỉ đạo *"không được hy sinh
+  chất lượng hình ảnh trước một vấn đề hiệu năng chưa được đo"*, và còn nợ một lần đo trên iPhone;
+  (b) tấm núi KHÔNG nhận bóng và KHÔNG đổ bóng — vì đúng chứ không phải vì nhanh: khung bóng đổ chỉ
+  bó quanh lưới 12×12, điểm ngoài khung sẽ tra nhầm mép bản đồ bóng và cả dãy núi đen kịt (đã thấy
+  tận mắt với tấm ván cũ).
+- **Ảnh hưởng đo được**: số lớp không gian ở dải xa (`scripts/depth-score.mjs`) **0 → 55**; biên độ
+  0 → 0,241. Kỷ 13 dựng núi cao > 2,5 đơn vị, kỷ 12 giữ < 1,0 — có test khoá cả hai đầu.
+- **Điều kiện xem lại**: nếu `DEFAULT_PITCH` hoặc `CITY_CAMERA_FOV` đổi tới mức bầu trời lọt vào
+  khung hình, thì tiền đề "100% khung là mặt đất" biến mất và phải cân lại tỉ trọng núi/trời.
+
+---
+
 ## ADR-020 — Thảm thực vật có NGỮ PHÁP RIÊNG (bảng loài theo kỷ + thư viện hình khối), không phải mấy nhánh `if` trong bộ vẽ cảnh vật
 
 - **Ngày**: 2026-08-15 (Phase 8D)

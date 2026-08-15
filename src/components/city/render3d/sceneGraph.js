@@ -26,7 +26,7 @@ import {
   Color,
   DirectionalLight,
   DynamicDrawUsage,
-  Fog,
+  FogExp2,
   HemisphereLight,
   InstancedMesh,
   Matrix4,
@@ -47,12 +47,13 @@ import { getEraStyle } from '../../../engine/city3d/eraStyle';
 import { buildBuildingSpec, buildScaffoldSpec } from '../../../engine/city3d/buildingSpec';
 import { buildPropSpec } from '../../../engine/city3d/propSpec';
 import { prism, specSpan } from '../../../engine/city3d/parts';
-import { APRON_DROP, buildTerrain } from '../../../engine/city3d/terrain';
+import { buildTerrain } from '../../../engine/city3d/terrain';
+import { buildHorizon } from '../../../engine/city3d/horizon';
 import { placeBounds, specBounds } from '../../../engine/city3d/pick';
 import { RESIDENT_HEIGHT, buildResidents, residentAt } from '../../../engine/city3d/residents';
-import { fogRangeFor, sunDirectionAt } from '../../../engine/city3d/daylight';
+import { fogDensityFor, sunDirectionAt } from '../../../engine/city3d/daylight';
 import { buildMergedGeometry } from './geometryFactory';
-import { ROAD_LIFT, buildRoadSurface, buildTerrainSurface } from './terrainMesh';
+import { ROAD_LIFT, buildHorizonSurface, buildRoadSurface, buildTerrainSurface } from './terrainMesh';
 
 /**
  * Hệ số phóng to công trình so với ô lưới.
@@ -90,8 +91,6 @@ export const TILE_UNIT = 1;
  * chỗ dựng vật liệu công trình.
  */
 const ENV_DIFFUSE = 0.12;
-
-const GROUND_THICKNESS = 0.22;
 
 /**
  * Cao độ MẶT TRÊN của đường — nơi bàn chân cư dân chạm vào.
@@ -305,9 +304,19 @@ export function createCityScene({
   // ⚠️ ĐỘ DÀY SƯƠNG ĐỔI THEO GIỜ (2026-08-13). Trước đây sương là một hằng số, nên buổi nào cũng
   // trong veo như nhau — và đó chính là thứ đã làm bình minh với hoàng hôn thành một bức ảnh: màu
   // nắng hai buổi buộc phải giống nhau (vật lý), nên nếu sương cũng giống nhau thì không còn gì
-  // khác. Sáng sớm là buổi DUY NHẤT có sương đọng; xem giải thích đầy đủ ở `fogRangeFor`.
-  const fogRange = fogRangeFor(daylight?.haze ?? 0, gridSize);
-  scene.fog = new Fog(palette.sky2?.horizon ?? palette.background, fogRange.near, fogRange.far);
+  // khác. Sáng sớm là buổi DUY NHẤT có sương đọng; xem giải thích đầy đủ ở `fogDensityFor`.
+  //
+  // ⚠️ PHASE 9A ĐỔI TỪ `Fog` (tuyến tính) SANG `FogExp2` (luỹ thừa), VÀ ĐÓ LÀ MỘT SỬA CHỮA CHỨ
+  // KHÔNG PHẢI MỘT KHẨU VỊ. Sương tuyến tính có một mặt phẳng `far`; qua khỏi nó thì cảnh vật không
+  // nhạt đi mà **bị thay bằng đúng một màu**. Đo bằng cách sơn sương màu hồng cánh sen rồi chụp:
+  // đỉnh khung hình ra `#e803e6`, tức 95–100% sương nguyên chất — nghĩa là ~25% mỗi tấm ảnh là một
+  // mảng phẳng lì MỘT màu, và bất cứ thứ gì đứng ngoài đó đều tàng hình tuyệt đối. Chính vì vậy
+  // dòng này phải đổi TRƯỚC khi dựng vùng đất xa bên dưới, nếu không cả dãy núi sẽ là mã chết ngay
+  // từ lúc sinh ra (đúng cái bẫy Phase 8D đã sập một lần với cơ chế "lùm cây").
+  scene.fog = new FogExp2(
+    palette.sky2?.horizon ?? palette.background,
+    fogDensityFor(daylight?.haze ?? 0, gridSize),
+  );
 
   // three KHÔNG tự giải phóng bộ nhớ GPU — mọi thứ tạo ra ở đây phải tự dọn trong `dispose`.
   const disposables = [];
@@ -438,35 +447,39 @@ export function createCityScene({
   // ── Vùng đất bao quanh ────────────────────────────────────────────────────
   // ⚠️ ĐÂY LÀ THỨ TÁCH "MỘT NƠI CHỐN" KHỎI "MÔ HÌNH TRÊN BÀN".
   // Lưới 12×12 kết thúc bằng một mép vuông sắc lẹm, và ảnh chụp thử cho thấy đúng cảm giác một
-  // miếng bìa đặt giữa hư không — dù mọi thứ TRÊN miếng bìa đó đều đã đẹp. Một mặt đất rộng chạy
-  // xa khỏi lưới, đậm hơn chút và tan vào sương ở rìa, làm thành phố trở thành một điểm TRONG một
-  // vùng đất thay vì một vật thể lơ lửng. Rẻ đúng 12 tam giác.
-  const outskirtsSize = gridSize * 6;
-  const outskirtsGeometry = track(new BoxGeometry(outskirtsSize, GROUND_THICKNESS, outskirtsSize));
+  // miếng bìa đặt giữa hư không — dù mọi thứ TRÊN miếng bìa đó đều đã đẹp.
+  //
+  // ⚠️ NHƯNG TỪ PHASE 9A ĐÂY KHÔNG CÒN LÀ MỘT TẤM VÁN PHẲNG. Bản cũ là một khối hộp 72×72 tô đúng
+  // MỘT màu (12 tam giác), và đo trên ảnh chụp thì nó chiếm **100% khung hình**: pitch camera 34,4°
+  // trừ nửa FOV dọc 19° ⇒ mép trên khung nằm 15,4° DƯỚI tầm mắt, nên không một điểm ảnh nào là
+  // trời (đã chứng minh bằng cách sơn vòm trời ĐỎ CHÓI rồi chụp — đỉnh khung vẫn nguyên màu đất).
+  // Cả bức ảnh vì thế chỉ có HAI lớp: thành phố, và một mảng phẳng. Đó chính là cảm giác "mô hình
+  // trên bàn" mà tấm ván này sinh ra để chữa, và nó đã tự trở thành nguyên nhân.
+  //
+  // Nay là địa hình thật theo kỷ (`horizon.js`): kỷ 13 có núi vây quanh vì đô thị Nhật kẹp giữa
+  // núi, kỷ 12 phẳng lì vì thảo nguyên Nga phẳng thật. Dữ liệu địa lý ấy đã nằm sẵn trong dự án từ
+  // Phase 7B — chỉ là tầng vẽ chưa từng đọc tới nó.
+  const horizon = buildHorizon({ era: layout.era, gridSize });
+  const horizonSurface = buildHorizonSurface({ horizon, palette, terrain, gridSize });
   const outskirtsMaterial = track(new MeshStandardMaterial({
-    color: palette.outskirts ?? palette.groundAlt,
+    vertexColors: true,
     roughness: 0.98,
     metalness: 0,
     envMap,
     envMapIntensity: ENV_DIFFUSE,
   }));
-  const outskirts = new Mesh(outskirtsGeometry, outskirtsMaterial);
-  // ⚠️ MẶT TRÊN CỦA TẤM VÁN NÀY PHẢI TRÙNG KHÍT ĐÁY VÙNG ĐẤT THOẢI (`-APRON_DROP`), KHÔNG PHẢI MỘT
-  // CON SỐ TỰ CHỌN. Trước Phase 8C nó nằm ở `-GROUND_THICKNESS - 0.06` để tạo một cái gờ — đúng khi
-  // lưới thành phố còn là một khay vuông có thành. Nay tấm địa hình tự thoải xuống rồi PHẲNG đúng
-  // `-APRON_DROP` từ `APRON_EDGE` trở ra, nên hai mặt chỉ nối liền được nếu chúng đồng phẳng. Để
-  // nguyên số cũ thì tấm ván (-0,28) nhô lên trên đáy thoải (-0,62) và cắt ngang vùng đất như một
-  // lưỡi dao. Đây là loại quan hệ mà dự án đã trả giá ở Phase 7D: một chú thích có chữ "hơn"/"khớp
-  // với" thì con số ấy phải ĐỌC từ cái mốc thật, không được viết tay song song.
-  outskirts.position.y = -APRON_DROP - GROUND_THICKNESS / 2;
-  // ⚠️ KHÔNG nhận bóng, và đây KHÔNG phải tối ưu hiệu năng — nó là bắt buộc để đúng.
-  // Khung bóng đổ chỉ bó quanh lưới 12×12 (`reach` bên dưới), còn mặt đất này rộng gấp bảy lần.
-  // Mọi điểm nằm NGOÀI khung đó tra vào bản đồ bóng sẽ lấy nhầm giá trị ở mép và bị coi là đang
-  // trong bóng — kết quả là cả vùng đất quanh thành phố tối đen (đã thấy tận mắt ở ảnh chụp thử).
-  // Ngoài lưới cũng chẳng có gì đổ bóng, nên tắt là vừa đúng vừa rẻ.
-  outskirts.receiveShadow = false;
-  scene.add(outskirts);
-  meshes.push(outskirts);
+  if (horizonSurface) {
+    track(horizonSurface.geometry);
+    const outskirts = new Mesh(horizonSurface.geometry, outskirtsMaterial);
+    // ⚠️ KHÔNG nhận bóng, và đây KHÔNG phải tối ưu hiệu năng — nó là bắt buộc để đúng.
+    // Khung bóng đổ chỉ bó quanh lưới 12×12 (`reach` bên dưới), còn vùng đất này rộng gấp sáu lần.
+    // Mọi điểm nằm NGOÀI khung đó tra vào bản đồ bóng sẽ lấy nhầm giá trị ở mép và bị coi là đang
+    // trong bóng — kết quả là cả vùng đất quanh thành phố tối đen (đã thấy tận mắt ở ảnh chụp thử).
+    outskirts.castShadow = false;
+    outskirts.receiveShadow = false;
+    scene.add(outskirts);
+    meshes.push(outskirts);
+  }
 
   // ── MẶT ĐẤT + MẶT ĐƯỜNG: MỘT TẤM LIỀN ─────────────────────────────────────
   //
@@ -832,15 +845,47 @@ export function createCityScene({
   // nghe rất vững ("môi trường là đèn nền thứ ba"), đo lại thì độ sáng gần như KHÔNG nhúc nhích —
   // vì thủ phạm thật lúc đó là `envMapIntensity` chưa được nối, môi trường đang rọi ở mức 1,0.
   // Lý lẽ đúng + con số sai vẫn ra một bản vá vô dụng. Chỉnh đèn thì phải chụp rồi đo, mọi lần.
+  // ⚠️ LẦN 4 (Phase 9A) — **ÁNH SÁNG NGOÀI TRỜI CÓ HAI NHIỆT ĐỘ MÀU, VÀ CẢNH NÀY MỚI CÓ MỘT.**
+  // Đây là bản sửa GỐC cho thứ Đàm gọi là "vẫn giống prototype", và nó được tìm ra bằng phép đo
+  // chứ không bằng cảm giác. Đo trên ảnh chụp thật (kỷ 11, 15 giờ):
+  //     trời góc màu 38 · đất nắng góc màu 40 · ĐẤT TRONG BÓNG góc màu 40
+  // Ba thứ đó CÙNG MỘT GÓC MÀU. Cả khung hình chỉ còn một sắc nâu-cam, khác nhau mỗi độ sáng —
+  // đó đúng là định nghĩa của một bức ảnh đơn sắc, và không một chi tiết hình học nào cứu được.
+  //
+  // Thủ phạm KHÔNG phải bảng màu. Đo tiếp thì đèn bán cầu đang mang đúng màu lam trời cần có
+  // (`#b9c6dd`, góc màu 218) — **nhưng cường độ của nó là 0,10 trong khi nắng là 2,15**, tức
+  // **tỉ lệ 9:1**, cộng thêm 0,12 môi trường TRUNG TÍNH. Ánh lam ấy có tồn tại; nó chỉ chiếm 4%
+  // tổng sáng nên không ai nhìn thấy bao giờ. Ngoài đời, ánh trời trên một mặt phẳng ngang bằng
+  // khoảng **1/5 nắng trực tiếp** — tức đúng tầm 5:1. Ở 9:1 thì vùng khuất nắng không còn được
+  // trời rọi vào nữa, nên nó tụt xuống thành một mảng ĐEN thay vì một mảng LAM.
+  //
+  // ⇒ Và đây là chỗ phải nói cho sòng phẳng: con số 0,10 ấy do **chính Phase 7A** đặt, với lý lẽ
+  // "môi trường là đèn nền thứ ba nên phải hạ hai đèn cũ". Nhưng ghi chú ngay phía trên đã tự thú
+  // rằng lý lẽ đó **đo ra không đúng** — thủ phạm thật lúc ấy là `envMapIntensity` chưa được nối,
+  // môi trường đang rọi ở mức 1,0. Bản vá đúng (gắn `envMap` vào từng vật liệu) đã tự giải quyết
+  // việc đó; phần hạ đèn bán cầu là **thiệt hại kèm theo của một giả thuyết đã bị bác**, và nó ở
+  // lại thêm nhiều phase. Cùng hình dạng với ADR-019: một kết luận hết đúng vì tiền đề của nó bị
+  // gỡ, mà không ai quay lại xem.
+  //
+  // ⚠️ VÌ SAO DỒN VÀO BÁN CẦU CHỨ KHÔNG PHẢI `AmbientLight`. `AmbientLight` rọi ĐỀU tuyệt đối —
+  // nó cộng đúng một hằng số vào mọi mặt, mang **thông tin bằng 0** về không gian, và đó chính là
+  // thứ đã tạo ra thất bại "pastel như sữa" mà dự án đã bác một lần. Đèn bán cầu thì trên là trời
+  // lam, dưới là đất ấm: nó nâng vùng tối LÊN mà vẫn cho mỗi mặt của khối một sắc khác, nên hình
+  // khối càng rõ chứ không nhoè đi. Vì vậy ambient tụt gần về 0 và toàn bộ phần nâng dồn vào bán
+  // cầu — **tổng sáng vùng tối tăng, mà lượng ánh sáng KHÔNG mang thông tin thì giảm.**
+  //
+  // ⚠️ CHIAROSCURO LÀ KHOẢNG CÁCH, KHÔNG PHẢI "TỐI ĐI" (luật cũ, vẫn áp dụng): nâng sàn mà giữ
+  // nguyên trần thì khoảng cách hẹp lại. Nên nắng GIỮ NGUYÊN 2,15 — mục tiêu là vùng tối chuyển
+  // từ ĐEN sang LAM, không phải cả ảnh sáng đều lên.
   const hemisphere = new HemisphereLight(
     palette.lights?.skyDome ?? palette.sky,
     palette.lights?.bounce ?? palette.ground,
-    (palette.isDark ? 0.34 : 0.10) * fillEnergy,
+    (palette.isDark ? 0.50 : 0.34) * fillEnergy,
   );
   scene.add(hemisphere);
 
   const ambient = new AmbientLight(palette.lights?.bounce ?? palette.sky,
-    (palette.isDark ? 0.10 : 0.02) * fillEnergy);
+    (palette.isDark ? 0.05 : 0.03) * fillEnergy);
   scene.add(ambient);
 
   const sun = new DirectionalLight(palette.lights?.sun ?? palette.sun,

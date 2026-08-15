@@ -6,7 +6,19 @@
 > chọn: `ARCHITECTURE_DECISIONS.md`. Nợ kỹ thuật: `TECH_DEBT.md`. Migration: `MIGRATION.md`. Tóm
 > tắt theo mốc: `CHANGELOG.md`.
 > **NGUYÊN TẮC ƯU TIÊN SỐ 1:** (1) mọi phiên AI phải đọc file này + `CLAUDE.md` + các file liên quan TRƯỚC khi làm; (2) sau MỌI cập nhật dù nhỏ, phải cập nhật ngay file này + `CLAUDE.md` + các file liên quan khác.
-> Cập nhật lần cuối: **2026-08-15** — **Phase 7D**: **MẶT ĐƯỜNG THEO THỜI ĐẠI, VÀ CON ĐƯỜNG TÀNG
+> Cập nhật lần cuối: **2026-08-15** — **Phase 8A**: **TƯỜNG THÔI PHẲNG.** Đàm ra chỉ thị mới, bác
+> thẳng cách làm cũ: *"không coi các thay đổi palette, màu đường, terrain hoặc thêm vài nhà hiện tại
+> là đã hoàn thành Visual Foundation"* — thành phố vẫn *"quá pixel, hình hộp, low-poly, vật liệu
+> phẳng"*. Audit đo ra anh đúng theo nghĩa đen: nhà dân nhỏ nhất là **12 khối, trong đó thân nhà
+> đúng MỘT cái hộp**, và cả cảnh chỉ dùng **5–23%** ngân sách tam giác. Nay mỗi mảng nhà có chân
+> tường · gờ mái · ≤3 gờ tầng, mỗi ô cửa có bệ + lanh tô. Nhà dân nhỏ 12 → **17 khối**; kỷ nặng
+> nhất **23% → 41%** trần tam giác. **650 bài test**, lint sạch, build xanh, không đụng state.
+> Xem **ADR-017**.
+> ⚠️ **CÒN LẠI, ĐÃ NÓI THẲNG VỚI ĐÀM**: mặt tường vẫn là mảng lớn và **mọi cạnh vẫn sắc như dao** —
+> nguyên nhân gốc (1) trong ba nguyên nhân audit tìm ra, nằm ở tầng `geometryFactory.js` nên tách
+> sang **Phase 8B** (vát cạnh) để commit lùi lại được độc lập.
+>
+> **(Phase 7D, ngay trước đó)** **MẶT ĐƯỜNG THEO THỜI ĐẠI, VÀ CON ĐƯỜNG TÀNG
 > HÌNH BAN ĐÊM.** Bước "Đường xá" trong thứ tự Đàm chốt. Trước bản này mặt đường của cả 15 kỷ là
 > đúng MỘT dòng hằng số — đường mòn thời đồ đá và đại lộ Dubai là *cùng một mặt phẳng cùng một
 > màu*. Nay 15 kỷ khai `roadMaterial` + `roadColor` (mỗi giá trị kèm một vật liệu CÓ THẬT), và mặt
@@ -518,6 +530,45 @@
 
 ## 🗒️ Nhật ký cập nhật
 > Mỗi lần xong việc đáng kể, thêm 1 dòng vào ĐẦU danh sách.
+
+- **2026-08-15 (Phase 8A — tường thôi phẳng)** — **650 bài test** (646 → 650), lint sạch, build
+  xanh, **không đụng state/schema**. Đàm ra chỉ thị mới và nó bác thẳng cách làm cũ: *"không coi các
+  thay đổi palette, màu đường, terrain hoặc thêm vài nhà hiện tại là đã hoàn thành Visual
+  Foundation"*; thành phố vẫn *"quá pixel, hình hộp, low-poly, vật liệu phẳng"* và *"nhà không được
+  chỉ gồm: box + roof + vài ô cửa"*.
+  - **Audit đo ra Đàm đúng theo nghĩa đen.** Nhà dân nhỏ nhất (kỷ 7): **12 khối**, cấu tạo
+    `wall:1 stone:1 glass:8 dark:1 roof:1` — thân nhà đúng MỘT cái hộp. Kỳ quan kỷ 7 Lv3: 134 khối.
+    Và con số đáng xấu hổ hơn: cả cảnh chỉ dùng **5% (kỷ 1) – 23% (kỷ 7)** trần 60.000 tam giác.
+    Tức nhiều phase liền đã tiết kiệm tam giác ở nơi KHÔNG cần tiết kiệm, rồi đi chỉnh màu để bù
+    cho cảm giác phẳng — chữa triệu chứng của một bệnh do chính mình gây ra.
+  - **Ba nguyên nhân gốc đặt tên được**: (1) cả hệ thống chỉ có ĐÚNG HAI hình cơ bản (`prism` và
+    `gable`), không có vát cạnh, nên mọi cạnh là góc 90° trần trụi; (2) cửa sổ **THÒ RA** khỏi
+    tường 0,035 — mắt đọc ra "miếng dán", không đọc ra "cái lỗ"; (3) một mảng tường là một hình chữ
+    nhật tô một màu, không có gì cắt ngang.
+  - **Đã sửa (2) và (3)**: mỗi mảng nhà nay có **chân tường** · **gờ mái** · **≤3 gờ tầng**, mỗi ô
+    cửa có **bệ + lanh tô** thò ra xa hơn chính ô kính. Ba mức thò ra bắt buộc theo thứ tự
+    `gờ mái (0,075) > chân tường (0,055) > gờ tầng (0,028)` — viết thành assert vì đảo bất kỳ dấu
+    nào cũng hỏng trong im lặng. Cửa **vòm** cố ý KHÔNG có lanh tô (cái vòm chính là lanh tô); băng
+    ngăn tầng (spandrel) cho tường kính `curtain`/`neon`.
+  - **Giá phải trả, đo chứ không đoán**: nhà dân nhỏ 12 → **17 khối** (172 → 232 tam giác); kỷ nặng
+    nhất **13.556 → 24.532 tam giác, 23% → 41%** trần. Vẫn còn hơn nửa ngân sách. Xem **ADR-017**
+    để biết vì sao chọn hình khối thật thay vì bản đồ pháp tuyến (không đổ bóng thật, lộ ngay khi
+    camera xoay — mà camera ở đây xoay được) hay kẻ đường bằng màu (chữa triệu chứng).
+  - ⚠️ **PHÉP THỬ NGƯỢC TỰ NÓ HỎNG — suýt cấp giấy chứng nhận giả cho hai bài test.** Để thử ngược
+    bài "nhà phải có chân tường", tôi gỡ khối bằng `parts.push(prism({…})) && 0`. `diff` báo 2 dòng
+    đổi (đúng luật Phase 7A), test vẫn XANH, và tôi suýt kết luận *"bài test này vô dụng"*. Sự thật:
+    `&& 0` chỉ vứt **giá trị trả về** của `push`, khối thì **vẫn được đẩy vào danh sách** — sửa file
+    mà không sửa hành vi. Gỡ thật bằng `[].push(…)` thì cả hai bài đỏ ngay. ⇒ Bài học mới ở
+    `CLAUDE.md`: **`diff` chứng minh FILE đổi, không chứng minh HÀNH VI đổi.**
+  - ⚠️ **Và phép ĐO cũng nói dối một lần nữa (lần thứ 18)**: bảng đếm gờ tầng đầu tiên tìm mảng nhà
+    qua `role === 'wall'`, rồi in ra rất thuyết phục rằng *"thành luỹ không có gờ tầng nào ở cả 15
+    kỷ"*. Sai: nguyên mẫu phòng thủ khai `role:'stone'`, xưởng khai `role:'wood'` — chúng **tàng
+    hình với phép đo** chứ không thiếu gờ. Đo lại đúng: thành luỹ có **15 dải**.
+  - **Nhìn ảnh chụp (theo đúng yêu cầu của Đàm)**: cận cảnh kỷ 7 — bệ cửa sổ nay hắt bóng thật, gờ
+    mái và gờ tầng đọc ra rõ, tháp chuông có nhịp ngang thay vì một cột trơn. **Nhưng vẫn thành
+    thật**: mặt tường vẫn là mảng lớn và **mọi cạnh vẫn sắc như dao** — đó là nguyên nhân gốc (1),
+    nằm ở tầng `geometryFactory.js` (three.js) nên tách sang **Phase 8B** để mỗi commit lùi lại
+    được độc lập.
 
 - **2026-08-15 (Phase 7D — mặt đường theo thời đại)** — **646 bài test** (640 → 646), lint sạch,
   build xanh. Yêu cầu của Đàm nêu đích danh bốn chặng: *"đất/đá cổ đại, ngõ đá trung cổ, đường công

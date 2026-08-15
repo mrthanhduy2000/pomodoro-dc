@@ -11,6 +11,46 @@
 
 ---
 
+## ADR-017 — Chiều sâu mặt tường dựng bằng HÌNH KHỐI THẬT, không bằng bản đồ pháp tuyến
+
+- **Ngày**: 2026-08-15 (Phase 8A)
+- **Bối cảnh**: Đàm nhìn ảnh cận cảnh rồi nói thành phố *"quá pixel, hình hộp, low-poly, vật liệu
+  phẳng"*. Đo ra thì anh đúng theo nghĩa đen: nhà dân nhỏ nhất gồm **12 khối, trong đó thân nhà
+  đúng MỘT cái hộp** (`wall:1`) + 1 mái + 8 mảnh kính. Cả cảnh chỉ dùng **5% (kỷ 1) đến 23% (kỷ 7)**
+  ngân sách tam giác.
+- **Vấn đề**: mặt tường không có gì cắt ngang thì mắt đọc ra một hình chữ nhật tô màu, không đọc ra
+  một khối đặc. Thêm vào đó, cửa sổ đang **THÒ RA** khỏi tường 0,035 — một ô kính nhô lên trên mặt
+  tường thì mắt đọc ra "miếng dán", không đọc ra "cái lỗ".
+- **Phương án cân nhắc**:
+  1. **Bản đồ pháp tuyến / bản đồ nổi (normal/bump map)** — rẻ về tam giác, là cách ngành game hay
+     dùng để "giả" chiều sâu trên mặt phẳng.
+  2. **Kẻ đường bằng MÀU** (vẽ dải sẫm lên đỉnh tường qua màu đỉnh) — rẻ nhất, không thêm khối nào.
+  3. **Dựng khối thật**: chân tường, gờ mái, gờ tầng, bệ và lanh tô cửa sổ.
+- **Lý do loại bỏ**:
+  - (1) thêm ảnh chụp (texture) vào một dự án hiện **không có một tấm ảnh nào** — mọi màu đang sinh
+    ra từ đỉnh hình học. Nó kéo theo cả một hệ thống mới: tải ảnh, bộ nhớ đệm ảnh, tiền tải, tỉ lệ
+    UV cho từng khối cỡ khác nhau. Và bản đồ pháp tuyến **không đổ bóng thật** — nó chỉ lừa được
+    ánh sáng khuếch tán, nên đúng ở góc nhìn thẳng và lộ ngay khi camera xoay, mà camera ở đây thì
+    xoay được. Đây cũng đúng thứ Đàm gọi tên là *"texture/chi tiết giả tạo"*.
+  - (2) vi phạm thẳng bài học đã trả giá nhiều lần trong dự án: **đổi màu để bù cho cảm giác phẳng
+    là chữa triệu chứng**. Một dải sẫm không có bóng, không đổi theo hướng mặt trời, và biến mất
+    hoàn toàn lúc đêm.
+  - Cả hai đều tiết kiệm một thứ **đang thừa 4–5 lần**. Tiết kiệm tam giác ở nơi không cần tiết
+    kiệm rồi đi chỉnh màu để bù — đó chính là cái bệnh, không phải cách chữa.
+- **Giải pháp chọn**: phương án (3). Năm khối mới cho mỗi mảng nhà (chân tường · gờ mái · ≤3 gờ
+  tầng · bệ cửa sổ · lanh tô), tất cả sinh ra ở tầng **engine thuần** `buildingSpec.js` dưới dạng
+  `PartSpec` như mọi khối khác — không có đường đi mới, không có loại vật liệu mới, không có ảnh.
+- **Trade-off**: nhà dân nhỏ 12 → 17 khối (172 → 232 tam giác); kỷ nặng nhất 13.556 → 24.532 tam
+  giác, tức **23% → 41%** trần 60.000. Đắt hơn hẳn, nhưng vẫn còn hơn một nửa ngân sách; và đây là
+  khoản chi ĐÚNG CHỖ — nó mua bóng đổ thật, đổi theo giờ trong ngày, đúng ở mọi góc camera.
+- **Ảnh hưởng**: mọi công trình ở mọi kỷ, cả bảo tàng. Hình khối đổi ⇒ thành phố cũ trong bảo tàng
+  cũng hiện theo bộ khối mới. **Điều này KHÔNG vi phạm ADR-007** (bảo tàng bất động): ADR-007 khoá
+  *vị trí và danh tính* công trình, không khoá cách vẽ chúng — y như đổi bảng màu ở Phase 3N/6B.
+- **Điều kiện xem lại**: nếu cổng hiệu năng iPhone (TECH_DEBT #23/#26) đo ra không đạt, chỗ cắt đầu
+  tiên là **gờ tầng** (nhiều nhất, nhỏ nhất, dễ bỏ nhất) chứ không phải chân tường/gờ mái.
+
+---
+
 ## ADR-016 — Mặt đường phát biểu bằng KHOẢNG CÁCH TỚI MẶT ĐẤT, không bằng một độ sáng tuyệt đối
 
 - **Ngày**: 2026-08-15 (Phase 7D)

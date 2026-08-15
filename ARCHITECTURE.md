@@ -318,6 +318,18 @@ dáng giữa hai lần mở app — mở rộng ADR-007 từ vị trí sang hìn
 `BufferGeometry`, màu đi qua thuộc tính màu ĐỈNH chứ không qua material. Nhờ vậy "mỗi công trình
 một hình dáng riêng" tốn **5–7 lệnh vẽ** cho cả thành phố, không phải 750.
 
+**KHỐI KIẾN TRÚC — vì sao chiều sâu mặt tường cũng nằm ở tầng THUẦN (2026-08-15, Phase 8A)**: một
+mảng tường không có gì cắt ngang thì mắt đọc ra một hình chữ nhật tô màu, không đọc ra một khối
+đặc. Trước Phase 8A, thân một căn nhà dân đúng là **MỘT** khối hộp (`wall:1`), và cả cảnh chỉ dùng
+5–23% ngân sách tam giác — tức đang tiết kiệm ở nơi thừa gấp 4–5 lần, rồi đi chỉnh màu để bù. Nay
+`buildingSpec.js` phát ra thêm bốn loại khối cho mỗi mảng nhà: **chân tường · gờ mái · ≤3 gờ tầng ·
+bệ + lanh tô cửa sổ**, tất cả vẫn là `PartSpec` đi qua đúng chuỗi cũ — **không có đường dẫn mới,
+không ảnh chụp (texture), không vật liệu mới, không thêm lệnh vẽ**. Ba mức thò ra bắt buộc theo thứ
+tự `gờ mái > chân tường > gờ tầng`, và bệ cửa sổ phải thò xa hơn chính ô kính: đó là các QUAN HỆ
+(nếu gờ thò ít hơn thứ dưới nó thì nó mất bóng và thành đường kẻ vô nghĩa), nên chúng được khoá
+bằng assert chứ không để nằm rời như bốn con số. Vì sao chọn hình khối thật thay vì bản đồ pháp
+tuyến: **ADR-017**. Giá: kỷ nặng nhất 23% → **41%** trần tam giác.
+
 **BỀ MẶT là một trục ĐỘC LẬP với màu (2026-08-14, Phase 7A)** — và đây là lớp cuối cùng của chuỗi
 trên. Trước Phase 7A cả thành phố dùng đúng **một** `MeshLambertMaterial`. Lambert thuần khuếch
 tán: không có số hạng phản xạ gương, nên **về mặt toán học mọi bề mặt là cùng một bề mặt**, chỉ

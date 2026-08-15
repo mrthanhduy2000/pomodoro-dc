@@ -21,8 +21,65 @@ import { emitSignature } from './signature';
 
 /** Bề dày mảng tường phụ / gờ / diềm. Đủ để bắt sáng, đủ mỏng để không ăn vào khối chính. */
 const TRIM_THICKNESS = 0.055;
-/** Cửa sổ nhô ra khỏi mặt tường một chút — chính vệt lồi này tạo bóng đổ nhỏ làm mặt tiền có nhịp. */
-const WINDOW_RELIEF = 0.035;
+/**
+ * Cửa sổ nhô ra khỏi mặt tường một chút — chính vệt lồi này tạo bóng đổ nhỏ làm mặt tiền có nhịp.
+ * ⚠️ XUẤT RA vì `SILL_RELIEF` phải LỚN HƠN nó, và luật đó được khoá bằng test. Xem `SILL_RELIEF`.
+ */
+export const WINDOW_RELIEF = 0.035;
+
+/**
+ * ─── KHỐI KIẾN TRÚC (Phase 8A) ───────────────────────────────────────────────
+ *
+ * ⚠️ VÌ SAO NHỮNG CON SỐ NÀY RA ĐỜI. Đàm nhìn ảnh cận cảnh và nói thành phố *"quá pixel, hình hộp,
+ * vật liệu phẳng"*. Đo ra thì anh đúng đến mức khó chối: **nhà dân là 12 khối, trong đó thân nhà
+ * đúng MỘT cái hộp** (`wall:1`), cộng một khối mái và 8 mảnh kính. Đúng nghĩa đen "cube + mái".
+ *
+ * Nhưng con số thứ hai mới là con số đáng xấu hổ: cả cảnh dùng **5% (kỷ 1) đến 23% (kỷ 7)** ngân
+ * sách tam giác. Tức là suốt nhiều phase, chỗ này tiết kiệm tam giác ở một nơi KHÔNG cần tiết kiệm,
+ * rồi đi chỉnh màu để bù cho cảm giác phẳng — chữa triệu chứng của một bệnh do chính mình gây ra.
+ *
+ * Hai thứ mắt người dùng để đọc ra "đây là một khối đặc" chứ không phải "một hình chữ nhật tô màu":
+ *   1. **Đường ngang cắt mặt tường.** Một mảng tường cao 2 đơn vị không có gì trên đó thì đọc ra
+ *      như bìa các-tông. Chân tường + gờ mái + gờ tầng chia nó thành các dải có tỉ lệ.
+ *   2. **Bóng do CHÍNH công trình đổ lên chính nó.** Muốn có bóng thì phải có thứ THÒ RA. Bệ cửa
+ *      sổ thò xa hơn ô kính nên nó hắt một vệt tối xuống mặt tường ngay dưới nó — đó là chi tiết
+ *      rẻ nhất trong cả file này mà lại đọc ra rõ nhất.
+ *
+ * ⚠️ VÀ ĐÂY LÀ LÝ DO CỬA SỔ CŨ TRÔNG NHƯ MIẾNG DÁN: chúng **thò RA** khỏi tường 0,035 chứ không
+ * lõm vào. Một ô kính nhô lên trên mặt tường thì mắt đọc ra "cái nhãn dán", không đọc ra "cái lỗ".
+ * Không sửa được bằng cách cho nó lõm vào (thân nhà là khối ĐẶC, lõm vào là biến mất), nên cách
+ * đúng là dựng KHUNG quanh nó thò ra XA HƠN — mắt suy ra chiều sâu từ bóng của khung, y hệt cách
+ * một bức phù điêu gợi ra chiều sâu trên một mặt phẳng.
+ */
+
+/**
+ * ⚠️ BỐN CON SỐ DƯỚI ĐÂY XUẤT RA KHÔNG PHẢI ĐỂ AI DÙNG LẠI — chúng xuất ra vì **quan hệ thứ tự
+ * giữa chúng mới là cái luật**, và bài test phải hỏi chính chúng chứ không được chép lại giá trị
+ * (đúng bài học "một luật một công thức"). Thứ tự bắt buộc, đọc từ thò xa nhất tới ít nhất:
+ *
+ *     CORNICE_SPREAD  >  PLINTH_SPREAD  >  COURSE_SPREAD          và   SILL_RELIEF > WINDOW_RELIEF
+ *
+ * Đảo bất kỳ dấu nào trong đó là hỏng ngay, mà **không có gì đỏ lên**: nhà vẫn dựng được, chỉ là
+ * cái gờ mất bóng và mặt tường phẳng trở lại — đúng loại lỗi im lặng đã cắn ở Phase 7D.
+ */
+
+/** Chân tường thò ra bao nhiêu phần thân nhà (mỗi bên). Trước Phase 8A là 0,025 — quá mảnh để đọc. */
+export const PLINTH_SPREAD = 0.055;
+/** Chiều cao chân tường, tính theo phần chiều cao thân — nhà cao thì bệ cũng phải cao theo. */
+const PLINTH_HEIGHT = 0.055;
+/** Gờ mái (cornice) — dải ngang ngay dưới mái. Thò ra XA HƠN chân tường: nó phải hắt bóng xuống tường. */
+export const CORNICE_SPREAD = 0.075;
+const CORNICE_HEIGHT = 0.05;
+/** Gờ tầng (string course) — dải mảnh ở mỗi ranh giới tầng. Mảnh hơn hẳn hai cái trên. */
+export const COURSE_SPREAD = 0.028;
+const COURSE_HEIGHT = 0.022;
+/** Trần số dải gờ tầng mỗi mảng nhà. Tháp 8 tầng kẻ đủ 7 dải thì thành sọc ngựa vằn. */
+export const MAX_COURSES = 3;
+/** Bệ cửa sổ thò ra xa hơn ô kính — chênh lệch này CHÍNH LÀ thứ sinh ra vệt bóng. */
+export const SILL_RELIEF = 0.085;
+const SILL_HEIGHT = 0.035;
+/** Bệ/lanh tô rộng hơn ô kính mỗi bên bao nhiêu. */
+const SILL_OVERHANG = 0.035;
 
 /** Băm → số thực trong [0,1). Tất định tuyệt đối. */
 function unit(key) {
@@ -245,6 +302,18 @@ function emitWindows(out, { w, d, base, height, x, z }, style) {
           h: (height / stories) * (style.windows === 'neon' ? 0.16 : 0.42),
           sides: 4, role: 'glass',
         }));
+
+        // ⚠️ DẢI CHE SÀN (spandrel) — vế hiện đại của cái bệ cửa sổ ở nhánh dưới, và nó là thứ
+        // KHÁC hẳn chứ không phải bản rẻ tiền của cùng một chi tiết. Nhà kính không có bệ đá: cái
+        // ngăn giữa hai tầng kính là một dải nhôm/bê tông che mép sàn, chạy LIỀN hết mặt tiền.
+        // Nó thò ra xa hơn mặt kính nên vẫn sinh đúng vệt bóng cần có — cùng một nguyên lý, hai
+        // cách xây khác nhau, đúng như hai thời đại ấy thật sự khác nhau.
+        out.push(prism({
+          x: wallOffset.x, z: wallOffset.z, y: y - SILL_HEIGHT,
+          w: face.sideways ? SILL_RELIEF : face.span * 0.94,
+          d: face.sideways ? face.span * 0.94 : SILL_RELIEF,
+          h: SILL_HEIGHT, sides: 4, role: 'trim',
+        }));
       }
       continue;
     }
@@ -271,6 +340,33 @@ function emitWindows(out, { w, d, base, height, x, z }, style) {
           d: face.sideways ? ww : WINDOW_RELIEF,
           h: wh, sides: 4, role: 'glass',
         }));
+
+        // ── BỆ CỬA SỔ + LANH TÔ ────────────────────────────────────────────
+        // ⚠️ CHỈ Ở KỶ XÂY BẰNG ĐÁ/GẠCH, và đó không phải để tiết kiệm tam giác — đó là sự thật về
+        // kết cấu. Tường đá muốn có lỗ thì BẮT BUỘC phải có một thanh đá bắc ngang bên trên (lanh
+        // tô) để đỡ phần tường phía trên cái lỗ ấy; nhà kính hiện đại treo cả mặt tiền lên khung
+        // thép nên không có lanh tô, và cho nó lanh tô là dựng sai cách nhà đó đứng được.
+        // Kỷ `grid`/`curtain`/`neon` đi đường khác ở nhánh trên (dải ngang liền mạch).
+        const sillW = ww + SILL_OVERHANG * 2;
+        out.push(prism({
+          x: px, z: pz, y: y - SILL_HEIGHT,
+          w: face.sideways ? SILL_RELIEF : sillW,
+          d: face.sideways ? sillW : SILL_RELIEF,
+          h: SILL_HEIGHT, sides: 4, role: 'trim',
+        }));
+        // Lanh tô chỉ dựng khi ô cửa đủ cao để mắt còn tách được hai thanh — ô khe hẹp (`slit`)
+        // của kỷ phòng thủ vốn là một rãnh chém xuyên tường, nó KHÔNG có lanh tô lộ ra ngoài.
+        // ⚠️ VÀ KHÔNG DỰNG Ở KỶ CỬA VÒM: **vòm CHÍNH LÀ lanh tô**. Cả lý do vòm được phát minh ra
+        // là để bắc qua một ô cửa rộng hơn thứ mà một thanh đá thẳng chịu nổi. Chồng cả hai lên
+        // nhau vừa sai kết cấu vừa cắm hai khối vào đúng một chỗ (`y + wh`).
+        if (!isSlit && style.windows !== 'arch') {
+          out.push(prism({
+            x: px, z: pz, y: y + wh,
+            w: face.sideways ? SILL_RELIEF * 0.8 : sillW,
+            d: face.sideways ? sillW : SILL_RELIEF * 0.8,
+            h: SILL_HEIGHT * 0.8, sides: 4, role: 'trim',
+          }));
+        }
 
         // Cửa vòm: thêm nửa vòm phía trên. Chỉ ở kỷ có `arch` — đây là dấu hiệu nhận dạng
         // mạnh nhất của kiến trúc Phục Hưng / Tân cổ điển.
@@ -520,9 +616,20 @@ export function buildBuildingSpec({ bpId, era, type, rarity = 'common', level = 
       role: mass.role ?? 'wall',
     }));
 
-    // Gờ chân tường — đường ngang mảnh nơi nhà chạm đất. Thiếu nó, nhà trông như bị cắm vào đất.
+    // ── BA ĐƯỜNG NGANG CẮT MẶT TƯỜNG (Phase 8A) ─────────────────────────────
+    // Xem khối chú thích ở đầu file. Tóm tắt: một mảng tường không có gì trên đó đọc ra như bìa
+    // các-tông, và trước bản này thân nhà đúng là MỘT cái hộp trơn.
+    //
+    // ⚠️ BA CÁI NÀY THÒ RA BA MỨC KHÁC NHAU, VÀ THỨ TỰ ẤY KHÔNG ĐƯỢC ĐẢO. Gờ mái thò xa nhất
+    // (0,075) vì nhiệm vụ của nó là HẮT BÓNG xuống mặt tường — thò ít hơn chân tường thì nó không
+    // có bóng và thành một đường kẻ vô nghĩa. Gờ tầng mảnh nhất (0,028) vì nó lặp lại nhiều lần;
+    // để nó dày bằng hai cái kia thì mặt tường thành ra một chồng bánh kem.
+
+    // (1) Chân tường — nơi nhà chạm đất. Thiếu nó, nhà trông như bị CẮM xuống đất thay vì ĐỨNG trên.
     parts.push(prism({
-      x, z, y: base, w: w * 1.05, d: d * 1.05, h: TRIM_THICKNESS,
+      x, z, y: base,
+      w: w * (1 + PLINTH_SPREAD), d: d * (1 + PLINTH_SPREAD),
+      h: Math.max(TRIM_THICKNESS, height * PLINTH_HEIGHT),
       sides: style.bodySides, ry: jitterR, role: 'stone',
     }));
 
@@ -538,6 +645,35 @@ export function buildBuildingSpec({ bpId, era, type, rarity = 'common', level = 
       // từ ~12.500 xuống ~5.000 tam giác chỉ nhờ bỏ chi tiết này). Dáng thóp + mái nhọn của tháp
       // đã đủ để mắt nhận ra nó là tháp.
       if (!mass.tower) emitWindows(parts, { w, d, base, height, x, z }, style);
+
+      // (2) Gờ mái (cornice) — dải ngang ngay dưới mái, thò ra XA NHẤT trong ba đường.
+      // ⚠️ Đây là chỗ trống lớn nhất của bản cũ: khối `low` đã có gờ trên từ lâu (xem nhánh
+      // `else` bên dưới) còn thân nhà THẬT thì đi thẳng từ tường lên mái, không có gì phân cách.
+      // Ngoài đời không có toà nhà nào như vậy — chỗ tường gặp mái luôn có một đường bo, vì nếu
+      // không thì nước mưa chảy thẳng xuống mặt tường.
+      parts.push(prism({
+        x, z, y: Math.max(base, top - height * CORNICE_HEIGHT),
+        w: w * (1 + CORNICE_SPREAD), d: d * (1 + CORNICE_SPREAD),
+        h: Math.max(TRIM_THICKNESS, height * CORNICE_HEIGHT),
+        sides: style.bodySides, ry: jitterR, role: 'trim',
+      }));
+
+      // (3) Gờ tầng (string course) — một dải mảnh ở mỗi ranh giới tầng.
+      // ⚠️ CHỈ DỰNG TỪ TẦNG 2 TRỞ LÊN và tối đa 3 dải. Nhà một tầng không có ranh giới tầng nào để
+      // mà đánh dấu; còn tháp kính 8 tầng mà kẻ đủ 7 dải thì vừa tốn vừa thành sọc ngựa vằn.
+      // Cắt ở 3 là đủ để mắt đọc ra nhịp mà không đếm — trên cỡ hiển thị thật, dải thứ tư trở đi
+      // chỉ còn rộng ~2 điểm ảnh.
+      const stories = Math.max(1, Math.round(height / style.storyHeight));
+      const courses = Math.min(MAX_COURSES, stories - 1);
+      for (let s = 1; s <= courses; s += 1) {
+        parts.push(prism({
+          x, z, y: base + (height * s) / stories,
+          w: w * (1 + COURSE_SPREAD), d: d * (1 + COURSE_SPREAD),
+          h: Math.max(0.012, height * COURSE_HEIGHT),
+          sides: style.bodySides, ry: jitterR, role: 'trim',
+        }));
+      }
+
       emitRoof(parts, { w, d, top, x, z }, style, ctx);
     } else {
       // Khối thấp (sân, bệ, tường bao): chỉ có gờ trên, không lợp mái.

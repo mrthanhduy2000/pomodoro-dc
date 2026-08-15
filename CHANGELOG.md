@@ -12,6 +12,29 @@
 
 ---
 
+## 2026-08-15 — Tường thôi phẳng: chân tường, gờ mái, gờ tầng, bệ cửa sổ (Phase 8A)
+
+**Mục đích.** Đàm ra chỉ thị mới, và nó bác thẳng cách làm cũ: *"không coi các thay đổi palette,
+màu đường, terrain hoặc thêm vài nhà hiện tại là đã hoàn thành Visual Foundation"* — thành phố vẫn
+*"quá pixel, hình hộp, low-poly, vật liệu phẳng"*, và *"nhà không được chỉ gồm: box + roof + vài ô
+cửa"*. Audit đo ra anh đúng theo nghĩa đen: nhà dân nhỏ nhất là **12 khối, trong đó thân nhà đúng
+MỘT cái hộp**; cả cảnh chỉ dùng **5–23%** ngân sách tam giác.
+
+**Phạm vi.** `buildingSpec.js` (engine thuần): mỗi mảng nhà nay có **chân tường** (nơi chạm đất),
+**gờ mái** (dải ngang dưới mái, thò ra xa nhất để hắt bóng xuống tường), **≤3 gờ tầng**, và mỗi ô
+cửa sổ có **bệ + lanh tô** thò ra xa hơn chính ô kính. Ba mức thò ra bắt buộc theo thứ tự
+`gờ mái > chân tường > gờ tầng`; cửa **vòm** cố ý không có lanh tô (cái vòm CHÍNH LÀ lanh tô).
+
+**Ảnh hưởng.** Nhà dân nhỏ 12 → **17 khối** (172 → 232 tam giác); kỷ nặng nhất **23% → 41%** trần
+tam giác. Không thêm ảnh chụp (texture), không thêm vật liệu, không thêm lệnh vẽ, không đụng
+state/schema. **650 bài test** (+4), lint sạch, build xanh.
+
+**Tương thích.** Bảo tàng hiện lại bằng bộ khối mới — không vi phạm ADR-007 (khoá *vị trí và danh
+tính*, không khoá cách vẽ). Xem **ADR-017** để biết vì sao chọn hình khối thật thay vì bản đồ pháp
+tuyến hay kẻ đường bằng màu.
+
+---
+
 ## 2026-08-15 — Mặt đường theo thời đại, và con đường tàng hình ban đêm (Phase 7D)
 
 **Mục đích.** Bước "Đường xá" trong thứ tự Đàm đã chốt. Yêu cầu nêu đích danh: *"hệ thống đường phải

@@ -28,8 +28,14 @@ import {
   describeBudget,
   specTriangles,
 } from './budget.js';
+import {
+  CORNICE_SPREAD, PLINTH_SPREAD, COURSE_SPREAD, MAX_COURSES, SILL_RELIEF, WINDOW_RELIEF,
+} from './buildingSpec.js';
 
 const ROLE_SET = new Set(PART_ROLES);
+const ERAS = Object.keys(ERA_STYLES).map(Number).sort((a, b) => a - b);
+/** So sánh số thực do nhân/chia sinh ra. Đòi bằng tuyệt đối là canh phép làm tròn, không canh luật. */
+const gần = (a, b) => Math.abs(a - b) < 1e-9;
 
 /** Mọi bản vẽ có thật, kèm đủ ba trục — dùng lại cho gần hết bài test bên dưới. */
 const ALL_BLUEPRINTS = Object.entries(BLUEPRINT_CATALOG).flatMap(([eraKey, list]) =>
@@ -625,4 +631,147 @@ test('BỀ NGANG: không công trình nào phình ra quá khu đất của nó (
       + '— một thay đổi vừa rồi làm công trình phình thêm; xem TECH_DEBT #21 trước khi nới số này');
   }
   console.log(`   [bề ngang] rộng nhất: ${worst.bpId} kỷ ${worst.era} — ${worst.span.toFixed(3)} / ${SPAN_RATCHET} ô`);
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// KHỐI KIẾN TRÚC (Phase 8A) — tường thôi là một mảng phẳng
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Cắt lấy một công trình có ĐÚNG MỘT mảng thân, rồi nhận diện từng đường ngang bằng BỀ NGANG của
+ * nó — chân tường là thân nở thêm `PLINTH_SPREAD`, gờ mái là thân nở thêm `CORNICE_SPREAD`…
+ *
+ * ⚠️ VÌ SAO PHẢI NHẬN DIỆN KIỂU NÀY chứ không đếm theo `role`: chân tường mang `role:'stone'`,
+ * mà `stone` cũng là vai của tường bao sân ở nguyên mẫu kinh tế; gờ mái mang `role:'trim'`, mà
+ * `trim` cũng là vai của bệ cửa sổ, lanh tô và gờ khối thấp. Hỏi `some(role === 'trim')` thì bài
+ * test xanh kể cả khi gờ mái đã bị gỡ sạch — đúng cái bẫy "assert 'có ít nhất một chỗ' là cái
+ * phễu, không phải hàng rào" ở Phase 7A.
+ */
+function mộtMảng(era, opts = {}) {
+  const spec = buildBuildingSpec({
+    bpId: 'bp_mot_mang', era, type: 'infrastructure', rarity: 'common', level: 1, ...opts,
+  });
+  const thân = spec.parts.filter((p) => !p.deco && p.role === 'wall');
+  assert.equal(thân.length, 1, `kỷ ${era}: hạ tầng common phải đúng 1 mảng thân`);
+  const rộng = (spread) => spec.parts.filter((p) => !p.deco && gần(p.w, thân[0].w * (1 + spread)));
+  return { spec, thân: thân[0], rộng };
+}
+
+test('THÂN NHÀ KHÔNG CÒN LÀ MỘT CÁI HỘP TRƠN — đủ 15 kỷ', () => {
+  // ⚠️ BÀI ĐỐI CHỨNG NHỐT SỐ ĐO CŨ. Trước Phase 8A, nhà dân nhỏ nhất là **12 khối, trong đó thân
+  // nhà đúng MỘT hộp** (`wall:1`) + 1 mái + 8 mảnh kính. Đàm nhìn ảnh cận cảnh rồi nói thành phố
+  // "quá pixel, hình hộp, vật liệu phẳng" — và số đo cho thấy anh đúng theo nghĩa đen.
+  // Không có gì đỏ lên nếu ba đường ngang này biến mất: nhà vẫn dựng được, vẫn đúng ngân sách,
+  // chỉ là mặt tường phẳng trở lại như bìa các-tông.
+  for (const era of ERAS) {
+    const { thân, rộng } = mộtMảng(era);
+    const chânTường = rộng(PLINTH_SPREAD);
+    const gờMái = rộng(CORNICE_SPREAD);
+    assert.equal(chânTường.length, 1, `kỷ ${era}: phải có đúng 1 chân tường`);
+    assert.equal(gờMái.length, 1, `kỷ ${era}: phải có đúng 1 gờ mái`);
+    // Và chúng phải nằm ĐÚNG hai đầu thân nhà — một cái gờ đặt lửng giữa tường thì vô nghĩa.
+    assert.ok(gần(chânTường[0].y, thân.y), `kỷ ${era}: chân tường không nằm ở chân thân nhà`);
+    assert.ok(gờMái[0].y + gờMái[0].h > thân.y + thân.h - 1e-9,
+      `kỷ ${era}: gờ mái không chạm tới đỉnh thân nhà`);
+  }
+});
+
+test('GỜ MÁI PHẢI THÒ RA XA HƠN CHÂN TƯỜNG — nếu không nó không có bóng để mà nhìn thấy', () => {
+  // ⚠️ Đây là luật QUAN HỆ, không phải hai con số rời — đúng bài học Phase 7D. Cả công dụng của
+  // gờ mái là hắt một vệt tối xuống mặt tường; thò ít hơn chân tường thì nó thành một đường kẻ
+  // vô nghĩa và cái tường lại phẳng như cũ. Viết thành assert để không ai "cân đối" hai số cho đẹp.
+  assert.ok(CORNICE_SPREAD > PLINTH_SPREAD,
+    `gờ mái (${CORNICE_SPREAD}) phải thò xa hơn chân tường (${PLINTH_SPREAD})`);
+  assert.ok(PLINTH_SPREAD > COURSE_SPREAD,
+    `chân tường (${PLINTH_SPREAD}) phải dày hơn gờ tầng (${COURSE_SPREAD})`);
+  // Và bệ cửa sổ phải thò xa hơn chính ô kính — cùng lý do, ở cỡ nhỏ hơn.
+  assert.ok(SILL_RELIEF > WINDOW_RELIEF,
+    `bệ cửa sổ (${SILL_RELIEF}) phải thò xa hơn ô kính (${WINDOW_RELIEF}), nếu không không có bóng`);
+});
+
+test('CỬA SỔ CÓ BỆ — và cửa VÒM thì không có lanh tô, vì vòm CHÍNH LÀ lanh tô', () => {
+  // Kỷ 7 (`arch`) và kỷ 10 (`grid`) là hai cách xây khác hẳn nhau; bài này canh rằng chúng ra hai
+  // kết quả khác nhau chứ không phải cùng một bộ chi tiết dán lên.
+  const đếm = (era, windows) => {
+    const spec = buildBuildingSpec({ bpId: `dw|${era}|3|4`, era, type: 'house', rarity: 'rare', level: 1 });
+    const glass = spec.parts.filter((p) => p.role === 'glass' && !p.deco).length;
+    const trim = spec.parts.filter((p) => p.role === 'trim' && !p.deco).length;
+    return { glass, trim, windows };
+  };
+  // Kỷ 7 dựng mỗi ô cửa THÀNH HAI khối kính (thân + nửa vòm) nên số kính gấp đôi số ô thật.
+  const vòm = đếm(7, 'arch');
+  assert.ok(vòm.glass > 0 && vòm.trim > 0, 'kỷ 7 phải có cả kính lẫn bệ cửa');
+
+  // ⚠️ Canh ĐÍCH DANH: không khối `trim` nào của kỷ vòm được nằm ĐÚNG đỉnh ô kính — đó sẽ là một
+  // lanh tô cắm vào giữa cái vòm. Hỏi tổng số khối thì không bắt được, vì gờ mái cũng là `trim`.
+  const spec7 = buildBuildingSpec({ bpId: 'dw|7|3|4', era: 7, type: 'house', rarity: 'rare', level: 1 });
+  const kính = spec7.parts.filter((p) => p.role === 'glass' && !p.deco);
+  const trims = spec7.parts.filter((p) => p.role === 'trim' && !p.deco);
+  for (const g of kính) {
+    const đỉnh = g.y + g.h;
+    const đè = trims.find((t) => Math.abs(t.y - đỉnh) < 1e-9
+      && Math.abs(t.x - g.x) < 1e-9 && Math.abs(t.z - g.z) < 1e-9);
+    assert.equal(đè, undefined,
+      `kỷ 7: có lanh tô cắm đúng đỉnh ô vòm tại (${g.x.toFixed(2)}, ${g.z.toFixed(2)})`);
+  }
+});
+
+/**
+ * Đếm gờ tầng của TỪNG mảng nhà, trả về mảng số đếm.
+ *
+ * ⚠️ NHẬN DIỆN BẰNG HÌNH HỌC, KHÔNG BẰNG `role` — và đây là một cái bẫy tôi đã sập đúng một lần
+ * trong lúc viết bài này. Phép đo đầu tiên hỏi `role === 'wall' || role === 'wall2'` rồi kết luận
+ * *"thành luỹ không có gờ tầng nào ở cả 15 kỷ"*. Sai: nguyên mẫu phòng thủ khai mảng nhà là
+ * `role:'stone'` (thành luỹ xây bằng đá) và xưởng khai `role:'wood'`, nên hai nguyên mẫu ấy **tàng
+ * hình với phép đo** chứ không phải thiếu gờ. Đo lại cho đúng thì thành luỹ có tới 15 dải.
+ * Lần thứ n công cụ đo nói dối; luật cũ vẫn đúng — **số đo nào gây bất ngờ thì kiểm CÔNG CỤ trước.**
+ *
+ * ⚠️ Phải khớp CẢ `x`/`z` chứ không chỉ `w`/`d`: hạ tầng epic có hai mảng phụ RỘNG BẰNG NHAU đặt
+ * đối xứng hai bên, nên khớp mỗi bề ngang thì mỗi mảng "nhận vơ" luôn gờ của mảng kia và số đếm
+ * nhân đôi — cái trần sẽ báo vượt trong khi mã hoàn toàn đúng.
+ */
+function gờTầngTheoMảng(spec) {
+  const kết = spec.parts.filter((p) => !p.deco);
+  return kết.map((mass) => kết.filter((p) => p !== mass
+    && gần(p.x, mass.x) && gần(p.z, mass.z)
+    && gần(p.w, mass.w * (1 + COURSE_SPREAD)) && gần(p.d, mass.d * (1 + COURSE_SPREAD))).length);
+}
+
+test('GỜ TẦNG MỌC THEO CHIỀU CAO THẬT, và không mảng nào quá trần', () => {
+  // Nhà một tầng không có ranh giới tầng nào để mà đánh dấu; tháp 8 tầng kẻ đủ 7 dải thì thành sọc
+  // ngựa vằn. Bài này canh CẢ HAI ĐẦU của cái luật.
+  //
+  // ⚠️ CỐ Ý KHÔNG chép lại công thức `Math.min(MAX_COURSES, stories - 1)` vào đây. Chép lại thì
+  // đổi trần từ 3 lên 5 mà bài test vẫn xanh, tức nó canh phép tính chứ không canh cái luật.
+  const TYPES = ['infrastructure', 'economy', 'defense', 'wonder', 'house', 'shop', 'workshop'];
+  let tổngKỷ1 = 0;
+  let tổngKỷ15 = 0;
+  let chạmTrần = 0;
+  for (const era of ERAS) {
+    for (const type of TYPES) {
+      const đếm = gờTầngTheoMảng(
+        buildBuildingSpec({ bpId: 'bp_go_tang', era, type, rarity: 'epic', level: 3 }),
+      );
+      const nhiềuNhất = Math.max(0, ...đếm);
+      assert.ok(nhiềuNhất <= MAX_COURSES,
+        `kỷ ${era}/${type}: một mảng nhà có ${nhiềuNhất} gờ tầng, vượt trần ${MAX_COURSES}`);
+      if (nhiềuNhất === MAX_COURSES) chạmTrần += 1;
+      const tổng = đếm.reduce((a, b) => a + b, 0);
+      if (era === 1) tổngKỷ1 += tổng;
+      if (era === 15) tổngKỷ15 += tổng;
+    }
+  }
+  // Bất đẳng thức ở trên vẫn xanh nếu KHÔNG có gờ tầng nào tồn tại (0 ≤ 3). Nên phải đòi thêm rằng
+  // cả hai đầu của luật đều THẬT SỰ xảy ra: lều kỷ 1 một tầng thì không có dải nào, còn kỷ 15 —
+  // tháp kính Dubai — thì phải có. Nhốt luôn số đo hiện tại: kỷ 1 = 0, kỷ 15 = 50.
+  assert.equal(tổngKỷ1, 0, `kỷ 1 toàn lều một tầng mà có ${tổngKỷ1} gờ tầng`);
+  assert.ok(tổngKỷ15 >= 20, `kỷ 15 chỉ có ${tổngKỷ15} gờ tầng — luật gần như không chạy`);
+  assert.ok(chạmTrần >= 1, 'không công trình nào chạm trần gờ tầng — cái trần chưa từng được kiểm');
+
+  // ⚠️ VÀ MỘT TRẦN CHO CHÍNH CÁI TRẦN. Ba assert trên đều ĐỌC `MAX_COURSES`, nên nâng hằng số ấy
+  // lên 8 thì cả ba di chuyển theo và bài test vẫn xanh — đã thử ngược và thấy đúng như vậy. Nhưng
+  // 8 dải chính là "sọc ngựa vằn" mà cả cái trần sinh ra để ngăn. Con số này khoá một QUYẾT ĐỊNH
+  // mỹ thuật có lý do đo được (trên cỡ hiển thị thật, dải thứ tư trở đi chỉ còn rộng ~2 điểm ảnh),
+  // không phải khoá một phép làm tròn — nên khoá nó là đúng việc.
+  assert.ok(MAX_COURSES <= 4, `trần gờ tầng ${MAX_COURSES} quá cao — mặt tường sẽ thành sọc ngựa vằn`);
 });

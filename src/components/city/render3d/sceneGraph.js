@@ -613,16 +613,27 @@ export function createCityScene({
   // tốn thêm lệnh vẽ nào — chúng đều đứng yên nên chẳng có lý do gì phải tách ra.
   const scatter = (layout.props ?? []).filter((prop) => prop.kind !== 'road');
   for (const prop of scatter) {
-    const { x, z } = cellToWorld(prop.x, prop.y, gridSize);
+    // ⚠️ CẢNH VẬT NAY LỆCH KHỎI TÂM Ô (Phase 8D) — và cái lệch ấy PHẢI đi vào cả hai phép tính
+    // dưới đây, không được chỉ một. Toạ độ ngang lấy `ox/oy` mà cao độ vẫn hỏi tâm ô thì cái cây
+    // đứng ở sườn dốc sẽ **lơ lửng giữa trời hoặc lún nửa thân xuống đất**, và không có gì đỏ lên:
+    // build xanh, test cũ xanh, chỉ có ảnh chụp là sai. Đây đúng cái bẫy "một luật nói ở hai chỗ"
+    // mà bảng `GROUND_ANCHORS` ở `sceneGraphWiring.test.js` sinh ra để canh.
+    const ux = prop.x + (prop.ox ?? 0);
+    const uy = prop.y + (prop.oy ?? 0);
+    const { x, z } = cellToWorld(ux, uy, gridSize);
     placements.push({
       // Cảnh vật nhỏ (cây, đá, đèn) chỉ chiếm một ô nên không cần móng — nó ngồi thẳng lên thềm.
-      x, z, y: terrain.heightAt(prop.x, prop.y),
+      // ⚠️ `surfaceHeightAt` (mặt đất LIÊN TỤC), KHÔNG phải `heightAt` (cao độ rời rạc của TÂM ô).
+      // Ở đúng tâm ô hai hàm cho cùng một số, nên bản cũ đúng; ở toạ độ lẻ thì chỉ `surfaceHeightAt`
+      // mới trả về đúng cao độ của tấm lưới mà mắt đang nhìn thấy.
+      x, z, y: terrain.surfaceHeightAt(ux, uy),
       // Xoay tự do — cây cối mà thẳng hàng theo lưới thì lộ ngay ra là máy đặt.
       ry: (prop.variant + prop.x * 0.7 + prop.y * 1.3) % (Math.PI * 2),
       spec: buildPropSpec({
         kind: prop.kind,
         era: layout.era,
         seed: `${layout.era}|${prop.kind}|${prop.x}|${prop.y}|${prop.variant}`,
+        detail: lowDetail ? 'low' : 'high',
       }),
     });
   }

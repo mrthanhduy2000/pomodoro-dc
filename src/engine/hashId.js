@@ -36,3 +36,38 @@ export function hashId(str) {
   }
   return hash >>> 0;                        // ép về không dấu
 }
+
+/**
+ * ⚠️ BA HÀM DƯỚI ĐÂY VỀ ĐÂY VÌ CHÚNG ĐÃ CÓ **BỐN BẢN SAO** (Phase 8D).
+ * `unit` được chép nguyên văn trong `propSpec.js`, `signature.js`, `residents.js` và
+ * `buildingSpec.js`; `signed` có hai bản. Bốn bản sao của một công thức là đúng thứ mà luật
+ * **Composition over Duplication** cấm, và ở đây nó nguy hiểm hơn vẻ ngoài: chúng là những hàm
+ * quyết định HÌNH DÁNG tất định của thành phố, nên một bản trôi khỏi ba bản kia (đổi `10000` thành
+ * `1000` cho "mịn hơn" chẳng hạn) sẽ làm một phần thành phố đổi hình vĩnh viễn trong khi phần còn
+ * lại đứng yên — và không có gì đỏ lên, vì mỗi bản vẫn tự nhất quán với chính nó.
+ *
+ * Đặt ở đây là đúng chỗ: chúng chỉ phụ thuộc `hashId`, không phụ thuộc gì khác, nên file lá này
+ * vẫn không có đường nào sinh ra vòng import (xem ghi chú dài phía trên).
+ */
+
+/** Băm → số thực trong [0, 1). Dùng cho mọi biến thể "trông ngẫu nhiên nhưng vĩnh viễn không đổi". */
+export function unit(key) {
+  return (hashId(key) % 10000) / 10000;
+}
+
+/** Băm → số thực trong [−1, 1). Dùng cho độ lệch hai chiều (lệch trái/phải, cao/thấp). */
+export function signed(key) {
+  return unit(key) * 2 - 1;
+}
+
+/**
+ * Băm → một chỉ số nguyên trong `[0, count)`. Dùng để CHỌN trong một danh sách.
+ *
+ * ⚠️ Không viết `Math.floor(unit(key) * count)`: `unit` đã cắt về 4 chữ số nên phép nhân rồi làm
+ * tròn ấy lệch tần suất ở những `count` không chia hết cho 10000. Chia dư thẳng trên số băm gốc
+ * mới cho phân bố đều.
+ */
+export function pickIndex(key, count) {
+  const n = Math.max(1, Math.floor(count) || 1);
+  return hashId(key) % n;
+}

@@ -137,7 +137,28 @@ function Scaffold({ item, palette }) {
   );
 }
 
-const PROP_SHAPES = { tree: Tree, rock: Rock, lamp: Lamp, water: Water, field: Field };
+/**
+ * Bụi cây (Phase 8D). Hai ba khối tròn sát đất, không có thân — đó là toàn bộ điều cần nói ở cỡ
+ * một ô isometric.
+ *
+ * ⚠️ PHẢI CÓ MẶT Ở ĐÂY, KHÔNG ĐƯỢC ĐỂ BỘ VẼ 2D LỜ ĐI. `CityTile` xử lý loại lạ bằng
+ * `if (!Shape) return null` — nghĩa là thêm một loại cảnh vật mới mà quên khai ở đây thì bản dự
+ * phòng 2D sẽ **âm thầm bỏ trống** đúng những ô ấy: không lỗi, không cảnh báo, chỉ là một thành
+ * phố thưa hơn thật. Bộ vẽ 2D tồn tại để làm lưới an toàn khi 3D không chạy được, mà một lưới an
+ * toàn kể một câu chuyện khác thì không còn là lưới an toàn.
+ */
+function Bush({ variant, palette }) {
+  const s = 4 + variant;
+  return (
+    <>
+      <ellipse cx={-s * 0.5} cy={-s * 0.5} rx={s * 0.9} ry={s * 0.7} fill={palette.wallLeft} />
+      <ellipse cx={s * 0.5} cy={-s * 0.4} rx={s * 0.8} ry={s * 0.6} fill={palette.roofTop} />
+      <ellipse cx={0} cy={-s * 0.9} rx={s * 0.7} ry={s * 0.55} fill={palette.roofTop} />
+    </>
+  );
+}
+
+const PROP_SHAPES = { tree: Tree, bush: Bush, rock: Rock, lamp: Lamp, water: Water, field: Field };
 
 // ─── CÔNG TRÌNH ──────────────────────────────────────────────────────────────
 

@@ -11,6 +11,85 @@
 
 ---
 
+## ADR-020 — Thảm thực vật có NGỮ PHÁP RIÊNG (bảng loài theo kỷ + thư viện hình khối), không phải mấy nhánh `if` trong bộ vẽ cảnh vật
+
+- **Ngày**: 2026-08-15 (Phase 8D)
+- **Bối cảnh**: Đàm yêu cầu *"thay thế toàn bộ visual language của cây và environment props, vì cây
+  cone + cylinder hiện là một trong những yếu tố khiến cảnh vẫn giống prototype"*, với đích rõ ràng:
+  *"nhìn vào phải nhận ra CÂY, không phải 'hình nón màu xanh trên một cái que'"*.
+- **Vấn đề**: hình dáng cây nằm trong ba nhánh `if` viết cứng giữa hàm `tree()` của `propSpec.js`
+  (`era >= 10` → một mẫu · `style.rough > 0.5` → mẫu hai · còn lại → mẫu ba). Đo được: **40 hạt
+  giống ra ĐÚNG MỘT cấu trúc khối** (hạt chỉ đổi được chiều cao, trong dải 1,32 lần), và **cả 15 kỷ
+  chỉ có 3 mẫu cây**. Đây KHÔNG phải lỗi mã — mã chạy đúng như viết. Đây là lỗi THIẾU KIẾN TRÚC:
+  nhà cửa từ Phase 3B đã có hẳn một ngữ pháp ba trục (kỷ × loại × độ hiếm) để thoát khỏi đúng cái
+  bẫy này; thảm thực vật chưa bao giờ được cho một ngữ pháp nào cả, nên hạt giống chỉ có chỗ để đổi
+  CON SỐ, không có chỗ để đổi HÌNH DẠNG.
+- **Phương án đã cân nhắc**:
+  1. *Thêm biến thể vào ba nhánh `if` sẵn có.* Rẻ nhất, nhưng đó chính là cách bốn phase trước đã
+     làm cho `eaves`, cho `storyHeight`, cho `roof` — và cả bốn lần bệnh gốc quay lại ngay khi số
+     đối tượng tăng lên. Chỉnh khéo một tham số bị trộn hai nghĩa thì chỉ đổi chỗ vấn đề.
+  2. *Nhập mô hình cây dựng sẵn (glTF).* Đẹp nhất, nhưng phá vỡ kỷ luật nền tảng: `src/engine/` là
+     tầng THUẦN, test được bằng `node --test` không cần DOM/WebGL; nhét tài nguyên nhị phân vào đó
+     là mở một loại phụ thuộc mới, cộng thêm dung lượng tải và một trần cache PWA phải trông coi.
+  3. *Tăng `sides` cho tán mượt hơn.* Đã bác ngay từ đầu bằng lý lẽ, và lý lẽ đó nay nằm ở đầu
+     `flora.js`: một khối lồi mượt hơn thì càng giống HÌNH HỌC hơn, không giống cây hơn.
+  4. **(CHỌN)** *Sao chép đúng kiến trúc nhà cửa cho cây*: một bảng tham số theo kỷ + một thư viện
+     hình khối + một bộ ghép mỏng.
+- **Giải pháp**: ba lớp, mỗi lớp một việc — `floraStyle.js` (bảng 15 kỷ: loài + trọng số + cỡ + mật
+  độ + tầng cây bụi + màu lá) · `flora.js` (7 hàm dựng hình, mỗi loài một bóng dáng) · `propSpec.js`
+  (chỉ còn ghép). Nguyên tắc chống-primitive nằm gọn trong một câu: **tán là NHIỀU THUỲ chồng lấn
+  lệch tâm, không phải MỘT khối lồi** — ba thuỳ tự sinh ra cả bốn thứ mà một khối lồi không thể có
+  (viền lồi lõm, mặt này đổ bóng lên mặt kia, xoay ra hình bóng khác, chỗ nối thân–tán bị che).
+- **Đánh đổi**: (a) tốn thêm ~132 tam giác/cây thay vì 44 — nhưng phần này đã được **trả đủ** bằng
+  trần phủ xanh (xem ADR-021), tổng cảnh chỉ +0,4%; (b) cây vẫn không NGHIÊNG được, vì `parts.js`
+  chỉ xoay quanh trục đứng — thêm một trục xoay sẽ chạm vào nhà máy hình học, phép đếm tam giác và
+  phép tính cạnh vát của cả 75 công trình, để đổi lấy một thứ gần như không đọc ra ở cỡ 40 điểm ảnh;
+  (c) 15 dòng bảng phải được ai đó nuôi — chống trôi bằng một bài test bắt mỗi dòng nhắc đúng
+  `country` mà `eraStyle.js` đã khai.
+- **Ảnh hưởng đo được**: **405 cấu trúc cây khác nhau** trên 15 kỷ (trước: 3) · 17–33 dáng trên mỗi
+  40 hạt của từng kỷ (trước: 1) · 100% cảnh vật di động được đã lệch khỏi tâm ô lưới (trước: 0%).
+- **Điều kiện xem lại**: nếu sau này `parts.js` có trục nghiêng (vì một lý do khác), quay lại cho
+  cành và tàu lá chĩa xiên — đó là thứ duy nhất còn thiếu để hình bóng cây thật sự tự nhiên.
+
+---
+
+## ADR-021 — Mật độ cây là một TỈ LỆ với đất còn trống, không phải một số cây tuyệt đối
+
+- **Ngày**: 2026-08-15 (Phase 8D)
+- **Bối cảnh**: Đàm yêu cầu *"không rải cây đều nhau trên grid; tạo cluster tự nhiên với khoảng
+  trống hợp lý"*. Phase 8D thêm cơ chế mọc thành lùm để làm vế đầu.
+- **Vấn đề**: cơ chế lùm chỉ có nghĩa khi CÒN CHỖ TRỐNG để mà tụ. Đếm thử một thành phố trưởng thành
+  (80 phiên): **10/15 kỷ có ĐÚNG 0 ô đất trống** — lưới 12×12 kín đặc. Ở trạng thái ấy mọi cơ chế
+  phân bố đều vô nghĩa, và cảnh quay về đúng cái "rải đều trên lưới" mà cả phase sinh ra để xoá.
+  Một nửa lỗi ấy do chính Phase 8D: trần cảnh vật vốn 34, tôi nâng lên 48 để mật độ theo kỷ có chỗ
+  khác nhau — nhưng nâng một trần TUYỆT ĐỐI trong một cái lưới hữu hạn thì thứ tăng thêm không phải
+  "mật độ", mà là "tỉ lệ lấp đầy", và nó tăng cho tới khi chạm trần cứng 144 ô.
+- **Phương án đã cân nhắc**:
+  1. *Hạ trần tuyệt đối về 34 như cũ.* Xoá được triệu chứng, nhưng cũng xoá luôn khả năng phân biệt
+     Singapore rậm với UAE thưa — tức trả lại một bài toán để lấy một bài toán khác.
+  2. *Trần phủ CỐ ĐỊNH (72% đất trống).* Đã làm, đã đo, và **đã bị số liệu bác**: kỷ 14 (mật độ
+     1,42 — rậm nhất) và kỷ 15 (0,66 — thưa nhất) ra **cùng 21 cảnh vật**, vì ở thành phố trưởng
+     thành nhà dân ăn hết đất nên cả hai chỉ còn 30 ô trống và cái trần chung đè bẹp cả hai đầu.
+  3. **(CHỌN)** *Trần phủ theo tỉ lệ, và chính TỈ LỆ ấy mang mật độ của kỷ.*
+- **Giải pháp**: `coverShare = clamp(0,55 × density, 0,28…0,80)`, rồi `budget ≤ freeGround ×
+  coverShare`. Giữ song song cả trần tuyệt đối cũ vì **chỗ thắt cổ chai đổi theo tuổi thành phố**:
+  lúc trẻ đất mênh mông nên trần tuyệt đối trói (nói "kỷ này bao nhiêu cây"), lúc đông đất hiếm nên
+  trần tỉ lệ trói (nói "chừa lại bao nhiêu đất"). Bỏ vế nào cũng có một quãng đời thành phố mất hẳn
+  mật độ theo kỷ.
+- **Đánh đổi**: hai cái trần cùng đọc một trường `density` — phải giải thích rõ tại chỗ, nếu không
+  phiên sau sẽ tưởng là trùng lặp rồi gộp lại và làm hỏng một trong hai quãng.
+- **Ảnh hưởng đo được**: mọi kỷ nay chừa **7–24 ô đất trần** (trước: 0 ở 10/15 kỷ) · kỷ 14 ra 23
+  cảnh vật còn kỷ 15 ra 10 (trước: 21 và 21) · và vì cảnh vật ít đi, **toàn bộ chi phí tam giác của
+  cây nhiều thuỳ được trả đủ**: trung bình 30.656 → 30.769 (+0,4%).
+- **Bài học chung**: đây là bài học *"một con số tuyệt đối không diễn đạt được một luật nói về QUAN
+  HỆ"* (Phase 7D, mặt đường) dưới một hình dạng mới. "Rậm hơn kỷ khác" là quan hệ giữa các kỷ; "còn
+  chừa đất trống" là quan hệ với chỗ đất còn lại. Một cái trần đếm-số-cây không nhìn thấy cái nào
+  trong hai thứ đó.
+- **Điều kiện xem lại**: nếu số nhà dân theo phiên đổi (Phase 7C), đo lại — chính nhà dân là thứ
+  ăn mất đất trống ở thành phố trưởng thành.
+
+---
+
 ## ADR-019 — Mặt đất là MỘT TẤM LƯỚI LIỀN, và điều đó ĐẢO NGƯỢC một nửa lập luận "phải là thềm bậc"
 
 - **Ngày**: 2026-08-15 (Phase 8C)

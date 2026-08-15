@@ -13,7 +13,9 @@
 > mà không được refactor triệt để, phải CHỦ ĐỘNG đề xuất mở một "Maintenance Sprint" (nêu rõ mục
 > tiêu/phạm vi/lợi ích/rủi ro/tiêu chí hoàn thành) thay vì tiếp tục cộng thêm tính năng mới.
 >
-> **Trạng thái ngưỡng hiện tại (2026-08-15, cập nhật sau Phase 8C)**: **1 mục Priority High**
+> **Trạng thái ngưỡng hiện tại (2026-08-15, cập nhật sau Phase 8D)**: thêm **#29** (Low — cọ nhìn
+> từ đúng trên xuống dẹt thành dấu "✳", do `parts.js` không nghiêng được khối; đã giảm nhẹ ở 8D,
+> ĐỪNG vá nếu chỉ vì cây cọ). Vẫn **1 mục Priority High**
 > (#14) → vẫn CHƯA đạt ngưỡng 8–10 mục để đề xuất Maintenance Sprint. Còn **3 mục Medium-High**
 > (#3, #13, và **#24**: 14/15 kỷ có công trình bị mép khung hình cắt, đã đo đủ, chờ Đàm chọn
 > hướng). **#28 đã ĐÓNG CẢ HAI PHẦN** — cạnh sắc ở Phase 8B, bàn cờ ô vuông ở Phase 8C.
@@ -1460,3 +1462,32 @@
 - **Blocking Conditions**: **chờ Đàm đo trên iPhone thật** (giống #23 — cùng một lần đo là đóng cả hai)
 - **Review Trigger**: trước khi bắt đầu bước "Living City"
 - **Owner**: Đàm (đo) → phiên AI kế tiếp (cắt nếu cần) · **Status**: Open
+
+---
+
+## #29 — Cọ nhìn từ ĐÚNG TRÊN XUỐNG vẫn dẹt thành dấu "✳", vì `parts.js` không nghiêng được khối
+
+- **Module**: `src/engine/city3d/flora.js` (`palm`) + `src/engine/city3d/parts.js` (`prism`), phát
+  hiện ở Phase 8D bằng ảnh chụp kỷ 14
+- **Priority**: Low
+- **Severity**: Low
+- **Impact**: `prism` chỉ xoay quanh TRỤC ĐỨNG (`ry`), không nghiêng được, nên tàu lá cọ là những
+  tấm NẰM NGANG toả tròn. Nhìn chéo từ bên (phần lớn các cây trên màn hình) thì đọc ra đúng là cây
+  cọ; nhưng những cây nằm gần đúng dưới camera thì cả vòng lá dẹt lại thành một dấu hoa thị phẳng.
+  Ảnh hưởng kỷ **2, 3, 6, 8, 14, 15** (những kỷ có `palm` trong bảng loài).
+- **Root Cause**: giới hạn có chủ đích của tầng hình học, ghi rõ ở đầu `flora.js` — thêm một trục
+  xoay vào `parts.js` sẽ kéo theo nhà máy hình học, phép đếm tam giác (`countTriangles`) và phép
+  tính cạnh vát, tức chạm vào nền móng của cả 75 công trình.
+- **Current Risk**: thấp — đã giảm bớt ở Phase 8D bằng cách buộc **độ rủ vào chiều dài tàu lá** (tàu
+  càng dài càng oằn thấp, đúng như cọ thật), tốn 0 tam giác. Cái phễu lá dựng lại được phần lớn,
+  chỉ những cây nằm đúng tâm khung hình mới còn dẹt.
+- **Future Risk**: nếu sau này camera được phép hạ thấp hoặc kéo gần, tật này sẽ **đỡ đi** chứ không
+  nặng thêm — nên nó không phải một quả mìn hẹn giờ.
+- **Recommended Solution**: hai hướng, cả hai đều KHÔNG nên làm chỉ vì cây cọ. (a) Thêm trục nghiêng
+  cho `prism` — chỉ đáng làm nếu có một lý do KHÁC cũng cần nó (mái dốc thật, cầu thang, dốc cầu);
+  lúc đó cây cọ đi ké. (b) Tách mỗi tàu lá thành 2 khối bậc thang xuống — đo rồi: đẩy `palm` từ
+  ≤212 lên ~336 tam giác, sát trần 340 của một cái cây. Không đáng cho một tật chỉ thấy ở một góc.
+- **Estimated Complexity**: (a) cao và rủi ro · (b) thấp nhưng đắt tam giác
+- **Blocking Conditions**: không có — nhưng ĐỪNG làm nếu chỉ vì cọ
+- **Review Trigger**: khi có một tính năng KHÁC cần trục nghiêng, hoặc khi Đàm nói cọ trông sai
+- **Owner**: phiên AI kế tiếp · **Status**: Open

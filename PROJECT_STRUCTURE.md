@@ -174,10 +174,26 @@
 │   │   │   │                      #   ⚠️ Dựng ở MỌI hạng kể cả `common` — khác `motifs` (chỉ
 │   │   │   │                      #   rare/epic, tức 30/75 căn trước đây là hộp trơn)
 │   │   │   ├── buildingSpec.js    # NƠI 3 TRỤC GẶP NHAU: (kỷ × loại × độ hiếm) → mô tả hình học
-│   │   │   ├── propSpec.js        # Cây, đá, đèn, mặt nước, ruộng
+│   │   │   ├── floraStyle.js      # BẢNG THẢM THỰC VẬT 15 KỶ (Phase 8D): loài + trọng số · cỡ ·
+│   │   │   │                      #   mật độ · tầng cây bụi · màu lá. Nguồn DUY NHẤT trả lời "kỷ
+│   │   │   │                      #   này mọc cây gì". Mỗi dòng buộc vào `country` của eraStyle —
+│   │   │   │                      #   có test bắt, để hai bảng không trôi khỏi nhau
+│   │   │   │                      #   ⚠️ `bush` KHÔNG BAO GIỜ nằm trong bảng loài: nó là TẦNG CÂY
+│   │   │   │                      #   BỤI (trường `undergrowth` riêng), không phải một loài để bốc
+│   │   │   ├── flora.js           # 7 LOÀI CÂY (Phase 8D): tán rộng · thông · cọ · trắc bách diệp
+│   │   │   │                      #   · đa · cây phố · bụi. Luật chống-primitive: tán là NHIỀU
+│   │   │   │                      #   THUỲ chồng lấn lệch tâm, KHÔNG phải một khối lồi (xem ADR-020)
+│   │   │   │                      #   ⚠️ `sides`/`taper` phải theo HẠT, không viết cứng — lỗi này
+│   │   │   │                      #   đã cắn 4 lần trong chính file này (cypress/streetTree/banyan/
+│   │   │   │                      #   bush), mỗi lần đều ra "40 hạt chỉ 2–4 dáng"
+│   │   │   ├── propSpec.js        # BỘ GHÉP cảnh vật: cây · bụi · đá · đèn · mặt nước · ruộng
+│   │   │   │                      #   Từ Phase 8D chỉ còn GHÉP — hình cây nằm ở `flora.js`
 │   │   │   │                      #   ⚠️ Mặt nước dùng vai màu RIÊNG (`water`), KHÔNG dùng chung
 │   │   │   │                      #   `glass` với cửa sổ — vai `glass` ban đêm TỰ PHÁT SÁNG, ao
 │   │   │   │                      #   mà mượn vai đó sẽ thành hộp đèn (xem parts.js)
+│   │   │   │                      #   ⚠️ Thêm loại cảnh vật mới thì PHẢI thêm hình cho nó ở
+│   │   │   │                      #   `render2d/CityTile.jsx` — chỗ đó trả `null` trong im lặng
+│   │   │   │                      #   cho loại lạ, nên bản 2D sẽ lặng lẽ thưa đi
 │   │   │   ├── daylight.js        # 6 CHẶNG TRONG NGÀY: hướng/độ ấm/cường độ nắng, đèn nền, sắc
 │   │   │   │                      #   trời, đèn cửa sổ, đèn hắt ra sân. THUẦN — nhận GIỜ làm tham
 │   │   │   │                      #   số, không đụng `Date` (tầng ngoài lo lấy giờ Việt Nam)

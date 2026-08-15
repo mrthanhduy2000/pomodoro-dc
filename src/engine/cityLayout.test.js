@@ -16,6 +16,7 @@ import {
   placeBuilding,
 } from './cityLayout.js';
 import { BLUEPRINT_CATALOG, BUILDING_EFFECTS } from './constants.js';
+import { PROP_KINDS } from './city3d/propSpec.js';
 
 // Bộ 5 bản vẽ có thật của kỷ 1 (dùng id thật để test bám sát dữ liệu game).
 const ERA_1 = BLUEPRINT_CATALOG[1].map((bp) => bp.id);
@@ -215,8 +216,14 @@ test('deriveProps tránh các ô đã bị công trình chiếm', () => {
   }
 });
 
-test('deriveProps chỉ sinh các loại cảnh vật đã khai báo', () => {
-  const allowed = new Set(['tree', 'rock', 'lamp', 'road', 'water', 'field']);
+test('deriveProps chỉ sinh các loại cảnh vật mà BỘ VẼ dựng được', () => {
+  // ⚠️ HỎI THẲNG `PROP_KINDS` CỦA BỘ VẼ, KHÔNG CHÉP LẠI MỘT DANH SÁCH THỨ BA (sửa ở Phase 8D).
+  // Bản cũ viết tay `['tree','rock','lamp','road','water','field']`, tức cùng một luật ("bố cục
+  // và bộ vẽ phải biết cùng một bộ loại") được phát biểu ở BA chỗ. Thêm loại `bush` làm bài này
+  // đỏ — đúng ra thì nó phải đỏ khi hai bên LỆCH nhau, chứ không phải khi cả hai bên cùng thêm
+  // đúng một thứ. Nay nó so hai bên thật với nhau: `deriveProps` sinh ra gì thì `buildPropSpec`
+  // phải dựng được cái đó, cộng `road` (do chính tầng nền vẽ, không đi qua `buildPropSpec`).
+  const allowed = new Set([...PROP_KINDS, 'road']);
   const props = deriveProps({ era: 7, buildingCount: 4, sessionCount: 120, streakLength: 20 });
   for (const prop of props) {
     assert.ok(allowed.has(prop.kind), `loại lạ: ${prop.kind}`);

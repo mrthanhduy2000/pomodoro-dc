@@ -12,6 +12,33 @@
 
 ---
 
+## 2026-08-15 — Cây thôi là hình nón trên que: thảm thực vật có ngữ pháp 15 kỷ (Phase 8D)
+
+**Mục đích.** Đàm chỉ đích danh mắt xích còn lại: *"cây cone + cylinder hiện là một trong những yếu
+tố khiến cảnh vẫn giống prototype"*, với đích rất cụ thể — *"nhìn vào phải nhận ra CÂY, không phải
+'hình nón màu xanh trên một cái que'"*, cây phải hợp với từng kỷ, và **không được rải đều trên
+lưới**.
+
+**Phạm vi.** Hai file mới ở tầng thuần: `city3d/floraStyle.js` (bảng 15 kỷ — loài + cỡ + mật độ +
+tầng cây bụi + màu lá, mỗi dòng buộc vào `country` mà `eraStyle.js` đã khai) và `city3d/flora.js`
+(7 loài: tán rộng · thông · cọ · trắc bách diệp · đa · cây phố · bụi). `propSpec.js` viết lại: cây
+gọi thư viện mới, thêm loại `bush`, đá có 3 dáng, đèn có 4 kiểu theo thời đại, ao có vành đá, ruộng
+chia ba kiểu (ruộng nước · vườn nho có cọc · luống thường). `parts.js` thêm vai màu `leaf2` (mặt lá
+trong bóng). `cityLayout.js` thêm cơ chế **mọc thành lùm** + **lệch khỏi tâm ô** + **trần phủ xanh
+theo tỉ lệ**. Gộp 4 bản sao của `unit`/`signed`/`pickIndex` về `hashId.js`. Xem **ADR-020** và
+**ADR-021**.
+
+**Ảnh hưởng (đo được).** Cấu trúc cây khác nhau trên 15 kỷ: **3 → 405**. Cảnh vật lệch khỏi tâm ô
+lưới: **0% → 100%**. Chỉ số tụ Clark–Evans khi bật/tắt cơ chế lùm: **1,051 → 0,923** (34 phiên) và
+**0,914 → 0,782** (80 phiên). Đất trần còn lại ở thành phố trưởng thành: **0 ô ở 10/15 kỷ → 7–24 ô
+ở mọi kỷ**. Chi phí: trung bình **30.656 → 30.769 tam giác (+0,4%)**, lệnh vẽ **không đổi** (11–13)
+— toàn bộ chi phí cây nhiều thuỳ được trả bằng trần phủ xanh. Test 665 → **688**.
+
+**Tương thích.** Không đụng state/schema/Supabase — cây suy ra từ hạt băm của ô lưới như trước, nên
+bảo tàng vẫn bất động (ADR-007). Bộ vẽ 2D dự phòng đã thêm hình bụi để không lặng lẽ thưa đi.
+
+---
+
 ## 2026-08-15 — Mặt đất thôi là bàn cờ: một tấm lưới liền thay 144 khối hộp (Phase 8C)
 
 **Mục đích.** Thứ Đàm gọi thẳng là *"vấn đề rất lớn"*: *"terrain như các bậc thang… grid rõ… toàn

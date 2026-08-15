@@ -13,7 +13,7 @@
  * lần mở lại trông một khác.
  */
 
-import { hashId } from '../cityLayout';
+import { unit, signed } from '../hashId';
 import { gable, prism, countSpecTriangles, specHeight, specSpan } from './parts';
 import { getEraStyle, getVernacularStyle, eaveOverhang } from './eraStyle';
 import { getArchetype, getMassing, getMotifBudget, getRarityScale } from './archetypes';
@@ -82,15 +82,6 @@ const SILL_HEIGHT = 0.035;
 const SILL_OVERHANG = 0.035;
 
 /** Băm → số thực trong [0,1). Tất định tuyệt đối. */
-function unit(key) {
-  return (hashId(key) % 10000) / 10000;
-}
-
-/** Băm → số thực trong [-1,1). Dùng cho độ lệch "tay làm". */
-function signed(key) {
-  return unit(key) * 2 - 1;
-}
-
 /**
  * Chiều cao một mảng nhà. Nâng cấp công trình PHẢI nhìn thấy được là cao lên — đây là phần thưởng
  * hình ảnh cho việc Đàm nâng cấp, nếu không thì cấp 3 chỉ là một con số trong bảng.

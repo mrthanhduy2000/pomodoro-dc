@@ -17,7 +17,7 @@
  * không bao giờ lệch giữa hai máy.
  */
 
-import { hashId } from '../cityLayout';
+import { hashId, unit } from '../hashId';
 
 /** Trần cư dân. Đây là ngưỡng HIỆU NĂNG: mỗi người là một thực thể phải cập nhật mỗi khung hình. */
 export const MAX_RESIDENTS = 28;
@@ -27,10 +27,6 @@ const WALK_SPEED = 0.42;
 
 /** Chiều cao người, tính theo đơn vị ô. Nhỏ có chủ ý: người phải làm nhà trông TO. */
 export const RESIDENT_HEIGHT = 0.2;
-
-function unit(key) {
-  return (hashId(key) % 10000) / 10000;
-}
 
 /**
  * Suy ra số cư dân từ tiến độ của Đàm.

@@ -30,7 +30,13 @@ export const PART_ROLES = [
   'gold',    // điểm nhấn quý: chóp, tượng, biển hiệu
   'glass',   // cửa sổ, kính — ⚠️ BAN ĐÊM VAI NÀY TỰ PHÁT SÁNG (xem `glowRole` ở `sceneGraph.js`)
   'water',   // mặt ao hồ — TÁCH KHỎI `glass` có lý do, xem ngay dưới
-  'leaf',    // cây cối
+  'leaf',    // tán lá ăn nắng
+  // ⚠️ Mặt lá TRONG BÓNG — quan hệ với `leaf` giống hệt quan hệ `wall2` với `wall`, và vì cùng một
+  // lý do. Tán cây từ Phase 8D là nhiều thuỳ chồng lấn; nếu mọi thuỳ cùng một vai thì chúng ra
+  // cùng một màu và chỉ còn phân biệt được nhờ bóng đổ — mà ở cỡ vài chục điểm ảnh, bóng đổ giữa
+  // hai khối sát nhau gần như không đọc ra. Một vai thứ hai là cách rẻ nhất để tán có chiều sâu
+  // ngay cả khi đứng trong bóng râm.
+  'leaf2',
   'dark',    // bóng sâu, cửa ra vào, khe hở
 ];
 

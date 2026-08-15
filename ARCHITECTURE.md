@@ -263,8 +263,22 @@ mật độ tăng dần theo kỷ (17 căn kỷ 1 → 30 căn kỷ 15). ⚠️ N
 — cùng lý do với giàn giáo, và cùng kiểu hỏng im lặng (một cái cây mọc trong phòng khách). Nhà dân
 đi qua **đúng** `buildBuildingSpec` như công trình thật, chỉ khác cờ `plain` (tắt chữ ký kiến trúc +
 mô-típ) và mái `vernacularRoof` — nhờ vậy chúng thừa hưởng mái/vật liệu/tỉ lệ của kỷ mà không tranh
-mất hình bóng của 5 kỳ quan. (3) Bộ vẽ
-biến ô lưới thành hình. `CityViewShell.jsx` là KHUNG (chuyển kỷ, số liệu, trạng thái rỗng) và
+mất hình bóng của 5 kỳ quan.
+**`props` (cảnh vật) — thảm thực vật có ngữ pháp riêng (Phase 8D, ADR-020/021)**: cùng khuôn ba
+lớp với nhà cửa, chỉ khác trục. `city3d/floraStyle.js` là BẢNG (15 kỷ → loài + cỡ + mật độ + tầng
+cây bụi + màu lá, mỗi dòng buộc vào `country` mà `eraStyle.js` đã khai); `city3d/flora.js` là THƯ
+VIỆN HÌNH (7 loài); `propSpec.js` chỉ còn GHÉP. Luật chống-primitive nằm ở một câu: **tán là nhiều
+thuỳ chồng lấn lệch tâm, không phải một khối lồi** — một khối lồi tất yếu cho viền trơn, một dải
+sáng và đối xứng xoay hoàn hảo, ba tật không chữa được bằng cách tăng số cạnh. `palette3d.js` đọc
+`leafHue`/`leafSat` từ bảng ấy y như cách nó đã đọc `roofColor` từ `eraStyle.js` — màu lá là thuộc
+tính của LOÀI, không phải một lựa chọn hoà sắc.
+⚠️ Chỗ đặt cảnh vật có **hai luật quan hệ, không phải hai con số**: (a) cảnh vật mọc thành **LÙM**
+(tối đa 4 tâm lùm, vật sau có 7/10 khả năng bám vào một lùm sẵn có) và **lệch khỏi tâm ô** — mắt
+người bắt lưới rất giỏi, vài vật thẳng hàng là lộ ra cái bàn cờ mà Phase 8C vừa tốn công xoá;
+(b) **trần phủ xanh theo TỈ LỆ** với đất còn trống, và chính tỉ lệ ấy mang mật độ của kỷ. Một trần
+đếm-số-cây tuyệt đối không nhìn thấy "còn chừa bao nhiêu đất" — đo ra thì 10/15 kỷ lấp kín 144/144
+ô, tức mọi cơ chế phân bố đều thành vô nghĩa (ADR-021).
+(3) Bộ vẽ biến ô lưới thành hình. `CityViewShell.jsx` là KHUNG (chuyển kỷ, số liệu, trạng thái rỗng) và
 **không biết bộ vẽ nào đang chạy** — bộ vẽ vào qua `children` và tự quyết định kích thước của mình.
 Có HAI bộ vẽ: `city/render2d/` (SVG isometric) và `city/render3d/` (three.js). `render3d/` là **nơi
 duy nhất được phép `import 'three'`** — luật này giữ cho `src/engine/` tiếp tục test được bằng

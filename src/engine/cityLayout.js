@@ -22,6 +22,7 @@
 
 import { BLUEPRINT_CATALOG, BUILDING_EFFECTS } from './constants';
 import { deriveDwellings } from './city3d/dwellings';
+import { getFloraStyle } from './city3d/floraStyle';
 import { hashId } from './hashId';
 import {
   CITY_GRID_SIZE, BUILDING_ZONES,
@@ -40,8 +41,15 @@ export const TILE_H = 32;              // bề cao ô isometric (px) — tỉ l�
  * cùng lớp chi phí với 144 ô nền vốn đã luôn được vẽ. Gộp chung hai thứ khác hẳn nhau về chi phí
  * là cách chắc chắn nhất để một thay đổi ở bên này bóp nghẹt bên kia trong im lặng — đúng chuyện
  * đã suýt xảy ra khi mạng đường tăng từ 23 lên 44 ô (2026-08-14).
+ *
+ * ⚠️ ĐÂY LÀ TRẦN CỨNG, KHÔNG PHẢI SỐ LƯỢNG THẬT (đổi ở Phase 8D). Số cảnh vật thật của mỗi kỷ nay
+ * là `SCATTER_BASE × density` của kỷ đó (`floraStyle.js`): sa mạc UAE thưa 22, thành phố vườn
+ * Singapore rậm 48. Trần này chỉ còn là cái chặn trên để một dòng khai sai trong bảng thực vật
+ * không thể làm phình cảnh vô hạn.
  */
-export const MAX_SCATTER_PROPS = 34;
+export const MAX_SCATTER_PROPS = 48;
+/** Số cảnh vật của một kỷ có `density = 1`. Trần trên là `MAX_SCATTER_PROPS`. */
+const SCATTER_BASE = 34;
 
 /** Số biến thể hình ảnh cho mỗi loại ô nền / cảnh vật. */
 const GROUND_VARIANTS = 4;
@@ -249,6 +257,11 @@ export const MAX_PROPS = ROAD_CELL_COUNT + MAX_SCATTER_PROPS;
 /** Bảng loại cảnh vật rải rác + trọng số (tổng = 20). Thứ tự cố định → tất định. */
 const SCATTER_KINDS = [
   { kind: 'tree',  weight: 8 },
+  // ⚠️ `bush` là loại MỚI (Phase 8D) và nó không phải "thêm cho đủ món". Trước đó cảnh vật nhỏ
+  // nhất là hòn đá, nên giữa các cây luôn là mặt đất trống trơn — mà tầng cây bụi dưới tán mới là
+  // thứ làm một đám cây đọc ra thành mảng rừng thay vì mấy cái cây đứng cạnh nhau. Nó cũng là
+  // cảnh vật RẺ NHẤT (2–3 khối, không thân), nên nó là cách tăng độ rậm ít tốn nhất.
+  { kind: 'bush',  weight: 5 },
   { kind: 'field', weight: 4 },
   { kind: 'rock',  weight: 3 },
   { kind: 'lamp',  weight: 3 },
@@ -280,6 +293,11 @@ function cellKey(x, y) {
 
 function isInsideGrid(x, y) {
   return x >= 0 && y >= 0 && x < CITY_GRID_SIZE && y < CITY_GRID_SIZE;
+}
+
+/** Kéo một chỉ số ô về trong lưới. Dùng khi một lùm mọc lan ra sát mép bản đồ. */
+function clampCell(value) {
+  return Math.min(CITY_GRID_SIZE - 1, Math.max(0, value));
 }
 
 /**
@@ -340,6 +358,110 @@ function pickScatterKind(seed) {
   return SCATTER_KINDS[0].kind;
 }
 
+/**
+ * ─── PHÂN BỐ: VÌ SAO RẢI ĐỀU LÀ SAI (Phase 8D) ──────────────────────────────
+ *
+ * Bản cũ bốc cho mỗi cảnh vật một ô hoàn toàn độc lập với mọi cảnh vật khác. Nghe thì "ngẫu nhiên",
+ * nhưng kết quả trên màn hình lại đọc ra rất máy móc, vì hai lý do khác nhau:
+ *
+ *   (a) **Mọi thứ nằm ĐÚNG tâm ô.** Đo trước khi sửa: 34/34 cảnh vật ở toạ độ nguyên. Mắt người
+ *       cực giỏi bắt lưới — chỉ cần vài vật thẳng hàng là cả cảnh lộ ra cái bàn cờ bên dưới, đúng
+ *       thứ Phase 8C vừa tốn công xoá khỏi mặt đất. Lệch mỗi vật một chút là xong, tốn 0 tam giác.
+ *   (b) **Ngẫu nhiên đều KHÔNG giống thiên nhiên.** Cây ngoài đời mọc thành lùm: hạt rơi gần cây
+ *       mẹ, bóng râm giữ ẩm cho cây con. Nên rừng thật là "chỗ dày, chỗ trống", còn rải đều là
+ *       "chỗ nào cũng lưng lửng" — và cái lưng lửng ấy chính là dấu vân tay của máy móc.
+ *
+ * ⇒ Cảnh vật nay mọc theo LÙM: bốn ô đầu tiên rơi vào chỗ mới trở thành "tâm lùm"; những vật sau có
+ *   7/10 khả năng bám vào một lùm đã có thay vì bốc ô mới. Nước và ruộng KHÔNG bám lùm (một cái ao
+ *   ở giữa ba cái ao khác là chuyện lạ), đèn cũng không (đèn thuộc về phố, không thuộc về đám).
+ *
+ * ⚠️ CON SỐ NGHIỆM THU, đo bằng chỉ số Clark–Evans (khoảng cách trung bình tới hàng xóm gần nhất
+ *   chia cho kỳ vọng nếu rải ngẫu nhiên; R < 1 = tụ, R > 1 = rải đều). Bật/tắt cơ chế ở 7 kỷ:
+ *   34 phiên **1,051 → 0,923** · 80 phiên **0,914 → 0,782**. Hai cỡ thành phố, cùng một chiều,
+ *   cùng độ lớn ≈ 0,13 — đó mới là thứ phân biệt tín hiệu với nhiễu, chứ một lần đo thì không.
+ *   Ghi lại vì phiên sau chỉnh `GROVE_*` mà không đo lại thì không có cách nào biết đã làm hỏng.
+ */
+const GROVE_JOIN_CHANCE = 7;      // trên 10
+const GROVE_RADIUS = 2;           // ô, tính từ tâm lùm
+/**
+ * ⚠️ SỐ LÙM PHẢI CÓ TRẦN, VÀ CHỈ HẠT ĐẦU MỚI ĐƯỢC LÀM TÂM LÙM — bản đầu của Phase 8D thiếu cả hai
+ * và **phép thử ngược chứng minh cả cơ chế lùm chẳng làm gì cả**: bật/tắt nó thì chỉ số phân tán
+ * đứng yên tới hai chữ số thập phân ở cả bốn kỷ đo thử. Lý do: mỗi cảnh vật vừa đặt lại được ghi
+ * thành một tâm lùm mới, nên sau chục ô thì "bám vào một lùm" ≈ "bám vào một cảnh vật bất kỳ đã
+ * có", tức đúng bằng rải đều. Một cơ chế tụ tập mà tâm tụ tập nhiều bằng số vật thì không tụ được.
+ *
+ * Đây cũng là lời nhắc vì sao luật "một bài test chưa từng thấy đỏ thì chưa phải test" phải áp cho
+ * cả PHÉP ĐO: nhìn ảnh thì thấy có lùm cây thật, và nếu dừng ở đó thì tôi đã tin một cơ chế chết.
+ */
+const MAX_GROVES = 4;
+
+/**
+ * Vào một lùm loại `X` thì được mọc thêm những loại nào. Bụi len vào lùm cây và lùm đá — đó là
+ * tầng cây bụi dưới tán, thứ làm cho một đám cây trông như một mảng rừng chứ không như mấy cái cây
+ * đứng cạnh nhau.
+ */
+const GROVE_COMPANIONS = {
+  tree: ['tree', 'tree', 'bush'],
+  bush: ['bush', 'tree'],
+  rock: ['rock', 'bush'],
+};
+
+/**
+ * Cảnh vật được phép lệch khỏi tâm ô bao nhiêu (đơn vị ô).
+ *
+ * ⚠️ NƯỚC VÀ RUỘNG PHẢI BẰNG 0, VÀ ĐÓ KHÔNG PHẢI SỰ THẬN TRỌNG THỪA: hai thứ này rộng gần trọn ô
+ * (0,94–0,95), nên lệch đi một chút là chúng thò sang ô bên và cắm vào chân nhà hàng xóm. Chỉ
+ * những vật NHỎ HƠN ô mới có chỗ mà lệch. Đèn lệch ít hơn cây vì đèn là vật do người dựng — xiêu
+ * vẹo quá thì mất luôn cảm giác có quy hoạch, mà đó lại đúng là thứ phân biệt phố với rừng.
+ */
+const PROP_JITTER = { tree: 0.34, bush: 0.38, rock: 0.32, lamp: 0.13, water: 0, field: 0 };
+
+/**
+ * Phần đất trống TỐI ĐA được phủ cảnh vật. Phần còn lại phải là mặt đất trần.
+ *
+ * ⚠️ CON SỐ NÀY TỒN TẠI VÌ MỘT PHÉP ĐO ĐÃ LẬT NGƯỢC MỘT KẾT LUẬN. Sau khi cơ chế lùm chứng minh
+ * được là có tác dụng ở 34 phiên, tôi đếm thử ô trống của một thành phố TRƯỞNG THÀNH (80 phiên) và
+ * kết quả là **10/15 kỷ có ĐÚNG 0 ô đất trống** — cả lưới 12×12 kín đặc, không sót một mảng đất
+ * nào. Ở trạng thái ấy thì mọi cơ chế phân bố đều vô nghĩa: khi mọi ô trống đều bị lấp thì không
+ * còn "chỗ dày, chỗ trống" nào để mà tụ, và cảnh quay về đúng cái "rải đều trên lưới" mà cả Phase
+ * 8D sinh ra để xoá. Cơ chế lùm vẫn chạy, chỉ là nó không còn gì để sắp xếp.
+ *
+ * Và một nửa lỗi ấy là do CHÍNH Phase 8D: trần cảnh vật vốn là 34, tôi nâng lên 48 để mật độ theo
+ * kỷ có chỗ mà khác nhau — nhưng nâng trần trong một cái lưới hữu hạn thì thứ tăng thêm không phải
+ * "mật độ", mà là "tỉ lệ lấp đầy", và nó tăng cho tới khi chạm trần cứng 144 ô. Bài học cũ của dự
+ * án dưới một hình dạng mới: **một con số tuyệt đối không diễn đạt được một luật nói về QUAN HỆ.**
+ * "Rậm hơn kỷ khác" là quan hệ giữa các kỷ; "còn chừa đất trống" là quan hệ với chỗ đất còn lại.
+ * Trần tuyệt đối 48 không nhìn thấy cái nào trong hai thứ đó.
+ *
+ * ⚠️ VÀ CHÍNH TỈ LỆ NÀY PHẢI MANG MẬT ĐỘ CỦA KỶ, chứ không được là một con số chung. Bản vá đầu để
+ * nó cố định 0,72 và đo lại thì kỷ 14 (Singapore, mật độ 1,42 — rậm nhất) và kỷ 15 (UAE, 0,66 —
+ * thưa nhất) **ra cùng 21 cảnh vật**: ở thành phố trưởng thành thì nhà dân ăn hết đất, chỉ còn 30 ô
+ * trống, nên cái trần chung đè bẹp cả hai đầu và xoá sạch thứ mà `density` sinh ra để nói. Sửa
+ * xong: 23 với 10 — đọc ra được ngay bằng mắt.
+ *
+ * Hai cái trần, hai việc KHÁC nhau, và cần cả hai vì chỗ thắt cổ chai đổi theo tuổi thành phố:
+ *   · `SCATTER_BASE × density` — SỐ CÂY của kỷ. Trói lúc thành phố còn TRẺ (đất mênh mông).
+ *   · `freeGround × coverShare` — PHẦN ĐẤT được phủ. Trói lúc thành phố đã ĐÔNG (đất hiếm).
+ * Bỏ vế nào cũng có một quãng đời thành phố mất hẳn mật độ theo kỷ.
+ *
+ * Dải 0,28–0,80 chọn bằng phép đo chứ không bằng cảm giác: nó để lại 7–21 ô đất trần ở mọi kỷ
+ * (bảng đầy đủ trong `BAN_GIAO.md`), đủ để mắt đọc ra khoảng thở giữa các lùm mà chưa làm sa mạc
+ * UAE trông hoang tàn.
+ */
+const COVER_BASE = 0.55;
+const COVER_MIN = 0.28;
+const COVER_MAX = 0.80;
+
+function jitterFor(kind, seed) {
+  const range = PROP_JITTER[kind] ?? 0;
+  if (range === 0) return { ox: 0, oy: 0 };
+  // 0..200 → −1..1, rồi nhân biên độ. Dùng `hashPick` để cùng một ô luôn ra cùng một độ lệch.
+  return {
+    ox: ((hashPick(`${seed}|ox`, 201) - 100) / 100) * range,
+    oy: ((hashPick(`${seed}|oy`, 201) - 100) / 100) * range,
+  };
+}
+
 function safeCount(value) {
   return Number.isFinite(value) ? Math.max(0, Math.floor(value)) : 0;
 }
@@ -386,26 +508,70 @@ export function deriveProps({ era, buildingCount, sessionCount, streakLength, oc
   // Tách trần là ĐÚNG với chi phí thật chứ không phải nới cho tiện: đường là ô nền PHẲNG, gom vào
   // một `InstancedMesh` duy nhất cùng lớp chi phí với 144 ô nền vốn đã luôn vẽ; còn cây/đá/đèn mới
   // là vật thể khối, và chính chúng là thứ trần `MAX_PROPS` sinh ra để bảo vệ.
+  //
+  // ⚠️ MẬT ĐỘ THEO KỶ (Phase 8D): sa mạc UAE thưa, thành phố vườn Singapore rậm. Con số nằm ở
+  // `floraStyle.js` cùng chỗ với danh sách loài cây — vì "ở đây mọc cây gì" và "mọc dày tới đâu"
+  // là hai vế của cùng một câu trả lời, tách ra hai file thì sớm muộn chúng nói ngược nhau.
+  const flora = getFloraStyle(eraNum);
+  const density = flora.density ?? 1;
+  const undergrowth = flora.undergrowth ?? 0;
+  // Đất còn trống NGAY LÚC NÀY (sau nhà, nhà dân và đường) — phải đọc ở đây chứ không phải đầu hàm,
+  // vì `taken` vừa nuốt thêm 78–80 ô đường ở bước (1) ngay phía trên.
+  const freeGround = CITY_GRID_SIZE * CITY_GRID_SIZE - taken.size;
+  const coverShare = Math.min(COVER_MAX, Math.max(COVER_MIN, COVER_BASE * density));
   const scatterBudget = Math.min(
     MAX_SCATTER_PROPS,
+    Math.round(SCATTER_BASE * density),
+    Math.floor(freeGround * coverShare),
     2 * nBuild + Math.floor(nSession / 2) + Math.floor(nStreak / 2),
   );
+
+  const groves = [];
   for (let i = 0; props.length < roadsPlaced + scatterBudget; i += 1) {
     // chặn vòng lặp vô hạn khi lưới gần kín
     if (i > CITY_GRID_SIZE * CITY_GRID_SIZE) break;
     const seed = `p|${eraNum}|${i}`;
-    const anchorX = hashPick(`${seed}|x`, CITY_GRID_SIZE);
-    const anchorY = hashPick(`${seed}|y`, CITY_GRID_SIZE);
+
+    // Bám vào một lùm đã có, hay khai một chỗ mới? (Xem ghi chú dài ở `GROVE_JOIN_CHANCE`.)
+    const joinGrove = groves.length > 0 && hashPick(`${seed}|g`, 10) < GROVE_JOIN_CHANCE;
+    let anchorX;
+    let anchorY;
+    let kind;
+    if (joinGrove) {
+      const grove = groves[hashPick(`${seed}|gi`, groves.length)];
+      const span = GROVE_RADIUS * 2 + 1;
+      anchorX = clampCell(grove.x + hashPick(`${seed}|gx`, span) - GROVE_RADIUS);
+      anchorY = clampCell(grove.y + hashPick(`${seed}|gy`, span) - GROVE_RADIUS);
+      const companions = GROVE_COMPANIONS[grove.kind];
+      kind = companions[hashPick(`${seed}|gk`, companions.length)];
+    } else {
+      anchorX = hashPick(`${seed}|x`, CITY_GRID_SIZE);
+      anchorY = hashPick(`${seed}|y`, CITY_GRID_SIZE);
+      kind = pickScatterKind(`${seed}|k`);
+    }
+    // TẦNG CÂY BỤI theo kỷ: một phần ô "cây" hạ xuống thành bụi. Manchester công nghiệp đầy đất
+    // hoang mọc bụi hoang; vườn ô-liu Toscana thì đất giữa các hàng bị cày sạch.
+    if (kind === 'tree' && hashPick(`${seed}|u`, 100) < Math.round(undergrowth * 100)) {
+      kind = 'bush';
+    }
+
     const cell = taken.has(cellKey(anchorX, anchorY))
       ? findFreeCell(anchorX, anchorY, taken)
       : { x: anchorX, y: anchorY };
     if (!cell) break;
     taken.add(cellKey(cell.x, cell.y));
+    // CHỈ hạt gieo ở chỗ mới mới thành tâm lùm — vật bám vào lùm thì không được đẻ ra lùm nữa.
+    if (!joinGrove && GROVE_COMPANIONS[kind] && groves.length < MAX_GROVES) {
+      groves.push({ x: cell.x, y: cell.y, kind });
+    }
     props.push({
-      kind:    pickScatterKind(`${seed}|k`),
+      kind,
       x:       cell.x,
       y:       cell.y,
       variant: hashPick(`${seed}|v`, PROP_VARIANTS),
+      // Lệch khỏi tâm ô. Bộ vẽ 2D bỏ qua hai trường này — nó vẽ theo ô, và một ô isometric thì
+      // lệch nửa ô cũng không đọc ra; bộ vẽ 3D thì dùng, vì ở đó cái lưới nhìn thấy được.
+      ...jitterFor(kind, seed),
     });
   }
 

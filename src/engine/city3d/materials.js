@@ -92,6 +92,9 @@ const ROLE_FAMILY = {
   glass: 'glass',
   water: 'water',
   leaf: 'foliage',
+  // Mặt lá trong bóng vẫn là LÁ: cùng độ nhám, cùng độ bóng — chỉ khác màu. Cho nó một họ vật liệu
+  // riêng là tự thêm một lệnh vẽ cho mỗi thành phố mà không đổi được gì trên màn hình.
+  leaf2: 'foliage',
 };
 
 /**

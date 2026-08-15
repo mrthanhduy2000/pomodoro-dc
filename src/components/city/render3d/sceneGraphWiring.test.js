@@ -137,8 +137,20 @@ const GROUND_ANCHORS = [
     hurt: 'đường nằm ở cao độ 0 trong khi đất đã nhô lên ⇒ phố chui xuyên vào trong đồi' },
   { name: 'công trình + móng', file: 'sceneGraph.js', pattern: /terrain\.footprint\(cell\.x, cell\.y, span\)/,
     hurt: 'nhà đứng ở cao độ 0 ⇒ nhà trên đồi bị chôn tới nóc, nhà dưới thung lũng bay lơ lửng' },
-  { name: 'cảnh vật', file: 'sceneGraph.js', pattern: /y: terrain\.heightAt\(prop\.x, prop\.y\)/,
-    hurt: 'cây/thùng/đèn cắm ở cao độ 0 ⇒ cây mọc xuyên qua sườn đồi hoặc treo giữa trời' },
+  // ⚠️ CẢNH VẬT ĐỔI SANG `surfaceHeightAt` Ở PHASE 8D, VÀ ĐÓ KHÔNG PHẢI MỘT LỰA CHỌN TUỲ Ý.
+  // Từ 8D mỗi cây/bụi/đá lệch khỏi tâm ô tới ±0,38 ô để thoát khỏi cái lưới nhìn thấy được. Ở
+  // đúng tâm ô, `heightAt` (rời rạc, theo ô) và `surfaceHeightAt` (liên tục) cho CÙNG một số —
+  // nên bản cũ đúng, và đó chính là lý do việc này nguy hiểm: hàm cũ vẫn "chạy được", chỉ trả về
+  // cao độ của một chỗ KHÁC. Trên sườn dốc, chênh lệch ấy là cả một cái cây treo giữa trời.
+  // Khoá luôn TOẠ ĐỘ ĐÃ LỆCH (`ux, uy`), không phải `prop.x, prop.y`: hỏi đúng hàm mà sai chỗ thì
+  // hậu quả y hệt.
+  { name: 'cảnh vật', file: 'sceneGraph.js', pattern: /y: terrain\.surfaceHeightAt\(ux, uy\)/,
+    hurt: 'cây/bụi/đèn lấy cao độ của TÂM ô trong khi thân nó đứng ở chỗ đã lệch ⇒ trên sườn dốc '
+      + 'thì mọc xuyên qua đất hoặc treo lơ lửng, mà build/lint/test đều xanh' },
+  { name: 'cảnh vật — độ lệch phải vào CẢ toạ độ ngang', file: 'sceneGraph.js',
+    pattern: /const ux = prop\.x \+ \(prop\.ox \?\? 0\)/,
+    hurt: 'cảnh vật lại nằm đúng tâm ô ⇒ cái lưới bàn cờ hiện lại, đúng thứ Phase 8C vừa xoá khỏi '
+      + 'mặt đất' },
   { name: 'cư dân', file: 'sceneGraph.js', pattern: /terrain\.heightAt\(spot\.x, spot\.y\) \+ ROAD_SURFACE_Y/,
     hurt: 'người đi bộ lún dưới mặt đường hoặc đi trên không' },
 ];

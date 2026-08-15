@@ -35,15 +35,11 @@
  * đặt đủ cả hai bên với `ry` đối nhau — hoặc `ry: 0` cho gọn.
  */
 
-import { hashId } from '../cityLayout';
+import { unit } from '../hashId';
 import { prism, gable } from './parts';
 import { roofRise, eaveOverhang } from './eraStyle';
 
 /** Băm → số thực trong [0,1). Tất định tuyệt đối, cùng hàm băm với phần còn lại của thành phố. */
-function unit(key) {
-  return (hashId(key) % 10000) / 10000;
-}
-
 /**
  * Các bên được phép đặt một khối lệch tâm.
  *

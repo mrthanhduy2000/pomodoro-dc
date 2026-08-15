@@ -27,6 +27,7 @@
  */
 
 import { getEraStyle } from './eraStyle';
+import { getFloraStyle } from './floraStyle';
 
 /**
  * Trần độ tươi của MÁI — hướng mỹ thuật trầm (Townscaper): mái là vật liệu lợp, không phải nhựa dẻo.
@@ -522,6 +523,12 @@ export function buildScenePalette({ tokens, eraColor, era: eraNumber, daylight }
   /** Bao nhiêu phần sắc kỷ được phép ngấm vào tường. Thấp có chủ ý — xem đoạn ghi chú ngay trên. */
   const WALL_ERA = 0.18;
 
+  // Thảm thực vật của kỷ — nguồn của hai vai `leaf`/`leaf2` ngay dưới. Xem ghi chú tại chỗ.
+  const flora = getFloraStyle(era);
+  // Theme tối cắt độ tươi đi một nửa: ban đêm mắt người gần như không đọc được sắc ở vùng tối
+  // (thị giác chuyển sang tế bào que), nên giữ nguyên độ tươi chỉ làm tán lá thành mảng xanh giả.
+  const leafSat = isDark ? flora.leafSat * 0.52 : flora.leafSat;
+
   const roles = {
     wall:  material(WALL_ANCHOR, WALL_ERA, isDark ? 0.24 : 0.23, 0.70, 0.44),
     wall2: material(WALL_ANCHOR, WALL_ERA, isDark ? 0.20 : 0.19, 0.62, 0.37),
@@ -561,7 +568,20 @@ export function buildScenePalette({ tokens, eraColor, era: eraNumber, daylight }
     // đời — bình minh và hoàng hôn, khi ao bắt lửa cả một mảng cam hồng — lại là lúc sắc ấm nằm ở
     // DẢI SÁT CHÂN TRỜI. Chọn cái đọc ra được bằng mắt.
     water: skyward(202, 0.12, isDark ? 0.26 : 0.32, 0.62, 0.34, 'horizon', 0.8),
-    leaf:  material(88, 0.20, isDark ? 0.19 : 0.38, 0.33, 0.28),
+    // ⚠️ MÀU LÁ ĐỌC TỪ `floraStyle.js`, KHÔNG VIẾT CỨNG Ở ĐÂY (Phase 8D).
+    // Bản cũ là `material(88, 0.20, …)` — một góc màu xanh lá duy nhất cho cả 15 kỷ, nên rừng vân
+    // sam Nga, cọ sa mạc UAE và cây ám bồ hóng Manchester ra đúng một màu. Nhưng lý do đặt con số
+    // ở BẢNG THỰC VẬT chứ không sửa tại chỗ này thì sâu hơn: màu lá là thuộc tính của LOÀI đang
+    // mọc, mà danh sách loài nằm ở `floraStyle.js`. Khai màu ở đây thì ngày nào có người đổi loài
+    // của một kỷ, màu sẽ đứng yên và không có gì đỏ lên — đúng cái bẫy "một luật hai chỗ khai" mà
+    // `roofColor` đã phải dọn ở Phase 6B.
+    //
+    // Sắc kỷ chỉ ngấm 0,10 (bản cũ 0,20): nay chính GÓC MÀU đã mang bản sắc kỷ rồi, mượn thêm
+    // màu nhấn giao diện chỉ kéo 15 kỷ xích lại gần nhau — cùng lý lẽ với `WALL_ERA` ở trên.
+    leaf:  material(flora.leafHue, 0.10, leafSat, 0.33, 0.28),
+    // Mặt lá trong bóng: cùng họ màu, ĐẬM hơn và bớt tươi. Chênh lệch phải đủ để đọc ra hai lớp
+    // tán chồng nhau, nhưng không được thành hai loài cây khác nhau — nên lệch góc màu chỉ 6°.
+    leaf2: material(flora.leafHue - 6, 0.10, leafSat * 0.88, 0.23, 0.19),
     // Bóng tối sâu nhất. Gần như đen ở mọi kỷ nên góc màu hầu như không đọc ra, nhưng vẫn pha bằng
     // `material` cho nhất quán — không để sót một chỗ nào dùng thẳng sắc kỷ chưa qua bảng pha.
     dark:  material(24, 0.45, 0.24, 0.19, 0.09),

@@ -6,7 +6,34 @@
 > chọn: `ARCHITECTURE_DECISIONS.md`. Nợ kỹ thuật: `TECH_DEBT.md`. Migration: `MIGRATION.md`. Tóm
 > tắt theo mốc: `CHANGELOG.md`.
 > **NGUYÊN TẮC ƯU TIÊN SỐ 1:** (1) mọi phiên AI phải đọc file này + `CLAUDE.md` + các file liên quan TRƯỚC khi làm; (2) sau MỌI cập nhật dù nhỏ, phải cập nhật ngay file này + `CLAUDE.md` + các file liên quan khác.
-> Cập nhật lần cuối: **2026-08-15** — **Phase 8C**: **MẶT ĐẤT THÔI LÀ BÀN CỜ.** Đàm gọi thẳng đây
+> Cập nhật lần cuối: **2026-08-15** — **Phase 8D**: **CÂY THÔI LÀ HÌNH NÓN TRÊN QUE.** Đàm chỉ
+> đích danh mắt xích còn lại: *"cây cone + cylinder hiện là một trong những yếu tố khiến cảnh vẫn
+> giống prototype"*, đích rất cụ thể — *"nhìn vào phải nhận ra **cây**, không phải 'hình nón màu
+> xanh trên một cái que'"*, và **không được rải đều trên lưới**.
+> **NGUYÊN NHÂN GỐC là THIẾU KIẾN TRÚC, không phải lỗi mã.** Hình dáng cây nằm trong ba nhánh `if`
+> viết cứng giữa hàm `tree()` của `propSpec.js`. Đo được: **40 hạt giống ra ĐÚNG MỘT cấu trúc khối**
+> (hạt chỉ đổi được chiều cao), **cả 15 kỷ chỉ 3 mẫu cây**. Nhà cửa từ Phase 3B đã có ngữ pháp ba
+> trục để thoát đúng cái bẫy này; thảm thực vật chưa bao giờ được cho một ngữ pháp nào. Nay có:
+> `city3d/floraStyle.js` (BẢNG 15 kỷ) + `city3d/flora.js` (7 LOÀI) + `propSpec.js` (chỉ còn GHÉP).
+> **688 bài test** (+23, tất cả đã thử ngược), lint sạch, build xanh. Xem **ADR-020** + **ADR-021**.
+> ⚠️ **LUẬT CHỐNG-PRIMITIVE, ghi một lần cho mọi phiên sau**: tán là **NHIỀU THUỲ chồng lấn lệch
+> tâm**, KHÔNG phải một khối lồi. Một khối lồi tất yếu cho viền trơn + đúng một dải sáng-tối + đối
+> xứng xoay hoàn hảo + chỗ nối thân-tán sắc lẻm. **Tăng `sides` không chữa được — càng mượt càng
+> giống hình học.** Ba thuỳ tốn 132 tam giác thay vì 44 và sửa cả bốn tật.
+> ⚠️ **CHI PHÍ GẦN NHƯ BẰNG KHÔNG, và đó KHÔNG phải may mắn**: trung bình **30.656 → 30.769 tam
+> giác (+0,4%)**, lệnh vẽ **không đổi** (11–13). Cây đắt hơn hẳn, nhưng **trần phủ xanh** (ADR-021)
+> trả lại đúng chỗ đó. Đây là phase đầu tiên của cả mảng 8 KHÔNG cộng thêm tải.
+> ⚠️ **BỐN LỖI CỦA PHASE NÀY, ba do chính bài test mới bắt chứ không do đọc mã**: (1) `bush` nằm
+> chung bảng loài với cây ⇒ "bụi" ở kỷ 1 ra **5 khối, 212 tam giác, cao 0,94** — một cái cây hoàn
+> chỉnh; **một bảng gánh hai việc**, lần thứ tư. (2) `sides`/`taper` viết cứng ở `cypress`,
+> `streetTree`, `banyan`, `bush` ⇒ mỗi lần đều "40 hạt chỉ 2–4 dáng"; sửa ba chỗ vẫn sót chỗ thứ
+> tư. (3) núm LOD **chỉ cắn ở 5/10 hạt** với `palm` và `cypress` — một cái núm không nối vào đâu vẫn
+> "chạy" bình thường (đúng hình dạng sai của Phase 7A). (4) cả cơ chế lùm **là mã chết**, chứng minh
+> bằng phép thử ngược: bật/tắt thì chỉ số phân tán đứng yên tới hai chữ số thập phân.
+> ⚠️ **CÒN LẠI, NÓI THẲNG**: cọ nhìn từ đúng trên xuống vẫn dẹt thành dấu "✳" (vì `parts.js` không
+> nghiêng được khối); bóng đổ vẫn là mảng đen cạnh cứng; mặt đường vẫn một màu phẳng.
+>
+> **(Phase 8C, ngay trước đó)** **MẶT ĐẤT THÔI LÀ BÀN CỜ.** Đàm gọi thẳng đây
 > là *"vấn đề rất lớn"*: *"terrain như các bậc thang… grid rõ… toàn cảnh giống prototype/editor hơn
 > là một thế giới 3D"*. Nguyên nhân gốc gọn trong một câu: mặt đất **là** 144 khối hộp riêng lẻ.
 > Hộp không dốc được (chênh cao độ chỉ có thể là BẬC), hộp có mặt bên (mỗi ô bốn cạnh đứng), và
@@ -566,6 +593,49 @@
 
 ## 🗒️ Nhật ký cập nhật
 > Mỗi lần xong việc đáng kể, thêm 1 dòng vào ĐẦU danh sách.
+
+- **2026-08-15 (Phase 8D — cây thôi là hình nón trên que)** — **688 bài test** (665 → 688), lint
+  sạch, build xanh. File MỚI: `engine/city3d/floraStyle.js` + `flora.js` + hai file test của chúng.
+  Sửa: `propSpec.js` (viết lại), `parts.js` (thêm vai `leaf2`), `materials.js` (`leaf2` → cùng họ
+  `foliage`, không tốn thêm lệnh vẽ), `palette3d.js` (đọc `leafHue`/`leafSat` từ bảng thực vật),
+  `cityLayout.js` (lùm + lệch tâm ô + trần phủ xanh), `hashId.js` (gom `unit`/`signed`/`pickIndex`),
+  `sceneGraph.js` (độ lệch vào CẢ toạ độ ngang lẫn truy vấn cao độ), `render2d/CityTile.jsx` (hình
+  bụi), `cityLayout.test.js` + `sceneGraphWiring.test.js`.
+  - **Quyết định kiến trúc**: **ADR-020** (thảm thực vật có ngữ pháp riêng — sao chép đúng khuôn ba
+    lớp của nhà cửa, thay vì thêm biến thể vào mấy nhánh `if`) và **ADR-021** (mật độ cây là một
+    TỈ LỆ với đất còn trống, không phải một số cây tuyệt đối).
+  - **Số nghiệm thu**: cấu trúc cây khác nhau trên 15 kỷ **3 → 405** (17–33 dáng trên 40 hạt mỗi
+    kỷ, trước là 1) · cảnh vật lệch khỏi tâm ô **0% → 100%** · chỉ số tụ Clark–Evans khi bật/tắt cơ
+    chế lùm **1,051 → 0,923** (34 phiên) và **0,914 → 0,782** (80 phiên) · đất trần ở thành phố
+    trưởng thành **0 ô ở 10/15 kỷ → 7–24 ô ở mọi kỷ** · tam giác trung bình **30.656 → 30.769
+    (+0,4%)** · lệnh vẽ **11–13, không đổi**.
+  - **BỐN LỖI, và ba trong bốn là do bài test mới bắt chứ không do đọc mã**:
+    1. **`bush` nằm chung bảng loài với cây** (lọc bằng cờ `allowBush`). Đo ra: cảnh vật loại "bụi"
+       ở kỷ 1 ra **5 khối, 212 tam giác, CAO 0,94** — một cái cây hoàn chỉnh đứng ở chỗ đáng lẽ là
+       bụi thấp, vì kỷ 1 khai `broadleaf` nặng hơn nên 6/10 lần "bụi" bốc trúng cây. Cái cờ ấy chỉ
+       che một nửa: nó chặn bụi lọt vào rổ cây, **không** chặn cây lọt vào rổ bụi. Bài học cũ lần
+       thứ tư — **một bảng gánh hai việc** ("cây gì mọc ở đây" + "tầng cây bụi dày bao nhiêu").
+       Nay bảng chỉ trả lời câu đầu; câu sau là trường `undergrowth` riêng. Bụi nay 3 khối, 108 tam
+       giác, cao 0,18–0,20.
+    2. **`sides`/`taper` viết cứng ở BỐN loài** (`cypress`, `streetTree`, `banyan`, `bush`) ⇒ hạt
+       giống chỉ đổi được kích thước, mà kích thước không đổi được HÌNH BÓNG. Mỗi lần đo đều ra
+       "40 hạt chỉ 2–4 dáng". Vá xong ba chỗ vẫn sót chỗ thứ tư — đúng bài học *"đổi một luật thì
+       grep chính cái luật ấy trên toàn cây"*.
+    3. **Núm LOD chỉ cắn ở 5/10 hạt** với `palm` và `cypress`: ngân sách mức thấp đặt bằng đúng
+       khoảng mà mức cao có thể ra, nên một nửa số hạt cho hai mức Y HỆT NHAU. Một cái núm không
+       nối vào đâu vẫn "chạy" bình thường — đúng hình dạng sai của Phase 7A.
+    4. **Cả cơ chế mọc-thành-lùm là MÃ CHẾT**, và chỉ **phép thử ngược** chứng minh được: bật/tắt
+       thì chỉ số phân tán **đứng yên tới hai chữ số thập phân** ở cả bốn kỷ đo thử. Hai nguyên
+       nhân: (a) mọi cảnh vật vừa đặt lại được ghi thành một tâm lùm mới ⇒ "bám vào một lùm" thoái
+       hoá thành "bám vào một cảnh vật bất kỳ" ≈ rải đều; (b) ở 120+ phiên lưới **kín 144/144** nên
+       không chiến lược đặt nào đổi được gì. Vá: trần 4 tâm lùm + chỉ hạt gieo ở chỗ MỚI mới được
+       làm tâm + trần phủ xanh (ADR-021).
+  - **Bài học ghi lại cho phiên sau**: *"một bài test chưa từng thấy đỏ thì chưa phải test"* phải áp
+    cho cả **PHÉP ĐO**. Nhìn ảnh chụp thì thấy có lùm cây thật, và nếu dừng ở đó thì tôi đã ship một
+    cơ chế chết kèm một chú thích dài giải thích nó hoạt động ra sao. Ngoài ra: chỉ số phân tán theo
+    ô vuông (Ic) **quá nhiễu ở cỡ mẫu n≈30** (bốn kỷ cho bốn chiều khác nhau); Clark–Evans chỉ phụ
+    thuộc chính các điểm nên đo lại hai cỡ thành phố ra cùng chiều, cùng độ lớn ≈0,13 — **hai lần đo
+    khớp nhau mới là thứ phân biệt tín hiệu với nhiễu**, một lần thì không.
 
 - **2026-08-15 (Phase 8C — mặt đất thôi là bàn cờ)** — **665 bài test** (653 → 665), lint sạch,
   build xanh. Đổi `engine/city3d/terrain.js` (thêm `smoothHeightAt`/`surfaceHeightAt`/`tintAt` +

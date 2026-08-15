@@ -6,7 +6,19 @@
 > chọn: `ARCHITECTURE_DECISIONS.md`. Nợ kỹ thuật: `TECH_DEBT.md`. Migration: `MIGRATION.md`. Tóm
 > tắt theo mốc: `CHANGELOG.md`.
 > **NGUYÊN TẮC ƯU TIÊN SỐ 1:** (1) mọi phiên AI phải đọc file này + `CLAUDE.md` + các file liên quan TRƯỚC khi làm; (2) sau MỌI cập nhật dù nhỏ, phải cập nhật ngay file này + `CLAUDE.md` + các file liên quan khác.
-> Cập nhật lần cuối: **2026-08-14** — **Phase 7B**: **MẶT ĐẤT CÓ CAO ĐỘ — 15 kỷ, 15 vùng đất.**
+> Cập nhật lần cuối: **2026-08-15** — **Phase 7C**: **NHÀ DÂN — THÀNH PHỐ CÓ NGƯỜI Ở.**
+> Bước THỨ BA trong thứ tự Đàm chốt (*Visual Foundation → Terrain/City → …*). Trước bản này mỗi kỷ
+> chỉ có **5 công trình trên lưới 144 ô** — thứ Đàm nhìn thấy là một bãi đất, không phải một thành
+> phố. Nay mỗi **2 phiên** (~50 phút, đúng con số anh nêu) mọc thêm một căn nhà dân, từ trong ra
+> ngoài, tối đa 17 căn (kỷ 1) → 30 căn (kỷ 15). **640 bài test**, lint sạch, build xanh, không đụng
+> state/schema.
+> ⚠️ **Hai lỗi gốc phát hiện bằng ẢNH CHỤP, không phải bằng suy luận**: (1) 25 nhà dân kỷ 7 đội mái
+> vòm y hệt Duomo (thêm `vernacularRoof`); (2) mái nhà dân rộng gấp **2,4 lần** thân nhà (thêm
+> `eaveOverhang` kẹp theo tỉ lệ, còn 1,41). Xem **ADR-015** + 3 bài học mới ở `CLAUDE.md`.
+> ⚠️ **VIỆC CẦN ĐÀM LÀM**: đo cổng hiệu năng trên iPhone thật (đóng cùng lúc `TECH_DEBT #23` + **#26**)
+> — Phase 7C vừa cộng ~50% tam giác mỗi cảnh lên một hệ thống chưa cân lại kể từ trước Phase 7A.
+>
+> *(mốc trước)* **2026-08-14 — Phase 7B**: **MẶT ĐẤT CÓ CAO ĐỘ — 15 kỷ, 15 vùng đất.**
 > Bước THỨ HAI trong thứ tự Đàm chốt (*Visual Foundation → **Terrain/City** → Roads → Historical
 > Architecture → Living City → Pomodoro → Polish*). Trước bản này mặt đất là 144 ô hộp **phẳng
 > tuyệt đối ở cao độ 0** cho cả 15 kỷ — trục "địa hình" hoàn toàn không tồn tại.
@@ -496,6 +508,52 @@
 
 ## 🗒️ Nhật ký cập nhật
 > Mỗi lần xong việc đáng kể, thêm 1 dòng vào ĐẦU danh sách.
+
+- **2026-08-15 (Phase 7C — nhà dân: thành phố có người ở)** — **640 bài test** (625 → 640), lint
+  sạch, build xanh. Không đụng state/schema, không migration.
+  - **Module thuần mới `src/engine/city3d/dwellings.js`** (+ 8 bài test riêng). 30 ô đất trống trên
+    lưới (những ô không phải đường và không thuộc 5 khu đất đã hứa cho kỳ quan), chia **ba khu**
+    theo khoảng cách Chebyshev tới tâm: **12 ngoại vi · 12 khu dân cư · 6 trung tâm** — đúng bố cục
+    *"ngoại vi → khu dân cư → trung tâm → landmark"* Đàm yêu cầu. Mỗi khu cho phép công năng + cỡ
+    nhà riêng (ngoại vi thiên về xưởng/kho, trung tâm thiên về cửa hàng và nhà lớn).
+  - **Nhịp: 2 phiên = 1 căn** (Đàm nói *"~50 phút → thêm một nhà dân"*, phiên mặc định 25 phút).
+    Nhà mọc **từ trong ra ngoài** và nhà cũ **không bao giờ đổi chỗ** khi thành phố lớn lên — có bài
+    test riêng khoá điều đó. Trần mật độ tăng dần theo kỷ (17 → 30 căn).
+  - ⚠️ **CHƯA XÂY CÔNG TRÌNH NÀO THÌ CHƯA CÓ NHÀ DÂN.** Công trình đầu tiên là thứ Đàm đổi 4–11
+    phiên để có; nếu nó mọc lên giữa một thị trấn có sẵn thì mất trọn ý nghĩa. Cùng luật với đường sá.
+  - **Nhà dân đi qua ĐÚNG `buildBuildingSpec`** như công trình thật (**ADR-015**), không có bộ sinh
+    riêng — nên nhà dân kỷ 6 TỰ ĐỘNG có mái ngói Bắc Bộ, nhà dân kỷ 14 TỰ ĐỘNG có mặt kính
+    Singapore, không cần một dòng dữ liệu mới nào. Ba nguyên mẫu mới `house`/`shop`/`workshop` khai
+    cờ **`plain: true`** → tắt chữ ký kiến trúc + mô-típ, để 5 kỳ quan vẫn "nhận ra được từ xa".
+    Trục `rarity` dùng lại với nghĩa **cỡ nhà nhỏ/vừa/lớn** (không phải độ quý).
+  - ⚠️ **LỖI GỐC 1 — `vernacularRoof`.** Ảnh chụp kỷ 7 cho thấy **25 nhà dân đều đội mái vòm
+    terracotta y hệt Duomo**, nên nhà thờ chính toà chìm nghỉm. `style.roof` đang gánh hai việc:
+    *"công trình biểu tượng lợp mái gì"* và *"nhà thường lợp mái gì"* — ngoài đời hai câu ấy gần như
+    không bao giờ cùng đáp án. Thêm trường `vernacularRoof` **bắt buộc cả 15 kỷ**, 9 kỷ khai khác
+    (2·3·4·6·7·9·10·11·15), 6 kỷ khai trùng có chủ đích. Thay mái **ở NGUỒN** qua
+    `getVernacularStyle()`, không thay trong `emitRoof` (vì `roofRise` cũng đọc `style.roof`).
+  - ⚠️ **LỖI GỐC 2 — `eaveOverhang`.** `eaves` là số TUYỆT ĐỐI, mà `rw = w + eaves × 2`. Trên kỳ
+    quan rộng 1,4 thì `eaves` 0,4 là mái hiên sâu rất đẹp; trên nhà dân rộng 0,56 thì nó thò ra
+    **71% mỗi bên** và mái rộng **gấp 2,4 lần** cái nhà — một cái ô, không phải mái hiên. Kẹp theo
+    tỉ lệ (`EAVE_MAX_RATIO = 0,28`) → rộng nhất còn **1,41 lần**. ⚠️ Phép kẹp này chạm vào
+    **115/215 mảng nhà** của 75 công trình đã có (những mảng phụ nhỏ vốn "đội ô" từ lâu) — tức một
+    thay đổi mỹ thuật ảnh hưởng cả công trình cũ. KHÔNG phạm ADR-007 (lời hứa ở đó là "cùng `bpId`
+    → cùng hình", cấm ngẫu nhiên; Phase 5B đã đổi chiều cao cả 75 công trình theo đúng tinh thần này).
+  - **Hai file lá mới `src/engine/hashId.js` + `src/engine/cityGrid.js`** — cắt TẬN GỐC vòng import
+    `cityLayout ↔ city3d/dwellings`. Bản đầu tôi né bằng cách CHÉP hằng số sang `dwellings.js` kèm
+    một đoạn tự trấn an "đã khoá bằng test đối chiếu"; lý lẽ đó sai vì test đối chiếu chỉ báo được
+    khi hai bên ĐÃ lệch, nó không ngăn được việc lệch. `cityLayout.js` TÁI XUẤT, không chép.
+  - **Ngân sách**: cảnh nặng nhất (kỷ 7) đi từ ~13.600 lên **21.244 / 60.000** tam giác. Nhà dân vào
+    **chung khối hình gộp** với công trình nên **không tốn thêm lệnh vẽ nào**. Nhà dân **không chạm
+    được** (`addPickTarget` chỉ cho công trình thật + giàn giáo) — chạm vào một căn nhà vô danh rồi
+    hiện bảng rỗng thì tệ hơn là không chạm được.
+  - **Nợ mới**: `TECH_DEBT #25` (nhà dân nhỏ nhất ở kỷ 3/6/8 không có cửa sổ — ngưỡng tuyệt đối
+    `height < 0.3`, cùng hình dạng sai với `eaves`) và **`#26`** (nhà dân chưa có LOD + cổng hiệu
+    năng iPhone vẫn chưa đo lại — **đóng cùng lúc với #23 bằng MỘT ảnh chụp HUD trên máy Đàm**).
+  - **Sửa kèm 2 phép đo đã già đi**: `assert.equal(seen.size, 4)` ("4 loại công trình") đỏ khi thêm
+    3 nguyên mẫu → đổi thành `Object.keys(ARCHETYPES).length`; và một assert MỚI tôi vừa viết cũng
+    dính đúng lỗi đó (`picks.length === 1` trong khi `addPickTarget` vốn được gọi hai lần hợp lệ).
+  - **Đã thử ngược 15/15 assert mới** (mỗi lần đều kiểm bằng `diff` xem file có đổi thật không).
 
 - **2026-08-14 (Phase 7B — mặt đất có cao độ: 15 kỷ, 15 vùng đất)** — **625 bài test**, lint sạch,
   build xanh. Không đụng state/schema, không migration.

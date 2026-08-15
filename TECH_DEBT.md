@@ -13,11 +13,15 @@
 > mà không được refactor triệt để, phải CHỦ ĐỘNG đề xuất mở một "Maintenance Sprint" (nêu rõ mục
 > tiêu/phạm vi/lợi ích/rủi ro/tiêu chí hoàn thành) thay vì tiếp tục cộng thêm tính năng mới.
 >
-> **Trạng thái ngưỡng hiện tại (2026-08-14, cập nhật sau Phase 7B)**: **1 mục Priority High**
+> **Trạng thái ngưỡng hiện tại (2026-08-15, cập nhật sau Phase 7C)**: **1 mục Priority High**
 > (#14) → vẫn CHƯA đạt ngưỡng 8–10 mục để đề xuất Maintenance Sprint. Còn **3 mục Medium-High**
-> (#3, #13, và **#24** — MỚI: 14/15 kỷ có công trình bị mép khung hình cắt, đã đo đủ, chờ Đàm chọn
-> hướng) và **3 mục Medium**: **#23** (cổng hiệu năng iPhone chưa đo lại sau khi đổi sang PBR —
-> MỚI, sinh ra từ chính Phase 7A), **#22** (công cụ `sweep-score.mjs` không còn chấm được 15 kỷ) và
+> (#3, #13, và **#24** — 14/15 kỷ có công trình bị mép khung hình cắt, đã đo đủ, chờ Đàm chọn
+> hướng), **4 mục Medium** và **1 mục Low** (**#25** — MỚI: nhà dân nhỏ nhất ở 3 kỷ không có cửa sổ).
+> ⚠️ **#26 (MỚI, Medium) và #23 đóng được bằng CÙNG MỘT lần đo**: Phase 7C vừa cộng thêm ~50% tam
+> giác mỗi cảnh lên một hệ thống mà cổng hiệu năng iPhone **chưa được cân lại kể từ trước Phase 7A**.
+> Một ảnh chụp HUD trên máy Đàm đóng cả hai. Nên làm TRƯỚC bước "Living City".
+> Bốn mục Medium: **#26**, **#23** (cổng hiệu năng iPhone chưa đo lại sau khi đổi sang PBR),
+> **#22** (công cụ `sweep-score.mjs` không còn chấm được 15 kỷ) và
 > **#19** (nay đang **treo chờ #22**: hai con số nghiệm thu của nó đo trên bảng mái CŨ, đã bị Phase
 > 6B thay hẳn, mà chưa đo lại được). **#15, #16, #17 và #20 đều đã đóng** — không còn mục nào chờ
 > Đàm chọn hướng mỹ thuật.
@@ -1318,3 +1322,59 @@
   nguồn ở BẤT KỲ độ sâu nào cũng chạy, đúng quy ước chính thức ở `PROJECT_STRUCTURE.md`.
   ⚠️ Ràng buộc còn lại: cú pháp nháy đơn này cần shell kiểu POSIX (Mac/Linux — đúng môi trường dự
   án); chạy `npm test` từ `cmd.exe` của Windows sẽ không mở rộng đúng.
+
+---
+
+## #25 — Nhà dân NHỎ NHẤT ở 3 kỷ không có lấy một ô cửa sổ nào (là hộp trơn đội mái)
+
+- **Module**: `src/engine/city3d/buildingSpec.js` (`emitWindows`), phát hiện ở Phase 7C
+- **Priority**: Low
+- **Severity**: Low
+- **Impact**: `emitWindows` bỏ qua mọi mảng nhà cao dưới `0.3` đơn vị. Với 5 công trình kỳ quan thì
+  ngưỡng ấy chưa bao giờ chạm tới; với nhà dân cỡ **nhỏ** thì nó chạm ở **kỷ 3, 6 và 8** — những căn
+  ấy dựng ra là hộp trơn đội mái, không một ô cửa. Đo bằng `buildBuildingSpec({type:'house',
+  rarity:'common'})`: 3 kỷ này có 0 khối vai `glass`. (Kỷ 1 và 2 cũng không có cửa sổ nhưng đó là
+  **đúng** — `windows: 'none'`, lều da thú và nhà vách đất thật sự không có cửa sổ.)
+- **Root Cause**: ngưỡng `height < 0.3` là một số TUYỆT ĐỐI áp lên những khối chênh nhau nhiều lần —
+  đúng cùng một hình dạng sai với `eaves` mà Phase 7C vừa vá bằng `eaveOverhang`. Lần này chưa vá
+  vì chưa đo được là ở cỡ hiển thị thật (một cửa sổ nhà dân rộng ~4 điểm ảnh) thì thêm cửa sổ có
+  làm mặt tiền đẹp hơn hay chỉ thành một vệt bẩn.
+- **Current Risk**: thấp — chỉ ảnh hưởng căn nhỏ nhất ở 3/15 kỷ, và chúng nằm ở ngoại vi.
+- **Future Risk**: nếu sau này nhà dân được phép to lên hoặc camera được kéo gần hơn, số kỷ dính sẽ
+  đổi mà không có gì báo.
+- **Recommended Solution**: đổi ngưỡng tuyệt đối thành ngưỡng theo tỉ lệ (giống `EAVE_MAX_RATIO`),
+  HOẶC cho `plain` một cách vẽ cửa sổ tối giản riêng. **Phải chụp ảnh so sánh trước/sau rồi mới
+  chọn** — đây là câu hỏi mỹ thuật, không phải câu hỏi mã.
+- **Estimated Complexity**: thấp (một dòng + một bài test + một lần quét ảnh)
+- **Blocking Conditions**: không có
+- **Review Trigger**: khi làm bước "Historical Architecture" hoặc khi Đàm nói nhà dân trông trống
+- **Owner**: phiên AI kế tiếp · **Status**: Open
+
+---
+
+## #26 — Nhà dân chưa có LOD, và cổng hiệu năng iPhone vẫn chưa đo lại (nối với #23)
+
+- **Module**: `src/engine/city3d/dwellings.js` + `buildingSpec.js`, sinh ra từ Phase 7C
+- **Priority**: Medium
+- **Severity**: Medium
+- **Impact**: Phase 7C cộng thêm 17–30 công trình mỗi kỷ. Cảnh nặng nhất (kỷ 7) đi từ ~13.600 lên
+  **21.244 / 60.000** tam giác — vẫn trong ngân sách, và nhà dân vào **chung khối hình gộp** nên
+  KHÔNG tốn thêm lệnh vẽ. Nhưng số tam giác gần **gấp rưỡi**, mà bản đồ bóng đổ vẽ cảnh lần thứ
+  hai, nên chi phí thực tế trên máy yếu là gấp đôi con số đó.
+- **Root Cause**: nhà dân dùng đúng `buildBuildingSpec` như công trình thật (ADR-015) nên chúng
+  mang đủ chi tiết ở mọi khoảng cách. Riêng kỷ 7 và 9 (`windows: 'arch'`) đắt hơn hẳn: mỗi ô cửa
+  dựng thêm một nửa vòm phía trên, mà ở cỡ hiển thị thật một ô cửa nhà dân chỉ rộng ~4 điểm ảnh.
+  Đây là chỗ cắt rẻ nhất nếu cần cắt.
+- **Current Risk**: **chưa biết** — và đó chính là vấn đề. `TECH_DEBT #23` (đo lại cổng hiệu năng
+  iPhone sau khi đổi sang PBR ở Phase 7A) vẫn đang mở, nên hiện KHÔNG có số đo nào trên máy thật kể
+  từ trước Phase 7A. Phase 7C vừa cộng thêm tải lên một hệ thống chưa được cân lại.
+- **Future Risk**: các bước còn lại của Roadmap (Living City — người đi bộ, xe, khói, cờ) sẽ cộng
+  tiếp. Nếu không cân trước thì tới lúc đó sẽ không biết phần nào làm nóng máy.
+- **Recommended Solution**: (1) Đàm mở màn Thành Phố trên iPhone, bật HUD hiệu năng, chụp màn hình
+  gửi lại — đóng luôn #23. (2) Chỉ khi số đo xấu mới cắt: bỏ nửa vòm cửa sổ cho `plain`, rồi tới
+  hạ trần mật độ. **Không cắt trước khi có số** — 35% ngân sách là còn rộng, và cắt mù thì mất chi
+  tiết mà không biết có đổi được gì.
+- **Estimated Complexity**: đo = thấp (một ảnh chụp) · cắt nếu cần = thấp
+- **Blocking Conditions**: **chờ Đàm đo trên iPhone thật** (giống #23 — cùng một lần đo là đóng cả hai)
+- **Review Trigger**: trước khi bắt đầu bước "Living City"
+- **Owner**: Đàm (đo) → phiên AI kế tiếp (cắt nếu cần) · **Status**: Open

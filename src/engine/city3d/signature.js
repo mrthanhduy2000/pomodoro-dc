@@ -37,7 +37,7 @@
 
 import { hashId } from '../cityLayout';
 import { prism, gable } from './parts';
-import { roofRise } from './eraStyle';
+import { roofRise, eaveOverhang } from './eraStyle';
 
 /** Băm → số thực trong [0,1). Tất định tuyệt đối, cùng hàm băm với phần còn lại của thành phố. */
 function unit(key) {
@@ -167,7 +167,10 @@ function turret(out, ctx) {
  */
 function daoDinh(out, ctx) {
   const { x, z, w, d, style, top } = ctx;
-  const eaves = Number.isFinite(style?.eaves) ? style.eaves : 0.2;
+  // ⚠️ QUA `eaveOverhang`, KHÔNG đọc thẳng `style.eaves` — xem chú thích hàm đó ở `eraStyle.js`.
+  // Đầu đao phải đậu đúng mép mái; đọc số thô ở đây trong khi `emitRoof` đã kẹp nghĩa là bốn cái
+  // đầu đao treo lơ lửng ngoài không khí ở mọi công trình nhỏ. Một luật thì chỉ được có một công thức.
+  const eaves = eaveOverhang(style, w, d);
   const corners = [[-1, -1], [1, -1], [-1, 1], [1, 1]];
   for (const [sx, sz] of corners) {
     const cx = x + sx * (w / 2 + eaves) * 0.96;

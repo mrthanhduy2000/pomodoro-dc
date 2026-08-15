@@ -11,6 +11,68 @@
 
 ---
 
+## ADR-015 — Nhà dân đi qua ĐÚNG bộ máy sinh công trình (không có bộ sinh riêng), và kỷ khai thêm một MÁI NHÀ THƯỜNG tách khỏi mái công trình biểu tượng
+
+- **Ngày**: 2026-08-15 (Phase 7C)
+- **Bối cảnh**: Đàm yêu cầu thành phố phải có *"nhà dân nhỏ/vừa/lớn, cửa hàng, xưởng… khu dân cư,
+  trung tâm, ngoại vi"*, mỗi ~2 phiên mọc thêm một căn, và *"nhà dân phải đúng thời đại + quốc gia,
+  không dùng nhà generic rồi đổi texture"*. Đồng thời: *"5 landmark phải có silhouette đặc trưng,
+  detail cao hơn nhà dân, nhận ra được từ xa."* Trước bản này mỗi kỷ chỉ có 5 công trình trên lưới
+  144 ô — phần còn lại là đất trống.
+- **Vấn đề**: hai yêu cầu trên kéo ngược nhau. Muốn nhà dân "đúng thời đại + quốc gia" thì nó phải
+  mang toàn bộ ngữ pháp kỷ (mái, vật liệu, tỉ lệ, cửa sổ); nhưng mang đủ ngữ pháp ấy thì nó trông
+  y hệt kỳ quan thu nhỏ, và kỳ quan hết "nhận ra được từ xa".
+
+**Phương án đã cân nhắc**
+
+1. **Bộ sinh nhà dân RIÊNG** (một `dwellingSpec.js` độc lập). *Loại bỏ*: phải chép lại lần thứ hai
+   toàn bộ thứ đã dạy cho thành phố suốt 6 phase — kiểu mái theo kỷ, vật liệu tường/mái, `massScale`,
+   `spread`, kiểu cửa sổ. Mọi bản chép trong lịch sử dự án này đều đã trôi khỏi bản gốc (xem mục
+   "Composition over Duplication" ở `CLAUDE.md`, và sự cố bản sao tài liệu 2026-07-31). Thêm nữa,
+   một kỷ mới sẽ phải khai dữ liệu ở HAI nơi.
+2. **Dùng chung `buildBuildingSpec`, phân biệt bằng ĐỘ HIẾM** (nhà dân = `common`). *Loại bỏ*: trục
+   `rarity` đã mang nghĩa "công trình bề thế tới đâu", và `common` vẫn dựng chữ ký kiến trúc — tức
+   30 căn nhà dân kỷ 1 đều đội cột chữ T Göbekli Tepe. Không giải quyết được vế thứ hai.
+3. **✅ Dùng chung `buildBuildingSpec` + một cờ `plain` ở tầng NGUYÊN MẪU.** Nhà dân là 3 nguyên
+   mẫu mới (`house`/`shop`/`workshop`) khai `plain: true`; cờ này tắt `emitSignature` và đưa ngân
+   sách mô-típ về 0. Trục `rarity` được dùng lại với nghĩa **cỡ nhà nhỏ/vừa/lớn** — đúng ba nấc Đàm
+   nêu, và đã có sẵn toàn bộ hệ số nhân đi kèm.
+
+**Vì sao chọn (3)**: nhà dân kỷ 6 TỰ ĐỘNG có mái ngói Bắc Bộ và nhà dân kỷ 14 TỰ ĐỘNG có mặt kính
+Singapore mà không cần một dòng dữ liệu mới nào; thêm một kỷ vẫn chỉ khai ở một chỗ. Ranh giới
+"kết cấu vs căn cước" đã tồn tại sẵn trong `buildingSpec.js` từ Phase 6A, nên `plain` chỉ là đặt tên
+cho một đường cắt đã có, không phải tạo khái niệm mới.
+
+**Quyết định thứ hai, phát hiện bằng ẢNH CHỤP chứ không bằng suy luận**: `plain` là CHƯA ĐỦ. Ảnh kỷ 7
+cho thấy 25 căn nhà nhỏ đều đội mái vòm terracotta y hệt Duomo — vì `style.roof` đang gánh hai việc
+(*"công trình biểu tượng của nền văn minh này lợp mái gì"* và *"nhà thường ở đây lợp mái gì"*), hai
+câu hỏi gần như không bao giờ cùng đáp án ngoài đời. ⇒ Thêm trường **`vernacularRoof`** (bắt buộc,
+15/15 kỷ; 9 kỷ khai khác `roof`) và **`getVernacularStyle()`** thay mái **ở nguồn** — không thay
+trong `emitRoof`, vì `roofRise` cùng nhiều chỗ khác cũng đọc `style.roof`.
+
+**Đánh đổi**
+- Nhà dân KHÔNG chạm được (`addPickTarget` chỉ dành cho công trình thật + giàn giáo). Chạm vào một
+  căn nhà vô danh rồi hiện bảng rỗng thì tệ hơn là không chạm được.
+- Cờ `plain` cắt chữ ký kiến trúc, nên nhà dân giữ **nét vẽ** của kỷ mà không mang **căn cước** của
+  kỷ. Đây là chủ đích, không phải thiếu sót.
+- Kèm theo phải kẹp diềm mái theo tỉ lệ (`eaveOverhang`), và phép kẹp đó **chạm vào 115/215 mảng
+  nhà của 75 công trình đã có** — tức một thay đổi mỹ thuật ảnh hưởng cả công trình cũ. Không phạm
+  ADR-007 (lời hứa ở đó là "cùng `bpId` → cùng hình", cấm ngẫu nhiên; không phải "cấm sửa mỹ thuật"
+  — Phase 5B đã đổi chiều cao cả 75 công trình theo đúng tinh thần này).
+
+**Ảnh hưởng**: `src/engine/city3d/dwellings.js` (mới), `archetypes.js`, `buildingSpec.js`,
+`eraStyle.js`, `signature.js`, `cityLayout.js`, `sceneGraph.js`. Cộng hai file lá mới
+`src/engine/hashId.js` và `src/engine/cityGrid.js` — cắt vòng import `cityLayout ↔ dwellings` tận
+gốc thay vì chép hằng số sang.
+
+**Số liệu**: 17 căn (kỷ 1) → 30 căn (kỷ 15). Cảnh nặng nhất kỷ 7 = **21.244 / 60.000** tam giác.
+
+**Điều kiện xem lại**: nếu sau này nhà dân cần chạm được (ví dụ để hiện tên khu), hoặc nếu một kỷ
+mới cần mái nhà thường khác cả `roof` lẫn `vernacularRoof` tuỳ công năng (nhà ở vs xưởng), thì trục
+`vernacularRoof` phải mở rộng theo `type` chứ không nhân bản thành trường thứ ba.
+
+---
+
 ## ADR-014 — Địa hình Thành Phố 3D dùng THỀM BẬC do kỷ quyết định (không phải dốc liên tục, không phải ngẫu nhiên), và nhà vắt qua mép thềm thì kê MÓNG chứ không san phẳng đất
 
 - **Ngày**: 2026-08-14

@@ -12,6 +12,36 @@
 
 ---
 
+## 2026-08-15 — Nhà dân: thành phố có người ở (Phase 7C)
+
+**Mục đích.** Bước thứ ba trong thứ tự Đàm đã chốt (*Visual Foundation → Terrain/City → …*). Yêu cầu
+nêu đích danh *"nhà dân nhỏ/vừa/lớn, cửa hàng, xưởng"*, bố cục *"ngoại vi → khu dân cư → trung tâm →
+landmark"*, và *"~50 phút → thêm một nhà dân"*. Trước bản này mỗi kỷ chỉ có **5 công trình trên lưới
+144 ô** — phần còn lại là đất trống, tức thứ Đàm nhìn thấy là một bãi đất chứ không phải một thành phố.
+
+**Phạm vi.** Module thuần mới `engine/city3d/dwellings.js`: 30 ô đất trống chia ba khu theo khoảng
+cách tới tâm (12 ngoại vi · 12 khu dân cư · 6 trung tâm), mỗi khu cho phép công năng và cỡ nhà khác
+nhau. Cứ **2 phiên** (~50 phút) mọc thêm một căn, mọc từ trong ra ngoài, trần mật độ theo kỷ (17 căn
+kỷ 1 → 30 căn kỷ 15). Nhà dân đi qua **đúng** `buildBuildingSpec` nên tự động thừa hưởng mái/vật
+liệu/tỉ lệ của kỷ; cờ `plain` tắt chữ ký kiến trúc + mô-típ để kỳ quan vẫn nổi bật. Xem **ADR-015**.
+
+**Hai lỗi gốc phát hiện bằng ảnh chụp và sửa kèm.** (1) `style.roof` gánh hai việc → 25 nhà dân kỷ 7
+đội mái vòm y hệt Duomo; thêm trường `vernacularRoof` (bắt buộc 15/15 kỷ, 9 kỷ khai khác). (2) `eaves`
+là số tuyệt đối → mái nhà dân rộng gấp **2,4 lần** thân nhà (một cái ô, không phải mái hiên); thêm
+`eaveOverhang()` kẹp theo tỉ lệ, còn **1,41 lần**.
+
+**Ảnh hưởng.** Cảnh nặng nhất (kỷ 7) đi từ ~13.600 lên **21.244 / 60.000** tam giác — vẫn trong ngân
+sách, và nhà dân vào **chung khối hình gộp** nên không tốn thêm lệnh vẽ. Phép kẹp diềm mái chạm vào
+**115/215 mảng nhà** của 75 công trình đã có (những mảng phụ nhỏ vốn đang "đội ô" từ lâu). Nhà dân
+KHÔNG chạm được — chỉ công trình thật và giàn giáo mới mở bảng thông tin.
+
+**Tương thích.** Không đụng state, không migration, không đổi schema. Nhà dân là hàm THUẦN của
+`(kỷ, số công trình, số phiên)` nên không tốn một byte nào trong JSONB đang tranh chấp CAS.
+
+**Test.** 625 → **640** bài.
+
+---
+
 ## 2026-08-14 — Mặt đất có cao độ: 15 kỷ, 15 vùng đất (Phase 7B)
 
 **Mục đích.** Bước thứ hai trong thứ tự Đàm đã chốt cho Thành phố 3D (*Visual Foundation → Terrain

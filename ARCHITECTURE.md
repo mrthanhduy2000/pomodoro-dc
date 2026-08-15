@@ -247,13 +247,23 @@ phiên" vẫn là câu dùng được, "3/ phiên" thì không.
 (1) `CityView.jsx` chọn NGUỒN dữ liệu — kỷ hiện tại lấy state sống, kỷ đã niêm phong lấy ảnh chụp
 trong `cityArchive`; đây là chỗ dễ sai nhất cả màn hình. (2) `computeCityLayout` (engine thuần) trả
 về **ô lưới `(x, y)`, không phải pixel** — cùng một bố cục dùng được cho mọi cách vẽ. Bố cục gồm
-`buildings` (đã xây) · `props` (cảnh vật) · **`scaffolds` (đang xây)** · `ground`. `scaffolds` nhận
+`buildings` (đã xây) · **`dwellings` (nhà dân)** · `props` (cảnh vật) · **`scaffolds` (đang xây)** ·
+`ground`. `scaffolds` nhận
 THẲNG shape của `craftingQueue` trong store (`{ bpId, sessionsRemaining }`) và tự quy ra tiến độ —
 cố ý không bắt bên gọi tính sẵn, để hai màn hình (tab Thành Phố và lớp nền trang chủ) không thể
 tính lệch nhau. Mỗi giàn giáo mang theo đủ ba thứ một màn hình cần để nói thành câu: `progress`
 (vẽ hình), `remaining`/`total` (**còn bao xa** — số phiên, thứ hành động được), và `reward` (nhãn
 đặc quyền sẽ mở khoá — **đi tới đó để làm gì**). ⚠️ Giàn giáo được đặt chỗ TRƯỚC khi sinh cảnh vật,
-nếu không cây sẽ mọc giữa công trường. (3) Bộ vẽ
+nếu không cây sẽ mọc giữa công trường.
+**`dwellings` (Phase 7C, ADR-015)** là hàm THUẦN của `(kỷ, số công trình đã xây, số phiên)` — không
+lưu byte nào vào state. 30 ô đất trống (những ô không phải đường, không thuộc 5 khu đất đã hứa cho
+kỳ quan) chia ba khu theo khoảng cách tới tâm: ngoại vi → khu dân cư → trung tâm, mỗi khu cho phép
+công năng và cỡ nhà riêng. Cứ 2 phiên (~50 phút) mọc thêm một căn, **mọc từ trong ra ngoài**, trần
+mật độ tăng dần theo kỷ (17 căn kỷ 1 → 30 căn kỷ 15). ⚠️ Nhà dân cũng phải đặt chỗ TRƯỚC `deriveProps`
+— cùng lý do với giàn giáo, và cùng kiểu hỏng im lặng (một cái cây mọc trong phòng khách). Nhà dân
+đi qua **đúng** `buildBuildingSpec` như công trình thật, chỉ khác cờ `plain` (tắt chữ ký kiến trúc +
+mô-típ) và mái `vernacularRoof` — nhờ vậy chúng thừa hưởng mái/vật liệu/tỉ lệ của kỷ mà không tranh
+mất hình bóng của 5 kỳ quan. (3) Bộ vẽ
 biến ô lưới thành hình. `CityViewShell.jsx` là KHUNG (chuyển kỷ, số liệu, trạng thái rỗng) và
 **không biết bộ vẽ nào đang chạy** — bộ vẽ vào qua `children` và tự quyết định kích thước của mình.
 Có HAI bộ vẽ: `city/render2d/` (SVG isometric) và `city/render3d/` (three.js). `render3d/` là **nơi

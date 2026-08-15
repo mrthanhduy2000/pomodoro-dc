@@ -21,10 +21,17 @@
  */
 
 import { BLUEPRINT_CATALOG, BUILDING_EFFECTS } from './constants';
+import { deriveDwellings } from './city3d/dwellings';
+import { hashId } from './hashId';
+import {
+  CITY_GRID_SIZE, BUILDING_ZONES,
+  ROAD_MAIN_AXIS, ROAD_CROSS_AXIS, RING_LOW, RING_HIGH,
+} from './cityGrid';
 import { describeCraftProgress } from './craftProgress';
 
 // ─── HẰNG SỐ LƯỚI ────────────────────────────────────────────────────────────
-export const CITY_GRID_SIZE = 12;      // lưới 12×12 = 144 ô
+// ⚠️ TÁI XUẤT từ `cityGrid.js`, KHÔNG phải bản sao — xem chú thích đầu file đó.
+export { CITY_GRID_SIZE, BUILDING_ZONES };
 export const TILE_W = 64;              // bề rộng ô isometric (px)
 export const TILE_H = 32;              // bề cao ô isometric (px) — tỉ lệ 2:1
 /**
@@ -65,18 +72,6 @@ for (const [eraKey, list] of Object.entries(BLUEPRINT_CATALOG)) {
     };
   });
 }
-
-/**
- * Khu đất riêng cho từng thứ hạng bản vẽ trong kỷ. Các ô vuông này KHÔNG giao nhau — đó chính là
- * thứ bảo đảm "bảo tàng bất động". Hạng 4 (luôn là công trình `epic` của kỷ) đứng giữa thành phố.
- */
-const BUILDING_ZONES = [
-  { x: 1, y: 1, w: 3, h: 3 },   // hạng 0 — góc trên-trái
-  { x: 8, y: 1, w: 3, h: 3 },   // hạng 1 — góc trên-phải
-  { x: 1, y: 8, w: 3, h: 3 },   // hạng 2 — góc dưới-trái
-  { x: 8, y: 8, w: 3, h: 3 },   // hạng 3 — góc dưới-phải
-  { x: 5, y: 5, w: 3, h: 3 },   // hạng 4 — trung tâm (kỳ quan)
-];
 
 /**
  * Mạng đường. Đàm 2026-08-14: *"đường đi cũng nên phức tạp hơn"* — và anh đúng: trước đó cả thành
@@ -128,11 +123,7 @@ const BUILDING_ZONES = [
  * nguyên thứ tự cũ**, nên thành phố Đàm đang có KHÔNG bị sắp xếp lại. Bất biến này có bài test
  * riêng khoá lại.
  */
-const ROAD_MAIN_AXIS = 4;
-const ROAD_CROSS_AXIS = 8;
 /** Viền ngoài cùng của lưới — nơi duy nhất không chạm khu đất công trình nào. */
-const RING_LOW = 0;
-const RING_HIGH = CITY_GRID_SIZE - 1;
 
 /**
  * Các ô đường, sắp xếp từ TRUNG TÂM ra NGOÀI. Đường được "mở" dần theo số phiên, nên thành phố
@@ -268,18 +259,13 @@ const SCATTER_WEIGHT_TOTAL = SCATTER_KINDS.reduce((sum, item) => sum + item.weig
 // ─── BĂM TẤT ĐỊNH ────────────────────────────────────────────────────────────
 
 /**
- * Băm tất định chuỗi → số nguyên KHÔNG ÂM 32-bit (FNV-1a). Không dùng `Math.random`.
- * Mọi giá trị đầu vào (kể cả `null`/`undefined`/số) đều cho ra một số hợp lệ, không bao giờ `NaN`.
+ * ⚠️ TÁI XUẤT, KHÔNG PHẢI BẢN SAO. Hàm thật nay ở `src/engine/hashId.js` — phải tách ra vì Phase 7C
+ * làm `cityLayout` phụ thuộc ngược vào `city3d/dwellings.js`, tạo một VÒNG import. Xem lý do đầy đủ
+ * ở đầu file đó. Dòng này giữ cho sáu module đang `import { hashId } from '../cityLayout'` chạy y
+ * nguyên; **tuyệt đối không được** chép lại thân hàm về đây, vì hai bản băm trôi khỏi nhau nghĩa là
+ * cùng một `bpId` cho ra hai hình dáng khác nhau ở hai chỗ — sập ADR-007 mà không có gì báo.
  */
-export function hashId(str) {
-  const text = typeof str === 'string' ? str : String(str ?? '');
-  let hash = 0x811c9dc5;                    // FNV offset basis
-  for (let i = 0; i < text.length; i += 1) {
-    hash ^= text.charCodeAt(i);
-    hash = Math.imul(hash, 0x01000193);     // FNV prime
-  }
-  return hash >>> 0;                        // ép về không dấu
-}
+export { hashId };
 
 /** Lấy số trong khoảng [0, range) từ một khoá băm — tiện ích nội bộ. */
 function hashPick(key, range) {
@@ -567,6 +553,19 @@ export function computeCityLayout({ built, levels, era, stats, pending } = {}) {
       };
     });
 
+  // ── NHÀ DÂN (Phase 7C) ────────────────────────────────────────────────────
+  //
+  // ⚠️ ĐẶT TRƯỚC `deriveProps`, VÀ THỨ TỰ NÀY BẮT BUỘC — cùng lý do đã buộc giàn giáo phải đứng
+  // trước nó: `deriveProps` né mọi ô trong `occupied`, nên đặt sau thì cây cối sẽ mọc xuyên qua
+  // giữa nhà dân. Đây là chỗ dễ sai mà **không có gì đỏ lên**: bố cục vẫn hợp lệ, chỉ là một cái
+  // cây mọc trong phòng khách.
+  const dwellings = deriveDwellings({
+    era: eraNum,
+    buildingCount: buildings.length,
+    sessionCount,
+  });
+  for (const home of dwellings) occupied.add(cellKey(home.x, home.y));
+
   const props = deriveProps({
     era: eraNum,
     buildingCount: buildings.length,
@@ -579,6 +578,7 @@ export function computeCityLayout({ built, levels, era, stats, pending } = {}) {
     era:       eraNum,
     gridSize:  CITY_GRID_SIZE,
     buildings: buildings.sort(byIsometricDepth),
+    dwellings: dwellings.sort(byIsometricDepth),
     props:     props.sort(byIsometricDepth),
     scaffolds: scaffolds.sort(byIsometricDepth),
     ground:    buildGround(eraNum),

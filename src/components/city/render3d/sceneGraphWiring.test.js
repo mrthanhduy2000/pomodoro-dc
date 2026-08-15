@@ -170,6 +170,40 @@ test('CÔNG TRÌNH ĐỨNG Ở CAO ĐỘ CAO NHẤT DƯỚI BÓNG MÌNH, và ph�
   );
 });
 
+test('NHÀ DÂN PHẢI ĐƯỢC DỰNG THẬT VÀO CẢNH, không chỉ được TÍNH ra', () => {
+  // ⚠️ Đúng bẫy Phase 4H, và Phase 7C là ca dễ dính nhất từ trước tới nay: `deriveDwellings` là hàm
+  // thuần, có 8 bài test riêng, được `computeCityLayout` gọi và trả về trong `layout.dwellings` —
+  // tất cả đều xanh kể cả khi `sceneGraph.js` không hề đọc mảng đó. Triệu chứng duy nhất sẽ là một
+  // thành phố vẫn trống trơn y như trước, và không một dòng nào đỏ lên.
+  assert.ok(
+    /for \(const home of layout\.dwellings \?\? \[\]\)/.test(CALLS),
+    'Cảnh không còn duyệt `layout.dwellings`. Cả Phase 7C biến mất trong im lặng: engine vẫn tính '
+    + 'đủ 17–30 căn nhà mỗi kỷ, test tầng thuần vẫn xanh, màn hình vẫn là bãi đất trống.',
+  );
+  // …và phải đi vào CÙNG `placements` với công trình, tức cùng khối hình gộp. Đẩy sang một mesh
+  // riêng thì mỗi kỷ cộng thêm một lệnh vẽ — chính thứ ngân sách hiệu năng đang giữ.
+  assert.ok(
+    /placements\.push\(built\.placement\)/.test(CALLS),
+    'Nhà dân không vào chung `placements` — mất gộp hình, cảnh sẽ tốn thêm lệnh vẽ.',
+  );
+  // Nhà dân KHÔNG được nhận `addPickTarget`: chạm vào một căn nhà vô danh mà hiện bảng thông tin
+  // rỗng thì tệ hơn là không chạm được. Chỉ công trình thật và giàn giáo mới có chuyện để kể.
+  //
+  // ⚠️ HỎI ĐÍCH DANH KHỐI NHÀ DÂN, KHÔNG ĐẾM TỔNG SỐ LỜI GỌI. Bản đầu của bài này viết
+  // `assert.equal(picks.length, 1)` và **đỏ ngay trên mã đang chạy đúng** — vì `addPickTarget` vốn
+  // được gọi HAI lần hợp lệ (công trình + giàn giáo), một sự thật tôi không kiểm trước khi viết
+  // con số. Cùng lỗi với `assert.equal(seen.size, 4)` ở `buildingSpec.test.js`: một phép đếm tuyệt
+  // đối là lời phát biểu về phần mã mình KHÔNG nhìn, nên nó vừa đỏ oan hôm nay vừa sẽ đỏ oan lần
+  // sau khi có thêm một thứ đáng chạm. Cắt đúng đoạn cần canh thì phép đo nói đúng thứ nó định nói.
+  const block = CALLS.slice(CALLS.indexOf('for (const home of layout.dwellings'));
+  const body = block.slice(0, block.indexOf('\n  }'));
+  assert.ok(
+    !/addPickTarget\(/.test(body),
+    'Nhà dân đang được gắn `addPickTarget`. Chạm vào một căn nhà vô danh sẽ mở ra bảng rỗng — '
+    + 'tệ hơn là không chạm được.',
+  );
+});
+
 test('BẦU TRỜI PHẢN CHIẾU PHẢI LÀ BẦU TRỜI ĐANG NHÌN THẤY — một luật, một hàm', () => {
   // Vẽ vòm trời bằng một công thức rồi nướng bản đồ phản chiếu bằng công thức khác là đúng cái bẫy
   // `sweep-score.mjs` ↔ `city-preview.mjs` ở Phase 4G: hai bên lệch nhau thì kính sẽ phản chiếu một

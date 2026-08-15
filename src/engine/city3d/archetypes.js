@@ -136,6 +136,98 @@ export const ARCHETYPES = {
       ],
     },
   },
+
+  // ── NHÀ DÂN (Phase 7C) ───────────────────────────────────────────────────
+  //
+  // ⚠️ VÌ SAO NHÀ DÂN DÙNG ĐÚNG BỘ MÁY NÀY CHỨ KHÔNG PHẢI MỘT HỆ THỐNG SONG SONG.
+  // Đàm yêu cầu *"nhà dân cũng phải đúng thời đại + quốc gia, không dùng nhà generic rồi đổi
+  // texture"*. Nếu viết một bộ sinh nhà riêng thì mọi thứ đã dạy cho thành phố suốt 6 phase —
+  // kiểu mái theo kỷ, vật liệu tường/mái, `massScale`, `spread`, kiểu cửa sổ — sẽ phải chép lại
+  // lần thứ hai, và bản chép sẽ trôi khỏi bản gốc y như mọi bản chép khác trong lịch sử dự án này.
+  // Đi qua `buildBuildingSpec` thì nhà dân kỷ 6 TỰ ĐỘNG có mái ngói nung Bắc Bộ và nhà dân kỷ 14
+  // TỰ ĐỘNG có mặt kính Singapore, không cần một dòng dữ liệu mới nào.
+  //
+  // ⚠️ HAI TRỤC ĐƯỢC DÙNG LẠI VỚI NGHĨA MỚI, và đây là chỗ dễ đọc nhầm nhất:
+  //   `type`   = nhà ở / cửa hàng / xưởng  → CÔNG NĂNG
+  //   `rarity` = common / rare / epic      → **CỠ NHÀ nhỏ / vừa / lớn** (KHÔNG phải độ quý)
+  // Đàm yêu cầu đích danh *"nhà dân nhỏ/vừa/lớn"*, và trục `rarity` đã có sẵn đúng ba nấc cùng
+  // toàn bộ hệ số nhân đi kèm. Đặt thêm một trục thứ tư chỉ để nói "cỡ nhà" là tạo pattern mới
+  // trong khi pattern cũ dùng được — đúng thứ mục "Tính nhất quán kiến trúc" ở `CLAUDE.md` cấm.
+  //
+  // ⚠️ `plain: true` LÀ THỨ GIỮ CHO LANDMARK CÒN LÀ LANDMARK. Đàm: *"5 landmark phải có silhouette
+  // đặc trưng, detail cao hơn nhà dân và nhận ra được từ xa"*. Cờ này bỏ CHỮ KÝ KIẾN TRÚC
+  // (`emitSignature`) và CHI TIẾT ĐẶC TRƯNG (`motifs`) khỏi nhà dân — hai thứ đắt nhất và cũng là
+  // hai thứ mang căn cước của kỷ. Không có nó thì 30 căn nhà dân đều đội cột chữ T Göbekli Tepe
+  // như kỳ quan, và kỳ quan chìm nghỉm giữa đám đông bản sao của chính nó.
+
+  /** Nhà ở: một khối, mái là thứ nói lên tất cả. Nhỏ nhất trong ba loại. */
+  house: {
+    label: 'nhà ở',
+    heightScale: 0.62,
+    plain: true,
+    masses: {
+      // nhỏ — một gian
+      common: [
+        { x: 0, z: 0, w: 0.46, d: 0.40, s: 1 },
+      ],
+      // vừa — thêm một chái bên hông
+      rare: [
+        { x: -0.06, z: 0, w: 0.52, d: 0.44, s: 1 },
+        { x: 0.32, z: 0.06, w: 0.24, d: 0.30, s: 1, role: 'wall2' },
+      ],
+      // lớn — hai tầng + sân có tường bao thấp
+      epic: [
+        { x: -0.04, z: -0.02, w: 0.56, d: 0.48, s: 2 },
+        { x: 0.34, z: 0.10, w: 0.26, d: 0.32, s: 1, role: 'wall2' },
+        { x: 0.02, z: 0.42, w: 0.62, d: 0.12, s: 1, role: 'stone', low: true },
+      ],
+    },
+  },
+
+  /** Cửa hàng: mặt tiền rộng hơn nhà ở, thấp, có mái hiên (khối thấp nhô ra phía trước). */
+  shop: {
+    label: 'cửa hàng',
+    heightScale: 0.60,
+    plain: true,
+    masses: {
+      common: [
+        { x: 0, z: -0.04, w: 0.54, d: 0.36, s: 1 },
+        { x: 0, z: 0.28, w: 0.54, d: 0.14, s: 1, role: 'wood', low: true },
+      ],
+      rare: [
+        { x: 0, z: -0.06, w: 0.62, d: 0.40, s: 1 },
+        { x: 0, z: 0.30, w: 0.66, d: 0.16, s: 1, role: 'wood', low: true },
+        { x: -0.40, z: 0.14, w: 0.14, d: 0.14, s: 1, role: 'wall2' },
+      ],
+      epic: [
+        { x: 0, z: -0.08, w: 0.70, d: 0.44, s: 2 },
+        { x: 0, z: 0.34, w: 0.74, d: 0.18, s: 1, role: 'wood', low: true },
+        { x: -0.44, z: 0.16, w: 0.16, d: 0.16, s: 1, role: 'wall2' },
+        { x: 0.44, z: 0.16, w: 0.16, d: 0.16, s: 1, role: 'wall2' },
+      ],
+    },
+  },
+
+  /** Xưởng / kho: bè ngang, thấp, mái dài — thứ nằm ở ngoại vi chứ không ở mặt phố. */
+  workshop: {
+    label: 'xưởng',
+    heightScale: 0.66,
+    plain: true,
+    masses: {
+      common: [
+        { x: 0, z: 0, w: 0.60, d: 0.34, s: 1, role: 'wood' },
+      ],
+      rare: [
+        { x: -0.08, z: 0, w: 0.68, d: 0.38, s: 1, role: 'wood' },
+        { x: 0.40, z: 0, w: 0.22, d: 0.26, s: 1, role: 'stone', low: true },
+      ],
+      epic: [
+        { x: -0.10, z: 0, w: 0.78, d: 0.42, s: 1, role: 'wood' },
+        { x: 0.46, z: -0.04, w: 0.26, d: 0.30, s: 1, role: 'wall2' },
+        { x: 0.10, z: 0.40, w: 0.72, d: 0.14, s: 1, role: 'stone', low: true },
+      ],
+    },
+  },
 };
 
 /** Loại mặc định khi `BUILDING_EFFECTS` không có `type` (bản vẽ lạ / dữ liệu hỏng). */

@@ -606,6 +606,33 @@ export function createCityScene({
     addPickTarget(placement, { kind: 'scaffold', bpId: scaffold.bpId });
   }
 
+  // ── NHÀ DÂN (Phase 7C) ───────────────────────────────────────────────────
+  //
+  // ⚠️ ĐI CHUNG `placements` VỚI LANDMARK, và đó là điểm mấu chốt về hiệu năng: cả 30 căn gộp vào
+  // đúng khối hình học đã có, nên thêm nhà dân tốn **0 lệnh vẽ mới**. Đây là lý do bố cục "gộp
+  // hình học + màu đỉnh" từ Phase 3B đáng giá — không có nó thì 30 căn = 30 lệnh vẽ và cổng hiệu
+  // năng iPhone sập ngay.
+  //
+  // ⚠️ KHÔNG `addPickTarget` cho nhà dân. Chạm vào công trình là để hỏi "công trình này là gì, cho
+  // đặc quyền gì" — nhà dân không có bản vẽ, không có đặc quyền, không có gì để nói. Thêm chúng vào
+  // danh sách chạm chỉ làm loãng đúng thao tác mà Phase 3K sinh ra: 30 mục tiêu câm chen giữa 5 mục
+  // tiêu có nội dung, và ngón tay sẽ trúng nhà dân nhiều gấp sáu lần trúng thứ đáng đọc.
+  for (const home of layout.dwellings ?? []) {
+    const built = groundPlacement(home, buildBuildingSpec({
+      // Khoá hình dáng gồm cả TOẠ ĐỘ: hai căn cùng loại cùng cỡ ở hai ô khác nhau phải khác nhau ở
+      // số cửa sổ và độ xiêu vẹo, nếu không cả khu phố là một căn nhà nhân bản 12 lần.
+      bpId: `dw|${layout.era}|${home.x}|${home.y}`,
+      era: layout.era,
+      type: home.type,
+      rarity: home.rarity,
+      level: 1,
+    }), {
+      ry: ((home.x * 3 + home.y) % 4) * (Math.PI / 2),
+    });
+    if (built.plinth) plinths.push(built.plinth);
+    placements.push(built.placement);
+  }
+
   // ── Cảnh vật: cây, đá, đèn, mặt nước, ruộng ──────────────────────────────
   // `deriveProps` đã sinh sẵn danh sách này từ Phase 1 (bộ vẽ 2D dùng từ lâu) nhưng bộ vẽ 3D
   // trước nay mới chỉ đọc mỗi đường sá. Gộp chúng vào CÙNG khối hình học với công trình để không
@@ -931,6 +958,9 @@ export function createCityScene({
       groundTiles: groundCells.length,
       roads: roads.length,
       buildings: buildings.length,
+      // Đếm RIÊNG khỏi `buildings`: HUD phải phân biệt được "5 landmark" với "30 nhà dân", vì hai
+      // con số ấy lớn lên theo hai luật khác hẳn nhau và khi máy nóng thì cần biết cái nào đang phình.
+      dwellings: (layout.dwellings ?? []).length,
       props: scatter.length,
       residents: residents.length,
       // Đèn điểm là nguồn sáng DUY NHẤT ở đây tính tiền theo từng điểm ảnh — hiện lên HUD để lúc

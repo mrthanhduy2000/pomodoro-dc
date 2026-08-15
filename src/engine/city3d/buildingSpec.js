@@ -15,7 +15,7 @@
 
 import { hashId } from '../cityLayout';
 import { gable, prism, countSpecTriangles, specHeight, specSpan } from './parts';
-import { getEraStyle } from './eraStyle';
+import { getEraStyle, getVernacularStyle, eaveOverhang } from './eraStyle';
 import { getArchetype, getMassing, getMotifBudget, getRarityScale } from './archetypes';
 import { emitSignature } from './signature';
 
@@ -62,7 +62,7 @@ function massHeight(mass, style, archetype, rarity, level) {
  * rơm thì ra túp lều, đội phiến kính mỏng thì ra kiến trúc tương lai.
  */
 function emitRoof(out, { w, d, top, x, z }, style, ctx) {
-  const eaves = style.eaves;
+  const eaves = eaveOverhang(style, w, d);
   const rw = w + eaves * 2;
   const rd = d + eaves * 2;
   const pitch = Math.max(0.08, style.roofPitch) * Math.max(w, d);
@@ -472,8 +472,12 @@ function emitMotif(out, name, ctx) {
  */
 export function buildBuildingSpec({ bpId, era, type, rarity = 'common', level = 1 } = {}) {
   const id = typeof bpId === 'string' && bpId ? bpId : 'bp_unknown';
-  const style = getEraStyle(era);
   const archetype = getArchetype(type);
+  // ⚠️ ĐÂY LÀ CHỖ DUY NHẤT quyết định "công trình này lợp mái kỳ đài hay mái nhà thường", và nó
+  // phải nằm ở đây chứ không phải trong `emitRoof`. Xem `getVernacularStyle` (`eraStyle.js`): thay
+  // ở NGUỒN thì mọi chỗ đọc `style.roof` về sau tự khớp; thay ở chỗ dựng mái thì `roofRise` vẫn
+  // tính theo mái cũ và chi tiết trên nóc sẽ lơ lửng hoặc chôn nửa trong mái.
+  const style = archetype.plain ? getVernacularStyle(era) : getEraStyle(era);
   const masses = getMassing(type, rarity);
   const safeLevel = Number.isFinite(level) ? Math.max(1, Math.min(3, Math.floor(level))) : 1;
 
@@ -553,6 +557,13 @@ export function buildBuildingSpec({ bpId, era, type, rarity = 'common', level = 
   // `RARITY_MOTIF_BUDGET.common = 0` nghĩa là 2 trong 5 công trình mỗi kỷ (30 trong 75 căn của cả
   // game) hiện KHÔNG có lấy một chi tiết đặc trưng nào — chúng là hộp trơn đội mái. Độ hiếm nên
   // quyết định công trình BỀ THẾ tới đâu, không nên quyết định nó có thuộc về kỷ nào hay không.
+  //
+  // ⚠️ …TRỪ NHÀ DÂN (`plain`, Phase 7C). Đàm yêu cầu *"5 landmark phải có silhouette đặc trưng,
+  // detail cao hơn nhà dân và nhận ra được từ xa"*. Chữ ký kiến trúc là thứ ĐẮT NHẤT và cũng là
+  // thứ MANG CĂN CƯỚC của kỷ; gắn nó lên cả 30 căn nhà dân thì hai điều xảy ra cùng lúc, cả hai
+  // đều hỏng: (a) ngân sách tam giác vỡ, (b) kỳ quan chìm nghỉm giữa một đám đông bản sao của
+  // chính nó — thứ đáng lẽ phải nhận ra từ xa lại thành thứ khó tìm nhất. Nhà dân vẫn giữ NÉT VẼ
+  // của kỷ (mái, cửa sổ, vật liệu, tỉ lệ) qua `eraStyle`, chỉ không mang CĂN CƯỚC.
   const mainMass = masses.find((m) => !m.low) ?? masses[0];
   const mainMassHeight = massHeight(mainMass, style, archetype, rarity, safeLevel);
   const mainCtx = {
@@ -563,7 +574,7 @@ export function buildBuildingSpec({ bpId, era, type, rarity = 'common', level = 
     // Kỳ quan đứng giữa thành phố ⇒ chữ ký phải cân hai bên và tuyệt đối không xoay.
     symmetric: Boolean(archetype.symmetric),
   };
-  emitSignature(parts, style.signature, mainCtx);
+  if (!archetype.plain) emitSignature(parts, style.signature, mainCtx);
 
   // ── Chi tiết đặc trưng của kỷ, số lượng theo độ hiếm ──────────────────────
   // ⚠️ Mọi khối sinh ra từ đây trở xuống được đánh dấu `deco: true`. Đó KHÔNG phải cờ phục vụ
@@ -572,7 +583,9 @@ export function buildBuildingSpec({ bpId, era, type, rarity = 'common', level = 
   // hạ chi tiết trên máy yếu mà không phá hình bóng, và nó cũng giải thích vì sao đá thờ quanh
   // kỳ quan kỷ 1 được phép xoay lệch trong khi bản thân kỳ quan thì tuyệt đối đối xứng.
   const structuralCount = parts.length;
-  const budget = getMotifBudget(rarity);
+  // Nhà dân: `rarity` ở đây mang nghĩa CỠ NHÀ (nhỏ/vừa/lớn), không phải độ quý — nên tra ngân sách
+  // chi tiết theo nó sẽ cho nhà "lớn" 3 mô-típ của kỷ, tức một căn nhà dân bề thế hơn kỳ quan.
+  const budget = archetype.plain ? 0 : getMotifBudget(rarity);
   if (budget > 0) {
     // ⚠️ Chi tiết đặc trưng cũng phải nhân `spread` — đã lo sẵn trong `mainCtx` ở trên. Bỏ sót chỗ
     // này thì hàng cột của kỷ 3 (bè 1,18) đứng thụt vào giữa mặt tiền, còn cột buồm của kỷ 14

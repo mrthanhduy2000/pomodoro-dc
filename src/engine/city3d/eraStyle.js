@@ -40,6 +40,26 @@
  * rơm và bùn là CÙNG MỘT BỀ MẶT. Đó chính là nguyên nhân gốc của cảm giác "khối màu phẳng".
  * Hai trường mới trỏ sang `materials.js`; luật ràng buộc y hệt `country`/`landmark`: khai vật liệu
  * nào thì phải trả lời được *"công trình có thật ở nước ấy lợp bằng gì?"*.
+ *
+ * ⚠️ `vernacularRoof` THÊM NGÀY 2026-08-15 (Phase 7C) — VÀ ĐÂY LÀ LẦN THỨ BA CỦA CÙNG MỘT CÁI BẪY
+ * "một trường gánh hai việc" (sau `storyHeight` ở Phase 5B và `roofColor` ở Phase 7A).
+ * Phase 7C dựng 17–30 NHÀ DÂN quanh 5 kỳ quan. Nhà dân đọc `roof` của kỷ, và ảnh chụp kỷ 7 cho
+ * thấy ngay hậu quả: **25 căn nhà nhỏ đều đội mái vòm terracotta y hệt Duomo**, nên nhà thờ chính
+ * toà — thứ Đàm yêu cầu phải *"nhận ra được từ xa"* — chìm nghỉm giữa một đám bản sao tí hon của
+ * chính nó. Không có gì đỏ lên: mã chạy đúng, ngân sách tam giác vẫn còn dư, chỉ có hình bóng sai.
+ *
+ * Nguyên nhân gốc là một lỗi MÔ HÌNH DỮ LIỆU, không phải lỗi mã: `roof` đang trả lời hai câu hỏi
+ * khác nhau cùng lúc — *"công trình BIỂU TƯỢNG của nền văn minh này lợp mái gì?"* và *"nhà thường
+ * ở đây lợp mái gì?"*. Ngoài đời hai câu đó gần như không bao giờ cùng đáp án, vì mái kỳ đài là
+ * thứ tốn kém và thường bị luật lệ giới hạn (mái chồng nhiều tầng từng bị cấm với dân thường ở
+ * Trung Quốc; giật cấp New York là luật quy hoạch cho cao ốc; Firenze có đúng MỘT mái vòm).
+ * Cách nhận ra sớm — đúng câu hỏi đã dùng cho `massScale`: *"ngoài đời hai thứ này có luôn đi
+ * cùng nhau không?"* Không ⇒ phải tách, mọi lần chỉnh sau đó chỉ là đổi chỗ vấn đề.
+ *
+ * 9/15 kỷ khai khác `roof`; 6 kỷ còn lại khai TRÙNG một cách có chủ đích (thời đồ đá thì nhà nào
+ * cũng là lều) — và chúng vẫn phải khai, không được để trống. Trường bắt buộc thì một kỷ mới thêm
+ * vào sẽ buộc người viết trả lời câu hỏi ấy; trường tuỳ chọn thì nó lặng lẽ rơi về `roof` và cái
+ * bẫy này quay lại. `eraStyle.test.js` khoá cả hai vế: đủ 15 kỷ, và 9 kỷ kia phải KHÁC.
  */
 
 /**
@@ -94,6 +114,8 @@ export const ERA_STYLES = {
     bodySides: 6, bodyTaper: 0.74, storyHeight: 0.62,
     massScale: 0.24, spread: 0.72,
     roof: 'cone', roofPitch: 0.95, eaves: 0.04,
+    // Thời đồ đá thì nhà nào cũng là lều — công trình lớn khác ở KÍCH THƯỚC, không ở kiểu mái.
+    vernacularRoof: 'cone',
     windows: 'none',
     motifs: ['boulder', 'firepit'],
     rough: 0.9,
@@ -107,6 +129,9 @@ export const ERA_STYLES = {
     bodySides: 4, bodyTaper: 0.94, storyHeight: 0.66,
     massScale: 0.46, spread: 0.98,
     roof: 'cone', roofPitch: 0.72, eaves: 0.2,
+    // Nhà làng ven sông Nin là gạch bùn MÁI BẰNG — người ta phơi đồ và ngủ trên nóc. Mái tranh
+    // hình nón dành cho nhà kho/nhà chung, không phải nhà ở thường ngày.
+    vernacularRoof: 'flat',
     windows: 'none',
     motifs: ['fence', 'granary'],
     rough: 0.62,
@@ -120,6 +145,9 @@ export const ERA_STYLES = {
     bodySides: 4, bodyTaper: 0.86, storyHeight: 0.6,
     massScale: 0.78, spread: 1.18,
     roof: 'stepped', roofPitch: 0.3, eaves: 0.06,
+    // Giật cấp là hình dáng của ZIGGURAT — đền thờ. Nhà dân Lưỡng Hà là gạch bùn mái BẰNG quây
+    // quanh sân trong. Cho cả phố giật cấp thì thành 30 cái ziggurat tí hon vây quanh ziggurat thật.
+    vernacularRoof: 'flat',
     windows: 'slit',
     motifs: ['pillar', 'ramp'],
     rough: 0.36,
@@ -133,6 +161,9 @@ export const ERA_STYLES = {
     bodySides: 4, bodyTaper: 1, storyHeight: 0.68,
     massScale: 0.72, spread: 1.1,
     roof: 'tiered', roofPitch: 0.34, eaves: 0.34,
+    // Mái CHỒNG nhiều tầng là đặc quyền của cung điện và chùa; luật nhà Thanh còn cấm dân thường
+    // lợp kiểu đó. Nhà tứ hợp viện của dân là mái dốc hai phía, một tầng, lợp ngói.
+    vernacularRoof: 'gable',
     windows: 'square',
     motifs: ['columns', 'banner'],
     rough: 0.22,
@@ -146,6 +177,8 @@ export const ERA_STYLES = {
     bodySides: 4, bodyTaper: 0.97, storyHeight: 0.72,
     massScale: 0.7, spread: 0.96,
     roof: 'gable', roofPitch: 0.92, eaves: 0.12,
+    // Nhà phố Đức trung cổ cũng mái dốc đứng như lâu đài — khác ở bề thế, không ở kiểu mái.
+    vernacularRoof: 'gable',
     windows: 'slit',
     motifs: ['buttress', 'crenel'],
     rough: 0.44,
@@ -165,6 +198,9 @@ export const ERA_STYLES = {
     bodySides: 4, bodyTaper: 0.92, storyHeight: 0.66,
     massScale: 0.68, spread: 1.16,
     roof: 'tiered', roofPitch: 0.4, eaves: 0.4,
+    // Mái chồng diềm cong là của ĐÌNH/CHÙA. Nhà ba gian Bắc Bộ là mái dốc hai phía lợp ngói âm
+    // dương, hiên thấp — cùng vật liệu, khác hẳn dáng. Giữ `eaves` lớn nên hiên vẫn thò ra kiểu Việt.
+    vernacularRoof: 'gable',
     windows: 'square',
     motifs: ['courtyard', 'banner', 'columns'],
     rough: 0.2,
@@ -179,6 +215,10 @@ export const ERA_STYLES = {
     bodySides: 4, bodyTaper: 1, storyHeight: 0.74,
     massScale: 0.74, spread: 1.02,
     roof: 'dome', roofPitch: 0.56, eaves: 0.22,
+    // ⚠️ CA NẶNG NHẤT CỦA CẢ BẢNG, và là lý do trường này ra đời. Firenze có ĐÚNG MỘT mái vòm;
+    // toàn bộ phần còn lại của thành phố là nhà phố mái ngói dốc thoải. Cho nhà dân đội vòm thì
+    // Duomo — thứ đáng lẽ nhận ra được từ xa — chìm nghỉm giữa 25 bản sao tí hon của chính nó.
+    vernacularRoof: 'gable',
     windows: 'arch',
     motifs: ['columns', 'arcade', 'statue'],
     rough: 0.06,
@@ -192,6 +232,8 @@ export const ERA_STYLES = {
     bodySides: 4, bodyTaper: 0.98, storyHeight: 0.7,
     massScale: 0.64, spread: 1.12,
     roof: 'gable', roofPitch: 0.52, eaves: 0.24,
+    // Nhà phố Lisboa cũng mái ngói dốc như kho cảng — khác ở quy mô.
+    vernacularRoof: 'gable',
     windows: 'square',
     motifs: ['mast', 'crate'],
     rough: 0.3,
@@ -206,6 +248,9 @@ export const ERA_STYLES = {
     bodySides: 4, bodyTaper: 1, storyHeight: 0.76,
     massScale: 0.92, spread: 1,
     roof: 'pyramid', roofPitch: 0.28, eaves: 0.26,
+    // Chóp bốn mặt là mái của điện Panthéon. Nhà phố Haussmann là mái MANSARD — dốc đứng, lợp
+    // kẽm, ngắt thành hai độ dốc. `gable` là cách gần nhất dựng được bằng bộ khối hiện có.
+    vernacularRoof: 'gable',
     windows: 'arch',
     motifs: ['columns', 'pediment', 'statue'],
     rough: 0.04,
@@ -219,6 +264,9 @@ export const ERA_STYLES = {
     bodySides: 4, bodyTaper: 1, storyHeight: 0.7,
     massScale: 0.9, spread: 1.16,
     roof: 'sawtooth', roofPitch: 0.3, eaves: 0.1,
+    // Mái răng cưa là mái NHÀ MÁY (lấy sáng trời cho xưởng dệt). Nhà công nhân Manchester là dãy
+    // nhà liền kề mái dốc lợp đá phiến — chính hình ảnh "terraced house" của cách mạng công nghiệp.
+    vernacularRoof: 'gable',
     windows: 'grid',
     motifs: ['chimney', 'truss'],
     rough: 0.18,
@@ -232,6 +280,9 @@ export const ERA_STYLES = {
     bodySides: 4, bodyTaper: 1, storyHeight: 0.8,
     massScale: 0.86, spread: 0.94,
     roof: 'stepped', roofPitch: 0.24, eaves: 0.2,
+    // Giật cấp (setback) là luật quy hoạch dành cho CAO ỐC New York 1916. Nhà ở thường — chung cư
+    // tenement, nhà brownstone — là mái BẰNG có gờ chắn, không giật cấp.
+    vernacularRoof: 'flat',
     windows: 'grid',
     motifs: ['columns', 'spire', 'statue'],
     rough: 0.03,
@@ -245,6 +296,8 @@ export const ERA_STYLES = {
     bodySides: 4, bodyTaper: 0.96, storyHeight: 0.6,
     massScale: 1.02, spread: 1.1,
     roof: 'flat', roofPitch: 0.12, eaves: 0.14,
+    // Khối nhà ở tập thể Xô-viết cũng mái bằng như lô cốt — khác ở bề dày tường, không ở mái.
+    vernacularRoof: 'flat',
     windows: 'slit',
     motifs: ['bunker', 'crenel'],
     rough: 0.26,
@@ -260,6 +313,8 @@ export const ERA_STYLES = {
     bodySides: 4, bodyTaper: 1, storyHeight: 0.66,
     massScale: 1.24, spread: 0.92,
     roof: 'flat', roofPitch: 0.1, eaves: 0.08,
+    // Chung cư Nhật thời Metabolism: mái bằng, giống tháp nang. Không đổi.
+    vernacularRoof: 'flat',
     windows: 'grid',
     motifs: ['antenna', 'dish'],
     rough: 0.08,
@@ -273,6 +328,8 @@ export const ERA_STYLES = {
     bodySides: 4, bodyTaper: 1, storyHeight: 0.84,
     massScale: 1.36, spread: 0.8,
     roof: 'flat', roofPitch: 0.08, eaves: 0.05,
+    // Cao ốc Singapore: mái bằng. Không đổi.
+    vernacularRoof: 'flat',
     windows: 'curtain',
     motifs: ['sign', 'solar'],
     rough: 0,
@@ -286,6 +343,9 @@ export const ERA_STYLES = {
     bodySides: 8, bodyTaper: 0.9, storyHeight: 0.8,
     massScale: 1.72, spread: 0.76,
     roof: 'blade', roofPitch: 0.16, eaves: 0.3,
+    // Phiến lơ lửng là thủ pháp của một CÔNG TRÌNH BIỂU TƯỢNG. Nhà ở Dubai vẫn là mái bằng —
+    // và giữ được sự tương phản đó mới thấy Bảo tàng Tương Lai lạ tới mức nào.
+    vernacularRoof: 'flat',
     windows: 'neon',
     motifs: ['halo', 'float'],
     rough: 0,
@@ -306,6 +366,46 @@ export function roofRise(style, w, d) {
   return Math.max(0.08, pitch) * Math.max(Number.isFinite(w) ? w : 1, Number.isFinite(d) ? d : 1);
 }
 
+/**
+ * Diềm mái thò ra bao xa, ĐÃ KẸP THEO CỠ CÔNG TRÌNH.
+ *
+ * ⚠️ VÌ SAO PHẢI KẸP (2026-08-15, Phase 7C — và đây là LẦN THỨ HAI dự án gặp đúng lỗi này).
+ * `eaves` trong bảng trên là một số TUYỆT ĐỐI, còn `rw = w + eaves * 2`. Với kỳ quan rộng ~1,4 thì
+ * `eaves` 0,4 là một mái hiên sâu rất đẹp, thò ra 29% mỗi bên — đúng nét Á Đông. Với một căn nhà
+ * dân rộng 0,56 thì vẫn con số 0,4 ấy thò ra **71% mỗi bên**, và mái rộng gấp 2,4 lần cái nhà nó
+ * đậy. Trên màn hình đó không còn là mái hiên: đó là một cái ô, hoặc một cây nấm.
+ *
+ * Dự án đã trả giá cho đúng cơ chế này một lần rồi: kỷ 1 từng đọc ra thành CÂY NẤM và được vá bằng
+ * cách hạ tay `eaves` xuống 0,04 (xem chú thích kỷ 1 ở trên). Đó là vá TRIỆU CHỨNG cho một kỷ; bệnh
+ * gốc là "một số tuyệt đối áp lên những khối có kích thước chênh nhau nhiều lần", nên nó quay lại
+ * ngay khi Phase 7C dựng 17–30 công trình nhỏ mỗi kỷ.
+ *
+ * Kẹp theo TỈ LỆ chữa tận gốc mà không phải chỉnh lại 15 con số đã cân trong bảng.
+ *
+ * ⚠️ VÀ NÓ CHẠM VÀO CẢ CÔNG TRÌNH CŨ — **115 trên 215 mảng nhà** của 75 bản vẽ chính, tức quá nửa.
+ * Câu đầu tiên tôi viết ở chỗ này là *"kỳ quan đủ to nên cái kẹp không bao giờ chạm tới chúng"*;
+ * nghe rất xuôi tai và **sai hẳn**, chỉ lộ ra khi đem đếm. (Nó còn tự mâu thuẫn với chính câu sau
+ * đó trong cùng đoạn — dấu hiệu kinh điển của một câu viết ra để tự trấn an.)
+ * Vì sao chạm nhiều đến thế: một kỳ quan KHÔNG phải một khối to duy nhất, nó là 3–7 mảng, và các
+ * mảng phụ — tháp góc, chái, gian thờ — nhỏ ngang nhà dân (kỷ 2 có mảng 0,29×0,29 đội `eaves` 0,2,
+ * tức thò ra 69% mỗi bên). Nghĩa là những cái "ô che nắng" ấy đã đứng sẵn trong thành phố của Đàm
+ * từ lâu; Phase 7C không tạo ra chúng, chỉ làm chúng nhiều lên tới mức không thể không thấy.
+ * ⇒ Đây là một thay đổi MỸ THUẬT có ảnh hưởng tới công trình đã xây. Nó KHÔNG phạm ADR-007: lời
+ * hứa ở đó là "cùng một `bpId` luôn cho ra cùng một hình" (cấm ngẫu nhiên), không phải "hình dáng
+ * không bao giờ được sửa" — Phase 5B đã đổi chiều cao toàn bộ 75 công trình theo đúng tinh thần này.
+ *
+ * 0,28 chọn bằng đo, không bằng cảm giác: mái rộng nhất còn gấp 1,41 lần thân nhà (kỷ 6, trước khi
+ * kẹp là 2,38 lần), tức vẫn còn hiên sâu để nhận ra kiến trúc Á Đông mà không nuốt mất bức tường.
+ */
+export const EAVE_MAX_RATIO = 0.28;
+
+export function eaveOverhang(style, w, d) {
+  const raw = Number.isFinite(style?.eaves) ? style.eaves : 0.2;
+  const sw = Number.isFinite(w) ? w : 1;
+  const sd = Number.isFinite(d) ? d : 1;
+  return Math.min(raw, Math.min(sw, sd) * EAVE_MAX_RATIO);
+}
+
 /** Kỷ mặc định khi gặp số kỷ lạ (dữ liệu hỏng từ cloud) — thà ra một căn nhà thường còn hơn nổ. */
 const DEFAULT_ERA = 2;
 
@@ -316,4 +416,24 @@ const DEFAULT_ERA = 2;
 export function getEraStyle(era) {
   const key = Number.isFinite(era) ? Math.round(era) : DEFAULT_ERA;
   return ERA_STYLES[key] ?? ERA_STYLES[DEFAULT_ERA];
+}
+
+/**
+ * Ngữ pháp của kỷ, ở phiên bản dành cho NHÀ THƯỜNG: y hệt bản gốc, chỉ thay mái kỳ đài bằng mái
+ * nhà dân (xem chú thích `vernacularRoof` ở đầu file).
+ *
+ * ⚠️ TRẢ VỀ MỘT BỘ THAM SỐ ĐẦY ĐỦ chứ không phải một mình chuỗi tên mái, và đó là điểm quan trọng
+ * nhất của hàm này. `buildingSpec.js` đọc `style.roof` ở nhiều chỗ khác nhau — dựng mái, tính
+ * `roofRise` để biết đặt chi tiết trên nóc ở đâu, quyết định mái có xoay không. Nếu chỉ thay mái ở
+ * MỘT trong số đó thì một nửa công trình sẽ dựng theo mái vòm còn nửa kia theo mái dốc, tức đúng
+ * cái bẫy "một luật hai công thức" mà dự án đã trả giá nhiều lần. Thay ở NGUỒN thì mọi chỗ đọc
+ * sau đó tự khớp, không cần ai nhớ gì.
+ *
+ * Kỷ khai `vernacularRoof` trùng `roof` thì trả về CHÍNH đối tượng cũ — vừa đỡ rác, vừa để phép so
+ * sánh tham chiếu trong test nói được "kỷ này cố ý không đổi".
+ */
+export function getVernacularStyle(era) {
+  const style = getEraStyle(era);
+  if (!style.vernacularRoof || style.vernacularRoof === style.roof) return style;
+  return { ...style, roof: style.vernacularRoof };
 }

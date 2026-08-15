@@ -93,6 +93,12 @@
 │   │   │   └── *.test.js          # test đi kèm từng file cùng tên
 │   │   ├── gameMath.js        # Công thức tính điểm/XP/streak/thống kê — file LỚN, sửa cẩn thận
 │   │   ├── constants.js       # Toàn bộ dữ liệu tĩnh của game (kỹ năng, công trình, thành tích...)
+│   │   ├── hashId.js          # FILE LÁ: băm tất định FNV-1a. KHÔNG import gì — đó là điểm chính.
+│   │   │                     #   Tách khỏi cityLayout.js ở Phase 7C để cắt vòng import
+│   │   │                     #   cityLayout ↔ city3d/dwellings. cityLayout TÁI XUẤT, không chép.
+│   │   ├── cityGrid.js        # FILE LÁ: hợp đồng về mảnh đất — lưới 12×12, 5 khu đất đã hứa cho
+│   │   │                     #   kỳ quan (BUILDING_ZONES), các hàng/cột có đường. Cùng lý do tách
+│   │   │                     #   như hashId.js. Sai lệch giữa hai bên = nhà mọc đè kỳ quan, IM LẶNG.
 │   │   ├── cityLayout.js      # THÀNH PHỐ PIXEL: suy ra bố cục từ danh sách công trình (băm tất
 │   │   │                     #   định, KHÔNG lưu toạ độ). Bất biến: cùng đầu vào → cùng bố cục
 │   │   │                     #   vĩnh viễn + xây thêm nhà không làm xê dịch nhà cũ.
@@ -135,6 +141,10 @@
 │   │   │   │                      #   ⚠️ `wallMaterial`/`roofMaterial` là BỀ MẶT (nhám/bóng), tách
 │   │   │   │                      #   hẳn khỏi `wallColor`/`roofColor` (sắc). Cùng bài học "một
 │   │   │   │                      #   trường gánh hai việc" của `storyHeight` ở Phase 5B
+│   │   │   ├── dwellings.js       # NHÀ DÂN (ADR-015): 30 ô đất trống chia 3 khu theo khoảng cách
+│   │   │   │                      #   tới tâm (ngoại vi/dân cư/trung tâm); mỗi 2 phiên mọc thêm 1
+│   │   │   │                      #   căn, mọc từ trong ra. Nhà dân đi qua ĐÚNG buildingSpec.js —
+│   │   │   │                      #   không có bộ sinh riêng — nên tự thừa hưởng mái/vật liệu kỷ.
 │   │   │   ├── terrain.js         # ĐỊA HÌNH: 15 kỷ = 15 trường cao độ THỀM BẬC (ADR-014)
 │   │   │   │                      #   ⚠️ Cao độ là hàm của DUY NHẤT (era, gridSize) — cố tình KHÔNG
 │   │   │   │                      #   nhận danh sách công trình, nếu không thì mỗi lần Đàm xây xong

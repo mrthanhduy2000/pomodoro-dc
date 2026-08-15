@@ -328,3 +328,74 @@ test('MẶT ĐƯỜNG PHẢI DÙNG VẬT LIỆU CỦA KỶ, không dùng chung v
     'Ngõ phố vẫn đang mượn màu đá xây tường — đúng chỗ rò rỉ mà Phase 7D sinh ra để bịt.',
   );
 });
+
+const SCENE3D_CODE = codeOnly(readFileSync(join(HERE, 'CityScene3D.jsx'), 'utf8'));
+const PREVIEW_CODE = codeOnly(
+  readFileSync(join(HERE, '..', '..', '..', '..', 'scripts', 'city-preview.mjs'), 'utf8'),
+);
+
+test('⚠️ ĐÈN TRỜI PHẢI BÁM THEO NẮNG — một tỉ lệ, không phải hai hằng số rời nhau', () => {
+  // ⚠️ ĐÂY LÀ BÀI CANH MỘT QUAN HỆ, VÀ NÓ TỒN TẠI VÌ MỘT QUAN HỆ ĐÃ TỪNG BỊ VIẾT THÀNH HẰNG SỐ
+  // RỒI GÃY TRONG IM LẶNG. Độ đen của bóng đổ không do đèn nền quyết định — nó do KHOẢNG CÁCH
+  // giữa đèn nền và nắng quyết định. Khi hai thứ ấy là hai con số không biết nhau, một phase khác
+  // chỉnh nắng vì lý do riêng là bóng đổ tối đi mà không có gì đỏ lên. Đúng hình dạng lỗi mặt
+  // đường của Phase 7D, và đúng chuyện đã xảy ra ở đây: Phase 7A hạ đèn bán cầu theo một giả
+  // thuyết về sau bị bác, rồi con số ấy nằm lại nhiều phase.
+  //
+  // Bài này KHÔNG khoá giá trị 0,41 (đó là một lựa chọn mỹ thuật, đo lại thì được đổi) — nó khoá
+  // cái HÌNH DẠNG: đèn bán cầu phải được tính TỪ cường độ nắng. Viết ngược lại thành một số rời là
+  // đỏ ngay.
+  assert.match(
+    CODE, /const SUN_BASE = /,
+    'Cường độ nắng không còn là một đại lượng có tên — đèn trời hết chỗ bám vào.',
+  );
+  assert.match(
+    CODE, /new HemisphereLight\([\s\S]{0,200}?SUN_BASE \* SKY_FILL_RATIO/,
+    'Đèn bán cầu thôi bám theo nắng — nó đã quay về làm một hằng số rời, và bóng đổ sẽ lại đen dần.',
+  );
+  assert.match(
+    CODE, /new DirectionalLight\([\s\S]{0,120}?SUN_BASE \* sunEnergy/,
+    'Đèn mặt trời không còn dùng chính `SUN_BASE` mà đèn trời đang bám vào — hai bên đã tách nhau.',
+  );
+
+  // Và tỉ lệ phải nằm trong khoảng còn nghĩa: 0 là tắt hẳn đèn trời (bóng đen trở lại), ≥1 là đèn
+  // nền mạnh hơn nắng — lúc đó không còn hướng sáng nào và cảnh dẹt ra đúng kiểu "pastel như sữa".
+  const ratios = [...CODE.matchAll(/SKY_FILL_RATIO = palette\.isDark \? ([\d.]+) : ([\d.]+)/g)];
+  assert.equal(ratios.length, 1, 'Không tìm thấy khai báo tỉ lệ đèn trời/nắng.');
+  for (const value of ratios[0].slice(1).map(Number)) {
+    assert.ok(value > 0.2 && value < 1,
+      `Tỉ lệ đèn trời/nắng ${value} nằm ngoài khoảng còn nghĩa (0,2 … 1).`);
+  }
+});
+
+test('⚠️ BÓNG ĐỔ CHỈ ĐƯỢC CẤU HÌNH Ở MỘT CHỖ — công cụ xem thử phải thấy đúng thứ app thấy', () => {
+  // ⚠️ BÀI ĐỐI CHỨNG NHỐT MỘT LỖI ĐÃ CHẠY THẬT. Cỡ bản đồ bóng đổ từng được viết cứng ở BA nơi với
+  // BA giá trị: app 1024, trang xem thử một-kỷ 1024, bản QUÉT 15 kỷ chỉ 512. Mà bản quét chính là
+  // công cụ `CLAUDE.md` bắt buộc dùng để duyệt mỹ thuật ⇒ mọi nhận xét về bóng đổ rút ra từ nó đều
+  // đang nói về một thế giới thô gấp đôi thứ Đàm nhìn thấy. Không có gì đỏ lên: ảnh vẫn dựng ra.
+  assert.match(
+    CODE, /sun\.shadow\.mapSize\.setScalar\(isMobile \? SHADOW_MAP_MOBILE : SHADOW_MAP_DESKTOP\)/,
+    'Cảnh không còn tự đặt cỡ bóng lúc dựng — ai dựng cảnh mà không biết dòng này sẽ nhận mặc định 512.',
+  );
+  assert.match(CODE, /renderer\.shadowMap\.type = /,
+    'Kiểu bóng đổ không còn được đặt trong `applyPaintedLook` — hai thế giới sắp trôi khỏi nhau.');
+
+  // ⚠️ HỎI ĐÍCH DANH: hai nơi gọi TUYỆT ĐỐI không được tự khai lại, vì tự khai lại CHÍNH LÀ cách
+  // ba giá trị khác nhau đã sinh ra. Đây là hàng rào, không phải cái phễu.
+  // ⚠️ CẤM GHI, KHÔNG CẤM ĐỌC — và bản đầu của chính assert này đã sai đúng chỗ đó: nó hỏi
+  // `/shadow\.mapSize/` nên bắt luôn dòng `shadowMap: city.sun.shadow.mapSize.width` mà HUD hiệu
+  // năng dùng để BÁO CÁO cỡ bóng thật. Đọc lại giá trị là việc đúng và đáng khuyến khích (đó là
+  // cách Đàm nhìn thấy cảnh đang chạy ở cỡ nào); thứ phải cấm là tự ĐẶT một giá trị thứ hai.
+  for (const [name, code] of [['CityScene3D.jsx', SCENE3D_CODE], ['city-preview.mjs', PREVIEW_CODE]]) {
+    assert.ok(!/shadow\.mapSize\.(setScalar|set)\s*\(|shadow\.mapSize\.\w+\s*=/.test(code),
+      `${name} lại tự đặt cỡ bản đồ bóng đổ — luật này chỉ được có MỘT chỗ phát biểu.`);
+    assert.ok(!/shadowMap\.type/.test(code),
+      `${name} lại tự đặt kiểu bóng đổ thay vì dùng \`applyPaintedLook\`.`);
+  }
+  // …và cả hai vẫn phải THỰC SỰ gọi hàm dùng chung, nếu không thì "không tự khai" chỉ có nghĩa là
+  // không có bóng đổ nào cả.
+  for (const [name, code] of [['CityScene3D.jsx', SCENE3D_CODE], ['city-preview.mjs', PREVIEW_CODE]]) {
+    assert.match(code, /applyPaintedLook\(renderer\)/,
+      `${name} không còn gọi \`applyPaintedLook\` — nó đang dựng bằng một cấu hình khác.`);
+  }
+});

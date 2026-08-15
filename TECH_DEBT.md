@@ -13,7 +13,15 @@
 > mà không được refactor triệt để, phải CHỦ ĐỘNG đề xuất mở một "Maintenance Sprint" (nêu rõ mục
 > tiêu/phạm vi/lợi ích/rủi ro/tiêu chí hoàn thành) thay vì tiếp tục cộng thêm tính năng mới.
 >
-> **Trạng thái ngưỡng hiện tại (2026-08-15, cập nhật sau Phase 8D)**: thêm **#29** (Low — cọ nhìn
+> **Trạng thái ngưỡng hiện tại (2026-08-15, cập nhật sau Phase 9B)**: thêm **#30** (Medium-High —
+> mặt đường render DƯỚI ngưỡng mắt đọc được xét riêng vật liệu; đã có bản vá đo xong nhưng CỐ Ý
+> chưa ship vì nó làm đỏ một lời hứa đang có). ⚠️ **#30 và #27 nay là MỘT cặp phải làm cùng nhau** —
+> #30 phơi ra rằng lời hứa "15 kỷ ra 15 mặt đường" xưa nay chỉ đạt nhờ **3% biên**, và đạt được
+> chính nhờ khuyết tật mà #30 phải sửa. Nay là **1 mục High** (#14) + **4 mục Medium-High**
+> (#3, #13, #24, #30) = 5 → vẫn CHƯA đạt ngưỡng 8–10 mục để đề xuất Maintenance Sprint, nhưng đã
+> đi được nửa đường tới đó; nếu phase sau lại thêm một mục Medium-High nữa thì phải cân nhắc.
+>
+> **(Ảnh chụp trước đó, sau Phase 8D)**: thêm **#29** (Low — cọ nhìn
 > từ đúng trên xuống dẹt thành dấu "✳", do `parts.js` không nghiêng được khối; đã giảm nhẹ ở 8D,
 > ĐỪNG vá nếu chỉ vì cây cọ). Vẫn **1 mục Priority High**
 > (#14) → vẫn CHƯA đạt ngưỡng 8–10 mục để đề xuất Maintenance Sprint. Còn **3 mục Medium-High**
@@ -1335,6 +1343,55 @@
 
 ---
 
+## #30 — Mặt đường render ra DƯỚI ngưỡng mắt đọc được, xét riêng vật liệu (kỷ 11 · 13 · 10 · 3)
+
+- **Module**: `src/engine/city3d/palette3d.js` (luật `roadL`), đo ở Phase 9B
+- **Priority**: Medium-High
+- **Severity**: Medium
+- **Impact**: đo trên ảnh dựng thật kỷ 11 lúc 15 giờ, **đã TẮT HẲN `sun.castShadow`** để tách vật
+  liệu khỏi ánh sáng: mặt đất sáng **0,406**, còn ngõ phố **0,113** — tức nằm DƯỚI ngưỡng 0,12 mà
+  mắt còn đọc ra chi tiết, trước khi bóng đổ chạm vào. Trên ảnh, mạng đường đọc ra thành những
+  RÃNH ĐEN cắt qua thành phố chứ không phải phố xá. Phép thử ngược: trong 11,1% khung hình bị
+  nghiền của kỷ 11, **9,6 điểm phần trăm vẫn còn nguyên khi tắt sạch bóng đổ** ⇒ phần lớn mảng đen
+  của kỷ này là MẶT ĐƯỜNG, không phải bóng. Đây chính là chữ *"mảng đen … tuyệt đối"* trong yêu
+  cầu của Đàm, ở dạng literal nhất của nó.
+- **Root Cause**: `ROAD_MIN_CONTRAST` (0,13) mang nghĩa *"đường và đất phải cách nhau ÍT NHẤT
+  chừng này"*, nhưng nó được **CỘNG THÊM** vào phần chênh lệch riêng của vật liệu chứ không làm
+  SÀN cho tổng: `roadL = groundL ± (MIN + |off| × SPAN)`. Vật liệu nào vốn đã xa mức trung tính
+  thì bị đẩy HAI LẦN. Nhựa đường kỷ 11 (`#3a3b3e`, cách trung tính 0,265) nhận tổng đẩy **0,289**
+  — lớn hơn cả chênh lệch của chính nó — và **không có gì chặn lại**. Luật có SÀN mà không có TRẦN;
+  chưa ai từng hỏi *"đẩy xa bao nhiêu thì là quá xa?"*.
+- **Current Risk**: trung bình. Ảnh hưởng rõ nhất ở 4 kỷ hiện đại/tối (11, 13, 10, 3) — đúng nửa
+  sau hành trình, tức phần Đàm sẽ ở lại lâu nhất.
+- **Future Risk**: mỗi lần ai đó làm mặt đất SÁNG lên, mặt đường tự động chìm sâu thêm đúng bằng
+  chừng ấy, vĩnh viễn, và không có gì đỏ lên (bài test hiện chỉ canh khoảng cách TỐI THIỂU giữa
+  đường và đất — nó canh "đủ khác nhau", không canh "đủ sáng để nhìn ra").
+- **Recommended Solution**: ĐÃ VIẾT VÀ ĐÃ ĐO XONG, chỉ chưa ship — thay phép đẩy vô hạn bằng phép
+  **đẩy BÃO HOÀ**, có cả sàn lẫn trần mà vẫn đơn điệu ngặt:
+  `gap = MIN + (MAX − MIN) × (1 − exp(−|off| × SPAN / (MAX − MIN)))`, với `MAX = 0.26`.
+  Kết quả đo đủ 15 kỷ: kỷ 11 đại lộ 0,243 → **0,309** (+27%), ngõ 0,208 → **0,266** (+28%); các kỷ
+  sáng gần như không nhúc nhích; **thứ tự 15 kỷ giữ nguyên tuyệt đối**. ⚠️ KHÔNG được sửa bằng
+  `Math.max(MIN, …)` (phá thứ tự — đúng phép KẸP mà Phase 7D đã phải gỡ) và cũng không nên chỉ hạ
+  `ROAD_SPAN` (bóp đều cả 15 kỷ, kể cả những kỷ đang đúng). Luật cũ là **trường hợp giới hạn** của
+  công thức trên khi `MAX → ∞`, nên có thể dò dần rất an toàn.
+- **⚠️ BỊ CHẶN BỞI #27, VÀ ĐÂY LÀ PHẦN QUAN TRỌNG NHẤT CỦA MỤC NÀY**: bản vá trên **làm ĐỎ** bài
+  `15 KỶ RA 15 MẶT ĐƯỜNG` (`palette3d.test.js`) — cặp 3↔10 ban đêm tụt từ 10,3 xuống **7,9**, dưới
+  ngưỡng 10. Đo tiếp thì thấy điều đáng nói hơn nhiều: **kể cả khi nới trần tới 0,46 (gần như không
+  bão hoà nữa) cặp ấy cũng chỉ lên được 9,8** — tức lời hứa "15 kỷ ra 15 mặt đường" xưa nay **chỉ
+  đạt nhờ 3% biên** (10,3 so với ngưỡng 10), và nó đạt được **chính nhờ cái khuyết tật này**: phép
+  đẩy vô hạn đang thổi phồng khác biệt ở đầu tối. Gỡ khuyết tật thì lời hứa mất theo.
+  ⇒ **#27 và #30 nay là MỘT cặp, phải làm cùng nhau.** Và phương án "chấp nhận vĩnh viễn" mà #27
+  đề xuất KHÔNG còn dùng được nữa: chấp nhận #27 nghĩa là giữ #30. Muốn cả hai thì phải tách 15 kỷ
+  bằng thứ KHÔNG phải độ đậm — vạch kẻ, bề rộng làn, vỉa hè (tức hình học, đúng như #27 đã gợi ý).
+- **Estimated Complexity**: thấp cho riêng công thức (một hàm thuần, đã viết + đã đo); trung bình
+  nếu làm trọn gói cùng #27.
+- **Blocking Conditions**: #27 (xem trên)
+- **Review Trigger**: khi bắt tay vào #27, hoặc khi Đàm nói đường trông như rãnh đen
+- **Owner**: phiên AI kế tiếp · **Status**: Open (đã đo đủ, có bản vá, CỐ Ý chưa ship vì sẽ phải
+  nới một lời hứa đang có — xem `CLAUDE.md` mục cấm nới ngưỡng cho tiện)
+
+---
+
 ## #28 — ✅ [ĐÃ XỬ LÝ 2026-08-15] Mặt đất vẫn là bàn cờ ô vuông phẳng
 
 - **Module**: `src/components/city/render3d/geometryFactory.js` (cạnh) + `sceneGraph.js` (ô nền),
@@ -1405,6 +1462,12 @@
   nên thêm chi tiết đường phải làm trong CÙNG ô, không được cấp ô mới
 - **Review Trigger**: khi làm bước "Historical Architecture", hoặc nếu Đàm nói hai kỷ nào đó có
   đường giống nhau
+- **⚠️ CẬP NHẬT 2026-08-15 (Phase 9B) — MỤC NÀY NAY BỊ NỐI CỨNG VỚI #30**: phương án "chấp nhận
+  vĩnh viễn" ở trên **không còn dùng được**. Ba cặp này chỉ đạt ngưỡng 10 nhờ đúng cái khuyết tật
+  mà #30 phải sửa (phép đẩy độ đậm KHÔNG CÓ TRẦN đang thổi phồng khác biệt ở đầu tối). Bản vá của
+  #30 kéo cặp 3↔10 xuống 7,9; nới trần tới mức gần như không bão hoà cũng chỉ lên 9,8. ⇒ chấp
+  nhận #27 = giữ #30 (mặt đường đen dưới ngưỡng nhìn). Hai mục phải làm CÙNG NHAU, và lối ra
+  nằm ở gợi ý sẵn có ngay trên: tách bằng HÌNH HỌC chứ không bằng độ đậm.
 - **Owner**: phiên AI kế tiếp · **Status**: Open (đã đo đủ, có chủ đích chưa xử lý)
 
 ---

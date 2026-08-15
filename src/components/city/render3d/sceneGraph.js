@@ -34,6 +34,7 @@ import {
   MeshBasicMaterial,
   MeshStandardMaterial,
   NeutralToneMapping,
+  PCFSoftShadowMap,
   PMREMGenerator,
   PointLight,
   Quaternion,
@@ -159,7 +160,37 @@ export function applyPaintedLook(renderer) {
   renderer.toneMapping = NeutralToneMapping;
   // Hơi >1 để bù phần `Neutral` nén ở vùng sáng; cao hơn nữa thì trời bắt đầu bạc.
   renderer.toneMappingExposure = 1.2;
+
+  // ⚠️ BÓNG ĐỔ CẤU HÌNH Ở ĐÂY, KHÔNG PHẢI Ở TỪNG NƠI GỌI (Phase 9B). Ba dòng dưới đây trước kia
+  // được chép ở BA chỗ: `CityScene3D.jsx` và HAI khối dựng trong `scripts/city-preview.mjs`. Đúng
+  // cái bẫy "một luật ba chỗ phát biểu" mà dự án đã trả giá với `CITY_CAMERA_FOV`.
+  //
+  // ⚠️ VÀ NÓ ĐÃ CẮN THẬT, Ở CHỖ ĐẮT NHẤT: cỡ bản đồ bóng đổ được viết cứng ở ba nơi với **ba giá
+  // trị khác nhau** — app 1024, trang xem thử một-kỷ 1024, còn **bản QUÉT 15 kỷ chỉ 512**. Mà bản
+  // quét chính là công cụ mà `CLAUDE.md` bắt buộc dùng để duyệt mỹ thuật (*"sửa mỹ thuật thành phố
+  // 3D thì PHẢI QUÉT"*). Nghĩa là mọi nhận xét về bóng đổ rút ra từ bảng quét — suốt nhiều phase —
+  // đều đang nói về một thế giới có bóng thô gấp đôi thứ Đàm nhìn thấy. Không có gì đỏ lên: ảnh
+  // vẫn dựng ra, chỉ là nó trả lời một câu hỏi khác câu mình đang hỏi.
+  // ⇒ Nay CẢ BA đi qua đúng hàm này, và cỡ bóng do chính cảnh tự đặt lúc dựng (xem `createCityScene`).
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = PCFSoftShadowMap;
+  // Đôi với `shadow.autoUpdate = false` ở `createCityScene`: shadow map chỉ vẽ lại khi ta yêu cầu.
+  renderer.shadowMap.autoUpdate = false;
 }
+
+/**
+ * Cỡ bản đồ bóng đổ.
+ *
+ * ⚠️ MÁY BÀN 2048, KHÔNG PHẢI 1024. Khung bóng bó sát lưới (`reach = gridSize × 0,75` ⇒ 18 đơn vị
+ * ngang cho lưới 12), nên 1024 cho ~57 điểm/đơn vị còn 2048 cho ~114. Chi tiết nhỏ nhất cần đọc ra
+ * bóng là gờ mái và chân tường (Phase 8A) — cỡ ~0,08 đơn vị, tức 4,5 điểm ở 1024: không đủ để ra
+ * một cái bóng, chỉ đủ ra một vệt răng cưa. Đây đúng chỗ Đàm yêu cầu ưu tiên chất lượng hình ảnh
+ * và MacBook là máy chính.
+ * ⚠️ Điện thoại GIỮ 512 — không phải vì tiếc, mà vì bóng ở đó vẽ lại rất hiếm (render-on-demand)
+ * và bộ nhớ texture là thứ iOS Safari giết tab vì nó. 2048² × 4 byte = 16 MB cho MỘT bản đồ.
+ */
+export const SHADOW_MAP_DESKTOP = 2048;
+export const SHADOW_MAP_MOBILE = 512;
 
 /** Ô lưới (x, y) → toạ độ thế giới, gốc toạ độ đặt giữa thành phố. */
 export function cellToWorld(x, y, gridSize) {
@@ -279,7 +310,7 @@ function createSkyEnvironment(renderer, skyLook, groundColor) {
  */
 export function createCityScene({
   layout, palette, dimmed = false, lowDetail = false, stats = {}, still = false, daylight = null,
-  maxLamps = 3, renderer = null,
+  maxLamps = 3, renderer = null, isMobile = false,
 }) {
   const gridSize = layout.gridSize;
   const scene = new Scene();
@@ -875,12 +906,62 @@ export function createCityScene({
   // cầu — **tổng sáng vùng tối tăng, mà lượng ánh sáng KHÔNG mang thông tin thì giảm.**
   //
   // ⚠️ CHIAROSCURO LÀ KHOẢNG CÁCH, KHÔNG PHẢI "TỐI ĐI" (luật cũ, vẫn áp dụng): nâng sàn mà giữ
-  // nguyên trần thì khoảng cách hẹp lại. Nên nắng GIỮ NGUYÊN 2,15 — mục tiêu là vùng tối chuyển
-  // từ ĐEN sang LAM, không phải cả ảnh sáng đều lên.
+  // nguyên trần thì khoảng cách hẹp lại.
+  //
+  // ⭐ ĐÈN TRỜI PHÁT BIỂU BẰNG **TỈ LỆ VỚI NẮNG**, KHÔNG PHẢI BẰNG MỘT CON SỐ RỜI (Phase 9B).
+  //
+  // ⚠️ ĐOẠN CHÚ THÍCH NGAY TRÊN ĐÂY TỪNG KẾT THÚC BẰNG CÂU *"nên nắng GIỮ NGUYÊN 2,15 — mục tiêu
+  // là vùng tối chuyển từ ĐEN sang LAM"*. Ý định đúng. Nhưng nó **chưa bao giờ được đo**, và đo ra
+  // thì nó không đạt: sàn độ sáng 0,029–0,109 và **8,2–20,8% khung hình bị nghiền dưới ngưỡng đọc
+  // được** ở kỷ 7/11/13 (`scripts/shadow-score.mjs`). Vùng tối vẫn là ĐEN, không phải LAM. Đúng
+  // họ với bài học Phase 4G: *một câu tự trấn an cũng phải được kiểm như một con số* — khác ở chỗ
+  // lần này câu ấy nằm trong chú thích của mã sản phẩm, nơi không ai nghĩ tới việc phải kiểm.
+  //
+  // ⚠️ VÀ VÌ SAO PHẢI LÀ MỘT TỈ LỆ. Trước bản này, đèn bán cầu (0,34) và nắng (2,15) là hai hằng
+  // số KHÔNG biết nhau. Nhưng thứ quyết định bóng đổ đen tới đâu không phải độ sáng của đèn nền —
+  // nó là **khoảng cách giữa đèn nền và nắng**. Một con số tuyệt đối không diễn đạt được một luật
+  // nói về QUAN HỆ, và khi ai đó chỉnh nắng vì một lý do khác thì bóng đổ tối đi trong im lặng.
+  // Đó ĐÚNG là chuyện đã xảy ra ở đây: chú thích phía trên tự thú rằng Phase 7A hạ đèn bán cầu
+  // theo một giả thuyết sau đó bị bác, *"và nó ở lại thêm nhiều phase"*. Cùng hình dạng với lỗi
+  // mặt đường ở Phase 7D — cũng một lời hứa dạng "… hơn …" bị viết thành một hằng số.
+  // ⇒ Nay đèn trời **bám theo nắng**: nắng đổi thì nó tự đi theo, mãi mãi, không cần ai nhớ.
+  //
+  // ⚠️ TỈ LỆ NÀY CHỌN BẰNG BẢNG ĐO, KHÔNG BẰNG CẢM GIÁC. Chỉ tiêu NGHIỆM THU là "nâng sàn mà
+  // KHÔNG mất màu" — vì cách chữa ngây thơ (bật đèn nền lên một mình) đã thất bại một lần ở
+  // Phase 7A với đúng triệu chứng *"pastel như sữa"*, và thứ bắt được nó lúc ấy KHÔNG phải độ
+  // sáng mà là **độ tươi** (tụt 34%). Đo bằng `scripts/shadow-score.mjs` trên kỷ 7@15h / 11@15h /
+  // 13@12h — đây là số của ĐÚNG cấu hình đang chạy (`ENV_DIFFUSE` giữ nguyên 0,12):
+  //
+  //     tỉ lệ 0,158 (cũ) → sàn 0,107/0,029/0,109 · nghiền 13,4/16,9/8,2% · tươi 0,131/0,117/0,082
+  //     tỉ lệ 0,41  ⭐   → sàn 0,170/0,054/0,160 · nghiền  0,2/11,1/2,7% · tươi 0,136/0,114/0,082
+  //
+  // Độ tươi **đứng yên** (+4%/−3%/±0%) và khoảng cách sáng-tối còn NHÍCH LÊN (0,480 → 0,503) —
+  // tức đây KHÔNG phải cái bẫy sữa của Phase 7A. Lý do nó khác: lần ấy đèn nền được bật lên một
+  // mình, lần này nắng đi lên CÙNG — chính là điều mà một TỈ LỆ bắt buộc phải xảy ra.
+  //
+  // ⚠️ BẢNG DÒ 4 NẤC LÀM RA TỈ LỆ NÀY CÓ VẶN KÈM `ENV_DIFFUSE` (0,12 → 0,20), nên hai nấc giữa
+  // của nó KHÔNG được chép vào đây: chúng trộn hai cần gạt nên không nói được cần nào có tác dụng.
+  // Bản cuối giữ `ENV_DIFFUSE` = 0,12 và vẫn ra gần đúng bộ số của nấc mạnh nhất ⇒ phần nâng là
+  // do TỈ LỆ, còn bản đồ môi trường gần như không đóng góp. `ENV_DIFFUSE` có bảng đo riêng và
+  // quyết định riêng (xem chú thích của nó) — không gộp vào đây.
+  //
+  // ⚠️ KỶ 11 VẪN CÒN 11,1% BỊ NGHIỀN, VÀ ĐÓ KHÔNG PHẢI LỖI ÁNH SÁNG. Phép thử ngược (tắt hẳn
+  // `sun.castShadow`) cho thấy **9,6 trong 11,1 điểm phần trăm ấy vẫn còn nguyên** — tức phần lớn
+  // mảng đen của kỷ 11 là MẶT ĐƯỜNG (nhựa đường `#3a3b3e` render ra độ sáng 0,113 trong khi mặt
+  // đất 0,406), không phải bóng đổ. Đó là một khuyết tật của bảng màu đường, có gốc riêng và bản
+  // vá riêng — xem `TECH_DEBT.md` #30. Đừng cố chữa nó bằng cách nâng thêm đèn.
+  //
+  // ⚠️ THEME TỐI GIỮ TỈ LỆ RIÊNG, CAO HƠN (0,75). Đó không phải sự thiếu nhất quán: theme tối là
+  // một CẢNH KHÁC (chạng vạng/đêm), nơi bầu trời chiếm phần lớn ánh sáng còn "nắng" chỉ là ánh
+  // trăng. Giữ đúng tỉ lệ cũ giữa hai theme (1,84 lần) để không vô tình dựng lại cảnh đêm — thứ đã
+  // được chỉnh riêng ở Phase 3M và 5A.
+  const SUN_BASE = palette.isDark ? 1.96 : 2.45;
+  const SKY_FILL_RATIO = palette.isDark ? 0.75 : 0.41;
+
   const hemisphere = new HemisphereLight(
     palette.lights?.skyDome ?? palette.sky,
     palette.lights?.bounce ?? palette.ground,
-    (palette.isDark ? 0.50 : 0.34) * fillEnergy,
+    SUN_BASE * SKY_FILL_RATIO * fillEnergy,
   );
   scene.add(hemisphere);
 
@@ -888,8 +969,7 @@ export function createCityScene({
     (palette.isDark ? 0.05 : 0.03) * fillEnergy);
   scene.add(ambient);
 
-  const sun = new DirectionalLight(palette.lights?.sun ?? palette.sun,
-    (palette.isDark ? 1.72 : 2.15) * sunEnergy);
+  const sun = new DirectionalLight(palette.lights?.sun ?? palette.sun, SUN_BASE * sunEnergy);
   // Hướng lấy từ `SUN_DIRECTION` — CÙNG hướng đã nướng quầng sáng vào vòm trời ở trên. Nắng mạnh
   // hơn bản trước (1,9 → 2,15) vì đèn nền đã bị hạ xuống: giữ TỔNG sáng gần như cũ nhưng kéo rộng
   // khoảng cách giữa mặt hứng nắng và mặt khuất — đó chính là chiaroscuro.
@@ -903,6 +983,10 @@ export function createCityScene({
   // tuý; với điện thoại thì đó là nóng máy. Ta tự bật `needsUpdate` khi cảnh THỰC SỰ đổi.
   sun.shadow.autoUpdate = false;
   sun.shadow.needsUpdate = true;
+  // ⚠️ ĐẶT CỠ Ở ĐÂY, LÚC DỰNG — không phải sau khi cảnh đã trả về. Bản cũ để `CityScene3D.jsx` gọi
+  // `setScalar` sau `createCityScene`, nên bất kỳ ai dựng cảnh mà không biết dòng đó (đúng là trang
+  // xem thử) sẽ lặng lẽ nhận mặc định 512 của three. Cảnh tự biết cỡ bóng của mình là đúng chỗ.
+  sun.shadow.mapSize.setScalar(isMobile ? SHADOW_MAP_MOBILE : SHADOW_MAP_DESKTOP);
 
   // Khung bóng bó SÁT đúng lưới — rộng thừa thì mất độ nét, thiếu thì cụt bóng ở rìa.
   const reach = gridSize * 0.75;

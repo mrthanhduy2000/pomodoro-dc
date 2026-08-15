@@ -12,6 +12,25 @@
 
 ---
 
+## 2026-08-15 — Phase 9B: bóng đổ thôi là mảng đen tuyệt đối
+
+- **Mục đích**: Đàm yêu cầu *"bóng đổ không được là những mảng đen cứng, phẳng và tuyệt đối"*. Đo
+  bằng công cụ mới `scripts/shadow-score.mjs`: **8,2–20,8% khung hình** đang bị nghiền dưới ngưỡng
+  mắt còn đọc ra chi tiết.
+- **Phạm vi**: `sceneGraph.js` (đèn trời phát biểu thành TỈ LỆ của nắng — xem ADR-024; cấu hình
+  bóng đổ dồn vào `applyPaintedLook`; cỡ bản đồ bóng máy bàn 1024 → 2048), `CityScene3D.jsx` và
+  `scripts/city-preview.mjs` (bỏ phần tự khai lại), `scripts/shadow-score.mjs` (mới).
+- **Ảnh hưởng**: sàn độ sáng **0,107→0,170 · 0,029→0,054 · 0,109→0,160** (kỷ 7/11/13); bị nghiền
+  **13,4→0,2% · 16,9→11,1% · 8,2→2,7%**; **độ tươi đứng yên** và khoảng cách sáng-tối nhích lên ⇒
+  không rơi vào bẫy "pastel như sữa" của Phase 7A.
+- **Phát hiện kèm theo**: cỡ bản đồ bóng từng viết cứng ở **ba nơi với ba giá trị** (app 1024, xem
+  thử một-kỷ 1024, **bản quét 15 kỷ chỉ 512**) — tức mọi nhận xét về bóng đổ rút ra từ bản quét đều
+  đang nói về một thế giới thô gấp đôi thứ Đàm nhìn thấy.
+- **Chưa làm, có chủ đích**: mặt đường render DƯỚI ngưỡng nhìn xét riêng vật liệu (`TECH_DEBT #30`)
+  — đã có bản vá đo xong nhưng ship nó sẽ làm đỏ một lời hứa đang có, và lời hứa ấy hoá ra chỉ đạt
+  nhờ 3% biên; #30 và #27 nay phải làm cùng nhau.
+- **Tương thích**: không đổi dữ liệu, không đổi API, không cần migration.
+
 ## 2026-08-15 — Thế giới không kết thúc ở rìa thành phố: chân trời theo kỷ (Phase 9A)
 
 **Mục đích.** Xoá nốt cảm giác "mô hình đặt trên bàn". Đo trên ảnh chụp: ra khỏi lưới 3,4 ô, thế

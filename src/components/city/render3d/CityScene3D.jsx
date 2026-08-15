@@ -17,7 +17,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { PerspectiveCamera, Raycaster, Vector2, WebGLRenderer, PCFSoftShadowMap } from 'three';
+import { PerspectiveCamera, Raycaster, Vector2, WebGLRenderer } from 'three';
 
 import { buildScenePalette } from '../../../engine/city3d/palette3d';
 import { deriveDaylight } from '../../../engine/city3d/daylight';
@@ -31,10 +31,6 @@ import { readThemeSignature, readThemeTokens } from './themeBridge';
 
 /** Giới hạn tỉ lệ điểm ảnh. Màn Retina 3x mà vẽ đủ 3x thì tốn gấp 9 lần mà mắt gần như không thấy. */
 const MAX_PIXEL_RATIO = 2;
-
-/** Kích thước shadow map. Điện thoại lấy nửa — đây là thứ đắt thứ nhì sau số lệnh vẽ. */
-const SHADOW_MAP_DESKTOP = 1024;
-const SHADOW_MAP_MOBILE = 512;
 
 /**
  * Trần nhịp khung hình cho hoạt hoạ cư dân.
@@ -146,13 +142,9 @@ export default function CityScene3D({
         failIfMajorPerformanceCaveat: true,
       });
       renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, MAX_PIXEL_RATIO));
-      // Nén dải sáng thay vì cắt phẳng — xem `applyPaintedLook`. Dùng chung với trang xem thử.
+      // Nén dải sáng + cấu hình bóng đổ — xem `applyPaintedLook`. Dùng CHUNG với trang xem thử,
+      // và đó là điều kiện để công cụ xem thử nhìn thấy đúng thứ máy của Đàm nhìn thấy.
       applyPaintedLook(renderer);
-      renderer.shadowMap.enabled = true;
-      renderer.shadowMap.type = PCFSoftShadowMap;
-      // ⚠️ Đôi với `shadow.autoUpdate = false` ở `sceneGraph.js`: shadow map chỉ được vẽ lại khi
-      // ta chủ động yêu cầu, không phải mỗi khung hình.
-      renderer.shadowMap.autoUpdate = false;
 
       const isMobile = Math.min(window.innerWidth, window.innerHeight) < 768;
 
@@ -193,11 +185,13 @@ export default function CityScene3D({
         // Dùng CHUNG tín hiệu `isMobile` với cỡ shadow map ngay dưới — một máy đã đáng hạ bóng thì
         // cũng đáng bớt đèn, để hai ngưỡng không trôi khỏi nhau theo thời gian.
         maxLamps: isMobile ? 2 : 3,
+        // Cùng tín hiệu ấy quyết luôn cỡ bản đồ bóng đổ, ngay trong lúc dựng cảnh — xem
+        // `SHADOW_MAP_DESKTOP` ở `sceneGraph.js`.
+        isMobile,
         // Bảo tàng (kỷ đã niêm phong) đứng yên tuyệt đối — đúng tinh thần "bảo tàng bất động";
         // và khi Đàm bật giảm chuyển động ở mức hệ điều hành thì KHÔNG có gì được nhúc nhích.
         still: dimmed || reduceMotion || still,
       });
-      city.sun.shadow.mapSize.setScalar(isMobile ? SHADOW_MAP_MOBILE : SHADOW_MAP_DESKTOP);
 
       // ⚠️ Mặt phẳng xa 8 × gridSize, KHÔNG phải 6. Vòm trời ở `sceneGraph.js` có bán kính
       // 3,6 × gridSize và camera lùi được tới 3,1 × gridSize — tổng 6,7 phải NHỎ HƠN mặt phẳng xa,

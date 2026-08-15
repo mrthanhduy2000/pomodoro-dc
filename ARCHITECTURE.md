@@ -318,6 +318,23 @@ hình — nó âm thầm biến mọi khung hình thành đắt như khung đầ
 tab) là hai hàm KHÁC `stop` (tháo cảnh): `stop` là vĩnh viễn, gọi nhầm khi rời tab thì quay lại
 thấy thành phố đóng băng.
 
+**Luật ánh sáng ngoài trời (Phase 9B, ADR-024)**: cảnh có ba nguồn — nắng có hướng (`DirectionalLight`,
+là nguồn đổ bóng duy nhất), đèn bán cầu mang màu TRỜI ở trên và màu ĐẤT ở dưới, và một `AmbientLight`
+gần bằng 0. ⚠️ **Đèn bán cầu KHÔNG phải một hằng số — nó là một TỈ LỆ của cường độ nắng**
+(`SUN_BASE × SKY_FILL_RATIO`). Lý do là một luật, không phải một sở thích: độ đen của bóng đổ do
+**khoảng cách giữa đèn nền và nắng** quyết định, nên viết hai thứ ấy thành hai con số không biết
+nhau là gài sẵn một cái bẫy — lần nào có người chỉnh nắng vì lý do riêng thì bóng đổ tối đi trong
+im lặng (đúng hình dạng lỗi mặt đường Phase 7D, và đã xảy ra thật ở Phase 7A). Phần "nâng vùng tối"
+dồn vào bán cầu chứ không vào `AmbientLight`, vì ambient rọi đều tuyệt đối ⇒ mang thông tin không
+gian bằng 0 và làm dẹt hình khối.
+
+**Cấu hình bóng đổ chỉ có MỘT chỗ**: `applyPaintedLook(renderer)` (kiểu + tắt tự-cập-nhật) và
+`createCityScene` (cỡ bản đồ, `SHADOW_MAP_DESKTOP`/`SHADOW_MAP_MOBILE`). App và **cả hai** đường
+dựng của `scripts/city-preview.mjs` đều đi qua đúng đó. ⚠️ Trước Phase 9B, cỡ bản đồ bóng được viết
+cứng ở ba nơi với ba giá trị (app 1024 · xem thử một-kỷ 1024 · **bản quét 15 kỷ 512**), nghĩa là
+công cụ duyệt mỹ thuật chính thức đang đánh giá một thế giới khác với thứ Đàm nhìn thấy. Có test
+đọc-mã-nguồn chặn cả hai nơi gọi tự khai lại (`sceneGraphWiring.test.js`).
+
 **Ngôn ngữ hình khối 3 trục — vì sao mô tả hình học lại là ENGINE THUẦN (2026-08-12)**: hình dáng
 một công trình là hàm của **(kỷ × loại × độ hiếm × cấp)**, cả ba trục đều đã có sẵn trong dữ liệu
 game (`ERA_METADATA`, `BUILDING_EFFECTS[].type`, `BLUEPRINT_CATALOG[].rarity`) — 15 × 4 × 3 = **75

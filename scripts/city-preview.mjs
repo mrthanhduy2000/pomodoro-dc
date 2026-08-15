@@ -115,7 +115,7 @@ import { deriveDaylight } from '${ROOT}/src/engine/city3d/daylight.js';
 import { applyPaintedLook, createCityScene } from '${ROOT}/src/components/city/render3d/sceneGraph.js';
 import { CITY_CAMERA_FOV, cityOrbitOptions, createOrbit } from '${ROOT}/src/engine/city3d/orbit.js';
 import { BLUEPRINT_CATALOG, ERA_METADATA } from '${ROOT}/src/engine/constants.js';
-import { PerspectiveCamera, WebGLRenderer, PCFSoftShadowMap } from 'three';
+import { PerspectiveCamera, WebGLRenderer } from 'three';
 
 const ERA = ${era};
 const LEVEL = ${level};
@@ -157,15 +157,11 @@ renderer.setPixelRatio(1);
 // Dùng CHUNG cấu hình nhìn với app — nếu không, trang xem thử sẽ vẽ ra một thành phố khác.
 applyPaintedLook(renderer);
 renderer.setSize(canvas.width, canvas.height, false);
-renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = PCFSoftShadowMap;
-renderer.shadowMap.autoUpdate = false;
 renderer.shadowMap.needsUpdate = true;
 
 // ⚠️ Truyền ĐÚNG bộ số mà app truyền, không để mặc định: dân số suy ra từ đây, và một trang xem
 // thử vẽ thành phố vắng hơn thật thì nó không còn kiểm chứng được thứ cần kiểm chứng.
 const city = createCityScene({ layout, palette, daylight, renderer, stats: { sessionCount: SESSIONS, streakLength: 9 } });
-city.sun.shadow.mapSize.setScalar(1024);
 
 // Đẩy đồng hồ tới một thời điểm giữa chừng. Ở t = 0 mọi cư dân đều đứng ở đầu tuyến của mình —
 // đúng chỗ dễ trùng nhau nhất, tức là ảnh chụp sẽ nói dối theo hướng lạc quan về chuyện họ có
@@ -212,7 +208,7 @@ import { deriveDaylight } from '${ROOT}/src/engine/city3d/daylight.js';
 import { applyPaintedLook, createCityScene } from '${ROOT}/src/components/city/render3d/sceneGraph.js';
 import { CITY_CAMERA_FOV, cityOrbitOptions, createOrbit } from '${ROOT}/src/engine/city3d/orbit.js';
 import { BLUEPRINT_CATALOG, ERA_METADATA } from '${ROOT}/src/engine/constants.js';
-import { PerspectiveCamera, WebGLRenderer, PCFSoftShadowMap } from 'three';
+import { PerspectiveCamera, WebGLRenderer } from 'three';
 
 const LEVEL = ${level};
 const IS_DARK = ${theme === 'dark'};
@@ -240,9 +236,6 @@ const renderer = new WebGLRenderer({ canvas: stage, antialias: true });
 renderer.setPixelRatio(1);
 applyPaintedLook(renderer);
 renderer.setSize(CELL_W, CELL_H, false);
-renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = PCFSoftShadowMap;
-renderer.shadowMap.autoUpdate = false;
 
 const camera = new PerspectiveCamera(CITY_CAMERA_FOV, CELL_W / CELL_H, 0.5, 200);
 const tokens = IS_DARK
@@ -282,7 +275,6 @@ eras.forEach((era, row) => {
     const city = createCityScene({
       layout, palette, daylight, renderer, stats: { sessionCount: SESSIONS, streakLength: 9 },
     });
-    city.sun.shadow.mapSize.setScalar(512);
     renderer.shadowMap.needsUpdate = true;
     city.updateResidents(17.5);
 

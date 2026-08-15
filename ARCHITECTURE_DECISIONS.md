@@ -11,6 +11,50 @@
 
 ---
 
+## ADR-024 — Đèn trời là một TỈ LỆ CỦA NẮNG, không phải một hằng số rời; và bóng đổ chỉ được cấu hình ở MỘT chỗ
+
+- **Ngày**: 2026-08-15 (Phase 9B)
+- **Bối cảnh**: Đàm yêu cầu *"bóng đổ không được là những mảng đen cứng, phẳng và tuyệt đối"*. Đo
+  bằng `scripts/shadow-score.mjs` trên kỷ 7/11/13: sàn độ sáng **0,029–0,109**, **8,2–20,8% khung
+  hình bị nghiền** dưới ngưỡng 0,12 mà mắt còn đọc ra chi tiết. Vùng tối là ĐEN, không phải LAM.
+- **Vấn đề**: chính chú thích trong `sceneGraph.js` đã tuyên bố mục tiêu *"vùng tối chuyển từ ĐEN
+  sang LAM"* và tự kết luận là đạt — nhưng nó **chưa bao giờ được đo**. Đèn bán cầu (0,34) và nắng
+  (2,15) là hai hằng số KHÔNG biết nhau, trong khi thứ quyết định độ đen của bóng đổ là **khoảng
+  cách giữa chúng**. Chú thích ngay tại chỗ còn tự thú rằng Phase 7A đã hạ đèn bán cầu theo một
+  giả thuyết về sau bị bác, *"và nó ở lại thêm nhiều phase"*.
+- **Phương án cân nhắc**:
+  1. **Nâng thẳng hằng số đèn bán cầu.** Rẻ nhất. Loại: đây đúng là thứ đã hỏng một lần — một con
+     số rời không diễn đạt được một luật nói về QUAN HỆ, nên lần chỉnh nắng kế tiếp lại phá nó
+     trong im lặng (đúng hình dạng lỗi mặt đường Phase 7D).
+  2. **`LightShadow.intensity`** (three ≥0.165) — nâng riêng điểm ảnh trong bóng, không đụng vùng
+     nắng. Loại làm phương án CHÍNH: nó cộng lại ánh sáng **ẤM của nắng** vào bóng, tức đẩy chênh
+     sắc nóng-lạnh sai chiều, trong khi bóng ban ngày ngoài đời phải NGẢ LAM.
+  3. **`VSMShadowMap` + `shadow.radius`** để làm mềm mép bóng. **Đã thử thật, đã xác minh là sống**
+     (vặn `radius` lên 60 thì các con số có dịch), nhưng ở bán kính an toàn thì **không đo được và
+     không nhìn ra khác biệt nào**, mà VSM lại mang sẵn rủi ro rò sáng. Loại: không ship một thay
+     đổi mà mình không chứng minh được lợi ích.
+  4. ⭐ **Phát biểu đèn trời thành TỈ LỆ của nắng** — chọn.
+- **Giải pháp chọn**: `SUN_BASE` là đại lượng có tên; đèn bán cầu = `SUN_BASE × SKY_FILL_RATIO`
+  (0,41 theme sáng · 0,75 theme tối, giữ đúng tỉ lệ 1,84 lần giữa hai theme để không dựng lại cảnh
+  đêm đã chỉnh riêng ở Phase 3M/5A). Nắng đổi thì đèn trời tự đi theo, mãi mãi.
+  Kèm theo: **cấu hình bóng đổ dồn hết vào `applyPaintedLook`** và **cỡ bản đồ bóng do chính cảnh
+  đặt lúc dựng** (`SHADOW_MAP_DESKTOP = 2048`, điện thoại 512).
+- **Trade-off**: bản đồ bóng 2048 tốn 16 MB texture trên máy bàn (điện thoại giữ 512). Mép bóng
+  của PCF hẹp lại theo texel, tức bóng NÉT hơn — đổi lại chân tường và gờ mái (Phase 8A) mới đủ
+  điểm ảnh để đổ ra một cái bóng thật thay vì một vệt răng cưa.
+- **Ảnh hưởng (đo được)**: sàn **0,107→0,170 · 0,029→0,054 · 0,109→0,160**; bị nghiền
+  **13,4→0,2% · 16,9→11,1% · 8,2→2,7%**; **độ tươi đứng yên** (0,131→0,136 · 0,117→0,114 ·
+  0,082→0,082) và khoảng cách sáng-tối còn nhích lên (0,480→0,503) ⇒ KHÔNG rơi vào bẫy "pastel như
+  sữa" của Phase 7A, vì lần này nắng đi lên cùng.
+- **⚠️ Phát hiện kèm theo, quan trọng cho mọi phiên sau**: cỡ bản đồ bóng từng viết cứng ở **ba nơi
+  với ba giá trị** — app 1024, trang xem thử một-kỷ 1024, **bản QUÉT 15 kỷ chỉ 512**. Mà bản quét
+  chính là công cụ `CLAUDE.md` bắt buộc dùng để duyệt mỹ thuật ⇒ mọi nhận xét về bóng đổ rút ra từ
+  nó đều đang nói về một thế giới thô gấp đôi thứ Đàm nhìn thấy.
+- **Điều kiện xem lại**: nếu HUD hiệu năng trên iPhone của Đàm cho thấy bóng đổ là chỗ nghẽn; hoặc
+  nếu sau này muốn mép bóng MỀM hơn thì VSM là hướng đã dò sẵn (xem phương án 3).
+
+---
+
 ## ADR-023 — Phối cảnh không khí là việc của SƯƠNG (theo khoảng cách thật), không nướng sẵn vào nước sơn — đảo ngược một nửa quyết định cũ về `outskirts`
 
 - **Ngày**: 2026-08-15 (Phase 9A)

@@ -6,543 +6,16 @@
 > chọn: `ARCHITECTURE_DECISIONS.md`. Nợ kỹ thuật: `TECH_DEBT.md`. Migration: `MIGRATION.md`. Tóm
 > tắt theo mốc: `CHANGELOG.md`.
 > **NGUYÊN TẮC ƯU TIÊN SỐ 1:** (1) mọi phiên AI phải đọc file này + `CLAUDE.md` + các file liên quan TRƯỚC khi làm; (2) sau MỌI cập nhật dù nhỏ, phải cập nhật ngay file này + `CLAUDE.md` + các file liên quan khác.
-> Cập nhật lần cuối: **2026-08-15** — **Phase 9A**: **THẾ GIỚI KHÔNG CÒN KẾT THÚC Ở RÌA THÀNH PHỐ.**
-> Đo trên ảnh chụp: ra khỏi lưới 3,4 ô, thế giới là **một tấm ván phẳng 72×72 tô một màu, đúng 12
-> tam giác** — trong khi `terrain.js` đã khai sẵn từ Phase 7B rằng kỷ 13 *"kẹp giữa núi"*, kỷ 7
-> *"đồi Toscana nối nhau"*, kỷ 8 *"thành phố bảy quả đồi"*. **Dữ liệu địa lý có sẵn; tầng vẽ chưa
-> bao giờ đọc tới nó.** Nay có `city3d/horizon.js` (bảng 15 kỷ + trường cao độ fBm) +
-> `buildHorizonSurface`. **703 bài test** (+15, tất cả đã thử ngược), lint sạch, build xanh.
-> Xem **ADR-022** + **ADR-023**.
-> ⚠️ **VÌ SAO KHÔNG PHẢI CHỈ "THIẾU NÚI"**: camera chúi 34,4° trừ nửa FOV dọc 19° ⇒ **mép TRÊN khung
-> hình nằm 15,4° DƯỚI tầm mắt**, nên **0% khung hình là trời** (chứng minh bằng cách sơn vòm trời đỏ
-> chói rồi chụp — đỉnh khung vẫn nguyên màu đất). Cả bức ảnh vì thế chỉ có HAI lớp: thành phố, và
-> một mảng phẳng chiếm ~25% mỗi tấm. Đó chính là cảm giác "mô hình đặt trên bàn". Đo bằng
-> `scripts/depth-score.mjs`: số lớp không gian ở dải xa **0 → 55**.
-> ⚠️ **THỨ TỰ BẮT BUỘC, ĐỪNG ĐẢO: sửa SƯƠNG trước, dựng NÚI sau.** Sương tuyến tính cũ có mặt phẳng
-> `far` và bão hoà **95–100%** ở đúng vùng này (đo bằng cách sơn sương hồng cánh sen). Dựng núi
-> trước thì núi **tàng hình hoàn toàn** — ship một cơ chế ĐÃ CHẾT kèm chú thích dài giải thích nó
-> chạy ra sao, đúng bẫy Phase 8D.
-> ⚠️ **BA LẦN "MỘT TRƯỜNG GÁNH HAI VIỆC" TRONG MỘT PHASE**: (1) `relief` không thể vừa tả đất thành
-> phố vừa tả núi vây quanh — Kyoto lòng thung PHẲNG mà núi quanh CAO ngất, Manhattan phẳng và cũng
-> chẳng có núi ⇒ hai đại lượng ĐỘC LẬP (lần thứ 5); (2) `grain` không thể vừa trả lời "khối núi to
-> bằng nào" vừa trả lời "mặt gồ ghề tới đâu" — đụn cát Sahara rất LỚN mà mặt cực TRƠN ⇒ tách ra
-> `rough` (lần thứ 6); (3) `outskirts` không thể vừa là màu ĐẤT vừa là phối cảnh không khí nướng
-> sẵn ⇒ hạ pha 0,42 → 0,15 và để `FogExp2` lo theo khoảng cách thật (ADR-023).
-> ⚠️ **BỐN LỖI, cả bốn chỉ lộ ra khi ĐO chứ không khi đọc mã**: chỗ giáp suy tay 9,4 thay vì 9,5 ⇒
-> **khe hở 0,5 đơn vị** vòng quanh thành phố · ô nhiễu 1,01 trong khi lưới lấy mẫu mỗi 2,0 ⇒ **mảng
-> tam giác sắc lẹm** đúng vẻ low-poly cả phase sinh ra để xoá · một tầng nhiễu ra **bong bóng tròn
-> xoe như sáp chảy** (địa hình thật là phân dạng ⇒ phải fBm) · tấm núi tự nghĩ ra luật màu riêng ⇒
-> mắt đọc ra **một cái bệ và một cái hào** dù hình học khớp tuyệt đối.
->
-> **(Phase 8D, ngay trước đó)** **CÂY THÔI LÀ HÌNH NÓN TRÊN QUE.** Đàm chỉ đích danh: *"cây cone +
-> cylinder hiện là một trong những yếu tố khiến cảnh vẫn giống prototype"*. Nguyên nhân gốc là
-> **THIẾU KIẾN TRÚC**, không phải lỗi mã: hình cây nằm trong ba nhánh `if` viết cứng giữa `tree()`
-> của `propSpec.js` ⇒ **40 hạt giống ra ĐÚNG MỘT cấu trúc khối**, cả 15 kỷ chỉ 3 mẫu. Nay có
-> `city3d/floraStyle.js` (BẢNG 15 kỷ) + `city3d/flora.js` (7 LOÀI) + `propSpec.js` (chỉ còn GHÉP).
-> **688 bài test.** Xem **ADR-020** + **ADR-021**. **Luật chống-primitive**: tán là **NHIỀU THUỲ
-> chồng lấn lệch tâm**, không phải một khối lồi — **tăng `sides` không chữa được, càng mượt càng
-> giống hình học**. Chi phí gần bằng không (+0,4% tam giác) nhờ trần phủ xanh của ADR-021.
-> Bốn lỗi, ba do bài test bắt: `bush` chung bảng với cây (một bảng gánh hai việc, lần thứ tư) ·
-> `sides`/`taper` viết cứng ở bốn chỗ · núm LOD chỉ cắn 5/10 hạt · **cả cơ chế lùm là mã chết**,
-> chứng minh bằng thử ngược (bật/tắt thì chỉ số phân tán đứng yên tới hai chữ số).
->
-> **(Phase 8C, ngay trước đó)** **MẶT ĐẤT THÔI LÀ BÀN CỜ.** Đàm gọi thẳng đây
-> là *"vấn đề rất lớn"*: *"terrain như các bậc thang… grid rõ… toàn cảnh giống prototype/editor hơn
-> là một thế giới 3D"*. Nguyên nhân gốc gọn trong một câu: mặt đất **là** 144 khối hộp riêng lẻ.
-> Hộp không dốc được (chênh cao độ chỉ có thể là BẬC), hộp có mặt bên (mỗi ô bốn cạnh đứng), và
-> 144 ô mỗi ô một sắc phẳng thì mắt đọc ra ngay hàng lối. Nay mặt đất và mặt đường mỗi thứ là **MỘT
-> tấm lưới liền** (`render3d/terrainMesh.js`) lấy mẫu mượt từ `surfaceHeightAt`, pháp tuyến mượt,
-> có vùng đất thoải bao quanh nên mép thôi là hình vuông sắc lẹm. **DỮ LIỆU bậc thềm không đổi một
-> con số** — đúng như Đàm cho phép (*"giữ data/progression nhưng thay đổi cách render"*).
-> **665 bài test** (+11, tất cả đã thử ngược), lint sạch, build xanh. **TECH_DEBT #28 đóng cả hai
-> phần.** Xem **ADR-019**.
-> ⚠️ **GIÁ PHẢI TRẢ, ĐO CHỨ KHÔNG ĐOÁN**: lệnh vẽ **KHÔNG đổi** (2 → 2), nhưng tam giác địa hình
-> **2.330 → 7.130**, cả cảnh **~29.000 → ~36.100 = 60%** trần 60.000. Đây là khoản chi lớn nhất của
-> cả mảng 8 và là **phase thứ TƯ liên tiếp** cộng tải lên một con số chưa ai đo trên iPhone thật →
-> `TECH_DEBT #23/#26` nay là mục cần đo GẤP NHẤT. Núm hạ tải rẻ nhất: `SUB` 3 → 2 ở `terrainMesh.js`
-> trả lại 3.610 tam giác.
-> ⚠️ **HAI LỖI CỦA PHASE NÀY ĐỀU DO BÀI TEST BẮT, KHÔNG DO ĐỌC MÃ**: (1) lưới đỉnh neo lệch nửa ô
-> nên **không đỉnh nào nằm đúng tâm ô** — mà tâm ô là chỗ nhà/cây/cư dân đứng; ảnh vẫn đẹp, không
-> gì đỏ. (2) bản đầu nhét mặt đường vào chung lưới đất, và **ràng buộc chẵn-lẻ** khiến ngõ phố
-> không thể vừa đúng bề rộng vừa cân giữa ô — phải tách tấm riêng, cái giá hoá ra bằng không.
-> ⚠️ **CÒN LẠI, ĐÃ NÓI THẲNG VỚI ĐÀM**: trong danh sách của anh mới xong mục **terrain**. **Cây vẫn
-> là nón + trụ** (anh gọi đích danh), vật liệu mặt đường vẫn là một màu phẳng, và bóng đổ vẫn là
-> mảng đen cạnh cứng. Chưa được coi Visual Foundation là xong.
->
-> **(Phase 8B, ngay trước đó)** **CẠNH VÁT — KHỐI THÔI SẮC NHƯ DAO.** Nguyên
-> nhân gốc **số 1** trong ba cái audit Phase 8A đặt tên. Ngoài đời cạnh nhọn tuyệt đối gần như không
-> tồn tại; dải hẹp ở mép là thứ **bắt vệt sáng viền**, và vệt ấy mới nói cho mắt biết "vật này có
-> khối lượng". Bề rộng vát = **tỉ lệ** theo cạnh mỏng nhất (không phải một số cố định — số cố định
-> 0,02 sẽ nuốt trọn cái gờ dày 0,022 vừa dựng ở 8A), và khối quá mỏng để thấy thì **không vát**.
-> Giá: **×1,24** tam giác công trình; đo trên ảnh: **3,8% khung hình đổi đủ để mắt thấy**.
-> **653 bài test**, lint sạch, build xanh. Xem **ADR-018**.
-> ⚠️ **VÁ MỘT LỖ HỔNG CÓ TỪ PHASE 3B**: chú thích của `countTriangles` khẳng định *"có test đối
-> chiếu hai bên"* — nhưng bài duy nhất tồn tại chỉ so hàm ấy với **những con số viết cứng**, trên
-> khối không có `w`/`d`/`h`, và chưa bao giờ `import` nhà máy hình học. Suốt 6 tháng ngân sách có
-> thể lệch tuỳ ý mà không gì đỏ. Nay đã có bài đối chiếu thật (dựng cả 15 kỷ, đếm thẳng từ bộ đệm
-> đỉnh). Bài học ở `CLAUDE.md`.
->
-> **(Phase 8A, ngay trước đó)** **TƯỜNG THÔI PHẲNG.** Đàm ra chỉ thị mới, bác
-> thẳng cách làm cũ: *"không coi các thay đổi palette, màu đường, terrain hoặc thêm vài nhà hiện tại
-> là đã hoàn thành Visual Foundation"* — thành phố vẫn *"quá pixel, hình hộp, low-poly, vật liệu
-> phẳng"*. Audit đo ra anh đúng theo nghĩa đen: nhà dân nhỏ nhất là **12 khối, trong đó thân nhà
-> đúng MỘT cái hộp**, và cả cảnh chỉ dùng **5–23%** ngân sách tam giác. Nay mỗi mảng nhà có chân
-> tường · gờ mái · ≤3 gờ tầng, mỗi ô cửa có bệ + lanh tô. Nhà dân nhỏ 12 → **17 khối**; kỷ nặng
-> nhất **23% → 41%** trần tam giác. **650 bài test**, lint sạch, build xanh, không đụng state.
-> Xem **ADR-017**.
-> ⚠️ **CÒN LẠI, ĐÃ NÓI THẲNG VỚI ĐÀM**: mặt tường vẫn là mảng lớn và **mọi cạnh vẫn sắc như dao** —
-> nguyên nhân gốc (1) trong ba nguyên nhân audit tìm ra, nằm ở tầng `geometryFactory.js` nên tách
-> sang **Phase 8B** (vát cạnh) để commit lùi lại được độc lập.
->
-> **(Phase 7D, ngay trước đó)** **MẶT ĐƯỜNG THEO THỜI ĐẠI, VÀ CON ĐƯỜNG TÀNG
-> HÌNH BAN ĐÊM.** Bước "Đường xá" trong thứ tự Đàm chốt. Trước bản này mặt đường của cả 15 kỷ là
-> đúng MỘT dòng hằng số — đường mòn thời đồ đá và đại lộ Dubai là *cùng một mặt phẳng cùng một
-> màu*. Nay 15 kỷ khai `roadMaterial` + `roadColor` (mỗi giá trị kèm một vật liệu CÓ THẬT), và mặt
-> đường có vật liệu PBR riêng. **646 bài test**, lint sạch, build xanh, không đụng state/schema,
-> **không thêm lệnh vẽ nào**.
-> ⚠️ **LỖI GỐC THỨ HAI, NẶNG HƠN, CHỈ TÌM RA KHI ĐO**: luật *"đường phải nhạt hơn đất"* được viết
-> thành một HẰNG SỐ (0,42) thay vì một QUAN HỆ. Phase 3M nâng độ đậm mặt đất ban đêm 0,286 → 0,400
-> vì lý do khác, mặt đường không có cách nào biết ⇒ **ban đêm đường cách đất 0,012–0,020, tức tàng
-> hình**, chạy như vậy nhiều ngày mà không có gì đỏ lên. Nay đo 0,131 ở mọi kỷ, mọi chặng. Xem
-> **ADR-016** + bài học mới ở `CLAUDE.md`.
-> ⚠️ **CHỖ RÒ RỈ THỨ BA**: ngõ phố (2/3 số ô đường) tô bằng `palette.roles.stone` — màu ĐÁ XÂY
-> TƯỜNG — nên chúng sẽ không đổi theo kỷ kể cả sau khi đại lộ đã sửa, mà nhìn ảnh thì vẫn tưởng
-> xong. Thêm vai màu `roadLane` suy thẳng từ `road`.
->
-> **(Phase 7C, ngay trước đó)** Nhà dân: mỗi **2 phiên** (~50 phút) mọc thêm một căn, tối đa 17 căn
-> (kỷ 1) → 30 căn (kỷ 15). Hai lỗi gốc phát hiện bằng ẢNH CHỤP: 25 nhà dân kỷ 7 đội mái vòm y hệt
-> Duomo (thêm `vernacularRoof`); mái nhà dân rộng gấp **2,4 lần** thân nhà (thêm `eaveOverhang`,
-> còn 1,41). Xem **ADR-015**.
-> ⚠️ **VIỆC CẦN ĐÀM LÀM**: đo cổng hiệu năng trên iPhone thật (đóng cùng lúc `TECH_DEBT #23` + **#26**)
-> — Phase 7C vừa cộng ~50% tam giác mỗi cảnh lên một hệ thống chưa cân lại kể từ trước Phase 7A.
->
-> *(mốc trước)* **2026-08-14 — Phase 7B**: **MẶT ĐẤT CÓ CAO ĐỘ — 15 kỷ, 15 vùng đất.**
-> Bước THỨ HAI trong thứ tự Đàm chốt (*Visual Foundation → **Terrain/City** → Roads → Historical
-> Architecture → Living City → Pomodoro → Polish*). Trước bản này mặt đất là 144 ô hộp **phẳng
-> tuyệt đối ở cao độ 0** cho cả 15 kỷ — trục "địa hình" hoàn toàn không tồn tại.
->
-> **Đã làm.** Module thuần mới `src/engine/city3d/terrain.js`. Mỗi kỷ một trường cao độ **THỀM BẬC**
-> khai bằng 3 tham số (`shape` · `terraces` · `relief`) cộng một trường `note` **BẮT BUỘC** giải
-> thích địa hình bằng một nơi CÓ THẬT ở đúng nước của kỷ đó: gò Göbekli Tepe (kỷ 1) · đồng bằng phù
-> sa sông Nin (2) · Lưỡng Hà phẳng tuyệt đối (3) · kinh thành Trung Hoa (4) · mỏm đá Burg Eltz —
-> dốc nhất (5) · làng Bắc Bộ ven sông (6) · đồi Toscana (7) · Lisbon "bảy quả đồi" (8) · lòng chảo
-> sông Seine (9) · thung lũng Manchester (10) · tấm granite Manhattan (11) · thảo nguyên Nga (12) ·
-> đô thị Nhật kẹp giữa núi (13) · đất LẤN BIỂN Marina Bay, phẳng có chủ đích (14) · đụn cát Dubai
-> (15). `sceneGraph.js` bám địa hình ở **sáu** chỗ và sinh **bệ kè** cho nhà vắt qua mép thềm.
-> `orbit.js` bù khoảng cách + điểm ngắm camera theo độ cao đất. Xem **ADR-014**.
->
-> **Ba quyết định đáng nhớ.** (a) **THỀM chứ không phải DỐC** — nền là 144 ô HỘP và công trình là
-> khối ĐÁY PHẲNG, dốc liên tục sẽ hở khe hoặc cắm chìm một góc; đây là ràng buộc hình học, không
-> phải lựa chọn mỹ thuật. (b) **Cao độ là hàm của DUY NHẤT `(era, gridSize)`** — `buildTerrain` cố
-> tình KHÔNG nhận danh sách công trình, vì nếu đất đổi theo tiến độ thì mỗi căn nhà Đàm xây xong sẽ
-> làm cả quả đồi nhích và nhà cũ lún **mà không có gì báo** (cùng bất biến với ADR-007). (c) **Nhà
-> vắt mép thềm thì KÊ MÓNG, không san phẳng đất** — san phẳng thì con đường chạy ngay cạnh hụt đúng
-> một bậc và mạng đường (Phase 5C/6C) gãy làm đôi ở chỗ đông nhất; bệ kè lại thêm đúng loại chi tiết
-> kiến trúc cảnh đang thiếu, và nó đi vào cùng khối hình học gộp nên **tốn 0 lệnh vẽ**.
->
-> **Giá phải trả: gần như bằng 0.** Nền vẫn đúng 144 ô trong MỘT `InstancedMesh` (chỉ đổi `y` + hệ
-> số cao mỗi thể hiện) ⇒ **không thêm lệnh vẽ nào**; bệ kè ≤ 60 tam giác trên tổng ~5.000. Không
-> đụng state, không đụng schema, không migration. Test **612 → 625**.
->
-> ⚠️ **BÀI HỌC LỚN NHẤT PHIÊN NÀY — ba lần đoán sai nguyên nhân, và cả ba lần đều nghe rất có lý.**
-> Yêu cầu: mọi kỷ phải DÙNG ĐỦ số bậc mình khai. Đo lần 1: **4 kỷ phẳng lì**, 15 kỷ chỉ ra 11 trường
-> khác nhau — hàm hình dạng gánh luôn cả biên độ rồi `Math.round(0.35 × 1)` **làm tròn về 0**. Đo
-> lần 2: kỷ 8 có **85% số ô cùng một bậc** — trục dốc viết `(x + y)`, mà tổng hai biến đều có **phân
-> bố tam giác**. Đo lần 3: vẫn 5 kỷ dồn cục, và đây mới là nguyên nhân THẬT — lưới 12×12 với ô nhiễu
-> 4,5 chỉ có **~9 giá trị độc lập**, tức cỡ mẫu là 9 chứ không phải 144, nên **luật số lớn không áp
-> dụng được** bất kể chỉnh hàm khéo tới đâu. Vá gốc: **căng trường ra trọn 0..1 rồi mới chia bậc**,
-> chia bằng `floor` chứ không `round` (ô biên của `round` chỉ rộng bằng NỬA ô giữa).
-> ⚠️ Và phần khó chịu nhất: bản vá thứ ba **NUỐT LUÔN** hai lỗi đầu — sau khi có bước căng thì nhân
-> hệ số nào vào hàm hình dạng cũng ra kết quả y hệt từng con số. Nghĩa là hai bài test tôi viết cho
-> hai lỗi ấy **thành vô dụng mà vẫn xanh**, và chú thích của chúng thành lời nói dối. Đã thử ngược
-> rồi viết lại cho đúng. Cùng họ với Phase 3Y: **sửa đúng KHÔNG chứng minh hiểu đúng.**
->
-> ⚠️ **PHÁT HIỆN KÈM THEO — CHƯA SỬA, CẦN ĐÀM QUYẾT (`TECH_DEBT #24`).** Viết công cụ mới
-> `scripts/frame-fit.mjs` để kiểm khung hình, và nó đo ra **14/15 kỷ có công trình bị mép khung hình
-> CẮT** (nặng nhất kỷ 2, biên −0,513; ở khung vuông kiểu iPhone là **15/15**). Đối chứng `--flat`
-> chứng minh đây là lỗi **có từ Phase 5A**, KHÔNG phải do 7B — địa hình thực ra làm khung hình **đỡ**
-> đi (hệ số cần thiết 2,01 → 1,78). Nguyên nhân: Phase 5A hạ `CAMERA_DISTANCE_FACTOR` 1,5 → 1,18 để
-> chữa đúng lời Đàm *"không thu quá xa rồi bị mờ"*, và lần đó chỉ kiểm **một trục, mép TRÊN, một
-> công trình**. Sửa triệt để nghĩa là mở khung ~1,5 lần — tức đi ngược chính yêu cầu của Đàm ⇒ đây
-> là **đánh đổi thật, không phải lỗi để tự sửa**, đã ghi 3 hướng để Đàm chọn.
-> ⚠️ Và công cụ ấy **nói dối ngay lần chạy đầu** (lần thứ 17 trong dự án): vector `right` ngược dấu
-> ⇒ nhãn mép ĐẢO ("mép TRÊN" trong khi ảnh rõ ràng cắt ở mép DƯỚI), trong khi **các con số thì vẫn
-> đúng tuyệt đối** vì phép đo lấy trị tuyệt đối. Loại nói dối này rất dễ được tin vì phần dễ kiểm
-> nhất của nó lại đúng. Ảnh chụp là thứ bắt được nó.
->
-> **Phase 7A** (ngay trước đó): **VẬT LIỆU THẬT — đá ra đá, kính ra kính, kim
-> loại ra kim loại.** Đàm ra yêu cầu nâng cấp TOÀN DIỆN Thành phố 3D vì nó *"còn giống
-> low-poly/prototype"*, đích đến là **premium stylized 3D realism**, và nói rõ *"vật liệu phải đọc
-> ra rõ là đá, gạch, gỗ, đất nung, ngói, bê tông, kim loại"*. Thứ tự Đàm chốt: **Visual Foundation →
-> Terrain/City → Roads → Historical Architecture → Living City → Pomodoro → Polish**, và **không
-> được chuyển bước khi kết quả còn low-poly/blocky/empty/prototype**. Đây là bước ĐẦU TIÊN.
->
-> **Nguyên nhân gốc (không phải số tam giác, không phải bảng màu).** Cả thành phố dùng đúng **một**
-> `MeshLambertMaterial`. Lambert là mô hình **thuần khuếch tán** — không có số hạng phản xạ gương
-> nào. Nghĩa là **về mặt toán học mọi bề mặt trong thành phố là CÙNG MỘT bề mặt**, chỉ khác sắc.
-> Không có cách nào để kính đọc ra khác đá, hay kẽm khác ngói, vì thứ phân biệt chúng ngoài đời
-> (bóng/nhám/phản chiếu) đơn giản **không tồn tại trong công thức**. Bao nhiêu Phase đầu tư vào bảng
-> màu (3N, 6B) và hình khối (5B, 6A) cũng không chạm tới được chỗ này.
->
-> **Đã làm.** Module thuần mới `src/engine/city3d/materials.js`: bảng **15 HỌ vật liệu** (mái tranh,
-> gỗ, gạch bùn, gạch nung, đá, vữa, ngói, ngói men, đá phiến, bê tông, kim loại, vàng, kính, nước,
-> lá) mỗi họ khai `roughness`/`metalness`; hàm tra `vai màu × kỷ → họ`; đường cong **bóng tiếp xúc**.
-> `eraStyle.js` thêm `wallMaterial`/`roofMaterial` **bắt buộc cho cả 15 kỷ**, khai theo công trình
-> có thật ở nước biểu tượng (kỷ 4 gỗ sơn son + ngói MEN · kỷ 6 cột lim + ngói nung KHÔNG men · kỷ 9
-> đá vôi + mái KẼM · kỷ 11 granite + đồng GỈ · kỷ 12–13 bê tông · kỷ 14 kính · kỷ 15 kính + vành
-> THÉP MẠ). `geometryFactory.js` gom tam giác **theo họ** rồi phát ra các **nhóm**
-> (`geometry.addGroup`) — giữ nguyên kiến trúc gộp-hình-học, chỉ đi từ 1 lệnh vẽ lên **5–7**, thay
-> vì 750 nếu vẽ rời từng khối. `sceneGraph.js` dựng mảng vật liệu **từ chính `families` nhà máy trả
-> về** (không tự liệt kê lại), và nướng **bản đồ môi trường** từ chính bầu trời đang nhìn thấy.
->
-> ⚠️ **KIM LOẠI KHÔNG CÓ BẢN ĐỒ MÔI TRƯỜNG THÌ RA ĐEN — đây là điều kiện CẦN, không phải điểm tô
-> thêm.** Kim loại gần như không có thành phần khuếch tán: màu nó hiện ra hầu hết là thứ nó phản
-> chiếu. Bản đồ nướng bằng `PMREMGenerator.fromScene` trên một quả cầu 16×8 tô bằng **cùng hàm**
-> `paintSkyGradient` vẽ vòm trời (một luật một công thức — nếu không thì kính phản chiếu một bầu
-> trời khác với bầu trời ngay sau lưng nó). Hệ quả: `CityScene3D.jsx` và **cả hai** chỗ gọi trong
-> `scripts/city-preview.mjs` đều phải truyền `renderer` vào; quên một chỗ thì trang xem thử lặng lẽ
-> đóng khung khác app.
->
-> ⚠️ **BÀI HỌC LỚN NHẤT PHIÊN NÀY — mất nửa buổi chỉnh một cái núm không nối vào đâu cả.** Sau khi
-> chuyển sang PBR, bảng màu **nhạt hẳn**: sáng 33,8 → 52,2 (+54%), tươi 24,4 → 16,1 (−34%),
-> chiaroscuro 40,3 → 30,3 (−25%) — đúng thất bại "pastel như sữa" mà dự án đã bác một lần. Giả
-> thuyết rất hợp lý: *"môi trường đang làm đèn nền thứ ba"* ⇒ hạ đèn bán cầu 0,34 → 0,10, đèn nền
-> 0,07 → 0,02. Đo lại: **52,2 → 51,0** — gần như không nhúc nhích. **Lý lẽ đúng, con số vô dụng.**
-> Thủ phạm thật: gắn bản đồ bằng `scene.environment` thì **three BỎ QUA `material.envMapIntensity`
-> hoàn toàn** — môi trường luôn rọi ở mức 1,0 bất kể khai gì. Phát hiện bằng **phép thử vô lý**: tô
-> quả cầu dò ĐỎ CHÓI rồi chạy với cường độ khai bằng **0**; cả thành phố **vẫn đỏ** (tươi 53,0) ⇒
-> cái núm chắc chắn không nối. ⇒ **(a)** một thay đổi làm ảnh đổi "một chút" là hình dạng của cả
-> nhiễu lẫn tín hiệu — chỉ hậu quả VÔ LÝ mới phân biệt được; **(b)** `catch` im lặng biến tính năng
-> HỎNG thành tính năng VÔ HÌNH (chính khối `catch` tôi tự viết đã giấu lỗi — nay là `console.warn`);
-> **(c)** lý lẽ đúng + số sai vẫn ra bản vá vô dụng ⇒ mọi thay đổi ánh sáng phải **chụp-rồi-đo**.
-> `ENV_DIFFUSE = 0,12` chọn bằng bảng đo, không bằng cảm giác (0 → 32,4/24,5/43 · **0,12 →
-> 35,3/20,3/38** · 0,20 → 37,0/18,1/36 · 1,00 → 51,3/14,4/29). Đáng ghi: PBR **không** có môi trường
-> đã tốt hơn Lambert ở cả ba con số.
->
-> ⚠️ **BÀI HỌC THỨ HAI — cùng một lỗi cắn BA LẦN trong đúng một file test tôi vừa viết.** Bài
-> `sceneGraphWiring.test.js` canh "hàm X có được gọi không" bằng regex, mà `/tênHàm\(/` **khớp luôn
-> dòng `function tênHàm(`** — nên gỡ sạch mọi lời GỌI vẫn không đỏ. Lần 1 `paintSkyGradient`; lần 2
-> `createSkyEnvironment`; lần 3 **ngay trong cái assert vừa viết ra để vá lần 2**. Vá theo triệu
-> chứng thì chỗ thứ tư sẽ lại quên ⇒ vá GỐC: lọc mọi dòng định nghĩa hàm ra hằng số `CALLS`, mọi
-> phép kiểm "có được gọi không" đều hỏi trên đó. Kèm hai bài phụ: **(a)** assert "có ít nhất một
-> chỗ" là cái phễu chứ không phải hàng rào (`/envMap,/` xanh oan vì file có 4 vật liệu mang
-> `envMap`; gỡ đúng cái DUY NHẤT chứa kim loại vẫn còn 3 cái kia đỡ) ⇒ phải hỏi ĐÍCH DANH khối cần
-> canh; **(b)** phép thử ngược phải **kiểm bằng `diff`** xem file có đổi thật không — hai lần "thử
-> ngược không đỏ" đầu tiên hoá ra là do regex sửa file bị trượt vì thụt lề, tức tôi suýt kết luận
-> sai về chính bài test của mình.
->
-> **Test**: 591 → **612** (+21: `materials.test.js` 10 bài, `geometryFactory.test.js` 7 bài,
-> `sceneGraphWiring.test.js` 4 bài). **Cả 13 bài đã thử-cho-đỏ**: 5 kiểu phá `geometryFactory` và 8
-> kiểu phá `sceneGraph` đều đỏ đúng bài cần đỏ. Lint sạch, build xanh. Không đụng state, không đụng
-> dữ liệu đã lưu, không thêm dependency. Quyết định ghi ở **ADR-013**.
->
-> ⚠️ **NÓI CHO ĐÚNG PHASE NÀY MUA ĐƯỢC GÌ**: nó chữa **bề mặt**, và chỉ bề mặt. Nhìn ảnh quét 15 kỷ
-> thì mái tranh kỷ 1 nay lì hoàn toàn, mái kẽm kỷ 9 có vệt sáng gương trượt trên mặt, kính kỷ 15
-> bóng dịu — ba thứ trước đây đọc ra y hệt nhau. Nhưng **đất vẫn còn trống nhiều** và mật độ nhà vẫn
-> thưa, đúng thứ Đàm phàn nàn. Đó là việc của **Phase 7B (Terrain có cao độ) và 7C (mật độ + khu
-> dân cư)**, chưa làm.
->
-> **Phase 6C** (ngay trước đó): **ĐƯỜNG VÀNH ĐAI, VÀ CÂU BÁO NÓI RA ĐÚNG CON
-> ĐƯỜNG VỪA MỞ.** Đàm: *"mở rộng thêm, làm cầu kỳ lên"*. Nhưng việc này chọn theo SỐ ĐO, không theo
-> cảm tính — đo nhánh "xưởng trống" của `buildGrowthMoment` (ca chiếm ~85% số phiên thật):
->
-> | mốc phiên trong kỷ | TRƯỚC | SAU |
-> |---|---|---|
-> | 1–44 | **100 %** | **100 %** |
-> | 45–60 | 38 % | **100 %** |
-> | 61–88 | 6 % | **73 %** |
-> | 89–120 | 3 % | 3 % |
-> | 121+ | **0 %** | **0 %** |
-> | tổng qua 200 phiên | **26,3 %** | **40,7 %** |
->
-> ⇒ **Mạng đường LÀ động cơ của cảm giác "có gì đó mọc lên"**, và nó tắt đúng ở phiên 44 = số ô của
-> mạng lưới. Cư dân và cảnh vật chỉ kéo lê thêm vài chục phiên rồi cũng hết.
-> **Đã làm**: vành đai chạy đúng viền lưới (x/y ∈ {0, 11} — dải DUY NHẤT không chạm khu đất công
-> trình nào; mọi vòng trong hơn sẽ cắt ngang giữa các lô và biến mặt tiền thành ngõ cụt), đưa mạng
-> đường **44 → 80 ô**. Hàm mới `describeRoadCell(x, y)` đặt tên từng đoạn, nên câu báo sau mỗi phiên
-> nay nói *"Vừa mở thêm một đoạn đại lộ ngang"* · *"một đoạn phố dọc"* · *"một khúc cua vành đai"* ·
-> *"một ngã tư mới"* — **8 cách gọi** thay vì "một đoạn đường" lặp 80 lần, cộng một cột mốc riêng
-> khi vành đai khép kín (*"Mạng đường đã hoàn chỉnh · đủ 80/80 ô đường"*).
-> ⚠️ **NÓI CHO ĐÚNG CÁI NÀY MUA ĐƯỢC GÌ**: nó **kéo dài** quãng "phiên nào cũng thấy có gì mọc lên"
-> từ phiên 44 lên phiên 80 — nó **KHÔNG** chữa cái đuôi. Từ phiên 121 vẫn im lặng tuyệt đối, y như
-> trước; với kỷ 15 (840 phiên) thì 80 ô đường vẫn chỉ phủ 10% chặng đường. `TECH_DEBT #14` vì vậy
-> vẫn MỞ, và câu hỏi CÓ/KHÔNG cho Đàm vẫn nguyên vẹn.
->
-> ⚠️ **BẤT BIẾN QUAN TRỌNG NHẤT CỦA PHASE NÀY, và nó KHÔNG nhìn thấy được trong ảnh chụp**: 44 ô
-> đường cũ phải giữ **y nguyên thứ tự mở**. `ROAD_CELLS` xếp theo khoảng cách tới tâm, nên nếu chỉ
-> thả vành đai vào rồi để phép xếp đó lo, ô giữa cạnh viền `(0,5)` (cách tâm 6) sẽ **chen lên
-> trước** đoạn cuối đại lộ `(4,11)` (cách tâm 7) — nghĩa là một người đã chơi tới phiên 30 sẽ mở
-> app sau deploy và thấy phố mình **tự sắp xếp lại**. Không có gì đỏ lên, không ai mất dữ liệu, chỉ
-> là một buổi sáng thành phố khác đi. Trường `tier` chặn đúng điều đó, và có bài test riêng khoá
-> lại (đã thử-cho-đỏ: gỡ phép xếp theo `tier` thì bài test bắt được ngay).
-> ⚠️ **Bài học kèm — "nằm trên viền" KHÔNG bằng "là vành đai"**: bản đầu của bài test ấy dùng phép
-> thử hình học `x === 0 || y === 0 || …` và nó đỏ ngay, kêu tên ô `(4, 0)`. Ô đó nằm trên viền thật,
-> nhưng nó là **đầu mút của đại lộ dọc** chạy từ tâm ra tới mép — thuộc mạng cũ, mở từ lâu. Phép đo
-> sai chứ không phải mã sai. Nay bài test dùng thẳng `describeRoadCell` làm nguồn sự thật, thay vì
-> phát biểu lại cùng một luật bằng công thức thứ hai.
->
-> **Dọn kèm — ba hằng số chép tay đã lặng lẽ hết đúng khi đường lên 80:** `MAX_PROPS = 96` (80 + 34
-> cảnh vật = 114) và ngân sách DOM `230` trong bài test — **cả hai nay suy ra từ nguồn**, nên lần
-> sau ai thêm một trục đường thì chúng tự đi theo. Và `city-preview.mjs` ghim cứng `sessionCount:
-> 40` ở **bốn** chỗ: với mạng 44 ô thì `40` tình cờ cho ra thành phố gần đủ đường, nhưng với 80 ô
-> thì **mọi bản quét chỉ còn thấy đúng một nửa mạng đường mà không có gì báo cho người soi biết** —
-> họ sẽ nhìn một thành phố thiếu vành đai rồi kết luận là vành đai không chạy. Nay có cờ
-> `--sessions N`, và con số đó được ghi vào hồ sơ `.geom.json` như một **sự thật về tấm ảnh** (đúng
-> bài học `--cell` ở Phase 4G).
->
-> **Phase 6B** (ngay trước đó): **MÁI NHÀ LÀ VẬT LIỆU LỢP, KHÔNG PHẢI MÀU
-> NHẤN GIAO DIỆN.** Phase 6A vừa cho mỗi kỷ một bộ phận chép từ công trình có thật — rồi nhìn vào
-> bản quét thì **đình làng Bắc Bộ (kỷ 6) đang lợp mái TÍM, và vòm Duomo Firenze (kỷ 7) cũng TÍM**.
-> Thêm: bê tông Nakagin (kỷ 13) ra **xanh lơ**, mái kẽm Paris (kỷ 9) ra **xanh nõn chuối**, lều da
-> thú kỷ 1 ra **xanh lá** nên cụm lều đọc thành bụi cây. Một chữ ký kiến trúc lợp sai vật liệu thì
-> không còn là chữ ký.
-> **Nguyên nhân gốc — đúng lại hình dạng sai của Phase 5B, chỉ khác chỗ**: `accentColor` gánh HAI
-> việc không liên quan nhau — vừa là màu nhận diện kỷ trên toàn app (thanh chuyển kỷ, chấm tròn,
-> biểu đồ), vừa là nguồn góc màu cho MÁI trong cảnh 3D. Màu nhấn giao diện được chọn để chữ nổi
-> trên nền nên nó rực và rải khắp vòng tròn màu; vật liệu lợp thì không có màu tím, không có màu
-> hồng sen. Hai vai ấy chỉ tình cờ hợp nhau ở vài kỷ. Đã tách hẳn: `eraStyle.js` thêm `roofColor`
-> **bắt buộc cho cả 15 kỷ**, mỗi kỷ khai đúng vật liệu của công trình có thật ở nước biểu tượng
-> (kỷ 7 `#c5572b` ngói terracotta · kỷ 6 `#844433` ngói âm dương · kỷ 5 `#586a89` đá phiến sông
-> Rhine · kỷ 9 `#9ea8b3` mái kẽm Paris · kỷ 11 `#3e9883` đồng oxy hoá · kỷ 13 `#ccc9c7` bê tông đúc
-> sẵn · kỷ 15 `#d0c295` thép mạ champagne). `palette3d.js` tra ở **một chỗ duy nhất** trong
-> `buildScenePalette` nên không chỗ gọi nào quên được; `accentColor` **giữ nguyên** ⇒ màu nhận diện
-> kỷ trên toàn app không đổi một pixel. **Đo lại** (bảng màu, giữa trưa, theme sáng): trung vị 105
-> cặp **46,2 → 62,7**, trải độ sáng **0,18 → 0,40**, cặp gần nhất 6,9 → 10,9. Đóng `TECH_DEBT #20`.
->
-> ⚠️ **BA BÀI HỌC CỦA PHASE NÀY, và cả ba đều về PHÉP ĐO chứ không về mã:**
-> **(1) Một hàng rào có thể đang THƯỞNG cho đúng cái lỗi ta phải đi sửa.** Bài test mái có phép đếm
-> *"15 mái phải phủ ≥ 6 múi màu 30°"*, nghe rất hợp lý. Đo hai đường cạnh nhau: đường CŨ (hỏng) ăn
-> **9 múi**, đường vật liệu thật chỉ **6** — tức bản hỏng ĂN ĐIỂM CAO HƠN. Lý do rất vật lý: đất
-> nung, gạch bùn, rơm rạ, gỗ hun, ngói men đều nằm gọn trong 13°–46°; ra ngoài dải đó chỉ có đồng
-> oxy hoá, kính và đá phiến. **Đòi phủ 6 múi là đòi bịa ra vật liệu không tồn tại.** Tệ hơn, phép
-> đếm ấy tính cả những kỷ mà góc màu là NHIỄU (bê tông kỷ 13 độ tươi 0,04 vẫn được đếm như một
-> "màu" đầy đủ). Đã hạ nó xuống làm sàn yếu, và thay bằng trục thật sự phân biệt vật liệu: **ĐỘ
-> SÁNG** (đá phiến nhà máy 0,28 ↔ bê tông đúc sẵn 0,68). Vì đây là một lần **NỚI** ngưỡng nên có
-> kèm **bài đối chứng** nhốt sẵn bảng mái hỏng cũ, bắt bộ hàng rào phải còn bắt được nó — may mắn
-> là bản hỏng vẫn còn sống trong mã (nhánh chạy khi không truyền `era`), khỏi phải dựng lại tay.
-> **(2) Sửa đúng mã sản phẩm vẫn có thể làm HỎNG công cụ đo.** `sweep-score.mjs` lọc "8% điểm ảnh
-> TƯƠI NHẤT của dải thành phố ≈ mái" — đứng trên một giả định **chưa bao giờ được viết ra**: *mái
-> là thứ tươi nhất khung hình*. Đúng suốt thời kỳ mái suy từ màu nhấn giao diện, và **chết ngay**
-> khi mái thành đá phiến/bê tông. Nó quay ra chấm **cỏ nắng lọt giữa các khối nhà**: cả 8 kỷ ra
-> cùng một sắc ô-liu, kể cả đá phiến lam kỷ 5 (`#586a89` → đo `#4b5745`) và đồng xanh lục kỷ 11
-> (`#3e9883` → đo `#5d6b4c`). Rồi từ bộ số rác đó nó in ra một kết luận rất thuyết phục: *"✗ kỷ 3 ↔
-> kỷ 10: 6,7 — dưới ngưỡng mắt"*, trong khi kỷ 3 là gạch bùn nâu vàng SÁNG còn kỷ 10 là đá phiến
-> gần ĐEN. Đã cắm cổng tự kiểm (đối chiếu sắc đo được với vật liệu kỷ đó tự khai) và nay công cụ
-> **TỪ CHỐI CHẤM** phần cặp-kỷ, nói rõ vì sao → `TECH_DEBT #22`. *Một công cụ im lặng còn dùng
-> được; một công cụ nói dối tự tin thì tệ hơn không có.*
-> **(3) Cổng tự kiểm phải hỏi những kỷ CÓ KHẢ NĂNG tố cáo, chứ không hỏi đa số.** Bản đầu của cổng
-> viết luật "quá nửa số kỷ lệch thì từ chối" — và nó **KHÔNG NỔ**. Vì bộ lọc chấm nhầm CỎ (sắc
-> ô-liu ~60°), mà các vật liệu ẤM nằm sẵn ngay cạnh đó: kỷ 6 lệch đúng **2°**, kỷ 3 lệch **13°** —
-> chúng "khớp" hoàn hảo cả khi bộ lọc đang chấm cỏ. Chỉ vật liệu LẠNH mới phơi được lỗi, và lúc đó
-> phơi rất rõ (kỷ 5 lệch **158°**, kỷ 11 lệch **104°**). Tức **đa số kỷ về mặt cấu tạo không có khả
-> năng phát hiện lỗi này**; đòi "quá nửa" là đòi bằng chứng từ những nhân chứng mù. Luật đúng:
-> **MỘT kỷ lệch > 60° là đủ kết luận.** Cùng họ với bài học Phase 4G *"phép tự-kiểm phải chạm tới
-> TỪNG CHIỀU nó muốn bảo chứng"*.
->
-> **Phase 6A** (ngay trước đó): **CHỮ KÝ KIẾN TRÚC — mỗi kỷ một bộ phận lấy
-> từ công trình CÓ THẬT.** Đàm: *"phải ra nét đặc trưng và ra signature"*. Phase 5B đã cho 15 kỷ 15
-> tỉ lệ khác nhau, nhưng đó chỉ sửa được HÌNH BÓNG nhìn từ xa; lại gần thì vẫn là hộp đội mái, vì
-> hai tầng chi tiết hiện có đều không lấp nổi khoảng đó: `roof` chỉ có **9** giá trị và `windows`
-> có **7** cho 15 kỷ ⇒ buộc phải dùng lại (kỷ 1+2 chung `cone`, kỷ 12/13/14 chung `flat`); còn
-> `motifs` thì `RARITY_MOTIF_BUDGET.common = 0` ⇒ **30 trong 75 căn nhà của cả game là hộp trơn,
-> không một chi tiết nào**. File mới `src/engine/city3d/signature.js` là trục thứ ba: **mỗi kỷ MỘT
-> chữ ký, không kỷ nào dùng chung, và dựng ở MỌI hạng kể cả `common`** — cột đá chữ T Göbekli Tepe ·
-> gờ cavetto Ai Cập · cầu thang ziggurat Ur · đấu củng Trung Hoa · tháp tròn Burg Eltz · **đầu đao
-> đình làng Việt** · tháp chuông Giotto + nhà rửa tội bát giác · tháp Belém · hiên cột Panthéon ·
-> ống khói Manchester · **bồn nước gỗ trên mái New York** · ụ súng Stalingrad · viên nang Nakagin
-> có cửa TRÒN · sàn trời Marina Bay · vòng xuyến Bảo tàng Tương Lai. Đo được: công trình hạng
-> `common` đi từ ~4 khối lên **6–35 khối**; ngân sách tam giác 2.208 → **2.384 / 8.000 (30%)**.
-> ⚠️ **Và nó lôi ra một lỗi ĐỐI XỨNG có thật, chạy nhiều tháng không ai thấy**: bốn tháp góc của kỳ
-> quan kỷ 5 và kỷ 8 (hai kỷ mái `gable`) mỗi cái quay nóc mái một hướng khác nhau, vì hàm băm lấy
-> khoá theo `x|z` của TỪNG mảng nhà. Bài test đối xứng cũ chỉ soi kỷ 1 (mái `cone`, không có nóc để
-> mà quay) nên chưa bao giờ chạm tới. Đã vá tận gốc (`emitRoof` nhận `ctx.symmetric`).
-> ⚠️ **Bài test đối xứng mới đã sai HAI LẦN trước khi đúng, cả hai đều là PHÉP ĐO hỏng chứ không
-> phải mã hỏng** — ghi lại vì cách sai rất dễ lặp: canh `ry === 0` thì kết tội oan mái `gable` nằm
-> đúng tâm; canh "đối xứng qua TÂM" thì kết tội oan **cửa ra vào** (mặt tiền nào cũng có cửa trước
-> và không có cửa sau). Bất biến đúng là **đối xứng TRÁI–PHẢI qua mặt phẳng x = 0**.
-> Kèm số đo mới: công trình rộng nhất là `bp_thanh_quan_viet` **3,687 ô** trên khu đất 3 ô — lỗi
-> **có sẵn từ trước** (đo lại trên đúng commit cũ ra cùng số), thủ phạm là chi tiết `courtyard`.
-> Đã khoá bằng bánh cóc 3,7 + `TECH_DEBT #21`. **587 bài test.**
->
-> Trước đó cùng ngày — **Phase 5D**: **XƯỞNG TRỐNG KHÔNG CÒN NGHĨA LÀ IM LẶNG.**
-> Đàm: *"mỗi phiên hoàn thành thì phải có nhà xây lên hay gì đó"*. `TECH_DEBT #14` đo được **95%
-> số phiên không có lễ mừng nào** — nhánh 3 của `buildGrowthMoment` trả thẳng `null` khi xưởng
-> trống. Cách chữa RẺ là in một câu động viên chung chung, và luật trung thực ở đầu `cityMoment.js`
-> cấm đúng điều đó. Cách chữa ĐÚNG là hỏi lại câu chưa ai hỏi: *phiên vừa rồi có thật sự không đổi
-> gì không?* — **không hề**: mỗi phiên vẫn mở thêm một ô đường, vài phiên lại thêm cư dân hoặc
-> cảnh vật. Nay nhánh 3 **ĐO** (gọi lại đúng `deriveProps`/`deriveResidentCount` đang dựng thành
-> phố, với `sessionCount` và `sessionCount − 1`, rồi so hai kết quả) chứ không suy đoán — nên nó
-> KHÔNG THỂ khoe một thứ không xảy ra, và ngày mạng đường mở hết thì nhánh đó **tự tắt** mà không
-> cần ai nhớ sửa. Thanh tiến độ **tự ẩn** khi không có cú nhích (nhánh cư dân/cảnh vật không có mẫu
-> số — vẽ thanh rỗng ở đó là bịa ra một lời chê giữa màn khen). **582 bài test.**
-> ⚠️ **ĐÍNH CHÍNH CÙNG NGÀY — con số nghiệm thu đầu tiên tôi ghi ở đây là ƯỚC LƯỢNG, không phải số
-> đo.** Bản đầu viết *"44/44 phiên đầu mỗi kỷ… tính trên 80 phiên đầu thì 55–69% tuỳ số công
-> trình"*. Chạy `buildGrowthMoment` thật qua 200 phiên × 4 kỷ × 3 mức công trình thì ra **55% phẳng
-> lì ở cả 12 cấu hình** — cái khoảng "55–69%" **chưa từng tồn tại**, và số công trình **không hề**
-> ảnh hưởng. Ghép với nhịp thật của `scripts/simulate-pacing.mjs` (370 ngày × 12 phiên = 4 440
-> phiên, `eraEntryDays` thật): nhánh mới nói được ở **660/4 440 phiên = 14,9%** — tức mỗi kỷ đúng
-> **44 phiên đầu** (số ô đường), rồi im. Và nó **xấu dần y hệt hình dạng của `#14`**: kỷ 1 nói được
-> 92% số phiên → kỷ 7: 24% → **kỷ 15: 5%**, vì mạng đường cố định 44 ô còn kỷ thì dài dần (48 phiên
-> → 840 phiên). ⇒ Im lặng đi từ 95% xuống khoảng **80–85%** (không chốt được con số chính xác vì
-> phần chồng lấn với 215 phiên vốn đã có lễ mừng chưa được mô phỏng chung). **`TECH_DEBT #14` VẪN
-> MỞ** — xem số đo đầy đủ ở đó. 👉 Bài học lặp lại đúng cái đã ghi ở Phase 4C: **một con số nghiệm
-> thu phải đi kèm CÔNG CỤ đã đo ra nó**; số nào viết ra mà không chạy được lệnh để tái lập thì phải
-> coi là chưa đo.
->
-> Trước đó cùng ngày — **Phase 5C**: **ĐƯỜNG SÁ THÀNH MẠNG LƯỚI THẬT.** Đàm:
-> *"đường đi cũng nên phức tạp hơn"*. Trước đó cả thành phố chỉ có **một dấu cộng** — cột x=4 +
-> hàng y=4, 23 ô trên lưới 144 ô, đọc ra là hai con đường mòn cắt nhau giữa đồng. Nay bốn trục
-> x ∈ {4, 8} và y ∈ {4, 8} = **44 ô**, chia lưới thành các ô phố đều nhau và **chạy sát mép cả năm
-> khu đất** nên công trình nào cũng có mặt tiền quay ra đường. Ba hạng đường (`variant` 0 đại lộ /
-> 1 phố dọc / 2 phố ngang) và bộ vẽ 3D đọc `variant` để đổi **bề rộng** mặt đường (`LANE_WIDTH`
-> 0,64) — bề rộng đọc được từ xa hơn nhiều so với chênh lệch màu ở cỡ hiển thị thật. ⚠️ Cái bẫy đã
-> gỡ trong lúc làm: trần `MAX_PROPS` trừ CHUNG cho đường và cảnh vật, nên mạng đường to gấp đôi sẽ
-> **bóp nghẹt cây cối** đúng lúc thành phố đông nhất mà không có gì đỏ lên. Nay tách
-> `MAX_SCATTER_PROPS = 34` (cảnh vật khối — thứ trần đó sinh ra để bảo vệ) khỏi ô đường (nền phẳng,
-> gom vào một `InstancedMesh` cùng lớp chi phí với 144 ô nền vốn đã luôn vẽ). Mỗi phiên vẫn mở đúng
-> một ô đường ⇒ số phiên "có thứ nhúc nhích trên bản đồ" tăng từ 23 lên 44. **578 bài test.**
->
-> Trước đó cùng ngày — **Phase 5B**: **15 KỶ NAY CÓ 15 DÁNG NHÀ THẬT, VÀ MỖI KỶ
-> LẤY MỘT ĐẤT NƯỚC LÀM BIỂU TƯỢNG.** Đàm nhìn thành phố rồi nói *"không thể nào nhà hiện đại lại
-> giống nhà thời đồ đồng được"*. Đo ra thì anh đúng đến mức khó tin: kỷ 1 (lều da thú) cao trung
-> bình **1,81**, kỷ 14 (tháp kính) cao **2,05** — chênh 13%; cả bảng chỉ trải **1,88 lần** và còn
-> SAI CHIỀU (lâu đài kỷ 5 cao hơn cao ốc kính). Nguyên nhân gốc: `storyHeight` gánh HAI việc mâu
-> thuẫn — vừa là "một tầng cao bao nhiêu" (chia ra số hàng cửa sổ) vừa là hệ số chiều cao tổng, mà
-> lều và nhà chọc trời có chiều cao TẦNG gần bằng nhau ngoài đời; thứ khác nhau giữa chúng là SỐ
-> TẦNG, và trước nay không ai ghi nó. Nay tách đôi: thêm `massScale` + `spread` cho cả 15 kỷ →
-> trải **3,16 lần**, kỷ 14 cao gấp **2,96 lần** kỷ 1. Thêm `country`/`landmark` (15 nước KHÔNG
-> trùng nhau; kỷ 7 = Ý, kỷ 9 = Pháp — đúng hai nước Đàm nêu đích danh) và một dòng "Kiến trúc lấy
-> mẫu từ …" trên màn Thành Phố. Ảnh quét bắt thêm hai lỗi im lặng: tháp kỷ 11/14/15 **bị cắt mất
-> nóc** (khung hình cố định không thể vừa cả lều lẫn tháp) → camera nay co giãn theo chính
-> `massScale`, kỷ thấp còn tiến VÀO gần hơn; và lều kỷ 1 đọc ra thành **cây nấm** (mái nón thò
-> vành 0,16 trên thân thóp) → nay là lều nón cao sát đất. Gộp `CITY_CAMERA_FOV` (số 38 từng viết
-> cứng ở 3 nơi). **575 bài test.**
->
-> Trước đó — **Phase 5A**: đêm sáng lên (`fillEnergy` 2,60 → 4,60 · `sunEnergy` 1,25 → 2,05, giữ
-> tỉ lệ 0,45 > ngưỡng 0,35 của bài "đêm phải có HƯỚNG sáng") và camera lại gần
-> (`CAMERA_DISTANCE_FACTOR` 1,5 → 1,18 · `CAMERA_MIN_FACTOR` 0,9 → 0,72).
->
-> Trước đó — **Phase 4I**: **TRÙNG TU DI SẢN (ADR-012)** — Đàm chọn
-> hướng (b2) cho `TECH_DEBT #14`. Bản vẽ của kỷ ĐÃ QUA nay khởi công lại được; xây xong nó đứng
-> trong **bảo tàng** của kỷ đó, đưa kỷ ấy tới gần dấu ★. **Không thêm một chút sức mạnh nào**
-> (không perk) và **không lưu thêm trường state nào**. Ba lớp chống lạm dụng: ô riêng
-> `LEGACY_QUEUE_SLOTS = 1` · nguyên liệu kỷ cũ **không bao giờ kiếm lại được** (`mergeResources`
-> chỉ cộng vào `book${activeBook}`) · không sinh `BUILDING_EFFECTS`. Chính lớp thứ hai là thứ trả
-> lời mối lo mà ADR-011 dùng để TỪ CHỐI đúng phương án này: ngôi sao ★ vẫn còn sức nặng, chỉ đổi
-> câu hỏi từ *"xây kịp không"* sang *"để dành đủ không"*. Bỏ cổng nghiên-cứu cho kỷ cũ (RP kỷ cũ
-> không kiếm lại được ⇒ đòi nó là khoá ★ vĩnh viễn); cổng của kỷ hiện tại giữ nguyên, có test canh.
-> ⚠️ Soi ảnh chụp bắt được một lời nói dối im lặng: thẻ trùng tu dùng chung `ReadyCard` nên đang
-> **khoe đặc quyền** cho một thứ vĩnh viễn không tặng gì — đã sửa. **570 bài test.**
->
-> Trước đó cùng ngày — **Phase 4H**: **MỘT CON SỐ ĐÃ VIẾT XONG, ĐÃ CÓ TEST, MÀ
-> CHƯA MÀN HÌNH NÀO GỌI TỚI.** `summarizeMuseum` (engine, Phase 4B) tự giới thiệu là *"con số duy
-> nhất trả lời tôi đã đi được bao xa"* — `grep` cả cây `src/` ra đúng HAI chỗ: dòng định nghĩa và
-> bài test của chính nó. Nó nằm chết trong engine từ đó tới nay mà **không có gì đỏ lên**: build
-> xanh, lint sạch, 551 test xanh, không cảnh báo "unused" (vì hàm CÓ được dùng — bởi test của nó).
-> Cùng lúc, ô số liệu thứ ba của màn Thành Phố đang hiện **"Chuỗi ngày 4"**, đúng con số mà thanh
-> tiêu đề đã hiện **"CHUỖI 4"** cách đó vài phân — một trong bốn ô dùng để nói lại điều vừa nói.
-> Nay ô đó là **"KỶ TRỌN VẸN 6/8"**: gộp những ngôi sao ★ rải rác trên thanh chuyển kỷ thành một
-> con số, và vì kỷ cũ niêm phong vĩnh viễn (ADR-007) thì đây là **điểm số duy nhất trong app không
-> sửa lại được nữa**. 0 byte lưu thêm, 0 thay đổi cân bằng. **553 bài test.**
->
-> Trước đó cùng ngày — **Phase 4G**: **CÔNG CỤ CHẤM ĐIỂM TỰ BỊA RA 5 LỖI KHÔNG CÓ
-> THẬT — ĐÃ VÁ TẬN GỐC.** `sweep-score.mjs` chép lại công thức hình học của `city-preview.mjs` kèm
-> mặc định cỡ ô **260**, trong khi bên kia dựng ảnh ở cỡ **300**. Cỡ ô không phải tuỳ chọn của phép
-> đo — nó là sự thật về tấm ảnh; đoán sai thì tới hàng cuối lệch **420px**, tức đang chấm màu của
-> một kỷ khác. Nó in ra một bộ số bịa rất thuyết phục (*"5/105 cặp kỷ + 1/15 cặp chặng hỏng, trung
-> vị 106,4"*, kể cả một lỗi bình-minh↔hoàng-hôn mà Phase 3Y đã sửa xong), còn phép tự-kiểm thì vẫn
-> báo ✓ vì nó **chỉ đọc hàng 0** — nơi sai số bằng 0. Nay: mỗi ảnh quét đi kèm hồ sơ `.geom.json`
-> do chính bên dựng ghi ra, bên chấm **từ chối chạy nếu thiếu**, tự-kiểm chạy đủ **15/15 hàng**, và
-> `--eras` in màu mái + độ sáng từng kỷ. Số thật: **0/15 cặp chặng và 2/105 cặp kỷ** dưới ngưỡng.
-> Đồng thời đo được **CƠ CHẾ** của `TECH_DEBT #19` (cả hai cặp hỏng vì cùng một nguyên nhân: đường
-> ống render **nén độ đậm ~5× và góc màu vùng ấm ~8×**, trong khi khuếch đại độ tươi ~2×) → mục #19
-> nay có hướng sửa cụ thể thay vì mò. **551 bài test.**
->
-> Trước đó cùng ngày — **Phase 4F**: **QUÉT ĐỦ 15 KỶ × 6 CHẶNG, VÀ CHẤM NÓ BẰNG SỐ.**
-> Công cụ mới `scripts/sweep-score.mjs` so được cả 15 cặp chặng ngày lẫn cả 105 cặp kỷ (mắt chỉ
-> so được ô kề nhau). Kết quả: **15/15 cặp chặng ĐẠT**, nhưng **2/105 cặp kỷ KHÔNG đạt** — kỷ 5↔12
-> và kỷ 4↔10 nhìn gần như cùng một màu. **Cố ý chưa sửa** → `TECH_DEBT #19` (sửa nó là "đợt vá thứ
-> 6" cho `palette3d.js`, mà luật bắt phải làm thành đợt rà soát tử tế). Cũng đính chính con số
-> "0/105" của `TECH_DEBT #18` và đóng nốt rủi ro cỡ chữ nút chính mà Phase 4E tự khai.
-> **551 bài test.**
->
-> Trước đó cùng ngày — **Phase 4E**: **ĐÁNH BÓNG CHỮ TRÊN MÀN HÌNH, ĐO BẰNG SỐ.**
-> Quét cả 7 màn hình × 2 bề ngang (390px điện thoại thật + 1280px máy bàn) và sửa 4 chỗ hiện sai:
-> Xưởng in **"-4/2 phiên"** (số âm) · nút chính trang chủ bị **xén chữ** ở 390px · 4 thẻ preset cắt
-> mô tả ("Vào việc …") · tên hợp lực cắt thành "Bậc Thầy…". Bài học đắt nhất: bản vá đầu cho nút
-> chính **không hề ăn thua** — lớp Tailwind truyền qua `className` THUA `sizeMap` của component mà
-> không có gì báo đỏ. Đồng thời vá **4 kiểu nói dối mới** của chính công cụ đo `shot.mjs`.
-> **551 bài test.**
->
-> Trước đó cùng ngày — **Phase 4D**: **DI SẢN DANG DỞ** — công trình khởi công trước khi lên kỷ nay
-> xây tiếp được, xong thì vào bảo tàng (không perk, 0 thay đổi cân bằng). ADR-011. **542 bài test.**
->
-> Trước đó cùng ngày — **Phase 4B**: **TRỌN VẸN KỶ**. Mỗi kỷ có đúng 5 công trình
-> nhưng cả app không chỗ nào nói ra con số 5 đó ("Công trình: 3" — ba trên mấy?). Nay thanh chuyển
-> kỷ hiện `3/5` + gắn **★** cho kỷ xây trọn vẹn, danh sách công trình thành **bảng sưu tập đủ 5 ô**,
-> ô thống kê thứ tư hiện **dân số** (trước chỉ nằm trong bảng gỡ lỗi). Engine thuần mới
-> `src/engine/cityCompletion.js`, KHÔNG lưu một byte nào. Soi bằng mắt bắt thêm 2 lỗi im lặng: ô
-> "Đang xây: N" trùng thẻ ngay dưới nó, và ★ tô màu kỷ chỉ đạt **1,49:1** tương phản ở theme sáng.
-> **524 bài test.**
->
-> Trước đó cùng ngày — **Phase 3Y**: đo lại bản quét 15 kỷ × 6 chặng bằng phép đo
-> CẢ CẢNH (thay vì chỉ đo góc màu dải trời) và bắt được lỗi mà mọi bài test đều bỏ lọt: **bình minh
-> và hoàng hôn là CÙNG MỘT BỨC ẢNH** (5,9/255, dưới ngưỡng mắt ~12). Sửa bằng **sương theo giờ**
-> (`haze` + `fogRangeFor`) → **75,1/255**; cả 15 cặp chặng nay đều trên ngưỡng. `TECH_DEBT` #17
-> ĐÓNG (và được viết lại — chẩn đoán đầu của nó đổ nhầm cho chặng chiều). **509 bài test.**
-> Cùng ngày, trước đó: trang chủ thôi mắng lúc vừa mở app · thanh tiêu đề thôi gọi EP là XP ·
-> Phase 3V/3W/3X (trời ban ngày xanh · bầu trời theo đồng hồ · vòng ngày ra trang chủ).
->
-> Trước đó **2026-08-12** — **THÀNH PHỐ, 3 phase liên tiếp trong ngày**: (1) engine thuần
-> suy ra bố cục thành phố từ danh sách công trình; (2) **bảo tàng** — thành phố kỷ cũ được niêm
-> phong thay vì xoá vĩnh viễn (`GAME_STORE_SCHEMA_VERSION` **3 → 4**, tương thích ngược, KHÔNG cần
-> chạy SQL); (3) **tab "Thành Phố" hiện ra**, vẽ bằng SVG; (4) **Phase 3A — bộ vẽ 3D thật
-> (three.js)** + bảng đo hiệu năng trong app. **360 bài test.** Cân bằng game KHÔNG đổi, chunk
-> chính KHÔNG to thêm.
-> ✅ **CỔNG HIỆU NĂNG 3A ĐÃ QUA** (2026-08-12, Đàm quyết): Đàm đã xem bản 3D trên máy thật và ra
-> lệnh *"hãy tiếp tục xây dựng sản phẩm và không dừng lại"* — tức là qua cổng bằng QUYẾT ĐỊNH của
-> chủ dự án, không phải bằng con số đo. ⚠️ **Mọi lưới an toàn hiệu năng vẫn còn nguyên, KHÔNG được
-> gỡ**: watchdog FPS, ba cửa lùi về 2D, trần 30 khung/giây, dừng khi rời tab. Nhận xét của Đàm:
-> *"quá đơn giản và không đẹp"* → đã chạy tiếp **Phase 3B (hình khối + cư dân) · 3C (ánh sáng) ·
-> 3D (giờ trong ngày, đèn cửa sổ, vũng sáng đêm) · 3F (thành phố ra TRANG CHỦ)**.
-> Rồi lệnh *"quét đủ 15 kỷ × 6 chặng ngày… game hoá lên… không bị chán"* → **3G** (vá 6 lỗi mỹ
-> thuật từ bản quét 180 cảnh) · **3H** (giàn giáo công trình đang xây) · **3I** (bảng "Đang xây":
-> còn bao xa, mở khoá gì) · **3J** (thanh chuyển kỷ tự kéo vào tầm mắt) · **3K** (chạm vào công
-> trình để biết nó là ai) · **3L** (nói cho Đàm biết là chạm được) · **4′** (3,2 giây được NHÌN
-> THẤY thành phố lớn lên sau mỗi phiên — mắt xích cuối của vòng lặp "làm việc → thấy thành quả").
-> **462 bài test.**
-> Trước đó 2026-08-10: sửa khoảng trắng thừa trước icon 🍅/☕ trên thanh menu Mac (`electron/main.js`,
-> đúng 1 dòng; xoá `public/tray-empty.png`) — chỉ đụng app tray. Trước đó 2026-08-05 có 3 việc
-> **cấu hình máy + tài liệu, KHÔNG đổi dòng code ứng dụng nào**: (a) sửa "app biến mất khỏi thanh
-> menu Mac" + bật tự khởi động; (b) dọn sạch dấu vết dự án đời cũ trên máy; (c) diệt bản sao
-> `AGENTS.md` và cấm nhân bản tài liệu quy tắc theo từng công cụ AI.
->
-> ❌ **[ĐÃ ĐÍNH CHÍNH 2026-08-12] Mục "Đang dở" trước đây ở chỗ này là SAI SỰ THẬT.** Nó ghi rằng có
-> `src/hooks/useTimer.test.js` với "41 bài characterization test, **tất cả đều xanh**, chỉ chưa nối
-> vào `npm test`". Đã kiểm cạn kiệt: `git log --all --diff-filter=A -- '*useTimer.test.js'` **rỗng**
-> — file CHƯA TỪNG được commit ở bất kỳ nhánh/commit nào; `find src/hooks -name '*.test.js'` đếm
-> được **0 file**. Nó được viết trong một phiên cũ rồi mất theo container (phiên chạy trên máy ảo
-> tạm, không commit là mất). **`useTimer.js` hiện có ĐÚNG 0 bài test.**
-> Thêm một tầng sai nữa: lý do "chưa nối vào `npm test`" cũng đã lỗi thời — glob test đã đổi thành
-> `'src/**/*.test.js'` (`TECH_DEBT` #10, cùng ngày), nên nếu file có thật thì nay nó TỰ ĐỘNG chạy.
-> ⚠️ **Dòng ghi sai này đã gây thiệt hại thật**: nó khiến phiên AI hôm nay đề xuất "nối 41 bài test
-> vào `npm test`" làm task ưu tiên số một — một task bất khả thi, dựa trên một tài sản không tồn
-> tại. **Bài học (lần thứ ba trong cùng một ngày): tài liệu khẳng định một thứ mà không ai kiểm lại
-> thì thành bẫy cho chính người đọc nó sau này.** Hai lần kia: ghi chú ở `roof` khẳng định "15 sắc
-> mái phân biệt được" trong khi đo ra 0°; bài test giàn giáo chỉ khoá hướng nên nhận cả mức tăng
-> 1,02 lần. Nợ thật đã ghi vào **`TECH_DEBT.md` #13**.
->
-> Mốc kỹ thuật gần nhất: **2026-07-17** (Giai đoạn A — **đã ĐÓNG blocker Critical C1 của lớp đồng bộ**:
-> vá 4 đường mất dữ liệu trong `syncService.js` (flush khi rời app · chặn state trắng ghi đè cloud ·
-> bịt đường ghi không-CAS · báo to khi thiếu cột `version`), 261 bài test. Trước đó cùng ngày:
-> hoàn tất đợt 2 "lưới an toàn": +16 bài test cho
-> `computeLevelUps`, bảo-toàn-tài-sản qua `triggerPrestige` (kèm ĐÓNG BĂNG bug #3 bằng test),
-> streak nối/đứt chuỗi, `unlockSkill` cơ bản, sync retry-sau-lỗi. Tổng 253 bài. KHÔNG đổi hành vi
-> runtime. Trước đó 2026-07-13: đợt 1 lưới an toàn +29 bài cho `completeFocusSession`/`syncService`/
-> `cancelFocusSession`).
-> **Roadmap POS (A→B→C→D) là nguyên tắc ưu tiên cao nhất** — đang ở **Giai đoạn A** (ổn định kiến
-> trúc); CẤM mở rộng AI/gamification/Life-Analytics/Knowledge-Graph tới khi qua cổng A. Xem memory
-> `phase-roadmap-pos.md`.
+> Cập nhật lần cuối: **2026-08-15** — **Phase 9B**: **BÓNG ĐỔ THÔI LÀ MẢNG ĐEN TUYỆT ĐỐI.**
+> Đàm yêu cầu *"bóng đổ không được là những mảng đen cứng, phẳng và tuyệt đối"*. Công cụ mới
+> `scripts/shadow-score.mjs` đo ra **8,2–20,8% khung hình bị nghiền** dưới ngưỡng mắt còn đọc ra
+> chi tiết. Nguyên nhân gốc: đèn trời và nắng là **hai hằng số không biết nhau**, trong khi thứ
+> quyết định độ đen của bóng là KHOẢNG CÁCH giữa chúng — nay đèn trời là một **TỈ LỆ của nắng**
+> (ADR-024). Kết quả: sàn **0,107→0,170 · 0,029→0,054 · 0,109→0,160**, bị nghiền **13,4→0,2% ·
+> 16,9→11,1% · 8,2→2,7%**, **độ tươi đứng yên** (không dính bẫy "pastel như sữa" của Phase 7A).
+> Kèm theo: cỡ bản đồ bóng từng viết cứng ở **BA nơi với BA giá trị** — và bản QUÉT 15 kỷ, công cụ
+> duyệt mỹ thuật chính thức, đang chạy ở 512 trong khi app chạy 1024. **705 bài test** (+2, cả hai
+> đã thử ngược 5/5 lần đều đỏ), lint sạch, build xanh.
 
 ---
 
@@ -605,6 +78,60 @@
 - **Lịch sử git `main` từng bị xáo** (thao tác git song song): bản đang chạy là `eb44638` — chứa ĐỦ mọi việc gần đây (Hỏi Coach offline + fix đêm khuya + Coach offline analyst). Vài commit cũ (`1e27505`, `9fbcd62`) thành dangling, KHÔNG còn trong `git log` nhưng code vẫn nằm trong bản deploy. Đừng hoảng nếu không thấy chúng.
 
 ## 🗒️ Nhật ký cập nhật
+
+### 2026-08-15 — Phase 9B: bóng đổ nhận được ánh trời, và công cụ đo thôi nhìn một thế giới khác
+
+**Đàm yêu cầu gì**: *"Bóng đổ không được là những mảng đen cứng, phẳng và tuyệt đối."*
+
+**Đo trước khi sửa** (công cụ mới `scripts/shadow-score.mjs`, kỷ 7@15h · 11@15h · 13@12h): sàn độ
+sáng **0,107 / 0,029 / 0,109**, **13,4% / 16,9% / 8,2% khung hình bị nghiền** dưới ngưỡng 0,12 mà
+mắt còn đọc ra chi tiết. Khoảng cách sáng-tối 0,48–0,64 (còn rộng ⇒ có chỗ nâng sàn mà không nhạt).
+
+**Nguyên nhân gốc**: đèn bán cầu (0,34) và nắng (2,15) là **hai hằng số KHÔNG biết nhau**, trong
+khi thứ quyết định độ đen của bóng là **khoảng cách giữa chúng**. Đáng nói hơn: chú thích ngay tại
+chỗ đã tuyên bố mục tiêu *"vùng tối chuyển từ ĐEN sang LAM"* và tự coi là đạt — nhưng **chưa bao
+giờ được đo**; và nó còn tự thú rằng Phase 7A đã hạ đèn bán cầu theo một giả thuyết về sau bị bác,
+*"và nó ở lại thêm nhiều phase"*.
+
+**Đã làm**:
+1. **Đèn trời phát biểu thành TỈ LỆ của nắng** (`SUN_BASE × SKY_FILL_RATIO`, 0,41 sáng · 0,75 tối)
+   — ADR-024. Nắng đổi thì đèn trời tự đi theo, mãi mãi.
+2. **Cấu hình bóng đổ dồn vào `applyPaintedLook`**; **cỡ bản đồ bóng do chính cảnh đặt lúc dựng**
+   (máy bàn 1024 → **2048**, điện thoại giữ 512). Gỡ phần tự khai lại ở `CityScene3D.jsx` và ở CẢ
+   HAI khối dựng của `scripts/city-preview.mjs`.
+3. **2 bài test mới** đọc-mã-nguồn, **đã thử ngược 5/5 lần đều đỏ**: một bài khoá cái HÌNH DẠNG
+   "đèn trời bám theo nắng" (không khoá giá trị 0,41 — đó là lựa chọn mỹ thuật), một bài cấm hai
+   nơi gọi tự khai lại cấu hình bóng.
+
+**Kết quả đo sau khi sửa**: sàn **0,170 / 0,054 / 0,160**; bị nghiền **0,2% / 11,1% / 2,7%**;
+**độ tươi đứng yên** (0,131→0,136 · 0,117→0,114 · 0,082→0,082) và khoảng cách sáng-tối còn nhích
+lên (0,480→0,503) ⇒ **không dính bẫy "pastel như sữa"** của Phase 7A — vì lần này nắng đi lên CÙNG.
+
+**Ba thứ đã thử và KHÔNG ship** (ghi lại để phiên sau khỏi dò lại từ đầu):
+- `LightShadow.intensity` — nâng riêng điểm ảnh trong bóng, nhưng nó cộng lại ánh sáng **ẤM** của
+  nắng, tức đẩy chênh sắc nóng-lạnh sai chiều (bóng ban ngày ngoài đời phải ngả LAM).
+- `VSMShadowMap` + `shadow.radius` — **đã xác minh là sống** (vặn radius lên 60 thì số có dịch),
+  nhưng ở bán kính an toàn thì không đo được và không nhìn ra khác biệt, mà VSM có sẵn rủi ro rò
+  sáng. Không ship một thay đổi mà mình không chứng minh được lợi ích.
+- **Bản vá mặt đường** (phép đẩy bão hoà) — đã viết, đã đo đủ 15 kỷ, kỷ 11 lên +27%, thứ tự giữ
+  nguyên… nhưng nó làm ĐỎ bài `15 KỶ RA 15 MẶT ĐƯỜNG`. **Không nới ngưỡng, không ship nửa vời** →
+  `TECH_DEBT #30`, nối cứng với `#27`.
+
+**Hai phát hiện đáng giá hơn cả bản vá**:
+- **Bản QUÉT 15 kỷ — công cụ duyệt mỹ thuật chính thức của dự án — đang chạy bóng ở 512 trong khi
+  app chạy 1024.** Cỡ bản đồ bóng viết cứng ở ba nơi với ba giá trị. Mọi nhận xét về bóng đổ rút ra
+  từ bảng quét suốt các phase trước đều đang nói về một thế giới thô gấp đôi.
+- **Lời hứa "15 kỷ ra 15 mặt đường" xưa nay chỉ đạt nhờ 3% biên (10,3 so với ngưỡng 10), và nó đạt
+  được chính nhờ khuyết tật mà #30 phải sửa.** Nới trần tới mức gần như không bão hoà nữa cũng chỉ
+  lên 9,8. ⇒ phương án "chấp nhận vĩnh viễn" mà #27 đề xuất **đã chết** mà không ai để ý.
+
+**Còn lại, đã đo, chưa xử lý**: kỷ 11 vẫn 11,1% bị nghiền — nhưng phép thử ngược (tắt hẳn
+`sun.castShadow`) cho thấy **9,6 trong 11,1 điểm phần trăm ấy là MẶT ĐƯỜNG chứ không phải bóng**
+(`TECH_DEBT #30`). Đừng cố chữa bằng cách nâng thêm đèn. Cảnh ĐÊM (kỷ 11, 22h) sàn 0,014 và 32,2%
+bị nghiền — đêm tối là đúng, nhưng chưa có mốc "trước" để so, phiên sau muốn đụng thì đo lại trước.
+
+**Nghiệm thu**: 705 bài test xanh (+2), lint sạch, build xanh, đã nhìn bằng mắt vào ảnh kỷ 7/11.
+
 > Mỗi lần xong việc đáng kể, thêm 1 dòng vào ĐẦU danh sách.
 
 - **2026-08-15 (Phase 9A — thế giới không kết thúc ở rìa thành phố)** — **703 bài test** (688 → 703),

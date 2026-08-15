@@ -41,6 +41,7 @@ import {
 } from 'three';
 
 import { materialProfile } from '../../../engine/city3d/materials';
+import { getEraStyle } from '../../../engine/city3d/eraStyle';
 import { buildBuildingSpec, buildScaffoldSpec } from '../../../engine/city3d/buildingSpec';
 import { buildPropSpec } from '../../../engine/city3d/propSpec';
 import { prism, specSpan } from '../../../engine/city3d/parts';
@@ -376,9 +377,30 @@ export function createCityScene({
   const scale = new Vector3(1, 1, 1);
   const tint = new Color();
 
-  function buildInstances(items, geometry, place, { castShadow, receiveShadow }) {
+  /**
+   * MẶT ĐƯỜNG CÓ VẬT LIỆU RIÊNG — không dùng chung `tileMaterial` với mặt đất nữa.
+   *
+   * ⚠️ Đây là nửa còn lại của bản vá màu ở `palette3d.js`, và bỏ nó đi thì bản vá kia mới chỉ làm
+   * được một nửa việc: đường đất nện thời đồ đá và mặt bê tông Dubai sẽ đúng MÀU nhưng vẫn phản
+   * ứng với ánh sáng y hệt nhau, tức vẫn là cùng một bề mặt — đúng nguyên nhân gốc của cảm giác
+   * "khối màu phẳng" mà `materials.js` sinh ra để chữa. Đất nện rời (nhám 0,99) không bao giờ bắt
+   * được vệt sáng; bê tông đúc (0,90) thì có, dù rất mờ. Chênh lệch nhỏ, nhưng nó là chênh lệch
+   * DUY NHẤT phân biệt được "chưa lát" với "đã lát" khi cả hai cùng nằm phẳng dưới đất.
+   * Giá phải trả: đúng MỘT lệnh vẽ (mặt đường vốn đã là một `InstancedMesh` riêng từ trước).
+   */
+  const roadProfile = materialProfile(getEraStyle(layout.era)?.roadMaterial);
+  const roadMaterial = track(new MeshStandardMaterial({
+    roughness: roadProfile.roughness,
+    metalness: roadProfile.metalness,
+    envMap,
+    envMapIntensity: ENV_DIFFUSE,
+    transparent: dimmed,
+    opacity: dimmed ? 0.62 : 1,
+  }));
+
+  function buildInstances(items, geometry, place, { castShadow, receiveShadow, material }) {
     if (items.length === 0) return null;
-    const mesh = new InstancedMesh(geometry, tileMaterial, items.length);
+    const mesh = new InstancedMesh(geometry, material ?? tileMaterial, items.length);
     mesh.castShadow = castShadow;
     mesh.receiveShadow = receiveShadow;
 
@@ -512,14 +534,17 @@ export function createCityScene({
         height: 1,
         sx: road.variant === 1 ? LANE_WIDTH : 1,
         sz: road.variant === 2 ? LANE_WIDTH : 1,
-        // Ngõ phố tối hơn đại lộ một chút — đại lộ mòn hơn vì đi lại nhiều. Chênh lệch nhỏ thôi:
-        // bề rộng mới là thứ mắt đọc, màu chỉ để nhấn thêm.
+        // Ngõ phố tối hơn đại lộ một chút — nhà hai bên che bớt trời. Chênh lệch nhỏ thôi: bề rộng
+        // mới là thứ mắt đọc, màu chỉ để nhấn thêm.
+        // ⚠️ CẢ HAI đều suy từ `roadColor` của kỷ. Trước đây ngõ lấy `roles.stone` (màu ĐÁ XÂY
+        // TƯỜNG) nên 2/3 số ô đường không hề đổi theo thời đại — xem chú thích `roadLane` ở
+        // `palette3d.js`.
         color: lane
-          ? (palette.roles?.stone ?? palette.road ?? palette.edge)
-          : (palette.road ?? palette.roles?.stone ?? palette.edge),
+          ? (palette.roadLane ?? palette.road ?? palette.edge)
+          : (palette.road ?? palette.edge),
       };
     },
-    { castShadow: false, receiveShadow: true },
+    { castShadow: false, receiveShadow: true, material: roadMaterial },
   ));
 
   // ── Công trình: mỗi cái một hình dáng riêng, tất cả trong MỘT lệnh vẽ ──────

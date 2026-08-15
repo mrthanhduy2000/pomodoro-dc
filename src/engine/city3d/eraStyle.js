@@ -116,6 +116,8 @@ export const ERA_STYLES = {
     roof: 'cone', roofPitch: 0.95, eaves: 0.04,
     // Thời đồ đá thì nhà nào cũng là lều — công trình lớn khác ở KÍCH THƯỚC, không ở kiểu mái.
     vernacularRoof: 'cone',
+    // đường mòn ĐẤT NỆN — thời đồ đá chưa có khái niệm lát đường
+    roadMaterial: 'dirt', roadColor: '#8d7550',
     windows: 'none',
     motifs: ['boulder', 'firepit'],
     rough: 0.9,
@@ -132,6 +134,8 @@ export const ERA_STYLES = {
     // Nhà làng ven sông Nin là gạch bùn MÁI BẰNG — người ta phơi đồ và ngủ trên nóc. Mái tranh
     // hình nón dành cho nhà kho/nhà chung, không phải nhà ở thường ngày.
     vernacularRoof: 'flat',
+    // lối cát ven sông Nin, đất pha cát phơi nắng
+    roadMaterial: 'dirt', roadColor: '#b9a173',
     windows: 'none',
     motifs: ['fence', 'granary'],
     rough: 0.62,
@@ -148,6 +152,10 @@ export const ERA_STYLES = {
     // Giật cấp là hình dáng của ZIGGURAT — đền thờ. Nhà dân Lưỡng Hà là gạch bùn mái BẰNG quây
     // quanh sân trong. Cho cả phố giật cấp thì thành 30 cái ziggurat tí hon vây quanh ziggurat thật.
     vernacularRoof: 'flat',
+    // đường rước lễ lát GẠCH nung GẮN BẰNG NHỰA ĐƯỜNG TỰ NHIÊN — con đường lát đầu tiên của loài
+    // người, và Lưỡng Hà là nơi duy nhất thời đó có bitum lộ thiên (mỏ Hit). Vì thế nó ĐẬM hẳn so
+    // với đường cát Ai Cập ngay kỷ trước, chứ không phải cùng một sắc đất nhạt hơn một chút.
+    roadMaterial: 'mudbrick', roadColor: '#6b5745',
     windows: 'slit',
     motifs: ['pillar', 'ramp'],
     rough: 0.36,
@@ -164,6 +172,9 @@ export const ERA_STYLES = {
     // Mái CHỒNG nhiều tầng là đặc quyền của cung điện và chùa; luật nhà Thanh còn cấm dân thường
     // lợp kiểu đó. Nhà tứ hợp viện của dân là mái dốc hai phía, một tầng, lợp ngói.
     vernacularRoof: 'gable',
+    // đường lát THANH THẠCH (青石) kinh thành, kẻ ô vuông vắn theo quy hoạch Chu Lễ. Tên gọi
+    // "đá xanh" là mô tả đúng: loại granite này ngả LỤC-xám, khác hẳn granite ngả LAM của Paris.
+    roadMaterial: 'stone', roadColor: '#82877e',
     windows: 'square',
     motifs: ['columns', 'banner'],
     rough: 0.22,
@@ -179,6 +190,9 @@ export const ERA_STYLES = {
     roof: 'gable', roofPitch: 0.92, eaves: 0.12,
     // Nhà phố Đức trung cổ cũng mái dốc đứng như lâu đài — khác ở bề thế, không ở kiểu mái.
     vernacularRoof: 'gable',
+    // ngõ ĐÁ CUỘI trung cổ Đức — mặt lồi lõm, kẽ đá đầy bùn và rêu nên tổng thể ngả NÂU ẤM, không
+    // phải xám sạch: ngõ trung cổ không có cống, mọi thứ đọng lại trên mặt đường.
+    roadMaterial: 'stone', roadColor: '#7d7264',
     windows: 'slit',
     motifs: ['buttress', 'crenel'],
     rough: 0.44,
@@ -201,6 +215,10 @@ export const ERA_STYLES = {
     // Mái chồng diềm cong là của ĐÌNH/CHÙA. Nhà ba gian Bắc Bộ là mái dốc hai phía lợp ngói âm
     // dương, hiên thấp — cùng vật liệu, khác hẳn dáng. Giữ `eaves` lớn nên hiên vẫn thò ra kiểu Việt.
     vernacularRoof: 'gable',
+    // đường GẠCH NGHIÊNG + đất ĐỎ laterite làng Bắc Bộ — đất miền Bắc ngả đỏ vì oxit sắt, và gạch
+    // nghiêng lát sân đình cũng đỏ. Đây là mặt đường ĐỎ NHẤT cả 15 kỷ, và đó là sự thật về đất
+    // Việt Nam chứ không phải một lựa chọn cho khác kỷ 5.
+    roadMaterial: 'mudbrick', roadColor: '#a05c3c',
     windows: 'square',
     motifs: ['courtyard', 'banner', 'columns'],
     rough: 0.2,
@@ -219,6 +237,9 @@ export const ERA_STYLES = {
     // toàn bộ phần còn lại của thành phố là nhà phố mái ngói dốc thoải. Cho nhà dân đội vòm thì
     // Duomo — thứ đáng lẽ nhận ra được từ xa — chìm nghỉm giữa 25 bản sao tí hon của chính nó.
     vernacularRoof: 'gable',
+    // đá PIETRAFORTE lát quảng trường Firenze — sa thạch NÂU-VÀNG ấm, chính thứ đá dựng nên
+    // Palazzo Vecchio; nó không phải granite xám như kỷ 4 hay kỷ 9.
+    roadMaterial: 'stone', roadColor: '#9c8760',
     windows: 'arch',
     motifs: ['columns', 'arcade', 'statue'],
     rough: 0.06,
@@ -234,6 +255,8 @@ export const ERA_STYLES = {
     roof: 'gable', roofPitch: 0.52, eaves: 0.24,
     // Nhà phố Lisboa cũng mái ngói dốc như kho cảng — khác ở quy mô.
     vernacularRoof: 'gable',
+    // calçada portuguesa — đá vôi TRẮNG khảm hoa văn, sáng nhất bảng
+    roadMaterial: 'stone', roadColor: '#c9c3b4',
     windows: 'square',
     motifs: ['mast', 'crate'],
     rough: 0.3,
@@ -251,6 +274,8 @@ export const ERA_STYLES = {
     // Chóp bốn mặt là mái của điện Panthéon. Nhà phố Haussmann là mái MANSARD — dốc đứng, lợp
     // kẽm, ngắt thành hai độ dốc. `gable` là cách gần nhất dựng được bằng bộ khối hiện có.
     vernacularRoof: 'gable',
+    // pavé Paris — đá granite xám ngả LAM rõ, mặt đã mòn bóng vì xe ngựa
+    roadMaterial: 'stone', roadColor: '#767f8a',
     windows: 'arch',
     motifs: ['columns', 'pediment', 'statue'],
     rough: 0.04,
@@ -267,6 +292,8 @@ export const ERA_STYLES = {
     // Mái răng cưa là mái NHÀ MÁY (lấy sáng trời cho xưởng dệt). Nhà công nhân Manchester là dãy
     // nhà liền kề mái dốc lợp đá phiến — chính hình ảnh "terraced house" của cách mạng công nghiệp.
     vernacularRoof: 'gable',
+    // đường gạch nung Manchester ÁM BỒ HÓNG — tối vì khói nhà máy
+    roadMaterial: 'brick', roadColor: '#584f48',
     windows: 'grid',
     motifs: ['chimney', 'truss'],
     rough: 0.18,
@@ -283,6 +310,9 @@ export const ERA_STYLES = {
     // Giật cấp (setback) là luật quy hoạch dành cho CAO ỐC New York 1916. Nhà ở thường — chung cư
     // tenement, nhà brownstone — là mái BẰNG có gờ chắn, không giật cấp.
     vernacularRoof: 'flat',
+    // NHỰA ĐƯỜNG (asphalt gốc dầu mỏ) New York + vỉa hè granite. Lạnh và gần đen — khác hẳn
+    // macadam đá vôi ám bồ hóng ẤM của Manchester ngay kỷ trước, dù nhìn thoáng cả hai đều "tối".
+    roadMaterial: 'concrete', roadColor: '#3a3b3e',
     windows: 'grid',
     motifs: ['columns', 'spire', 'statue'],
     rough: 0.03,
@@ -298,6 +328,8 @@ export const ERA_STYLES = {
     roof: 'flat', roofPitch: 0.12, eaves: 0.14,
     // Khối nhà ở tập thể Xô-viết cũng mái bằng như lô cốt — khác ở bề dày tường, không ở mái.
     vernacularRoof: 'flat',
+    // tấm BÊ TÔNG đúc sẵn kiểu quân sự Xô-viết, ngả ô-liu
+    roadMaterial: 'concrete', roadColor: '#5e665c',
     windows: 'slit',
     motifs: ['bunker', 'crenel'],
     rough: 0.26,
@@ -315,6 +347,8 @@ export const ERA_STYLES = {
     roof: 'flat', roofPitch: 0.1, eaves: 0.08,
     // Chung cư Nhật thời Metabolism: mái bằng, giống tháp nang. Không đổi.
     vernacularRoof: 'flat',
+    // asphalt Tokyo hậu chiến phẳng lì, kẻ vạch trắng — xám ngả lam, sẫm
+    roadMaterial: 'concrete', roadColor: '#42474f',
     windows: 'grid',
     motifs: ['antenna', 'dish'],
     rough: 0.08,
@@ -330,6 +364,10 @@ export const ERA_STYLES = {
     roof: 'flat', roofPitch: 0.08, eaves: 0.05,
     // Cao ốc Singapore: mái bằng. Không đổi.
     vernacularRoof: 'flat',
+    // đại lộ Singapore quy hoạch: bó vỉa và rãnh BÊ TÔNG SÁNG, mặt đường bạc đi dưới nắng xích đạo,
+    // lại được rửa thường xuyên. Sáng hơn hẳn asphalt Tokyo kỷ trước — đây là chỗ Đàm đi qua và
+    // thấy đường ĐỔI, nên hai kỷ liền nhau không được phép cùng một sắc.
+    roadMaterial: 'concrete', roadColor: '#9aa0a6',
     windows: 'curtain',
     motifs: ['sign', 'solar'],
     rough: 0,
@@ -346,6 +384,8 @@ export const ERA_STYLES = {
     // Phiến lơ lửng là thủ pháp của một CÔNG TRÌNH BIỂU TƯỢNG. Nhà ở Dubai vẫn là mái bằng —
     // và giữ được sự tương phản đó mới thấy Bảo tàng Tương Lai lạ tới mức nào.
     vernacularRoof: 'flat',
+    // asphalt mới + đá sáng chống nóng sa mạc Dubai
+    roadMaterial: 'concrete', roadColor: '#b0a68e',
     windows: 'neon',
     motifs: ['halo', 'float'],
     rough: 0,

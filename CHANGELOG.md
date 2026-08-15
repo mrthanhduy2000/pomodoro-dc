@@ -12,6 +12,40 @@
 
 ---
 
+## 2026-08-15 — Mặt đường theo thời đại, và con đường tàng hình ban đêm (Phase 7D)
+
+**Mục đích.** Bước "Đường xá" trong thứ tự Đàm đã chốt. Yêu cầu nêu đích danh: *"hệ thống đường phải
+thay đổi theo thời đại: đất/đá cổ đại, ngõ đá trung cổ, đường công nghiệp, đường quy hoạch hiện
+đại"*. Audit tìm ra mặt đường của cả 15 kỷ là đúng MỘT dòng hằng số — đường mòn thời đồ đá và đại lộ
+Dubai đang là *cùng một mặt phẳng cùng một màu*.
+
+**Phạm vi.** 15 kỷ khai thêm `roadMaterial` + `roadColor`, mỗi giá trị kèm một công trình/vật liệu
+có thật (nhựa đường tự nhiên Babylon · gạch nghiêng + đất đỏ làng Bắc Bộ · thanh thạch Tử Cấm Thành ·
+pietraforte Firenze · pavé Paris · macadam ám bồ hóng Manchester · asphalt Tokyo…). Thêm họ vật liệu
+`dirt`. Mặt đường nay là một `InstancedMesh` có **vật liệu PBR riêng** (nhám 0,99 cho đất nện ↔ 0,90
+cho bê tông), không dùng chung với mặt đất nữa — giá phải trả: 0 lệnh vẽ, vì nó vốn đã là mesh riêng.
+
+**Lỗi gốc thứ hai, nặng hơn, tìm ra khi đo chứ không khi nhìn.** Luật *"đường phải nhạt hơn đất để
+mắt đọc ra lối đi"* được viết thành một HẰNG SỐ TUYỆT ĐỐI (0,42) thay vì một QUAN HỆ. Phase 3M nâng
+độ đậm mặt đất ban đêm 0,286 → 0,400 vì một lý do chẳng liên quan, và mặt đường không có cách nào
+biết. Kết quả: **ban đêm đường cách đất 0,012–0,020 — tàng hình**, chạy như vậy nhiều ngày, không có
+gì đỏ lên. Nay mặt đường ĐO mặt đất thật rồi tự đặt mình cách ra, giữ đúng chiều của vật liệu. Xem
+**ADR-016**.
+
+**Chỗ rò rỉ thứ ba.** Ngõ phố (2/3 số ô đường) tô bằng `palette.roles.stone` — màu ĐÁ XÂY TƯỜNG,
+chẳng liên quan mặt đường — nên chúng sẽ không đổi theo kỷ kể cả sau khi đại lộ đã sửa xong, mà nhìn
+ảnh thì vẫn tưởng đã xong. Thêm vai màu `roadLane` suy thẳng từ `road`.
+
+**Ảnh hưởng.** 0 thay đổi dữ liệu lưu, 0 API đổi, 0 lệnh vẽ thêm. Đo lại: khoảng cách đường↔đất tối
+thiểu **0,131** ở mọi kỷ và mọi chặng trong ngày (trước: 0,012 ban đêm); 105 cặp kỷ ban ngày **0 cặp**
+dưới ngưỡng nhìn-thấy-khác-nhau (trung vị 116), ban đêm còn 3 cặp ở 10,3–10,9 — đều cách nhau ≥3 kỷ,
+ghi ở `TECH_DEBT.md` #27. Test 640 → **646**.
+
+**Tương thích.** Không có migration. Kỷ nào thiếu `roadColor` vẫn dựng được (rơi về vật liệu trung
+tính) và vẫn đi qua luật khoảng cách, nên không bao giờ tàng hình.
+
+---
+
 ## 2026-08-15 — Nhà dân: thành phố có người ở (Phase 7C)
 
 **Mục đích.** Bước thứ ba trong thứ tự Đàm đã chốt (*Visual Foundation → Terrain/City → …*). Yêu cầu

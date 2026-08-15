@@ -202,6 +202,15 @@ export function buildScenePalette({ tokens, eraColor, era: eraNumber, daylight }
     ? (parseCssColor(getEraStyle(eraNumber)?.roofColor) ?? era)
     : era;
 
+  // ⚠️ MẶT ĐƯỜNG cũng tra ở ĐÚNG chỗ này, cùng lý do với mái ngay trên (Phase 7D).
+  // Trước bản này `road` là MỘT mã màu viết cứng dùng chung cho cả 15 kỷ — nghĩa là con đường mòn
+  // thời đồ đá và đại lộ Dubai là **cùng một mặt phẳng cùng một màu**. Đó đúng thứ Đàm cấm
+  // (*"không dùng cùng một thành phố rồi đổi màu"*), và là cùng một hình dạng sai với `roofColor`
+  // trước Phase 6B: một thuộc tính của VẬT LIỆU bị đóng băng thành một hằng số của giao diện.
+  const roadSource = Number.isFinite(eraNumber)
+    ? parseCssColor(getEraStyle(eraNumber)?.roadColor)
+    : null;
+
   // ── Giờ trong ngày ────────────────────────────────────────────────────────
   // ⚠️ "THEME TỐI" VÀ "TRỜI ĐÃ TỐI" LÀ HAI CHUYỆN KHÁC NHAU, và gộp chúng là cái bẫy dễ mắc nhất
   // ở đây. Theme là SỞ THÍCH của Đàm (anh có thể để theme sáng lúc 11 giờ đêm); giờ là SỰ THẬT về
@@ -599,6 +608,51 @@ export function buildScenePalette({ tokens, eraColor, era: eraNumber, daylight }
   /** Độ tươi mặt đất. Trời sáng đã hạ 0,26 → 0,20 để hết "bãi cỏ sân bóng". */
   const groundSat = isDark ? 0.12 : 0.20;
 
+  /**
+   * ⭐ MẶT ĐƯỜNG — phát biểu bằng KHOẢNG CÁCH TỚI MẶT ĐẤT, không phải bằng một con số nhớ sẵn.
+   *
+   * ⚠️ CHỖ NÀY ĐANG GÁNH HAI LỖI, VÀ CHÚNG CÓ CÙNG MỘT GỐC. Bản cũ là đúng MỘT dòng:
+   * `road: material(48, 0.10, 0.10, 0.68, 0.42)` — một mã màu duy nhất cho cả 15 kỷ, kèm chú thích
+   * *"NHẠT hơn đất rõ rệt … mắt cần đọc ra lối đi"*.
+   *   • **Lỗi 1 — 15 kỷ một mặt đường.** Đường mòn thời đồ đá và đại lộ Dubai là *cùng một mặt
+   *     phẳng cùng một màu*. Đúng thứ Đàm cấm: *"không dùng cùng một thành phố rồi đổi màu"*.
+   *   • **Lỗi 2 — BAN ĐÊM ĐƯỜNG TÀNG HÌNH, và nó đã chạy như vậy nhiều ngày.** Đo cả 15 kỷ:
+   *     ban ngày đường sáng hơn đất **0,129–0,145** (đọc ra ngay); ban đêm chỉ **0,012–0,020**,
+   *     tức mắt không tách nổi đường khỏi đất. Nguyên nhân KHÔNG phải ai đó chỉnh sai con số đường:
+   *     Phase 3M nâng độ đậm mặt đất ban đêm 0,286 → 0,400 (có lý do đầy đủ, xem chú thích
+   *     `groundShades`) — còn số 0,42 của mặt đường thì **không có lý do gì để đi theo**, vì nó
+   *     không biết mặt đất tồn tại. Cái luật *"đường phải nhạt hơn đất"* được viết thành một HẰNG
+   *     SỐ TUYỆT ĐỐI thay vì một QUAN HỆ, nên khi mặt đất dịch chỗ, luật gãy trong im lặng.
+   *
+   * ⇒ Nay luật ấy được phát biểu đúng như lời của nó: **đo mặt đất thật ở đúng thời điểm này, rồi
+   * đặt mặt đường cách ra một khoảng nhìn thấy được.** Mặt đất có dời đi đâu thì mặt đường theo tới
+   * đó, mãi mãi, không cần ai nhớ để chỉnh tay.
+   */
+  const groundBaseRgb = blend(GROUND_ANCHOR, GROUND_ERA, groundSat, isDark ? 0.400 : 0.536);
+  const groundL = rgbToHsl(groundBaseRgb).l;
+
+  /**
+   * Khoảng cách độ đậm tối thiểu giữa đường và đất. Hiệu chuẩn từ chính cảnh BAN NGÀY đang chạy tốt
+   * (đo được 0,129–0,145 qua đủ 15 kỷ) — không phải một số chọn cho đẹp.
+   */
+  const ROAD_MIN_CONTRAST = 0.13;
+  /** Vật liệu đúng giữa thang sáng thì nằm ngang mặt đất; sáng hơn thì nổi lên, tối hơn thì chìm. */
+  const ROAD_NEUTRAL_L = 0.50;
+  /** Phần chênh lệch RIÊNG của vật liệu còn được giữ lại sau khi đã đẩy ra khỏi vùng mù. */
+  const ROAD_SPAN = 0.60;
+
+  const roadHsl = roadSource ? rgbToHsl(roadSource) : null;
+  // ⚠️ ĐẨY RA, KHÔNG PHẢI KẸP LẠI — và đây là chỗ bản đầu của chính phase này làm sai, bắt được
+  // bằng phép đo chứ không bằng mắt. Bản đầu viết `|offset| < MIN ? ±MIN : offset`, tức mọi vật
+  // liệu nằm gần mặt đất đều bị dồn về ĐÚNG ±0,13 — pavé Paris (độ đậm 0,50) và bê tông Singapore
+  // (0,63) ra CÙNG MỘT độ đậm, dù hai con số đầu vào cách nhau xa. Một phép kẹp thì phá THỨ TỰ;
+  // đo được: 9↔14 chỉ còn cách nhau 7,3 ban ngày và 3,7 ban đêm, tức gần như cùng một mặt đường.
+  // Công thức dưới đây là một phép ĐẨY ĐƠN ĐIỆU: vật liệu nào sáng hơn thì mặt đường vẫn sáng hơn,
+  // chỉ là cả hai cùng bị đẩy ra khỏi vùng không đọc được quanh mặt đất.
+  const roadOffset = roadHsl ? roadHsl.l - ROAD_NEUTRAL_L : 0;
+  const roadL = groundL + Math.sign(roadOffset || 1)
+    * (ROAD_MIN_CONTRAST + Math.abs(roadOffset) * ROAD_SPAN);
+
   // ⚠️ CHÂN TRỜI PHẢI CÓ MÀU, không được nhợt. Bản đầu lấy `l: 0.86` và ảnh chụp thử ra một mảng
   // xám tím phẳng lì — bầu trời chiếm gần một nửa khung hình nên nó nhợt là cả bức nhợt theo.
   // Chân trời ẤM (ngả vàng-hồng như nắng chiều), đỉnh trời LẠNH và ĐẬM hơn: chênh lệch đó chính
@@ -685,8 +739,45 @@ export function buildScenePalette({ tokens, eraColor, era: eraNumber, daylight }
       material(GROUND_ANCHOR + 2, GROUND_ERA, groundSat - 0.02, 0.522, 0.386),
     ],
 
-    /** Mặt đường: NHẠT hơn đất rõ rệt — đá lát bạc màu vì bị giẫm, và mắt cần đọc ra lối đi. */
-    road: material(48, 0.10, 0.10, 0.68, 0.42),
+    /**
+     * Mặt đường CỦA KỶ NÀY — góc màu và độ tươi lấy thẳng từ `roadColor`, độ đậm do phép đo mặt
+     * đất ngay trên quyết định. Xem khối chú thích dài ở đó để biết vì sao.
+     *
+     * ⚠️ KHÔNG pha sắc kỷ vào (bản cũ có `eraMix` 0,10). Mặt đường đã MANG SẴN màu đúng của vật
+     * liệu nó làm bằng; kéo thêm về màu nhấn giao diện nữa là đếm hai lần, và đó chính là hình
+     * dạng sai mà Phase 6B đã gỡ khỏi mái nhà.
+     *
+     * ⚠️ BAN ĐÊM BẠC MÀU ĐI 20%, KHÔNG PHẢI 40% NHƯ MẶT ĐẤT — và chỗ lệch này là có chủ đích.
+     * Hiệu ứng Purkinje (ánh sáng yếu ⇒ mắt mất dần khả năng phân biệt màu) là thật, và mặt đất
+     * theo nó rất mạnh (độ tươi 0,20 → 0,12). Nhưng mặt đất chỉ có MỘT sắc, nên bạc màu nó đi thì
+     * không mất thông tin gì; mặt đường có MƯỜI LĂM sắc, và chúng là thứ duy nhất nói cho Đàm biết
+     * anh đang ở kỷ nào. Đo được: hạ 40% thì ban đêm có 7 cặp kỷ tụt xuống dưới ngưỡng nhìn-thấy-
+     * khác-nhau, gấp đôi ban ngày — tức nửa số đêm trong tháng thành phố mất bản sắc.
+     * Kỷ nào chưa khai `roadColor` thì rơi về vật liệu trung tính 48° — vẫn đi qua đúng luật khoảng
+     * cách ở trên, nên nó cũng không bao giờ tàng hình ban đêm nữa.
+     */
+    road: rgbToHexNumber(hslToRgb({
+      h: roadHsl ? roadHsl.h : 48,
+      s: Math.min(0.30, (roadHsl ? roadHsl.s : 0.10) * (isDark ? 0.8 : 1)),
+      l: Math.min(0.88, Math.max(0.08, roadL)),
+    })),
+
+    /**
+     * NGÕ PHỐ — cùng vật liệu với đại lộ, chỉ tối hơn vì nhà hai bên che bớt trời.
+     *
+     * ⚠️ VAI MÀU NÀY RA ĐỜI ĐỂ SỬA MỘT CHỖ RÒ RỈ ĐÚNG CÙNG HỌ với hai lỗi ở trên, và nó nấp kỹ hơn
+     * cả hai. `sceneGraph.js` tô ngõ phố bằng `palette.roles.stone` — một vai màu CHẲNG LIÊN QUAN
+     * GÌ tới mặt đường — kèm chú thích *"ngõ phố tối hơn đại lộ một chút"*. Ý định đúng, đường dẫn
+     * sai: `roles.stone` là màu ĐÁ XÂY TƯỜNG, nên hai phần ba mạng đường của mọi kỷ vẫn không hề
+     * biết `roadColor` tồn tại, kể cả sau khi đại lộ đã được sửa. Nghĩa là bản vá chỉ chạm tới
+     * 1/3 số ô đường, mà nhìn ảnh thì vẫn thấy "đường đã đổi màu" — đúng kiểu sửa xong tưởng xong.
+     * Nay ngõ suy THẲNG từ đại lộ, nên không có đường nào tuột khỏi vật liệu của kỷ nữa.
+     */
+    roadLane: rgbToHexNumber(hslToRgb({
+      h: roadHsl ? roadHsl.h : 48,
+      s: Math.min(0.30, (roadHsl ? roadHsl.s : 0.10) * (isDark ? 0.8 : 1)),
+      l: Math.min(0.88, Math.max(0.06, roadL * 0.86)),
+    })),
 
     /**
      * Vùng đất ngoài thành phố. Pha sẵn một phần về phía màu chân trời để nó tự LÙI RA SAU thay

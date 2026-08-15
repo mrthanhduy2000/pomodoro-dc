@@ -6,15 +6,25 @@
 > chọn: `ARCHITECTURE_DECISIONS.md`. Nợ kỹ thuật: `TECH_DEBT.md`. Migration: `MIGRATION.md`. Tóm
 > tắt theo mốc: `CHANGELOG.md`.
 > **NGUYÊN TẮC ƯU TIÊN SỐ 1:** (1) mọi phiên AI phải đọc file này + `CLAUDE.md` + các file liên quan TRƯỚC khi làm; (2) sau MỌI cập nhật dù nhỏ, phải cập nhật ngay file này + `CLAUDE.md` + các file liên quan khác.
-> Cập nhật lần cuối: **2026-08-15** — **Phase 7C**: **NHÀ DÂN — THÀNH PHỐ CÓ NGƯỜI Ở.**
-> Bước THỨ BA trong thứ tự Đàm chốt (*Visual Foundation → Terrain/City → …*). Trước bản này mỗi kỷ
-> chỉ có **5 công trình trên lưới 144 ô** — thứ Đàm nhìn thấy là một bãi đất, không phải một thành
-> phố. Nay mỗi **2 phiên** (~50 phút, đúng con số anh nêu) mọc thêm một căn nhà dân, từ trong ra
-> ngoài, tối đa 17 căn (kỷ 1) → 30 căn (kỷ 15). **640 bài test**, lint sạch, build xanh, không đụng
-> state/schema.
-> ⚠️ **Hai lỗi gốc phát hiện bằng ẢNH CHỤP, không phải bằng suy luận**: (1) 25 nhà dân kỷ 7 đội mái
-> vòm y hệt Duomo (thêm `vernacularRoof`); (2) mái nhà dân rộng gấp **2,4 lần** thân nhà (thêm
-> `eaveOverhang` kẹp theo tỉ lệ, còn 1,41). Xem **ADR-015** + 3 bài học mới ở `CLAUDE.md`.
+> Cập nhật lần cuối: **2026-08-15** — **Phase 7D**: **MẶT ĐƯỜNG THEO THỜI ĐẠI, VÀ CON ĐƯỜNG TÀNG
+> HÌNH BAN ĐÊM.** Bước "Đường xá" trong thứ tự Đàm chốt. Trước bản này mặt đường của cả 15 kỷ là
+> đúng MỘT dòng hằng số — đường mòn thời đồ đá và đại lộ Dubai là *cùng một mặt phẳng cùng một
+> màu*. Nay 15 kỷ khai `roadMaterial` + `roadColor` (mỗi giá trị kèm một vật liệu CÓ THẬT), và mặt
+> đường có vật liệu PBR riêng. **646 bài test**, lint sạch, build xanh, không đụng state/schema,
+> **không thêm lệnh vẽ nào**.
+> ⚠️ **LỖI GỐC THỨ HAI, NẶNG HƠN, CHỈ TÌM RA KHI ĐO**: luật *"đường phải nhạt hơn đất"* được viết
+> thành một HẰNG SỐ (0,42) thay vì một QUAN HỆ. Phase 3M nâng độ đậm mặt đất ban đêm 0,286 → 0,400
+> vì lý do khác, mặt đường không có cách nào biết ⇒ **ban đêm đường cách đất 0,012–0,020, tức tàng
+> hình**, chạy như vậy nhiều ngày mà không có gì đỏ lên. Nay đo 0,131 ở mọi kỷ, mọi chặng. Xem
+> **ADR-016** + bài học mới ở `CLAUDE.md`.
+> ⚠️ **CHỖ RÒ RỈ THỨ BA**: ngõ phố (2/3 số ô đường) tô bằng `palette.roles.stone` — màu ĐÁ XÂY
+> TƯỜNG — nên chúng sẽ không đổi theo kỷ kể cả sau khi đại lộ đã sửa, mà nhìn ảnh thì vẫn tưởng
+> xong. Thêm vai màu `roadLane` suy thẳng từ `road`.
+>
+> **(Phase 7C, ngay trước đó)** Nhà dân: mỗi **2 phiên** (~50 phút) mọc thêm một căn, tối đa 17 căn
+> (kỷ 1) → 30 căn (kỷ 15). Hai lỗi gốc phát hiện bằng ẢNH CHỤP: 25 nhà dân kỷ 7 đội mái vòm y hệt
+> Duomo (thêm `vernacularRoof`); mái nhà dân rộng gấp **2,4 lần** thân nhà (thêm `eaveOverhang`,
+> còn 1,41). Xem **ADR-015**.
 > ⚠️ **VIỆC CẦN ĐÀM LÀM**: đo cổng hiệu năng trên iPhone thật (đóng cùng lúc `TECH_DEBT #23` + **#26**)
 > — Phase 7C vừa cộng ~50% tam giác mỗi cảnh lên một hệ thống chưa cân lại kể từ trước Phase 7A.
 >
@@ -508,6 +518,40 @@
 
 ## 🗒️ Nhật ký cập nhật
 > Mỗi lần xong việc đáng kể, thêm 1 dòng vào ĐẦU danh sách.
+
+- **2026-08-15 (Phase 7D — mặt đường theo thời đại)** — **646 bài test** (640 → 646), lint sạch,
+  build xanh. Yêu cầu của Đàm nêu đích danh bốn chặng: *"đất/đá cổ đại, ngõ đá trung cổ, đường công
+  nghiệp, đường quy hoạch hiện đại"*.
+  - **Audit**: `palette3d.js` có `road: material(48, 0.10, 0.10, 0.68, 0.42)` — **một mã màu cho cả
+    15 kỷ**, không đi qua bảng vật liệu nào. Cùng hình dạng sai với `roofColor` trước Phase 6B.
+  - **Ngân sách ô lưới đã đầy**: 80 ô đường · 34 ô khu kỳ quan · 30 ô nhà dân = **144/144**. Nên
+    bước này KHÔNG thể thêm ngõ nhỏ/lối đi bộ thành ô mới (sẽ ăn vào nhà dân vừa dựng ở 7C) — nó đi
+    vào VẬT LIỆU mặt đường, đúng thứ Đàm nêu kèm ví dụ.
+  - **Đã làm**: (1) 15 kỷ khai `roadMaterial` + `roadColor`, mỗi giá trị kèm một công trình/vật liệu
+    có thật — nhựa đường tự nhiên mỏ Hit ở Con đường Rước thần Babylon · gạch nghiêng + đất đỏ
+    laterite làng Bắc Bộ · thanh thạch 青石 Tử Cấm Thành · pietraforte Firenze · pavé granite ngả lam
+    Paris · macadam ám bồ hóng Manchester · asphalt gốc dầu mỏ New York · bó vỉa bê tông sáng
+    Singapore. (2) Thêm họ vật liệu `dirt` (nhám 0,99). (3) Mặt đường có vật liệu PBR RIÊNG, không
+    dùng chung `tileMaterial` với mặt đất — **0 lệnh vẽ thêm**, vì nó vốn đã là `InstancedMesh` riêng.
+  - ⚠️ **LỖI GỐC THỨ HAI, tìm ra khi ĐO chứ không khi nhìn — và nó đã chạy thật trên production.**
+    Luật *"đường phải nhạt hơn đất để mắt đọc ra lối đi"* được viết thành hằng số tuyệt đối 0,42.
+    Phase 3M nâng độ đậm mặt đất ban đêm 0,286 → 0,400 (có lý do đầy đủ, chẳng liên quan gì tới
+    đường); mặt đường không tham chiếu mặt đất nên không thể đi theo. Đo cả 15 kỷ: **ban ngày cách
+    0,129–0,145 · ban đêm 0,012–0,020**. Nay mặt đường ĐO mặt đất thật rồi tự đặt mình cách ra, giữ
+    đúng chiều của vật liệu (đường đất SÁNG hơn nền cỏ, nhựa đường TỐI hơn). Xem **ADR-016**.
+  - ⚠️ **BẢN VÁ ĐẦU CỦA CHÍNH PHASE NÀY CŨNG SAI, và cũng chỉ phép đo bắt được**: nó KẸP
+    (`|off| < MIN ? ±MIN : off`) nên dồn mọi vật liệu gần mặt đất về đúng ±0,13 ⇒ pavé Paris (0,50)
+    và bê tông Singapore (0,63) ra CÙNG một độ đậm (9↔14 chỉ còn 7,3 ngày / 3,7 đêm). Đổi sang phép
+    ĐẨY ĐƠN ĐIỆU `sign(off) × (MIN + |off| × SPAN)` thì giữ được cả thứ tự lẫn khoảng cách tối thiểu.
+  - ⚠️ **CHỖ RÒ RỈ THỨ BA**: ngõ phố tô bằng `palette.roles.stone` (màu ĐÁ XÂY TƯỜNG) — tức 2/3 số
+    ô đường không hề biết `roadColor` tồn tại, kể cả sau khi đại lộ đã sửa xong. Thêm `roadLane`.
+  - **Số đo cuối**: khoảng cách đường↔đất tối thiểu **0,131** (mọi kỷ × 6 chặng ngày). 105 cặp kỷ:
+    **ban ngày 0 cặp** dưới ngưỡng (gần nhất 12,4 · trung vị 116,4) · **ban đêm 3 cặp** ở 10,3–10,9,
+    đều cách nhau ≥3 kỷ → `TECH_DEBT #27` (đo đủ, có chủ đích chưa xử lý — ba lần thử chỉnh mã màu
+    đều chỉ ĐỔI CHỖ vấn đề). **Không cặp kỷ LIỀN NHAU nào** dưới ngưỡng ở bất kỳ chặng nào.
+  - **Thử ngược 7/7 assert mới đều ĐỎ** (kiểm bằng `diff` xem file có đổi thật không — bài học
+    Phase 7A). Tài liệu: `ADR-016`, `CHANGELOG`, `ARCHITECTURE`, `CLAUDE.md` (1 bài học mới),
+    `TECH_DEBT #27` + cập nhật header ngưỡng, file này.
 
 - **2026-08-15 (Phase 7C — nhà dân: thành phố có người ở)** — **640 bài test** (625 → 640), lint
   sạch, build xanh. Không đụng state/schema, không migration.

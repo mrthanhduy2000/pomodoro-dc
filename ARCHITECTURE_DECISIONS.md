@@ -11,6 +11,59 @@
 
 ---
 
+## ADR-016 — Mặt đường phát biểu bằng KHOẢNG CÁCH TỚI MẶT ĐẤT, không bằng một độ sáng tuyệt đối
+
+- **Ngày**: 2026-08-15 (Phase 7D)
+- **Bối cảnh**: Đàm yêu cầu *"hệ thống đường phải thay đổi theo thời đại: đất/đá cổ đại, ngõ đá
+  trung cổ, đường công nghiệp, đường quy hoạch hiện đại"*. Audit tìm ra mặt đường của cả 15 kỷ là
+  đúng MỘT dòng: `road: material(48, 0.10, 0.10, 0.68, 0.42)`.
+- **Vấn đề**: dòng ấy mang HAI lỗi có chung một gốc.
+  1. Một mã màu cho 15 kỷ — đường mòn thời đồ đá và đại lộ Dubai là *cùng một mặt phẳng cùng một
+     màu*. Đây là hình dạng sai đã gặp ở `roofColor` trước Phase 6B.
+  2. **Ban đêm mặt đường tàng hình**, và nó đã chạy như vậy trên production nhiều ngày. Đo cả 15
+     kỷ: ban ngày đường cách mặt đất 0,129–0,145 độ đậm (đọc được); ban đêm chỉ **0,012–0,020**.
+     Nguyên nhân không phải ai đó chỉnh sai số của đường: Phase 3M nâng độ đậm mặt đất ban đêm
+     0,286 → 0,400 vì một lý do hoàn toàn khác, còn số 0,42 của mặt đường thì **không có lý do gì
+     để đi theo**, vì nó không biết mặt đất tồn tại.
+
+**Phương án đã cân nhắc**
+
+1. **Giữ hằng số, chỉnh lại 0,42 thành một số cao hơn.** *Loại bỏ*: đây đúng là bản vá theo triệu
+   chứng. Nó chữa được hôm nay và sẽ gãy lại y hệt vào lần kế tiếp có ai chỉnh mặt đất — mà mặt
+   đất đã bị chỉnh ba lần trong lịch sử dự án (Phase 3C, 3M, 7B). Không có gì đỏ lên khi nó gãy.
+2. **Cho mặt đường lấy thẳng `roadColor` của kỷ, không kẹp gì cả.** *Loại bỏ*: đo ra thì bê tông
+   kỷ 11 (`#4a4744`, độ đậm 0,278) và mặt đất ban đêm (0,40) chỉ cách nhau 0,12 ở một số kỷ, và
+   vài kỷ khác thì đường gần như trùng đất. Bản sắc vật liệu thắng, nhưng *"mắt cần đọc ra lối
+   đi"* — lời hứa ghi ngay trong chú thích cũ — thì thua.
+3. **✅ Đo mặt đất THẬT ở đúng thời điểm đang dựng, rồi đặt mặt đường cách ra một khoảng nhìn
+   thấy được, GIỮ NGUYÊN chiều của vật liệu.** Đường đất mòn sáng hơn nền cỏ (bụi khô, bị giẫm
+   bạc màu); nhựa đường và bê tông thì tối hơn. Công thức là một phép **ĐẨY ĐƠN ĐIỆU**:
+   `roadL = groundL + sign(offset) × (MIN + |offset| × SPAN)`.
+
+**Vì sao chọn (3)**: nó phát biểu cái luật đúng như lời của nó — *"đường phải đọc ra là lối đi"*
+là một QUAN HỆ với mặt đất, không phải một con số. Mặt đất dời đi đâu thì mặt đường theo tới đó,
+vĩnh viễn, không cần ai nhớ để chỉnh tay. Và vì chiều được giữ nguyên, 15 kỷ vẫn nói được vật
+liệu của mình.
+
+**⚠️ ĐẨY chứ không KẸP — bản đầu của chính phase này làm sai, và phép đo bắt được chứ mắt thì
+không.** Bản đầu viết `|offset| < MIN ? ±MIN : offset`. Phép kẹp bảo đảm được khoảng cách tối
+thiểu nhưng **phá THỨ TỰ**: mọi vật liệu nằm gần mặt đất đều bị dồn về đúng ±0,13, nên pavé Paris
+(độ đậm 0,50) và bê tông Singapore (0,63) ra CÙNG MỘT độ đậm dù hai con số đầu vào cách nhau xa.
+Đo được: 9↔14 chỉ còn 7,3 ban ngày và 3,7 ban đêm. Phép đẩy giữ được cả hai vế.
+
+**Trade-off**: mặt đường không còn hiện đúng mã màu khai trong `eraStyle.js` — nó hiện một màu đã
+được dịch theo mặt đất. Chấp nhận, vì `roadColor` là **lời khai về vật liệu**, không phải một lời
+hứa về điểm ảnh; cùng đúng tinh thần "BẢNG MÀU ≠ MÀU TRÊN MÀN HÌNH" đã ghi ở `CLAUDE.md`.
+
+**Ảnh hưởng**: `palette3d.js` (thêm `road`/`roadLane` suy từ mặt đất), `eraStyle.js` (15 kỷ khai
+`roadMaterial` + `roadColor`), `sceneGraph.js` (mặt đường có vật liệu PBR riêng, ngõ phố thôi mượn
+`roles.stone`), `materials.js` (thêm họ `dirt`).
+
+**Điều kiện xem lại**: nếu sau này mặt đất đổi từ một màu phẳng sang có vân/texture thì "độ đậm
+của mặt đất" không còn là một con số duy nhất, và phép đo neo ở đây phải đổi theo.
+
+---
+
 ## ADR-015 — Nhà dân đi qua ĐÚNG bộ máy sinh công trình (không có bộ sinh riêng), và kỷ khai thêm một MÁI NHÀ THƯỜNG tách khỏi mái công trình biểu tượng
 
 - **Ngày**: 2026-08-15 (Phase 7C)

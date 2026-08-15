@@ -49,6 +49,7 @@ export const MATERIAL_FAMILIES = {
   //          nhám  kim loại  nhung   ngoài đời là gì
   thatch:   { roughness: 0.97, metalness: 0.00, sheen: 0.55 }, // rơm, lá cọ, da thú căng
   wood:     { roughness: 0.80, metalness: 0.00, sheen: 0.10 }, // gỗ xẻ, cột kèo, giàn giáo
+  dirt:     { roughness: 0.99, metalness: 0.00, sheen: 0.00 }, // ĐẤT NỆN rời — mặt đường chưa lát
   mudbrick: { roughness: 0.94, metalness: 0.00, sheen: 0.00 }, // gạch bùn phơi nắng, đất nện
   brick:    { roughness: 0.84, metalness: 0.00, sheen: 0.00 }, // gạch nung đỏ
   stone:    { roughness: 0.74, metalness: 0.00, sheen: 0.00 }, // đá tảng, đá vôi, sa thạch

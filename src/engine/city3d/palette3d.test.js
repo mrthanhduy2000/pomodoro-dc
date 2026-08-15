@@ -21,8 +21,10 @@ import {
   mixRgb,
   parseCssColor,
   rgbToHexNumber,
+  rgbToHsl,
 } from './palette3d.js';
 import { DAY_PHASES, deriveDaylight } from './daylight.js';
+import { ERA_METADATA } from '../constants.js';
 
 test('parseCssColor: đọc đúng các dạng getComputedStyle thật sự trả về', () => {
   assert.deepEqual(parseCssColor('#c96442'), { r: 201, g: 100, b: 66 });
@@ -614,4 +616,85 @@ test('ĐỐI CHỨNG: bộ hàng rào mới PHẢI còn bắt được bảng m�
   assert.ok(new Set(broken.map((c) => Math.floor(c.h / 30))).size >= 4,
     'bản hỏng cũ ĐẠT phép đếm múi màu — nếu ngày nào nó trượt luôn cả phép này thì hãy xoá bài đối '
     + 'chứng, vì lúc đó phép đếm múi mới thật sự là hàng rào có ích');
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MẶT ĐƯỜNG (Phase 7D)
+// ─────────────────────────────────────────────────────────────────────────────
+
+const ROAD_ERAS = Array.from({ length: 15 }, (_, i) => i + 1);
+const toRgb = (n) => ({ r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 });
+const rgbGap = (a, b) => Math.hypot(a.r - b.r, a.g - b.g, a.b - b.b);
+const roadPalette = (era, hour) => buildScenePalette({
+  tokens: FALLBACK_TOKENS,
+  eraColor: ERA_METADATA[era]?.accentColor,
+  era,
+  daylight: deriveDaylight(hour),
+});
+
+test('ĐƯỜNG KHÔNG BAO GIỜ TÀNG HÌNH TRÊN ĐẤT — mọi kỷ, mọi chặng trong ngày', () => {
+  // ⚠️ BÀI ĐỐI CHỨNG NHỐT MỘT LỖI ĐÃ CHẠY THẬT TRÊN PRODUCTION, KHÔNG PHẢI MỘT LỖI GIẢ ĐỊNH.
+  // Trước Phase 7D, mặt đường là hằng số `material(48, 0.10, 0.10, 0.68, 0.42)`. Con số 0,42 ấy
+  // từng đúng — cho tới khi Phase 3M nâng độ đậm mặt đất ban đêm 0,286 → 0,400 vì một lý do hoàn
+  // toàn khác và chẳng liên quan gì tới đường. Đo ra: ban ngày đường cách đất 0,129–0,145 (đọc
+  // được), BAN ĐÊM chỉ còn **0,012–0,020** — mắt không tách nổi đường khỏi đất.
+  // Không có gì đỏ lên khi chuyện đó xảy ra, vì cái luật "đường phải nhạt hơn đất" hồi ấy được
+  // viết thành một HẰNG SỐ TUYỆT ĐỐI chứ không phải một QUAN HỆ. Bài này viết nó thành quan hệ.
+  const MIN = 0.13;
+  let worst = { gap: Infinity };
+  for (const era of ROAD_ERAS) {
+    for (const phase of DAY_PHASES) {
+      const p = roadPalette(era, phase.hour ?? 12);
+      const road = rgbToHsl(toRgb(p.road));
+      const ground = rgbToHsl(toRgb(p.groundShades[0]));
+      const gap = Math.abs(road.l - ground.l);
+      if (gap < worst.gap) worst = { gap, era, phase: phase.key ?? phase.id ?? '?' };
+    }
+  }
+  assert.ok(worst.gap >= MIN - 1e-9,
+    `kỷ ${worst.era} chặng "${worst.phase}": đường chỉ cách đất ${worst.gap.toFixed(3)} — dưới ${MIN}`);
+});
+
+test('15 KỶ RA 15 MẶT ĐƯỜNG — duyệt đủ 105 CẶP, không phải chỉ cặp liền nhau', () => {
+  // ⚠️ DUYỆT TỔ HỢP ĐÔI, không duyệt danh sách theo thứ tự — đúng bài học `daylight.test.js` từng
+  // trả giá (bình minh ở đầu danh sách và hoàng hôn ở cuối nên KHÔNG BAO GIỜ được đem so nhau).
+  // Và canh cả PHÂN BỐ (trung vị) chứ không chỉ cực tiểu: "cặp gần nhất = 10" đứng yên y hệt dù
+  // có MỘT cặp sát nhau hay MƯỜI cặp, mà mười cặp nghĩa là hai phần ba hành trình không đổi gì.
+  for (const hour of [12, 22]) {
+    const roads = ROAD_ERAS.map((era) => ({ era, rgb: toRgb(roadPalette(era, hour).road) }));
+    const pairs = [];
+    for (let i = 0; i < roads.length; i += 1) {
+      for (let j = i + 1; j < roads.length; j += 1) {
+        pairs.push({ a: roads[i].era, b: roads[j].era, d: rgbGap(roads[i].rgb, roads[j].rgb) });
+      }
+    }
+    pairs.sort((x, y) => x.d - y.d);
+    const median = pairs[Math.floor(pairs.length / 2)].d;
+    assert.ok(pairs[0].d >= 10,
+      `${hour}h: kỷ ${pairs[0].a}↔${pairs[0].b} chỉ cách nhau ${pairs[0].d.toFixed(1)}`);
+    assert.ok(median >= 90, `${hour}h: trung vị 105 cặp tụt còn ${median.toFixed(1)} — bảng đang dẹt lại`);
+
+    // KỶ LIỀN NHAU phải khác RÕ: đây là chỗ Đàm thật sự đi qua và mong thấy đường đổi. Cặp xa nhau
+    // giống nhau thì anh không bao giờ nhìn cạnh nhau; cặp liền nhau thì có.
+    for (let era = 1; era < 15; era += 1) {
+      const d = rgbGap(roads[era - 1].rgb, roads[era].rgb);
+      assert.ok(d >= 12, `${hour}h: kỷ ${era} sang kỷ ${era + 1} mặt đường gần như không đổi (${d.toFixed(1)})`);
+    }
+  }
+});
+
+test('NGÕ PHỐ SUY TỪ ĐẠI LỘ, không mượn màu đá xây tường', () => {
+  // Trước Phase 7D ngõ phố tô bằng `palette.roles.stone`, nên 2/3 số ô đường KHÔNG hề đổi theo kỷ
+  // — kể cả sau khi đại lộ đã được sửa. Đây là bài canh cho chỗ rò rỉ đó.
+  for (const era of [1, 8, 15]) {
+    const p = roadPalette(era, 12);
+    const road = rgbToHsl(toRgb(p.road));
+    const lane = rgbToHsl(toRgb(p.roadLane));
+    // ⚠️ DUNG SAI 3° CHỨ KHÔNG PHẢI 0. Cả hai màu ĐƯỢC DỰNG từ cùng một góc màu, nhưng bảng màu
+    // trả về số nguyên 8-bit, nên đọc ngược ra HSL thì phép làm tròn tự sinh lệch tới ~1,5° (đo
+    // được: kỷ 8 lệch 1,50°). Đòi bằng 0 là đang canh phép làm tròn chứ không canh cái luật.
+    assert.ok(Math.abs(lane.h - road.h) < 3, `kỷ ${era}: ngõ lệch góc màu khỏi đại lộ`);
+    assert.ok(lane.l < road.l, `kỷ ${era}: ngõ phải TỐI hơn đại lộ (nhà hai bên che trời)`);
+    assert.notEqual(p.roadLane, p.roles?.stone, `kỷ ${era}: ngõ vẫn đang lấy màu đá xây tường`);
+  }
 });

@@ -225,3 +225,31 @@ test('BẦU TRỜI PHẢN CHIẾU PHẢI LÀ BẦU TRỜI ĐANG NHÌN THẤY —
     + 'đúng bẫy `sweep-score.mjs` ở Phase 4G: hai công thức "tương đương trên giấy" luôn lệch ở biên.',
   );
 });
+
+test('MẶT ĐƯỜNG PHẢI DÙNG VẬT LIỆU CỦA KỶ, không dùng chung với mặt đất', () => {
+  // ⚠️ Đây là loại vi phạm mà lint/build KHÔNG THỂ bắt, và là đúng bài học Phase 4H: một hàm tầng
+  // engine có thể chạy hoàn hảo, có test riêng, mà **không ai gọi**. `getEraStyle(era).roadMaterial`
+  // được khai đủ cho cả 15 kỷ và có test khoá ở `eraStyle.test.js`; nếu `sceneGraph.js` quên dùng
+  // nó thì cả 15 kỷ vẫn hiện đúng MÀU (nhờ bảng màu) nhưng phản ứng với ánh sáng y hệt nhau — tức
+  // vẫn là cùng một bề mặt. Triệu chứng: không có gì cả. Chỉ là thành phố phẳng hơn nó đáng ra.
+  assert.match(
+    CALLS, /materialProfile\(getEraStyle\(layout\.era\)\?\.roadMaterial\)/,
+    'Mặt đường không còn tra vật liệu theo kỷ.',
+  );
+
+  // ⚠️ HỎI ĐÍCH DANH KHỐI CẦN CANH, không hỏi "có ít nhất một chỗ dùng roadMaterial". Phép đếm
+  // gộp là cái phễu chứ không phải hàng rào: file này có nhiều `InstancedMesh`, nên chỉ cần một
+  // chỗ khác tình cờ nhận vật liệu là assert vẫn xanh dù đúng khối đường đã tuột mất.
+  const roadBlock = CALLS.slice(CALLS.indexOf("prop.kind === 'road'"));
+  const body = roadBlock.slice(0, roadBlock.indexOf('\n  ));'));
+  assert.ok(body.length > 0, 'không tìm thấy khối dựng đường — bài test này đã lạc chỗ, sửa nó trước');
+  assert.match(body, /material:\s*roadMaterial/, 'Khối đường không được truyền vật liệu riêng.');
+
+  // NGÕ PHỐ cũng phải đi qua bảng màu đường. Trước Phase 7D nó lấy `roles.stone` (màu đá xây
+  // tường), nên 2/3 số ô đường không đổi theo kỷ — mà nhìn ảnh thì vẫn tưởng đã sửa xong.
+  assert.match(body, /palette\.roadLane/, 'Ngõ phố không còn suy từ mặt đường của kỷ.');
+  assert.ok(
+    !/roles\?\.stone/.test(body),
+    'Ngõ phố vẫn đang mượn màu đá xây tường — đúng chỗ rò rỉ mà Phase 7D sinh ra để bịt.',
+  );
+});

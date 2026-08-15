@@ -13,10 +13,12 @@
 > mà không được refactor triệt để, phải CHỦ ĐỘNG đề xuất mở một "Maintenance Sprint" (nêu rõ mục
 > tiêu/phạm vi/lợi ích/rủi ro/tiêu chí hoàn thành) thay vì tiếp tục cộng thêm tính năng mới.
 >
-> **Trạng thái ngưỡng hiện tại (2026-08-15, cập nhật sau Phase 7C)**: **1 mục Priority High**
+> **Trạng thái ngưỡng hiện tại (2026-08-15, cập nhật sau Phase 7D)**: **1 mục Priority High**
 > (#14) → vẫn CHƯA đạt ngưỡng 8–10 mục để đề xuất Maintenance Sprint. Còn **3 mục Medium-High**
 > (#3, #13, và **#24** — 14/15 kỷ có công trình bị mép khung hình cắt, đã đo đủ, chờ Đàm chọn
-> hướng), **4 mục Medium** và **1 mục Low** (**#25** — MỚI: nhà dân nhỏ nhất ở 3 kỷ không có cửa sổ).
+> hướng), **4 mục Medium** và **2 mục Low** (#25 — nhà dân nhỏ nhất ở 3 kỷ không có cửa sổ; **#27**
+> — MỚI: 3 cặp kỷ có mặt đường gần trùng nhau vào BAN ĐÊM, đều cách nhau ≥3 kỷ, đã đo đủ và có
+> chủ đích chưa xử lý).
 > ⚠️ **#26 (MỚI, Medium) và #23 đóng được bằng CÙNG MỘT lần đo**: Phase 7C vừa cộng thêm ~50% tam
 > giác mỗi cảnh lên một hệ thống mà cổng hiệu năng iPhone **chưa được cân lại kể từ trước Phase 7A**.
 > Một ảnh chụp HUD trên máy Đàm đóng cả hai. Nên làm TRƯỚC bước "Living City".
@@ -1322,6 +1324,38 @@
   nguồn ở BẤT KỲ độ sâu nào cũng chạy, đúng quy ước chính thức ở `PROJECT_STRUCTURE.md`.
   ⚠️ Ràng buộc còn lại: cú pháp nháy đơn này cần shell kiểu POSIX (Mac/Linux — đúng môi trường dự
   án); chạy `npm test` từ `cmd.exe` của Windows sẽ không mở rộng đúng.
+
+---
+
+## #27 — Ba cặp kỷ có mặt đường gần trùng nhau VÀO BAN ĐÊM (ban ngày thì không)
+
+- **Module**: `src/engine/city3d/eraStyle.js` (`roadColor` 15 kỷ), phát hiện + đo ở Phase 7D
+- **Priority**: Low
+- **Severity**: Low
+- **Impact**: đo 105 cặp kỷ trên bảng màu mặt đường. **Ban ngày: 0 cặp** dưới ngưỡng nhìn-thấy-
+  khác-nhau (cặp gần nhất 12,4 · trung vị 116,4). **Ban đêm: 3 cặp** — kỷ 3↔10 = 10,3 · 10↔13 =
+  10,3 · 1↔5 = 10,9 (trung vị 116,6). Không cặp nào là hai kỷ LIỀN NHAU (cách nhau lần lượt 7, 3
+  và 4 kỷ), nên Đàm gần như không bao giờ nhìn hai cái cạnh nhau.
+- **Root Cause**: hai tầng cộng lại. (a) Vật liệu thật sự CÓ trùng họ — nhựa đường Babylon và
+  macadam ám bồ hóng Manchester đều là mặt tối gốc hắc ín; ép chúng khác nhau là bịa ra một khác
+  biệt không có ngoài đời, đúng thứ luật `country`/`landmark` ở `eraStyle.js` cấm. (b) Ban đêm bảng
+  màu hạ độ tươi 20% (hiệu ứng Purkinje), mà độ tươi chính là chỗ ba cặp này khác nhau — nên chúng
+  chỉ chụm lại khi trời tối.
+- **Current Risk**: rất thấp. Ba cặp trên tổng 105, đều cách nhau ≥3 kỷ, và chỉ vào ban đêm.
+- **Future Risk**: nếu sau này có ai hạ độ tươi ban đêm sâu hơn nữa (về 0,6 như mặt đất), số cặp
+  trùng ban đêm nhảy từ 3 lên 7 — đã đo. Bài test `palette3d.test.js` canh cực tiểu ≥ 10 và trung
+  vị ≥ 90 nên nó sẽ ĐỎ, không trôi ngầm.
+- **Recommended Solution**: đừng chỉnh mã màu để chạy theo con số — ba lần thử ở Phase 7D đều
+  chỉ ĐỔI CHỖ vấn đề (kéo kỷ 12 ra khỏi 13 thì nó dính vào kỷ 5). Nếu muốn tách thật thì tách
+  bằng thứ KHÔNG phải màu: bề rộng làn, vạch kẻ đường, hoặc vỉa hè — tức hình học, thuộc một
+  phase sau. Cũng có thể chấp nhận vĩnh viễn: đường Manchester và đường Babylon giống nhau là
+  một sự thật, không phải một lỗi.
+- **Estimated Complexity**: trung bình (nếu chọn tách bằng hình học); bằng 0 nếu chấp nhận
+- **Blocking Conditions**: lưới 12×12 đã đầy (80 ô đường · 34 ô kỳ quan · 30 ô nhà dân = 144),
+  nên thêm chi tiết đường phải làm trong CÙNG ô, không được cấp ô mới
+- **Review Trigger**: khi làm bước "Historical Architecture", hoặc nếu Đàm nói hai kỷ nào đó có
+  đường giống nhau
+- **Owner**: phiên AI kế tiếp · **Status**: Open (đã đo đủ, có chủ đích chưa xử lý)
 
 ---
 

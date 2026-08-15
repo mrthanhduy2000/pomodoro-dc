@@ -16,6 +16,7 @@ import {
   getEraStyle, getVernacularStyle, eaveOverhang,
 } from './eraStyle';
 import { buildBuildingSpec } from './buildingSpec';
+import { MATERIAL_FAMILIES } from './materials';
 
 const ERAS = Object.keys(ERA_STYLES).map(Number).sort((a, b) => a - b);
 
@@ -123,4 +124,38 @@ test('KHÔNG CÒN CÔNG TRÌNH NÀO ĐỘI Ô: mái rộng nhất không quá 1,
   );
   console.log(`   [diềm mái] rộng nhất: kỷ ${worst.era} ${worst.type}/${worst.rarity}`
     + ` — mái gấp ${worst.ratio.toFixed(2)} lần thân (trần ${LIMIT.toFixed(2)})`);
+});
+
+test('MỌI KỶ PHẢI KHAI MẶT ĐƯỜNG — vật liệu có thật, và mã màu đọc được', () => {
+  // ⚠️ BẮT BUỘC, không tuỳ chọn — cùng lý do với `vernacularRoof` ở bài đầu file. Để trống được
+  // thì một kỷ thêm sau này sẽ lặng lẽ rơi về mặt đường trung tính, và cái bẫy "15 kỷ một mặt
+  // đường" quay lại đúng ở kỷ mới mà không ai để ý, vì 14 kỷ kia vẫn đúng.
+  for (const era of ERAS) {
+    const style = ERA_STYLES[era];
+    assert.ok(
+      Object.prototype.hasOwnProperty.call(MATERIAL_FAMILIES, style.roadMaterial),
+      `kỷ ${era} khai vật liệu mặt đường "${style.roadMaterial}" — không có trong MATERIAL_FAMILIES`,
+    );
+    assert.match(
+      String(style.roadColor), /^#[0-9a-f]{6}$/i,
+      `kỷ ${era} (${style.country}) chưa khai roadColor đọc được`,
+    );
+  }
+});
+
+test('MẶT ĐƯỜNG ĐI HẾT MỘT HÀNH TRÌNH VẬT LIỆU, không dừng ở một họ', () => {
+  // Đàm nêu đích danh bốn chặng: "đất/đá cổ đại, ngõ đá trung cổ, đường công nghiệp, đường quy
+  // hoạch hiện đại". Bài này canh rằng bảng thật sự đi qua từng chặng ấy — nếu ai đó đổi cả 15 kỷ
+  // về `concrete` cho tiện thì mọi bài khác vẫn xanh, chỉ có hành trình là biến mất.
+  const families = new Set(ERAS.map((e) => ERA_STYLES[e].roadMaterial));
+  assert.ok(families.size >= 4, `chỉ còn ${families.size} họ vật liệu mặt đường — hành trình đã dẹt`);
+  assert.equal(ERA_STYLES[1].roadMaterial, 'dirt', 'kỷ 1 phải là đường đất chưa lát');
+  assert.equal(ERA_STYLES[15].roadMaterial, 'concrete', 'kỷ 15 phải là mặt đường đúc');
+  // Không kỷ hiện đại nào được quay lại đường đất, và không kỷ cổ đại nào có bê tông.
+  for (const era of [11, 12, 13, 14, 15]) {
+    assert.equal(ERA_STYLES[era].roadMaterial, 'concrete', `kỷ ${era} không còn là đường đúc`);
+  }
+  for (const era of [1, 2]) {
+    assert.equal(ERA_STYLES[era].roadMaterial, 'dirt', `kỷ ${era} không còn là đường đất`);
+  }
 });

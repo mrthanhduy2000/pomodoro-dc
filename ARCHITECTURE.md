@@ -383,6 +383,17 @@ bốn thứ dưới đây khoá lẫn nhau, đổi một cái phải soi lại b
    thật — nên giờ đêm ép cảnh sang bảng màu tối ở CẢ hai theme, nếu không thì ai để theme sáng sẽ
    vĩnh viễn thấy giữa trưa.
 
+⚠️ **MỘT VAI MÀU PHẢI ĐỌC ĐƯỢC TRÊN THỨ NÓ NẰM CẠNH, NÊN NÓ PHẢI BIẾT THỨ ẤY ĐANG Ở ĐÂU**
+(Phase 7D, xem **ADR-016**). Đa số vai màu trong `palette3d.js` khai một độ đậm tuyệt đối cho từng
+theme, và điều đó ổn vì chúng đứng một mình. **Mặt đường thì không**: cả công dụng của nó là được
+đọc ra như một lối đi TRÊN mặt đất, tức nó là một QUAN HỆ chứ không phải một con số. Viết nó thành
+hằng số một lần thì lần sau có ai chỉnh mặt đất là quan hệ ấy gãy trong im lặng — và đã gãy thật:
+Phase 3M nâng độ đậm mặt đất ban đêm 0,286 → 0,400, mặt đường giữ nguyên 0,42, nên **suốt nhiều
+ngày ban đêm mặt đường tàng hình** (cách mặt đất 0,012–0,020 thay vì 0,13). Nay `road`/`roadLane`
+đo mặt đất thật rồi tự đặt mình cách ra, giữ đúng chiều của vật liệu (đường đất SÁNG hơn nền cỏ,
+nhựa đường TỐI hơn). Vai màu nào sau này cũng phải "đọc được trên nền X" thì làm y như vậy, đừng
+khai một con số rồi tin nó đứng yên.
+
 ⚠️ **BẦU TRỜI KHÔNG ĐƯỢC PHA BẰNG CÁCH XOAY GÓC MÀU** — họ lỗi này đã lộ ra BA lần trong cùng một
 Phase, mỗi lần ở một chỗ khác nhau, và cả ba lần chỉ ảnh chụp mới thấy chứ đọc code thì không:
 cộng thẳng offset độ (`skyShift`) · nội suy góc màu về đích cố định · pha sắc kỷ bằng `mixHue`. Gốc

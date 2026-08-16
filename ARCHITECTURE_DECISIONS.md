@@ -11,6 +11,64 @@
 
 ---
 
+## ADR-025 — Bản sắc mặt đường là CẤU TRÚC (9 trục hình học), không phải MÀU; và phép đẩy độ đậm phải có TRẦN
+
+- **Ngày**: 2026-08-16 (Phase 9D)
+- **Bối cảnh**: Đàm nhìn thành phố và nói mặt đường *"vẫn giống một dải màu phẳng: không curb,
+  không sidewalk, không edge detail, không marking, kết thúc bằng mép chữ nhật và ở một số kỷ trở
+  thành rãnh đen"*, kèm một yêu cầu rất cụ thể: **"sửa ROOT CAUSE thay vì chỉ chỉnh `roadColor`"**
+  và **"không dùng màu để ép 15 kỷ khác nhau"**.
+- **Vấn đề**: hai mục nợ đang mở, `TECH_DEBT #30` (mặt đường kỷ 11 render ra **0,113** trên nền đất
+  **0,406** — dưới ngưỡng 0,12 mà mắt còn đọc ra chi tiết, đo với bóng đổ TẮT HẲN) và `#27` (ba cặp
+  kỷ trùng màu đường vào ban đêm), thật ra là **MỘT** bài toán: toàn bộ bản sắc mặt đường của một kỷ
+  nằm gọn trong **một mã màu**. Khi màu là trục DUY NHẤT, mọi sức ép "15 kỷ phải phân biệt được"
+  dồn hết vào ĐỘ ĐẬM — mà độ đậm thì có đáy. Phase 9B đã chứng minh không có lối ra trên trục ấy:
+  nới trần tới mức gần như không bão hoà thì cặp 3↔10 cũng chỉ lên **9,8/10**.
+- **Phương án cân nhắc**:
+  1. **Chỉnh lại 15 giá trị `roadColor` cho khéo hơn.** Rẻ nhất, và đã bị chính số liệu bác: một
+     trục không đủ chỗ cho 15 giá trị vừa cách nhau vừa nằm trong vùng đọc được. Đây cũng đúng thứ
+     Đàm cấm thẳng.
+  2. **Nới ngưỡng của bài test "15 kỷ ra 15 mặt đường".** Loại: bài test ấy xưa nay xanh **nhờ chính
+     khuyết tật đang phải sửa** (phép đẩy vô hạn thổi phồng khác biệt ở đầu tối). Nới nó là hợp
+     thức hoá cái rãnh đen.
+  3. **Giữ metric RGB nhưng bẻ màu cho hai kỷ đụng nhau.** Loại: cặp đụng nhau là **11↔13**, mà
+     Manhattan và Tokyo **đều lát nhựa đường** — chúng gần nhau về màu là sự thật vật lý.
+  4. ⭐ **Mở thêm chín trục CẤU TRÚC và chuyển phép đo bản sắc sang đó** — chọn.
+- **Giải pháp chọn**: file thuần mới `src/engine/city3d/streetStyle.js` — bảng 15 kỷ × 10 trường
+  (`avenue` · `lane` · `paving` · `stone` · `wear` · `curb` · `walk` · `markings` · `edge` +
+  `country`), mỗi dòng buộc vào đúng đất nước mà `eraStyle.js` đã chọn và phải trả lời được *"đi bộ
+  ở nước ấy thì giẫm lên cái gì?"* (cùng khuôn `floraStyle.js` đã theo cho cây cối). Ba hàm thuần
+  đi kèm: `pavingSubdivision` (cỡ viên → số ô con), `streetCrossSection` (mặt cắt ngang), và
+  `carriagewayExtents` (bốn mép lòng đường theo ô bên cạnh CÓ NỐI hay không). Song song, phép đẩy
+  độ đậm trong `palette3d.js` đổi sang **bão hoà** (`roadContrastGap`: sàn 0,13 · trần 0,26 · vẫn
+  đơn điệu ngặt), tức có cả sàn lẫn trần thay vì chỉ có sàn.
+- **Trade-off**: (a) cả hệ đường vẫn là **một hình học, một vật liệu, một lệnh vẽ** — nên vỉa hè
+  không có độ nhám riêng, nó chỉ sáng hơn lòng đường; đổi lại số lệnh vẽ đứng yên **13 → 13**.
+  (b) `stone` bị chặn dưới bởi `MIN_STONE = 1/7` (viên 8 điểm ảnh, đo được), nên sỏi và đá cuội
+  THẬT — vốn mịn hơn nhiều — không lấy đặc trưng từ hình học mà từ `wear` và `paving`. Khai mịn hơn
+  không cho thêm chi tiết, chỉ cho thêm NHIỄU. (c) Số tam giác terrain+road tăng
+  **27 626 → 31 546** ở kỷ nặng nhất (+14%), ms/khung +3,5% trên SwiftShader (trần trên, không phải
+  số của máy thật).
+- **Ảnh hưởng (đo được)**: **12/12** tổ hợp (kỷ 3·7·11·14 × 12h·15h·22h) đạt cả hai lời hứa —
+  khoảng cách đường↔đất xấu nhất **0,061** (ngưỡng mắt 0,05) và "hố" sâu nhất **0,202** (trần 0,26),
+  cùng còn ~22% biên. Bản sắc trên **105 cặp kỷ**: cặp yếu nhất khác **3/8 trục**, trung vị **6/8**,
+  không cặp nào dưới 3. Phép chấm 15 kỷ toàn cảnh (`sweep-score.mjs`) giữ nguyên **15/15 chặng** và
+  **105/105 kỷ**.
+- **⚠️ Phát hiện kèm theo, quan trọng cho mọi phiên sau**: (1) kỷ 7 lấy `roadColor` từ
+  **pietraforte** — đá XÂY TƯỜNG của Palazzo Vecchio — trong khi Firenze LÁT đường bằng **pietra
+  serena** (xám-xanh); đá ấy cùng họ màu với nền đất ấm của kỷ 7 nên con đường chỉ còn độ sáng để
+  tách khỏi đất, đo được **0,050 lúc 12h và 0,019 lúc 22h**. Sửa sang đúng vật liệu ⇒ **0,200 /
+  0,191 / 0,198**. (2) Bản đầu của Phase 9D thu hẹp ô đường ở **cả hai chiều** theo bề rộng kỷ khai,
+  làm con đường vỡ thành những mảng nhựa rời rạc — bề rộng là đại lượng của MẶT CẮT NGANG, áp nó lên
+  chiều DỌC là hiểu sai chính đại lượng ấy; `carriagewayExtents` sinh ra từ đó và nó xoá luôn việc
+  phải phân biệt `variant`.
+- **Điều kiện xem lại**: nếu thêm kỷ thứ 16 (bảng phải khai đủ 10 trường, `isValidStreetStyle` chặn
+  thẳng); nếu HUD hiệu năng trên iPhone cho thấy tấm đường là chỗ nghẽn (lúc đó hạ `pavingSubdivision`
+  theo LOD là cần gạt sẵn có); hoặc nếu muốn vỉa hè có độ nhám riêng — lúc đó phải chấp nhận thêm
+  một lệnh vẽ và đo lại.
+
+---
+
 ## ADR-024 — Đèn trời là một TỈ LỆ CỦA NẮNG, không phải một hằng số rời; và bóng đổ chỉ được cấu hình ở MỘT chỗ
 
 - **Ngày**: 2026-08-15 (Phase 9B)

@@ -637,10 +637,18 @@ export function createCityScene({
 
   const ground3d = buildTerrainSurface({ terrain, gridSize, layout, palette });
   const road3d = buildRoadSurface({ terrain, gridSize, layout, palette });
-  for (const [surface, material] of [[ground3d, tileMaterial], [road3d, roadMaterial]]) {
+  for (const [surface, material, name] of [
+    [ground3d, tileMaterial, 'ground'], [road3d, roadMaterial, 'road'],
+  ]) {
     if (!surface) continue;
     track(surface.geometry);
     const mesh = new Mesh(surface.geometry, material);
+    // ⚠️ ĐẶT TÊN LÀ ĐỂ **ĐO ĐƯỢC**, không phải để tra cứu lúc chạy. Muốn hỏi "mặt đường trên màn
+    // hình sáng bao nhiêu so với mặt đất" thì phải biết điểm ảnh nào là đường — và `TECH_DEBT #22`
+    // đã trả giá đắt cho bài học rằng việc ấy KHÔNG được đoán bằng màu: bộ lọc "8% điểm ảnh tươi
+    // nhất ≈ mái" đã đo nhầm sang cỏ suốt ba phase. Bên DỰNG biết chắc chắn cái nào là cái nào, nên
+    // bên dựng phải nói ra. `city-preview.mjs --mask road` đọc đúng tên này.
+    mesh.name = name;
     // Đồi KHÔNG đổ bóng lên chính nó ở phiên này: khung bóng bó sát lưới 12×12, mà tấm đất trải
     // rộng hơn nhiều ⇒ mọi điểm ngoài khung sẽ tra nhầm mép bản đồ bóng và tối đen cả vùng ngoài
     // (đúng lỗi đã thấy tận mắt với `outskirts`). Nhận bóng thì có — đó là bóng công trình in lên

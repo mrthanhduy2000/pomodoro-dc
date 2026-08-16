@@ -22,8 +22,10 @@ import {
   parseCssColor,
   rgbToHexNumber,
   rgbToHsl,
+  roadContrastGap,
 } from './palette3d.js';
 import { DAY_PHASES, deriveDaylight } from './daylight.js';
+import { STREET_STYLES } from './streetStyle.js';
 import { ERA_METADATA } from '../constants.js';
 
 test('parseCssColor: đọc đúng các dạng getComputedStyle thật sự trả về', () => {
@@ -655,11 +657,61 @@ test('ĐƯỜNG KHÔNG BAO GIỜ TÀNG HÌNH TRÊN ĐẤT — mọi kỷ, mọi 
     `kỷ ${worst.era} chặng "${worst.phase}": đường chỉ cách đất ${worst.gap.toFixed(3)} — dưới ${MIN}`);
 });
 
-test('15 KỶ RA 15 MẶT ĐƯỜNG — duyệt đủ 105 CẶP, không phải chỉ cặp liền nhau', () => {
-  // ⚠️ DUYỆT TỔ HỢP ĐÔI, không duyệt danh sách theo thứ tự — đúng bài học `daylight.test.js` từng
-  // trả giá (bình minh ở đầu danh sách và hoàng hôn ở cuối nên KHÔNG BAO GIỜ được đem so nhau).
-  // Và canh cả PHÂN BỐ (trung vị) chứ không chỉ cực tiểu: "cặp gần nhất = 10" đứng yên y hệt dù
-  // có MỘT cặp sát nhau hay MƯỜI cặp, mà mười cặp nghĩa là hai phần ba hành trình không đổi gì.
+test('ĐƯỜNG KHÔNG BAO GIỜ THÀNH CÁI HỐ — phép đẩy có TRẦN, không chỉ có SÀN (TECH_DEBT #30)', () => {
+  // ⚠️ BÀI ĐỐI CHỨNG THỨ HAI CHO CÙNG MỘT LUẬT, VÀ NÓ CANH ĐẦU CÒN LẠI. Bài ngay trên canh SÀN
+  // ("đường không được chìm vào đất"). Bài này canh TRẦN, và cái trần ấy thiếu suốt từ Phase 7D:
+  // luật cũ CỘNG THÊM 0,13 vào chênh lệch riêng của vật liệu chứ không lấy 0,13 làm sàn cho tổng,
+  // nên vật liệu nào vốn đã xa mức trung tính thì bị đẩy HAI LẦN. Nhựa đường kỷ 11 nhận tổng đẩy
+  // 0,289 và render ra độ sáng 0,113 trong khi mặt đất 0,406 — DƯỚI ngưỡng 0,12 mà mắt còn đọc ra
+  // chi tiết, tức con đường biến thành một cái rãnh đen. Luật có sàn mà không có trần, và suốt
+  // nhiều tháng không ai hỏi "đẩy xa bao nhiêu thì là QUÁ xa?".
+  //
+  // ⚠️ TRẦN LẤY BẰNG CÁCH HỎI CHÍNH HÀM, không chép con số. Chép là "một luật hai công thức".
+  const TRẦN = roadContrastGap(Infinity);
+  assert.ok(Number.isFinite(TRẦN) && TRẦN > 0.13, 'phép đẩy không còn bão hoà — nó lại vô hạn rồi');
+
+  let xa = { gap: -1 };
+  for (const era of ROAD_ERAS) {
+    for (const phase of DAY_PHASES) {
+      const p = roadPalette(era, phase.hour ?? 12);
+      const gap = Math.abs(rgbToHsl(toRgb(p.road)).l - rgbToHsl(toRgb(p.groundShades[0])).l);
+      if (gap > xa.gap) xa = { gap, era, phase: phase.key ?? phase.id ?? '?' };
+    }
+  }
+  assert.ok(xa.gap <= TRẦN + 1e-9,
+    `kỷ ${xa.era} chặng "${xa.phase}": đường bị đẩy xa đất tới ${xa.gap.toFixed(3)} — vượt trần ${TRẦN}`);
+
+  // ĐỐI CHỨNG: nhốt lại đúng phép đẩy VÔ HẠN cũ. Không có mục này thì một ngày nào đó ai đó gỡ bão
+  // hoà đi "cho đường rõ hơn" và cái rãnh quay lại y nguyên, không gì đỏ lên.
+  const ĐẨY_CŨ = (x) => 0.13 + x * 0.60; // Phase 7D: sàn được CỘNG vào, không làm sàn cho tổng
+  assert.ok(ĐẨY_CŨ(0.26) > TRẦN,
+    'phép đẩy cũ nay lọt qua trần — bài đối chứng đã mất tác dụng, phép đo hỏng chứ không phải mã đúng');
+
+  // Và phép đẩy phải còn ĐƠN ĐIỆU: vật liệu xa trung tính hơn thì vẫn phải nằm xa đất hơn, nếu
+  // không thì bão hoà đã nuốt mất trục vật liệu (đúng cái bẫy "kẹp nuốt tham số" ở Phase 7B).
+  const mẫu = [0, 0.1, 0.2, 0.3, 0.5, 1].map(roadContrastGap);
+  for (let i = 1; i < mẫu.length; i += 1) {
+    assert.ok(mẫu[i] > mẫu[i - 1], `phép đẩy hết đơn điệu ở mẫu ${i} — vật liệu khác nhau ra cùng một khoảng cách`);
+  }
+});
+
+test('MÀU KHÔNG CÒN GÁNH BẢN SẮC MỘT MÌNH — nhưng cũng không được sập', () => {
+  // ═══════════════════════════════════════════════════════════════════════════════════════════════
+  // ⚠️ BÀI NÀY THAY THẾ MỘT BÀI CŨ ĐÒI "CẢ 105 CẶP KỶ PHẢI KHÁC MÀU". ĐỌC TRƯỚC KHI ĐỊNH SIẾT LẠI.
+  // ═══════════════════════════════════════════════════════════════════════════════════════════════
+  // Bài cũ đòi mọi cặp trong 105 cặp cách nhau ≥10 và mọi cặp kỷ liền nhau ≥12. Nó xanh suốt từ
+  // Phase 7D — nhưng nó xanh **nhờ chính khuyết tật mà bài ngay trên vừa vá**: phép đẩy vô hạn thổi
+  // phồng khác biệt ở đầu tối, và bài cũ đọc sự thổi phồng ấy thành "15 kỷ phân biệt tốt". Vá cái
+  // rãnh đen ⇒ bài cũ ĐỎ ở cặp 11↔13 (7,9).
+  //
+  // ⚠️ VÀ NÓ ĐỎ MỘT CÁCH ĐÚNG ĐẮN, ĐỪNG "SỬA" BẰNG CÁCH BẺ MÀU. Kỷ 11 là lưới Manhattan, kỷ 13 là
+  // phố Nhật — CẢ HAI ĐỀU LÁT NHỰA ĐƯỜNG. Nhựa đường ở New York và nhựa đường ở Tokyo là cùng một
+  // vật liệu, nên chúng có màu gần nhau là SỰ THẬT VẬT LÝ. Ép chúng ra hai màu khác nhau để một
+  // con số đẹp lên chính là thứ Đàm cấm thẳng ở Phase 9D ("không giả màu"). Thứ phân biệt hai kỷ
+  // ấy là CẤU TRÚC: 0,92 ô có vạch tim vàng, so với 0,72 ô có vạch sang đường — và đó là việc của
+  // `streetStyle.test.js`, bài `15 KỶ RA 15 MẶT ĐƯỜNG`, nơi bản sắc được đo bằng 8 trục hình học.
+  //
+  // Ở TẦNG BẢNG MÀU chỉ còn lại đúng hai lời hứa mà màu sắc THẬT SỰ chịu trách nhiệm được:
   for (const hour of [12, 22]) {
     const roads = ROAD_ERAS.map((era) => ({ era, rgb: toRgb(roadPalette(era, hour).road) }));
     const pairs = [];
@@ -669,18 +721,35 @@ test('15 KỶ RA 15 MẶT ĐƯỜNG — duyệt đủ 105 CẶP, không phải c
       }
     }
     pairs.sort((x, y) => x.d - y.d);
-    const median = pairs[Math.floor(pairs.length / 2)].d;
-    assert.ok(pairs[0].d >= 10,
-      `${hour}h: kỷ ${pairs[0].a}↔${pairs[0].b} chỉ cách nhau ${pairs[0].d.toFixed(1)}`);
-    assert.ok(median >= 90, `${hour}h: trung vị 105 cặp tụt còn ${median.toFixed(1)} — bảng đang dẹt lại`);
 
-    // KỶ LIỀN NHAU phải khác RÕ: đây là chỗ Đàm thật sự đi qua và mong thấy đường đổi. Cặp xa nhau
-    // giống nhau thì anh không bao giờ nhìn cạnh nhau; cặp liền nhau thì có.
-    for (let era = 1; era < 15; era += 1) {
-      const d = rgbGap(roads[era - 1].rgb, roads[era].rgb);
-      assert.ok(d >= 12, `${hour}h: kỷ ${era} sang kỷ ${era + 1} mặt đường gần như không đổi (${d.toFixed(1)})`);
+    // (1) BẢNG KHÔNG ĐƯỢC SẬP. Trung vị canh PHÂN BỐ chứ không canh cực tiểu: "cặp gần nhất = 5"
+    // đứng yên y hệt dù có MỘT cặp sát nhau hay BỐN MƯƠI cặp. Bốn mươi cặp nghĩa là cả bảng màu đã
+    // dẹt về một dải xám mà cực tiểu không hé một lời. Đo được hiện tại: 116,4 (12h) · 115,9 (22h).
+    const median = pairs[Math.floor(pairs.length / 2)].d;
+    assert.ok(median >= 90, `${hour}h: trung vị 105 cặp tụt còn ${median.toFixed(1)} — bảng màu đang dẹt lại`);
+
+    // (2) KHÔNG HAI KỶ NÀO RA ĐÚNG CÙNG MỘT MÃ MÀU. Gần nhau vì cùng vật liệu là đúng; TRÙNG KHÍT
+    // thì không — nó nghĩa là một kỷ đang không hề tra bảng vật liệu của mình (đúng lỗi trước
+    // Phase 7D, khi cả 15 kỷ dùng chung một hằng số).
+    assert.ok(pairs[0].d > 0,
+      `${hour}h: kỷ ${pairs[0].a} và ${pairs[0].b} ra ĐÚNG cùng một mã màu — một trong hai không tra bảng`);
+  }
+
+  // (3) VÀ MỘT SỰ THẬT ĐƯỢC GHI LẠI ĐỂ PHIÊN SAU KHÔNG "SỬA" NHẦM: các cặp gần nhau nhất về màu
+  // PHẢI là các cặp dùng chung vật liệu. Nếu một ngày cặp gần nhất lại là hai kỷ lát vật liệu KHÁC
+  // nhau, thì lúc đó bảng màu mới thật sự có lỗi — vì gạch nung và nhựa đường thì không có lý do
+  // gì để ra cùng một màu.
+  const roads12 = ROAD_ERAS.map((era) => ({ era, rgb: toRgb(roadPalette(era, 12).road) }));
+  let gần = { d: Infinity };
+  for (let i = 0; i < roads12.length; i += 1) {
+    for (let j = i + 1; j < roads12.length; j += 1) {
+      const d = rgbGap(roads12[i].rgb, roads12[j].rgb);
+      if (d < gần.d) gần = { d, a: roads12[i].era, b: roads12[j].era };
     }
   }
+  assert.equal(STREET_STYLES[gần.a].paving, STREET_STYLES[gần.b].paving,
+    `cặp màu gần nhau nhất giờ là kỷ ${gần.a} (${STREET_STYLES[gần.a].paving}) và kỷ ${gần.b} `
+    + `(${STREET_STYLES[gần.b].paving}) — hai vật liệu KHÁC nhau mà cùng màu thì đó là lỗi bảng màu thật`);
 });
 
 test('NGÕ PHỐ SUY TỪ ĐẠI LỘ, không mượn màu đá xây tường', () => {

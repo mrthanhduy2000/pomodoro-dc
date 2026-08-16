@@ -13,7 +13,16 @@
 > mà không được refactor triệt để, phải CHỦ ĐỘNG đề xuất mở một "Maintenance Sprint" (nêu rõ mục
 > tiêu/phạm vi/lợi ích/rủi ro/tiêu chí hoàn thành) thay vì tiếp tục cộng thêm tính năng mới.
 >
-> **Trạng thái ngưỡng hiện tại (2026-08-15, cập nhật sau Phase 9B)**: thêm **#30** (Medium-High —
+> **Trạng thái ngưỡng hiện tại (2026-08-16, cập nhật sau Phase 9D)**: **#30 và #27 đã ĐÓNG CẢ HAI**
+> — đúng như hai mục ấy đã tự nối cứng, chúng là một bài toán duy nhất (*màu là trục DUY NHẤT mang
+> bản sắc mặt đường*) và được giải cùng lúc bằng cách mở thêm chín trục cấu trúc, chứ không phải
+> bằng cách chỉnh lại con số nào. Nay còn **1 mục High** (#14) + **2 mục Medium-High** (#3, #13) +
+> **1 mục Medium-High chờ Đàm quyết** (#24) = 4 → xa ngưỡng 8–10 mục, KHÔNG cần Maintenance Sprint.
+>
+> ⚠️ **Phase 9D KHÔNG mở mục nợ mới**, nhưng có ghi hai bài học vào `CLAUDE.md` (công cụ đo tự chế
+> nói dối lần thứ 20 và 21 — cả hai đều nằm trong công cụ vừa viết ra trong chính phiên ấy).
+>
+> **(Ảnh chụp trước đó, sau Phase 9B)**: thêm **#30** (Medium-High —
 > mặt đường render DƯỚI ngưỡng mắt đọc được xét riêng vật liệu; đã có bản vá đo xong nhưng CỐ Ý
 > chưa ship vì nó làm đỏ một lời hứa đang có). ⚠️ **#30 và #27 nay là MỘT cặp phải làm cùng nhau** —
 > #30 phơi ra rằng lời hứa "15 kỷ ra 15 mặt đường" xưa nay chỉ đạt nhờ **3% biên**, và đạt được
@@ -1438,7 +1447,27 @@
 
 ---
 
-## #30 — Mặt đường render ra DƯỚI ngưỡng mắt đọc được, xét riêng vật liệu (kỷ 11 · 13 · 10 · 3)
+## #30 — ✅ [ĐÃ XỬ LÝ 2026-08-16, Phase 9D] Mặt đường render ra DƯỚI ngưỡng mắt đọc được, xét riêng vật liệu (kỷ 11 · 13 · 10 · 3)
+
+> **ĐÃ ĐÓNG CÙNG #27 — hai mục là một bài toán, đúng như hai mục này đã tự nối cứng với nhau.**
+> Nguyên nhân gốc KHÔNG phải con số `roadColor` của một kỷ nào, mà là: **màu là trục DUY NHẤT mang
+> bản sắc mặt đường**, nên toàn bộ sức ép "15 kỷ phải khác nhau" dồn vào ĐỘ ĐẬM — và độ đậm có đáy.
+> Phase 9D mở thêm chín trục (`src/engine/city3d/streetStyle.js`: bề rộng đại lộ · bề rộng ngõ ·
+> vật liệu lát · cỡ viên · độ mòn · bó vỉa · vỉa hè · vạch kẻ · kiểu mép) và cho phép đẩy độ đậm
+> **bão hoà** (`roadContrastGap`: sàn 0,13 · trần 0,26 · vẫn đơn điệu ngặt).
+>
+> **Nghiệm thu, đo trên ảnh dựng thật, `--no-shadow`, 4 kỷ × 3 giờ = 12 tổ hợp** (công cụ
+> `scripts/road-score.mjs`, mặt nạ do chính bên dựng cấp qua `city-preview.mjs --mask road,ground`):
+> **12/12 ĐẠT**. Khoảng cách đường↔đất xấu nhất **0,061** (kỷ 11, 22h — ngưỡng mắt 0,05, biên 23%);
+> "hố" sâu nhất **0,202** (kỷ 3, 12h — trần 0,26, biên 22%). So với con số mở mục này: kỷ 11 từ
+> **0,113 trên nền đất 0,406** nay là **0,302 trên nền 0,495**.
+>
+> ⚠️ **Kèm một phát hiện ngoài dự kiến, đã sửa**: kỷ 7 lấy `roadColor` từ **pietraforte** — đá XÂY
+> TƯỜNG của Palazzo Vecchio — trong khi Firenze LÁT đường bằng **pietra serena** (xám-xanh). Đá ấy
+> cùng họ màu với nền đất ấm của kỷ 7, nên con đường chỉ còn độ sáng để tách khỏi đất, mà độ sáng
+> thì đang ở đúng sàn: đo được **0,050 lúc 12h và 0,019 lúc 22h**, dưới ngưỡng mắt. Sửa sang đúng
+> vật liệu lịch sử ⇒ **0,200 / 0,191 / 0,198**. Đây là chính bệnh của cả Phase 9D, thu nhỏ vào một
+> kỷ: một trục (sáng) phải gánh việc của hai (sáng + sắc).
 
 - **Module**: `src/engine/city3d/palette3d.js` (luật `roadL`), đo ở Phase 9B
 - **Priority**: Medium-High
@@ -1529,7 +1558,28 @@
 
 ---
 
-## #27 — Ba cặp kỷ có mặt đường gần trùng nhau VÀO BAN ĐÊM (ban ngày thì không)
+## #27 — ✅ [ĐÃ XỬ LÝ 2026-08-16, Phase 9D] Ba cặp kỷ có mặt đường gần trùng nhau VÀO BAN ĐÊM (ban ngày thì không)
+
+> **ĐÃ ĐÓNG CÙNG #30 — và đóng bằng cách BỎ HẲN câu hỏi cũ, không phải bằng cách kéo con số lên.**
+>
+> Mục này đo bản sắc mặt đường bằng **khoảng cách RGB**. Sau khi #30 được vá (phép đẩy độ đậm có
+> trần), bài test `15 KỶ RA 15 MẶT ĐƯỜNG` ĐỎ ở cặp **11↔13 (7,9)** — và nó đỏ **một cách đúng đắn**:
+> kỷ 11 là lưới Manhattan, kỷ 13 là phố Nhật, **cả hai đều lát NHỰA ĐƯỜNG**. Nhựa đường ở New York
+> và ở Tokyo là cùng một vật liệu, nên chúng gần nhau về màu là sự thật vật lý; ép hai con đường
+> nhựa ra hai màu khác nhau để một con số đẹp lên mới là nói dối. Đàm nói thẳng ở Phase 9D:
+> *"không nới threshold và không giả màu — hãy thay metric RGB bằng đặc trưng structural thực sự."*
+>
+> ⇒ Phép đo bản sắc chuyển sang **8 trục CẤU TRÚC** (`src/engine/city3d/streetStyle.test.js`), mỗi
+> trục lượng hoá về thứ mắt thật sự đọc được, suy từ hai phép đo đã có (một ô ≈ 64 điểm ảnh; ngưỡng
+> mắt 12/255) chứ không từ ba hằng số chọn tay. Kết quả trên **cả 105 cặp**: cặp yếu nhất khác nhau
+> **3/8 trục**, trung vị **6/8**, không cặp nào dưới 3; **kỷ liền nhau** yếu nhất cũng 3/8.
+> Kèm **hai bài đối chứng**: một thế giới 15 kỷ giống hệt nhau (phải ra 0 trục) và một thế giới 15 kỷ
+> chỉ chênh nhau 0,001 ô ≈ 0,06 điểm ảnh (sàn 3 trục phải TỪ CHỐI) — để ngưỡng không bị nới dần.
+>
+> Tầng bảng màu giữ lại đúng hai lời hứa mà **màu** thật sự chịu trách nhiệm được: bảng không dẹt
+> (trung vị 105 cặp ≥ 90; đo được 116,4 lúc 12h và 115,9 lúc 22h) và không hai kỷ nào ra ĐÚNG cùng
+> một mã màu. Cộng thêm một bài canh chiều ngược: **cặp gần nhau nhất về màu PHẢI là hai kỷ dùng
+> chung vật liệu** — nếu một ngày gạch nung và nhựa đường ra cùng màu thì lúc đó bảng màu mới có lỗi.
 
 - **Module**: `src/engine/city3d/eraStyle.js` (`roadColor` 15 kỷ), phát hiện + đo ở Phase 7D
 - **Priority**: Low

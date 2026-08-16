@@ -47,6 +47,9 @@ import { BufferAttribute, BufferGeometry, Color } from 'three';
 import {
   APRON_CELLS, APRON_DROP, APRON_EDGE, TERRAIN_SUB,
 } from '../../../engine/city3d/terrain';
+import {
+  carriagewayExtents, getStreetStyle, pavingSubdivision, streetCrossSection,
+} from '../../../engine/city3d/streetStyle';
 
 /**
  * Số ô con trên MỘT ô thành phố, cho tấm ĐẤT.
@@ -59,12 +62,6 @@ import {
 const SUB = TERRAIN_SUB;
 
 /**
- * Số ô con trên một ô ĐƯỜNG. Nhỏ hơn nhiều vì mặt đường ngắn (một ô) và gần như phẳng trong lòng
- * một ô — nó chỉ cần đủ đỉnh để bám theo sườn dốc bên dưới, không cần tả hình dạng quả đồi.
- */
-const ROAD_SUB = 2;
-
-/**
  * Mặt đường nhô lên tí xíu để không chọi (z-fight) với mặt đất ngay dưới.
  * ⚠️ `sceneGraph.js` NHẬP hằng số này chứ không viết lại số 0,014 của riêng nó — cư dân phải đứng
  * đúng trên mặt đường, và hai con số song song thì chỉ cần một lần chỉnh là cả thành phố lún nửa
@@ -73,16 +70,18 @@ const ROAD_SUB = 2;
 export const ROAD_LIFT = 0.014;
 
 /**
- * Bề rộng NGÕ PHỐ so với đại lộ.
+ * ⚠️ `LANE_WIDTH` ĐÃ ĐƯỢC GỠ Ở PHASE 9D — ĐỪNG DỰNG LẠI NÓ Ở ĐÂY.
  *
- * ⚠️ 0,64 chứ không phải 0,85: chênh lệch nhỏ hơn thì ở cỡ hiển thị thật (thẻ cảnh cao ~300px trên
- * điện thoại) mắt không đọc ra hai hạng đường, và cả mạng lưới lại quay về "tấm lưới đều tăm tắp".
- * Cũng KHÔNG hẹp hơn nữa: dưới ~0,55 thì ngõ mảnh như sợi chỉ và cư dân đi bộ trên đó sẽ lộ ra
- * ngoài mép đường (họ vẫn đi đúng tâm ô).
+ * Nó từng là MỘT hằng số 0,64 dùng chung cho cả 15 kỷ, và chính điều đó là một phần của nguyên nhân
+ * gốc mà 9D phải chữa: khi bề rộng là hằng số, trục "bề rộng" không mang được bản sắc nào, nên toàn
+ * bộ sức ép "15 kỷ phải khác nhau" dồn về màu — rồi độ đậm bị căng tới mức nhựa đường tụt xuống
+ * dưới ngưỡng nhìn được (`TECH_DEBT #30`).
  *
- * ⚠️ TỪ PHASE 8C ĐÂY LÀ NHÀ CỦA NÓ, VÌ ĐÂY LÀ NƠI DUY NHẤT CÒN DỰNG MẶT ĐƯỜNG.
+ * Nay bề rộng do `streetStyle.js` khai theo từng kỷ (ngõ trung cổ 0,30 · đại lộ Dubai 1,00), và
+ * `streetCrossSection()` là nơi DUY NHẤT tính ra nửa bề rộng. Cần một con số bề rộng thì hỏi ở đó.
+ * Ràng buộc cũ vẫn còn hiệu lực và nay nằm trong `streetStyle.test.js`: ngõ phải hẹp hơn đại lộ,
+ * nhưng không được hẹp tới mức cư dân (đi đúng tâm ô) lòi ra ngoài mép đường.
  */
-export const LANE_WIDTH = 0.64;
 
 /**
  * Biên độ VẾT LOANG trên mặt đất, tính theo phần độ sáng (±).
@@ -227,9 +226,29 @@ function surfaceKit({ terrain, gridSize, layout, palette }) {
   return { toWorld, heightAt, normalAt, groundColorAt };
 }
 
+/**
+ * BỐN LỚP CỦA MỘT CON ĐƯỜNG, đánh số để bên ĐO không phải tự đoán.
+ *
+ * ⚠️ ĐÂY LÀ BÀI HỌC CỦA `TECH_DEBT #22` ĐƯỢC ÁP NGAY LÚC DỰNG, chứ không phải sau khi trả giá lần
+ * nữa. Kết luận của #22: *"việc 'đâu là mái' phải là dữ kiện do bên DỰNG cung cấp, không phải bên
+ * ĐO đoán"* — vì mọi phép đoán đều đứng trên một giả định mỹ thuật rồi chết lặng khi mỹ thuật đổi.
+ * Ở đây bốn lớp NẰM CHUNG một khối hình học (để giữ đúng một lệnh vẽ), nên nếu không có bảng này
+ * thì bài test buộc phải phân loại bằng MÀU — và màu thì chồng lấn thật: mặt đường mòn nhất của
+ * kỷ đá cuội (nền × 1,23) sáng hơn vỉa hè của kỷ nhựa đường. Một phép đo như vậy sẽ báo sai mà
+ * không ai biết.
+ *
+ * Giá phải trả: 1 byte cho mỗi tam giác (~7 KB cho cả mạng đường), KHÔNG lên GPU.
+ */
+export const ROAD_PART = {
+  CARRIAGEWAY: 0,   // lòng đường
+  WALK: 1,          // vỉa hè
+  CURB: 2,          // mặt đứng của bó vỉa
+  MARKING: 3,       // vạch kẻ
+};
+
 /** Bộ gom đỉnh: đẩy vào rồi đúc thành `BufferGeometry` một lần ở cuối. */
 function createSink() {
-  return { pos: [], nor: [], col: [], tris: 0 };
+  return { pos: [], nor: [], col: [], tris: 0, kinds: [] };
 }
 
 function finish(sink) {
@@ -239,7 +258,9 @@ function finish(sink) {
   geometry.setAttribute('normal', new BufferAttribute(new Float32Array(sink.nor), 3));
   geometry.setAttribute('color', new BufferAttribute(new Float32Array(sink.col), 3));
   geometry.computeBoundingSphere();
-  return { geometry, triangles: sink.tris };
+  const out = { geometry, triangles: sink.tris };
+  if (sink.kinds.length) out.kinds = Uint8Array.from(sink.kinds);
+  return out;
 }
 
 /**
@@ -310,10 +331,46 @@ export function buildTerrainSurface({ terrain, gridSize, layout, palette }) {
 }
 
 /**
- * Dựng MẶT ĐƯỜNG — một tấm riêng, bám sát tấm đất bên dưới.
+ * Vạch kẻ và mặt vỉa hè nhô thêm bao nhiêu so với mặt đường, để không chọi mặt (z-fight).
+ * Rất nhỏ — đây là chống chọi mặt, không phải một bậc thềm.
+ */
+const MARKING_LIFT = 0.0035;
+
+/** Vạch kẻ tim đường rộng bao nhiêu phần của lòng đường. */
+const MARKING_WIDTH = 0.10;
+/** Vạch đứt: mỗi ô đường có bấy nhiêu đoạn, mỗi đoạn dài bằng nửa bước. */
+const DASH_SEGMENTS = 3;
+/** Vạch sang đường (kỷ 13): số sọc ngựa vằn cắt ngang. */
+const CROSSING_BARS = 5;
+
+/**
+ * Nhiễu tất định cho ĐỘ MÒN của từng viên lát. Không dùng `Math.random` (bảo tàng phải bất động —
+ * ADR-007: cùng một thành phố phải dựng ra y hệt, mãi mãi), và không dùng `terrain.tintAt` vì
+ * trường đó có tần số của MẶT ĐẤT (~2,9 ô) nên mọi viên lát trong một ô sẽ nhận gần cùng một giá
+ * trị — tức không có sự khác nhau giữa viên nọ và viên kia, đúng thứ ta đang cần.
+ */
+function stoneNoise(a, b) {
+  const s = Math.sin(a * 127.1 + b * 311.7) * 43758.5453;
+  return s - Math.floor(s);
+}
+
+/**
+ * Dựng ĐƯỜNG PHỐ — không còn là một dải màu, mà là một mặt cắt có lớp.
  *
- * Thứ bậc đường: `variant` 0 = đại lộ/ngã tư (rộng hết ô) · 1 = phố dọc (hẹp bề ngang) · 2 = phố
- * ngang (hẹp bề sâu). Xem `ROAD_CELLS` trong `cityLayout.js`.
+ * ```
+ *   cỏ │ vỉa hè │ bó vỉa │←──── lòng đường ────→│ bó vỉa │ vỉa hè │ cỏ
+ * ```
+ *
+ * Thứ bậc đường: `variant` 0 = đại lộ/ngã tư · 1 = phố dọc (hẹp bề ngang) · 2 = phố ngang (hẹp bề
+ * sâu). Xem `ROAD_CELLS` trong `cityLayout.js`. Bề rộng KHÔNG còn là hằng số `LANE_WIDTH` chung cho
+ * mọi kỷ — nó đọc từ `streetStyle.js`, vì bề rộng là trục bản sắc mạnh nhất (mắt đọc bề rộng trước
+ * cả màu, và đại lộ Haussmann với ngõ trung cổ khác nhau ở đó chứ không ở sắc xám).
+ *
+ * ⚠️ TẤT CẢ NẰM TRONG **MỘT** KHỐI HÌNH HỌC, DÙNG CHUNG **MỘT** VẬT LIỆU. Bó vỉa, vỉa hè và vạch kẻ
+ * phân biệt nhau bằng MÀU ĐỈNH + HÌNH DẠNG, không bằng vật liệu riêng — nên cả hệ thống đường vẫn
+ * đúng **một lệnh vẽ**, y như trước phase này. Đổi lấy: vỉa hè không có độ nhám riêng. Đó là đánh
+ * đổi có chủ đích và đã cân: một lệnh vẽ nữa để vỉa hè nhám hơn lòng đường 0,04 là trả giá cao cho
+ * thứ gần như không nhìn ra, trong khi CHIỀU CAO bó vỉa (thứ tạo bóng đổ dọc mép) thì nhìn ra ngay.
  *
  * ⚠️ Ô đường KHÔNG được vẽ như một tấm phẳng đặt lên đồi — nó lấy cao độ ở TỪNG đỉnh của chính
  * mình, nên nó cong theo sườn dốc. Đây là nửa còn lại của việc bỏ thềm bậc: mặt đất đã mượt mà
@@ -324,6 +381,8 @@ export function buildTerrainSurface({ terrain, gridSize, layout, palette }) {
 export function buildRoadSurface({ terrain, gridSize, layout, palette }) {
   if (!terrain || !Number.isFinite(gridSize) || gridSize < 1) return null;
   const kit = surfaceKit({ terrain, gridSize, layout, palette });
+  const street = getStreetStyle(layout?.era);
+  const sub = pavingSubdivision(street);
 
   const scratch = new Color();
   const rgbOf = (hex) => { scratch.setHex(hex); return [scratch.r, scratch.g, scratch.b]; };
@@ -334,33 +393,189 @@ export function buildRoadSurface({ terrain, gridSize, layout, palette }) {
   // là thứ mắt đọc, màu chỉ để nhấn thêm.
   const laneRgb = rgbOf(palette?.roadLane ?? palette?.road ?? palette?.edge ?? 0x888888);
 
+  /**
+   * VỈA HÈ SÁNG HƠN LÒNG ĐƯỜNG, BÓ VỈA SÁNG HƠN NỮA — cả hai SUY TỪ màu mặt đường chứ không khai
+   * riêng, đúng lý lẽ mà `applyBareEarth` đã ghi: 15 kỷ có 15 vật liệu, một màu bê tông chốt cứng
+   * sẽ đúng ở vài kỷ và chỏi hẳn ở số còn lại. Vỉa hè thật luôn nhạt hơn lòng đường (ít bánh xe
+   * miết, ít dầu máy) — quan sát vật lý, không phải lựa chọn hoà sắc.
+   *
+   * ⚠️ PHA VỀ TRẮNG, KHÔNG NHÂN HỆ SỐ. Nhân thì vật liệu càng tối càng ít được nâng (nhựa đường
+   * 0,11 × 1,26 = 0,14 — mắt không đọc ra), tức đúng những kỷ CẦN tương phản nhất lại nhận ít nhất.
+   * Pha về trắng thì ngược lại: nhựa 0,11 → 0,25 (chênh rõ), còn bê tông sáng 0,70 → 0,75 (nhẹ
+   * nhàng, không thành vệt chói). Đây là cùng một hình dạng lỗi với `TECH_DEBT #30` — một phép biến
+   * đổi tỉ lệ thuận áp lên những giá trị chênh nhau nhiều lần thì sớm muộn cũng sai ở một đầu.
+   */
+  const lighten = (rgb, t) => rgb.map((c) => c + (1 - c) * t);
+  const walkRgb = lighten(avenueRgb, 0.16);
+  const curbRgb = lighten(avenueRgb, 0.26);
+  const markRgb = [0.92, 0.88, 0.66];   // vạch sơn bạc màu — không trắng tinh, đó là sơn cũ
+
   const sink = createSink();
+  const roadCells = new Set();
+  for (const prop of layout?.props ?? []) {
+    if (prop?.kind === 'road') roadCells.add(`${prop.x}|${prop.y}`);
+  }
+
+  /** Đẩy một đỉnh với màu cho sẵn. `lift` cộng thêm vào cao độ (bó vỉa, vạch kẻ). */
+  const push = (u, v, rgb, lift = 0) => {
+    const n = kit.normalAt(u, v);
+    sink.pos.push(kit.toWorld(u), kit.heightAt(u, v) + ROAD_LIFT + lift, kit.toWorld(v));
+    sink.nor.push(n[0], n[1], n[2]);
+    sink.col.push(rgb[0], rgb[1], rgb[2]);
+  };
+
+  /** Một tấm chữ nhật nằm NGANG (mặt trên), 2 tam giác. `part` = lớp nào (xem `ROAD_PART`). */
+  const quad = (ua, va, ub, vb, rgb, lift, part) => {
+    push(ua, va, rgb, lift); push(ua, vb, rgb, lift); push(ub, vb, rgb, lift);
+    push(ua, va, rgb, lift); push(ub, vb, rgb, lift); push(ub, va, rgb, lift);
+    sink.kinds.push(part, part);
+    sink.tris += 2;
+  };
+
+  /**
+   * Một dải ĐỨNG — mặt bên của bó vỉa. Đây là thứ DUY NHẤT trong cả hệ thống đường có mặt thẳng
+   * đứng, và chính nó tạo ra vệt bóng chạy dọc mép đường. Bóng ấy cho con đường CHIỀU SÂU ngay cả
+   * khi màu đường và màu đất gần nhau — tức nó là trục bản sắc không phụ thuộc vào bảng màu.
+   * Pháp tuyến hướng RA NGOÀI theo trục đang chạy (`axis` = 'u' hoặc 'v'), dấu theo `outward`.
+   */
+  const curbFace = (ua, va, ub, vb, height, axis, outward) => {
+    const nx = axis === 'u' ? outward : 0;
+    const nz = axis === 'u' ? 0 : outward;
+    const emit = (u, v, lift) => {
+      sink.pos.push(kit.toWorld(u), kit.heightAt(u, v) + ROAD_LIFT + lift, kit.toWorld(v));
+      sink.nor.push(nx, 0, nz);
+      sink.col.push(curbRgb[0], curbRgb[1], curbRgb[2]);
+    };
+    emit(ua, va, 0); emit(ub, vb, 0); emit(ub, vb, height);
+    emit(ua, va, 0); emit(ub, vb, height); emit(ua, va, height);
+    sink.kinds.push(ROAD_PART.CURB, ROAD_PART.CURB);
+    sink.tris += 2;
+  };
 
   for (const prop of layout?.props ?? []) {
     if (prop?.kind !== 'road') continue;
-    const lane = prop.variant === 1 || prop.variant === 2;
-    const rgb = lane ? laneRgb : avenueRgb;
-    // Nửa bề rộng theo từng trục. Ngõ dọc (variant 1) hẹp bề NGANG; ngõ ngang (variant 2) hẹp bề
-    // SÂU. Đại lộ và ngã tư rộng trọn ô, nên hai ô đại lộ kề nhau khít không kẽ hở.
-    const halfU = prop.variant === 1 ? LANE_WIDTH / 2 : 0.5;
-    const halfV = prop.variant === 2 ? LANE_WIDTH / 2 : 0.5;
+    const isLane = prop.variant === 1 || prop.variant === 2;
+    const baseRgb = isLane ? laneRgb : avenueRgb;
+    const cross = streetCrossSection(street, isLane);
 
-    const push = (u, v) => {
-      const n = kit.normalAt(u, v);
-      sink.pos.push(kit.toWorld(u), kit.heightAt(u, v) + ROAD_LIFT, kit.toWorld(v));
-      sink.nor.push(n[0], n[1], n[2]);
-      sink.col.push(rgb[0], rgb[1], rgb[2]);
+    // ⚠️ BỐN MÉP LẤY TỪ HÀNG XÓM, KHÔNG TỪ `variant`. Xem `carriagewayExtents` để biết vì sao —
+    // tóm tắt: bề rộng là đại lượng của MẶT CẮT NGANG, áp nó lên chiều DỌC thì con đường vỡ thành
+    // những mảnh vuông rời nhau có cỏ chen giữa (đã nhìn thấy tận mắt ở kỷ 13).
+    const nối = {
+      west: roadCells.has(`${prop.x - 1}|${prop.y}`),
+      east: roadCells.has(`${prop.x + 1}|${prop.y}`),
+      north: roadCells.has(`${prop.x}|${prop.y - 1}`),
+      south: roadCells.has(`${prop.x}|${prop.y + 1}`),
     };
+    const ext = carriagewayExtents(cross, nối);
+    const u0 = prop.x - ext.west; const u1 = prop.x + ext.east;
+    const v0 = prop.y - ext.north; const v1 = prop.y + ext.south;
 
-    for (let j = 0; j < ROAD_SUB; j += 1) {
-      for (let i = 0; i < ROAD_SUB; i += 1) {
-        const ua = prop.x - halfU + (i / ROAD_SUB) * halfU * 2;
-        const ub = prop.x - halfU + ((i + 1) / ROAD_SUB) * halfU * 2;
-        const va = prop.y - halfV + (j / ROAD_SUB) * halfV * 2;
-        const vb = prop.y - halfV + ((j + 1) / ROAD_SUB) * halfV * 2;
-        push(ua, va); push(ua, vb); push(ub, vb);
-        push(ua, va); push(ub, vb); push(ub, va);
-        sink.tris += 2;
+    // ── LÒNG ĐƯỜNG — chia theo CỠ VIÊN LÁT ────────────────────────────────────
+    // ⚠️ Bốn đỉnh của một ô con nhận CÙNG một màu ⇒ viên lát PHẲNG có mép rõ. Hình học ở đây không
+    // đánh chỉ mục (mỗi tam giác mang ba đỉnh riêng) nên điều đó có được miễn phí — không cần thêm
+    // thuộc tính, không cần shader riêng. Nhựa đường khai `stone = 0` ⇒ `sub = 2` và biên độ mòn
+    // 0,10 ⇒ mặt gần như liền, đúng thứ nó phải là.
+    for (let j = 0; j < sub; j += 1) {
+      for (let i = 0; i < sub; i += 1) {
+        const ua = u0 + ((u1 - u0) * i) / sub;
+        const ub = u0 + ((u1 - u0) * (i + 1)) / sub;
+        const va = v0 + ((v1 - v0) * j) / sub;
+        const vb = v0 + ((v1 - v0) * (j + 1)) / sub;
+        // Độ mòn của RIÊNG viên này. Hạt lấy theo toạ độ TUYỆT ĐỐI của viên (không phải chỉ số
+        // trong ô), nên hai ô đường kề nhau không lặp lại cùng một mẫu — nếu lấy theo `i,j` thì cả
+        // mạng đường sẽ hiện ra một hoạ tiết tuần hoàn đúng bằng một ô, tức lại là cái lưới.
+        const n = stoneNoise(prop.x * sub + i, prop.y * sub + j);
+        const k = 1 + (n - 0.5) * street.wear;
+        quad(ua, va, ub, vb, baseRgb.map((c) => Math.min(1, c * k)), 0, ROAD_PART.CARRIAGEWAY);
+      }
+    }
+
+    // ── BÓ VỈA + VỈA HÈ ───────────────────────────────────────────────────────
+    // Chỉ dựng ở CẠNH NGOÀI — cạnh nào giáp một ô đường khác thì không có vỉa hè, vì hai con đường
+    // gặp nhau thì mặt đường phải liền. Không kiểm điều này thì ngã tư mọc bó vỉa chắn ngang giữa
+    // lối đi, và cư dân (đi đúng tâm ô) sẽ bước xuyên qua nó.
+    if (cross.walk > 0.01) {
+      const sides = [
+        { du: -1, dv: 0, có: nối.west }, { du: 1, dv: 0, có: nối.east },
+        { du: 0, dv: -1, có: nối.north }, { du: 0, dv: 1, có: nối.south },
+      ];
+      for (const side of sides) {
+        if (side.có) continue;
+        const axis = side.du !== 0 ? 'u' : 'v';
+        const outward = side.du !== 0 ? side.du : side.dv;
+        // Mép trong = đúng mép lòng đường phía ấy; vỉa hè chạy dọc trọn bề của trục vuông góc, nên
+        // ở ngã tư nó ôm sát tới tận chỗ con đường cắt ngang thay vì hụt một khúc.
+        const inner = outward < 0
+          ? (axis === 'u' ? ext.west : ext.north)
+          : (axis === 'u' ? ext.east : ext.south);
+        const outer = inner + cross.walk;
+        const c0 = (axis === 'u' ? prop.x : prop.y) + outward * inner;
+        const c1 = (axis === 'u' ? prop.x : prop.y) + outward * outer;
+        const a0 = axis === 'u' ? v0 : u0;
+        const a1 = axis === 'u' ? v1 : u1;
+
+        if (cross.curb > 0) {
+          curbFace(
+            axis === 'u' ? c0 : a0, axis === 'u' ? a0 : c0,
+            axis === 'u' ? c0 : a1, axis === 'u' ? a1 : c0,
+            cross.curb, axis, outward,
+          );
+        }
+        // Mặt trên vỉa hè, nhô đúng bằng chiều cao bó vỉa.
+        if (axis === 'u') {
+          quad(Math.min(c0, c1), a0, Math.max(c0, c1), a1,
+            walkRgb, cross.curb + MARKING_LIFT, ROAD_PART.WALK);
+        } else {
+          quad(a0, Math.min(c0, c1), a1, Math.max(c0, c1),
+            walkRgb, cross.curb + MARKING_LIFT, ROAD_PART.WALK);
+        }
+      }
+    }
+
+    // ── VẠCH KẺ ───────────────────────────────────────────────────────────────
+    // ⚠️ CHỈ TRÊN ĐẠI LỘ, và chỉ ở kỷ có vạch. Vạch tim đường kẻ vào một con ngõ 0,30 ô thì nó
+    // chiếm gần hết lòng đường và đọc ra thành "đường sơn trắng", không phải "đường có vạch".
+    // ⚠️ HƯỚNG VẠCH CŨNG ĐỌC TỪ HÀNG XÓM: vạch phải chạy DỌC theo hướng con đường đi, mà hướng ấy
+    // là "phía nào có ô đường nối tiếp". Suy từ `variant` thì ngã tư (variant 0) luôn ra một hướng
+    // cố định và vạch sẽ cắt ngang chính con đường ở một nửa số ngã tư.
+    if (street.markings !== 'none' && !isLane) {
+      const dọc = nối.north || nối.south;              // đường chạy theo trục v?
+      const along = dọc ? 'v' : 'u';
+      const halfU = (u1 - u0) / 2; const halfV = (v1 - v0) / 2;
+      const halfMark = Math.min(halfU, halfV) * MARKING_WIDTH;
+      const centre = dọc ? (u0 + u1) / 2 : (v0 + v1) / 2;
+      const from = dọc ? v0 : u0;
+      const span = dọc ? v1 - v0 : u1 - u0;
+
+      if (street.markings === 'crossing') {
+        // Sọc ngựa vằn cắt NGANG đường, ở đầu ô — đọc ra ngay là chỗ sang đường.
+        const ngang = dọc ? u1 - u0 : v1 - v0;
+        for (let b = 0; b < CROSSING_BARS; b += 1) {
+          const w0 = centre - ngang / 2 + (ngang * (b + 0.15)) / CROSSING_BARS;
+          const w1 = centre - ngang / 2 + (ngang * (b + 0.6)) / CROSSING_BARS;
+          const lo = from + span * 0.06;
+          const hi = from + span * 0.22;
+          if (along === 'v') {
+            quad(Math.min(w0, w1), lo, Math.max(w0, w1), hi, markRgb, MARKING_LIFT, ROAD_PART.MARKING);
+          } else {
+            quad(lo, Math.min(w0, w1), hi, Math.max(w0, w1), markRgb, MARKING_LIFT, ROAD_PART.MARKING);
+          }
+        }
+      } else {
+        // `center` = một vạch liền suốt ô · `dashed` = ba đoạn ngắt quãng.
+        const segs = street.markings === 'dashed' ? DASH_SEGMENTS : 1;
+        for (let s = 0; s < segs; s += 1) {
+          const t0 = (s + (segs > 1 ? 0.15 : 0)) / segs;
+          const t1 = (s + (segs > 1 ? 0.75 : 1)) / segs;
+          const lo = from + span * t0;
+          const hi = from + span * t1;
+          if (along === 'v') {
+            quad(centre - halfMark, lo, centre + halfMark, hi, markRgb, MARKING_LIFT, ROAD_PART.MARKING);
+          } else {
+            quad(lo, centre - halfMark, hi, centre + halfMark, markRgb, MARKING_LIFT, ROAD_PART.MARKING);
+          }
+        }
       }
     }
   }

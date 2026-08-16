@@ -1,9 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { LANE_WIDTH, ROAD_LIFT, buildRoadSurface, buildTerrainSurface } from './terrainMesh.js';
+import { ROAD_LIFT, ROAD_PART, buildRoadSurface, buildTerrainSurface } from './terrainMesh.js';
 import { APRON_DROP, buildTerrain } from '../../../engine/city3d/terrain.js';
 import { buildScenePalette } from '../../../engine/city3d/palette3d.js';
+import {
+  carriagewayExtents, getStreetStyle, streetCrossSection,
+} from '../../../engine/city3d/streetStyle.js';
 import { computeCityLayout } from '../../../engine/cityLayout.js';
 import { BLUEPRINT_CATALOG } from '../../../engine/constants.js';
 
@@ -138,41 +141,85 @@ test('MẶT ĐƯỜNG BÁM SÁT SƯỜN DỐC — đúng `ROAD_LIFT` phía trên
   // ⚠️ Nửa còn lại của việc bỏ thềm bậc, và là nửa dễ quên: mặt đất đã mượt mà đường vẫn là những
   // phiến vuông nằm ngang thì cái lưới quay về ngay, chỉ mảnh hơn. Hỏi từng ĐỈNH một, không hỏi
   // trung bình — một phiến phẳng vẫn có thể trùng cao độ ở tâm mà sai ở bốn góc.
-  let đã_kiểm = 0;
+  //
+  // ⚠️ TỪ PHASE 9D KHÔNG PHẢI ĐỈNH ĐƯỜNG NÀO CŨNG NẰM ĐÚNG `ROAD_LIFT`: vỉa hè nhô lên bằng chiều
+  // cao bó vỉa, vạch kẻ nhô một chút để khỏi chọi mặt, và mặt bên bó vỉa thì có hẳn hai cao độ. Bài
+  // này vì vậy hỏi RIÊNG **lòng đường** một cách chính xác tuyệt đối — đó là 90% số tam giác và là
+  // đúng thứ "phiến phẳng" sẽ phá — rồi hỏi các lớp còn lại rằng chúng có nằm trong một dải mỏng
+  // ngay trên mặt đất không. Lớp nào là lớp nào thì đọc từ `road.kinds` do chính bên dựng cấp.
+  const NHÔ_TỐI_ĐA = 0.06;   // bó vỉa cao nhất (0,055) + chống chọi mặt (0,0035)
+  let đã_kiểm = 0; let lòng_đường = 0;
   for (const era of ERAS) {
     const { terrain, road } = dựng(era);
     if (!road) continue;
-    for (const [x, y, z] of đỉnh(road)) {
-      const đúng = terrain.surfaceHeightAt(về_ô(x), về_ô(z)) + ROAD_LIFT;
-      assert.ok(
-        Math.abs(y - đúng) < 1e-5,
-        `kỷ ${era}: đỉnh đường (${x.toFixed(2)},${z.toFixed(2)}) ở ${y.toFixed(4)}, đáng lẽ `
-        + `${đúng.toFixed(4)} — mặt đường đang là phiến phẳng, không bám sườn dốc`,
-      );
-      đã_kiểm += 1;
+    const v = đỉnh(road);
+    for (let t = 0; t < road.kinds.length; t += 1) {
+      const là_lòng = road.kinds[t] === ROAD_PART.CARRIAGEWAY;
+      for (let k = 0; k < 3; k += 1) {
+        const [x, y, z] = v[t * 3 + k];
+        const nền = terrain.surfaceHeightAt(về_ô(x), về_ô(z)) + ROAD_LIFT;
+        if (là_lòng) {
+          assert.ok(
+            Math.abs(y - nền) < 1e-5,
+            `kỷ ${era}: đỉnh LÒNG ĐƯỜNG (${x.toFixed(2)},${z.toFixed(2)}) ở ${y.toFixed(4)}, đáng lẽ `
+            + `${nền.toFixed(4)} — mặt đường đang là phiến phẳng, không bám sườn dốc`,
+          );
+          lòng_đường += 1;
+        } else {
+          assert.ok(
+            y >= nền - 1e-5 && y <= nền + NHÔ_TỐI_ĐA + 1e-5,
+            `kỷ ${era}: đỉnh lớp ${road.kinds[t]} ở (${x.toFixed(2)},${z.toFixed(2)}) cao ${y.toFixed(4)}, `
+            + `ngoài dải [${nền.toFixed(4)} … ${(nền + NHÔ_TỐI_ĐA).toFixed(4)}] — vỉa hè/bó vỉa/vạch `
+            + 'kẻ đang trôi khỏi mặt đường',
+          );
+        }
+        đã_kiểm += 1;
+      }
     }
   }
   assert.ok(đã_kiểm > 100, `chỉ kiểm được ${đã_kiểm} đỉnh đường — bài test này đang chạy không`);
+  assert.ok(lòng_đường > 100, `chỉ kiểm được ${lòng_đường} đỉnh LÒNG ĐƯỜNG — mặt nạ lớp đang hỏng`);
 });
 
-test('NGÕ PHỐ HẸP HƠN ĐẠI LỘ **VÀ NẰM CÂN GIỮA Ô** — chính ràng buộc đã bắt tách tấm đường ra', () => {
+test('LÒNG ĐƯỜNG DỰNG ĐÚNG BỐN MÉP MÀ `carriagewayExtents` KHAI — hẹp ngang, LIỀN dọc', () => {
   // ⚠️ ĐÂY LÀ LÝ DO MẶT ĐƯỜNG KHÔNG NẰM CHUNG LƯỚI VỚI MẶT ĐẤT. Nhét chung thì bề rộng ngõ bị làm
   // tròn về bội của một ô con (1/3), mà muốn CÂN GIỮA thì số ô con phải cùng chẵn-lẻ với 3 ⇒ chỉ
   // còn 1/3 (mảnh như sợi chỉ) hoặc 3/3 (bằng đại lộ). Lấy 2/3 thì đúng bề rộng nhưng LỆCH TÂM
-  // 1/6 ô, và cư dân đi đúng tâm ô sẽ đi sát mép đường. Bài này khoá cả hai vế cùng lúc: bỏ vế
-  // "cân giữa" thì bản dựng chung lưới sẽ lại qua cửa.
-  let ngõ = 0; let đại_lộ = 0;
+  // 1/6 ô, và cư dân đi đúng tâm ô sẽ đi sát mép đường.
+  //
+  // ⚠️ VÀ NÓ CANH THÊM MỘT LỖI ĐÃ NHÌN THẤY TẬN MẮT Ở KỶ 13: bản đầu Phase 9D thu hẹp ô đường ở CẢ
+  // HAI chiều, nên hai ô kề nhau chừa một khe cỏ và con đường vỡ thành những mảnh vuông rời rạc.
+  // Bề rộng là đại lượng của mặt cắt NGANG; chiều DỌC phải vươn tới ranh giới ô khi còn đường nối
+  // tiếp. Bài này hỏi CHÍNH hàm thuần mà bên dựng hỏi (`carriagewayExtents`) rồi đối chiếu với đỉnh
+  // dựng ra — nó canh việc bên dựng CÓ DÙNG luật ấy, chứ không diễn đạt lại luật bằng công thức
+  // riêng (hai công thức "tương đương" luôn lệch nhau ở biên — Phase 3Y).
+  let ngõ = 0; let đại_lộ = 0; let liền = 0;
   for (const era of ERAS) {
     const { layout, road } = dựng(era);
     if (!road) continue;
+    const street = getStreetStyle(era);
+    const ôĐường = new Set();
+    for (const prop of layout.props ?? []) {
+      if (prop.kind === 'road') ôĐường.add(`${prop.x}|${prop.y}`);
+    }
     // ⚠️ GOM THEO TAM GIÁC, KHÔNG THEO ĐỈNH. Bản đầu lọc "mọi đỉnh cách tâm ô ≤ 0,5" và báo ngõ
     // dọc kỷ 1 rộng đúng 1,0 — nghe y hệt một lỗi thật. Không phải: ô ĐẠI LỘ bên cạnh có đỉnh nằm
     // đúng trên ranh giới ±0,5, nên chúng lọt vào mẫu của ô ngõ và thổi bề ngang lên. Mỗi tam giác
     // thì chỉ thuộc về MỘT ô (trọng tâm nằm hẳn bên trong), nên gom theo tam giác thì không có
     // chuyện nhận vơ. Cùng bẫy với "hạ tầng epic có hai mảng rộng bằng nhau" ở Phase 8A.
+    //
+    // ⚠️ VÀ CHỈ LẤY TAM GIÁC **LÒNG ĐƯỜNG**. Từ Phase 9D một ô đường còn có vỉa hè + bó vỉa nằm
+    // NGOÀI lòng đường, nên "bề ngang của mọi tam giác trong ô" nay là bề ngang cả mặt cắt chứ
+    // không phải bề rộng con đường — đo nhầm thì bài này báo ngõ rộng gần gấp đôi. Lớp nào là lớp
+    // nào thì HỎI CHÍNH BÊN DỰNG (`road.kinds`), không phân loại lại bằng màu: mặt đường mòn nhất
+    // của kỷ đá cuội sáng hơn vỉa hè của kỷ nhựa đường, nên phân loại bằng màu là đoán. Đây đúng
+    // bài học `TECH_DEBT #22` — việc "đâu là cái gì" phải là dữ kiện do bên DỰNG cung cấp.
     const v = đỉnh(road);
+    assert.ok(road.kinds?.length === v.length / 3, `kỷ ${era}: thiếu bảng phân lớp tam giác`);
     const theo_ô = new Map();
-    for (let i = 0; i < v.length; i += 3) {
+    for (let t = 0; t < road.kinds.length; t += 1) {
+      if (road.kinds[t] !== ROAD_PART.CARRIAGEWAY) continue;
+      const i = t * 3;
       const cx = (về_ô(v[i][0]) + về_ô(v[i + 1][0]) + về_ô(v[i + 2][0])) / 3;
       const cz = (về_ô(v[i][2]) + về_ô(v[i + 1][2]) + về_ô(v[i + 2][2])) / 3;
       const key = `${Math.round(cx)}|${Math.round(cz)}`;
@@ -183,42 +230,96 @@ test('NGÕ PHỐ HẸP HƠN ĐẠI LỘ **VÀ NẰM CÂN GIỮA Ô** — chính 
       if (prop.kind !== 'road') continue;
       const trong = theo_ô.get(`${prop.x}|${prop.y}`);
       if (!trong || trong.length === 0) continue;
+      const isLane = prop.variant === 1 || prop.variant === 2;
+      const cross = streetCrossSection(street, isLane);
+      const nối = {
+        west: ôĐường.has(`${prop.x - 1}|${prop.y}`),
+        east: ôĐường.has(`${prop.x + 1}|${prop.y}`),
+        north: ôĐường.has(`${prop.x}|${prop.y - 1}`),
+        south: ôĐường.has(`${prop.x}|${prop.y + 1}`),
+      };
+      const ext = carriagewayExtents(cross, nối);
       const us = trong.map(([x]) => về_ô(x));
-      const rộng = Math.max(...us) - Math.min(...us);
-      const tâm = (Math.max(...us) + Math.min(...us)) / 2;
-      if (prop.variant === 1) {
+      const vs = trong.map(([, , z]) => về_ô(z));
+      const mép = [
+        ['tây', Math.min(...us), prop.x - ext.west],
+        ['đông', Math.max(...us), prop.x + ext.east],
+        ['bắc', Math.min(...vs), prop.y - ext.north],
+        ['nam', Math.max(...vs), prop.y + ext.south],
+      ];
+      for (const [tên, đo, mong] of mép) {
         assert.ok(
-          Math.abs(rộng - LANE_WIDTH) < 1e-6,
-          `kỷ ${era} ngõ dọc (${prop.x},${prop.y}) rộng ${rộng.toFixed(4)}, đáng lẽ ${LANE_WIDTH}`,
+          Math.abs(đo - mong) < 1e-6,
+          `kỷ ${era} ô (${prop.x},${prop.y}) variant ${prop.variant}: mép ${tên} ở ${đo.toFixed(4)}, `
+          + `đáng lẽ ${mong.toFixed(4)}`,
         );
+      }
+      // LIỀN MẠCH: cạnh nào giáp một ô đường khác thì lòng đường PHẢI chạm đúng ranh giới ô, nếu
+      // không sẽ có khe cỏ chen giữa hai đoạn đường.
+      for (const [tên, có, đo, ranh] of [
+        ['tây', nối.west, Math.min(...us), prop.x - 0.5],
+        ['đông', nối.east, Math.max(...us), prop.x + 0.5],
+        ['bắc', nối.north, Math.min(...vs), prop.y - 0.5],
+        ['nam', nối.south, Math.max(...vs), prop.y + 0.5],
+      ]) {
+        if (!có) continue;
+        assert.ok(
+          Math.abs(đo - ranh) < 1e-6,
+          `kỷ ${era} ô (${prop.x},${prop.y}): phía ${tên} có ô đường nối tiếp mà lòng đường dừng ở `
+          + `${đo.toFixed(4)} thay vì ${ranh.toFixed(4)} — hai đoạn đường hở một khe cỏ`,
+        );
+        liền += 1;
+      }
+      // CÂN GIỮA theo trục NGANG của chính nó — chỉ xét ô không phải ngã ba/ngã tư trên trục ấy.
+      if (!nối.west && !nối.east) {
+        const tâm = (Math.min(...us) + Math.max(...us)) / 2;
         assert.ok(
           Math.abs(tâm - prop.x) < 1e-6,
-          `kỷ ${era} ngõ dọc (${prop.x},${prop.y}) lệch tâm ${(tâm - prop.x).toFixed(4)} ô — `
+          `kỷ ${era} ô (${prop.x},${prop.y}) lệch tâm ngang ${(tâm - prop.x).toFixed(4)} ô — `
           + 'cư dân đi đúng tâm ô sẽ đi sát mép đường',
         );
-        ngõ += 1;
-      } else if (prop.variant === 0) {
-        assert.ok(Math.abs(rộng - 1) < 1e-6, `kỷ ${era} đại lộ (${prop.x},${prop.y}) không rộng trọn ô`);
-        đại_lộ += 1;
+        assert.ok(
+          Math.abs((Math.max(...us) - Math.min(...us)) - cross.half * 2) < 1e-6,
+          `kỷ ${era} ô (${prop.x},${prop.y}) rộng ${(Math.max(...us) - Math.min(...us)).toFixed(4)}, `
+          + `đáng lẽ ${(cross.half * 2).toFixed(4)}`,
+        );
+        if (isLane) ngõ += 1; else đại_lộ += 1;
       }
     }
+    assert.ok(
+      street.lane < street.avenue,
+      `kỷ ${era}: ngõ (${street.lane}) phải hẹp hơn đại lộ (${street.avenue})`,
+    );
   }
   assert.ok(ngõ > 0 && đại_lộ > 0, `phải gặp cả hai hạng đường (ngõ ${ngõ}, đại lộ ${đại_lộ})`);
-  assert.ok(LANE_WIDTH < 1, 'ngõ phải hẹp hơn đại lộ');
+  assert.ok(liền > 50, `chỉ gặp ${liền} mép nối — bài canh liền mạch đang chạy không`);
 });
 
 test('NGÂN SÁCH TAM GIÁC CỦA ĐỊA HÌNH KHÔNG ĐƯỢC PHÌNH LÊN TRONG IM LẶNG', () => {
   // Số tam giác của tấm đất đi theo BÌNH PHƯƠNG độ mịn: nâng `SUB` từ 3 lên 4 là +77%, lên 6 là
   // +287%. Không có gì đỏ khi làm vậy — chỉ có iPhone của Đàm nóng lên. Trần này là dây bẫy, không
   // phải mục tiêu: nó chỉ cần bắt được một lần nâng độ mịn mà quên tính tiền.
+  //
+  // ⚠️ TRẦN NÂNG 9.000 → 16.000 Ở PHASE 9D, VÀ ĐÂY LÀ SỐ ĐO CHỨ KHÔNG PHẢI SỰ NHÂN NHƯỢNG. Mặt
+  // đường thôi là một dải màu phẳng và thành một hệ có lớp (lòng đường chia theo cỡ viên lát · bó
+  // vỉa · vỉa hè · vạch kẻ), nên nó tốn hơn — đó là thứ mua được, không phải thứ trượt ra.
+  // Đo thật (kỷ 8, viên lát mịn nhất bộ, nên là ca đắt nhất trong 15 kỷ):
+  //   • địa hình + đường : 7.122 → 14.914 tam giác   (kỷ rẻ nhất vẫn giữ nguyên 7.122)
+  //   • CẢ CẢNH          : 27.626 → 31.546 tam giác  (ngân sách cảnh là 60.000 ⇒ còn dư 47%)
+  //   • lệnh vẽ          : 13 → 13  (KHÔNG đổi — cả bốn lớp dùng chung một khối, một vật liệu)
+  //   • ms/khung         : 2.378 → 2.461  (+3,5%)
+  // ⚠️ Con số ms ấy đo bằng SwiftShader (rasterise bằng CPU), tức là CẬN TRÊN: CPU không có phần
+  // cứng cho phép tính đỉnh, nên trên GPU MacBook phần tăng còn nhỏ hơn nhiều. Đọc nó như "thêm
+  // 3,5% ở trường hợp tệ nhất có thể", không phải như FPS thật.
+  // Trần 16.000 để lại ~7% dư trên ca đắt nhất — đủ chật để một lần nâng độ mịn nữa là đỏ ngay.
   for (const era of ERAS) {
     const { ground, road } = dựng(era);
     const tổng = (ground?.triangles ?? 0) + (road?.triangles ?? 0);
     assert.ok(tổng > 0, `kỷ ${era}: địa hình không sinh ra tam giác nào`);
     assert.ok(
-      tổng <= 9000,
-      `kỷ ${era}: địa hình tốn ${tổng} tam giác (trần 9.000). Ngân sách cả cảnh là 60.000 và công `
-      + 'trình đã ăn ~29.000 sau Phase 8B.',
+      tổng <= 16000,
+      `kỷ ${era}: địa hình tốn ${tổng} tam giác (trần 16.000). Ngân sách cả cảnh là 60.000 và công `
+      + 'trình đã ăn ~17.000 sau Phase 8B.',
     );
   }
 });

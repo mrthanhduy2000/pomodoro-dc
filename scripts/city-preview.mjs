@@ -85,6 +85,23 @@ function parseArgs(argv) {
     // cứng cho phép tính shader, nên mọi phép tính thêm vào shader ở đây đắt hơn thực tế nhiều
     // lần. Một bản vá shader mà ngay cả ở đây cũng gần như không đo được thì trên GPU là miễn phí.
     bench: 0,
+    // ⚠️ MẶT NẠ: vẽ CÙNG một cảnh, cùng camera, nhưng tô mỗi đối tượng có tên trong danh sách này
+    // thành MỘT KÊNH MÀU THUẦN (đỏ · lục · lam) và mọi thứ khác thành ĐEN — cho ra một tấm ảnh nói
+    // chính xác "điểm ảnh nào là của cái nào". Nhiều tên thì cách nhau bằng dấu phẩy.
+    //
+    // Vì sao cần: muốn hỏi "mặt đường trên màn hình sáng bao nhiêu so với mặt đất" thì trước hết
+    // phải biết điểm ảnh nào là đường. `TECH_DEBT #22` đã trả giá ba phase cho việc ĐOÁN chuyện đó
+    // bằng màu (bộ lọc "8% điểm ảnh tươi nhất ≈ mái" hoá ra đo cỏ). Bên DỰNG biết chắc, nên bên
+    // dựng nói ra: `sceneGraph.js` đặt `mesh.name`, còn đây chỉ đọc lại. Không có bộ lọc nào cả.
+    mask: null,
+    // ⚠️ TẮT HẲN BÓNG ĐỔ. Không phải để chụp cho đẹp — để TÁCH được hai nguyên nhân khác nhau của
+    // một mảng tối: "vật liệu này vốn tối" và "chỗ này đang nằm trong bóng". Phase 9B đã trả giá
+    // cho việc lẫn hai thứ đó (suýt kết luận VSM vô dụng, trong khi thứ không chịu mờ đi chưa bao
+    // giờ là bóng đổ mà là MẶT ĐƯỜNG). Và đổi giờ trong ngày KHÔNG thay được: đổi giờ vừa làm ngắn
+    // bóng vừa đổi góc nắng rọi xuống mặt phẳng, tức trộn thêm một nguyên nhân thứ ba.
+    // `TECH_DEBT #30` đo con số 0,113 của nhựa đường kỷ 11 ở đúng điều kiện này — giữ nguyên cờ
+    // này là cách duy nhất để số mới còn so được với số cũ.
+    noShadow: false,
   };
   for (let i = 0; i < argv.length; i += 1) {
     const key = argv[i];
@@ -104,6 +121,8 @@ function parseArgs(argv) {
     else if (key === '--sessions') { args.sessions = Number(value); i += 1; }
     else if (key === '--dpr') { args.dpr = Number(value); i += 1; }
     else if (key === '--bench') { args.bench = Number(value); i += 1; }
+    else if (key === '--mask') { args.mask = String(value); i += 1; }
+    else if (key === '--no-shadow') args.noShadow = true;
   }
   return args;
 }
@@ -122,6 +141,7 @@ function run(cmd, cmdArgs, options = {}) {
  */
 function entrySource({
   era, level, theme, zoom = 1, hour = null, pending = 0, sessions = 40, dpr = null, bench = 0,
+  mask = null, noShadow = false,
 }) {
   return `
 import { computeCityLayout } from '${ROOT}/src/engine/cityLayout.js';
@@ -130,7 +150,10 @@ import { deriveDaylight } from '${ROOT}/src/engine/city3d/daylight.js';
 import { applyPaintedLook, createCityScene, MAX_PIXEL_RATIO } from '${ROOT}/src/components/city/render3d/sceneGraph.js';
 import { CITY_CAMERA_FOV, cityOrbitOptions, createOrbit } from '${ROOT}/src/engine/city3d/orbit.js';
 import { BLUEPRINT_CATALOG, ERA_METADATA } from '${ROOT}/src/engine/constants.js';
-import { PerspectiveCamera, WebGLRenderer } from 'three';
+import { Color, MeshBasicMaterial, PerspectiveCamera, WebGLRenderer } from 'three';
+
+const MASK = ${mask === null ? 'null' : JSON.stringify(mask)};
+const NO_SHADOW = ${noShadow ? 'true' : 'false'};
 
 const ERA = ${era};
 const LEVEL = ${level};
@@ -204,6 +227,61 @@ const eye = orbit.getPosition();
 const target = orbit.getTarget();
 camera.position.set(eye.x, eye.y, eye.z);
 camera.lookAt(target.x, target.y, target.z);
+
+if (NO_SHADOW) {
+  // Tắt ở CẢ HAI đầu: đèn thôi ném bóng, và bộ dựng thôi lấy mẫu bản đồ bóng. Tắt mỗi một đầu thì
+  // three vẫn tra một bản đồ bóng cũ/rỗng và kết quả không sạch.
+  let tắt = 0;
+  city.scene.traverse((obj) => {
+    if (obj.isLight && obj.castShadow) { obj.castShadow = false; tắt += 1; }
+    if (obj.isMesh) obj.receiveShadow = false;
+  });
+  renderer.shadowMap.enabled = false;
+  console.log('[no-shadow] đã tắt ' + tắt + ' nguồn bóng');
+}
+
+if (MASK) {
+  // ⚠️ THAY VẬT LIỆU, KHÔNG XOÁ ĐỐI TƯỢNG. Xoá thì thứ nằm SAU nó lộ ra và mặt nạ sẽ nhận vơ những
+  // điểm ảnh đáng lẽ bị che (mái nhà che một khúc đường thì khúc ấy KHÔNG phải điểm ảnh đường trên
+  // màn hình). Giữ nguyên mọi khối, chỉ đổi màu, thì phép kiểm chiều sâu vẫn chạy y hệt lần dựng
+  // thật ⇒ mặt nạ khớp từng điểm ảnh một.
+  //
+  // Nhiều tên cách nhau bằng dấu phẩy ⇒ mỗi tên một KÊNH MÀU riêng: đỏ · lục · lam.
+  //
+  // ⚠️ KÊNH MÀU, KHÔNG PHẢI MỨC XÁM — VÀ ĐÂY LÀ MỘT LỖI ĐÃ TRẢ GIÁ THẬT, KHÔNG PHẢI ĐỀ PHÒNG SUÔNG.
+  // Bản đầu tô ba mức xám 255/192/128 rồi phân loại bằng ngưỡng. Đo ra thì tấm mặt nạ chỉ có **233
+  // và 235** — hai mức cách nhau 63 ở đầu vào bị bóp còn cách nhau 2 ở đầu ra, vì applyPaintedLook
+  // bật NeutralToneMapping (nén mạnh nhất đúng ở vùng SÁNG) rồi còn mã hoá sang sRGB. Bộ chấm nuốt
+  // gọn cả đường lẫn đất vào chung một nhóm và in ra một bảng số hoàn chỉnh, rất thuyết phục, trong
+  // đó mặt đường "sáng hơn mặt đất ở cả 12 ca" và "có nhiều điểm ảnh hơn cả mặt đất" — hai điều bất
+  // khả thi mới là thứ tố cáo nó. Cùng họ với bài học bầu trời nhạt đi 5 lần (Phase 3V):
+  // **không có một hệ số chung giữa màu khai và màu ra màn hình.**
+  // Kênh màu thì miễn nhiễm: mọi đường cong tông đều ĐƠN ĐIỆU và áp riêng từng kênh, nên đỏ thuần
+  // vẫn cứ đỏ hơn hai kênh kia dù bị nén tới đâu. Thêm toneMapped:false cho chắc.
+  //
+  // ⚠️ VÀ ĐỪNG VIẾT DẤU HUYỀN-NGƯỢC (backtick) TRONG KHỐI NÀY — cả đoạn nằm BÊN TRONG một chuỗi
+  // template của entrySource, nên một dấu backtick trong chú thích cũng đủ cắt đôi chuỗi ấy.
+  const names = MASK.split(',').map((s) => s.trim()).filter(Boolean);
+  if (names.length > 3) throw new Error('mặt nạ tối đa 3 tên (đỏ/lục/lam)');
+  const CHANNELS = [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
+  const TÊN_KÊNH = ['đỏ', 'lục', 'lam'];
+  const mats = names.map((_, i) => new MeshBasicMaterial({
+    color: new Color().setRGB(...CHANNELS[i]), fog: false, toneMapped: false,
+  }));
+  const black = new MeshBasicMaterial({ color: 0x000000, fog: false, toneMapped: false });
+  const hits = names.map(() => 0);
+  city.scene.traverse((obj) => {
+    if (!obj.isMesh && !obj.isPoints && !obj.isLine) return;
+    const idx = names.indexOf(obj.name);
+    if (idx >= 0) { hits[idx] += 1; obj.material = mats[idx]; } else obj.material = black;
+  });
+  city.scene.background = new Color(0x000000);
+  city.scene.fog = null;
+  names.forEach((n, i) => {
+    if (hits[i] === 0) throw new Error('mặt nạ "' + n + '" không khớp đối tượng nào — sai tên?');
+    console.log('[mask] "' + n + '" kênh ' + TÊN_KÊNH[i] + ' khớp ' + hits[i] + ' khối');
+  });
+}
 
 renderer.render(city.scene, camera);
 
@@ -405,13 +483,20 @@ function sweepPageHtml({ theme }) {
 </body></html>`;
 }
 
-function pageHtml({ width, height, theme }) {
+function pageHtml({ width, height, theme, mask = null }) {
+  // ⚠️ DỰNG MẶT NẠ THÌ CẢ TRANG PHẢI ĐEN, KHÔNG CHỈ CẢNH 3D. Ảnh chụp rộng hơn canvas (viền cửa sổ
+  // + dòng chữ số liệu bên dưới), nên nền trang lọt vào ảnh: ở theme sáng nó là `#e9e6de`, tức
+  // (233,230,222) — một màu KHÔNG thuần kênh nào, chiếm 13% khung hình, và nó làm cổng "mặt nạ có
+  // thuần kênh màu không" của `road-score.mjs` báo động nhầm (62% thay vì ~99%). Đúng bài học
+  // Phase 4G: số đo nào gây bất ngờ thì kiểm CÔNG CỤ trước — và ở đây thủ phạm hoá ra không nằm
+  // trong cảnh 3D chút nào.
+  const bg = mask ? '#000' : (theme === 'dark' ? '#141311' : '#e9e6de');
   return `<!doctype html>
 <html><head><meta charset="utf-8"><title>đang dựng…</title>
 <style>
-  body { margin:0; background:${theme === 'dark' ? '#141311' : '#e9e6de'}; font-family: system-ui, sans-serif; }
+  body { margin:0; background:${bg}; font-family: system-ui, sans-serif; }
   #wrap { padding:16px; }
-  #info { margin-top:10px; font-size:13px; color:${theme === 'dark' ? '#cfc9bb' : '#4a463f'}; }
+  #info { margin-top:10px; font-size:13px; color:${mask ? '#000' : (theme === 'dark' ? '#cfc9bb' : '#4a463f')}; }
   /* ⚠️ PHẢI GIỐNG HỆT lớp vignette trong CityScene3D.jsx. Không có nó thì trang xem thử
      chụp ra một thành phố KHÁC với thành phố Đàm nhìn thấy — mà một công cụ mắt-soi nói dối
      còn tệ hơn không có công cụ nào. Đổi bên này phải đổi bên kia. */
@@ -420,9 +505,13 @@ function pageHtml({ width, height, theme }) {
      vì siêu lấy mẫu như màn Retina. */
   #stage { width:${width}px; height:${height}px; display:block; }
   #frame { position:relative; display:inline-block; line-height:0; }
+  /* ⚠️ DỰNG MẶT NẠ THÌ TẮT LỚP VIỀN TỐI GÓC. Nó là một lớp CSS nâu trong suốt phủ lên canvas, tức
+     nó CỘNG thêm vào cả ba kênh ở vùng rìa — đỏ thuần hoá thành đỏ pha nâu và tụt khỏi ngưỡng
+     "thuần một kênh". Ảnh THẬT thì vẫn phải có nó (đó là thứ Đàm nhìn thấy); chỉ tấm mặt nạ mới
+     cần sạch. */
   #vignette {
     position:absolute; inset:0; pointer-events:none;
-    background: ${theme === 'dark'
+    background: ${mask ? 'none' : theme === 'dark'
       ? `radial-gradient(ellipse 82% 74% at 50% 44%,
       rgba(10,8,14,0) 48%, rgba(10,8,14,0.10) 78%, rgba(10,8,14,0.24) 100%)`
       : `radial-gradient(ellipse 76% 68% at 50% 44%,
@@ -459,7 +548,7 @@ function serve(files) {
   });
 }
 
-async function shoot(chrome, url, pngPath, { width, height, bench = 0 }) {
+async function shoot(chrome, url, pngPath, { width, height, bench = 0, mask = null, noShadow = false }) {
   await run(chrome, [
     '--headless=new',
     '--no-sandbox',
@@ -480,8 +569,9 @@ async function shoot(chrome, url, pngPath, { width, height, bench = 0 }) {
     '--virtual-time-budget=12000',
     `--screenshot=${pngPath}`,
     url,
-    // Lúc đo hiệu năng thì PHẢI để stderr chảy ra, vì dòng [bench] đi bằng đường đó.
-  ], bench > 0 ? {} : { stdio: 'ignore' });   // Chromium trong hộp cát này chửi dbus không ngớt
+    // Lúc đo hiệu năng thì PHẢI để stderr chảy ra, vì dòng [bench] đi bằng đường đó — và lúc dựng
+    // mặt nạ cũng vậy, vì dòng [mask] là thứ DUY NHẤT chứng minh mặt nạ khớp đúng khối cần khớp.
+  ], (bench > 0 || mask || noShadow) ? {} : { stdio: 'ignore' });   // Chromium trong hộp cát này chửi dbus không ngớt
 }
 
 async function main() {
@@ -582,7 +672,12 @@ async function main() {
       // Giờ nằm trong TÊN FILE: không có nó thì chụp 6 chặng trong ngày sẽ đè lên nhau và chỉ còn
       // chặng cuối, đúng lúc cần so sánh chúng cạnh nhau nhất.
       const hourTag = hour === null ? '' : `-h${String(hour).padStart(2, '0')}`;
-      const pngPath = resolve(OUT_DIR, `city-era${String(era).padStart(2, '0')}-${args.theme}${hourTag}.png`);
+      // ⚠️ MẶT NẠ PHẢI CÓ TÊN FILE RIÊNG. Không thì nó ghi đè lên chính tấm ảnh thật vừa chụp, và
+      // lần đo sau sẽ so "ảnh thật" với một tấm đen trắng — đúng cái bẫy `--hour` đã cắn một lần
+      // (mở nhầm file cũ rồi kết luận bản vá không ăn thua).
+      const maskTag = args.mask ? `-mask-${args.mask.replace(/[^a-z0-9]+/gi, '_')}` : '';
+      const shadowTag = args.noShadow ? '-noshadow' : '';
+      const pngPath = resolve(OUT_DIR, `city-era${String(era).padStart(2, '0')}-${args.theme}${hourTag}${maskTag}${shadowTag}.png`);
       try {
         await shoot(chrome, `http://127.0.0.1:${port}/index.html`, pngPath, options);
       } finally {

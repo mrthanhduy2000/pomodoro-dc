@@ -6,28 +6,36 @@
 > chọn: `ARCHITECTURE_DECISIONS.md`. Nợ kỹ thuật: `TECH_DEBT.md`. Migration: `MIGRATION.md`. Tóm
 > tắt theo mốc: `CHANGELOG.md`.
 > **NGUYÊN TẮC ƯU TIÊN SỐ 1:** (1) mọi phiên AI phải đọc file này + `CLAUDE.md` + các file liên quan TRƯỚC khi làm; (2) sau MỌI cập nhật dù nhỏ, phải cập nhật ngay file này + `CLAUDE.md` + các file liên quan khác.
-> Cập nhật lần cuối: **2026-08-16** — **`TECH_DEBT #22` ĐÃ ĐÓNG**: công cụ chấm bản quét thôi đo
-> "thứ tươi nhất khung hình" rồi **gọi** đó là mái. Chữ "≈" trong *"8% tươi nhất ≈ mái"* là một
-> giả định mỹ thuật không được viết ra; nó đúng khi mái suy từ màu nhấn giao diện, và **chết ở
-> Phase 6B** khi mái thành vật liệu lợp thật — từ đó công cụ chấm **CỎ** suốt ba phase. Không vá
-> bộ lọc (đo ở tầng dữ liệu: **4/15 kỷ khai mái TRÙNG vật liệu tường** ⇒ mái không tách được ngay
-> từ NGUỒN, mọi hướng "chọn mái khéo hơn" đều là ngõ cụt) mà **bỏ hẳn proxy**: dải thành phố chia
-> lưới **6×3 ô con** (`scripts/sweepMetric.mjs`, thuần, 6 bài test đã phá thử thấy đỏ), giữ nguyên
-> đơn vị RGB/255 nên ngưỡng mắt 12 còn dùng được. Kết quả: **0/105 cặp kỷ** dưới ngưỡng (gần nhất
-> 23,3 · trung vị 41,1) và **0/15 cặp chặng**; cặp 12↔13 = 28,2. Phase 9C **không** đẩy cặp nào
-> xuống dưới ngưỡng (24,1→23,3 · 42,8→41,1). `TECH_DEBT #19` nhờ đó đo lại được và cũng ĐÓNG.
-> **718 bài test**, lint sạch, build xanh, chunk 3D **trùng băm** với `53045b2` (không đụng renderer).
+> Cập nhật lần cuối: **2026-08-16** — **Phase 9D: MẶT ĐƯỜNG LÀ MỘT HỆ THỐNG, KHÔNG PHẢI MỘT DẢI MÀU**
+> (đóng luôn `TECH_DEBT #30` + `#27`, hai mục đã bị nối cứng với nhau từ Phase 9B). **Nguyên nhân
+> gốc**: bản sắc mặt đường xưa nay tựa lên **đúng MỘT trục là MÀU**, nên toàn bộ sức ép "15 kỷ phải
+> khác nhau" dồn hết vào ĐỘ ĐẬM — mà độ đậm thì có ĐÁY. Phép đẩy lại chỉ có SÀN, không có TRẦN
+> (0,13 **cộng thêm** vào chênh lệch riêng của vật liệu), nên vật liệu nào vốn đã tối thì bị đẩy hai
+> lần và rơi khỏi đáy: nhựa đường kỷ 11 render ra **0,113** trên nền đất 0,406 — một cái rãnh đen.
+> **Cách sửa (ADR-025)**: bản sắc chuyển sang **9 trục CẤU TRÚC** (`src/engine/city3d/streetStyle.js`,
+> thuần) — bề rộng đại lộ · bề rộng ngõ · vật liệu lát · cỡ viên · độ mòn · bó vỉa · vỉa hè · vạch kẻ ·
+> kiểu mép; phép đẩy độ đậm nay **bão hoà, có cả sàn lẫn trần mà vẫn đơn điệu ngặt**. Bài test
+> `15 KỶ RA 15 MẶT ĐƯỜNG` **thôi chấm bằng RGB**, chấm bằng chính 9 trục ấy: 105 cặp, yếu nhất
+> **3/8**, trung vị **6/8**, không cặp nào dưới 3. Màu vẫn được canh nhưng chỉ còn là lưới chống sập
+> (trung vị 116,4) — và cặp gần nhau nhất về màu **bắt buộc phải là hai kỷ dùng CHUNG vật liệu**,
+> nếu không là bảng đã trôi. **Nghiệm thu trên điểm ảnh đã dựng** (`scripts/road-score.mjs`, 7 bài
+> tự-kiểm): 4 kỷ × 3 giờ = **12/12 đạt**, `sắc` mỏng nhất 0,056 (ngưỡng 0,05) · `hố` xấu nhất 0,201
+> (ngưỡng 0,26) — **không còn ô nào là rãnh**. Kèm **một lỗi đọc sử đã sửa**: kỷ 7 lát đường bằng
+> `pietraforte` — đá **XÂY TƯỜNG** của Firenze — nên đường và đất gần như cùng màu (0,050); đổi sang
+> **pietra serena**, thứ đá thật sự dùng lát đường, ra **0,200**. **728 bài test**, lint sạch, build
+> xanh. Hiệu năng (4 kỷ, cùng camera/giờ/seed): tam giác **+1,0…+2,1%**, **lệnh vẽ ĐỨNG YÊN** ở cả 4
+> kỷ (cả hệ thống đường vẫn là MỘT lệnh vẽ); ms/khung **không kết luận được** — kỷ 14 còn *nhanh
+> lên*, tức phép đo đang bị nhiễu át (biên độ trong cùng một lần chạy ±4,5% > mọi chênh lệch đo được).
+> Bản quét 15 kỷ chạy lại: **0/105 cặp kỷ** + **0/15 cặp chặng** dưới ngưỡng (gần nhất 22,8 · trung
+> vị 40,7 — 9D không đẩy cặp nào xuống dưới ngưỡng).
 >
-> *(Trước đó — 2026-08-15, **Phase 9B**: **BÓNG ĐỔ THÔI LÀ MẢNG ĐEN TUYỆT ĐỐI.***
-> Đàm yêu cầu *"bóng đổ không được là những mảng đen cứng, phẳng và tuyệt đối"*. Công cụ mới
-> `scripts/shadow-score.mjs` đo ra **8,2–20,8% khung hình bị nghiền** dưới ngưỡng mắt còn đọc ra
-> chi tiết. Nguyên nhân gốc: đèn trời và nắng là **hai hằng số không biết nhau**, trong khi thứ
-> quyết định độ đen của bóng là KHOẢNG CÁCH giữa chúng — nay đèn trời là một **TỈ LỆ của nắng**
-> (ADR-024). Kết quả: sàn **0,107→0,170 · 0,029→0,054 · 0,109→0,160**, bị nghiền **13,4→0,2% ·
-> 16,9→11,1% · 8,2→2,7%**, **độ tươi đứng yên** (không dính bẫy "pastel như sữa" của Phase 7A).
-> Kèm theo: cỡ bản đồ bóng từng viết cứng ở **BA nơi với BA giá trị** — và bản QUÉT 15 kỷ, công cụ
-> duyệt mỹ thuật chính thức, đang chạy ở 512 trong khi app chạy 1024. **705 bài test** (+2, cả hai
-> đã thử ngược 5/5 lần đều đỏ), lint sạch, build xanh.)*
+> *(Trước đó — 2026-08-16, **`TECH_DEBT #22` ĐÃ ĐÓNG**: công cụ chấm bản quét thôi đo "thứ tươi nhất
+> khung hình" rồi **gọi** đó là mái. Chữ "≈" trong *"8% tươi nhất ≈ mái"* là một giả định mỹ thuật
+> không được viết ra; nó đúng khi mái suy từ màu nhấn giao diện, và **chết ở Phase 6B** khi mái thành
+> vật liệu lợp thật — từ đó công cụ chấm **CỎ** suốt ba phase. Không vá bộ lọc (**4/15 kỷ khai mái
+> TRÙNG vật liệu tường** ⇒ mái không tách được ngay từ NGUỒN) mà **bỏ hẳn proxy**: dải thành phố chia
+> lưới **6×3 ô con** (`scripts/sweepMetric.mjs`), giữ nguyên đơn vị RGB/255 nên ngưỡng mắt 12 còn
+> dùng được. `TECH_DEBT #19` nhờ đó đo lại được và cũng ĐÓNG. **718 bài test**.)*
 
 ---
 
@@ -90,6 +98,100 @@
 - **Lịch sử git `main` từng bị xáo** (thao tác git song song): bản đang chạy là `eb44638` — chứa ĐỦ mọi việc gần đây (Hỏi Coach offline + fix đêm khuya + Coach offline analyst). Vài commit cũ (`1e27505`, `9fbcd62`) thành dangling, KHÔNG còn trong `git log` nhưng code vẫn nằm trong bản deploy. Đừng hoảng nếu không thấy chúng.
 
 ## 🗒️ Nhật ký cập nhật
+
+### 2026-08-16 — Phase 9D: mặt đường là một HỆ THỐNG, không phải một dải màu (`TECH_DEBT #30` + `#27` đóng)
+
+**Đàm yêu cầu gì**: *"Road hiện tại vẫn giống một dải màu phẳng… ở một số kỷ trở thành rãnh đen.
+Hãy sửa ROOT CAUSE thay vì chỉ chỉnh `roadColor`."* Kèm một câu Đàm tự đánh dấu là *"thay đổi quan
+trọng"*: **KHÔNG DÙNG MÀU ĐỂ ÉP 15 KỶ KHÁC NHAU** — *"Nếu test '15 kỷ → 15 mặt đường' bị fail sau
+khi bỏ darkness, không nới threshold và không giả màu. Hãy thay metric RGB bằng các đặc trưng
+structural/visual thực sự."*
+
+**Nguyên nhân gốc** (một câu): bản sắc mặt đường tựa lên **đúng MỘT trục là MÀU**, nên toàn bộ sức
+ép "15 kỷ phải khác nhau" dồn vào ĐỘ ĐẬM — mà độ đậm có ĐÁY, còn phép đẩy thì chỉ có SÀN. Luật
+*"đường và đất phải cách nhau ít nhất 0,13"* được **CỘNG THÊM** vào chênh lệch riêng của vật liệu,
+nên vật liệu nào vốn đã tối bị đẩy **hai lần**: nhựa đường kỷ 11 nhận tổng đẩy 0,289 và render ra
+**0,113** trong khi mặt đất 0,406. Đó chính là cái rãnh đen Đàm nhìn thấy, và nó là hậu quả tất yếu
+của việc bắt một đại lượng có đáy gánh một nhiệm vụ không có đáy.
+
+**Đã làm gì**
+- **Trục bản sắc mới, thuần** — `src/engine/city3d/streetStyle.js`: 15 kỷ × **9 trục CẤU TRÚC** (bề
+  rộng đại lộ · bề rộng ngõ · vật liệu lát · cỡ viên · độ mòn · bó vỉa · vỉa hè · vạch kẻ · kiểu
+  mép). Mỗi dòng buộc vào `country` mà `eraStyle.js` khai, **có test bắt** để hai bảng không trôi
+  khỏi nhau — đúng khuôn `floraStyle.js` đã dùng ở Phase 8D.
+- **Phép đẩy độ đậm nay BÃO HOÀ** — có cả sàn lẫn trần mà vẫn đơn điệu ngặt (`palette3d.js`). Đóng
+  `#30`; và vì `#27` ("15 kỷ ra 15 mặt đường" chỉ đạt nhờ 3% biên) xưa nay **sống nhờ chính phép
+  đẩy vô hạn đang được sửa**, hai mục buộc phải đóng cùng lúc — đúng như Phase 9B đã ghi khi nối
+  cứng chúng lại.
+- **Bài test `15 KỶ RA 15 MẶT ĐƯỜNG` thôi chấm bằng RGB**, chấm bằng chính 9 trục ấy. Lượng tử hoá
+  suy ra từ **đúng hai sự thật đã đo**: một ô thành phố ≈ 64 điểm ảnh màn hình, và ngưỡng mắt
+  12/255 — không có con số nào chọn cho vừa. Kết quả 105 cặp: yếu nhất **3/8**, trung vị **6/8**,
+  không cặp nào dưới 3; cặp kề nhau yếu nhất cũng 3/8.
+- **Màu vẫn được canh, nhưng đổi VAI** — từ "thứ mang bản sắc" thành "lưới chống sập" (trung vị
+  116,4). Thêm một bài canh mà tôi cho là quan trọng nhất trong nhóm: **cặp gần nhau nhất về màu
+  BẮT BUỘC phải là hai kỷ dùng CHUNG vật liệu lát**. Nếu một ngày hai kỷ khác vật liệu lại gần nhau
+  nhất về màu thì bảng đã trôi, và bài test nói ra điều đó thay vì chỉ kêu một con số.
+- **Bốn dòng bảng sai lịch sử đã sửa**, mỗi dòng kèm lý do có thể kiểm lại: kỷ 3 (đường **rước** của
+  Ur mà lại hẹp hơn cả nước Ý và nước Anh công nghiệp — chính chữ "đường rước" trong `note` của nó
+  tự tố cáo), kỷ 6 (Hà Nội "36 phố phường" mà rộng hơn đường rước Ur), kỷ 1 (cỏ bị giẫm vốn loang
+  lổ — mặt đường không đều nhất trong 15 kỷ), kỷ 2 (phù sa sông Nin liên tục được gió và chân người
+  san phẳng — cực đối lập của kỷ 1).
+- **Một lỗi ĐỌC SỬ, không phải lỗi chỉnh màu**: kỷ 7 lát đường bằng `pietraforte` và tự giải thích
+  là *"chính thứ đá dựng nên Palazzo Vecchio"* — câu ấy **đúng**, và chính nó là chỗ sai:
+  pietraforte là đá **XÂY TƯỜNG**. Đá thật sự lát đường Firenze là **pietra serena**. Đổi xong:
+  0,050/0,039/0,019 → **0,200/0,191/0,198**.
+
+**Nghiệm thu trên ĐIỂM ẢNH ĐÃ DỰNG** (`scripts/road-score.mjs`, mặt nạ do chính bên dựng cấp nên
+khớp từng điểm ảnh; 7 bài tự-kiểm, trong đó có bài **nhốt sẵn bộ số hỏng của `#30`** bắt phép đo
+phải còn bắt được nó). 4 kỷ × 3 giờ = **12/12 đạt**:
+
+| kỷ · giờ | sắc (≥0,05) | hố (≤0,26) | kỷ · giờ | sắc | hố |
+|---|---|---|---|---|---|
+| 3 · 12h | 0,226 | 0,181 | 11 · 12h | 0,183 | 0,201 |
+| 3 · 15h | 0,194 | 0,135 | 11 · 15h | 0,173 | 0,184 |
+| 3 · 22h | 0,109 | 0,059 | 11 · 22h | **0,056** | 0,072 |
+| 7 · 12h | 0,209 | −0,213 | 14 · 12h | 0,167 | −0,106 |
+| 7 · 15h | 0,200 | −0,203 | 14 · 15h | 0,153 | −0,099 |
+| 7 · 22h | 0,209 | −0,155 | 14 · 22h | 0,210 | −0,147 |
+
+`hố` âm = mặt đường **sáng hơn** nền quanh nó (kỷ 7 đá phiến sáng, kỷ 14 bê tông) — ngược hẳn cái
+rãnh cũ. **Biên mỏng nhất: kỷ 11 · 22h ở 0,056, chỉ hơn ngưỡng 12%** — ghi ra đây theo đúng bài học
+Phase 9B (*"đo BIÊN của mọi lời hứa, đừng chỉ đọc xanh/đỏ"*). Nhưng đó là biên của **bề mặt**, và
+đúng ở chỗ này Phase 9D trả lời được: đo đuôi sáng của chính nhóm đường ban đêm ra kỷ 11 = **0,561**
+(vạch giữa) so với kỷ 3 = 0,189 (không có vạch nào) — tức con đường ban đêm còn đọc được nhờ một
+tín hiệu **cấu trúc mạnh gấp 10 lần** độ tương phản bề mặt của nó. Đây là điều bản cũ không thể có,
+vì bản cũ chỉ có màu.
+
+**Hiệu năng** (đo A/B trong một `git worktree` riêng ở `b89eb5c`, cùng kỷ/giờ/seed/camera):
+
+| kỷ | tam giác | lệnh vẽ | ms/khung |
+|---|---|---|---|
+| 3 | 26.494 → 26.894 (+1,5%) | 13 → 13 | 2453,20 → 2556,00 |
+| 7 | 33.502 → 34.222 (+2,1%) | 13 → 13 | 2285,30 → 2333,90 |
+| 11 | 35.230 → 35.594 (+1,0%) | 12 → 12 | 2560,10 → 2586,00 |
+| 14 | 27.210 → 27.670 (+1,7%) | 12 → 12 | 2395,70 → **2342,70** |
+
+⚠️ **Cột ms/khung KHÔNG kết luận được gì** và tôi ghi rõ ra thay vì im lặng dùng nó: kỷ 14 *nhanh
+lên* sau khi được thêm hình học, còn biên độ dao động trong **cùng một lần chạy** là ±4,5% — lớn
+hơn mọi chênh lệch đo được. Đây là SwiftShader (dựng bằng CPU, ~2,4 giây/khung), không phải GPU
+MacBook. Hai cột đáng tin là tam giác (+1…+2%) và **lệnh vẽ đứng yên ở cả 4 kỷ** — tức cả hệ thống
+đường (mặt đường + bó vỉa + vỉa hè + vạch kẻ) vẫn nằm gọn trong **MỘT lệnh vẽ**, phân lớp bằng
+thuộc tính đỉnh `ROAD_PART` chứ không bằng thêm vật liệu.
+
+**Bản quét 15 kỷ vẫn chạy được** (yêu cầu nghiệm thu của Đàm): **0/105 cặp kỷ** và **0/15 cặp
+chặng** dưới ngưỡng mắt; gần nhất 22,8 · trung vị 40,7 (trước 9D: 23,3 · 41,1) — 9D **không** đẩy
+cặp nào xuống dưới ngưỡng.
+
+**Bài học mới ghi vào `CLAUDE.md`**: (1) công cụ nói dối lần thứ 20–21 — một phép đo chỉ nhìn ĐỘ
+SÁNG đã **kết tội oan kỷ 7** (0,001 lúc 22h trong khi mắt thấy rõ con đường), và suýt dẫn tới hai
+kết luận SAI NGƯỢC NHAU liên tiếp: tin công cụ ("kỷ 7 hỏng"), rồi tin mắt ("công cụ hỏng, kỷ 7
+không sao"). **Cả hai đều đúng một nửa**: công cụ hỏng thật (thiếu một trục) VÀ kỷ 7 hỏng thật (sai
+đá), vì hai lý do hoàn toàn không liên quan nhau; (2) một ngưỡng TUYỆT ĐỐI cho "đáy tối" kêu oan
+cảnh đêm — đêm tối là ĐÚNG, nên cả hai ngưỡng nay đều là QUAN HỆ với mặt đất; (3) suýt chấm điểm
+một **tấm ảnh cũ** (bản quét còn đang dựng) và đã huỷ kết quả đó — bài "đo một hiện vật ôi thiu".
+
+**728 bài test** (+9 của `streetStyle.test.js`, tất cả đã phá thử 11/11 lần đều đỏ), lint sạch,
+build xanh.
 
 ### 2026-08-16 — `TECH_DEBT #22` đóng: công cụ chấm 15 kỷ thôi đo "thứ tươi nhất" rồi gọi đó là mái
 

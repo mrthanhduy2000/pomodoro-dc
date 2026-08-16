@@ -188,6 +188,22 @@
 │   │   │   │                      #   ⚠️ Dựng ở MỌI hạng kể cả `common` — khác `motifs` (chỉ
 │   │   │   │                      #   rare/epic, tức 30/75 căn trước đây là hộp trơn)
 │   │   │   ├── buildingSpec.js    # NƠI 3 TRỤC GẶP NHAU: (kỷ × loại × độ hiếm) → mô tả hình học
+│   │   │   ├── streetStyle.js     # BẢNG ĐƯỜNG PHỐ 15 KỶ (Phase 9D, ADR-025): bề rộng đại lộ · bề
+│   │   │   │                      #   rộng ngõ · vật liệu lát · cỡ viên · độ mòn · bó vỉa · vỉa hè
+│   │   │   │                      #   · vạch kẻ · kiểu mép. Nguồn DUY NHẤT trả lời "ở kỷ này con
+│   │   │   │                      #   đường trông như thế nào". Mỗi dòng buộc vào `country` của
+│   │   │   │                      #   eraStyle — CÓ TEST BẮT, chống trôi hai bảng
+│   │   │   │                      #   ⚠️ RA ĐỜI VÌ BẢN SẮC ĐƯỜNG TỪNG NẰM GỌN TRONG MỘT MÃ MÀU: một
+│   │   │   │                      #   trục thì không đủ chỗ cho 15 giá trị vừa cách nhau vừa nằm
+│   │   │   │                      #   trong vùng mắt đọc được (TECH_DEBT #30 + #27)
+│   │   │   │                      #   ⚠️ `carriagewayExtents` — bề rộng là đại lượng của MẶT CẮT
+│   │   │   │                      #   NGANG; áp nó lên chiều DỌC thì đường vỡ thành mảng rời rạc
+│   │   │   │                      #   ⚠️ `stone` không được nhỏ hơn `MIN_STONE = 1/7` (viên 8 điểm
+│   │   │   │                      #   ảnh, ĐO ĐƯỢC) — nhỏ hơn thì cái kẹp nuốt mất phần chênh trong
+│   │   │   │                      #   im lặng, đúng bẫy Phase 7B. `isValidStreetStyle` chặn thẳng
+│   │   │   │                      #   ⚠️ Bó vỉa = La Mã (kỷ 1–6 không có) · vạch kẻ = thế kỷ 20 (kỷ
+│   │   │   │                      #   1–10 không có). Test khoá CẢ HAI CHIỀU — không có nó thì cách
+│   │   │   │                      #   dễ nhất để "15 kỷ khác nhau" là nói dối lịch sử
 │   │   │   ├── floraStyle.js      # BẢNG THẢM THỰC VẬT 15 KỶ (Phase 8D): loài + trọng số · cỡ ·
 │   │   │   │                      #   mật độ · tầng cây bụi · màu lá. Nguồn DUY NHẤT trả lời "kỷ
 │   │   │   │                      #   này mọc cây gì". Mỗi dòng buộc vào `country` của eraStyle —

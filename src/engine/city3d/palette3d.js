@@ -176,6 +176,40 @@ export function mixHue(a, b, t) {
 }
 
 /**
+ * Khoảng cách độ đậm giữa MẶT ĐƯỜNG và MẶT ĐẤT — có cả SÀN lẫn TRẦN.
+ *
+ * ⚠️ ĐÂY LÀ BẢN VÁ GỐC CỦA `TECH_DEBT #30`, VÀ CÁI TRẦN MỚI LÀ PHẦN MỚI.
+ * Luật cũ viết `gap = MIN + |off| × SPAN` — tức `MIN` mang nghĩa *"đường và đất phải cách nhau ÍT
+ * NHẤT chừng này"* nhưng lại được **CỘNG THÊM** vào chênh lệch riêng của vật liệu thay vì làm SÀN
+ * cho tổng. Vật liệu nào vốn đã xa mức trung tính thì bị đẩy HAI LẦN: nhựa đường kỷ 11 (`#3a3b3e`,
+ * cách trung tính 0,265) nhận tổng đẩy **0,289** và render ra độ sáng **0,113** trong khi mặt đất
+ * 0,406 — DƯỚI ngưỡng 0,12 mà mắt còn đọc ra chi tiết, **xét riêng vật liệu, trước khi bóng đổ chạm
+ * vào**. Luật có sàn mà **không có trần**, và chưa ai từng hỏi *"đẩy xa bao nhiêu thì là quá xa?"*.
+ *
+ * Công thức mới bão hoà về `MAX`: `MIN + (MAX−MIN) × (1 − e^(−x·SPAN/(MAX−MIN)))`.
+ *   • tại `x = 0` cho đúng `MIN` ⇒ sàn giữ nguyên, đường không bao giờ chìm vào đất;
+ *   • đạo hàm tại 0 đúng bằng `SPAN` ⇒ các kỷ SÁNG (offset nhỏ) gần như không nhúc nhích;
+ *   • đơn điệu NGẶT ⇒ vật liệu nào sáng hơn thì mặt đường vẫn sáng hơn, thứ tự 15 kỷ giữ nguyên
+ *     tuyệt đối. Đây là điều một phép KẸP (`Math.max`) KHÔNG làm được — Phase 7D đã thử và phải gỡ,
+ *     vì kẹp thì pavé Paris (0,50) và bê tông Singapore (0,63) ra CÙNG một độ đậm.
+ * Luật cũ là trường hợp giới hạn của luật này khi `MAX → ∞`.
+ *
+ * ⚠️ VÀ VÌ SAO ĐƯỢC PHÉP HẠ TRẦN XUỐNG mà 15 kỷ vẫn phân biệt được: từ Phase 9D bản sắc đường KHÔNG
+ * còn nằm hết ở màu. Bề rộng, viên lát, bó vỉa, vỉa hè, vạch kẻ (`streetStyle.js`) gánh phần lớn —
+ * nên trục độ đậm không phải căng ra tới đứt nữa. Trước 9D mà hạ trần là mất bản sắc thật; sau 9D
+ * thì không, và đó chính là lý do #30 và #27 phải làm CÙNG NHAU.
+ *
+ * @param {number} offsetAbs |độ đậm vật liệu − 0,50|
+ */
+export function roadContrastGap(offsetAbs, {
+  min = 0.13, max = 0.26, span = 0.60,
+} = {}) {
+  const x = Math.max(0, offsetAbs);
+  const range = Math.max(1e-6, max - min);
+  return min + range * (1 - Math.exp((-x * span) / range));
+}
+
+/**
  * Dựng bảng màu cho cảnh 3D từ token theme + sắc riêng của kỷ.
  *
  * Cách pha giữ đúng tinh thần bộ vẽ 2D (`cityTokens.js`): **sắc kỷ luôn được pha CHỒNG LÊN nền
@@ -652,26 +686,15 @@ export function buildScenePalette({ tokens, eraColor, era: eraNumber, daylight }
   const groundL = rgbToHsl(groundBaseRgb).l;
 
   /**
-   * Khoảng cách độ đậm tối thiểu giữa đường và đất. Hiệu chuẩn từ chính cảnh BAN NGÀY đang chạy tốt
-   * (đo được 0,129–0,145 qua đủ 15 kỷ) — không phải một số chọn cho đẹp.
+   * Vật liệu đúng giữa thang sáng thì nằm ngang mặt đất; sáng hơn thì nổi lên, tối hơn thì chìm.
+   * ⚠️ Sàn/trần/độ dốc của phép đẩy nay nằm ở `roadContrastGap` (module này, có test riêng) —
+   * KHÔNG chép lại ba con số ấy vào đây, đó là "một luật hai công thức".
    */
-  const ROAD_MIN_CONTRAST = 0.13;
-  /** Vật liệu đúng giữa thang sáng thì nằm ngang mặt đất; sáng hơn thì nổi lên, tối hơn thì chìm. */
   const ROAD_NEUTRAL_L = 0.50;
-  /** Phần chênh lệch RIÊNG của vật liệu còn được giữ lại sau khi đã đẩy ra khỏi vùng mù. */
-  const ROAD_SPAN = 0.60;
 
   const roadHsl = roadSource ? rgbToHsl(roadSource) : null;
-  // ⚠️ ĐẨY RA, KHÔNG PHẢI KẸP LẠI — và đây là chỗ bản đầu của chính phase này làm sai, bắt được
-  // bằng phép đo chứ không bằng mắt. Bản đầu viết `|offset| < MIN ? ±MIN : offset`, tức mọi vật
-  // liệu nằm gần mặt đất đều bị dồn về ĐÚNG ±0,13 — pavé Paris (độ đậm 0,50) và bê tông Singapore
-  // (0,63) ra CÙNG MỘT độ đậm, dù hai con số đầu vào cách nhau xa. Một phép kẹp thì phá THỨ TỰ;
-  // đo được: 9↔14 chỉ còn cách nhau 7,3 ban ngày và 3,7 ban đêm, tức gần như cùng một mặt đường.
-  // Công thức dưới đây là một phép ĐẨY ĐƠN ĐIỆU: vật liệu nào sáng hơn thì mặt đường vẫn sáng hơn,
-  // chỉ là cả hai cùng bị đẩy ra khỏi vùng không đọc được quanh mặt đất.
   const roadOffset = roadHsl ? roadHsl.l - ROAD_NEUTRAL_L : 0;
-  const roadL = groundL + Math.sign(roadOffset || 1)
-    * (ROAD_MIN_CONTRAST + Math.abs(roadOffset) * ROAD_SPAN);
+  const roadL = groundL + Math.sign(roadOffset || 1) * roadContrastGap(Math.abs(roadOffset));
 
   // ⚠️ CHÂN TRỜI PHẢI CÓ MÀU, không được nhợt. Bản đầu lấy `l: 0.86` và ảnh chụp thử ra một mảng
   // xám tím phẳng lì — bầu trời chiếm gần một nửa khung hình nên nó nhợt là cả bức nhợt theo.

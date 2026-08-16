@@ -490,6 +490,37 @@ ngày ban đêm mặt đường tàng hình** (cách mặt đất 0,012–0,020 
 nhựa đường TỐI hơn). Vai màu nào sau này cũng phải "đọc được trên nền X" thì làm y như vậy, đừng
 khai một con số rồi tin nó đứng yên.
 
+⚠️ **NHƯNG QUAN HỆ ẤY CHỈ CÓ SÀN, KHÔNG CÓ TRẦN — VÀ ĐÓ LÀ NỬA CÒN LẠI, SỬA Ở PHASE 9D**
+(xem **ADR-025**). Phép đẩy của Phase 7D **CỘNG** 0,13 vào chênh lệch riêng của vật liệu chứ không
+lấy 0,13 làm sàn cho TỔNG, nên vật liệu nào vốn đã xa mức trung tính thì bị đẩy **hai lần**: nhựa
+đường kỷ 11 nhận tổng đẩy 0,289 và render ra độ sáng **0,113** trong khi mặt đất 0,406 — dưới ngưỡng
+0,12 mà mắt còn đọc ra chi tiết, **xét riêng vật liệu, trước khi bóng đổ chạm vào**. Con đường thành
+cái rãnh. Nay `roadContrastGap` **bão hoà**: sàn 0,13 · trần 0,26 · vẫn đơn điệu ngặt (vật liệu xa
+trung tính hơn vẫn nằm xa đất hơn, nên bão hoà không nuốt mất trục vật liệu).
+
+⚠️ **VÀ CÁI TRẦN ẤY MỘT MÌNH KHÔNG ĐỦ — VÌ NÓ LÀM ĐỎ MỘT LỜI HỨA KHÁC, ĐÚNG ĐẮN.** Đây là chỗ
+Phase 9D chạm tới KIẾN TRÚC chứ không chỉ chạm tới một con số. Chặn cái rãnh lại nghĩa là thu hẹp
+dải độ đậm khả dụng, mà bản sắc *"15 kỷ ra 15 mặt đường"* khi ấy **chỉ nằm trên trục độ đậm** — nên
+bài test ấy đỏ ngay ở cặp **11↔13**. Nó đỏ đúng: Manhattan và Tokyo **đều lát nhựa đường**, gần nhau
+về màu là sự thật vật lý. Gốc rễ không phải cái trần, mà là **một trục đang gánh việc của mười**.
+
+⇒ **Luồng mới, ba lớp tách bạch** (`engine/city3d/streetStyle.js` → `render3d/terrainMesh.js` →
+`palette3d.js`): bảng 15 kỷ × 10 trường trả lời *"con đường kỷ này TRÔNG NHƯ THẾ NÀO"* (bề rộng đại
+lộ · bề rộng ngõ · vật liệu lát · cỡ viên · độ mòn · bó vỉa · vỉa hè · vạch kẻ · kiểu mép); tầng vẽ
+chỉ DỰNG theo bảng; bảng màu chỉ còn lo MÀU và chỉ còn hai lời hứa về màu (bảng không dẹt · không
+hai kỷ trùng khít mã màu). Phép đo bản sắc chuyển sang **8 trục cấu trúc** ở `streetStyle.test.js`.
+Ba hệ quả kiến trúc đáng nhớ:
+1. **`carriagewayExtents` xoá luôn khái niệm `variant` khỏi tầng vẽ.** Bề rộng là đại lượng của MẶT
+   CẮT NGANG; bản đầu áp nó lên cả chiều DỌC nên đường vỡ thành những mảng rời rạc. Luật đúng —
+   *mép giáp ô đường thì vươn tới ranh giới, mép giáp đất thì dừng ở nửa bề rộng* — làm đường dọc,
+   ngã tư và đầu đường cụt tự đúng, không cần ba nhánh mã.
+2. **Cả hệ đường vẫn là MỘT hình học, MỘT vật liệu, MỘT lệnh vẽ.** Bó vỉa/vỉa hè/vạch kẻ phân biệt
+   nhau bằng `ROAD_PART` (thuộc tính đỉnh) chứ không bằng mesh riêng — nên số lệnh vẽ đứng yên
+   **13 → 13**. Cái giá đã biết và chấp nhận: vỉa hè không có độ nhám riêng, nó chỉ sáng hơn.
+3. **Bảng đường buộc cứng vào `eraStyle.js` qua `country`** (có test bắt), y như `floraStyle.js`.
+   Không có ràng buộc ấy thì 15 dòng là 15 lần chọn bừa — mà chọn bừa chính là thứ đã sinh ra 15 kỷ
+   đường giống hệt nhau ngay từ đầu.
+
 ⚠️ **BẦU TRỜI KHÔNG ĐƯỢC PHA BẰNG CÁCH XOAY GÓC MÀU** — họ lỗi này đã lộ ra BA lần trong cùng một
 Phase, mỗi lần ở một chỗ khác nhau, và cả ba lần chỉ ảnh chụp mới thấy chứ đọc code thì không:
 cộng thẳng offset độ (`skyShift`) · nội suy góc màu về đích cố định · pha sắc kỷ bằng `mixHue`. Gốc

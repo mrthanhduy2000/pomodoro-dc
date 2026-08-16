@@ -318,12 +318,18 @@ test('MẶT ĐƯỜNG PHẢI DÙNG VẬT LIỆU CỦA KỶ, không dùng chung v
   // ⚠️ HỎI ĐÍCH DANH TẤM ĐƯỜNG, không hỏi "có ít nhất một chỗ dùng roadMaterial". Phép đếm gộp là
   // cái phễu chứ không phải hàng rào: cảnh này có nhiều mesh, nên chỉ cần một chỗ khác tình cờ nhận
   // vật liệu là assert vẫn xanh dù đúng tấm đường đã tuột mất.
+  // ⚠️ MỞ NGOẶC VUÔNG BẰNG `[,\]]` CHỨ KHÔNG ĐÓNG CỨNG `\]` — và đây là một PHÉP ĐO GIÀ ĐI, không
+  // phải mã hỏng. Bản đầu viết `\[road3d, roadMaterial\]`, tức khoá luôn cả SỐ PHẦN TỬ của bộ ba.
+  // Phase 9D thêm phần tử thứ ba (tên khối, để `city-preview.mjs --mask road` gọi đúng tên nó) và
+  // bài này đỏ với thông báo "tấm đường không còn được ghép với vật liệu riêng" — trong khi tấm
+  // đường vẫn ghép đúng vật liệu ấy, không sai một chữ. Cùng họ với bài "kỳ quan phải có 4 tháp
+  // góc" ở Phase 5B: câu hỏi đúng, cách hỏi lỗi thời.
   assert.match(
-    CALLS, /\[road3d, roadMaterial\]/,
+    CALLS, /\[road3d, roadMaterial[,\]]/,
     'Tấm đường không còn được ghép với vật liệu riêng của nó.',
   );
   assert.ok(
-    !/\[road3d, tileMaterial\]/.test(CALLS),
+    !/\[road3d, tileMaterial[,\]]/.test(CALLS),
     'Tấm đường đang dùng chung vật liệu với mặt đất — đúng thứ Phase 7D đi sửa.',
   );
 

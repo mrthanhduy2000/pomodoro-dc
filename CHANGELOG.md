@@ -12,6 +12,34 @@
 
 ---
 
+## 2026-08-16 — Phase 9D: đường phố thành một HỆ THỐNG, bản sắc chuyển từ màu sang cấu trúc (đóng `TECH_DEBT #30` + `#27`)
+
+- **Mục đích**: sửa nguyên nhân gốc của hai mục nợ đã tự nối cứng với nhau. Mặt đường trước đây là
+  *một dải màu phẳng*: không bó vỉa, không vỉa hè, không viên lát, không vạch kẻ, mép cắt vuông
+  giữa đồng, và ở vài kỷ tối tới mức thành một cái rãnh. Gốc rễ: **màu là trục DUY NHẤT mang bản
+  sắc**, nên mọi sức ép "15 kỷ phải khác nhau" dồn vào độ đậm — mà độ đậm có đáy.
+- **Phạm vi**: thêm `src/engine/city3d/streetStyle.js` (bảng 15 kỷ × 10 trường + 3 hàm thuần) và
+  `streetStyle.test.js`; `terrainMesh.js` dựng thêm bó vỉa · vỉa hè · viên lát · vạch kẻ (tim
+  đường / vạch đứt / vạch sang đường) và nối liền mặt đường qua ngã tư; `palette3d.js` đổi phép đẩy
+  độ đậm sang **bão hoà** (sàn 0,13 · trần 0,26); `eraStyle.js` sửa vật liệu lát kỷ 7 (pietraforte
+  → pietra serena — xem bên dưới); công cụ đo `scripts/road-score.mjs` + cờ `--mask` / `--no-shadow`
+  cho `city-preview.mjs`.
+- **Ảnh hưởng**: **12/12** tổ hợp nghiệm thu (kỷ 3·7·11·14 × 12h·15h·22h) đạt cả hai lời hứa —
+  đường đọc được (xấu nhất 0,061 trên ngưỡng mắt 0,05) và không thành hố (sâu nhất 0,202 dưới trần
+  0,26). Bản sắc 105 cặp kỷ nay đo bằng **8 trục cấu trúc**: yếu nhất 3/8, trung vị 6/8. Phép chấm
+  15 kỷ toàn cảnh giữ nguyên 15/15 chặng và 105/105 kỷ. Số lệnh vẽ **13 → 13**; tam giác
+  terrain+road 27 626 → 31 546 ở kỷ nặng nhất.
+- **⚠️ Một lỗi đọc sử đã sửa**: kỷ 7 dùng **pietraforte** (đá XÂY TƯỜNG Palazzo Vecchio) làm màu mặt
+  đường, trong khi Firenze LÁT đường bằng **pietra serena** (xám-xanh). Hậu quả đo được: đá ấy cùng
+  họ màu với nền đất ấm nên con đường gần như tàng hình (0,050 lúc 12h · **0,019 lúc 22h**). Sửa
+  đúng vật liệu ⇒ 0,200 / 0,191 / 0,198.
+- **Tương thích**: không đổi dữ liệu lưu, không đổi API, không thêm dependency. Bài test
+  `15 KỶ RA 15 MẶT ĐƯỜNG` đổi chỗ ở (`palette3d.test.js` → `streetStyle.test.js`) và đổi đại lượng
+  đo (khoảng cách RGB → 8 trục cấu trúc); tầng bảng màu giữ lại hai lời hứa mà màu thật sự chịu
+  trách nhiệm được. Chi tiết lý do: **ADR-025**.
+
+---
+
 ## 2026-08-16 — Công cụ đo: bỏ hẳn proxy "mái", khôi phục phép chấm 15 kỷ (`TECH_DEBT #22` + `#19`)
 
 - **Mục đích**: sửa **nguyên nhân gốc** của #22 — công cụ chấm bản quét không còn chấm được 105 cặp

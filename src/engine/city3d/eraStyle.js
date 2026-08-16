@@ -237,9 +237,18 @@ export const ERA_STYLES = {
     // toàn bộ phần còn lại của thành phố là nhà phố mái ngói dốc thoải. Cho nhà dân đội vòm thì
     // Duomo — thứ đáng lẽ nhận ra được từ xa — chìm nghỉm giữa 25 bản sao tí hon của chính nó.
     vernacularRoof: 'gable',
-    // đá PIETRAFORTE lát quảng trường Firenze — sa thạch NÂU-VÀNG ấm, chính thứ đá dựng nên
-    // Palazzo Vecchio; nó không phải granite xám như kỷ 4 hay kỷ 9.
-    roadMaterial: 'stone', roadColor: '#9c8760',
+    // ⚠️ ĐÁ **PIETRA SERENA** — SỬA MỘT LỖI ĐỌC SỬ, KHÔNG PHẢI CHỈNH MÀU CHO DỄ NHÌN. Bản trước
+    // dùng `#9c8760` (pietraforte) và tự giải thích là "chính thứ đá dựng nên Palazzo Vecchio" —
+    // câu ấy đúng, và chính nó là chỗ sai: pietraforte là đá XÂY TƯỜNG. Thứ người Firenze LÁT
+    // ĐƯỜNG và lát quảng trường là *pietra serena*, sa thạch XÁM-XANH nguội (cũng là đá của mọi
+    // đường gờ, cột, khung cửa Brunelleschi). Lấy đá xây tường làm màu mặt đường là đang mô tả
+    // sai vật liệu, và nó gây hậu quả đo được: đá ấy CÙNG HỌ MÀU với nền đất ấm của kỷ 7, nên con
+    // đường chỉ còn mỗi độ sáng để tách khỏi đất — mà độ sáng thì đang nằm đúng ở sàn 0,13. Đo
+    // trên ảnh dựng (tắt bóng): khoảng cách đường↔đất chỉ 0,050 lúc 12h và **0,019 lúc 22h**,
+    // dưới hẳn ngưỡng mắt 0,047. Kỷ 4 và kỷ 9 có sàn y hệt (0,135 · 0,131) mà ra 0,106–0,163 —
+    // vì đá của chúng XÁM, khác họ màu với đất. Nói cách khác kỷ 7 dính đúng bệnh của cả Phase
+    // 9D, thu nhỏ lại: một trục (độ sáng) phải gánh việc của hai (sáng + sắc).
+    roadMaterial: 'stone', roadColor: '#8a8f8c',
     windows: 'arch',
     motifs: ['columns', 'arcade', 'statue'],
     rough: 0.06,

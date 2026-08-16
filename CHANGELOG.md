@@ -12,6 +12,30 @@
 
 ---
 
+## 2026-08-16 — Công cụ đo: bỏ hẳn proxy "mái", khôi phục phép chấm 15 kỷ (`TECH_DEBT #22` + `#19`)
+
+- **Mục đích**: sửa **nguyên nhân gốc** của #22 — công cụ chấm bản quét không còn chấm được 105 cặp
+  kỷ vì bộ lọc "8% điểm ảnh tươi nhất **≈ mái**" đã chuyển sang chấm **CỎ**. Chữ "≈" là một giả
+  định mỹ thuật không được viết ra (*mái là thứ tươi nhất khung hình*), đúng khi mái suy từ
+  `accentColor` và chết ở **Phase 6B** khi mái thành vật liệu lợp thật.
+- **Phạm vi**: **chỉ tầng công cụ dev** — `scripts/sweepMetric.mjs` (mới, phép đo thuần),
+  `scripts/sweepMetric.test.js` (mới, 6 bài), `scripts/sweep-score.mjs` (gỡ `roofColor` + cổng "từ
+  chối chấm"; so từng chặng rồi lấy trung bình khoảng cách), `package.json` (glob test thêm gốc
+  `scripts/`). **Không đụng một dòng nào của renderer**: chunk 3D `CityScene3D-BoWYJm9L.js` trùng
+  băm với `53045b2`.
+- **Vì sao không "chọn điểm ảnh mái cho khéo hơn"**: đo ở tầng dữ liệu thì **4/15 kỷ khai mái TRÙNG
+  vật liệu tường** (kỷ 3, 12, 13, 14) ⇒ mái không tách được ngay từ NGUỒN, nên cả hướng "mặt nạ do
+  bên dựng cung cấp" mà chính #22 đề xuất cũng là ngõ cụt. Thay bằng **chia lưới 6×3 ô con** — giải
+  thẳng bệnh gốc ("trung bình trên vùng quá rộng pha loãng ~10 lần") mà không cần biết mái là gì.
+- **Ảnh hưởng**: **0/105 cặp kỷ** dưới ngưỡng mắt (gần nhất 23,3 · trung vị 41,1) và **0/15 cặp
+  chặng** (gần nhất 20,7). Phase 9C **không** đẩy cặp nào xuống dưới ngưỡng (24,1→23,3 · 42,8→41,1).
+  `TECH_DEBT #19` nhờ đó đo lại được và cũng đóng. **718 bài test** (+6), lint sạch, build xanh.
+- **Tương thích**: ⚠️ **mọi con số cặp-kỷ ghi trước 2026-08-16 đo một đại lượng KHÁC** (màu mái vs
+  cả dải thành phố) — trùng đơn vị nhưng **không so trực tiếp được**. Ngưỡng mắt 12 giữ nguyên vì
+  đơn vị RGB/255 được giữ có chủ ý.
+
+---
+
 ## 2026-08-15 — Phase 9B: bóng đổ thôi là mảng đen tuyệt đối
 
 - **Mục đích**: Đàm yêu cầu *"bóng đổ không được là những mảng đen cứng, phẳng và tuyệt đối"*. Đo

@@ -17,18 +17,21 @@
  *    sáng ở theme sáng, đen ở theme tối ⇒ sai theo hai chiều NGƯỢC nhau tuỳ theme. Toạ độ ở đây
  *    lấy THẲNG từ mã dựng bảng (`city-preview.mjs`: `ctx.drawImage(stage, 60 + col*CELL_W, y)` với
  *    `y = 30 + row*(CELL_H+LABEL_H)`, cộng `#wrap { padding: 8px }`).
- * 2. **Đừng đo trung bình cả dải thành phố để so 15 kỷ.** Mái — thứ mang bản sắc kỷ — chỉ chiếm
- *    ~1/10 diện tích dải đó; phần còn lại (đất, trời lọt giữa các khối) giống hệt nhau ở mọi kỷ
- *    nên tín hiệu bị pha loãng ~10 lần và ra kết luận sai hẳn (70/105 cặp "trùng nhau", trong khi
- *    số thật là 5/105). Ở đây lọc lấy **8% điểm ảnh TƯƠI NHẤT** của dải thành phố.
+ * 2. **Đừng đo trung bình CẢ dải thành phố để so 15 kỷ.** Một mảng mái chỉ chiếm ~1/10 diện tích
+ *    dải đó, nên trung bình cả dải pha loãng tín hiệu ~10 lần và ra kết luận sai hẳn (70/105 cặp
+ *    "trùng nhau"). Bản cũ chữa bằng bộ lọc "8% điểm ảnh tươi nhất ≈ mái" — và chính bộ lọc ấy
+ *    chết ở bẫy số 5 bên dưới. Nay chữa bằng cách CHIA Ô CON (`sweepMetric.mjs`): thu vùng lấy
+ *    trung bình xuống 1/18 thì mảng mái chiếm trọn vài ô con và hiện nguyên độ lớn, mà phép đo
+ *    không cần biết "mái" là gì.
  * 3. **Đừng chấm cả cảnh bằng MỘT trục.** Góc màu chỉ là một trong ba thành phần của màu, dải trời
  *    chỉ là một trong ba dải của khung hình. Đo một trục thì vừa báo nhầm vừa bỏ sót. Ở đây mỗi ô
  *    thành một **vector 9 chiều** (trời + thành phố + đất, mỗi dải 3 kênh).
  * 4. **Đừng chấm chặng ĐÊM bằng độ tương phản tuyệt đối.** Đêm tối thì tương phản thấp là ĐÚNG.
  *    Phép đo có nghĩa cho đêm là "15 kỷ có còn khác nhau không" — và nó nằm sẵn trong bảng cặp-kỷ.
  *
- * ⚠️ `--selftest` LÀ BẮT BUỘC KHI NGHI NGỜ: nó bỏ bộ lọc "8% tươi nhất" đi. Nếu con số KHÔNG nhảy
- * về mức pha loãng thì bộ lọc chưa hề chạy và mọi kết luận bên dưới là rác.
+ * ⚠️ `--selftest` LÀ BẮT BUỘC KHI NGHI NGỜ: nó thu lưới ô con về 1×1, tức quay lại đúng phép trung
+ * bình cả dải đã gây ra kết luận sai 70/105. Nếu con số KHÔNG tệ đi rõ rệt thì việc chia ô con
+ * chưa hề chạy và mọi kết luận bên dưới là rác.
  *
  * ══════════════════════════════════════════════════════════════════════════════════════════════
  * ⚠️⚠️ CÁI BẪY THỨ NĂM (2026-08-14, Phase 6B) — VÀ NÓ GIẾT CHÍNH BỘ LỌC Ở BẪY SỐ 2 BÊN TRÊN
@@ -46,11 +49,20 @@
  * SÁNG và kỷ 10 là đá phiến gần ĐEN, hai thứ không ai nhầm được.
  *
  * ⇒ **Bài học chung, quan trọng hơn cái bẫy cụ thể**: `--selftest` chỉ chứng minh bộ lọc CÓ tác
- * dụng, không chứng minh nó chọn ĐÚNG THỨ (đã ghi ở `CLAUDE.md`, Phase 4C). Cách duy nhất biết nó
- * chọn đúng là **đối chiếu thứ nó chọn với một sự thật độc lập**. Ở đây có sẵn một sự thật như
- * vậy: `eraStyle.js` KHAI màu vật liệu của từng kỷ. Nên nay tool tự kiểm — đo ra một sắc lệch hẳn
- * so với vật liệu kỷ đó tự khai thì nó **TỪ CHỐI CHẤM** và nói rõ vì sao, thay vì in một con số.
- * Một công cụ im lặng còn dùng được; một công cụ nói dối tự tin thì tệ hơn không có.
+ * dụng, không chứng minh nó chọn ĐÚNG THỨ (đã ghi ở `CLAUDE.md`, Phase 4C).
+ *
+ * ══════════════════════════════════════════════════════════════════════════════════════════════
+ * ✅ ĐÃ VÁ GỐC (2026-08-16) — BỎ HẲN PROXY "MÁI", KHÔNG PHẢI VÁ BỘ LỌC
+ * ══════════════════════════════════════════════════════════════════════════════════════════════
+ * Bản vá đầu tiên nghĩ tới là "chọn điểm ảnh mái cho khéo hơn" — ví dụ đối chiếu với `roofColor`
+ * mà `eraStyle.js` khai. Nhưng cách đó VỪA vòng tròn (chọn điểm ảnh theo màu đã khai rồi đo xem
+ * màu có khớp màu đã khai không) VỪA bất khả thi: đo ở tầng dữ liệu thì **4/15 kỷ khai mái TRÙNG
+ * vật liệu tường** (kỷ 3, 12, 13, 14), nên mái không tách được ra ngay từ NGUỒN — xem
+ * `sweepMetric.mjs` để biết chi tiết.
+ *
+ * ⇒ Phép đo nay KHÔNG chọn điểm ảnh theo màu nữa. Nó chia dải thành phố thành lưới ô con và so
+ * từng ô con. Không còn giả định mỹ thuật nào để mà chết lần thứ ba. Cổng "TỪ CHỐI CHẤM" dựa trên
+ * góc màu mái đã được gỡ cùng lúc — nó tồn tại để canh một bộ lọc nay không còn nữa.
  *
  * Dùng:
  *   node scripts/city-preview.mjs --sweep --all --theme light --cell 260
@@ -60,7 +72,9 @@
 
 import { readFileSync } from 'node:fs';
 import { decodePng, describe } from './png-probe.mjs';
-import { getEraStyle } from '../src/engine/city3d/eraStyle.js';
+import {
+  BANDS, cityRect, EYE, GRID_X, GRID_Y, gridVector, vecDist,
+} from './sweepMetric.mjs';
 
 const argv = process.argv.slice(2);
 const FILE = argv.find((a) => !a.startsWith('--'));
@@ -107,13 +121,6 @@ const PHASES = geom.hours.map((h) => PHASE_NAME[h] ?? `${h}h`);
 const ERA_LIST = geom.eras;
 const ERAS = ERA_LIST.length;
 
-// Ba dải theo chiều cao ô. Camera chúc xuống nên: trên là trời, giữa là thành phố, dưới là đất.
-const BANDS = [
-  { name: 'trời', from: 0.02, to: 0.30 },
-  { name: 'thành phố', from: 0.34, to: 0.68 },
-  { name: 'đất', from: 0.72, to: 0.98 },
-];
-
 const png = decodePng(readFileSync(FILE));
 
 function pixelsIn(col, row, band) {
@@ -136,23 +143,15 @@ const mean = (list) => {
   return s.map((v) => v / list.length);
 };
 
-/** Độ tươi thô (max−min) — đủ để tách mái sơn màu ra khỏi đất/bê tông/trời. */
+/** Độ tươi thô (max−min). Nay CHỈ dùng để mô tả khi in ra, KHÔNG còn dùng để chọn điểm ảnh nào. */
 const chroma = (p) => Math.max(p[0], p[1], p[2]) - Math.min(p[0], p[1], p[2]);
-
-/** 8% điểm ảnh tươi nhất của dải thành phố ≈ MÁI. `--selftest` bỏ lọc để lộ mức pha loãng. */
-function roofColor(col, row) {
-  const px = pixelsIn(col, row, BANDS[1]);
-  if (SELFTEST) return mean(px);
-  const sorted = px.slice().sort((a, b) => chroma(b) - chroma(a));
-  return mean(sorted.slice(0, Math.max(1, Math.round(sorted.length * 0.08))));
-}
 
 /** Vector 9 chiều của một ô: 3 dải × 3 kênh. */
 function sceneVector(col, row) {
   return BANDS.flatMap((b) => mean(pixelsIn(col, row, b)));
 }
 
-const dist = (a, b) => Math.sqrt(a.reduce((s, v, i) => s + (v - b[i]) ** 2, 0) / (a.length / 3));
+const dist = vecDist;
 
 // ── Cổng tự-kiểm hình học ─────────────────────────────────────────────────────────────────────
 // ⚠️ PHẢI CHẠM TỚI HÀNG CUỐI. Bản cũ so hai ô CÙNG NẰM Ở HÀNG 0, nên nó bảo chứng được bước nhảy
@@ -196,7 +195,6 @@ for (let i = 0; i < PHASES.length; i += 1) {
   }
 }
 phasePairs.sort((x, y) => x.d - y.d);
-const EYE = 12;   // ngưỡng mắt phân biệt, /255 — hiệu chuẩn ở Phase 3Y
 console.log(`\n── 6 CHẶNG NGÀY · ${phasePairs.length} cặp · cả cảnh (9 chiều) ──`);
 for (const p of phasePairs.slice(0, 5)) {
   console.log(`  ${p.d < EYE ? '✗' : '✓'} ${p.a} ↔ ${p.b}: ${p.d.toFixed(1)}`);
@@ -205,11 +203,21 @@ const phaseBad = phasePairs.filter((p) => p.d < EYE);
 console.log(`  cặp gần nhất ${phasePairs[0].d.toFixed(1)} · dưới ngưỡng mắt (${EYE}): `
   + `${phaseBad.length}/${phasePairs.length}`);
 
-// ── 2. Mười lăm kỷ có phân biệt được không? (105 cặp, đo MÁI, trung bình trên 6 chặng) ─────────
-const eraVec = Array.from({ length: ERAS }, (_, row) => {
-  const perPhase = PHASES.map((_, col) => roofColor(col, row));
-  return perPhase[0].map((_, k) => perPhase.reduce((s, v) => s + v[k], 0) / PHASES.length);
-});
+// ── 2. Mười lăm kỷ có phân biệt được không? (105 cặp, lưới ô con của dải thành phố) ────────────
+// ⚠️ KHÔNG gộp 6 chặng thành một vector rồi mới so. Gộp trước thì hai kỷ khác nhau ở bình minh
+// nhưng ngược chiều nhau ở hoàng hôn sẽ TRIỆT TIÊU nhau và ra "giống hệt". So TỪNG chặng rồi lấy
+// trung bình các khoảng cách — trả lời đúng câu hỏi "vào một giờ bất kỳ, hai kỷ này cách nhau bao
+// nhiêu", và không có phép cộng nào có thể giấu một khác biệt đi.
+const eraPhaseVec = Array.from({ length: ERAS }, (_, row) => PHASES.map((_, col) => {
+  const rect = cityRect({
+    x0: X0 + col * CELL_W, y0: Y0 + row * ROW_STRIDE, cellW: CELL_W, cellH: CELL_H,
+  });
+  // `--selftest` thu lưới về 1×1 = đúng phép trung bình cả dải đã gây ra kết luận sai 70/105 ở
+  // Phase 4C. Số phải TỆ ĐI rõ rệt; không tệ đi nghĩa là việc chia ô con chưa hề chạy.
+  return gridVector(png, rect, SELFTEST ? { gx: 1, gy: 1 } : {});
+}));
+const eraVec = eraPhaseVec.map((perPhase) => perPhase[0]
+  .map((_, k) => perPhase.reduce((s, v) => s + v[k], 0) / PHASES.length));
 // ⚠️ IN KÈM ĐỘ SÁNG CỦA MÀU ĐO ĐƯỢC — đây là bài học đắt nhất của chính bộ lọc này (2026-08-13):
 // bản trước lọc bằng độ tươi TƯƠNG ĐỐI `(max−min)/max`, mà mẫu số là `max` nên **pixel càng TỐI
 // càng dễ đạt điểm cao** ⇒ nó lấy mặt mái KHUẤT TRONG BÓNG và in ra 15 màu gần đen ở giữa TRƯA.
@@ -217,78 +225,45 @@ const eraVec = Array.from({ length: ERAS }, (_, row) => {
 // chọn ĐÚNG THỨ. Cách duy nhất nhận ra: in ra thứ nó chọn rồi nhìn. 15 con số quanh 20–60 giữa
 // trưa là báo động; mái đang nắng phải ở khoảng 80–130.
 if (VERBOSE) {
-  console.log('\n── MÀU MÁI ĐO ĐƯỢC TỪNG KỶ (trung bình 6 chặng) ──');
+  // ⚠️ IN RA THỨ PHÉP ĐO THẬT SỰ NHÌN THẤY — bài học đắt nhất của chính file này (2026-08-13 và
+  // 2026-08-14): cả hai lần bộ lọc hỏng đều chỉ lộ ra khi có người IN màu đo được rồi nhìn. Nay
+  // in màu trung bình của dải thành phố + ĐỘ TRẢI giữa 18 ô con. Độ trải gần 0 nghĩa là dải này
+  // phẳng lì — hoặc thành phố thật sự đơn sắc, hoặc lưới ô con đang lấy mẫu nhầm chỗ.
+  console.log('\n── DẢI THÀNH PHỐ ĐO ĐƯỢC TỪNG KỶ (trung bình 6 chặng) ──');
   eraVec.forEach((v, i) => {
-    const [r, g, b] = v.map(Math.round);
-    const d = describe(r, g, b);
+    const cells = Array.from({ length: v.length / 3 }, (_, k) => v.slice(k * 3, k * 3 + 3));
+    const avg = [0, 1, 2].map((k) => cells.reduce((s, c) => s + c[k], 0) / cells.length);
+    const spread = Math.sqrt(cells.reduce((s, c) => s + vecDist(c, avg) ** 2, 0) / cells.length);
+    const [r, g, b] = avg.map(Math.round);
     console.log(`  kỷ ${String(ERA_LIST[i]).padStart(2)}  rgb(${String(r).padStart(3)},`
-      + `${String(g).padStart(3)},${String(b).padStart(3)})  ${d.hex}  `
-      + `sáng ${String(Math.round((r + g + b) / 3)).padStart(3)}  tươi ${chroma(v).toFixed(0).padStart(3)}`);
+      + `${String(g).padStart(3)},${String(b).padStart(3)})  ${describe(r, g, b).hex}  `
+      + `sáng ${String(Math.round((r + g + b) / 3)).padStart(3)}`
+      + `  tươi ${chroma(avg).toFixed(0).padStart(3)}`
+      + `  trải giữa 18 ô con ${spread.toFixed(1).padStart(5)}`);
   });
-}
-
-// ── CỔNG TIN CẬY CỦA BỘ LỌC MÁI (thêm 2026-08-14 — xem "cái bẫy thứ năm" ở đầu file) ──────────
-// Bộ lọc chỉ đáng tin nếu thứ nó chọn THẬT SỰ là mái. Sự thật độc lập để đối chiếu: `eraStyle.js`
-// khai màu vật liệu của từng kỷ. So GÓC MÀU (không so độ sáng — ánh sáng cảnh làm mái sáng/tối đi
-// rất nhiều, đó là chuyện bình thường; nhưng ánh sáng KHÔNG biến đá phiến lam thành cỏ ô-liu).
-// Chỉ xét những kỷ có vật liệu đủ tươi để góc màu còn là tín hiệu — bê tông xám thì góc màu của nó
-// gần như là số ngẫu nhiên, đem so là tự bịa ra lỗi.
-const hueGap = (a, b) => { const d = Math.abs(a - b) % 360; return d > 180 ? 360 - d : d; };
-const trust = [];
-for (let i = 0; i < ERAS; i += 1) {
-  const declared = getEraStyle(ERA_LIST[i])?.roofColor;
-  if (!declared) continue;
-  const dr = parseInt(declared.slice(1, 3), 16);
-  const dg = parseInt(declared.slice(3, 5), 16);
-  const db = parseInt(declared.slice(5, 7), 16);
-  if (Math.max(dr, dg, db) - Math.min(dr, dg, db) < 25) continue; // vật liệu xám ⇒ bỏ qua, không kết tội
-  const want = describe(dr, dg, db).h;
-  const got = describe(...eraVec[i].map(Math.round)).h;
-  trust.push({ era: ERA_LIST[i], want: Math.round(want), got: Math.round(got), gap: hueGap(want, got) });
-}
-// ⚠️ MỘT KỶ LỆCH LÀ ĐỦ KẾT LUẬN — ĐỪNG ĐỔI THÀNH "quá nửa số kỷ" (đã thử, và nó KHÔNG nổ).
-// Lý do nằm ở chỗ bất đối xứng này: bộ lọc hỏng vì nó chấm nhầm CỎ, mà cỏ có sắc ô-liu ~60°. Các
-// vật liệu ẤM (gạch bùn 30°, ngói âm dương 15°, terracotta 18°) tình cờ nằm gần ngay đó, nên khi bộ
-// lọc chấm nhầm cỏ thì chúng vẫn "khớp" — kỷ 6 lệch đúng 2°, kỷ 3 lệch 13°. Tức đa số kỷ KHÔNG có
-// khả năng phát hiện lỗi này; chỉ vật liệu LẠNH mới phơi ra được, và lúc đó nó phơi ra rất rõ (đá
-// phiến kỷ 5 lệch 156°, đồng oxy hoá kỷ 11 lệch 103°). Đòi "quá nửa" là đòi bằng chứng từ những kỷ
-// về mặt cấu tạo không thể cung cấp — cùng họ với bài học "phép tự-kiểm phải chạm tới ĐÚNG CHIỀU
-// nó muốn bảo chứng" (Phase 4G).
-// Ngưỡng 60°: ánh sáng cảnh có kéo góc màu thật, nhưng đo được nhiều nhất ~22° (nắng ấm kéo sắc
-// lạnh về phía lục — `CLAUDE.md`, Phase 3V). 60° nằm trên hẳn mức đó và dưới hẳn 103°.
-const strayed = trust.filter((t) => t.gap > 60);
-if (strayed.length) {
-  console.log('\n── 15 KỶ · ✋ TỪ CHỐI CHẤM: bộ lọc mái không tìm thấy mái ──');
-  console.log(`  ${strayed.length}/${trust.length} kỷ có vật liệu đủ tươi để đối chiếu đang lệch góc màu > 60°`);
-  for (const t of strayed) {
-    console.log(`    kỷ ${String(t.era).padStart(2)}: khai ${String(t.want).padStart(3)}° · `
-      + `đo được ${String(t.got).padStart(3)}° · lệch ${Math.round(t.gap)}°`);
-  }
-  const ok = trust.filter((t) => t.gap <= 60);
-  if (ok.length) {
-    console.log(`  (${ok.length} kỷ còn lại "khớp" — nhưng đó là vật liệu ẤM, nằm sẵn gần sắc ô-liu của`);
-    console.log('   cỏ, nên chúng khớp cả khi bộ lọc chấm nhầm cỏ. Đừng đọc thành "phần lớn vẫn ổn".)');
-  }
-  console.log('  ⇒ Bộ lọc "8% điểm ảnh tươi nhất" đang chấm CỎ/ĐẤT chứ không phải mái (xem "cái bẫy');
-  console.log('    thứ năm" ở đầu file). Mọi con số cặp-kỷ sinh ra từ đây là RÁC — KHÔNG in ra, vì');
-  console.log('    một con số sai mà tự tin thì nguy hiểm hơn hẳn việc không có số nào.');
-  console.log('  ⇒ Phần chấm 6 CHẶNG NGÀY ở trên KHÔNG dùng bộ lọc này (nó đo cả cảnh 9 chiều) nên');
-  console.log('    vẫn dùng được bình thường. Tình trạng + đường sửa: `TECH_DEBT.md` #22.');
-  console.log('');
-  process.exit(phaseBad.length ? 1 : 0);
 }
 
 const eraPairs = [];
 for (let i = 0; i < ERAS; i += 1) {
   for (let j = i + 1; j < ERAS; j += 1) {
-    eraPairs.push({ a: ERA_LIST[i], b: ERA_LIST[j], d: dist(eraVec[i], eraVec[j]) });
+    const per = PHASES.map((_, col) => dist(eraPhaseVec[i][col], eraPhaseVec[j][col]));
+    eraPairs.push({
+      a: ERA_LIST[i],
+      b: ERA_LIST[j],
+      d: per.reduce((s, v) => s + v, 0) / per.length,
+      worst: Math.min(...per),
+    });
   }
 }
 eraPairs.sort((x, y) => x.d - y.d);
 const eraBad = eraPairs.filter((p) => p.d < EYE);
-console.log(`\n── 15 KỶ · ${eraPairs.length} cặp · màu MÁI (8% điểm ảnh tươi nhất của dải thành phố) ──`);
+// ⚠️ IN ĐÚNG LƯỚI ĐANG CHẠY. `--selftest` thu về 1×1, mà nhãn vẫn ghi 6×3 thì công cụ đang nói
+// dối về chính việc nó vừa làm — đúng loại lỗi NHÃN (không phải lỗi SỐ) đã cắn ở `frame-fit.mjs`.
+const gridLabel = SELFTEST ? '1×1 (--selftest: ĐÃ THU LƯỚI, số phải TỆ ĐI)' : `${GRID_X}×${GRID_Y}`;
+console.log(`\n── 15 KỶ · ${eraPairs.length} cặp · lưới ${gridLabel} ô con của dải thành phố ──`);
 for (const p of eraPairs.slice(0, 5)) {
-  console.log(`  ${p.d < EYE ? '✗' : '✓'} kỷ ${p.a} ↔ kỷ ${p.b}: ${p.d.toFixed(1)}`);
+  console.log(`  ${p.d < EYE ? '✗' : '✓'} kỷ ${p.a} ↔ kỷ ${p.b}: ${p.d.toFixed(1)}`
+    + `  (chặng sát nhau nhất ${p.worst.toFixed(1)})`);
 }
 const med = eraPairs[Math.floor(eraPairs.length / 2)].d;
 console.log(`  cặp gần nhất ${eraPairs[0].d.toFixed(1)} · trung vị ${med.toFixed(1)} · `

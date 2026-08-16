@@ -6,7 +6,19 @@
 > chọn: `ARCHITECTURE_DECISIONS.md`. Nợ kỹ thuật: `TECH_DEBT.md`. Migration: `MIGRATION.md`. Tóm
 > tắt theo mốc: `CHANGELOG.md`.
 > **NGUYÊN TẮC ƯU TIÊN SỐ 1:** (1) mọi phiên AI phải đọc file này + `CLAUDE.md` + các file liên quan TRƯỚC khi làm; (2) sau MỌI cập nhật dù nhỏ, phải cập nhật ngay file này + `CLAUDE.md` + các file liên quan khác.
-> Cập nhật lần cuối: **2026-08-15** — **Phase 9B**: **BÓNG ĐỔ THÔI LÀ MẢNG ĐEN TUYỆT ĐỐI.**
+> Cập nhật lần cuối: **2026-08-16** — **`TECH_DEBT #22` ĐÃ ĐÓNG**: công cụ chấm bản quét thôi đo
+> "thứ tươi nhất khung hình" rồi **gọi** đó là mái. Chữ "≈" trong *"8% tươi nhất ≈ mái"* là một
+> giả định mỹ thuật không được viết ra; nó đúng khi mái suy từ màu nhấn giao diện, và **chết ở
+> Phase 6B** khi mái thành vật liệu lợp thật — từ đó công cụ chấm **CỎ** suốt ba phase. Không vá
+> bộ lọc (đo ở tầng dữ liệu: **4/15 kỷ khai mái TRÙNG vật liệu tường** ⇒ mái không tách được ngay
+> từ NGUỒN, mọi hướng "chọn mái khéo hơn" đều là ngõ cụt) mà **bỏ hẳn proxy**: dải thành phố chia
+> lưới **6×3 ô con** (`scripts/sweepMetric.mjs`, thuần, 6 bài test đã phá thử thấy đỏ), giữ nguyên
+> đơn vị RGB/255 nên ngưỡng mắt 12 còn dùng được. Kết quả: **0/105 cặp kỷ** dưới ngưỡng (gần nhất
+> 23,3 · trung vị 41,1) và **0/15 cặp chặng**; cặp 12↔13 = 28,2. Phase 9C **không** đẩy cặp nào
+> xuống dưới ngưỡng (24,1→23,3 · 42,8→41,1). `TECH_DEBT #19` nhờ đó đo lại được và cũng ĐÓNG.
+> **718 bài test**, lint sạch, build xanh, chunk 3D **trùng băm** với `53045b2` (không đụng renderer).
+>
+> *(Trước đó — 2026-08-15, **Phase 9B**: **BÓNG ĐỔ THÔI LÀ MẢNG ĐEN TUYỆT ĐỐI.***
 > Đàm yêu cầu *"bóng đổ không được là những mảng đen cứng, phẳng và tuyệt đối"*. Công cụ mới
 > `scripts/shadow-score.mjs` đo ra **8,2–20,8% khung hình bị nghiền** dưới ngưỡng mắt còn đọc ra
 > chi tiết. Nguyên nhân gốc: đèn trời và nắng là **hai hằng số không biết nhau**, trong khi thứ
@@ -15,7 +27,7 @@
 > 16,9→11,1% · 8,2→2,7%**, **độ tươi đứng yên** (không dính bẫy "pastel như sữa" của Phase 7A).
 > Kèm theo: cỡ bản đồ bóng từng viết cứng ở **BA nơi với BA giá trị** — và bản QUÉT 15 kỷ, công cụ
 > duyệt mỹ thuật chính thức, đang chạy ở 512 trong khi app chạy 1024. **705 bài test** (+2, cả hai
-> đã thử ngược 5/5 lần đều đỏ), lint sạch, build xanh.
+> đã thử ngược 5/5 lần đều đỏ), lint sạch, build xanh.)*
 
 ---
 
@@ -79,7 +91,67 @@
 
 ## 🗒️ Nhật ký cập nhật
 
-### 2026-08-15 — Phase 9B: bóng đổ nhận được ánh trời, và công cụ đo thôi nhìn một thế giới khác
+### 2026-08-16 — `TECH_DEBT #22` đóng: công cụ chấm 15 kỷ thôi đo "thứ tươi nhất" rồi gọi đó là mái
+
+**Đàm yêu cầu gì**: sửa **nguyên nhân gốc** của #22 — *"không được chỉ đổi threshold cho đến khi
+test xanh"*, *"không phụ thuộc vào một giả định mỹ thuật dễ chết trong phase sau"*, *"không thay
+đổi renderer production chỉ để phục vụ metric"*. Không đụng vào #30/#27/#24.
+
+**Nguyên nhân gốc**: bộ lọc `roofColor` lấy **8% điểm ảnh tươi nhất** của dải thành phố rồi **gọi**
+đó là mái. Chữ "≈" ấy là một **giả định mỹ thuật không được viết ra**: *mái là thứ tươi nhất khung
+hình*. Đúng suốt thời kỳ mái suy từ `accentColor` (màu nhấn giao diện, luôn rực); **Phase 6B** đổi
+mái sang vật liệu lợp thật (đá phiến `#586a89`, bê tông `#717b65`, tranh, gạch bùn — phần lớn XỈN)
+và **Phase 8D** cho mỗi kỷ một thảm thực vật riêng ⇒ thứ tươi nhất còn lại là **CỎ**.
+
+**Vì sao KHÔNG "chọn điểm ảnh mái cho khéo hơn"** (đo ở tầng dữ liệu, không phải suy đoán): chạy 15
+kỷ qua `getEraStyle` thì **4/15 kỷ khai mái TRÙNG vật liệu tường** — kỷ 3 (mudbrick), 12 và 13
+(concrete), 14 (glass). `materialProfile(role==='roof')` xếp tam giác mái vào họ **vật liệu**, nên
+ở bốn kỷ ấy "nhóm mái" và "nhóm tường" là MỘT. **Mái không tách được ngay từ NGUỒN** ⇒ cả hướng
+"mặt nạ do bên dựng cung cấp" mà chính #22 từng đề xuất cũng chết. Và đúng cặp **12↔13** dùng chung
+CẢ HAI vật liệu.
+
+**Đã làm**: bỏ hẳn proxy "mái". Ruột phép đo tách sang `scripts/sweepMetric.mjs` (thuần, `import`
+được); dải thành phố chia **lưới 6×3 = 18 ô con**, so **từng chặng rồi lấy trung bình khoảng cách**
+(gộp trước khi so thì hai kỷ lệch ngược chiều ở hai đầu ngày sẽ triệt tiêu nhau). Giữ nguyên **đơn
+vị RGB/255** để ngưỡng mắt 12 hiệu chuẩn ở Phase 3Y còn dùng được. Gỡ luôn cổng "TỪ CHỐI CHẤM" —
+nó sinh ra để canh một bộ lọc nay không còn.
+
+**Số đo** (bản quét 15 kỷ × 6 chặng trên mã Phase 9C `53045b2`): **0/105 cặp kỷ** dưới ngưỡng, gần
+nhất **23,3** (kỷ 11↔12), trung vị **41,1**; **0/15 cặp chặng**, gần nhất 20,7. Cặp **12↔13 = 28,2**
+(gấp 2,35 lần ngưỡng). `--selftest` thu lưới về 1×1 ra **5,0 · 6/105** ⇒ việc chia ô con nâng cặp
+gần nhất **~4,7 lần** trên dữ liệu THẬT, không chỉ trên ảnh dựng tay.
+
+**Phase 9C có làm 15 kỷ khó phân biệt hơn không?** Không đáng kể, và **không cặp nào tụt xuống dưới
+ngưỡng**: đo cùng một phép đo trên cùng bộ kỷ, trước 9C gần nhất 24,1 · trung vị 42,8 → sau 9C
+23,3 · trung vị 41,1 (−3,3% và −4,0%, cả hai đều 0/105). Cặp 12↔13: 28,7 → 28,2.
+
+**6 bài test mới** (`scripts/sweepMetric.test.js`), **mỗi bài đã phá thử và thấy ĐỎ**. ⚠️ Hai bài
+đỏ ngay lần đầu, và lỗi nằm ở **FIXTURE chứ không ở phép đo** (mảng thử là dải ngang, chỉ hưởng lợi
+từ chia HÀNG). Sửa fixture cho giống vật thật, **không hạ ngưỡng cho test xanh**.
+
+**KHÔNG đụng gì vào renderer**: 718/718 test, lint sạch, build xanh, chunk 3D
+`CityScene3D-BoWYJm9L.js` **trùng băm** với `53045b2`; không file nào dưới `src/` import công cụ đo.
+
+⚠️ **Kèm theo — một khoản nợ tài liệu tự phát hiện**: `package.json` glob test trước nay liệt kê
+từng thư mục GỐC (`electron/` · `src/` · `api/`), nên `scripts/sweepMetric.test.js` **im lặng không
+chạy** cho tới khi thêm `'scripts/**/*.test.js'`. Đúng hình dạng sai của `TECH_DEBT #10`, chỉ khác
+ở cấp gốc thay vì cấp thư mục con. Đã ghi vào `PROJECT_STRUCTURE.md`.
+
+### 2026-08-16 — Phase 9C (bổ sung nhật ký còn thiếu, commit `53045b2` đã lên `main` từ 2026-08-16)
+
+> ⚠️ Ghi bù: phiên làm Phase 9C đã commit + push nhưng **chưa kịp ghi vào nhật ký này**, nên file
+> vẫn tự nhận "cập nhật lần cuối = Phase 9B" trong khi 9C đã chạy trên production. Ghi lại đây cho
+> đúng — một bản ghi thiếu là thứ phiên sau kế thừa rồi dựa vào.
+
+Ba nguyên nhân gốc, đo được: **(1)** `city-preview.mjs` viết cứng `setPixelRatio(1)` trong khi app
+chạy `min(dpr, 2)` ⇒ **mọi kết luận mỹ thuật trước nay đo trên bản THẤP HƠN thứ Đàm nhìn**; nay cả
+hai đọc chung `MAX_PIXEL_RATIO` (12,82% điểm ảnh đổi giá trị giữa DPR 1 và 2). **(2)** Không có đỉnh
+chói vì `envMapIntensity` là **một trường của three gánh hai việc** (nhân cả khuếch tán lẫn phản
+chiếu); vá bằng đĩa mặt trời HDR trong cảnh dò PMREM + nhân bù RIÊNG đường `radiance`, **chỉ cho
+công trình** — bóc cho cả mặt đất/đường/đồi làm tươi tụt mà đỉnh không cao thêm. **(3)** Bề mặt
+phẳng lì → `surfaceDetail.js`, một abstraction dùng chung cho bốn nhóm vật liệu, nhiễu theo toạ độ
+THẾ GIỚI (không thêm UV, không ảnh kết cấu). ⚠️ **Đính chính commit message của `53045b2`**: nó ghi
+tươi tụt "9-16%", số đo thật là **6,4–14,6%**; bảng số trong `surfaceDetail.js` mới là bản đúng.
 
 **Đàm yêu cầu gì**: *"Bóng đổ không được là những mảng đen cứng, phẳng và tuyệt đối."*
 

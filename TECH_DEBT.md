@@ -38,15 +38,19 @@
 > **không được lấy blocker này làm lý do dừng cải thiện hình ảnh** — nên vẫn làm tiếp, nhưng đây
 > nay là mục cần đo GẤP NHẤT: nếu iPhone không gánh nổi thì `SUB = 3` ở `terrainMesh.js` là cái núm
 > hạ tải rẻ nhất (SUB 3 → 2 cắt 6.498 xuống 2.888, tức trả lại gần hết khoản chi của 8C).
-> Bốn mục Medium: **#26**, **#23** (cổng hiệu năng iPhone chưa đo lại sau khi đổi sang PBR),
-> **#22** (công cụ `sweep-score.mjs` không còn chấm được 15 kỷ) và
-> **#19** (nay đang **treo chờ #22**: hai con số nghiệm thu của nó đo trên bảng mái CŨ, đã bị Phase
-> 6B thay hẳn, mà chưa đo lại được). **#15, #16, #17 và #20 đều đã đóng** — không còn mục nào chờ
-> Đàm chọn hướng mỹ thuật.
+> ⚠️ **CẬP NHẬT 2026-08-16 — #22 VÀ #19 ĐỀU ĐÃ ĐÓNG.** #22 vá gốc bằng cách **bỏ hẳn** proxy "mái"
+> (lưới 6×3 ô con ở `scripts/sweepMetric.mjs`, không còn giả định mỹ thuật nào để mà hỏng lần nữa);
+> #19 nhờ đó đo lại được và **cả 105 cặp kỷ đều trên ngưỡng mắt** (gần nhất 23,3 · trung vị 41,1).
+> ⚠️ Hai bộ số của #19 **KHÔNG so trực tiếp được** (cũ đo màu mái, mới đo cả dải thành phố) — chi
+> tiết ở đầu mục #19. Nay còn **hai mục Medium**: **#26** và **#23** (cổng hiệu năng iPhone chưa đo
+> lại sau khi đổi sang PBR). **#15, #16, #17 và #20 đều đã đóng** — không còn mục nào chờ Đàm chọn
+> hướng mỹ thuật.
 > ⚠️ **#22 là ví dụ sạch nhất trong cả file này của một luật đáng nhớ**: *sửa đúng mã sản phẩm vẫn
 > có thể làm HỎNG công cụ đo*, vì công cụ đo bao giờ cũng đứng trên vài giả định không được viết ra
 > về thứ nó đang đo. Ở đây giả định ngầm là *"mái là thứ tươi nhất khung hình"* — đúng suốt thời kỳ
-> mái suy từ màu nhấn giao diện, và chết ngay khi mái thành vật liệu lợp thật.
+> mái suy từ màu nhấn giao diện, và chết ngay khi mái thành vật liệu lợp thật. **Bài học rút ra khi
+> đóng nó còn quan trọng hơn**: đừng vá một proxy hỏng bằng một proxy khôn hơn — hỏi lại xem nó
+> sinh ra để giải bài toán gì, rồi giải thẳng bài toán đó, để không còn proxy nào mà hỏng.
 > ⚠️ **#17 LÀ VÍ DỤ THỨ HAI CỦA ĐÚNG CÁI BẪY MÀ BÀI HỌC #16 DƯỚI ĐÂY CẢNH BÁO** — và lần này nặng
 > hơn: mục đó không chỉ ghi nhầm một lỗi thành "đánh đổi cần Đàm quyết", nó còn **chẩn đoán nhầm
 > hẳn chặng ngày** (đổ cho chặng chiều, trong khi cặp hỏng thật là bình minh ↔ hoàng hôn). Nguyên
@@ -348,7 +352,8 @@
 >    biệt nhau bằng ĐỘ SÁNG. Hàng rào đã đổi theo (`palette3d.test.js`).
 > 2. Trần độ tươi từng được phát biểu ở **hai** chỗ với **hai** số (mã kẹp 0,70, test canh 0,66) —
 >    nay là một hằng số `ROOF_MAX_SATURATION` mà bài test `import` thẳng.
-> 3. Việc sửa này **làm hỏng công cụ đo** `sweep-score.mjs` → xem mục **#22** ngay đầu file.
+> 3. Việc sửa này **làm hỏng công cụ đo** `sweep-score.mjs` → mục **#22** (nay đã ĐÓNG, 2026-08-16:
+>    proxy "mái" bị bỏ hẳn, thay bằng lưới ô con không giả định gì về màu).
 
 <details>
 <summary>Nội dung gốc của mục (giữ nguyên để đối chiếu)</summary>
@@ -399,6 +404,28 @@
 > nên công cụ nay TỪ CHỐI chấm phần cặp-kỷ. Mục này vì vậy **treo, chờ #22 xong** — không phải
 > "vẫn còn 2 cặp trùng", mà là **chưa biết**. Ghi rõ ra đây thay vì để hai con số cũ nằm im trông
 > như số còn đúng: đó chính là cái bẫy mà phần ĐÍNH CHÍNH ngay bên dưới đã dạy một lần rồi.
+>
+> ## ✅ ĐÃ ĐO LẠI, VÀ ĐÓNG (2026-08-16, sau khi #22 xong)
+>
+> ⚠️ **HAI BỘ SỐ KHÔNG SO TRỰC TIẾP ĐƯỢC — ĐỪNG VIẾT "9,5 → 35,0" NHƯ MỘT PHÉP CẢI THIỆN.** Số cũ
+> đo **màu MÁI** (8% điểm ảnh tươi nhất); số mới đo **cả dải thành phố** chia lưới 6×3. Đó là hai
+> đại lượng khác nhau, chỉ trùng đơn vị. Điều số mới nói được là điều mục này thật sự hỏi từ đầu —
+> *"hai kỷ này nhìn trên màn hình có phân biệt được không"* — chứ không phải "mái đã tách chưa".
+>
+> | cặp | phép đo mới (trung bình 6 chặng) | chặng sát nhau nhất | kết luận |
+> |---|---|---|---|
+> | kỷ 5 ↔ kỷ 12 | **35,0** | 28,1 | ✅ đạt, gấp 2,9 lần ngưỡng mắt |
+> | kỷ 4 ↔ kỷ 10 | **44,3** | 35,9 | ✅ đạt, gấp 3,7 lần |
+> | kỷ 3 ↔ kỷ 10 | 38,9 | 29,2 | ✅ |
+> | cặp gần nhất TRONG CẢ 105 CẶP | **23,3** (kỷ 11 ↔ 12) | 16,4 | ✅ **0/105 dưới ngưỡng** |
+>
+> ⇒ Hai cặp mà mục này nêu tên **không còn nằm trong nhóm sát nhau nhất**, và cả 105 cặp đều trên
+> ngưỡng. Nguyên nhân hợp lý nhất: từ lúc mục này được ghi (Phase 4G) tới nay, bản sắc kỷ đã thôi
+> nằm gần hết ở màu mái — Phase 5B (dáng nhà + `massScale`), 6A (chữ ký kiến trúc), 7B (địa hình),
+> 7C (nhà dân), 7D (mặt đường), 8B/8C/8D (tường, mặt đất, thảm thực vật) đều thêm trục phân biệt
+> mới. Tức mục này được **giải quyết gián tiếp bởi 8 phase mỹ thuật**, không bởi một lần vá màu.
+> ⚠️ Vì vậy **KHÔNG được đọc thành "phép trộn màu ở `palette3d.js` đã hết vấn đề"** — luật "đợt vá
+> thứ 6 cho `palette3d.js` phải là một đợt rà soát toàn bộ" vẫn còn nguyên hiệu lực.
 > Ở tầng bảng màu (không phải điểm ảnh) thì đã đo lại được và số có tốt lên: trung vị 105 cặp
 > 46,2 → 62,7, cặp gần nhất 6,9 → 10,9. Nhưng đó là tầng khác, **không thay lời cho phép đo trên
 > ảnh** — đúng bài học "bài test bảng màu và phép đo trên ảnh kêu hai tập cặp rời nhau hoàn toàn".
@@ -884,6 +911,72 @@
 
 ## #22 — `sweep-score.mjs` KHÔNG còn chấm được 15 kỷ: bộ lọc "8% tươi nhất" chấm nhầm CỎ, không phải mái
 
+> ## ✅ ĐÃ ĐÓNG (2026-08-16) — VÁ GỐC BẰNG CÁCH **BỎ HẲN** PROXY "MÁI", KHÔNG PHẢI VÁ BỘ LỌC
+>
+> **Đã làm gì**: gỡ `roofColor` (bộ lọc 8% tươi nhất) và cổng "TỪ CHỐI CHẤM" đi kèm; ruột phép đo
+> chuyển sang `scripts/sweepMetric.mjs` (thuần, `import` được, có `sweepMetric.test.js` canh).
+> Dải thành phố nay được chia **lưới 6×3 = 18 ô con**, mỗi ô con một màu trung bình → vector 54
+> chiều; hai kỷ so nhau **theo TỪNG chặng rồi lấy trung bình các khoảng cách** (gộp 6 chặng trước
+> khi so thì hai kỷ lệch ngược chiều nhau ở hai đầu ngày sẽ triệt tiêu nhau).
+>
+> **Vì sao cách này không chết lần thứ ba**: nó **không chứa giả định mỹ thuật nào** — phép đo
+> không biết "mái"/"cỏ"/"tường" là gì. Bệnh gốc mà bộ lọc sinh ra để chữa là *"trung bình trên vùng
+> quá rộng pha loãng tín hiệu ~10 lần"*; thu vùng lấy trung bình xuống **1/18** chữa đúng bệnh đó
+> mà không cần biết mái nằm ở đâu.
+>
+> **Hai hướng đã LOẠI, ghi lại để phiên sau khỏi thử lại** (bổ sung cho ba hướng ở phần
+> Recommended Solution cũ bên dưới):
+> - *Đối chiếu điểm ảnh với `roofColor` mà `eraStyle.js` khai* → **vòng tròn**: chọn điểm ảnh theo
+>   màu đã khai rồi đo xem màu có khớp màu đã khai không.
+> - *Lượt ảnh mặt-nạ do `city-preview.mjs` dựng* (hướng "có vẻ đúng nhất" mà chính mục này đề xuất)
+>   → **bất khả thi ở tầng dữ liệu**: chạy 15 kỷ qua `getEraStyle` thì **4/15 kỷ khai mái TRÙNG vật
+>   liệu tường** — kỷ 3 (mudbrick/mudbrick), kỷ 12 và 13 (concrete/concrete), kỷ 14 (glass/glass).
+>   `materialProfile(role==='roof')` xếp tam giác mái vào họ **vật liệu** `style.roofMaterial`, nên
+>   ở bốn kỷ ấy "nhóm mái" và "nhóm tường" là MỘT. Mái **không tách được ngay từ NGUỒN** ⇒ không bộ
+>   lọc điểm ảnh nào, kể cả mặt nạ do bên dựng cung cấp, cứu được. ⚠️ Và đúng cặp **12↔13** — cặp
+>   hay bị kêu trùng nhau nhất — là cặp dùng chung **cả hai** vật liệu; bản sắc của chúng nằm ở
+>   màu, khối và cây cối, không nằm ở mái.
+>
+> **ĐƠN VỊ GIỮ NGUYÊN CÓ CHỦ Ý**: vẫn là khoảng cách RGB trung bình mỗi bộ ba (/255), nên ngưỡng
+> mắt **12** hiệu chuẩn ở Phase 3Y (Spearman 0,854) còn dùng được. Đổi sang biểu đồ tần suất/EMD
+> sẽ tạo ra một ngưỡng **chưa hiệu chuẩn** — đúng cái phễu Phase 9A đã dạy.
+>
+> **SỐ ĐO SAU KHI VÁ** (2026-08-16, bản quét `sweep-light-ky1-15.png`, 15 kỷ × 6 chặng, theme
+> sáng, cấp 3, 40 phiên — trên mã Phase 9C `53045b2`):
+>
+> | | kết quả |
+> |---|---|
+> | 105 cặp kỷ dưới ngưỡng mắt (12) | **0/105** |
+> | cặp kỷ gần nhất | **23,3** (kỷ 11 ↔ 12; chặng sát nhau nhất 16,4) |
+> | trung vị 105 cặp kỷ | **41,1** |
+> | 15 cặp chặng ngày | **0/15** dưới ngưỡng, gần nhất 20,7 |
+> | trải giữa 18 ô con, từng kỷ | 14,6 – 31,6 (lưới thật sự nhìn thấy cấu trúc, không phẳng lì) |
+>
+> **BẰNG CHỨNG LƯỚI Ô CON CÓ TÁC DỤNG TRÊN DỮ LIỆU THẬT** (không chỉ trên ảnh dựng tay):
+> `--selftest` thu lưới về 1×1 — tức quay lại đúng phép trung bình cả dải đã gây ra kết luận sai
+> 70/105 ở Phase 4C — cho ra **cặp gần nhất 5,0 và 6/105 dưới ngưỡng**. Tức việc chia ô con nâng
+> cặp gần nhất lên **~4,7 lần**. Nhãn in ra cũng đổi theo (`lưới 1×1 (--selftest: ĐÃ THU LƯỚI, số
+> phải TỆ ĐI)`) — bản đầu vẫn in "6×3" khi đang chạy 1×1, đúng loại lỗi NHÃN đã cắn ở `frame-fit.mjs`.
+>
+> **PHÉP ĐO MỚI CÓ TEST RIÊNG** — `scripts/sweepMetric.test.js`, 6 bài, **mỗi bài đã được phá thử
+> ít nhất một lần và thấy ĐỎ**: mảng nhỏ không bị pha loãng (phá: thu lưới về 1×1 ⇒ 2 đỏ) · không
+> thiên vị màu, đá phiến xỉn đọc được (phá: nhân đôi kênh lục ⇒ 2 đỏ) · chỉ đọc dải thành phố (phá:
+> bỏ độ lệch dải ⇒ 1 đỏ) · tất định + số chiều khớp lưới (phá: cộng dồn phụ thuộc thứ tự ⇒ 1 đỏ) ·
+> không tràn sang ô bên/dải nhãn (phá: nới bề ngang ô con +20px ⇒ 2 đỏ) · đơn vị vẫn là RGB (phá:
+> bỏ căn bậc hai ⇒ 2 đỏ). ⚠️ Hai bài đầu ĐỎ ngay lần chạy đầu tiên và **lỗi nằm ở FIXTURE, không ở
+> phép đo**: mảng thử là một dải ngang suốt bề rộng, mà dải ngang chỉ hưởng lợi từ chia HÀNG (trần
+> nhạy √3 = 1,73). Đã sửa fixture thành mảng vuông vức (giống vật thật), **KHÔNG hạ ngưỡng cho test
+> xanh**.
+>
+> **KHÔNG ĐỤNG GÌ VÀO RENDERER**: `npm test` 718/718 · lint sạch · build xanh · chunk 3D
+> `CityScene3D-BoWYJm9L.js` **trùng băm** với commit `53045b2` · không file nào dưới `src/` import
+> `sweepMetric`/`sweep-score`/`frame-score`.
+>
+> **Bài học đã ghi vào `CLAUDE.md`**: *một "thứ đại diện" (proxy) là một giả định mỹ thuật đội lốt
+> một phép đo* — chữ "≈" trong "8% tươi nhất **≈ mái**" chính là giả định, và nó chết trong im lặng
+> ở một phase khác do tay một người khác. Đừng vá một proxy hỏng bằng một proxy khôn hơn; hỏi lại
+> xem nó sinh ra để giải bài toán gì rồi giải thẳng bài toán đó.
+
 - **Module**: `scripts/sweep-score.mjs` (hàm `roofColor`)
 - **Priority**: Medium
 - **Severity**: Medium
@@ -932,7 +1025,9 @@
   ở tầng dữ liệu bằng bài `MỖI KỶ PHẢI KHAI MỘT MÀU VẬT LIỆU LỢP ĐỌC ĐƯỢC` (`buildingSpec.test.js`).
 - **Review Trigger**: lần tới cần đo màu mái trên ảnh chụp thật; hoặc khi thêm/sửa `roofColor`.
 - **Owner**: chưa ai
-- **Status**: Open — đã chặn không cho nói dối, CHƯA khôi phục được năng lực đo.
+- **Status**: ✅ **ĐÓNG 2026-08-16** — xem khối đóng khung ở đầu mục. Năng lực chấm 105 cặp kỷ đã
+  khôi phục, bằng một phép đo KHÔNG còn proxy nào để mà hỏng lần nữa. Phần thân mục dưới đây giữ
+  NGUYÊN làm bản ghi lịch sử (đúng luật của file này: không xoá bản ghi cũ khi lật một kết luận).
 
 ---
 

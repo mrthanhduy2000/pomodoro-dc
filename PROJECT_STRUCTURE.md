@@ -303,9 +303,13 @@
   (`tokens2d.js` là bảng màu `rgba()` + phép chiếu isometric — WebGL không dùng lại được). Thư mục
   cha chỉ giữ phần dùng chung. Lý do đầy đủ: ADR-008.
 - **Test** luôn đặt CẠNH file nguồn, cùng tên + `.test.js` (vd `guard.js` → `guard.test.js`), ở
-  **bất kỳ độ sâu nào** — glob trong `package.json` quét đệ quy nên thêm thư mục mới KHÔNG cần sửa
-  `package.json`. (Trước 2026-08-12 glob chỉ quét một cấp và test trong thư mục con sẽ im lặng
+  **bất kỳ độ sâu nào** — glob trong `package.json` quét đệ quy nên thêm thư mục con mới KHÔNG cần
+  sửa `package.json`. (Trước 2026-08-12 glob chỉ quét một cấp và test trong thư mục con sẽ im lặng
   không bao giờ chạy — xem `TECH_DEBT.md` #10.)
+  ⚠️ **Nhưng thêm một thư mục GỐC mới thì PHẢI thêm một mục vào glob** — nó liệt kê từng gốc một
+  (`electron/` · `src/` · `api/` · `scripts/`), và một gốc thiếu ở đó thì test trong đó im lặng
+  không chạy, đúng hình dạng sai của #10. `scripts/` được thêm vào 2026-08-16 khi công cụ đo có bài
+  test đầu tiên (`sweepMetric.test.js`).
   Riêng test của `api/` bắt buộc đặt trong `api/_tests/` (mirror cấu trúc `api/`) — xem lý do ở
   `CLAUDE.md` mục "Vercel Hobby: giới hạn 12 Serverless Functions".
 - **Route API mới** → thêm file trực tiếp trong `api/` hoặc `api/push/`, rồi đếm lại tổng số
@@ -333,7 +337,7 @@
 | `node scripts/shot.mjs --phone --fit` | có nút nào chữ tràn / bị xén / bị dấu "…" cắt không |
 | `node scripts/shot.mjs --phone --fit --el "<chữ>"` | font-size/padding/overflow THẬT của một phần tử (dùng khi `--fit` và mắt bất đồng) |
 | `node scripts/city-preview.mjs --sweep --all` | dựng bảng 15 kỷ × 6 chặng ngày thành MỘT tấm ảnh |
-| `node scripts/sweep-score.mjs <ảnh quét>` | **chấm** bảng đó: 15 cặp chặng + 105 cặp kỷ, cặp nào dưới ngưỡng mắt |
+| `node scripts/sweep-score.mjs <ảnh quét>` | **chấm** bảng đó: 15 cặp chặng + 105 cặp kỷ, cặp nào dưới ngưỡng mắt. Ruột phép đo nằm ở `scripts/sweepMetric.mjs` (thuần, có `sweepMetric.test.js` canh) — file `sweep-score.mjs` chỉ là lớp vỏ đọc `process.argv` + in bảng, nên **đừng chép công thức sang chỗ khác, hãy `import` từ `sweepMetric.mjs`** |
 | `node scripts/shadow-score.mjs <ảnh>` | **chấm bóng đổ**: sàn độ sáng · % khung hình bị nghiền · khoảng cách sáng-tối · độ tươi · chênh sắc nóng-lạnh. Đo PHÂN BỐ chứ không chấm vài điểm — chấm tay rất dễ trúng mặt đường (vật liệu đen sẵn) rồi ghi công cho bóng đổ. `--selftest` có 5 ca, trong đó một ca tách riêng "chữa đúng" khỏi "chữa ngây thơ làm nhạt ảnh" |
 | `node scripts/png-probe.mjs <ảnh> --top 10` | màu THẬT trên màn hình tại một điểm/vùng |
 | `node --import ./scripts/register-esm-loader.mjs scripts/frame-fit.mjs 1.3` | công trình nào đang bị **mép khung hình cắt**, và phải lùi camera bao nhiêu thì hết (`--flat` = đối chứng địa hình phẳng · `--selftest`) |

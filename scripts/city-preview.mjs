@@ -74,6 +74,17 @@ function parseArgs(argv) {
     // thành phố thiếu vành đai rồi kết luận là vành đai không chạy. Đúng họ với bài học `--cell`
     // ở Phase 4G: một tham số mà công cụ tự đoán thì sớm muộn cũng đoán sai.
     sessions: 40,
+    // Tỉ lệ điểm ảnh. Rỗng = dùng đúng MAX_PIXEL_RATIO của app — ĐÂY LÀ MẶC ĐỊNH ĐÚNG, đừng đổi.
+    // ⚠️ Cờ này tồn tại để THỬ NGƯỢC được lời hứa "trang xem thử dựng ở đúng tầng chất lượng của
+    // app": Phase 9C phát hiện nó đã dựng ở DPR 1 suốt nhiều tháng mà không có gì báo, và một lời
+    // hứa parity không kiểm lại được thì sớm muộn cũng trôi lần nữa.
+    dpr: null,
+    // Số khung hình đo hiệu năng. 0 = không đo.
+    // ⚠️ SỐ ĐO Ở ĐÂY LÀ SwiftShader (rasterise bằng CPU), KHÔNG phải GPU MacBook. Nên đừng đọc nó
+    // như "app chạy bao nhiêu FPS" — đọc nó như CẬN TRÊN của chi phí mỗi mảnh: CPU không có phần
+    // cứng cho phép tính shader, nên mọi phép tính thêm vào shader ở đây đắt hơn thực tế nhiều
+    // lần. Một bản vá shader mà ngay cả ở đây cũng gần như không đo được thì trên GPU là miễn phí.
+    bench: 0,
   };
   for (let i = 0; i < argv.length; i += 1) {
     const key = argv[i];
@@ -91,6 +102,8 @@ function parseArgs(argv) {
     else if (key === '--eras') { args.eraList = String(value).split(',').map(Number); i += 1; }
     else if (key === '--pending') { args.pending = Number(value); i += 1; }
     else if (key === '--sessions') { args.sessions = Number(value); i += 1; }
+    else if (key === '--dpr') { args.dpr = Number(value); i += 1; }
+    else if (key === '--bench') { args.bench = Number(value); i += 1; }
   }
   return args;
 }
@@ -107,12 +120,14 @@ function run(cmd, cmdArgs, options = {}) {
  * Mã nguồn trang xem thử. Được gói thành MỘT file bằng chính Vite của dự án, nên nó dùng đúng
  * phiên bản three và đúng các module thật — nếu bản gói lỗi thì bản chạy thật cũng lỗi.
  */
-function entrySource({ era, level, theme, zoom = 1, hour = null, pending = 0, sessions = 40 }) {
+function entrySource({
+  era, level, theme, zoom = 1, hour = null, pending = 0, sessions = 40, dpr = null, bench = 0,
+}) {
   return `
 import { computeCityLayout } from '${ROOT}/src/engine/cityLayout.js';
 import { buildScenePalette } from '${ROOT}/src/engine/city3d/palette3d.js';
 import { deriveDaylight } from '${ROOT}/src/engine/city3d/daylight.js';
-import { applyPaintedLook, createCityScene } from '${ROOT}/src/components/city/render3d/sceneGraph.js';
+import { applyPaintedLook, createCityScene, MAX_PIXEL_RATIO } from '${ROOT}/src/components/city/render3d/sceneGraph.js';
 import { CITY_CAMERA_FOV, cityOrbitOptions, createOrbit } from '${ROOT}/src/engine/city3d/orbit.js';
 import { BLUEPRINT_CATALOG, ERA_METADATA } from '${ROOT}/src/engine/constants.js';
 import { PerspectiveCamera, WebGLRenderer } from 'three';
@@ -124,6 +139,8 @@ const ZOOM = ${zoom};
 const HOUR = ${hour === null ? 'null' : hour};
 const PENDING = ${pending};
 const SESSIONS = ${sessions};
+const DPR = ${dpr === null ? 'MAX_PIXEL_RATIO' : dpr};
+const BENCH = ${bench};
 
 const allIds = BLUEPRINT_CATALOG[ERA].map((bp) => bp.id);
 // Mấy bản vẽ cuối chuyển sang ĐANG XÂY, mỗi cái một tiến độ khác nhau (còn 1, 2, 3… phiên nữa)
@@ -152,11 +169,18 @@ const palette = buildScenePalette({
 });
 
 const canvas = document.getElementById('stage');
+// ⚠️ CHỤP KÍCH THƯỚC LOGIC TRƯỚC KHI setSize GHI ĐÈ. Từ Phase 9C trang xem thử dựng ở đúng
+// MAX_PIXEL_RATIO của app (2), nên bộ đệm vẽ rộng gấp đôi khung CSS — canvas.width sau đó KHÔNG
+// còn là bề ngang khung hình nữa. Lấy nhầm nó thì tỉ lệ camera vẫn đúng (cùng nhân 2) nhưng mọi
+// con số bố cục suy ra từ đây sẽ lệch gấp đôi mà không có gì đỏ lên.
+const VIEW_W = canvas.width;
+const VIEW_H = canvas.height;
 const renderer = new WebGLRenderer({ canvas, antialias: true });
-renderer.setPixelRatio(1);
+// ⚠️ ĐÚNG TẦNG CHẤT LƯỢNG CỦA APP, KHÔNG PHẢI 1. Xem MAX_PIXEL_RATIO ở sceneGraph.js.
+renderer.setPixelRatio(DPR);
 // Dùng CHUNG cấu hình nhìn với app — nếu không, trang xem thử sẽ vẽ ra một thành phố khác.
 applyPaintedLook(renderer);
-renderer.setSize(canvas.width, canvas.height, false);
+renderer.setSize(VIEW_W, VIEW_H, false);
 renderer.shadowMap.needsUpdate = true;
 
 // ⚠️ Truyền ĐÚNG bộ số mà app truyền, không để mặc định: dân số suy ra từ đây, và một trang xem
@@ -168,7 +192,7 @@ const city = createCityScene({ layout, palette, daylight, renderer, stats: { ses
 // TRẢI ĐỀU trên phố hay không.
 city.updateResidents(17.5);
 
-const camera = new PerspectiveCamera(CITY_CAMERA_FOV, canvas.width / canvas.height, 0.5, layout.gridSize * 8);
+const camera = new PerspectiveCamera(CITY_CAMERA_FOV, VIEW_W / VIEW_H, 0.5, layout.gridSize * 8);
 // Dùng CHUNG bộ tham số camera với app; ZOOM chỉ để soi chi tiết, mặc định 1 = đúng khung app.
 const orbitOptions = cityOrbitOptions(layout.gridSize, layout.era);
 const orbit = createOrbit({
@@ -182,6 +206,31 @@ camera.position.set(eye.x, eye.y, eye.z);
 camera.lookAt(target.x, target.y, target.z);
 
 renderer.render(city.scene, camera);
+
+if (BENCH > 0) {
+  // ⚠️ PHẢI ÉP ỐNG DẪN HOÀN TẤT TRƯỚC KHI BẤM GIỜ DỪNG. WebGL xếp lệnh không đồng bộ, nên đo trần
+  // renderer.render() chỉ đo thời gian ĐẨY LỆNH VÀO HÀNG ĐỢI.
+  // ⚠️ VÀ gl.finish() KHÔNG ĐỦ — đã thử và nó nói dối: ra 0,40 ms/khung cho 3200×1400 rasterise
+  // bằng CPU, tức khoảng 11 tỉ điểm ảnh mỗi giây trên CPU, một con số bất khả thi. ANGLE có đường
+  // biến finish() thành flush(). Thứ KHÔNG thể giả vờ là đọc ngược điểm ảnh: muốn trả về được một
+  // byte thì mọi lệnh vẽ phải xong thật.
+  const gl = renderer.getContext();
+  const probe = new Uint8Array(4);
+  const settle = () => gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, probe);
+  for (let i = 0; i < 5; i += 1) { renderer.render(city.scene, camera); settle(); }
+  const ts = [];
+  for (let i = 0; i < BENCH; i += 1) {
+    const t0 = performance.now();
+    renderer.render(city.scene, camera);
+    settle();
+    ts.push(performance.now() - t0);
+  }
+  ts.sort((a, b) => a - b);
+  const mid = ts[Math.floor(ts.length / 2)];
+  console.log('[bench] ms/khung trung vị=' + mid.toFixed(2)
+    + ' nhanh nhất=' + ts[0].toFixed(2) + ' chậm nhất=' + ts[ts.length - 1].toFixed(2)
+    + ' | lệnh vẽ=' + city.stats.drawCalls + ' tam giác=' + city.stats.triangles);
+}
 
 document.title = 'READY ' + JSON.stringify(city.stats);
 document.getElementById('info').textContent =
@@ -205,7 +254,7 @@ function sweepSource({ level, theme, cell, combos, sessions = 40 }) {
 import { computeCityLayout } from '${ROOT}/src/engine/cityLayout.js';
 import { buildScenePalette } from '${ROOT}/src/engine/city3d/palette3d.js';
 import { deriveDaylight } from '${ROOT}/src/engine/city3d/daylight.js';
-import { applyPaintedLook, createCityScene } from '${ROOT}/src/components/city/render3d/sceneGraph.js';
+import { applyPaintedLook, createCityScene, MAX_PIXEL_RATIO } from '${ROOT}/src/components/city/render3d/sceneGraph.js';
 import { CITY_CAMERA_FOV, cityOrbitOptions, createOrbit } from '${ROOT}/src/engine/city3d/orbit.js';
 import { BLUEPRINT_CATALOG, ERA_METADATA } from '${ROOT}/src/engine/constants.js';
 import { PerspectiveCamera, WebGLRenderer } from 'three';
@@ -230,10 +279,11 @@ ctx.fillRect(0, 0, sheet.width, sheet.height);
 
 // Một canvas WebGL DUY NHẤT, kích thước đúng một ô.
 const stage = document.createElement('canvas');
-stage.width = CELL_W;
-stage.height = CELL_H;
 const renderer = new WebGLRenderer({ canvas: stage, antialias: true });
-renderer.setPixelRatio(1);
+// ⚠️ ĐÚNG TẦNG CHẤT LƯỢNG CỦA APP (Phase 9C). setSize sẽ đặt stage.width = CELL_W × 2; phần hạ
+// mẫu về đúng cỡ ô nằm ở drawImage bên dưới, nên hình học bảng quét KHÔNG đổi — hồ sơ .geom.json
+// và sweep-score.mjs vẫn đọc đúng.
+renderer.setPixelRatio(MAX_PIXEL_RATIO);
 applyPaintedLook(renderer);
 renderer.setSize(CELL_W, CELL_H, false);
 
@@ -288,7 +338,7 @@ eras.forEach((era, row) => {
     camera.lookAt(target.x, target.y, target.z);
 
     renderer.render(city.scene, camera);
-    ctx.drawImage(stage, 60 + col * CELL_W, y);
+    ctx.drawImage(stage, 60 + col * CELL_W, y, CELL_W, CELL_H);
 
     notes.push({ era, hour, ...city.stats });
     // ⚠️ DỌN NGAY. Không dọn thì 90 cảnh cùng nằm trong bộ nhớ GPU và những ô cuối sẽ trống.
@@ -365,6 +415,10 @@ function pageHtml({ width, height, theme }) {
   /* ⚠️ PHẢI GIỐNG HỆT lớp vignette trong CityScene3D.jsx. Không có nó thì trang xem thử
      chụp ra một thành phố KHÁC với thành phố Đàm nhìn thấy — mà một công cụ mắt-soi nói dối
      còn tệ hơn không có công cụ nào. Đổi bên này phải đổi bên kia. */
+  /* ⚠️ GHIM CỠ CSS. Không có dòng này thì setSize (vốn chỉ đổi bộ đệm vẽ) sẽ để canvas tự dàn
+     theo thuộc tính width mới — tức khung hình phóng to gấp đôi rồi bị cửa sổ chụp cắt mất, thay
+     vì siêu lấy mẫu như màn Retina. */
+  #stage { width:${width}px; height:${height}px; display:block; }
   #frame { position:relative; display:inline-block; line-height:0; }
   #vignette {
     position:absolute; inset:0; pointer-events:none;
@@ -405,7 +459,7 @@ function serve(files) {
   });
 }
 
-async function shoot(chrome, url, pngPath, { width, height }) {
+async function shoot(chrome, url, pngPath, { width, height, bench = 0 }) {
   await run(chrome, [
     '--headless=new',
     '--no-sandbox',
@@ -426,7 +480,8 @@ async function shoot(chrome, url, pngPath, { width, height }) {
     '--virtual-time-budget=12000',
     `--screenshot=${pngPath}`,
     url,
-  ], { stdio: 'ignore' });   // Chromium trong hộp cát này chửi dbus không ngớt, không liên quan gì
+    // Lúc đo hiệu năng thì PHẢI để stderr chảy ra, vì dòng [bench] đi bằng đường đó.
+  ], bench > 0 ? {} : { stdio: 'ignore' });   // Chromium trong hộp cát này chửi dbus không ngớt
 }
 
 async function main() {

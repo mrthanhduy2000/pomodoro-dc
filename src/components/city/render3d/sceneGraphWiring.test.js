@@ -107,10 +107,18 @@ test('KIM LOẠI PHẢI CÓ BẢN ĐỒ MÔI TRƯỜNG — thiếu nó thì mái
     + 'hoàn toàn (đã đo: vặn từ 0 lên 3,0 ảnh không đổi một điểm ảnh nào), môi trường rọi ở mức 1,0 '
     + 'bất kể ta khai gì, và cả bảng màu bạc phếch như sữa.',
   );
+  // ⚠️ HỎI HAI VẾ, VÌ TỪ PHASE 9C LUẬT NÀY NẰM Ở HAI DÒNG. Trước đây nó là một biểu thức viết
+  // thẳng vào `envMapIntensity:`; nay giá trị được đặt tên (`envIntensity`) để `specularGainFor`
+  // dùng lại đúng con số ấy thay vì tự suy ra lần nữa. Chỉ hỏi vế định nghĩa thì ai đó có thể khai
+  // đúng rồi truyền một giá trị KHÁC vào vật liệu, và không có gì đỏ.
   assert.ok(
-    /envMapIntensity: profile\.metalness > 0\.15 \? 1 : ENV_DIFFUSE/.test(CODE),
+    /const envIntensity = profile\.metalness > 0\.15 \? 1 : ENV_DIFFUSE;/.test(CODE),
     'Luật "kim loại ăn trọn môi trường, bề mặt khuếch tán chỉ lấy một phần" đã bị đổi. Cho khuếch '
     + 'tán ăn trọn 1,0 thì đo được sáng 51,3 / tươi 14,4 / chiaroscuro 29 — nhạt hơn cả bản Lambert cũ.',
+  );
+  assert.ok(
+    /envMapIntensity: envIntensity,/.test(buildingBlock[0]),
+    'Vật liệu công trình không còn nhận đúng `envIntensity` vừa tính — luật khai một đằng, dùng một nẻo.',
   );
 });
 
@@ -398,4 +406,91 @@ test('⚠️ BÓNG ĐỔ CHỈ ĐƯỢC CẤU HÌNH Ở MỘT CHỖ — công c�
     assert.match(code, /applyPaintedLook\(renderer\)/,
       `${name} không còn gọi \`applyPaintedLook\` — nó đang dựng bằng một cấu hình khác.`);
   }
+});
+
+const DETAIL_CODE = codeOnly(readFileSync(join(HERE, 'surfaceDetail.js'), 'utf8'));
+
+test('⚠️ ĐĨA MẶT TRỜI PHẢI CHÓI HƠN 1 VÀ CHỈ NƯỚNG VÀO MÔI TRƯỜNG', () => {
+  // Phase 9C. Đợt audit đo ra: giữa trưa KHÔNG một điểm ảnh nào sáng quá 0,75 ở kỷ 3 và kỷ 7
+  // (0,00%). Nguyên nhân: môi trường phản chiếu chỉ là một dải trời đều đều, nên mặt bóng chẳng có
+  // gì để phản chiếu thành điểm loé. Ba điều dưới đây là điều kiện cần để bản vá còn sống.
+
+  // (1) ĐỘ CHÓI PHẢI >1. Đây là chỗ hỏng IM LẶNG nhất của cả bản vá: nếu ai đó hạ nó về ≤1, hoặc
+  //     three đổi PMREM sang render target 8-bit, thì đĩa bị kẹp về 1,0 — vẫn có một đốm sáng
+  //     trong bản đồ môi trường, vẫn không có lỗi nào, mà mọi điểm loé biến mất sạch.
+  const radiance = /const SUN_DISC_RADIANCE = ([\d.]+)/.exec(CODE);
+  assert.ok(radiance, 'Không còn `SUN_DISC_RADIANCE` — đĩa mặt trời đã bị gỡ.');
+  assert.ok(Number(radiance[1]) > 1,
+    `Độ chói đĩa = ${radiance[1]} ≤ 1: nó không còn là nguồn HDR, và điểm loé sẽ biến mất trong im lặng.`);
+
+  // (2) ĐĨA PHẢI THẬT SỰ ĐƯỢC THÊM VÀO CẢNH THĂM DÒ. Khai hằng số mà quên `probeScene.add` là đúng
+  //     loại lỗi mà Phase 4H đã trả giá: hàm viết xong, có test, và không ai gọi.
+  assert.match(CALLS, /probeScene\.add\(disc\)/,
+    'Đĩa mặt trời được dựng nhưng KHÔNG được thêm vào cảnh thăm dò — nó không vào bản đồ môi trường.');
+  assert.match(CALLS, /skyLook\.glow\)\.multiplyScalar\(skyLook\.sunDiscRadiance\)/,
+    'Độ chói không còn được nhân vào màu đĩa — đĩa trở lại sáng như bầu trời, tức vô hình.');
+
+  // (3) VÀ CHỈ VÀO MÔI TRƯỜNG, KHÔNG VẼ LÊN VÒM TRỜI NHÌN THẤY. `paintSkyGradient` đã có hẳn một
+  //     đoạn chú thích giải thích vì sao một cái đĩa sắc nét trên vòm trời trông như lỗi. Cách duy
+  //     nhất giữ được cả hai là để `sunDiscRadiance` nằm trong `skyLook` mà chỉ một bên đọc.
+  const painter = /function paintSkyGradient\([\s\S]*?\n}/.exec(CODE);
+  assert.ok(painter, 'Không tìm thấy `paintSkyGradient`.');
+  assert.ok(!/sunDiscRadiance/.test(painter[0]),
+    'Vòm trời NHÌN THẤY đã bắt đầu đọc `sunDiscRadiance` — nó sắp mọc một cái đĩa sắc nét trên nền trời.');
+});
+
+test('⚠️ BẢN VÁ BỀ MẶT CHỈ ĐƯỢC NHÂN PHẢN CHIẾU, KHÔNG ĐƯỢC NHÂN KHUẾCH TÁN', () => {
+  // Phase 9C. `envMapIntensity` của three gánh HAI việc — nó nhân vào cả `iblIrradiance` (khuếch
+  // tán, rọi đều mọi hướng) lẫn `radiance` (phản chiếu). Dự án đặt 0,12 để cứu độ tươi, và con số
+  // ấy ĐÚNG cho đường khuếch tán. Bản vá gỡ phanh cho đường phản chiếu; nhân nhầm sang đường kia
+  // là quay lại đúng thất bại "pastel như sữa" của Phase 7A, chỉ vào bằng cửa khác.
+  assert.match(DETAIL_CODE, /radiance \*= uSpecGain;/,
+    'Không còn nhân phản chiếu — bản vá tách-đôi đã chết, cảnh quay về không có điểm loé.');
+  assert.ok(!/iblIrradiance\s*\*=/.test(DETAIL_CODE),
+    'Có ai đó bắt đầu nhân `iblIrradiance` — đó là đường KHUẾCH TÁN, nhân vào là làm nhạt cả thành phố.');
+
+  // ⚠️ KHOÁ MỘT QUYẾT ĐỊNH ĐÃ ĐO, KHÔNG PHẢI MỘT SỞ THÍCH. Bản đầu bóc phanh cho MỌI bề mặt và đo
+  // ra: độ tươi kỷ 3/7/14 tụt 0,120→0,109 · 0,082→0,070 · 0,109→0,102, trong khi đỉnh sáng KHÔNG
+  // hơn được một chút nào so với chỉ-bóc-công-trình (0,753 · 0,773 · 0,869 y hệt cả hai bên). Mặt
+  // đất/đường/đồi nhám 0,96–0,98 nên "phản chiếu" của chúng là một lớp sáng đều đội lốt.
+  // Ai đó "dọn cho nhất quán" bằng cách rắc `specularGain` vào cả ba sẽ mất màu mà không được gì.
+  for (const surface of ['ground', 'road', 'outskirts']) {
+    const call = new RegExp(`\\.\\.\\.GRAIN\\.${surface}[^}]*specularGain`);
+    assert.ok(!call.test(CODE),
+      `\`GRAIN.${surface}\` lại được bóc phanh phản chiếu — đo rồi: mất độ tươi, không thêm đỉnh sáng.`);
+  }
+  assert.match(CODE, /\.\.\.GRAIN\.building, specularGain: specularGainFor\(envIntensity\)/,
+    'Công trình không còn được bóc phanh phản chiếu — đây là bề mặt DUY NHẤT bản vá này có tác dụng.');
+
+  // Bốn bề mặt đều phải thật sự được vá, nếu không "có hạt vân" chỉ đúng với một phần cảnh.
+  for (const surface of ['ground', 'road', 'outskirts', 'building']) {
+    assert.ok(new RegExp(`\\.\\.\\.GRAIN\\.${surface}`).test(CODE),
+      `Bề mặt \`${surface}\` không còn được vá hạt vân — nó sẽ phẳng lì giữa những mặt đã có vân.`);
+  }
+});
+
+test('⚠️ VẬT LIỆU ĐÃ VÁ PHẢI CÓ KHOÁ CHƯƠNG TRÌNH RIÊNG', () => {
+  // three gộp chương trình shader theo khoá. Không khai khoá riêng thì một vật liệu ĐÃ vá và một
+  // vật liệu CHƯA vá có cùng cấu hình gốc sẽ dùng chung chương trình đã biên dịch — bản vá hoặc rò
+  // sang chỗ không nên có, hoặc biến mất ở chỗ nên có, tuỳ cái nào biên dịch trước. Không có lỗi
+  // nào hiện ra; chỉ là một vài bề mặt im lặng sai.
+  assert.match(DETAIL_CODE, /customProgramCacheKey = \(\) =>/,
+    '`applySurfaceDetail` không còn khai `customProgramCacheKey` — shader sẽ bị gộp nhầm.');
+});
+
+test('⚠️ TRANG XEM THỬ PHẢI DỰNG Ở ĐÚNG TẦNG ĐIỂM ẢNH CỦA APP', () => {
+  // Phase 9C. Trước bản vá này, app dựng ở `min(devicePixelRatio, 2)` còn trang xem thử viết cứng
+  // `setPixelRatio(1)` ở CẢ HAI khối — tức mọi nhận xét mỹ thuật rút ra từ nó (răng cưa, mép khối,
+  // cây cối, chi tiết nhỏ) suốt nhiều tháng đều đang nói về một bản dựng THẤP HƠN bản thật. Cùng
+  // hình dạng lỗi với cỡ bóng đổ ở bài trên, ở một cần gạt khác.
+  assert.match(CODE, /export const MAX_PIXEL_RATIO = 2;/,
+    'Trần tỉ lệ điểm ảnh không còn nằm ở `sceneGraph.js` — hai nơi sắp tự khai lại.');
+  assert.match(SCENE3D_CODE, /Math\.min\(window\.devicePixelRatio \|\| 1, MAX_PIXEL_RATIO\)/,
+    'App không còn dùng `MAX_PIXEL_RATIO` nhập về — nó đang tự khai lại một trần thứ hai.');
+  // Trang xem thử: cờ `--dpr` được phép tồn tại (nó dùng để THỬ NGƯỢC lời hứa này), nhưng MẶC ĐỊNH
+  // phải là hằng số dùng chung. Hỏi đúng dòng mặc định, không hỏi chung chung.
+  assert.match(PREVIEW_CODE, /dpr === null \? 'MAX_PIXEL_RATIO' : dpr/,
+    'Trang xem thử không còn mặc định về `MAX_PIXEL_RATIO` — nó lại dựng ở một tầng chất lượng riêng.');
+  assert.ok(!/setPixelRatio\(1\)/.test(PREVIEW_CODE),
+    'Trang xem thử lại viết cứng `setPixelRatio(1)` — đúng lỗi Phase 9C vừa sửa.');
 });

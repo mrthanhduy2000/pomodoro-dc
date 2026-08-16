@@ -44,6 +44,7 @@ import {
 } from 'three';
 
 import { materialProfile } from '../../../engine/city3d/materials';
+import { applySurfaceDetail, specularGainFor } from './surfaceDetail';
 import { getEraStyle } from '../../../engine/city3d/eraStyle';
 import { buildBuildingSpec, buildScaffoldSpec } from '../../../engine/city3d/buildingSpec';
 import { buildPropSpec } from '../../../engine/city3d/propSpec';
@@ -92,6 +93,55 @@ export const TILE_UNIT = 1;
  * chỗ dựng vật liệu công trình.
  */
 const ENV_DIFFUSE = 0.12;
+
+/**
+ * ĐĨA MẶT TRỜI nướng vào bản đồ môi trường (Phase 9C). Ba con số, mỗi con một việc.
+ *
+ * `SUN_DISC_ANGLE` — bán kính GÓC (radian). Mặt trời thật chỉ 0,0047 rad (0,27°), nhưng ở đây có
+ * hai lý do phải to hơn: (a) `pmrem.fromScene(scene, 0.06)` làm mờ sẵn cả cảnh với sigma 0,06 rad
+ * ≈ 3,4°, nên một cái đĩa nhỏ hơn thế sẽ bị chính phép mờ ấy xoá gần hết; (b) đây là một thành phố
+ * vẽ kiểu tranh, không phải ảnh chụp — một điểm loé to bằng đầu kim đọc ra như hạt nhiễu, còn một
+ * vệt loé mềm đọc ra như nắng.
+ *
+ * `SUN_DISC_DISTANCE` — đặt đĩa ở đâu trong quả cầu thăm dò bán kính 8. Phải NHỎ HƠN 8 để nằm bên
+ * trong (nếu không nó ra ngoài vỏ cầu và không camera nào của PMREM thấy được).
+ *
+ * `SUN_DISC_RADIANCE` — độ chói, tính theo bội của màu nắng. Đây là con số đã đo, không phải chọn
+ * bằng cảm giác; bảng đo nằm ở phần báo cáo Phase 9C. Nhớ: nó nâng ĐỈNH chứ không nâng nền, vì
+ * góc khối của đĩa chỉ chiếm 0,14% bầu trời (xem tính toán ở `createSkyEnvironment`).
+ */
+const SUN_DISC_ANGLE = 0.075;
+const SUN_DISC_DISTANCE = 6;
+const SUN_DISC_RADIANCE = 30;
+
+/**
+ * Sàn độ chói cho đĩa lúc trời tối. `sunEnergy` ban đêm gần 0, mà nhân thẳng vào thì đĩa biến mất
+ * hẳn — trong khi ban đêm vẫn có MẶT TRĂNG, và một mái đồng bắt ánh trăng là thứ đêm đang thiếu.
+ * ⚠️ Giữ nhỏ: đêm mà loé bằng ban ngày thì mất luôn cảm giác đêm — đúng thứ Phase 3M đã tốn công
+ * dựng. Số này được kiểm bằng chính ảnh chụp 22h ở phần nghiệm thu.
+ */
+const SUN_DISC_NIGHT_FLOOR = 0.16;
+
+/**
+ * HẠT VÂN cho từng loại bề mặt (Phase 9C). Xem `surfaceDetail.js` để biết nó làm gì và vì sao.
+ *
+ * `scale` = số chu kỳ vân trên MỘT Ô LƯỚI, nên nó phải tỉ lệ NGHỊCH với cỡ vật: mặt đất trải 12 ô
+ * nên vân thưa vẫn ra vệt loang lớn; một bức tường chỉ rộng ~1,3 ô nên phải dày hơn nhiều mới đọc
+ * ra "bề mặt có nhám" thay vì "bức tường bị loang màu".
+ *
+ * ⚠️ NGƯỠNG "ĐỦ THẤY MÀ CHƯA THÀNH BỘ LỌC NHIỄU" nằm quanh ±10% và nó là một quyết định MỸ THUẬT,
+ * không phải một hằng số vật lý: Đàm yêu cầu giữ ngôn ngữ low-poly / cách điệu, không biến thành
+ * PBR tả thực. Vặn `strength` lên 0,2 thì mọi mặt phẳng bắt đầu "sôi" và thành phố trông như phủ
+ * cát — đã thử và loại.
+ */
+const GRAIN = {
+  ground: { scale: 5, strength: 0.16, roughness: 0.22 },
+  road: { scale: 9, strength: 0.18, roughness: 0.26 },
+  // Vùng đất xa: vân THƯA và NHẸ. Nó chiếm nửa khung hình và nằm sau màn sương, nên vân dày ở đó
+  // vừa tốn vừa phá phối cảnh khí quyển (chi tiết đều tay từ xa tới gần = mất cảm giác chiều sâu).
+  outskirts: { scale: 2.2, strength: 0.12, roughness: 0.10 },
+  building: { scale: 11, strength: 0.11, roughness: 0.22 },
+};
 
 /**
  * Cao độ MẶT TRÊN của đường — nơi bàn chân cư dân chạm vào.
@@ -192,6 +242,19 @@ export function applyPaintedLook(renderer) {
 export const SHADOW_MAP_DESKTOP = 2048;
 export const SHADOW_MAP_MOBILE = 512;
 
+/**
+ * Trần tỉ lệ điểm ảnh. Màn Retina 3x mà vẽ đủ 3x thì tốn gấp 9 lần mà mắt gần như không thấy.
+ *
+ * ⚠️ ĐỂ Ở ĐÂY, CẠNH CỠ BÓNG ĐỔ, VÌ NÓ CÙNG MỘT LOẠI: cả hai đều trả lời câu "bản dựng này thuộc
+ * tầng chất lượng nào". Trước Phase 9C nó nằm riêng trong `CityScene3D.jsx`, còn
+ * `scripts/city-preview.mjs` thì viết cứng `setPixelRatio(1)` ở HAI khối dựng — tức **trang xem
+ * thử render ở đúng một nửa mật độ điểm ảnh của thứ Đàm nhìn thấy trên MacBook**, và mọi nhận xét
+ * mỹ thuật rút ra từ nó (răng cưa, mép khối, chi tiết nhỏ, cây cối) đều đang nói về một bản dựng
+ * THẤP HƠN bản thật. Đúng cái bẫy đã cắn với cỡ bóng đổ ở Phase 9B, lặp lại nguyên hình dạng ở một
+ * cần gạt khác — nên nó được xử lý y hệt: một hằng số, mọi nơi nhập về.
+ */
+export const MAX_PIXEL_RATIO = 2;
+
 /** Ô lưới (x, y) → toạ độ thế giới, gốc toạ độ đặt giữa thành phố. */
 export function cellToWorld(x, y, gridSize) {
   const half = (gridSize - 1) / 2;
@@ -258,6 +321,13 @@ function paintSkyGradient(geometry, radius, {
  * tiết) → PMREM ra một cubemap đã làm mờ sẵn theo từng mức nhám. Sau khi nướng xong thì cả quả cầu
  * lẫn cảnh tạm đều bỏ đi; thứ giữ lại là một texture duy nhất.
  *
+ * ⚠️ VÀ TỪ PHASE 9C NÓ CÒN CHỨA MỘT ĐĨA MẶT TRỜI — xem `SUN_DISC_ANGLE` bên dưới. Đây là bản vá
+ * gốc cho phát hiện lớn nhất của đợt audit: **giữa trưa, KHÔNG một điểm ảnh nào trong khung sáng
+ * quá 0,75** (0,00% ở kỷ 3 và kỷ 7). Mắt đọc ra "thật" một phần lớn nhờ điểm loé — nắng bắt trên
+ * mép ngói, trên kính, trên đồng. Trước đây môi trường chỉ là một dải trời đều đều, nên mặt bóng
+ * chẳng có gì để phản chiếu thành điểm loé, và mọi vật liệu — vàng, kính, kim loại, nước — đều
+ * hiện ra như nhựa mờ.
+ *
  * @returns {{texture:object, dispose:function}|null} `null` khi không có renderer (test, SSR)
  */
 function createSkyEnvironment(renderer, skyLook, groundColor) {
@@ -266,10 +336,44 @@ function createSkyEnvironment(renderer, skyLook, groundColor) {
   let target = null;
   const probeGeometry = new SphereGeometry(8, 16, 8);
   const probeMaterial = new MeshBasicMaterial({ vertexColors: true, side: BackSide, fog: false });
+  const discGeometry = new SphereGeometry(SUN_DISC_DISTANCE * Math.tan(SUN_DISC_ANGLE), 12, 8);
+  const discMaterial = new MeshBasicMaterial({ fog: false, toneMapped: false });
   try {
     paintSkyGradient(probeGeometry, 8, { ...skyLook, groundColor });
     const probeScene = new Scene();
     probeScene.add(new Mesh(probeGeometry, probeMaterial));
+
+    /**
+     * ⚠️ VÌ SAO ĐĨA NÀY KHÔNG THỂ LÀM NHẠT CẢ THÀNH PHỐ — và đây là điểm khiến nó KHÁC HẲN mọi
+     * cách "làm sáng lên" mà Phase 7A đã thử rồi thất bại.
+     *
+     * Năng lượng một nguồn rót vào bề mặt khuếch tán = độ chói × GÓC KHỐI nó chiếm. Đĩa bán kính
+     * góc 4,3° chiếm 0,0177 sr trên tổng 12,57 sr của cả mặt cầu — tức **0,14% bầu trời**. Nhân
+     * độ chói 30 vào thì phần cộng thêm cho ánh sáng khuếch tán chỉ khoảng 30 × 0,0177 / π ≈ 0,17,
+     * rồi còn bị `ENV_DIFFUSE` (0,12) nhân xuống còn ~0,02 — mắt không thấy được.
+     * Nhưng với một mặt NHẴN (kính 0,06 · vàng 0,20 · men 0,22 · kim loại 0,32), thuỳ phản chiếu
+     * hẹp hơn cái đĩa, nên nó phản chiếu gần trọn độ chói 30 → một điểm loé thật.
+     * ⇒ Đĩa này nâng ĐỈNH mà gần như không nâng TRUNG BÌNH. Đó chính xác là thứ đang thiếu, và về
+     * mặt cấu trúc nó KHÔNG THỂ gây ra "pastel như sữa" — thất bại kia đến từ việc nâng nền sáng
+     * đều (`envMapIntensity` 1,0 rọi khắp mọi hướng), một việc khác hẳn.
+     *
+     * ⚠️ CHỈ NƯỚNG VÀO MÔI TRƯỜNG, KHÔNG VẼ LÊN VÒM TRỜI NHÌN THẤY. Vòm trời vẫn dùng đúng quầng
+     * sáng mềm cũ (`glow` + mũ 6) — chú thích của `paintSkyGradient` đã ghi rõ vì sao một cái đĩa
+     * sắc nét trên vòm trời trông như lỗi. Ở đây thì ngược lại: cái ta cần chính là một nguồn NHỎ
+     * và CHÓI để mặt bóng có gì mà bắt.
+     *
+     * ⚠️ SỐ >1 SỐNG SÓT QUA PMREM. `PMREMGenerator._allocateTargets` dùng `HalfFloatType` và
+     * `fromScene` tự đặt `toneMapping = NoToneMapping` trong lúc nướng (đã đọc mã three r185).
+     * Nếu một ngày nào đó three đổi sang render target 8-bit thì đĩa sẽ bị kẹp về 1,0 và mọi điểm
+     * loé biến mất — im lặng. Bài test `sceneGraphWiring` canh chuyện độ chói phải >1.
+     */
+    if (skyLook.sunDiscRadiance > 0) {
+      discMaterial.color.copy(skyLook.glow).multiplyScalar(skyLook.sunDiscRadiance);
+      const disc = new Mesh(discGeometry, discMaterial);
+      disc.position.copy(skyLook.sunDir).multiplyScalar(SUN_DISC_DISTANCE);
+      probeScene.add(disc);
+    }
+
     pmrem = new PMREMGenerator(renderer);
     target = pmrem.fromScene(probeScene, 0.06);
   } catch (error) {
@@ -287,6 +391,8 @@ function createSkyEnvironment(renderer, skyLook, groundColor) {
     pmrem?.dispose();
     probeGeometry.dispose();
     probeMaterial.dispose();
+    discGeometry.dispose();
+    discMaterial.dispose();
   }
   if (!target) return null;
   return { texture: target.texture, dispose: () => target.dispose() };
@@ -362,6 +468,11 @@ export function createCityScene({
     glow: new Color(palette.lights?.sun ?? palette.sun),
     glowStrength: palette.isDark ? 0.30 : 0.55,
     sunDir,
+    // ⚠️ CHỈ `createSkyEnvironment` ĐỌC TRƯỜNG NÀY. `paintSkyGradient` bỏ qua nó, nên vòm trời
+    // NHÌN THẤY vẫn giữ nguyên quầng sáng mềm cũ — đúng như chú thích của hàm đó yêu cầu. Hai nơi
+    // dùng chung một `skyLook` chính là thứ giữ cho bầu trời phản chiếu trên kính khớp với bầu
+    // trời sau lưng nó; thêm một trường mà chỉ một bên đọc thì không phá vỡ điều đó.
+    sunDiscRadiance: SUN_DISC_RADIANCE * Math.max(sunEnergy, SUN_DISC_NIGHT_FLOOR),
   };
 
   // ⚠️ MÔI TRƯỜNG PHẢN CHIẾU — dựng Ở ĐÂY, TRƯỚC MỌI VẬT LIỆU, dù vòm trời nhìn thấy được thì mãi
@@ -394,7 +505,7 @@ export function createCityScene({
 
   // Mặt đất, mặt đường, vùng đất bao quanh: nhám gần như tuyệt đối. Chúng KHÔNG được bóng — một
   // con đường bắt sáng là con đường vừa mưa xong, và cả 15 kỷ đều không mưa.
-  const tileMaterial = track(new MeshStandardMaterial({
+  const tileMaterial = track(applySurfaceDetail(new MeshStandardMaterial({
     roughness: 0.96,
     metalness: 0,
     // ⚠️ TỪ PHASE 8C MÀU ĐI QUA ĐỈNH, KHÔNG QUA `setColorAt` NỮA. Mặt đất thôi là 144 khối hộp có
@@ -405,7 +516,7 @@ export function createCityScene({
     envMapIntensity: ENV_DIFFUSE,
     transparent: dimmed,
     opacity: dimmed ? 0.62 : 1,
-  }));
+  }), { ...GRAIN.ground }));
 
   // Dùng lại vài đối tượng tạm cho mọi thực thể — tạo mới trong vòng lặp là rác cho bộ dọn.
   const matrix = new Matrix4();
@@ -427,7 +538,7 @@ export function createCityScene({
    * tới Phase 8B, một tấm lưới bám sườn dốc từ Phase 8C).
    */
   const roadProfile = materialProfile(getEraStyle(layout.era)?.roadMaterial);
-  const roadMaterial = track(new MeshStandardMaterial({
+  const roadMaterial = track(applySurfaceDetail(new MeshStandardMaterial({
     roughness: roadProfile.roughness,
     metalness: roadProfile.metalness,
     vertexColors: true,
@@ -435,7 +546,7 @@ export function createCityScene({
     envMapIntensity: ENV_DIFFUSE,
     transparent: dimmed,
     opacity: dimmed ? 0.62 : 1,
-  }));
+  }), { ...GRAIN.road }));
 
   // ── ĐỊA HÌNH ──────────────────────────────────────────────────────────────
   // ⚠️ MỌI THỨ ĐỨNG TRÊN ĐẤT ĐỀU PHẢI HỎI Ở ĐÂY, KHÔNG ĐƯỢC AI TỰ GIẢ ĐỊNH y = 0.
@@ -492,13 +603,13 @@ export function createCityScene({
   // Phase 7B — chỉ là tầng vẽ chưa từng đọc tới nó.
   const horizon = buildHorizon({ era: layout.era, gridSize });
   const horizonSurface = buildHorizonSurface({ horizon, palette, terrain, gridSize });
-  const outskirtsMaterial = track(new MeshStandardMaterial({
+  const outskirtsMaterial = track(applySurfaceDetail(new MeshStandardMaterial({
     vertexColors: true,
     roughness: 0.98,
     metalness: 0,
     envMap,
     envMapIntensity: ENV_DIFFUSE,
-  }));
+  }), { ...GRAIN.outskirts }));
   if (horizonSurface) {
     track(horizonSurface.geometry);
     const outskirts = new Mesh(horizonSurface.geometry, outskirtsMaterial);
@@ -704,7 +815,10 @@ export function createCityScene({
       // mắt thấy ngay mà đọc code thì không, vì hai bên đều "đúng" theo cách hiểu riêng.
       const buildingMaterial = merged.families.map((family) => {
         const profile = materialProfile(family);
-        return track(new MeshStandardMaterial({
+        // Kim loại/kính đã nhận trọn môi trường (1,0) nên `specularGainFor` trả về 1 — tức bản vá
+        // tách-đôi KHÔNG chạm vào chúng, chỉ gỡ phanh cho các bề mặt khuếch tán.
+        const envIntensity = profile.metalness > 0.15 ? 1 : ENV_DIFFUSE;
+        return track(applySurfaceDetail(new MeshStandardMaterial({
           vertexColors: true,
           roughness: profile.roughness,
           metalness: profile.metalness,
@@ -712,10 +826,10 @@ export function createCityScene({
           // Kim loại và kính SỐNG bằng phản chiếu → cho ăn trọn môi trường. Bề mặt khuếch tán chỉ
           // lấy một phần: để nguyên 1,0 thì ánh trời tràn vào làm nhạt hết bảng màu đất đã dựng
           // công phu suốt các Phase trước — đúng cái bẫy "sáng đều là kẻ thù của hình khối".
-          envMapIntensity: profile.metalness > 0.15 ? 1 : ENV_DIFFUSE,
+          envMapIntensity: envIntensity,
           transparent: dimmed,
           opacity: dimmed ? 0.62 : 1,
-        }));
+        }), { ...GRAIN.building, specularGain: specularGainFor(envIntensity) }));
       });
       const mesh = new Mesh(merged.geometry, buildingMaterial);
       mesh.castShadow = true;

@@ -26,11 +26,8 @@ import { createRenderLoop } from '../../../engine/city3d/renderLoop';
 import { pickNearest } from '../../../engine/city3d/pick';
 import { ERA_METADATA } from '../../../engine/constants';
 import { getVietnamHour } from '../../../engine/time';
-import { applyPaintedLook, createCityScene } from './sceneGraph';
+import { applyPaintedLook, createCityScene, MAX_PIXEL_RATIO } from './sceneGraph';
 import { readThemeSignature, readThemeTokens } from './themeBridge';
-
-/** Giới hạn tỉ lệ điểm ảnh. Màn Retina 3x mà vẽ đủ 3x thì tốn gấp 9 lần mà mắt gần như không thấy. */
-const MAX_PIXEL_RATIO = 2;
 
 /**
  * Trần nhịp khung hình cho hoạt hoạ cư dân.

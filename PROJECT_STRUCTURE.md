@@ -293,7 +293,11 @@
 │   ├── city-preview.mjs        #   Dựng cảnh 3D thật rồi chụp/đo. `--bench N` là bộ đo hiệu năng
 │   │                           #   DUY NHẤT — đừng viết bộ thứ hai, hai phép đo song song sớm muộn
 │   │                           #   sẽ lệch nhau (bài học sweep-score, Phase 4G).
-│   └── bench-macbook.sh        #   Một lệnh duy nhất cho Đàm: chạy trọn ma trận 24 cảnh trên GPU thật
+│   ├── cityPreviewSource.test.js # Khoá HAI cái bẫy của file trên mà không gì khác bắt được: dấu
+│   │                           #   huyền (`) trong chú thích làm chết cả template >300 dòng, và
+│   │                           #   nháy kép ASCII trong dòng in ra bị bench-macbook.sh cắt cụt.
+│   └── bench-macbook.sh        #   Một lệnh duy nhất cho Đàm: ma trận 24 cảnh (1100×700) + 1 cảnh
+│                               #   1600×1000, trên GPU thật. `--thu` = thử 1 cảnh ~20s trước.
 ├── supabase/                   # SQL chạy TAY trong Supabase SQL Editor (không tự động migrate)
 │
 ├── CLAUDE.md                   # Quy tắc bắt buộc + Project Governance Protocol + bối cảnh kỹ thuật
@@ -362,13 +366,21 @@
 | `node scripts/png-probe.mjs <ảnh> --top 10` | màu THẬT trên màn hình tại một điểm/vùng |
 | `node --import ./scripts/register-esm-loader.mjs scripts/frame-fit.mjs 1.3` | công trình nào đang bị **mép khung hình cắt**, và phải lùi camera bao nhiêu thì hết (`--flat` = đối chứng địa hình phẳng · `--selftest`) |
 | `node scripts/city-preview.mjs --era 7 --bench 120` | **chấm hiệu năng MỘT cảnh**: frame time P50/P95 ở khung ỔN ĐỊNH và ở khung DỰNG LẠI BÓNG (hai câu hỏi khác nhau, in riêng), số tam giác + lệnh vẽ đọc từ `renderer.info`, DPR thật, cỡ bản đồ bóng, số shader/geometry/texture. Thêm `--gpu` để dùng card thật (bắt buộc trên máy Đàm), `--no-shadow` để tách "vật liệu tối" khỏi "chi phí bóng" |
-| `bash scripts/bench-macbook.sh` | **ĐO TRÊN MACBOOK THẬT** — chạy trọn ma trận 4 kỷ × 3 giờ × 2 góc = 24 cảnh, 120 khung mỗi cảnh, ghi ra `.city-preview/bench-macbook.txt` |
+| `bash scripts/bench-macbook.sh --thu` | **CHẠY CÁI NÀY TRƯỚC** — thử đúng 1 cảnh (~20 giây), in ĐẠT/HỎNG + tên card đồ hoạ |
+| `bash scripts/bench-macbook.sh` | **ĐO TRÊN MACBOOK THẬT** — ma trận 4 kỷ × 3 giờ × 2 góc = 24 cảnh ở **1100×700** + 1 cảnh **1600×1000**, 120 khung mỗi cảnh, ghi ra `.city-preview/bench-macbook.txt`. Kiểm mã thoát từng cảnh, đếm N/24, DỪNG NGAY nếu card là SwiftShader |
 
-⚠️ **Bảng `[stats]` của `--bench` in ra HAI cột cạnh nhau — "tự tính" và "renderer.info" — và chúng
-PHẢI bằng nhau.** Đây không phải trang trí: tháng 8/2026 hai bên lệch **56%** (HUD báo 34.622 tam
-giác, máy vẽ 78.748) suốt từ Phase 9A, vì con số HUD được DỰ ĐOÁN bằng công thức riêng và chưa ai
-đặt nó cạnh sự thật. Thấy cột "lệch" khác 0 ⇒ có ai đó thêm khối vào cảnh mà phép đếm không thấy;
-`src/components/city/render3d/sceneStats.test.js` canh chuyện này ở tầng test.
+⚠️ **Bảng `[stats]` của `--bench` in ra BỐN cột, và đọc nhầm cột là ra kết luận sai.**
+`trong cảnh: thành phố` · `nền (trời+núi)` · `trong cảnh: tổng` · `đã vẽ (sau khi cắt)`.
+- Hỏi *"GPU vẽ bao nhiêu mỗi khung"* → đọc **tổng**. Hỏi *"kỷ nào nặng / xây thêm nhà có nặng
+  không"* → đọc **thành phố**. Phần nền là một **HẰNG SỐ 44.126 tam giác ở cả 15 kỷ**, đọc số tổng
+  để so kỷ thì nó pha loãng chênh lệch thật **1,43 lần** xuống còn **1,16 lần** (vòng 2 Performance
+  Gate, đúng hình dạng `TECH_DEBT #22`). Tách theo **nhãn gắn lúc tạo khối**, không đoán bằng màu.
+- ⚠️ Hai cột cuối **KHÔNG buộc bằng nhau**, và lệch nhau là ĐÚNG: `renderer.info` đếm SAU khi three
+  cắt bỏ khối ngoài khung hình. Hôm nay chúng luôn bằng nhau vì cả cảnh chỉ có 7 khối lớn nằm ôm
+  lấy camera hoặc ở gốc toạ độ (đã đo ở mọi mức zoom) — ngày nào tách công trình thành nhiều khối
+  thì chúng lệch. `sceneStats.test.js` khoá QUAN HỆ `đã vẽ ≤ trong cảnh`, **không** khoá "bằng nhau".
+- Tháng 8/2026 con số HUD từng được DỰ ĐOÁN bằng công thức riêng và lệch **56%** (báo 34.622, máy vẽ
+  78.748) suốt từ Phase 9A vì chưa ai đặt nó cạnh sự thật. Nay là một phép ĐẾM trên chính cảnh.
 ⚠️ **Số FPS đo trong hộp cát dựng ảnh là VÔ NGHĨA**: ở đó WebGL chạy bằng SwiftShader (tô hình bằng
 CPU), ~2,4 giây/khung — sai ba bậc so với GPU thật VÀ sai cả hình dạng chi phí. Dòng
 `[bench] máy đồ hoạ=...` tồn tại để bảng kết quả tự khai nó được đo bằng gì; thấy chữ "SwiftShader"

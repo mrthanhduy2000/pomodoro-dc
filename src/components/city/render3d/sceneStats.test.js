@@ -16,16 +16,19 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { Frustum, Matrix4, PerspectiveCamera } from 'three';
 
 import { createCityScene } from './sceneGraph.js';
 import { computeCityLayout } from '../../../engine/cityLayout.js';
 import { buildScenePalette } from '../../../engine/city3d/palette3d.js';
 import { deriveDaylight } from '../../../engine/city3d/daylight.js';
+import { CITY_CAMERA_FOV, cityOrbitOptions, createOrbit } from '../../../engine/city3d/orbit.js';
 import { BLUEPRINT_CATALOG, ERA_METADATA } from '../../../engine/constants.js';
 
 const TOKENS = { canvas2: '#f4f2ec', ink: '#1f1e1d', line: '#e8e6de', accent: '#c96442' };
 
-function dựngCảnh(era, hour = 12, sessions = 80) {
+/** MỘT đường dựng tham số cho cả file — bài nào cần `layout` thì lấy từ đây, đừng dựng lại. */
+function thamSố(era, hour = 12, sessions = 80) {
   const built = BLUEPRINT_CATALOG[era].map((bp) => bp.id);
   const levels = Object.fromEntries(built.map((id) => [id, 3]));
   const stats = { sessionCount: sessions, streakLength: 9 };
@@ -34,9 +37,13 @@ function dựngCảnh(era, hour = 12, sessions = 80) {
   const palette = buildScenePalette({
     tokens: TOKENS, eraColor: ERA_METADATA[era]?.accentColor, era, daylight,
   });
+  return { layout, palette, daylight, stats };
+}
+
+function dựngCảnh(era, hour = 12, sessions = 80) {
   // `renderer` để trống: nhà máy hình học không cần GPU, chỉ bản đồ môi trường mới cần — mà bản đồ
   // môi trường không sinh ra tam giác nào.
-  return createCityScene({ layout, palette, daylight, stats });
+  return createCityScene(thamSố(era, hour, sessions));
 }
 
 /**
@@ -44,18 +51,43 @@ function dựngCảnh(era, hour = 12, sessions = 80) {
  * `info.render`. Cố ý KHÔNG import hàm của mã sản phẩm — import nó thì bài test này chỉ chứng minh
  * "một hàm bằng chính nó".
  */
-function đếmĐộcLập(scene) {
+function đếmĐộcLập(scene, khungNhìn = null) {
   let tam = 0;
   let lệnh = 0;
   scene.traverse((o) => {
     if (!o.isMesh || o.visible === false) return;
     const g = o.geometry;
     if (!g) return;
+    // Luật cắt của `WebGLRenderer.projectObject`: bỏ qua khối có `frustumCulled` mà hộp bao của nó
+    // không giao với khung nhìn. Truyền `khungNhìn = null` là đếm TRONG CẢNH (không cắt gì).
+    if (khungNhìn && o.frustumCulled && !khungNhìn.intersectsObject(o)) return;
     const đỉnh = g.index ? g.index.count : (g.attributes?.position?.count ?? 0);
     tam += ((o.isInstancedMesh ? o.count : 1) * đỉnh) / 3;
     lệnh += (Array.isArray(o.material) && g.groups?.length) ? g.groups.length : 1;
   });
   return { tam, lệnh };
+}
+
+/**
+ * Dựng ĐÚNG camera mà `CityScene3D.jsx` dựng, rồi trả về khung nhìn của nó.
+ * `zoom` mô phỏng cờ `--zoom` của `city-preview.mjs` (nhân vào `distance`, xem dòng
+ * `distance: orbitOptions.distance * ZOOM`) — 1 là khung mặc định, 0,4 là đóng sát.
+ */
+function khungNhìnCủa(scene, layout, zoom = 1) {
+  const opts = cityOrbitOptions(layout.gridSize, layout.era);
+  const orbit = createOrbit({ ...opts, distance: opts.distance * zoom });
+  const eye = orbit.getPosition();
+  const target = orbit.getTarget();
+  // Tỉ lệ khung 1 : 0,62 — đúng mặc định của `resize()` trong `CityScene3D.jsx`.
+  const camera = new PerspectiveCamera(CITY_CAMERA_FOV, 1 / 0.62, 0.5, layout.gridSize * 8);
+  camera.position.set(eye.x, eye.y, eye.z);
+  camera.lookAt(target.x, target.y, target.z);
+  camera.updateMatrixWorld(true);
+  camera.updateProjectionMatrix();
+  scene.updateMatrixWorld(true);
+  return new Frustum().setFromProjectionMatrix(
+    new Matrix4().multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse),
+  );
 }
 
 test('HUD báo ĐÚNG số tam giác + lệnh vẽ mà máy sẽ vẽ — cả 15 kỷ', () => {
@@ -94,6 +126,127 @@ test('ĐỐI CHỨNG: bầu trời và rặng núi chân trời PHẢI nằm tro
     'con số HUD không bao trọn cả hai phần — công thức tự tính đã lẻn về');
   assert.ok(city.stats.triangles > cũNhìnThấy * 1.5,
     `HUD (${city.stats.triangles}) phải lớn hơn hẳn phần công thức cũ thấy được (${cũNhìnThấy})`);
+  city.dispose();
+});
+
+test('BA con số: thành phố + nền = tổng, và phần nền tách theo NGUỒN GỐC chứ không theo ngưỡng', () => {
+  // ⚠️ VÌ SAO BÀI NÀY TỒN TẠI (Performance Gate vòng 2). Con số TỔNG đúng cho câu "GPU vẽ bao
+  // nhiêu", nhưng sai cho câu "kỷ nào nặng": 44.126 tam giác vòm trời + rặng núi là HẰNG SỐ ở cả
+  // 15 kỷ, và một hằng số cộng vào cả tử lẫn mẫu thì pha loãng khác biệt. Trên 4 kỷ của ma trận
+  // đo, chênh lệch thật 1,43 lần bị đọc thành 1,16 lần.
+  const nềnTheoKỷ = [];
+  for (let era = 1; era <= 15; era += 1) {
+    const city = dựngCảnh(era);
+    const g = city.stats.geometry;
+
+    assert.equal(g.triangles.city + g.triangles.backdrop, g.triangles.total,
+      `kỷ ${era}: thành phố + nền không bằng tổng tam giác`);
+    assert.equal(g.drawCalls.city + g.drawCalls.backdrop, g.drawCalls.total,
+      `kỷ ${era}: thành phố + nền không bằng tổng lệnh vẽ`);
+    assert.equal(g.triangles.total, city.stats.triangles, `kỷ ${era}: tổng phẳng lệch tổng tách`);
+    assert.equal(g.drawCalls.total, city.stats.drawCalls, `kỷ ${era}: tổng phẳng lệch tổng tách`);
+
+    // Phép đếm ĐỘC LẬP của bài test, phân loại bằng chính NHÃN mà bên dựng gắn — nếu ai đó đổi sang
+    // đoán bằng kích thước/màu thì hai bên sẽ lệch ngay.
+    let nềnRiêng = 0;
+    let khốiNền = 0;
+    city.scene.traverse((o) => {
+      if (!o.isMesh || o.visible === false || !o.geometry) return;
+      if (o.userData?.sceneLayer !== 'backdrop') return;
+      khốiNền += 1;
+      const đỉnh = o.geometry.index
+        ? o.geometry.index.count : (o.geometry.attributes?.position?.count ?? 0);
+      nềnRiêng += đỉnh / 3;
+    });
+    assert.equal(g.triangles.backdrop, nềnRiêng, `kỷ ${era}: phần nền báo sai`);
+    assert.equal(khốiNền, 2, `kỷ ${era}: nền phải đúng 2 khối (vòm trời + rặng núi), thấy ${khốiNền}`);
+
+    nềnTheoKỷ.push(g.triangles.backdrop);
+    assert.ok(g.triangles.city > 0 && g.triangles.backdrop > 0,
+      `kỷ ${era}: một trong hai phần bằng 0 — nhãn nguồn gốc đã rơi mất?`);
+    city.dispose();
+  }
+
+  // ĐỐI CHỨNG nhốt đúng cái bẫy: phần nền là HẰNG SỐ. Ngày nào nó thôi hằng số thì lý lẽ "trừ nền
+  // ra mới so được kỷ" phải được viết lại, và bài này phải đỏ để bắt người ta viết lại.
+  assert.equal(new Set(nềnTheoKỷ).size, 1,
+    `phần nền đáng lẽ giống hệt ở cả 15 kỷ, nhưng thấy ${new Set(nềnTheoKỷ).size} giá trị khác nhau`);
+});
+
+test('"ĐÃ VẼ" ≤ "TRONG CẢNH" ở mọi camera, và BẰNG NHAU ở camera mặc định', () => {
+  /**
+   * ⚠️ BÀI NÀY CỐ Ý **KHÔNG** KHOÁ "HAI BÊN LUÔN BẰNG NHAU" — khoá thế là gài mìn.
+   * Hôm nay chúng bằng nhau chỉ vì camera mặc định thấy trọn cảnh. Ma trận đo có `--zoom 0.4`, ở
+   * đó rặng núi chân trời (rộng gấp sáu lần lưới) rơi ra ngoài khung và three bỏ qua nó trước khi
+   * vẽ. Một bài test đòi "luôn bằng" sẽ ĐỎ ở đúng lúc mã đang chạy ĐÚNG.
+   * Thứ thật sự là luật là QUAN HỆ: cắt bỏ thì chỉ có thể vẽ ÍT ĐI, không bao giờ nhiều hơn.
+   */
+  for (const era of [1, 3, 7, 11, 13, 15]) {
+    const p = thamSố(era);
+    const city = createCityScene(p);
+    const trongCảnh = đếmĐộcLập(city.scene);
+    assert.equal(city.stats.triangles, trongCảnh.tam, `kỷ ${era}: số "trong cảnh" lệch`);
+
+    // (1) Camera MẶC ĐỊNH: bằng nhau — đây là điều kiện đã kiểm chứng trong trình duyệt (kỷ 7 ra
+    // 78.748 ở cả hai cột) và là thứ giữ cho bảng [stats] có ý nghĩa đối chiếu.
+    const mặcĐịnh = đếmĐộcLập(city.scene, khungNhìnCủa(city.scene, p.layout, 1));
+    assert.equal(mặcĐịnh.tam, trongCảnh.tam,
+      `kỷ ${era}: camera mặc định đáng lẽ thấy trọn cảnh, nhưng cắt mất ${trongCảnh.tam - mặcĐịnh.tam} tam giác`);
+    assert.equal(mặcĐịnh.lệnh, trongCảnh.lệnh, `kỷ ${era}: camera mặc định cắt mất lệnh vẽ`);
+
+    // (2) Mọi camera khác: chỉ được ÍT ĐI. Gồm cả `--zoom 0.4` của ma trận đo.
+    for (const zoom of [1.5, 1, 0.6, 0.4, 0.25]) {
+      const đãVẽ = đếmĐộcLập(city.scene, khungNhìnCủa(city.scene, p.layout, zoom));
+      assert.ok(đãVẽ.tam <= trongCảnh.tam,
+        `kỷ ${era} zoom ${zoom}: "đã vẽ" (${đãVẽ.tam}) > "trong cảnh" (${trongCảnh.tam})`);
+      assert.ok(đãVẽ.lệnh <= trongCảnh.lệnh,
+        `kỷ ${era} zoom ${zoom}: lệnh vẽ "đã vẽ" (${đãVẽ.lệnh}) > "trong cảnh" (${trongCảnh.lệnh})`);
+      assert.ok(đãVẽ.tam > 0, `kỷ ${era} zoom ${zoom}: cắt sạch cả cảnh — phép dựng camera hỏng`);
+    }
+    city.dispose();
+  }
+});
+
+test('ĐỐI CHỨNG cho bài trên: phép cắt của bài test PHẢI có răng, nếu không "≤" là cái phễu', () => {
+  /**
+   * ⚠️ Bài "≤" ở trên sẽ XANH VĨNH VIỄN kể cả khi phép cắt của bài test hỏng và không bao giờ cắt
+   * gì (0 ≤ 0 luôn đúng) — đúng hình dạng "ngưỡng một phía là cái phễu, không phải hàng rào".
+   *
+   * ⚠️ VÀ ĐO RA MỘT SỰ THẬT NGƯỢC VỚI DỰ ĐOÁN, GHI LẠI ĐỂ PHIÊN SAU KHỎI ĐI TÌM LỖI KHÔNG CÓ:
+   * cảnh này **không thể** bị cắt bớt bởi bất kỳ camera nào app dựng ra được. Cả thành phố chỉ gồm
+   * 7 khối, mà khối nào cũng hoặc bao trùm camera hoặc nằm ngay giữa tầm ngắm: vòm trời bán kính
+   * 43,2 và rặng núi 51,1 (camera đứng cách tâm 4,3–17,2 nên nó ở BÊN TRONG cả hai), còn mặt đất
+   * 13,5 · mặt đường 8,5 · toàn bộ công trình đã GỘP làm một khối bán kính 7,5 đều tâm ở gốc toạ
+   * độ — mà camera thì luôn ngắm vào gốc toạ độ. Cắt theo hộp bao là phép cắt rất thô, nên
+   * `--zoom 0.4` hay 0,25 đều KHÔNG bỏ được khối nào (đã đo: 78.748 = 78.748 ở cả ba mức zoom).
+   * ⇒ Hai cột "trong cảnh" và "đã vẽ" hôm nay **buộc phải bằng nhau**, và đó là lý do phép đối
+   * chiếu ở Bước 1 khớp — không phải nhờ may. Ngày nào tách công trình thành nhiều khối riêng thì
+   * chúng mới lệch, và lúc ấy lệch là ĐÚNG.
+   *
+   * Vì vậy đối chứng này KHÔNG dùng camera của app (sẽ chẳng bao giờ cắt được gì), mà vặn tới mức
+   * PHI LÝ — quay lưng lại thành phố — rồi ĐÒI thấy hậu quả phi lý.
+   */
+  const p = thamSố(7);
+  const city = createCityScene(p);
+  const trongCảnh = đếmĐộcLập(city.scene);
+
+  // ⚠️ ĐỨNG THẬT XA rồi mới quay lưng. Đứng ở gốc toạ độ mà quay lưng thì KHÔNG cắt được gì, vì
+  // camera lúc ấy nằm BÊN TRONG hộp bao của cả 7 khối (kể cả mặt đường bán kính 8,5) — và một hộp
+  // bao chứa camera thì luôn giao với khung nhìn. Đây chính là bản đối chứng đầu tiên tôi viết, và
+  // nó ĐỎ; đọc kỹ mới thấy lỗi nằm ở phép thử chứ không ở phép cắt.
+  const xa = p.layout.gridSize * 25;
+  const camera = new PerspectiveCamera(CITY_CAMERA_FOV, 1 / 0.62, 0.5, p.layout.gridSize * 8);
+  camera.position.set(0, 2, xa);
+  camera.lookAt(0, 2, xa * 2);   // ngắm ra hư không, thành phố ở sau lưng và ngoài mặt phẳng xa
+  camera.updateMatrixWorld(true);
+  city.scene.updateMatrixWorld(true);
+  const quayLưng = new Frustum().setFromProjectionMatrix(
+    new Matrix4().multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse),
+  );
+  const đãVẽ = đếmĐộcLập(city.scene, quayLưng);
+  assert.equal(đãVẽ.tam, 0,
+    `đứng xa quay lưng lại thành phố mà vẫn "vẽ" ${đãVẽ.tam} tam giác — phép cắt của bài test không nối vào đâu cả`);
+  assert.ok(trongCảnh.tam > 0, 'cảnh rỗng thì đối chứng này vô nghĩa');
   city.dispose();
 });
 

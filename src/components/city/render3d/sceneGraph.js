@@ -191,18 +191,52 @@ function drawCallsOfMesh(mesh) {
  * ⚠️ Con số này mô tả CẢNH ở trạng thái ổn định. Khung hình nào dựng lại bản đồ bóng sẽ tốn THÊM
  * một lượt vẽ riêng cho các khối đổ bóng (kỷ 7: +7 lệnh vẽ, +25.436 tam giác) — đó là chi phí có
  * thật nhưng KHÔNG thường trực, nên nó không thuộc về đây.
+ *
+ * ⚠️ VÀ MỘT CON SỐ ĐÚNG VẪN RA KẾT LUẬN SAI, NẾU NÓ TRỘN HAI ĐẠI LƯỢNG (Performance Gate vòng 2).
+ * Bản vá ở trên chữa xong "HUD nói dối", rồi ngay lập tức đẻ ra một cái bẫy mới: con số tổng ĐÚNG
+ * cho câu hỏi *"GPU vẽ bao nhiêu mỗi khung"*, nhưng nó **SAI** cho câu hỏi *"kỷ nào nặng"* — vì
+ * 44.126 tam giác vòm trời + rặng núi là một HẰNG SỐ nằm trong số của cả 15 kỷ. Đọc số tổng thì
+ * kết luận là *"15 kỷ đồng đều, chênh 1,16 lần"*; trừ nền ra thì kỷ 11 (37.494) so kỷ 3 (26.168)
+ * = **1,43 lần**. Một hằng số cộng vào cả tử lẫn mẫu đã pha loãng 43% khác biệt xuống còn 16% —
+ * đúng hình dạng của `TECH_DEBT #22` (trung bình trên vùng quá rộng làm loãng tín hiệu ~10 lần).
+ *
+ * ⇒ Vì vậy phép đếm này trả về **BA con số**, và việc phân loại đọc **NHÃN GẮN LÚC TẠO KHỐI**
+ * (`userData.sceneLayer`), KHÔNG đoán bằng ngưỡng/kích thước/tên màu. Bên DỰNG biết chắc chắn cái
+ * nào là trời, cái nào là nhà — nên bên dựng phải nói ra, đúng luật đã trả giá ở `TECH_DEBT #22`.
  */
-export function countSceneTriangles(root) {
-  let total = 0;
-  root.traverse((obj) => { if (obj.isMesh && obj.visible !== false) total += trianglesOfMesh(obj); });
-  return total;
+
+/** Nhãn nguồn gốc: khối thuộc PHÔNG NỀN (vòm trời + rặng núi chân trời), không phải thành phố. */
+export const SCENE_LAYER_BACKDROP = 'backdrop';
+
+/** Gắn nhãn nền cho một khối. Một chỗ duy nhất viết nhãn ⇒ không có hai cách khai. */
+function markBackdrop(mesh, name) {
+  mesh.userData.sceneLayer = SCENE_LAYER_BACKDROP;
+  mesh.name = name;
+  return mesh;
 }
 
-/** Cặp song sinh của `countSceneTriangles` cho số lệnh vẽ. */
-export function countSceneDrawCalls(root) {
-  let total = 0;
-  root.traverse((obj) => { if (obj.isMesh && obj.visible !== false) total += drawCallsOfMesh(obj); });
-  return total;
+/** Khối này thuộc lớp nào — ĐỌC nhãn, không suy đoán. Không nhãn ⇒ thành phố. */
+function layerOfMesh(mesh) {
+  return mesh.userData?.sceneLayer === SCENE_LAYER_BACKDROP ? 'backdrop' : 'city';
+}
+
+/**
+ * MỘT lượt duyệt, ra cả tam giác lẫn lệnh vẽ, mỗi thứ ba con số: thành phố · nền · tổng.
+ * @returns {{triangles:{city:number,backdrop:number,total:number},
+ *            drawCalls:{city:number,backdrop:number,total:number}}}
+ */
+export function measureSceneGeometry(root) {
+  const triangles = { city: 0, backdrop: 0, total: 0 };
+  const drawCalls = { city: 0, backdrop: 0, total: 0 };
+  root.traverse((obj) => {
+    if (!obj.isMesh || obj.visible === false) return;
+    const lớp = layerOfMesh(obj);
+    const t = trianglesOfMesh(obj);
+    const c = drawCallsOfMesh(obj);
+    triangles[lớp] += t; triangles.total += t;
+    drawCalls[lớp] += c; drawCalls.total += c;
+  });
+  return { triangles, drawCalls };
 }
 
 /** Trục đứng, dùng lại cho mọi phép xoay người — tạo mới trong vòng lặp là rác cho bộ dọn. */
@@ -635,6 +669,10 @@ export function createCityScene({
     depthWrite: false,
   }));
   const skyMesh = new Mesh(skyGeometry, skyMaterial);
+  // ⚠️ NHÃN NGUỒN GỐC, không phải để tra cứu lúc chạy — xem `measureSceneGeometry`. Vòm trời là
+  // một trong hai thứ tạo nên hằng số 44.126 tam giác có mặt ở CẢ 15 kỷ; không tách nó ra thì mọi
+  // câu hỏi dạng "kỷ nào nặng" đều bị pha loãng.
+  markBackdrop(skyMesh, 'sky');
   scene.add(skyMesh);
   meshes.push(skyMesh);
 
@@ -671,6 +709,8 @@ export function createCityScene({
     // trong bóng — kết quả là cả vùng đất quanh thành phố tối đen (đã thấy tận mắt ở ảnh chụp thử).
     outskirts.castShadow = false;
     outskirts.receiveShadow = false;
+    // Nửa còn lại của hằng số 44.126 (rặng núi Phase 9A ≈ 43.166 tam giác) — xem `measureSceneGeometry`.
+    markBackdrop(outskirts, 'horizon');
     scene.add(outskirts);
     meshes.push(outskirts);
   }
@@ -1226,6 +1266,9 @@ export function createCityScene({
     scene.clear();
   }
 
+  // ĐO một lần, ngay khi cảnh đã dựng xong và trước khi có ai kịp đổi nó.
+  const geometry = measureSceneGeometry(scene);
+
   return {
     scene,
     sun,
@@ -1251,10 +1294,18 @@ export function createCityScene({
       // Đèn điểm là nguồn sáng DUY NHẤT ở đây tính tiền theo từng điểm ảnh — hiện lên HUD để lúc
       // Đàm chụp màn hình báo máy nóng, ta biết ngay lúc đó có mấy cái đang bật.
       lamps: lampCount,
-      // ⚠️ ĐẾM CẢ CẢNH, KHÔNG TỰ TÍNH NỮA (xem `countSceneTriangles` ở đầu file để biết vì sao —
+      // ⚠️ ĐẾM CẢ CẢNH, KHÔNG TỰ TÍNH NỮA (xem `measureSceneGeometry` ở đầu file để biết vì sao —
       // công thức tự tính cũ đã báo THIẾU 56% suốt từ Phase 9A mà không có gì đỏ lên).
-      drawCalls: countSceneDrawCalls(scene),
-      triangles: countSceneTriangles(scene),
+      // Hai con số phẳng dưới đây là TỔNG, và chúng suy ra từ ĐÚNG một phép đo ở dòng trên — không
+      // có đường nào để tổng và phần tách trôi khỏi nhau.
+      drawCalls: geometry.drawCalls.total,
+      triangles: geometry.triangles.total,
+      /**
+       * Ba con số: `thành phố` · `nền` (vòm trời + rặng núi) · `tổng`.
+       * ⚠️ Đây là số ĐẾM TRONG CẢNH, tức TRƯỚC khi three cắt bỏ khối nằm ngoài khung hình. Số máy
+       * THẬT SỰ vẽ nằm ở `renderer.info.render` và có thể NHỎ HƠN — đó là đúng, không phải lỗi.
+       */
+      geometry,
     },
     /** Gọi khi cảnh đổi hình dạng (đổi kỷ, xây thêm nhà) — bóng mới được vẽ lại. */
     invalidateShadows() { sun.shadow.needsUpdate = true; },

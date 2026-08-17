@@ -383,6 +383,11 @@ export default function CityScene3D({
           // dựng bản đồ bóng ở đúng khung hình có dựng lại. Đây là một cái đồng hồ đo, nên nó phải
           // đọc từ đồng hồ chứ không đọc từ dự báo. (Performance Gate 2026-08-17: hai bên từng lệch
           // 56% suốt nhiều tháng vì không ai đặt chúng cạnh nhau.)
+          //
+          // ⚠️ HAI CON SỐ NÀY LÀ **"ĐÃ VẼ (SAU KHI CẮT)"**, còn `...city.stats.geometry` giữ nguyên
+          // bên dưới là **"TRONG CẢNH"** — chúng KHÔNG buộc phải bằng nhau, và HUD nói rõ điều đó.
+          // three bỏ qua khối nằm ngoài khung hình trước khi vẽ, nên camera đóng sát ⇒ "đã vẽ" nhỏ
+          // hơn; khung dựng lại bóng ⇒ "đã vẽ" lớn hơn. Cả hai chiều đều đúng. Đừng "sửa" cho khớp.
           drawCalls: renderer.info.render.calls,
           triangles: renderer.info.render.triangles,
           shadowMap: city.sun.shadow.mapSize.width,

@@ -367,28 +367,92 @@ if (BENCH > 0) {
     + ' P50=' + f2(ổnĐịnh.p50) + 'ms P95=' + f2(ổnĐịnh.p95) + 'ms'
     + ' nhanh nhất=' + f2(ổnĐịnh.min) + ' chậm nhất=' + f2(ổnĐịnh.max));
   if (dựngBóng) {
+    /**
+     * ⚠️ MỘT HIỆU SỐ NHỎ HƠN NHIỄU THÌ KHÔNG PHẢI MỘT PHÉP ĐO — ĐỪNG IN NÓ NHƯ MỘT CON SỐ.
+     * Bản trước in thẳng 'riêng bóng=-55.00ms (+-2.4%)': vừa vô nghĩa về dấu, vừa mời người đọc
+     * kết luận "dựng lại bóng còn nhanh hơn không dựng". Ở khung 2200×1400 trên CPU rasteriser,
+     * riêng loạt ổn định đã dao động 2247–2450 ms (biên độ 203 ms) — một hiệu số 55 ms nằm gọn
+     * bên trong đó. Câu duy nhất được phép nói lúc ấy là *nhỏ hơn mức phép đo này phân giải được*
+     * (đúng luật của Phase 9B, và của chính bản báo cáo vòng 1 đã phải sửa vì viết quá tay).
+     * ⚠️ Nhiễu ở đây đo bằng ĐỘ TRẢI của loạt ổn định, KHÔNG phải một hằng số đoán sẵn — hằng số
+     * thì đúng ở một cỡ khung rồi sai ở mọi cỡ khác.
+     */
+    const hiệu = dựngBóng.p50 - ổnĐịnh.p50;
+    const nhiễu = ổnĐịnh.max - ổnĐịnh.min;
+    const đọcĐược = Math.abs(hiệu) > nhiễu;
+    const dấu = hiệu >= 0 ? '+' : '−';
     console.log('[bench] (b) DỰNG LẠI BÓNG n=' + dựngBóng.n
       + ' P50=' + f2(dựngBóng.p50) + 'ms P95=' + f2(dựngBóng.p95) + 'ms'
-      + ' | riêng bóng=' + f2(dựngBóng.p50 - ổnĐịnh.p50) + 'ms'
-      + ' (+' + (100 * (dựngBóng.p50 - ổnĐịnh.p50) / ổnĐịnh.p50).toFixed(1) + '%)');
+      + ' | riêng bóng=' + dấu + f2(Math.abs(hiệu)) + 'ms'
+      + ' (' + dấu + (100 * Math.abs(hiệu) / ổnĐịnh.p50).toFixed(1) + '%)');
+    console.log('[bench]     nhiễu của loạt ổn định=' + f2(nhiễu) + 'ms ⇒ '
+      + (đọcĐược
+        ? 'hiệu số LỚN HƠN nhiễu, đọc được.'
+        : 'hiệu số NẰM TRONG NHIỄU — phép đo này KHÔNG phân giải được chi phí dựng bóng, đừng trích con số trên.'));
+    // ⚠️ Đây mới là bằng chứng cổng bóng THẬT SỰ mở. three có HAI cổng nối tiếp (toàn cục
+    // 'renderer.shadowMap' và từng đèn 'sun.shadow'); mở một cổng thì bản đồ bóng không hề được vẽ
+    // lại và phép đo đang so hai khung y hệt nhau. Số lệnh vẽ/tam giác TĂNG là thứ chứng minh
+    // lượt bóng có chạy — và nó độc lập với chuyện thời gian có đo được hay không.
     console.log('[bench] lượt bóng thêm ' + (thậtBóng.calls - thật.calls) + ' lệnh vẽ, '
-      + (thậtBóng.triangles - thật.triangles).toLocaleString('vi-VN') + ' tam giác');
+      + (thậtBóng.triangles - thật.triangles).toLocaleString('vi-VN') + ' tam giác'
+      + ((thậtBóng.calls - thật.calls) > 0
+        ? ' ⇒ cổng bóng ĐANG MỞ (lượt vẽ thứ hai có thật).'
+        : ' ⚠ BẰNG 0 — cổng bóng KHÔNG mở, mọi số ở dòng (b) đang so hai khung y hệt nhau.'));
   } else {
     console.log('[bench] (b) BỎ QUA — đang chạy --no-shadow');
   }
 
-  // ── BƯỚC 1: ĐỐI CHIẾU SỐ TỰ TÍNH vs SỰ THẬT CỦA three ────────────────────────
-  // sceneGraph.js tự tính drawCalls/triangles bằng công thức riêng; three biết CHÍNH XÁC nó đã phát
-  // ra bao nhiêu lệnh vẽ và bao nhiêu tam giác. Chưa ai từng đặt hai bên cạnh nhau. Bên nào lệch
-  // thì bên tự tính SAI — three không đoán, nó đếm.
-  const lệchC = thật.calls - city.stats.drawCalls;
-  const lệchT = thật.triangles - city.stats.triangles;
-  const pct = (l, t) => (t === 0 ? '—' : (100 * l / t).toFixed(1) + '%');
-  console.log('[stats] | đại lượng | tự tính | renderer.info | lệch |');
-  console.log('[stats] | lệnh vẽ | ' + city.stats.drawCalls + ' | ' + thật.calls
-    + ' | ' + (lệchC >= 0 ? '+' : '') + lệchC + ' (' + pct(lệchC, thật.calls) + ') |');
-  console.log('[stats] | tam giác | ' + city.stats.triangles + ' | ' + thật.triangles
-    + ' | ' + (lệchT >= 0 ? '+' : '') + lệchT + ' (' + pct(lệchT, thật.triangles) + ') |');
+  // ── BƯỚC 1: HÌNH HỌC MỖI KHUNG — BA CON SỐ, KHÔNG PHẢI MỘT ───────────────────
+  //
+  // ⚠️ HAI CỘT CUỐI TRẢ LỜI HAI CÂU HỎI KHÁC NHAU, VÀ LỆCH NHAU LÀ ĐÚNG.
+  // "trong cảnh" = duyệt scene graph, đếm MỌI khối đang có mặt.
+  // "đã vẽ"      = renderer.info.render, đếm SAU khi three cắt bỏ khối nằm ngoài khung hình.
+  //
+  // ⚠️ ĐO RỒI: hôm nay hai cột LUÔN BẰNG NHAU, ở mọi kỷ và mọi mức zoom — và đó KHÔNG phải may.
+  // Cả cảnh chỉ có 7 khối, khối nào cũng hoặc bao trùm camera (vòm trời bán kính 43,2 · rặng núi
+  // 51,1, camera đứng cách tâm 4,3–17,2 nên nằm BÊN TRONG cả hai) hoặc có tâm ngay tại gốc toạ độ
+  // mà camera thì luôn ngắm vào gốc (mặt đất 13,5 · mặt đường 8,5 · toàn bộ công trình đã GỘP làm
+  // một khối 7,5). Cắt theo hộp bao là phép cắt rất thô nên nó không bỏ được khối nào.
+  // ⇒ Đừng chờ hai cột lệch nhau ở --zoom 0.4; chúng sẽ không lệch. Nhưng vẫn phải ghi RIÊNG và
+  // dán nhãn RIÊNG, vì ngày nào tách công trình thành nhiều khối thì chúng sẽ lệch, và lúc ấy lệch
+  // là ĐÚNG — một bảng đòi "hai cột phải khớp" sẽ biến chuyện đúng đó thành một báo động giả.
+  // (Khoá bằng sceneStats.test.js: "đã vẽ" ≤ "trong cảnh", KHÔNG khoá "luôn bằng nhau".)
+  //
+  // ⚠️ VÀ VÌ SAO PHẢI TÁCH "NỀN" RA: 44.126 tam giác vòm trời + rặng núi là HẰNG SỐ ở cả 15 kỷ.
+  // Đọc cột "tổng" để so kỷ nào nặng thì hằng số ấy pha loãng khác biệt — trên 4 kỷ của ma trận
+  // này, chênh lệch thật 1,43 lần bị đọc thành 1,16 lần. Cột "thành phố" mới là cột trả lời câu
+  // "xây thêm nhà thì nặng thêm bao nhiêu".
+  // ⚠️ CẤM DÙNG DẤU NHÁY KÉP ASCII (") TRONG MỌI DÒNG IN RA Ở ĐÂY. Chromium bọc mỗi dòng console
+  // vào cặp nháy kép rồi dán thêm '", source: http://...' phía sau, nên 'bench-macbook.sh' lọc bằng
+  // '[^"]*' — dòng nào chứa " sẽ bị CẮT NGANG ở đúng chỗ đó. Đã trả giá thật: dòng kết luận
+  // '[stats] ✓ "đã vẽ" = "trong cảnh" …' in ra thành đúng '[stats] ✓ ' và không ai biết vì sao.
+  // Dùng nháy kép cong “ ” (U+201C/201D) — mắt đọc y như nhau, bộ lọc không thấy.
+  const g = city.stats.geometry;
+  const n = (x) => x.toLocaleString('vi-VN');
+  const pct = (a, b) => (b === 0 ? '—' : (100 * a / b).toFixed(1).replace('.', ',') + '%');
+  console.log('[stats] | đại lượng | trong cảnh: thành phố | nền (trời+núi) | trong cảnh: tổng'
+    + ' | đã vẽ (sau khi cắt) |');
+  console.log('[stats] | lệnh vẽ | ' + g.drawCalls.city + ' | ' + g.drawCalls.backdrop
+    + ' | ' + g.drawCalls.total + ' | ' + thật.calls + ' |');
+  console.log('[stats] | tam giác | ' + n(g.triangles.city) + ' | ' + n(g.triangles.backdrop)
+    + ' | ' + n(g.triangles.total) + ' | ' + n(thật.triangles) + ' |');
+  console.log('[stats] nền chiếm ' + pct(g.triangles.backdrop, g.triangles.total)
+    + ' tam giác trong cảnh (hằng số ở mọi kỷ) ⇒ so kỷ nặng nhẹ phải đọc cột THÀNH PHỐ.');
+
+  const cắtT = g.triangles.total - thật.triangles;
+  const cắtC = g.drawCalls.total - thật.calls;
+  if (cắtT === 0 && cắtC === 0) {
+    console.log('[stats] ✓ “đã vẽ” = “trong cảnh” — khung hình này thấy trọn cảnh, không khối nào bị cắt.');
+  } else if (cắtT >= 0 && cắtC >= 0) {
+    console.log('[stats] ⓘ “đã vẽ” ÍT HƠN “trong cảnh” ' + n(cắtT) + ' tam giác ('
+      + pct(cắtT, g.triangles.total) + ') và ' + cắtC + ' lệnh vẽ — ĐÚNG, KHÔNG PHẢI LỖI.');
+    console.log('[stats]   Camera đang đóng sát nên three bỏ qua khối nằm ngoài khung hình trước'
+      + ' khi vẽ (frustum culling). Hai cột hỏi hai chuyện: “cảnh có gì” vs “khung này vẽ gì”.');
+  } else {
+    console.log('[stats] ⚠ “đã vẽ” NHIỀU HƠN “trong cảnh” ' + n(-cắtT) + ' tam giác và '
+      + (-cắtC) + ' lệnh vẽ — khung vừa đọc có DỰNG LẠI BẢN ĐỒ BÓNG (lượt vẽ thứ hai).');
+    console.log('[stats]   Nếu không phải vậy thì phép đọc renderer.info đang lệch pha với loạt đo.');
+  }
   console.log('[bench] DPR=' + renderer.getPixelRatio()
     + ' khung=' + renderer.domElement.width + 'x' + renderer.domElement.height
     + ' bản đồ bóng=' + (city.sun ? city.sun.shadow.mapSize.width : 'không có')
@@ -399,7 +463,12 @@ document.title = 'READY ' + JSON.stringify(city.stats);
 document.getElementById('info').textContent =
   'Kỷ ' + ERA + ' — ' + (ERA_METADATA[ERA]?.label ?? '?') + ' · cấp ' + LEVEL
   + ' · ' + pendingQueue.length + ' công trường'
-  + ' · ' + city.stats.drawCalls + ' lệnh vẽ · ' + city.stats.triangles.toLocaleString('vi-VN') + ' tam giác';
+  + ' · ' + city.stats.drawCalls + ' lệnh vẽ · '
+  // Ba con số, theo đúng thứ tự bảng [stats]: thành phố + nền = tổng. Dòng chú thích dưới ảnh xem
+  // thử là chỗ DUY NHẤT Đàm đọc mà không cần mở terminal, nên nó không được nói ít hơn bảng đo.
+  + city.stats.geometry.triangles.city.toLocaleString('vi-VN') + ' tam giác thành phố + '
+  + city.stats.geometry.triangles.backdrop.toLocaleString('vi-VN') + ' nền = '
+  + city.stats.triangles.toLocaleString('vi-VN');
 document.body.dataset.ready = '1';
 `;
 }

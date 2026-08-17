@@ -6,7 +6,24 @@
 > chọn: `ARCHITECTURE_DECISIONS.md`. Nợ kỹ thuật: `TECH_DEBT.md`. Migration: `MIGRATION.md`. Tóm
 > tắt theo mốc: `CHANGELOG.md`.
 > **NGUYÊN TẮC ƯU TIÊN SỐ 1:** (1) mọi phiên AI phải đọc file này + `CLAUDE.md` + các file liên quan TRƯỚC khi làm; (2) sau MỌI cập nhật dù nhỏ, phải cập nhật ngay file này + `CLAUDE.md` + các file liên quan khác.
-> Cập nhật lần cuối: **2026-08-17** — **PERFORMANCE GATE: kiểm chính ĐỒNG HỒ ĐO trước khi tin nó.**
+> Cập nhật lần cuối: **2026-08-17** — **PERFORMANCE GATE VÒNG 2: vá xong phép đo vẫn kết luận SAI.**
+> Vòng 1 chữa được "HUD nói dối" (thiếu 56%), rồi lấy chính con số ĐÚNG ấy trả lời sai câu hỏi
+> *"kỷ nào nặng"*: `countSceneTriangles` duyệt CẢ CẢNH nên **44.126 tam giác vòm trời + rặng núi**
+> — một HẰNG SỐ ở cả 15 kỷ — nằm trong số của mọi kỷ, pha loãng khác biệt thật **1,43 lần** xuống
+> còn **1,16 lần** (cả 15 kỷ thì là **2,46 lần**: kỷ 13 = 41.102 so kỷ 2 = 16.738). Đúng hình dạng
+> `TECH_DEBT #22`. **(A)** Nay báo **BA con số** — thành phố · nền · tổng — cho cả tam giác lẫn lệnh
+> vẽ, tách theo **NGUỒN GỐC khối** (`userData.sceneLayer` gắn lúc TẠO), HUD cũng hiện tách. Nền
+> chiếm **54–63%** hình học mỗi khung trên 4 kỷ của ma trận (**52–72%** nếu xét cả 15 kỷ) — ĐÂY LÀ
+> QUAN SÁT, KHÔNG phải đề xuất cắt; rặng núi giữ nguyên. **(B)** Đi gỡ quả mìn "cắt vật ngoài khung"
+> thì **đo ra là mìn chưa có ngòi**: cả cảnh chỉ có **7 khối**, khối nào cũng bao trùm camera hoặc
+> có tâm ở gốc toạ độ, nên **không mức zoom nào cắt được gì**. Vẫn đổi nhãn thành *"trong cảnh"* vs
+> *"đã vẽ (sau khi cắt)"* và khoá bằng QUAN HỆ (`đã vẽ ≤ trong cảnh`), KHÔNG khoá "luôn bằng nhau".
+> **(C)** Gỡ hai chỗ ngoại suy tự mâu thuẫn khỏi báo cáo vòng 1 (bỏ chữ *"giá thật"*, bỏ *"lấy mẫu
+> bóng ≈ 0%"*, bỏ hẳn phần ngoại suy ~144 ms). **(D)** `bench-macbook.sh` có chế độ khói `--thu`,
+> kiểm mã thoát từng cảnh, đếm N/24, **dừng ngay** nếu card là SwiftShader, thêm 1 cảnh 1600×1000.
+> **736 bài test** (731 nền + 5 mới), lint sạch, build xanh. ⏳ Vẫn chờ Đàm chạy trên MacBook.
+>
+> *(Trước đó — cùng ngày)* — **PERFORMANCE GATE: kiểm chính ĐỒNG HỒ ĐO trước khi tin nó.**
 > Đàm yêu cầu đo dư địa để biết *"còn được phép làm thành phố đẹp tới đâu"*, và cấm mọi tối ưu
 > trước khi đo. **BƯỚC 0**: máy chạy AI là Linux + SwiftShader (tô hình bằng CPU) ⇒ **KHÔNG xuất
 > một con số FPS nào**, chuyển sang dựng bộ đo cho Đàm tự chạy. **BƯỚC 1 BẮT ĐƯỢC MỘT LỖI THẬT VÀ
@@ -20,13 +37,15 @@
 > HAI bên). Ghi `TECH_DEBT #32` (đã đóng) vì đây là **lần thứ HAI cùng hình dạng sai** — chú thích
 > `countTriangles` (`parts.js`) đã tự cảnh báo đúng cái bẫy này từ Phase 8B mà vẫn tái diễn ⇒ **một
 > bài học được ghi ra không chặn được gì, chỉ một bài TEST mới chặn được**. **BƯỚC 2** tách bóng đổ
-> thành ba câu hỏi khác nhau: lấy mẫu bóng ≈ **4 ms (trong nhiễu)** · dựng lại bản đồ bóng
-> **+29,4 ms (+14%)**, chỉ nổ khi thành phố ĐỔI · và chi phí ấy **không** nằm trong bảng FPS.
+> thành ba câu hỏi khác nhau — ⚠️ **cả ba con số đều đo trên SwiftShader (CPU rasteriser) ở khung
+> 400×250, KHÔNG suy ra được cho MacBook**: lấy mẫu bóng **−4,0 ms, nằm trong nhiễu ±15 ms** (chỉ
+> được nói "nhỏ hơn mức phép đo này phân giải được", KHÔNG được nói "≈ 0%") · dựng lại bản đồ bóng
+> **+29,4 ms (+14,0%)**, chỉ nổ khi thành phố ĐỔI · và chi phí ấy **không** nằm trong bảng FPS.
 > **BƯỚC 3** mở rộng `--bench` sẵn có (không viết công cụ mới — đã **GỠ** `bench-suite.mjs`/
 > `benchCore*` của lượt trước vì hai bộ đo song song là đúng bẫy "một luật hai công thức"): thêm
 > P50/P95, đối chiếu `renderer.info`, DPR/cỡ bóng/shader/geometry/texture, cờ `--gpu` (dùng card
 > thật) và đường dẫn Chrome trên macOS. **Thử ngược ĐẠT**: `--dpr` 1→2→4 làm frame time
-> 218,5 → 488,7 → **1337,2 ms** (6,1×) ⇒ cần gạt có nối. **739 bài test**, lint sạch, build xanh.
+> 218,5 → 488,7 → **1337,2 ms** (6,1×) ⇒ cần gạt có nối. **731 bài test** (số THẬT, đếm lại ở vòng 2 — vòng 1 ghi nhầm 739), lint sạch, build xanh.
 > ⏳ **Bước 4/7/8 CHƯA làm được ở đây** — chờ Đàm chạy `bash scripts/bench-macbook.sh` trên MacBook.
 >
 > *(Trước đó — 2026-08-16)* — **Phase 9D: MẶT ĐƯỜNG LÀ MỘT HỆ THỐNG, KHÔNG PHẢI MỘT DẢI MÀU**
@@ -122,6 +141,100 @@
 
 ## 🗒️ Nhật ký cập nhật
 
+### 2026-08-17 (vòng 2) — Vá xong phép đo vẫn kết luận SAI: con số đúng trộn hai đại lượng
+
+**Yêu cầu của Đàm**: *"sửa phép đo trước khi Đàm chạy, rồi mới chạy"*. Bốn chỗ trong chính bộ đo.
+Vẫn nguyên lệnh cấm: **không tối ưu, không giảm chất lượng hình ảnh, không mở phase mỹ thuật.**
+⚠️ Và một luật bị đình chỉ riêng cho task này: *"lệnh làm đã gồm cho phép deploy"* của `CLAUDE.md`
+**KHÔNG áp dụng** — đây là task ĐO, một bộ đo chưa từng chạy trên máy đích thì chưa có gì để deploy.
+Commit lên nhánh `claude/xay-san-pham-huong-nay-nasr3n` rồi DỪNG, để Đàm quyết việc gộp `main`.
+
+**(A) Tách "thành phố" khỏi "nền" — việc quan trọng nhất.** Vòng 1 chữa được *"HUD nói dối"* rồi
+lấy chính con số ĐÚNG ấy trả lời sai câu hỏi khác. `countSceneTriangles` duyệt CẢ CẢNH, nên 44.126
+tam giác vòm trời + rặng núi — một **HẰNG SỐ** có mặt ở cả 15 kỷ — nằm trong số của mọi kỷ:
+
+| Câu hỏi | Đọc số nào | Kết luận |
+|---|---|---|
+| GPU vẽ bao nhiêu mỗi khung? | **tổng** | đúng — giữ nguyên |
+| Kỷ nào nặng? (4 kỷ ma trận) | tổng → **1,16 lần** ❌ · thành phố → **1,43 lần** ✅ | kỷ 11 (37.494) so kỷ 3 (26.168) |
+| Kỷ nào nặng? (cả 15 kỷ) | tổng → **1,40 lần** ❌ · thành phố → **2,46 lần** ✅ | kỷ 13 (41.102) so kỷ 2 (16.738) |
+
+Một hằng số cộng vào cả tử lẫn mẫu pha loãng 43% khác biệt xuống 16% — **đúng hình dạng
+`TECH_DEBT #22`**. Nay `measureSceneGeometry()` trả **ba** con số (thành phố · nền · tổng) cho cả
+tam giác lẫn lệnh vẽ; hai con số phẳng `stats.triangles`/`stats.drawCalls` suy ra từ ĐÚNG phép đo
+đó nên không có đường nào để chúng trôi khỏi nhau. Phân loại đọc **NHÃN GẮN LÚC TẠO KHỐI**
+(`userData.sceneLayer`, hàm `markBackdrop`) — KHÔNG đoán bằng ngưỡng/kích thước/tên màu, đúng bài
+học ba-phase của `TECH_DEBT #22`. HUD hiện tách (`↳ thành phố` / `↳ nền (trời + núi)`) vì Đàm dùng
+nó để biết *"xây thêm nhà có nặng không"* — mà nhà không nằm ở phần nền.
+
+⚠️ **QUAN SÁT, KHÔNG PHẢI ĐỀ XUẤT CẮT**: nền chiếm **54–63%** tam giác mỗi khung trên 4 kỷ của ma
+trận, **52–72%** nếu xét cả 15 kỷ (nhẹ nhất kỷ 13: 51,8% · nặng nhất kỷ 2: 72,5%). Rặng núi
+**giữ nguyên**, không đụng vào. Về lệnh vẽ thì nền chỉ tốn **2/12–13** — rẻ ở trục đó.
+
+**(B) Quả mìn "cắt vật ngoài khung" — đo ra là nó CHƯA HỀ CÓ NGÒI.** Dự đoán: `--zoom 0.4` sẽ làm
+`renderer.info` (đếm SAU khi cắt) lệch khỏi traversal (đếm MỌI khối), và Đàm sẽ đọc thành "bản vá
+hỏng". Đo thật ở zoom 1 · 0,6 · 0,4 · 0,25 và ở 6 kỷ: **không một khối nào bị cắt, bao giờ**. Lý do
+là một sự thật về kiến trúc cảnh chưa ai từng phát biểu — cả thành phố chỉ có **7 khối**:
+
+| khối | bán kính hộp bao | vì sao không cắt được |
+|---|---:|---|
+| `sky` (vòm trời) | 43,2 | camera đứng cách tâm 4,3–17,2 ⇒ **ở BÊN TRONG** |
+| `horizon` (rặng núi) | 51,1 | **ở BÊN TRONG** |
+| `ground` · `road` · công trình đã GỘP | 13,5 · 8,5 · 7,5 | tâm ở gốc toạ độ, mà camera **luôn ngắm vào gốc** |
+| 2 × cư dân (InstancedMesh) | 0,1 | ở giữa thành phố |
+
+⇒ Vẫn đổi nhãn thành **"trong cảnh"** vs **"đã vẽ (sau khi cắt)"** (đúng yêu cầu), vì ngày nào tách
+công trình thành nhiều khối riêng thì hai cột sẽ lệch — và lúc ấy lệch là ĐÚNG. Bài test khoá
+**QUAN HỆ** `đã vẽ ≤ trong cảnh` + bằng nhau ở camera mặc định, **KHÔNG** khoá "luôn bằng nhau"
+(khoá thế mới là gài mìn thật: nó sẽ đỏ đúng lúc mã đang chạy đúng).
+
+**(C) Gỡ hai chỗ ngoại suy tự mâu thuẫn của vòng 1.** Đã từ chối xuất FPS vì SwiftShader rồi lại
+viết *"dựng lại bóng = 14% một khung"* và *"đã đo được GIÁ THẬT 29,4 ms"*. Đã sửa: dán nhãn
+**"đo trên SwiftShader, KHÔNG suy ra được cho MacBook"**, bỏ chữ *"giá thật"*, ghi rõ **400×250**
+cạnh cả ba số, bỏ khẳng định *"lấy mẫu bóng ≈ 0%"* (−4,0 ms nằm trong nhiễu ±15 ms ⇒ chỉ được nói
+*"nhỏ hơn mức phép đo này phân giải được"*), và **bỏ hẳn** phần ngoại suy ~144 ms chi phí cố định.
+
+⚠️ Và bản thân công cụ cũng được vá cho khớp: dòng `(b)` nay in kèm **nhiễu của loạt ổn định** rồi
+tự nói *"hiệu số NẰM TRONG NHIỄU — đừng trích con số trên"* khi |hiệu| < nhiễu. Bản cũ in thẳng
+`riêng bóng=-55.00ms (+-2.4%)` — vừa vô nghĩa về dấu, vừa mời người đọc kết luận ngược. Dòng
+"lượt bóng thêm N lệnh vẽ" nay tự khẳng định **cổng bóng ĐANG MỞ**, vì đó mới là bằng chứng độc
+lập với thời gian (bài học "hai cổng nối tiếp" của vòng 1).
+
+**(D) `bench-macbook.sh` an toàn cho người không biết code.**
+- `--thu`: chạy ĐÚNG 1 cảnh (~20 giây), in **ĐẠT/HỎNG** + tên card. Đàm chạy cái này TRƯỚC.
+- Mỗi cảnh kiểm mã thoát của `node` **và** kiểm có lấy được dòng đo không; hỏng thì ghi
+  `!!! CẢNH NÀY HỎNG` + 20 dòng cuối để tìm nguyên nhân, **không để trống** (một khoảng trống trông
+  y hệt "cảnh này chẳng có gì đáng nói").
+- Cuối file in **N/24**, thiếu thì kêu to bằng khối `!!!`.
+- Tên card chứa `SwiftShader`/`Software`/`llvmpipe` ⇒ **DỪNG NGAY ở cảnh đầu**, không phí 5 phút.
+- Cả 24 cảnh giữ **1100×700** để so được với nhau, **thêm 1 cảnh cuối 1600×1000** (gấp 2,08 lần
+  điểm ảnh) để biết chi phí tăng theo điểm ảnh ra sao trên GPU thật. Mọi kết luận headroom nay
+  **gắn tường minh với cỡ cửa sổ**, in ngay trong file kết quả.
+
+**Hai lỗi bắt được nhờ chính cơ chế báo lỗi vừa thêm** (và cả hai đều sẽ nổ trên máy Đàm):
+1. **Dấu huyền (`) trong chú thích làm chết cả `city-preview.mjs`.** Mã trang xem thử nằm trong MỘT
+   template literal >300 dòng, nên ``// `renderer.info` …`` đóng chuỗi giữa chừng ⇒ `SyntaxError`.
+   **Cắn HAI lần trong một phiên.** ESLint không bắt, `npm run build` không bắt (file không vào
+   bundle) — chỉ lộ ra lúc CHẠY.
+2. **Nháy kép ASCII trong `console.log` làm cụt dòng.** `bench-macbook.sh` lọc bằng `[^"]*` (bắt
+   buộc: Chromium bọc mỗi dòng console vào nháy kép rồi dán thêm `", source: http://…`). Dòng kết
+   luận quan trọng nhất in ra thành đúng `[stats] ✓ ` rồi hết.
+   ⇒ Khoá bằng **`scripts/cityPreviewSource.test.js`** (2 bài, đã thử-cho-đỏ; bài 1 bảo chính Node
+   `--check` parse file chứ không đoán bằng regex). Cùng lúc phát hiện `grep -oE 'máy đồ hoạ=.*'`
+   kéo theo cả đuôi `", source: …` vào tên card ⇒ đổi sang `[^"]*`.
+
+**Sửa một con số nghiệm thu SAI của vòng 1**: báo cáo ghi *"739 bài test"* — thực tế nền là **731**
+(đếm lại bằng `git stash` toàn bộ thay đổi rồi chạy `npm test`). Một con số nghiệm thu ghi sai thì
+phiên sau sẽ tưởng mình vừa làm mất 8 bài test rồi đi tìm một lỗi không có.
+
+**Nghiệm thu**: **736 bài test** (731 nền + 5 mới) · lint sạch · build xanh · đã chạy lại 4 kỷ của
+ma trận trong hộp cát và xác nhận bảng ba-con-số hiện đúng.
+**Tài liệu**: `TECH_DEBT #33` (hoãn có chủ đích, nối cứng với `#31`) · `CLAUDE.md` thêm bài học
+chính của vòng này + 2 bài kèm theo · `BAN_GIAO.md` (mục này) · `PROJECT_STRUCTURE.md`.
+⏳ **Vẫn chờ Đàm**: `bash scripts/bench-macbook.sh --thu` rồi `bash scripts/bench-macbook.sh`.
+
+---
+
 ### 2026-08-17 — Performance Gate: kiểm chính đồng hồ đo trước khi tin nó
 
 **Yêu cầu của Đàm**: đo headroom thật của MacBook để biết còn được phép làm thành phố đẹp tới đâu.
@@ -153,19 +266,35 @@ mới. `CityScene3D.publishStats()` còn đè lên bằng `renderer.info.render`
 một cái đồng hồ đo, nên nó phải đọc từ đồng hồ chứ không đọc từ dự báo.
 **Sau vá**: `[stats] tam giác | 78748 | 78748 | +0 (0.0%)`.
 
-**Bước 2 — bóng đổ là BA câu hỏi, không phải một** (kỷ 7 · 12h · 400×250 · DPR 1):
+**Bước 2 — bóng đổ là BA câu hỏi, không phải một.**
 
-| Đo gì | P50 | So với khung ổn định |
+⚠️ **MỌI CON SỐ DƯỚI ĐÂY ĐO TRÊN SwiftShader — CPU rasteriser, KHÔNG PHẢI CARD ĐỒ HOẠ.** Không suy
+ra được cho MacBook, kể cả dưới dạng tỉ lệ phần trăm: trên GPU thật lượt dựng bóng chỉ ghi ĐỘ SÂU
+(không chạy shader màu, không lấy mẫu môi trường), nên tỉ lệ của nó so với một khung thường là một
+đại lượng khác hẳn. Đây là số dùng để **so ba trường hợp với nhau trong cùng một hộp cát**, không
+phải giá phải trả trên máy Đàm.
+
+| Đo gì (kỷ 7 · 12h · **khung 400×250** · DPR 1) | P50 | So với khung ổn định |
 |---|---:|---|
-| Khung ổn định, có bóng | 209,6 ms | mốc |
-| `--no-shadow` (tắt hẳn) | 205,6 ms | **−4,0 ms — nằm trong nhiễu** (biên độ ±15 ms) |
-| Khung DỰNG LẠI bản đồ bóng | 239,0 ms | **+29,4 ms (+14,0%)** |
+| Khung ổn định, có bóng — **400×250** | 209,6 ms | mốc |
+| `--no-shadow` (tắt hẳn) — **400×250** | 205,6 ms | **−4,0 ms, NẰM TRONG NHIỄU** (biên độ ±15 ms) |
+| Khung DỰNG LẠI bản đồ bóng — **400×250** | 239,0 ms | **+29,4 ms (+14,0%)** |
 
-⇒ Phép đo `--bench` hiện tại đo **khung ổn định**, tức nó chứa chi phí **lấy mẫu** bóng (≈ miễn
-phí) nhưng **KHÔNG** chứa chi phí **dựng lại** (14%). Lượt dựng bóng thêm **7 lệnh vẽ + 25.436 tam
-giác** vào `renderer.info` của đúng khung đó — nên phải đọc `renderer.info` **ngay sau loạt ổn
-định**, đọc sau loạt dựng bóng là so lệch pha. `sun.shadow.autoUpdate = false` nên chi phí này chỉ
-nổ khi thành phố ĐỔI (xây xong công trình, đổi giờ, đổi kỷ).
+⚠️ **KHÔNG được đọc dòng giữa thành "lấy mẫu bóng ≈ 0%".** −4,0 ms nằm gọn trong nhiễu ±15 ms, nên
+câu duy nhất được phép nói là: *chi phí lấy mẫu bóng NHỎ HƠN MỨC PHÉP ĐO NÀY PHÂN GIẢI ĐƯỢC.* Và có
+một lý do **cấu trúc** khiến nó không thể lớn hơn thế: phép thử ngược `--dpr` (bảng dưới) cho thấy
+16× điểm ảnh chỉ làm thời gian tăng 6,1× ⇒ phần lớn thời gian mỗi khung là chi phí **cố định**,
+không phụ thuộc số điểm ảnh. Mà lấy mẫu bóng thì tính tiền **theo từng điểm ảnh**. Một phép đo bị
+chi phí cố định lấn át **về mặt cấu trúc không thể thấy** thứ tính theo điểm ảnh — đúng bài học
+Phase 9B (*"đại lượng tôi vừa vặn có nằm trong thứ công cụ này đo không?"*). Muốn trả lời câu ấy
+phải đo trên GPU thật, ở khung lớn.
+
+Phần dùng được bất kể máy nào là phần **cấu trúc**, không phải con số: `--bench` đo **khung ổn
+định**, tức nó chứa chi phí **lấy mẫu** bóng nhưng **KHÔNG** chứa chi phí **dựng lại**. Lượt dựng
+bóng thêm **7 lệnh vẽ + 25.436 tam giác** vào `renderer.info` của đúng khung đó — nên phải đọc
+`renderer.info` **ngay sau loạt ổn định**, đọc sau loạt dựng bóng là so lệch pha.
+`sun.shadow.autoUpdate = false` nên chi phí này chỉ nổ khi thành phố ĐỔI (xây xong công trình, đổi
+giờ, đổi kỷ) — điều đó đúng trên mọi máy.
 
 **Bước 3 — mở rộng `--bench` sẵn có, KHÔNG viết công cụ mới.** Giữ nguyên cơ chế `readPixels` (đã
 giải xong chuyện `gl.finish()` nói dối). Thêm: P50 + P95 (**P95 = ĐUÔI CHẬM**, nói rõ trong output
@@ -185,16 +314,22 @@ cùng ngày): hai bộ đo song song cho cùng một câu hỏi là đúng cái 
 | 4 | 1.600.000 | 1337,2 ms | **6,12×** |
 
 Số nhảy rất rõ ⇒ **cần gạt CÓ nối**, phép đo đáng tin. Đáng chú ý: chi phí **không** tỉ lệ thuận
-với điểm ảnh (16× điểm ảnh chỉ ra 6,1× thời gian) ⇒ có một phần chi phí CỐ ĐỊNH lớn (~144 ms ước
-lượng) không phụ thuộc độ phân giải. Trên CPU rasteriser đó là phần xử lý đỉnh; trên GPU thật tỉ lệ
-này sẽ khác hẳn — thêm một lý do nữa để không ngoại suy số ở đây sang MacBook.
+với điểm ảnh (16× điểm ảnh chỉ ra 6,1× thời gian) ⇒ trong hộp cát này có một phần chi phí **CỐ
+ĐỊNH** lớn, không phụ thuộc độ phân giải. ⚠️ **Con số ấy KHÔNG ngoại suy sang MacBook và đã bị gỡ
+khỏi mọi kết luận.** Trên CPU rasteriser phần cố định là xử lý đỉnh + dựng lệnh vẽ, hai việc chạy
+**tuần tự** trước phần điểm ảnh; trên GPU thật chúng chạy **song song** với phần điểm ảnh, nên
+không có "phần cố định" nào để mà cộng vào. Ở đây nó chỉ dùng đúng một việc: giải thích vì sao phép
+đo này không thấy được chi phí lấy mẫu bóng (mục Bước 2).
 
 **Bước 4/7/8 — CHƯA LÀM ĐƯỢC Ở ĐÂY.** Ma trận 24 cảnh × 120 khung cần GPU thật. Đã dựng
 `scripts/bench-macbook.sh`: **một lệnh duy nhất**, chạy trọn ma trận (kỷ 3/7/11/14 × 12/15/22h ×
 zoom 1/0.4, `--sessions 80 --level 3`, ở đúng DPR app dùng), ghi ra `.city-preview/bench-macbook.txt`.
 Mỗi cảnh tự in **tên máy đồ hoạ** ⇒ bảng kết quả tự khai nó được đo bằng gì.
 
-**Nghiệm thu**: **739 bài test** · lint sạch · build xanh.
+**Nghiệm thu**: **731 bài test** · lint sạch · build xanh.
+⚠️ **SỬA LẠI Ở VÒNG 2**: con số này vòng 1 ghi là "739" — SAI. Đếm lại bằng cách `git stash` toàn bộ
+thay đổi rồi chạy `npm test` cho ra đúng **731**. Một con số nghiệm thu ghi sai thì phiên sau sẽ
+tưởng mình vừa làm mất 8 bài test, rồi đi tìm một lỗi không có.
 **Tài liệu**: `TECH_DEBT #32` (đã đóng, ghi lại vì là lần thứ hai cùng hình dạng sai) ·
 `CLAUDE.md` thêm 3 bài học · `PROJECT_STRUCTURE.md` cập nhật bộ công cụ.
 

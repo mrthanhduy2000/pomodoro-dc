@@ -1773,3 +1773,32 @@
   thứ mã sản phẩm báo (chạy CẢ HAI bên, không bên nào so với hằng số thứ ba), kèm một **đối chứng**
   đòi phần "công thức cũ mù" phải còn > 40.000 tam giác và phải nằm trong con số HUD.
 - **Owner**: đã đóng · **Status**: Resolved
+
+---
+
+## #33 — Ma trận 24 cảnh mở lại trình duyệt 25 lần thay vì gộp vào MỘT trang
+
+- **Tên**: `bench-macbook.sh` khởi động Chromium mỗi cảnh một lần
+- **Module**: `scripts/bench-macbook.sh` · `scripts/city-preview.mjs` (chế độ `--sweep` đã có sẵn
+  đúng kỹ thuật cần dùng, chỉ chưa áp cho `--bench`)
+- **Priority**: Low · **Severity**: Low
+- **Impact**: Mỗi cảnh phải gói lại bundle + mở lại trình duyệt (~8 giây), tức khoảng **3,5 phút**
+  trong tổng ~5 phút chạy là chi phí khởi động chứ không phải chi phí đo. Không sai số nào, chỉ tốn
+  thời gian chờ của Đàm.
+- **Root Cause**: `--bench` sinh ra để đo MỘT cảnh, còn cơ chế "một trang, một WebGL context, vẽ
+  tuần tự nhiều cảnh" chỉ được viết cho `--sweep` (dựng ảnh). Hai chế độ chưa dùng chung đường.
+- **Current Risk**: Gần như không. Chỉ là chờ lâu hơn cần thiết.
+- **Future Risk**: Nếu sau này ma trận nở ra (15 kỷ × 6 chặng × 2 góc = 180 cảnh) thì 8 giây/cảnh
+  thành **24 phút** chỉ để khởi động — đủ lâu để không ai chạy nữa, mà một công cụ không ai chạy
+  thì bằng không có (đúng lý lẽ đã viết cho `--sweep`).
+- **Recommended Solution**: cho `--bench` đi qua đúng đường của `--sweep`: một trang, một context,
+  vòng lặp qua danh sách cảnh. ⚠️ Nhưng phải xử lý `TECH_DEBT #31` TRƯỚC hoặc CÙNG LÚC — dùng lại
+  một renderer cho 25 cảnh là chính xác cái điều kiện làm rò rỉ bản đồ bóng thức dậy (2 texture
+  2048² mỗi cảnh ⇒ gần 800 MB), và một bộ đo tự làm nóng máy giữa chừng thì mọi con số sau đó đều
+  trôi. Hai mục này **nối cứng với nhau**, như #30 ↔ #27 đã từng.
+- **Estimated Complexity**: Trung bình (gộp hai đường chạy + #31)
+- **Blocking Conditions**: **Đàm đã CHỦ ĐỘNG HOÃN** (2026-08-17, vòng 2 Performance Gate): *"ĐỪNG
+  làm bây giờ. Ưu tiên là Đàm có bộ số ĐÚNG một lần, không phải có nó nhanh."* Ghi lại ở đây theo
+  đúng yêu cầu của anh, KHÔNG tự làm.
+- **Review Trigger**: khi ma trận cần nở ra quá ~30 cảnh, hoặc khi #31 được sửa vì lý do khác.
+- **Owner**: phiên AI kế tiếp · **Status**: Open (hoãn có chủ đích)

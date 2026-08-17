@@ -38,6 +38,23 @@ function Row({ label, value, hint }) {
 export default function CityPerfHud({ stats, mode, reason }) {
   const fps = stats?.fps ?? 0;
   const measured = fps > 0;
+  const hìnhHọc = stats?.geometry ?? null;
+
+  /**
+   * ⚠️ "đã vẽ" ÍT HƠN "trong cảnh" LÀ ĐÚNG, KHÔNG PHẢI LỖI — và nếu không nói ra thì hai con số
+   * lệch nhau trên màn hình sẽ bị đọc thành "app đang báo sai". three bỏ qua khối nằm ngoài khung
+   * hình trước khi vẽ (frustum culling), nên kéo camera lại gần là số "đã vẽ" tụt xuống trong khi
+   * cảnh không hề mất gì. Chiều NGƯỢC LẠI ("đã vẽ" nhiều hơn) cũng có thật và cũng đúng: đúng
+   * khung hình dựng lại bản đồ bóng thì các khối đổ bóng được vẽ thêm một lượt nữa.
+   */
+  const trongCảnh = hìnhHọc?.triangles.total ?? null;
+  const đãVẽ = stats?.triangles ?? null;
+  const chênh = (trongCảnh != null && đãVẽ != null) ? trongCảnh - đãVẽ : 0;
+  const lờiGiảiThích = chênh > 0
+    ? `${chênh.toLocaleString('vi-VN')} tam giác trong cảnh không được vẽ vì nằm ngoài khung hình — bình thường khi camera đóng sát, không phải lỗi.`
+    : (chênh < 0
+      ? `Khung vừa đo có dựng lại bóng đổ nên vẽ nhiều hơn số trong cảnh ${(-chênh).toLocaleString('vi-VN')} tam giác — đúng, lượt vẽ bóng là lượt thứ hai.`
+      : null);
 
   // Ngưỡng của cổng Phase 3A: từ 30 khung/giây trở lên là đạt.
   const fpsColor = !measured
@@ -59,8 +76,13 @@ export default function CityPerfHud({ stats, mode, reason }) {
       {mode === '3d' ? (
         <>
           <Row label="Khung/giây" value={measured ? fps : '—'} hint={fpsColor} />
-          <Row label="Lệnh vẽ" value={stats?.drawCalls ?? '—'} />
-          <Row label="Tam giác" value={stats?.triangles?.toLocaleString('vi-VN') ?? '—'} />
+          <Row label="Lệnh vẽ · đã vẽ" value={stats?.drawCalls ?? '—'} />
+          <Row label="Tam giác · đã vẽ" value={stats?.triangles?.toLocaleString('vi-VN') ?? '—'} />
+          {/* Hai dòng THỤT VÀO: số đếm TRONG CẢNH, tách theo nguồn gốc khối. Dòng "thành phố" mới
+              là dòng trả lời câu Đàm thật sự hỏi — "xây thêm nhà có nặng máy không" — vì nhà không
+              nằm ở phần nền. Xem `measureSceneGeometry` để biết vì sao gộp lại là đọc sai. */}
+          <Row label="↳ thành phố" value={hìnhHọc ? hìnhHọc.triangles.city.toLocaleString('vi-VN') : '—'} />
+          <Row label="↳ nền (trời + núi)" value={hìnhHọc ? hìnhHọc.triangles.backdrop.toLocaleString('vi-VN') : '—'} />
           <Row label="Mỗi khung" value={stats?.lastFrameMs != null ? `${stats.lastFrameMs} ms` : '—'} />
           <Row label="Đã vẽ" value={stats?.framesRendered ?? '—'} />
           <Row
@@ -75,6 +97,11 @@ export default function CityPerfHud({ stats, mode, reason }) {
             label="Bóng · điểm ảnh"
             value={stats ? `${stats.shadowMap}px · ${stats.pixelRatio}×` : '—'}
           />
+          {lờiGiảiThích && (
+            <p className="text-[10px] leading-relaxed" style={{ color: 'var(--muted)' }}>
+              {lờiGiảiThích}
+            </p>
+          )}
           <p className="mt-0.5 text-[10px] leading-relaxed" style={{ color: 'var(--muted)' }}>
             {measured
               ? 'Cư dân đang đi lại nên thành phố vẽ liên tục. Nhịp vẽ được giới hạn ở 30 khung/giây để đỡ tốn pin — thấy khoảng 30 là ĐẠT, không phải thiếu.'

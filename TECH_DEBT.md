@@ -911,7 +911,18 @@
   chồng lên nhau.
 - **Review Trigger**: trước khi bắt đầu Phase 7B (mật độ/địa hình); hoặc ngay khi Đàm thấy máy nóng.
 - **Owner**: cần Đàm đo (AI không chạm được vào iPhone thật)
-- **Status**: Open — chưa đo.
+- **Status**: Open — **nửa DESKTOP đã đóng, nửa iPhone vẫn chưa đo.**
+- ✅ **CẬP NHẬT 2026-08-17 — NỬA DESKTOP CỦA MỤC NÀY ĐÃ CÓ SỐ, VÀ ĐẠT** (xem `PERFORMANCE.md`).
+  Đo trên **Apple M3 · ANGLE Metal · 1100×700 · DPR 2**, 24/24 cảnh: frame time **3,90–5,20 ms**
+  trên trần 16,67 ms ⇒ **dư 3,2 lần**. Ba lo ngại của mục này được trả lời riêng từng cái:
+  **(a) `MeshStandardMaterial` đắt hơn cho mỗi điểm ảnh** — ĐÚNG, và đó chính là trục đắt: 80% chi
+  phí đi theo điểm ảnh. Nhưng ở cỡ cửa sổ này nó chỉ tiêu 5,20 ms lúc xấu nhất.
+  **(b) nướng PMREM mỗi lần dựng cảnh** — không hiện ra trong frame time khung ổn định (đúng như
+  mục này dự đoán: chi phí một-lần-mỗi-lần-dựng, không phải mỗi khung).
+  **(c) công trình đi từ 1 lên 5–7 lệnh vẽ** — đo được 12–13 lệnh vẽ cả cảnh, không phải nút thắt.
+  ⇒ **Trên Mac: KHÔNG cần hạ `metalness`, KHÔNG cần bỏ PMREM.** Đường lui ấy vẫn giữ nguyên cho
+  iPhone. ⚠️ **Bộ số M3 KHÔNG suy ra được cho iPhone** — GPU khác, băng thông khác, không quạt, và
+  `PERFORMANCE.md` ghi rõ điều này. Mục này vì vậy **thu hẹp phạm vi còn ĐÚNG iPhone**.
 - ⚠️ **CẬP NHẬT 2026-08-14 — PHASE 7B ĐÃ LÀM MÀ CHƯA CÓ SỐ ĐO NÀY, ghi ra để không ai tưởng là đã
   đo.** Mục này khuyến nghị "nên đo TRƯỚC khi làm 7B" để hai thay đổi khỏi chồng lên nhau; thực tế
   7B chạy trước khi Đàm kịp đo. Lý do chấp nhận được, và đây là lập luận để phản biện chứ không phải
@@ -1676,7 +1687,20 @@
 - **Estimated Complexity**: đo = thấp (một ảnh chụp) · cắt nếu cần = thấp
 - **Blocking Conditions**: **chờ Đàm đo trên iPhone thật** (giống #23 — cùng một lần đo là đóng cả hai)
 - **Review Trigger**: trước khi bắt đầu bước "Living City"
-- **Owner**: Đàm (đo) → phiên AI kế tiếp (cắt nếu cần) · **Status**: Open
+- **Owner**: Đàm (đo) → phiên AI kế tiếp (cắt nếu cần)
+- **Status**: Open — **nửa DESKTOP đã đóng với câu trả lời "ĐỪNG CẮT", nửa iPhone vẫn chưa đo.**
+- ✅ **CẬP NHẬT 2026-08-17 — NỬA DESKTOP ĐÃ CÓ SỐ, VÀ NÓ TRẢ LỜI NGƯỢC VỚI THỨ MỤC NÀY LO** (xem
+  `PERFORMANCE.md`). Mục này tự đặt luật đúng — *"**Không cắt trước khi có số**"* — và nay đã có số:
+  Apple M3 · 1100×700 · DPR 2, 24/24 cảnh trong **3,90–5,20 ms** trên trần 16,67 ms.
+  **Câu trả lời cho câu hỏi LOD là: ĐỪNG CẮT.** Bằng chứng trực tiếp: tam giác **thành phố** chênh
+  nhau **43%** giữa kỷ 3 (26.168) và kỷ 11 (37.494), mà thời gian chỉ chênh **2,4%**. Tức thứ mục
+  này định cắt — nửa vòm cửa sổ, mật độ nhà dân — nằm trên **trục rẻ nhất trong cả hệ thống**. Cắt
+  nó là trả một cái giá thẩm mỹ thật để mua về một khoản tiết kiệm không đo được, đúng cái bẫy
+  "chọn mục tiêu tối ưu theo số tam giác" mà `PERFORMANCE.md` ghi vào TOP 3 KHÔNG NÊN.
+  ⚠️ Còn lo ngại *"bản đồ bóng vẽ cảnh lần thứ hai nên chi phí thực tế gấp đôi"*: **chưa bác được
+  và cũng chưa xác nhận được** — chi phí dựng lại bóng nằm DƯỚI mức nhiễu của phép đo ở mọi cảnh,
+  nên không có con số nào để trích. Đó là một câu hỏi còn mở, không phải một câu đã trả lời.
+  ⇒ Mục này **thu hẹp phạm vi còn ĐÚNG iPhone**, y như #23. Bộ số M3 không suy ra được cho iPhone.
 
 ---
 
@@ -1802,3 +1826,85 @@
   đúng yêu cầu của anh, KHÔNG tự làm.
 - **Review Trigger**: khi ma trận cần nở ra quá ~30 cảnh, hoặc khi #31 được sửa vì lý do khác.
 - **Owner**: phiên AI kế tiếp · **Status**: Open (hoãn có chủ đích)
+
+---
+
+## #34 — `--thu` không kiểm điều kiện tiên quyết, nên lỗi "thiếu thư viện" hiện ra thành 20 dòng lỗi Vite
+
+- **Tên**: Chế độ thử nhanh của bộ đo báo SAI NGUYÊN NHÂN khi thiếu `node_modules/three`
+- **Module**: `scripts/bench-macbook.sh` (chế độ `--thu`) · `scripts/city-preview.mjs`
+- **Priority**: **Medium** · **Severity**: Medium
+- **Impact**: **Đã cắn Đàm thật ngày 2026-08-17, mất 4 vòng qua lại.** Máy anh chưa cài đủ phụ
+  thuộc; `--thu` chạy tới bước gói bundle rồi Vite đổ ra ~20 dòng lỗi phân giải module. Bộ đo báo
+  đúng là "HỎNG", nhưng **không nói được vì sao**, nên cả hai bên phải đoán qua lại vài lượt mới ra
+  nguyên nhân thật — trong khi bản sửa chỉ là một câu tiếng Việt.
+- **Root Cause**: `--thu` sinh ra ở vòng 2 để **chứng minh bộ đo chạy được trước khi chạy thật**, và
+  nó làm đúng phần *phát hiện*: nó dừng, in `!!! CẢNH NÀY HỎNG` kèm 20 dòng cuối. Cái thiếu là phần
+  *chẩn đoán*: nó không kiểm **điều kiện tiên quyết** (có `node_modules/three` không) TRƯỚC khi
+  khởi động, nên nguyên nhân gốc bị chôn dưới hậu quả. Cùng họ với luật "kiểm CÔNG CỤ trước, kiểm
+  mã sau" — chỉ là ở đây phải kiểm **môi trường** trước cả hai.
+- **Current Risk**: **Trung bình, và nó chỉ nổ với đúng người không biết code.** Một AI đọc lỗi Vite
+  là hiểu ngay; Đàm thì không, mà `--thu` được thiết kế riêng cho Đàm. Tức lỗi này nhắm đúng vào
+  người dùng duy nhất của tính năng.
+- **Future Risk**: mỗi lần Đàm đổi máy / xoá `node_modules` / clone lại repo là lặp lại y hệt. Và
+  mọi phụ thuộc tiên quyết khác (Chromium của Playwright, `zlib`, quyền ghi `.city-preview/`) đều
+  có cùng hình dạng — chưa cái nào được kiểm trước.
+- **Recommended Solution**: thêm một hàm `kiem_moi_truong()` chạy **trước mọi thứ khác** trong cả
+  `--thu` lẫn chạy thật, kiểm theo thứ tự và **dừng ngay ở cái đầu tiên thiếu**, mỗi lỗi in **đúng
+  một câu tiếng Việt + đúng một câu lệnh cần gõ**:
+  (1) `node_modules/three` → *"Thiếu thư viện 3D. Chạy: `npm install --legacy-peer-deps`"*;
+  (2) `node_modules` rỗng/không có → cùng câu lệnh trên;
+  (3) không tìm thấy Chromium → câu lệnh tương ứng.
+  ⚠️ Kiểm bằng **sự tồn tại của thư mục**, đừng kiểm bằng cách chạy thử rồi bắt lỗi — chạy thử
+  chính là thứ sinh ra 20 dòng nhiễu.
+- **Estimated Complexity**: **Thấp** (~10 dòng shell). Đây là mục rẻ nhất trong cả file này.
+- **Blocking Conditions**: không có. **Chưa làm vì vòng 3 của Performance Gate được Đàm giới hạn
+  đúng phạm vi "ghi lại kết quả, không sửa mã"** — mở mục này là đúng chỉ thị của anh, không phải
+  vì việc khó.
+- **Review Trigger**: lần kế tiếp bất kỳ ai chạm vào `bench-macbook.sh`; hoặc ngay khi Đàm phải
+  chạy lại bộ đo trên một máy khác.
+- **Owner**: phiên AI kế tiếp · **Status**: Open
+
+---
+
+## #35 — Toàn bộ bộ đo chưa từng chạy thử ở đường dẫn có DẤU TIẾNG VIỆT + DẤU CÁCH, dù `CLAUDE.md` đã có sẵn "BẪY 2" về đúng chuyện đó
+
+- **Tên**: Công cụ mới chưa được thử ở điều kiện đã từng làm chết một tính năng khác
+- **Module**: `scripts/bench-macbook.sh` · `scripts/city-preview.mjs` · `scripts/sweep-score.mjs` ·
+  `scripts/shot.mjs` — mọi công cụ ghi/đọc `.city-preview/`
+- **Priority**: **Medium** · **Severity**: Medium
+- **Impact**: Thư mục dự án trên máy Đàm là **`Bản sao Pomodoro Game - USING`** — có **dấu tiếng
+  Việt** VÀ **dấu cách** VÀ **dấu gạch nối**. Bộ đo chạy hoàn toàn trong hộp cát Linux ở đường dẫn
+  thuần ASCII không dấu cách (`/home/user/pomodoro-dc`), nên **chưa một dòng nào của nó từng gặp
+  điều kiện thật của máy Đàm**. Ngày 2026-08-17 nó chạy được trên máy anh — nhưng đó là **may**,
+  không phải **đã kiểm**: không có bài test nào khoá, và lần sau đổi một dòng là mất.
+- **Root Cause**: hai thứ độc lập, cả hai đều đã có tiền lệ trong chính dự án này.
+  (a) **Dấu cách**: shell không trích dẫn biến đường dẫn (`$X` thay vì `"$X"`) thì `Bản sao Pomodoro
+  Game - USING` bị tách thành nhiều tham số. Đây là lỗi shell kinh điển, và `bench-macbook.sh` là
+  script shell **mới nhất và dài nhất** trong repo.
+  (b) **Dấu tiếng Việt (NFC/NFD)**: macOS lưu tên file ở dạng NFD (`a` + dấu rời), phần lớn công cụ
+  khác giả định NFC. `CLAUDE.md` đã ghi hẳn **"BẪY 2"** — launchd thoát mã 78 **không có stderr** ở
+  đúng đường dẫn này — và ghi thêm rằng nó *"cùng họ với cái bẫy NFC/NFD làm test nạp hai bản
+  React"*. Tức dự án đã trả giá **hai lần** cho đúng cái bẫy này, bài học đã được viết ra, **và
+  công cụ mới vẫn không được thử ở điều kiện đó.** Đúng bài học *"một bài học được ghi ra KHÔNG chặn
+  được gì; chỉ một bài TEST mới chặn được"*.
+- **Current Risk**: **Chưa biết — và "chưa biết" là toàn bộ vấn đề.** Bộ đo đã chạy đạt một lần
+  trên máy Đàm, nên (a) có vẻ ổn ở đường đi hiện tại; nhưng không có gì chứng minh nó ổn ở mọi
+  nhánh (nhánh lỗi, nhánh `tail -n 20`, nhánh ghi log), và (b) chưa hề được chạm tới.
+- **Future Risk**: triệu chứng của cả hai đều **im lặng hoặc gây hiểu nhầm** — (a) cho ra "không
+  tìm thấy file" trỏ vào một đường dẫn bị cắt cụt, (b) từng cho ra **thoát mã 78 không có stderr**.
+  Cả hai đều trông y hệt "bộ đo hỏng" chứ không giống "đường dẫn có dấu", nên sẽ lại tốn nhiều vòng
+  qua lại như #34 vừa tốn.
+- **Recommended Solution**: một bài test đọc-mã-nguồn + một lần chạy thật, cả hai đều rẻ:
+  (1) test quét `scripts/*.sh` bắt mọi biến đường dẫn dùng không có nháy kép (`$THUMUC` thay vì
+  `"$THUMUC"`) — khoá được (a) **vĩnh viễn**, và đây là thứ duy nhất chặn được hồi quy;
+  (2) chạy `bash scripts/bench-macbook.sh --thu` một lần từ một bản sao repo đặt ở đường dẫn
+  `/tmp/Bản sao Pomodoro Game - USING/` — khoá được (b) một lần, ở chính điều kiện của máy Đàm.
+  ⚠️ Làm (2) **trong hộp cát Linux vẫn có giá trị** cho vế dấu cách, nhưng **KHÔNG** thay thế được
+  vế NFC/NFD: Linux không chuẩn hoá tên file như macOS, nên vế đó chỉ Đàm mới kiểm thật được.
+- **Estimated Complexity**: (1) Thấp · (2) Thấp
+- **Blocking Conditions**: không có (cùng lý do như #34 — vòng 3 giới hạn phạm vi ở việc ghi chép)
+- **Review Trigger**: lần kế tiếp có ai thêm/sửa một script trong `scripts/`; hoặc ngay khi bộ đo
+  báo một lỗi mà Đàm không hiểu.
+- **Owner**: phiên AI kế tiếp (viết test) + Đàm (chạy thử một lần trên máy thật)
+- **Status**: Open

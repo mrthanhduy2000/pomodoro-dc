@@ -65,6 +65,9 @@ thực sự lên production (xem bài học sự cố trong `BAN_GIAO.md`/`AI_HA
   `ARCHITECTURE.md`.
 - Muốn hiểu VÌ SAO một quyết định được chọn → `ARCHITECTURE_DECISIONS.md`. Nợ kỹ thuật đã biết →
   `TECH_DEBT.md`. Lịch sử migration → `MIGRATION.md`. Tóm tắt thay đổi theo mốc → `CHANGELOG.md`.
+- **Sắp thêm gì đó vào Thành Phố 3D (chi tiết, ánh sáng, hiệu ứng)?** Đọc **`PERFORMANCE.md`**
+  TRƯỚC — nó nói bằng SỐ đo trên máy thật còn bao nhiêu dư địa, thứ gì rẻ, thứ gì đắt, và ba thứ
+  tuyệt đối không nên đụng vào.
 - Bàn giao tri thức ĐẦY ĐỦ nhất (domain/flow/lịch sử quyết định chi tiết, viết cho AI không được
   đọc code) → `AI_HANDOFF_KNOWLEDGE.md`.
 

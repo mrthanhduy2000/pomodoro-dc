@@ -6,7 +6,26 @@
 > chọn: `ARCHITECTURE_DECISIONS.md`. Nợ kỹ thuật: `TECH_DEBT.md`. Migration: `MIGRATION.md`. Tóm
 > tắt theo mốc: `CHANGELOG.md`.
 > **NGUYÊN TẮC ƯU TIÊN SỐ 1:** (1) mọi phiên AI phải đọc file này + `CLAUDE.md` + các file liên quan TRƯỚC khi làm; (2) sau MỌI cập nhật dù nhỏ, phải cập nhật ngay file này + `CLAUDE.md` + các file liên quan khác.
-> Cập nhật lần cuối: **2026-08-17** — **PERFORMANCE GATE VÒNG 2: vá xong phép đo vẫn kết luận SAI.**
+> Cập nhật lần cuối: **2026-08-17** — **PERFORMANCE GATE VÒNG 3: ĐÃ CÓ SỐ TRÊN MÁY THẬT, VÀ CÂU
+> TRẢ LỜI LÀ "CÒN NHIỀU DƯ ĐỊA".** Đàm chạy bộ đo trên **Apple M3 · ANGLE Metal · 1100×700 · DPR 2**:
+> 24/24 cảnh + 1 cảnh đối chiếu, tất cả ĐẠT. Frame time **3,90–5,20 ms** trên trần 16,67 ms ⇒
+> **dư 3,2 lần** (192–256 hình/giây), không khung nào trượt 60 fps kể cả đỉnh nhiễu 9,2 ms.
+> **Mô hình chi phí**: `≈ 0,87 ms cố định + 1,14 ms mỗi TRIỆU ĐIỂM ẢNH THẬT (đã nhân DPR 2)` ⇒
+> **80% chi phí đi theo ĐIỂM ẢNH, 20% cố định.** **Phát hiện lớn nhất: thứ ăn thời gian là GIỜ
+> TRONG NGÀY (đèn), KHÔNG phải KỶ** — 22h chậm hơn ban ngày +0,8 ms (+19%) ở CẢ 4 kỷ, trong khi
+> tam giác thành phố chênh **43%** giữa kỷ 3 và 11 chỉ đổi **2,4%** thời gian. Ba vòng đi tìm "kỷ
+> nào nặng" và câu trả lời là **không kỷ nào** — chọn sai TRỤC để đo thì đo bao nhiêu vòng cũng
+> không ra. ⚠️ **Rặng núi chân trời chiếm 54–63% hình học nhưng 0 ms đo được ⇒ ĐỪNG ĐỤNG VÀO.**
+> Chi phí dựng lại bản đồ bóng **nằm dưới nhiễu ở mọi cảnh ⇒ ghi là "CHƯA ĐO ĐƯỢC", KHÔNG ghi
+> thành một con số.** Bản ghi chính thức: **`PERFORMANCE.md`** (mới) — đọc TRƯỚC mọi phase mỹ thuật.
+> `TECH_DEBT`: **#23 và #26 đóng NỬA DESKTOP** (không cần hạ `metalness`, không cần LOD nhà dân —
+> hình học là trục rẻ nhất), nửa iPhone vẫn mở; **mở #34** (`--thu` không kiểm `node_modules/three`
+> trước nên lỗi thiếu thư viện hiện ra thành 20 dòng lỗi Vite — đã cắn Đàm thật, mất 4 vòng qua
+> lại) và **#35** (bộ đo chưa từng chạy thử ở đường dẫn có dấu tiếng Việt + dấu cách như máy Đàm).
+> **736 bài test**, lint sạch, build xanh. ⏳ **CHƯA gộp `main` — chờ Đàm quyết** (nhánh có đụng
+> `src/`, xem cuối nhật ký).
+>
+> *(Trước đó — cùng ngày, vòng 2)* — **Vá xong phép đo vẫn kết luận SAI.**
 > Vòng 1 chữa được "HUD nói dối" (thiếu 56%), rồi lấy chính con số ĐÚNG ấy trả lời sai câu hỏi
 > *"kỷ nào nặng"*: `countSceneTriangles` duyệt CẢ CẢNH nên **44.126 tam giác vòm trời + rặng núi**
 > — một HẰNG SỐ ở cả 15 kỷ — nằm trong số của mọi kỷ, pha loãng khác biệt thật **1,43 lần** xuống
@@ -121,6 +140,12 @@
    — phase này thêm hình học THẬT nên nếu không đo trước sẽ không tách được thủ phạm khi máy nóng;
    (b) Đàm chọn hướng cho `TECH_DEBT #24` (khung hình đang cắt công trình) — thành phố càng dày thì
    phần bị xén càng nhiều, và chỉnh bố cục + chỉnh khung một lần rẻ hơn hai lần.
+   ⚠️ **CẬP NHẬT 2026-08-17 — việc (a) nay chỉ còn đúng nửa iPhone.** Nửa **Desktop đã đo và ĐẠT**
+   trên MacBook M3 (dư 3,2 lần), và bộ số ấy nói rằng **thêm hình học gần như miễn phí** — 43%
+   chênh tam giác chỉ đổi 2,4% thời gian. Tức trên Mac, "thêm nhà" **không còn là việc phải xin
+   phép hiệu năng**. Trên iPhone thì vẫn chưa ai đo. **Trước mọi phase mỹ thuật, đọc
+   `PERFORMANCE.md`** — nó nói bằng SỐ thứ gì rẻ (hình học), thứ gì đắt (điểm ảnh + ánh sáng), và
+   ba thứ tuyệt đối không nên đụng.
 1. **Giao diện còn dở**: full-screen iPhone (tai thỏ che mép trên), nút đóng ✕ cho hộp phần thưởng, gom cỡ chữ cho đồng nhất, tắt hiệu ứng cho người nhạy chuyển động.
 2. **(Giai đoạn A, gần xong)** Lưới an toàn test: đợt 1 (2026-07-13) phủ `completeFocusSession`/
    `cancelFocusSession`/`syncService`; đợt 2 (2026-07-17) phủ nốt `computeLevelUps`, bảo-toàn-tài-sản
@@ -140,6 +165,104 @@
 - **Lịch sử git `main` từng bị xáo** (thao tác git song song): bản đang chạy là `eb44638` — chứa ĐỦ mọi việc gần đây (Hỏi Coach offline + fix đêm khuya + Coach offline analyst). Vài commit cũ (`1e27505`, `9fbcd62`) thành dangling, KHÔNG còn trong `git log` nhưng code vẫn nằm trong bản deploy. Đừng hoảng nếu không thấy chúng.
 
 ## 🗒️ Nhật ký cập nhật
+
+### 2026-08-17 (vòng 3) — Bộ số trên MacBook M3 thật: còn dư 3,2 lần, và trục đúng là GIỜ chứ không phải KỶ
+
+**Yêu cầu của Đàm**: *"ghi lại kết quả, KHÔNG phân tích lại"*. Anh đã tự chạy bộ đo trên máy thật,
+cố vấn đã phân tích xong; việc của vòng này CHỈ là ghi vào tài liệu và hỏi ý kiến về việc gộp
+nhánh. **KHÔNG sửa mã dựng cảnh, KHÔNG tối ưu, KHÔNG mở phase mỹ thuật mới.** Đã tuân thủ đúng —
+vòng này **không sửa một dòng nào** trong `src/` hay `scripts/`.
+
+**Bộ số đã chốt** (nguồn: Đàm chạy `bash scripts/bench-macbook.sh`, 2026-08-17, commit `48d3c83`):
+
+| | |
+|---|---|
+| Máy | **Apple M3** — ANGLE Metal Renderer |
+| Cửa sổ | 1100×700 · DPR 2 ⇒ **2200×1400 = 3,08 triệu điểm ảnh** |
+| Phạm vi | 24/24 cảnh (kỷ 3/7/11/14 × giờ 12/15/22 × rộng/gần) + 1 cảnh đối chiếu 1600×1000 — **tất cả ĐẠT** |
+| Frame time P50 | **3,90 – 5,20 ms** · P95 cao nhất 6,50 ms |
+| **Kết luận** | **A — CÒN NHIỀU DƯ ĐỊA**: 16,67 ÷ 5,20 = **3,2 lần** (192–256 hình/giây) |
+
+⚠️ **File kết quả gốc `.city-preview/bench-macbook.txt` nằm trên máy Đàm và KHÔNG có trong repo**
+(`.city-preview/` bị `.gitignore` bỏ qua). Vì vậy **`PERFORMANCE.md` LÀ bản ghi chính thức**, không
+phải bản tóm tắt của một file nào khác trong repo — ai cần con số phải đọc ở đó.
+
+**Mô hình chi phí** (suy từ cảnh đối chiếu, cùng kỷ 7 · 12h, chỉ đổi cỡ cửa sổ):
+
+> `thời gian ≈ 0,87 ms cố định + 1,14 ms mỗi TRIỆU ĐIỂM ẢNH` ⇒ **80% theo điểm ảnh, 20% cố định**
+
+⚠️ **"Triệu điểm ảnh" là điểm ảnh THẬT, tức đã nhân DPR 2** (3,08 Mpx cho cửa sổ 1100×700, không
+phải 0,77). Thiếu chú thích này thì hệ số 1,14 vô dụng — ai đó sẽ nhân với số điểm ảnh CSS và ra
+kết quả **nhỏ hơn 4 lần**. Đã ghi rõ ở cả `PERFORMANCE.md` lẫn `CLAUDE.md`.
+
+**PHÁT HIỆN QUAN TRỌNG NHẤT — và nó lật ngược câu hỏi của cả ba vòng:**
+
+> **Thứ ăn thời gian là GIỜ TRONG NGÀY (đèn bật), KHÔNG phải KỶ. Không kỷ nào là điểm nóng.**
+
+Ba bằng chứng cho "trần KHÔNG nằm ở hình học": (1) tam giác **thành phố** chênh **43%** giữa kỷ 3
+(26.168) và kỷ 11 (37.494) → thời gian chỉ chênh **2,4%**; (2) tăng điểm ảnh **×2,08** → thời gian
+**×1,86** (gần tuyến tính); (3) 22h (đèn bật, shader 4→5) chậm hơn ban ngày **+0,8 ms (+19%)** ở
+**CẢ 4 kỷ**. ⚠️ **Rặng núi chân trời chiếm 54–63% hình học mỗi khung nhưng KHÔNG tốn thời gian đo
+được ⇒ ĐỪNG ĐỤNG VÀO NÓ** — cắt nó là trả một cái giá thẩm mỹ rất lớn để mua về khoản tiết kiệm
+bằng 0.
+
+**Chi phí dựng lại bản đồ bóng: CHƯA ĐO ĐƯỢC.** Ở **mọi cảnh**, hiệu số giữa khung có dựng lại bóng
+và khung ổn định nằm **dưới mức nhiễu** của chính phép đo ⇒ **không ghi một con số nào**. Chỉ được
+nói *"nhỏ hơn mức phép đo này phân giải được"*. Ai cần con số phải thiết kế một phép đo khác.
+
+**Ngân sách an toàn**: giữ mức làm việc **8 ms** (chừa gấp đôi phòng hờ) ⇒ **còn ~3 ms mỗi khung**.
+Hình học *gần như không giới hạn* (tăng 3–5× tam giác vẫn chưa đo được) · ánh sáng/shader còn
+**~1,6×** hoặc thêm **3–4 nguồn sáng** (tính từ ca XẤU NHẤT là cảnh 22h) · điểm ảnh là 80% chi phí
+nhưng **KHÔNG hạ DPR**.
+
+**Đã đổi những file nào (tài liệu, không phải mã):**
+
+| File | Đổi gì |
+|---|---|
+| **`PERFORMANCE.md`** | **MỚI** — bản ghi chính thức: xuất xứ bộ số · bảng 4×6 · mô hình chi phí · ba bằng chứng · ngân sách · TOP 3 nên/không nên · **ba giới hạn** · khi nào phải đo lại |
+| `README.md` | Thêm con trỏ: *"Sắp thêm gì đó vào Thành Phố 3D? Đọc `PERFORMANCE.md` TRƯỚC"* |
+| `PROJECT_STRUCTURE.md` | Thêm `PERFORMANCE.md` vào cây tài liệu + `bench-macbook.sh` vào mục scripts |
+| `CLAUDE.md` | Mục mới **"NGÂN SÁCH HIỆU NĂNG THÀNH PHỐ 3D"** (hình học rẻ · điểm ảnh và ánh sáng đắt · ĐỪNG hạ DPR · con số 3 ms) + bài học ba-vòng-chọn-sai-trục |
+| `TECH_DEBT.md` | **#23** và **#26** đóng NỬA DESKTOP (chi tiết dưới) · **mở #34 + #35** |
+| `BAN_GIAO.md` | File này |
+
+**`TECH_DEBT` — đóng nửa, mở hai:**
+- **#23** (cổng hiệu năng chưa đo lại sau khi chuyển PBR): ba lo ngại được trả lời riêng từng cái.
+  `MeshStandardMaterial` đắt hơn mỗi điểm ảnh — **đúng**, và đó chính là trục đắt, nhưng ở cỡ cửa
+  sổ này chỉ tiêu 5,20 ms lúc xấu nhất. Nướng PMREM — không hiện ra ở khung ổn định, **đúng như mục
+  ấy dự đoán**. 5–7 lệnh vẽ mỗi công trình — đo được 12–13 lệnh cả cảnh, không phải nút thắt.
+  ⇒ **Trên Mac: KHÔNG cần hạ `metalness`, KHÔNG cần bỏ PMREM.**
+- **#26** (nhà dân chưa có LOD): mục này tự đặt luật *"Không cắt trước khi có số"* — nay có số, và
+  **câu trả lời là ĐỪNG CẮT**. Thứ nó định cắt nằm trên trục rẻ nhất trong cả hệ thống. ⚠️ Riêng lo
+  ngại *"bản đồ bóng vẽ cảnh lần thứ hai nên chi phí gấp đôi"* thì **chưa bác được và cũng chưa xác
+  nhận được** — nằm dưới nhiễu, nên đó là câu hỏi còn mở chứ không phải câu đã trả lời.
+- **Cả hai thu hẹp phạm vi còn ĐÚNG iPhone.** Bộ số M3 **không** suy ra được cho iPhone.
+- **#34 (MỚI, Medium)** — `--thu` không kiểm điều kiện tiên quyết. Máy Đàm chưa cài đủ phụ thuộc;
+  bộ đo báo đúng là "HỎNG" nhưng **không nói được vì sao**, đổ ra ~20 dòng lỗi Vite. **Đã cắn Đàm
+  thật hôm nay, mất 4 vòng qua lại**, trong khi bản sửa chỉ là ~10 dòng shell in một câu tiếng
+  Việt: *"Thiếu thư viện 3D. Chạy: `npm install --legacy-peer-deps`"*. Lỗi này nhắm đúng vào người
+  dùng duy nhất của tính năng — `--thu` sinh ra riêng cho Đàm, và chỉ người không đọc được lỗi Vite
+  mới bị nó cắn.
+- **#35 (MỚI, Medium)** — bộ đo **chưa từng chạy thử ở đường dẫn có dấu tiếng Việt + dấu cách**.
+  Thư mục của Đàm là `Bản sao Pomodoro Game - USING`; bộ đo chạy trong hộp cát ở `/home/user/
+  pomodoro-dc` (thuần ASCII, không dấu cách). Hôm nay nó chạy được trên máy anh — nhưng đó là
+  **may**, không phải **đã kiểm**. ⚠️ `CLAUDE.md` đã có sẵn **"BẪY 2"** về đúng chuyện này
+  (launchd thoát mã 78 **không có stderr** ở chính đường dẫn đó, *"cùng họ với cái bẫy NFC/NFD làm
+  test nạp hai bản React"*) — tức dự án đã trả giá **hai lần** cho cái bẫy này, bài học đã viết ra,
+  **và công cụ mới vẫn không được thử ở điều kiện đó**. Đúng bài học *"một bài học được ghi ra KHÔNG
+  chặn được gì; chỉ một bài TEST mới chặn được"*.
+
+**Nghiệm thu**: `npm test` **736 bài** (số THẬT ở dòng cuối) · `npm run lint` sạch · `npm run build`
+xanh. Không đổi mã nên số bài test giữ nguyên so với vòng 2.
+
+⏳ **CHƯA GỘP `main` — chờ Đàm quyết.** Nhánh `claude/xay-san-pham-huong-nay-nasr3n` **có đụng
+`src/`** (`sceneGraph.js` báo ba con số thay vì một, `CityPerfHud.jsx` hiện tách thành phố/nền) nên
+**gộp = deploy lên production**. Hình ảnh thành phố **không đổi một điểm ảnh nào** — chỉ những con
+số trong bảng HUD đổi. Đây là câu hỏi cho Đàm, không phải việc AI tự quyết (vòng 1 đã tự gộp hai
+lần không hỏi; luật *"lệnh làm đã gồm cho phép deploy"* của `CLAUDE.md` bị **đình chỉ** cho riêng
+task này theo chỉ thị của anh ở vòng 2).
+
+---
 
 ### 2026-08-17 (vòng 2) — Vá xong phép đo vẫn kết luận SAI: con số đúng trộn hai đại lượng
 

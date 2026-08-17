@@ -308,6 +308,11 @@
 ├── PROJECT_STRUCTURE.md         # File này
 ├── ARCHITECTURE_DECISIONS.md    # ADR — vì sao từng quyết định kiến trúc được chọn (không chỉ thế nào)
 ├── TECH_DEBT.md                 # Nợ kỹ thuật đã biết, có cấu trúc (priority/severity/risk/owner...)
+├── PERFORMANCE.md               # ⚠️ NGÂN SÁCH HIỆU NĂNG Thành Phố 3D, đo trên MacBook M3 thật
+│                                #   (2026-08-17). ĐỌC TRƯỚC khi thêm bất cứ gì vào cảnh 3D: hình
+│                                #   học gần như miễn phí, điểm ảnh + ánh sáng mới là trục đắt.
+│                                #   Là bản ghi CHÍNH THỨC — file kết quả gốc nằm trong
+│                                #   `.city-preview/` (bị gitignore), không có trong repo.
 ├── MIGRATION.md                 # Lịch sử migration THẬT (schema/API/path/workflow đổi)
 ├── CHANGELOG.md                 # Tóm tắt chính thức theo mốc (không phải lịch sử commit)
 ├── AI_ONBOARDING.md              # Đọc nhanh 10-15 phút cho AI mới

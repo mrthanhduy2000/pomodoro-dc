@@ -28,11 +28,20 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const OUT_DIR = resolve(ROOT, '.city-preview');
 const WORK_DIR = resolve(OUT_DIR, '.build');
 
-/** Chromium do môi trường cài sẵn (Playwright). Không tự tải về. */
+/**
+ * Chromium do môi trường cài sẵn (Playwright). Không tự tải về.
+ *
+ * ⚠️ CÓ CẢ ĐƯỜNG DẪN macOS, và đó không phải để cho đủ bộ: cờ `--gpu` chỉ có nghĩa trên một máy CÓ
+ * card đồ hoạ thật, tức máy của Đàm — mà ở đó `/opt/pw-browsers/` không tồn tại. Thiếu mấy dòng này
+ * thì công cụ báo "Không tìm thấy Chromium" đúng lúc nó là thứ duy nhất trả lời được câu hỏi FPS.
+ */
 const CHROME_CANDIDATES = [
+  process.env.CHROME_PATH,
   '/opt/pw-browsers/chromium-1194/chrome-linux/chrome',
   '/opt/pw-browsers/chromium/chrome-linux/chrome',
-  process.env.CHROME_PATH,
+  '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+  '/Applications/Chromium.app/Contents/MacOS/Chromium',
+  '/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge',
 ].filter(Boolean);
 
 function findChrome() {
@@ -102,6 +111,11 @@ function parseArgs(argv) {
     // `TECH_DEBT #30` đo con số 0,113 của nhựa đường kỷ 11 ở đúng điều kiện này — giữ nguyên cờ
     // này là cách duy nhất để số mới còn so được với số cũ.
     noShadow: false,
+    // ⚠️ DÙNG GPU THẬT thay vì SwiftShader. Mặc định TẮT vì hộp cát dựng ảnh không có card đồ hoạ —
+    // nhưng trên MacBook của Đàm thì BẮT BUỘC bật, nếu không mọi con số đo được vẫn là số của một
+    // cỗ máy tô hình bằng CPU, chỉ khác là lần này nó đội lốt "đo trên máy thật". Công cụ luôn in
+    // ra tên máy đồ hoạ ở dòng [bench] đầu tiên, nên bảng kết quả tự khai nó được đo bằng gì.
+    gpu: false,
   };
   for (let i = 0; i < argv.length; i += 1) {
     const key = argv[i];
@@ -123,6 +137,7 @@ function parseArgs(argv) {
     else if (key === '--bench') { args.bench = Number(value); i += 1; }
     else if (key === '--mask') { args.mask = String(value); i += 1; }
     else if (key === '--no-shadow') args.noShadow = true;
+    else if (key === '--gpu') args.gpu = true;
   }
   return args;
 }
@@ -295,19 +310,89 @@ if (BENCH > 0) {
   const gl = renderer.getContext();
   const probe = new Uint8Array(4);
   const settle = () => gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, probe);
-  for (let i = 0; i < 5; i += 1) { renderer.render(city.scene, camera); settle(); }
-  const ts = [];
-  for (let i = 0; i < BENCH; i += 1) {
-    const t0 = performance.now();
-    renderer.render(city.scene, camera);
-    settle();
-    ts.push(performance.now() - t0);
+
+  // Máy đồ hoạ THẬT đang chạy là gì. Không có dòng này thì mọi con số phía dưới đều vô danh tính,
+  // và một bảng đo bằng CPU rasteriser dán nhãn "MacBook" là loại đồng hồ tệ nhất.
+  const dbg = gl.getExtension('WEBGL_debug_renderer_info');
+  const gpu = dbg ? gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : 'không đọc được';
+  console.log('[bench] máy đồ hoạ=' + gpu);
+
+  // Khung khởi động mang theo chi phí biên dịch shader — vứt, không tính.
+  for (let i = 0; i < 12; i += 1) { renderer.render(city.scene, camera); settle(); }
+
+  // ⚠️ QUY ƯỚC: P95 là ĐUÔI CHẬM (95% số khung NHANH HƠN mức này). Nói cách khác P95 là trường hợp
+  // XẤU, không phải trường hợp tốt — rất dễ đọc ngược khi nó đứng cạnh chữ "FPS".
+  // Nearest-rank chứ không nội suy: frame time rời rạc theo nhịp màn hình, nội suy sẽ đẻ ra những
+  // giá trị KHÔNG khung hình nào từng đạt.
+  function đoLoạt(n, dựngLạiBóng) {
+    const ts = [];
+    for (let i = 0; i < n; i += 1) {
+      // ⚠️ PHẢI MỞ CẢ HAI CỔNG. three có cổng toàn cục (renderer.shadowMap) và cổng TỪNG ĐÈN
+      // (sun.shadow, mà city.invalidateShadows() lo). Mở một cổng thì vòng lặp bỏ qua đèn, bản đồ
+      // bóng KHÔNG hề được vẽ lại, và phép đo đang so hai khung hình y hệt nhau — đã trả giá thật:
+      // ra hiệu số ÂM 0,5 ms, tức "dựng lại bóng còn nhanh hơn không dựng".
+      if (dựngLạiBóng) { city.invalidateShadows(); renderer.shadowMap.needsUpdate = true; }
+      const t0 = performance.now();
+      renderer.render(city.scene, camera);
+      settle();
+      ts.push(performance.now() - t0);
+    }
+    ts.sort((a, b) => a - b);
+    const pv = (p) => ts[Math.min(ts.length, Math.max(1, Math.ceil(p * ts.length))) - 1];
+    return { n, p50: pv(0.5), p95: pv(0.95), min: ts[0], max: ts[ts.length - 1] };
   }
-  ts.sort((a, b) => a - b);
-  const mid = ts[Math.floor(ts.length / 2)];
-  console.log('[bench] ms/khung trung vị=' + mid.toFixed(2)
-    + ' nhanh nhất=' + ts[0].toFixed(2) + ' chậm nhất=' + ts[ts.length - 1].toFixed(2)
-    + ' | lệnh vẽ=' + city.stats.drawCalls + ' tam giác=' + city.stats.triangles);
+
+  // (a) KHUNG ỔN ĐỊNH — bản đồ bóng đã cache. Đây là chi phí thường ngày, thứ quyết định FPS.
+  const ổnĐịnh = đoLoạt(BENCH, false);
+  // ⚠️ ĐỌC renderer.info NGAY TẠI ĐÂY. three reset info mỗi lần render, nên nó mô tả khung CUỐI
+  // của loạt vừa đo — tức một khung ổn định KHÔNG có lượt dựng bóng. Đọc sau loạt (b) sẽ lẫn cả
+  // lượt bóng vào và bảng đối chiếu Bước 1 thành so lệch pha.
+  const thật = {
+    calls: renderer.info.render.calls,
+    triangles: renderer.info.render.triangles,
+    geometries: renderer.info.memory.geometries,
+    textures: renderer.info.memory.textures,
+    programs: renderer.info.programs ? renderer.info.programs.length : -1,
+  };
+
+  // (b) KHUNG NGAY SAU KHI CẢNH ĐỔI — bản đồ bóng phải dựng lại. Đây là ĐỈNH chi phí, và nó rơi
+  // đúng lúc Đàm vừa xong một phiên. Đo riêng, KHÔNG gộp vào (a).
+  const dựngBóng = NO_SHADOW ? null : đoLoạt(Math.max(20, Math.round(BENCH / 4)), true);
+  const thậtBóng = dựngBóng ? {
+    calls: renderer.info.render.calls, triangles: renderer.info.render.triangles,
+  } : null;
+
+  const f2 = (x) => x.toFixed(2);
+  console.log('[bench] (a) khung ỔN ĐỊNH  n=' + ổnĐịnh.n
+    + ' P50=' + f2(ổnĐịnh.p50) + 'ms P95=' + f2(ổnĐịnh.p95) + 'ms'
+    + ' nhanh nhất=' + f2(ổnĐịnh.min) + ' chậm nhất=' + f2(ổnĐịnh.max));
+  if (dựngBóng) {
+    console.log('[bench] (b) DỰNG LẠI BÓNG n=' + dựngBóng.n
+      + ' P50=' + f2(dựngBóng.p50) + 'ms P95=' + f2(dựngBóng.p95) + 'ms'
+      + ' | riêng bóng=' + f2(dựngBóng.p50 - ổnĐịnh.p50) + 'ms'
+      + ' (+' + (100 * (dựngBóng.p50 - ổnĐịnh.p50) / ổnĐịnh.p50).toFixed(1) + '%)');
+    console.log('[bench] lượt bóng thêm ' + (thậtBóng.calls - thật.calls) + ' lệnh vẽ, '
+      + (thậtBóng.triangles - thật.triangles).toLocaleString('vi-VN') + ' tam giác');
+  } else {
+    console.log('[bench] (b) BỎ QUA — đang chạy --no-shadow');
+  }
+
+  // ── BƯỚC 1: ĐỐI CHIẾU SỐ TỰ TÍNH vs SỰ THẬT CỦA three ────────────────────────
+  // sceneGraph.js tự tính drawCalls/triangles bằng công thức riêng; three biết CHÍNH XÁC nó đã phát
+  // ra bao nhiêu lệnh vẽ và bao nhiêu tam giác. Chưa ai từng đặt hai bên cạnh nhau. Bên nào lệch
+  // thì bên tự tính SAI — three không đoán, nó đếm.
+  const lệchC = thật.calls - city.stats.drawCalls;
+  const lệchT = thật.triangles - city.stats.triangles;
+  const pct = (l, t) => (t === 0 ? '—' : (100 * l / t).toFixed(1) + '%');
+  console.log('[stats] | đại lượng | tự tính | renderer.info | lệch |');
+  console.log('[stats] | lệnh vẽ | ' + city.stats.drawCalls + ' | ' + thật.calls
+    + ' | ' + (lệchC >= 0 ? '+' : '') + lệchC + ' (' + pct(lệchC, thật.calls) + ') |');
+  console.log('[stats] | tam giác | ' + city.stats.triangles + ' | ' + thật.triangles
+    + ' | ' + (lệchT >= 0 ? '+' : '') + lệchT + ' (' + pct(lệchT, thật.triangles) + ') |');
+  console.log('[bench] DPR=' + renderer.getPixelRatio()
+    + ' khung=' + renderer.domElement.width + 'x' + renderer.domElement.height
+    + ' bản đồ bóng=' + (city.sun ? city.sun.shadow.mapSize.width : 'không có')
+    + ' | shader=' + thật.programs + ' geometry=' + thật.geometries + ' texture=' + thật.textures);
 }
 
 document.title = 'READY ' + JSON.stringify(city.stats);
@@ -548,16 +633,16 @@ function serve(files) {
   });
 }
 
-async function shoot(chrome, url, pngPath, { width, height, bench = 0, mask = null, noShadow = false }) {
+async function shoot(chrome, url, pngPath,
+  { width, height, bench = 0, mask = null, noShadow = false, gpu = false }) {
   await run(chrome, [
     '--headless=new',
     '--no-sandbox',
     '--disable-dev-shm-usage',
-    // ⚠️ Bắt buộc: không có card đồ hoạ thật trong hộp cát này. SwiftShader vẽ WebGL bằng CPU —
+    // ⚠️ Mặc định: không có card đồ hoạ thật trong hộp cát này. SwiftShader vẽ WebGL bằng CPU —
     // chậm hơn nhiều nhưng cho ra ĐÚNG hình ảnh mà GPU sẽ cho, đủ để soi mỹ thuật.
-    '--use-gl=angle',
-    '--use-angle=swiftshader',
-    '--enable-unsafe-swiftshader',
+    // `--gpu` bỏ hẳn ba cờ ép SwiftShader để trình duyệt tự chọn card thật (dùng trên máy Đàm).
+    ...(gpu ? [] : ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader']),
     '--hide-scrollbars',
     // ⚠️ CHUYỂN `console.*` CỦA TRANG RA stderr. Thiếu dòng này thì mọi cảnh báo phía trình duyệt
     // biến mất không dấu vết — và một công cụ mắt-soi im lặng nuốt cảnh báo thì đúng bằng một công
@@ -566,7 +651,7 @@ async function shoot(chrome, url, pngPath, { width, height, bench = 0, mask = nu
     '--enable-logging=stderr',
     '--log-level=0',
     `--window-size=${width + 34},${height + 80}`,
-    '--virtual-time-budget=12000',
+    `--virtual-time-budget=${bench > 0 ? 600000 : 12000}`,
     `--screenshot=${pngPath}`,
     url,
     // Lúc đo hiệu năng thì PHẢI để stderr chảy ra, vì dòng [bench] đi bằng đường đó — và lúc dựng

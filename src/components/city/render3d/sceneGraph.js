@@ -151,7 +151,59 @@ const GRAIN = {
  */
 const ROAD_SURFACE_Y = ROAD_LIFT;
 /** Số tam giác của một hộp — dùng để tính ngân sách hiển thị trên HUD. */
-const TRIANGLES_PER_BOX = 12;
+/**
+ * Số tam giác MỘT khối đóng góp, theo ĐÚNG luật `WebGLRenderer` cộng vào `info.render.triangles`:
+ * lấy số chỉ mục (hoặc số đỉnh nếu không có chỉ mục) chia 3, nhân số bản sao nếu là InstancedMesh.
+ */
+function trianglesOfMesh(mesh) {
+  const geometry = mesh.geometry;
+  if (!geometry) return 0;
+  const count = geometry.index
+    ? geometry.index.count
+    : (geometry.attributes?.position?.count ?? 0);
+  return ((mesh.isInstancedMesh ? mesh.count : 1) * count) / 3;
+}
+
+/** Số lệnh vẽ MỘT khối tốn: mỗi nhóm vật liệu là một lệnh riêng. */
+function drawCallsOfMesh(mesh) {
+  if (!mesh.geometry) return 0;
+  return Array.isArray(mesh.material) && mesh.geometry.groups?.length
+    ? mesh.geometry.groups.length
+    : 1;
+}
+
+/**
+ * ĐẾM cả cảnh, thay vì DỰ ĐOÁN từ bản mô tả.
+ *
+ * ⚠️ VÌ SAO PHẢI ĐỔI (Performance Gate 2026-08-17): trước đây hai con số này được TỰ TÍNH bằng một
+ * công thức riêng (`buildingTriangles + surfaceTriangles + residents × 24`). Đặt nó cạnh sự thật
+ * `renderer.info.render.triangles` lần đầu tiên thì lệch **+44.126 tam giác ở CẢ 15 kỷ** — HUD báo
+ * 34.622 trong khi máy thật sự vẽ 78.748, tức **thiếu 56%**. Hằng số 44.126 chính là hai thứ công
+ * thức không biết tới: **vòm trời** (960) và **rặng núi chân trời** thêm ở Phase 9A (43.166). Không
+ * ai sửa công thức khi thêm chúng, và **không có gì đỏ lên** — đúng hình dạng sai mà chú thích
+ * `countTriangles` ở `parts.js` đã tự cảnh báo (Phase 8B) rồi vẫn tái diễn ở một chỗ khác.
+ *
+ * Bài học: **một ngân sách TỰ TÍNH riêng thì phải được đối chiếu với thực tế, hoặc đừng tự tính.**
+ * Ở đây chọn vế thứ hai — duyệt scene graph là một phép ĐO trên chính thứ sẽ được vẽ, nên nó không
+ * thể lạc hậu khi ai đó thêm một khối mới. Đã kiểm chứng: phép duyệt này ra **78.748** cho kỷ 7,
+ * khớp TỪNG ĐƠN VỊ với `renderer.info.render.triangles` đo trong trình duyệt.
+ *
+ * ⚠️ Con số này mô tả CẢNH ở trạng thái ổn định. Khung hình nào dựng lại bản đồ bóng sẽ tốn THÊM
+ * một lượt vẽ riêng cho các khối đổ bóng (kỷ 7: +7 lệnh vẽ, +25.436 tam giác) — đó là chi phí có
+ * thật nhưng KHÔNG thường trực, nên nó không thuộc về đây.
+ */
+export function countSceneTriangles(root) {
+  let total = 0;
+  root.traverse((obj) => { if (obj.isMesh && obj.visible !== false) total += trianglesOfMesh(obj); });
+  return total;
+}
+
+/** Cặp song sinh của `countSceneTriangles` cho số lệnh vẽ. */
+export function countSceneDrawCalls(root) {
+  let total = 0;
+  root.traverse((obj) => { if (obj.isMesh && obj.visible !== false) total += drawCallsOfMesh(obj); });
+  return total;
+}
 
 /** Trục đứng, dùng lại cho mọi phép xoay người — tạo mới trong vòng lặp là rác cho bộ dọn. */
 const UP = new Vector3(0, 1, 0);
@@ -657,7 +709,6 @@ export function createCityScene({
     mesh.receiveShadow = true;
     addMesh(mesh);
   }
-  const surfaceTriangles = (ground3d?.triangles ?? 0) + (road3d?.triangles ?? 0);
 
   // ── Công trình: mỗi cái một hình dáng riêng, tất cả trong MỘT lệnh vẽ ──────
   //
@@ -812,9 +863,7 @@ export function createCityScene({
     glowRole: daylight?.windowsLit ? 'glass' : null,
     era: layout.era,
   });
-  let buildingTriangles = 0;
   if (merged) {
-    buildingTriangles = merged.triangles + merged.glowTriangles;
     if (merged.geometry) {
       track(merged.geometry);
       // ⚠️ MẢNG VẬT LIỆU DỰNG TỪ CHÍNH `merged.families`, KHÔNG tự liệt kê lại.
@@ -1202,19 +1251,10 @@ export function createCityScene({
       // Đèn điểm là nguồn sáng DUY NHẤT ở đây tính tiền theo từng điểm ảnh — hiện lên HUD để lúc
       // Đàm chụp màn hình báo máy nóng, ta biết ngay lúc đó có mấy cái đang bật.
       lamps: lampCount,
-      // ⚠️ KHÔNG CÒN BẰNG `meshes.length` TỪ PHASE 7A. Khối công trình nay chia nhóm theo họ vật
-      // liệu, và MỖI NHÓM là một lệnh vẽ riêng. Để nguyên phép đếm cũ thì HUD sẽ báo một con số
-      // nhỏ hơn sự thật đúng ở chỗ Đàm dựa vào nó để biết máy có gánh nổi không — một cái đồng hồ
-      // đo nói dối theo hướng trấn an là loại đồng hồ tệ nhất.
-      drawCalls: meshes.length + Math.max(0, (merged?.families?.length ?? 1) - 1),
-      triangles: buildingTriangles
-        // ⚠️ ĐẾM THẲNG TỪ TẤM ĐỊA HÌNH, KHÔNG QUY RA "SỐ Ô × 12" NỮA. Từ Phase 8C mặt đất là một
-        // lưới đỉnh liền, và số tam giác của nó KHÔNG còn tỉ lệ với số ô — nó tỉ lệ với bình phương
-        // độ mịn. Giữ công thức cũ thì HUD sẽ báo 1.728 trong khi thực tế gần 7.000, tức một cái
-        // đồng hồ đo nói dối theo hướng trấn an, đúng loại đã bị gọi tên ở `drawCalls` ngay trên.
-        + surfaceTriangles
-        // × 2: mỗi cư dân là HAI hộp (thân + đầu).
-        + residents.length * TRIANGLES_PER_BOX * 2,
+      // ⚠️ ĐẾM CẢ CẢNH, KHÔNG TỰ TÍNH NỮA (xem `countSceneTriangles` ở đầu file để biết vì sao —
+      // công thức tự tính cũ đã báo THIẾU 56% suốt từ Phase 9A mà không có gì đỏ lên).
+      drawCalls: countSceneDrawCalls(scene),
+      triangles: countSceneTriangles(scene),
     },
     /** Gọi khi cảnh đổi hình dạng (đổi kỷ, xây thêm nhà) — bóng mới được vẽ lại. */
     invalidateShadows() { sun.shadow.needsUpdate = true; },

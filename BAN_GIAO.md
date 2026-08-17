@@ -6,26 +6,28 @@
 > chọn: `ARCHITECTURE_DECISIONS.md`. Nợ kỹ thuật: `TECH_DEBT.md`. Migration: `MIGRATION.md`. Tóm
 > tắt theo mốc: `CHANGELOG.md`.
 > **NGUYÊN TẮC ƯU TIÊN SỐ 1:** (1) mọi phiên AI phải đọc file này + `CLAUDE.md` + các file liên quan TRƯỚC khi làm; (2) sau MỌI cập nhật dù nhỏ, phải cập nhật ngay file này + `CLAUDE.md` + các file liên quan khác.
-> Cập nhật lần cuối: **2026-08-17** — **PERFORMANCE GATE: đo dư địa, KHÔNG hạ chất lượng.** Đàm yêu
-> cầu biết *"thành phố còn có thể đẹp tới đâu"*, và cấm mọi tối ưu trước khi đo. **KHÔNG một dòng
-> `src/` nào bị đụng** — bảng số nói về đúng bản `9b9cb66`. Thêm 3 file công cụ:
-> `scripts/benchCore.mjs` (ruột THUẦN — phân vị nearest-rank, dư địa, danh sách 24 cảnh; 8 bài test
-> đã thử-cho-đỏ), `scripts/benchCore.test.js`, `scripts/bench-suite.mjs` (dựng 24 cảnh = 4 kỷ ×
-> 3 giờ × wide/close; `--page` xuất một trang HTML **tự chứa 1,6 MB** để Đàm bấm đúp trên MacBook).
-> ⚠️ **Hộp cát này KHÔNG trả lời được câu hỏi FPS**: máy đồ hoạ là SwiftShader (tô bằng CPU),
-> ~2,4 giây/khung — sai ba bậc VÀ sai cả hình dạng chi phí. Thứ chuyển được sang máy thật là các con
-> số **không phụ thuộc máy**: tam giác **71.020 / 78.348 / 79.720 / 71.796** (kỷ 3/7/11/14 — kỷ 11
-> nặng nhất) · **12–13 lệnh vẽ cho CẢ thành phố** · 4 shader (5 ban đêm) · 4 texture · bản đồ bóng
-> **2048** desktop / **512** mobile · bộ nhớ JS 57 MB. **Ba phát hiện có giá trị**: (1) chỉ có **HAI**
-> bậc chất lượng được nối dây, và chúng chỉ khác nhau ở **cỡ bản đồ bóng + số đèn** — `0/24 cảnh`
-> chênh nhau một tam giác nào, tức **không có bậc HÌNH HỌC**; `lowDetail` có sẵn trong
-> `createCityScene` nhưng **không ai gọi**; (2) close shot đắt hơn wide **+72%** với **ĐÚNG cùng số
-> tam giác** ⇒ chi phí nằm ở **điểm ảnh**, không ở hình học — đây là trục đắt, và là thứ quyết định
-> nên đầu tư mỹ thuật vào đâu; (3) dựng lại bản đồ bóng tốn **21,7 ms** (2048) vs **3,9 ms** (512),
-> nhưng chỉ xảy ra khi thành phố ĐỔI, không phải mỗi khung. Mở **`TECH_DEBT #31`** (Low —
-> `city.dispose()` không giải phóng bản đồ bóng; app KHÔNG dính vì mỗi cảnh một renderer riêng,
-> nhưng là mìn nếu sau này có ai dùng lại renderer). **736 bài test** (728 + 8 mới), lint sạch, build
-> xanh. **Kết luận A — VISUAL HEADROOM CÒN NHIỀU** (tạm, chờ Đàm chạy trang HTML để có FPS thật).
+> Cập nhật lần cuối: **2026-08-17** — **PERFORMANCE GATE: kiểm chính ĐỒNG HỒ ĐO trước khi tin nó.**
+> Đàm yêu cầu đo dư địa để biết *"còn được phép làm thành phố đẹp tới đâu"*, và cấm mọi tối ưu
+> trước khi đo. **BƯỚC 0**: máy chạy AI là Linux + SwiftShader (tô hình bằng CPU) ⇒ **KHÔNG xuất
+> một con số FPS nào**, chuyển sang dựng bộ đo cho Đàm tự chạy. **BƯỚC 1 BẮT ĐƯỢC MỘT LỖI THẬT VÀ
+> ĐÃ SỬA**: `sceneGraph.js` **dự đoán** số tam giác bằng công thức riêng, chưa ai từng đặt nó cạnh
+> `renderer.info.render.triangles`. Đặt lần đầu: HUD báo **34.622**, máy vẽ **78.748** — **thiếu
+> 56%**, lệch **đúng 44.126 ở CẢ 15 kỷ**, chính là **vòm trời** (960) + **rặng núi chân trời** thêm
+> ở Phase 9A (43.166). Sai theo hướng **trấn an** — loại sai tệ nhất cho một đồng hồ đo. Vá gốc:
+> thôi dự đoán, **đếm** scene graph (`countSceneTriangles`), và `publishStats()` đè lên bằng
+> `renderer.info` của khung vừa vẽ. Sau vá: **78.748 = 78.748, lệch 0,0%**. Khoá bằng
+> `sceneStats.test.js` (3 bài, cả 3 đã thử-cho-đỏ, tự duyệt cảnh rồi so với mã sản phẩm — chạy CẢ
+> HAI bên). Ghi `TECH_DEBT #32` (đã đóng) vì đây là **lần thứ HAI cùng hình dạng sai** — chú thích
+> `countTriangles` (`parts.js`) đã tự cảnh báo đúng cái bẫy này từ Phase 8B mà vẫn tái diễn ⇒ **một
+> bài học được ghi ra không chặn được gì, chỉ một bài TEST mới chặn được**. **BƯỚC 2** tách bóng đổ
+> thành ba câu hỏi khác nhau: lấy mẫu bóng ≈ **4 ms (trong nhiễu)** · dựng lại bản đồ bóng
+> **+29,4 ms (+14%)**, chỉ nổ khi thành phố ĐỔI · và chi phí ấy **không** nằm trong bảng FPS.
+> **BƯỚC 3** mở rộng `--bench` sẵn có (không viết công cụ mới — đã **GỠ** `bench-suite.mjs`/
+> `benchCore*` của lượt trước vì hai bộ đo song song là đúng bẫy "một luật hai công thức"): thêm
+> P50/P95, đối chiếu `renderer.info`, DPR/cỡ bóng/shader/geometry/texture, cờ `--gpu` (dùng card
+> thật) và đường dẫn Chrome trên macOS. **Thử ngược ĐẠT**: `--dpr` 1→2→4 làm frame time
+> 218,5 → 488,7 → **1337,2 ms** (6,1×) ⇒ cần gạt có nối. **739 bài test**, lint sạch, build xanh.
+> ⏳ **Bước 4/7/8 CHƯA làm được ở đây** — chờ Đàm chạy `bash scripts/bench-macbook.sh` trên MacBook.
 >
 > *(Trước đó — 2026-08-16)* — **Phase 9D: MẶT ĐƯỜNG LÀ MỘT HỆ THỐNG, KHÔNG PHẢI MỘT DẢI MÀU**
 > (đóng luôn `TECH_DEBT #30` + `#27`, hai mục đã bị nối cứng với nhau từ Phase 9B). **Nguyên nhân
@@ -120,80 +122,81 @@
 
 ## 🗒️ Nhật ký cập nhật
 
-### 2026-08-17 — Performance Gate: đo dư địa để biết còn đẹp được tới đâu (KHÔNG hạ chất lượng)
+### 2026-08-17 — Performance Gate: kiểm chính đồng hồ đo trước khi tin nó
 
-**Yêu cầu của Đàm**: *"đo headroom thực tế trên thiết bị target, không phải để giảm chất lượng hình
-ảnh… MacBook/Desktop visual quality > performance optimization… KHÔNG OPTIMIZE TRƯỚC KHI ĐO."*
+**Yêu cầu của Đàm**: đo headroom thật của MacBook để biết còn được phép làm thành phố đẹp tới đâu.
+*"Đây KHÔNG phải task tối ưu. Ưu tiên vĩnh viễn: chất lượng hình ảnh Desktop > hiệu năng."* Luật
+"tự xử lý vấn đề rủi ro thấp" của `CLAUDE.md` bị **tạm đình chỉ** cho task này.
 
-**Đã làm** — 3 file công cụ MỚI, **không đụng một dòng `src/` nào** (điều kiện §6 của Đàm: *"không
-benchmark code đang thay đổi"*; bảng số vì vậy nói về đúng bản `9b9cb66`):
+**Bước 0 — chốt môi trường.** `uname`: Linux, không có `sw_vers` ⇒ không phải macOS.
+`UNMASKED_RENDERER_WEBGL` = *ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero)), SwiftShader
+driver)* ⇒ **tô hình bằng CPU**. Theo đúng luật đã ghi sẵn ở tham số `bench`: **không xuất một con
+số FPS nào**, chuyển sang dựng bộ đo để Đàm tự chạy.
 
-| File | Vai trò |
-|---|---|
-| `scripts/benchCore.mjs` | **Ruột THUẦN**: phân vị nearest-rank · `tómTắt` · `dưĐịa`/`hệSốNặngThêm` · danh sách 24 cảnh. Không import three, không đụng DOM. |
-| `scripts/benchCore.test.js` | 8 bài, **cả 8 đã thử-cho-đỏ rồi khôi phục**. |
-| `scripts/bench-suite.mjs` | Lớp vỏ: dựng 24 cảnh, đo, in bảng; `--page` xuất HTML tự chứa 1,6 MB cho Đàm. |
+**Bước 1 — ĐÃ BẮT ĐƯỢC LỖI THẬT.** Đối chiếu hai bên lần đầu tiên trong lịch sử dự án:
 
-⚠️ **Vì sao phải tách ruột thuần ra**: bộ đo có HAI lối chạy (ngầm ở đây + trên MacBook Đàm). Mỗi
-lối tự tính phân vị theo cách của nó thì hai bảng số không so được với nhau — đúng lỗi hình dạng mà
-`sweep-score.mjs` đã trả giá ở Phase 4G (chép công thức kèm một mặc định KHÁC rồi in ra một bộ số
-bịa hoàn chỉnh). Nay cả hai lối `import` cùng một file.
+| Kỷ (sessions 80, level 3) | tự tính | `renderer.info` | lệch |
+|---|---:|---:|---:|
+| 3 | 26.168 | 70.294 | **+44.126 (62,8%)** |
+| 7 | 34.622 | 78.748 | **+44.126 (56,0%)** |
+| 11 | 37.494 | 81.620 | **+44.126 (54,1%)** |
+| 14 | 29.366 | 73.492 | **+44.126 (60,0%)** |
 
-**Ba cái bẫy đã vá sẵn trong bộ đo** (ghi lại để phiên sau khỏi vấp): (a) `gl.finish()` **nói dối** —
-ANGLE biến nó thành `flush()`, chỉ `gl.readPixels` mới ép GPU làm xong thật; (b) khung hình đầu mang
-theo chi phí biên dịch shader ⇒ vứt 4 khung khởi động; (c) không `city.dispose()` mỗi cảnh thì cảnh
-sau đo lẫn cảnh trước.
+Lệnh vẽ thì **khớp tuyệt đối** (12/13 ở cả 4 kỷ). Hằng số 44.126 giống hệt ở mọi kỷ là manh mối:
+truy ra đúng hai khối — **vòm trời 960** + **rặng núi chân trời 43.166** (thêm ở Phase 9A). Người
+thêm chúng không sửa công thức, và không có gì đỏ lên vì công thức chỉ được so với chính nó.
 
-**Số ĐO ĐƯỢC — loại chuyển được sang máy thật** (thuộc tính của CẢNH, không của máy):
+**Vá gốc**: bỏ hẳn công thức dự đoán, thay bằng `countSceneTriangles(scene)` /
+`countSceneDrawCalls(scene)` — duyệt scene graph theo đúng luật `WebGLRenderer` cộng vào
+`info.render`. Một phép ĐO trên chính thứ sẽ được vẽ thì không thể lạc hậu khi phase sau thêm khối
+mới. `CityScene3D.publishStats()` còn đè lên bằng `renderer.info.render` của khung vừa vẽ — HUD là
+một cái đồng hồ đo, nên nó phải đọc từ đồng hồ chứ không đọc từ dự báo.
+**Sau vá**: `[stats] tam giác | 78748 | 78748 | +0 (0.0%)`.
 
-| Kỷ | Tam giác | Lệnh vẽ | Shader (ngày/đêm) | Geometry | Texture | Bóng |
-|---|---:|---:|---:|---:|---:|---:|
-| 3 | 71.020 | 13 | 4 / 5 | 7 / 8 | 4 | 2048 |
-| 7 | 78.348 | 13 | 4 / 5 | 7 / 8 | 4 | 2048 |
-| 11 | **79.720** (nặng nhất) | 12 | 4 / 5 | 7 / 8 | 4 | 2048 |
-| 14 | 71.796 | 12–13 | 4 / 5 | 7 / 8 | 4 | 2048 |
+**Bước 2 — bóng đổ là BA câu hỏi, không phải một** (kỷ 7 · 12h · 400×250 · DPR 1):
 
-Bộ nhớ JS 57 MB · DPR app dùng `min(devicePixelRatio, 2)`.
+| Đo gì | P50 | So với khung ổn định |
+|---|---:|---|
+| Khung ổn định, có bóng | 209,6 ms | mốc |
+| `--no-shadow` (tắt hẳn) | 205,6 ms | **−4,0 ms — nằm trong nhiễu** (biên độ ±15 ms) |
+| Khung DỰNG LẠI bản đồ bóng | 239,0 ms | **+29,4 ms (+14,0%)** |
 
-⚠️ **Số FPS/ms trong hộp cát này KHÔNG dùng được**: máy đồ hoạ là SwiftShader (tô bằng CPU),
-~2,4 giây/khung — sai khoảng **ba bậc** so với GPU thật, và sai cả **hình dạng** chi phí. Chúng chỉ
-dùng để so TƯƠNG ĐỐI giữa các cảnh trong cùng một lần chạy.
+⇒ Phép đo `--bench` hiện tại đo **khung ổn định**, tức nó chứa chi phí **lấy mẫu** bóng (≈ miễn
+phí) nhưng **KHÔNG** chứa chi phí **dựng lại** (14%). Lượt dựng bóng thêm **7 lệnh vẽ + 25.436 tam
+giác** vào `renderer.info` của đúng khung đó — nên phải đọc `renderer.info` **ngay sau loạt ổn
+định**, đọc sau loạt dựng bóng là so lệch pha. `sun.shadow.autoUpdate = false` nên chi phí này chỉ
+nổ khi thành phố ĐỔI (xây xong công trình, đổi giờ, đổi kỷ).
 
-**Ba phát hiện đáng giá:**
+**Bước 3 — mở rộng `--bench` sẵn có, KHÔNG viết công cụ mới.** Giữ nguyên cơ chế `readPixels` (đã
+giải xong chuyện `gl.finish()` nói dối). Thêm: P50 + P95 (**P95 = ĐUÔI CHẬM**, nói rõ trong output
+vì rất dễ đọc ngược), đối chiếu `renderer.info`, DPR thật, cỡ bản đồ bóng, số shader/geometry/
+texture, 12 khung khởi động bị vứt, và cờ **`--gpu`** (bỏ ba cờ ép SwiftShader) + đường dẫn Chrome
+trên macOS vào `CHROME_CANDIDATES`.
+⚠️ **ĐÃ GỠ `scripts/bench-suite.mjs` + `benchCore.mjs` + `benchCore.test.js`** (viết ở lượt trước
+cùng ngày): hai bộ đo song song cho cùng một câu hỏi là đúng cái bẫy "một luật hai công thức" mà
+`sweep-score.mjs` đã trả giá ở Phase 4G.
 
-1. **Chỉ có HAI bậc chất lượng được nối dây**, và chúng khác nhau **chỉ ở cỡ bản đồ bóng (2048 vs
-   512) + số đèn đường (3 vs 2)**. Chạy A/B cùng 640×360: `0/24` cảnh chênh nhau **một tam giác hay
-   một lệnh vẽ nào** ⇒ **không tồn tại bậc HÌNH HỌC**. Desktop chỉ đắt hơn mobile **3,7%** ở trạng
-   thái đứng yên (cảnh chênh nhiều nhất là kỷ 11 · 22h, +14,3% — đúng chỗ có cây đèn thứ ba).
-   `createCityScene` có sẵn một bậc thứ BA (`lowDetail` → `detail:'low'`, `skipDeco`, `lampBudget=0`)
-   **nhưng không một ai gọi** — một khả năng đã viết xong mà chưa nối.
-2. **Close shot đắt hơn wide +72%** (1280×720) với **ĐÚNG cùng số tam giác** ⇒ chi phí nằm ở **điểm
-   ảnh phải tô**, không ở hình học. Đây là lý do close shot bắt buộc phải có trong bộ 24 cảnh: chỉ
-   đo wide thì sẽ kết luận sai về bottleneck, và kết luận sai về bottleneck dẫn tới tối ưu nhầm chỗ.
-3. **Chi phí dựng lại bản đồ bóng**: 2048 → **21,7 ms** · 512 → **3,9 ms** (16× texel nhưng chỉ
-   5,6× thời gian ⇒ ở cỡ nhỏ thì chi phí dựng hình lấn át). Nhưng nó chỉ nổ khi thành phố ĐỔI
-   (`shadow.autoUpdate = false`), không phải mỗi khung — nên nó KHÔNG nằm trong bảng FPS, và không
-   được đọc bảng FPS rồi kết luận "bóng miễn phí".
+**Phép thử ngược (bắt buộc)** — vặn `--dpr` tới mức vô lý, kỷ 7 · 400×250 nền:
 
-**Nợ mới**: `TECH_DEBT #31` (Priority Low) — `city.dispose()` không giải phóng `sun.shadow.map`
-(+2 texture sống sót mỗi cảnh). **App KHÔNG dính** vì `CityScene3D` huỷ hẳn renderer + context mỗi
-cảnh; chỉ công cụ dính vì công cụ cố ý dùng lại một renderer. Đã vá **phía công cụ**, cố ý KHÔNG
-sửa `src/` để giữ nguyên bản đang đo.
+| DPR | Điểm ảnh | P50 | so với DPR 1 |
+|---:|---:|---:|---:|
+| 1 | 100.000 | 218,5 ms | mốc |
+| 2 | 400.000 | 488,7 ms | 2,24× |
+| 4 | 1.600.000 | 1337,2 ms | **6,12×** |
 
-**Bài học mới** (đã ghi `CLAUDE.md`): **công cụ đo nói dối lần thứ 22** — bật
-`renderer.shadowMap.needsUpdate` rồi kết luận "dựng lại bóng tốn ≈ 0 ms" (thực ra **−0,5 ms**, một
-con số vô lý nằm gọn trong nhiễu). three có **HAI cổng nối tiếp**: cổng toàn cục và cổng TỪNG ĐÈN
-(`sun.shadow.autoUpdate/needsUpdate`); qua cổng một mà không qua cổng hai thì đèn bị `continue` bỏ
-qua và phép đo đang so hai khung y hệt nhau. App gói cả chuỗi vào `city.invalidateShadows()` — **phép
-đo phải gọi đúng hàm mà app gọi**. Phép thử vô lý (4 lần dựng bóng/khung → **6,1×/8,0×**) là thứ
-chứng minh cần gạt đã nối.
+Số nhảy rất rõ ⇒ **cần gạt CÓ nối**, phép đo đáng tin. Đáng chú ý: chi phí **không** tỉ lệ thuận
+với điểm ảnh (16× điểm ảnh chỉ ra 6,1× thời gian) ⇒ có một phần chi phí CỐ ĐỊNH lớn (~144 ms ước
+lượng) không phụ thuộc độ phân giải. Trên CPU rasteriser đó là phần xử lý đỉnh; trên GPU thật tỉ lệ
+này sẽ khác hẳn — thêm một lý do nữa để không ngoại suy số ở đây sang MacBook.
 
-**Nghiệm thu**: **736 bài test** (728 + 8 mới) · lint sạch · build xanh (3,19 s) · `git status` chỉ
-hiện 3 file `scripts/` mới ⇒ **renderer y hệt `9b9cb66`**.
+**Bước 4/7/8 — CHƯA LÀM ĐƯỢC Ở ĐÂY.** Ma trận 24 cảnh × 120 khung cần GPU thật. Đã dựng
+`scripts/bench-macbook.sh`: **một lệnh duy nhất**, chạy trọn ma trận (kỷ 3/7/11/14 × 12/15/22h ×
+zoom 1/0.4, `--sessions 80 --level 3`, ở đúng DPR app dùng), ghi ra `.city-preview/bench-macbook.txt`.
+Mỗi cảnh tự in **tên máy đồ hoạ** ⇒ bảng kết quả tự khai nó được đo bằng gì.
 
-**Kết luận**: **A — VISUAL HEADROOM CÒN NHIỀU** (tạm thời, chờ Đàm chạy trang HTML để có FPS thật
-trên MacBook). Căn cứ: 71–80k tam giác và 12–13 lệnh vẽ là tải rất nhẹ với mọi GPU đời gần, và
-renderer chạy theo yêu cầu (thành phố đứng yên = **không một khung hình nào** được vẽ).
+**Nghiệm thu**: **739 bài test** · lint sạch · build xanh.
+**Tài liệu**: `TECH_DEBT #32` (đã đóng, ghi lại vì là lần thứ hai cùng hình dạng sai) ·
+`CLAUDE.md` thêm 3 bài học · `PROJECT_STRUCTURE.md` cập nhật bộ công cụ.
 
 ### 2026-08-16 — Phase 9D: mặt đường là một HỆ THỐNG, không phải một dải màu (`TECH_DEBT #30` + `#27` đóng)
 

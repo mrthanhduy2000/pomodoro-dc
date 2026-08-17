@@ -24,8 +24,10 @@
 >
 > **Cập nhật 2026-08-17 (Performance Gate)**: mở **#31** (Priority **Low** — bản đồ bóng sống sót
 > qua `city.dispose()`; app hiện KHÔNG dính vì mỗi cảnh một renderer riêng, nhưng là mìn hẹn giờ
-> nếu sau này có ai dùng lại renderer giữa các kỷ). Số mục High/Critical **KHÔNG đổi**: vẫn 1 mục
-> High (#14) + 3 mục Medium-High (#3, #13, #24) → xa ngưỡng 8–10, KHÔNG cần Maintenance Sprint.
+> nếu sau này có ai dùng lại renderer giữa các kỷ) và **#32** (đồng hồ đo HUD báo thiếu 56% số tam
+> giác — **ĐÃ SỬA ngay trong phiên**, ghi lại vì nguyên nhân gốc là một hình dạng sai đã tái diễn
+> lần thứ hai). Số mục High/Critical **KHÔNG đổi**: vẫn 1 mục High (#14) + 3 mục Medium-High
+> (#3, #13, #24) → xa ngưỡng 8–10, KHÔNG cần Maintenance Sprint.
 >
 > **(Ảnh chụp trước đó, sau Phase 9B)**: thêm **#30** (Medium-High —
 > mặt đường render DƯỚI ngưỡng mắt đọc được xét riêng vật liệu; đã có bản vá đo xong nhưng CỐ Ý
@@ -1736,3 +1738,38 @@
 - **Review Trigger**: NGAY khi có ai đề xuất dùng lại renderer giữa các cảnh/kỷ; hoặc phiên nào
   đụng vào `dispose()` vì lý do khác thì sửa luôn.
 - **Owner**: phiên AI kế tiếp · **Status**: Open
+
+
+---
+
+## #32 — ✅ [ĐÃ XỬ LÝ 2026-08-17, Performance Gate] Đồng hồ đo HUD báo THIẾU 56% số tam giác
+
+- **Tên**: `stats.triangles` tự tính bằng công thức riêng, lệch +44.126 so với thực tế
+- **Module**: `src/components/city/render3d/sceneGraph.js` · `CityScene3D.jsx` · `CityPerfHud.jsx`
+- **Priority**: (đã đóng) — lúc phát hiện là **High**, vì đây là con số Đàm dùng để quyết định
+- **Impact**: HUD và trang xem thử báo **34.622** tam giác cho kỷ 7 trong khi máy thật sự vẽ
+  **78.748** — thiếu **56%**. Sai theo hướng **trấn an**, tức loại sai nguy hiểm nhất cho một đồng
+  hồ đo: nó khiến mọi quyết định "còn dư sức, thêm chi tiết đi" dựa trên một ngân sách bịa.
+- **Root Cause**: `stats.triangles` được **DỰ ĐOÁN** bằng công thức
+  `buildingTriangles + surfaceTriangles + residents × 24`, trong khi three biết chính xác qua
+  `renderer.info.render.triangles`. **Chưa ai từng đặt hai bên cạnh nhau.** Hằng số lệch 44.126
+  giống hệt ở cả 15 kỷ chính là hai thứ công thức không biết tới: **vòm trời** (960) và **rặng núi
+  chân trời** thêm ở **Phase 9A** (43.166). Người thêm chúng không sửa công thức, và **không có gì
+  đỏ lên** vì công thức chỉ được so với chính nó.
+- **⚠️ Đây là lần thứ HAI cùng một hình dạng sai**: chú thích của `countTriangles` (`parts.js`) đã
+  tự nhận *"có test đối chiếu hai bên"* trong khi bài test ấy chỉ so với **hằng số viết tay**
+  (Phase 8B, đã ghi trong `CLAUDE.md`). Bài học đã được viết ra mà vẫn tái diễn ở một file khác ⇒
+  bài học chưa đủ, phải có **test thật** mới chặn được.
+- **Giải pháp đã áp dụng**: thôi DỰ ĐOÁN, chuyển sang **ĐẾM** — `countSceneTriangles(scene)` /
+  `countSceneDrawCalls(scene)` duyệt scene graph theo đúng luật `WebGLRenderer` cộng vào
+  `info.render`. Một phép đo trên chính thứ sẽ được vẽ thì không thể lạc hậu khi ai đó thêm khối
+  mới. `CityScene3D.publishStats()` còn **đè lên** bằng `renderer.info.render` — HUD phải nói máy
+  vừa làm gì, nên nó đọc từ đồng hồ chứ không đọc từ dự báo.
+- **Nghiệm thu**: `[stats] tam giác | 78748 | 78748 | +0 (0.0%)` — đo bằng
+  `node scripts/city-preview.mjs --era 7 --sessions 80 --level 3 --hour 12 --bench 24`.
+  Lệnh vẽ vốn đã đúng (13 = 13) nên phần đó không đổi.
+- **Test khoá**: `src/components/city/render3d/sceneStats.test.js` — 3 bài, **cả 3 đã thử-cho-đỏ**
+  bằng cách khôi phục đúng công thức cũ. Bài test tự duyệt scene graph bằng mã CỦA NÓ rồi so với
+  thứ mã sản phẩm báo (chạy CẢ HAI bên, không bên nào so với hằng số thứ ba), kèm một **đối chứng**
+  đòi phần "công thức cũ mù" phải còn > 40.000 tam giác và phải nằm trong con số HUD.
+- **Owner**: đã đóng · **Status**: Resolved

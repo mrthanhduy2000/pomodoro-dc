@@ -377,6 +377,14 @@ export default function CityScene3D({
         onStatsRef.current?.({
           ...loop.getStats(),
           ...city.stats,
+          // ⚠️ ĐÈ LÊN hai con số vừa spread từ `city.stats` bằng SỰ THẬT của khung hình vừa vẽ.
+          // `city.stats` đếm scene graph (đúng, và có ngay trước khi vẽ lần nào), nhưng thứ HUD
+          // phải nói là *máy vừa làm gì*, và chỉ `renderer.info` biết điều đó — nó tính cả lượt
+          // dựng bản đồ bóng ở đúng khung hình có dựng lại. Đây là một cái đồng hồ đo, nên nó phải
+          // đọc từ đồng hồ chứ không đọc từ dự báo. (Performance Gate 2026-08-17: hai bên từng lệch
+          // 56% suốt nhiều tháng vì không ai đặt chúng cạnh nhau.)
+          drawCalls: renderer.info.render.calls,
+          triangles: renderer.info.render.triangles,
           shadowMap: city.sun.shadow.mapSize.width,
           pixelRatio: renderer.getPixelRatio(),
         });

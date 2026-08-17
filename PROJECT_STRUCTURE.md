@@ -290,11 +290,10 @@
 │                               #   lệnh Chromium mới: `--virtual-time-budget` đóng băng hoạt hoạ rAF
 │                               #   (khối framer-motion biến mất im lặng) và `--window-size` không
 │                               #   cho ra khung điện thoại thật (sàn 500px). Xem CLAUDE.md.
-│   ├── benchCore.mjs           #   RUỘT THUẦN của bộ đo hiệu năng (phân vị · dư địa · danh sách 24
-│   │                           #   cảnh). Không import three, không đụng DOM ⇒ test bằng node --test.
-│   │                           #   ⚠️ CẢ HAI lối chạy (ngầm ở đây + trang HTML trên máy Đàm) đều gọi
-│   │                           #   vào đây — một luật một công thức, đúng bài học sweep-score 4G.
-│   └── bench-suite.mjs         #   Lớp vỏ: dựng 24 cảnh, đo, in bảng. `--page` xuất HTML tự chứa.
+│   ├── city-preview.mjs        #   Dựng cảnh 3D thật rồi chụp/đo. `--bench N` là bộ đo hiệu năng
+│   │                           #   DUY NHẤT — đừng viết bộ thứ hai, hai phép đo song song sớm muộn
+│   │                           #   sẽ lệch nhau (bài học sweep-score, Phase 4G).
+│   └── bench-macbook.sh        #   Một lệnh duy nhất cho Đàm: chạy trọn ma trận 24 cảnh trên GPU thật
 ├── supabase/                   # SQL chạy TAY trong Supabase SQL Editor (không tự động migrate)
 │
 ├── CLAUDE.md                   # Quy tắc bắt buộc + Project Governance Protocol + bối cảnh kỹ thuật
@@ -362,16 +361,19 @@
 | `node scripts/shadow-score.mjs <ảnh>` | **chấm bóng đổ**: sàn độ sáng · % khung hình bị nghiền · khoảng cách sáng-tối · độ tươi · chênh sắc nóng-lạnh. Đo PHÂN BỐ chứ không chấm vài điểm — chấm tay rất dễ trúng mặt đường (vật liệu đen sẵn) rồi ghi công cho bóng đổ. `--selftest` có 5 ca, trong đó một ca tách riêng "chữa đúng" khỏi "chữa ngây thơ làm nhạt ảnh" |
 | `node scripts/png-probe.mjs <ảnh> --top 10` | màu THẬT trên màn hình tại một điểm/vùng |
 | `node --import ./scripts/register-esm-loader.mjs scripts/frame-fit.mjs 1.3` | công trình nào đang bị **mép khung hình cắt**, và phải lùi camera bao nhiêu thì hết (`--flat` = đối chứng địa hình phẳng · `--selftest`) |
-| `node scripts/bench-suite.mjs` | **chấm hiệu năng**: 24 cảnh (4 kỷ × 3 giờ × wide/close) ra FPS · frame time P50/P95 · tam giác · lệnh vẽ · DPR · cỡ bản đồ bóng. `--tier desktop\|mobile` chọn bậc chất lượng · `--page` xuất một trang HTML tự chứa để chạy trên máy THẬT · `--selftest` vẽ 4 lần/khung và đòi ≥2,5× thời gian |
+| `node scripts/city-preview.mjs --era 7 --bench 120` | **chấm hiệu năng MỘT cảnh**: frame time P50/P95 ở khung ỔN ĐỊNH và ở khung DỰNG LẠI BÓNG (hai câu hỏi khác nhau, in riêng), số tam giác + lệnh vẽ đọc từ `renderer.info`, DPR thật, cỡ bản đồ bóng, số shader/geometry/texture. Thêm `--gpu` để dùng card thật (bắt buộc trên máy Đàm), `--no-shadow` để tách "vật liệu tối" khỏi "chi phí bóng" |
+| `bash scripts/bench-macbook.sh` | **ĐO TRÊN MACBOOK THẬT** — chạy trọn ma trận 4 kỷ × 3 giờ × 2 góc = 24 cảnh, 120 khung mỗi cảnh, ghi ra `.city-preview/bench-macbook.txt` |
 
-⚠️ **`bench-suite` chạy trong hộp cát này KHÔNG trả lời được câu hỏi FPS**: máy đồ hoạ ở đây là
-SwiftShader (tô hình bằng CPU) nên mỗi khung tốn ~2,4 giây — sai khoảng ba bậc so với một GPU thật,
-**và sai cả HÌNH DẠNG chi phí** (CPU đắt ở phần tô điểm ảnh, GPU đắt ở phần khác). Thứ chuyển được
-sang máy thật là các con số **KHÔNG phụ thuộc máy**: số tam giác · số lệnh vẽ · số shader · cỡ bản
-đồ bóng · bộ nhớ. Muốn biết FPS thật thì `--page` rồi đưa file HTML cho Đàm chạy trên MacBook.
-⚠️ Ruột phép tính nằm ở `scripts/benchCore.mjs` (thuần, có `benchCore.test.js` canh) và **cả hai
-lối chạy — ngầm ở đây và trên máy Đàm — đều gọi vào đó**, để hai bảng số so được với nhau. Đừng
-chép công thức phân vị sang chỗ khác (đúng bài học `sweep-score.mjs` ở Phase 4G).
+⚠️ **Bảng `[stats]` của `--bench` in ra HAI cột cạnh nhau — "tự tính" và "renderer.info" — và chúng
+PHẢI bằng nhau.** Đây không phải trang trí: tháng 8/2026 hai bên lệch **56%** (HUD báo 34.622 tam
+giác, máy vẽ 78.748) suốt từ Phase 9A, vì con số HUD được DỰ ĐOÁN bằng công thức riêng và chưa ai
+đặt nó cạnh sự thật. Thấy cột "lệch" khác 0 ⇒ có ai đó thêm khối vào cảnh mà phép đếm không thấy;
+`src/components/city/render3d/sceneStats.test.js` canh chuyện này ở tầng test.
+⚠️ **Số FPS đo trong hộp cát dựng ảnh là VÔ NGHĨA**: ở đó WebGL chạy bằng SwiftShader (tô hình bằng
+CPU), ~2,4 giây/khung — sai ba bậc so với GPU thật VÀ sai cả hình dạng chi phí. Dòng
+`[bench] máy đồ hoạ=...` tồn tại để bảng kết quả tự khai nó được đo bằng gì; thấy chữ "SwiftShader"
+hay "Software" thì vứt phần thời gian, chỉ giữ các con số **không phụ thuộc máy** (tam giác, lệnh
+vẽ, shader, cỡ bản đồ bóng).
 
 ⚠️ **`--sweep` mà không `sweep-score` thì mới đi được nửa đường**: mắt chỉ so được các ô KỀ NHAU,
 nên hai lỗi nặng nhất từng lọt qua đều là hai ô nằm ở HAI ĐẦU bảng (bình minh ↔ hoàng hôn ở Phase

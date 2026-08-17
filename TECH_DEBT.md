@@ -1829,7 +1829,37 @@
 
 ---
 
-## #34 — `--thu` không kiểm điều kiện tiên quyết, nên lỗi "thiếu thư viện" hiện ra thành 20 dòng lỗi Vite
+## #34 — ✅ [ĐÃ XỬ LÝ 2026-08-17, vòng 4] `--thu` không kiểm điều kiện tiên quyết, nên lỗi "thiếu thư viện" hiện ra thành 20 dòng lỗi Vite
+
+> ✅ **ĐÃ ĐÓNG.** `--thu` nay chạy **preflight 8 mục trước khi gói bundle**, xếp theo giá (kiểm thư
+> mục tức thì → gọi node đọc phiên bản → hỏi Chromium → ghi thử file → hỏi git), **dừng ngay ở mục
+> đầu tiên hỏng** và in ✅/❌ kèm **ĐÚNG MỘT lệnh cần gõ**. Ca đã cắn Đàm (`node_modules` có nhưng
+> thiếu `three`) nay bị bắt trước khi Vite kịp nói một chữ.
+>
+> Kèm hai thứ phát sinh, cả hai đều do **thử ngược** lộ ra chứ không do đọc mã:
+> **(a)** Mục "đúng thư mục dự án" phải đứng **TRƯỚC** mục `node_modules` — hai triệu chứng giống
+> hệt nhau (không có `node_modules`) nhưng cách sửa **ngược nhau**: bảo một người đang đứng nhầm
+> chỗ chạy `npm install` là làm họ mất vài phút cài vào thư mục chẳng liên quan rồi hỏng y như cũ.
+> **(b)** Mục kiểm git tự tố cáo **sản phẩm của chính nó** — script ghi báo cáo vào `.city-preview/`
+> trước khi preflight chạy, nên `git status` thấy nó là "thay đổi chưa lưu". Trong kho thật điều đó
+> bị `.gitignore` che đi, tức lời cảnh báo đang đúng **nhờ một file chẳng liên quan** — đúng hình
+> dạng quả mìn. Đã lọc. Một cảnh báo kêu oan còn tệ hơn không có: nó dạy người dùng bỏ qua MỌI
+> cảnh báo.
+>
+> **Khoá bằng test** (`scripts/benchMacbookSource.test.js`, 8 bài, tất cả đã thử-cho-đỏ). ⚠️ Chính
+> phép thử ngược đã bắt được một lỗ hổng trong bài test đầu tiên tôi viết: nó dựng dự án **không
+> có `node_modules` nào cả**, nên mục kiểm số 1 bắt trước và **mục kiểm số 2 chưa từng được chạy** —
+> gỡ hẳn mục 2 khỏi script mà test vẫn xanh. Đúng bài học Phase 4D: *"một bài test xanh không cho
+> biết có BAO NHIÊU thứ đang giữ nó xanh"*. Nay có bài riêng dựng đúng ca "đủ mọi gói, khuyết đúng
+> `three`".
+>
+> **Chỗ cắt log cũng đã sửa (phần B của vòng 4)**: bản cũ `tail -n 20` giữ 20 dòng CUỐI, mà với lỗi
+> build thì **nguyên nhân luôn ở ĐẦU còn ngăn xếp ở cuối** — nên nó đã vứt đúng dòng
+> `Rolldown failed to resolve import "three"` và giữ lại toàn `at viteLog (...)`. Nay in **15 dòng
+> đầu + 8 dòng cuối** có nhãn rõ ràng, lọc bỏ dòng ngăn xếp thuần khỏi phần trích (KHÔNG lọc khỏi
+> file log), và luôn ghi đường dẫn đầy đủ tới `.city-preview/bench-loi-toanvan.log`.
+
+**(Bản ghi gốc, giữ nguyên để đối chiếu:)**
 
 - **Tên**: Chế độ thử nhanh của bộ đo báo SAI NGUYÊN NHÂN khi thiếu `node_modules/three`
 - **Module**: `scripts/bench-macbook.sh` (chế độ `--thu`) · `scripts/city-preview.mjs`
@@ -1858,12 +1888,9 @@
   ⚠️ Kiểm bằng **sự tồn tại của thư mục**, đừng kiểm bằng cách chạy thử rồi bắt lỗi — chạy thử
   chính là thứ sinh ra 20 dòng nhiễu.
 - **Estimated Complexity**: **Thấp** (~10 dòng shell). Đây là mục rẻ nhất trong cả file này.
-- **Blocking Conditions**: không có. **Chưa làm vì vòng 3 của Performance Gate được Đàm giới hạn
-  đúng phạm vi "ghi lại kết quả, không sửa mã"** — mở mục này là đúng chỉ thị của anh, không phải
-  vì việc khó.
-- **Review Trigger**: lần kế tiếp bất kỳ ai chạm vào `bench-macbook.sh`; hoặc ngay khi Đàm phải
-  chạy lại bộ đo trên một máy khác.
-- **Owner**: phiên AI kế tiếp · **Status**: Open
+- **Blocking Conditions**: không có.
+- **Review Trigger**: lần kế tiếp bất kỳ ai chạm vào `bench-macbook.sh`.
+- **Owner**: phiên AI kế tiếp · **Status**: ✅ **ĐÃ XỬ LÝ 2026-08-17 (vòng 4)**
 
 ---
 
@@ -1903,8 +1930,24 @@
   ⚠️ Làm (2) **trong hộp cát Linux vẫn có giá trị** cho vế dấu cách, nhưng **KHÔNG** thay thế được
   vế NFC/NFD: Linux không chuẩn hoá tên file như macOS, nên vế đó chỉ Đàm mới kiểm thật được.
 - **Estimated Complexity**: (1) Thấp · (2) Thấp
-- **Blocking Conditions**: không có (cùng lý do như #34 — vòng 3 giới hạn phạm vi ở việc ghi chép)
 - **Review Trigger**: lần kế tiếp có ai thêm/sửa một script trong `scripts/`; hoặc ngay khi bộ đo
   báo một lỗi mà Đàm không hiểu.
-- **Owner**: phiên AI kế tiếp (viết test) + Đàm (chạy thử một lần trên máy thật)
-- **Status**: Open
+- **Owner**: Đàm (chỉ còn vế NFD trên macOS)
+- **Status**: **Open — vế DẤU CÁCH đã đóng và đã khoá bằng test; vế NFC/NFD của macOS thì KHÔNG
+  kiểm được từ Linux, còn nguyên.**
+- ✅ **ĐÃ LÀM ĐƯỢC (2026-08-17, vòng 4)** — `scripts/benchMacbookSource.test.js`:
+  **(a)** Preflight chạy trọn vẹn từ một thư mục tên `Bản sao Test - CÓ DẤU`, ở **CẢ HAI** dạng
+  chuẩn hoá NFC và NFD — chứng minh đường dẫn đi qua được `cd`, `$PWD`, **hai lần gọi `node`**
+  (đọc phiên bản three + hỏi Chromium), `mkdir`, ghi file thử và `df` mà không đứt.
+  **(b)** Một bài **đọc mã nguồn** bắt mọi biến đường dẫn để trần trong `scripts/bench-macbook.sh`.
+  Nó đi **từng ký tự** chứ không dùng regex, vì `"$(grep -c . $tam)"` trông như đã bọc nháy nhưng
+  `$tam` bên trong `$( )` **không** được lớp nháy ngoài che — một phép kiểm bằng regex sẽ báo an
+  toàn ở đúng chỗ nguy hiểm nhất. Danh sách biến là **cho-phép** chứ không phải cấm (fail-closed):
+  thêm biến mới mà quên bọc nháy thì test ĐỎ ngay. Có **đối chứng** nhốt cả hai hình dạng sai.
+  ⚠️ Đã thử ngược: chèn `rm -f $thu_file` để trần vào script ⇒ bài (b) ĐỎ đúng như mong đợi.
+- ⚠️ **CÒN LẠI — VÀ ĐỪNG ĐỌC MỤC TRÊN THÀNH "ĐÃ XONG"**: Linux lưu tên file **nguyên byte**, không
+  chuẩn hoá gì cả; macOS lưu ở dạng **NFD** và một số tầng lại trả về NFC. Nên bài test trên chứng
+  minh được vế **dấu cách + ký tự nhiều byte**, KHÔNG chứng minh được hành vi chuẩn-hoá thật của
+  macOS — tức đúng cái đã giết LaunchAgent ở "BẪY 2" (`CLAUDE.md`: thoát mã 78, **không có
+  stderr**). Phần ấy chỉ máy Đàm kiểm được, và nó đã thành một dòng trong runbook ở
+  `PERFORMANCE.md` ("Một điều CHỈ máy Đàm kiểm được").

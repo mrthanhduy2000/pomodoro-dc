@@ -6,7 +6,25 @@
 > chọn: `ARCHITECTURE_DECISIONS.md`. Nợ kỹ thuật: `TECH_DEBT.md`. Migration: `MIGRATION.md`. Tóm
 > tắt theo mốc: `CHANGELOG.md`.
 > **NGUYÊN TẮC ƯU TIÊN SỐ 1:** (1) mọi phiên AI phải đọc file này + `CLAUDE.md` + các file liên quan TRƯỚC khi làm; (2) sau MỌI cập nhật dù nhỏ, phải cập nhật ngay file này + `CLAUDE.md` + các file liên quan khác.
-> Cập nhật lần cuối: **2026-08-17** — **PERFORMANCE GATE VÒNG 3: ĐÃ CÓ SỐ TRÊN MÁY THẬT, VÀ CÂU
+> Cập nhật lần cuối: **2026-08-17** — **PERFORMANCE GATE VÒNG 4: LÀM CHO BỘ ĐO CHẠY ĐƯỢC TRÊN MÁY
+> ĐÀM** (đóng `TECH_DEBT #34`, đóng **một nửa** `#35`). Bộ đo đã "nghiệm thu đủ" ở vòng 2 — test
+> xanh, lint sạch, thử ngược đạt — vậy mà đưa cho Đàm chạy thì anh mất **5 vòng qua lại** vì bốn
+> thứ **không cái nào liên quan tới hiệu năng**: nhánh chưa `git fetch` · `package.json` bẩn chặn
+> `checkout` · `three` chưa cài (đổ ra 20 dòng ngăn xếp Vite) · đường dẫn đầy dấu tiếng Việt chưa
+> ai thử. Cả bốn là **khoảng cách giữa môi trường viết ra công cụ và môi trường chạy nó**.
+> **(A)** `--thu` nay chạy **preflight 8 mục TRƯỚC khi gói bundle**, xếp rẻ-trước-đắt-sau, dừng ngay
+> ở mục đầu tiên hỏng, mỗi ❌ in **ĐÚNG MỘT lệnh cần gõ**. **(B)** Sửa chỗ cắt log **ngược**: bản cũ
+> `tail -n 20` giữ 20 dòng CUỐI, mà với lỗi build thì nguyên nhân ở **ĐẦU** — nó đã vứt đúng dòng
+> `Rolldown failed to resolve import "three"` và giữ lại toàn `at viteLog…`; nay in **đầu + cuối**
+> có nhãn, lọc ngăn xếp khỏi phần trích, luôn ghi đường dẫn log đầy đủ. **(C)** Test chạy preflight
+> từ thư mục tên `Bản sao Test - CÓ DẤU` ở **cả NFC lẫn NFD**, cộng một bài **đọc mã nguồn** bắt mọi
+> biến đường dẫn để trần (đi từng ký tự, vì `"$(… $tam)"` trông như đã bọc nháy mà thật ra không).
+> **(D)** `PERFORMANCE.md` có runbook copy-paste 7 bước + bảng "gặp lỗi này thì gõ cái này" cho đúng
+> 4 ca đã xảy ra. **(E)** Thử ngược **từng** mục kiểm — và nó bắt được **hai lỗi trong chính bộ đo
+> lẫn trong bài test tôi vừa viết** (xem nhật ký). **744 bài test** (736 + 8 mới), lint sạch, build
+> xanh. ⚠️ **KHÔNG đụng `src/`.** ⏳ **CHƯA gộp `main` — chờ Đàm quyết.**
+>
+> *(Trước đó — cùng ngày, vòng 3)* — **ĐÃ CÓ SỐ TRÊN MÁY THẬT, VÀ CÂU
 > TRẢ LỜI LÀ "CÒN NHIỀU DƯ ĐỊA".** Đàm chạy bộ đo trên **Apple M3 · ANGLE Metal · 1100×700 · DPR 2**:
 > 24/24 cảnh + 1 cảnh đối chiếu, tất cả ĐẠT. Frame time **3,90–5,20 ms** trên trần 16,67 ms ⇒
 > **dư 3,2 lần** (192–256 hình/giây), không khung nào trượt 60 fps kể cả đỉnh nhiễu 9,2 ms.
@@ -165,6 +183,97 @@
 - **Lịch sử git `main` từng bị xáo** (thao tác git song song): bản đang chạy là `eb44638` — chứa ĐỦ mọi việc gần đây (Hỏi Coach offline + fix đêm khuya + Coach offline analyst). Vài commit cũ (`1e27505`, `9fbcd62`) thành dangling, KHÔNG còn trong `git log` nhưng code vẫn nằm trong bản deploy. Đừng hoảng nếu không thấy chúng.
 
 ## 🗒️ Nhật ký cập nhật
+
+### 2026-08-17 (vòng 4) — Bộ đo "đã nghiệm thu đủ" vẫn làm Đàm mất 5 vòng, vì nó chưa từng chạy ở môi trường của anh
+
+**Yêu cầu của Đàm**: *"làm cho nó CHẠY ĐƯỢC TRÊN MÁY ĐÀM"*, kèm một nguyên tắc gốc đặt lên trên mọi
+quyết định khác: **khi hỏng, phải in ra MỘT DÒNG nói CẦN GÕ GÌ, chứ không in nguyên nhân kỹ thuật
+rồi để người dùng tự suy.** Phạm vi: chỉ `scripts/` + tài liệu + test. **CẤM đụng `src/`** — bộ số
+vừa đo gắn với đúng mã hiện tại, sửa mã dựng cảnh là làm bộ số hết giá trị. Đã tuân thủ: `git diff`
+không chạm một dòng nào trong `src/`.
+
+**Bốn thứ đã cắn Đàm, không cái nào liên quan tới hiệu năng:** `git checkout` báo *"did not match
+any file(s)"* (chưa `git fetch`) → checkout bị chặn vì `package.json` bẩn → `three` chưa cài, đổ ra
+20 dòng ngăn xếp Vite → đường dẫn đầy dấu tiếng Việt chưa ai từng thử. Tất cả đều là **khoảng cách
+giữa môi trường viết ra công cụ và môi trường chạy nó**: hộp cát AI có đường dẫn ASCII không dấu
+cách, `node_modules` luôn đúng, nhánh luôn có sẵn.
+
+**(A) Preflight thật — 8 mục, xếp RẺ TRƯỚC ĐẮT SAU, dừng ngay ở mục đầu tiên hỏng.**
+`node` → đúng thư mục dự án → `node_modules/` → `node_modules/three` → phiên bản three khớp không
+(cảnh báo) → Chromium → ghi được `.city-preview/` → cây git sạch không (cảnh báo). Mỗi mục in ✅/❌,
+mỗi ❌ kèm **ĐÚNG MỘT lệnh** copy-paste được.
+- ⚠️ **Mục "đúng thư mục dự án" PHẢI đứng TRƯỚC mục `node_modules`** — hai triệu chứng giống hệt
+  nhau (đều "không có `node_modules`") nhưng cách sửa **ngược nhau**: bảo một người đang đứng nhầm
+  chỗ chạy `npm install` là làm họ mất vài phút cài vào một thư mục chẳng liên quan rồi hỏng y như cũ.
+- ⚠️ **Chromium hỏi `city-preview.mjs`, KHÔNG chép danh sách đường dẫn sang shell** (cờ mới
+  `--kiem-chromium`, kiểm rồi thoát, không gói bundle). Chép sang chỗ thứ hai là đúng cái bẫy "một
+  luật hai công thức" đã làm `sweep-score.mjs` bịa ra nguyên một bộ số ở Phase 4G.
+- ⚠️ **Mục phiên bản three tồn tại vì một ca có thật**: hôm 2026-08-17 `npm install` báo *"up to
+  date"* trong khi `three` HOÀN TOÀN chưa có — vì nó chạy lúc `package.json` còn là bản cũ. **"npm
+  nói ổn" không có nghĩa là đúng thư viện đang nằm đó**; chỉ có đặt hai con số cạnh nhau mới biết.
+
+**(B) Chỗ cắt log bị NGƯỢC — lỗi thật, đã xác định được dòng.** Bản cũ `tail -n 20` giữ 20 dòng
+CUỐI. Với lỗi build thì **nguyên nhân luôn ở ĐẦU và ngăn xếp ở CUỐI**, nên nó đã vứt đúng dòng
+`Rolldown failed to resolve import "three"` và giữ lại toàn `at viteLog (...)` — Đàm phải tự chạy
+một lệnh khác mới nhìn thấy. Nay in **15 dòng đầu + 8 dòng cuối** có nhãn rõ ràng, lọc bỏ dòng ngăn
+xếp thuần khỏi phần trích (**không** lọc khỏi file log), và luôn ghi đường dẫn đầy đủ tới
+`.city-preview/bench-loi-toanvan.log`. Đã dựng lại đúng ca của Đàm để kiểm: dòng `Rolldown…` nay
+hiện ra ở **dòng thứ 4**.
+
+**(C) Đường dẫn có dấu tiếng Việt + dấu cách** — `scripts/benchMacbookSource.test.js` (8 bài):
+preflight chạy trọn vẹn từ thư mục tên `Bản sao Test - CÓ DẤU` ở **cả NFC lẫn NFD**, cộng một bài
+**đọc mã nguồn** bắt mọi biến đường dẫn để trần. ⚠️ Bài đó đi **từng ký tự** chứ không dùng regex,
+vì `"$(grep -c . $tam)"` trông như đã bọc nháy nhưng `$tam` bên trong `$( )` **không** được lớp
+nháy ngoài che — regex sẽ báo an toàn ở đúng chỗ nguy hiểm nhất. Danh sách biến là **cho-phép**
+(fail-closed): thêm biến mới mà quên bọc nháy thì test ĐỎ ngay.
+⚠️ **GIỚI HẠN, ghi rõ tại chỗ để phiên sau đừng đọc thành "đã xong"**: Linux lưu tên file nguyên
+byte, macOS lưu NFD — nên bài test chứng minh được vế **dấu cách + ký tự nhiều byte**, KHÔNG chứng
+minh được hành vi chuẩn-hoá thật của macOS (đúng thứ đã giết LaunchAgent ở "BẪY 2": thoát mã 78,
+không có stderr). Phần ấy chỉ máy Đàm kiểm được → đã thành một dòng trong runbook.
+
+**(D) Runbook** trong `PERFORMANCE.md`: khối copy-paste 7 bước (kể cả `git fetch` và `git stash` —
+những bước AI hay quên vì cho là hiển nhiên) + bảng **"gặp lỗi này thì gõ cái này"** cho đúng 4 ca
+đã xảy ra, không lý thuyết.
+
+**(E) Thử ngược TỪNG mục kiểm — và nó bắt được HAI lỗi mà đọc mã không thấy:**
+- ⚠️ **Lỗi trong bài test tôi vừa viết**: gỡ hẳn mục kiểm `node_modules/three` khỏi script mà test
+  **vẫn xanh**. Nguyên nhân: bài đó dựng dự án **không có `node_modules` nào cả**, nên mục kiểm số
+  1 bắt trước và mục số 2 **chưa từng được chạy**. Đúng bài học Phase 4D — *"một bài test xanh
+  không cho biết có BAO NHIÊU thứ đang giữ nó xanh"*. Đã thêm bài dựng đúng ca "đủ mọi gói, khuyết
+  đúng `three`" (nối mềm từng gói một), và mutation ấy nay ĐỎ.
+- ⚠️ **Lỗi trong chính mục kiểm git**: nó tự tố cáo **sản phẩm của chính nó** — script ghi báo cáo
+  vào `.city-preview/` trước khi preflight chạy, nên `git status` thấy đó là "thay đổi chưa lưu".
+  Trong kho thật bị `.gitignore` che đi, tức lời cảnh báo xưa nay đúng **nhờ một file chẳng liên
+  quan**. Chỉ lộ ra vì phép thử ngược chạy trong một kho git tạm không có `.gitignore`. Đã lọc.
+- ⚠️ **Và PHÉP PHÁ nói dối hai lần, cả hai đều không phải lỗi của mục kiểm.** (1) Bản đầu dùng
+  `git stash` trên **chính kho đang sửa** → stash luôn cái script đang thử, nên mục cuối chạy bằng
+  bản CŨ và treo 5 phút. Vá: mọi phép phá làm trong kho git **tạm**. (2) Phép phá viết bằng
+  `perl -0pi -e` chứa `$PWD`/`$thu_file` trong chuỗi thay thế — **perl nội suy chúng thành rỗng**,
+  nên thứ chèn vào không phải "biến để trần" mà là một dòng vô nghĩa; bài test đúng thì không đỏ và
+  tôi suýt kết luận phép kiểm nháy kép bị mù. Làm lại bằng thay-thế-nguyên-văn (python) thì nó ĐỎ
+  đúng chỗ. ⇒ **Khi phá mà không nổ, nghi CHÍNH PHÉP PHÁ trước** (Phase 8A).
+
+| Mục kiểm | Cách phá | Nhận được | Khôi phục |
+|---|---|---|---|
+| node | `PATH` không có node | ❌ + link nodejs.org, không ✅ nào trước | ✓ |
+| đúng thư mục | chạy từ thư mục trống | ❌ + lệnh `cd "…"`, **không** khuyên `npm install` | ✓ |
+| `node_modules/` | bỏ thư mục | ❌ "Chưa cài thư viện" + `npm install --legacy-peer-deps` | ✓ |
+| `node_modules/three` | nối mềm mọi gói TRỪ three | ❌ "Thiếu thư viện 3D", sau khi mục 1 đã ✅ | ✓ |
+| phiên bản three | `package.json` → `0.99.9` | ⚠️ lệch, **thoát mã 0** (cảnh báo, không chặn) | ✓ |
+| Chromium | thu danh sách còn mỗi env + trỏ sai | ❌ + liệt kê đường đã thử + cách đặt `CHROME_PATH` | ✓ |
+| ghi `.city-preview/` | biến nó thành FILE / file thử thành THƯ MỤC | ❌ hai nhánh khác nhau | ✓ |
+| cây git | kho tạm: sạch ↔ có file rác | ✅ ↔ ⚠️ (**hai chiều**) | ✓ |
+| nháy kép | chèn `rm -f $thu_file` để trần | bài "bọc nháy kép" ĐỎ | ✓ |
+
+**Nghiệm thu**: `npm test` **744 bài** (736 + 8 mới) · lint sạch · build xanh. Chạy `--thu` thật
+trong hộp cát: preflight ✅ hết → gói bundle → chạy cảnh → **❌ ở mục card đồ hoạ (SwiftShader)** —
+đó là hành vi ĐÚNG, và nó chứng minh chuỗi preflight chạy tới tận cuối.
+
+⏳ **CHƯA GỘP `main` — chờ Đàm quyết.** Vòng này **không đụng `src/`**, nên gộp sẽ deploy một bản
+production **giống hệt bản đang chạy về mọi mặt người dùng thấy được** (chỉ khác `scripts/` + tài
+liệu, những thứ không vào bundle).
+
+---
 
 ### 2026-08-17 (vòng 3) — Bộ số trên MacBook M3 thật: còn dư 3,2 lần, và trục đúng là GIỜ chứ không phải KỶ
 

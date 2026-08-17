@@ -49,6 +49,23 @@ function findChrome() {
   return null;
 }
 
+/**
+ * Câu báo "không tìm thấy Chromium" — viết cho NGƯỜI KHÔNG BIẾT CODE.
+ *
+ * ⚠️ Bản cũ chỉ nói *"Không tìm thấy Chromium. Đặt CHROME_PATH trỏ tới file chrome rồi chạy lại."*
+ * Câu ấy đúng về mặt kỹ thuật và VÔ DỤNG với người nhận: nó không nói đã tìm ở đâu (nên không
+ * biết mình thiếu cái gì) và không nói gõ thế nào (nên không biết làm gì tiếp). Nguyên tắc gốc của
+ * vòng 4: khi hỏng thì in RA LỆNH CẦN GÕ, đừng in nguyên nhân kỹ thuật rồi để người dùng tự suy.
+ */
+function baoThieuChromium() {
+  console.error('Không tìm thấy Chromium/Chrome. Đã tìm ở những chỗ sau, không chỗ nào có:');
+  for (const path of CHROME_CANDIDATES) console.error(`  · ${path}`);
+  console.error('');
+  console.error('Cách sửa — cài Google Chrome, HOẶC chỉ thẳng đường dẫn rồi chạy lại:');
+  console.error('  CHROME_PATH="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \\');
+  console.error('    bash scripts/bench-macbook.sh --thu');
+}
+
 function parseArgs(argv) {
   const args = {
     era: 7, level: 3, theme: 'light', all: false, width: 1100, height: 700,
@@ -138,6 +155,11 @@ function parseArgs(argv) {
     else if (key === '--mask') { args.mask = String(value); i += 1; }
     else if (key === '--no-shadow') args.noShadow = true;
     else if (key === '--gpu') args.gpu = true;
+    // Chỉ KIỂM xem có Chromium không rồi thoát — không gói bundle, không mở trình duyệt.
+    // ⚠️ Tồn tại để `bench-macbook.sh` hỏi được câu "máy này có Chromium chưa" mà KHÔNG phải chép
+    // danh sách `CHROME_CANDIDATES` sang một file thứ hai. Chép sang chỗ thứ hai là đúng cái bẫy
+    // "một luật hai công thức" đã làm `sweep-score.mjs` bịa ra nguyên một bộ số ở Phase 4G.
+    else if (key === '--kiem-chromium') args.kiemChromium = true;
   }
   return args;
 }
@@ -732,8 +754,13 @@ async function main() {
   const args = parseArgs(process.argv.slice(2));
   const chrome = findChrome();
   if (!chrome) {
-    console.error('Không tìm thấy Chromium. Đặt CHROME_PATH trỏ tới file chrome rồi chạy lại.');
+    baoThieuChromium();
     process.exit(1);
+  }
+  // Chế độ kiểm-rồi-thoát: dừng NGAY ở đây, trước `mkdirSync`, trước mọi việc gói bundle.
+  if (args.kiemChromium) {
+    console.log(chrome);
+    process.exit(0);
   }
 
   mkdirSync(OUT_DIR, { recursive: true });

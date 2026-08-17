@@ -23,12 +23,63 @@
 | **Mỗi cảnh** | 120 khung hình, `--sessions 80 --level 3`, 12 khung khởi động bị vứt |
 | **Mã nguồn lúc đo** | nhánh `claude/xay-san-pham-huong-nay-nasr3n`, commit `48d3c83` |
 
-Muốn đo lại (sau một phase mỹ thuật lớn, hoặc trên máy khác):
+---
+
+## Cách chạy lại bộ đo — làm đúng theo thứ tự này
+
+> Viết cho người **KHÔNG biết code**. Chép từng dòng một, chạy xong dòng nào mới sang dòng kế.
+> Lần đo 2026-08-17 mất **5 vòng qua lại** chỉ để tới được chỗ chạy lệnh — mục này tồn tại để
+> lần sau không lặp lại. Mọi bước dưới đây đều đã có người vấp ít nhất một lần.
+
+Mở **Terminal** trên Mac rồi gõ:
 
 ```bash
-bash scripts/bench-macbook.sh --thu     # thử 1 cảnh ~20 giây, phải thấy "✅ ĐẠT"
-bash scripts/bench-macbook.sh           # chạy thật ~5 phút
+# 1. Vào đúng thư mục dự án. GIỮ NGUYÊN hai dấu nháy kép — đường dẫn có dấu cách.
+cd "/Users/damduy/Downloads/Claude Code/Bản sao Pomodoro Game - USING"
+
+# 2. Lấy về các nhánh mới từ GitHub (bỏ bước này thì bước 4 sẽ báo "did not match any file(s)").
+git fetch origin
+
+# 3. Xem có gì chưa lưu không.
+git status
+#    → nếu nó liệt kê file nào đó, gõ tiếp:  git stash
+
+# 4. Chuyển sang nhánh cần đo (hỏi AI tên nhánh nếu không nhớ).
+git checkout <tên-nhánh>
+
+# 5. Cài thư viện. BẮT BUỘC có --legacy-peer-deps.
+npm install --legacy-peer-deps
+
+# 6. Thử máy trước — khoảng 20 giây. PHẢI thấy dòng "✅ ĐẠT" ở cuối.
+bash scripts/bench-macbook.sh --thu
+
+# 7. Chỉ khi bước 6 ✅ mới chạy thật — khoảng 5 phút.
+bash scripts/bench-macbook.sh
 ```
+
+Xong thì gửi lại file **`.city-preview/bench-macbook.txt`**.
+
+### Gặp lỗi này thì gõ cái này
+
+Đúng bốn ca đã xảy ra thật ngày 2026-08-17, theo thứ tự chúng xuất hiện:
+
+| Trên màn hình hiện | Gõ cái này |
+|---|---|
+| `pathspec '<nhánh>' did not match any file(s)` | `git fetch origin` rồi làm lại bước 4 |
+| `Your local changes … would be overwritten by checkout` | `git stash` rồi làm lại bước 4 |
+| `❌ Thiếu thư viện 3D` · hoặc một trang lỗi dài có chữ `Rolldown` / `vite` | `npm install --legacy-peer-deps` |
+| `❌ Đang KHÔNG đứng trong thư mục dự án` | chép lại nguyên dòng `cd "…"` ở bước 1 |
+
+Từ vòng 4 trở đi, `--thu` **kiểm máy trước khi chạy** và tự in ra đúng lệnh cần gõ cho từng ca,
+nên phần lớn bảng trên chỉ còn để tra cứu.
+
+### ⚠️ Một điều CHỈ máy Đàm kiểm được
+
+Thư mục dự án có **dấu tiếng Việt + dấu cách**. macOS lưu tên file ở dạng **NFD** (dấu tách rời
+khỏi chữ cái), Linux thì lưu nguyên byte — nên bài test tự động (`scripts/benchMacbookSource.test.js`)
+chạy trong hộp cát Linux **KHÔNG** chứng minh được hành vi chuẩn hoá thật của macOS. Nếu bộ đo báo
+một lỗi trông vô lý (kiểu "không tìm thấy file" trỏ vào một đường dẫn bị cắt cụt ở giữa, hoặc thoát
+im lặng không nói gì), **hãy nghi ngay cái tên thư mục** và gửi lại nguyên dòng lỗi cho AI.
 
 ---
 

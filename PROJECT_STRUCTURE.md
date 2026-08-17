@@ -296,8 +296,16 @@
 │   ├── cityPreviewSource.test.js # Khoá HAI cái bẫy của file trên mà không gì khác bắt được: dấu
 │   │                           #   huyền (`) trong chú thích làm chết cả template >300 dòng, và
 │   │                           #   nháy kép ASCII trong dòng in ra bị bench-macbook.sh cắt cụt.
-│   └── bench-macbook.sh        #   Một lệnh duy nhất cho Đàm: ma trận 24 cảnh (1100×700) + 1 cảnh
-│                               #   1600×1000, trên GPU thật. `--thu` = thử 1 cảnh ~20s trước.
+│   ├── bench-macbook.sh        #   Một lệnh duy nhất cho Đàm: ma trận 24 cảnh (1100×700) + 1 cảnh
+│   │                           #   1600×1000, trên GPU thật. `--thu` = PREFLIGHT 8 mục (kiểm rẻ
+│   │                           #   trước, đắt sau) rồi thử 1 cảnh ~20s. Mỗi ❌ in ĐÚNG MỘT lệnh
+│   │                           #   cần gõ — nguyên tắc gốc: người nhận phải biết làm gì tiếp.
+│   └── benchMacbookSource.test.js # Khoá hai lời hứa của file trên: (a) preflight chạy được ở
+│                               #   đường dẫn có DẤU TIẾNG VIỆT + DẤU CÁCH (cả NFC lẫn NFD) như
+│                               #   thư mục thật của Đàm; (b) mọi biến đường dẫn đều bọc nháy kép
+│                               #   (đi từng ký tự, vì `"$(… $x)"` trông như đã bọc mà thật ra
+│                               #   không). ⚠️ Linux không chuẩn hoá tên file như macOS ⇒ KHÔNG
+│                               #   bảo chứng được vế NFD thật — xem TECH_DEBT #35.
 ├── supabase/                   # SQL chạy TAY trong Supabase SQL Editor (không tự động migrate)
 │
 ├── CLAUDE.md                   # Quy tắc bắt buộc + Project Governance Protocol + bối cảnh kỹ thuật

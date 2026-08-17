@@ -6,7 +6,28 @@
 > chọn: `ARCHITECTURE_DECISIONS.md`. Nợ kỹ thuật: `TECH_DEBT.md`. Migration: `MIGRATION.md`. Tóm
 > tắt theo mốc: `CHANGELOG.md`.
 > **NGUYÊN TẮC ƯU TIÊN SỐ 1:** (1) mọi phiên AI phải đọc file này + `CLAUDE.md` + các file liên quan TRƯỚC khi làm; (2) sau MỌI cập nhật dù nhỏ, phải cập nhật ngay file này + `CLAUDE.md` + các file liên quan khác.
-> Cập nhật lần cuối: **2026-08-16** — **Phase 9D: MẶT ĐƯỜNG LÀ MỘT HỆ THỐNG, KHÔNG PHẢI MỘT DẢI MÀU**
+> Cập nhật lần cuối: **2026-08-17** — **PERFORMANCE GATE: đo dư địa, KHÔNG hạ chất lượng.** Đàm yêu
+> cầu biết *"thành phố còn có thể đẹp tới đâu"*, và cấm mọi tối ưu trước khi đo. **KHÔNG một dòng
+> `src/` nào bị đụng** — bảng số nói về đúng bản `9b9cb66`. Thêm 3 file công cụ:
+> `scripts/benchCore.mjs` (ruột THUẦN — phân vị nearest-rank, dư địa, danh sách 24 cảnh; 8 bài test
+> đã thử-cho-đỏ), `scripts/benchCore.test.js`, `scripts/bench-suite.mjs` (dựng 24 cảnh = 4 kỷ ×
+> 3 giờ × wide/close; `--page` xuất một trang HTML **tự chứa 1,6 MB** để Đàm bấm đúp trên MacBook).
+> ⚠️ **Hộp cát này KHÔNG trả lời được câu hỏi FPS**: máy đồ hoạ là SwiftShader (tô bằng CPU),
+> ~2,4 giây/khung — sai ba bậc VÀ sai cả hình dạng chi phí. Thứ chuyển được sang máy thật là các con
+> số **không phụ thuộc máy**: tam giác **71.020 / 78.348 / 79.720 / 71.796** (kỷ 3/7/11/14 — kỷ 11
+> nặng nhất) · **12–13 lệnh vẽ cho CẢ thành phố** · 4 shader (5 ban đêm) · 4 texture · bản đồ bóng
+> **2048** desktop / **512** mobile · bộ nhớ JS 57 MB. **Ba phát hiện có giá trị**: (1) chỉ có **HAI**
+> bậc chất lượng được nối dây, và chúng chỉ khác nhau ở **cỡ bản đồ bóng + số đèn** — `0/24 cảnh`
+> chênh nhau một tam giác nào, tức **không có bậc HÌNH HỌC**; `lowDetail` có sẵn trong
+> `createCityScene` nhưng **không ai gọi**; (2) close shot đắt hơn wide **+72%** với **ĐÚNG cùng số
+> tam giác** ⇒ chi phí nằm ở **điểm ảnh**, không ở hình học — đây là trục đắt, và là thứ quyết định
+> nên đầu tư mỹ thuật vào đâu; (3) dựng lại bản đồ bóng tốn **21,7 ms** (2048) vs **3,9 ms** (512),
+> nhưng chỉ xảy ra khi thành phố ĐỔI, không phải mỗi khung. Mở **`TECH_DEBT #31`** (Low —
+> `city.dispose()` không giải phóng bản đồ bóng; app KHÔNG dính vì mỗi cảnh một renderer riêng,
+> nhưng là mìn nếu sau này có ai dùng lại renderer). **736 bài test** (728 + 8 mới), lint sạch, build
+> xanh. **Kết luận A — VISUAL HEADROOM CÒN NHIỀU** (tạm, chờ Đàm chạy trang HTML để có FPS thật).
+>
+> *(Trước đó — 2026-08-16)* — **Phase 9D: MẶT ĐƯỜNG LÀ MỘT HỆ THỐNG, KHÔNG PHẢI MỘT DẢI MÀU**
 > (đóng luôn `TECH_DEBT #30` + `#27`, hai mục đã bị nối cứng với nhau từ Phase 9B). **Nguyên nhân
 > gốc**: bản sắc mặt đường xưa nay tựa lên **đúng MỘT trục là MÀU**, nên toàn bộ sức ép "15 kỷ phải
 > khác nhau" dồn hết vào ĐỘ ĐẬM — mà độ đậm thì có ĐÁY. Phép đẩy lại chỉ có SÀN, không có TRẦN
@@ -98,6 +119,81 @@
 - **Lịch sử git `main` từng bị xáo** (thao tác git song song): bản đang chạy là `eb44638` — chứa ĐỦ mọi việc gần đây (Hỏi Coach offline + fix đêm khuya + Coach offline analyst). Vài commit cũ (`1e27505`, `9fbcd62`) thành dangling, KHÔNG còn trong `git log` nhưng code vẫn nằm trong bản deploy. Đừng hoảng nếu không thấy chúng.
 
 ## 🗒️ Nhật ký cập nhật
+
+### 2026-08-17 — Performance Gate: đo dư địa để biết còn đẹp được tới đâu (KHÔNG hạ chất lượng)
+
+**Yêu cầu của Đàm**: *"đo headroom thực tế trên thiết bị target, không phải để giảm chất lượng hình
+ảnh… MacBook/Desktop visual quality > performance optimization… KHÔNG OPTIMIZE TRƯỚC KHI ĐO."*
+
+**Đã làm** — 3 file công cụ MỚI, **không đụng một dòng `src/` nào** (điều kiện §6 của Đàm: *"không
+benchmark code đang thay đổi"*; bảng số vì vậy nói về đúng bản `9b9cb66`):
+
+| File | Vai trò |
+|---|---|
+| `scripts/benchCore.mjs` | **Ruột THUẦN**: phân vị nearest-rank · `tómTắt` · `dưĐịa`/`hệSốNặngThêm` · danh sách 24 cảnh. Không import three, không đụng DOM. |
+| `scripts/benchCore.test.js` | 8 bài, **cả 8 đã thử-cho-đỏ rồi khôi phục**. |
+| `scripts/bench-suite.mjs` | Lớp vỏ: dựng 24 cảnh, đo, in bảng; `--page` xuất HTML tự chứa 1,6 MB cho Đàm. |
+
+⚠️ **Vì sao phải tách ruột thuần ra**: bộ đo có HAI lối chạy (ngầm ở đây + trên MacBook Đàm). Mỗi
+lối tự tính phân vị theo cách của nó thì hai bảng số không so được với nhau — đúng lỗi hình dạng mà
+`sweep-score.mjs` đã trả giá ở Phase 4G (chép công thức kèm một mặc định KHÁC rồi in ra một bộ số
+bịa hoàn chỉnh). Nay cả hai lối `import` cùng một file.
+
+**Ba cái bẫy đã vá sẵn trong bộ đo** (ghi lại để phiên sau khỏi vấp): (a) `gl.finish()` **nói dối** —
+ANGLE biến nó thành `flush()`, chỉ `gl.readPixels` mới ép GPU làm xong thật; (b) khung hình đầu mang
+theo chi phí biên dịch shader ⇒ vứt 4 khung khởi động; (c) không `city.dispose()` mỗi cảnh thì cảnh
+sau đo lẫn cảnh trước.
+
+**Số ĐO ĐƯỢC — loại chuyển được sang máy thật** (thuộc tính của CẢNH, không của máy):
+
+| Kỷ | Tam giác | Lệnh vẽ | Shader (ngày/đêm) | Geometry | Texture | Bóng |
+|---|---:|---:|---:|---:|---:|---:|
+| 3 | 71.020 | 13 | 4 / 5 | 7 / 8 | 4 | 2048 |
+| 7 | 78.348 | 13 | 4 / 5 | 7 / 8 | 4 | 2048 |
+| 11 | **79.720** (nặng nhất) | 12 | 4 / 5 | 7 / 8 | 4 | 2048 |
+| 14 | 71.796 | 12–13 | 4 / 5 | 7 / 8 | 4 | 2048 |
+
+Bộ nhớ JS 57 MB · DPR app dùng `min(devicePixelRatio, 2)`.
+
+⚠️ **Số FPS/ms trong hộp cát này KHÔNG dùng được**: máy đồ hoạ là SwiftShader (tô bằng CPU),
+~2,4 giây/khung — sai khoảng **ba bậc** so với GPU thật, và sai cả **hình dạng** chi phí. Chúng chỉ
+dùng để so TƯƠNG ĐỐI giữa các cảnh trong cùng một lần chạy.
+
+**Ba phát hiện đáng giá:**
+
+1. **Chỉ có HAI bậc chất lượng được nối dây**, và chúng khác nhau **chỉ ở cỡ bản đồ bóng (2048 vs
+   512) + số đèn đường (3 vs 2)**. Chạy A/B cùng 640×360: `0/24` cảnh chênh nhau **một tam giác hay
+   một lệnh vẽ nào** ⇒ **không tồn tại bậc HÌNH HỌC**. Desktop chỉ đắt hơn mobile **3,7%** ở trạng
+   thái đứng yên (cảnh chênh nhiều nhất là kỷ 11 · 22h, +14,3% — đúng chỗ có cây đèn thứ ba).
+   `createCityScene` có sẵn một bậc thứ BA (`lowDetail` → `detail:'low'`, `skipDeco`, `lampBudget=0`)
+   **nhưng không một ai gọi** — một khả năng đã viết xong mà chưa nối.
+2. **Close shot đắt hơn wide +72%** (1280×720) với **ĐÚNG cùng số tam giác** ⇒ chi phí nằm ở **điểm
+   ảnh phải tô**, không ở hình học. Đây là lý do close shot bắt buộc phải có trong bộ 24 cảnh: chỉ
+   đo wide thì sẽ kết luận sai về bottleneck, và kết luận sai về bottleneck dẫn tới tối ưu nhầm chỗ.
+3. **Chi phí dựng lại bản đồ bóng**: 2048 → **21,7 ms** · 512 → **3,9 ms** (16× texel nhưng chỉ
+   5,6× thời gian ⇒ ở cỡ nhỏ thì chi phí dựng hình lấn át). Nhưng nó chỉ nổ khi thành phố ĐỔI
+   (`shadow.autoUpdate = false`), không phải mỗi khung — nên nó KHÔNG nằm trong bảng FPS, và không
+   được đọc bảng FPS rồi kết luận "bóng miễn phí".
+
+**Nợ mới**: `TECH_DEBT #31` (Priority Low) — `city.dispose()` không giải phóng `sun.shadow.map`
+(+2 texture sống sót mỗi cảnh). **App KHÔNG dính** vì `CityScene3D` huỷ hẳn renderer + context mỗi
+cảnh; chỉ công cụ dính vì công cụ cố ý dùng lại một renderer. Đã vá **phía công cụ**, cố ý KHÔNG
+sửa `src/` để giữ nguyên bản đang đo.
+
+**Bài học mới** (đã ghi `CLAUDE.md`): **công cụ đo nói dối lần thứ 22** — bật
+`renderer.shadowMap.needsUpdate` rồi kết luận "dựng lại bóng tốn ≈ 0 ms" (thực ra **−0,5 ms**, một
+con số vô lý nằm gọn trong nhiễu). three có **HAI cổng nối tiếp**: cổng toàn cục và cổng TỪNG ĐÈN
+(`sun.shadow.autoUpdate/needsUpdate`); qua cổng một mà không qua cổng hai thì đèn bị `continue` bỏ
+qua và phép đo đang so hai khung y hệt nhau. App gói cả chuỗi vào `city.invalidateShadows()` — **phép
+đo phải gọi đúng hàm mà app gọi**. Phép thử vô lý (4 lần dựng bóng/khung → **6,1×/8,0×**) là thứ
+chứng minh cần gạt đã nối.
+
+**Nghiệm thu**: **736 bài test** (728 + 8 mới) · lint sạch · build xanh (3,19 s) · `git status` chỉ
+hiện 3 file `scripts/` mới ⇒ **renderer y hệt `9b9cb66`**.
+
+**Kết luận**: **A — VISUAL HEADROOM CÒN NHIỀU** (tạm thời, chờ Đàm chạy trang HTML để có FPS thật
+trên MacBook). Căn cứ: 71–80k tam giác và 12–13 lệnh vẽ là tải rất nhẹ với mọi GPU đời gần, và
+renderer chạy theo yêu cầu (thành phố đứng yên = **không một khung hình nào** được vẽ).
 
 ### 2026-08-16 — Phase 9D: mặt đường là một HỆ THỐNG, không phải một dải màu (`TECH_DEBT #30` + `#27` đóng)
 

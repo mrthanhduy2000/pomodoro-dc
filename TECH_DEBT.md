@@ -22,6 +22,11 @@
 > ⚠️ **Phase 9D KHÔNG mở mục nợ mới**, nhưng có ghi hai bài học vào `CLAUDE.md` (công cụ đo tự chế
 > nói dối lần thứ 20 và 21 — cả hai đều nằm trong công cụ vừa viết ra trong chính phiên ấy).
 >
+> **Cập nhật 2026-08-17 (Performance Gate)**: mở **#31** (Priority **Low** — bản đồ bóng sống sót
+> qua `city.dispose()`; app hiện KHÔNG dính vì mỗi cảnh một renderer riêng, nhưng là mìn hẹn giờ
+> nếu sau này có ai dùng lại renderer giữa các kỷ). Số mục High/Critical **KHÔNG đổi**: vẫn 1 mục
+> High (#14) + 3 mục Medium-High (#3, #13, #24) → xa ngưỡng 8–10, KHÔNG cần Maintenance Sprint.
+>
 > **(Ảnh chụp trước đó, sau Phase 9B)**: thêm **#30** (Medium-High —
 > mặt đường render DƯỚI ngưỡng mắt đọc được xét riêng vật liệu; đã có bản vá đo xong nhưng CỐ Ý
 > chưa ship vì nó làm đỏ một lời hứa đang có). ⚠️ **#30 và #27 nay là MỘT cặp phải làm cùng nhau** —
@@ -1698,4 +1703,36 @@
 - **Estimated Complexity**: (a) cao và rủi ro · (b) thấp nhưng đắt tam giác
 - **Blocking Conditions**: không có — nhưng ĐỪNG làm nếu chỉ vì cọ
 - **Review Trigger**: khi có một tính năng KHÁC cần trục nghiêng, hoặc khi Đàm nói cọ trông sai
+- **Owner**: phiên AI kế tiếp · **Status**: Open
+
+---
+
+## #31 — `city.dispose()` KHÔNG giải phóng bản đồ bóng (app hiện KHÔNG dính, công cụ thì dính)
+
+- **Tên**: Bản đồ bóng của mặt trời sống sót qua `city.dispose()`
+- **Module**: `src/components/city/render3d/sceneGraph.js` (hàm `dispose()`, ~dòng 1167)
+- **Priority**: Low · **Severity**: Low hôm nay, Medium nếu kiến trúc đổi
+- **Impact**: Mỗi lần dựng-rồi-dọn một cảnh để lại **+2 texture sống sót**. Bản đồ bóng desktop là
+  2048×2048; chạy 24 cảnh liên tiếp trên MỘT renderer để lại gần **800 MB bộ nhớ đồ hoạ**.
+- **Root Cause**: `dispose()` duyệt `meshes` + `disposables` — hai danh sách chứa những thứ nó TỰ
+  tạo ra. Bản đồ bóng thì không nằm trong danh sách nào: nó do chính three tạo ra **muộn hơn**, ở
+  lần render đầu tiên, và treo vào `sun.shadow.map`. Đây là hình dạng sai quen thuộc — *dọn theo
+  danh sách mình ghi, trong khi có thứ được sinh ra ngoài danh sách ấy*.
+- **Current Risk**: **App KHÔNG dính.** `CityScene3D.jsx` (`runtime.dispose()`, ~dòng 422) gọi
+  `city.dispose()` RỒI `renderer.dispose()` + `renderer.forceContextLoss()` — mất context thì cả
+  bối cảnh đồ hoạ bị thu hồi, kể cả những texture không ai gọi tên. Chỉ CÔNG CỤ dính, vì công cụ
+  cố ý dùng lại một renderer cho nhiều cảnh (`bench-suite.mjs`, `--sweep`).
+- **Future Risk**: ⚠️ Đây là **mìn hẹn giờ**, không phải lỗi đang chảy máu. Ngày nào có ai làm app
+  dùng lại renderer khi chuyển kỷ — một tối ưu hoàn toàn hợp lý và rất dễ được đề xuất, vì dựng lại
+  context tốn cả trăm mili-giây — thì rò rỉ này thức dậy trên máy Đàm, và triệu chứng sẽ là *"đi qua
+  vài kỷ trong bảo tàng thì máy nóng dần rồi tab sập"*, một triệu chứng KHÔNG trỏ về đây chút nào.
+- **Recommended Solution**: một dòng trong `dispose()` — `sun?.shadow?.map?.dispose?.()`. Kèm một
+  bài test đòi số texture sau dispose KHÔNG tăng qua nhiều vòng dựng-dọn (đã đo được bằng
+  `.city-preview/.leak-work/`, hiệu số rất rõ: bật cập nhật bóng thì 1→3→5→7…, tắt thì đứng yên).
+- **Estimated Complexity**: Thấp (1 dòng + 1 bài test)
+- **Blocking Conditions**: Không có. CỐ Ý chưa sửa trong phiên Performance Gate vì Đàm đã yêu cầu
+  *"không benchmark code đang thay đổi"* — sửa renderer giữa lúc đo thì bảng số không còn nói về
+  bản `9b9cb66` nữa. Bản vá đã áp **phía công cụ** để bộ đo không tự làm hỏng con số nó đang đo.
+- **Review Trigger**: NGAY khi có ai đề xuất dùng lại renderer giữa các cảnh/kỷ; hoặc phiên nào
+  đụng vào `dispose()` vì lý do khác thì sửa luôn.
 - **Owner**: phiên AI kế tiếp · **Status**: Open

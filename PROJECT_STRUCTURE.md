@@ -191,7 +191,7 @@
 │   │   │   │                      #   rare/epic, tức 30/75 căn trước đây là hộp trơn)
 │   │   │   ├── groundFloor.js     # BẢNG TẦNG TRỆT 15 KỶ (Phase 10, ADR-026): cửa ra vào · bậc
 │   │   │   │                      #   thềm · MỘT đặc trưng tầng trệt theo kỷ (hiên cột · ô văng ·
-│   │   │   │                      #   ban công · cửa chớp · biển hiệu). Nguồn DUY NHẤT trả lời
+│   │   │   │                      #   ban công · cửa chớp · biển hiệu · hàng vòm). Nguồn DUY NHẤT trả lời
 │   │   │   │                      #   "đứng trước cửa một công trình ở kỷ này thì thấy gì".
 │   │   │   │                      #   BẢNG nằm ở `eraStyle.js` (trường `groundFloor`), HÌNH nằm ở
 │   │   │   │                      #   đây, `buildingSpec.js` chỉ ĐỌC — giống hệt streetStyle/flora
@@ -202,9 +202,18 @@
 │   │   │   │                      #   ⚠️ MỌI kích thước là TỈ LỆ bề ngang khối, có TRẦN kẹp
 │   │   │   │                      #   (`DOOR_MAX_WIDTH_RATIO`) — số tuyệt đối áp lên khối chênh
 │   │   │   │                      #   nhau vài lần thì sớm muộn cũng sai (bài học `eaves` Phase 7C)
-│   │   │   │                      #   ⚠️ Kỷ chưa nghiên cứu khai `door: 'legacy'` — trạng thái
-│   │   │   │                      #   TƯỜNG MINH ĐẾM ĐƯỢC, có test khoá đúng 12 kỷ, KHÔNG im lặng
-│   │   │   │                      #   rơi về mặc định
+│   │   │   │                      #   ⚠️ Bước 2 (ADR-027) ĐÃ XOÁ `door: 'legacy'`: cả 15 kỷ khai
+│   │   │   │                      #   đủ số đo, `isValidGroundFloor` TỪ CHỐI THẲNG dòng thiếu.
+│   │   │   │                      #   5 kiểu cửa (`flap` tấm mềm · `panel` · `double` · `sliding`
+│   │   │   │                      #   · `glazed` mặt kính) — thêm kiểu thứ 6 phải trả lời được
+│   │   │   │                      #   "phục vụ ≥2 kỷ, và diễn đạt hình học mà 5 kiểu kia không có"
+│   │   │   │                      #   ⚠️ BẢN SẮC ĐO BẰNG 8 TRỤC CẤU TRÚC (`groundFloor.test.js`,
+│   │   │   │                      #   cùng khuôn streetStyle): 105/105 cặp ≥3/8 · trung vị 6/8 ·
+│   │   │   │                      #   mọi trục còn sống. Kỷ nào trông giống kỷ khác thì sửa BẢNG,
+│   │   │   │                      #   KHÔNG hạ sàn — kỷ 4 đã phải lùi cửa sâu hơn vì lý do đó
+│   │   │   │                      #   ⚠️ LỊCH SỬ LÀ MỘT RÀNG BUỘC CÓ TEST: kỷ cổ không được có
+│   │   │   │                      #   ban công/biển hiệu/hàng vòm, kỷ hiện đại không được giữ tấm
+│   │   │   │                      #   da thời đồ đá — khoá CẢ HAI CHIỀU
 │   │   │   ├── buildingSpec.js    # NƠI 3 TRỤC GẶP NHAU: (kỷ × loại × độ hiếm) → mô tả hình học
 │   │   │   ├── streetStyle.js     # BẢNG ĐƯỜNG PHỐ 15 KỶ (Phase 9D, ADR-025): bề rộng đại lộ · bề
 │   │   │   │                      #   rộng ngõ · vật liệu lát · cỡ viên · độ mòn · bó vỉa · vỉa hè

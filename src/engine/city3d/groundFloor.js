@@ -61,37 +61,52 @@ import { unit } from '../hashId';
 
 /**
  * Kiểu cánh cửa. Mỗi giá trị là một cách MỞ khác nhau, không phải cùng một tấm ván đổi màu:
- *   `legacy`  ⚠️ TẠM THỜI — xem khối chú thích ngay dưới.
+ *   `flap`    tấm mềm treo trên lanh tô — da thú, chiếu sậy, rèm cỏ. KHÔNG có bản lề, KHÔNG có
+ *             cánh cứng: nó rủ xuống và bị vén lên. Đây là cái cửa của thời chưa có bản lề.
  *   `panel`   cửa bức bàn: nhiều tấm ván ghép trong khung, tháo rời được (Việt Nam, Đông Á)
  *   `double`  hai cánh cao có trụ giữa — porte cochère, cửa chung cư Pháp
  *   `sliding` cửa lùa: hai tấm trượt chồng mép, không có bản lề (Nhật Bản)
+ *   `glazed`  bay kính cao chạy suốt tầng trệt, khung mảnh chia ô — sảnh kính thế kỷ 20
  *
  * ⚠️ DANH SÁCH NÀY CHỈ CHỨA THỨ ĐÃ DỰNG ĐƯỢC, KHÔNG CHỨA THỨ ĐỊNH LÀM. Khai một kiểu chưa có mã
  * dựng thì kỷ ấy nhận về một cái lỗ trống trong im lặng — đúng cái phễu mà `PAVING_KINDS` của
  * `streetStyle.js` tránh bằng cách để `isValidStreetStyle` từ chối thẳng. `groundFloor.test.js`
  * bắt MỌI kiểu trong danh sách này phải sinh ra khối thật.
+ *
+ * ⚠️ VÌ SAO BƯỚC 2 THÊM ĐÚNG HAI KIỂU, KHÔNG THÊM NỮA. Luật của Đàm là *"KHÔNG viết thêm mã hình
+ * học mới trừ khi một kỷ thật sự cần hình chưa có"*. Hai kiểu này là hai ca ấy, và cả hai đều do
+ * chính Đàm nêu ra:
+ *   - `flap` — *"kỷ 1–2 (đồ đá): cửa phải THÔ SƠ đúng thời — khung gỗ, tấm da, rèm cỏ. Đừng bịa
+ *     cho sang."* Dựng cửa bức bàn cho một cái lều da thú là nói dối lịch sử tới **tám nghìn năm**:
+ *     bản lề kim loại chưa tồn tại, ván cưa phẳng cũng chưa. Không có kiểu nào trong ba kiểu cũ tả
+ *     được một tấm mềm rủ xuống.
+ *   - `glazed` — *"kỷ 11 Mỹ → sảnh kính cao hai tầng, bậc đá rộng."* Ba kiểu cũ đều là **cánh** có
+ *     bề rộng bằng cái cửa; sảnh kính thì ngược lại, nó là một MẶT TIỀN TRONG SUỐT rộng gấp mấy
+ *     lần lối đi, và thứ mắt đọc ra là các đố khung chia ô chứ không phải mấy cái cánh.
+ * Mọi kỷ khác đều trả lời được bằng ba kiểu cũ, nên chúng dùng lại — thêm kiểu cho đủ mâm chính là
+ * thứ luật trên cấm.
  */
-export const DOOR_KINDS = ['legacy', 'panel', 'double', 'sliding'];
+export const DOOR_KINDS = ['flap', 'panel', 'double', 'sliding', 'glazed'];
 
 /**
- * ⚠️ `legacy` LÀ MỘT TRẠNG THÁI TẠM, CÓ HẠN, VÀ CỐ Ý ỒN ÀO.
+ * ══════════════════════════════════════════════════════════════════════════════════════════════
+ * (LỊCH SỬ) `legacy` ĐÃ CHẾT Ở BƯỚC 2 — GIỮ LẠI ĐOẠN NÀY VÌ CÁCH NÓ CHẾT MỚI LÀ BÀI HỌC
+ * ══════════════════════════════════════════════════════════════════════════════════════════════
+ * Bước 1 chỉ nghiên cứu 3 kỷ (6 · 9 · 13) theo lệnh Đàm — *"nếu hướng mỹ thuật sai thì sai ở kỷ
+ * thứ 3 rẻ hơn nhiều so với sai ở kỷ thứ 15"*. Nhưng kiến trúc lại đòi trường `groundFloor` phải
+ * bắt buộc đủ 15 kỷ. Hai đòi hỏi ấy gặp nhau ở một giá trị thứ ba: 12 kỷ chưa nghiên cứu khai
+ * thẳng `door: 'legacy'`, nghĩa là *"giữ nguyên cửa cũ, tôi chưa trả lời được câu hỏi về nước
+ * này"*, và một bài test khoá ĐÚNG con số 12.
  *
- * Đàm yêu cầu làm từng bước: *"Bước 1: làm cửa ra vào cho ĐÚNG 3 kỷ (6 · 9 · 13), chụp cận cảnh,
- * ĐO lại, rồi DỪNG và hỏi… nếu hướng mỹ thuật sai thì sai ở kỷ thứ 3 rẻ hơn nhiều so với sai ở kỷ
- * thứ 15."* Nhưng kiến trúc lại đòi trường `groundFloor` phải **bắt buộc đủ 15 kỷ** — trường tuỳ
- * chọn thì kỷ thêm sau này rơi về mặc định trong im lặng.
+ * Điểm đáng giữ lại: **cái con số 12 ấy chính là thứ giết `legacy` đúng hạn.** Một chỗ trống hay
+ * một `null` thì im lặng — nó sẽ sống thêm nhiều phase vì không ai đếm được còn bao nhiêu. Chữ
+ * `legacy` thì đếm được, và bài test khoá số 12 buộc Bước 2 phải sửa chính nó mới chạy xanh trở
+ * lại. Bài test ấy nay đổi vế: nó khoá **KHÔNG kỷ nào còn được để trống**, tức đúng cùng một luật
+ * đọc theo chiều ngược lại.
  *
- * Hai đòi hỏi ấy gặp nhau ở đây: cả 15 kỷ ĐỀU phải khai `groundFloor`, nhưng 12 kỷ chưa nghiên cứu
- * khai thẳng `door: 'legacy'`, nghĩa là *"giữ nguyên cái cửa cũ, tôi chưa trả lời được câu hỏi về
- * nước này"*. Khi ấy `emitGroundFloor` KHÔNG dựng gì và `buildingSpec.js` giữ nguyên dòng cửa cũ
- * ⇒ 12 kỷ đó ra mô tả **y hệt trước Phase 10**, kiểm được bằng test.
- *
- * Vì sao không để trống hoặc `null`: một chỗ trống thì im lặng, còn chữ `legacy` thì đếm được.
- * `groundFloor.test.js` khoá ĐÚNG con số 12 và ĐÚNG ba kỷ đã nghiên cứu — nên trạng thái dở dang
- * này không thể trôi thành vĩnh viễn mà không ai để ý. Bước 2 đưa con số ấy về 0 và xoá luôn
- * `'legacy'` khỏi danh sách trên; lúc đó bài test sẽ bắt buộc phải sửa, đó là chủ đích.
+ * ⇒ Luật rút ra cho mọi trạng thái dở dang sau này: **trạng thái "chưa làm" phải TƯỜNG MINH và
+ * ĐẾM ĐƯỢC**, và con số đếm được ấy phải nằm trong một bài test. Đừng để nó rơi về mặc định.
  */
-export const LEGACY_DOOR = 'legacy';
 
 /**
  * Đặc trưng tầng trệt. **Mỗi kỷ chọn ĐÚNG MỘT** cho công trình chính và ĐÚNG MỘT cho nhà dân —
@@ -103,8 +118,16 @@ export const LEGACY_DOOR = 'legacy';
  *   `balcony`  ban công tầng hai — sàn đua ra + lan can
  *   `shutters` cửa chớp — hai cánh gỗ kẹp hai bên cửa
  *   `sign`     biển hiệu khối — tấm đứng bám mặt tiền cạnh cửa
+ *   `arcade`   hàng vòm cuốn chạy suốt mặt tiền — lối đi có mái nằm TRONG lòng công trình
+ *
+ * ⚠️ `arcade` LÀ ĐẶC TRƯNG DUY NHẤT BƯỚC 2 THÊM VÀO, và nó khác `porch` ở một điểm không thể diễn
+ * đạt lại được bằng `porch`: **hàng hiên cột thì ĐUA RA khỏi nhà, hàng vòm thì KHOÉT VÀO trong
+ * nhà.** Loggia Firenze, Praça do Comércio Lisboa và five-foot way Singapore đều là lối đi công
+ * cộng nằm DƯỚI thân nhà — tường ngoài lùi vào, còn cột và vòm thì đứng đúng trên ranh giới cũ.
+ * Dựng nó bằng `porch` sẽ ra một cái mái đua trước một bức tường phẳng, tức mất hẳn cái bóng đổ
+ * sâu vốn là toàn bộ lý do người ta xây arcade ở xứ nắng.
  */
-export const GROUND_FEATURES = ['none', 'porch', 'awning', 'balcony', 'shutters', 'sign'];
+export const GROUND_FEATURES = ['none', 'porch', 'awning', 'balcony', 'shutters', 'sign', 'arcade'];
 
 /** Vai màu được phép dùng cho khung cửa. `none` = không có khung, cửa là một lỗ trên tường. */
 export const FRAME_ROLES = ['none', 'wood', 'stone', 'trim'];
@@ -191,10 +214,10 @@ export function isValidGroundFloor(gf) {
   if (!FEATURE_SET.has(gf.feature)) return false;
   if (!FEATURE_SET.has(gf.vernacularFeature)) return false;
   if (typeof gf.note !== 'string' || gf.note.length < 8) return false;
-  // Kỷ chưa nghiên cứu chỉ cần khai đủ ba trường trên — nó cố ý KHÔNG có số đo nào, vì nó không
-  // dựng gì cả. Bắt nó khai số đo là bắt viết ra những con số chưa ai đo, và những con số ấy sẽ
-  // được người sau đọc như thể đã được cân nhắc.
-  if (gf.door === LEGACY_DOOR) return gf.feature === 'none' && gf.vernacularFeature === 'none';
+  // ⚠️ TỪ BƯỚC 2 KHÔNG CÒN ĐƯỜNG THOÁT NÀO. Bước 1 có một nhánh cho `legacy` được miễn khai số đo;
+  // nhánh ấy đã bị xoá cùng với chính giá trị `legacy`. Nay MỌI dòng phải khai đủ, và khai sai thì
+  // bị từ chối thẳng chứ không tự chữa — tự chữa là cách một bảng 15 dòng lặng lẽ thoái hoá về 1
+  // dòng (bẫy `MIN_STONE` của `streetStyle.js`, Phase 9D).
   if (!FRAME_SET.has(gf.frame)) return false;
   if (!Number.isFinite(gf.doorWidth) || gf.doorWidth <= 0 || gf.doorWidth > DOOR_MAX_WIDTH_RATIO) return false;
   if (!Number.isFinite(gf.doorTall) || gf.doorTall <= 0 || gf.doorTall > 1.4) return false;
@@ -248,7 +271,7 @@ export function doorMetrics(gf, { w, height, storyHeight, plain = false } = {}) 
  */
 export function emitGroundFloor(out, ctx) {
   const { gf } = ctx;
-  if (!isValidGroundFloor(gf) || gf.door === LEGACY_DOOR) return false;
+  if (!isValidGroundFloor(gf)) return false;
 
   const { bpId = 'bp', index = 0, x = 0, z = 0, base = 0, w = 1, d = 1, height = 1, ry = 0,
     storyHeight = 0.7, plain = false, symmetric = false } = ctx;
@@ -341,6 +364,35 @@ function emitLeaf(out, { gf, cx, face, sill, m, ry, plain, symmetric, seed }) {
   const z = face - Math.max(0, gf.recess) * DOOR_RECESS_DEPTH + DOOR_LEAF_RELIEF * 0.4;
 
   switch (gf.door) {
+    case 'flap': {
+      // Tấm mềm treo trên lanh tô: da thú căng, chiếu sậy, rèm cỏ bện. KHÔNG có bản lề — thời này
+      // chưa có bản lề — nên nó không phải một cánh cứng mà là một tấm RỦ XUỐNG, và thứ mắt đọc ra
+      // là các NẾP GẤP dọc cùng cái mép dưới không thẳng.
+      //
+      // ⚠️ SỐ NẾP VÀ ĐỘ VÉN ĐỀU THEO HẠT GIỐNG. Một khu lều mà tấm nào cũng vén đúng một kiểu thì
+      // đọc ra là hàng công nghiệp — mà cả điểm của kỷ 1–2 là chúng KHÔNG phải hàng công nghiệp.
+      // ⚠️ NHÀ DÂN ÍT NẾP HƠN, và đây là chuyện thật chứ không phải một khoản cắt cho rẻ: tấm che
+      // cửa một túp lều là một hai mảnh da khâu lại, còn tấm của gian lớn là bộ da lớn xếp nếp —
+      // ở thời chưa dệt được vải khổ rộng thì SỐ MẢNH chính là thước đo của cải.
+      const folds = plain ? 2 + Math.floor(seed('folds') * 2) : 3 + Math.floor(seed('folds') * 3);
+      const gap = m.doorW * 0.02;
+      const fw = (m.doorW - gap * (folds - 1)) / folds;
+      if (fw <= 0) break;
+      // Tấm bị vén lên một góc: mép dưới của mỗi nếp cao thấp khác nhau, và cả tấm hở ra ở chân.
+      const lift = 0.1 + seed('lift') * 0.22;
+      for (let i = 0; i < folds; i += 1) {
+        const t = (i + 0.5) / folds - 0.5;
+        // Nếp giữa rủ dài nhất, nếp mép bị vén cao hơn — đó là hình một tấm mềm bị vén sang bên.
+        const edge = Math.abs(t) * 2;
+        const drop = m.doorH * (1 - lift * edge);
+        out.push(prism({
+          x: cx + t * m.doorW, z: z + (i % 2) * DOOR_LEAF_RELIEF * 0.3,
+          y: sill + m.doorH - drop,
+          w: fw, d: DOOR_LEAF_RELIEF * 0.7, h: drop, sides: 4, ry, role: 'wood',
+        }));
+      }
+      break;
+    }
     case 'panel': {
       // Cửa bức bàn: các tấm ván ĐỨNG ghép trong khung, tháo rời được từng tấm.
       // ⚠️ SỐ TẤM THEO HẠT GIỐNG, không viết cứng. Bài học Phase 8D: viết cứng thì "40 hạt chỉ ra
@@ -403,6 +455,39 @@ function emitLeaf(out, { gf, cx, face, sill, m, ry, plain, symmetric, seed }) {
       }
       break;
     }
+    case 'glazed': {
+      // Sảnh kính: KHÔNG phải một cánh cửa mà là một MẶT TIỀN TRONG SUỐT. Ba kiểu cửa cổ đều rộng
+      // bằng lối đi; cái này rộng gấp mấy lần, và thứ mắt đọc ra không phải cánh mà là các ĐỐ
+      // KHUNG chia ô kính — cùng nhịp chia với `windows: 'curtain'`/`'grid'` của các kỷ này.
+      //
+      // ⚠️ DÙNG VAI `glass` — vai này BAN ĐÊM TỰ PHÁT SÁNG (xem `parts.js`), và đó chính là điều
+      // đúng: một sảnh kính tối om lúc 22h là một sảnh chưa xây xong. Đây cũng là lý do KHÔNG dựng
+      // nó bằng vai `dark` như lòng cửa của bốn kiểu kia.
+      const bays = 2 + Math.floor(seed('bays') * 3);
+      const mullion = Math.max(0.012, m.doorW * 0.045);
+      out.push(prism({
+        x: cx, z, y: sill,
+        w: m.doorW * 0.98, d: DOOR_LEAF_RELIEF * 0.6, h: m.doorH * 0.98,
+        sides: 4, ry, role: 'glass',
+      }));
+      // Đố đứng chia ô. `bays` ô ⇒ `bays - 1` đố ở giữa.
+      for (let i = 1; i < bays; i += 1) {
+        const t = i / bays - 0.5;
+        out.push(prism({
+          x: cx + t * m.doorW, z: z + DOOR_LEAF_RELIEF * 0.35, y: sill,
+          w: mullion, d: DOOR_LEAF_RELIEF * 0.7, h: m.doorH * 0.98,
+          sides: 4, ry, role: gf.frame === 'none' ? 'trim' : gf.frame,
+        }));
+      }
+      // Đố ngang ở tầm tay — cái vạch này là thứ nói cho mắt biết đây là cửa cho NGƯỜI đi vào chứ
+      // không phải một ô kính suốt trần, và nó đặt theo tỉ lệ chiều cao cửa nên đúng ở mọi cỡ nhà.
+      out.push(prism({
+        x: cx, z: z + DOOR_LEAF_RELIEF * 0.35, y: sill + m.doorH * 0.62,
+        w: m.doorW * 0.98, d: DOOR_LEAF_RELIEF * 0.7, h: mullion,
+        sides: 4, ry, role: gf.frame === 'none' ? 'trim' : gf.frame,
+      }));
+      break;
+    }
     default:
       break;
   }
@@ -410,7 +495,7 @@ function emitLeaf(out, { gf, cx, face, sill, m, ry, plain, symmetric, seed }) {
 
 /** MỘT đặc trưng mặt phố. Xem `GROUND_FEATURES` — mỗi kỷ chọn đúng một. */
 function emitFeature(out, name, ctx) {
-  const { cx, face, x, base, w, d, height, m, sill, ry, storyHeight, symmetric, seed } = ctx;
+  const { cx, face, x, base, w, d, height, m, sill, ry, storyHeight, plain, symmetric, seed } = ctx;
   const storey = Math.max(0.2, storyHeight);
 
   switch (name) {
@@ -459,37 +544,51 @@ function emitFeature(out, name, ctx) {
       break;
     }
     case 'balcony': {
-      // Ban công tầng hai: sàn đua ra + lan can. Luật quy hoạch Haussmann bắt buộc ban công chạy
-      // LIỀN hết mặt tiền ở tầng hai — nên nó rộng bằng thân nhà, không chỉ rộng bằng cái cửa.
+      // Ban công tầng hai: sàn đua ra + lan can.
+      //
+      // ⚠️ HAI CỠ, VÀ SỰ KHÁC NHAU LÀ LỊCH SỬ CHỨ KHÔNG PHẢI LOD BỊA RA. Ban công của công trình
+      // chính là **ban công quy chế**: luật quy hoạch Haussmann bắt buộc nó chạy LIỀN hết mặt tiền
+      // tầng hai, có sàn đá gác trên congxon chạm. Ban công của nhà dân là thứ khác hẳn — varanda
+      // sắt hẹp của nhà Pombalino Lisboa, và **cầu thang thoát hiểm** của nhà cho thuê New York
+      // (thứ luật Tenement House Act bắt phải có, nên nó phủ kín mặt tiền khu lao động). Cả hai
+      // đều là một chiếu sắt rộng bằng MỘT ô cửa sổ, treo trên giá sắt mảnh — không phải một dải
+      // đá chạy suốt nhà.
+      // ⇒ Bản `plain` hẹp hơn, ít con tiện hơn, và KHÔNG có congxon đá. Nó rẻ hơn thật, nhưng cái
+      // rẻ ấy là hệ quả của việc dựng đúng thứ ngoài đời, không phải mục tiêu.
+      const span = plain ? Math.min(w * 0.46, m.doorW * 1.7) : w * 0.94;
       const y = base + Math.min(height * 0.62, storey * 1.05);
-      const reach = Math.min(d * 0.2, w * 0.14);
-      const railH = Math.max(0.05, storey * 0.2);
+      const reach = Math.min(d * 0.2, w * (plain ? 0.1 : 0.14));
+      const railH = Math.max(0.05, storey * (plain ? 0.16 : 0.2));
+      const bx = plain ? cx : x;
       out.push(prism({
-        x, z: face + reach / 2, y,
-        w: w * 0.94, d: reach, h: Math.max(0.02, reach * 0.28), sides: 4, ry, role: 'trim',
+        x: bx, z: face + reach / 2, y,
+        w: span, d: reach, h: Math.max(0.02, reach * 0.28), sides: 4, ry, role: 'trim',
       }));
-      // Lan can sắt uốn: một dải mảnh + các con tiện đứng. Số con tiện theo hạt giống.
-      const balusters = 5 + Math.floor(seed('bal') * 4);
+      // Lan can: một dải mảnh + các con tiện đứng. Số con tiện theo hạt giống.
+      const balusters = plain ? 3 + Math.floor(seed('bal') * 2) : 5 + Math.floor(seed('bal') * 4);
       for (let i = 0; i < balusters; i += 1) {
         const t = i / (balusters - 1) - 0.5;
         out.push(prism({
-          x: x + t * w * 0.9, z: face + reach, y: y + reach * 0.28,
+          x: bx + t * span * 0.96, z: face + reach, y: y + reach * 0.28,
           w: Math.max(0.012, w * 0.016), d: Math.max(0.012, w * 0.016),
           h: railH, sides: 4, ry, role: 'trim',
         }));
       }
       out.push(prism({
-        x, z: face + reach, y: y + reach * 0.28 + railH,
-        w: w * 0.94, d: Math.max(0.016, reach * 0.24), h: Math.max(0.016, railH * 0.18),
+        x: bx, z: face + reach, y: y + reach * 0.28 + railH,
+        w: span, d: Math.max(0.016, reach * 0.24), h: Math.max(0.016, railH * 0.18),
         sides: 4, ry, role: 'trim',
       }));
-      // Congxon đỡ sàn — ban công đá mà không có gì đỡ thì đọc ra là một tấm dán.
-      for (const s of [-1, 1]) {
-        out.push(prism({
-          x: x + s * w * 0.36, z: face + reach * 0.45, y: y - railH * 0.42,
-          w: Math.max(0.02, w * 0.035), d: reach * 0.8, h: railH * 0.42,
-          sides: 4, taper: 0.4, ry, role: 'stone',
-        }));
+      // Congxon đá đỡ sàn — CHỈ ở công trình chính: một dải đá chạy suốt mặt tiền mà không có gì
+      // đỡ thì đọc ra là tấm dán. Chiếu sắt hẹp thì treo trên giá sắt, không cần congxon.
+      if (!plain) {
+        for (const s of [-1, 1]) {
+          out.push(prism({
+            x: x + s * w * 0.36, z: face + reach * 0.45, y: y - railH * 0.42,
+            w: Math.max(0.02, w * 0.035), d: reach * 0.8, h: railH * 0.42,
+            sides: 4, taper: 0.4, ry, role: 'stone',
+          }));
+        }
       }
       break;
     }
@@ -531,6 +630,58 @@ function emitFeature(out, name, ctx) {
         x: bx, z: face + DOOR_FRAME_RELIEF * 0.4,
         y: by + bh, w: bw * 1.15, d: Math.max(0.016, bw * 0.5),
         h: Math.max(0.016, bw * 0.22), sides: 4, ry, role: 'trim',
+      }));
+      break;
+    }
+    case 'arcade': {
+      // Hàng vòm cuốn: lối đi có mái nằm TRONG lòng công trình, không đua ra ngoài như `porch`.
+      // Loggia Firenze · Praça do Comércio Lisboa · five-foot way Singapore — cả ba đều là lối đi
+      // công cộng luồn dưới thân nhà, và thứ mắt đọc ra là **nhịp lặp cột–vòm–cột** cùng cái bóng
+      // sâu bên trong.
+      //
+      // Dựng bằng ba thành phần, mỗi thành phần một việc:
+      //   1. lòng arcade — mảng tối lùi vào, chính là cái bóng
+      //   2. các trụ đứng trên ranh giới mặt tiền cũ
+      //   3. thanh cuốn nối đầu trụ (một khối bẹt trên mỗi nhịp) + dầm ngang gác lên tất cả
+      // ⚠️ SỐ NHỊP THEO HẠT GIỐNG, và nó phải là một SỐ ĐẾM chứ không phải bề rộng cố định: một
+      // dãy phố mà nhà nào cũng đúng 4 vòm đọc ra là hàng in, còn nhà nào cũng vòm rộng 0,3 thì
+      // nhà to sẽ có 12 vòm và nhà nhỏ có 1 (đúng bẫy số tuyệt đối, Phase 7C).
+      const depth = Math.min(d * 0.3, w * 0.22);
+      const openH = Math.min(height * 0.58, storey * 0.98);
+      // ⚠️ NHÀ DÂN ÍT NHỊP HƠN — cũng là sự thật, không phải khoản cắt. Praça do Comércio và loggia
+      // Firenze là hàng vòm hàng chục nhịp chạy suốt một quảng trường; còn một căn nhà phố
+      // Singapore rộng đúng vài mét thì five-foot way của nó chỉ có MỘT hoặc HAI nhịp. Bề rộng nhà
+      // quyết định số nhịp, và nhà dân thì hẹp.
+      const bays = plain ? 1 + Math.floor(seed('bays') * 2) : 3 + Math.floor(seed('bays') * 3);
+      const pierW = Math.max(0.03, w * 0.06);
+      // 1. lòng arcade
+      out.push(prism({
+        x, z: face - depth / 2, y: base,
+        w: w * 0.94, d: depth, h: openH, sides: 4, ry, role: 'dark',
+      }));
+      // 2 + 3. trụ và thanh cuốn
+      const span = (w * 0.94) / bays;
+      for (let i = 0; i <= bays; i += 1) {
+        const t = i / bays - 0.5;
+        out.push(prism({
+          x: x + t * w * 0.94, z: face, y: base,
+          w: pierW, d: depth * 0.55, h: openH, sides: 4, ry, role: 'stone',
+        }));
+      }
+      for (let i = 0; i < bays; i += 1) {
+        const t = (i + 0.5) / bays - 0.5;
+        // Thanh cuốn: khối bẹt hẹp hơn nhịp, đặt ngay dưới dầm. Ở cỡ hiển thị thật nó đọc ra là
+        // đỉnh vòm — dựng cả cung tròn là tiêu tam giác cho thứ chưa tới hai điểm ảnh.
+        out.push(prism({
+          x: x + t * w * 0.94, z: face, y: base + openH - pierW * 0.9,
+          w: span * 0.62, d: depth * 0.55, h: pierW * 0.9, sides: 4, ry, role: 'stone',
+        }));
+      }
+      // Dầm ngang gác lên toàn bộ hàng trụ — thứ nói cho mắt biết tường phía trên ĐỨNG TRÊN arcade
+      // chứ không lơ lửng.
+      out.push(prism({
+        x, z: face - depth * 0.2, y: base + openH,
+        w: w * 0.98, d: depth * 0.9, h: Math.max(0.03, pierW * 0.8), sides: 4, ry, role: 'stone',
       }));
       break;
     }

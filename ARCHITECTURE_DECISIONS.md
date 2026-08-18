@@ -11,6 +11,95 @@
 
 ---
 
+## ADR-027 — Trải tầng trệt ra 15 kỷ: thêm ĐÚNG hai kiểu cửa + một đặc trưng, và đo bản sắc bằng 8 TRỤC CẤU TRÚC thay vì bằng mắt
+
+- **Ngày**: 2026-08-18 (Phase 10, Bước 2)
+- **Bối cảnh**: Đàm đã duyệt hướng mỹ thuật của Bước 1 (kỷ 6 · 9 · 13) và ra lệnh *"làm nốt 12
+  kỷ"*, kèm một ràng buộc gắt trong chương trình làm việc: **"KHÔNG viết thêm mã hình học mới trừ
+  khi một kỷ thật sự cần hình chưa có"**, và **"mỗi kỷ đúng một-hoặc-hai đặc điểm, không rắc đều"**.
+  Riêng kỷ 1–2 anh nói thẳng: *"cửa phải THÔ SƠ đúng thời — khung gỗ, tấm da, rèm cỏ. Đừng bịa cho
+  sang."*
+
+- **Vấn đề**: bốn kiểu cửa của Bước 1 (`panel` · `double` · `sliding` + trạng thái `legacy`) và sáu
+  đặc trưng (`porch` · `awning` · `balcony` · `shutters` · `sign` · `none`) đủ cho ba kỷ đã nghiên
+  cứu, nhưng KHÔNG đủ cho 12 kỷ còn lại theo đúng nghĩa lịch sử. Hai chỗ thiếu thật:
+  1. **Kỷ 1–2 chưa có bản lề.** Bản lề/cối xoay xuất hiện ở kỷ 3 (cối đá của Ur). Dựng cửa bức bàn
+     cho một túp lều da thú là nói dối lịch sử tới tám nghìn năm — mà đó lại đúng thứ Đàm cấm.
+  2. **Kỷ 11 · 14 · 15 không có "cánh cửa".** Sảnh kính là một MẶT TIỀN TRONG SUỐT, và thứ mắt đọc
+     ra không phải cánh mà là nhịp đố khung chia ô. Ép nó vào `double` thì được một cái cửa gỗ hai
+     cánh trên một toà tháp kính.
+  3. **Kỷ 7 · 8 · 14 có một device chung mà bảng chưa gọi tên**: hàng vòm cuốn / five-foot way —
+     lối đi công cộng luồn DƯỚI thân nhà. `porch` không diễn đạt được vì porch ĐUA RA còn arcade
+     KHOÉT VÀO.
+
+- **Phương án đã cân nhắc**:
+  - **(A) Không thêm gì, ép 12 kỷ vào vốn từ sẵn có.** Rẻ nhất, giữ đúng chữ của ràng buộc. Loại:
+    nó giữ được chữ mà phá mất tinh thần — cả điểm của bảng 15 dòng là mỗi dòng phải trả lời được
+    *"công trình có thật nào ở nước ấy trông như vậy?"*, và với kỷ 1 thì câu trả lời sẽ là "không
+    có công trình nào".
+  - **(B) Thêm một kiểu cửa cho mỗi kỷ chưa vừa.** Loại thẳng: đó chính là cách một bảng biến thành
+    một danh sách ngoại lệ, và nó phá ràng buộc "không rắc đều".
+  - **(C) ĐÃ CHỌN — thêm ĐÚNG hai kiểu cửa (`flap`, `glazed`) và ĐÚNG một đặc trưng (`arcade`),
+    mỗi cái phục vụ ÍT NHẤT hai kỷ, và mỗi cái phải diễn đạt một hình học mà vốn từ cũ KHÔNG diễn
+    đạt được** (tấm mềm rủ có nếp · mặt kính chia đố · hàng vòm khoét vào). Ba thứ khác từng nghĩ
+    tới nhưng KHÔNG thêm — cửa cuốn vòm, cổng tam quan, cửa xoay — vì mỗi thứ chỉ phục vụ một kỷ
+    và kỷ ấy đã đứng vững bằng các trục khác.
+
+- **Quyết định thứ hai (và nó lớn hơn)**: **bản sắc tầng trệt được đo bằng 8 TRỤC CẤU TRÚC, không
+  đo bằng mắt.** Dùng lại nguyên khuôn `streetStyle.test.js` (ADR-025): 4 trục danh mục (`door` ·
+  `frame` · `feature` · `vernacularFeature`) + 4 trục số đã lượng hoá (`steps` ≥1 bậc · `recess`
+  ≥0,25 · `doorWidth` ≥0,06 · `doorTall` ≥0,08), sàn **≥3/8 cho cả 105 cặp**, cộng một phép canh
+  **trung vị ≥5/8** (cực tiểu là con số gộp — nó đứng yên dù có một cặp yếu hay bốn mươi) và một
+  phép canh **mỗi trục phải còn sống** (tách được ≥10/105 cặp). Ba bước lượng hoá đều suy từ đại
+  lượng có thật (`DOOR_RECESS_DEPTH` → độ sâu thế giới; `doorWidth`/`doorTall` vốn đã là tỉ lệ),
+  không có hằng số nào chọn tay.
+  - **Vì sao dùng lại khuôn cũ thay vì nghĩ thước mới**: hai thước khác nhau đẻ ra hai ngưỡng không
+    so được với nhau, và lúc ấy câu "kỷ này khác kỷ kia bao nhiêu" không còn một câu trả lời.
+
+- **Trade-off**:
+  - **Được**: 15 kỷ có 15 tầng trệt đo được (105/105 cặp ≥3/8 · trung vị **6/8** · yếu nhất **3/8**
+    · cả 8 trục đều sống, yếu nhất `recess` tách 51/105 cặp). Kỷ 1 và 2 lần đầu tiên có lối vào.
+    `legacy` bị xoá hẳn ⇒ không còn đường rơi về trạng thái dở dang.
+  - **Mất**: `groundFloor.js` dài thêm ~150 dòng cho ba đường hình học mới; `DOOR_KINDS` từ 3 kiểu
+    thật lên 5. Đây là chi phí có thật và nó được trả bằng một điều kiện xem lại rõ ràng ở dưới.
+  - **Không mất**: **lệnh vẽ KHÔNG tăng một đơn vị nào** — mọi vai mới (`glass`) đều đã có mặt
+    trong thành phố của chính những kỷ dùng nó, và có bài test khoá quan hệ ấy chứ không khoá một
+    con số.
+
+- **Giả định**: (a) mỗi kỷ vẫn có đúng một `country` trong `eraStyle.js` và hai bảng ở cùng file
+  nên không thể trôi khỏi nhau; (b) 30/35 công trình mỗi thành phố là nhà dân — con số này chỉ dùng
+  để CHẤM ngân sách, không dùng để dựng hình.
+
+- **Điều kiện xem lại**: nếu một phase sau muốn thêm kiểu cửa thứ sáu, phải trả lời được *"nó phục
+  vụ ít nhất hai kỷ, và nó diễn đạt một hình học mà năm kiểu kia không diễn đạt được"* — nếu không
+  thì thứ cần sửa là bốn con số của kỷ ấy, không phải danh sách. Và nếu `eraStyle.js` vượt ~800
+  dòng thì tách bảng `groundFloor` ra file riêng (Đàm đã chốt ngưỡng này).
+
+- **Quyết định thứ ba (bổ sung cùng ngày, sau khi đo đủ 15 kỷ) — bài test "không thêm lệnh vẽ" phải
+  hỏi QUẦN THỂ THẬT, không phải một quần thể dựng cho tiện.** Bài ấy hỏi *"tập họ vật liệu của tầng
+  trệt có nằm gọn trong tập họ của phần còn lại không?"*, và nó đã được sửa một lần rồi (Bước 1 —
+  hỏi ở cấp CẢ KỶ thay vì từng công trình). Nhưng nó vẫn dựng quần thể bằng **7 loại × 3 hạng = 21
+  công trình giả định**. Thành phố thật là **5 bản vẽ `BLUEPRINT_CATALOG`** (loại và hạng đã ấn
+  định, không phải tổ hợp tự do) cộng **6–30 nhà dân** `deriveDwellings`, và cả hai đi qua
+  `buildBuildingSpec` ở `sceneGraph.js`.
+  - **Phương án A (giữ nguyên)**: quần thể giả định RỘNG HƠN thật, nên nó "bao trùm" mọi ca. Loại —
+    rộng hơn ở vế `nen` chính là cái phễu: `nen` phình ra thì `them ⊆ nen` xanh dễ hơn.
+  - **Phương án B (dùng quần thể thật)**: gọi `computeCityLayout` — một hàm THUẦN đã có sẵn. **Chọn
+    B.** Cùng lý lẽ đã dùng cho `countSceneTriangles`: *đừng DỰ ĐOÁN thứ có thể ĐO*. Kèm hệ quả tốt:
+    `deriveDwellings` hay catalog đổi thì bài test tự đi theo, không phải nhớ cập nhật.
+  - **Trade-off đã chấp nhận**: bài mới **chặt hơn thực tế** — cảnh thật còn có cây cối, mặt đất,
+    đường sá, cư dân cũng góp họ vật liệu, mà quần thể này bỏ chúng ra. Chấp nhận, vì với một ràng
+    buộc dạng *"không được thêm"* thì chặt hơn là chiều an toàn: một báo đỏ oan thì ồn ào và truy
+    được, một báo xanh oan thì im lặng. ⚠️ Nếu Phase 11 thật sự cần một họ mà chỉ tầng thực vật mới
+    có (ví dụ `foliage` cho vườn trên mái), cách xử lý ĐÚNG là **mở rộng quần thể một cách tường
+    minh RỒI đo lại bằng `--bench`**, KHÔNG phải nới câu assert.
+  - ⚠️ **Đo trước khi sửa: cái phễu ấy hôm nay rộng đúng 0 họ ở cả 15 kỷ.** Bài cũ KHÔNG xanh oan —
+    nó đúng nhờ một trùng hợp (`deriveDwellings` tình cờ phủ đủ house/shop/workshop, catalog tình cờ
+    phủ đủ 4 loại kia). Sửa vì **trùng hợp thì gãy trong im lặng** khi thứ nó dựa vào đổi (Phase 7D),
+    không vì nó đang hỏng. Ghi rõ con số 0 ở đây để phiên sau không đọc mục này thành "đã từng có bug".
+
+---
+
 ## ADR-026 — Tầng trệt là một BẢNG BẮT BUỘC 15 kỷ trong `eraStyle.js` + một tầng hình học riêng; và trạng thái "mới làm 3 kỷ" được khai TƯỜNG MINH bằng `door: 'legacy'`
 
 - **Ngày**: 2026-08-18 (Phase 10, Bước 1)
@@ -75,6 +164,9 @@
 - **Điều kiện xem lại**: khi Bước 2 trải ra 12 kỷ còn lại thì phải xoá `'legacy'` khỏi `DOOR_KINDS`,
   xoá khối cửa cũ trong `emitWindows`, và đổi bài test "đúng 12 kỷ legacy" thành "không kỷ nào".
   Nếu Đàm thấy hướng mỹ thuật sai thì chỉ cần trả 3 dòng bảng về `legacy` — không đụng tới mã.
+- ✅ **ĐÃ THỰC HIỆN NỐT (2026-08-18, Bước 2)** — cả ba việc trên đã làm, `TECH_DEBT #36` đã đóng.
+  Xem **ADR-027** để biết Bước 2 quyết định thêm những gì (hai kiểu cửa mới, một đặc trưng mới, và
+  phép đo bản sắc 8 trục).
 
 ## ADR-025 — Bản sắc mặt đường là CẤU TRÚC (9 trục hình học), không phải MÀU; và phép đẩy độ đậm phải có TRẦN
 

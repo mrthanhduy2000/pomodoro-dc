@@ -6,7 +6,29 @@
 > chọn: `ARCHITECTURE_DECISIONS.md`. Nợ kỹ thuật: `TECH_DEBT.md`. Migration: `MIGRATION.md`. Tóm
 > tắt theo mốc: `CHANGELOG.md`.
 > **NGUYÊN TẮC ƯU TIÊN SỐ 1:** (1) mọi phiên AI phải đọc file này + `CLAUDE.md` + các file liên quan TRƯỚC khi làm; (2) sau MỌI cập nhật dù nhỏ, phải cập nhật ngay file này + `CLAUDE.md` + các file liên quan khác.
-> Cập nhật lần cuối: **2026-08-18** — **PHASE 10 BƯỚC 1: THÀNH PHỐ CÓ CỬA RA VÀO.** Cả dự án đã
+> Cập nhật lần cuối: **2026-08-18** — **PHASE 10 BƯỚC 2: CẢ 15 KỶ ĐỀU CÓ CỬA RA VÀO, `legacy` ĐÃ
+> BỊ XOÁ HẲN.** Đàm duyệt hướng mỹ thuật Bước 1 và ra lệnh làm nốt 12 kỷ. Nay **cả 15 dòng bảng đều
+> khai đủ số đo** — không còn giá trị nào nghĩa là "chưa làm", `isValidGroundFloor` **TỪ CHỐI THẲNG**
+> dòng thiếu, và `TECH_DEBT #36` (kỷ 1 và 2 không có cửa) **đã đóng**. Thêm **đúng hai kiểu cửa**
+> (`flap` tấm da/chiếu rủ có nếp cho kỷ 1–2 — thời chưa có bản lề; `glazed` mặt kính chia đố cho kỷ
+> 11 · 14 · 15) và **đúng một đặc trưng** (`arcade` hàng vòm khoét VÀO thân nhà — loggia Firenze ·
+> Praça do Comércio · five-foot way Singapore), mỗi thứ phục vụ ≥2 kỷ và diễn đạt một hình học mà
+> vốn từ cũ không có (ADR-027). Bản sắc nay **đo bằng 8 TRỤC CẤU TRÚC** thay vì bằng mắt, dùng lại
+> nguyên khuôn `streetStyle`: **105/105 cặp ≥3/8 · trung vị 6/8 · cả 8 trục đều còn sống**.
+> ⚠️ **Bốn bài học đã trả giá**: **(a)** *"từ chối thẳng" chỉ an toàn khi có người ĐẾM số lần từ
+> chối* — kỷ 14 khai `doorWidth: 0.46` vượt trần 0,42, validator từ chối ĐÚNG, hàm dựng trả `false`
+> ĐÚNG, và **cả kỷ ấy mất cửa** mà không gì đỏ lên; **(b)** một mốc lịch sử đặt theo **thứ mình
+> NHỚ** (cửa chớp lá sách = thế kỷ 17) chứ không theo **thứ mình đang DỰNG** (hai cánh ván trơn, cổ
+> ngang cái cửa sổ) lập tức cấm nhà Fachwerk Đức — luật lịch sử quay ra cấm chính lịch sử;
+> **(c)** luật *"chưa từng thấy đỏ thì chưa phải test"* áp cho **từng ASSERT**, và hai assert của
+> chính phiên này rớt: một vòng lặp "kỷ liền nhau" **không thể đỏ một mình** (tập con của 105 cặp,
+> cùng sàn), và một đối chứng cộng-gộp ba lệch 0,001 nên nới **một** ngưỡng vẫn xanh; **(d)** kỷ 4
+> và kỷ 6 chỉ khác **1/8 trục** — sửa **BẢNG** (kỷ 4 lùi cửa 0,50→0,62, mở rộng 0,38→0,41, đúng quy
+> chế điện cung đình) chứ không hạ sàn, và sửa **kỷ MỚI** chứ không đụng kỷ Đàm đã duyệt.
+> **766 bài test** (764 + 2 mới), lint sạch, build xanh, **21/21 phép phá làm ĐỎ đúng chỗ đã nêu
+> trước**. ⏳ **CHƯA gộp `main`** — theo đúng mục 5 chương trình làm việc, gộp `main` LUÔN phải hỏi.
+>
+> *(Trước đó — 2026-08-18)* — **PHASE 10 BƯỚC 1: THÀNH PHỐ CÓ CỬA RA VÀO.** Cả dự án đã
 > tách bản sắc theo kỷ ở mái · thảm thực vật · mặt đường, riêng **chỗ mắt nhìn vào đầu tiên khi
 > đứng trước một công trình** thì vẫn là một khối `dark` bề ngang **viết cứng 0,14** giống hệt nhau
 > ở cả 15 kỷ — và trên nhà dân hẹp nó chiếm gần nửa bề ngang (đúng bệnh `eaves` Phase 7C). Nay có
@@ -171,13 +193,20 @@
 
 ## 🔜 Sẽ làm tiếp (ưu tiên từ trên xuống)
 
-> ⚠️ **VIỆC GẦN NHẤT ĐANG CHỜ ĐÀM (2026-08-18)** — **Phase 10 Bước 2: trải tầng trệt ra 12 kỷ còn
-> lại.** Bước 1 (kỷ 6 · 9 · 13) đã xong và đã commit lên nhánh; Đàm chỉ cần xem 3 ảnh cận cảnh rồi
-> nói **đúng hướng** hay **chỉnh hướng**. Chưa gật thì **không được trải tiếp** — đây là cổng dừng
-> chính Đàm đặt ra, lý do: *"sai ở kỷ thứ 3 rẻ hơn nhiều so với sai ở kỷ thứ 15."* Gật rồi thì Bước
-> 2 là việc thuần cơ học: 12 dòng bảng trong `eraStyle.js`, mỗi dòng phải trả lời được *"công trình
-> có thật nào ở nước ấy trông như vậy?"*; hình đã dựng sẵn đủ 4 kiểu cửa + 5 đặc trưng, không cần
-> viết thêm mã hình học. Bước 2 tự đóng luôn `TECH_DEBT #36`.
+> ⚠️ **CHƯƠNG TRÌNH ĐANG CHẠY (2026-08-18)** — Đàm đã duyệt hướng mỹ thuật Bước 1 và ra một
+> **chương trình làm việc liên tục** cho giai đoạn "tiêu ngân sách" hiệu năng (dư 3,2 lần trên M3),
+> gồm ba phase theo THỨ TỰ CỐ ĐỊNH, với **uỷ quyền tự chạy** giữa các phase:
+> **Phase 10 Bước 2 ✅ (tầng trệt đủ 15 kỷ)** → **Phase 11 (MÁI — phase có thu hoạch thị giác lớn
+> nhất, vì camera mặc định NHÌN XUỐNG nên mái là bề mặt lớn nhất trong khung hình)** → **Phase 12
+> (ĐO tỉ lệ khung hình thành phố chiếm, rồi TRÌNH PHƯƠNG ÁN và DỪNG)**.
+> ⚠️ **Ranh giới Đàm đặt — chỉ 6 ca phải dừng hỏi**: (1) **gộp `main` — LUÔN LUÔN hỏi**; (2) cổng
+> nghiệm thu trượt 2 lần liên tiếp; (3) muốn đụng file ngoài danh sách cho phép (`src/engine/city3d/*`
+> + test + `scripts/*` + tài liệu; **CẤM**: bảng màu · ánh sáng · đường · địa hình · thực vật ·
+> camera · store · sync · AI Coach · `api/`); (4) phát hiện điều mâu thuẫn `PERFORMANCE.md`;
+> (5) hết bước đo của Phase 12; (6) một quyết định mỹ thuật mà độ tự tin **dưới 80%**.
+> ⚠️ **Được tiêu: tam giác · khối · đỉnh. CẤM tiêu: lệnh vẽ mới · vật liệu mới · nguồn sáng mới ·
+> texture mới.** Và cấm "tối ưu hiệu năng" — máy còn dư 3,2 lần, mọi lo lắng về hiệu năng phải trả
+> lời bằng `PERFORMANCE.md` chứ không bằng cảm giác.
 
 0. **NHÁNH THÀNH PHỐ 3D — thứ tự Đàm đã chốt, KHÔNG được nhảy bước.**
    *Visual Foundation (**7A ✅**) → Terrain/City (**7B: địa hình ✅ · mật độ + khu dân cư CHƯA**) →
@@ -214,6 +243,78 @@
 - **Lịch sử git `main` từng bị xáo** (thao tác git song song): bản đang chạy là `eb44638` — chứa ĐỦ mọi việc gần đây (Hỏi Coach offline + fix đêm khuya + Coach offline analyst). Vài commit cũ (`1e27505`, `9fbcd62`) thành dangling, KHÔNG còn trong `git log` nhưng code vẫn nằm trong bản deploy. Đừng hoảng nếu không thấy chúng.
 
 ## 🗒️ Nhật ký cập nhật
+
+### 2026-08-18 — Phase 10 Bước 2: cả 15 kỷ có cửa, `legacy` bị xoá hẳn (đóng `TECH_DEBT #36`)
+
+**Đàm yêu cầu**: duyệt hướng mỹ thuật Bước 1 (kỷ 6 · 9 · 13) và ra một **chương trình làm việc liên
+tục** — Phase 10 Bước 2 → Phase 11 (mái) → Phase 12 (đo khung hình rồi dừng) — kèm uỷ quyền tự chạy
+giữa các phase và đúng 6 ca phải dừng hỏi (xem mục "Sẽ làm tiếp"). Riêng kỷ 1–2 anh dặn thẳng:
+*"cửa phải THÔ SƠ đúng thời — khung gỗ, tấm da, rèm cỏ. Đừng bịa cho sang. 'Không có gì' cũng là
+một câu trả lời hợp lệ, miễn là khai tường minh chứ không rơi về mặc định."*
+
+**Đã làm**
+
+1. **12 dòng bảng còn lại trong `eraStyle.js`.** Mỗi dòng có một chú thích dài nêu đích danh công
+   trình có thật của nước ấy: Göbekli Tepe · Deir el-Medina · ziggurat Ur · điện cung đình · Burg
+   Eltz · Firenze (loggia Brunelleschi) · Praça do Comércio · Manchester công nghiệp · New York Mạ
+   Vàng · khối nhà Xô Viết · five-foot way Raffles + Marina Bay · Bảo tàng Tương Lai Dubai.
+   ⚠️ **Bốn kỷ khai `feature: 'none'` (1 · 3 · 5 · 12) và đó là BỐN CÂU TRẢ LỜI KHÁC NHAU, không
+   phải bốn chỗ trống**: kỷ 1 chưa có gì để gắn · kỷ 3 (và nhà dân kỷ 15) quay vào sân trong nên
+   mặt phố trơn · kỷ 5 và 12 cố ý trống trơn vì lý do phòng thủ.
+2. **Ba đường hình học mới trong `groundFloor.js`** (ADR-027) — thêm ĐÚNG chừng này, mỗi thứ phục
+   vụ ≥2 kỷ: `flap` (tấm mềm rủ, số nếp + độ vén theo hạt giống — thời chưa có bản lề) · `glazed`
+   (mặt kính chia đố, dùng vai `glass` nên **ban đêm tự phát sáng** — một sảnh kính tối om lúc 22h
+   là một sảnh chưa xây xong) · `arcade` (hàng vòm khoét VÀO thân nhà, khác `porch` là đua RA).
+   `balcony` cũng được dựng lại thành **hai cỡ có lý do lịch sử**: ban công quy chế Haussmann chạy
+   liền mặt tiền (công trình chính) vs chiếu sắt hẹp / cầu thang thoát hiểm New York (nhà dân).
+3. **Xoá `legacy` khỏi ba nơi**: `DOOR_KINDS`, `isValidGroundFloor` (nay từ chối thẳng), và khối
+   cửa đời cũ trong `emitWindows` (thay bằng một cảnh báo *"ĐỪNG THÊM LẠI MỘT CÁI CỬA VÀO ĐÂY"*).
+   `LEGACY_DOOR_WIDTH = 0.14` **giữ lại có chủ đích** — nó là đối chứng nhốt bộ số hỏng cũ.
+4. **Phép đo bản sắc 8 trục** (`groundFloor.test.js`), dùng lại nguyên khuôn `streetStyle`.
+5. **Đo lệnh vẽ + tam giác ĐỦ 15 KỶ, hai lượt** (trên `HEAD` và trên cây làm việc) — lần đầu tiên
+   cả 15 kỷ được đo, bảng đầy đủ ở `PERFORMANCE.md`. **Bước 2 thêm ĐÚNG 0 lệnh vẽ ở cả 15 kỷ**;
+   tam giác thành phố 474.924 → 535.360 (**+12,7%**, kỷ nặng nhất +24,6%). ⚠️ Phép tự-kiểm của
+   chính bảng ấy: kỷ 6 · 9 · 13 (đã làm ở Bước 1) phải **không đổi một tam giác nào** — và chúng
+   khớp từng đơn vị, nên 12 con số Δ còn lại đọc được.
+6. **Vá bài test "không thêm lệnh vẽ" lần thứ HAI** — nó dựng quần thể bằng 21 công trình **giả
+   định** rồi gọi đó là "cả thành phố". Nay hỏi quần thể **THẬT** qua `computeCityLayout`
+   (5 bản vẽ catalog + 6–30 nhà dân), ở **ba nhịp tuổi** và hỏi **từng nhịp một**.
+   ⚠️ Đo ra thì cái phễu ấy hôm nay rộng đúng **0 họ** ở cả 15 kỷ — bài cũ **không** xanh oan, nó
+   chỉ đang đúng nhờ một trùng hợp. Vá vì trùng hợp thì gãy trong im lặng, không vì nó đang hỏng.
+
+**Nghiệm thu**: `npm test` **766 bài** (số THẬT ở dòng cuối) · `npm run lint` sạch · `npm run build`
+xanh · **25/25 phép phá làm ĐỎ đúng chỗ đã nêu TRƯỚC** (21 của vòng đầu + 4 cho bài test vừa vá) ·
+bản quét 15 kỷ × 6 chặng: **0/15 cặp chặng và 0/105 cặp kỷ** dưới ngưỡng mắt.
+
+⚠️ **MỘT ĐÍNH CHÍNH SO VỚI BẢN GHI ĐẦU CỦA MỤC NÀY**: nó từng ghi *"lệnh vẽ cao nhất 13/13 (đúng
+trần Đàm đặt)"*. Câu ấy **sai**, và sai vì nó suy từ ba kỷ đã đo lúc đó. Đo đủ 15 kỷ thì **kỷ 10 =
+14 lệnh vẽ** — nhưng nó ra 14 **ở CẢ lượt đo trên `HEAD`**, tức đã vượt trần **từ trước Phase 10**.
+Đây là một **con số nền chưa từng được đo**, không phải hồi quy của Bước 2. Đã ghi `TECH_DEBT #38`
+và **đã dừng hỏi Đàm** theo đúng ca §5(4) *"phát hiện điều mâu thuẫn `PERFORMANCE.md`"*.
+
+**Sáu thứ bắt được trong lúc làm (chi tiết ở `CLAUDE.md`)**
+
+- ⚠️ **Kỷ 14 mất cửa trong im lặng.** Khai `doorWidth: 0.46` vượt trần 0,42 ⇒ validator từ chối
+  ĐÚNG, `emitGroundFloor` trả `false` ĐÚNG, và cả kỷ ấy không có cửa mà **không gì đỏ lên**. Hai
+  lời "đúng" cộng lại thành một lỗi. Nay có assert *"kỷ nào khai hợp lệ mà KHÔNG dựng ra khối nào"*.
+- ⚠️ **Một mốc lịch sử đặt theo thứ mình NHỚ.** Bài test cấm `shutters` trước kỷ 7 (lá sách = thế
+  kỷ 17) — nhưng hình đang dựng là **hai cánh ván trơn**, cổ ngang cái cửa sổ. Nó lập tức cấm nhà
+  Fachwerk Đức thời trung cổ. Sửa thành mốc kỷ 3 + một **điều kiện cấu trúc** hỏi chính bảng
+  (*kỷ khai `windows: 'none'` thì không được có cửa chớp*).
+- ⚠️ **Hai assert của chính phiên này không thể đỏ.** Vòng lặp "kỷ liền nhau" là tập CON của 105
+  cặp với cùng sàn ⇒ chép lại điều vừa chứng minh; thay bằng **trung vị** + **mỗi trục còn sống**.
+  Và đối chứng "hạt bụi" cộng-gộp ba lệch 0,001 nên nới **một** ngưỡng vẫn xanh ⇒ hỏi từng trục.
+- ⚠️ **Kỷ 4 và kỷ 6 chỉ khác 1/8 trục.** Sửa BẢNG (kỷ 4 lùi cửa 0,50→0,62, mở rộng 0,38→0,41) chứ
+  không hạ sàn, và sửa **kỷ MỚI** chứ không đụng kỷ Đàm đã duyệt ở Bước 1.
+- ⚠️ **Một cái trần suy từ mẫu 3 kỷ được đọc thành luật của 15 kỷ** — xem đính chính ở trên.
+- ⚠️ **Một bài test đang đúng NHỜ MỘT TRÙNG HỢP.** "Chưa xanh oan" không bằng "không thể xanh oan":
+  quần thể giả định tình cờ phủ đúng bằng quần thể thật, nên bài cũ vẫn đúng — cho tới ngày
+  `deriveDwellings` hoặc `BLUEPRINT_CATALOG` đổi, và ngày ấy nó gãy mà không ai biết.
+
+**Chưa làm / cố ý không làm**: chưa gộp `main` (luôn phải hỏi) · `TECH_DEBT #37` (cửa sổ không xoay
+theo `ry`) **cố ý để nguyên** — Đàm đã chốt *"vá thứ mắt không thấy là mua rủi ro không đổi lấy gì"*.
+
+---
 
 ### 2026-08-18 — Phase 10 Bước 1: thành phố có CỬA RA VÀO, và 3 kỷ có tầng trệt riêng
 

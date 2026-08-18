@@ -19,7 +19,20 @@
 > bằng cách chỉnh lại con số nào. Nay còn **1 mục High** (#14) + **2 mục Medium-High** (#3, #13) +
 > **1 mục Medium-High chờ Đàm quyết** (#24) = 4 → xa ngưỡng 8–10 mục, KHÔNG cần Maintenance Sprint.
 >
-> **Cập nhật 2026-08-18 (Phase 10, Bước 1)**: mở **#36** (Priority **Medium** — kỷ 1 và 2 vẫn chưa
+> **Cập nhật 2026-08-18 (Phase 10, Bước 2)**: **ĐÓNG #36** — cả 15 kỷ nay đều có cửa ra vào thật,
+> kể cả kỷ 1 và 2. **MỞ #38** (Priority Low-Medium): đo đủ 15 kỷ lần đầu tiên thì lộ ra **kỷ 10 =
+> 14 lệnh vẽ**, tức vượt cái trần "13" mà cổng nghiệm thu đang dùng — nhưng nó **đã như vậy từ
+> trước Phase 10** (đo trên `HEAD` cũng ra 14), nên đây là một **con số nền chưa từng được đo**,
+> không phải hồi quy. Sửa nó phải đụng `materials.js`, nằm ngoài phạm vi file được phép của chương
+> trình hiện hành ⇒ ghi nợ, không tự sửa. Ngoài ra Bước 2 phát hiện hai chuyện đáng ghi nhưng cả
+> hai đều đã xử lý ngay trong phiên nên không thành nợ: (a) kỷ 14 khai `doorWidth` vượt trần khiến cả
+> kỷ ấy **mất cửa trong im lặng** — validator từ chối đúng, `emitGroundFloor` trả `false` đúng, và
+> không gì đỏ lên; nay có một assert bắt "khai hợp lệ nhưng không dựng ra khối nào"; (b) kỷ 4 và
+> kỷ 6 chỉ khác nhau **1/8 trục** tầng trệt — sửa BẢNG (kỷ 4 lùi cửa sâu hơn, mở rộng hơn, đúng
+> quy chế điện cung đình) chứ không hạ sàn. Số mục High vẫn là **1** (#14) — #38 là Low-Medium nên
+> không đổi ngưỡng; tổng vẫn **5 mục**, vẫn xa ngưỡng 8–10.
+>
+> **(Ảnh chụp trước đó, Phase 10 Bước 1)**: mở **#36** (Priority **Medium** — kỷ 1 và 2 vẫn chưa
 > có cửa; nguyên nhân gốc đã sửa, tự đóng khi Bước 2 chạy) và **#37** (Priority **Low** — cửa sổ
 > không xoay theo độ nghiêng thân nhà, sai số hiện dưới một điểm ảnh). Không mục nào là High/
 > Critical ⇒ số mục High vẫn là **1** (#14), vẫn xa ngưỡng.
@@ -1899,7 +1912,7 @@
 
 ---
 
-## #36 — Kỷ 1 và kỷ 2 vẫn KHÔNG có cửa ra vào (nguyên nhân gốc đã sửa, hai kỷ này chưa hưởng)
+## #36 — ✅ ĐÃ ĐÓNG (2026-08-18, Phase 10 Bước 2) — Kỷ 1 và kỷ 2 vẫn KHÔNG có cửa ra vào
 
 - **Module**: `src/engine/city3d/eraStyle.js` (bảng `groundFloor` của kỷ 1, 2) · `buildingSpec.js`
 - **Priority**: Medium · **Severity**: Low (mỹ thuật, không ảnh hưởng dữ liệu hay hiệu năng)
@@ -1921,7 +1934,20 @@
 - **Estimated Complexity**: Thấp — chỉ là hai dòng bảng, mã dựng đã có.
 - **Blocking Conditions**: chờ Đàm gật cho Bước 1 (xem `BAN_GIAO.md`).
 - **Review Trigger**: khi bắt đầu Bước 2 của Phase 10.
-- **Owner**: chưa phân công · **Status**: Open
+- **Owner**: chưa phân công · **Status**: ✅ **ĐÓNG 2026-08-18 (Phase 10 Bước 2)**
+
+**Đã đóng thế nào** — kỷ 1 khai `door: 'flap'` (tấm da căng treo trên thanh ngang, `frame: 'none'`,
+`steps: 0`, `feature: 'none'`), kỷ 2 khai `door: 'flap'` + `frame: 'wood'` (lanh tô gỗ sơn đỏ của
+làng thợ Deir el-Medina) + `vernacularFeature: 'awning'` (mành sậy chắn nắng). Phải THÊM một kiểu
+cửa mới (`flap`) chứ không tái dùng `panel`: dựng cửa bức bàn cho một túp lều da thú là nói dối
+lịch sử tới tám nghìn năm. Gợi ý cũ ở mục này ghi kỷ 1 dùng `frame: 'wood'` — **đã đổi thành
+`'none'` sau khi đọc lại**: một tấm da vắt qua thanh ngang thì không có khuôn cửa.
+
+⚠️ **BÀI HỌC RÚT RA — và nó lớn hơn chính mục nợ này.** Mục #36 được đóng ĐÚNG HẠN không phải nhờ
+ai nhớ ra, mà nhờ **một con số nằm trong một bài test**: Bước 1 viết `assert.equal(soKyLegacy, 12)`.
+Con số ấy là thứ buộc Bước 2 phải mở lại bài test mới chạy xanh được. Một mục nợ ghi trong tài liệu
+thì chỉ được đọc khi có người đi tìm; một con số trong bài test thì **tự đòi được đọc**. ⇒ Khi phải
+ship một trạng thái dở dang, hãy làm nó **ĐẾM ĐƯỢC trong một bài test**, đừng chỉ ghi vào đây.
 
 ---
 
@@ -2010,3 +2036,41 @@
   macOS — tức đúng cái đã giết LaunchAgent ở "BẪY 2" (`CLAUDE.md`: thoát mã 78, **không có
   stderr**). Phần ấy chỉ máy Đàm kiểm được, và nó đã thành một dòng trong runbook ở
   `PERFORMANCE.md` ("Một điều CHỈ máy Đàm kiểm được").
+
+---
+
+## #38 — Trần "13 lệnh vẽ" trong `PERFORMANCE.md` là con số suy từ MẪU 3 KỶ, và kỷ 10 nằm ngoài nó
+
+- **Module**: `src/engine/city3d/materials.js` (bảng `MATERIAL_ORDER`) · `eraStyle.js` (vai vật liệu
+  của kỷ 10) · `PERFORMANCE.md` (chỗ phát biểu cái trần)
+- **Priority**: **Low-Medium**
+- **Severity**: **Low** — không phải lỗi hiệu năng, là lỗi **của một con số nghiệm thu**.
+- **Impact**: Ràng buộc "không quá 13 lệnh vẽ" là một trong sáu mục cổng nghiệm thu Đàm đặt ra cho
+  cả chương trình Phase 10–12. Một cổng mà **thực tế đã vượt sẵn từ trước khi chương trình bắt đầu**
+  thì hoặc sẽ báo đỏ oan ở mọi phase sau (và bị nới dần cho tiện — đúng cái phễu Phase 9A), hoặc bị
+  ngó lơ và mất luôn tác dụng.
+- **Root Cause**: Bảng "Sau Phase 10" bản đầu đo **ba kỷ** (6 · 9 · 13 → 13 · 12 · 11 lệnh vẽ cả
+  cảnh) rồi con số cao nhất trong ba ấy được viết ra như **luật của cả 15 kỷ**. Đo đủ 15 kỷ lần đầu
+  tiên (2026-08-18) ra kỷ 10 = **14**. Kỷ 10 (Anh, thời công nghiệp) là kỷ **duy nhất** dùng cùng
+  lúc cả `brick` lẫn `slate`, cộng `glass` · `stone` · `wood` ⇒ 5 họ vật liệu riêng phần thành phố,
+  nhiều hơn mọi kỷ khác đúng một họ.
+  ⚠️ Đây **KHÔNG phải hồi quy của Phase 10**: đo trên `HEAD` (trước Bước 2) cũng ra **14**. Cùng
+  hình dạng với bài học *"một ngân sách tự tính mà chưa bao giờ được đặt cạnh sự thật thì không phải
+  ngân sách"* — cái trần chưa bao giờ được kiểm với cả 15 kỷ, nó chỉ được kiểm với **chính cái mẫu
+  đã sinh ra nó**.
+- **Current Risk**: **Thấp.** Mô hình chi phí đo trên M3 nói 80% chi phí đi theo ĐIỂM ẢNH; một lệnh
+  vẽ thêm trong một cảnh 12–14 lệnh vẽ nằm dưới mức phép đo phân giải được. Không có triệu chứng
+  nào Đàm nhìn thấy.
+- **Future Risk**: **Trung bình.** Phase 11 (mái) sẽ đụng đúng tầng vật liệu này. Nếu để nguyên,
+  phase ấy sẽ hoặc phải làm việc với một cổng đã đỏ sẵn, hoặc vô tình được miễn cổng.
+- **Recommended Solution**: **Đặt lại trần cho đúng sự thật 15 kỷ** — ghi trần là **14** kèm câu
+  giải thích vì sao kỷ 10 tốn hơn một họ, và bổ sung một bài test đọc bảng vật liệu để đếm **số họ
+  tối đa trên một kỷ** (một phép đo THUẦN, rẻ, không cần dựng cảnh — đúng gợi ý §7(3) của Đàm).
+  ❌ **KHÔNG** gộp `brick` với `slate` để lấy lại con số 13: hai vật liệu ấy khác nhau thật, và mua
+  một con số đẹp bằng cách nói dối vật liệu chính là thứ `ADR-025` đã cấm với mặt đường.
+- **Estimated Complexity**: Thấp (một mục tài liệu + một bài test thuần).
+- **Blocking Conditions**: Đụng `materials.js`/`palette3d.js` nằm **ngoài** danh sách file được phép
+  của chương trình Phase 10–12 (§3). Cần Đàm cho phép, hoặc để dành cho một phase riêng.
+- **Review Trigger**: Trước khi bắt đầu Phase 11 (mái) — vì Phase 11 dùng chính cổng này.
+- **Owner**: chưa giao
+- **Status**: **Open — đã đo đủ 15 kỷ, đã ghi vào `PERFORMANCE.md`, CHƯA sửa (cố ý, ngoài phạm vi).**

@@ -72,10 +72,17 @@
  * không có lối vào là một khối đặc; (b) cửa cũ rộng đúng **0,14** cho cả kỳ quan rộng 1,4 lẫn nhà
  * dân rộng 0,45, tức lần thứ ba của cái bẫy "số tuyệt đối áp lên những khối chênh nhau ba lần".
  *
- * Trường này **bắt buộc cả 15 kỷ** — cùng lý do như `vernacularRoof`. 12 kỷ chưa nghiên cứu khai
- * thẳng `door: 'legacy'` (giữ nguyên cửa cũ, không dựng gì mới); đó là một trạng thái tạm CÓ ĐẾM
- * ĐƯỢC, `groundFloor.test.js` khoá đúng con số 12 và đúng ba kỷ đã làm (6 · 9 · 13). Xem
- * `LEGACY_DOOR` ở `groundFloor.js` để biết vì sao không để trống.
+ * Trường này **bắt buộc cả 15 kỷ** — cùng lý do như `vernacularRoof`, và từ **Bước 2 (cùng ngày)
+ * thì cả 15 kỷ đều khai đủ số đo**: không còn giá trị nào nghĩa là "chưa làm". `groundFloor.test.js`
+ * khoá đúng vế đó, và `isValidGroundFloor` từ chối thẳng dòng thiếu trường thay vì tự chữa.
+ *
+ * ⚠️ BỐN KỶ KHAI `feature: 'none'` (1 · 3 · 5 · 12) VÀ ĐÓ LÀ BỐN CÂU TRẢ LỜI KHÁC NHAU, KHÔNG PHẢI
+ * BỐN CHỖ TRỐNG. Lều da thú thì chưa có gì để gắn lên mặt tường (kỷ 1); nhà Ur và nhà Dubai quay
+ * hết vào SÂN TRONG nên mặt phố cố ý là tường trơn (kỷ 3, và `vernacularFeature` của kỷ 15); lâu
+ * đài và lô cốt thì CỐ Ý không gắn, vì mọi thứ nhô ra là chỗ bám cho đối phương (kỷ 5, 12). Đàm
+ * nói thẳng: *"Kỷ nào KHÔNG có đặc trưng nào thì khai rõ là 'không có', đừng bịa cho đủ mâm."*
+ * Mỗi chữ `'none'` ở đây đều có một câu giải thích ngay bên trên nó; `'none'` mà không kèm lý do
+ * mới là chỗ chưa làm.
  */
 
 /**
@@ -137,10 +144,20 @@ export const ERA_STYLES = {
     windows: 'none',
     motifs: ['boulder', 'firepit'],
     rough: 0.9,
-    // ⚠️ Bước 2 — chưa nghiên cứu tầng trệt của nước này. `legacy` = GIỮ NGUYÊN cửa cũ (xem
-    // `LEGACY_DOOR` ở `groundFloor.js`), thay vì bịa vài con số cho đủ mâm rồi để người sau đọc
-    // chúng như thể đã được cân nhắc.
-    groundFloor: { note: 'chưa nghiên cứu tầng trệt — Bước 2', door: 'legacy', feature: 'none', vernacularFeature: 'none' },
+    // ⚠️ TẦNG TRỆT — THỜI CHƯA CÓ BẢN LỀ. Đàm dặn: *"kỷ 1–2 (đồ đá): cửa phải THÔ SƠ đúng thời —
+    // khung gỗ, tấm da, rèm cỏ. Đừng bịa cho sang."* `flap` là tấm da thú căng treo trên thanh
+    // ngang, vén sang bên khi ra vào — bản lề kim loại còn cách đây hơn năm nghìn năm.
+    // `frame: 'none'` là câu trả lời ĐÚNG chứ không phải chỗ trống: cái lều không có khuôn cửa,
+    // tấm da rủ thẳng từ mép mái xuống. `steps: 0`, `recess: 0` — nền lều là chính mặt đất.
+    // ⚠️ `feature`/`vernacularFeature` đều `'none'`, và đây là chỗ Đàm nói thẳng: *"Kỷ nào KHÔNG
+    // có đặc trưng nào (thời đồ đá) thì khai rõ là 'không có', đừng bịa cho đủ mâm."* Göbekli Tepe
+    // có phiến cửa đá khoét lỗ, nhưng đó là một LỖ trên khối đá — không phải hiên, không phải ô
+    // văng, không phải thứ gì trong danh sách. Gán bừa một cái cho có là nói dối để bảng trông đầy.
+    groundFloor: {
+        note: 'lều da thú Göbekli Tepe — tấm da căng treo trên thanh ngang, không khuôn, không bậc; mặt tiền hoàn toàn trống',
+        door: 'flap', doorWidth: 0.40, doorTall: 0.52, frame: 'none', recess: 0.0, steps: 0,
+        feature: 'none', vernacularFeature: 'none',
+    },
   },
   2: {
     name: 'vách đất & mái tranh',
@@ -159,10 +176,19 @@ export const ERA_STYLES = {
     windows: 'none',
     motifs: ['fence', 'granary'],
     rough: 0.62,
-    // ⚠️ Bước 2 — chưa nghiên cứu tầng trệt của nước này. `legacy` = GIỮ NGUYÊN cửa cũ (xem
-    // `LEGACY_DOOR` ở `groundFloor.js`), thay vì bịa vài con số cho đủ mâm rồi để người sau đọc
-    // chúng như thể đã được cân nhắc.
-    groundFloor: { note: 'chưa nghiên cứu tầng trệt — Bước 2', door: 'legacy', feature: 'none', vernacularFeature: 'none' },
+    // ⚠️ TẦNG TRỆT — làng thợ Deir el-Medina, ngôi làng Ai Cập được đào kỹ nhất. Cửa nhà thợ là
+    // một lanh tô GỖ (gỗ quý ở xứ không có rừng, nên nó là thứ đắt nhất căn nhà) sơn đỏ có khắc
+    // tên chủ, và che bằng một tấm CHIẾU SẬY. Vì vậy: `flap` như kỷ 1 nhưng `frame: 'wood'` — đây
+    // đúng là chỗ hai kỷ đồ đá tách khỏi nhau, một bên chưa có khuôn cửa, một bên khuôn cửa là
+    // món tài sản đáng khắc tên.
+    // ⚠️ `vernacularFeature: 'awning'` = mành sậy chắn nắng dựng trước cửa — có trong tranh tường
+    // và trong chính nền nhà đào được. `feature: 'none'`: đền Ai Cập có tháp môn (pylon), nhưng
+    // tháp môn là KHỐI TƯỜNG nghiêng chứ không phải một chi tiết gắn lên tầng trệt.
+    groundFloor: {
+        note: 'làng thợ Deir el-Medina — lanh tô gỗ sơn đỏ khắc tên chủ, chiếu sậy che cửa; nhà thợ dựng mành sậy chắn nắng',
+        door: 'flap', doorWidth: 0.32, doorTall: 0.64, frame: 'wood', recess: 0.15, steps: 0,
+        feature: 'none', vernacularFeature: 'awning',
+    },
   },
   3: {
     name: 'gạch bùn & giật cấp',
@@ -183,10 +209,20 @@ export const ERA_STYLES = {
     windows: 'slit',
     motifs: ['pillar', 'ramp'],
     rough: 0.36,
-    // ⚠️ Bước 2 — chưa nghiên cứu tầng trệt của nước này. `legacy` = GIỮ NGUYÊN cửa cũ (xem
-    // `LEGACY_DOOR` ở `groundFloor.js`), thay vì bịa vài con số cho đủ mâm rồi để người sau đọc
-    // chúng như thể đã được cân nhắc.
-    groundFloor: { note: 'chưa nghiên cứu tầng trệt — Bước 2', door: 'legacy', feature: 'none', vernacularFeature: 'none' },
+    // ⚠️ TẦNG TRỆT — ziggurat Ur. Thứ ai cũng nhận ra ở công trình này KHÔNG phải cái cửa mà là
+    // BA VẾ BẬC LỚN chạy thẳng lên khối đầu tiên, nên `steps: 3` (kịch trần) là con số mang bản
+    // sắc của cả kỷ. Cửa Lưỡng Hà là cửa hai cánh XOAY TRÊN TRỤC ĐÁ (chưa có bản lề, nhưng đã có
+    // cối trục — một bước tiến thật so với kỷ 1–2), và hai bên khuôn dựng BÓ SẬY — bó sậy dựng
+    // cạnh cửa chính là chữ tượng hình của nữ thần Inanna, tức nó là hình ảnh người Sumer tự chọn
+    // để nói "đây là lối vào". `frame: 'wood'` là vai gần nhất với bó sậy/gỗ chà là.
+    // ⚠️ `vernacularFeature: 'none'` — nhà Ur quay hết vào SÂN TRONG, mặt phố cố ý là tường trơn
+    // không cửa sổ để giữ mát và giữ kín. Mặt tiền trống ở đây là một quyết định kiến trúc, không
+    // phải chỗ chưa làm.
+    groundFloor: {
+        note: 'ziggurat Ur — ba vế bậc lớn dẫn lên, cửa hai cánh xoay trên cối đá, hai bó sậy dựng bên khuôn; nhà Ur quay vào sân trong nên mặt phố trơn',
+        door: 'double', doorWidth: 0.26, doorTall: 0.60, frame: 'wood', recess: 0.30, steps: 3,
+        feature: 'none', vernacularFeature: 'none',
+    },
   },
   4: {
     name: 'mái chồng diềm cong',
@@ -206,10 +242,36 @@ export const ERA_STYLES = {
     windows: 'square',
     motifs: ['columns', 'banner'],
     rough: 0.22,
-    // ⚠️ Bước 2 — chưa nghiên cứu tầng trệt của nước này. `legacy` = GIỮ NGUYÊN cửa cũ (xem
-    // `LEGACY_DOOR` ở `groundFloor.js`), thay vì bịa vài con số cho đủ mâm rồi để người sau đọc
-    // chúng như thể đã được cân nhắc.
-    groundFloor: { note: 'chưa nghiên cứu tầng trệt — Bước 2', door: 'legacy', feature: 'none', vernacularFeature: 'none' },
+    // ⚠️ TẦNG TRỆT — điện cung đình Trung Hoa. Ba thứ, đều là quy chế chứ không phải trang trí:
+    // (a) `steps: 3` — 台基, bệ đá nâng cả toà điện lên; số bậc và chiều cao bệ bị luật quy định
+    // theo phẩm cấp, nên bệ cao chính là cách công trình tự xưng địa vị. (b) `panel` = 格扇门,
+    // cửa cách phiến — bộ cánh gỗ chạm lưới, cùng HỌ với cửa bức bàn kỷ 6 (đúng: nghề mộc Việt
+    // thừa hưởng từ đây), khác ở chỗ nó nhiều tấm hơn và nằm trong hàng hiên sâu hơn.
+    // (c) `feature: 'porch'` = 廊, hàng hiên cột sơn son chạy hết mặt trước — bộ phận định nghĩa
+    // kiến trúc gỗ Trung Hoa, và `recess` chính là độ sâu ấy.
+    // ⚠️ Tách hạng: phố buôn không có hiên cột (không đủ đất, và không được phép — hiên cột là
+    // quy chế của công trình có phẩm cấp), chỉ có 雨搭, mái vải che hàng ⇒ `awning`.
+    //
+    // ⚠️⚠️ BA CON SỐ DƯỚI ĐÂY LÀ THỨ TÁCH KỶ 4 KHỎI KỶ 6, VÀ CHÚNG ĐƯỢC ĐO CHỨ KHÔNG ĐOÁN. Bản
+    // đầu của Bước 2 khai `doorWidth: 0.38 · recess: 0.50` và phép đo 105 cặp báo **kỷ 4 với kỷ 6
+    // chỉ khác nhau 1/8 trục** — cùng `panel`, cùng `wood`, cùng `porch`, cùng `awning`, chỉ chênh
+    // một bậc thềm. Điều đó ĐÚNG về mặt họ hàng (nghề mộc Việt thừa hưởng từ đây) nhưng nó bỏ mất
+    // đúng thứ phân biệt hai nền: **điện Trung Hoa NÂNG mình lên và LÙI vào; đình Việt HẠ mình
+    // xuống và ĐƯA ra.**
+    //   · `steps: 3` (kỷ 6 chỉ 2) — 台基 nâng cả toà điện; đình làng ngồi thấp, thứ người ta bước
+    //     qua là NGƯỠNG CỬA chứ không phải một vế thang.
+    //   · `recess: 0.62` (kỷ 6 chỉ 0.35) — cửa cách phiến nằm ở CUỐI một gian hiên trọn vẹn, tức
+    //     lùi vào gần đúng một bước cột. Bức bàn của đình thì nằm ngay mặt ngoài giữa hai cột
+    //     hiên, vì nó phải THÁO RỜI ĐƯỢC để ngày hội mở toang cả mặt trước.
+    //   · `doorWidth: 0.41` (kỷ 6 chỉ 0.34) — 格扇门 lấp KÍN gian giữa, thường 4–6 tấm liền; đây
+    //     là bộ cửa rộng nhất trong toàn bộ 10 kỷ tiền-hiện-đại, và bề rộng ấy chính là quy chế.
+    // ⇒ Sau khi sửa: 3/8 trục. KHÔNG chỉnh kỷ 6 để lấy khoảng cách — hướng mỹ thuật của kỷ 6 Đàm
+    // đã duyệt ở Bước 1; kỷ nào mới thì kỷ ấy phải tự tìm chỗ đứng của mình.
+    groundFloor: {
+        note: 'điện cung đình — bệ đá ba bậc theo phẩm cấp, cửa cách phiến chạm lưới lấp kín gian giữa, hàng hiên cột sơn son chạy hết mặt trước; phố buôn chỉ có mái vải che hàng',
+        door: 'panel', doorWidth: 0.41, doorTall: 0.66, frame: 'wood', recess: 0.62, steps: 3,
+        feature: 'porch', vernacularFeature: 'awning',
+    },
   },
   5: {
     name: 'đá tảng & mái dốc đứng',
@@ -228,10 +290,20 @@ export const ERA_STYLES = {
     windows: 'slit',
     motifs: ['buttress', 'crenel'],
     rough: 0.44,
-    // ⚠️ Bước 2 — chưa nghiên cứu tầng trệt của nước này. `legacy` = GIỮ NGUYÊN cửa cũ (xem
-    // `LEGACY_DOOR` ở `groundFloor.js`), thay vì bịa vài con số cho đủ mâm rồi để người sau đọc
-    // chúng như thể đã được cân nhắc.
-    groundFloor: { note: 'chưa nghiên cứu tầng trệt — Bước 2', door: 'legacy', feature: 'none', vernacularFeature: 'none' },
+    // ⚠️ TẦNG TRỆT — lâu đài Burg Eltz. Cổng lâu đài là bài toán NGƯỢC với mọi kỷ khác: mục tiêu
+    // không phải mời vào mà là chặn lại. Vì vậy `doorWidth: 0.22` (hẹp nhất trong 15 kỷ — vừa một
+    // người, không vừa một đám đông), `recess: 0.55` (lối cuốn xuyên qua bức tường dày, đủ chỗ
+    // cho cửa lật và song chắn), và `steps: 0` — bậc thềm trước cổng là chỗ đứng cho kẻ tấn công,
+    // nên lâu đài không làm. Ba con số ấy đều là quyết định phòng thủ, không phải mỹ thuật.
+    // ⚠️ `feature: 'none'`: cổng lâu đài không gắn thêm gì lên mặt tường; thứ nhô ra là tháp cổng,
+    // mà tháp cổng là một KHỐI của công trình chứ không phải chi tiết tầng trệt.
+    // `vernacularFeature: 'shutters'` = Fensterläden, cửa chớp gỗ sơn của nhà Fachwerk trong làng
+    // dưới chân lâu đài — vẫn thấy nguyên ở Eltz và khắp Rheinland-Pfalz.
+    groundFloor: {
+        note: 'lâu đài Burg Eltz — cổng cuốn hẹp xuyên tường dày, không bậc thềm để không cho kẻ tấn công chỗ đứng; nhà Fachwerk trong làng có cửa chớp gỗ sơn',
+        door: 'double', doorWidth: 0.22, doorTall: 0.70, frame: 'stone', recess: 0.55, steps: 0,
+        feature: 'none', vernacularFeature: 'shutters',
+    },
   },
   6: {
     // ⚠️ Kỷ 6 (phong kiến Việt) và kỷ 4 (Tam Quốc) cùng họ kiến trúc mái chồng Á Đông — đúng về
@@ -302,10 +374,20 @@ export const ERA_STYLES = {
     windows: 'arch',
     motifs: ['columns', 'arcade', 'statue'],
     rough: 0.06,
-    // ⚠️ Bước 2 — chưa nghiên cứu tầng trệt của nước này. `legacy` = GIỮ NGUYÊN cửa cũ (xem
-    // `LEGACY_DOOR` ở `groundFloor.js`), thay vì bịa vài con số cho đủ mâm rồi để người sau đọc
-    // chúng như thể đã được cân nhắc.
-    groundFloor: { note: 'chưa nghiên cứu tầng trệt — Bước 2', door: 'legacy', feature: 'none', vernacularFeature: 'none' },
+    // ⚠️ TẦNG TRỆT — Firenze. `feature: 'arcade'` = LOGGIA, và đây là lựa chọn có địa chỉ chính
+    // xác: Ospedale degli Innocenti, hàng vòm cuốn trên cột mảnh, do CHÍNH Brunelleschi — người
+    // dựng cái vòm Duomo mà kỷ này lấy làm landmark — thiết kế. Không phải "kiểu Ý chung chung":
+    // cùng một kiến trúc sư, cùng một thành phố, cách nhau vài trăm mét.
+    // Cửa: `double` hai cánh gỗ nặng trong khuôn ĐÁ (`frame: 'stone'`, đá pietra serena xám xanh
+    // đặc trưng Toscana), `steps: 2` — bậc đá trước cửa palazzo là chỗ ngồi công cộng, người
+    // Firenze còn có tên riêng cho nó.
+    // ⚠️ Tách hạng: nhà phố Firenze mặt tiền hẹp, không đủ đất làm loggia; cửa hàng che bằng ô văng
+    // vải ⇒ `awning`.
+    groundFloor: {
+        note: 'Firenze — loggia vòm cuốn kiểu Ospedale degli Innocenti của chính Brunelleschi, cửa hai cánh gỗ trong khuôn đá pietra serena, bậc đá ngồi được; nhà phố chỉ có ô văng vải',
+        door: 'double', doorWidth: 0.28, doorTall: 0.80, frame: 'stone', recess: 0.40, steps: 2,
+        feature: 'arcade', vernacularFeature: 'awning',
+    },
   },
   8: {
     name: 'kho cảng & cột buồm',
@@ -323,10 +405,20 @@ export const ERA_STYLES = {
     windows: 'square',
     motifs: ['mast', 'crate'],
     rough: 0.3,
-    // ⚠️ Bước 2 — chưa nghiên cứu tầng trệt của nước này. `legacy` = GIỮ NGUYÊN cửa cũ (xem
-    // `LEGACY_DOOR` ở `groundFloor.js`), thay vì bịa vài con số cho đủ mâm rồi để người sau đọc
-    // chúng như thể đã được cân nhắc.
-    groundFloor: { note: 'chưa nghiên cứu tầng trệt — Bước 2', door: 'legacy', feature: 'none', vernacularFeature: 'none' },
+    // ⚠️ TẦNG TRỆT — Lisboa. `arcade` lần thứ hai liên tiếp, và tôi GIỮ NGUYÊN thay vì đổi cho
+    // bảng trông đa dạng: Praça do Comércio là một hình chữ U toàn vòm cuốn hướng ra sông Tejo, và
+    // nó là landmark mà chính dòng này khai. Bồ Đào Nha học cổ điển từ Ý — hai kỷ liền nhau giống
+    // nhau ở đây là SỰ THẬT lịch sử, không phải lỗi bảng. Đổi nó thành thứ khác cho đỡ trùng chính
+    // là "bịa cho đủ mâm" theo chiều ngược lại.
+    // Chúng tách nhau ở NĂM trục khác: bậc (1 ↔ 2) · độ hõm (0,20 ↔ 0,40) · bề rộng cửa · chiều
+    // cao cửa · và đặc trưng nhà dân (ban công ↔ ô văng).
+    // ⚠️ `vernacularFeature: 'balcony'` = varanda sắt nhỏ của nhà Pombalino — kiểu nhà dựng lại
+    // sau động đất 1755, có ban công sắt hẹp ở mỗi tầng, thấy khắp Baixa và Alfama.
+    groundFloor: {
+        note: 'Praça do Comércio — dãy vòm cuốn chạy suốt mặt tiền hướng sông Tejo, cửa hai cánh khuôn đá vôi; nhà Pombalino có ban công sắt hẹp từng tầng',
+        door: 'double', doorWidth: 0.24, doorTall: 0.72, frame: 'stone', recess: 0.20, steps: 1,
+        feature: 'arcade', vernacularFeature: 'balcony',
+    },
   },
   9: {
     // Nước thứ hai Đàm nêu làm ví dụ. Tân cổ điển Pháp: fronton tam giác trên hàng cột.
@@ -378,10 +470,23 @@ export const ERA_STYLES = {
     windows: 'grid',
     motifs: ['chimney', 'truss'],
     rough: 0.18,
-    // ⚠️ Bước 2 — chưa nghiên cứu tầng trệt của nước này. `legacy` = GIỮ NGUYÊN cửa cũ (xem
-    // `LEGACY_DOOR` ở `groundFloor.js`), thay vì bịa vài con số cho đủ mâm rồi để người sau đọc
-    // chúng như thể đã được cân nhắc.
-    groundFloor: { note: 'chưa nghiên cứu tầng trệt — Bước 2', door: 'legacy', feature: 'none', vernacularFeature: 'none' },
+    // ⚠️ TẦNG TRỆT — Manchester thời công nghiệp. `feature: 'sign'`: nhà máy bông Manchester viết
+    // TÊN HÃNG cỡ lớn lên đầu hồi, và cái tên ấy là thứ đọc được từ đầu phố — đúng chức năng mà
+    // biển hiệu sinh ra. (Trùng `sign` với kỷ 13 là hai nền văn hoá cùng nghĩ ra một giải pháp cho
+    // cùng một bài toán; chúng tách nhau ở cửa, khuôn, độ hõm và đặc trưng nhà dân.)
+    // Cửa: `panel` = cửa bốn ô ván của nhà thợ Victoria, kiểu cửa được sản xuất hàng loạt đầu tiên
+    // trong lịch sử — rất hợp với một kỷ lấy nhà máy làm landmark. `frame: 'stone'` vì nhà gạch đỏ
+    // Manchester đóng khuôn cửa bằng đá sa thạch, tương phản cố ý với tường gạch.
+    // `steps: 1` = bậc đá trước cửa, thứ mà phụ nữ khu thợ chà trắng mỗi sáng bằng đá donkey —
+    // một tập tục có tên riêng, tức cái bậc ấy thật sự là một bộ phận ai cũng thấy.
+    // ⚠️ `vernacularFeature: 'none'` và đây là câu trả lời CÓ NỘI DUNG: nhà dãy lưng-kề-lưng mở
+    // cửa THẲNG ra vỉa hè, không sân, không hiên, không gì che. Chính sự trơ trụi ấy là thứ các
+    // phóng sự thế kỷ 19 mô tả, và nó tương phản mạnh với kỷ 9 Paris ngay trước đó.
+    groundFloor: {
+        note: 'Manchester công nghiệp — tên hãng cỡ lớn trên đầu hồi nhà máy, cửa bốn ô ván khuôn đá sa thạch, bậc đá chà trắng mỗi sáng; nhà dãy thợ mở thẳng ra vỉa hè, không che gì',
+        door: 'panel', doorWidth: 0.26, doorTall: 0.68, frame: 'stone', recess: 0.15, steps: 1,
+        feature: 'sign', vernacularFeature: 'none',
+    },
   },
   11: {
     name: 'mặt tiền đồ sộ mạ vàng',
@@ -401,10 +506,22 @@ export const ERA_STYLES = {
     windows: 'grid',
     motifs: ['columns', 'spire', 'statue'],
     rough: 0.03,
-    // ⚠️ Bước 2 — chưa nghiên cứu tầng trệt của nước này. `legacy` = GIỮ NGUYÊN cửa cũ (xem
-    // `LEGACY_DOOR` ở `groundFloor.js`), thay vì bịa vài con số cho đủ mâm rồi để người sau đọc
-    // chúng như thể đã được cân nhắc.
-    groundFloor: { note: 'chưa nghiên cứu tầng trệt — Bước 2', door: 'legacy', feature: 'none', vernacularFeature: 'none' },
+    // ⚠️ TẦNG TRỆT — New York thời Mạ Vàng. Đàm nêu thẳng hướng: *"kỷ 11 Mỹ → sảnh kính cao hai
+    // tầng, bậc đá rộng."* `glazed` + `steps: 3` + `doorTall: 0.90` (cao nhất 15 kỷ) chính là ba
+    // con số ấy. Sảnh cao hai tầng là thứ ngân hàng và khách sạn Mạ Vàng dùng để phô sự bề thế:
+    // tiền sảnh phải LỚN HƠN nhu cầu đi lại, đó mới là thông điệp.
+    // `feature: 'awning'` = MARQUEE, mái đón bằng kim loại và kính đua từ cửa ra tận mép đường —
+    // bộ phận đặc New York tới mức tên nó đi vào tiếng Anh phổ thông.
+    // ⚠️ `vernacularFeature: 'balcony'` = CẦU THANG THOÁT HIỂM SẮT. Không phải ban công để ngắm
+    // cảnh: luật Tenement House Act bắt mọi nhà cho thuê phải có, nên nó phủ kín mặt tiền các khu
+    // lao động và trở thành hình ảnh nhận diện của New York hơn bất cứ thứ gì khác. Hình học của
+    // nó — sàn đua ra + lan can + congxon đỡ — đúng bằng ban công, nên dùng lại chứ không thêm
+    // đặc trưng mới.
+    groundFloor: {
+        note: 'New York Mạ Vàng — sảnh kính cao hai tầng, bậc đá rộng, mái đón marquee đua ra mép đường; nhà cho thuê phủ kín cầu thang thoát hiểm sắt theo luật Tenement House Act',
+        door: 'glazed', doorWidth: 0.42, doorTall: 0.90, frame: 'stone', recess: 0.20, steps: 3,
+        feature: 'awning', vernacularFeature: 'balcony',
+    },
   },
   12: {
     name: 'bê tông & lô cốt',
@@ -422,10 +539,22 @@ export const ERA_STYLES = {
     windows: 'slit',
     motifs: ['bunker', 'crenel'],
     rough: 0.26,
-    // ⚠️ Bước 2 — chưa nghiên cứu tầng trệt của nước này. `legacy` = GIỮ NGUYÊN cửa cũ (xem
-    // `LEGACY_DOOR` ở `groundFloor.js`), thay vì bịa vài con số cho đủ mâm rồi để người sau đọc
-    // chúng như thể đã được cân nhắc.
-    groundFloor: { note: 'chưa nghiên cứu tầng trệt — Bước 2', door: 'legacy', feature: 'none', vernacularFeature: 'none' },
+    // ⚠️ TẦNG TRỆT — lô cốt và khối nhà Xô Viết. `recess: 0.65` là con số SÂU NHẤT của 15 kỷ sau
+    // genkan Nhật, và lý do hoàn toàn khác: lỗ châu mai và cửa lô cốt thụt sâu vào khối bê tông để
+    // mảnh đạn không xiên thẳng vào trong. `frame: 'none'` cũng vậy — bê tông đổ liền khối thì
+    // không có khuôn cửa rời; cái lỗ CHÍNH LÀ hình dạng ván khuôn.
+    // `feature: 'none'`: một công sự không gắn gì lên mặt ngoài, mọi thứ nhô ra đều là chỗ bám cho
+    // đối phương. Lần thứ tư trong bảng này câu trả lời là "không có", và cả bốn lần đều có lý do
+    // riêng chứ không phải cùng một chỗ trống: lều thì chưa có gì để gắn (kỷ 1), nhà Ur quay vào
+    // trong (kỷ 3), lâu đài và lô cốt thì CỐ Ý không gắn (kỷ 5, 12).
+    // ⚠️ `vernacularFeature: 'awning'` = козырёк, tấm bê tông đua ra trên cửa mọi khối nhà ở Xô
+    // Viết — có ở toàn bộ khối panel từ Kaliningrad tới Vladivostok, tức nó là chi tiết được nhân
+    // bản nhiều nhất trong lịch sử kiến trúc nhà ở.
+    groundFloor: {
+        note: 'công sự và khối nhà Xô Viết — cửa thép thụt sâu trong bê tông đổ liền khối, không khuôn rời, mặt ngoài không gắn gì; khối nhà ở có tấm bê tông козырёк đua trên cửa',
+        door: 'double', doorWidth: 0.28, doorTall: 0.56, frame: 'none', recess: 0.65, steps: 2,
+        feature: 'none', vernacularFeature: 'awning',
+    },
   },
   13: {
     // Nhật Bản thời Metabolism (thập niên 1960-70) là câu trả lời chính xác cho "khối bê tông lắp
@@ -477,10 +606,19 @@ export const ERA_STYLES = {
     windows: 'curtain',
     motifs: ['sign', 'solar'],
     rough: 0,
-    // ⚠️ Bước 2 — chưa nghiên cứu tầng trệt của nước này. `legacy` = GIỮ NGUYÊN cửa cũ (xem
-    // `LEGACY_DOOR` ở `groundFloor.js`), thay vì bịa vài con số cho đủ mâm rồi để người sau đọc
-    // chúng như thể đã được cân nhắc.
-    groundFloor: { note: 'chưa nghiên cứu tầng trệt — Bước 2', door: 'legacy', feature: 'none', vernacularFeature: 'none' },
+    // ⚠️ TẦNG TRỆT — Singapore. `feature: 'arcade'` ở đây là **five-foot way / 五脚基**, và nó là
+    // ca mạnh nhất trong ba ca arcade của bảng: quy hoạch Raffles năm 1822 BẮT BUỘC mọi nhà phố
+    // chừa một lối đi có mái rộng năm bộ Anh trước cửa, nên nó không phải một lựa chọn thẩm mỹ mà
+    // là một điều khoản luật đã định hình toàn bộ mặt phố Singapore suốt hai trăm năm. Ở xứ vừa
+    // nắng gắt vừa mưa rào thì lối đi có mái là hạ tầng, không phải trang trí.
+    // Cửa: `glazed` — sảnh kính tháp Marina Bay, `frame: 'trim'` (đố nhôm mảnh, không phải đá),
+    // `steps: 0` vì cao ốc hiện đại đưa mặt sàn bằng vỉa hè cho xe lăn vào được.
+    // ⚠️ `vernacularFeature: 'awning'`: nhà phố cũ ngoài five-foot way còn có mái hắt che cửa hàng.
+    groundFloor: {
+        note: 'Singapore — five-foot way có mái bắt buộc từ quy hoạch Raffles 1822, sảnh kính tháp Marina Bay đố nhôm mảnh, sàn bằng vỉa hè; nhà phố cũ thêm mái hắt che cửa hàng',
+        door: 'glazed', doorWidth: 0.41, doorTall: 0.92, frame: 'trim', recess: 0.30, steps: 0,
+        feature: 'arcade', vernacularFeature: 'awning',
+    },
   },
   15: {
     name: 'khối lơ lửng & vòng sáng',
@@ -499,10 +637,21 @@ export const ERA_STYLES = {
     windows: 'neon',
     motifs: ['halo', 'float'],
     rough: 0,
-    // ⚠️ Bước 2 — chưa nghiên cứu tầng trệt của nước này. `legacy` = GIỮ NGUYÊN cửa cũ (xem
-    // `LEGACY_DOOR` ở `groundFloor.js`), thay vì bịa vài con số cho đủ mâm rồi để người sau đọc
-    // chúng như thể đã được cân nhắc.
-    groundFloor: { note: 'chưa nghiên cứu tầng trệt — Bước 2', door: 'legacy', feature: 'none', vernacularFeature: 'none' },
+    // ⚠️ TẦNG TRỆT — Dubai. `feature: 'awning'` = tấm che nắng sâu, và ở sa mạc thì đây là bộ phận
+    // quyết định: Bảo tàng Tương Lai cùng cả thế hệ công trình Vịnh đều dựa vào bóng đổ sâu và
+    // lớp lưới mashrabiya để hạ nhiệt trước khi tới điều hoà. `recess: 0.45` cùng phục vụ đúng
+    // việc ấy — lối vào thụt vào là lối vào có bóng.
+    // Cửa: `glazed` như hai kỷ hiện đại trước, nhưng `doorWidth: 0.40` hẹp hơn Singapore (0,41) và
+    // `steps: 2` thay vì 0 — công trình biểu tượng Vịnh đặt trên bệ nâng, khác hẳn cao ốc thương
+    // mại Singapore chủ ý bằng vỉa hè.
+    // ⚠️ `vernacularFeature: 'none'` là câu trả lời có nội dung, và nó khép lại 15 kỷ đúng chỗ nó
+    // mở ra: nhà ở Dubai quay vào SÂN TRONG y như nhà Ur kỷ 3, cùng một lý do khí hậu, cách nhau
+    // bốn nghìn năm. Mặt phố là tường trơn, và đó là truyền thống chưa từng đứt.
+    groundFloor: {
+        note: 'Dubai — tấm che nắng sâu và lối vào thụt vào lấy bóng kiểu Bảo tàng Tương Lai, sảnh kính trên bệ nâng; nhà ở vẫn quay vào sân trong nên mặt phố trơn, y như nhà sân trong vùng Lưỡng Hà bốn nghìn năm trước',
+        door: 'glazed', doorWidth: 0.40, doorTall: 0.88, frame: 'trim', recess: 0.45, steps: 2,
+        feature: 'awning', vernacularFeature: 'none',
+    },
   },
 };
 

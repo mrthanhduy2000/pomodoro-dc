@@ -206,30 +206,71 @@ Giữ mức làm việc ở **8 ms** mỗi khung — tức chừa **gấp đôi*
 
 ---
 
-## Sau Phase 10 — tầng trệt (2026-08-18)
+## Sau Phase 10 — tầng trệt, cả hai bước (2026-08-18)
 
-Phase 10 thêm cửa ra vào · bậc thềm · một đặc trưng tầng trệt cho **3 kỷ** (6 · 9 · 13). Điều kiện
-nghiệm thu Đàm đặt ra là một **QUAN HỆ**, không phải một mức tuyệt đối: *P50 mọi cảnh ≤ 8,0 ms ở
-1100×700 trên M3* **VÀ** *số lệnh vẽ không tăng quá 13*.
+Phase 10 thêm cửa ra vào · bậc thềm · một đặc trưng tầng trệt. **Bước 1** làm 3 kỷ (6 · 9 · 13),
+**Bước 2** trải nốt ra 12 kỷ còn lại và xoá `legacy`. Điều kiện nghiệm thu Đàm đặt ra là một
+**QUAN HỆ**, không phải một mức tuyệt đối: *P50 mọi cảnh ≤ 8,0 ms ở 1100×700 trên M3* **VÀ**
+*số lệnh vẽ không tăng quá 13*.
 
-### Vế đã đo xong — số lệnh vẽ và hình học
+### Vế đã đo xong — số lệnh vẽ và hình học, ĐỦ CẢ 15 KỶ
 
-| | Trước (`b98a47d`) | Sau Phase 10 | Trần |
-|---|---:|---:|---:|
-| Lệnh vẽ **thành phố** — kỷ 6 · 9 · 13 | 11 · 10 · 9 | **11 · 10 · 9** | — |
-| Lệnh vẽ **cả cảnh** — kỷ 6 · 9 · 13 | 13 · 12 · 11 | **13 · 12 · 11** | **13** |
-| Tam giác **thành phố** — kỷ 6 | 35.110 | 42.554 (+21%) | — |
-| Tam giác **thành phố** — kỷ 9 | 38.094 | 45.842 (+20%) | — |
-| Tam giác **thành phố** — kỷ 13 | 41.102 | 46.422 (+13%) | — |
-| Tam giác — công trình nặng nhất | — | **4.364** | 8.000 |
-| Tam giác — thành phố nặng nhất (5 CT cấp 3) | — | **11.920** | 24.000 |
+Lệnh: `node scripts/city-preview.mjs --era N --hour 12 --bench 1 --no-shadow`, chạy hai lượt —
+một lượt trên `HEAD` (= sau Bước 1) và một lượt trên cây làm việc (= sau Bước 2). Cột "cả cảnh"
+gồm cả vòm trời + rặng núi (hằng số **44.126** tam giác ở mọi kỷ — phải trừ ra khi so các kỷ với
+nhau, xem bài học vòng 2 ở `CLAUDE.md`).
 
-**Không một lệnh vẽ nào được thêm**, đúng như ràng buộc mục D. Lý do nằm ở kiến trúc chứ không ở
-may mắn: cả thành phố gộp thành **một bộ lưới cho mỗi HỌ VẬT LIỆU**, nên một lệnh vẽ chỉ sinh ra khi
-một họ vật liệu **mới toàn kỷ** xuất hiện — mà tầng trệt cố ý chỉ dùng lại các vai màu đã có
-(`wood` · `stone` · `trim` · `dark` · `glass`). Có **bài test khoá** điều này ở
-`groundFloor.test.js` (gộp họ vật liệu theo TỪNG KỶ trên 7 loại × 3 hạng, kèm một bài đối chứng bắt
-buộc cờ `ground` phải thật sự được gắn — nếu không vòng lặp đếm có thể chạy rỗng mà vẫn xanh).
+| Kỷ | Nước | Lệnh vẽ TP T→S | Lệnh vẽ **cả cảnh** T→S | Tam giác TP T→S | Δ |
+|---:|---|---:|---:|---:|---:|
+| 1 | Thổ Nhĩ Kỳ | 9 → 9 | 11 → 11 | 19.622 → 21.058 | +7,3% |
+| 2 | Ai Cập | 11 → 11 | 13 → 13 | 17.690 → 21.522 | +21,7% |
+| 3 | Iraq | 11 → 11 | 13 → 13 | 26.894 → 31.686 | +17,8% |
+| 4 | Trung Quốc | 11 → 11 | 13 → 13 | 34.682 → 41.482 | +19,6% |
+| 5 | Đức | 10 → 10 | 12 → 12 | 27.016 → 32.424 | +20,0% |
+| 6 | Việt Nam | 11 → 11 | 13 → 13 | 39.738 → 39.738 | **0,0%** ¹ |
+| 7 | Ý | 11 → 11 | 13 → 13 | 34.222 → 41.178 | +20,3% |
+| 8 | Bồ Đào Nha | 11 → 11 | 13 → 13 | 31.546 → 39.314 | +24,6% |
+| 9 | Pháp | 10 → 10 | 12 → 12 | 41.282 → 41.282 | **0,0%** ¹ |
+| 10 | Anh | 12 → 12 | **14 → 14** ² | 34.530 → 39.350 | +14,0% |
+| 11 | Mỹ | 10 → 10 | 12 → 12 | 35.594 → 41.702 | +17,2% |
+| 12 | Nga | 10 → 10 | 12 → 12 | 28.186 → 32.050 | +13,7% |
+| 13 | Nhật Bản | 10 → 10 | 12 → 12 | 42.546 → 42.546 | **0,0%** ¹ |
+| 14 | Singapore | 10 → 10 | 12 → 12 | 27.670 → 32.678 | +18,1% |
+| 15 | UAE | 10 → 10 | 12 → 12 | 33.706 → 37.350 | +10,8% |
+| **Tổng** | | | | **474.924 → 535.360** | **+12,7%** |
+
+¹ **Ba kỷ này KHÔNG đổi một tam giác nào — và đó là phép tự-kiểm của chính bảng số này.** Kỷ 6 · 9 ·
+13 đã có tầng trệt từ Bước 1, tức chúng nằm trong cả hai lượt đo ở trạng thái y hệt nhau. Nếu ba
+dòng ấy mà lệch dù chỉ một tam giác thì thứ hỏng là **phép đo**, không phải mã. Chúng khớp từng
+đơn vị ⇒ 12 con số Δ còn lại đọc được.
+
+² ⚠️ **KỶ 10 CHẠM 14 LỆNH VẼ — VÀ NÓ ĐÃ NHƯ VẬY TỪ TRƯỚC PHASE 10.** Xem mục riêng ngay dưới.
+
+**Bước 2 thêm ĐÚNG 0 lệnh vẽ, ở cả 15 kỷ** (cột "T→S" bằng nhau từng dòng). Lý do nằm ở kiến trúc
+chứ không ở may mắn: cả thành phố gộp thành **một bộ lưới cho mỗi HỌ VẬT LIỆU**, nên một lệnh vẽ
+chỉ sinh ra khi một họ vật liệu **mới toàn kỷ** xuất hiện — mà tầng trệt cố ý chỉ dùng lại các vai
+màu đã có (`wood` · `stone` · `trim` · `dark` · `glass`). Có **bài test khoá** điều này ở
+`groundFloor.test.js` (xem mục dưới về việc bài ấy vừa được vá lần thứ hai).
+
+### ❗ KỶ 10 = 14 LỆNH VẼ: trần "13" trong tài liệu này là một con số suy từ MẪU 3 KỶ
+
+Bảng "Sau Phase 10" bản trước ghi trần là **13**. Con số ấy đúng với **ba kỷ đã đo lúc đó** (6 · 9 ·
+13 → 13 · 12 · 11) và rồi được viết ra như một luật của cả 15 kỷ. Đo đủ 15 kỷ lần đầu tiên (hôm nay)
+cho thấy **kỷ 10 ra 14** — và nó ra 14 **ở CẢ hai lượt đo**, tức khuyết tật này **có trước Phase 10**,
+không do tầng trệt gây ra.
+
+- Kỷ 10 (Anh, thời công nghiệp) là kỷ duy nhất dùng **cả `brick` lẫn `slate`** cùng lúc, cộng
+  `glass` · `stone` · `wood` ⇒ 5 họ vật liệu cho riêng phần thành phố, nhiều hơn mọi kỷ khác một họ.
+- ⇒ **Đây là một CON SỐ NỀN chưa từng được đo, không phải một hồi quy.** Cùng hình dạng với bài học
+  "một ngân sách tự tính mà chưa bao giờ được đặt cạnh sự thật thì không phải ngân sách": trần 13
+  chưa bao giờ được kiểm với cả 15 kỷ, nó chỉ được kiểm với chính mẫu đã sinh ra nó.
+- **CHƯA sửa gì, và cố ý không tự sửa.** Đụng vào đây là đụng bảng màu/vật liệu — nằm ngoài danh
+  sách file được phép của chương trình hiện hành. Đã ghi thành `TECH_DEBT.md` #38 và đã báo Đàm.
+
+⚠️ **Đừng đọc "14 > 13" thành "hiệu năng đã hỏng".** Mô hình chi phí đã đo trên M3 nói **80% chi phí
+đi theo ĐIỂM ẢNH**, và một lệnh vẽ thêm trong một cảnh 12–14 lệnh vẽ là nhiễu so với mức đó. Con số
+13 là một **hàng rào kỷ luật** ("đừng để số lệnh vẽ trôi lên"), không phải một mức đã đo ra là ngưỡng
+đau. Việc cần làm là **đặt lại trần cho đúng sự thật 15 kỷ**, chứ không phải nới nó cho vừa kết quả.
 
 ### Vế CHƯA đo — frame time trên M3
 
@@ -241,8 +282,9 @@ trên MacBook.
 **Dự đoán (chưa phải phép đo):** không đổi đáng kể. Mô hình chi phí đã đo nói **80% chi phí theo
 ĐIỂM ẢNH**, mà Phase 10 không đổi cỡ khung, không đổi DPR, không thêm nguồn sáng, không thêm shader,
 không thêm vật liệu. Bằng chứng thứ nhất trong mục "Ba bằng chứng" còn mạnh hơn thế: **43% chênh
-lệch hình học chỉ đổi 2,4% thời gian** — mà Phase 10 chỉ thêm 13–21%. Nếu Đàm chạy ra một con số
-lệch hẳn dự đoán này thì **chính dự đoán sai**, không phải máy hỏng, và phải quay lại đọc lý do.
+lệch hình học chỉ đổi 2,4% thời gian** — mà cả hai bước của Phase 10 cộng lại chỉ thêm **12,7%** trên
+tổng 15 kỷ (kỷ nặng nhất +24,6%). Nếu Đàm chạy ra một con số lệch hẳn dự đoán này thì **chính dự đoán
+sai**, không phải máy hỏng, và phải quay lại đọc lý do.
 
 ---
 

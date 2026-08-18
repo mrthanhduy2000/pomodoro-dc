@@ -6,7 +6,29 @@
 > chọn: `ARCHITECTURE_DECISIONS.md`. Nợ kỹ thuật: `TECH_DEBT.md`. Migration: `MIGRATION.md`. Tóm
 > tắt theo mốc: `CHANGELOG.md`.
 > **NGUYÊN TẮC ƯU TIÊN SỐ 1:** (1) mọi phiên AI phải đọc file này + `CLAUDE.md` + các file liên quan TRƯỚC khi làm; (2) sau MỌI cập nhật dù nhỏ, phải cập nhật ngay file này + `CLAUDE.md` + các file liên quan khác.
-> Cập nhật lần cuối: **2026-08-17** — **PERFORMANCE GATE VÒNG 4: LÀM CHO BỘ ĐO CHẠY ĐƯỢC TRÊN MÁY
+> Cập nhật lần cuối: **2026-08-18** — **PHASE 10 BƯỚC 1: THÀNH PHỐ CÓ CỬA RA VÀO.** Cả dự án đã
+> tách bản sắc theo kỷ ở mái · thảm thực vật · mặt đường, riêng **chỗ mắt nhìn vào đầu tiên khi
+> đứng trước một công trình** thì vẫn là một khối `dark` bề ngang **viết cứng 0,14** giống hệt nhau
+> ở cả 15 kỷ — và trên nhà dân hẹp nó chiếm gần nửa bề ngang (đúng bệnh `eaves` Phase 7C). Nay có
+> **ngữ pháp thứ tư**, đúng khuôn ba lớp đã dùng ba lần: **BẢNG** `groundFloor` ở `eraStyle.js`
+> (đủ 15 kỷ, buộc vào `country`, có test bắt) · **HÌNH** ở `city3d/groundFloor.js` (mới, thuần) ·
+> `buildingSpec.js` **chỉ ĐỌC**. Bước 1 làm **đúng 3 kỷ** theo lệnh Đàm: **6 Việt Nam** (cửa bức
+> bàn + hàng hiên cột gỗ, đình làng Bắc Bộ) · **9 Pháp** (porte cochère hai cánh + ban công sắt
+> uốn, chung cư Haussmann) · **13 Nhật** (genkan lùi sâu + cửa lùa + biển hiệu dọc). 12 kỷ còn lại
+> khai thẳng `door: 'legacy'` — **trạng thái tường minh ĐẾM ĐƯỢC**, test khoá đúng 12. **KỲ QUAN ≠
+> NHÀ DÂN** (hai trường riêng, bài học Phase 7C) và nhà dân bị **LOD cắn thật**. Đo: **không thêm
+> một lệnh vẽ nào** (11→11 · 10→10 · 9→9; cả cảnh 13/12/11 — trần Đàm đặt là 13), tam giác thành
+> phố +13…21%, ảnh cận cảnh đổi 2,75%/0,89%/0,88%, **bản quét kỷ 1–5 đổi 0,00%**. ⚠️ Ba bài học đã
+> trả giá: **(a)** một bài test canh mỹ thuật ĐỎ ở kỷ 13 và câu trả lời đúng không phải nới nó mà
+> là **4 tấm cửa lùa trên 2 rãnh** — đúng cổng đền lớn Nhật Bản làm thật; **(b)** một phép đo ĐÚNG
+> nhưng **đo sai CẤP ĐỘ** báo oan "kỷ 9 thêm họ vật liệu `wood`" (thành phố gộp lưới theo TOÀN KỶ,
+> mà kỷ 9 đã có xưởng dùng `wood`) — hai lần trước loại lỗi này sai theo hướng **trấn an**, lần này
+> **gây hoảng** và suýt làm tôi gỡ bỏ một bản vá đúng; **(c)** ba lời khẳng định yếu trong chính
+> test tôi vừa viết, chỉ lộ ra khi thử ngược. **764 bài test** (744 + 20 mới), lint sạch, build
+> xanh, **18/18 phép phá làm ĐỎ đúng bài mong đợi**. ⏳ **DỪNG ĐÚNG CỔNG ĐÀM ĐẶT — chưa trải 12 kỷ
+> còn lại, CHƯA gộp `main`**, chờ Đàm xem 3 ảnh cận cảnh và gật đầu là đúng hướng mỹ thuật.
+>
+> *(Trước đó — 2026-08-17)* — **PERFORMANCE GATE VÒNG 4: LÀM CHO BỘ ĐO CHẠY ĐƯỢC TRÊN MÁY
 > ĐÀM** (đóng `TECH_DEBT #34`, đóng **một nửa** `#35`). Bộ đo đã "nghiệm thu đủ" ở vòng 2 — test
 > xanh, lint sạch, thử ngược đạt — vậy mà đưa cho Đàm chạy thì anh mất **5 vòng qua lại** vì bốn
 > thứ **không cái nào liên quan tới hiệu năng**: nhánh chưa `git fetch` · `package.json` bẩn chặn
@@ -148,6 +170,15 @@
 - ⚠️ **CẦN ĐÀM THỬ TAY** (không test được trên dev): (a) câu nhắc-sau-phiên hiện sau khi xong PHIÊN THẬT; (b) bài "AI phân tích tổng thể" giờ chạy pro — xem có chậm/khác chất lượng không; (c) dòng "Ghi nhớ" lời khuyên hiện sau ≥3 ngày; (d) thông báo chuỗi-sắp-đứt: **từ nay** (11/7) chiều nào quên làm sẽ nhận push (cần đã bật push iPhone) — đây là lần đầu tiên thực sự có cơ hội chạy thật.
 
 ## 🔜 Sẽ làm tiếp (ưu tiên từ trên xuống)
+
+> ⚠️ **VIỆC GẦN NHẤT ĐANG CHỜ ĐÀM (2026-08-18)** — **Phase 10 Bước 2: trải tầng trệt ra 12 kỷ còn
+> lại.** Bước 1 (kỷ 6 · 9 · 13) đã xong và đã commit lên nhánh; Đàm chỉ cần xem 3 ảnh cận cảnh rồi
+> nói **đúng hướng** hay **chỉnh hướng**. Chưa gật thì **không được trải tiếp** — đây là cổng dừng
+> chính Đàm đặt ra, lý do: *"sai ở kỷ thứ 3 rẻ hơn nhiều so với sai ở kỷ thứ 15."* Gật rồi thì Bước
+> 2 là việc thuần cơ học: 12 dòng bảng trong `eraStyle.js`, mỗi dòng phải trả lời được *"công trình
+> có thật nào ở nước ấy trông như vậy?"*; hình đã dựng sẵn đủ 4 kiểu cửa + 5 đặc trưng, không cần
+> viết thêm mã hình học. Bước 2 tự đóng luôn `TECH_DEBT #36`.
+
 0. **NHÁNH THÀNH PHỐ 3D — thứ tự Đàm đã chốt, KHÔNG được nhảy bước.**
    *Visual Foundation (**7A ✅**) → Terrain/City (**7B: địa hình ✅ · mật độ + khu dân cư CHƯA**) →
    Roads → Historical Architecture → Living City → Pomodoro → Polish.*
@@ -183,6 +214,76 @@
 - **Lịch sử git `main` từng bị xáo** (thao tác git song song): bản đang chạy là `eb44638` — chứa ĐỦ mọi việc gần đây (Hỏi Coach offline + fix đêm khuya + Coach offline analyst). Vài commit cũ (`1e27505`, `9fbcd62`) thành dangling, KHÔNG còn trong `git log` nhưng code vẫn nằm trong bản deploy. Đừng hoảng nếu không thấy chúng.
 
 ## 🗒️ Nhật ký cập nhật
+
+### 2026-08-18 — Phase 10 Bước 1: thành phố có CỬA RA VÀO, và 3 kỷ có tầng trệt riêng
+
+**Yêu cầu của Đàm**: thêm một lớp chi tiết tầng trệt khác nhau theo kỷ — **cửa ra vào (bắt buộc,
+mọi công trình)** · bậc thềm nếu vật liệu và thời kỳ cho phép · **MỘT đặc trưng tầng trệt theo kỷ**
+(mái hiên · cột · ban công · cửa chớp · ô văng · hàng hiên · biển hiệu). Kèm một luật cứng:
+*"KHÔNG rắc đều mọi thứ cho mọi kỷ. Mỗi kỷ chọn ĐÚNG một hai đặc trưng, và phải trả lời được:
+'công trình có thật nào ở nước ấy trông như vậy?'"*, và một **cổng dừng**: *"Bước 1: làm cửa ra vào
+cho ĐÚNG 3 kỷ (6 Việt Nam · 9 Pháp · 13 Nhật), chụp cận cảnh, ĐO lại, rồi DỪNG và hỏi Đàm."*
+
+**Hai khuyết tật THẬT mà nó vá** (không phải "thêm cho đẹp"):
+1. Cửa cũ là **một khối `dark` bề ngang viết cứng `0,14`**, áp cho mọi khối — mà khối trong thành
+   phố chênh nhau vài lần. Cùng đúng bệnh `eaves` ở Phase 7C (mái hiên thò ra 71% mỗi bên trên nhà
+   dân, thành cây nấm). Trên nhà dân hẹp, cái cửa 0,14 chiếm gần nửa bề ngang.
+2. **15 kỷ chung đúng một cái cửa.** Cả dự án đã tách bản sắc theo kỷ ở mái (`vernacularRoof`),
+   thảm thực vật (`floraStyle`), mặt đường (`streetStyle`) — riêng chỗ mắt nhìn vào đầu tiên khi
+   đứng trước một công trình thì vẫn là một lỗ đen giống hệt nhau ở cả 15 kỷ.
+
+**Đã làm gì**
+- **BẢNG** `groundFloor` ở `eraStyle.js` — **đủ 15 kỷ, bắt buộc**. Ba kỷ đã nghiên cứu:
+  | Kỷ | Nước | Cửa | Đặc trưng KỲ QUAN | Đặc trưng NHÀ DÂN | Lấy mẫu từ |
+  |---|---|---|---|---|---|
+  | 6 | Việt Nam | `panel` (bức bàn), ngưỡng cao, 2 bậc | `porch` — hàng hiên cột gỗ | `awning` — mái đua thấp | đình làng Bắc Bộ · nhà ống phố cổ |
+  | 9 | Pháp | `double` (porte cochère), khuôn đá | `balcony` — ban công sắt uốn | `shutters` — cửa chớp | chung cư Haussmann Paris |
+  | 13 | Nhật | `sliding` (cửa lùa), genkan lùi sâu | `sign` — biển hiệu dọc | `awning` — mành che | phố thương mại Nhật |
+  12 kỷ còn lại khai thẳng `door: 'legacy'` — **trạng thái tường minh ĐẾM ĐƯỢC**, có test khoá đúng
+  12, chứ không im lặng rơi về mặc định.
+- **HÌNH** ở `src/engine/city3d/groundFloor.js` (mới, thuần): bậc thềm · khuôn cửa hõm/nhô · cánh
+  cửa 4 kiểu · 5 đặc trưng. `buildingSpec.js` **chỉ ĐỌC** — đúng khuôn ba lớp đã dùng ba lần.
+- **KỲ QUAN ≠ NHÀ DÂN**: hai trường riêng `feature` / `vernacularFeature` (bài học Phase 7C —
+  25 căn nhà nhỏ từng đội mái vòm Duomo). Nhà dân còn bị **LOD cắn thật**: cửa co còn 78%, tối đa
+  1 bậc thay vì 3, không hõm sâu, không hốc cạnh.
+- **Mọi kích thước là TỈ LỆ bề ngang khối, có TRẦN kẹp** — và **trần luôn thắng sàn**: khối quá hẹp
+  thì **không có cửa**, chứ không phải có một cái cửa tí hon dính hai mép tường.
+- `isValidGroundFloor` **TỪ CHỐI THẲNG** bảng sai, không tự chữa (bẫy `MIN_STONE` Phase 9D: tự chữa
+  là cách một bảng 15 dòng lặng lẽ thoái hoá về 1 dòng).
+
+**Đo được**
+| | Trước | Sau |
+|---|---:|---:|
+| Lệnh vẽ thành phố (kỷ 6 · 9 · 13) | 11 · 10 · 9 | **11 · 10 · 9** — không đổi |
+| Lệnh vẽ cả cảnh | 13 · 12 · 11 | **13 · 12 · 11** — trần Đàm đặt là 13 |
+| Tam giác thành phố | 35.110 · 38.094 · 41.102 | 42.554 · 45.842 · 46.422 (**+13…21%**) |
+| Tam giác công trình nặng nhất | — | 4.364 / trần 8.000 |
+| Khác biệt ảnh cận cảnh (điểm ảnh đổi) | — | **2,75% · 0,89% · 0,88%**, lệch trung bình 45–50/255 |
+| Bản quét kỷ 1–5 | — | **0,00% đổi** — 12 kỷ `legacy` không bị chạm một điểm ảnh |
+
+**Ba bài học đã trả giá** (chi tiết ở `CLAUDE.md`):
+1. **Một bài test canh mỹ thuật đã dạy lại tôi một sự thật kiến trúc.** Bài *"kỳ quan của MỌI kỷ vẫn
+   đối xứng tuyệt đối"* ĐỎ ở kỷ 13, vì cửa lùa Nhật vốn so le hai tấm. Câu trả lời đúng **không**
+   phải nới bài test, mà là **4 tấm trên 2 rãnh** — đúng cách cổng đền lớn Nhật Bản làm thật.
+2. **Phép đo đúng nhưng đo SAI CẤP ĐỘ, và lần này nó GÂY HOẢNG.** Bài test của chính tôi báo
+   *"kỷ 9 kỳ quan kéo thêm họ vật liệu `wood`"* — nghe như đã vi phạm ràng buộc cứng nhất. Sai: cả
+   thành phố gộp lưới theo họ vật liệu trên **TOÀN KỶ**, mà kỷ 9 đã có cửa hàng + xưởng dùng `wood`
+   từ trước. Đo lại đúng cấp: **không thêm một lệnh vẽ nào**. Hai lần trước (`TECH_DEBT #22`, ngân
+   sách tam giác) sai theo hướng **trấn an**; lần này sai theo hướng **gây hoảng** — và hoảng thì
+   nguy hiểm kiểu khác, nó suýt làm tôi gỡ bỏ một bản vá đúng.
+3. **Ba lời khẳng định yếu chỉ lộ ra khi thử ngược**, cả ba đều là test tôi vừa viết trong chính
+   phiên ấy: một bài dùng bảng thử `frame: 'wood'` nên khung cửa đã thoả điều kiện "có khối gỗ"
+   (cùng họ `/envMap,/` xanh oan Phase 7A) · một bài có **hai** thứ giữ nó xanh mà chú thích chỉ kể
+   một (bài học Phase 4D) · một bài ký tên gồm cả `p.x` mà chính `p.x` đã theo hạt giống nên viết
+   cứng số ô cửa vẫn ra 40 chữ ký khác nhau.
+
+**Nghiệm thu**: **764 bài test** (744 + 20 mới), lint sạch, build xanh, **18/18 phép phá làm ĐỎ đúng
+bài mong đợi**. Tài liệu đã đồng bộ: `ARCHITECTURE_DECISIONS.md` (**ADR-026**) · `PROJECT_STRUCTURE.md`
+· `PERFORMANCE.md` (mục "Sau Phase 10") · `TECH_DEBT.md` (**#36** + **#37** mới) · `CLAUDE.md`.
+
+⏳ **DỪNG Ở ĐÂY, ĐÚNG THEO LỆNH ĐÀM.** Chưa trải ra 12 kỷ còn lại, **chưa gộp `main`** — chờ Đàm xem
+3 ảnh cận cảnh và gật đầu là đúng hướng mỹ thuật. Lý do chính Đàm nêu: *"nếu hướng mỹ thuật sai thì
+sai ở kỷ thứ 3 rẻ hơn nhiều so với sai ở kỷ thứ 15."*
 
 ### 2026-08-17 (vòng 4) — Bộ đo "đã nghiệm thu đủ" vẫn làm Đàm mất 5 vòng, vì nó chưa từng chạy ở môi trường của anh
 

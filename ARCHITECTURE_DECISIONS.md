@@ -11,6 +11,71 @@
 
 ---
 
+## ADR-026 — Tầng trệt là một BẢNG BẮT BUỘC 15 kỷ trong `eraStyle.js` + một tầng hình học riêng; và trạng thái "mới làm 3 kỷ" được khai TƯỜNG MINH bằng `door: 'legacy'`
+
+- **Ngày**: 2026-08-18 (Phase 10, Bước 1)
+- **Bối cảnh**: Đàm yêu cầu thành phố có *"tầng trệt"* — cửa ra vào cho mọi công trình, bậc thềm
+  nếu vật liệu và thời kỳ cho phép, và **MỘT** đặc trưng mặt phố theo kỷ; kèm hai ràng buộc gắt:
+  **"KHÔNG rắc đều mọi thứ cho mọi kỷ"** và **"làm từng bước — Bước 1 đúng 3 kỷ (6 · 9 · 13), chụp
+  cận cảnh, ĐO lại, rồi DỪNG và hỏi"**.
+- **Vấn đề**: audit tìm ra lối vào của cả 75 công trình là **một dòng lệnh duy nhất** ở cuối
+  `emitWindows` — một tấm phẳng `dark` rộng cứng **0,14**. Hai lỗi thật, đã chạy production nhiều
+  tháng, không bài test nào đỏ: **(a)** kỷ 1 và 2 khai `windows: 'none'` nên hàm ấy thoát trước khi
+  tới dòng cửa ⇒ **hai kỷ không hề có cửa** (đo được: 0 khối vai `dark`); **(b)** một con số tuyệt
+  đối áp cho cả kỳ quan rộng 1,4 lẫn nhà dân rộng 0,45 — trên nhà dân nó chiếm 31% mặt tiền (đọc ra
+  là cái cổng), trên kỳ quan 10% (đọc ra là vết nứt).
+- **Phương án cân nhắc**:
+  1. **Chỉnh con số 0,14 cho vừa mắt hơn.** Loại thẳng: đây đúng cái bẫy "số tuyệt đối áp lên những
+     khối chênh nhau ba lần" đã cắn ở Phase 5B (`storyHeight`), 7C (`eaves`) và 7D (`roadColor`) —
+     mọi lần chỉnh sau đó chỉ là đổi chỗ vấn đề sang một cỡ nhà khác.
+  2. **Thêm một bảng thứ tư song song `floraStyle.js`/`streetStyle.js` (ví dụ `groundFloorStyle.js`)
+     có `country` riêng + test khoá chéo.** Nhất quán với hai lần trước, nhưng nó tạo **bảng thứ tư
+     phải giữ đồng bộ** với `eraStyle.country`, tức mặt tiếp xúc để trôi tăng lên; và khác hai bảng
+     kia, tầng trệt là thuộc tính của **chính công trình** chứ không phải của mặt đất quanh nó.
+  3. **Trường `groundFloor` tuỳ chọn, kỷ nào chưa làm thì bỏ trống.** Loại: đúng cái bẫy mà
+     `vernacularRoof` (Phase 7C) đã phải làm thành trường BẮT BUỘC để tránh — trường tuỳ chọn thì
+     kỷ thêm sau này lặng lẽ rơi về mặc định và cả bảng mất nghĩa.
+  4. ⭐ **Trường `groundFloor` BẮT BUỘC đủ 15 kỷ, khai ngay trong `eraStyle.js`; hình học tách sang
+     `city3d/groundFloor.js`; 12 kỷ chưa nghiên cứu khai TƯỜNG MINH `door: 'legacy'`** — chọn.
+- **Giải pháp chọn**:
+  - **Bảng nằm trong `eraStyle.js`** (không phải file thứ tư): mỗi dòng phải trả lời *"công trình
+    có thật nào ở nước ấy trông như vậy?"*, và câu trả lời — `country`/`landmark` — nằm ngay cùng
+    dòng, trong tầm mắt. Không có bảng thứ hai thì không có gì để trôi khỏi nhau.
+  - **Hình học ở file thuần mới `src/engine/city3d/groundFloor.js`**, `buildingSpec.js` chỉ ĐỌC.
+    Lý do là God File: `buildingSpec.js` đã 821 dòng và đang gánh chiều cao · mái · cửa sổ · mô-típ
+    · chữ ký · giàn giáo; nhét thêm tầng trệt là đẩy nó qua 1.100 dòng.
+  - **Tách kỳ quan khỏi nhà dân ở đúng chỗ nó thật sự khác**: `feature` vs `vernacularFeature` là
+    hai trường khai riêng (đình làng có hàng hiên cột gỗ; nhà ống phố cổ chỉ có mái đua thấp — hai
+    loại nhà khác nhau ở cùng một Hà Nội). Nhưng **kiểu cửa/khung/số bậc KHÔNG tách**, vì chúng là
+    hằng số văn hoá chứ không phải dấu hiệu địa vị; thứ khác nhau giữa hai hạng là CỠ và ĐỘ RƯỜM
+    RÀ, và hai thứ ấy suy được từ cờ `plain` đã có sẵn ở `archetypes.js`.
+  - **Mọi kích thước là TỈ LỆ của bề ngang khối, có TRẦN**; trần đứng ngoài cùng trong phép kẹp nên
+    không tồn tại cái cửa rộng hơn bức tường. Mảng nhà hẹp dưới ngưỡng thì **không có cửa**, chứ
+    không phải có cửa tí hon (bài học Phase 7D: "KẸP thì phá thứ tự, ĐẨY thì không").
+  - **`door: 'legacy'` là trạng thái tạm CÓ ĐẾM ĐƯỢC**: `groundFloor.test.js` khoá đúng con số 12
+    và đúng ba kỷ đã làm. Bước 2 đưa con số ấy về 0 và lúc đó bài test BẮT BUỘC phải bị đụng tới.
+- **Trade-off**:
+  - **Được**: hai lỗi thật được sửa tận gốc; 0 lệnh vẽ mới (đo được, xem dưới); 12 kỷ chưa làm ra
+    mô tả byte-identical nên hướng mỹ thuật nghiệm thu được ở 3 kỷ với rủi ro bằng 0.
+  - **Mất**: `DOOR_KINDS` mang một giá trị `'legacy'` không phải kiểu cửa thật, và mã cửa đời cũ
+    trong `emitWindows` phải sống thêm một phase. Đây là cái giá của việc làm từng bước, và nó được
+    trả bằng một con số trong bài test chứ không phải một dòng "TODO".
+  - **Vẫn còn**: kỷ 1 và 2 **vẫn chưa có cửa** — kiến trúc để sửa đã sẵn (`emitGroundFloor` được
+    gọi từ `buildBuildingSpec` chứ không từ `emitWindows`), nhưng hai kỷ ấy còn `legacy` nên chưa
+    hưởng. Ghi ở `TECH_DEBT #36`.
+- **Ảnh hưởng đo được** (kỷ 6 · 9 · 13, cùng khung 500×320, `--bench`):
+  - **lệnh vẽ: 11 → 11 · 10 → 10 · 9 → 9** — KHÔNG đổi, đúng ràng buộc Đàm đặt (trần 13).
+  - tam giác thành phố: 35.110 → 42.554 (+21%) · 38.094 → 45.842 (+20%) · 41.102 → 46.422 (+13%).
+    Trần `MAX_TRIANGLES_PER_CITY` = 24.000 cho phần công trình vẫn còn dư gần một nửa (nặng nhất
+    11.920). Theo mô hình chi phí đo trên M3 (`PERFORMANCE.md`), hình học gần như miễn phí —
+    80% chi phí đi theo ĐIỂM ẢNH.
+  - điểm ảnh đổi ở cận cảnh 1500×950: kỷ 6 **2,75%** · kỷ 9 **0,89%** · kỷ 13 **0,88%** (lệch
+    trung bình 45–50/255, cao hơn nhiều ngưỡng mắt 12). Bản quét 5 kỷ 1–5 đổi **0,00%** — bằng
+    chứng 12 kỷ `legacy` thật sự không suy suyển.
+- **Điều kiện xem lại**: khi Bước 2 trải ra 12 kỷ còn lại thì phải xoá `'legacy'` khỏi `DOOR_KINDS`,
+  xoá khối cửa cũ trong `emitWindows`, và đổi bài test "đúng 12 kỷ legacy" thành "không kỷ nào".
+  Nếu Đàm thấy hướng mỹ thuật sai thì chỉ cần trả 3 dòng bảng về `legacy` — không đụng tới mã.
+
 ## ADR-025 — Bản sắc mặt đường là CẤU TRÚC (9 trục hình học), không phải MÀU; và phép đẩy độ đậm phải có TRẦN
 
 - **Ngày**: 2026-08-16 (Phase 9D)

@@ -149,6 +149,8 @@
 │   │   │   │                      #   ⚠️ `wallMaterial`/`roofMaterial` là BỀ MẶT (nhám/bóng), tách
 │   │   │   │                      #   hẳn khỏi `wallColor`/`roofColor` (sắc). Cùng bài học "một
 │   │   │   │                      #   trường gánh hai việc" của `storyHeight` ở Phase 5B
+│   │   │   │                      #   ⚠️ Từ Phase 10 còn giữ BẢNG TẦNG TRỆT (`groundFloor`, bắt
+│   │   │   │                      #   buộc đủ 15 kỷ) — hình dựng ở `city3d/groundFloor.js`
 │   │   │   ├── dwellings.js       # NHÀ DÂN (ADR-015): 30 ô đất trống chia 3 khu theo khoảng cách
 │   │   │   │                      #   tới tâm (ngoại vi/dân cư/trung tâm); mỗi 2 phiên mọc thêm 1
 │   │   │   │                      #   căn, mọc từ trong ra. Nhà dân đi qua ĐÚNG buildingSpec.js —
@@ -187,6 +189,22 @@
 │   │   │   │                      #   và `windows` có 7 nên hai trục ấy BUỘC phải dùng lại
 │   │   │   │                      #   ⚠️ Dựng ở MỌI hạng kể cả `common` — khác `motifs` (chỉ
 │   │   │   │                      #   rare/epic, tức 30/75 căn trước đây là hộp trơn)
+│   │   │   ├── groundFloor.js     # BẢNG TẦNG TRỆT 15 KỶ (Phase 10, ADR-026): cửa ra vào · bậc
+│   │   │   │                      #   thềm · MỘT đặc trưng tầng trệt theo kỷ (hiên cột · ô văng ·
+│   │   │   │                      #   ban công · cửa chớp · biển hiệu). Nguồn DUY NHẤT trả lời
+│   │   │   │                      #   "đứng trước cửa một công trình ở kỷ này thì thấy gì".
+│   │   │   │                      #   BẢNG nằm ở `eraStyle.js` (trường `groundFloor`), HÌNH nằm ở
+│   │   │   │                      #   đây, `buildingSpec.js` chỉ ĐỌC — giống hệt streetStyle/flora
+│   │   │   │                      #   ⚠️ KỲ QUAN ≠ NHÀ DÂN: `feature` cho công trình biểu tượng,
+│   │   │   │                      #   `vernacularFeature` cho nhà dân — cùng bài học Phase 7C
+│   │   │   │                      #   (25 nhà nhỏ đội mái vòm Duomo). Nhà dân còn bị LOD cắn:
+│   │   │   │                      #   `VERNACULAR_DOOR_SHRINK` + tối đa 1 bậc + không hõm sâu
+│   │   │   │                      #   ⚠️ MỌI kích thước là TỈ LỆ bề ngang khối, có TRẦN kẹp
+│   │   │   │                      #   (`DOOR_MAX_WIDTH_RATIO`) — số tuyệt đối áp lên khối chênh
+│   │   │   │                      #   nhau vài lần thì sớm muộn cũng sai (bài học `eaves` Phase 7C)
+│   │   │   │                      #   ⚠️ Kỷ chưa nghiên cứu khai `door: 'legacy'` — trạng thái
+│   │   │   │                      #   TƯỜNG MINH ĐẾM ĐƯỢC, có test khoá đúng 12 kỷ, KHÔNG im lặng
+│   │   │   │                      #   rơi về mặc định
 │   │   │   ├── buildingSpec.js    # NƠI 3 TRỤC GẶP NHAU: (kỷ × loại × độ hiếm) → mô tả hình học
 │   │   │   ├── streetStyle.js     # BẢNG ĐƯỜNG PHỐ 15 KỶ (Phase 9D, ADR-025): bề rộng đại lộ · bề
 │   │   │   │                      #   rộng ngõ · vật liệu lát · cỡ viên · độ mòn · bó vỉa · vỉa hè

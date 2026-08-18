@@ -206,6 +206,46 @@ Giữ mức làm việc ở **8 ms** mỗi khung — tức chừa **gấp đôi*
 
 ---
 
+## Sau Phase 10 — tầng trệt (2026-08-18)
+
+Phase 10 thêm cửa ra vào · bậc thềm · một đặc trưng tầng trệt cho **3 kỷ** (6 · 9 · 13). Điều kiện
+nghiệm thu Đàm đặt ra là một **QUAN HỆ**, không phải một mức tuyệt đối: *P50 mọi cảnh ≤ 8,0 ms ở
+1100×700 trên M3* **VÀ** *số lệnh vẽ không tăng quá 13*.
+
+### Vế đã đo xong — số lệnh vẽ và hình học
+
+| | Trước (`b98a47d`) | Sau Phase 10 | Trần |
+|---|---:|---:|---:|
+| Lệnh vẽ **thành phố** — kỷ 6 · 9 · 13 | 11 · 10 · 9 | **11 · 10 · 9** | — |
+| Lệnh vẽ **cả cảnh** — kỷ 6 · 9 · 13 | 13 · 12 · 11 | **13 · 12 · 11** | **13** |
+| Tam giác **thành phố** — kỷ 6 | 35.110 | 42.554 (+21%) | — |
+| Tam giác **thành phố** — kỷ 9 | 38.094 | 45.842 (+20%) | — |
+| Tam giác **thành phố** — kỷ 13 | 41.102 | 46.422 (+13%) | — |
+| Tam giác — công trình nặng nhất | — | **4.364** | 8.000 |
+| Tam giác — thành phố nặng nhất (5 CT cấp 3) | — | **11.920** | 24.000 |
+
+**Không một lệnh vẽ nào được thêm**, đúng như ràng buộc mục D. Lý do nằm ở kiến trúc chứ không ở
+may mắn: cả thành phố gộp thành **một bộ lưới cho mỗi HỌ VẬT LIỆU**, nên một lệnh vẽ chỉ sinh ra khi
+một họ vật liệu **mới toàn kỷ** xuất hiện — mà tầng trệt cố ý chỉ dùng lại các vai màu đã có
+(`wood` · `stone` · `trim` · `dark` · `glass`). Có **bài test khoá** điều này ở
+`groundFloor.test.js` (gộp họ vật liệu theo TỪNG KỶ trên 7 loại × 3 hạng, kèm một bài đối chứng bắt
+buộc cờ `ground` phải thật sự được gắn — nếu không vòng lặp đếm có thể chạy rỗng mà vẫn xanh).
+
+### Vế CHƯA đo — frame time trên M3
+
+⚠️ **Con số ms trong tài liệu này vẫn là bộ số ngày 2026-08-17, đo TRƯỚC Phase 10.** Hộp cát AI
+chạy SwiftShader (rasteriser CPU) nên **không suy ra được** cho GPU thật, kể cả dưới dạng phần trăm
+— đúng luật đã ghi ở mục "BA GIỚI HẠN". Muốn đóng vế này thì Đàm chạy `bash scripts/bench-macbook.sh`
+trên MacBook.
+
+**Dự đoán (chưa phải phép đo):** không đổi đáng kể. Mô hình chi phí đã đo nói **80% chi phí theo
+ĐIỂM ẢNH**, mà Phase 10 không đổi cỡ khung, không đổi DPR, không thêm nguồn sáng, không thêm shader,
+không thêm vật liệu. Bằng chứng thứ nhất trong mục "Ba bằng chứng" còn mạnh hơn thế: **43% chênh
+lệch hình học chỉ đổi 2,4% thời gian** — mà Phase 10 chỉ thêm 13–21%. Nếu Đàm chạy ra một con số
+lệch hẳn dự đoán này thì **chính dự đoán sai**, không phải máy hỏng, và phải quay lại đọc lý do.
+
+---
+
 ## Khi nào phải đo lại
 
 - Sau bất kỳ phase nào **thêm nguồn sáng, đổi shader, đổi bóng đổ, hoặc đổi DPR**.

@@ -14,6 +14,7 @@
  */
 
 import { unit, signed } from '../hashId';
+import { emitGroundFloor, LEGACY_DOOR } from './groundFloor';
 import { gable, prism, countSpecTriangles, specHeight, specSpan } from './parts';
 import { getEraStyle, getVernacularStyle, eaveOverhang } from './eraStyle';
 import { getArchetype, getMassing, getMotifBudget, getRarityScale } from './archetypes';
@@ -26,6 +27,15 @@ const TRIM_THICKNESS = 0.055;
  * ⚠️ XUẤT RA vì `SILL_RELIEF` phải LỚN HƠN nó, và luật đó được khoá bằng test. Xem `SILL_RELIEF`.
  */
 export const WINDOW_RELIEF = 0.035;
+
+/**
+ * Bề ngang cái cửa ĐỜI CŨ. ⚠️ Xuất ra KHÔNG phải để ai dùng lại — xuất ra để `groundFloor.test.js`
+ * đối chiếu được rằng 12 kỷ `legacy` vẫn dựng đúng cái cửa cũ, mà không phải chép con số này sang
+ * bài test (chép là tự tạo "một luật hai công thức", đúng thứ đã cắn dự án nhiều lần).
+ * Một con số TUYỆT ĐỐI dùng chung cho khối rộng 0,45 lẫn khối rộng 1,4 — xem `groundFloor.js` để
+ * biết vì sao nó sai và vì sao bản mới đo bằng TỈ LỆ.
+ */
+export const LEGACY_DOOR_WIDTH = 0.14;
 
 /**
  * ─── KHỐI KIẾN TRÚC (Phase 8A) ───────────────────────────────────────────────
@@ -263,7 +273,7 @@ function emitRoof(out, { w, d, top, x, z }, style, ctx) {
  *
  * Vẽ đủ bốn mặt vì camera xoay được 360°: bỏ mặt sau sẽ lộ ra ngay lần đầu Đàm kéo xoay.
  */
-function emitWindows(out, { w, d, base, height, x, z }, style) {
+function emitWindows(out, { w, d, base, height, x, z }, style, hasGroundFloor = false) {
   if (style.windows === 'none' || height < 0.3) return;
 
   const stories = Math.max(1, Math.round(height / style.storyHeight));
@@ -373,10 +383,20 @@ function emitWindows(out, { w, d, base, height, x, z }, style) {
     }
   }
 
+  // ⚠️ CỬA CŨ — CHỈ CÒN DÙNG CHO KỶ KHAI `door: 'legacy'` (xem `groundFloor.js`). Đừng "dọn dẹp"
+  // nó đi khi thấy nó đơn sơ: chừng nào còn kỷ chưa nghiên cứu tầng trệt thì đây là thứ giữ cho
+  // 12 kỷ ấy ra mô tả Y HỆT trước Phase 10 — tức là thứ cho phép nghiệm thu hướng mỹ thuật ở 3 kỷ
+  // mà không làm 12 kỷ kia đổi theo. Bước 2 xoá cả khối này lẫn `LEGACY_DOOR`.
+  //
+  // ⚠️ VÀ ĐÂY LÀ CHỖ HAI KỶ ĐẦU MẤT CỬA: hàm này thoát ngay ở dòng đầu khi `windows === 'none'`,
+  // nên kỷ 1 và kỷ 2 chưa bao giờ chạy tới dòng dưới. `emitGroundFloor` được gọi từ
+  // `buildBuildingSpec` chứ KHÔNG từ đây, đúng để cái cửa thôi phụ thuộc vào chuyện có cửa sổ hay
+  // không — hai luật chẳng liên quan gì nhau mà xưa nay chung một câu `return`.
+  if (hasGroundFloor) return;
   // Cửa ra vào ở mặt trước — cái neo tỉ lệ, giúp mắt ước lượng công trình to cỡ nào.
   out.push(prism({
     x, z: z + d / 2, y: base,
-    w: 0.14, d: WINDOW_RELIEF, h: Math.min(0.3, height * 0.32),
+    w: LEGACY_DOOR_WIDTH, d: WINDOW_RELIEF, h: Math.min(0.3, height * 0.32),
     sides: 4, role: 'dark',
   }));
 }
@@ -635,7 +655,39 @@ export function buildBuildingSpec({ bpId, era, type, rarity = 'common', level = 
       // hình gì, vừa ngốn phần lớn ngân sách tam giác của cả công trình (đo được: kỳ quan kỷ 7 rơi
       // từ ~12.500 xuống ~5.000 tam giác chỉ nhờ bỏ chi tiết này). Dáng thóp + mái nhọn của tháp
       // đã đủ để mắt nhận ra nó là tháp.
-      if (!mass.tower) emitWindows(parts, { w, d, base, height, x, z }, style);
+      // ⚠️ TẦNG TRỆT ĐI TRƯỚC CỬA SỔ TRONG THỨ TỰ ĐỌC, NHƯNG DỰNG SAU — và nó được gọi TỪ ĐÂY
+      // chứ không từ trong `emitWindows`. Đó là cả điểm của Phase 10: cái cửa thôi phụ thuộc vào
+      // chuyện kỷ này có cửa sổ hay không (kỷ 1 và 2 khai `windows: 'none'` nên xưa nay không hề
+      // có cửa nào). Hai luật khác nhau thì phải có hai đường đi khác nhau.
+      const hasGroundFloor = Boolean(style.groundFloor) && style.groundFloor.door !== LEGACY_DOOR;
+
+      if (!mass.tower) emitWindows(parts, { w, d, base, height, x, z }, style, hasGroundFloor);
+
+      // ⚠️ THÁP GÓC KHÔNG CÓ CỬA, cùng lý do với cửa sổ: chúng chỉ rộng ~0,2 ô, và một công trình
+      // phòng thủ hạng epic có tới bốn cái — bốn cái cửa tí hon trên bốn cái tháp canh đọc ra là
+      // lỗi dựng hình chứ không phải chi tiết. Mảng nhà thường mà quá hẹp thì `doorMetrics` tự trả
+      // về `null` (một phép ĐO, không phải một luật phải nhớ), nên ở đây chỉ cần chặn tháp.
+      if (hasGroundFloor && !mass.tower) {
+        // ⚠️ ĐÁNH DẤU `ground: true`, cùng lý do với cờ `deco` ở cuối hàm: nó KHÔNG phục vụ mã
+        // dựng, nó phục vụ câu hỏi *"phần này thêm vào những gì?"*. Không có cờ ấy thì bài test
+        // "tầng trệt không được thêm họ vật liệu nào" buộc phải tự dựng lại một công trình
+        // không-có-tầng-trệt để so — tức viết công thức thứ hai cho cùng một luật, đúng cái bẫy
+        // đã cắn dự án nhiều lần.
+        const beforeGround = parts.length;
+        emitGroundFloor(parts, {
+          gf: style.groundFloor,
+          bpId: id, index,
+          x, z, base, w, d, height,
+          // Cửa phải nghiêng ĐÚNG BẰNG thân nhà, nếu không nó rời khỏi mặt tường ở những kỷ có
+          // nét vẽ thô. (Cửa sổ hiện KHÔNG nhận `ry` — sai số dưới một điểm ảnh nên chưa đáng
+          // sửa trong phase này; đã ghi `TECH_DEBT`.)
+          ry: jitterR,
+          storyHeight: style.storyHeight,
+          plain: Boolean(archetype.plain),
+          symmetric: Boolean(archetype.symmetric),
+        });
+        for (let i = beforeGround; i < parts.length; i += 1) parts[i].ground = true;
+      }
 
       // (2) Gờ mái (cornice) — dải ngang ngay dưới mái, thò ra XA NHẤT trong ba đường.
       // ⚠️ Đây là chỗ trống lớn nhất của bản cũ: khối `low` đã có gờ trên từ lâu (xem nhánh

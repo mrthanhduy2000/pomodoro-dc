@@ -60,6 +60,22 @@
  * cũng là lều) — và chúng vẫn phải khai, không được để trống. Trường bắt buộc thì một kỷ mới thêm
  * vào sẽ buộc người viết trả lời câu hỏi ấy; trường tuỳ chọn thì nó lặng lẽ rơi về `roof` và cái
  * bẫy này quay lại. `eraStyle.test.js` khoá cả hai vế: đủ 15 kỷ, và 9 kỷ kia phải KHÁC.
+ *
+ * ⚠️ `groundFloor` THÊM NGÀY 2026-08-18 (Phase 10) — TẦNG TRỆT: cái cửa để bước vào, và MỘT đặc
+ * trưng mặt phố. Nó nằm trong file NÀY chứ không thành bảng thứ tư riêng, vì mỗi dòng phải trả lời
+ * *"công trình có thật nào ở nước ấy trông như vậy?"* — và câu trả lời (`country`/`landmark`) nên
+ * nằm trong tầm mắt, không phải ở một file khác phải mở ra đối chiếu. Hình học nằm ở
+ * `groundFloor.js`; file này chỉ KHAI.
+ *
+ * Hai lỗi thật mà nó sửa (đo được, đã chạy trên production nhiều tháng): (a) kỷ 1 và 2 khai
+ * `windows: 'none'` nên `emitWindows` thoát sớm và **hai kỷ ấy không hề có cửa** — một công trình
+ * không có lối vào là một khối đặc; (b) cửa cũ rộng đúng **0,14** cho cả kỳ quan rộng 1,4 lẫn nhà
+ * dân rộng 0,45, tức lần thứ ba của cái bẫy "số tuyệt đối áp lên những khối chênh nhau ba lần".
+ *
+ * Trường này **bắt buộc cả 15 kỷ** — cùng lý do như `vernacularRoof`. 12 kỷ chưa nghiên cứu khai
+ * thẳng `door: 'legacy'` (giữ nguyên cửa cũ, không dựng gì mới); đó là một trạng thái tạm CÓ ĐẾM
+ * ĐƯỢC, `groundFloor.test.js` khoá đúng con số 12 và đúng ba kỷ đã làm (6 · 9 · 13). Xem
+ * `LEGACY_DOOR` ở `groundFloor.js` để biết vì sao không để trống.
  */
 
 /**
@@ -121,6 +137,10 @@ export const ERA_STYLES = {
     windows: 'none',
     motifs: ['boulder', 'firepit'],
     rough: 0.9,
+    // ⚠️ Bước 2 — chưa nghiên cứu tầng trệt của nước này. `legacy` = GIỮ NGUYÊN cửa cũ (xem
+    // `LEGACY_DOOR` ở `groundFloor.js`), thay vì bịa vài con số cho đủ mâm rồi để người sau đọc
+    // chúng như thể đã được cân nhắc.
+    groundFloor: { note: 'chưa nghiên cứu tầng trệt — Bước 2', door: 'legacy', feature: 'none', vernacularFeature: 'none' },
   },
   2: {
     name: 'vách đất & mái tranh',
@@ -139,6 +159,10 @@ export const ERA_STYLES = {
     windows: 'none',
     motifs: ['fence', 'granary'],
     rough: 0.62,
+    // ⚠️ Bước 2 — chưa nghiên cứu tầng trệt của nước này. `legacy` = GIỮ NGUYÊN cửa cũ (xem
+    // `LEGACY_DOOR` ở `groundFloor.js`), thay vì bịa vài con số cho đủ mâm rồi để người sau đọc
+    // chúng như thể đã được cân nhắc.
+    groundFloor: { note: 'chưa nghiên cứu tầng trệt — Bước 2', door: 'legacy', feature: 'none', vernacularFeature: 'none' },
   },
   3: {
     name: 'gạch bùn & giật cấp',
@@ -159,6 +183,10 @@ export const ERA_STYLES = {
     windows: 'slit',
     motifs: ['pillar', 'ramp'],
     rough: 0.36,
+    // ⚠️ Bước 2 — chưa nghiên cứu tầng trệt của nước này. `legacy` = GIỮ NGUYÊN cửa cũ (xem
+    // `LEGACY_DOOR` ở `groundFloor.js`), thay vì bịa vài con số cho đủ mâm rồi để người sau đọc
+    // chúng như thể đã được cân nhắc.
+    groundFloor: { note: 'chưa nghiên cứu tầng trệt — Bước 2', door: 'legacy', feature: 'none', vernacularFeature: 'none' },
   },
   4: {
     name: 'mái chồng diềm cong',
@@ -178,6 +206,10 @@ export const ERA_STYLES = {
     windows: 'square',
     motifs: ['columns', 'banner'],
     rough: 0.22,
+    // ⚠️ Bước 2 — chưa nghiên cứu tầng trệt của nước này. `legacy` = GIỮ NGUYÊN cửa cũ (xem
+    // `LEGACY_DOOR` ở `groundFloor.js`), thay vì bịa vài con số cho đủ mâm rồi để người sau đọc
+    // chúng như thể đã được cân nhắc.
+    groundFloor: { note: 'chưa nghiên cứu tầng trệt — Bước 2', door: 'legacy', feature: 'none', vernacularFeature: 'none' },
   },
   5: {
     name: 'đá tảng & mái dốc đứng',
@@ -196,6 +228,10 @@ export const ERA_STYLES = {
     windows: 'slit',
     motifs: ['buttress', 'crenel'],
     rough: 0.44,
+    // ⚠️ Bước 2 — chưa nghiên cứu tầng trệt của nước này. `legacy` = GIỮ NGUYÊN cửa cũ (xem
+    // `LEGACY_DOOR` ở `groundFloor.js`), thay vì bịa vài con số cho đủ mâm rồi để người sau đọc
+    // chúng như thể đã được cân nhắc.
+    groundFloor: { note: 'chưa nghiên cứu tầng trệt — Bước 2', door: 'legacy', feature: 'none', vernacularFeature: 'none' },
   },
   6: {
     // ⚠️ Kỷ 6 (phong kiến Việt) và kỷ 4 (Tam Quốc) cùng họ kiến trúc mái chồng Á Đông — đúng về
@@ -222,6 +258,20 @@ export const ERA_STYLES = {
     windows: 'square',
     motifs: ['courtyard', 'banner', 'columns'],
     rough: 0.2,
+    // ⚠️ TẦNG TRỆT. Mỗi con số ở đây trả lời đúng câu hỏi mà `country`/`landmark` đặt ra:
+    // *"công trình có thật nào ở nước ấy trông như vậy?"*
+    // `panel` = **cửa bức bàn** — bộ ván ghép tháo rời được từng tấm, cửa của CẢ đình làng lẫn nhà
+    // ống phố cổ (nên nó không tách theo hạng, xem `groundFloor.js`). `steps: 2` vì **ngưỡng cửa
+    // cao** là nét Việt ai cũng nhận ra: vào đình là BƯỚC QUA chứ không bước vào, và đình thì đứng
+    // trên nền đá kê thật chứ không phải một cái bệ trang trí.
+    // ⚠️ Đàm nêu "hiên trước có cột, mái đua thấp" — đó là HAI thứ thuộc HAI loại nhà, không phải
+    // một thứ tả hai lần: đình có hàng hiên cột gỗ sâu (`porch`); nhà ống phố cổ mặt tiền chỉ rộng
+    // ~3m, không đủ đất dựng hiên cột, nên chỉ có mái đua thấp che mặt hàng (`awning`).
+    groundFloor: {
+      note: 'đình làng Bắc Bộ — cửa bức bàn, ngưỡng cửa cao, hàng hiên cột gỗ; nhà ống phố cổ chỉ có mái đua thấp',
+      door: 'panel', doorWidth: 0.34, doorTall: 0.62, frame: 'wood', recess: 0.35, steps: 2,
+      feature: 'porch', vernacularFeature: 'awning',
+    },
   },
   7: {
     // Kỷ Phục Hưng — đúng cái hình mẫu thẩm mỹ Đàm nhắc tới, và cũng đúng nước anh nêu làm ví dụ.
@@ -252,6 +302,10 @@ export const ERA_STYLES = {
     windows: 'arch',
     motifs: ['columns', 'arcade', 'statue'],
     rough: 0.06,
+    // ⚠️ Bước 2 — chưa nghiên cứu tầng trệt của nước này. `legacy` = GIỮ NGUYÊN cửa cũ (xem
+    // `LEGACY_DOOR` ở `groundFloor.js`), thay vì bịa vài con số cho đủ mâm rồi để người sau đọc
+    // chúng như thể đã được cân nhắc.
+    groundFloor: { note: 'chưa nghiên cứu tầng trệt — Bước 2', door: 'legacy', feature: 'none', vernacularFeature: 'none' },
   },
   8: {
     name: 'kho cảng & cột buồm',
@@ -269,6 +323,10 @@ export const ERA_STYLES = {
     windows: 'square',
     motifs: ['mast', 'crate'],
     rough: 0.3,
+    // ⚠️ Bước 2 — chưa nghiên cứu tầng trệt của nước này. `legacy` = GIỮ NGUYÊN cửa cũ (xem
+    // `LEGACY_DOOR` ở `groundFloor.js`), thay vì bịa vài con số cho đủ mâm rồi để người sau đọc
+    // chúng như thể đã được cân nhắc.
+    groundFloor: { note: 'chưa nghiên cứu tầng trệt — Bước 2', door: 'legacy', feature: 'none', vernacularFeature: 'none' },
   },
   9: {
     // Nước thứ hai Đàm nêu làm ví dụ. Tân cổ điển Pháp: fronton tam giác trên hàng cột.
@@ -288,6 +346,20 @@ export const ERA_STYLES = {
     windows: 'arch',
     motifs: ['columns', 'pediment', 'statue'],
     rough: 0.04,
+    // ⚠️ TẦNG TRỆT. `double` = **porte cochère** — cửa hai cánh cao cho xe ngựa chui qua vào sân
+    // trong; đây là bộ phận định nghĩa mặt tiền chung cư Haussmann, và `doorTall: 0.86` cao nhất
+    // trong ba kỷ đã nghiên cứu chính vì lý do ấy (cửa phải lọt cả cỗ xe, không chỉ lọt người).
+    // `frame: 'stone'` vì khuôn cửa là đá vôi cắt — cùng vật liệu tường (`wallMaterial: 'stone'`),
+    // đúng cách Paris xây.
+    // ⚠️ `feature` vs `vernacularFeature`: **ban công sắt uốn chạy LIỀN hết mặt tiền tầng hai** là
+    // một điều khoản trong luật quy hoạch Haussmann, nên nó rộng bằng thân nhà chứ không rộng bằng
+    // cái cửa. Nhà nhỏ mặt phố thì thứ nhận ra được lại là **persiennes** — cửa chớp gỗ mở áp vào
+    // tường. Hai thứ này ngoài đời không đi cùng nhau ở cùng một hạng nhà ⇒ tách.
+    groundFloor: {
+      note: 'chung cư Haussmann Paris — porte cochère hai cánh cao khuôn đá, ban công sắt uốn liền tầng hai; nhà nhỏ có cửa chớp',
+      door: 'double', doorWidth: 0.30, doorTall: 0.86, frame: 'stone', recess: 0.25, steps: 1,
+      feature: 'balcony', vernacularFeature: 'shutters',
+    },
   },
   10: {
     name: 'gạch nung & ống khói',
@@ -306,6 +378,10 @@ export const ERA_STYLES = {
     windows: 'grid',
     motifs: ['chimney', 'truss'],
     rough: 0.18,
+    // ⚠️ Bước 2 — chưa nghiên cứu tầng trệt của nước này. `legacy` = GIỮ NGUYÊN cửa cũ (xem
+    // `LEGACY_DOOR` ở `groundFloor.js`), thay vì bịa vài con số cho đủ mâm rồi để người sau đọc
+    // chúng như thể đã được cân nhắc.
+    groundFloor: { note: 'chưa nghiên cứu tầng trệt — Bước 2', door: 'legacy', feature: 'none', vernacularFeature: 'none' },
   },
   11: {
     name: 'mặt tiền đồ sộ mạ vàng',
@@ -325,6 +401,10 @@ export const ERA_STYLES = {
     windows: 'grid',
     motifs: ['columns', 'spire', 'statue'],
     rough: 0.03,
+    // ⚠️ Bước 2 — chưa nghiên cứu tầng trệt của nước này. `legacy` = GIỮ NGUYÊN cửa cũ (xem
+    // `LEGACY_DOOR` ở `groundFloor.js`), thay vì bịa vài con số cho đủ mâm rồi để người sau đọc
+    // chúng như thể đã được cân nhắc.
+    groundFloor: { note: 'chưa nghiên cứu tầng trệt — Bước 2', door: 'legacy', feature: 'none', vernacularFeature: 'none' },
   },
   12: {
     name: 'bê tông & lô cốt',
@@ -342,6 +422,10 @@ export const ERA_STYLES = {
     windows: 'slit',
     motifs: ['bunker', 'crenel'],
     rough: 0.26,
+    // ⚠️ Bước 2 — chưa nghiên cứu tầng trệt của nước này. `legacy` = GIỮ NGUYÊN cửa cũ (xem
+    // `LEGACY_DOOR` ở `groundFloor.js`), thay vì bịa vài con số cho đủ mâm rồi để người sau đọc
+    // chúng như thể đã được cân nhắc.
+    groundFloor: { note: 'chưa nghiên cứu tầng trệt — Bước 2', door: 'legacy', feature: 'none', vernacularFeature: 'none' },
   },
   13: {
     // Nhật Bản thời Metabolism (thập niên 1960-70) là câu trả lời chính xác cho "khối bê tông lắp
@@ -361,6 +445,19 @@ export const ERA_STYLES = {
     windows: 'grid',
     motifs: ['antenna', 'dish'],
     rough: 0.08,
+    // ⚠️ TẦNG TRỆT. `recess: 0.85` là **hốc sâu nhất** trong ba kỷ đã nghiên cứu, và nó có tên
+    // riêng: **genkan** — khoảng lùi vào có bậc, chỗ đổi giày, ranh giới trong/ngoài của mọi ngôi
+    // nhà Nhật. `steps: 1` chính là cái bậc ấy. `sliding` = **cửa lùa** (hikido): hai tấm TRƯỢT
+    // chồng mép, nên chúng nằm ở hai độ sâu khác nhau — đó mới là thứ phân biệt cửa lùa với cửa
+    // hai cánh, không phải bề rộng.
+    // ⚠️ Tách hạng: **biển hiệu dọc** (kanban) bám mặt tiền là thứ đọc ra "phố Nhật" ngay ở cỡ vài
+    // chục điểm ảnh vì nó phá thế nằm ngang của mọi thứ khác; còn quán nhỏ thì treo **mành che**
+    // (noren) rủ xuống trước cửa. Cả hai đều là Đàm nêu, và chúng thuộc hai cỡ công trình khác nhau.
+    groundFloor: {
+      note: 'phố Nhật — genkan lùi sâu có bậc đổi giày, cửa lùa hai tấm chồng mép, biển hiệu dọc; quán nhỏ treo mành che',
+      door: 'sliding', doorWidth: 0.30, doorTall: 0.58, frame: 'wood', recess: 0.85, steps: 1,
+      feature: 'sign', vernacularFeature: 'awning',
+    },
   },
   14: {
     name: 'kính & cao tầng',
@@ -380,6 +477,10 @@ export const ERA_STYLES = {
     windows: 'curtain',
     motifs: ['sign', 'solar'],
     rough: 0,
+    // ⚠️ Bước 2 — chưa nghiên cứu tầng trệt của nước này. `legacy` = GIỮ NGUYÊN cửa cũ (xem
+    // `LEGACY_DOOR` ở `groundFloor.js`), thay vì bịa vài con số cho đủ mâm rồi để người sau đọc
+    // chúng như thể đã được cân nhắc.
+    groundFloor: { note: 'chưa nghiên cứu tầng trệt — Bước 2', door: 'legacy', feature: 'none', vernacularFeature: 'none' },
   },
   15: {
     name: 'khối lơ lửng & vòng sáng',
@@ -398,6 +499,10 @@ export const ERA_STYLES = {
     windows: 'neon',
     motifs: ['halo', 'float'],
     rough: 0,
+    // ⚠️ Bước 2 — chưa nghiên cứu tầng trệt của nước này. `legacy` = GIỮ NGUYÊN cửa cũ (xem
+    // `LEGACY_DOOR` ở `groundFloor.js`), thay vì bịa vài con số cho đủ mâm rồi để người sau đọc
+    // chúng như thể đã được cân nhắc.
+    groundFloor: { note: 'chưa nghiên cứu tầng trệt — Bước 2', door: 'legacy', feature: 'none', vernacularFeature: 'none' },
   },
 };
 
@@ -485,4 +590,17 @@ export function getVernacularStyle(era) {
   const style = getEraStyle(era);
   if (!style.vernacularRoof || style.vernacularRoof === style.roof) return style;
   return { ...style, roof: style.vernacularRoof };
+}
+
+/**
+ * Bảng tầng trệt của một kỷ — cửa ra vào + MỘT đặc trưng mặt phố.
+ *
+ * ⚠️ KHÔNG CÓ ĐƯỜNG RƠI VỀ MẶC ĐỊNH, và đó là chủ đích. `getEraStyle` đã lo phần "kỷ lạ thì tra ra
+ * cái gì" (nó trả về kỷ mặc định), nên hàm này chỉ việc đọc trường bắt buộc. Nếu một ngày có kỷ
+ * nào thiếu trường `groundFloor`, người viết sẽ gặp `undefined` ngay ở chỗ dựng chứ không nhận về
+ * một cái cửa mặc định trông "cũng được" — đúng lý do `vernacularRoof` được làm thành trường bắt
+ * buộc ở Phase 7C. `eraStyle.test.js` khoá đủ 15 kỷ.
+ */
+export function getGroundFloor(era) {
+  return getEraStyle(era).groundFloor;
 }

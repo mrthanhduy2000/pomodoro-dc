@@ -19,6 +19,11 @@
 > bằng cách chỉnh lại con số nào. Nay còn **1 mục High** (#14) + **2 mục Medium-High** (#3, #13) +
 > **1 mục Medium-High chờ Đàm quyết** (#24) = 4 → xa ngưỡng 8–10 mục, KHÔNG cần Maintenance Sprint.
 >
+> **Cập nhật 2026-08-18 (Phase 10, Bước 1)**: mở **#36** (Priority **Medium** — kỷ 1 và 2 vẫn chưa
+> có cửa; nguyên nhân gốc đã sửa, tự đóng khi Bước 2 chạy) và **#37** (Priority **Low** — cửa sổ
+> không xoay theo độ nghiêng thân nhà, sai số hiện dưới một điểm ảnh). Không mục nào là High/
+> Critical ⇒ số mục High vẫn là **1** (#14), vẫn xa ngưỡng.
+>
 > ⚠️ **Phase 9D KHÔNG mở mục nợ mới**, nhưng có ghi hai bài học vào `CLAUDE.md` (công cụ đo tự chế
 > nói dối lần thứ 20 và 21 — cả hai đều nằm trong công cụ vừa viết ra trong chính phiên ấy).
 >
@@ -1891,6 +1896,60 @@
 - **Blocking Conditions**: không có.
 - **Review Trigger**: lần kế tiếp bất kỳ ai chạm vào `bench-macbook.sh`.
 - **Owner**: phiên AI kế tiếp · **Status**: ✅ **ĐÃ XỬ LÝ 2026-08-17 (vòng 4)**
+
+---
+
+## #36 — Kỷ 1 và kỷ 2 vẫn KHÔNG có cửa ra vào (nguyên nhân gốc đã sửa, hai kỷ này chưa hưởng)
+
+- **Module**: `src/engine/city3d/eraStyle.js` (bảng `groundFloor` của kỷ 1, 2) · `buildingSpec.js`
+- **Priority**: Medium · **Severity**: Low (mỹ thuật, không ảnh hưởng dữ liệu hay hiệu năng)
+- **Impact**: hai kỷ đầu của hành trình — tức thứ Đàm nhìn thấy TRƯỚC TIÊN khi mở bảo tàng — có
+  công trình không có lối vào. Nhìn kỹ thì mỗi khối là một hình đặc.
+- **Root Cause**: cửa đời cũ nằm ở cuối `emitWindows`, mà hàm ấy thoát ngay ở dòng đầu khi
+  `style.windows === 'none'`. Kỷ 1 (lều da thú) và kỷ 2 (nhà bùn) khai `'none'` — hoàn toàn đúng về
+  lịch sử — nên chưa bao giờ chạy tới dòng cửa. Hai luật chẳng liên quan gì nhau (có cửa sổ không /
+  có cửa ra vào không) dùng chung một câu `return`.
+- **Current Risk**: thấp. **Nguyên nhân gốc ĐÃ được sửa ở Phase 10**: `emitGroundFloor` nay được
+  gọi từ `buildBuildingSpec` chứ không từ `emitWindows`, nên cửa đã thôi phụ thuộc vào cửa sổ. Hai
+  kỷ này chưa hưởng chỉ vì Bước 1 cố ý chỉ làm 3 kỷ (6 · 9 · 13) để nghiệm thu hướng mỹ thuật.
+- **Future Risk**: thấp — mục này tự đóng khi Bước 2 chạy.
+- **Recommended Solution**: ở Bước 2, khai `groundFloor` thật cho kỷ 1 và 2. Gợi ý đã có sẵn dữ
+  liệu: kỷ 1 (Göbekli Tepe) là tấm da thú vén lên trên một khung gỗ — `frame: 'wood'`, `steps: 0`,
+  `feature: 'none'` (thời đồ đá thì mặt tiền KHÔNG có gì, và khai `'none'` là một câu trả lời hợp
+  lệ chứ không phải chỗ trống). Kỷ 2 (làng ven sông Nin) là lỗ cửa trổ trong tường bùn dày, có
+  ngưỡng đất nện.
+- **Estimated Complexity**: Thấp — chỉ là hai dòng bảng, mã dựng đã có.
+- **Blocking Conditions**: chờ Đàm gật cho Bước 1 (xem `BAN_GIAO.md`).
+- **Review Trigger**: khi bắt đầu Bước 2 của Phase 10.
+- **Owner**: chưa phân công · **Status**: Open
+
+---
+
+## #37 — Cửa sổ KHÔNG xoay theo độ nghiêng "tay làm" của thân nhà (sai số dưới một điểm ảnh, nhưng là một luật chỉ đúng một nửa)
+
+- **Module**: `src/engine/city3d/buildingSpec.js` (`emitWindows`)
+- **Priority**: Low · **Severity**: Low
+- **Impact**: ở những kỷ có `rough` cao (kỷ 1 = 0,90 · kỷ 2 = 0,62 · kỷ 5 = 0,44), thân nhà được
+  xoay `ry = jitterR` cho xiêu vẹo tự nhiên, nhưng cửa sổ/bệ/lanh tô thì đặt ở toạ độ mặt tường
+  CHƯA xoay và bản thân chúng không mang `ry`. Về nguyên tắc chúng lệch khỏi mặt tường.
+- **Root Cause**: `emitWindows` không nhận `jitterR`. Phát hiện khi Phase 10 phải truyền `ry` cho
+  các khối tầng trệt (cửa mới CÓ xoay theo, xem `emitGroundFloor`).
+- **Current Risk**: rất thấp — đo ra: `jitterR` lớn nhất là `rough × 0,14` = **0,126 rad** ở kỷ 1,
+  và trên một bức tường rộng 0,7 thì lệch mép ≈ 0,7/2 × sin(0,126) ≈ **0,044 đơn vị**. Ở cỡ hiển
+  thị thật, con số đó dưới một điểm ảnh. Chưa ai nhìn thấy, kể cả trong ảnh cận cảnh 1500px.
+- **Future Risk**: trung bình. Nếu một phase sau nâng `rough` lên, hoặc cho camera xuống thấp ngang
+  tầm mắt, sai số này lớn dần mà **không có gì đỏ lên** — cùng hình dạng với mọi lỗi mỹ thuật im
+  lặng đã ghi trong `CLAUDE.md`.
+- **Recommended Solution**: truyền `jitterR` vào `emitWindows` y như đã làm cho `emitGroundFloor`,
+  rồi gắn `ry` cho mọi khối cửa sổ/bệ/lanh tô/vòm. ⚠️ Xoay quanh TÂM KHỐI chứ không quanh tâm nhà,
+  nên khối lệch tâm vẫn còn sai số vị trí nhỏ — muốn đúng tuyệt đối thì phải quay cả toạ độ
+  `(x, z)` quanh tâm mảng nhà. Cân nhắc làm cả hai cùng lúc.
+- **Estimated Complexity**: Thấp–Trung bình (một tham số, nhưng chạm ~10 chỗ `out.push` và sẽ làm
+  đổi mô tả của MỌI kỷ có `rough` > 0 ⇒ phải quét lại ảnh).
+- **Blocking Conditions**: không nên làm chung với Phase 10 — nó đổi cả 15 kỷ, tức phá đúng cái
+  tính chất "12 kỷ không suy suyển" mà Bước 1 dựa vào để nghiệm thu.
+- **Review Trigger**: khi Phase 10 Bước 2 xong, hoặc khi có phase hạ camera xuống thấp.
+- **Owner**: chưa phân công · **Status**: Open
 
 ---
 

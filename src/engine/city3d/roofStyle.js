@@ -322,13 +322,22 @@ export const ROOF_STYLES = {
     note: 'lan can đá quanh mái dinh thự Phục Hưng; nhà phố Toscana lợp ngói coppi',
   },
 
+  // ⚠️ PHASE 11-B (2026-08-18): `vernacularCrown` đổi `barrel` → `balustrade`. Kỷ 8 là kỷ ĐỔI ÍT
+  // NHẤT cả bảng khi đo bằng ảnh (**1,2%** điểm ảnh ở khung app, trong khi kỷ 7 ra 8,4%) — dù nó
+  // tốn NHIỀU hình học nhất (+48,5% tam giác). Lý do đo được: cả hai vế đều là ngói bò, tức thuần
+  // BỀ MẶT, mà bề mặt thì tan biến khi lùi xa. **Platibanda** — bức tường lùn xây cao hơn mái, che
+  // hẳn dốc ngói — là nét nhà Algarve và Alentejo có thật, và nó phá được ĐƯỜNG VIỀN cắt lên trời.
+  // ⚠️ Bản vá ĐẦU TIÊN đổi vế KỲ QUAN sang `balustrade` (lan can đá đục lỗ Jerónimos, cũng đúng
+  // lịch sử) và bài `15 KỶ RA 15 MÁI` **ĐỎ NGAY**: kỷ 7 đã khai `crown: 'balustrade'`, nên hai kỷ
+  // tụt xuống chỉ còn khác nhau 1/6 trục — Ý và Bồ Đào Nha đọc ra gần như một cái mái. Đúng lịch sử
+  // là ĐIỀU KIỆN CẦN, không phải điều kiện đủ: một giá trị còn phải không giẫm lên hàng xóm.
   // KỶ 8 — BỒ ĐÀO NHA, bến cảng Lisboa.
   // **Telha canudo** — ngói ống Bồ, đúng nghĩa đen là "ngói cái ống". Nhà Pombaline dựng lại sau
   // động đất 1755 có **trapeira**: cửa sổ mái nhô lên khỏi mặt dốc, thành hàng đều tăm tắp suốt
   // dãy phố. Chính cái hàng ấy phân biệt mái Lisboa với mái Toscana, dù cả hai cùng lợp ngói cong.
   8: {
     crown: 'barrel', crownWeight: 1.1, stack: 'none', stackCount: 2,
-    vernacularCrown: 'barrel', vernacularStack: 'dormer',
+    vernacularCrown: 'balustrade', vernacularStack: 'dormer',
     note: 'ngói ống telha canudo; nhà Pombaline Lisboa có hàng cửa sổ mái trapeira',
   },
 
@@ -362,9 +371,13 @@ export const ROOF_STYLES = {
   // này. Vành **lan can đá** ở mỗi bậc giật cấp là ngôn ngữ Beaux-Arts.
   // Nhà thuê thấp tầng thì đội **bồn nước gỗ đai sắt** trên bốn chân — và chính hình ảnh ấy, không
   // phải toà cao ốc, mới là mái nhà New York trong trí nhớ mọi người.
+  // ⚠️ PHASE 11-B: `vernacularCrown` `none` → `balustrade`. **Tường lan can chính là thứ mà cái bể
+  // nước đứng nấp sau** — mái nhà New York không phải một tấm phẳng trần trụi, nó là một cái khay
+  // có thành, và cái thành ấy (parapet + gờ mái đúc) là đường viền mà cả Manhattan cắt lên trời.
+  // Bỏ trống nó là bỏ mất chính nét đã làm nên bóng dáng khu phố gạch nâu.
   11: {
     crown: 'balustrade', crownWeight: 0.9, stack: 'liftHouse', stackCount: 1,
-    vernacularCrown: 'none', vernacularStack: 'tank',
+    vernacularCrown: 'balustrade', vernacularStack: 'tank',
     note: 'buồng máy thang trên khối giật cấp Beaux-Arts; nhà thuê New York đội bồn nước gỗ',
   },
 
@@ -374,20 +387,34 @@ export const ROOF_STYLES = {
   // ra là chỗ bám cho đối phương. Thứ duy nhất được phép nhô lên là **cột ăng-ten** — liên lạc thì
   // không có cách nào giấu xuống dưới. Nhà tập thể mái bằng thì căng dây phơi, vì căn hộ không có
   // ban công đủ rộng.
+  // ⚠️ PHASE 11-B: `vernacularCrown` `none` → `balustrade`, `crownWeight` 0 → 0,45. Lô cốt thì
+  // **vẫn trơn tuyệt đối** — kỷ luật quân sự ở trên không đổi một chữ. Nhưng nhà tập thể Xô Viết là
+  // một thứ khác hẳn: mái bằng lợp bitum bắt buộc có **parapet bê tông** viền quanh (vừa chắn người
+  // ngã vừa neo lớp chống thấm), và dây phơi thì căng phía sau nó. 0,45 là một vành mỏng, đúng tinh
+  // thần tấm panel đúc sẵn — không phải một vành lan can trang trí.
   12: {
-    crown: 'none', crownWeight: 0, stack: 'mast', stackCount: 2,
-    vernacularCrown: 'none', vernacularStack: 'dryingRack',
-    note: 'lô cốt bê tông Stalingrad chỉ nhô cột ăng-ten; nhà tập thể Xô Viết căng dây phơi trên mái',
+    crown: 'none', crownWeight: 0.45, stack: 'mast', stackCount: 2,
+    vernacularCrown: 'balustrade', vernacularStack: 'dryingRack',
+    note: 'lô cốt Stalingrad trơn tuyệt đối; nhà tập thể Xô Viết viền parapet bê tông mỏng, dây phơi căng sau nó',
   },
 
   // KỶ 13 — NHẬT BẢN, tháp nang Nakagin.
   // Mái bằng của nhà Nhật hậu chiến là một **sàn thiết bị**: bồn nước inox trên giá thép (áp lực
   // nước thành phố không với tới tầng trên), và trên nhà dân là **cột ăng-ten** cùng giá đỡ. Không
   // có đường nét trang trí nào — chủ nghĩa Chuyển Hoá coi cái nang và cái ống là toàn bộ hình thức.
+  // ⚠️ PHASE 11-B: `vernacularCrown` `none` → `balustrade`, `crownWeight` 0 → 0,5. Tháp nang
+  // Nakagin **vẫn trơn** — chủ nghĩa Chuyển Hoá không có chỗ cho trang trí. Nhà dân thì viền
+  // **parapet bê tông mỏng**, thứ mà mọi chung cư mái bằng đều bắt buộc có.
+  // ⚠️ Bản vá đầu khai `ridge` với lý lẽ nghe rất xuôi (ngói kawara Nhật có sống mái munagawara rất
+  // dày). Bài `MÁI PHẢI ĐỠ ĐƯỢC THỨ ĐẶT LÊN NÓ` **ĐỎ NGAY**: `vernacularRoof` của kỷ này là
+  // **`flat`**, mà sống mái thì cần một cái nóc để mà chạy dọc. Tôi đã kể một câu chuyện lịch sử
+  // đúng về một loại nhà mà kỷ này KHÔNG dựng — Nhật hậu chiến ở đây là bê tông mái bằng, không
+  // phải nhà gỗ lợp ngói. **Đi đọc hình mình đang dựng trước khi viết một luật lịch sử** (đúng bài
+  // học `shutters` ở Phase 10 Bước 2), và cái bắt được nó là một bài test cấu trúc, không phải trí nhớ.
   13: {
-    crown: 'none', crownWeight: 0, stack: 'tank', stackCount: 2,
-    vernacularCrown: 'none', vernacularStack: 'mast',
-    note: 'tháp nang Nakagin và mái bằng Nhật hậu chiến là sàn thiết bị: bồn nước trên giá, nhà dân cắm cột ăng-ten',
+    crown: 'none', crownWeight: 0.5, stack: 'tank', stackCount: 2,
+    vernacularCrown: 'balustrade', vernacularStack: 'mast',
+    note: 'tháp nang Nakagin trơn đội bồn nước trên giá; chung cư Nhật viền parapet bê tông mỏng, cắm cột ăng-ten',
   },
 
   // KỶ 14 — SINGAPORE, tháp kính Marina Bay.
@@ -397,8 +424,8 @@ export const ROOF_STYLES = {
   // trên mái**, một chính sách quy hoạch chứ không phải sở thích của chủ nhà.
   14: {
     crown: 'balustrade', crownWeight: 0.5, stack: 'condenser', stackCount: 4,
-    vernacularCrown: 'none', vernacularStack: 'planter',
-    note: 'dàn cục nóng và lan can kính mảnh Marina Bay; nhà ở phủ bồn cây theo quy hoạch vườn',
+    vernacularCrown: 'balustrade', vernacularStack: 'planter',
+    note: 'dàn cục nóng và lan can kính mảnh Marina Bay; khối HDB viền parapet, sân thượng phủ bồn cây theo quy hoạch vườn',
   },
 
   // KỶ 15 — UAE, Bảo tàng Tương Lai Dubai.
@@ -406,10 +433,14 @@ export const ROOF_STYLES = {
   // `groundFloorStyle` khai `vernacularFeature: 'none'`: nhà Dubai quay vào trong. Thứ nhô lên là
   // **bồn cây** trên sân thượng công trình chính (vườn treo là ngôn ngữ marketing của kiến trúc
   // vùng Vịnh) và **dàn cục nóng** trên nhà ở — 45 độ ngoài trời thì điều hoà là hạ tầng sống còn.
+  // ⚠️ PHASE 11-B: `vernacularCrown` `none` → `balustrade`, `crownWeight` 0 → 0,6. Phiến mái Bảo
+  // tàng Tương Lai **vẫn không có mép** — hình xuyến thì không có chỗ nào để kẻ. Nhưng villa và
+  // tháp ở Dubai thì viền **lan can kính** quanh sân thượng gần như không có ngoại lệ, vì sân
+  // thượng là không gian sống thật ở xứ nóng (dùng vào buổi tối) và luật xây dựng đòi lan can.
   15: {
-    crown: 'none', crownWeight: 0, stack: 'planter', stackCount: 2,
-    vernacularCrown: 'none', vernacularStack: 'condenser',
-    note: 'phiến mái Dubai trơn không mép; sân thượng trồng cây, nhà ở đội dàn cục nóng',
+    crown: 'none', crownWeight: 0.6, stack: 'planter', stackCount: 2,
+    vernacularCrown: 'balustrade', vernacularStack: 'condenser',
+    note: 'phiến mái bảo tàng Dubai trơn không mép; villa viền lan can kính quanh sân thượng, đội dàn cục nóng',
   },
 };
 

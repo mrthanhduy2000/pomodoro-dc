@@ -14,6 +14,46 @@
 > **798 bài test** (775 + 23 mới), lint sạch, build xanh, **0 lệnh vẽ mới ở cả 15 kỷ**, tam giác
 > thành phố +27,9%. **15 phép phá, 14 đỏ đúng chỗ đã nêu trước; cái thứ 15 KHÔNG đỏ và đó là một
 > phát hiện thật** (xem ngay dưới). ⏳ **CHƯA gộp `main`** — mục 5 chương trình làm việc.
+> **PHASE 11-B (Đàm chốt phương án 1) + PHASE 12 BƯỚC ĐO — 2026-08-18, cùng ngày.**
+> Đàm chọn **ưu tiên thứ PHÁ ĐƯỜNG VIỀN** (không phóng to vật trên mái — đó là mua đúng rủi ro
+> "cây nấm" của Phase 7C). Sửa 6 dòng bảng `roofStyle.js`: kỷ 8 · 11 · 12 · 13 · 14 · 15 nay có
+> `vernacularCrown` thật thay vì `none`. **Kết quả đo (khung app, so với `e089c00`)**: kỷ 8 **1,2%
+> → 3,6%** (gấp 3 — kỷ tệ nhất nay khá nhất trong nhóm sửa) · kỷ 11 3,5% → 4,5%. Nhưng kỷ 12 · 13 ·
+> 14 · 15 chỉ nhích lên **1,1–2,0%** — parapet mái bằng là một vành mỏng CHẠY THEO đúng đường viền
+> sẵn có, nên nó gần như không đổi HÌNH DÁNG bóng đổ lên trời. ⇒ **Luật "đường viền vs bề mặt" phải
+> sắc hơn nữa: thứ sống sót là thứ đổi *HÌNH DÁNG* đường viền, không phải thứ *nằm trên* đường viền.**
+> ✓ Anti-drift (tiêu chí MỚI Đàm đặt cho bản quét): **15/15 cặp chặng và 105/105 cặp kỷ trên ngưỡng
+> mắt**, cặp gần nhất 21,5 · trung vị 38,3. Bảng màu không trôi.
+> ⚠️ **HAI BÀI TEST BẮT ĐƯỢC HAI LỖI TRONG CHÍNH BẢN VÁ NÀY, cả hai đều "đúng lịch sử mà vẫn sai".**
+> (a) Bản đầu đổi `crown` kỷ 8 sang `balustrade` (lan can đá Jerónimos — Manueline thật) ⇒ bài
+> `15 KỶ RA 15 MÁI` ĐỎ: kỷ 7 đã dùng đúng giá trị ấy, Ý và Bồ Đào Nha tụt còn khác nhau 1/6 trục.
+> (b) `vernacularCrown` kỷ 13 khai `ridge` (sống mái kawara Nhật — cũng thật) ⇒ bài `MÁI PHẢI ĐỠ
+> ĐƯỢC THỨ ĐẶT LÊN NÓ` ĐỎ: `vernacularRoof` kỷ ấy là **`flat`**, tôi đã kể chuyện về một loại nhà
+> mà kỷ này KHÔNG dựng. ⇒ **Đúng lịch sử là điều kiện CẦN, không phải điều kiện ĐỦ** — giá trị còn
+> phải không giẫm lên hàng xóm, và phải khớp hình mình đang thật sự dựng.
+>
+> **PHASE 12 — BƯỚC ĐO (chưa sửa gì, đúng lệnh "ĐO TRƯỚC, ĐỪNG SỬA").**
+> ⚠️ **LỖI ĐẦU TIÊN TÌM RA NẰM TRONG CHÍNH CÔNG CỤ ĐO**: `frame-fit.mjs` nhân `BUILDING_SCALE` vào
+> bề NGANG nhưng **quên chiều CAO**, trong khi cảnh thật nhân `scale` vào cả ba chiều. Mọi công
+> trình thật cao hơn 1,3 lần thứ công cụ tưởng ⇒ **`TECH_DEBT #24` nhẹ hơn sự thật**. Đã vá; hệ số
+> camera cần để vào trọn khung nay là **1,82** (đang dùng 1,19–1,58).
+> **BỘ SỐ MỚI — `node --import ./scripts/register-esm-loader.mjs scripts/frame-fit.mjs --scale`:**
+>
+> | ở góc mặc định (zoom 1,0 · khung 780px) | số đo |
+> |---|--:|
+> | thành phố chiếm khung | **103% ngang · 99% dọc** (đã tràn, không còn chỗ trống) |
+> | **một căn nhà dân cao** | **68 điểm ảnh** (thấp nhất 33) |
+> | một kỳ quan cao | 157 điểm ảnh |
+> | **một chi tiết mái cao** | **≈ 5,7 điểm ảnh** ← đây là câu trả lời cho cả Phase 10 và 11 |
+>
+> ⚠️ **`--zoom 0.4` KHÔNG DÙNG ĐƯỢC: camera lọt vào TRONG thành phố ở 11/15 kỷ.** Bản đầu của bộ đo
+> in ra "rộng 12725%" và "kỳ quan 4230,9px" — số nổ tung vì chia cho khoảng cách ≈ 0, mà vẫn xếp
+> thành cột thẳng hàng trông như số liệu thật. Nay có gác từ chối thẳng thay vì kẹp giá trị.
+> **Lại gần được tới đâu**: zoom an toàn nhỏ nhất là **0,38–0,58** (trung bình 0,48) ⇒ nhà to lên
+> **1,78×–2,86×** (trung bình ~2,2×) ⇒ chi tiết mái từ 5,7px lên **~12,5px**, tức vừa CHẠM ngưỡng
+> mắt 12. **Camera một mình không đủ, nhưng nó là đòn bẩy lớn nhất còn lại.**
+> ⏳ **DỪNG Ở ĐÂY, CHỜ ĐÀM CHỌN PHƯƠNG ÁN** — tuyệt đối không tự sửa camera.
+>
 > ⛔ **NÓI THẲNG TRƯỚC MỌI THỨ KHÁC: PHASE NÀY KHÔNG ĐẠT CÁI BAR ĐÀM ĐẶT RA.** Đàm yêu cầu ảnh
 > nghiệm thu phải có **bản quét 15 kỷ đặt CẠNH bản trước**, và nói rõ: *"nếu hai bản quét vẫn khó
 > phân biệt như Bước 2 thì phase này CHƯA đạt mục tiêu của nó — nói thẳng ra, đừng khoe test xanh

@@ -871,6 +871,19 @@
 
 ## #24 — MỌI KỶ ĐỀU CÓ CÔNG TRÌNH BỊ MÉP KHUNG HÌNH CẮT — và không ai đo cho tới hôm nay
 
+> ⚠️ **CẬP NHẬT 2026-08-18 (Phase 12) — BỘ SỐ GỐC CỦA MỤC NÀY ĐO THIẾU 30% CHIỀU CAO.**
+> `frame-fit.mjs` nhân `BUILDING_SCALE` (1,3) vào bề NGANG nhưng quên nhân vào chiều CAO, trong khi
+> `geometryFactory` nhân `scale` vào **cả ba chiều** (`h: part.h * scale`). Nên mọi công trình thật
+> **cao hơn 1,3 lần** thứ công cụ tưởng, biên mép TRÊN thật hẹp hơn số đã ghi, và mức độ bị cắt
+> **nặng hơn** những gì mục này mô tả — sai theo hướng TRẤN AN. Đã vá; đo lại ở khung 1,30 vẫn ra
+> **14/15 kỷ bị cắt**, nhưng hệ số camera cần để vào trọn khung nay là **1,82** (đang dùng
+> 1,19–1,58), tức phải lùi xa thêm ~15–50% chứ không phải một chút.
+> ⇒ Bài học: **một công cụ đo chép lại hằng số của công cụ dựng thì hai bên trôi khỏi nhau** —
+> đúng cái bẫy mà chính chú thích đầu `frame-fit.mjs` đã cảnh báo, ở ngay dòng dưới nó.
+> ⚠️ Mục này nay **dính chặt với #41 và với Phase 12**: cả ba đều là một bài toán duy nhất —
+> *"thành phố quá nhỏ / quá lớn so với khung hình"*. Đừng chữa riêng một mục.
+
+
 - **Module**: `src/engine/city3d/orbit.js` (`cityOrbitOptions`) — đo bằng `scripts/frame-fit.mjs`
 - **Priority**: Medium-High
 - **Severity**: Medium

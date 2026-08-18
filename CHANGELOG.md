@@ -12,6 +12,25 @@
 
 ---
 
+## 2026-08-18 — Vỉa hè thôi bị bóp trong im lặng (ADR-033, đóng `TECH_DEBT #42`)
+
+**Mục đích**: `walk` (bề rộng vỉa hè) là một trong 8 trục bản sắc mặt đường, nhưng 8/15 kỷ bị một
+phép kẹp im lặng nuốt gần hết — kỷ tệ nhất còn **11%** bề rộng đã khai, tức 1,3 điểm ảnh trên màn
+hình, trong khi `note` của kỷ ấy viết "vỉa hè mênh mông".
+
+**Phạm vi**: `src/engine/city3d/streetStyle.js` (bảng 15 kỷ + `isValidStreetStyle` + hai hằng số
+hiệu chuẩn nay `export`), hai file test tương ứng. Không đụng tầng dựng hình, không đụng bảng màu.
+
+**Ảnh hưởng**: `avenue` được sửa lại cho đúng nghĩa nó vẫn luôn mang trong mã — *phần mặt cắt dành
+cho XE*, không phải *"đại lộ này oai tới đâu"*. Paris/Moskva/Manhattan/Singapore/Dubai giảm phần
+lòng đường và tăng phần người đi bộ, đúng mặt cắt thật của chúng. Vỉa hè dựng ra nay **bằng đúng**
+con số khai ở 15/15 kỷ (trước: 8 kỷ bị bóp, 5 kỷ dưới ngưỡng nhìn thấy). 0 lệnh vẽ mới;
+**−2.266 tam giác** (4 kỷ nhẹ đi, 11 kỷ không đổi). Bản quét 15 kỷ không trôi.
+
+**Tương thích**: không đổi dữ liệu lưu, không migration. Thuần hình ảnh.
+
+---
+
 ## 2026-08-18 — Phase 12: đường sá thôi lởm chởm — mép ngang và mặt cắt dọc (ADR-031 + ADR-032)
 
 - **Mục đích**: Đàm nói *"đường lòi lõm, mất tự nhiên quá"*. Đo ra thì câu ấy gộp **hai nguyên nhân

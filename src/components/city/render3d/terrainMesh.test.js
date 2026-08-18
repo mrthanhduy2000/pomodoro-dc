@@ -5,7 +5,7 @@ import { ROAD_LIFT, ROAD_PART, buildRoadSurface, buildTerrainSurface } from './t
 import { APRON_DROP, buildTerrain } from '../../../engine/city3d/terrain.js';
 import { buildScenePalette } from '../../../engine/city3d/palette3d.js';
 import {
-  carriagewayShape, getStreetStyle, streetCrossSection,
+  STREET_STYLES, carriagewayShape, getStreetStyle, streetCrossSection,
 } from '../../../engine/city3d/streetStyle.js';
 import { computeCityLayout } from '../../../engine/cityLayout.js';
 import { BLUEPRINT_CATALOG } from '../../../engine/constants.js';
@@ -380,4 +380,45 @@ test('NGÂN SÁCH TAM GIÁC CỦA ĐỊA HÌNH KHÔNG ĐƯỢC PHÌNH LÊN TRONG
       + 'trình đã ăn ~17.000 sau Phase 8B.',
     );
   }
+});
+
+test('VỈA HÈ DỰNG RA ĐÚNG THỨ BẢNG KHAI — khai 0 thì KHÔNG một tam giác vỉa hè nào, khai khác 0 thì có', () => {
+  // ⚠️ ĐÂY LÀ CHIỀU THỨ HAI CỦA KHOÁ VỈA HÈ (`TECH_DEBT #42`). `streetStyle.test.js` canh ở tầng DỮ
+  // LIỆU — "bảng khai gì, `streetCrossSection` trả về gì". Bài này canh ở tầng HÌNH HỌC — "tam giác
+  // có thật sự sinh ra không". Hai câu hỏi khác nhau, và bài học Phase 4H nói rõ vì sao phải hỏi cả
+  // hai: một hàm chạy đúng KHÔNG chứng minh có ai gọi nó.
+  const CÓ = [4, 7, 8, 9, 10, 11, 12, 13, 14, 15];
+  const KHÔNG = [1, 2, 3, 5, 6];
+  let sốCó = 0; let sốKhông = 0;
+
+  for (const era of [...CÓ, ...KHÔNG]) {
+    const { road } = dựng(era);
+    let tamGiácVỉaHè = 0; let tamGiácBóVỉa = 0; let tamGiácLòngĐường = 0;
+    for (let t = 0; t < road.kinds.length; t += 1) {
+      if (road.kinds[t] === ROAD_PART.WALK) tamGiácVỉaHè += 1;
+      else if (road.kinds[t] === ROAD_PART.CURB) tamGiácBóVỉa += 1;
+      else if (road.kinds[t] === ROAD_PART.CARRIAGEWAY) tamGiácLòngĐường += 1;
+    }
+    // Gác chạy-rỗng TỪNG KỶ: nếu kỷ này chẳng có mét đường nào thì mọi khẳng định bên dưới đều vô
+    // nghĩa mà vẫn xanh — đúng bẫy fixture đã ghi ở đầu file.
+    assert.ok(tamGiácLòngĐường > 100,
+      `kỷ ${era} chỉ dựng ${tamGiácLòngĐường} tam giác lòng đường — fixture rỗng, bài test không canh gì`);
+
+    if (KHÔNG.includes(era)) {
+      sốKhông += 1;
+      assert.equal(tamGiácVỉaHè, 0, `kỷ ${era} khai walk 0 mà vẫn dựng ${tamGiácVỉaHè} tam giác vỉa hè`);
+      assert.equal(tamGiácBóVỉa, 0, `kỷ ${era} không có vỉa hè mà vẫn dựng ${tamGiácBóVỉa} tam giác bó vỉa`);
+    } else {
+      sốCó += 1;
+      assert.ok(tamGiácVỉaHè > 0,
+        `kỷ ${era} khai vỉa hè ${STREET_STYLES[era].walk} mà tầng vẽ dựng ra 0 tam giác — `
+        + `bảng nói một đằng, màn hình hiện một nẻo`);
+    }
+  }
+  assert.equal(sốCó, CÓ.length);
+  assert.equal(sốKhông, KHÔNG.length);
+
+  // Và danh sách trên phải BÁM theo bảng, không phải một bản chép tay già đi trong im lặng.
+  for (const era of CÓ) assert.ok(STREET_STYLES[era].walk > 0, `kỷ ${era} nằm trong danh sách CÓ nhưng bảng khai walk 0`);
+  for (const era of KHÔNG) assert.equal(STREET_STYLES[era].walk, 0, `kỷ ${era} nằm trong danh sách KHÔNG nhưng bảng khai walk khác 0`);
 });

@@ -2229,7 +2229,7 @@ ship một trạng thái dở dang, hãy làm nó **ĐẾM ĐƯỢC trong một 
 
 ---
 
-## #42 — Vỉa hè bị bóp trong im lặng trên ĐẠI LỘ ở 8/15 kỷ, kỷ tệ nhất chỉ còn 11% bề rộng đã khai
+## #42 — ✅ ĐÃ ĐÓNG (2026-08-18, ADR-033) — Vỉa hè bị bóp trong im lặng trên ĐẠI LỘ ở 8/15 kỷ, kỷ tệ nhất chỉ còn 11% bề rộng đã khai
 
 - **Module**: `src/engine/city3d/streetStyle.js` (`streetCrossSection`)
 - **Priority**: Medium · **Severity**: Medium
@@ -2277,7 +2277,41 @@ ship một trạng thái dở dang, hãy làm nó **ĐẾM ĐƯỢC trong một 
   vi Việc 1, vốn chỉ nhận hai nguyên nhân "đường lởm chởm".
 - **Review Trigger**: khi Đàm trả lời; hoặc ngay khi có ai định thêm/sửa một dòng `walk` trong
   `STREET_STYLES`.
-- **Owner**: chưa ai · **Status**: MỞ, đã đo đủ số, chờ quyết định
+- **Owner**: Đàm quyết 2026-08-18 · **Status**: ✅ **ĐÃ ĐÓNG** — chọn phương án (2) "từ chối thẳng",
+  kèm một luật mà cả ba phương án cũ đều thiếu: **nới cho vượt ngưỡng nhìn thấy được, HOẶC khai
+  thẳng `walk: 0` — không có gì ở giữa.**
+
+### Đã đóng thế nào (2026-08-18, ADR-033)
+
+Sửa được nhờ nhìn ra một chuyện lớn hơn cái kẹp: **`avenue` đang được VIẾT như thể nó trả lời câu
+"đại lộ này oai tới đâu", trong khi mã ĐỌC nó là "bao nhiêu phần mặt cắt dành cho XE".** Ngoài đời
+hai câu ấy gần như ngược nhau — Champs-Élysées rộng 70m thì **21m mỗi bên là vỉa hè**, tức hơn 60%
+mặt cắt dành cho người đi bộ. Nên khai Paris `0,94` không phải "chật quá không đủ chỗ", mà là **sai
+lịch sử**. Sửa bảng, mỗi dòng kèm một mặt cắt có thật:
+
+| kỷ | avenue T→S | walk khai T→S | **dựng ra** T→S | điểm ảnh T→S |
+|---|--:|--:|--:|--:|
+| 4 Trung Quốc | 0,82 → 0,80 | 0,10 → 0,08 | 0,09 → **0,08** | 5,8 → 5,1 |
+| 9 Pháp | 0,94 → **0,54** | 0,17 → 0,22 | 0,03 → **0,22** | 1,9 → **14,1** |
+| 10 Anh | 0,78 → 0,78 | 0,15 → 0,10 | 0,11 → **0,10** | 7,0 → 6,4 |
+| 11 Mỹ | 0,92 → **0,62** | 0,14 → 0,17 | 0,04 → **0,17** | 2,6 → **10,9** |
+| 12 Nga | 0,96 → **0,70** | 0,19 → 0,14 | 0,02 → **0,14** | 1,3 → **9,0** |
+| 13 Nhật | 0,72 → 0,72 | 0,16 → 0,12 | 0,14 → **0,12** | 9,0 → 7,7 |
+| 14 Singapore | 0,90 → **0,54** | 0,20 → 0,19 | 0,05 → **0,19** | 3,2 → **12,2** |
+| 15 UAE | 0,96 → **0,84** | 0,18 → 0,07 | 0,02 → **0,07** | 1,3 → **4,5** |
+
+**Kết quả: 0/15 kỷ bị kẹp** (trước 8/15) · **0/15 kỷ dưới ngưỡng mắt** (trước 5/15). Vỉa hè dựng ra
+nay bằng ĐÚNG con số khai ở cả 15 kỷ. Kỷ 15 (UAE) là kỷ hiện đại nhất mà vỉa hè HẸP nhất bảng —
+đó là sự thật về Dubai: Sheikh Zayed Road là trục 12+ làn bắc qua bằng cầu bộ hành, còn chỗ đi bộ
+tử tế thì nằm ở các promenade riêng (Mohammed Bin Rashid Boulevard, The Walk at JBR) và đều CÓ MÁI
+CHE — một thiết bị chống 45°C, khác hẳn cái trottoir Paris làm ra để kê bàn cà phê.
+
+⚠️ **Bài học lớn hơn cái lỗi** — bài test canh trục này đọc **thứ đã KHAI** (`s.walk`) chứ không đọc
+**thứ đã DỰNG** (`streetCrossSection().walk`), nên nó xanh suốt nhiều tháng về một con số chưa bao
+giờ tới được mắt Đàm. Hai con số hiệu chuẩn (`CELL_PIXELS`, `EYE_PIXELS`) khi ấy chỉ là bản chép tay
+nằm trong file test, còn mã sản phẩm không biết chúng tồn tại ⇒ `isValidStreetStyle` **không thể**
+canh ngưỡng mắt dù có muốn. Nay cả hai `export` từ `streetStyle.js` và bài test `import` về — một
+luật một công thức. Xem `CLAUDE.md`.
 
 ⚠️ **Vì sao mục này ra đời trong lúc sửa một việc khác**: đi tìm nguyên nhân "đường lởm chởm" thì
 phát hiện `avenue: 1.00` của kỷ 12/15 làm vỉa hè **bằng 0 tuyệt đối**. Phần ấy đã sửa trong ADR-031

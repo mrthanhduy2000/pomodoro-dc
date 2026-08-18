@@ -532,6 +532,46 @@
 
 ## 🗒️ Nhật ký cập nhật
 
+### 2026-08-18 — Vỉa hè: dứt điểm `TECH_DEBT #42` (ADR-033)
+
+**Đàm yêu cầu**: làm nốt vỉa hè cho cả 5 kỷ, mỗi dòng phải trả lời được câu *"đi bộ ở nước ấy, thời
+ấy, có vỉa hè tách cao không?"* kèm một công trình/khu phố có thật làm căn cứ. Và một luật mới:
+**nới cho vượt ngưỡng nhìn thấy được (4 điểm ảnh), HOẶC khai thẳng `walk: 0` — không có gì ở giữa.**
+
+**Đã phát hiện gì (lớn hơn cái lỗi ban đầu)**: hai chuyện, chuyện thứ hai mới là bệnh gốc.
+1. **Bài test canh trục này đọc con số đã KHAI, không đọc con số đã DỰNG.** Kỷ 12 khai `walk: 0,19`,
+   màn hình dựng `0,02` — lệch **9,5 lần**, xanh suốt nhiều tháng. Hai hằng số hiệu chuẩn của mắt
+   (`CELL_PIXELS = 64`, `EYE_PIXELS = 4`) khi ấy chỉ là bản chép tay nằm trong file test, nên
+   `isValidStreetStyle` **không thể** canh ngưỡng mắt dù có muốn.
+2. **`avenue` được VIẾT một nghĩa và được ĐỌC một nghĩa khác.** Người điền bảng hiểu nó là *"đại lộ
+   này oai tới đâu"*; mã tính nó là *"bao nhiêu phần mặt cắt dành cho XE"*. Ngoài đời hai câu ấy gần
+   như ngược nhau — Champs-Élysées rộng 70m thì 21m MỖI BÊN là vỉa hè. Nên khai Paris `0,94` không
+   phải "chật quá không đủ chỗ" mà là **sai lịch sử**.
+
+**Đã làm**: sửa bảng 8 kỷ (mỗi dòng một mặt cắt có thật: Chang'an · Champs-Élysées + Saint-Germain ·
+back-to-back Manchester · Commissioners' Plan 1811 · Tverskaya 1937 · kaki lima Raffles 1822 ·
+Sheikh Zayed Road) · `isValidStreetStyle` **từ chối thẳng** cả hai chiều (dưới ngưỡng mắt · vượt bề
+rộng ô) · `CELL_PIXELS`/`EYE_PIXELS`/`MIN_WALK` nay `export` từ mã sản phẩm, test import về · 2 bài
+test mới (một ở tầng bảng, một ở tầng hình học đếm tam giác `road.kinds[]`) + 1 bài đối chứng nhốt
+bộ số hỏng cũ.
+
+**Số**: `npm test` **808 bài, 0 fail** · lint sạch · build xanh · **0 lệnh vẽ mới** ở cả 15 kỷ ·
+**−2.266 tam giác** (4 kỷ nhẹ đi, 11 kỷ không đổi, 0 kỷ nặng thêm) · vỉa hè dựng ra **bằng đúng** số
+khai ở **15/15 kỷ** (trước: 8 kỷ bị bóp, 5 kỷ dưới ngưỡng mắt) · hẹp nhất 4,5 điểm ảnh (kỷ 15), rộng
+nhất 14,1 (kỷ 9) · bản quét 15 kỷ **không trôi** (105/105 cặp kỷ, 15/15 cặp chặng trên ngưỡng mắt;
+gần nhất 21,3 · trung vị 37,6) · ảnh cận cảnh kỷ 9 đổi **3,1%** điểm ảnh, kỷ 12 đổi **2,7%**.
+
+**7 phép thử ngược**, đều đỏ đúng chỗ đã nêu trước (P1–P5 ở tầng bảng/validator, P6–P7 ở tầng dựng
+hình). Bài `15 KỶ RA 15 MẶT ĐƯỜNG` (8 trục) từng ĐỎ ở cặp 11↔14 sau khi nới — đã sửa **BẢNG** cho
+khác nhau ở trục khác (kỷ 11 `wear` 0,16 → 0,24 vì nhựa Manhattan vá quanh năm; kỷ 14 `avenue` 0,60
+→ 0,54 vì chính sách Garden City chia đất hành lang cho cây), **KHÔNG hạ sàn**. Nay yếu nhất 3/8
+(sàn là 3) · trung vị 6/8 · 7/8 trục còn ≥4 giá trị khác nhau.
+
+**Còn lại**: hiệu chuẩn trần dốc 34,8% bằng mắt (§2) · khoá `SMOOTHSTEP_PEAK` bằng test đạo hàm số
+(§3 Q2) · xem `TECH_DEBT #44` là nợ hay là lựa chọn (§3 Q3) · rồi Việc 2 (camera cận cảnh).
+
+---
+
 ### 2026-08-18 — Việc 3 / Phase 11: mái thôi là một tấm phẳng trơn (ADR-030)
 
 **Đàm yêu cầu**: *"(1) thứ phá vỡ mặt phẳng — ống khói · bể nước · cục nóng · lồng thang máy · cột

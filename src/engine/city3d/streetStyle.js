@@ -125,8 +125,12 @@ export const STREET_STYLES = {
     country: 'Trung Quốc',
     note: 'đường ngự đạo — đất nện đầm chặt rất rộng cho xe ngựa, hai bên có lối đi lát đá thưa',
     // Đá dăm rải trên nền đất đầm: mắt đọc ra một mảng LỐM ĐỐM cỡ vừa, không phải từng viên rời.
-    avenue: 0.82, lane: 0.44, paving: 'gravel', stone: 0.19, wear: 0.24,
-    curb: 0, walk: 0.10, markings: 'none', edge: 'blend',
+    // Đại lộ Chang'an đời Hán rộng tới 45–50m và được chia LÀM BA bằng hai rãnh thoát nước cùng
+    // hàng cây: làn giữa (chi dao) dành cho vua, hai làn bên cho dân. Nên kỷ này CÓ dải đi bộ hai
+    // bên, nhưng KHÔNG có bó vỉa — thứ ngăn cách là rãnh và cây, không phải một hòn đá dựng đứng
+    // (bó vỉa là phát minh La Mã, mãi kỷ 7 mới có).
+    avenue: 0.80, lane: 0.44, paving: 'gravel', stone: 0.19, wear: 0.24,
+    curb: 0, walk: 0.08, markings: 'none', edge: 'blend',
   },
   5: {
     country: 'Đức',
@@ -164,11 +168,19 @@ export const STREET_STYLES = {
   },
   9: {
     country: 'Pháp',
-    note: 'đại lộ Haussmann — pavé đá vuông, đại lộ RẤT rộng mà ngõ vẫn hẹp: tương phản mạnh nhất',
+    note: 'đại lộ Haussmann — pavé đá vuông, TRỌTTOIR rộng nhất bảng, mà ngõ vẫn hẹp: tương phản mạnh nhất',
     // Pavé Paris là khối vuông đục đều, TO HƠN đá mosaic Bồ Đào Nha — và đều hơn hẳn (wear 0,28 so
     // với 0,46 của đá cuội nhặt suối kỷ 5): đây là đá công nghiệp cắt máy, không phải đá nhặt.
-    avenue: 0.94, lane: 0.30, paving: 'cobble', stone: 0.155, wear: 0.28,
-    curb: 0.05, walk: 0.17, markings: 'none', edge: 'hard',
+    //
+    // ⚠️ VÌ SAO `avenue` TỤT TỪ 0,94 XUỐNG 0,54 MÀ ĐÂY LÀ SỬA CHỨ KHÔNG PHẢI BÓP. `avenue` là phần
+    // LÒNG ĐƯỜNG trong hành lang, không phải "phố này hoành tráng cỡ nào" — và cái làm nên đại lộ
+    // Haussmann chính là phần KHÔNG phải lòng đường: Champs-Élysées rộng 70m thì vỉa hè chiếm 21m
+    // MỖI BÊN (60% hành lang là của người đi bộ), Boulevard Saint-Germain rộng ~30m thì lòng đường
+    // chỉ ~13m. Khai 0,94 là kể ngược câu chuyện: nó biến Paris thành một xa lộ. Nay lòng đường
+    // 0,54 và vỉa hè 0,22 — RỘNG NHẤT cả bảng, đúng thứ Paris nổi tiếng. "Tương phản mạnh nhất"
+    // vẫn giữ, vì nó là tỉ số đại lộ/ngõ (0,54 / 0,20 = 2,70 — vẫn cao nhất 15 kỷ).
+    avenue: 0.54, lane: 0.20, paving: 'cobble', stone: 0.155, wear: 0.28,
+    curb: 0.05, walk: 0.22, markings: 'none', edge: 'hard',
   },
   10: {
     country: 'Anh',
@@ -177,38 +189,64 @@ export const STREET_STYLES = {
     // loạn quanh nhà máy, nhà "back-to-back" chen chúc, phố ám khói chật hẹp. "Hiện đại hơn" KHÔNG
     // đồng nghĩa "đường rộng hơn", và bảng này phải nói được điều đó.
     note: 'Manchester công nghiệp — gạch nung ám khói, phố chật, vỉa hè đá phiến, bó vỉa cao chắn bánh xe',
+    // Vỉa hè đá phiến Manchester HẸP thật — phố back-to-back chen chúc, lối đi bộ chỉ vừa hai
+    // người tránh nhau. Đây là kỷ duy nhất có bó vỉa CAO mà vỉa hè lại hẹp: bó vỉa cao để chắn
+    // bánh xe ngựa chở than, không phải để tôn một lối dạo.
     avenue: 0.78, lane: 0.42, paving: 'brick', stone: 0.16, wear: 0.42,
-    curb: 0.055, walk: 0.15, markings: 'none', edge: 'hard',
+    curb: 0.055, walk: 0.10, markings: 'none', edge: 'hard',
   },
   11: {
     country: 'Mỹ',
     note: 'lưới Manhattan — nhựa đường liền, vạch tim vàng, mọi phố gần bằng nhau (tương phản yếu)',
-    avenue: 0.92, lane: 0.66, paving: 'asphalt', stone: 0, wear: 0.16,
-    curb: 0.05, walk: 0.14, markings: 'center', edge: 'hard',
+    // Commissioners' Plan 1811 ấn định đại lộ rộng 100 foot (30,5m): lòng đường ~18m, vỉa hè ~6m
+    // mỗi bên. Tỉ lệ ấy cho `avenue` 0,60 và `walk` 0,20 — bảng lấy 0,62/0,17 để giữ "tương phản
+    // yếu" (đại lộ và phố ngang gần bằng nhau) là nét riêng của lưới Manhattan.
+    // ⚠️ `wear` 0,24 — ĐẬM HƠN Singapore (0,10) dù cả hai đều là nhựa đường thế kỷ 20, và đây là
+    // trục tách hai kỷ ấy ra. Lòng đường Manhattan bị xẻ đi xẻ lại suốt đời: hơi nước, tàu điện
+    // ngầm, ống nước, cáp điện — mỗi lần vá là một mảng nhựa khác tuổi, khác màu. Ổ gà New York là
+    // một định chế văn hoá. Singapore thì thảm lại theo chu kỳ và cấm xe nặng vào nhiều tuyến.
+    avenue: 0.62, lane: 0.50, paving: 'asphalt', stone: 0, wear: 0.24,
+    curb: 0.05, walk: 0.17, markings: 'center', edge: 'hard',
   },
   12: {
     country: 'Nga',
-    note: 'đại lộ Xô Viết — tấm bê tông đúc rất lớn, mặt cắt khổng lồ, ít vạch, vỉa hè mênh mông',
-    avenue: 0.96, lane: 0.58, paving: 'slab', stone: 0.46, wear: 0.14,
-    curb: 0.045, walk: 0.19, markings: 'none', edge: 'hard',
+    note: 'đại lộ Xô Viết — tấm bê tông đúc rất lớn, lòng đường áp đảo, ít vạch, vỉa hè vẫn rộng',
+    // Tverskaya được nới năm 1937–38 theo Tổng quy hoạch Moskva: tổng ~60m, lòng đường ~40m, vỉa hè
+    // ~10m mỗi bên ⇒ lòng đường chiếm hai phần ba hành lang. Đó là tỉ lệ 0,66/0,17; bảng lấy
+    // 0,70/0,14 để kỷ này giữ được nét "lòng đường áp đảo" so với Paris và Singapore.
+    avenue: 0.70, lane: 0.46, paving: 'slab', stone: 0.46, wear: 0.14,
+    curb: 0.045, walk: 0.14, markings: 'none', edge: 'hard',
   },
   13: {
     country: 'Nhật Bản',
     note: 'phố Nhật — lòng đường HẸP lại (đất đắt), nhựa mịn, vạch sang đường kẻ dày',
     avenue: 0.72, lane: 0.38, paving: 'asphalt', stone: 0, wear: 0.12,
-    curb: 0.04, walk: 0.16, markings: 'crossing', edge: 'hard',
+    curb: 0.04, walk: 0.12, markings: 'crossing', edge: 'hard',
   },
   14: {
     country: 'Singapore',
     note: 'thành phố vườn — nhựa hai làn vạch đứt, vỉa hè rộng có hàng cây, bó vỉa bo tròn',
-    avenue: 0.90, lane: 0.56, paving: 'asphalt', stone: 0, wear: 0.10,
-    curb: 0.045, walk: 0.20, markings: 'dashed', edge: 'hard',
+    // Vỉa hè là nét riêng LÂU ĐỜI NHẤT của Singapore chứ không phải một tiện ích thêm vào: Quy
+    // hoạch Raffles 1822 bắt mọi nhà phố phải chừa một hành lang có mái rộng 5 foot chạy liền
+    // (kaki lima — "ngũ cước kỳ lộ"), để người đi bộ tránh nắng và mưa rào nhiệt đới. Orchard Road
+    // ngày nay vẫn giữ đúng nguyên tắc ấy bằng vỉa hè rộng rợp cây.
+    // ⚠️ `avenue` 0,54 — HẸP HƠN Manhattan (0,62) dù Singapore giàu hơn và mới hơn. Đó là chính
+    // sách "Thành phố Vườn" (Lý Quang Diệu, 1967): hành lang đường được chia bớt cho dải trồng cây
+    // và hàng cây bóng mát, chứ không dồn hết cho nhựa. Tán cây Orchard Road là sản phẩm của luật,
+    // không phải của may mắn. Lại một lần nữa: "hiện đại hơn" KHÔNG đồng nghĩa "đường rộng hơn".
+    avenue: 0.54, lane: 0.44, paving: 'asphalt', stone: 0, wear: 0.10,
+    curb: 0.045, walk: 0.19, markings: 'dashed', edge: 'hard',
   },
   15: {
     country: 'UAE',
-    note: 'đại lộ sa mạc — bê tông sáng phản nắng, mặt cắt rộng nhất, vạch đứt thưa',
-    avenue: 0.96, lane: 0.62, paving: 'slab', stone: 0.30, wear: 0.08,
-    curb: 0.05, walk: 0.18, markings: 'dashed', edge: 'hard',
+    note: 'đại lộ sa mạc — bê tông sáng phản nắng, LÒNG ĐƯỜNG rộng nhất bảng, vỉa hè hẹp, vạch đứt thưa',
+    // ⚠️ ĐÂY LÀ KỶ DUY NHẤT MÀ "HIỆN ĐẠI NHẤT" LẠI CÓ VỈA HÈ HẸP NHẤT — và đó là sự thật về Dubai,
+    // không phải một thiếu sót. Sheikh Zayed Road là trục 12+ làn mà người đi bộ phải qua bằng cầu
+    // vượt; thành phố được dựng quanh xe hơi và điều hoà. Lối đi bộ rộng chỉ có trong vài khu dựng
+    // riêng cho việc dạo (Mohammed Bin Rashid Boulevard ở Downtown, The Walk ở JBR, Dubai Marina),
+    // và chúng có MÁI CHE — thứ chống 45°C, khác hẳn cái trottoir Paris dựng để ngồi cà phê.
+    avenue: 0.84, lane: 0.52, paving: 'slab', stone: 0.30, wear: 0.08,
+    curb: 0.05, walk: 0.07, markings: 'dashed', edge: 'hard',
   },
 };
 
@@ -280,6 +318,38 @@ export const MIN_STONE = 1 / 7;
  * ⚠️ VÀ `isValidStreetStyle` **TỪ CHỐI THẲNG**, không tự kẹp. Tự kẹp là cách một bảng 15 dòng lặng
  * lẽ thoái hoá — đúng bài học `MIN_STONE` (bốn kỷ khai bốn số, dựng ra một kết quả).
  */
+/**
+ * HAI CON SỐ HIỆU CHUẨN CỦA MẮT — nguồn DUY NHẤT, `streetStyle.test.js` import từ đây.
+ *
+ * ⚠️ Trước 2026-08-18 hai số này nằm trong bài test dưới dạng bản chép tay, còn mã sản phẩm thì
+ * không biết chúng tồn tại. Hậu quả đúng như luật **"một luật một công thức"** báo trước: bài test
+ * canh *"kỷ hiện đại phải có vỉa hè rõ"* đọc `s.walk` **đã KHAI**, trong khi màn hình hiện
+ * `streetCrossSection().walk` **đã DỰNG**, và hai số ấy lệch nhau tới **9,5 lần** ở kỷ 12 (khai
+ * 0,19 · dựng 0,02). Bài test xanh suốt nhiều tháng về một con số chưa bao giờ tới được mắt Đàm.
+ *
+ * `CELL_PIXELS` — một ô thành phố ≈ bao nhiêu điểm ảnh ở khoảng nhìn thật của app. **ĐO ĐƯỢC, không
+ * suy đoán**: Phase 9D dựng kỷ 5 ở bề ngang 1100 rồi chạy tự-tương-quan trên hàng điểm ảnh của mặt
+ * đường — `Δ` theo lag chững lại đúng ở **lag 8**, mà kỷ ấy chia viên lát 1/7 ô, nên một ô ≈ 7 × 8
+ * = 56…64 điểm ảnh (xem cả đoạn `MIN_STONE` phía trên). Lấy 64.
+ * ⚠️ Đây là một số TRUNG BÌNH và nó gắn với MỘT cỡ khung: phối cảnh làm ô ở gần to hơn ô ở xa, và
+ * đổi bề ngang cửa sổ là đổi con số này. Vì vậy mọi phát biểu "vỉa hè N điểm ảnh" trong dự án đều
+ * là *xấp xỉ ở khung app*, KHÔNG phải một phép đo trên một tấm ảnh cụ thể — đừng trích nó như thể
+ * đã đếm từng điểm ảnh của một ảnh chụp.
+ * `EYE_PIXELS`  — một dải hẹp hơn chừng này thì không đọc chắc được là dải gì.
+ */
+export const CELL_PIXELS = 64;
+export const EYE_PIXELS = 4;
+
+/**
+ * Vỉa hè hẹp nhất còn ĐỌC RA ĐƯỢC là vỉa hè, tính theo phần của một ô.
+ *
+ * ⚠️ ĐÂY LÀ MỘT SÀN, VÀ NÓ CHỈ ÁP CHO KỶ NÀO KHAI KHÁC 0. Khai thẳng `walk: 0` vẫn hợp lệ — "nước
+ * này thời này đi bộ ngay trên lòng đường" là một sự thật lịch sử, không phải một thiếu sót. Thứ
+ * bị cấm là khoảng GIỮA: một con số nhỏ li ti dựng ra một vệt 1,3 điểm ảnh, thứ không phải vỉa hè
+ * mà cũng không phải "không có vỉa hè" — nó chỉ là nhiễu, và nó khiến `note` của kỷ ấy nói dối.
+ */
+export const MIN_WALK = EYE_PIXELS / CELL_PIXELS;
+
 export const MAX_AVENUE = 0.96;
 
 /**
@@ -408,6 +478,16 @@ export function isValidStreetStyle(style) {
     && (style.stone === 0 || style.stone >= MIN_STONE - 1e-9)
     && Number.isFinite(style.wear) && style.wear >= 0 && style.wear <= 1
     && Number.isFinite(style.curb) && style.curb >= 0
+    // ⚠️ VỈA HÈ: TỪ CHỐI THẲNG CẢ HAI ĐẦU, KHÔNG TỰ KẸP — và đây là mục nhốt `TECH_DEBT #42`.
+    //   (a) khai RỘNG HƠN chỗ còn lại trong ô ⇒ từ chối. Trước 2026-08-18 `streetCrossSection` lặng
+    //       lẽ kẹp `walk ≤ 0,5 − half`, nên **8/15 kỷ** dựng ra hẹp hơn số đã khai và không có gì
+    //       đỏ lên. Kỷ 12 khai 0,19 với `note` viết nguyên chữ *"vỉa hè mênh mông"*, dựng ra 0,02 —
+    //       con số và lời giải thích cùng bị vứt đi. Đúng cái bẫy `MIN_STONE` ngay trên đây.
+    //   (b) khai KHÁC 0 nhưng hẹp hơn `MIN_WALK` ⇒ từ chối. Khai thẳng `walk: 0` vẫn hợp lệ; thứ bị
+    //       cấm là khoảng GIỮA — một vệt dưới ngưỡng mắt, không phải vỉa hè mà cũng không phải
+    //       "không có vỉa hè".
     && Number.isFinite(style.walk) && style.walk >= 0
+    && (style.walk === 0 || style.walk >= MIN_WALK - 1e-9)
+    && style.walk <= 0.5 - Math.max(0.08, Math.min(1, style.avenue)) / 2 + 1e-9
     && (style.edge === 'blend' || style.edge === 'hard');
 }

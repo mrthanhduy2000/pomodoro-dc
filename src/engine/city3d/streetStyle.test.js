@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
-  MARKING_KINDS, MIN_STONE, PAVING_KINDS, STREET_STYLES,
+  CELL_PIXELS, EYE_PIXELS, MARKING_KINDS, MIN_STONE, MIN_WALK, PAVING_KINDS, STREET_STYLES,
   carriagewayShape, getStreetStyle, isValidStreetStyle, pavingSubdivision, streetCrossSection,
 } from './streetStyle.js';
 import { ERA_STYLES } from './eraStyle.js';
@@ -23,8 +23,11 @@ const ERAS = Array.from({ length: 15 }, (_, i) => i + 1);
 // trên màn hình là **cùng một con đường** — chênh 0,64 điểm ảnh. Một phép so số thực sẽ báo "15 kỷ
 // đều khác nhau" ngay cả khi cả 15 dồn trong một khoảng mắt không tách nổi. Đó đúng là cái bẫy mà
 // bài test màu cũ đã dính theo chiều ngược lại.
-const Ô_ĐIỂM_ẢNH = 64;
-const MẮT_ĐIỂM_ẢNH = 4;    // mép một dải hẹp hơn 4 điểm ảnh thì không đọc chắc được
+// ⚠️ HAI SỐ ĐẦU **IMPORT TỪ `streetStyle.js`**, KHÔNG chép tay nữa (2026-08-18). Trước đây chúng là
+// bản chép trong file test còn mã sản phẩm không biết chúng tồn tại, nên `isValidStreetStyle`
+// không thể canh ngưỡng mắt — và đúng thứ nó không canh được (`MIN_WALK`) là thứ đã hỏng ở 5 kỷ.
+const Ô_ĐIỂM_ẢNH = CELL_PIXELS;
+const MẮT_ĐIỂM_ẢNH = EYE_PIXELS;
 const MẮT_MÀU = 12 / 255;  // ngưỡng mắt đã hiệu chuẩn
 
 /** Bước cho mọi trục mang nghĩa BỀ RỘNG (tính theo phần của một ô). */
@@ -42,6 +45,10 @@ const BƯỚC_MÒN = MẮT_MÀU / NỀN_ĐƯỜNG;
 /**
  * TÁM TRỤC BẢN SẮC, mỗi trục lượng hoá về thứ MẮT THẬT SỰ ĐỌC ĐƯỢC.
  *
+ * ⚠️ TRỤC `walk` HỎI `streetCrossSection`, KHÔNG đọc `s.walk` đã khai — cùng đúng lý do của trục
+ * `viên` ngay dưới đây, và nó đã CẮN THẬT: tới 2026-08-18 trục này đọc số khai, nên nó chấm kỷ 12
+ * là "vỉa hè 3 bậc" trong khi màn hình hiện 0,02 ô (**0 bậc**). Bảng thì khác nhau, mắt thì không.
+ *
  * ⚠️ TRỤC `viên` HỎI THẲNG `pavingSubdivision`, KHÔNG lượng hoá lại `stone` bằng một bước riêng —
  * vì `pavingSubdivision` mới là thứ hình học thật sự dùng, và nó có kẹp. Tự dựng một công thức
  * "tương đương" ở đây là đúng cái bẫy "một luật hai công thức" (Phase 3Y): hai kỷ khai `stone` khác
@@ -56,7 +63,7 @@ const vectorBảnSắc = (s) => [
   pavingSubdivision(s),
   Math.round(s.wear / BƯỚC_MÒN),
   s.curb > 0 ? 1 : 0,   // bó vỉa: mắt đọc ra CÓ hay KHÔNG (nó đổ bóng dọc mép), không đọc ra cao bao nhiêu
-  Math.round(s.walk / BƯỚC_BỀ_RỘNG),
+  Math.round(streetCrossSection(s, false).walk / BƯỚC_BỀ_RỘNG),
   s.markings,
 ];
 
@@ -136,9 +143,90 @@ test('KHÔNG NHÉT ĐẶC ĐIỂM HIỆN ĐẠI VÀO KỶ CỔ — bó vỉa, v�
   // biến thành cái cớ để mọi kỷ đều trống trơn.
   for (const era of [11, 13, 14, 15]) {
     assert.notEqual(STREET_STYLES[era].markings, 'none', `kỷ ${era} là thế kỷ 20+ mà không có vạch kẻ nào`);
-    assert.ok(STREET_STYLES[era].walk > 0.1, `kỷ ${era} phải có vỉa hè rõ`);
+    // ⚠️ ĐO BỀ RỘNG **DỰNG RA**, không đọc số khai. Bản cũ hỏi `walk > 0.1` trên số khai và XANH ở
+    // cả kỷ 12 lẫn kỷ 15 trong khi hai kỷ ấy dựng ra 1,3 điểm ảnh — một lời hứa về thứ mắt thấy,
+    // kiểm bằng một con số chưa bao giờ tới được mắt.
+    const dựngRa = streetCrossSection(STREET_STYLES[era], false).walk;
+    assert.ok(dựngRa >= MIN_WALK - 1e-9,
+      `kỷ ${era} phải có vỉa hè ĐỌC RA ĐƯỢC: dựng ra ${(dựngRa * Ô_ĐIỂM_ẢNH).toFixed(2)}px, `
+      + `cần ≥ ${MẮT_ĐIỂM_ẢNH}px`);
     assert.ok(STREET_STYLES[era].curb > 0, `kỷ ${era} phải có bó vỉa`);
   }
+});
+
+test('VỈA HÈ: KHÔNG KỶ NÀO DỰNG RA MỘT VỆT DƯỚI NGƯỠNG MẮT, VÀ KHÔNG KỶ NÀO BỊ KẸP TRONG IM LẶNG', () => {
+  // Đóng `TECH_DEBT #42`. Khoá HAI CHIỀU, vì một chiều thôi thì lách được:
+  //   (a) kỷ nào có vỉa hè thì nó phải ĐỌC RA ĐƯỢC (≥ 4 điểm ảnh) — chặn cái vệt 1,3px;
+  //   (b) kỷ nào khai 0 thì phải dựng ra ĐÚNG 0 — chặn cách "sửa" bằng việc bỏ vỉa hè đi cho xong;
+  //   (c) và không kỷ nào được BỊ KẸP: số dựng ra phải bằng số khai, từng kỷ một. Không có (c) thì
+  //       (a) vẫn xanh trong khi bảng nói một đằng màn hình hiện một nẻo — đúng lỗi đã xảy ra.
+  let sốCóVỉaHè = 0; let sốKhôngCó = 0;
+  for (const era of ERAS) {
+    const s = STREET_STYLES[era];
+    const dựngRa = streetCrossSection(s, false).walk;
+
+    // (c) — hỏi TỪNG kỷ, không hỏi tổng. Hỏi tổng thì một kỷ dư bù cho một kỷ bị kẹp.
+    assert.ok(Math.abs(dựngRa - s.walk) < 1e-9,
+      `kỷ ${era} (${s.country}) khai vỉa hè ${s.walk} nhưng DỰNG RA ${dựngRa.toFixed(4)} — `
+      + `bị kẹp trong im lặng bởi \`walk ≤ 0,5 − avenue/2\` (chỗ trống chỉ có `
+      + `${(0.5 - s.avenue / 2).toFixed(4)}). Hạ \`avenue\` hoặc hạ \`walk\`, đừng để cái kẹp tự lo.`);
+
+    if (s.walk === 0) {
+      sốKhôngCó += 1;
+      assert.equal(dựngRa, 0, `kỷ ${era} khai walk 0 mà vẫn dựng ra ${dựngRa}`);
+      // Bó vỉa đi kèm vỉa hè: không có lối đi bộ thì không có gì để bó.
+      assert.equal(streetCrossSection(s, false).curb, 0,
+        `kỷ ${era} không có vỉa hè mà vẫn dựng bó vỉa`);
+    } else {
+      sốCóVỉaHè += 1;
+      assert.ok(dựngRa >= MIN_WALK - 1e-9,
+        `kỷ ${era} (${s.country}) dựng ra vỉa hè ${(dựngRa * Ô_ĐIỂM_ẢNH).toFixed(2)}px — `
+        + `mảnh hơn ngưỡng nhìn được ${MẮT_ĐIỂM_ẢNH}px. Đó không phải vỉa hè, đó là một vệt lạ. `
+        + `Chọn dứt khoát: nới cho đủ rộng, hoặc khai thẳng \`walk: 0\`.`);
+    }
+  }
+  // Gác chạy-rỗng: cả hai nhánh phải thật sự được đi qua, nếu không bài test này không canh gì cả.
+  assert.equal(sốCóVỉaHè + sốKhôngCó, 15);
+  assert.ok(sốCóVỉaHè >= 5 && sốKhôngCó >= 3,
+    `phân bố lạ: ${sốCóVỉaHè} kỷ có vỉa hè / ${sốKhôngCó} kỷ không — một nhánh gần như không chạy`);
+});
+
+test('ĐỐI CHỨNG: bộ số HỎNG CŨ (vỉa hè 0,02 ô) phải bị CẢ validator LẪN phép đo trên từ chối', () => {
+  // ⚠️ Không có mục này thì `MIN_WALK` sẽ bị nới dần cho tiện, và phép đo trên mất răng mà vẫn xanh.
+  // Nhốt đúng bộ số đã chạy trên production nhiều tháng: kỷ 12 khai `avenue 0,96 · walk 0,19`.
+  const hỏng = { ...STREET_STYLES[12], avenue: 0.96, walk: 0.19 };
+
+  // Chiều 1 — validator phải TỪ CHỐI (khai rộng hơn chỗ còn lại: 0,19 > 0,5 − 0,48 = 0,02).
+  assert.equal(isValidStreetStyle(hỏng), false,
+    'validator vẫn nhận một dòng khai vỉa hè 0,19 trong khi ô chỉ còn 0,02 chỗ trống');
+
+  // Chiều 2 — và nếu nó lọt qua được thì bề rộng DỰNG RA phải nằm dưới ngưỡng mắt, tức phép đo ở
+  // bài trên bắt được. Hai chiều này độc lập: một cái canh lúc KHAI, một cái canh lúc DỰNG.
+  const dựngRa = streetCrossSection(hỏng, false).walk;
+  assert.ok(dựngRa < MIN_WALK,
+    `bộ số hỏng cũ dựng ra ${(dựngRa * Ô_ĐIỂM_ẢNH).toFixed(2)}px mà phép đo lại cho là đạt`);
+  assert.ok(Math.abs(dựngRa - 0.02) < 1e-9,
+    `bộ số hỏng cũ phải dựng ra đúng 0,02 ô như đã đo; nay ra ${dựngRa}`);
+
+  // Chiều 3 — và một vệt nhỏ li ti KHÁC 0 cũng phải bị từ chối, kể cả khi nó vừa chỗ trống. Đây là
+  // cái khe mà hai chiều trên không bịt: `avenue 0,90 · walk 0,05` thì 0,05 ≤ 0,05 nên không bị kẹp,
+  // mà 3,2px thì vẫn không đọc ra được.
+  assert.equal(isValidStreetStyle({ ...STREET_STYLES[14], avenue: 0.90, walk: 0.05 }), false,
+    'validator vẫn nhận một vỉa hè 3,2px — vừa chỗ trống nhưng dưới ngưỡng mắt');
+
+  // Và chiều ngược lại: khai thẳng 0 vẫn PHẢI hợp lệ, nếu không cái sàn sẽ cấm luôn sự thật lịch sử
+  // "nước này thời này đi bộ ngay trên lòng đường".
+  assert.equal(isValidStreetStyle({ ...STREET_STYLES[14], walk: 0, curb: 0 }), true,
+    'validator từ chối một kỷ khai thẳng walk 0 — cái sàn đang cấm cả sự thật lịch sử');
+
+  // Chiều 4 — TRỤC BẢN SẮC phải đọc bề rộng DỰNG RA, không đọc số khai. Không có assert này thì
+  // việc đổi trục ở `vectorBảnSắc` là một thay đổi KHÔNG QUAN SÁT ĐƯỢC (hôm nay 15/15 kỷ có
+  // dựng-ra == khai, nên hai cách đọc cho cùng kết quả), tức nó có thể bị hoàn tác mà không gì đỏ.
+  // Bộ số hỏng cũ là chỗ DUY NHẤT hai cách đọc lệch nhau, nên nó chính là chỗ để ghim.
+  assert.equal(Math.round(hỏng.walk / BƯỚC_BỀ_RỘNG), 3,
+    'số KHAI của bộ hỏng cũ phải rơi vào bậc 3 — nếu không thì đối chứng này chẳng chứng minh gì');
+  assert.equal(Math.round(dựngRa / BƯỚC_BỀ_RỘNG), 0,
+    'bề rộng DỰNG RA của bộ hỏng cũ phải rơi vào bậc 0 — trục bản sắc đang đọc nhầm số khai');
 });
 
 test('15 KỶ RA 15 MẶT ĐƯỜNG — bản sắc đo bằng CẤU TRÚC, duyệt đủ 105 CẶP', () => {

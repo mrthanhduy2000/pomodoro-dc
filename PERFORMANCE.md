@@ -559,6 +559,70 @@ Vẫn nợ, y như sau Phase 10 và 11. Muốn đóng thì Đàm chạy `bash sc
 
 ---
 
+## Sau vỉa hè (ADR-033) — 4 kỷ NHẸ ĐI, 11 kỷ không đổi, 0 kỷ nặng thêm (2026-08-18)
+
+Đóng `TECH_DEBT #42`: `avenue` được sửa lại cho đúng nghĩa "phần mặt cắt dành cho XE", nên lòng
+đường ở 5 kỷ hẹp lại và vỉa hè rộng ra. Lòng đường hẹp hơn ⇒ lưới lát ít viên hơn ⇒ **ít tam giác
+hơn**. Cùng lệnh đo của Phase 10/11/12: `node scripts/city-preview.mjs --era N --hour 12 --bench 1
+--no-shadow`.
+
+⚠️ **Cột T đo LẠI trên `e295f79`** trong một `git worktree` riêng, KHÔNG chép từ bảng Phase 12-B —
+dù ở đây hai bộ số trùng nhau ở cả 5 kỷ được kiểm chéo, vì `e295f79` ĐÚNG là commit sinh ra cột "S"
+của bảng ấy. Kiểm chứ không tin (bài học Phase 11-B).
+
+| Kỷ | Nước | Lệnh vẽ TP T→S | Tam giác TP T→S | Δ |
+|---:|---|---:|---:|---:|
+| 1 | Thổ Nhĩ Kỳ | 9 → 9 | 22.882 → 22.882 | 0 |
+| 2 | Ai Cập | 11 → 11 | 28.594 → 28.594 | 0 |
+| 3 | Iraq | 11 → 11 | 40.316 → 40.316 | 0 |
+| 4 | Trung Quốc | 11 → 11 | 48.578 → 48.578 | 0 |
+| 5 | Đức | 10 → 10 | 33.752 → 33.752 | 0 |
+| 6 | Việt Nam | 11 → 11 | 47.964 → 47.964 | 0 |
+| 7 | Ý | 11 → 11 | 55.896 → 55.896 | 0 |
+| 8 | Bồ Đào Nha | 11 → 11 | 52.840 → 52.840 | 0 |
+| 9 | Pháp | 10 → 10 | 49.102 → 47.454 | **−1.648** |
+| 10 | Anh | 12 → 12 | 42.666 → 42.666 | 0 |
+| 11 | Mỹ | 10 → 10 | 54.016 → 53.810 | **−206** |
+| 12 | Nga | 10 → 10 | 38.808 → 38.602 | **−206** |
+| 13 | Nhật Bản | 10 → 10 | 50.054 → 50.054 | 0 |
+| 14 | Singapore | 10 → 10 | 41.840 → 41.634 | **−206** |
+| 15 | UAE | 10 → 10 | 45.800 → 45.800 | 0 |
+| **Tổng** | | | **653.108 → 650.842** | **−2.266 (−0,35%)** |
+
+**Lệnh vẽ: KHÔNG ĐỔI MỘT ĐƠN VỊ NÀO ở cả 15 kỷ**, khớp bảng 15 mốc `MOC_LENH_VE`
+(`drawCallBudget.test.js`). Đúng theo cấu trúc: không thêm vai màu, không thêm vật liệu — vỉa hè và
+bó vỉa đã dùng chung họ vật liệu với lòng đường từ Phase 9D.
+
+### Đối chiếu chéo: hai phép đo độc lập, khớp TỪNG ĐƠN VỊ
+
+Con số trên đo bằng Chromium (`renderer.info`). Đo lại bằng một đường **hoàn toàn khác** — gọi thẳng
+`buildRoadSurface` trong Node, không Chromium, chỉ đếm tam giác MẶT ĐƯỜNG:
+
+| Kỷ | Δ tam giác cả cảnh (Chromium) | Δ tam giác mặt đường (đếm thuần) |
+|---:|---:|---:|
+| 9 | −1.648 | −1.648 ✓ |
+| 11 | −206 | −206 ✓ |
+| 12 | −206 | −206 ✓ |
+| 14 | −206 | −206 ✓ |
+| 8 (đối chứng, không sửa) | 0 | 0 ✓ |
+
+Khớp tuyệt đối ⇒ **toàn bộ chênh lệch nằm ở mặt đường**, không có gì khác trong cảnh bị đụng tới.
+
+⚠️ **VÀ HAI PHÉP ĐO ẤY LÚC ĐẦU CÃI NHAU — vì ĐẦU VÀO lệch, không vì phép đo sai.** Vòng một ra
+Chromium `−1.648` còn đếm thuần `−2.136` ở kỷ 9. Nguyên nhân: phép đếm thuần dựng thành phố ở
+`sessionCount: 400` (chép từ fixture của `terrainMesh.test.js`) trong khi `city-preview.mjs` dùng
+mặc định **40**, mà mạng đường thì MỞ DẦN theo số phiên ⇒ hai bên đang đếm hai thành phố khác nhau.
+Cho bằng đầu vào thì khớp từng đơn vị. Đây đúng là bài học *"một công cụ đúng chạy trên đầu vào sai
+vẫn ra số sai mà không kêu"* (Phase 11) — và nó lặp lại chỉ vài ngày sau khi được ghi ra.
+
+### Bản quét 15 kỷ — không trôi
+
+`sweep-score.mjs` trên bản quét mới (md5 `34f0fcfd`): **15/15 cặp chặng** và **105/105 cặp kỷ** trên
+ngưỡng mắt. Cặp kỷ gần nhất 21,3 (trước 21,4) · trung vị 37,6 (trước 37,5) — đứng yên trong sai số.
+Nới vỉa hè làm mỗi ô đường sáng lên một chút nhưng KHÔNG kéo hai kỷ nào lại gần nhau.
+
+---
+
 ## Sau Phase 12-B — đường leo dốc thôi nhảy bậc (2026-08-18)
 
 Phase 12-B (VIỆC 1, nguyên nhân 2) **san cao độ 80 ô đường** thành dốc thoải có trần lấy từ ngoài

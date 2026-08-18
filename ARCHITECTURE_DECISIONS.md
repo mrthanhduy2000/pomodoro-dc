@@ -11,6 +11,49 @@
 
 ---
 
+## ADR-033 — `avenue` là PHẦN MẶT CẮT DÀNH CHO XE, không phải "đại lộ này oai tới đâu"; và một trục bản sắc phải được canh bằng thứ DỰNG RA, không phải thứ KHAI RA
+
+- **Ngày**: 2026-08-18 (đóng `TECH_DEBT #42`)
+- **Bối cảnh**: `STREET_STYLES` (ADR-025) có 10 trường, trong đó `avenue` (bề rộng đại lộ) và `walk`
+  (bề rộng vỉa hè) phải cùng nằm gọn trong MỘT ô lưới: `avenue/2 + walk ≤ 0,5`. `streetCrossSection`
+  xưa nay xử lý xung đột bằng một phép kẹp im lặng `walk = min(s.walk, room)`.
+- **Vấn đề**: 8/15 kỷ bị kẹp, kỷ tệ nhất còn **11%** bề rộng đã khai. Kỷ 12 (Nga) khai `walk: 0,19`
+  và `note` viết nguyên chữ *"vỉa hè mênh mông"*, trong khi màn hình dựng ra **0,02 ô ≈ 1,3 điểm
+  ảnh** — lệch **9,5 lần**, và không có gì đỏ lên. Nguyên nhân bài test không bắt được: nó đọc
+  `s.walk` (**đã KHAI**) chứ không đọc `streetCrossSection().walk` (**đã DỰNG**).
+- **Phương án đã cân nhắc**:
+  1. **Cho vỉa hè lấn sang ô đất bên cạnh.** Đúng nhất với đời thật (vỉa hè thuộc lộ giới, không
+     thuộc lòng đường) nhưng đắt: phải hỏi ô hàng xóm là gì, tức thêm một phép hỏi kiểu
+     `carriagewayShape`, và phải quyết ai sở hữu phần đất giáp ranh.
+  2. **Giữ nguyên phép kẹp, ghi thành lời hứa tường minh** ("vỉa hè là đặc điểm của NGÕ").
+  3. **Từ chối thẳng ở validator, sửa BẢNG cho khai được thứ dựng được.**
+- **Lý do loại bỏ**: (1) đắt và mở một mặt trận mới về quyền sở hữu ô, trong khi bệnh gốc nằm ở
+  *bảng khai sai*, không ở *hình học chật*. (2) là hợp thức hoá một lời nói dối: nó biến "8 kỷ đang
+  bị bóp" thành "thiết kế là vậy", trong khi Champs-Élysées có **21m vỉa hè MỖI BÊN trên 70m mặt
+  cắt** — vỉa hè rộng chính là đặc điểm của ĐẠI LỘ, không phải của ngõ.
+- **Giải pháp chọn**: (3), và nó kéo theo một phát hiện lớn hơn cả cái kẹp — **`avenue` đang bị viết
+  như thể nó trả lời câu *"đại lộ này oai tới đâu"*, trong khi mã đọc nó là *"bao nhiêu phần mặt cắt
+  dành cho XE"*.** Hai câu ấy ngoài đời gần như NGƯỢC nhau: đại lộ càng sang thì phần dành cho người
+  đi bộ càng nhiều. Vì vậy Paris `0,94 → 0,54`, Moskva `0,96 → 0,70`, Manhattan `0,92 → 0,62`,
+  Singapore `0,90 → 0,54`, Dubai `0,96 → 0,84`. Không kỷ nào "bị hạ cấp" — chúng được sửa cho đúng.
+  Kèm hai lưới:
+  - `isValidStreetStyle` **TỪ CHỐI THẲNG** cả hai chiều: `walk > 0` mà dưới `MIN_WALK` (4 điểm ảnh)
+    là sai, và `avenue/2 + walk > 0,5` cũng là sai. Không tự kẹp — đúng luật `MIN_STONE` (Phase 9D).
+  - `walk: 0` vẫn **hợp lệ**: "nước này thời này đi bộ ngay trên lòng đường" là một sự thật lịch sử.
+    Thứ bị cấm là khoảng GIỮA — một con số li ti dựng ra một vệt 1,3 điểm ảnh, thứ không phải vỉa hè
+    mà cũng không phải "không có vỉa hè", và nó khiến `note` của kỷ ấy nói dối.
+- **Trade-off**: `avenue` mất khả năng diễn đạt "mặt cắt phố tổng thể rộng bao nhiêu" — hôm nay
+  không có trường nào mang nghĩa ấy, vì cả mặt cắt vẫn khoá cứng bằng một ô. Chấp nhận: 15 kỷ vẫn
+  phân biệt được bằng 8 trục, và phương án (1) còn nguyên đó nếu sau này cần mặt cắt rộng thật.
+- **Ảnh hưởng**: 0 lệnh vẽ mới; **−2.266 tam giác** (4 kỷ nhẹ đi, 11 kỷ không đổi, 0 kỷ nặng thêm) —
+  lòng đường hẹp lại thì lưới lát cũng ít viên đi. Vỉa hè dựng ra nay **bằng đúng** con số khai ở
+  **15/15 kỷ**; hẹp nhất 4,5 điểm ảnh (kỷ 15), rộng nhất 14,1 (kỷ 9). Bản quét 15 kỷ không trôi:
+  105/105 cặp kỷ và 15/15 cặp chặng vẫn trên ngưỡng mắt.
+- **Điều kiện xem lại**: khi có ai muốn một kỷ vừa đại lộ rất rộng vừa vỉa hè rất rộng (hai vế cộng
+  lại quá một ô) — lúc ấy phương án (1) là lối duy nhất, và nó là một phase riêng.
+
+---
+
 ## ADR-032 — ĐẤT giữ bậc thềm, ĐƯỜNG được san thành dốc thoải: hai loại ô, hai luật cao độ khác nhau
 
 - **Ngày**: 2026-08-18 (Phase 12, Việc 1 — nguyên nhân 2/2)

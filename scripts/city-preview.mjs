@@ -73,6 +73,18 @@ function parseArgs(argv) {
     // Cần thiết vì ở khoảng nhìn thật, một cư dân cao 0,2 ô chỉ chiếm vài điểm ảnh — không đủ để
     // phân biệt "hình người" với "vệt nhiễu".
     zoom: 1,
+    /**
+     * `--focus N` — CHỤP ĐÚNG CHẾ ĐỘ CẬN CẢNH CỦA APP: bay tới công trình mốc thứ N (1–5) rồi
+     * đứng ở chỗ mà `planCityFocus` đã chứng minh là thoáng.
+     *
+     * ⚠️ VÌ SAO KHÔNG DỰNG LẠI BẰNG `--zoom 0.45`: mức thu phóng chỉ là MỘT trong ba thứ chế độ
+     * cận cảnh quyết định — hai thứ kia là điểm ngắm (một công trình, không phải tâm thành phố) và
+     * góc ngẩng (được nâng lên tới mức tránh được phố). Chụp bằng `--zoom` là chụp một khung hình
+     * KHÁC rồi gọi tên nó là cận cảnh, đúng bẫy "phép đo phải gọi đúng hàm mà app gọi" (Phase 9C:
+     * đo chi phí bóng đổ qua một cổng, app mở hai cổng, ra hiệu số ÂM).
+     * 0 = tắt (khung toàn cảnh như cũ).
+     */
+    focus: 0,
     // Giờ Việt Nam giả lập để soi từng chặng trong ngày (0–23). Rỗng = giữa trưa trung tính.
     // ⚠️ LÀ MẢNG, và đây là sửa một cái bẫy đã cắn thật: bản đầu để `hour` là MỘT số, nên
     // `--hour 6 --hour 12 --hour 22` chỉ vẽ mỗi giờ 22 rồi in đúng một dòng "✓" — mà hai file kia
@@ -144,6 +156,7 @@ function parseArgs(argv) {
     else if (key === '--width') { args.width = Number(value); i += 1; }
     else if (key === '--height') { args.height = Number(value); i += 1; }
     else if (key === '--zoom') { args.zoom = Number(value); i += 1; }
+    else if (key === '--focus') { args.focus = Number(value); i += 1; }
     else if (key === '--hour') { args.hours.push(Number(value)); i += 1; }
     else if (key === '--sweep') args.sweep = true;
     else if (key === '--cell') { args.cell = Number(value); i += 1; }
@@ -177,7 +190,7 @@ function run(cmd, cmdArgs, options = {}) {
  * phiên bản three và đúng các module thật — nếu bản gói lỗi thì bản chạy thật cũng lỗi.
  */
 function entrySource({
-  era, level, theme, zoom = 1, hour = null, pending = 0, sessions = 40, dpr = null, bench = 0,
+  era, level, theme, zoom = 1, focus = 0, hour = null, pending = 0, sessions = 40, dpr = null, bench = 0,
   mask = null, noShadow = false,
 }) {
   return `
@@ -186,6 +199,7 @@ import { buildScenePalette } from '${ROOT}/src/engine/city3d/palette3d.js';
 import { deriveDaylight } from '${ROOT}/src/engine/city3d/daylight.js';
 import { applyPaintedLook, createCityScene, MAX_PIXEL_RATIO } from '${ROOT}/src/components/city/render3d/sceneGraph.js';
 import { CITY_CAMERA_FOV, cityOrbitOptions, createOrbit } from '${ROOT}/src/engine/city3d/orbit.js';
+import { planCityFocus } from '${ROOT}/src/engine/city3d/cityFocus.js';
 import { BLUEPRINT_CATALOG, ERA_METADATA } from '${ROOT}/src/engine/constants.js';
 import { Color, MeshBasicMaterial, PerspectiveCamera, WebGLRenderer } from 'three';
 
@@ -196,6 +210,7 @@ const ERA = ${era};
 const LEVEL = ${level};
 const IS_DARK = ${theme === 'dark'};
 const ZOOM = ${zoom};
+const FOCUS = ${focus};
 const HOUR = ${hour === null ? 'null' : hour};
 const PENDING = ${pending};
 const SESSIONS = ${sessions};
@@ -260,6 +275,32 @@ const orbit = createOrbit({
   distance: orbitOptions.distance * ZOOM,
   minDistance: orbitOptions.minDistance * Math.min(1, ZOOM),
 });
+// ⚠️ CHẾ ĐỘ CẬN CẢNH GỌI ĐÚNG HÀM MÀ APP GỌI ('planCityFocus'), với ĐÚNG danh sách vật cản mà cảnh
+// vừa dựng ra ('city.blockers'). Không có dòng nào ở đây tự tính lại góc hay khoảng cách — nếu có,
+// tấm ảnh nghiệm thu sẽ mô tả một chế độ cận cảnh không tồn tại trong app.
+if (FOCUS > 0) {
+  const marks = (city.pickTargets ?? []).filter((t) => t.kind === 'building');
+  const mark = marks[Math.min(marks.length, Math.max(1, FOCUS)) - 1];
+  if (!mark) throw new Error('kỷ này không có công trình mốc nào để ngắm gần');
+  const b = mark.box;
+  const plan = planCityFocus({
+    from: orbit.getState(),
+    focus: {
+      x: (b.minX + b.maxX) / 2,
+      y: (b.minY + b.maxY) / 2,
+      z: (b.minZ + b.maxZ) / 2,
+    },
+    blockers: city.blockers,
+  });
+  orbit.set(plan);
+  console.log('[focus] mốc ' + Math.max(1, FOCUS) + '/' + marks.length
+    + ' · khoảng cách ' + plan.distance.toFixed(2)
+    + ' · góc ngẩng ' + (plan.pitch * 180 / Math.PI).toFixed(1) + ' độ'
+    + ' · thoáng ' + plan.clearance.toFixed(2)
+    + ' · ngẩng thêm ' + (plan.raisedPitch * 180 / Math.PI).toFixed(1) + ' độ'
+    + ' · lùi thêm ' + plan.raisedDistance.toFixed(2));
+}
+
 const eye = orbit.getPosition();
 const target = orbit.getTarget();
 camera.position.set(eye.x, eye.y, eye.z);
@@ -725,7 +766,7 @@ function serve(files) {
 }
 
 async function shoot(chrome, url, pngPath,
-  { width, height, bench = 0, mask = null, noShadow = false, gpu = false }) {
+  { width, height, bench = 0, mask = null, noShadow = false, gpu = false, focus = 0 }) {
   await run(chrome, [
     '--headless=new',
     '--no-sandbox',
@@ -747,7 +788,10 @@ async function shoot(chrome, url, pngPath,
     url,
     // Lúc đo hiệu năng thì PHẢI để stderr chảy ra, vì dòng [bench] đi bằng đường đó — và lúc dựng
     // mặt nạ cũng vậy, vì dòng [mask] là thứ DUY NHẤT chứng minh mặt nạ khớp đúng khối cần khớp.
-  ], (bench > 0 || mask || noShadow) ? {} : { stdio: 'ignore' });   // Chromium trong hộp cát này chửi dbus không ngớt
+    // ⚠️ Chế độ cận cảnh cũng phải mở đường này: dòng [focus] là thứ DUY NHẤT nói ra camera đã
+    // đứng ở đâu (khoảng cách · góc ngẩng · độ thoáng). Không có nó thì tấm ảnh chỉ chứng minh
+    // "có một khung hình khác", không chứng minh nó là khung mà `planCityFocus` chọn.
+  ], (bench > 0 || mask || noShadow || focus > 0) ? {} : { stdio: 'ignore' });   // Chromium trong hộp cát này chửi dbus không ngớt
 }
 
 async function main() {
@@ -858,7 +902,12 @@ async function main() {
       // (mở nhầm file cũ rồi kết luận bản vá không ăn thua).
       const maskTag = args.mask ? `-mask-${args.mask.replace(/[^a-z0-9]+/gi, '_')}` : '';
       const shadowTag = args.noShadow ? '-noshadow' : '';
-      const pngPath = resolve(OUT_DIR, `city-era${String(era).padStart(2, '0')}-${args.theme}${hourTag}${maskTag}${shadowTag}.png`);
+      // ⚠️ CHẾ ĐỘ CẬN CẢNH CŨNG PHẢI CÓ TÊN RIÊNG, cùng lý do với mặt nạ ở trên — mà lý do ấy vừa
+      // trả giá thật ngày 2026-08-18: hai con số nghiệm thu mái (4,5% / 16,5%) phải vứt đi vì tấm
+      // ảnh mang tên "cận mái" hoá ra trùng TỪNG BYTE với ảnh khung thường. Một khung hình khác
+      // hẳn mà dùng chung tên file là cách chắc chắn nhất để một phép đo đúng cho ra kết luận sai.
+      const focusTag = args.focus > 0 ? `-focus${args.focus}` : '';
+      const pngPath = resolve(OUT_DIR, `city-era${String(era).padStart(2, '0')}-${args.theme}${hourTag}${maskTag}${shadowTag}${focusTag}.png`);
       try {
         await shoot(chrome, `http://127.0.0.1:${port}/index.html`, pngPath, options);
       } finally {

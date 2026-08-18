@@ -6,7 +6,37 @@
 > chọn: `ARCHITECTURE_DECISIONS.md`. Nợ kỹ thuật: `TECH_DEBT.md`. Migration: `MIGRATION.md`. Tóm
 > tắt theo mốc: `CHANGELOG.md`.
 > **NGUYÊN TẮC ƯU TIÊN SỐ 1:** (1) mọi phiên AI phải đọc file này + `CLAUDE.md` + các file liên quan TRƯỚC khi làm; (2) sau MỌI cập nhật dù nhỏ, phải cập nhật ngay file này + `CLAUDE.md` + các file liên quan khác.
-> Cập nhật lần cuối: **2026-08-18** — **VIỆC 1 / PHASE 12-B: ĐƯỜNG LEO DỐC THÔI NHẢY BẬC.**
+> Cập nhật lần cuối: **2026-08-18** — **VIỆC 2: CHẠM VÀO KHU PHỐ THÌ CAMERA BAY TỚI NGẮM GẦN.**
+>
+> **VIỆC 2 — CAMERA CẬN CẢNH: CHẠM VÀO MỘT KHU PHỐ THÌ BAY TỚI NGẮM GẦN — 2026-08-18 (ADR-034).**
+> Đây là lần đầu công sức của **Phase 10 (tầng trệt)** và **Phase 11 (mái)** được chứng minh bằng
+> SỐ là nhìn thấy được. Cùng một thay đổi mã (`b98a47d` → `e95cdf1`), chụp bằng cùng một dòng lệnh,
+> chỉ khác khoảng cách camera:
+>
+> | | khung TOÀN CẢNH | khung CẬN CẢNH (7,5) |
+> |---|--:|--:|
+> | điểm ảnh đổi quá ngưỡng mắt 12 | 7,0% | **17,0%** |
+> | lệch trung bình cả khung | **5,54 — DƯỚI ngưỡng** | **15,45 — TRÊN ngưỡng** |
+> | lệch trung bình chỗ đã đổi | 78,39 | 90,52 |
+>
+> **RÀNG BUỘC CỨNG ĐÃ GIỮ — khung mặc định KHÔNG đổi**, và không chứng minh bằng lời: ảnh kỷ 9 và
+> kỷ 15 dựng ở nhánh này trùng **TỪNG BYTE** (`md5sum`) với ảnh dựng ở `ae2b4a0`.
+> **LUẬT CHÍNH (vì sao "mỗi kỷ một mức thu phóng riêng" không phải 15 số chọn tay):** khoá
+> **KHOẢNG CÁCH THẬT** `FOCUS_VIEW_DISTANCE = 7,5`, để mức thu phóng tự khác nhau theo kỷ
+> (**0,395 kỷ 15 … 0,557 kỷ 2**, trọn trong dải 0,38–0,58 Đàm chốt). Nhờ vậy **một cái ống khói ở
+> kỷ 1 và ở kỷ 15 chiếm bằng nhau số điểm ảnh**. Con số 7,5 gần như bị ÉP: cửa sổ hợp lệ chỉ rộng
+> **[7,22; 7,81]**.
+> **LƯỚI AN TOÀN CANH CẢ ĐƯỜNG BAY, không chỉ điểm đến** — 48 mẫu dọc đường, cách mọi khối ≥ 1 ô
+> lưới. Đo **1200 chuyến** (15 kỷ × 5 mốc × 4 hướng × 4 góc xuất phát): **0 kẹt · 0 phải lùi ra ·
+> góc ngẩng lớn nhất 65,3°**. Đối chứng nhốt bộ hỏng: **9/1200 chuyến THOÁNG ở đích mà VI PHẠM
+> giữa đường** ⇒ canh mỗi điểm đến là chưa đủ, và con số 9 ấy được `assert` khoá.
+> **GIÁ PHẢI TRẢ, ĐÃ GHI THÀNH NỢ (`TECH_DEBT #46`, CHỜ ĐÀM QUYẾT):** kỷ 15 phải ngẩng 65,3° nên
+> cận cảnh ở đó ngả thành nhìn-từ-trên-xuống — mái rõ, **tầng trệt gần như không thấy**. Hai phương
+> án đã đo sẵn, không tự chốt vì đây là quyết định mỹ thuật.
+> **825 bài test** (809 + 16 mới, mọi assert mới đều đã thử-cho-đỏ), lint sạch, build xanh.
+> **0 lệnh vẽ mới · 0 tam giác mới · 0 điểm ảnh mới** — đã ĐO: cả hai khung đều 12 lệnh vẽ và
+> 91.580 tam giác.
+> ⏳ **CHƯA gộp `main`** — mục 5 chương trình làm việc.
 >
 > **VIỆC 1 / PHASE 12-B — ĐƯỜNG LEO DỐC THÔI NHẢY BẬC (nguyên nhân 2/2) — 2026-08-18.**
 > Nửa NẶNG hơn của câu Đàm nói. Trước bản vá: kỷ 7 có chỗ đường **nhảy 1,150 đơn vị trong MỘT ô**
@@ -531,6 +561,64 @@
 - **Lịch sử git `main` từng bị xáo** (thao tác git song song): bản đang chạy là `eb44638` — chứa ĐỦ mọi việc gần đây (Hỏi Coach offline + fix đêm khuya + Coach offline analyst). Vài commit cũ (`1e27505`, `9fbcd62`) thành dangling, KHÔNG còn trong `git log` nhưng code vẫn nằm trong bản deploy. Đừng hoảng nếu không thấy chúng.
 
 ## 🗒️ Nhật ký cập nhật
+
+### 2026-08-18 — VIỆC 2: chạm vào một khu phố thì camera bay tới ngắm gần (ADR-034)
+
+**Vì sao làm bây giờ.** `TECH_DEBT #41` nói thẳng: chi tiết mái của Phase 11 **không sống sót** tới
+thang bản quét (90/90 ô dưới ngưỡng mắt). Nguyên nhân gốc đã đo và ghi ở `CLAUDE.md`: không phải
+đặt chi tiết sai chỗ, mà là **cả thành phố quá nhỏ trong khung hình** — mỗi căn nhà chỉ cao 40–60
+điểm ảnh ở góc mặc định. Thêm chi tiết nữa mà không đưa được mắt tới gần thì chỉ là tiêu tam giác.
+
+**Ba quyết định đáng ghi lại.**
+
+1. **Khoá KHOẢNG CÁCH, không khoá TỈ LỆ.** Yêu cầu viết là *"mức thu phóng riêng mỗi kỷ,
+   0,38–0,58"*. Nhưng thu phóng là một tỉ lệ nhân vào khoảng cách toàn cảnh, mà khoảng cách ấy trải
+   13,46 → 19,01 giữa 15 kỷ. Đo trước khi viết: một tỉ lệ chung 0,45 cho ra công trình cao nhất phủ
+   **44% khung ở kỷ 1 nhưng 122% ở kỷ 15** — chênh 2,8 lần, kỷ cuối cụt nóc. Đảo chiều: cố định
+   khoảng cách 7,5 rồi suy ngược ra tỉ lệ. Lời hứa giữ được nhờ vậy: **số điểm ảnh trên mỗi đơn vị
+   thế giới chỉ phụ thuộc khoảng cách**, nên chi tiết ở mọi kỷ to bằng nhau trên màn hình. Một bảng
+   15 số chọn tay không giữ được lời hứa đó — nó chỉ là 15 lần chọn bừa (đúng bẫy ADR-028).
+2. **KHÔNG dựng hệ camera thứ hai.** `cityFocus.js` là hàm THUẦN, không giữ trạng thái, chỉ tính ra
+   `{yaw, pitch, distance, target}` rồi đưa cho chính `createOrbit` cũ. Hai hệ camera là cách chắc
+   chắn nhất để chúng trôi khỏi nhau (ống kính khác, giới hạn khác) — *một luật một công thức*.
+3. **Canh CẢ ĐƯỜNG BAY.** Điểm đến thoáng KHÔNG có nghĩa là đoạn giữa thoáng: điểm đến nằm ở rìa
+   thành phố còn điểm xuất phát ở trên đỉnh đầu, nên đoạn giữa đi ngang chỗ đông nhà nhất.
+
+**Ba lần công cụ / phép thử nói dối trong chính phiên này — cả ba đều bắt được, ghi lại để phiên sau
+đỡ mất công.**
+
+- ⚠️ **Cái bẫy nháy ngược ĐÃ ĐƯỢC GHI RÕ TRONG `CLAUDE.md` VẪN CẮN LẦN NỮA.** Viết chú thích
+  ``(`planCityFocus`)`` và một `console.log` dùng nháy ngược **bên trong** template literal 300 dòng
+  của `city-preview.mjs` ⇒ đóng chuỗi giữa chừng ⇒ `SyntaxError` lúc CHẠY. ESLint không bắt,
+  `npm run build` không bắt. Thứ bắt được là `scripts/cityPreviewSource.test.js` — bài test đã có
+  sẵn từ trước, và tôi chỉ phát hiện vì **chạy nó**. Một lần nữa: *một bài học được ghi ra không
+  chặn được gì; chỉ một bài TEST mới chặn được* — nhưng bài test ấy phải được CHẠY.
+- ⚠️ **`cd` trong một lệnh ghép sống sót sang lệnh kế tiếp**, nên hai lượt dựng ảnh "trước/sau" đều
+  chạy trong cây cũ và ghi đè lên **cùng một tên file**. Nếu không `md5sum` thì đã có một bảng số
+  hoàn chỉnh so bản cũ với chính nó. Đúng bài học 2026-08-18 (`MAI-SAU-ky9.png` trùng byte với ảnh
+  khung thường): **`md5sum` mọi ảnh nghiệm thu TRƯỚC khi trích số từ chúng.**
+- ⚠️ **Tên file không mang mức thu phóng / chế độ cận cảnh** ⇒ ảnh cận cảnh ghi đè ảnh toàn cảnh
+  trong im lặng. Đã vá: thêm hậu tố `-focusN` (cùng lý do với hậu tố `-mask-*` đã có).
+
+**Ba assert yếu chỉ lộ ra khi thử ngược** (17 phép phá, mỗi phép nêu TRƯỚC chỗ mong đợi đỏ):
+- Phép phá P1 (làm `pathClearance` chỉ nhìn mẫu cuối) **không đỏ**, vì bài test xác minh đường bay
+  bằng CHÍNH hàm vừa bị làm mù. Vá: viết một bộ lấy mẫu **ĐỘC LẬP** ngay trong file test, mật độ
+  gấp đôi, rồi đối chiếu hai bên.
+- P9 (trả `zoom` về phép kẹp cũ) không đỏ vì assert viết `distance >= 7,5` mà camera rơi về sàn 8.
+  Vá: `assert.equal(..., 7.5)` — lỗi thật là camera **bật ngược ra** ở lần cuộn đầu tiên.
+- P14 (gỡ nút thoát) không đỏ vì `assert.match(code, /Toàn cảnh/)` khớp phải **câu gợi ý** chứ
+  không phải cái nút. Vá: đòi đúng `className` của nút đứng ngay trước nhãn.
+
+**Nghiệm thu.** 825 test (809 + 16), lint sạch, build xanh. Lệnh vẽ và tam giác đo ở CẢ HAI khung:
+12 / 91.580, không lệch một đơn vị. Khung mặc định trùng từng byte với `ae2b4a0` ở kỷ 9 và kỷ 15.
+Ảnh nghiệm thu nằm ở `.city-preview/`: `city-era{06,09,13,15}-light-h12-focus1.png` (cận cảnh) và
+`city-era{06,09,13,15}-light-h12.png` (toàn cảnh), cộng bốn ảnh đo chi tiết
+`TRUOC-b98a47d-*` / `SAU-e95cdf1-*`.
+
+**Việc phiên sau cần biết.** `TECH_DEBT #46` đang chờ Đàm quyết (kỷ cao ngả thành nhìn-từ-trên
+-xuống). Chưa gộp `main`.
+
+---
 
 ### 2026-08-18 — Hiệu chuẩn trần dốc bằng mắt · khoá `SMOOTHSTEP_PEAK` · đóng `TECH_DEBT #44`
 

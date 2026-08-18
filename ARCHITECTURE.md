@@ -294,6 +294,17 @@ camera nhất) nằm ở `engine/city3d/pick.js` — thuần, test bằng `node 
 đúng việc mà three.js buộc phải làm hộ: đổi toạ độ điểm ảnh thành một tia. Bộ vẽ 2D không có tính
 năng này, và đó là chấp nhận được — nó là đường lui, không phải bản song song đầy đủ.
 
+**Bay tới một khu phố (2026-08-18, VIỆC 2 — ADR-034)** dùng lại đúng `pickTargets` ở trên và đúng
+`createOrbit` sẵn có — **không có hệ camera thứ hai**. `engine/city3d/cityFocus.js` là một hàm
+THUẦN: nhận chỗ đứng hiện tại + hộp bao của công trình được chạm + danh sách hộp bao của MỌI khối
+trong phố (`city.blockers`, do `sceneGraph` xuất ra cùng lúc với `pickTargets`), trả về bộ tham số
+`{yaw, pitch, distance, target}` rồi đưa cho chính cái cần cẩu cũ. Hai luật đáng nhớ: **khoảng
+cách THẬT được khoá (7,5 đơn vị), còn mức thu phóng thì tự khác nhau theo kỷ** — đó là điều kiện để
+một cái ống khói ở kỷ 1 và ở kỷ 15 chiếm bằng nhau số điểm ảnh; và **lưới an toàn lấy mẫu cả đường
+bay** (48 chặng, cách mọi khối ≥ 1 ô lưới), vì điểm đến thoáng không có nghĩa là đoạn giữa thoáng —
+đo thật: 9/1200 chuyến bay thoáng ở đích nhưng vi phạm giữa đường. `CityScene3D` chỉ giữ phần mà
+React buộc phải giữ: nội suy 700 ms giữa hai chỗ đứng, và hạ sàn giới hạn khi hạ cánh.
+
 Bộ vẽ 2D **không phải bản nháp sẽ xoá**: nó là đường lui
 thường trực khi máy không có WebGL, khi trình duyệt mất context, hoặc khi Đàm tự chọn tắt 3D.
 Xem ADR-008.

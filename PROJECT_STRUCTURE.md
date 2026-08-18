@@ -137,7 +137,13 @@
 │   │   ├── city3d/            # Logic THUẦN của bộ vẽ 3D — cấm import three, cấm DOM
 │   │   │   ├── renderMode.js      # Luật chọn 3D/2D (FAIL-CLOSED: không chắc → 2D)
 │   │   │   ├── renderLoop.js      # Nhịp khung hình: đứng yên = 0 nhịp rAF + trần FPS khi có hoạt hoạ
-│   │   │   ├── orbit.js           # Toán camera xoay (tự viết, KHÔNG dùng OrbitControls)
+│   │   │   ├── orbit.js           # Toán camera xoay (tự viết, KHÔNG dùng OrbitControls). Từ VIỆC 2
+│   │   │   │                      #   nhận thêm ĐIỂM NGẮM di động + `setLimits`/`getHome` để chế độ
+│   │   │   │                      #   cận cảnh hạ sàn khoảng cách xuống mà không phá giới hạn toàn cảnh
+│   │   │   ├── cityFocus.js      # CHẾ ĐỘ CẬN CẢNH (ADR-034): tính ra chỗ đứng an toàn khi chạm vào
+│   │   │   │                      #   một khu phố. Khoá KHOẢNG CÁCH THẬT (7,5) để mức thu phóng tự
+│   │   │   │                      #   khác nhau theo kỷ; canh CẢ ĐƯỜNG BAY chứ không chỉ điểm đến.
+│   │   │   │                      #   ⚠️ KHÔNG phải hệ camera thứ hai — vẫn trả tham số cho `orbit.js`
 │   │   │   ├── palette3d.js       # Token màu CSS → số cho WebGL, + vai màu cho ngôn ngữ hình khối
 │   │   │   │                      #   ⚠️ NGOẠI LỆ DUY NHẤT của luật "cấm hex, chỉ CSS var":
 │   │   │   │                      #   WebGL không đọc được biến CSS (xem ARCHITECTURE.md)

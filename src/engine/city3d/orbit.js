@@ -186,6 +186,28 @@ export function createOrbit({
   let pitch = DEFAULT_PITCH;
   let dist = Math.min(maxDistance, Math.max(minDistance, distance));
 
+  /**
+   * ⚠️ ĐIỂM NGẮM NAY DI CHUYỂN ĐƯỢC (chế độ cận cảnh, `cityFocus.js`) — trước đây nó là một hằng
+   * số đóng kín trong closure. Bản gốc `getState()` trả về chính tham số `target`, nên nếu chỉ
+   * thêm đường ghi mà quên sửa chỗ đọc thì camera sẽ BAY tới khu phố trong khi mọi phép đo vẫn
+   * tường nó đang đứng giữa thành phố — sai im lặng, đúng họ "một luật hai công thức".
+   * `home*` giữ nguyên bộ số toàn cảnh để `reset()` luôn có đường về, kể cả sau nhiều lần bay.
+   */
+  const homeTarget = { x: target?.x ?? 0, y: target?.y ?? 0, z: target?.z ?? 0 };
+  const homeMinDistance = minDistance;
+  let tgt = { ...homeTarget };
+
+  /**
+   * SÀN GÓC NHÌN ĐỘNG. Ở toàn cảnh nó là `MIN_PITCH`; ở cận cảnh nó được nâng lên đúng góc mà
+   * `planCityFocus` đã chứng minh là thoáng. Không có nó thì lời hứa "camera không bao giờ chui
+   * vào phố" chỉ đúng ĐÚNG MỘT LẦN — lúc hạ cánh — rồi vỡ ngay ở cú kéo đầu tiên của Đàm.
+   */
+  let pitchFloor = MIN_PITCH;
+  let distFloor = minDistance;
+
+  const clampPitchNow = (value) => Math.min(MAX_PITCH, Math.max(pitchFloor, value));
+  const clampDistNow = (value) => Math.min(maxDistance, Math.max(distFloor, value));
+
   return {
     /**
      * Kéo chuột/ngón tay. `dx`/`dy` tính theo pixel màn hình (y tăng khi đi XUỐNG).
@@ -199,13 +221,13 @@ export function createOrbit({
     drag(dx, dy) {
       const before = `${yaw}|${pitch}`;
       yaw = wrapYaw(yaw - dx * dragSpeed);
-      pitch = clampPitch(pitch + dy * dragSpeed);
+      pitch = clampPitchNow(pitch + dy * dragSpeed);
       return `${yaw}|${pitch}` !== before;
     },
 
     /** Phóng to/thu nhỏ. `factor` > 1 là ra xa. Trả về `true` nếu khoảng cách đổi. */
     zoom(factor) {
-      const next = Math.min(maxDistance, Math.max(minDistance, dist * factor));
+      const next = clampDistNow(dist * factor);
       if (next === dist) return false;
       dist = next;
       return true;
@@ -214,20 +236,56 @@ export function createOrbit({
     reset() {
       yaw = DEFAULT_YAW;
       pitch = DEFAULT_PITCH;
-      dist = Math.min(maxDistance, Math.max(minDistance, distance));
+      pitchFloor = MIN_PITCH;
+      distFloor = homeMinDistance;
+      tgt = { ...homeTarget };
+      dist = clampDistNow(distance);
     },
 
-    /** Đặt thẳng góc (dùng cho hoạt hoạ bay giữa các kỷ ở Phase 3C). */
-    set({ yaw: nextYaw, pitch: nextPitch, distance: nextDistance }) {
+    /**
+     * Đặt thẳng góc (hoạt hoạ bay giữa các kỷ ở Phase 3C, và bay tới một khu phố ở chế độ cận
+     * cảnh). `target` là tuỳ chọn — bỏ trống thì giữ nguyên điểm ngắm đang có.
+     *
+     * ⚠️ CỐ Ý dùng `clampPitch`/trần-sàn TĨNH ở đây chứ không dùng sàn động: một chuyến bay khởi
+     * hành từ góc nhìn thấp và hạ dần xuống góc cao, nên nếu sàn mới có hiệu lực ngay từ khung
+     * hình đầu thì camera sẽ GIẬT một cái ngay lúc cất cánh. Sàn được bật lên sau khi hạ cánh,
+     * qua `setLimits`.
+     */
+    set({ yaw: nextYaw, pitch: nextPitch, distance: nextDistance, target: nextTarget }) {
       if (Number.isFinite(nextYaw)) yaw = wrapYaw(nextYaw);
       if (Number.isFinite(nextPitch)) pitch = clampPitch(nextPitch);
       if (Number.isFinite(nextDistance)) {
-        dist = Math.min(maxDistance, Math.max(minDistance, nextDistance));
+        dist = Math.min(maxDistance, Math.max(0, nextDistance));
+      }
+      if (nextTarget) {
+        tgt = {
+          x: Number.isFinite(nextTarget.x) ? nextTarget.x : tgt.x,
+          y: Number.isFinite(nextTarget.y) ? nextTarget.y : tgt.y,
+          z: Number.isFinite(nextTarget.z) ? nextTarget.z : tgt.z,
+        };
       }
     },
 
-    getState: () => ({ yaw, pitch, distance: dist, target: { ...target } }),
-    getPosition: () => orbitPosition({ yaw, pitch, distance: dist, target }),
-    getTarget: () => ({ ...target }),
+    /**
+     * Nâng SÀN góc nhìn và SÀN khoảng cách. Đây là lưới an toàn sống mãi trong lúc còn ở chế độ
+     * cận cảnh: kéo xuống thấp hay lăn chuột vào gần nữa cũng không xuống dưới mức đã chứng minh
+     * là thoáng. `reset()` trả cả hai về mức toàn cảnh.
+     */
+    setLimits({ minPitch: nextMinPitch, minDistance: nextMinDistance } = {}) {
+      if (Number.isFinite(nextMinPitch)) {
+        pitchFloor = Math.min(MAX_PITCH, Math.max(MIN_PITCH, nextMinPitch));
+        pitch = clampPitchNow(pitch);
+      }
+      if (Number.isFinite(nextMinDistance)) {
+        distFloor = Math.max(0, nextMinDistance);
+        dist = clampDistNow(dist);
+      }
+    },
+
+    getLimits: () => ({ minPitch: pitchFloor, minDistance: distFloor }),
+    getHome: () => ({ target: { ...homeTarget }, distance, minDistance: homeMinDistance }),
+    getState: () => ({ yaw, pitch, distance: dist, target: { ...tgt } }),
+    getPosition: () => orbitPosition({ yaw, pitch, distance: dist, target: tgt }),
+    getTarget: () => ({ ...tgt }),
   };
 }

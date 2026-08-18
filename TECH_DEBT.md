@@ -2125,6 +2125,38 @@ ship một trạng thái dở dang, hãy làm nó **ĐẾM ĐƯỢC trong một 
 
 ---
 
+## #46 — Chế độ cận cảnh ở những kỷ CAO ngả thành nhìn-từ-trên-xuống: kỷ 15 ngẩng 65,3°, tầng trệt gần như biến mất
+
+- **Module**: `src/engine/city3d/cityFocus.js` (thứ tự chữa trong `planCityFocus`)
+- **Priority**: Medium · **Severity**: Low
+- **Impact**: chế độ cận cảnh sinh ra để Đàm NHÌN THẤY công sức của Phase 10 (tầng trệt: cửa ra
+  vào, cửa lùa, bức bàn) và Phase 11 (mái). Ở những kỷ thấp nó làm được cả hai. Ở kỷ 15 (Dubai —
+  thành phố cao nhất) lưới an toàn phải ngẩng camera lên **65,3°**, và ở góc ấy màn hình gần như
+  chỉ còn MÁI: tường bị chính mái che, nên đúng nửa số chi tiết mới không tới được mắt. Ảnh nghiệm
+  thu `.city-preview/city-era15-light-h12-focus1.png` cho thấy rõ.
+- **Root Cause**: `planCityFocus` chữa va chạm theo thứ tự **ngẩng trước → lùi sau**, chọn vì
+  "ngẩng giữ nguyên độ lớn của vật, lùi thì làm vật nhỏ đi". Lý lẽ ấy đúng về mặt số điểm ảnh và
+  **bỏ sót một chiều khác**: ngẩng quá cao thì vật vẫn to nhưng ta không còn nhìn thấy MẶT ĐỨNG
+  của nó nữa. Đo 1200 chuyến bay: 0 chuyến phải lùi, tức thứ tự này khiến cách chữa thứ hai **chưa
+  bao giờ được dùng** — cái giá dồn hết vào góc nhìn.
+- **Current Risk**: thấp — không sai chức năng, camera vẫn thoáng (1,06 ô ở kỷ 15, trên mức tối
+  thiểu 1 ô), và 14/15 kỷ có góc dễ nhìn (34,4°–45°).
+- **Future Risk**: trung bình. Kỷ mới cao hơn nữa sẽ đẩy góc lên sát trần `MAX_PITCH` (85,4°) —
+  lúc đó cận cảnh thành ảnh chụp từ trực thăng, và **không có gì đỏ lên** vì mọi bài test hiện có
+  chỉ đòi "thoáng", không đòi "còn nhìn thấy mặt đứng".
+- **Recommended Solution**: một trong hai, **Đàm chọn** (đây là quyết định MỸ THUẬT, không phải kỹ
+  thuật): (a) **đổi thứ tự** — lùi ra trước, ngẩng sau; vật nhỏ đi nhưng giữ được góc nhìn ngang,
+  và ngân sách lùi có sẵn vì chưa dùng bao giờ. (b) **đặt trần góc ngẩng riêng cho chế độ cận
+  cảnh** (ví dụ 50°), vượt trần thì chuyển sang lùi. Cách nào cũng phải đo lại đủ 1200 chuyến +
+  chụp lại ảnh kỷ 15.
+- **Estimated Complexity**: Thấp (một khối trong `planCityFocus` + đo lại).
+- **Blocking Conditions**: cần Đàm chọn hướng — xem ảnh kỷ 15 rồi quyết "thà nhỏ hơn mà thấy mặt
+  tiền" hay "thà to mà nhìn từ trên xuống".
+- **Review Trigger**: khi thêm kỷ mới cao hơn kỷ 15, hoặc khi Đàm nói cận cảnh ở kỷ cao khó nhìn.
+- **Owner**: chờ Đàm · **Status**: 🟡 MỞ — đã đo, đã có hai phương án, chờ quyết định mỹ thuật
+
+---
+
 ## #45 — 5/2160 chỗ bờ đất bên lề đường dốc hơn MỘT bậc thềm (giá phải trả của việc san đường)
 
 - **Module**: `src/engine/city3d/terrain.js` (lượt 3 — SAN ĐƯỜNG) ↔ `src/engine/city3d/terrain.test.js`
@@ -2389,7 +2421,15 @@ hơn và nằm ngoài phạm vi. Ghi lại thay vì mở rộng phạm vi, đún
   mỹ thuật với độ tự tin dưới 80%). Tuyệt đối không tự phóng to rồi báo "đã đạt".
 - **Review Trigger**: ngay khi Đàm trả lời; hoặc trước khi Phase 12 bắt đầu thêm bất cứ chi tiết
   nào lên mái/tường, vì cùng câu hỏi sẽ lặp lại.
-- **Owner**: chưa ai · **Status**: MỞ, đã đo đủ số, chờ quyết định
+- **Owner**: chưa ai · **Status**: 🟢 **ĐÃ CÓ LỜI GIẢI, GIỮ MỞ CHO ĐÚNG PHẠM VI** — VIỆC 2
+  (2026-08-18, ADR-034) chọn một hướng thứ TƯ mà mục này chưa liệt kê: **không phóng to chi tiết,
+  mà đưa MẮT lại gần** (chạm vào công trình → camera bay tới, khoảng cách 7,5). Đo được: cùng thay
+  đổi mã ấy, lệch trung bình cả khung đi từ **5,54 (dưới ngưỡng mắt 12)** ở khung toàn cảnh lên
+  **15,45 (trên ngưỡng)** ở khung cận cảnh. ⚠️ **Câu chữ của mục này vẫn ĐÚNG và vì vậy chưa đóng**:
+  chi tiết mái vẫn KHÔNG sống sót tới thang **bản quét** (mỗi thành phố ~300 điểm ảnh), và sẽ không
+  bao giờ sống sót tới thang đó. Cái đã đổi là **nó không còn cần phải sống sót tới đó nữa**. Ba
+  phương án (1)(2)(3) ở trên còn nguyên giá trị nếu Đàm muốn chi tiết đọc được ngay ở khung mặc
+  định — nhưng nay chúng là *thêm*, không phải *cứu*.
 
 ⚠️ **Bài học đi kèm, đáng giá hơn cả mục nợ này**: bản quét là thang NHỎ NHẤT dự án có, và nó
 **không phải** thang Đàm dùng app. Một thay đổi có thể thật ở khung app mà chết ở bản quét (đúng ca

@@ -17,7 +17,7 @@
  */
 
 import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react';
-import { AnimatePresence } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 
 import useSettingsStore from '../../store/settingsStore';
 import {
@@ -117,6 +117,15 @@ export default function CityStage({
     }
   }, [preference]);
 
+  // Phím Esc = lối thoát thứ ba. Chỉ gắn khi ĐANG ngắm một công trình: gắn thường trực thì Esc ở
+  // màn hình Thành Phố sẽ âm thầm "làm gì đó" ngay cả lúc chẳng có gì để đóng.
+  useEffect(() => {
+    if (!selection || !interactive) return undefined;
+    const onKey = (event) => { if (event.key === 'Escape') onPick?.(null); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [selection, interactive, onPick]);
+
   const handleFallback = useCallback((reason) => {
     // Chỉ ghi nhận lần hỏng ĐẦU TIÊN: `lost-context` và `slow` có thể bắn liên tiếp, mà lý do đầu
     // mới là lý do thật.
@@ -146,8 +155,42 @@ export default function CityStage({
               fill={fill}
               interactive={interactive}
               onPick={interactive ? onPick : undefined}
+              // ⚠️ HAI SỐ RỜI, không phải object `selection`: `selection` được `useMemo` dựng lại
+              // mỗi khi bố cục đổi, và một object mới sẽ làm effect bay nổ lại vô cớ.
+              // Cũng chỉ truyền khi `interactive` — lớp nền trang chủ không được tự bay đi đâu cả.
+              focusKind={interactive ? (selection?.kind ?? null) : null}
+              focusBpId={interactive ? (selection?.bpId ?? null) : null}
             />
           </Suspense>
+
+          {/*
+            ĐƯỜNG THOÁT. Camera bay vào một khu phố mà không có lối ra hiển nhiên thì Đàm sẽ phải
+            đoán (kéo ngược lại? bấm đâu?) — và đoán sai vài lần là thôi không dám chạm nữa, tức
+            mất luôn cả tính năng. Ba lối, cố ý dư thừa vì mỗi lối hỏng theo một kiểu:
+              1. nút này — thấy được, không cần biết trước gì cả;
+              2. chạm vào chỗ trống — phản xạ tự nhiên, đã có sẵn từ Phase 3K;
+              3. phím Esc — quen tay trên máy tính.
+            ⚠️ `pointer-events-none` ở lớp bọc, `auto` ở chính cái nút: thiếu luật này thì cả dải
+            trống bên cạnh nút nuốt mất thao tác kéo xoay (đúng bài học của thẻ thông tin bên dưới).
+          */}
+          <div className="pointer-events-none absolute inset-x-2 top-2 flex justify-end">
+            <AnimatePresence>
+              {selection && (
+                <motion.button
+                  type="button"
+                  initial={reduceMotion ? false : { opacity: 0, y: -6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: -6 }}
+                  transition={{ duration: reduceMotion ? 0 : 0.18 }}
+                  onClick={() => onPick?.(null)}
+                  className="pointer-events-auto rounded-full px-3 py-1.5 text-[11px] font-medium shadow-sm"
+                  style={{ background: 'var(--canvas)', color: 'var(--ink)', border: '1px solid var(--line)' }}
+                >
+                  ⤺ Toàn cảnh
+                </motion.button>
+              )}
+            </AnimatePresence>
+          </div>
 
           {/* ⚠️ `pointer-events-none` trên lớp bọc, `pointer-events-auto` trên chính thẻ: thiếu
               luật này thì cả vùng trống quanh thẻ nuốt mất thao tác kéo xoay của Đàm. */}
@@ -181,7 +224,9 @@ export default function CityStage({
       */}
       {chrome && mode === '3d' && interactive && (
         <p className="text-[11px]" style={{ color: 'var(--muted-2)' }}>
-          Kéo để xoay · chạm vào công trình để xem chi tiết
+          {selection
+            ? 'Đang ngắm gần · kéo để xoay quanh · bấm “Toàn cảnh” hoặc Esc để lùi ra'
+            : 'Kéo để xoay · chạm vào công trình để bay tới ngắm gần'}
         </p>
       )}
 

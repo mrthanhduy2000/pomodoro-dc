@@ -703,6 +703,37 @@ ms, và Phase 12-B không đổi cỡ khung / DPR / nguồn sáng / shader / v�
 
 ---
 
+## Sau VIỆC 2 — chế độ cận cảnh (2026-08-18, ADR-034)
+
+**Không đo lại, và đây là một trong số ít trường hợp câu ấy có căn cứ CẤU TRÚC chứ không phải phỏng
+đoán.** Chế độ cận cảnh chỉ đổi **chỗ đứng của camera**. Nó không thêm khối, không thêm vật liệu,
+không thêm nguồn sáng, không đổi shader, không đổi cỡ khung, không đổi DPR — tức nó không chạm vào
+BẤT KỲ trục nào của mô hình chi phí đã đo trên M3 (*≈ 0,87 ms cố định + 1,14 ms mỗi triệu điểm ảnh
+thật*). Số điểm ảnh phải tô là **y hệt** vì khung hình và DPR không đổi.
+
+Ba con số kiểm chứng, đo trong hộp cát (kỷ 9, 12 giờ, `--bench 12`, cùng một dòng lệnh chỉ khác cờ
+`--focus 1`). Chúng là số ĐẾM (lệnh vẽ · tam giác · điểm ảnh) nên mang ra ngoài hộp cát được — khác
+với số ms của SwiftShader, thứ chỉ dùng để so trong hộp cát với nhau:
+
+| | toàn cảnh | cận cảnh |
+|---|---|---|
+| lệnh vẽ (thành phố / nền / tổng / đã vẽ) | 10 / 2 / 12 / 12 | **10 / 2 / 12 / 12** |
+| tam giác (thành phố / nền / tổng) | 47.454 / 44.126 / 91.580 | **47.454 / 44.126 / 91.580** |
+| điểm ảnh | 1134×780 | **1134×780** |
+
+Không một đơn vị nào lệch — kể cả cột “đã vẽ (sau khi cắt)”, đúng như chú thích ở `city-preview.mjs`
+đã đo và giải thích: cả cảnh chỉ có 7 khối và không khối nào rơi ra ngoài hộp bao dù camera lại gần.
+
+⚠️ **Một chỗ CÓ THỂ đắt hơn mà bộ số hiện tại không nói được**: lúc camera đang BAY (700 ms), vòng
+lặp chuyển sang chế độ `sustained` nên nó vẽ liên tục thay vì đứng yên — giống hệt lúc Đàm kéo xoay
+camera bằng tay, thứ đã nằm trong bảng đo. Cái chưa nằm trong bảng là **lượt dựng lại bản đồ bóng**
+có nổ trong lúc bay hay không; hôm nay nó KHÔNG nổ (thành phố không đổi trong lúc bay, và
+`sun.shadow.autoUpdate = false`), nhưng nếu sau này có ai gọi `invalidateShadows()` mỗi khung của
+chuyến bay thì chi phí ấy mới xuất hiện — và Phase 9C đã đo rằng nó thêm 7 lệnh vẽ + 25.436 tam
+giác vào đúng khung hình đó.
+
+---
+
 ## Khi nào phải đo lại
 
 - Sau bất kỳ phase nào **thêm nguồn sáng, đổi shader, đổi bóng đổ, hoặc đổi DPR**.

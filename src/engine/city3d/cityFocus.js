@@ -1,0 +1,232 @@
+/**
+ * cityFocus.js — BAY TỚI MỘT KHU PHỐ RỒI DỪNG LẠI Ở CHỖ AN TOÀN. THUẦN: chỉ toán, không three,
+ * không DOM.
+ *
+ * ⚠️ ĐÂY KHÔNG PHẢI HỆ CAMERA THỨ HAI. Cả app vẫn chỉ có MỘT `createOrbit` (`orbit.js`); file này
+ * không giữ trạng thái nào cả, nó chỉ TÍNH RA bộ tham số `{yaw, pitch, distance, target}` rồi đưa
+ * cho chính cái cần cẩu ấy. Dựng một hệ camera riêng cho chế độ cận cảnh là cách chắc chắn nhất để
+ * hai hệ trôi khỏi nhau (ống kính khác, giới hạn góc khác), đúng bẫy "một luật hai công thức".
+ *
+ * ═══ VÌ SAO MỖI KỶ MỘT MỨC THU PHÓNG RIÊNG, VÀ VÌ SAO NÓ KHÔNG PHẢI MỘT BẢNG 15 SỐ CHỌN TAY ═══
+ *
+ * Đo trước khi viết (`BUILDING_SCALE = 1,3`, lưới 12, ống kính 38°): nếu lấy MỘT mức thu phóng
+ * chung — 0,45 lần khoảng cách toàn cảnh — thì công trình cao nhất của kỷ phủ **44% khung hình ở
+ * kỷ 1 nhưng 122% ở kỷ 15**, tức kỷ cuối bị cắt mất nóc đúng thứ đáng xem nhất. Chênh 2,8 lần.
+ * Nguyên nhân: `cityOrbitOptions` đã lùi camera ra theo `massScale`, nên "0,45 lần khoảng cách
+ * toàn cảnh" là 0,45 lần của mười lăm con số khác nhau.
+ *
+ * ⇒ Luật ở đây đảo ngược chiều suy nghĩ: **cố định KHOẢNG CÁCH THẬT (`FOCUS_VIEW_DISTANCE`), để
+ * chính mức thu phóng tự khác nhau theo kỷ.** Hệ quả là thứ ta thật sự muốn: **một ống khói ở kỷ 1
+ * và một ống khói ở kỷ 15 chiếm ĐÚNG BẰNG NHAU số điểm ảnh trên màn hình** — bởi số điểm ảnh trên
+ * mỗi đơn vị thế giới chỉ phụ thuộc khoảng cách, không phụ thuộc kỷ. Một mức thu phóng riêng cho
+ * mỗi kỷ mà không giữ được lời hứa ấy thì chỉ là mười lăm con số tuỳ hứng.
+ * Mức thu phóng suy ra: **0,395 (kỷ 15) … 0,557 (kỷ 2)** — nằm trọn trong dải 0,38–0,58 Đàm chốt.
+ *
+ * ═══ CAMERA TUYỆT ĐỐI KHÔNG ĐƯỢC CHUI VÀO TRONG PHỐ — VÀ PHẢI CANH CẢ ĐƯỜNG BAY ═══
+ *
+ * Canh mỗi ĐIỂM ĐẾN là chưa đủ, và đây không phải lo xa: điểm đến nằm ở rìa thành phố còn điểm
+ * xuất phát nằm trên đỉnh đầu, nên đoạn giữa của chuyến bay đi ngang qua đúng chỗ đông nhà nhất.
+ * Đo thật ở mức thu phóng trên, với góc nhìn mặc định 34°: **7 trên 15 kỷ có camera nằm THẤP HƠN
+ * nóc nhà cao nhất** khi hạ xuống. Nên phép canh lấy mẫu toàn bộ đường bay
+ * (`FLIGHT_SAMPLES` chặng) và đo khoảng cách tới hộp bao GẦN NHẤT của mọi khối trong phố.
+ *
+ * Cách chữa xếp theo thứ tự "mất ít nhất trước": **ngẩng camera lên** (giữ nguyên khung ngắm, chỉ
+ * đổi góc nhìn) → nếu hết cỡ ngẩng vẫn kẹt thì **lùi ra xa** → cùng lắm là đứng yên tại chỗ cũ
+ * (trạng thái xuất phát luôn thoáng, nên phép tìm LUÔN dừng lại được, không có nhánh vô định).
+ *
+ * ⚠️ Số lần phải lùi ra được ĐẾM và trả về (`raisedDistance`), không nuốt im lặng — bài học Phase
+ * 10 Bước 2: một cơ chế "từ chối thẳng" chỉ an toàn khi có người đếm số lần từ chối.
+ */
+
+import { MAX_PITCH, MIN_PITCH, orbitPosition } from './orbit';
+
+/**
+ * Khoảng cách THẬT (đơn vị thế giới) từ camera tới khu phố đang ngắm ở chế độ cận cảnh.
+ *
+ * ⚠️ 7,5 KHÔNG phải số chọn cho đẹp — nó là con số DUY NHẤT thoả cùng lúc ba ràng buộc đã đo:
+ *   1. mức thu phóng suy ra phải nằm trong 0,38–0,58 ở CẢ 15 kỷ ⇒ 7,5 phải nằm giữa
+ *      0,38 × 19,01 = 7,22 (kỷ xa nhất) và 0,58 × 13,46 = 7,81 (kỷ gần nhất). Dải hợp lệ chỉ
+ *      rộng 0,59 đơn vị — gần như không có chỗ để chọn bừa.
+ *   2. cả 300 chuyến bay thử (15 kỷ × 5 công trình × 4 hướng) đều tìm được đường thoáng.
+ *   3. tầm nhìn dọc còn 0,689 × 7,5 ≈ 5,2 ô lưới — một KHU PHỐ, không phải một căn nhà. Chạm vào
+ *      một công trình mà khung hình chỉ còn đúng bức tường của nó thì mất hết ngữ cảnh xung quanh.
+ */
+export const FOCUS_VIEW_DISTANCE = 7.5;
+
+/**
+ * Camera phải cách mọi khối trong phố ít nhất một Ô LƯỚI. Chọn đơn vị này chứ không chọn một số
+ * lẻ: một ô lưới là bề rộng một căn nhà, tức "cách ra bằng một căn nhà" — kiểm bằng mắt được, và
+ * không trôi nếu sau này đổi tỉ lệ công trình.
+ */
+export const FOCUS_CLEARANCE = 1;
+
+/** Số chặng lấy mẫu dọc đường bay. 48 chặng trên quãng ~10 đơn vị ⇒ mỗi bước ~0,2 đơn vị. */
+export const FLIGHT_SAMPLES = 48;
+
+/** Mỗi lần ngẩng camera lên thêm bao nhiêu radian khi đường bay còn kẹt (~1,1°). */
+const PITCH_STEP = 0.02;
+/** Mỗi lần lùi ra xa thêm bao nhiêu đơn vị thế giới, khi ngẩng hết cỡ vẫn kẹt. */
+const DISTANCE_STEP = 0.5;
+
+const num = (value, fallback = 0) => (Number.isFinite(value) ? value : fallback);
+
+/**
+ * Mức thu phóng của một kỷ = khoảng cách cận cảnh chia khoảng cách toàn cảnh của chính kỷ ấy.
+ * Trả về số < 1 (lại gần). Dùng để BÁO CÁO và để test khoá dải 0,38–0,58; bản thân đường bay
+ * không cần tới nó, vì nó đã làm việc thẳng bằng khoảng cách thật.
+ */
+export function focusZoom(overviewDistance, viewDistance = FOCUS_VIEW_DISTANCE) {
+  const d = num(overviewDistance, 0);
+  return d > 0 ? viewDistance / d : 1;
+}
+
+/**
+ * Khoảng cách từ một điểm tới một hộp bao theo trục. Điểm nằm TRONG hộp ⇒ 0.
+ * Đây là phép đo "camera có chui vào trong không", nên nằm-trong phải ra đúng 0 chứ không ra một
+ * số âm nào đó — số âm sẽ lẫn với "cách ra một chút" khi đem so ngưỡng.
+ */
+export function boxDistance(point, box) {
+  if (!point || !box) return Infinity;
+  const dx = Math.max(box.minX - point.x, 0, point.x - box.maxX);
+  const dy = Math.max(box.minY - point.y, 0, point.y - box.maxY);
+  const dz = Math.max(box.minZ - point.z, 0, point.z - box.maxZ);
+  return Math.hypot(dx, dy, dz);
+}
+
+/** Khoảng cách tới khối GẦN NHẤT trong phố. Phố rỗng ⇒ `Infinity` (thoáng vô hạn). */
+export function nearestBlocker(point, blockers) {
+  let best = Infinity;
+  for (const box of blockers ?? []) {
+    const d = boxDistance(point, box);
+    if (d < best) best = d;
+  }
+  return best;
+}
+
+/**
+ * Một chặng trên đường bay. Nội suy TUYẾN TÍNH mọi thành phần.
+ *
+ * ⚠️ Bên gọi được phép bôi trơn nhịp bằng hàm dịu (`t` đã qua ease) — làm vậy KHÔNG đổi tập hợp
+ * các trạng thái đi qua, chỉ đổi tốc độ đi qua chúng, nên phép canh thoáng ở đây vẫn còn nguyên
+ * giá trị. Đừng đổi sang nội suy theo đường cong (bezier, arc): lúc ấy đường bay sẽ đi qua những
+ * chỗ mà phép lấy mẫu này chưa từng nhìn thấy.
+ */
+export function flightState(from, to, t) {
+  const k = Math.min(1, Math.max(0, num(t)));
+  const mix = (a, b) => a + (b - a) * k;
+  return {
+    yaw: mix(from.yaw, to.yaw),
+    pitch: mix(from.pitch, to.pitch),
+    distance: mix(from.distance, to.distance),
+    target: {
+      x: mix(from.target.x, to.target.x),
+      y: mix(from.target.y, to.target.y),
+      z: mix(from.target.z, to.target.z),
+    },
+  };
+}
+
+/** Chỗ thoáng NHỎ NHẤT mà camera gặp phải trên cả đường bay. */
+export function pathClearance(from, to, blockers, samples = FLIGHT_SAMPLES) {
+  const n = Math.max(1, Math.round(samples));
+  let worst = Infinity;
+  for (let i = 0; i <= n; i += 1) {
+    const gap = nearestBlocker(orbitPosition(flightState(from, to, i / n)), blockers);
+    if (gap < worst) worst = gap;
+  }
+  return worst;
+}
+
+/**
+ * Lên kế hoạch bay tới một khu phố.
+ *
+ * @param {object} p
+ * @param {object} p.from        trạng thái camera hiện tại `{yaw, pitch, distance, target}`
+ * @param {object} p.focus       điểm ngắm mới `{x, y, z}` — tâm hộp bao của công trình được chạm
+ * @param {Array}  p.blockers    hộp bao thế giới của MỌI khối trong phố
+ * @param {number} [p.viewDistance]
+ * @param {number} [p.clearance]
+ * @returns {{yaw, pitch, distance, target, clearance, raisedPitch, raisedDistance, blocked}}
+ *   `raisedPitch`/`raisedDistance`: đã phải ngẩng lên / lùi ra bao nhiêu so với mong muốn.
+ *   `blocked`: hết cách, đành đứng yên (chỉ xảy ra nếu chính chỗ đang đứng cũng đã kẹt).
+ */
+export function planCityFocus({
+  from,
+  focus,
+  blockers,
+  viewDistance = FOCUS_VIEW_DISTANCE,
+  clearance = FOCUS_CLEARANCE,
+  samples = FLIGHT_SAMPLES,
+} = {}) {
+  const start = {
+    yaw: num(from?.yaw),
+    pitch: num(from?.pitch, MIN_PITCH),
+    distance: num(from?.distance, viewDistance),
+    target: { x: num(from?.target?.x), y: num(from?.target?.y), z: num(from?.target?.z) },
+  };
+  const target = { x: num(focus?.x), y: num(focus?.y), z: num(focus?.z) };
+
+  // ⚠️ GIỮ NGUYÊN HƯỚNG NHÌN (`yaw`). Xoay ngang trong lúc bay làm mất phương hướng — Đàm vừa chạm
+  // vào một căn nhà anh đang nhìn thấy, thì lúc hạ xuống nó phải còn ở đúng phía ấy. Giữ `yaw` cố
+  // định cũng khiến phép canh chỉ còn HAI cần gạt (ngẩng lên, lùi ra), tức ít đường trôi hơn.
+  const wanted = {
+    yaw: start.yaw,
+    pitch: Math.max(start.pitch, MIN_PITCH),
+    distance: Math.min(viewDistance, start.distance),
+    target,
+  };
+
+  const tryPlan = (pitch, distance) => {
+    const to = { yaw: start.yaw, pitch, distance, target };
+    return { to, gap: pathClearance(start, to, blockers, samples) };
+  };
+
+  let attempt = tryPlan(wanted.pitch, wanted.distance);
+  if (attempt.gap >= clearance) {
+    return { ...attempt.to, clearance: attempt.gap, raisedPitch: 0, raisedDistance: 0, blocked: false };
+  }
+
+  // (1) NGẨNG LÊN — mất ít nhất: khung ngắm và mức thu phóng giữ nguyên, chỉ nhìn chúc xuống hơn.
+  let pitch = wanted.pitch;
+  while (pitch < MAX_PITCH) {
+    pitch = Math.min(MAX_PITCH, pitch + PITCH_STEP);
+    attempt = tryPlan(pitch, wanted.distance);
+    if (attempt.gap >= clearance) {
+      return {
+        ...attempt.to,
+        clearance: attempt.gap,
+        raisedPitch: pitch - wanted.pitch,
+        raisedDistance: 0,
+        blocked: false,
+      };
+    }
+  }
+
+  // (2) LÙI RA XA — mất chi tiết, nên chỉ dùng khi ngẩng hết cỡ vẫn kẹt.
+  // ⚠️ Trần của vòng lặp này là chính khoảng cách ĐANG đứng: trạng thái xuất phát hiển nhiên
+  // thoáng (camera đang ở đó mà), nên phép tìm không thể chạy vô tận.
+  let distance = wanted.distance;
+  while (distance < start.distance) {
+    distance = Math.min(start.distance, distance + DISTANCE_STEP);
+    attempt = tryPlan(MAX_PITCH, distance);
+    if (attempt.gap >= clearance) {
+      return {
+        ...attempt.to,
+        clearance: attempt.gap,
+        raisedPitch: MAX_PITCH - wanted.pitch,
+        raisedDistance: distance - wanted.distance,
+        blocked: false,
+      };
+    }
+  }
+
+  // (3) Đứng yên. Chỉ tới được đây nếu chính chỗ đang đứng đã nằm trong phố — tức thành phố đã
+  // phình ra quanh camera, một tình huống không nên im lặng.
+  return {
+    ...start,
+    clearance: nearestBlocker(orbitPosition(start), blockers),
+    raisedPitch: 0,
+    raisedDistance: 0,
+    blocked: true,
+  };
+}

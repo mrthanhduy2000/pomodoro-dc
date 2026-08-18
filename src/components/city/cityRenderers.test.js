@@ -293,3 +293,42 @@ test('"ĐANG XÂY" TRÊN THANH KỶ KHÔNG ĐƯỢC GÁC BẰNG `isCurrent` — 
   assert.match(code, /state\s*===\s*'building'/,
     'EraSwitcher phải nhìn vào slot trạng thái "building" để biết kỷ cũ còn đang xây');
 });
+
+test('BAY VÀO KHU PHỐ PHẢI CÓ BA ĐƯỜNG THOÁT, và cả ba đều nằm ở tầng khung chứ không ở tầng cảnh', () => {
+  // ⚠️ Camera bay vào giữa phố mà không có lối ra hiển nhiên thì Đàm phải ĐOÁN — kéo ngược lại?
+  // bấm chỗ nào? Đoán sai vài lần là thôi không dám chạm nữa, tức mất luôn cả tính năng vừa làm.
+  // Ba lối cố ý dư thừa vì mỗi lối hỏng theo một kiểu khác nhau: nút thì phải nhìn thấy (điện
+  // thoại), Esc thì phải có bàn phím (máy tính), chạm-chỗ-trống thì phải biết trước là làm được.
+  const stage = SOURCES.find((f) => f.path === 'components/city/CityStage.jsx');
+  assert.ok(stage, 'không thấy CityStage.jsx');
+  const code = codeOnly(stage.source);
+
+  // ⚠️ PHẢI HỎI ĐÍCH DANH CÁI NÚT, không hỏi "có chữ 'Toàn cảnh' ở đâu đó trong file".
+  // Phép thử ngược đã chứng minh: đổi nhãn nút thành chữ khác mà bài test **vẫn xanh**, vì dòng
+  // nhắc bên dưới cũng chứa đúng hai chữ ấy (“bấm ‘Toàn cảnh’ hoặc Esc…”). Đúng bẫy Phase 7A —
+  // assert "có ít nhất một chỗ" là cái phễu, không phải hàng rào.
+  assert.match(code, /pointer-events-auto rounded-full[\s\S]{0,300}?⤺ Toàn cảnh/,
+    'mất nút “Toàn cảnh” — lối thoát nhìn thấy được duy nhất trên iPhone');
+  assert.match(code, /event\.key === 'Escape'/, 'mất lối thoát bằng phím Esc');
+  assert.match(code, /onClick=\{\(\) => onPick\?\.\(null\)\}/,
+    'nút thoát không còn gọi `onPick(null)` ⇒ bấm vào thì thẻ đóng mà camera vẫn kẹt trong phố');
+  // Cùng luật với thẻ thông tin ngay trên: lớp bọc phủ ngang cả cảnh, thiếu `pointer-events-none`
+  // thì dải trống cạnh nút nuốt mất thao tác kéo xoay.
+  assert.match(code, /pointer-events-none absolute inset-x-2 top-2/,
+    'lớp bọc nút thoát phải có pointer-events-none');
+  assert.match(code, /pointer-events-auto rounded-full/, 'chính cái nút phải có pointer-events-auto');
+});
+
+test('LỚP NỀN TRANG CHỦ KHÔNG ĐƯỢC TỰ BAY ĐI ĐÂU CẢ', () => {
+  // Lớp nền không nhận thao tác nên nó không thể tự chọn công trình — nhưng lưới an toàn phải nằm
+  // ở chỗ TRUYỀN, không phải ở chỗ hy vọng. Cùng khuôn với `onPick={interactive ? … : undefined}`.
+  const stage = SOURCES.find((f) => f.path === 'components/city/CityStage.jsx');
+  const code = codeOnly(stage.source);
+  assert.match(code, /focusKind=\{interactive \? \(selection\?\.kind \?\? null\) : null\}/,
+    'CityStage phải chặn tiêu điểm khi không nhận thao tác');
+  assert.match(code, /focusBpId=\{interactive \? \(selection\?\.bpId \?\? null\) : null\}/,
+    'CityStage phải chặn tiêu điểm khi không nhận thao tác');
+  const backdrop = SOURCES.find((f) => f.path === 'components/city/CityBackdrop.jsx');
+  assert.doesNotMatch(codeOnly(backdrop.source), /focusKind|focusBpId/,
+    'lớp nền trang chủ truyền tiêu điểm ⇒ thành phố sau lưng đồng hồ có thể tự bay đi giữa phiên');
+});

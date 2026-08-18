@@ -21,7 +21,8 @@ import { PerspectiveCamera, Raycaster, Vector2, WebGLRenderer } from 'three';
 
 import { buildScenePalette } from '../../../engine/city3d/palette3d';
 import { deriveDaylight } from '../../../engine/city3d/daylight';
-import { CITY_CAMERA_FOV, cityOrbitOptions, createOrbit } from '../../../engine/city3d/orbit';
+import { CITY_CAMERA_FOV, MIN_PITCH, cityOrbitOptions, createOrbit } from '../../../engine/city3d/orbit';
+import { planCityFocus } from '../../../engine/city3d/cityFocus';
 import { createRenderLoop } from '../../../engine/city3d/renderLoop';
 import { pickNearest } from '../../../engine/city3d/pick';
 import { ERA_METADATA } from '../../../engine/constants';
@@ -36,6 +37,21 @@ import { readThemeSignature, readThemeTokens } from './themeBridge';
  * không đổi lấy gì ngoài nhiệt máy.
  */
 const ANIMATION_FPS = 30;
+
+/**
+ * Chuyến bay tới một khu phố dài bao lâu (mili-giây).
+ *
+ * 700 ms là chỗ cân bằng đã có tiền lệ trong dự án (camera chuyển kỷ 2,5 s là quãng đường dài hơn
+ * nhiều): đủ chậm để mắt bám được là camera đang HẠ XUỐNG chứ không phải màn hình vừa nhảy sang
+ * cảnh khác, đủ nhanh để không ai kịp sốt ruột. Nhịp bay đi qua `loop.beginSustained` nên nó vẫn
+ * nằm dưới trần 30 khung/giây — một chuyến bay tốn nhiều nhất ~21 khung hình rồi trả nhịp về.
+ * ⚠️ Bật "giảm chuyển động" ⇒ 0 ms: nhảy thẳng tới nơi, không một khung hoạt hoạ nào.
+ */
+const FLIGHT_MS = 700;
+
+/** Dịu hai đầu. Nội suy vẫn TUYẾN TÍNH theo `t` đã dịu, nên tập trạng thái đi qua không đổi —
+ *  đó là điều kiện để phép canh thoáng ở `cityFocus.js` còn giá trị. */
+const ease = (t) => (t < 0.5 ? 4 * t * t * t : 1 - ((-2 * t + 2) ** 3) / 2);
 
 export default function CityScene3D({
   layout,
@@ -65,6 +81,14 @@ export default function CityScene3D({
    * không thể chạm — đúng ý: ở đó thành phố là khung cảnh, không phải thứ để bấm.
    */
   onPick,
+  /**
+   * Công trình đang được CHỌN — camera bay tới ngắm nó (VIỆC 2). Nhận HAI SỐ RỜI chứ không nhận
+   * một object `{kind, bpId}`: object mới ở mỗi lượt render cha sẽ đổi danh tính liên tục và
+   * effect bay sẽ nổ vài lần mỗi giây. Cùng lý do đã ghi ở `sessionCount`/`streakLength`.
+   * `null` ở cả hai ⇒ thu về toàn cảnh.
+   */
+  focusKind = null,
+  focusBpId = null,
 }) {
   const hostRef = useRef(null);
   const runtimeRef = useRef(null);
@@ -108,6 +132,12 @@ export default function CityScene3D({
   useEffect(() => { onStatsRef.current = onStats; }, [onStats]);
   useEffect(() => { onFallbackRef.current = onFallback; }, [onFallback]);
   useEffect(() => { onPickRef.current = onPick; }, [onPick]);
+
+  // Công trình đang chọn, giữ trong ref để cảnh vừa dựng xong biết ngay phải bay đi đâu. Không có
+  // nó thì đổi kỷ trong lúc đang ngắm cận cảnh sẽ dựng lại cảnh ở toàn cảnh còn thẻ thông tin vẫn
+  // mở — hai thứ nói hai chuyện khác nhau trên cùng một màn hình.
+  const focusRef = useRef(null);
+  focusRef.current = focusBpId ? { kind: focusKind, bpId: focusBpId } : null;
 
   const giveUp = useCallback((reason, error) => {
     setFailed(true);
@@ -225,9 +255,103 @@ export default function CityScene3D({
       // quay lại tab sau nửa tiếng thì cư dân đang ở đúng chỗ đáng lẽ phải tới.
       const startedAt = performance.now();
 
+      // ── BAY TỚI MỘT KHU PHỐ (VIỆC 2) ────────────────────────────────────────
+      //
+      // ⚠️ KHÔNG có hệ camera thứ hai: vẫn đúng `orbit` ở trên, chỉ là điểm ngắm và giới hạn góc
+      // được đổi. Phần TOÁN (đường bay có thoáng không, phải ngẩng lên bao nhiêu) nằm trọn ở
+      // `engine/city3d/cityFocus.js` — thuần, test được bằng `node --test`, không cần trình duyệt.
+      //
+      // `flight` là chuyến bay đang chạy; `homeState` là chỗ Đàm đứng TRƯỚC khi bay đi (đường về).
+      let flight = null;
+      let homeState = null;
+      let focusedRef = null;          // `${kind}|${bpId}` đang ngắm, hoặc `null`
+
+      function beginFlight(to, { minPitch, minDistance }) {
+        const from = orbit.getState();
+        // Bật sàn an toàn NGAY nếu nhảy thẳng (giảm chuyển động), còn bay thì bật lúc hạ cánh —
+        // xem lý do ở `orbit.set`.
+        if (reduceMotion || FLIGHT_MS <= 0) {
+          orbit.set(to);
+          orbit.setLimits({ minPitch, minDistance });
+          flight = null;
+          loop.invalidate();
+          return;
+        }
+        flight = { from, to, minPitch, minDistance, startedAt: performance.now() };
+        loop.beginSustained('bay-camera');
+      }
+
+      /** Nhích chuyến bay một nhịp. Gọi ngay đầu mỗi khung hình, trước khi đặt camera. */
+      function stepFlight(now) {
+        if (!flight) return;
+        const t = Math.min(1, (now - flight.startedAt) / FLIGHT_MS);
+        const k = ease(t);
+        const { from, to } = flight;
+        orbit.set({
+          yaw: from.yaw + (to.yaw - from.yaw) * k,
+          pitch: from.pitch + (to.pitch - from.pitch) * k,
+          distance: from.distance + (to.distance - from.distance) * k,
+          target: {
+            x: from.target.x + (to.target.x - from.target.x) * k,
+            y: from.target.y + (to.target.y - from.target.y) * k,
+            z: from.target.z + (to.target.z - from.target.z) * k,
+          },
+        });
+        if (t >= 1) {
+          orbit.setLimits({ minPitch: flight.minPitch, minDistance: flight.minDistance });
+          flight = null;
+          loop.endSustained('bay-camera');
+        }
+      }
+
+      const home = orbit.getHome();
+
+      function applyFocus(ref) {
+        const key = ref?.bpId ? `${ref.kind}|${ref.bpId}` : null;
+        if (key === focusedRef) return;
+
+        if (!key) {
+          // ── ĐƯỜNG VỀ ─────────────────────────────────────────────────────────
+          // Về ĐÚNG chỗ đã rời đi, không về góc mặc định: Đàm có thể đã xoay thành phố sang hướng
+          // khác trước khi chạm, và trả anh về một hướng anh không chọn thì đó là app tự ý đổi
+          // cảnh chứ không phải "thoát ra".
+          if (homeState) {
+            beginFlight(homeState, { minPitch: MIN_PITCH, minDistance: home.minDistance });
+            homeState = null;
+          }
+          focusedRef = null;
+          return;
+        }
+
+        const target = city.pickTargets.find((t) => t.kind === ref.kind && t.bpId === ref.bpId);
+        if (!target?.box) return;    // công trình vừa biến mất (đổi kỷ, xây xong) ⇒ đứng yên
+
+        const box = target.box;
+        const plan = planCityFocus({
+          from: orbit.getState(),
+          focus: {
+            x: (box.minX + box.maxX) / 2,
+            // Ngắm vào GIỮA THÂN chứ không vào chân tường: ngắm chân thì mái chạy lên mép trên
+            // khung hình, mà mái mới là nơi Phase 11 để chi tiết.
+            y: (box.minY + box.maxY) / 2,
+            z: (box.minZ + box.maxZ) / 2,
+          },
+          blockers: city.blockers,
+        });
+
+        if (!homeState) homeState = orbit.getState();
+        beginFlight(
+          { yaw: plan.yaw, pitch: plan.pitch, distance: plan.distance, target: plan.target },
+          { minPitch: plan.pitch, minDistance: plan.distance },
+        );
+        focusedRef = key;
+      }
+
       let shadowsDirty = true;
       function renderFrame() {
-        if (city.isAnimated) city.updateResidents((performance.now() - startedAt) / 1000);
+        const now = performance.now();
+        stepFlight(now);
+        if (city.isAnimated) city.updateResidents((now - startedAt) / 1000);
         applyCamera();
         if (shadowsDirty) {
           // Chỉ vẽ lại bóng đúng khung hình cần. Bật `autoUpdate` lên một nhịp rồi tắt ngay là
@@ -418,6 +542,11 @@ export default function CityScene3D({
 
       resize();
       applyCamera();
+      // Cảnh vừa dựng lại (đổi kỷ, xong một phiên) mà thẻ thông tin vẫn đang mở ⇒ bay lại tới đúng
+      // công trình ấy. Đọc từ ref chứ không từ prop: effect này KHÔNG có `focusKind`/`focusBpId`
+      // trong danh sách phụ thuộc, và cố ý như vậy — thêm vào là dựng lại cả cảnh WebGL mỗi lần
+      // Đàm chạm vào một căn nhà.
+      applyFocus(focusRef.current);
       loop.invalidate();
 
       // Số liệu đầu tiên gửi ở khung hình kế — lúc này `renderer.info` còn rỗng.
@@ -431,6 +560,7 @@ export default function CityScene3D({
         statsTimer,
         themeSignature,
         invalidate: () => loop.invalidate(),
+        applyFocus,
         markShadowsDirty: () => { shadowsDirty = true; city.invalidateShadows(); },
         dispose() {
           window.clearTimeout(statsTimer);
@@ -480,6 +610,13 @@ export default function CityScene3D({
     // TÍN HIỆU dựng lại. Bỏ nó ra = bầu trời đứng im khi mở lại app trên iPhone.
   }, [layout, dimmed, failed, giveUp, reduceMotion, sessionCount, streakLength,
     still, fill, interactive, dayPhase]);
+
+  // Chạm vào công trình → bay tới. Effect RIÊNG, cố ý tách khỏi effect dựng cảnh: nó chỉ gọi một
+  // hàm trên cảnh đang sống, không dựng lại gì cả. Gộp chung thì mỗi cú chạm sẽ tháo cả WebGL
+  // context rồi dựng lại — tức là một cú chạm tốn bằng một lần đổi kỷ.
+  useEffect(() => {
+    runtimeRef.current?.applyFocus(focusBpId ? { kind: focusKind, bpId: focusBpId } : null);
+  }, [focusKind, focusBpId]);
 
   if (failed) return null;
 

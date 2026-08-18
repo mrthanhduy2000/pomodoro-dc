@@ -894,6 +894,29 @@ export function createCityScene({
   // vùng chỉ số mà `addPickTarget` đã bám theo (`placements[index]`).
   placements.push(...plinths);
 
+  /**
+   * VẬT CẢN — hộp bao thế giới của MỌI khối đứng trên mặt đất, để camera cận cảnh biết chỗ nào
+   * không được bay vào (`engine/city3d/cityFocus.js`).
+   *
+   * ⚠️ ĐỌC THẲNG TỪ `placements`, đúng cái danh sách vừa được đem đi dựng hình. Dựng lại danh sách
+   * ấy bằng một vòng lặp riêng là tạo công thức thứ hai cho cùng một luật, và triệu chứng sẽ là
+   * camera đâm xuyên qua đúng những khối mới thêm ở phase sau — im lặng tuyệt đối.
+   *
+   * ⚠️ LẤY CẢ CẢNH VẬT (cây, đá, đèn) chứ không chỉ công trình. Đo ngày 2026-08-18: thêm chúng vào
+   * làm số hộp ở kỷ 1 đi từ 22 lên 56 mà kế hoạch bay **không đổi lấy một chữ số** ở cả 15 kỷ —
+   * cây thấp hơn nhà nên chưa bao giờ là thứ trói camera. Giữ lại vì nó rẻ bằng không và vì ngày
+   * nào có một hàng cọ cao hơn mái thì nó bảo vệ được ngay, không phải chờ ai nhớ ra.
+   *
+   * Chỉ là DỮ LIỆU: không lệnh vẽ, không tam giác, không cần dọn ở `dispose()`.
+   */
+  const blockers = [];
+  for (const placement of placements) {
+    const box = placeBounds(specBounds(placement.spec), {
+      x: placement.x, z: placement.z, y: placement.y, scale: placement.scale,
+    });
+    if (box) blockers.push(box);
+  }
+
   const merged = buildMergedGeometry(placements, palette, {
     skipDeco: lowDetail,
     // Trời đã tối ⇒ tách ô cửa ra khối "tự phát sáng" riêng. Ban ngày `null` ⇒ không tách, không
@@ -1280,6 +1303,11 @@ export function createCityScene({
      * `dispose()`. Cảnh nào không cần chạm thì bỏ qua mảng này là xong.
      */
     pickTargets,
+    /**
+     * Hộp bao của mọi khối đứng trên đất — camera cận cảnh dùng để tránh bay vào trong phố.
+     * Cùng tính chất với `pickTargets`: thuần dữ liệu, không tốn gì.
+     */
+    blockers,
     stats: {
       groundTiles: groundCells.length,
       roads: roads.length,

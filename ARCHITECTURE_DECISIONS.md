@@ -11,6 +11,57 @@
 
 ---
 
+## ADR-034 — Chế độ cận cảnh khoá KHOẢNG CÁCH THẬT, để mức thu phóng tự khác nhau theo kỷ; và lưới an toàn canh CẢ ĐƯỜNG BAY chứ không chỉ điểm đến
+
+- **Ngày**: 2026-08-18 (VIỆC 2 — camera cận cảnh)
+- **Bối cảnh**: Phase 10 (tầng trệt) và Phase 11 (chi tiết mái) đổ công vào những thứ mà ở khung
+  hình mặc định gần như KHÔNG NHÌN THẤY — đã đo và ghi thành `TECH_DEBT #41`: 90/90 ô bản quét nằm
+  dưới ngưỡng mắt 12. Nguyên nhân gốc không phải đặt chi tiết sai chỗ mà là **cả thành phố quá nhỏ
+  trong khung hình**: mỗi căn nhà chỉ cao chừng 40–60 điểm ảnh. Đàm yêu cầu một chế độ cận cảnh,
+  kèm một ràng buộc CỨNG: **khung mặc định KHÔNG được đổi**.
+- **Vấn đề**: yêu cầu ghi *"dừng ở mức thu phóng an toàn RIÊNG của kỷ đó (0,38–0,58)"*. Nhưng mức
+  thu phóng là một TỈ LỆ nhân vào khoảng cách toàn cảnh, mà khoảng cách ấy trải **13,46 (kỷ 2) →
+  19,01 (kỷ 15)** vì `cityOrbitOptions` đã lùi camera ra theo `massScale`. Đo trước khi viết: lấy
+  MỘT tỉ lệ chung 0,45 thì công trình cao nhất phủ **44% khung ở kỷ 1 nhưng 122% ở kỷ 15** — chênh
+  **2,8 lần**, và kỷ cuối bị cắt mất nóc đúng thứ đáng xem nhất.
+- **Phương án đã cân nhắc**:
+  1. **Một mức thu phóng chung** cho cả 15 kỷ.
+  2. **Một bảng 15 mức thu phóng chọn tay**, chỉnh theo mắt từng kỷ.
+  3. **Khoá KHOẢNG CÁCH THẬT, suy ngược ra mức thu phóng.**
+- **Lý do loại bỏ**: (1) chính là cái 2,8 lần ở trên — nó không giữ được lời hứa nào. (2) là mười
+  lăm lần chọn bừa: không có luật nào canh, nên nó sẽ trôi ngay lần đầu có người chỉnh `massScale`
+  của một kỷ, đúng hình dạng *"một con số tuyệt đối không diễn đạt được một luật nói về QUAN HỆ"*
+  (Phase 7D) và *"một bảng nhiều dòng vẫn có thể thoái hoá về một trần chung"* (ADR-028).
+- **Giải pháp chọn**: (3). `FOCUS_VIEW_DISTANCE = 7,5` đơn vị thế giới, và mức thu phóng của mỗi kỷ
+  = `7,5 / khoảng cách toàn cảnh của kỷ ấy` ⇒ **0,395 (kỷ 15) … 0,557 (kỷ 2)**, mười lăm giá trị
+  khác nhau, tất cả nằm trọn trong dải Đàm chốt. Lời hứa mà cách này giữ được và cách (2) không:
+  **số điểm ảnh trên mỗi đơn vị thế giới chỉ phụ thuộc khoảng cách**, nên một cái ống khói ở kỷ 1
+  và một cái ở kỷ 15 chiếm ĐÚNG BẰNG NHAU số điểm ảnh. Con số 7,5 gần như bị ÉP chứ không phải
+  chọn: ghép dải 0,38–0,58 với dải 13,46–19,01 thì cửa sổ hợp lệ chỉ còn **[7,22; 7,81]**.
+  Kèm hai lưới an toàn:
+  - **Canh CẢ ĐƯỜNG BAY, không chỉ điểm đến.** Lấy 48 mẫu dọc đường nội suy, đòi khoảng cách tới
+    hộp bao gần nhất ≥ **1 ô lưới** (bằng bề rộng một căn nhà — kiểm bằng mắt được). Thứ tự chữa
+    xếp theo "mất ít nhất trước": **ngẩng lên** → **lùi ra** → **đứng yên**. Phép tìm luôn dừng
+    được vì trạng thái xuất phát hiển nhiên thoáng.
+  - **Đếm được, không nuốt im lặng**: `raisedPitch` / `raisedDistance` / `blocked` được trả về —
+    bài học Phase 10 Bước 2 (*"từ chối thẳng chỉ an toàn khi có người ĐẾM số lần từ chối"*).
+- **Trade-off**: kỷ càng cao thì camera càng phải ngẩng. Kỷ 15 ra **65,3°** — gần như nhìn từ trên
+  xuống, nên mái đọc rất rõ còn **tầng trệt gần như không thấy**. Thứ tự "ngẩng trước, lùi sau" là
+  một lựa chọn MỸ THUẬT (đổi thành "lùi trước" sẽ giữ được góc nhìn ngang nhưng vật nhỏ đi);
+  **chưa hỏi Đàm** ⇒ ghi thành `TECH_DEBT #45` thay vì tự chốt.
+- **Ảnh hưởng**: **0 lệnh vẽ mới · 0 tam giác mới · 0 điểm ảnh mới** (cùng khung, cùng DPR) — chế
+  độ này chỉ đổi chỗ đứng của camera. Khung mặc định BẤT BIẾN, chứng minh bằng `md5sum`: ảnh kỷ 9
+  và kỷ 15 trùng **TỪNG BYTE** với bản dựng ở `ae2b4a0`. Chi tiết Phase 10–11 (so `b98a47d` với
+  `e95cdf1`, cùng một dòng lệnh): ở khung toàn cảnh lệch trung bình **5,54 — DƯỚI ngưỡng mắt 12**;
+  ở khoảng cách cận cảnh 7,5 lệch **15,45 — TRÊN ngưỡng**, và tỉ lệ điểm ảnh vượt ngưỡng đi từ
+  **7,0% lên 17,0%**. Đây là lần đầu công sức của hai phase ấy được chứng minh bằng số là nhìn thấy
+  được.
+- **Điều kiện xem lại**: khi thêm một kỷ cao hơn kỷ 15 (dải [7,22; 7,81] có thể đóng lại — lúc ấy
+  phải nới dải thu phóng chứ không được nhích 7,5 trong im lặng), hoặc khi Đàm muốn nhìn tầng trệt
+  ở những kỷ cao (lúc ấy đổi thứ tự chữa thành "lùi trước, ngẩng sau").
+
+---
+
 ## ADR-033 — `avenue` là PHẦN MẶT CẮT DÀNH CHO XE, không phải "đại lộ này oai tới đâu"; và một trục bản sắc phải được canh bằng thứ DỰNG RA, không phải thứ KHAI RA
 
 - **Ngày**: 2026-08-18 (đóng `TECH_DEBT #42`)

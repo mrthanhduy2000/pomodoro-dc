@@ -12,6 +12,28 @@
 
 ---
 
+## 2026-08-18 — Chạm vào một khu phố thì camera bay tới ngắm gần (ADR-034)
+
+**Mục đích**: Phase 10 (tầng trệt) và Phase 11 (chi tiết mái) đổ công vào những thứ mà ở khung hình
+mặc định gần như không nhìn thấy (`TECH_DEBT #41`: 90/90 ô bản quét dưới ngưỡng mắt). Chạm vào một
+công trình nay đưa camera **bay tới đứng gần nó** — thứ làm cho hai phase ấy có giá trị thật.
+
+**Phạm vi**: file thuần mới `src/engine/city3d/cityFocus.js` + test; `orbit.js` nhận điểm ngắm di
+động và sàn giới hạn tạm thời; `sceneGraph.js` xuất thêm `blockers` (dữ liệu thuần, 0 lệnh vẽ);
+`CityScene3D.jsx` nội suy 700 ms; `CityStage.jsx` thêm đường thoát "⤺ Toàn cảnh" + phím Esc;
+`scripts/city-preview.mjs` thêm `--focus N` để chụp ĐÚNG chế độ này (không dựng lại bằng `--zoom`).
+
+**Ảnh hưởng**: **khung mặc định KHÔNG đổi — chứng minh bằng `md5sum`, ảnh kỷ 9 và kỷ 15 trùng từng
+byte với bản trước.** 0 lệnh vẽ mới · 0 tam giác mới · 0 điểm ảnh mới. Chi tiết Phase 10–11 ở
+khoảng cách cận cảnh: lệch trung bình **15,45 (trên ngưỡng mắt 12)** so với **5,54** ở khung toàn
+cảnh; điểm ảnh vượt ngưỡng **17,0%** so với **7,0%**. Lưới an toàn canh cả đường bay: 1200 chuyến
+thử, 0 chuyến kẹt, 0 chuyến phải lùi ra.
+
+**Tương thích**: không đổi dữ liệu lưu, không migration. Bộ vẽ 2D không có tính năng này (đúng như
+mọi tính năng 3D khác — nó là đường lui, không phải bản song song đầy đủ).
+
+---
+
 ## 2026-08-18 — Vỉa hè thôi bị bóp trong im lặng (ADR-033, đóng `TECH_DEBT #42`)
 
 **Mục đích**: `walk` (bề rộng vỉa hè) là một trong 8 trục bản sắc mặt đường, nhưng 8/15 kỷ bị một

@@ -20,6 +20,7 @@ import { fileURLToPath } from 'node:url';
 const HERE = dirname(fileURLToPath(import.meta.url));
 const SOURCE = readFileSync(join(HERE, 'sceneGraph.js'), 'utf8');
 const TERRAIN_SOURCE = readFileSync(join(HERE, 'terrainMesh.js'), 'utf8');
+const SHELL_SOURCE = readFileSync(join(HERE, 'CityScene3D.jsx'), 'utf8');
 // ⚠️ Từ 2026-08-18 danh sách "thành phố gồm những khối nào" nằm ở `cityParts.js` (một bản duy nhất,
 // dùng chung với bài test — xem đầu file ấy). Bài test dưới đây phải hỏi CẢ HAI phía: bên kia có
 // còn duyệt nhà dân không, và bên này có còn dựng chúng vào cảnh không.
@@ -43,6 +44,7 @@ function codeOnly(source) {
 
 const CODE = codeOnly(SOURCE);
 const TERRAIN_CODE = codeOnly(TERRAIN_SOURCE);
+const SHELL_CODE = codeOnly(SHELL_SOURCE);
 
 /**
  * `CODE` nhưng đã BỎ MỌI DÒNG ĐỊNH NGHĨA HÀM — dùng cho mọi phép kiểm "hàm X có được GỌI không".
@@ -512,4 +514,57 @@ test('⚠️ TRANG XEM THỬ PHẢI DỰNG Ở ĐÚNG TẦNG ĐIỂM ẢNH CỦA
     'Trang xem thử không còn mặc định về `MAX_PIXEL_RATIO` — nó lại dựng ở một tầng chất lượng riêng.');
   assert.ok(!/setPixelRatio\(1\)/.test(PREVIEW_CODE),
     'Trang xem thử lại viết cứng `setPixelRatio(1)` — đúng lỗi Phase 9C vừa sửa.');
+});
+
+test('⚠️ VẬT CẢN PHẢI ĐỌC THẲNG TỪ DANH SÁCH KHỐI ĐÃ ĐEM ĐI DỰNG HÌNH', () => {
+  // Camera cận cảnh tránh va vào phố bằng cách hỏi `city.blockers`. Nếu danh sách ấy được dựng
+  // bằng một vòng lặp RIÊNG (duyệt lại `layout` chẳng hạn) thì nó là công thức thứ hai cho cùng
+  // một luật, và triệu chứng sẽ là camera đâm xuyên qua đúng những khối được thêm ở phase sau —
+  // im lặng tuyệt đối: build xanh, lint sạch, test cũ xanh.
+  assert.ok(
+    /for \(const placement of placements\)[\s\S]{0,320}?blockers\.push\(box\)/.test(CODE),
+    'Không còn vòng lặp nào dựng `blockers` TỪ `placements`. Dựng lại danh sách khối bằng đường '
+    + 'khác là tạo công thức thứ hai cho cùng một luật.',
+  );
+  assert.ok(/^\s*blockers,\s*$/m.test(CODE), '`blockers` không còn được cảnh trả ra ⇒ camera cận cảnh mù.');
+  // Phải nằm SAU khi móng đã được đẩy vào: móng cũng là khối đứng trên đất.
+  assert.ok(
+    CODE.indexOf('placements.push(...plinths)') < CODE.indexOf('blockers.push(box)'),
+    'Vật cản được gom TRƯỚC khi móng vào danh sách ⇒ camera coi bệ kè là không khí.',
+  );
+});
+
+test('⚠️ VỎ REACT PHẢI ĐƯA ĐÚNG VẬT CẢN CỦA CẢNH CHO BỘ LẬP KẾ HOẠCH BAY', () => {
+  // Đây là chỗ nối duy nhất giữa "cảnh biết mình có những khối nào" và "camera biết chỗ nào cấm
+  // bay". Truyền nhầm một mảng khác (hoặc quên truyền) thì `planCityFocus` vẫn chạy, vẫn trả về
+  // một kế hoạch trông rất hợp lý, và camera vẫn bay thẳng vào giữa phố.
+  assert.ok(/planCityFocus\(\{/.test(SHELL_CODE), 'Vỏ React không còn gọi `planCityFocus`.');
+  assert.ok(
+    /blockers:\s*city\.blockers/.test(SHELL_CODE),
+    'Bộ lập kế hoạch bay không còn nhận `city.blockers` — nó đang lập kế hoạch cho một thành phố rỗng.',
+  );
+  assert.ok(
+    /setLimits\(\{\s*minPitch:\s*flight\.minPitch/.test(SHELL_CODE),
+    'Sàn an toàn không còn được bật lúc hạ cánh ⇒ lời hứa "camera không chui vào phố" chỉ đúng '
+    + 'đúng một khung hình, rồi vỡ ở cú kéo đầu tiên của Đàm.',
+  );
+});
+
+test('⚠️ CHẠM VÀO MỘT CĂN NHÀ KHÔNG ĐƯỢC DỰNG LẠI CẢ CẢNH WEBGL', () => {
+  // `focusKind`/`focusBpId` mà lọt vào danh sách phụ thuộc của effect dựng cảnh thì mỗi cú chạm sẽ
+  // tháo WebGL context rồi dựng lại toàn bộ thành phố — tức một cú chạm tốn bằng một lần đổi kỷ,
+  // và trên iPhone thì đó là một khoảng đen chớp giữa màn hình.
+  const deps = SHELL_CODE.match(/\}, \[layout, dimmed[\s\S]*?\]\);/);
+  assert.ok(deps, 'Không tìm thấy danh sách phụ thuộc của effect dựng cảnh — bài test này đã mù.');
+  assert.doesNotMatch(deps[0], /focusKind|focusBpId/,
+    'Prop tiêu điểm lọt vào danh sách phụ thuộc của effect dựng cảnh.');
+  assert.ok(
+    /runtimeRef\.current\?\.applyFocus\(/.test(SHELL_CODE),
+    'Không còn effect riêng gọi `applyFocus` ⇒ chạm vào nhà thì camera đứng im.',
+  );
+  assert.ok(
+    /applyFocus\(focusRef\.current\)/.test(SHELL_CODE),
+    'Cảnh dựng lại (đổi kỷ, xong phiên) mà không bay lại tới công trình đang chọn ⇒ thẻ thông tin '
+    + 'nói một đằng, camera nhìn một nẻo.',
+  );
 });

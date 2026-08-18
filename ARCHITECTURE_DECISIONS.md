@@ -11,6 +11,101 @@
 
 ---
 
+## ADR-029 — Bảng tầng trệt dọn sang file riêng: quy ước "bảng ↔ hình" áp cho MỌI bảng 15 kỷ, kể cả bảng ra đời sau; và đảo ngược lý lẽ "để trong tầm mắt" của ADR-026
+
+- **Ngày**: 2026-08-18 (Việc 2, ngay trước Phase 11)
+- **Bối cảnh**: `groundFloor` ra đời ở Phase 10 và được đặt **trong `eraStyle.js`**, kèm một lý do
+  viết hẳn vào chú thích: *"mỗi dòng phải trả lời «công trình có thật nào ở nước ấy trông như
+  vậy?» — nên câu trả lời (`country`/`landmark`) phải nằm trong tầm mắt, không phải ở một file
+  khác phải mở ra đối chiếu."* Phase 11 sắp thêm một bảng 15 dòng nữa (mái).
+- **Vấn đề**: Dự án đã tách bảng ra file riêng **ba lần** — `floraStyle.js` (163 dòng) ·
+  `streetStyle.js` (330 dòng) · `horizon.js` — và cả ba đều buộc vào `country`. Nên `eraStyle.js`
+  (606 dòng) ôm bảng tầng trệt là **chỗ lệch khuôn duy nhất**. Đàm gọi đúng tên: *"đây là chuyện
+  QUY ƯỚC, không phải chuyện file dài."*
+
+### Vì sao lý lẽ cũ sai — và nó sai theo một cách đáng ghi lại
+
+Lý lẽ *"để trong tầm mắt"* giả định rằng thứ đang giữ ràng buộc "mỗi dòng buộc vào `country`" là
+**khoảng cách vật lý trên màn hình**. Không phải. Thứ giữ nó là **bài test** `KHOÁ VÀO country` —
+và bằng chứng là bài ấy chạy **y nguyên** sau khi bảng dọn đi, chỉ đổi một dòng `import`.
+
+Một ràng buộc được giữ bởi "tiện mắt" là một ràng buộc **không được giữ bởi gì cả**: nó chỉ đúng
+chừng nào người viết còn nhớ nhìn lên. Đây là cùng họ với bài học Phase 8B (*"một chú thích nói
+'đã có test đối chiếu' không phải là một bài test"*) và Phase 4G (*"một câu tự trấn an phải được
+kiểm như một con số"*).
+
+### Phương án đã cân nhắc
+
+**(a) Giữ nguyên trong `eraStyle.js`, Phase 11 cũng nhét bảng mái vào đó** — bác. `eraStyle.js` sẽ
+thành nơi chứa mọi thứ, và khuôn "bảng ↔ hình" mất nghĩa hẳn. Quan trọng hơn: **sửa quy ước TRƯỚC
+khi thêm bảng thứ hai thì tốn một lần; sửa sau thì tốn hai, và ở giữa có một phase làm theo khuôn
+sai** — mà một phase làm theo khuôn sai là thứ phiên sau sẽ chép lại.
+
+**(b) Dọn cả `groundFloor` lẫn `vernacularRoof` ra ngoài cùng lúc** — bác, ít nhất là bây giờ.
+`vernacularRoof` là **một trường** của ngữ pháp mái, không phải một bảng; và `getVernacularStyle`
+trả về nguyên bộ tham số nên nó thuộc về `eraStyle.js`. Phase 11 sẽ trả lời câu hỏi ấy tử tế khi
+dựng `roofStyle.js` — gộp vào đây là quyết định vội trong lúc đang dọn nhà.
+
+**(c) Dọn `groundFloor` sang `groundFloorStyle.js`, ĐÚNG khuôn ba bảng kia — ĐÃ CHỌN.**
+
+### Quyết định
+
+1. **`src/engine/city3d/groundFloorStyle.js`** (mới): `GROUND_FLOOR_STYLES` 15 dòng +
+   `getGroundFloor(era)`. Đủ cặp với `groundFloor.js` (hình), y như `floraStyle.js ↔ flora.js`.
+2. **`eraStyle.js` giữ đúng phần NGỮ PHÁP CHUNG**: `country` · `landmark` · `massScale` · `spread`
+   · `storyHeight` · `roof`/`vernacularRoof` · `windows` · `motifs` · vật liệu · màu.
+3. ⚠️ **`normalizeEraKey(era)` xuất ra từ `eraStyle.js`** — cả `getEraStyle` lẫn `getGroundFloor`
+   (và mọi bảng 15 kỷ sau này, kể cả bảng mái Phase 11) đều hỏi nó. Chép lại `Math.round` +
+   `?? DEFAULT_ERA` là "một luật hai công thức", và hai công thức tương đương trên giấy gần như
+   luôn lệch nhau ở biên (Phase 3Y).
+4. **Hai bài test mới**, cả hai đều sinh ra từ những thứ chỉ tồn tại SAU khi tách file:
+   - *khoá của hai bảng phải khớp nhau* — chừng nào bảng còn nằm trong `ERA_STYLES` thì "đủ 15
+     dòng" là hệ quả hiển nhiên; tách ra thì thêm kỷ 16 mà quên bảng này ⇒ kỷ ấy **mất cửa trong
+     im lặng**, đúng ca kỷ 14 ở Bước 2;
+   - *kỷ lạ phải rơi về cùng một kỷ ở cả hai bảng* — xem mục dưới, bài này ra đời từ một phép thử
+     ngược KHÔNG NỔ.
+
+### ⚠️ Một lời hứa được phát hiện là chưa có gì giữ
+
+Sau khi viết `getGroundFloor` kèm chú thích *"hỏi `normalizeEraKey` vì một luật một công thức"*,
+phép thử ngược (đổi thành `Math.round(era)`) **không làm đỏ bài nào**. Tức lời hứa ấy đang được
+giữ bởi đúng một câu chú thích. Hậu quả thật nếu để trôi: `getEraStyle(99)` trả về kỷ mặc định
+trong khi `GROUND_FLOOR_STYLES[99]` là `undefined` ⇒ công trình dựng theo ngữ pháp kỷ 2 nhưng
+**không có cửa**. Đã vá bằng một bài test duyệt 9 đầu vào lạ (`undefined` · `NaN` · `0` · `-3` ·
+`2.4` · `99` · `16` · `'7'` · `null`) và đòi hai bảng tra ra CÙNG một kỷ; nay cả hai phép phá
+(sửa `getGroundFloor` và sửa `normalizeEraKey`) đều đỏ đúng ở đó.
+
+### Trade-off đã chấp nhận
+
+- **Đọc một kỷ nay phải mở hai file.** Đó là cái giá của mọi bảng đã tách, và ba bảng trước đã trả
+  nó rồi. Bù lại: `note` của mỗi dòng vẫn nhắc đúng nước, và một BÀI TEST bắt buộc điều đó — mạnh
+  hơn "để cạnh nhau cho dễ nhìn".
+- **Thêm một cạnh phụ thuộc** `groundFloorStyle.js → eraStyle.js` (để dùng chung `normalizeEraKey`).
+  Chấp nhận: nó là một chiều, và thay thế cho việc chép công thức.
+- **Không đổi một hành vi nào** — đã chứng minh bằng phép đo, xem dưới.
+
+### Bằng chứng "chỉ là dọn nhà"
+
+Đo lại đủ 15 kỷ bằng `node scripts/city-preview.mjs --era N --hour 12 --bench 1 --no-shadow`, so
+với bảng của Việc 1 (cùng lệnh, cùng ngày): **lệnh vẽ khớp 15/15 kỷ, tam giác khớp 15/15 kỷ, từng
+đơn vị**. Xem `PERFORMANCE.md`.
+
+⚠️ **Và một bài học về CHÍNH phép đo ấy** — xem mục "đo trong lúc cây đang thay đổi" ở `CLAUDE.md`.
+
+### Ảnh hưởng
+
+Phase 11 dựng `roofStyle.js` theo đúng khuôn này: bảng ở file riêng · buộc vào `country` bằng test
+· khoá hai bảng phải khớp · tra kỷ qua `normalizeEraKey` · hình học ở file riêng · `buildingSpec.js`
+chỉ ĐỌC.
+
+### Điều kiện xem lại
+
+- Một bảng 15 kỷ mới cần đọc nhiều trường của `eraStyle` tới mức tách ra làm mã khó đọc hơn.
+- `eraStyle.js` co lại đủ nhỏ để việc gộp lại thật sự đơn giản hơn (khó xảy ra — nó đang là bảng
+  ngữ pháp trung tâm).
+
+---
+
 ## ADR-028 — Ngân sách lệnh vẽ là MỘT BẢNG 15 MỐC RIÊNG, không phải một trần chung; và câu hỏi "thành phố gồm những khối nào" chỉ được trả lời ở MỘT nơi
 
 - **Ngày**: 2026-08-18 (Việc 1 — chốt `TECH_DEBT #38`, trước Phase 11)
@@ -185,6 +280,12 @@ không phải đợi tới lượt dựng ảnh.
 ---
 
 ## ADR-026 — Tầng trệt là một BẢNG BẮT BUỘC 15 kỷ trong `eraStyle.js` + một tầng hình học riêng; và trạng thái "mới làm 3 kỷ" được khai TƯỜNG MINH bằng `door: 'legacy'`
+
+> ⚠️ **NỬA ĐẦU CỦA BẢN GHI NÀY ĐÃ BỊ ĐẢO NGƯỢC — xem ADR-029 (2026-08-18).** Bảng tầng trệt
+> nay nằm ở `city3d/groundFloorStyle.js`, không còn trong `eraStyle.js`. Lý lẽ cũ (*"câu trả
+> lời `country` phải nằm trong tầm mắt"*) sai vì thứ giữ ràng buộc ấy xưa nay là một BÀI TEST,
+> không phải khoảng cách trên màn hình. Mọi phần còn lại của bản ghi này (bảng bắt buộc 15 kỷ ·
+> tầng hình học riêng · `buildingSpec.js` chỉ ĐỌC · `door: 'legacy'` tường minh) **vẫn đúng**.
 
 - **Ngày**: 2026-08-18 (Phase 10, Bước 1)
 - **Bối cảnh**: Đàm yêu cầu thành phố có *"tầng trệt"* — cửa ra vào cho mọi công trình, bậc thềm

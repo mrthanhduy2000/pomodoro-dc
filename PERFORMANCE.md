@@ -312,6 +312,21 @@ Khoá bằng `src/engine/city3d/drawCallBudget.test.js` — **4 bài, chạy tro
 ⚠️ **Muốn sửa một dòng trong bảng mốc thì phải CHẠY LẠI phép đo và ghi ngày mới**, không phải nới
 cho vừa kết quả. Lệnh đo nằm ngay trong chú thích đầu file test.
 
+### Sau Việc 2 (dọn bảng tầng trệt sang file riêng, ADR-029) — ĐO LẠI ĐỦ 15 KỶ: KHÔNG ĐỔI GÌ
+
+Cùng lệnh, cùng ngày: `node scripts/city-preview.mjs --era N --hour 12 --bench 1 --no-shadow`.
+**Lệnh vẽ khớp 15/15 kỷ, tam giác khớp 15/15 kỷ, TỪNG ĐƠN VỊ** với cột "sau Bước 2" ở bảng trên
+(9·11·11·11·10·11·11·11·10·**12**·10·10·10·10·10 lệnh vẽ · tổng 535.360 tam giác). Đây là bằng
+chứng rằng việc chuyển bảng ra `groundFloorStyle.js` là dọn nhà thuần tuý.
+
+⚠️ **BÀI HỌC VỀ CHÍNH PHÉP ĐO NÀY — ĐỌC TRƯỚC KHI ĐO KIỂU TƯƠNG TỰ.** Lượt đo mốc nền đầu tiên bị
+**hỏng hoàn toàn** vì tôi cho nó chạy nền rồi sửa file ngay trong lúc nó chạy. Mỗi kỷ mất ~15 giây,
+nên bảng trả về trộn **ba trạng thái mã**: kỷ 1–4 mã cũ · kỷ 5–9 đúng lúc bảng đã bị cắt mà
+`buildingSpec.js` chưa nối lại (**mất trọn tầng trệt**, tụt 6.000–8.000 tam giác mỗi kỷ) · kỷ 10+
+mã đã nối xong. Bảng ấy trông hoàn toàn chỉnh tề và không có dấu hiệu nào cho biết nó không mô tả
+một phiên bản nào của phần mềm cả. ⇒ **Phép đo và lần sửa mã không được chồng lấn thời gian**; cần
+mốc nền trong lúc vẫn làm việc thì dựng `git worktree` rồi đo ở đó. Xem `CLAUDE.md`.
+
 ### Vế CHƯA đo — frame time trên M3
 
 ⚠️ **Con số ms trong tài liệu này vẫn là bộ số ngày 2026-08-17, đo TRƯỚC Phase 10.** Hộp cát AI

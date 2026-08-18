@@ -149,8 +149,22 @@
 │   │   │   │                      #   ⚠️ `wallMaterial`/`roofMaterial` là BỀ MẶT (nhám/bóng), tách
 │   │   │   │                      #   hẳn khỏi `wallColor`/`roofColor` (sắc). Cùng bài học "một
 │   │   │   │                      #   trường gánh hai việc" của `storyHeight` ở Phase 5B
-│   │   │   │                      #   ⚠️ Từ Phase 10 còn giữ BẢNG TẦNG TRỆT (`groundFloor`, bắt
-│   │   │   │                      #   buộc đủ 15 kỷ) — hình dựng ở `city3d/groundFloor.js`
+│   │   │   │                      #   ⚠️ KHÔNG chứa bảng tầng trệt nữa (dọn sang `groundFloorStyle
+│   │   │   │                      #   .js` ngày 2026-08-18, ADR-029) — quy ước "bảng ↔ hình" áp cho
+│   │   │   │                      #   MỌI bảng 15 kỷ, kể cả bảng ra đời sau
+│   │   │   │                      #   ⚠️ `normalizeEraKey` XUẤT RA để mọi bảng 15 kỷ tra kỷ bằng
+│   │   │   │                      #   CÙNG một phép chuẩn hoá — chép lại `Math.round` + mặc định là
+│   │   │   │                      #   "một luật hai công thức", và hai công thức tương đương trên
+│   │   │   │                      #   giấy gần như luôn lệch nhau ở BIÊN (Phase 3Y)
+│   │   │   ├── groundFloorStyle.js # BẢNG TẦNG TRỆT 15 KỶ (ADR-026/027, dọn ra riêng ADR-029): cửa
+│   │   │   │                      #   ra vào (kiểu · bề rộng · chiều cao · khuôn · độ hõm · bậc) +
+│   │   │   │                      #   MỘT đặc trưng mặt phố, tách riêng cho kỳ quan và nhà dân.
+│   │   │   │                      #   Mỗi dòng buộc vào `country` của eraStyle — CÓ TEST BẮT, và
+│   │   │   │                      #   test ấy hỏi TỪ KHOÁ trong `note` chứ không chỉ so tên nước
+│   │   │   │                      #   ⚠️ Khoá bảng này PHẢI khớp khoá `ERA_STYLES` (có test): thiếu
+│   │   │   │                      #   một dòng thì kỷ ấy MẤT CỬA trong im lặng — `emitGroundFloor`
+│   │   │   │                      #   trả `false` đúng luật, và không gì đỏ lên
+│   │   │   │                      #   Hình dựng ở `city3d/groundFloor.js`
 │   │   │   ├── dwellings.js       # NHÀ DÂN (ADR-015): 30 ô đất trống chia 3 khu theo khoảng cách
 │   │   │   │                      #   tới tâm (ngoại vi/dân cư/trung tâm); mỗi 2 phiên mọc thêm 1
 │   │   │   │                      #   căn, mọc từ trong ra. Nhà dân đi qua ĐÚNG buildingSpec.js —

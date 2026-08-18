@@ -6,7 +6,37 @@
 > chọn: `ARCHITECTURE_DECISIONS.md`. Nợ kỹ thuật: `TECH_DEBT.md`. Migration: `MIGRATION.md`. Tóm
 > tắt theo mốc: `CHANGELOG.md`.
 > **NGUYÊN TẮC ƯU TIÊN SỐ 1:** (1) mọi phiên AI phải đọc file này + `CLAUDE.md` + các file liên quan TRƯỚC khi làm; (2) sau MỌI cập nhật dù nhỏ, phải cập nhật ngay file này + `CLAUDE.md` + các file liên quan khác.
-> Cập nhật lần cuối: **2026-08-18** — **VIỆC 1: CỔNG LỆNH VẼ THÔI LÀ MỘT CON SỐ, THÀNH MỘT BẢNG 15
+> Cập nhật lần cuối: **2026-08-18** — **VIỆC 2: BẢNG TẦNG TRỆT DỌN SANG FILE RIÊNG, TRƯỚC KHI
+> PHASE 11 THÊM BẢNG THỨ HAI.** Đây là chuyện **QUY ƯỚC**, không phải chuyện file dài (Đàm nói
+> thẳng). Dự án đã tách bảng ra file riêng **ba lần** — `floraStyle.js` · `streetStyle.js` ·
+> `horizon.js` — nên `eraStyle.js` ôm bảng tầng trệt là **chỗ lệch khuôn duy nhất**, và Phase 11
+> sắp thêm một bảng 15 dòng nữa (mái). Sửa quy ước TRƯỚC thì tốn một lần; sửa sau thì tốn hai, và
+> ở giữa có một phase làm theo khuôn sai — mà khuôn sai là thứ phiên sau chép lại. Nay:
+> **`city3d/groundFloorStyle.js`** giữ bảng, `groundFloor.js` giữ hình, `buildingSpec.js` chỉ ĐỌC.
+> `eraStyle.js` giữ đúng phần ngữ pháp chung (`country` · `landmark` · `massScale` · `spread` ·
+> `storyHeight` · `roof`/`vernacularRoof` · `windows` · `motifs` · vật liệu · màu). ADR-029.
+> ⚠️ **Lý lẽ cũ của ADR-026 đã bị ĐẢO NGƯỢC, và cách nó sai đáng ghi lại**: chú thích cũ bảo phải
+> để bảng trong `eraStyle.js` *"vì câu trả lời `country` phải nằm trong tầm mắt"*. Thứ giữ ràng
+> buộc ấy xưa nay **là một BÀI TEST**, không phải khoảng cách trên màn hình — và bằng chứng là bài
+> `KHOÁ VÀO country` chạy y nguyên sau khi bảng dọn đi, chỉ đổi một dòng `import`. Một ràng buộc
+> được giữ bởi "tiện mắt" là một ràng buộc **không được giữ bởi gì cả**.
+> ⚠️ **VÀ MỘT PHÉP THỬ NGƯỢC KHÔNG NỔ ĐÃ ĐẺ RA MỘT BÀI TEST THẬT**: tôi viết trong chú thích của
+> `getGroundFloor` rằng nó *"hỏi `normalizeEraKey` thay vì tự viết lại, vì một luật một công
+> thức"* — rồi thử phá (đổi thành `Math.round(era)`) và **không bài nào đỏ**. Lời hứa ấy đang được
+> giữ bởi đúng một câu chú thích. Hậu quả thật nếu để trôi: `getEraStyle(99)` trả về kỷ mặc định
+> trong khi `GROUND_FLOOR_STYLES[99]` là `undefined` ⇒ công trình dựng theo ngữ pháp kỷ 2 nhưng
+> **không có cửa**, đúng ca kỷ 14 mất cửa ở Bước 2. Đã vá bằng một bài duyệt 9 đầu vào lạ.
+> ⚠️ **BÀI HỌC THỨ BA — VỀ CHÍNH PHÉP ĐO**: lượt đo mốc nền đầu tiên **hỏng hoàn toàn** vì tôi cho
+> nó chạy nền rồi sửa file ngay trong lúc nó chạy. Mỗi kỷ ~15 giây nên bảng trả về trộn **ba trạng
+> thái mã** (kỷ 1–4 mã cũ · kỷ 5–9 đúng lúc bảng đã cắt mà chưa nối lại, **mất trọn tầng trệt** ·
+> kỷ 10+ đã nối xong), và nó trông hoàn toàn chỉnh tề. Đọc vội thì kết luận *"dọn nhà làm mất 15%
+> tam giác ở 5 kỷ"* — một hồi quy không hề tồn tại.
+> **Bằng chứng "chỉ là dọn nhà"**: đo lại đủ 15 kỷ trên cây sạch — **lệnh vẽ khớp 15/15, tam giác
+> khớp 15/15, TỪNG ĐƠN VỊ**. **775 bài test** (773 + 2 mới), lint sạch, build xanh. **15 phép phá,
+> 14 đỏ đúng chỗ đã nêu trước — và cái thứ 15 KHÔNG đỏ, đó chính là phát hiện ở trên** (sau khi vá
+> thì nó đỏ). ⏳ **CHƯA gộp `main`** — mục 5 chương trình làm việc.
+>
+> *(Trước đó — 2026-08-18)* — **VIỆC 1: CỔNG LỆNH VẼ THÔI LÀ MỘT CON SỐ, THÀNH MỘT BẢNG 15
 > MỐC RIÊNG (`TECH_DEBT #38` ĐÓNG).** Cổng nghiệm thu của cả chương trình Phase 10–12 có mục *"số
 > lệnh vẽ không quá 13"*. Con số ấy đo trên đúng **ba kỷ** rồi được viết ra như luật của mười lăm;
 > đo đủ 15 kỷ thì **kỷ 10 ra 14**, và ra 14 cả trên `HEAD`. Tôi đề xuất nâng trần lên 14. **Đàm

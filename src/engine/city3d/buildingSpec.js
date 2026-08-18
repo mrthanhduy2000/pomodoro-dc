@@ -15,6 +15,7 @@
 
 import { unit, signed } from '../hashId';
 import { emitGroundFloor } from './groundFloor';
+import { getGroundFloor } from './groundFloorStyle';
 import { gable, prism, countSpecTriangles, specHeight, specSpan } from './parts';
 import { getEraStyle, getVernacularStyle, eaveOverhang } from './eraStyle';
 import { getArchetype, getMassing, getMotifBudget, getRarityScale } from './archetypes';
@@ -658,7 +659,11 @@ export function buildBuildingSpec({ bpId, era, type, rarity = 'common', level = 
       // chứ không từ trong `emitWindows`. Đó là cả điểm của Phase 10: cái cửa thôi phụ thuộc vào
       // chuyện kỷ này có cửa sổ hay không (kỷ 1 và 2 khai `windows: 'none'` nên xưa nay không hề
       // có cửa nào). Hai luật khác nhau thì phải có hai đường đi khác nhau.
-      const hasGroundFloor = Boolean(style.groundFloor);
+      // ⚠️ Bảng tầng trệt tra theo SỐ KỶ, không đọc từ `style` — từ 2026-08-18 nó là một bảng
+      // riêng (`groundFloorStyle.js`, ADR-029). `getGroundFloor` dùng CHUNG phép chuẩn hoá số
+      // kỷ với `getEraStyle` (`normalizeEraKey`), nên kỷ lạ rơi về cùng một chỗ ở cả hai bảng.
+      const gf = getGroundFloor(era);
+      const hasGroundFloor = Boolean(gf);
 
       if (!mass.tower) emitWindows(parts, { w, d, base, height, x, z }, style);
 
@@ -674,7 +679,7 @@ export function buildBuildingSpec({ bpId, era, type, rarity = 'common', level = 
         // đã cắn dự án nhiều lần.
         const beforeGround = parts.length;
         emitGroundFloor(parts, {
-          gf: style.groundFloor,
+          gf,
           bpId: id, index,
           x, z, base, w, d, height,
           // Cửa phải nghiêng ĐÚNG BẰNG thân nhà, nếu không nó rời khỏi mặt tường ở những kỷ có

@@ -11,7 +11,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
-import { ERA_STYLES, getEraStyle, getGroundFloor } from './eraStyle.js';
+import { ERA_STYLES, getEraStyle } from './eraStyle.js';
+import { GROUND_FLOOR_STYLES, getGroundFloor } from './groundFloorStyle.js';
 import { buildBuildingSpec, LEGACY_DOOR_WIDTH, WINDOW_RELIEF, SILL_RELIEF } from './buildingSpec.js';
 import { materialFamilyFor } from './materials.js';
 import { computeCityLayout } from '../cityLayout.js';
@@ -64,6 +65,50 @@ test('BẢNG: cả 15 kỷ đều khai `groundFloor`, và không dòng nào sai 
   assert.equal(ERAS.length, 15);
 });
 
+test('HAI BẢNG KHÔNG ĐƯỢC TRÔI KHỎI NHAU: khoá của bảng tầng trệt phải khớp KHOÁ CỦA `ERA_STYLES`', () => {
+  // ⚠️ RA ĐỜI CÙNG LÚC BẢNG DỌN SANG FILE RIÊNG (2026-08-18, ADR-029). Chừng nào bảng còn nằm
+  // TRONG `ERA_STYLES` thì "đủ 15 dòng" là hệ quả hiển nhiên của việc nó là một trường của mỗi
+  // dòng. Tách ra file riêng thì hai bảng có thể lệch nhau: thêm kỷ 16 vào `eraStyle.js` mà quên
+  // bảng này ⇒ `getGroundFloor(16)` trả `undefined` và kỷ ấy **mất cửa trong im lặng** — đúng cái
+  // đã cắn ở Bước 2 với kỷ 14 (`TECH_DEBT #38` ghi lại: hai lời "đúng" cộng lại thành một lỗi).
+  // Đây là cùng sợi dây mà `floraStyle`/`streetStyle`/`horizon` đã có sẵn.
+  // THỬ-CHO-ĐỎ: xoá dòng kỷ 7 khỏi `GROUND_FLOOR_STYLES` → đỏ, kèm đúng số kỷ thiếu.
+  const khoaKy = Object.keys(ERA_STYLES).sort();
+  const khoaTangTret = Object.keys(GROUND_FLOOR_STYLES).sort();
+  assert.deepEqual(khoaTangTret, khoaKy,
+    'bảng tầng trệt và bảng kỷ không cùng một tập khoá — một kỷ thiếu dòng sẽ MẤT CỬA trong im lặng '
+    + `(kỷ: [${khoaKy}] · tầng trệt: [${khoaTangTret}])`);
+  assert.equal(khoaKy.length, 15, 'số kỷ đã đổi — mọi bảng 15 dòng phải đổi theo, không chỉ bảng này');
+});
+
+test('KỶ LẠ PHẢI RƠI VỀ CÙNG MỘT KỶ Ở CẢ HAI BẢNG — một luật, một công thức', () => {
+  // ⚠️ BÀI NÀY RA ĐỜI TỪ MỘT PHÉP THỬ NGƯỢC KHÔNG NỔ. Khi tách bảng ra file riêng, tôi viết trong
+  // chú thích của `getGroundFloor` rằng nó *"hỏi `normalizeEraKey` thay vì tự viết lại `Math.round`
+  // + `?? DEFAULT_ERA`, vì một luật chỉ được có một công thức"*. Rồi thử phá — đổi
+  // `normalizeEraKey(era)` thành `Math.round(era)` — và **KHÔNG BÀI NÀO ĐỎ**. Lời hứa ấy đang được
+  // giữ bởi đúng một câu chú thích, tức không được giữ bởi gì cả (bài học Phase 8B: "một chú thích
+  // nói có test đối chiếu KHÔNG phải là một bài test").
+  //
+  // Hậu quả thật nếu để trôi: `getEraStyle(99)` trả về kỷ mặc định (kỷ 2) trong khi
+  // `GROUND_FLOOR_STYLES[99]` là `undefined` ⇒ công trình dựng theo ngữ pháp kỷ 2 nhưng **không có
+  // cửa**. Cùng hình dạng với ca kỷ 14 mất cửa ở Bước 2: hai đường tra cứu lệch nhau ở BIÊN.
+  // THỬ-CHO-ĐỎ: đổi `normalizeEraKey(era)` thành `Math.round(era)` → đỏ ở `undefined`/`99`/`0`.
+  const LA = [undefined, null, NaN, 0, -3, 2.4, 99, 16, '7'];
+  // Khoá của một bộ ngữ pháp: tìm bằng ĐỒNG NHẤT THAM CHIẾU, vì `ERA_STYLES` không có trường `era`
+  // — và cố ý không thêm, để khỏi có một chỗ thứ hai phát biểu "dòng này là kỷ mấy".
+  const khoaCua = (style) => Object.keys(ERA_STYLES).find((k) => ERA_STYLES[k] === style);
+  let soCaDo = 0;
+  for (const dauVao of LA) {
+    const kyRaCua_nguPhap = khoaCua(getEraStyle(dauVao));
+    assert.ok(kyRaCua_nguPhap, `đầu vào ${String(dauVao)}: \`getEraStyle\` trả về thứ không nằm trong bảng`);
+    assert.equal(getGroundFloor(dauVao), GROUND_FLOOR_STYLES[kyRaCua_nguPhap],
+      `đầu vào ${String(dauVao)}: bảng kỷ tra ra kỷ ${kyRaCua_nguPhap} còn bảng tầng trệt tra ra chỗ `
+      + 'khác ⇒ công trình dựng theo ngữ pháp một kỷ nhưng đeo cửa của kỷ khác, hoặc KHÔNG có cửa');
+    soCaDo += 1;
+  }
+  assert.equal(soCaDo, LA.length, 'không duyệt hết danh sách đầu vào lạ');
+});
+
 test('BƯỚC 2: KHÔNG kỷ nào còn để trống — trạng thái dở dang đã bị đóng, không trôi thành vĩnh viễn', () => {
   // ⚠️ ĐÂY LÀ CHÍNH BÀI TEST CỦA BƯỚC 1, ĐỔI VẾ. Bước 1 khoá "đúng 12 kỷ còn `legacy`"; con số 12
   // ấy là thứ buộc Bước 2 phải đụng tới bài này mới chạy xanh trở lại, tức nó chính là cái hẹn giờ
@@ -86,10 +131,13 @@ test('BƯỚC 2: KHÔNG kỷ nào còn để trống — trạng thái dở dang
 });
 
 test('KHOÁ VÀO `country`: mỗi dòng phải nói về ĐÚNG nước của kỷ đó, và không dính chữ của nước khác', () => {
-  // ⚠️ ĐÂY LÀ SỢI DÂY BUỘC BẢNG TẦNG TRỆT VÀO `country` — vế mà `streetStyle.test.js`/
-  // `floraStyle.test.js` làm bằng cách so hai bảng. Bảng này nằm CÙNG FILE với `country` nên không
-  // có bảng thứ hai để so; thay vào đó, từ khoá dưới đây làm đúng việc ấy. Chúng sống trong bài
-  // test chứ không trong mã sản phẩm, vì nhiệm vụ duy nhất của chúng LÀ sợi dây buộc.
+  // ⚠️ ĐÂY LÀ SỢI DÂY BUỘC BẢNG TẦNG TRỆT VÀO `country`, cùng vai trò với vế so-hai-bảng ở
+  // `streetStyle.test.js`/`floraStyle.test.js` — và từ 2026-08-18 (ADR-029) thì bảng tầng trệt
+  // cũng đã là một file riêng như hai bảng ấy, nên ba anh em nay cùng một hình dạng.
+  // ⚠️ Nhưng phép kiểm ở đây **mạnh hơn** một phép so hai bảng: so hai bảng chỉ chứng minh chúng
+  // nói cùng TÊN NƯỚC, còn từ khoá dưới đây bắt dòng ghi chú phải nhắc tới thứ chỉ nước ấy mới
+  // có. Chúng sống trong bài test chứ không trong mã sản phẩm, vì nhiệm vụ duy nhất của chúng LÀ
+  // sợi dây buộc.
   //
   // Vế thứ hai ("không dính chữ của nước khác") mới là vế bắt được lỗi thật: cách hỏng dễ xảy ra
   // nhất là chép dòng của kỷ này sang kỷ kia rồi sửa nửa chừng.
@@ -125,7 +173,7 @@ test('KHOÁ VÀO `country`: mỗi dòng phải nói về ĐÚNG nước của k�
     'mỗi kỷ một nước, không nước nào dùng hai lần — thiếu/thừa ở đây nghĩa là bảng `country` đã đổi');
   for (const era of ERAS) {
     const style = getEraStyle(era);
-    const note = style.groundFloor.note.toLowerCase();
+    const note = getGroundFloor(era).note.toLowerCase();
     const cua_minh = TU_KHOA[style.country];
     assert.ok(cua_minh, `kỷ ${era}: nước "${style.country}" chưa có từ khoá trong bài test này — `
       + 'thêm kỷ nghiên cứu mới thì phải thêm dây buộc cho nó, không được bỏ qua');

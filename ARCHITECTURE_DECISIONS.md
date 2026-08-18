@@ -11,6 +11,90 @@
 
 ---
 
+## ADR-030 — Mái là NGỮ PHÁP THỨ NĂM, và nó tách đôi kỳ-quan ↔ nhà-dân lần thứ sáu; nhưng `stackCount` thì CỐ Ý không tách
+
+- **Ngày**: 2026-08-18 (Phase 11)
+- **Bối cảnh**: Camera nhìn CHÚC XUỐNG, nên **mái là mặt lớn nhất trong khung hình** — và cho tới
+  Phase 10 nó là một tấm phẳng trơn ở cả 15 kỷ. Ngân sách đo trên M3 (`PERFORMANCE.md`) nói hình
+  học gần như miễn phí (dư 3,2 lần, 80% chi phí theo ĐIỂM ẢNH), tức đây đúng là chỗ tiêu ngân sách
+  có lãi nhất: thêm khối thì rẻ, mà thứ thêm vào lại chiếm phần lớn khung hình.
+- **Vấn đề**: *"Cho mái có chi tiết"* nghe như một việc mỹ thuật. Nó không phải — nó là một bài
+  toán **cấu trúc dữ liệu**, vì cùng một chữ "mái" đang trả lời ít nhất ba câu hỏi khác nhau.
+
+### Quyết định 1 — hai TRỤC, không phải một danh sách chi tiết
+
+Bảng có hai trục vuông góc, vì mắt đọc chúng bằng hai cách khác nhau:
+
+| Trục | Câu hỏi | Phá vỡ điều gì |
+|---|---|---|
+| `stack` | *cái gì NHÔ LÊN khỏi mặt phẳng mái?* | phá **mặt phẳng** — ống khói, bồn nước, buồng thang, cột ăng-ten, giàn phơi, chậu cây, cửa sổ mái |
+| `crown` | *cái gì VẼ ĐƯỜNG NÉT trên mái?* | phá **sự trơn nhẵn** — đầu dầm, ngói ống, thanh nóc, đầu đao, lan can |
+
+Gộp chúng vào một danh sách "đặc trưng mái" thì một kỷ có hai đặc trưng cùng loại (hai kiểu đường
+nét) sẽ trông rối, còn một kỷ không có đường nét nào lại không phát biểu được. Tách ra thì luật
+*"mỗi vế đúng một-hoặc-hai đặc trưng"* viết được thành test, và **cả 15 kỷ đều bị buộc phải có ít
+nhất một** — không kỷ nào lặng lẽ về lại tấm phẳng trơn.
+
+### Quyết định 2 — tách kỳ quan ↔ nhà dân (lần thứ SÁU của cùng một câu hỏi)
+
+Đây là lần thứ sáu dự án hỏi *"ngoài đời hai thứ này có LUÔN đi cùng nhau không?"* (sau
+`storyHeight`/`massScale` · `vernacularRoof` · bảng cây/`undergrowth` · `roadColor`/`streetStyle` ·
+`groundFloor`). Bốn ca đo được, và không ca nào hai vế trùng nhau:
+
+| Nước | Công trình biểu tượng | Nhà thường cùng thành phố |
+|---|---|---|
+| Pháp | Panthéon **giấu mái sau lan can đá** | mái kẽm Haussmann trơn, **cắm đầy lucarne** |
+| Anh | nhà máy Manchester **mái răng cưa lấy sáng bắc** | dãy nhà thợ, **ba ống khói mỗi đầu hồi** |
+| Mỹ | tháp Beaux-Arts, **buồng máy thang** trên khối giật cấp | nhà thuê New York, **bồn nước gỗ** |
+| Iraq | ziggurat Ur, **tường chắn mỗi thềm** | nhà bùn mái bằng, **cửa sập lên mái ngủ đêm** |
+
+Lý do vật lý thì giống hệt bốn lần trước: mái kỳ đài tốn kém và thường bị quy chế giới hạn, còn
+mái nhà dân giải quyết một nhu cầu sinh hoạt (phơi, ngủ, sưởi, chứa nước). ⇒ **bốn trường**:
+`crown`/`stack` cho công trình chính, `vernacularCrown`/`vernacularStack` cho nhà dân, **bắt buộc
+cả 15 kỷ**, không tuỳ chọn — trường tuỳ chọn sẽ lặng lẽ rơi về vế kia và cái bẫy quay lại ở kỷ
+thêm sau này (đúng lý do `vernacularRoof` phải bắt buộc ở Phase 7C).
+
+### Quyết định 3 — `stackCount` thì CỐ Ý **KHÔNG** tách, và đây là chỗ dễ làm sai
+
+Cùng lúc tách bốn trường trên, `stackCount` (mấy cái) **dùng chung** cho cả hai vế. Nghe như thiếu
+nhất quán, nhưng hỏi lại đúng câu hỏi cũ thì ra đáp án ngược: *"một ống khói Đức, ba ống khói
+Manchester, bốn cục nóng Singapore"* là một **sự thật văn hoá của cả thành phố**, không phải một
+mức chi tiết. Nhà thợ Manchester có ba ống khói vì nhà xây liền kề chia tường chung — cùng đúng
+cho nhà máy. Tách nó ra là tạo một trục giả, tức làm bảng trông rộng hơn mà không thêm thông tin.
+
+⇒ **Luật rút ra, ghi để lần thứ bảy khỏi làm máy móc**: *"một trường gánh hai việc"* là câu hỏi
+phải HỎI, không phải kết luận phải ÁP. Cùng một bảng có thể có trường phải tách và trường phải
+giữ, và cách phân biệt vẫn là câu hỏi cũ — chỉ khác là lần này câu trả lời là "CÓ, chúng luôn đi
+cùng nhau".
+
+### Quyết định 4 — hai họ ràng buộc là **ĐIỀU KIỆN CẤU TRÚC**, không phải trí nhớ
+
+`CROWN_NEEDS_ROOF`/`STACK_NEEDS_ROOF` hỏi thẳng `style.roof`: bồn nước cần mặt bằng đứng được, ngói
+ống cần mái dốc, đầu đao chỉ có ở mái chồng tầng. `EARLIEST_ERA` là mốc lịch sử hai chiều (kỷ cổ
+không được có, kỷ hiện đại không được thiếu). Cả hai đều **hỏi chính cái bảng** chứ không hỏi trí
+nhớ — đúng bài học Phase 10 Bước 2, nơi một mốc "cửa chớp lá sách là thế kỷ 17" đúng về lịch sử mà
+sai về **thứ đang được dựng** (hai cánh ván trơn, cổ ngang chính cái cửa sổ).
+
+### Trade-off đã chấp nhận
+
+- **+27,9% tam giác** (394.466 → 504.458 trên cả 15 kỷ; mái chiếm 21,8%). Nằm trong mô hình chi phí
+  đã đo: hình học rẻ, điểm ảnh và ánh sáng mới đắt. **0 lệnh vẽ mới** ở cả 15 kỷ — mọi vai màu dùng
+  lại họ vật liệu kỷ đó đã có.
+- **`crownWeight` là một trục MỎNG** — nó chỉ tách được 6/105 cặp kỷ, và với kiểu `barrel` thì bước
+  lượng hoá (1,459) còn **rộng hơn cả dải hợp lệ** (1,25), tức hai kỷ cùng lợp ngói ống thì trọng
+  số **không bao giờ** tách được chúng. Giữ lại vì nó có việc thật (số con tiện, độ vươn đầu đao),
+  nhưng đã ghi rõ giới hạn trong test để phiên sau đừng trông cậy vào nó.
+- **`parts.js` chỉ xoay được quanh trục đứng (`ry`)**, không có `rx`/`rz`. Nên ngói ống dựng bằng
+  **đầu ngói ở diềm + cuộn nóc**, không xấp xỉ cuộn ngói nằm nghiêng. Chấp nhận: thêm hai trục xoay
+  là đụng vào nhà máy hình học dùng chung cho cả thành phố, rủi ro lớn hơn nhiều lần cái lợi.
+
+### Điều kiện xem lại
+
+Nếu một phase sau thêm `rx`/`rz` vào `parts.js` thì dựng lại `barrel` cho đúng cuộn ngói. Nếu
+`crownWeight` tụt xuống 0 cặp thì phải hoặc bỏ trường ấy đi, hoặc trải nó ra cho đáng.
+
+---
+
 ## ADR-029 — Bảng tầng trệt dọn sang file riêng: quy ước "bảng ↔ hình" áp cho MỌI bảng 15 kỷ, kể cả bảng ra đời sau; và đảo ngược lý lẽ "để trong tầm mắt" của ADR-026
 
 - **Ngày**: 2026-08-18 (Việc 2, ngay trước Phase 11)

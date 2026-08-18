@@ -26,6 +26,22 @@
 > (#3, #13) + **1 mục Medium-High chờ Đàm quyết** (#24) = 4 → xa ngưỡng 8–10, KHÔNG cần Maintenance
 > Sprint.
 >
+> **Cập nhật 2026-08-18 (Phase 11 — mái, ĐO ẢNH XONG)**: **MỞ #41, Priority Medium** — phase thêm
+> 110.076 tam giác lên mái mà **bản quét 15 kỷ vẫn không phân biệt được với bản trước** (90/90 ô
+> dưới ngưỡng mắt 12, trung vị 2,2), tức **KHÔNG đạt** điều kiện nghiệm thu Đàm đặt ra. Chi tiết có
+> thật ở thang gần (1,2–8,4% điểm ảnh ở khung app; 15,1% khi zoom sát mái kỷ 9) nhưng không sống
+> sót tới thang quét. Đo được thêm một quy luật dùng được cho Phase 12: **thứ phá ĐƯỜNG VIỀN sống
+> sót, thứ chỉ thêm BỀ MẶT thì không** — kỷ 8 tốn nhiều hình học nhất (+48,5%) mà đổi ít nhất
+> (1,2%). ⛔ Cách chữa là quyết định MỸ THUẬT ⇒ **chờ Đàm**, không tự phóng to. Nay còn **1 High**
+> (#14) + **2 Medium-High** (#3, #13) + **2 chờ Đàm quyết** (#24, #41) = 5 → vẫn xa ngưỡng 8–10.
+>
+> **Cập nhật 2026-08-18 (Phase 11 — mái)**: **MỞ #39 và #40**, cả hai Priority **Low**. #39 =
+> `crownWeight` là trục mỏng (6/105 cặp) và với `barrel` thì bước lượng hoá còn rộng hơn cả dải hợp
+> lệ — đã khoá sự thật ấy bằng một `assert` tự đỏ nếu có kiểu thứ hai rơi vào. #40 = `parts.js`
+> không có `rx`/`rz` nên ngói ống là phép xấp xỉ. Cả hai đều là **giới hạn đã biết có điều kiện xem
+> lại**, không phải lỗi. Nay còn **1 mục High** (#14) + **2 Medium-High** (#3, #13) + **1
+> Medium-High chờ Đàm quyết** (#24) = 4 → xa ngưỡng 8–10, KHÔNG cần Maintenance Sprint.
+>
 > **Cập nhật 2026-08-18 (Phase 10, Bước 2)**: **ĐÓNG #36** — cả 15 kỷ nay đều có cửa ra vào thật,
 > kể cả kỷ 1 và 2. **MỞ #38** (Priority Low-Medium): đo đủ 15 kỷ lần đầu tiên thì lộ ra **kỷ 10 =
 > 14 lệnh vẽ**, tức vượt cái trần "13" mà cổng nghiệm thu đang dùng — nhưng nó **đã như vậy từ
@@ -2043,6 +2059,113 @@ ship một trạng thái dở dang, hãy làm nó **ĐẾM ĐƯỢC trong một 
   macOS — tức đúng cái đã giết LaunchAgent ở "BẪY 2" (`CLAUDE.md`: thoát mã 78, **không có
   stderr**). Phần ấy chỉ máy Đàm kiểm được, và nó đã thành một dòng trong runbook ở
   `PERFORMANCE.md` ("Một điều CHỈ máy Đàm kiểm được").
+
+---
+
+## #39 — `crownWeight` là một trục MỎNG, và với `barrel` nó KHÔNG THỂ tách được hai kỷ dù khai số nào
+
+- **Module**: `src/engine/city3d/roofStyle.js` + `rooftop.js`
+- **Priority**: Low · **Severity**: Low
+- **Impact**: trong 6 trục dùng để chứng minh "15 kỷ ra 15 mái", `crownWeight` chỉ tách được **6
+  trên 105 cặp** (năm trục kia: 74–99). Tệ hơn, với kiểu `barrel` (ngói ống) thì bước lượng hoá đo
+  được là **1,459** trong khi cả dải hợp lệ chỉ rộng **1,25** (`CROWN_WEIGHT_MIN` 0,35 →
+  `CROWN_WEIGHT_MAX` 1,6) ⇒ hai kỷ cùng lợp ngói ống (kỷ 4 và kỷ 8) **không bao giờ** phân biệt
+  được bằng trọng số, dù khai giá trị nào.
+- **Root Cause**: `crownWeight` là MỘT số dùng chung cho năm kiểu đường nét có **độ nhạy hình học
+  chênh nhau 16 lần** (đầu đao 0,175 đơn-vị-hình-bao mỗi đơn-vị-trọng-số · ngói ống 0,011). Một
+  thang chung áp lên năm thứ nhạy khác nhau thì với thứ nhạy nhất nó quá thô, với thứ ít nhạy nhất
+  nó gần như không làm gì — đúng họ với bẫy `eaves` ở Phase 7C, chỉ khác là ở đây thứ chênh nhau
+  không phải kích thước khối mà là **độ nhạy của phép biến đổi**.
+- **Current Risk**: rất thấp. Bảng vẫn đạt 105/105 cặp ≥ 2 trục nhờ năm trục kia, và trục này vẫn
+  có việc thật (nó quyết định số con tiện của lan can, độ vươn của đầu đao — hai thứ nhìn thấy
+  được). Nó chỉ **yếu**, không sai.
+- **Future Risk**: trung bình. Nguy hiểm nằm ở chỗ một phiên sau đọc bảng, thấy có trường
+  `crownWeight`, rồi **trông cậy vào nó** để phân biệt hai kỷ mới thêm — và nó im lặng không làm
+  được. Đã chặn bằng cách ghi thẳng sự thật vào `roofStyle.test.js` (danh sách `KHONG_VUA_DAI` bị
+  khoá bằng `assert.deepEqual(..., ['barrel'])`, tức nó tự đỏ nếu có kiểu thứ hai rơi vào).
+- **Recommended Solution**: nếu cần trục này khoẻ hơn thì **chuẩn hoá theo độ nhạy** — cho mỗi kiểu
+  một dải riêng, hoặc đổi `crownWeight` từ "hệ số nhân" sang "đơn vị hình bao" (khai thẳng cái đầu
+  đao vươn ra bao nhiêu) để một con số nghĩa như nhau ở mọi kiểu. ⚠️ Đừng nới `CROWN_WEIGHT_MAX`
+  cho `barrel` vừa — đó là mua điểm bằng cách cho ngói ống dày gấp ba lần thực tế.
+- **Estimated Complexity**: Thấp (một hàm chuẩn hoá + đo lại bước) — nhưng nó đổi hình của mọi kỷ
+  có đường nét ⇒ phải quét lại 15 kỷ.
+- **Blocking Conditions**: không có.
+- **Review Trigger**: khi `crownWeight` tụt xuống 0 cặp tách được (bài `MỖI TRỤC PHẢI CÒN SỐNG` sẽ
+  đỏ), hoặc khi có phase thêm kiểu đường nét thứ sáu.
+- **Owner**: chưa phân công · **Status**: Open
+
+---
+
+## #41 — Chi tiết mái KHÔNG sống sót tới thang bản quét: 90/90 ô dưới ngưỡng mắt
+
+- **Module**: `src/engine/city3d/rooftop.js` + `roofStyle.js` (kích cỡ), `scripts/sweep-diff.mjs` (đo)
+- **Priority**: Medium · **Severity**: Medium
+- **Impact**: Phase 11 thêm **110.076 tam giác (+20,6%)** lên mái, và ở **thang bản quét 15 kỷ ×
+  6 chặng thì gần như không thấy gì**: 90/90 ô dưới ngưỡng mắt 12, trung vị **2,2**, ô đổi mạnh
+  nhất (kỷ 7 @ 12h) mới 10,6. Đây chính là điều kiện nghiệm thu Đàm đặt ra cho phase — *"nếu hai
+  bản quét vẫn khó phân biệt thì phase này CHƯA đạt mục tiêu của nó"* — nên phải ghi là **CHƯA
+  ĐẠT**, không phải "đạt có bảo lưu".
+- **Root Cause**: hai nguyên nhân độc lập, và cái thứ hai mới là cái sâu. **(a) Kích cỡ**: vật trên
+  mái bị kẹp bởi `STACK_W_MAX_RATIO = 0,3` và `STACK_W_MIN = 0,055`, cỡ ấy chọn để không thành "cây
+  nấm" khi nhìn gần, nhưng ở thang quét (một thành phố ≈ 300 × 186 điểm ảnh) thì một cái ống khói
+  rộng 0,3 lần bề ngang mái chỉ còn **vài điểm ảnh**. **(b) Loại chi tiết**: đo theo từng kỷ thì
+  thứ sống sót là thứ phá **ĐƯỜNG VIỀN** mái (`dormer` kỷ 9 = 5,3% ở khung app · `balustrade` kỷ 7
+  = 8,4%), còn thứ chỉ thêm **BỀ MẶT** thì tan biến — kỷ 8 tốn nhiều hình học nhất (**+48,5%** tam
+  giác, ngói bò `barrel`) mà đổi **ít nhất (1,2%)**. Ngói bò là những cục nhỏ lặp lại: đắt nhất về
+  khối, rẻ nhất về thứ mắt đọc được ở xa.
+- **Current Risk**: thấp về mặt kỹ thuật (không có gì hỏng, không có lệnh vẽ mới, hiệu năng vẫn nằm
+  sâu trong vùng rẻ), **cao về mặt giá trị**: một phase đã tiêu hết ngân sách hình học của nó mà
+  Đàm mở app ra vẫn thấy gần như y cũ. Ở khung app thì có thấy (1,2–8,4% điểm ảnh), nhưng bản quét
+  — chỗ DUY NHẤT đặt 15 kỷ cạnh nhau — thì không.
+- **Future Risk**: trung bình-cao **nếu không quyết**. Phase 12 sẽ lại thêm chi tiết lên cùng những
+  bề mặt ấy; nếu không biết "thứ gì sống sót ở xa" thì nó sẽ lặp lại đúng kết quả này với một ngân
+  sách nữa. Ngược lại, phóng đại vật trên mái mà không có gác tỉ lệ sẽ dựng lại bẫy **"cây nấm"** —
+  Phase 7C đã trả giá một lần vì `eaves` là số tuyệt đối áp lên những khối chênh nhau vài lần.
+- **Recommended Solution**: KHÔNG phải "nhân mọi thứ lên cho to". Ba hướng, theo thứ tự ROI đo được:
+  (1) **ưu tiên thứ phá đường viền** — nâng `crown` (lan can, đầu đao, sống mái nổi) và `dormer` ở
+  những kỷ đang chỉ có `stack`, vì đó là loại chi tiết đã ĐO ra là sống sót; (2) **nâng trần tỉ lệ
+  của riêng vật cao** (bể nước, lồng thang máy, cột ăng-ten — thứ nhô lên khỏi đường viền mái) chứ
+  không nâng đều mọi `stack`; (3) chấp nhận rằng chi tiết mái là phần thưởng khi nhìn GẦN và ghi
+  điều đó thành lời hứa tường minh, thay vì để nó là một thất bại không tên. **Cả ba đều là quyết
+  định MỸ THUẬT ⇒ phải Đàm chọn.**
+- **Estimated Complexity**: thấp cho (1) và (2) — bảng đã có sẵn cả hai trục, sửa là sửa giá trị
+  trong `roofStyle.js` cộng nới `STACK_W_MAX_RATIO`; phần tốn là chụp + đo lại 15 kỷ (~12 phút).
+- **Blocking Conditions**: ⛔ **CHỜ ĐÀM QUYẾT** — mục 5 ca 6 của chương trình làm việc (quyết định
+  mỹ thuật với độ tự tin dưới 80%). Tuyệt đối không tự phóng to rồi báo "đã đạt".
+- **Review Trigger**: ngay khi Đàm trả lời; hoặc trước khi Phase 12 bắt đầu thêm bất cứ chi tiết
+  nào lên mái/tường, vì cùng câu hỏi sẽ lặp lại.
+- **Owner**: chưa ai · **Status**: MỞ, đã đo đủ số, chờ quyết định
+
+⚠️ **Bài học đi kèm, đáng giá hơn cả mục nợ này**: bản quét là thang NHỎ NHẤT dự án có, và nó
+**không phải** thang Đàm dùng app. Một thay đổi có thể thật ở khung app mà chết ở bản quét (đúng ca
+này), hoặc ngược lại. `sweep-diff.mjs` nay có **hai chế độ** (`--sweep` mặc định và `--frame`) dùng
+CHUNG đơn vị + ngưỡng, để hai con số đặt cạnh nhau được. **Đọc cả hai, đừng chọn con số dễ nghe.**
+
+---
+
+## #40 — `parts.js` chỉ xoay được quanh trục ĐỨNG, nên ngói ống là một phép XẤP XỈ chứ không phải hình thật
+
+- **Module**: `src/engine/city3d/parts.js` (nhà máy hình học) · biểu hiện ở `rooftop.js` (`emitBarrel`)
+- **Priority**: Low · **Severity**: Low
+- **Impact**: `prism()` nhận `ry` (xoay quanh trục đứng) nhưng KHÔNG có `rx`/`rz`. Ngói ống thật
+  là những ống bán trụ **nằm nghiêng theo chiều dốc mái**; không nghiêng được khối thì Phase 11
+  dựng bằng **đầu ngói ở diềm + cuộn nóc**, tức mắt đọc ra "mái này lợp ngói ống" từ hai đầu chứ
+  không thấy các cuộn chạy dọc mặt dốc.
+- **Root Cause**: quyết định kiến trúc cũ của nhà máy hình học — một trục xoay đủ cho mọi thứ đứng
+  trên mặt đất, và thêm trục làm ma trận biến đổi phức tạp hơn cho MỌI khối của cả thành phố.
+- **Current Risk**: thấp. Ở cỡ bản quét (một thành phố ≈ 300px) sự khác biệt không đọc được; ảnh
+  cận cảnh 1500px thì thấy được, nhưng hình hiện tại vẫn kể đúng câu chuyện vật liệu.
+- **Future Risk**: thấp–trung bình. Nếu một phase sau hạ camera xuống gần mái, hoặc thêm kiểu mái
+  cần khối nghiêng (mái vòm có gân, cầu thang ngoài trời, mái hắt), thì thiếu `rx`/`rz` sẽ chặn
+  nhiều thứ cùng lúc chứ không riêng ngói ống.
+- **Recommended Solution**: thêm `rx`/`rz` vào `prism()` và nhân ma trận theo thứ tự cố định
+  (`rz → rx → ry`), có test khoá thứ tự ấy. ⚠️ Đây là thay đổi chạm vào MỌI khối của thành phố ⇒
+  phải quét lại 15 kỷ × 6 chặng và đo lại tam giác; **không được làm kèm một phase mỹ thuật**, vì
+  lúc ấy không tách được "đổi vì nhà máy hình học" khỏi "đổi vì mỹ thuật".
+- **Estimated Complexity**: Trung bình.
+- **Blocking Conditions**: nên có một phase riêng, không gộp.
+- **Review Trigger**: khi có phase cần khối nghiêng, hoặc khi camera xuống gần mái.
+- **Owner**: chưa phân công · **Status**: Open
 
 ---
 

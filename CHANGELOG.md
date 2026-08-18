@@ -12,6 +12,29 @@
 
 ---
 
+## 2026-08-18 — Phase 11: mái thôi là một tấm phẳng trơn — ống khói, bồn nước, cửa sổ mái, đường nét mái (ADR-030)
+
+- **Mục đích**: camera nhìn **chúc xuống**, nên mái là mặt lớn nhất trong khung hình — và cho tới
+  Phase 10 nó vẫn là một tấm phẳng trơn ở cả 15 kỷ. Ngân sách đo trên M3 nói hình học gần như miễn
+  phí (dư 3,2 lần; 80% chi phí đi theo ĐIỂM ẢNH), tức đây là chỗ tiêu ngân sách có lãi nhất.
+- **Phạm vi**: **ngữ pháp thứ năm**, đúng khuôn ba lớp đã dùng bốn lần — BẢNG `city3d/roofStyle.js`
+  (15 kỷ, buộc vào `country`, có test bắt) · HÌNH ở `city3d/rooftop.js` · `buildingSpec.js` chỉ ĐỌC.
+  Hai trục vuông góc: `stack` (thứ **nhô lên** phá mặt phẳng — ống khói · bồn nước · buồng thang ·
+  cột ăng-ten · giàn phơi · chậu cây · cửa sổ mái · cửa sập · bó cọc) và `crown` (thứ **vẽ đường
+  nét** — đầu dầm · ngói ống · thanh nóc · đầu đao · lan can). Tách đôi kỳ quan ↔ nhà dân ở 4
+  trường; `stackCount` **cố ý dùng chung** vì nó là sự thật văn hoá của cả thành phố. Hai họ ràng
+  buộc là **điều kiện cấu trúc** (mái nào đỡ được thứ gì · mốc lịch sử hai chiều), không phải trí nhớ.
+- **Ảnh hưởng**: **0 lệnh vẽ mới ở cả 15 kỷ** — mỗi kỷ vẫn đúng mốc riêng của chính nó
+  (9·11·11·11·10·11·11·11·10·12·10·10·10·10·10). Tam giác thành phố +27,9% (394.466 → 504.458 trên
+  cả 15 kỷ; phần mái chiếm 21,8%), nằm gọn trong mô hình chi phí đã đo. Test 775 → **798**.
+- **Tương thích**: không đổi state, không đổi schema, không migration. Công trình đã xây giữ nguyên
+  hình (ADR-007) vì hạt giống vẫn thuần theo `bpId` + vị trí — có test khoá.
+- **Nợ kỹ thuật mở thêm**: `TECH_DEBT #39` (trục `crownWeight` mỏng — 6/105 cặp; với ngói ống thì
+  bước lượng hoá còn rộng hơn cả dải hợp lệ) và `#40` (`parts.js` không có `rx`/`rz` nên ngói ống
+  là phép xấp xỉ). Cả hai Priority Low, đều có điều kiện xem lại.
+
+---
+
 ## 2026-08-18 — Phase 10: tầng trệt cho cả 15 kỷ; và cổng lệnh vẽ thành BẢNG 15 MỐC (đóng `TECH_DEBT #36` + `#38`)
 
 - **Mục đích**: chỗ mắt nhìn vào đầu tiên khi đứng trước một công trình — cửa ra vào — vẫn là một

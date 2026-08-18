@@ -165,6 +165,36 @@
 │   │   │   │                      #   một dòng thì kỷ ấy MẤT CỬA trong im lặng — `emitGroundFloor`
 │   │   │   │                      #   trả `false` đúng luật, và không gì đỏ lên
 │   │   │   │                      #   Hình dựng ở `city3d/groundFloor.js`
+│   │   │   ├── roofStyle.js       # BẢNG MÁI 15 KỶ (Phase 11, ADR-030): HAI TRỤC vuông góc —
+│   │   │   │                      #   `stack` (thứ NHÔ LÊN phá mặt phẳng: ống khói · bồn nước ·
+│   │   │   │                      #   buồng thang · cột ăng-ten · giàn phơi · chậu cây · cửa sổ
+│   │   │   │                      #   mái · cửa sập · bó cọc) và `crown` (thứ VẼ ĐƯỜNG NÉT: đầu
+│   │   │   │                      #   dầm · ngói ống · thanh nóc · đầu đao · lan can) + `crownWeight`
+│   │   │   │                      #   (đường nét ấy đậm tới đâu) + `stackCount` (mấy cái).
+│   │   │   │                      #   TÁCH ĐÔI kỳ quan ↔ nhà dân ở 4 trường, nhưng `stackCount`
+│   │   │   │                      #   CỐ Ý dùng chung — nó là sự thật văn hoá của cả thành phố,
+│   │   │   │                      #   không phải một mức chi tiết (ADR-030 Quyết định 3)
+│   │   │   │                      #   Mỗi dòng buộc vào `country` của eraStyle — CÓ TEST BẮT
+│   │   │   │                      #   ⚠️ Hai họ ràng buộc là ĐIỀU KIỆN CẤU TRÚC, không phải trí nhớ:
+│   │   │   │                      #   `CROWN_NEEDS_ROOF`/`STACK_NEEDS_ROOF` hỏi thẳng `style.roof`
+│   │   │   │                      #   (bồn nước cần mặt bằng, ngói ống cần mái dốc), `EARLIEST_ERA`
+│   │   │   │                      #   là mốc lịch sử kiểm CẢ HAI CHIỀU
+│   │   │   │                      #   ⚠️ `crownWeight` là trục MỎNG: chỉ tách 6/105 cặp, và với
+│   │   │   │                      #   `barrel` thì bước lượng hoá còn rộng hơn cả dải hợp lệ ⇒ hai
+│   │   │   │                      #   kỷ cùng ngói ống KHÔNG BAO GIỜ tách được bằng trọng số
+│   │   │   │                      #   Hình dựng ở `city3d/rooftop.js`
+│   │   │   ├── rooftop.js         # HÌNH của bảng mái: 5 kiểu đường nét + 10 kiểu nhô lên.
+│   │   │   │                      #   ⚠️ TUYỆT ĐỐI không tự tính lại hình mái — nhận `RoofAnchors`
+│   │   │   │                      #   do `emitRoof` TRẢ VỀ (`eaveY`/`apexY`/`deck`/`ridges`). Tự
+│   │   │   │                      #   tính lại là "một luật hai công thức", đúng thứ đã làm
+│   │   │   │                      #   `sweep-score.mjs` bịa ra một bộ số hoàn chỉnh ở Phase 4G
+│   │   │   │                      #   ⚠️ `parts.js` CHỈ có `ry` (không `rx`/`rz`) ⇒ ngói ống dựng
+│   │   │   │                      #   bằng ĐẦU NGÓI ở diềm + CUỘN NÓC, không xấp xỉ cuộn nằm nghiêng
+│   │   │   │                      #   ⚠️ BA NÚT BỊT ĐỐI XỨNG đặt Ở `emitRooftop`, không đặt trong
+│   │   │   │                      #   từng hàm dựng: `at(k, off)` (hạt giống theo |vị trí|) ·
+│   │   │   │                      #   `lateral()` (lệch ngang = 0) · `spin()` (góc xoay = 0). Nhét
+│   │   │   │                      #   `off` vào CHUỖI KHOÁ là vô hiệu hoá nút bịt — đã cắn một lần
+│   │   │   │                      #   ở `emitPlanter`, xem chú thích tại chỗ
 │   │   │   ├── dwellings.js       # NHÀ DÂN (ADR-015): 30 ô đất trống chia 3 khu theo khoảng cách
 │   │   │   │                      #   tới tâm (ngoại vi/dân cư/trung tâm); mỗi 2 phiên mọc thêm 1
 │   │   │   │                      #   căn, mọc từ trong ra. Nhà dân đi qua ĐÚNG buildingSpec.js —

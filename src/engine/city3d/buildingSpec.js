@@ -15,7 +15,9 @@
 
 import { unit, signed } from '../hashId';
 import { emitGroundFloor } from './groundFloor';
+import { emitRooftop } from './rooftop';
 import { getGroundFloor } from './groundFloorStyle';
+import { getRoofStyle } from './roofStyle';
 import { gable, prism, countSpecTriangles, specHeight, specSpan } from './parts';
 import { getEraStyle, getVernacularStyle, eaveOverhang } from './eraStyle';
 import { getArchetype, getMassing, getMotifBudget, getRarityScale } from './archetypes';
@@ -123,32 +125,53 @@ function massHeight(mass, style, archetype, rarity, level) {
 /**
  * Lợp mái cho một mảng nhà. Đây là chi tiết PHÂN BIỆT KỶ mạnh nhất: cùng một khối hộp, đội mái nón
  * rơm thì ra túp lều, đội phiến kính mỏng thì ra kiến trúc tương lai.
+ *
+ * ⚠️ HÀM NÀY **TRẢ VỀ CHỖ ĐỨNG CỦA MÁI** (`RoofAnchors`) — và đó không phải một tiện ích, nó là
+ * cách duy nhất đúng để `rooftop.js` biết đặt cái ống khói/bồn nước ở đâu (Phase 11). Cách sai là
+ * để `rooftop.js` chép lại công thức `eaves → rw → pitch → cộng dồn chiều cao từng tầng`; dự án đã
+ * trả giá cho đúng hình dạng ấy hai lần (`sweep-score.mjs` chép công thức của `city-preview.mjs`
+ * kèm một mặc định `--cell` khác — Phase 4G; `sceneGraph.js` DỰ ĐOÁN số tam giác trong khi three
+ * biết chính xác — Performance Gate). Một luật, một công thức: **chỉ chỗ nào DỰNG ra hình mới được
+ * phát biểu hình ấy nằm ở đâu.**
+ *
+ * @returns {{x:number, z:number, eaveY:number, apexY:number, rw:number, rd:number, pitch:number,
+ *            deck:{x:number,z:number,y:number,w:number,d:number}|null,
+ *            ridges:Array<{x:number,z:number,y:number,w:number,ry:number}>}}
+ *   `eaveY` đỉnh tường (chân mái) · `apexY` điểm cao nhất · `deck` mặt bằng ĐỨNG ĐƯỢC (`null` khi
+ *   mái dốc — và `null` phải được tôn trọng, không được xấp xỉ) · `ridges` các sống mái.
  */
 function emitRoof(out, { w, d, top, x, z }, style, ctx) {
   const eaves = eaveOverhang(style, w, d);
   const rw = w + eaves * 2;
   const rd = d + eaves * 2;
   const pitch = Math.max(0.08, style.roofPitch) * Math.max(w, d);
+  const anchors = { x, z, eaveY: top, apexY: top, rw, rd, pitch, deck: null, ridges: [] };
 
   switch (style.roof) {
     case 'cone':
       out.push(prism({ x, z, y: top, w: rw, d: rd, h: pitch, sides: 8, taper: 0, role: 'roof' }));
+      anchors.apexY = top + pitch;
       break;
 
-    case 'gable':
-      out.push(gable({
-        x, z, y: top, w: rw, d: rd, h: pitch, role: 'roof',
-        // Xoay 90° cho một phần công trình để dãy nhà không cùng quay một hướng như xếp hàng.
-        //
-        // ⚠️ TRỪ KỲ QUAN — lỗi thật, phát hiện 2026-08-14 khi bài test đối xứng được mở rộng ra cả
-        // 15 kỷ. Hàm băm ở đây lấy khoá theo `x|z` của TỪNG MẢNG NHÀ, mà kỳ quan epic có bốn tháp
-        // góc ở bốn toạ độ khác nhau ⇒ bốn cái mái quay bốn hướng độc lập nhau. Trên màn hình đó là
-        // một toà cung điện đối xứng hoàn hảo đội bốn cái mái lệch pha. Bài test cũ không bắt được
-        // vì nó chỉ soi kỷ 1 (mái `cone`, không có nóc để mà quay); chỉ hai kỷ mái `gable` (5 và 8)
-        // dính, và cả hai đều đã chạy như vậy nhiều tháng mà không có gì đỏ lên.
-        ry: !ctx.symmetric && unit(`${ctx.bpId}|ridge|${x}|${z}`) > 0.55 ? Math.PI / 2 : 0,
-      }));
+    case 'gable': {
+      // Xoay 90° cho một phần công trình để dãy nhà không cùng quay một hướng như xếp hàng.
+      //
+      // ⚠️ TRỪ KỲ QUAN — lỗi thật, phát hiện 2026-08-14 khi bài test đối xứng được mở rộng ra cả
+      // 15 kỷ. Hàm băm ở đây lấy khoá theo `x|z` của TỪNG MẢNG NHÀ, mà kỳ quan epic có bốn tháp
+      // góc ở bốn toạ độ khác nhau ⇒ bốn cái mái quay bốn hướng độc lập nhau. Trên màn hình đó là
+      // một toà cung điện đối xứng hoàn hảo đội bốn cái mái lệch pha. Bài test cũ không bắt được
+      // vì nó chỉ soi kỷ 1 (mái `cone`, không có nóc để mà quay); chỉ hai kỷ mái `gable` (5 và 8)
+      // dính, và cả hai đều đã chạy như vậy nhiều tháng mà không có gì đỏ lên.
+      //
+      // ⚠️ Và góc xoay ấy nay phải ĐI RA NGOÀI cùng `anchors.ridges`: sống mái quay hướng nào thì
+      // cuộn nóc và thanh nóc của `rooftop.js` phải nằm đúng hướng đó. Đây chính là thứ sẽ lệch
+      // trong im lặng nếu file kia tự đoán lại.
+      const ridgeRy = !ctx.symmetric && unit(`${ctx.bpId}|ridge|${x}|${z}`) > 0.55 ? Math.PI / 2 : 0;
+      out.push(gable({ x, z, y: top, w: rw, d: rd, h: pitch, role: 'roof', ry: ridgeRy }));
+      anchors.apexY = top + pitch;
+      anchors.ridges.push({ x, z, y: top + pitch, w: rw, ry: ridgeRy });
       break;
+    }
 
     case 'flat': {
       // Mái bằng vẫn phải có GỜ CHẮN MÁI, nếu không khối hộp cụt ngọn trông như bị cắt dở.
@@ -171,11 +194,13 @@ function emitRoof(out, { w, d, top, x, z }, style, ctx) {
       // ⚠️ Tấm phủ phải HẸP HƠN gờ (0,94) — bằng hoặc rộng hơn thì nó nuốt mất cái gờ và khối lại
       // trông như bị cắt cụt, đúng cái bệnh mà gờ chắn mái sinh ra để chữa.
       const lip = Math.max(0.05, pitch * 0.28);
+      const capH = Math.max(0.05, pitch * 0.34);
       out.push(prism({ x, z, y: top, w: rw, d: rd, h: lip, sides: 4, role: 'trim' }));
-      out.push(prism({
-        x, z, y: top + lip, w: rw * 0.94, d: rd * 0.94,
-        h: Math.max(0.05, pitch * 0.34), sides: 4, role: 'roof',
-      }));
+      out.push(prism({ x, z, y: top + lip, w: rw * 0.94, d: rd * 0.94, h: capH, sides: 4, role: 'roof' }));
+      anchors.apexY = top + lip + capH;
+      // Mặt sàn mái — đây mới là chỗ ĐỨNG ĐƯỢC, và nó là mặt trên của TẤM PHỦ chứ không phải của
+      // cái gờ: đặt đồ lên mặt gờ thì bồn nước sẽ lún nửa thân vào tấm phủ.
+      anchors.deck = { x, z, y: anchors.apexY, w: rw * 0.94, d: rd * 0.94 };
       break;
     }
 
@@ -187,9 +212,13 @@ function emitRoof(out, { w, d, top, x, z }, style, ctx) {
         const h = pitch * (0.5 - i * 0.12);
         out.push(prism({ x, z, y: cy, w: cw, d: cd, h, sides: 4, role: i === 0 ? 'trim' : 'roof' }));
         cy += h;
+        // ⚠️ Mặt bằng đứng được là mặt trên của bậc CUỐI, nên phải chốt trước khi thu tiếp — chốt
+        // sau vòng lặp thì được bề ngang của một bậc thứ tư không tồn tại (nhỏ hơn thật 28%).
+        anchors.deck = { x, z, y: cy, w: cw, d: cd };
         cw *= 0.72;
         cd *= 0.72;
       }
+      anchors.apexY = cy;
       break;
     }
 
@@ -211,7 +240,12 @@ function emitRoof(out, { w, d, top, x, z }, style, ctx) {
           h: TRIM_THICKNESS, sides: 4, role: 'trim',
         }));
         cy += h + pitch * 0.1;
+        // Sống mái của bộ mái chồng tầng nằm trên MẶT ĐỈNH của tầng trên cùng — mà mặt ấy hẹp,
+        // vì mỗi tầng là một chóp thoải (`taper` 0,34). Đúng như mái điện thật: bờ nóc rất ngắn so
+        // với bề ngang mái, và chính sự tương phản ấy làm bộ mái đọc ra là "chồng tầng".
+        anchors.ridges = [{ x, z, y: cy - pitch * 0.1, w: rw * shrink * 0.34, ry: 0 }];
       }
+      anchors.apexY = cy;
       break;
     }
 
@@ -237,11 +271,13 @@ function emitRoof(out, { w, d, top, x, z }, style, ctx) {
         x, z, y: top + cornice * 1.5 + pitch * 0.88, w: drum * 0.2, d: drum * 0.2, h: pitch * 0.3,
         sides: 6, taper: 0.2, role: 'gold',
       }));
+      anchors.apexY = top + cornice * 1.5 + pitch * 1.18;
       break;
     }
 
     case 'pyramid':
       out.push(prism({ x, z, y: top, w: rw, d: rd, h: pitch, sides: 4, taper: 0.06, role: 'roof' }));
+      anchors.apexY = top + pitch;
       break;
 
     case 'sawtooth': {
@@ -249,25 +285,36 @@ function emitRoof(out, { w, d, top, x, z }, style, ctx) {
       const teeth = 3;
       const step = rd / teeth;
       for (let i = 0; i < teeth; i += 1) {
-        out.push(gable({
-          x, z: z - rd / 2 + step * (i + 0.5), y: top,
-          w: rw, d: step * 0.92, h: pitch * 0.7, role: 'roof',
-        }));
+        const tz = z - rd / 2 + step * (i + 0.5);
+        out.push(gable({ x, z: tz, y: top, w: rw, d: step * 0.92, h: pitch * 0.7, role: 'roof' }));
+        // ⚠️ BA sống mái, không phải một. Mái răng cưa có bao nhiêu răng thì có bấy nhiêu nóc, và
+        // đó chính là thứ làm nó đọc ra là mái nhà máy. Trả về một cái là mất hai phần ba đường nét.
+        anchors.ridges.push({ x, z: tz, y: top + pitch * 0.7, w: rw, ry: 0 });
       }
+      anchors.apexY = top + pitch * 0.7;
       break;
     }
 
-    case 'blade':
+    case 'blade': {
       // Phiến mỏng lơ lửng, tách khỏi thân bằng một khe hở — khe hở mới là thứ tạo cảm giác bay.
+      const bladeH = pitch * 0.34;
       out.push(prism({
-        x, z, y: top + pitch * 0.5, w: rw * 1.12, d: rd * 1.12, h: pitch * 0.34,
-        sides: 4, role: 'roof',
+        x, z, y: top + pitch * 0.5, w: rw * 1.12, d: rd * 1.12, h: bladeH, sides: 4, role: 'roof',
       }));
+      anchors.apexY = top + pitch * 0.5 + bladeH;
+      anchors.deck = { x, z, y: anchors.apexY, w: rw * 1.12, d: rd * 1.12 };
       break;
+    }
 
-    default:
-      out.push(prism({ x, z, y: top, w: rw, d: rd, h: pitch * 0.5, sides: 4, role: 'trim' }));
+    default: {
+      const slabH = pitch * 0.5;
+      out.push(prism({ x, z, y: top, w: rw, d: rd, h: slabH, sides: 4, role: 'trim' }));
+      anchors.apexY = top + slabH;
+      anchors.deck = { x, z, y: anchors.apexY, w: rw, d: rd };
+    }
   }
+
+  return anchors;
 }
 
 // ─── CỬA SỔ ──────────────────────────────────────────────────────────────────
@@ -721,7 +768,25 @@ export function buildBuildingSpec({ bpId, era, type, rarity = 'common', level = 
         }));
       }
 
-      emitRoof(parts, { w, d, top, x, z }, style, ctx);
+      const anchors = emitRoof(parts, { w, d, top, x, z }, style, ctx);
+
+      // ── PHẦN TRÊN MÁI (Phase 11) ─────────────────────────────────────────
+      // ⚠️ Camera nhìn TỪ TRÊN XUỐNG ⇒ mái là mặt lớn nhất trong khung hình của mỗi công trình.
+      // Bước 2 của Phase 10 đã đo được mặt kia của cùng sự thật: tầng trệt gần như không nhìn thấy
+      // trên bản quét, dù nó đúng và dù test xanh.
+      // ⚠️ `anchors` là thứ `emitRoof` VỪA TRẢ VỀ, không phải thứ `rooftop.js` tự tính lại — xem
+      // chú thích ở `emitRoof`. Và KHÔNG có luật "bỏ qua tháp góc" ở đây: `ROOFTOP_MIN_SPAN` là
+      // một phép ĐO trên bề ngang thật, nên tháp canh tự rụng mà không cần ai nhớ, đúng cách
+      // `doorMetrics` trả `null` thay vì để `emitGroundFloor` phải biết trước cái gì là tháp.
+      const beforeRooftop = parts.length;
+      emitRooftop(parts, getRoofStyle(era), anchors, {
+        bpId: id, index,
+        plain: Boolean(archetype.plain),
+        // ⚠️ Kỳ quan phải cân TUYỆT ĐỐI, kể cả phần trên mái — hai bài test đối xứng có sẵn đã bắt
+        // đúng chỗ này ngay lần chạy đầu của Phase 11. Xem `emitRooftop`.
+        symmetric: Boolean(archetype.symmetric),
+      });
+      for (let i = beforeRooftop; i < parts.length; i += 1) parts[i].rooftop = true;
     } else {
       // Khối thấp (sân, bệ, tường bao): chỉ có gờ trên, không lợp mái.
       parts.push(prism({

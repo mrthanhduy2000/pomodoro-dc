@@ -6,7 +6,76 @@
 > chọn: `ARCHITECTURE_DECISIONS.md`. Nợ kỹ thuật: `TECH_DEBT.md`. Migration: `MIGRATION.md`. Tóm
 > tắt theo mốc: `CHANGELOG.md`.
 > **NGUYÊN TẮC ƯU TIÊN SỐ 1:** (1) mọi phiên AI phải đọc file này + `CLAUDE.md` + các file liên quan TRƯỚC khi làm; (2) sau MỌI cập nhật dù nhỏ, phải cập nhật ngay file này + `CLAUDE.md` + các file liên quan khác.
-> Cập nhật lần cuối: **2026-08-18** — **VIỆC 2: BẢNG TẦNG TRỆT DỌN SANG FILE RIÊNG, TRƯỚC KHI
+> Cập nhật lần cuối: **2026-08-18** — **VIỆC 3 / PHASE 11: MÁI THÔI LÀ MỘT TẤM PHẲNG TRƠN.**
+> Camera nhìn **chúc xuống**, nên mái là mặt lớn nhất trong khung hình — mà tới hết Phase 10 nó vẫn
+> trơn nhẵn ở cả 15 kỷ. Nay có **ngữ pháp thứ năm** theo đúng khuôn ba lớp đã dùng bốn lần: BẢNG
+> `city3d/roofStyle.js` · HÌNH `city3d/rooftop.js` · `buildingSpec.js` chỉ ĐỌC. Hai trục vuông góc
+> — `stack` (thứ **nhô lên** phá mặt phẳng) và `crown` (thứ **vẽ đường nét**). ADR-030.
+> **798 bài test** (775 + 23 mới), lint sạch, build xanh, **0 lệnh vẽ mới ở cả 15 kỷ**, tam giác
+> thành phố +27,9%. **15 phép phá, 14 đỏ đúng chỗ đã nêu trước; cái thứ 15 KHÔNG đỏ và đó là một
+> phát hiện thật** (xem ngay dưới). ⏳ **CHƯA gộp `main`** — mục 5 chương trình làm việc.
+> ⛔ **NÓI THẲNG TRƯỚC MỌI THỨ KHÁC: PHASE NÀY KHÔNG ĐẠT CÁI BAR ĐÀM ĐẶT RA.** Đàm yêu cầu ảnh
+> nghiệm thu phải có **bản quét 15 kỷ đặt CẠNH bản trước**, và nói rõ: *"nếu hai bản quét vẫn khó
+> phân biệt như Bước 2 thì phase này CHƯA đạt mục tiêu của nó — nói thẳng ra, đừng khoe test xanh
+> thay cho kết quả nhìn được."* Đo bằng `sweep-diff.mjs` (cùng đơn vị, cùng ngưỡng mắt 12):
+> **90/90 ô DƯỚI ngưỡng · trung vị 2,2 · kỷ đổi mạnh nhất là kỷ 7 cũng chỉ 7,4.** Hai bản quét
+> **KHÔNG phân biệt được**. Test xanh, 0 lệnh vẽ mới, +110.076 tam giác — nhưng ở thang bản quét
+> thì công sức ấy **không tới được mắt**.
+> ⚠️ **VÀ CHI TIẾT ẤY CÓ THẬT — NÓ CHỈ KHÔNG SỐNG SÓT TỚI THANG QUÉT.** Ba thang, cùng đơn vị
+> RGB/255, cùng ngưỡng 12, đều chụp lại từ `git worktree` ở `e089c00` cho vế TRƯỚC:
+>
+> | thang | kỷ 7 | kỷ 8 | kỷ 9 | kỷ 11 |
+> |---|--:|--:|--:|--:|
+> | bản quét (thành phố ≈ 300px) | 7,4 | 1,3 | 6,1 | 4,8 | ← đều DƯỚI ngưỡng 12 |
+> | khung app (1134×780) | **8,4%** | 1,2% | **5,3%** | 3,5% | ← % điểm ảnh đổi quá ngưỡng |
+> | zoom 0,45 sát mái | — | — | **15,1%** | 4,8% | |
+>
+> ⇒ Nghịch lý đáng ghi: **kỷ 8 tốn nhiều hình học nhất (+48,5% tam giác) mà đổi ít nhất (1,2%)** —
+> ngói bò (`barrel`) là những cục nhỏ lặp lại, tốn khối nhất và tan biến sớm nhất khi lùi xa. Còn
+> `dormer` (kỷ 9) và `balustrade` (kỷ 7) thì phá được đường viền mái nên sống lâu hơn. **Bài học
+> cho phase sau: thứ sống sót ở xa là thứ đổi ĐƯỜNG VIỀN, không phải thứ thêm bề mặt.**
+> ⇒ **Việc kế tiếp là một câu hỏi cho Đàm, không phải một bản vá** — phóng to vật trên mái là quyết
+> định MỸ THUẬT mà tôi chưa đủ 80% tự tin (bẫy số 2 của chính chương trình: "cây nấm" — Phase 7C đã
+> trả giá một lần vì `eaves` tuyệt đối). Theo mục 5 chương trình làm việc thì phải DỪNG VÀ HỎI.
+> ⚠️ **MỘT CON SỐ SAI TRONG `PERFORMANCE.md`, ĐÃ SỬA: KỶ 5.** Hàng "Mốc" tóm tắt ghi **11** trong
+> khi bảng số liệu ngay phía trên nó ghi **10 → 10** và `MOC_LENH_VE` trong `drawCallBudget.test.js`
+> cũng ghi **10**; lượt đo Phase 11 xác nhận **10**. Tức hàng tóm tắt ấy đang nới cổng của kỷ 5 thêm
+> một lệnh vẽ, ngay trong tài liệu vừa viết ra để chống đúng chuyện đó. Một bảng số và một hàng TÓM
+> TẮT của chính bảng ấy là **hai bản chép** — thứ cứu được ở đây là bản chép thứ ba (bài test), vì
+> nó là bản duy nhất máy đọc.
+> ⚠️ **ẢNH NGHIỆM THU TỪNG MANG TÊN NÓI DỐI — SUÝT ĐƯA HAI CON SỐ KHÔNG TRUY ĐƯỢC NGUỒN VÀO BÁO
+> CÁO.** `MAI-SAU-ky9.png` (tên nói là "cận mái") trùng **từng byte** với `city-era09-light-h12.png`
+> (khung thường); `md5sum` bắt được. Hai con số cũ (4,5% · 16,5%) đã bị **vứt bỏ và đo lại** ra
+> 5,3% · 15,1% — gần bằng, nhưng "gần đúng" không phải lý do giữ một con số không truy được nguồn.
+> Đã ghi thành bài học ở `CLAUDE.md` + thêm chế độ `--frame` cho `sweep-diff.mjs` (có `--selftest`).
+> ⚠️ **BÀI TEST MỚI BẮT ĐƯỢC MỘT LỖI THẬT TRONG MÃ VỪA VIẾT — LẦN THỨ HAI LIÊN TIẾP.** Bài "kỳ quan
+> cân tuyệt đối với MỌI tổ hợp" duyệt cả 6 × 11 tổ hợp (thay vì chỉ những tổ hợp bảng ĐANG dùng) và
+> đỏ ngay ở `planter`: `emitPlanter` nhét `off` vào **CHUỖI KHOÁ** hạt giống (`` `lobe0|${off}` ``)
+> rồi gọi `at(k, 0)`, tức **vô hiệu hoá cái nút bịt đối xứng** đặt ở `emitRooftop` — hai bồn cây soi
+> gương nhau nhận hai khoá khác nhau ⇒ hai bụi cây to nhỏ khác nhau ⇒ kỳ quan lệch. Đúng cái chú
+> thích ở `emitRooftop` đã tự cảnh báo (*"bịt mười lăm chỗ thì chỗ thứ mười sáu viết sau này sẽ
+> quên"*), và chỗ thứ mười sáu ấy nằm ngay dưới chính câu cảnh báo đó. ⚠️ Lỗi này **KHÔNG lộ ra ở
+> kỷ 15** — kỷ duy nhất cho kỳ quan đội bồn cây — vì mái nó chỉ nhét vừa MỘT bồn, mà một bồn thì
+> `off = 0` nên khoá tự cân. Bài test cũ (đo trên 15 kỷ thật) sẽ chỉ đỏ vào ngày có ai gán bồn cây
+> cho một kỳ quan rộng hơn, tức **đỏ MUỘN, sau khi bảng đã đổi**.
+> ⚠️ **PHÉP PHÁ THỨ 15 KHÔNG NỔ — VÀ NGHI PHÉP PHÁ TRƯỚC LÀ ĐÚNG.** Để thử bài "không có hai cái
+> mái giống hệt nhau", tôi ép `anchors.rw`/`rd` về hằng số. Không đỏ. Lý do: `deck` và `ridges`
+> được tính từ biến `rw` **cục bộ**, không từ `anchors.rw` — tôi đã ghim một trường mà phần lớn mã
+> không đọc. Phá đúng (ép cả `x`/`z`/`deck`/`ridges`) thì đỏ ngay. Và đo tiếp mới ra chuyện đáng
+> nói hơn: bài ấy được giữ xanh bởi **HAI** thứ độc lập — `rooftop.js` bám theo neo, **và** neo tự
+> nó khác nhau; ép chung một trong hai thì không đỏ. Nói cho đúng thì nguồn biến thể nằm ở **bộ
+> sinh khối nhà**, không ở `rooftop.js`. Đã ghi thẳng vào chú thích bài test (bài học Phase 4D:
+> *"một bài test xanh không cho biết có BAO NHIÊU thứ đang giữ nó xanh"*).
+> ⚠️ **VÀ MỘT ĐỐI CHỨNG SUÝT ĐỎ OAN VÌ DẤU PHẨY ĐỘNG**: bài đối chứng "bước lượng hoá `crownWeight`
+> không được quá thô" dựng `1,0 + bước` rồi đòi phép đo phải thấy — và nó ĐỎ ở `barrel`, vì
+> `(0,35 + 0,0890…) − 0,35` ra **nhỏ hơn** chính cái bước. Đứng đúng TRÊN ngưỡng thì kết quả do sai
+> số cuối cùng của phép cộng quyết định. Đã đổi sang **ghim hai phía** (99,9% phải KHÔNG thấy ·
+> 100,1% phải thấy) — chặt hơn bản cũ chứ không lỏng hơn. Và lúc đo mới lộ ra sự thật thứ hai:
+> bước của `barrel` (1,459) **rộng hơn cả dải `crownWeight` hợp lệ** (1,25), tức hai kỷ cùng lợp
+> ngói ống **không bao giờ** tách được bằng trọng số. Đã khoá bằng `assert.deepEqual(KHONG_VUA_DAI,
+> ['barrel'])` và ghi `TECH_DEBT #39`.
+>
+> *(Trước đó — 2026-08-18)* — **VIỆC 2: BẢNG TẦNG TRỆT DỌN SANG FILE RIÊNG, TRƯỚC KHI
 > PHASE 11 THÊM BẢNG THỨ HAI.** Đây là chuyện **QUY ƯỚC**, không phải chuyện file dài (Đàm nói
 > thẳng). Dự án đã tách bảng ra file riêng **ba lần** — `floraStyle.js` · `streetStyle.js` ·
 > `horizon.js` — nên `eraStyle.js` ôm bảng tầng trệt là **chỗ lệch khuôn duy nhất**, và Phase 11
@@ -303,6 +372,72 @@
 - **Lịch sử git `main` từng bị xáo** (thao tác git song song): bản đang chạy là `eb44638` — chứa ĐỦ mọi việc gần đây (Hỏi Coach offline + fix đêm khuya + Coach offline analyst). Vài commit cũ (`1e27505`, `9fbcd62`) thành dangling, KHÔNG còn trong `git log` nhưng code vẫn nằm trong bản deploy. Đừng hoảng nếu không thấy chúng.
 
 ## 🗒️ Nhật ký cập nhật
+
+### 2026-08-18 — Việc 3 / Phase 11: mái thôi là một tấm phẳng trơn (ADR-030)
+
+**Đàm yêu cầu**: *"(1) thứ phá vỡ mặt phẳng — ống khói · bể nước · cục nóng · lồng thang máy · cột
+ăng-ten · giàn phơi · chậu cây sân thượng; (2) thứ tạo đường nét trên mái — sống mái nổi, ngói bò,
+đầu đao, lan can mái; (3) cửa sổ mái/dormer (kỷ 9 Pháp, kỷ 10 Anh). Mỗi kỷ đúng một-hoặc-hai đặc
+trưng, buộc vào `country`, có test khoá."* Và một câu dặn riêng về ảnh nghiệm thu: *"Nếu hai bản
+quét vẫn khó phân biệt như Bước 2 thì phase này CHƯA đạt mục tiêu của nó — nói thẳng ra, đừng khoe
+test xanh thay cho kết quả nhìn được."*
+
+**Đã làm**
+
+1. **`city3d/roofStyle.js` — bảng 15 kỷ, HAI TRỤC vuông góc.** `stack` (thứ nhô lên phá mặt phẳng,
+   11 kiểu) và `crown` (thứ vẽ đường nét, 6 kiểu). Mỗi kỷ có một chú thích dài nêu đích danh công
+   trình có thật: lều tranh Anatolia · nhà bùn sông Nin · ziggurat Ur · điện Trung Hoa · Burg Eltz ·
+   đình làng Bắc Bộ · dinh thự Phục Hưng · nhà Pombaline Lisboa · Panthéon + mái Haussmann · nhà máy
+   Manchester · nhà thuê New York · nhà tập thể Xô Viết · tháp Nakagin · Marina Bay · Dubai.
+2. **Tách đôi kỳ quan ↔ nhà dân ở 4 trường** (`crown`/`stack` ↔ `vernacularCrown`/`vernacularStack`),
+   bắt buộc cả 15 kỷ. Bốn ca đo được, không ca nào hai vế trùng: Panthéon giấu mái sau lan can ↔
+   mái kẽm Haussmann cắm đầy lucarne · nhà máy Manchester mái răng cưa ↔ dãy nhà thợ ba ống khói ·
+   tháp Beaux-Arts buồng máy thang ↔ nhà thuê New York bồn nước gỗ · ziggurat Ur tường chắn ↔ nhà
+   bùn cửa sập lên mái.
+3. **`stackCount` thì CỐ Ý KHÔNG tách** — "một ống khói Đức, ba ống Manchester, bốn cục nóng
+   Singapore" là sự thật văn hoá của cả thành phố, không phải một mức chi tiết. Hỏi lại đúng câu
+   hỏi cũ (*"ngoài đời hai thứ này có luôn đi cùng nhau không?"*) thì lần này đáp án là **CÓ**.
+4. **`city3d/rooftop.js` — hình.** Mọi kích thước là tỉ lệ có trần; mái hẹp hơn `ROOFTOP_MIN_SPAN`
+   thì **không có gì trên nó**, chứ không phải một cái ống khói tí hon.
+5. **23 bài test mới** (`roofStyle.test.js` 11 · `rooftop.test.js` 12), **15 phép phá** đều nêu
+   trước chỗ mong đợi đỏ.
+
+**Số đo**
+
+| | Trước | Sau |
+|---|---:|---:|
+| Bài test | 775 | **798** |
+| Lệnh vẽ (15 kỷ) | 9·11·11·11·10·11·11·11·10·12·10·10·10·10·10 | **y hệt — 0 lệnh vẽ mới** |
+| Tam giác thành phố | 394.466 | **504.458** (+27,9%) |
+| Phần mái chiếm | — | **21,8%** tổng tam giác |
+| 105 cặp kỷ, 6 trục | — | cực tiểu **2** · trung vị **4** · cả 6 trục còn sống |
+
+**Ba phát hiện đáng ghi**
+
+- **Bài test bắt được lỗi thật trong mã vừa viết, lần thứ hai liên tiếp.** Bài "kỳ quan cân tuyệt
+  đối với MỌI tổ hợp" duyệt cả 6 × 11 (thay vì chỉ tổ hợp bảng ĐANG dùng) và đỏ ở `planter`:
+  `emitPlanter` nhét `off` vào **chuỗi khoá** hạt giống rồi gọi `at(k, 0)`, tức vô hiệu hoá nút bịt
+  đối xứng đặt ở `emitRooftop` — chỗ thứ mười sáu mà chính chú thích ở đó đã cảnh báo. Lỗi này
+  không lộ ra ở kỷ 15 (kỷ duy nhất dùng tổ hợp ấy) vì mái nó chỉ nhét vừa MỘT bồn ⇒ `off = 0` ⇒
+  khoá tự cân.
+- **Phép phá thứ 15 không nổ, và nghi phép phá trước là đúng.** Ép `anchors.rw`/`rd` về hằng số
+  không làm đỏ bài "không có hai mái giống hệt nhau" — vì `deck`/`ridges` tính từ biến `rw` **cục
+  bộ**, tôi ghim một trường mà phần lớn mã không đọc. Phá đúng thì đỏ. Đo tiếp mới thấy bài ấy được
+  giữ xanh bởi **HAI** thứ độc lập, và nguồn biến thể thật nằm ở **bộ sinh khối nhà** chứ không ở
+  `rooftop.js` — đã ghi thẳng vào chú thích.
+- **Một đối chứng suýt đỏ oan vì dấu phẩy động, và nó che một sự thật thứ hai.** Đối chứng "bước
+  lượng hoá không được quá thô" đứng đúng TRÊN ngưỡng nên kết quả do sai số phép cộng quyết định.
+  Đổi sang ghim hai phía (99,9% không thấy · 100,1% phải thấy) — chặt hơn bản cũ. Lúc đo mới lộ ra:
+  bước của `barrel` (1,459) **rộng hơn cả dải hợp lệ** (1,25) ⇒ hai kỷ cùng lợp ngói ống không bao
+  giờ tách được bằng trọng số. Khoá bằng `assert.deepEqual(KHONG_VUA_DAI, ['barrel'])` + `TECH_DEBT
+  #39`.
+
+**Nợ mở thêm**: `#39` (trục `crownWeight` mỏng) · `#40` (`parts.js` không có `rx`/`rz` nên ngói ống
+là phép xấp xỉ). Cả hai Low, đều có điều kiện xem lại.
+
+**Chưa làm**: chưa gộp `main` (mục 5 chương trình làm việc — luôn phải hỏi Đàm).
+
+---
 
 ### 2026-08-18 — Phase 10 Bước 2: cả 15 kỷ có cửa, `legacy` bị xoá hẳn (đóng `TECH_DEBT #36`)
 

@@ -294,7 +294,7 @@ hứa thật chưa bao giờ là "≤ 13"; nó là *"kỷ này không được t
 
 | Kỷ | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 |
 |---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|
-| Mốc | 9 | 11 | 11 | 11 | 11 | 11 | 11 | 11 | 10 | **12** | 10 | 10 | 10 | 10 | 10 |
+| Mốc | 9 | 11 | 11 | 11 | **10** | 11 | 11 | 11 | 10 | **12** | 10 | 10 | 10 | 10 | 10 |
 
 Khoá bằng `src/engine/city3d/drawCallBudget.test.js` — **4 bài, chạy trong `npm test`**:
 
@@ -340,6 +340,78 @@ không thêm vật liệu. Bằng chứng thứ nhất trong mục "Ba bằng ch
 lệch hình học chỉ đổi 2,4% thời gian** — mà cả hai bước của Phase 10 cộng lại chỉ thêm **12,7%** trên
 tổng 15 kỷ (kỷ nặng nhất +24,6%). Nếu Đàm chạy ra một con số lệch hẳn dự đoán này thì **chính dự đoán
 sai**, không phải máy hỏng, và phải quay lại đọc lý do.
+
+---
+
+## Sau Phase 11 — chi tiết trên mái (2026-08-18)
+
+Phase 11 thêm hai trục lên mái: **đường nét** (`crown` — sống mái nổi · ngói bò · đầu đao · lan can)
+và **vật đứng trên mái** (`stack` — ống khói · bể nước · cục nóng · lồng thang máy · cột ăng-ten ·
+giàn phơi · chậu cây · cửa sổ mái). Cùng điều kiện nghiệm thu của Phase 10, và cùng một lệnh đo:
+`node scripts/city-preview.mjs --era N --hour 12 --bench 1 --no-shadow`, chạy hai lượt (một trên
+`e089c00` = sau Việc 2, một trên cây làm việc).
+
+### Vế đã đo xong — lệnh vẽ và hình học, ĐỦ CẢ 15 KỶ
+
+| Kỷ | Nước | Lệnh vẽ TP T→S | Lệnh vẽ **cả cảnh** T→S | Tam giác TP T→S | Δ |
+|---:|---|---:|---:|---:|---:|
+| 1 | Thổ Nhĩ Kỳ | 9 → 9 | 11 → 11 | 21.058 → 22.966 | +9,1% |
+| 2 | Ai Cập | 11 → 11 | 13 → 13 | 21.522 → 28.674 | +33,2% |
+| 3 | Iraq | 11 → 11 | 13 → 13 | 31.686 → 40.594 | +28,1% |
+| 4 | Trung Quốc | 11 → 11 | 13 → 13 | 41.482 → 49.274 | +18,8% |
+| 5 | Đức | 10 → 10 | 12 → 12 | 32.424 → 35.184 | +8,5% |
+| 6 | Việt Nam | 11 → 11 | 13 → 13 | 39.738 → 49.658 | +25,0% |
+| 7 | Ý | 11 → 11 | 13 → 13 | 41.178 → 56.170 | +36,4% |
+| 8 | Bồ Đào Nha | 11 → 11 | 13 → 13 | 39.314 → 58.370 | +48,5% |
+| 9 | Pháp | 10 → 10 | 12 → 12 | 41.282 → 49.506 | +19,9% |
+| 10 | Anh | 12 → 12 | 14 → 14 | 39.350 → 43.298 | +10,0% |
+| 11 | Mỹ | 10 → 10 | 12 → 12 | 41.702 → 50.114 | +20,2% |
+| 12 | Nga | 10 → 10 | 12 → 12 | 32.050 → 34.346 | +7,2% |
+| 13 | Nhật Bản | 10 → 10 | 12 → 12 | 42.546 → 46.366 | +9,0% |
+| 14 | Singapore | 10 → 10 | 12 → 12 | 32.678 → 39.094 | +19,6% |
+| 15 | UAE | 10 → 10 | 12 → 12 | 37.350 → 41.822 | +12,0% |
+| **Tổng** | | | | **535.360 → 645.436** | **+20,6%** |
+
+⚠️ Cột "cả cảnh" gồm cả vòm trời + rặng núi (hằng số **44.126** tam giác ở mọi kỷ) — phải trừ ra khi
+so các kỷ với nhau.
+
+**Phase 11 thêm ĐÚNG 0 lệnh vẽ, ở cả 15 kỷ** — và đây không phải may mắn mà là một ràng buộc được
+khoá bằng test. `rooftop.test.js` bài 12 khoá rằng cả tầng mái chỉ được dùng lại **đúng 7 vai màu đã
+có** (`dark` · `glass` · `leaf` · `roof` · `stone` · `trim` · `wood`), cộng một gác riêng: kỷ nào khai
+`dormer` (cửa sổ mái, cần kính) thì kỷ ấy **phải đã dùng `glass` ở chỗ khác rồi**. Không có gác thứ
+hai đó thì một dòng bảng vô hại sẽ lặng lẽ kéo thêm một họ vật liệu vào một kỷ chưa có kính.
+
+⚠️ **Bảng 15 mốc lệnh vẽ ở mục Phase 10 KHÔNG đổi một dòng nào** — cả 15 kỷ vẫn đúng mốc cũ, đo lại
+bằng chính lệnh trên. Đây cũng là **phép tự-kiểm của bảng số này**: nếu một dòng mốc lệch thì thứ
+hỏng là phép đo, vì Phase 11 về mặt kiến trúc không thể sinh lệnh vẽ mới.
+
+### ❗ MỘT CON SỐ SAI TRONG CHÍNH TÀI LIỆU NÀY, ĐÃ SỬA: KỶ 5
+
+Hàng "Mốc" tóm tắt ở mục Phase 10 ghi **kỷ 5 = 11**, trong khi bảng số liệu nằm ngay phía trên nó
+(cột "Lệnh vẽ TP") ghi **10 → 10**, và `MOC_LENH_VE` trong `drawCallBudget.test.js` cũng ghi **10**.
+Lượt đo Phase 11 xác nhận con số thật là **10**. Tức hàng tóm tắt ấy nới cổng của kỷ 5 thêm một lệnh
+vẽ, âm thầm, ngay trong tài liệu vừa được viết ra để chống đúng chuyện đó. Đã sửa về **10**.
+
+⇒ **Bài học, cùng họ với "một luật một công thức":** một bảng số và một hàng TÓM TẮT của chính bảng
+ấy là **hai bản chép**, nên chúng trôi khỏi nhau được. Ở đây cái cứu là bản chép thứ ba — bài test —
+vì nó là bản duy nhất máy đọc. Hàng tóm tắt chỉ nên tồn tại khi có ai đó đối chiếu nó; không thì
+tốt hơn hết là trỏ thẳng sang bảng gốc.
+
+### Hình học vẫn nằm sâu trong vùng rẻ
+
+Tổng 15 kỷ **535.360 → 645.436 tam giác (+20,6%)**; phần mái chiếm **110.076 tam giác = 17,1%** hình
+học thành phố sau phase. Kỷ nặng nhất là **kỷ 8 (+48,5%)** — Bồ Đào Nha khai `barrel` (ngói bò) cho
+cả kỳ quan lẫn nhà dân, mà ngói bò là kiểu tốn khối nhất trong bảng.
+
+⚠️ **Đừng đọc "+20,6%" thành "đắt lên 20,6%".** Mô hình chi phí đã đo trên M3 nói **80% chi phí đi
+theo ĐIỂM ẢNH**, và bằng chứng số 1 ở mục "Ba bằng chứng" nói **43% chênh lệch hình học chỉ đổi 2,4%
+thời gian**. Phase 11 không đổi cỡ khung, không đổi DPR, không thêm nguồn sáng, không thêm shader,
+không thêm vật liệu, không thêm lệnh vẽ. **Dự đoán (chưa phải phép đo): không đổi đáng kể.**
+
+### Vế CHƯA đo — frame time trên M3
+
+Vẫn nợ, y như sau Phase 10: bộ số ms trong tài liệu này là của ngày 2026-08-17. Hộp cát AI chạy
+SwiftShader nên **không suy ra được** cho GPU thật. Muốn đóng thì Đàm chạy `bash scripts/bench-macbook.sh`.
 
 ---
 

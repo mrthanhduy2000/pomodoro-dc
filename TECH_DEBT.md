@@ -26,6 +26,22 @@
 > (#3, #13) + **1 mục Medium-High chờ Đàm quyết** (#24) = 4 → xa ngưỡng 8–10, KHÔNG cần Maintenance
 > Sprint.
 >
+> **Cập nhật 2026-08-18 (Phase 12 / Việc 1 — đường sá, nguyên nhân 1)**: **MỞ #42, Priority
+> Medium** — vỉa hè bị cái kẹp `walk ≤ 0,5 − half` bóp trong im lặng trên ĐẠI LỘ ở **8/15 kỷ**, tệ
+> nhất còn **11%** bề rộng đã khai (kỷ 12 khai "vỉa hè mênh mông" mà dựng ra 0,02 ô). Phát hiện
+> trong lúc sửa mép đường; phần chặn lời hứa "hết bậc" đã sửa ở ADR-031, phần còn lại là quyết định
+> mỹ thuật ⇒ chờ Đàm. Nay còn **1 High** (#14) + **2 Medium-High** (#3, #13) + **3 chờ Đàm quyết**
+> (#24, #41, #42) = 6 → vẫn dưới ngưỡng 8–10, chưa cần Maintenance Sprint, nhưng **đã có ba mục
+> liên tiếp bị chặn bởi cùng một lý do (quyết định mỹ thuật)** — nếu con số này lên 4 thì nên gộp
+> thành một lượt hỏi Đàm duy nhất thay vì hỏi lẻ.
+>
+> **Cập nhật 2026-08-18 (Phase 12 — đo mốc nền)**: **MỞ #43, Priority Medium** — `PERFORMANCE.md`
+> KHÔNG có gì máy đọc được canh, và nó đã trôi thật: Phase 11-B sửa hình học mái rồi không cập nhật
+> tài liệu, để **6/15 kỷ sai số tam giác** suốt từ đó. Cột lệnh vẽ thì có `drawCallBudget.test.js`
+> canh nên vẫn đúng — tức chỗ có test thì không trôi, chỗ không có test thì trôi, ngay trong cùng
+> một bảng. Nay còn **1 High** (#14) + **2 Medium-High** (#3, #13) + **3 chờ Đàm quyết** (#24, #41,
+> #42) + **1 Medium** (#43) = 7 → vẫn dưới ngưỡng 8–10, nhưng chỉ còn cách một mục.
+>
 > **Cập nhật 2026-08-18 (Phase 11 — mái, ĐO ẢNH XONG)**: **MỞ #41, Priority Medium** — phase thêm
 > 110.076 tam giác lên mái mà **bản quét 15 kỷ vẫn không phân biệt được với bản trước** (90/90 ô
 > dưới ngưỡng mắt 12, trung vị 2,2), tức **KHÔNG đạt** điều kiện nghiệm thu Đàm đặt ra. Chi tiết có
@@ -2106,6 +2122,104 @@ ship một trạng thái dở dang, hãy làm nó **ĐẾM ĐƯỢC trong một 
 - **Review Trigger**: khi `crownWeight` tụt xuống 0 cặp tách được (bài `MỖI TRỤC PHẢI CÒN SỐNG` sẽ
   đỏ), hoặc khi có phase thêm kiểu đường nét thứ sáu.
 - **Owner**: chưa phân công · **Status**: Open
+
+---
+
+## #43 — Số tam giác trong `PERFORMANCE.md` không có gì canh, và nó ĐÃ trôi ở 6/15 kỷ
+
+- **Module**: `PERFORMANCE.md` (bảng số) ↔ `src/engine/city3d/*` + `src/components/city/render3d/*`
+  (nguồn sinh ra số)
+- **Priority**: Medium · **Severity**: Medium
+- **Impact**: `PERFORMANCE.md` là nơi DUY NHẤT trả lời *"thêm thứ này vào cảnh có nặng không?"*, và
+  mọi quyết định "còn dư sức, thêm chi tiết đi" đều dựa vào nó. Đo lại đủ 15 kỷ ngày 2026-08-18 thì
+  **6/15 kỷ sai**: kỷ 8 lệch −3.560 tam giác, kỷ 11 +3.776, kỷ 12 +4.160, kỷ 13 +3.776, kỷ 14
+  +2.624, kỷ 15 +3.584; tổng lệch **+14.360**. Nguyên nhân: `e95cdf1` (Phase 11-B) sửa
+  `roofStyle.js` — hình học thật — và không đụng `PERFORMANCE.md`.
+- **Root Cause**: **cột lệnh vẽ có một bài test canh (`drawCallBudget.test.js`, bảng 15 mốc), cột
+  tam giác thì không có gì cả.** Chỗ có test không trôi, chỗ không có test trôi — ngay trong cùng
+  một bảng, cùng một phase. Đây đúng bài học đã ghi ở `CLAUDE.md`: *"một bài học được ghi ra KHÔNG
+  chặn được gì; chỉ một bài TEST mới chặn được"*. Definition of Done có ghi "tài liệu đã đồng bộ",
+  nhưng nó là một câu chữ, và một câu chữ thì không đỏ lên được.
+- **Current Risk**: trung bình. Không hỏng gì lúc chạy, nhưng một con số ngân sách sai theo hướng
+  **trấn an** (bảng ghi kỷ 11 = 50.114 trong khi thật là 53.890) là loại sai tệ nhất cho một đồng
+  hồ đo — cùng hình dạng với vụ HUD thiếu 56% tam giác ngày 2026-08-17.
+- **Future Risk**: trung bình-cao và TĂNG DẦN. Mỗi phase mới lại thêm một bảng "trước → sau"; càng
+  nhiều bảng thì xác suất một bảng nào đó mô tả một commit đã chết càng cao, và không có cách nào
+  phát hiện ngoài việc đo lại tay đủ 15 kỷ (≈15 phút Chromium mỗi lượt).
+- **Recommended Solution**: ba hướng, chưa chọn.
+  (1) **Một bài test THUẦN cho tam giác**, giống hệt cách `drawCallBudget.test.js` đã làm cho lệnh
+  vẽ: hiện `countSceneTriangles` cần `three`, nhưng `collectCitySpecs` + `countTriangles` (`parts.js`)
+  thì THUẦN. Cần thêm phần mặt đất/đường/vòm trời/rặng núi mới ra được số tổng — tức phải tìm một
+  công thức thuần cho chúng, đúng kiểu `lệnh vẽ = họ vật liệu + 4` đã tìm được ở ADR-028.
+  (2) **Bảng 15 mốc tam giác riêng từng kỷ** (không phải một trần chung — bẫy `TECH_DEBT #38`), đặt
+  cạnh `MOC_LENH_VE`, có dung sai; rẻ hơn (1) nhưng vẫn cần (1) để tính được số.
+  (3) **Chấp nhận + đổi cách viết tài liệu**: mọi bảng ghi rõ HAI commit nó so, và mỗi phase bắt
+  buộc tự đo mốc nền (đã làm ở Phase 12 + đã thêm luật vào mục "Khi nào phải đo lại"). Rẻ nhất,
+  nhưng vẫn là một câu chữ, tức vẫn không đỏ lên được.
+- **Estimated Complexity**: (3) đã xong · (2) thấp một khi có (1) · (1) trung bình — chỗ khó là
+  mặt đất/đường/chân trời, vì số ô con của chúng phụ thuộc `pavingSubdivision` và lưới địa hình.
+- **Blocking Conditions**: không có blocker kỹ thuật. Nằm ngoài phạm vi Việc 1 (chỉ nhận hai nguyên
+  nhân "đường lởm chởm") ⇒ ghi lại thay vì mở rộng phạm vi.
+- **Review Trigger**: ngay trước phase kế tiếp có đụng hình học; hoặc khi có ai định trích một con
+  số tam giác từ `PERFORMANCE.md` mà không tự đo lại.
+- **Owner**: chưa ai · **Status**: MỞ, đã đo đủ số, hướng (3) đã áp dụng, (1)+(2) chưa làm
+
+---
+
+## #42 — Vỉa hè bị bóp trong im lặng trên ĐẠI LỘ ở 8/15 kỷ, kỷ tệ nhất chỉ còn 11% bề rộng đã khai
+
+- **Module**: `src/engine/city3d/streetStyle.js` (`streetCrossSection`)
+- **Priority**: Medium · **Severity**: Medium
+- **Impact**: `walk` là **một trong 8 trục bản sắc** của bảng mặt đường (ADR-025), nhưng trên đại lộ
+  nó bị cái kẹp `walk ≤ 0,5 − half` nuốt gần hết ở hơn nửa số kỷ. Đo ngày 2026-08-18 (sau khi đã
+  đặt `MAX_AVENUE = 0,96`):
+
+  | kỷ | khai | dựng ra trên đại lộ | còn lại | trên ngõ |
+  |---|--:|--:|--:|--:|
+  | 12 (Nga) | 0,190 | 0,020 | **11%** | 100% |
+  | 15 (UAE) | 0,180 | 0,020 | **11%** | 100% |
+  | 9 (Pháp) | 0,170 | 0,030 | **18%** | 100% |
+  | 14 (Singapore) | 0,200 | 0,050 | **25%** | 100% |
+  | 11 (Mỹ) | 0,140 | 0,040 | **29%** | 100% |
+  | 10 (Anh) | 0,150 | 0,110 | 73% | 100% |
+  | 13 (Nhật) | 0,160 | 0,140 | 88% | 100% |
+  | 4 (Trung Quốc) | 0,100 | 0,090 | 90% | 100% |
+
+  Kỷ 12 khai `walk: 0,19` và `note` của nó viết nguyên chữ *"vỉa hè mênh mông"* — con số và lời
+  giải thích cùng bị bóp còn một phần chín, **không có gì đỏ lên**. Đúng hình dạng bẫy `MIN_STONE`
+  (Phase 9D) và bẫy Phase 7D: một giá trị khai ra rồi bị một cái kẹp ở nơi khác nuốt mất.
+- **Root Cause**: vỉa hè bị buộc phải nằm **trong đúng một ô lưới** cùng với lòng đường, nên tổng
+  `half + walk ≤ 0,5` là một ràng buộc cứng. Đại lộ càng rộng thì chỗ còn lại càng ít, và ở những
+  kỷ hiện đại (đại lộ rộng **và** vỉa hè rộng — đúng đặc điểm lịch sử của chúng) hai vế chọi nhau
+  trực diện. Ngoài đời, đại lộ Haussmann rộng *và* có vỉa hè rộng vì cả mặt cắt phố rộng ra; ở đây
+  mặt cắt bị khoá cứng bằng một ô.
+- **Current Risk**: thấp về kỹ thuật (không hỏng gì, không lệnh vẽ mới), trung bình về giá trị: một
+  trục bản sắc đang chỉ sống ở các **ngõ**, còn ở đại lộ — chỗ mắt nhìn nhiều nhất — thì gần như
+  không phát biểu được. Bài `15 KỶ RA 15 MẶT ĐƯỜNG` vẫn xanh vì nó đọc **bảng khai**, không đọc
+  thứ dựng ra ⇒ hiện KHÔNG có gì canh chỗ này.
+- **Future Risk**: trung bình. Thêm một kỷ mới khai đại lộ rộng + vỉa hè rộng sẽ lặng lẽ rơi vào
+  cùng cái kẹp, và người thêm sẽ tưởng mình vừa khai một đặc điểm mới.
+- **Recommended Solution**: ba hướng, chưa chọn.
+  (1) **Cho vỉa hè lấn sang ô ĐẤT bên cạnh** khi ô ấy không phải công trình — đúng như ngoài đời
+  (vỉa hè thuộc lộ giới, không thuộc lòng đường). Đắt nhất: phải biết ô bên cạnh là gì, tức lại là
+  một phép hỏi hàng xóm như `carriagewayShape`.
+  (2) **Từ chối thẳng ở `isValidStreetStyle`**: `avenue/2 + walk ≤ 0,5`, buộc bảng khai ra thứ dựng
+  được. Rẻ nhất, trung thực nhất, nhưng ép 8 kỷ phải hạ một trong hai con số — tức đổi bản sắc.
+  (3) **Chấp nhận + ghi thành lời hứa tường minh** ("vỉa hè là đặc điểm của NGÕ, không phải của đại
+  lộ") và thêm test khoá điều đó, để nó thôi là một khuyết tật vô danh.
+  ⚠️ Cả ba đều đụng bản sắc 15 kỷ ⇒ là **quyết định mỹ thuật**, không tự chọn.
+- **Estimated Complexity**: (2) và (3) thấp (một buổi); (1) trung bình — cần dữ liệu ô hàng xóm và
+  phải nghĩ lại ai sở hữu phần đất giáp ranh.
+- **Blocking Conditions**: ⛔ **CHỜ ĐÀM QUYẾT** (mục 5 ca 6 — quyết định mỹ thuật). Nằm ngoài phạm
+  vi Việc 1, vốn chỉ nhận hai nguyên nhân "đường lởm chởm".
+- **Review Trigger**: khi Đàm trả lời; hoặc ngay khi có ai định thêm/sửa một dòng `walk` trong
+  `STREET_STYLES`.
+- **Owner**: chưa ai · **Status**: MỞ, đã đo đủ số, chờ quyết định
+
+⚠️ **Vì sao mục này ra đời trong lúc sửa một việc khác**: đi tìm nguyên nhân "đường lởm chởm" thì
+phát hiện `avenue: 1.00` của kỷ 12/15 làm vỉa hè **bằng 0 tuyệt đối**. Phần ấy đã sửa trong ADR-031
+(vì nó chặn chính lời hứa "hết bậc"), nhưng nó chỉ kéo hai kỷ ấy từ 0% lên 11% — bệnh gốc thì rộng
+hơn và nằm ngoài phạm vi. Ghi lại thay vì mở rộng phạm vi, đúng luật `CLAUDE.md`.
 
 ---
 

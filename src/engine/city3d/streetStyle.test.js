@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 
 import {
   MARKING_KINDS, MIN_STONE, PAVING_KINDS, STREET_STYLES,
-  carriagewayExtents, getStreetStyle, isValidStreetStyle, pavingSubdivision, streetCrossSection,
+  carriagewayShape, getStreetStyle, isValidStreetStyle, pavingSubdivision, streetCrossSection,
 } from './streetStyle.js';
 import { ERA_STYLES } from './eraStyle.js';
 
@@ -270,34 +270,87 @@ test('MIN_STONE — bảng không được khai cỡ viên mà màn hình nuốt
   assert.equal(pavingSubdivision({ stone: 0.001 }), Math.round(1 / MIN_STONE), 'phải kẹp ở MIN_STONE');
 });
 
-test('carriagewayExtents — mép giáp ô đường thì VƯƠN TỚI ranh giới, mép giáp đất thì dừng ở bề rộng', () => {
-  // ⚠️ BÀI NÀY NHỐT MỘT LỖI ĐÃ NHÌN THẤY TẬN MẮT, không phải một lỗi giả định. Bản đầu Phase 9D thu
-  // hẹp ô đường ở CẢ HAI chiều theo bề rộng kỷ khai, nên kỷ 13 (`avenue` 0,72) ra những hình vuông
-  // 0,72 nằm giữa ô và hai ô kề nhau chừa một khe cỏ 0,28. Ảnh chụp gần cho thấy con đường vỡ thành
-  // các mảng nhựa rời rạc như mấy cái sân đỗ xe. Bề rộng là đại lượng của MẶT CẮT NGANG; áp nó lên
-  // chiều DỌC đường là hiểu sai chính đại lượng ấy.
-  const cross = streetCrossSection(STREET_STYLES[13], false);
-  const nửa = cross.half;
+test('carriagewayShape — LÕI + CÁNH TAY: liền dọc, không phình ngang, không rộng hơn chính mình', () => {
+  // ⚠️ BÀI NÀY NHỐT HAI LỖI ĐÃ NHÌN THẤY TẬN MẮT, cách nhau một phase.
+  // (1) Bản đầu Phase 9D thu ô đường ở CẢ HAI chiều nên kỷ 13 ra những hình vuông rời rạc có khe
+  //     cỏ chen giữa — con đường vỡ thành mấy cái sân đỗ xe.
+  // (2) Bản vá của nó lại để MỘT hình chữ nhật gánh cả bốn bề rộng, nên ngã ba phải phình trọn ô
+  //     theo hướng có nhánh. Đo ở Phase 12: ~50% số mép đường có một bậc vuông góc.
+  const rong = streetCrossSection(STREET_STYLES[13], false).half;   // đại lộ
+  const hep = streetCrossSection(STREET_STYLES[13], true).half;     // ngõ
+  assert.ok(hep < rong, 'ca thử phải có hai bề rộng thật khác nhau');
 
-  const dọc = carriagewayExtents(cross, { north: true, south: true, west: false, east: false });
-  assert.equal(dọc.north, 0.5, 'đường chạy dọc phải LIỀN sang ô trên');
-  assert.equal(dọc.south, 0.5, 'đường chạy dọc phải LIỀN sang ô dưới');
-  assert.equal(dọc.west, nửa, 'mép giáp đất phải dừng ở đúng nửa bề rộng');
-  assert.equal(dọc.east, nửa);
+  const doc = carriagewayShape(rong, { north: rong, south: rong });
+  assert.equal(doc.reach.north, 0.5, 'đường chạy dọc phải LIỀN sang ô trên');
+  assert.equal(doc.reach.south, 0.5, 'đường chạy dọc phải LIỀN sang ô dưới');
+  assert.equal(doc.reach.west, rong, 'mép giáp đất phải dừng ở đúng nửa bề rộng');
+  assert.equal(doc.coreU, rong, 'đoạn thẳng thì lõi rộng đúng bằng con đường');
+  assert.equal(doc.coreV, rong, 'không có nhánh ngang ⇒ lõi vuông, mũ đầu đoạn đúng bề rộng');
 
-  const ngãTư = carriagewayExtents(cross, { north: true, south: true, west: true, east: true });
-  for (const mép of ['north', 'south', 'west', 'east']) {
-    assert.equal(ngãTư[mép], 0.5, `ngã tư phải loang trọn ô ở mép ${mép}`);
+  // NGÃ TƯ ĐẠI LỘ × NGÕ — đây là ca mà bản cũ sai. Hộp bao vẫn trọn ô (đường vẫn liền bốn phía),
+  // nhưng CÁNH TAY dọc phải hẹp đúng bằng cái ngõ, không phải trọn ô.
+  const nga = carriagewayShape(rong, { west: rong, east: rong, north: hep, south: hep });
+  for (const mep of ['north', 'south', 'west', 'east']) {
+    assert.equal(nga.reach[mep], 0.5, `ngã tư phải liền sang ô ${mep}`);
   }
+  assert.equal(nga.arms.west, rong, 'nhánh ngang là đại lộ ⇒ giữ nguyên bề rộng');
+  assert.equal(nga.arms.north, hep, 'nhánh dọc là ngõ ⇒ chỗ nối chỉ rộng bằng cái ngõ');
+  // ⚠️ LÕI LÀ MỘT HÌNH CHỮ NHẬT, và đó chính là bản vá: bề ngang theo `u` bằng bề rộng của con
+  // đường chạy DỌC (cái ngõ), bề ngang theo `v` bằng con đường chạy NGANG (đại lộ). Bản trước cho
+  // nó là hình vuông cạnh bằng con đường LỚN, tức ngã ba phình ra trọn ô theo cả hai chiều.
+  assert.equal(nga.coreU, hep, 'lõi theo u phải hẹp bằng cái NGÕ, không phải bằng đại lộ');
+  assert.equal(nga.coreV, rong, 'lõi theo v rộng bằng ĐẠI LỘ — đường lớn chạy thẳng qua');
 
-  const cụt = carriagewayExtents(cross, { north: true, south: false, west: false, east: false });
-  assert.equal(cụt.south, nửa, 'đầu đường cụt phải kết thúc bằng đúng bề ngang của nó');
+  // ⚠️ ĐỐI XỨNG LÀ THỨ XOÁ BẬC, và phải kiểm bằng cách hỏi TỪ PHÍA BÊN KIA. Ô ngõ nằm ngay trên ô
+  // ngã tư phải trình ra ĐÚNG con số mà ô ngã tư trình ra tại cùng chỗ giáp; lệch một chút là một
+  // bậc vuông góc chạy dọc mép đường.
+  const oNgo = carriagewayShape(hep, { north: hep, south: rong });
+  assert.equal(oNgo.arms.south, nga.arms.north, 'hai ô kề nhau phải khai CÙNG bề rộng tại chỗ giáp');
 
-  // Ô đường cô lập (không nối đâu cả) vẫn phải ra một mảng vuông đúng bề rộng, không ra số âm/0.
-  const côLập = carriagewayExtents(cross, {});
-  for (const mép of ['north', 'south', 'west', 'east']) {
-    assert.ok(côLập[mép] > 0 && côLập[mép] <= 0.5, `mép ${mép} ra ${côLập[mép]} — ngoài khoảng dựng được`);
+  // GÓC VÀNH ĐAI — ô khai đại lộ nhưng chỉ chạm hai cái ngõ. Bản cũ cho nó phình trọn ô.
+  const goc = carriagewayShape(rong, { east: hep, south: hep });
+  assert.equal(goc.coreU, hep, 'ô chỉ chạm ngõ thì không được rộng hơn cái ngõ');
+  assert.equal(goc.coreV, hep);
+
+  const cut = carriagewayShape(rong, { north: rong });
+  assert.equal(cut.reach.south, rong, 'đầu đường cụt kết thúc bằng đúng bề ngang của nó');
+  assert.equal(cut.arms.south, null, 'phía cụt không có cánh tay nào');
+
+  // Ô đường cô lập vẫn phải ra một mảng vuông đúng bề rộng, không ra số âm/0.
+  const coLap = carriagewayShape(rong, {});
+  assert.equal(coLap.coreU, rong);
+  assert.equal(coLap.coreV, rong);
+  for (const mep of ['north', 'south', 'west', 'east']) {
+    assert.ok(coLap.reach[mep] > 0 && coLap.reach[mep] <= 0.5, `mép ${mep} ngoài khoảng dựng được`);
   }
+});
+
+test('ĐỐI CHỨNG — luật `min` phải ĐỐI XỨNG ở MỌI cặp bề rộng, không chỉ ở cặp tôi chọn tay', () => {
+  // ⚠️ VÌ SAO CẦN BÀI NÀY DÙ BÀI TRÊN ĐÃ KIỂM MỘT CẶP: một cặp là một mẫu, và "ba mẫu là đủ" đã
+  // đẻ ra `TECH_DEBT #38`. `carriagewayShape` là hàm THUẦN nên quét cả bảng rẻ tới mức không có cớ
+  // để đoán — 15 kỷ × 2 hạng = 30 bề rộng thật, 900 cặp.
+  const be = [];
+  for (let era = 1; era <= 15; era += 1) {
+    be.push(streetCrossSection(STREET_STYLES[era], false).half);
+    be.push(streetCrossSection(STREET_STYLES[era], true).half);
+  }
+  let cap = 0;
+  for (const a of be) {
+    for (const b of be) {
+      const A = carriagewayShape(a, { east: b });
+      const B = carriagewayShape(b, { west: a });
+      assert.ok(
+        Math.abs(A.arms.east - B.arms.west) < 1e-12,
+        `bề rộng ${a} gặp ${b}: một bên khai ${A.arms.east}, bên kia ${B.arms.west} — đó là một bậc`,
+      );
+      // Và không ô nào được rộng hơn chính con đường của nó — đây là thứ giết cái phình 0,5 ô.
+      assert.ok(A.coreU <= a + 1e-12 && A.coreV <= a + 1e-12,
+        `lõi (${A.coreU}, ${A.coreV}) rộng hơn con đường ${a}`);
+      cap += 1;
+    }
+  }
+  assert.equal(cap, be.length * be.length, 'phép quét chạy hụt — không đủ số cặp');
+  assert.ok(cap >= 900, `chỉ quét ${cap} cặp, quá ít để nói lên điều gì`);
 });
 
 test('VỈA HÈ KHÔNG BAO GIỜ TRÀN KHỎI Ô — hai ô đường kề nhau không chọi mặt', () => {

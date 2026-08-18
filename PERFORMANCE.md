@@ -408,10 +408,154 @@ theo ĐIỂM ẢNH**, và bằng chứng số 1 ở mục "Ba bằng chứng" n�
 thời gian**. Phase 11 không đổi cỡ khung, không đổi DPR, không thêm nguồn sáng, không thêm shader,
 không thêm vật liệu, không thêm lệnh vẽ. **Dự đoán (chưa phải phép đo): không đổi đáng kể.**
 
+### ❗ BẢNG NÀY MÔ TẢ `d888fae`, KHÔNG MÔ TẢ HEAD — PHASE 11-B ĐỔI 6/15 KỶ MÀ KHÔNG SỬA TÀI LIỆU
+
+Phát hiện ngày 2026-08-18, lúc đi lấy mốc nền cho Phase 12. Cột "S" của bảng trên đo trên `d888fae`
+(Phase 11). Ngay sau đó `e95cdf1` (**Phase 11-B — ưu tiên đường viền**) sửa `src/engine/city3d/roofStyle.js`,
+tức sửa hình học thật, và **không đụng một dòng nào của file này**. Đo lại đủ 15 kỷ trên `e95cdf1`:
+
+| Kỷ | bảng trên ghi | thật ở `e95cdf1` | lệch |
+|---:|---:|---:|---:|
+| 8 (Bồ Đào Nha) | 58.370 | **54.810** | −3.560 |
+| 11 (Mỹ) | 50.114 | **53.890** | +3.776 |
+| 12 (Nga) | 34.346 | **38.506** | +4.160 |
+| 13 (Nhật Bản) | 46.366 | **50.142** | +3.776 |
+| 14 (Singapore) | 39.094 | **41.718** | +2.624 |
+| 15 (UAE) | 41.822 | **45.406** | +3.584 |
+| **Tổng** | 645.436 | **659.796** | +14.360 |
+
+Chín kỷ còn lại khớp từng đơn vị, và **lệnh vẽ không đổi ở kỷ nào** — Phase 11-B chỉ đổi kích cỡ
+đường nét mái, không kéo thêm vai màu nào.
+
+⚠️ **Bảng gốc GIỮ NGUYÊN, không sửa đè.** Nó mô tả đúng cái nó nói là mô tả: `e089c00` → `d888fae`.
+Sửa cột "S" thành số của `e95cdf1` sẽ làm mọi cột Δ% trong bảng hoá sai, và xoá luôn bằng chứng về
+việc trôi. Cái phải sửa là **cách đọc**: cột "S" của một bảng phase là *"sau phase ấy"*, **không**
+phải *"hiện nay"*.
+
+⇒ **Bài học, cùng họ với "một luật một công thức" và với lỗi kỷ 5 ở ngay trên**: một bảng số ghi
+"trước → sau" chỉ đúng cho **hai commit** đã sinh ra nó. Mọi phase sau đó phải **tự đo lại mốc nền
+của mình**, không được chép cột "sau" của phase trước làm cột "trước" của mình — dù hai phase liền
+kề nhau và dù trông chẳng có gì liên quan (Phase 11-B đụng mái, Phase 12 đụng đường; không ai nghĩ
+chúng dính nhau, và đúng là chúng không dính — cái dính là **cột số**). Ở đây suýt nữa cả bảng
+Phase 12 ra sai: kỷ 8 sẽ được báo là −5.558 thay vì −1.998, và kỷ 11 là +3.902 thay vì +126. Thứ
+lộ ra chuyện này là một phép **đối chiếu chéo** — đếm riêng tam giác của mặt đường rồi so với chênh
+lệch tổng; 7 kỷ đầu khớp từng đơn vị còn kỷ 8 lệch đúng 3.560, và chỗ lệch ấy là chỗ hỏng.
+
+⚠️ Và Phase 11-B đã vi phạm Definition of Done (`CLAUDE.md`): đổi hình học ⇒ `PERFORMANCE.md` là
+tài liệu **phải** đồng bộ. Không có gì đỏ lên, vì không có gì máy đọc được canh chỗ này.
+
 ### Vế CHƯA đo — frame time trên M3
 
 Vẫn nợ, y như sau Phase 10: bộ số ms trong tài liệu này là của ngày 2026-08-17. Hộp cát AI chạy
 SwiftShader nên **không suy ra được** cho GPU thật. Muốn đóng thì Đàm chạy `bash scripts/bench-macbook.sh`.
+
+---
+
+## Sau Phase 12 — mép đường thôi lởm chởm (2026-08-18)
+
+Phase 12 đổi **HÌNH** của lòng đường trong một ô: từ MỘT hình chữ nhật (buộc phải phình trọn ô ở
+mọi chỗ có nhánh) sang **MỘT LÕI + TỐI ĐA BỐN CÁNH TAY** (ADR-031). Cùng lệnh đo của Phase 10/11:
+`node scripts/city-preview.mjs --era N --hour 12 --bench 1 --no-shadow`.
+
+⚠️ **Cột T đo LẠI trên `e95cdf1`, KHÔNG chép từ bảng Phase 11** — xem mục ❗ ngay trên. Chép sang
+thì kỷ 8 sẽ ra −5.558 và kỷ 11 ra +3.902, cả hai đều bịa.
+
+### Vế đã đo xong — lệnh vẽ và hình học, ĐỦ CẢ 15 KỶ
+
+| Kỷ | Nước | Lệnh vẽ TP T→S | Lệnh vẽ **cả cảnh** T→S | Tam giác TP T→S | Δ |
+|---:|---|---:|---:|---:|---:|
+| 1 | Thổ Nhĩ Kỳ | 9 → 9 | 11 → 11 | 22.966 → 22.882 | −84 |
+| 2 | Ai Cập | 11 → 11 | 13 → 13 | 28.674 → 28.594 | −80 |
+| 3 | Iraq | 11 → 11 | 13 → 13 | 40.594 → 40.316 | −278 |
+| 4 | Trung Quốc | 11 → 11 | 13 → 13 | 49.274 → 48.578 | −696 |
+| 5 | Đức | 10 → 10 | 12 → 12 | 35.184 → 33.752 | −1.432 |
+| 6 | Việt Nam | 11 → 11 | 13 → 13 | 49.658 → 47.952 | −1.706 |
+| 7 | Ý | 11 → 11 | 13 → 13 | 56.170 → 55.896 | −274 |
+| 8 | Bồ Đào Nha | 11 → 11 | 13 → 13 | 54.810 → 52.812 | −1.998 |
+| 9 | Pháp | 10 → 10 | 12 → 12 | 49.506 → 49.090 | −416 |
+| 10 | Anh | 12 → 12 | 14 → 14 | 43.298 → 42.666 | −632 |
+| 11 | Mỹ | 10 → 10 | 12 → 12 | 53.890 → 54.016 | **+126** |
+| 12 | Nga | 10 → 10 | 12 → 12 | 38.506 → 38.808 | **+302** |
+| 13 | Nhật Bản | 10 → 10 | 12 → 12 | 50.142 → 50.054 | −88 |
+| 14 | Singapore | 10 → 10 | 12 → 12 | 41.718 → 41.840 | **+122** |
+| 15 | UAE | 10 → 10 | 12 → 12 | 45.406 → 45.788 | **+382** |
+| **Tổng** | | | | **659.796 → 653.044** | **−6.752 (−1,0%)** |
+
+⚠️ Cột "cả cảnh" gồm cả vòm trời + rặng núi (hằng số **44.126** tam giác ở mọi kỷ) — phải trừ ra khi
+so các kỷ với nhau.
+
+**Lệnh vẽ: KHÔNG ĐỔI MỘT ĐƠN VỊ NÀO ở cả 15 kỷ**, khớp đúng bảng 15 mốc `MOC_LENH_VE` trong
+`drawCallBudget.test.js`. Điều này đúng theo cấu trúc chứ không do may: Phase 12 không thêm vai màu
+nào, không thêm vật liệu nào — nó chỉ đổi cách chia nhỏ **một tấm lưới đã có sẵn**.
+
+### Toàn bộ 6.752 tam giác chênh lệch nằm ở MẶT ĐƯỜNG — đối chiếu chéo, 15/15 kỷ khớp từng đơn vị
+
+Đây là phép kiểm quan trọng nhất của bảng trên, và cũng là thứ đã bắt được cái mốc nền hỏng. Đếm
+riêng tam giác mặt đường theo **từng phần** (`ROAD_PART`) bằng cách gọi thẳng `buildRoadSurface` —
+thuần, không cần Chromium — rồi so Δ ấy với Δ tổng của cả thành phố:
+
+| Kỷ | lòng đường T→S | vỉa hè T→S | bó vỉa T→S | vạch kẻ | Δ đường | Δ tổng (đo bằng Chromium) |
+|---:|---:|---:|---:|---:|---:|---:|
+| 1 | 320 → 236 | 0 → 0 | 0 → 0 | 0 | −84 | −84 |
+| 2 | 320 → 240 | 0 → 0 | 0 → 0 | 0 | −80 | −80 |
+| 3 | 720 → 442 | 0 → 0 | 0 → 0 | 0 | −278 | −278 |
+| 4 | 2.000 → 1.304 | 160 | 0 | 0 | −696 | −696 |
+| 5 | 2.880 → 1.448 | 0 | 0 | 0 | −1.432 | −1.432 |
+| 6 | 2.880 → 1.174 | 0 | 0 | 0 | −1.706 | −1.706 |
+| 7 | 720 → 446 | 160 | 160 | 0 | −274 | −274 |
+| 8 | 3.920 → 1.922 | 160 | 160 | 0 | −1.998 | −1.998 |
+| 9 | 2.880 → 2.464 | 160 | 160 | 0 | −416 | −416 |
+| 10 | 2.880 → 2.248 | 164 | 164 | 0 | −632 | −632 |
+| 11 | 320 → 446 | 160 | 160 | 44 | +126 | +126 |
+| 12 | 320 → 446 | **72 → 160** | **72 → 160** | 0 | +302 | +302 |
+| 13 | 320 → 232 | 168 | 168 | 220 | −88 | −88 |
+| 14 | 320 → 442 | 164 | 164 | 132 | +122 | +122 |
+| 15 | 720 → 922 | **74 → 164** | **74 → 164** | 132 | +382 | +382 |
+
+**15/15 kỷ khớp CHÍNH XÁC.** Không một tam giác nào của chênh lệch đến từ nhà, cây, mặt đất hay
+chân trời — đúng như phạm vi của phase.
+
+### Vì sao 10 kỷ GIẢM mà 5 kỷ TĂNG — và đây không phải nhiễu
+
+Luật CŨ chia lòng đường thành đúng `sub × sub` ô con **bất kể ô ấy rộng bao nhiêu**. Kiểm được:
+tam giác lòng đường cũ **= 2 × (số ô đường) × sub²**, đúng **15/15 kỷ, không một ngoại lệ** (mọi kỷ
+đều có đúng **40 ô đường** ở mốc 40 phiên):
+
+| sub | kỷ | 2 × 40 × sub² | đo được |
+|---:|---|---:|---:|
+| 2 | 1 · 2 · 11 · 12 · 13 · 14 | 320 | 320 |
+| 3 | 3 · 7 · 15 | 720 | 720 |
+| 5 | 4 | 2.000 | 2.000 |
+| 6 | 5 · 6 · 9 · 10 | 2.880 | 2.880 |
+| 7 | 8 | 3.920 | 3.920 |
+
+Tức `sub` xưa nay là **số lát cắt của MỘT MẢNH**, không phải **cỡ một viên lát**. Hệ quả: cùng một
+kỷ, cùng một vật liệu, viên lát trên ngõ nhỏ hơn viên trên đại lộ đúng bằng tỉ lệ hai bề rộng — một
+điều không ai muốn và không ai từng khai. Luật MỚI suy số ô con từ **chiều dài thật** (`oCon`), nên
+cỡ viên là một đại lượng của THẾ GIỚI (`1/sub` ô).
+
+⇒ Dấu của Δ do hai lực ngược chiều quyết định:
+- **Kỷ lát mịn (`sub` lớn)**: bỏ được lưới `sub × sub` dày đặc trên những mảnh nhỏ ⇒ **giảm mạnh**
+  (kỷ 8, `sub = 7`: lòng đường 3.920 → 1.922, còn **49%**).
+- **Kỷ lát thô (`sub = 2`) + đại lộ RỘNG**: lõi vẫn tròn về 2×2 như cũ, nhưng nay có thêm bốn cánh
+  tay ngắn, mà một cánh tay dài 0,02 ô vẫn phải có tối thiểu một hàng ô con ⇒ **tăng nhẹ** (kỷ 11 ·
+  12 · 14, đại lộ 0,90–0,96). Kỷ 13 cũng `sub = 2` nhưng đại lộ chỉ 0,72 nên vẫn **giảm** — đúng
+  chiều mà lời giải thích này dự đoán.
+- **Kỷ 12 và 15 có thêm một khoản riêng**: `MAX_AVENUE = 0,96` kéo `avenue` xuống khỏi 1,00, nên
+  `room = 0,5 − half` thôi bằng 0 và **vỉa hè trên đại lộ lần đầu tiên được dựng ra** (72 → 160 và
+  74 → 164 tam giác). Đó là +176 và +180 trong tổng +302 / +382 của hai kỷ ấy. Bề rộng vỉa hè vẫn
+  chỉ còn 11% con số đã khai — xem `TECH_DEBT #42`.
+
+### Hình học vẫn nằm sâu trong vùng rẻ
+
+−1,0% tổng, và biên độ lớn nhất một kỷ là −4,6% (kỷ 6). Mô hình chi phí trên M3 nói **80% chi phí đi
+theo ĐIỂM ẢNH**, còn 43% chênh lệch hình học chỉ đổi 2,4% thời gian ⇒ **dự đoán (chưa phải phép đo):
+không đổi đáng kể**. Phase 12 không đổi cỡ khung, không đổi DPR, không thêm nguồn sáng, không thêm
+shader, không thêm vật liệu, không thêm lệnh vẽ.
+
+### Vế CHƯA đo — frame time trên M3
+
+Vẫn nợ, y như sau Phase 10 và 11. Muốn đóng thì Đàm chạy `bash scripts/bench-macbook.sh`.
 
 ---
 
@@ -421,3 +565,5 @@ SwiftShader nên **không suy ra được** cho GPU thật. Muốn đóng thì �
 - Sau bất kỳ phase nào làm **cỡ khung hình mặc định** đổi.
 - Trước khi kết luận bất cứ điều gì về **iPhone**.
 - **Không** cần đo lại chỉ vì thêm khối / thêm tam giác — trục đó đã chứng minh là rẻ.
+- ⚠️ **Mỗi phase PHẢI tự đo lại mốc nền của mình**, không được chép cột "sau" của phase trước làm
+  cột "trước" của mình. Lý do và cái giá suýt phải trả: mục ❗ ở cuối phần Phase 11.

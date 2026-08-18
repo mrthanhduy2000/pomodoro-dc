@@ -49,6 +49,18 @@ export const PAVING_KINDS = [
 /** Kiểu vạch kẻ. `terrainMesh.js` chỉ dựng vạch khi kỷ khai khác `'none'`. */
 export const MARKING_KINDS = ['none', 'center', 'dashed', 'crossing'];
 
+/** Bốn phía, một thứ tự duy nhất. Viết ra một chỗ để không có hai cách liệt kê. */
+export const SIDES = ['west', 'east', 'north', 'south'];
+
+/**
+ * Phía nào ứng với bước đi nào trên lưới. Ba nơi cần biết điều này — hàm dựng hình
+ * (`terrainMesh.js`), bài test hình học, và công cụ đo (`scripts/road-fit.mjs`) — nên nó phải nằm
+ * ở ĐÚNG MỘT chỗ. Chép tay bốn dòng `west: [-1,0] …` ở mỗi nơi là ba cơ hội để một dấu trừ lạc,
+ * và một dấu trừ lạc ở đây thì hàng xóm phía tây bị hỏi thành hàng xóm phía đông: hình vẫn dựng
+ * ra, vẫn liền lạc, chỉ là bề rộng chỗ nối lấy từ nhầm con đường.
+ */
+export const SIDE_STEPS = { west: [-1, 0], east: [1, 0], north: [0, -1], south: [0, 1] };
+
 const PAVING_SET = new Set(PAVING_KINDS);
 const MARKING_SET = new Set(MARKING_KINDS);
 
@@ -177,7 +189,7 @@ export const STREET_STYLES = {
   12: {
     country: 'Nga',
     note: 'đại lộ Xô Viết — tấm bê tông đúc rất lớn, mặt cắt khổng lồ, ít vạch, vỉa hè mênh mông',
-    avenue: 1.00, lane: 0.58, paving: 'slab', stone: 0.46, wear: 0.14,
+    avenue: 0.96, lane: 0.58, paving: 'slab', stone: 0.46, wear: 0.14,
     curb: 0.045, walk: 0.19, markings: 'none', edge: 'hard',
   },
   13: {
@@ -195,7 +207,7 @@ export const STREET_STYLES = {
   15: {
     country: 'UAE',
     note: 'đại lộ sa mạc — bê tông sáng phản nắng, mặt cắt rộng nhất, vạch đứt thưa',
-    avenue: 1.00, lane: 0.62, paving: 'slab', stone: 0.30, wear: 0.08,
+    avenue: 0.96, lane: 0.62, paving: 'slab', stone: 0.30, wear: 0.08,
     curb: 0.05, walk: 0.18, markings: 'dashed', edge: 'hard',
   },
 };
@@ -245,6 +257,32 @@ export function getStreetStyle(era) {
 export const MIN_STONE = 1 / 7;
 
 /**
+ * Bề rộng lớn nhất một con đường được khai, tính theo phần của một ô.
+ *
+ * ⚠️ ĐÂY LÀ MỘT RÀNG BUỘC HÌNH HỌC, KHÔNG PHẢI MỘT LỰA CHỌN MỸ THUẬT — và nó nhốt HAI khuyết tật
+ * đã đo được, cả hai đều do đúng một dòng `avenue: 1.00` sinh ra (kỷ 12 và 15 trước Phase 12).
+ *
+ *   (1) **Con đường rộng TRỌN Ô thì không còn chỗ cho cánh tay loe.** `carriagewayShape` cho cánh
+ *       tay chạy từ mép lõi ra tới ranh giới ô; lõi rộng đúng 0,5 nghĩa là cánh tay dài BẰNG KHÔNG,
+ *       nên một cái ngõ hẹp rẽ vào sẽ gặp mép đường ở một bậc vuông góc mà không phép loe nào cứu
+ *       được. Tức lời hứa "không còn bậc ở mép đường" **không thể đúng** ở một kỷ khai 1,00.
+ *   (2) **Nó nuốt sạch vỉa hè của chính kỷ ấy, trong im lặng.** `streetCrossSection` kẹp
+ *       `walk ≤ 0,5 − half`; với `avenue = 1,00` thì `half = 0,5` ⇒ chỗ trống bằng 0 ⇒ vỉa hè bằng
+ *       0. Kỷ 12 khai `walk: 0,19` và `note` của nó viết nguyên chữ *"vỉa hè mênh mông"* — con số
+ *       và lời giải thích cùng bị vứt đi mà không có gì đỏ lên. Đúng cái bẫy `MIN_STONE` ở ngay
+ *       trên đây, lần này ở một trường khác.
+ *
+ * Vì sao **0,96** chứ không phải một số tròn hơn: nó vẫn để kỷ 12 và 15 là hai kỷ đường RỘNG NHẤT
+ * trong 15 (kế tiếp là 0,94), tức trục bản sắc "đại lộ Xô Viết / đại lộ sa mạc rộng nhất" giữ
+ * nguyên, mà vẫn chừa lại 0,02 ô cho cánh tay loe. Đây là mức thấp nhất sửa được lỗi — cố ý không
+ * hạ sâu hơn, vì hạ sâu là mua một con số đẹp bằng cách bóp một trục bản sắc đã được đo.
+ *
+ * ⚠️ VÀ `isValidStreetStyle` **TỪ CHỐI THẲNG**, không tự kẹp. Tự kẹp là cách một bảng 15 dòng lặng
+ * lẽ thoái hoá — đúng bài học `MIN_STONE` (bốn kỷ khai bốn số, dựng ra một kết quả).
+ */
+export const MAX_AVENUE = 0.96;
+
+/**
  * Số ô con chia trên MỘT ô đường, suy từ cỡ viên lát.
  *
  * ⚠️ ĐÂY LÀ CHỖ CỠ VIÊN TRỞ THÀNH HÌNH HỌC THẬT, không phải một con số trang trí. Hình học của
@@ -278,38 +316,83 @@ export function streetCrossSection(style, isLane) {
 }
 
 /**
- * BỐN MÉP của lòng đường trong một ô, tính từ tâm ô ra — theo việc ô ĐÓ có NỐI sang ô đường bên
- * cạnh hay không.
+ * HÌNH DẠNG lòng đường trong một ô: MỘT LÕI Ở GIỮA + TỐI ĐA BỐN CÁNH TAY vươn ra bốn phía.
  *
- * ⚠️ VÌ SAO KHÔNG DÙNG MỘT HÌNH CHỮ NHẬT CÂN GIỮA, VÀ ĐÂY LÀ MỘT LỖI ĐÃ NHÌN THẤY TẬN MẮT: bản đầu
- * của Phase 9D thu hẹp ô đại lộ ở CẢ HAI chiều theo bề rộng kỷ khai. Kỷ 13 khai `avenue = 0,72`,
- * nên mỗi ô đường thành một hình vuông cạnh 0,72 nằm giữa ô — và hai ô kề nhau chừa lại một khe cỏ
- * rộng 0,28. Ảnh chụp gần cho thấy ngay: con đường vỡ thành những mảnh nhựa rời rạc, trông như mấy
- * cái sân đỗ xe rải rác chứ không phải một tuyến phố. Bề rộng là một đại lượng của MẶT CẮT NGANG;
- * áp nó lên chiều DỌC đường là hiểu sai chính đại lượng ấy.
+ * ⚠️ VÌ SAO KHÔNG PHẢI MỘT HÌNH CHỮ NHẬT — VÀ ĐÂY LÀ HAI LỖI ĐÃ NHÌN THẤY TẬN MẮT, CÁCH NHAU MỘT
+ * PHASE. Bản đầu Phase 9D thu ô đại lộ ở CẢ HAI chiều theo bề rộng kỷ khai, nên hai ô kề nhau chừa
+ * một khe cỏ và con đường vỡ thành mấy cái sân đỗ xe rời rạc. Bản vá khi ấy — *mép nào giáp ô
+ * đường khác thì vươn tới 0,5, mép nào giáp đất thì dừng ở nửa bề rộng* — chữa đúng cái khe cỏ, và
+ * đẻ ra khuyết tật thứ hai mà mãi tới Phase 12 mới đo: **một ô vẫn chỉ là MỘT hình chữ nhật, nên
+ * nó không có cách nào diễn đạt "đại lộ chạy thẳng qua, ngõ nhỏ rẽ vào"**. Ngã ba buộc phải phình
+ * ra TRỌN Ô theo hướng có nhánh, dù cái nhánh ấy chỉ rộng bằng một phần ba. Đo ra:
+ * **~50% số mép đường có một bậc vuông góc**, bậc to nhất 0,38 ô — tức con đường lởm chởm đúng như
+ * Đàm nói, và nó lởm chởm ở gần một nửa số chỗ nối.
  *
- * ⇒ Luật đúng, và nó xoá luôn việc phải phân biệt `variant`: mép nào giáp một ô đường khác thì
- * VƯƠN TỚI ranh giới ô (0,5) để hai mặt đường liền nhau; mép nào giáp đất thì dừng ở đúng nửa bề
- * rộng của chính nó. Đường dọc tự khắc dài trọn ô theo chiều đi và hẹp theo chiều ngang; ngã tư tự
- * khắc loang ra cả bốn phía; đầu đường cụt tự khắc kết thúc bằng đúng bề ngang của nó thay vì thò
- * ra một mẩu giữa đồng.
+ * ⚠️ Cái sai gốc là một **giả định về HÌNH**, không phải một con số sai: *"lòng đường của một ô là
+ * một hình chữ nhật"*. Chỉnh khéo con số nào cũng không thoát, vì một hình chữ nhật chỉ có hai bề
+ * rộng còn một ngã tư cần tới bốn. Cùng họ với "một trường gánh hai việc" (`CLAUDE.md`), chỉ khác
+ * là ở đây thứ gánh hai việc là một HÌNH DẠNG.
+ *
+ * ── LUẬT MỚI, SUY THẲNG TỪ CÁCH ĐƯỜNG SÁ NGOÀI ĐỜI GẶP NHAU ───────────────────────────────────
+ *   1. **Chỗ nối rộng bằng con đường HẸP HƠN trong hai bên** (`min`). Đây là thứ xoá bậc: hai ô kề
+ *      nhau cùng suy ra một con số từ CÙNG một phép tính đối xứng, nên chúng không thể lệch nhau.
+ *      Một cái bậc chỉ sinh ra khi hai bên tự tính bề rộng của mình một cách độc lập.
+ *   2. **Lõi rộng bằng cánh tay RỘNG NHẤT** — tức con đường lớn nhất chạy qua ô này. Ngoài đời:
+ *      ở ngã ba, đường LỚN chạy thẳng qua và giữ nguyên bề rộng, đường NHỎ loe ra để nhập vào.
+ *   3. ⇒ **Một ô KHÔNG BAO GIỜ rộng hơn chính con đường của nó** (`coreU`/`coreV ≤ myHalf` luôn
+ *      đúng, vì mọi cánh tay đều đã bị `min` với `myHalf`). Chính điều này giết cái phình 0,5 ô.
+ *   4. **Cánh tay LOE**: rộng bằng lõi ở mép lõi, thu về `min` ở ranh giới ô. Ngõ nhỏ nhập vào đại
+ *      lộ thì loe ra đúng như một cái phễu nhập làn, thay vì gãy một góc vuông.
+ *   5. ⚠️ **CÁNH TAY CẦN CHỖ ĐỂ LOE, nên một con đường KHÔNG ĐƯỢC rộng trọn ô** — xem `MAX_AVENUE`.
+ *
+ * Kiểm nhanh vài ca thật (đại lộ nửa bề rộng 0,36 · ngõ 0,15):
+ *   · đại lộ chạy thẳng dọc → lõi 0,36×0,36, hai cánh 0,36 ⇒ một dải thẳng, y như trước.
+ *   · ngã tư đại-lộ×ngõ    → lõi 0,15(u)×0,36(v), cánh ngang 0,36, cánh dọc loe 0,15→0,15
+ *                             ⇒ đại lộ đi thẳng qua, ngõ nhỏ nhập vào — KHÔNG phình trọn ô nữa.
+ *   · ô ngõ cạnh ngã tư    → lõi 0,15, cánh 0,15 ⇒ khớp KHÍT cánh dọc của ô ngã tư.
+ *   · góc vành đai (khai đại lộ nhưng chỉ chạm hai ngõ) → lõi 0,15 ⇒ khúc cua đều bề, hết phình.
+ *   · đầu đường cụt        → lõi `myHalf`, một cánh ⇒ kết thúc bằng một cái mũ vuông đúng bề rộng.
  *
  * ⚠️ HÀM THUẦN VÀ ĐƯỢC DÙNG CHUNG với bài test hình học (`terrainMesh.test.js`) — bài test hỏi
  * chính hàm này rồi đối chiếu với đỉnh dựng ra, chứ KHÔNG diễn đạt lại luật bằng công thức riêng.
  * Hai công thức "tương đương" cho cùng một luật thì gần như luôn lệch nhau ở biên (Phase 3Y).
  *
- * @param {{half:number}} cross  kết quả `streetCrossSection`
- * @param {{west:boolean, east:boolean, north:boolean, south:boolean}} nối  cạnh nào giáp ô đường
+ * @param {number} myHalf  nửa bề rộng lòng đường của CHÍNH ô này (`streetCrossSection().half`)
+ * @param {{west:?number, east:?number, north:?number, south:?number}} nbHalf
+ *        nửa bề rộng của ô đường HÀNG XÓM mỗi phía; `null`/`undefined` = phía ấy không có đường
+ * @returns {{coreU:number, coreV:number, arms:object, reach:object}}
+ *        `coreU`/`coreV` = nửa bề ngang của LÕI theo trục u / trục v (một ngã tư có hai bề rộng
+ *        khác nhau, nên đây phải là HAI con số — gộp làm một là dựng lại đúng cái giả định hình
+ *        chữ nhật vừa gỡ bỏ);
+ *        `arms[phía]` = nửa bề rộng TẠI RANH GIỚI ô (null nếu không có cánh tay phía ấy);
+ *        `reach[phía]` = hộp bao của cả lòng đường phía ấy (0,5 nếu có cánh tay, lõi nếu không)
  */
-export function carriagewayExtents(cross, nối) {
-  const half = Math.max(0, Math.min(0.5, cross?.half ?? 0.25));
-  const mép = (có_nối) => (có_nối ? 0.5 : half);
-  return {
-    west: mép(!!nối?.west),
-    east: mép(!!nối?.east),
-    north: mép(!!nối?.north),
-    south: mép(!!nối?.south),
+export function carriagewayShape(myHalf, nbHalf) {
+  const mine = Math.max(0, Math.min(0.5, Number.isFinite(myHalf) ? myHalf : 0.25));
+  const arms = { west: null, east: null, north: null, south: null };
+  for (const phía of SIDES) {
+    const nb = nbHalf?.[phía];
+    if (!Number.isFinite(nb) || nb <= 0) continue;
+    // Luật 1 — chỗ nối rộng bằng con đường hẹp hơn. Đối xứng ⇒ hai ô kề nhau không thể lệch.
+    arms[phía] = Math.max(0, Math.min(mine, Math.min(0.5, nb)));
+  }
+  const coNgang = arms.west !== null || arms.east !== null;
+  const coDoc = arms.north !== null || arms.south !== null;
+  // Nửa bề rộng của con đường chạy theo mỗi TRỤC. Hai cánh cùng trục có thể khác nhau (một đầu
+  // là đại lộ, đầu kia là ngõ) — lấy `max` vì lòng đường ở giữa ô phải đủ rộng cho cả hai.
+  const nuaNgang = coNgang ? Math.max(arms.west ?? 0, arms.east ?? 0) : null;
+  const nuaDoc = coDoc ? Math.max(arms.north ?? 0, arms.south ?? 0) : null;
+  // Lõi = chỗ hai con đường CHỒNG LÊN NHAU. Bề ngang của nó theo trục u chính là bề rộng của con
+  // đường chạy DỌC, và ngược lại — đó là định nghĩa của một ngã tư, không phải một hằng số chọn tay.
+  const coreU = nuaDoc ?? nuaNgang ?? mine;
+  const coreV = nuaNgang ?? nuaDoc ?? mine;
+  const reach = {
+    west: arms.west === null ? coreU : 0.5,
+    east: arms.east === null ? coreU : 0.5,
+    north: arms.north === null ? coreV : 0.5,
+    south: arms.south === null ? coreV : 0.5,
   };
+  return { coreU, coreV, arms, reach };
 }
 
 /** Bảng tra để test kiểm nhanh: kỷ nào khai gì. Không dùng trong lúc chạy. */
@@ -317,8 +400,8 @@ export function isValidStreetStyle(style) {
   return !!style
     && PAVING_SET.has(style.paving)
     && MARKING_SET.has(style.markings)
-    && Number.isFinite(style.avenue) && style.avenue > 0 && style.avenue <= 1
-    && Number.isFinite(style.lane) && style.lane > 0 && style.lane <= 1
+    && Number.isFinite(style.avenue) && style.avenue > 0 && style.avenue <= MAX_AVENUE
+    && Number.isFinite(style.lane) && style.lane > 0 && style.lane <= MAX_AVENUE
     // ⚠️ `stone` chỉ được là 0 (liền khối) hoặc một cỡ MÀN HÌNH DỰNG RA ĐƯỢC. Xem `MIN_STONE`: khai
     // nhỏ hơn thì cái kẹp trong `pavingSubdivision` sẽ nuốt mất phần chênh lệch trong im lặng.
     && Number.isFinite(style.stone) && style.stone >= 0 && style.stone < 1

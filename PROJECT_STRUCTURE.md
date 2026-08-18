@@ -286,8 +286,14 @@
 │   │   │   │                      #   ⚠️ RA ĐỜI VÌ BẢN SẮC ĐƯỜNG TỪNG NẰM GỌN TRONG MỘT MÃ MÀU: một
 │   │   │   │                      #   trục thì không đủ chỗ cho 15 giá trị vừa cách nhau vừa nằm
 │   │   │   │                      #   trong vùng mắt đọc được (TECH_DEBT #30 + #27)
-│   │   │   │                      #   ⚠️ `carriagewayExtents` — bề rộng là đại lượng của MẶT CẮT
-│   │   │   │                      #   NGANG; áp nó lên chiều DỌC thì đường vỡ thành mảng rời rạc
+│   │   │   │                      #   ⚠️ `carriagewayShape` — một ô đường là MỘT LÕI + tối đa BỐN
+│   │   │   │                      #   CÁNH TAY loe, KHÔNG phải một hình chữ nhật (ADR-031). Bề rộng
+│   │   │   │                      #   là đại lượng của MẶT CẮT NGANG; áp lên chiều DỌC thì đường vỡ
+│   │   │   │                      #   thành mảng rời rạc, còn ép về chữ nhật thì ngã ba phình trọn
+│   │   │   │                      #   ô ⇒ 45% số mép có bậc. Chỗ nối = min(nửa tôi, nửa hàng xóm)
+│   │   │   │                      #   ⚠️ `avenue`/`lane` ≤ `MAX_AVENUE = 0,96` — rộng trọn ô thì cánh
+│   │   │   │                      #   tay dài bằng 0 VÀ vỉa hè bị nuốt sạch. `isValidStreetStyle`
+│   │   │   │                      #   TỪ CHỐI THẲNG, không tự kẹp (bẫy `MIN_STONE`)
 │   │   │   │                      #   ⚠️ `stone` không được nhỏ hơn `MIN_STONE = 1/7` (viên 8 điểm
 │   │   │   │                      #   ảnh, ĐO ĐƯỢC) — nhỏ hơn thì cái kẹp nuốt mất phần chênh trong
 │   │   │   │                      #   im lặng, đúng bẫy Phase 7B. `isValidStreetStyle` chặn thẳng
@@ -468,6 +474,7 @@
 | `node scripts/shadow-score.mjs <ảnh>` | **chấm bóng đổ**: sàn độ sáng · % khung hình bị nghiền · khoảng cách sáng-tối · độ tươi · chênh sắc nóng-lạnh. Đo PHÂN BỐ chứ không chấm vài điểm — chấm tay rất dễ trúng mặt đường (vật liệu đen sẵn) rồi ghi công cho bóng đổ. `--selftest` có 5 ca, trong đó một ca tách riêng "chữa đúng" khỏi "chữa ngây thơ làm nhạt ảnh" |
 | `node scripts/png-probe.mjs <ảnh> --top 10` | màu THẬT trên màn hình tại một điểm/vùng |
 | `node --import ./scripts/register-esm-loader.mjs scripts/frame-fit.mjs 1.3` | công trình nào đang bị **mép khung hình cắt**, và phải lùi camera bao nhiêu thì hết (`--flat` = đối chứng địa hình phẳng · `--selftest`) |
+| `node --import ./scripts/register-esm-loader.mjs scripts/road-fit.mjs` | **đường sá có lởm chởm không, và lởm chởm cỡ nào** — đo HAI khuyết tật độc lập: (1) *bậc ở mép đường* = hai ô kề nhau trình ra hai bề rộng khác nhau tại chỗ giáp; (2) *mặt cắt dọc* = chênh cao độ hai ô đường kề nhau, quy về **phần của một căn nhà** (số tuyệt đối không nói lên gì — bài học Phase 7D). Hỏi thẳng `carriagewayShape`, không diễn đạt lại luật. ⚠️ Từ ADR-031, ĐO 1 ra 0 **theo cấu trúc** (luật `min` đối xứng), nên `--selftest` giữ một **đối chứng bơm LUẬT CŨ** vào — không còn bắt được bộ số hỏng cũ thì con số 0 kia vô nghĩa (11 ca) |
 | `node scripts/city-preview.mjs --era 7 --bench 120` | **chấm hiệu năng MỘT cảnh**: frame time P50/P95 ở khung ỔN ĐỊNH và ở khung DỰNG LẠI BÓNG (hai câu hỏi khác nhau, in riêng), số tam giác + lệnh vẽ đọc từ `renderer.info`, DPR thật, cỡ bản đồ bóng, số shader/geometry/texture. Thêm `--gpu` để dùng card thật (bắt buộc trên máy Đàm), `--no-shadow` để tách "vật liệu tối" khỏi "chi phí bóng" |
 | `bash scripts/bench-macbook.sh --thu` | **CHẠY CÁI NÀY TRƯỚC** — thử đúng 1 cảnh (~20 giây), in ĐẠT/HỎNG + tên card đồ hoạ |
 | `bash scripts/bench-macbook.sh` | **ĐO TRÊN MACBOOK THẬT** — ma trận 4 kỷ × 3 giờ × 2 góc = 24 cảnh ở **1100×700** + 1 cảnh **1600×1000**, 120 khung mỗi cảnh, ghi ra `.city-preview/bench-macbook.txt`. Kiểm mã thoát từng cảnh, đếm N/24, DỪNG NGAY nếu card là SwiftShader |

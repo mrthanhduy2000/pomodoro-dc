@@ -6,7 +6,82 @@
 > chọn: `ARCHITECTURE_DECISIONS.md`. Nợ kỹ thuật: `TECH_DEBT.md`. Migration: `MIGRATION.md`. Tóm
 > tắt theo mốc: `CHANGELOG.md`.
 > **NGUYÊN TẮC ƯU TIÊN SỐ 1:** (1) mọi phiên AI phải đọc file này + `CLAUDE.md` + các file liên quan TRƯỚC khi làm; (2) sau MỌI cập nhật dù nhỏ, phải cập nhật ngay file này + `CLAUDE.md` + các file liên quan khác.
-> Cập nhật lần cuối: **2026-08-18** — **VIỆC 3 / PHASE 11: MÁI THÔI LÀ MỘT TẤM PHẲNG TRƠN.**
+> Cập nhật lần cuối: **2026-08-18** — **VIỆC 1 / PHASE 12: ĐƯỜNG THÔI LỞM CHỞM.**
+>
+> **VIỆC 1 / PHASE 12 — ĐƯỜNG THÔI LỞM CHỞM (nguyên nhân 1/2) — 2026-08-18.**
+> Đàm nói *"đường lòi lõm, mất tự nhiên quá"*. Câu ấy gộp **hai nguyên nhân độc lập**, và một bản
+> vá cho cái này không chạm được cái kia: **(1) MÉP NGANG** — hai ô đường kề nhau trình ra hai bề
+> rộng khác nhau ngay tại chỗ giáp ⇒ mép đường bẻ một **góc vuông**; **(2) MẶT CẮT DỌC** — hai ô
+> đường nằm ở hai bậc thềm khác nhau ⇒ đường phải leo một **dốc dựng đứng** trong đúng một ô.
+> Commit này chỉ làm **(1)**. Nguyên nhân (2) là commit riêng ("không trộn nhiều thay đổi").
+> **ĐO TRƯỚC (`scripts/road-fit.mjs`, 15 kỷ × 3 mốc tuổi)**: **45%** số mép đường có một bậc, bậc
+> lớn nhất **0,380 ô**. **ĐO SAU: 0% · 0,000 ô.**
+> ⚠️ **Cái sai gốc là một GIẢ ĐỊNH VỀ HÌNH, không phải một con số sai** — *"lòng đường một ô là MỘT
+> hình chữ nhật"*. Hình chữ nhật có **hai** bề rộng, ngã tư cần **bốn**; nên ngã ba buộc phải phình
+> ra **trọn ô** theo hướng có nhánh dù nhánh ấy chỉ rộng một phần ba. Chỉnh khéo con số nào cũng
+> không thoát. Luật mới (**ADR-031**): **một LÕI + tối đa BỐN CÁNH TAY loe**, bề rộng chỗ nối là
+> `min(nửa của tôi, nửa của hàng xóm)` — một phép **ĐỐI XỨNG**, nên hai ô kề nhau *không có cách
+> nào* lệch. Kèm `MAX_AVENUE = 0,96` (cánh tay cần chỗ để loe; `avenue: 1,00` của kỷ 12/15 vừa làm
+> cánh tay dài bằng 0, vừa nuốt sạch vỉa hè của chính kỷ ấy).
+> **799 bài test** (798 + 1 đối chứng mới), lint sạch, build xanh, **0 lệnh vẽ mới / 0 vật liệu mới
+> / 0 nguồn sáng mới**. Anti-drift bản quét: **15/15 cặp chặng + 105/105 cặp kỷ trên ngưỡng mắt**
+> (gần nhất 20,7 / 21,4 · trung vị 37,6). ⏳ **CHƯA gộp `main`** — mục 5 chương trình làm việc.
+>
+> ⚠️ **BÀI HỌC LỚN NHẤT PHIÊN NÀY — TÔI SUÝT GỌI CHÍNH BẢN VÁ ĐÚNG CỦA MÌNH LÀ MỘT HỒI QUY.** Nhìn
+> ảnh 3D sau khi sửa: đường **thưa hẳn đi, đứt quãng**, mặt nạ đường mất **36% điểm ảnh đỏ** ở kỷ 1.
+> Trông y hệt một lỗi nặng. Rasterise thẳng hình học ra bản đồ ký tự (không qua camera, không có
+> khối nào che) thì sự thật ngược lại: **TRƯỚC** mỗi ngã tư phình thành `████` rồi thụt về `██` —
+> đúng cái lồi lõm Đàm thấy; **SAU** bề rộng chạy thẳng đều, mạng đường vẫn **liền lạc hoàn toàn**,
+> tâm của cả 50 ô đường đều còn mặt đường. Diện tích mất **13,6%**, và mất **đúng ở các ngã tư**
+> (ô 4|8 và 8|4: −56 điểm phần trăm · ô thẳng: −3). ⇒ **Một ảnh 3D có che khuất KHÔNG phải bằng
+> chứng về hình học.** Cái phình ở ngã tư xưa nay đang *bắc cầu* qua những quãng bị nhà cửa che,
+> nên gỡ nó đi thì mắt đọc thành "đường đứt" trong khi hình học liền hơn trước. Cùng họ với bài học
+> Phase 9B (*"thứ không chịu mờ đi chưa bao giờ là bóng đổ"*): **khi mắt và phép đo cãi nhau, hãy
+> đo lại bằng một phép đo KHÔNG đi qua camera**, đừng chọn bên nghe hợp lý hơn.
+>
+> ⚠️ **VÀ MỘT CÁI BẪY ĐÚNG NHƯ TÀI LIỆU ĐÃ CẢNH BÁO, LẶP LẠI Y NGUYÊN**: cặp ảnh "trước/sau" đầu
+> tiên tôi định dùng có **kích thước khác nhau** (1434 vs 1134 điểm ảnh) — tức khung hình khác,
+> camera khác, không so được. Chúng là ảnh cũ còn sót trong `.city-preview/`, không truy được nguồn.
+> Đã dựng lại vế TRƯỚC từ một `git worktree` ở `e95cdf1` bằng **đúng một dòng lệnh**, `md5sum` cả
+> sáu tấm để chứng minh không tấm nào trùng byte tấm nào. Đây đúng bài học 2026-08-18 (Phase 11)
+> viết trong `CLAUDE.md`, và nó vẫn cắn được lần nữa chỉ một ngày sau.
+>
+> ⚠️ **Hai quả mìn nhỏ, cả hai đều do bài test bắt, không do đọc mã.** (a) **Tam giác SUY BIẾN**:
+> khi lõi chạm đúng ranh giới ô (`avenue: 1,00`), dải cánh tay dài bằng 0 vẫn được đẩy vào lưới —
+> vô hình trên màn hình, nhưng trọng tâm rơi **đúng trên** ranh giới rồi bị làm tròn sang ô **bên
+> cạnh**, làm ô ấy "rộng" thêm ra; bài test đỏ với thông báo trỏ vào một ô hoàn toàn lành. (b)
+> **Cỡ viên lát phải là đại lượng của THẾ GIỚI, không phải của mảnh** — chia đều `sub` cho năm mảnh
+> dài ngắn khác nhau thì viên của cánh tay 0,14 ô nhỏ hơn viên của lõi 0,72 ô tới năm lần.
+>
+> 🆕 **TECH_DEBT #42** (Medium, chờ Đàm): vỉa hè bị kẹp `walk ≤ 0,5 − half` bóp trong im lặng trên
+> ĐẠI LỘ ở **8/15 kỷ**, tệ nhất còn **11%** bề rộng đã khai. Phần chặn lời hứa "hết bậc" đã sửa;
+> phần còn lại đụng bản sắc 15 kỷ nên không tự quyết.
+>
+> **SỐ HIỆU NĂNG (đo đủ 15 kỷ, `--bench 1 --no-shadow`)**: **lệnh vẽ KHÔNG đổi một đơn vị nào** ở
+> cả 15 kỷ · tam giác **659.796 → 653.044 (−1,0%)**, 10 kỷ giảm 5 kỷ tăng. Đối chiếu chéo: đếm
+> riêng tam giác mặt đường theo từng phần (`ROAD_PART`) thì **15/15 kỷ khớp CHÍNH XÁC** với chênh
+> lệch tổng ⇒ không một tam giác nào đến từ nhà/cây/đất/chân trời. Vì sao 5 kỷ *tăng*: luật cũ chia
+> lòng đường thành đúng `sub × sub` ô con **bất kể ô rộng bao nhiêu** (kiểm được: tam giác cũ
+> `= 2 × 40 ô đường × sub²`, đúng 15/15 kỷ) — tức `sub` xưa nay là *số lát cắt của một mảnh* chứ
+> không phải *cỡ một viên lát*; luật mới suy từ chiều dài thật nên kỷ lát mịn giảm mạnh (kỷ 8 còn
+> 49%) còn kỷ lát thô + đại lộ rộng thì tăng nhẹ. Chi tiết: `PERFORMANCE.md` mục "Sau Phase 12".
+>
+> ⚠️ **PHÁT HIỆN NGOÀI DỰ KIẾN — `PERFORMANCE.md` ĐANG MÔ TẢ MỘT COMMIT ĐÃ CHẾT.** Đi lấy mốc nền
+> cho Phase 12, tôi định chép cột "sau" của bảng Phase 11 làm cột "trước" của mình. Phép đối chiếu
+> chéo ở trên chặn lại: 7 kỷ đầu khớp từng đơn vị, riêng kỷ 8 lệch đúng 3.560. Đo lại thì bảng
+> Phase 11 mô tả `d888fae`, còn HEAD là `e95cdf1` — **Phase 11-B sửa `roofStyle.js` (hình học thật)
+> mà không đụng `PERFORMANCE.md`**, để **6/15 kỷ sai số tam giác** (tổng lệch +14.360). Chép sang
+> thì kỷ 8 sẽ được báo là −5.558 thay vì −1.998 và kỷ 11 là +3.902 thay vì +126 — cả bảng bịa.
+> ⇒ Đã (a) giữ nguyên bảng Phase 11 + thêm mục ❗ giải thích cách đọc, (b) thêm luật *"mỗi phase
+> PHẢI tự đo lại mốc nền của mình"* vào `PERFORMANCE.md`, (c) mở **TECH_DEBT #43**. Điều đáng nói
+> nhất: **cột lệnh vẽ của chính bảng ấy KHÔNG trôi**, vì nó có `drawCallBudget.test.js` canh; cột
+> tam giác trôi vì không có gì canh. Chỗ có test thì đúng, chỗ chỉ có một câu Definition of Done
+> thì sai — trong cùng một bảng, cùng một phase.
+>
+>
+> ---
+>
+> **(mốc trước) VIỆC 3 / PHASE 11: MÁI THÔI LÀ MỘT TẤM PHẲNG TRƠN.**
 > Camera nhìn **chúc xuống**, nên mái là mặt lớn nhất trong khung hình — mà tới hết Phase 10 nó vẫn
 > trơn nhẵn ở cả 15 kỷ. Nay có **ngữ pháp thứ năm** theo đúng khuôn ba lớp đã dùng bốn lần: BẢNG
 > `city3d/roofStyle.js` · HÌNH `city3d/rooftop.js` · `buildingSpec.js` chỉ ĐỌC. Hai trục vuông góc

@@ -11,6 +11,130 @@
 
 ---
 
+## ADR-031 — Lòng đường của một ô là MỘT LÕI + TỐI ĐA BỐN CÁNH TAY, không phải một hình chữ nhật; và bề rộng chỗ nối do CẢ HAI ô cùng suy ra bằng một phép ĐỐI XỨNG
+
+- **Ngày**: 2026-08-18 (Phase 12, Việc 1 — nguyên nhân 1/2)
+- **Bối cảnh**: Đàm nhìn thành phố rồi nói *"đường lòi lõm, mất tự nhiên quá"*. Câu ấy gộp **hai
+  nguyên nhân độc lập**, và một bản vá cho cái này không chạm được cái kia: (1) hai ô đường kề nhau
+  trình ra hai bề rộng khác nhau ngay tại chỗ giáp ⇒ mép đường bẻ một **góc vuông**; (2) hai ô
+  đường nằm ở hai bậc thềm khác nhau ⇒ con đường phải **leo một cái dốc dựng đứng** trong đúng một
+  ô. Bản ghi này chỉ nói về **(1)**. Nguyên nhân (2) là một commit riêng.
+- **Vấn đề**: ADR-025 (Phase 9D) đã sửa mặt đường một lần, và sửa đúng: bản đầu thu ô đại lộ ở CẢ
+  HAI chiều theo bề rộng kỷ khai, làm hai ô kề nhau chừa một khe cỏ và con đường vỡ thành mấy cái
+  sân đỗ xe rời rạc. Bản vá khi ấy — *mép nào giáp ô đường khác thì vươn tới ranh giới ô (0,5), mép
+  nào giáp đất thì dừng ở nửa bề rộng của chính nó* — chữa đứt điểm cái khe cỏ. Nhưng nó giữ
+  nguyên một giả định chưa ai viết ra: **lòng đường của một ô là MỘT hình chữ nhật**. Một hình chữ
+  nhật chỉ có **hai** bề rộng, còn một ngã tư cần tới **bốn** — nên ngã ba/ngã tư buộc phải phình
+  ra trọn ô theo hướng có nhánh, dù cái nhánh ấy chỉ rộng bằng một phần ba đại lộ.
+
+### Đo trước, không sửa mò
+
+Công cụ `scripts/road-fit.mjs` (thuần, không dựng ảnh, 11 ca `--selftest`) hỏi **chính**
+`carriagewayShape` chứ không diễn đạt lại luật ấy. Đo trên 15 kỷ × 3 mốc tuổi thành phố:
+
+| | trước | sau |
+|---|--:|--:|
+| tỉ lệ mép đường có bậc (trung vị 45 lượt đo) | **45%** | **0%** |
+| bậc lớn nhất cả bảng | **0,380 ô** | **0,000 ô** |
+
+Tức con đường lởm chởm ở **gần một nửa** số chỗ nối — đúng như Đàm nói, và lớn hơn nhiều mức "một
+chút răng cưa" mà mắt có thể bỏ qua.
+
+### Quyết định 1 — bề rộng chỗ nối là `min(nửa của tôi, nửa của hàng xóm)`
+
+Đây là thứ **xoá** bậc, và nó xoá bằng một tính chất chứ không bằng một con số: hai ô kề nhau cùng
+suy ra bề rộng chỗ giáp từ **cùng một biểu thức đối xứng**, nên chúng không có cách nào lệch nhau.
+Một cái bậc chỉ sinh ra khi mỗi bên tự tính bề rộng của mình một cách **độc lập** — đó chính xác là
+điều luật cũ làm.
+
+⚠️ Hệ quả về giao diện của hàm: `carriagewayShape(myHalf, nbHalf)` nhận **bề rộng** của hàng xóm,
+không phải một cờ `có/không` như `carriagewayExtents` cũ. Biết "có đường bên cạnh" là **không đủ**
+để tính một phép `min`.
+
+### Quyết định 2 — LÕI + CÁNH TAY, và lõi rộng bằng cánh tay rộng nhất
+
+- **Lõi** = chỗ hai con đường chồng lên nhau. Bề ngang của nó theo trục `u` chính là bề rộng của
+  con đường chạy **dọc**, và ngược lại — đó là *định nghĩa* của một ngã tư, không phải một hằng số
+  chọn tay. Vì vậy lõi phải là **hai** con số (`coreU`, `coreV`); gộp làm một là dựng lại đúng cái
+  giả định hình chữ nhật vừa gỡ bỏ.
+- **Cánh tay** loe: rộng bằng lõi ở mép lõi, thu về `min` ở ranh giới ô. Ngõ nhỏ nhập vào đại lộ
+  giống một cái phễu nhập làn, thay vì gãy một góc vuông.
+- ⇒ **Một ô không bao giờ rộng hơn chính con đường của nó** (`coreU`/`coreV ≤ myHalf` luôn đúng,
+  vì mọi cánh tay đều đã bị `min` với `myHalf`). Chính điều này giết cái phình 0,5 ô.
+
+### Quyết định 3 — `MAX_AVENUE = 0,96`, và `isValidStreetStyle` TỪ CHỐI THẲNG
+
+Cánh tay cần chỗ để loe, nên một con đường **không được rộng trọn ô**. Kỷ 12 và 15 khai
+`avenue: 1.00`, và con số ấy đang gây **hai** khuyết tật cùng lúc:
+
+1. lõi rộng đúng 0,5 ⇒ cánh tay dài **bằng không** ⇒ lời hứa "không còn bậc" *không thể* đúng ở hai
+   kỷ đó, bất kể luật `min` tốt tới đâu;
+2. `streetCrossSection` kẹp `walk ≤ 0,5 − half` ⇒ **vỉa hè bằng 0** — trong khi `note` của kỷ 12
+   viết nguyên chữ *"vỉa hè mênh mông"*. Con số và lời giải thích cùng bị vứt đi **trong im lặng**.
+
+Chọn **0,96** chứ không phải một số tròn hơn vì nó vẫn để kỷ 12 và 15 là hai kỷ đường **rộng nhất**
+trong 15 (kế tiếp là 0,94) — trục bản sắc "đại lộ Xô Viết / đại lộ sa mạc rộng nhất" giữ nguyên, mà
+vẫn chừa 0,02 ô cho cánh tay. Đây là mức **thấp nhất** sửa được lỗi; cố ý không hạ sâu hơn, vì hạ
+sâu là mua một con số đẹp bằng cách bóp một trục bản sắc đã được đo (8 trục ở `streetStyle.test.js`).
+
+⚠️ Và validator **từ chối**, không tự kẹp — đúng bài học `MIN_STONE` (Phase 9D): tự kẹp là cách một
+bảng 15 dòng lặng lẽ thoái hoá về 1 dòng, vì bốn kỷ khai bốn số vẫn dựng ra một kết quả.
+
+### Phương án đã cân nhắc và loại bỏ
+
+| Phương án | Vì sao loại |
+|---|---|
+| **Giữ hình chữ nhật, chỉnh lại các bề rộng khai** cho gần nhau hơn | Cái sai là một giả định về **HÌNH**, không phải một con số. Một hình chữ nhật có hai bề rộng, ngã tư cần bốn — không giá trị nào thoát được, và làm 15 kỷ giống nhau hơn thì mất chính thứ ADR-025 vừa dựng lên. |
+| **Bo tròn góc chỗ nối** (fillet) cho đỡ gắt | Che triệu chứng. Bậc vẫn còn, chỉ là mép nó cong. Và nó tốn hình học ở mọi chỗ nối thay vì chỉ ở chỗ thật sự đổi bề rộng. |
+| **Mọi ô đường đều rộng trọn ô** (bỏ hẳn bề rộng theo kỷ) | Xoá bậc thật, nhưng giết luôn trục bản sắc "bề rộng đại lộ / bề rộng ngõ" — 2 trong 8 trục của `15 KỶ RA 15 MẶT ĐƯỜNG`. Mua sự phẳng phiu bằng cách xoá sự khác biệt. |
+| **Tự kẹp `avenue` về 0,96 trong `getStreetStyle`** | Bảng vẫn khai 1,00, mã vẫn chạy, và không ai biết hai kỷ đang bị sửa sau lưng. Bẫy `MIN_STONE`. |
+
+### Trade-off
+
+- **Được**: mép đường liền lạc ở 100% chỗ nối (đo được); ngã ba/ngã tư đọc ra được thứ bậc đường
+  (đại lộ đi thẳng, ngõ nhập vào); vỉa hè của kỷ 12/15 sống lại; **0 lệnh vẽ mới, 0 vật liệu mới,
+  0 nguồn sáng mới** — chỉ tốn tam giác, thứ ngân sách M3 nói là gần như miễn phí.
+- **Mất**: hàm dựng phức tạp hơn (một lõi + bốn dải hình thang thay vì một lưới chữ nhật), và nó
+  cần biết bề rộng của **hàng xóm** nên phải dựng sẵn một `Map` bề rộng trước vòng lặp chính.
+- **Mất**: kỷ 12/15 hẹp đi 0,04 ô (2% bề rộng) — dưới ngưỡng mắt, và đã kiểm rằng 8 trục bản sắc
+  không đổi thứ hạng.
+
+### Ảnh hưởng
+
+- `src/engine/city3d/streetStyle.js` — `carriagewayExtents` → `carriagewayShape` (đổi cả chữ ký);
+  thêm `SIDES`, `SIDE_STEPS`, `MAX_AVENUE`; siết `isValidStreetStyle`; kỷ 12/15 `avenue` 1,00→0,96.
+- `src/components/city/render3d/terrainMesh.js` — dựng lõi + bốn dải loe; thêm `quad4` (bốn góc tự
+  do, vì ô lát ở mép cánh tay là hình **thang** chứ không phải chữ nhật); `Map` bề rộng thay cho
+  `Set` ô đường; vỉa hè/bó vỉa/vạch kẻ đọc `shape.arms` thay cho cờ `nối`.
+- `scripts/road-fit.mjs` — công cụ đo mới.
+
+### Điều kiện xem lại
+
+- Nếu có kỷ nào cần đại lộ rộng hơn 0,96 ô: phải đổi **mô hình**, không đổi hằng số — ví dụ cho
+  cánh tay loe *ra ngoài* ranh giới ô, việc này đòi hai ô cùng thoả thuận nên phải suy nghĩ lại từ
+  đầu.
+- Nếu mạng đường thôi bám lưới vuông (đường chéo, đường cong): "bốn phía" hết đúng và cả bản ghi
+  này phải viết lại.
+
+### ⚠️ Ba cái bẫy đã trả giá trong chính phase này
+
+1. **Tam giác suy biến làm hỏng phép đo, không làm hỏng hình.** Khi lõi chạm đúng ranh giới ô
+   (`avenue = 1,00`), dải cánh tay dài bằng 0 vẫn được đẩy vào lưới. Trên màn hình chúng vô hình;
+   nhưng trọng tâm của chúng rơi **đúng trên** ranh giới rồi bị làm tròn sang ô **bên cạnh**, và ô
+   ấy bỗng "rộng" thêm ra — bài test hình học đỏ với một thông báo trỏ vào một ô hoàn toàn lành.
+   Vá hai lớp: bỏ qua dải dài 0, **và** cấm khai 1,00 ngay từ bảng.
+2. **Cỡ viên lát phải là đại lượng của THẾ GIỚI, không phải của mảnh.** Trước đây cả ô là một hình
+   chữ nhật nên chia `sub × sub` là xong. Nay mỗi ô có tới năm mảnh dài ngắn khác nhau; chia đều
+   `sub` cho mọi mảnh thì viên lát của cánh tay dài 0,14 ô nhỏ hơn viên của lõi dài 0,72 ô tới năm
+   lần — tức cỡ viên thôi là một trục bản sắc và bắt đầu kể chuyện về hình dạng ngã tư.
+3. **Phép phá đầu tiên không cô lập được thứ tôi định cô lập.** Dựng lại luật cũ (`arms = 0,5`) làm
+   đỏ assert *bề rộng lõi* **trước** assert *bậc ở mép*, nên nó không chứng minh được assert thứ
+   hai có răng. Phải phá đúng **một** chiều — chỉ phá tính đối xứng (`nb × 0,9`, vẫn `≤ myHalf`) —
+   thì mới ra đúng dòng đỏ đã nêu trước: *"ô (0,0) và (1,0) giáp nhau mà bên này phủ [−0,1170;
+   0,1170] còn bên kia phủ [−0,1300; 0,1300] — đó là một BẬC ở mép đường"*.
+
+---
+
 ## ADR-030 — Mái là NGỮ PHÁP THỨ NĂM, và nó tách đôi kỳ-quan ↔ nhà-dân lần thứ sáu; nhưng `stackCount` thì CỐ Ý không tách
 
 - **Ngày**: 2026-08-18 (Phase 11)

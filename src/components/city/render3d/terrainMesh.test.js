@@ -5,7 +5,7 @@ import { ROAD_LIFT, ROAD_PART, buildRoadSurface, buildTerrainSurface } from './t
 import { APRON_DROP, buildTerrain } from '../../../engine/city3d/terrain.js';
 import { buildScenePalette } from '../../../engine/city3d/palette3d.js';
 import {
-  carriagewayExtents, getStreetStyle, streetCrossSection,
+  carriagewayShape, getStreetStyle, streetCrossSection,
 } from '../../../engine/city3d/streetStyle.js';
 import { computeCityLayout } from '../../../engine/cityLayout.js';
 import { BLUEPRINT_CATALOG } from '../../../engine/constants.js';
@@ -181,7 +181,7 @@ test('MẶT ĐƯỜNG BÁM SÁT SƯỜN DỐC — đúng `ROAD_LIFT` phía trên
   assert.ok(lòng_đường > 100, `chỉ kiểm được ${lòng_đường} đỉnh LÒNG ĐƯỜNG — mặt nạ lớp đang hỏng`);
 });
 
-test('LÒNG ĐƯỜNG DỰNG ĐÚNG BỐN MÉP MÀ `carriagewayExtents` KHAI — hẹp ngang, LIỀN dọc', () => {
+test('LÒNG ĐƯỜNG DỰNG ĐÚNG HÌNH MÀ `carriagewayShape` KHAI — LÕI + CÁNH TAY, không bậc ở mép', () => {
   // ⚠️ ĐÂY LÀ LÝ DO MẶT ĐƯỜNG KHÔNG NẰM CHUNG LƯỚI VỚI MẶT ĐẤT. Nhét chung thì bề rộng ngõ bị làm
   // tròn về bội của một ô con (1/3), mà muốn CÂN GIỮA thì số ô con phải cùng chẵn-lẻ với 3 ⇒ chỉ
   // còn 1/3 (mảnh như sợi chỉ) hoặc 3/3 (bằng đại lộ). Lấy 2/3 thì đúng bề rộng nhưng LỆCH TÂM
@@ -190,18 +190,28 @@ test('LÒNG ĐƯỜNG DỰNG ĐÚNG BỐN MÉP MÀ `carriagewayExtents` KHAI —
   // ⚠️ VÀ NÓ CANH THÊM MỘT LỖI ĐÃ NHÌN THẤY TẬN MẮT Ở KỶ 13: bản đầu Phase 9D thu hẹp ô đường ở CẢ
   // HAI chiều, nên hai ô kề nhau chừa một khe cỏ và con đường vỡ thành những mảnh vuông rời rạc.
   // Bề rộng là đại lượng của mặt cắt NGANG; chiều DỌC phải vươn tới ranh giới ô khi còn đường nối
-  // tiếp. Bài này hỏi CHÍNH hàm thuần mà bên dựng hỏi (`carriagewayExtents`) rồi đối chiếu với đỉnh
+  // tiếp. Bài này hỏi CHÍNH hàm thuần mà bên dựng hỏi (`carriagewayShape`) rồi đối chiếu với đỉnh
   // dựng ra — nó canh việc bên dựng CÓ DÙNG luật ấy, chứ không diễn đạt lại luật bằng công thức
   // riêng (hai công thức "tương đương" luôn lệch nhau ở biên — Phase 3Y).
-  let ngõ = 0; let đại_lộ = 0; let liền = 0;
+  let ngõ = 0; let đại_lộ = 0; let liền = 0; let cặpGiáp = 0;
   for (const era of ERAS) {
     const { layout, road } = dựng(era);
     if (!road) continue;
     const street = getStreetStyle(era);
     const ôĐường = new Set();
+    const nửaCủa = new Map();
     for (const prop of layout.props ?? []) {
-      if (prop.kind === 'road') ôĐường.add(`${prop.x}|${prop.y}`);
+      if (prop.kind !== 'road') continue;
+      ôĐường.add(`${prop.x}|${prop.y}`);
+      const lane = prop.variant === 1 || prop.variant === 2;
+      nửaCủa.set(`${prop.x}|${prop.y}`, streetCrossSection(street, lane).half);
     }
+    const hàngXóm = (x, y) => ({
+      west: nửaCủa.has(`${x - 1}|${y}`) ? nửaCủa.get(`${x - 1}|${y}`) : null,
+      east: nửaCủa.has(`${x + 1}|${y}`) ? nửaCủa.get(`${x + 1}|${y}`) : null,
+      north: nửaCủa.has(`${x}|${y - 1}`) ? nửaCủa.get(`${x}|${y - 1}`) : null,
+      south: nửaCủa.has(`${x}|${y + 1}`) ? nửaCủa.get(`${x}|${y + 1}`) : null,
+    });
     // ⚠️ GOM THEO TAM GIÁC, KHÔNG THEO ĐỈNH. Bản đầu lọc "mọi đỉnh cách tâm ô ≤ 0,5" và báo ngõ
     // dọc kỷ 1 rộng đúng 1,0 — nghe y hệt một lỗi thật. Không phải: ô ĐẠI LỘ bên cạnh có đỉnh nằm
     // đúng trên ranh giới ±0,5, nên chúng lọt vào mẫu của ô ngõ và thổi bề ngang lên. Mỗi tam giác
@@ -232,13 +242,21 @@ test('LÒNG ĐƯỜNG DỰNG ĐÚNG BỐN MÉP MÀ `carriagewayExtents` KHAI —
       if (!trong || trong.length === 0) continue;
       const isLane = prop.variant === 1 || prop.variant === 2;
       const cross = streetCrossSection(street, isLane);
+      const shape = carriagewayShape(cross.half, hàngXóm(prop.x, prop.y));
+      const ext = shape.reach;
       const nối = {
-        west: ôĐường.has(`${prop.x - 1}|${prop.y}`),
-        east: ôĐường.has(`${prop.x + 1}|${prop.y}`),
-        north: ôĐường.has(`${prop.x}|${prop.y - 1}`),
-        south: ôĐường.has(`${prop.x}|${prop.y + 1}`),
+        west: shape.arms.west !== null, east: shape.arms.east !== null,
+        north: shape.arms.north !== null, south: shape.arms.south !== null,
       };
-      const ext = carriagewayExtents(cross, nối);
+      // ⚠️ MỘT Ô KHÔNG BAO GIỜ ĐƯỢC RỘNG HƠN CHÍNH CON ĐƯỜNG CỦA NÓ. Đây là thứ giết cái phình
+      // 0,5 ô ở ngã ba — bản trước Phase 12 cho mọi ô có nhánh nở ra trọn ô bất kể nhánh ấy hẹp
+      // cỡ nào, và đó là nguồn của ~50% số bậc mép đường.
+      for (const [trục, giá] of [['u', shape.coreU], ['v', shape.coreV]]) {
+        assert.ok(
+          giá <= cross.half + 1e-9,
+          `kỷ ${era} ô (${prop.x},${prop.y}): lõi theo ${trục} rộng ${giá}, hơn cả con đường ${cross.half}`,
+        );
+      }
       const us = trong.map(([x]) => về_ô(x));
       const vs = trong.map(([, , z]) => về_ô(z));
       const mép = [
@@ -278,12 +296,50 @@ test('LÒNG ĐƯỜNG DỰNG ĐÚNG BỐN MÉP MÀ `carriagewayExtents` KHAI —
           `kỷ ${era} ô (${prop.x},${prop.y}) lệch tâm ngang ${(tâm - prop.x).toFixed(4)} ô — `
           + 'cư dân đi đúng tâm ô sẽ đi sát mép đường',
         );
+        // ⚠️ SO VỚI `shape.coreU`, KHÔNG VỚI `cross.half`. Từ Phase 12 một ô có thể HẸP HƠN con
+        // đường nó khai — đó chính là bản vá: ô nào chỉ chạm toàn ngõ thì thu về đúng bề ngõ thay
+        // vì phình ra. Trần `coreU ≤ cross.half` đã được canh riêng ở trên, nên vế "không rộng hơn
+        // con đường của mình" vẫn còn nguyên răng.
         assert.ok(
-          Math.abs((Math.max(...us) - Math.min(...us)) - cross.half * 2) < 1e-6,
+          Math.abs((Math.max(...us) - Math.min(...us)) - shape.coreU * 2) < 1e-6,
           `kỷ ${era} ô (${prop.x},${prop.y}) rộng ${(Math.max(...us) - Math.min(...us)).toFixed(4)}, `
-          + `đáng lẽ ${(cross.half * 2).toFixed(4)}`,
+          + `đáng lẽ ${(shape.coreU * 2).toFixed(4)}`,
         );
         if (isLane) ngõ += 1; else đại_lộ += 1;
+      }
+    }
+
+    // ⚠️ ĐÂY LÀ LỜI HỨA CHÍNH CỦA PHASE 12, VÀ NÓ PHẢI ĐO TRÊN ĐỈNH THẬT, KHÔNG ĐỌC LẠI HÀM THUẦN.
+    // Hai ô đường kề nhau phải trình ra CÙNG một bề rộng tại chỗ giáp. Lệch một chút là một BẬC
+    // vuông góc chạy dọc mép đường — thứ Đàm gọi là "đường lòi lõm". Đo bằng cách lấy mọi đỉnh
+    // lòng đường NẰM ĐÚNG trên ranh giới chung rồi so khoảng chúng phủ.
+    for (const prop of layout.props ?? []) {
+      if (prop.kind !== 'road') continue;
+      for (const [du, dv] of [[1, 0], [0, 1]]) {
+        if (!ôĐường.has(`${prop.x + du}|${prop.y + dv}`)) continue;
+        const ranh = (du ? prop.x : prop.y) + 0.5;
+        // ⚠️ HAI CHỈ SỐ NÀY TỪNG VIẾT NGƯỢC, và bài test "xanh" một cách vô nghĩa vì `phủ` không
+        // tìm thấy đỉnh nào — chính dòng đếm `cặpGiáp` cuối bài mới tố cáo. Ranh giới ĐÔNG-TÂY
+        // (`du`) là một đường thẳng đứng: toạ độ bị CẮT là `u` (chỉ số 0), toạ độ chạy DỌC nó là
+        // `v` (chỉ số 2). Viết ngược thì đi tìm đỉnh ở một nơi không có đỉnh nào.
+        const cắtNgang = du ? 0 : 2;        // toạ độ vuông góc với ranh giới
+        const dọcTheo = du ? 2 : 0;         // toạ độ chạy DỌC ranh giới
+        const phủ = (key) => {
+          const ds = (theo_ô.get(key) ?? [])
+            .filter((đ) => Math.abs(về_ô(đ[cắtNgang]) - ranh) < 1e-6)
+            .map((đ) => về_ô(đ[dọcTheo]));
+          return ds.length ? [Math.min(...ds), Math.max(...ds)] : null;
+        };
+        const a = phủ(`${prop.x}|${prop.y}`);
+        const b = phủ(`${prop.x + du}|${prop.y + dv}`);
+        if (!a || !b) continue;
+        cặpGiáp += 1;
+        assert.ok(
+          Math.abs(a[0] - b[0]) < 1e-6 && Math.abs(a[1] - b[1]) < 1e-6,
+          `kỷ ${era}: ô (${prop.x},${prop.y}) và (${prop.x + du},${prop.y + dv}) giáp nhau mà bên `
+          + `này phủ [${a[0].toFixed(4)}, ${a[1].toFixed(4)}] còn bên kia phủ `
+          + `[${b[0].toFixed(4)}, ${b[1].toFixed(4)}] — đó là một BẬC ở mép đường`,
+        );
       }
     }
     assert.ok(
@@ -293,6 +349,8 @@ test('LÒNG ĐƯỜNG DỰNG ĐÚNG BỐN MÉP MÀ `carriagewayExtents` KHAI —
   }
   assert.ok(ngõ > 0 && đại_lộ > 0, `phải gặp cả hai hạng đường (ngõ ${ngõ}, đại lộ ${đại_lộ})`);
   assert.ok(liền > 50, `chỉ gặp ${liền} mép nối — bài canh liền mạch đang chạy không`);
+  // Gác chạy-rỗng cho phép đo bậc: nó duyệt một tập con của `liền`, nên phải tự khai số cặp đã xét.
+  assert.ok(cặpGiáp > 500, `chỉ so ${cặpGiáp} cặp giáp nhau — phép canh bậc đang chạy gần như rỗng`);
 });
 
 test('NGÂN SÁCH TAM GIÁC CỦA ĐỊA HÌNH KHÔNG ĐƯỢC PHÌNH LÊN TRONG IM LẶNG', () => {

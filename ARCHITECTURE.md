@@ -510,10 +510,17 @@ lộ · bề rộng ngõ · vật liệu lát · cỡ viên · độ mòn · bó
 chỉ DỰNG theo bảng; bảng màu chỉ còn lo MÀU và chỉ còn hai lời hứa về màu (bảng không dẹt · không
 hai kỷ trùng khít mã màu). Phép đo bản sắc chuyển sang **8 trục cấu trúc** ở `streetStyle.test.js`.
 Ba hệ quả kiến trúc đáng nhớ:
-1. **`carriagewayExtents` xoá luôn khái niệm `variant` khỏi tầng vẽ.** Bề rộng là đại lượng của MẶT
-   CẮT NGANG; bản đầu áp nó lên cả chiều DỌC nên đường vỡ thành những mảng rời rạc. Luật đúng —
+1. **`carriagewayShape` xoá luôn khái niệm `variant` khỏi tầng vẽ.** Bề rộng là đại lượng của MẶT
+   CẮT NGANG; bản đầu áp nó lên cả chiều DỌC nên đường vỡ thành những mảng rời rạc. Bản vá 9D —
    *mép giáp ô đường thì vươn tới ranh giới, mép giáp đất thì dừng ở nửa bề rộng* — làm đường dọc,
-   ngã tư và đầu đường cụt tự đúng, không cần ba nhánh mã.
+   ngã tư và đầu đường cụt tự đúng, không cần ba nhánh mã. ⚠️ **Nhưng nó giữ nguyên một giả định
+   chưa ai viết ra: lòng đường một ô là MỘT hình chữ nhật** — mà hình chữ nhật chỉ có hai bề rộng
+   còn ngã tư cần bốn, nên ngã ba buộc phải phình trọn ô theo hướng có nhánh dù nhánh ấy chỉ rộng
+   một phần ba. Đo ở Phase 12: **45% số mép đường có một bậc vuông góc**, bậc lớn nhất 0,380 ô.
+   **ADR-031** thay hình chữ nhật bằng **một LÕI + tối đa bốn CÁNH TAY loe**, bề rộng chỗ nối do cả
+   hai ô cùng suy ra bằng `min(nửa của tôi, nửa của hàng xóm)` — một phép ĐỐI XỨNG, nên hai ô kề
+   nhau không còn cách nào lệch. Đo lại: **0%**. Kèm `MAX_AVENUE = 0,96` (cánh tay cần chỗ để loe;
+   `avenue: 1,00` vừa làm cánh tay dài bằng 0 vừa nuốt sạch vỉa hè của chính kỷ ấy).
 2. **Cả hệ đường vẫn là MỘT hình học, MỘT vật liệu, MỘT lệnh vẽ.** Bó vỉa/vỉa hè/vạch kẻ phân biệt
    nhau bằng `ROAD_PART` (thuộc tính đỉnh) chứ không bằng mesh riêng — nên số lệnh vẽ đứng yên
    **13 → 13**. Cái giá đã biết và chấp nhận: vỉa hè không có độ nhám riêng, nó chỉ sáng hơn.

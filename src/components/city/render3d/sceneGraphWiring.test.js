@@ -20,6 +20,11 @@ import { fileURLToPath } from 'node:url';
 const HERE = dirname(fileURLToPath(import.meta.url));
 const SOURCE = readFileSync(join(HERE, 'sceneGraph.js'), 'utf8');
 const TERRAIN_SOURCE = readFileSync(join(HERE, 'terrainMesh.js'), 'utf8');
+// ⚠️ Từ 2026-08-18 danh sách "thành phố gồm những khối nào" nằm ở `cityParts.js` (một bản duy nhất,
+// dùng chung với bài test — xem đầu file ấy). Bài test dưới đây phải hỏi CẢ HAI phía: bên kia có
+// còn duyệt nhà dân không, và bên này có còn dựng chúng vào cảnh không.
+const PARTS_SOURCE = readFileSync(
+  join(HERE, '..', '..', '..', 'engine', 'city3d', 'cityParts.js'), 'utf8');
 
 /**
  * Bỏ chú thích, chỉ giữ phần MÃ.
@@ -253,10 +258,18 @@ test('NHÀ DÂN PHẢI ĐƯỢC DỰNG THẬT VÀO CẢNH, không chỉ được
   // thuần, có 8 bài test riêng, được `computeCityLayout` gọi và trả về trong `layout.dwellings` —
   // tất cả đều xanh kể cả khi `sceneGraph.js` không hề đọc mảng đó. Triệu chứng duy nhất sẽ là một
   // thành phố vẫn trống trơn y như trước, và không một dòng nào đỏ lên.
+  // ⚠️ CÂU HỎI NÀY NAY CÓ HAI VẾ, vì việc dựng danh sách đã tách sang `cityParts.js`. Hỏi thiếu một
+  // vế là để lọt đúng ca nguy hiểm: `collectCitySpecs` vẫn sinh ra nhà dân đầy đủ mà `sceneGraph.js`
+  // lặng lẽ bỏ qua nhánh `'dwelling'` (hoặc ngược lại) — cả hai đều cho ra một bãi đất trống.
   assert.ok(
-    /for \(const home of layout\.dwellings \?\? \[\]\)/.test(CALLS),
-    'Cảnh không còn duyệt `layout.dwellings`. Cả Phase 7C biến mất trong im lặng: engine vẫn tính '
-    + 'đủ 17–30 căn nhà mỗi kỷ, test tầng thuần vẫn xanh, màn hình vẫn là bãi đất trống.',
+    /for \(const home of layout\.dwellings \?\? \[\]\)/.test(PARTS_SOURCE),
+    '`cityParts.js` không còn duyệt `layout.dwellings`. Cả Phase 7C biến mất trong im lặng: engine '
+    + 'vẫn tính đủ 17–30 căn nhà mỗi kỷ, test tầng thuần vẫn xanh, màn hình vẫn là bãi đất trống.',
+  );
+  assert.ok(
+    /item\.kind !== 'dwelling'/.test(CALLS),
+    '`sceneGraph.js` không còn nhận nhánh `dwelling` từ `collectCitySpecs` — danh sách vẫn đủ nhà '
+    + 'dân nhưng không căn nào được dựng vào cảnh.',
   );
   // …và phải đi vào CÙNG `placements` với công trình, tức cùng khối hình gộp. Đẩy sang một mesh
   // riêng thì mỗi kỷ cộng thêm một lệnh vẽ — chính thứ ngân sách hiệu năng đang giữ.
@@ -273,7 +286,7 @@ test('NHÀ DÂN PHẢI ĐƯỢC DỰNG THẬT VÀO CẢNH, không chỉ được
   // con số. Cùng lỗi với `assert.equal(seen.size, 4)` ở `buildingSpec.test.js`: một phép đếm tuyệt
   // đối là lời phát biểu về phần mã mình KHÔNG nhìn, nên nó vừa đỏ oan hôm nay vừa sẽ đỏ oan lần
   // sau khi có thêm một thứ đáng chạm. Cắt đúng đoạn cần canh thì phép đo nói đúng thứ nó định nói.
-  const block = CALLS.slice(CALLS.indexOf('for (const home of layout.dwellings'));
+  const block = CALLS.slice(CALLS.indexOf("item.kind !== 'dwelling'"));
   const body = block.slice(0, block.indexOf('\n  }'));
   assert.ok(
     !/addPickTarget\(/.test(body),

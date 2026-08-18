@@ -46,8 +46,7 @@ import {
 import { materialProfile } from '../../../engine/city3d/materials';
 import { applySurfaceDetail, specularGainFor } from './surfaceDetail';
 import { getEraStyle } from '../../../engine/city3d/eraStyle';
-import { buildBuildingSpec, buildScaffoldSpec } from '../../../engine/city3d/buildingSpec';
-import { buildPropSpec } from '../../../engine/city3d/propSpec';
+import { collectCitySpecs } from '../../../engine/city3d/cityParts';
 import { prism, specSpan } from '../../../engine/city3d/parts';
 import { buildTerrain } from '../../../engine/city3d/terrain';
 import { buildHorizon } from '../../../engine/city3d/horizon';
@@ -798,32 +797,39 @@ export function createCityScene({
     return { placement, plinth };
   }
 
+  // ⚠️ DANH SÁCH KHỐI LẤY TỪ `collectCitySpecs`, KHÔNG dựng lại tại chỗ. Trước đây vòng lặp này nằm
+  // ngay đây và bài test phải CHÉP LẠI nó — bản chép đã sai mà không ai biết (xem đầu
+  // `cityParts.js`). Nay chỉ còn một bản: chỗ này DỰNG, bài test ĐO, cùng một hàm.
+  // Thứ tự trả về (công trình → giàn giáo → nhà dân → cảnh vật) là một phần hợp đồng, vì
+  // `addPickTarget` bám theo chỉ số của nhóm công trình.
+  const cityParts = collectCitySpecs({ layout, detail: lowDetail ? 'low' : 'high' });
+
   const plinths = [];
-  const placements = buildings.map((building) => {
-    const built = groundPlacement(building, buildBuildingSpec({
-      bpId: building.bpId,
-      era: layout.era,
-      type: building.type,
-      rarity: building.rarity,
-      level: building.level,
-    }), {
+  const placements = [];
+  const buildingPlacements = [];
+
+  for (const item of cityParts) {
+    if (item.kind !== 'building') continue;
+    const building = item.source;
+    const built = groundPlacement(building, item.spec, {
       // Xoay cả công trình theo bội số 90° cho phố khỏi xếp hàng răm rắp. Bội số của góc vuông
       // chứ không phải góc bất kỳ: nhà quay chéo so với lưới đường trông như bị đặt ẩu.
       ry: ((building.x + building.y) % 4) * (Math.PI / 2),
     });
     if (built.plinth) plinths.push(built.plinth);
-    return built.placement;
-  });
+    placements.push(built.placement);
+    buildingPlacements.push(built.placement);
+  }
 
   buildings.forEach((building, index) => {
-    addPickTarget(placements[index], { kind: 'building', bpId: building.bpId });
+    addPickTarget(buildingPlacements[index], { kind: 'building', bpId: building.bpId });
   });
 
   // Công trình đang xây (nếu bố cục có) → giàn giáo dựng cao dần theo tiến độ.
-  for (const scaffold of layout.scaffolds ?? []) {
-    const built = groundPlacement(scaffold, buildScaffoldSpec({
-      bpId: scaffold.bpId, era: layout.era, progress: scaffold.progress,
-    }), { ry: 0 });
+  for (const item of cityParts) {
+    if (item.kind !== 'scaffold') continue;
+    const scaffold = item.source;
+    const built = groundPlacement(scaffold, item.spec, { ry: 0 });
     const { placement } = built;
     // ⚠️ Giàn giáo cũng cần MÓNG như công trình thật: nó đang chiếm đúng khu đất ấy, và nếu chỉ
     // công trình xong mới có bệ kè thì đúng lúc xây xong sẽ thấy cả toà nhà nhảy lên một bậc.
@@ -845,16 +851,12 @@ export function createCityScene({
   // đặc quyền gì" — nhà dân không có bản vẽ, không có đặc quyền, không có gì để nói. Thêm chúng vào
   // danh sách chạm chỉ làm loãng đúng thao tác mà Phase 3K sinh ra: 30 mục tiêu câm chen giữa 5 mục
   // tiêu có nội dung, và ngón tay sẽ trúng nhà dân nhiều gấp sáu lần trúng thứ đáng đọc.
-  for (const home of layout.dwellings ?? []) {
-    const built = groundPlacement(home, buildBuildingSpec({
-      // Khoá hình dáng gồm cả TOẠ ĐỘ: hai căn cùng loại cùng cỡ ở hai ô khác nhau phải khác nhau ở
-      // số cửa sổ và độ xiêu vẹo, nếu không cả khu phố là một căn nhà nhân bản 12 lần.
-      bpId: `dw|${layout.era}|${home.x}|${home.y}`,
-      era: layout.era,
-      type: home.type,
-      rarity: home.rarity,
-      level: 1,
-    }), {
+  // ⚠️ Khoá hình dáng nhà dân gồm cả TOẠ ĐỘ (`dwellingBpId` ở `cityParts.js`) — không có vế toạ độ
+  // thì cả khu phố là một căn nhà nhân bản 12 lần.
+  for (const item of cityParts) {
+    if (item.kind !== 'dwelling') continue;
+    const home = item.source;
+    const built = groundPlacement(home, item.spec, {
       ry: ((home.x * 3 + home.y) % 4) * (Math.PI / 2),
     });
     if (built.plinth) plinths.push(built.plinth);
@@ -865,8 +867,9 @@ export function createCityScene({
   // `deriveProps` đã sinh sẵn danh sách này từ Phase 1 (bộ vẽ 2D dùng từ lâu) nhưng bộ vẽ 3D
   // trước nay mới chỉ đọc mỗi đường sá. Gộp chúng vào CÙNG khối hình học với công trình để không
   // tốn thêm lệnh vẽ nào — chúng đều đứng yên nên chẳng có lý do gì phải tách ra.
-  const scatter = (layout.props ?? []).filter((prop) => prop.kind !== 'road');
-  for (const prop of scatter) {
+  for (const item of cityParts) {
+    if (item.kind !== 'prop') continue;
+    const prop = item.source;
     // ⚠️ CẢNH VẬT NAY LỆCH KHỎI TÂM Ô (Phase 8D) — và cái lệch ấy PHẢI đi vào cả hai phép tính
     // dưới đây, không được chỉ một. Toạ độ ngang lấy `ox/oy` mà cao độ vẫn hỏi tâm ô thì cái cây
     // đứng ở sườn dốc sẽ **lơ lửng giữa trời hoặc lún nửa thân xuống đất**, và không có gì đỏ lên:
@@ -883,12 +886,7 @@ export function createCityScene({
       x, z, y: terrain.surfaceHeightAt(ux, uy),
       // Xoay tự do — cây cối mà thẳng hàng theo lưới thì lộ ngay ra là máy đặt.
       ry: (prop.variant + prop.x * 0.7 + prop.y * 1.3) % (Math.PI * 2),
-      spec: buildPropSpec({
-        kind: prop.kind,
-        era: layout.era,
-        seed: `${layout.era}|${prop.kind}|${prop.x}|${prop.y}|${prop.variant}`,
-        detail: lowDetail ? 'low' : 'high',
-      }),
+      spec: item.spec,
     });
   }
 
@@ -1289,7 +1287,7 @@ export function createCityScene({
       // Đếm RIÊNG khỏi `buildings`: HUD phải phân biệt được "5 landmark" với "30 nhà dân", vì hai
       // con số ấy lớn lên theo hai luật khác hẳn nhau và khi máy nóng thì cần biết cái nào đang phình.
       dwellings: (layout.dwellings ?? []).length,
-      props: scatter.length,
+      props: cityParts.filter((it) => it.kind === 'prop').length,
       residents: residents.length,
       // Đèn điểm là nguồn sáng DUY NHẤT ở đây tính tiền theo từng điểm ảnh — hiện lên HUD để lúc
       // Đàm chụp màn hình báo máy nóng, ta biết ngay lúc đó có mấy cái đang bật.

@@ -19,6 +19,13 @@
 > bằng cách chỉnh lại con số nào. Nay còn **1 mục High** (#14) + **2 mục Medium-High** (#3, #13) +
 > **1 mục Medium-High chờ Đàm quyết** (#24) = 4 → xa ngưỡng 8–10 mục, KHÔNG cần Maintenance Sprint.
 >
+> **Cập nhật 2026-08-18 (Việc 1 — chốt #38)**: **ĐÓNG #38** ngay trong ngày mở. Đàm bác đề xuất
+> "nâng trần chung lên 14" và chọn **15 mốc riêng từng kỷ** + đối chứng bắt buộc; hoá ra cách ấy
+> **không cần đụng `materials.js`** (cổng chỉ ĐỌC bảng vật liệu), nên cái tưởng là blocker thật ra
+> là hệ quả của việc đề xuất sai giải pháp. Nay còn **1 mục High** (#14) + **2 mục Medium-High**
+> (#3, #13) + **1 mục Medium-High chờ Đàm quyết** (#24) = 4 → xa ngưỡng 8–10, KHÔNG cần Maintenance
+> Sprint.
+>
 > **Cập nhật 2026-08-18 (Phase 10, Bước 2)**: **ĐÓNG #36** — cả 15 kỷ nay đều có cửa ra vào thật,
 > kể cả kỷ 1 và 2. **MỞ #38** (Priority Low-Medium): đo đủ 15 kỷ lần đầu tiên thì lộ ra **kỷ 10 =
 > 14 lệnh vẽ**, tức vượt cái trần "13" mà cổng nghiệm thu đang dùng — nhưng nó **đã như vậy từ
@@ -2039,7 +2046,7 @@ ship một trạng thái dở dang, hãy làm nó **ĐẾM ĐƯỢC trong một 
 
 ---
 
-## #38 — Trần "13 lệnh vẽ" trong `PERFORMANCE.md` là con số suy từ MẪU 3 KỶ, và kỷ 10 nằm ngoài nó
+## #38 — ✅ ĐÃ ĐÓNG (2026-08-18) — Trần "13 lệnh vẽ" là con số suy từ MẪU 3 KỶ, và kỷ 10 nằm ngoài nó
 
 - **Module**: `src/engine/city3d/materials.js` (bảng `MATERIAL_ORDER`) · `eraStyle.js` (vai vật liệu
   của kỷ 10) · `PERFORMANCE.md` (chỗ phát biểu cái trần)
@@ -2063,14 +2070,51 @@ ship một trạng thái dở dang, hãy làm nó **ĐẾM ĐƯỢC trong một 
   nào Đàm nhìn thấy.
 - **Future Risk**: **Trung bình.** Phase 11 (mái) sẽ đụng đúng tầng vật liệu này. Nếu để nguyên,
   phase ấy sẽ hoặc phải làm việc với một cổng đã đỏ sẵn, hoặc vô tình được miễn cổng.
-- **Recommended Solution**: **Đặt lại trần cho đúng sự thật 15 kỷ** — ghi trần là **14** kèm câu
-  giải thích vì sao kỷ 10 tốn hơn một họ, và bổ sung một bài test đọc bảng vật liệu để đếm **số họ
-  tối đa trên một kỷ** (một phép đo THUẦN, rẻ, không cần dựng cảnh — đúng gợi ý §7(3) của Đàm).
+- **Recommended Solution**: ⚠️ **Đề xuất ban đầu của tôi — "ghi trần là 14" — ĐÃ BỊ ĐÀM BÁC, và
+  anh đúng.** Lý do anh nêu: *"14 kỷ khác đang ở 11–13, nên trần chung 14 cho chúng ba lệnh vẽ
+  trống để trôi vào trong im lặng. Cổng chỉ bắt được kỷ tệ nhất."* Đó chính là bẫy Phase 7D — **một
+  con số tuyệt đối không diễn đạt được một luật nói về QUAN HỆ**; lời hứa thật không phải "≤ 13" mà
+  là *"kỷ này không được tốn hơn chính nó hôm nay"*.
+  ⇒ **Giải pháp đã làm: MỘT BẢNG 15 MỐC RIÊNG**, mỗi mốc là số đo của chính kỷ ấy.
   ❌ **KHÔNG** gộp `brick` với `slate` để lấy lại con số 13: hai vật liệu ấy khác nhau thật, và mua
   một con số đẹp bằng cách nói dối vật liệu chính là thứ `ADR-025` đã cấm với mặt đường.
 - **Estimated Complexity**: Thấp (một mục tài liệu + một bài test thuần).
-- **Blocking Conditions**: Đụng `materials.js`/`palette3d.js` nằm **ngoài** danh sách file được phép
-  của chương trình Phase 10–12 (§3). Cần Đàm cho phép, hoặc để dành cho một phase riêng.
-- **Review Trigger**: Trước khi bắt đầu Phase 11 (mái) — vì Phase 11 dùng chính cổng này.
-- **Owner**: chưa giao
-- **Status**: **Open — đã đo đủ 15 kỷ, đã ghi vào `PERFORMANCE.md`, CHƯA sửa (cố ý, ngoài phạm vi).**
+- **Blocking Conditions**: (đã gỡ) — hoá ra **không cần đụng `materials.js` một dòng nào**: cổng
+  mới chỉ ĐỌC bảng vật liệu, không sửa nó, nên nó nằm gọn trong `src/engine/city3d/*` mà §3 cho
+  phép. Cái tưởng là blocker thật ra là hệ quả của việc đề xuất sai giải pháp.
+- **Review Trigger**: (đã tới) Trước Phase 11 (mái) — và đã xử lý xong trước khi Phase 11 bắt đầu.
+- **Owner**: Việc 1 của chương trình "CHỐT #38 + DỌN QUY ƯỚC + VÀO PHASE 11".
+- **Status**: ✅ **ĐÓNG 2026-08-18.**
+
+### Đã làm gì để đóng
+
+1. **`src/engine/city3d/drawCallBudget.test.js`** (mới, 4 bài) — bảng `MOC_LENH_VE` 15 dòng, mỗi
+   dòng là số đo ngày 2026-08-18 kèm **lệnh đo chép sẵn trong chú thích** để phiên sau tái lập được:
+   `node scripts/city-preview.mjs --era N --hour 12 --bench 1 --no-shadow`.
+   | Kỷ | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 |
+   |---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|
+   | Mốc (thành phố) | 9 | 11 | 11 | 11 | 11 | 11 | 11 | 11 | 10 | **12** | 10 | 10 | 10 | 10 | 10 |
+2. **ĐỐI CHỨNG bắt buộc** (Đàm: *"Không có đối chứng thì không biết bài test có còn răng hay
+   không"*): kéo thêm một họ vật liệu vào một kỷ ⇒ **đúng kỷ ấy** phải vượt mốc, và vượt **đúng 1**.
+   Hỏi từng kỷ một, không hỏi tổng.
+3. **Bài chống "trần chung đội lốt"**: cách rẻ nhất để bài 1 hết đỏ là điền cả 15 dòng cùng một số;
+   bài này đòi khoảng trải ≥ 2 và ≥ 10/15 kỷ nằm dưới mốc cao nhất.
+4. **Bài khoá quan hệ nền** `lệnh vẽ thành phố = (số họ vật liệu) + 4` — đúng **15/15 kỷ, không một
+   ngoại lệ**. Đây là thứ cho phép cả bộ chạy trong `npm test` bằng `node --test`, không cần
+   Chromium. Hằng số 4 = nền ô lưới · mặt đường · thân cư dân · đầu cư dân, và nó là **hiệu số đo
+   được**, không phải kết quả đếm bằng mắt trong `sceneGraph.js`.
+5. **`src/engine/city3d/cityParts.js`** (mới) — trả lời câu *"thành phố kỷ N gồm những khối nào?"*
+   ở đúng MỘT nơi. Trước đó câu ấy nằm giữa thân `sceneGraph.js` nên mọi thứ muốn hỏi đều phải chép
+   lại, và một bài test đã chép rồi chép sai. Nay `sceneGraph.js` gọi nó để DỰNG, bài test gọi nó
+   để ĐO. Đàm: *"Đừng cố khoá hai bản chép cho khớp nhau — hãy làm cho chỉ còn một bản."*
+6. **Tài liệu đã sửa**: `PERFORMANCE.md` (mục "Sau Phase 10" — bỏ hẳn phát biểu "không quá 13", thay
+   bằng bảng 15 mốc + cách khoá), `ARCHITECTURE_DECISIONS.md` (ADR-028), `PROJECT_STRUCTURE.md`,
+   `BAN_GIAO.md`, `CLAUDE.md`.
+
+### 12 phép thử ngược (mỗi bài test mới đều đã thấy ĐỎ ở đúng chỗ dự đoán trước)
+
+Phá `role:'stone'` → `'water'` · điền cả 15 mốc = 12 · `TAM_CO_DINH` 4→5 · `collectCitySpecs` trả
+rỗng · đối chứng chọn họ ĐÃ CÓ · bảng 14 dòng bằng nhau + 1 dòng lệch · `NHIP_SESSIONS` còn một
+dòng · `SWEEP_MAX` 150→0 · `kieuNhaDan` trả rỗng · đối chứng dùng nhịp già thay nhịp trẻ · nới kẹp
+cấp `Math.min(3,…)` → `Math.min(9,…)` · cắt bớt danh sách cấp thử. **Cả 12 đều đỏ đúng câu assert
+đã nêu trước khi chạy.**

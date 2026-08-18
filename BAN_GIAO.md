@@ -6,7 +6,37 @@
 > chọn: `ARCHITECTURE_DECISIONS.md`. Nợ kỹ thuật: `TECH_DEBT.md`. Migration: `MIGRATION.md`. Tóm
 > tắt theo mốc: `CHANGELOG.md`.
 > **NGUYÊN TẮC ƯU TIÊN SỐ 1:** (1) mọi phiên AI phải đọc file này + `CLAUDE.md` + các file liên quan TRƯỚC khi làm; (2) sau MỌI cập nhật dù nhỏ, phải cập nhật ngay file này + `CLAUDE.md` + các file liên quan khác.
-> Cập nhật lần cuối: **2026-08-18** — **PHASE 10 BƯỚC 2: CẢ 15 KỶ ĐỀU CÓ CỬA RA VÀO, `legacy` ĐÃ
+> Cập nhật lần cuối: **2026-08-18** — **VIỆC 1: CỔNG LỆNH VẼ THÔI LÀ MỘT CON SỐ, THÀNH MỘT BẢNG 15
+> MỐC RIÊNG (`TECH_DEBT #38` ĐÓNG).** Cổng nghiệm thu của cả chương trình Phase 10–12 có mục *"số
+> lệnh vẽ không quá 13"*. Con số ấy đo trên đúng **ba kỷ** rồi được viết ra như luật của mười lăm;
+> đo đủ 15 kỷ thì **kỷ 10 ra 14**, và ra 14 cả trên `HEAD`. Tôi đề xuất nâng trần lên 14. **Đàm
+> bác**, với lý do đúng: *"14 kỷ khác đang ở 11–13, nên trần chung 14 cho chúng ba lệnh vẽ trống để
+> trôi vào trong im lặng. Cổng chỉ bắt được kỷ tệ nhất."* Đây đúng **bẫy Phase 7D** — một con số
+> tuyệt đối không diễn đạt được một luật nói về QUAN HỆ; lời hứa thật là *"kỷ này không được tốn
+> hơn chính nó hôm nay"*. Nay là **`drawCallBudget.test.js`**: bảng 15 mốc (9·11·11·11·11·11·11·11·
+> 10·**12**·10·10·10·10·10, cột thành phố; cả cảnh = mốc + 2), mỗi mốc kèm **lệnh đo + ngày đo**
+> chép sẵn để tái lập được, cộng **ĐỐI CHỨNG bắt buộc** (kéo thêm một họ vật liệu vào một kỷ ⇒ đúng
+> kỷ ấy vượt mốc, vượt đúng 1) và một bài **chống "trần chung đội lốt"** (điền cả 15 dòng cùng một
+> số là cách rẻ nhất để bài đầu hết đỏ). Chạy trong `npm test`, **không cần Chromium**, nhờ một
+> quan hệ ĐO ĐƯỢC: **`lệnh vẽ thành phố = (số họ vật liệu) + 4`, đúng 15/15 kỷ, không một ngoại
+> lệ**. ADR-028.
+> ⚠️ **Kèm ba việc phụ, cả ba đều là bài học chứ không phải dọn dẹp**: **(a)** **`cityParts.js`
+> (mới)** — câu hỏi *"thành phố kỷ N gồm những khối nào?"* trước nay nằm giữa thân `sceneGraph.js`,
+> nên mọi thứ muốn hỏi đều phải CHÉP LẠI, và một bài test đã chép rồi chép sai. Đàm: *"Đừng cố khoá
+> hai bản chép cho khớp nhau — hãy làm cho chỉ còn một bản."* Nay `sceneGraph.js` gọi nó để DỰNG,
+> bài test gọi nó để ĐO. **(b)** **Ba nhịp tuổi 12/45/120 nay là một PHÉP ĐO, không còn là một giả
+> định** — quét `sessionCount` 0→150 bước 5 ở cả 15 kỷ, gom mọi kiểu nhà dân, rồi đòi ba nhịp phủ
+> trọn; cộng một bài chứng minh **trục CẤP cũng cạn ở 3** (cấp 4/5/9 cho mô tả byte-identical với
+> cấp 3). **(c)** ⚠️ **MỘT CÂU TỰ TRẤN AN TRONG CHÚ THÍCH CỦA CHÍNH TÔI ĐÃ BỊ PHÉP ĐO BÁC BỎ**: bản
+> trước viết *"số nhà dân đi từ 6 lên 30 nên bộ họ vật liệu của thành phố TRẺ hẹp hơn hẳn thành phố
+> già"* — nghe rất xuôi, và **sai**: `nen` giống hệt nhau ở cả ba nhịp, ở cả 15 kỷ (kỷ 1 4·4·4 · kỷ
+> 7 6·6·6). Sáu căn đầu tiên đã kéo đủ mọi họ mà hai mươi bốn căn sau dùng. Chú thích đã sửa, và
+> nói thẳng rằng ba nhịp hôm nay là một **lưới rẻ** chứ không phải một phép đo đang làm việc.
+> **773 bài test** (766 + 7 mới), lint sạch, build xanh, **12/12 phép phá làm ĐỎ đúng câu assert đã
+> nêu TRƯỚC khi chạy**. ⏳ **CHƯA gộp `main`** — theo mục 5 chương trình làm việc, gộp `main` LUÔN
+> phải hỏi.
+>
+> *(Trước đó — 2026-08-18)* — **PHASE 10 BƯỚC 2: CẢ 15 KỶ ĐỀU CÓ CỬA RA VÀO, `legacy` ĐÃ
 > BỊ XOÁ HẲN.** Đàm duyệt hướng mỹ thuật Bước 1 và ra lệnh làm nốt 12 kỷ. Nay **cả 15 dòng bảng đều
 > khai đủ số đo** — không còn giá trị nào nghĩa là "chưa làm", `isValidGroundFloor` **TỪ CHỐI THẲNG**
 > dòng thiếu, và `TECH_DEBT #36` (kỷ 1 và 2 không có cửa) **đã đóng**. Thêm **đúng hai kiểu cửa**

@@ -558,10 +558,19 @@ test('KHÔNG THÊM MỘT LỆNH VẼ NÀO: tầng trệt chỉ dùng họ vật 
   // đúng nhờ một thứ chẳng liên quan thì gãy trong im lặng đúng lúc thứ đó đổi (Phase 7D). Nay hỏi
   // thẳng quần thể thật, nên `deriveDwellings` hay catalog có đổi thì bài này tự đi theo.
   //
-  // ⚠️ BA NHỊP TUỔI, VÀ HỎI TỪNG NHỊP MỘT: số nhà dân đi từ 6 lên 30 theo `sessionCount` (kỷ 1:
-  // 6 → 17), nên bộ họ vật liệu của một thành phố TRẺ hẹp hơn hẳn thành phố già. Gộp ba nhịp vào
-  // một `nen` chung là tự dựng lại đúng cái phễu vừa gỡ: họ của thành phố già sẽ che cho tầng trệt
-  // của thành phố trẻ. Mỗi nhịp là một thành phố có thật, phải tự đứng được một mình.
+  // ⚠️ BA NHỊP TUỔI, VÀ HỎI TỪNG NHỊP MỘT — nhưng phải nói đúng vì sao. Bản đầu của chú thích này
+  // viết: *"số nhà dân đi từ 6 lên 30 nên bộ họ vật liệu của thành phố TRẺ hẹp hơn hẳn thành phố
+  // già"*. Nghe rất xuôi, và **ĐO RA LÀ SAI**: `nen` giống hệt nhau ở cả ba nhịp, ở cả 15 kỷ (kỷ 1
+  // 4·4·4 · kỷ 7 6·6·6 · kỷ 14 4·4·4 — đo 2026-08-18). Sáu căn nhà dân đầu tiên đã kéo đủ mọi họ
+  // vật liệu mà hai mươi bốn căn sau đó dùng. Đúng cái bẫy "một câu tự trấn an cũng phải được kiểm
+  // như một con số" (Phase 4G) — và nó nằm trong chú thích của chính bài test này.
+  //
+  // Vậy giữ ba nhịp để làm gì? Vì gộp chúng vào một `nen` chung là **tự dựng lại cái phễu vừa gỡ
+  // ngay trong cấu trúc bài test**: lúc đó họ của thành phố già sẽ che cho tầng trệt của thành phố
+  // trẻ, và ngày nào hai bộ ấy tách ra thì không có gì đỏ. Hỏi từng nhịp một thì hôm nay ba câu
+  // trả lời trùng nhau, và ngày mai chúng tách ra thì bài này bắt được. Đó là một lưới rẻ, không
+  // phải một phép đo đang làm việc — và bài `BA NHỊP TUỔI CÓ PHỦ TRỌN KHÔNG` ngay dưới đây là thứ
+  // biến câu *"ba nhịp là đủ"* từ một giả định thành một phép đo.
   //
   // ⚠️ CỐ Ý CHẶT HƠN THỰC TẾ: cảnh thật còn có cây cối, mặt đất, đường sá, cư dân — chúng cũng góp
   // họ vật liệu vào bộ khối gộp. Bỏ chúng ra làm `nen` NHỎ hơn thật, tức bài này khó xanh hơn.
@@ -631,6 +640,123 @@ test('ĐỐI CHỨNG: phép đo lệnh vẽ ở trên thật sự bắt được
   const nen = new Set(spec.parts.filter((p) => !p.ground).map((p) => materialFamilyFor(p.role, style)));
   assert.equal(nen.has(materialFamilyFor('water', style)), false,
     'kỷ 9 mà đã có họ `water` thì đối chứng này mất tác dụng — chọn một họ khác');
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// BA NHỊP TUỔI CÓ ĐỦ KHÔNG — biến một giả định thành một phép đo
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/** Quét `sessionCount` từ 0 tới đây, bước này. 150 phiên ≈ 75 căn nhà — quá dư so với trần 30. */
+const SWEEP_MAX = 150;
+const SWEEP_STEP = 5;
+/** Ba mốc số phiên mà bảng `NHỊP` ở bài "KHÔNG THÊM MỘT LỆNH VẼ NÀO" đang dùng. */
+const NHIP_SESSIONS = [12, 45, 120];
+
+/** Mọi kiểu nhà dân (`loại|hạng`) mà một kỷ đẻ ra tại một mốc số phiên. */
+function kieuNhaDan(era, sessionCount) {
+  const ids = BLUEPRINT_CATALOG[era].map((bp) => bp.id);
+  const layout = computeCityLayout({
+    built:  ids,
+    levels: Object.fromEntries(ids.map((id) => [id, 1])),
+    era,
+    stats:  { sessionCount, streakLength: 9 },
+  });
+  return new Set(layout.dwellings.map((h) => `${h.type}|${h.rarity}`));
+}
+
+test('BA NHỊP TUỔI CÓ PHỦ TRỌN KHÔNG — quét `sessionCount` 0→150 thay vì đoán', () => {
+  // ⚠️ VÌ SAO BÀI NÀY TỒN TẠI. Bài "KHÔNG THÊM MỘT LỆNH VẼ NÀO" chụp thành phố ở ĐÚNG BA mốc tuổi
+  // (12 · 45 · 120 phiên) rồi kết luận cho MỌI mốc tuổi. Đó là một mẫu ba điểm được đọc như một
+  // luật của cả tập — chính xác cái hình dạng sai đã sinh ra `TECH_DEBT #38` (trần "13 lệnh vẽ" đo
+  // trên ba kỷ, viết ra như luật của mười lăm kỷ). Đàm chốt cách xử lý, 2026-08-18:
+  //
+  //   *"Đừng đoán. `computeCityLayout` là hàm thuần nên quét rẻ: chạy `sessionCount` từ 0 đến ~150
+  //   bước 5, gom TẤT CẢ tổ hợp (loại nhà, hạng) phân biệt được, rồi assert ba nhịp kia phủ trọn
+  //   tập hợp đó. Biến một giả định thành một phép đo."*
+  //
+  // ⚠️ SỰ THẬT ĐO ĐƯỢC, ghi thẳng ra để phiên sau khỏi tưởng ba nhịp đang chia nhau việc: **nhịp
+  // 120 MỘT MÌNH đã phủ trọn ở cả 15 kỷ** (nhịp 12 chỉ với tới 2–3 kiểu trên tổng 6–7). Lý do là
+  // `DWELLING_PLOTS` có thứ tự MỌC cố định, nên tập nhà dân ở mốc N luôn là một đoạn đầu của tập ở
+  // mốc M > N, và 120 phiên thì đã chạm trần mật độ ở cả 15 kỷ. Bài này KHÔNG vì thế mà thừa: nó
+  // là thứ sẽ đỏ đúng ngày `SESSIONS_PER_DWELLING`, `ERA_DENSITY` hay `DISTRICT_RULES` đổi và mốc
+  // 120 thôi chạm trần — lúc ấy bảng `NHỊP` phải thêm dòng, và không có bài này thì không ai biết.
+  let soMocDaQuet = 0;
+  let soKyDaQuet = 0;
+  for (const era of ERAS) {
+    const toanBo = new Set();
+    for (let sc = 0; sc <= SWEEP_MAX; sc += SWEEP_STEP) {
+      for (const kieu of kieuNhaDan(era, sc)) toanBo.add(kieu);
+      soMocDaQuet += 1;
+    }
+    const baNhip = new Set();
+    for (const sc of NHIP_SESSIONS) for (const kieu of kieuNhaDan(era, sc)) baNhip.add(kieu);
+
+    // Gác chạy-rỗng: quét cả 31 mốc mà ra dưới 6 kiểu nhà thì quần thể đã hỏng, và phép so sánh
+    // dưới đây trở thành "tập rỗng nằm trong tập rỗng" — luôn xanh, tức vô giá trị.
+    const soMoc = SWEEP_MAX / SWEEP_STEP + 1;
+    assert.ok(toanBo.size >= 6,
+      `kỷ ${era}: quét ${soMoc} mốc chỉ ra ${toanBo.size} kiểu nhà dân — quần thể hỏng, bài chạy gần rỗng`);
+
+    const lot = [...toanBo].filter((k) => !baNhip.has(k)).sort();
+    assert.deepEqual(lot, [],
+      `kỷ ${era}: ba nhịp tuổi ${NHIP_SESSIONS.join('/')} phiên KHÔNG phủ hết — lọt ${lot.length} `
+      + `kiểu nhà dân (${lot.join(', ')}). Nghĩa là bài "KHÔNG THÊM MỘT LỆNH VẼ NÀO" đang bỏ sót `
+      + 'đúng những kiểu ấy ⇒ THÊM MỘT DÒNG vào bảng NHỊP, tuyệt đối đừng nới câu assert này.');
+    soKyDaQuet += 1;
+  }
+  assert.equal(soKyDaQuet, ERAS.length, 'không quét đủ 15 kỷ');
+  assert.equal(soMocDaQuet, ERAS.length * (SWEEP_MAX / SWEEP_STEP + 1),
+    'không quét đủ 31 mốc số phiên ở mỗi kỷ — vòng quét bị cắt ngắn');
+});
+
+test('ĐỐI CHỨNG: phép quét thật sự bắt được một bảng NHỊP thiếu dòng', () => {
+  // ⚠️ Không có bài này thì bài trên có thể xanh vì nó chẳng đo gì. Và đối chứng phải bỏ đúng nhịp
+  // GIÀ — bỏ hai nhịp trẻ thì nó VẪN XANH, vì nhịp 120 một mình đã phủ trọn (đo 2026-08-18). Ghi
+  // rõ điều đó ở đây để phiên sau khỏi viết một đối chứng không thể đỏ rồi tưởng mình đã canh gác.
+  let soKyLot = 0;
+  for (const era of ERAS) {
+    const toanBo = new Set();
+    for (let sc = 0; sc <= SWEEP_MAX; sc += SWEEP_STEP) {
+      for (const kieu of kieuNhaDan(era, sc)) toanBo.add(kieu);
+    }
+    const chiNhipTre = kieuNhaDan(era, 12);
+    if ([...toanBo].some((k) => !chiNhipTre.has(k))) soKyLot += 1;
+  }
+  assert.equal(soKyLot, ERAS.length,
+    'bỏ nhịp già ra khỏi bảng NHỊP mà vẫn phủ trọn ở một kỷ nào đó ⇒ phép quét không phân biệt được '
+    + 'thành phố trẻ với thành phố già, tức bài "BA NHỊP TUỔI CÓ PHỦ TRỌN KHÔNG" đã mất răng');
+});
+
+test('TRỤC CẤP CŨNG PHẢI CẠN: cấp 1/2/3 của bảng NHỊP là TOÀN BỘ trục cấp, không phải ba mẫu', () => {
+  // ⚠️ Bảng `NHỊP` có HAI trục, và trục thứ hai cũng là một mẫu ba điểm: `level` 1 · 2 · 3. Câu
+  // *"ba cấp là hết"* đúng hôm nay vì `buildBuildingSpec` kẹp `Math.min(3, …)`, nhưng đó là một
+  // sự thật nằm trong một file khác, và nó có thể đổi mà không ai nhớ tới bảng NHỊP. Nên đừng đọc
+  // hằng số ấy — hãy ĐO: cấp 4/5/9 phải cho mô tả byte-identical với cấp 3. Ngày nào nâng trần
+  // cấp lên 4 thì bài này đỏ, và đó đúng là ngày bảng NHỊP phải thêm một dòng.
+  let soCaDo = 0;
+  for (const era of ERAS) {
+    const ids = BLUEPRINT_CATALOG[era].map((bp) => bp.id);
+    const layout = computeCityLayout({
+      built:  ids,
+      levels: Object.fromEntries(ids.map((id) => [id, 3])),
+      era,
+      stats:  { sessionCount: 120, streakLength: 9 },
+    });
+    assert.equal(layout.buildings.length, 5, `kỷ ${era}: quần thể sai — phải đủ 5 bản vẽ catalog`);
+    for (const b of layout.buildings) {
+      const gui = (level) => JSON.stringify(buildBuildingSpec({
+        bpId: b.bpId, era, type: b.type, rarity: b.rarity, level,
+      }));
+      const cap3 = gui(3);
+      for (const cap of [4, 5, 9]) {
+        assert.equal(gui(cap), cap3,
+          `kỷ ${era} ${b.bpId}: cấp ${cap} cho mô tả KHÁC cấp 3 ⇒ trục cấp không còn cạn ở 3, `
+          + 'bảng NHỊP đang thiếu ít nhất một dòng');
+        soCaDo += 1;
+      }
+    }
+  }
+  assert.equal(soCaDo, ERAS.length * 5 * 3, 'không đo đủ 15 kỷ × 5 bản vẽ × 3 cấp vượt trần');
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════

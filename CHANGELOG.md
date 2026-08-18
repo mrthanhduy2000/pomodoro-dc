@@ -12,6 +12,31 @@
 
 ---
 
+## 2026-08-18 — Phase 10: tầng trệt cho cả 15 kỷ; và cổng lệnh vẽ thành BẢNG 15 MỐC (đóng `TECH_DEBT #36` + `#38`)
+
+- **Mục đích**: chỗ mắt nhìn vào đầu tiên khi đứng trước một công trình — cửa ra vào — vẫn là một
+  khối tối bề ngang **viết cứng 0,14** giống hệt nhau ở cả 15 kỷ, trong khi mái · thảm thực vật ·
+  mặt đường đều đã có ngữ pháp riêng theo kỷ.
+- **Phạm vi**: **ngữ pháp thứ tư** theo đúng khuôn ba lớp đã dùng ba lần — BẢNG `groundFloor`
+  (`eraStyle.js`, bắt buộc đủ 15 kỷ, buộc vào `country`, có test bắt) · HÌNH ở
+  `city3d/groundFloor.js` · `buildingSpec.js` chỉ ĐỌC. Bước 1 làm 3 kỷ (6 Việt Nam · 9 Pháp ·
+  13 Nhật), Bước 2 trải nốt 12 kỷ và **xoá hẳn trạng thái `legacy`**. Mọi kích thước là **TỈ LỆ có
+  TRẦN**, trần luôn thắng sàn; khối quá hẹp thì **không có cửa**, chứ không có một cái cửa tí hon.
+  Bản sắc đo bằng **8 trục cấu trúc**: 105/105 cặp ≥ 3/8, trung vị 6/8, cả 8 trục đều còn sống.
+  Xem ADR-026 + ADR-027.
+- **Ảnh hưởng**: **không thêm một lệnh vẽ nào ở cả 15 kỷ** (tầng trệt cố ý chỉ dùng lại vai màu đã
+  có). Tam giác thành phố 474.924 → 535.360 (**+12,7%**), kỷ nặng nhất +24,6%. Mô hình chi phí đã
+  đo trên M3 nói 80% chi phí đi theo ĐIỂM ẢNH ⇒ hình học thêm ở mức này nằm dưới nhiễu.
+- **Kèm theo — cổng nghiệm thu đổi hình dạng**: đo đủ 15 kỷ lần đầu tiên thì lộ ra rằng ràng buộc
+  *"số lệnh vẽ không quá 13"* là con số suy từ **mẫu 3 kỷ**, và kỷ 10 nằm ngoài nó (14, kể cả
+  trước Phase 10). Đàm bác cách chữa "nâng trần chung lên 14" ⇒ nay là **bảng 15 mốc riêng từng
+  kỷ**, khoá bằng `src/engine/city3d/drawCallBudget.test.js` (chạy trong `npm test`, không cần
+  Chromium, nhờ quan hệ đo được `lệnh vẽ = số họ vật liệu + 4` đúng 15/15 kỷ). Xem ADR-028.
+- **Tương thích**: không đổi dữ liệu lưu, không migration. Công trình đã xây giữ nguyên vị trí và
+  hạt giống (ADR-007); chỉ hình khối tầng trệt là mới.
+
+---
+
 ## 2026-08-16 — Phase 9D: đường phố thành một HỆ THỐNG, bản sắc chuyển từ màu sang cấu trúc (đóng `TECH_DEBT #30` + `#27`)
 
 - **Mục đích**: sửa nguyên nhân gốc của hai mục nợ đã tự nối cứng với nhau. Mặt đường trước đây là

@@ -211,7 +211,15 @@ Giữ mức làm việc ở **8 ms** mỗi khung — tức chừa **gấp đôi*
 Phase 10 thêm cửa ra vào · bậc thềm · một đặc trưng tầng trệt. **Bước 1** làm 3 kỷ (6 · 9 · 13),
 **Bước 2** trải nốt ra 12 kỷ còn lại và xoá `legacy`. Điều kiện nghiệm thu Đàm đặt ra là một
 **QUAN HỆ**, không phải một mức tuyệt đối: *P50 mọi cảnh ≤ 8,0 ms ở 1100×700 trên M3* **VÀ**
-*số lệnh vẽ không tăng quá 13*.
+*số lệnh vẽ không tăng*.
+
+⚠️ **VẾ THỨ HAI TỪNG ĐƯỢC GHI LÀ "không quá 13" — CON SỐ ẤY ĐÃ CHẾT, ĐỪNG TRÍCH LẠI.** Nó đo trên
+đúng ba kỷ rồi được viết ra như luật của mười lăm kỷ; đo đủ 15 kỷ thì kỷ 10 ra 14. Cách thay thế
+Đàm chốt ngày 2026-08-18 **không phải nâng trần chung lên 14** — vì như thế là tặng cho 14 kỷ còn
+lại (đang ở 11–13) hai đến ba lệnh vẽ trống để trôi vào trong im lặng, và cổng sẽ chỉ còn bắt được
+kỷ tệ nhất. Thay vào đó: **MỘT BẢNG 15 MỐC RIÊNG**, mỗi mốc là số đo của chính kỷ ấy, khoá bằng
+`src/engine/city3d/drawCallBudget.test.js` (chạy trong `npm test`, không cần Chromium). Xem mục
+"❗ KỶ 10" bên dưới.
 
 ### Vế đã đo xong — số lệnh vẽ và hình học, ĐỦ CẢ 15 KỶ
 
@@ -252,7 +260,7 @@ chỉ sinh ra khi một họ vật liệu **mới toàn kỷ** xuất hiện —
 màu đã có (`wood` · `stone` · `trim` · `dark` · `glass`). Có **bài test khoá** điều này ở
 `groundFloor.test.js` (xem mục dưới về việc bài ấy vừa được vá lần thứ hai).
 
-### ❗ KỶ 10 = 14 LỆNH VẼ: trần "13" trong tài liệu này là một con số suy từ MẪU 3 KỶ
+### ❗ KỶ 10 = 14 LỆNH VẼ — và cách chữa là BỎ cái trần chung đi (đã xong, `TECH_DEBT #38` đóng)
 
 Bảng "Sau Phase 10" bản trước ghi trần là **13**. Con số ấy đúng với **ba kỷ đã đo lúc đó** (6 · 9 ·
 13 → 13 · 12 · 11) và rồi được viết ra như một luật của cả 15 kỷ. Đo đủ 15 kỷ lần đầu tiên (hôm nay)
@@ -264,13 +272,45 @@ không do tầng trệt gây ra.
 - ⇒ **Đây là một CON SỐ NỀN chưa từng được đo, không phải một hồi quy.** Cùng hình dạng với bài học
   "một ngân sách tự tính mà chưa bao giờ được đặt cạnh sự thật thì không phải ngân sách": trần 13
   chưa bao giờ được kiểm với cả 15 kỷ, nó chỉ được kiểm với chính mẫu đã sinh ra nó.
-- **CHƯA sửa gì, và cố ý không tự sửa.** Đụng vào đây là đụng bảng màu/vật liệu — nằm ngoài danh
-  sách file được phép của chương trình hiện hành. Đã ghi thành `TECH_DEBT.md` #38 và đã báo Đàm.
+- ⚠️ **KHÔNG gộp `brick` với `slate` để lấy lại con số 13.** Đó là mua một con số đẹp bằng cách nói
+  dối vật liệu — đúng kiểu ADR-025 đã cấm với mặt đường. Kỷ 10 dùng hai vật liệu ấy vì nước Anh
+  thời công nghiệp dùng hai vật liệu ấy.
 
 ⚠️ **Đừng đọc "14 > 13" thành "hiệu năng đã hỏng".** Mô hình chi phí đã đo trên M3 nói **80% chi phí
 đi theo ĐIỂM ẢNH**, và một lệnh vẽ thêm trong một cảnh 12–14 lệnh vẽ là nhiễu so với mức đó. Con số
 13 là một **hàng rào kỷ luật** ("đừng để số lệnh vẽ trôi lên"), không phải một mức đã đo ra là ngưỡng
-đau. Việc cần làm là **đặt lại trần cho đúng sự thật 15 kỷ**, chứ không phải nới nó cho vừa kết quả.
+đau.
+
+#### Cách chữa đã làm: 15 mốc riêng, không phải một trần chung (Đàm chốt 2026-08-18)
+
+> *"14 kỷ khác đang ở 11–13, nên trần chung 14 cho chúng ba lệnh vẽ trống để trôi vào trong im
+> lặng. Cổng chỉ bắt được kỷ tệ nhất."* — và *"cổng KHÔNG mất tác dụng răn đe khi đặt lại cho
+> đúng; nó mất tác dụng khi giữ một con số sai rồi ai cũng học cách ngó lơ."*
+
+Đây đúng bẫy Phase 7D: **một con số tuyệt đối không diễn đạt được một luật nói về QUAN HỆ.** Lời
+hứa thật chưa bao giờ là "≤ 13"; nó là *"kỷ này không được tốn hơn chính nó hôm nay"*.
+
+**Mốc lệnh vẽ THÀNH PHỐ của từng kỷ** (cột "Lệnh vẽ TP" trong bảng trên; cả cảnh = mốc + 2):
+
+| Kỷ | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 |
+|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|
+| Mốc | 9 | 11 | 11 | 11 | 11 | 11 | 11 | 11 | 10 | **12** | 10 | 10 | 10 | 10 | 10 |
+
+Khoá bằng `src/engine/city3d/drawCallBudget.test.js` — **4 bài, chạy trong `npm test`**:
+
+1. **Mỗi kỷ ≤ mốc của chính kỷ đó** (+ gác chạy-rỗng: mỗi kỷ phải sinh ra > 100 khối thật).
+2. **ĐỐI CHỨNG**: kéo thêm một họ vật liệu vào một kỷ thì **đúng kỷ ấy** phải vượt mốc, và vượt
+   đúng 1. Hỏi từng kỷ một, không hỏi tổng — hỏi tổng thì một kỷ dư chỗ sẽ bù cho một kỷ vượt,
+   tức dựng lại đúng cái phễu mà bảng-15-dòng sinh ra để gỡ.
+3. **Bảng phải là 15 mốc riêng, không phải một trần chung đội lốt**: điền cả 15 dòng bằng cùng một
+   số là cách rẻ nhất để bài 1 hết đỏ, và bài này chặn đúng chuyện đó.
+4. **Quan hệ nền**: `lệnh vẽ thành phố = (số họ vật liệu) + 4`, đúng **15/15 kỷ, không một ngoại
+   lệ** — đây là thứ cho phép ba bài trên chạy bằng `node --test` thay vì phải bật Chromium. Nếu
+   một phase sau tách thêm một tấm cố định ra khỏi khối gộp thì hằng số 4 đổi, và bài này đỏ
+   **đồng loạt cả 15 kỷ** — một hình dạng đỏ rất dễ đọc, khác hẳn "một kỷ đỏ".
+
+⚠️ **Muốn sửa một dòng trong bảng mốc thì phải CHẠY LẠI phép đo và ghi ngày mới**, không phải nới
+cho vừa kết quả. Lệnh đo nằm ngay trong chú thích đầu file test.
 
 ### Vế CHƯA đo — frame time trên M3
 

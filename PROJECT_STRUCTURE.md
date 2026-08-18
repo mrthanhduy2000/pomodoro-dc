@@ -215,6 +215,25 @@
 │   │   │   │                      #   ban công/biển hiệu/hàng vòm, kỷ hiện đại không được giữ tấm
 │   │   │   │                      #   da thời đồ đá — khoá CẢ HAI CHIỀU
 │   │   │   ├── buildingSpec.js    # NƠI 3 TRỤC GẶP NHAU: (kỷ × loại × độ hiếm) → mô tả hình học
+│   │   │   ├── cityParts.js       # DANH SÁCH MỌI KHỐI CỦA MỘT THÀNH PHỐ (2026-08-18), thuần:
+│   │   │   │                      #   layout → [{kind, source, spec}] cho công trình · giàn giáo ·
+│   │   │   │                      #   nhà dân · cảnh vật. Nguồn DUY NHẤT trả lời "thành phố kỷ N
+│   │   │   │                      #   gồm những khối nào" — `sceneGraph.js` gọi để DỰNG, bài test
+│   │   │   │                      #   gọi để ĐO, nên hai bên không thể trôi khỏi nhau
+│   │   │   │                      #   ⚠️ RA ĐỜI VÌ CÂU HỎI ẤY TỪNG NẰM GIỮA THÂN `sceneGraph.js`:
+│   │   │   │                      #   mọi thứ muốn hỏi đều phải CHÉP LẠI vòng lặp, và một bài test
+│   │   │   │                      #   đã chép rồi chép sai (21 công trình giả định thay vì 5 bản vẽ
+│   │   │   │                      #   + 6–30 nhà dân). Đàm: "hãy làm cho chỉ còn một bản"
+│   │   │   │                      #   ⚠️ THỨ TỰ TRẢ VỀ LÀ HỢP ĐỒNG (công trình → giàn giáo → nhà dân
+│   │   │   │                      #   → cảnh vật): `addPickTarget` gắn theo CHỈ SỐ của nhóm công
+│   │   │   │                      #   trình, đảo thứ tự = chạm nhà này mà app kể tên nhà kia
+│   │   │   │                      #   ⚠️ KHÔNG trả lời "khối ấy đứng ở đâu / cao độ bao nhiêu" —
+│   │   │   │                      #   phần ấy cần `terrain` nên thuộc tầng dựng cảnh
+│   │   │   ├── drawCallBudget.test.js  # ⚠️ NGOẠI LỆ CÓ CHỦ ĐÍCH của luật "test cùng tên file
+│   │   │   │                      #   nguồn": đây là một CỔNG cắt ngang, không canh một file nào
+│   │   │   │                      #   cả. Bảng 15 MỐC LỆNH VẼ riêng từng kỷ (ADR-028) + đối chứng.
+│   │   │   │                      #   Chạy được trong `npm test` nhờ quan hệ ĐO ĐƯỢC
+│   │   │   │                      #   `lệnh vẽ thành phố = (số họ vật liệu) + 4`, đúng 15/15 kỷ
 │   │   │   ├── streetStyle.js     # BẢNG ĐƯỜNG PHỐ 15 KỶ (Phase 9D, ADR-025): bề rộng đại lộ · bề
 │   │   │   │                      #   rộng ngõ · vật liệu lát · cỡ viên · độ mòn · bó vỉa · vỉa hè
 │   │   │   │                      #   · vạch kẻ · kiểu mép. Nguồn DUY NHẤT trả lời "ở kỷ này con

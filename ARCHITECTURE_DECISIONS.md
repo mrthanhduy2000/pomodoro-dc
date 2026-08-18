@@ -11,6 +11,90 @@
 
 ---
 
+## ADR-028 — Ngân sách lệnh vẽ là MỘT BẢNG 15 MỐC RIÊNG, không phải một trần chung; và câu hỏi "thành phố gồm những khối nào" chỉ được trả lời ở MỘT nơi
+
+- **Ngày**: 2026-08-18 (Việc 1 — chốt `TECH_DEBT #38`, trước Phase 11)
+- **Bối cảnh**: Cổng nghiệm thu của cả chương trình Phase 10–12 có một mục là *"số lệnh vẽ không
+  quá 13"*. Đo đủ 15 kỷ lần đầu tiên thì **kỷ 10 ra 14** — và ra 14 cả trên `HEAD`, tức con số 13
+  chưa bao giờ đúng với cả 15 kỷ; nó đo trên đúng **ba kỷ** (6 · 9 · 13) rồi được viết ra như luật
+  của mười lăm. Tôi đề xuất nâng trần lên 14. Đàm bác.
+- **Vấn đề**: Một cổng nghiệm thu mà con số của nó SAI thì có hai kết cục, cả hai đều tệ: hoặc nó
+  báo đỏ oan ở mọi phase sau rồi bị nới dần cho tiện (đúng cái phễu Phase 9A), hoặc nó bị ngó lơ và
+  mất sạch tác dụng.
+
+### Phương án đã cân nhắc
+
+**(a) Nâng trần chung lên 14** — *đề xuất ban đầu của tôi, ĐÃ BỊ BÁC.* Lý do Đàm nêu: *"14 kỷ khác
+đang ở 11–13, nên trần chung 14 cho chúng ba lệnh vẽ trống để trôi vào trong im lặng. Cổng chỉ bắt
+được kỷ tệ nhất."* Anh đúng, và cái sai của (a) có tên sẵn trong dự án: **bẫy Phase 7D — một con số
+tuyệt đối không diễn đạt được một luật nói về QUAN HỆ.** Lời hứa thật chưa bao giờ là "≤ 13"; nó là
+*"kỷ này không được tốn hơn chính nó hôm nay"*, và một hằng số thì không nhìn thấy "chính nó".
+
+**(b) Gộp `brick` với `slate` để kỷ 10 quay về 13** — bác thẳng. Đó là mua một con số đẹp bằng cách
+nói dối vật liệu; nước Anh thời công nghiệp dùng cả hai vật liệu ấy thật. `ADR-025` đã cấm đúng
+kiểu này với mặt đường.
+
+**(c) Bỏ hẳn cổng lệnh vẽ, chỉ canh frame time** — bác. Frame time chỉ đo được trên máy thật, mà
+máy thật thì mỗi lần đo phải nhờ Đàm chạy tay. Một cổng chỉ chạy được vài tháng một lần không chặn
+được gì trong lúc làm việc hằng ngày.
+
+**(d) MỘT BẢNG 15 MỐC RIÊNG — ĐÃ CHỌN.** Mỗi kỷ một mốc, mỗi mốc là số đo của chính kỷ ấy, kèm
+lệnh đo và ngày đo chép sẵn trong chú thích để phiên sau tái lập được.
+
+### Quyết định
+
+1. **Bảng `MOC_LENH_VE` 15 dòng** ở `src/engine/city3d/drawCallBudget.test.js` (9 · 11 · 11 · 11 ·
+   11 · 11 · 11 · 11 · 10 · **12** · 10 · 10 · 10 · 10 · 10 — cột "thành phố"; cả cảnh = mốc + 2).
+2. **Bốn bài khoá**, trong đó ba bài canh chính cái bảng ấy khỏi thoái hoá:
+   - mỗi kỷ ≤ mốc của chính nó (+ gác chạy-rỗng: > 100 khối thật/kỷ);
+   - **ĐỐI CHỨNG bắt buộc** — kéo thêm một họ vật liệu vào một kỷ thì **đúng kỷ ấy** vượt mốc, và
+     vượt **đúng 1**. Hỏi TỪNG KỶ, không hỏi tổng: hỏi tổng thì một kỷ dư chỗ bù cho một kỷ vượt,
+     tức dựng lại đúng cái phễu mà bảng-15-dòng sinh ra để gỡ. Đàm: *"Không có đối chứng thì không
+     biết bài test có còn răng hay không."*;
+   - **chống "trần chung đội lốt"** — điền cả 15 dòng cùng một số là cách rẻ nhất để bài đầu hết đỏ;
+   - **quan hệ nền** `lệnh vẽ thành phố = (số họ vật liệu) + 4`.
+3. **`src/engine/city3d/cityParts.js`** — câu hỏi *"thành phố kỷ N gồm những khối nào?"* nay được
+   trả lời ở đúng một nơi. `sceneGraph.js` gọi nó để DỰNG, bài test gọi nó để ĐO.
+
+### Vì sao cổng này chạy được bằng `node --test`, không cần Chromium
+
+Cả thành phố gộp thành **một khối hình học có nhóm vật liệu**, mỗi họ một nhóm, và three vẽ mỗi
+nhóm bằng một lệnh vẽ (`mergeSinks`, `geometryFactory.js`). Ngoài khối gộp còn đúng bốn tấm cố
+định (nền ô lưới · mặt đường · thân cư dân · đầu cư dân). Đem đối chiếu với phép đo thật:
+`lệnh vẽ = số họ + 4`, **đúng 15/15 kỷ, không một ngoại lệ**. Hằng số 4 là một **hiệu số đo được**,
+không phải kết quả đếm bằng mắt trong `sceneGraph.js` — và nếu một phase sau tách thêm một tấm cố
+định thì bài thứ tư đỏ **đồng loạt cả 15 kỷ**, một hình dạng đỏ rất dễ đọc.
+
+⚠️ Đây **không phải một thứ đại diện** cho số lệnh vẽ (`TECH_DEBT #22` là bài học về việc nhầm hai
+chuyện đó) — nó là một phép tính CHÍNH XÁC, đã đặt cạnh phép đo thật ở cả mười lăm kỷ.
+
+### Trade-off đã chấp nhận
+
+- **Bảng 15 dòng đắt hơn một hằng số khi bảo trì**: thêm một họ vật liệu cho một kỷ nghĩa là phải
+  chạy lại `--bench` cho kỷ ấy rồi sửa một dòng kèm ngày. Đó chính là cái giá muốn trả — nó biến
+  "nới cổng" từ một thao tác một-ký-tự thành một việc phải có phép đo đi kèm.
+- **Cổng đứng ở tầng HỌ VẬT LIỆU, không ở tầng lệnh vẽ thật.** Nếu ngày nào `geometryFactory` đổi
+  cách gộp nhóm thì quan hệ "+4" hết đúng. Bài thứ tư tồn tại đúng để chuyện đó không trôi qua im
+  lặng, nhưng nó **không** thay được một lượt `--bench` khi có thay đổi lớn ở tầng dựng cảnh.
+- **`cityParts.js` thêm một tầng gián tiếp** giữa `cityLayout` và `sceneGraph`. Đổi lại: hết cảnh
+  "hai bản chép của cùng một danh sách", và bài test đo đúng thứ app dựng.
+
+### Ảnh hưởng
+
+Mọi phase sau (11 mái · 12 …) nghiệm thu bằng bảng này, không bằng một con số. Thêm chi tiết mà tái
+dùng vai màu đã có ⇒ mốc không nhúc nhích; kéo một họ mới vào ⇒ đỏ ngay tại kỷ đó trong `npm test`,
+không phải đợi tới lượt dựng ảnh.
+
+### Điều kiện xem lại
+
+- `geometryFactory.mergeSinks` đổi cách gộp nhóm, hoặc `sceneGraph` tách/gộp một tấm cố định
+  (⇒ hằng số 4 đổi, phải đo lại cả bảng).
+- Một kỷ thật sự cần một họ vật liệu mới vì lý do lịch sử ⇒ đo lại **đúng kỷ ấy**, ghi ngày mới,
+  và nói rõ trong `PERFORMANCE.md` vì sao.
+- Số kỷ khác 15.
+
+---
+
 ## ADR-027 — Trải tầng trệt ra 15 kỷ: thêm ĐÚNG hai kiểu cửa + một đặc trưng, và đo bản sắc bằng 8 TRỤC CẤU TRÚC thay vì bằng mắt
 
 - **Ngày**: 2026-08-18 (Phase 10, Bước 2)
@@ -153,7 +237,9 @@
     gọi từ `buildBuildingSpec` chứ không từ `emitWindows`), nhưng hai kỷ ấy còn `legacy` nên chưa
     hưởng. Ghi ở `TECH_DEBT #36`.
 - **Ảnh hưởng đo được** (kỷ 6 · 9 · 13, cùng khung 500×320, `--bench`):
-  - **lệnh vẽ: 11 → 11 · 10 → 10 · 9 → 9** — KHÔNG đổi, đúng ràng buộc Đàm đặt (trần 13).
+  - **lệnh vẽ: 11 → 11 · 10 → 10 · 9 → 9** — KHÔNG đổi, đúng ràng buộc Đàm đặt (lúc đó phát biểu
+    là "trần 13"; ⚠️ con số ấy **đã chết** — nó suy từ mẫu 3 kỷ và kỷ 10 nằm ngoài nó. Nay là bảng
+    15 mốc riêng, xem **ADR-028** và `TECH_DEBT #38`).
   - tam giác thành phố: 35.110 → 42.554 (+21%) · 38.094 → 45.842 (+20%) · 41.102 → 46.422 (+13%).
     Trần `MAX_TRIANGLES_PER_CITY` = 24.000 cho phần công trình vẫn còn dư gần một nửa (nặng nhất
     11.920). Theo mô hình chi phí đo trên M3 (`PERFORMANCE.md`), hình học gần như miễn phí —

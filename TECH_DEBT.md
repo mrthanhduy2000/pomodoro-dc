@@ -2159,7 +2159,7 @@ ship một trạng thái dở dang, hãy làm nó **ĐẾM ĐƯỢC trong một 
 
 ---
 
-## #44 — Kỷ 4 khai 3 bậc thềm nhưng ĐẤT chỉ dùng 2 bậc rưỡi: một bậc chiếm 64% diện tích
+## #44 — ✅ ĐÃ ĐÓNG (2026-08-18) — KHÔNG PHẢI NỢ, LÀ LỰA CHỌN: kỷ 4 là kinh thành trên đồng bằng
 
 - **Module**: `src/engine/city3d/terrain.js` (bảng `ERA_TERRAIN`) ↔ `src/engine/city3d/terrain.test.js`
 - **Priority**: Low · **Severity**: Low
@@ -2184,7 +2184,38 @@ ship một trạng thái dở dang, hãy làm nó **ĐẾM ĐƯỢC trong một 
 - **Estimated Complexity**: Thấp (một dòng bảng + đo lại 15 kỷ).
 - **Blocking Conditions**: không có.
 - **Review Trigger**: khi `TRUOT` khác `[4]`, hoặc khi có phase chỉnh bảng `ERA_TERRAIN`.
-- **Owner**: chưa phân công · **Status**: Open
+- **Owner**: Đàm quyết 2026-08-18 · **Status**: ✅ **ĐÃ ĐÓNG — phân loại lại, không phải sửa**
+
+### Vì sao đóng mà không sửa gì (ADR-032 bổ sung (b))
+
+Đàm đặt đúng câu hỏi mà mục này chưa từng hỏi: ***"đây là thứ mình MẮC hay thứ mình CHỌN?"*** —
+*"Nợ là thứ mình MẮC; cái này có thể là thứ mình CHỌN. Phân biệt hai cái đó, đừng để sổ nợ phình
+bằng những lựa chọn có chủ ý."* Đi kiểm ý định trước khi đi sửa, và ba bằng chứng đều nói CHỌN:
+
+1. **Bảng khai đúng như vậy.** `ERA_TERRAIN[4]` = `{ shape: 'valley', terraces: 3, relief: 0.60 }`
+   kèm `note` nguyên văn *"kinh thành Trung Hoa trên ĐỒNG BẰNG, đồi thấp vây bốn phía"*. Trường An
+   và Lạc Dương nằm trên bình nguyên Quan Trung / bồn địa Lạc Dương — đồng bằng có đồi thấp vây
+   quanh. Một dải phẳng chiếm phần lớn mặt đất **chính là** câu ấy dịch sang hình học.
+2. **Không mất bậc nào** — đây là dấu hiệu phân biệt quyết định. Kỷ 4 khai 3 bậc và **dùng đủ 3**:
+   20% ở đáy lòng chảo · 64% ở dải đồng bằng · 16% ở vành đồi. Một trường nhiễu *sập* (bẫy Phase
+   7B) thì mất bậc, hoặc dồn về một ĐẦU; ở đây dải đông nhất nằm ở **GIỮA**, có đất thấp hơn bên
+   dưới và vành cao hơn bên trên. Đó là mặt cắt của một lòng chảo, không phải của một mặt phẳng.
+3. **Kỷ 9 khai cùng một thứ và chỉ cách 6 điểm.** Kỷ 9 (`valley`, 3 bậc, *"lòng chảo sông Seine,
+   gần phẳng"*) đo ra **58%** — cùng hình dạng phân bố, chỉ tình cờ nằm dưới vạch. Vạch 60% đang
+   cắt ngang giữa hai kỷ mô tả **cùng một loại địa hình**, nên nó không phân biệt được "đồng bằng
+   có chủ ý" với "địa hình sập".
+
+**Không sửa một dòng mã nào.** Bài test giữ nguyên `assert.deepEqual(TRUOT, [4])` — vẫn là hàng
+rào, chỉ đổi vai: từ *"một khuyết tật chờ sửa"* thành *"một ngoại lệ đã khai, đếm được"*, đỏ theo
+cả hai chiều (kỷ thứ hai tụt xuống ⇒ đỏ; kỷ 4 hoá gồ ghề ⇒ cũng đỏ). Chú thích của bài test đã
+viết lại cho khớp — **một lời giải thích sai là thứ phiên sau kế thừa rồi dựa vào**.
+
+⚠️ **Ghi kèm cho trung thực**: ngưỡng 60% là một con số **CHỌN TAY** (bản đầu 70% cho cả 15 kỷ, hạ
+xuống sau khi nó đòi bịa ra đồi ở Lưỡng Hà và thảo nguyên Nga), không phải con số đo được, và kỷ 9
+chỉ đứng cách vạch 2 điểm. Thứ thật sự canh *"địa hình có sập không"* là bài **"MỌI KỶ PHẢI DÙNG ĐỦ
+SỐ BẬC MÌNH KHAI"** — nó hỏi thẳng vào khuyết tật thay vì hỏi qua một tỉ lệ. Theo chỉ đạo của Đàm,
+**KHÔNG thêm một ngưỡng thứ hai** bên cạnh nó (một ngưỡng chưa hiệu chuẩn đặt cạnh một ngưỡng có
+gốc là đúng cái phễu Phase 9A).
 
 ---
 

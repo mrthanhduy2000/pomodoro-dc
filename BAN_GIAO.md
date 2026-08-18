@@ -532,6 +532,41 @@
 
 ## 🗒️ Nhật ký cập nhật
 
+### 2026-08-18 — Hiệu chuẩn trần dốc bằng mắt · khoá `SMOOTHSTEP_PEAK` · đóng `TECH_DEBT #44`
+
+Ba việc nhỏ Đàm giao kèm, làm liền một mạch (ADR-032 bổ sung (a) và (b)).
+
+**1. Trần dốc 34,8% đã hiệu chuẩn — KHÔNG hạ.** Tìm quãng dốc nhất còn lại rồi chụp cận cảnh: kỷ 5
+và kỷ 7 chạm đúng trần (35%, ô (3,4)→(4,4) và (1,4)→(2,4)), kỷ 11 ở 30%, kỷ 12 ở 22%. Cả bốn đều
+**đọc ra là con dốc, không phải bức tường** — 34,8% chỉ là **19,2°**, còn rất xa mốc mắt bắt đầu
+đọc mặt nghiêng thành mặt đứng. ⚠️ Thứ trong ảnh trông giống bức tường là **mép bậc thềm của ĐẤT**
+(tới 0,675 đơn vị một bậc ở kỷ 5), không phải mặt đường — đó chính là nửa còn lại của ADR-032, cố ý
+giữ. Theo đúng chỉ đạo của Đàm: **không thêm trần thứ hai** cho 30 chỗ ranh thềm còn lại.
+⚠️ Suýt kết luận sai: phép đo đầu ra **23%** và cãi nhau với `road-fit.mjs` (35%) — vì tôi đo chênh
+cao độ TRUNG BÌNH qua một ô, còn trần nói về độ dốc **ĐỈNH** giữa ô, lớn hơn `SMOOTHSTEP_PEAK` lần.
+
+**2. `SMOOTHSTEP_PEAK = 1.5` nay được KHOÁ bằng test đạo hàm số.** Hằng số ấy là một lời khẳng định
+về hàm nội suy đang dùng, và cho tới hôm nay nó **chỉ sống trong một dòng chú thích** — đổi
+`smoothstep` thành `smootherstep` (đỉnh 1,875) thì mặt đất dốc thêm 25% mà **cả bài trần Baldwin
+lẫn đối chứng của nó vẫn xanh**, vì cả hai đều nhân với chính cái hằng số đã lạc hậu. Bài mới lấy
+sai phân `smoothHeightAt` trên lưới 1000 điểm, so đỉnh với trung bình. Đo được: **đúng 1,5000** ở
+cả 4 kỷ thử. Có TRẦN (≤ 1,5) và SÀN (≥ 0,9 × 1,5) — thiếu sàn thì một hàm tuyến tính (1,0) lọt
+thoải mái, đúng bẫy "ngưỡng một phía là cái phễu" (Phase 9A). Hai phép thử ngược, đỏ đúng chỗ đã
+nêu trước: smootherstep → đỏ ở TRẦN (1,8750) · tuyến tính → đỏ ở SÀN (1,0000).
+
+**3. `TECH_DEBT #44` đóng — KHÔNG SỬA MỘT DÒNG MÃ NÀO.** Đàm đặt câu hỏi mục ấy chưa từng hỏi:
+*"đây là thứ mình MẮC hay thứ mình CHỌN?"*. Đi kiểm ý định trước khi đi sửa: `ERA_TERRAIN[4]` khai
+thẳng *"kinh thành Trung Hoa trên ĐỒNG BẰNG, đồi thấp vây bốn phía"*; kỷ 4 **dùng đủ 3 bậc** đã
+khai (20% đáy / 64% đồng bằng / 16% vành đồi — dải đông nhất nằm ở GIỮA, không dồn về một đầu như
+địa hình bị sập); và kỷ 9 khai CÙNG một thứ (*"lòng chảo sông Seine, gần phẳng"*) đo ra 58%, tức
+vạch 60% đang cắt ngang giữa hai kỷ mô tả cùng một loại địa hình. ⇒ **Lựa chọn, không phải nợ.**
+Bài test giữ nguyên hình dạng nhưng đổi vai (ngoại lệ đã khai, đỏ theo cả hai chiều); chú thích
+viết lại cho khớp, vì một lời giải thích sai là thứ phiên sau kế thừa rồi dựa vào.
+
+**Còn lại**: Việc 2 — camera cận cảnh.
+
+---
+
 ### 2026-08-18 — Vỉa hè: dứt điểm `TECH_DEBT #42` (ADR-033)
 
 **Đàm yêu cầu**: làm nốt vỉa hè cho cả 5 kỷ, mỗi dòng phải trả lời được câu *"đi bộ ở nước ấy, thời

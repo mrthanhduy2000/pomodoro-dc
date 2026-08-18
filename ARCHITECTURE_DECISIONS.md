@@ -109,6 +109,68 @@
   lại và cho kết quả sạch hơn. Nếu `TERRACE_STEP` được hạ xuống dưới 0,232 cho MỌI kỷ thì lượt 3
   thành vô tác dụng và nên gỡ — nhưng đừng gỡ trước khi đo, vì `relief` nhân vào nó.
 
+### Bổ sung 2026-08-18 (a) — TRẦN 34,8% ĐÃ ĐƯỢC HIỆU CHUẨN BẰNG MẮT, không chỉ bằng một con số mượn
+
+Trần lấy từ Baldwin Street (Dunedin, NZ — con phố dốc nhất thế giới). Một con số mượn từ ngoài đời
+là một khởi điểm tốt, nhưng nó **chưa trả lời** câu duy nhất quan trọng: *ở trong app này, cái dốc
+ấy đọc ra là một con dốc hay một bức tường?* Đã đi kiểm:
+
+| Kỷ | Dốc đỉnh | Quãng dốc nhất | Đọc ra là gì |
+|---:|---:|---|---|
+| 5 Đức | **35%** (chạm trần) | ô (3,4)→(4,4) | dốc |
+| 7 Ý | **35%** (chạm trần) | ô (1,4)→(2,4) | dốc |
+| 11 Mỹ | 30% | ô (1,4)→(2,4) | dốc |
+| 12 Nga | 22% | ô (1,8)→(2,8) | dốc |
+
+**Kết luận: trần đã hiệu chuẩn, KHÔNG hạ.** 34,8% = **19,2°**. Một bức tường là 90°; ngưỡng mà mắt
+bắt đầu đọc một mặt nghiêng thành một mặt đứng nằm đâu đó trên 45°. Ở 19,2° con đường còn cách rất
+xa chỗ đó, và ảnh chụp xác nhận: trong lòng đường **không có một mặt đứng nào** ở cả hai mốc 35% và
+22%.
+
+⚠️ **NHƯNG PHẢI NÓI RÕ THỨ GÌ TRONG ẢNH VẪN TRÔNG NHƯ MỘT BỨC TƯỜNG — và vì sao đó không phải lỗi.**
+Mặt đứng nhìn thấy rõ nhất ở kỷ 5 và kỷ 7 là **mép bậc thềm của ĐẤT** (tới 0,675 đơn vị một bậc ở
+kỷ 5), không phải mặt đường. Đó chính là nửa còn lại của ADR này: đất GIỮ bậc thềm, chỉ đường mới
+được san. Ai đọc ảnh rồi kết luận "đường vẫn còn vách" là đang nhìn nhầm sang ô đất bên cạnh.
+
+⚠️ **Và một cái bẫy đo lường đã suýt cắn**: chênh cao độ trung bình qua một ô ở chỗ dốc nhất là
+**23%**, còn độ dốc mà trần nói tới là độ dốc **ĐỈNH** ở giữa ô — lớn hơn `SMOOTHSTEP_PEAK` lần,
+tức 35%. Hai con số cùng mô tả một con đường; lẫn chúng là tự cho mình dốc thêm 50% hoặc tự khai
+thấp đi một phần ba. Phép đo đầu tiên của tôi ra 23% và cãi nhau với `road-fit.mjs` (35%) đúng vì
+lý do đó.
+
+### Bổ sung 2026-08-18 (b) — Kỷ 4 phẳng là một LỰA CHỌN, không phải một khoản NỢ (đóng `TECH_DEBT #44`)
+
+`TECH_DEBT #44` ghi nhận kỷ 4 có **64%** ô đất nằm cùng một bậc, quá ngưỡng 60%. Câu hỏi đúng không
+phải *"sửa thế nào"* mà là *"đây là thứ ta MẮC hay thứ ta CHỌN?"*. Ba bằng chứng nói rằng đó là
+CHỌN:
+
+1. **Bảng khai đúng như vậy.** `ERA_TERRAIN[4]` ghi `shape: 'valley'` kèm `note` nguyên văn *"kinh
+   thành Trung Hoa trên ĐỒNG BẰNG, đồi thấp vây bốn phía"*. Trường An / Lạc Dương nằm trên bình
+   nguyên Quan Trung và bồn địa Lạc Dương — đồng bằng sông ngòi có đồi thấp vây quanh. Một dải
+   phẳng chiếm phần lớn mặt đất **chính là** câu ấy dịch sang hình học.
+2. **Không có bậc nào bị mất.** Kỷ 4 khai 3 bậc và **dùng đủ 3**: 20% ở đáy lòng chảo · **64%** ở
+   dải đồng bằng · 16% ở vành đồi. Địa hình "sập" (bẫy Phase 7B) thì mất bậc hoặc dồn về một ĐẦU;
+   ở đây dải đông nhất nằm ở GIỮA, có đất thấp hơn ở dưới và vành cao hơn ở trên.
+3. **Kỷ 9 khai cùng một thứ và chỉ cách 6 điểm.** Kỷ 9 (`valley`, 3 bậc, *"lòng chảo sông Seine,
+   gần phẳng"*) đo ra **58%** — cùng hình dạng phân bố, chỉ tình cờ nằm dưới vạch. Ngưỡng 60% đang
+   cắt ngang giữa hai kỷ mô tả cùng một loại địa hình.
+
+⇒ **Đóng `TECH_DEBT #44`.** Bài test giữ NGUYÊN dạng `assert.deepEqual(TRUOT, [4])` — nó vẫn là
+hàng rào, chỉ đổi vai: từ *"một khuyết tật chờ sửa"* thành *"một ngoại lệ đã khai, đếm được"*. Kỷ
+thứ hai rơi xuống ⇒ đỏ (địa hình vừa sập ở đâu đó). Kỷ 4 hoá gồ ghề ⇒ cũng đỏ, và người sửa phải
+quyết định có ý thức.
+
+⚠️ **Phải nói thật về chính ngưỡng 60%**: nó là một con số CHỌN TAY (bản đầu là 70% cho cả 15 kỷ,
+hạ xuống sau khi nó đòi bịa ra đồi ở Lưỡng Hà và thảo nguyên Nga), **không phải một con số đo
+được**. Kỷ 9 đứng cách vạch đúng 2 điểm. Vì vậy đừng đọc nó như một chân lý — thứ thật sự canh
+"địa hình có sập không" là bài *"MỌI KỶ PHẢI DÙNG ĐỦ SỐ BẬC MÌNH KHAI"*, hỏi thẳng vào đúng khuyết
+tật thay vì hỏi qua một tỉ lệ. Theo đúng chỉ đạo của Đàm (2026-08-18), **KHÔNG thêm một ngưỡng thứ
+hai** bên cạnh nó: một ngưỡng chưa hiệu chuẩn đặt cạnh một ngưỡng có gốc là đúng cái phễu Phase 9A.
+
+- **Điều kiện xem lại (cho cả hai bổ sung)**: (a) nếu `SMOOTHSTEP_PEAK` hoặc hàm nội suy đổi thì
+  trần 19,2° đổi theo — nay đã có test đạo hàm số bắt việc đó; (b) nếu có ai muốn kỷ 4 gồ ghề hơn
+  vì một lý do mỹ thuật mới, hoặc một kỷ thứ hai tụt xuống dưới vạch.
+
 ---
 
 ## ADR-031 — Lòng đường của một ô là MỘT LÕI + TỐI ĐA BỐN CÁNH TAY, không phải một hình chữ nhật; và bề rộng chỗ nối do CẢ HAI ô cùng suy ra bằng một phép ĐỐI XỨNG

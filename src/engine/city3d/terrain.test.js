@@ -83,8 +83,23 @@ test('kỷ khai TỪ 3 BẬC TRỞ LÊN thì không bậc nào được nuốt q
   // không phải mặt đất** — đúng hình dạng "một lời hứa đúng nhờ một thứ chẳng liên quan" ở Phase 7D.
   //
   // Cách xử lý ĐÚNG là giữ nguyên ngưỡng 60% (nới cho vừa kết quả là mua một con số đẹp) và ĐẾM
-  // TƯỜNG MINH kỷ nào đang trượt, để trạng thái dở dang tự đòi được đọc thay vì nằm im trong tài
-  // liệu. Ghi ở `TECH_DEBT #44`.
+  // TƯỜNG MINH kỷ nào đang trượt.
+  //
+  // ⚠️ 2026-08-18 — KỶ 4 NAY LÀ MỘT NGOẠI LỆ ĐÃ KHAI, KHÔNG PHẢI MỘT KHUYẾT TẬT CHỜ SỬA (ADR-032
+  // bổ sung (b), đóng `TECH_DEBT #44`). Ba bằng chứng: `ERA_TERRAIN[4]` khai thẳng *"kinh thành
+  // Trung Hoa trên ĐỒNG BẰNG, đồi thấp vây bốn phía"* · kỷ 4 **dùng đủ 3 bậc** đã khai (20% đáy /
+  // 64% đồng bằng / 16% vành đồi — dải đông nhất nằm ở GIỮA, không dồn về một đầu như địa hình bị
+  // sập) · kỷ 9 khai CÙNG một thứ (*"lòng chảo sông Seine, gần phẳng"*) và đo ra 58%, tức vạch 60%
+  // đang cắt ngang giữa hai kỷ mô tả cùng một loại địa hình. **Nợ là thứ mình MẮC; cái này là thứ
+  // mình CHỌN.**
+  //
+  // Bài test giữ NGUYÊN hình dạng — nó vẫn là hàng rào, chỉ đổi vai. Đỏ theo HAI chiều: dài ra ⇒
+  // địa hình vừa sập ở một kỷ nữa; ngắn lại ⇒ ai đó vừa làm kỷ 4 gồ ghề lên, và đó là một quyết
+  // định mỹ thuật phải làm có ý thức (sửa cả đây lẫn ADR-032).
+  //
+  // ⚠️ Và nói thật về chính ngưỡng 60%: nó là con số CHỌN TAY, không phải con số đo được, và kỷ 9
+  // chỉ cách vạch 2 điểm. Thứ thật sự canh "địa hình có sập không" là bài "MỌI KỶ PHẢI DÙNG ĐỦ SỐ
+  // BẬC MÌNH KHAI" ở trên — nó hỏi thẳng vào khuyết tật thay vì hỏi qua một tỉ lệ.
   const TRUOT = [];
   for (const era of ERAS) {
     const profile = eraTerrainProfile(era);
@@ -94,8 +109,9 @@ test('kỷ khai TỪ 3 BẬC TRỞ LÊN thì không bậc nào được nuốt q
   }
   assert.deepEqual(
     TRUOT, [4],
-    `danh sách kỷ có một bậc nuốt quá 60% mặt ĐẤT đã đổi: ${JSON.stringify(TRUOT)}. Nếu dài ra thì `
-    + 'địa hình vừa sập ở một kỷ nữa; nếu ngắn lại thì `TECH_DEBT #44` đã đóng — sửa cả hai nơi.',
+    `danh sách kỷ có một bậc nuốt quá 60% mặt ĐẤT đã đổi: ${JSON.stringify(TRUOT)}. Dài ra ⇒ địa `
+    + 'hình vừa sập ở một kỷ nữa. Ngắn lại ⇒ kỷ 4 vừa hoá gồ ghề, mà đồng bằng của nó là một LỰA '
+    + 'CHỌN đã khai (ADR-032 bổ sung (b)) — sửa cả hai nơi cho khớp.',
   );
 });
 
@@ -187,6 +203,62 @@ test('PHỐ KHÔNG BAO GIỜ DỐC HƠN CON PHỐ DỐC NHẤT THẾ GIỚI (34,
     }
   }
   assert.equal(soCap, 15 * 88, 'phép quét không duyệt đủ số cặp ô đường kề nhau đã hứa');
+});
+
+test('`SMOOTHSTEP_PEAK` PHẢI LÀ ĐẠO HÀM ĐỈNH THẬT CỦA MẶT ĐẤT, không phải một con số chép từ sách', () => {
+  // ⚠️ VÌ SAO BÀI NÀY TỒN TẠI. Bài "PHỐ KHÔNG BAO GIỜ DỐC HƠN…" ở trên tính độ dốc bằng
+  // `SMOOTHSTEP_PEAK * |Δh|`. Cái hệ số 1,5 ấy là một LỜI KHẲNG ĐỊNH VỀ HÀM NỘI SUY đang dùng
+  // (`smoothstep`, đạo hàm cực đại 1,5 ở giữa quãng) — và cho tới hôm nay nó chỉ sống trong một
+  // dòng CHÚ THÍCH. Đổi `smoothstep` thành `smootherstep` (đạo hàm đỉnh 1,875) thì mặt đất dốc
+  // thêm 25% mà **cả bài cap lẫn đối chứng của nó vẫn xanh**, vì cả hai đều nhân với chính cái
+  // hằng số đã lạc hậu. Cả cái trần Baldwin Street lúc ấy thành một lời nói dối có cấu trúc.
+  // ⇒ Bài này ĐO đạo hàm thay vì tin nó — đúng luật "đừng DỰ ĐOÁN thứ có thể ĐO", và đúng bài học
+  // "một câu tự trấn an trong chú thích cũng phải được kiểm như một con số" (Phase 8B).
+  //
+  // Cách đo: đi dọc MỘT quãng giữa hai tâm ô (giữ `y` ở đúng tâm ô nên thành phần nội suy theo `y`
+  // triệt tiêu, còn lại đúng đường cong 1 chiều), lấy sai phân trên lưới mịn, rồi so ĐỈNH với
+  // TRUNG BÌNH. Tỉ số ấy chính là hằng số đang xét, và nó không phụ thuộc quãng dốc bao nhiêu.
+  const N = 1000;                      // sai phân trên lưới mịn; đỉnh đo được luôn ≤ đỉnh thật
+  const SAN = 0.05;                    // quãng phẳng hơn mức này thì tỉ số vô nghĩa (0/0)
+  let soQuang = 0;
+  let toiDa = 0;
+  for (const era of [1, 5, 7, 13]) {
+    const { smoothHeightAt } = buildTerrain({ era, gridSize: GRID });
+    for (let x = 0; x < GRID - 1; x += 1) {
+      for (let y = 0; y < GRID; y += 1) {
+        const trungBinh = Math.abs(smoothHeightAt(x + 1, y) - smoothHeightAt(x, y));
+        if (trungBinh < SAN) continue;
+        soQuang += 1;
+        let dinh = 0;
+        for (let i = 0; i < N; i += 1) {
+          const a = smoothHeightAt(x + i / N, y);
+          const b = smoothHeightAt(x + (i + 1) / N, y);
+          dinh = Math.max(dinh, Math.abs(b - a) * N);
+        }
+        toiDa = Math.max(toiDa, dinh / trungBinh);
+      }
+    }
+  }
+  // ⚠️ GÁC CHẠY-RỖNG. Không có nó thì một `buildTerrain` trả mặt phẳng sẽ làm `soQuang = 0`, vòng
+  // lặp không chạy lần nào, và bài test xanh mà chưa đo gì cả.
+  assert.ok(soQuang >= 40,
+    `chỉ tìm được ${soQuang} quãng đủ dốc để đo — phép đo gần như không chạy, con số dưới vô nghĩa`);
+
+  // TRẦN: hàm nội suy không được dốc hơn thứ hằng số đang khai. Vượt ⇒ mọi con số độ dốc trong
+  // file này đang bị khai THẤP đi, kể cả cái trần Baldwin Street.
+  assert.ok(toiDa <= SMOOTHSTEP_PEAK + 1e-6,
+    `đạo hàm đỉnh của mặt đất là ${toiDa.toFixed(4)} lần độ dốc trung bình, trong khi `
+    + `SMOOTHSTEP_PEAK khai ${SMOOTHSTEP_PEAK} — hàm nội suy đã đổi, hằng số chưa đổi theo. `
+    + 'Mọi phép tính độ dốc trong file này đang khai thấp hơn sự thật.');
+
+  // SÀN: và nó cũng KHÔNG được thấp hơn nhiều — nếu không, một hàm nội suy TUYẾN TÍNH (đỉnh = 1,0)
+  // sẽ qua được cái trần trên một cách thoải mái, và bài test này thành một cái phễu chứ không
+  // phải hàng rào. Đây đúng là bài học Phase 9A: một ngưỡng chỉ chặn MỘT phía thì phía kia trôi tự
+  // do. Sàn 0,9 chừa chỗ cho sai số sai phân (sai phân cho TRUNG BÌNH trên mỗi quãng con nên luôn
+  // hụt so với đỉnh thật một chút), nhưng vẫn bắt được cả `linear` (1,0) lẫn `smootherstep` (1,875).
+  assert.ok(toiDa >= 0.9 * SMOOTHSTEP_PEAK,
+    `đạo hàm đỉnh chỉ ${toiDa.toFixed(4)} lần độ dốc trung bình, thấp hơn hẳn ${SMOOTHSTEP_PEAK} — `
+    + 'hoặc hàm nội suy đã thành tuyến tính (thềm hết là thềm), hoặc phép đo đang không chạm mặt đất.');
 });
 
 test('ĐỐI CHỨNG: trường CHƯA SAN (bậc thềm thô) phải bị chính phép đo trên bắt', () => {

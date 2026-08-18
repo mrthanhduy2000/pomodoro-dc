@@ -11,6 +11,63 @@
 
 ---
 
+## ADR-032 — ĐẤT giữ bậc thềm, ĐƯỜNG được san thành dốc thoải: hai loại ô, hai luật cao độ khác nhau
+
+- **Ngày**: 2026-08-18 (Phase 12, Việc 1 — nguyên nhân 2/2)
+- **Bối cảnh**: nửa còn lại của câu *"đường lòi lõm, mất tự nhiên quá"*. Nguyên nhân 1 (mép ngang,
+  ADR-031) đã xong: 45% → 0%. Nửa này là **mặt cắt dọc**. Đo trên 80 ô đường ứng viên × 15 kỷ trước
+  khi sửa: **235 chỗ ranh giới thềm cắt ngang qua đường**, **205 chỗ dốc quá mức một con phố thật
+  có thể dốc**, chỗ tệ nhất **173%** (kỷ 7 — nghiêng 60°, tức nhảy 85% chiều cao một căn nhà trong
+  đúng một ô). Con phố dân cư dốc nhất thế giới — Baldwin Street, Dunedin, New Zealand — dốc
+  **34,8%**; hai con dốc nổi tiếng nhất San Francisco đều 31,5%. Tức thành phố đang có những đoạn
+  phố dốc gấp năm lần thứ dốc nhất loài người từng lát nhựa.
+- **Vấn đề**: `terrain.js` chia cao độ thành **thềm bậc** (`terraces` × `TERRACE_STEP × relief`).
+  Với 10/15 kỷ, **một bậc thềm đã dốc hơn Baldwin Street** (kỷ 5: 0,675 đơn vị trên một ô = 101%).
+  Nên chừng nào mặt đường còn bám lưới bậc thềm, mọi ranh thềm chạm vào đường đều là một cái vách.
+- **Phương án đã cân nhắc**:
+  1. **Làm mượt cả trường cao độ** (bỏ lượng tử hoá). Gỡ luôn thứ đang đỡ các toà nhà: công trình
+     là khối đáy phẳng rộng tới 3 ô, thềm bậc là thứ cho chúng mặt đất bằng để đặt xuống. Bài
+     `cao độ luôn là BỘI SỐ NGUYÊN của một bậc thềm` tồn tại vì lý do ấy, và lý do ấy còn đúng.
+  2. **Ép mọi ô đường về CÙNG một cao độ** ("không ranh thềm nào cắt ngang đường"). Chết vì hình
+     học chứ không vì thẩm mỹ: mạng đường là 4 cột + 4 hàng CẮT NHAU, tức một đồ thị **liên thông**
+     ⇒ điều kiện ấy buộc cả 80 ô bằng nhau ⇒ 56% mặt lưới phẳng tuyệt đối; và vì mọi ô đất đều kề
+     một ô đường nên độ dốc chỉ bị dồn sang phương ngang. Đổi một khuyết tật lấy một khuyết tật to
+     hơn, đồng thời xoá sạch Phase 7B.
+  3. **San riêng mặt đường, tách khỏi mặt đất** (Đàm đã tự loại): đường treo lơ lửng hoặc cắm vào
+     đất hai bên, phải dựng tường chắn khắp nơi, mỗi tường lại là một khuyết tật hình học mới.
+  4. ⇒ **CHỌN: đất giữ bậc thềm, đường được san thành dốc thoải trong CÙNG một trường cao độ.**
+- **Vì sao loại các phương án kia**: (1) và (2) đều phá một bất biến đang thật sự gánh việc; (3)
+  tạo ra một mặt phân cách mới ở mọi chỗ đường gặp đất. Phương án 4 không tạo mặt phân cách nào —
+  nó chỉ đổi GIÁ TRỊ của 80 ô trong cùng một trường, nên `smoothHeightAt` vẫn liền lạc.
+- **Giải pháp**: trong `buildTerrain`, sau bước chia bậc, thêm **LƯỢT 3 — SAN ĐƯỜNG**:
+  - Lấy 80 ô từ `roadCellCandidates()` (`cityLayout.js`) — **danh sách ứng viên, hằng số cấp
+    module**, KHÔNG phải mạng đường đang hiện.
+  - Dựng ba hàm C-Lipschitz trên **đồ thị đường** (C = `maxRoadRise()` = 34,8% / 1,5) rồi lấy
+    **trung vị** của chúng: hai bao hình của chính trường gốc (bám sát địa hình) và hai bao hình
+    của trần/sàn do **bờ đất** áp đặt (`maxBankRise()`). Trung vị của ba hàm C-Lipschitz vẫn
+    C-Lipschitz, nên kết quả vừa đủ thoải vừa không trôi khỏi bờ đất hai bên.
+  - Điểm bất động của bao hình là DUY NHẤT ⇒ kết quả không phụ thuộc thứ tự duyệt ⇒ tất định.
+- **Trade-off (nói thẳng, cả ba)**:
+  - **Cao độ ô ĐƯỜNG không còn là bội số nguyên của một bậc thềm.** Có chủ đích: lý do của bất biến
+    cũ (mặt đất bằng cho khối đáy phẳng) không áp cho mặt phố, vì không ai đặt nhà lên đó. Bài test
+    đã tách làm hai vế và **đếm** số ô lẻ, để trạng thái này tường minh.
+  - **Bờ đất bên lề dốc hơn một bậc thềm ở 5/2160 chỗ** (4 ở kỷ 5, 1 ở kỷ 7). Đó là chỗ đất hai bên
+    phố chênh nhau hơn hai bậc, nên **không tồn tại** cao độ nào vừa giữ phố dưới 34,8% vừa nằm
+    trong một bậc của cả hai bên. Khi buộc phải chọn, **phố thắng** — cái giá trả trên bờ đất.
+  - **Số cặp ô đường có chênh cao độ TĂNG** (kỷ 5: 26/84 → 81/84). Đây là dấu hiệu ĐÚNG, không phải
+    hồi quy: thay vì vài cái vách, nay là nhiều nhịp nhỏ — con đường **đi theo** địa hình thay vì
+    bước qua nó.
+- **Ảnh hưởng**: `terrain.js` nay import `roadCellCandidates` từ `cityLayout.js` (chiều import đã
+  có sẵn: nó vốn import `hashId`). ADR-007 **không bị phá** vì danh sách ứng viên là hằng số cấp
+  module, không phải tham số đầu vào — có test khoá cả hai vế ở `cityLayout.test.js`. Hình học:
+  **0 lệnh vẽ mới, 0 vật liệu mới, 0 nguồn sáng mới**; tam giác mặt đất và mặt đường **giống hệt
+  từng đơn vị** ở cả 15 kỷ, chỉ 4 kỷ thêm đúng một bệ kè (+12 tam giác mỗi kỷ).
+- **Điều kiện xem lại**: nếu mạng đường thôi liên thông (bỏ một trục), phương án 2 sẽ khả thi trở
+  lại và cho kết quả sạch hơn. Nếu `TERRACE_STEP` được hạ xuống dưới 0,232 cho MỌI kỷ thì lượt 3
+  thành vô tác dụng và nên gỡ — nhưng đừng gỡ trước khi đo, vì `relief` nhân vào nó.
+
+---
+
 ## ADR-031 — Lòng đường của một ô là MỘT LÕI + TỐI ĐA BỐN CÁNH TAY, không phải một hình chữ nhật; và bề rộng chỗ nối do CẢ HAI ô cùng suy ra bằng một phép ĐỐI XỨNG
 
 - **Ngày**: 2026-08-18 (Phase 12, Việc 1 — nguyên nhân 1/2)

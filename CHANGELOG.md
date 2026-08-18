@@ -12,6 +12,35 @@
 
 ---
 
+## 2026-08-18 — Phase 12: đường sá thôi lởm chởm — mép ngang và mặt cắt dọc (ADR-031 + ADR-032)
+
+- **Mục đích**: Đàm nói *"đường lòi lõm, mất tự nhiên quá"*. Đo ra thì câu ấy gộp **hai nguyên nhân
+  độc lập**, và một bản vá cho cái này không chạm được cái kia.
+- **Phạm vi — nguyên nhân 1, MÉP NGANG (ADR-031)**: lòng đường trong một ô thôi là **một hình chữ
+  nhật** (chỉ có hai bề rộng, trong khi một ngã tư cần bốn) mà thành **một LÕI + tối đa BỐN CÁNH
+  TAY loe**. Bề rộng chỗ nối là `min(nửa của tôi, nửa của hàng xóm)` — một phép **đối xứng**, nên
+  hai ô kề nhau không có cách nào lệch. Kèm `MAX_AVENUE = 0,96`.
+  **Đo: 45% số mép có một bậc vuông góc (lớn nhất 0,380 ô) → 0% · 0,000 ô.**
+- **Phạm vi — nguyên nhân 2, MẶT CẮT DỌC (ADR-032)**: **hai loại ô, hai luật cao độ**. 64 ô ĐẤT
+  giữ nguyên bậc thềm (đo lại từng ô: giống hệt, không đụng ô nào); 80 ô ĐƯỜNG được **san thành dốc
+  thoải** có trần lấy từ ngoài đời — **34,8%**, Baldwin Street (Dunedin, NZ), con phố dốc nhất thế
+  giới. `terrain.js` nay đọc `roadCellCandidates()` của `cityLayout.js`: danh sách **ứng viên** (80
+  ô, hằng số), **không** phải mạng đường đang hiện.
+  **Đo: 205 chỗ vượt trần Baldwin → 0; dốc dọc tệ nhất 173% → 35%.** Trên mạng đã hiện ở 80 phiên:
+  cú nhảy tệ nhất từ 85% chiều cao một căn nhà xuống **33%**, dốc 59,9° → **19,2°**.
+- **Ảnh hưởng**: **0 lệnh vẽ mới · 0 vật liệu mới · 0 nguồn sáng mới** ở cả hai nguyên nhân. Hình
+  học: nguyên nhân 1 **−6.752 tam giác (−1,0%)**, nguyên nhân 2 **+64 (+0,010%)** — và +64 ấy nằm ở
+  **bệ kè** (4 công trình cạnh đường nay có mép hụt thật nên được kè), không ở mặt đường.
+- **Tương thích**: không đổi dữ liệu lưu, không migration. Bất biến ADR-007 ("bảo tàng bất động")
+  giữ nguyên và thực ra **chặt hơn**: địa hình khoá vào tập ứng viên — tập cha thật sự của mọi mạng
+  đường đã hiện — chứ không khoá vào thứ đổi theo tiến độ.
+- **Giá phải trả, ghi rõ chứ không giấu**: cao độ ô đường thôi là bội số của bậc thềm (có chủ đích);
+  **5/2160** chỗ bờ đất bên lề dốc hơn một bậc, ở đó phố thắng và bờ chịu giá (`TECH_DEBT #45`);
+  ranh thềm cắt ngang đường về **30** chứ không về 0, và 30 chỗ ấy dốc 22–34% — thoải hơn San
+  Francisco (`TECH_DEBT #44` là một phát hiện KHÁC, có sẵn từ trước, không do phase này gây ra).
+
+---
+
 ## 2026-08-18 — Phase 11: mái thôi là một tấm phẳng trơn — ống khói, bồn nước, cửa sổ mái, đường nét mái (ADR-030)
 
 - **Mục đích**: camera nhìn **chúc xuống**, nên mái là mặt lớn nhất trong khung hình — và cho tới

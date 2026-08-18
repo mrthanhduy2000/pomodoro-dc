@@ -6,7 +6,51 @@
 > chọn: `ARCHITECTURE_DECISIONS.md`. Nợ kỹ thuật: `TECH_DEBT.md`. Migration: `MIGRATION.md`. Tóm
 > tắt theo mốc: `CHANGELOG.md`.
 > **NGUYÊN TẮC ƯU TIÊN SỐ 1:** (1) mọi phiên AI phải đọc file này + `CLAUDE.md` + các file liên quan TRƯỚC khi làm; (2) sau MỌI cập nhật dù nhỏ, phải cập nhật ngay file này + `CLAUDE.md` + các file liên quan khác.
-> Cập nhật lần cuối: **2026-08-18** — **VIỆC 1 / PHASE 12: ĐƯỜNG THÔI LỞM CHỞM.**
+> Cập nhật lần cuối: **2026-08-18** — **VIỆC 1 / PHASE 12-B: ĐƯỜNG LEO DỐC THÔI NHẢY BẬC.**
+>
+> **VIỆC 1 / PHASE 12-B — ĐƯỜNG LEO DỐC THÔI NHẢY BẬC (nguyên nhân 2/2) — 2026-08-18.**
+> Nửa NẶNG hơn của câu Đàm nói. Trước bản vá: kỷ 7 có chỗ đường **nhảy 1,150 đơn vị trong MỘT ô**
+> = 85% chiều cao một căn nhà, dốc **59,9°** — một bức tường, không phải một con dốc.
+> **KẾT QUẢ (tập ứng viên, 15 kỷ × 88 cặp = 1.320 cặp ô đường kề nhau):**
+>
+> | | TRƯỚC | SAU |
+> |---|--:|--:|
+> | chỗ dốc quá trần Baldwin Street (34,8%) | **205** | **0** |
+> | dốc dọc tệ nhất | **173%** | **35%** |
+> | ranh thềm cắt ngang đường | 235 | 30 |
+> | bờ đất bên lề dốc hơn 1 bậc thềm | 0/2160 | 5/2160 |
+>
+> Trên **mạng đường ĐÃ HIỆN** ở 80 phiên: cú nhảy tệ nhất **85% → 33%** chiều cao một căn nhà
+> (trung vị 31% → 20%), dốc tệ nhất **59,9° → 19,2°**.
+> ⚠️ **BA ĐIỀU PHẢI NÓI CHO ĐÚNG, ĐỪNG ĐỌC BẢNG TRÊN THÀNH "ĐÃ VỀ 0 HẾT":**
+> **(1)** *"Ranh thềm cắt ngang"* **KHÔNG** về 0 — nó về **30**, và 30 chỗ ấy nằm ở kỷ 2/3/11/12 nơi
+> trọn một bậc thềm chỉ dốc **22–34%**, tức thoải hơn phố San Francisco. Con số phải về 0 là con số
+> đo bằng **ĐỘ DỐC** (thứ con mắt thấy), không phải con số đếm ranh giới. **(2)** Số cặp ô đường
+> *có chênh cao độ* lại **TĂNG** (kỷ 5: 26/84 → 81/84) — đúng, không phải hồi quy: đường nay **bám
+> theo** mặt đất thay vì bước qua nó. **(3)** 5/2160 chỗ bờ đất bên lề dốc hơn một bậc: ở đó hai
+> lời hứa **về mặt hình học không thể cùng đạt**, và tôi cho **phố thắng, bờ chịu giá** (`TECH_DEBT
+> #45`, có `assert` khoá đúng con số 5 nên chỗ thứ sáu sẽ đỏ).
+> **ĐO KIỂM BẤT BIẾN:** 64 ô ĐẤT có cao độ **giống hệt từng ô** trước và sau — không đụng một ô đất
+> nào; chỉ 80 ô ĐƯỜNG đổi. Dải cao độ của đất **không thu hẹp** (kỷ 7 vẫn 0,000–2,300) ⇒ địa hình
+> vẫn cao thấp y như cũ, chỉ các BẬC hoá thành DỐC.
+> **ADR-032**: đất giữ thềm bậc · đường được san. Phép san là **TRUNG VỊ của ba hàm C-Lipschitz** —
+> chọn trung vị vì trung bình hai bao **không tôn trọng được trần nào cả** (đã thử: độ dốc ngang kỷ
+> 5 tệ đi 101% → 184%, vá thêm một vòng chỉ xuống 183%). Trung vị của ba hàm C-Lipschitz vẫn
+> C-Lipschitz, và điểm bất động là DUY NHẤT ⇒ không phụ thuộc thứ tự duyệt ⇒ tất định (ADR-007).
+> **805 bài test** (799 + 6 mới, tất cả đã thử-cho-đỏ), lint sạch, build xanh. **Lệnh vẽ KHÔNG đổi
+> một đơn vị nào ở cả 15 kỷ.** Tam giác **+64 (+0,010%)** — và +64 ấy **KHÔNG** ở mặt đường (lưới
+> đường có số đỉnh cố định, giống hệt từng đơn vị) mà ở **BỆ KÈ**: 4 công trình cạnh đường nay có
+> mép hụt thật nên được kè. Đối chiếu chéo bằng phép đếm thuần (không Chromium) ra **đúng +64**.
+> ⏳ **CHƯA gộp `main`** — mục 5 chương trình làm việc.
+>
+> ⚠️ **BÀI HỌC PHIÊN NÀY — MỘT TIỀN ĐỀ ĐÚNG SUÝT DẪN TỚI MỘT KẾT LUẬN SAI.** Cố vấn bảo
+> *"`ROAD_CELLS` là hằng số nên địa hình được phép biết trước đường ở đâu"*. Đi kiểm: tiền đề ĐÚNG.
+> Nhưng nếu dừng ở đó rồi đọc mạng đường **đang hiện** thì đã phá ADR-007 tan tành — mạng đã hiện
+> vừa mở dần theo số phiên vừa bỏ ô bị công trình chiếm (**1.818/2.265 tổ hợp không phải tiền tố của
+> nhau**; `built: []` ⇒ **0 ô đường**). Hai thứ tên gần giống nhau, một cái bất biến một cái không.
+> ⇒ Đặt **tên riêng** cho cái bất biến (`roadCellCandidates()`) và khoá bằng **ba** bài test — bài
+> thứ ba (*"mạng đã hiện thì KHÔNG bất biến, đừng dựa vào nó"*) không bảo vệ mã, nó bảo vệ **phiên
+> sau khỏi hiểu nhầm**.
 >
 > **VIỆC 1 / PHASE 12 — ĐƯỜNG THÔI LỞM CHỞM (nguyên nhân 1/2) — 2026-08-18.**
 > Đàm nói *"đường lòi lõm, mất tự nhiên quá"*. Câu ấy gộp **hai nguyên nhân độc lập**, và một bản

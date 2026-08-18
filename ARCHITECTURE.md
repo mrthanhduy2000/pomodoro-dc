@@ -438,7 +438,7 @@ Lập luận "phải là thềm bậc" đứng trên tiền đề *"nền thành
 và công trình vẫn đứng trên thềm (chúng là khối đáy phẳng, vẫn cần mặt bằng). Bất biến giữ hai vế
 khớp nhau: tại toạ độ NGUYÊN, `smoothHeightAt` trả về **đúng** `heightAt`.
 
-Ba điểm về LUỒNG DỮ LIỆU đáng nhớ ở tầng kiến trúc:
+Bốn điểm về LUỒNG DỮ LIỆU đáng nhớ ở tầng kiến trúc:
 1. **Cao độ là hàm của DUY NHẤT `(era, gridSize)`** — `buildTerrain` cố tình không nhận danh sách
    công trình. Đây là cùng một bất biến đã giữ cho VỊ TRÍ ô đất (ADR-007) và THỨ TỰ mở đường
    (Phase 6C): thứ gì thuộc về "vùng đất" thì không được đổi theo tiến độ của Đàm, nếu không mỗi
@@ -458,6 +458,29 @@ Ba điểm về LUỒNG DỮ LIỆU đáng nhớ ở tầng kiến trúc:
    Camera cũng phải bù, và bù theo **ĐƠN VỊ THẾ GIỚI** chứ không trộn vào `massScale`: đo được 1 đơn
    vị `massScale` ≈ 5 đơn vị thế giới, nên quy đổi qua cỡ lưới là quy đổi bằng một con số chẳng liên
    quan (bản đầu bù thiếu ~4 lần và ảnh vẫn "trông có vẻ đúng").
+4. ⚠️ **HAI LOẠI Ô, HAI LUẬT CAO ĐỘ (2026-08-18, ADR-032)** — điểm 1 ở trên vẫn nguyên vẹn, nhưng
+   `buildTerrain` nay đọc thêm **một hằng số thứ hai**: `roadCellCandidates()` từ `cityLayout.js`.
+   Đây KHÔNG phải cửa sau cho tiến độ lọt vào: đó là danh sách **ỨNG VIÊN** (80 ô, suy một lần từ
+   `CITY_GRID_SIZE`), không phải mạng đường đã hiện. Mạng đã hiện thì CÓ đổi theo kỷ và theo số
+   phiên (công trình chiếm mất ô); ứng viên là **tập cha thật sự** của mọi mạng đã hiện, nên khoá
+   địa hình vào nó là một lời hứa **CHẶT HƠN** ADR-007, không phải lỏng hơn. Ba bài test ở
+   `cityLayout.test.js` khoá đúng ba mệnh đề ấy (ứng viên bất biến · ứng viên là tập cha · mạng đã
+   hiện thì KHÔNG bất biến — đừng dựa vào nó).
+   · **Luật ĐẤT không đổi**: 64 ô đất vẫn là bội số nguyên của một bậc thềm, đo lại từng ô trước và
+     sau bản vá thì **giống hệt, không một ô nào nhúc nhích**.
+   · **Luật ĐƯỜNG mới**: 80 ô đường được san thành dốc thoải, có **trần độ dốc lấy từ ngoài đời**
+     (Baldwin Street, Dunedin NZ — 34,8%, con phố dốc nhất thế giới), nên cao độ của chúng KHÔNG
+     còn là bội số của bậc thềm. Đây là chỗ duy nhất trong `terrain.js` phá tính "mọi cao độ đều
+     lượng tử hoá", và nó phá có chủ đích.
+   · Phép san là **trung vị của BA hàm C-Lipschitz** (bao dưới · bao trên · hai trần từ đất bên lề).
+     Chọn trung vị vì nó là cách duy nhất giữ được **cả hai** lời hứa cùng lúc (phố không dốc quá
+     Baldwin **và** bờ đất bên lề không dốc quá 1:1) — lấy trung bình hai bao thì không tôn trọng
+     được trần nào cả, đã thử và đo ra là sai. Trung vị của ba hàm C-Lipschitz vẫn C-Lipschitz, và
+     điểm bất động của phép quét là DUY NHẤT ⇒ không phụ thuộc thứ tự duyệt ⇒ tất định, đúng ADR-007.
+   · Hệ quả nhìn thấy được: ranh thềm cắt ngang đường nay là một **đoạn dốc** thay vì một bức tường.
+     Vì đường nằm ở mọi hàng/cột thứ 4, gần như mọi ranh thềm đều đi qua đường, nên cả thành phố
+     mềm hẳn đi — mà **quan trắc quan trọng nhất là dải cao độ của ĐẤT không hề thu hẹp**: địa hình
+     vẫn cao thấp đúng như cũ, chỉ có các BẬC hoá thành DỐC.
 
 **Ánh sáng và màu là một hệ THỐNG NHẤT, không phải các nút chỉnh rời (2026-08-12, Phase 3C)**:
 bốn thứ dưới đây khoá lẫn nhau, đổi một cái phải soi lại ba cái còn lại.

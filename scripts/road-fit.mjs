@@ -42,9 +42,11 @@
  * đã hỏng, và con số 0 kia vô nghĩa.
  */
 
-import { computeCityLayout } from '../src/engine/cityLayout.js';
+import { computeCityLayout, roadCellCandidates } from '../src/engine/cityLayout.js';
 import { collectCitySpecs } from '../src/engine/city3d/cityParts.js';
-import { buildTerrain } from '../src/engine/city3d/terrain.js';
+import {
+  SMOOTHSTEP_PEAK, STREET_MAX_GRADE, TERRACE_STEP, buildTerrain, eraTerrainProfile, maxRoadRise,
+} from '../src/engine/city3d/terrain.js';
 import {
   SIDES, SIDE_STEPS, carriagewayShape, getStreetStyle, streetCrossSection,
 } from '../src/engine/city3d/streetStyle.js';
@@ -185,6 +187,65 @@ export function chieuCaoNhaDan(layout) {
   return median(hs);
 }
 
+/**
+ * ── ĐO 3: RANH THỀM CÓ CẮT NGANG ĐƯỜNG KHÔNG ───────────────────────────────────────────────────
+ *
+ * ⚠️ ĐO TRÊN **DANH SÁCH ỨNG VIÊN** (80 ô, hằng số), KHÔNG TRÊN MẠNG ĐƯỜNG ĐANG HIỆN. Hai tập đó
+ * khác nhau — xem chú thích của `roadCellCandidates`. `terrain.js` bắt buộc phải bất biến theo tiến
+ * độ (ADR-007), nên luật nó tuân theo phải phát biểu trên tập CHA; đo trên tập con thì con số sẽ
+ * đổi theo việc Đàm đã xây gì, và một phép đo như thế thì không nghiệm thu được cái gì cả.
+ *
+ * Ba con số, mỗi con trả lời một câu KHÁC nhau — đừng gộp:
+ *   · `soRanh`     — bao nhiêu chỗ hai ô đường kề nhau nằm ở HAI BẬC THỀM KHÁC NHAU. Đây đúng là
+ *                    "ranh giới thềm cắt ngang qua đường", và là con số phải về 0: ranh thềm phải
+ *                    chạy DỌC theo phố, đổi cao độ thì đổi ở ô KHÔNG PHẢI đường.
+ *   · `soQuaTran`  — bao nhiêu chỗ dốc quá `STREET_MAX_GRADE` (Baldwin Street). Khác `soRanh`: một
+ *                    con dốc thoải chia làm nhiều nhịp nhỏ thì `soRanh` = 0 mà vẫn có thể quá dốc
+ *                    nếu mỗi nhịp còn quá lớn. Cũng phải về 0.
+ *   · `docNhat`    — dốc nhất bao nhiêu phần trăm. Đây là con số so được với đời thật.
+ *
+ * Cộng thêm `docNgang` — chênh giữa một ô đường và ô ĐẤT kề nó. Nó KHÔNG phải mục tiêu của phase
+ * này (mặt đường vắt ngang một bờ đất dốc là chuyện có thật, Positano đầy), nhưng phải theo dõi:
+ * làm phẳng dọc mà đẩy hết độ dốc sang ngang thì con đường thành một cái máng.
+ */
+export function terraceCuts(oDuong, heightAt, buocThem, tranRise) {
+  const lech = [];
+  const lechNgang = [];
+  for (const key of oDuong) {
+    const [x, y] = key.split('|').map(Number);
+    for (const [du, dv] of [[1, 0], [0, 1]]) {
+      const d = Math.abs(heightAt(x, y) - heightAt(x + du, y + dv));
+      if (oDuong.has(`${x + du}|${y + dv}`)) lech.push(d);
+      else lechNgang.push(d);
+    }
+    // Nhìn cả sang tây/bắc cho vế ĐẤT: hàng xóm phía ấy không được duyệt bởi cặp đường nào.
+    for (const [du, dv] of [[-1, 0], [0, -1]]) {
+      if (oDuong.has(`${x + du}|${y + dv}`)) continue;
+      lechNgang.push(Math.abs(heightAt(x, y) - heightAt(x + du, y + dv)));
+    }
+  }
+  const lonNhat = lech.length ? Math.max(...lech) : 0;
+  return {
+    soCap: lech.length,
+    soRanh: buocThem > 0 ? lech.filter((d) => d >= buocThem - EPS).length : 0,
+    soQuaTran: lech.filter((d) => d > tranRise + EPS).length,
+    lonNhat,
+    docNhat: SMOOTHSTEP_PEAK * lonNhat,
+    // ⚠️ VẾ NGANG PHẢI ĐỌC BẰNG PHÂN BỐ, KHÔNG BẰNG CỰC ĐẠI. Cực đại là một con số GỘP: nó đứng
+    // yên y hệt dù có MỘT chỗ bờ dốc hay BỐN MƯƠI chỗ, mà hai tình huống ấy khác hẳn nhau trên
+    // màn hình (cùng bài học "cực tiểu cũng là một con số gộp" ở `daylight.test.js`).
+    soNgang: lechNgang.length,
+    docNgang: lechNgang.length ? SMOOTHSTEP_PEAK * Math.max(...lechNgang) : 0,
+    docNgangTrungVi: SMOOTHSTEP_PEAK * median(lechNgang),
+    soNgangQuaBuoc: buocThem > 0 ? lechNgang.filter((d) => d > buocThem + EPS).length : 0,
+  };
+}
+
+/** Tập khoá "x|y" của DANH SÁCH ỨNG VIÊN — hằng số, không phụ thuộc kỷ hay tiến độ. */
+function candidateRoadKeys() {
+  return new Set(roadCellCandidates().map((c) => `${c.x}|${c.y}`));
+}
+
 function roadCellsOf(layout) {
   const set = new Set();
   const laneOf = new Map();
@@ -222,25 +283,62 @@ function report() {
     + '% · bậc to nhất cả bảng ' + f3(Math.max(...tongLon)) + ' ô');
 
   console.log('');
-  console.log('═══ ĐO 2 — MẶT CẮT DỌC (chênh cao độ hai ô đường kề nhau) ═══');
-  console.log('kỷ  nhà cao  cặp lệch/cặp  lệch lớn nhất  = mấy phần nhà  dốc nhất');
+  console.log('═══ ĐO 2 — MẶT CẮT DỌC (chênh cao độ hai ô đường kề nhau, MẠNG ĐANG HIỆN) ═══');
+  console.log('kỷ  phiên  nhà cao  cặp lệch/cặp  lệch lớn nhất  = mấy phần nhà  dốc nhất');
   const tongPhan = [];
   for (const era of ERAS) {
-    const layout = layoutOf(era, 80);
-    const { set } = roadCellsOf(layout);
     const terrain = buildTerrain({ era, gridSize: GRID });
-    const nha = chieuCaoNhaDan(layout);
-    const r = heightJumps(set, (x, y) => terrain.heightAt(x, y), nha);
-    tongPhan.push(r.phanNha);
-    console.log(
-      String(era).padStart(2) + '  ' + f2(nha).padStart(7) + '  '
-      + (String(r.soCapDoc) + '/' + String(r.soCap)).padStart(12) + '  '
-      + f3(r.lonNhat).padStart(13) + '  ' + (r.phanNha * 100).toFixed(0).padStart(13) + '%'
-      + '  ' + (r.docNhat.toFixed(1) + '°').padStart(8),
-    );
+    for (const moc of MOCS) {
+      const layout = layoutOf(era, moc);
+      const { set } = roadCellsOf(layout);
+      const nha = chieuCaoNhaDan(layout);
+      const r = heightJumps(set, (x, y) => terrain.heightAt(x, y), nha);
+      tongPhan.push(r.phanNha);
+      console.log(
+        String(era).padStart(2) + '  ' + String(moc).padStart(5) + '  ' + f2(nha).padStart(7) + '  '
+        + (String(r.soCapDoc) + '/' + String(r.soCap)).padStart(12) + '  '
+        + f3(r.lonNhat).padStart(13) + '  ' + (r.phanNha * 100).toFixed(0).padStart(13) + '%'
+        + '  ' + (r.docNhat.toFixed(1) + '°').padStart(8),
+      );
+    }
   }
   console.log('→ lệch lớn nhất so với một căn nhà: trung vị ' + (median(tongPhan) * 100).toFixed(0)
     + '% · tệ nhất ' + (Math.max(...tongPhan) * 100).toFixed(0) + '%');
+
+  console.log('');
+  console.log('═══ ĐO 3 — RANH THỀM CẮT NGANG ĐƯỜNG (DANH SÁCH ỨNG VIÊN 80 ô — bất biến) ═══');
+  console.log('trần phố: ' + (STREET_MAX_GRADE * 100).toFixed(1) + '% (Baldwin St) ⇒ chênh tối đa '
+    + f3(maxRoadRise()) + ' mỗi ô');
+  console.log('kỷ  bậc thềm  cắt ngang  quá trần  /cặp  dốc dọc  ngang tệ  ngang giữa  ngang>1bậc');
+  const ungVien = candidateRoadKeys();
+  let tongCat = 0;
+  let tongQua = 0;
+  let tongNgangQua = 0;
+  let tongNgangCap = 0;
+  const docs = [];
+  for (const era of ERAS) {
+    const terrain = buildTerrain({ era, gridSize: GRID });
+    const buoc = TERRACE_STEP * eraTerrainProfile(era).relief;
+    const r = terraceCuts(ungVien, (x, y) => terrain.heightAt(x, y), buoc, maxRoadRise());
+    tongCat += r.soRanh;
+    tongQua += r.soQuaTran;
+    docs.push(r.docNhat);
+    tongNgangQua += r.soNgangQuaBuoc;
+    tongNgangCap += r.soNgang;
+    console.log(
+      String(era).padStart(2) + '  ' + f3(buoc).padStart(8) + '  ' + String(r.soRanh).padStart(9)
+      + '  ' + String(r.soQuaTran).padStart(8) + '  ' + String(r.soCap).padStart(4) + '  '
+      + ((r.docNhat * 100).toFixed(0) + '%').padStart(7)
+      + '  ' + ((r.docNgang * 100).toFixed(0) + '%').padStart(8)
+      + '  ' + ((r.docNgangTrungVi * 100).toFixed(0) + '%').padStart(10)
+      + '  ' + (String(r.soNgangQuaBuoc) + '/' + String(r.soNgang)).padStart(10),
+    );
+  }
+  console.log('→ TỔNG chỗ ranh thềm cắt ngang đường: ' + tongCat
+    + ' · tổng chỗ quá trần: ' + tongQua
+    + ' · dốc dọc tệ nhất ' + (Math.max(...docs) * 100).toFixed(0) + '%');
+  console.log('→ BỜ ĐẤT bên lề: ' + tongNgangQua + '/' + tongNgangCap
+    + ' chỗ rộng hơn MỘT bậc thềm (mốc không-được-tệ-hơn)');
 }
 
 /**
@@ -319,6 +417,48 @@ function selftest() {
   // (i) Độ dốc nhân 1,5 của `smoothstep`, không phải atan thẳng. Chiều "công thức dốc".
   ok('dốc nhất = atan(1,5 × lệch)',
     Math.abs(h.docNhat - (Math.atan(1.5) * 180) / Math.PI) < 1e-9);
+
+  // ── ĐO 3 ──
+  // Một chữ thập nhỏ: 3 ô đường dọc + 1 ô đường ngang, phần còn lại là đất.
+  const cheo = set(['5|1', '5|2', '5|3', '6|2']);
+
+  // (j) Cao độ phẳng ⇒ không có ranh nào, không chỗ nào quá trần, bờ đất cũng phẳng.
+  {
+    const r = terraceCuts(cheo, () => 0.8, 0.5, 0.232);
+    ok('ĐO 3: phẳng ⇒ 0 ranh, 0 quá trần, 0 dốc ngang',
+      r.soRanh === 0 && r.soQuaTran === 0 && r.docNgang === 0 && r.soCap === 3);
+  }
+
+  // (k) Một bậc TRỌN VẸN cắt ngang phố ⇒ phải đếm ra đúng 1 ranh, và độ dốc = 1,5 × bậc.
+  {
+    const r = terraceCuts(cheo, (x, y) => (y >= 3 ? 0.5 : 0), 0.5, 0.232);
+    ok('ĐO 3: một bậc trọn vẹn cắt ngang phố ⇒ đúng 1 ranh, dốc = 1,5 × bậc',
+      r.soRanh === 1 && Math.abs(r.docNhat - 0.75) < EPS);
+  }
+
+  // (l) NỬA bậc ⇒ KHÔNG phải ranh thềm (chưa trọn một bậc) NHƯNG vẫn quá trần. Hai câu hỏi khác
+  //     nhau, và đây là ca duy nhất tách được chúng ra.
+  {
+    const r = terraceCuts(cheo, (x, y) => (y >= 3 ? 0.25 : 0), 0.5, 0.232);
+    ok('ĐO 3: nửa bậc ⇒ 0 ranh nhưng VẪN quá trần — hai câu hỏi khác nhau',
+      r.soRanh === 0 && r.soQuaTran === 1);
+  }
+
+  // (m) ĐỐI CHỨNG NGƯỠNG — ngay dưới trần phải THA, ngay trên trần phải BẮT. Không có cặp này thì
+  //     `soQuaTran` chỉ là một con số không ai biết nó nhạy tới đâu.
+  {
+    const duoi = terraceCuts(cheo, (x, y) => (y >= 3 ? 0.232 * 0.999 : 0), 0.5, 0.232);
+    const tren = terraceCuts(cheo, (x, y) => (y >= 3 ? 0.232 * 1.001 : 0), 0.5, 0.232);
+    ok('ĐO 3: 99,9% trần ⇒ tha · 100,1% trần ⇒ bắt',
+      duoi.soQuaTran === 0 && tren.soQuaTran === 1);
+  }
+
+  // (n) DỐC NGANG đo ĐẤT, không đo đường — bơm một bờ đất cao mà mặt phố phẳng lì.
+  {
+    const r = terraceCuts(cheo, (x, y) => (cheo.has(`${x}|${y}`) ? 0 : 0.6), 0.5, 0.232);
+    ok('ĐO 3: phố phẳng + bờ đất cao ⇒ dọc = 0, ngang = 1,5 × 0,6',
+      r.docNhat === 0 && Math.abs(r.docNgang - 0.9) < EPS && r.soNgangQuaBuoc === r.soNgang);
+  }
 
   let fail = 0;
   for (const c of ca) {

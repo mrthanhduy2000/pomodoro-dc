@@ -559,6 +559,86 @@ Vẫn nợ, y như sau Phase 10 và 11. Muốn đóng thì Đàm chạy `bash sc
 
 ---
 
+## Sau Phase 12-B — đường leo dốc thôi nhảy bậc (2026-08-18)
+
+Phase 12-B (VIỆC 1, nguyên nhân 2) **san cao độ 80 ô đường** thành dốc thoải có trần lấy từ ngoài
+đời, giữ nguyên bậc thềm của 64 ô đất (ADR-032). Cùng lệnh đo của Phase 10/11/12:
+`node scripts/city-preview.mjs --era N --hour 12 --bench 1 --no-shadow`.
+
+⚠️ **Cột T đo LẠI trên `be261ef`** (một `git worktree` riêng), KHÔNG chép từ bảng Phase 12 — dù ở
+đây hai bộ số trùng nhau, vì `be261ef` ĐÚNG là commit sinh ra cột "S" của bảng ấy. Kiểm chứ không
+tin: xem mục ❗ cuối phần Phase 11 để biết cái giá của việc chép.
+
+### Vế đã đo xong — lệnh vẽ và hình học, ĐỦ CẢ 15 KỶ
+
+| Kỷ | Nước | Lệnh vẽ TP T→S | Lệnh vẽ **cả cảnh** T→S | Tam giác TP T→S | Δ |
+|---:|---|---:|---:|---:|---:|
+| 1 | Thổ Nhĩ Kỳ | 9 → 9 | 11 → 11 | 22.882 → 22.882 | 0 |
+| 2 | Ai Cập | 11 → 11 | 13 → 13 | 28.594 → 28.594 | 0 |
+| 3 | Iraq | 11 → 11 | 13 → 13 | 40.316 → 40.316 | 0 |
+| 4 | Trung Quốc | 11 → 11 | 13 → 13 | 48.578 → 48.578 | 0 |
+| 5 | Đức | 10 → 10 | 12 → 12 | 33.752 → 33.752 | 0 |
+| 6 | Việt Nam | 11 → 11 | 13 → 13 | 47.952 → 47.964 | **+12** |
+| 7 | Ý | 11 → 11 | 13 → 13 | 55.896 → 55.896 | 0 |
+| 8 | Bồ Đào Nha | 11 → 11 | 13 → 13 | 52.812 → 52.840 | **+28** |
+| 9 | Pháp | 10 → 10 | 12 → 12 | 49.090 → 49.102 | **+12** |
+| 10 | Anh | 12 → 12 | 14 → 14 | 42.666 → 42.666 | 0 |
+| 11 | Mỹ | 10 → 10 | 12 → 12 | 54.016 → 54.016 | 0 |
+| 12 | Nga | 10 → 10 | 12 → 12 | 38.808 → 38.808 | 0 |
+| 13 | Nhật Bản | 10 → 10 | 12 → 12 | 50.054 → 50.054 | 0 |
+| 14 | Singapore | 10 → 10 | 12 → 12 | 41.840 → 41.840 | 0 |
+| 15 | UAE | 10 → 10 | 12 → 12 | 45.788 → 45.800 | **+12** |
+| **Tổng** | | | | **653.044 → 653.108** | **+64 (+0,010%)** |
+
+**Lệnh vẽ: KHÔNG ĐỔI MỘT ĐƠN VỊ NÀO ở cả 15 kỷ**, khớp bảng 15 mốc `MOC_LENH_VE`
+(`drawCallBudget.test.js`). Đúng theo cấu trúc: Phase 12-B không thêm vai màu, không thêm vật liệu.
+
+### 64 tam giác ấy đến từ đâu — và vì sao nó KHÔNG phải mặt đường
+
+Câu trả lời trực giác ("đường đổi cao độ ⇒ lưới đường đổi") **SAI**, và đã kiểm bằng phép đếm thuần
+(gọi thẳng `buildRoadSurface`, không cần Chromium): **tam giác mặt đất + mặt đường giống hệt tới
+từng đơn vị ở cả 15 kỷ.** Hợp lý — hai tấm lưới ấy có số đỉnh cố định theo cỡ lưới, đổi CAO ĐỘ của
+một đỉnh không đổi số đỉnh.
+
+Toàn bộ +64 nằm ở **BỆ KÈ** (`groundPlacement`, `sceneGraph.js`): khi cao độ dưới bóng một công
+trình đổi, `footprint().drop` có thể vượt 0 ở chỗ trước đó bằng 0 ⇒ mọc thêm một khối đá kè.
+
+**Đối chiếu chéo** — đếm bệ kè bằng một đường HOÀN TOÀN ĐỘC LẬP (JS thuần: `computeCityLayout` +
+`collectCitySpecs` + `terrain.footprint` + `countTriangles`, chép đúng công thức của
+`groundPlacement`, không mở Chromium) rồi so với Δ tổng đo bằng Chromium:
+
+| Kỷ | Bệ kè T→S | Tam giác bệ kè T→S | Δ |
+|---:|---:|---:|---:|
+| 3 | 2 → 2 | 56 → 56 | 0 |
+| 4 | 4 → 4 | 112 → 112 | 0 |
+| **6** | **4 → 5** | **112 → 124** | **+12** |
+| 7 | 5 → 5 | 140 → 140 | 0 |
+| **8** | **2 → 3** | **56 → 84** | **+28** |
+| **9** | **4 → 5** | **112 → 124** | **+12** |
+| 10 | 3 → 3 | 84 → 84 | 0 |
+| 13 | 1 → 1 | 28 → 28 | 0 |
+| **15** | **0 → 1** | **0 → 12** | **+12** |
+| **Tổng** | **+4 bệ kè** | | **+64** |
+
+(Kỷ 1, 2, 5, 11, 12, 14 không có bệ kè nào, trước lẫn sau.) **+64 khớp ĐÚNG TỪNG ĐƠN VỊ với Δ tổng
+đo bằng Chromium** — hai phép đo độc lập, cùng một con số, nên câu "toàn bộ chênh lệch nằm ở bệ kè"
+là một phép đo chứ không phải một lời giải thích nghe hợp lý.
+
+⚠️ Kỷ 8 mọc **đúng một** bệ kè như ba kỷ kia nhưng tốn **28** thay vì 12: số tam giác của bệ kè
+**co giãn theo kích thước** từ Phase 8B, nên "thêm một bệ" KHÔNG phải một con số cố định. Đừng suy
+"+12 mỗi bệ" thành một hằng số cho phase sau.
+
+⇒ Đây là hành vi ĐÚNG, không phải hồi quy: bệ kè sinh ra chính để che phần hụt dưới một công trình
+vắt qua mép thềm. Đường thoải hơn ⇒ vài công trình cạnh đường nay có mép hụt thật ⇒ chúng được kè.
+
+### Vế CHƯA đo — frame time trên M3
+
+Vẫn nợ, y như sau Phase 10, 11 và 12. +0,010% hình học nằm **xa dưới** mọi ngưỡng nhiễu của phép đo
+ms, và Phase 12-B không đổi cỡ khung / DPR / nguồn sáng / shader / vật liệu / lệnh vẽ ⇒ **dự đoán
+(chưa phải phép đo): không đổi đo được**. Muốn đóng thì Đàm chạy `bash scripts/bench-macbook.sh`.
+
+---
+
 ## Khi nào phải đo lại
 
 - Sau bất kỳ phase nào **thêm nguồn sáng, đổi shader, đổi bóng đổ, hoặc đổi DPR**.

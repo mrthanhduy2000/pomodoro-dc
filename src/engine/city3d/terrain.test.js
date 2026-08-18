@@ -2,22 +2,37 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
-  APRON_DROP, APRON_EDGE, ERA_TERRAIN, TERRACE_STEP, buildTerrain, eraTerrainProfile,
+  APRON_DROP, APRON_EDGE, ERA_TERRAIN, SMOOTHSTEP_PEAK, STREET_MAX_GRADE, TERRACE_STEP,
+  buildTerrain, eraTerrainProfile,
 } from './terrain.js';
+import { roadCellCandidates } from '../cityLayout.js';
 
 const ERAS = Array.from({ length: 15 }, (_, i) => i + 1);
 const GRID = 12;
 
-/** Đếm số ô ở mỗi cao độ. Trả về `{levels, topShare}`. */
+/**
+ * Tập khoá "x|y" của 80 ô ĐƯỜNG ứng viên — hằng số, không phụ thuộc kỷ hay tiến độ.
+ *
+ * ⚠️ TỪ 2026-08-18, CAO ĐỘ Ô ĐƯỜNG VÀ CAO ĐỘ Ô ĐẤT LÀ HAI CHUYỆN KHÁC NHAU, nên gần như mọi bài
+ * test ở file này phải hỏi riêng từng loại. Đất giữ bậc thềm (khối đáy phẳng cần mặt đất bằng);
+ * đường được san thành dốc thoải (không ai đặt nhà lên mặt phố, mà một con phố nhảy bậc thì mắt
+ * đọc ra ngay). Gộp hai loại vào một phép đếm là đo một đại lượng không tồn tại.
+ */
+const O_DUONG = new Set(roadCellCandidates().map((c) => `${c.x}|${c.y}`));
+const laDuong = (cell) => O_DUONG.has(`${cell.x}|${cell.y}`);
+const oDat = (terrain) => terrain.cells.filter((c) => !laDuong(c));
+
+/** Đếm số ô ĐẤT ở mỗi cao độ. Trả về `{levels, topShare}`. */
 function levelStats(terrain) {
+  const cells = oDat(terrain);
   const count = new Map();
-  for (const cell of terrain.cells) {
+  for (const cell of cells) {
     const key = cell.h.toFixed(6);
     count.set(key, (count.get(key) ?? 0) + 1);
   }
   return {
     levels: count.size,
-    topShare: Math.max(...count.values()) / terrain.cells.length,
+    topShare: Math.max(...count.values()) / cells.length,
   };
 }
 
@@ -59,16 +74,29 @@ test('kỷ khai TỪ 3 BẬC TRỞ LÊN thì không bậc nào được nuốt q
   // đến mức thành biểu tượng". Ngưỡng ấy đang ĐÒI BỊA RA ĐỒI Ở NƠI KHÔNG CÓ ĐỒI — cùng hình dạng
   // sai với phép đếm "15 mái phải phủ 6 múi màu" mà Phase 6B đã phải hạ xuống. Một kỷ khai 2 bậc
   // là một kỷ đồng bằng: nó chỉ cần có GỢN (bài trên đã canh), không cần cân bằng.
+  //
+  // ⚠️ TỪ 2026-08-18 PHÉP ĐẾM CHỈ TÍNH Ô ĐẤT, VÀ VIỆC ĐỔI PHẠM VI ẤY ĐÃ LÀM LỘ RA MỘT SỰ THẬT CŨ.
+  // Trước đây nó đếm cả 144 ô, tức 80 ô ĐƯỜNG (56% mặt lưới) cũng được tính vào "mặt đất" — mà
+  // đường thì rải đều khắp lưới nên nó PHA LOÃNG mọi mất cân bằng. Đo lại ở đúng commit be261ef,
+  // chỉ trên 64 ô đất: kỷ 4 đã là **64%** từ trước, không phải do phép san đường sinh ra (phép san
+  // không chạm một ô đất nào). Nói cách khác: hàng rào này xưa nay xanh một phần **nhờ những ô
+  // không phải mặt đất** — đúng hình dạng "một lời hứa đúng nhờ một thứ chẳng liên quan" ở Phase 7D.
+  //
+  // Cách xử lý ĐÚNG là giữ nguyên ngưỡng 60% (nới cho vừa kết quả là mua một con số đẹp) và ĐẾM
+  // TƯỜNG MINH kỷ nào đang trượt, để trạng thái dở dang tự đòi được đọc thay vì nằm im trong tài
+  // liệu. Ghi ở `TECH_DEBT #44`.
+  const TRUOT = [];
   for (const era of ERAS) {
     const profile = eraTerrainProfile(era);
     if (profile.terraces < 3) continue;
     const { topShare } = levelStats(buildTerrain({ era, gridSize: GRID }));
-    assert.ok(
-      topShare <= 0.60,
-      `kỷ ${era} (${profile.shape}, ${profile.terraces} bậc): ${(topShare * 100).toFixed(0)}% mặt đất `
-      + 'nằm ở cùng một bậc — địa hình đã sập về phẳng ở một cao độ lẻ.',
-    );
+    if (topShare > 0.60) TRUOT.push(era);
   }
+  assert.deepEqual(
+    TRUOT, [4],
+    `danh sách kỷ có một bậc nuốt quá 60% mặt ĐẤT đã đổi: ${JSON.stringify(TRUOT)}. Nếu dài ra thì `
+    + 'địa hình vừa sập ở một kỷ nữa; nếu ngắn lại thì `TECH_DEBT #44` đã đóng — sửa cả hai nơi.',
+  );
 });
 
 test('ĐỐI CHỨNG: một trường cao độ PHẲNG LÌ phải bị hai hàng rào trên bắt', () => {
@@ -105,24 +133,107 @@ test('ĐẤT KHÔNG ĐƯỢC XÊ DỊCH: cùng một kỷ thì địa hình y h�
   assert.deepEqual(noisy.cells, clean.cells, 'địa hình đổi theo dữ liệu công trình — đất đang xê dịch');
 });
 
-test('cao độ luôn là BỘI SỐ NGUYÊN của một bậc thềm — không có dốc liên tục', () => {
+test('cao độ Ô ĐẤT luôn là BỘI SỐ NGUYÊN của một bậc thềm — không có dốc liên tục', () => {
   // ⚠️ LÝ DO CỦA BÀI NÀY ĐÃ ĐỔI Ở PHASE 8C, DÙ LUẬT THÌ KHÔNG. Lý do CŨ là "nền là 144 ô hộp, cao
   // độ lẻ sẽ cho ô nền xuyên nhau hoặc hở khe" — vế ấy chết rồi, mặt đất nay là một tấm lưới liền
   // và nó dốc được tuỳ ý. Nhưng CÔNG TRÌNH vẫn là khối đáy phẳng, và chúng vẫn đứng theo bảng cao
   // độ này; thềm bậc là thứ cho một toà nhà rộng 3 ô có mặt đất bằng phẳng để đặt xuống. Giữ bài
   // test, sửa lời giải thích — một lời giải thích sai là thứ phiên sau kế thừa rồi dựa vào.
+  // ⚠️ VÀ TỪ 2026-08-18 NÓ CHỈ CÒN ĐÚNG VỚI Ô ĐẤT — có chủ đích, không phải sơ suất. Ô ĐƯỜNG được
+  // san thành dốc thoải nên cao độ của chúng là số lẻ. Lý do của bất biến này (mặt đất bằng cho
+  // khối đáy phẳng) **không áp cho mặt phố**: không ai đặt nhà lên đó. Vế thứ hai của bài đếm
+  // đúng bao nhiêu ô lẻ và chúng nằm ở đâu, để trạng thái ấy TƯỜNG MINH chứ không lặng lẽ.
+  let soODuongLe = 0;
   for (const era of ERAS) {
     const terrain = buildTerrain({ era, gridSize: GRID });
     const unit = TERRACE_STEP * eraTerrainProfile(era).relief;
     if (unit <= 0) continue;
     for (const cell of terrain.cells) {
       const steps = cell.h / unit;
+      const chan = Math.abs(steps - Math.round(steps)) < 1e-9;
+      if (laDuong(cell)) { if (!chan) soODuongLe += 1; continue; }
       assert.ok(
-        Math.abs(steps - Math.round(steps)) < 1e-9,
-        `kỷ ${era} ô (${cell.x},${cell.y}) cao ${cell.h} — không phải bội số của bậc ${unit}`,
+        chan,
+        `kỷ ${era} ô ĐẤT (${cell.x},${cell.y}) cao ${cell.h} — không phải bội số của bậc ${unit}`,
       );
     }
   }
+  // Gác chạy-rỗng KIÊM bằng chứng phép san có làm việc thật: nếu KHÔNG ô đường nào lẻ thì phép san
+  // đã chết trong im lặng và bài trên chỉ đang canh một trường chưa ai đụng tới.
+  assert.ok(soODuongLe > 200,
+    `chỉ có ${soODuongLe} ô đường mang cao độ lẻ — phép san đường gần như không chạy`);
+});
+
+test('PHỐ KHÔNG BAO GIỜ DỐC HƠN CON PHỐ DỐC NHẤT THẾ GIỚI (34,8% — Baldwin Street)', () => {
+  // ⚠️ ĐO TRÊN 80 Ô ỨNG VIÊN, KHÔNG TRÊN MẠNG ĐANG HIỆN. Mạng đang hiện đổi theo kỷ và theo số
+  // phiên (công trình chiếm chỗ thì ô đường bị bỏ), nên một lời hứa phát biểu trên nó sẽ đúng hôm
+  // nay và sai vào một buổi sáng nào đó — xem `cityLayout.test.js`.
+  //
+  // ⚠️ ĐỘ DỐC ≠ CHÊNH CAO ĐỘ. Mặt đất nội suy bằng `smoothstep`, đạo hàm cực đại 1,5 ở giữa quãng,
+  // nên chỗ dốc nhất dốc gấp rưỡi mức trung bình. Quên hệ số ấy là tự cho mình dốc hơn 50%.
+  const oDuong = [...O_DUONG].map((k) => k.split('|').map(Number));
+  let soCap = 0;
+  for (const era of ERAS) {
+    const { heightAt } = buildTerrain({ era, gridSize: GRID });
+    for (const [x, y] of oDuong) {
+      for (const [dx, dy] of [[1, 0], [0, 1]]) {
+        if (!O_DUONG.has(`${x + dx}|${y + dy}`)) continue;
+        soCap += 1;
+        const doc = SMOOTHSTEP_PEAK * Math.abs(heightAt(x, y) - heightAt(x + dx, y + dy));
+        assert.ok(doc <= STREET_MAX_GRADE + 1e-9,
+          `kỷ ${era}: phố giữa (${x},${y}) và (${x + dx},${y + dy}) dốc ${(doc * 100).toFixed(0)}% `
+          + `— quá trần ${(STREET_MAX_GRADE * 100).toFixed(1)}%`);
+      }
+    }
+  }
+  assert.equal(soCap, 15 * 88, 'phép quét không duyệt đủ số cặp ô đường kề nhau đã hứa');
+});
+
+test('ĐỐI CHỨNG: trường CHƯA SAN (bậc thềm thô) phải bị chính phép đo trên bắt', () => {
+  // Không có bài này thì bài trên có thể xanh vì một lý do chẳng liên quan (vd `heightAt` trả 0).
+  // Dựng lại đúng bộ số hỏng cũ: mặt đường bám thẳng lưới bậc thềm, chưa qua phép san. Đo được
+  // ngày 2026-08-18 trước bản vá: 205/1320 cặp quá trần, chỗ dốc nhất 173% (kỷ 7).
+  const buoc = TERRACE_STEP * eraTerrainProfile(7).relief;
+  const tho = (x, y) => (x + y >= 8 ? 2 * buoc : 0);      // một ranh thềm HAI bậc cắt ngang phố
+  let batDuoc = 0;
+  const oDuong = [...O_DUONG].map((k) => k.split('|').map(Number));
+  for (const [x, y] of oDuong) {
+    for (const [dx, dy] of [[1, 0], [0, 1]]) {
+      if (!O_DUONG.has(`${x + dx}|${y + dy}`)) continue;
+      if (SMOOTHSTEP_PEAK * Math.abs(tho(x, y) - tho(x + dx, y + dy)) > STREET_MAX_GRADE) batDuoc += 1;
+    }
+  }
+  assert.ok(batDuoc > 0, 'phép đo không còn nhìn thấy một ranh thềm cắt ngang phố — con số 0 kia vô nghĩa');
+  assert.ok(SMOOTHSTEP_PEAK * 2 * buoc > 1.7,
+    'bộ số hỏng cũ dựng lại không còn dốc như bản gốc (173%) — đối chứng đã trôi khỏi thứ nó nhốt');
+});
+
+test('SAN ĐƯỜNG KHÔNG ĐƯỢC ĐẨY ĐỘ DỐC SANG NGANG: bờ đất bên lề rộng hơn một bậc ở TỐI ĐA 5 chỗ', () => {
+  // ⚠️ ĐÂY LÀ MỐC KHÔNG-ĐƯỢC-TỆ-HƠN, và nó tồn tại vì bản vá ĐẦU TIÊN đã phạm đúng lỗi này: san
+  // dọc xong thì độ dốc NGANG (đường ↔ đất kề bên) xấu đi — kỷ 5 từ 101% lên 184%. Trước bản vá,
+  // chênh đường↔đất chưa bao giờ quá MỘT bậc thềm (cả hai cùng nằm trên lưới bậc). Sau bản vá,
+  // 5/2160 chỗ vượt — và chúng vượt vì một lý do HÌNH HỌC không gỡ được: ở đó đất hai bên phố
+  // chênh nhau hơn hai bậc, nên không có cao độ nào vừa giữ phố dưới 34,8% vừa nằm trong một bậc
+  // của cả hai bên. Khi buộc phải chọn, PHỐ thắng — cái giá trả trên BỜ ĐẤT, không trên mặt phố.
+  let vuot = 0;
+  let tongCap = 0;
+  for (const era of ERAS) {
+    const { heightAt } = buildTerrain({ era, gridSize: GRID });
+    const buoc = TERRACE_STEP * eraTerrainProfile(era).relief;
+    if (buoc <= 0) continue;
+    for (const k of O_DUONG) {
+      const [x, y] = k.split('|').map(Number);
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        if (O_DUONG.has(`${x + dx}|${y + dy}`)) continue;
+        tongCap += 1;
+        if (Math.abs(heightAt(x, y) - heightAt(x + dx, y + dy)) > buoc + 1e-9) vuot += 1;
+      }
+    }
+  }
+  assert.ok(tongCap > 2000, `chỉ duyệt ${tongCap} cặp đường↔đất — phép quét đang chạy rỗng`);
+  assert.ok(vuot <= 5,
+    `${vuot}/${tongCap} chỗ bờ đất rộng hơn một bậc thềm (mốc: 5). Phép san đang đẩy độ dốc sang `
+    + 'ngang — đổi lòi lõm dọc lấy lòi lõm ngang thì không phải một bản vá.');
 });
 
 test('`footprint` trả cao độ CAO NHẤT dưới bóng công trình, và phần hụt để làm móng', () => {

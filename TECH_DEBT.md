@@ -2125,6 +2125,69 @@ ship một trạng thái dở dang, hãy làm nó **ĐẾM ĐƯỢC trong một 
 
 ---
 
+## #45 — 5/2160 chỗ bờ đất bên lề đường dốc hơn MỘT bậc thềm (giá phải trả của việc san đường)
+
+- **Module**: `src/engine/city3d/terrain.js` (lượt 3 — SAN ĐƯỜNG) ↔ `src/engine/city3d/terrain.test.js`
+- **Priority**: Low · **Severity**: Low
+- **Impact**: sau khi đường được san thành dốc thoải (ADR-032), cao độ ô đường **không còn** là bội
+  số nguyên của một bậc thềm. Ở hầu hết chỗ, phép trung-vị-ba giữ được cả hai lời hứa cùng lúc
+  (phố không dốc quá Baldwin Street **và** bờ đất bên lề không dốc quá 1:1). Nhưng có **5 chỗ trên
+  2160** (4 ở kỷ 5, 1 ở kỷ 7) mà hai lời hứa ấy **về mặt hình học không thể cùng đạt**: đường buộc
+  phải đi qua giữa hai thềm cách nhau nhiều bậc trong một ô. Ở 5 chỗ đó **phố thắng, bờ đất chịu
+  giá** — bờ dốc hơn một bậc thềm.
+- **Root Cause**: bài toán bị ràng buộc quá chặt ở một số ô: mạng đường là hằng số (cột/hàng thứ 4),
+  còn thềm bậc thì sinh từ trường nhiễu của từng kỷ. Có kỷ mà một ô đường rơi đúng vào chỗ trường
+  nhiễu nhảy hai bậc liền. Không có phép làm mượt nào tránh được điều đó mà không phá một trong hai
+  trần (phố hoặc bờ) — đây là ràng buộc, không phải sai số cần tinh chỉnh.
+- **Current Risk**: rất thấp. Bờ đất dốc là thứ **có thật ngoài đời** (kè, ta-luy) và đã có `bệ kè`
+  (`groundPlacement` trong `sceneGraph.js`) dựng khối đá che phần hụt, nên nó đọc ra như một bờ kè
+  chứ không như một lỗi. 5/2160 = 0,2%.
+- **Future Risk**: thấp, nhưng **sẽ tăng nếu có ai nâng `relief` hoặc `terraces` của một kỷ** — càng
+  nhiều bậc trên cùng một quãng thì càng nhiều ô rơi vào ca không thể. Đã chặn bằng
+  `assert.ok(soCho <= 5)` trong `terrain.test.js` (bài *SAN ĐƯỜNG KHÔNG ĐƯỢC ĐẨY ĐỘ DỐC SANG NGANG*)
+  — con số 5 là **số đo hôm nay**, không phải một ngưỡng chọn tay, nên nó tự đỏ ngay khi có chỗ thứ
+  sáu.
+- **Recommended Solution**: nếu muốn về 0 thì phải cho ranh thềm **né** ô đường ở tầng sinh trường
+  nhiễu (dịch mắt lưới sao cho ranh rơi vào giữa khối đất), tức đổi cách sinh địa hình chứ không
+  phải thêm một lượt làm mượt nữa. ⚠️ **Đừng nới `assert.ok(soCho <= 5)`** — nới là mua một con số
+  đẹp bằng cách bỏ phép đo, đúng thứ §4 cấm.
+- **Estimated Complexity**: Trung bình (đổi tầng sinh trường nhiễu ⇒ đổi hình 15 kỷ ⇒ phải quét lại).
+- **Blocking Conditions**: không có.
+- **Review Trigger**: khi bài *SAN ĐƯỜNG KHÔNG ĐƯỢC ĐẨY ĐỘ DỐC SANG NGANG* đỏ, hoặc khi có phase
+  chỉnh `relief`/`terraces` của bất kỳ kỷ nào.
+- **Owner**: chưa phân công · **Status**: Open
+
+---
+
+## #44 — Kỷ 4 khai 3 bậc thềm nhưng ĐẤT chỉ dùng 2 bậc rưỡi: một bậc chiếm 64% diện tích
+
+- **Module**: `src/engine/city3d/terrain.js` (bảng `ERA_TERRAIN`) ↔ `src/engine/city3d/terrain.test.js`
+- **Priority**: Low · **Severity**: Low
+- **Impact**: bài `kỷ khai TỪ 3 BẬC TRỞ LÊN thì không bậc nào được chiếm quá 60% số ô` là thứ canh
+  bài học Phase 7B (*phân bố một trường nhiễu trên lưới nhỏ không tuân luật số lớn*). Kỷ 4 hiện ở
+  **64%** — tức trường nhiễu của kỷ ấy vẫn dồn cục, và người chơi thấy một mảng phẳng chiếm gần hai
+  phần ba thành phố thay vì ba thềm rõ rệt.
+- **Root Cause**: ⚠️ **đây KHÔNG phải hồi quy do việc san đường.** Đo lại trên cây git ở `be261ef`
+  (trước khi san) thì kỷ 4 **đã là 64%**. Bài test cũ xanh chỉ vì nó đếm **cả ô đường**: 80 ô đường
+  trên 144 ô (56% lưới) nằm rải đều mọi bậc, nên chúng pha loãng phép đếm xuống dưới 60%. Sau khi
+  tách ô đất ra đo riêng — việc bắt buộc, vì ô đường nay không còn là bội số của bậc thềm — con số
+  thật lộ ra. Đúng hình dạng `TECH_DEBT #22`: **trung bình trên vùng quá rộng làm loãng tín hiệu.**
+- **Current Risk**: thấp. Một kỷ hơi phẳng là chuyện mỹ thuật, không phải lỗi chạy; và 14/15 kỷ còn
+  lại vẫn đạt.
+- **Future Risk**: trung bình nếu bị bỏ quên — cách rẻ nhất để "sửa" là nới ngưỡng 60% lên 65%, và
+  lúc ấy phép đo mất răng cho **cả 15 kỷ**. Đã chặn bằng cách ghi ngoại lệ ra **tường minh đếm
+  được**: `assert.deepEqual(TRUOT, [4])` — kỷ thứ hai trượt thì đỏ ngay, mà kỷ 4 được sửa xong cũng
+  đỏ (buộc phải xoá tên khỏi danh sách).
+- **Recommended Solution**: chỉnh `noiseScale`/`shape` của riêng kỷ 4 rồi đo lại bằng chính bài test
+  ấy; hoặc hạ `terraces` của kỷ 4 từ 3 xuống 2 nếu bảng chấp nhận (lúc đó bài test không áp cho nó
+  nữa — nhưng phải hỏi *"kỷ này ĐÁNG có mấy thềm?"* trước, đừng hạ chỉ để hết đỏ).
+- **Estimated Complexity**: Thấp (một dòng bảng + đo lại 15 kỷ).
+- **Blocking Conditions**: không có.
+- **Review Trigger**: khi `TRUOT` khác `[4]`, hoặc khi có phase chỉnh bảng `ERA_TERRAIN`.
+- **Owner**: chưa phân công · **Status**: Open
+
+---
+
 ## #43 — Số tam giác trong `PERFORMANCE.md` không có gì canh, và nó ĐÃ trôi ở 6/15 kỷ
 
 - **Module**: `PERFORMANCE.md` (bảng số) ↔ `src/engine/city3d/*` + `src/components/city/render3d/*`

@@ -240,6 +240,31 @@ export function describeRoadCell(x, y) {
 export const ROAD_CELL_COUNT = ROAD_CELLS.length;
 
 /**
+ * DANH SÁCH ỨNG VIÊN của mạng đường — 80 ô, **hằng số cấp module**, suy ra DUY NHẤT từ
+ * `CITY_GRID_SIZE`/`ROAD_MAIN_AXIS`/`ROAD_CROSS_AXIS`/`RING_LOW`/`RING_HIGH`. Không phụ thuộc
+ * `era`, `built`, `levels`, hay `sessionCount` — có bài test khoá lại (`roadCells.test.js`).
+ *
+ * ⚠️ **ĐÂY LÀ DANH SÁCH ỨNG VIÊN, KHÔNG PHẢI MẠNG ĐƯỜNG ĐANG HIỆN TRÊN MÀN HÌNH.** Hai thứ đó
+ * KHÁC NHAU, và nhầm chúng là nhầm ở chỗ nguy hiểm nhất: `deriveProps` mở dần theo `sessionCount`
+ * (`roadBudget`) **và bỏ qua ô nào đã bị một công trình chiếm** (`if (taken.has(key)) continue`),
+ * mà vị trí công trình thì đổi theo kỷ (`hashPick`). Đo thật trên 15 kỷ × 151 mốc phiên: **1.818
+ * trong 2.265 tổ hợp cho ra một tập ô đường KHÔNG phải tiền tố của danh sách này**, và riêng ở mốc
+ * 40 phiên, 15 kỷ cho ra **10 tập khác nhau**. Tập hiện trên màn hình là con thật sự, nhưng nó
+ * KHÔNG bất biến.
+ *
+ * ⇒ Ai cần một mạng đường **KHÔNG ĐỔI THEO TIẾN ĐỘ** — cụ thể là `city3d/terrain.js`, vì cao độ
+ * mặt đất tuyệt đối không được nhúc nhích khi Đàm xây thêm một căn nhà (ADR-007) — thì phải dùng
+ * ĐÚNG danh sách này, không được đi hỏi `layout.props`. Nó là **tập cha thực sự** của mọi tập đã
+ * hiện, nên đặt luật lên nó là một lời hứa CHẶT HƠN, không phải lỏng hơn.
+ *
+ * Trả về BẢN SAO NÔNG mỗi lần gọi: mảng gốc là trạng thái dùng chung của module, để lọt ra ngoài
+ * thì một dòng `.sort()` vô ý ở nơi khác sẽ sắp xếp lại thứ tự mở đường của cả thành phố.
+ */
+export function roadCellCandidates() {
+  return ROAD_CELLS.map((c) => ({ x: c.x, y: c.y, variant: c.variant, tier: c.tier }));
+}
+
+/**
  * Trần TỔNG (đường + cảnh vật) — hàng rào tuyệt đối để một lỗi ở tầng nào cũng không sinh ra hàng
  * trăm ô.
  *

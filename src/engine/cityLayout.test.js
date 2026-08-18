@@ -9,6 +9,7 @@ import {
   TILE_W,
   ROAD_CELL_COUNT,
   cellToScreen,
+  roadCellCandidates,
   computeCityLayout,
   deriveProps,
   describeRoadCell,
@@ -610,4 +611,100 @@ test('CẢNH VẬT KHÔNG BỊ ĐƯỜNG BÓP NGHẸT khi mạng đường mở 
     `thành phố đông nhất mà chỉ còn ${scatter.length} cảnh vật — đường đã nuốt mất trần chung`);
   assert.ok(scatter.length <= MAX_SCATTER_PROPS,
     `cảnh vật khối vượt trần riêng: ${scatter.length} > ${MAX_SCATTER_PROPS}`);
+});
+
+/* ══════════════════════════════════════════════════════════════════════════════════════════════
+ * DANH SÁCH ỨNG VIÊN MẠNG ĐƯỜNG — TIỀN ĐỀ CỦA `city3d/terrain.js`
+ * ══════════════════════════════════════════════════════════════════════════════════════════════
+ * `terrain.js` sắp đặt ranh giới thềm bậc theo mạng đường. Cao độ mặt đất **tuyệt đối không được
+ * đổi theo tiến độ** (ADR-007: xây thêm một căn nhà mà cả quả đồi nhích lên thì nhà cũ lún, im
+ * lặng, không gì đỏ). Nên trước khi cho `terrain.js` biết đường nằm ở đâu, phải chứng minh cái
+ * "đâu" ấy là một hằng số — bằng test, không bằng lời.
+ *
+ * ⚠️ VÀ PHẢI NÓI RÕ NÓ LÀ HẰNG SỐ Ở TẦNG NÀO. Có HAI tập ô đường, và chúng khác nhau:
+ *   · **ứng viên** (`roadCellCandidates`) — 80 ô suy từ hằng số lưới. BẤT BIẾN.
+ *   · **đã hiện** (`layout.props` kind `road`) — mở dần theo `sessionCount` VÀ bị công trình
+ *     chiếm chỗ đá ra, mà công trình thì đặt theo kỷ. **KHÔNG bất biến.**
+ * Ba bài dưới đây khoá cả hai vế: vế "ứng viên bất biến" (thứ `terrain.js` dựa vào) và vế "đã hiện
+ * KHÔNG bất biến" (thứ `terrain.js` PHẢI TRÁNH). Thiếu vế thứ hai thì phiên sau sẽ đọc bài đầu
+ * rồi kết luận "mạng đường bất biến" và đi hỏi `layout.props` cho tiện.
+ * ══════════════════════════════════════════════════════════════════════════════════════════════ */
+
+/** Tập khoá "x|y" của những ô đường THẬT SỰ hiện ra trong một bố cục. */
+function roadKeysOf(layout) {
+  return new Set(layout.props.filter((p) => p.kind === 'road').map((p) => `${p.x}|${p.y}`));
+}
+
+function layoutAt(era, ids, sessionCount) {
+  return computeCityLayout({
+    built: ids,
+    levels: Object.fromEntries(ids.map((id) => [id, 3])),
+    era,
+    stats: { sessionCount, streakLength: 9 },
+  });
+}
+
+test('ỨNG VIÊN MẠNG ĐƯỜNG LÀ HẰNG SỐ — không đổi theo kỷ, theo công trình, theo số phiên', () => {
+  // Hàm không nhận tham số nào, nên "không đổi theo X" được chứng minh bằng hai vế:
+  //  (a) hai lần gọi ra kết quả y hệt — và bản trả về là BẢN SAO, sửa nó không làm bẩn lần sau;
+  //  (b) nó là TẬP CHA của mọi tập đã hiện, quét qua 15 kỷ × nhiều mốc phiên (vế (b) ở bài sau).
+  const a = roadCellCandidates();
+  assert.deepEqual(a, roadCellCandidates(), 'hai lần gọi ra hai danh sách khác nhau');
+  assert.equal(a.length, ROAD_CELL_COUNT, 'danh sách ứng viên phải đúng bằng mẫu số đang công bố');
+
+  // Bản sao thật: đầu độc kết quả rồi gọi lại, danh sách gốc phải nguyên vẹn.
+  // ⚠️ MỐC SO SÁNH PHẢI LÀ MỘT ẢNH CHỤP RỜI, KHÔNG PHẢI MỘT LẦN GỌI THỨ HAI. Bản đầu của bài này
+  // giữ mốc bằng `const b = roadCellCandidates()` rồi đầu độc `a` — mà nếu hàm trả về CHÍNH mảng
+  // gốc thì `a` và `b` là một, nên phép đầu độc bẩn cả hai vế và `deepEqual` vẫn xanh. Phép phá
+  // (bỏ `.map`) đã KHÔNG nổ vì đúng lý do đó: hỏng nằm ở bài test, không ở phép phá.
+  const moc = JSON.stringify(a);
+  a.sort((p, q) => q.x - p.x);
+  a[0].x = -999;
+  assert.equal(JSON.stringify(roadCellCandidates()), moc,
+    'danh sách gốc bị sửa từ bên ngoài — nó không phải bản sao');
+});
+
+test('ỨNG VIÊN LÀ TẬP CHA THẬT SỰ của mọi mạng đường đã hiện, ở mọi kỷ và mọi mốc phiên', () => {
+  // Đây là vế khiến `terrain.js` được phép dựa vào danh sách ứng viên: đặt luật lên tập cha là
+  // một lời hứa CHẶT HƠN mọi tập con, nên không thể hụt ở một tổ hợp chưa nghĩ tới.
+  const ungVien = new Set(roadCellCandidates().map((c) => `${c.x}|${c.y}`));
+  let soLuotDuyet = 0;
+  let tongOHien = 0;
+  for (let era = 1; era <= 15; era += 1) {
+    const ids = BLUEPRINT_CATALOG[era].map((bp) => bp.id);
+    for (const phien of [0, 1, 7, 20, 44, 60, 80, 120, 200]) {
+      for (const built of [[], ids.slice(0, 2), ids]) {
+        const keys = roadKeysOf(layoutAt(era, built, phien));
+        soLuotDuyet += 1;
+        tongOHien += keys.size;
+        for (const k of keys) {
+          assert.ok(ungVien.has(k), `kỷ ${era}/${phien} phiên: ô đường ${k} nằm NGOÀI danh sách ứng viên`);
+        }
+      }
+    }
+  }
+  // Gác chạy-rỗng: một vòng lặp bỏ sót mọi thứ cũng "không có ô nào ngoài danh sách".
+  assert.equal(soLuotDuyet, 15 * 9 * 3, 'phép quét không duyệt đủ số tổ hợp đã hứa');
+  assert.ok(tongOHien > 1000, `chỉ thấy ${tongOHien} ô đường trong cả phép quét — bố cục đang trả về rỗng`);
+});
+
+test('MẠNG ĐƯỜNG ĐÃ HIỆN thì NGƯỢC LẠI — nó ĐỔI theo kỷ và theo tiến độ, đừng dựa vào nó', () => {
+  // ⚠️ Bài này khoá một sự thật NGƯỢC với bài trên, và đó là lý do nó tồn tại. Nguyên nhân:
+  // `deriveProps` bỏ qua ô đường nào đã bị một công trình chiếm, mà `placeBuilding` đặt công trình
+  // theo `hashPick(bpId)` — khác nhau từng kỷ. Ai đọc bài đầu rồi kết luận "mạng đường bất biến"
+  // sẽ đi hỏi `layout.props` và gài đúng quả mìn ADR-007 vào `terrain.js`.
+  const chuKy = new Set();
+  for (let era = 1; era <= 15; era += 1) {
+    const ids = BLUEPRINT_CATALOG[era].map((bp) => bp.id);
+    chuKy.add([...roadKeysOf(layoutAt(era, ids, 40))].sort().join(','));
+  }
+  assert.ok(chuKy.size > 1,
+    'cùng 40 phiên mà 15 kỷ ra CÙNG một mạng đường — nếu điều này thành thật thì hãy xoá bài test '
+    + 'này và ghi lại lý do, đừng lặng lẽ tin rằng `layout.props` bất biến');
+
+  // Và nó cũng đổi theo tiến độ trong CÙNG một kỷ: chưa xây gì thì chưa có đường nào.
+  const ids7 = BLUEPRINT_CATALOG[7].map((bp) => bp.id);
+  assert.equal(roadKeysOf(layoutAt(7, [], 80)).size, 0, 'chưa xây gì mà đã có đường');
+  assert.ok(roadKeysOf(layoutAt(7, ids7, 80)).size > roadKeysOf(layoutAt(7, ids7, 20)).size,
+    'mạng đường không lớn thêm theo số phiên');
 });

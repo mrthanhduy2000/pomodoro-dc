@@ -108,6 +108,9 @@
 │   │   │                     #   kỳ quan (BUILDING_ZONES), các hàng/cột có đường. Cùng lý do tách
 │   │   │                     #   như hashId.js. Sai lệch giữa hai bên = nhà mọc đè kỳ quan, IM LẶNG.
 │   │   ├── cityLayout.js      # THÀNH PHỐ PIXEL: suy ra bố cục từ danh sách công trình (băm tất
+│   │   │                     #   ⚠️ `roadCellCandidates()` (2026-08-18) = tập ỨNG VIÊN đường, hằng
+│   │   │                     #   số, ĐỪNG nhầm với mạng đã hiện trong `layout.props` — cái sau đổi
+│   │   │                     #   theo tiến độ. 3 bài test ở cityLayout.test.js khoá cả hai chiều
 │   │   │                     #   định, KHÔNG lưu toạ độ). Bất biến: cùng đầu vào → cùng bố cục
 │   │   │                     #   vĩnh viễn + xây thêm nhà không làm xê dịch nhà cũ.
 │   │   ├── cityArchive.js     # THÀNH PHỐ PIXEL: "bảo tàng" các kỷ đã niêm phong (ghi lại công
@@ -218,6 +221,15 @@
 │   │   │   │                      #   nhận danh sách công trình, nếu không thì mỗi lần Đàm xây xong
 │   │   │   │                      #   một căn nhà cả quả đồi sẽ nhích và nhà cũ lún mà không có gì
 │   │   │   │                      #   báo (cùng bất biến "không xê dịch" với ADR-007)
+│   │   │   │                      #   ⚠️ NGOẠI LỆ DUY NHẤT (2026-08-18, ADR-032): nó ĐỌC thêm
+│   │   │   │                      #   `roadCellCandidates()` của cityLayout.js — danh sách ỨNG VIÊN
+│   │   │   │                      #   (80 ô, hằng số suy từ CITY_GRID_SIZE), KHÔNG phải mạng đường
+│   │   │   │                      #   ĐANG HIỆN (cái đó CÓ đổi theo kỷ + số phiên). Ứng viên là tập
+│   │   │   │                      #   CHA của mọi mạng đã hiện ⇒ lời hứa CHẶT HƠN ADR-007, không
+│   │   │   │                      #   lỏng hơn. 64 ô ĐẤT giữ nguyên bậc thềm; 80 ô ĐƯỜNG được san
+│   │   │   │                      #   thành dốc thoải (trần 34,8% = Baldwin Street) nên KHÔNG còn
+│   │   │   │                      #   là bội số của bậc thềm — đây là chỗ duy nhất phá tính lượng
+│   │   │   │                      #   tử hoá, và phá có chủ đích
 │   │   │   │                      #   ⚠️ THỀM chứ không phải DỐC: nền là 144 ô HỘP và công trình là
 │   │   │   │                      #   khối ĐÁY PHẲNG — dốc liên tục sẽ hở khe / cắm chìm góc
 │   │   │   │                      #   ⚠️ Mỗi kỷ phải có `note` giải thích bằng một nơi CÓ THẬT, y

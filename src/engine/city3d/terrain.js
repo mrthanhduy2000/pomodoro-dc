@@ -23,10 +23,56 @@
  * chống lơ lửng vừa thêm đúng loại chi tiết kiến trúc đang thiếu.
  */
 
-import { hashId } from '../cityLayout';
+import { hashId, roadCellCandidates } from '../cityLayout';
 
 /** Chiều cao MỘT bậc thềm, tính theo đơn vị ô (`TILE_UNIT = 1`). */
 export const TERRACE_STEP = 0.5;
+
+/**
+ * ĐỘ DỐC LỚN NHẤT MỘT CON PHỐ ĐƯỢC PHÉP CÓ — **34,8%**, và con số này KHÔNG do tôi chọn.
+ *
+ * Đó là độ dốc chỗ dốc nhất của **Baldwin Street, Dunedin, New Zealand** (1:2,86 ≈ 34,8%) — con
+ * phố dân cư dốc nhất thế giới theo Guinness. Để so: hai con dốc nổi tiếng nhất San Francisco
+ * (Filbert St đoạn Leavenworth–Hyde, và 22nd St đoạn Church–Vicksburg) đều **31,5%**. Nghĩa là
+ * bất cứ chỗ nào trong thành phố của Đàm dốc hơn 34,8% thì **không còn là một con phố** — nó là
+ * một vách, và mắt đọc ra ngay lập tức dù không biết vì sao.
+ *
+ * ⚠️ ĐỪNG NHÂN CON SỐ NÀY VỚI 1 Ô RỒI COI LÀ CHÊNH CAO ĐỘ CHO PHÉP. Mặt đất nội suy giữa hai tâm
+ * ô bằng `smoothstep`, mà đạo hàm của `smoothstep` đạt CỰC ĐẠI **1,5** ở chính giữa quãng — nên
+ * chỗ dốc nhất dốc gấp rưỡi mức trung bình. Chênh cao độ cho phép là `GRADE / 1,5`, xem
+ * `maxRoadRise()`. Quên hệ số này là tự cho mình dốc hơn 50% so với thứ mình vừa viết ra.
+ */
+export const STREET_MAX_GRADE = 0.348;
+
+/** Đạo hàm cực đại của `smoothstep` trên quãng [0,1] — đúng 1,5, đạt ở chính giữa. */
+export const SMOOTHSTEP_PEAK = 1.5;
+
+/** Chênh cao độ tối đa giữa hai ô đường KỀ NHAU để con phố không dốc quá `STREET_MAX_GRADE`. */
+export function maxRoadRise() {
+  return STREET_MAX_GRADE / SMOOTHSTEP_PEAK;
+}
+
+/**
+ * ĐỘ DỐC LỚN NHẤT CỦA **BỜ ĐẤT BÊN LỀ PHỐ** — 1:1, tức **100% (45°)**.
+ *
+ * Đây là một đại lượng KHÁC hẳn `STREET_MAX_GRADE`, và trộn hai cái là sai. Cái kia nói về thứ
+ * người ta ĐI LÊN; cái này nói về thứ người ta ĐI NGANG QUA. Ngoài đời mái taluy đường bộ đào/đắp
+ * thường 1:1,5 đến 1:2 (34°–56° tuỳ vật liệu), và **1:1 là mốc quen thuộc cho mái đá hoặc đất đắp
+ * đầm chặt** — dốc hơn nữa thì phải xây tường chắn chứ không còn là một bờ đất.
+ *
+ * ⚠️ VÌ SAO PHẢI CÓ CON SỐ NÀY, VÀ NÓ RA ĐỜI TỪ MỘT PHÉP ĐO CHỨ KHÔNG TỪ LÝ LẼ: bản đầu của phép
+ * san đường chỉ ràng buộc ô đường với ô ĐƯỜNG. Đo lại thì độ dốc DỌC về đúng 35% ở cả 15 kỷ — thắng
+ * lợi thật — nhưng độ dốc NGANG (đường ↔ đất kề bên) **xấu đi**: kỷ 5 từ 101% lên **184%**, kỷ 7
+ * từ 86% lên 112%. Lý do rất đơn giản khi đã thấy: mặt đường được kéo về một dốc thoải, còn mặt
+ * đất hai bên vẫn nhảy trọn bậc, nên hai bên trôi xa nhau. Tức là đã đổi *lòi lõm theo chiều dọc*
+ * lấy *lòi lõm theo chiều ngang* — đúng loại "sửa xong lại hỏng chỗ khác" mà phải đo mới thấy.
+ */
+export const BANK_MAX_GRADE = 1.00;
+
+/** Chênh cao độ tối đa giữa một ô ĐƯỜNG và ô ĐẤT kề nó. */
+export function maxBankRise() {
+  return BANK_MAX_GRADE / SMOOTHSTEP_PEAK;
+}
 
 /**
  * Cỡ ô của lưới nhiễu — bao nhiêu ô thành phố cho MỘT ô nhiễu.
@@ -273,6 +319,130 @@ export function buildTerrain({ era, gridSize = 12 } = {}) {
     const h = step * TERRACE_STEP * profile.relief;
     heights[i] = h;
     if (h > maxHeight) maxHeight = h;
+  }
+
+  // ── LƯỢT 3: SAN ĐƯỜNG — RANH THỀM CHẠY DỌC THEO PHỐ, KHÔNG CẮT NGANG QUA PHỐ ─────────────
+  /**
+   * ⚠️ ĐÂY LÀ NỬA CÒN LẠI CỦA "ĐƯỜNG LÒI LÕM", VÀ NÓ KHÔNG PHẢI CHUYỆN BỀ RỘNG. Nửa thứ nhất (mép
+   * ngang có bậc) đã xong ở ADR-031. Nửa này là MẶT CẮT DỌC: hai ô đường kề nhau nằm ở hai bậc
+   * thềm khác nhau, nên con phố phải leo trọn một bậc — có khi HAI bậc — trong đúng một ô.
+   * Đo trước khi sửa, trên 80 ô ứng viên × 15 kỷ: **235 chỗ ranh thềm cắt ngang đường**, chỗ dốc
+   * nhất **173%** (kỷ 7 — dốc 60°, tức 85% chiều cao một căn nhà trong một ô). Con phố dốc nhất
+   * thế giới ngoài đời là 34,8%. Đó không phải một con phố, đó là một vách đá.
+   *
+   * ⚠️ VÌ SAO SAN **ĐƯỜNG** CHỨ KHÔNG SAN **ĐẤT** — và vì sao đây không phải lựa chọn tuỳ tiện.
+   * Ba phương án, hai cái chết vì hình học chứ không vì thẩm mỹ:
+   *   (a) *Làm mượt cả trường cao độ* ⇒ chết. Bài `cao độ luôn là BỘI SỐ NGUYÊN của một bậc thềm`
+   *       tồn tại vì CÔNG TRÌNH là khối đáy phẳng rộng tới 3 ô; thềm bậc là thứ cho chúng mặt đất
+   *       bằng để đặt xuống. Làm mượt đất là gỡ đúng thứ đang đỡ các toà nhà.
+   *   (b) *Ép mọi ô đường về CÙNG một cao độ* ⇒ chết. Mạng đường là 4 cột + 4 hàng cắt nhau, tức
+   *       một đồ thị LIÊN THÔNG: "không ô đường nào lệch ô đường nào" ⇒ cả 80 ô phải bằng nhau ⇒
+   *       56% mặt lưới phẳng tuyệt đối, và vì mọi ô đất đều kề một ô đường nên độ dốc chỉ bị dồn
+   *       sang ngang. Đổi một khuyết tật lấy một khuyết tật to hơn.
+   *   (c) ⇒ **Đất giữ nguyên bậc thềm; ĐƯỜNG được san thành dốc thoải.** Ranh giới thềm bị đẩy ra
+   *       khỏi lòng phố và nằm lại ở mép thửa đất — đúng cách Positano, Cinque Terre, Sa Pa làm
+   *       thật: phố men theo đường đồng mức, tường chắn đất nằm sau lưng thửa đất.
+   *
+   * ⚠️ CAO ĐỘ Ô ĐƯỜNG VÌ THẾ **KHÔNG CÒN LÀ BỘI SỐ NGUYÊN CỦA MỘT BẬC THỀM**, và điều đó là CÓ CHỦ
+   * ĐÍCH, không phải sơ suất. Lý do của bất biến cũ (mặt đất bằng cho khối đáy phẳng) **không áp
+   * cho ô đường**: chỗ ấy là mặt phố, không ai đặt nhà lên. Bài test đã tách làm hai vế và đếm
+   * riêng, để trạng thái này TƯỜNG MINH chứ không lặng lẽ.
+   *
+   * ⚠️ DÙNG `roadCellCandidates()` — DANH SÁCH ỨNG VIÊN, KHÔNG PHẢI MẠNG ĐANG HIỆN. Đây là điều
+   * kiện sống còn của ADR-007: mạng đang hiện đổi theo `sessionCount` và theo kỷ (công trình chiếm
+   * chỗ thì ô đường bị bỏ), nên hỏi nó thì cao độ mặt đất sẽ nhúc nhích mỗi lần Đàm xây thêm một
+   * căn nhà. Danh sách ứng viên là hằng số cấp module và là TẬP CHA của mọi mạng đã hiện — đặt
+   * luật lên nó là một lời hứa chặt hơn. Có test khoá cả hai vế ở `cityLayout.test.js`.
+   *
+   * PHÉP SAN: giữ đúng hai bao hình Lipschitz rồi lấy trung bình.
+   *   `duoi[a] = min_b (h[b] + C·d(a,b))` — hàm C-Lipschitz LỚN NHẤT còn ≤ h
+   *   `tren[a] = max_b (h[b] − C·d(a,b))` — hàm C-Lipschitz NHỎ NHẤT còn ≥ h
+   * Trung bình của hai hàm C-Lipschitz vẫn C-Lipschitz, và nó nằm gọn giữa `duoi` và `tren` nên
+   * không bao giờ vượt ra ngoài dải cao độ gốc. `d` đo bằng số bước ĐI TRÊN ĐƯỜNG, nên một bậc
+   * thềm 0,575 tự trải thành dốc 4 ô mà không ai phải chọn tay con số 4. Điểm bất động là DUY
+   * NHẤT nên kết quả không phụ thuộc thứ tự duyệt — tất định tuyệt đối.
+   */
+  const roadIdx = [];
+  const roadNb = [];
+  const roadLandNb = [];
+  {
+    const isRoad = new Uint8Array(size * size);
+    for (const cell of roadCellCandidates()) {
+      if (cell.x < 0 || cell.y < 0 || cell.x >= size || cell.y >= size) continue;
+      isRoad[cell.y * size + cell.x] = 1;
+    }
+    const viTri = new Map();
+    for (let y = 0; y < size; y += 1) {
+      for (let x = 0; x < size; x += 1) {
+        const i = y * size + x;
+        if (isRoad[i]) { viTri.set(i, roadIdx.length); roadIdx.push(i); }
+      }
+    }
+    for (const i of roadIdx) {
+      const x = i % size;
+      const y = (i - x) / size;
+      const nb = [];
+      const dat = [];
+      for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) {
+        const nx = x + dx;
+        const ny = y + dy;
+        if (nx < 0 || ny < 0 || nx >= size || ny >= size) continue;
+        const j = ny * size + nx;
+        if (isRoad[j]) nb.push(viTri.get(j)); else dat.push(heights[j]);
+      }
+      roadNb.push(nb);
+      roadLandNb.push(dat);
+    }
+  }
+  if (roadIdx.length > 1) {
+    const C = maxRoadRise();
+    // Trần bờ đất: không được rộng hơn MỘT bậc thềm của chính kỷ này. Trước bản vá, chênh
+    // đường↔đất luôn ≤ 1 bậc (cả hai cùng nằm trên lưới bậc); nếu sau khi san mà nó rộng hơn thế
+    // thì ta chỉ đổi lòi lõm dọc lấy lòi lõm ngang. Đây là mốc KHÔNG-ĐƯỢC-TỆ-HƠN, đo được.
+    const buoc = TERRACE_STEP * profile.relief;
+    const D = buoc > 0 ? Math.min(maxBankRise(), buoc) : maxBankRise();
+
+    /**
+     * Bao hình Lipschitz trên ĐỒ THỊ ĐƯỜNG: hàm C-Lipschitz lớn nhất còn ≤ `moc` (`huong = -1`),
+     * hoặc nhỏ nhất còn ≥ `moc` (`huong = +1`). Điểm bất động là DUY NHẤT nên kết quả không phụ
+     * thuộc thứ tự duyệt — tất định tuyệt đối, đúng yêu cầu của ADR-007.
+     */
+    const baoHinh = (moc, huong) => {
+      const v = moc.slice();
+      for (let vong = 0; vong < roadIdx.length; vong += 1) {
+        let doi = false;
+        for (let k = 0; k < roadIdx.length; k += 1) {
+          for (const m of roadNb[k]) {
+            if (huong < 0) {
+              if (v[m] + C < v[k] - 1e-12) { v[k] = v[m] + C; doi = true; }
+            } else if (v[m] - C > v[k] + 1e-12) { v[k] = v[m] - C; doi = true; }
+          }
+        }
+        if (!doi) break;
+      }
+      return v;
+    };
+
+    const goc = roadIdx.map((i) => heights[i]);
+    // (1) Dốc thoải: trung bình hai bao hình của chính trường gốc — bám sát địa hình, C-Lipschitz.
+    const duoi = baoHinh(goc, -1);
+    const tren = baoHinh(goc, +1);
+    // (2) Trần/sàn do BỜ ĐẤT áp đặt, rồi kéo trần/sàn ấy thành C-Lipschitz để còn ghép được.
+    const INF = 1e9;
+    const tranTren = baoHinh(roadLandNb.map((ds, k) => (
+      ds.length ? Math.min(...ds.map((h) => h + D)) : goc[k] + INF)), -1);
+    const tranDuoi = baoHinh(roadLandNb.map((ds, k) => (
+      ds.length ? Math.max(...ds.map((h) => h - D)) : goc[k] - INF)), +1);
+    // (3) TRUNG VỊ của ba hàm C-Lipschitz vẫn C-Lipschitz (min/max của các hàm C-Lipschitz đều
+    //     C-Lipschitz), và nó nằm trong [sàn, trần] ở mọi chỗ hai vế ấy còn giao nhau.
+    //     ⚠️ KHÔNG dùng phép KẸP thẳng: kẹp phá mất tính Lipschitz, tức trả lại đúng cái bậc vừa
+    //     xoá (cùng bài học "KẸP thì phá thứ tự, ĐẨY thì không" ở Phase 7D).
+    for (let k = 0; k < roadIdx.length; k += 1) {
+      const a = tranDuoi[k];
+      const b = (duoi[k] + tren[k]) / 2;
+      const c = tranTren[k];
+      heights[roadIdx[k]] = Math.max(Math.min(a, b), Math.min(b, c), Math.min(a, c));
+    }
   }
 
   /** Cao độ mặt trên của ô. Ngoài lưới → kẹp về ô mép gần nhất (đất không kết thúc đột ngột). */

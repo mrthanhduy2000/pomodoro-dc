@@ -20,7 +20,7 @@
  * bằng cách loang từ mép vào cho tới khi khác màu nền trang.
  *
  * Cách dùng:
- *   node scripts/frame-score.mjs .city-preview/city-era07-light-h12.png
+ *   node scripts/frame-score.mjs .city-preview/city-era07-light-h12-s40.png
  *   node scripts/frame-score.mjs .city-preview/*.png          # nhiều ảnh, in thành bảng
  *   node scripts/frame-score.mjs --json <ảnh…>                # máy đọc, để so trước/sau
  *   node scripts/frame-score.mjs --selftest                   # tự kiểm phép đo

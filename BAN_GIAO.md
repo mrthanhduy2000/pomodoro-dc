@@ -6,7 +6,18 @@
 > chọn: `ARCHITECTURE_DECISIONS.md`. Nợ kỹ thuật: `TECH_DEBT.md`. Migration: `MIGRATION.md`. Tóm
 > tắt theo mốc: `CHANGELOG.md`.
 > **NGUYÊN TẮC ƯU TIÊN SỐ 1:** (1) mọi phiên AI phải đọc file này + `CLAUDE.md` + các file liên quan TRƯỚC khi làm; (2) sau MỌI cập nhật dù nhỏ, phải cập nhật ngay file này + `CLAUDE.md` + các file liên quan khác.
-> Cập nhật lần cuối: **2026-08-19** — **§1: VÁ #49 (ẢNH NGHIỆM THU BỊ XÉN) + TRẦN 4 MiB CỦA CDP.**
+> Cập nhật lần cuối: **2026-08-19** — **ĐO CÁI ĐĨA ĐẤT: VÀNH NGOÀI LƯỚI CHIẾM ~21% KHUNG HÌNH VÀ KHÔNG PHASE NỘI DUNG NÀO CHẠM TỚI (`TECH_DEBT #53` — CHỜ ĐÀM QUYẾT).**
+>
+> **ĐO, KHÔNG SỬA.** Đàm dừng §2-B lại vì phép đo trần của §2-C đã tự trả lời câu hỏi: lấp KÍN mọi
+> ô đất trống trong lưới cũng chỉ đưa kỷ 1 từ 60,29% xuống 53,16% — tức **84–88% chỗ trống nhìn
+> thấy nằm NGOÀI tầm với của cả §2-B lẫn §2-C**. Phiên này đi đo xem 84–88% ấy là cái gì.
+> Kết quả (90 ảnh mặt nạ, 15 kỷ × 3 mốc × 2 lượt): **vành đất ngoài lưới 12×12 chiếm 21,4% khung
+> hình và ĐỨNG YÊN** ở mọi mốc chơi, trong khi đất trong lưới tụt 23,4 → 13,7 theo tiến độ. Nghĩa
+> là **càng chơi lâu thì phần trống nhìn thấy càng có tỉ lệ là thứ không đụng được** (48,9% → 63,0%
+> chỗ trống là vành). Rặng núi chân trời 31,1%, bầu trời **0,00%** (camera ngẩng 34,4° trừ nửa FOV
+> dọc 19° ⇒ mép trên khung nằm 15,4° DƯỚI tầm mắt — sự thật đã ghi ở `sceneGraph.js` từ Phase 9A).
+> ⚠️ **KHÔNG tự sửa bán kính đĩa đất** — Đàm chốt đây là ca 6 (quyết định mỹ thuật lớn, đụng mọi kỷ
+> và mọi màn hình). Ba phương án + giá + tầm với đã ghi ở `TECH_DEBT #53`, chờ Đàm chọn.
 >
 > **§1 — CÔNG CỤ CHỤP PHẢI *HỎI* CANVAS NẰM ĐÂU, ĐỪNG *KHẲNG ĐỊNH* NÓ NẰM ĐÂU (đóng `TECH_DEBT #49`, ADR-036).**
 > Mọi ảnh nghiệm thu từ trước tới nay chụp bằng `--window-size` — một con số ĐOÁN. Ảnh ra
@@ -658,6 +669,85 @@
 
 ## 🗒️ Nhật ký cập nhật
 
+### 2026-08-19 — Đo cái đĩa đất: 21% khung hình là vành đất không phase nội dung nào chạm tới (`TECH_DEBT #53`)
+
+**Vì sao làm bây giờ.** §2-C (mảng phủ đất) đạt, nhưng phép đo trần của chính nó — ép `share = 1,00`
+để phủ MỌI ô đất trống còn lại — chỉ hạ kỷ 1 từ 60,29% xuống 53,16%. Con số đó nói thẳng: ô lưới
+thành phố chỉ chiếm ~12–16% chỗ "đất" mà mắt nhìn thấy. Nhà dân cũng chỉ mọc trong lưới, nên §2-B
+(nhồi thêm nhà) sẽ đụng đúng cái trần ấy. **Đàm DỪNG §2-B** và ra lệnh đi đo trước — đúng luật
+"đo TRẦN của cơ chế trước khi tiêu ngân sách cho nó" mà chính §2-C vừa viết vào `CLAUDE.md`.
+
+**Đo bằng gì.** `city-preview.mjs --mask` — **hỏi bên dựng, đừng dò màu**: tô ba khối có tên thành
+đỏ/lục/lam thuần, mọi thứ khác đen, phần ảnh không phải khung hình mang màu mốc `rgb(1,2,3)` và bị
+loại khỏi mẫu số. Hai lượt mặt nạ mỗi ô (`sky,road,city` + `residents` / `sky,horizon,ground`),
+15 kỷ × 3 mốc (20/50/80 phiên) = **90 ảnh**. Để tách được đất trong lưới khỏi đất ngoài lưới, thêm
+cờ **chỉ-dùng-để-đo** `splitGroundMesh` (mặc định TẮT, có test khoá — đúng luật đã áp cho
+`splitCityMesh`), cắt tấm đất làm `ground-grid` / `ground-apron` đúng ranh giới lưới 12×12.
+
+**Kết quả (trung bình 15 kỷ, % khung hình).**
+
+| | 20 phiên | 50 phiên | 80 phiên |
+|---|--:|--:|--:|
+| đất TRONG lưới 12×12 | 23,4 | 15,3 | **13,7** |
+| **VÀNH đất NGOÀI lưới** | **21,6** | **21,2** | **21,4** |
+| rặng núi chân trời | 31,2 | 31,1 | 31,1 |
+| nhà | 23,1 | 28,7 | 27,2 |
+| đường | 1,2 | 4,4 | 7,3 |
+| cư dân | 0,1 | 0,2 | 0,2 |
+| **đất trơ (trong + ngoài)** | **45,0** | **36,5** | **35,1** |
+| **… trong đó là VÀNH** | **48,9%** | **59,7%** | **63,0%** |
+
+Vành **đứng yên** trong khi đất trong lưới tụt gần một nửa ⇒ **càng chơi lâu, phần trống nhìn thấy
+càng chủ yếu là thứ không đụng được**. Đây là một cái SÀN, không phải một phần của tiến độ.
+
+**Ba lớp kiểm chứng chéo.** (1) Sáu lớp có tên cộng lại ra **100,1–101,4%** — nếu còn lớp vô danh
+thì tổng phải THIẾU, nên không có lớp nào bị bỏ sót; phần dôi ≤1,36 pp là viền răng cưa bị hai lượt
+dựng cùng nhận, lớn nhất đúng ở kỷ 11 (nhiều mép đường nhất). (2) Dòng `[mask] tô đen` báo đúng
+`sky×1, road×1, city×1, residents×2` và `sky×1, horizon×1, ground×1` — không khối nào vô danh.
+(3) Phóng tia thuần hình học (không che khuất, tức cận trên): trong lưới 45,6% · vành 26,3% · không
+phải đất 28,1%, khớp cả độ lớn lẫn chiều với mặt nạ (48,4 / 21,4 / 31,1).
+
+**Gốc của con số.** Đĩa đất trải **19×19** đơn vị thế giới (`padSteps = ceil((0,5 + APRON_EDGE) × 3)
+= 12` ⇒ `−9,5 … +9,5`), lưới thành phố **12×12** (`−6 … +6`) ⇒ **60,1%** diện tích đĩa nằm ngoài
+lưới. `APRON_EDGE = 3,4` sinh ra ở commit `1efa7fe` (Phase 8C/ADR-019) với lý do **VẪN CÒN ĐÚNG**:
+đĩa phải phẳng ở chỗ giáp tấm chân trời, không thì hở khe răng cưa (Phase 9A đã trả giá bằng hai
+mảng sáng). Nhưng lý do ấy chỉ ràng buộc **QUAN HỆ** `APRON_EDGE ≥ APRON_CELLS`, không ràng buộc
+giá trị — nên nó không giải thích được vì sao phải là 3,4.
+
+⚠️ **ĐÍNH CHÍNH con số tôi đưa Đàm trước đó: 69% → 60,1%.** Tôi đã đọc 13,5 / 8,5 / 7,5 trong
+`sceneStats.test.js` như bán kính ĐĨA, trong khi chúng là bán kính **hình cầu bao của tấm VUÔNG**
+(9,5 × √2 = 13,435). Con số 84–88% **không đổi** vì nó được ĐO, không phải suy ra.
+
+**Ba việc nhỏ làm kèm (Đàm chốt).** (1) `cityLayout.test.js` quét đủ **0..150 × 15 kỷ** cho bất biến
+"chỉ thêm, không bao giờ dời", thay 9 mốc chọn tay. (2) `TECH_DEBT #52`: mỗi lần cổng chống-rách
+kích hoạt thì ghi một dòng nhật ký (kỷ · mốc · kích thước · số dải), kèm điều kiện xem lại tường
+minh *"quá 5 lần kích hoạt thì dừng lại truy"*. (3) Bài học "đo trần TRƯỚC khi tiêu ngân sách" đã
+vào `CLAUDE.md`, nối với bài học lùm cây Phase 8D.
+
+**Hai khuyết tật thật tìm ra trong lúc đo.**
+- **`--sessions` không có trong tên file ảnh** — ba mốc 20/50/80 ghi đè lặng lẽ lên nhau, tức bảng
+  sẽ ra ba con số giống hệt nhau mà không ai biết. Đây là **lần thứ tư** cùng cái bẫy trong chính
+  file ấy (giờ · mặt nạ · cận cảnh, nay tới số phiên). Đã thêm hậu tố `-s{N}` luôn bật.
+- ⚠️ **Bản vá một bài test nằm trong VÒNG LẶP phải được kiểm với MỌI phần tử của vòng lặp.** Bài
+  `BA TẤM ĐỊA HÌNH` khoá trọn danh sách tham số nên đỏ oan khi `buildTerrainSurface` nhận thêm cờ
+  `tach`. Tôi đổi sang khoá tiền tố `[,}]` — vá đúng cái vế đang đỏ, rồi **không thử vế còn lại**:
+  `buildRoadSurface({ … palette })` có một DẤU CÁCH trước ngoặc đóng nên nó đỏ tiếp, với một thông
+  báo cũng SAI y như cũ. Bài test chỉ đổi từ nói dối về hàm này sang nói dối về hàm kia. Bản đúng là
+  `\s*[,}]`, và cả hai vế đều đã thử-cho-đỏ.
+
+**Cổng nghiệm thu.** `npm test` **882 bài xanh** · `npm run lint` sạch · `npm run build` xanh ·
+**0 lệnh vẽ mới / 0 vật liệu mới / 0 nguồn sáng mới** trong app (cả hai cờ tách khối mặc định TẮT,
+có test khoá, và có test cấm chúng xuất hiện trong `CityScene3D.jsx`) · mọi assert mới đã thử-cho-đỏ
+với chỗ đỏ nêu TRƯỚC · `md5sum` mọi cặp ảnh đều khác nhau · tài liệu đồng bộ.
+
+⚠️ **Ngoài phạm vi §3 (phải báo):** phiên này sửa `src/components/city/render3d/*` (`sceneGraph.js`,
+`terrainMesh.js` + test) — nằm ngoài danh sách file được phép của chương trình. Lý do: chính lệnh
+của Đàm bắt "hỏi bên dựng, đừng dò màu", mà bên dựng nằm ở tầng đó. Không có đường nào khác để tách
+đất trong lưới khỏi đất ngoài lưới mà không quay lại dò màu — đúng thứ `TECH_DEBT #22` cấm.
+
+**Việc tiếp theo — CHỜ ĐÀM.** Ba phương án cho cái vành (`TECH_DEBT #53`), mỗi phương án kèm tầm
+với trong 21,4% và giá ms. **Không tự sửa bán kính.**
+
 ### 2026-08-19 — §2-C: mảng phủ đất, và một tấm ảnh nghiệm thu bị rách ngang (ADR-037)
 
 **Vì sao làm bây giờ.** Đàm nhìn thành phố và thấy "thưa". Đo ra con số: **46,2% khung hình là đất
@@ -673,8 +763,11 @@ cả 15 kỷ. Bản quét 15 kỷ vẫn 15/15 cặp chặng · 105/105 cặp k�
 
 ⚠️ **Trần của cách làm này — đo được, không đoán.** Ép phủ tối đa (`share = 1,00`) chỉ hạ thêm được
 ~6–7 điểm phần trăm: **ô lưới trống chỉ chiếm ~12–16% số điểm ảnh "đất" nhìn thấy được**, phần còn
-lại là **vạt đất NGOÀI lưới thành phố** (đĩa đất bán kính 13,5 so với thành phố ~7,5). ⇒ **§2-B sẽ
-đụng đúng cái trần này**, vì nhà dân cũng chỉ mọc trong ô lưới.
+lại là **vạt đất NGOÀI lưới thành phố**. ⇒ **§2-B sẽ đụng đúng cái trần này**, vì nhà dân cũng chỉ
+mọc trong ô lưới. ⚠️ **ĐÍNH CHÍNH 2026-08-19**: bản đầu giải thích kèm câu *"đĩa đất bán kính 13,5
+so với thành phố ~7,5"* — SAI, đó là bán kính **hình cầu bao** chứ không phải bán kính đĩa. Mặt đất
+là tấm **VUÔNG 19×19**, lưới thành phố **12×12** ⇒ phần ngoài lưới là **60,1%** diện tích (không
+phải 69%). Con số 12–16% ở trên KHÔNG đổi — nó được ĐO, không suy ra từ hình học.
 
 **Bốn thứ đã cắn trong phiên này, ghi lại để phiên sau đỡ mất công.**
 

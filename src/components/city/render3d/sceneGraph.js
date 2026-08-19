@@ -506,7 +506,7 @@ function createSkyEnvironment(renderer, skyLook, groundColor) {
  */
 export function createCityScene({
   layout, palette, dimmed = false, lowDetail = false, stats = {}, still = false, daylight = null,
-  maxLamps = 3, renderer = null, isMobile = false, splitCityMesh = false,
+  maxLamps = 3, renderer = null, isMobile = false, splitCityMesh = false, splitGroundMesh = false,
 }) {
   const gridSize = layout.gridSize;
   const scene = new Scene();
@@ -731,10 +731,30 @@ export function createCityScene({
   const groundCells = layout.ground ?? [];
   const roads = (layout.props ?? []).filter((prop) => prop.kind === 'road');
 
-  const ground3d = buildTerrainSurface({ terrain, gridSize, layout, palette });
+  /**
+   * ⚠️ CỜ CHỈ-DÙNG-ĐỂ-ĐO thứ hai, cùng luật với `splitCityMesh`: **mặc định TẮT, có test khoá.**
+   *
+   * Vì sao phải có: mặt đất là MỘT tấm lưới trải từ rìa vành đất bên này qua thành phố sang rìa
+   * bên kia, nên ở tầng scene không còn cách nào hỏi *"bao nhiêu phần khung hình là đất TRONG lưới
+   * thành phố, bao nhiêu là vành đất NGOÀI?"*. Mà tách bằng MÀU thì đúng vào bẫy `TECH_DEBT #22`
+   * (bộ lọc "8% tươi nhất ≈ mái" hoá ra chấm cỏ suốt ba phase) — huống hồ ở đây hai vùng dùng
+   * chung một dải sắc độ, tức còn khó tách hơn. Bên DỰNG biết chắc ô nào nằm đâu, nên bên dựng
+   * phải nói ra.
+   *
+   * Câu hỏi này KHÔNG phải tò mò: §2-C đã đo được rằng phủ kín MỌI ô đất trống trong lưới cũng chỉ
+   * hạ "đất trống" 7,13 điểm phần trăm, tức phần lớn chỗ trống Đàm nhìn thấy nằm ở đâu đó KHÁC —
+   * và "đâu đó" chính là thứ cờ này đo.
+   *
+   * Giá: khi bật, mặt đất ra HAI lệnh vẽ thay vì một. App không bao giờ đi vào nhánh này.
+   */
+  const ground3d = buildTerrainSurface({ terrain, gridSize, layout, palette, tach: splitGroundMesh });
   const road3d = buildRoadSurface({ terrain, gridSize, layout, palette });
+  const tamDat = splitGroundMesh
+    ? [[ground3d?.trongLuoi ?? null, tileMaterial, 'ground-grid'],
+      [ground3d?.vanhNgoai ?? null, tileMaterial, 'ground-apron']]
+    : [[ground3d, tileMaterial, 'ground']];
   for (const [surface, material, name] of [
-    [ground3d, tileMaterial, 'ground'], [road3d, roadMaterial, 'road'],
+    ...tamDat, [road3d, roadMaterial, 'road'],
   ]) {
     if (!surface) continue;
     track(surface.geometry);

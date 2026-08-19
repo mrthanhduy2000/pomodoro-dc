@@ -2143,6 +2143,44 @@ ship một trạng thái dở dang, hãy làm nó **ĐẾM ĐƯỢC trong một 
 
 ---
 
+## #53 — VÀNH ĐẤT NGOÀI LƯỚI CHIẾM ~21% KHUNG HÌNH VÀ KHÔNG MỘT PHASE NỘI DUNG NÀO CHẠM TỚI ĐƯỢC
+
+- **Tên**: Vành đất ngoài lưới thành phố là vùng trống lớn nhất còn lại — và nó KHÔNG giảm khi Đàm chơi
+- **Module**: `src/engine/city3d/terrain.js` (`APRON_CELLS`/`APRON_EDGE`) · `render3d/terrainMesh.js` · khung hình (`orbit.js`)
+- **Priority**: High · **Severity**: Medium (mỹ thuật, không phải lỗi chạy)
+- **Impact**: Ở mốc 80 phiên, trung bình 15 kỷ: **đất trơ chiếm 35,1% khung hình, và 63,0% chỗ trơ ấy
+  là VÀNH NGOÀI** — phần mà `§2-C` (mảng phủ) lẫn `§2-B` (nhà dân) đều không đặt được thứ gì lên,
+  vì cả hai chỉ mọc trong lưới 12×12. Tệ hơn: tỉ lệ ấy **TĂNG theo thời gian chơi** (48,9% ở 20
+  phiên → 59,7% ở 50 → 63,0% ở 80), vì thành phố chỉ lấp được phần trong lưới. Càng chơi lâu, phần
+  trống Đàm nhìn thấy càng là phần không ai chạm được.
+- **Root Cause**: mặt đất là một tấm **VUÔNG 19×19** đơn vị thế giới (`u0 = −4` … `+15`, quy về thế
+  giới là −9,5 … +9,5) trong khi lưới thành phố chỉ **12×12** ⇒ **60,1% diện tích tấm đất nằm ngoài
+  lưới**. Bề rộng ấy đến từ `APRON_EDGE = 3,4` ô, và **con số đó CÓ lý do thật, vẫn còn đúng**: nó là
+  một LỜI HỨA với `sceneGraph.js`/`horizon.js` — tấm đất phải **phẳng đúng `−APRON_DROP`** ở chỗ giáp
+  rặng núi, nếu không sẽ có một đường răng cưa lộ gầm chạy vòng quanh thành phố (Phase 9A đã trả giá
+  bằng hai cái nêm sáng chói ở hai góc dưới khung). ⚠️ NHƯNG lời hứa ấy chỉ ràng buộc **QUAN HỆ**
+  `APRON_EDGE ≥ APRON_CELLS` (gợn sóng phải tắt hết trước mép), **không** ràng buộc giá trị 3,4.
+- **Current Risk**: thấp — không có lỗi chạy, không có hồi quy. Chỉ là thành phố trông trống hơn
+  công sức Đàm bỏ ra, và mọi phase nội dung tiếp theo đều sẽ đụng trần này.
+- **Future Risk**: cao nếu KHÔNG ghi ra: phiên sau rất dễ tiêu thêm một ngân sách nữa vào tầng nội
+  dung (thêm nhà, thêm cây, thêm mảng phủ) rồi đo ra "chỉ nhích vài phần trăm" — đúng hình dạng
+  `TECH_DEBT #41` và bài học lùm cây Phase 8D.
+- **Recommended Solution**: ⚠️ **ĐÂY LÀ QUYẾT ĐỊNH MỸ THUẬT CỦA ĐÀM, KHÔNG PHẢI CỦA AI** (ca 6 của
+  §5). Ba phương án đã đo, xem báo cáo phiên 2026-08-19 và `PERFORMANCE.md`.
+- **Estimated Complexity**: thu tấm đất = nhỏ (2 hằng số + đo lại) · lấp vành ngoài = lớn (một tầng
+  nội dung mới, và phải KHÔNG thêm lệnh vẽ) · siết camera = nhỏ nhưng đụng `TECH_DEBT #24`.
+- **Blocking Conditions**: chờ Đàm chọn hướng.
+- **Review Trigger**: trước khi bắt đầu BẤT KỲ phase nội dung nào khác cho thành phố 3D — đọc mục
+  này trước, vì nó nói ngay rằng trần của tầng nội dung là 37% chỗ trống, không phải 100%.
+- **Owner**: chờ Đàm · **Status**: MỞ (đã đo xong, chờ quyết định)
+- **Cách tái lập số**:
+  `node scripts/city-preview.mjs --all --hour 12 --sessions <20|50|80> --mask ground-grid,ground-apron,horizon`
+  rồi `--mask city,road,residents`, sau đó đếm bằng `scripts/mask-count.mjs`. Cờ `splitGroundMesh`
+  (mặc định TẮT, có test khoá ở `sceneStats.test.js`) là thứ tách được hai vùng đất — **không** dò
+  bằng màu, vì hai vùng dùng chung dải sắc độ (`TECH_DEBT #22`).
+
+---
+
 ## #52 — Một ảnh nghiệm thu đã bị RÁCH NGANG và ta KHÔNG biết vì sao; nay có cổng chặn nhưng chưa có chẩn đoán
 
 - **Module**: `scripts/city-preview.mjs` (`shoot`, `soiVetRach`, `chiaBang`).
@@ -2165,6 +2203,18 @@ ship một trạng thái dở dang, hãy làm nó **ĐẾM ĐƯỢC trong một 
 - **Future Risk**: cổng chặn **triệu chứng**, không chữa **nguyên nhân**. Nếu tỉ lệ rách tăng (hôm
   nay ~1/120) thì mỗi ảnh phải chụp 2–3 lượt và bản quét 15 kỷ chậm gấp đôi; nếu một ngày nào đó
   nó rách theo chiều DỌC thì phép quét theo hàng mù hoàn toàn.
+- **✅ ĐÃ LÀM (2026-08-19, Đàm chốt)**: **NHẬT KÝ MỖI LẦN KÍCH HOẠT.** Đàm: *"cổng chặn + chụp lại
+  là đủ cho bây giờ vì nó biến một lỗi IM LẶNG thành một lỗi ỒN ÀO — đó là 90% giá trị. Nhưng thêm
+  đúng một thứ rẻ: mỗi lần kích hoạt, ghi một dòng kèm kỷ/mốc/kích thước/số dải. Sau vài chục lần
+  sẽ có mẫu, và lúc đó truy nguyên nhân là đọc bảng chứ không phải đoán."* ⇒ `dongNhatKyVetRach`
+  (thuần) ghi 10 cột vào `.city-preview/vet-rach.log`, trong đó cột đáng giá nhất là
+  **`trungMocDai`** — chính nó là thứ đã bác bỏ giả thuyết đầu tiên, nên nó phải có mặt trong mọi
+  dòng. Ghi **TRƯỚC** khi ném lỗi (lượt cuối là lượt đáng ghi nhất) và **SAU** `if (!soi.hong)`
+  (đừng ghi lượt lành). 3 bài test khoá, 4 phép phá đều đã thử-cho-đỏ.
+- ⚠️ **GIỚI HẠN CỦA NHẬT KÝ, PHẢI NÓI THẲNG**: `.city-preview/` nằm trong `.gitignore`, mà phiên
+  làm việc từ xa chạy trong một hộp cát **bị thu hồi sau khi xong**. Nghĩa là bảng này chỉ sống
+  trong MỘT phiên. **Phiên nào thấy cổng kích hoạt thì PHẢI chép dòng ấy sang `BAN_GIAO.md`** —
+  nếu không thì "sau vài chục lần sẽ có mẫu" không bao giờ tới được. Công cụ tự in ra lời nhắc này.
 - **Recommended Solution**: (a) giữ một bản sao ảnh bị từ chối vào `.city-preview/rach/` để lần sau
   còn có vật chứng mà chẩn đoán — hôm nay không có, và đó chính là lý do mục này phải để ngỏ;
   (b) đo tỉ lệ rách thật bằng cách đếm số lượt chụp lại qua một lần quét đầy đủ; (c) nếu tỉ lệ đáng
@@ -2180,8 +2230,11 @@ ship một trạng thái dở dang, hãy làm nó **ĐẾM ĐƯỢC trong một 
   một-cảnh mất hết hàng rào) mà là **kể tên những hàng mà mép sắc lẹm là ĐÚNG THIẾT KẾ**
   (`hangCauTrucBangQuet`, suy từ CÙNG công thức bố cục của `sweepPageHtml`, tái lập đúng cả 30 hàng
   — có test đòi BẰNG NHAU chứ không "bao gồm", vì "bao gồm" là cách một bản vá thành cái chăn trùm).
-- **Review Trigger**: lần đầu thấy dòng `⚠️ ảnh rách ngang … chụp lại` trong log, hoặc lần đầu một
-  lượt dựng ảnh chết với `ảnh vẫn RÁCH NGANG sau 3 lượt`.
+- **Review Trigger** (Đàm chốt 2026-08-19, TƯỜNG MINH VÀ ĐẾM ĐƯỢC): **quá 5 lần kích hoạt thì DỪNG
+  LẠI TRUY NGUYÊN NHÂN**, đừng chụp lại tiếp. Ngưỡng ấy là hằng số `NGUONG_TRUY_VET_RACH = 5` trong
+  `city-preview.mjs`; công cụ **tự đếm số dòng nhật ký và tự in lời nhắc** khi chạm ngưỡng, có test
+  khoá rằng hằng số ấy thật sự được ĐỌC. Một điều kiện xem lại chỉ nằm trong tài liệu thì phải có
+  người đi tìm mới đọc được — một con số trong mã thì tự đòi được đọc.
 - **Owner**: chưa phân công · **Status**: Open
 
 ---

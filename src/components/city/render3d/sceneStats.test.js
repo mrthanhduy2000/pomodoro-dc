@@ -345,3 +345,145 @@ test('CƯ DÂN PHẢI CÓ TÊN — không thì phép đo mật độ đọc họ
     `cư dân đang mang tên ${JSON.stringify(cưDân)} — mặt nạ sẽ không hỏi được họ`);
   city.dispose();
 });
+
+/**
+ * ⚠️ `splitGroundMesh` — CỜ CHỈ-DÙNG-ĐỂ-ĐO THỨ HAI, CÙNG LUẬT VỚI `splitCityMesh`.
+ *
+ * Mặt đất là MỘT tấm lưới đỉnh liền trải từ rìa vành đất bên này, qua thành phố, sang rìa bên kia.
+ * Ở tầng scene vì thế KHÔNG còn cách nào hỏi *"bao nhiêu phần khung hình là đất TRONG lưới thành
+ * phố, bao nhiêu là vành đất NGOÀI?"* — mà đó đúng là câu hỏi §1 phải trả lời, sau khi §2-C đo
+ * được rằng phủ kín MỌI ô đất trống trong lưới cũng chỉ hạ "đất trống" 7,13 điểm phần trăm.
+ *
+ * Tách bằng MÀU thì rơi thẳng vào `TECH_DEBT #22` (bộ lọc "8% tươi nhất ≈ mái" hoá ra chấm cỏ suốt
+ * ba phase) — huống hồ hai vùng ở đây dùng chung một dải sắc độ, tức còn khó tách hơn cả mái. Bên
+ * DỰNG biết chắc ô nào nằm đâu, nên bên dựng phải nói ra.
+ *
+ * Bốn assert dưới đây khoá bốn vế KHÁC NHAU (đừng gộp — mỗi vế đỏ vì một lý do riêng):
+ *   1. mặc định TẮT ở cả 15 kỷ;
+ *   2. bật thì CÓ cắt thật, tam giác được BẢO TOÀN, và cái giá là lệnh vẽ;
+ *   3. chỗ cắt nằm ĐÚNG ranh giới lưới thành phố — không phải "có cắt là được";
+ *   4. app không bao giờ truyền cờ này.
+ */
+test('`splitGroundMesh` MẶC ĐỊNH TẮT — app phải thấy MỘT khối `ground` duy nhất', () => {
+  for (let era = 1; era <= 15; era += 1) {
+    const city = dựngCảnh(era);
+    const tên = [];
+    city.scene.traverse((o) => { if (o.isMesh && o.name) tên.push(o.name); });
+    assert.equal(tên.filter((t) => t === 'ground').length, 1,
+      `kỷ ${era}: phải có đúng MỘT khối "ground", đang có ${tên.filter((t) => t === 'ground').length}`);
+    assert.ok(!tên.includes('ground-grid') && !tên.includes('ground-apron'),
+      `kỷ ${era}: mặt đất mặc định đã bị cắt làm hai (${tên.join(', ')}) — mất một lệnh vẽ`);
+    city.dispose();
+  }
+});
+
+test('ĐỐI CHỨNG: bật `splitGroundMesh` thì PHẢI cắt thật, tam giác bảo toàn, giá là lệnh vẽ', () => {
+  // Không có đối chứng này thì assert trên vẫn xanh khi cờ bị nối hỏng và chẳng làm gì cả — lúc ấy
+  // `--mask ground-grid` sẽ ném lỗi "không khớp đối tượng nào", hoặc tệ hơn là khớp một tấm rỗng
+  // rồi báo 0,00% mà trông hoàn toàn hợp lý.
+  for (const era of [1, 7, 15]) {
+    const thường = createCityScene(thamSố(era));
+    const cắt = createCityScene({ ...thamSố(era), splitGroundMesh: true });
+
+    const tên = [];
+    cắt.scene.traverse((o) => { if (o.isMesh && o.name) tên.push(o.name); });
+    assert.ok(tên.includes('ground-grid'), `kỷ ${era}: bật cờ mà không có khối "ground-grid"`);
+    assert.ok(tên.includes('ground-apron'), `kỷ ${era}: bật cờ mà không có khối "ground-apron"`);
+    assert.ok(!tên.includes('ground'), `kỷ ${era}: bật cờ mà khối gộp "ground" vẫn còn`);
+
+    // Cắt là CHIA LẠI cùng một đống hình học, không phải dựng thêm. Nếu số này lệch thì hai nửa
+    // không cộng lại thành cái cũ, và mọi tỉ lệ đo từ mặt nạ sẽ sai theo — đúng bài học "mọi phép
+    // chia-một-cái-toàn-thể-thành-nhiều-phần phải in ra TỔNG và đòi nó bằng 100%".
+    assert.equal(đếmĐộcLập(cắt.scene).tam, đếmĐộcLập(thường.scene).tam,
+      `kỷ ${era}: cắt mặt đất làm đổi số tam giác — vậy nó không còn là cùng một mặt đất`);
+
+    // ⚠️ CÁI GIÁ LÀ LỆNH VẼ — lý do cờ này CẤM vào app. Khoá QUAN HỆ ("cắt thì đắt lên"), không
+    // khoá "+1": hai nửa dùng chung `tileMaterial` nên hôm nay đúng +1, nhưng viết cứng con số là
+    // gài mìn cho ngày vật liệu mặt đất được tách ra.
+    //
+    // ⚠️ NÓI THẲNG MỘT ĐIỀU VỀ CHÍNH ASSERT NÀY: hôm nay nó KHÔNG THỂ ĐỎ MỘT MÌNH. Hai khối lưới
+    // thì tất yếu tốn nhiều lệnh vẽ hơn một khối, nên mọi phép phá làm nó đỏ đều đã bị assert
+    // "phải có ground-grid/ground-apron" ở trên bắt trước. Đã thử ngược 9 phép phá; không phép nào
+    // cô lập được nó. Vậy nó ở đây để làm gì? Để **cái giá được viết ra thành số**, và để bắt được
+    // đúng MỘT tương lai mà ba assert kia mù: có ai đó "tối ưu" phép cắt thành hai NHÓM VẬT LIỆU
+    // trong CÙNG một khối hình học — lúc ấy tên khối vẫn đủ, tam giác vẫn bảo toàn, và nếu hai
+    // nhóm dùng chung vật liệu thì lệnh vẽ có thể KHÔNG tăng ⇒ cờ đo hết đắt ⇒ luật "cấm vào app"
+    // mất lý do tồn tại mà không ai biết. Ghi rõ ở đây thay vì để nó trông như một cái bẫy đang
+    // canh gác — một assert chưa từng thấy đỏ mà không nói ra là một assert đang cho vay uy tín.
+    const lệnhThường = đếmĐộcLập(thường.scene).lệnh;
+    const lệnhCắt = đếmĐộcLập(cắt.scene).lệnh;
+    assert.ok(lệnhCắt > lệnhThường,
+      `kỷ ${era}: cắt mà lệnh vẽ không tăng (${lệnhThường} → ${lệnhCắt}) — vậy cờ này không hề cắt`);
+
+    thường.dispose();
+    cắt.dispose();
+  }
+});
+
+test('CHỖ CẮT PHẢI TRÙNG RANH GIỚI LƯỚI THÀNH PHỐ — đối xứng, và sai lệch đúng NỬA Ô', () => {
+  // ⚠️ "Có cắt" KHÔNG bằng "cắt đúng chỗ". Một bộ phân loại lệch tâm, hoặc lấy nhầm nửa bề rộng,
+  // vẫn cho ra hai khối đầy đủ, tam giác vẫn bảo toàn, lệnh vẽ vẫn tăng — cả ba assert trên đều
+  // xanh, và bảng số §1 sẽ nói dối về việc vành đất chiếm bao nhiêu khung hình.
+  //
+  // Đo bằng HỘP BAO trong toạ độ THẾ GIỚI, vì đó là thứ camera nhìn thấy. Lưới thành phố trải
+  // `world ∈ [−gridSize/2 ; +gridSize/2]` (12 ô, tâm ở gốc toạ độ).
+  const { layout } = thamSố(7);
+  const nửaLưới = layout.gridSize / 2;                      // 6 với lưới 12
+  const city = createCityScene({ ...thamSố(7), splitGroundMesh: true });
+
+  let trong = null;
+  let vành = null;
+  city.scene.traverse((o) => {
+    if (o.name === 'ground-grid') trong = o;
+    if (o.name === 'ground-apron') vành = o;
+  });
+  assert.ok(trong && vành, 'thiếu một trong hai khối — bài test đang chạy rỗng');
+
+  const hộpBao = (mesh) => {
+    const p = mesh.geometry.attributes.position.array;
+    let xMin = Infinity; let xMax = -Infinity; let zMin = Infinity; let zMax = -Infinity;
+    for (let k = 0; k < p.length; k += 3) {
+      if (p[k] < xMin) xMin = p[k];
+      if (p[k] > xMax) xMax = p[k];
+      if (p[k + 2] < zMin) zMin = p[k + 2];
+      if (p[k + 2] > zMax) zMax = p[k + 2];
+    }
+    return { xMin, xMax, zMin, zMax };
+  };
+  const g = hộpBao(trong);
+  const v = hộpBao(vành);
+
+  // (a) ĐỐI XỨNG. Đây là vế bắt được kiểu hỏng tinh vi nhất: `<` một phía, `<=` phía kia thì một
+  // bên ăn thêm nguyên một hàng ô mà bên kia không — phép đo lệch 1/3 ô về một phía, không ai thấy.
+  assert.ok(Math.abs(g.xMin + g.xMax) < 1e-6,
+    `khối trong lưới lệch tâm theo X: [${g.xMin}; ${g.xMax}] — phép phân loại không đối xứng`);
+  assert.ok(Math.abs(g.zMin + g.zMax) < 1e-6,
+    `khối trong lưới lệch tâm theo Z: [${g.zMin}; ${g.zMax}] — phép phân loại không đối xứng`);
+
+  // (b) BƯỚC LƯỚI đo THẲNG TỪ HÌNH HỌC, không chép hằng số `TERRAIN_SUB` — chép là "một luật hai
+  // công thức", và bài test sẽ trôi theo đúng thứ nó định canh.
+  const xs = [...new Set(Array.from(
+    { length: trong.geometry.attributes.position.count },
+    (_, k) => Math.round(trong.geometry.attributes.position.array[k * 3] * 1e6) / 1e6,
+  ))].sort((a, b) => a - b);
+  let bước = Infinity;
+  for (let k = 1; k < xs.length; k += 1) bước = Math.min(bước, xs[k] - xs[k - 1]);
+  assert.ok(bước > 0 && Number.isFinite(bước), 'không đo được bước lưới — hình học không phải lưới đều');
+
+  // (c) VÀO ĐÚNG RANH GIỚI, sai lệch đúng NỬA Ô. Tâm ô biên rơi CHÍNH XÁC lên mốc ±6, và phép so
+  // `<` đối xứng đẩy CẢ HAI ô biên ra vành ngoài ⇒ khối trong lưới hụt đúng `bước/2` mỗi cạnh.
+  // Đây là con số ĐO ĐƯỢC (0,1667 trên bước 0,3333), không phải một dung sai nới cho chắc: không
+  // phép phân loại theo ô nào làm tốt hơn nửa ô được.
+  for (const [tên2, hụt] of [['X', nửaLưới - g.xMax], ['Z', nửaLưới - g.zMax]]) {
+    assert.ok(Math.abs(hụt - bước / 2) < 1e-6,
+      `mép ${tên2} của khối trong lưới hụt ${hụt} so với ranh giới ${nửaLưới} — phải đúng nửa ô (${bước / 2})`);
+  }
+
+  // (d) VÀNH NGOÀI PHẢI BAO TRỌN khối trong lưới, và phải vươn ra XA HƠN hẳn — nếu không thì thứ
+  // đang được gọi là "vành đất" thật ra chỉ là một viền mỏng, và bảng §1 sẽ đọc sai chỗ trống.
+  assert.ok(v.xMax > g.xMax && v.zMax > g.zMax && v.xMin < g.xMin && v.zMin < g.zMin,
+    `vành ngoài không bao trọn khối trong lưới: vành [${v.xMin}; ${v.xMax}], trong [${g.xMin}; ${g.xMax}]`);
+  assert.ok(v.xMax > nửaLưới, `vành ngoài không vươn quá ranh giới lưới (${v.xMax} ≤ ${nửaLưới})`);
+
+  city.dispose();
+});

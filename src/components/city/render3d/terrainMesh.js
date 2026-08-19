@@ -273,7 +273,7 @@ function finish(sink) {
  * @param {object} input.palette   cần `groundShades` / `ground` / `outskirts`
  * @returns {{geometry:BufferGeometry, triangles:number}|null}
  */
-export function buildTerrainSurface({ terrain, gridSize, layout, palette }) {
+export function buildTerrainSurface({ terrain, gridSize, layout, palette, tach = false }) {
   if (!terrain || !Number.isFinite(gridSize) || gridSize < 1) return null;
   const kit = surfaceKit({ terrain, gridSize, layout, palette });
 
@@ -306,28 +306,55 @@ export function buildTerrainSurface({ terrain, gridSize, layout, palette }) {
   }
 
   const sink = createSink();
-  const push = (i, j) => {
+  const sinkVanh = tach ? createSink() : null;
+  const push = (s, i, j) => {
     const u = u0 + i * du; const v = u0 + j * du;
     const n = kit.normalAt(u, v);
     // Pháp tuyến tính MỘT lần rồi đưa cả cho màu dùng — tầng "sườn dốc lộ đất" cần đúng con số
     // này. Để `groundColorAt` tự tính lại là hai công thức cho một luật, và chúng sẽ lệch nhau
     // ngay khi ai đó chỉnh `GRAD_EPS`.
     const c = kit.groundColorAt(u, v, n);
-    sink.pos.push(kit.toWorld(u), H[j * (steps + 1) + i], kit.toWorld(v));
-    sink.nor.push(n[0], n[1], n[2]);
-    sink.col.push(c[0], c[1], c[2]);
+    s.pos.push(kit.toWorld(u), H[j * (steps + 1) + i], kit.toWorld(v));
+    s.nor.push(n[0], n[1], n[2]);
+    s.col.push(c[0], c[1], c[2]);
   };
 
   for (let j = 0; j < steps; j += 1) {
     for (let i = 0; i < steps; i += 1) {
+      const s = (tach && !oTrongLuoi(i, j, u0, du, gridSize)) ? sinkVanh : sink;
       // Hai tam giác, thứ tự đỉnh cho pháp tuyến hướng LÊN.
-      push(i, j); push(i, j + 1); push(i + 1, j + 1);
-      push(i, j); push(i + 1, j + 1); push(i + 1, j);
-      sink.tris += 2;
+      push(s, i, j); push(s, i, j + 1); push(s, i + 1, j + 1);
+      push(s, i, j); push(s, i + 1, j + 1); push(s, i + 1, j);
+      s.tris += 2;
     }
   }
 
-  return finish(sink);
+  if (!tach) return finish(sink);
+  return { trongLuoi: finish(sink), vanhNgoai: finish(sinkVanh) };
+}
+
+/**
+ * Ô lưới (i, j) của tấm địa hình nằm TRONG lưới thành phố hay ở VÀNH ĐẤT ngoài?
+ *
+ * ⚠️ CHỈ DÙNG CHO PHÉP ĐO (`tach`), và nó phải suy từ CÙNG bộ số đã dựng ra tấm lưới (`u0`, `du`,
+ * `gridSize`) chứ không được viết lại một mốc riêng — đó là bẫy "một luật hai công thức" đã cắn
+ * nhiều lần. Lưới thành phố trải `u ∈ [−0,5 ; gridSize − 0,5]`, tức tâm 5,5 và nửa bề rộng 6.
+ *
+ * ⚠️ VÀ PHÉP SO PHẢI ĐỐI XỨNG. Tâm ô rơi ĐÚNG lên mốc biên ở cả hai đầu (i = 10 cho u = −0,5 và
+ * i = 46 cho u = 11,5 với lưới 12 và SUB 3) — dùng `<` một phía, `<=` phía kia thì một bên ăn thêm
+ * một hàng ô mà bên kia không, tức phép đo lệch 1/3 ô về một phía mà không ai thấy. Dùng
+ * `|tâm − 5,5| < 6` thì CẢ HAI ô biên đều về vành ngoài, đối xứng.
+ *
+ * ⚠️ SAI SỐ CÒN LẠI, NÓI THẲNG: ô biên bị cắt đôi bởi mốc (đúng nửa ô nằm trong lưới) nhưng được
+ * gán TRỌN cho vành ngoài ⇒ vành ngoài bị tính dôi **1/6 ô** ở mỗi cạnh. Trên lưới 12 ô đó là
+ * 1,4% chu vi — không đủ để đổi kết luận, nhưng phải ghi ra vì nó là một thiên lệch CÓ HƯỚNG.
+ */
+function oTrongLuoi(i, j, u0, du, gridSize) {
+  const tam = (gridSize - 1) / 2;          // 5,5 với lưới 12
+  const nua = gridSize / 2;                // 6
+  const u = u0 + (i + 0.5) * du;
+  const v = u0 + (j + 0.5) * du;
+  return Math.abs(u - tam) < nua && Math.abs(v - tam) < nua;
 }
 
 /**

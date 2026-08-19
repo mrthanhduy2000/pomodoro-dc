@@ -189,9 +189,24 @@ test('BA TẤM ĐỊA HÌNH PHẢI ĐƯỢC DỰNG THẬT VÀO CẢNH', () => {
   // ⚠️ Đúng bẫy Phase 4H một lần nữa: `terrainMesh.js` có test riêng chạy đủ, engine `terrain.js`
   // vẫn tính đủ 15 vùng đất — và nếu `sceneGraph.js` quên gọi thì màn hình chỉ còn một tấm ván
   // vuông trơ trọi với năm công trình bay lơ lửng bên trên. Không lint nào bắt được.
+  // ⚠️ KHOÁ TIỀN TỐ, KHÔNG KHOÁ TRỌN DANH SÁCH THAM SỐ — VÀ BÀI HỌC NÀY ĐÃ ĐƯỢC VIẾT RA CÁCH ĐÂY
+  // HAI MƯƠI DÒNG RỒI VẪN CẮN Ở ĐÂY. Xem chú thích của `buildHorizonSurface` bên dưới: bản đầu của
+  // nó khoá trọn danh sách và đỏ ngay lần đầu có người thêm một tham số CHÍNH ĐÁNG. Vòng lặp này
+  // giữ nguyên `\}\)` đóng, nên khi `buildTerrainSurface` nhận thêm `tach` (cờ chỉ-dùng-để-đo, mặc
+  // định tắt) nó đỏ với thông báo *"Cảnh không còn gọi buildTerrainSurface với terrain thật"* —
+  // một câu SAI: hàm vẫn được gọi, vẫn với `terrain` thật. Phép đo hỏng, không phải mã hỏng.
+  // ⇒ Lời hứa THẬT là "`terrain` vừa tính xong phải được đưa vào tấm vẽ", nên chỉ khoá tiền tố.
+  // ⚠️ VÀ BẢN VÁ ĐẦU CỦA CHÍNH CHỖ NÀY CŨNG SAI, THEO ĐÚNG CÙNG MỘT KIỂU — LẦN THỨ BA TRONG MỘT
+  // BÀI TEST. Nó viết `[,}]`, tức đòi ký tự NGAY SAU `palette` phải là dấu phẩy hoặc ngoặc đóng.
+  // Đúng cho `buildTerrainSurface` (`palette,` — có tham số `tach` phía sau) và SAI cho
+  // `buildRoadSurface` (`palette })` — giữa chúng có một DẤU CÁCH). Tôi đã vá đúng cái vế đang đỏ
+  // rồi không thử vế còn lại của chính vòng lặp mình vừa sửa, nên bài test đổi từ báo sai về hàm
+  // này sang báo sai về hàm kia. ⇒ Luật: **một bản vá nằm trong vòng lặp phải được kiểm với MỌI
+  // phần tử của vòng lặp**, không chỉ phần tử vừa đỏ — nếu không thì "sửa xong" chỉ có nghĩa là
+  // "cái tôi nhìn thấy đã hết đỏ". `\\s*[,}]` nhận cả `palette,` lẫn `palette })`.
   for (const fn of ['buildTerrainSurface', 'buildRoadSurface']) {
     assert.ok(
-      new RegExp(`${fn}\\(\\{ terrain, gridSize, layout, palette \\}\\)`).test(CALLS),
+      new RegExp(`${fn}\\(\\{ terrain, gridSize, layout, palette\\s*[,}]`).test(CALLS),
       `Cảnh không còn gọi \`${fn}\` với \`terrain\` thật.`,
     );
   }
@@ -567,4 +582,25 @@ test('⚠️ CHẠM VÀO MỘT CĂN NHÀ KHÔNG ĐƯỢC DỰNG LẠI CẢ CẢN
     'Cảnh dựng lại (đổi kỷ, xong phiên) mà không bay lại tới công trình đang chọn ⇒ thẻ thông tin '
     + 'nói một đằng, camera nhìn một nẻo.',
   );
+});
+
+test('⚠️ HAI CỜ CHỈ-DÙNG-ĐỂ-ĐO KHÔNG ĐƯỢC XUẤT HIỆN TRONG VỎ REACT CỦA APP', () => {
+  // ⚠️ BÀI NÀY SINH RA VÌ MỘT CHÚ THÍCH TỰ NHẬN CÓ TEST MÀ KHÔNG CÓ. Khối chú thích của
+  // `splitCityMesh` ở `sceneStats.test.js` liệt kê ba vế được khoá, vế thứ ba là *"và app KHÔNG BAO
+  // GIỜ truyền cờ này"* — nhưng chỉ hai vế đầu có assert. Đúng hình dạng lỗi Phase 8B: chú thích
+  // của `countTriangles` tự nhận *"có test đối chiếu hai bên"* trong khi bài test ấy chỉ so với
+  // hằng số viết tay, và lời hứa ấy sống sót sáu tháng vì nó nghe đã đủ yên tâm.
+  //
+  // Vì sao vế này đáng canh: bật nhầm cờ đo trong app thì KHÔNG có gì đỏ lên — ảnh y hệt, tam giác
+  // y hệt, chỉ ngân sách lệnh vẽ bị thủng trong im lặng. Mà ngân sách lệnh vẽ là ràng buộc cứng
+  // nhất của giai đoạn "tiêu ngân sách" (được tiêu tam giác, CẤM tiêu lệnh vẽ).
+  for (const cờ of ['splitCityMesh', 'splitGroundMesh']) {
+    assert.ok(!SCENE3D_CODE.includes(cờ),
+      `\`${cờ}\` xuất hiện trong CityScene3D.jsx — cờ chỉ-dùng-để-đo đã rò vào app, mất lệnh vẽ`);
+  }
+  // Và đối chứng: công cụ chụp PHẢI truyền chúng, nếu không thì `--mask` đang đo một tấm rỗng.
+  for (const cờ of ['splitCityMesh', 'splitGroundMesh']) {
+    assert.ok(PREVIEW_CODE.includes(cờ),
+      `\`${cờ}\` không có trong city-preview.mjs — không ai bật cờ này thì phép đo mặt nạ vô nghĩa`);
+  }
 });

@@ -31,6 +31,7 @@ import path from 'node:path';
 import {
   BYTE_MOI_DIEM_XAU_NHAT, chiaBang, HAN_TIN_CDP, kiemKhungNhin, SO_DIEM_MOI_BANG,
   hangCauTrucBangQuet, soiVetRach, VET_RACH_HE_SO, VET_RACH_SAN,
+  dongNhatKyVetRach, NGUONG_TRUY_VET_RACH,
 } from './city-preview.mjs';
 
 const GỐC = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -362,4 +363,80 @@ test('DẢI NHÃN — bản quét phải THẬT SỰ truyền danh sách miễn 
   const gọi = dòng.filter((d) => /hangCauTrucBangQuet\s*\(/.test(d) && !/^\s*export function /.test(d));
   assert.ok(gọi.some((d) => /hangCauTruc:/.test(d)),
     'không thấy chỗ nào truyền `hangCauTruc:` bằng `hangCauTrucBangQuet(...)` — bản quét sẽ đỏ oan');
+});
+
+/**
+ * ─── NHẬT KÝ CỔNG CHỐNG-RÁCH ──────────────────────────────────────────────────────────────────
+ *
+ * `TECH_DEBT #52` nói rõ: nguyên nhân gốc CHƯA biết, và lời giải thích đầu tiên đã bị số đo bác
+ * bỏ. Đàm chốt cách xử lý: đừng dừng lại truy ngay, nhưng cũng đừng để nó thành nợ vĩnh viễn —
+ * ghi lại mỗi lần kích hoạt để sau này truy bằng cách ĐỌC BẢNG, và đặt một điều kiện xem lại
+ * TƯỜNG MINH ("quá 5 lần thì dừng lại truy") do chính công cụ tự đếm và tự nhắc.
+ */
+
+test('NHẬT KÝ — dòng ghi phải mang ĐỦ thứ cần để truy sau này, nhất là cột trùng-mốc-dải', () => {
+  const d = dongNhatKyVetRach({
+    khi: '2026-08-19T09:00:00.000Z',
+    anh: 'city-era09-light-h12.png',
+    rong: 1100,
+    cao: 700,
+    soDai: 2,
+    luot: 1,
+    soLuot: 3,
+    xau: [
+      { y: 441, buoc: 0.180, tiSo: 66, trungMocDai: false },
+      { y: 476, buoc: 0.361, tiSo: 132, trungMocDai: true },
+    ],
+  });
+  const cot = d.split('\t');
+
+  // ⚠️ HỎI TỪNG CỘT MỘT, không hỏi "chuỗi có chứa mấy chữ này". Một dòng nhật ký thiếu đúng một
+  // cột trông y hệt một dòng đầy đủ, và cột thiếu ấy chính là cột ta sẽ cần.
+  assert.equal(cot[0], '2026-08-19T09:00:00.000Z', 'thiếu thời điểm — không xếp được theo thứ tự');
+  assert.equal(cot[1], 'city-era09-light-h12.png', 'thiếu tên ảnh — không biết kỷ nào, chặng nào');
+  assert.equal(cot[2], '1100x700', 'thiếu kích thước — không đối chiếu được với ngân sách dải');
+  assert.equal(cot[3], 'dai=2', 'thiếu số dải — đây là biến nghi can số một');
+  assert.equal(cot[4], 'luot=1/3', 'thiếu số lượt — không biết chụp lại có cứu được không');
+  assert.equal(cot[5], 'soVet=2');
+  // Cột QUAN TRỌNG NHẤT: chính nó đã bác bỏ giả thuyết "một dải đến từ khung hình cũ".
+  assert.equal(cot[6], 'trungMocDai=1/2',
+    'thiếu cột trùng-mốc-dải — đây là cột duy nhất phân biệt được hai giả thuyết về nguyên nhân');
+  assert.equal(cot[7], 'buocMax=0.3610');
+  assert.equal(cot[8], 'tiSoMax=132.0');
+  assert.equal(cot[9], 'hang=441,476', 'thiếu vị trí các vết — không tìm lại được chỗ rách');
+  assert.equal(cot.length, 10, 'số cột đổi — sửa cả phần đọc bảng, đừng để hai bên lệch nhau');
+});
+
+test('NHẬT KÝ — phải ghi TRƯỚC khi ném lỗi, nếu không lượt cuối cùng mất dấu', () => {
+  // ⚠️ CÁI BẪY ĐÃ CẮN LẦN THỨ NĂM, và lần này nó cắn bài test tôi vừa viết ra: dòng ĐỊNH NGHĨA
+  // `export function dongNhatKyVetRach({` tự nó khớp `/dongNhatKyVetRach\(\{/`, mà định nghĩa nằm
+  // TRƯỚC `shoot` trong file ⇒ `findIndex` trỏ vào định nghĩa và mọi so sánh thứ tự sau đó đều nói
+  // về một chỗ khác. Lọc bỏ dòng định nghĩa, đúng như bài `soiVetRach` ở trên đã phải làm.
+  const dòng = NGUỒN.split('\n');
+  const ghiNhậtKý = dòng.findIndex(
+    (d) => /dongNhatKyVetRach\(\{/.test(d) && !/^\s*export function /.test(d));
+  assert.ok(ghiNhậtKý >= 0, 'không ai GỌI hàm dựng dòng nhật ký — đúng loại lỗi lint/build bỏ qua');
+
+  const némLỗi = dòng.findIndex((d) => /ảnh vẫn RÁCH NGANG sau/.test(d));
+  assert.ok(némLỗi >= 0, 'không tìm thấy chỗ ném lỗi — file đã đổi cấu trúc?');
+  assert.ok(ghiNhậtKý < némLỗi,
+    'ghi nhật ký nằm SAU chỗ ném lỗi ⇒ lượt cuối cùng — lượt thất bại hẳn, lượt đáng ghi nhất —'
+    + ' sẽ không để lại dòng nào');
+
+  // Và nó phải nằm TRONG nhánh "đã hỏng", không phải chạy mọi lượt: mốc là dòng `if (!soi.hong)`.
+  const sauKhiSoi = dòng.findIndex((d) => /if \(!soi\.hong\) break;/.test(d));
+  assert.ok(sauKhiSoi >= 0 && sauKhiSoi < ghiNhậtKý,
+    'ghi nhật ký phải nằm sau `if (!soi.hong) break` — ghi cả lượt LÀNH thì bảng đầy rác'
+    + ' và điều kiện xem lại 5 lần sẽ nổ ngay lần chạy đầu tiên');
+});
+
+test('NHẬT KÝ — điều kiện xem lại phải ĐẾM ĐƯỢC và tự nhắc, không chỉ nằm trong tài liệu', () => {
+  // Một `Review Trigger` viết trong TECH_DEBT.md chỉ được đọc khi có người đi tìm. Một con số
+  // trong mã thì tự đòi được đọc — cùng bài học "một con số trong bài test là cái hẹn giờ duy
+  // nhất chạy được" (Phase 10 Bước 1).
+  assert.equal(NGUONG_TRUY_VET_RACH, 5, 'ngưỡng Đàm chốt là 5 lần');
+  assert.ok(/soLanDaGhi >= NGUONG_TRUY_VET_RACH/.test(NGUỒN),
+    'ngưỡng được khai nhưng KHÔNG ai so với nó — một hằng số không được đọc thì bằng không có');
+  assert.ok(/TECH_DEBT #52/.test(NGUỒN),
+    'lời nhắc phải trỏ đích danh mục nợ, nếu không người đọc log không biết đi đâu tiếp');
 });

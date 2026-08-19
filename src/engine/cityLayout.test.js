@@ -801,8 +801,27 @@ test('MẢNG PHỦ — ĐỐI CHỨNG: chưa bỏ công thì chưa được thư
  * ⚠️ VÀ PHẦN NÀO Ở ĐÂY THẬT SỰ MỚI, ĐỂ KHÔNG AI TƯỞNG NÓ CANH NHIỀU HƠN NÓ CANH. Nửa "công trình"
  * đã có `BẤT BIẾN #2` canh từ lâu — phép phá "dời công trình theo số công trình đã xây" làm đỏ
  * SÁU bài, trong đó có bài ấy. Nửa **NHÀ DÂN theo trục THỜI GIAN** thì chưa ai canh: phép phá
- * "dời nhà dân theo số phiên" (đúng phép phá Đàm yêu cầu) chỉ làm đỏ **một** bài, và đó là bài
- * dưới đây. Trục ấy chính là trục §2-B sắp vặn.
+ * "dời nhà dân theo số phiên" chỉ làm đỏ **một** bài, và đó là bài dưới đây.
+ *
+ * ⚠️⚠️ BẢN NÀY QUÉT ĐẦY ĐỦ, KHÔNG CÒN CHỌN TAY (Đàm yêu cầu 2026-08-19). Bản trước lấy 9 mốc phiên
+ * chọn tay ([0, 4, 10, 20, 30, 50, 80, 120, 150]) rồi viết kết luận cho mọi mốc — **đúng hình dạng
+ * đã sinh ra `TECH_DEBT #38`** (đo 3 kỷ rồi viết thành trần cho 15). `computeCityLayout` là hàm
+ * THUẦN nên quét dày gần như miễn phí: đã ĐO — lưới tích đầy đủ 15 kỷ × 5 mốc công trình × 151 mốc
+ * phiên = **11.325 lượt dựng trong 1,74 giây**. Không có cớ nào để đoán nữa.
+ *
+ * ⚠️ VÀ NÓ QUÉT **LƯỚI TÍCH**, KHÔNG PHẢI HAI TRỤC RỜI. Bản trước kiểm trục thời gian ở một giá trị
+ * cố định của trục công trình, rồi kiểm trục công trình ở một giá trị cố định của trục thời gian —
+ * hai lát cắt ấy KHÔNG chứng minh được gì cho phần còn lại của mặt phẳng. Bố cục là hàm của HAI
+ * biến, và lời hứa là "lớn lên theo thứ tự tích": (n, s) ≤ (n′, s′) khi n ≤ n′ VÀ s ≤ s′.
+ * Kiểm hai BƯỚC ĐƠN VỊ — (n, s) → (n, s+1) và (n, s) → (n+1, s) — là đủ cho toàn bộ thứ tự tích,
+ * vì mọi cặp so sánh được đều nối với nhau bằng một đường đi gồm các bước ấy, và cả "tập con" lẫn
+ * "cùng một ô" đều bắc cầu.
+ *
+ * ⚠️ VÀ ĐÂY LÀ BẰNG CHỨNG rằng lưới tích KHÔNG phải cầu toàn thừa thãi, chứ không phải một lý lẽ:
+ * phép phá N6 dời nhà dân CHỈ ở đúng ô (3 công trình, ≥ 77 phiên) — một điểm nằm ngoài cả hai lát
+ * cắt của bản cũ (bản cũ quét thời gian ở n = 5, quét tiến độ ở s = 60). Bản CŨ **xanh 2/2**; bản
+ * này **đỏ ngay**: "kỷ 1, 3 công trình, 76 → 77 phiên: nd:9 bị DỜI từ ô 2,5 sang ô 9,5". Hai lát
+ * cắt qua một mặt phẳng thì để lọt cả phần mặt phẳng còn lại, và §2-B sẽ vặn đúng vùng ấy.
  * ════════════════════════════════════════════════════════════════════════════════════════════ */
 
 /** Bảng "ô nào của ai" cho một mốc tiến độ: công trình theo `bpId`, nhà dân theo `index`. */
@@ -828,40 +847,65 @@ function khongDoiCho(cu, moi, boiCanh) {
   }
 }
 
-test('CHỈ THÊM — thành phố già đi thì không một căn nhà nào đổi chỗ', () => {
-  // Trục THỜI GIAN: `built` đứng yên, số phiên tăng dần. Đây đúng là trục mà §2-B sắp vặn.
-  const MOC = [0, 4, 10, 20, 30, 50, 80, 120, 150];
-  let soSanh = 0;
-  for (let era = 1; era <= 15; era += 1) {
-    const built = BLUEPRINT_CATALOG[era].map((bp) => bp.id);
-    let truoc = soDoODat(era, built, MOC[0]);
-    for (let i = 1; i < MOC.length; i += 1) {
-      const nay = soDoODat(era, built, MOC[i]);
-      khongDoiCho(truoc, nay, `kỷ ${era}, ${MOC[i - 1]} → ${MOC[i]} phiên`);
-      truoc = nay; soSanh += 1;
-    }
-  }
-  // Gác chạy-rỗng: một `continue` đặt nhầm chỗ sẽ làm bài này im lặng không so gì cả.
-  assert.equal(soSanh, 15 * (MOC.length - 1), 'số lần so sánh không đúng — vòng lặp đã chạy rỗng');
+test('CHỈ THÊM — quét ĐẦY ĐỦ lưới tích (5 mốc công trình × 151 mốc phiên × 15 kỷ)', () => {
+  const PHIEN_MAX = 150;
+  let soSanhPhien = 0;      // bước đơn vị theo trục THỜI GIAN
+  let soSanhCongTrinh = 0;  // bước đơn vị theo trục TIẾN ĐỘ XÂY
+  let themTheoCongTrinh = 0; // trong đó, bao nhiêu bước THẬT SỰ mọc thêm chỗ ở
+  const themTheoPhienMoiKy = []; // đếm RIÊNG từng kỷ — xem gác đối chứng ở cuối
 
-  // ĐỐI CHỨNG: và thành phố PHẢI thật sự lớn lên, nếu không "không dời" là đúng một cách rỗng tuếch.
-  const it = soDoODat(6, BLUEPRINT_CATALOG[6].map((bp) => bp.id), 4);
-  const nhieu = soDoODat(6, BLUEPRINT_CATALOG[6].map((bp) => bp.id), 150);
-  assert.ok(nhieu.size > it.size + 5,
-    `kỷ 6 đi từ ${it.size} lên ${nhieu.size} chỗ ở — không đủ lớn để bài test có ý nghĩa`);
-});
-
-test('CHỈ THÊM — xây thêm công trình cũng không dời thứ đã có', () => {
-  // Trục TIẾN ĐỘ: số phiên đứng yên, `built` dài thêm từng bản vẽ một.
-  let soSanh = 0;
   for (let era = 1; era <= 15; era += 1) {
     const ids = BLUEPRINT_CATALOG[era].map((bp) => bp.id);
-    let truoc = soDoODat(era, ids.slice(0, 1), 60);
-    for (let n = 2; n <= ids.length; n += 1) {
-      const nay = soDoODat(era, ids.slice(0, n), 60);
-      khongDoiCho(truoc, nay, `kỷ ${era}, xây tới công trình thứ ${n}`);
-      truoc = nay; soSanh += 1;
+    let hangTruoc = null; // cả một hàng (mọi mốc phiên) của `nb − 1`
+    let themTheoPhien = 0;
+
+    for (let nb = 1; nb <= ids.length; nb += 1) {
+      const built = ids.slice(0, nb);
+      const hangNay = [];
+      for (let s = 0; s <= PHIEN_MAX; s += 1) hangNay.push(soDoODat(era, built, s));
+
+      // Bước ngang: thêm một phiên.
+      for (let s = 0; s < PHIEN_MAX; s += 1) {
+        khongDoiCho(hangNay[s], hangNay[s + 1], `kỷ ${era}, ${nb} công trình, ${s} → ${s + 1} phiên`);
+        soSanhPhien += 1;
+        if (hangNay[s + 1].size > hangNay[s].size) themTheoPhien += 1;
+      }
+
+      // Bước dọc: xây thêm một công trình, giữ nguyên số phiên.
+      if (hangTruoc) {
+        for (let s = 0; s <= PHIEN_MAX; s += 1) {
+          khongDoiCho(hangTruoc[s], hangNay[s], `kỷ ${era}, ${s} phiên, xây tới công trình thứ ${nb}`);
+          soSanhCongTrinh += 1;
+          if (hangNay[s].size > hangTruoc[s].size) themTheoCongTrinh += 1;
+        }
+      }
+      hangTruoc = hangNay;
     }
+    themTheoPhienMoiKy.push(themTheoPhien);
   }
-  assert.equal(soSanh, 15 * (BUILDINGS_PER_ERA - 1), 'vòng lặp đã chạy rỗng');
+
+  // Gác chạy-rỗng, HỎI TỪNG TRỤC MỘT: một `continue` đặt nhầm chỗ, hay một vòng lặp thu về đúng
+  // một giá trị, sẽ làm bài này im lặng không so gì cả trên đúng cái trục đang bị phá.
+  assert.equal(soSanhPhien, 15 * BUILDINGS_PER_ERA * PHIEN_MAX,
+    'trục THỜI GIAN so thiếu — vòng lặp đã chạy rỗng');
+  assert.equal(soSanhCongTrinh, 15 * (BUILDINGS_PER_ERA - 1) * (PHIEN_MAX + 1),
+    'trục TIẾN ĐỘ XÂY so thiếu — vòng lặp đã chạy rỗng');
+
+  // ĐỐI CHỨNG: "không dời" là một lời hứa RỖNG TUẾCH nếu thành phố đứng im. Hỏi TỪNG TRỤC MỘT, và
+  // trên trục thời gian thì hỏi TỪNG KỶ MỘT — hỏi tổng thì một kỷ đóng băng vẫn được 14 kỷ kia che,
+  // đúng cái phễu mà chính §2-C vừa ghi thành bài học.
+  //
+  // ⚠️ NGƯỠNG LẤY TỪ SỐ ĐO, KHÔNG PHẢI "nới cho chắc" (bài học Phase 9A): đo ngày 2026-08-19, mỗi
+  // kỷ có 85–150 bước phiên làm thành phố mọc thêm trên tổng 750 bước (kỷ 1 thấp nhất = 85, kỷ
+  // 14/15 cao nhất = 150; tổng 1.855/11.250 = 16,5%). Sàn 40 nằm dưới mốc thấp nhất ĐO ĐƯỢC đúng
+  // hơn hai lần — đủ chỗ cho việc chỉnh nhịp hợp lệ, mà một kỷ bị đóng băng thì tụt về 0 và đỏ ngay.
+  themTheoPhienMoiKy.forEach((t, i) => {
+    assert.ok(t >= 40,
+      `kỷ ${i + 1}: chỉ ${t}/750 bước phiên làm thành phố mọc thêm — kỷ này gần như đứng im theo thời gian`);
+  });
+  // Trục công trình thì KHÔNG cần ngưỡng: xây thêm một công trình LUÔN thêm một khoá `ct:`, nên
+  // 100% là một lời hứa CẤU TRÚC, không phải một con số may rủi. Nó bắt được ca "công trình thứ n
+  // lặng lẽ không được đặt" — thứ mà một ngưỡng phần trăm sẽ cho qua.
+  assert.equal(themTheoCongTrinh, soSanhCongTrinh,
+    'có bước xây thêm công trình mà thành phố KHÔNG lớn thêm — một công trình đã không được đặt');
 });

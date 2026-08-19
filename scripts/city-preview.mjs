@@ -20,8 +20,8 @@
 
 import { spawn } from 'node:child_process';
 import { createServer, get as httpGet } from 'node:http';
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
+import { appendFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { basename, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { decodePng, encodePng, ghepDoc } from './png-probe.mjs';
@@ -268,6 +268,10 @@ renderer.shadowMap.needsUpdate = true;
 const city = createCityScene({
   layout, palette, daylight, renderer, stats: { sessionCount: SESSIONS, streakLength: 9 },
   splitCityMesh: !!MASK && (MASK.includes('buildings') || MASK.includes('props')),
+  // splitGroundMesh: cùng luật — CHỈ bật khi mặt nạ hỏi tên "ground-grid"/"ground-apron". Mặt đất
+  // vốn là MỘT tấm lưới trải qua cả thành phố lẫn vành đất ngoài, nên không tách thì không trả lời
+  // được câu "chỗ trống Đàm thấy nằm TRONG lưới hay NGOÀI lưới".
+  splitGroundMesh: !!MASK && (MASK.includes('ground-grid') || MASK.includes('ground-apron')),
 });
 
 // Đẩy đồng hồ tới một thời điểm giữa chừng. Ở t = 0 mọi cư dân đều đứng ở đầu tuyến của mình —
@@ -960,6 +964,52 @@ export function hangCauTrucBangQuet({ soKy, cellH, labelH = 22, yHeader = 30 }) 
 }
 
 /**
+ * NHẬT KÝ CỔNG CHỐNG-RÁCH — `TECH_DEBT #52`, Đàm yêu cầu 2026-08-19.
+ *
+ * Cổng chặn đã biến một lỗi IM LẶNG thành một lỗi ỒN ÀO, và đó là 90% giá trị. Nhưng ta vẫn KHÔNG
+ * biết vì sao ảnh rách — lời giải thích đầu tiên ("một dải đến từ khung hình cũ") đã bị chính số đo
+ * bác bỏ. Nên mỗi lần cổng kích hoạt, ghi lại ĐỦ thứ cần để sau này truy bằng cách ĐỌC BẢNG chứ
+ * không phải đoán: ảnh nào · cỡ bao nhiêu · chụp mấy dải · lượt thứ mấy · rách ở đâu · có trùng mốc
+ * chia dải không (đây là cột quan trọng nhất — nó là thứ đã bác bỏ giả thuyết đầu tiên).
+ *
+ * ⚠️ ĐIỀU KIỆN XEM LẠI, TƯỜNG MINH: **quá 5 lần kích hoạt thì DỪNG LẠI TRUY NGUYÊN NHÂN**, đừng
+ * chụp lại tiếp. Công cụ tự đếm và tự nhắc — một điều kiện xem lại chỉ nằm trong tài liệu thì phải
+ * có người đi tìm mới đọc được.
+ *
+ * ⚠️ VÀ MỘT GIỚI HẠN PHẢI NÓI THẲNG: `.city-preview/` nằm trong `.gitignore`, mà phiên làm việc từ
+ * xa thì chạy trong một hộp cát bị thu hồi sau khi xong. Nghĩa là nhật ký này **chỉ sống trong một
+ * phiên**. Phiên nào thấy cổng kích hoạt thì PHẢI chép dòng ấy sang `BAN_GIAO.md` — nếu không thì
+ * "sau vài chục lần sẽ có mẫu" không bao giờ tới được.
+ */
+export const NHAT_KY_VET_RACH = 'vet-rach.log';
+export const NGUONG_TRUY_VET_RACH = 5;
+
+/**
+ * Một dòng nhật ký cho một lần kích hoạt. THUẦN — không đụng đĩa, không đọc đồng hồ (nhận `khi` từ
+ * ngoài), để test khoá được ĐỊNH DẠNG chứ không phải khoá một lần chạy may rủi.
+ */
+export function dongNhatKyVetRach({
+  khi, anh, rong, cao, soDai, luot, soLuot, xau = [],
+}) {
+  const trung = xau.filter((m) => m.trungMocDai).length;
+  const buocLonNhat = xau.reduce((t, m) => Math.max(t, m.buoc), 0);
+  const tiSoLonNhat = xau.reduce((t, m) => Math.max(t, m.tiSo), 0);
+  const hang = xau.map((m) => m.y).join(',');
+  return [
+    khi,
+    anh,
+    `${rong}x${cao}`,
+    `dai=${soDai}`,
+    `luot=${luot}/${soLuot}`,
+    `soVet=${xau.length}`,
+    `trungMocDai=${trung}/${xau.length}`,
+    `buocMax=${buocLonNhat.toFixed(4)}`,
+    `tiSoMax=${tiSoLonNhat.toFixed(1)}`,
+    `hang=${hang}`,
+  ].join('\t');
+}
+
+/**
  * Quét MỌI mép hàng của một ảnh, tìm chỗ đứt ngang bất thường.
  *
  * @param {{pixels: Buffer, width: number, height: number}} anh
@@ -1241,6 +1291,32 @@ async function shoot(chrome, url, pngPath,
       }
       const soi = soiVetRach(ghep, mocDai, hangCauTruc);
       if (!soi.hong) break;
+
+      // NHẬT KÝ (`TECH_DEBT #52`): ghi TRƯỚC khi quyết định chụp lại hay bỏ cuộc, để cả lượt cuối
+      // — lượt ném lỗi — cũng để lại dấu vết. Ghi hỏng thì kệ, không được để việc ghi nhật ký làm
+      // hỏng lượt dựng ảnh.
+      let soLanDaGhi = 0;
+      try {
+        const nk = resolve(OUT_DIR, NHAT_KY_VET_RACH);
+        appendFileSync(nk, `${dongNhatKyVetRach({
+          khi: new Date().toISOString(),
+          anh: basename(pngPath),
+          rong: ghep.width,
+          cao: ghep.height,
+          soDai: dsBang.length,
+          luot,
+          soLuot: SO_LUOT,
+          xau: soi.xau,
+        })}\n`);
+        soLanDaGhi = readFileSync(nk, 'utf8').split('\n').filter(Boolean).length;
+      } catch { /* nhật ký hỏng thì thôi, đừng làm hỏng cả lượt dựng */ }
+      if (soLanDaGhi >= NGUONG_TRUY_VET_RACH) {
+        process.stderr.write(`  ⛔ cổng chống-rách đã kích hoạt ${soLanDaGhi} lần `
+          + `(ngưỡng ${NGUONG_TRUY_VET_RACH}) — theo điều kiện xem lại của TECH_DEBT #52, DỪNG LẠI\n`
+          + `     TRUY NGUYÊN NHÂN thay vì chụp lại tiếp. Bảng: ${resolve(OUT_DIR, NHAT_KY_VET_RACH)}\n`
+          + '     ⚠️ Thư mục này KHÔNG được git theo dõi và hộp cát sẽ bị thu hồi — chép sang BAN_GIAO.md.\n');
+      }
+
       const xau = soi.xau
         .map((m) => `hàng ${m.y} đổi ${(m.buoc * 100).toFixed(1)}% bề ngang`
           + ` (gấp ${m.tiSo.toFixed(0)}× mép điển hình, ${m.trungMocDai ? 'TRÙNG mốc dải' : 'không trùng mốc dải'})`)
@@ -1387,7 +1463,15 @@ async function main() {
       // ảnh mang tên "cận mái" hoá ra trùng TỪNG BYTE với ảnh khung thường. Một khung hình khác
       // hẳn mà dùng chung tên file là cách chắc chắn nhất để một phép đo đúng cho ra kết luận sai.
       const focusTag = args.focus > 0 ? `-focus${args.focus}` : '';
-      const pngPath = resolve(OUT_DIR, `city-era${String(era).padStart(2, '0')}-${args.theme}${hourTag}${maskTag}${shadowTag}${focusTag}.png`);
+      // ⚠️ SỐ PHIÊN CŨNG PHẢI CÓ TÊN RIÊNG — VÀ ĐÂY LÀ LẦN THỨ TƯ CÙNG MỘT CÁI BẪY TRONG CHÍNH
+      // FILE NÀY (giờ · mặt nạ · cận cảnh, nay tới số phiên). `--sessions` quyết mạng đường mở tới
+      // đâu và có bao nhiêu cảnh vật, tức hai lượt chụp cùng kỷ ở 20 và 80 phiên là HAI THÀNH PHỐ
+      // KHÁC HẲN — vậy mà chúng dùng chung một tên file và lượt sau lặng lẽ đè lượt trước. Bảng đo
+      // "15 kỷ × 3 mốc" vì thế sẽ đọc CÙNG MỘT tấm ảnh ba lần rồi in ra ba con số giống hệt nhau
+      // trông rất thuyết phục. Luôn gắn nhãn, kể cả ở giá trị mặc định: một cái tên chỉ đúng nhờ
+      // "ai cũng biết mặc định là 40" là một cái tên sẽ nói dối vào ngày mặc định đổi.
+      const sessTag = `-s${args.sessions}`;
+      const pngPath = resolve(OUT_DIR, `city-era${String(era).padStart(2, '0')}-${args.theme}${hourTag}${sessTag}${maskTag}${shadowTag}${focusTag}.png`);
       let info = '';
       let hop = null;
       try {

@@ -951,9 +951,54 @@ chân công trình nên che mất một dải mỏng ở đó.
 ⚠️ **TRẦN CỦA CÁCH LÀM NÀY — ĐO ĐƯỢC, KHÔNG ĐOÁN.** Ép `share = 1,00` (phủ MỌI ô đất trống còn
 lại) chỉ đưa kỷ 1 từ 60,29 xuống **53,16** (−7,13) và kỷ 14 xuống **38,81** (−6,33). Nghĩa là **ô
 lưới trống chỉ chiếm ~12–16% số điểm ảnh "đất" nhìn thấy được**; phần còn lại là **vạt đất ngoài
-lưới thành phố** (đĩa đất bán kính 13,5 so với thành phố ~7,5 ⇒ ~69% diện tích đất nằm ngoài lưới).
+lưới thành phố**. ⚠️ **ĐÍNH CHÍNH 2026-08-19**: bản đầu ghi *"đĩa đất bán kính 13,5 so với thành phố ~7,5 ⇒ ~69%"* — SAI. 13,5 · 8,5 · 7,5 là bán kính **hình cầu bao**, không phải bán kính đĩa; mặt đất là tấm **VUÔNG** 19×19 và lưới thành phố 12×12, nên phần nằm ngoài lưới là **361 − 144 = 217 ⇒ 60,1%** diện tích. Con số 84–88% ở trên KHÔNG đổi (nó được ĐO trên ảnh, không suy ra từ hình học).
 ⇒ **§2-B sẽ đụng đúng cái trần này**, vì nhà dân cũng chỉ mọc trong ô lưới. Muốn "đất trống" xuống
 dưới ~30% thì phải đụng tới vạt đất ngoài lưới — một việc KHÁC, chưa ai bàn.
+
+### Ba vùng của khung hình — ĐÃ ĐO (2026-08-19, 15 kỷ × 3 mốc × 2 lượt mặt nạ = 90 ảnh)
+
+Câu hỏi Đàm đặt sau khi trần trên lộ ra: *"vạt đất ngoài lưới thành phố đang làm gì trong khung
+hình?"*. Đo bằng cờ `splitGroundMesh` (mặc định TẮT, có test khoá) — mặt đất được cắt làm hai khối
+mang tên `ground-grid` / `ground-apron` **ở tầng DỰNG**, không dò bằng màu (`TECH_DEBT #22`: hai
+vùng dùng chung dải sắc độ, dò màu chắc chắn sai).
+
+Lệnh tái lập, cho từng mốc `S ∈ {20, 50, 80}`:
+```
+node scripts/city-preview.mjs --all --hour 12 --sessions S --mask ground-grid,ground-apron,horizon
+node scripts/city-preview.mjs --all --hour 12 --sessions S --mask city,road,residents
+node scripts/mask-count.mjs .city-preview/<ảnh>.png <tên-đỏ> <tên-lục> <tên-lam>
+```
+
+| trung bình 15 kỷ (% khung hình) | 20 phiên | 50 phiên | 80 phiên |
+|---|--:|--:|--:|
+| đất TRONG lưới 12×12 | 23,4 | 15,3 | **13,7** |
+| **VÀNH đất NGOÀI lưới** | **21,6** | **21,2** | **21,4** |
+| rặng núi chân trời | 31,2 | 31,1 | 31,1 |
+| nhà (đã gộp) | 23,1 | 28,7 | 27,2 |
+| đường | 1,2 | 4,4 | 7,3 |
+| cư dân | 0,1 | 0,2 | 0,2 |
+| **đất trơ (trong lưới + vành)** | **45,0** | **36,5** | **35,1** |
+| **… trong đó bao nhiêu phần là VÀNH** | **48,9%** | **59,7%** | **63,0%** |
+
+⚠️ **KẾT LUẬN QUAN TRỌNG NHẤT — VÀNH NGOÀI LÀ MỘT CÁI SÀN, KHÔNG PHẢI MỘT PHẦN CỦA TIẾN ĐỘ.** Ba
+cột trên cho thấy vành ngoài **đứng yên 21,2–21,6%** qua cả ba mốc, trong khi đất trong lưới tụt
+23,4 → 13,7. Nghĩa là **càng chơi lâu, phần trống Đàm nhìn thấy càng là phần không cơ chế nội dung
+nào chạm được**: 48,9% ở 20 phiên, 63,0% ở 80 phiên. Một phase kiểu §2-B/§2-C chỉ chia nhau 37% còn
+lại. Xem `TECH_DEBT #53`.
+
+**Đối chiếu chéo bằng một đường hoàn toàn khác** (bắn tia qua từng điểm ảnh, cắt mặt phẳng `y = 0`,
+bỏ qua mọi vật che — tức CẬN TRÊN của mỗi vùng): trong lưới **45,6%** · vành **26,3%** · không chạm
+đất **28,1%**. So với bảng đo trên ảnh ở mốc 80 phiên: trong lưới 13,7 + nhà 27,2 + đường 7,3 +
+cư dân 0,2 = **48,4%** (cận trên 45,6, chênh vì công trình cao vượt lên che cả phần trời) · vành
+**21,4** (cận trên 26,3, chênh vì nhà và đồi che bớt) · chân trời **31,1** (cận trên 28,1). Ba cặp
+đều khớp về độ lớn và đúng chiều ⇒ hai phép đo độc lập đồng ý.
+
+⚠️ **BẦU TRỜI CHIẾM 0% KHUNG HÌNH, và điều đó được chứng minh bằng chính CỔNG TỔNG.** Sáu lớp trên
+cộng lại ra **100,1–101,4%** ở cả 45 ô. Nếu còn một lớp chưa ai đặt tên thì tổng phải THIẾU, không
+thể THỪA; thừa chỉ có thể do viền răng cưa bị hai lượt mặt nạ độc lập cùng nhận (mỗi lượt gán điểm
+ảnh biên cho lớp trội của lượt đó). Lệch lớn nhất **1,36 điểm phần trăm** — trên mức "dưới 1 đpt"
+mà `mask-count.mjs` ghi, và nó lớn nhất đúng ở kỷ 11 (nhiều mép đường nhất), khớp với cách giải
+thích viền răng cưa. **Đừng đọc bảng này tới chữ số thập phân thứ nhất.**
 
 ❗ **MỘT TẤM TRONG 120 ẢNH ĐÃ BỊ RÁCH NGANG.** `TRUOC-A-s20-ky09.png` báo đất **37,37%**; hai lượt
 dựng lại độc lập đều ra **41,61%** với cùng md5. Nó lọt qua cả ba cổng của `bang-C.mjs`. Thứ lộ ra

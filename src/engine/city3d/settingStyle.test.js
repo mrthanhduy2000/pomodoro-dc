@@ -16,10 +16,11 @@ import assert from 'node:assert/strict';
 import {
   SETTING_STYLES, getSetting, isValidSetting, hasWater,
   WATER_KINDS, WATER_SIDES, GROUND_FORMS,
-  MAX_SEA_ERAS, MAX_ERAS_PER_SIDE,
+  MAX_SEA_ERAS, MAX_SIDE_SPREAD,
   summarizeSettings, settingCountryMismatches,
 } from './settingStyle.js';
 import { ERA_STYLES, getEraStyle } from './eraStyle.js';
+import { OUTSKIRT_REACH } from './outskirts.js';
 
 const ERAS = Object.keys(ERA_STYLES).map(Number).sort((a, b) => a - b);
 
@@ -124,10 +125,13 @@ test('LUẬT (1) — "KHÔNG CÓ NƯỚC" phải khai TƯỜNG MINH và ĐẾM �
   // được đọc khi có người đi tìm; một con số trong bài test thì tự đòi được đọc."* Kỷ khô thứ ba
   // xuất hiện ⇒ đỏ; một trong hai kỷ khô được cấp nước ⇒ cũng đỏ. Cả hai chiều đều bắt buộc phải
   // được nhìn lại bằng mắt người, vì "khô" là một quyết định mỹ thuật chứ không phải một mặc định.
-  // THỬ-CHO-ĐỎ: đổi kỷ 5 sang `water:'river', side:'tay', reach:1, width:0.6` → đỏ ở `deepEqual`
-  // danh sách kỷ khô (`[1]` thay vì `[1, 5]`).
+  // ⚠️ CON SỐ NÀY ĐÃ ĐỔI MỘT LẦN, VÀ CHÍNH NÓ LÀ THỨ BUỘC PHẢI SỬA BÀI TEST KHI ĐÀM BÁC DÒNG KỶ 5
+  // (2026-08-19): bảng từng khai `[1, 5]`, nay còn `[1]`. Đó đúng là việc nó sinh ra để làm — một
+  // danh sách chép cứng thì mọi lần đổi đều phải đi qua mắt người, không lặng lẽ trôi.
+  // THỬ-CHO-ĐỎ: đổi kỷ 2 sang `water:'none', side:'none', reach:0, width:null` → đỏ ở `deepEqual`
+  // (`[1, 2]` thay vì `[1]`).
   const KHO = ERAS.filter((e) => !hasWater(e));
-  assert.deepEqual(KHO, [1, 5],
+  assert.deepEqual(KHO, [1],
     'danh sách kỷ KHÔNG có nước đã đổi — đây là quyết định mỹ thuật, phải xem lại bằng mắt');
 
   // Và `hasWater` phải đọc đúng bảng, không phải đọc một danh sách chép tay ở đâu đó.
@@ -149,9 +153,10 @@ test('LUẬT (2) — biển KHÔNG được quá nửa số kỷ, và trần ph�
   assert.ok(MAX_SEA_ERAS * 2 < ERAS.length,
     `trần ${MAX_SEA_ERAS} không còn "dưới một nửa" của ${ERAS.length} kỷ`);
 
-  // Và nói thẳng phần chưa được bảo vệ (bài học phễu Phase 9A): hôm nay 4, trần 7, tức còn 3 chỗ
-  // trống. Con số 4 được ghim để một phiên sau đổi bốn kỷ sang biển thì phải mở bài này ra đọc.
-  assert.equal(dem.sea, 4,
+  // Và nói thẳng phần chưa được bảo vệ (bài học phễu Phase 9A): hôm nay 3, trần 7, tức còn 4 chỗ
+  // trống. Con số 3 được ghim để một phiên sau đổi kỷ nào sang biển thì phải mở bài này ra đọc.
+  // (Đã đổi 4 → 3 ngày 2026-08-19: kỷ 11 từ `sea` sang `estuary` cho khớp `note` bến tàu Hudson.)
+  assert.equal(dem.sea, 3,
     'số kỷ có biển đã đổi — vẫn dưới trần, nhưng đây là thứ Đàm cấm nới dần, phải xem lại bằng mắt');
 });
 
@@ -166,21 +171,26 @@ test('LUẬT (2) — ĐỐI CHỨNG: phép đếm PHẢI bắt được một b�
   // đổi luôn ý nghĩa của đối chứng.
   const bangHong = {};
   for (const era of ERAS) {
-    bangHong[era] = era <= 8 ? { ...SETTING_STYLES[11] } : { ...SETTING_STYLES[12] };
+    bangHong[era] = era <= 8 ? { ...SETTING_STYLES[13] } : { ...SETTING_STYLES[12] };
   }
   const dem = summarizeSettings(bangHong).water;
   assert.equal(dem.sea, 8, 'bảng giả phải có đúng 8 kỷ biển');
   assert.ok(dem.sea > MAX_SEA_ERAS, 'phép đếm KHÔNG bắt được bảng 8 kỷ biển — trần đã thành cái phễu');
 });
 
-test('LUẬT (3) — cả bốn hướng phải CÒN SỐNG, và không hướng nào được dồn quá nửa', () => {
-  // Hai vế, và vế đầu mới là vế siết chặt. Bài học `floraStyle` / 8 trục: *"trục nào cả 15 kỷ khai
-  // giống nhau thì bảng thật ra hẹp hơn nó trông"* — một hướng chết hẳn là cách hỏng dễ xảy ra nhất
-  // và cũng là cách khó nhìn ra nhất, vì bảng vẫn có đủ 15 dòng khác nhau.
-  // THỬ-CHO-ĐỎ: đổi kỷ 3 và 9 và 11 từ `tay` sang `bac` → hướng `tay` chết → đỏ ở vế "còn sống".
+test('LUẬT (3) — cả bốn hướng phải CÒN SỐNG, và không hướng nào được ÁP ĐẢO', () => {
+  // ⚠️ Vế thứ hai đã ĐỔI HÌNH DẠNG ngày 2026-08-19 theo phán quyết của Đàm: từ một MỨC tuyệt đối
+  // (`≤ 6`) sang một QUAN HỆ (hiệu giữa hướng đông nhất và hướng thưa nhất `≤ 2`). Lý do đầy đủ ở
+  // chú thích của `MAX_SIDE_SPREAD`; tóm tắt: một mức tuyệt đối vừa quá rộng (6·3·2·2 lọt) vừa
+  // trôi khi số kỷ đổi, còn hiệu thì không có cả hai bệnh.
+  //
+  // Vế thứ nhất ("còn sống") mới là vế siết chặt nhất. Bài học `floraStyle` / 8 trục: *"trục nào
+  // cả 15 kỷ khai giống nhau thì bảng thật ra hẹp hơn nó trông"* — một hướng chết hẳn là cách hỏng
+  // dễ xảy ra nhất và cũng khó nhìn ra nhất, vì bảng vẫn có đủ 15 dòng khác nhau.
+  // THỬ-CHO-ĐỎ: đổi kỷ 3, 9 và 11 từ `tay` sang `bac` → hướng `tay` chết → đỏ ở vế "còn sống".
   const dem = summarizeSettings().side;
   const coNuoc = ERAS.filter((e) => hasWater(e)).length;
-  assert.equal(coNuoc, 13, 'số kỷ có nước đã đổi — mọi con số dưới đây tính theo nó');
+  assert.equal(coNuoc, 14, 'số kỷ có nước đã đổi — mọi con số dưới đây tính theo nó');
 
   for (const huong of HUONG_THAT) {
     assert.ok((dem[huong] ?? 0) >= 1,
@@ -189,32 +199,85 @@ test('LUẬT (3) — cả bốn hướng phải CÒN SỐNG, và không hướng
   assert.equal(Object.keys(dem).sort().join(','), HUONG_THAT.slice().sort().join(','),
     'bảng đang dùng một hướng không có trong `WATER_SIDES`, hoặc `none` đã lọt vào phép đếm');
 
-  const donNhat = Math.max(...HUONG_THAT.map((h) => dem[h] ?? 0));
-  assert.ok(donNhat <= MAX_ERAS_PER_SIDE,
-    `${donNhat} kỷ dồn về một hướng, vượt trần ${MAX_ERAS_PER_SIDE} — 15 kỷ sẽ ra cùng một bố cục`);
-  assert.ok(MAX_ERAS_PER_SIDE * 2 < coNuoc + 1,
-    `trần ${MAX_ERAS_PER_SIDE} không còn "dưới một nửa" của ${coNuoc} kỷ có nước`);
+  const soLuong = HUONG_THAT.map((h) => dem[h] ?? 0);
+  const lech = Math.max(...soLuong) - Math.min(...soLuong);
+  assert.ok(lech <= MAX_SIDE_SPREAD,
+    `hướng đông nhất hơn hướng thưa nhất ${lech} kỷ (trần ${MAX_SIDE_SPREAD}) — bảng đang dồn về `
+    + `một phía: ${HUONG_THAT.map((h, i) => `${h} ${soLuong[i]}`).join(' · ')}`);
 });
 
-test('LUẬT (3) — ĐỐI CHỨNG: phép đếm PHẢI bắt được bảng dồn hết 13 kỷ về một hướng, ở CẢ HAI vế', () => {
-  // ⚠️ Hỏi TỪNG vế một, không hỏi gộp. Bài học `TECH_DEBT #22`: gộp lại thì một vế đỏ che cho một
-  // vế đã mất răng, và ta không bao giờ biết vế nào còn canh gác.
-  // THỬ-CHO-ĐỎ: nâng `MAX_ERAS_PER_SIDE` lên 13 → đỏ ở vế trần của đối chứng này (vế "hướng chết"
-  // vẫn đỏ, đó chính là lý do phải tách hai vế).
-  const bangHong = {};
+test('LUẬT (3) — ĐỐI CHỨNG: phép kiểm phải TỪ CHỐI cả bảng dồn HẾT một hướng lẫn bảng 6·3·2·2', () => {
+  // ⚠️ Hỏi TỪNG vế một, không hỏi gộp (bài học `TECH_DEBT #22`: gộp thì một vế đỏ che cho một vế
+  // đã mất răng). Và ca 6·3·2·2 là ca Đàm nêu đích danh — nó **lọt qua** bản trần-tuyệt-đối cũ
+  // (không hướng nào chạm 6) trong khi rõ ràng là dồn một phía. Không có ca này thì không có gì
+  // chứng minh phép kiểm mới thật sự chặt hơn phép kiểm cũ.
+  // THỬ-CHO-ĐỎ: nâng `MAX_SIDE_SPREAD` lên 4 → đỏ ở ca 6·3·2·2 (ca dồn-hết vẫn đỏ ở vế "hướng
+  // chết", đó chính là lý do phải tách hai vế).
+  const lechCua = (dem) => {
+    const n = HUONG_THAT.map((h) => dem[h] ?? 0);
+    return Math.max(...n) - Math.min(...n);
+  };
+
+  // Ca A — dồn HẾT 14 kỷ có nước về `bac`.
+  const donHet = {};
   for (const era of ERAS) {
     const st = SETTING_STYLES[era];
-    bangHong[era] = st.water === 'none' ? { ...st } : { ...st, side: 'bac' };
+    donHet[era] = st.water === 'none' ? { ...st } : { ...st, side: 'bac' };
   }
-  const dem = summarizeSettings(bangHong).side;
-
-  const chet = HUONG_THAT.filter((h) => (dem[h] ?? 0) === 0);
+  const demA = summarizeSettings(donHet).side;
+  const chet = HUONG_THAT.filter((h) => (demA[h] ?? 0) === 0);
   assert.deepEqual(chet.sort(), ['dong', 'nam', 'tay'],
     'vế "hướng còn sống" KHÔNG nhận ra ba hướng đã chết');
+  assert.ok(lechCua(demA) > MAX_SIDE_SPREAD, 'vế độ lệch KHÔNG bắt được bảng dồn hết một hướng');
 
-  const donNhat = Math.max(...HUONG_THAT.map((h) => dem[h] ?? 0));
-  assert.ok(donNhat > MAX_ERAS_PER_SIDE,
-    `vế trần KHÔNG bắt được bảng dồn ${donNhat} kỷ về một hướng — trần đã thành cái phễu`);
+  // Ca B — 6·3·2·2, đúng bộ số Đàm nêu: mọi hướng còn sống, tổng chỉ 13, và bản trần-tuyệt-đối cũ
+  // (`≤ 6`) cho nó ĐI LỌT. Đây là ca chứng minh phép kiểm mới chặt hơn phép kiểm cũ.
+  const CA_B = { bac: 6, nam: 3, dong: 2, tay: 2 };
+  const demB = {};
+  for (const [h, n] of Object.entries(CA_B)) demB[h] = n;
+  assert.equal(HUONG_THAT.every((h) => (demB[h] ?? 0) >= 1), true,
+    'ca 6·3·2·2 phải có ĐỦ bốn hướng còn sống — nếu không thì nó bị vế kia bắt, và ca này vô nghĩa');
+  assert.ok(Math.max(...Object.values(CA_B)) <= 6,
+    'ca 6·3·2·2 phải ĐI LỌT trần tuyệt đối cũ (≤ 6) — đó là toàn bộ lý do nó tồn tại');
+  assert.ok(lechCua(demB) > MAX_SIDE_SPREAD,
+    `vế độ lệch KHÔNG bắt được bảng 6·3·2·2 (hiệu ${lechCua(demB)}) — phép kiểm mới không chặt hơn`);
+});
+
+test('Q2 — MẶT NƯỚC PHẢI NẰM GỌN TRONG VÙNG QUÊ: khoá QUAN HỆ với `OUTSKIRT_REACH`, không khoá số 8', () => {
+  // ⚠️ Đàm ra lệnh làm ngay ở Bước A: *"kỷ 15 đang `reach 6` trên vùng quê rộng 8. Nếu ai đó thu
+  // `OUTSKIRT_REACH` xuống 5 thì mặt nước kỷ 15 rơi ra ngoài địa hình và không có gì đỏ lên."*
+  //
+  // ⚠️ VÀ CÔNG THỨC Ở ĐÂY LỆCH NỬA BỀ RỘNG SO VỚI CÔNG THỨC ĐÀM VIẾT (`reach + width/2`) — nói
+  // thẳng vì sao. `reach` trong bảng này được định nghĩa là khoảng cách ra tới **MÉP GẦN** của mặt
+  // nước, không phải tới TIM nước; nên mép XA nằm ở `reach + width`, và cái phải nằm trong vùng quê
+  // chính là mép xa. Dùng `width/2` với định nghĩa ấy thì phép kiểm cho phép nửa bề rộng bên kia
+  // thò ra ngoài địa hình — tức nó không diễn đạt lời hứa mà nó mang tên. Ý ĐỊNH của Đàm ("nước
+  // phải nằm gọn trong địa hình") được giữ nguyên; chỉ con số là chặt hơn.
+  //
+  // ⚠️ Phép kiểm này sống ở BÀI TEST chứ không ở `isValidSetting`, và đó là điều bắt buộc: mã sản
+  // phẩm mà `import` `OUTSKIRT_REACH` là dựng đúng chiều NGƯỢC của luật Đàm ra (`settingStyle` →
+  // `outskirts`), lại còn đẻ ra một vòng import khi `outskirts.js` gọi `hasWater` ở Bước B.
+  // THỬ-CHO-ĐỎ: đổi `width` kỷ 8 từ 6 lên 8 → mép xa ra 9 > 8 → đỏ đúng kỷ 8.
+  let chatNhat = 0;
+  let kyChatNhat = 0;
+  for (const era of ERAS) {
+    const st = getSetting(era);
+    if (st.water === 'none') continue;
+    // `sea` không có bờ bên kia ⇒ chỉ cần MÉP GẦN (bờ) nằm trong vùng quê; phần còn lại là chân trời.
+    const mepXa = st.width === null ? st.reach : st.reach + st.width;
+    assert.ok(mepXa <= OUTSKIRT_REACH,
+      `kỷ ${era}: mép xa mặt nước ở ${mepXa} ô, ra ngoài vùng quê (${OUTSKIRT_REACH} ô) — `
+      + 'nước sẽ nằm trên chỗ không có địa hình');
+    if (mepXa > chatNhat) { chatNhat = mepXa; kyChatNhat = era; }
+  }
+  // Nói thẳng phần biên còn lại, đúng bài học phễu Phase 9A: chật nhất là **kỷ 4** (Trường An, sông
+  // Vị xa tận 5 ô rồi rộng thêm 2,6) ở **7,6/8 ô** — chỉ còn 0,4 ô dự phòng. Con số ấy đúng với sự
+  // thật địa lý (sông Vị thật sự nằm xa kinh đô), nên đây là một ràng buộc CHẶT chứ không phải một
+  // lời hứa mỏng; nhưng nó chặt tới mức thu `OUTSKIRT_REACH` xuống 7 là kỷ 4 đỏ ngay.
+  assert.equal(kyChatNhat, 4, 'kỷ chật nhất đã đổi — xem lại xem nước có còn nằm gọn không');
+  assert.ok(chatNhat >= OUTSKIRT_REACH - 2,
+    `kỷ chật nhất chỉ dùng ${chatNhat}/${OUTSKIRT_REACH} ô — phép kiểm đã thành cái phễu, `
+    + 'không còn ràng buộc dòng nào');
 });
 
 test('BA TRỤC PHẢI CÒN SỐNG: mọi giá trị khai trong ba danh sách đều có kỷ dùng tới', () => {
@@ -231,18 +294,19 @@ test('BA TRỤC PHẢI CÒN SỐNG: mọi giá trị khai trong ba danh sách đ
   }
 });
 
-test('HAI KỶ KHÔ ĐỌC RA LÀ MỘT — đếm tường minh, KHÔNG giấu bằng một `continue`', () => {
-  // ⚠️ Sự thật khó chịu, ghi thẳng ra thay vì bịa một trục để né: kỷ 1 (Göbekli Tepe) và kỷ 5
-  // (Burg Eltz) khai HỆT NHAU trên mọi trường hình học — cùng `none`/`ridge`/`reach 0`. Điều đó
-  // ĐÚNG: cả hai đều là một sống đá khô, chọn vì tầm nhìn và vì thế thủ, không vì nước. Thứ phân
-  // biệt chúng KHÔNG nằm ở bảng này mà ở `eraStyle` (lều da thú so với lâu đài đá) — nên tách
-  // chúng ở đây là bịa ra một khác biệt địa lý không có thật, đúng thứ luật (2) cấm.
-  //
-  // Cách xử lý theo đúng khuôn `assert.deepEqual(KHONG_VUA_DAI, ['barrel'])` ở Phase 11: ĐẾM ca ấy
-  // ra, để cặp trùng thứ hai thì đỏ, mà cặp này được tách ra thì cũng đỏ. Một `continue` im lặng ở
-  // đây sẽ giấu mất việc bảng đang hẹp hơn nó trông.
+test('15 KỶ RA 15 ĐỊA THẾ — không hai kỷ nào trùng khít', () => {
+  // ⚠️ BÀI NÀY TỪNG TÊN LÀ "HAI KỶ KHÔ ĐỌC RA LÀ MỘT" VÀ TỪNG KHAI `[[1, 5]]`. Nó ra đời để ĐẾM
+  // TƯỜNG MINH một sự thật khó chịu: kỷ 1 (Göbekli Tepe) và kỷ 5 (Burg Eltz) khai hệt nhau trên mọi
+  // trường hình học, và tôi cố ý KHÔNG bịa thêm một trục để né. Rồi Đàm bác dòng kỷ 5 vì một lý do
+  // hoàn toàn khác — lịch sử, không phải phép đo — và cặp trùng biến mất **bằng một sự thật** chứ
+  // không bằng một trục bịa thêm:
+  //     kỷ 1 — sống núi đá vôi khô, không nước, chọn vì TẦM NHÌN
+  //     kỷ 5 — mỏm đá trong khúc uốn suối ôm ba mặt, chọn vì THẾ THỦ
+  // Đây chính là thứ mà một con số chép cứng trong bài test mua được: nó không sửa được bảng, nhưng
+  // nó bắt mọi lần bảng đổi phải đi qua mắt người, và lần này mắt người đã ra một quyết định tốt hơn
+  // mọi phương án kỹ thuật tôi nghĩ ra.
   // THỬ-CHO-ĐỎ: đổi kỷ 3 sang `side:'nam', width:1.2` (thành river|nam|flat|2|1.2, hệt kỷ 6) → đỏ
-  // với cặp `[3, 6]` thừa trong danh sách.
+  // với cặp `[3, 6]` trong danh sách.
   const vanTay = (st) => [st.water, st.side, st.ground, st.reach, String(st.width)].join('|');
   const trung = [];
   for (let i = 0; i < ERAS.length; i += 1) {
@@ -252,8 +316,15 @@ test('HAI KỶ KHÔ ĐỌC RA LÀ MỘT — đếm tường minh, KHÔNG giấu 
       }
     }
   }
-  assert.deepEqual(trung, [[1, 5]],
-    'danh sách cặp kỷ trùng khít địa thế đã đổi — xem lại bằng mắt, đừng nới');
+  assert.deepEqual(trung, [],
+    'có hai kỷ trùng khít địa thế — xem lại bằng mắt, và ĐỪNG nới phép đo để nó hết đỏ');
+
+  // ⚠️ ĐỐI CHỨNG BẮT BUỘC: một `deepEqual(…, [])` là loại assert dễ xanh oan nhất trong dự án —
+  // `vanTay` trả về hằng số, hoặc vòng lặp chạy rỗng, thì nó vẫn xanh vĩnh viễn. Bơm hai dòng trùng
+  // vào rồi đòi phép đo phải bắt được.
+  const doiChung = [{ ...getSetting(12) }, { ...getSetting(12) }, { ...getSetting(3) }];
+  const kyGia = doiChung.map(vanTay);
+  assert.equal(new Set(kyGia).size, 2, 'phép lấy vân tay không phân biệt được hai dòng khác nhau');
 });
 
 test('VALIDATOR TỪ CHỐI THẲNG — bẻ TỪNG trường một, không bẻ gộp', () => {

@@ -16,15 +16,17 @@
  *
  * ── BA LUẬT ĐÀM RA CHO BẢNG NÀY ─────────────────────────────────────────────────────────────
  * (1) ⚠️ **"KHÔNG CÓ NƯỚC" LÀ MỘT CÂU TRẢ LỜI ĐÚNG**, và nó phải được KHAI TƯỜNG MINH, có test
- *     đếm được — không rơi về mặc định. Hai kỷ khai `water: 'none'` (1 và 5) và mỗi kỷ có một lý
- *     do riêng viết ra bên trên nó. Cùng tinh thần với `feature: 'none'` ở bảng tầng trệt: *"kỷ nào
- *     KHÔNG có thì khai rõ là không có, đừng bịa cho đủ mâm."*
+ *     đếm được — không rơi về mặc định. **Đúng MỘT kỷ** khai `water: 'none'` (kỷ 1), và lý do
+ *     riêng của nó viết ra bên trên dòng ấy. Cùng tinh thần với `feature: 'none'` ở bảng tầng trệt:
+ *     *"kỷ nào KHÔNG có thì khai rõ là không có, đừng bịa cho đủ mâm."*
+ *     ⚠️ Kỷ 5 TỪNG khai `none` và Đàm bác ngày 2026-08-19: nước chắn ba mặt chính là câu trả lời
+ *     cho *"vì sao lâu đài nằm ở đó"*, nên bỏ nó đi là bỏ mất câu trả lời. Xem chú thích dòng kỷ 5.
  * (2) ⚠️ **ĐỪNG GÁN BIỂN CHO MỘT NỀN VĂN MINH SÔNG CHỈ VÌ BIỂN ĐẸP HƠN.** Ai Cập và Lưỡng Hà là
- *     nền văn minh SÔNG — cả hai khai `river`. Đo được: 4/15 kỷ có biển, tức **dưới một phần ba**,
- *     xa ngưỡng "quá nửa" mà Đàm cấm. Kỷ nào cũng ven biển thì biển thôi mang thông tin, và ta mất
- *     đúng thứ vừa xây được suốt mười phase — bản sắc 15 kỷ.
+ *     nền văn minh SÔNG — cả hai khai `river`. Đo được: **3/15** kỷ có biển, tức dưới một phần
+ *     năm, xa ngưỡng "quá nửa" mà Đàm cấm. Kỷ nào cũng ven biển thì biển thôi mang thông tin, và ta
+ *     mất đúng thứ vừa xây được suốt mười phase — bản sắc 15 kỷ.
  * (3) ⚠️ **HƯỚNG BỜ NƯỚC PHẢI KHÁC NHAU**, nếu không 15 kỷ sẽ ra cùng một bố cục lệch về một phía.
- *     13 kỷ có nước chia ra: bắc 3 · nam 4 · đông 3 · tây 3. Mỗi hướng đều là một sự thật địa lý
+ *     14 kỷ có nước chia ra: bắc 3 · nam 4 · đông 4 · tây 3. Mỗi hướng đều là một sự thật địa lý
  *     kiểm được, KHÔNG phải rải cho đều: sông Vị chảy phía BẮC Trường An (kinh đô đặt bờ nam), sông
  *     Arno chảy phía NAM Duomo, đình làng Bắc Bộ quay hướng NAM nên ao làng nằm phía nam, sông
  *     Volga chạy phía ĐÔNG Stalingrad (quân tiếp viện vượt sông từ bờ đông).
@@ -38,20 +40,36 @@
  * hướng ra biển độc lập với nhau (Lisboa và Porto cùng cây cùng khí hậu nhưng quay ra nước theo hai
  * hướng khác nhau). Hai chiều là cách hai bảng trôi khỏi nhau.
  *
- * ── NĂM KIỂU NƯỚC, VÀ VÌ SAO KHÔNG PHẢI BA ──────────────────────────────────────────────────
+ * ── SÁU KIỂU NƯỚC, VÀ VÌ SAO KHÔNG PHẢI BA ──────────────────────────────────────────────────
  * Đàm nêu ba (*"biển / sông / KHÔNG nước"*) và nhắc thêm *"cửa sông"* khi nói về Lisboa. Bảng này
- * dùng NĂM, vì mỗi kiểu là một HÌNH DẠNG khác hẳn chứ không phải một sắc thái chữ nghĩa:
+ * dùng SÁU, vì mỗi kiểu là một HÌNH DẠNG khác hẳn chứ không phải một sắc thái chữ nghĩa:
  *   `none`    — khô. Không có mặt nước nào trong khung.
- *   `river`   — dải hẹp, bờ tự nhiên gấp khúc.
+ *   `river`   — dải hẹp cắt ngang MỘT phía, bờ tự nhiên gấp khúc.
+ *   `meander` — khúc uốn ÔM QUANH BA phía, chỉ chừa một dải yên ngựa hẹp làm lối vào.
  *   `canal`   — dải hẹp nhưng THẲNG, bờ kè đá, nhà máy áp sát mép nước. Người đào, không phải trời.
- *   `estuary` — cửa sông: một cái phễu rộng mở dần ra.
- *   `sea`     — mặt nước trải tới chân trời, không có bờ bên kia.
- * ⚠️ Kiểu thứ tư và thứ năm KHÁC NHAU ở chỗ **có bờ bên kia hay không** — đó là thứ mắt đọc ra ngay
- * và là thứ quyết định hình học ở Bước B, nên chúng không được gộp.
+ *   `estuary` — cửa sông chịu triều: rộng, nước mặn, nhưng **VẪN CÒN bờ bên kia nhìn thấy được**.
+ *   `sea`     — mặt nước trải tới chân trời, KHÔNG có bờ bên kia.
+ * ⚠️ `estuary` và `sea` KHÁC NHAU ở đúng một chuyện — **có bờ bên kia hay không**. Đó là thứ mắt
+ * đọc ra ngay và là thứ quyết định hình học ở Bước B, nên chúng không được gộp. (Định nghĩa cũ ghi
+ * `estuary` là *"một cái phễu rộng mở dần ra"* — một mô tả HÌNH DÁNG MẶT BẰNG, mà hình dáng ấy thì
+ * tầng vẽ không dựng được ở cỡ này và cũng không phải thứ phân biệt hai kiểu. Đã sửa cho đúng thứ
+ * nó thật sự gánh.)
+ *
+ * ⚠️ **VÌ SAO PHẢI THÊM `meander` CHỨ KHÔNG ÉP KỶ 5 VÀO `river`** (Đàm ra lệnh sửa dòng kỷ 5, và
+ * ra kèm điều kiện *"đừng ép nó vào `river` nếu hình dạng khác thật"*). Suối Elzbach uốn quanh mỏm
+ * đá Burg Eltz ở BA mặt. Về TOPO đó là một hình khác hẳn `river`: `river` chia khung hình làm hai
+ * nửa (bên này bờ, bên kia bờ), còn `meander` thì nước BAO LẤY đất, và cái nó tạo ra là **một lối
+ * vào duy nhất** — đúng thứ khiến người ta xây lâu đài ở đó. Vẽ nó bằng một dải thẳng một bên là
+ * vẽ ra một sự thật khác: một lâu đài cạnh một con suối, thay vì một lâu đài trong một khúc uốn.
+ * ⚠️ `side` GIỮ NGUYÊN MỘT NGHĨA cho mọi kiểu — *"hướng có mặt nước"*. Với `meander` thì nước phủ
+ * `side` CỘNG hai hướng kề nó, và hướng ĐỐI DIỆN là dải yên ngựa khô. Đó là một luật về HÌNH suy ra
+ * từ một hướng, KHÔNG phải trường `side` gánh việc thứ hai — nếu để `side` nghĩa là "hướng lối vào"
+ * cho riêng kiểu này thì đó mới đúng cái bẫy "một trường gánh hai việc" đã cắn năm lần.
  *
  * ── TRỤC THỨ HAI: `ground` — THÀNH PHỐ NGỒI THẾ NÀO SO VỚI MẶT NƯỚC ─────────────────────────
  * Chỉ mỗi "có sông" thì 7 kỷ sông sẽ ra 7 bức ảnh giống nhau. Trục này mới là thứ tách chúng:
- *   `ridge`     — trên sống núi / mỏm đá, xa nước (kỷ 1, 5)
+ *   `ridge`     — trên sống núi / mỏm đá, CAO hơn hẳn mặt nước (kỷ 1 khô hẳn; kỷ 5 là mỏm đá
+ *                 nhô lên giữa khúc uốn — cùng một thế đất, hai lý do khác nhau)
  *   `flat`      — ngang mặt nước, trên đồng bồi (kỷ 2, 3, 6, 15)
  *   `bank`      — trên một bờ đê thấp hơn mái nhà (kỷ 4, 7, 9)
  *   `bluff`     — vách dốc đứng xuống nước (kỷ 8, 12)
@@ -62,8 +80,8 @@
 
 import { normalizeEraKey, getEraStyle } from './eraStyle.js';
 
-/** Năm kiểu mặt nước. Xem khối chú thích đầu file để biết vì sao là năm chứ không phải ba. */
-export const WATER_KINDS = ['none', 'river', 'canal', 'estuary', 'sea'];
+/** Sáu kiểu mặt nước. Xem khối chú thích đầu file để biết vì sao là sáu chứ không phải ba. */
+export const WATER_KINDS = ['none', 'river', 'meander', 'canal', 'estuary', 'sea'];
 
 /** Bốn hướng, cộng `none` cho kỷ khô. Hướng là của MẶT NƯỚC so với tâm thành phố. */
 export const WATER_SIDES = ['none', 'bac', 'nam', 'dong', 'tay'];
@@ -76,25 +94,29 @@ export const GROUND_FORMS = ['ridge', 'flat', 'bank', 'bluff', 'reclaimed'];
  *
  * *"Đừng cho quá nửa số kỷ có biển. Kỷ nào cũng ven biển thì biển thôi mang thông tin, và ta mất
  * đúng thứ vừa xây được — bản sắc 15 kỷ."* Trần đặt ở 7 (đúng "quá nửa" của 15 là từ 8 trở lên).
- * Bảng hiện dùng 4, tức còn cách trần 3 — khoảng ấy CỐ Ý để dành: nếu một phiên sau đổi một kỷ
- * sang biển vì có lý do lịch sử thật thì vẫn đi lọt, nhưng đổi bốn kỷ thì đỏ.
+ * Bảng hiện dùng 3, tức còn cách trần 4 — khoảng ấy CỐ Ý để dành: nếu một phiên sau đổi một kỷ
+ * sang biển vì có lý do lịch sử thật thì vẫn đi lọt, nhưng đổi năm kỷ thì đỏ.
  */
 export const MAX_SEA_ERAS = 7;
 
 /**
- * ⚠️ TRẦN CHO SỐ KỶ DỒN VỀ CÙNG MỘT HƯỚNG — luật (3) của Đàm viết thành số.
+ * ⚠️ ĐỘ LỆCH TỐI ĐA GIỮA HƯỚNG ĐÔNG NHẤT VÀ HƯỚNG THƯA NHẤT — luật (3) của Đàm, viết thành QUAN HỆ.
  *
- * *"Hướng bờ nước phải khác nhau giữa các kỷ có nước"* không thể có nghĩa "13 kỷ ra 13 hướng" —
- * chỉ có bốn hướng. Nghĩa dùng được là thứ Đàm sợ: *"15 kỷ sẽ ra cùng một bố cục lệch về một
- * phía"*. Trần đặt theo ĐÚNG cách trần biển đặt: **dưới một nửa** số kỷ có nước (13 kỷ ⇒ quá nửa
- * là 7 trở lên ⇒ trần 6), chứ KHÔNG phải "giá trị đo hôm nay cộng một chút".
+ * ⚠️ BẢN ĐẦU VIẾT SAI HÌNH DẠNG: `MAX_ERAS_PER_SIDE = 6`, một MỨC TUYỆT ĐỐI. Đàm bác đúng chỗ
+ * đau — *"luật thật không phải 'không hướng nào quá 6' mà là 'không hướng nào ÁP ĐẢO'"* — và chỉ
+ * thẳng ra đó là bẫy Phase 7D (mặt đường có lời hứa *"nhạt hơn đất"*, một quan hệ, mà được viết
+ * thành một hằng số; nhiều tháng sau mặt đất bị chỉnh vì một lý do khác và con đường thành tàng
+ * hình trong im lặng). Một mức tuyệt đối ở đây có ĐÚNG hai cách hỏng:
+ *   · **quá rộng** — bảng 6·3·2·2 có tổng 13, không hướng nào chạm 6, mà nó dồn rõ rệt về một phía;
+ *   · **trôi theo số kỷ** — thêm một kỷ có nước là con số 6 tự nhiên hết nghĩa, mà nó không tự đỏ.
+ * Hiệu giữa nhiều nhất và ít nhất KHÔNG có cả hai bệnh: nó bắt được 6·3·2·2 (hiệu 4), và nó không
+ * cần biết có bao nhiêu kỷ.
  *
- * ⚠️ Và phải nói thẳng phần không được bảo vệ (bài học phễu Phase 9A): hôm nay hướng đông nhất là
- * `nam` với 4 kỷ, tức còn **2 chỗ trống** dưới trần. Hai chỗ ấy CỐ Ý để dành cho một phiên sau đổi
- * một, hai kỷ vì lý do địa lý thật. Thứ siết chặt hơn nhiều là bài "cả bốn hướng phải còn sống" ở
- * `settingStyle.test.js` — nó chặn ngay ca hỏng dễ xảy ra nhất, là một hướng chết hẳn.
+ * Vì sao 2 chứ không phải 1: bốn hướng chia 14 kỷ thì không thể đều tuyệt đối (14 = 4×3 + 2), nên
+ * hiệu 2 là mức chặt nhất mà một bảng CÂN vẫn đi lọt. Hôm nay bảng ra **bắc 3 · nam 4 · đông 4 ·
+ * tây 3**, hiệu **1** — đạt thoải mái, và còn đúng một bậc dự phòng.
  */
-export const MAX_ERAS_PER_SIDE = 6;
+export const MAX_SIDE_SPREAD = 2;
 
 /**
  * 15 dòng. Mỗi dòng buộc vào `country` mà `eraStyle.js` khai — **CÓ TEST BẮT**, để hai bảng không
@@ -186,22 +208,30 @@ export const SETTING_STYLES = {
       + 'chồng là kiến trúc của một trung tâm, không phải của một bến cảng.',
   },
 
-  // ⚠️ KỶ 5 — "KHÔNG CÓ NƯỚC" THỨ HAI, VÀ LÝ DO KHÁC HẲN KỶ 1. Burg Eltz đứng trên một mỏm đá cao
-  // 70 mét giữa rừng Eifel; thứ chọn chỗ này là ĐỊA HÌNH THỦ THẾ — mỏm đá dốc ba mặt, chỉ một lối
-  // lên. Suối Elzbach có chảy vòng dưới chân, nhưng ở cỡ một khung hình thành phố thì một con suối
-  // rộng vài mét KHÔNG đọc ra được (dưới ngưỡng mắt, đúng nghĩa đen). Khai `river` cho nó là khai
-  // một thứ người xem sẽ không bao giờ thấy — tức nói dối bằng dữ liệu.
+  // ⚠️ KỶ 5 — ĐÃ SỬA 2026-08-19 THEO LỆNH ĐÀM: TỪ "KHÔNG NƯỚC" SANG KHÚC UỐN ÔM QUANH.
+  // Bản đầu khai `none` với lý lẽ *"suối Elzbach hẹp quá, ở cỡ một khung hình thành phố thì không
+  // đọc ra được"*. Lý lẽ ấy đúng về BỀ RỘNG và sai về CÂU HỎI. Bảng này hỏi *"nằm ở đâu và VÌ
+  // SAO"*, mà câu trả lời của Burg Eltz có nước nằm ngay trong nó: suối uốn quanh mỏm đá 70 mét ở
+  // BA mặt, nên chỉ còn một dải yên ngựa hẹp phải giữ. Nước chắn ba phía CHÍNH LÀ lý do lâu đài
+  // đứng ở đó — bỏ nó đi là bỏ mất câu trả lời rồi giữ lại mỗi câu hỏi.
+  //
+  // ⚠️ VÀ ĐÂY LÀ CHỖ DUY NHẤT TRONG BẢNG TÔI KHÔNG KIỂM ĐƯỢC TỚI CHUẨN CHUNG — NÓI THẲNG RA.
+  // Việc suối ôm ba mặt và chừa một dải yên ngựa là sự thật kiểm được, ai tới cũng thấy. Nhưng
+  // dải yên ngựa ấy quay về hướng ĐỊA BÀN nào thì tôi không kiểm được tới mức mà mọi dòng khác
+  // trong bảng này được kiểm (sông Vị phía bắc Trường An, Arno phía nam Duomo…). Nên `side: 'dong'`
+  // ở đây là hướng khúc uốn ôm sâu nhất, và lối vào khô rơi về phía tây — một lựa chọn, không phải
+  // một trích dẫn. Ghi ra để phiên sau đừng đọc nó như một sự thật đã tra.
   5: {
     country: 'Đức',
-    city: 'Burg Eltz — mỏm đá trong rừng Eifel',
-    water: 'none',
-    side: 'none',
+    city: 'Burg Eltz — mỏm đá trong khúc uốn suối Elzbach, rừng Eifel',
+    water: 'meander',
+    side: 'dong',
     ground: 'ridge',
-    reach: 0,
-    width: null,
-    note: 'Lâu đài đá Burg Eltz chọn một mỏm đá dốc ba mặt giữa rừng Eifel: thứ giữ nó là ĐỊA HÌNH, '
-      + 'không phải nước. Suối Elzbach vòng dưới chân nhưng hẹp tới mức không đọc ra ở cỡ một khung '
-      + 'hình thành phố.',
+    reach: 1,
+    width: 0.5,
+    note: 'Lâu đài đá Burg Eltz đứng trên mỏm đá 70 mét mà suối Elzbach uốn quanh ba mặt, chỉ chừa '
+      + 'một dải yên ngựa hẹp làm lối vào. Nước chắn ba phía cộng vách dốc chính là thứ giữ nó — '
+      + 'giữa rừng Eifel, không phải giữa một thung lũng mở.',
   },
 
   // KỶ 6 — AO LÀNG, VÀ HƯỚNG NAM LÀ MỘT LUẬT CHỨ KHÔNG PHẢI MỘT LỰA CHỌN. Làng Bắc Bộ nằm trên
@@ -250,8 +280,8 @@ export const SETTING_STYLES = {
     water: 'estuary',
     side: 'nam',
     ground: 'bluff',
-    reach: 2,
-    width: 7,
+    reach: 1,
+    width: 6,
     note: 'Bến cảng Lisboa nằm bờ bắc cửa sông Tagus, chỗ sông phình thành Mar da Palha: rộng hàng '
       + 'cây số mà vẫn kín gió, bến đậu tự nhiên tốt nhất cho hạm đội đi biển xa. Đoàn thuyền thời '
       + 'Khám Phá nhổ neo từ Belém. Phố leo bảy quả đồi dốc đứng ngay sát mép nước.',
@@ -295,21 +325,32 @@ export const SETTING_STYLES = {
       + 'vào.',
   },
 
-  // KỶ 11 — BẾN TÀU SÔNG HUDSON. Manhattan là một hòn đảo giữa hai dòng nước, và toàn bộ của cải
-  // thời Mạ Vàng đi qua mép TÂY của nó: dãy bến tàu Hudson nơi tàu vượt Đại Tây Dương cập bờ, nối
-  // thẳng vào kênh Erie để hàng đi tiếp vào lục địa. Mép nước là kè gỗ và đá do người đóng, kéo dài
+  // ⚠️ KỶ 11 — ĐÃ SỬA 2026-08-19: `sea` → `estuary`, GIỮ NGUYÊN hình ảnh bến tàu bờ tây.
+  // Đàm chỉ ra `kind` và `note` chỏi nhau, và anh đúng. Hudson ở đoạn Manhattan là một cửa sông
+  // CHỊU TRIỀU (nước mặn, thuỷ triều lên tới tận Troy, New York — dân địa lý gọi là "dòng sông
+  // chết đuối"), và **bờ New Jersey nhìn thấy rõ ở bên kia** — mà "có bờ bên kia hay không" chính
+  // là thứ duy nhất phân biệt `estuary` với `sea` trong bảng này.
+  //
+  // ⚠️ ĐÃ CÂN NHẮC PHƯƠNG ÁN KIA (giữ `sea`, đổi `note` sang vịnh cảng phía nam — Upper Bay, tượng
+  // Nữ Thần, tàu vượt Đại Tây Dương qua cửa Narrows) VÀ BÁC, vì HAI lý do độc lập: (a) của cải
+  // thời Mạ Vàng đi qua DÃY BẾN TÀU bờ tây, không qua mặt vịnh — đổi sang vịnh là đổi mất chính
+  // cái hình ảnh mang tính kỷ này; (b) vịnh cảng nằm phía NAM, mà đổi kỷ 11 sang `nam` thì bảng
+  // thành bắc 3 · nam 5 · đông 4 · tây 2, hiệu 3 — VƯỢT luật cân hướng của Q3. Một dòng sửa cho
+  // khớp mà làm hỏng một ràng buộc khác thì chưa phải bản sửa.
+  //
+  // Manhattan là một hòn đảo giữa hai dòng nước; mép nước là kè gỗ và đá do người đóng, kéo dài
   // thêm ra sông từng thập kỷ ⇒ `reclaimed`.
   11: {
     country: 'Mỹ',
     city: 'New York — Manhattan, dãy bến tàu bờ tây sông Hudson',
-    water: 'sea',
+    water: 'estuary',
     side: 'tay',
     ground: 'reclaimed',
     reach: 2,
-    width: null,
+    width: 4,
     note: 'New York thời Mạ Vàng sống bằng dãy bến tàu bờ tây sông Hudson: tàu vượt Đại Tây Dương '
       + 'cập ở đó rồi hàng nối thẳng vào kênh Erie đi tiếp vào lục địa. Manhattan là một hòn đảo, '
-      + 'và mép nước là kè gỗ đá do người đóng, lấn thêm ra từng thập kỷ.',
+      + 'mép nước là kè gỗ đá do người đóng, lấn thêm ra từng thập kỷ; bờ New Jersey nhìn rõ bên kia.',
   },
 
   // KỶ 12 — SÔNG VOLGA, VÀ ĐÓ LÀ TOÀN BỘ TRẬN ĐÁNH. Stalingrad là một dải phố dài hơn 20 km bám bờ

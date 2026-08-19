@@ -20,13 +20,25 @@ luôn nằm cạnh một thứ quyết định vì sao nó ở đúng chỗ ấy
 
 **Phạm vi.** Chỉ DỮ LIỆU, chưa một tam giác nào. Thêm `src/engine/city3d/settingStyle.js` (15 dòng:
 `water` · `side` · `ground` · `reach` · `width` · `note`, mỗi dòng buộc vào `country` của
-`eraStyle.js`) và `settingStyle.test.js` (12 bài, cả 12 đã thử-cho-đỏ đúng chỗ đã nêu trước). Gộp
-hai cờ đo `splitCityMesh`/`splitGroundMesh` thành một tham số `tachDeDo`, và thêm trần hộp bao cho
-khối `city` (20,12 — giá trị đo hôm nay 19,7239 cộng 2%, có đối chứng chống phễu).
+`eraStyle.js`) và `settingStyle.test.js` (**13 bài**, cả 13 đã thử-cho-đỏ đúng chỗ đã nêu trước).
+Gộp hai cờ đo `splitCityMesh`/`splitGroundMesh` thành một tham số `tachDeDo`, và thêm trần hộp bao
+cho khối `city` (20,12 — giá trị đo hôm nay 19,7239 cộng 2%, có đối chứng chống phễu).
+
+**Đàm sửa gì sau khi đọc bảng.** Ba thay đổi, mỗi cái sửa một loại sai khác nhau. (1) **Kỷ 5 phải
+CÓ NƯỚC** — suối Elzbach uốn quanh mỏm đá Burg Eltz ba mặt, và đó chính là lý do lâu đài nằm ở đó;
+hình ấy không ép được vào `river` nên bảng có kiểu thứ sáu **`meander`** (nước BAO LẤY đất, chừa
+đúng một lối vào). Kéo theo kỷ 8 đổi `reach 2→1`, `width 7→6`. (2) **Kỷ 11 đổi `sea` → `estuary`**
+— Hudson ở Manhattan là cửa sông chịu triều, và `kind` phải khớp `note`. (3) **Luật hướng bờ nước
+viết lại thành QUAN HỆ**: `MAX_ERAS_PER_SIDE = 6` (mức tuyệt đối, bẫy Phase 7D) → `MAX_SIDE_SPREAD
+= 2` (hiệu giữa hướng đông nhất và thưa nhất). Cộng một phép gác mới: nước phải **nằm gọn trong địa
+hình** (`reach + width ≤ OUTSKIRT_REACH`, `import` thẳng hằng số ấy). Đếm cuối: khô 1 · river 7 ·
+meander 1 · canal 1 · estuary 2 · sea 3; hướng bắc 3 · nam 4 · đông 4 · tây 3.
 
 **Ảnh hưởng.** Chưa file nào đọc bảng địa thế; Bước B sẽ nối qua đúng một cửa `hasWater(era)`. Bước
-B chỉ dựng hình cho 3 kỷ rồi dừng để Đàm xem, Bước C mới trải 12 kỷ còn lại. Không đụng lưới 12×12,
-không đụng vị trí nhà, không đụng `computeCityLayout`.
+B chỉ dựng hình cho **3 kỷ** — biển kỷ 14 (Singapore) · sông kỷ 12 (Nga, dải rộng nhất bảng) · khô
+kỷ 1 (Thổ Nhĩ Kỳ, làm chứng rằng kỷ không nước giữ nguyên mốc lệnh vẽ) — rồi dừng để Đàm xem, Bước
+C mới trải 12 kỷ còn lại. Không đụng lưới 12×12, không đụng vị trí nhà, không đụng
+`computeCityLayout`.
 
 **Tương thích.** Không có migration. Không đổi dữ liệu người dùng, không đổi API.
 

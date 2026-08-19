@@ -662,12 +662,21 @@
 - ⚠️ **CẦN ĐÀM THỬ TAY** (không test được trên dev): (a) câu nhắc-sau-phiên hiện sau khi xong PHIÊN THẬT; (b) bài "AI phân tích tổng thể" giờ chạy pro — xem có chậm/khác chất lượng không; (c) dòng "Ghi nhớ" lời khuyên hiện sau ≥3 ngày; (d) thông báo chuỗi-sắp-đứt: **từ nay** (11/7) chiều nào quên làm sẽ nhận push (cần đã bật push iPhone) — đây là lần đầu tiên thực sự có cơ hội chạy thật.
 
 ## 🔜 Sẽ làm tiếp (ưu tiên từ trên xuống)
-- ⚠️ **VIỆC 2 Bước B — ĐANG CHỜ ĐÀM DUYỆT BẢNG ĐỊA THẾ.** Bảng 15 dòng đã xong
-  (`settingStyle.js`, ADR-039) và đã trình. Bước B chỉ được bắt đầu SAU khi Đàm gật: dựng hình cho
-  **3 kỷ** (một biển rõ · một sông · một khô), chụp ảnh trước/sau ở khung mặc định, đo lại ba vùng,
-  rồi **DỪNG hỏi tiếp**. Bước C mới trải 12 kỷ còn lại. Ràng buộc Đàm ra: nước tốn **tối đa +1 lệnh
-  vẽ và CHỈ ở kỷ có nước** (kỷ khô không được đổi một đơn vị nào) · **CẤM** nguồn sáng mới, texture
-  mới, shader nước động — nước phẳng, vật liệu tĩnh; hình học thì thoải mái.
+- ⚠️ **VIỆC 2 Bước B — ĐANG LÀM. Bảng địa thế đã được Đàm DUYỆT (kèm ba lệnh sửa, đã làm xong).**
+  Ba sửa ấy: kỷ 5 phải CÓ NƯỚC (thêm kiểu thứ sáu `meander` — khúc uốn ôm ba mặt) · kỷ 11 đổi
+  `sea` → `estuary` cho khớp `note` · luật hướng bờ nước viết lại thành QUAN HỆ
+  (`MAX_SIDE_SPREAD = 2` thay cho mức tuyệt đối 6), cộng phép gác Q2 "nước phải nằm gọn trong địa
+  hình". Bước B: dựng hình cho **ĐÚNG 3 kỷ** — **biển kỷ 14** (Singapore, đảo quốc) · **sông kỷ 12**
+  (Nga, `width 3,4`, dải rộng nhất bảng) · **khô kỷ 1** (Thổ Nhĩ Kỳ — làm chứng cho ràng buộc cứng:
+  kỷ không nước giữ nguyên mốc lệnh vẽ, không đổi một đơn vị) — chụp ảnh trước/sau ở khung mặc định,
+  đo chỗ giáp bờ, rồi **DỪNG hỏi tiếp**. Bước C mới trải 12 kỷ còn lại. Ràng buộc Đàm ra: nước tốn
+  **tối đa +1 lệnh vẽ và CHỈ ở kỷ có nước**, cập nhật `MOC_LENH_VE` theo TỪNG KỶ, **KHÔNG nâng trần
+  chung** · **CẤM** nguồn sáng mới, texture mới, shader nước động (sóng/gợn/phản chiếu động) — nước
+  PHẲNG, vật liệu TĨNH; hình học thì thoải mái · **cấm đụng** lưới 12×12, `deriveDwellings`,
+  `computeCityLayout` · quan hệ `settingStyle → outskirts` MỘT CHIỀU.
+  ⚠️ **Cổng không đo được bằng test** (lời Đàm): *"kỷ có biển phải đọc ra là **thành phố cảng**,
+  không phải thành phố cạnh một vũng xanh. Ảnh không đạt câu đó thì phase chưa xong, dù mọi con số
+  đều xanh."*
 
 > ⚠️ **CHƯƠNG TRÌNH ĐANG CHẠY (2026-08-18)** — Đàm đã duyệt hướng mỹ thuật Bước 1 và ra một
 > **chương trình làm việc liên tục** cho giai đoạn "tiêu ngân sách" hiệu năng (dư 3,2 lần trên M3),
@@ -730,14 +739,14 @@ dòng chữ rẻ hơn sửa một dòng chữ đã có hình dựng theo.
 
 **Đã làm.**
 - `src/engine/city3d/settingStyle.js` — 15 dòng: `country` · `city` · `water` · `side` · `ground` ·
-  `reach` · `width` · `note`. Năm kiểu nước (`none`/`river`/`canal`/`estuary`/`sea`) chứ không phải
-  ba: kênh đào THẲNG có bờ kè đá, cửa sông là một cái phễu VẪN CÒN bờ bên kia — hai hình dạng khác
-  hẳn nhau. Trục thứ hai `ground` (sống núi · ngang mặt nước · bờ đê · vách dốc · đất lấn) là thứ
-  tách 7 kỷ cùng khai `river` ra khỏi nhau.
-- `settingStyle.test.js` — **12 bài, cả 12 đã thử-cho-đỏ đúng chỗ đã nêu TRƯỚC** trong chú thích.
+  `reach` · `width` · `note`. **Sáu** kiểu nước (`none`/`river`/`meander`/`canal`/`estuary`/`sea`)
+  chứ không phải ba: kênh đào THẲNG có bờ kè đá, cửa sông VẪN CÒN bờ bên kia, khúc uốn thì BAO LẤY
+  đất — những hình dạng khác hẳn nhau. Trục thứ hai `ground` (sống núi · ngang mặt nước · bờ đê ·
+  vách dốc · đất lấn) là thứ tách 7 kỷ cùng khai `river` ra khỏi nhau.
+- `settingStyle.test.js` — **13 bài, cả 13 đã thử-cho-đỏ đúng chỗ đã nêu TRƯỚC** trong chú thích.
 - Ba luật của Đàm thành assert đếm được, mỗi luật kèm **đối chứng bơm bảng hỏng**: kỷ khô
-  `deepEqual([1, 5])` · `MAX_SEA_ERAS = 7` (hiện 4) · bốn hướng phải CÒN SỐNG và
-  `MAX_ERAS_PER_SIDE = 6` (hiện đông nhất là `nam` với 4).
+  `deepEqual([1])` · `MAX_SEA_ERAS = 7` (hiện 3) · bốn hướng phải CÒN SỐNG và
+  `MAX_SIDE_SPREAD = 2` (hiện bắc 3 · nam 4 · đông 4 · tây 3, hiệu 1).
 - Gộp hai cờ đo `splitCityMesh`/`splitGroundMesh` thành một tham số `tachDeDo` (danh sách tên nhóm),
   theo lệnh Đàm *"gom cả ba cờ đo NGAY trong commit tới"*. Bản gộp còn KHÔN HƠN chứ không chỉ gọn
   hơn: bản cũ dịch `splitCityMesh: !!MASK` nên một mặt nạ chỉ hỏi mặt đất vẫn cắt cả khối thành phố.
@@ -749,9 +758,9 @@ dòng chữ rẻ hơn sửa một dòng chữ đã có hình dựng theo.
    TCN; kỷ 1 khai cự thạch Göbekli Tepe + mái lều da thú, tức đồ đá mới tiền-gốm ~9600 TCN). Đàm đã
    nói rõ đó là gợi ý chứ không phải mệnh lệnh, và chính anh ra luật *"đừng gán biển cho một nơi
    không có biển vì biển đẹp hơn"*.
-2. **Kỷ 1 và kỷ 5 trùng khít nhau** trên mọi trường hình học (`none`/`ridge`/`reach 0`). Đó là sự
-   thật — hai sống đá khô — nên tôi ĐẾM ca ấy ra (`assert.deepEqual(trung, [[1, 5]])`) thay vì bịa
-   một trục để né.
+2. ~~**Kỷ 1 và kỷ 5 trùng khít nhau** trên mọi trường hình học~~ — ⚠️ **ĐÀM BÁC, và anh đúng.**
+   Xem mục "Đàm sửa gì" ngay dưới. Cặp trùng ấy biến mất, và nó biến mất **bằng một sự thật lịch sử
+   chứ không bằng một trục bịa thêm** — đúng như anh nói trước khi tôi kịp đo lại.
 
 **Hai lỗi bắt được ngay lần chạy đầu, và cả hai đều đáng ghi.**
 - ⚠️ **`isValidSetting` viết `country.length < 2`** như một cách lười để nói "không rỗng" — và nó
@@ -770,8 +779,44 @@ chúng ngay sau khi sửa script**, đúng bài học đã ghi trong `CLAUDE.md`
 dấu nháy ngược rơi vào vị trí khác có thể để file VẪN parse được, và lúc ấy chỉ bài test đọc mã
 nguồn mới bắt.)
 
-**Chưa làm, và cố ý chưa làm.** Bảng chưa dựng một tam giác nào. Bước B chỉ làm hình cho **3 kỷ**
-(một biển rõ · một sông · một khô) rồi dừng để Đàm xem; Bước C mới trải 12 kỷ còn lại.
+**⚠️ ĐÀM ĐỌC BẢNG RỒI SỬA BA DÒNG — và ba cái sửa ấy thuộc ba loại sai khác nhau.**
+1. **Kỷ 5 phải CÓ NƯỚC — sai về SỰ THẬT.** Tôi khai `water: 'none'` cho Burg Eltz rồi tự khen đó là
+   một dòng trung thực. Đàm: *"Burg Eltz đứng trên mỏm đá ~70 m, suối Elzbach **uốn quanh ba mặt** —
+   đó chính là lý do lâu đài nằm ở đó: nước chắn ba phía, chỉ còn một lối vào phải giữ."* Tức tôi đã
+   bỏ đi **chính câu trả lời cho câu hỏi mà mỗi dòng phải trả lời**. Anh ra kèm điều kiện *"đừng ép
+   nó vào `river` nếu hình dạng khác thật"* ⇒ thêm kiểu thứ sáu **`meander`**: `river` chia khung
+   hình làm hai nửa (bên này bờ, bên kia bờ), còn `meander` thì nước BAO LẤY đất và đẻ ra **một lối
+   vào duy nhất**. Kéo theo kỷ 8 (Lisboa) phải đổi `reach 2→1`, `width 7→6` cho lọt luật Q2 — và
+   reach 1 cũng ĐÚNG HƠN, vì khu Baixa chạy thẳng ra mép nước.
+2. **Kỷ 11 đổi `sea` → `estuary` — sai về KHỚP giữa `kind` và `note`.** Hudson ở Manhattan là cửa
+   sông chịu triều, không phải biển khơi. Đàm cho hai lựa chọn (giữ ảnh bến tàu ⇒ `estuary`, hoặc
+   giữ `sea` ⇒ viết lại `note` thành vịnh cảng) và không bắt buộc đổi. Chọn vế đầu vì **hai lý do
+   độc lập**: của cải thời Gilded Age đi qua **bến tàu** bờ Hudson chứ không qua vịnh; và vịnh nằm
+   phía NAM, đổi sang đó cho ra hiệu hướng **3**, tức vi phạm chính luật vừa siết ở mục 3.
+3. **Luật hướng bờ nước phải là một QUAN HỆ — sai về HÌNH DẠNG.** Tôi viết
+   `MAX_ERAS_PER_SIDE = 6`, một mức tuyệt đối. Đàm chỉ thẳng ra đó là **bẫy Phase 7D** (mặt đường
+   có lời hứa *"nhạt hơn đất"* — một quan hệ — bị viết thành hằng số, rồi chết trong im lặng nhiều
+   tháng sau). Một mức tuyệt đối ở đây hỏng theo ĐÚNG hai cách: **quá rộng** (bảng 6·3·2·2 dồn rõ
+   rệt về một phía mà không hướng nào chạm 6) và **trôi theo số kỷ**. Thay bằng
+   `MAX_SIDE_SPREAD = 2`, kèm đối chứng nhốt đúng bảng 6·3·2·2 và đòi phép kiểm phải TỪ CHỐI nó.
+
+**Và Đàm ra thêm một phép gác mới (Q2) — khoá QUAN HỆ, không khoá con số 8.** *"Kỷ 15 đang `reach 6`
+trên vùng quê rộng 8. Nếu ai đó thu `OUTSKIRT_REACH` xuống 5 thì mặt nước kỷ 15 rơi ra ngoài địa
+hình và **không có gì đỏ lên**."* Bài test nay `import` thẳng `OUTSKIRT_REACH` từ `outskirts.js`.
+⚠️ Công thức lệch nửa bề rộng so với công thức anh viết (`reach + width/2`) và tôi nói thẳng vì sao:
+`reach` là khoảng cách ra tới mép **GẦN**, nên mép XA ở `reach + width`. Ý ĐỊNH giữ nguyên, con số
+**chặt hơn**. Kỷ chật nhất là **kỷ 4 ở 7,6/8** (dư 0,4 ô) và con số 4 ấy được assert luôn.
+⚠️ Phép kiểm sống ở BÀI TEST chứ không ở `isValidSetting`: mã sản phẩm mà `import` `OUTSKIRT_REACH`
+là dựng đúng chiều NGƯỢC của luật một chiều, lại đẻ ra vòng import khi `outskirts.js` gọi `hasWater`.
+
+**Bài học lớn nhất của Bước A.** Dòng kỷ 5 **qua sạch 12 bài test** — hợp lệ, `note` rành mạch,
+`country` khớp, đủ từ khoá — **và vẫn sai sự thật**. Thứ bắt được nó là Đàm ĐỌC. Đúng điều kiện xem
+lại đã tự viết trong ADR-039: *"một dòng địa lý sai thì `note` bên cạnh nó vẫn kể một câu chuyện
+rành mạch cho con số sai ấy — nên bảng này phải được đọc bằng MẮT NGƯỜI, không chỉ bằng test."*
+
+**Chưa làm, và cố ý chưa làm.** Bảng chưa dựng một tam giác nào. Bước B chỉ làm hình cho **3 kỷ** —
+biển kỷ 14 · sông kỷ 12 · khô kỷ **1** (đổi từ kỷ 5, vì kỷ 5 nay có nước) — rồi dừng để Đàm xem;
+Bước C mới trải 12 kỷ còn lại.
 
 ### 2026-08-19 — Đo cái đĩa đất: 21% khung hình là vành đất không phase nội dung nào chạm tới (`TECH_DEBT #53`)
 

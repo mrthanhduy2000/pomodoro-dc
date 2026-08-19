@@ -932,6 +932,43 @@ export function createCityScene({
   // vùng chỉ số mà `addPickTarget` đã bám theo (`placements[index]`).
   placements.push(...plinths);
 
+  // ── Vùng quê: cây cối, bờ bụi, đá tảng NGOÀI lưới thành phố ──────────────
+  /**
+   * ⚠️ ĐÂY LÀ BẢN VÁ CHO THỨ ĐÀM GỌI LÀ *"thành phố xây trên một ô đất nhô ra"* — và ba giả thuyết
+   * đầu (vách đứng ở mép đĩa · màu chỏi ở mép đĩa · vùng gần phẳng lì) đều đã bị PHÉP ĐO bác bỏ,
+   * xem khối chú thích đầu `engine/city3d/outskirts.js`. Thứ mắt đọc ra là cái khay chính là
+   * THÀNH PHỐ: một hình chữ nhật kín đặc nhà và đường, dừng phắt, và ngoài nó không có gì hết.
+   *
+   * ⚠️ CAO ĐỘ HỎI HAI TẤM KHÁC NHAU, VÀ ĐÓ KHÔNG PHẢI "hai công thức cho một luật". Mặt đất thật
+   * sự do HAI tấm lưới dựng nên: tấm thành phố (`terrain.surfaceHeightAt`, toạ độ Ô) phủ tới
+   * `horizon.innerEdge`, ra ngoài đó là tấm chân trời (`horizon.heightAt`, toạ độ THẾ GIỚI). Cây
+   * đứng ở đâu thì phải hỏi tấm đang vẽ chỗ ấy; hỏi nhầm tấm là cây lơ lửng hoặc lún nửa thân, và
+   * **không có gì đỏ lên**. Hai tấm khớp nhau TUYỆT ĐỐI tại chỗ giáp (đo được 0,0000 ở kỷ 1 · 7 ·
+   * 14, và `terrainMesh.test.js` khoá điều đó), nên chọn tấm nào ở đúng biên cũng ra cùng một số.
+   */
+  let soKhoiVungQue = 0;
+  for (const item of cityParts) {
+    if (item.kind !== 'outskirt') continue;
+    soKhoiVungQue += 1;
+    const wild = item.source;
+    const { x, z } = cellToWorld(wild.x, wild.y, gridSize);
+    const trongDiaDat = Math.max(Math.abs(x), Math.abs(z)) <= horizon.innerEdge;
+    placements.push({
+      x, z,
+      y: trongDiaDat ? terrain.surfaceHeightAt(wild.x, wild.y) : horizon.heightAt(x, z),
+      // Xoay tự do: vùng quê mà thẳng hàng theo lưới thì nó chỉ là một cái khay thứ hai.
+      ry: (wild.x * 0.83 + wild.y * 1.37) % (Math.PI * 2),
+      scale: wild.scale,
+      spec: item.spec,
+      // ⚠️ NHÃN TƯỜNG MINH, KHÔNG PHẢI VỊ TRÍ TRONG MẢNG. Bản đầu loại vùng quê khỏi `blockers`
+      // bằng `placements.slice(0, length - soKhoiVungQue)` — đúng kết quả hôm nay, nhưng nó ngầm
+      // đòi vùng quê phải LUÔN được đẩy vào cuối cùng. Ngày nào có ai đẩy thêm một loại khối nữa
+      // sau nó, phép cắt ấy lấy nhầm và camera bắt đầu đâm xuyên nhà — im lặng tuyệt đối.
+      vungQue: true,
+    });
+  }
+
+
   /**
    * VẬT CẢN — hộp bao thế giới của MỌI khối đứng trên mặt đất, để camera cận cảnh biết chỗ nào
    * không được bay vào (`engine/city3d/cityFocus.js`).
@@ -951,10 +988,24 @@ export function createCityScene({
    * chứng thổi cảnh vật cao quá mái để chứng minh phép đếm ấy không mù — nên ngày nó khác 0 thì
    * bài test đỏ, chứ không phải chú thích này lặng lẽ nói dối.
    *
+   * ⚠️ VÙNG QUÊ **KHÔNG** NẰM TRONG DANH SÁCH NÀY, VÀ LÝ DO LÀ MỘT PHÉP ĐO CHỨ KHÔNG PHẢI MỘT SỞ
+   * THÍCH. Bản đầu cho cây cối ngoài lưới vào đây và bài `CAMERA KHÔNG BAO GIỜ CHUI VÀO PHỐ` ĐỎ ở
+   * kỷ 8: đường bay chỉ còn 0,81 đơn vị. Đo tiếp mới thấy thủ phạm không phải cái cây mà là **quả
+   * đồi nó đứng trên** — mặt đất vùng quê kỷ 8 (Lisbon, "thành phố bảy quả đồi") dâng tới **+2,18**
+   * trong khi thành phố ở quanh 0. Nghĩa là camera **xưa nay đã có thể bay xuyên qua sườn đồi ấy**
+   * và chưa bao giờ có gì bắt được, vì bộ lập kế hoạch chỉ biết tới hình khối của THÀNH PHỐ
+   * (`terrain.footprint`), không biết tới địa hình bao quanh.
+   *
+   * Cho MỘT NỬA cảnh quan vào (cái cây) mà bỏ nửa kia (quả đồi) thì tệ hơn là không cho gì: camera
+   * sẽ né một bụi cây rồi bay thẳng vào sườn đồi ngay dưới nó, và lời hứa khoảng cách 7,5 của
+   * ADR-034 bị trả giá để đổi lấy một sự an toàn giả. Câu hỏi *"camera có nên tránh ĐỊA HÌNH
+   * không"* là một câu hỏi thật và riêng — ghi ở `TECH_DEBT #54`, đừng giải nửa vời ở đây.
+   *
    * Chỉ là DỮ LIỆU: không lệnh vẽ, không tam giác, không cần dọn ở `dispose()`.
    */
   const blockers = [];
   for (const placement of placements) {
+    if (placement.vungQue) continue;   // vùng quê KHÔNG chặn camera — lý do ở chú thích ngay trên
     const box = placeBounds(specBounds(placement.spec), {
       x: placement.x, z: placement.z, y: placement.y, scale: placement.scale,
     });
@@ -979,6 +1030,10 @@ export function createCityScene({
     ? [
       ['buildings', [...placements.slice(0, soKhoiDaXay), ...plinths]],
       ['props', placements.slice(soKhoiDaXay, soKhoiDaXay + soKhoiCanhVat)],
+      // ⚠️ NHÓM THỨ BA, KHÔNG PHẢI CỜ THỨ BA. Đàm đã ra luật: khi viết cờ chỉ-để-đo thứ ba thì
+      // phải gom cả ba lại cùng lúc. Vùng quê KHÔNG cần một cờ mới — nó chỉ cần cái cờ đã có
+      // biết cắt thêm một nhát, nên luật ấy chưa bị chạm tới.
+      ['landscape', soKhoiVungQue ? placements.slice(-soKhoiVungQue) : []],
     ]
     : [['city', placements]];
 

@@ -286,6 +286,23 @@ NHỎ đứng giữa một ô RỘNG, và Phase 8D đã đo ra rằng ở thành
 khuôn ba lớp lần thứ SÁU: `city3d/groundCoverStyle.js` là BẢNG (15 kỷ → bộ kiểu + `share` + `scale`
 + `enclose`, mỗi dòng buộc vào `country`), `city3d/groundCover.js` là THƯ VIỆN HÌNH (7 kiểu), còn
 `propSpec.js`/`cityParts.js` chỉ ĐỌC.
+**`outskirts` (vùng quê) — địa lý NGOÀI lưới, và đây là tầng đầu tiên KHÔNG nằm trong lưới 12×12
+(VIỆC 1 «bỏ cái khay», 2026-08-19, ADR-038)**: `city3d/outskirts.js` rải cây/bụi/đá ra **ngoài**
+lưới thành phố, mật độ tắt dần ra xa (`smoothstep`) nhân với một trường nhiễu tạo lùm; giống loài,
+cỡ và tỉ lệ bụi **đọc thẳng từ `floraStyle.js`** — cố ý KHÔNG có bảng 15 kỷ riêng, vì hai bảng mật
+độ sẽ trôi khỏi nhau và triệu chứng ("cây trong phố rậm mà cây ngoài phố thưa, ở đúng vài kỷ") rất
+khó truy; có test khoá tương quan hạng giữa hai bên.
+⚠️ **Điểm kiến trúc quan trọng nhất: đây là tầng ĐỊA LÝ, không phải tầng TIẾN ĐỘ.** `deriveOutskirts`
+nhận đúng `{era, gridSize}` — không `built`, không `levels`, không `sessionCount`. Cây ngoại ô có từ
+trước khi có thành phố và không mọc thêm khi Đàm xây xong một căn nhà; trộn nó vào `computeCityLayout`
+là mời đúng cái bẫy *"một trường gánh hai việc"* đã cắn năm lần trong dự án này. Bất biến ấy được
+khoá bằng một bài test **gọi kèm dữ liệu rác** và đòi kết quả y hệt lần gọi sạch.
+⚠️ **Và nó KHÔNG vào `blockers`** (danh sách vật cản của camera cận cảnh): bộ hoạch định đường bay
+chỉ biết CÔNG TRÌNH chứ không biết ĐỊA HÌNH, nên chặn cây mà không chặn quả đồi bên dưới là mua một
+sự an toàn GIẢ — xem `TECH_DEBT #54`. Việc loại trừ ấy dùng một **nhãn tường minh** (`vungQue`) chứ
+không dùng vị trí trong mảng, và có một bài test dựng cảnh THẬT rồi đòi mọi vật cản phải nằm trong
+lưới (bản đầu không có bài này, và gỡ cái gác đi thì cả 891 bài vẫn xanh).
+
 ⚠️ Ba quyết định đáng nhớ hơn cái bảng. (a) **`covers` là một MẢNG RIÊNG, không phải một `kind` mới
 của `props`** — vì một ô phải trả lời được HAI câu độc lập (*"vật gì đứng đây"* và *"mảnh đất này
 dùng làm gì"*), và vì nhờ vậy `deriveProps` **không bị đụng tới một dòng nào**: bất biến *"chỉ thêm,

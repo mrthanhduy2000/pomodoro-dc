@@ -1010,6 +1010,66 @@ hình cũ") đã bị chính số đo bác bỏ.
 
 ---
 
+## Sau VIỆC 1 «bỏ cái khay» — vùng quê ngoài lưới (2026-08-19)
+
+**Mốc nền ĐO LẠI Ở HEAD (`702fa31`) trong một `git worktree` riêng, không chép cột "sau" của phase
+trước** — đúng luật đã ghi ở cuối mục này (Phase 11 suýt phải trả giá vì chép). Cả hai vế dùng CÙNG
+một script (`KHO=<đường-dẫn> node --import ./scripts/register-esm-loader.mjs …`), cùng `sessionCount
+= 80`, cùng `hour = 12`, mọi công trình cấp 3. Phép đếm là một bản duyệt scene graph ĐỘC LẬP viết
+theo đúng luật `WebGLRenderer.info.render` — cố ý không gọi hàm của mã sản phẩm.
+
+### Vế đã đo xong — lệnh vẽ và hình học, ĐỦ CẢ 15 KỶ
+
+| kỷ | nước | tam giác TRƯỚC | tam giác SAU | chênh | % | lệnh vẽ TRƯỚC → SAU |
+|---|---|---:|---:|---:|---:|:---:|
+| 1 | Thổ Nhĩ Kỳ | 68.848 | 123.840 | +54.992 | +79.9% | 11 → 11 ✓ |
+| 2 | Ai Cập | 73.252 | 114.268 | +41.016 | +56.0% | 13 → 13 ✓ |
+| 3 | Iraq | 86.192 | 123.792 | +37.600 | +43.6% | 12 → 12 ✓ |
+| 4 | Trung Quốc | 95.316 | 170.972 | +75.656 | +79.4% | 13 → 13 ✓ |
+| 5 | Đức | 82.356 | 137.278 | +54.922 | +66.7% | 12 → 12 ✓ |
+| 6 | Việt Nam | 98.490 | 172.766 | +74.276 | +75.4% | 13 → 13 ✓ |
+| 7 | Ý | 104.618 | 164.982 | +60.364 | +57.7% | 13 → 13 ✓ |
+| 8 | Bồ Đào Nha | 100.990 | 149.210 | +48.220 | +47.7% | 13 → 13 ✓ |
+| 9 | Pháp | 97.284 | 140.452 | +43.168 | +44.4% | 12 → 12 ✓ |
+| 10 | Anh | 94.370 | 121.478 | +27.108 | +28.7% | 13 → 13 ✓ |
+| 11 | Mỹ | 104.932 | 151.128 | +46.196 | +44.0% | 12 → 12 ✓ |
+| 12 | Nga | 87.370 | 131.738 | +44.368 | +50.8% | 12 → 12 ✓ |
+| 13 | Nhật Bản | 100.660 | 152.658 | +51.998 | +51.7% | 11 → 11 ✓ |
+| 14 | Singapore | 94.190 | 173.474 | +79.284 | +84.2% | 12 → 12 ✓ |
+| 15 | UAE | 97.538 | 131.634 | +34.096 | +35.0% | 12 → 12 ✓ |
+| **tổng** | | **1.386.406** | **2.159.670** | **+773.264** | **+55.8%** | **0 kỷ đổi** |
+
+**LỆNH VẼ: KHÔNG MỘT KỶ NÀO ĐỔI MỘT ĐƠN VỊ.** Đây là ràng buộc cứng nhất của Đàm cho phase này
+(*"kỷ trong lục địa phải giữ nguyên mốc cũ, không đổi một đơn vị"*), và nó đạt được vì vùng quê
+**nhập vào khối gộp `city`** thay vì dựng khối riêng: cây dùng vai màu `wood` + `leaf`/`leaf2` →
+họ vật liệu `wood` và `foliage`, mà **cả hai họ đã có mặt ở cả 15 kỷ từ trước**. Cổng
+`drawCallBudget.test.js` (4 bài, gồm một đối chứng kéo thêm một họ vào một kỷ và ĐÒI mốc kỷ ấy phải
+đỏ) xanh nguyên.
+
+### Hình học: +55,8%, và nó vẫn nằm trong vùng RẺ — nhưng đây là ƯỚC LƯỢNG, không phải số đo
+
+⚠️ **NÓI RÕ: chưa ai chạy `bench-macbook.sh` cho bộ mã này.** Con số ms dưới đây là SUY RA từ mô
+hình chi phí đã đo trên M3, không phải một phép đo mới. Đàm là người chạy được bộ đo thật.
+
+Suy luận, và điều kiện để nó sai:
+- Mô hình đã đo: **≈ 0,87 ms cố định + 1,14 ms mỗi TRIỆU ĐIỂM ẢNH THẬT** ⇒ **80% chi phí đi theo
+  ĐIỂM ẢNH, 20% cố định**; hình học gần như không xuất hiện trong mô hình.
+- Ba bằng chứng đã ghi ở trên vẫn áp dụng, đặc biệt: *"tam giác thành phố chênh 43% giữa kỷ 3 và 11
+  mà thời gian chỉ chênh 2,4%"* và *"rặng núi chiếm 54–63% hình học mỗi khung nhưng 0 ms đo được"*.
+- ⚠️ **Và có một lý do riêng để tin lần này còn rẻ hơn thường**: vùng quê **không thêm điểm ảnh
+  nào**. Nó phủ lên đúng chỗ trước đây là mặt đất trơn — cùng số điểm ảnh, chỉ khác thứ được tô lên.
+  Trục đắt (điểm ảnh) đứng yên; chỉ trục rẻ (tam giác) tăng.
+- ⇒ **Ước lượng: dưới 0,3 ms mỗi khung**, tức cảnh chậm nhất đi từ 5,20 lên khoảng 5,5 ms trên trần
+  làm việc 8 ms. **Điều kiện để ước lượng này SAI**: nếu +773.264 tam giác đủ để đẩy khâu xử lý đỉnh
+  thành nút thắt mới — chưa từng thấy trong bộ số M3, nhưng cũng chưa từng thử ở mức này. Bộ đo thật
+  là thứ duy nhất đóng được câu hỏi.
+
+### KHÔNG chạm vào ba thứ Đàm cấm
+**0 nguồn sáng mới · 0 texture mới · 0 shader động.** Vùng quê chỉ dùng lại vai màu và nhà máy hình
+học sẵn có (`flora.js` qua `propSpec.js`); không một `Material` mới nào được tạo.
+
+---
+
 ## Khi nào phải đo lại
 
 - Sau bất kỳ phase nào **thêm nguồn sáng, đổi shader, đổi bóng đổ, hoặc đổi DPR**.

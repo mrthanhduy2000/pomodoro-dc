@@ -27,6 +27,7 @@
  */
 
 import { buildBuildingSpec, buildScaffoldSpec } from './buildingSpec.js';
+import { deriveOutskirts } from './outskirts.js';
 import { buildPropSpec } from './propSpec.js';
 
 /**
@@ -119,6 +120,28 @@ export function collectCitySpecs({ layout, detail = 'high' } = {}) {
         seed:   `${era}|${cover.kind}|${cover.x}|${cover.y}|${cover.variant}`,
         detail,
       }),
+    });
+  }
+
+  /**
+   * ⚠️ VÙNG QUÊ ĐI CHUNG DANH SÁCH NÀY, VÀ ĐÓ LÀ MỘT LỰA CHỌN CÓ GIÁ ĐO ĐƯỢC.
+   *
+   * Cây cối ngoài lưới dùng ĐÚNG hai họ vật liệu mà cây trong lưới đã dùng (`wood` + `foliage`,
+   * xem `materials.js`), nên gộp chung một khối hình học ⇒ **không thêm một lệnh vẽ nào ở cả 15
+   * kỷ**. Tách ra một khối riêng thì đẹp về mặt khái niệm (thành phố ≠ cảnh quan) nhưng tốn thêm
+   * một lệnh vẽ ở MỌI kỷ, kể cả những kỷ mà phase này không hề đụng tới — mà mốc lệnh vẽ của dự án
+   * là một BẢNG 15 dòng đo được chứ không phải một cái trần chung (`drawCallBudget.test.js`), và
+   * làm trôi 15 dòng ấy cùng lúc thì cái bảng hết còn nói được điều nó sinh ra để nói.
+   *
+   * ⚠️ Vẫn ĐO RIÊNG được: `splitCityMesh` (`sceneGraph.js`) cắt khối gộp làm ba nhóm có TÊN
+   * (`buildings` · `props` · `landscape`) khi công cụ chụp cần hỏi *"bao nhiêu phần khung hình là
+   * vùng quê?"*. Đó là một CỜ CHỈ-ĐỂ-ĐO đã có sẵn, không phải một cờ thứ ba.
+   */
+  for (const wild of deriveOutskirts({ era, gridSize: layout.gridSize })) {
+    out.push({
+      kind: 'outskirt',
+      source: wild,
+      spec: buildPropSpec({ kind: wild.kind, era, seed: wild.seed, detail: wild.detail ?? detail }),
     });
   }
 

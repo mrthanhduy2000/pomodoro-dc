@@ -6,8 +6,53 @@
 > chọn: `ARCHITECTURE_DECISIONS.md`. Nợ kỹ thuật: `TECH_DEBT.md`. Migration: `MIGRATION.md`. Tóm
 > tắt theo mốc: `CHANGELOG.md`.
 > **NGUYÊN TẮC ƯU TIÊN SỐ 1:** (1) mọi phiên AI phải đọc file này + `CLAUDE.md` + các file liên quan TRƯỚC khi làm; (2) sau MỌI cập nhật dù nhỏ, phải cập nhật ngay file này + `CLAUDE.md` + các file liên quan khác.
-> Cập nhật lần cuối: **2026-08-19** — **ĐO CÁI ĐĨA ĐẤT: VÀNH NGOÀI LƯỚI CHIẾM ~21% KHUNG HÌNH VÀ KHÔNG PHASE NỘI DUNG NÀO CHẠM TỚI (`TECH_DEBT #53` — CHỜ ĐÀM QUYẾT).**
+> Cập nhật lần cuối: **2026-08-19** — **VIỆC 1 «BỎ CÁI KHAY»: THÀNH PHỐ NAY CÓ VÙNG QUÊ (ADR-038). ĐANG CHỜ ĐÀM GẬT HƯỚNG MỸ THUẬT TRƯỚC KHI LÀM VIỆC 2.**
 >
+> **ĐÀM RA LỆNH**: *"Tại sao một thành phố lại được xây trên một ô đất nhô ra, đâu có thành phố nào
+> như vậy, xem lại lịch sử đi. Nếu có ô đất nhô ra thì là cảnh thiên nhiên xung quanh."* — tức anh
+> BÁC cả hai phương án thu-nhỏ của `TECH_DEBT #53` và chọn **LẤP**.
+>
+> ⚠️ **BA GIẢ THUYẾT ĐẦU ĐỀU SAI, VÀ CHÍNH SỐ ĐO BÁC BỎ CẢ BA.** (1) *"có bức tường đứng ở mép tấm
+> đất"* → cao độ hai bên khớp **0,0000**. (2) *"chỗ nối màu bị gãy"* → bước màu lớn nhất qua 353 vị
+> trí chỉ **1,1/255** (ngưỡng mắt 12). (3) *"vùng gần quá phẳng"* → bản vá gợn sóng đổi 25,6% điểm
+> ảnh nhưng **0 điểm ảnh** vượt ngưỡng mắt (đã hoàn tác). Thứ chỉ ra sự thật là **phủ ranh giới các
+> vùng lên chính ảnh render rồi nhìn**: không có mép nào ở cả hai ranh giới. **Cái khay chưa bao giờ
+> là một cái MÉP — nó là hình chữ nhật đường-và-nhà dừng đột ngột giữa một mặt phẳng trống trơn.**
+> ⇒ Bài học: khi ba giả thuyết liên tiếp đều bị số đo bác, hãy nghi chính CÂU HỎI; và cách rẻ nhất
+> để đổi câu hỏi là vẽ thứ mình tin lên đúng tấm ảnh mình đang nhìn.
+>
+> **ĐÃ LÀM**: `src/engine/city3d/outskirts.js` — vùng quê rải cây/bụi/đá RA NGOÀI lưới 12×12, mật độ
+> tắt dần ra xa + trường nhiễu tạo lùm, giống loài đọc thẳng từ `floraStyle.js` (KHÔNG có bảng riêng
+> — bảng 15 kỷ thuộc về VIỆC 2). **Tầng ĐỊA LÝ, không phải tầng TIẾN ĐỘ**: không nhận `built`/
+> `sessionCount`, có test gọi kèm dữ liệu rác khoá điều đó.
+> **ĐẤT TRỐNG**: kỷ 3 **65,63→60,64%** · kỷ 12 **64,82→38,61%** · kỷ 14 **64,15→52,44%**. Phần
+> `trong lưới` gần như đứng yên (18,38→18,34 · 11,66→11,16 · 8,63→8,56) ⇒ **ADR-007 còn nguyên**.
+> **0 lệnh vẽ mới ở cả 15 kỷ** (vùng quê nhập khối gộp `city`; cây dùng vai `wood`/`leaf` đã có sẵn
+> ở mọi kỷ). ⚠️ Chỗ này **mâu thuẫn với câu trả lời Q2 của Đàm** ("cho cảnh quan một khối gộp
+> RIÊNG") — xem mục "CHỜ ĐÀM" bên dưới, tôi đã chọn theo con số cứng và cần anh chốt.
+>
+> ⚠️ **HAI LỖ TRỐNG DO PHÉP THỬ NGƯỢC BẮT ĐƯỢC, KHÔNG PHẢI DO ĐỌC MÃ.** (a) Bản đầu loại vùng quê
+> khỏi `blockers` bằng **vị trí trong mảng** (`slice(0, len − n)`) — đúng kết quả hôm nay nhưng ngầm
+> đòi vùng quê phải LUÔN được đẩy vào cuối; nay là một **nhãn tường minh** `vungQue`. (b) Gỡ hẳn cái
+> gác ấy đi thì **toàn bộ 891 bài vẫn xanh**, vì `cityFocus.test.js` tự dựng lấy danh sách khối của
+> nó nên không bao giờ nhìn thấy `blockers` thật ⇒ đã thêm một bài hỏi thẳng cảnh THẬT.
+> ⚠️ Và ngưỡng của bài ấy bản đầu tôi **đoán 1,5** trong khi số đo thật là **0,340** (15 kỷ, xa nhất
+> 6,340 trên mép lưới 6,000) — một cái phễu rộng gấp 4,4 lần, đúng bài học Phase 9A. Nay 0,6, kèm
+> đối chứng nhốt ca hỏng.
+>
+> **CỔNG KHÔNG-TRÔI (quét 15 kỷ × 6 chặng, md5 `08679bcf95255064138d4ca4da4f1ff8`) — ĐẠT, và hai
+> trục đi HAI HƯỚNG NGƯỢC NHAU.** Kỷ **đi lên**: trung vị 37,6 → **40,8**, gần nhất 21,3 → 21,5 —
+> đảo lại đà tụt của các phase 10–12 (41,1 sau Phase 9C → 37,6), vì vùng quê mang mật độ + loài cây
+> RIÊNG TỪNG KỶ nên nó thêm chi tiết PHÂN BIỆT chứ không phải chi tiết CHUNG. Chặng **đi xuống**:
+> 20,7 → **16,5** (bình minh↔chiều) — vẫn trên ngưỡng mắt 12 tới 37%, nhưng là hướng sai, và sai vì
+> lý do ngược lại: vùng quê giống hệt nhau ở cả 6 chặng, mà phép đo chặng lấy trung bình CẢ CẢNH nên
+> phần chung ấy pha loãng khác biệt giữa các chặng. 0/15 và 0/105 dưới ngưỡng ⇒ cổng ĐẠT.
+>
+> **CÒN LẠI**: vùng quê hiện là **một thảm thực vật ĐỒNG NHẤT quanh mọi phía** — nó xoá cái khay
+> nhưng chưa trả lời vế thứ hai của Đàm (*"nên có những kỷ có biển đi… như thành Troy"*). Đó là
+> **VIỆC 2**: bảng `settingStyle.js` 15 kỷ (biển / sông / KHÔNG nước — và "không nước" phải khai
+> tường minh). **CHƯA BẮT ĐẦU** — Đàm yêu cầu dừng lại hỏi hướng mỹ thuật trước.
+
 > **ĐO, KHÔNG SỬA.** Đàm dừng §2-B lại vì phép đo trần của §2-C đã tự trả lời câu hỏi: lấp KÍN mọi
 > ô đất trống trong lưới cũng chỉ đưa kỷ 1 từ 60,29% xuống 53,16% — tức **84–88% chỗ trống nhìn
 > thấy nằm NGOÀI tầm với của cả §2-B lẫn §2-C**. Phiên này đi đo xem 84–88% ấy là cái gì.

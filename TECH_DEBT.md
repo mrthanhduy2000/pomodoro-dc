@@ -2143,6 +2143,44 @@ ship một trạng thái dở dang, hãy làm nó **ĐẾM ĐƯỢC trong một 
 
 ---
 
+## #54 — BỘ HOẠCH ĐỊNH ĐƯỜNG BAY CẬN CẢNH CHỈ BIẾT CÔNG TRÌNH, KHÔNG BIẾT ĐỊA HÌNH QUANH NÓ
+
+- **Tên**: Camera cận cảnh né được nhà nhưng KHÔNG né được quả đồi
+- **Module**: `src/engine/city3d/cityFocus.js` (`planCityFocus`, danh sách `blockers`) · nguồn cao độ
+  là `terrain.js` (`surfaceHeightAt`) và `horizon.js` (`heightAt`)
+- **Priority**: Medium · **Severity**: Medium (chỉ chạm khi Đàm bấm vào một công trình ở rìa phố)
+- **Impact**: `planCityFocus` nhận `blockers` là **danh sách khối CÔNG TRÌNH**, nên nó chứng minh
+  được "đường bay không xuyên qua nhà" mà **không** chứng minh được "đường bay không xuyên qua đất".
+  Đo được ở **kỷ 8 (Bồ Đào Nha)**: mặt đất vùng quê dâng tới **+2,18** đơn vị thế giới trong khi nền
+  thành phố quanh 0 — tức **camera ĐÃ CÓ THỂ chui qua sườn đồi ấy từ trước phase này**, không phải
+  lỗi do vùng quê sinh ra.
+- **Root Cause**: ADR-034 định nghĩa lưới an toàn theo **khối kiến trúc**, vì lúc viết nó mặt đất
+  còn gần như phẳng ở mọi chỗ camera đi qua. Phase 7B cho mặt đất cao độ thật và Phase 9A thêm rặng
+  núi, nhưng `planCityFocus` **không được kể lại** — đúng hình dạng *"một kết luận đúng hết đúng vì
+  TIỀN ĐỀ của nó bị gỡ ở một phase khác"* (Phase 8C).
+- **Current Risk**: thấp–trung bình. Chỉ lộ ra ở kỷ có địa hình dâng cao gần rìa (đo được: kỷ 8 cao
+  nhất). Triệu chứng là một khoảnh khắc camera lướt qua trong lòng đất khi bay tới công trình rìa phố.
+- **Future Risk**: TĂNG theo mỗi phase địa hình. VIỆC 2 (bảng `settingStyle.js` — bờ biển, vách đá,
+  cửa sông) sẽ dựng những khối đất CAO và DỐC hơn hẳn hiện nay; làm xong VIỆC 2 mà chưa vá mục này
+  thì xác suất chui-qua-đất tăng rõ rệt.
+- **Recommended Solution**: cho `planCityFocus` lấy mẫu **CAO ĐỘ MẶT ĐẤT dọc đường bay** (nó đã lấy
+  mẫu cả đường bay sẵn rồi — ADR-034 §"lưới an toàn canh CẢ ĐƯỜNG BAY") và đòi camera luôn cao hơn
+  `max(surfaceHeightAt, horizon.heightAt)` một khoảng hở tối thiểu. ⚠️ **KHÔNG** giải bằng cách nhét
+  cây cối vùng quê vào `blockers`: cây chỉ là thứ MỌC TRÊN quả đồi, chặn cây mà không chặn đồi là
+  chữa triệu chứng, và nó còn làm hỏng phép đo (đo thật: khoảng hở kỷ 8 tụt xuống 0,81 khi thêm cây,
+  tức bài test kêu OAN về một nguyên nhân sai).
+- **Estimated Complexity**: nhỏ–vừa. Hàm cao độ đã thuần và đã có sẵn; việc chính là thêm một trục
+  vào phép kiểm đường bay và hiệu chuẩn lại khoảng hở tối thiểu bằng số đo, không bằng cảm giác.
+- **Blocking Conditions**: không có. Nên làm **TRƯỚC hoặc CÙNG** VIỆC 2 (địa thế theo kỷ).
+- **Review Trigger**: ngay khi bắt đầu VIỆC 2, hoặc khi có ai báo camera "chui xuống đất" lúc bấm
+  vào một công trình.
+- **Owner**: chưa phân công · **Status**: Open
+- **Cách tái lập số**: chạy `planCityFocus` cho 15 kỷ rồi so cao độ camera dọc đường bay với
+  `surfaceHeightAt` tại chính toạ độ ấy; con số +2,18 của kỷ 8 lấy từ `surfaceHeightAt` trên vành
+  ngoài lưới (`distanceOutsideGrid > 0`).
+
+---
+
 ## #53 — VÀNH ĐẤT NGOÀI LƯỚI CHIẾM ~21% KHUNG HÌNH VÀ KHÔNG MỘT PHASE NỘI DUNG NÀO CHẠM TỚI ĐƯỢC
 
 - **Tên**: Vành đất ngoài lưới thành phố là vùng trống lớn nhất còn lại — và nó KHÔNG giảm khi Đàm chơi
@@ -2172,7 +2210,30 @@ ship một trạng thái dở dang, hãy làm nó **ĐẾM ĐƯỢC trong một 
 - **Blocking Conditions**: chờ Đàm chọn hướng.
 - **Review Trigger**: trước khi bắt đầu BẤT KỲ phase nội dung nào khác cho thành phố 3D — đọc mục
   này trước, vì nó nói ngay rằng trần của tầng nội dung là 37% chỗ trống, không phải 100%.
-- **Owner**: chờ Đàm · **Status**: MỞ (đã đo xong, chờ quyết định)
+- **Owner**: Đàm đã quyết · **Status**: ⚠️ **ĐANG ĐÓNG DẦN — nửa "lấp vành" ĐÃ LÀM (2026-08-19,
+  VIỆC 1), nửa "địa thế theo kỷ" còn lại ở VIỆC 2.**
+- ⚠️ **ĐÀM ĐÃ CHỌN (2026-08-19), VÀ ANH BÁC CẢ HAI PHƯƠNG ÁN "THU NHỎ"**: không thu tấm đất, không
+  siết khung hình — mà **LẤP**. Lý do anh nêu thẳng vào bản chất chứ không vào con số: *"Tại sao một
+  thành phố lại được xây trên một ô đất nhô ra, đâu có thành phố nào như vậy… Nếu có ô đất nhô ra
+  thì là cảnh thiên nhiên xung quanh."* Tức chẩn đoán "vành đất quá rộng" là **SAI ĐỀ**: vành ấy
+  không rộng quá, nó chỉ **TRỐNG**. Thu nó lại là giấu triệu chứng và đồng thời làm thế giới nhỏ đi.
+- ⚠️ **VÀ CHẨN ĐOÁN CŨ CỦA CHÍNH MỤC NÀY CŨNG SAI MỘT NỬA.** Mục này (và ba giả thuyết đi trước nó)
+  đổ lỗi cho **MÉP tấm đất** — tường đứng ở `APRON_EDGE`, chỗ nối màu, vùng gần phẳng. Đo lại thì cả
+  ba đều bị bác: cao độ hai bên mép khớp tới **0,0000**; bước màu lớn nhất qua 353 vị trí chỉ
+  **1,1/255** (ngưỡng mắt 12); bản vá "gợn sóng gần" đổi 25,6% điểm ảnh nhưng **0 điểm ảnh** vượt
+  ngưỡng mắt. Thứ chỉ ra sự thật là **phủ ranh giới các vùng lên chính ảnh render** rồi nhìn: KHÔNG
+  có mép nào ở cả hai ranh giới. Cái khay chưa bao giờ là một cái MÉP — nó là **hình chữ nhật thành
+  phố dừng đột ngột giữa một mặt phẳng trống trơn**. ⇒ Bài học: *"khi ba giả thuyết liên tiếp đều bị
+  số đo bác bỏ, hãy nghi chính CÂU HỎI"*, và cách rẻ nhất để đổi câu hỏi là **vẽ thứ mình tin lên
+  đúng tấm ảnh mình đang nhìn**.
+- **Đã làm được gì (VIỆC 1, đo ở `--hour 12 --sessions 60`, khung mặc định)**: `deriveOutskirts`
+  rải cây/bụi/đá RA NGOÀI lưới 12×12, mật độ tắt dần ra xa, giống loài lấy từ `floraStyle.js`.
+  ĐẤT TRỐNG: kỷ 3 **65,63% → 60,64%** · kỷ 12 **64,82% → 38,61%** · kỷ 14 **64,15% → 52,44%**.
+  Phần `trong lưới` gần như đứng yên (18,38→18,34 · 11,66→11,16 · 8,63→8,56) — bằng chứng trực tiếp
+  rằng lưới thành phố KHÔNG bị đụng vào.
+- **Còn lại gì**: vùng quê hiện là **một tấm thảm thực vật ĐỒNG NHẤT quanh mọi phía** — nó xoá cái
+  khay nhưng chưa trả lời câu hỏi thứ hai của Đàm (*"nên có những kỷ có biển đi, nằm sát bờ biển
+  chẳng hạn, như thành Troy"*). Đó là VIỆC 2: bảng `settingStyle.js` 15 kỷ (biển/sông/không nước).
 - **Cách tái lập số**:
   `node scripts/city-preview.mjs --all --hour 12 --sessions <20|50|80> --mask ground-grid,ground-apron,horizon`
   rồi `--mask city,road,residents`, sau đó đếm bằng `scripts/mask-count.mjs`. Cờ `splitGroundMesh`

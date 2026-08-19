@@ -18,7 +18,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { Frustum, Matrix4, PerspectiveCamera } from 'three';
 
-import { createCityScene } from './sceneGraph.js';
+import { createCityScene, cellToWorld } from './sceneGraph.js';
+import { deriveOutskirts } from '../../../engine/city3d/outskirts.js';
 import { computeCityLayout } from '../../../engine/cityLayout.js';
 import { buildScenePalette } from '../../../engine/city3d/palette3d.js';
 import { deriveDaylight } from '../../../engine/city3d/daylight.js';
@@ -110,6 +111,7 @@ test('ĐỐI CHỨNG: bầu trời và rặng núi chân trời PHẢI nằm tro
   const city = dựngCảnh(7);
   let cũNhìnThấy = 0;
   let cũKhôngThấy = 0;
+  const tênPhầnMù = new Set();
   city.scene.traverse((o) => {
     if (!o.isMesh || o.visible === false) return;
     const g = o.geometry;
@@ -117,15 +119,29 @@ test('ĐỐI CHỨNG: bầu trời và rặng núi chân trời PHẢI nằm tro
     const đỉnh = g.index ? g.index.count : (g.attributes?.position?.count ?? 0);
     const t = ((o.isInstancedMesh ? o.count : 1) * đỉnh) / 3;
     const côngThứcCũBiết = o.castShadow || o.name === 'ground' || o.name === 'road' || o.isInstancedMesh;
-    if (côngThứcCũBiết) cũNhìnThấy += t; else cũKhôngThấy += t;
+    if (côngThứcCũBiết) cũNhìnThấy += t;
+    else { cũKhôngThấy += t; tênPhầnMù.add(o.name || '(không tên)'); }
   });
 
   assert.ok(cũKhôngThấy > 40000,
     `phần công thức cũ mù chỉ còn ${cũKhôngThấy} tam giác — bầu trời/chân trời đã biến mất khỏi cảnh?`);
   assert.equal(city.stats.triangles, cũNhìnThấy + cũKhôngThấy,
     'con số HUD không bao trọn cả hai phần — công thức tự tính đã lẻn về');
-  assert.ok(city.stats.triangles > cũNhìnThấy * 1.5,
-    `HUD (${city.stats.triangles}) phải lớn hơn hẳn phần công thức cũ thấy được (${cũNhìnThấy})`);
+  /**
+   * ⚠️ HỎI **PHẦN MÙ LÀ NHỮNG AI**, KHÔNG HỎI "phần mù chiếm bao nhiêu phần trăm".
+   *
+   * Bản trước viết `HUD > cũNhìnThấy × 1,5`, và nó ĐỎ vào ngày thành phố có thêm cây cối vùng quê —
+   * tức mẫu số phình ra, trong khi thứ bài test này canh (HUD có đếm cả vòm trời + rặng núi không)
+   * hoàn toàn không đổi. Một phép đo GIÀ ĐI, đúng họ với `assert.equal(seen.size, 4)` ở Phase 7C và
+   * ngưỡng `|x| > 0,5` lọc tháp góc ở Phase 5B. Nó cũng chẳng thêm thông tin gì: hai dòng ngay trên
+   * đã ép `HUD ≥ cũNhìnThấy + 40000` rồi.
+   *
+   * Thứ đáng canh mà chưa ai canh là **danh tính** của phần mù: nếu ngày nào một khối THÀNH PHỐ rơi
+   * vào nhóm mù (ví dụ ai đó tắt `castShadow` của khối gộp) thì `cũKhôngThấy` vẫn > 40000, tổng vẫn
+   * khớp, và bài test cũ vẫn xanh — trong khi bộ số hỏng cũ đã lẻn về đúng một nửa.
+   */
+  assert.deepEqual([...tênPhầnMù].sort(), ['horizon', 'sky'],
+    'phần mà công thức cũ mù phải ĐÚNG BẰNG vòm trời + rặng núi, không hơn không kém');
   city.dispose();
 });
 
@@ -486,4 +502,71 @@ test('CHỖ CẮT PHẢI TRÙNG RANH GIỚI LƯỚI THÀNH PHỐ — đối xứ
   assert.ok(v.xMax > nửaLưới, `vành ngoài không vươn quá ranh giới lưới (${v.xMax} ≤ ${nửaLưới})`);
 
   city.dispose();
+});
+
+/**
+ * ⚠️ VÙNG QUÊ KHÔNG ĐƯỢC LÀ VẬT CẢN — và bài này tồn tại vì phép thử ngược đã bắt được một LỖ TRỐNG.
+ *
+ * `sceneGraph.js` cố ý bỏ cây/bụi/đá ngoại ô ra khỏi `blockers` (ADR-038 + `TECH_DEBT #54`): bộ
+ * hoạch định đường bay chỉ biết CÔNG TRÌNH, không biết ĐỊA HÌNH, nên nhét cây vào đó là mua một sự
+ * an toàn GIẢ — camera sẽ né một bụi cây rồi bay thẳng vào sườn đồi ngay dưới nó (đo được: mặt đất
+ * vùng quê kỷ 8 dâng tới +2,18 trong khi nền phố quanh 0), lại còn cắt khoảng hở của ADR-034 từ
+ * 7,5 xuống 0,81 và làm bài test kêu OAN về một nguyên nhân sai.
+ *
+ * ⚠️ NHƯNG LÚC MỚI VIẾT, LUẬT ẤY KHÔNG CÓ GÌ CANH. Gỡ hẳn dòng `if (placement.vungQue) continue;`
+ * ra khỏi `sceneGraph.js` thì **toàn bộ 891 bài vẫn xanh** — vì `cityFocus.test.js` tự dựng lấy
+ * danh sách khối của nó (và tự bỏ qua vùng quê), nên nó KHÔNG BAO GIỜ nhìn thấy `blockers` thật mà
+ * cảnh trả ra. Đúng bài học *"một bài học được ghi ra không chặn được gì; chỉ một bài TEST mới chặn
+ * được"* — nên bài này hỏi thẳng cảnh THẬT, không hỏi mã nguồn và không hỏi một bản dựng lại.
+ *
+ * THỬ-CHO-ĐỎ ĐÃ CHẠY THẬT (nêu trước chỗ mong đợi đỏ): gỡ `if (placement.vungQue) continue;`
+ * ⇒ mong đợi đỏ ở assert "vật cản nằm ngoài lưới" ngay dưới, kèm toạ độ của khối phạm luật.
+ */
+test('⚠️ VẬT CẢN CHỈ GỒM KHỐI TRONG LƯỚI THÀNH PHỐ — cây ngoại ô KHÔNG chặn camera', () => {
+  // Nửa bề rộng lưới, quy ra toạ độ THẾ GIỚI: ô chạy từ −0,5 tới gridSize−0,5, `cellToWorld` trừ đi
+  // `(gridSize−1)/2` ⇒ mép lưới cách tâm đúng `gridSize / 2` = 6,000 đơn vị thế giới.
+  //
+  // ⚠️ DUNG SAI 0,6 LÀ SỐ ĐO, KHÔNG PHẢI SỐ ĐOÁN — và bản đầu của chính bài này đã đoán 1,5.
+  // Phần khối nhô ra khỏi tâm ô (mái đua, bệ kè) đo trên CẢ 15 KỶ ở 80 phiên: xa nhất **6,340**
+  // (kỷ 9), tức dung sai thật đang dùng chỉ **0,340**; 11/15 kỷ còn không quá 5,88. Ngưỡng 1,5 để
+  // ngỏ một khe rộng gấp 4,4 lần chỗ thật sự cần — đúng cái phễu Phase 9A ("một ngưỡng nới rộng
+  // cho chắc là một cái phễu, và nó im lặng đúng lúc cần kêu nhất"). 0,6 chừa biên 1,8× so với số
+  // đo mà vẫn nằm xa dưới mức bắt đầu nuốt vùng quê.
+  const NUA_LUOI = 12 / 2;
+  const DUNG_SAI = 0.6;
+  let tongVatCan = 0;
+  let xaNhat = 0;
+  for (const era of [1, 3, 8, 12, 14]) {
+    const scene = dựngCảnh(era);
+    const vatCan = scene.blockers ?? [];
+    assert.ok(vatCan.length > 0, `kỷ ${era}: không có vật cản nào — bài này đang kiểm một danh sách rỗng`);
+    tongVatCan += vatCan.length;
+    for (const b of vatCan) {
+      const xa = Math.max(Math.abs(b.minX), Math.abs(b.maxX), Math.abs(b.minZ), Math.abs(b.maxZ));
+      if (xa > xaNhat) xaNhat = xa;
+      assert.ok(xa <= NUA_LUOI + DUNG_SAI,
+        `kỷ ${era}: có vật cản cách tâm ${xa.toFixed(2)} (> ${NUA_LUOI + DUNG_SAI}) — một khối NGOÀI `
+        + 'lưới đã lọt vào `blockers`. Vùng quê là địa hình, không phải công trình: xem ADR-038.');
+    }
+    scene.dispose?.();
+  }
+  assert.ok(tongVatCan > 100, `mới duyệt ${tongVatCan} vật cản — quá ít để bài này nói được điều gì`);
+
+  // ⚠️ ĐỐI CHỨNG — NHỐT ĐÚNG CA HỎNG, để ngưỡng trên không bị nới dần cho tiện. Không có vế này thì
+  // `DUNG_SAI` có thể trôi lên tới mức nuốt trọn vùng quê mà bài test vẫn xanh, và lúc ấy nó chỉ
+  // còn là một dòng chữ. Hỏi thẳng: NẾU vùng quê bị để lại trong `blockers` thì phép đo này có bắt
+  // được không, và bắt được bao nhiêu khối?
+  const ngoaiO = deriveOutskirts({ era: 8, gridSize: 12 });
+  const soLotLuoi = ngoaiO.filter((it) => {
+    const { x, z } = cellToWorld(it.x, it.y, 12);
+    return Math.max(Math.abs(x), Math.abs(z)) > NUA_LUOI + DUNG_SAI;
+  }).length;
+  assert.ok(soLotLuoi > 100,
+    `chỉ ${soLotLuoi} khối vùng quê vượt ngưỡng ${NUA_LUOI + DUNG_SAI} — dung sai đã nới tới mức `
+    + 'gần như không còn bắt được ca hỏng. Ngưỡng này phải TÁCH được hai bên, không chỉ tồn tại.');
+
+  // Và ghi lại biên thật, để lần sau ai đọc cũng thấy ngay khoảng cách giữa số đo và ngưỡng —
+  // "đo BIÊN của mọi lời hứa, đừng chỉ đọc xanh/đỏ" (Phase 9B).
+  assert.ok(xaNhat > NUA_LUOI - 1,
+    `vật cản xa nhất chỉ ${xaNhat.toFixed(3)} — thành phố co lại bất thường, phép đo mất ngữ cảnh`);
 });

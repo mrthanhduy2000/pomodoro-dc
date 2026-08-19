@@ -330,6 +330,16 @@
 │   │   │   │                      #   ⚠️ `sides`/`taper` phải theo HẠT, không viết cứng — lỗi này
 │   │   │   │                      #   đã cắn 4 lần trong chính file này (cypress/streetTree/banyan/
 │   │   │   │                      #   bush), mỗi lần đều ra "40 hạt chỉ 2–4 dáng"
+│   │   │   ├── outskirts.js       # VÙNG QUÊ NGOÀI LƯỚI (ADR-038): cây/bụi/đá rải RA NGOÀI lưới
+│   │   │   │                      #   12×12, mật độ tắt dần ra xa + trường nhiễu tạo lùm. Đây là
+│   │   │   │                      #   thứ xoá "cái khay" — cái khay chưa bao giờ là một cái MÉP,
+│   │   │   │                      #   nó là hình chữ nhật phố dừng đột ngột giữa mặt phẳng trống
+│   │   │   │                      #   ⚠️ TẦNG ĐỊA LÝ, KHÔNG PHẢI TẦNG TIẾN ĐỘ: không nhận `built`/
+│   │   │   │                      #   `levels`/`sessionCount`. Cây ngoại ô KHÔNG mọc thêm khi Đàm
+│   │   │   │                      #   xây nhà — có test gọi kèm DỮ LIỆU RÁC khoá điều đó
+│   │   │   │                      #   ⚠️ KHÔNG có bảng 15 kỷ riêng — ĐỌC `floraStyle.js`, có test
+│   │   │   │                      #   khoá tương quan hạng. Bảng 15 kỷ thuộc về `settingStyle.js`
+│   │   │   │                      #   (VIỆC 2: biển/sông/không nước), là câu hỏi KHÁC
 │   │   │   ├── groundCoverStyle.js# BẢNG DÙNG ĐẤT 15 KỶ (§2-C, ADR-037): bộ kiểu + trọng số ·
 │   │   │   │                      #   `share` (phần đất trống được dùng) · `scale` · `enclose`.
 │   │   │   │                      #   Trả lời "ở nước ấy mảnh đất cạnh nhà dùng làm gì" — buộc vào

@@ -11,6 +11,65 @@
 
 ---
 
+## ADR-038 — "Cái khay" KHÔNG phải một cái MÉP: thành phố phải có VÙNG QUÊ, và vùng quê là một tầng ĐỊA LÝ nằm ngoài lưới — tách hẳn khỏi tầng TIẾN ĐỘ
+
+- **Ngày**: 2026-08-19 (VIỆC 1 trong chỉ thị "bỏ cái khay" của Đàm; trả lời `TECH_DEBT #53`)
+- **Bối cảnh**: Đàm nhìn thành phố rồi nói: *"Tại sao một thành phố lại được xây trên một ô đất nhô
+  ra, đâu có thành phố nào như vậy, xem lại lịch sử đi. Nếu có ô đất nhô ra thì là cảnh thiên nhiên
+  xung quanh."* Trước đó `TECH_DEBT #53` đã đo được vành đất ngoài lưới chiếm ~21% khung hình và
+  63,0% toàn bộ chỗ trơ ở mốc 80 phiên — nhưng chẩn đoán đi kèm là *"tấm đất quá rộng"*.
+- **Vấn đề**: ⚠️ **BA GIẢ THUYẾT ĐẦU ĐỀU SAI, VÀ CẢ BA ĐỀU BỊ CHÍNH SỐ ĐO BÁC BỎ.** (1) *"có một
+  bức tường đứng ở `APRON_EDGE`"* — cao độ hai bên mép khớp tới **0,0000** ở kỷ 1, 7, 14. (2) *"chỗ
+  nối màu giữa tấm đất và rặng núi bị gãy"* — cắt ngang qua 353 vị trí: bước màu một-điểm-ảnh lớn
+  nhất **1,1/255**, tổng cộng **1,9** trải trên 60 điểm ảnh, trong khi ngưỡng mắt là 12. (3) *"vùng
+  gần quá phẳng"* — bản vá gợn sóng đổi 25,6% điểm ảnh nhưng lệch trung bình chỉ 1,91 và **0 điểm
+  ảnh** vượt ngưỡng mắt (đã hoàn tác). Thứ chỉ ra sự thật là **phủ ranh giới các vùng lên chính tấm
+  ảnh render**: không có mép nào ở cả hai ranh giới. **Cái khay là hình chữ nhật đường-và-nhà dừng
+  đột ngột giữa một mặt phẳng trống trơn** — mắt tự vạch ra đường viền ấy từ chỗ NỘI DUNG hết, chứ
+  không từ chỗ HÌNH HỌC đổi.
+- **Các phương án cân nhắc**:
+  - **A — thu tấm đất lại cho vừa thành phố.** Rẻ nhất (hai hằng số). Bác: nó làm thế giới NHỎ đi để
+    giấu một chỗ trống, và đi ngược hẳn câu Đàm nói (anh muốn *thêm cảnh thiên nhiên*, không phải bớt
+    đất). Ngoài ra `APRON_EDGE` mang một lời hứa thật với `horizon.js` (Phase 9A đã trả giá bằng hai
+    cái nêm sáng ở hai góc khung) — chạm vào nó là chạm vào một quan hệ đang đúng.
+  - **B — siết khung hình cho vành đất ra ngoài mép ảnh.** Bác: cùng bản chất với A (giấu, không
+    chữa), lại còn đá thẳng vào `TECH_DEBT #24` (khung đang cắt công trình ở 14/15 kỷ).
+  - **C — LẤP: rải cảnh thiên nhiên ra ngoài lưới.** ✅ **CHỌN.** Đây là thứ duy nhất trả lời đúng
+    câu hỏi *"vì sao thành phố này không có vùng ngoại ô?"* thay vì câu *"vì sao tấm đất rộng thế?"*.
+- **Giải pháp chọn**: một tầng **VÙNG QUÊ** thuần — `src/engine/city3d/outskirts.js`,
+  `deriveOutskirts({era, gridSize})` → danh sách cây/bụi/đá **CHỈ nằm ngoài lưới 12×12**, mật độ tắt
+  dần ra xa theo `smoothstep` cộng một trường nhiễu tạo lùm, giống loài + cỡ + tỉ lệ bụi lấy thẳng từ
+  bảng `floraStyle.js` đã có. Vùng quê **nhập vào khối gộp `city`** ⇒ **0 lệnh vẽ mới**.
+- ⚠️ **VÌ SAO LÀ MỘT FILE RIÊNG, KHÔNG NHÉT VÀO `cityLayout.js`**: vùng quê là **ĐỊA LÝ**, còn
+  `computeCityLayout` là **TIẾN ĐỘ**. Trộn hai thứ ấy là mời đúng cái bẫy *"một trường gánh hai
+  việc"* đã cắn năm lần trong dự án này (`storyHeight` · `roof` · bảng loài cây · `avenue` ·
+  `groundFloor`). Cây ngoại ô **không được** mọc thêm khi Đàm xây xong một căn nhà — nó là đất đai,
+  có từ trước khi có thành phố. Khoá bằng một bài test gọi kèm **dữ liệu rác** (`built`, `levels`,
+  `sessionCount`, `buildings`, `stats`) và đòi kết quả y hệt lần gọi sạch — đúng khuôn `terrain.js`
+  đã dùng từ Phase 7B.
+- ⚠️ **VÀ VÌ SAO NÓ KHÔNG CÓ BẢNG 15 KỶ RIÊNG**: cám dỗ hiển nhiên là viết một bảng mật độ cây riêng
+  cho vùng quê. Bác — hai bảng sẽ trôi khỏi nhau, và triệu chứng ("cây trong phố rậm mà cây ngoài
+  phố thưa, ở đúng vài kỷ") thì rất khó truy. Vùng quê **ĐỌC** `floraStyle.js`, và có một bài test
+  khoá tương quan hạng giữa hai bên. Bảng 15 kỷ thật sự thuộc về VIỆC 2 (`settingStyle.js` — biển,
+  sông, không nước), là một câu hỏi KHÁC: *"thành phố tiêu biểu của nước ấy nằm ở đâu và vì sao?"*
+- **Trade-off**: (a) vùng quê đi chung khối gộp với thành phố ⇒ hộp bao của khối `city` phình từ bán
+  kính 7,5 lên ~14. Hôm nay **không có gì bị cắt bởi camera** (đã đo ở `sceneStats.test.js`), nên giá
+  bằng 0; ngày nào phép cắt thật sự cắn thì đây là chỗ phải xem lại. Đổi lại: **0 lệnh vẽ mới ở cả 15
+  kỷ**, giữ nguyên mốc `MOC_LENH_VE` từng kỷ. (b) tam giác tăng (hình học rẻ — `PERFORMANCE.md`: 80%
+  chi phí theo ĐIỂM ẢNH, và vùng quê không thêm điểm ảnh nào vì nó thay thế mặt đất trơn đang có).
+- **Ảnh hưởng**: đất trơ giảm **65,63→60,64%** (kỷ 3) · **64,82→38,61%** (kỷ 12) · **64,15→52,44%**
+  (kỷ 14). Phần `trong lưới` gần như đứng yên (18,38→18,34 · 11,66→11,16 · 8,63→8,56) — bằng chứng
+  trực tiếp rằng ADR-007 ("bảo tàng bất động") và luật "chỉ thêm, không bao giờ dời" còn nguyên.
+- ⚠️ **Một nợ mới lộ ra khi làm, và nó CÓ TỪ TRƯỚC**: `planCityFocus` chỉ biết công trình, không biết
+  địa hình. Kỷ 8 có mặt đất vùng quê dâng tới **+2,18** nên camera đã có thể chui qua sườn đồi ấy từ
+  trước phase này. **Cách sửa SAI** là nhét cây vùng quê vào `blockers` — chặn cây mà không chặn đồi
+  là chữa triệu chứng, và nó làm bài test kêu oan về một nguyên nhân sai. Ghi ở `TECH_DEBT #54`.
+- **Điều kiện xem lại**: khi VIỆC 2 dựng nước/vách đá (địa hình sẽ cao và dốc hơn hẳn) · khi phép cắt
+  theo hộp bao thật sự bắt đầu loại được khối · nếu có phase nào cần vùng quê đổi theo tiến độ (lúc
+  ấy phải viết ADR mới ĐẢO NGƯỢC mục này, đừng lặng lẽ thêm tham số).
+
+---
+
 ## ADR-037 — Mảng phủ đất: đất trống là một câu hỏi về **CÔNG NĂNG**, không phải một chỗ thiếu cây; và một mảng phủ phải là **MẢNG RIÊNG** chứ không phải một `kind` mới của cảnh vật
 
 - **Ngày**: 2026-08-19 (§2-C của chương trình mật độ; mở đường cho §2-B)

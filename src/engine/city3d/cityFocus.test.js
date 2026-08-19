@@ -69,8 +69,19 @@ function buildCity(era) {
   const landmarks = [];
   const nhaOnly = [];   // chỉ CÔNG TRÌNH — dùng cho bài đối chứng "cảnh vật có trói camera không"
 
+  let soVungQue = 0;
   for (const item of collectCitySpecs({ layout, detail: 'high' })) {
     const src = item.source;
+    /**
+     * ⚠️ VÙNG QUÊ CỐ Ý ĐỨNG NGOÀI DANH SÁCH VẬT CẢN — cùng luật với `sceneGraph.js`, đọc lý do đầy
+     * đủ ở đó (tóm tắt: cho cái cây vào mà bỏ quả đồi nó đứng trên thì tệ hơn không cho gì; kỷ 8
+     * có mặt đất vùng quê dâng tới +2,18 mà bộ lập kế hoạch không hề biết — `TECH_DEBT #54`).
+     *
+     * ⚠️ VÀ NÓ PHẢI ĐƯỢC **ĐẾM**, không được `continue` im lặng. Một `continue` đặt nhầm chỗ sẽ
+     * lặng lẽ nuốt luôn nhà cửa và cả bài test này đo một thành phố rỗng mà vẫn xanh — bài
+     * `THÀNH PHỐ DỰNG THỬ PHẢI ĐÚNG CỠ` bên dưới đòi con số này khác 0.
+     */
+    if (item.kind === 'outskirt') { soVungQue += 1; continue; }
     let box;
     if (item.kind === 'prop') {
       const ux = src.x + (src.ox ?? 0);
@@ -89,7 +100,7 @@ function buildCity(era) {
     if (item.kind !== 'prop') nhaOnly.push(box);
     if (item.kind === 'building') landmarks.push(box);
   }
-  return { blockers, landmarks, nhaOnly, orbit: cityOrbitOptions(GRID, era) };
+  return { blockers, landmarks, nhaOnly, soVungQue, orbit: cityOrbitOptions(GRID, era) };
 }
 
 const centreOf = (box) => ({
@@ -161,9 +172,11 @@ test('THÀNH PHỐ DỰNG THỬ PHẢI ĐÚNG CỠ — nếu không thì mọi c
   let cao = 0;
   let banKinh = 0;
   let soMoc = 0;
+  let soVungQue = 0;
   for (let era = 1; era <= 15; era += 1) {
-    const { blockers, landmarks } = cityOf(era);
+    const { blockers, landmarks, soVungQue: vq } = cityOf(era);
     soMoc += landmarks.length;
+    soVungQue += vq;
     for (const box of blockers) {
       cao = Math.max(cao, box.maxY);
       for (const x of [box.minX, box.maxX]) {
@@ -172,6 +185,11 @@ test('THÀNH PHỐ DỰNG THỬ PHẢI ĐÚNG CỠ — nếu không thì mọi c
     }
   }
   assert.equal(soMoc, 75, 'phải đủ 15 kỷ × 5 bản vẽ — thiếu là bài test đang chạy trên nửa thành phố');
+  // ⚠️ VÙNG QUÊ PHẢI CÓ THẬT RỒI MỚI ĐƯỢC LOẠI RA. Không có dòng này thì `continue` ở `buildCity`
+  // có thể đang nuốt một danh sách RỖNG (ví dụ `deriveOutskirts` hỏng và trả về `[]`) mà mọi con
+  // số dưới đây vẫn xanh — đúng bẫy "một cơ chế chết vẫn được ship kèm một chú thích dài".
+  assert.ok(soVungQue > 1000, `cả 15 kỷ chỉ có ${soVungQue} vật vùng quê — `
+    + 'phép loại-ra ở `buildCity` đang loại một danh sách rỗng, tức nó không kiểm được gì');
   assert.ok(cao > 5 && cao < 12, `nóc cao nhất của 15 kỷ = ${cao.toFixed(2)}, ngoài dải 5–12 đã ghi ở tài liệu`);
   assert.ok(banKinh > 5 && banKinh < 12, `bán kính phố = ${banKinh.toFixed(2)}, ngoài dải 5–12`);
 });

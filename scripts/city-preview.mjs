@@ -263,11 +263,13 @@ renderer.shadowMap.needsUpdate = true;
 // ⚠️ Truyền ĐÚNG bộ số mà app truyền, không để mặc định: dân số suy ra từ đây, và một trang xem
 // thử vẽ thành phố vắng hơn thật thì nó không còn kiểm chứng được thứ cần kiểm chứng.
 // splitCityMesh: CHỈ bật khi mặt nạ hỏi tên "buildings"/"props". Cả thành phố vốn gộp làm MỘT
-// khối nên ở tầng scene không tách được nhà khỏi cây; cờ này bảo bên dựng tách ra thành hai khối
-// mang tên. Nó thêm một lệnh vẽ, nên tuyệt đối không dùng cho ảnh thường và không dùng cho --bench.
+// khối nên ở tầng scene không tách được nhà khỏi cây; cờ này bảo bên dựng tách ra thành BA khối
+// mang tên ('buildings' · 'props' · 'landscape'). Nó thêm lệnh vẽ, nên tuyệt đối không dùng cho ảnh
+// thường và không dùng cho --bench.
 const city = createCityScene({
   layout, palette, daylight, renderer, stats: { sessionCount: SESSIONS, streakLength: 9 },
-  splitCityMesh: !!MASK && (MASK.includes('buildings') || MASK.includes('props')),
+  splitCityMesh: !!MASK
+    && (MASK.includes('buildings') || MASK.includes('props') || MASK.includes('landscape')),
   // splitGroundMesh: cùng luật — CHỈ bật khi mặt nạ hỏi tên "ground-grid"/"ground-apron". Mặt đất
   // vốn là MỘT tấm lưới trải qua cả thành phố lẫn vành đất ngoài, nên không tách thì không trả lời
   // được câu "chỗ trống Đàm thấy nằm TRONG lưới hay NGOÀI lưới".

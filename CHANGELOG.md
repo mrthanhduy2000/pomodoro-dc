@@ -12,6 +12,37 @@
 
 ---
 
+## 2026-08-19 (mới nhất) — Bỏ "cái khay": thành phố có vùng quê bao quanh (ADR-038)
+
+**Mục đích.** Đàm: *"Tại sao một thành phố lại được xây trên một ô đất nhô ra, đâu có thành phố nào
+như vậy… Nếu có ô đất nhô ra thì là cảnh thiên nhiên xung quanh."* Anh bác cả hai phương án thu-nhỏ
+của `TECH_DEBT #53` (thu tấm đất / siết khung hình) và chọn **LẤP**.
+
+**Chẩn đoán, và vì sao ba lần đầu sai.** "Cái khay" **không phải một cái MÉP**. Đo ra: cao độ hai
+bên mép tấm đất khớp **0,0000**; bước màu lớn nhất qua 353 vị trí chỉ **1,1/255** (ngưỡng mắt 12);
+bản vá "gợn sóng gần" đổi 25,6% điểm ảnh nhưng **0 điểm ảnh** vượt ngưỡng mắt. Sự thật chỉ lộ ra khi
+**phủ ranh giới các vùng lên chính ảnh render**: không có mép nào cả — cái khay là **hình chữ nhật
+đường-và-nhà dừng đột ngột giữa một mặt phẳng trống trơn**.
+
+**Phạm vi.** Mới: `src/engine/city3d/outskirts.js` + `outskirts.test.js` (9 bài). Sửa:
+`city3d/cityParts.js`, `render3d/sceneGraph.js` (đặt khối + nhãn `vungQue` + nhóm đo `landscape`),
+`render3d/sceneStats.test.js` (+1 bài), `city3d/cityFocus.test.js`, `scripts/city-preview.mjs`.
+
+**Kết quả.**
+- ĐẤT TRỐNG: kỷ 3 **65,63 → 60,64%** · kỷ 12 **64,82 → 38,61%** · kỷ 14 **64,15 → 52,44%**.
+- Phần `trong lưới` gần như đứng yên (18,38→18,34 · 11,66→11,16 · 8,63→8,56) ⇒ ADR-007 còn nguyên.
+- **0 lệnh vẽ mới ở cả 15 kỷ** · 0 nguồn sáng mới · 0 texture mới · 0 shader động.
+- Tam giác +55,8% (1.386.406 → 2.159.670) — nằm sâu trong vùng rẻ, nhưng **chi phí ms là ƯỚC LƯỢNG**
+  (< 0,3 ms/khung), chưa chạy bộ đo thật trên M3.
+
+**Tương thích.** Không đụng state, không đụng schema, không migration. Vùng quê là tầng ĐỊA LÝ
+thuần: không phụ thuộc `built`/`levels`/`sessionCount`, có test gọi kèm dữ liệu rác khoá điều đó.
+
+**Còn lại.** Vùng quê hiện đồng nhất quanh mọi phía; vế thứ hai của Đàm (*"nên có những kỷ có biển…
+như thành Troy"*) là VIỆC 2 — bảng `settingStyle.js` 15 kỷ, **chưa bắt đầu**.
+
+---
+
 ## 2026-08-19 (cuối) — Mảng phủ đất: đất trống thôi là một tấm thảm xanh trơn (ADR-037)
 
 **Mục đích.** Đàm nhìn thành phố và thấy nó "thưa". Đo ra: **46,2% khung hình là đất trống** ở mốc

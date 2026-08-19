@@ -35,6 +35,18 @@
 > liên tiếp bị chặn bởi cùng một lý do (quyết định mỹ thuật)** — nếu con số này lên 4 thì nên gộp
 > thành một lượt hỏi Đàm duy nhất thay vì hỏi lẻ.
 >
+> **Cập nhật 2026-08-19 (§3a — sai số hộp bao)**: **ĐÓNG luôn câu hỏi hộp bao, nhưng KHÔNG theo
+> cách cố vấn đoán.** Cố vấn bảo *"giữ hộp bao, đo sai số một lần, dưới ~5 điểm phần trăm thì đóng
+> vĩnh viễn"*. Đo ra **11,10 đpt trung bình, tới 24,47 đpt** — không đóng được, phải sửa. Tách ba
+> nguồn: **6,11 đpt** do LUẬT TÔ *"ô mẫu bị chạm vào là tô trọn"* (không liên quan gì tới hộp bao —
+> đó là sai số của chính cái bút vẽ) · **4,86 đpt** do tô hộp bao CẢ công trình (sân giữa bốn tháp
+> góc bị tính là nhà) · **0,13 đpt** do hình từng khối. ⇒ Phần cố vấn dự đoán là nguồn sai số hoá ra
+> là phần **duy nhất không đáng lo**. `planCoverage` nay tô **đa giác đáy thật, luật tâm ô, lưới 16
+> mẫu/ô**; bản cũ giữ lại tên `planCoverageCu` chỉ để đối chứng. ⚠️ **Bảng mật độ mặt bằng cũ
+> (26,6 / 48,8 / 72,4%) KHÔNG so trực tiếp được** với bảng mới (**20,1 / 37,6 / 55,8%**).
+> Khoá bằng `scripts/planCoverage.test.js` (5 bài, 6/7 phép phá đỏ đúng chỗ đã nêu trước; phép phá
+> thứ 7 không đỏ và đã đo chứng minh nó là TỊNH TIẾN lưới lấy mẫu chứ không phải sai số).
+>
 > **Cập nhật 2026-08-19 (§1 — vá #49)**: **ĐÓNG #49** (ảnh nay cắt đúng hộp bao canvas qua CDP
 > `clip`, không còn cờ đoán nào) và **MỞ #50, Priority Medium** — `md5sum` ảnh dựng đổi theo TẢI
 > MÁY (±1 trên ~2% điểm ảnh), nên nó chỉ chứng minh được một chiều. Số mục High/Critical KHÔNG đổi:

@@ -41,6 +41,26 @@
 > lần thủ phạm là CHÍNH PHÉP PHÁ chứ không phải bài test), lint sạch, build xanh.
 > ⏳ **CHƯA gộp `main`** — mục 5 chương trình làm việc.
 >
+> **§3a — CÂU HỎI VỀ "HỘP BAO" ĐÃ ĐÓNG, NHƯNG SỰ THẬT NẰM Ở CHỖ KHÁC.**
+> Cố vấn bảo: *giữ hộp bao, đo sai số một lần, dưới ~5 điểm phần trăm thì đóng vĩnh viễn.* Đo ra
+> **11,10 đpt trung bình, tới 24,47 đpt** ⇒ không đóng được, phải sửa. Bóc thành cái thang bốn nấc
+> (mỗi nấc đổi ĐÚNG MỘT thứ, nấc đầu tái lập ĐÚNG con số cũ):
+>
+> | nguồn nói quá | trung bình |
+> |---|--:|
+> | **luật tô "ô mẫu bị chạm vào là tô trọn"** — sai số của chính CÁI BÚT VẼ, chẳng liên quan hộp bao | **6,11 đpt** |
+> | **hộp bao CẢ công trình** — khoảng sân giữa bốn tháp góc bị tính là nhà | **4,86 đpt** |
+> | **hình thật của từng khối** (trụ tròn, tháp thóp, khối xoay) | **0,13 đpt** |
+>
+> ⇒ **Đúng cái phần cố vấn chỉ đích danh lại là phần duy nhất không đáng lo.** `planCoverage` nay
+> tô đa giác đáy thật · luật tâm ô · lưới 16 mẫu/ô; bản cũ giữ tên `planCoverageCu` chỉ để đối
+> chứng. ⚠️ **BẢNG MẶT BẰNG PHẢI ĐỌC LẠI**: 15 kỷ trung bình **20,1% (20 phiên) · 37,6% (50) ·
+> 55,8% (80)** — KHÔNG phải 26,6 / 48,8 / 72,4 như đã ghi ở mốc trước. Thành phố không thưa đi;
+> phép đo cũ nói quá. Khoá bằng `scripts/planCoverage.test.js` (5 bài).
+> **Điều này KHÔNG lật thứ tự "làm C trước B" mà Đàm đã chốt** — hai lý do đầu (rủi ro ADR-007;
+> C là phép thử rẻ cho chính câu hỏi của B) không đụng tới con số này; chỉ lý do thứ ba yếu đi
+> (thành phố già ở 55,8% chứ không phải 72,4%, tức B còn chỗ ở đầu già hơn ta tưởng).
+>
 > **(mốc trước)** **CHỐT #46 · ĐÓNG #41 · ĐO MẬT ĐỘ NHÀ.**
 >
 > **VIỆC A — CHỐT `TECH_DEBT #46`: LÙI RA TRƯỚC, NGẨNG SAU (2026-08-19, ADR-035).**

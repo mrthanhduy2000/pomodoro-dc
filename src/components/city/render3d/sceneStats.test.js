@@ -275,3 +275,73 @@ test('thêm một khối mới vào cảnh thì con số PHẢI đi theo', () =>
   city.dispose();
   city2.dispose();
 });
+
+/**
+ * ⚠️ `splitCityMesh` LÀ CỜ CHỈ DÀNH CHO PHÉP ĐO — VÀ MỘT CỜ ĐO LỌT VÀO APP LÀ MỘT LỆNH VẼ MẤT
+ * TRẮNG.
+ *
+ * Cả thành phố gộp làm MỘT khối lưới để tốn đúng một lệnh vẽ mỗi họ vật liệu; đó là ràng buộc cứng
+ * nhất của giai đoạn "tiêu ngân sách" (được tiêu tam giác, CẤM tiêu lệnh vẽ). Cờ này cắt khối ấy
+ * làm hai (`buildings` / `props`) để `city-preview.mjs --mask` hỏi được "điểm ảnh nào là nhà" —
+ * một câu hỏi không trả lời được bằng cách dò màu (`TECH_DEBT #22`).
+ *
+ * Nhưng cắt đôi thì cộng thêm lệnh vẽ. Nếu cờ này lặng lẽ bật trong app thì không có gì đỏ lên:
+ * ảnh y hệt, tam giác y hệt, chỉ có ngân sách lệnh vẽ bị thủng. Ba assert dưới đây khoá cả ba vế:
+ * mặc định TẮT · bật thì đúng là có cắt (nếu không, phép đo mật độ đang đo một tấm mặt nạ rỗng) ·
+ * và app KHÔNG BAO GIỜ truyền cờ này.
+ */
+test('`splitCityMesh` MẶC ĐỊNH TẮT — app phải thấy MỘT khối `city` duy nhất', () => {
+  for (let era = 1; era <= 15; era += 1) {
+    const city = dựngCảnh(era);
+    const tên = [];
+    city.scene.traverse((o) => { if (o.isMesh && o.name) tên.push(o.name); });
+    assert.ok(tên.includes('city'), `kỷ ${era}: không có khối nào tên "city" — cờ đo đã rò vào đường mặc định?`);
+    assert.equal(tên.filter((t) => t === 'city').length, 1, `kỷ ${era}: có nhiều hơn một khối "city"`);
+    assert.ok(!tên.includes('buildings') && !tên.includes('props'),
+      `kỷ ${era}: cảnh mặc định đã bị cắt làm hai (${tên.join(', ')}) — mất một lệnh vẽ`);
+    city.dispose();
+  }
+});
+
+test('ĐỐI CHỨNG: bật `splitCityMesh` thì PHẢI cắt thật, và cái giá đúng bằng 1 lệnh vẽ', () => {
+  // Không có đối chứng này thì assert ở trên vẫn xanh khi cờ bị nối hỏng và chẳng làm gì cả — lúc
+  // ấy mọi tấm mặt nạ "buildings" sẽ ném lỗi "không khớp đối tượng nào", hoặc tệ hơn là khớp nhầm.
+  for (const era of [1, 7, 15]) {
+    const thường = createCityScene(thamSố(era));
+    const cắt = createCityScene({ ...thamSố(era), splitCityMesh: true });
+
+    const tên = [];
+    cắt.scene.traverse((o) => { if (o.isMesh && o.name) tên.push(o.name); });
+    assert.ok(tên.includes('buildings'), `kỷ ${era}: bật cờ mà không có khối "buildings"`);
+    assert.ok(tên.includes('props'), `kỷ ${era}: bật cờ mà không có khối "props"`);
+    assert.ok(!tên.includes('city'), `kỷ ${era}: bật cờ mà khối gộp "city" vẫn còn`);
+
+    // Tam giác KHÔNG được đổi — cắt là chia lại cùng một đống hình học, không phải dựng thêm.
+    assert.equal(đếmĐộcLập(cắt.scene).tam, đếmĐộcLập(thường.scene).tam,
+      `kỷ ${era}: cắt khối làm đổi số tam giác — vậy nó không còn là cùng một thành phố`);
+    // ⚠️ VÀ CÁI GIÁ LÀ LỆNH VẼ — ĐÂY MỚI LÀ LÝ DO CỜ NÀY CẤM VÀO APP.
+    // Đừng khoá bằng "đúng +1": một khối gộp tốn MỘT lệnh vẽ mỗi HỌ VẬT LIỆU (mảng material +
+    // groups), nên cắt đôi làm mọi họ có mặt ở CẢ HAI nửa bị đếm hai lần. Giá thật vì thế bằng số
+    // họ dùng chung, và nó khác nhau theo kỷ — đo ra: kỷ 1 tốn +2. Viết cứng +1 là gài mìn, viết
+    // cứng một bảng 15 số là khoá một phép làm tròn. Thứ đáng khoá là QUAN HỆ: cắt thì ĐẮT LÊN.
+    const lệnhThường = đếmĐộcLập(thường.scene).lệnh;
+    const lệnhCắt = đếmĐộcLập(cắt.scene).lệnh;
+    assert.ok(lệnhCắt > lệnhThường,
+      `kỷ ${era}: cắt khối mà lệnh vẽ không tăng (${lệnhThường} → ${lệnhCắt}) — vậy cờ này không hề cắt`);
+
+    thường.dispose();
+    cắt.dispose();
+  }
+});
+
+test('CƯ DÂN PHẢI CÓ TÊN — không thì phép đo mật độ đọc họ thành nền trời', () => {
+  // Bài học 2026-08-19: bảng mật độ đầu tiên có 15,6% khung hình nằm trong "sọt đen" không tên, và
+  // tôi suýt đọc phần ấy thành trời. Đặt tên là cách rẻ nhất để một phép đo tự khai ra chỗ mù.
+  const city = dựngCảnh(7);
+  const cưDân = [];
+  city.scene.traverse((o) => { if (o.isInstancedMesh) cưDân.push(o.name); });
+  assert.ok(cưDân.length > 0, 'không có InstancedMesh nào — fixture hỏng, bài test đang chạy rỗng');
+  assert.deepEqual([...new Set(cưDân)], ['residents'],
+    `cư dân đang mang tên ${JSON.stringify(cưDân)} — mặt nạ sẽ không hỏi được họ`);
+  city.dispose();
+});

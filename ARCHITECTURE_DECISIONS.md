@@ -11,6 +11,49 @@
 
 ---
 
+## ADR-035 — Chữa va chạm cận cảnh: **LÙI RA TRƯỚC, NGẨNG SAU** (đảo nửa sau của ADR-034); và một phép lấy mẫu rời rạc phải trả về BIÊN CHỨNG MINH ĐƯỢC, không phải khoảng cách đo được
+
+- **Ngày**: 2026-08-18 (đóng `TECH_DEBT #46`, sửa một lỗ hổng trong chính ADR-034)
+- **Bối cảnh**: ADR-034 dựng chế độ cận cảnh và xếp thứ tự chữa va chạm là **ngẩng lên → lùi ra →
+  đứng yên**, với lý lẽ *"mất ít nhất trước"*: ngẩng thì vật vẫn to bằng ấy, lùi thì vật nhỏ đi.
+  Cùng ADR ấy đã tự ghi nhận cái giá: kỷ 15 phải ngẩng **65,3°**, và ở góc đó tầng trệt gần như
+  biến mất. Nó không tự chốt mà ghi thành `TECH_DEBT #46` để Đàm quyết, vì đây là lựa chọn MỸ
+  THUẬT.
+- **Vấn đề**: lý lẽ *"mất ít nhất"* đo bằng ĐỘ PHÓNG TO — một chiều duy nhất. Nó bỏ sót chiều thứ
+  hai: ngẩng quá cao thì vật vẫn to nhưng **MẶT ĐỨNG của nó biến mất**. Mà chế độ cận cảnh sinh ra
+  để cho xem đúng hai thứ: tầng trệt (Phase 10) và mái (Phase 11). Một cách chữa xoá sạch một
+  trong hai thì không phải chữa, nó chỉ dời chỗ hỏng.
+- **Phương án cân nhắc**: (a) **đảo thứ tự** — lùi ra trước, ngẩng sau. (b) **đặt trần góc ngẩng
+  riêng cho cận cảnh** (ví dụ 50°), vượt trần thì mới chuyển sang lùi.
+- **Lý do loại bỏ**: (b) đặt một **ngưỡng chưa hiệu chuẩn** (50° từ đâu ra?) đứng chắn trước đúng
+  cái cơ chế lùi mà (a) dùng — tức nó vừa làm y hệt (a) ở những ca đã vượt trần, vừa thêm một con
+  số không ai kiểm được. Đó là cái phễu Phase 9A đã dạy (*"một ngưỡng nới rộng cho chắc là một cái
+  phễu"*). Đàm chốt (a) với hai câu: ***"(a) giữ được LỜI HỨA, (b) giữ được CON SỐ."***
+- **Giải pháp chọn**: (a). `planCityFocus` nay chữa theo thứ tự **lùi ra (giữ nguyên góc) → ngẩng
+  lên → đứng yên**. Kèm một bản vá thứ hai, độc lập nhưng cùng phiên:
+  - ⚠️ **BIÊN CHỨNG MINH ĐƯỢC, không phải khoảng cách đo được.** `pathClearance` lấy 48 mẫu rời
+    rạc dọc đường bay, nên nó chỉ biết 48 điểm chứ không biết cả đoạn. Khoảng-cách-tới-một-tập là
+    hàm **1-Lipschitz**, nên giữa hai mẫu cách nhau `s` thì độ thoáng không thể tụt quá `s/2` ⇒
+    biên bảo đảm là `gap − step/2`. `pathGuarantee` trả về cả ba (`gap`, `step`, `guaranteed`);
+    bộ lập kế hoạch **nhận theo `guaranteed`** và **báo ra `gap`** (số so được với ảnh chụp).
+    Đo trước khi vá: chuyến chật nhất có `gap` 1,002 với bước mẫu 0,3682 ⇒ biên thật chỉ **0,0016**
+    trong khi cần **0,184** — tức lời hứa "cách một ô lưới" xưa nay chỉ chứng minh được tới ~0,82.
+- **Trade-off**: vật nhỏ đi ở những ca phải lùi. **Đã đo, và cái giá gần bằng không**: so cùng kỷ ở
+  khoảng cách lý tưởng 7,5 với ở ca xấu nhất, lệch trung bình cả khung thay đổi trong khoảng
+  **−0,72 … +2,14** (có kỷ còn TĂNG, vì lùi ra thì lọt vào khung nhiều nhà hơn). **Không một kỷ
+  nào tụt qua ngưỡng mắt vì việc lùi ra.** Đổi lại: **0/75 chuyến phải ngẩng**, góc nhìn giữ
+  nguyên 34,4° ở cả 15 kỷ, kỷ 15 đi từ 65,3° về 34,4°.
+- **Ảnh hưởng**: 0 lệnh vẽ · 0 tam giác · 0 điểm ảnh mới. Khung mặc định trùng **TỪNG BYTE** với
+  trước khi sửa (kỷ 9, kỷ 15, và cả bản quét 90 ô). Chỗ phải lùi xa nhất là **11,00** (kỷ 15), tỉ
+  lệ thu phóng tệ nhất **0,664** (kỷ 11) — tức **3 kỷ nay nằm ngoài dải 0,38–0,58** Đàm chốt ở
+  ADR-034, ở ca xấu nhất của chúng. Đó là cái giá của (a), nói thẳng ra chứ không giấu.
+- **Điều kiện xem lại**: khi có một công trình **RỘNG BẤT THƯỜNG** (xem `TECH_DEBT #47`) — lúc ấy
+  khoá khoảng cách sẽ cắt mất hai đầu công trình và câu trả lời có thể phải là "khoá theo bề
+  ngang", không phải theo khoảng cách. Hoặc khi Đàm thấy một kỷ nào đó lùi xa tới mức nhìn như
+  toàn cảnh.
+
+---
+
 ## ADR-034 — Chế độ cận cảnh khoá KHOẢNG CÁCH THẬT, để mức thu phóng tự khác nhau theo kỷ; và lưới an toàn canh CẢ ĐƯỜNG BAY chứ không chỉ điểm đến
 
 - **Ngày**: 2026-08-18 (VIỆC 2 — camera cận cảnh)
@@ -48,7 +91,7 @@
 - **Trade-off**: kỷ càng cao thì camera càng phải ngẩng. Kỷ 15 ra **65,3°** — gần như nhìn từ trên
   xuống, nên mái đọc rất rõ còn **tầng trệt gần như không thấy**. Thứ tự "ngẩng trước, lùi sau" là
   một lựa chọn MỸ THUẬT (đổi thành "lùi trước" sẽ giữ được góc nhìn ngang nhưng vật nhỏ đi);
-  **chưa hỏi Đàm** ⇒ ghi thành `TECH_DEBT #45` thay vì tự chốt.
+  **chưa hỏi Đàm** ⇒ ghi thành `TECH_DEBT #46` thay vì tự chốt. ⚠️ Đàm đã trả lời 2026-08-18: **đổi thứ tự** — xem ADR-035, mục này giữ nguyên làm bản ghi lịch sử.
 - **Ảnh hưởng**: **0 lệnh vẽ mới · 0 tam giác mới · 0 điểm ảnh mới** (cùng khung, cùng DPR) — chế
   độ này chỉ đổi chỗ đứng của camera. Khung mặc định BẤT BIẾN, chứng minh bằng `md5sum`: ảnh kỷ 9
   và kỷ 15 trùng **TỪNG BYTE** với bản dựng ở `ae2b4a0`. Chi tiết Phase 10–11 (so `b98a47d` với

@@ -30,9 +30,11 @@
  * nóc nhà cao nhất** khi hạ xuống. Nên phép canh lấy mẫu toàn bộ đường bay
  * (`FLIGHT_SAMPLES` chặng) và đo khoảng cách tới hộp bao GẦN NHẤT của mọi khối trong phố.
  *
- * Cách chữa xếp theo thứ tự "mất ít nhất trước": **ngẩng camera lên** (giữ nguyên khung ngắm, chỉ
- * đổi góc nhìn) → nếu hết cỡ ngẩng vẫn kẹt thì **lùi ra xa** → cùng lắm là đứng yên tại chỗ cũ
- * (trạng thái xuất phát luôn thoáng, nên phép tìm LUÔN dừng lại được, không có nhánh vô định).
+ * Cách chữa xếp theo thứ tự **"giữ được thứ nhìn thấy trước"**: **lùi ra xa** (giữ nguyên góc
+ * nhìn, vật nhỏ đi nhưng MẶT ĐỨNG còn nguyên) → nếu lùi hết cỡ vẫn kẹt thì **ngẩng lên** → cùng
+ * lắm là đứng yên tại chỗ cũ. Mọi vòng lặp đều có trần hữu hạn nên phép tìm LUÔN dừng lại được.
+ * ⚠️ Thứ tự này từng NGƯỢC LẠI cho tới 2026-08-18 (`TECH_DEBT #46`) — xem lý do ngay tại chỗ sửa
+ * trong `planCityFocus`, và đừng đảo lại mà không đọc nó.
  *
  * ⚠️ Số lần phải lùi ra được ĐẾM và trả về (`raisedDistance`), không nuốt im lặng — bài học Phase
  * 10 Bước 2: một cơ chế "từ chối thẳng" chỉ an toàn khi có người đếm số lần từ chối.
@@ -126,15 +128,43 @@ export function flightState(from, to, t) {
   };
 }
 
-/** Chỗ thoáng NHỎ NHẤT mà camera gặp phải trên cả đường bay. */
-export function pathClearance(from, to, blockers, samples = FLIGHT_SAMPLES) {
+/**
+ * Đo đường bay: chỗ thoáng NHỎ NHẤT ĐO ĐƯỢC (`gap`), bước dài nhất giữa hai chặng lấy mẫu
+ * (`step`), và — quan trọng nhất — `guaranteed`: chặn dưới CHỨNG MINH ĐƯỢC của độ thoáng ở MỌI
+ * điểm trên đường bay, kể cả những điểm nằm GIỮA hai chặng lấy mẫu.
+ *
+ * ⚠️ VÌ SAO CẦN `guaranteed` CHỨ KHÔNG CHỈ `gap`: 48 chặng lấy mẫu chỉ nhìn thấy 49 điểm; giữa hai
+ * điểm ấy camera vẫn đi qua một quãng. Khoảng cách tới một tập hợp là hàm **1-Lipschitz** theo vị
+ * trí, nên trên một quãng dài `s` giữa hai chặng đã đo, độ thoáng không thể tụt quá `s/2` dưới
+ * mức nhỏ hơn trong hai đầu. Vậy `guaranteed = gap − step/2` là con số ta thật sự được phép hứa.
+ *
+ * Đây là câu trả lời cho *"có nên quét hình trụ liên tục thay vì 48 chặng không?"* — KHÔNG: siết
+ * phép lấy mẫu trong khi mô hình vật cản vẫn là hộp bao THÔ là siết nhầm chỗ. Thứ đúng phải làm là
+ * đòi một BIÊN, vì có biên thì độ thưa của phép lấy mẫu **không còn quyết định kết quả** nữa.
+ * (Đo thật lúc đặt luật này: chưa có biên thì chuyến bay chật nhất đo được 1,002 trong khi biên
+ * cần là 0,184 — tức lời hứa "cách một ô lưới" khi ấy chỉ chứng minh được tới 0,82 ô.)
+ */
+export function pathGuarantee(from, to, blockers, samples = FLIGHT_SAMPLES) {
   const n = Math.max(1, Math.round(samples));
-  let worst = Infinity;
+  let gap = Infinity;
+  let step = 0;
+  let prev = null;
   for (let i = 0; i <= n; i += 1) {
-    const gap = nearestBlocker(orbitPosition(flightState(from, to, i / n)), blockers);
-    if (gap < worst) worst = gap;
+    const eye = orbitPosition(flightState(from, to, i / n));
+    const d = nearestBlocker(eye, blockers);
+    if (d < gap) gap = d;
+    if (prev) step = Math.max(step, Math.hypot(eye.x - prev.x, eye.y - prev.y, eye.z - prev.z));
+    prev = eye;
   }
-  return worst;
+  return { gap, step, guaranteed: gap - step / 2 };
+}
+
+/**
+ * Chỗ thoáng NHỎ NHẤT ĐO ĐƯỢC trên đường bay (chưa trừ biên lấy mẫu).
+ * Một dòng gọi lại `pathGuarantee` chứ không tự duyệt lần nữa — *một luật một công thức*.
+ */
+export function pathClearance(from, to, blockers, samples = FLIGHT_SAMPLES) {
+  return pathGuarantee(from, to, blockers, samples).gap;
 }
 
 /**
@@ -176,45 +206,57 @@ export function planCityFocus({
     target,
   };
 
+  // ⚠️ Điều kiện nhận một phương án là `guaranteed`, KHÔNG phải `gap` — xem `pathGuarantee`.
+  // Con số báo ra ngoài (`clearance`) vẫn là `gap` đo được, vì đó mới là thứ so được với ảnh chụp.
   const tryPlan = (pitch, distance) => {
     const to = { yaw: start.yaw, pitch, distance, target };
-    return { to, gap: pathClearance(start, to, blockers, samples) };
+    const { gap, guaranteed } = pathGuarantee(start, to, blockers, samples);
+    return { to, gap, guaranteed };
   };
 
   let attempt = tryPlan(wanted.pitch, wanted.distance);
-  if (attempt.gap >= clearance) {
+  if (attempt.guaranteed >= clearance) {
     return { ...attempt.to, clearance: attempt.gap, raisedPitch: 0, raisedDistance: 0, blocked: false };
   }
 
-  // (1) NGẨNG LÊN — mất ít nhất: khung ngắm và mức thu phóng giữ nguyên, chỉ nhìn chúc xuống hơn.
-  let pitch = wanted.pitch;
-  while (pitch < MAX_PITCH) {
-    pitch = Math.min(MAX_PITCH, pitch + PITCH_STEP);
-    attempt = tryPlan(pitch, wanted.distance);
-    if (attempt.gap >= clearance) {
+  // (1) LÙI RA XA — GIỮ NGUYÊN GÓC NHÌN, chỉ đứng xa hơn.
+  // ⚠️ THỨ TỰ NÀY ĐÃ TỪNG NGƯỢC LẠI (ngẩng trước), và Đàm đổi nó ngày 2026-08-18 khi đóng
+  // `TECH_DEBT #46`. Lý lẽ cũ — *"ngẩng thì vật vẫn to bằng ấy, lùi thì vật nhỏ đi"* — đúng về số
+  // ĐIỂM ẢNH và bỏ sót một chiều khác: ngẩng quá cao thì vật vẫn to nhưng ta không còn nhìn thấy
+  // MẶT ĐỨNG của nó nữa. Ở kỷ 15 nó đẩy góc lên 65,3°, tức cận cảnh ngả thành ảnh chụp từ trực
+  // thăng — mái rõ, còn tầng trệt (cả Phase 10) biến mất. Mà lời hứa của chế độ này là *"chi tiết
+  // Phase 10–11 nhìn thấy được"*, nên một cách chữa xoá sạch một trong hai phase thì không chữa,
+  // nó chỉ dời chỗ hỏng. Đàm: *"(a) giữ được LỜI HỨA, (b) giữ được CON SỐ."*
+  // Nhà nhỏ đi bao nhiêu là thứ ĐO ĐƯỢC (và đã đo: 15/15 kỷ vẫn trên ngưỡng mắt); còn "thấy được
+  // mặt tiền hay không" thì hoặc có hoặc không.
+  let distance = wanted.distance;
+  while (distance < start.distance) {
+    distance = Math.min(start.distance, distance + DISTANCE_STEP);
+    attempt = tryPlan(wanted.pitch, distance);
+    if (attempt.guaranteed >= clearance) {
       return {
         ...attempt.to,
         clearance: attempt.gap,
-        raisedPitch: pitch - wanted.pitch,
-        raisedDistance: 0,
+        raisedPitch: 0,
+        raisedDistance: distance - wanted.distance,
         blocked: false,
       };
     }
   }
 
-  // (2) LÙI RA XA — mất chi tiết, nên chỉ dùng khi ngẩng hết cỡ vẫn kẹt.
-  // ⚠️ Trần của vòng lặp này là chính khoảng cách ĐANG đứng: trạng thái xuất phát hiển nhiên
-  // thoáng (camera đang ở đó mà), nên phép tìm không thể chạy vô tận.
-  let distance = wanted.distance;
-  while (distance < start.distance) {
-    distance = Math.min(start.distance, distance + DISTANCE_STEP);
-    attempt = tryPlan(MAX_PITCH, distance);
-    if (attempt.gap >= clearance) {
+  // (2) NGẨNG LÊN — chỉ khi đã lùi hết cỡ (về đúng khoảng cách đang đứng) mà vẫn kẹt. Lùi hết cỡ
+  // KHÔNG hiển nhiên thoáng: điểm ngắm đã dời sang một công trình khác nên chỗ đứng cũng khác chỗ
+  // đứng ban đầu, dù khoảng cách bằng nhau.
+  let pitch = wanted.pitch;
+  while (pitch < MAX_PITCH) {
+    pitch = Math.min(MAX_PITCH, pitch + PITCH_STEP);
+    attempt = tryPlan(pitch, start.distance);
+    if (attempt.guaranteed >= clearance) {
       return {
         ...attempt.to,
         clearance: attempt.gap,
-        raisedPitch: MAX_PITCH - wanted.pitch,
-        raisedDistance: distance - wanted.distance,
+        raisedPitch: pitch - wanted.pitch,
+        raisedDistance: start.distance - wanted.distance,
         blocked: false,
       };
     }

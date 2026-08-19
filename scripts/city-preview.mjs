@@ -260,7 +260,13 @@ renderer.shadowMap.needsUpdate = true;
 
 // ⚠️ Truyền ĐÚNG bộ số mà app truyền, không để mặc định: dân số suy ra từ đây, và một trang xem
 // thử vẽ thành phố vắng hơn thật thì nó không còn kiểm chứng được thứ cần kiểm chứng.
-const city = createCityScene({ layout, palette, daylight, renderer, stats: { sessionCount: SESSIONS, streakLength: 9 } });
+// splitCityMesh: CHỈ bật khi mặt nạ hỏi tên "buildings"/"props". Cả thành phố vốn gộp làm MỘT
+// khối nên ở tầng scene không tách được nhà khỏi cây; cờ này bảo bên dựng tách ra thành hai khối
+// mang tên. Nó thêm một lệnh vẽ, nên tuyệt đối không dùng cho ảnh thường và không dùng cho --bench.
+const city = createCityScene({
+  layout, palette, daylight, renderer, stats: { sessionCount: SESSIONS, streakLength: 9 },
+  splitCityMesh: !!MASK && (MASK.includes('buildings') || MASK.includes('props')),
+});
 
 // Đẩy đồng hồ tới một thời điểm giữa chừng. Ở t = 0 mọi cư dân đều đứng ở đầu tuyến của mình —
 // đúng chỗ dễ trùng nhau nhất, tức là ảnh chụp sẽ nói dối theo hướng lạc quan về chuyện họ có
@@ -348,10 +354,17 @@ if (MASK) {
   }));
   const black = new MeshBasicMaterial({ color: 0x000000, fog: false, toneMapped: false });
   const hits = names.map(() => 0);
+  // ⚠️ PHẢI KỂ RA THỨ BỊ TÔ ĐEN. Phần đen là một cái sọt, và một cái sọt không có nhãn thì mọi con
+  // số rút ra từ tấm mặt nạ đều thiếu một vế: đọc 44% nền mà không biết trong đó có gì thì rất dễ
+  // đọc thành trời, trong khi nó có thể là cư dân, là ô cửa sáng, là một khối chưa ai đặt tên.
+  const conLai = new Map();
   city.scene.traverse((obj) => {
     if (!obj.isMesh && !obj.isPoints && !obj.isLine) return;
     const idx = names.indexOf(obj.name);
-    if (idx >= 0) { hits[idx] += 1; obj.material = mats[idx]; } else obj.material = black;
+    if (idx >= 0) { hits[idx] += 1; obj.material = mats[idx]; return; }
+    obj.material = black;
+    const ten = obj.name || '(không tên)';
+    conLai.set(ten, (conLai.get(ten) ?? 0) + 1);
   });
   city.scene.background = new Color(0x000000);
   city.scene.fog = null;
@@ -359,8 +372,17 @@ if (MASK) {
     if (hits[i] === 0) throw new Error('mặt nạ "' + n + '" không khớp đối tượng nào — sai tên?');
     console.log('[mask] "' + n + '" kênh ' + TÊN_KÊNH[i] + ' khớp ' + hits[i] + ' khối');
   });
+  const denList = [...conLai.entries()].map(([t, n]) => t + '×' + n).join(', ');
+  console.log('[mask] tô đen (không nằm trong phép đếm nào): ' + (denList || 'không có khối nào'));
 }
 
+{
+  const r = canvas.getBoundingClientRect();
+  console.log('[geom] canvas trên màn hình: x=' + r.x + ' y=' + r.y + ' w=' + r.width + ' h=' + r.height
+    + ' | thuộc tính: ' + canvas.width + 'x' + canvas.height
+    + ' | khung nhìn: ' + window.innerWidth + 'x' + window.innerHeight
+    + ' | tỉ lệ camera: ' + camera.aspect.toFixed(4));
+}
 renderer.render(city.scene, camera);
 
 if (BENCH > 0) {
@@ -707,13 +729,25 @@ function pageHtml({ width, height, theme, mask = null }) {
   // thuần kênh màu không" của `road-score.mjs` báo động nhầm (62% thay vì ~99%). Đúng bài học
   // Phase 4G: số đo nào gây bất ngờ thì kiểm CÔNG CỤ trước — và ở đây thủ phạm hoá ra không nằm
   // trong cảnh 3D chút nào.
-  const bg = mask ? '#000' : (theme === 'dark' ? '#141311' : '#e9e6de');
+  // ⚠️ NỀN TRANG Ở CHẾ ĐỘ MẶT NẠ LÀ MỘT MÀU MỐC, KHÔNG PHẢI MÀU ĐEN — VÀ ĐÂY LÀ BẢN VÁ CHO MỘT
+  // PHÉP ĐO ĐÃ SAI THẬT (2026-08-19). Ảnh chụp rộng hơn canvas, nên nền trang lọt vào ảnh. Tô đen
+  // thì nó lẫn hoàn toàn vào "không có lớp nào" của cảnh 3D, tức nó nằm trong MẪU SỐ mà không ai
+  // tách ra được: bảng mật độ đầu tiên vì thế thấp hơn sự thật một cách có hệ thống ở MỌI ô.
+  // Bản vá đầu (khai toạ độ canvas ra `.geom.json` rồi cắt theo) VẪN SAI, vì khung nhìn thật chỉ
+  // cao 693 chứ không phải 780 — canvas bị xén mất 23 dòng cuối, nên con số khai (700) lớn hơn số
+  // dòng thật sự vẽ ra (677). Một toạ độ KHAI không phải một toạ độ ĐO.
+  // ⇒ Nay bên dựng TỰ ĐÁNH DẤU phần không phải khung hình bằng một bộ ba màu không thể sinh ra từ
+  // mặt nạ: các lớp chỉ tô đỏ/lục/lam thuần, nên mọi điểm ảnh pha đều có ĐÚNG MỘT kênh khác 0.
+  // `rgb(1,2,3)` có ba kênh khác 0 và khác nhau ⇒ không một phép pha nào tạo ra được nó.
+  const bg = mask ? 'rgb(1,2,3)' : (theme === 'dark' ? '#141311' : '#e9e6de');
   return `<!doctype html>
 <html><head><meta charset="utf-8"><title>đang dựng…</title>
 <style>
   body { margin:0; background:${bg}; font-family: system-ui, sans-serif; }
   #wrap { padding:16px; }
-  #info { margin-top:10px; font-size:13px; color:${mask ? '#000' : (theme === 'dark' ? '#cfc9bb' : '#4a463f')}; }
+  /* Dòng số liệu cũng phải mang màu mốc ở chế độ mặt nạ, nếu không mấy trăm điểm ảnh chữ sẽ rơi
+     vào mẫu số dưới dạng "không có lớp nào". */
+  #info { margin-top:10px; font-size:13px; color:${mask ? 'rgb(1,2,3)' : (theme === 'dark' ? '#cfc9bb' : '#4a463f')}; }
   /* ⚠️ PHẢI GIỐNG HỆT lớp vignette trong CityScene3D.jsx. Không có nó thì trang xem thử
      chụp ra một thành phố KHÁC với thành phố Đàm nhìn thấy — mà một công cụ mắt-soi nói dối
      còn tệ hơn không có công cụ nào. Đổi bên này phải đổi bên kia. */
@@ -913,6 +947,29 @@ async function main() {
       } finally {
         server.close();
       }
+      // ⚠️ HỒ SƠ HÌNH HỌC ĐI KÈM ẢNH ĐƠN — CÙNG LUẬT VỚI BẢN QUÉT, VÀ NÓ VỪA TRẢ GIÁ THẬT.
+      // Ảnh chụp RỘNG HƠN canvas: `#wrap { padding:16px }` cộng dòng số liệu bên dưới, nên một tấm
+      // 1100×700 ra file 1134×780 — **12,9% ảnh không phải khung hình thành phố**. Phần thừa ấy đã
+      // được tô đen ở chế độ mặt nạ (xem `pageHtml`) nên nó KHÔNG còn phá phép phân loại kênh màu
+      // nữa; nhưng nó vẫn nằm trong MẪU SỐ, và một phép đo "nhà chiếm bao nhiêu phần khung hình"
+      // chia cho mẫu số ấy sẽ thấp hơn sự thật một cách có hệ thống. Đúng bài học `TECH_DEBT #44`:
+      // trước khi tin một tỉ lệ, hỏi "mẫu số của tôi có lẫn thứ không thuộc câu hỏi không?".
+      // ⇒ Ghi thẳng toạ độ canvas ra đây; `mask-count.mjs` ĐỌC file này và TỪ CHỐI chạy nếu thiếu,
+      // thay vì tự đoán bằng cách dò mép theo màu (đúng thứ đã bịa ra 5 lỗi ma ở Phase 4G).
+      const geomPath = pngPath.replace(/\.png$/, '.geom.json');
+      writeFileSync(geomPath, `${JSON.stringify({
+        png: pngPath.split('/').pop(),
+        pad: 16,               // #wrap { padding: 16px } trong `pageHtml`
+        canvasW: options.width,
+        canvasH: options.height,
+        era,
+        hour,
+        sessions: args.sessions,
+        mask: args.mask,
+        focus: args.focus,
+        zoom: args.zoom,
+        theme: args.theme,
+      }, null, 2)}\n`);
       console.log(`✓ kỷ ${era} · ${hour === null ? 'giờ trung tính' : `${hour} giờ`} → ${pngPath}`);
     }
   }

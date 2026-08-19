@@ -10,6 +10,7 @@ import {
   focusZoom,
   nearestBlocker,
   pathClearance,
+  pathGuarantee,
   planCityFocus,
 } from './cityFocus.js';
 import {
@@ -66,6 +67,7 @@ function buildCity(era) {
   const terrain = buildTerrain({ era, gridSize: GRID });
   const blockers = [];
   const landmarks = [];
+  const nhaOnly = [];   // chỉ CÔNG TRÌNH — dùng cho bài đối chứng "cảnh vật có trói camera không"
 
   for (const item of collectCitySpecs({ layout, detail: 'high' })) {
     const src = item.source;
@@ -84,9 +86,10 @@ function buildCity(era) {
     }
     if (!box) continue;
     blockers.push(box);
+    if (item.kind !== 'prop') nhaOnly.push(box);
     if (item.kind === 'building') landmarks.push(box);
   }
-  return { blockers, landmarks, orbit: cityOrbitOptions(GRID, era) };
+  return { blockers, landmarks, nhaOnly, orbit: cityOrbitOptions(GRID, era) };
 }
 
 const centreOf = (box) => ({
@@ -214,7 +217,10 @@ test('CAMERA KHÔNG BAO GIỜ CHUI VÀO PHỐ — canh CẢ ĐƯỜNG BAY, 15 k�
   let hep = Infinity;
   let ngangNhat = 0;
   const phaiLuiRa = [];
+  const phaiNgang = [];
   const ketCung = [];
+  let bienHep = Infinity;
+  let dayHep = Infinity;
   for (let era = 1; era <= 15; era += 1) {
     const { blockers, landmarks, orbit } = cityOf(era);
     for (const box of landmarks) {
@@ -231,7 +237,13 @@ test('CAMERA KHÔNG BAO GIỜ CHUI VÀO PHỐ — canh CẢ ĐƯỜNG BAY, 15 k�
           hep = Math.min(hep, thucTe);
           ngangNhat = Math.max(ngangNhat, plan.pitch);
           if (plan.raisedDistance > 0) phaiLuiRa.push(era);
+          if (plan.raisedPitch > 0) phaiNgang.push(era);
           if (plan.blocked) ketCung.push(era);
+          // Biên CHỨNG MINH ĐƯỢC (`gap − step/2`) và một phép đo lại DÀY GẤP 10. Xem `pathGuarantee`.
+          const bien = pathGuarantee(from, plan, blockers).guaranteed;
+          assert.ok(bien >= FOCUS_CLEARANCE - 1e-9, `kỷ ${era}: biên chứng minh được chỉ còn ${bien.toFixed(3)}`);
+          bienHep = Math.min(bienHep, bien);
+          dayHep = Math.min(dayHep, pathGuarantee(from, plan, blockers, FLIGHT_SAMPLES * 10).gap);
         }
       }
     }
@@ -239,13 +251,21 @@ test('CAMERA KHÔNG BAO GIỜ CHUI VÀO PHỐ — canh CẢ ĐƯỜNG BAY, 15 k�
   assert.equal(chuyenBay, 1200, 'phải thử đủ 1200 chuyến — ít hơn là vòng lặp đã lặng lẽ bỏ qua kỷ nào đó');
   assert.ok(hep >= FOCUS_CLEARANCE - 1e-9, `chỗ hẹp nhất ${hep.toFixed(2)}`);
   // ⚠️ ĐẾM RA TƯỜNG MINH, không nuốt im lặng (bài học Phase 10 Bước 2: "từ chối thẳng" chỉ an toàn
-  // khi có người đếm số lần từ chối). Hôm nay ngẩng camera lên là đủ ở cả 1200 chuyến; ngày nào có
-  // kỷ phải lùi ra xa thì con số này đỏ lên và người sửa biết ngay mình vừa làm mất chi tiết.
-  assert.deepEqual([...new Set(phaiLuiRa)], [], 'có kỷ phải LÙI RA XA mới bay được — mất chi tiết cận cảnh');
+  // khi có người đếm số lần từ chối). Từ 2026-08-18 thứ tự chữa là LÙI trước, NGẨNG sau
+  // (`TECH_DEBT #46` — Đàm chốt), nên hai con số dưới đây đã ĐỔI VAI:
+  //   · lùi ra xa: nay là cách chữa THỨ NHẤT ⇒ có thật, và phải có thật (nếu về 0 thì hoặc thành
+  //     phố đã teo lại, hoặc phép canh đã mù — cả hai đều đáng biết).
+  //   · ngẩng thêm: nay là cách chữa CUỐI ⇒ phải bằng 0. Ngày nào nó khác 0 nghĩa là có kỷ mà lùi
+  //     hết cỡ vẫn kẹt, và lúc ấy cận cảnh ở kỷ đó lại ngả thành ảnh chụp từ trực thăng.
+  assert.ok(phaiLuiRa.length > 0, 'KHÔNG chuyến nào phải lùi ra — cơ chế chữa va chạm đang chạy rỗng');
+  assert.deepEqual([...new Set(phaiNgang)], [], 'có kỷ lùi hết cỡ vẫn kẹt, phải NGẨNG lên — mất mặt đứng');
   assert.deepEqual([...new Set(ketCung)], [], 'có kỷ hết cách, camera đứng yên');
-  // Góc ngẩng tệ nhất còn cách trần một quãng rộng: cái trần chưa bao giờ phải cứu ai, nên con số
-  // "0 lần phải lùi ra xa" ở trên không phải may mắn sát nút.
+  // Cần gạt thứ hai (ngẩng) chưa bao giờ phải cứu ai ⇒ con số "0 lần ngẩng" ở trên không phải may
+  // mắn sát nút, và cái trần `MAX_PITCH` vẫn còn nguyên chỗ dự phòng.
   assert.ok(ngangNhat < MAX_PITCH - 0.3, `góc ngẩng tệ nhất ${ngangNhat.toFixed(3)} đã sát trần ${MAX_PITCH.toFixed(3)}`);
+  // ⚠️ HAI CON SỐ CHỨNG MINH 48 CHẶNG LÀ ĐỦ — trả lời thẳng câu "có nên quét liên tục không".
+  assert.ok(bienHep >= FOCUS_CLEARANCE - 1e-9, `biên chứng minh được hẹp nhất ${bienHep.toFixed(4)}`);
+  assert.ok(dayHep >= FOCUS_CLEARANCE - 1e-9, `đo lại dày gấp 10 vẫn phải thoáng, nhưng ra ${dayHep.toFixed(4)}`);
 });
 
 test('ĐỐI CHỨNG: chỉ canh ĐIỂM ĐẾN thôi là chưa đủ — và đây là danh sách kỷ chứng minh điều đó', () => {
@@ -356,14 +376,21 @@ test('ĐIỂM NGẮM DI CHUYỂN ĐƯỢC, và mọi chỗ ĐỌC nó đều th�
   assert.deepEqual(orbit.getHome().target, { x: 0, y: 0, z: 0 }, 'chỗ cũ vẫn được giữ để còn đường về');
 });
 
-test('NGẨNG LÊN TRƯỚC, LÙI RA SAU — thứ tự chữa phải theo "mất ít nhất trước"', () => {
+test('LÙI RA TRƯỚC, NGẨNG SAU — thứ tự chữa phải giữ được MẶT ĐỨNG', () => {
+  // ⚠️ Thứ tự này NGƯỢC lại với bản trước 2026-08-18, và đó là cả nội dung của `TECH_DEBT #46`.
+  // Lý lẽ cũ ("ngẩng lên mất ít nhất") đo bằng ĐỘ PHÓNG TO: lùi ra thì vật nhỏ đi, nên nghe như
+  // lùi ra là mất nhiều hơn. Nó bỏ sót thứ đắt hơn: ngẩng lên thì MẶT ĐỨNG biến mất, mà tầng trệt
+  // (Phase 10) và mái (Phase 11) là hai thứ chế độ cận cảnh sinh ra để cho xem. Đàm chốt:
+  // "(a) giữ được LỜI HỨA, (b) giữ được CON SỐ" — lùi ra vẫn còn cả hai, ngẩng lên thì mất (a).
   // Một bức tường dài chắn ngang giữa camera và điểm ngắm, cao vừa đủ để góc nhìn mặc định đâm vào.
   const tuong = [{ minX: -20, maxX: 20, minY: 0, maxY: 6, minZ: -1.2, maxZ: 1.2 }];
   const from = { yaw: 0, pitch: DEFAULT_PITCH, distance: 18, target: { x: 0, y: 5, z: 12 } };
   const plan = planCityFocus({ from, focus: { x: 0, y: 1, z: -6 }, blockers: tuong });
   assert.equal(plan.blocked, false);
-  assert.ok(plan.raisedPitch > 0, 'phải ngẩng lên mới qua được bức tường');
-  assert.equal(plan.raisedDistance, 0, 'ngẩng lên đã đủ thì KHÔNG được lùi ra — lùi ra là mất chi tiết vô cớ');
+  assert.ok(plan.raisedDistance > 0, 'phải lùi ra mới qua được bức tường');
+  assert.equal(plan.raisedPitch, 0, 'lùi ra đã đủ thì KHÔNG được ngẩng — ngẩng lên là mất mặt đứng vô cớ');
+  assert.equal(plan.pitch, DEFAULT_PITCH, 'góc nhìn phải NGUYÊN VẸN như lúc Đàm đang đứng ngắm');
+  assert.ok(plan.distance <= from.distance + 1e-9, 'lùi ra thì cùng lắm về đúng chỗ cũ, không được lùi xa hơn');
   assert.ok(plan.pitch <= MAX_PITCH + 1e-9);
   // Ở ĐÂY thì cố ý dùng `pathClearance` của mã sản phẩm, và so nó với phép đo độc lập: đó là cách
   // duy nhất khoá được rằng HAI BÊN CÒN KHỚP NHAU. Bài trên đã không dùng nó, nên nếu không có
@@ -373,4 +400,84 @@ test('NGẨNG LÊN TRƯỚC, LÙI RA SAU — thứ tự chữa phải theo "mấ
     Math.abs(pathClearance(from, plan, tuong) - doDuongBayDocLap(from, plan, tuong)) < 0.05,
     '`pathClearance` của mã sản phẩm đã trôi khỏi phép đo độc lập của bài test',
   );
+});
+
+test('CA THẬT CỦA APP — xuất phát từ đúng khung TOÀN CẢNH thì KHÔNG kỷ nào phải ngẩng lên', () => {
+  // ⚠️ VÌ SAO CẦN BÀI NÀY KHI ĐÃ CÓ BÀI 1200 CHUYẾN Ở TRÊN.
+  // Bài kia cố ý thử từ BỐN góc xuất phát, kể cả góc 0,18 rad (gần sát mặt đất) mà Đàm chỉ tới
+  // được nếu đã tự kéo camera xuống — nó trả lời câu *"có ca nào phá được phép canh không"*.
+  // Bài này trả lời một câu KHÁC và cụ thể hơn: *"mở app lên, không đụng gì, chạm vào một công
+  // trình — thì Đàm nhận được gì?"* Đó là ca duy nhất xảy ra hằng ngày, và nó là ca mà
+  // `TECH_DEBT #46` nói tới (kỷ 15 từng phải ngẩng tới 65,3° và mất sạch mặt đứng).
+  // Hai bài KHÔNG thay thế nhau: bài kia rộng mà không nói được ca thường gặp, bài này hẹp mà nói
+  // đúng ca ấy.
+  const luiRa = [];
+  let xaNhat = 0;
+  let tiLeTe = 0;
+  let soChuyen = 0;
+  for (let era = 1; era <= 15; era += 1) {
+    const { blockers, landmarks, orbit } = cityOf(era);
+    for (const box of landmarks) {
+      const from = { yaw: DEFAULT_YAW, pitch: DEFAULT_PITCH, distance: orbit.distance, target: orbit.target };
+      const plan = planCityFocus({ from, focus: centreOf(box), blockers });
+      soChuyen += 1;
+      assert.equal(
+        plan.pitch, DEFAULT_PITCH,
+        `kỷ ${era}: mở app rồi chạm một cái mà camera đã phải ngẩng lên ${plan.pitch.toFixed(3)} — mất mặt đứng`,
+      );
+      assert.equal(plan.blocked, false, `kỷ ${era}: bí ngay từ khung toàn cảnh`);
+      if (plan.raisedDistance > 0 && !luiRa.includes(era)) luiRa.push(era);
+      xaNhat = Math.max(xaNhat, plan.distance);
+      tiLeTe = Math.max(tiLeTe, focusZoom(orbit.distance, plan.distance));
+    }
+  }
+  assert.equal(soChuyen, 75, 'phải thử đủ 15 kỷ × 5 công trình mốc');
+  // ⚠️ ĐẾM RA TƯỜNG MINH — danh sách, không phải một con số tổng. Thêm một kỷ vào là đỏ, mà một kỷ
+  // được chữa xong cũng đỏ; cả hai đều là tin đáng biết. (Bài học `TECH_DEBT #44`: ngoại lệ phải
+  // đếm được, đừng nới ngưỡng cho vừa.)
+  assert.deepEqual(luiRa, [5, 6, 7, 8, 10, 11, 14, 15], 'danh sách kỷ có công trình phải lùi ra mới ngắm được');
+  assert.ok(xaNhat <= 11 + 1e-9, `chỗ phải lùi xa nhất ${xaNhat} — xa hơn nữa là chi tiết cận cảnh bắt đầu tan`);
+  assert.ok(tiLeTe <= 0.664 + 1e-9, `kỷ ít lợi nhất chỉ còn tỉ lệ ${tiLeTe.toFixed(4)} so với toàn cảnh`);
+});
+
+test('CẢNH VẬT NẰM TRONG DANH SÁCH VẬT CẢN, và hôm nay nó TRÓI ĐÚNG 0 KỶ — đếm ra, đừng đoán', () => {
+  // ⚠️ ĐÂY LÀ MỘT MỤC KIỂM CHO MỘT DÒNG CHÚ THÍCH. `sceneGraph.js` nhét cả cây/đá/đèn vào
+  // `blockers` và tự giải thích rằng làm vậy "rẻ bằng không". Câu ấy là một CON SỐ trá hình, nên
+  // nó phải được đếm chứ không được tin — và nó cũng là thứ ngăn phiên sau đọc nhầm dòng ấy thành
+  // mã chết rồi gỡ đi (Đàm chốt 2026-08-18: GIỮ, và ghi rõ hôm nay nó trói mấy kỷ).
+  // Ngày nào một kỷ có hàng cọ/tháp đèn cao hơn mái thì con số 0 này thành khác 0 và bài test đỏ —
+  // đúng lúc đáng biết, chứ không phải im lặng bảo vệ rồi chẳng ai hay.
+  const troi = [];
+  for (let era = 1; era <= 15; era += 1) {
+    const { blockers, nhaOnly, landmarks, orbit } = cityOf(era);
+    assert.ok(blockers.length > nhaOnly.length, `kỷ ${era}: cảnh vật đã rơi khỏi danh sách vật cản`);
+    for (const box of landmarks) {
+      const from = { yaw: DEFAULT_YAW, pitch: DEFAULT_PITCH, distance: orbit.distance, target: orbit.target };
+      const focus = centreOf(box);
+      const co = planCityFocus({ from, focus, blockers });
+      const khong = planCityFocus({ from, focus, blockers: nhaOnly });
+      if (co.distance !== khong.distance || co.pitch !== khong.pitch) troi.push(era);
+    }
+  }
+  assert.deepEqual([...new Set(troi)], [], 'cảnh vật đã bắt đầu trói camera — cập nhật lại chú thích ở `sceneGraph.js`');
+
+  // ⚠️ ĐỐI CHỨNG BẮT BUỘC — nếu không có nó thì assert trên là một cái PHỄU: một phép so "hai kế
+  // hoạch giống nhau" cũng xanh y hệt khi `nhaOnly` tình cờ bằng `blockers`, khi vòng lặp chạy
+  // rỗng, hoặc khi `planCityFocus` bỏ qua tham số `blockers`. Nên phải chứng minh phép đo ấy CÓ
+  // THỂ thấy sự khác biệt: thổi mỗi cảnh vật cao lên quá mái (y tới 12) thì nó phải trói được ít
+  // nhất một kỷ. Đây chính là ngày mai của dòng chú thích ở `sceneGraph.js` — "ngày nào có hàng
+  // cọ cao hơn mái".
+  const nhaSet = new Set();
+  const { blockers, nhaOnly, landmarks, orbit } = cityOf(1);
+  for (const b of nhaOnly) nhaSet.add(b);
+  const phongTo = blockers.map((b) => (nhaSet.has(b) ? b : { ...b, maxY: 12 }));
+  let doiChung = 0;
+  for (const box of landmarks) {
+    const from = { yaw: DEFAULT_YAW, pitch: DEFAULT_PITCH, distance: orbit.distance, target: orbit.target };
+    const focus = centreOf(box);
+    const a = planCityFocus({ from, focus, blockers: phongTo });
+    const b = planCityFocus({ from, focus, blockers: nhaOnly });
+    if (a.distance !== b.distance || a.pitch !== b.pitch) doiChung += 1;
+  }
+  assert.ok(doiChung > 0, 'thổi cảnh vật cao quá mái mà kế hoạch bay KHÔNG đổi ⇒ phép so ở trên đang mù');
 });

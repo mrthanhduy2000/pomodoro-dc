@@ -305,6 +305,17 @@ bay** (48 chặng, cách mọi khối ≥ 1 ô lưới), vì điểm đến tho�
 đo thật: 9/1200 chuyến bay thoáng ở đích nhưng vi phạm giữa đường. `CityScene3D` chỉ giữ phần mà
 React buộc phải giữ: nội suy 700 ms giữa hai chỗ đứng, và hạ sàn giới hạn khi hạ cánh.
 
+⚠️ **Hai bản vá ngày 2026-08-18 (ADR-035), đọc kèm mới đủ.** (1) **Thứ tự chữa va chạm là LÙI RA
+trước, NGẨNG LÊN sau** — bản đầu làm ngược, và ở kỷ 15 nó ngẩng tới 65,3°, tức cận cảnh ngả thành
+ảnh chụp từ trực thăng và tầng trệt biến mất. Lý lẽ cũ (*"ngẩng thì vật vẫn to bằng ấy"*) đo đúng
+một chiều — số điểm ảnh — và bỏ sót chiều thứ hai: **còn nhìn thấy mặt đứng hay không**. (2) Phép
+lấy mẫu rời rạc nay báo ra **BIÊN CHỨNG MINH ĐƯỢC** chứ không phải khoảng cách đo được: 48 mẫu chỉ
+biết 48 điểm, nhưng khoảng-cách-tới-một-tập là hàm **1-Lipschitz**, nên giữa hai mẫu cách nhau `s`
+độ thoáng không thể tụt quá `s/2` ⇒ `pathGuarantee` trả `gap − s/2`, và bộ lập kế hoạch nhận theo
+con số ấy. Đây là câu trả lời cho câu hỏi *"48 chặng có đủ không, hay phải quét liên tục?"*: **một
+cái biên chứng minh được thì đủ; thêm mẫu chỉ làm biên hẹp lại chứ không đổi bản chất** — và quét
+liên tục là độ-chính-xác-giả, vì bản thân vật cản chỉ là hộp bao thô.
+
 Bộ vẽ 2D **không phải bản nháp sẽ xoá**: nó là đường lui
 thường trực khi máy không có WebGL, khi trình duyệt mất context, hoặc khi Đàm tự chọn tắt 3D.
 Xem ADR-008.

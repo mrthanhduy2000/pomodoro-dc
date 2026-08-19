@@ -501,7 +501,7 @@ function createSkyEnvironment(renderer, skyLook, groundColor) {
  */
 export function createCityScene({
   layout, palette, dimmed = false, lowDetail = false, stats = {}, still = false, daylight = null,
-  maxLamps = 3, renderer = null, isMobile = false,
+  maxLamps = 3, renderer = null, isMobile = false, splitCityMesh = false,
 }) {
   const gridSize = layout.gridSize;
   const scene = new Scene();
@@ -867,8 +867,10 @@ export function createCityScene({
   // `deriveProps` đã sinh sẵn danh sách này từ Phase 1 (bộ vẽ 2D dùng từ lâu) nhưng bộ vẽ 3D
   // trước nay mới chỉ đọc mỗi đường sá. Gộp chúng vào CÙNG khối hình học với công trình để không
   // tốn thêm lệnh vẽ nào — chúng đều đứng yên nên chẳng có lý do gì phải tách ra.
+  let soKhoiCanhVat = 0;
   for (const item of cityParts) {
     if (item.kind !== 'prop') continue;
+    soKhoiCanhVat += 1;
     const prop = item.source;
     // ⚠️ CẢNH VẬT NAY LỆCH KHỎI TÂM Ô (Phase 8D) — và cái lệch ấy PHẢI đi vào cả hai phép tính
     // dưới đây, không được chỉ một. Toạ độ ngang lấy `ox/oy` mà cao độ vẫn hỏi tâm ô thì cái cây
@@ -890,6 +892,12 @@ export function createCityScene({
     });
   }
 
+  // ⚠️ RANH GIỚI NHÓM — ghi lại NGAY TẠI CHỖ ĐẶT, không dò ngược bằng hình dạng sau này.
+  // `placements` xếp theo đúng thứ tự: [công trình · giàn giáo · nhà dân] rồi [cảnh vật] rồi [móng].
+  // Móng luôn thuộc về một thứ ĐÃ XÂY (cảnh vật không có móng), nên "phần đã xây" = đoạn đầu cộng
+  // toàn bộ móng. Con số này chỉ có một chỗ dùng: chế độ ĐO (`splitCityMesh`) — xem ngay dưới.
+  const soKhoiDaXay = placements.length - soKhoiCanhVat;
+
   // Móng xếp SAU cùng: chúng chỉ là khối lấp, không phải thứ chạm vào được, nên phải nằm ngoài
   // vùng chỉ số mà `addPickTarget` đã bám theo (`placements[index]`).
   placements.push(...plinths);
@@ -902,10 +910,16 @@ export function createCityScene({
    * ấy bằng một vòng lặp riêng là tạo công thức thứ hai cho cùng một luật, và triệu chứng sẽ là
    * camera đâm xuyên qua đúng những khối mới thêm ở phase sau — im lặng tuyệt đối.
    *
-   * ⚠️ LẤY CẢ CẢNH VẬT (cây, đá, đèn) chứ không chỉ công trình. Đo ngày 2026-08-18: thêm chúng vào
-   * làm số hộp ở kỷ 1 đi từ 22 lên 56 mà kế hoạch bay **không đổi lấy một chữ số** ở cả 15 kỷ —
-   * cây thấp hơn nhà nên chưa bao giờ là thứ trói camera. Giữ lại vì nó rẻ bằng không và vì ngày
-   * nào có một hàng cọ cao hơn mái thì nó bảo vệ được ngay, không phải chờ ai nhớ ra.
+   * ⚠️ LẤY CẢ CẢNH VẬT (cây, đá, đèn) chứ không chỉ công trình — VÀ HÔM NAY NÓ TRÓI ĐÚNG **0 KỶ**.
+   * Đo lại 2026-08-18 (sau khi đổi thứ tự chữa va chạm, `TECH_DEBT #46`): thêm chúng vào làm số
+   * hộp ở kỷ 1 đi từ 22 lên 56 mà kế hoạch bay **không đổi lấy một chữ số** ở cả 15 kỷ — cây thấp
+   * hơn nhà nên chưa bao giờ là thứ trói camera.
+   * ⚠️ **Đừng đọc con số 0 ấy thành "mã chết rồi, gỡ đi".** Đàm đã chốt GIỮ (2026-08-18): nó rẻ
+   * bằng không, và ngày nào một kỷ có hàng cọ hay tháp đèn cao hơn mái thì nó bảo vệ được NGAY,
+   * không phải chờ ai nhớ ra. Con số 0 ấy không nằm trong chú thích này mà được ĐẾM trong bài
+   * `CẢNH VẬT NẰM TRONG DANH SÁCH VẬT CẢN…` (`engine/city3d/cityFocus.test.js`), kèm một đối
+   * chứng thổi cảnh vật cao quá mái để chứng minh phép đếm ấy không mù — nên ngày nó khác 0 thì
+   * bài test đỏ, chứ không phải chú thích này lặng lẽ nói dối.
    *
    * Chỉ là DỮ LIỆU: không lệnh vẽ, không tam giác, không cần dọn ở `dispose()`.
    */
@@ -917,13 +931,35 @@ export function createCityScene({
     if (box) blockers.push(box);
   }
 
-  const merged = buildMergedGeometry(placements, palette, {
+  /**
+   * ⚠️ CHẾ ĐỘ ĐO — `splitCityMesh` CHỈ để công cụ chụp trả lời được câu *"bao nhiêu phần khung hình
+   * là NHÀ?"*, và nó **KHÔNG BAO GIỜ bật trong app**.
+   *
+   * Vì sao phải có: cả thành phố gộp vào MỘT khối hình học (đó là lý do chỉ tốn một lệnh vẽ), nên
+   * ở tầng scene không còn cách nào tách "nhà" khỏi "cây". Mà tách bằng MÀU thì đúng vào cái bẫy
+   * `TECH_DEBT #22` đã trả giá ba phase (bộ lọc "8% tươi nhất ≈ mái" hoá ra chấm cỏ). Bên DỰNG
+   * biết chắc chắn khối nào là nhà — nên bên dựng phải nói ra, đúng tinh thần cái tên `road`/
+   * `ground` ở trên.
+   *
+   * Giá: khi bật, thành phố ra HAI lệnh vẽ thay vì một. Đó là lý do nó là một cờ tắt-mặc-định chứ
+   * không phải cách dựng thường: ràng buộc "không thêm lệnh vẽ nào" của Đàm nói về APP, và app thì
+   * không bao giờ đi vào nhánh này. Có test khoá mặc định ở `sceneGraphWiring.test.js`.
+   */
+  const nhomHinhHoc = splitCityMesh
+    ? [
+      ['buildings', [...placements.slice(0, soKhoiDaXay), ...plinths]],
+      ['props', placements.slice(soKhoiDaXay, soKhoiDaXay + soKhoiCanhVat)],
+    ]
+    : [['city', placements]];
+
+  for (const [tenNhom, nhom] of nhomHinhHoc) {
+  const merged = nhom.length ? buildMergedGeometry(nhom, palette, {
     skipDeco: lowDetail,
     // Trời đã tối ⇒ tách ô cửa ra khối "tự phát sáng" riêng. Ban ngày `null` ⇒ không tách, không
     // tốn thêm lệnh vẽ nào.
     glowRole: daylight?.windowsLit ? 'glass' : null,
     era: layout.era,
-  });
+  }) : null;
   if (merged) {
     if (merged.geometry) {
       track(merged.geometry);
@@ -950,6 +986,7 @@ export function createCityScene({
         }), { ...GRAIN.building, specularGain: specularGainFor(envIntensity) }));
       });
       const mesh = new Mesh(merged.geometry, buildingMaterial);
+      mesh.name = tenNhom;   // để `city-preview.mjs --mask buildings` hỏi được, xem chú thích trên
       mesh.castShadow = true;
       mesh.receiveShadow = true;
       addMesh(mesh);
@@ -970,10 +1007,12 @@ export function createCityScene({
         fog: false,
       }));
       const glowMesh = new Mesh(merged.glowGeometry, glowMaterial);
+      glowMesh.name = tenNhom + '-glow';
       glowMesh.castShadow = false;      // ô cửa sáng mà đổ bóng thì thành ra vô lý
       glowMesh.receiveShadow = false;
       addMesh(glowMesh);
     }
+  }
   }
 
   // ── Cư dân ────────────────────────────────────────────────────────────────
@@ -1013,6 +1052,11 @@ export function createCityScene({
 
     const skin = palette.roles?.skin ?? palette.roles?.trim ?? palette.wall;
     for (const mesh of [bodyMesh, headMesh]) {
+      // ⚠️ ĐẶT TÊN LÀ ĐỂ ĐO ĐƯỢC — cùng lý do đã ghi ở mặt đất và mặt đường phía trên. Không có
+      // cái tên này thì cư dân rơi vào "sọt đen" của `city-preview.mjs --mask`, và một phép đo mật
+      // độ nhà sẽ đọc phần đen ấy thành trời hoặc thành nền. Đo lần đầu (kỷ 7, 50 phiên, khung
+      // toàn cảnh) ra 15,7% khung hình — lớn hơn nhiều so với cảm giác "vài chấm nhỏ".
+      mesh.name = 'residents';
       // Người quá nhỏ để đổ bóng ra hồn, nhưng NHẬN bóng thì có: đi vào bóng nhà là tối đi.
       mesh.castShadow = false;
       mesh.receiveShadow = true;

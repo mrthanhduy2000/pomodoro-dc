@@ -12,6 +12,54 @@
 
 ---
 
+## 2026-08-19 — Đo mật độ nhà, và ba lớp vá cho chính phép đo
+
+**Mục đích.** Trả lời câu hỏi của Đàm *"nhà chỉ che khoảng 1/3 mặt đất, có nên xây dày hơn không?"*
+bằng số đo chứ không bằng cảm giác. **CHỈ ĐO — không sửa mỹ thuật, không đổi một dòng nào của tầng
+dựng cảnh ngoài phần phục vụ phép đo.**
+
+**Phạm vi.** `scripts/mask-count.mjs` (mới), `scripts/plan-coverage.mjs` (mới),
+`scripts/city-preview.mjs` (cờ `--mask` kể tên khối bị tô đen · nền trang mang màu mốc · ghi kèm
+`.geom.json`), `src/components/city/render3d/sceneGraph.js` (cờ đo `splitCityMesh`, mặc định TẮT +
+đặt tên cho cư dân), `sceneStats.test.js` (3 bài khoá).
+
+**Kết quả.** Nhà chiếm **20,7% → 25,0% → 25,5%** khung hình toàn cảnh ở 20/50/80 phiên; nhìn từ
+trên xuống thì che **26,6% → 48,8% → 72,4%** phần đất không phải đường. Tiền đề "1/3" đúng với
+thành phố trẻ, sai với thành phố già: 72,4% đã vượt dải 30–60% của khu dân cư thấp tầng Nhật (hệ số
+建蔽率) và tiệm cận trần 80% của khu thương mại.
+
+**Ảnh hưởng / tương thích.** Không đổi hình ảnh app: cờ `splitCityMesh` mặc định TẮT và có test
+khoá, khung mặc định vẫn trùng từng byte. Một khoản nợ mới: `TECH_DEBT #49` — công cụ xem thử xén
+mất 23 dòng cuối của mọi ảnh đơn (đã vá đường vòng cho phép đo, chưa vá gốc vì sửa sẽ làm đổi kích
+thước MỌI ảnh tham chiếu).
+
+---
+
+## 2026-08-18 — Cận cảnh chữa va chạm bằng cách LÙI RA, không phải NGẨNG LÊN (ADR-035)
+
+**Mục đích**: giữ được **mặt đứng** của công trình khi camera bay tới ngắm gần. Bản trước
+(ADR-034) chữa va chạm bằng cách ngẩng camera lên, và ở kỷ 15 nó ngẩng tới **65,3°** — mái đọc rõ
+còn tầng trệt (cả Phase 10) biến mất. Đàm chốt đổi thứ tự: *"lùi ra giữ được LỜI HỨA, và giữ được
+cả CON SỐ."*
+
+**Phạm vi**: `src/engine/city3d/cityFocus.js` (đảo thứ tự chữa + hàm mới `pathGuarantee`), test
+tương ứng (+2 bài), một chú thích ở `sceneGraph.js`. Không đụng giao diện, không đụng dữ liệu.
+
+**Ảnh hưởng**: góc nhìn cận cảnh nay **giữ nguyên 34,4° ở cả 15 kỷ** (0/75 chuyến phải ngẩng, so
+với 8 trước đây; 0/1200 ở phép thử rộng). Khung mặc định vẫn trùng **TỪNG BYTE** (kỷ 9, kỷ 15, và
+cả bản quét 90 ô). Giá phải trả, nói thẳng: 3 kỷ có ca xấu nhất nằm ngoài dải thu phóng 0,38–0,58
+(0,664 · 0,623 · 0,579), nhưng **việc lùi ra KHÔNG làm mất chi tiết** — đo đối chứng cùng kỷ ở
+khoảng cách lý tưởng, chênh lệch chỉ −0,72…+2,14 và không kỷ nào đổi phía so với ngưỡng mắt.
+Kèm một bản vá âm thầm nhưng quan trọng: phép lấy mẫu 48 chặng nay báo **biên chứng minh được**
+(`gap − bước/2`, vì khoảng-cách-tới-một-tập là hàm 1-Lipschitz) thay vì khoảng cách đo được — lời
+hứa "cách một ô lưới" trước đó chỉ chứng minh được tới ~0,82.
+
+⚠️ **Đo lần đầu đủ 15 kỷ thì lộ ra rằng con số 15,45 của ADR-034 là số của MỘT kỷ**: chi tiết
+Phase 10–11 chỉ vượt ngưỡng mắt ở **4/15 kỷ**. Nguyên nhân không phải camera (đã có đối chứng loại
+trừ) mà là **thứ để mà nhìn** — xem `TECH_DEBT #48`. `TECH_DEBT #41` và `#46` đã ĐÓNG.
+
+---
+
 ## 2026-08-18 — Chạm vào một khu phố thì camera bay tới ngắm gần (ADR-034)
 
 **Mục đích**: Phase 10 (tầng trệt) và Phase 11 (chi tiết mái) đổ công vào những thứ mà ở khung hình

@@ -2125,7 +2125,118 @@ ship một trạng thái dở dang, hãy làm nó **ĐẾM ĐƯỢC trong một 
 
 ---
 
-## #46 — Chế độ cận cảnh ở những kỷ CAO ngả thành nhìn-từ-trên-xuống: kỷ 15 ngẩng 65,3°, tầng trệt gần như biến mất
+## #49 — `city-preview.mjs` xén mất 23 dòng cuối của MỌI ảnh đơn, và không có gì nói ra
+
+- **Module**: `scripts/city-preview.mjs` (hàm `shoot`, cờ `--window-size`)
+- **Priority**: Medium · **Severity**: Low-Medium
+- **Impact**: `--width 1100 --height 700` dựng canvas đúng 1100×700, nhưng **khung nhìn thật chỉ
+  cao 693** (đo 2026-08-19 bằng chính trang xem thử: `khung nhìn: 1134x693`). Canvas đặt ở
+  `y = 16`, nên **23 dòng cuối của khung hình chưa bao giờ được vẽ ra**; ảnh PNG vẫn cao 780 vì
+  Chromium chụp vượt khung nhìn rồi phủ nốt bằng nền trang. Nói cách khác: mọi ảnh đơn từ trước
+  tới nay là một khung hình **1100×677** mang tên 1100×700, cộng một dải nền trang cao 87 dòng.
+- **Root Cause**: `--window-size=${width + 34},${height + 80}` — con số `+80` là một ước lượng cho
+  phần khung cửa sổ, và nó THIẾU 23 điểm ảnh trong hộp cát này. Không ai từng đặt nó cạnh sự thật,
+  vì trang xem thử không in ra `window.innerHeight` (đúng bài học đã ghi cho `shot.mjs`: *"luôn in
+  kèm `window.innerWidth` thật, nếu không mọi kết luận về bố cục đều dựa trên một bề ngang bịa"* —
+  bài học ấy có sẵn, chỉ là chưa được áp cho công cụ này).
+- **Current Risk**: THẤP cho việc so ảnh trước/sau (cả hai vế cùng bị xén y hệt) và cho bản quét 15
+  kỷ (đường đi khác, dùng `sweepPageHtml`). CAO cho bất kỳ phép đo nào tin vào con số KHAI: bản đầu
+  của phép đo mật độ đã khai canvas cao 700 rồi cắt theo, và 23 dòng chênh ấy lọt thẳng vào mẫu số.
+- **Future Risk**: một kết luận mỹ thuật về **mép dưới khung hình** (mặt đường gần nhất, bóng đổ
+  chân tường, bệ kè) sẽ nói về một vùng ảnh KHÔNG tồn tại. Và bất cứ ai đọc `--height 700` rồi suy
+  ra tỉ lệ khung 1100:700 = 1,571 đều sai — tỉ lệ THẬT trên màn hình là 1100:677 = 1,625, trong khi
+  camera vẫn dựng theo 1,571 (`tỉ lệ camera: 1.5714`), tức ảnh đang bị **kéo dãn dọc nhẹ**.
+- **Recommended Solution**: nới `+80` thành một số đủ (đo được: cần ≥ +103), HOẶC bỏ hẳn cách đoán
+  bằng cách chụp qua CDP `Page.captureScreenshot` với `clip` đúng hộp bao canvas. Kèm một cổng tự
+  kiểm: trang PHẢI in `window.innerHeight` và script PHẢI đỏ nếu `innerHeight < pad + height`.
+- **Estimated Complexity**: Nhỏ (một dòng + một cổng kiểm) — nhưng xem Blocking Conditions.
+- **Blocking Conditions**: sửa xong thì **MỌI ảnh tham chiếu đổi kích thước**, nên mọi con số
+  nghiệm thu đã đo bằng ảnh 1134×780 (kể cả các phép `md5sum` byte-identical dùng trong phiên này)
+  sẽ không tái lập được. Phải làm thành một bước riêng, đo lại mốc nền, chứ không kèm vào một phase
+  mỹ thuật — đúng bài học `TECH_DEBT #43` (*mỗi phase phải tự đo lại mốc nền của mình*).
+- **Review Trigger**: trước phase kế tiếp có kết luận về mép dưới khung hình, hoặc trước lần đo
+  nghiệm thu nào phải khai toạ độ canvas.
+- **Owner**: chưa phân công · **Status**: Open — đã VÁ ĐƯỜNG VÒNG cho phép đo mật độ: nền trang ở
+  chế độ mặt nạ nay mang màu mốc `rgb(1,2,3)` và `mask-count.mjs` loại nó khỏi mẫu số, nên phép đo
+  KHÔNG còn phụ thuộc vào con số khai. Bản thân việc xén 23 dòng thì vẫn còn.
+
+---
+
+## #48 — Chi tiết Phase 10–11 nằm DƯỚI ngưỡng mắt ở 11/15 kỷ, **kể cả ở khoảng cách cận cảnh lý tưởng**
+
+- **Module**: `src/engine/city3d/groundFloorStyle.js` + `roofStyle.js` (bảng) · `rooftop.js` +
+  `groundFloor.js` (hình) — KHÔNG phải `cityFocus.js`
+- **Priority**: Medium · **Severity**: Medium
+- **Impact**: chế độ cận cảnh (ADR-034) được ship kèm một con số chứng minh: *"lệch trung bình
+  15,45 — TRÊN ngưỡng mắt 12"*. Con số ấy đo ở **đúng một kỷ (kỷ 9)**. Đo lần đầu đủ 15 kỷ
+  (2026-08-18, cùng một dòng lệnh, `b98a47d` → `e95cdf1`, khung 1134×780):
+
+  | kỷ | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 |
+  |---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|
+  | lệch TB | **0,71** | 4,56 | 5,03 | 8,17 | 3,72 | 3,19 | **15,52** | 11,19 | **15,45** | 8,85 | **12,61** | 5,81 | **12,20** | 4,48 | 3,02 |
+
+  Chỉ **4/15 kỷ** trên ngưỡng. Kỷ 1 gần như KHÔNG đổi gì (0,71 — chỉ 0,9% điểm ảnh).
+- **Root Cause**: KHÔNG phải camera, và đây là điểm dễ kết luận nhầm nhất. Đối chứng: đo lại 8 kỷ
+  có lùi ra, ở **khoảng cách lý tưởng 7,5** (tức không lùi chút nào) — chênh lệch so với ca xấu
+  nhất chỉ **−0,72 … +2,14**, và **không kỷ nào đổi phía so với ngưỡng**. Tức camera đã làm hết
+  phần việc của nó; thứ thiếu là **thứ để mà nhìn**. Hai nguyên nhân thật, cả hai đã có tên sẵn
+  trong `#41`: (a) Phase 10–11 thêm rất ÍT vào một số kỷ (kỷ 1 là lều da thú: +9,1% tam giác, và
+  tầng trệt của nó chỉ là một cửa lều); (b) thứ được thêm ở nhiều kỷ là **BỀ MẶT** chứ không phải
+  **ĐƯỜNG VIỀN** — kỷ 8 tốn nhiều hình học nhất bảng (+48,5%, ngói bò) mà chỉ ra 11,19.
+  Đối chiếu: 4 kỷ đạt đều là kỷ có chi tiết phá đường viền (lan can kỷ 7, cửa sổ mái kỷ 9).
+- **Current Risk**: thấp về kỹ thuật (không hỏng gì, không lệnh vẽ mới). Trung bình về giá trị:
+  Đàm bay tới ngắm gần một khu phố ở 11/15 kỷ và thấy gần như y hệt trước Phase 10.
+- **Future Risk**: trung bình. Đây đúng là cái bẫy `#41` cảnh báo — nếu Phase 13 lại thêm chi tiết
+  bề mặt lên cùng những kỷ ấy thì kết quả sẽ lặp lại với một ngân sách nữa.
+- **Recommended Solution**: theo đúng LUẬT MỚI ở `#41` — chọn kỷ theo con số trong bảng trên, và
+  chỉ thêm thứ **đổi đường viền**: `crown`/`dormer` cho những kỷ đang chỉ có `stack`, hoặc một đặc
+  trưng tầng trệt nhô ra khỏi mặt tường (mái hiên, cột hiên, bậc thềm rộng). ⚠️ **KHÔNG** phóng to
+  đều mọi thứ — bẫy "cây nấm" (Phase 7C) và bẫy `MIN_STONE` (Phase 9D). ⚠️ Và với kỷ 1–2 phải hỏi
+  trước: một túp lều da thú **có nên** có nhiều chi tiết không, hay sự đơn sơ mới đúng?
+- **Estimated Complexity**: Trung bình — sửa bảng thì rẻ, nhưng phải chụp + đo lại 15 kỷ mỗi vòng
+  (~12 phút/vòng) và mỗi giá trị mới phải trả lời được *"công trình có thật nào ở nước ấy trông
+  như vậy?"*.
+- **Blocking Conditions**: ⛔ **CHỜ ĐÀM QUYẾT** — mục 5 ca 6 (quyết định mỹ thuật). Cụ thể: có
+  đáng tiêu một phase nữa để kéo 11 kỷ kia lên trên ngưỡng không, hay chấp nhận rằng **những kỷ
+  đơn sơ thì vốn dĩ đơn sơ** và chuyển ngân sách sang chỗ khác (mật độ nhà — xem báo cáo cùng
+  ngày)?
+- **Review Trigger**: trước khi bắt đầu bất kỳ phase nào thêm chi tiết lên nhà.
+- **Owner**: chờ Đàm · **Status**: 🟡 MỞ — đã đo đủ 15 kỷ, đã có đối chứng loại trừ camera
+
+---
+
+## #47 — Chế độ cận cảnh khoá KHOẢNG CÁCH, nên một công trình RỘNG BẤT THƯỜNG sẽ bị cắt hai đầu
+
+- **Module**: `src/engine/city3d/cityFocus.js` (`FOCUS_VIEW_DISTANCE`)
+- **Priority**: Low · **Severity**: Low
+- **Impact**: chưa có. Hôm nay **không có kỷ nào** dính — công trình rộng nhất trong 15 kỷ vẫn nằm
+  gọn trong khung ở khoảng cách 7,5.
+- **Root Cause**: ADR-034 khoá **khoảng cách thật** (7,5) thay vì khoá "công trình chiếm bao nhiêu
+  phần khung", và đó là lựa chọn ĐÚNG vì nó giữ được lời hứa *"một cái ống khói ở kỷ 1 và ở kỷ 15
+  chiếm bằng nhau số điểm ảnh"*. Nhưng khoá khoảng cách là một luật về **CHIỀU SÂU**, mà thứ quyết
+  định "có lọt khung không" là **BỀ NGANG**. Hai đại lượng ấy hôm nay đi cùng nhau chỉ vì mọi công
+  trình đều cao-hơn-rộng; ngày nào có một công trình bè ngang (một cây cầu, một bức tường thành
+  dài, một sân vận động) thì chúng tách ra, và cận cảnh sẽ cắt mất hai đầu.
+- **Current Risk**: bằng không — **cố ý ghi ra một mục nợ cho một thứ CHƯA hỏng**, vì cố vấn kỹ
+  thuật chỉ đúng một điều: cách hỏng duy nhất còn lại của việc khoá khoảng cách là ca này, và nó
+  sẽ đến im lặng (không có gì đỏ lên, chỉ là một tấm ảnh bị cắt).
+- **Future Risk**: thấp hôm nay, trung bình khi có công trình bè ngang.
+- **Recommended Solution**: ⚠️ **ĐỪNG SỬA BÂY GIỜ** (Đàm chốt 2026-08-18). Sửa trước khi có ca
+  hỏng là tự đặt một ngưỡng chưa hiệu chuẩn — đúng cái phễu Phase 9A. Khi ca ấy tới thì cách đúng
+  là **giữ khoá khoảng cách làm mặc định và thêm một phép nới CHỈ khi bề ngang vượt khung**, chứ
+  không đổi sang khoá theo bề ngang cho mọi công trình (làm vậy là mất lời hứa gốc ở 15/15 kỷ để
+  chữa cho 1 kỷ).
+- **Estimated Complexity**: Thấp.
+- **Blocking Conditions**: không — chờ điều kiện xem lại.
+- **Review Trigger**: ⚠️ **ĐIỀU KIỆN TƯỜNG MINH** — khi một công trình có bề ngang (`w` sau
+  `BUILDING_SCALE`) vượt **quá chiều cao của chính nó**, hoặc khi thêm một loại công trình mới
+  thuộc nhóm cầu/tường thành/sân vận động. Hai điều kiện ấy đếm được, không phải "khi nào thấy
+  kỳ kỳ".
+- **Owner**: chưa ai · **Status**: 🟡 MỞ — cố ý, làm cái hẹn cho một ca chưa xảy ra
+
+---
+
+## #46 — ✅ ĐÃ ĐÓNG (2026-08-18, ADR-035) — Chế độ cận cảnh ở những kỷ CAO ngả thành nhìn-từ-trên-xuống: kỷ 15 ngẩng 65,3°, tầng trệt gần như biến mất
 
 - **Module**: `src/engine/city3d/cityFocus.js` (thứ tự chữa trong `planCityFocus`)
 - **Priority**: Medium · **Severity**: Low
@@ -2153,7 +2264,34 @@ ship một trạng thái dở dang, hãy làm nó **ĐẾM ĐƯỢC trong một 
 - **Blocking Conditions**: cần Đàm chọn hướng — xem ảnh kỷ 15 rồi quyết "thà nhỏ hơn mà thấy mặt
   tiền" hay "thà to mà nhìn từ trên xuống".
 - **Review Trigger**: khi thêm kỷ mới cao hơn kỷ 15, hoặc khi Đàm nói cận cảnh ở kỷ cao khó nhìn.
-- **Owner**: chờ Đàm · **Status**: 🟡 MỞ — đã đo, đã có hai phương án, chờ quyết định mỹ thuật
+- **Owner**: đã xong · **Status**: ✅ **ĐÃ ĐÓNG 2026-08-18** — Đàm chọn **(a) đổi thứ tự**, xem
+  ADR-035.
+
+### Đã đóng thế nào, và cái giá thật là bao nhiêu
+
+`planCityFocus` nay chữa theo thứ tự **lùi ra (giữ nguyên góc) → ngẩng lên → đứng yên**.
+
+| Đo lại sau khi đổi | Trước (ngẩng trước) | Sau (lùi trước) |
+|---|--:|--:|
+| góc ngẩng kỷ 15, ca thật của app | 65,3° | **34,4°** |
+| số chuyến phải NGẨNG (75 chuyến ca thật) | 8 | **0** |
+| số chuyến phải NGẨNG (1200 chuyến, 4 góc xuất phát) | 109 | **0** |
+| số chuyến bị kẹt cứng | 0 | **0** |
+| chỗ phải lùi xa nhất | — | 11,00 (kỷ 15) |
+| tỉ lệ thu phóng tệ nhất | — | 0,664 (kỷ 11) |
+
+⚠️ **Giá phải trả, nói thẳng**: 3 kỷ (11 · 14 · 15) nay có ca xấu nhất nằm **ngoài dải thu phóng
+0,38–0,58** mà Đàm chốt ở ADR-034 — lần lượt 0,664 · 0,623 · 0,579. Dải ấy là một lời hứa về
+*"công trình chiếm bao nhiêu khung hình"*, và ở ca phải lùi thì nó không giữ được. Đổi lại, lời hứa
+*"còn nhìn thấy mặt đứng"* thì giữ được ở **15/15 kỷ**.
+
+⚠️ **Và điều quan trọng nhất, đo bằng đối chứng chứ không suy luận**: việc lùi ra **KHÔNG làm mất
+chi tiết**. Đo cùng một kỷ ở khoảng cách lý tưởng 7,5 rồi ở ca xấu nhất của nó, lệch trung bình cả
+khung thay đổi trong khoảng **−0,72 … +2,14** — có kỷ còn TĂNG, vì lùi ra thì lọt vào khung nhiều
+nhà hơn. **Không một kỷ nào tụt qua ngưỡng mắt vì lùi ra.** Đây chính là điều kiện Đàm đặt ra
+(*"nếu một kỷ nào tụt xuống dưới 12 thì DỪNG và báo"*): số kỷ TỤT vì bản vá này là **0**.
+⚠️ Nhưng phép đo ấy lôi ra một sự thật KHÁC và lớn hơn, không liên quan gì tới thứ tự chữa — xem
+**#48**.
 
 ---
 
@@ -2383,7 +2521,7 @@ hơn và nằm ngoài phạm vi. Ghi lại thay vì mở rộng phạm vi, đún
 
 ---
 
-## #41 — Chi tiết mái KHÔNG sống sót tới thang bản quét: 90/90 ô dưới ngưỡng mắt
+## #41 — ✅ ĐÃ ĐÓNG (2026-08-18) — Chi tiết mái KHÔNG sống sót tới thang bản quét: 90/90 ô dưới ngưỡng mắt
 
 - **Module**: `src/engine/city3d/rooftop.js` + `roofStyle.js` (kích cỡ), `scripts/sweep-diff.mjs` (đo)
 - **Priority**: Medium · **Severity**: Medium
@@ -2421,7 +2559,8 @@ hơn và nằm ngoài phạm vi. Ghi lại thay vì mở rộng phạm vi, đún
   mỹ thuật với độ tự tin dưới 80%). Tuyệt đối không tự phóng to rồi báo "đã đạt".
 - **Review Trigger**: ngay khi Đàm trả lời; hoặc trước khi Phase 12 bắt đầu thêm bất cứ chi tiết
   nào lên mái/tường, vì cùng câu hỏi sẽ lặp lại.
-- **Owner**: chưa ai · **Status**: 🟢 **ĐÃ CÓ LỜI GIẢI, GIỮ MỞ CHO ĐÚNG PHẠM VI** — VIỆC 2
+- **Owner**: đã xong · **Status**: ✅ **ĐÃ ĐÓNG 2026-08-18** (xem mục "ĐÓNG NGÀY 2026-08-18" bên
+  dưới; phần chưa giải chuyển sang `#48`) — VIỆC 2
   (2026-08-18, ADR-034) chọn một hướng thứ TƯ mà mục này chưa liệt kê: **không phóng to chi tiết,
   mà đưa MẮT lại gần** (chạm vào công trình → camera bay tới, khoảng cách 7,5). Đo được: cùng thay
   đổi mã ấy, lệch trung bình cả khung đi từ **5,54 (dưới ngưỡng mắt 12)** ở khung toàn cảnh lên
@@ -2430,6 +2569,35 @@ hơn và nằm ngoài phạm vi. Ghi lại thay vì mở rộng phạm vi, đún
   bao giờ sống sót tới thang đó. Cái đã đổi là **nó không còn cần phải sống sót tới đó nữa**. Ba
   phương án (1)(2)(3) ở trên còn nguyên giá trị nếu Đàm muốn chi tiết đọc được ngay ở khung mặc
   định — nhưng nay chúng là *thêm*, không phải *cứu*.
+
+### ĐÓNG NGÀY 2026-08-18 — ghi CẢ HAI NỬA, vì mỗi nửa là một kết luận khác nhau
+
+**NỬA ĐÃ GIẢI:** chi tiết Phase 10–11 **có** vượt ngưỡng mắt khi camera lại gần — nhưng **chỉ ở
+4/15 kỷ**, không phải cả 15 như bản ghi trước của mục này (VIỆC 2) để người đọc tưởng. Đo lần đầu
+đủ 15 kỷ, cùng một dòng lệnh, `b98a47d` → `e95cdf1`, lệch trung bình cả khung ở khoảng cách cận
+cảnh: kỷ 7 = **15,52** · kỷ 9 = **15,45** · kỷ 11 = **12,61** · kỷ 13 = **12,20** (bốn kỷ trên
+ngưỡng 12); 11 kỷ còn lại từ **0,71** (kỷ 1) tới 11,19 (kỷ 8). Con số 15,45 mà VIỆC 2 khoe là kỷ 9
+— **một mẫu, đọc thành luật của cả tập**, đúng hình dạng đã sinh ra `#38`.
+
+**NỬA VĨNH VIỄN KHÔNG GIẢI (kết luận cuối, KHÔNG phải việc còn tồn):** ở **thang bản quét** thì chi
+tiết mái sẽ **không bao giờ** đọc được, và đó không phải một thất bại cần chữa. Mỗi thành phố trong
+bản quét rộng ~300 điểm ảnh, mỗi căn nhà cao 40–60 điểm ảnh, nên mọi chi tiết cỡ ống khói còn 3–5
+điểm ảnh — **bất kể nó nằm trên mái hay dưới đất**. Từ nay bản quét chỉ dùng để canh
+**KHÔNG-TRÔI** (15 kỷ còn phân biệt được với nhau không), không dùng để chứng minh một phase chi
+tiết có tác dụng.
+
+### ⚠️ LUẬT MỚI CHO MỌI PHASE SAU (Đàm chốt 2026-08-18)
+
+> **Trước khi thêm bất kỳ chi tiết nào, trả lời trước: nó dành cho khung TOÀN CẢNH hay khung CẬN
+> CẢNH? Chi tiết cỡ dưới ~12 điểm ảnh ở toàn cảnh thì chỉ đáng làm nếu nó phục vụ cận cảnh.**
+
+Hệ quả thực hành, đã đo trên chính Phase 11: thứ sống sót ở xa là thứ đổi **ĐƯỜNG VIỀN** (lan can
+kỷ 7 → 8,4% · cửa sổ mái kỷ 9 → 5,3%), không phải thứ thêm **BỀ MẶT** (ngói bò kỷ 8 tốn nhiều hình
+học nhất bảng, **+48,5%** tam giác, mà chỉ đổi **1,2%**). Nên câu hỏi thứ hai luôn là: *"cái này
+đổi đường viền hay đổi bề mặt?"*
+
+**Phần chưa giải được chuyển sang `#48`** — nó là một câu hỏi KHÁC (*"vì sao 11 kỷ có quá ít thứ để
+mà nhìn"*), không phải phần còn lại của câu hỏi này.
 
 ⚠️ **Bài học đi kèm, đáng giá hơn cả mục nợ này**: bản quét là thang NHỎ NHẤT dự án có, và nó
 **không phải** thang Đàm dùng app. Một thay đổi có thể thật ở khung app mà chết ở bản quét (đúng ca

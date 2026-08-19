@@ -6,7 +6,48 @@
 > chọn: `ARCHITECTURE_DECISIONS.md`. Nợ kỹ thuật: `TECH_DEBT.md`. Migration: `MIGRATION.md`. Tóm
 > tắt theo mốc: `CHANGELOG.md`.
 > **NGUYÊN TẮC ƯU TIÊN SỐ 1:** (1) mọi phiên AI phải đọc file này + `CLAUDE.md` + các file liên quan TRƯỚC khi làm; (2) sau MỌI cập nhật dù nhỏ, phải cập nhật ngay file này + `CLAUDE.md` + các file liên quan khác.
-> Cập nhật lần cuối: **2026-08-18** — **VIỆC 2: CHẠM VÀO KHU PHỐ THÌ CAMERA BAY TỚI NGẮM GẦN.**
+> Cập nhật lần cuối: **2026-08-19** — **CHỐT #46 · ĐÓNG #41 · ĐO MẬT ĐỘ NHÀ.**
+>
+> **VIỆC A — CHỐT `TECH_DEBT #46`: LÙI RA TRƯỚC, NGẨNG SAU (2026-08-19, ADR-035).**
+> Đàm chọn phương án (a) vì *"(a) giữ được LỜI HỨA, (b) giữ được CON SỐ"*. `planCityFocus` nay
+> chữa vướng theo thứ tự: **(1) lùi xa giữ nguyên góc → (2) ngẩng lên ở khoảng cách xuất phát →
+> (3) đứng yên**. Kết quả: **kỷ 15 hết ngả thành nhìn-từ-trên-xuống** — `khoảng cách 11,00 · góc
+> ngẩng 34,4° · thoáng 1,45 · ngẩng thêm 0,0° · lùi thêm 3,50`.
+> **ĐIỀU KIỆN DỪNG CỦA ĐÀM KHÔNG BỊ KÍCH HOẠT**: đo lại đủ 15 kỷ ở khoảng cách lý tưởng 7,5 so với
+> khoảng cách đã-lùi tệ nhất, lệch trung bình chỉ đổi **−0,72 … +2,14** (có kỷ TĂNG, vì lùi ra thì
+> lọt vào khung nhiều thành phố hơn) ⇒ **0 kỷ tụt xuống dưới 12 vì phép lật**.
+> 1200 chuyến bay đo lại: **0 kẹt · 0 phải ngẩng · vẫn 0 vi phạm giữa đường**. Khung mặc định trùng
+> **TỪNG BYTE** — kỷ 9, kỷ 15 và cả bản quét 90 ô (`34f0fcfde06e2a06f385e6e35160f03e`).
+>
+> **VIỆC B — ĐÓNG `TECH_DEBT #41` CHO TRỌN, KỂ CẢ NỬA KHÔNG GIẢI ĐƯỢC.**
+> Nửa ĐÃ GIẢI: cận cảnh đưa chi tiết lên trên ngưỡng mắt. Nửa VĨNH VIỄN KHÔNG GIẢI: ở khung toàn
+> cảnh chi tiết Phase 10–11 vẫn dưới ngưỡng, và **đó là kết luận cuối cùng, không phải việc còn
+> tồn** — mỗi căn nhà chỉ cao 40–60 điểm ảnh ở góc mặc định nên mọi chi tiết cỡ ống khói còn 3–5
+> điểm ảnh. Luật Đàm ra cho MỌI phase sau, đã ghi vào `CLAUDE.md` (HỆ QUẢ 2b): *trước khi thêm bất
+> kỳ chi tiết nào, trả lời trước — nó dành cho khung TOÀN CẢNH hay CẬN CẢNH?*
+> ⚠️ **VÀ MỘT SỰ THẬT LỚN HƠN LỘ RA KHI ĐO ĐỦ 15 KỶ LẦN ĐẦU**: con số "≥ 12" của VIỆC 2 đo ở **đúng
+> một kỷ (kỷ 9)** rồi được đọc thành luật chung. Đo đủ: chỉ **4/15 kỷ** vượt ngưỡng (7 · 9 · 11 ·
+> 13), kỷ 1 chỉ **0,71**. ⇒ `TECH_DEBT #48`.
+>
+> **VIỆC C — ĐO MẬT ĐỘ NHÀ (CHỈ ĐO, KHÔNG SỬA) — và tiền đề của Đàm chỉ đúng một nửa.**
+> Đàm nói *"nhà chỉ che khoảng 1/3 mặt đất"*. Đo hai cách:
+>
+> | | 20 phiên | 50 phiên | 80 phiên |
+> |---|--:|--:|--:|
+> | **nhà chiếm bao nhiêu phần KHUNG HÌNH** (mặt nạ, 15 kỷ) | 20,7% | 25,0% | 25,5% |
+> | **nhà che bao nhiêu phần ĐẤT, nhìn từ trên xuống** (hợp các hộp bao) | **26,6%** | **48,8%** | **72,4%** |
+>
+> ⇒ **đúng với thành phố TRẺ, sai hẳn với thành phố GIÀ.** Ở 80 phiên, độ phủ 72,4% đã VƯỢT dải
+> 30–60% của khu dân cư thấp tầng Nhật (hệ số 建蔽率 kenpeiritsu, Luật Tiêu chuẩn Xây dựng) và tiệm
+> cận trần 80% của khu thương mại; kỷ 6 chạm **99,9%** — kín đặc. Phần khung hình còn lại: **rặng
+> núi 32,2% · trời ĐÚNG 0,00%** (camera ngẩng 34,4° trừ nửa FOV 19° ⇒ mép trên khung nằm 15,4°
+> DƯỚI tầm mắt) · cảnh vật 1,67% · cư dân 0,14%.
+> **CHỜ ĐÀM QUYẾT** — đã trình 3 phương án kèm giá ms và rủi ro ADR-007, không tự chọn.
+>
+> ⚠️ **BA CÔNG CỤ ĐO ĐÃ PHẢI VÁ TRƯỚC KHI BẢNG SỐ TRÊN ĐÁNG TIN** (chi tiết ở `CLAUDE.md`):
+> mẫu số từng lẫn 12,9% nền trang; bản vá đầu (khai toạ độ canvas) VẪN sai vì canvas bị xén 23
+> dòng (`TECH_DEBT #49`); và "sọt đen" không tên từng bị tôi đoán nhầm hai lần. Nay bên dựng tô
+> nền trang bằng màu mốc `rgb(1,2,3)`, kể tên mọi khối bị tô đen, và cư dân đã có tên.
 >
 > **VIỆC 2 — CAMERA CẬN CẢNH: CHẠM VÀO MỘT KHU PHỐ THÌ BAY TỚI NGẮM GẦN — 2026-08-18 (ADR-034).**
 > Đây là lần đầu công sức của **Phase 10 (tầng trệt)** và **Phase 11 (mái)** được chứng minh bằng

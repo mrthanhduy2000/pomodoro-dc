@@ -18,6 +18,7 @@ import {
 } from './cityLayout.js';
 import { BLUEPRINT_CATALOG, BUILDING_EFFECTS } from './constants.js';
 import { PROP_KINDS } from './city3d/propSpec.js';
+import { GROUND_COVER_STYLES } from './city3d/groundCoverStyle.js';
 
 // Bộ 5 bản vẽ có thật của kỷ 1 (dùng id thật để test bám sát dữ liệu game).
 const ERA_1 = BLUEPRINT_CATALOG[1].map((bp) => bp.id);
@@ -707,4 +708,160 @@ test('MẠNG ĐƯỜNG ĐÃ HIỆN thì NGƯỢC LẠI — nó ĐỔI theo kỷ 
   assert.equal(roadKeysOf(layoutAt(7, [], 80)).size, 0, 'chưa xây gì mà đã có đường');
   assert.ok(roadKeysOf(layoutAt(7, ids7, 80)).size > roadKeysOf(layoutAt(7, ids7, 20)).size,
     'mạng đường không lớn thêm theo số phiên');
+});
+
+/* ════════════════════════════════════════════════════════════════════════════════════════════
+ * MẢNG PHỦ ĐẤT (§2-C, ADR-037) — `share` KHÔNG ĐƯỢC BỊ NUỐT.
+ *
+ * ⚠️ VÌ SAO CÓ NHÓM BÀI NÀY: bản đầu của ngân sách mảng phủ viết
+ *      min(MAX, floor(ungVien × share), 4 × nhà + phiên)
+ * — đặt một PHẦN cạnh một LƯỢNG trong cùng một `Math.min`. Lý lẽ nghe xuôi, và **mọi bài test
+ * lúc ấy đều xanh**: bảng `groundCoverStyle.test.js` chỉ hỏi cái BẢNG, `groundCover.test.js` chỉ
+ * hỏi cái HÌNH, không bài nào hỏi *"con số trong bảng có tới được thành phố không"*. Đo bằng ảnh
+ * mới lộ ra: ở mốc **20 phiên** (mốc đất trống tệ nhất) **8/15 kỷ** cùng dựng ra ĐÚNG 40 mảng —
+ * tám con số `share` khác nhau cho một kết quả. Đúng bẫy `MIN_STONE` (Phase 9D) và bẫy trường
+ * nhiễu (Phase 7B), lần này do chính tay tôi cài vào.
+ * ⇒ Bài học đã ghi thành mã: **một bảng bản sắc phải được canh ở CẢ HAI ĐẦU** — đầu KHAI
+ * (validator) và đầu DỰNG (ở đây).
+ * ════════════════════════════════════════════════════════════════════════════════════════════ */
+
+/** Số mảng phủ của một kỷ ở một mốc tuổi. Cả 5 bản vẽ đã xây, cấp 1 — đúng thành phố mà `--sessions` dựng. */
+function soMangPhu(era, sessionCount) {
+  const ids = BLUEPRINT_CATALOG[era].map((bp) => bp.id);
+  return (computeCityLayout({
+    built: ids,
+    levels: Object.fromEntries(ids.map((id) => [id, 1])),
+    era,
+    stats: { sessionCount, streakLength: 9 },
+  }).covers ?? []).length;
+}
+
+/**
+ * Các mốc tuổi phải quét. KHÔNG chỉ 20/50/80 — cái bẫy chỉ nổ ở thành phố TRẺ, nên phải có cả mốc
+ * rất trẻ (4, 10) lẫn mốc đã bão hoà (150).
+ */
+const MOC_TUOI = [4, 10, 20, 30, 50, 80, 150];
+
+test('MẢNG PHỦ — `share` quyết định ở MỌI mốc tuổi, không bị một trần TUYỆT ĐỐI nuốt mất', () => {
+  // ⚠️ NGƯỠNG LẤY TỪ PHÉP ĐO, KHÔNG ĐOÁN (bài học Phase 9A). Đo ngày 2026-08-19, số giá trị khác
+  // nhau trong 15 kỷ: 10 · 11 · 13 · 14 · 11 · 10 · 10 theo thứ tự `MOC_TUOI` ⇒ thật sự nhỏ nhất
+  // là 10, nên để sàn 9: sát đủ để một lần thoái hoá là đỏ, không sát tới mức đỏ vì làm tròn.
+  for (const moc of MOC_TUOI) {
+    const dem = [];
+    for (let era = 1; era <= 15; era += 1) dem.push(soMangPhu(era, moc));
+    assert.ok(new Set(dem).size >= 9,
+      `mốc ${moc} phiên: 15 kỷ chỉ ra ${new Set(dem).size} giá trị khác nhau [${dem.join(',')}] `
+      + '⇒ có một cái trần đang nuốt `share`');
+  }
+});
+
+test('MẢNG PHỦ — kỷ khai `share` CAO nhất luôn phủ nhiều hơn kỷ khai THẤP nhất', () => {
+  // Đây là assert bắt được đúng con bug thật: bản cũ cho kỷ 14 (`share` 0,66) và kỷ 9 (0,54) và
+  // kỷ 3 (0,46) cùng ra 40 ở mốc 20 phiên. Hỏi "nhiều giá trị khác nhau" thôi là chưa đủ —
+  // phải hỏi thẳng thứ tự có còn không.
+  const shares = Object.entries(GROUND_COVER_STYLES).map(([e, s]) => [Number(e), s.share]);
+  const thap = shares.reduce((m, r) => (r[1] < m[1] ? r : m))[0];
+  const cao = shares.reduce((m, r) => (r[1] > m[1] ? r : m))[0];
+  assert.notEqual(thap, cao, 'bảng dẹt: `share` cao nhất và thấp nhất là cùng một kỷ');
+  for (const moc of MOC_TUOI) {
+    assert.ok(soMangPhu(cao, moc) > soMangPhu(thap, moc),
+      `mốc ${moc} phiên: kỷ ${cao} (share cao nhất) phủ ${soMangPhu(cao, moc)} mảng, `
+      + `không nhiều hơn kỷ ${thap} (share thấp nhất) ${soMangPhu(thap, moc)}`);
+  }
+});
+
+test('MẢNG PHỦ — ĐỐI CHỨNG: chưa bỏ công thì chưa được thưởng (thành phố sơ khai vẫn phải thưa)', () => {
+  // ⚠️ Không có vế này thì bản vá "bỏ trần tuyệt đối đi" cũng xanh — mà bỏ hẳn là sai: một thành
+  // phố mới 1 công trình + 2 phiên sẽ mọc ngay mấy chục cái sân, tức phần thưởng đến TRƯỚC công
+  // sức. Ý định của cái trần cũ là ĐÚNG; chỉ đơn vị của nó là sai.
+  const ids = BLUEPRINT_CATALOG[14].slice(0, 1).map((bp) => bp.id);
+  const soKhai = (computeCityLayout({
+    built: ids, levels: { [ids[0]]: 1 }, era: 14, stats: { sessionCount: 2, streakLength: 0 },
+  }).covers ?? []).length;
+  assert.ok(soKhai <= 5,
+    `kỷ rộng tay nhất mà mới 1 công trình + 2 phiên đã có ${soKhai} mảng phủ ⇒ thưởng trước công`);
+  // …và nó phải LỚN LÊN thật, chứ không phải luôn luôn bằng 0.
+  assert.ok(soMangPhu(14, 30) > soKhai * 3,
+    'mảng phủ không lớn lên theo công sức — cái nhịp công sức đang chết cứng');
+});
+
+/* ════════════════════════════════════════════════════════════════════════════════════════════
+ * "CHỈ THÊM, KHÔNG BAO GIỜ DỜI" — bất biến quan trọng nhất của cả mảng mật độ.
+ *
+ * Đàm nêu nó thành điều kiện cứng cho §2-B, nhưng nó cũng chính là thứ §2-C đang **tự nhận là
+ * đúng theo cấu trúc** (mảng phủ nằm ở một mảng RIÊNG nên `deriveProps`/`deriveDwellings` không hề
+ * bị đụng tới). ⚠️ Và "đúng theo cấu trúc" là đúng loại lời hứa chết trong im lặng khi phiên sau
+ * đổi cấu trúc — nên nó phải thành một bài TEST, không phải một câu trong ADR.
+ *
+ * ⚠️ PHẠM VI, NÓI THẲNG RA ĐỂ KHÔNG AI ĐỌC NHẦM SỰ IM LẶNG THÀNH MỘT LỜI BẢO ĐẢM:
+ *   · CÓ canh: **công trình** (theo `bpId`) và **nhà dân** (theo `index`) — những thứ Đàm KIẾM ĐƯỢC.
+ *   · KHÔNG canh: cây, đèn, mảng phủ. Chúng CỐ Ý nhường chỗ — một cái cây đứng ở ô mà sau này thành
+ *     nhà thì phải biến đi, và đó là hành vi đúng, không phải vi phạm.
+ *
+ * ⚠️ VÀ PHẦN NÀO Ở ĐÂY THẬT SỰ MỚI, ĐỂ KHÔNG AI TƯỞNG NÓ CANH NHIỀU HƠN NÓ CANH. Nửa "công trình"
+ * đã có `BẤT BIẾN #2` canh từ lâu — phép phá "dời công trình theo số công trình đã xây" làm đỏ
+ * SÁU bài, trong đó có bài ấy. Nửa **NHÀ DÂN theo trục THỜI GIAN** thì chưa ai canh: phép phá
+ * "dời nhà dân theo số phiên" (đúng phép phá Đàm yêu cầu) chỉ làm đỏ **một** bài, và đó là bài
+ * dưới đây. Trục ấy chính là trục §2-B sắp vặn.
+ * ════════════════════════════════════════════════════════════════════════════════════════════ */
+
+/** Bảng "ô nào của ai" cho một mốc tiến độ: công trình theo `bpId`, nhà dân theo `index`. */
+function soDoODat(era, built, sessionCount) {
+  const l = computeCityLayout({
+    built,
+    levels: Object.fromEntries(built.map((id) => [id, 1])),
+    era,
+    stats: { sessionCount, streakLength: 9 },
+  });
+  const o = new Map();
+  for (const b of l.buildings) o.set(`ct:${b.bpId}`, `${b.x},${b.y}`);
+  for (const d of l.dwellings ?? []) o.set(`nd:${d.index}`, `${d.x},${d.y}`);
+  return o;
+}
+
+/** Mọi thứ có trong `cu` phải còn nguyên vị trí trong `moi`. `moi` được phép có thêm. */
+function khongDoiCho(cu, moi, boiCanh) {
+  for (const [ai, oCu] of cu) {
+    const oMoi = moi.get(ai);
+    assert.ok(oMoi !== undefined, `${boiCanh}: ${ai} BIẾN MẤT (đang ở ${oCu})`);
+    assert.equal(oMoi, oCu, `${boiCanh}: ${ai} bị DỜI từ ô ${oCu} sang ô ${oMoi}`);
+  }
+}
+
+test('CHỈ THÊM — thành phố già đi thì không một căn nhà nào đổi chỗ', () => {
+  // Trục THỜI GIAN: `built` đứng yên, số phiên tăng dần. Đây đúng là trục mà §2-B sắp vặn.
+  const MOC = [0, 4, 10, 20, 30, 50, 80, 120, 150];
+  let soSanh = 0;
+  for (let era = 1; era <= 15; era += 1) {
+    const built = BLUEPRINT_CATALOG[era].map((bp) => bp.id);
+    let truoc = soDoODat(era, built, MOC[0]);
+    for (let i = 1; i < MOC.length; i += 1) {
+      const nay = soDoODat(era, built, MOC[i]);
+      khongDoiCho(truoc, nay, `kỷ ${era}, ${MOC[i - 1]} → ${MOC[i]} phiên`);
+      truoc = nay; soSanh += 1;
+    }
+  }
+  // Gác chạy-rỗng: một `continue` đặt nhầm chỗ sẽ làm bài này im lặng không so gì cả.
+  assert.equal(soSanh, 15 * (MOC.length - 1), 'số lần so sánh không đúng — vòng lặp đã chạy rỗng');
+
+  // ĐỐI CHỨNG: và thành phố PHẢI thật sự lớn lên, nếu không "không dời" là đúng một cách rỗng tuếch.
+  const it = soDoODat(6, BLUEPRINT_CATALOG[6].map((bp) => bp.id), 4);
+  const nhieu = soDoODat(6, BLUEPRINT_CATALOG[6].map((bp) => bp.id), 150);
+  assert.ok(nhieu.size > it.size + 5,
+    `kỷ 6 đi từ ${it.size} lên ${nhieu.size} chỗ ở — không đủ lớn để bài test có ý nghĩa`);
+});
+
+test('CHỈ THÊM — xây thêm công trình cũng không dời thứ đã có', () => {
+  // Trục TIẾN ĐỘ: số phiên đứng yên, `built` dài thêm từng bản vẽ một.
+  let soSanh = 0;
+  for (let era = 1; era <= 15; era += 1) {
+    const ids = BLUEPRINT_CATALOG[era].map((bp) => bp.id);
+    let truoc = soDoODat(era, ids.slice(0, 1), 60);
+    for (let n = 2; n <= ids.length; n += 1) {
+      const nay = soDoODat(era, ids.slice(0, n), 60);
+      khongDoiCho(truoc, nay, `kỷ ${era}, xây tới công trình thứ ${n}`);
+      truoc = nay; soSanh += 1;
+    }
+  }
+  assert.equal(soSanh, 15 * (BUILDINGS_PER_ERA - 1), 'vòng lặp đã chạy rỗng');
 });

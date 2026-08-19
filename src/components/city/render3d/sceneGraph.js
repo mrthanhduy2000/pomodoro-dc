@@ -892,7 +892,12 @@ export function createCityScene({
       // mới trả về đúng cao độ của tấm lưới mà mắt đang nhìn thấy.
       x, z, y: terrain.surfaceHeightAt(ux, uy),
       // Xoay tự do — cây cối mà thẳng hàng theo lưới thì lộ ngay ra là máy đặt.
-      ry: (prop.variant + prop.x * 0.7 + prop.y * 1.3) % (Math.PI * 2),
+      // ⚠️ TRỪ MẢNG PHỦ ĐẤT (`gridAligned`, xem `deriveGroundCover` ở `cityLayout.js`): nó là một
+      // hình VUÔNG rộng gần trọn ô, xoay một góc bất kỳ là nó thò sang ô bên. Bội số 90° thì góc
+      // nào cũng vẫn nằm gọn trong ô, mà vẫn đủ bốn hướng cho những kiểu không đối xứng.
+      ry: prop.gridAligned
+        ? ((prop.variant + prop.x + prop.y) % 4) * (Math.PI / 2)
+        : (prop.variant + prop.x * 0.7 + prop.y * 1.3) % (Math.PI * 2),
       spec: item.spec,
     });
   }

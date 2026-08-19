@@ -158,7 +158,134 @@ function Bush({ variant, palette }) {
   );
 }
 
-const PROP_SHAPES = { tree: Tree, bush: Bush, rock: Rock, lamp: Lamp, water: Water, field: Field };
+// ─── MẢNG PHỦ ĐẤT ────────────────────────────────────────────────────────────
+//
+// ⚠️ BẢY HÌNH DƯỚI ĐÂY LÀ BẮT BUỘC, KHÔNG PHẢI "làm cho đủ bộ". `CityTile` trả `null` **trong im
+// lặng** cho loại lạ (dòng cuối file), nên thêm một loại cảnh vật ở tầng engine mà quên vẽ ở đây
+// thì bản 2D sẽ lặng lẽ thưa đi — không lỗi, không cảnh báo, chỉ là một thành phố nghèo hơn cho
+// đúng người dùng máy yếu nhất. Luật này đã ghi ở `CLAUDE.md` sau Phase 8D.
+//
+// Ở đây chúng cố tình chỉ là "hình thoi có một dấu hiệu": bộ vẽ 2D là ĐƯỜNG LÙI, nó phải nói đúng
+// NỘI DUNG (ô này được dùng vào việc gì) chứ không cần đẹp bằng bản 3D.
+
+/** Nền của một mảng phủ — hình thoi lát, khác sắc với ô nền trơn bên cạnh. */
+function CoverBase({ palette, fill, dash = false }) {
+  return (
+    <polygon
+      points={DIAMOND}
+      fill={fill ?? palette.ground[1]}
+      stroke={palette.edge}
+      strokeWidth="0.6"
+      strokeDasharray={dash ? '3 2' : undefined}
+    />
+  );
+}
+
+/** SÂN — mảng lát có bó vỉa quanh mép. */
+function Yard({ palette }) {
+  return (
+    <>
+      <CoverBase palette={palette} fill={palette.road} />
+      <polygon
+        points={`0,${-TILE.H / 2 + 4} ${TILE.W / 2 - 8},0 0,${TILE.H / 2 - 4} ${-TILE.W / 2 + 8},0`}
+        fill="none" stroke={palette.wallLeft} strokeWidth="1.2" strokeLinejoin="round"
+      />
+    </>
+  );
+}
+
+/** VƯỜN CÓ RÀO — luống cây song song trong một vòng rào nét đứt. */
+function Garden({ variant, palette }) {
+  return (
+    <>
+      <CoverBase palette={palette} fill={palette.ground[3]} dash />
+      {[-5, 0, 5].map((offset) => (
+        <path
+          key={offset}
+          d={`M${-14 + offset} ${offset / 2 + 3} L${offset + 2} ${-6 + offset / 2}`}
+          stroke={palette.roofTop} strokeWidth={1.4 + variant * 0.2} strokeLinecap="round"
+        />
+      ))}
+    </>
+  );
+}
+
+/** SÂN PHƠI — nền phẳng, mẻ hàng trải thành dải ngang. */
+function Drying({ palette }) {
+  return (
+    <>
+      <CoverBase palette={palette} fill={palette.road} />
+      {[-4, 1, 6].map((offset) => (
+        <path
+          key={offset}
+          d={`M${-12} ${offset} L${12} ${offset - 4}`}
+          stroke={palette.accent} strokeWidth="1.6" strokeLinecap="round" opacity="0.5"
+        />
+      ))}
+    </>
+  );
+}
+
+/** BÃI QUÂY — rỗng ở giữa, chỉ có hàng rào cọc: đó CHÍNH LÀ hình của nó. */
+function Pen({ palette }) {
+  return (
+    <>
+      <CoverBase palette={palette} fill={palette.ground[2]} dash />
+      {[-16, -8, 0, 8, 16].map((offset) => (
+        <path
+          key={offset}
+          d={`M${offset} ${offset / 2 - 2} L${offset} ${offset / 2 - 8}`}
+          stroke={palette.wallLeft} strokeWidth="1.3" strokeLinecap="round"
+        />
+      ))}
+    </>
+  );
+}
+
+/** ĐỐNG RƠM — bệ kê + một chóp cao, kiểu "cao" nhất trong bảy kiểu. */
+function Stack({ variant, palette }) {
+  const h = 11 + variant * 2;
+  return (
+    <>
+      <CoverBase palette={palette} fill={palette.ground[2]} />
+      <path
+        d={`M0 ${-h} L${8} 1 L${-8} 1 Z`}
+        fill={palette.roofTop} stroke={palette.edge} strokeWidth="0.6" strokeLinejoin="round"
+      />
+    </>
+  );
+}
+
+/** GIẾNG — hai vòng đồng tâm + khung kéo nước. */
+function Well({ palette }) {
+  return (
+    <>
+      <CoverBase palette={palette} fill={palette.road} />
+      <ellipse cx="0" cy="0" rx="9" ry="4.5" fill={palette.wallLeft} stroke={palette.edge} strokeWidth="0.6" />
+      <path d="M-6 -1 L-6 -11 M6 -1 L6 -11 M-7 -11 L7 -11"
+        stroke={palette.accent} strokeWidth="1.3" strokeLinecap="round" />
+    </>
+  );
+}
+
+/** QUẢNG TRƯỜNG — mảng lát rộng nhất, bó vỉa liền, không rào. */
+function Plaza({ palette }) {
+  return (
+    <>
+      <CoverBase palette={palette} fill={palette.road} />
+      <polygon
+        points={`0,${-TILE.H / 2 + 2} ${TILE.W / 2 - 4},0 0,${TILE.H / 2 - 2} ${-TILE.W / 2 + 4},0`}
+        fill="none" stroke={palette.accent} strokeWidth="1" strokeLinejoin="round" opacity="0.7"
+      />
+      <path d={`M${-10} 0 L0 ${-5} L10 0 L0 5 Z`} fill={palette.wallLeft} opacity="0.5" />
+    </>
+  );
+}
+
+const PROP_SHAPES = {
+  tree: Tree, bush: Bush, rock: Rock, lamp: Lamp, water: Water, field: Field,
+  yard: Yard, garden: Garden, drying: Drying, pen: Pen, stack: Stack, well: Well, plaza: Plaza,
+};
 
 // ─── CÔNG TRÌNH ──────────────────────────────────────────────────────────────
 

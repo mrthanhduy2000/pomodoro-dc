@@ -330,6 +330,18 @@
 │   │   │   │                      #   ⚠️ `sides`/`taper` phải theo HẠT, không viết cứng — lỗi này
 │   │   │   │                      #   đã cắn 4 lần trong chính file này (cypress/streetTree/banyan/
 │   │   │   │                      #   bush), mỗi lần đều ra "40 hạt chỉ 2–4 dáng"
+│   │   │   ├── groundCoverStyle.js# BẢNG DÙNG ĐẤT 15 KỶ (§2-C, ADR-037): bộ kiểu + trọng số ·
+│   │   │   │                      #   `share` (phần đất trống được dùng) · `scale` · `enclose`.
+│   │   │   │                      #   Trả lời "ở nước ấy mảnh đất cạnh nhà dùng làm gì" — buộc vào
+│   │   │   │                      #   `country` của eraStyle, có test bắt (khuôn thứ SÁU sau
+│   │   │   │                      #   streetStyle/flora/groundFloor/roof)
+│   │   │   │                      #   ⚠️ CẤM vai `water`: chỉ 7/15 kỷ có họ ấy ⇒ dùng là đẻ lệnh vẽ
+│   │   │   │                      #   ⚠️ `share` là một PHẦN, không phải một LƯỢNG (bài học Phase 8D)
+│   │   │   ├── groundCover.js     # 7 KIỂU MẢNG PHỦ (§2-C): sân · vườn rào · sân phơi · bãi quây ·
+│   │   │   │                      #   đống rơm · giếng · quảng trường. RỘNG và THẤP — ngược hẳn cây
+│   │   │   │                      #   ⚠️ `canhVien` thụt vào `w/2 − dày/2`: mép NGOÀI hàng rào mới
+│   │   │   │                      #   là thứ phải trùng mép mảng. Đặt tâm ở ±w/2 thì rào cưỡi lên
+│   │   │   │                      #   ranh giới ô — đã đo 0,506 và test bắt
 │   │   │   ├── propSpec.js        # BỘ GHÉP cảnh vật: cây · bụi · đá · đèn · mặt nước · ruộng
 │   │   │   │                      #   Từ Phase 8D chỉ còn GHÉP — hình cây nằm ở `flora.js`
 │   │   │   │                      #   ⚠️ Mặt nước dùng vai màu RIÊNG (`water`), KHÔNG dùng chung

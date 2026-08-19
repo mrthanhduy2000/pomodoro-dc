@@ -27,6 +27,8 @@
 import { unit, signed, pickIndex } from '../hashId';
 import { prism, countSpecTriangles, specHeight } from './parts';
 import { growEraTree } from './flora';
+import { buildGroundCover } from './groundCover';
+import { COVER_KINDS, getGroundCoverStyle } from './groundCoverStyle';
 
 /** Cây thân gỗ — loài do `floraStyle.js` quyết định theo kỷ. */
 function tree(seed, era, detail) {
@@ -273,7 +275,25 @@ function field(seed, era, detail) {
   return parts;
 }
 
-const BUILDERS = { tree, bush: bushProp, rock, lamp, water, field };
+/**
+ * MẢNG PHỦ ĐẤT — sân, vườn, sân phơi, bãi quây, đống rơm, giếng, quảng trường.
+ *
+ * ⚠️ CỠ VÀ MỨC QUÂY KHÔNG PHẢI THAM SỐ CỦA LỜI GỌI, MÀ LÀ THUỘC TÍNH CỦA KỶ — nên chúng được tra
+ * ở đây từ `getGroundCoverStyle(era)` chứ không thêm hai tham số vào `buildPropSpec`. Nếu để bên
+ * gọi truyền vào thì sớm muộn sẽ có một chỗ gọi quên truyền và rơi về mặc định, tức kỷ ấy lặng lẽ
+ * mất bản sắc — đúng thứ `isValidGroundCoverStyle` sinh ra để chặn ở đầu bên kia.
+ */
+function coverBuilder(kind) {
+  return (seed, era, detail) => {
+    const style = getGroundCoverStyle(era);
+    return buildGroundCover({ kind, scale: style.scale, enclose: style.enclose, seed, detail });
+  };
+}
+
+const BUILDERS = {
+  tree, bush: bushProp, rock, lamp, water, field,
+  ...Object.fromEntries(COVER_KINDS.map((kind) => [kind, coverBuilder(kind)])),
+};
 
 /**
  * Mô tả hình học cho MỘT cảnh vật.

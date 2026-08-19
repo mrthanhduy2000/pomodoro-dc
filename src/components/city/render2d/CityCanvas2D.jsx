@@ -101,6 +101,24 @@ export default function CityCanvas2D({ layout, dimmed = false }) {
             />
           )}
 
+          {/*
+            MẢNG PHỦ ĐẤT — một lớp PHẲNG nằm giữa đường sá và mọi vật thể nổi.
+            ⚠️ VÌ SAO NÓ KHÔNG TRỘN VÀO `risen`: mảng phủ được phép DÙNG CHUNG một ô với cây hoặc
+            đèn (xem `deriveGroundCover` ở `cityLayout.js`), mà `byIsometricDepth` trả 0 cho hai
+            vật cùng ô — lúc ấy thứ tự vẽ do thứ tự mảng quyết định, và mảng phủ nối vào sau sẽ
+            phủ ĐÈ LÊN cái cây đứng trong nó. Tách thành một lớp riêng vẽ trước thì thứ tự chồng
+            lớp đúng theo cấu trúc, không cần đụng vào hàm sắp xếp dùng chung.
+          */}
+          {(layout.covers ?? []).map((item) => (
+            <CityTile
+              key={`cover-${item.x}-${item.y}`}
+              kind="prop"
+              item={item}
+              palette={palette}
+              dimmed={dimmed}
+            />
+          ))}
+
           {risen.map(({ kind, item }) => (
             <CityTile
               key={kind === 'building' ? item.bpId : `${item.kind}-${item.x}-${item.y}`}

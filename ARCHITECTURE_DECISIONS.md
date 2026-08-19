@@ -11,6 +11,117 @@
 
 ---
 
+## ADR-037 — Mảng phủ đất: đất trống là một câu hỏi về **CÔNG NĂNG**, không phải một chỗ thiếu cây; và một mảng phủ phải là **MẢNG RIÊNG** chứ không phải một `kind` mới của cảnh vật
+
+- **Ngày**: 2026-08-19 (§2-C của chương trình mật độ; mở đường cho §2-B)
+- **Bối cảnh**: đo trên khung hình đã sửa (`TECH_DEBT #49` — trước đó 12,9% tấm ảnh không phải cảnh
+  3D và 23 dòng cuối chưa từng được vẽ): **"đất trống" chiếm 46,17% khung hình ở 20 phiên, 38,52%
+  ở 50 và 35,88% ở 80**. Tức gần một nửa thứ Đàm nhìn thấy ở thành phố trẻ là mặt đất trơn. Cố vấn
+  đề nghị hai hướng — **B**: cho nhà dân hiện sớm hơn; **C**: lấp đất bằng thứ không phải nhà. Đàm
+  chốt **làm C trước**, với ba lý do đo được: C gần như không đụng ADR-007 (nhà không dời), C là
+  phép thử rẻ cho chính câu hỏi của B, và thành phố GIÀ vốn đã kín nên B chỉ giúp được đầu trẻ
+  trong khi C giúp cả hai đầu.
+- **Vấn đề**: ba phase gần nhất (8D cây · 10 tầng trệt · 11 mái) đều đã thêm chi tiết, và đất trống
+  vẫn 46%. Phase 8D còn đo ra một điều dứt khoát: ở thành phố trưởng thành lưới cảnh vật lấp **kín
+  144/144 ô** mà đất vẫn trống. Nghĩa là **thêm cây không phải câu trả lời**, vì *"có một cái cây
+  trong ô"* và *"ô ấy được dùng vào việc gì"* là hai câu khác nhau — một cái cây là vật NHỎ đứng
+  giữa một ô RỘNG, che vài phần trăm ô rồi thôi. Thứ lấp được đất là thứ con người **LÀM VỚI ĐẤT**:
+  sân, vườn rào, sân phơi, bãi quây, đống rơm, giếng, quảng trường lát đá — chúng RỘNG (gần trọn ô)
+  và THẤP, đúng ngược với cây.
+- ⚠️ **TRẢ LỜI TRƯỚC KHI VIẾT MÃ — C phục vụ khung TOÀN CẢNH**, đúng luật Đàm ra sau Phase 11
+  (`CLAUDE.md`, HỆ QUẢ 2b). Lý do đo được: ở khung mặc định **một ô lưới rộng 60–90 điểm ảnh, gấp
+  5–7 lần ngưỡng mắt 12**, trong khi một cái ống khói Phase 11 chỉ còn 3–5 điểm ảnh. Một mảng phủ
+  cỡ gần trọn ô là thứ DUY NHẤT trong bốn phase gần đây chắc chắn sống sót ở thang toàn cảnh. Chi
+  tiết bên trong mỗi mảng (cọc rào, thành giếng) là phần thưởng khi bay tới gần và **không được
+  dùng để biện minh cho cả phase**.
+- **Phương án đã cân nhắc**:
+  1. **Thêm `kind` mới vào `deriveProps`** (`yard`, `garden`… đứng cạnh `tree`/`rock`/`lamp`). Rẻ
+     nhất, tái dùng trọn bộ máy có sẵn. **Loại vì hai lý do độc lập.** (a) Một ô phải trả lời được
+     HAI câu độc lập — *"vật gì đứng đây"* và *"mảnh đất này dùng làm gì"* — mà một danh sách
+     `props` mỗi ô một mục thì chỉ trả lời được một; cùng hình dạng *"một trường gánh hai việc"* đã
+     cắn năm lần (`storyHeight` · `roof` · bảng loài cây · `avenue`). (b) Nó buộc phải sửa
+     `deriveProps`, tức **đụng thẳng vào bất biến "chỉ thêm, không bao giờ dời"** mà §2-B sắp phải
+     dựa vào — một cái cây dời chỗ là ADR-007 vỡ.
+  2. **Phóng to cây / thêm cây cho dày**. Không tốn kiến trúc nào. **Loại**: Phase 8D đã đo — lưới
+     kín 144/144 ô mà đất vẫn trống. Đây là phương án đi lại đúng con đường vừa chứng minh là cụt.
+  3. **Vẽ hoa văn lên chính mặt đất** (đổi vân bề mặt theo ô). Rẻ nhất về hình học. **Loại**: nó
+     đổi BỀ MẶT chứ không đổi ĐƯỜNG VIỀN, mà Phase 11 đã đo ra rằng thứ sống sót ở xa là thứ phá
+     đường viền (lan can đổi 8,4% điểm ảnh; ngói bò tốn nhiều hình học nhất bảng mà chỉ đổi 1,2%).
+     Nó cũng cần một vật liệu/hoạ tiết mới, tức chạm vào đúng bốn thứ Đàm CẤM tiêu.
+- **Giải pháp chọn** — khuôn ba lớp lần thứ **SÁU** (sau `streetStyle` · `floraStyle` ·
+  `groundFloorStyle` · `roofStyle` · `vernacularRoof`), cộng **ba quyết định riêng của lần này**:
+  - **BẢNG** `city3d/groundCoverStyle.js` — 15 dòng, mỗi dòng buộc vào `country` mà `eraStyle.js`
+    khai (**có test bắt**), trả lời *"ở nước ấy mảnh đất cạnh nhà dùng làm gì?"*. `isValidGround
+    CoverStyle` **TỪ CHỐI THẲNG** dòng sai, không tự chữa — tự chữa là cách một bảng 15 dòng lặng
+    lẽ thoái hoá về 1 dòng (bẫy `MIN_STONE`, Phase 9D). File riêng **ngay từ đầu**, không phải dọn
+    ra sau như ADR-029.
+  - **HÌNH** `city3d/groundCover.js` — 7 kiểu, mỗi kiểu ≥2 biến thể hình học theo hạt giống.
+  - **NƠI DÙNG** `cityLayout.js` → mảng **`covers` RIÊNG**; `propSpec.js`/`cityParts.js` chỉ ĐỌC.
+    ⇒ `deriveProps` **không bị sửa một dòng nào**, nên *"chỉ thêm, không bao giờ dời"* đúng **theo
+    cấu trúc**. Đây là điểm quan trọng nhất của ADR này. ⚠️ Nhưng *"đúng theo cấu trúc"* là đúng
+    loại lời hứa chết trong im lặng khi phiên sau đổi cấu trúc, nên nó **cũng đã được viết thành
+    hai bài test** (`cityLayout.test.js`, nhóm `CHỈ THÊM`). Điều phép phá dạy thêm: dời một CÔNG
+    TRÌNH làm đỏ sáu bài (`BẤT BIẾN #2` đã canh từ lâu), còn dời một NHÀ DÂN theo số phiên chỉ làm
+    đỏ **một** — tức trục NHÀ DÂN × THỜI GIAN, đúng trục §2-B sắp vặn, trước nay chưa ai canh.
+  - **Ô nào được CHIA CHUNG với cảnh vật là một phép ĐO, không phải một sở thích.** Đo 15 kỷ × 8
+    hạt: cây vươn tới 0,415 và đèn 0,225 — lọt vào trong hàng rào ở ±0,43; bụi 0,545 và đá 0,50 —
+    không lọt. `COVER_CAN_SHARE = {tree, lamp}`. Hai loại bị loại đều **NẰM TRÊN** mặt đất, hai
+    loại được nhận đều **MỌC LÊN** từ một điểm — cái đó mới là luật, con số chỉ là bằng chứng.
+  - **0 lệnh vẽ mới, ĐÃ ĐẾM chứ không suy.** Bốn vai được phép: `stone`/`wood`/`leaf` ánh xạ thẳng
+    (`ROLE_FAMILY`) sang ba họ có mặt ở **15/15 kỷ**, còn `wall` KHÔNG có trong `ROLE_FAMILY` nên
+    rơi về `style.wallMaterial` — vật liệu tường của chính kỷ đó, **miễn phí theo định nghĩa**.
+    Đếm thật ở cả 15 kỷ (14–42 mảng mỗi kỷ ở mốc gate 40 phiên): **0 họ mới**, `MOC_LENH_VE` không
+    đổi một đơn vị. ⚠️ `water` bị **CẤM** — nó chỉ có ở 7/15 kỷ, nên một cái ao (nghe rất hợp với
+    kỷ 6) là một lệnh vẽ phải trả bằng một mục nợ, không phải thứ lén thêm.
+- ⚠️ **MỘT KHUYẾT TẬT DO CHÍNH ADR NÀY SINH RA, TÌM ĐƯỢC BẰNG PHÉP ĐO CHỨ KHÔNG BẰNG ĐỌC MÃ.**
+  Ngân sách mảng phủ bản đầu viết `min(MAX, floor(ungVien × share), 4 × nhà + phiên)` — đặt một
+  **PHẦN** (`share`) cạnh một **LƯỢNG** (`4 × nhà + phiên`) trong cùng một `Math.min`, kèm một chú
+  thích tự tin *"hai trần, hai việc khác nhau"*. Cả ba bộ test đều XANH, vì
+  `groundCoverStyle.test.js` chỉ hỏi cái BẢNG và `groundCover.test.js` chỉ hỏi cái HÌNH — **không
+  bài nào hỏi *"con số trong bảng có tới được thành phố không"***. Đo ra: ở mốc **20 phiên** (mốc
+  đất trống tệ nhất) vế lượng ăn trọn vế phần ở **8/15 kỷ** — tám kỷ khai tám `share` khác nhau,
+  cùng dựng ra ĐÚNG 40 mảng; ở mốc 4 phiên thì **cả 15 kỷ ra đúng 24**. Đây chính là bẫy
+  `MIN_STONE` (Phase 9D) và bẫy trường nhiễu (Phase 7B), lần này do chính tay tôi cài vào ngay
+  trong phase đang viết ra luật cấm nó.
+  **Vá đúng** (cùng khuôn ADR-021 đã dùng cho cây): giữ nguyên Ý ĐỊNH, đổi ĐƠN VỊ — công sức thành
+  một **hệ số nhân** lên chính `share` (`nhipCongSuc = min(1, (4 × nhà + phiên) / số ứng viên)`),
+  nên nó làm cả 15 kỷ CÙNG chậm lại mà không kỷ nào mất thứ hạng. Khoá bằng **ba** bài ở
+  `cityLayout.test.js`, trong đó đối chứng N1 **dựng lại nguyên văn công thức cũ** và đòi phải đỏ.
+  ⇒ **Luật rút ra: một bảng bản sắc phải được canh ở CẢ HAI ĐẦU** — đầu KHAI (validator từ chối
+  dòng sai) và đầu DỰNG (con số ấy có thật sự tới được màn hình không). Bốn phase gần đây chỉ canh
+  đầu khai, và đó là lý do khuyết tật này sống sót qua 16 bài test mới toanh.
+- ⚠️ **TRẦN CỦA CHÍNH PHƯƠNG ÁN C — đo được, và nó nhỏ hơn tôi tưởng.** Ép `share = 1,00` (phủ MỌI
+  ô đất trống) ở mốc 20 phiên: kỷ 1 đi từ 60,29% xuống **53,16%** (−7,13 đpt), kỷ 14 từ 45,15%
+  xuống 38,81% (−6,33). Nghĩa là **ô đất trống trong lưới chỉ chiếm ~12–16% số điểm ảnh "đất" mà
+  Đàm nhìn thấy**; phần lớn còn lại là **vạt đất ngoài lưới thành phố** (mặt đất bán kính 13,5
+  trong khi cả thành phố chỉ rộng ~7,5 ⇒ theo hình học thì ~69% diện tích mặt đất nằm ngoài phố).
+  ⇒ **§2-B cũng sẽ đụng đúng cái trần này**, vì nhà dân cũng chỉ mọc trong lưới. Muốn ăn vào phần
+  còn lại thì phải là một việc KHÁC (ruộng ngoại ô, mở rộng lưới, hoặc kéo camera vào gần hơn) —
+  và đó là một quyết định của Đàm, không phải thứ tự quyết trong phase này.
+- **Kết quả đo (120 ảnh mặt nạ, hai cây mã, cùng một dòng lệnh)**: đất trống **46,17 → 44,84**
+  (20 phiên) · **38,52 → 36,23** (50) · **35,88 → 34,77** (80); **45/45 ô đều giảm**. Mặt nạ thứ
+  hai xác nhận đất chảy đúng sang mảng phủ (cảnh vật+mảng phủ 1,58 → 4,40; tổng hai Δ = +0,49).
+  Bản quét 15 kỷ vẫn 15/15 cặp chặng · 105/105 cặp kỷ. ⚠️ Mức giảm ở mốc 20 phiên **tụt từ −2,56
+  xuống −1,05 đpt sau khi vá khuyết tật ngân sách ở trên** — cố ý KHÔNG chỉnh `share` lại cho đẹp
+  số, vì đó đúng là "nới cổng cho vừa kết quả".
+- **Trade-off**:
+  - ⊖ Thêm một bảng 15 dòng nữa phải bảo trì, và một trục bản sắc nữa phải giữ cho không trôi.
+  - ⊖ Mảng phủ đi vào nhóm `props` khi đo bằng mặt nạ, nên bảng mật độ cũ (`buildings,ground,road`)
+    thấy đất giảm mà không thấy nó chảy đi đâu — phải đo thêm một mặt nạ `buildings,ground,props`
+    để **gọi tên cái sọt**, đúng luật đã học ngày 2026-08-19.
+  - ⊕ Đổi lại: nó phục vụ **cả hai đầu** (trẻ lẫn già), không đụng ADR-007, và không tiêu một lệnh
+    vẽ nào.
+- **Ảnh hưởng**: `cityLayout.js` (+`deriveGroundCover`, +`MAX_GROUND_COVER`), `cityParts.js`,
+  `propSpec.js`, `sceneGraph.js` (mảng phủ xoay theo bội số 90° — `gridAligned`, vì một cái sân
+  xoay 37° trông như rác), `render2d/CityTile.jsx` + `CityCanvas2D.jsx` (bắt buộc: `CityTile` trả
+  `null` **trong im lặng** cho kiểu lạ, nên quên là bản 2D lặng lẽ thưa đi).
+- **Điều kiện xem lại**: (a) khi §2-B chạy xong — mật độ nhà tăng thì đất trống giảm tiếp, có thể
+  phải hạ `share` ở vài kỷ; (b) khi có kỷ thứ 16; (c) nếu cổng hiệu năng iPhone (`TECH_DEBT #23`/
+  `#26`) trượt — mảng phủ là hình học thuần nên nó thuộc nhóm RẺ theo `PERFORMANCE.md`, nhưng câu
+  đó chưa được đo trên iPhone lần nào.
+
+---
+
 ## ADR-036 — Ảnh nghiệm thu: **HỎI trình duyệt canvas nằm đâu** (CDP `clip`), và chụp thành **DẢI NGANG** vì ổ cắm CDP có trần cứng 4 MiB
 
 - **Ngày**: 2026-08-19 (đóng `TECH_DEBT #49`, mở `#50`)

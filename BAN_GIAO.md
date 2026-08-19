@@ -658,6 +658,50 @@
 
 ## 🗒️ Nhật ký cập nhật
 
+### 2026-08-19 — §2-C: mảng phủ đất, và một tấm ảnh nghiệm thu bị rách ngang (ADR-037)
+
+**Vì sao làm bây giờ.** Đàm nhìn thành phố và thấy "thưa". Đo ra con số: **46,2% khung hình là đất
+trống** ở mốc 20 phiên. Đàm chốt làm **C trước B** — lấp đất trống bằng thứ đúng ra phải có ở đó
+(sân, vườn rào, ruộng, giếng, sân phơi, bãi quây, khoảnh đất), mỗi kỷ một cách, buộc vào đúng đất
+nước mà `eraStyle.js` khai. Làm C trước vì nếu chỉ nhồi thêm nhà thì thành phố đông mà vẫn không có
+đời sống.
+
+**Kết quả đo.** Đất trống **46,17 → 44,84** (20 phiên) · **38,52 → 36,23** (50) · **35,88 → 34,77**
+(80). **45/45 ô đều giảm**, không kỷ nào đi ngược. Mặt nạ thứ hai xác nhận phần đất mất đi chảy
+đúng sang mảng phủ (cảnh vật+mảng phủ 1,58 → 4,40; tổng hai Δ = +0,49, gần 0). **0 lệnh vẽ mới** ở
+cả 15 kỷ. Bản quét 15 kỷ vẫn 15/15 cặp chặng · 105/105 cặp kỷ.
+
+⚠️ **Trần của cách làm này — đo được, không đoán.** Ép phủ tối đa (`share = 1,00`) chỉ hạ thêm được
+~6–7 điểm phần trăm: **ô lưới trống chỉ chiếm ~12–16% số điểm ảnh "đất" nhìn thấy được**, phần còn
+lại là **vạt đất NGOÀI lưới thành phố** (đĩa đất bán kính 13,5 so với thành phố ~7,5). ⇒ **§2-B sẽ
+đụng đúng cái trần này**, vì nhà dân cũng chỉ mọc trong ô lưới.
+
+**Bốn thứ đã cắn trong phiên này, ghi lại để phiên sau đỡ mất công.**
+
+1. ⚠️ **NGÂN SÁCH MẢNG PHỦ CỦA CHÍNH TÔI ĐẶT MỘT `PHẦN` CẠNH MỘT `LƯỢNG`.** Bản đầu viết
+   `min(MAX, floor(ứngViên × share), 4 × nhà + phiên)`. Lý lẽ nghe xuôi, **và 16 bài test mới đều
+   xanh** — vì `groundCoverStyle.test.js` chỉ hỏi cái BẢNG còn `groundCover.test.js` chỉ hỏi cái
+   HÌNH, **không bài nào hỏi con số trong bảng có TỚI ĐƯỢC thành phố không**. Đo bằng ảnh mới lộ:
+   ở mốc 20 phiên **8/15 kỷ** cùng ra ĐÚNG 40 mảng, ở mốc 4 phiên thì **15/15** cùng ra 24. Vá bằng
+   cách đổi ĐƠN VỊ của vế nhịp-công-sức thành một hệ số nhân, giữ nguyên Ý ĐỊNH. ⇒ Luật:
+   **một bảng bản sắc phải được canh ở CẢ HAI ĐẦU — đầu KHAI (validator) và đầu DỰNG.**
+   ⚠️ Giá phải trả: mức giảm ở mốc 20 phiên từ −2,56 tụt còn −1,05 đpt. **Cố ý KHÔNG chỉnh lại cho
+   đẹp số** — chỉnh là "nới cổng cho vừa kết quả", đúng thứ §4 cấm.
+2. ⚠️ **MỘT TẤM TRONG 120 ẢNH NGHIỆM THU ĐÃ BỊ RÁCH NGANG** (`TECH_DEBT #52`). Xem mục mới ở cuối
+   `CLAUDE.md` — gồm cả chuyện tôi **đoán sai nguyên nhân** (chỗ rách ở hàng 441, mốc chia dải là
+   476) và suýt ship một phép kiểm chỉ soi mốc dải, tức mù với đúng ca đã cắn.
+3. ⚠️ **PHÉP KIỂM MỚI ẤY KÊU OAN 30 CHỖ TRÊN BẢN QUÉT** — các dải nhãn của tấm bảng. Ngưỡng hiệu
+   chuẩn trên một quần thể (ảnh một-cảnh) đem áp cho quần thể khác (bảng dán ảnh). Chữa bằng cách
+   kể tên các hàng mà mép sắc lẹm là ĐÚNG THIẾT KẾ, và bài test đòi danh sách ấy **BẰNG** đúng 30
+   hàng chứ không "bao gồm".
+4. ⚠️ **`until [ -f ... ]` LÀ MỘT CÁI CỔNG KHÔNG THỂ ĐÓNG.** Chờ bản quét bằng cách đợi file xuất
+   hiện — trong khi một file cũ 2 tiếng trước đã nằm sẵn ở đó. Vòng lặp trả về tức thì và tôi chấm
+   điểm **tấm ảnh cũ**, ra đúng bộ số cũ tới ba chữ số (nên trông rất thuyết phục). ⇒ Chờ một tiến
+   trình thì **chờ CHÍNH TIẾN TRÌNH** (`kill -0 <pid>`), và dời/xoá kết quả cũ TRƯỚC khi chạy lại.
+
+**Việc chưa làm (cố ý).** `TECH_DEBT #51` (bộ vẽ 2D chưa bao giờ vẽ nhà dân) và `#52` (chưa có chẩn
+đoán cho vết rách) — cả hai ngoài phạm vi §2-C, đã ghi thay vì sửa. **§2-B chưa bắt đầu.**
+
 ### 2026-08-18 — VIỆC 2: chạm vào một khu phố thì camera bay tới ngắm gần (ADR-034)
 
 **Vì sao làm bây giờ.** `TECH_DEBT #41` nói thẳng: chi tiết mái của Phase 11 **không sống sót** tới

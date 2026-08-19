@@ -278,6 +278,33 @@ người bắt lưới rất giỏi, vài vật thẳng hàng là lộ ra cái b
 (b) **trần phủ xanh theo TỈ LỆ** với đất còn trống, và chính tỉ lệ ấy mang mật độ của kỷ. Một trần
 đếm-số-cây tuyệt đối không nhìn thấy "còn chừa bao nhiêu đất" — đo ra thì 10/15 kỷ lấp kín 144/144
 ô, tức mọi cơ chế phân bố đều thành vô nghĩa (ADR-021).
+**`covers` (mảng phủ đất — §2-C, ADR-037)** trả lời một câu mà cả cây lẫn nhà đều không trả lời
+được: *"phần đất KHÔNG xây nhà ở đây được dùng làm gì?"*. Đo trước khi làm: đất trơn chiếm **46,2%
+khung hình ở 20 phiên** và vẫn **35,9% ở 80 phiên**. Thêm cây không chữa được — một cái cây là vật
+NHỎ đứng giữa một ô RỘNG, và Phase 8D đã đo ra rằng ở thành phố trưởng thành lưới cảnh vật lấp kín
+144/144 ô mà đất vẫn trống, vì *"có một cái cây trong ô"* ≠ *"ô ấy được dùng vào việc gì"*. Cùng
+khuôn ba lớp lần thứ SÁU: `city3d/groundCoverStyle.js` là BẢNG (15 kỷ → bộ kiểu + `share` + `scale`
++ `enclose`, mỗi dòng buộc vào `country`), `city3d/groundCover.js` là THƯ VIỆN HÌNH (7 kiểu), còn
+`propSpec.js`/`cityParts.js` chỉ ĐỌC.
+⚠️ Ba quyết định đáng nhớ hơn cái bảng. (a) **`covers` là một MẢNG RIÊNG, không phải một `kind` mới
+của `props`** — vì một ô phải trả lời được HAI câu độc lập (*"vật gì đứng đây"* và *"mảnh đất này
+dùng làm gì"*), và vì nhờ vậy `deriveProps` **không bị đụng tới một dòng nào**: bất biến *"chỉ thêm,
+không bao giờ dời"* thành đúng **theo cấu trúc**. ⚠️ Nhưng *"đúng theo cấu trúc"* là đúng loại
+lời hứa chết trong im lặng khi phiên sau đổi cấu trúc, nên nó nay có **hai bài test canh**
+(`cityLayout.test.js`, nhóm `CHỈ THÊM`) — và phép phá *"dời một căn nhà theo số phiên"* chỉ làm đỏ
+đúng một bài trong cả bộ, tức trục NHÀ DÂN × THỜI GIAN trước nay **chưa ai canh**. (b) **Ô nào được
+CHIA CHUNG với cảnh vật là một phép ĐO, không phải một sở thích**: đo 15 kỷ × 8 hạt thì cây (vươn
+0,415) và đèn (0,225) lọt vào trong hàng rào ở ±0,43, còn bụi (0,545) và đá (0,50) thì không — và
+hai loại bị loại đều **NẰM TRÊN** mặt đất, hai loại được nhận đều **MỌC LÊN** từ một điểm. (c)
+**0 lệnh vẽ mới, đã đếm chứ không suy**: bốn vai được phép (`stone`/`wood`/`leaf` ánh xạ thẳng sang
+ba họ có mặt ở 15/15 kỷ, `wall` rơi về `wallMaterial` của chính kỷ đó) sinh ra **0 họ mới ở cả 15
+kỷ**, nên `MOC_LENH_VE` không đổi một đơn vị. `water` bị **cấm** vì chỉ 7/15 kỷ có họ ấy — một cái
+ao nghe rất hợp nhưng nó là một lệnh vẽ phải trả bằng một mục nợ, không phải thứ lén thêm.
+⚠️ **Trần của lớp này, đo được**: ép phủ mọi ô đất trống cũng chỉ hạ "đất trống" thêm ~6–7 điểm phần
+trăm, vì **ô lưới trống chỉ chiếm ~12–16% số điểm ảnh "đất" nhìn thấy được** — phần còn lại là vạt
+đất NGOÀI lưới thành phố (đĩa đất bán kính 13,5 so với thành phố ~7,5). Mọi cách làm chỉ đụng tới ô
+lưới — kể cả §2-B (nhà dân sớm hơn) — đều đụng cùng cái trần này.
+
 (3) Bộ vẽ biến ô lưới thành hình. `CityViewShell.jsx` là KHUNG (chuyển kỷ, số liệu, trạng thái rỗng) và
 **không biết bộ vẽ nào đang chạy** — bộ vẽ vào qua `children` và tự quyết định kích thước của mình.
 Có HAI bộ vẽ: `city/render2d/` (SVG isometric) và `city/render3d/` (three.js). `render3d/` là **nơi

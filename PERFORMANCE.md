@@ -923,6 +923,46 @@ vá đường vòng (màu mốc `rgb(1,2,3)` loại nền trang khỏi mẫu s�
 
 ⇒ **Mốc cho §2-C**: "đất trống" phải tụt rõ so với **46,17% (20 phiên) / 38,52% (50) / 35,88% (80)**.
 
+#### 4. Sau §2-C (mảng phủ đất) — 120 ảnh mặt nạ, hai cây mã
+
+```
+bash <scratchpad>/do-matdo-C.sh      # TRƯỚC dựng tại fffa893 trong `git worktree` riêng
+node <scratchpad>/bang-C.mjs         # 3 cổng nằm trong công cụ, không phải chú thích
+```
+
+⚠️ Vế TRƯỚC **đo lại từ đầu**, không chép bảng trên (bài học `TECH_DEBT #43`). Phép đối chiếu:
+cột TRƯỚC ra **46,17 / 38,52 / 35,88** — khớp bảng §3 tới hai chữ số thập phân ở cả ba mốc. Đó là
+bằng chứng độc lập rằng bộ ảnh sạch, và nó **chỉ đúng sau khi thay một tấm hỏng** (xem ❗ bên dưới).
+
+| trung bình 15 kỷ | 20 phiên | 50 phiên | 80 phiên |
+|---|--:|--:|--:|
+| **đất trống** | 46,17 → **44,84** (−1,33) | 38,52 → **36,23** (−2,29) | 35,88 → **34,77** (−1,11) |
+| nhà | 20,38 → 20,04 | 24,51 → 24,05 | 25,01 → 24,85 |
+| đường | 1,19 → 1,19 | 4,26 → 4,25 | 7,02 → 7,01 |
+
+**45/45 ô đều GIẢM** (15 kỷ × 3 mốc, không một kỷ nào đi ngược). Giảm mạnh nhất kỷ 14 ở cả ba mốc
+(−3,36 / −5,51 / −2,29); yếu nhất kỷ 7 ở mốc 20 (−0,25) và kỷ 13 ở hai mốc kia (−0,61 / −0,23).
+
+Mặt nạ thứ hai gọi tên chỗ đất đi đâu (mốc 50 phiên): đất **38,61 → 36,27** (−2,34) · cảnh vật +
+mảng phủ **1,58 → 4,40** (+2,83). Tổng hai Δ = **+0,49** — gần 0, tức phần đất mất đi đúng là đã
+chảy sang mảng phủ chứ không phải đi đâu khác. Phần dư 0,49 nằm ở nhà (−0,48): mảng phủ nằm sát
+chân công trình nên che mất một dải mỏng ở đó.
+
+⚠️ **TRẦN CỦA CÁCH LÀM NÀY — ĐO ĐƯỢC, KHÔNG ĐOÁN.** Ép `share = 1,00` (phủ MỌI ô đất trống còn
+lại) chỉ đưa kỷ 1 từ 60,29 xuống **53,16** (−7,13) và kỷ 14 xuống **38,81** (−6,33). Nghĩa là **ô
+lưới trống chỉ chiếm ~12–16% số điểm ảnh "đất" nhìn thấy được**; phần còn lại là **vạt đất ngoài
+lưới thành phố** (đĩa đất bán kính 13,5 so với thành phố ~7,5 ⇒ ~69% diện tích đất nằm ngoài lưới).
+⇒ **§2-B sẽ đụng đúng cái trần này**, vì nhà dân cũng chỉ mọc trong ô lưới. Muốn "đất trống" xuống
+dưới ~30% thì phải đụng tới vạt đất ngoài lưới — một việc KHÁC, chưa ai bàn.
+
+❗ **MỘT TẤM TRONG 120 ẢNH ĐÃ BỊ RÁCH NGANG.** `TRUOC-A-s20-ky09.png` báo đất **37,37%**; hai lượt
+dựng lại độc lập đều ra **41,61%** với cùng md5. Nó lọt qua cả ba cổng của `bang-C.mjs`. Thứ lộ ra
+sự thật chỉ là tình cờ: hai mặt nạ khác nhau cãi nhau về cùng một đại lượng. Với con số hỏng, mốc
+20 phiên ra 45,88 (lệch mốc tài liệu 46,17); thay tấm đúng vào thì khớp chính xác. ⇒ Nay `shoot`
+quét mọi mép hàng (`soiVetRach`), chụp lại tối đa 3 lượt, và **từ chối ghi ảnh** nếu vẫn rách. Xem
+`TECH_DEBT #52` — nguyên nhân gốc vẫn CHƯA biết, và lời giải thích đầu tiên ("một dải đến từ khung
+hình cũ") đã bị chính số đo bác bỏ.
+
 ---
 
 ## Khi nào phải đo lại

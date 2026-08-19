@@ -2186,6 +2186,40 @@ ship một trạng thái dở dang, hãy làm nó **ĐẾM ĐƯỢC trong một 
 
 ---
 
+## #51 — Bộ vẽ 2D CHƯA BAO GIỜ vẽ nhà dân, nên hai bộ vẽ khác nhau về NỘI DUNG chứ không chỉ độ đẹp
+
+- **Module**: `src/components/city/render2d/CityCanvas2D.jsx` (mảng `risen`), đối chiếu
+  `src/engine/city3d/cityParts.js` (bộ 3D).
+- **Priority**: Medium · **Severity**: Medium · **Status**: Open (phát hiện 2026-08-19 trong §2-C,
+  **có TRƯỚC phase này** — không phải nợ do §2-C sinh ra).
+- **Impact**: đo 2026-08-19, trung bình 15 kỷ mỗi thành phố: **10,0 nhà dân ở 20 phiên · 23,3 ở 50
+  phiên · 24,7 ở 80 phiên** — bộ 2D không vẽ một căn nào. Ở mốc 80 phiên, **24,7 trong tổng 29,7
+  công trình (83%)** biến mất khi Đàm rơi về bản 2D, và thành phố tụt về đúng 5 công trình như
+  trước Phase 7C.
+- **Root Cause**: Phase 7C thêm `layout.dwellings` như một MẢNG RIÊNG (không nhập vào
+  `layout.buildings`), và chỉ nối vào bộ 3D. `CityCanvas2D.jsx` dựng `risen` bằng cách liệt kê tay
+  ba nguồn (`buildings` · `props` lọc bỏ đường · `scaffolds`) — thêm nguồn thứ tư thì phải sửa
+  chỗ này, mà không có gì nhắc. Đúng hình dạng *"một luật được phát biểu lại ở nhiều nơi"* đã cắn
+  ở Phase 4D và Phase 7B, chỉ khác là ở đây chỗ quên nằm trong một bộ vẽ ít ai mở.
+- **Current Risk**: THẤP hôm nay — bộ 2D là đường lui, và cổng hiệu năng 3D đang ĐẠT nên hầu như
+  không ai thấy nó. Nhưng chính điều đó làm nó im lặng: nó chỉ hiện ra đúng lúc 3D hỏng, tức đúng
+  lúc không ai muốn gặp thêm bất ngờ.
+- **Future Risk**: TRUNG BÌNH. `CityCanvas2D.jsx` tự tuyên bố luật *"Hai bộ vẽ được phép khác nhau
+  về ĐỘ ĐẸP, không được khác nhau về NỘI DUNG"* — một chú thích đang nói dối, và đó chính là loại
+  câu mà phiên sau kế thừa rồi dựa vào (bài học Phase 4D).
+- **Recommended Solution**: nối `layout.dwellings` vào `risen` (một dòng, cùng khuôn `scaffolds`),
+  rồi khoá bằng một bài test **đọc mã nguồn** đòi mọi mảng mà `computeCityLayout` trả về đều có
+  mặt ở CẢ HAI bộ vẽ — canh QUAN HỆ chứ không canh danh sách viết tay, nếu không mảng thứ sáu
+  thêm sau này lại lọt y hệt.
+- **Estimated Complexity**: Nhỏ (~10 dòng mã + ~25 dòng test) — nhưng đụng `render2d/`, **nằm
+  ngoài phạm vi file của chương trình hiện tại (§3)**, nên ghi lại chứ không sửa.
+- **Blocking Conditions**: không có.
+- **Review Trigger**: lần kế tiếp có ai đụng vào `render2d/`, hoặc lần kế tiếp cổng 3D trượt và bộ
+  2D được bật thật.
+- **Owner**: chưa phân công.
+
+---
+
 ## #50 — `md5sum` của ảnh dựng KHÔNG ổn định khi máy bận, nên nó chỉ chứng minh được MỘT chiều
 
 - **Module**: mọi phép nghiệm thu bằng ảnh (`scripts/city-preview.mjs` → `md5sum`), và luật nghiệm

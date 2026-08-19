@@ -23,6 +23,7 @@
 import { BLUEPRINT_CATALOG, BUILDING_EFFECTS } from './constants';
 import { deriveDwellings } from './city3d/dwellings';
 import { getFloraStyle } from './city3d/floraStyle';
+import { getGroundCoverStyle, pickCoverKind } from './city3d/groundCoverStyle';
 import { hashId } from './hashId';
 import {
   CITY_GRID_SIZE, BUILDING_ZONES,
@@ -603,6 +604,148 @@ export function deriveProps({ era, buildingCount, sessionCount, streakLength, oc
   return props;
 }
 
+// ─── MẢNG PHỦ ĐẤT ────────────────────────────────────────────────────────────
+
+/**
+ * Trần cứng cho mảng phủ đất. Không phải số lượng thật — số thật do `share` của kỷ quyết định
+ * (`groundCoverStyle.js`), y hệt cách `MAX_SCATTER_PROPS` chỉ chặn trên cho cảnh vật.
+ *
+ * 48 = một phần ba lưới 144 ô. Chọn bằng phép đo chứ không bằng cảm giác: ở 20 phiên lưới còn 96 ô
+ * trống, nên một trần thấp hơn sẽ cắt đúng cái đầu mà cả phase này sinh ra để chữa; một trần cao
+ * hơn thì vô nghĩa, vì `share` cao nhất trong bảng (0,58 ở kỷ 14) nhân với số ứng viên thực tế
+ * không bao giờ chạm tới.
+ */
+export const MAX_GROUND_COVER = 48;
+
+/**
+ * Loại cảnh vật mà một mảng phủ được phép NẰM DƯỚI.
+ *
+ * ⚠️ HAI CÁI TÊN NÀY LÀ KẾT QUẢ ĐO, KHÔNG PHẢI Ý THÍCH. Mảng phủ là một tấm nền dày `0,045` nằm
+ * sát mặt đất, còn hàng rào của nó đứng ở mép `±0,43` ô. Đo đáy và bề rộng tầng thấp của cả bốn
+ * loại cảnh vật nhỏ, trên 15 kỷ × 8 hạt giống:
+ *   · `tree` — đáy `0,000`, rộng nhất dưới cao độ 0,08 là `0,149`; lệch tâm tối đa `0,34`
+ *     ⇒ với tới `0,415` < `0,43`: thân cây nằm GỌN trong sân. ✓
+ *   · `lamp` — đáy `0,000`, rộng `0,190`, lệch tối đa `0,13` ⇒ `0,225`. ✓
+ *   · `bush` — đáy **`−0,018`** (thụt xuống DƯỚI mặt tấm nền), rộng `0,329`, lệch `0,38`
+ *     ⇒ với tới `0,545` > `0,43`: bụi vừa lún vào tấm nền vừa chọc thủng hàng rào. ✗
+ *   · `rock` — đáy **`−0,030`**, rộng `0,359`, lệch `0,32` ⇒ `0,50`. ✗
+ * Hai loại bị loại đều **NẰM TRÊN mặt đất**; hai loại được nhận đều **MỌC LÊN từ một điểm**. Đó
+ * mới là ranh giới thật, không phải "cây thì đẹp còn đá thì xấu".
+ */
+const COVER_CAN_SHARE = new Set(['tree', 'lamp']);
+
+/**
+ * Mảng phủ đất — "mảnh đất cạnh nhà được dùng làm gì".
+ *
+ * ⚠️ VÌ SAO NÓ LÀ MỘT LỚP RIÊNG CHỨ KHÔNG PHẢI MỘT LOẠI `prop` NỮA (quyết định gốc của Phase C).
+ * Bản đầu định nhét bảy kiểu này vào `SCATTER_KINDS` cho gọn. Làm vậy là bắt MỘT ô lưới trả lời
+ * hai câu hỏi khác hẳn nhau — *"cái gì ĐỨNG ở đây?"* và *"mảnh đất này được DÙNG làm gì?"* — đúng
+ * cái bẫy "một trường gánh hai việc" đã cắn dự án năm lần (`storyHeight` · `roof` · bảng loài cây ·
+ * `avenue`). Ngoài đời hai câu ấy độc lập: một cái cây đứng giữa sân là chuyện bình thường nhất
+ * trần đời. Tách thành lớp riêng thì cả hai cùng trả lời được, và ta được thêm ba thứ miễn phí:
+ *   (a) `deriveProps` KHÔNG BỊ ĐỘNG TỚI MỘT DÒNG NÀO ⇒ mọi cây/đá/đèn/đường của mọi thành phố đã
+ *       niêm phong giữ nguyên từng byte. "Chỉ thêm, không bao giờ dời" trở thành đúng **theo cấu
+ *       trúc**, không phải nhờ cẩn thận.
+ *   (b) Bộ vẽ 2D vẽ được nó như một lớp PHẲNG dưới mọi vật thể nổi — đúng thứ tự chồng lớp, không
+ *       cần đụng vào hàm sắp xếp theo chiều sâu dùng chung.
+ *   (c) Trần riêng, không tranh chỗ với trần cảnh vật.
+ *
+ * ⚠️ ƯU TIÊN Ô KỀ NHÀ. Một cái sân thuộc về một ngôi nhà; rải sân ra giữa đồng thì nó thành nhiễu
+ * chứ không thành câu chuyện. `nhaCua` là ảnh chụp `occupied` LÚC VÀO HÀM — tức công trình + nhà
+ * dân + giàn giáo, trước khi đường và cảnh vật kịp chen vào.
+ *
+ * @param {object} input
+ * @param {number} input.era
+ * @param {number} input.buildingCount
+ * @param {number} input.sessionCount
+ * @param {Set<string>} input.blocked   ô đã bị chiếm bởi thứ KHÔNG cho phủ (nhà, đường, ao, ruộng…)
+ * @param {Set<string>} input.nhaCua    ô có công trình/nhà dân — dùng để ưu tiên đất kề nhà
+ * @param {Array} [input.shareable]     cảnh vật mà mảng phủ được phép nằm dưới, dạng `{kind,x,y}`
+ * @returns {Array<{kind:string,x:number,y:number,variant:number}>} tối đa `MAX_GROUND_COVER` phần tử
+ */
+export function deriveGroundCover({
+  era, buildingCount, sessionCount, blocked, nhaCua, shareable,
+} = {}) {
+  const eraNum = Number.isFinite(era) ? era : 1;
+  const nBuild = safeCount(buildingCount);
+  const nSession = safeCount(sessionCount);
+  if (nBuild === 0) return [];          // chưa có nhà thì chưa có ai dùng mảnh đất nào
+
+  const chan = blocked instanceof Set ? blocked : new Set();
+  const nha = nhaCua instanceof Set ? nhaCua : new Set();
+  const style = getGroundCoverStyle(eraNum);
+
+  // Ứng viên: ô trống hẳn, CỘNG những ô chỉ có cây/đèn đứng (mảng phủ nằm dưới, xem
+  // `COVER_CAN_SHARE`). Duyệt theo thứ tự cố định ⇒ tất định.
+  const ungVien = [];
+  for (let y = 0; y < CITY_GRID_SIZE; y += 1) {
+    for (let x = 0; x < CITY_GRID_SIZE; x += 1) {
+      if (!chan.has(cellKey(x, y))) ungVien.push({ x, y });
+    }
+  }
+  for (const prop of Array.isArray(shareable) ? shareable : []) {
+    if (COVER_CAN_SHARE.has(prop.kind)) ungVien.push({ x: prop.x, y: prop.y });
+  }
+  if (ungVien.length === 0) return [];
+
+  // Kề một ngôi nhà (8 hướng) thì được ưu tiên; trong cùng nhóm thì xáo bằng băm để mảng phủ không
+  // dồn về góc trên-trái của lưới.
+  const keNha = ({ x, y }) => {
+    for (let dy = -1; dy <= 1; dy += 1) {
+      for (let dx = -1; dx <= 1; dx += 1) {
+        if (dx === 0 && dy === 0) continue;
+        if (nha.has(cellKey(x + dx, y + dy))) return 0;
+      }
+    }
+    return 1;
+  };
+  const xepHang = ungVien
+    .map((c, i) => ({ ...c, uu: keNha(c), khoa: hashId(`gc|${eraNum}|${c.x}|${c.y}`), thuTu: i }))
+    .sort((a, b) => (a.uu - b.uu) || (a.khoa - b.khoa) || (a.thuTu - b.thuTu));
+
+  /**
+   * NGÂN SÁCH — hai điều kiện, nhưng phải nói CÙNG MỘT ĐƠN VỊ.
+   *
+   * ⚠️ BẢN ĐẦU CỦA CHÍNH CHỖ NÀY ĐÃ SAI, và nó sai theo đúng cái kiểu dự án đã trả giá ba lần
+   * (`MIN_STONE` Phase 9D · trường nhiễu Phase 7B · trần cây Phase 8D). Nó viết:
+   *     min(MAX, floor(ungVien × share), 4 × nhà + phiên)
+   * — tức đặt một PHẦN (`share`) cạnh một LƯỢNG (`4 × nhà + phiên`) trong cùng một `Math.min`.
+   * Lý lẽ nghe rất xuôi ("một cái trói lúc đông, một cái trói lúc trẻ") nhưng ĐO RA thì ở mốc **20
+   * phiên — đúng mốc đất trống tệ nhất (46%)** — vế lượng ăn trọn vế phần ở **8/15 kỷ**: tám kỷ
+   * khai tám con số `share` khác nhau và cùng dựng ra ĐÚNG 40 mảng. Trục bản sắc bị nuốt trong im
+   * lặng, y hệt cái bẫy mà `isValidGroundCoverStyle` sinh ra để chặn ở đầu kia.
+   *
+   * ⇒ Giữ nguyên Ý ĐỊNH (chưa bỏ công thì chưa được thưởng), đổi ĐƠN VỊ: công sức thành một HỆ SỐ
+   * nhân lên chính `share`, nên nó làm cả 15 kỷ CÙNG chậm lại mà không kỷ nào mất thứ hạng của
+   * mình. Thành phố 1 công trình + 2 phiên: nhịp ≈ 0,05 ⇒ kỷ rộng tay nhất cũng chỉ 3 mảng.
+   */
+  const nhipCongSuc = Math.min(1, (4 * nBuild + nSession) / Math.max(1, ungVien.length));
+  const soLuong = Math.min(
+    MAX_GROUND_COVER,
+    Math.floor(ungVien.length * style.share * nhipCongSuc),
+  );
+
+  const out = [];
+  for (let i = 0; i < soLuong && i < xepHang.length; i += 1) {
+    const cell = xepHang[i];
+    const seed = `gc|${eraNum}|${cell.x}|${cell.y}`;
+    out.push({
+      kind:    pickCoverKind(eraNum, seed),
+      x:       cell.x,
+      y:       cell.y,
+      variant: hashPick(`${seed}|v`, PROP_VARIANTS),
+      // ⚠️ BÁM LƯỚI — KHÔNG ĐƯỢC XOAY TỰ DO, và đây là chỗ duy nhất nói ra điều đó.
+      // Cảnh vật thường (cây, đá) được xoay một góc BẤT KỲ, vì cây thẳng hàng theo lưới thì lộ ngay
+      // ra là máy đặt. Mảng phủ thì ngược hẳn: nó là một hình VUÔNG rộng gần trọn ô, nên xoay 37°
+      // là nó thò ra tới `0,61` tính từ tâm — tức đè lên ô bên cạnh và xoá mất chính cái lưới mà
+      // mắt đang đọc. Chỉ được xoay theo bội số 90°, và bốn góc ấy vẫn đủ biến thể cho những kiểu
+      // không đối xứng (giàn phơi, cần vọt, dải lát chéo).
+      gridAligned: true,
+    });
+  }
+  return out;
+}
+
 // ─── NỀN ─────────────────────────────────────────────────────────────────────
 
 /** 144 ô nền, biến thể suy từ băm để mặt đất không phẳng lì một màu. */
@@ -641,8 +784,8 @@ function byIsometricDepth(a, b) {
  * @param {Array}  [input.pending]          hàng đợi xây dựng, ĐÚNG shape của `craftingQueue` trong
  *                                          store: `{ bpId, sessionsRemaining }`. Thiếu ⇒ không có
  *                                          giàn giáo nào, và kết quả GIỐNG HỆT bản cũ từng byte.
- * @returns {{era:number, gridSize:number, buildings:Array, props:Array, scaffolds:Array,
- *            ground:Array, isEmpty:boolean}}
+ * @returns {{era:number, gridSize:number, buildings:Array, dwellings:Array, props:Array,
+ *            covers:Array, scaffolds:Array, ground:Array, isEmpty:boolean}}
  */
 export function computeCityLayout({ built, levels, era, stats, pending } = {}) {
   const eraNum = Number.isFinite(era) ? era : 1;
@@ -757,6 +900,12 @@ export function computeCityLayout({ built, levels, era, stats, pending } = {}) {
   });
   for (const home of dwellings) occupied.add(cellKey(home.x, home.y));
 
+  // ⚠️ ẢNH CHỤP TRƯỚC KHI `deriveProps` CHẠY. `occupied` lúc này đúng bằng "chỗ có người ở" —
+  // công trình + giàn giáo + nhà dân — và đó là thứ mảng phủ cần để biết ô nào là đất KỀ NHÀ.
+  // Đọc sau khi `deriveProps` xong thì trong đó đã lẫn 80 ô đường và mấy chục gốc cây, tức câu
+  // hỏi "kề nhà không" sẽ trả lời cho một câu khác hẳn.
+  const nhaCua = new Set(occupied);
+
   const props = deriveProps({
     era: eraNum,
     buildingCount: buildings.length,
@@ -765,12 +914,35 @@ export function computeCityLayout({ built, levels, era, stats, pending } = {}) {
     occupied,
   });
 
+  // ── MẢNG PHỦ ĐẤT (Phase C) ────────────────────────────────────────────────
+  //
+  // ⚠️ ĐẶT SAU `deriveProps` VÀ KHÔNG TRUYỀN GÌ NGƯỢC LẠI — đó chính là lời hứa "chỉ thêm, không
+  // bao giờ dời" viết thành cấu trúc: `deriveProps` không biết lớp này tồn tại, nên mọi thành phố
+  // đã niêm phong giữ nguyên từng cây, từng hòn đá, từng ô đường.
+  const chan = new Set(occupied);
+  const chiaDuoc = [];
+  for (const prop of props) {
+    // Ao và ruộng đã là hai cách xử lý mặt đất chiếm TRỌN ô; chồng một cái sân lên đó vừa vô nghĩa
+    // vừa chọi nhau về mặt hình học. Đường thì đã là mặt lát rồi.
+    if (prop.kind === 'tree' || prop.kind === 'lamp') chiaDuoc.push(prop);
+    chan.add(cellKey(prop.x, prop.y));
+  }
+  const covers = deriveGroundCover({
+    era: eraNum,
+    buildingCount: buildings.length,
+    sessionCount,
+    blocked: chan,
+    nhaCua,
+    shareable: chiaDuoc,
+  });
+
   return {
     era:       eraNum,
     gridSize:  CITY_GRID_SIZE,
     buildings: buildings.sort(byIsometricDepth),
     dwellings: dwellings.sort(byIsometricDepth),
     props:     props.sort(byIsometricDepth),
+    covers:    covers.sort(byIsometricDepth),
     scaffolds: scaffolds.sort(byIsometricDepth),
     ground:    buildGround(eraNum),
     // ⚠️ "Trống" vẫn CHỈ tính công trình đã xây. Một bãi đất chỉ có giàn giáo thì đúng là chưa có

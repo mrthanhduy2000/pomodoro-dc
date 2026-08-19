@@ -12,6 +12,40 @@
 
 ---
 
+## 2026-08-19 (cuối) — Mảng phủ đất: đất trống thôi là một tấm thảm xanh trơn (ADR-037)
+
+**Mục đích.** Đàm nhìn thành phố và thấy nó "thưa". Đo ra: **46,2% khung hình là đất trống** ở mốc
+20 phiên. Trước khi làm nhà mọc dày hơn (§2-B), lấp phần đất ấy bằng thứ đúng ra phải có ở đó —
+**sân, vườn rào, ruộng, giếng, sân phơi, bãi quây, khoảnh đất** — mỗi kỷ một cách, buộc vào đúng
+đất nước mà `eraStyle.js` đã khai.
+
+**Phạm vi.** Mới: `src/engine/city3d/groundCoverStyle.js` (BẢNG 15 kỷ) +
+`src/engine/city3d/groundCover.js` (HÌNH) + 2 file test. Sửa: `src/engine/cityLayout.js`
+(`deriveGroundCover`, mảng `covers` RIÊNG), `src/engine/city3d/cityParts.js`, `propSpec.js`,
+`render3d/sceneGraph.js`, `render2d/CityCanvas2D.jsx` + `CityTile.jsx`, `cityLayout.test.js`.
+Công cụ: `scripts/city-preview.mjs` (`soiVetRach`) + `scripts/cityPreviewSource.test.js`.
+
+**Kết quả.**
+- Đất trống **46,17 → 44,84** (20 phiên) · **38,52 → 36,23** (50) · **35,88 → 34,77** (80).
+  **45/45 ô đều giảm.** Phần đất mất đi chảy đúng sang mảng phủ (cảnh vật+mảng phủ 1,58 → 4,40).
+- **0 lệnh vẽ mới** ở cả 15 kỷ — mảng phủ chỉ dùng lại các họ vật liệu đã có (`water` bị CẤM vì chỉ
+  7/15 kỷ có). Đây là con số ĐẾM, không phải giả định.
+- Bản quét 15 kỷ × 6 chặng vẫn **15/15 cặp chặng · 105/105 cặp kỷ**, gần nhất 20,7 / 21,3, trung vị
+  37,6 — không nhúc nhích, tức mảng phủ không làm 15 kỷ mờ vào nhau.
+- Thêm hai bài khoá bất biến **"chỉ thêm, không bao giờ dời"** — trục NHÀ DÂN × THỜI GIAN trước nay
+  chưa ai canh, và đó đúng là trục §2-B sắp vặn.
+
+**⚠️ Trần của cách làm này, đo được chứ không đoán.** Ép phủ tối đa cũng chỉ hạ được thêm ~6–7 điểm
+phần trăm: **ô lưới trống chỉ chiếm ~12–16% số điểm ảnh "đất"**, phần còn lại là vạt đất NGOÀI lưới
+thành phố. §2-B sẽ đụng đúng cái trần này.
+
+**Ảnh hưởng / tương thích.** Không đụng state, không đụng dữ liệu lưu. Mảng `covers` là trường mới
+trong kết quả `computeCityLayout` (thêm, không đổi thứ cũ). Nợ mới: `TECH_DEBT #51` (bộ vẽ 2D chưa
+bao giờ vẽ nhà dân) và `#52` (một ảnh nghiệm thu đã bị rách ngang, nguyên nhân gốc **chưa biết** —
+nay có cổng chặn, chưa có chẩn đoán).
+
+---
+
 ## 2026-08-19 (sau) — Ảnh nghiệm thu thôi bị xén: chụp đúng hộp bao canvas, và chụp thành dải (ADR-036)
 
 **Mục đích.** Đóng `TECH_DEBT #49` ở gốc, TRƯỚC khi làm bất cứ việc mỹ thuật nào — vì mọi con số

@@ -22,6 +22,8 @@
  * ⚠️ THỨ TỰ TRẢ VỀ LÀ MỘT PHẦN CỦA HỢP ĐỒNG: công trình → giàn giáo → nhà dân → cảnh vật.
  * `sceneGraph.js` gắn `addPickTarget` theo CHỈ SỐ của nhóm công trình, nên đảo thứ tự sẽ làm ngón
  * tay chạm vào một công trình mà app kể tên một công trình khác. Có test khoá thứ tự này.
+ * Nhóm "cảnh vật" gồm CẢ mảng phủ đất (`layout.covers`) — chúng cùng đi qua `buildPropSpec`, cùng
+ * mang `kind:'prop'`, và cùng phải nằm ngoài vùng chỉ số mà `addPickTarget` bám theo.
  */
 
 import { buildBuildingSpec, buildScaffoldSpec } from './buildingSpec.js';
@@ -98,6 +100,23 @@ export function collectCitySpecs({ layout, detail = 'high' } = {}) {
         kind:   prop.kind,
         era,
         seed:   `${era}|${prop.kind}|${prop.x}|${prop.y}|${prop.variant}`,
+        detail,
+      }),
+    });
+  }
+
+  // ⚠️ MẢNG PHỦ ĐẤT ĐI QUA CHÍNH `buildPropSpec` — nó chỉ là một `kind` khác, không phải một nhà
+  // máy thứ hai. Lý do nó nằm ở một MẢNG riêng của bố cục (chứ không lẫn vào `props`) là chuyện
+  // của tầng ĐẶT CHỖ, không phải của tầng dựng hình: một ô lưới được phép vừa có cây đứng vừa có
+  // sân lát, nên hai thứ ấy không được tranh nhau một chỗ trong danh sách. Xem `cityLayout.js`.
+  for (const cover of layout.covers ?? []) {
+    out.push({
+      kind: 'prop',
+      source: cover,
+      spec: buildPropSpec({
+        kind:   cover.kind,
+        era,
+        seed:   `${era}|${cover.kind}|${cover.x}|${cover.y}|${cover.variant}`,
         detail,
       }),
     });

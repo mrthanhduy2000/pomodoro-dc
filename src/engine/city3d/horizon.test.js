@@ -13,8 +13,9 @@ import assert from 'node:assert/strict';
 import {
   HORIZON_STYLES, HORIZON_REACH, MAX_OCTAVES, getHorizonStyle, buildHorizon, horizonMaxHeight,
 } from './horizon.js';
-import { APRON_DROP, ERA_TERRAIN } from './terrain.js';
+import { APRON_DROP, ERA_TERRAIN, buildTerrain } from './terrain.js';
 import { ERA_STYLES } from './eraStyle.js';
+import { buildSetting } from './setting.js';
 
 const ERAS = Object.keys(HORIZON_STYLES).map(Number);
 
@@ -88,15 +89,34 @@ test('⚠️ CHỖ GIÁP PHẢI PHẲNG ĐÚNG `-APRON_DROP` — nếu không th
   // Tấm địa hình thành phố kết thúc ở `innerEdge` với cao độ chính xác `-APRON_DROP` (xem
   // `terrain.js`). Vùng đất xa phải bắt đầu ở ĐÚNG con số đó. Lệch một phần nghìn thì mắt không
   // thấy khe, nhưng lệch một phần mười thì có một bậc chạy vòng quanh — và không có gì đỏ lên.
+  //
+  // ⚠️ VIỆC 2 Bước B (2026-08-19): chỗ nào có NƯỚC thì mốc không còn là hằng số ấy nữa, vì cả hai
+  // tấm cùng bị khoét xuống. Lời hứa gốc không đổi — hai tấm phải khớp nhau — nên chỗ ướt chuyển
+  // sang hỏi thẳng `terrain.surfaceHeightAt`, KHÔNG bỏ qua trắng (bỏ qua trắng thì bài này rỗng
+  // dần mỗi lần thêm một kỷ được dựng nước, mà rỗng dần thì không ai thấy).
+  let soKho = 0;
+  let soUot = 0;
   for (const era of ERAS) {
     const h = buildHorizon({ era, gridSize: 12 });
+    const t = buildTerrain({ era, gridSize: 12 });
+    const half = (12 - 1) / 2;
     for (const d of [h.innerEdge, h.innerEdge + 0.3, h.innerEdge - 2]) {
       for (const [x, z] of [[d, 0], [0, d], [-d, 0], [0, -d], [d, d], [-d, d * 0.4]]) {
+        if (t.setting.blendAt(x + half, z + half) > 0) {
+          soUot += 1;
+          assert.ok(Math.abs(h.heightAt(x, z) - t.surfaceHeightAt(x + half, z + half)) < 1e-9,
+            `kỷ ${era}: chỗ giáp có nước (${x}, ${z}) — chân trời ${h.heightAt(x, z)} ≠ địa hình `
+            + `${t.surfaceHeightAt(x + half, z + half)}`);
+          continue;
+        }
+        soKho += 1;
         assert.equal(h.heightAt(x, z), -APRON_DROP,
           `kỷ ${era}: chỗ giáp (${x}, ${z}) cao ${h.heightAt(x, z)} thay vì ${-APRON_DROP}`);
       }
     }
   }
+  assert.ok(soKho > 230, `chỉ còn ${soKho} điểm giáp khô — lời hứa "phẳng đúng" đang rỗng dần`);
+  assert.ok(soUot > 0, 'không một điểm giáp nào chạm nước — nhánh so hai tấm chưa bao giờ chạy');
 });
 
 test('⚠️ KHÔNG PHỤ THUỘC TIẾN ĐỘ NGƯỜI CHƠI — gọi kèm dữ liệu rác vẫn phải ra y hệt', () => {
@@ -177,13 +197,30 @@ test('⚠️ `rough` PHẢI ĐỔI ĐƯỢC BỀ MẶT — đo bằng ĐỘ CONG
   // "fBm vô dụng, bỏ đi". Nguyên nhân: |Δ| bị cái DỐC từ `onset` lên `reach` át hoàn toàn, mà dốc
   // ấy thì hai bản giống nhau. Sai phân bậc hai cho dốc thẳng ra 0 nên chỉ còn nghe thấy chi tiết.
   // Lần thứ 19 công cụ đo tự chế nói dối, và lần này nó nói dối theo hướng "chê oan".
+  //
+  // ⚠️ VIỆC 2 Bước B (2026-08-19) — MẶT NƯỚC LÀM CHÍNH PHÉP ĐO NÀY NÓI DỐI, VÀ ĐÂY LÀ LẦN THỨ HAI
+  // CÙNG MỘT HÌNH DẠNG SAI. Con sông kỷ 12 khoét hai bờ dốc vào tấm chân trời, mà bờ sông thì có
+  // ĐỘ CONG rất lớn — nên phép đo nhảy từ 0,00088 lên **0,01618** và bài test đỏ với thông báo
+  // *"kỷ 12 khai rough 0,16 nhưng bề mặt gồ ghề"*. Thảo nguyên Nga vẫn trơn y như cũ; thứ gồ ghề
+  // là BỜ SÔNG, một đại lượng chẳng liên quan gì tới `rough`. Đúng bài học Phase 9A: *"hỏi xem đại
+  // lượng này có chứa thứ mình KHÔNG muốn đo không"*.
+  //
+  // Cách sửa ĐÚNG không phải nới ngưỡng (nới là bỏ răng cho cả năm kỷ) mà là **bỏ những mẫu chạm
+  // nước ra khỏi mẫu số** — và phải bỏ cả ba điểm của khuôn sai phân, vì chỉ cần một điểm bị khoét
+  // là cả bộ ba đã mang thông tin về bờ. Kèm một gác chạy-rỗng: nếu phép loại ấy ăn quá nhiều mẫu
+  // thì bài test này thành rỗng, và rỗng thì nó không còn phân biệt được fBm sống với fBm chết.
   const curvature = (era) => {
     const h = buildHorizon({ era, gridSize: 12 });
+    const setting = buildSetting({ era, gridSize: 12 });
+    const half = (12 - 1) / 2;
+    const uot = (x, z) => setting.blendAt(x + half, z + half) > 0;
     const s = h.step;
     let sum = 0;
     let n = 0;
+    let boQuaVìNuoc = 0;
     for (let x = -h.reach; x <= h.reach; x += s) {
       for (let z = -h.reach; z <= h.reach; z += s) {
+        if (uot(x - s, z) || uot(x, z) || uot(x + s, z)) { boQuaVìNuoc += 1; continue; }
         const a = h.heightAt(x - s, z);
         const b = h.heightAt(x, z);
         const c = h.heightAt(x + s, z);
@@ -192,7 +229,10 @@ test('⚠️ `rough` PHẢI ĐỔI ĐƯỢC BỀ MẶT — đo bằng ĐỘ CONG
         n += 1;
       }
     }
-    return n ? (sum / n) / HORIZON_STYLES[era].rise : 0;
+    assert.ok(n > 400,
+      `kỷ ${era}: chỉ còn ${n} mẫu độ cong (bỏ ${boQuaVìNuoc} mẫu vì chạm nước) — phép đo đã rỗng, `
+      + 'nó không còn phân biệt được fBm đang chạy với fBm là mã chết');
+    return (sum / n) / HORIZON_STYLES[era].rise;
   };
   // Núi đá (Đức, Nhật) phải có chi tiết ở cỡ lưới…
   for (const era of [5, 13]) {

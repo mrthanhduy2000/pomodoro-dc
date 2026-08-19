@@ -5,6 +5,7 @@ import {
   APRON_DROP, APRON_EDGE, ERA_TERRAIN, SMOOTHSTEP_PEAK, STREET_MAX_GRADE, TERRACE_STEP,
   buildTerrain, eraTerrainProfile,
 } from './terrain.js';
+import { buildHorizon } from './horizon.js';
 import { roadCellCandidates } from '../cityLayout.js';
 
 const ERAS = Array.from({ length: 15 }, (_, i) => i + 1);
@@ -403,26 +404,51 @@ test('MẶT ĐẤT PHẢI THẬT SỰ DỐC GIỮA HAI TÂM Ô — không đư�
   assert.ok(checked >= 50, `chỉ kiểm được ${checked} chỗ chênh bậc — bài test này đang chạy không`);
 });
 
-test('RA KHỎI `APRON_EDGE` THÌ MẶT ĐẤT PHẲNG ĐÚNG `-APRON_DROP`', () => {
+test('RA KHỎI `APRON_EDGE` THÌ MẶT ĐẤT PHẲNG ĐÚNG `-APRON_DROP` — TRỪ chỗ có nước', () => {
   // ⚠️ Đây là LỜI HỨA VỚI `sceneGraph.js`: tấm ván vùng ngoài ngồi ở đúng cao độ ấy, nên nếu rìa
   // tấm địa hình còn gợn thì chỗ giáp sẽ là một đường răng cưa hở cả gầm — vòng quanh thành phố,
   // và im lặng. Kiểm ở NHIỀU hướng vì bán kính chuyển tiếp bị nhiễu nhân vào: chỗ nào nhiễu lớn
   // nhất mới là chỗ chạm trần, và đúng chỗ đó mới lộ lỗi.
+  //
+  // ⚠️ VIỆC 2 Bước B (2026-08-19) THÊM MỘT NGOẠI LỆ, VÀ NGOẠI LỆ ẤY PHẢI ĐẾM ĐƯỢC. Mặt nước khoét
+  // mặt đất xuống dưới `-APRON_DROP` ở đúng những chỗ nó chảy qua, nên câu "phẳng đúng" hết đúng ở
+  // đó — nhưng lời hứa gốc (hai tấm phải KHỚP NHAU) thì vẫn nguyên giá trị, chỉ là mốc khớp nay là
+  // cao độ đã khoét chứ không phải một hằng số. Nên chỗ ướt KHÔNG bị bỏ qua: nó chuyển sang hỏi
+  // `horizon.heightAt` xem hai tấm có bằng nhau không. Bỏ qua trắng thì bài test này sẽ lặng lẽ
+  // rỗng dần mỗi lần có thêm một kỷ được dựng nước.
+  let soDiemKho = 0;
+  let soDiemUot = 0;
   for (const era of ERAS) {
     const terrain = buildTerrain({ era, gridSize: GRID });
+    const horizon = buildHorizon({ era, gridSize: GRID });
+    const half = (GRID - 1) / 2;
     for (let t = 0; t <= 24; t += 1) {
       const along = -0.5 + (GRID * t) / 24;
       const out = GRID - 0.5 + APRON_EDGE + 0.01;
       for (const [u, v] of [[-0.5 - APRON_EDGE - 0.01, along], [out, along],
         [along, -0.5 - APRON_EDGE - 0.01], [along, out]]) {
+        const cao = terrain.surfaceHeightAt(u, v);
+        if (terrain.setting.blendAt(u, v) > 0) {
+          soDiemUot += 1;
+          const troi = horizon.heightAt(u - half, v - half);
+          assert.ok(Math.abs(cao - troi) < 1e-9,
+            `kỷ ${era} tại (${u.toFixed(2)},${v.toFixed(2)}): chỗ có nước mà hai tấm lệch nhau — `
+            + `địa hình ${cao.toFixed(6)}, chân trời ${troi.toFixed(6)}`);
+          continue;
+        }
+        soDiemKho += 1;
         assert.ok(
-          Math.abs(terrain.surfaceHeightAt(u, v) + APRON_DROP) < 1e-9,
-          `kỷ ${era} tại (${u.toFixed(2)},${v.toFixed(2)}): rìa ở ${terrain.surfaceHeightAt(u, v)}, `
+          Math.abs(cao + APRON_DROP) < 1e-9,
+          `kỷ ${era} tại (${u.toFixed(2)},${v.toFixed(2)}): rìa ở ${cao}, `
           + `đáng lẽ ${-APRON_DROP} — sẽ hở một khe giữa địa hình và tấm ván vùng ngoài`,
         );
       }
     }
   }
+  // Gác chạy-rỗng hai chiều: phần lớn rìa vẫn phải KHÔ (nếu không thì lời hứa gốc đã mất răng), và
+  // phải có ít nhất vài điểm ướt (nếu không thì nhánh mới ở trên chưa bao giờ chạy).
+  assert.ok(soDiemKho > 1400, `chỉ còn ${soDiemKho} điểm rìa khô — lời hứa "phẳng đúng" đang rỗng dần`);
+  assert.ok(soDiemUot > 0, 'không một điểm rìa nào chạm nước — nhánh so hai tấm chưa bao giờ chạy');
 });
 
 test('VÙNG ĐẤT NGOÀI PHẢI THẤP HƠN CAO NGUYÊN, và ranh giới phải LƯỢN chứ không vuông', () => {

@@ -43,19 +43,38 @@ import { BLUEPRINT_CATALOG } from '../constants.js';
 import { collectCitySpecs } from './cityParts.js';
 import { getEraStyle, ERA_STYLES } from './eraStyle.js';
 import { materialFamilyFor, MATERIAL_ORDER } from './materials.js';
+import { waterIsBuilt } from './setting.js';
 
 const ERAS = Object.keys(ERA_STYLES).map(Number).sort((a, b) => a - b);
 
 /**
- * Bốn tấm cố định nằm NGOÀI khối gộp, có ở mọi kỷ và không phụ thuộc kỷ nào:
+ * Bốn tấm cố định nằm NGOÀI khối gộp, có ở MỌI kỷ và không phụ thuộc kỷ nào:
  * nền ô lưới · mặt đường · thân cư dân · đầu cư dân.
  *
  * ⚠️ Con số 4 KHÔNG được viết ra từ việc đếm bằng mắt trong `sceneGraph.js` — nó là hiệu số đo
- * được giữa phép đo thật và số họ vật liệu, và nó ra ĐÚNG 4 ở cả 15 kỷ. Nếu một phase sau thêm một
- * tấm cố định (ví dụ tách mặt nước ra khối riêng) thì con số này phải đổi, và cách biết là bài test
- * dưới đây sẽ đỏ ĐỒNG LOẠT ở cả 15 kỷ — một hình dạng đỏ rất dễ đọc, khác hẳn với "một kỷ đỏ".
+ * được giữa phép đo thật và số họ vật liệu, và nó ra ĐÚNG 4 ở cả 15 kỷ.
  */
-const TAM_CO_DINH = 4;
+const TAM_CO_DINH_KHO = 4;
+
+/**
+ * ⚠️ VÀ ĐÂY LÀ TẤM THỨ NĂM — CHỈ Ở KỶ CÓ NƯỚC ĐÃ DỰNG HÌNH (VIỆC 2 Bước B, 2026-08-19).
+ *
+ * Chú thích cũ của `TAM_CO_DINH` đã dự đoán đúng cái ngày này: *"nếu một phase sau thêm một tấm cố
+ * định (ví dụ tách mặt nước ra khối riêng) thì con số này phải đổi"*. Nó vừa đến — nhưng nó đến
+ * theo một hình dạng mà chú thích ấy KHÔNG lường: tấm nước **không có ở mọi kỷ**, nên hằng số cũ
+ * không thể là một hằng số nữa, nó phải là một HÀM CỦA KỶ.
+ *
+ * Đây chính là ràng buộc Đàm ra chữ một: *"Nước: tối đa +1 lệnh vẽ, CHỈ ở kỷ có nước. Cập nhật
+ * `MOC_LENH_VE` theo TỪNG KỶ, ghi rõ kỷ nào tăng và vì sao. KHÔNG nâng trần chung."* Viết thành
+ * `TAM_CO_DINH_KHO + 1` cho cả 15 kỷ là đúng cái "nâng trần chung" đã bị cấm: 13 kỷ khô sẽ được
+ * tặng một lệnh vẽ trống để trôi vào trong im lặng.
+ *
+ * ⚠️ Hỏi `waterIsBuilt` (HÌNH đã dựng) chứ KHÔNG hỏi `hasWater` (BẢNG khai có nước). Bảng khai 14
+ * kỷ có nước; hình mới dựng 2. Hỏi nhầm thì 12 kỷ nhận trước một lệnh vẽ chúng chưa hề tiêu.
+ */
+function tamCoDinh(era) {
+  return TAM_CO_DINH_KHO + (waterIsBuilt(era) ? 1 : 0);
+}
 
 /**
  * MỐC LỆNH VẼ THÀNH PHỐ của từng kỷ — đo ngày 2026-08-18 bằng lệnh ghi ở đầu file.
@@ -69,6 +88,22 @@ const TAM_CO_DINH = 4;
  * vật liệu ấy lại để lấy một con số đẹp hơn (ADR-025 đã cấm đúng kiểu mua-số-bằng-cách-nói-dối này).
  */
 const MOC_LENH_VE = {
+  1: 9, 2: 11, 3: 11, 4: 11, 5: 10,
+  6: 11, 7: 11, 8: 11, 9: 10, 10: 12,
+  11: 10, 12: 11, 13: 10, 14: 11, 15: 10,
+};
+
+/**
+ * BẢNG MỐC TRƯỚC KHI CÓ MẶT NƯỚC — đo ngày 2026-08-18, giữ nguyên văn để làm ĐỐI CHỨNG.
+ *
+ * ⚠️ Không có bảng này thì câu *"nước chỉ tốn +1 lệnh vẽ, chỉ ở kỷ có nước"* là một lời hứa không
+ * ai kiểm được: mốc mới sẽ chỉ là 15 con số, và bất kỳ con số nào cũng "khớp" với chính nó. Có nó
+ * thì lời hứa trở thành một PHÉP TRỪ có thể đỏ (xem bài test cuối file).
+ *
+ * Đây cũng là chỗ kỷ 1 làm chứng, đúng ý Đàm khi anh chọn kỷ 1 vào bộ ba dựng hình:
+ * *"Kỷ 1 làm chứng cho ràng buộc cứng: kỷ không nước giữ nguyên mốc lệnh vẽ, không đổi một đơn vị."*
+ */
+const MOC_TRUOC_NUOC = {
   1: 9, 2: 11, 3: 11, 4: 11, 5: 10,
   6: 11, 7: 11, 8: 11, 9: 10, 10: 12,
   11: 10, 12: 10, 13: 10, 14: 10, 15: 10,
@@ -108,7 +143,7 @@ function hoVatLieu(era, themHo = null) {
 }
 
 function lenhVe(era, themHo = null) {
-  return hoVatLieu(era, themHo).length + TAM_CO_DINH;
+  return hoVatLieu(era, themHo).length + tamCoDinh(era);
 }
 
 /**
@@ -199,8 +234,49 @@ test('QUAN HỆ "lệnh vẽ = số họ + 4" phải còn đúng với phép đo
   // đúng bẫy "phép đo đúng nhưng đo sai đại lượng". Bài này nhốt sẵn bộ số đã đo để chuyện đó
   // không thể xảy ra trong im lặng.
   for (const era of ERAS) {
-    assert.equal(hoVatLieu(era).length + TAM_CO_DINH, MOC_LENH_VE[era],
-      `kỷ ${era}: số họ + ${TAM_CO_DINH} không còn khớp mốc đo được. Hoặc có tấm cố định mới (thì `
-      + 'sửa `TAM_CO_DINH` và đo lại cả bảng), hoặc thành phố đã đổi họ vật liệu.');
+    assert.equal(hoVatLieu(era).length + tamCoDinh(era), MOC_LENH_VE[era],
+      `kỷ ${era}: số họ + ${tamCoDinh(era)} không còn khớp mốc đo được. Hoặc có tấm cố định mới (thì `
+      + 'sửa `tamCoDinh` và đo lại cả bảng), hoặc thành phố đã đổi họ vật liệu.');
+  }
+});
+
+test('MẶT NƯỚC TỐN ĐÚNG +1 LỆNH VẼ, VÀ CHỈ Ở KỶ ĐÃ DỰNG HÌNH NƯỚC', () => {
+  // THỬ-CHO-ĐỎ (nêu TRƯỚC, đúng luật Phase 8A): sửa `tamCoDinh` thành `TAM_CO_DINH_KHO + 1` (tức
+  // nâng trần chung) ⇒ 13 kỷ khô đỏ ở dòng `assert.equal(hieu, ...)` với `hieu = 1` mà chờ 0. Sửa
+  // ngược lại thành hằng số 4 ⇒ kỷ 12 và 14 đỏ với `hieu = 0` mà chờ 1.
+  let soKyTang = 0;
+  for (const era of ERAS) {
+    const truoc = MOC_TRUOC_NUOC[era];
+    assert.ok(Number.isFinite(truoc), `kỷ ${era} thiếu mốc trước-nước — đối chứng mất một dòng`);
+    const hieu = MOC_LENH_VE[era] - truoc;
+    const coNuoc = waterIsBuilt(era);
+    assert.equal(hieu, coNuoc ? 1 : 0,
+      `kỷ ${era}: mốc đi từ ${truoc} lên ${MOC_LENH_VE[era]} (lệch ${hieu}) trong khi kỷ này `
+      + `${coNuoc ? 'CÓ' : 'KHÔNG có'} mặt nước đã dựng. Nước được phép tốn đúng +1 lệnh vẽ và chỉ `
+      + 'ở kỷ có nước — mọi thay đổi khác phải đo lại rồi ghi ngày mới, không được đi ké dòng này.');
+    if (coNuoc) soKyTang += 1;
+  }
+  // Gác chạy-rỗng: nếu `waterIsBuilt` hỏng và trả `false` ở mọi kỷ thì vòng trên vẫn xanh trơn tru
+  // trong khi nó chẳng kiểm gì về nước cả.
+  assert.equal(soKyTang, 2,
+    `chỉ ${soKyTang} kỷ được cộng lệnh vẽ nước — Bước B dựng hình cho ĐÚNG 2 kỷ có nước (12 và 14). `
+    + 'Số này đổi thì phải đổi cùng lúc với `ERAS_WITH_WATER_GEOMETRY` và phải đo lại từng kỷ.');
+});
+
+test('KỶ KHÔ KHÔNG ĐƯỢC ĐỔI MỘT ĐƠN VỊ NÀO — KỶ 1 LÀM CHỨNG', () => {
+  // ⚠️ Bài trên so hai BẢNG SỐ; bài này so bảng số với thứ mã THẬT SỰ TÍNH RA. Hai câu hỏi khác
+  // nhau: bảng có thể được sửa cho khớp nhau mà mã lại tính ra một con số thứ ba.
+  //
+  // THỬ-CHO-ĐỎ: bỏ điều kiện `waterIsBuilt` trong `tamCoDinh` ⇒ kỷ 1 đỏ ngay ở dòng đầu (10 ≠ 9).
+  assert.equal(waterIsBuilt(1), false, 'kỷ 1 phải là kỷ KHÔ — cả bộ ba Bước B dựa vào điều đó');
+  assert.equal(lenhVe(1), MOC_TRUOC_NUOC[1],
+    'kỷ 1 (Thổ Nhĩ Kỳ, khô) đã đổi số lệnh vẽ. Đây là kỷ Đàm chọn làm nhân chứng cho ràng buộc '
+    + '"nước không được tính tiền lên kỷ không có nước" — nó đỏ nghĩa là ràng buộc ấy vừa vỡ.');
+
+  const kho = ERAS.filter((e) => !waterIsBuilt(e));
+  assert.equal(kho.length, 13, 'phải còn đúng 13 kỷ khô ở Bước B');
+  for (const era of kho) {
+    assert.equal(lenhVe(era), MOC_TRUOC_NUOC[era],
+      `kỷ ${era} không có mặt nước nhưng số lệnh vẽ đã đổi khỏi mốc trước-nước (${MOC_TRUOC_NUOC[era]}).`);
   }
 });

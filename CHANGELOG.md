@@ -12,7 +12,32 @@
 
 ---
 
-## 2026-08-19 (mới nhất) — Bảng địa thế 15 kỷ: thành phố nằm ở đâu và vì sao (ADR-039)
+## 2026-08-19 (mới nhất) — Mặt nước: sông ở kỷ 12, biển ở kỷ 14 (ADR-040)
+
+**Mục đích.** Dựng HÌNH cho bảng địa thế đã duyệt ở ADR-039 — nhưng chỉ cho **ba kỷ** để Đàm nhìn
+trước khi trải rộng: kỷ 14 (biển Singapore) · kỷ 12 (sông Nga) · kỷ 1 (khô Thổ Nhĩ Kỳ, làm nhân
+chứng cho ràng buộc "kỷ không nước giữ nguyên mốc lệnh vẽ").
+
+**Phạm vi.** Mới: `src/engine/city3d/setting.js` (dấu chân mặt nước, thuần) ·
+`src/engine/city3d/noise.js` (`valueNoise` dọn ra khỏi `terrain.js` để gỡ vòng import). Sửa:
+`terrain.js` + `horizon.js` (khoét lòng nước bằng MỘT phép dùng chung) · `outskirts.js` (không
+trồng cây dưới nước) · `terrainMesh.js` (`buildWaterSurface`) · `sceneGraph.js` (một tấm nước).
+
+**Ảnh hưởng.** Mặt nước là chỗ **mặt đất thấp hơn một mặt phẳng**, không phải một tấm xanh đặt lên
+trên — nên **bờ nước không được vẽ**: nó tự lượn theo mọi gợn của địa hình. Tấm nước là một hình
+chữ nhật phẳng ⇒ **+1 lệnh vẽ, chỉ ở kỷ có nước** (kỷ 12: 10→11 · kỷ 14: 10→11 · **13 kỷ còn lại
+không đổi một đơn vị**). Không nguồn sáng mới, không texture, không shader nước động (lệnh Đàm).
+
+**Tương thích.** Không đụng state, không đụng lưới 12×12, không đụng `deriveDwellings` /
+`computeCityLayout`. ADR-007 ("bảo tàng bất động") giữ nguyên: cao độ trong lưới không đổi một
+phần nghìn nào, có test đo dày ở cả 15 kỷ.
+
+**Đang dở dang có chủ ý**: bảng khai 14 kỷ có nước, hình mới dựng 2 — `TECH_DEBT #56`, chờ Đàm gật
+hướng mỹ thuật.
+
+---
+
+## 2026-08-19 — Bảng địa thế 15 kỷ: thành phố nằm ở đâu và vì sao (ADR-039)
 
 **Mục đích.** Vùng quê của ADR-038 hôm nay giống hệt nhau ở mọi hướng. Một thành phố thật gần như
 luôn nằm cạnh một thứ quyết định vì sao nó ở đúng chỗ ấy — một con sông, một cửa biển, một con kênh

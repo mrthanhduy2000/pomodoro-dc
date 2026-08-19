@@ -53,6 +53,18 @@
 > **1 High** (#14) + **2 Medium-High** (#3, #13) + **3 chờ Đàm quyết** (#24, #41, #42) = 6, vẫn
 > dưới ngưỡng 8–10.
 >
+> **Cập nhật 2026-08-19 (VIỆC 2 Bước B — mặt nước)**: **MỞ #56** (Low, dở dang CÓ CHỦ Ý — 12 kỷ khai
+> có nước mà chưa dựng hình, đã khoá bằng `assert.deepEqual(ERAS_WITH_WATER_GEOMETRY, [12, 14])`),
+> **#57** (**High**, chờ Đàm quyết — camera mặc định quay lưng lại bờ nước; kỷ 14 chỉ thấy 0,09% mặt
+> biển trong khi trần là 31,43%) và **#58** (Medium — ảnh rộng >1300px có thể nhiễm một khối chữ
+> nhật mà cổng chống-rách không thấy). ⚠️ **#57 là mục High THỨ HAI**, nên nay còn **2 High** (#14,
+> #57) + **2 Medium-High** (#3, #13) + **3 chờ Đàm quyết** (#24, #41, #42) + **2 Medium** (#43, #58)
+> = 9 → **ĐÃ CHẠM DẢI NGƯỠNG 8–10**. Nhưng đọc kỹ thì 4/9 mục đang chờ **quyết định của Đàm** chứ
+> không chờ công sức kỹ thuật (#57, #24, #41, #42), tức một Maintenance Sprint sẽ không đụng được
+> vào chúng. ⇒ **Đề xuất đúng không phải mở Sprint mà là gom MỘT lượt hỏi Đàm duy nhất** — đúng
+> điều bản cập nhật 2026-08-18 đã dự báo (*"nếu con số này lên 4 thì nên gộp thành một lượt hỏi
+> duy nhất thay vì hỏi lẻ"*); con số ấy nay **đúng là 4**.
+>
 > **Cập nhật 2026-08-18 (Phase 12 — đo mốc nền)**: **MỞ #43, Priority Medium** — `PERFORMANCE.md`
 > KHÔNG có gì máy đọc được canh, và nó đã trôi thật: Phase 11-B sửa hình học mái rồi không cập nhật
 > tài liệu, để **6/15 kỷ sai số tam giác** suốt từ đó. Cột lệnh vẽ thì có `drawCallBudget.test.js`
@@ -2140,6 +2152,126 @@ ship một trạng thái dở dang, hãy làm nó **ĐẾM ĐƯỢC trong một 
 - **Review Trigger**: khi `crownWeight` tụt xuống 0 cặp tách được (bài `MỖI TRỤC PHẢI CÒN SỐNG` sẽ
   đỏ), hoặc khi có phase thêm kiểu đường nét thứ sáu.
 - **Owner**: chưa phân công · **Status**: Open
+
+---
+
+## #58 — ẢNH CHỤP RỘNG HƠN ~1300px CÓ THỂ BỊ NHIỄM MỘT **KHỐI CHỮ NHẬT** Ở GÓC, VÀ CỔNG CHỐNG-RÁCH HIỆN CÓ KHÔNG THỂ THẤY
+
+- **Tên**: lỗi ghép DẢI lúc chụp CDP sinh ra một khối chữ nhật lệch ở ảnh rộng; cổng `soiVetRach`
+  chỉ quét mép HÀNG nên mù với mép ĐỨNG
+- **Module**: `scripts/city-preview.mjs` (đường ghép dải `Page.captureScreenshot`) ·
+  cổng `soiVetRach`
+- **Priority**: Medium · **Severity**: Medium
+- **Impact**: một cặp ảnh nghiệm thu "trước/sau" có thể lệch nhau hàng chục phần trăm vì lý do
+  KHÔNG liên quan gì tới mã cảnh, và nó **qua được** cổng chống-rách hiện tại. Đã cắn thật:
+  VIỆC 2 Bước B, cặp **kỷ 1 ở 1500px** lệch **20,8%** trong khi kỷ 1 là kỷ KHÔ và ở 1100px thì hai
+  ảnh trùng TỪNG BYTE. Phần lệch là hình chữ nhật **hàng 0–348 × cột 780–1499**.
+- **Root Cause**: **349 = chiều cao đúng một dải** cho ảnh rộng 1500 (`2 MiB ÷ 4 byte ÷ 1500`), nên
+  đây là lỗi ở bước ghép dải chứ không phải ở cảnh. Vì sao cổng không thấy: `soiVetRach` sinh ra
+  cho `TECH_DEBT #52` — một vết rách NGANG — nên nó quét mép giữa các HÀNG. Một khối lệch có mép
+  ĐỨNG ở cột 780 **không tạo ra mép ngang nào** ở phần lớn chiều rộng, nên phép đo về mặt cấu trúc
+  không thể thấy nó. Đúng bài học đã ghi nhiều lần: *"hỏi 'đại lượng tôi đang vặn có nằm trong thứ
+  công cụ này đo không?'"*.
+- **Current Risk**: **THẤP** — mọi ảnh nghiệm thu chuẩn của dự án là **1100px**, dưới ngưỡng cắn;
+  chưa gặp lần nào ở 1100px. Số đo w1500 của Bước B đã bị **vứt bỏ toàn bộ**, không dùng một con nào.
+- **Future Risk**: **CAO nếu có phase dùng ảnh cận cảnh rộng** — `CLAUDE.md` đang khuyên chụp
+  `--width 1500` để soi chi tiết nhỏ (cây, đèn, tầng trệt, mái). Tức đúng loại ảnh mà bài học
+  "chi tiết chỉ thấy khi nhìn gần" bảo phải dùng lại chính là loại ảnh có thể nhiễm, **và người đọc
+  sẽ tin nó** vì cổng báo sạch.
+- **Recommended Solution**: mở rộng `soiVetRach` sang mép **ĐỨNG** (cùng công thức, đổi trục), và
+  quan trọng hơn — thêm một mục kiểm **ngay tại chỗ ghép**: mỗi dải phải đúng chiều cao đã yêu cầu
+  và tổng chiều cao các dải phải bằng chiều cao khung nhìn. Kèm **đối chứng nhốt đúng ca này**
+  (dựng lại khối 0–348 × 780–1499) đòi phép đo phải bắt được, theo đúng luật ngưỡng-phải-có-đối-chứng.
+- **Estimated Complexity**: Nhỏ–Vừa (một hàm thuần + đối chứng; không đụng mã cảnh)
+- **Blocking Conditions**: không có. Nằm ngoài phạm vi VIỆC 2 Bước B (Đàm giới hạn ở `city3d/*`
+  + test + scripts + tài liệu — `scripts` thì trong phạm vi, nhưng việc này không phục vụ Bước B và
+  làm kèm sẽ trộn hai thay đổi không liên quan vào một commit, trái luật commit của dự án).
+- **Review Trigger**: lần đầu có phase cần ảnh nghiệm thu rộng hơn 1300px; hoặc khi có cặp ảnh
+  "trước/sau" lệch nhau ở một kỷ đáng lẽ không đổi.
+- **Owner**: chưa phân công · **Status**: Open
+
+---
+
+## #57 — CAMERA MẶC ĐỊNH ĐỨNG NGAY TRÊN PHÍA CÓ NƯỚC RỒI QUAY LƯNG LẠI: KỶ 14 CHỈ THẤY **0,09%** MẶT BIỂN, TRẦN LÀ **31,43%**
+
+- **Tên**: bờ nước và góc camera mặc định chỏi nhau; 8/14 kỷ có nước sẽ gần như vô hình
+- **Module**: `src/engine/city3d/settingStyle.js` (cột `side`) ↔ `src/engine/city3d/orbit.js`
+  (`DEFAULT_YAW`) · đo bằng `scripts/water-view.mjs`
+- **Priority**: **High** · **Severity**: High (nó vô hiệu hoá phần thưởng chính của cả VIỆC 2)
+- **Impact**: Đàm mở màn Thành Phố ở kỷ 14 — kỷ *đảo quốc Singapore* — và **không nhìn thấy biển**.
+  Toàn bộ hình học biển vẫn được dựng, vẫn tốn +1 lệnh vẽ, vẫn tốn 16.128 tam giác; nó chỉ nằm
+  ngoài khung hình. Đây chính xác là cổng không-đo-được-bằng-test mà Đàm đặt ra (*"phải đọc ra là
+  thành phố cảng, không phải thành phố cạnh một vũng xanh"*) — và nó **TRƯỢT**.
+- **Root Cause**: `DEFAULT_YAW = π/4` đặt camera ở góc **ĐÔNG-NAM** rồi nhìn về gốc toạ độ, tức
+  nhìn về hướng **tây-bắc**. Nên bờ `nam` và bờ `dong` nằm **SAU LƯNG** camera, còn bờ `bac`/`tay`
+  thì nằm trọn trong khung. Kỷ 14 khai `side: 'nam'` — và khai ĐÚNG (Marina Bay thật sự nhìn nam ra
+  eo Malacca). Hai quyết định đều đúng một mình, và **chúng chưa bao giờ được đặt cạnh nhau**.
+  ⚠️ Đây là **cùng một hình dạng sai với `TECH_DEBT #38`/Phase 7D**: một lời hứa nói về QUAN HỆ
+  (*"nước phải NHÌN THẤY ĐƯỢC"*) được cài đặt bằng hai HẰNG SỐ ở hai file không tham chiếu nhau.
+- **Current Risk**: đã hiện thực, không phải rủi ro tiềm tàng — đo được ở HAI kỷ đã dựng hình.
+- **Future Risk**: Bước C trải nốt 12 kỷ ⇒ **8/14 kỷ có nước rơi vào phía khuất** (`nam`: 6, 7, 8,
+  14 · `dong`: 2, 5, 12, 13). Làm xong Bước C mà không chốt mục này là **tiêu ngân sách cho một
+  thứ hơn nửa số kỷ sẽ không nhìn thấy** — đúng bài học §2-C (*đo TRẦN trước khi tiêu*), chỉ khác
+  là lần này trần đã đo xong TRƯỚC, nên không còn cớ.
+- **SỐ ĐO** (`node --import ./scripts/register-esm-loader.mjs scripts/water-view.mjs --eras 12,14,1`,
+  2026-08-19; bắn tia qua đúng camera app dùng, không đếm màu):
+
+  | kỷ | loại nước | bờ | mặc định 45° | trần (đứng đối diện) | gấp |
+  |---|---|---|---:|---:|---:|
+  | 14 | sea | nam | **0,09%** | **31,43%** | **345,7×** |
+  | 12 | river | dong | 2,30% | 9,16% | 4,0× |
+  | 1 | none | none | 0,00% | 0,00% | — |
+
+  ⚠️ Sông đỡ hơn biển rất nhiều (4,0× so với 345,7×) vì một dòng sông **cắt ngang cả cảnh** nên
+  luôn còn một khúc trong khung, còn biển là một **nửa mặt phẳng** nằm trọn về một phía.
+- **Recommended Solution**: **KHÔNG tự chọn — Đàm quyết** (đụng `camera` hoặc đụng bảng đã duyệt,
+  cả hai đều nằm trong 6 ca phải dừng hỏi). Bốn hướng, kèm giá đã cân:
+  - **(a) Xoay `DEFAULT_YAW` thêm 180°** (45° → 225°). Rẻ nhất về mã (một số), đắt nhất về hệ quả:
+    **mọi kỷ đổi khung hình**, nên toàn bộ mốc `sweep-score`, mọi kết luận mỹ thuật đã duyệt, và
+    `PERFORMANCE.md` đều phải đo lại. Và nó chỉ đổi chỗ vấn đề: `bac`/`tay` (6 kỷ) sẽ thành phía khuất.
+  - **(b) Camera xoay THEO bờ nước của kỷ** (`yaw` suy từ `side`). Giải đúng gốc — mọi kỷ đều nhìn
+    ra nước. Giá: chuyển kỷ thì góc nhìn nhảy, và `cityFocus`/`sceneStats` phải kiểm lại.
+  - **(c) Sửa cột `side`** cho các kỷ vào phía khuất. **Không nên**: nó mua một con số đẹp bằng cách
+    nói dối địa lý — đúng thứ ADR-025 đã cấm với mặt đường.
+  - **(d) Chấp nhận**: nước là phần thưởng khi Đàm TỰ xoay camera (app cho kéo). Giá bằng 0 về mã,
+    nhưng ảnh mặc định — thứ Đàm nhìn thấy hằng ngày — vẫn không có biển.
+- **Estimated Complexity**: (a) rất thấp về mã / rất cao về nghiệm thu lại · (b) trung bình ·
+  (c) thấp · (d) 0
+- **Blocking Conditions**: **Bước C không nên bắt đầu trước khi mục này được chốt** — trải 12 kỷ
+  rồi mới đổi góc nhìn là phải nghiệm thu lại toàn bộ hai lần.
+- **Review Trigger**: ngay khi Đàm trả lời cổng "thành phố cảng"
+- **Owner**: chờ Đàm · **Status**: **Open — CHỜ ĐÀM QUYẾT**
+
+---
+
+## #56 — 12/14 KỶ CÓ NƯỚC TRONG BẢNG NHƯNG CHƯA ĐƯỢC DỰNG HÌNH (dở dang CÓ CHỦ Ý, và nó đếm được)
+
+- **Tên**: `settingStyle.js` khai 14 kỷ có nước; `ERAS_WITH_WATER_GEOMETRY` mới dựng 2 (12 và 14)
+- **Module**: `src/engine/city3d/setting.js` · `settingStyle.js` · `drawCallBudget.test.js`
+- **Priority**: Medium · **Severity**: Low (không hỏng gì; chỉ là 12 kỷ chưa nhận phần thưởng)
+- **Impact**: mười hai kỷ vẫn hiện đúng như trước Bước B — không nước, không lỗi, không hồi quy.
+  Cái mất là **bản sắc địa lý** mà bảng đã hứa: kỷ 3 (Ur bên Euphrates), kỷ 9 (Paris bên Seine),
+  kỷ 13 (vịnh Tokyo)… hôm nay vẫn là những thành phố giữa đồng.
+- **Root Cause**: **KHÔNG PHẢI một thiếu sót — là lệnh của Đàm.** Chỉ thị Bước B ghi rõ: *"DỰNG
+  HÌNH, ĐÚNG 3 KỶ… Đừng trải 12 kỷ còn lại"*, và kèm một cổng không đo được bằng test (*"kỷ có
+  biển phải đọc ra là 'thành phố cảng', không phải 'thành phố cạnh một vũng xanh'"*). Trải 12 kỷ
+  trước khi Đàm nhìn ảnh là trải một hướng mỹ thuật chưa được duyệt ra mười hai chỗ.
+- **Current Risk**: gần như không. Trạng thái dở dang này **ĐẾM ĐƯỢC trong `npm test`**:
+  `assert.deepEqual(ERAS_WITH_WATER_GEOMETRY, [12, 14])` + `soKyKho === 13` +
+  `assert.equal(soKyTang, 2)` ở `drawCallBudget.test.js`. Đúng bài học Phase 10 (`door: 'legacy'`):
+  *"một mục nợ trong tài liệu chỉ được đọc khi có người đi tìm; một con số trong bài test thì tự
+  đòi được đọc."* Ba con số ấy — chứ không phải mục này — là thứ buộc phiên sau phải mở lại.
+- **Future Risk**: nếu để lâu, `hasWater` (BẢNG khai) và `waterIsBuilt` (HÌNH đã dựng) sẽ bắt đầu
+  bị dùng lẫn lộn. Hai cái tên đã cố tình tách nhau vì lý do đó, nhưng tên chỉ nhắc chứ không chặn.
+- **Recommended Solution**: sau khi Đàm gật hướng mỹ thuật → trải nốt, **đo lại mốc lệnh vẽ của
+  TỪNG kỷ** (không cộng đều: một kỷ có thể vốn đã dùng họ vật liệu ấy). Chú ý riêng **kỷ 5**
+  (`meander` — khúc uốn ôm ba mặt): đó là kiểu nước DUY NHẤT chưa ai nhìn bằng mắt, và
+  `MEANDER_NECK = 1,6` hôm nay là một suy luận, không phải một quyết định đã nghiệm thu.
+- **Estimated Complexity**: Thấp về mã (một dòng danh sách), Trung bình về nghiệm thu (12 ảnh +
+  12 mốc lệnh vẽ + một vòng quét không-trôi).
+- **Blocking Conditions**: **CHỜ ĐÀM** xem ba ảnh Bước B và gật hướng mỹ thuật.
+- **Review Trigger**: ngay khi Đàm trả lời về ba ảnh Bước B.
+- **Owner**: chưa phân công · **Status**: Open (chờ quyết định, không phải chờ mã)
 
 ---
 

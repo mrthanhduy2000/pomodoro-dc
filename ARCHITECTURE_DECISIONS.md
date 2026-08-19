@@ -11,6 +11,93 @@
 
 ---
 
+## ADR-040 — Mặt nước là chỗ MẶT ĐẤT THẤP HƠN MỘT MẶT PHẲNG, không phải một tấm xanh đặt lên trên; và bờ nước KHÔNG được vẽ
+
+- **Ngày**: 2026-08-19 (VIỆC 2 Bước B — Đàm: *"BƯỚC A DUYỆT — SỬA MỘT DÒNG, RỒI VÀO BƯỚC B"*)
+- **Bối cảnh**: ADR-039 đã chốt BẢNG 15 dòng địa thế và Đàm đã duyệt kèm ba lệnh sửa. Bước B là
+  lớp HÌNH, và Đàm giới hạn nó rất chặt: dựng cho **đúng ba kỷ** (14 biển Singapore · 12 sông Nga ·
+  1 khô Thổ Nhĩ Kỳ làm nhân chứng), **tối đa +1 lệnh vẽ và chỉ ở kỷ có nước**, **cấm** nguồn sáng
+  mới · texture mới · shader nước động. *"Mặt nước phẳng, vật liệu tĩnh. Nước động là phase riêng
+  có đo lại — `PERFORMANCE.md`: +0,8 ms mỗi nguồn sáng, trục ĐẮT."*
+- **Vấn đề**: mặt đất của dự án là **MỘT tấm lưới liền** trải từ rìa bên này qua thành phố sang rìa
+  bên kia (Phase 8C, ADR-019). Đặt một tấm xanh phẳng LÊN TRÊN nó thì hoặc hai mặt chọi nhau
+  (z-fighting), hoặc tấm nước nổi lều bều như một miếng giấy màu. Và nếu phải VẼ đường bờ thì đường
+  ấy sẽ là một đa giác do ta tự dựng — tức nó sẽ thẳng, hoặc răng cưa, hoặc phải sinh ra thêm một
+  cơ chế làm-cho-nó-lượn (đúng loại cơ chế mà Phase 8D đã chứng minh là hay chết trong im lặng).
+- **Các phương án cân nhắc**:
+  - **A — tấm nước đặt LÊN mặt đất, cắt viền theo một đa giác bờ.** Bác vì hai lẽ: (a) phải tự dựng
+    và tự làm lượn đường bờ — thêm một cơ chế, thêm một chỗ hỏng im lặng; (b) chỗ giáp giữa tấm
+    nước và mặt đất là một cạnh CHUNG mà hai bên tính riêng ⇒ đúng hình dạng lỗi "một luật hai công
+    thức" đã cắn nhiều lần.
+  - **B — khoét mặt đất xuống dưới một mặt phẳng, rồi đặt một hình chữ nhật phẳng ở mực nước.**
+    ✅ **Chọn.** Bờ nước **không cần được vẽ**: nó LÀ chỗ mặt đất cắt mực nước, nên nó tự lượn theo
+    mọi gợn của địa hình, không bao giờ có bậc răng cưa, và tấm nước chỉ cần là một hình chữ nhật
+    — đúng **+1 lệnh vẽ**, đúng ràng buộc Đàm ra.
+  - **C — shader nước (sóng, phản chiếu động).** Đàm CẤM thẳng ở chỉ thị. Ghi lại ở đây vì nó là
+    phương án mà mọi phiên sau sẽ nghĩ tới đầu tiên: nó **không** bị bác vì xấu, mà vì chưa được
+    ĐO, và vì bảng chi phí hiện có nói ánh sáng/shader là trục đắt (`PERFORMANCE.md`).
+- **Giải pháp**: ba lớp, đúng khuôn đã dùng bảy lần (`vernacularRoof` · `undergrowth` ·
+  `streetStyle` · `groundFloor` · `floraStyle` · `settingStyle` · và nay là đây):
+  - `city3d/settingStyle.js` = **BẢNG** (ADR-039, đã duyệt) — không đụng tới ở Bước B.
+  - `city3d/setting.js` = **HÌNH** — thuần, trả về `insetAt` / `blendAt` / `depthAt` / `bounds`.
+  - `terrain.js` · `horizon.js` · `outskirts.js` · `terrainMesh.js` · `sceneGraph.js` chỉ **ĐỌC**.
+  Cộng một file mới `city3d/noise.js`: `valueNoise` xưa nay sống nhờ trong `terrain.js` dù nó chưa
+  bao giờ là một hàm của địa hình. Bước B biến chỗ ở nhờ ấy thành một **vòng import thật**
+  (`setting` cần nhiễu → `terrain` cần `setting`), nên nó phải dọn ra một file không phụ thuộc ai.
+- **Trade-off / cái giá phải trả**:
+  - **Mọi hằng số của `setting.js` là ĐỘ LỆCH, không phải cao độ tuyệt đối.** `terrain.js` (nơi giữ
+    `APRON_DROP`) là chỗ DUY NHẤT tính ra `WATER_SURFACE_Y`. Hơi vòng, nhưng đó là cái giá của việc
+    không có vòng import — và nó giữ "một luật một công thức".
+  - **Phép khoét nằm ở `setting.hazXuongDay`, cả hai tấm đất cùng gọi.** Bản đầu chép công thức
+    sang cả `terrain.js` lẫn `horizon.js`; hai tấm gặp nhau khít ở `innerEdge` nên chép là cách
+    chắc chắn nhất để mở lại đúng cái khe Phase 9A đã trả giá để vá. Nay có test đọc mã nguồn cấm
+    chuyện đó, và có test đo chỗ giáp ở cả 15 kỷ.
+  - **`WATER_DROP_BELOW_PLAIN = 0,30` là một PHÉP ĐO, không phải một sở thích.** Vành đất ngoài lưới
+    gợn ±0,21 quanh −0,62 nên chỗ trũng nhất chạm **−0,83**; mực nước −0,92 nằm dưới nó 0,09. Đặt
+    cao hơn thì tấm nước phẳng ló lên ở những hõm khô cách con sông hàng chục ô — một vũng nước ma,
+    và nó sẽ được đọc thành "lỗi vẽ" chứ không thành "lỗi hằng số". Có test đo lại khoảng hở ấy
+    trên toàn thế giới thay vì tin vào phép suy tay.
+  - **Mép bờ chỉ được lượn RA XA thành phố.** Nhiễu trả 0..1 (không phải −1..1) và luôn được CỘNG.
+    Đây là thứ giữ ADR-007 theo CẤU TRÚC: một mép bờ lượn được cả hai chiều thì ngày nào đó nó sẽ
+    liếm vào lưới 12×12 ở đúng một kỷ, một hạt giống, và hậu quả là một căn nhà lún xuống mà không
+    có bài test nào đỏ.
+  - **Đang dở dang có chủ ý, và nó ĐẾM ĐƯỢC**: `ERAS_WITH_WATER_GEOMETRY = [12, 14]` có
+    `assert.deepEqual` khoá, và `hasWater` (BẢNG khai) được giữ TÁCH khỏi `waterIsBuilt` (HÌNH đã
+    dựng) — gộp hai câu hỏi ấy là đúng cái bẫy "một trường gánh hai việc" đã cắn năm lần.
+    Ghi ở `TECH_DEBT #56`.
+- **Ảnh hưởng**:
+  - **Lệnh vẽ**: `TAM_CO_DINH` thôi là một hằng số, nay là `tamCoDinh(era) = 4 + (có nước ? 1 : 0)`.
+    `MOC_LENH_VE` lên đúng 1 ở kỷ 12 (10→11) và kỷ 14 (10→11); **13 kỷ còn lại không đổi một đơn
+    vị**, có bài test so với bảng mốc trước-nước để chứng minh.
+  - **Ba bài test cũ phải đổi phạm vi, và cả ba đều đổi theo cùng một luật**: chỗ có nước thì lời
+    hứa "phẳng đúng `−APRON_DROP`" hết đúng, nhưng lời hứa GỐC (hai tấm phải KHỚP NHAU) vẫn nguyên
+    giá trị — nên chỗ ướt **chuyển sang so hai tấm với nhau**, không bỏ qua trắng, và cả hai nhóm
+    đều được ĐẾM để bài test không rỗng dần theo mỗi kỷ được dựng nước.
+  - **Một phép đo cũ bị nhiễm và đã được vá**: bài `rough PHẢI ĐỔI ĐƯỢC BỀ MẶT` đo ĐỘ CONG của tấm
+    chân trời, và bờ sông thì có độ cong rất lớn ⇒ kỷ 12 nhảy từ 0,00088 lên **0,01618** và đỏ với
+    thông báo *"thảo nguyên Nga gồ ghề"*. Thảo nguyên không hề gồ ghề; thứ gồ ghề là BỜ SÔNG, một
+    đại lượng chẳng liên quan tới `rough`. Vá bằng cách bỏ mẫu chạm nước ra khỏi mẫu số (đo lại:
+    **0,00132**, về đúng gia đình với kỷ 3 = 0,00114 và kỷ 15 = 0,00117), kèm gác chạy-rỗng.
+  - ⚠️ **VÀ ĐÂY LÀ ẢNH HƯỞNG LỚN NHẤT, DÙ NÓ KHÔNG NẰM TRONG QUYẾT ĐỊNH NÀY: quyết định trên ĐÚNG
+    và vẫn KHÔNG ĐỦ.** Cổng không-đo-được-bằng-test của Đàm (*"kỷ có biển phải đọc ra là **thành
+    phố cảng**"*) **TRƯỢT**: mặt biển kỷ 14 chiếm **0,09%** khung hình mặc định. Hình nước không
+    sai — xoay camera sang phía đối diện thì đúng cảnh ấy cho **31,43%**, gấp **345,7 lần**. Thủ
+    phạm là `DEFAULT_YAW = π/4` (camera đứng góc đông-nam nhìn tây-bắc) chỏi với `side: 'nam'` của
+    kỷ 14, và **cả hai đều đúng một mình**: Marina Bay thật sự nhìn nam ra eo Malacca, còn góc 45°
+    thì kế thừa từ bộ vẽ 2D. Hai hằng số ở hai file không tham chiếu nhau, chưa bao giờ được đặt
+    cạnh nhau — đúng hình dạng ADR-028/Phase 7D (*một lời hứa nói về QUAN HỆ được cài đặt bằng hai
+    HẰNG SỐ*). ⇒ `TECH_DEBT #57`, **chờ Đàm quyết**, vì chữa nó phải đụng `camera` (danh sách CẤM)
+    hoặc cột `side` mà Đàm đã DUYỆT ở Bước A. **Bài học cho mọi ADR sau: một quyết định về HÌNH
+    không tự bảo đảm rằng hình ấy TỚI ĐƯỢC MẮT.** Hai câu hỏi đó tách rời nhau, và ADR này chỉ trả
+    lời câu đầu.
+- **Điều kiện xem xét lại**: (a) khi Đàm gật hướng mỹ thuật và cho trải nốt 12 kỷ còn lại — lúc đó
+  phải đo lại mốc lệnh vẽ của TỪNG kỷ, không được cộng đều; (b) khi có ai muốn shader nước động —
+  phải chạy `bash scripts/bench-macbook.sh` TRƯỚC, vì bảng chi phí hiện tại chưa đo mảng này;
+  (c) nếu `MEANDER_NECK` (kiểu `meander` của kỷ 5) được dựng hình — **chưa ai nhìn kiểu ấy bằng
+  mắt**, con số 1,6 hôm nay là suy luận chứ không phải một quyết định mỹ thuật đã nghiệm thu.
+
+---
+
 ## ADR-039 — Địa thế là một BẢNG DỮ LIỆU viết TRƯỚC khi có hình, và "không có nước" là một câu trả lời phải khai TƯỜNG MINH
 
 - **Ngày**: 2026-08-19 (VIỆC 2 Bước A trong chỉ thị "chốt bốn câu hỏi, rồi vào việc 2" của Đàm;

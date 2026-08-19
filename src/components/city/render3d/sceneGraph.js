@@ -54,7 +54,9 @@ import { placeBounds, specBounds } from '../../../engine/city3d/pick';
 import { RESIDENT_HEIGHT, buildResidents, residentAt } from '../../../engine/city3d/residents';
 import { fogDensityFor, sunDirectionAt } from '../../../engine/city3d/daylight';
 import { buildMergedGeometry } from './geometryFactory';
-import { ROAD_LIFT, buildHorizonSurface, buildRoadSurface, buildTerrainSurface } from './terrainMesh';
+import {
+  ROAD_LIFT, buildHorizonSurface, buildRoadSurface, buildTerrainSurface, buildWaterSurface,
+} from './terrainMesh';
 
 /**
  * Hệ số phóng to công trình so với ô lưới.
@@ -811,6 +813,43 @@ export function createCityScene({
     mesh.castShadow = false;
     mesh.receiveShadow = true;
     addMesh(mesh);
+  }
+
+  // ── MẶT NƯỚC: MỘT tấm phẳng, và CHỈ ở kỷ có nước ──────────────────────────
+  //
+  // ⚠️ ĐÂY LÀ TOÀN BỘ CHI PHÍ LỆNH VẼ CỦA VIỆC 2: **+1, và chỉ ở kỷ đã dựng hình nước.** Kỷ khô đi
+  // qua đây mà không tạo gì cả, nên mốc `MOC_LENH_VE` của chúng không đổi một đơn vị — đúng lệnh
+  // Đàm ra (*"KHÔNG nâng trần chung"*), và `drawCallBudget.test.js` khoá điều đó theo TỪNG KỶ.
+  //
+  // ⚠️ VẬT LIỆU RIÊNG LÀ ĐIỀU BẮT BUỘC, KHÔNG PHẢI MỘT MÓN THÊM: nước là thứ duy nhất trong cảnh
+  // PHẢN CHIẾU (nhám 0,10 so với 0,90–0,99 của mọi mặt khác). Gộp nó vào vật liệu mặt đất thì tiết
+  // kiệm được một lệnh vẽ và mất đúng thứ khiến mắt đọc ra "nước". Bản đồ môi trường đã dựng sẵn
+  // (Phase 7A) nên bầu trời soi xuống mặt nước **miễn phí** và TĨNH — không có một hạt sóng, không
+  // một dòng shader động nào, đúng ràng buộc Đàm ra.
+  const water3d = buildWaterSurface({ setting: terrain.setting, gridSize, horizon });
+  if (water3d) {
+    track(water3d.geometry);
+    const waterMaterial = track(new MeshStandardMaterial({
+      vertexColors: true,
+      // Nhám rất thấp = mặt gương. Đây là cái duy nhất tách nước khỏi "một mảng sơn xanh".
+      roughness: 0.10,
+      metalness: 0.05,
+      envMap,
+      // ⚠️ MẠNH HƠN MẶT ĐẤT BỐN LẦN, CÓ CHỦ Ý. `ENV_DIFFUSE = 0,12` được hiệu chuẩn bằng bảng đo ở
+      // Phase 7A cho vật liệu ĐỤC (0 → quá tối, 1,00 → pastel như sữa). Nước thì gần như KHÔNG có
+      // thành phần khuếch tán — màu nó hiện ra phần lớn là thứ nó phản chiếu, đúng cùng lý lẽ đã
+      // ghi cho kim loại (*"kim loại không có gì để phản chiếu thì render ra đen"*).
+      envMapIntensity: ENV_DIFFUSE * 4,
+    }));
+    const water = new Mesh(water3d.geometry, waterMaterial);
+    water.name = 'water';
+    // ⚠️ KHÔNG nhận bóng — cùng lý do với `outskirts`, và nó KHÔNG phải tối ưu hiệu năng mà là bắt
+    // buộc để đúng: khung bóng đổ bó sát lưới 12×12, còn mặt nước trải ra xa gấp nhiều lần, nên mọi
+    // điểm ngoài khung tra vào bản đồ bóng sẽ lấy nhầm giá trị ở mép và bị coi là đang trong bóng
+    // ⇒ cả mặt biển đen kịt.
+    water.castShadow = false;
+    water.receiveShadow = false;
+    addMesh(water);
   }
 
   // ── Công trình: mỗi cái một hình dáng riêng, tất cả trong MỘT lệnh vẽ ──────

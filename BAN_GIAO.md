@@ -6,7 +6,103 @@
 > chọn: `ARCHITECTURE_DECISIONS.md`. Nợ kỹ thuật: `TECH_DEBT.md`. Migration: `MIGRATION.md`. Tóm
 > tắt theo mốc: `CHANGELOG.md`.
 > **NGUYÊN TẮC ƯU TIÊN SỐ 1:** (1) mọi phiên AI phải đọc file này + `CLAUDE.md` + các file liên quan TRƯỚC khi làm; (2) sau MỌI cập nhật dù nhỏ, phải cập nhật ngay file này + `CLAUDE.md` + các file liên quan khác.
-> Cập nhật lần cuối: **2026-08-19** — **VIỆC 1 «BỎ CÁI KHAY»: THÀNH PHỐ NAY CÓ VÙNG QUÊ (ADR-038). ĐANG CHỜ ĐÀM GẬT HƯỚNG MỸ THUẬT TRƯỚC KHI LÀM VIỆC 2.**
+> Cập nhật lần cuối: **2026-08-19** — **VIỆC 2 BƯỚC B: MẶT NƯỚC ĐÃ DỰNG HÌNH CHO ĐÚNG 3 KỶ (14 biển · 12 sông · 1 khô) — ADR-040. ĐANG CHỜ ĐÀM XEM ẢNH VÀ GẬT TRƯỚC KHI TRẢI RA 12 KỶ CÒN LẠI.**
+>
+> ## 🌊 VIỆC 2 BƯỚC B — MẶT NƯỚC (2026-08-19, ADR-040)
+>
+> **Ý TƯỞNG GỐC, đọc kỹ trước khi sửa gì:** nước KHÔNG phải một tấm màu xanh đặt LÊN mặt đất. Nước
+> là chỗ **mặt đất bị khoét XUỐNG dưới một mặt phẳng phẳng lì**. Hệ quả quan trọng nhất: **đường bờ
+> không bao giờ được vẽ ra** — nó chính là chỗ mặt đất đã khoét cắt qua mực nước, nên nó tự uốn éo
+> theo địa hình mà không tốn một tam giác nào, còn tấm nước chỉ là **một hình chữ nhật phẳng** ⇒ đúng
+> **+1 lệnh vẽ**, không hơn.
+>
+> **BA KỶ, ĐÚNG NHƯ ĐÀM CHỈ ĐỊNH.** Biển = **kỷ 14** (Singapore, đảo quốc) · sông = **kỷ 12** (Nga,
+> dải rộng nhất bảng) · khô = **kỷ 1** (Thổ Nhĩ Kỳ, làm chứng cho ràng buộc cứng).
+>
+> **LỆNH VẼ — đo THẬT bằng Chromium** (`node scripts/city-preview.mjs --era N --hour 12`):
+> kỷ 14 **12 → 13** (+1) · kỷ 12 **12 → 13** (+1) · **kỷ 1 11 → 11 (KHÔNG đổi một đơn vị)**.
+> `TAM_CO_DINH` nay là **một HÀM CỦA KỶ** (`4 + (waterIsBuilt(era) ? 1 : 0)`), không phải hằng số —
+> viết `+1` cho cả 15 kỷ chính là cái "nâng trần chung" Đàm đã cấm, nó tặng 13 kỷ khô một lệnh vẽ
+> trống để trôi vào trong im lặng. Có bảng đối chứng `MOC_TRUOC_NUOC` giữ nguyên văn mốc cũ, nên câu
+> *"chỉ +1, và chỉ ở kỷ có nước"* là một **PHÉP TRỪ có thể đỏ**, không phải một lời hứa.
+> ⚠️ Hỏi `waterIsBuilt` (HÌNH đã dựng) chứ KHÔNG hỏi `hasWater` (BẢNG khai có nước) — bảng khai 14
+> kỷ có nước, hình mới dựng 2; hỏi nhầm thì 12 kỷ nhận trước một lệnh vẽ chúng chưa hề tiêu.
+>
+> **TAM GIÁC:** kỷ 14 **129.986 → 135.686** (+5.700) · kỷ 12 **86.282 → 81.744** (**−4.538, NHẸ ĐI**)
+> · kỷ 1 **82.562 → 82.562** (y hệt). Kỷ 12 nhẹ đi vì tấm nước (3.442 tam giác) rẻ hơn đám cây/đá bị
+> dòng sông dọn đi. **Ảnh kỷ 1 TRÙNG TỪNG BYTE** với ảnh trước khi có nước (`ddfc0876…`) — và đây là
+> lần DUY NHẤT "trùng byte" là kết quả ĐÚNG chứ không phải lỗi chép nhầm tên: nó là bằng chứng mạnh
+> nhất có thể có cho câu *"kỷ khô không đổi một đơn vị"* (`TECH_DEBT #50`: md5 trùng ⇒ ảnh y hệt,
+> chiều này vẫn đọc được).
+>
+> **ĐO CHỖ GIÁP BỜ — Đàm dặn *"đo, đừng nhìn"*.** Quét dày 0,05 đơn vị trên cả cảnh (±14, hơn 313.000
+> điểm mỗi kỷ), hỏi ba câu KHÁC NHAU: **(1) LỖ THỦNG** — có điểm nào mặt đất nằm DƯỚI mực nước mà
+> tấm nước không phủ tới không (Đàm sẽ nhìn thẳng xuống lòng hồ qua đó)? **0 điểm ở cả ba kỷ.**
+> **(2) BỜ CÓ LIỀN KHÔNG** — đi cắt ngang đường bờ, cao độ có nhảy bậc ở chỗ giao không? Kỷ 14
+> **0,00000**; kỷ 12 **0,02768** trên một bước quét 0,05 — tức một cái DỐC (0,55 độ dốc), không phải
+> một cái BẬC. **(3)** 59.466 điểm ngập được phủ ở kỷ 14, 44.121 ở kỷ 12, **0 ở kỷ 1** (không có tấm
+> nước, đúng như bảng khai).
+>
+> ⚠️ **MỘT CHÚ THÍCH TỰ NHẬN CÓ TEST MÀ KHÔNG CÓ TEST — và cách sửa nó lại gỡ luôn một chỗ trùng mã.**
+> `khoetLongNuoc` trong `terrain.js` có câu *"có test bơm một trường cao độ âm sâu vào"*. Bài test ấy
+> không tồn tại. Cách sửa KHÔNG phải xoá câu đó đi mà là **làm cho nó thành sự thật** — và lúc đi
+> viết bài test mới lộ ra rằng phép khoét ấy đã bị **chép tay vào HAI file** (`terrain.js` và
+> `horizon.js`), đúng cái bẫy "một luật hai công thức" mà chỗ giáp Phase 9A đã trả giá. Nay là MỘT
+> hàm thuần `hazXuongDay` ở `setting.js`, và có bài test **đọc mã nguồn** đòi cả hai file phải
+> `import` nó, gọi nó **đúng một lần**, và **không dòng nào** được viết lại `Math.min(dat, …)`.
+>
+> ⚠️⚠️ **CỔNG KHÔNG-ĐO-ĐƯỢC-BẰNG-TEST: TRƯỢT. BÁO THẲNG, KHÔNG KHOE TEST XANH THAY.**
+> Đàm hỏi: *"kỷ có biển phải đọc ra là **thành phố cảng**, không phải thành phố cạnh một vũng xanh"*.
+> Câu trả lời là **KHÔNG**, và nó đo được: ở khung hình mặc định của app, mặt biển kỷ 14 chiếm
+> **0,09% khung hình**. Không phải "hơi nhỏ" — gần như **không có**.
+> **Nguyên nhân KHÔNG nằm ở hình nước.** Xoay camera sang phía đối diện thì đúng cảnh ấy cho ra
+> **31,43%** — gấp **345,7 lần**. Hình biển hoàn toàn ổn; thứ sai là **camera mặc định đứng ở góc
+> ĐÔNG-NAM rồi quay lưng về phía biển** (`DEFAULT_YAW = π/4` ⇒ nhìn về tây-bắc, mà kỷ 14 khai
+> `side: 'nam'` — và khai ĐÚNG, Marina Bay thật sự nhìn nam ra eo Malacca). Hai quyết định đều đúng
+> một mình và **chưa bao giờ được đặt cạnh nhau** — đúng hình dạng `TECH_DEBT #38`/Phase 7D: một
+> lời hứa nói về QUAN HỆ được cài đặt bằng hai HẰNG SỐ ở hai file không tham chiếu nhau.
+> Sông kỷ 12 đỡ hơn nhiều (**2,30% → 9,16%**, gấp 4,0×) vì sông **cắt ngang cả cảnh** nên luôn còn
+> một khúc trong khung, còn biển là một **nửa mặt phẳng** nằm trọn về một phía.
+> ⇒ Ghi thành **`TECH_DEBT #57`** kèm 4 phương án đã cân giá. **KHÔNG tự sửa** — nó đụng `camera`
+> (nằm trong danh sách CẤM) hoặc đụng cột `side` mà Đàm đã DUYỆT ở Bước A. **Bước C không nên bắt
+> đầu trước khi Đàm chốt mục này**: trải 12 kỷ rồi mới đổi góc nhìn là phải nghiệm thu lại hai lần,
+> và 8/14 kỷ có nước đang nằm ở phía khuất (`nam`: 6,7,8,14 · `dong`: 2,5,12,13).
+> Công cụ đo: **`scripts/water-view.mjs`** (bắn tia qua đúng camera app dùng, không đếm màu — bài
+> học `TECH_DEBT #22`; có `--selftest` 4 mục, trong đó một mục ĐỐI CHỨNG bắt buộc phải THẤY được
+> nước khi đứng đúng chỗ, nếu không thì mục "kỷ khô ra 0" vẫn xanh kể cả khi phép đo hỏng hẳn).
+>
+> **CÒN LẠI:** 12 kỷ nữa khai có nước trong bảng mà **chưa dựng hình** (`TECH_DEBT #56` — dở dang CÓ
+> CHỦ Ý, và nó **đếm được** bằng `assert.deepEqual(ERAS_WITH_WATER_GEOMETRY, [12, 14])`, đúng bài học
+> *"một con số trong bài test là cái hẹn giờ duy nhất chạy được"*). Bước C mới trải nốt.
+>
+> **BA PHÉP PHÁ CHO `scripts/waterView.test.js`, chỗ mong đợi đỏ nêu TRƯỚC khi phá, cả ba đỏ đúng chỗ:**
+> (1) cho kỷ 1 nước thật ⇒ đỏ ở dòng 36 (`0,126` thay vì `0`) · (2) ép `buildWaterSurface` trả `null`
+> ⇒ đỏ ở dòng 42 (đối chứng) **và** dòng 64 (trần tụt về 0) · (3) xoay `DEFAULT_YAW` thêm π ⇒ đỏ ở
+> dòng 61, đúng câu *"#57 có vẻ đã được sửa (23,72% khung mặc định)"* — tức cái chuông CÓ kêu.
+>
+> **CỔNG KHÔNG-TRÔI (quét 15 kỷ × 6 chặng, md5 `a31bc10c61a03b73c2c144cd1ebe3629`) — ĐẠT:**
+> **0/15** cặp chặng và **0/105** cặp kỷ dưới ngưỡng mắt 12; gần nhất **16,5** (bình minh↔chiều) và
+> **21,5** (kỷ 7↔8), trung vị **40,8**.
+> ⚠️ **NHƯNG ĐỪNG ĐỌC CÁI "ĐẠT" NÀY THÀNH "MẶT NƯỚC KHÔNG LÀM HỎNG GÌ".** Cả sáu con số trên **trùng
+> khít** bộ số của VIỆC 1 — trong khi md5 ảnh thì KHÁC (`08679bcf…` → `a31bc10c…`), tức ảnh CÓ đổi.
+> Lý do: `sweep-score.mjs` lấy mẫu ở **lưới 6×3 ô con của DẢI THÀNH PHỐ**, mà nước nằm **NGOÀI lưới
+> 12×12** — nên phép đo ấy **về mặt cấu trúc không thể thấy** thứ phase này vừa thêm. Nó vẫn là cổng
+> ĐÚNG cho câu nó được giao (*"15 kỷ có còn phân biệt được với nhau không"*), và câu trả lời là CÒN;
+> nó **không** phải bằng chứng về mặt nước theo bất kỳ chiều nào. Bằng chứng về nước là ảnh đơn +
+> `water-view.mjs`. Đúng bài học đã trả giá ở Phase 9B: *"trước khi tin một phép đo 'không đổi', hãy
+> hỏi — đại lượng tôi vừa vặn có nằm trong thứ công cụ này đo không?"*
+>
+> ⚠️ **PHÉP PHÁ THỨ NHẤT KHÔNG NỔ Ở LẦN ĐẦU, VÀ LỖI NẰM Ở CHÍNH PHÉP PHÁ** (Phase 8A lần thứ tư).
+> Bản đầu chỉ đổi `water: 'none'` → `'sea'` mà **quên đổi `side: 'none'`**, tức bơm vào một dòng
+> TỰ MÂU THUẪN (`isValidSetting` từ chối thẳng ca ấy). `insetAt` có một câu phòng thủ
+> `const d = outwardDistances(...)[style.side]; if (d === undefined) return -Infinity;` nên nó **nuốt
+> gọn** dòng hỏng: `blendAt` ra 0 khắp nơi, 0 tam giác nước, và bài test xanh **vì mã vẫn đúng**,
+> không phải vì bài test mù. Cách rẻ để tự bảo vệ: **in ra trạng thái trung gian ngay sau khi phá**
+> (ở đây `buildSetting({era:1}).built` và một giá trị `blendAt`) rồi mới chạy test — mất 2 giây, và
+> nó phân biệt được "bài test mù" với "phép phá trượt". Câu phòng thủ ấy KHÔNG phải lỗ hổng: bảng
+> thật không thể có dòng như vậy (có test đòi mọi dòng qua `isValidSetting`), nên nó là lớp phòng
+> thủ chiều sâu — giữ nguyên.
+
 >
 > **ĐÀM RA LỆNH**: *"Tại sao một thành phố lại được xây trên một ô đất nhô ra, đâu có thành phố nào
 > như vậy, xem lại lịch sử đi. Nếu có ô đất nhô ra thì là cảnh thiên nhiên xung quanh."* — tức anh
@@ -662,7 +758,12 @@
 - ⚠️ **CẦN ĐÀM THỬ TAY** (không test được trên dev): (a) câu nhắc-sau-phiên hiện sau khi xong PHIÊN THẬT; (b) bài "AI phân tích tổng thể" giờ chạy pro — xem có chậm/khác chất lượng không; (c) dòng "Ghi nhớ" lời khuyên hiện sau ≥3 ngày; (d) thông báo chuỗi-sắp-đứt: **từ nay** (11/7) chiều nào quên làm sẽ nhận push (cần đã bật push iPhone) — đây là lần đầu tiên thực sự có cơ hội chạy thật.
 
 ## 🔜 Sẽ làm tiếp (ưu tiên từ trên xuống)
-- ⚠️ **VIỆC 2 Bước B — ĐANG LÀM. Bảng địa thế đã được Đàm DUYỆT (kèm ba lệnh sửa, đã làm xong).**
+- ⚠️ **VIỆC 2 Bước C — CHỜ ĐÀM XEM ẢNH BƯỚC B RỒI GẬT. Bước B đã XONG (ADR-040, 2026-08-19).**
+  Bước B đã dựng hình nước cho đúng 3 kỷ (14 biển · 12 sông · 1 khô), mọi ràng buộc Đàm ra đều đo
+  được và đã đạt: +1 lệnh vẽ CHỈ ở 2 kỷ có nước · kỷ 1 trùng từng byte · 0 nguồn sáng mới · 0 texture
+  mới · 0 shader động · 0 lỗ thủng ở bờ. **Bước C = trải nốt 13 kỷ còn lại**, và chỉ được bắt đầu
+  sau khi Đàm nhìn ảnh và trả lời cổng không-đo-được-bằng-test bên dưới.
+  *(Nguyên văn chỉ thị Bước B, giữ lại để đối chiếu:)*
   Ba sửa ấy: kỷ 5 phải CÓ NƯỚC (thêm kiểu thứ sáu `meander` — khúc uốn ôm ba mặt) · kỷ 11 đổi
   `sea` → `estuary` cho khớp `note` · luật hướng bờ nước viết lại thành QUAN HỆ
   (`MAX_SIDE_SPREAD = 2` thay cho mức tuyệt đối 6), cộng phép gác Q2 "nước phải nằm gọn trong địa
@@ -728,6 +829,114 @@
 - **Lịch sử git `main` từng bị xáo** (thao tác git song song): bản đang chạy là `eb44638` — chứa ĐỦ mọi việc gần đây (Hỏi Coach offline + fix đêm khuya + Coach offline analyst). Vài commit cũ (`1e27505`, `9fbcd62`) thành dangling, KHÔNG còn trong `git log` nhưng code vẫn nằm trong bản deploy. Đừng hoảng nếu không thấy chúng.
 
 ## 🗒️ Nhật ký cập nhật
+
+### 2026-08-19 — VIỆC 2 Bước B: mặt nước có hình, cho ĐÚNG 3 kỷ (ADR-040)
+
+**Đàm ra lệnh**: *"BƯỚC A DUYỆT — sửa một dòng, rồi vào BƯỚC B. Chạy liên tục, không hỏi vặt."* Ba
+sửa của Bước A đã làm xong ở `178efeb`; phiên này là Bước B — **dựng hình**.
+
+**Ý TƯỞNG GỐC (thứ đáng nhớ nhất của cả phase).** Nước KHÔNG phải một tấm màu xanh đặt LÊN mặt đất.
+Nước là chỗ **mặt đất bị khoét XUỐNG dưới một mặt phẳng phẳng lì**. Ba hệ quả, cả ba đều là lý do
+phase này rẻ tới mức ấy:
+1. **Đường bờ không bao giờ được VẼ** — nó là chỗ mặt đất đã khoét cắt qua mực nước. Nó tự uốn éo
+   theo địa hình mà **không tốn một tam giác nào**, và nó không thể "lệch" khỏi địa hình, vì nó
+   ĐƯỢC ĐỊNH NGHĨA bằng địa hình.
+2. Tấm nước chỉ là **một hình chữ nhật phẳng** ⇒ đúng **+1 lệnh vẽ**, không hơn. Đây là cách duy
+   nhất thoả được ràng buộc "+1 và chỉ +1" của Đàm mà vẫn có bờ uốn lượn.
+3. Sâu/nông đọc ra được **bằng MÀU ĐỈNH** (`vertexColors`) chứ không bằng texture — vì độ sâu đã có
+   sẵn trong `depthAt`, không cần bịa thêm dữ liệu.
+
+**BA KỶ, đúng như Đàm chỉ định**: biển **kỷ 14** (Singapore) · sông **kỷ 12** (Nga) · khô **kỷ 1**
+(Thổ Nhĩ Kỳ, làm chứng cho ràng buộc cứng).
+
+**FILE MỚI**
+- `src/engine/city3d/setting.js` — tầng **HÌNH** thuần: `buildSetting({era, gridSize})` trả về
+  `{style, hasWater, built, insetAt, blendAt, depthAt, bounds}`. Đây là khuôn ba lớp **thứ tám** của
+  dự án (BẢNG `settingStyle.js` → HÌNH `setting.js` → bên tiêu thụ chỉ ĐỌC), y hệt `vernacularRoof` ·
+  `undergrowth` · `streetStyle` · `groundFloor` · `floraStyle`.
+- `src/engine/city3d/noise.js` — `valueNoise` **dời ra khỏi** `terrain.js`. Lý do KHÔNG phải cho gọn:
+  `setting` cần nhiễu, `terrain` cần `setting` ⇒ để nguyên là một **vòng import**. Và cố ý **KHÔNG**
+  xuất lại từ `terrain.js` — xuất lại là giữ nguyên vòng dưới một cái tên khác.
+- `src/engine/city3d/setting.test.js` — **15 bài**, tất cả đã thử-cho-đỏ đúng chỗ nêu TRƯỚC.
+
+**SỐ ĐO — LỆNH VẼ (đo THẬT bằng Chromium, `--era N --hour 12`)**
+
+| Kỷ | Trước | Sau | Hiệu | Vì sao |
+|---|---:|---:|---:|---|
+| 14 (biển) | 12 | **13** | **+1** | tấm nước biển |
+| 12 (sông) | 12 | **13** | **+1** | tấm nước sông |
+| 1 (khô) | 11 | **11** | **0** | không có nước — *không đổi một đơn vị* |
+
+`TAM_CO_DINH` nay là **HÀM CỦA KỶ** (`4 + (waterIsBuilt(era) ? 1 : 0)`). Viết `+1` cho cả 15 kỷ
+chính là cái "nâng trần chung" Đàm cấm — nó tặng 13 kỷ khô một lệnh vẽ trống để trôi trong im lặng.
+Có bảng đối chứng `MOC_TRUOC_NUOC` giữ nguyên văn mốc cũ ⇒ lời hứa thành một **PHÉP TRỪ có thể đỏ**.
+
+**SỐ ĐO — TAM GIÁC**: kỷ 14 **129.986 → 135.686** (+5.700; tấm nước 16.128 tam giác, nhưng biển dọn
+đi hơn 10.000 tam giác cây/đá vùng quê) · kỷ 12 **86.282 → 81.744** (**−4.538, NHẸ ĐI**) · kỷ 1
+**82.562 → 82.562**. **Ảnh kỷ 1 trùng TỪNG BYTE** (`ddfc0876…`).
+
+**SỐ ĐO — CHỖ GIÁP BỜ** (Đàm: *"đo, đừng nhìn"*). Quét 0,05 đơn vị trên ±14, hơn 313.000 điểm/kỷ,
+ba câu hỏi KHÁC NHAU: **(1) lỗ thủng** (đất dưới mực nước mà tấm nước không phủ tới) = **0 ở cả ba
+kỷ** · **(2) bờ có liền không** = bước cao độ lớn nhất tại chỗ cắt mực nước **0,00000** (kỷ 14) và
+**0,02768** (kỷ 12) — con số sau là một DỐC trên bước quét 0,05, không phải một BẬC · **(3)** 59.466
+điểm ngập được phủ (kỷ 14), 44.121 (kỷ 12), **0** (kỷ 1).
+
+⚠️ **BÀI HỌC 1 — MỘT CHÚ THÍCH TỰ NHẬN CÓ TEST, MÀ BÀI TEST ẤY KHÔNG TỒN TẠI.** `khoetLongNuoc` viết
+*"có test bơm một trường cao độ âm sâu vào"*. Không có. Cách sửa KHÔNG phải xoá câu ấy đi — mà **làm
+cho nó thành sự thật**; và lúc đi viết bài test mới lộ ra chuyện lớn hơn: phép khoét đã bị **chép
+tay vào HAI file** (`terrain.js` + `horizon.js`), đúng bẫy "một luật hai công thức" mà chỗ giáp
+Phase 9A từng trả giá. Nay là MỘT hàm thuần `hazXuongDay`, và bài test **đọc mã nguồn** đòi cả hai
+file phải `import` nó, gọi **đúng một lần**, và **không dòng nào** được viết lại `Math.min(dat, …)`.
+Cùng họ với bài học Phase 8B (*"một chú thích nói có test đối chiếu hai bên không phải là một bài
+test"*) — khác ở chỗ lần này cách sửa đúng lại gỡ luôn một chỗ trùng mã chưa ai thấy.
+
+⚠️ **BÀI HỌC 2 — PHÉP ĐO SAI, KHÔNG PHẢI MÃ SAI (và tôi suýt đi chữa một cái không hỏng).** Bài
+`BẤT BIẾN (1) trên MẶT ĐẤT THẬT` của chính tôi đỏ: *"kỷ 12 tại (12.00,−2.50): chỗ ngập nước lại cao
+−0.333"*. Tôi đã đòi **mọi** điểm ướt phải nằm sát đáy — nhưng ở dải chuyển tiếp (`blend ≈ 0,35`)
+mặt đất mới bị kéo xuống MỘT PHẦN, và đó là điều ĐÚNG. Viết lại: ở blend đầy thì cao độ phải bằng
+đáy **CHÍNH XÁC**, ở blend một phần thì chỉ đòi `cao ≥ đáy`.
+
+⚠️ **BÀI HỌC 3 — BA BÀI TEST CŨ ĐỎ, VÀ CẢ BA ĐỀU ĐỎ ĐÚNG.** `terrain.test.js` / `horizon.test.js` /
+`terrainMesh.test.js` đều có bài nói *"mặt đất phải phẳng ở rìa"* hoặc *"hai tấm đất phải khớp"* —
+dòng sông chạy tràn ra khỏi mép thì các bài ấy phải đỏ. Cách sửa **KHÔNG** phải bỏ qua điểm ướt
+(bỏ qua là để bài test tự rỗng dần khi Bước C trải ra 13 kỷ nữa) mà là **bắt nhánh ướt khẳng định
+đúng lời hứa GỐC** — hai tấm đất vẫn phải KHỚP NHAU ở chỗ giáp — cộng **đếm cả hai nhánh**
+(`soDiemKho > 1400 && soDiemUot > 0`) để không bài nào có thể xanh vì chạy rỗng.
+
+⚠️ **BÀI HỌC 4 — MỘT PHÉP ĐO ĐỘ GỒ GHỀ BỊ ĐƯỜNG BỜ LÀM Ô NHIỄM.** `rough PHẢI ĐỔI ĐƯỢC BỀ MẶT` đỏ
+với *"kỷ 12 khai rough 0,16 nhưng bề mặt gồ ghề 0,01618"* — gấp **12 lần** họ hàng của nó. Thủ phạm
+là ĐỘ CONG CỦA BỜ SÔNG lọt vào một phép đo về độ gồ ghề của NÚI (đúng bài học Phase 9A). Lọc bỏ ô
+chạm nước thì kỷ 12 về **0,00132**, đúng họ với kỷ 3 (0,00114) và kỷ 15 (0,00117).
+
+⚠️ **BÀI HỌC 5 — CÁI BẪY TÊN FILE LẶP LẠI, DÙ NÓ ĐÃ ĐƯỢC GHI RA.** `city-preview.mjs` không đưa
+`--width` vào tên file, nên lượt chụp 1500px **ghi đè** lượt 1100px trong im lặng, y hệt chuyện
+`--zoom`/`--focus` đã cắn ở VIỆC 2 hôm trước. Phải chụp lại và tự đặt tên có bề ngang. **Một bài
+học được ghi ra không chặn được gì** — chỉ một hậu tố trong chính công cụ mới chặn được.
+
+⚠️ **BÀI HỌC 6 — CẶP ẢNH 1500px BỊ NHIỄM, ĐÃ VỨT BỎ TOÀN BỘ SỐ ĐO CỦA CHÚNG.** Sau khi chụp lại
+đúng tên, cặp **kỷ 1 ở bề ngang 1500** lệch nhau **20,8%** — trong khi kỷ 1 là kỷ KHÔ, đáng lẽ phải
+trùng từng byte (và ở 1100px thì nó trùng thật). Dò theo hàng/cột thì phần lệch là một **hình chữ
+nhật sắc lẹm**: hàng 0–348 × cột 780–1499. Con số **349** chính là chiều cao một DẢI chụp CDP cho
+ảnh rộng 1500 (2 MiB ÷ 4 byte ÷ 1500) ⇒ đây là lỗi **ghép dải lúc chụp**, không phải mã cảnh đổi.
+⇒ Đã **vứt toàn bộ số đo w1500** và chỉ giữ cặp w1100 (sạch, đã `md5sum`). Cùng họ `TECH_DEBT #52`
+(ảnh rách ngang) nhưng ở một cơ chế khác: lần đó là một dải đến từ khoảnh khắc khác, lần này là một
+KHỐI CHỮ NHẬT ở góc — tức cổng chống-rách hiện có (quét mép HÀNG) **không thể thấy nó**, vì mép
+đứng ở cột 780 không tạo ra mép ngang nào. **Chưa vá, đã ghi `TECH_DEBT #58`** — nó chỉ cắn ảnh
+rộng hơn ~1300px, mà mọi ảnh nghiệm thu chuẩn của dự án là 1100px.
+
+**CỔNG NGHIỆM THU**: `npm test` **930 bài xanh / 0 đỏ**. Mốc nền **906** — ĐO LẠI ở `178efeb` trong
+worktree, không chép: **+24 bài** (15 `setting.test.js` · 4 `terrainMesh.test.js` · 3
+`waterView.test.js` · 2 `drawCallBudget.test.js` · 0 ở `terrain`/`horizon` — hai file ấy được SỬA
+phạm vi chứ không thêm bài). ⚠️ Con số **891** từng bị ghi nhầm ở đây là mốc **trước Bước A**;
+`settingStyle.test.js` (13 bài) của Bước A nằm giữa hai mốc. Bắt được vì đếm delta từng file rồi
+thấy **+24 ≠ +39** — một phép cộng không khớp, đúng thứ đã lộ ra "15,6% không lớp nào nhận" ở phép
+đo mật độ. **Mọi phép trừ hai mốc phải đo lại CẢ HAI đầu, đừng chép một đầu từ phase trước**
+(`TECH_DEBT #43`) · `npm run lint` sạch ·
+`npm run build` xanh · 0 nguồn sáng mới · 0 texture mới · 0 shader động (`MeshStandardMaterial`
+tĩnh, `roughness 0,10`) · không đụng lưới 12×12 / `deriveDwellings` / `computeCityLayout`.
+
+**CHỜ ĐÀM**: xem ảnh rồi trả lời cổng không-đo-được-bằng-test — *"kỷ 14 có đọc ra là **thành phố
+cảng** không, hay chỉ là thành phố cạnh một vũng xanh?"*. Gật thì mới sang Bước C (13 kỷ còn lại).
 
 ### 2026-08-19 — VIỆC 2 Bước A: bảng địa thế 15 kỷ, viết TRƯỚC khi có hình (ADR-039)
 

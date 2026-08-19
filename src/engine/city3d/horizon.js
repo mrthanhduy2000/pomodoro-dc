@@ -32,7 +32,9 @@
  * một bài test ở đó canh riêng điều này.
  */
 
-import { APRON_DROP, terrainSurfaceReach, valueNoise } from './terrain';
+import { valueNoise } from './noise';
+import { APRON_DROP, WATER_SURFACE_Y, terrainSurfaceReach } from './terrain';
+import { buildSetting, hazXuongDay } from './setting';
 
 /** Bao xa thì hết thế giới, tính bằng CẠNH LƯỚI. Phải nhỏ hơn bán kính vòm trời (3,6 × lưới). */
 export const HORIZON_REACH = 3.0;
@@ -86,6 +88,16 @@ const MIN_SAMPLES_PER_CELL = 2.6;
  * mắt đọc ra "một vùng đất bằng rồi mới tới chân núi", chứ không phải núi mọc ngay sát nhà.
  */
 export const HORIZON_ONSET = 0.62;
+
+/**
+ * Quãng (tính bằng Ô) mà rặng núi tắt dần khi tiến vào mặt nước.
+ *
+ * ⚠️ RỘNG HƠN DẢI BỜ (0,9 ô) BA LẦN RƯỠI, CÓ CHỦ Ý. Dải bờ tả chỗ mặt ĐẤT chạm mặt nước; con số
+ * này tả chỗ một KHỐI NÚI chìm xuống biển. Hai đại lượng khác nhau: cho núi tắt trong 0,9 ô thì ở
+ * kỷ biển ta được một bức tường đá cao mấy đơn vị dựng đứng ngay mép sóng. Nó an toàn vì số hạng
+ * núi bằng 0 ở chỗ hai tấm giáp nhau — xem chú thích tại chỗ dùng.
+ */
+export const MOUNTAIN_FADE = 3.2;
 
 /**
  * BẢNG 15 KỶ — mỗi dòng phải trả lời được *"đứng ở thành phố ấy mà nhìn ra xa thì thấy gì?"*.
@@ -147,6 +159,7 @@ export function getHorizonStyle(era) {
 }
 
 function smoothstep(t) { return t * t * (3 - 2 * t); }
+function clamp01(t) { return t < 0 ? 0 : (t > 1 ? 1 : t); }
 
 /**
  * Đỉnh cao nhất mà vùng đất xa của một kỷ CÓ THỂ đạt tới — tính bằng công thức, không dựng cả
@@ -180,6 +193,8 @@ export function buildHorizon({ era, gridSize = 12 } = {}) {
   const style = getHorizonStyle(era);
   const size = Number.isFinite(gridSize) && gridSize > 0 ? gridSize : 12;
   const seed = `h|${era}`;
+  const half = (size - 1) / 2;
+  const setting = buildSetting({ era, gridSize: size });
 
   // Mép TRONG: ĐỌC từ chính công thức sinh ra mép ngoài của tấm địa hình thành phố, không suy lại
   // bằng tay. Hai tấm phải gặp nhau ở đây, cùng cao độ `-APRON_DROP`; lệch một chút là có một khe
@@ -218,7 +233,7 @@ export function buildHorizon({ era, gridSize = 12 } = {}) {
     // Khoảng cách Chebyshev — CÙNG phép đo mà vùng đất thoải của `terrain.js` dùng. Dùng Euclid ở
     // đây thì bốn góc thế giới tụt xuống thành bốn cái hố vuông góc với vành núi hình tròn.
     const d = Math.max(Math.abs(x), Math.abs(z));
-    if (d <= onset) return -APRON_DROP;
+    if (d <= onset) return khoetLongNuoc(x, z, -APRON_DROP);
 
     const t = smoothstep(Math.min(1, (d - onset) / span));
 
@@ -260,7 +275,32 @@ export function buildHorizon({ era, gridSize = 12 } = {}) {
     // Nhân chứ không cộng: khối núi VẮNG MẶT thì phải kéo cả tầng chi tiết xuống theo, không để lại
     // một đám lấm tấm lơ lửng. Trần 1,0 giữ nguyên nên `horizonMaxHeight` vẫn là một cái kẹp đúng.
     const shape = (0.34 + massif * 0.66) * fractal;
-    return -APRON_DROP + style.rise * t * shape;
+    // ⚠️ NÚI PHẢI TẮT DẦN TRÊN MỘT QUÃNG RỘNG HƠN HẲN DẢI BỜ, và đây không phải "hai công thức cho
+    // một luật". Phép khoét lòng nước (`khoetLongNuoc`) dùng ĐÚNG dải bờ 0,9 ô mà `terrain.js`
+    // dùng — bắt buộc, vì hai tấm phải gặp nhau khít ở chỗ giáp (bài học hai cái nêm sáng, Phase
+    // 9A). Nhưng nếu chỉ có nó thì ở kỷ biển, một dãy núi cao mấy đơn vị sẽ đổ thẳng xuống mặt biển
+    // trong 0,9 ô — một bức tường, không phải một bờ. Phép tắt dưới đây chỉ nhân vào SỐ HẠNG NÚI,
+    // và số hạng ấy **bằng 0 ở chỗ giáp** (núi chỉ bắt đầu từ `onset` ≥ `innerEdge + 0,6`), nên nó
+    // KHÔNG THỂ làm hai tấm lệch nhau — có bài test đo đúng chỗ giáp ở cả 15 kỷ để chứng minh.
+    const luiNui = 1 - smoothstep(clamp01((setting.insetAt(x + half, z + half) + MOUNTAIN_FADE)
+      / MOUNTAIN_FADE));
+    return khoetLongNuoc(x, z, -APRON_DROP + style.rise * t * shape * luiNui);
+  }
+
+  /**
+   * Hạ tấm chân trời xuống làm lòng nước — CÙNG một phép (`setting.hazXuongDay`), cùng một dải bờ,
+   * cùng một `setting` mà `terrain.surfaceHeightAt` dùng. Hai tấm gặp nhau ở `innerEdge`, nên chúng
+   * buộc phải khoét giống hệt nhau ở đó; viết lại một bản "tương đương" ở đây là cách chắc chắn
+   * nhất để mở lại đúng cái khe hở chạy vòng quanh thành phố mà Phase 9A đã trả giá để vá. Chỗ duy
+   * nhất hai bên khác nhau là ĐỔI TOẠ ĐỘ: hàm này nhận toạ độ THẾ GIỚI, `setting` nói bằng toạ độ Ô.
+   */
+  function khoetLongNuoc(x, z, dat) {
+    if (!setting.built) return dat;
+    const u = x + half;
+    const v = z + half;
+    const tron = setting.blendAt(u, v);
+    if (tron <= 0) return dat;
+    return hazXuongDay(dat, WATER_SURFACE_Y - setting.depthAt(u, v), tron);
   }
 
   return { heightAt, innerEdge, reach, step, octaves, maxHeight: horizonMaxHeight(era), style };

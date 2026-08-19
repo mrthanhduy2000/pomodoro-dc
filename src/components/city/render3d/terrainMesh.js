@@ -45,8 +45,9 @@
 import { BufferAttribute, BufferGeometry, Color } from 'three';
 
 import {
-  APRON_CELLS, APRON_DROP, APRON_EDGE, TERRAIN_SUB,
+  APRON_CELLS, APRON_DROP, APRON_EDGE, TERRAIN_SUB, WATER_SURFACE_Y,
 } from '../../../engine/city3d/terrain';
+import { WATER_BED_DEPTH, WATER_TINT } from '../../../engine/city3d/setting';
 import {
   SIDES, SIDE_STEPS, carriagewayShape, getStreetStyle, pavingSubdivision, streetCrossSection,
 } from '../../../engine/city3d/streetStyle';
@@ -796,6 +797,95 @@ export function buildHorizonSurface({ horizon, palette, terrain, gridSize }) {
       if (Math.abs(ix) < n && Math.abs(jz) < n) continue;
       push(ix, jz); push(ix, jz + 1); push(ix + 1, jz + 1);
       push(ix, jz); push(ix + 1, jz + 1); push(ix + 1, jz);
+      sink.tris += 2;
+    }
+  }
+
+  return finish(sink);
+}
+
+/**
+ * Số ô con trên MỘT ô thành phố, cho tấm NƯỚC.
+ *
+ * ⚠️ MẶT NƯỚC PHẲNG TUYỆT ĐỐI NÊN VỀ HÌNH HỌC HAI TAM GIÁC LÀ ĐỦ — chia nhỏ ở đây KHÔNG phải để
+ * làm cong mặt nước (Đàm cấm sóng), mà để **màu đỉnh** chuyển được từ nhạt ở mép cạn sang sẫm ở
+ * chỗ sâu. Nếu chỉ có bốn đỉnh ở bốn góc thì cả mặt nước là một mảng phẳng đúng một sắc, và nó đọc
+ * ra là *"một tấm nhựa xanh"* — chính là câu Đàm dùng để mô tả thứ KHÔNG được phép ship
+ * (*"một vũng xanh"*). 2 ô con mỗi ô ⇒ mắt lưới nửa ô, đủ mịn cho một chuyển sắc dài vài ô.
+ */
+const WATER_SUB = 2;
+
+/**
+ * Dựng TẤM NƯỚC: một mặt phẳng nằm ngang duy nhất ở `WATER_SURFACE_Y`.
+ *
+ * ⚠️ NÓ KHÔNG VẼ BỜ, VÀ ĐÓ LÀ CẢ Ý TƯỞNG. Bờ nước là chỗ MẶT ĐẤT cắt mực nước (`terrain.js` +
+ * `horizon.js` đã khoét lòng), nên đường bờ tự lượn theo mọi gợn của địa hình, không bao giờ có bậc
+ * răng cưa, và tấm này chỉ cần đủ rộng để luôn chui xuống dưới bờ. Đó là lý do một mặt phẳng câm
+ * lại đủ, và là lý do cả tính năng tốn đúng **+1 lệnh vẽ**.
+ *
+ * ⚠️ BỎ HẲN NHỮNG Ô MÀ CẢ BỐN ĐỈNH ĐỀU KHÔ. Không bắt buộc (bất biến (3) của `setting.js` bảo đảm
+ * mặt nước nằm dưới mọi cao độ đất khô, nên có phủ cả thế giới cũng vô hình), nhưng nó cắt phần
+ * lớn tam giác đi và — quan trọng hơn — giữ cho một hồi quy tương lai ở tầng địa hình không biến
+ * thành một vũng nước ma ở giữa đồng.
+ *
+ * @param {object} input
+ * @param {object} input.setting  kết quả `buildTerrain(...).setting`
+ * @param {number} input.gridSize
+ * @param {object} input.horizon  cần `reach` — mép ngoài cùng của thế giới
+ * @returns {{geometry:BufferGeometry, triangles:number}|null}
+ */
+export function buildWaterSurface({ setting, gridSize, horizon }) {
+  if (!setting?.built || !setting.bounds) return null;
+  if (!Number.isFinite(gridSize) || gridSize < 1) return null;
+
+  const half = (gridSize - 1) / 2;
+  const reach = Number.isFinite(horizon?.reach) ? horizon.reach : gridSize * 3;
+  // Hộp bao mặt nước, KẸP vào đúng mép ngoài của thế giới. `bounds` có thể là ±Infinity (dải nước
+  // cắt ngang toàn cảnh, hoặc biển ra tới chân trời) nên phép kẹp này là bắt buộc, không phải phòng xa.
+  const u0 = Math.max(-reach + half, setting.bounds.u0);
+  const u1 = Math.min(reach + half, setting.bounds.u1);
+  const v0 = Math.max(-reach + half, setting.bounds.v0);
+  const v1 = Math.min(reach + half, setting.bounds.v1);
+  if (!(u1 > u0) || !(v1 > v0)) return null;
+
+  const du = 1 / WATER_SUB;
+  const nu = Math.max(1, Math.ceil((u1 - u0) / du));
+  const nv = Math.max(1, Math.ceil((v1 - v0) / du));
+
+  const tint = WATER_TINT[setting.style.water] ?? WATER_TINT.river;
+  const scratch = new Color();
+  const rgbOf = (hex) => { scratch.setHex(hex); return [scratch.r, scratch.g, scratch.b]; };
+  const sauRgb = rgbOf(tint.sau);
+  const canRgb = rgbOf(tint.can);
+
+  const sink = createSink();
+  const uAt = (i) => u0 + (i / nu) * (u1 - u0);
+  const vAt = (j) => v0 + (j / nv) * (v1 - v0);
+
+  const push = (i, j) => {
+    const u = uAt(i);
+    const v = vAt(j);
+    // Sâu bao nhiêu ⇒ sẫm bấy nhiêu. `depthAt` trả 0 ở chỗ khô, nên mép tấm nước (đang nằm dưới
+    // đất) mang màu cạn nhất — không ai nhìn thấy nó, và đó là điều đúng.
+    const t = smoothstep(Math.min(1, Math.max(0, setting.depthAt(u, v) / WATER_BED_DEPTH)));
+    sink.pos.push(u - half, WATER_SURFACE_Y, v - half);
+    sink.nor.push(0, 1, 0);
+    sink.col.push(
+      lerp(canRgb[0], sauRgb[0], t),
+      lerp(canRgb[1], sauRgb[1], t),
+      lerp(canRgb[2], sauRgb[2], t),
+    );
+  };
+
+  for (let j = 0; j < nv; j += 1) {
+    for (let i = 0; i < nu; i += 1) {
+      const kho = setting.blendAt(uAt(i), vAt(j)) <= 0
+        && setting.blendAt(uAt(i + 1), vAt(j)) <= 0
+        && setting.blendAt(uAt(i), vAt(j + 1)) <= 0
+        && setting.blendAt(uAt(i + 1), vAt(j + 1)) <= 0;
+      if (kho) continue;
+      push(i, j); push(i, j + 1); push(i + 1, j + 1);
+      push(i, j); push(i + 1, j + 1); push(i + 1, j);
       sink.tris += 2;
     }
   }

@@ -359,7 +359,29 @@
 │   │   │   │                      #   ⚠️ Nước phải NẰM GỌN trong địa hình: bài test import thẳng
 │   │   │   │                      #   `OUTSKIRT_REACH` và đòi `reach + width ≤` nó — khoá QUAN HỆ,
 │   │   │   │                      #   không khoá con số 8
-│   │   │   │                      #   Hình sẽ dựng ở `city3d/setting.js` (Bước B) — CHƯA CÓ
+│   │   │   ├── setting.js        # HÌNH CỦA ĐỊA THẾ (VIỆC 2 Bước B, ADR-040): dấu chân mặt nước.
+│   │   │   │                      #   `insetAt` (lùi vào nước bao xa) · `blendAt` (hệ số kéo đất
+│   │   │   │                      #   xuống) · `depthAt` · `bounds` (hộp bao tấm nước). THUẦN.
+│   │   │   │                      #   ⚠️ BỜ NƯỚC KHÔNG ĐƯỢC VẼ — nó LÀ chỗ mặt đất cắt mực nước,
+│   │   │   │                      #   nên tự lượn theo mọi gợn địa hình và tấm nước chỉ cần một
+│   │   │   │                      #   hình chữ nhật phẳng (đúng +1 lệnh vẽ, ràng buộc của Đàm)
+│   │   │   │                      #   ⚠️ Mọi hằng số ở đây là ĐỘ LỆCH, không phải cao độ tuyệt
+│   │   │   │                      #   đối: `terrain.js` (nơi giữ `APRON_DROP`) là chỗ DUY NHẤT
+│   │   │   │                      #   tính ra `WATER_SURFACE_Y`. Không có vòng import
+│   │   │   │                      #   ⚠️ `hazXuongDay` là phép khoét DÙNG CHUNG cho cả `terrain`
+│   │   │   │                      #   lẫn `horizon` — hai tấm gặp nhau khít ở `innerEdge`, chép
+│   │   │   │                      #   công thức sang hai bên là mở lại khe hở Phase 9A đã vá
+│   │   │   │                      #   ⚠️ Mép bờ CHỈ được lượn RA XA thành phố (nhiễu 0..1, luôn
+│   │   │   │                      #   CỘNG) — đó là thứ giữ ADR-007 theo CẤU TRÚC
+│   │   │   │                      #   ⚠️ `hasWater` (BẢNG khai) ≠ `waterIsBuilt` (HÌNH đã dựng).
+│   │   │   │                      #   `ERAS_WITH_WATER_GEOMETRY = [12, 14]` — dở dang có chủ ý,
+│   │   │   │                      #   có `assert.deepEqual` khoá (`TECH_DEBT #56`)
+│   │   │   ├── noise.js           # `valueNoise` — nhiễu lưới tất định DÙNG CHUNG (VIỆC 2 Bước B).
+│   │   │   │                      #   ⚠️ TÁCH RA KHỎI `terrain.js` vì nó CHƯA BAO GIỜ là một hàm
+│   │   │   │                      #   của địa hình; chỗ ở nhờ ấy thành một vòng import thật khi
+│   │   │   │                      #   `setting.js` cần nhiễu mà `terrain.js` lại cần `setting`.
+│   │   │   │                      #   KHÔNG re-export lại từ `terrain.js` — hai đường nhập cho
+│   │   │   │                      #   một hàm là hai chỗ để phiên sau tin
 │   │   │   ├── groundCoverStyle.js# BẢNG DÙNG ĐẤT 15 KỶ (§2-C, ADR-037): bộ kiểu + trọng số ·
 │   │   │   │                      #   `share` (phần đất trống được dùng) · `scale` · `enclose`.
 │   │   │   │                      #   Trả lời "ở nước ấy mảnh đất cạnh nhà dùng làm gì" — buộc vào
@@ -549,6 +571,8 @@
 | `node scripts/png-probe.mjs <ảnh> --top 10` | màu THẬT trên màn hình tại một điểm/vùng |
 | `node scripts/city-preview.mjs --era 7 --mask buildings,ground,road` | **hỏi thẳng bên dựng điểm ảnh nào là cái gì** — tô mỗi lớp một kênh màu thuần (đỏ/lục/lam), phần còn lại đen. Tên lớp là `mesh.name` do `sceneGraph.js` đặt, KHÔNG dò bằng màu (`TECH_DEBT #22`). In kèm dòng "tô đen" kể tên mọi khối rơi vào sọt đen, để phần nền không bao giờ là một cái sọt vô danh |
 | `node scripts/mask-count.mjs <ảnh mặt nạ> nhà đất đường` | đếm mỗi lớp chiếm bao nhiêu **phần khung hình**. ⚠️ Nền trang (ngoài canvas) được bên dựng tô màu mốc `rgb(1,2,3)` và bị loại khỏi MẪU SỐ — không có nó thì mọi tỉ lệ thấp hơn sự thật ~13% mà chẳng có gì kêu (xem `TECH_DEBT #49`). `--selftest` có 4 đối chứng |
+| `node --import ./scripts/register-esm-loader.mjs scripts/water-view.mjs` | **nước chiếm bao nhiêu phần khung hình, và TRẦN của nó là bao nhiêu** — bắn tia qua đúng camera app dùng (`cityOrbitOptions` + `DEFAULT_PITCH` + `CITY_CAMERA_FOV`), mỗi tia hỏi *"chạm mặt nước trước hay mặt đất trước?"*. Không đếm màu (bài học `TECH_DEBT #22`). Cột "trần" = xoay camera sang phía đối diện bờ nước, nên hiệu số giữa hai cột nói thẳng vấn đề nằm ở HÌNH NƯỚC hay ở GÓC CAMERA — chính nó phát hiện `TECH_DEBT #57` (kỷ 14 thấy 0,09% mặt biển trong khi trần là 31,43%). `--selftest` 4 mục, trong đó một mục **đối chứng** bắt buộc phải THẤY được nước khi đứng đúng chỗ |
+| `KHO=<đường dẫn> node --import ./scripts/register-esm-loader.mjs scripts/scene-count.mjs` | **đếm tam giác + lệnh vẽ của cả 15 kỷ, THUẦN, không cần Chromium.** Biến `KHO` trỏ vào một cây mã bất kỳ (thường là một `git worktree` ở mốc nền), nên hai vế "trước/sau" chạy bằng **đúng một dòng lệnh**, chỉ khác đường dẫn — đây là thứ đóng `TECH_DEBT #43` (*"bảng số chỉ đúng cho đúng hai commit đã sinh ra nó"*). Env `SESSIONS`/`HOUR`/`LEVEL` (mặc định 80/12/3). ⚠️ Phải nêu `SESSIONS` khi trích số: mạng đường mở dần theo số phiên, hai fixture khác nhau cho ra hai bảng khác nhau |
 | `node --import ./scripts/register-esm-loader.mjs scripts/plan-coverage.mjs` | **độ phủ xây dựng nhìn từ trên xuống** (khác hẳn "phần khung hình" ở trên — đây là tỉ lệ ĐẤT bị nhà chiếm, so được với hệ số 建蔽率 của Nhật). Rasterise HỢP của các hộp bao, KHÔNG cộng diện tích từng nhà: nhà rộng hơn ô của nó (`TECH_DEBT #21`) nên phép cộng đếm hai lần và từng cho ra 109,9% — `--selftest` giữ đúng đối chứng "không kỷ nào được vượt 100%" |
 | `node --import ./scripts/register-esm-loader.mjs scripts/frame-fit.mjs 1.3` | công trình nào đang bị **mép khung hình cắt**, và phải lùi camera bao nhiêu thì hết (`--flat` = đối chứng địa hình phẳng · `--selftest`) |
 | `node --import ./scripts/register-esm-loader.mjs scripts/road-fit.mjs` | **đường sá có lởm chởm không, và lởm chởm cỡ nào** — đo HAI khuyết tật độc lập: (1) *bậc ở mép đường* = hai ô kề nhau trình ra hai bề rộng khác nhau tại chỗ giáp; (2) *mặt cắt dọc* = chênh cao độ hai ô đường kề nhau, quy về **phần của một căn nhà** (số tuyệt đối không nói lên gì — bài học Phase 7D). Hỏi thẳng `carriagewayShape`, không diễn đạt lại luật. ⚠️ Từ ADR-031, ĐO 1 ra 0 **theo cấu trúc** (luật `min` đối xứng), nên `--selftest` giữ một **đối chứng bơm LUẬT CŨ** vào — không còn bắt được bộ số hỏng cũ thì con số 0 kia vô nghĩa (11 ca) |

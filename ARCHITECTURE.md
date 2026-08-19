@@ -313,9 +313,9 @@ phải một sắc thái chữ nghĩa. `estuary` khác `sea` ở đúng một ch
 vẫn giữ MỘT nghĩa (*"hướng có mặt nước"*) và nước phủ `side` cộng hai hướng kề — một luật về HÌNH
 suy ra từ một hướng, không phải trường `side` gánh việc thứ hai.
 Trục thứ hai `ground` là thứ tách 7 kỷ cùng khai `river` ra khỏi nhau; chỉ mỗi "có sông" thì chúng
-sẽ ra bảy bức ảnh giống nhau. Hình sẽ dựng ở `city3d/setting.js` (Bước B, chưa có).
-⚠️ **Quan hệ với `outskirts` là MỘT CHIỀU: `settingStyle` → `outskirts`.** Vùng quê sẽ đọc
-`hasWater(era)` để không trồng cây dưới nước; `outskirts.js` tuyệt đối không được khai hướng nước
+sẽ ra bảy bức ảnh giống nhau.
+⚠️ **Quan hệ với `outskirts` là MỘT CHIỀU: `settingStyle` → `setting` → `outskirts`.** Vùng quê đọc
+dấu chân mặt nước để không trồng cây dưới nước; `outskirts.js` tuyệt đối không được khai hướng nước
 rồi để bảng địa thế đọc ngược lại. Lý do là câu hỏi chuẩn của dự án — *"ngoài đời hai thứ này có
 luôn đi cùng nhau không?"*: loài cây và hướng ra nước độc lập (Lisboa và Porto cùng cây cùng khí
 hậu, quay ra nước hai hướng khác nhau). Hai chiều là cách hai bảng trôi khỏi nhau.
@@ -331,6 +331,32 @@ mức tuyệt đối vừa **quá rộng** (bảng 6·3·2·2 dồn về một p
 theo số kỷ**, đúng bẫy Phase 7D · và **nước phải nằm gọn trong địa hình** (`reach + width ≤
 OUTSKIRT_REACH`, `import` thẳng hằng số ấy nên thu vùng quê lại là đỏ ngay). Mỗi phép gác có một
 đối chứng bơm bảng hỏng vào để chứng minh nó còn răng.
+
+**`setting` (HÌNH của địa thế) — mặt nước là chỗ MẶT ĐẤT THẤP HƠN một mặt phẳng (VIỆC 2 Bước B,
+2026-08-19, ADR-040)**: `city3d/setting.js` biến bảng trên thành một **dấu chân** thuần —
+`insetAt(u,v)` (lùi vào trong nước bao xa; âm là trên cạn) · `blendAt` (hệ số kéo mặt đất xuống) ·
+`depthAt` · `bounds` (hộp bao tấm nước). `terrain.surfaceHeightAt` và `horizon.heightAt` gọi
+`setting.hazXuongDay(dat, đáy, độ_trộn)` — **một phép khoét dùng chung**, vì hai tấm đất gặp nhau
+khít ở `innerEdge` và chép công thức sang hai bên là mở lại đúng cái khe hở Phase 9A đã trả giá để
+vá (có test đọc mã nguồn cấm chép, và test đo chỗ giáp ở cả 15 kỷ).
+⚠️ **Hệ quả đẹp nhất: BỜ NƯỚC KHÔNG ĐƯỢC VẼ.** Nó LÀ chỗ mặt đất cắt mực nước, nên nó tự lượn theo
+mọi gợn của địa hình, không bao giờ có bậc răng cưa, và tấm nước chỉ cần là **một hình chữ nhật
+phẳng** ⇒ đúng **+1 lệnh vẽ**, đúng ràng buộc Đàm ra. Không có nguồn sáng mới, không texture, không
+shader động — thứ làm mắt đọc ra "đây là nước" là *một mặt phẳng tuyệt đối giữa một mặt đất gợn* +
+*màu nhạt dần vào bờ* (`WATER_TINT` theo KIỂU nước, không theo kỷ: kênh đào tù đọng thì đen, cửa
+sông chịu triều thì đục, biển khơi thì lam sâu — sự thật vật lý về nước, không phải hoà sắc của kỷ).
+⚠️ **Ba bất biến, cả ba đều có test đo chứ không chỉ có chú thích**: (1) nước chỉ HẠ mặt đất, không
+bao giờ NÂNG (`Math.min`, và test bơm thẳng một cao độ −9 vào để chứng minh phép kiểm còn răng);
+(2) **trong lưới 12×12 thì cao độ không đổi một phần nghìn nào** — ADR-007, giữ được nhờ mọi kỷ khai
+`reach ≥ SHORE_BAND` **và** mép bờ gần chỉ được lượn RA XA (nhiễu 0..1, luôn CỘNG — một mép lượn
+được cả hai chiều sẽ liếm vào lưới ở đúng một kỷ, một hạt giống, và làm một căn nhà lún mà không có
+gì đỏ); (3) **mực nước nằm dưới MỌI cao độ đất khô của cả thế giới** — vành đất ngoài lưới gợn
+±0,21 quanh −0,62 nên chỗ trũng nhất chạm −0,83, mực nước −0,92 nằm dưới nó 0,09; đặt cao hơn thì
+tấm nước phẳng ló lên ở những hõm khô cách con sông hàng chục ô, một vũng nước ma.
+⚠️ **Dở dang CÓ CHỦ Ý và ĐẾM ĐƯỢC**: bảng khai 14 kỷ có nước, hình mới dựng **2**
+(`ERAS_WITH_WATER_GEOMETRY = [12, 14]`, cộng kỷ 1 khô làm nhân chứng cho ràng buộc lệnh vẽ). Đó là
+lệnh của Đàm, không phải thiếu sót — và `hasWater` (BẢNG khai) được giữ TÁCH khỏi `waterIsBuilt`
+(HÌNH đã dựng), vì gộp hai câu hỏi ấy là đúng cái bẫy "một trường gánh hai việc". Xem `TECH_DEBT #56`.
 
 ⚠️ Ba quyết định đáng nhớ hơn cái bảng. (a) **`covers` là một MẢNG RIÊNG, không phải một `kind` mới
 của `props`** — vì một ô phải trả lời được HAI câu độc lập (*"vật gì đứng đây"* và *"mảnh đất này

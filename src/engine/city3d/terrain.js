@@ -23,7 +23,14 @@
  * chống lơ lửng vừa thêm đúng loại chi tiết kiến trúc đang thiếu.
  */
 
-import { hashId, roadCellCandidates } from '../cityLayout';
+import { roadCellCandidates } from '../cityLayout';
+import { valueNoise } from './noise';
+import { WATER_DROP_BELOW_PLAIN, buildSetting, hazXuongDay } from './setting';
+
+// ⚠️ `valueNoise` ĐÃ DỜI SANG `./noise` (VIỆC 2 Bước B) và file này KHÔNG xuất lại nó. Xuất lại thì
+// có hai đường nhập cho một hàm, tức hai chỗ để phiên sau tin — đúng thứ mà cả việc dời file này
+// sinh ra để gỡ. Lý do phải dời: `setting.js` cần nhiễu để làm mép bờ lượn, mà `terrain.js` phải
+// hỏi `setting.js` xem chỗ nào là nước ⇒ `setting → terrain → setting`, một vòng import thật.
 
 /** Chiều cao MỘT bậc thềm, tính theo đơn vị ô (`TILE_UNIT = 1`). */
 export const TERRACE_STEP = 0.5;
@@ -228,27 +235,15 @@ export function terrainMaxHeight(era) {
 function lerp(a, b, t) { return a + (b - a) * t; }
 function smoothstep(t) { return t * t * (3 - 2 * t); }
 
-/** Giá trị 0..1 tất định tại một nút lưới nhiễu. */
-function latticeValue(seed, ix, iy) {
-  return (hashId(`t|${seed}|${ix}|${iy}`) % 4096) / 4095;
-}
-
 /**
- * Nhiễu giá trị nội suy song tuyến, làm mượt bằng smoothstep. Trả 0..1.
+ * ⚠️ MỰC NƯỚC — CAO ĐỘ TUYỆT ĐỐI DUY NHẤT CỦA MẶT NƯỚC, VÀ NÓ SỐNG Ở ĐÂY CÓ LÝ DO.
  *
- * ⚠️ XUẤT RA NGOÀI TỪ PHASE 9A — `horizon.js` (địa hình vùng xa) dùng CHUNG đúng hàm này, không
- * chép lại. Hai bản nhiễu "tương đương trên giấy" thì mặt đất gần và mặt đất xa sẽ có hai kiểu gợn
- * khác nhau, và chỗ giáp giữa chúng sẽ lộ ra một đường — đúng luật "một luật một công thức".
+ * `setting.js` (dấu chân mặt nước) chỉ khai ĐỘ LỆCH, vì nếu nó biết `APRON_DROP` thì nó phải nhập
+ * từ file này, mà file này lại phải hỏi nó *"chỗ này có nước không"* ⇒ vòng import. Nên chỗ giữ
+ * `APRON_DROP` cũng là chỗ làm phép trừ cuối cùng, và `horizon.js` · `terrainMesh.js` ·
+ * `sceneGraph.js` đều đọc lại đúng hằng số này thay vì tự tính. Một luật một công thức.
  */
-export function valueNoise(seed, gx, gy) {
-  const x0 = Math.floor(gx);
-  const y0 = Math.floor(gy);
-  const sx = smoothstep(gx - x0);
-  const sy = smoothstep(gy - y0);
-  const top = lerp(latticeValue(seed, x0, y0), latticeValue(seed, x0 + 1, y0), sx);
-  const bottom = lerp(latticeValue(seed, x0, y0 + 1), latticeValue(seed, x0 + 1, y0 + 1), sx);
-  return lerp(top, bottom, sy);
-}
+export const WATER_SURFACE_Y = -APRON_DROP - WATER_DROP_BELOW_PLAIN;
 
 /**
  * Dựng trường cao độ cho một kỷ.
@@ -270,6 +265,13 @@ export function buildTerrain({ era, gridSize = 12 } = {}) {
   const shape = SHAPES[profile.shape] ?? SHAPES.plain;
   const terraces = Math.max(1, Math.round(profile.terraces));
   const seed = `${era}|${profile.shape}`;
+
+  // ⚠️ ĐỌC MỘT CHIỀU: `terrain` hỏi `setting` chỗ nào là nước, `setting` KHÔNG bao giờ hỏi ngược
+  // lại (nó chỉ khai độ lệch, `WATER_SURFACE_Y` ở trên là chỗ duy nhất biến độ lệch thành cao độ).
+  // Lớp này chỉ nhận `era` + `gridSize` — không nhận bố cục — nên bất biến "địa hình là hàm của KỶ,
+  // không phải của việc Đàm đã xây gì" (Phase 7B, ADR-007) còn nguyên, và có test gọi kèm dữ liệu
+  // rác khoá điều đó.
+  const setting = buildSetting({ era, gridSize: size });
 
   const centre = (size - 1) / 2;
   const heights = new Float64Array(size * size);
@@ -553,7 +555,26 @@ export function buildTerrain({ era, gridSize = 12 } = {}) {
     const settle = smoothstep(Math.min(1, Math.max(0,
       (outside - APRON_CELLS) / Math.max(1e-6, APRON_EDGE - APRON_CELLS))));
     const roll = (valueNoise(`${seed}|roll`, u / 3.4, v / 3.4) - 0.5) * 0.42 * (1 - settle);
-    return lerp(plateau, -APRON_DROP + roll, t);
+    return khoetLongNuoc(u, v, lerp(plateau, -APRON_DROP + roll, t));
+  }
+
+  /**
+   * Hạ mặt đất xuống làm LÒNG NƯỚC. Trả về `dat` y nguyên ở kỷ khô và ở mọi chỗ trên cạn.
+   *
+   * ⚠️ PHÉP KHOÉT NẰM Ở `setting.hazXuongDay`, KHÔNG VIẾT LẠI Ở ĐÂY — `horizon.js` cũng gọi đúng
+   * hàm ấy, và hai tấm phải khoét giống hệt nhau ở chỗ giáp (Phase 9A). Ở đây chỉ còn việc tra
+   * `setting` rồi trừ ra cao độ đáy.
+   *
+   * ⚠️ VÀ VÌ SAO NÓ CHỈ NẰM Ở ĐÂY, KHÔNG NẰM Ở `heightAt`/`smoothHeightAt`: hai hàm kia tả cao độ
+   * TRONG lưới 12×12 — chỗ nhà đứng, chỗ đường chạy, chỗ ADR-007 hứa "bảo tàng bất động". Bảng khai
+   * `reach ≥ SHORE_BAND` ở mọi kỷ và mép bờ gần chỉ được lượn RA XA, nên độ trộn luôn bằng 0 trong
+   * lưới; nhưng "luôn bằng 0" là một lời hứa, còn "không có mặt trong hàm" là một sự thật.
+   */
+  function khoetLongNuoc(u, v, dat) {
+    if (!setting.built) return dat;
+    const tron = setting.blendAt(u, v);
+    if (tron <= 0) return dat;
+    return hazXuongDay(dat, WATER_SURFACE_Y - setting.depthAt(u, v), tron);
   }
 
   /**
@@ -577,5 +598,9 @@ export function buildTerrain({ era, gridSize = 12 } = {}) {
 
   return {
     heightAt, smoothHeightAt, surfaceHeightAt, tintAt, footprint, cells, maxHeight, profile,
+    // Trả ra chứ không bắt tầng vẽ tự `buildSetting` lần nữa: hai lần dựng là hai cơ hội để một bên
+    // truyền `gridSize` khác bên kia, và triệu chứng sẽ là tấm nước lệch khỏi lòng nước vài phần
+    // mười ô — đúng loại lỗi im lặng mà "một luật một công thức" sinh ra để chặn.
+    setting,
   };
 }

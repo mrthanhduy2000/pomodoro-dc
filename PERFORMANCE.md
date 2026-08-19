@@ -1070,6 +1070,102 @@ học sẵn có (`flora.js` qua `propSpec.js`); không một `Material` mới n�
 
 ---
 
+## Sau VIỆC 2 Bước B «mặt nước» — 2 kỷ có nước, 13 kỷ KHÔNG ĐỔI MỘT ĐƠN VỊ (2026-08-19)
+
+**Mốc nền ĐO LẠI Ở HEAD (`178efeb`) trong một `git worktree` riêng.** Lần này phép đo có TÊN và đã
+được commit: **`scripts/scene-count.mjs`**, chạy hai vế bằng **cùng một dòng lệnh**, chỉ khác `KHO`:
+
+```
+git worktree add /tmp/truoc 178efeb && ln -s "$PWD/node_modules" /tmp/truoc/node_modules
+KHO=/tmp/truoc node --import ./scripts/register-esm-loader.mjs scripts/scene-count.mjs
+KHO=$PWD      node --import ./scripts/register-esm-loader.mjs scripts/scene-count.mjs
+```
+
+`SESSIONS=80 · HOUR=12 · LEVEL=3` (đúng tham số VIỆC 1 dùng). Trước nay phép đo này được viết TẠM
+rồi vứt đi ở mọi phase, nên chính con số nghiệm thu lại không tái lập được — vi phạm luật *"một con
+số nghiệm thu phải đi kèm CÔNG CỤ **và ĐẦU VÀO** đã sinh ra nó"*. Nay không còn.
+
+✅ **Vế "trước" đo lại ra ĐÚNG cột "sau" của VIỆC 1 ở CẢ 15 KỶ, tổng khớp từng đơn vị
+(2.159.670).** Tức tài liệu KHÔNG trôi lần này — khác hẳn `TECH_DEBT #43`, nơi 6/15 kỷ đã lệch mà
+không ai biết. Đây là lý do phải đo lại chứ không chép: nếu có trôi thì đây là chỗ nó lộ ra.
+
+### Vế đã đo xong — lệnh vẽ và hình học, ĐỦ CẢ 15 KỶ
+
+| kỷ | nước | tam giác TRƯỚC | tam giác SAU | chênh | lệnh vẽ TRƯỚC → SAU |
+|---|---|---:|---:|---:|:---:|
+| 1 | Thổ Nhĩ Kỳ — KHÔ | 123.840 | 123.840 | **0** | 11 → 11 ✓ |
+| 2 | Ai Cập | 114.268 | 114.268 | 0 | 13 → 13 ✓ |
+| 3 | Iraq | 123.792 | 123.792 | 0 | 12 → 12 ✓ |
+| 4 | Trung Quốc | 170.972 | 170.972 | 0 | 13 → 13 ✓ |
+| 5 | Đức | 137.278 | 137.278 | 0 | 12 → 12 ✓ |
+| 6 | Việt Nam | 172.766 | 172.766 | 0 | 13 → 13 ✓ |
+| 7 | Ý | 164.982 | 164.982 | 0 | 13 → 13 ✓ |
+| 8 | Bồ Đào Nha | 149.210 | 149.210 | 0 | 13 → 13 ✓ |
+| 9 | Pháp | 140.452 | 140.452 | 0 | 12 → 12 ✓ |
+| 10 | Anh | 121.478 | 121.478 | 0 | 13 → 13 ✓ |
+| 11 | Mỹ | 151.128 | 151.128 | 0 | 12 → 12 ✓ |
+| **12** | **Nga — SÔNG** | 131.738 | **127.200** | **−4.538 (−3,4%)** | **12 → 13 (+1)** |
+| 13 | Nhật Bản | 152.658 | 152.658 | 0 | 11 → 11 ✓ |
+| **14** | **Singapore — BIỂN** | 173.474 | **179.174** | **+5.700 (+3,3%)** | **12 → 13 (+1)** |
+| 15 | UAE | 131.634 | 131.634 | 0 | 12 → 12 ✓ |
+| **tổng** | | **2.159.670** | **2.160.832** | **+1.162 (+0,05%)** | **đúng 2 kỷ đổi** |
+
+**LỆNH VẼ: +1 Ở ĐÚNG HAI KỶ CÓ NƯỚC, 13 KỶ KHÔ KHÔNG ĐỔI MỘT ĐƠN VỊ.** Đây là ràng buộc cứng nhất
+Đàm ra cho phase này. Nó đạt được vì mặt nước là **một tấm hình chữ nhật PHẲNG** — đường bờ không
+bao giờ được vẽ ra, nó là chỗ mặt đất đã khoét cắt qua mực nước. `TAM_CO_DINH` trong
+`drawCallBudget.test.js` nay là **HÀM CỦA KỶ** (`4 + (waterIsBuilt(era) ? 1 : 0)`), kèm bảng đối
+chứng `MOC_TRUOC_NUOC` giữ nguyên văn mốc cũ ⇒ lời hứa là một **phép trừ có thể đỏ**.
+
+### ✅ ĐỐI CHIẾU CHÉO: hai phép đo độc lập, hai fixture khác nhau, CÙNG một hiệu số
+
+Phép đếm thuần ở trên chạy `SESSIONS=80, LEVEL=3`. Chromium (`node scripts/city-preview.mjs --era N
+--hour 12`) chạy `SESSIONS=40, LEVEL=3`. Hai bộ số TUYỆT ĐỐI khác nhau (kỷ 14: 179.174 so với
+135.686 + 44.126 nền), nhưng **hiệu số trước/sau khớp TỪNG ĐƠN VỊ**:
+
+| kỷ | hiệu số (thuần, 80 phiên) | hiệu số (Chromium, 40 phiên) |
+|---|---:|---:|
+| 12 | −4.538 | −4.538 |
+| 14 | +5.700 | +5.700 |
+| 1 | 0 | 0 (ảnh trùng TỪNG BYTE) |
+
+Điều này không chỉ là "hai phép đo đồng ý". Nó nói một điều về **kiến trúc**: chi phí của mặt nước
+**không phụ thuộc tiến độ chơi** — đúng như tầng `setting` được thiết kế (ĐỊA LÝ, không phải TIẾN
+ĐỘ; có test gọi kèm dữ liệu rác khoá điều đó). Nếu hiệu số lệch nhau giữa hai mốc phiên thì nghĩa
+là nước đang lén phụ thuộc `sessionCount`, và không có phép đối chiếu này thì không ai biết.
+
+### Vì sao kỷ 12 NHẸ ĐI mà kỷ 14 NẶNG THÊM
+
+Tấm nước tự nó tốn: **16.128 tam giác (kỷ 14)** và **3.442 (kỷ 12)** — đọc thẳng từ hình học đã
+dựng, không suy ra. Nhưng nước cũng **dọn đi cảnh vật vùng quê** (`PROP_SHORE_CLEAR = 0,35`: không
+có cây mọc dưới nước). Cộng lại:
+
+- kỷ 12 (sông rộng 3,4 ô, vắt dọc cả cảnh): dọn đi ~7.980 tam giác cây/đá, tấm nước chỉ 3.442 ⇒ **nhẹ đi**.
+- kỷ 14 (biển, nửa mặt phẳng phía nam ra tới mép thế giới): tấm nước 16.128, dọn đi ~10.428 ⇒ **nặng thêm 5.700**.
+
+### Hình học vẫn nằm sâu trong vùng RẺ — nhưng đây là ƯỚC LƯỢNG, KHÔNG phải số đo
+
++0,05% tổng là con số nhỏ nhất của bất kỳ phase nào trong loạt này. Theo mô hình chi phí đã đo trên
+M3 (**80% chi phí theo ĐIỂM ẢNH, 20% cố định; 43% chênh tam giác chỉ đổi 2,4% thời gian**), một
+thay đổi hình học cỡ này gần như chắc chắn không đo được.
+
+⚠️ **NHƯNG PHẢI NÓI CHO ĐÚNG: đó là một SUY LUẬN từ mô hình chi phí, không phải một phép đo.**
+Không có một con số mili-giây nào trong mục này. Và mô hình chi phí ấy **đã từng nói dối theo đúng
+hướng trấn an một lần** (ngân sách tam giác 2026-08-17: HUD báo 34.622 trong khi máy vẽ 78.748 —
+thiếu 56%, và không có gì đỏ lên vì công thức chỉ được so với chính nó).
+
+⚠️ **MÓN NỢ ĐANG PHÌNH, và nó KHÔNG phải của phase này.** VIỆC 1 «bỏ cái khay» đã thêm **+55,8%
+tam giác** (1.386.406 → 2.159.670) và **chưa ai đo lại trên phần cứng thật ở mức đó**. Bước B chỉ
+thêm 0,05% lên trên một cái nền chưa được kiểm. Bộ số M3 hiện hành đo ở khoảng **78.748 tam giác
+mỗi khung**; nay là **~2,16 triệu**, tức **gấp 27 lần** — xa ngoài dải đã hiệu chuẩn.
+⇒ **Đàm cần chạy `bash scripts/bench-macbook.sh` trên MacBook.** Cho tới lúc đó, mọi câu "vẫn còn
+dư địa" trong mục này là ngoại suy, không phải kết luận.
+
+### Vế CHƯA đo — frame time trên M3
+
+Chưa đo. Xem đoạn ngay trên. iPhone thì vẫn chưa ai đo bao giờ (`TECH_DEBT #23`/`#26`).
+
+---
+
 ## Khi nào phải đo lại
 
 - Sau bất kỳ phase nào **thêm nguồn sáng, đổi shader, đổi bóng đổ, hoặc đổi DPR**.

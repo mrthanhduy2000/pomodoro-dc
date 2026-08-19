@@ -43,8 +43,11 @@
  */
 
 import { hashId } from '../cityLayout';
-import { valueNoise } from './terrain';
+import { valueNoise } from './noise';
 import { getFloraStyle } from './floraStyle';
+import { PROP_SHORE_CLEAR, buildSetting, distanceOutsideGrid } from './setting';
+
+export { distanceOutsideGrid };
 
 /**
  * Vùng quê trải ra bao xa, tính bằng Ô kể từ MÉP lưới thành phố.
@@ -80,18 +83,11 @@ const CLUMP_CELL = 5.2;
 /** Phần vật thể là ĐÁ chứ không phải cây cối — đủ để đồng trống không chỉ có một loại bóng. */
 const ROCK_SHARE = 0.14;
 
-/**
- * Khoảng cách từ một điểm tới HÌNH CHỮ NHẬT lưới thành phố, tính bằng ô. Trong lưới ⇒ 0.
- *
- * ⚠️ ĐÚNG CÔNG THỨC MÀ `surfaceHeightAt` (`terrain.js`) và tầng màu của `terrainMesh.js` đang dùng
- * để biết "đã ra khỏi lưới chưa" — cùng một câu hỏi thì phải cùng một công thức. Viết lại bằng một
- * biểu thức "tương đương" là cách chắc chắn nhất để cây cối và mặt đất bất đồng ở đúng chỗ biên,
- * mà biên chính là chỗ cả file này sinh ra để làm việc.
- */
-export function distanceOutsideGrid(u, v, gridSize = 12) {
-  const hi = gridSize - 0.5;
-  return Math.max(0, Math.max(-0.5 - u, u - hi), Math.max(-0.5 - v, v - hi));
-}
+// ⚠️ `distanceOutsideGrid` ĐÃ DỜI SANG `setting.js` (VIỆC 2 Bước B) và được XUẤT LẠI ở trên, vì
+// mọi chỗ đang nhập nó từ đây vẫn đúng về mặt ý nghĩa. Lý do dời: Bước B cần thêm vế *"ra khỏi lưới
+// về HƯỚNG NÀO"* (mặt nước nằm một phía), mà hướng thì không suy ngược được từ một con số `max`.
+// Nên phép gốc là `outwardDistances`, và `distanceOutsideGrid` nay được định nghĩa BẰNG nó thay vì
+// viết song song — cùng đúng cái luật mà chú thích cũ ở đây đã nêu: một câu hỏi, một công thức.
 
 function smoothstep(t) { return t * t * (3 - 2 * t); }
 function lerp(a, b, t) { return a + (b - a) * t; }
@@ -112,6 +108,11 @@ function lerp(a, b, t) { return a + (b - a) * t; }
 export function deriveOutskirts({ era, gridSize = 12 } = {}) {
   const key = Number.isFinite(era) ? era : 1;
   const style = getFloraStyle(key);
+  // ⚠️ QUAN HỆ MỘT CHIỀU — luật Đàm ra cho VIỆC 2: `settingStyle` → `setting` → `outskirts`. Vùng
+  // quê ĐỌC dấu chân mặt nước để không trồng cây dưới nước; tuyệt đối không có đường ngược lại.
+  // Lớp này vẫn chỉ nhận `era` + `gridSize`, nên bất biến "vùng quê là ĐỊA LÝ, không phải TIẾN ĐỘ"
+  // còn nguyên (có test gọi kèm dữ liệu rác khoá điều đó).
+  const setting = buildSetting({ era: key, gridSize });
   const out = [];
 
   const lo = -0.5 - OUTSKIRT_REACH;
@@ -130,6 +131,12 @@ export function deriveOutskirts({ era, gridSize = 12 } = {}) {
 
       const d = distanceOutsideGrid(u, v, gridSize);
       if (d <= 0) continue;                       // trong lưới là việc của `computeCityLayout`
+
+      // ⚠️ CHỪA CẢ MÉP ƯỚT, KHÔNG CHỈ CHỪA MẶT NƯỚC. Ngưỡng là `> -PROP_SHORE_CLEAR` chứ không phải
+      // `> 0`: một cái cây đứng đúng mép nước sẽ có gốc nằm trên sườn lòng sông, tức nó chúi xuống
+      // hoặc lơ lửng nửa thân — mà `sceneGraph` đặt cây theo cao độ mặt đất TẠI TÂM gốc nên không
+      // có gì đỏ lên, chỉ có một hàng cây trông sai sai ở đúng chỗ mắt nhìn nhất.
+      if (setting.insetAt(u, v) > -PROP_SHORE_CLEAR) continue;
 
       const xa = smoothstep(Math.min(1, d / OUTSKIRT_REACH));
       const nen = lerp(OUTSKIRT_EDGE_DENSITY, OUTSKIRT_FAR_DENSITY, xa);

@@ -1,8 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { ROAD_LIFT, ROAD_PART, buildRoadSurface, buildTerrainSurface } from './terrainMesh.js';
-import { APRON_DROP, buildTerrain } from '../../../engine/city3d/terrain.js';
+import {
+  ROAD_LIFT, ROAD_PART, buildRoadSurface, buildTerrainSurface, buildWaterSurface,
+} from './terrainMesh.js';
+import { APRON_DROP, WATER_SURFACE_Y, buildTerrain } from '../../../engine/city3d/terrain.js';
+import { buildHorizon } from '../../../engine/city3d/horizon.js';
+import { ERAS_WITH_WATER_GEOMETRY, WATER_TINT } from '../../../engine/city3d/setting.js';
 import { buildScenePalette } from '../../../engine/city3d/palette3d.js';
 import {
   STREET_STYLES, carriagewayShape, getStreetStyle, streetCrossSection,
@@ -119,15 +123,31 @@ test('MẶT ĐẤT LIỀN MẠCH: hai đỉnh kề nhau không được chênh n
   }
 });
 
-test('RÌA TẤM ĐẤT PHẲNG ĐÚNG `-APRON_DROP` để khớp tấm ván vùng ngoài', () => {
+test('RÌA TẤM ĐẤT PHẲNG ĐÚNG `-APRON_DROP` để khớp tấm ván vùng ngoài — TRỪ chỗ có nước', () => {
   // Tấm ván vùng ngoài của `sceneGraph.js` ngồi ở đúng cao độ này. Rìa lưới còn gợn ⇒ hở một khe
   // răng cưa vòng quanh thành phố, im lặng.
+  //
+  // ⚠️ VIỆC 2 Bước B (2026-08-19): con sông kỷ 12 chảy RA KHỎI rìa tấm đất (đúng như một con sông
+  // phải thế — nó không dừng lại ở mép thành phố), nên ở đúng những đỉnh ấy cao độ thấp hơn
+  // `-APRON_DROP` là ĐÚNG. Không bỏ qua trắng: chỗ ướt vẫn phải khớp với `surfaceHeightAt`, và
+  // phải đếm cả hai nhóm để bài test không rỗng dần theo mỗi kỷ được dựng nước.
+  let soKho = 0;
+  let soUot = 0;
   for (const era of ERAS) {
-    const { ground } = dựng(era);
+    const { ground, terrain } = dựng(era);
     const v = đỉnh(ground);
     const maxX = Math.max(...v.map((p) => p[0]));
+    const half = (GRID - 1) / 2;
     for (const [x, y, z] of v) {
       if (Math.abs(Math.abs(x) - maxX) > 1e-6 && Math.abs(Math.abs(z) - maxX) > 1e-6) continue;
+      if (terrain.setting.blendAt(x + half, z + half) > 0) {
+        soUot += 1;
+        assert.ok(Math.abs(y - terrain.surfaceHeightAt(x + half, z + half)) < 1e-5,
+          `kỷ ${era}: đỉnh rìa có nước (${x.toFixed(2)},${z.toFixed(2)}) ở ${y.toFixed(4)}, lệch `
+          + `khỏi trường cao độ ${terrain.surfaceHeightAt(x + half, z + half).toFixed(4)}`);
+        continue;
+      }
+      soKho += 1;
       assert.ok(
         Math.abs(y + APRON_DROP) < 1e-6,
         `kỷ ${era}: đỉnh rìa (${x.toFixed(2)},${z.toFixed(2)}) ở cao độ ${y.toFixed(4)}, `
@@ -135,6 +155,8 @@ test('RÌA TẤM ĐẤT PHẲNG ĐÚNG `-APRON_DROP` để khớp tấm ván vù
       );
     }
   }
+  assert.ok(soKho > 3000, `chỉ còn ${soKho} đỉnh rìa khô — lời hứa "phẳng đúng" đang rỗng dần`);
+  assert.ok(soUot > 0, 'không đỉnh rìa nào chạm nước — nhánh mới chưa bao giờ chạy');
 });
 
 test('MẶT ĐƯỜNG BÁM SÁT SƯỜN DỐC — đúng `ROAD_LIFT` phía trên mặt đất, không phải một phiến phẳng', () => {
@@ -421,4 +443,109 @@ test('VỈA HÈ DỰNG RA ĐÚNG THỨ BẢNG KHAI — khai 0 thì KHÔNG một 
   // Và danh sách trên phải BÁM theo bảng, không phải một bản chép tay già đi trong im lặng.
   for (const era of CÓ) assert.ok(STREET_STYLES[era].walk > 0, `kỷ ${era} nằm trong danh sách CÓ nhưng bảng khai walk 0`);
   for (const era of KHÔNG) assert.equal(STREET_STYLES[era].walk, 0, `kỷ ${era} nằm trong danh sách KHÔNG nhưng bảng khai walk khác 0`);
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// MẶT NƯỚC — VIỆC 2 Bước B (2026-08-19)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+test('MẶT NƯỚC LÀ ĐÚNG MỘT TẤM PHẲNG — cùng một cao độ ở mọi đỉnh, không một gợn nào', () => {
+  // ⚠️ Đàm CẤM shader nước động (sóng, gợn, phản chiếu động): *"Mặt nước phẳng, vật liệu tĩnh."*
+  // Một tấm phẳng tuyệt đối giữa một mặt đất gợn CHÍNH LÀ tín hiệu để mắt đọc ra "đây là nước" —
+  // nó không phải một sự thiếu thốn phải bù bằng hiệu ứng.
+  //
+  // THỬ-CHO-ĐỎ: trong `buildWaterSurface`, đổi `WATER_SURFACE_Y` thành `WATER_SURFACE_Y + u * 0.01`
+  // ⇒ đỏ ngay ở dòng `assert.equal(pos[i + 1], ...)`.
+  for (const era of ERAS_WITH_WATER_GEOMETRY) {
+    const terrain = buildTerrain({ era, gridSize: 12 });
+    const horizon = buildHorizon({ era, gridSize: 12 });
+    const out = buildWaterSurface({ setting: terrain.setting, gridSize: 12, horizon });
+    assert.ok(out, `kỷ ${era}: không dựng được tấm nước nào`);
+    assert.ok(out.triangles > 200, `kỷ ${era}: tấm nước chỉ ${out.triangles} tam giác — quá mỏng`);
+
+    // ⚠️ HỎI "PHẲNG" BẰNG CÁCH SO CÁC ĐỈNH VỚI NHAU, KHÔNG SO VỚI HẰNG SỐ. Bản đầu viết
+    // `assert.equal(pos[i + 1], WATER_SURFACE_Y)` và ĐỎ trên mã đang đúng: kho đỉnh là `Float32Array`
+    // nên −0,9199999999999999 (float64) cất vào rồi đọc ra thành −0,9200000166893005. Đó là phép
+    // làm tròn của kiểu dữ liệu, không phải một gợn sóng. So các đỉnh với nhau thì phép đo hỏi đúng
+    // câu nó muốn hỏi ("có phẳng không") và CHẶT HƠN: nó bắt được cả một gợn 1e-7 lẫn một tấm
+    // nghiêng đều. Vế "đúng mực nước" hỏi riêng, với dung sai của float32.
+    const pos = out.geometry.getAttribute('position').array;
+    const y0 = pos[1];
+    for (let i = 0; i < pos.length; i += 3) {
+      assert.equal(pos[i + 1], y0,
+        `kỷ ${era}: mặt nước không phẳng — một đỉnh ở ${pos[i + 1]}, đỉnh đầu ở ${y0}`);
+    }
+    assert.ok(Math.abs(y0 - WATER_SURFACE_Y) < 1e-6,
+      `kỷ ${era}: mặt nước phẳng nhưng đặt sai cao độ (${y0} thay vì ${WATER_SURFACE_Y})`);
+
+    // Pháp tuyến phải hướng thẳng lên: nghiêng một chút là ánh sáng loang lổ trên một mặt phẳng.
+    const nor = out.geometry.getAttribute('normal').array;
+    for (let i = 0; i < nor.length; i += 3) {
+      assert.equal(nor[i], 0, `kỷ ${era}: pháp tuyến mặt nước nghiêng theo x`);
+      assert.equal(nor[i + 1], 1, `kỷ ${era}: pháp tuyến mặt nước không hướng lên`);
+      assert.equal(nor[i + 2], 0, `kỷ ${era}: pháp tuyến mặt nước nghiêng theo z`);
+    }
+  }
+});
+
+test('TẤM NƯỚC PHẢI NẰM GỌN TRONG THẾ GIỚI — không thò ra ngoài rặng núi chân trời', () => {
+  // ⚠️ `setting.bounds` có thể là ±Infinity (dải nước cắt ngang toàn cảnh, hoặc biển ra tới chân
+  // trời), nên phép kẹp theo `horizon.reach` là BẮT BUỘC, không phải phòng xa. Thiếu nó thì
+  // `Math.ceil(Infinity)` cho ra một vòng lặp không bao giờ dừng.
+  //
+  // THỬ-CHO-ĐỎ: bỏ `Math.min(reach + half, …)` ⇒ kỷ 14 treo máy (biển `width: null`), nên bài này
+  // vừa là hàng rào vừa là cái phanh.
+  for (const era of ERAS_WITH_WATER_GEOMETRY) {
+    const terrain = buildTerrain({ era, gridSize: 12 });
+    const horizon = buildHorizon({ era, gridSize: 12 });
+    const out = buildWaterSurface({ setting: terrain.setting, gridSize: 12, horizon });
+    const pos = out.geometry.getAttribute('position').array;
+    for (let i = 0; i < pos.length; i += 3) {
+      assert.ok(Math.abs(pos[i]) <= horizon.reach + 1e-6,
+        `kỷ ${era}: đỉnh mặt nước ở x=${pos[i]}, ra ngoài chân trời ${horizon.reach}`);
+      assert.ok(Math.abs(pos[i + 2]) <= horizon.reach + 1e-6,
+        `kỷ ${era}: đỉnh mặt nước ở z=${pos[i + 2]}, ra ngoài chân trời ${horizon.reach}`);
+    }
+  }
+});
+
+test('KỶ KHÔ KHÔNG ĐƯỢC DỰNG MỘT TAM GIÁC NƯỚC NÀO — đây là ràng buộc lệnh vẽ của Đàm', () => {
+  // THỬ-CHO-ĐỎ: bỏ `if (!setting?.built …) return null` ⇒ đỏ ở kỷ 1 (và kèm theo, mốc lệnh vẽ của
+  // 13 kỷ khô ở `drawCallBudget.test.js` cũng đỏ).
+  let soKyKho = 0;
+  for (let era = 1; era <= 15; era += 1) {
+    if (ERAS_WITH_WATER_GEOMETRY.includes(era)) continue;
+    soKyKho += 1;
+    const terrain = buildTerrain({ era, gridSize: 12 });
+    const horizon = buildHorizon({ era, gridSize: 12 });
+    assert.equal(buildWaterSurface({ setting: terrain.setting, gridSize: 12, horizon }), null,
+      `kỷ ${era} chưa dựng nước mà vẫn sinh ra hình học mặt nước — đó là +1 lệnh vẽ không ai trả`);
+  }
+  assert.equal(soKyKho, 13, 'phải duyệt đúng 13 kỷ khô');
+});
+
+test('MÀU NƯỚC ĐI TỪ CẠN SANG SÂU — đó là thứ thay cho sóng, nên nó phải THẬT SỰ đổi', () => {
+  // ⚠️ Bài học Phase 8D: một cơ chế trông thuyết phục trên ảnh mà chưa bao giờ làm gì. Ở đây phải
+  // đo: hai đầu bảng màu có thật sự xuất hiện trên tấm nước không, hay cả tấm ra một sắc duy nhất?
+  //
+  // THỬ-CHO-ĐỎ: cho `depthAt` trả một hằng số ⇒ đỏ ở `trai > 0.02` (mọi đỉnh cùng một màu).
+  for (const era of ERAS_WITH_WATER_GEOMETRY) {
+    const terrain = buildTerrain({ era, gridSize: 12 });
+    const horizon = buildHorizon({ era, gridSize: 12 });
+    const out = buildWaterSurface({ setting: terrain.setting, gridSize: 12, horizon });
+    const col = out.geometry.getAttribute('color').array;
+    let lo = Infinity;
+    let hi = -Infinity;
+    for (let i = 0; i < col.length; i += 3) {
+      const v = (col[i] + col[i + 1] + col[i + 2]) / 3;
+      lo = Math.min(lo, v);
+      hi = Math.max(hi, v);
+    }
+    const trai = hi - lo;
+    assert.ok(trai > 0.02,
+      `kỷ ${era}: cả tấm nước chỉ trải ${trai.toFixed(4)} độ sáng — chỗ cạn và chỗ sâu đang cùng `
+      + 'một màu, tức tín hiệu "cạn dần vào bờ" không tồn tại.');
+    assert.ok(WATER_TINT[terrain.setting.style.water],
+      `kỷ ${era}: kiểu nước "${terrain.setting.style.water}" không có màu trong \`WATER_TINT\``);
+  }
 });

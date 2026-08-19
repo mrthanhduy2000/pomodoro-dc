@@ -12,6 +12,34 @@
 
 ---
 
+## 2026-08-19 (sau) — Ảnh nghiệm thu thôi bị xén: chụp đúng hộp bao canvas, và chụp thành dải (ADR-036)
+
+**Mục đích.** Đóng `TECH_DEBT #49` ở gốc, TRƯỚC khi làm bất cứ việc mỹ thuật nào — vì mọi con số
+nghiệm thu của thành phố 3D đều đọc từ ảnh do công cụ này chụp.
+
+**Phạm vi.** `scripts/city-preview.mjs` (bỏ hẳn `--window-size` · `--screenshot` ·
+`--virtual-time-budget`; chụp qua CDP `clip` theo `getBoundingClientRect`; cổng `kiemKhungNhin`;
+chia dải `chiaBang`), `scripts/png-probe.mjs` (thêm `encodePng` + `ghepDoc`),
+`scripts/pngProbe.test.js` (mới, 5 bài), `scripts/cityPreviewSource.test.js` (+4 bài),
+`scripts/mask-count.mjs` (đối chứng đếm điểm nền trang). **Không đụng một dòng nào trong `src/`.**
+
+**Kết quả.**
+- Ảnh đơn ra **1100×700** thay vì 1134×780 — trong đó 23 dòng canvas trước đây **chưa bao giờ được
+  vẽ** và 12,9% tấm ảnh không phải khung hình. `mask-count.mjs` nay đếm được **0 điểm nền trang**.
+- Phát hiện thêm một trần cứng chưa ai biết: **ổ cắm CDP chỉ cho 4 MiB một tin nhắn** (đo chính
+  xác), nên bản quét 15 kỷ chưa bao giờ chụp được bằng đường CDP. Đã chia thành 12 dải ngang rồi
+  ghép — khoá bằng bài test "ghép ba dải phải ra byte giống hệt ghi một lần".
+- Mốc nền dựng lại ở HEAD: bản quét 15 kỷ × 6 chặng vẫn **15/15 cặp chặng và 105/105 cặp kỷ** trên
+  ngưỡng mắt, cặp gần nhất 20,7 / 21,3, trung vị 37,6 — **không nhúc nhích** so với số cũ.
+
+**Ảnh hưởng / tương thích.** ⚠️ Mọi con số đo TRÊN ẢNH trước ngày này **không so trực tiếp được**
+với số mới (khung bị xén ↔ khung đúng) — đã ghi thành một mục riêng trong `PERFORMANCE.md`, đúng
+cách `TECH_DEBT #22` xử lý bộ lọc "8% mái". Tam giác · lệnh vẽ · ms mỗi khung **KHÔNG** bị ảnh
+hưởng (đọc từ `renderer.info`). Nợ mới `TECH_DEBT #50`: `md5sum` ảnh dựng đổi theo tải máy nên chỉ
+chứng minh được một chiều.
+
+---
+
 ## 2026-08-19 — Đo mật độ nhà, và ba lớp vá cho chính phép đo
 
 **Mục đích.** Trả lời câu hỏi của Đàm *"nhà chỉ che khoảng 1/3 mặt đất, có nên xây dày hơn không?"*

@@ -108,6 +108,16 @@ function main() {
   const nhan = [names[0] ?? 'đỏ', names[1] ?? 'lục', names[2] ?? 'lam'];
   console.log(`── ảnh ${img.width}×${img.height}, trong đó KHUNG HÌNH là ${c.tong.toLocaleString('vi-VN')} điểm ảnh `
     + `(đã loại ${c.ngoai.toLocaleString('vi-VN')} điểm nền trang) ──`);
+  // ⚠️ TỪ 2026-08-19 CON SỐ NÀY PHẢI LÀ 0 — VÀ ĐÓ LÀ MỘT PHÉP ĐỐI CHIẾU CHÉO, KHÔNG PHẢI TRANG TRÍ.
+  // `city-preview.mjs` nay chụp bằng CDP `clip` đúng hộp bao canvas (`TECH_DEBT #49`), nên trong
+  // ảnh KHÔNG còn một điểm nền trang nào. Khác 0 nghĩa là cái `clip` đã trượt — tức tấm ảnh này
+  // không phải khung hình mà nó tự nhận, và mọi tỉ lệ dưới đây đang chia cho một mẫu số sai.
+  // Màu mốc `rgb(1,2,3)` vì thế đổi vai: từ BẢN VÁ thành LƯỚI AN TOÀN nói ra khi bản vá kia hỏng.
+  if (c.ngoai > 0) {
+    console.log(`  ⚠️  CÓ ${c.ngoai.toLocaleString('vi-VN')} ĐIỂM NỀN TRANG TRONG ẢNH — đáng lẽ phải là 0.`);
+    console.log('     Ảnh này chụp bằng bản CŨ (trước bản vá TECH_DEBT #49), hoặc `clip` đang trượt.');
+    console.log('     Chụp lại: node scripts/city-preview.mjs --era <N> --hour <H> --mask <a,b,c>');
+  }
   console.log(`  ${nhan[0].padEnd(12)} ${pct(c.do)}%`);
   console.log(`  ${nhan[1].padEnd(12)} ${pct(c.luc)}%`);
   console.log(`  ${nhan[2].padEnd(12)} ${pct(c.lam)}%`);

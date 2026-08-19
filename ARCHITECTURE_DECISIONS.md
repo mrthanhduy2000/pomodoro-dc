@@ -11,6 +11,63 @@
 
 ---
 
+## ADR-036 — Ảnh nghiệm thu: **HỎI trình duyệt canvas nằm đâu** (CDP `clip`), và chụp thành **DẢI NGANG** vì ổ cắm CDP có trần cứng 4 MiB
+
+- **Ngày**: 2026-08-19 (đóng `TECH_DEBT #49`, mở `#50`)
+- **Bối cảnh**: `city-preview.mjs` là công cụ sinh ra MỌI ảnh nghiệm thu của thành phố 3D — bản
+  quét 15 kỷ, ảnh cận cảnh, ảnh mặt nạ để đo mật độ. Nó chụp bằng `--screenshot` + `--window-size`,
+  trong đó cỡ cửa sổ được ĐOÁN là `(width + 34, height + 80)`. Trong hộp cát này `+80` thiếu 23
+  điểm ảnh, nên **23 dòng cuối của mọi khung hình chưa bao giờ được vẽ ra**, còn ảnh PNG vẫn cao
+  đúng 780 vì Chromium phủ nốt bằng nền trang. Không có gì đỏ lên suốt nhiều tháng.
+- **Vấn đề**: một công cụ đo **KHẲNG ĐỊNH** thay vì **HỎI**. Ba cờ đều là lời khẳng định về một thứ
+  chỉ trình duyệt mới biết: cỡ khung nhìn (`--window-size`, còn có SÀN 500px trong headless), thời
+  điểm cảnh vẽ xong (`--virtual-time-budget` tua nhanh ĐỒNG HỒ chứ không tua nhanh CPU), và vùng
+  cần chụp (`--screenshot` chụp cả cửa sổ).
+- **Phương án đã cân nhắc**:
+  1. **Nới `+80` thành `+103`** (số đo được). Rẻ nhất, một dòng. **Loại**: thay một con số đoán
+     bằng một con số đoán khác — nó trôi lại ngay khi ai đó đổi bố cục trang, thêm thanh cuộn, hay
+     chạy ở DPR khác. Đàm bác thẳng: *"đừng áp nửa vời ở chỗ này rồi chặt chẽ ở chỗ kia."*
+  2. **Khai toạ độ canvas ra `.geom.json` rồi cắt theo.** Đã thử — **VẪN SAI**, vì con số KHAI
+     (canvas cao 700) lớn hơn số dòng THẬT SỰ được vẽ (677). Một toạ độ khai không phải một toạ độ
+     đo.
+  3. ✅ **Hỏi `getBoundingClientRect()` rồi chụp CDP `Page.captureScreenshot` với `clip` đúng hộp
+     bao đó**, kèm một cổng TỪ CHỐI CHẠY nếu hộp bao thò ra ngoài khung nhìn.
+- **Quyết định**: phương án 3. Khung nhìn đặt bằng `Emulation.setDeviceMetricsOverride` (bố cục
+  thật, không dính khung cửa sổ, không dính sàn 500px); đợi bằng tín hiệu thật của trang
+  (`document.body.dataset.ready`); chụp đúng hộp bao đo được. Cổng `kiemKhungNhin` là hàm THUẦN,
+  xuất ra, có `--selftest` **nhốt đúng bộ số hỏng cũ** (1134×693 phải báo thiếu đúng 23 dòng).
+- **Trần 4 MiB và phép chia dải**: vá xong cái xén thì lượt dựng lại mốc nền đầu tiên **chết giữa
+  chừng** với đúng một dòng *"ổ cắm CDP lỗi"*. Đo ra: **một tin nhắn CDP không được quá 4 MiB**
+  (`4.194.264` byte base64 thì chạy, nhích thêm là đứt ổ cắm), mà bản quét 15 kỷ cần ~9 MB.
+  Bốn cách ra:
+  1. **Chấp nhận trần, báo lỗi cho rõ ràng.** Loại — công cụ từ chối làm việc chính của nó.
+  2. **Cho trang tự mã hoá canvas rồi POST qua HTTP.** Chạy được cho BẢNG QUÉT (đó là canvas 2D do
+     trang tự dựng), nhưng KHÔNG chạy cho ảnh đơn: ảnh đơn phải giữ **lớp viền tối góc** — một lớp
+     CSS phủ lên canvas, tức chỉ ảnh chụp trang mới có. Dựng lại lớp ấy trong canvas là "một luật
+     hai công thức".
+  3. **Tắt permessage-deflate của ổ cắm.** Node không cho tuỳ chọn ⇒ phải tự viết một client
+     WebSocket. Nhiều bề mặt mới trong một công cụ đo.
+  4. ✅ **Chụp thành DẢI NGANG, ghép ở phía Node.** Một luật cho MỌI đường chụp, không giới hạn cỡ
+     ảnh, giữ nguyên lớp viền tối góc, và **kiểm được bằng test thuần**.
+- **Trade-off**: phải tự viết phép GHI PNG (`encodePng` + `ghepDoc`, đặt cạnh phép ĐỌC trong
+  `png-probe.mjs` vì cùng một định dạng thì phải cùng một file). Đổi lại có một bài test rất mạnh:
+  **cùng một ảnh, ghép từ ba dải phải ra BYTE GIỐNG HỆT ảnh ghi một lần** — chạy cả hai bên rồi so
+  với nhau, không so bên nào với một hằng số thứ ba. Cái giá thứ hai: ảnh nay do ta mã hoá chứ
+  không phải Chromium, nên `md5sum` cũ không tái lập được — nhưng mốc nền dù sao cũng phải dựng lại
+  vì bản vá xén.
+- **Ảnh hưởng**: mọi con số đo trên ảnh trước 2026-08-19 **không so trực tiếp được** với số mới
+  (đã ghi thành một mục riêng trong `PERFORMANCE.md`, đúng cách `TECH_DEBT #22` xử lý bộ lọc "8%
+  mái"). Tam giác / lệnh vẽ / ms mỗi khung KHÔNG bị ảnh hưởng — chúng đọc từ `renderer.info`, và
+  bộ đệm vẽ luôn là 1100×700; thứ bị xén là phần HIỂN THỊ, không phải phần RENDER.
+- **Điều kiện xem lại**: nếu Node cho phép chỉnh trần tin nhắn WebSocket, hoặc nếu một phiên bản
+  Chromium sau này cho `Page.captureScreenshot` ghi thẳng ra file, thì phép chia dải thành thừa —
+  nhưng **đừng gỡ nó chỉ vì thế**: nó cũng là thứ giữ cho ảnh không phụ thuộc vào một trần ẩn.
+- **Hệ quả kèm theo (`TECH_DEBT #50`)**: trong lúc chứng minh phép ghép đúng, đo ra rằng
+  **`md5sum` của ảnh dựng đổi theo TẢI MÁY** (±1 trên ~2% điểm ảnh). Nên md5 chỉ đọc được một
+  chiều: *trùng ⇒ y hệt* (các lời hứa cũ, kể cả ADR-034, vẫn đứng vững), còn *khác ⇏ đã đổi*.
+
+---
+
 ## ADR-035 — Chữa va chạm cận cảnh: **LÙI RA TRƯỚC, NGẨNG SAU** (đảo nửa sau của ADR-034); và một phép lấy mẫu rời rạc phải trả về BIÊN CHỨNG MINH ĐƯỢC, không phải khoảng cách đo được
 
 - **Ngày**: 2026-08-18 (đóng `TECH_DEBT #46`, sửa một lỗ hổng trong chính ADR-034)

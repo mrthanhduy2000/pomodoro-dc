@@ -6,7 +6,42 @@
 > chọn: `ARCHITECTURE_DECISIONS.md`. Nợ kỹ thuật: `TECH_DEBT.md`. Migration: `MIGRATION.md`. Tóm
 > tắt theo mốc: `CHANGELOG.md`.
 > **NGUYÊN TẮC ƯU TIÊN SỐ 1:** (1) mọi phiên AI phải đọc file này + `CLAUDE.md` + các file liên quan TRƯỚC khi làm; (2) sau MỌI cập nhật dù nhỏ, phải cập nhật ngay file này + `CLAUDE.md` + các file liên quan khác.
-> Cập nhật lần cuối: **2026-08-19** — **CHỐT #46 · ĐÓNG #41 · ĐO MẬT ĐỘ NHÀ.**
+> Cập nhật lần cuối: **2026-08-19** — **§1: VÁ #49 (ẢNH NGHIỆM THU BỊ XÉN) + TRẦN 4 MiB CỦA CDP.**
+>
+> **§1 — CÔNG CỤ CHỤP PHẢI *HỎI* CANVAS NẰM ĐÂU, ĐỪNG *KHẲNG ĐỊNH* NÓ NẰM ĐÂU (đóng `TECH_DEBT #49`, ADR-036).**
+> Mọi ảnh nghiệm thu từ trước tới nay chụp bằng `--window-size` — một con số ĐOÁN. Ảnh ra
+> **1134×780** trong khi khung hình thật chỉ **1100×700**: **12,9% tấm ảnh không phải cảnh 3D**
+> (đệm 16px + dòng số liệu), và tệ hơn, **23 dòng cuối của canvas chưa bao giờ được vẽ ra**.
+> Nay chụp qua CDP `Page.captureScreenshot` với `clip` lấy thẳng từ `getBoundingClientRect()` của
+> canvas, cộng cổng `kiemKhungNhin` **TỪ CHỐI CHẠY** nếu hộp bao thò ra ngoài khung nhìn (có
+> `--selftest` nhốt đúng bộ số hỏng cũ 1134×780). Ba cờ đoán đã bỏ hẳn.
+> ⚠️ **VÀ VÁ XONG CÁI XÉN THÌ ĐỤNG NGAY MỘT KHUYẾT TẬT THỨ HAI CHƯA AI BIẾT: ổ cắm CDP có TRẦN CỨNG
+> 4 MiB một tin nhắn.** Lượt dựng lại mốc nền đầu tiên chạy 5 phút rồi chết bằng đúng một dòng
+> `Page.captureScreenshot: ổ cắm CDP lỗi` — **không một chữ nào nói tới cỡ ảnh**. Đo tới từng byte
+> (chụp canvas nhiễu mỗi lúc một cao): 1864×570 = **4.194.264 B chạy, thiếu đúng 40 byte là chạm
+> trần**; cao hơn một nấc là ổ cắm chết. Vá: **chụp thành DẢI NGANG rồi ghép** (`chiaBang` thuần,
+> ngân sách nửa trần, 4 byte/điểm ảnh — cả hai con số đều ĐO). `png-probe.mjs` nay biết cả GHI PNG
+> (Paeth + deflate 9), vì nếu ghép ảnh rồi nhờ trình duyệt mã hoá lại thì có hai công thức PNG
+> trong dự án. Bản quét 15 kỷ nay chụp **12 dải**, khung đơn **2 dải**.
+> ⚠️ **`md5sum` chỉ đọc được MỘT CHIỀU**: trùng ⇒ chắc chắn cùng ảnh (lời hứa "khung mặc định không
+> đổi" của ADR-034 vẫn đứng); **khác ⇏ ảnh đã đổi** — đo ra bộ dựng SwiftShader lệch ±1 trên ~2%
+> điểm ảnh **tuỳ máy đang bận hay rảnh** (cùng mã, cùng lệnh: rảnh ra `2ad06f97…` năm lần liền,
+> chạy kèm 4 vòng lặp bận ra `28992bba…`, rảnh lại ra `2ad06f97…`). ⇒ `TECH_DEBT #50`.
+> **MỐC NỀN ĐÃ DỰNG LẠI TOÀN BỘ Ở HEAD** và ghi `md5sum` mới (`PERFORMANCE.md`): bản quét
+> `4ec25554…` (1864×3154), khung đơn kỷ 7 `2ad06f97…` (1100×700), 60 ảnh mặt nạ mật độ
+> `9720aa7d…`. **Cổng không-trôi vẫn ĐẠT y nguyên**: 15/15 cặp chặng · 105/105 cặp kỷ · gần nhất
+> 20,7 / 21,3 · trung vị 37,6.
+> ⚠️ **BỘ SỐ ĐIỂM ẢNH TRƯỚC 2026-08-19 ĐO TRÊN KHUNG BỊ XÉN — KHÔNG SO TRỰC TIẾP ĐƯỢC** với số mới,
+> đúng cách `TECH_DEBT #22` đã xử lý bộ lọc "8% mái". Số tam giác/lệnh vẽ/ms **KHÔNG** ảnh hưởng
+> (đọc từ `renderer.info`, không đọc từ điểm ảnh).
+> **MỐC MẬT ĐỘ MỚI CHO §2-C** (đo lại trên khung đúng): "đất trống" **46,17% (20 phiên) · 38,52%
+> (50) · 35,88% (80)**; nhà 20,38 / 24,51 / 25,01%. Phần nhà thấp hơn bộ cũ đều đặn ~0,4–0,5 điểm
+> phần trăm — **đúng chiều đã dự đoán**, vì 23 dòng được trả lại là đáy khung, toàn đất và đường.
+> **843 bài test** (830 + 13 mới, mọi assert mới đều đã thử-cho-đỏ; hai phép phá KHÔNG nổ và cả hai
+> lần thủ phạm là CHÍNH PHÉP PHÁ chứ không phải bài test), lint sạch, build xanh.
+> ⏳ **CHƯA gộp `main`** — mục 5 chương trình làm việc.
+>
+> **(mốc trước)** **CHỐT #46 · ĐÓNG #41 · ĐO MẬT ĐỘ NHÀ.**
 >
 > **VIỆC A — CHỐT `TECH_DEBT #46`: LÙI RA TRƯỚC, NGẨNG SAU (2026-08-19, ADR-035).**
 > Đàm chọn phương án (a) vì *"(a) giữ được LỜI HỨA, (b) giữ được CON SỐ"*. `planCityFocus` nay

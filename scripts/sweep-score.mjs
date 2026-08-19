@@ -272,7 +272,12 @@ console.log(`  cặp gần nhất ${eraPairs[0].d.toFixed(1)} · trung vị ${me
 // ── 3. Kết luận ───────────────────────────────────────────────────────────────────────────────
 console.log('');
 if (!phaseBad.length && !eraBad.length) {
-  console.log('✓ TOÀN BỘ 90 Ô PHÂN BIỆT ĐƯỢC: 15/15 cặp chặng và 105/105 cặp kỷ đều trên ngưỡng mắt.');
+  // ⚠️ ĐẾM THẬT, ĐỪNG VIẾT CỨNG. Dòng này từng ghi thẳng “90 ô · 15/15 · 105/105” bất kể quét mấy
+  // kỷ, nên chạy `--eras 1,2` (12 ô, 1 cặp kỷ) vẫn in ra một lời tuyên bố về 15 kỷ. Một dòng kết
+  // luận nói nhiều hơn thứ nó vừa đo chính là hình dạng nói dối rẻ tiền nhất của một công cụ đo.
+  console.log(`✓ TOÀN BỘ ${ERA_LIST.length * PHASES.length} Ô PHÂN BIỆT ĐƯỢC: `
+    + `${phasePairs.length}/${phasePairs.length} cặp chặng và ${eraPairs.length}/${eraPairs.length} `
+    + 'cặp kỷ đều trên ngưỡng mắt.');
 } else {
   console.log(`✗ CÒN ${phaseBad.length} cặp chặng và ${eraBad.length} cặp kỷ dưới ngưỡng mắt —`
     + ' hai thứ đó đang là CÙNG MỘT BỨC ẢNH với người chơi.');

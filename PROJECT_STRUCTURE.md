@@ -407,9 +407,17 @@
 │   ├── city-preview.mjs        #   Dựng cảnh 3D thật rồi chụp/đo. `--bench N` là bộ đo hiệu năng
 │   │                           #   DUY NHẤT — đừng viết bộ thứ hai, hai phép đo song song sớm muộn
 │   │                           #   sẽ lệch nhau (bài học sweep-score, Phase 4G).
-│   ├── cityPreviewSource.test.js # Khoá HAI cái bẫy của file trên mà không gì khác bắt được: dấu
-│   │                           #   huyền (`) trong chú thích làm chết cả template >300 dòng, và
-│   │                           #   nháy kép ASCII trong dòng in ra bị bench-macbook.sh cắt cụt.
+│   ├── cityPreviewSource.test.js # Khoá BA nhóm bẫy của file trên mà không gì khác bắt được: dấu
+│   │                           #   huyền (`) trong chú thích làm chết cả template >300 dòng; nháy
+│   │                           #   kép ASCII trong dòng in ra bị bench-macbook.sh cắt cụt; và
+│   │                           #   `kiemKhungNhin` + `chiaBang` (cổng chống xén ảnh · chia dải
+│   │                           #   chụp cho lọt trần 4 MiB của ổ cắm CDP — ADR-036).
+│   ├── png-probe.mjs           #   ĐỌC **VÀ GHI** PNG — cả dự án chỉ một chỗ biết định dạng này.
+│   │                           #   `decodePng` để đo màu thật trên màn hình; `encodePng`+`ghepDoc`
+│   │                           #   để ghép các dải chụp lại thành một ảnh. Đừng dựng chunk IHDR ở
+│   │                           #   chỗ khác — hai bên sẽ lệch nhau ở biên mà không gì đỏ lên.
+│   ├── pngProbe.test.js        #   Khoá phép ghi/ghép. Bài có răng nhất: ghép BA DẢI phải ra byte
+│   │                           #   GIỐNG HỆT ghi MỘT LẦN (chạy cả hai bên rồi so với nhau).
 │   ├── bench-macbook.sh        #   Một lệnh duy nhất cho Đàm: ma trận 24 cảnh (1100×700) + 1 cảnh
 │   │                           #   1600×1000, trên GPU thật. `--thu` = PREFLIGHT 8 mục (kiểm rẻ
 │   │                           #   trước, đắt sau) rồi thử 1 cảnh ~20s. Mỗi ❌ in ĐÚNG MỘT lệnh

@@ -15,13 +15,18 @@
  *   node scripts/png-probe.mjs <ảnh.png> --grid        # lưới 8×6 phủ cả ảnh
  *   node scripts/png-probe.mjs <ảnh.png> --top 12      # 12 màu chiếm nhiều diện tích nhất
  *
+ * ⚠️ FILE NÀY GIỮ TOÀN BỘ HIỂU BIẾT VỀ ĐỊNH DẠNG PNG CỦA DỰ ÁN — cả ĐỌC lẫn GHI. Tên file nói
+ * "soi ảnh" vì lúc sinh ra nó chỉ đọc, nhưng từ 2026-08-19 nó ghi luôn (`encodePng`, `ghepDoc`).
+ * Để chỗ khác tự dựng lấy một cái chunk IHDR là "một luật hai công thức" — hai bên sẽ lệch nhau ở
+ * biên, và ảnh hỏng thì không có gì đỏ lên.
+ *
  * Tự giải mã PNG bằng `zlib` có sẵn của Node — KHÔNG thêm dependency nào (dự án đã một lần trả giá
  * vì gỡ dependency GPU nặng, xem `CLAUDE.md`; một công cụ dev không đáng để mở rộng chuỗi cung ứng).
  * Chỉ đọc được PNG 8-bit màu thật (loại 2 hoặc 6) — đúng thứ Chromium chụp ra.
  */
 
 import { readFileSync } from 'node:fs';
-import { inflateSync } from 'node:zlib';
+import { deflateSync, inflateSync } from 'node:zlib';
 
 /** Giải mã PNG 8-bit → `{ width, height, pixels }` với `pixels` là RGBA phẳng. */
 export function decodePng(buffer) {
@@ -94,6 +99,142 @@ export function decodePng(buffer) {
   }
 
   return { width, height, pixels: out };
+}
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * GHI PNG — vì sao cần, và vì sao nó nằm ở ĐÂY
+ *
+ * Ổ cắm CDP có một cái trần CỨNG: **4 MiB cho một tin nhắn**. Đo được chính xác (2026-08-19):
+ * `Page.captureScreenshot` trả về 4.194.264 byte base64 thì CHẠY, thêm một nhúm nữa là ổ cắm
+ * ĐỨT — và nó đứt dưới dạng `ws.onerror`, tức một lỗi truyền tải chứ không phải một câu "ảnh quá
+ * to". Bản quét 15 kỷ (1864×3120) cần ~9 MB base64 ⇒ KHÔNG THỂ đi qua đường đó.
+ *
+ * ⇒ Chụp thành nhiều DẢI NGANG, mỗi dải nằm gọn dưới trần, rồi ghép lại ở phía Node. Ghép thì phải
+ * ghi ra PNG, nên phép ghi nằm cạnh phép đọc: cùng một định dạng, cùng một file.
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+const BANG_CRC = (() => {
+  const t = new Int32Array(256);
+  for (let n = 0; n < 256; n += 1) {
+    let c = n;
+    for (let k = 0; k < 8; k += 1) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+    t[n] = c;
+  }
+  return t;
+})();
+
+function crc32(buf) {
+  let c = -1;
+  for (let i = 0; i < buf.length; i += 1) c = BANG_CRC[(c ^ buf[i]) & 255] ^ (c >>> 8);
+  return (c ^ -1) >>> 0;
+}
+
+function chunk(type, data) {
+  const head = Buffer.alloc(8);
+  head.writeUInt32BE(data.length, 0);
+  head.write(type, 4, 'ascii');
+  const crc = Buffer.alloc(4);
+  crc.writeUInt32BE(crc32(Buffer.concat([head.subarray(4), data])), 0);
+  return Buffer.concat([head, data, crc]);
+}
+
+/**
+ * `{width, height, pixels}` (RGBA phẳng) → Buffer PNG 8-bit.
+ *
+ * ⚠️ TỰ CHỌN 3 hay 4 KÊNH: ảnh chụp màn hình luôn đục hoàn toàn, mà giữ thêm một kênh alpha toàn
+ * 255 thì file phình ~1/3 mà không mang thêm một tin gì. Chromium cũng làm đúng vậy — nên giữ
+ * cùng một luật thì ảnh ghép ra không nặng hơn ảnh chụp thẳng.
+ *
+ * ⚠️ LỌC PAETH CHO MỌI HÀNG, không phải lọc 0. Cảnh 3D toàn dải chuyển màu mượt: lọc 0 gửi thẳng
+ * giá trị tuyệt đối nên zlib gần như không nén được, còn Paeth gửi phần CHÊNH với hàng xóm nên
+ * dải chuyển màu co lại rất nhiều. Đây là lựa chọn một-dòng đổi lấy phần lớn khoảng lợi; chọn lọc
+ * thích ứng từng hàng thì tốt hơn vài phần trăm nhưng tốn 5 lượt quét.
+ */
+export function encodePng({ width, height, pixels }) {
+  if (!Number.isInteger(width) || !Number.isInteger(height) || width <= 0 || height <= 0) {
+    throw new Error(`cỡ ảnh phải là số nguyên dương, nhận ${width}×${height}`);
+  }
+  if (pixels.length !== width * height * 4) {
+    throw new Error(`số byte điểm ảnh không khớp cỡ: có ${pixels.length}, cần ${width * height * 4}`);
+  }
+
+  let ducHoanToan = true;
+  for (let i = 3; i < pixels.length; i += 4) {
+    if (pixels[i] !== 255) { ducHoanToan = false; break; }
+  }
+  const kenh = ducHoanToan ? 3 : 4;
+  const stride = width * kenh;
+
+  const raw = Buffer.alloc((stride + 1) * height);
+  const hangTruoc = Buffer.alloc(stride);
+  const hang = Buffer.alloc(stride);
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const src = (y * width + x) * 4;
+      const dst = x * kenh;
+      hang[dst] = pixels[src];
+      hang[dst + 1] = pixels[src + 1];
+      hang[dst + 2] = pixels[src + 2];
+      if (kenh === 4) hang[dst + 3] = pixels[src + 3];
+    }
+    const base = y * (stride + 1);
+    raw[base] = 4;                                   // Paeth
+    for (let i = 0; i < stride; i += 1) {
+      const a = i >= kenh ? hang[i - kenh] : 0;
+      const b = hangTruoc[i];
+      const c = i >= kenh ? hangTruoc[i - kenh] : 0;
+      const p = a + b - c;
+      const pa = Math.abs(p - a);
+      const pb = Math.abs(p - b);
+      const pc = Math.abs(p - c);
+      const doan = pa <= pb && pa <= pc ? a : pb <= pc ? b : c;
+      raw[base + 1 + i] = (hang[i] - doan) & 255;
+    }
+    hang.copy(hangTruoc);
+  }
+
+  const ihdr = Buffer.alloc(13);
+  ihdr.writeUInt32BE(width, 0);
+  ihdr.writeUInt32BE(height, 4);
+  ihdr[8] = 8;                                       // 8 bit mỗi kênh
+  ihdr[9] = kenh === 4 ? 6 : 2;                      // 6 = RGBA, 2 = RGB
+  ihdr[10] = 0; ihdr[11] = 0; ihdr[12] = 0;          // deflate · lọc chuẩn · không xen dòng
+
+  return Buffer.concat([
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    chunk('IHDR', ihdr),
+    chunk('IDAT', deflateSync(raw, { level: 9 })),
+    chunk('IEND', Buffer.alloc(0)),
+  ]);
+}
+
+/**
+ * Xếp chồng nhiều ảnh THEO CHIỀU DỌC thành một ảnh.
+ *
+ * ⚠️ ĐÒI BỀ NGANG BẰNG NHAU VÀ NÓI RA KHI KHÔNG — một dải lệch bề ngang mà ghép im lặng thì ảnh
+ * ra vẫn "có vẻ đúng" (chỉ xô lệch dần xuống dưới), đúng loại hỏng không ai nhìn thấy.
+ */
+export function ghepDoc(danhSach) {
+  if (!danhSach.length) throw new Error('không có dải nào để ghép');
+  const width = danhSach[0].width;
+  const lech = danhSach.findIndex((d) => d.width !== width);
+  if (lech >= 0) {
+    throw new Error(`dải ${lech} rộng ${danhSach[lech].width}, khác dải đầu (${width}) — không ghép được`);
+  }
+  const height = danhSach.reduce((t, d) => t + d.height, 0);
+  const pixels = Buffer.alloc(width * height * 4);
+  let doiChen = 0;
+  for (const d of danhSach) {
+    const nguon = Buffer.isBuffer(d.pixels)
+      ? d.pixels
+      : Buffer.from(d.pixels.buffer, d.pixels.byteOffset, d.pixels.length);
+    if (nguon.length !== d.width * d.height * 4) {
+      throw new Error(`dải ${d.width}×${d.height} có ${nguon.length} byte, cần ${d.width * d.height * 4}`);
+    }
+    nguon.copy(pixels, doiChen);
+    doiChen += nguon.length;
+  }
+  return { width, height, pixels };
 }
 
 /** `{r,g,b}` → `{hex, h, s, l}` để nói được "sắc gì, tươi bao nhiêu" chứ không chỉ ba con số. */

@@ -498,6 +498,11 @@ function createSkyEnvironment(renderer, skyLook, groundColor) {
  * @param {object}  [input.daylight]  kết quả `deriveDaylight(giờ VN)` — giờ nào trong ngày.
  *                                    Không truyền ⇒ ánh sáng trung tính như trước, mọi chỗ gọi cũ
  *                                    giữ nguyên kết quả.
+ * @param {boolean} [input.splitCityMesh] CỜ CHỈ-DÙNG-ĐỂ-ĐO. Xem luật ngay dưới đây.
+ *
+ * ⚠️ LUẬT CHO MỌI CỜ CHỈ-DÙNG-ĐỂ-ĐO (không riêng `splitCityMesh`): **mặc định phải TẮT, và phải có
+ * test khoá rằng BẬT nó lên mới đổi số.** Thiếu vế sau thì một cờ hỏng vẫn xanh — ảnh y hệt, tam
+ * giác y hệt, chỉ ngân sách lệnh vẽ thủng trong im lặng.
  */
 export function createCityScene({
   layout, palette, dimmed = false, lowDetail = false, stats = {}, still = false, daylight = null,
@@ -943,7 +948,7 @@ export function createCityScene({
    *
    * Giá: khi bật, thành phố ra HAI lệnh vẽ thay vì một. Đó là lý do nó là một cờ tắt-mặc-định chứ
    * không phải cách dựng thường: ràng buộc "không thêm lệnh vẽ nào" của Đàm nói về APP, và app thì
-   * không bao giờ đi vào nhánh này. Có test khoá mặc định ở `sceneGraphWiring.test.js`.
+   * không bao giờ đi vào nhánh này. Có test khoá mặc định ở `sceneStats.test.js`.
    */
   const nhomHinhHoc = splitCityMesh
     ? [

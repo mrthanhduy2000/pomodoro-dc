@@ -734,6 +734,197 @@ giác vào đúng khung hình đó.
 
 ---
 
+## ⚠️ MỌI CON SỐ ĐO TRÊN ẢNH TRƯỚC 2026-08-19 ĐO TRÊN MỘT KHUNG HÌNH BỊ XÉN — KHÔNG SO TRỰC TIẾP ĐƯỢC
+
+Đọc mục này TRƯỚC khi đem bất kỳ con số điểm-ảnh nào trong tài liệu này (hoặc trong `CLAUDE.md`,
+`TECH_DEBT.md`, `BAN_GIAO.md`) đặt cạnh một con số đo sau ngày 2026-08-19.
+
+**Chuyện gì đã xảy ra.** `city-preview.mjs` mở cửa sổ bằng `--window-size=(width + 34),(height + 80)`
+— hai con số ƯỚC LƯỢNG cho phần khung cửa sổ. Trong hộp cát này khung nhìn thật ra **1134×693**,
+trong khi canvas 1100×700 đặt ở `y = 16` cần tới 716 dòng. Kết quả: **23 dòng cuối của khung hình
+chưa bao giờ được vẽ ra**, và ảnh PNG vẫn cao 780 vì Chromium phủ nốt phần thiếu bằng nền trang.
+
+Nói cho đủ: mọi ảnh đơn từ trước tới nay là
+
+| | khai | thật |
+|---|---|---|
+| cỡ khung hình | 1100×700 | **1100×677** |
+| tỉ lệ khung | 1,5714 | **1,625** |
+| tỉ lệ camera dựng theo | 1,5714 | 1,5714 |
+| phần ảnh KHÔNG phải khung hình | 0% | **12,9%** (đệm + dòng số liệu + dải nền trang) |
+
+Hai hệ quả, và cái thứ hai mới là cái nguy hiểm:
+1. Ảnh bị **kéo dãn dọc nhẹ** ở mọi kỷ, mọi chặng (camera dựng 1,571 rồi hiển thị ở 1,625).
+2. Mọi TỈ LỆ chia cho số điểm ảnh của tấm ảnh đều lấy một mẫu số lẫn 12,9% thứ không thuộc câu hỏi
+   — đúng hình dạng `TECH_DEBT #44`.
+
+**Bản vá (2026-08-19).** Bỏ hẳn ba cờ ĐOÁN (`--window-size`, `--screenshot`,
+`--virtual-time-budget`). Nay chụp qua CDP `Page.captureScreenshot` với `clip` lấy thẳng từ
+`getBoundingClientRect()` của canvas, cộng một cổng **từ chối chạy** nếu hộp bao ấy thò ra ngoài
+khung nhìn (`kiemKhungNhin`, có `--selftest` nhốt đúng bộ số hỏng cũ). Ảnh ra **đúng bằng khung
+hình**: 1100×700, `pad = 0`, không đệm, không dòng chữ, không dải nền trang. Xem `TECH_DEBT #49`.
+
+**Vì sao phải viết mục này ra thay vì lặng lẽ đo lại.** Đây đúng cách `TECH_DEBT #22` đã xử lý bộ
+lọc "8% điểm ảnh tươi nhất ≈ mái": bộ số cũ và bộ số mới **đo hai đại lượng khác nhau**, nên đặt
+cạnh nhau là bịa ra một "thay đổi" không hề tồn tại. Một dòng "đã đo lại" thì phiên sau sẽ đọc bảng
+cũ mà không biết.
+
+### Cái gì ĐỔI và cái gì KHÔNG
+
+| Loại số | Có bị ảnh hưởng không? | Vì sao |
+|---|---|---|
+| tam giác · lệnh vẽ · shader · geometry | **KHÔNG** | đọc từ `renderer.info`, không đọc từ điểm ảnh. Bộ đệm vẽ của canvas luôn là 1100×700 — phần bị xén là phần HIỂN THỊ, không phải phần RENDER. |
+| ms mỗi khung (`--bench`) | **KHÔNG** | đo `renderer.domElement.width/height`, cùng lý do trên. Mô hình chi phí M3 (≈ 0,87 ms + 1,14 ms mỗi triệu điểm ảnh thật) vẫn đứng. |
+| điểm số bản quét (`sweep-score.mjs`) | **CÓ** | đường đi khác (`sweepPageHtml`) nên không bị xén, NHƯNG `pad` đổi 8 → 0 và ảnh mất phần đệm ⇒ md5 đổi. Số điểm thì gần như không nhúc nhích (xem dưới). |
+| bảng mật độ, `sweep-diff`, `road-score`, `shadow-score`, `frame-fit`, `png-probe` | **CÓ** | mọi thứ đọc từ điểm ảnh. |
+| mọi `md5sum` byte-identical đã ghi | **CÓ** | ảnh đổi kích thước ⇒ không tái lập được. |
+
+### Vá xong cái xén thì đụng ngay cái trần: ổ cắm CDP chỉ cho 4 MiB một tin nhắn
+
+Lượt dựng lại mốc nền ĐẦU TIÊN sau bản vá đã **chết giữa chừng**: chạy 5 phút, rồi đúng một dòng
+
+```
+Error: Page.captureScreenshot: ổ cắm CDP lỗi
+```
+
+Không có chữ nào nói tới cỡ ảnh. Đo ra thì đó chính là cỡ ảnh: **một tin nhắn CDP không được quá
+4 MiB**, và bản quét 15 kỷ (1864×3120) cần ~9 MB base64.
+
+Con số 4 MiB là ĐO, không phải đọc tài liệu — chụp một canvas nhiễu (không nén được) mỗi lúc một
+cao, rồi xem chỗ nào gãy:
+
+| ảnh chụp | base64 trả về | kết quả |
+|---|---|---|
+| 1864×540 | 3.970.440 B (3,787 MiB) | chạy |
+| 1864×564 | 4.149.532 B (3,957 MiB) | chạy |
+| **1864×570** | **4.194.264 B (4,000 MiB)** | **chạy — sát trần, thiếu đúng 40 byte** |
+| 1864×580 | — | **đứt ổ cắm** |
+
+⇒ Trần đúng bằng `4 × 1024 × 1024`. Từ đó suy ra giá xấu nhất của một điểm ảnh khi đi qua ổ cắm:
+4.194.264 ÷ (1864 × 570) = **3,948 ≈ 4 byte/điểm** (ảnh chụp đục hoàn toàn nên Chromium ghi PNG
+3 byte/điểm, base64 nhân thêm 4/3).
+
+**Bản vá: chụp thành DẢI NGANG rồi ghép ở phía Node.** Ngân sách mỗi dải = `4 MiB ÷ 2 ÷ 4 byte` =
+**524.288 điểm ảnh**, tức đúng MỘT NỬA trần — và là nửa dành cho ảnh *không nén được chút nào*
+(ảnh thật nén 3–6 lần, nên biên thực tế còn rộng hơn nhiều). Chọn một nửa chứ không chọn 90% vì
+cái trần đó là một cái vực: vượt qua thì không có thông báo, chỉ có ổ cắm chết.
+
+Phép ghi + ghép PNG nằm trong `scripts/png-probe.mjs` (cạnh phép đọc — cùng một định dạng thì phải
+cùng một file), khoá bằng `scripts/pngProbe.test.js`. Bài có răng nhất là bài **so hai đường**:
+cùng một ảnh, ghép từ ba dải phải ra **byte giống hệt** ảnh ghi một lần — chạy cả hai bên rồi so
+với nhau, không so bên nào với một hằng số thứ ba.
+
+| ảnh | số dải |
+|---|---|
+| khung mặc định 1100×700 | 2 |
+| cận cảnh `--width 1500` (1500×954) | 3 |
+| bản quét 15 kỷ 1864×3120 | 12 |
+
+### ⚠️ `md5sum` KHÔNG phải phép đo "ảnh có đổi không" — máy bận là ảnh đổi
+
+Đo được cùng ngày, và nó chạm tới mọi lời hứa "trùng từng byte" của dự án. Chụp **cùng một lệnh**,
+cùng một cây mã, chỉ khác tải máy:
+
+| hoàn cảnh | md5 |
+|---|---|
+| máy rảnh, 5 lượt liên tiếp | `2ad06f97…` (cả 5 lượt) |
+| máy bận (4 vòng lặp bận trên máy 4 nhân) | `28992bba…` |
+| rảnh trở lại | `2ad06f97…` |
+
+Chênh lệch: **±1 trên một kênh màu, rải khắp ~2% điểm ảnh** — SwiftShader chia ô rasterise theo số
+luồng dùng được, nên tải máy đổi thì đường làm tròn đổi. Cùng cỡ với chênh lệch giữa **chụp 1 dải
+và chụp 2 dải** (±1 trên 2,28% điểm ảnh), tức **phép ghép dải không làm ảnh "kém chính xác" hơn
+việc chạy trên một cái máy đang bận.**
+
+Nghĩa là đọc `md5sum` phải đọc theo ĐÚNG MỘT CHIỀU:
+
+- ✅ **Trùng md5 ⇒ ảnh y hệt.** Vẫn là bằng chứng mạnh nhất dự án có, và các lời hứa cũ dựa vào nó
+  (ADR-034 "khung mặc định bất biến", `CHANGELOG` mục VIỆC 2) **vẫn đứng vững**.
+- ❌ **Khác md5 KHÔNG ⇒ ảnh đã đổi.** Máy bận là đủ để md5 khác. Ai đó chạy lại phép chứng minh của
+  ADR-034 trên một máy đang bận sẽ thấy nó "trượt" và tưởng có hồi quy.
+- ⇒ Muốn chứng minh **KHÔNG đổi** thì hai lượt chụp phải **liền nhau, trên máy rảnh**; md5 khác thì
+  đừng kết luận vội mà **đo chênh lệch điểm ảnh rồi so với ngưỡng mắt 12/255** — ±1 nằm thấp hơn
+  ngưỡng ấy 12 lần, tức nó không đổi được bất kỳ kết luận mỹ thuật nào.
+- ⇒ Và vai trò md5 ghi ở luật nghiệm thu (*"md5sum mọi cặp ảnh trước/sau, từ chối nếu TRÙNG byte"*)
+  vẫn nguyên giá trị: nó bắt lỗi **chép nhầm / đặt sai tên / quên dựng lại** (bài học
+  `MAI-SAU-ky9.png`), là chuyện khác hẳn với việc đo mỹ thuật.
+
+### Mốc nền đã dựng lại ở HEAD (2026-08-19)
+
+Dựng lại toàn bộ ở `208c5f3` + bản vá công cụ, **trên máy rảnh** (xem cảnh báo về tải máy ở trên).
+Mọi con số dưới đây tái lập được bằng đúng dòng lệnh ghi kèm.
+
+#### 1. Bản quét 15 kỷ × 6 chặng — cổng KHÔNG-TRÔI
+
+```
+node scripts/city-preview.mjs --sweep --all --theme light
+node scripts/sweep-score.mjs .city-preview/sweep-light-ky1-15.png
+```
+
+| | trước (khung bị xén) | **sau (2026-08-19)** |
+|---|---|---|
+| cỡ ảnh | 1880×3170 (`pad: 8`) | **1864×3154** (`pad: 0`) |
+| md5 | `34f0fcfd…` | **`4ec25554fb4c01f0c8762d709315ac86`** |
+| số dải chụp | 1 (và nó KHÔNG đi lọt được nữa) | **12** |
+
+Điểm số — **không nhúc nhích một chữ số nào** so với bộ đo sau Phase 12:
+
+| | giá trị | ngưỡng |
+|---|--:|---|
+| cặp chặng gần nhất | **20,7** (sáng 8h ↔ chiều 15h) | > 12 |
+| cặp chặng dưới ngưỡng | **0/15** | 0 |
+| cặp kỷ gần nhất | **21,3** (kỷ 11 ↔ 12) | > 12 |
+| cặp kỷ dưới ngưỡng | **0/105** | 0 |
+| trung vị 105 cặp kỷ | **37,6** | (theo dõi — đang tụt dần qua các phase) |
+
+Tự-kiểm hình học của công cụ: *"trời bình minh sáng hơn trời đêm ở 15/15 hàng ✓"*.
+
+#### 2. Khung đơn mặc định
+
+```
+node scripts/city-preview.mjs --era 7 --hour 12
+```
+
+| | trước | **sau** |
+|---|---|---|
+| cỡ ảnh | 1134×780 (trong đó 23 dòng canvas **chưa từng được vẽ**) | **1100×700** |
+| phần ảnh không phải khung hình | 12,9% | **0%** |
+| md5 | — (không tái lập được) | **`2ad06f9742ec777271d9884de1726313`** |
+| số dải chụp | 1 | **2** |
+| hồ sơ `.geom.json` | `pad: 8`, toạ độ KHAI | `pad: 0`, toạ độ ĐO: `doX:16 doY:16 doW:1100 doH:700`, khung nhìn `1196×940` |
+
+#### 3. Bảng mật độ — 60 ảnh mặt nạ (nền của §2-C)
+
+```
+bash <scratchpad>/do-matdo2.sh        # 45 ảnh {nhà·đất·đường} + 15 ảnh {cảnh vật·trời·núi}
+node <scratchpad>/bang-matdo.mjs
+```
+md5 gộp cả 60 ảnh: **`9720aa7d914e5ad7f71e14d83501f59b`** · mỗi ảnh **1100×700** · `mask-count.mjs`
+báo **0 điểm nền trang** ở cả 60 (đây là đối chứng của bản vá `clip`, không phải một con số trang trí).
+
+Trung bình 15 kỷ, khung TOÀN CẢNH:
+
+| | 20 phiên | 50 phiên | 80 phiên |
+|---|--:|--:|--:|
+| **nhà** | **20,38%** | **24,51%** | **25,01%** |
+| **đất trống** | **46,17%** | **38,52%** | **35,88%** |
+| đường | 1,19% | 4,26% | 7,02% |
+| phần còn lại (núi + cảnh vật + cư dân) | 32,27% | 32,72% | 32,09% |
+
+Trải ra 15 kỷ ở mốc 50 phiên: nhà thấp nhất **kỷ 1 = 7,73%** (lều da thú), cao nhất
+**kỷ 6 = 35,02%**. Phần còn lại tách ra (mốc 50 phiên): **rặng núi 31,16% · trời ĐÚNG 0,00% ·
+cảnh vật 1,67% · cư dân ≈ 0,14%**. Cổng kiểm hai mặt nạ khớp nhau, chênh lớn nhất **0,23%**.
+
+⚠️ **So với bộ số cũ (đo trên khung bị xén)**: nhà 20,7 → 20,38 · 25,0 → 24,51 · 25,5 → 25,01, tức
+**thấp hơn đều ~0,4–0,5 điểm phần trăm**. Đúng chiều dự đoán: 23 dòng được trả lại nằm ở **MÉP DƯỚI**
+khung hình, chỗ gần như toàn mặt đất và mặt đường, nên chúng pha loãng phần nhà. Bộ số cũ đã được
+vá đường vòng (màu mốc `rgb(1,2,3)` loại nền trang khỏi mẫu số) nên phần 12,9% không còn nằm trong
+đó — chênh lệch còn lại **chỉ** là 23 dòng bị xén.
+
+⇒ **Mốc cho §2-C**: "đất trống" phải tụt rõ so với **46,17% (20 phiên) / 38,52% (50) / 35,88% (80)**.
+
+---
+
 ## Khi nào phải đo lại
 
 - Sau bất kỳ phase nào **thêm nguồn sáng, đổi shader, đổi bóng đổ, hoặc đổi DPR**.

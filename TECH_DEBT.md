@@ -35,6 +35,12 @@
 > liên tiếp bị chặn bởi cùng một lý do (quyết định mỹ thuật)** — nếu con số này lên 4 thì nên gộp
 > thành một lượt hỏi Đàm duy nhất thay vì hỏi lẻ.
 >
+> **Cập nhật 2026-08-19 (§1 — vá #49)**: **ĐÓNG #49** (ảnh nay cắt đúng hộp bao canvas qua CDP
+> `clip`, không còn cờ đoán nào) và **MỞ #50, Priority Medium** — `md5sum` ảnh dựng đổi theo TẢI
+> MÁY (±1 trên ~2% điểm ảnh), nên nó chỉ chứng minh được một chiều. Số mục High/Critical KHÔNG đổi:
+> **1 High** (#14) + **2 Medium-High** (#3, #13) + **3 chờ Đàm quyết** (#24, #41, #42) = 6, vẫn
+> dưới ngưỡng 8–10.
+>
 > **Cập nhật 2026-08-18 (Phase 12 — đo mốc nền)**: **MỞ #43, Priority Medium** — `PERFORMANCE.md`
 > KHÔNG có gì máy đọc được canh, và nó đã trôi thật: Phase 11-B sửa hình học mái rồi không cập nhật
 > tài liệu, để **6/15 kỷ sai số tam giác** suốt từ đó. Cột lệnh vẽ thì có `drawCallBudget.test.js`
@@ -2125,6 +2131,38 @@ ship một trạng thái dở dang, hãy làm nó **ĐẾM ĐƯỢC trong một 
 
 ---
 
+## #50 — `md5sum` của ảnh dựng KHÔNG ổn định khi máy bận, nên nó chỉ chứng minh được MỘT chiều
+
+- **Module**: mọi phép nghiệm thu bằng ảnh (`scripts/city-preview.mjs` → `md5sum`), và luật nghiệm
+  thu trong `CLAUDE.md` / các lời hứa "trùng từng byte" ở `ARCHITECTURE_DECISIONS.md` (ADR-034),
+  `CHANGELOG.md`, `BAN_GIAO.md`.
+- **Priority**: Medium · **Severity**: Low (không có gì SAI hôm nay; rủi ro là kết luận nhầm sau này)
+- **Impact**: đo 2026-08-19 — **cùng một lệnh, cùng một cây mã**, chỉ khác tải máy:
+  máy rảnh 5 lượt liên tiếp ra `2ad06f97…`; bật 4 vòng lặp bận trên máy 4 nhân thì ra
+  `28992bba…`; hết tải quay lại `2ad06f97…`. Chênh lệch **±1 trên một kênh, ~2% điểm ảnh** —
+  SwiftShader chia ô rasterise theo số luồng dùng được nên tải máy đổi thì đường làm tròn đổi.
+- **Root Cause**: `md5sum` là phép so BYTE, mà thứ ta muốn hỏi là "ảnh có đổi không" — hai câu khác
+  nhau. Chúng trùng nhau chừng nào bộ dựng còn tất định TUYỆT ĐỐI; nó không tất định tuyệt đối.
+- **Current Risk**: THẤP. Chiều đang được dùng vẫn đúng: **trùng md5 ⇒ ảnh y hệt** (ADR-034 và
+  `CHANGELOG` VIỆC 2 dựa vào đúng chiều này, nên chúng vẫn đứng vững), và luật nghiệm thu *"từ chối
+  nếu cặp trước/sau TRÙNG byte"* cũng vẫn đúng — nó bắt lỗi chép nhầm/đặt sai tên.
+- **Future Risk**: TRUNG BÌNH và im lặng. Ai đó chạy lại phép chứng minh của ADR-034 trên một máy
+  đang bận sẽ thấy md5 lệch và kết luận **có hồi quy trong khi không có** — đúng loại báo động giả
+  đã cắn ở Phase 9D (`road-score.mjs`). Ngược lại, một người muốn chứng minh "không đổi" có thể bị
+  cám dỗ chạy đi chạy lại tới khi md5 khớp.
+- **Recommended Solution**: đừng dùng md5 làm phép đo mỹ thuật. Muốn chứng minh **KHÔNG đổi** thì
+  (a) chụp hai lượt LIỀN NHAU trên máy rảnh, và (b) nếu md5 lệch thì **đo chênh lệch điểm ảnh rồi
+  so với ngưỡng mắt 12/255** (±1 thấp hơn ngưỡng ấy 12 lần ⇒ không đổi được kết luận nào).
+  Cách đóng triệt để: một công cụ `anh-bang-nhau.mjs` trả lời "lệch tối đa bao nhiêu" thay vì
+  "giống/khác", để không ai phải tự nhớ luật này.
+- **Estimated Complexity**: Nhỏ (~40 dòng, tái dùng `decodePng`) — nhưng chưa cấp bách.
+- **Blocking Conditions**: không có.
+- **Review Trigger**: lần kế tiếp có một lời hứa "trùng từng byte" cần chứng minh, hoặc lần kế tiếp
+  một phép so ảnh trước/sau cho kết quả khó hiểu.
+- **Owner**: chưa phân công · **Status**: Open (đã ghi đầy đủ số đo vào `PERFORMANCE.md`).
+
+---
+
 ## #49 — `city-preview.mjs` xén mất 23 dòng cuối của MỌI ảnh đơn, và không có gì nói ra
 
 - **Module**: `scripts/city-preview.mjs` (hàm `shoot`, cờ `--window-size`)
@@ -2156,9 +2194,26 @@ ship một trạng thái dở dang, hãy làm nó **ĐẾM ĐƯỢC trong một 
   mỹ thuật — đúng bài học `TECH_DEBT #43` (*mỗi phase phải tự đo lại mốc nền của mình*).
 - **Review Trigger**: trước phase kế tiếp có kết luận về mép dưới khung hình, hoặc trước lần đo
   nghiệm thu nào phải khai toạ độ canvas.
-- **Owner**: chưa phân công · **Status**: Open — đã VÁ ĐƯỜNG VÒNG cho phép đo mật độ: nền trang ở
-  chế độ mặt nạ nay mang màu mốc `rgb(1,2,3)` và `mask-count.mjs` loại nó khỏi mẫu số, nên phép đo
-  KHÔNG còn phụ thuộc vào con số khai. Bản thân việc xén 23 dòng thì vẫn còn.
+- **Owner**: — · **Status**: ✅ **ĐÃ ĐÓNG 2026-08-19.**
+  - **Đã làm gì**: bỏ hẳn BA cờ ĐOÁN (`--window-size`, `--screenshot`, `--virtual-time-budget`).
+    Nay đặt khung nhìn bằng CDP `Emulation.setDeviceMetricsOverride`, **hỏi** trình duyệt canvas
+    nằm đâu (`getBoundingClientRect`), rồi chụp `Page.captureScreenshot` với `clip` đúng hộp bao
+    đó. **Không nới `+80` thành `+103`** — đó là thay một con số đoán bằng một con số đoán khác, và
+    nó sẽ trôi lại ngay khi ai đó đổi bố cục trang, thanh cuộn, hay chạy ở DPR khác.
+  - **Cổng chặn**: `kiemKhungNhin` (thuần, xuất ra, có `--selftest`) TỪ CHỐI chạy nếu hộp bao thò
+    ra ngoài khung nhìn, và đối chứng của nó **nhốt đúng ca 23 dòng bị xén** (1134×693) — bắt cả
+    chiều ngang lẫn chiều dọc, và không tha một mẩu thò 0,4 điểm ảnh.
+  - **Đối chứng thứ hai, nằm ở đầu bên kia**: ảnh nay đúng bằng khung hình nên `mask-count.mjs`
+    phải đếm được **0 điểm màu mốc `rgb(1,2,3)`**. Khác 0 là `clip` trượt, và công cụ in số đó ra.
+  - **Kết quả đo**: ảnh ra **1100×700** (trước: 1134×780 với 23 dòng canvas không tồn tại), hồ sơ
+    hình học ghi hộp ĐO ĐƯỢC `doX:16 doY:16 doW:1100 doH:700` trong khung nhìn `1196×940`,
+    `pad: 0`.
+  - ⚠️ **Vá xong thì đụng ngay một cái trần khác** — ổ cắm CDP chỉ cho **4 MiB một tin nhắn**, nên
+    bản quét 15 kỷ (~9 MB base64) chết với đúng một dòng "ổ cắm CDP lỗi". Đã đo chính xác cái trần
+    rồi chụp thành **dải ngang** và ghép ở phía Node. Xem `PERFORMANCE.md` mục *"Vá xong cái xén
+    thì đụng ngay cái trần"*, và **`#50`** cho hệ quả về `md5sum`.
+  - **Mốc nền cũ**: KHÔNG so trực tiếp được với số mới — đã ghi thành một mục riêng trong
+    `PERFORMANCE.md`, đúng cách `#22` xử lý bộ lọc "8% mái".
 
 ---
 

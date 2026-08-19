@@ -19,10 +19,12 @@
  */
 
 import { spawn } from 'node:child_process';
-import { createServer } from 'node:http';
+import { createServer, get as httpGet } from 'node:http';
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+
+import { decodePng, encodePng, ghepDoc } from './png-probe.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const OUT_DIR = resolve(ROOT, '.city-preview');
@@ -622,7 +624,14 @@ hours.forEach((hour, col) => {
 
 const notes = [];
 
-eras.forEach((era, row) => {
+// ⚠️ VÒNG LẶP CÓ NHƯỜNG LUỒNG, KHÔNG PHẢI forEach ĐỒNG BỘ — VÀ ĐÂY KHÔNG PHẢI CHUYỆN MỸ THUẬT.
+// Dựng 90 ô trong MỘT khối đồng bộ thì luồng chính của trang bị khoá suốt ~15 phút, nên
+// Runtime.evaluate của CDP KHÔNG trả lời được, console.log KHÔNG chảy ra được, và hạn giờ bên
+// ngoài KHÔNG chạy tới. Người chạy lệnh nhìn thấy đúng một màn hình im lặng, không phân biệt nổi
+// “đang dựng” với “đã chết” — đã ngồi đợi 25 phút một tiến trình đã chết vì đúng chuyện này.
+// Nhường luồng sau MỖI HÀNG là đủ: chi phí gần bằng không, đổi lại công cụ nói được nó đang ở đâu.
+for (let row = 0; row < eras.length; row += 1) {
+  const era = eras[row];
   const y = 30 + row * (CELL_H + LABEL_H);
   ctx.save();
   ctx.font = '600 12px system-ui, sans-serif';
@@ -665,7 +674,9 @@ eras.forEach((era, row) => {
   ctx.font = '11px system-ui, sans-serif';
   ctx.fillStyle = ink;
   ctx.fillText(ERA_METADATA[era]?.label ?? '?', 60, y + CELL_H + LABEL_H / 2);
-});
+  console.log('[sweep] xong kỷ ' + era + ' (' + (row + 1) + '/' + eras.length + ' hàng)');
+  await new Promise((r) => setTimeout(r, 0));
+}
 
 renderer.dispose();
 document.getElementById('info').textContent =
@@ -799,9 +810,127 @@ function serve(files) {
   });
 }
 
+/**
+ * KIỂM XEM HỘP BAO CANVAS CÓ NẰM TRỌN TRONG KHUNG NHÌN KHÔNG — hàm THUẦN, không DOM, không CDP.
+ *
+ * ⚠️ ĐÂY LÀ BẢN VÁ CỦA `TECH_DEBT #49`. Bản cũ ĐOÁN cỡ cửa sổ bằng
+ * `--window-size=(width + 34),(height + 80)` — hai con số ước lượng cho phần khung cửa sổ. Trong
+ * hộp cát này `+80` THIẾU 23 điểm ảnh: canvas 1100×700 đặt ở `y = 16` chỉ được vẽ ra 677 dòng,
+ * 23 dòng cuối là nền trang, và **không có gì nói ra**. Mọi ảnh đơn từ trước tới nay là một khung
+ * hình 1100×677 mang tên 1100×700 — tỉ lệ thật 1,625 trong khi camera dựng theo 1,571, tức ảnh bị
+ * kéo dãn dọc nhẹ ở MỌI kỷ, MỌI chặng, suốt nhiều tháng.
+ *
+ * ⚠️ VÌ SAO KHÔNG NỚI `+80` THÀNH `+103`. Đó là thay một con số đoán bằng một con số đoán khác, và
+ * nó sẽ trôi lại ngay khi ai đó đổi bố cục trang, đổi thanh cuộn, hay chạy trên máy có DPR khác.
+ * ⇒ Nay: HỎI trình duyệt canvas đang nằm ở đâu (`getBoundingClientRect`), chụp đúng hộp đó bằng
+ * CDP `clip`, và TỪ CHỐI CHẠY nếu hộp ấy thò ra ngoài khung nhìn. Cùng một luật với màu mốc
+ * `rgb(1,2,3)` ở `pageHtml`: một toạ độ ĐO thay cho một toạ độ KHAI.
+ *
+ * ⚠️ KIỂM CẢ HAI CHIỀU, KHÔNG CHỈ CHIỀU ĐANG SAI. Bản đầu của `frame-fit.mjs --selftest`
+ * (Phase 7B) chỉ vặn khoảng cách camera nên nó bảo chứng trục DỌC và mù hoàn toàn với trục NGANG —
+ * đúng chiều đang sai lúc ấy. Ở đây chiều đang sai là DỌC, nên phép kiểm phải chạm tới cả chiều
+ * NGANG để không lặp lại y hệt cái lỗi đó.
+ *
+ * `Math.ceil` chứ không `Math.round`: thò ra nửa điểm ảnh vẫn là thò ra.
+ */
+/**
+ * TRẦN CỨNG CỦA Ổ CẮM CDP — **4 MiB cho MỘT tin nhắn**. Không phải phỏng đoán: đo được từng byte
+ * ngày 2026-08-19 bằng cách chụp một canvas nhiễu (không nén được) mỗi lúc một cao —
+ * **4.194.264 byte base64 thì CHẠY, nhích thêm là ĐỨT Ổ CẮM**. Tức đúng 4 × 1024 × 1024.
+ *
+ * ⚠️ NÓ ĐỨT DƯỚI DẠNG `ws.onerror`, KHÔNG dưới dạng một câu "ảnh quá to". Ngày phát hiện, bản quét
+ * 15 kỷ chạy 5 phút rồi chết với đúng một dòng "ổ cắm CDP lỗi" — không ai đoán được là vì cỡ ảnh.
+ * Bản quét 15 kỷ (1864×3120) cần ~9 MB base64 ⇒ nó KHÔNG BAO GIỜ đi lọt đường đó.
+ */
+export const HAN_TIN_CDP = 4 * 1024 * 1024;
+
+/**
+ * Ngân sách ĐIỂM ẢNH cho mỗi dải chụp.
+ *
+ * Ảnh chụp màn hình đục hoàn toàn ⇒ Chromium ghi PNG 3 byte/điểm; trường hợp XẤU NHẤT (ảnh nhiễu,
+ * zlib bó tay) thì base64 ra ≈ 3 × 4/3 = **4 byte mỗi điểm ảnh** — con số này cũng đo được, không
+ * suy diễn: 1864×570 = 1.062.480 điểm cho ra 4.194.264 byte, tức 3,948 byte/điểm.
+ *
+ * ⇒ 512 K điểm × 4 byte = **2 MiB, đúng MỘT NỬA trần đo được**, và đó là nửa dành cho ảnh KHÔNG
+ * NÉN ĐƯỢC CHÚT NÀO. Ảnh thật nén 3–6 lần nên biên thực tế còn rộng hơn nhiều. Chọn một nửa chứ
+ * không chọn 90% vì trần kia là một cái vực: vượt qua thì không có thông báo, chỉ có ổ cắm chết.
+ */
+export const BYTE_MOI_DIEM_XAU_NHAT = 4;
+
+/**
+ * ⚠️ SUY RA, KHÔNG GÕ TAY. Viết thẳng `512 * 1024` thì con số ấy và cái trần 4 MiB thành hai sự
+ * thật rời nhau: đổi một bên, bên kia không biết — đúng bẫy "một luật hai công thức". Ở đây quyết
+ * định mỹ thuật-kỹ thuật duy nhất là **lấy một nửa trần**, và nó nằm ngay trong công thức.
+ */
+export const SO_DIEM_MOI_BANG = Math.floor(HAN_TIN_CDP / 2 / BYTE_MOI_DIEM_XAU_NHAT);
+
+/**
+ * Chia một hộp ảnh thành các DẢI NGANG, mỗi dải nằm gọn trong ngân sách điểm ảnh.
+ *
+ * Thuần, xuất ra để test được: phủ đúng [0, height), không hở, không chồng, dải cuối được phép cụt.
+ */
+export function chiaBang({ width, height }, soDiemMoiBang = SO_DIEM_MOI_BANG) {
+  if (!Number.isInteger(width) || !Number.isInteger(height) || width <= 0 || height <= 0) {
+    throw new Error(`hộp phải nguyên và dương, nhận ${width}×${height}`);
+  }
+  if (!(soDiemMoiBang > 0)) throw new Error('ngân sách điểm ảnh mỗi dải phải dương');
+  const soDong = Math.max(1, Math.floor(soDiemMoiBang / width));
+  const bang = [];
+  for (let y = 0; y < height; y += soDong) bang.push({ y, height: Math.min(soDong, height - y) });
+  return bang;
+}
+
+export function kiemKhungNhin(hop, khungNhin) {
+  const thieuNgang = Math.max(0, Math.ceil(hop.x + hop.width - khungNhin.width));
+  const thieuDoc = Math.max(0, Math.ceil(hop.y + hop.height - khungNhin.height));
+  return { ok: thieuNgang === 0 && thieuDoc === 0, thieuNgang, thieuDoc };
+}
+
+/** Đọc một đường dẫn JSON của DevTools. Dùng `http` của Node, KHÔNG dùng `fetch` — `fetch` đi qua
+ *  biến môi trường proxy, mà đây là 127.0.0.1. */
+function docJsonDevtools(port, path) {
+  return new Promise((done, fail) => {
+    httpGet({ host: '127.0.0.1', port, path }, (res) => {
+      let s = '';
+      res.on('data', (d) => { s += d; });
+      res.on('end', () => { try { done(JSON.parse(s)); } catch (e) { fail(e); } });
+    }).on('error', fail);
+  });
+}
+
+const nghi = (ms) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * CHỤP MỘT KHUNG HÌNH — qua CDP, cắt đúng hộp bao canvas.
+ *
+ * Ba thứ đổi so với bản cũ, và cả ba đều là "hỏi thay vì khẳng định":
+ *  1. Cỡ trang đặt bằng `Emulation.setDeviceMetricsOverride` chứ không `--window-size` (cờ ấy có
+ *     SÀN 500px trong headless và cộng thêm phần khung cửa sổ không đoán được — đúng bài học đã
+ *     ghi cho `shot.mjs`).
+ *  2. Đợi bằng `document.body.dataset.ready` chứ không `--virtual-time-budget`. Thời gian ảo tua
+ *     nhanh đồng hồ chứ không tua nhanh CPU, nên với SwiftShader nó chỉ là một cái hẹn giờ mù.
+ *  3. Ảnh ra ĐÚNG BẰNG canvas: không đệm, không dòng chữ số liệu, không dải nền trang. Nghĩa là
+ *     `mask-count.mjs` phải đếm được 0 điểm ảnh màu mốc — nếu khác 0 thì cái `clip` đã sai, và
+ *     công cụ ấy in con số đó ra để ai cũng thấy.
+ *
+ * ⚠️ DÒNG SỐ LIỆU DƯỚI ẢNH BỊ CẮT KHỎI PNG (nó không phải khung hình). Nó KHÔNG mất: hàm này đọc
+ * `#info` qua CDP rồi trả về để chỗ gọi in ra terminal. Đổi chỗ hiển thị, không bỏ thông tin.
+ */
 async function shoot(chrome, url, pngPath,
   { width, height, bench = 0, mask = null, noShadow = false, gpu = false, focus = 0 }) {
-  await run(chrome, [
+  // Lúc đo hiệu năng thì PHẢI để stderr chảy ra, vì dòng [bench] đi bằng đường đó — và lúc dựng
+  // mặt nạ cũng vậy, vì dòng [mask] là thứ DUY NHẤT chứng minh mặt nạ khớp đúng khối cần khớp.
+  // ⚠️ Chế độ cận cảnh cũng phải mở đường này: dòng [focus] là thứ DUY NHẤT nói ra camera đã đứng
+  // ở đâu. Ngoài mấy ca đó thì im, vì Chromium trong hộp cát này chửi dbus không ngớt.
+  const choNoi = bench > 0 || !!mask || noShadow || focus > 0;
+
+  // ⚠️ KHUNG NHÌN RỘNG RÃI CÓ CHỦ Ý. Cắt theo hộp bao rồi thì thừa bao nhiêu cũng không vào ảnh;
+  // thứ duy nhất phải chắc là canvas KHÔNG bị xén. Vẫn kiểm lại bằng `kiemKhungNhin` phía dưới —
+  // con số dưới đây là một lựa chọn thoải mái, không phải một lời hứa.
+  const trangW = width + 96;
+  const trangH = height + 240;
+
+  const child = spawn(chrome, [
     '--headless=new',
     '--no-sandbox',
     '--disable-dev-shm-usage',
@@ -816,16 +945,190 @@ async function shoot(chrome, url, pngPath,
     // không ai biết. Chỉ khi vặn một hằng số lên mức phi lý mà ảnh không đổi mới lộ.
     '--enable-logging=stderr',
     '--log-level=0',
-    `--window-size=${width + 34},${height + 80}`,
-    `--virtual-time-budget=${bench > 0 ? 600000 : 12000}`,
-    `--screenshot=${pngPath}`,
-    url,
-    // Lúc đo hiệu năng thì PHẢI để stderr chảy ra, vì dòng [bench] đi bằng đường đó — và lúc dựng
-    // mặt nạ cũng vậy, vì dòng [mask] là thứ DUY NHẤT chứng minh mặt nạ khớp đúng khối cần khớp.
-    // ⚠️ Chế độ cận cảnh cũng phải mở đường này: dòng [focus] là thứ DUY NHẤT nói ra camera đã
-    // đứng ở đâu (khoảng cách · góc ngẩng · độ thoáng). Không có nó thì tấm ảnh chỉ chứng minh
-    // "có một khung hình khác", không chứng minh nó là khung mà `planCityFocus` chọn.
-  ], (bench > 0 || mask || noShadow || focus > 0) ? {} : { stdio: 'ignore' });   // Chromium trong hộp cát này chửi dbus không ngớt
+    '--remote-debugging-port=0',
+    'about:blank',
+  ], { stdio: ['ignore', 'ignore', 'pipe'] });
+
+  let dongDevtools = '';
+  const cong = await new Promise((done, fail) => {
+    const hen = setTimeout(() => fail(new Error('Chromium không báo cổng DevTools sau 30 giây')), 30000);
+    child.on('error', (e) => { clearTimeout(hen); fail(e); });
+    child.stderr.on('data', (b) => {
+      const s = String(b);
+      if (choNoi) process.stderr.write(s);
+      if (dongDevtools !== null) {
+        dongDevtools += s;
+        const m = /ws:\/\/127\.0\.0\.1:(\d+)\//.exec(dongDevtools);
+        if (m) { dongDevtools = null; clearTimeout(hen); done(Number(m[1])); }
+      }
+    });
+  });
+
+  const dsTarget = await docJsonDevtools(cong, '/json/list');
+  const trang = dsTarget.find((t) => t.type === 'page');
+  const ws = new WebSocket(trang.webSocketDebuggerUrl);
+  await new Promise((r) => { ws.onopen = r; });
+
+  let soThuTu = 0;
+  const dangCho = new Map();
+  // ⚠️ MỘT LỜI HỨA KHÔNG BAO GIỜ ĐƯỢC TRẢ LỜI LÀ MỘT VỤ TREO IM LẶNG — VÀ NÓ ĐÃ XẢY RA THẬT
+  // (2026-08-19, ngay trong lượt chạy đầu tiên của chính bản vá này). Bản đầu chỉ gắn `onmessage`:
+  // khi ổ cắm CDP chết (trang sập, tiến trình con bị giết, WebSocket đứt) thì mọi `cdp(...)` đang
+  // chờ nằm lại trong `dangCho` VĨNH VIỄN. Triệu chứng: cả node lẫn Chromium đứng yên 0% CPU, không
+  // một dòng nào in ra, không một thông báo lỗi nào — trông y hệt "đang dựng, cứ đợi thêm". Đã ngồi
+  // đợi 25 phút một tiến trình đã chết. ⇒ Ổ cắm đứt PHẢI làm đỏ mọi lời hứa đang chờ, ngay lập tức.
+  const chetOCam = (vìSao) => {
+    for (const [, tra] of dangCho) tra({ error: { message: vìSao } });
+    dangCho.clear();
+  };
+  ws.onmessage = (ev) => {
+    const m = JSON.parse(ev.data);
+    if (m.id && dangCho.has(m.id)) { dangCho.get(m.id)(m); dangCho.delete(m.id); }
+  };
+  ws.onclose = () => chetOCam('ổ cắm CDP đã đóng — Chromium chết hoặc trang sập giữa chừng');
+  ws.onerror = () => chetOCam('ổ cắm CDP lỗi');
+  child.on('exit', (ma) => chetOCam(`Chromium thoát bất ngờ (mã ${ma})`));
+
+  const cdp = (method, params = {}) => new Promise((done, fail) => {
+    const id = ++soThuTu;
+    dangCho.set(id, (m) => (m.error ? fail(new Error(`${method}: ${m.error.message}`)) : done(m.result)));
+    ws.send(JSON.stringify({ id, method, params }));
+  });
+  const doc = async (bieuThuc) => (await cdp('Runtime.evaluate', {
+    expression: bieuThuc, returnByValue: true, awaitPromise: true,
+  })).result.value;
+
+  let info = '';
+  let hop = null;
+  try {
+    await cdp('Page.enable');
+    await cdp('Runtime.enable');
+    // ⚠️ ĐÂY là thứ `--window-size` không làm được: đặt bề ngang/bề cao BỐ CỤC thật, không dính
+    // phần khung cửa sổ, không dính sàn 500px của headless.
+    await cdp('Emulation.setDeviceMetricsOverride', {
+      width: trangW, height: trangH, deviceScaleFactor: 1, mobile: false,
+    });
+    await cdp('Page.navigate', { url });
+
+    // ── ĐỢI BẰNG TÍN HIỆU THẬT CỦA TRANG ──────────────────────────────────────
+    // ⚠️ ĐỒNG HỒ PHẢI CHẠY SONG SONG, KHÔNG ĐƯỢC NẰM TRONG VÒNG LẶP. `Runtime.evaluate` KHÔNG trả
+    // lời khi luồng chính của trang đang bận (trang quét dựng 90 ô trong một khối đồng bộ), nên một
+    // phép kiểm hạn giờ đặt SAU `await` thì không bao giờ chạy tới — đúng cái đã để tôi ngồi đợi 25
+    // phút một tiến trình đã chết. Hạn giờ chỉ có nghĩa khi nó là một cuộc đua.
+    // 30 phút cho MỌI chế độ. Bản quét 90 ô trên SwiftShader đã đo được ~15 phút, `--bench 120`
+    // cũng cỡ đó — một hạn chung dễ nhớ hơn hai con số mà không ai kiểm.
+    const hanCho = 1800000;
+    const batDau = Date.now();
+    let xong = false;
+    const nhac = setInterval(() => {
+      if (!xong) process.stderr.write(`  … đang dựng (${Math.round((Date.now() - batDau) / 1000)}s)\n`);
+    }, 30000);
+    // ⚠️ PHẢI GIỮ LẠI CÁI HẸN GIỜ ĐỂ CÒN HUỶ. Bản đầu thả trôi `setTimeout(…, 30 phút)`, nên sau khi
+    // ảnh đã ghi xong tiến trình vẫn SỐNG thêm nửa tiếng: vòng lặp sự kiện của Node còn một cái hẹn
+    // chưa tới hạn. Triệu chứng y hệt một vụ treo (ảnh có rồi mà lệnh không chịu trả về dấu nhắc),
+    // và nó sẽ kết thúc bằng một lời-hứa-bị-từ-chối-không-ai-bắt. Một cái hẹn giờ luôn phải có chỗ
+    // huỷ, kể cả khi đường đi bình thường không bao giờ chạm tới nó.
+    let henGio;
+    const dongHo = new Promise((_, fail) => {
+      henGio = setTimeout(() => fail(new Error(
+        `Trang không báo sẵn sàng sau ${Math.round(hanCho / 1000)} giây.\n`
+        + '  ⇒ Chạy lại KHÔNG kèm cờ nào để xem lỗi phía trình duyệt, hoặc bớt số kỷ:\n'
+        + '    node scripts/city-preview.mjs --sweep --eras 1,2 --theme light')), hanCho);
+    });
+    // Không ai bắt lời từ chối này nếu cuộc đua đã kết thúc — nói trước để Node khỏi coi là lỗi.
+    dongHo.catch(() => {});
+    try {
+      await Promise.race([
+        (async () => {
+          for (;;) {
+            if (await doc("document.body && document.body.dataset.ready === '1'")) return;
+            await nghi(250);
+          }
+        })(),
+        dongHo,
+      ]);
+    } finally {
+      xong = true;
+      clearInterval(nhac);
+      clearTimeout(henGio);
+    }
+
+    // ── HỎI TRÌNH DUYỆT CANVAS NẰM Ở ĐÂU (không khai, không đoán) ─────────────
+    const do_ = await doc(`(() => {
+      const c = document.querySelector('canvas');
+      const r = c.getBoundingClientRect();
+      return {
+        x: r.x, y: r.y, width: r.width, height: r.height,
+        buffW: c.width, buffH: c.height,
+        vpW: window.innerWidth, vpH: window.innerHeight,
+        info: (document.getElementById('info') || {}).textContent || '',
+      };
+    })()`);
+    info = do_.info;
+
+    const kiem = kiemKhungNhin(do_, { width: do_.vpW, height: do_.vpH });
+    if (!kiem.ok) {
+      throw new Error(
+        'CANVAS THÒ RA NGOÀI KHUNG NHÌN — ảnh sẽ bị xén và KHÔNG có gì nói ra (đúng TECH_DEBT #49).\n'
+        + `  hộp bao canvas: x=${do_.x} y=${do_.y} ${do_.width}×${do_.height}\n`
+        + `  khung nhìn:     ${do_.vpW}×${do_.vpH}\n`
+        + `  thiếu:          ${kiem.thieuNgang} cột · ${kiem.thieuDoc} dòng\n`
+        + '  ⇒ Nới `trangW`/`trangH` trong `shoot()` (scripts/city-preview.mjs) rồi chạy lại.');
+    }
+
+    // ── CHỤP THEO DẢI NGANG RỒI GHÉP ─────────────────────────────────────────
+    // ⚠️ KHÔNG PHẢI TỐI ƯU, LÀ ĐIỀU KIỆN CẦN: một tin nhắn CDP không quá 4 MiB (xem `HAN_TIN_CDP`).
+    // Chụp một phát thì bản quét 15 kỷ chết giữa chừng với đúng một dòng "ổ cắm CDP lỗi".
+    const hopNguyen = {
+      x: Math.round(do_.x), y: Math.round(do_.y),
+      width: Math.round(do_.width), height: Math.round(do_.height),
+    };
+    // Canvas ở đây luôn được ghim cỡ CSS bằng số nguyên. Nếu ngày nào đó không còn vậy thì phép
+    // làm tròn trên ĂN MẤT một phần khung hình — nên nó phải KÊU, đừng lặng lẽ đúng gần đúng.
+    const lechNguyen = Math.max(
+      Math.abs(do_.x - hopNguyen.x), Math.abs(do_.y - hopNguyen.y),
+      Math.abs(do_.width - hopNguyen.width), Math.abs(do_.height - hopNguyen.height),
+    );
+    if (lechNguyen > 0.01) {
+      process.stderr.write(`  ⚠️  hộp bao canvas KHÔNG nguyên (${do_.x},${do_.y} ${do_.width}×${do_.height})`
+        + ` — đã làm tròn, ảnh có thể lệch tới ${lechNguyen.toFixed(2)} điểm ảnh.\n`);
+    }
+
+    const dsBang = chiaBang(hopNguyen);
+    if (dsBang.length > 1) {
+      process.stderr.write(`  … chụp ${dsBang.length} dải ngang (trần một tin nhắn CDP là 4 MiB)\n`);
+    }
+    const dai = [];
+    for (const b of dsBang) {
+      const anh = await cdp('Page.captureScreenshot', {
+        format: 'png',
+        clip: { x: hopNguyen.x, y: hopNguyen.y + b.y, width: hopNguyen.width, height: b.height, scale: 1 },
+      });
+      const d = decodePng(Buffer.from(anh.data, 'base64'));
+      // Đối chứng NẰM TRONG ĐƯỜNG CHẠY THẬT: đặt hàng bao nhiêu phải nhận về đúng bấy nhiêu. Thiếu
+      // nó thì một phép làm tròn phía Chromium sẽ lặng lẽ làm ảnh ghép ngắn đi vài hàng.
+      if (d.width !== hopNguyen.width || d.height !== b.height) {
+        throw new Error(`dải tại y=${b.y} trả về ${d.width}×${d.height}, đặt hàng `
+          + `${hopNguyen.width}×${b.height} — không ghép được vì sẽ ra ảnh sai thầm lặng.`);
+      }
+      dai.push(d);
+    }
+    const ghep = ghepDoc(dai);
+    if (ghep.height !== hopNguyen.height) {
+      throw new Error(`ghép xong cao ${ghep.height}, hộp bao cao ${hopNguyen.height}`);
+    }
+    writeFileSync(pngPath, encodePng(ghep));
+    hop = {
+      x: hopNguyen.x, y: hopNguyen.y, width: hopNguyen.width, height: hopNguyen.height,
+      soDai: dsBang.length,
+      khungNhin: { width: do_.vpW, height: do_.vpH },
+      boDem: { width: do_.buffW, height: do_.buffH },
+    };
+  } finally {
+    try { ws.close(); } catch { /* đóng được thì tốt, không thì thôi */ }
+    child.kill();
+  }
+  return { info, hop };
 }
 
 async function main() {
@@ -863,11 +1166,14 @@ async function main() {
     const tag = `${eras[0]}-${eras[eras.length - 1]}`;
     const pngPath = resolve(OUT_DIR, `sweep-${args.theme}-ky${tag}.png`);
     try {
-      await shoot(chrome, `http://127.0.0.1:${port}/index.html`, pngPath, {
+      const { info } = await shoot(chrome, `http://127.0.0.1:${port}/index.html`, pngPath, {
         width: sweepHours.length * args.cell + 64,
         // +40: chỗ cho hàng tiêu đề giờ và dòng chữ số liệu ở dưới cùng.
         height: eras.length * (cellH + 22) + 40,
       });
+      // Dòng số liệu nay nằm NGOÀI ảnh (ảnh cắt đúng hộp bao canvas), nên phải in ra terminal —
+      // đổi chỗ hiển thị, không bỏ thông tin.
+      if (info) console.log(`  ${info}`);
     } finally {
       server.close();
     }
@@ -883,7 +1189,11 @@ async function main() {
     const geomPath = pngPath.replace(/\.png$/, '.geom.json');
     writeFileSync(geomPath, `${JSON.stringify({
       png: pngPath.split('/').pop(),
-      pad: 8,          // #wrap { padding: 8px } trong `sweepPageHtml`
+      // ⚠️ `pad: 0` — KHÔNG PHẢI 8. Từ 2026-08-19 ảnh được cắt ĐÚNG hộp bao canvas bằng CDP
+      // `clip` (xem `shoot`), nên phần đệm `#wrap { padding: 8px }` KHÔNG còn trong ảnh nữa.
+      // Giữ trường này thay vì xoá: `sweep-score.mjs` tính `X0 = pad + xLabel`, nên một luật vẫn
+      // chỉ có một công thức và bên chấm điểm không phải biết chuyện gì vừa đổi.
+      pad: 0,
       xLabel: 60,      // ctx.drawImage(stage, 60 + col * CELL_W, y)
       yHeader: 30,     // y = 30 + row * (CELL_H + LABEL_H)
       cellW: args.cell,
@@ -942,26 +1252,39 @@ async function main() {
       // hẳn mà dùng chung tên file là cách chắc chắn nhất để một phép đo đúng cho ra kết luận sai.
       const focusTag = args.focus > 0 ? `-focus${args.focus}` : '';
       const pngPath = resolve(OUT_DIR, `city-era${String(era).padStart(2, '0')}-${args.theme}${hourTag}${maskTag}${shadowTag}${focusTag}.png`);
+      let info = '';
+      let hop = null;
       try {
-        await shoot(chrome, `http://127.0.0.1:${port}/index.html`, pngPath, options);
+        ({ info, hop } = await shoot(chrome, `http://127.0.0.1:${port}/index.html`, pngPath, options));
       } finally {
         server.close();
       }
-      // ⚠️ HỒ SƠ HÌNH HỌC ĐI KÈM ẢNH ĐƠN — CÙNG LUẬT VỚI BẢN QUÉT, VÀ NÓ VỪA TRẢ GIÁ THẬT.
-      // Ảnh chụp RỘNG HƠN canvas: `#wrap { padding:16px }` cộng dòng số liệu bên dưới, nên một tấm
-      // 1100×700 ra file 1134×780 — **12,9% ảnh không phải khung hình thành phố**. Phần thừa ấy đã
-      // được tô đen ở chế độ mặt nạ (xem `pageHtml`) nên nó KHÔNG còn phá phép phân loại kênh màu
-      // nữa; nhưng nó vẫn nằm trong MẪU SỐ, và một phép đo "nhà chiếm bao nhiêu phần khung hình"
-      // chia cho mẫu số ấy sẽ thấp hơn sự thật một cách có hệ thống. Đúng bài học `TECH_DEBT #44`:
-      // trước khi tin một tỉ lệ, hỏi "mẫu số của tôi có lẫn thứ không thuộc câu hỏi không?".
-      // ⇒ Ghi thẳng toạ độ canvas ra đây; `mask-count.mjs` ĐỌC file này và TỪ CHỐI chạy nếu thiếu,
-      // thay vì tự đoán bằng cách dò mép theo màu (đúng thứ đã bịa ra 5 lỗi ma ở Phase 4G).
+      // ⚠️ HỒ SƠ HÌNH HỌC ĐI KÈM ẢNH ĐƠN — CÙNG LUẬT VỚI BẢN QUÉT.
+      // LỊCH SỬ, ĐỪNG XOÁ: cho tới 2026-08-19 ảnh chụp RỘNG HƠN canvas (`#wrap { padding:16px }`
+      // cộng dòng số liệu bên dưới), nên một tấm 1100×700 ra file 1134×780 — 12,9% ảnh không phải
+      // khung hình. Phần thừa ấy nằm trong MẪU SỐ và làm mọi tỉ lệ thấp hơn sự thật một cách có hệ
+      // thống (`TECH_DEBT #44`: trước khi tin một tỉ lệ, hỏi "mẫu số có lẫn thứ không thuộc câu
+      // hỏi không?"). Bản vá đầu KHAI toạ độ canvas ra đây rồi cắt theo — VẪN SAI, vì khung nhìn
+      // thật chỉ cao 693 nên canvas bị xén 23 dòng: con số khai (700) lớn hơn số dòng thật sự vẽ
+      // ra (677). Một toạ độ KHAI không phải một toạ độ ĐO (`TECH_DEBT #49`).
+      // ⇒ NAY ảnh được cắt ĐÚNG hộp bao canvas ngay lúc chụp (CDP `clip`, xem `shoot`), nên
+      // `pad = 0` và ảnh CHÍNH LÀ khung hình. Hồ sơ này giữ lại để ghi ĐẦU VÀO đã sinh ra tấm ảnh
+      // (kỷ, giờ, số phiên, mặt nạ, thu phóng) — bài học Phase 11: một con số nghiệm thu phải đi
+      // kèm công cụ VÀ đầu vào đã đo ra nó.
       const geomPath = pngPath.replace(/\.png$/, '.geom.json');
       writeFileSync(geomPath, `${JSON.stringify({
         png: pngPath.split('/').pop(),
-        pad: 16,               // #wrap { padding: 16px } trong `pageHtml`
+        pad: 0,
         canvasW: options.width,
         canvasH: options.height,
+        // ⚠️ HỘP BAO ĐÃ ĐO, không phải hộp bao đã khai — đây chính là thứ phân biệt bản này với
+        // bản đã sai. Nếu `doW`/`doH` khác `canvasW`/`canvasH` thì trang đã co giãn canvas và
+        // MỌI kết luận về tỉ lệ khung hình phải xét lại.
+        doX: hop?.x ?? null,
+        doY: hop?.y ?? null,
+        doW: hop?.width ?? null,
+        doH: hop?.height ?? null,
+        khungNhin: hop?.khungNhin ?? null,
         era,
         hour,
         sessions: args.sessions,
@@ -971,13 +1294,56 @@ async function main() {
         theme: args.theme,
       }, null, 2)}\n`);
       console.log(`✓ kỷ ${era} · ${hour === null ? 'giờ trung tính' : `${hour} giờ`} → ${pngPath}`);
+      // ⚠️ IN DÒNG SỐ LIỆU RA TERMINAL. Ảnh nay cắt đúng khung hình nên dòng chữ dưới ảnh không
+      // còn nằm trong PNG — nhưng nó là chỗ DUY NHẤT Đàm đọc được số lệnh vẽ / số tam giác mà
+      // không phải mở công cụ khác, nên nó chuyển sang đây chứ không biến mất.
+      if (info) console.log(`  ${info}`);
     }
   }
 
   rmSync(WORK_DIR, { recursive: true, force: true });
 }
 
-main().catch((error) => {
-  console.error(error);
-  process.exit(1);
-});
+/**
+ * TỰ KIỂM PHÉP KIỂM — nhốt BỘ SỐ HỎNG CŨ của `TECH_DEBT #49`.
+ *
+ * ⚠️ Một ngưỡng không kèm đối chứng sẽ bị nới dần cho tiện (bài học Phase 9A). Ở đây "ngưỡng" là
+ * chính cái cổng chặn, nên đối chứng phải dựng lại ĐÚNG con số đã hỏng: khung nhìn 1134×693 (cái
+ * mà `--window-size=1134,780` thật sự cho ra trong hộp cát này) với canvas 1100×700 đặt ở y=16 —
+ * ca ấy PHẢI bị bắt, và phải bắt đúng 23 dòng, không phải "bắt được là xong".
+ */
+function selftest() {
+  const canvasCu = { x: 16, y: 16, width: 1100, height: 700 };
+
+  // (1) BỘ SỐ HỎNG CŨ — 23 dòng bị xén. Đây là ca đã chạy thật suốt nhiều tháng.
+  const cu = kiemKhungNhin(canvasCu, { width: 1134, height: 693 });
+  if (cu.ok) throw new Error('selftest hỏng: bộ số cũ (khung nhìn 1134×693) LỌT LƯỚI');
+  if (cu.thieuDoc !== 23) throw new Error(`selftest hỏng: phải thiếu ĐÚNG 23 dòng, ra ${cu.thieuDoc}`);
+  if (cu.thieuNgang !== 0) throw new Error(`selftest hỏng: bộ số cũ không thiếu cột, ra ${cu.thieuNgang}`);
+
+  // (2) BỘ SỐ MỚI — khung nhìn của `shoot()` hiện nay (width + 96, height + 240) phải ĐẠT.
+  const moi = kiemKhungNhin(canvasCu, { width: 1100 + 96, height: 700 + 240 });
+  if (!moi.ok) throw new Error('selftest hỏng: khung nhìn mới vẫn bị báo xén');
+
+  // (3) ĐỐI CHỨNG TRỤC NGANG — phép kiểm phải chạm tới CẢ HAI chiều, không chỉ chiều đang sai.
+  // Bản `--selftest` của `frame-fit.mjs` (Phase 7B) từng chỉ bảo chứng một trục và mù đúng trục
+  // kia; ở đây chiều đang sai là DỌC nên chiều NGANG mới là chiều dễ quên.
+  const hep = kiemKhungNhin(canvasCu, { width: 1115, height: 940 });
+  if (hep.ok || hep.thieuNgang !== 1) throw new Error(`selftest hỏng: thiếu 1 cột mà không bắt được (${JSON.stringify(hep)})`);
+
+  // (4) THÒ RA NỬA ĐIỂM ẢNH VẪN LÀ THÒ RA — `Math.round` sẽ tha, `Math.ceil` thì không.
+  const nua = kiemKhungNhin({ x: 0, y: 0, width: 100.4, height: 100 }, { width: 100, height: 100 });
+  if (nua.ok || nua.thieuNgang !== 1) throw new Error('selftest hỏng: thò ra 0,4 điểm ảnh bị tha');
+
+  console.log('✓ selftest: cổng chặn bắt đúng ca 23 dòng bị xén của TECH_DEBT #49, và bắt cả hai chiều');
+}
+
+// ⚠️ CHẠY CLI CHỈ KHI ĐƯỢC GỌI THẲNG — để `cityPreviewSource.test.js` `import` được `kiemKhungNhin`
+// mà không mở trình duyệt. Cùng khuôn với `png-probe.mjs` và `mask-count.mjs`.
+if (import.meta.url === `file://${process.argv[1]}`) {
+  if (process.argv.includes('--selftest')) { selftest(); process.exit(0); }
+  main().catch((error) => {
+    console.error(error);
+    process.exit(1);
+  });
+}

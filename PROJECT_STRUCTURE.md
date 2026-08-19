@@ -411,7 +411,13 @@
 │   │                           #   huyền (`) trong chú thích làm chết cả template >300 dòng; nháy
 │   │                           #   kép ASCII trong dòng in ra bị bench-macbook.sh cắt cụt; và
 │   │                           #   `kiemKhungNhin` + `chiaBang` (cổng chống xén ảnh · chia dải
-│   │                           #   chụp cho lọt trần 4 MiB của ổ cắm CDP — ADR-036).
+│   │                           #   chụp cho lọt trần 4 MiB của ổ cắm CDP — ADR-036); và `soiVetRach`
+│   │                           #   + `hangCauTrucBangQuet` (ảnh RÁCH NGANG — `TECH_DEBT #52`).
+│   │                           #   ⚠️ `soiVetRach` quét MỌI mép hàng, CỐ Ý không dựa vào mốc chia
+│   │                           #   dải: ảnh hỏng thật rách ở hàng 441 còn mốc dải là 476, tức lời
+│   │                           #   giải thích "một dải đến từ khung hình cũ" đã bị số đo bác bỏ.
+│   │                           #   Bảng quét có mép sắc lẹm ĐÚNG THIẾT KẾ ở mọi dải nhãn ⇒ phải
+│   │                           #   truyền `hangCauTruc`, và test đòi danh sách ấy BẰNG đúng 30 hàng.
 │   ├── png-probe.mjs           #   ĐỌC **VÀ GHI** PNG — cả dự án chỉ một chỗ biết định dạng này.
 │   │                           #   `decodePng` để đo màu thật trên màn hình; `encodePng`+`ghepDoc`
 │   │                           #   để ghép các dải chụp lại thành một ảnh. Đừng dựng chunk IHDR ở

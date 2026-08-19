@@ -2143,6 +2143,49 @@ ship một trạng thái dở dang, hãy làm nó **ĐẾM ĐƯỢC trong một 
 
 ---
 
+## #52 — Một ảnh nghiệm thu đã bị RÁCH NGANG và ta KHÔNG biết vì sao; nay có cổng chặn nhưng chưa có chẩn đoán
+
+- **Module**: `scripts/city-preview.mjs` (`shoot`, `soiVetRach`, `chiaBang`).
+- **Priority**: Medium · **Severity**: High (một tấm rách cho ra số liệu lệch vài điểm phần trăm mà
+  không cổng nào kêu) · **Status**: Open (mở 2026-08-19 trong §2-C).
+- **Impact**: `TRUOC-A-s20-ky09.png` báo đất trống **37,37%** trong khi sự thật là **41,61%** — sai
+  4,24 điểm phần trăm trên đúng đại lượng đang dùng để nghiệm thu. Nếu tấm ấy không tình cờ bị hai
+  mặt nạ khác nhau cãi nhau về cùng một đại lượng thì con số sai đã đi thẳng vào báo cáo, và cả một
+  kết luận mỹ thuật đã dựa lên nó.
+- **Root Cause**: **CHƯA BIẾT.** Lời giải thích đầu tiên — *"`shoot` chụp thành nhiều dải, một dải
+  đến từ khung hình cũ"* — nghe rất xuôi và **đã bị chính số đo bác bỏ**: chỗ rách nằm ở **hàng
+  441**, còn mốc chia dải của khung 1100×700 là **hàng 476**. Ảnh gốc đã bị ghi đè bằng bản dựng
+  lại (md5 `5263956e…`) nên không truy được nữa. Các giả thuyết còn sống: Chromium trả về một khung
+  hình đang vẽ dở; một lượt `Page.captureScreenshot` bắt gặp cảnh giữa hai lần rAF; hoặc một khối
+  cảnh vật/mặt nạ được gắn muộn hơn một khung.
+- **Current Risk**: THẤP-đã-chặn. `shoot` nay quét MỌI mép hàng bằng `soiVetRach` sau khi ghép,
+  chụp lại tối đa 3 lượt, và **dừng hẳn chứ không ghi ảnh** nếu vẫn rách. Ngưỡng hiệu chuẩn bằng số
+  đo thật (120 ảnh lành: mép lớn nhất 0,0582 · tỉ số lớn nhất 14,5× — đối chứng rách: 0,180/66× và
+  0,361/132×), khoá bằng 4 bài ở `scripts/cityPreviewSource.test.js`, cả 7 phép phá đều đã thử-cho-đỏ.
+- **Future Risk**: cổng chặn **triệu chứng**, không chữa **nguyên nhân**. Nếu tỉ lệ rách tăng (hôm
+  nay ~1/120) thì mỗi ảnh phải chụp 2–3 lượt và bản quét 15 kỷ chậm gấp đôi; nếu một ngày nào đó
+  nó rách theo chiều DỌC thì phép quét theo hàng mù hoàn toàn.
+- **Recommended Solution**: (a) giữ một bản sao ảnh bị từ chối vào `.city-preview/rach/` để lần sau
+  còn có vật chứng mà chẩn đoán — hôm nay không có, và đó chính là lý do mục này phải để ngỏ;
+  (b) đo tỉ lệ rách thật bằng cách đếm số lượt chụp lại qua một lần quét đầy đủ; (c) nếu tỉ lệ đáng
+  kể thì ép trang đứng yên (dừng vòng lặp hoạt hoạ) trước khi chụp thay vì chụp rồi kiểm.
+- **Estimated Complexity**: (a) rất nhỏ · (b) nhỏ · (c) vừa.
+- **Blocking Conditions**: không có — (a) làm được ngay, nhưng cố ý KHÔNG làm trong §2-C để không
+  mở rộng phạm vi một task đang đo mật độ.
+- ⚠️ **BÀI HỌC KÈM THEO, ĐÃ TRẢ GIÁ NGAY TRONG PHIÊN MỞ MỤC NÀY**: ngưỡng hiệu chuẩn trên **120 ảnh
+  một-cảnh** rồi đem áp cho **bảng quét 15 kỷ** ⇒ kêu oan đúng **30 chỗ**, cách nhau đều 208 hàng =
+  `CELL_H(186) + LABEL_H(22)` — đó là các **dải nhãn** mà chính trang xem thử vẽ ra. Một tấm bảng
+  dán ảnh thì CÓ mép sắc lẹm, và có rất nhiều. Đúng hình dạng `TECH_DEBT #38`: một con số đo trên
+  MỘT quần thể được đọc thành luật của CẢ TẬP. Cách chữa **không** phải nới ngưỡng (nới thì ảnh
+  một-cảnh mất hết hàng rào) mà là **kể tên những hàng mà mép sắc lẹm là ĐÚNG THIẾT KẾ**
+  (`hangCauTrucBangQuet`, suy từ CÙNG công thức bố cục của `sweepPageHtml`, tái lập đúng cả 30 hàng
+  — có test đòi BẰNG NHAU chứ không "bao gồm", vì "bao gồm" là cách một bản vá thành cái chăn trùm).
+- **Review Trigger**: lần đầu thấy dòng `⚠️ ảnh rách ngang … chụp lại` trong log, hoặc lần đầu một
+  lượt dựng ảnh chết với `ảnh vẫn RÁCH NGANG sau 3 lượt`.
+- **Owner**: chưa phân công · **Status**: Open
+
+---
+
 ## #50 — `md5sum` của ảnh dựng KHÔNG ổn định khi máy bận, nên nó chỉ chứng minh được MỘT chiều
 
 - **Module**: mọi phép nghiệm thu bằng ảnh (`scripts/city-preview.mjs` → `md5sum`), và luật nghiệm

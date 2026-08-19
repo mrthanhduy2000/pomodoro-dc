@@ -30,6 +30,7 @@ import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import {
   BYTE_MOI_DIEM_XAU_NHAT, chiaBang, HAN_TIN_CDP, kiemKhungNhin, SO_DIEM_MOI_BANG,
+  hangCauTrucBangQuet, soiVetRach, VET_RACH_HE_SO, VET_RACH_SAN,
 } from './city-preview.mjs';
 
 const GỐC = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -205,4 +206,160 @@ test('hộp không hợp lệ thì từ chối, không đoán bừa', () => {
   assert.throws(() => chiaBang({ width: 10.5, height: 4 }), /nguyên và dương/);
   assert.throws(() => chiaBang({ width: 10, height: 0 }), /nguyên và dương/);
   assert.throws(() => chiaBang({ width: 10, height: 4 }, 0), /phải dương/);
+});
+
+/**
+ * ─── ẢNH RÁCH NGANG ───────────────────────────────────────────────────────────────────────────
+ *
+ * Ngày 2026-08-19 một tấm ảnh nghiệm thu bị rách ngang: nó báo đất trống 37,37% trong khi sự thật
+ * là 41,61%. Nó lọt qua cả ba cổng đang có (md5 khác nhau · 0 điểm màu mốc · các lớp cộng đủ 100%)
+ * vì tấm ấy hợp lệ về mọi mặt. Xem `soiVetRach` trong `city-preview.mjs` để biết vì sao lời giải
+ * thích đầu tiên ("một dải đến từ khung hình cũ") đã bị chính số đo bác bỏ.
+ *
+ * Mọi con số dưới đây là số ĐO ĐƯỢC trên 120 ảnh mặt nạ thật, không phải số chọn tay.
+ */
+
+/** Dựng một ảnh thử: mỗi hàng gồm `tỉLệLục` phần lục, phần còn lại đỏ. Chữ ký hàng = [1−f, f, 0, 0]. */
+function ảnhTheoHàng(width, height, tỉLệLục) {
+  const pixels = Buffer.alloc(width * height * 4);
+  for (let y = 0; y < height; y += 1) {
+    const sốLục = Math.round(width * tỉLệLục(y));
+    for (let x = 0; x < width; x += 1) {
+      const i = (y * width + x) * 4;
+      if (x < sốLục) pixels[i + 1] = 200; else pixels[i] = 200;
+      pixels[i + 3] = 255;
+    }
+  }
+  return { pixels, width, height };
+}
+
+test('ẢNH RÁCH — ĐỐI CHỨNG nhốt đúng ca đã cắn: chỗ đứt KHÔNG nằm ở mốc chia dải', () => {
+  // 0,36 và nhịp nhiễu 0,0027 là hai con số đo được từ ảnh đối chứng thật (nửa dưới lấy từ kỷ khác).
+  const RÁCH_TẠI = 441;
+  const ảnh = ảnhTheoHàng(1100, 700, (y) => (y < RÁCH_TẠI ? 0.80 : 0.44) + (y % 2 ? 0.0027 : 0));
+  const mốcDải = chiaBang({ width: 1100, height: 700 }).map((b) => b.y).filter((y) => y > 0);
+
+  const kết = soiVetRach(ảnh, mốcDải);
+  assert.equal(kết.hong, true, 'một vết rách 36% bề ngang PHẢI bị bắt');
+  assert.deepEqual(kết.xau.map((m) => m.y), [RÁCH_TẠI], 'và phải chỉ đúng hàng bị rách, không kêu bừa');
+
+  // ⚠️ ĐÂY LÀ PHẦN QUAN TRỌNG NHẤT CỦA BÀI NÀY. Chỗ rách thật nằm ở hàng 441, mốc chia dải là 476.
+  // Nếu phép quét chỉ soi mốc dải (đúng như lời giải thích đầu tiên đề nghị) thì nó sẽ MÙ với
+  // chính ca đã cắn. Bài test khoá cả hai vế: mốc dải KHÔNG phải 441, và phép quét vẫn bắt được.
+  assert.ok(!mốcDải.includes(RÁCH_TẠI),
+    'giả định của bài test đã hỏng: mốc chia dải nay trùng chỗ rách, phải chọn chỗ khác');
+  assert.equal(kết.xau[0].trungMocDai, false, 'và phải NÓI RA rằng chỗ rách không trùng mốc dải nào');
+});
+
+test('ẢNH RÁCH — mức khắc nghiệt NHẤT từng đo trên ảnh lành vẫn phải được THA', () => {
+  // Trên 120 ảnh mặt nạ thật (~83.000 mép hàng): mép lớn nhất 0,0582 · tỉ số lớn nhất 14,5×.
+  // Ảnh thử này gộp CẢ HAI kỷ lục vào một tấm — khắc nghiệt hơn thực tế, vì ngoài đời chúng nằm ở
+  // hai tấm khác nhau. Không có bài này thì ai đó siết ngưỡng cho "chắc ăn" và biến phép kiểm
+  // thành một cỗ máy báo động giả, mà một cảnh báo kêu oan còn tệ hơn không có cảnh báo.
+  const MÉP_LÀNH_LỚN_NHẤT = 0.0582;
+  const NHIỄU = MÉP_LÀNH_LỚN_NHẤT / 14.5; // để tỉ số tại chỗ ấy ra đúng 14,5×
+  const ảnh = ảnhTheoHàng(1100, 700, (y) => (
+    0.30 + (y >= 330 ? MÉP_LÀNH_LỚN_NHẤT : 0) + (y % 2 ? NHIỄU : 0)
+  ));
+  const kết = soiVetRach(ảnh, []);
+  assert.equal(kết.hong, false,
+    `ảnh lành bị kêu oan tại ${JSON.stringify(kết.xau)} — ngưỡng đã bị siết quá tay`);
+});
+
+test('ẢNH RÁCH — HAI VẾ của ngưỡng, hỏi TỪNG vế một', () => {
+  // ⚠️ Hỏi tổng thì một vế hỏng vẫn xanh nhờ vế kia (bẫy "cái phễu nằm trong thứ sinh ra để chống
+  // phễu", Phase 10 Bước 2). Nên hai ca dưới đây tách hẳn: mỗi ca chỉ vi phạm MỘT vế.
+
+  // (a) BƯỚC NHẢY TO nhưng KHÔNG nổi bật: cả tấm vốn đã lộn xộn ⇒ tỉ số chỉ 15×, dưới 30×.
+  const ồnÀo = ảnhTheoHàng(1100, 700, (y) => 0.40 + (y % 2 ? 0.02 : 0) + (y >= 300 ? 0.30 : 0));
+  assert.equal(soiVetRach(ồnÀo, []).hong, false,
+    'một bước nhảy to trong một tấm vốn lộn xộn KHÔNG phải vết rách — bỏ vế TỈ SỐ thì ca này kêu oan');
+
+  // (b) NỔI BẬT nhưng NHỎ: tấm phẳng lì nên trung vị = 0 ⇒ tỉ số vô cùng, mà bước nhảy chỉ 0,05.
+  const phẳngLì = ảnhTheoHàng(1100, 700, (y) => (y < 350 ? 0.40 : 0.45));
+  const b = soiVetRach(phẳngLì, []);
+  assert.equal(b.trungVi, 0, 'giả định của ca (b) đã hỏng: tấm này phải phẳng lì');
+  assert.equal(b.hong, false,
+    'một chênh lệch 5% trong một tấm phẳng KHÔNG phải vết rách — bỏ vế SÀN thì ca này kêu oan');
+
+  // Và hai ngưỡng phải giữ đúng khoảng cách với số đo thật, kẻo chúng trôi dần cho tiện.
+  assert.ok(VET_RACH_SAN > 0.0582 && VET_RACH_SAN < 0.180,
+    'sàn phải nằm giữa mép lành lớn nhất (0,0582) và ca rách nhẹ nhất đo được (0,180)');
+  assert.ok(VET_RACH_HE_SO > 14.5 && VET_RACH_HE_SO < 66,
+    'hệ số phải nằm giữa tỉ số lành lớn nhất (14,5×) và ca rách nhẹ nhất đo được (66×)');
+});
+
+test('ẢNH RÁCH — phép soi phải được GỌI trong shoot, và ảnh chỉ được ghi SAU khi soi', () => {
+  // ⚠️ `/soiVetRach\(/` trên mã nguồn thì chính dòng ĐỊNH NGHĨA cũng là một match (bẫy đã cắn ba
+  // lần liên tiếp ở Phase 7A) ⇒ lọc bỏ mọi dòng định nghĩa trước khi hỏi.
+  const dòng = NGUỒN.split('\n');
+  const gọi = dòng
+    .map((d, i) => ({ d, i }))
+    .filter(({ d }) => /soiVetRach\s*\(/.test(d) && !/^\s*export function /.test(d));
+  assert.ok(gọi.length >= 1, 'hàm dò vết rách được định nghĩa nhưng KHÔNG ai gọi — đúng loại lỗi'
+    + ' mà lint/build không bao giờ bắt (bài học `summarizeMuseum`, Phase 4H)');
+
+  const ghiẢnh = dòng.findIndex((d) => /writeFileSync\(pngPath/.test(d));
+  assert.ok(ghiẢnh >= 0, 'không tìm thấy chỗ ghi ảnh — file đã đổi cấu trúc?');
+  assert.ok(gọi.some(({ i }) => i < ghiẢnh),
+    'phép soi phải chạy TRƯỚC khi ghi ảnh — soi sau thì tấm rách đã nằm trên đĩa rồi');
+});
+
+/**
+ * ─── DẢI NHÃN CỦA BẢNG QUÉT ───────────────────────────────────────────────────────────────────
+ *
+ * Phép kiểm vết rách ở trên hiệu chuẩn hoàn toàn trên **ảnh một-cảnh** (120 tấm mặt nạ). Lần đầu
+ * đem áp cho **bảng quét 15 kỷ** nó kêu oan đúng 30 chỗ — vì một tấm bảng dán ảnh thì CÓ mép sắc
+ * lẹm, ở mọi dải nhãn. Đúng bài học `TECH_DEBT #38`: một ngưỡng đo trên MỘT quần thể đã được đem
+ * áp cho CẢ TẬP mà không ai hỏi tập kia có cùng hình dạng không.
+ */
+
+/** Đúng 30 hàng mà bản quét 15 kỷ đã kêu oan ngày 2026-08-19 — chép từ log, không tính lại. */
+const KÊU_OAN_THẬT = [
+  30, 216, 238, 424, 446, 632, 654, 840, 862, 1048, 1070, 1256, 1278, 1464, 1486,
+  1672, 1694, 1880, 1902, 2088, 2110, 2296, 2318, 2504, 2526, 2712, 2734, 2920, 2942, 3128,
+];
+
+test('DẢI NHÃN — công thức phải tái lập ĐÚNG 30 hàng đã kêu oan, không thừa không thiếu', () => {
+  // ⚠️ Đây là chỗ phân biệt một BẢN VÁ với một cái CHĂN TRÙM. Nếu danh sách miễn trừ chỉ "bao gồm"
+  // 30 hàng ấy thì nó có thể đang miễn trừ cả nghìn hàng khác và phép kiểm chết lặng. Đòi BẰNG
+  // NHAU, và đòi công thức suy ra từ bố cục (`yHeader + row × (cellH + labelH)`), không phải chép
+  // lại 30 con số vào mã sản phẩm.
+  const tính = hangCauTrucBangQuet({ soKy: 15, cellH: Math.round(300 * 0.62) });
+  assert.deepEqual([...tính].sort((a, b) => a - b), KÊU_OAN_THẬT);
+});
+
+test('DẢI NHÃN — miễn trừ phải NHỎ: không được biến thành cách tắt phép kiểm', () => {
+  const cao = 15 * (Math.round(300 * 0.62) + 22) + 34;
+  const tính = hangCauTrucBangQuet({ soKy: 15, cellH: Math.round(300 * 0.62) });
+  assert.ok(tính.length / cao < 0.05,
+    `miễn trừ ${tính.length}/${cao} hàng (${((tính.length / cao) * 100).toFixed(1)}%) — quá nhiều`);
+
+  // Và nó phải còn bắt được vết rách ở chỗ KHÔNG phải dải nhãn. Không có vế này thì bản vá "miễn
+  // trừ" có thể vô hiệu hoá phép kiểm trên bảng quét mà mọi bài trên vẫn xanh.
+  const cellH = Math.round(300 * 0.62);
+  const RÁCH = 300; // nằm giữa hai dải nhãn (238 và 424), không phải hàng cấu trúc nào
+  assert.ok(!tính.includes(RÁCH), 'giả định hỏng: hàng thử nghiệm lại trùng một dải nhãn');
+  const w = 200; const h = 15 * (cellH + 22) + 34;
+  const pixels = Buffer.alloc(w * h * 4);
+  for (let y = 0; y < h; y += 1) {
+    const sốLục = Math.round(w * ((y < RÁCH ? 0.80 : 0.44) + (y % 2 ? 0.0027 : 0)));
+    for (let x = 0; x < w; x += 1) {
+      const i = (y * w + x) * 4;
+      if (x < sốLục) pixels[i + 1] = 200; else pixels[i] = 200;
+      pixels[i + 3] = 255;
+    }
+  }
+  const kết = soiVetRach({ pixels, width: w, height: h }, [], tính);
+  assert.equal(kết.hong, true, 'vết rách ngoài dải nhãn KHÔNG được miễn trừ theo');
+  assert.deepEqual(kết.xau.map((m) => m.y), [RÁCH]);
+});
+
+test('DẢI NHÃN — bản quét phải THẬT SỰ truyền danh sách miễn trừ vào, không để mặc định rỗng', () => {
+  // Nếu chỗ gọi quên truyền thì bản quét sẽ chết mỗi lần chạy — một hỏng hóc rất ồn, nhưng nó chỉ
+  // lộ ra sau 6 phút dựng ảnh. Bắt ở đây rẻ hơn nhiều.
+  const dòng = NGUỒN.split('\n');
+  const gọi = dòng.filter((d) => /hangCauTrucBangQuet\s*\(/.test(d) && !/^\s*export function /.test(d));
+  assert.ok(gọi.some((d) => /hangCauTruc:/.test(d)),
+    'không thấy chỗ nào truyền `hangCauTruc:` bằng `hangCauTrucBangQuet(...)` — bản quét sẽ đỏ oan');
 });

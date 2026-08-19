@@ -880,6 +880,119 @@ export function chiaBang({ width, height }, soDiemMoiBang = SO_DIEM_MOI_BANG) {
   return bang;
 }
 
+/**
+ * ⚠️ MỘT TẤM ẢNH ĐO ĐƯỢC CÓ THỂ BỊ **RÁCH NGANG** MÀ TRÔNG HOÀN TOÀN BÌNH THƯỜNG.
+ * Đã xảy ra thật ngày 2026-08-19: `TRUOC-A-s20-ky09.png` báo đất trống 37,37% trong khi sự thật là
+ * 41,61% — hai lượt dựng lại độc lập đều ra 41,61 với cùng md5. Tấm ấy lọt qua MỌI cổng đang có:
+ * md5 hai vế khác nhau ✓, 0 điểm màu mốc ✓, các lớp cộng đúng 100% ✓. Nó hợp lệ về mọi mặt, chỉ là
+ * một dải ngang của nó thuộc về một khung hình khác. Thứ lộ ra sự thật hoàn toàn là tình cờ: hai
+ * mặt nạ khác nhau cãi nhau về cùng một đại lượng.
+ *
+ * ⚠️ VÀ ĐÂY LÀ PHẦN PHẢI ĐỌC KỸ — **TÔI KHÔNG BIẾT NGUYÊN NHÂN GỐC, VÀ ĐÃ ĐOÁN SAI MỘT LẦN.**
+ * Lời giải thích đầu tiên nghe rất xuôi: "một DẢI đến từ khung hình cũ", vì `shoot` chụp thành
+ * nhiều dải (xem `chiaBang`). Nhưng chỗ rách đo được nằm ở **hàng 441**, còn mốc chia dải của khung
+ * 1100×700 là **hàng 476** — hai con số khác nhau, tức chỗ rách KHÔNG phải mốc ghép. Ảnh gốc đã bị
+ * ghi đè bằng bản dựng lại nên không truy được nữa. ⇒ Phép kiểm này cố ý **KHÔNG dựa vào mốc dải**:
+ * nó quét MỌI mép hàng và hỏi một câu không cần biết nguyên nhân — *"trong tấm ảnh này có một chỗ
+ * đứt ngang nào nổi bật hẳn so với mọi chỗ khác không?"*. Một phép đo không mang giả định thì không
+ * chết khi giả định sai (đúng bài học `TECH_DEBT #22`: đừng vá một thứ-đại-diện bằng một
+ * thứ-đại-diện khôn hơn — hãy hỏi thẳng đại lượng mình cần).
+ *
+ * ⚠️ VÌ SAO NGƯỠNG PHẢI CÓ HAI VẾ. Một mức TUYỆT ĐỐI thôi thì mù với ngữ cảnh (bẫy Phase 7D: một
+ * con số tuyệt đối không diễn đạt được một luật nói về QUAN HỆ) — mà luật ở đây đúng là quan hệ:
+ * *chỗ đứt không được nổi bật hơn mọi mép hàng khác trong CHÍNH tấm ảnh ấy*. Nhưng một TỈ SỐ thôi
+ * cũng hỏng: ảnh gần phẳng thì trung vị ≈ 0 và tỉ số nổ tung vì một hạt nhiễu. ⇒ Đòi CẢ HAI, và cả
+ * hai hiệu chuẩn bằng số đo thật, không chọn tay (đo 2026-08-19 trên 120 ảnh mặt nạ, 15 kỷ × 3 mốc
+ * tuổi × 2 cây mã × 2 bộ mặt nạ, tổng ~83.000 mép hàng):
+ *   · 120 ảnh LÀNH: mép hàng lớn nhất **0,0582** · tỉ số lớn nhất **14,5×**.
+ *   · ĐỐI CHỨNG rách (nửa dưới lấy từ kỷ khác): cắt tại 476 ra **0,180 / 66×**; cắt tại 441 ra
+ *     **0,361 / 132×**. Ảnh hỏng thật đo được **0,423**.
+ * ⇒ sàn 0,12 nằm giữa 0,0582 và 0,180 (2,1× trên · 1,5× dưới); hệ số 30× nằm giữa 14,5× và 66×
+ * (2,1× trên · 2,2× dưới). Cả hai khoảng trống đều ĐO ĐƯỢC, không phải nới cho vừa.
+ */
+export const VET_RACH_SAN = 0.12;
+export const VET_RACH_HE_SO = 30;
+
+/**
+ * Chữ ký MỎNG của một hàng: tỉ lệ điểm ảnh rơi vào 4 nhóm {đỏ trội · lục trội · lam trội · gần đen}.
+ *
+ * Cố ý KHÔNG dùng độ sáng trung bình: hai màu khác hẳn nhau vẫn có thể cùng độ sáng, nên trung bình
+ * sẽ bỏ sót đúng ca một dải bị thay bằng dải của cảnh khác. Phân bố theo nhóm thì không. Dùng được
+ * cho cả ảnh mặt nạ lẫn ảnh thường.
+ */
+export function chuKyHang(pixels, width, y) {
+  const nhom = [0, 0, 0, 0];
+  for (let x = 0; x < width; x += 1) {
+    const i = (y * width + x) * 4;
+    const r = pixels[i]; const g = pixels[i + 1]; const b = pixels[i + 2];
+    const dinh = Math.max(r, g, b);
+    nhom[dinh < 40 ? 3 : (dinh === r ? 0 : (dinh === g ? 1 : 2))] += 1;
+  }
+  return nhom.map((v) => v / width);
+}
+
+/** Tổng biến phân giữa hai chữ ký — nằm trong [0,1], đọc thẳng ra "bao nhiêu phần bề ngang đã đổi nhóm". */
+export function khoangCachHang(a, b) {
+  return (Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1])
+    + Math.abs(a[2] - b[2]) + Math.abs(a[3] - b[3])) / 2;
+}
+
+/**
+ * ⚠️ NGƯỠNG TRÊN HIỆU CHUẨN TRÊN ẢNH MỘT-CẢNH, VÀ BẢNG QUÉT KHÔNG PHẢI MỘT CẢNH.
+ * Bản đầu của phép kiểm này chạy đúng như thiết kế rồi **kêu oan 30 chỗ** trên bản quét 15 kỷ —
+ * hàng 216, 424, 632, … cách nhau đúng **208 = CELL_H(186) + LABEL_H(22)**. Đó là các **dải nhãn**
+ * mà chính trang xem thử vẽ ra: một tấm bảng dán ảnh thì CÓ mép sắc lẹm, và có rất nhiều.
+ * ⇒ Đúng bài học `TECH_DEBT #38`: một ngưỡng đo trên MỘT quần thể (120 ảnh một-cảnh) đã được đem
+ * áp cho CẢ TẬP mà không ai hỏi tập kia có cùng hình dạng không.
+ *
+ * Cách chữa KHÔNG phải nới ngưỡng (nới thì ảnh một-cảnh mất hết hàng rào) mà là **kể tên những
+ * hàng mà một mép sắc lẹm là ĐÚNG THIẾT KẾ**. Hàm này suy chúng từ CÙNG công thức bố cục mà
+ * `sweepPageHtml` dùng (`y = yHeader + row × (cellH + labelH)`), không phải một bản chép tay.
+ */
+export function hangCauTrucBangQuet({ soKy, cellH, labelH = 22, yHeader = 30 }) {
+  const hang = [];
+  for (let row = 0; row < soKy; row += 1) {
+    const y = yHeader + row * (cellH + labelH);
+    hang.push(y);          // mép trên của ô ảnh (nền bảng → ảnh)
+    hang.push(y + cellH);  // mép dưới của ô ảnh (ảnh → dải nhãn)
+  }
+  return hang;
+}
+
+/**
+ * Quét MỌI mép hàng của một ảnh, tìm chỗ đứt ngang bất thường.
+ *
+ * @param {{pixels: Buffer, width: number, height: number}} anh
+ * @param {number[]} [mocDai] các hàng bắt đầu một dải chụp — CHỈ để ghi chú trong thông báo, KHÔNG
+ *   tham gia vào phép quyết định. Có nó thì thông báo nói được "chỗ rách trùng / không trùng mốc
+ *   dải", tức đưa luôn bằng chứng cho hay chống giả thuyết "một dải đến từ khung hình cũ".
+ * @param {number[]} [hangCauTruc] các hàng mà một mép SẮC LẸM là ĐÚNG THIẾT KẾ — xem `HANG_CAU_TRUC`.
+ * @returns {{trungVi: number, xau: {y: number, buoc: number, tiSo: number, trungMocDai: boolean}[], hong: boolean}}
+ */
+export function soiVetRach(anh, mocDai = [], hangCauTruc = [], san = VET_RACH_SAN, heSo = VET_RACH_HE_SO) {
+  const { pixels, width, height } = anh;
+  if (height < 3) return { trungVi: 0, xau: [], hong: false };
+  const buoc = new Array(height - 1);
+  let truoc = chuKyHang(pixels, width, 0);
+  for (let y = 1; y < height; y += 1) {
+    const nay = chuKyHang(pixels, width, y);
+    buoc[y - 1] = khoangCachHang(truoc, nay);
+    truoc = nay;
+  }
+  const sap = [...buoc].sort((a, b) => a - b);
+  const trungVi = sap[sap.length >> 1];
+  const moc = new Set(mocDai);
+  const boQua = new Set(hangCauTruc);
+  const xau = [];
+  for (let y = 1; y < height; y += 1) {
+    if (boQua.has(y)) continue;
+    const b = buoc[y - 1];
+    const tiSo = b / Math.max(trungVi, 1e-9);
+    if (b > san && tiSo > heSo) xau.push({ y, buoc: b, tiSo, trungMocDai: moc.has(y) });
+  }
+  return { trungVi, xau, hong: xau.length > 0 };
+}
+
 export function kiemKhungNhin(hop, khungNhin) {
   const thieuNgang = Math.max(0, Math.ceil(hop.x + hop.width - khungNhin.width));
   const thieuDoc = Math.max(0, Math.ceil(hop.y + hop.height - khungNhin.height));
@@ -917,7 +1030,8 @@ const nghi = (ms) => new Promise((r) => setTimeout(r, ms));
  * `#info` qua CDP rồi trả về để chỗ gọi in ra terminal. Đổi chỗ hiển thị, không bỏ thông tin.
  */
 async function shoot(chrome, url, pngPath,
-  { width, height, bench = 0, mask = null, noShadow = false, gpu = false, focus = 0 }) {
+  { width, height, bench = 0, mask = null, noShadow = false, gpu = false, focus = 0,
+    hangCauTruc = [] }) {
   // Lúc đo hiệu năng thì PHẢI để stderr chảy ra, vì dòng [bench] đi bằng đường đó — và lúc dựng
   // mặt nạ cũng vậy, vì dòng [mask] là thứ DUY NHẤT chứng minh mặt nạ khớp đúng khối cần khớp.
   // ⚠️ Chế độ cận cảnh cũng phải mở đường này: dòng [focus] là thứ DUY NHẤT nói ra camera đã đứng
@@ -1098,24 +1212,44 @@ async function shoot(chrome, url, pngPath,
     if (dsBang.length > 1) {
       process.stderr.write(`  … chụp ${dsBang.length} dải ngang (trần một tin nhắn CDP là 4 MiB)\n`);
     }
-    const dai = [];
-    for (const b of dsBang) {
-      const anh = await cdp('Page.captureScreenshot', {
-        format: 'png',
-        clip: { x: hopNguyen.x, y: hopNguyen.y + b.y, width: hopNguyen.width, height: b.height, scale: 1 },
-      });
-      const d = decodePng(Buffer.from(anh.data, 'base64'));
-      // Đối chứng NẰM TRONG ĐƯỜNG CHẠY THẬT: đặt hàng bao nhiêu phải nhận về đúng bấy nhiêu. Thiếu
-      // nó thì một phép làm tròn phía Chromium sẽ lặng lẽ làm ảnh ghép ngắn đi vài hàng.
-      if (d.width !== hopNguyen.width || d.height !== b.height) {
-        throw new Error(`dải tại y=${b.y} trả về ${d.width}×${d.height}, đặt hàng `
-          + `${hopNguyen.width}×${b.height} — không ghép được vì sẽ ra ảnh sai thầm lặng.`);
+    // ⚠️ ẢNH CÓ THỂ BỊ RÁCH NGANG — xem `soiVetRach`. Chụp lại là cách chữa đúng: lỗi này là một
+    // cuộc đua, không phải một sai sót tất định. Nhưng chụp lại MÃI thì lại giấu đi một hỏng hóc
+    // thật sự, nên hết lượt thì DỪNG HẲN — không ghi ra một tấm ảnh đáng ngờ, vì số liệu đo từ nó
+    // sai vài điểm phần trăm mà không gì kêu.
+    const mocDai = dsBang.map((b) => b.y).filter((y) => y > 0);
+    const SO_LUOT = 3;
+    let ghep = null;
+    for (let luot = 1; luot <= SO_LUOT; luot += 1) {
+      const dai = [];
+      for (const b of dsBang) {
+        const anh = await cdp('Page.captureScreenshot', {
+          format: 'png',
+          clip: { x: hopNguyen.x, y: hopNguyen.y + b.y, width: hopNguyen.width, height: b.height, scale: 1 },
+        });
+        const d = decodePng(Buffer.from(anh.data, 'base64'));
+        // Đối chứng NẰM TRONG ĐƯỜNG CHẠY THẬT: đặt hàng bao nhiêu phải nhận về đúng bấy nhiêu. Thiếu
+        // nó thì một phép làm tròn phía Chromium sẽ lặng lẽ làm ảnh ghép ngắn đi vài hàng.
+        if (d.width !== hopNguyen.width || d.height !== b.height) {
+          throw new Error(`dải tại y=${b.y} trả về ${d.width}×${d.height}, đặt hàng `
+            + `${hopNguyen.width}×${b.height} — không ghép được vì sẽ ra ảnh sai thầm lặng.`);
+        }
+        dai.push(d);
       }
-      dai.push(d);
-    }
-    const ghep = ghepDoc(dai);
-    if (ghep.height !== hopNguyen.height) {
-      throw new Error(`ghép xong cao ${ghep.height}, hộp bao cao ${hopNguyen.height}`);
+      ghep = ghepDoc(dai);
+      if (ghep.height !== hopNguyen.height) {
+        throw new Error(`ghép xong cao ${ghep.height}, hộp bao cao ${hopNguyen.height}`);
+      }
+      const soi = soiVetRach(ghep, mocDai, hangCauTruc);
+      if (!soi.hong) break;
+      const xau = soi.xau
+        .map((m) => `hàng ${m.y} đổi ${(m.buoc * 100).toFixed(1)}% bề ngang`
+          + ` (gấp ${m.tiSo.toFixed(0)}× mép điển hình, ${m.trungMocDai ? 'TRÙNG mốc dải' : 'không trùng mốc dải'})`)
+        .join(' · ');
+      if (luot === SO_LUOT) {
+        throw new Error(`ảnh vẫn RÁCH NGANG sau ${SO_LUOT} lượt: ${xau}\n`
+          + '  ⇒ KHÔNG ghi ảnh. Một tấm rách trông bình thường nhưng số liệu đo từ nó lệch vài điểm phần trăm.');
+      }
+      process.stderr.write(`  ⚠️  ảnh rách ngang (${xau}) — chụp lại, lượt ${luot + 1}/${SO_LUOT}\n`);
     }
     writeFileSync(pngPath, encodePng(ghep));
     hop = {
@@ -1170,6 +1304,8 @@ async function main() {
         width: sweepHours.length * args.cell + 64,
         // +40: chỗ cho hàng tiêu đề giờ và dòng chữ số liệu ở dưới cùng.
         height: eras.length * (cellH + 22) + 40,
+        // Bảng dán ảnh CÓ mép sắc lẹm ở mọi dải nhãn — kể tên chúng ra thay vì nới ngưỡng.
+        hangCauTruc: hangCauTrucBangQuet({ soKy: eras.length, cellH }),
       });
       // Dòng số liệu nay nằm NGOÀI ảnh (ảnh cắt đúng hộp bao canvas), nên phải in ra terminal —
       // đổi chỗ hiển thị, không bỏ thông tin.

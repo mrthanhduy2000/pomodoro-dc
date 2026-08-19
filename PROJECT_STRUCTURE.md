@@ -340,6 +340,20 @@
 │   │   │   │                      #   ⚠️ KHÔNG có bảng 15 kỷ riêng — ĐỌC `floraStyle.js`, có test
 │   │   │   │                      #   khoá tương quan hạng. Bảng 15 kỷ thuộc về `settingStyle.js`
 │   │   │   │                      #   (VIỆC 2: biển/sông/không nước), là câu hỏi KHÁC
+│   │   │   ├── settingStyle.js    # BẢNG ĐỊA THẾ 15 KỶ (VIỆC 2 Bước A, ADR-039): thành phố NẰM Ở
+│   │   │   │                      #   ĐÂU và VÌ SAO. `water` (none/river/canal/estuary/sea) ·
+│   │   │   │                      #   `side` (hướng mặt nước) · `ground` (ngồi thế nào so với
+│   │   │   │                      #   nước: ridge/flat/bank/bluff/reclaimed) · `reach` · `width`.
+│   │   │   │                      #   Buộc vào `country` của eraStyle — có test hỏi TỪ KHOÁ trong
+│   │   │   │                      #   `note`, khuôn thứ BẢY sau streetStyle/flora/groundFloor/
+│   │   │   │                      #   roof/groundCover
+│   │   │   │                      #   ⚠️ QUAN HỆ MỘT CHIỀU `settingStyle` → `outskirts`: vùng quê
+│   │   │   │                      #   ĐỌC `hasWater(era)` để không trồng cây dưới nước; TUYỆT ĐỐI
+│   │   │   │                      #   không để outskirts khai hướng rồi bảng này đọc ngược lại
+│   │   │   │                      #   ⚠️ `water: 'none'` là câu trả lời ĐÚNG (kỷ 1, 5), khai tường
+│   │   │   │                      #   minh + có test ĐẾM. `MAX_SEA_ERAS`/`MAX_ERAS_PER_SIDE` là
+│   │   │   │                      #   hai trần "dưới một nửa", mỗi trần có ĐỐI CHỨNG bơm bảng hỏng
+│   │   │   │                      #   Hình sẽ dựng ở `city3d/setting.js` (Bước B) — CHƯA CÓ
 │   │   │   ├── groundCoverStyle.js# BẢNG DÙNG ĐẤT 15 KỶ (§2-C, ADR-037): bộ kiểu + trọng số ·
 │   │   │   │                      #   `share` (phần đất trống được dùng) · `scale` · `enclose`.
 │   │   │   │                      #   Trả lời "ở nước ấy mảnh đất cạnh nhà dùng làm gì" — buộc vào

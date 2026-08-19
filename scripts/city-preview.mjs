@@ -206,6 +206,11 @@ import { BLUEPRINT_CATALOG, ERA_METADATA } from '${ROOT}/src/engine/constants.js
 import { Color, MeshBasicMaterial, PerspectiveCamera, WebGLRenderer } from 'three';
 
 const MASK = ${mask === null ? 'null' : JSON.stringify(mask)};
+// Tách tên MỘT LẦN ở đây, dùng cho CẢ HAI việc: bảo bên dựng cắt khối nào (tachDeDo) và tô kênh
+// màu nào cho tên nào. Bản trước tách ở dưới, còn ở trên thì hỏi MASK.includes(...) trên chuỗi
+// thô — hai cách đọc cùng một tham số, và cách hỏi trên chuỗi thì khớp cả tên nằm lọt trong tên
+// khác.
+const MASK_NAMES = MASK ? MASK.split(',').map((s) => s.trim()).filter(Boolean) : [];
 const NO_SHADOW = ${noShadow ? 'true' : 'false'};
 
 const ERA = ${era};
@@ -262,18 +267,17 @@ renderer.shadowMap.needsUpdate = true;
 
 // ⚠️ Truyền ĐÚNG bộ số mà app truyền, không để mặc định: dân số suy ra từ đây, và một trang xem
 // thử vẽ thành phố vắng hơn thật thì nó không còn kiểm chứng được thứ cần kiểm chứng.
-// splitCityMesh: CHỈ bật khi mặt nạ hỏi tên "buildings"/"props". Cả thành phố vốn gộp làm MỘT
-// khối nên ở tầng scene không tách được nhà khỏi cây; cờ này bảo bên dựng tách ra thành BA khối
-// mang tên ('buildings' · 'props' · 'landscape'). Nó thêm lệnh vẽ, nên tuyệt đối không dùng cho ảnh
-// thường và không dùng cho --bench.
+// tachDeDo: TRUYỀN THẲNG danh sách tên mà --mask hỏi, không dịch sang cờ ở đây. Bên dựng mới là
+// bên biết tên nào nằm trong khối nào (NHOM_TACH_THANH_PHO / NHOM_TACH_MAT_DAT ở sceneGraph.js), và
+// nó tự quyết cắt nhát nào. Mỗi nhát cắt tốn thêm lệnh vẽ, nên chỉ ảnh mặt nạ mới đi vào nhánh này
+// — ảnh thường và --bench truyền 'null', dựng y hệt app.
+//
+// ⚠️ Bản trước dịch tay ở ĐÂY (MASK.includes “buildings” …), tức cùng một luật sống ở hai
+// chỗ. Thêm nhóm 'landscape' đã phải sửa cả hai; quên chỗ này thì --mask landscape đo một tấm
+// rỗng mà không có gì đỏ lên. Nay chỉ còn một công thức, nằm cạnh mã dựng.
 const city = createCityScene({
   layout, palette, daylight, renderer, stats: { sessionCount: SESSIONS, streakLength: 9 },
-  splitCityMesh: !!MASK
-    && (MASK.includes('buildings') || MASK.includes('props') || MASK.includes('landscape')),
-  // splitGroundMesh: cùng luật — CHỈ bật khi mặt nạ hỏi tên "ground-grid"/"ground-apron". Mặt đất
-  // vốn là MỘT tấm lưới trải qua cả thành phố lẫn vành đất ngoài, nên không tách thì không trả lời
-  // được câu "chỗ trống Đàm thấy nằm TRONG lưới hay NGOÀI lưới".
-  splitGroundMesh: !!MASK && (MASK.includes('ground-grid') || MASK.includes('ground-apron')),
+  tachDeDo: MASK_NAMES,
 });
 
 // Đẩy đồng hồ tới một thời điểm giữa chừng. Ở t = 0 mọi cư dân đều đứng ở đầu tuyến của mình —
@@ -353,7 +357,7 @@ if (MASK) {
   //
   // ⚠️ VÀ ĐỪNG VIẾT DẤU HUYỀN-NGƯỢC (backtick) TRONG KHỐI NÀY — cả đoạn nằm BÊN TRONG một chuỗi
   // template của entrySource, nên một dấu backtick trong chú thích cũng đủ cắt đôi chuỗi ấy.
-  const names = MASK.split(',').map((s) => s.trim()).filter(Boolean);
+  const names = MASK_NAMES;
   if (names.length > 3) throw new Error('mặt nạ tối đa 3 tên (đỏ/lục/lam)');
   const CHANNELS = [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
   const TÊN_KÊNH = ['đỏ', 'lục', 'lam'];

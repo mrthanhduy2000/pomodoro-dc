@@ -662,6 +662,12 @@
 - ⚠️ **CẦN ĐÀM THỬ TAY** (không test được trên dev): (a) câu nhắc-sau-phiên hiện sau khi xong PHIÊN THẬT; (b) bài "AI phân tích tổng thể" giờ chạy pro — xem có chậm/khác chất lượng không; (c) dòng "Ghi nhớ" lời khuyên hiện sau ≥3 ngày; (d) thông báo chuỗi-sắp-đứt: **từ nay** (11/7) chiều nào quên làm sẽ nhận push (cần đã bật push iPhone) — đây là lần đầu tiên thực sự có cơ hội chạy thật.
 
 ## 🔜 Sẽ làm tiếp (ưu tiên từ trên xuống)
+- ⚠️ **VIỆC 2 Bước B — ĐANG CHỜ ĐÀM DUYỆT BẢNG ĐỊA THẾ.** Bảng 15 dòng đã xong
+  (`settingStyle.js`, ADR-039) và đã trình. Bước B chỉ được bắt đầu SAU khi Đàm gật: dựng hình cho
+  **3 kỷ** (một biển rõ · một sông · một khô), chụp ảnh trước/sau ở khung mặc định, đo lại ba vùng,
+  rồi **DỪNG hỏi tiếp**. Bước C mới trải 12 kỷ còn lại. Ràng buộc Đàm ra: nước tốn **tối đa +1 lệnh
+  vẽ và CHỈ ở kỷ có nước** (kỷ khô không được đổi một đơn vị nào) · **CẤM** nguồn sáng mới, texture
+  mới, shader nước động — nước phẳng, vật liệu tĩnh; hình học thì thoải mái.
 
 > ⚠️ **CHƯƠNG TRÌNH ĐANG CHẠY (2026-08-18)** — Đàm đã duyệt hướng mỹ thuật Bước 1 và ra một
 > **chương trình làm việc liên tục** cho giai đoạn "tiêu ngân sách" hiệu năng (dư 3,2 lần trên M3),
@@ -713,6 +719,59 @@
 - **Lịch sử git `main` từng bị xáo** (thao tác git song song): bản đang chạy là `eb44638` — chứa ĐỦ mọi việc gần đây (Hỏi Coach offline + fix đêm khuya + Coach offline analyst). Vài commit cũ (`1e27505`, `9fbcd62`) thành dangling, KHÔNG còn trong `git log` nhưng code vẫn nằm trong bản deploy. Đừng hoảng nếu không thấy chúng.
 
 ## 🗒️ Nhật ký cập nhật
+
+### 2026-08-19 — VIỆC 2 Bước A: bảng địa thế 15 kỷ, viết TRƯỚC khi có hình (ADR-039)
+
+**Vì sao làm bây giờ.** ADR-038 vừa đưa vùng quê ra ngoài lưới, nhưng vùng quê ấy giống hệt nhau ở
+mọi hướng. Đàm chốt thứ tự làm việc: *"chỗ đắt là BẢNG, không phải hình. Bốn lần trước đã chứng
+minh."* Và anh chốt luôn điểm dừng: **viết xong bảng thì DỪNG, trình bảng cho Đàm xem (chỉ bảng,
+dạng chữ, chưa cần ảnh)** — vì 15 dòng ấy là quyết định mỹ thuật lớn nhất của phase, và sửa một
+dòng chữ rẻ hơn sửa một dòng chữ đã có hình dựng theo.
+
+**Đã làm.**
+- `src/engine/city3d/settingStyle.js` — 15 dòng: `country` · `city` · `water` · `side` · `ground` ·
+  `reach` · `width` · `note`. Năm kiểu nước (`none`/`river`/`canal`/`estuary`/`sea`) chứ không phải
+  ba: kênh đào THẲNG có bờ kè đá, cửa sông là một cái phễu VẪN CÒN bờ bên kia — hai hình dạng khác
+  hẳn nhau. Trục thứ hai `ground` (sống núi · ngang mặt nước · bờ đê · vách dốc · đất lấn) là thứ
+  tách 7 kỷ cùng khai `river` ra khỏi nhau.
+- `settingStyle.test.js` — **12 bài, cả 12 đã thử-cho-đỏ đúng chỗ đã nêu TRƯỚC** trong chú thích.
+- Ba luật của Đàm thành assert đếm được, mỗi luật kèm **đối chứng bơm bảng hỏng**: kỷ khô
+  `deepEqual([1, 5])` · `MAX_SEA_ERAS = 7` (hiện 4) · bốn hướng phải CÒN SỐNG và
+  `MAX_ERAS_PER_SIDE = 6` (hiện đông nhất là `nam` với 4).
+- Gộp hai cờ đo `splitCityMesh`/`splitGroundMesh` thành một tham số `tachDeDo` (danh sách tên nhóm),
+  theo lệnh Đàm *"gom cả ba cờ đo NGAY trong commit tới"*. Bản gộp còn KHÔN HƠN chứ không chỉ gọn
+  hơn: bản cũ dịch `splitCityMesh: !!MASK` nên một mặt nạ chỉ hỏi mặt đất vẫn cắt cả khối thành phố.
+- Trần hộp bao khối `city`: **20,12** = giá trị đo hôm nay **19,7239** cộng 2%, kèm hai đối chứng
+  (chống phễu ở 95% trần · nội thành phải vẫn ≤ 9). Cả ba assert đã thử-cho-đỏ.
+
+**Hai chỗ tôi tự quyết, Đàm cần xem lại bằng mắt.**
+1. **Bác gợi ý "thành Troy" cho kỷ 1** — lệch thời gần bảy nghìn năm (Troy là đồ đồng ~3000–1200
+   TCN; kỷ 1 khai cự thạch Göbekli Tepe + mái lều da thú, tức đồ đá mới tiền-gốm ~9600 TCN). Đàm đã
+   nói rõ đó là gợi ý chứ không phải mệnh lệnh, và chính anh ra luật *"đừng gán biển cho một nơi
+   không có biển vì biển đẹp hơn"*.
+2. **Kỷ 1 và kỷ 5 trùng khít nhau** trên mọi trường hình học (`none`/`ridge`/`reach 0`). Đó là sự
+   thật — hai sống đá khô — nên tôi ĐẾM ca ấy ra (`assert.deepEqual(trung, [[1, 5]])`) thay vì bịa
+   một trục để né.
+
+**Hai lỗi bắt được ngay lần chạy đầu, và cả hai đều đáng ghi.**
+- ⚠️ **`isValidSetting` viết `country.length < 2`** như một cách lười để nói "không rỗng" — và nó
+  **từ chối thẳng kỷ 7**, vì nước ấy tên là **"Ý"**, đúng một ký tự. Bài test bắt ngay. Nếu bảng
+  này không có Ý thì lỗi đã nằm im tới ngày có ai thêm một nước tên một chữ.
+- ⚠️ **Đối chứng "8 kỷ biển" của chính tôi đọc ké bảng thật**: ép 8 kỷ đầu sang biển rồi để 7 kỷ
+  sau nguyên vẹn, mà 4 trong số đó vốn đã là biển ⇒ ra 12 chứ không phải 8. Chính dòng gác *"bảng
+  giả phải có đúng 8"* đã đỏ. **Một đối chứng đọc ké bảng thật thì đổi bảng thật là đổi luôn ý nghĩa
+  của đối chứng** — nay bảng giả dựng độc lập.
+
+**Và một quả mìn cũ nổ lại, ở chỗ đã có sẵn biển báo.** Chú thích tôi viết cho lần gộp cờ nằm TRONG
+template literal 300 dòng của `city-preview.mjs` và chứa dấu nháy ngược (`` `null` ``) ⇒ đóng chuỗi
+giữa chừng. Đo lại thì **cả ba cổng đều bắt được** ca này — `node --check` ĐỎ · `cityPreviewSource
+.test.js` ĐỎ · `npm run lint` ĐỎ — tức lưới an toàn vẫn nguyên vẹn, chỗ hỏng là **tôi không chạy
+chúng ngay sau khi sửa script**, đúng bài học đã ghi trong `CLAUDE.md`. (Ghi chú cho phiên sau: một
+dấu nháy ngược rơi vào vị trí khác có thể để file VẪN parse được, và lúc ấy chỉ bài test đọc mã
+nguồn mới bắt.)
+
+**Chưa làm, và cố ý chưa làm.** Bảng chưa dựng một tam giác nào. Bước B chỉ làm hình cho **3 kỷ**
+(một biển rõ · một sông · một khô) rồi dừng để Đàm xem; Bước C mới trải 12 kỷ còn lại.
 
 ### 2026-08-19 — Đo cái đĩa đất: 21% khung hình là vành đất không phase nội dung nào chạm tới (`TECH_DEBT #53`)
 

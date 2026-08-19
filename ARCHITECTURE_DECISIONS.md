@@ -11,6 +11,67 @@
 
 ---
 
+## ADR-039 — Địa thế là một BẢNG DỮ LIỆU viết TRƯỚC khi có hình, và "không có nước" là một câu trả lời phải khai TƯỜNG MINH
+
+- **Ngày**: 2026-08-19 (VIỆC 2 Bước A trong chỉ thị "chốt bốn câu hỏi, rồi vào việc 2" của Đàm)
+- **Bối cảnh**: ADR-038 vừa đưa vùng quê ra ngoài lưới 12×12, nhưng vùng quê ấy hôm nay chỉ có cây,
+  đá và bụi — **giống hệt nhau ở mọi hướng**. Một thành phố thật gần như luôn nằm cạnh một thứ gì đó
+  quyết định vì sao nó ở đúng chỗ ấy: một con sông, một cửa biển, một con kênh đào, hoặc — với hai
+  trường hợp trong bảng này — một sống núi khô không có nước nào cả. Đàm chốt thứ tự làm việc:
+  *"chỗ đắt là BẢNG, không phải hình. Bốn lần trước đã chứng minh."*
+- **Vấn đề**: nếu đi thẳng vào hình học thì mọi quyết định địa lý sẽ được ra **trong lúc đang viết
+  mã dựng hình**, tức ra vội và ra một mình. Bốn lần trước (`vernacularRoof` · `undergrowth` ·
+  `streetStyle` · `groundFloor`) đều cho cùng một kết quả đo được: thứ tốn thời gian và quyết định
+  chất lượng là **15 dòng dữ liệu**, còn nhà máy hình học thì gần như viết thẳng ra được. Sửa một
+  dòng chữ rẻ hơn sửa một dòng chữ đã có hình dựng theo.
+- **Các phương án cân nhắc**:
+  - **A — ba kiểu nước (`sea` / `river` / `none`), như Đàm nêu ban đầu.** Bác: gộp mất hai HÌNH DẠNG
+    khác hẳn nhau. Kênh Bridgewater THẲNG, bờ kè đá, nhà máy áp sát mép nước — người đào, không phải
+    trời; cửa sông Tagus là một cái phễu rộng hàng cây số **vẫn còn bờ bên kia**. Gộp `canal` vào
+    `river` và `estuary` vào `sea` là bảo nhà máy hình học dựng ra hai thứ sai.
+  - **B — năm kiểu nước, một trục duy nhất.** Bác: 7 kỷ khai `river` sẽ ra 7 bức ảnh giống nhau. Thứ
+    tách chúng là **thành phố NGỒI THẾ NÀO so với mặt nước** — nên có trục thứ hai `ground` (sống
+    núi · ngang mặt nước · bờ đê · vách dốc · đất lấn).
+  - **C — để `outskirts.js` khai hướng nước, `settingStyle` đọc lại.** Bác thẳng theo lệnh Đàm:
+    *"quan hệ MỘT CHIỀU, `settingStyle` → `outskirts`. Hai chiều là cách hai bảng trôi khỏi nhau."*
+    Lý do là câu hỏi chuẩn của dự án — *"ngoài đời hai thứ này có luôn đi cùng nhau không?"*: loài
+    cây và hướng ra nước độc lập với nhau (Lisboa và Porto cùng cây cùng khí hậu, quay ra nước theo
+    hai hướng khác nhau).
+- **Giải pháp chọn**: **B**, cộng luật một chiều của **C**. `src/engine/city3d/settingStyle.js` là
+  BẢNG 15 dòng (`country` · `city` · `water` · `side` · `ground` · `reach` · `width` · `note`), buộc
+  vào `country` của `eraStyle.js` bằng test; `city3d/setting.js` (Bước B) sẽ là HÌNH; tầng cảnh chỉ
+  ĐỌC. Ba luật của Đàm được viết thành assert **đếm được**, mỗi luật kèm một **đối chứng bơm bảng
+  hỏng vào**:
+  - *"Không có nước" là câu trả lời đúng, khai tường minh* ⇒ `assert.deepEqual(KHO, [1, 5])`. Kỷ khô
+    thứ ba xuất hiện thì đỏ; một trong hai kỷ khô được cấp nước cũng đỏ.
+  - *Đừng cho quá nửa số kỷ có biển* ⇒ `MAX_SEA_ERAS = 7` (đúng "dưới một nửa" của 15), hiện dùng 4.
+  - *Hướng bờ nước phải khác nhau* ⇒ cả bốn hướng phải CÒN SỐNG, và không hướng nào quá
+    `MAX_ERAS_PER_SIDE = 6` (dưới một nửa của 13 kỷ có nước). Hiện: bắc 3 · nam 4 · đông 3 · tây 3.
+- **Trade-off**:
+  - ⚠️ **Kỷ 1 và kỷ 5 trùng khít nhau trên mọi trường hình học** (`none`/`ridge`/`reach 0`), và đó là
+    SỰ THẬT chứ không phải một chỗ hổng: cả hai đều là một sống đá khô, chọn vì tầm nhìn và vì thế
+    thủ. Thứ phân biệt chúng nằm ở `eraStyle` (lều da thú so với lâu đài đá), không nằm ở địa lý.
+    Bịa thêm một trục để tách chúng chính là *"gán cho một nơi thứ nó không có vì thứ đó đẹp hơn"* —
+    đúng điều luật (2) cấm. Xử theo khuôn `assert.deepEqual(KHONG_VUA_DAI, ['barrel'])` ở Phase 11:
+    **đếm ca ấy ra tường minh** (`assert.deepEqual(trung, [[1, 5]])`), để cặp thứ hai thì đỏ mà cặp
+    này được tách ra cũng đỏ.
+  - ⚠️ **Đã cân nhắc và BÁC gợi ý "thành Troy" của Đàm cho kỷ 1** — nó lệch thời gần bảy nghìn năm.
+    Troy (Hisarlık, nhìn xuống eo Dardanelles) là ĐỒ ĐỒNG, ~3000–1200 TCN; kỷ 1 khai
+    `landmark: 'cự thạch Göbekli Tepe'` và mái nhà dân là lều da thú, tức đồ đá mới tiền-gốm,
+    ~9600 TCN. Đàm đã nói rõ đó là gợi ý chứ không phải mệnh lệnh, và chính anh ra luật (2). Việc
+    Göbekli Tepe **không có nguồn nước thường xuyên** lại là điều nổi tiếng nhất về nó, nên dòng ấy
+    mạnh hơn khi giữ đúng sự thật.
+  - Bảng chưa dựng ra một tam giác nào. Đó là chủ ý: Bước B chỉ làm hình cho **3 kỷ** (một biển rõ,
+    một sông, một khô) rồi dừng để Đàm xem, Bước C mới trải 12 kỷ còn lại.
+- **Ảnh hưởng**: `settingStyle.js` + `settingStyle.test.js` (12 bài, cả 12 đã thử-cho-đỏ đúng chỗ đã
+  nêu trước). Chưa file nào khác đọc bảng này — nó sẽ được `outskirts.js` gọi ở Bước B qua đúng một
+  cửa `hasWater(era)`.
+- **Điều kiện xem lại**: khi Đàm duyệt bảng (điểm dừng bắt buộc của Bước A); khi có kỷ thứ 16; hoặc
+  khi số kỷ có biển chạm 7. ⚠️ Một dòng địa lý sai thì `note` bên cạnh nó vẫn kể một câu chuyện rành
+  mạch cho con số sai ấy — nên bảng này phải được đọc bằng MẮT NGƯỜI, không chỉ bằng test.
+
+---
+
 ## ADR-038 — "Cái khay" KHÔNG phải một cái MÉP: thành phố phải có VÙNG QUÊ, và vùng quê là một tầng ĐỊA LÝ nằm ngoài lưới — tách hẳn khỏi tầng TIẾN ĐỘ
 
 - **Ngày**: 2026-08-19 (VIỆC 1 trong chỉ thị "bỏ cái khay" của Đàm; trả lời `TECH_DEBT #53`)
@@ -52,10 +113,21 @@
   phố thưa, ở đúng vài kỷ") thì rất khó truy. Vùng quê **ĐỌC** `floraStyle.js`, và có một bài test
   khoá tương quan hạng giữa hai bên. Bảng 15 kỷ thật sự thuộc về VIỆC 2 (`settingStyle.js` — biển,
   sông, không nước), là một câu hỏi KHÁC: *"thành phố tiêu biểu của nước ấy nằm ở đâu và vì sao?"*
-- **Trade-off**: (a) vùng quê đi chung khối gộp với thành phố ⇒ hộp bao của khối `city` phình từ bán
-  kính 7,5 lên ~14. Hôm nay **không có gì bị cắt bởi camera** (đã đo ở `sceneStats.test.js`), nên giá
-  bằng 0; ngày nào phép cắt thật sự cắn thì đây là chỗ phải xem lại. Đổi lại: **0 lệnh vẽ mới ở cả 15
-  kỷ**, giữ nguyên mốc `MOC_LENH_VE` từng kỷ. (b) tam giác tăng (hình học rẻ — `PERFORMANCE.md`: 80%
+- **Trade-off**: (a) vùng quê đi chung khối gộp với thành phố ⇒ hộp bao của khối `city` phình
+  **2,32 lần**: bán kính hình cầu bao đi từ **8,4836** (nhà + cảnh vật, đo bằng cách bảo bên dựng
+  tách ba nhóm) lên **19,7239** (15 kỷ × 2 mốc tuổi). Hôm nay **không có gì bị cắt bởi camera** (đã
+  đo ở `sceneStats.test.js`), nên giá bằng 0; ngày nào có người tách thành phố ra nhiều mesh thì
+  phép cắt mới có nghĩa, và lúc ấy hộp bao rộng gấp 2,32 lần sẽ âm thầm vô hiệu hoá nó. ⇒ Đàm chốt
+  **đặt hẳn một trần thành bài test** (`sceneStats.test.js`, ngưỡng **20,12** = số đo thật + 2%,
+  kèm hai đối chứng: chống-phễu và "nội thành phải vẫn nhỏ ≤ 9"). Đổi lại: **0 lệnh vẽ mới ở cả 15
+  kỷ**, giữ nguyên mốc `MOC_LENH_VE` từng kỷ.
+  - ⚠️ **ĐÍNH CHÍNH — bản đầu của chính mục này ghi "phình từ 7,5 lên ~14", và con số ~14 là SAI.**
+    Nó suy từ NỬA CẠNH (lưới nửa-rộng 6 + với tay 8 ô = 14) trong khi `computeBoundingSphere()` trả
+    về bán kính hình cầu bao, mà cầu bao một hình VUÔNG thì lớn hơn nửa cạnh đúng √2 lần (14 × 1,414
+    = 19,80 — khớp số đo 19,72). Đây là **lần thứ hai cùng một cái bẫy cắn trong cùng một ngày**:
+    sáng cùng ngày đã phải đính chính "69% → 60,1%" vì đọc 13,5/8,5/7,5 như bán kính ĐĨA trong khi
+    chúng là bán kính cầu bao của tấm VUÔNG. Bài học đã được ghi ra và vẫn tái diễn ⇒ đúng luật
+    *"một bài học được ghi ra KHÔNG chặn được gì; chỉ một bài TEST mới chặn được"* — nay đã có test. (b) tam giác tăng (hình học rẻ — `PERFORMANCE.md`: 80%
   chi phí theo ĐIỂM ẢNH, và vùng quê không thêm điểm ảnh nào vì nó thay thế mặt đất trơn đang có).
 - **Ảnh hưởng**: đất trơ giảm **65,63→60,64%** (kỷ 3) · **64,82→38,61%** (kỷ 12) · **64,15→52,44%**
   (kỷ 14). Phần `trong lưới` gần như đứng yên (18,38→18,34 · 11,66→11,16 · 8,63→8,56) — bằng chứng

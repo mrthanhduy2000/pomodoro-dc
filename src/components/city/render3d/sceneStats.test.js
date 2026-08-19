@@ -18,7 +18,9 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { Frustum, Matrix4, PerspectiveCamera } from 'three';
 
-import { createCityScene, cellToWorld } from './sceneGraph.js';
+import {
+  createCityScene, cellToWorld, NHOM_TACH_THANH_PHO, NHOM_TACH_MAT_DAT,
+} from './sceneGraph.js';
 import { deriveOutskirts } from '../../../engine/city3d/outskirts.js';
 import { computeCityLayout } from '../../../engine/cityLayout.js';
 import { buildScenePalette } from '../../../engine/city3d/palette3d.js';
@@ -293,20 +295,20 @@ test('thêm một khối mới vào cảnh thì con số PHẢI đi theo', () =>
 });
 
 /**
- * ⚠️ `splitCityMesh` LÀ CỜ CHỈ DÀNH CHO PHÉP ĐO — VÀ MỘT CỜ ĐO LỌT VÀO APP LÀ MỘT LỆNH VẼ MẤT
- * TRẮNG.
+ * ⚠️ `tachDeDo` LÀ CỜ CHỈ DÀNH CHO PHÉP ĐO — VÀ MỘT CỜ ĐO LỌT VÀO APP LÀ MỘT LỆNH VẼ MẤT TRẮNG.
  *
  * Cả thành phố gộp làm MỘT khối lưới để tốn đúng một lệnh vẽ mỗi họ vật liệu; đó là ràng buộc cứng
- * nhất của giai đoạn "tiêu ngân sách" (được tiêu tam giác, CẤM tiêu lệnh vẽ). Cờ này cắt khối ấy
- * làm hai (`buildings` / `props`) để `city-preview.mjs --mask` hỏi được "điểm ảnh nào là nhà" —
- * một câu hỏi không trả lời được bằng cách dò màu (`TECH_DEBT #22`).
+ * nhất của giai đoạn "tiêu ngân sách" (được tiêu tam giác, CẤM tiêu lệnh vẽ). Hỏi một trong các tên
+ * `NHOM_TACH_THANH_PHO` thì cờ cắt khối ấy làm ba (`buildings`/`props`/`landscape`) để
+ * `city-preview.mjs --mask` hỏi được "điểm ảnh nào là nhà" — một câu hỏi không trả lời được bằng
+ * cách dò màu (`TECH_DEBT #22`).
  *
  * Nhưng cắt đôi thì cộng thêm lệnh vẽ. Nếu cờ này lặng lẽ bật trong app thì không có gì đỏ lên:
  * ảnh y hệt, tam giác y hệt, chỉ có ngân sách lệnh vẽ bị thủng. Ba assert dưới đây khoá cả ba vế:
  * mặc định TẮT · bật thì đúng là có cắt (nếu không, phép đo mật độ đang đo một tấm mặt nạ rỗng) ·
  * và app KHÔNG BAO GIỜ truyền cờ này.
  */
-test('`splitCityMesh` MẶC ĐỊNH TẮT — app phải thấy MỘT khối `city` duy nhất', () => {
+test('`tachDeDo` MẶC ĐỊNH TẮT — app phải thấy MỘT khối `city` duy nhất', () => {
   for (let era = 1; era <= 15; era += 1) {
     const city = dựngCảnh(era);
     const tên = [];
@@ -319,12 +321,12 @@ test('`splitCityMesh` MẶC ĐỊNH TẮT — app phải thấy MỘT khối `ci
   }
 });
 
-test('ĐỐI CHỨNG: bật `splitCityMesh` thì PHẢI cắt thật, và cái giá đúng bằng 1 lệnh vẽ', () => {
+test('ĐỐI CHỨNG: hỏi tên nhóm thành phố thì PHẢI cắt thật, và cái giá đúng bằng 1 lệnh vẽ', () => {
   // Không có đối chứng này thì assert ở trên vẫn xanh khi cờ bị nối hỏng và chẳng làm gì cả — lúc
   // ấy mọi tấm mặt nạ "buildings" sẽ ném lỗi "không khớp đối tượng nào", hoặc tệ hơn là khớp nhầm.
   for (const era of [1, 7, 15]) {
     const thường = createCityScene(thamSố(era));
-    const cắt = createCityScene({ ...thamSố(era), splitCityMesh: true });
+    const cắt = createCityScene({ ...thamSố(era), tachDeDo: NHOM_TACH_THANH_PHO });
 
     const tên = [];
     cắt.scene.traverse((o) => { if (o.isMesh && o.name) tên.push(o.name); });
@@ -363,7 +365,7 @@ test('CƯ DÂN PHẢI CÓ TÊN — không thì phép đo mật độ đọc họ
 });
 
 /**
- * ⚠️ `splitGroundMesh` — CỜ CHỈ-DÙNG-ĐỂ-ĐO THỨ HAI, CÙNG LUẬT VỚI `splitCityMesh`.
+ * ⚠️ NHÁT CẮT THỨ HAI CỦA `tachDeDo` — mở ra khi hỏi tên `NHOM_TACH_MAT_DAT`, cùng luật.
  *
  * Mặt đất là MỘT tấm lưới đỉnh liền trải từ rìa vành đất bên này, qua thành phố, sang rìa bên kia.
  * Ở tầng scene vì thế KHÔNG còn cách nào hỏi *"bao nhiêu phần khung hình là đất TRONG lưới thành
@@ -380,7 +382,7 @@ test('CƯ DÂN PHẢI CÓ TÊN — không thì phép đo mật độ đọc họ
  *   3. chỗ cắt nằm ĐÚNG ranh giới lưới thành phố — không phải "có cắt là được";
  *   4. app không bao giờ truyền cờ này.
  */
-test('`splitGroundMesh` MẶC ĐỊNH TẮT — app phải thấy MỘT khối `ground` duy nhất', () => {
+test('`tachDeDo` MẶC ĐỊNH TẮT — app phải thấy MỘT khối `ground` duy nhất', () => {
   for (let era = 1; era <= 15; era += 1) {
     const city = dựngCảnh(era);
     const tên = [];
@@ -393,13 +395,13 @@ test('`splitGroundMesh` MẶC ĐỊNH TẮT — app phải thấy MỘT khối `
   }
 });
 
-test('ĐỐI CHỨNG: bật `splitGroundMesh` thì PHẢI cắt thật, tam giác bảo toàn, giá là lệnh vẽ', () => {
+test('ĐỐI CHỨNG: hỏi tên nhóm mặt đất thì PHẢI cắt thật, tam giác bảo toàn, giá là lệnh vẽ', () => {
   // Không có đối chứng này thì assert trên vẫn xanh khi cờ bị nối hỏng và chẳng làm gì cả — lúc ấy
   // `--mask ground-grid` sẽ ném lỗi "không khớp đối tượng nào", hoặc tệ hơn là khớp một tấm rỗng
   // rồi báo 0,00% mà trông hoàn toàn hợp lý.
   for (const era of [1, 7, 15]) {
     const thường = createCityScene(thamSố(era));
-    const cắt = createCityScene({ ...thamSố(era), splitGroundMesh: true });
+    const cắt = createCityScene({ ...thamSố(era), tachDeDo: NHOM_TACH_MAT_DAT });
 
     const tên = [];
     cắt.scene.traverse((o) => { if (o.isMesh && o.name) tên.push(o.name); });
@@ -445,7 +447,7 @@ test('CHỖ CẮT PHẢI TRÙNG RANH GIỚI LƯỚI THÀNH PHỐ — đối xứ
   // `world ∈ [−gridSize/2 ; +gridSize/2]` (12 ô, tâm ở gốc toạ độ).
   const { layout } = thamSố(7);
   const nửaLưới = layout.gridSize / 2;                      // 6 với lưới 12
-  const city = createCityScene({ ...thamSố(7), splitGroundMesh: true });
+  const city = createCityScene({ ...thamSố(7), tachDeDo: NHOM_TACH_MAT_DAT });
 
   let trong = null;
   let vành = null;
@@ -569,4 +571,103 @@ test('⚠️ VẬT CẢN CHỈ GỒM KHỐI TRONG LƯỚI THÀNH PHỐ — cây 
   // "đo BIÊN của mọi lời hứa, đừng chỉ đọc xanh/đỏ" (Phase 9B).
   assert.ok(xaNhat > NUA_LUOI - 1,
     `vật cản xa nhất chỉ ${xaNhat.toFixed(3)} — thành phố co lại bất thường, phép đo mất ngữ cảnh`);
+});
+
+/**
+ * ⚠️ TRẦN CHO HỘP BAO KHỐI `city` — VÌ VIỆC 1 VỪA BIẾN MỘT SỰ THẬT CHẮC CHẮN THÀNH MỘT SỰ THẬT
+ * MONG MANH, VÀ MỘT SỰ THẬT MONG MANH KHÔNG CÓ TEST THÌ MỤC NÁT TRONG IM LẶNG.
+ *
+ * Nền của nó là một sự thật kiến trúc đã ghi trong `CLAUDE.md` (Performance Gate vòng 2): *"cả
+ * thành phố chỉ có 7 khối, khối nào cũng hoặc bao trùm camera hoặc có tâm ngay tại gốc toạ độ mà
+ * camera thì luôn ngắm vào gốc ⇒ phép cắt theo hộp bao không bỏ được gì"*. Câu ấy nói ra một điều
+ * dễ chịu: **KHÔNG có gì bị cắt, nên `đã vẽ` luôn bằng `trong cảnh`** (bài ở trên khoá đúng quan hệ
+ * ấy). VIỆC 1 nhập vùng quê vào khối `city` để không tốn lệnh vẽ nào, và cái giá là hộp bao khối ấy
+ * **phình 2,32 lần** — từ 8,4836 (nhà + cảnh vật, đo bằng cách hỏi ba nhóm tách) lên **19,7239**.
+ *
+ * Vì sao con số ấy đáng canh, nói cho đúng: three cắt theo **HÌNH CẦU BAO của TỪNG MESH**. Khối
+ * `city` là MỘT mesh, nên hôm nay nó có to tới đâu cũng chẳng đổi gì — cắt hay không cắt thì vẫn
+ * vẽ trọn hoặc bỏ trọn, và nó bao trùm camera nên luôn vẽ trọn. Điều đáng sợ nằm ở NGÀY MAI: ngày
+ * nào có người tách thành phố ra nhiều mesh (LOD, cắt theo khu, tách nhà khỏi cây cho đúng), phép
+ * cắt mới bắt đầu có nghĩa — và lúc ấy một hộp bao rộng gấp 2,32 lần sẽ âm thầm vô hiệu hoá nó.
+ * Không có gì đỏ lên: ảnh y hệt, tam giác y hệt, chỉ mất một cơ hội tiết kiệm mà không ai biết đã
+ * từng có.
+ *
+ * ⚠️ NGƯỠNG 20,12 = giá trị THẬT lớn nhất đo được (19,7239, kỷ 3) **cộng 2%**, KHÔNG phải một số
+ * tròn chọn cho dễ nhớ. Biên 2% chỉ đủ che hai thứ: một kỷ mới khai `size` cây nhỉnh hơn chút, và
+ * sai số dấu phẩy động giữa các máy. Nó **CỐ Ý KHÔNG đủ** để che việc nâng `OUTSKIRT_REACH` — nâng
+ * 8 → 9 đưa hộp bao lên ~21,2 và bài này đỏ ngay, đúng thứ cần đỏ.
+ *
+ * ⚠️ VÀ ĐỪNG ĐỌC 19,72 THÀNH "BÁN KÍNH VÙNG QUÊ": vùng quê với tay ra 8 ô ngoài lưới nửa-rộng 6 ⇒
+ * NỬA CẠNH 14, mà hình cầu bao của một hình VUÔNG thì lớn hơn nửa cạnh đúng √2 lần (14 × 1,414 =
+ * 19,80). Đây chính là cái bẫy `computeBoundingSphere` đã cắn ngày 2026-08-19 — bán kính chỉ là bán
+ * kính khi vật thể TRÒN. Bản đầu của ADR-038 ước lượng "~14" theo nửa cạnh và đã phải sửa.
+ */
+const NGUONG_HOP_BAO_CITY = 20.12;
+
+function banKinhBao(scene, tên) {
+  let r = 0;
+  scene.traverse((o) => {
+    if (!o.isMesh || o.name !== tên) return;
+    o.geometry.computeBoundingSphere();
+    r = Math.max(r, o.geometry.boundingSphere?.radius ?? 0);
+  });
+  return r;
+}
+
+test('⚠️ TRẦN HỘP BAO khối `city` — và nội thành PHẢI vẫn nhỏ', () => {
+  let lớnNhấtCity = 0;
+  let lớnNhấtNộiThành = 0;
+  let sốCảnh = 0;
+
+  for (let era = 1; era <= 15; era += 1) {
+    // Hai mốc tuổi: thành phố trẻ (ít nhà) và già (kín nhà). Hộp bao vùng quê không đổi theo tuổi —
+    // vùng quê là ĐỊA LÝ, không phải TIẾN ĐỘ (ADR-038) — nhưng phần nội thành thì có, nên phải hỏi
+    // cả hai chứ đừng hỏi một.
+    for (const phiên of [12, 120]) {
+      const gộp = createCityScene(thamSố(era, 12, phiên));
+      const tách = createCityScene({ ...thamSố(era, 12, phiên), tachDeDo: NHOM_TACH_THANH_PHO });
+      sốCảnh += 1;
+
+      const rCity = banKinhBao(gộp.scene, 'city');
+      // "Nội thành" = thành phố THẬT, tức thứ nằm trong lưới 12×12: nhà + cảnh vật, KHÔNG có vùng
+      // quê. Hỏi bằng cách bảo bên dựng tách ra — không suy từ toạ độ, không dò màu (`TECH_DEBT
+      // #22`: một thứ đại diện là một giả định mỹ thuật đội lốt một phép đo).
+      const rNộiThành = Math.max(
+        banKinhBao(tách.scene, 'buildings'),
+        banKinhBao(tách.scene, 'props'),
+      );
+
+      assert.ok(rCity > 0, `kỷ ${era} · ${phiên} phiên: không tìm thấy khối "city" để đo`);
+      assert.ok(rCity <= NGUONG_HOP_BAO_CITY,
+        `kỷ ${era} · ${phiên} phiên: hộp bao khối "city" = ${rCity.toFixed(4)} > trần `
+        + `${NGUONG_HOP_BAO_CITY}. Một khối bao trùm cả thế giới thì phép cắt theo hộp bao không `
+        + 'bao giờ bỏ được gì — hôm nay vô hại (chỉ có MỘT mesh), ngày mai tách mesh thì nó âm thầm '
+        + 'vô hiệu hoá phép cắt. Nếu đây là chủ ý (nâng OUTSKIRT_REACH?) thì ĐO LẠI rồi sửa trần '
+        + 'kèm lý do, đừng nới cho vừa.');
+
+      lớnNhấtCity = Math.max(lớnNhấtCity, rCity);
+      lớnNhấtNộiThành = Math.max(lớnNhấtNộiThành, rNộiThành);
+      gộp.dispose();
+      tách.dispose();
+    }
+  }
+
+  // Gác chạy-rỗng: một `continue` đặt nhầm chỗ sẽ làm vòng lặp trên im lặng bỏ qua cả bảng.
+  assert.equal(sốCảnh, 30, 'phải duyệt đủ 15 kỷ × 2 mốc tuổi');
+
+  // ⚠️ ĐỐI CHỨNG 1 — CHỐNG PHỄU (bài học Phase 9A: khoảng cách giữa giá trị thật và ngưỡng chính là
+  // phần dự án đang KHÔNG được bảo vệ). Trần 20,12 chỉ có răng khi giá trị thật còn nằm sát nó.
+  // Bài này đỏ nếu ai đó thu vùng quê lại — và đó là hành vi ĐÚNG: thu xong thì phải hạ trần theo,
+  // nếu không ta để lại một khoảng trống rộng cho lần phình sau đi qua mà không kêu.
+  assert.ok(lớnNhấtCity >= NGUONG_HOP_BAO_CITY * 0.95,
+    `hộp bao lớn nhất đo được chỉ ${lớnNhấtCity.toFixed(4)}, thấp hơn 95% của trần `
+    + `${NGUONG_HOP_BAO_CITY} — trần đã thành cái phễu. Vùng quê vừa bị thu lại? Hạ trần cho khớp `
+    + 'số đo mới (kèm lý do), đừng để nguyên.');
+
+  // ⚠️ ĐỐI CHỨNG 2 — GIỮ ĐÚNG SỰ THẬT KIẾN TRÚC GỐC. Thứ Đàm muốn bảo tồn không phải con số 20,12
+  // mà là câu *"cả thành phố là một khối NHỎ"*. Vùng quê được phép rộng vì nó là cảnh nền; NHÀ thì
+  // không. Đo được 8,4836 (kỷ 9) ⇒ trần 9 là sát, không phải phễu.
+  assert.ok(lớnNhấtNộiThành <= 9,
+    `nội thành (nhà + cảnh vật, KHÔNG tính vùng quê) đã phình tới ${lớnNhấtNộiThành.toFixed(4)} — `
+    + 'thành phố thật đang tràn ra ngoài lưới 12×12, mà lưới ấy là thứ ADR-007 khoá.');
 });

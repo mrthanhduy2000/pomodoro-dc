@@ -340,6 +340,23 @@ export const SHADOW_MAP_MOBILE = 512;
  */
 export const MAX_PIXEL_RATIO = 2;
 
+/**
+ * TÊN NHÓM mà cờ đo `tachDeDo` (xem `createCityScene`) cắt được, chia theo KHỐI bị cắt.
+ *
+ * ⚠️ Hai mảng này là **hợp đồng giữa bên gọi và bên dựng**, và chúng phải nằm ở đây — cạnh mã dựng
+ * — chứ không phải chép tay trong công cụ chụp. Bản trước đúng là chép tay: `city-preview.mjs` tự
+ * viết `MASK.includes('buildings') || MASK.includes('props') || MASK.includes('landscape')`, tức
+ * cùng một luật tồn tại ở hai chỗ, đúng cái bẫy "một luật một công thức". Thêm nhóm `landscape` ở
+ * VIỆC 1 đã phải sửa CẢ HAI chỗ; nếu quên chỗ thứ hai thì `--mask landscape` sẽ đo một tấm rỗng và
+ * không có gì đỏ lên.
+ *
+ * Vì sao chia làm hai mảng chứ không một danh sách phẳng: chúng trả lời hai câu khác nhau ở tầng
+ * dựng (*"cắt khối gộp thành phố"* · *"cắt tấm mặt đất"*), và mỗi nhát cắt có giá riêng bằng lệnh
+ * vẽ. Gộp phẳng thì hỏi `--mask ground-grid` sẽ cắt oan cả thành phố.
+ */
+export const NHOM_TACH_THANH_PHO = ['buildings', 'props', 'landscape'];
+export const NHOM_TACH_MAT_DAT = ['ground-grid', 'ground-apron'];
+
 /** Ô lưới (x, y) → toạ độ thế giới, gốc toạ độ đặt giữa thành phố. */
 export function cellToWorld(x, y, gridSize) {
   const half = (gridSize - 1) / 2;
@@ -498,16 +515,37 @@ function createSkyEnvironment(renderer, skyLook, groundColor) {
  * @param {object}  [input.daylight]  kết quả `deriveDaylight(giờ VN)` — giờ nào trong ngày.
  *                                    Không truyền ⇒ ánh sáng trung tính như trước, mọi chỗ gọi cũ
  *                                    giữ nguyên kết quả.
- * @param {boolean} [input.splitCityMesh] CỜ CHỈ-DÙNG-ĐỂ-ĐO. Xem luật ngay dưới đây.
+ * @param {string[]} [input.tachDeDo] CỜ CHỈ-DÙNG-ĐỂ-ĐO — danh sách TÊN NHÓM cần cắt riêng ra để
+ *                                    đếm điểm ảnh. Xem luật ngay dưới đây.
  *
- * ⚠️ LUẬT CHO MỌI CỜ CHỈ-DÙNG-ĐỂ-ĐO (không riêng `splitCityMesh`): **mặc định phải TẮT, và phải có
- * test khoá rằng BẬT nó lên mới đổi số.** Thiếu vế sau thì một cờ hỏng vẫn xanh — ảnh y hệt, tam
- * giác y hệt, chỉ ngân sách lệnh vẽ thủng trong im lặng.
+ * ⚠️ LUẬT CHO MỌI CỜ CHỈ-DÙNG-ĐỂ-ĐO: **mặc định phải TẮT, và phải có test khoá rằng BẬT nó lên mới
+ * đổi số.** Thiếu vế sau thì một cờ hỏng vẫn xanh — ảnh y hệt, tam giác y hệt, chỉ ngân sách lệnh
+ * vẽ thủng trong im lặng.
+ *
+ * ⚠️ **MỘT CỜ, KHÔNG PHẢI BA.** Trước 2026-08-19 đây là hai cờ boolean rời (`splitCityMesh` +
+ * `splitGroundMesh`), và VIỆC 1 suýt đẻ ra cái thứ ba cho vùng quê. Đàm đã ra luật từ trước cho
+ * đúng tình huống này: *"khi viết cờ thứ ba, viết nó theo đúng khuôn hai cờ hiện có, rồi GOM CẢ BA
+ * trong cùng commit ấy"*. Vùng quê hoá ra không cần cờ mới (chỉ cần cắt thêm một nhát ở khối thành
+ * phố), nhưng ngưỡng đã chạm ⇒ gom.
+ *
+ * Vì sao gom được, và vì sao bản gộp KHÔN HƠN chứ không chỉ gọn hơn: hai cờ cũ trả lời hai câu
+ * khác nhau (*"có cắt khối thành phố không"* · *"có cắt tấm đất không"*) trong khi người gọi chỉ
+ * có MỘT câu hỏi thật — *"tôi cần đếm những nhóm nào?"*. Bên gọi biết tên nhóm mình cần; bên dựng
+ * mới là bên biết tên ấy nằm trong khối nào. Bản cũ bắt bên gọi phải tự dịch tên → cờ, và nó đã
+ * dịch sai một nhịp: `splitCityMesh: !!MASK` bật cả khi mặt nạ chỉ hỏi mặt đất.
+ *
+ * Tên hợp lệ: {@link NHOM_TACH_THANH_PHO} (cắt khối gộp thành phố làm ba) ·
+ * {@link NHOM_TACH_MAT_DAT} (cắt tấm mặt đất làm hai). Tên lạ bị BỎ QUA — không ném lỗi, vì công
+ * cụ mặt nạ truyền thẳng cả danh sách người dùng gõ (`sky`, `road`, `residents`…) và phần lớn tên
+ * trong đó vốn đã tách sẵn, không cần cắt gì.
  */
 export function createCityScene({
   layout, palette, dimmed = false, lowDetail = false, stats = {}, still = false, daylight = null,
-  maxLamps = 3, renderer = null, isMobile = false, splitCityMesh = false, splitGroundMesh = false,
+  maxLamps = 3, renderer = null, isMobile = false, tachDeDo = null,
 }) {
+  const nhomCanTach = new Set(Array.isArray(tachDeDo) ? tachDeDo : []);
+  const tachThanhPho = NHOM_TACH_THANH_PHO.some((ten) => nhomCanTach.has(ten));
+  const tachMatDat = NHOM_TACH_MAT_DAT.some((ten) => nhomCanTach.has(ten));
   const gridSize = layout.gridSize;
   const scene = new Scene();
   scene.background = new Color(palette.background);
@@ -732,7 +770,8 @@ export function createCityScene({
   const roads = (layout.props ?? []).filter((prop) => prop.kind === 'road');
 
   /**
-   * ⚠️ CỜ CHỈ-DÙNG-ĐỂ-ĐO thứ hai, cùng luật với `splitCityMesh`: **mặc định TẮT, có test khoá.**
+   * ⚠️ MỘT TRONG HAI NHÁT CẮT của cờ đo `tachDeDo` — nhát này mở ra khi người gọi hỏi tên
+   * `ground-grid`/`ground-apron` ({@link NHOM_TACH_MAT_DAT}). **Mặc định TẮT, có test khoá.**
    *
    * Vì sao phải có: mặt đất là MỘT tấm lưới trải từ rìa vành đất bên này qua thành phố sang rìa
    * bên kia, nên ở tầng scene không còn cách nào hỏi *"bao nhiêu phần khung hình là đất TRONG lưới
@@ -747,9 +786,9 @@ export function createCityScene({
    *
    * Giá: khi bật, mặt đất ra HAI lệnh vẽ thay vì một. App không bao giờ đi vào nhánh này.
    */
-  const ground3d = buildTerrainSurface({ terrain, gridSize, layout, palette, tach: splitGroundMesh });
+  const ground3d = buildTerrainSurface({ terrain, gridSize, layout, palette, tach: tachMatDat });
   const road3d = buildRoadSurface({ terrain, gridSize, layout, palette });
-  const tamDat = splitGroundMesh
+  const tamDat = tachMatDat
     ? [[ground3d?.trongLuoi ?? null, tileMaterial, 'ground-grid'],
       [ground3d?.vanhNgoai ?? null, tileMaterial, 'ground-apron']]
     : [[ground3d, tileMaterial, 'ground']];
@@ -925,7 +964,7 @@ export function createCityScene({
   // ⚠️ RANH GIỚI NHÓM — ghi lại NGAY TẠI CHỖ ĐẶT, không dò ngược bằng hình dạng sau này.
   // `placements` xếp theo đúng thứ tự: [công trình · giàn giáo · nhà dân] rồi [cảnh vật] rồi [móng].
   // Móng luôn thuộc về một thứ ĐÃ XÂY (cảnh vật không có móng), nên "phần đã xây" = đoạn đầu cộng
-  // toàn bộ móng. Con số này chỉ có một chỗ dùng: chế độ ĐO (`splitCityMesh`) — xem ngay dưới.
+  // toàn bộ móng. Con số này chỉ có một chỗ dùng: chế độ ĐO (`tachDeDo`) — xem ngay dưới.
   const soKhoiDaXay = placements.length - soKhoiCanhVat;
 
   // Móng xếp SAU cùng: chúng chỉ là khối lấp, không phải thứ chạm vào được, nên phải nằm ngoài
@@ -1013,8 +1052,9 @@ export function createCityScene({
   }
 
   /**
-   * ⚠️ CHẾ ĐỘ ĐO — `splitCityMesh` CHỈ để công cụ chụp trả lời được câu *"bao nhiêu phần khung hình
-   * là NHÀ?"*, và nó **KHÔNG BAO GIỜ bật trong app**.
+   * ⚠️ NHÁT CẮT THỨ HAI của cờ đo `tachDeDo` — mở ra khi người gọi hỏi tên `buildings`/`props`/
+   * `landscape` ({@link NHOM_TACH_THANH_PHO}), để công cụ chụp trả lời được câu *"bao nhiêu phần
+   * khung hình là NHÀ?"*. Nó **KHÔNG BAO GIỜ bật trong app**.
    *
    * Vì sao phải có: cả thành phố gộp vào MỘT khối hình học (đó là lý do chỉ tốn một lệnh vẽ), nên
    * ở tầng scene không còn cách nào tách "nhà" khỏi "cây". Mà tách bằng MÀU thì đúng vào cái bẫy
@@ -1026,13 +1066,13 @@ export function createCityScene({
    * không phải cách dựng thường: ràng buộc "không thêm lệnh vẽ nào" của Đàm nói về APP, và app thì
    * không bao giờ đi vào nhánh này. Có test khoá mặc định ở `sceneStats.test.js`.
    */
-  const nhomHinhHoc = splitCityMesh
+  const nhomHinhHoc = tachThanhPho
     ? [
       ['buildings', [...placements.slice(0, soKhoiDaXay), ...plinths]],
       ['props', placements.slice(soKhoiDaXay, soKhoiDaXay + soKhoiCanhVat)],
-      // ⚠️ NHÓM THỨ BA, KHÔNG PHẢI CỜ THỨ BA. Đàm đã ra luật: khi viết cờ chỉ-để-đo thứ ba thì
-      // phải gom cả ba lại cùng lúc. Vùng quê KHÔNG cần một cờ mới — nó chỉ cần cái cờ đã có
-      // biết cắt thêm một nhát, nên luật ấy chưa bị chạm tới.
+      // ⚠️ NHÓM THỨ BA, KHÔNG PHẢI CỜ THỨ BA — vùng quê chỉ cần cắt thêm một nhát ở khối đã có.
+      // Nhưng ngưỡng "cái thứ ba" của Đàm ĐÃ CHẠM, nên hai cờ boolean cũ đã được gom thành một
+      // `tachDeDo` ngay trong cùng commit ấy — xem khối chú thích ở `createCityScene`.
       ['landscape', soKhoiVungQue ? placements.slice(-soKhoiVungQue) : []],
     ]
     : [['city', placements]];

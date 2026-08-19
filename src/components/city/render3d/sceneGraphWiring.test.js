@@ -584,7 +584,7 @@ test('⚠️ CHẠM VÀO MỘT CĂN NHÀ KHÔNG ĐƯỢC DỰNG LẠI CẢ CẢN
   );
 });
 
-test('⚠️ HAI CỜ CHỈ-DÙNG-ĐỂ-ĐO KHÔNG ĐƯỢC XUẤT HIỆN TRONG VỎ REACT CỦA APP', () => {
+test('⚠️ CỜ CHỈ-DÙNG-ĐỂ-ĐO KHÔNG ĐƯỢC XUẤT HIỆN TRONG VỎ REACT CỦA APP', () => {
   // ⚠️ BÀI NÀY SINH RA VÌ MỘT CHÚ THÍCH TỰ NHẬN CÓ TEST MÀ KHÔNG CÓ. Khối chú thích của
   // `splitCityMesh` ở `sceneStats.test.js` liệt kê ba vế được khoá, vế thứ ba là *"và app KHÔNG BAO
   // GIỜ truyền cờ này"* — nhưng chỉ hai vế đầu có assert. Đúng hình dạng lỗi Phase 8B: chú thích
@@ -594,13 +594,22 @@ test('⚠️ HAI CỜ CHỈ-DÙNG-ĐỂ-ĐO KHÔNG ĐƯỢC XUẤT HIỆN TRONG 
   // Vì sao vế này đáng canh: bật nhầm cờ đo trong app thì KHÔNG có gì đỏ lên — ảnh y hệt, tam giác
   // y hệt, chỉ ngân sách lệnh vẽ bị thủng trong im lặng. Mà ngân sách lệnh vẽ là ràng buộc cứng
   // nhất của giai đoạn "tiêu ngân sách" (được tiêu tam giác, CẤM tiêu lệnh vẽ).
-  for (const cờ of ['splitCityMesh', 'splitGroundMesh']) {
-    assert.ok(!SCENE3D_CODE.includes(cờ),
-      `\`${cờ}\` xuất hiện trong CityScene3D.jsx — cờ chỉ-dùng-để-đo đã rò vào app, mất lệnh vẽ`);
+  //
+  // ⚠️ 2026-08-19: hai cờ boolean cũ (`splitCityMesh` + `splitGroundMesh`) ĐÃ GỘP thành một
+  // `tachDeDo` nhận danh sách TÊN NHÓM. Bài này canh cả ba tên — hai tên cũ phải KHÔNG còn tồn tại
+  // ở đâu nữa (nếu còn thì có một đường gọi chưa được đổi và nó đang truyền một tham số bị bỏ qua
+  // trong im lặng, tức phép đo trả về một tấm mặt nạ rỗng mà không ai biết), và tên mới thì không
+  // được rò vào vỏ React.
+  for (const cờCũ of ['splitCityMesh', 'splitGroundMesh']) {
+    for (const [tên, mã] of [['CityScene3D.jsx', SCENE3D_CODE], ['city-preview.mjs', PREVIEW_CODE]]) {
+      assert.ok(!mã.includes(cờCũ),
+        `\`${cờCũ}\` vẫn còn trong ${tên} — cờ ấy đã bị gộp vào \`tachDeDo\`, nên nay nó là một `
+        + 'tham số KHÔNG AI ĐỌC: truyền vào thì bị bỏ qua lặng lẽ và mặt nạ ra tấm rỗng');
+    }
   }
-  // Và đối chứng: công cụ chụp PHẢI truyền chúng, nếu không thì `--mask` đang đo một tấm rỗng.
-  for (const cờ of ['splitCityMesh', 'splitGroundMesh']) {
-    assert.ok(PREVIEW_CODE.includes(cờ),
-      `\`${cờ}\` không có trong city-preview.mjs — không ai bật cờ này thì phép đo mặt nạ vô nghĩa`);
-  }
+  assert.ok(!SCENE3D_CODE.includes('tachDeDo'),
+    '`tachDeDo` xuất hiện trong CityScene3D.jsx — cờ chỉ-dùng-để-đo đã rò vào app, mất lệnh vẽ');
+  // Và đối chứng: công cụ chụp PHẢI truyền nó, nếu không thì `--mask` đang đo một tấm rỗng.
+  assert.ok(PREVIEW_CODE.includes('tachDeDo'),
+    '`tachDeDo` không có trong city-preview.mjs — không ai bật cờ này thì phép đo mặt nạ vô nghĩa');
 });

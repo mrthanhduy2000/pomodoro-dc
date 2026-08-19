@@ -302,6 +302,22 @@ chỉ biết CÔNG TRÌNH chứ không biết ĐỊA HÌNH, nên chặn cây mà
 sự an toàn GIẢ — xem `TECH_DEBT #54`. Việc loại trừ ấy dùng một **nhãn tường minh** (`vungQue`) chứ
 không dùng vị trí trong mảng, và có một bài test dựng cảnh THẬT rồi đòi mọi vật cản phải nằm trong
 lưới (bản đầu không có bài này, và gỡ cái gác đi thì cả 891 bài vẫn xanh).
+**`settingStyle` (địa thế) — khuôn ba lớp lần thứ BẢY, và nó là bảng đầu tiên viết ra TRƯỚC khi có
+hình (VIỆC 2 Bước A, 2026-08-19, ADR-039)**: `city3d/settingStyle.js` trả lời *"thành phố tiêu biểu
+của nước ấy, thời ấy, nằm ở đâu và vì sao nằm ở đó?"* — `water` (không / sông / kênh đào / cửa sông
+/ biển) · `side` (hướng mặt nước) · `ground` (thành phố ngồi thế nào so với nước) · `reach` · `width`.
+Trục thứ hai `ground` là thứ tách 7 kỷ cùng khai `river` ra khỏi nhau; chỉ mỗi "có sông" thì chúng
+sẽ ra bảy bức ảnh giống nhau. Hình sẽ dựng ở `city3d/setting.js` (Bước B, chưa có).
+⚠️ **Quan hệ với `outskirts` là MỘT CHIỀU: `settingStyle` → `outskirts`.** Vùng quê sẽ đọc
+`hasWater(era)` để không trồng cây dưới nước; `outskirts.js` tuyệt đối không được khai hướng nước
+rồi để bảng địa thế đọc ngược lại. Lý do là câu hỏi chuẩn của dự án — *"ngoài đời hai thứ này có
+luôn đi cùng nhau không?"*: loài cây và hướng ra nước độc lập (Lisboa và Porto cùng cây cùng khí
+hậu, quay ra nước hai hướng khác nhau). Hai chiều là cách hai bảng trôi khỏi nhau.
+⚠️ **"Không có nước" là một câu trả lời, không phải một chỗ trống**: hai kỷ khai `none` (Göbekli Tepe
+trên sống núi khô — điều nổi tiếng nhất về nơi ấy; Burg Eltz trên mỏm đá, thứ giữ nó là địa hình chứ
+không phải nước), và danh sách ấy bị khoá bằng `assert.deepEqual(KHO, [1, 5])` để cả hai chiều đổi
+đều phải qua mắt người. Hai trần `MAX_SEA_ERAS = 7` và `MAX_ERAS_PER_SIDE = 6` đều là "dưới một
+nửa", mỗi trần có một đối chứng bơm bảng hỏng vào để chứng minh phép đếm còn răng.
 
 ⚠️ Ba quyết định đáng nhớ hơn cái bảng. (a) **`covers` là một MẢNG RIÊNG, không phải một `kind` mới
 của `props`** — vì một ô phải trả lời được HAI câu độc lập (*"vật gì đứng đây"* và *"mảnh đất này

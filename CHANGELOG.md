@@ -12,7 +12,27 @@
 
 ---
 
-## 2026-08-19 (mới nhất) — Bỏ "cái khay": thành phố có vùng quê bao quanh (ADR-038)
+## 2026-08-19 (mới nhất) — Bảng địa thế 15 kỷ: thành phố nằm ở đâu và vì sao (ADR-039)
+
+**Mục đích.** Vùng quê của ADR-038 hôm nay giống hệt nhau ở mọi hướng. Một thành phố thật gần như
+luôn nằm cạnh một thứ quyết định vì sao nó ở đúng chỗ ấy — một con sông, một cửa biển, một con kênh
+đào, hoặc một sống núi khô không có nước nào cả. Đàm chốt thứ tự: **BẢNG TRƯỚC, HÌNH SAU**.
+
+**Phạm vi.** Chỉ DỮ LIỆU, chưa một tam giác nào. Thêm `src/engine/city3d/settingStyle.js` (15 dòng:
+`water` · `side` · `ground` · `reach` · `width` · `note`, mỗi dòng buộc vào `country` của
+`eraStyle.js`) và `settingStyle.test.js` (12 bài, cả 12 đã thử-cho-đỏ đúng chỗ đã nêu trước). Gộp
+hai cờ đo `splitCityMesh`/`splitGroundMesh` thành một tham số `tachDeDo`, và thêm trần hộp bao cho
+khối `city` (20,12 — giá trị đo hôm nay 19,7239 cộng 2%, có đối chứng chống phễu).
+
+**Ảnh hưởng.** Chưa file nào đọc bảng địa thế; Bước B sẽ nối qua đúng một cửa `hasWater(era)`. Bước
+B chỉ dựng hình cho 3 kỷ rồi dừng để Đàm xem, Bước C mới trải 12 kỷ còn lại. Không đụng lưới 12×12,
+không đụng vị trí nhà, không đụng `computeCityLayout`.
+
+**Tương thích.** Không có migration. Không đổi dữ liệu người dùng, không đổi API.
+
+---
+
+## 2026-08-19 — Bỏ "cái khay": thành phố có vùng quê bao quanh (ADR-038)
 
 **Mục đích.** Đàm: *"Tại sao một thành phố lại được xây trên một ô đất nhô ra, đâu có thành phố nào
 như vậy… Nếu có ô đất nhô ra thì là cảnh thiên nhiên xung quanh."* Anh bác cả hai phương án thu-nhỏ

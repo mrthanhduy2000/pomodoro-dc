@@ -2143,6 +2143,44 @@ ship một trạng thái dở dang, hãy làm nó **ĐẾM ĐƯỢC trong một 
 
 ---
 
+## #55 — VÙNG QUÊ KHÔNG PHẢN ỨNG VỚI GIỜ TRONG NGÀY, VÀ NÓ ĐANG KÉO TRỤC "6 CHẶNG NGÀY" XUỐNG
+
+- **Tên**: Thảm thực vật ngoài lưới giống hệt nhau ở cả 6 chặng ngày ⇒ pha loãng khác biệt sáng/trưa/chiều/tối
+- **Module**: `src/engine/city3d/outskirts.js` · `render3d/sceneGraph.js` (chỗ đặt vùng quê) · công cụ chấm `scripts/sweep-score.mjs`
+- **Priority**: Medium · **Severity**: Low (mỹ thuật, biên còn 37%)
+- **Impact**: Bản quét 15 kỷ × 6 chặng chấm hai trục. Sau VIỆC 1, trục **KỶ đi lên** (trung vị
+  37,6 → **40,8**, gần nhất 21,3 → 21,5) nhưng trục **CHẶNG NGÀY đi xuống**: cặp gần nhất
+  20,7 → **16,5** (bình minh 6h ↔ chiều 15h). Vẫn trên ngưỡng mắt 12 tới 37%, nhưng là hướng sai.
+- **Root Cause**: ⚠️ **KHÔNG PHẢI phép đo hỏng — mã hỏng.** Phép đo chặng lấy trung bình CẢ CẢNH
+  (vector 9 chiều), và vùng quê là một mảng lớn **giống hệt nhau ở cả 6 chặng**, nên nó pha loãng
+  đúng cái đại lượng đang được hỏi. Cùng hình dạng `TECH_DEBT #22` (trung bình trên vùng quá rộng)
+  và bài học ngân sách tam giác 2026-08-17 (hằng số nền pha loãng 43% xuống 16%) — nhưng lần này
+  thứ pha loãng KHÔNG phải một lỗi đo, mà là một khuyết tật thật: ngoài đời đồng ruộng và rừng cây
+  đổi màu theo nắng **mạnh hơn cả mái nhà**, trong khi ở đây chúng đứng yên.
+- ⚠️ **ĐÀM ĐÃ BÁC PHƯƠNG ÁN "SỬA PHÉP ĐO"**, và anh bác đúng: bỏ vùng quê ra khỏi vùng lấy mẫu là
+  **định nghĩa lại câu hỏi cho vừa câu trả lời**. Câu hỏi gốc là *"6 chặng ngày có còn phân biệt
+  được không"*, mà người dùng nhìn CẢ KHUNG HÌNH chứ không nhìn riêng thành phố. (Chính tôi đã tự
+  nêu nghi ngại này — *"đổi phép đo có nguy cơ tự cho mình điểm đẹp"* — rồi suýt không nghe theo.)
+- **Current Risk**: thấp — 16,5 còn cách ngưỡng mắt 12 một khoảng 37%.
+- **Future Risk**: trung bình. Mỗi phase sau thêm thứ gì đó **không phụ thuộc giờ trong ngày** sẽ
+  kéo tiếp, và biên đang thu hẹp chứ không nới ra.
+- **Recommended Solution**: cho vùng quê nhận `daylight` như thành phố đã nhận — lá cây ngả vàng
+  lúc hoàng hôn, xám lại lúc chạng vạng. **KHÔNG cần nguồn sáng mới** (vai màu đã đi qua cùng hệ
+  ánh sáng), chỉ cần màu lá đọc thêm một hệ số theo giờ.
+- **Estimated Complexity**: nhỏ.
+- **Blocking Conditions**: ⚠️ **ĐỪNG LÀM BÂY GIỜ.** Đàm chốt: VIỆC 2 sắp thêm NƯỚC, mà mặt nước
+  phản ứng với ánh sáng rất mạnh, nên con số này **có thể tự phục hồi**. Đo lại sau VIỆC 2 rồi mới
+  quyết — sửa trước là có nguy cơ chữa một cái sắp tự lành.
+- **Review Trigger**: ⚠️ **NGƯỠNG TƯỜNG MINH DO ĐÀM ĐẶT — "nếu trục chặng ngày xuống DƯỚI 14 thì
+  phải làm vùng quê đổi theo giờ, KHÔNG được nới ngưỡng."** Ngoài ra: đo lại ngay sau khi VIỆC 2
+  ship (lệnh `node scripts/city-preview.mjs --sweep --all --theme light` rồi
+  `node scripts/sweep-score.mjs .city-preview/sweep-light-ky1-15.png`).
+- **Owner**: chưa ai · **Status**: đang theo dõi, có ngưỡng hành động rõ ràng
+- **Số hiện hành (2026-08-19, sau VIỆC 1)**: cặp chặng gần nhất **16,5** · ngưỡng hành động **14** ·
+  ngưỡng mắt **12**.
+
+---
+
 ## #54 — BỘ HOẠCH ĐỊNH ĐƯỜNG BAY CẬN CẢNH CHỈ BIẾT CÔNG TRÌNH, KHÔNG BIẾT ĐỊA HÌNH QUANH NÓ
 
 - **Tên**: Camera cận cảnh né được nhà nhưng KHÔNG né được quả đồi

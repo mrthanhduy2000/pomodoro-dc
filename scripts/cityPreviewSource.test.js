@@ -440,3 +440,29 @@ test('NHẬT KÝ — điều kiện xem lại phải ĐẾM ĐƯỢC và tự nh
   assert.ok(/TECH_DEBT #52/.test(NGUỒN),
     'lời nhắc phải trỏ đích danh mục nợ, nếu không người đọc log không biết đi đâu tiếp');
 });
+
+test('TÊN FILE — `--zoom` phải có mặt trong tên ảnh, và mặc định phải là 1', () => {
+  // ⚠️ CÁI BẪY THỨ NĂM CỦA CÙNG MỘT HÌNH DẠNG (giờ · mặt nạ · cận cảnh · số phiên, nay tới thu
+  // phóng). `--zoom` đổi khoảng cách camera ⇒ đổi hẳn khung hình; dùng chung tên file với ảnh
+  // toàn cảnh là cách chắc chắn nhất để một phép đo đúng cho ra kết luận sai — đúng chuyện đã
+  // phải vứt hai con số nghiệm thu mái ngày 2026-08-18.
+  assert.ok(/const zoomTag = /.test(NGUỒN), 'không có nhãn thu phóng trong tên file');
+  // ⚠️ HỎI ĐÍCH DANH TÊN ẢNH MỘT KỶ. File có HAI chỗ `resolve(OUT_DIR, …)` — chỗ kia là tên bảng
+  // quét (`sweep-…`), và bản đầu của chính bài test này vớ phải nó rồi đỏ với một thông báo trỏ
+  // vào một dòng hoàn toàn lành. Cùng bài học `/envMap,/` xanh oan ở Phase 7A: hỏi "có ít nhất
+  // một chỗ" là cái phễu, phải cắt đúng khối cần canh ra rồi mới hỏi.
+  const dựngTên = /const pngPath = resolve\(OUT_DIR, `city-era[^`]*`\)/.exec(NGUỒN);
+  assert.ok(dựngTên, 'không tìm thấy chỗ dựng tên ảnh MỘT KỶ (`city-era…`)');
+  assert.match(dựngTên[0], /\$\{zoomTag\}/,
+    'nhãn thu phóng được khai nhưng KHÔNG được ghép vào tên — một hằng số không ai đọc thì bằng'
+    + ' không có (cùng lỗi với `NGUONG_TRUY_VET_RACH` ở bài trên)');
+
+  // ⚠️ VÀ ĐÂY LÀ VẾ GIỮ CHO CÁCH LÀM TRÊN CÒN ĐÚNG. Nhãn chỉ gắn khi `zoom !== 1`, nên tấm ảnh
+  // KHÔNG có nhãn ngầm tuyên bố "tôi chụp ở thu phóng 1". Ngày nào mặc định đổi thành 0,8 thì mọi
+  // tên file cũ lặng lẽ nói dối, và cả `PERFORMANCE.md` lẫn cổng không-trôi đọc theo. Cái mốc ấy
+  // phải ĐỎ LÊN chứ không nằm trong một dòng chú thích — đúng luật "một bài học được ghi ra KHÔNG
+  // chặn được gì; chỉ một bài TEST mới chặn được".
+  assert.match(NGUỒN, /^\s*zoom: 1,$/m,
+    'mặc định `zoom` không còn là 1 ⇒ mọi tên file KHÔNG có nhãn thu phóng đang nói dối.'
+    + ' Phải đổi `zoomTag` sang luôn-gắn-nhãn và dựng lại mọi md5 mốc nền ở PERFORMANCE.md');
+});

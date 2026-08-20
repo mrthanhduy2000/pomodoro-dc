@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 
 import {
   APRON_DROP, APRON_EDGE, ERA_TERRAIN, SMOOTHSTEP_PEAK, STREET_MAX_GRADE, TERRACE_STEP,
-  buildTerrain, eraTerrainProfile,
+  buildTerrain, eraTerrainProfile, geometricTemplate,
 } from './terrain.js';
 import { buildHorizon } from './horizon.js';
 import { roadCellCandidates } from '../cityLayout.js';
@@ -526,5 +526,60 @@ test('`tintAt` phải TẤT ĐỊNH, nằm trong 0..1, và đổi theo cả hai 
       }
     }
     assert.ok(seen.size >= 30, `kỷ ${era}: vết loang chỉ có ${seen.size} giá trị — gần như phẳng`);
+  }
+});
+
+test('KHUÔN HÌNH HỌC phải SẠCH NHIỄU — hai kỷ cùng `shape` ra khuôn giống hệt từng con số', () => {
+  // `geometricTemplate` chỉ có giá trị nếu nó thật sự đã gỡ hết nhiễu ra. Cách kiểm rẻ nhất và
+  // không thể xanh oan: năm kỷ cùng khai `valley` phải cho MỘT khuôn duy nhất. Còn sót một hạt
+  // nhiễu nào (nhiễu lấy hạt giống từ `era`) là năm khuôn ấy khác nhau ngay.
+  const theoDang = new Map();
+  for (const era of ERAS) {
+    const dang = eraTerrainProfile(era).shape;
+    const { field } = geometricTemplate({ era, gridSize: GRID });
+    const van = Array.from(field).map((v) => v.toFixed(9)).join(',');
+    if (!theoDang.has(dang)) theoDang.set(dang, { era, van });
+    else {
+      const dau = theoDang.get(dang);
+      assert.equal(van, dau.van,
+        `kỷ ${era} và kỷ ${dau.era} cùng khai '${dang}' mà ra hai khuôn khác nhau`
+        + ' ⇒ khuôn vẫn còn dính nhiễu, và mọi con số "phần dư" đo bằng nó đều sai');
+    }
+  }
+  assert.ok(theoDang.size >= 5, `chỉ thấy ${theoDang.size} kiểu địa hình — bảng đã hẹp lại?`);
+});
+
+test('ĐẾM ĐƯỢC: những kiểu địa hình KHÔNG có một lý do hình học nào', () => {
+  // ⚠️ ĐÂY LÀ MỘT KHUYẾT TẬT ĐANG ĐƯỢC GHI LẠI CHO ĐẾM ĐƯỢC, KHÔNG PHẢI MỘT LỜI HỨA.
+  // `SHAPES.plain` và `SHAPES.rolling` đều là `(n) => n` — thuần nhiễu, không một thành phần hình
+  // học nào. Nghĩa là năm kỷ (2, 3, 7, 11, 12) có hình dạng mặt đất **không thể** đọc ra lý do,
+  // dù `note` của chúng hứa hẳn "đồng bằng phù sa sông Nin" hay "đồi Toscana nối nhau".
+  // Đo được: khuôn của chúng là một HẰNG SỐ ⇒ phần dư chiếm 100% biên độ.
+  //
+  // Con số ở đây là **cái hẹn giờ duy nhất chạy được**: sửa xong một kiểu thì bài này đỏ và buộc
+  // phải mở ra đọc; thêm một kiểu vô-lý-do mới thì cũng đỏ. Một dòng trong `TECH_DEBT.md` chỉ được
+  // đọc khi có người đi tìm.
+  const vaLyDo = [];
+  for (const dang of new Set(ERAS.map((e) => eraTerrainProfile(e).shape))) {
+    const era = ERAS.find((e) => eraTerrainProfile(e).shape === dang);
+    const { field } = geometricTemplate({ era, gridSize: GRID });
+    const lo = Math.min(...field);
+    const hi = Math.max(...field);
+    if (hi - lo < 1e-9) vaLyDo.push(dang);
+  }
+  assert.deepEqual(vaLyDo.sort(), ['plain', 'rolling'],
+    'danh sách kiểu địa hình THUẦN NHIỄU đã đổi — đọc lại `TECH_DEBT` về địa hình trước khi sửa số này');
+});
+
+test('KHUÔN không được phụ thuộc tiến độ chơi (ADR-007)', () => {
+  // Cùng cách khoá đã dùng cho `buildTerrain`: gọi kèm dữ liệu rác rồi đòi kết quả Y HỆT. "Hàm
+  // hiện không nhận tham số đó" là một sự thật rất dễ mất — chỉ cần ai đó thêm một tham số tuỳ
+  // chọn là bất biến chết mà mọi test khác vẫn xanh.
+  for (const era of ERAS) {
+    const sach = Array.from(geometricTemplate({ era, gridSize: GRID }).field);
+    const rac = Array.from(geometricTemplate({
+      era, gridSize: GRID, built: ['a', 'b'], sessionCount: 400, buildings: [1, 2, 3],
+    }).field);
+    assert.deepEqual(rac, sach, `kỷ ${era}: khuôn đổi khi truyền thêm dữ liệu tiến độ`);
   }
 });

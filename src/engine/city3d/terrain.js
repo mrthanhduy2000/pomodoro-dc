@@ -246,6 +246,59 @@ function smoothstep(t) { return t * t * (3 - 2 * t); }
 export const WATER_SURFACE_Y = -APRON_DROP - WATER_DROP_BELOW_PLAIN;
 
 /**
+ * TRƯỜNG THÔ — hình dạng trước khi chia bậc: `shape` áp lên bốn thành phần (nhiễu, `edge`, `slope`,
+ * `wave`). Trả về mảng chưa căng, chưa chia bậc.
+ *
+ * ⚠️ TỒN TẠI VÌ **MỘT LUẬT CHỈ ĐƯỢC CÓ MỘT CÔNG THỨC**. `buildTerrain` cần nó với nhiễu thật;
+ * `geometricTemplate` cần đúng nó với nhiễu GIỮ NGUYÊN MỘT GIÁ TRỊ, để tách xem trong hình dạng
+ * cuối cùng có bao nhiêu phần là "hình mà kỷ này khai" và bao nhiêu phần là gợn ngẫu nhiên. Nếu
+ * hai bên tự dựng lấy `edge`/`slope`/`wave` thì chúng sẽ lệch nhau ở biên và phép đo sẽ đo một
+ * thế giới khác với thế giới được vẽ ra — đúng loại lỗi đã cắn ở `sweep-score.mjs` (Phase 4G).
+ *
+ * @param {(n:number, edge:number, slope:number, wave:number) => number} shape
+ * @param {number} size
+ * @param {(x:number, y:number) => number} nhieu  nguồn nhiễu 0..1 tại ô (x, y)
+ */
+function truongTho(shape, size, nhieu) {
+  const centre = (size - 1) / 2;
+  const raw = new Float64Array(size * size);
+  for (let y = 0; y < size; y += 1) {
+    for (let x = 0; x < size; x += 1) {
+      // `edge` = 0 ở tâm, 1 ở góc xa nhất. Dùng khoảng cách Chebyshev (hình vuông) chứ không phải
+      // Euclid: lưới là hình vuông, nên vành đồi hình vuông ôm sát mép lưới, còn vành hình TRÒN sẽ
+      // để bốn góc lưới tụt xuống thành bốn hố — trông như lỗi chứ không như địa hình.
+      const edge = centre > 0
+        ? Math.max(Math.abs(x - centre), Math.abs(y - centre)) / centre
+        : 0;
+      // ⚠️ MỘT TRỤC THẲNG, KHÔNG PHẢI ĐƯỜNG CHÉO — xem lý do đầy đủ ở `SHAPES.coast`.
+      const slope = size > 1 ? y / (size - 1) : 0;
+      const wave = (Math.sin((x + y * 0.6) / NOISE_CELL) + 1) / 2;
+      raw[y * size + x] = shape(nhieu(x, y), edge, slope, wave);
+    }
+  }
+  return raw;
+}
+
+/**
+ * KHUÔN HÌNH HỌC của một kỷ — chính `truongTho` nhưng nhiễu bị giữ ở HẰNG SỐ 0,5.
+ *
+ * Đây là "hình mà kỷ này khai": gò, lòng chảo, bờ dốc, sóng cát — không có một hạt nhiễu nào. So
+ * trường cao độ thật với khuôn này cho biết bao nhiêu phần hình dạng là CÓ NGUYÊN NHÂN và bao
+ * nhiêu phần là gợn ngẫu nhiên. Chỉ dùng để ĐO (`scripts/terrain-score.mjs`); `buildTerrain` không
+ * gọi nó, nên nó không thể làm đổi một điểm ảnh nào.
+ *
+ * ⚠️ Giá trị trả về chỉ có nghĩa **sai khác một phép biến đổi affine** (nhiễu hằng 0,5 để lại một
+ * số cộng thêm, và các hàm `SHAPES` có hệ số nhân riêng). Vì vậy phép so PHẢI khớp bình phương bé
+ * nhất `a·khuôn + c`, đừng so thẳng từng con số.
+ */
+export function geometricTemplate({ era, gridSize = 12 } = {}) {
+  const profile = eraTerrainProfile(era);
+  const size = Math.max(1, Math.round(Number.isFinite(gridSize) ? gridSize : 12));
+  const shape = SHAPES[profile.shape] ?? SHAPES.plain;
+  return { field: truongTho(shape, size, () => 0.5), size, profile };
+}
+
+/**
  * Dựng trường cao độ cho một kỷ.
  *
  * @param {object} input
@@ -278,25 +331,10 @@ export function buildTerrain({ era, gridSize = 12 } = {}) {
   let maxHeight = 0;
 
   // ── LƯỢT 1: trường thô ────────────────────────────────────────────────────
-  const raw = new Float64Array(size * size);
+  const raw = truongTho(shape, size, (x, y) => valueNoise(seed, x / NOISE_CELL, y / NOISE_CELL));
   let lo = Infinity;
   let hi = -Infinity;
-  for (let y = 0; y < size; y += 1) {
-    for (let x = 0; x < size; x += 1) {
-      const n = valueNoise(seed, x / NOISE_CELL, y / NOISE_CELL);
-      // `edge` = 0 ở tâm, 1 ở góc xa nhất. Dùng khoảng cách Chebyshev (hình vuông) chứ không phải
-      // Euclid: lưới là hình vuông, nên vành đồi hình vuông ôm sát mép lưới, còn vành hình TRÒN sẽ
-      // để bốn góc lưới tụt xuống thành bốn hố — trông như lỗi chứ không như địa hình.
-      const edge = Math.max(Math.abs(x - centre), Math.abs(y - centre)) / centre;
-      // ⚠️ MỘT TRỤC THẲNG, KHÔNG PHẢI ĐƯỜNG CHÉO — xem lý do đầy đủ ở `SHAPES.coast`.
-      const slope = size > 1 ? y / (size - 1) : 0;
-      const wave = (Math.sin((x + y * 0.6) / NOISE_CELL) + 1) / 2;
-      const v = shape(n, edge, slope, wave);
-      raw[y * size + x] = v;
-      if (v < lo) lo = v;
-      if (v > hi) hi = v;
-    }
-  }
+  for (const v of raw) { if (v < lo) lo = v; if (v > hi) hi = v; }
 
   // ── LƯỢT 2: CĂNG TRƯỜNG RA TRỌN 0..1 rồi mới chia bậc ─────────────────────
   /**

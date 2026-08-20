@@ -11,6 +11,91 @@
 
 ---
 
+## ADR-044 — Lối vào của `meander` là một **QUAN HỆ giữa `MEANDER_NECK` và `SHORE_BAND`**, không phải hai hằng số cạnh nhau; và cái hào phải đo bằng khoảng cách **Ơclit**, không phải khoảng cách lưới
+
+- **Ngày**: 2026-08-20 (§2 của Đàm — đóng `TECH_DEBT #64`)
+
+- **Bối cảnh**: Bước C trải mặt nước ra 14/15 kỷ. Kỷ 5 (Burg Eltz) dùng kiểu `meander` — khúc uốn
+  ôm ba mặt, chừa **một** dải yên ngựa khô làm lối vào. Cả bảng (`settingStyle.js`) lẫn hình
+  (`setting.js`) đều viết ra lời hứa ấy bằng chữ. Phép nghiệm thu bắn **720 tia** từ tâm thành phố
+  ra ngoài rồi hỏi *"tia này có ra được đất khô không"* trả lời: **0/720**. Tức thứ đã ship là một
+  **hào vuông khép kín** — một hòn đảo — chứ không phải một khúc uốn. Đàm gọi đúng bản chất:
+  *"Burg Eltz nổi tiếng vì chỉ có MỘT lối vào, không phải vì không có lối nào"*, và
+  *"hào 90° sắc lẹm là dấu hiệu hình dạng sinh từ LƯỚI VUÔNG, không phải từ DÒNG CHẢY. Suối thật uốn."*
+
+- **Vấn đề**: hai khuyết tật độc lập, cùng một chỗ.
+  **(1) Lối vào bị bịt.** `insetGoc` khoét hành lang bằng `trongKhe = min(d[doi], MEANDER_NECK − |lệch trục|)`
+  rồi trả `min(vành, −trongKhe)`. Ở đoạn hành lang SÁT mép lưới thì `d[doi]` còn nhỏ, nên độ khô
+  chưa đủ âm: ra 0,4 ô mới được −0,40 · ra 0,8 ô mới được −0,80, **cả hai đều lớn hơn**
+  `−SHORE_BAND = −0,9`. Mà `blendAt` chỉ về 0 khi `insetAt ≤ −SHORE_BAND`. Dải hoà bờ vì thế
+  **bắc cầu ngang qua CỬA hành lang** và khép kín vành nước.
+  **(2) Hào vuông.** `insetGoc` đo bằng `distanceOutsideGrid` = `max` của bốn khoảng cách mép, tức
+  khoảng cách **L∞ (Chebyshev)**, mà đường đồng mức của L∞ là những hình chữ nhật góc 90°.
+
+- **Phương án cân nhắc**:
+  · **(A) Nới `MEANDER_NECK` cho tới khi có lối ra.** Bác — đó là nới một ngưỡng cho tới khi phép
+    đo hết kêu, đúng cái phễu Phase 9A; và nó không sở hữu quan hệ nào, nên lần sau ai chỉnh
+    `SHORE_BAND` thì lối vào lại bịt trong im lặng.
+  · **(B) Hạ `SHORE_BAND` cho riêng `meander`.** Bác — `SHORE_BAND` là quyết định về ĐỘ MỀM của mép
+    nước, dùng chung cho cả 14 kỷ; bẻ nó vì một kỷ là đổi 14 kỷ vì 1 kỷ.
+  · **(C) Sửa thẳng `distanceOutsideGrid` thành Ơclit.** Bác — `outskirts.js` cũng gọi nó, và ở đó
+    câu hỏi thật sự là *"ra khỏi lưới bao xa theo TRỤC nào"* (L∞ đúng). Hai nơi hỏi **hai câu khác
+    nhau**, nên đây KHÔNG phải ca "một luật một công thức" mà là ca hai luật trùng tên.
+  · **(D) [ĐÃ CHỌN] Viết quan hệ ra thành mã, và thêm một hàm khoảng cách thứ hai.**
+
+- **Lý do loại bỏ**: (A) và (B) đều đi chỉnh một con số mà **không dòng nào sở hữu quan hệ giữa hai
+  con số ấy** — đúng hình dạng sai của `TECH_DEBT #57` (`side` đúng, `DEFAULT_YAW` đúng, quan hệ vô
+  chủ) mà ADR-041 đã phải sửa bằng một "thứ thứ ba". (C) mua một kỷ bằng giá 14 kỷ.
+
+- **Giải pháp chọn**: hai sửa đổi, mỗi cái một dòng.
+  **(1)** `trongKhe = min(d[doi] **+ SHORE_BAND**, MEANDER_NECK − |lệch trục|)`. Quan hệ được phát
+  biểu: ***một lối vào phải khô hẳn NGAY KHI nó rời khỏi lưới***, tức độ khô của nó phải vượt trọn
+  dải hoà bờ tại `d[doi] = 0`. Cộng đúng `SHORE_BAND` là cách ngắn nhất nói điều đó, và nó **không
+  có tham số tự do nào để trôi**. Hệ quả bắt buộc phải giữ mãi: **`MEANDER_NECK` > `SHORE_BAND`**
+  (nếu không, hành lang khô có bề rộng âm ⇒ không tồn tại lối vào).
+  **(2)** Thêm `distanceOutsideGridRounded` (Ơclit: `hypot(max(0,dx), max(0,dy))`) và cho riêng
+  `meander` dùng nó. Một dòng nước không biết lưới thành phố hình gì; thứ duy nhất nó biết là
+  *"tôi cách mỏm đá kia bao xa"* — đó đúng là khoảng cách Ơclit. Bo góc ở đây không phải hiệu ứng
+  làm đẹp, nó là **phép đo đúng cho câu hỏi đang hỏi**.
+
+- **Trade-off**: hai hàm khoảng cách cùng tồn tại trong một file, và một phiên sau có thể gọi nhầm.
+  Chấp nhận, đổi lại `outskirts.js` không bị đụng. Đã trả bằng: chú thích dài tại chỗ giải thích
+  **vì sao có hai hàm**, cộng một bài test THUẦN khoá rằng hai hàm phải là **hai hình khác nhau**
+  (ở đường chéo thì một bên = `t`, bên kia = `t·√2`; trên trục thì bằng nhau) — nên gộp chúng lại
+  hay chép nhầm đều đỏ ngay.
+
+- **Ảnh hưởng**: chỉ kỷ 5. 14 kỷ còn lại byte-identical (đã đo: lệnh vẽ 13 → 13, và bản quét 15 kỷ
+  qua cổng không-trôi). Số đo trước/sau:
+  | Đại lượng | TRƯỚC (`b87df3c`) | SAU |
+  |---|---|---|
+  | cung liên tục ra đất khô (720 tia, `blendAt`) | **0** | **1 cung, 9,5°** |
+  | bề rộng eo đất, phần KHÔ HẲN | **0,000 ô** | **1,400 ô** = `2×(MEANDER_NECK − SHORE_BAND)` |
+  | bề rộng hành lang danh nghĩa | 3,203 ô | 3,203 ô = `2×MEANDER_NECK` (không đổi) |
+  | bo góc: bờ ngoài chéo / trục | **1,3543** (vuông) | **1,0215** (tròn) · cổng 1,10 |
+  | nước chiếm khung hình kỷ 5 | 3,34% | 3,49% |
+  | tam giác thành phố kỷ 5 | 85.016 | 85.214 (+198) |
+  | lệnh vẽ kỷ 5 | 13 | **13** |
+
+- **Điều kiện xem lại**: khi `#65` cho `canal`/`estuary`/`meander` hình học riêng. Lúc ấy `meander`
+  sẽ thôi là *"một vành đều quanh một hình chữ nhật"* và cả hai sửa đổi trên đều có thể tan vào
+  hình mới. **Cho tới lúc đó thì đừng gỡ.**
+
+- ⚠️ **BÀI HỌC LỚN NHẤT KHÔNG NẰM Ở BẢN VÁ MÀ Ở PHÉP ĐO: CÓ BA ĐỊNH NGHĨA "ƯỚT", VÀ HAI TRONG BA
+  IM LẶNG KHI BỊ PHÁ.** Đo cùng một kỷ 5 bằng ba câu hỏi khác nhau ra ba con số khác nhau:
+  `insetAt > 0` → 46/720 tia khô · cao độ địa hình dưới `WATER_SURFACE_Y` → 37/720 ·
+  `blendAt > 0` → **19/720** (và **0/720** trước bản vá). Chỉ con số thứ ba khớp với ảnh render,
+  vì `terrainMesh.js` (`buildWaterSurface`) chỉ **bỏ** một ô mặt nước khi `blendAt <= 0` ở **cả bốn
+  góc** — tức **`blendAt` mới là thứ quyết định tấm nước được tô ở đâu**, không phải `insetAt`, và
+  cũng không phải cao độ (tấm nước được tô đè lên phần đất vẫn còn CAO HƠN mặt phẳng nước — đó
+  đúng là cái hào đã ship). Hai định nghĩa kia **không nhúc nhích một tia nào** khi tôi bơm phép
+  phá MS1 vào, tức nếu bài test hỏi bằng chúng thì nó xanh vĩnh viễn về một thế giới khác. ⇒ Cùng
+  họ `TECH_DEBT #42` (*"assert con số đã KHAI thay vì con số đã DỰNG"*), nhưng ở một biến thể khó
+  thấy hơn: cả ba đại lượng đều **có thật**, đều **đúng**, và đều nằm trong cùng một module. Câu
+  hỏi phát hiện: ***"con số tôi đang hỏi có phải chính con số mà tầng VẼ đọc không?"*** — và cách
+  trả lời rẻ nhất là `grep` xem tầng vẽ gọi hàm nào, rồi **dựng cả hai bản rồi NHÌN ẢNH**.
+
+---
+
 ## ADR-043 — TỔNG KẾT VIỆC 2 (mặt nước, 15 kỷ): khuôn **BẢNG → HÌNH → `worldYaw`** đã chạy đủ ba lớp; và bài học lớn nhất KHÔNG nằm ở nước mà ở **cái thước dùng để nghiệm thu nó**
 
 - **Ngày**: 2026-08-20 (viết ở phiên nghiệm thu Bước C, theo lệnh §4 của Đàm)

@@ -12,7 +12,43 @@
 
 ---
 
-## 2026-08-20 (mới nhất) — NGHIỆM THU BƯỚC C: cái thước sai, không phải cái cổng sai
+## 2026-08-20 (mới nhất) — GỘP `main` + KỶ 5 THÔI LÀ HÒN ĐẢO
+
+**Mục đích.** Hai việc theo lệnh Đàm: (1) gộp nhánh đã sống 25 commit vào `main`; (2) sửa
+`TECH_DEBT #64` — kỷ 5 (`meander`, Burg Eltz) ship ra một **hào vuông khép kín** thay vì một khúc
+uốn có lối vào, và bo góc cái hào ấy.
+
+**Phạm vi.** `main` = `b87df3c` (fast-forward, 0 xung đột, 0 file đụng store/sync/api/AI Coach).
+Sửa: `src/engine/city3d/setting.js` (+1 hàm thuần `distanceOutsideGridRounded`, +2 dòng đổi trong
+nhánh `meander`) · `setting.test.js` (+4 bài, 3 helper đo) · `settingStyle.js` (chú thích) ·
+`TECH_DEBT.md` · `ARCHITECTURE_DECISIONS.md` (ADR-044) · `CLAUDE.md`.
+
+**Ảnh hưởng.** Chỉ kỷ 5; 14 kỷ còn lại không đổi (lệnh vẽ 13 → 13, bản quét 15 kỷ qua cổng
+không-trôi 15/15 + 105/105). Hai khuyết tật độc lập được vá bằng hai dòng:
+1. **Lối vào bị bịt** — dải hoà bờ `SHORE_BAND` bắc cầu ngang qua CỬA hành lang khô. Quan hệ nay
+   được viết ra thành mã: *một lối vào phải khô hẳn ngay khi nó rời khỏi lưới*. Bề rộng eo đất khô
+   đi từ **0,000 ô → 1,400 ô** = `2 × (MEANDER_NECK − SHORE_BAND)`; 720 tia bắn từ tâm đi từ
+   **0 cung → 1 cung liên tục 9,5°**.
+2. **Hào vuông** — `meander` đo bằng khoảng cách L∞ (đường đồng mức là hình chữ nhật góc 90°). Nay
+   dùng khoảng cách Ơclit cho riêng nó; tỉ số bờ-ngoài chéo/trục đi từ **1,3543 → 1,0215** (cổng
+   1,10). `distanceOutsideGrid` giữ nguyên vì `outskirts.js` đang hỏi một câu KHÁC.
+
+**Tương thích.** Không migration. Không đổi API, không đổi dữ liệu lưu. `distanceOutsideGrid` giữ
+nguyên chữ ký và hành vi.
+
+**Còn nợ, nói thẳng.** Đàm ra **ba** tiêu chí; hai tiêu chí đo được đã đạt, tiêu chí thứ ba —
+*"ảnh cận cảnh phải đọc ra 'mỏm đá trong khúc uốn', không phải 'lâu đài giữa hào nước'"* — **CHƯA
+ĐẠT**. Ảnh sau vẫn đọc ra là một cái hào, chỉ khác là nay bo góc và có một lối vào. Nguyên nhân
+thuộc tầng khác: `meander` lấy hình từ khoảng cách tới **hình chữ nhật lưới**, nên dù bo góc nó vẫn
+là một **vành ĐỀU quanh một hình vuông**; suối thật thì rộng hẹp thất thường, ôm ba mặt chứ không
+bốn, và không lấy thành phố làm tâm. Việc ấy là `TECH_DEBT #65` (cho `canal`/`estuary`/`meander`
+hình học riêng), nay đã gánh thêm nửa còn lại của `#64`.
+
+**Chi tiết**: ADR-044 · `TECH_DEBT #64` · mục nhật ký cùng ngày trong `BAN_GIAO.md`.
+
+---
+
+## 2026-08-20 — NGHIỆM THU BƯỚC C: cái thước sai, không phải cái cổng sai
 
 **Mục đích.** Đàm ra lệnh soi ba kỷ trông khô trên bản quét (1 · 4 · 5), nhìn hai kiểu nước lần đầu
 có hình (`estuary` · `canal`), đo lại trục chặng ngày, rồi đóng VIỆC 2. Không sửa mỹ thuật.

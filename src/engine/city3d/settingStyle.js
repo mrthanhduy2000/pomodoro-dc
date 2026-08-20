@@ -65,6 +65,13 @@
  * `side` CỘNG hai hướng kề nó, và hướng ĐỐI DIỆN là dải yên ngựa khô. Đó là một luật về HÌNH suy ra
  * từ một hướng, KHÔNG phải trường `side` gánh việc thứ hai — nếu để `side` nghĩa là "hướng lối vào"
  * cho riêng kiểu này thì đó mới đúng cái bẫy "một trường gánh hai việc" đã cắn năm lần.
+ * ⚠️ **"MỘT LỐI VÀO DUY NHẤT" LÀ MỘT LỜI HỨA ĐÃ TỪNG SAI, NAY MỚI CÓ NGƯỜI CANH.** Bản ship đầu
+ * tiên của `meander` (Bước C) dựng ra một **hào vuông KHÉP KÍN** — 720 tia bắn từ tâm, 0 tia nào ra
+ * được đất khô — dù đoạn văn ngay trên đây đã khẳng định ngược lại bằng chữ. Nguyên nhân nằm ở
+ * `setting.js`: dải hoà bờ `SHORE_BAND` bắc cầu ngang qua CỬA hành lang, mà **không dòng nào sở
+ * hữu quan hệ** giữa bề rộng lối vào và độ mềm mép nước. Đã sửa 2026-08-20 (`TECH_DEBT #64`,
+ * ADR-044) bằng cách viết quan hệ ấy ra thành mã, và nay có test bắn đúng 720 tia đòi **ít nhất
+ * MỘT cung liên tục ra đất khô** ở cả 15 kỷ, kèm đối chứng nhốt lại trạng thái hòn đảo cũ.
  *
  * ── TRỤC THỨ HAI: `ground` — THÀNH PHỐ NGỒI THẾ NÀO SO VỚI MẶT NƯỚC ─────────────────────────
  * Chỉ mỗi "có sông" thì 7 kỷ sông sẽ ra 7 bức ảnh giống nhau. Trục này mới là thứ tách chúng:

@@ -220,6 +220,30 @@ export function distanceOutsideGrid(u, v, gridSize = 12) {
   return Math.max(0, d.bac, d.nam, d.tay, d.dong);
 }
 
+/**
+ * Khoảng cách ƠCLIT từ một điểm tới hình chữ nhật lưới — tức có **BO GÓC**. Trong lưới ⇒ 0.
+ *
+ * ⚠️ VÌ SAO CÓ HAI HÀM KHOẢNG CÁCH, VÀ VÌ SAO KHÔNG SỬA THẲNG `distanceOutsideGrid`.
+ * `distanceOutsideGrid` lấy `max` của bốn khoảng cách mép — đó là khoảng cách L∞ (Chebyshev), và
+ * đường đồng mức của nó là những hình chữ nhật **góc 90° sắc lẹm**. Với `outskirts.js` (mật độ cảnh
+ * vật thưa dần ra xa) hình dạng ấy vô hại và nó đã chạy đúng ở cả 15 kỷ, nên **đổi nó là đổi cả 15
+ * kỷ vì một kỷ** — đúng thứ mà luật "một luật một công thức" KHÔNG đòi hỏi (hai nơi đang hỏi hai
+ * câu khác nhau: *"ra khỏi lưới bao xa theo trục nào"* và *"cách cái lưới bao xa"*).
+ *
+ * Với MẶT NƯỚC thì hình dạng ấy nói dối: ảnh nghiệm thu 2026-08-20 cho ra một **cái hào vuông bốn
+ * góc vuông vức** ôm quanh kỷ 5, và Đàm chỉ đúng bản chất — *"hào 90° sắc lẹm là dấu hiệu hình
+ * dạng sinh từ LƯỚI VUÔNG, không phải từ DÒNG CHẢY. Suối thật uốn."* Một dòng nước không biết
+ * lưới thành phố là hình gì; thứ duy nhất nó biết là *"tôi cách cái mỏm đá kia bao xa"*, và đó
+ * đúng là khoảng cách Ơclit. Bo góc ở đây vì thế không phải một hiệu ứng làm đẹp — nó là phép đo
+ * ĐÚNG cho câu hỏi đang hỏi.
+ */
+export function distanceOutsideGridRounded(u, v, gridSize = 12) {
+  const d = outwardDistances(u, v, gridSize);
+  const dx = Math.max(0, d.tay, d.dong);
+  const dy = Math.max(0, d.bac, d.nam);
+  return Math.hypot(dx, dy);
+}
+
 /** Hướng đối diện. Dùng cho dải yên ngựa khô của `meander`. */
 const DOI_DIEN = { bac: 'nam', nam: 'bac', dong: 'tay', tay: 'dong' };
 
@@ -342,7 +366,9 @@ export function buildSetting({ era, gridSize = 12 } = {}) {
 
     if (style.water === 'meander') {
       // Vành khăn quanh cả bốn phía, rồi KHOÉT một khe ở phía đối diện `side`.
-      const da = distanceOutsideGrid(u, v, size);
+      // ⚠️ `…Rounded`, KHÔNG phải `distanceOutsideGrid` — xem chú thích của hàm ấy. Dòng nước
+      // uốn quanh một mỏm đá thì đường bờ phải cong ở góc; `max` cho ra hào vuông.
+      const da = distanceOutsideGridRounded(u, v, size);
       const shift = amp * valueNoise(`${seed}|rim`, u / WOBBLE_CELL, v / WOBBLE_CELL);
       const gan = style.reach + shift;
       const xa = style.reach + style.width + shift;
@@ -350,10 +376,26 @@ export function buildSetting({ era, gridSize = 12 } = {}) {
 
       // Dải yên ngựa: một hành lang chạy ra khỏi mặt đối diện, nửa rộng `MEANDER_NECK`. Trong hành
       // lang ⇒ KHÔ. `min` của hai trường có dấu = phép GIAO, nên khe luôn liền mạch, không vá.
+      //
+      // ⚠️ `+ SHORE_BAND` LÀ CẢ BẢN VÁ, VÀ NÓ LÀ MỘT QUAN HỆ CHỨ KHÔNG PHẢI MỘT SỐ HIỆU CHỈNH.
+      // Trước 2026-08-20 vế thứ nhất là `d[doi]` trần, nên ở đoạn hành lang SÁT mép lưới (nơi
+      // `d[doi]` còn nhỏ) độ khô chưa đủ âm để `blendAt` về 0 — đo được: ra 0,4 ô thì mới −0,40 và
+      // ra 0,8 ô mới −0,80, cả hai đều LỚN HƠN `-SHORE_BAND = −0,9`. Dải hoà bờ vì thế **bắc cầu
+      // ngang qua CỬA hành lang**, biến cả kỷ 5 thành một hòn đảo: 720 tia bắn từ tâm, 0 tia nào
+      // ra được đất khô (`TECH_DEBT #64`).
+      //
+      // Bệnh gốc: `MEANDER_NECK` là quyết định về BỀ RỘNG lối vào, `SHORE_BAND` là quyết định về
+      // ĐỘ MỀM của mép nước, mỗi hằng số đúng khi đứng riêng — và **không một dòng nào sở hữu quan
+      // hệ giữa chúng**. Cùng đúng hình dạng sai của `TECH_DEBT #57` (`side` đúng, `DEFAULT_YAW`
+      // đúng, quan hệ vô chủ), mà ADR-041 đã phải sửa bằng một "thứ thứ ba".
+      //
+      // Quan hệ nay được viết ra: **một lối vào phải khô hẳn ngay khi nó rời khỏi lưới**, tức độ
+      // khô của nó phải vượt qua trọn dải hoà bờ tại `d[doi] = 0`. Cộng đúng `SHORE_BAND` là cách
+      // ngắn nhất phát biểu điều đó, và nó KHÔNG có tham số tự do nào để trôi.
       const doi = DOI_DIEN[style.side] ?? 'tay';
       const d = outwardDistances(u, v, size);
       const doc = (doi === 'dong' || doi === 'tay') ? v : u;
-      const trongKhe = Math.min(d[doi], MEANDER_NECK - Math.abs(doc - (size - 1) / 2));
+      const trongKhe = Math.min(d[doi] + SHORE_BAND, MEANDER_NECK - Math.abs(doc - (size - 1) / 2));
       return Math.min(vanh, -trongKhe);
     }
 

@@ -29,6 +29,15 @@
 > đã ĐO và PHẢI BÁC — nó tương quan NGƯỢC với khả năng đọc ra). Bốn mục **#55 · #61 · #64 · #65**
 > đều đã chuẩn bị sẵn phương án, **CHỜ ĐÀM QUYẾT**, không tự chọn.
 >
+> **Cập nhật 2026-08-20 (Đàm trả lời bốn mục — mới nhất)**: **ĐÓNG #64** (kỷ 5 nay có eo đất rộng
+> 1,40 ô = `2×(MEANDER_NECK − SHORE_BAND)` và hào đã bo góc: tỉ số chéo/trục 1,3543 → 1,0215; 7 phép
+> phá đều đỏ đúng chỗ đã nêu trước). **#61** thôi là một mục nợ — cổng 5% GIỮ NGUYÊN, và con số thật
+> *"5/14 đủ diện tích · **14/14 đọc ra được** (tương phản 30,8–115,5 trên ngưỡng mắt 12)"* nay được
+> ghi như một **SỰ THẬT ĐÃ ĐO**, không phải một câu hỏi treo. **#55 HOÃN** (đơn thuốc cũ đã bị số đo
+> bác bỏ; mặt trận hình ảnh sắp tới rất có thể tự nâng dải trời + dải thành phố ⇒ đo lại SAU). **#65
+> HOÃN** tới sau mặt trận hình ảnh, và nay nó **gánh thêm nửa còn lại của #64** (hình `meander` vẫn
+> là một vành đai đều bề rộng ôm quanh hình vuông, chưa đọc ra là một khúc suối).
+>
 > **Cập nhật 2026-08-20 (chốt #57 — `worldYaw`)**: **ĐÓNG #57**, mở **#59**. Đàm bác cả bốn hướng
 > đã đề xuất (*"KHÔNG SỬA CAMERA, KHÔNG SỬA `side`. SỬA THỨ THỨ BA"*) — cả bốn đều hy sinh một
 > trong hai vế, trong khi thứ sai là **quan hệ giữa chúng không ai sở hữu**. Đóng bằng ADR-041.
@@ -2230,11 +2239,20 @@ ship một trạng thái dở dang, hãy làm nó **ĐẾM ĐƯỢC trong một 
 - **Estimated Complexity**: (a) nhỏ · (b) một phase riêng
 - **Blocking Conditions**: (b) chờ Đàm quyết cùng `#60`/`#61`
 - **Review Trigger**: khi có ai thêm/đổi một dòng `water: 'canal'` · hoặc khi mở phase ven nước
-- **Owner**: chưa gán · **Status**: **Open**
+- **Owner**: — · **Status**: ⏸️ **HOÃN có chủ ý — Đàm chốt 2026-08-20** (*"HOÃN tới sau mặt trận
+  hình ảnh. Gom làm một phase sau."*), và mục này nay **gánh thêm NỬA CÒN LẠI CỦA `#64`**.
+
+  `#64` đã đóng hai vế đo được (có eo đất · đã bo góc), nhưng vế thứ ba Đàm ra — *"phải đọc ra
+  **mỏm đá trong khúc uốn**, không phải **lâu đài giữa hào nước**"* — vẫn CHƯA đạt, và nó không sửa
+  được ở tầng `setting.js`. Lý do đúng là lý do của chính mục này: `meander` lấy hình từ **khoảng
+  cách tới hình chữ nhật lưới**, nên dù đã bo góc nó vẫn là một **vành đai đều bề rộng ôm quanh một
+  hình vuông**. Một khúc suối thật thì bề rộng thay đổi dọc dòng, ôm ba mặt chứ không bốn, và tâm
+  của nó không phải tâm thành phố. ⇒ Ba kiểu `canal` / `estuary` / `meander` đều cần **một dòng
+  hình học của riêng chúng**, và đó là một phase, không phải một bản vá.
 
 ---
 
-## #64 — KỶ 5 LÀ MỘT **ĐẢO**: `MEANDER_NECK = 1,6` KHÔNG CẮT RA ĐƯỢC LỐI VÀO NÀO, VÀ CHÚ THÍCH CỦA NÓ MÔ TẢ MỘT THỨ MÃ KHÔNG DỰNG
+## #64 — ✅ **ĐÃ ĐÓNG 2026-08-20** — KỶ 5 LÀ MỘT **ĐẢO**: `MEANDER_NECK = 1,6` KHÔNG CẮT RA ĐƯỢC LỐI VÀO NÀO
 
 - **Tên**: vành nước `meander` khép kín hoàn toàn quanh thành phố; "dải yên ngựa khô" mà cả bảng
   lẫn ADR đều dựa vào để biện minh cho kiểu nước này **không tồn tại trên màn hình**
@@ -2285,9 +2303,61 @@ ship một trạng thái dở dang, hãy làm nó **ĐẾM ĐƯỢC trong một 
   đúng điều bảng đang hứa. Hôm nay không có bài test nào chạm tới mệnh đề "có lối vào" — đó là lý do
   nó sai suốt từ Bước B mà không có gì đỏ.
 - **Estimated Complexity**: (a) nhỏ · (b) nhỏ (chỉ chữ nghĩa + đổi tên) · (c) nhỏ
-- **Blocking Conditions**: chờ Đàm chọn hướng
-- **Review Trigger**: ngay khi Đàm trả lời
-- **Owner**: chưa gán · **Status**: **Open — CHỜ ĐÀM QUYẾT**
+- **Blocking Conditions**: không còn
+- **Review Trigger**: khi có phase đổi `SHORE_BAND`, `MEANDER_NECK`, hoặc thêm kỷ `meander` thứ hai
+- **Owner**: — · **Status**: ✅ **ĐÃ ĐÓNG 2026-08-20** — Đàm chọn hướng **(a)**, làm xong.
+
+### ✅ ĐÃ SỬA — 2026-08-20
+
+**Đàm chốt hướng (a)** kèm hai điều kiện thêm: *"bo góc: hào 90° sắc lẹm là dấu hiệu hình dạng sinh
+từ LƯỚI VUÔNG, không phải từ DÒNG CHẢY. Suối thật uốn"* và *"nghiệm thu bằng chính phép bắn 720
+tia: phải có ít nhất một cung liên tục ra được đất khô, kèm đối chứng nhốt trạng thái hòn đảo"*.
+
+**Hai thay đổi, cả hai đều là QUAN HỆ chứ không phải số hiệu chỉnh** (`src/engine/city3d/setting.js`):
+
+1. `trongKhe = min(d[doi] **+ SHORE_BAND**, MEANDER_NECK − |doc − tâm|)`. Quan hệ được viết ra:
+   *một lối vào phải khô hẳn ngay khi nó rời khỏi lưới*, tức độ khô của nó phải vượt trọn dải hoà
+   bờ tại `d[doi] = 0`. Cộng đúng `SHORE_BAND` là cách ngắn nhất phát biểu điều đó, và nó **không có
+   tham số tự do nào để trôi**.
+2. Nhánh `meander` đổi sang hàm khoảng cách mới `distanceOutsideGridRounded` (Ơclit ⇒ **bo góc**).
+   `distanceOutsideGrid` (L∞) **giữ nguyên** cho `outskirts.js` — hai nơi đang hỏi hai câu khác
+   nhau (*"ra khỏi lưới bao xa theo trục nào"* vs *"cách cái lưới bao xa"*), nên đây KHÔNG phải
+   "một luật hai công thức".
+
+**Số nghiệm thu** (`node --test src/engine/city3d/setting.test.js`, và ảnh `--era 5 --hour 12
+--sessions 40 --width 1500 --zoom 2.4`):
+
+| Đại lượng | TRƯỚC (`b87df3c`) | SAU | Cách đo |
+|---|---|---|---|
+| cung liên tục ra đất khô (720 tia, `blendAt`) | **0** | **1 cung, 9,5° (19 tia)** | `cungKhoRaNgoai` |
+| bề rộng eo đất, phần KHÔ HẲN | **0,000 ô** | **1,400 ô** = `2×(MEANDER_NECK − SHORE_BAND)` | `beRongEoDat(blendAt)` |
+| bề rộng hành lang danh nghĩa | 3,203 ô | **3,203 ô** = `2×MEANDER_NECK` | `beRongEoDat(insetAt)` |
+| bo góc: bờ ngoài chéo / trục | **1,3543** (vuông) | **1,0215** (tròn) | `tiSoBoNgoaiCheoTruc`, cổng 1,10 |
+| nước chiếm khung hình (kỷ 5) | 3,34 % | 3,49 % | `water-score.mjs --eras 5` |
+| tương phản nước↔bờ | 41,7 | 42,7 | như trên (ngưỡng mắt 12) |
+| điểm ảnh đổi quá ngưỡng mắt | — | **1,0 %** (khung mặc định) · 0,7 % (cận cảnh) | `sweep-diff --frame` |
+| tam giác thành phố kỷ 5 | 85.016 | 85.214 (**+198**) | `city-preview` |
+| lệnh vẽ kỷ 5 | 13 | **13** (không đổi) | như trên |
+
+**Bốn bài test mới** (`setting.test.js`, tất cả đã thử-cho-đỏ, 7 phép phá, mỗi phép nêu TRƯỚC chỗ
+mong đợi đỏ): *KHÔNG KỶ NÀO ĐƯỢC LÀ HÒN ĐẢO* (15 kỷ, kèm đối chứng vành khép kín) · *EO ĐẤT RỘNG
+ĐÚNG BẰNG QUAN HỆ* (khoá cả hai bề rộng + khoá `MEANDER_NECK > SHORE_BAND`) · *HÀO PHẢI BO GÓC*
+(kèm hai đối chứng hào-vuông và hào-tròn dựng tay) · *HAI HÀM KHOẢNG CÁCH PHẢI LÀ HAI HÌNH*.
+
+### ⚠️ CÒN LẠI MỘT NỬA CHƯA ĐẠT — VÀ NÓ KHÔNG PHẢI LỖI, NÓ LÀ MỘT QUYẾT ĐỊNH MỸ THUẬT KHÁC
+
+Đàm ra ba điều kiện; **hai điều kiện đo được đã đạt** (có cung liên tục · đã bo góc). Điều kiện thứ
+ba — *"nhìn ảnh cận cảnh phải đọc ra **mỏm đá trong khúc uốn**, không phải **lâu đài giữa hào
+nước**"* — **CHƯA ĐẠT**, và tôi nói thẳng thay vì tự nhận là xong.
+
+Ảnh sau khi vá đọc ra là *"lâu đài có hào, hào đã bo góc và có một lối vào"*. Nó tốt hơn hẳn bản
+trước (hào vuông vức khép kín), nhưng vẫn chưa phải một khúc suối. Lý do nằm ở tầng khác: mặt nước
+`meander` lấy hình từ **khoảng cách tới hình chữ nhật lưới**, nên dù bo góc thì nó vẫn là một vành
+đai **đều bề rộng ôm quanh một hình vuông**. Suối thật thì bề rộng thay đổi, ôm ba mặt chứ không
+bốn, và không lấy tâm là thành phố. Đổi được điều đó nghĩa là đổi **hình** của kiểu `meander` (bảng
+`settingStyle.js` + một dòng hình học riêng), tức chính là việc `#65` đang giữ. → **gộp vào `#65`**.
+
+---
 
 ---
 
@@ -2480,7 +2550,30 @@ ship một trạng thái dở dang, hãy làm nó **ĐẾM ĐƯỢC trong một 
       thấp hơn — tức viết cổng thành một QUAN HỆ với `width` thay vì một MỨC chung (đúng khuôn
       ADR-028 đã dùng cho lệnh vẽ: 15 mốc riêng thay vì một trần chung).
   ⇒ **CHỜ ĐÀM.** Không tự chọn, và tuyệt đối không hạ con số 5%.
-- **Owner**: chờ Đàm · **Status**: **Open — điều kiện xem lại ĐÃ HỎI XONG, nay chờ Đàm chọn hướng**
+- **Owner**: — · **Status**: ✅ **ĐÃ TRẢ LỜI 2026-08-20 — THÔI LÀ MỘT MỤC NỢ, THÀNH MỘT SỰ THẬT ĐÃ ĐO**
+
+### ✅ ĐÀM CHỐT — 2026-08-20
+
+*"GIỮ NGUYÊN cổng, đổi cách đọc: nay có số màn hình thật, ghi thẳng «5/14 đủ diện tích · 14/14 đọc
+ra được» vào tài liệu như một sự thật đã đo, không phải một mục nợ. Cổng 5% vẫn dùng cho phase sau."*
+
+⇒ **Cổng 5% KHÔNG đổi.** Thứ đổi là cách đọc kết quả của nó. Bảng dưới là **số màn hình thật**, đo
+bằng `node scripts/water-score.mjs` (mặt nạ `--mask water`, khung mặc định 1100×700, 12 giờ, 40
+phiên) — không phải phép tia của `water-view.mjs`, thứ đã bị bác ở `#63`:
+
+| | Số | Nghĩa |
+|---|---|---|
+| **Đủ DIỆN TÍCH** (≥ 5% khung hình) | **5/14** kỷ (8 · 11 · 13 · 14 · 15) | *"nước chiếm được một mảng đáng kể của bức tranh"* |
+| **ĐỌC RA ĐƯỢC** (tương phản nước↔bờ ≥ 12) | **14/14** kỷ, dải **30,8 – 115,5** | *"chỗ nào có nước thì mắt nhận ra ngay là nước"* |
+
+⚠️ **HAI CÂU HỎI, ĐỪNG ĐỂ MỘT CỘT GÁNH CẢ HAI.** Kỷ 10 là đối chứng sống: tương phản **103,2** —
+gần mạnh nhất bảng — mà chỉ chiếm **1,18%** khung hình. Nó *rất* dễ đọc ra là nước, chỉ là ít nước.
+Ngược lại không có kỷ nào nhiều nước mà khó đọc. ⇒ Cổng 5% đo **"có đủ nhiều không"**, và nó vẫn là
+cổng đúng cho phase sau; nhưng *"9 kỷ trượt cổng"* **KHÔNG** có nghĩa là *"9 kỷ trông không ra
+nước"* — đọc như thế là gán cho một cột câu hỏi mà nó không trả lời.
+
+**Phương án (a)/(b)/(c) trong mục này KHÔNG còn treo** — Đàm đã chọn: giữ cổng, giữ 5/14, ghi cả
+hai con số. Việc *nâng* 9 kỷ kia lên trên 5% nếu có làm thì thuộc `#60`/`#65`, không thuộc mục này.
 
 ---
 
@@ -2856,10 +2949,21 @@ mất chỗ để ghi *"kỷ này khai có nước mà chưa dựng"* — thứ 
       ba mốc** bằng ảnh thật, không được mang ngưỡng cũ sang;
   (c) **chấp nhận 13,96** và ghi rõ rằng cặp 6h↔15h là cặp cố ý gần nhau (cùng là ánh nắng xiên,
       chỉ khác hướng) — có lý về vật lý, và đúng thứ `CLAUDE.md` đã ghi cho cặp bình minh↔hoàng hôn.
-- **Owner**: chưa ai · **Status**: **Open — NGƯỠNG ĐÃ CHẠM (13,96 < 14), chờ Đàm chọn hướng. Chẩn
-  đoán cũ ("vùng quê") đã bị số đo bác bỏ; đừng thực hiện bản vá ghi ở phần trên.**
-- **Số hiện hành (2026-08-19, sau VIỆC 1)**: cặp chặng gần nhất **16,5** · ngưỡng hành động **14** ·
-  ngưỡng mắt **12**.
+- **Owner**: — · **Status**: ⏸️ **HOÃN có chủ ý — Đàm chốt 2026-08-20**
+
+  *"HOÃN. Đơn thuốc cũ đã bị số đo bác bỏ, và Bước 2 của mặt trận mới (tone mapping, tương phản,
+  bóng) rất có thể tự nâng dải trời và dải thành phố. Đo lại SAU Bước 2 rồi mới quyết."*
+
+  Lý do kỹ thuật đứng sau quyết định ấy: số đo đã chỉ rõ thủ phạm **KHÔNG** phải vùng quê. Tách
+  con số gộp 13,96 ra ba dải ở đúng cặp yếu nhất (6h ↔ 15h): **mặt đất 19,14** (khoẻ nhất) ·
+  **thành phố 11,50** · **trời 9,29** — hai dải sau đã DƯỚI ngưỡng mắt 12. Bốc thuốc "làm vùng quê
+  đổi theo giờ" là đi bồi cho dải đang khoẻ nhất. Mà tone mapping / tương phản / bóng đổ thì tác
+  động thẳng vào **trời** và **thành phố** — đúng hai dải đang kéo con số xuống. ⇒ Đo lại sau, chứ
+  không sửa trước.
+
+  ⚠️ **KHÔNG được nới ngưỡng.** Ba mốc Đàm đặt (≥20,7 tự phục hồi · <17 khuyết tật thật · <14 phải
+  làm vùng quê đổi theo giờ) giữ nguyên, và giá trị hiện hành **13,9616** vẫn đang nằm dưới mốc thứ
+  ba — chỉ là thứ tự xử lý được đổi, không phải cái cổng.
 
 ---
 

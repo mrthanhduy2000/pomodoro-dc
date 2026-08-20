@@ -20,7 +20,8 @@ import { hasWater, SETTING_STYLES, SIDE_YAW, worldYaw } from './settingStyle.js'
 import {
   BED_RAMP, ERAS_WITH_WATER_GEOMETRY, PROP_SHORE_CLEAR, SHORE_BAND,
   WATER_BED_DEPTH, WATER_BED_LIP, WATER_DROP_BELOW_PLAIN,
-  buildSetting, distanceOutsideGrid, hazXuongDay, waterIsBuilt,
+  buildSetting, distanceOutsideGrid, distanceOutsideGridRounded, hazXuongDay, waterIsBuilt,
+  MEANDER_NECK,
 } from './setting.js';
 import { APRON_DROP, WATER_SURFACE_Y, buildTerrain, terrainSurfaceReach } from './terrain.js';
 import { MOUNTAIN_FADE, buildHorizon } from './horizon.js';
@@ -677,5 +678,298 @@ test('VÙNG QUÊ VẪN LÀ ĐỊA LÝ, KHÔNG PHẢI TIẾN ĐỘ — mặt nư�
       era, gridSize: GRID, built: ['a', 'b'], levels: { a: 3 }, stats: { sessionCount: 400 },
     });
     assert.deepEqual(rac, sach, `kỷ ${era}: vùng quê đổi theo dữ liệu tiến độ`);
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// KHÚC UỐN KỶ 5 — EO ĐẤT VÀ HÌNH DẠNG CỦA HÀO  (TECH_DEBT #64)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * BẮN TIA TỪ TÂM THÀNH PHỐ RA MỌI HƯỚNG, GOM CÁC HƯỚNG KHÔ LIỀN NHAU THÀNH **CUNG**.
+ *
+ * ⚠️ VÌ SAO PHẢI ĐẾM CUNG CHỨ KHÔNG ĐẾM TIA. Một tia lẻ lọt qua khe hở giữa hai gợn sóng bờ KHÔNG
+ * phải một lối vào — không ai đi bộ trên một đường thẳng dày 0 mét. Chỉ một **cung liên tục** mới
+ * là một eo đất. Đây đúng phép nghiệm thu Đàm ra cho `TECH_DEBT #64`.
+ *
+ * ⚠️⚠️ VÀ PHẢI HỎI ĐÚNG **`blendAt`**, KHÔNG PHẢI `insetAt` — BA ĐỊNH NGHĨA "ƯỚT", CHỈ MỘT CÁI ĐÚNG.
+ * Cùng một kỷ 5, cùng một bản mã, ba phép hỏi ra ba con số khác hẳn nhau:
+ *
+ *   · `insetAt > 0`  (dưới mặt phẳng nước)      → 46/720 tia khô  — và **KHÔNG ĐỔI** khi gỡ bản vá;
+ *   · cao độ đất < mực nước                     → 37/720 tia khô  — cũng **KHÔNG ĐỔI**;
+ *   · `blendAt > 0`  (mặt đất đã bị hạ chút nào)→ 19/720 sau khi vá, **0/720 trước khi vá**.
+ *
+ * Chỉ cái thứ ba khớp với ẢNH: bản trước khi vá render ra một cái hào KHÉP KÍN nhìn thấy rõ.
+ * Lý do nằm ở `terrainMesh.js` — `buildWaterSurface` bỏ ô nước nào có `blendAt <= 0` ở CẢ BỐN GÓC,
+ * tức **tấm nước được vẽ ở đâu là do `blendAt` quyết**, không do `insetAt`, và cũng không do cao độ
+ * đất (tấm nước vẫn được vẽ đè lên chỗ đất còn cao hơn mặt nước — đó chính là cái hào đã ship).
+ *
+ * ⇒ Bài học, cùng họ với `water-view.mjs` bắn tia xuyên qua cây (2026-08-20): **một phép đo về
+ * "chỗ này Đàm NHÌN THẤY là nước" phải hỏi ĐÚNG hàm mà bộ dựng hình hỏi.** Hai phép đo kia đều
+ * đúng về một đại lượng có thật, chỉ là đại lượng ấy không đi tới điểm ảnh. Và cả hai đều **im
+ * lặng đứng yên** qua phép thử ngược — loại nói dối nguy hiểm nhất, vì nó trông y hệt "không có gì
+ * hỏng cả". Thứ phân xử được là TẤM ẢNH, không phải lý lẽ.
+ *
+ * ⚠️ CUNG PHẢI QUẤN VÒNG QUA MỐC 0°/360°. Duyệt mảng theo thứ tự từ chỉ số 0 sẽ **cắt đôi** một
+ * cung nằm vắt qua mốc ấy và biến một lối vào rộng thành hai lối vào hẹp — cùng hình dạng sai với
+ * bài *"hai chặng liền nhau"* ở `daylight.test.js` (duyệt danh sách theo thứ tự nên `dawn` và
+ * `dusk` không bao giờ được đem so với nhau). Vì thế vòng lặp bắt đầu từ một hướng ƯỚT.
+ */
+function cungKhoRaNgoai(uotFn, { tia = 720, banKinh = 14, buoc = 0.1 } = {}) {
+  const half = (GRID - 1) / 2;
+  const kho = [];
+  for (let k = 0; k < tia; k += 1) {
+    const g = (k / tia) * Math.PI * 2;
+    let uot = false;
+    for (let r = 0.5; r <= banKinh && !uot; r += buoc) {
+      if (uotFn(half + Math.cos(g) * r, half + Math.sin(g) * r) > 0) uot = true;
+    }
+    kho.push(!uot);
+  }
+  if (kho.every(Boolean)) return [tia];
+  const goc = kho.findIndex((x) => !x);
+  if (goc < 0) return [];
+  const cung = []; let run = 0;
+  for (let i = 0; i < tia; i += 1) {
+    const k = (goc + i) % tia;
+    if (kho[k]) run += 1;
+    else if (run) { cung.push(run); run = 0; }
+  }
+  if (run) cung.push(run);
+  return cung.sort((a, b) => b - a);
+}
+
+/**
+ * BỀ RỘNG CHỖ HẸP NHẤT CỦA EO ĐẤT, TÍNH BẰNG **Ô** — không tính bằng độ.
+ *
+ * Góc phụ thuộc chỗ đứng nhìn; bề rộng ô thì không, và `MEANDER_NECK` cũng tính bằng ô ⇒ đo bằng ô
+ * là đo cùng đơn vị với hằng số đang sở hữu quyết định ấy, nên so được trực tiếp.
+ *
+ * ⚠️ MỘT DÂY CUNG **CHÍNH LÀ** BỀ RỘNG HÀNH LANG, không phải một phép xấp xỉ: với hành lang thẳng
+ * nửa rộng `w` nhìn từ tâm ở bán kính `R`, nửa góc là `asin(w/R)` nên dây cung
+ * `2·R·sin(asin(w/R)) = 2w` — độc lập với `R`. Số đo xác nhận: 1,40 ô ở mọi bán kính từ 6,5 tới 8,75.
+ *
+ * ⚠️ VÀ PHẢI LẤY DẢI KHÔ **CHỨA HƯỚNG HÀNH LANG**, KHÔNG LẤY "cung khô rộng nhất" ở mỗi bán kính.
+ * Bản đầu lấy cung rộng nhất và đo ra 2,61 ô — nó đang đo **khe chéo của hào** (vành hào xa tâm hơn
+ * ở góc chéo nên ở bán kính 8 thì bốn góc chéo còn khô), không đo eo đất.
+ */
+function beRongEoDat(insetFn, huongRad, { tu = 5, den = 13, buocR = 0.25, N = 7200 } = {}) {
+  const half = (GRID - 1) / 2;
+  const k0 = Math.round((huongRad / (2 * Math.PI)) * N);
+  let hep = Infinity;
+  for (let R = tu; R <= den + 1e-9; R += buocR) {
+    const uot = (k) => insetFn(half + Math.cos((k / N) * 2 * Math.PI) * R,
+      half + Math.sin((k / N) * 2 * Math.PI) * R) > 0;
+    if (uot(k0)) return 0;                       // trục hành lang đã ướt ⇒ eo đất ĐỨT
+    let a = 0; while (a < N && !uot(((k0 - a) % N + N) % N)) a += 1;
+    let b = 0; while (b < N && !uot((k0 + b) % N)) b += 1;
+    if (a + b >= N) continue;                    // khô cả vòng ⇒ chưa tới hào, không phải chỗ thắt
+    const goc = ((a + b - 1) / N) * 2 * Math.PI;
+    hep = Math.min(hep, 2 * R * Math.sin(Math.min(goc, Math.PI) / 2));
+  }
+  return hep;
+}
+
+/**
+ * HÀO VUÔNG HAY HÀO TRÒN — hỏi bằng HÌNH DẠNG CỦA CHÍNH ĐƯỜNG BỜ.
+ *
+ * Với mỗi hướng, tìm **đường bờ ngoài** (bán kính lớn nhất còn ngập) rồi hỏi điểm ấy cách HÌNH CHỮ
+ * NHẬT LƯỚI bao xa theo Ơclit. Bo góc ⇒ khoảng cách ấy gần như không đổi quanh vòng (tỉ số chéo/trục
+ * ≈ 1). Vuông ⇒ ở góc chéo đường bờ là một góc 90° nên nó xa hơn, tiến tới √2.
+ *
+ * ⚠️ HAI BẢN ĐO TRƯỚC ĐỀU SAI, VÀ CẢ HAI ĐỀU SAI THEO KIỂU IM LẶNG — ghi lại vì đây là lần thứ ba
+ * trong dự án một công cụ đo tự chế nói dối theo hướng *"không có gì thay đổi cả"*:
+ *
+ *   (a) **Hỏi nhị phân `blendAt > 0` ở một vòng cách lưới cố định.** Phép phá (đổi về L∞) làm
+ *       `insetAt` ở góc chéo tụt từ −0,02 xuống −0,45 — một thay đổi rất lớn — nhưng `blendAt` chỉ
+ *       về 0 khi `insetAt ≤ −SHORE_BAND (−0,9)`, nên **cả hai bản đều trả lời "ướt"** và phép đo ra
+ *       số giống hệt nhau tới từng chữ số. *Một câu hỏi nhị phân đặt lên một đại lượng liên tục thì
+ *       mù với mọi thay đổi chưa vượt ngưỡng.*
+ *
+ *   (b) **Hỏi giá trị `insetAt` ở vòng cách lưới cố định.** Cũng sai, vì `insetAt` của `meander` là
+ *       một hàm **hình lều** theo `da` (`min(da − gần, xa − da)`) nên nó KHÔNG đơn điệu: dịch `da`
+ *       một chút có thể làm giá trị TĂNG hoặc GIẢM tuỳ đang ở sườn nào. Hỏi qua một hàm không đơn
+ *       điệu thì câu trả lời không đọc ra được hình dạng (tách được 0,07 — lẫn trong nhiễu bờ 0,55).
+ *
+ * ⇒ Bài học: *trước khi tin một phép đo "không đổi", hỏi xem đại lượng vừa vặn có nằm trong thứ
+ * công cụ này đo không* (Phase 9B) — và thêm một vế: **hỏi cả xem đường truyền từ cần gạt tới con
+ * số có ĐƠN ĐIỆU không.** Không đơn điệu thì tín hiệu tự triệt tiêu.
+ *
+ * CỬA SỔ ±2°: đo được biên tách 26,9%. Cửa sổ rộng hơn pha loãng rất nhanh (±10° chỉ còn 7,1%) vì
+ * chỉ SÁT 45° đường bờ vuông mới thật sự xa ra — lệch vài độ là tia đã cắt vào cạnh chứ không vào
+ * góc. Cùng họ `TECH_DEBT #22`: lấy trung bình trên vùng quá rộng thì pha loãng tín hiệu.
+ */
+function tiSoBoNgoaiCheoTruc(insetFn, { cuaSo = 2, buocDo = 0.1, buocR = 0.02 } = {}) {
+  const half = (GRID - 1) / 2;
+  const ocl = (u, v) => Math.hypot(
+    Math.max(0, -0.5 - u, u - (GRID - 0.5)), Math.max(0, -0.5 - v, v - (GRID - 0.5)),
+  );
+  const truc = []; const cheo = [];
+  for (let deg = 0; deg < 360; deg += buocDo) {
+    const g = deg * Math.PI / 180;
+    let bo = null;
+    for (let r = 20; r >= 4; r -= buocR) {
+      const u = half + Math.cos(g) * r; const v = half + Math.sin(g) * r;
+      if (insetFn(u, v) > 0) { bo = ocl(u, v); break; }
+    }
+    if (bo === null) continue;
+    const m = ((deg % 90) + 90) % 90;
+    if (m <= cuaSo || m >= 90 - cuaSo) truc.push(bo);
+    else if (Math.abs(m - 45) <= cuaSo) cheo.push(bo);
+  }
+  const tb = (a) => a.reduce((x, y) => x + y, 0) / a.length;
+  return { tiSo: tb(cheo) / tb(truc), soTruc: truc.length, soCheo: cheo.length };
+}
+
+test('KHÔNG KỶ NÀO ĐƯỢC LÀ HÒN ĐẢO — 720 tia, mỗi kỷ phải có ít nhất MỘT CUNG liên tục ra đất khô', () => {
+  // ⚠️ ĐÂY LÀ BÀI CANH `TECH_DEBT #64`. Bước C dựng nước cho 14 kỷ mà **chưa ai hỏi câu này**, và
+  // kỷ 5 (`meander`) đã ship ra một cái hào KHÉP KÍN: 0/720 tia ra được đất khô. Burg Eltz nổi
+  // tiếng vì chỉ có MỘT lối vào — không phải vì KHÔNG có lối nào.
+  //
+  // Bệnh gốc là một QUAN HỆ VÔ CHỦ giữa hai hằng số mỗi cái đúng khi đứng riêng: `MEANDER_NECK`
+  // quyết bề rộng lối vào, `SHORE_BAND` quyết độ mềm của mép nước, và không dòng nào sở hữu câu
+  // *"lối vào phải khô hẳn ngay khi rời khỏi lưới"*. Cùng đúng hình dạng sai của `TECH_DEBT #57`.
+  //
+  // THỬ-CHO-ĐỎ (nêu TRƯỚC chỗ mong đợi đỏ, đã chạy thật):
+  //   · gỡ `+ SHORE_BAND` trong `trongKhe` ⇒ đỏ ở kỷ 5 với `cung.length === 0` (đúng bộ số cũ:
+  //     0/720 tia, và đúng cái hào khép kín nhìn thấy trên ảnh `K5-TRUOC.png`);
+  //   · đối chứng dưới đây đỏ nếu phép gom cung mất răng.
+  for (const era of ERAS) {
+    const cung = cungKhoRaNgoai(buildSetting({ era, gridSize: GRID }).blendAt);
+    assert.ok(cung.length >= 1,
+      `kỷ ${era} là một HÒN ĐẢO: bắn 720 tia từ tâm thành phố ra bán kính 14, không một cung liên `
+      + 'tục nào ra tới được đất khô. Mặt nước đang khép kín vòng quanh thành phố.');
+    assert.ok(cung[0] >= 8,
+      `kỷ ${era}: cung khô rộng nhất chỉ ${cung[0]} tia (${(cung[0] * 0.5).toFixed(1)}°) — quá mảnh `
+      + 'để là một lối đi, nhiều khả năng chỉ là một khe lọt giữa hai gợn sóng bờ.');
+  }
+
+  // ĐỐI CHỨNG — NHỐT ĐÚNG TRẠNG THÁI HÒN ĐẢO CŨ. Một vành nước khép kín, KHÔNG có khe: phép đo
+  // phải còn bắt được nó. Không có vế này thì ngày nào phép gom cung hỏng, bài trên vẫn xanh.
+  const daoKhepKin = (u, v) => { const da = distanceOutsideGrid(u, v, GRID); return Math.min(da - 1, 1.5 - da); };
+  assert.equal(cungKhoRaNgoai(daoKhepKin).length, 0,
+    'đối chứng hỏng: một vành nước khép kín hoàn toàn mà phép đo vẫn tìm ra lối ra — phép gom cung '
+    + 'đã mất răng, và bài test ở trên không còn canh gì.');
+});
+
+test('EO ĐẤT KỶ 5 RỘNG ĐÚNG BẰNG QUAN HỆ `2 × (MEANDER_NECK − SHORE_BAND)`, không phải một con số rời', () => {
+  // ⚠️ ĐÂY LÀ CHỖ VIẾT RA CÁI QUAN HỆ TỪNG VÔ CHỦ. Hành lang danh nghĩa rộng `2 × MEANDER_NECK`
+  // (3,2 ô), nhưng dải hoà bờ `SHORE_BAND` ăn vào mỗi bên đúng 0,9 ô ⇒ phần KHÔ HẲN còn lại là
+  // `2 × (1,6 − 0,9) = 1,4 ô`. Số đo: 1,396–1,405 ô ở mọi bán kính từ 6,5 tới 8,75 (chênh 0,005 là
+  // độ mịn lấy mẫu góc). Đó là một đẳng thức, không phải một sự trùng hợp.
+  //
+  // ⇒ HỆ QUẢ PHẢI GIỮ MÃI: `MEANDER_NECK` **phải lớn hơn** `SHORE_BAND`, nếu không eo đất rộng 0.
+  // Đó chính là điều kiện mà `TECH_DEBT #64` đã vi phạm trong im lặng.
+  //
+  // THỬ-CHO-ĐỎ (nêu TRƯỚC): hạ `MEANDER_NECK` xuống 0,8 ⇒ đỏ ngay ở vế QUAN HỆ đầu tiên (0,8 < 0,9);
+  // gỡ `+ SHORE_BAND` ⇒ đỏ ở `beRongEoDat` (trả về 0 vì trục hành lang đã ướt).
+  assert.ok(MEANDER_NECK > SHORE_BAND,
+    `MEANDER_NECK (${MEANDER_NECK}) phải LỚN HƠN SHORE_BAND (${SHORE_BAND}), nếu không dải hoà bờ `
+    + 'ăn hết bề rộng lối vào từ cả hai phía và khúc uốn thành một hòn đảo.');
+
+  const st = buildSetting({ era: 5, gridSize: GRID });
+  // Hướng hành lang tự tìm từ chính dữ liệu — KHÔNG dựng lại phép xoay `worldYaw` bằng công thức
+  // thứ hai. Tâm của cung khô rộng nhất chính là trục hành lang.
+  const TIA = 720; const half = (GRID - 1) / 2;
+  const kho = [];
+  for (let k = 0; k < TIA; k += 1) {
+    const g = (k / TIA) * Math.PI * 2;
+    let uot = false;
+    for (let r = 0.5; r <= 14 && !uot; r += 0.1) {
+      if (st.insetAt(half + Math.cos(g) * r, half + Math.sin(g) * r) > 0) uot = true;
+    }
+    kho.push(!uot);
+  }
+  const idx = kho.map((x, i) => (x ? i : -1)).filter((i) => i >= 0);
+  assert.ok(idx.length > 0, 'kỷ 5 không có một tia khô nào — bài trên đáng lẽ đã đỏ trước bài này');
+  const huong = (idx.reduce((a, b) => a + b, 0) / idx.length / TIA) * 2 * Math.PI;
+
+  // ⚠️ EO ĐẤT CÓ **HAI** BỀ RỘNG, VÀ ĐO NHẦM CÁI NÀO CŨNG RA MỘT CON SỐ TRÔNG HỢP LÝ.
+  //   · hỏi `insetAt > 0`  = *"chỗ này có nằm dưới mặt nước không"*  ⇒ hành lang DANH NGHĨA;
+  //   · hỏi `blendAt > 0`  = *"mặt đất ở đây có bị hạ xuống chút nào không"* ⇒ phần KHÔ HẲN.
+  // Bản đầu của bài này chỉ hỏi vế thứ nhất, ra 3,203 ô, và câu ấy ĐÚNG — chỉ là nó không phải câu
+  // đang hỏi. Cái vỡ ở `TECH_DEBT #64` là vế thứ HAI: dải hoà bờ bắc cầu ngang qua cửa hành lang.
+  // Khoá cả hai, vì mỗi vế canh một hằng số khác nhau.
+  const rongDanhNghia = beRongEoDat(st.insetAt, huong);
+  const huaDanhNghia = 2 * MEANDER_NECK;
+  assert.ok(Math.abs(rongDanhNghia - huaDanhNghia) < 0.05,
+    `hành lang danh nghĩa kỷ 5 rộng ${rongDanhNghia.toFixed(3)} ô, trong khi 2 × MEANDER_NECK hứa `
+    + `${huaDanhNghia.toFixed(3)} ô — mặt nước đang lấn vào chính cái khe sinh ra để chừa lối vào.`);
+
+  const rongKhoHan = beRongEoDat(st.blendAt, huong);
+  const huaKhoHan = 2 * (MEANDER_NECK - SHORE_BAND);
+  assert.ok(Math.abs(rongKhoHan - huaKhoHan) < 0.05,
+    `phần KHÔ HẲN của eo đất kỷ 5 rộng ${rongKhoHan.toFixed(3)} ô, trong khi quan hệ `
+    + `2 × (MEANDER_NECK − SHORE_BAND) hứa ${huaKhoHan.toFixed(3)} ô. Lệch quá 0,05 nghĩa là một `
+    + 'trong hai hằng số đã đổi mà quan hệ giữa chúng chưa được viết lại — hoặc dải hoà bờ đang ăn '
+    + 'vào lối đi theo một cách khác.');
+});
+
+test('HÀO PHẢI BO GÓC — dòng suối uốn quanh mỏm đá, không phải hào vuông đào theo lưới', () => {
+  // Đàm chỉ đúng bản chất khi nhìn ảnh nghiệm thu Bước C: *"hào 90° sắc lẹm là dấu hiệu hình dạng
+  // sinh từ LƯỚI VUÔNG, không phải từ DÒNG CHẢY. Suối thật uốn."* Một dòng nước không biết lưới
+  // thành phố là hình gì; thứ duy nhất nó biết là *"tôi cách cái mỏm đá kia bao xa"* — tức khoảng
+  // cách Ơclit, không phải L∞.
+  //
+  // SỐ ĐO (cửa sổ ±2°, đã chạy cả hai chiều):
+  //   · kỷ 5 hiện tại (Ơclit)      : 1,0215   ⟵ dưới cổng 1,10, dư 7,7%
+  //   · kỷ 5 nếu gỡ bo góc (L∞)    : 1,3543   ⟵ vượt cổng 23%
+  //   · đối chứng hào VUÔNG dựng tay: 1,2960
+  //   · đối chứng hào TRÒN dựng tay : 0,9956
+  // Cổng 1,10 nằm giữa hai đầu ĐO ĐƯỢC, không phải một con số chọn cho tiện (bài học Phase 9A:
+  // *"một ngưỡng nới rộng cho chắc là một cái phễu"* — nên phải kèm đối chứng nhốt bộ số hỏng).
+  //
+  // THỬ-CHO-ĐỎ (nêu TRƯỚC): đổi `distanceOutsideGridRounded` về `distanceOutsideGrid` trong nhánh
+  // `meander` ⇒ đỏ ở vế kỷ 5 với tỉ số 1,3543.
+  const CONG = 1.10;
+  const d5 = tiSoBoNgoaiCheoTruc(buildSetting({ era: 5, gridSize: GRID }).insetAt);
+  assert.ok(d5.soTruc > 40 && d5.soCheo > 40,
+    `phép đo chạy rỗng: chỉ ${d5.soTruc} hướng trục / ${d5.soCheo} hướng chéo tìm thấy đường bờ`);
+  assert.ok(d5.tiSo < CONG,
+    `hào kỷ 5 đang VUÔNG: đường bờ ngoài ở góc chéo cách lưới gấp ${d5.tiSo.toFixed(4)} lần ở sát `
+    + `trục (cổng ${CONG}; hào tròn ≈ 1,00 · hào vuông tiến tới √2 = 1,414).`);
+
+  // ĐỐI CHỨNG (a) — hào VUÔNG dựng tay PHẢI bị bắt. Không có vế này thì cổng 1,10 có thể đã bị nới
+  // tới mức không còn bắt được gì mà vế trên vẫn xanh.
+  const hV = tiSoBoNgoaiCheoTruc((u, v) => {
+    const da = distanceOutsideGrid(u, v, GRID); return Math.min(da - 1, 1.5 - da);
+  });
+  assert.ok(hV.tiSo >= CONG,
+    `đối chứng hỏng: một cái hào L∞ vuông vức dựng tay chỉ ra tỉ số ${hV.tiSo.toFixed(4)}, vẫn lọt `
+    + `cổng ${CONG} — phép đo đã mất răng.`);
+
+  // ĐỐI CHỨNG (b) — hào TRÒN dựng tay PHẢI lọt. Không có vế này thì một phép đo luôn-luôn-báo-động
+  // cũng sẽ trông như đang canh gác.
+  const hT = tiSoBoNgoaiCheoTruc((u, v) => {
+    const da = distanceOutsideGridRounded(u, v, GRID); return Math.min(da - 1, 1.5 - da);
+  });
+  assert.ok(hT.tiSo < CONG,
+    `đối chứng hỏng: một cái hào Ơclit tròn đều dựng tay lại ra tỉ số ${hT.tiSo.toFixed(4)} và bị `
+    + 'cổng chặn — phép đo đang kêu oan, không phải đang canh gác.');
+});
+
+test('HAI HÀM KHOẢNG CÁCH PHẢI LÀ HAI HÌNH KHÁC NHAU — và trong lưới thì cả hai đều bằng 0', () => {
+  // Bài rẻ và tất định, canh chính định nghĩa: `distanceOutsideGrid` là L∞ (đường đồng mức là hình
+  // chữ nhật), `distanceOutsideGridRounded` là Ơclit (đường đồng mức bo góc). Ở góc chéo, tỉ số
+  // giữa chúng phải là ĐÚNG √2 — một hằng số toán học, không phải một phép đo.
+  //
+  // THỬ-CHO-ĐỎ: cho `distanceOutsideGridRounded` gọi lại `Math.max` ⇒ đỏ ở vòng lặp đường chéo.
+  for (const t of [0.25, 0.5, 1, 2, 4]) {
+    for (const [u, v] of [[-0.5 - t, -0.5 - t], [GRID - 0.5 + t, -0.5 - t],
+      [GRID - 0.5 + t, GRID - 0.5 + t], [-0.5 - t, GRID - 0.5 + t]]) {
+      assert.ok(Math.abs(distanceOutsideGrid(u, v, GRID) - t) < 1e-9,
+        `L∞ tại góc chéo cách ${t}: phải là ${t}`);
+      assert.ok(Math.abs(distanceOutsideGridRounded(u, v, GRID) - t * Math.SQRT2) < 1e-9,
+        `Ơclit tại góc chéo cách ${t}: phải là ${(t * Math.SQRT2).toFixed(4)}, đang là `
+        + `${distanceOutsideGridRounded(u, v, GRID).toFixed(4)} — hàm này đã thoái hoá về L∞.`);
+    }
+    // Trên trục thì hai hàm PHẢI trùng nhau — nếu không, bo góc đang đổi cả hình dạng chỗ không cần.
+    for (const [u, v] of [[-0.5 - t, 5.5], [5.5, -0.5 - t]]) {
+      assert.ok(Math.abs(distanceOutsideGrid(u, v, GRID) - distanceOutsideGridRounded(u, v, GRID)) < 1e-9,
+        `trên trục, hai hàm phải cho cùng một số (tại ${u},${v})`);
+    }
+  }
+  for (const [u, v] of [[0, 0], [5.5, 5.5], [11, 11], [-0.5, -0.5], [11.5, 11.5]]) {
+    assert.equal(distanceOutsideGridRounded(u, v, GRID), 0, `trong lưới tại (${u},${v}) phải bằng 0`);
   }
 });

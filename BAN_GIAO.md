@@ -6,7 +6,71 @@
 > chọn: `ARCHITECTURE_DECISIONS.md`. Nợ kỹ thuật: `TECH_DEBT.md`. Migration: `MIGRATION.md`. Tóm
 > tắt theo mốc: `CHANGELOG.md`.
 > **NGUYÊN TẮC ƯU TIÊN SỐ 1:** (1) mọi phiên AI phải đọc file này + `CLAUDE.md` + các file liên quan TRƯỚC khi làm; (2) sau MỌI cập nhật dù nhỏ, phải cập nhật ngay file này + `CLAUDE.md` + các file liên quan khác.
-> Cập nhật lần cuối: **2026-08-20** — **VIỆC 2 BƯỚC C: MẶT NƯỚC ĐÃ TRẢI RA 14/15 KỶ, KỶ 1 LÀ KỶ KHÔ DUY NHẤT — ADR-042. `TECH_DEBT #56` ĐÓNG. CHỜ ĐÀM: xem ảnh, chạy `bench-macbook.sh`, quyết việc gộp `main`.**
+> Cập nhật lần cuối: **2026-08-20** — **ĐÃ GỘP `main` (= `b87df3c`, 25 commit). `TECH_DEBT #64` ĐÓNG (kỷ 5 thôi là hòn đảo — ADR-044), nửa mỹ thuật còn lại gộp vào `#65`. MẶT TRẬN MỚI: nâng chất lượng hình ảnh — CHỜ ĐÀM chạy `bash scripts/bench-macbook.sh` trên MacBook M3 trước khi viết dòng hiệu ứng đầu tiên.**
+>
+> ## ✅ ĐÃ GỘP `main` + KỶ 5 THÔI LÀ HÒN ĐẢO (2026-08-20, ADR-044, đóng `TECH_DEBT #64`)
+>
+> **1 — `main` = `b87df3c`.** Đàm duyệt gộp một lần. 25 commit, fast-forward, 0 xung đột, 0 file
+> đụng store/sync/api/AI Coach. ⚠️ **CHỜ ĐÀM: mở tab Deployments trên Vercel xác nhận "Ready"** —
+> push thành công KHÔNG có nghĩa là đã lên production (sự cố `8ee264d`). Sau lần này quay lại luật
+> cũ: **KHÔNG tự gộp `main`**.
+>
+> **2 — `#64` ĐÃ ĐÓNG, nhưng chỉ 2 trong 3 tiêu chí của Đàm.** Kỷ 5 (`meander`, Burg Eltz) ship ra
+> một **hào vuông khép kín** — 720 tia bắn từ tâm, **0 tia nào** ra được đất khô. Hai khuyết tật
+> độc lập, mỗi cái một dòng vá:
+>
+> | Đại lượng | TRƯỚC | SAU | Cách đo |
+> |---|---|---|---|
+> | cung liên tục ra đất khô (720 tia, `blendAt`) | **0** | **1 cung, 9,5°** | `cungKhoRaNgoai` |
+> | bề rộng eo đất, phần KHÔ HẲN | **0,000 ô** | **1,400 ô** = `2×(MEANDER_NECK − SHORE_BAND)` | `beRongEoDat(blendAt)` |
+> | bề rộng hành lang danh nghĩa | 3,203 ô | 3,203 ô = `2×MEANDER_NECK` | `beRongEoDat(insetAt)` |
+> | bo góc: bờ ngoài chéo / trục | **1,3543** (vuông) | **1,0215** (tròn) | `tiSoBoNgoaiCheoTruc`, cổng 1,10 |
+> | nước chiếm khung hình kỷ 5 | 3,34% | 3,49% | `water-score.mjs --eras 5` |
+> | tương phản nước↔bờ | 41,7 | 42,7 | ngưỡng mắt 12 |
+> | điểm ảnh đổi quá ngưỡng mắt | — | **1,0%** (khung mặc định) · 0,7% (cận cảnh) | `sweep-diff --frame` |
+> | tam giác thành phố kỷ 5 | 85.016 | 85.214 (**+198**) | `city-preview` |
+> | lệnh vẽ kỷ 5 | 13 | **13** (không đổi) | `city-preview` |
+>
+> **Bệnh gốc — cùng hình dạng với `TECH_DEBT #57`:** `MEANDER_NECK` (bề rộng lối vào) đúng khi đứng
+> riêng, `SHORE_BAND` (độ mềm mép nước) đúng khi đứng riêng, và **không dòng nào sở hữu quan hệ
+> giữa chúng**. Nay quan hệ ấy được viết ra: *một lối vào phải khô hẳn NGAY KHI nó rời khỏi lưới*
+> ⇒ `d[doi] + SHORE_BAND`. Không có tham số tự do nào để trôi. Hệ quả phải giữ mãi:
+> **`MEANDER_NECK` > `SHORE_BAND`** (có assert).
+>
+> **Bo góc:** thêm `distanceOutsideGridRounded` (Ơclit) chứ **KHÔNG** sửa `distanceOutsideGrid` —
+> `outskirts.js` cũng gọi nó và ở đó câu hỏi thật sự là *"ra khỏi lưới bao xa theo TRỤC nào"*
+> (L∞ đúng). Hai nơi hỏi **hai câu khác nhau**, nên đây không phải ca "một luật một công thức".
+>
+> ⚠️ **NỬA CHƯA ĐẠT, NÓI THẲNG.** Tiêu chí thứ ba của Đàm — *"ảnh cận cảnh phải đọc ra 'mỏm đá
+> trong khúc uốn', không phải 'lâu đài giữa hào nước'"* — **KHÔNG đạt**. Ảnh sau vẫn đọc ra là một
+> cái hào, chỉ khác là nay bo góc và có một lối vào. Lý do thuộc tầng khác và không chỉnh số nào
+> thoát được: `meander` lấy hình từ khoảng cách tới **hình chữ nhật lưới**, nên dù bo góc nó vẫn là
+> một **vành ĐỀU quanh một hình vuông**. Suối thật rộng hẹp thất thường, ôm ba mặt chứ không bốn,
+> và không lấy thành phố làm tâm. ⇒ Nửa này đã **gộp vào `TECH_DEBT #65`** (cho
+> `canal`/`estuary`/`meander` hình học riêng), đúng chỗ Đàm đã hoãn tới sau mặt trận hình ảnh.
+>
+> **7 phép phá, cả 7 nổ đúng chỗ đã nêu TRƯỚC:** MS1 (`+ SHORE_BAND`) · MS2 (bỏ bo góc) ·
+> MS3 (`hypot`→`max`) · MS4 (`MEANDER_NECK` 1,6→0,8) · MS5 (phép gom cung luôn báo có lối ra) ·
+> MS6/MS7 (ép tỉ số bo góc về 1,0 và 2,0).
+>
+> ⚠️ **BÀI HỌC LỚN NHẤT — BA ĐỊNH NGHĨA "ƯỚT", HAI TRONG BA IM LẶNG.** `insetAt > 0` → 46/720 tia
+> khô · cao độ dưới `WATER_SURFACE_Y` → 37/720 · `blendAt > 0` → **19/720** (và **0/720** trước bản
+> vá). Chỉ số thứ ba khớp ảnh render, vì `terrainMesh.js` chỉ bỏ một ô mặt nước khi `blendAt <= 0`
+> ở **cả bốn góc**. Hai định nghĩa kia không nhúc nhích khi bơm phép phá ⇒ nếu bài test hỏi bằng
+> chúng thì nó xanh vĩnh viễn về một thế giới khác. Chi tiết + hệ quả: `CLAUDE.md`, ADR-044.
+>
+> ⚠️ **KÈM THEO — cổng không-trôi in ra ĐÚNG 20 con số y hệt mốc nền**, và **không con số nào trong
+> đó phân biệt được "không trôi" với "bản quét chạy bằng mã cũ"** (phép chấm kỷ lấy trung bình trên
+> dải THÀNH PHỐ, còn cái hào nằm ở VÙNG QUÊ). Phải mượn một phép đo khác hẳn: đếm điểm ảnh lệch quá
+> ngưỡng mắt trên TOÀN khung giữa hai bản quét kỷ 5 dựng từ hai cây mã → **2.388 điểm ảnh (0,53%)
+> lệch > 12, lệch lớn nhất 118**, trong khi nhiễu SwiftShader là **±1** (`TECH_DEBT #50`).
+>
+> **Cổng nghiệm thu:** `npm test` **947/947, 0 fail** (nền 943) · lint sạch · build xanh
+> (`vendor-three` 131,29 kB gzip, trần 135) · bản quét 15 kỷ **15/15 cặp chặng + 105/105 cặp kỷ**
+> trên ngưỡng mắt.
+>
+> **3 — MẶT TRẬN MỚI ĐÃ MỞ: NÂNG CHẤT LƯỢNG HÌNH ẢNH.** Chưa viết một dòng hiệu ứng nào — đúng
+> lệnh: **BƯỚC 1 phải ĐO ngân sách thật trên MacBook M3 của Đàm trước**. Xem mục kế tiếp.
 >
 > ## 🌊 VIỆC 2 BƯỚC C — MẶT NƯỚC TRẢI RA 14/15 KỶ (2026-08-20, ADR-042)
 >

@@ -284,3 +284,83 @@ test('phiên bản three lệch thì CẢNH BÁO chứ không chặn', () => {
     rmSync(cha, { recursive: true, force: true });
   }
 });
+
+// ══════════════════════════════════════════════════════════════════════════════════════════
+//  4. MA TRẬN PHẢI CHỨA *CẢNH NẶNG NHẤT*, VÀ KỶ NẶNG NHẤT PHẢI ĐƯỢC **HỎI**, KHÔNG VIẾT CỨNG
+// ══════════════════════════════════════════════════════════════════════════════════════════
+/**
+ * ⚠️ VÌ SAO BA BÀI NÀY TỒN TẠI (§3 BƯỚC 1, lệnh Đàm 2026-08-20). Mặt trận nâng chất lượng hình
+ * ảnh là mặt trận ĐẦU TIÊN tiêu vào trục ĐIỂM ẢNH — trục chiếm 80% chi phí theo `PERFORMANCE.md`.
+ * Câu hỏi duy nhất đáng hỏi trước khi tiêu là *"còn bao nhiêu ms?"*, và nó phải được trả lời ở
+ * chỗ ngân sách cạn TRƯỚC, không phải ở mức trung bình.
+ *
+ * Ba trục đắt: ĐIỂM ẢNH (cửa sổ lớn) · ÁNH SÁNG (22 giờ là chặng DUY NHẤT bật đèn, đo được +19%)
+ * · hình học (gần như miễn phí). Ma trận cũ chạy 24 cảnh ở cửa sổ thường, rồi đúng MỘT cảnh ở cửa
+ * sổ lớn — và cảnh ấy là kỷ 7 · 12 giờ, tức góc NHẸ NHẤT của cả bộ. Nghĩa là chỗ đắt nhất chưa
+ * bao giờ được đo, trong khi bảng số trông đã đầy đủ.
+ */
+const NGUON_BENCH = readFileSync(KICH_BAN, 'utf8');
+
+/** Mọi lời gọi `chay_canh …` (một dòng), đã bỏ chú thích. */
+function cacLoiGoiCanh(nguon) {
+  return nguon.split('\n')
+    .filter((d) => !/^\s*#/.test(d))
+    .filter((d) => /\bchay_canh\b/.test(d));
+}
+
+test('ma trận PHẢI có cảnh NẶNG NHẤT: 22 giờ (đèn bật) × cửa sổ LỚN', () => {
+  // THỬ-CHO-ĐỎ: bỏ dòng `chay_canh "$nhan_nang" ... --hour 22` ⇒ bài này ĐỎ.
+  const nang = cacLoiGoiCanh(NGUON_BENCH).filter(
+    (d) => /\$RONG_LON/.test(d) && /\$CAO_LON/.test(d) && /--hour\s+22/.test(d),
+  );
+  assert.equal(nang.length, 1,
+    'Phải có ĐÚNG một cảnh ở cửa sổ LỚN chạy lúc 22 giờ — đó là chỗ cả ba trục đắt cùng ở mức cao\n'
+    + 'nhất, tức chỗ ngân sách cạn trước. Không có nó thì bảng số trông đầy đủ mà thiếu đúng con\n'
+    + `số cần dùng để quyết. Hiện tìm thấy ${nang.length} dòng như vậy.`);
+});
+
+test('kỷ nặng nhất phải được HỎI lúc chạy, KHÔNG viết cứng một con số', () => {
+  // THỬ-CHO-ĐỎ: đổi `--era "$KY_NANG"` thành `--era 14` ⇒ bài này ĐỎ ở vế thứ nhất.
+  //             bỏ lời gọi `scene-count.mjs` trong `tim_ky_nang` ⇒ ĐỎ ở vế thứ hai.
+  //
+  // ⚠️ "Kỷ nhiều tam giác nhất" là một QUAN HỆ, không phải một con số. Hôm nay là kỷ 14 (179.182
+  // tam giác), và MỌI phase thêm chi tiết đều có thể đổi nó — Phase 11 một mình đã thêm 110.076
+  // tam giác lên mái. Một hằng số viết cứng ở đây sẽ lặng lẽ trỏ vào một kỷ đã thôi là kỷ nặng
+  // nhất, và bộ đo vẫn in ra một bảng trông hoàn toàn hợp lý. Đúng bẫy Phase 7D.
+  const nang = cacLoiGoiCanh(NGUON_BENCH).find(
+    (d) => /\$RONG_LON/.test(d) && /--hour\s+22/.test(d),
+  );
+  assert.ok(nang, 'không tìm thấy cảnh nặng nhất — xem bài test ngay trên');
+  assert.match(nang, /--era\s+"\$KY_NANG"/,
+    'Kỷ của cảnh nặng nhất phải đọc từ biến tính lúc chạy, không phải một số viết cứng:\n'
+    + `  ${nang.trim()}`);
+
+  // ⚠️ Phải hỏi trên THÂN HÀM ĐÃ BỎ CHÚ THÍCH, không hỏi trên cả file. Chính phép thử ngược lộ
+  // ra chỗ này: chuỗi `scene-count.mjs` xuất hiện 4 lần trong kịch bản (1 chú thích + 1 lời gọi
+  // thật + 2 dòng echo), nên một phép khớp lỏng sẽ vẫn XANH sau khi lời gọi thật đã bị gỡ, chỉ
+  // cần còn một chú thích nhắc tới cái tên. Đúng bài học "assert 'có ít nhất một chỗ' là cái
+  // phễu, không phải hàng rào" (Phase 7A).
+  const than = /tim_ky_nang\(\)\s*\{([\s\S]*?)\n\}/.exec(NGUON_BENCH);
+  assert.ok(than, 'không tìm thấy thân hàm `tim_ky_nang`');
+  const thanSach = than[1].split('\n').filter((d) => !/^\s*#/.test(d)).join('\n');
+  assert.match(thanSach, /\bnode\b[^\n]*scene-count\.mjs/,
+    '`tim_ky_nang` phải thật sự CHẠY `scene-count.mjs` (không chỉ nhắc tên nó trong chú thích).\n'
+    + 'Nó là hàm THUẦN (duyệt scene graph, không cần Chromium, ~10 giây) nên hỏi là rẻ — không có\n'
+    + 'cớ để đoán.');
+});
+
+test('không hỏi được kỷ nặng nhất thì phải KÊU TO, không im lặng dùng số dự phòng', () => {
+  // THỬ-CHO-ĐỎ: bỏ dòng cảnh báo trong nhánh `else` của `if tim_ky_nang` ⇒ bài này ĐỎ.
+  //
+  // ⚠️ Một số dự phòng im lặng là cách tệ nhất để hỏng: bảng số vẫn ra đủ 26 cảnh, dòng "CẢNH
+  // NẶNG NHẤT" vẫn có, và không gì cho biết nó đang trỏ vào một kỷ đoán bừa. Cùng bài học với
+  // "một cơ chế từ chối thẳng phải có người ĐẾM số lần từ chối" (Phase 10 Bước 2).
+  const m = /if tim_ky_nang; then([\s\S]*?)\nfi\n/.exec(NGUON_BENCH);
+  assert.ok(m, 'không tìm thấy khối `if tim_ky_nang`');
+  const duPhong = m[1].split('else')[1] ?? '';
+  assert.match(duPhong, /⚠/,
+    'Nhánh dự phòng phải in một cảnh báo nhìn thấy được, để Đàm biết dòng "CẢNH NẶNG NHẤT" bên\n'
+    + 'dưới có thể không phải kỷ nặng nhất thật.');
+  assert.match(duPhong, /CÓ THỂ|có thể/,
+    'Cảnh báo phải nói rõ con số ấy CÓ THỂ sai, chứ không chỉ ghi "dùng tạm".');
+});

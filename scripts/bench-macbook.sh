@@ -5,7 +5,7 @@
 #  CÁCH DÙNG — MỞ TERMINAL, `cd` VÀO THƯ MỤC DỰ ÁN, RỒI CHẠY HAI LỆNH THEO ĐÚNG THỨ TỰ:
 #
 #      bash scripts/bench-macbook.sh --thu      ← kiểm máy + thử 1 cảnh. Phải thấy "ĐẠT".
-#      bash scripts/bench-macbook.sh            ← chạy thật (~5 phút, 25 cảnh).
+#      bash scripts/bench-macbook.sh            ← chạy thật (~5 phút, 26 cảnh).
 #
 #  Kết quả ghi vào .city-preview/bench-macbook.txt — gửi lại đúng file đó.
 #  Runbook đầy đủ cho người không biết code: xem PERFORMANCE.md mục "Cách chạy lại bộ đo".
@@ -21,14 +21,17 @@
 # làm gì thì bằng không có thông báo. Mọi lần sửa file này về sau phải giữ nguyên tắc ấy.
 #
 # ⚠️ TỰ KIỂM TỰ ĐỘNG: mỗi cảnh in ra TÊN MÁY ĐỒ HOẠ, và nếu tên ấy chứa "SwiftShader"/"Software"
-# thì script **DỪNG NGAY Ở CẢNH ĐẦU** thay vì chạy tiếp 25 cảnh rồi đẻ ra một bảng số vô giá trị.
+# thì script **DỪNG NGAY Ở CẢNH ĐẦU** thay vì chạy tiếp 26 cảnh rồi đẻ ra một bảng số vô giá trị.
 # Trên Mac tên card phải là card thật ("Apple M3" / "ANGLE (Apple, ANGLE Metal Renderer...)").
 #
 # ⚠️ MỌI KẾT LUẬN VỀ DƯ ĐỊA ĐỀU GẮN VỚI MỘT CỠ CỬA SỔ — một con số ms không có cỡ cửa sổ đi kèm thì
 # không nói lên điều gì, vì phần lớn chi phí là theo TỪNG ĐIỂM ẢNH. Vì vậy:
 #   · 24 cảnh của ma trận chạy ở ĐÚNG MỘT cỡ **1100×700** để so được với nhau;
-#   · thêm ĐÚNG MỘT cảnh cuối ở **1600×1000** (gấp 2,08 lần số điểm ảnh) để biết chi phí tăng theo
-#     điểm ảnh như thế nào trên GPU thật — thứ mà hộp cát SwiftShader không trả lời được.
+#   · thêm HAI cảnh ở **1600×1000** (gấp 2,08 lần số điểm ảnh): một cảnh ĐỐI CHIẾU ĐIỂM ẢNH (cùng
+#     kỷ/giờ/zoom với một dòng ở trên, nên hiệu số của chúng CHÍNH LÀ độ dốc theo điểm ảnh), và một
+#     cảnh NẶNG NHẤT (kỷ nhiều tam giác nhất × 22 giờ có đèn) — chỗ ngân sách cạn TRƯỚC.
+# ⚠️ Cảnh nặng nhất KHÔNG so thẳng được với trần 8 ms: trần ấy định nghĩa ở khung mặc định. Xem khối
+# "CÁCH ĐỌC BẢNG NÀY" in ở cuối báo cáo — không có nó thì hai con số đúng bị đem so sai.
 #
 # ⚠️ MỖI CẢNH ĐỀU KIỂM MÃ THOÁT. Cảnh nào chết thì file ghi "!!! CẢNH NÀY HỎNG" chứ KHÔNG để trống:
 # một khoảng trống trông y hệt "cảnh này không có gì đáng nói", và đó là cách một bảng số thiếu
@@ -356,6 +359,31 @@ if [ "$CHI_KIEM" = "1" ]; then
   exit 0
 fi
 
+# ══════════════════════ KỶ NẶNG NHẤT — HỎI, ĐỪNG VIẾT CỨNG ══════════════════════
+# ⚠️ Đàm yêu cầu ma trận phải gồm "cảnh nặng nhất hiện tại (kỷ nhiều tam giác nhất, 22h có đèn,
+# khung lớn)" — vì đó mới là chỗ ngân sách cạn TRƯỚC. Nhưng "kỷ nhiều tam giác nhất" là một QUAN
+# HỆ, không phải một con số: hôm nay là kỷ 14 (179.182 tam giác), và mọi phase thêm chi tiết đều
+# có thể đổi nó. Viết cứng `--era 14` vào đây là đúng cái bẫy đã cắn nhiều lần trong dự án — một
+# hằng số không nhìn thấy thứ nó đang được so với.
+#
+# `scene-count.mjs` là hàm THUẦN (duyệt scene graph, KHÔNG cần Chromium, ~10 giây) nên hỏi nó là
+# rẻ. Nó in TSV: kỷ \t nước \t tam giác \t lệnh vẽ.
+# ⚠️ Số tam giác KHÔNG phụ thuộc giờ (đã đo: kỷ 1 ra 123.840 ở cả 12h lẫn 22h — đèn là chi phí
+# ÁNH SÁNG, không phải hình học), nên hỏi ở giờ mặc định là đủ.
+KY_NANG=""
+TAMGIAC_NANG=""
+tim_ky_nang() {
+  local ra
+  ra="$(KHO="$PWD" node --import ./scripts/register-esm-loader.mjs scripts/scene-count.mjs 2>/dev/null \
+        | awk -F'\t' 'NF>=3 && $1 ~ /^[0-9]+$/ { if ($3+0 > m) { m = $3+0; k = $1 } } END { if (k != "") print k, m }')"
+  if [ -z "$ra" ]; then
+    return 1
+  fi
+  KY_NANG="${ra%% *}"
+  TAMGIAC_NANG="${ra##* }"
+  return 0
+}
+
 # ══════════════════════════ CHẾ ĐỘ THỬ — ĐÚNG 1 CẢNH ══════════════════════════
 if [ "$THU" -eq 1 ]; then
   echo "Máy đã sẵn sàng. Giờ thử dựng 1 cảnh (~20 giây)…" | tee -a "$RA"
@@ -380,13 +408,26 @@ if [ "$THU" -eq 1 ]; then
   exit 0
 fi
 
-# ══════════════════════════ CHẠY THẬT — MA TRẬN 24 CẢNH + 1 ══════════════════════════
+# ══════════════════════════ CHẠY THẬT — MA TRẬN 24 CẢNH + 2 ══════════════════════════
+# Hỏi TRƯỚC khi chạy cảnh nào, để phần mô tả ma trận tự khai nó sắp đo kỷ nào và vì sao.
+if tim_ky_nang; then
+  echo "kỷ NẶNG NHẤT hiện tại (đo bằng scene-count.mjs, không viết cứng): kỷ ${KY_NANG} — ${TAMGIAC_NANG} tam giác" | tee -a "$RA"
+else
+  KY_NANG=14
+  TAMGIAC_NANG="(không đọc được)"
+  echo "⚠ KHÔNG hỏi được scene-count.mjs — dùng tạm kỷ ${KY_NANG}. Cảnh nặng nhất bên dưới CÓ THỂ" | tee -a "$RA"
+  echo "  không phải kỷ nặng nhất thật. Báo lại cho AI, đừng đọc dòng ấy như một cái trần." | tee -a "$RA"
+fi
+echo "" | tee -a "$RA"
+
 echo "ma trận: kỷ 3/7/11/14 × giờ 12/15/22 × zoom 1 và 0.4 = 24 cảnh, TẤT CẢ ở cửa sổ ${RONG}×${CAO}" | tee -a "$RA"
-echo "cộng thêm 1 cảnh cuối ở ${RONG_LON}×${CAO_LON} để đo chi phí tăng theo điểm ảnh" | tee -a "$RA"
+echo "cộng 1 cảnh ĐỐI CHIẾU ĐIỂM ẢNH ở ${RONG_LON}×${CAO_LON} (kỷ 7 · 12 giờ — cùng cấu hình với một dòng ở trên)" | tee -a "$RA"
+echo "cộng 1 cảnh NẶNG NHẤT ở ${RONG_LON}×${CAO_LON} (kỷ ${KY_NANG} · 22 giờ · đèn bật) — chỗ ngân sách cạn TRƯỚC" | tee -a "$RA"
 echo "mỗi cảnh $KHUNG khung hình · --sessions 80 --level 3 · DPR đúng như app" | tee -a "$RA"
 echo "" | tee -a "$RA"
 
 DAT=0
+NANG_DAT=0
 TONG=0
 DAU_TIEN=1
 
@@ -402,7 +443,7 @@ for e in 3 7 11 14; do
       fi
       echo "" | tee -a "$RA"
 
-      # Cổng card: kiểm NGAY SAU cảnh đầu tiên. Chạy hết 25 cảnh rồi mới phát hiện dùng CPU
+      # Cổng card: kiểm NGAY SAU cảnh đầu tiên. Chạy hết 26 cảnh rồi mới phát hiện dùng CPU
       # rasteriser là mất 5 phút của Đàm để đổi lấy một bảng số phải vứt đi.
       if [ "$DAU_TIEN" -eq 1 ]; then
         DAU_TIEN=0
@@ -427,17 +468,41 @@ else
 fi
 echo "" | tee -a "$RA"
 
+# ── Cảnh NẶNG NHẤT: kỷ nhiều tam giác nhất × 22 giờ (đèn bật) × cửa sổ LỚN. ─────────────────
+# ⚠️ VÌ SAO CẢNH NÀY PHẢI CÓ, VÀ VÌ SAO NÓ KHÔNG NẰM TRONG MA TRẬN 24 CẢNH. Ma trận chạy TẤT CẢ ở
+# cửa sổ ${RONG}×${CAO}, còn cảnh đối chiếu điểm ảnh ở cửa sổ lớn lại dùng kỷ 7 · 12 giờ — tức
+# đúng góc NHẸ NHẤT của cả bộ (12 giờ = chưa bật đèn). Ba trục đắt nhất theo PERFORMANCE.md là
+# ĐIỂM ẢNH (80% chi phí) · ÁNH SÁNG (bật đèn 22h = +19%) · và hình học (gần như miễn phí). Cảnh
+# này là chỗ DUY NHẤT cả ba trục cùng ở mức cao nhất, nên nó là chỗ ngân sách cạn TRƯỚC — và đó
+# đúng là con số cần biết trước khi tiêu một mili-giây nào vào hiệu ứng.
+nhan_nang="kỷ $KY_NANG · 22 giờ (đèn bật) · góc rộng (zoom 1) · cửa sổ ${RONG_LON}×${CAO_LON} — CẢNH NẶNG NHẤT"
+echo "### $nhan_nang" | tee -a "$RA"
+echo "### (kỷ nhiều tam giác nhất = $TAMGIAC_NANG tam giác; 22 giờ là chặng DUY NHẤT có đèn;" | tee -a "$RA"
+echo "###  $((RONG_LON * CAO_LON)) điểm ảnh CSS. Đây là chỗ ngân sách cạn trước, không phải trung bình.)" | tee -a "$RA"
+if chay_canh "$nhan_nang" "$KHUNG" "$RONG_LON" "$CAO_LON" --era "$KY_NANG" --hour 22 --zoom 1; then
+  NANG_DAT=1
+else
+  NANG_DAT=0
+fi
+echo "" | tee -a "$RA"
+
 # ── Tổng kết: nói RÕ đã chạy được bao nhiêu. Thiếu thì phải kêu to. ──────────────────────────
 {
   echo "════════════════════════════════════════════════════════════════"
   echo "ĐÃ CHẠY ĐƯỢC $DAT/$TONG cảnh của ma trận (cửa sổ ${RONG}×${CAO})"
   if [ "$LON_DAT" -eq 1 ]; then
-    echo "cộng cảnh đối chiếu ở ${RONG_LON}×${CAO_LON}: ĐẠT"
+    echo "cộng cảnh đối chiếu điểm ảnh ở ${RONG_LON}×${CAO_LON}: ĐẠT"
   else
-    echo "!!! cảnh đối chiếu ở ${RONG_LON}×${CAO_LON}: HỎNG"
+    echo "!!! cảnh đối chiếu điểm ảnh ở ${RONG_LON}×${CAO_LON}: HỎNG"
+  fi
+  if [ "$NANG_DAT" -eq 1 ]; then
+    echo "cộng cảnh NẶNG NHẤT (kỷ $KY_NANG · 22 giờ · ${RONG_LON}×${CAO_LON}): ĐẠT"
+  else
+    echo "!!! cảnh NẶNG NHẤT (kỷ $KY_NANG · 22 giờ · ${RONG_LON}×${CAO_LON}): HỎNG"
+    echo "!!! Thiếu đúng cảnh quan trọng nhất — KHÔNG kết luận được còn bao nhiêu ms để tiêu."
   fi
   echo "máy đồ hoạ: ${TEN_CARD:-(không đọc được)}"
-  if [ "$DAT" -ne "$TONG" ] || [ "$LON_DAT" -ne 1 ]; then
+  if [ "$DAT" -ne "$TONG" ] || [ "$LON_DAT" -ne 1 ] || [ "$NANG_DAT" -ne 1 ]; then
     echo ""
     echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
     echo "!!! THIẾU $((TONG - DAT)) CẢNH CỦA MA TRẬN. Bảng số này CHƯA ĐỦ để kết luận."
@@ -448,7 +513,22 @@ echo "" | tee -a "$RA"
     echo "✅ đủ cảnh."
   fi
   echo "⚠️ Mọi kết luận về dư địa rút ra từ file này chỉ đúng cho CỬA SỔ ${RONG}×${CAO}"
-  echo "   (và dòng đối chiếu cho ${RONG_LON}×${CAO_LON}). Đổi cỡ cửa sổ là đổi bài toán."
+  echo "   (và hai dòng cửa sổ lớn cho ${RONG_LON}×${CAO_LON}). Đổi cỡ cửa sổ là đổi bài toán."
+  echo ""
+  echo "──────────────────── CÁCH ĐỌC BẢNG NÀY (đọc trước khi trích số) ────────────────────"
+  echo "Trần làm việc 8 ms mỗi khung được định nghĩa ở KHUNG MẶC ĐỊNH ${RONG}×${CAO}. Cảnh"
+  echo "NẶNG NHẤT lại chạy ở ${RONG_LON}×${CAO_LON} — nhiều điểm ảnh hơn — nên số ms của nó"
+  echo "KHÔNG đem so thẳng với 8 ms được. Hai con số ấy trả lời hai câu hỏi khác nhau."
+  echo ""
+  echo "  · CÒN BAO NHIÊU MS ĐỂ TIÊU  → đọc dòng (a) P50 của cảnh CHẬM NHẤT trong 24 cảnh ở"
+  echo "    ${RONG}×${CAO}, rồi lấy 8 trừ đi. Đó là ngân sách cho mọi hiệu ứng thêm vào."
+  echo "  · CHI PHÍ THEO ĐIỂM ẢNH     → so hai dòng kỷ 7 · 12 giờ · zoom 1 ở hai cỡ cửa sổ."
+  echo "    Chúng khác nhau ĐÚNG một thứ là số điểm ảnh, nên hiệu số của chúng là độ dốc."
+  echo "  · CHỖ CẠN TRƯỚC             → dòng CẢNH NẶNG NHẤT. Nó cho biết thứ tự các trục đắt,"
+  echo "    không cho biết dư địa ở khung mặc định."
+  echo ""
+  echo "⚠️ ĐỪNG hạ DPR để lấy lại ms — đó là bán đúng thứ đang muốn mua (lệnh Đàm 2026-08-20)."
+  echo "⚠️ iPhone CHƯA từng được đo (TECH_DEBT #23/#26). Đừng suy bất cứ gì từ bảng này sang iPhone."
   echo "════════════════════════════════════════════════════════════════"
   echo "=== XONG — gửi lại file $RA ==="
 } | tee -a "$RA"

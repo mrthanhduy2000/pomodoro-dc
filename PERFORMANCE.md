@@ -66,6 +66,75 @@ Phase 11 trôi trong im lặng — và lần này nó nói: **bảng Bước C K
 
 ---
 
+## §3 BƯỚC 1 — MA TRẬN ĐO CHO MẶT TRẬN NÂNG CHẤT LƯỢNG HÌNH ẢNH (2026-08-20, CHỜ ĐÀM CHẠY)
+
+> ⚠️ **Bộ số trong mục này CHƯA TỒN TẠI.** Đây là phần chuẩn bị; con số phải do Đàm chạy trên
+> MacBook M3 mới có. Hộp cát của AI dùng SwiftShader (tô hình bằng CPU) nên mọi ms đo ở đó vô
+> nghĩa — cái gác trong `bench-macbook.sh` tự chối đúng thiết kế. **Không có số thì không viết một
+> dòng hiệu ứng nào** (lệnh Đàm).
+
+**Vì sao lần này phải đo lại dù đã có bộ số 2026-08-17.** Bộ cũ trả lời câu *"kỷ nào nặng"* và kết
+luận **hình học thì rẻ, điểm ảnh và ánh sáng mới đắt** (≈ 0,87 ms cố định + 1,14 ms mỗi TRIỆU điểm
+ảnh thật). Mặt trận mới — khử răng cưa · bóng mềm · che khuất môi trường · phản chiếu mặt nước ·
+tone mapping — **toàn bộ là chi phí ĐIỂM ẢNH**. Đây là mặt trận đầu tiên tiêu vào đúng trục đắt,
+nên không được suy từ mô hình cũ; phải đo lại trên chính cây mã hiện tại.
+
+**Hai thứ đã sửa trong `bench-macbook.sh` để lượt chạy đó trả lời đúng câu hỏi:**
+
+**(1) Thêm CẢNH NẶNG NHẤT.** Ma trận cũ chạy 24 cảnh ở cửa sổ thường, rồi đúng **một** cảnh ở cửa
+sổ lớn — và cảnh ấy là kỷ 7 · 12 giờ, tức góc **NHẸ NHẤT** của cả bộ (12 giờ là chặng chưa bật
+đèn). Nghĩa là chỗ đắt nhất chưa bao giờ được đo, trong khi bảng số trông đã đầy đủ. Nay có thêm
+một cảnh thứ 26: **kỷ nhiều tam giác nhất × 22 giờ (đèn bật) × cửa sổ 1600×1000** — chỗ duy nhất
+cả ba trục đắt cùng ở mức cao nhất, tức chỗ ngân sách cạn TRƯỚC.
+
+⚠️ **Kỷ nặng nhất được HỎI lúc chạy, không viết cứng.** Hôm nay là **kỷ 14 — 179.182 tam giác**
+(đo bằng `node --import ./scripts/register-esm-loader.mjs scripts/scene-count.mjs`, `--sessions 80
+--level 3`), nhưng "nhiều tam giác nhất" là một **QUAN HỆ**, không phải một con số: Phase 11 một
+mình đã thêm 110.076 tam giác lên mái. Một hằng số viết cứng sẽ lặng lẽ trỏ vào một kỷ đã thôi là
+kỷ nặng nhất, và bộ đo vẫn in ra một bảng trông hoàn toàn hợp lý — đúng bẫy Phase 7D. `scene-count.mjs`
+là hàm THUẦN (duyệt scene graph, không cần Chromium, ~10 giây) nên hỏi nó là rẻ. Không hỏi được thì
+script **KÊU TO** rồi mới dùng số dự phòng, không im lặng. Cả ba điều này có test khoá
+(`scripts/benchMacbookSource.test.js`, 3 bài mới, cả 3 đã thử-cho-đỏ).
+
+Bảng tam giác hiện tại (15 kỷ, `--sessions 80 --level 3`; **số tam giác KHÔNG đổi theo giờ** — đã
+đo, kỷ 1 ra 123.840 ở cả 12h lẫn 22h, vì đèn là chi phí ÁNH SÁNG chứ không phải hình học):
+
+| kỷ | tam giác | | kỷ | tam giác | | kỷ | tam giác |
+|---|---|---|---|---|---|---|---|
+| **14** | **179.182** ← nặng nhất | | 9 | 136.836 | | 3 | 122.044 |
+| 4 | 169.408 | | 5 | 126.850 | | 10 | 120.070 |
+| 6 | 167.546 | | 1 | 123.840 | | 12 | 124.722 |
+| 13 | 163.594 | | 15 | 145.286 | | 2 | 112.140 ← nhẹ nhất |
+| 7 | 158.690 | | 11 | 147.012 | | 8 | 143.902 |
+
+**(2) Thêm khối "CÁCH ĐỌC BẢNG NÀY" in ở cuối báo cáo.** Không có nó thì hai con số đúng sẽ bị đem
+so sai: **trần 8 ms định nghĩa ở KHUNG MẶC ĐỊNH 1100×700**, còn cảnh nặng nhất chạy ở 1600×1000 —
+nhiều điểm ảnh hơn — nên ms của nó **không so thẳng với 8 ms được**. Ba câu hỏi, ba dòng khác nhau:
+
+| Muốn biết | Đọc dòng nào |
+|---|---|
+| **Còn bao nhiêu ms để tiêu** | (a) P50 của cảnh CHẬM NHẤT trong 24 cảnh ở 1100×700, rồi lấy `8 −` số đó |
+| **Chi phí theo điểm ảnh** | hiệu số hai dòng kỷ 7 · 12 giờ · zoom 1 ở hai cỡ cửa sổ (khác nhau ĐÚNG một thứ) |
+| **Chỗ cạn trước** | dòng CẢNH NẶNG NHẤT — cho biết thứ tự các trục đắt, KHÔNG cho biết dư địa ở khung mặc định |
+
+**Đã có sẵn, không phải sửa:** bộ đo vốn đã in **P50 · P95 · nhanh nhất · chậm nhất** cho từng cảnh
+(dòng `[bench] (a)`) cùng **DPR thật** và cỡ bộ đệm vẽ (dòng `[bench] DPR=…`) — tức yêu cầu *"in rõ
+ms mỗi khung ở DPR thật, không phải trung bình gộp"* đã được đáp ứng từ vòng 2.
+
+**Ràng buộc Đàm ra cho cả mặt trận này** (khác các phase trước — chép ra đây để không phải đi tìm):
+· **ĐƯỢC** tiêu chi phí điểm ảnh, đó là mục đích — nhưng phải đo **TỪNG MÓN**, mỗi món một commit,
+đo trước/sau bằng `--frame`, rollback độc lập được; cấm gộp ba hiệu ứng rồi báo "đẹp hơn".
+· Trần **8 ms** mỗi khung ở khung mặc định. Vượt là **dừng và báo**, không tự nới.
+· **ĐỪNG HẠ DPR** để lấy lại ms — đó là bán đúng thứ đang muốn mua.
+· iPhone **CHƯA từng đo** (`TECH_DEBT #23`/`#26`); mọi hiệu ứng thêm vào phải có **đường tắt cho
+tier thấp**, kể cả khi chưa dùng tới.
+
+⚠️ **Ray tracing thật KHÔNG khả thi trên nền hiện tại, và đừng hứa nó.** WebGL2 không có API dò tia
+phần cứng; WebGPU thì Safari iOS chưa hỗ trợ đủ. Thứ giao được là các kỹ thuật cho ra **cảm giác**
+ấy — bóng mềm, che khuất môi trường, phản chiếu mặt nước, khử răng cưa, tương phản/màu tốt hơn.
+
+---
+
 ## Cách chạy lại bộ đo — làm đúng theo thứ tự này
 
 > Viết cho người **KHÔNG biết code**. Chép từng dòng một, chạy xong dòng nào mới sang dòng kế.

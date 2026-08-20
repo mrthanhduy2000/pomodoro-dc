@@ -6,9 +6,65 @@
 > chọn: `ARCHITECTURE_DECISIONS.md`. Nợ kỹ thuật: `TECH_DEBT.md`. Migration: `MIGRATION.md`. Tóm
 > tắt theo mốc: `CHANGELOG.md`.
 > **NGUYÊN TẮC ƯU TIÊN SỐ 1:** (1) mọi phiên AI phải đọc file này + `CLAUDE.md` + các file liên quan TRƯỚC khi làm; (2) sau MỌI cập nhật dù nhỏ, phải cập nhật ngay file này + `CLAUDE.md` + các file liên quan khác.
-> Cập nhật lần cuối: **2026-08-19** — **VIỆC 2 BƯỚC B: MẶT NƯỚC ĐÃ DỰNG HÌNH CHO ĐÚNG 3 KỶ (14 biển · 12 sông · 1 khô) — ADR-040. ĐANG CHỜ ĐÀM XEM ẢNH VÀ GẬT TRƯỚC KHI TRẢI RA 12 KỶ CÒN LẠI.**
+> Cập nhật lần cuối: **2026-08-20** — **VIỆC 2 BƯỚC C: MẶT NƯỚC ĐÃ TRẢI RA 14/15 KỶ, KỶ 1 LÀ KỶ KHÔ DUY NHẤT — ADR-042. `TECH_DEBT #56` ĐÓNG. CHỜ ĐÀM: xem ảnh, chạy `bench-macbook.sh`, quyết việc gộp `main`.**
 >
-> ## 🌊 VIỆC 2 BƯỚC B — MẶT NƯỚC (2026-08-19, ADR-040)
+> ## 🌊 VIỆC 2 BƯỚC C — MẶT NƯỚC TRẢI RA 14/15 KỶ (2026-08-20, ADR-042)
+>
+> **XONG.** Bảng `settingStyle.js` khai 14 kỷ có nước từ Bước A; Bước B mới dựng hình cho 2 kỷ;
+> Bước C dựng nốt **12 kỷ còn lại**. Nay **14/15 kỷ có mặt nước, kỷ 1 là kỷ khô DUY NHẤT** — và
+> "khô" ấy vẫn là một câu trả lời được khai tường minh, có test đếm, chứ không phải một chỗ trống.
+> `TECH_DEBT #56` (12 kỷ dở dang) **ĐÃ ĐÓNG**.
+>
+> **THỨ TỰ ĐÀM RA, ĐÃ LÀM ĐÚNG:** 11 kỷ không bị chặn trước, ba kỷ nước hẹp (6 · 7 · 10) sau cùng.
+>
+> **BỐN PHÉP ĐO CÙNG GÃY MỘT KIỂU — VÀ ĐÓ MỚI LÀ PHẦN ĐÁNG NHỚ CỦA PHASE NÀY.** Hình nước gần như
+> không phải sửa gì; thứ vỡ là **bốn bài test cũ**, và cả bốn đều vỡ vì cùng một lý do: chúng được
+> hiệu chuẩn hồi CHỈ CÓ 2 KỶ có nước, mà hai kỷ ấy (12 và 14) tình cờ là hai kỷ nước RỘNG NHẤT
+> bảng. Mỗi bài viết một lời hứa về QUAN HỆ thành một MỨC tuyệt đối. Cách xử lý: **sửa MẪU SỐ hoặc
+> GHI RA ĐẾM ĐƯỢC — tuyệt đối không hạ ngưỡng.** Chi tiết đầy đủ ở **ADR-042**.
+>
+> **CỔNG NGHIỆM THU CỦA ĐÀM — TỪNG MỤC, KÈM SỐ:**
+>
+> | Cổng | Kết quả |
+> |---|---|
+> | 11 kỷ đạt cổng nước ≥ 5% khung hình | ✅ đạt |
+> | Ba kỷ 6 · 7 · 10 rơi ĐÚNG vào bảng `TRUOT` | ✅ `assert.deepEqual(TRUOT, [6, 7, 10])`, đỏ CẢ HAI CHIỀU |
+> | Kỷ khô: lệnh vẽ không đổi | ✅ kỷ 1 giữ nguyên **9** lệnh vẽ (mốc riêng của nó) |
+> | Kỷ khô: ảnh không đổi — ĐO bằng `--frame` | ✅ **0,0%** điểm ảnh đổi · lệch trung bình **0,00** |
+> | …và công cụ ấy KHÔNG mù (đối chứng) | ✅ cùng lệnh, kỷ 5 trước↔sau ra **15,2%** · lệch **9,67** |
+> | Bản quét 15 kỷ vẫn không trôi (chế độ dải) | ✅ **15/15** cặp chặng · **105/105** cặp kỷ trên ngưỡng mắt |
+> | Bản quét 15 kỷ (chế độ `--frame`) | ✅ đo được, xem bảng số bên dưới |
+> | ADR-007 «chỉ thêm, không bao giờ dời» | ✅ **20.310** bước so, **0** bị dời, **0** biến mất |
+> | ADR-007 «nhà không lún xuống nước» | ✅ **2.016** ô lưới × 14 kỷ, **0** ô ướt, **0** ô sát mép |
+> | 0 nguồn sáng mới · 0 texture mới · 0 shader nước động | ✅ giữ nguyên |
+> | `worldYaw` chỉ bội số 90° | ✅ `quarterTurns` TỪ CHỐI THẲNG mọi góc khác |
+>
+> **BA KIỂU NƯỚC LẦN ĐẦU ĐƯỢC NHÌN BẰNG MẮT** (Đàm dặn: hai thứ chưa ai nhìn là `meander` kỷ 5 và
+> `estuary`/`canal`). Đã chụp và ĐÃ NHÌN, nói thẳng cả chỗ được lẫn chỗ chưa:
+> · **`estuary` kỷ 8 (Lisboa) — ĐẠT RÕ.** Dải nước rộng cắt chéo góc trên-trái, **và thấy được bờ
+>   bên kia** — đúng cái làm `estuary` khác `sea` trong bảng. Đọc ra ngay: phố nằm bờ nam cửa sông.
+> · **`estuary` kỷ 11 (New York) — ĐẠT RÕ.** Dải rộng cắt ngang trên-trái, bờ bên kia hiện rõ, các
+>   tháp Art Deco đứng ngay mép nước.
+> · **`canal` kỷ 10 (Manchester) — ĐỌC RA LÀ KÊNH, NHƯNG KHÔNG ĐỌC RA LÀ *THÀNH PHỐ BÊN KÊNH*.**
+>   Vệt nước THẲNG tăm tắp, hẹp, mép sắc — không lẫn được với sông tự nhiên, đúng ý "người đào".
+>   Nhưng nó nằm tận góc xa, giữa nó và dãy nhà máy là một vạt đất trống rộng. ⚠️ Đây là ca đáng
+>   theo dõi nhất cho `TECH_DEBT #61`: nó **trượt** cổng 5% và mắt cũng **không** đọc ra thành phố
+>   bên kênh ⇒ cổng và mắt VẪN ĐỒNG Ý, chưa có bằng chứng cổng sai đại lượng.
+> · **`meander` kỷ 5 (Burg Eltz) — ĐẠT, NHƯNG SÁT MÉP.** Dòng nước ôm rìa trái và hai góc dưới,
+>   đọc được là một khe suối vòng quanh mỏm đất. Nó **đạt** cổng 5%, nhưng phần lớn diện tích ấy
+>   nằm ở VIỀN khung hình chứ không cắt qua giữa cảnh. Kỷ 5 cũng là kỷ nông nhất bảng (chỉ chạm
+>   **20,1%** độ sâu đáy tối đa) nên sắc nước nhạt. Chưa phải lỗi — nhưng nếu ngày nào `TECH_DEBT
+>   #61` phải mở lại, đây là ca thứ hai đáng đo.
+>
+> ⚠️ **`bash scripts/bench-macbook.sh` — CHƯA CHẠY ĐƯỢC Ở ĐÂY, VÀ ĐÓ LÀ THIẾT KẾ.** Hộp cát AI
+> chạy WebGL bằng SwiftShader (tô hình bằng CPU); chính script ấy **tự dừng ở cảnh đầu** khi thấy
+> tên card là "SwiftShader" thay vì đẻ ra một bảng số vô giá trị. Đây là lượt LÀM MỚI SỐ LIỆU Đàm
+> đã nói rõ *"không phải một cổng, không phải một blocker"* — nên Bước C **không** bị chặn bởi nó.
+> Việc cần Đàm làm nằm ở mục "CHỜ ĐÀM" bên dưới.
+>
+> ---
+>
+> ## 🌊 VIỆC 2 BƯỚC B — MẶT NƯỚC (2026-08-19, ADR-040) *(giữ lại làm lịch sử)*
 >
 > **Ý TƯỞNG GỐC, đọc kỹ trước khi sửa gì:** nước KHÔNG phải một tấm màu xanh đặt LÊN mặt đất. Nước
 > là chỗ **mặt đất bị khoét XUỐNG dưới một mặt phẳng phẳng lì**. Hệ quả quan trọng nhất: **đường bờ
@@ -758,19 +814,31 @@
 - ⚠️ **CẦN ĐÀM THỬ TAY** (không test được trên dev): (a) câu nhắc-sau-phiên hiện sau khi xong PHIÊN THẬT; (b) bài "AI phân tích tổng thể" giờ chạy pro — xem có chậm/khác chất lượng không; (c) dòng "Ghi nhớ" lời khuyên hiện sau ≥3 ngày; (d) thông báo chuỗi-sắp-đứt: **từ nay** (11/7) chiều nào quên làm sẽ nhận push (cần đã bật push iPhone) — đây là lần đầu tiên thực sự có cơ hội chạy thật.
 
 ## 🔜 Sẽ làm tiếp (ưu tiên từ trên xuống)
-- ⚠️ **`TECH_DEBT #59` — CHỐT TRƯỚC KHI BƯỚC C TRẢI TỚI KỶ 6, 7, 10.** Ba kỷ nước hẹp không đạt
+- ⚠️ **CHỜ ĐÀM — BA VIỆC SAU BƯỚC C.** (a) **Xem 4 ảnh** `estuary` kỷ 8 · `estuary` kỷ 11 · `canal`
+  kỷ 10 · `meander` kỷ 5 rồi gật hoặc chỉnh hướng mỹ thuật. (b) Chạy **một lượt**
+  `bash scripts/bench-macbook.sh` trên MacBook để làm mới số liệu (KHÔNG phải cổng, không chặn gì) —
+  hộp cát AI chạy SwiftShader nên script tự từ chối ở đó. (c) Quyết **có gộp `main`** hay không cho
+  các commit đang nằm ở nhánh `claude/xay-san-pham-huong-nay-nasr3n`. **KHÔNG tự gộp.**
+- ⚠️ **`TECH_DEBT #60` — NGỮ PHÁP VEN NƯỚC (cầu · bến · thuyền · kè).** Đây là phương án (c) mà Đàm
+  đã CHẤM ĐÚNG VỀ MỸ THUẬT nhưng hoãn lại: *"đổi thứ mang bản sắc sang cầu/bến/thuyền/kè là ĐÚNG về
+  mỹ thuật nhưng là cả một phase mới… đừng nhét vào khe hở của Bước C."* Điều kiện xem lại: **khi
+  nào có phase chi tiết ven nước**. Nó là thứ chữa được ba kỷ nước hẹp (6 · 7 · 10) mà KHÔNG phải
+  nói dối địa lý.
+- ⚠️ **`TECH_DEBT #61` — theo dõi, KHÔNG hành động.** Cổng 5% là một *thứ đại diện*, chính Đàm chỉ
+  ra. Dữ liệu Bước C **chưa** cho ca nào cổng và mắt bất đồng ⇒ giữ nguyên cổng đã hiệu chuẩn.
+- *(ĐÃ XONG, giữ lại để đối chiếu)* **`TECH_DEBT #59` — Đàm chốt hướng (b) ngày 2026-08-20.** Ba kỷ nước hẹp không đạt
   cổng 5% ở **BẤT KỲ** góc nào (kỷ 6 có trần toàn cục 4,44%). Đây là bài toán **BỀ RỘNG trong bảng**,
   không phải bài toán góc — nên `worldYaw` không chữa được, và trải Bước C tới chúng mà chưa chốt là
   tiêu ngân sách cho thứ Đàm gần như không nhìn thấy. Ba hướng đã cân sẵn ở `TECH_DEBT #59`
   (nới bề rộng / chấp nhận + đếm tường minh trong test / đổi thứ mang bản sắc sang cầu-bến-thuyền-kè).
   **Mười một kỷ còn lại KHÔNG bị chặn.**
-- ⚠️ **VIỆC 2 Bước C — CHỜ ĐÀM XEM ẢNH RỒI GẬT. `TECH_DEBT #57` đã ĐÓNG (ADR-041, 2026-08-20):**
+- *(ĐÃ XONG 2026-08-20, ADR-042 — giữ lại nguyên văn để đối chiếu)* **VIỆC 2 Bước C.** `TECH_DEBT #57` đã ĐÓNG (ADR-041, 2026-08-20):
   camera mặc định nay thật sự nhìn ra nước (kỷ 14: 0,09% → **23,75%** · kỷ 12: 2,30% → **9,32%**),
   nên phần thưởng của Bước C sẽ không còn nằm ngoài khung hình. Bước B đã XONG (ADR-040, 2026-08-19).
   Bước B đã dựng hình nước cho đúng 3 kỷ (14 biển · 12 sông · 1 khô), mọi ràng buộc Đàm ra đều đo
   được và đã đạt: +1 lệnh vẽ CHỈ ở 2 kỷ có nước · kỷ 1 trùng từng byte · 0 nguồn sáng mới · 0 texture
-  mới · 0 shader động · 0 lỗ thủng ở bờ. **Bước C = trải nốt 13 kỷ còn lại**, và chỉ được bắt đầu
-  sau khi Đàm nhìn ảnh và trả lời cổng không-đo-được-bằng-test bên dưới.
+  mới · 0 shader động · 0 lỗ thủng ở bờ. **Bước C = trải nốt 12 kỷ còn lại — ĐÃ LÀM XONG**, xem
+  khối 🌊 ở đầu file. (Câu cũ ghi "13 kỷ" là đếm nhầm: 15 − 2 kỷ đã dựng − 1 kỷ khô = **12**.)
   *(Nguyên văn chỉ thị Bước B, giữ lại để đối chiếu:)*
   Ba sửa ấy: kỷ 5 phải CÓ NƯỚC (thêm kiểu thứ sáu `meander` — khúc uốn ôm ba mặt) · kỷ 11 đổi
   `sea` → `estuary` cho khớp `note` · luật hướng bờ nước viết lại thành QUAN HỆ
@@ -837,6 +905,80 @@
 - **Lịch sử git `main` từng bị xáo** (thao tác git song song): bản đang chạy là `eb44638` — chứa ĐỦ mọi việc gần đây (Hỏi Coach offline + fix đêm khuya + Coach offline analyst). Vài commit cũ (`1e27505`, `9fbcd62`) thành dangling, KHÔNG còn trong `git log` nhưng code vẫn nằm trong bản deploy. Đừng hoảng nếu không thấy chúng.
 
 ## 🗒️ Nhật ký cập nhật
+
+### 2026-08-20 — BƯỚC C: mặt nước trải ra 14/15 kỷ, đóng `TECH_DEBT #56` (ADR-042)
+
+**LỆNH CỦA ĐÀM** (§0–§4): *"DUYỆT ẢNH — ĐẠT. CHỐT #59 THEO (b). VÀO BƯỚC C. Chạy liên tục, không
+hỏi vặt."* Kèm ba ràng buộc quan trọng: (1) **KHÔNG nới cổng 5% xuống cho vừa ba kỷ 6·7·10** —
+*"nới một ngưỡng cho vừa kết quả là cái phễu Phase 9A"*; (2) 11 kỷ không bị chặn làm **trước**, ba
+kỷ hẹp làm **sau**; (3) mọi kết luận *"kỷ khô không đổi"* phải đo bằng `--frame`, **không** được kết
+luận từ `md5`.
+
+**ĐÃ LÀM.** `ERAS_WITH_WATER_GEOMETRY` từ `[12, 14]` thành `[2…15]`. Hình nước gần như không phải
+sửa gì — ADR-040 dựng đúng: nước là chỗ mặt đất bị khoét xuống dưới một mặt phẳng phẳng lì, nên
+trải ra 12 kỷ mới chỉ là cho phép chúng đi qua đúng con đường ấy.
+
+**THỨ THẬT SỰ VỠ LÀ BỐN BÀI TEST CŨ, VÀ CẢ BỐN VỠ CÙNG MỘT KIỂU** (ADR-042). Chúng được hiệu chuẩn
+hồi chỉ có 2 kỷ có nước, mà hai kỷ ấy (12 và 14) tình cờ là hai kỷ nước **RỘNG NHẤT** bảng. Mỗi bài
+viết một lời hứa về **QUAN HỆ** thành một **MỨC tuyệt đối**:
+· `terrainMesh` — "sắc nước phải trải rộng" đo bằng một ngưỡng chung, trong khi bề rộng dải sắc
+  khác nhau theo KIỂU nước ⇒ chuẩn hoá theo biên độ của chính kiểu ấy (khe hẹp nhất rộng ra **25×**,
+  từ 0,00070 lên 0,01776).
+· `outskirts` — mật độ cây tính trên diện tích HÌNH HỌC của vành, mà nay một phần vành là mặt nước
+  ⇒ sửa **MẪU SỐ** (nhân với tỉ lệ đất khô). Khoảng trải 15 kỷ siết từ 1,85–3,86 (2,09×) về
+  2,51–3,41 (1,36×).
+· `terrain` — "vòng rìa phải khô" đếm GỘP cả 15 kỷ ⇒ tách ra hỏi TỪNG KỶ, cộng một bảng
+  `KY_RIA_CHAM_NUOC` đếm được.
+· `horizon` — ba khoảng cách lấy mẫu hỏi ba câu KHÁC NHAU, bài cũ trộn chúng làm một.
+**Không bài nào được chữa bằng cách hạ ngưỡng.**
+
+**BỐN PHÉP THỬ NGƯỢC ĐÃ CHẠY THẬT, NÊU TRƯỚC CHỖ MONG ĐỎ.** Hai phép mới nhất (MS1b · MS2b) đỏ
+**đúng chỗ đã nêu**: cấp cho kỷ 1 một con sông ⇒ `+ 'water'` ở `deepEqual(khô.tên, …)`; tắt
+`castShadow` của khối thành phố đã gộp ⇒ `+ 'city'` ở `deepEqual(tênPhầnMù, …)`. ⚠️ Và **MS1 (bản
+đầu) KHÔNG nổ, đó là một phát hiện chứ không phải một thất bại**: thêm kỷ 1 vào
+`ERAS_WITH_WATER_GEOMETRY` **không** làm kỷ 1 có nước, vì `waterIsBuilt = danh sách && hasWater`, mà
+bảng khai kỷ 1 `water: 'none'`. **BẢNG mới là thứ cai trị**, danh sách chỉ là cái van thứ hai.
+
+**BẢNG SỐ** — xem `PERFORMANCE.md` mục "Sau VIỆC 2 Bước C". Điểm cốt lõi: **ba kỷ (1 · 12 · 14) đứng
+yên tuyệt đối ở CẢ HAI cột** (tam giác và lệnh vẽ), đúng ba kỷ duy nhất lẽ ra phải đứng yên; 12 kỷ
+mới nhận **+1 lệnh vẽ mỗi kỷ, không kỷ nào +2**; tổng tam giác **NHẸ ĐI 17.438 (−0,8%)** vì chỗ nào
+thành nước thì cây/đá/mảng phủ ở đó biến mất.
+
+**CỔNG NƯỚC ≥ 5% KHUNG HÌNH** (`scripts/water-view.mjs`, camera mặc định): kỷ 2 **5,52%** · 3
+**5,32%** · 4 **5,02%** · 5 **5,62%** · 8 **9,96%** · 9 **5,68%** · 11 **9,97%** · 12 **9,32%** · 13
+**24,12%** · 14 **23,75%** · 15 **20,80%** ⇒ **11 kỷ ĐẠT**. Trượt đúng ba kỷ Đàm đã chốt: 6
+**4,13%** · 7 **2,40%** · 10 **1,62%**, khoá bằng `assert.deepEqual(TRUOT, [6, 7, 10])` đỏ cả hai
+chiều. ⚠️ **Kỷ 4 chỉ vượt cổng 0,02 điểm phần trăm** — mỏng nhất bảng, đã ghi thành rủi ro.
+
+**ADR-007 CHẠY LẠI, CÓ SỐ:** lưới tích 15 kỷ × 5 mốc công trình × 151 mốc phiên = **20.310 bước so**
+(11.250 theo trục thời gian + 9.060 theo trục công trình) ⇒ **0 bị dời · 0 biến mất**; 100% bước xây
+thêm làm thành phố lớn thêm. Và **2.016 ô lưới** (144 ô × 14 kỷ có nước) ⇒ **0 ô ướt, 0 ô sát mép**.
+
+**BẢN QUÉT 15 KỶ, HAI CHẾ ĐỘ.** Dải: **15/15** cặp chặng (gần nhất 14,0) và **105/105** cặp kỷ (gần
+nhất 21,8 · trung vị 40,7) — không trôi. `--frame` trước↔sau: trung vị **2,2**, và **kỷ 1 · 12 · 14
+đều đúng 0,0** — ba kỷ không đổi, hiện ra trong chính phép đo ảnh. ⚠️ Trục CHẶNG tiếp tục tụt (16,5
+→ 15,7 → **14,0**) đúng như `TECH_DEBT #55` đã dự đoán: mặt nước GIỐNG NHAU ở cả 6 chặng nên nó pha
+loãng phép đo chặng, y hệt vùng quê. Vẫn cao hơn ngưỡng mắt 12 khoảng 17%.
+
+**KỶ KHÔ — ĐO BẰNG `--frame`, KHÔNG KẾT LUẬN TỪ `md5`.** Kỷ 1 trước↔sau: **0,0%** điểm ảnh đổi quá
+ngưỡng mắt, lệch trung bình **0,00** (md5 cũng trùng, nhưng đó chỉ là bằng chứng phụ). **Đối chứng
+chứng minh công cụ không mù**: đúng công cụ ấy, đúng dòng lệnh ấy, kỷ 5 trước↔sau ra **15,2%** ·
+lệch **9,67**.
+
+**NHÌN BẰNG MẮT — BA KIỂU NƯỚC LẦN ĐẦU CÓ ẢNH.** `estuary` kỷ 8 và 11: **đạt rõ**, thấy được bờ bên
+kia đúng như định nghĩa. `canal` kỷ 10: đọc ra là **kênh đào** (thẳng tăm tắp, mép sắc) nhưng
+**không** đọc ra là *thành phố bên kênh* — nó nằm tận góc xa. `meander` kỷ 5: đạt, nhưng nước bám
+VIỀN khung hình và là kỷ nông nhất bảng (chỉ chạm **20,1%** độ sâu đáy tối đa) nên sắc nhạt.
+⇒ Với `TECH_DEBT #61`: **cổng và mắt VẪN ĐỒNG Ý ở mọi ca** (kỷ 10 trượt cổng và mắt cũng không đọc
+ra) ⇒ chưa có bằng chứng cổng sai đại lượng ⇒ **giữ nguyên cổng**, đúng điều kiện Đàm đặt.
+
+**BÀI TEST ĐỌC MÃ NGUỒN Đàm yêu cầu ở §2-Q3:** `settingReaders.test.js` — bảng có tên
+`NGUOI_DOC_DAU_CHAN` liệt kê **4 file** được phép hỏi về dấu chân mặt nước, mỗi dòng kèm câu "để làm
+gì". Đỏ **hai chiều**: khai thừa thì đỏ, mở cửa sau ở file ngoài bảng cũng đỏ.
+
+**Nghiệm thu:** `npm test` **943 pass / 0 fail** · lint sạch · build xanh.
+**CHƯA LÀM ĐƯỢC:** `bash scripts/bench-macbook.sh` — script tự từ chối chạy trên SwiftShader; đó là
+lượt làm mới số liệu **không phải cổng**, cần Đàm chạy trên MacBook.
 
 ### 2026-08-20 — `worldYaw`: đóng `TECH_DEBT #57`, mở `TECH_DEBT #59` (ADR-041)
 

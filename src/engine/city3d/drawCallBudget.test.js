@@ -83,14 +83,19 @@ function tamCoDinh(era) {
  * chứ không phải nới cho vừa kết quả — *"cổng KHÔNG mất tác dụng răn đe khi đặt lại cho đúng; nó
  * mất tác dụng khi giữ một con số sai rồi ai cũng học cách ngó lơ"* (Đàm, 2026-08-18).
  *
- * ⚠️ Kỷ 10 = 12 (cao nhất) vì nó là kỷ DUY NHẤT dùng cùng lúc cả `brick` lẫn `slate`. Đó là sự thật
+ * ⚠️ Kỷ 10 = 13 (cao nhất) vì nó là kỷ DUY NHẤT dùng cùng lúc cả `brick` lẫn `slate`. Đó là sự thật
  * về vật liệu thời công nghiệp Anh, không phải một khuyết tật — và tuyệt đối KHÔNG được gộp hai
  * vật liệu ấy lại để lấy một con số đẹp hơn (ADR-025 đã cấm đúng kiểu mua-số-bằng-cách-nói-dối này).
+ *
+ * ⚠️ ĐO LẠI NGÀY 2026-08-20 SAU BƯỚC C (trải nước ra đủ 14 kỷ). So với `MOC_TRUOC_NUOC` bên dưới:
+ * **kỷ 1 KHÔNG đổi một đơn vị, mười bốn kỷ còn lại đúng +1** — không kỷ nào +2, không kỷ khô nào
+ * nhích. Đó chính là ràng buộc Đàm ra, và nó được kiểm bằng một PHÉP TRỪ ở bài test cuối file chứ
+ * không bằng cách đọc hai bảng bằng mắt.
  */
 const MOC_LENH_VE = {
-  1: 9, 2: 11, 3: 11, 4: 11, 5: 10,
-  6: 11, 7: 11, 8: 11, 9: 10, 10: 12,
-  11: 10, 12: 11, 13: 10, 14: 11, 15: 10,
+  1: 9, 2: 12, 3: 12, 4: 12, 5: 11,
+  6: 12, 7: 12, 8: 12, 9: 11, 10: 13,
+  11: 11, 12: 11, 13: 11, 14: 11, 15: 11,
 };
 
 /**
@@ -242,8 +247,13 @@ test('QUAN HỆ "lệnh vẽ = số họ + 4" phải còn đúng với phép đo
 
 test('MẶT NƯỚC TỐN ĐÚNG +1 LỆNH VẼ, VÀ CHỈ Ở KỶ ĐÃ DỰNG HÌNH NƯỚC', () => {
   // THỬ-CHO-ĐỎ (nêu TRƯỚC, đúng luật Phase 8A): sửa `tamCoDinh` thành `TAM_CO_DINH_KHO + 1` (tức
-  // nâng trần chung) ⇒ 13 kỷ khô đỏ ở dòng `assert.equal(hieu, ...)` với `hieu = 1` mà chờ 0. Sửa
-  // ngược lại thành hằng số 4 ⇒ kỷ 12 và 14 đỏ với `hieu = 0` mà chờ 1.
+  // nâng trần chung) ⇒ KỶ 1 đỏ ở dòng `assert.equal(hieu, ...)` với `hieu = 1` mà chờ 0. Sửa ngược
+  // lại thành hằng số 4 ⇒ mười bốn kỷ có nước đỏ với `hieu = 0` mà chờ 1.
+  //
+  // ⚠️ SAU BƯỚC C CHỈ CÒN MỘT KỶ KHÔ, nên vế "không được tính tiền lên kỷ khô" nay chỉ còn ĐÚNG
+  // MỘT nhân chứng. Đó là lý do gác chạy-rỗng bên dưới đếm cả hai phía (14 kỷ tăng · 1 kỷ không),
+  // chứ không chỉ đếm phía tăng: một `waterIsBuilt` hỏng theo hướng "luôn trả true" sẽ làm kỷ 1
+  // im lặng đi theo, và phía tăng vẫn ra 15 trông rất giống 14.
   let soKyTang = 0;
   for (const era of ERAS) {
     const truoc = MOC_TRUOC_NUOC[era];
@@ -256,11 +266,15 @@ test('MẶT NƯỚC TỐN ĐÚNG +1 LỆNH VẼ, VÀ CHỈ Ở KỶ ĐÃ DỰNG 
       + 'ở kỷ có nước — mọi thay đổi khác phải đo lại rồi ghi ngày mới, không được đi ké dòng này.');
     if (coNuoc) soKyTang += 1;
   }
+  // Đếm CẢ HAI PHÍA. Xem chú thích thử-cho-đỏ ở đầu bài: đếm một phía thì một `waterIsBuilt` hỏng
+  // theo hướng "luôn trả true" cho ra 15 — sát 14 tới mức rất dễ được đọc lướt thành đúng.
+  assert.equal(ERAS.length - soKyTang, 1, 'phải còn ĐÚNG một kỷ khô (kỷ 1) sau Bước C');
   // Gác chạy-rỗng: nếu `waterIsBuilt` hỏng và trả `false` ở mọi kỷ thì vòng trên vẫn xanh trơn tru
   // trong khi nó chẳng kiểm gì về nước cả.
-  assert.equal(soKyTang, 2,
-    `chỉ ${soKyTang} kỷ được cộng lệnh vẽ nước — Bước B dựng hình cho ĐÚNG 2 kỷ có nước (12 và 14). `
-    + 'Số này đổi thì phải đổi cùng lúc với `ERAS_WITH_WATER_GEOMETRY` và phải đo lại từng kỷ.');
+  assert.equal(soKyTang, 14,
+    `chỉ ${soKyTang} kỷ được cộng lệnh vẽ nước — Bước C đã dựng hình cho ĐỦ 14 kỷ có nước (mọi kỷ `
+    + 'trừ kỷ 1). Số này đổi thì phải đổi cùng lúc với `ERAS_WITH_WATER_GEOMETRY` và phải đo lại '
+    + 'từng kỷ.');
 });
 
 test('KỶ KHÔ KHÔNG ĐƯỢC ĐỔI MỘT ĐƠN VỊ NÀO — KỶ 1 LÀM CHỨNG', () => {
@@ -274,7 +288,7 @@ test('KỶ KHÔ KHÔNG ĐƯỢC ĐỔI MỘT ĐƠN VỊ NÀO — KỶ 1 LÀM CH�
     + '"nước không được tính tiền lên kỷ không có nước" — nó đỏ nghĩa là ràng buộc ấy vừa vỡ.');
 
   const kho = ERAS.filter((e) => !waterIsBuilt(e));
-  assert.equal(kho.length, 13, 'phải còn đúng 13 kỷ khô ở Bước B');
+  assert.equal(kho.length, 1, 'sau Bước C chỉ còn ĐÚNG một kỷ khô (kỷ 1)');
   for (const era of kho) {
     assert.equal(lenhVe(era), MOC_TRUOC_NUOC[era],
       `kỷ ${era} không có mặt nước nhưng số lệnh vẽ đã đổi khỏi mốc trước-nước (${MOC_TRUOC_NUOC[era]}).`);

@@ -13,9 +13,32 @@ import {
   OUTSKIRT_REACH, OUTSKIRT_EDGE_DENSITY, OUTSKIRT_FAR_DENSITY,
 } from './outskirts.js';
 import { getFloraStyle } from './floraStyle.js';
+import { PROP_SHORE_CLEAR, buildSetting } from './setting.js';
 
 const KY = Array.from({ length: 15 }, (_, i) => i + 1);
 const GRID = 12;
+
+/**
+ * Phần TRĂM đất một vành mà cảnh vật ĐƯỢC PHÉP đứng — tức đất khô, đã chừa cả mép ướt.
+ * Lấy mẫu 0,1 ô; đo bằng CHÍNH điều kiện mà `deriveOutskirts` dùng để loại chỗ ướt, chứ không dựng
+ * lại một điều kiện "tương đương" (một luật một công thức).
+ */
+function tiLeDatKho(era, gridSize = GRID) {
+  const setting = buildSetting({ era, gridSize });
+  const nua = OUTSKIRT_REACH / 2;
+  const dem = [0, 0];
+  const kho = [0, 0];
+  for (let u = -0.5 - OUTSKIRT_REACH; u <= gridSize - 0.5 + OUTSKIRT_REACH; u += 0.1) {
+    for (let v = -0.5 - OUTSKIRT_REACH; v <= gridSize - 0.5 + OUTSKIRT_REACH; v += 0.1) {
+      const d = distanceOutsideGrid(u, v, gridSize);
+      if (d <= 0) continue;
+      const k = d <= nua ? 0 : 1;
+      dem[k] += 1;
+      if (setting.insetAt(u, v) <= -PROP_SHORE_CLEAR) kho[k] += 1;
+    }
+  }
+  return { trong: kho[0] / dem[0], ngoai: kho[1] / dem[1] };
+}
 
 /**
  * MẬT ĐỘ THEO KHOẢNG CÁCH — số vật trên MỘT đơn vị diện tích, chia làm hai vành.
@@ -23,8 +46,20 @@ const GRID = 12;
  * ⚠️ PHẢI CHIA CHO DIỆN TÍCH, KHÔNG ĐƯỢC ĐẾM THÔ. Vành ngoài rộng hơn vành trong rất nhiều (chu vi
  * lớn hơn), nên đếm thô thì một cách rải ĐỀU TUYỆT ĐỐI vẫn ra "ngoài nhiều hơn trong" và bài test
  * sẽ khen ngợi đúng thứ nó sinh ra để cấm. Đây là bài học mẫu số của `TECH_DEBT #44`.
+ *
+ * ⚠️ BƯỚC C (2026-08-20) — VÀ MẪU SỐ ẤY SAI LẦN THỨ HAI, THEO ĐÚNG CÙNG MỘT KIỂU. Diện tích hình
+ * vuông viền tính CẢ phần mặt nước, mà cảnh vật thì KHÔNG BAO GIỜ được đứng dưới nước
+ * (`PROP_SHORE_CLEAR` ở `outskirts.js`). Nên ở kỷ nào nước lấn sát phố, vành TRONG mất bớt đất khả
+ * dụng còn mẫu số thì giữ nguyên ⇒ mật độ vành trong bị đọc thấp đi một cách giả tạo. Kỷ 5 (khúc
+ * uốn Elzbach ôm ba mặt mỏm đá, `reach: 1`) chỉ còn **73,2%** đất khô ở vành trong, và tỉ số rơi
+ * xuống **1,85** — dưới cổng 2 — trong khi cơ chế thưa-dần KHÔNG hề đổi.
+ * ⇒ Chia cho **đất KHẢ DỤNG**, không chia cho diện tích hình học. Đo lại cả 15 kỷ: khoảng trải thu
+ * từ 1,85–3,86 (2,09 lần) xuống **2,51–3,41 (1,36 lần)** — đúng dấu hiệu của một mẫu số vừa được
+ * dọn sạch thứ không thuộc câu hỏi: 15 kỷ dùng chung một cơ chế thì chúng phải ra gần nhau.
+ * ⚠️ Đây KHÔNG phải nới ngưỡng cho vừa kết quả — cổng vẫn nguyên `>= 2`, chỉ có mẫu số được sửa
+ * cho đúng đại lượng. Bài đối chứng ngay dưới nhốt lại đúng bộ số cũ để không ai lặng lẽ quay về.
  */
-function matDoHaiVanh(items, gridSize = GRID) {
+function matDoHaiVanh(items, era, gridSize = GRID) {
   const nua = OUTSKIRT_REACH / 2;
   let trong = 0;
   let ngoai = 0;
@@ -34,8 +69,9 @@ function matDoHaiVanh(items, gridSize = GRID) {
   }
   // Diện tích hình vuông viền (Chebyshev): cạnh ngoài² − cạnh trong².
   const canh = (r) => (gridSize + 2 * r) ** 2;
-  const dtTrong = canh(nua) - canh(0);
-  const dtNgoai = canh(OUTSKIRT_REACH) - canh(nua);
+  const kho = era == null ? { trong: 1, ngoai: 1 } : tiLeDatKho(era, gridSize);
+  const dtTrong = (canh(nua) - canh(0)) * kho.trong;
+  const dtNgoai = (canh(OUTSKIRT_REACH) - canh(nua)) * kho.ngoai;
   return { trong: trong / dtTrong, ngoai: ngoai / dtNgoai };
 }
 
@@ -85,13 +121,41 @@ test('MẬT ĐỘ GIẢM DẦN RA XA — sát phố thì rậm, ngoài xa thì t
   assert.ok(OUTSKIRT_EDGE_DENSITY > OUTSKIRT_FAR_DENSITY, 'hai đầu mật độ phải khác nhau');
   const tiSo = [];
   for (const era of KY) {
-    const { trong, ngoai } = matDoHaiVanh(deriveOutskirts({ era, gridSize: GRID }));
+    const { trong, ngoai } = matDoHaiVanh(deriveOutskirts({ era, gridSize: GRID }), era);
     assert.ok(ngoai > 0, `kỷ ${era}: vành ngoài rỗng trơn — thành một cái vòng, không phải một vùng quê`);
     const r = trong / ngoai;
     tiSo.push(r);
     assert.ok(r >= 2, `kỷ ${era}: vành trong chỉ dày gấp ${r.toFixed(2)}× vành ngoài — gần như rải đều`);
   }
   assert.equal(tiSo.length, 15, 'phải chấm đủ 15 kỷ');
+  // 15 kỷ dùng CHUNG một cơ chế thưa-dần, nên sau khi mẫu số đã sạch thì chúng phải ra gần nhau.
+  // Đo thật: 2,51–3,41 = 1,36 lần. Trần 1,8 để nó còn kêu nếu một kỷ tách đàn.
+  // ⚠️ NÓI ĐÚNG NÓ BẮT ĐƯỢC GÌ (đã thử ngược ba lần, hai lần KHÔNG đỏ và đó là một kết quả): đổi
+  // hình dạng đường cong thưa-dần cho riêng một kỷ (`xa ** 4`, `xa ** 3`) thì nó KHÔNG đỏ, vì một
+  // đường cong dốc hơn kéo CẢ HAI vành cùng chiều nên tỉ số gần như đứng yên. Nó đỏ khi ai đó vá
+  // riêng MỘT VÀNH của một kỷ (thử: nhân 0,35 vào vành ngoài kỷ 2 ⇒ trải 3,52 lần). Ghi ra đây để
+  // phiên sau đừng tin nó canh nhiều hơn thực tế.
+  const trai = Math.max(...tiSo) / Math.min(...tiSo);
+  assert.ok(trai < 1.8,
+    `tỉ số thưa-dần trải tới ${trai.toFixed(2)} lần giữa kỷ đậm nhất và nhạt nhất — 15 kỷ đáng lẽ `
+    + 'dùng chung một cơ chế, nên có kỷ đang bị một nguyên nhân KHÁC kéo lệch.');
+});
+
+test('ĐỐI CHỨNG: mẫu số CŨ (tính cả mặt nước) phải vẫn đọc ra bộ số hỏng', () => {
+  // ⚠️ Không có bài này thì phép chia-cho-đất-khả-dụng có thể bị "đơn giản hoá" về mẫu số hình học
+  // vào một phiên nào đó, và kỷ 5 lại tụt xuống 1,85 mà không ai biết vì sao. Đúng khuôn "đối chứng
+  // nhốt bộ số hỏng cũ" của Phase 9A: bắt phép đo phải còn phân biệt được HAI mẫu số.
+  const kyNuocSatPho = 5;
+  const items = deriveOutskirts({ era: kyNuocSatPho, gridSize: GRID });
+  const cu = matDoHaiVanh(items, null);            // mẫu số hình học — bộ số hỏng cũ
+  const moi = matDoHaiVanh(items, kyNuocSatPho);   // mẫu số theo đất khả dụng
+  const rCu = cu.trong / cu.ngoai;
+  const rMoi = moi.trong / moi.ngoai;
+  assert.ok(rCu < 2,
+    `mẫu số cũ ở kỷ ${kyNuocSatPho} nay ra ${rCu.toFixed(2)} — nó KHÔNG còn đọc ra bộ số hỏng, tức `
+    + 'nước ở kỷ này đã đổi và cả bài học lẫn con số 1,85 trong chú thích đều phải được đo lại.');
+  assert.ok(rMoi >= 2,
+    `mẫu số mới ở kỷ ${kyNuocSatPho} ra ${rMoi.toFixed(2)} — bản vá mẫu số không còn tác dụng.`);
 });
 
 test('ĐỐI CHỨNG: phép đo "giảm dần" phải TỪ CHỐI một cách rải ĐỀU', () => {
@@ -103,9 +167,21 @@ test('ĐỐI CHỨNG: phép đo "giảm dần" phải TỪ CHỐI một cách r�
       if (distanceOutsideGrid(u, v, GRID) > 0) deu.push({ x: u, y: v });
     }
   }
-  const { trong, ngoai } = matDoHaiVanh(deu);
+  const { trong, ngoai } = matDoHaiVanh(deu, null);
   assert.ok(trong / ngoai < 1.2,
     `rải ĐỀU mà phép đo vẫn ra ${(trong / ngoai).toFixed(2)}× — phép đo đang thiên vị vành trong`);
+
+  // ⚠️ Và phải hỏi CẢ ở một kỷ có nước, với phép rải đều trên ĐÚNG phần đất khả dụng: bản vá mẫu số
+  // không được TỰ SINH RA một cái dốc. Kỷ 8 (cửa sông Tagus) là kỷ nước rộng nhất bảng.
+  const kyNuocRong = 8;
+  const setting = buildSetting({ era: kyNuocRong, gridSize: GRID });
+  const deuKho = deu.filter((it) => setting.insetAt(it.x, it.y) <= -PROP_SHORE_CLEAR);
+  assert.ok(deuKho.length > deu.length * 0.5,
+    `kỷ ${kyNuocRong}: chỉ còn ${deuKho.length}/${deu.length} ô khô — đối chứng đang chạy gần rỗng`);
+  const uot = matDoHaiVanh(deuKho, kyNuocRong);
+  assert.ok(uot.trong / uot.ngoai < 1.2,
+    `rải ĐỀU trên đất khô ở kỷ ${kyNuocRong} mà phép đo ra ${(uot.trong / uot.ngoai).toFixed(2)}× — `
+    + 'phép chia cho đất khả dụng đang tự bịa ra một cái dốc.');
 });
 
 /**

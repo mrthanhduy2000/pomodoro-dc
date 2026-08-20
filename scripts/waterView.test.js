@@ -58,36 +58,105 @@ test('BA LỚP PHẢI CỘNG ĐÚNG 100% — mọi phép chia-một-toàn-thể 
   }
 });
 
-test('TECH_DEBT #57 ĐÃ ĐÓNG — biển kỷ 14 và sông kỷ 12 phải THẬT SỰ nằm trong khung mặc định', () => {
+test('TECH_DEBT #57 ĐÃ ĐÓNG — 11 kỷ đạt cổng 5%, và ĐÚNG BA kỷ trượt vì BỀ RỘNG, không vì góc nhìn', () => {
   // ⚠️ BÀI NÀY THAY CHO BÀI "KHUYẾT TẬT VẪN CÒN NGUYÊN". Cái chuông đã reo (2026-08-20) và nay nó
   // đổi việc: từ *canh cho khuyết tật đừng bị quên* sang *canh cho bản vá đừng bị mất*.
   //
-  // Ngưỡng 5% là cổng Đàm ra ở §3. Nó KHÔNG áp cho mọi kỷ có nước, và đó là một sự thật đã đo chứ
-  // không phải một chỗ nới tay: kênh Amsterdam kỷ 10 rộng 0,9 ô, và **không góc nhìn nào** đưa nó
-  // lên 5% khung hình (trần đo được 7,37% ở một góc phá hỏng mọi kỷ khác; ở góc chung tốt nhất nó
-  // chỉ được 1,9%). Kỷ 6 thì trần TOÀN CỤC chỉ 4,44% — dưới 5% ở MỌI góc. Bảng đầy đủ 14 kỷ × 24
-  // góc nằm ở `PERFORMANCE.md`. Vì vậy bài này khoá đúng hai kỷ ĐÃ DỰNG HÌNH, và Bước C sẽ phải
-  // đối mặt với ba kỷ hẹp ấy bằng một câu trả lời khác (`TECH_DEBT #59`).
+  // ⚠️ CỔNG 5% KHÔNG ĐƯỢC NỚI XUỐNG CHO VỪA BA KỶ HẸP. Đàm chốt điều này bằng đúng một câu:
+  // *"Nới một ngưỡng cho vừa kết quả là cái phễu Phase 9A."* Con số 5% đã hiệu chuẩn ở CẢ HAI ĐẦU
+  // bằng phép đo thật — 0,09% là *"không nhìn thấy gì"* (kỷ 14 trước `worldYaw`) và 23,75% là
+  // *"đọc ra ngay là thành phố cảng"* (kỷ 14 sau) — nên hạ nó xuống là vứt bỏ một thứ đã hiệu
+  // chuẩn để lấy một con số chưa hiệu chuẩn.
   //
-  // THỬ-CHO-ĐỎ: cho `worldYaw` trả 0 ⇒ kỷ 14 tụt về 0,09% ⇒ đỏ ở `assert.ok(macDinh >= 0.05)`.
+  // ⚠️ VÀ ĐÂY LÀ GIỚI HẠN CỦA **BỀ RỘNG DÒNG NƯỚC**, KHÔNG PHẢI CỦA GÓC NHÌN — phân biệt được
+  // bằng số, không bằng cảm giác:
+  //
+  //   · **Kỷ 6** (kênh Bridgewater, rộng 1,2 ô): trần TOÀN CỤC — thử cả 24 góc — chỉ **4,36%**.
+  //     Tức KHÔNG TỒN TẠI một góc nào đưa nó lên 5%. Xoay thêm không cứu được.
+  //   · **Kỷ 7** (sông Arno, 1,4 ô) và **kỷ 10** (kênh Amsterdam, 0,9 ô) có trần toàn cục 9,11% và
+  //     7,22%, nhưng chỉ ở những góc phá hỏng bố cục chung của 14 kỷ còn lại; ở góc dùng được
+  //     chúng chỉ được 2,41% và 1,60%.
+  //
+  // ⇒ Cách chữa THẬT nằm ở hướng khác — đổi thứ mang bản sắc ven nước sang **cầu · bến · thuyền ·
+  // kè** thay vì diện tích mặt nước — và đó là cả một phase mới, đã ghi thành `TECH_DEBT #60` với
+  // điều kiện xem lại *"khi nào có phase chi tiết ven nước"*. Nới kênh cho rộng ra thì bị bác
+  // thẳng: kênh Bridgewater hẹp thật, và mua một con số bằng cách nói dối địa lý chính là thứ
+  // ADR-025 đã cấm với mặt đường.
+  //
+  // THỬ-CHO-ĐỎ (nêu TRƯỚC chỗ mong đợi đỏ):
+  //   · cho `worldYaw` trả 0 ⇒ kỷ 14 tụt về 0,09% ⇒ đỏ ở `assert.ok(macDinh >= CONG)`;
+  //   · nới bề rộng kỷ 6 lên cho nó vượt 5% ⇒ đỏ ở `deepEqual(TRUOT, …)` (chiều "đã sửa xong");
+  //   · thu hẹp một kỷ đang đạt cho nó tụt dưới 5% ⇒ cũng đỏ ở đúng dòng ấy (chiều "kỷ thứ tư").
+  const CONG = 0.05;
   assert.equal(getSetting(14).side, 'nam', 'sự thật lịch sử KHÔNG được đổi để lấy con số');
   assert.equal(getSetting(12).side, 'dong', 'sự thật lịch sử KHÔNG được đổi để lấy con số');
 
-  for (const era of ERAS_WITH_WATER_GEOMETRY) {
-    const macDinh = tiLeNuocTrongKhung({ era, tia: TIA }).nuoc;
-    assert.ok(macDinh >= 0.05,
+  // Đo MỘT lần rồi dùng lại — mỗi lời gọi là 88×88 tia, gọi lại là nhân đôi thời gian bài test mà
+  // không thêm một chút thông tin nào.
+  const doDuoc = new Map(
+    ERAS_WITH_WATER_GEOMETRY.map((era) => [era, tiLeNuocTrongKhung({ era, tia: TIA }).nuoc]));
+  const TRUOT = ERAS_WITH_WATER_GEOMETRY.filter((era) => doDuoc.get(era) < CONG);
+  const DAT = ERAS_WITH_WATER_GEOMETRY.filter((era) => doDuoc.get(era) >= CONG);
+
+  // ⚠️ MỘT BẢNG TƯỜNG MINH, KHÔNG PHẢI MỘT `continue` IM LẶNG. Đàm: *"tự đỏ CẢ HAI CHIỀU: kỷ thứ
+  // tư trượt thì đỏ, một trong ba kỷ được sửa xong cũng đỏ."* Một mục nợ trong tài liệu chỉ được
+  // đọc khi có người đi tìm; một con số trong bài test thì TỰ ĐÒI được đọc.
+  assert.deepEqual(TRUOT, [6, 7, 10],
+    'đúng ba kỷ nước HẸP được miễn cổng 5% (`TECH_DEBT #59`, Đàm chốt hướng (b) ngày 2026-08-20). '
+    + 'Danh sách này đổi nghĩa là hoặc có kỷ thứ tư vừa tụt xuống, hoặc một trong ba kỷ ấy vừa '
+    + 'được chữa — cả hai trường hợp đều phải xem lại `TECH_DEBT #59` chứ không phải sửa con số ở đây.');
+  assert.equal(DAT.length, 11, 'phải có đúng 11 kỷ đạt cổng 5%');
+
+  // Vế thật sự canh bản vá `worldYaw`: 11 kỷ kia phải THẬT SỰ đạt.
+  for (const era of DAT) {
+    const macDinh = doDuoc.get(era);
+    assert.ok(macDinh >= CONG,
       `kỷ ${era}: mặt nước chỉ chiếm ${(macDinh * 100).toFixed(2)}% khung mặc định, dưới cổng 5% `
       + 'của §3. `worldYaw` có đang bị vô hiệu hoá không?');
   }
+
+  // ⚠️ ĐO BIÊN, ĐỪNG CHỈ ĐỌC XANH/ĐỎ (luật Phase 9B). Kỷ mỏng nhất trong nhóm ĐẠT hiện chỉ hơn
+  // cổng **0,11 điểm phần trăm** (kỷ 4: 5,11% ở độ mịn của bài test này, 5,02% ở độ mịn đầy đủ).
+  // Đó là một lời hứa đang đạt nhờ 2% biên — ghi ra để phiên sau biết nó mỏng tới đâu, và để một
+  // thay đổi nhỏ ở kỷ 4 không lặng lẽ đẩy nó sang bảng `TRUOT`.
+  const mongNhat = Math.min(...DAT.map((era) => doDuoc.get(era)));
+  assert.ok(mongNhat >= CONG,
+    `kỷ mỏng nhất trong nhóm ĐẠT chỉ được ${(mongNhat * 100).toFixed(2)}%`);
+  assert.ok(mongNhat < 0.06,
+    `kỷ mỏng nhất trong nhóm ĐẠT đã lên ${(mongNhat * 100).toFixed(2)}% — nếu biên đã dày lên thật `
+    + 'thì cập nhật chú thích trên, đừng để nó nói dối về một biên 0,11 điểm phần trăm không còn nữa.');
 
   // ⚠️ ĐỐI CHỨNG — TRẦN PHẢI CÒN CAO HƠN MẶC ĐỊNH Ở KỶ BIỂN. Không có vế này thì bài trên vẫn xanh
   // trong một thế giới mà mặt biển đã phình to bất thường (vd `reach` tụt về 0 và nước liếm vào sát
   // thành phố) — lúc ấy 23% là triệu chứng của một lỗi khác, không phải bằng chứng đã sửa đúng.
   const tran14 = tiLeNuocTrongKhung({ era: 14, yaw: gocDoiDien(14), tia: TIA }).nuoc;
-  const macDinh14 = tiLeNuocTrongKhung({ era: 14, tia: TIA }).nuoc;
+  const macDinh14 = doDuoc.get(14);
   assert.ok(tran14 > macDinh14,
     `kỷ 14: trần ${(tran14 * 100).toFixed(2)}% không cao hơn mặc định ${(macDinh14 * 100).toFixed(2)}%`);
   assert.ok(macDinh14 / tran14 > 0.5,
     `kỷ 14: khung mặc định mới chỉ lấy được ${(macDinh14 / tran14 * 100).toFixed(0)}% của trần — `
     + 'bản vá chưa đưa được biển vào tầm nhìn như đã hứa.');
+});
+
+test('KỶ 6 TRƯỢT VÌ BỀ RỘNG — không góc nào trong 24 góc cứu được nó', () => {
+  // ⚠️ ĐÂY LÀ VẾ CHỨNG MINH CÂU *"giới hạn của BỀ RỘNG, không phải của GÓC NHÌN"* Ở BÀI TRÊN. Không
+  // có bài này thì câu ấy chỉ là một lời khẳng định trong chú thích — và dự án đã trả giá nhiều lần
+  // cho việc tin một câu tự trấn an chưa được kiểm (Phase 4G: *"ổn định qua hai cỡ ô 260 và 300"*).
+  //
+  // Kỷ 7 và 10 thì KHÔNG có bài tương tự, và đó là sự thật chứ không phải chỗ bỏ sót: trần toàn
+  // cục của chúng (9,11% · 7,22%) CÓ vượt 5%, chỉ là ở những góc phá hỏng 14 kỷ còn lại. Nói chúng
+  // "không góc nào cứu được" sẽ là một câu sai.
+  //
+  // THỬ-CHO-ĐỎ: nới `width` kỷ 6 từ 1,2 lên 3 ⇒ trần toàn cục vượt 5% ⇒ đỏ.
+  let tranToanCuc = 0;
+  for (let k = 0; k < 24; k += 1) {
+    const yaw = (k / 24) * Math.PI * 2;
+    tranToanCuc = Math.max(tranToanCuc, tiLeNuocTrongKhung({ era: 6, yaw, tia: TIA }).nuoc);
+  }
+  assert.ok(tranToanCuc < 0.05,
+    `kỷ 6: có một góc đưa mặt nước lên ${(tranToanCuc * 100).toFixed(2)}% — vượt cổng 5%. Nếu đúng `
+    + 'thì `TECH_DEBT #59` đã hết đúng ở kỷ này: xem lại nó thay vì sửa ngưỡng ở đây.');
+  assert.ok(tranToanCuc > 0.03,
+    `kỷ 6: trần toàn cục tụt còn ${(tranToanCuc * 100).toFixed(2)}% — thấp bất thường so với 4,36% `
+    + 'đo được ngày 2026-08-20. Mặt nước có còn được dựng không?');
 });

@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { Color } from 'three';
 
 import {
   ROAD_LIFT, ROAD_PART, buildRoadSurface, buildTerrainSurface, buildWaterSurface,
@@ -512,40 +513,118 @@ test('TẤM NƯỚC PHẢI NẰM GỌN TRONG THẾ GIỚI — không thò ra ngo
 test('KỶ KHÔ KHÔNG ĐƯỢC DỰNG MỘT TAM GIÁC NƯỚC NÀO — đây là ràng buộc lệnh vẽ của Đàm', () => {
   // THỬ-CHO-ĐỎ: bỏ `if (!setting?.built …) return null` ⇒ đỏ ở kỷ 1 (và kèm theo, mốc lệnh vẽ của
   // 13 kỷ khô ở `drawCallBudget.test.js` cũng đỏ).
-  let soKyKho = 0;
+  const kyKho = [];
   for (let era = 1; era <= 15; era += 1) {
     if (ERAS_WITH_WATER_GEOMETRY.includes(era)) continue;
-    soKyKho += 1;
+    kyKho.push(era);
     const terrain = buildTerrain({ era, gridSize: 12 });
     const horizon = buildHorizon({ era, gridSize: 12 });
     assert.equal(buildWaterSurface({ setting: terrain.setting, gridSize: 12, horizon }), null,
       `kỷ ${era} chưa dựng nước mà vẫn sinh ra hình học mặt nước — đó là +1 lệnh vẽ không ai trả`);
   }
-  assert.equal(soKyKho, 13, 'phải duyệt đúng 13 kỷ khô');
+  // ⚠️ BƯỚC C (2026-08-20): con số này ĐI THEO bảng `ERAS_WITH_WATER_GEOMETRY`, nên nó phải đổi mỗi
+  // lần một kỷ được dựng nước. Sau Bước C chỉ còn ĐÚNG một kỷ khô (kỷ 1 — Göbekli Tepe trên sườn
+  // núi, không có nước theo đúng lịch sử). Để nguyên số 13 thì bài này chạy RỖNG mà vẫn xanh.
+  assert.deepEqual(kyKho, [1], 'sau Bước C chỉ còn ĐÚNG kỷ 1 là khô');
 });
 
 test('MÀU NƯỚC ĐI TỪ CẠN SANG SÂU — đó là thứ thay cho sóng, nên nó phải THẬT SỰ đổi', () => {
   // ⚠️ Bài học Phase 8D: một cơ chế trông thuyết phục trên ảnh mà chưa bao giờ làm gì. Ở đây phải
   // đo: hai đầu bảng màu có thật sự xuất hiện trên tấm nước không, hay cả tấm ra một sắc duy nhất?
   //
-  // THỬ-CHO-ĐỎ: cho `depthAt` trả một hằng số ⇒ đỏ ở `trai > 0.02` (mọi đỉnh cùng một màu).
+  // ⚠️ BƯỚC C (2026-08-20) — LẦN NỮA: MỘT LỜI HỨA VỀ QUAN HỆ ĐƯỢC VIẾT THÀNH MỘT MỨC (bẫy Phase 7D).
+  // Bản cũ đòi `trai > 0.02` ở MỌI kỷ. Con số ấy đúng khi chỉ có hai kỷ nước, cả hai đều là biển/
+  // sông lớn nên chạm đáy tối đa. Bước C dựng nước cho 14 kỷ, trong đó có sông hẹp — và sắc nước
+  // suy từ ĐỘ SÂU, mà độ sâu thì ĐI THEO BỀ RỘNG (xem `setting.test.js`, bảng SÂU/NÔNG). Kỷ 5 chỉ
+  // sâu tới 0,111 trên trần 0,55 ⇒ trải sắc 0,0042. Đó KHÔNG phải cơ chế chết; nó là cùng một cơ
+  // chế đang chạy trên một dải hẹp hơn năm lần.
+  // ⚠️ Còn một tầng nén THỨ HAI ít ai để ý: sắc nước là `smoothstep(sâu / WATER_BED_DEPTH)`, mà
+  // `smoothstep` PHẲNG ở gần 0 (bậc ba). Nước nông vì thế bị nén HAI lần — một lần vì dải sâu ngắn,
+  // một lần nữa vì nó rơi vào đúng khúc phẳng của đường cong. Đo được: trải-sắc ÷ dải-sâu là 0,038
+  // ở kỷ 5 nhưng 0,079 ở kỷ 8 — cùng một công thức, khác nhau vì chỗ đứng trên đường cong.
+  //
+  // ⇒ Ba câu hỏi TÁCH RA, mỗi câu một phép đo:
+  //   (1) mỗi kỷ có một DẢI SÂU thật để mà ánh xạ không (nếu không thì mọi thứ sau là vô nghĩa);
+  //   (2) ánh xạ sâu→sắc có CÒN SỐNG và có DÙNG CHUNG một đường cong không — hỏi bằng QUAN HỆ:
+  //       kỷ nào có dải sâu rộng hơn hẳn thì trải sắc phải KHÔNG kém hơn. Đây là thứ bắt được một
+  //       bản vá "chữa riêng kỷ 5 cho qua cổng", mà một cái ngưỡng thì không bắt được;
+  //       ⚠️ và phép so ấy phải CHIA cho BIÊN ĐỘ bảng sắc của TỪNG KIỂU NƯỚC trước khi so, vì năm
+  //       kiểu nước có năm bảng sắc rộng hẹp khác nhau (kênh 0,0264 · cửa sông 0,0433 — chênh 1,6
+  //       lần). So thô thì đang trộn HAI đại lượng (dải sâu và biên độ bảng sắc) vào một con số, và
+  //       đo được là nó chỉ còn **0,00070** biên ở cặp 4→12 — mỏng tới mức một lần chỉnh màu vu vơ
+  //       cũng làm nó kêu oan. Chuẩn hoá xong thì biên mỏng nhất là **0,01776** (cặp 4→8), rộng
+  //       gấp 25 lần, VÀ nó đúng về cấu trúc: trải-chuẩn-hoá chính là bề rộng của `smoothstep`
+  //       trên dải sâu, nên nó ĐƠN ĐIỆU theo dải sâu bởi định nghĩa. Sáu kỷ chạm đáy tối đa đều ra
+  //       đúng **1,0000** — khớp từng đơn vị với bảng SÂU ở `setting.test.js`;
+  //       ⚠️ chuẩn hoá thì chia mất biên độ bảng sắc, nên phải hỏi RIÊNG một câu nữa: mỗi kiểu nước
+  //       có còn hai đầu phân biệt được không (nếu không, cả tấm một màu mà phép đơn điệu vẫn xanh);
+  //   (3) kỷ nào có tín hiệu mờ hơn mức cũ 0,02 — ghi ra TƯỜNG MINH ĐẾM ĐƯỢC, đúng khuôn `TRUOT`
+  //       mà Đàm đã chốt cho #59, thay vì hạ ngưỡng cho vừa (hạ ngưỡng = cái phễu Phase 9A).
+  //
+  // THỬ-CHO-ĐỎ (đã chạy, nêu TRƯỚC chỗ mong đỏ): (a) `depthAt` trả hằng số ⇒ đỏ ở `dai > 0.10`;
+  // (b) nới bề rộng kỷ 5 ⇒ đỏ ở phép đơn điệu; (c) bóp dẹt riêng bảng sắc `sea` ⇒ đỏ ở sàn biên độ;
+  // (d) rút một kỷ khỏi `ERAS_WITH_WATER_GEOMETRY` ⇒ đỏ ở bài "kỷ khô" bên trên.
+  const CONG_TRAI = 0.02;
+  const KHE_DAI = 0.02;    // hai kỷ chênh dải sâu ít hơn ngần này thì KHÔNG so — chúng ngang nhau
+  const SAN_BIEN_DO = 0.02; // đo thật: hẹp nhất là `canal` 0,0264; rộng nhất `estuary` 0,0433
+  const scratch = new Color();
+  const meanRgb = (hex) => { scratch.setHex(hex); return (scratch.r + scratch.g + scratch.b) / 3; };
+  const do_ = new Map();
   for (const era of ERAS_WITH_WATER_GEOMETRY) {
     const terrain = buildTerrain({ era, gridSize: 12 });
     const horizon = buildHorizon({ era, gridSize: 12 });
     const out = buildWaterSurface({ setting: terrain.setting, gridSize: 12, horizon });
     const col = out.geometry.getAttribute('color').array;
+    const pos = out.geometry.getAttribute('position').array;
+    const half = (12 - 1) / 2;
     let lo = Infinity;
     let hi = -Infinity;
+    let sauLo = Infinity;
+    let sauHi = -Infinity;
     for (let i = 0; i < col.length; i += 3) {
       const v = (col[i] + col[i + 1] + col[i + 2]) / 3;
       lo = Math.min(lo, v);
       hi = Math.max(hi, v);
+      const s = terrain.setting.depthAt(pos[i] + half, pos[i + 2] + half);
+      sauLo = Math.min(sauLo, s);
+      sauHi = Math.max(sauHi, s);
     }
-    const trai = hi - lo;
-    assert.ok(trai > 0.02,
-      `kỷ ${era}: cả tấm nước chỉ trải ${trai.toFixed(4)} độ sáng — chỗ cạn và chỗ sâu đang cùng `
-      + 'một màu, tức tín hiệu "cạn dần vào bờ" không tồn tại.');
-    assert.ok(WATER_TINT[terrain.setting.style.water],
-      `kỷ ${era}: kiểu nước "${terrain.setting.style.water}" không có màu trong \`WATER_TINT\``);
+    const kieu = terrain.setting.style.water;
+    assert.ok(WATER_TINT[kieu],
+      `kỷ ${era}: kiểu nước "${kieu}" không có màu trong \`WATER_TINT\``);
+    const bienDo = Math.abs(meanRgb(WATER_TINT[kieu].sau) - meanRgb(WATER_TINT[kieu].can));
+    assert.ok(bienDo > SAN_BIEN_DO,
+      `kiểu nước "${kieu}" có bảng sắc dẹt (biên độ ${bienDo.toFixed(4)}) — hai đầu cạn/sâu đã gần `
+      + 'như cùng một màu, nên chia thế nào cũng không còn tín hiệu để mà đơn điệu.');
+    do_.set(era, { kieu, trai: hi - lo, dai: sauHi - sauLo, chuan: (hi - lo) / bienDo });
+    // (1) Đo thật: mỏng nhất là kỷ 5 = 0,1108. Sàn 0,10 để nó còn kêu nếu ai đó thu nước hẹp thêm.
+    assert.ok(sauHi - sauLo > 0.10,
+      `kỷ ${era}: cả tấm nước chỉ có dải sâu ${(sauHi - sauLo).toFixed(4)} — không có gì để ánh xạ `
+      + 'thành sắc, tức lời hứa "cạn dần vào bờ" rỗng ngay từ hình học.');
   }
+
+  // (2) QUAN HỆ, không phải MỨC. Đo thật: 76 cặp đủ điều kiện so, 0 cặp vi phạm, biên mỏng nhất
+  // 0,01776 ở cặp 4→8.
+  let soCapSo = 0;
+  for (const a of ERAS_WITH_WATER_GEOMETRY) {
+    for (const b of ERAS_WITH_WATER_GEOMETRY) {
+      const A = do_.get(a);
+      const B = do_.get(b);
+      if (!(A.dai + KHE_DAI < B.dai)) continue;
+      soCapSo += 1;
+      assert.ok(A.chuan <= B.chuan + 1e-9,
+        `kỷ ${a} có dải sâu ${A.dai.toFixed(3)} (hẹp hơn kỷ ${b}: ${B.dai.toFixed(3)}) mà trải sắc `
+        + `chuẩn hoá ${A.chuan.toFixed(4)} lại ĐẬM HƠN ${B.chuan.toFixed(4)} — hai kỷ đang dùng hai `
+        + 'đường cong khác nhau, tức có ai đó vá riêng một kỷ.');
+    }
+  }
+  assert.ok(soCapSo > 60, `chỉ so được ${soCapSo} cặp — phép đơn điệu đang teo lại`);
+
+  // (3) Ghi ra tường minh, đỏ CẢ HAI CHIỀU: kỷ thứ năm mờ đi thì đỏ, một trong bốn kỷ này đậm lên
+  // cũng đỏ. Cùng gốc với `TRUOT = [6, 7, 10]` ở `waterView.test.js` — nước hẹp thì vừa chiếm ít
+  // khung hình vừa nhạt sắc, một nguyên nhân sinh ra hai triệu chứng. Xem `TECH_DEBT` #60.
+  const MO_NHAT = ERAS_WITH_WATER_GEOMETRY.filter((era) => do_.get(era).trai < CONG_TRAI);
+  assert.deepEqual(MO_NHAT, [5, 6, 7, 10],
+    'bảng kỷ có tín hiệu cạn-sâu mờ hơn cổng cũ đã đổi — nếu vì nước rộng ra thì mừng, nhưng phải '
+    + 'sửa bảng này và ghi lại; nếu vì nước hẹp thêm thì đó là hồi quy.');
 });

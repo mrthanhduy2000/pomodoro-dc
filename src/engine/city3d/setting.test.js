@@ -23,18 +23,46 @@ import {
   buildSetting, distanceOutsideGrid, hazXuongDay, waterIsBuilt,
 } from './setting.js';
 import { APRON_DROP, WATER_SURFACE_Y, buildTerrain, terrainSurfaceReach } from './terrain.js';
-import { buildHorizon } from './horizon.js';
+import { MOUNTAIN_FADE, buildHorizon } from './horizon.js';
 import { OUTSKIRT_REACH, deriveOutskirts } from './outskirts.js';
 
 const ERAS = Object.keys(ERA_STYLES).map(Number).sort((a, b) => a - b);
 const GRID = 12;
 
-/** Lấy mẫu dày trên TOÀN THẾ GIỚI (cả vùng chân trời), bước 0,25 ô. */
-function* diemToanTheGioi(buoc = 0.25) {
+/**
+ * Lấy mẫu dày QUANH TẤM ĐẤT THÀNH PHỐ — tấm địa hình cộng 2 ô đệm, tức tới bán kính
+ * `terrainSurfaceReach(12) + 2 = 11,4`.
+ *
+ * ⚠️ HÀM NÀY TỪNG MANG TÊN `diemToanTheGioi` VÀ CÁI TÊN ẤY NÓI DỐI — chú thích cũ ghi *"cả vùng
+ * chân trời"* trong khi tấm chân trời phủ tới bán kính **36**, tức nó bỏ sót **hơn 90% diện tích
+ * thế giới**. Cái tên sai không vô hại: nó làm bài "MẶT NƯỚC PHẢI THẬT SỰ ĐƯỢC KHOÉT" kết tội oan
+ * kỷ 15 (Dubai khai `reach: 6`, tức mặt nước bắt đầu **2,6 ô BÊN NGOÀI** mép tấm đất thành phố),
+ * và nó làm điều đó theo cách thuyết phục nhất: `insetAt` ra **âm ở mọi điểm**, y hệt triệu chứng
+ * của một kỷ không hề có nước. Cơ chế vẫn sống — chỉ là nó sống ở tấm BÊN KIA (`horizon.js` khoét
+ * lòng nước bằng CÙNG một `setting`, xem `khoetLongNuoc` ở cả hai file).
+ *
+ * ⇒ Bài học đã trả giá nhiều lần trong dự án này (`TECH_DEBT #22`, sương mù Phase 9B): *trước khi
+ * tin một phép đo "không thấy gì", hỏi xem nó có NHÌN TỚI chỗ ấy không.* Nay tên hàm nói đúng
+ * phạm vi của nó, và ai cần cả thế giới thì gọi `diemToiChanTroi`.
+ */
+function* diemQuanhThanhPho(buoc = 0.25) {
   const R = terrainSurfaceReach(GRID) + 2;
   const half = (GRID - 1) / 2;
   for (let u = -R + half; u <= R + half + 1e-9; u += buoc) {
     for (let v = -R + half; v <= R + half + 1e-9; v += buoc) yield [u, v];
+  }
+}
+
+/**
+ * Lấy mẫu THẬT SỰ tới mép thế giới — bán kính lấy từ chính `buildHorizon(era).reach`, không viết
+ * cứng. Đây là phạm vi phải dùng cho mọi câu hỏi về MẶT NƯỚC, vì nước của 3 kỷ biển trải gần hết
+ * tấm chân trời còn kỷ 15 thì nằm TRỌN ngoài tấm đất thành phố.
+ */
+function* diemToiChanTroi(era, buoc = 0.25) {
+  const R = buildHorizon({ era, gridSize: GRID }).reach;
+  const half = (GRID - 1) / 2;
+  for (let x = -R; x <= R + 1e-9; x += buoc) {
+    for (let z = -R; z <= R + 1e-9; z += buoc) yield [x + half, z + half, x, z];
   }
 }
 
@@ -49,26 +77,37 @@ function* diemTrongLuoi(buoc = 0.25) {
 // DỞ DANG CÓ CHỦ Ý — VÀ NÓ ĐẾM ĐƯỢC
 // ═══════════════════════════════════════════════════════════════════════════════
 
-test('BƯỚC B DỰNG HÌNH CHO ĐÚNG 2 KỶ CÓ NƯỚC — con số này là cái hẹn giờ, không phải một ghi chú', () => {
-  // ⚠️ Đàm ra lệnh: *"dựng hình cho ĐÚNG 3 kỷ (14 biển · 12 sông · 1 khô)… Đừng trải 12 kỷ còn
-  // lại."* Bài học Phase 10: *"một mục nợ trong tài liệu chỉ được đọc khi có người đi tìm; một con
-  // số trong bài test thì tự đòi được đọc."*
+test('BƯỚC C ĐÃ DỰNG HÌNH CHO ĐỦ 14 KỶ CÓ NƯỚC — và lời hứa nay là một QUAN HỆ, không phải một mảng', () => {
+  // ⚠️ BÀI NÀY ĐỔI VIỆC SAU KHI ĐÀM DUYỆT ẢNH BƯỚC B (2026-08-20). Trước đây nó canh một trạng
+  // thái DỞ DANG (*"đúng 2 kỷ, đừng trải thêm"*); nay nó canh một LỜI HỨA: *mọi kỷ mà BẢNG khai có
+  // nước thì phải dựng ra nước, và chỉ những kỷ ấy*.
   //
-  // THỬ-CHO-ĐỎ: thêm một kỷ vào `ERAS_WITH_WATER_GEOMETRY` ⇒ đỏ ở `deepEqual` ngay dòng dưới, và
-  // đỏ tiếp ở `drawCallBudget.test.js` (kỷ ấy chưa có mốc lệnh vẽ mới).
-  assert.deepEqual(ERAS_WITH_WATER_GEOMETRY, [12, 14],
-    'Bước B chốt đúng hai kỷ có nước. Trải thêm kỷ nào thì phải đo lại mốc lệnh vẽ của kỷ ấy và '
-    + 'phải có ảnh cho Đàm xem — đây không phải chỗ để thêm cho tiện.');
-
-  for (const era of ERAS_WITH_WATER_GEOMETRY) {
-    assert.equal(hasWater(era), true, `kỷ ${era} được dựng hình nước nhưng BẢNG lại khai không nước`);
-    assert.equal(waterIsBuilt(era), true, `kỷ ${era}: \`waterIsBuilt\` nói ngược với danh sách`);
+  // ⚠️ VÌ SAO KHÔNG VIẾT CỨNG `deepEqual(..., [2,3,4,...,15])`. Một mảng 14 số viết tay chỉ khoá
+  // được chính nó: thêm một dòng nước vào `settingStyle.js` mà quên dựng hình thì mảng ấy vẫn khớp
+  // với chính nó và không có gì đỏ — kỷ mới sẽ lặng lẽ thành một kỷ khô, đúng loại hỏng im lặng mà
+  // Phase 7D đã trả giá. Nên bài này hỏi CẢ 15 KỶ và đối chiếu với `hasWater`, tức khoá một QUAN HỆ.
+  //
+  // THỬ-CHO-ĐỎ (nêu TRƯỚC): bỏ một kỷ bất kỳ khỏi `ERAS_WITH_WATER_GEOMETRY` ⇒ đỏ ngay ở vòng
+  // dưới với câu "BẢNG khai có nước mà HÌNH không dựng"; thêm kỷ 1 vào ⇒ đỏ ở vế ngược lại.
+  let soCoNuoc = 0;
+  for (const era of ERAS) {
+    const bangKhai = hasWater(era);
+    const hinhDung = waterIsBuilt(era);
+    assert.equal(hinhDung, bangKhai,
+      `kỷ ${era}: BẢNG khai ${bangKhai ? 'CÓ' : 'KHÔNG'} nước nhưng HÌNH ${hinhDung ? 'CÓ' : 'KHÔNG'} `
+      + 'dựng. Hai vế này phải khớp sau Bước C — lệch một kỷ nghĩa là hoặc bảng vừa được sửa mà '
+      + 'quên dựng hình, hoặc một kỷ vừa bị rút khỏi hình mà không ai ghi lý do.');
+    if (bangKhai) soCoNuoc += 1;
   }
-  const kho = ERAS.filter((e) => !waterIsBuilt(e));
-  assert.equal(kho.length, 13, `phải còn đúng 13 kỷ chưa dựng nước, đang có ${kho.length}`);
+  // Gác chạy-rỗng ĐẾM CẢ HAI PHÍA. Không có nó thì một `hasWater` hỏng theo hướng "luôn trả false"
+  // sẽ làm vòng trên xanh trơn tru trong khi cả 15 kỷ đều khô.
+  assert.equal(soCoNuoc, 14, `phải có đúng 14 kỷ có nước, đang đếm được ${soCoNuoc}`);
+  assert.equal(ERAS_WITH_WATER_GEOMETRY.length, 14, 'danh sách phải đủ 14 kỷ');
 
-  // Và kỷ 1 phải nằm trong nhóm khô — nó là nhân chứng Đàm chọn cho ràng buộc lệnh vẽ.
-  assert.ok(kho.includes(1), 'kỷ 1 phải là kỷ khô — cả bộ ba Bước B dựa vào điều đó');
+  const kho = ERAS.filter((e) => !waterIsBuilt(e));
+  assert.deepEqual(kho, [1],
+    'kỷ 1 phải là kỷ khô DUY NHẤT — nó là nhân chứng Đàm chọn cho ràng buộc "nước không được tính '
+    + 'tiền lên kỷ không có nước", và sau Bước C nó là nhân chứng duy nhất còn lại.');
 });
 
 test('KỶ CHƯA DỰNG HÌNH PHẢI TRẢ VỀ MỘT LỚP RỖNG THẬT SỰ, không phải một lớp "gần rỗng"', () => {
@@ -85,7 +124,9 @@ test('KỶ CHƯA DỰNG HÌNH PHẢI TRẢ VỀ MỘT LỚP RỖNG THẬT SỰ, 
     }
     soKyKiem += 1;
   }
-  assert.equal(soKyKiem, 13, 'không duyệt đủ 13 kỷ khô');
+  // ⚠️ Sau Bước C chỉ còn ĐÚNG một kỷ khô. Con số này là một cái gác chạy-rỗng: không có nó thì
+  // vòng lặp trên duyệt 0 kỷ mà bài test vẫn xanh.
+  assert.equal(soKyKiem, 1, 'không duyệt đủ 1 kỷ khô (kỷ 1)');
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -130,7 +171,7 @@ test('BẤT BIẾN (1) trên MẶT ĐẤT THẬT — chỗ ngập HẲN phải n
   let soNgapMotPhan = 0;
   for (const era of ERAS_WITH_WATER_GEOMETRY) {
     const t = buildTerrain({ era, gridSize: GRID });
-    for (const [u, v] of diemToanTheGioi(0.5)) {
+    for (const [u, v] of diemQuanhThanhPho(0.5)) {
       const tron = t.setting.blendAt(u, v);
       if (tron <= 0) continue;
       const cao = t.surfaceHeightAt(u, v);
@@ -204,7 +245,7 @@ test('BẤT BIẾN (2) — trong lưới 12×12 thì `blendAt` phải bằng Đ�
   }
   // Biên còn lại: `insetAt` trong lưới phải ≤ −SHORE_BAND. In ra để biết ta đang cách vực bao xa —
   // luật Phase 9B: *"đo BIÊN của mọi lời hứa, đừng chỉ đọc xanh/đỏ"*.
-  assert.equal(bien.length, 2, 'phải đo biên ở đúng 2 kỷ đã dựng nước');
+  assert.equal(bien.length, 14, 'phải đo biên ở đúng 14 kỷ đã dựng nước');
   for (const { era, hepNhat } of bien) {
     assert.ok(hepNhat <= -SHORE_BAND + 1e-9,
       `kỷ ${era}: điểm ướt nhất trong lưới có inset ${hepNhat.toFixed(4)}, cần ≤ ${-SHORE_BAND}`);
@@ -292,7 +333,7 @@ test('BẤT BIẾN (3) — không có vũng nước ma: mọi điểm KHÔ đề
   let taiDau = null;
   for (const era of ERAS_WITH_WATER_GEOMETRY) {
     const t = buildTerrain({ era, gridSize: GRID });
-    for (const [u, v] of diemToanTheGioi(0.25)) {
+    for (const [u, v] of diemQuanhThanhPho(0.25)) {
       if (t.setting.blendAt(u, v) > 0) continue;          // chỗ có nước thì thấp hơn là ĐÚNG
       const ho = t.surfaceHeightAt(u, v) - WATER_SURFACE_Y;
       if (ho < hoNhoNhat) { hoNhoNhat = ho; taiDau = { era, u, v }; }
@@ -308,34 +349,112 @@ test('BẤT BIẾN (3) — không có vũng nước ma: mọi điểm KHÔ đề
     + 'tức bài test đang đo một thế giới phẳng chứ không phải thế giới thật.');
 });
 
-test('MẶT NƯỚC PHẢI THẬT SỰ ĐƯỢC KHOÉT — chống cơ chế chết (bài học lùm cây Phase 8D)', () => {
-  // ⚠️ Phase 8D: một cơ chế chạy đúng, có ảnh trông thuyết phục, và **chưa bao giờ làm gì cả**.
-  // Nên trước khi tin "đã có sông", phải hỏi: đáy có thật sự xuống tới đáy không, và nước có phủ
-  // một phần đáng kể của thế giới không.
+test('MẶT NƯỚC PHẢI THẬT SỰ ĐƯỢC KHOÉT — và ĐỘ SÂU phải ĐI THEO BỀ RỘNG, không phải một hằng số', () => {
+  // ⚠️ Phase 8D: một cơ chế chạy đúng, có ảnh trông thuyết phục, và **chưa bao giờ làm gì cả**. Nên
+  // trước khi tin "đã có sông", phải hỏi: mặt đất THẬT SỰ VẼ RA có bị khoét xuống tới đáy mà lớp
+  // `setting` hứa không.
   //
-  // THỬ-CHO-ĐỎ: cho `depthAt` trả 0 ⇒ đỏ ở `sauNhat`; cho `blendAt` trả 0 ⇒ đỏ ở `phanNgap`.
-  const day = WATER_SURFACE_Y - WATER_BED_DEPTH;
+  // ⚠️ BÀI NÀY TỪNG SAI HAI CHỖ CÙNG LÚC, VÀ CẢ HAI ĐỀU SAI THEO HƯỚNG "PHÉP ĐO KHÔNG CHẠM TỚI
+  // ĐẠI LƯỢNG NÓ MUỐN NÓI":
+  //
+  //   (a) **Phạm vi.** Nó lấy mẫu quanh tấm đất thành phố (bán kính 11,4) rồi tự gọi đó là "toàn
+  //       thế giới", trong khi thế giới rộng tới 36. Kỷ 15 (Dubai, `reach: 6`) có mặt nước bắt đầu
+  //       BÊN NGOÀI tấm đất ấy ⇒ `insetAt` âm ở mọi điểm lấy mẫu, y hệt một kỷ không có nước. Cơ
+  //       chế vẫn sống, nó chỉ sống ở tấm bên kia (`horizon.js` khoét bằng CÙNG một `setting`).
+  //
+  //   (b) **Đại lượng.** Nó đòi MỌI kỷ phải chạm đáy đầy đủ `WATER_BED_DEPTH`. Điều đó không thể
+  //       đúng và cũng không NÊN đúng: `depthAt` đi từ mép xuống đáy qua một đoạn dốc dài
+  //       `BED_RAMP = 1,6`, nên chỉ kỷ nào có chỗ lún sâu ≥ 1,6 ô mới chạm đáy. Kênh Amsterdam
+  //       rộng 0,9 ô thì **phải** nông hơn vịnh Tokyo — nước hẹp thì nông và nhạt màu hơn, đúng
+  //       vật lý (`terrainMesh.js` lấy chính `depthAt` làm sắc nước). Bài cũ xanh chỉ vì hai kỷ
+  //       duy nhất nó chạy tới (12 và 14) tình cờ đều thuộc nhóm rộng.
+  //
+  // ⇒ Lời hứa đúng là một QUAN HỆ (rộng ⇒ sâu), không phải một MỨC. Đúng bẫy Phase 7D.
+  //
+  // THỬ-CHO-ĐỎ (nêu TRƯỚC chỗ mong đợi đỏ, theo luật Phase 8A):
+  //   · cho `depthAt` trả một HẰNG SỐ `WATER_BED_DEPTH` ⇒ đỏ ở nhánh `nông` của kỷ 2 (đại lượng);
+  //   · bỏ `khoetLongNuoc` khỏi `terrain.surfaceHeightAt` ⇒ đỏ ở `thapNhat` của kỷ 2 (mặt đất thật);
+  //   · bỏ `khoetLongNuoc` khỏi `horizon.heightAt` ⇒ đỏ ở `thapNhat` của kỷ 15 (tấm bên kia);
+  //   · cho `insetAt` luôn trả số âm ⇒ đỏ ở `uot > 0` của kỷ 2 (dấu chân chết).
+  const PATCH = terrainSurfaceReach(GRID);
+  const SAU = [];    // đủ rộng để chạm đáy đầy đủ
+  const NONG = [];   // hẹp — đáy chưa xuống hết, và đó là điều ĐÚNG
+
   for (const era of ERAS_WITH_WATER_GEOMETRY) {
+    const s = buildSetting({ era, gridSize: GRID });
+    const h = buildHorizon({ era, gridSize: GRID });
     const t = buildTerrain({ era, gridSize: GRID });
-    let sauNhat = Infinity;
-    let ngap = 0;
+    let insetMax = -Infinity;
+    let sauDay = 0;
+    let thapNhat = Infinity;
+    let uot = 0;
     let tong = 0;
-    for (const [u, v] of diemToanTheGioi(0.25)) {
+    for (const [u, v, x, z] of diemToiChanTroi(era, 0.25)) {
       tong += 1;
-      if (t.setting.blendAt(u, v) > 0) ngap += 1;
-      sauNhat = Math.min(sauNhat, t.surfaceHeightAt(u, v));
+      const ins = s.insetAt(u, v);
+      if (ins > insetMax) insetMax = ins;
+      const d = s.depthAt(u, v);
+      if (d > sauDay) sauDay = d;
+      if (ins > 0) uot += 1;
+      // ⚠️ Hỏi ĐÚNG tấm đang được vẽ ở chỗ ấy: trong bán kính `terrainSurfaceReach` là tấm địa
+      // hình thành phố, ngoài ra là tấm chân trời. Hỏi `horizon.heightAt` ở điểm nằm trong tấm
+      // thành phố là đo một mặt phẳng KHÔNG được vẽ ra — con số đúng về một thứ khác.
+      const trongTam = Math.max(Math.abs(x), Math.abs(z)) <= PATCH;
+      const cao = trongTam ? t.surfaceHeightAt(u, v) : h.heightAt(x, z);
+      if (cao < thapNhat) thapNhat = cao;
     }
-    assert.ok(sauNhat <= day + 1e-6,
-      `kỷ ${era}: chỗ sâu nhất mới ${sauNhat.toFixed(3)}, chưa chạm đáy ${day.toFixed(3)} — lòng `
-      + 'sông chưa được khoét hết, mặt nước sẽ mỏng như một lớp sơn.');
-    const phanNgap = ngap / tong;
-    assert.ok(phanNgap > 0.02,
-      `kỷ ${era}: nước chỉ phủ ${(phanNgap * 100).toFixed(2)}% thế giới — nhỏ tới mức không đọc ra `
-      + 'được trên ảnh.');
-    assert.ok(phanNgap < 0.75,
-      `kỷ ${era}: nước phủ ${(phanNgap * 100).toFixed(1)}% thế giới — thành phố đang chìm, không `
+
+    // (1) DẤU CHÂN CÒN SỐNG — gác chạy-rỗng cho từng kỷ, không phải một phép đếm gộp (gộp thì một
+    //     kỷ dư che cho một kỷ chết).
+    assert.ok(uot > 0,
+      `kỷ ${era}: không một điểm nào trong cả thế giới nằm dưới mặt nước — dấu chân nước là mã chết.`);
+
+    // (2) MẶT ĐẤT VẼ RA KHOÉT ĐÚNG TỚI ĐÁY MÀ `setting` HỨA. Đây là chỗ nối giữa lớp mô tả và lớp
+    //     hình học; đứt chỗ này thì mặt nước thành một lớp sơn dán trên nền đất phẳng.
+    const hua = WATER_SURFACE_Y - sauDay;
+    assert.ok(Math.abs(thapNhat - hua) < 1e-6,
+      // ⚠️ IN RA HIỆU SỐ, không chỉ in hai con số. Bản đầu chỉ in hai giá trị làm tròn 4 chữ số và
+      // ở một ca thử-cho-đỏ chúng in ra **giống hệt nhau** (−1.1486 ≠ −1.1486) — một thông báo lỗi
+      // đúng về mặt kỹ thuật mà người đọc không thể hành động, đúng bài học vòng 4 Performance Gate.
+      `kỷ ${era}: chỗ thấp nhất của mặt đất vẽ ra là ${thapNhat.toFixed(6)}, trong khi lớp `
+      + `\`setting\` hứa đáy ở ${hua.toFixed(6)} — lệch ${(thapNhat - hua).toExponential(2)}. `
+      + 'Hai lớp đã rời nhau.');
+
+    // (3) QUAN HỆ RỘNG ⇒ SÂU, khoá CẢ HAI CHIỀU.
+    if (insetMax >= BED_RAMP) {
+      SAU.push(era);
+      assert.ok(Math.abs(sauDay - WATER_BED_DEPTH) < 1e-9,
+        `kỷ ${era}: chỗ lún sâu nhất ${insetMax.toFixed(2)} ô đã vượt dốc đáy ${BED_RAMP}, đáy phải `
+        + `xuống hết ${WATER_BED_DEPTH} nhưng mới ${sauDay.toFixed(4)}.`);
+    } else {
+      NONG.push(era);
+      assert.ok(sauDay < WATER_BED_DEPTH - 1e-9,
+        `kỷ ${era}: chỗ lún sâu nhất mới ${insetMax.toFixed(2)} ô, chưa tới dốc đáy ${BED_RAMP}, vậy `
+        + `mà đáy đã xuống hết ${sauDay.toFixed(4)} — độ sâu đang là một hằng số, không đi theo bề rộng.`);
+      assert.ok(sauDay >= WATER_BED_LIP - 1e-12,
+        `kỷ ${era}: đáy ${sauDay.toFixed(4)} còn nông hơn cả bậc mép ${WATER_BED_LIP}.`);
+    }
+
+    // (4) TRẦN CHỐNG CHÌM — đo ở phạm vi CẢ THẾ GIỚI nên nó là một đại lượng KHÁC với con số 0,75
+    //     mà bản cũ dùng cho phạm vi quanh thành phố; giá trị thật lớn nhất đo được là **37,4%**
+    //     (kỷ 14), nên trần 60% chừa 1,6 lần dư địa. Ghi giá trị thật ra đây đúng luật Phase 9A:
+    //     *"khoảng cách giữa giá trị thật và ngưỡng chính là phần dự án đang không được bảo vệ"*.
+    assert.ok(uot / tong < 0.60,
+      `kỷ ${era}: nước phủ ${(uot / tong * 100).toFixed(1)}% thế giới — thành phố đang chìm, không `
       + 'phải đứng bên bờ.');
   }
+
+  // (5) CẢ HAI NHÓM PHẢI CÓ MẶT, VÀ ĐƯỢC KỂ TÊN. Một bảng tường minh thì tự đỏ CẢ HAI CHIỀU: nới
+  //     rộng một con sông thì nó rơi khỏi `NONG`, mà thu hẹp một cửa sông thì nó rơi vào. Nếu chỉ
+  //     assert "cả hai nhóm khác rỗng" thì 13/14 kỷ có thể lặng lẽ đổi nhóm mà không ai biết.
+  //
+  // ⚠️ ĐỌC RA ĐƯỢC MỘT ĐIỀU: cả ba kỷ của `TECH_DEBT #59` (6 · 7 · 10) đều nằm trong `NONG`. Đó
+  // không phải trùng hợp — cùng một nguyên nhân gốc (BỀ RỘNG DÒNG NƯỚC) vừa làm chúng trượt cổng
+  // 5% khung hình, vừa làm đáy chúng không xuống hết.
+  assert.deepEqual(SAU, [8, 11, 12, 13, 14, 15],
+    'nhóm nước RỘNG (chạm đáy đầy đủ) đã đổi — cập nhật bảng này rồi hỏi vì sao.');
+  assert.deepEqual(NONG, [2, 3, 4, 5, 6, 7, 9, 10],
+    'nhóm nước HẸP (đáy chưa xuống hết) đã đổi — cập nhật bảng này rồi hỏi vì sao.');
 });
 
 test('ĐỘ SÂU đi từ MÉP xuống ĐÁY, và luôn có bậc `WATER_BED_LIP` để không nhấp nháy', () => {
@@ -346,7 +465,7 @@ test('ĐỘ SÂU đi từ MÉP xuống ĐÁY, và luôn có bậc `WATER_BED_LIP
   const s = buildSetting({ era: 14, gridSize: GRID });
   assert.ok(WATER_BED_LIP > 0, 'bậc mép nước phải > 0');
   let soDiem = 0;
-  for (const [u, v] of diemToanTheGioi(0.5)) {
+  for (const [u, v] of diemQuanhThanhPho(0.5)) {
     const inset = s.insetAt(u, v);
     if (!(inset > -SHORE_BAND)) continue;
     soDiem += 1;
@@ -398,26 +517,113 @@ test('NÚI PHẢI LÙI KHỎI MẶT NƯỚC, chứ không đổ thẳng xuống 
   // ⚠️ Không có `MOUNTAIN_FADE` thì ở kỷ biển, một dãy núi cao mấy đơn vị đổ xuống mặt biển trong
   // 0,9 ô — đọc ra là một bức tường, không phải một bờ biển.
   //
-  // THỬ-CHO-ĐỎ: bỏ hệ số `luiNui` trong `horizon.heightAt` ⇒ đỏ ở kỷ 14 (biển) vì có điểm ngập
-  // nước mà cao độ vẫn dương.
+  // ⚠️ BÀI NÀY TỪNG HỎI SAI HAI CHỖ, và cả hai chỉ lộ ra khi Bước C trải nước ra đủ 14 kỷ:
+  //
+  //   (a) **Lấy mẫu trên lưới SỐ NGUYÊN, bước 1 ô.** Con nước hẹp nhất bảng — khúc uốn kỷ 5, rộng
+  //       0,5 ô — lọt trọn giữa hai mắt lưới, nên bài test báo *"0 điểm ngập"* cho một kỷ có mặt
+  //       nước hoàn toàn lành lặn. Một phép đo thô hơn thứ nó đo thì nó đo được số 0 (cùng họ với
+  //       *"lưới 12×12 chỉ có ~9 giá trị độc lập"* ở Phase 7B).
+  //
+  //   (b) **Hỏi `horizon.heightAt` ở chỗ tấm chân trời KHÔNG được vẽ ra.** Trong bán kính
+  //       `terrainSurfaceReach` thì thứ Đàm nhìn thấy là tấm địa hình thành phố; hỏi hàm bên kia ở
+  //       đó là đo một mặt phẳng không tồn tại trên màn hình.
+  //
+  // ⚠️ VÀ SỰ THẬT LỘ RA KHI SỬA (b): **nước kỷ 5 nằm TRỌN trong tấm đất thành phố** — 447 điểm
+  // ngập, KHÔNG một điểm nào chạm tới tấm chân trời. Nên luật "núi lùi khỏi mặt nước" ở kỷ ấy
+  // không có gì để canh, và điều đó là ĐÚNG chứ không phải một lỗ hổng. Ghi nó thành một bảng
+  // tường minh thay vì một `continue` im lặng — im lặng thì ngày nào có kỷ thứ hai rơi vào đây sẽ
+  // không ai biết.
+  //
+  // ⚠️⚠️ VÀ ĐÂY LÀ ĐIỀU ĐÁNG GIÁ NHẤT BÀI NÀY DẠY RA — PHÉP THỬ NGƯỢC ĐÃ BÁC BỎ CHÍNH CHÚ THÍCH
+  // CỦA NÓ. Chú thích cũ (và bản đầu của chú thích mới, do tôi chép lại mà không kiểm) khẳng định:
+  // *"bỏ hệ số `luiNui` ⇒ đỏ ở kỷ 14"*. Thử thật (`luiNui * 0 + 1`): **KHÔNG MỘT BÀI NÀO ĐỎ.**
+  //
+  // Lý do: `khoetLongNuoc` chạy SAU và kéo mọi điểm dưới nước xuống đáy bất kể ngọn núi cao bao
+  // nhiêu. Nghĩa là lời hứa *"không có núi nhô lên khỏi mặt nước"* xưa nay được giữ bởi **phép
+  // khoét**, không phải bởi `luiNui` — HAI cơ chế độc lập che cùng một ca, mà chú thích chỉ kể một,
+  // và kể nhầm cái. Đúng bài học Phase 4D: *"một bài test xanh không cho biết có BAO NHIÊU thứ
+  // đang giữ nó xanh"* — cộng thêm một vế mới: **nó cũng không cho biết thứ đang giữ nó xanh có
+  // đúng là thứ chú thích nói hay không.**
+  //
+  // ⇒ Việc `luiNui` THẬT SỰ làm nằm ở vùng KHÔ sát bờ (`inset ∈ (−MOUNTAIN_FADE, −SHORE_BAND]`),
+  // nơi phép khoét đã tắt hẳn (`blendAt = 0`) nên nó là cơ chế DUY NHẤT. Vế thứ hai dưới đây canh
+  // đúng vùng ấy, và nó đỏ khi gỡ `luiNui`.
+  //
+  // THỬ-CHO-ĐỎ (nêu TRƯỚC chỗ mong đợi đỏ):
+  //   · bỏ khoét lòng nước khỏi `horizon.heightAt` ⇒ đỏ ở dòng cao độ của kỷ 2 (núi mọc giữa biển);
+  //   · bỏ hệ số `luiNui` ⇒ đỏ ở vế ĐƠN ĐIỆU (vành gần bờ không còn thấp hơn vành xa bờ);
+  //   · nới bề rộng khúc uốn kỷ 5 cho nước chạm tấm chân trời ⇒ đỏ ở `KHONG_CHAM_CHAN_TROI`;
+  //   · thu hẹp nước một kỷ khác cho nó thôi chạm tấm chân trời ⇒ cũng đỏ ở đúng dòng ấy.
+  const PATCH = terrainSurfaceReach(GRID);
+  const KHONG_CHAM_CHAN_TROI = [];
+  const THIEU_VANH_GAN = [];
+  let bienGanNhat = Infinity;
+
+  // Ba vành đồng tâm chia đều đoạn khô-sát-bờ. Ranh giới suy từ chính `MOUNTAIN_FADE`/`SHORE_BAND`,
+  // KHÔNG chép tay — một luật một công thức.
+  const VANH_TRONG = -MOUNTAIN_FADE;
+  const VANH_NGOAI = -SHORE_BAND;
+  const VANH_RONG = (VANH_NGOAI - VANH_TRONG) / 3;
+
   for (const era of ERAS_WITH_WATER_GEOMETRY) {
     const h = buildHorizon({ era, gridSize: GRID });
     const s = buildSetting({ era, gridSize: GRID });
-    const half = (GRID - 1) / 2;
     let soDiemNgapXa = 0;
-    for (let x = -h.reach; x <= h.reach; x += 1) {
-      for (let z = -h.reach; z <= h.reach; z += 1) {
-        if (s.insetAt(x + half, z + half) <= 0) continue;   // chỉ hỏi chỗ đã ở dưới nước
+    const caoVanh = [-Infinity, -Infinity, -Infinity];   // 0 = gần bờ nhất, 2 = xa bờ nhất
+    const soVanh = [0, 0, 0];
+
+    for (const [u, v, x, z] of diemToiChanTroi(era, 0.25)) {
+      // Chỉ hỏi chỗ tấm chân trời ĐANG được vẽ — trong bán kính này là tấm đất thành phố.
+      if (Math.max(Math.abs(x), Math.abs(z)) <= PATCH) continue;
+      const ins = s.insetAt(u, v);
+      const cao = h.heightAt(x, z);
+
+      if (ins > 0) {                                     // (1) đã ở dưới nước
         soDiemNgapXa += 1;
-        assert.ok(h.heightAt(x, z) <= WATER_SURFACE_Y + 1e-9,
-          `kỷ ${era} tại (${x},${z}): điểm này nằm trong mặt nước nhưng tấm chân trời để nó ở cao `
-          + `độ ${h.heightAt(x, z).toFixed(3)}, trên mực nước ${WATER_SURFACE_Y.toFixed(3)} — núi `
-          + 'đang mọc giữa biển.');
+        assert.ok(cao <= WATER_SURFACE_Y + 1e-9,
+          `kỷ ${era} tại (${x.toFixed(2)},${z.toFixed(2)}): điểm này nằm trong mặt nước nhưng tấm `
+          + `chân trời để nó ở cao độ ${cao.toFixed(3)}, trên mực nước `
+          + `${WATER_SURFACE_Y.toFixed(3)} — núi đang mọc giữa biển.`);
+        bienGanNhat = Math.min(bienGanNhat, WATER_SURFACE_Y - cao);
+      } else if (ins > VANH_TRONG && ins <= VANH_NGOAI) { // (2) khô, nhưng trong tầm `luiNui`
+        const k = ins > VANH_NGOAI - VANH_RONG ? 0 : (ins > VANH_TRONG + VANH_RONG ? 1 : 2);
+        soVanh[k] += 1;
+        caoVanh[k] = Math.max(caoVanh[k], cao);
       }
     }
-    assert.ok(soDiemNgapXa > 50,
-      `kỷ ${era}: chỉ ${soDiemNgapXa} điểm ngập ngoài vùng chân trời — bài test chạy gần như rỗng`);
+
+    if (soDiemNgapXa === 0) {
+      KHONG_CHAM_CHAN_TROI.push(era);
+    } else {
+      assert.ok(soDiemNgapXa > 50,
+        `kỷ ${era}: chỉ ${soDiemNgapXa} điểm ngập trên tấm chân trời — quá mỏng để tin, mà cũng `
+        + 'không phải 0. Hãy xem lại bề rộng dòng nước hoặc độ mịn lấy mẫu.');
+    }
+
+    // (2) NÚI PHẢI THẤP DẦN KHI TIẾN VỀ PHÍA NƯỚC. Viết thành QUAN HỆ giữa ba vành chứ không thành
+    //     một trần tuyệt đối: trần tuyệt đối sẽ vừa báo nhầm ở kỷ núi cao vừa bỏ sót ở kỷ núi thấp
+    //     (đúng bẫy Phase 7D), còn quan hệ này thì đúng ở cả 15 kỷ mà không cần một hằng số nào.
+    if (soVanh[0] === 0) {
+      THIEU_VANH_GAN.push(era);
+    } else {
+      assert.ok(caoVanh[0] < caoVanh[1] && caoVanh[1] < caoVanh[2],
+        `kỷ ${era}: đỉnh cao nhất của ba vành khô sát bờ là ${caoVanh[0].toFixed(4)} (gần) · `
+        + `${caoVanh[1].toFixed(4)} (giữa) · ${caoVanh[2].toFixed(4)} (xa) — không còn thấp dần về `
+        + 'phía nước. `luiNui` có đang bị vô hiệu hoá không?');
+    }
   }
+
+  assert.deepEqual(KHONG_CHAM_CHAN_TROI, [5],
+    'chỉ kỷ 5 (khúc uốn Rhein rộng 0,5 ô) có mặt nước nằm trọn trong tấm đất thành phố. Danh sách '
+    + 'này đổi nghĩa là một dòng nước vừa được nới rộng hoặc thu hẹp — cập nhật rồi hỏi vì sao.');
+  assert.deepEqual(THIEU_VANH_GAN, [5],
+    'cũng vì lý do ấy, kỷ 5 là kỷ duy nhất không có vành khô sát bờ nằm trên tấm chân trời.');
+
+  // ĐỐI CHỨNG — đo BIÊN, đừng chỉ đọc xanh/đỏ (luật Phase 9B). Chỗ sát nhất mà núi còn chừa cho
+  // mặt nước hiện là **0,08** đơn vị. Không có vế này thì bài trên vẫn xanh trong một thế giới mà
+  // mọi bờ biển đều chỉ vừa đúng không vi phạm — tức sắp gãy mà không ai biết.
+  assert.ok(bienGanNhat >= 0.05,
+    `chỗ núi sát mặt nước nhất chỉ còn chừa ${bienGanNhat.toFixed(4)} đơn vị — dưới biên 0,05.`);
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════

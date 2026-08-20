@@ -384,9 +384,19 @@
 │   │   │   │                      #   `worldYaw` rồi mới gọi `insetGoc`. Nhờ vậy mọi thứ đọc dấu
 │   │   │   │                      #   chân (địa hình, vùng quê, rặng núi) xoay theo CÙNG một góc
 │   │   │   │                      #   mà không nơi nào phải biết tới phép xoay
-│   │   │   │                      #   ⚠️ `hasWater` (BẢNG khai) ≠ `waterIsBuilt` (HÌNH đã dựng).
-│   │   │   │                      #   `ERAS_WITH_WATER_GEOMETRY = [12, 14]` — dở dang có chủ ý,
-│   │   │   │                      #   có `assert.deepEqual` khoá (`TECH_DEBT #56`)
+│   │   │   │                      #   ⚠️ `hasWater` (BẢNG khai) ≠ `waterIsBuilt` (HÌNH đã dựng) —
+│   │   │   │                      #   GIỮ HAI TÊN kể cả khi hai tập đã trùng nhau (Bước C,
+│   │   │   │                      #   2026-08-20): `ERAS_WITH_WATER_GEOMETRY` nay là 14 kỷ, chỉ
+│   │   │   │                      #   kỷ 1 khô. Gộp hai tên là bẫy "một trường gánh hai việc" lần
+│   │   │   │                      #   thứ sáu; `waterIsBuilt` là chỗ DUY NHẤT một phase sau có
+│   │   │   │                      #   thể tạm rút một kỷ ra khỏi hình mà không nói dối bảng địa lý
+│   │   │   ├── settingReaders.test.js
+│   │   │   │                      # ⚠️ BẢNG `NGUOI_DOC_DAU_CHAN` (Bước C, §2-Q3 Đàm ra): liệt kê
+│   │   │   │                      #   ĐÍCH DANH bốn file được phép chạm `insetAt`/`blendAt`/
+│   │   │   │                      #   `depthAt`, mỗi dòng kèm lý do. Cùng khuôn `GROUND_ANCHORS`.
+│   │   │   │                      #   Ba bài: bảng không nói dối · không có cửa sau (file thứ năm
+│   │   │   │                      #   chạm vào ⇒ đỏ) · một cửa duy nhất (dựng lại phép xoay bằng
+│   │   │   │                      #   tay ở nơi khác ⇒ đỏ). Bảng ấy TỰ NÓ là tài liệu
 │   │   │   ├── noise.js           # `valueNoise` — nhiễu lưới tất định DÙNG CHUNG (VIỆC 2 Bước B).
 │   │   │   │                      #   ⚠️ TÁCH RA KHỎI `terrain.js` vì nó CHƯA BAO GIỜ là một hàm
 │   │   │   │                      #   của địa hình; chỗ ở nhờ ấy thành một vòng import thật khi

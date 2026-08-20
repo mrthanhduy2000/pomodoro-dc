@@ -416,12 +416,36 @@ test('RA KHỎI `APRON_EDGE` THÌ MẶT ĐẤT PHẲNG ĐÚNG `-APRON_DROP` — 
   // cao độ đã khoét chứ không phải một hằng số. Nên chỗ ướt KHÔNG bị bỏ qua: nó chuyển sang hỏi
   // `horizon.heightAt` xem hai tấm có bằng nhau không. Bỏ qua trắng thì bài test này sẽ lặng lẽ
   // rỗng dần mỗi lần có thêm một kỷ được dựng nước.
+  //
+  // ⚠️ BƯỚC C (2026-08-20) — GÁC CHẠY-RỖNG PHẢI HỎI **TỪNG KỶ**, KHÔNG HỎI TỔNG. Bản trước đòi
+  // `soDiemKho > 1400` trên tổng 1500 điểm. Con số ấy đúng khi chỉ có hai kỷ nước; Bước C dựng
+  // nước cho 14 kỷ và tổng tụt xuống 1259 — nhưng cái tụt ấy KHÔNG nói lên điều gì, vì một cái
+  // tổng thì một kỷ ngập gần hết vẫn được chín kỷ khô bù cho. Đúng bẫy "hỏi tổng thì một kỷ dư chỗ
+  // bù cho một kỷ vượt" (`TECH_DEBT #38`). ⇒ Hỏi **tỉ lệ khô của TỪNG kỷ** (đo thật: thấp nhất
+  // 75,0% — dải rìa có bốn cạnh, và một dòng sông thì cắt qua đúng MỘT cạnh).
+  //
+  // ⚠️ Và bảng "kỷ nào có rìa chạm nước" là một sự thật ĐỊA LÝ đáng ghi ra, không phải một con số
+  // phụ: bốn kỷ có nước mà rìa vẫn khô trọn (4 · 5 · 10 · 15) không phải lỗi — vòng rìa nằm ở
+  // khoảng cách `APRON_EDGE` = 3,4 ô ngoài lưới, nên nước `reach: 1` (kỷ 5, 10 — sát chân phố) rơi
+  // vào PHÍA TRONG vòng ấy, còn nước `reach: 5`/`reach: 6` (kỷ 4, 15 — sông xa, biển xa) rơi ra
+  // PHÍA NGOÀI. Bảng này đỏ cả hai chiều nên nó là chỗ duy nhất một thay đổi `reach` bị chặn lại.
+  //
+  // THỬ-CHO-ĐỎ (nêu TRƯỚC chỗ mong đỏ, và ghi cả lần KHÔNG đỏ vì đó cũng là một kết quả):
+  //   · đẩy kênh kỷ 10 ra `reach: 3.5` ⇒ ĐỎ ở `KY_RIA_CHAM_NUOC` (kỷ 10 nhập bảng) ✓
+  //   · đẩy khúc uốn kỷ 5 ra `reach: 4` ⇒ ĐỎ ở `tiLeKho >= 0.70` (29,0%) — KHÔNG phải ở bảng như
+  //     tôi đoán, vì khúc uốn ôm BA cạnh vòng rìa chứ không cắt qua một cạnh ✓
+  //   · nới sông kỷ 2 rộng 12 ô ⇒ **KHÔNG đỏ**, và đó là đúng: `width` nới nước ra PHÍA NGOÀI theo
+  //     hướng `side`, nó không kéo nước cắt thêm cạnh nào của vòng rìa. Ghi ra để phiên sau đừng
+  //     tưởng `tiLeKho` canh được bề rộng — nó canh SỐ CẠNH bị cắt, mà đó là chuyện của `reach`.
   let soDiemKho = 0;
   let soDiemUot = 0;
+  const KY_RIA_CHAM_NUOC = [];
   for (const era of ERAS) {
     const terrain = buildTerrain({ era, gridSize: GRID });
     const horizon = buildHorizon({ era, gridSize: GRID });
     const half = (GRID - 1) / 2;
+    let khoKy = 0;
+    let uotKy = 0;
     for (let t = 0; t <= 24; t += 1) {
       const along = -0.5 + (GRID * t) / 24;
       const out = GRID - 0.5 + APRON_EDGE + 0.01;
@@ -430,6 +454,7 @@ test('RA KHỎI `APRON_EDGE` THÌ MẶT ĐẤT PHẲNG ĐÚNG `-APRON_DROP` — 
         const cao = terrain.surfaceHeightAt(u, v);
         if (terrain.setting.blendAt(u, v) > 0) {
           soDiemUot += 1;
+          uotKy += 1;
           const troi = horizon.heightAt(u - half, v - half);
           assert.ok(Math.abs(cao - troi) < 1e-9,
             `kỷ ${era} tại (${u.toFixed(2)},${v.toFixed(2)}): chỗ có nước mà hai tấm lệch nhau — `
@@ -437,6 +462,7 @@ test('RA KHỎI `APRON_EDGE` THÌ MẶT ĐẤT PHẲNG ĐÚNG `-APRON_DROP` — 
           continue;
         }
         soDiemKho += 1;
+        khoKy += 1;
         assert.ok(
           Math.abs(cao + APRON_DROP) < 1e-9,
           `kỷ ${era} tại (${u.toFixed(2)},${v.toFixed(2)}): rìa ở ${cao}, `
@@ -444,11 +470,21 @@ test('RA KHỎI `APRON_EDGE` THÌ MẶT ĐẤT PHẲNG ĐÚNG `-APRON_DROP` — 
         );
       }
     }
+    // Gác chạy-rỗng TỪNG KỶ: kỷ nào cũng phải còn phần lớn rìa khô, nếu không thì lời hứa "phẳng
+    // đúng" đã mất răng ở đúng kỷ ấy mà cái tổng thì không hé một lời. Đo thật: thấp nhất 75,0%.
+    const tiLeKho = khoKy / (khoKy + uotKy);
+    assert.ok(tiLeKho >= 0.70,
+      `kỷ ${era}: chỉ còn ${(tiLeKho * 100).toFixed(1)}% vòng rìa là khô — lời hứa "phẳng đúng ở `
+      + `-APRON_DROP" đã gần như không còn chỗ nào để mà đúng.`);
+    if (uotKy > 0) KY_RIA_CHAM_NUOC.push(era);
   }
-  // Gác chạy-rỗng hai chiều: phần lớn rìa vẫn phải KHÔ (nếu không thì lời hứa gốc đã mất răng), và
-  // phải có ít nhất vài điểm ướt (nếu không thì nhánh mới ở trên chưa bao giờ chạy).
-  assert.ok(soDiemKho > 1400, `chỉ còn ${soDiemKho} điểm rìa khô — lời hứa "phẳng đúng" đang rỗng dần`);
-  assert.ok(soDiemUot > 0, 'không một điểm rìa nào chạm nước — nhánh so hai tấm chưa bao giờ chạy');
+  // Gác chạy-rỗng toàn cục, thô: đo thật 1259 khô / 241 ướt trên 1500 điểm.
+  assert.ok(soDiemKho > 1200, `chỉ còn ${soDiemKho} điểm rìa khô — lời hứa "phẳng đúng" đang rỗng dần`);
+  assert.ok(soDiemUot > 200,
+    `chỉ ${soDiemUot} điểm rìa chạm nước — nhánh so hai tấm đang teo lại, không còn canh được gì`);
+  assert.deepEqual(KY_RIA_CHAM_NUOC, [2, 3, 6, 7, 8, 9, 11, 12, 13, 14],
+    'bảng kỷ có vòng rìa chạm nước đã đổi — nghĩa là một `reach` nào đó vừa vượt hoặc vừa tụt qua '
+    + `mốc APRON_EDGE = ${APRON_EDGE}; kiểm lại bằng mắt rồi mới sửa bảng này.`);
 });
 
 test('VÙNG ĐẤT NGOÀI PHẢI THẤP HƠN CAO NGUYÊN, và ranh giới phải LƯỢN chứ không vuông', () => {

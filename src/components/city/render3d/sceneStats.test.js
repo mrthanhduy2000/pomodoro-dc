@@ -110,20 +110,29 @@ test('ĐỐI CHỨNG: bầu trời và rặng núi chân trời PHẢI nằm tro
   // trình đã gộp (đổ bóng), mặt đất/mặt đường (có tên), và cư dân (InstancedMesh). Mọi thứ NGOÀI ba
   // nhóm đó — vòm trời, rặng núi Phase 9A — nó mù hoàn toàn. Bài test đòi phần mù ấy vừa TỒN TẠI
   // thật, vừa ĐƯỢC TÍNH vào con số HUD; thiếu vế nào thì bộ số hỏng cũ sẽ lặng lẽ quay lại.
-  const city = dựngCảnh(7);
-  let cũNhìnThấy = 0;
-  let cũKhôngThấy = 0;
-  const tênPhầnMù = new Set();
-  city.scene.traverse((o) => {
-    if (!o.isMesh || o.visible === false) return;
-    const g = o.geometry;
-    if (!g) return;
-    const đỉnh = g.index ? g.index.count : (g.attributes?.position?.count ?? 0);
-    const t = ((o.isInstancedMesh ? o.count : 1) * đỉnh) / 3;
-    const côngThứcCũBiết = o.castShadow || o.name === 'ground' || o.name === 'road' || o.isInstancedMesh;
-    if (côngThứcCũBiết) cũNhìnThấy += t;
-    else { cũKhôngThấy += t; tênPhầnMù.add(o.name || '(không tên)'); }
-  });
+  const đo = (era) => {
+    const c = dựngCảnh(era);
+    let thấy = 0;
+    let mù = 0;
+    const tên = new Set();
+    c.scene.traverse((o) => {
+      if (!o.isMesh || o.visible === false) return;
+      const g = o.geometry;
+      if (!g) return;
+      const đỉnh = g.index ? g.index.count : (g.attributes?.position?.count ?? 0);
+      const t = ((o.isInstancedMesh ? o.count : 1) * đỉnh) / 3;
+      const cũBiết = o.castShadow || o.name === 'ground' || o.name === 'road' || o.isInstancedMesh;
+      if (cũBiết) thấy += t;
+      else { mù += t; tên.add(o.name || '(không tên)'); }
+    });
+    return { c, thấy, mù, tên: [...tên].sort() };
+  };
+  const ướt = đo(7);
+  const khô = đo(1);
+  const city = ướt.c;
+  const cũNhìnThấy = ướt.thấy;
+  const cũKhôngThấy = ướt.mù;
+  const tênPhầnMù = new Set(ướt.tên);
 
   assert.ok(cũKhôngThấy > 40000,
     `phần công thức cũ mù chỉ còn ${cũKhôngThấy} tam giác — bầu trời/chân trời đã biến mất khỏi cảnh?`);
@@ -142,9 +151,25 @@ test('ĐỐI CHỨNG: bầu trời và rặng núi chân trời PHẢI nằm tro
    * vào nhóm mù (ví dụ ai đó tắt `castShadow` của khối gộp) thì `cũKhôngThấy` vẫn > 40000, tổng vẫn
    * khớp, và bài test cũ vẫn xanh — trong khi bộ số hỏng cũ đã lẻn về đúng một nửa.
    */
-  assert.deepEqual([...tênPhầnMù].sort(), ['horizon', 'sky'],
-    'phần mà công thức cũ mù phải ĐÚNG BẰNG vòm trời + rặng núi, không hơn không kém');
+  /**
+   * ⚠️ BƯỚC C (2026-08-20) — `water` NHẬP NHÓM MÙ, VÀ ĐÓ LÀ ĐÚNG. Tấm nước là một mặt phẳng nằm
+   * ngang: nó KHÔNG đổ bóng (một mặt phẳng đổ bóng lên chính mặt đất ngay dưới nó là một mảng đen
+   * vô nghĩa), không tên `ground`/`road`, không phải khối lặp ⇒ công thức cũ mù với nó.
+   * ⚠️ Nhưng nó KHÔNG phải phông nền: nó không mang nhãn `SCENE_LAYER_BACKDROP`, nên trong phép
+   * chia ba con số nó nằm ở phía **thành phố**, đứng cùng chỗ với `ground` và `road`. Đó là chỗ
+   * đúng, vì lý do sinh ra phép chia ấy là *"phần nào KHÔNG ĐỔI qua các kỷ thì phải tách ra"* —
+   * vòm trời và rặng núi là hằng số ở cả 15 kỷ, còn mặt nước thì có ở 14 kỷ và mỗi kỷ một hình.
+   *
+   * Và để câu trên không phải một lời khẳng định suông: đo CẢ HAI phía, kỷ 7 (có nước) và kỷ 1
+   * (kỷ khô DUY NHẤT). Hai danh sách phải khác nhau ĐÚNG một cái tên. Thiếu vế thứ hai thì ngày
+   * nào ai đó cho mọi kỷ dựng nước (kể cả kỷ khô) sẽ không có gì đỏ lên.
+   */
+  assert.deepEqual([...tênPhầnMù].sort(), ['horizon', 'sky', 'water'],
+    'phần mà công thức cũ mù phải ĐÚNG BẰNG vòm trời + rặng núi + mặt nước, không hơn không kém');
+  assert.deepEqual(khô.tên, ['horizon', 'sky'],
+    'kỷ 1 là kỷ khô duy nhất — nó KHÔNG được có khối `water` nào, đó là +1 lệnh vẽ không ai trả');
   city.dispose();
+  khô.c.dispose();
 });
 
 test('BA con số: thành phố + nền = tổng, và phần nền tách theo NGUỒN GỐC chứ không theo ngưỡng', () => {

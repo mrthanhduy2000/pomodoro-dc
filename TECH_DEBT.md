@@ -2162,7 +2162,125 @@ ship một trạng thái dở dang, hãy làm nó **ĐẾM ĐƯỢC trong một 
 
 ---
 
-## #59 — BA KỶ NƯỚC HẸP KHÔNG THỂ ĐẠT CỔNG 5% Ở **BẤT KỲ** GÓC NHÌN NÀO — đây là bài toán BỀ RỘNG, không phải bài toán góc
+## #62 — KỶ 4 VƯỢT CỔNG NƯỚC 5% ĐÚNG **0,02 ĐIỂM PHẦN TRĂM** — MỘT LỜI HỨA ĐẠT NHỜ 0,4% BIÊN
+
+- **Tên**: cổng *"mặt nước ≥ 5% khung hình"* đạt ở kỷ 4 với biên mỏng nhất bảng
+- **Module**: `src/engine/city3d/settingStyle.js` (dòng kỷ 4) · `scripts/water-view.mjs` ·
+  `scripts/waterView.test.js`
+- **Priority**: Low · **Severity**: Low (hôm nay ĐẠT; đây là cảnh báo về BIÊN, không phải một lỗi)
+- **Impact**: kỷ 4 đo được **5,02%** trên cổng **5,00%** ⇒ biên **0,4%**. Mọi thay đổi rất nhỏ ở
+  vùng lân cận — bố cục nhà dân, mật độ cây vùng quê, một lần chỉnh `reach`, thậm chí một lần đổi
+  khung hình mặc định — đều có thể đẩy nó xuống dưới, và lúc ấy `assert.deepEqual(TRUOT, [6, 7, 10])`
+  sẽ đỏ với thông báo *"kỷ thứ tư trượt"* mà không ai đoán ra vì sao.
+- **Root Cause**: đúng bài học Phase 9B — ***"đo BIÊN của mọi lời hứa, đừng chỉ đọc xanh/đỏ: một
+  lời hứa đạt nhờ 3% biên là một lời hứa sắp gãy mà không ai biết"***. Ở đây biên còn mỏng hơn thế
+  gần **tám lần**. Nguyên nhân cụ thể: kỷ 4 (Trường An, sông Vị phía BẮC) có `width 2,6` nhưng
+  `worldYaw = 0` — nó là một trong sáu kỷ **không xoay một độ nào** vì bờ nước vốn đã nằm trong tầm
+  nhìn, nên nó không nhận được khoản lợi mà phép xoay mang lại cho tám kỷ kia. Trần của nó khi đứng
+  đối diện là **6,22%**, tức dư địa có thật nhưng không lớn.
+- **Current Risk**: thấp — hôm nay đạt, và bài test đếm được sẽ đỏ NGAY nếu nó tụt.
+- **Future Risk**: trung bình. Nguy hiểm không nằm ở việc nó tụt (test bắt được) mà ở việc **phiên
+  sau sẽ đọc lời đỏ ấy thành "phase của tôi làm hỏng mặt nước"** rồi đi chữa nhầm chỗ. Mục này tồn
+  tại để câu trả lời có sẵn: *nó vốn đã ở sát mép từ 2026-08-20.*
+- **Recommended Solution**: ⚠️ **KHÔNG nới `width` của kỷ 4 để lấy biên.** Sông Vị ở Trường An là
+  một con sông thật với bề rộng thật; nới nó là **nói dối địa lý** — đúng thứ Đàm đã bác khi từ
+  chối phương án (a) của `TECH_DEBT #59`. Nếu ngày nào kỷ 4 tụt xuống dưới cổng thì cách chữa đúng
+  là ngữ pháp ven nước của `TECH_DEBT #60` (cầu · bến · thuyền · kè), giống hệt ba kỷ 6 · 7 · 10.
+- **Estimated Complexity**: không có việc phải làm bây giờ
+- **Blocking Conditions**: không chặn gì
+- **Review Trigger**: khi `waterView.test.js` đỏ ở kỷ 4 · hoặc khi có phase đổi **khung hình mặc
+  định** / **bố cục lưới 12×12** / **mật độ vùng quê** — ba thứ đều dịch được con số 5,02% này.
+- **Owner**: chưa gán · **Status**: **Open — theo dõi, không hành động**
+
+---
+
+## #61 — CỔNG "5% KHUNG HÌNH" LÀ MỘT **THỨ ĐẠI DIỆN**, VÀ CHÍNH ĐÀM ĐÃ CHỈ RA ĐIỀU ĐÓ
+
+- **Tên**: cổng nghiệm thu mặt nước đo DIỆN TÍCH, trong khi câu hỏi thật là *"có đọc ra là thành
+  phố bên nước không"* — mà thứ quyết định điều đó là **đường bờ có CẮT NGANG khung hình không**
+- **Module**: `scripts/water-view.mjs` · `scripts/waterView.test.js`
+- **Priority**: Low · **Severity**: Low (hôm nay cổng và mắt đồng ý ở mọi ca đã kiểm)
+- **Impact**: nguyên văn Đàm (§2-Q1, 2026-08-20): *"CÓ, một phần — và tự nêu ra được điều đó là
+  đúng. % khung hình đo **diện tích**, còn câu hỏi thật là 'có đọc ra là thành phố cảng không', mà
+  thứ quyết định điều đó là **đường bờ có cắt ngang khung hình không**, không phải nước chiếm bao
+  nhiêu."*
+- **Root Cause**: cùng họ với `TECH_DEBT #22` (bộ lọc *"8% điểm ảnh tươi nhất ≈ mái"*) — một đại
+  lượng dễ đo được **gọi tên** thành đại lượng thật sự cần. Khác ở chỗ lần này ta biết ngay từ đầu.
+- **Current Risk**: thấp — và nay đã ĐỐI CHIẾU BẰNG MẮT THẬT trên bốn ảnh chụp ở khung mặc định
+  (`estuary` kỷ 8 và 11 · `canal` kỷ 10 · `meander` kỷ 5), không phải suy từ con số:
+  · kỷ 8 (9,96%) và kỷ 11 (9,97%) — **đạt cổng, mắt đọc ra ngay**: dải nước rộng cắt chéo khung
+    hình VÀ thấy được bờ bên kia, đúng định nghĩa `estuary` trong bảng.
+  · kỷ 10 (1,62%) — **trượt cổng, và mắt cũng KHÔNG đọc ra "thành phố bên kênh"**. Nói cho chính
+    xác: mắt ĐỌC RA rằng đó là một cái KÊNH ĐÀO (thẳng tăm tắp, hẹp, mép sắc — không lẫn được với
+    sông tự nhiên), nhưng nó nằm tận góc xa, giữa nó và dãy nhà máy là một vạt đất trống rộng. Hai
+    câu ấy khác nhau, và câu Đàm hỏi là câu thứ hai ⇒ **cổng và mắt ĐỒNG Ý**.
+  · kỷ 5 (5,62%) — **đạt cổng, mắt đọc ra**, nhưng SÁT: nước bám VIỀN khung hình chứ không cắt qua
+    giữa cảnh, và kỷ 5 là kỷ nông nhất bảng (chỉ chạm **20,1%** độ sâu đáy tối đa) nên sắc nhạt.
+    Đây là ca đáng đo lại đầu tiên nếu mục này phải mở lại.
+  ⇒ **Không có ca nào cổng và mắt bất đồng** ⇒ chưa có bằng chứng cổng sai đại lượng.
+- **Future Risk**: một kỷ tương lai có dải nước NGẮN nhưng RỘNG (một cái hồ ở góc khung) sẽ đạt 5%
+  mà không có đường bờ nào cắt ngang — cổng cho qua, mắt không đọc ra.
+- **Recommended Solution**: ⚠️ **KHÔNG ĐỔI BÂY GIỜ**, và lý do Đàm nêu là lý do đúng: cổng 5% đã
+  **hiệu chuẩn ở cả hai đầu** (0,09% = không thấy gì · 23,75% = đọc ra ngay), còn "chiều dài đường
+  bờ cắt khung" thì **chưa có một mốc nào**. Đổi bây giờ là thay một ngưỡng đã hiệu chuẩn bằng một
+  ngưỡng chưa hiệu chuẩn — đúng cái phễu Phase 9A.
+- **Estimated Complexity**: trung bình (phải hiệu chuẩn lại từ đầu)
+- **Blocking Conditions**: không chặn gì
+- **Review Trigger**: ⚠️ **ĐIỀU KIỆN ĐÀM ĐẶT RA, CHÉP NGUYÊN VĂN** — *"nếu Bước C có kỷ nào đạt 5%
+  mà nhìn vẫn không ra bờ, hoặc trượt 5% mà nhìn vẫn ra bờ, thì đó là bằng chứng cổng sai đại lượng
+  — lúc ấy đổi sang đo CHIỀU DÀI ĐƯỜNG BỜ CẮT KHUNG."* Và: *"Để dữ liệu Bước C tự quyết, đừng đoán
+  trước."* **Kết quả Bước C: chưa có ca nào như vậy** ⇒ giữ nguyên cổng.
+- **Owner**: chờ dữ liệu · **Status**: **Open — theo dõi, không hành động**
+
+---
+
+## #60 — NƯỚC HẸP CẦN MỘT NGỮ PHÁP KHÁC: CẦU · BẾN · THUYỀN · KÈ, KHÔNG PHẢI THÊM DIỆN TÍCH
+
+- **Tên**: ba kỷ nước hẹp (6 · 7 · 10) đọc ra là *"có một vệt nước ở xa"* chứ không phải *"thành phố
+  bên kênh"*; thứ chữa được là VẬT THỂ VEN NƯỚC, không phải % khung hình
+- **Module**: `src/engine/city3d/settingStyle.js` · `setting.js` · một file `HÌNH` mới cho vật ven nước
+- **Priority**: Medium · **Severity**: Low (không hỏng gì; là một phần thưởng chưa được trao)
+- **Impact**: đây là **hướng (c)** của `#59`, và Đàm công nhận nó đúng: *"đổi thứ mang bản sắc sang
+  cầu/bến/thuyền/kè là ĐÚNG về mỹ thuật nhưng là cả một phase mới."* Một con kênh 0,9 ô có **bốn
+  cây cầu** đọc ra là *Amsterdam* rõ hơn một vệt xanh 5% — nó giải đúng câu hỏi *"đọc ra là gì"*
+  thay vì câu *"chiếm bao nhiêu"*.
+- **Root Cause**: `settingStyle.js` chỉ mô tả **hình dạng nước** (`water`/`side`/`reach`/`width`).
+  Không có trục nào cho **thứ con người dựng lên bên nước** — mà đó mới là thứ mang bản sắc.
+- **Current Risk**: bằng 0. Ba kỷ ấy đã có nước, đã được ghi tường minh vào bảng `TRUOT`.
+- **Future Risk**: nếu một phase sau đi giải bài này bằng cách **nới bề rộng nước** thì nó vừa nói
+  dối địa lý vừa làm `#59` hết đúng trong im lặng. Ghi ra đây để chặn đúng lối tắt ấy.
+- ⚠️ **MỘT SỐ ĐO ĐI KÈM, ĐO ĐƯỢC HÔM NAY (2026-08-20)**: **8/14 kỷ không bao giờ chạm đáy đầy đủ**,
+  vì `depthAt` cần chỗ lún sâu ≥ `BED_RAMP = 1,6` ô mới xuống hết `WATER_BED_DEPTH`:
+
+  | kỷ | nước | rộng (ô) | lún sâu nhất | đáy đạt được | % của đáy đầy |
+  |---|---|---:|---:|---:|---:|
+  | 5 | meander | 0,5 | 0,25 | 0,111 | **20,1%** |
+  | 10 | canal | 0,9 | 0,40 | 0,153 | **27,9%** |
+  | 6 | river | 1,2 | 0,60 | 0,229 | 41,6% |
+  | 7 | river | 1,4 | 0,70 | 0,271 | 49,3% |
+  | 3 | river | 1,6 | 0,80 | 0,315 | 57,3% |
+  | 9 | river | 1,8 | 0,90 | 0,359 | 65,2% |
+  | 2 | river | 2,2 | 1,10 | 0,441 | 80,2% |
+  | 4 | river | 2,6 | 1,30 | 0,507 | 92,1% |
+
+  Đây **KHÔNG phải lỗi** — `terrainMesh.js` lấy chính `depthAt` làm sắc nước, nên nước hẹp render
+  ra **nhạt hơn**, đúng vật lý. Nhưng nó cùng một họ với mục này: cùng một nguyên nhân gốc (BỀ RỘNG)
+  vừa làm ba kỷ trượt cổng 5%, vừa làm tám kỷ nhạt màu. Có bài test khoá quan hệ *rộng ⇒ sâu* ở cả
+  hai chiều (`setting.test.js`, bảng `SAU`/`NONG`).
+- **Recommended Solution**: một phase riêng theo đúng khuôn **BẢNG-trước-HÌNH-sau** đã dùng bốn lần
+  (`vernacularRoof` · `undergrowth` · `streetStyle` · `groundFloor`): một BẢNG 15 kỷ khai *bên nước
+  này có gì* (cầu đá / cầu gỗ / bến thuyền / kè đá / thuyền dhow / sà lan…), buộc vào `country`, có
+  test bắt; một file HÌNH riêng; `setting.js` chỉ ĐỌC. ⚠️ Và theo luật §2-C của Đàm: **đo TRẦN của
+  cơ chế TRƯỚC khi viết mã** — dựng thử một cây cầu ở kỷ 10 rồi đo xem nó chiếm bao nhiêu điểm ảnh
+  ở khung mặc định; nếu dưới ngưỡng mắt thì cả phase là công cốc (bài học Phase 11).
+- **Estimated Complexity**: cao (một phase đầy đủ)
+- **Blocking Conditions**: không chặn gì đang chạy
+- **Review Trigger**: ⚠️ **điều kiện Đàm đặt ra, nguyên văn: *"khi nào có phase chi tiết ven nước"***
+- **Owner**: chưa giao · **Status**: **Open**
+
+---
+
+## #59 — ✅ ĐÃ ĐÓNG (2026-08-20, Đàm chốt hướng (b)) — Ba kỷ nước hẹp không thể đạt cổng 5% ở **bất kỳ** góc nhìn nào: đây là bài toán BỀ RỘNG, không phải bài toán góc
 
 - **Tên**: kỷ 6, 7, 10 khai nước quá hẹp; xoay kiểu gì cũng không đưa nổi lên 5% khung hình
 - **Module**: `src/engine/city3d/settingStyle.js` (cột bề rộng nước) · đo bằng `scripts/water-view.mjs`
@@ -2197,10 +2315,39 @@ ship một trạng thái dở dang, hãy làm nó **ĐẾM ĐƯỢC trong một 
     thuyền, kè** — một con kênh 0,9 ô có bốn cây cầu đọc ra là *Amsterdam* rõ hơn một vệt xanh 5%.
     Đắt nhất, và cũng là hướng duy nhất giải đúng bài toán *"đọc ra là gì"* thay vì *"chiếm bao nhiêu"*.
 - **Estimated Complexity**: (a) thấp · (b) rất thấp · (c) cao
-- **Blocking Conditions**: nên chốt TRƯỚC khi Bước C trải ba kỷ này (6, 7, 10). Mười một kỷ còn lại
-  không bị chặn.
-- **Review Trigger**: ngay khi Bước C bắt đầu
-- **Owner**: chờ Đàm · **Status**: **Open — CHỜ ĐÀM QUYẾT**
+
+### ✅ ĐÃ CHỐT THẾ NÀO (2026-08-20)
+
+Đàm chọn **(b)**, và bác (a) bằng đúng một câu: *"nới kênh là **nói dối địa lý** — kênh Bridgewater
+hẹp thật."* Hướng (c) được công nhận là **đúng về mỹ thuật** nhưng *"là cả một phase mới"* ⇒ tách
+ra thành `TECH_DEBT #60` với điều kiện xem lại riêng, KHÔNG nhét vào khe hở của Bước C.
+
+⚠️ **VÀ MỘT CÂU CẤM RÕ RÀNG: KHÔNG NỚI CỔNG 5% XUỐNG CHO VỪA BA KỶ ĐÓ.** Nguyên văn: *"Nới một
+ngưỡng cho vừa kết quả là cái phễu Phase 9A."* Con số 5% đã hiệu chuẩn ở **cả hai đầu** bằng phép
+đo thật (0,09% = không nhìn thấy gì · 23,75% = đọc ra ngay là thành phố cảng), nên hạ nó xuống là
+vứt một thứ đã hiệu chuẩn để lấy một thứ chưa hiệu chuẩn.
+
+**Đóng bằng một con số trong bài test, không bằng một dòng trong tài liệu** (`scripts/waterView.test.js`):
+
+```js
+assert.deepEqual(TRUOT, [6, 7, 10], '…');
+assert.equal(DAT.length, 11, 'phải có đúng 11 kỷ đạt cổng 5%');
+```
+
+Nó tự đỏ **cả hai chiều**: kỷ thứ tư trượt thì đỏ, mà một trong ba kỷ được chữa xong cũng đỏ. Kèm
+một bài riêng — `KỶ 6 TRƯỢT VÌ BỀ RỘNG` — quét đủ 24 góc và đòi trần toàn cục của kỷ 6 phải **dưới**
+5%; đó là vế chứng minh câu *"giới hạn của bề rộng, không phải của góc nhìn"*, thay vì để nó nằm
+làm một lời khẳng định chưa kiểm trong chú thích (bài học Phase 4G).
+
+⚠️ **Kỷ 7 và 10 KHÔNG có bài tương tự, và đó là sự thật chứ không phải chỗ bỏ sót**: trần toàn cục
+của chúng (9,11% · 7,22% — đo lại ở độ mịn bài test) CÓ vượt 5%, chỉ là ở những góc phá hỏng bố cục
+của 14 kỷ còn lại. Viết *"không góc nào cứu được"* cho chúng sẽ là một câu sai.
+
+**Nghiệm thu bằng mắt (Bước C, 2026-08-20)** — Đàm đặt điều kiện xem lại ở `#61`: kỷ 10 trượt cổng
+(1,60%) **và mắt cũng không đọc ra là thành phố bên kênh** (ảnh cận cảnh: con kênh là một vệt xanh
+mảnh ở góc trên-trái, thành phố không có quan hệ gì với nó). Tức cổng và mắt **đồng ý** ở ca này —
+chưa có bằng chứng cổng đang đo sai đại lượng.
+- **Owner**: Đàm chốt · **Status**: **✅ Closed (2026-08-20)** — hướng (c) chuyển sang `#60`
 
 ---
 
@@ -2321,7 +2468,7 @@ nhất chạy được"*.
 
 ---
 
-## #56 — 12/14 KỶ CÓ NƯỚC TRONG BẢNG NHƯNG CHƯA ĐƯỢC DỰNG HÌNH (dở dang CÓ CHỦ Ý, và nó đếm được)
+## #56 — ✅ ĐÃ ĐÓNG (2026-08-20, Bước C) — 12/14 kỷ có nước trong bảng nhưng chưa được dựng hình (dở dang CÓ CHỦ Ý, và nó đếm được)
 
 - **Tên**: `settingStyle.js` khai 14 kỷ có nước; `ERAS_WITH_WATER_GEOMETRY` mới dựng 2 (12 và 14)
 - **Module**: `src/engine/city3d/setting.js` · `settingStyle.js` · `drawCallBudget.test.js`
@@ -2346,9 +2493,29 @@ nhất chạy được"*.
   `MEANDER_NECK = 1,6` hôm nay là một suy luận, không phải một quyết định đã nghiệm thu.
 - **Estimated Complexity**: Thấp về mã (một dòng danh sách), Trung bình về nghiệm thu (12 ảnh +
   12 mốc lệnh vẽ + một vòng quét không-trôi).
-- **Blocking Conditions**: **CHỜ ĐÀM** xem ba ảnh Bước B và gật hướng mỹ thuật.
-- **Review Trigger**: ngay khi Đàm trả lời về ba ảnh Bước B.
-- **Owner**: chưa phân công · **Status**: Open (chờ quyết định, không phải chờ mã)
+
+### ✅ ĐÃ ĐÓNG THẾ NÀO (2026-08-20, Bước C)
+
+Đàm duyệt ảnh Bước B (*"DUYỆT ẢNH — ĐẠT"*) ⇒ trải nốt. `ERAS_WITH_WATER_GEOMETRY` nay là đủ 14 kỷ,
+và **lời hứa đổi hình dạng**: từ một danh sách đếm một trạng thái DỞ DANG thành một **QUAN HỆ** —
+*mọi kỷ bảng khai có nước thì phải dựng ra nước*, kiểm ở cả 15 kỷ bằng `hasWater(era) === waterIsBuilt(era)`.
+
+⚠️ **`hasWater` và `waterIsBuilt` VẪN LÀ HAI CÁI TÊN, kể cả bây giờ khi hai tập hợp đã trùng nhau.**
+Việc chúng trùng là một **sự thật của hôm nay**, không phải một định nghĩa. Gộp chúng lại là xoá
+mất chỗ để ghi *"kỷ này khai có nước mà chưa dựng"* — thứ sẽ cần lại ngay lần tới có ai thêm một kỷ.
+
+**Số đo nghiệm thu (đo ngày 2026-08-20, lệnh ghi ngay dưới mỗi bảng):**
+
+| hạng mục | trước Bước C | sau Bước C |
+|---|---|---|
+| kỷ đã dựng nước | 2 (12, 14) | **14** |
+| kỷ khô | 13 | **1** (kỷ 1 — nhân chứng của luật *"nước không tính tiền lên kỷ không có nước"*) |
+| kỷ đạt cổng 5% | 2/2 | **11/14** (ba kỷ hẹp nằm trong bảng `TRUOT`, xem `#59`) |
+| lệnh vẽ | mốc riêng từng kỷ | **mỗi kỷ có nước đúng +1**, kỷ 1 không đổi |
+
+⚠️ **Kỷ 5 (`meander`) đã được nhìn bằng mắt** như mục này yêu cầu: hai nhánh nước ôm lấy một sống
+đất, thành phố đứng trên sống — đúng hình khúc uốn. `MEANDER_NECK = 1,6` thôi là một suy luận.
+- **Owner**: đã xong · **Status**: **✅ Closed (2026-08-20)**
 
 ---
 

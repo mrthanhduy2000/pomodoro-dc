@@ -1232,6 +1232,83 @@ file) — không ước lượng, để trống.
 
 ---
 
+## Sau VIỆC 2 Bước C «mặt nước trải ra 14/15 kỷ» — 3 kỷ KHÔNG ĐỔI MỘT ĐƠN VỊ (2026-08-20, ADR-042)
+
+**Công cụ + đầu vào, chép sẵn để tái lập** (luật *"một con số nghiệm thu phải đi kèm CÔNG CỤ **và
+ĐẦU VÀO** đã sinh ra nó"*):
+
+```
+git worktree add /tmp/truocC 054e868
+ln -s "$PWD/node_modules" /tmp/truocC/node_modules
+KHO=/tmp/truocC node --import ./scripts/register-esm-loader.mjs scripts/scene-count.mjs
+KHO=$PWD       node --import ./scripts/register-esm-loader.mjs scripts/scene-count.mjs
+```
+
+Cả hai vế: `SESSIONS=80 HOUR=12 LEVEL=3`. Cột "lệnh vẽ" ở bảng này là **TỔNG cả cảnh** (thành phố +
+vòm trời + rặng núi), nên nó lớn hơn `MOC_LENH_VE` của `drawCallBudget.test.js` đúng **2** — bảng
+kia đếm riêng phần THÀNH PHỐ và đo ở `sessionCount: 40`. Hai bảng trả lời hai câu hỏi khác nhau;
+đừng so thẳng chúng với nhau.
+
+### Vế đã đo xong — lệnh vẽ và hình học, ĐỦ CẢ 15 KỶ
+
+| kỷ | kiểu nước | tam giác trước | tam giác sau | Δ | lệnh vẽ trước → sau |
+|---:|---|---:|---:|---:|:---:|
+| 1 | — ⟵ khô | 123.840 | 123.840 | +0 | 11 → 11 (+0) |
+| 2 | river | 114.268 | 112.140 | −2.128 | 13 → 14 (+1) |
+| 3 | river | 123.792 | 122.044 | −1.748 | 12 → 13 (+1) |
+| 4 | river | 170.972 | 169.408 | −1.564 | 13 → 14 (+1) |
+| 5 | meander | 137.278 | 126.652 | −10.626 | 12 → 13 (+1) |
+| 6 | river | 172.766 | 167.546 | −5.220 | 13 → 14 (+1) |
+| 7 | river | 164.982 | 158.690 | −6.292 | 13 → 14 (+1) |
+| 8 | estuary | 149.210 | 143.902 | −5.308 | 13 → 14 (+1) |
+| 9 | river | 140.452 | 136.836 | −3.616 | 12 → 13 (+1) |
+| 10 | canal | 121.478 | 120.070 | −1.408 | 13 → 14 (+1) |
+| 11 | estuary | 151.128 | 147.012 | −4.116 | 12 → 13 (+1) |
+| 12 | river ⟵ đã dựng từ Bước B | 124.722 | 124.722 | **+0** | 13 → 13 (**+0**) |
+| 13 | sea | 152.658 | 163.594 | +10.936 | 11 → 12 (+1) |
+| 14 | sea ⟵ đã dựng từ Bước B | 179.182 | 179.182 | **+0** | 13 → 13 (**+0**) |
+| 15 | sea | 131.634 | 145.286 | +13.652 | 12 → 13 (+1) |
+| **tổng** | | **2.158.362** | **2.140.924** | **−17.438 (−0,8%)** | |
+
+### Ba con số ĐÚNG BẰNG 0 là phần đáng đọc nhất của bảng
+
+Kỷ **1** (khô), kỷ **12** và kỷ **14** (đã dựng nước từ Bước B) không đổi **một đơn vị nào**, ở
+**cả hai** cột. Đó không phải may mắn mà là đúng ba kỷ duy nhất lẽ ra phải đứng yên — nên bảng này
+tự nó là một đối chứng: nếu phép đo bị lệch phiên bản, bị lẫn tải máy, hay bị chép nhầm cột, ba
+số 0 ấy gần như chắc chắn sẽ không còn là 0. (Đúng bài học `TECH_DEBT #43`: hai phase không liên
+quan nhau về nội dung vẫn dính nhau qua **cột số**.)
+
+### +1 lệnh vẽ, và CHỈ ở kỷ vừa được dựng nước
+
+12 kỷ mới dựng nước: **+1 mỗi kỷ, không kỷ nào +2**. Ba kỷ còn lại: **+0**. Đây chính là ràng buộc
+cứng của ADR-040 (mặt nước là **một hình chữ nhật phẳng**, đường bờ không bao giờ được vẽ ra), và
+nó được canh bằng một **PHÉP TRỪ có thể đỏ** chứ không phải một lời hứa: `drawCallBudget.test.js`
+giữ song song `MOC_TRUOC_NUOC` (đo 2026-08-18, trước khi có bất kỳ giọt nước nào) và `MOC_LENH_VE`
+(nay), rồi đòi hiệu số phải bằng đúng `waterIsBuilt(era) ? 1 : 0` ở cả 15 kỷ.
+
+### Tam giác GIẢM ở 10 kỷ, TĂNG ở 2 kỷ — và đó là hành vi đúng
+
+Tổng **nhẹ đi 17.438 tam giác (−0,8%)**. Nghe ngược đời, nhưng đúng theo cấu trúc: chỗ nào thành
+mặt nước thì **cây, đá, mảng phủ ở đó biến mất** (chúng không mọc dưới nước — `PROP_SHORE_CLEAR`),
+và một tấm nước phẳng rẻ hơn hẳn đám cảnh vật nó thay thế. Kỷ 5 nhẹ nhất bảng (−10.626) vì khúc
+uốn `meander` ôm ba mặt nên dọn đi nhiều cảnh vật nhất.
+
+Hai kỷ nặng thêm đều là **`sea`** (13: +10.936 · 15: +13.652): biển là một **nửa mặt phẳng** trải
+tới chân trời, nên tấm nước của nó lớn hơn hẳn một dải sông — và `reach` của chúng cũng lớn nhất
+bảng (kỷ 15 = 6, kỷ 13 = 4). Kỷ 14 (`sea`, `reach` 3) đã trả khoản ấy từ Bước B: **+5.700**.
+
+Cả hai chiều đều nằm sâu trong vùng rẻ: trục tính tiền là **ĐIỂM ẢNH và ÁNH SÁNG**, không phải hình
+học (mục "Mô hình chi phí" ở đầu file). Phase này thêm **0 nguồn sáng · 0 texture · 0 shader động**.
+
+### Vế CHƯA đo — frame time trên M3
+
+`bash scripts/bench-macbook.sh` **chưa chạy được ở đây, và đó là thiết kế**: hộp cát AI chạy WebGL
+bằng SwiftShader, nên chính script tự **dừng ở cảnh đầu** khi thấy tên card đồ hoạ là "SwiftShader"
+thay vì đẻ ra 25 dòng số vô giá trị. **Không có phép đo thì không có con số** (luật ở đầu file) —
+để trống. Đây là lượt làm mới số liệu Đàm đã nói rõ *"không phải một cổng, không phải một blocker"*.
+
+---
+
 ## Khi nào phải đo lại
 
 - Sau bất kỳ phase nào **thêm nguồn sáng, đổi shader, đổi bóng đổ, hoặc đổi DPR**.

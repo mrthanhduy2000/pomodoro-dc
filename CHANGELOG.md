@@ -12,7 +12,29 @@
 
 ---
 
-## 2026-08-20 (mới nhất) — `worldYaw`: xoay TỜ GIẤY, không xoay thế giới (ADR-041)
+## 2026-08-20 (mới nhất) — BƯỚC C: mặt nước trải ra 14/15 kỷ, chỉ kỷ 1 còn khô (ADR-042)
+
+**Mục đích.** Hoàn tất mảng địa thế: mọi kỷ mà `settingStyle.js` khai có nước nay đều **dựng hình
+thật**, không còn kỷ nào "khai có nước mà không thấy nước". Kỷ 1 (Göbekli Tepe, sườn núi) là kỷ khô
+DUY NHẤT và nó khai `water: 'none'` một cách tường minh.
+
+**Phạm vi.** Mã sản phẩm gần như không đổi — `ERAS_WITH_WATER_GEOMETRY` mở từ 2 kỷ lên 14, phần còn
+lại đã có sẵn từ ADR-040/041. Việc thật nằm ở **bốn phép đo phải sửa cho đúng đại lượng** (ADR-042):
+sắc nước · mật độ vùng quê · vòng rìa · chỗ giáp hai tấm. Sửa: `setting.js` · `setting.test.js` ·
+`terrain.test.js` · `horizon.test.js` · `outskirts.test.js` · `terrainMesh.test.js` ·
+`sceneStats.test.js` · `drawCallBudget.test.js` · `scripts/waterView.test.js`. Mới:
+`settingReaders.test.js` (bảng `NGUOI_DOC_DAU_CHAN` — mọi nơi chạm dấu chân nước phải đi qua một cửa).
+
+**Ảnh hưởng.** Lệnh vẽ **+1 CHỈ ở kỷ có nước**, mốc riêng từng kỷ đã cập nhật (`MOC_LENH_VE`); kỷ 1
+không đổi một đơn vị. 11/14 kỷ đạt cổng "nước ≥ 5% khung hình"; ba kỷ nước hẹp (6 · 7 · 10) trượt
+vì **BỀ RỘNG** chứ không vì góc nhìn — Đàm đã chốt ghi ra tường minh đếm được
+(`TRUOT = [6, 7, 10]`), **KHÔNG hạ cổng 5%**. Xem `TECH_DEBT` #59 (đã đóng) · #60 · #61.
+
+**Tương thích.** Không đổi dữ liệu người dùng, không đổi state, không migration.
+
+---
+
+## 2026-08-20 — `worldYaw`: xoay TỜ GIẤY, không xoay thế giới (ADR-041)
 
 **Mục đích.** Đóng `TECH_DEBT #57`: kỷ 14 dựng đủ hình học biển nhưng camera mặc định quay lưng lại
 nên chỉ thấy **0,09%** khung hình. Đàm bác cả bốn hướng đã đề xuất — *"KHÔNG SỬA CAMERA, KHÔNG SỬA

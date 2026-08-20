@@ -11,6 +11,72 @@
 
 ---
 
+## ADR-042 — Trải một lời hứa từ 2 trường hợp ra 14 thì bốn phép đo cùng gãy một kiểu: chúng được viết thành MỨC, mà thứ chúng nói là QUAN HỆ. Cách xử lý là sửa MẪU SỐ hoặc GHI RA ĐẾM ĐƯỢC — không phải hạ ngưỡng
+
+- **Ngày**: 2026-08-20
+- **Bối cảnh**: Bước C dựng mặt nước cho 12 kỷ còn lại (2 → 14 kỷ có nước, chỉ kỷ 1 khô). Mã sản
+  phẩm gần như không phải sửa — ADR-040 và ADR-041 đã dựng sẵn ngữ pháp. Nhưng **sáu bài test đỏ**,
+  và không bài nào đỏ vì hình học sai. Cả sáu đỏ vì cùng một lý do: chúng được hiệu chuẩn khi chỉ
+  có HAI kỷ nước, mà hai kỷ ấy (12 và 14) tình cờ là hai kỷ nước RỘNG NHẤT bảng.
+- **Vấn đề**: mỗi bài phát biểu một lời hứa mỹ thuật thật, nhưng viết nó thành một **con số tuyệt
+  đối** — và con số ấy chỉ đúng cho quần thể đã sinh ra nó:
+
+  | Lời hứa | Viết thành | Thứ nó thật sự nói | Gãy ở đâu |
+  |---|---|---|---|
+  | "mặt nước cạn dần vào bờ" | `trải sắc > 0,02` | quan hệ với **BỀ RỘNG** nước (rộng ⇒ sâu ⇒ đậm) | kỷ 5 = 0,0042 |
+  | "sát phố thì rậm, ngoài xa thì thưa" | mật độ ÷ **diện tích hình học** | mật độ ÷ **đất KHẢ DỤNG** (cây không mọc dưới nước) | kỷ 5 = 1,85× |
+  | "rìa phẳng đúng `-APRON_DROP`" | `tổng điểm khô > 1400` | mỗi kỷ phải còn phần lớn rìa khô | tổng = 1259 |
+  | "hai tấm phải khớp ở chỗ giáp" | so ở **ba** khoảng cách | chỉ so được ở chỗ **CẢ HAI tấm đều được vẽ** | lệch 2,16e-1 |
+
+  Bài thứ tư là bài đáng sợ nhất: nó **so hai tấm ở chỗ chỉ có một tấm tồn tại** (`innerEdge − 2`
+  nằm TRONG tấm đất, nơi tấm chân trời không được vẽ), và nó xanh nhiều tháng chỉ vì hai kỷ nước cũ
+  tình cờ có `blend = 1` tại đúng các điểm lấy mẫu — khi blend bằng 1 thì hai tấm cùng sập về một
+  đáy nên nền của chúng bị nuốt, không thể lệch. Đây là bài học `diemToanTheGioi` lặp lại: **phép đo
+  không áp dụng được ở chỗ nó tự nhận là đang đo.**
+- **Phương án đã cân nhắc**:
+  1. **Hạ ngưỡng cho vừa số đo mới** (0,02 → 0,004 · 1400 → 1200 · sàn 2 → sàn 1,8).
+  2. **Bỏ qua trắng các trường hợp mới** (kỷ nước hẹp `continue`, chỗ ướt `continue`).
+  3. **Sửa lại hình cho vừa phép đo** — nới sông hẹp cho sâu hơn, đẩy nước ra khỏi vòng rìa.
+  4. ✅ **Hỏi lại từng phép đo xem nó nói MỨC hay QUAN HỆ**, rồi sửa đúng vế bị sai: mẫu số, phạm
+     vi lấy mẫu, hoặc — khi lời hứa thật sự không đạt được — **ghi danh sách trượt ra tường minh
+     đếm được**, đúng khuôn `TRUOT = [6, 7, 10]` mà Đàm đã chốt cho `TECH_DEBT #59`.
+- **Lý do loại bỏ**: (1) là cái phễu Phase 9A — nới một ngưỡng cho vừa kết quả thì nó không còn
+  canh ai, và lần sau sẽ được nới tiếp vì "lần trước cũng nới". (2) làm bài test **rỗng dần trong
+  im lặng**: mỗi kỷ nước mới thêm vào là một nhánh không bao giờ chạy, mà không có gì đỏ. (3) là
+  nói dối địa lý — kênh Bridgewater hẹp thật, khúc uốn Elzbach hẹp thật; đúng thứ ADR-025 đã cấm.
+- **Giải pháp chọn**: bốn bản vá, mỗi bản sửa đúng vế sai của phép đo ấy, KHÔNG bản nào đụng hình:
+  - **Sắc nước**: tách làm ba câu hỏi. (a) mỗi kỷ có **dải sâu** thật không (`> 0,10`; đo thật mỏng
+    nhất 0,111). (b) ánh xạ sâu→sắc có dùng CHUNG một đường cong không — hỏi bằng **quan hệ đơn
+    điệu** giữa 76 cặp kỷ, và **chuẩn hoá theo biên độ bảng sắc của từng kiểu nước** trước khi so
+    (không chuẩn hoá thì biên mỏng nhất chỉ 0,00070; chuẩn hoá xong là 0,01776 — rộng gấp **25
+    lần** — và nó đúng về cấu trúc vì trải-chuẩn-hoá chính là bề rộng `smoothstep` trên dải sâu).
+    (c) `MO_NHAT = [5, 6, 7, 10]` — bốn kỷ mờ hơn cổng cũ, ghi ra, đỏ cả hai chiều. **Cổng 0,02 giữ
+    NGUYÊN.**
+  - **Mật độ vùng quê**: chia cho **đất khả dụng** thay vì diện tích hình vuông viền. Cổng `>= 2`
+    giữ nguyên; chỉ mẫu số được dọn. Khoảng trải 15 kỷ thu từ 1,85–3,86 (2,09 lần) xuống
+    **2,51–3,41 (1,36 lần)** — dấu hiệu kinh điển của một mẫu số vừa hết lẫn thứ không thuộc câu hỏi.
+  - **Vòng rìa**: hỏi **tỉ lệ khô của TỪNG kỷ** (`>= 70%`; đo thật thấp nhất 75,0%) thay vì một
+    tổng — một tổng thì chín kỷ khô bù cho một kỷ ngập. Cộng bảng `KY_RIA_CHAM_NUOC` đếm được.
+  - **Chỗ giáp hai tấm**: nhánh "so hai tấm" **chỉ chạy ở nơi cả hai tấm đều được vẽ**; điểm ướt
+    nằm trong tấm đất được bỏ qua nhưng **đếm ra bảng `BO_QUA_KY` chín kỷ**. Ở đúng chỗ giáp, hai
+    tấm khớp tới **1,11e-16**.
+- **Trade-off**: bốn phép đo nay **đắt hơn và dài hơn**. Phép mật độ vùng quê phải lấy mẫu
+  `insetAt` trên lưới 0,1 ô cho từng kỷ (đo: cả bài chạy 1,05 giây — chấp nhận được). Ba bảng đếm
+  được (`MO_NHAT` · `KY_RIA_CHAM_NUOC` · `BO_QUA_KY`) sẽ **đỏ mỗi lần ai đó chỉnh một dòng địa
+  thế** — đó là chủ đích, nhưng nó có giá: người sửa phải đi nhìn ảnh rồi mới được sửa bảng, chứ
+  không được sửa cho hết đỏ. Ba dòng chú thích nói rõ điều đó tại chỗ.
+- **Ảnh hưởng**: 14/15 kỷ có mặt nước dựng hình. Lệnh vẽ **+1 CHỈ ở kỷ có nước**, mốc riêng từng
+  kỷ đã cập nhật (`MOC_LENH_VE`); kỷ 1 không đổi một đơn vị. Bốn phép đo trên nay nói đúng đại
+  lượng chúng tuyên bố, và mỗi assert mới đều đã thử-cho-đỏ với chỗ mong đợi đỏ nêu TRƯỚC.
+- **Điều kiện xem xét lại**: (a) nếu một phase sau nới bề rộng nước của kỷ 5/6/7/10 (xem
+  `TECH_DEBT #60` — cầu/bến/thuyền/kè) thì `MO_NHAT` sẽ đỏ và **đó là tin mừng**, sửa bảng rồi ghi
+  lại số; (b) nếu `APRON_EDGE` hoặc một `reach` nào đổi thì `KY_RIA_CHAM_NUOC` đỏ — phải nhìn ảnh
+  trước khi sửa bảng; (c) nếu `TECH_DEBT #61` thành sự thật (có kỷ đạt cổng 5% mà nhìn vẫn không ra
+  bờ, hoặc ngược lại) thì cổng khung hình phải đổi sang **đo CHIỀU DÀI ĐƯỜNG BỜ CẮT KHUNG** — và
+  lúc ấy phép "chuẩn hoá theo biên độ bảng sắc" ở đây là khuôn mẫu để làm việc đó.
+
+---
+
 ## ADR-041 — `worldYaw`: xoay TỜ GIẤY, không xoay thế giới. Khi hai hằng số đều đúng mà kết quả sai, thứ phải đặt tên là QUAN HỆ giữa chúng
 
 - **Ngày**: 2026-08-20

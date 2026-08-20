@@ -34,11 +34,12 @@
  *     phẳng sẽ ló ra ở những hõm khô trên vành đất (vùng đó gợn ±0,21 quanh −0,62, tức có chỗ sâu
  *     tới −0,83) và ta được một vũng nước ma giữa đồng. Xem `WATER_DROP_BELOW_PLAIN`.
  *
- * ── ĐANG DỞ DANG CÓ CHỦ Ý, VÀ NÓ ĐẾM ĐƯỢC ──────────────────────────────────────────────────
- * Đàm ra lệnh dựng hình cho **ĐÚNG 3 kỷ** rồi dừng để anh xem (14 biển · 12 sông · 1 khô). Nên
- * `ERAS_WITH_WATER_GEOMETRY` là một danh sách TƯỜNG MINH, có `assert.deepEqual` khoá, chứ không
- * phải một trạng thái ngầm — đúng bài học `door: 'legacy'` ở Phase 10: *"một mục nợ trong tài liệu
- * chỉ được đọc khi có người đi tìm; một con số trong bài test thì tự đòi được đọc."*
+ * ── BƯỚC C ĐÃ TRẢI ĐỦ 14 KỶ CÓ NƯỚC (2026-08-20) ──────────────────────────────────────────
+ * Bước B chỉ dựng 3 kỷ để Đàm duyệt hướng mỹ thuật; anh đã duyệt (*"DUYỆT ẢNH — ĐẠT"*) nên Bước C
+ * trải nốt. `ERAS_WITH_WATER_GEOMETRY` vẫn là một danh sách TƯỜNG MINH có `assert.deepEqual` khoá
+ * — nay nó không còn đếm một trạng thái DỞ DANG mà đếm một lời hứa: *mọi kỷ bảng khai có nước thì
+ * phải dựng ra nước*. Bài test đối chiếu nó với chính `hasWater` của cả 15 kỷ, nên thêm một dòng
+ * nước vào bảng mà quên dựng hình sẽ ĐỎ, chứ không lặng lẽ trở thành một kỷ khô.
  */
 
 import { valueNoise } from './noise';
@@ -152,15 +153,21 @@ export const WATER_TINT = {
 };
 
 /**
- * ⚠️ ĐANG DỞ DANG, VÀ ĐẾM ĐƯỢC. Bước B dựng hình cho ĐÚNG hai kỷ có nước (14 biển · 12 sông) cộng
- * kỷ 1 làm chứng cho vế khô. Mười hai kỷ còn lại vẫn khai nước trong bảng nhưng CHƯA được dựng —
- * đó là lệnh của Đàm (*"Đừng trải 12 kỷ còn lại"*), không phải một thiếu sót.
+ * Mười bốn kỷ có nước, đã dựng hình đủ cả mười bốn (Bước C, 2026-08-20). Kỷ 1 là kỷ khô DUY NHẤT
+ * và nó khai `water: 'none'` một cách tường minh — xem `settingStyle.js`.
  *
- * ⚠️ `hasWater(era)` (BẢNG khai có nước) và `waterIsBuilt(era)` (HÌNH đã dựng) là HAI câu hỏi khác
- * nhau và phải giữ hai cái tên khác nhau. Gộp chúng là đúng cái bẫy "một trường gánh hai việc" đã
- * cắn năm lần trong dự án này.
+ * ⚠️ `hasWater(era)` (BẢNG khai có nước) và `waterIsBuilt(era)` (HÌNH đã dựng) VẪN là HAI câu hỏi
+ * khác nhau và phải giữ hai cái tên khác nhau, **kể cả bây giờ khi hai tập hợp đã trùng nhau**.
+ * Gộp chúng là đúng cái bẫy "một trường gánh hai việc" đã cắn năm lần trong dự án này — và hôm nay
+ * là lúc dễ mắc nhất, vì `waterIsBuilt` trông y hệt một bản sao thừa của `hasWater`. Nó không
+ * thừa: nó là chỗ DUY NHẤT một phase sau có thể tạm rút một kỷ ra khỏi hình mà không phải nói dối
+ * bảng địa lý.
+ *
+ * ⚠️ HAI TẬP TRÙNG NHAU LÀ MỘT SỰ THẬT HÔM NAY, KHÔNG PHẢI MỘT ĐỊNH NGHĨA. Bài test khoá quan hệ
+ * ấy bằng cách duyệt CẢ 15 KỶ và đối chiếu với `hasWater`, chứ không viết cứng một mảng 14 số —
+ * viết cứng thì thêm một kỷ nước vào bảng mà quên dựng hình sẽ không có gì đỏ.
  */
-export const ERAS_WITH_WATER_GEOMETRY = [12, 14];
+export const ERAS_WITH_WATER_GEOMETRY = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
 
 export function waterIsBuilt(era) {
   return ERAS_WITH_WATER_GEOMETRY.includes(Number(era)) && hasWater(era);

@@ -94,29 +94,56 @@ test('⚠️ CHỖ GIÁP PHẢI PHẲNG ĐÚNG `-APRON_DROP` — nếu không th
   // tấm cùng bị khoét xuống. Lời hứa gốc không đổi — hai tấm phải khớp nhau — nên chỗ ướt chuyển
   // sang hỏi thẳng `terrain.surfaceHeightAt`, KHÔNG bỏ qua trắng (bỏ qua trắng thì bài này rỗng
   // dần mỗi lần thêm một kỷ được dựng nước, mà rỗng dần thì không ai thấy).
+  //
+  // ⚠️ BƯỚC C (2026-08-20) — PHÉP ĐO PHẢI CHẠM ĐÚNG CHỖ NÓ NÓI. Bài này lấy mẫu ở BA khoảng cách,
+  // và chúng KHÔNG hỏi cùng một câu:
+  //   · `innerEdge`      = đúng chỗ giáp — CẢ HAI tấm đều được vẽ ở đây ⇒ hỏi được "hai tấm có khớp
+  //                        nhau không". Đo thật: lệch lớn nhất **1,11e-16** (16 điểm ướt).
+  //   · `innerEdge+0.3`  = ngay bên ngoài — vẫn cả hai tấm ⇒ vẫn hỏi được. Đo thật: **đúng 0** (15 điểm).
+  //   · `innerEdge-2`    = NẰM TRONG tấm đất thành phố, nơi tấm chân trời KHÔNG hề được vẽ ra. Ở đây
+  //                        `h.heightAt` chỉ là một giá trị toán học, không phải thứ Đàm nhìn thấy.
+  // Bản trước hỏi "hai tấm có khớp không" ở CẢ BA, kể cả cái thứ ba — tức so hai tấm ở chỗ chỉ có
+  // một tấm tồn tại. Nó xanh nhiều tháng chỉ vì hai kỷ có nước lúc ấy (12 và 14) tình cờ có
+  // `blend = 1` tại các điểm lấy mẫu: khi blend bằng 1 thì cả hai tấm cùng sập về đúng đáy
+  // `WATER_SURFACE_Y − depthAt`, nền của chúng bị nuốt sạch nên không thể lệch. Kỷ sông hẹp có blend
+  // LỬNG ở đó ⇒ hai cái nền khác nhau lộ ra, lệch tới 2,16e-1 (kỷ 6). Cùng họ bài học
+  // `diemToanTheGioi`: phép đo không với tới (hoặc không áp dụng được) chỗ nó tự nhận là đang đo.
+  // ⇒ Điểm ƯỚT ở mốc TRONG được bỏ qua — nhưng bỏ qua phải ĐẾM ĐƯỢC, nếu không nó lặng lẽ nuốt dần
+  // cả bài test. `BO_QUA_KY` tự đỏ CẢ HAI CHIỀU: kỷ thứ mười lấn nước vào tới đó thì đỏ, mà một
+  // trong chín kỷ ấy rút nước ra cũng đỏ.
   let soKho = 0;
   let soUot = 0;
+  const boQua = [];
   for (const era of ERAS) {
     const h = buildHorizon({ era, gridSize: 12 });
     const t = buildTerrain({ era, gridSize: 12 });
     const half = (12 - 1) / 2;
-    for (const d of [h.innerEdge, h.innerEdge + 0.3, h.innerEdge - 2]) {
+    for (const [moc, d] of [['giáp', h.innerEdge], ['ngoài', h.innerEdge + 0.3], ['trong', h.innerEdge - 2]]) {
       for (const [x, z] of [[d, 0], [0, d], [-d, 0], [0, -d], [d, d], [-d, d * 0.4]]) {
-        if (t.setting.blendAt(x + half, z + half) > 0) {
+        const uot = t.setting.blendAt(x + half, z + half) > 0;
+        if (uot && moc === 'trong') {
+          boQua.push(era);
+          continue;
+        }
+        if (uot) {
           soUot += 1;
           assert.ok(Math.abs(h.heightAt(x, z) - t.surfaceHeightAt(x + half, z + half)) < 1e-9,
-            `kỷ ${era}: chỗ giáp có nước (${x}, ${z}) — chân trời ${h.heightAt(x, z)} ≠ địa hình `
-            + `${t.surfaceHeightAt(x + half, z + half)}`);
+            `kỷ ${era}: chỗ giáp có nước (${x}, ${z}, mốc "${moc}") — chân trời ${h.heightAt(x, z)} `
+            + `≠ địa hình ${t.surfaceHeightAt(x + half, z + half)}`);
           continue;
         }
         soKho += 1;
         assert.equal(h.heightAt(x, z), -APRON_DROP,
-          `kỷ ${era}: chỗ giáp (${x}, ${z}) cao ${h.heightAt(x, z)} thay vì ${-APRON_DROP}`);
+          `kỷ ${era}: chỗ giáp (${x}, ${z}, mốc "${moc}") cao ${h.heightAt(x, z)} thay vì ${-APRON_DROP}`);
       }
     }
   }
-  assert.ok(soKho > 230, `chỉ còn ${soKho} điểm giáp khô — lời hứa "phẳng đúng" đang rỗng dần`);
-  assert.ok(soUot > 0, 'không một điểm giáp nào chạm nước — nhánh so hai tấm chưa bao giờ chạy');
+  assert.ok(soKho > 200, `chỉ còn ${soKho} điểm giáp khô — lời hứa "phẳng đúng" đang rỗng dần`);
+  // Phải chạy ở CẢ HAI mốc ngoài, không chỉ một: hôm nay 16 điểm ở "giáp" + 15 ở "ngoài" = 31.
+  assert.ok(soUot > 25, `chỉ ${soUot} điểm giáp chạm nước — nhánh so hai tấm đang teo lại`);
+  assert.deepEqual([...new Set(boQua)].sort((a, b) => a - b), [3, 5, 6, 7, 8, 9, 10, 11, 12],
+    `những kỷ có nước lấn vào TRONG tấm đất tới ${'`innerEdge-2`'} đã đổi — bảng này phải đổi theo, `
+    + 'và phải kiểm lại bằng mắt rằng chỗ giáp vẫn liền');
 });
 
 test('⚠️ KHÔNG PHỤ THUỘC TIẾN ĐỘ NGƯỜI CHƠI — gọi kèm dữ liệu rác vẫn phải ra y hệt', () => {

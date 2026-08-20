@@ -373,6 +373,32 @@ camera nhìn theo đường chéo 45°, còn bờ nước luôn vuông góc vớ
 bao giờ bằng 0**; đo ra rel = ±45° ở cả 14 kỷ, chia đúng 7/7 giữa hai phía. Một hằng số thêm vào
 đây sẽ là một con số không có việc gì làm.
 
+⚠️ **BẢNG "AI ĐƯỢC HỎI DẤU CHÂN MẶT NƯỚC" — MỘT CỬA DUY NHẤT, VÀ CÓ TEST ĐẾM (Bước C, 2026-08-20)**.
+`worldYaw` vừa tạo ra một bất biến cùng hình dạng với `GROUND_ANCHORS` của Phase 7B: *mọi thứ hỏi
+dấu chân nước phải hỏi qua một cửa*. Cửa ấy là **`insetAt`** — `blendAt` và `depthAt` đều suy từ nó
+ngay trong `setting.js` — nên xoay `insetAt` là xoay cả ba, và **không nơi nào phải biết tới phép
+xoay**. Bốn chỗ đọc, đúng bốn, liệt kê thành một bảng có tên ở `settingReaders.test.js`:
+
+| file | truy vấn | để làm gì |
+|---|---|---|
+| `city3d/terrain.js` | `blendAt` · `depthAt` | khoét lòng nước vào TẤM ĐẤT THÀNH PHỐ |
+| `city3d/horizon.js` | `blendAt` · `depthAt` · `insetAt` | khoét lòng nước vào TẤM CHÂN TRỜI + hệ số `luiNui` |
+| `city3d/outskirts.js` | `insetAt` | không cho cây vùng quê mọc dưới nước |
+| `render3d/terrainMesh.js` | `blendAt` · `depthAt` | bỏ ô KHÔ khỏi tấm nước + sắc nước theo độ sâu |
+
+Ba bài test khoá nó, và chúng chia nhau ba câu hỏi khác nhau: **bảng không được nói dối** (mã dùng
+thêm/bớt một truy vấn ⇒ đỏ) · **không có cửa sau** (một file NGOÀI bảng hỏi dấu chân ⇒ đỏ) · **một
+cửa duy nhất** (`blendAt`/`depthAt` thôi hỏi `insetAt` ⇒ đỏ, cộng một đối chứng hành vi ở 14 kỷ).
+
+⚠️ **ĐỘ SÂU ĐI THEO BỀ RỘNG, KHÔNG PHẢI MỘT HẰNG SỐ.** `depthAt` đi từ bậc mép `WATER_BED_LIP` xuống
+đáy `WATER_BED_DEPTH` qua đoạn dốc `BED_RAMP = 1,6` ô, nên **chỉ kỷ nào có chỗ lún sâu ≥ 1,6 ô mới
+chạm đáy đầy đủ** — hôm nay là 6/14 kỷ (8 · 11 · 12 · 13 · 14 · 15); tám kỷ còn lại nông hơn, và
+vì `terrainMesh.js` lấy chính `depthAt` làm sắc nước nên chúng render ra **nhạt hơn**. Đây là vật
+lý chứ không phải khuyết tật: kênh Amsterdam 0,9 ô phải nông và nhạt hơn vịnh Tokyo. Có test khoá
+quan hệ ấy ở **cả hai chiều** bằng hai bảng tường minh `SAU`/`NONG`, nên nới rộng một dòng sông hay
+thu hẹp một cửa sông đều làm đỏ.
+
+
 ⚠️ **Dở dang CÓ CHỦ Ý và ĐẾM ĐƯỢC**: bảng khai 14 kỷ có nước, hình mới dựng **2**
 (`ERAS_WITH_WATER_GEOMETRY = [12, 14]`, cộng kỷ 1 khô làm nhân chứng cho ràng buộc lệnh vẽ). Đó là
 lệnh của Đàm, không phải thiếu sót — và `hasWater` (BẢNG khai) được giữ TÁCH khỏi `waterIsBuilt`

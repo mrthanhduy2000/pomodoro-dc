@@ -19,6 +19,16 @@
 > bằng cách chỉnh lại con số nào. Nay còn **1 mục High** (#14) + **2 mục Medium-High** (#3, #13) +
 > **1 mục Medium-High chờ Đàm quyết** (#24) = 4 → xa ngưỡng 8–10 mục, KHÔNG cần Maintenance Sprint.
 >
+> **Cập nhật 2026-08-20 (nghiệm thu Bước C — mới nhất)**: đếm lại bằng máy toàn bộ file ⇒ **3 mục
+> High còn mở** (#14 · #32 · #53), 0 mục Critical ⇒ **xa ngưỡng 8–10, KHÔNG cần Maintenance Sprint**.
+> Trong phiên này: **ĐÓNG #56** (12 kỷ chưa dựng nước) và **ĐÓNG #62** (tiền đề sai — kỷ 4 chưa bao
+> giờ vượt cổng); **MỞ #63** (phép tia mù với cây cối ⇒ cổng nước thật là 5/14 chứ không phải 11/14),
+> **#64** (kỷ 5 là một hòn đảo — khuyết tật SẢN PHẨM thật, đã xác nhận bằng ảnh), **#65** (`canal`
+> và `estuary` không có hình học riêng); **CẬP NHẬT #55** (trục chặng 13,96 — đã chạm điều kiện
+> "< 14", nhưng chẩn đoán cũ bị chính số đo bác bỏ) và **#61** (phép thay thế "chiều dài đường bờ"
+> đã ĐO và PHẢI BÁC — nó tương quan NGƯỢC với khả năng đọc ra). Bốn mục **#55 · #61 · #64 · #65**
+> đều đã chuẩn bị sẵn phương án, **CHỜ ĐÀM QUYẾT**, không tự chọn.
+>
 > **Cập nhật 2026-08-20 (chốt #57 — `worldYaw`)**: **ĐÓNG #57**, mở **#59**. Đàm bác cả bốn hướng
 > đã đề xuất (*"KHÔNG SỬA CAMERA, KHÔNG SỬA `side`. SỬA THỨ THỨ BA"*) — cả bốn đều hy sinh một
 > trong hai vế, trong khi thứ sai là **quan hệ giữa chúng không ai sở hữu**. Đóng bằng ADR-041.
@@ -2162,35 +2172,233 @@ ship một trạng thái dở dang, hãy làm nó **ĐẾM ĐƯỢC trong một 
 
 ---
 
-## #62 — KỶ 4 VƯỢT CỔNG NƯỚC 5% ĐÚNG **0,02 ĐIỂM PHẦN TRĂM** — MỘT LỜI HỨA ĐẠT NHỜ 0,4% BIÊN
+## #65 — `canal` VÀ `estuary` KHÔNG CÓ MỘT DÒNG HÌNH HỌC NÀO CỦA RIÊNG CHÚNG: BA TRONG SÁU "KIỂU NƯỚC" DỰNG BẰNG CÙNG MỘT ĐOẠN MÃ
 
-- **Tên**: cổng *"mặt nước ≥ 5% khung hình"* đạt ở kỷ 4 với biên mỏng nhất bảng
-- **Module**: `src/engine/city3d/settingStyle.js` (dòng kỷ 4) · `scripts/water-view.mjs` ·
-  `scripts/waterView.test.js`
-- **Priority**: Low · **Severity**: Low (hôm nay ĐẠT; đây là cảnh báo về BIÊN, không phải một lỗi)
-- **Impact**: kỷ 4 đo được **5,02%** trên cổng **5,00%** ⇒ biên **0,4%**. Mọi thay đổi rất nhỏ ở
-  vùng lân cận — bố cục nhà dân, mật độ cây vùng quê, một lần chỉnh `reach`, thậm chí một lần đổi
-  khung hình mặc định — đều có thể đẩy nó xuống dưới, và lúc ấy `assert.deepEqual(TRUOT, [6, 7, 10])`
-  sẽ đỏ với thông báo *"kỷ thứ tư trượt"* mà không ai đoán ra vì sao.
-- **Root Cause**: đúng bài học Phase 9B — ***"đo BIÊN của mọi lời hứa, đừng chỉ đọc xanh/đỏ: một
-  lời hứa đạt nhờ 3% biên là một lời hứa sắp gãy mà không ai biết"***. Ở đây biên còn mỏng hơn thế
-  gần **tám lần**. Nguyên nhân cụ thể: kỷ 4 (Trường An, sông Vị phía BẮC) có `width 2,6` nhưng
-  `worldYaw = 0` — nó là một trong sáu kỷ **không xoay một độ nào** vì bờ nước vốn đã nằm trong tầm
-  nhìn, nên nó không nhận được khoản lợi mà phép xoay mang lại cho tám kỷ kia. Trần của nó khi đứng
-  đối diện là **6,22%**, tức dư địa có thật nhưng không lớn.
-- **Current Risk**: thấp — hôm nay đạt, và bài test đếm được sẽ đỏ NGAY nếu nó tụt.
-- **Future Risk**: trung bình. Nguy hiểm không nằm ở việc nó tụt (test bắt được) mà ở việc **phiên
-  sau sẽ đọc lời đỏ ấy thành "phase của tôi làm hỏng mặt nước"** rồi đi chữa nhầm chỗ. Mục này tồn
-  tại để câu trả lời có sẵn: *nó vốn đã ở sát mép từ 2026-08-20.*
-- **Recommended Solution**: ⚠️ **KHÔNG nới `width` của kỷ 4 để lấy biên.** Sông Vị ở Trường An là
-  một con sông thật với bề rộng thật; nới nó là **nói dối địa lý** — đúng thứ Đàm đã bác khi từ
-  chối phương án (a) của `TECH_DEBT #59`. Nếu ngày nào kỷ 4 tụt xuống dưới cổng thì cách chữa đúng
-  là ngữ pháp ven nước của `TECH_DEBT #60` (cầu · bến · thuyền · kè), giống hệt ba kỷ 6 · 7 · 10.
-- **Estimated Complexity**: không có việc phải làm bây giờ
+- **Tên**: `river` · `canal` · `estuary` chia nhau ĐÚNG một nhánh trong `insetGoc`; thứ phân biệt
+  chúng trên màn hình chỉ là **một con số bề rộng** và **một mã màu**
+- **Module**: `src/engine/city3d/setting.js` (`insetGoc`, `BANK_WOBBLE`) ·
+  `src/engine/city3d/settingStyle.js` (`isValidSetting`)
+- **Priority**: Medium · **Severity**: Medium (không hỏng gì; nhưng bảng 6 kiểu đang hứa nhiều hơn
+  thứ nó giao)
+- **Impact**: `grep` cả cây cho thấy trường `water` chỉ đổi hành vi ở **ba** chỗ, không hơn:
+  `insetGoc` rẽ nhánh cho `meander` · `isValidSetting` đòi `width === null` cho `sea` ·
+  `WATER_TINT` tra một mã màu. Nghĩa là `river`, `canal`, `estuary` đi qua **cùng một dòng mã**.
+
+  Đo trên ảnh đã dựng — độ lượn của mép bờ, khớp một đường thẳng bình phương tối thiểu rồi lấy độ
+  lệch, đơn vị ĐIỂM ẢNH, cùng khung `--zoom 2,4 --width 1400`, mép GẦN camera:
+
+  | kỷ | kiểu | `ground` | `BANK_WOBBLE` | lệch RMS | lệch lớn nhất | dài đoạn đo |
+  |---:|---|---|---:|---:|---:|---:|
+  |  2 | river   | flat      | 0,45 |  3,72 px | 25,9 px | 1025 px |
+  |  8 | estuary | bluff     | 0,50 | 20,14 px | 84,7 px | 1025 px |
+  | 10 | canal   | reclaimed | 0    |  **2,88 px** | 20,2 px | 1030 px |
+
+  ⚠️ **Cột "canal" là sàn đo được của phép đo, không phải độ lượn thật** — `BANK_WOBBLE` của nó
+  bằng 0, tức bờ nó thẳng TUYỆT ĐỐI về mặt toán học, và 2,88 px kia hoàn toàn là răng cưa khi
+  rasterise một đường chéo. Con sông kỷ 2 chỉ nhỉnh hơn cái sàn ấy **1,3×**. ⇒ **Thứ được cho là
+  bản chất của một con kênh đào — bờ kè thẳng băng — trên màn hình không phân biệt được với một con
+  sông.** Nhìn ảnh cũng đúng như số: cả hai đọc ra là một dải nước thẳng cắt chéo khung hình, khác
+  nhau ở bề rộng.
+- **Root Cause**: ⚠️ **BIẾN THỂ THỨ SÁU CỦA "MỘT TRƯỜNG GÁNH HAI VIỆC", VÀ LẦN NÀY NÓ NGƯỢC:
+  không phải một trường gánh hai đại lượng, mà là MỘT ĐẶC ĐIỂM ĐỊNH NGHĨA KIỂU LẠI SỐNG Ở MỘT
+  TRƯỜNG KHÁC.** Độ thẳng của bờ do `BANK_WOBBLE` quyết định, mà `BANK_WOBBLE` tra theo **`ground`**
+  (`ridge`/`flat`/`bank`/`bluff`/`reclaimed`), KHÔNG theo `water`. Kỷ 10 thẳng **vì nó tình cờ khai
+  `ground: 'reclaimed'`**, không vì nó là `canal`. Và `isValidSetting` không hề buộc hai trường ấy
+  đi cùng nhau ⇒ một kỷ tương lai khai `canal` + `flat` sẽ có một con "kênh đào" uốn lượn tự nhiên,
+  **và không một bài test nào đỏ**. Đó đúng là điều Đàm gọi là *"kênh đào mà lượn tự nhiên là sai
+  bản chất"*.
+
+  Với `estuary` thì bảng đã tự biết và tự sửa từ trước: chú thích `settingStyle.js` ghi rõ định
+  nghĩa cũ (*"một cái phễu rộng mở dần ra"*) đã bị bỏ vì *"hình dáng ấy tầng vẽ không dựng được ở cỡ
+  này"*, và nay `estuary` chỉ hứa MỘT điều — **vẫn còn bờ bên kia**. Lời hứa ấy **ĐẠT**: ảnh kỷ 8
+  cho thấy dải nước có bờ đối diện rõ ràng, khác hẳn `sea`. ⇒ Nói cho sòng phẳng: `estuary` mang
+  thông tin thật, nhưng thông tin ấy là **so với `sea`**, không phải so với `river`; so với `river`
+  thì nó đúng là *"một con sông rộng"* (6 ô so với 1,2–3,4 ô).
+- **Current Risk**: thấp — hôm nay 15 dòng bảng tình cờ khai đúng cặp (`canal` ↔ `reclaimed`).
+- **Future Risk**: trung bình — một dòng bảng mới là đủ để phá, và triệu chứng ("kênh đào trông như
+  con lạch") thuộc loại chỉ thấy được bằng mắt trên một tấm ảnh cận cảnh mà không ai chụp.
+- **Recommended Solution**: hai việc, làm được độc lập với nhau.
+  **(a) RẺ, LÀM ĐƯỢC NGAY** — `isValidSetting` **từ chối thẳng** `water: 'canal'` mà `ground` không
+  thuộc nhóm bờ-người-làm (`reclaimed`), đúng khuôn "từ chối thẳng, không tự chữa" của
+  `isValidGroundFloor`/`#59`; kèm một bài test đếm được. Việc này khoá lại một sự thật bảng đang
+  đúng nhờ may mắn.
+  **(b) ĐẮT, CẦN QUYẾT ĐỊNH MỸ THUẬT** — cho `canal` một hình học của riêng nó (bờ kè đá thẳng đứng
+  · bến · cầu bộ hành), tức đúng nội dung `#60`. ⚠️ **Và phải đo TRẦN trước** (luật §2-C): kỷ 10 chỉ
+  chiếm **1,18%** khung hình, nên mọi chi tiết đặt lên bờ kè của nó đều nằm dưới ngưỡng mắt ở khung
+  toàn cảnh — đây là bài học Phase 11 (+110.076 tam giác lên mái mà bản quét không phân biệt nổi)
+  lặp lại y hệt. Nếu làm thì phải nói trước rằng nó **phục vụ khung CẬN CẢNH**, đúng luật Hệ quả 2b.
+- **Estimated Complexity**: (a) nhỏ · (b) một phase riêng
+- **Blocking Conditions**: (b) chờ Đàm quyết cùng `#60`/`#61`
+- **Review Trigger**: khi có ai thêm/đổi một dòng `water: 'canal'` · hoặc khi mở phase ven nước
+- **Owner**: chưa gán · **Status**: **Open**
+
+---
+
+## #64 — KỶ 5 LÀ MỘT **ĐẢO**: `MEANDER_NECK = 1,6` KHÔNG CẮT RA ĐƯỢC LỐI VÀO NÀO, VÀ CHÚ THÍCH CỦA NÓ MÔ TẢ MỘT THỨ MÃ KHÔNG DỰNG
+
+- **Tên**: vành nước `meander` khép kín hoàn toàn quanh thành phố; "dải yên ngựa khô" mà cả bảng
+  lẫn ADR đều dựa vào để biện minh cho kiểu nước này **không tồn tại trên màn hình**
+- **Module**: `src/engine/city3d/setting.js` (`MEANDER_NECK`, nhánh `meander` của `insetGoc`) ·
+  `src/engine/city3d/settingStyle.js` (chú thích dòng kỷ 5 + khối "sáu kiểu nước")
+- **Priority**: Medium · **Severity**: Medium (hình vẫn dựng ra, không lỗi runtime — nhưng nó kể
+  SAI câu chuyện mà cả kiểu nước ấy sinh ra để kể)
+- **Impact**: ĐO ĐƯỢC, hai phép độc lập, cùng kết luận.
+  1. **Tia toả tròn**: bắn **720 tia** từ tâm thành phố ra bán kính 14 ô, hỏi mỗi tia *"có gặp
+     `blendAt > 0` không?"*. Kết quả **0/720 tia khô suốt**. Tia "cạn nhất" (95°) vẫn chạm
+     `blendAt = 0,157` và độ sâu đáy **0,080 ô** — tức có một chỗ NÔNG hơn, nhưng nó vẫn là NƯỚC,
+     không phải đất. (Chỗ sâu nhất của vành: `blendAt = 1,000`, đáy 0,111 ô.)
+  2. **Loang trên ô khô**: loang từ tâm ra, bước 0,1 ô, chỉ đi qua ô có `blendAt <= 0`, hỏi có tới
+     được mép thế giới không. Kỷ 5 = **KHÔNG**. Tám kỷ có nước khác đem thử cùng cách (2 · 4 · 8 ·
+     10 · 12 · 13 · 14 · 15) đều = **CÓ**. Kỷ 5 là ca duy nhất.
+  3. **Nhìn ảnh** (`--era 5 --hour 12 --zoom 1,7 --width 1400`): một **hào nước hình vuông, bốn góc
+     vuông vức**, khép kín quanh thành phố. Nó đọc ra là *"lâu đài có hào"*, không phải *"suối uốn
+     ôm quanh mỏm đá"*.
+- **Root Cause**: `MEANDER_NECK` là **nửa bề rộng** của hành lang khô, còn `SHORE_BAND = 0,9` là bề
+  dày dải hoà bờ. Trong hành lang, "độ khô" bị chặn trên bởi `-min(d[doi], MEANDER_NECK)`, mà
+  `d[doi]` chính là khoảng cách ra khỏi mặt lưới — nên ở đoạn hành lang **sát mép lưới** (`d < 0,9`)
+  giá trị ấy chưa đủ âm để `blendAt` về 0. Hành lang vì thế bị dải hoà bờ **bịt lại đúng ở đầu
+  trong**, tức đúng đầu nối với thành phố. Một hành lang bịt một đầu thì không phải lối vào.
+
+  ⚠️ **VÀ ĐÂY LÀ HÌNH DẠNG SAI ĐÁNG NHỚ: hai hằng số ở hai file/khối khác nhau, mỗi cái đúng riêng
+  nó, mà QUAN HỆ giữa chúng thì không ai sở hữu.** `SHORE_BAND` là quyết định về độ mềm của mép
+  nước; `MEANDER_NECK` là quyết định về bề rộng lối vào; không có một dòng nào nói *"lối vào phải
+  rộng hơn dải hoà bờ"*. Cùng đúng bệnh của `TECH_DEBT #57` (`side` đúng, `DEFAULT_YAW` đúng, quan
+  hệ giữa chúng vô chủ) mà ADR-041 đã phải sửa bằng "thứ thứ ba".
+- **Current Risk**: trung bình — chú thích trong `setting.js` và `settingStyle.js` hiện **khẳng
+  định** rằng có một lối vào duy nhất, và cả hai dùng chính điều đó để biện minh vì sao `meander`
+  phải là một kiểu riêng chứ không ép vào `river`. Phiên sau đọc chú thích sẽ tin, và sẽ không đi
+  kiểm.
+- **Future Risk**: trung bình — Đàm đã nói thẳng trong lệnh nghiệm thu: *"nếu nó không đọc ra là
+  'suối ôm quanh mỏm đá' thì đó là một hình dạng CHƯA NGHIỆM THU, không phải một con số cần chỉnh"*.
+- **Recommended Solution**: ⚠️ **KHÔNG tự chọn — đây là quyết định mỹ thuật, chờ Đàm.** Ba hướng,
+  đã đo sẵn:
+  **(a) Chữa cái khe** — cho hành lang khô "trừ hao" dải hoà bờ (ví dụ lấy `-(trongKhe + SHORE_BAND)`
+  thay vì `-trongKhe`), tức viết ra thành QUAN HỆ thay vì hai hằng số rời. Rẻ, giữ nguyên ý đồ
+  Burg Eltz, và có thể khoá bằng đúng phép loang ở trên (`0/720` → phải có lối ra).
+  **(b) Nhận rằng hào-quanh-lâu-đài là một câu chuyện ĐÚNG** — Burg Eltz thật thì nằm trên mỏm đá
+  được suối ôm ba mặt, nhưng lâu đài Đức thời ấy có hào là chuyện phổ biến và nó vẫn kể đúng
+  *"vì sao lâu đài nằm ở đó"*. Nếu chọn hướng này thì phải **sửa chú thích + đổi tên kiểu**, vì giữ
+  chữ `meander` cho một cái hào là để lại một lời nói dối trong bảng.
+  **(c) Đổi kỷ 5 sang `river`** — Đàm đã bác hướng này ngày 2026-08-19 với lý do rõ ràng (*"nước
+  chắn ba mặt chính là câu trả lời cho vì sao lâu đài nằm ở đó"*), nên nêu ra chỉ để đủ bộ.
+  ⚠️ Dù chọn hướng nào, việc BẮT BUỘC là **một bài test đếm được**: phép loang từ tâm phải trả lời
+  đúng điều bảng đang hứa. Hôm nay không có bài test nào chạm tới mệnh đề "có lối vào" — đó là lý do
+  nó sai suốt từ Bước B mà không có gì đỏ.
+- **Estimated Complexity**: (a) nhỏ · (b) nhỏ (chỉ chữ nghĩa + đổi tên) · (c) nhỏ
+- **Blocking Conditions**: chờ Đàm chọn hướng
+- **Review Trigger**: ngay khi Đàm trả lời
+- **Owner**: chưa gán · **Status**: **Open — CHỜ ĐÀM QUYẾT**
+
+---
+
+## #63 — PHÉP TIA ĐO NƯỚC **MÙ VỚI CÂY CỐI**: CỔNG 5% ĐÃ ĐƯỢC CHẤM BẰNG MỘT CÁI THƯỚC SAI, VÀ "11 KỶ ĐẠT" THẬT RA LÀ **5**
+
+- **Tên**: `water-view.mjs` báo % khung hình cao hơn sự thật 1,04–3,01 lần vì nó chỉ dò trường cao
+  độ mặt đất, không biết cây cối / nhà cửa / đá / cư dân tồn tại
+- **Module**: `scripts/water-view.mjs` (hàm `caoDoTai`) · `scripts/waterView.test.js` ·
+  `BAN_GIAO.md` (bảng nghiệm thu Bước C) · công cụ thay thế: `scripts/water-score.mjs` (MỚI)
+- **Priority**: Medium · **Severity**: Medium (không có mã sản phẩm nào hỏng — thứ hỏng là **con
+  số nghiệm thu** và mọi quyết định dựa trên nó)
+- **Impact**: bảng nghiệm thu Bước C ghi *"11 kỷ đạt cổng nước ≥ 5% khung hình ✅"*. Đếm thẳng
+  điểm ảnh trên ảnh `--mask water` thì chỉ **5/14**. Hai kỷ Đàm chỉ đích danh trong lệnh nghiệm thu
+  (4 và 5) đều nằm trong số bị đọc nhầm — chúng được ghi là ĐẠT (5,02% và 5,62%) trong khi trên màn
+  hình chúng chỉ có **3,32%** và **3,34%**.
+
+  **BẢNG ĐỐI CHIẾU ĐẦY ĐỦ** (đo 2026-08-20 · khung mặc định 1100×700 · `--hour 12` · 40 phiên ·
+  dựng lại toàn bộ 28 ảnh trong một lượt, lệnh:
+  `node scripts/city-preview.mjs --era N --hour 12` và `… --hour 12 --mask water` cho N = 2…15,
+  chấm bằng `node --import ./scripts/register-esm-loader.mjs scripts/water-score.mjs`):
+
+  | kỷ | kiểu | phép TIA | trên MÀN HÌNH | tia cao hơn | cổng 5% | tương phản nước↔đất |
+  |---:|---|---:|---:|---:|:--:|---:|
+  |  2 | river   |  5,52% |  3,77% | 1,46× | TRƯỢT |  43,6 |
+  |  3 | river   |  5,32% |  3,87% | 1,37× | TRƯỢT |  73,2 |
+  |  4 | river   |  5,02% |  **3,32%** | 1,51× | **TRƯỢT** |  44,2 |
+  |  5 | meander |  5,62% |  **3,34%** | 1,68× | **TRƯỢT** |  41,7 |
+  |  6 | river   |  4,13% |  1,37% | **3,01×** | TRƯỢT |  37,2 |
+  |  7 | river   |  2,40% |  1,49% | 1,61× | TRƯỢT |  60,8 |
+  |  8 | estuary |  9,96% |  7,40% | 1,35× | **ĐẠT** |  70,7 |
+  |  9 | river   |  5,68% |  2,82% | 2,01× | TRƯỢT |  64,9 |
+  | 10 | canal   |  1,62% |  1,18% | 1,37× | TRƯỢT | 103,2 |
+  | 11 | estuary |  9,97% |  5,42% | 1,84× | **ĐẠT** |  52,0 |
+  | 12 | river   |  9,32% |  4,84% | 1,93× | TRƯỢT |  30,8 |
+  | 13 | sea     | 24,12% | 23,18% | 1,04× | **ĐẠT** |  75,2 |
+  | 14 | sea     | 23,75% | 20,09% | 1,18× | **ĐẠT** |  67,4 |
+  | 15 | sea     | 20,80% | 19,05% | 1,09× | **ĐẠT** | 115,5 |
+
+  ⇒ **5/14 ĐẠT** (8 · 11 · 13 · 14 · 15). ⚠️ **NHƯNG CỘT CUỐI LÀ TIN TỐT, VÀ NÓ LÀ MỘT ĐẠI LƯỢNG
+  KHÁC**: tương phản nước↔đất-sát-bờ chạy từ **30,8 tới 115,5**, trong khi ngưỡng mắt là **12** —
+  tức **14/14 kỷ, chỗ nào có nước thì chỗ ấy ĐỌC RA LÀ NƯỚC**. Vấn đề thuần tuý là **DIỆN TÍCH**,
+  không phải màu, không phải độ sâu, không phải hình. Đừng đi chỉnh `WATER_TINT`.
+
+- **Root Cause**: `caoDoTai` (`water-view.mjs`) trả về `surfaceHeightAt` / `horizon.heightAt` — tức
+  **trường cao độ MẶT ĐẤT**. Cây, nhà, đá, cư dân là những khối riêng, không nằm trong trường ấy.
+  Một tia xuyên qua tán cây rồi chạm mặt nước phía sau được ghi là "nước". Sai số vì thế **không
+  đều**: lớn nhất ở kỷ nước HẸP và bờ RẬM (kỷ 6: 3,01×), nhỏ nhất ở biển rộng (kỷ 13: 1,04×) — đúng
+  thứ tự mà một phép mù-cây bắt buộc phải có, và đó chính là bằng chứng cho chẩn đoán này.
+
+  ⚠️ **VÀ GIẢ THUYẾT ĐẦU TIÊN LÀ SAI — GHI LẠI ĐỂ PHIÊN SAU ĐỪNG ĐI LẠI.** Nghi ngờ đầu tiên rất
+  xuôi tai: *"hộp bao tấm nước đếm cả lỗ thủng, vì `buildWaterSurface` bỏ hẳn ô có `blendAt <= 0`
+  ở cả bốn góc"*. Đo được rằng hộp bao kỷ 5 chỉ được phủ **42,2%** bởi `blendAt > 0` — một con số
+  rất thuyết phục cho giả thuyết ấy. Đã vá theo nó, và **các con số không nhúc nhích một chữ số
+  nào**. Lý do: phần hộp bao bị thủng luôn có ĐẤT cao hơn mặt phẳng nước, nên phép so `tNuoc < tDat`
+  vốn đã loại chúng từ trước. ⇒ **Luật Phase 8A áp thêm một lần nữa: khi một bản vá không đổi kết
+  quả, hỏi cả hai câu — "phép phá có hỏng không?" VÀ "thứ tôi vừa sửa có phải nguyên nhân không?".**
+  Ở đây câu thứ hai mới đúng, và một con số phụ trợ đúng (42,2%) đã suýt đóng dấu cho một chẩn đoán
+  sai.
+
+- **Current Risk**: trung bình — mọi con số % khung hình ghi trước 2026-08-20 đều là số của phép
+  tia. Chúng **không so trực tiếp được** với số đo bằng `water-score.mjs` (cùng cách xử lý mà
+  `TECH_DEBT #22` đã dùng cho bộ lọc "8% mái" và `#49` cho khung hình bị xén 23 dòng).
+- **Future Risk**: trung bình. Nguy hiểm thật không nằm ở con số mà ở **hướng đi**: một cổng bị
+  chấm cao hơn sự thật khiến ta tin *"nước đã đủ, sang việc khác"*, trong khi 9/14 kỷ vẫn dưới
+  ngưỡng mà Đàm đặt ra.
+- **Recommended Solution**: đã làm xong phần công cụ — **`scripts/water-score.mjs`** (mới, 6 ca tự
+  kiểm, có đối chứng nhốt đúng cặp số 5,02 ↔ 3,32) chấm cổng bằng cách hỏi thẳng bên dựng qua
+  `--mask water`, không đoán màu (bài học `TECH_DEBT #22`). **Phân vai, đừng gộp**: `water-view.mjs`
+  vẫn là công cụ đúng cho câu *"xoay camera thì TRẦN là bao nhiêu"* (cây đứng yên khi xoay nên sai
+  số triệt tiêu phần lớn, và nó chạy không cần Chromium); `water-score.mjs` trả lời *"hôm nay Đàm
+  thật sự THẤY bao nhiêu"*. Phần CÒN LẠI — *9 kỷ dưới cổng thì làm gì* — là một quyết định mỹ
+  thuật, **chờ Đàm**, và ba lựa chọn đã đo sẵn nằm ở `#61`.
+- **Estimated Complexity**: công cụ đã xong; phần quyết định thì không có việc kỹ thuật nào cho tới
+  khi Đàm chốt
+- **Blocking Conditions**: chờ Đàm quyết hướng ở `#61` (đổi đại lượng cổng · chấp nhận 5/14 ·
+  hay mở phase ngữ pháp ven nước `#60`)
+- **Review Trigger**: ngay khi Đàm trả lời `#61` · hoặc khi có phase đổi **mật độ vùng quê** /
+  **khung hình mặc định** (cả hai đều dịch được cả hai cột của bảng trên)
+- **Owner**: chưa gán · **Status**: **Open — công cụ đã vá, quyết định chờ Đàm**
+
+---
+
+## #62 — ~~KỶ 4 VƯỢT CỔNG NƯỚC 5% ĐÚNG 0,02 ĐIỂM PHẦN TRĂM~~ → **TIỀN ĐỀ SAI: KỶ 4 KHÔNG HỀ VƯỢT CỔNG**
+
+- **Tên**: mục này được mở ngày 2026-08-20 để cảnh báo về một **biên mỏng**; đo lại cùng ngày bằng
+  công cụ đúng thì cái biên ấy **không tồn tại** — kỷ 4 nằm HẲN dưới cổng
+- **Module**: `src/engine/city3d/settingStyle.js` (dòng kỷ 4) · `scripts/waterView.test.js`
+- **Priority**: Low · **Severity**: Low (không có mã nào hỏng — mục nợ này tự nó là thứ sai)
+- **Impact**: bản đầu ghi *"kỷ 4 đo được **5,02%** trên cổng **5,00%** ⇒ biên **0,4%**"* và khuyên
+  phiên sau đừng hoảng khi thấy nó tụt. Sự thật: **3,32%** trên màn hình, tức **TRƯỢT cổng 33%**,
+  và nó đã trượt từ trước khi mục này được viết ra. Con số 5,02% là số của phép tia mù-cây (`#63`).
+- **Root Cause**: hai cái sai xếp chồng, và cái thứ hai chỉ có thể xảy ra vì cái thứ nhất.
+  **(1)** Con số nguồn sai (`#63`). **(2)** ⚠️ **VÀ ĐÂY MỚI LÀ BÀI HỌC ĐÁNG GIỮ: một mục nợ kỹ
+  thuật viết ra để CẢNH BÁO về một con số thì tự nó là một lời khẳng định về con số ấy — nhưng nó
+  KHÔNG được kiểm bởi bất cứ thứ gì.** Mã có test, tài liệu có người đọc, còn một dòng trong
+  `TECH_DEBT.md` thì im lặng tuyệt đối; và một mục nợ nghe càng lo lắng, càng cẩn thận, thì càng ít
+  ai nghĩ tới việc kiểm lại tiền đề của nó. Cùng họ với *"một chú thích nói 'có test đối chiếu hai
+  bên' không phải là một bài test"* (Phase 8B) và *"một câu tự trấn an cũng phải được kiểm như một
+  con số"* (Phase 4G) — khác ở chỗ lần này câu chưa-được-kiểm nằm trong chính cuốn sổ nợ, nơi lẽ ra
+  phải là chỗ đáng tin nhất.
+- **Current Risk**: thấp — đã bị chính phiên mở nó bác bỏ trong cùng ngày.
+- **Future Risk**: thấp, **với điều kiện** mục này không bị xoá đi. Giữ lại nguyên văn tiền đề sai
+  là thứ ngăn phiên sau tìm thấy con số 5,02% ở đâu đó rồi tin lại lần nữa.
+- **Recommended Solution**: đã xử lý — nội dung thật chuyển sang **`#63`**; mục này giữ làm bia.
+  ⚠️ **KHÔNG nới `width` của kỷ 4 để lấy lại con số.** Sông Vị ở Trường An là một con sông thật với
+  bề rộng thật; nới nó là **nói dối địa lý** — đúng thứ Đàm đã bác khi từ chối phương án (a) của
+  `#59`. Kỷ 4 nay thuộc cùng nhóm với 6 · 7 · 10 và có cùng một lối chữa: ngữ pháp ven nước (`#60`).
+- **Estimated Complexity**: không có việc phải làm
 - **Blocking Conditions**: không chặn gì
-- **Review Trigger**: khi `waterView.test.js` đỏ ở kỷ 4 · hoặc khi có phase đổi **khung hình mặc
-  định** / **bố cục lưới 12×12** / **mật độ vùng quê** — ba thứ đều dịch được con số 5,02% này.
-- **Owner**: chưa gán · **Status**: **Open — theo dõi, không hành động**
+- **Review Trigger**: không — mục này đã đóng, chỉ đọc
+- **Owner**: — · **Status**: **✅ ĐÃ ĐÓNG (2026-08-20) — tiền đề bị bác bỏ, nội dung chuyển sang #63**
 
 ---
 
@@ -2230,7 +2438,49 @@ ship một trạng thái dở dang, hãy làm nó **ĐẾM ĐƯỢC trong một 
   mà nhìn vẫn không ra bờ, hoặc trượt 5% mà nhìn vẫn ra bờ, thì đó là bằng chứng cổng sai đại lượng
   — lúc ấy đổi sang đo CHIỀU DÀI ĐƯỜNG BỜ CẮT KHUNG."* Và: *"Để dữ liệu Bước C tự quyết, đừng đoán
   trước."* **Kết quả Bước C: chưa có ca nào như vậy** ⇒ giữ nguyên cổng.
-- **Owner**: chờ dữ liệu · **Status**: **Open — theo dõi, không hành động**
+
+- ⚠️ **CẬP NHẬT 2026-08-20, NGHIỆM THU BƯỚC C — ĐIỀU KIỆN XEM LẠI ĐÃ ĐƯỢC HỎI, VÀ CÂU TRẢ LỜI LÀ
+  "KHÔNG, NHƯNG VÌ MỘT LÝ DO KHÁC HẲN".**
+
+  Đàm đặt điều kiện: *"nếu ≥5% mà bản quét vẫn không thấy ⇒ bằng chứng cổng sai đại lượng, lúc đó
+  mới đổi sang đo CHIỀU DÀI ĐƯỜNG BỜ CẮT KHUNG."* Đi kiểm thì **tiền đề không đúng**: kỷ 4 và kỷ 5
+  KHÔNG hề ≥5%. Chúng chỉ được ghi là 5,02% và 5,62% vì cái thước bị mù cây (`#63`); trên màn hình
+  chúng là **3,32%** và **3,34%**. ⇒ **Cổng không sai — cái THƯỚC sai.** Hai chuyện ấy khác nhau, và
+  gộp chúng lại sẽ dẫn tới việc thay một ngưỡng lành bằng một ngưỡng chưa hiệu chuẩn.
+
+  ⚠️ **VÀ ĐÃ ĐO LUÔN CÁI ĐẠI LƯỢNG THAY THẾ — NÓ KHÔNG DÙNG ĐƯỢC, THEO ĐÚNG HAI CHIỀU NGƯỢC NHAU.**
+  `duongBoCatKhung` (`water-view.mjs`) đo chiều dài ranh giới nước↔ĐẤT chia cho đường chéo khung:
+
+  | kỷ | kiểu | đường bờ (tương đối) | % khung (màn hình) | mắt đọc ra? |
+  |---:|---|---:|---:|---|
+  |  5 | meander | **1,879** ← DÀI NHẤT BẢNG | 3,34% | chỉ là một cái hào mảnh |
+  | 13 | sea     | 1,108 | 23,18% | biển, đọc ra ngay |
+  | 14 | sea     | **1,012** ← NGẮN NHẤT | 20,09% | biển, đọc ra ngay |
+  | 15 | sea     | 1,158 | 19,05% | biển, đọc ra ngay |
+
+  Ba kỷ `sea` — những kỷ **không thể nhầm được** là thành phố ven nước — có đường bờ **NGẮN NHẤT**
+  bảng, vì một mặt biển chỉ giáp đất bằng đúng một đường ngang. Còn kỷ 5, một cái hào vòng quanh,
+  có đường bờ dài nhất vì nó có **hai** mép và chúng uốn quanh bốn phía. ⇒ Đại lượng này **nghịch
+  biến** với thứ nó định đo, ở đúng nhóm kỷ quan trọng nhất. Chỉ số `vaoSauNhat` (nước lấn sâu vào
+  khung) cũng không tách được: kỷ 6 TRƯỢT với 0,600 trong khi kỷ 4 cũng TRƯỢT với 0,486 — không có
+  ngưỡng nào cắt đúng.
+
+  ⇒ **KHÔNG ĐỔI SANG ĐƯỜNG BỜ.** Ghi lại đây để phiên sau khỏi thử lại: nó đã được đo, không phải
+  bị bỏ qua. Bài học chung: *một đại lượng thay thế phải được KIỂM trên nhóm ca dễ nhất trước khi
+  được tin ở nhóm ca khó* — nếu nó không xếp đúng thứ tự cho ba kỷ biển thì nó không có tư cách
+  phân xử cho ba kỷ kênh hẹp.
+
+  ⚠️ **CÁI THẬT SỰ CÒN LẠI ĐỂ ĐÀM QUYẾT** (đã đo đủ, không tự chọn): trên màn hình chỉ **5/14** kỷ
+  đạt 5%, mà **14/14 kỷ có tương phản nước↔đất từ 30,8 tới 115,5 — trên ngưỡng mắt 12 rất xa**.
+  Nghĩa là *"nước ở đâu cũng đọc ra là nước; nó chỉ chiếm ít chỗ"*. Ba hướng:
+  (a) **giữ cổng 5%, chấp nhận 5/14** và coi 9 kỷ kia là việc của phase ngữ pháp ven nước (`#60`);
+  (b) **đổi cổng sang một đại lượng khác** — nhưng phải hiệu chuẩn lại từ đầu ở cả hai đầu, và
+      đường bờ đã bị loại ở trên;
+  (c) **giữ cổng nhưng nói rõ nó là cổng của kỷ BIỂN/CỬA SÔNG**, còn kỷ sông/kênh có một cổng riêng
+      thấp hơn — tức viết cổng thành một QUAN HỆ với `width` thay vì một MỨC chung (đúng khuôn
+      ADR-028 đã dùng cho lệnh vẽ: 15 mốc riêng thay vì một trần chung).
+  ⇒ **CHỜ ĐÀM.** Không tự chọn, và tuyệt đối không hạ con số 5%.
+- **Owner**: chờ Đàm · **Status**: **Open — điều kiện xem lại ĐÃ HỎI XONG, nay chờ Đàm chọn hướng**
 
 ---
 
@@ -2551,7 +2801,63 @@ mất chỗ để ghi *"kỷ này khai có nước mà chưa dựng"* — thứ 
   phải làm vùng quê đổi theo giờ, KHÔNG được nới ngưỡng."** Ngoài ra: đo lại ngay sau khi VIỆC 2
   ship (lệnh `node scripts/city-preview.mjs --sweep --all --theme light` rồi
   `node scripts/sweep-score.mjs .city-preview/sweep-light-ky1-15.png`).
-- **Owner**: chưa ai · **Status**: đang theo dõi, có ngưỡng hành động rõ ràng
+- ⚠️ **CẬP NHẬT 2026-08-20, NGHIỆM THU BƯỚC C — NGƯỠNG ĐÃ CHẠM, VÀ CHẨN ĐOÁN Ở TRÊN ĐÃ BỊ CHÍNH SỐ
+  ĐO BÁC BỎ. HAI VIỆC KHÁC NHAU, ĐỪNG GỘP.**
+
+  **(1) Con số.** Đo lại sau Bước C (md5 ảnh `c210cbe93adaa8fc5ea2bd7eafd1dead`): trục chặng ngày =
+  **13,9616**, tức **DƯỚI 14** — ngưỡng hành động của Đàm ĐÃ chạm. ⚠️ Bảng nghiệm thu đầu tiên của
+  phiên này ghi *"14,0"*; phép làm tròn ấy đẩy con số lên đúng phía kia của cổng và biến một điều
+  kiện-đã-kích-hoạt thành một câu *"vừa đúng ngưỡng, tạm ổn"*. ⇒ **Một con số dùng để chấm cổng thì
+  phải in đủ chữ số để phân biệt hai phía của cổng ấy.**
+
+  **(2) Nhưng nguyên nhân KHÔNG phải vùng quê — đã đo và bác bỏ.** Tách bản quét ra ba dải (trung
+  bình 15 kỷ, thang RGB/255), ở đúng cặp yếu nhất **6h ↔ 15h**:
+
+  | dải | 6h (R,G,B) | 15h (R,G,B) | khoảng cách | so với ngưỡng mắt 12 |
+  |---|---|---|---:|---|
+  | trời      | 103,103, 75 | 106,110, 79 |  **9,29** | **DƯỚI ngưỡng** |
+  | thành phố |  89, 87, 60 |  93, 93, 69 | **11,50** | **DƯỚI ngưỡng** |
+  | mặt đất   |  76, 79, 51 |  87, 91, 62 | **19,14** | trên ngưỡng 60% |
+
+  Và dải **mặt đất** đi **68,8 → 82,2 → 97,6 → 79,8 → 61,2 → 36,7** qua sáu chặng — tức vùng quê
+  PHẢN ỨNG rất mạnh với giờ trong ngày, và ở cặp yếu nhất nó là dải **KHOẺ NHẤT**. Nó cũng gần như
+  không đổi qua Bước C (19,04 → 19,14). ⇒ **Bản vá mà mục này đề xuất ("cho vùng quê nhận
+  `daylight`") sẽ đi bồi thêm cho dải đang mạnh nhất và không chạm vào hai dải đang hỏng.** Thứ
+  thật sự dẹt là **BẦU TRỜI** (9,29) và **THÀNH PHỐ** (11,50) — bình minh 6h và chiều 15h đang có
+  gần như cùng một bầu trời.
+
+  ⚠️ Đây là một cái bẫy đáng ghi: chẩn đoán cũ nghe **cực kỳ xuôi tai** (nó đúng về cơ chế — thêm
+  thứ không-phụ-thuộc-giờ thì pha loãng thật) và nó được viết ra ở thời điểm chưa ai tách dải. ⇒
+  **Trước khi đi sửa theo một chẩn đoán, tách con số gộp ra từng thành phần và hỏi thành phần nào
+  thật sự kéo nó xuống** (cùng họ `#22`).
+
+  **(3) VÀ MỘT PHÁT HIỆN VỀ CHÍNH PHÉP ĐO — CHƯA ĐƯỢC PHÉP TỰ SỬA.** `sweep-score.mjs` tính trục
+  chặng bằng cách **gộp 15 kỷ thành một vector trung bình rồi mới so**, đúng thứ mà chú thích của
+  trục KỶ trong CHÍNH file ấy cấm (*"gộp trước thì hai kỷ khác nhau ở bình minh nhưng ngược chiều ở
+  hoàng hôn sẽ TRIỆT TIÊU nhau"*). Trục kỷ đã được vá; trục chặng thì chưa bao giờ. Đo cả hai cách
+  trên cùng hai bản quét:
+
+  | cách | trước Bước C | sau Bước C | Δ |
+  |---|---:|---:|---:|
+  | A · gộp-trước (đang dùng) | 15,75 | **13,96** | −1,79 |
+  | B · so-từng-kỷ (cách trục kỷ) | 17,63 | **17,41** | −0,22 |
+
+  Ở cách B, kỷ tệ nhất trong cặp 6h↔15h còn **TỐT LÊN** (9,09 → 9,70). ⚠️ **KHÔNG được lặng lẽ đổi
+  sang cách B**: ba mốc 20,7 / 17 / 14 đều hiệu chuẩn trên cách A, nên đổi ruột phép đo mà giữ
+  ngưỡng cũ là tạo ra một ngưỡng chưa hiệu chuẩn — đúng cái phễu Phase 9A, và đúng thứ Đàm gọi là
+  *"định nghĩa lại câu hỏi cho vừa câu trả lời"*. Ghi ra để Đàm quyết, không tự làm.
+
+- **Recommended Solution (CẬP NHẬT)**: ⚠️ **KHÔNG làm bản vá vùng quê** — nó nhắm sai dải. Ba hướng,
+  chờ Đàm chọn:
+  (a) **làm BẦU TRỜI 6h khác BẦU TRỜI 15h** — đây là dải dẹt nhất (9,29) và cũng là dải rẻ nhất để
+      sửa (`daylight.js` đã có sẵn trục giờ; không cần nguồn sáng mới). Đây là hướng tôi khuyến
+      nghị nếu Đàm muốn kéo con số lên;
+  (b) **sửa phép đo cho khớp trục kỷ** (chuyển sang cách B) — nhưng bắt buộc phải **hiệu chuẩn lại
+      ba mốc** bằng ảnh thật, không được mang ngưỡng cũ sang;
+  (c) **chấp nhận 13,96** và ghi rõ rằng cặp 6h↔15h là cặp cố ý gần nhau (cùng là ánh nắng xiên,
+      chỉ khác hướng) — có lý về vật lý, và đúng thứ `CLAUDE.md` đã ghi cho cặp bình minh↔hoàng hôn.
+- **Owner**: chưa ai · **Status**: **Open — NGƯỠNG ĐÃ CHẠM (13,96 < 14), chờ Đàm chọn hướng. Chẩn
+  đoán cũ ("vùng quê") đã bị số đo bác bỏ; đừng thực hiện bản vá ghi ở phần trên.**
 - **Số hiện hành (2026-08-19, sau VIỆC 1)**: cặp chặng gần nhất **16,5** · ngưỡng hành động **14** ·
   ngưỡng mắt **12**.
 

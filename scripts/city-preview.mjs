@@ -1477,7 +1477,16 @@ async function main() {
       // trông rất thuyết phục. Luôn gắn nhãn, kể cả ở giá trị mặc định: một cái tên chỉ đúng nhờ
       // "ai cũng biết mặc định là 40" là một cái tên sẽ nói dối vào ngày mặc định đổi.
       const sessTag = `-s${args.sessions}`;
-      const pngPath = resolve(OUT_DIR, `city-era${String(era).padStart(2, '0')}-${args.theme}${hourTag}${sessTag}${maskTag}${shadowTag}${focusTag}.png`);
+      // ⚠️ LẦN THỨ NĂM VÀ THỨ SÁU CỦA ĐÚNG CÁI BẪY TRÊN — `--width` VÀ `--zoom` (2026-08-20).
+      // Cả hai đổi KHUNG HÌNH mà không đổi tên file. Hậu quả đã xảy ra thật trong chính phiên
+      // nghiệm thu Bước C: một lượt `--width 1500` để soi cận cảnh đã lặng lẽ ĐÈ LÊN bốn tấm ảnh
+      // khung mặc định vừa dùng để chấm cổng phần trăm, nên `water-score.mjs` sau đó phải so một
+      // ảnh 1500 với một mặt nạ 1100. Nó NÉM LỖI thay vì trả số — cái gác cỡ ảnh làm đúng việc —
+      // nhưng nếu hai lượt tình cờ cùng bề ngang thì đã không có gì kêu, và bảng số sẽ là rác.
+      // Chỉ gắn nhãn khi KHÁC mặc định, để mọi tên file cũ vẫn tra được (không viết lại lịch sử).
+      const widthTag = args.width === 1100 ? '' : `-w${args.width}`;
+      const zoomTag = args.zoom === 1 ? '' : `-z${String(args.zoom).replace('.', 'p')}`;
+      const pngPath = resolve(OUT_DIR, `city-era${String(era).padStart(2, '0')}-${args.theme}${hourTag}${sessTag}${widthTag}${zoomTag}${maskTag}${shadowTag}${focusTag}.png`);
       let info = '';
       let hop = null;
       try {

@@ -12,7 +12,36 @@
 
 ---
 
-## 2026-08-20 (mới nhất) — BƯỚC C: mặt nước trải ra 14/15 kỷ, chỉ kỷ 1 còn khô (ADR-042)
+## 2026-08-20 (mới nhất) — NGHIỆM THU BƯỚC C: cái thước sai, không phải cái cổng sai
+
+**Mục đích.** Đàm ra lệnh soi ba kỷ trông khô trên bản quét (1 · 4 · 5), nhìn hai kiểu nước lần đầu
+có hình (`estuary` · `canal`), đo lại trục chặng ngày, rồi đóng VIỆC 2. Không sửa mỹ thuật.
+
+**Phạm vi.** **Không một dòng `src/` nào đổi.** Mới: `scripts/water-score.mjs` (chấm % khung trên
+ẢNH ĐÃ DỰNG, 6 ca tự kiểm, cả 6 đã thử-cho-đỏ đúng chỗ nêu trước). Sửa: `scripts/water-view.mjs`
+(chú thích nói thật về giới hạn của nó) · `scripts/sweep-score.mjs` (in 2 chữ số ở dòng tổng) ·
+`scripts/waterView.test.js` (đổi tên bài + thông điệp assert cho khỏi đọc nhầm) · tài liệu.
+
+**Ảnh hưởng — ba phát hiện, đều là về CÔNG CỤ ĐO chứ không phải về nước.**
+1. **Cổng nước: 5/14 kỷ đạt, không phải 11/14.** Phép tia của `water-view.mjs` chỉ dò trường cao độ
+   nên nó MÙ với cây cối — tia xuyên qua tán cây rồi chạm nước được ghi là "nước". Nói quá
+   1,04–3,01 lần, và lệch nặng nhất đúng ở kỷ nước hẹp bờ rậm, tức đúng những kỷ đứng sát cổng.
+   ⚠️ **Nhưng 14/14 kỷ có tương phản nước↔bờ 30,8–115,5 — cao hơn ngưỡng mắt 12 từ 2,6 tới 9,6 lần.**
+   Chỗ nào có nước thì nó ĐỌC RA là nước; vấn đề thuần tuý là DIỆN TÍCH (`TECH_DEBT #63`).
+2. **Kỷ 5 là một HÒN ĐẢO — khuyết tật sản phẩm thật.** 720 tia từ tâm, **0/720** ra được đất khô;
+   phép loang trên ô khô không ra nổi mép thế giới (8/8 kỷ có nước khác thì ra được). `MEANDER_NECK`
+   bị `SHORE_BAND` bịt kín cổ hào. Hai hằng số đúng khi đứng riêng, một QUAN HỆ không ai sở hữu
+   (`TECH_DEBT #64`, ba phương án, **chờ Đàm quyết**).
+3. **Trục chặng ngày 13,96 — đã chạm điều kiện "< 14", nhưng đơn thuốc cũ SAI.** Tách theo dải:
+   trời 9,29 · thành phố 11,50 · **mặt đất 19,14 (dải KHOẺ NHẤT, và Bước C làm nó nhích LÊN)**. Câu
+   "vùng quê không đổi theo giờ" bị chính số đo bác bỏ. **Không nới ngưỡng, không làm theo đơn cũ**
+   (`TECH_DEBT #55`, ba phương án, chờ Đàm quyết).
+
+**Tương thích.** Không đổi hành vi app, không đổi dữ liệu, không migration.
+
+---
+
+## 2026-08-20 — BƯỚC C: mặt nước trải ra 14/15 kỷ, chỉ kỷ 1 còn khô (ADR-042)
 
 **Mục đích.** Hoàn tất mảng địa thế: mọi kỷ mà `settingStyle.js` khai có nước nay đều **dựng hình
 thật**, không còn kỷ nào "khai có nước mà không thấy nước". Kỷ 1 (Göbekli Tepe, sườn núi) là kỷ khô
@@ -26,7 +55,9 @@ sắc nước · mật độ vùng quê · vòng rìa · chỗ giáp hai tấm. 
 `settingReaders.test.js` (bảng `NGUOI_DOC_DAU_CHAN` — mọi nơi chạm dấu chân nước phải đi qua một cửa).
 
 **Ảnh hưởng.** Lệnh vẽ **+1 CHỈ ở kỷ có nước**, mốc riêng từng kỷ đã cập nhật (`MOC_LENH_VE`); kỷ 1
-không đổi một đơn vị. 11/14 kỷ đạt cổng "nước ≥ 5% khung hình"; ba kỷ nước hẹp (6 · 7 · 10) trượt
+không đổi một đơn vị. ~~11/14 kỷ đạt cổng "nước ≥ 5% khung hình"~~ ⟵ **SAI, xem mục nghiệm thu
+2026-08-20 ngay trên: đo lại trên MÀN HÌNH chỉ 5/14; con số 11 là của một phép tia mù với cây cối**;
+ba kỷ nước hẹp (6 · 7 · 10) trượt
 vì **BỀ RỘNG** chứ không vì góc nhìn — Đàm đã chốt ghi ra tường minh đếm được
 (`TRUOT = [6, 7, 10]`), **KHÔNG hạ cổng 5%**. Xem `TECH_DEBT` #59 (đã đóng) · #60 · #61.
 

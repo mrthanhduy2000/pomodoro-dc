@@ -200,7 +200,14 @@ for (const p of phasePairs.slice(0, 5)) {
   console.log(`  ${p.d < EYE ? '✗' : '✓'} ${p.a} ↔ ${p.b}: ${p.d.toFixed(1)}`);
 }
 const phaseBad = phasePairs.filter((p) => p.d < EYE);
-console.log(`  cặp gần nhất ${phasePairs[0].d.toFixed(1)} · dưới ngưỡng mắt (${EYE}): `
+// ⚠️ HAI CHỮ SỐ, KHÔNG PHẢI MỘT — VÀ ĐÂY LÀ MỘT LỖI THẬT ĐÃ CẮN (2026-08-20, nghiệm thu Bước C).
+// Con số "cặp gần nhất" của trục CHẶNG là con số DUY NHẤT trong cả bảng được đem so với những
+// ngưỡng Đàm ra bằng miệng (`≥ 20,7` · `< 17` · `< 14`). Ở một chữ số, giá trị thật **13,9616**
+// in ra thành **"14.0"** — tức nó đọc y hệt một con số CHƯA chạm ngưỡng "< 14", trong khi nó đã
+// chạm. Một phép làm tròn HIỂN THỊ vừa che mất một cái cổng đã kích hoạt, và không có gì đỏ lên.
+// ⇒ LUẬT: con số nào được đem so với một ngưỡng thì in đủ chữ số để phép so ấy đọc được từ màn
+// hình. Các dòng LIỆT KÊ bên trên vẫn một chữ số — chúng để liếc, không để phán xử.
+console.log(`  cặp gần nhất ${phasePairs[0].d.toFixed(2)} · dưới ngưỡng mắt (${EYE}): `
   + `${phaseBad.length}/${phasePairs.length}`);
 
 // ── 2. Mười lăm kỷ có phân biệt được không? (105 cặp, lưới ô con của dải thành phố) ────────────
@@ -266,7 +273,7 @@ for (const p of eraPairs.slice(0, 5)) {
     + `  (chặng sát nhau nhất ${p.worst.toFixed(1)})`);
 }
 const med = eraPairs[Math.floor(eraPairs.length / 2)].d;
-console.log(`  cặp gần nhất ${eraPairs[0].d.toFixed(1)} · trung vị ${med.toFixed(1)} · `
+console.log(`  cặp gần nhất ${eraPairs[0].d.toFixed(2)} · trung vị ${med.toFixed(2)} · `
   + `dưới ngưỡng mắt (${EYE}): ${eraBad.length}/${eraPairs.length}`);
 
 // ── 3. Kết luận ───────────────────────────────────────────────────────────────────────────────

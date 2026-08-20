@@ -27,7 +27,8 @@
 >
 > | Cổng | Kết quả |
 > |---|---|
-> | 11 kỷ đạt cổng nước ≥ 5% khung hình | ✅ đạt |
+> | 11 kỷ đạt cổng nước ≥ 5% khung hình | ❌ **SAI — xem đính chính ngay dưới bảng.** Trên MÀN HÌNH chỉ **5/14** |
+> | Nước có ĐỌC RA là nước không (tương phản ≥ ngưỡng mắt 12) | ✅ **14/14 kỷ**, thấp nhất **30,8** — cao gấp 2,6 lần ngưỡng |
 > | Ba kỷ 6 · 7 · 10 rơi ĐÚNG vào bảng `TRUOT` | ✅ `assert.deepEqual(TRUOT, [6, 7, 10])`, đỏ CẢ HAI CHIỀU |
 > | Kỷ khô: lệnh vẽ không đổi | ✅ kỷ 1 giữ nguyên **9** lệnh vẽ (mốc riêng của nó) |
 > | Kỷ khô: ảnh không đổi — ĐO bằng `--frame` | ✅ **0,0%** điểm ảnh đổi · lệch trung bình **0,00** |
@@ -49,12 +50,22 @@
 >   Vệt nước THẲNG tăm tắp, hẹp, mép sắc — không lẫn được với sông tự nhiên, đúng ý "người đào".
 >   Nhưng nó nằm tận góc xa, giữa nó và dãy nhà máy là một vạt đất trống rộng. ⚠️ Đây là ca đáng
 >   theo dõi nhất cho `TECH_DEBT #61`: nó **trượt** cổng 5% và mắt cũng **không** đọc ra thành phố
->   bên kênh ⇒ cổng và mắt VẪN ĐỒNG Ý, chưa có bằng chứng cổng sai đại lượng.
+>   bên kênh ⇒ cổng và mắt VẪN ĐỒNG Ý, chưa có bằng chứng cổng sai đại lượng. ⚠️ Nghiệm thu ngày
+>   2026-08-20 đo thêm: kênh này có **tương phản mạnh NHẤT bảng (103,2)** mà chỉ chiếm **1,18%**
+>   khung — tức rất RÕ nhưng rất ÍT. Hai câu hỏi khác nhau, đừng để một cột gánh cả hai.
 > · **`meander` kỷ 5 (Burg Eltz) — ĐẠT, NHƯNG SÁT MÉP.** Dòng nước ôm rìa trái và hai góc dưới,
 >   đọc được là một khe suối vòng quanh mỏm đất. Nó **đạt** cổng 5%, nhưng phần lớn diện tích ấy
 >   nằm ở VIỀN khung hình chứ không cắt qua giữa cảnh. Kỷ 5 cũng là kỷ nông nhất bảng (chỉ chạm
->   **20,1%** độ sâu đáy tối đa) nên sắc nước nhạt. Chưa phải lỗi — nhưng nếu ngày nào `TECH_DEBT
->   #61` phải mở lại, đây là ca thứ hai đáng đo.
+>   **20,1%** độ sâu đáy tối đa) nên sắc nước nhạt.
+>   ⚠️⚠️ **ĐÍNH CHÍNH 2026-08-20 — HAI CÂU TRÊN ĐỀU SAI, VÀ CHÚNG SAI VÌ TIN MỘT PHÉP ĐO MÙ.**
+>   (a) Kỷ 5 **KHÔNG đạt** cổng 5%: trên màn hình nó chỉ **3,34%** (phép tia báo 5,62%).
+>   (b) Nó không phải "khe suối vòng quanh mỏm đá" mà là một **HÀO KHÉP KÍN hình vuông**: bắn 720
+>   tia từ tâm ra mọi hướng thì **0/720 tia** ra được đất khô, và phép loang trên ô khô KHÔNG ra
+>   nổi mép thế giới (8/8 kỷ có nước khác thì ra được). Thành phố kỷ 5 là một HÒN ĐẢO.
+>   Nguyên nhân: `MEANDER_NECK = 1,6` bị `min(d[doi], …)` bóp lại, mà sát mép lưới thì
+>   `d[doi] < SHORE_BAND = 0,9` ⇒ cổ hào bị bịt kín. **Hai hằng số, mỗi cái đúng khi đứng riêng,
+>   và một QUAN HỆ giữa chúng không ai sở hữu** — đúng hình dạng `TECH_DEBT #57`. Ghi ở
+>   **`TECH_DEBT #64`**, ba phương án, **CHỜ ĐÀM QUYẾT**.
 >
 > ⚠️ **`bash scripts/bench-macbook.sh` — CHƯA CHẠY ĐƯỢC Ở ĐÂY, VÀ ĐÓ LÀ THIẾT KẾ.** Hộp cát AI
 > chạy WebGL bằng SwiftShader (tô hình bằng CPU); chính script ấy **tự dừng ở cảnh đầu** khi thấy
@@ -944,11 +955,49 @@ yên tuyệt đối ở CẢ HAI cột** (tam giác và lệnh vẽ), đúng ba 
 mới nhận **+1 lệnh vẽ mỗi kỷ, không kỷ nào +2**; tổng tam giác **NHẸ ĐI 17.438 (−0,8%)** vì chỗ nào
 thành nước thì cây/đá/mảng phủ ở đó biến mất.
 
-**CỔNG NƯỚC ≥ 5% KHUNG HÌNH** (`scripts/water-view.mjs`, camera mặc định): kỷ 2 **5,52%** · 3
-**5,32%** · 4 **5,02%** · 5 **5,62%** · 8 **9,96%** · 9 **5,68%** · 11 **9,97%** · 12 **9,32%** · 13
-**24,12%** · 14 **23,75%** · 15 **20,80%** ⇒ **11 kỷ ĐẠT**. Trượt đúng ba kỷ Đàm đã chốt: 6
-**4,13%** · 7 **2,40%** · 10 **1,62%**, khoá bằng `assert.deepEqual(TRUOT, [6, 7, 10])` đỏ cả hai
-chiều. ⚠️ **Kỷ 4 chỉ vượt cổng 0,02 điểm phần trăm** — mỏng nhất bảng, đã ghi thành rủi ro.
+**CỔNG NƯỚC ≥ 5% KHUNG HÌNH — BẢNG NÀY ĐO BẰNG PHÉP TIA, VÀ PHÉP TIA MÙ VỚI CÂY CỐI.**
+`scripts/water-view.mjs` (camera mặc định): kỷ 2 **5,52%** · 3 **5,32%** · 4 **5,02%** · 5 **5,62%**
+· 8 **9,96%** · 9 **5,68%** · 11 **9,97%** · 12 **9,32%** · 13 **24,12%** · 14 **23,75%** · 15
+**20,80%** ⇒ 11 kỷ vượt 5% **THEO PHÉP TIA**. Trượt đúng ba kỷ Đàm đã chốt: 6 **4,13%** · 7
+**2,40%** · 10 **1,62%**, khoá bằng `assert.deepEqual(TRUOT, [6, 7, 10])` đỏ cả hai chiều.
+
+⚠️⚠️ **ĐÍNH CHÍNH 2026-08-20 — CON SỐ "11 KỶ ĐẠT" LÀ SAI. TRÊN MÀN HÌNH CHỈ 5/14.** Phép tia bắn từ
+đúng camera của app và hỏi *"tia này chạm nước trước hay chạm đất trước?"* — nghe là đúng câu, nhưng
+hàm dò mặt đất của nó (`caoDoTai`) chỉ đọc **trường cao độ**, nó KHÔNG biết cây cối/nhà cửa/đá/cư
+dân tồn tại. Tia xuyên qua tán cây rồi chạm nước phía sau được ghi là "nước", còn màn hình vẽ ra một
+cái cây. Sai số **không đều**: lớn nhất đúng ở kỷ nước HẸP và bờ RẬM — tức đúng những kỷ đang đứng
+sát cổng. Đo lại bằng `scripts/water-score.mjs` (đọc mặt nạ `--mask water` do chính GPU tô, không
+đoán bằng màu):
+
+| kỷ | kiểu | tia | **màn hình** | cổng 5% | tương phản nước↔bờ |
+|---:|---|---:|---:|:--:|---:|
+| 2 | river | 5,52% | **3,77%** | TRƯỢT | 43,6 |
+| 3 | river | 5,32% | **3,87%** | TRƯỢT | 73,2 |
+| 4 | river | 5,02% | **3,32%** | TRƯỢT | 44,2 |
+| 5 | meander | 5,62% | **3,34%** | TRƯỢT | 41,7 |
+| 6 | river | 4,13% | **1,37%** | TRƯỢT | 37,2 |
+| 7 | river | 2,40% | **1,49%** | TRƯỢT | 60,8 |
+| 8 | estuary | 9,96% | **7,40%** | **ĐẠT** | 70,7 |
+| 9 | river | 5,68% | **2,82%** | TRƯỢT | 64,9 |
+| 10 | canal | 1,62% | **1,18%** | TRƯỢT | 103,2 |
+| 11 | estuary | 9,97% | **5,42%** | **ĐẠT** | 52,0 |
+| 12 | river | 9,32% | **4,84%** | TRƯỢT | 30,8 |
+| 13 | sea | 24,12% | **23,18%** | **ĐẠT** | 75,2 |
+| 14 | sea | 23,75% | **20,09%** | **ĐẠT** | 67,4 |
+| 15 | sea | 20,80% | **19,05%** | **ĐẠT** | 115,5 |
+
+⇒ **5/14 đạt cổng, không phải 11/14.** ⚠️ **NHƯNG cột cuối mới là cột an ủi: 14/14 kỷ có tương phản
+30,8–115,5, tức cao hơn ngưỡng mắt 12 từ 2,6 đến 9,6 lần.** Chỗ nào CÓ nước thì nó ĐỌC RA là nước;
+vấn đề thuần tuý là DIỆN TÍCH. **Cái cổng không sai — cái THƯỚC mới sai.** Phân vai từ nay:
+`water-view.mjs` trả lời *"xoay camera thì TRẦN là bao nhiêu"* (cây đứng yên khi xoay nên sai số
+triệt tiêu phần lớn, và nó chạy không cần Chromium); `water-score.mjs` trả lời *"hôm nay Đàm thật sự
+THẤY bao nhiêu"* và **chỉ nó được dùng chấm cổng phần trăm**. Ghi ở `TECH_DEBT #63`; mục `#62`
+("kỷ 4 vượt cổng 0,02 điểm") **đã đóng vì TIỀN ĐỀ SAI — kỷ 4 chưa bao giờ vượt cổng**.
+
+⚠️ Đàm từng đề xuất thay cổng bằng **CHIỀU DÀI ĐƯỜNG BỜ CẮT KHUNG**. Đã đo, và **PHẢI BÁC**: kỷ 5
+có đường bờ DÀI NHẤT bảng (1,879) mà đọc ra kém nhất, còn ba kỷ biển 13/14/15 có đường bờ NGẮN NHẤT
+(1,108 · 1,012 · 1,158) mà không thể nhầm được. Hai đại lượng **tương quan NGƯỢC**. Ba phương án
+thay thế đã ghi ở `TECH_DEBT #61`, **CHỜ ĐÀM QUYẾT**.
 
 **ADR-007 CHẠY LẠI, CÓ SỐ:** lưới tích 15 kỷ × 5 mốc công trình × 151 mốc phiên = **20.310 bước so**
 (11.250 theo trục thời gian + 9.060 theo trục công trình) ⇒ **0 bị dời · 0 biến mất**; 100% bước xây
@@ -957,8 +1006,29 @@ thêm làm thành phố lớn thêm. Và **2.016 ô lưới** (144 ô × 14 kỷ
 **BẢN QUÉT 15 KỶ, HAI CHẾ ĐỘ.** Dải: **15/15** cặp chặng (gần nhất 14,0) và **105/105** cặp kỷ (gần
 nhất 21,8 · trung vị 40,7) — không trôi. `--frame` trước↔sau: trung vị **2,2**, và **kỷ 1 · 12 · 14
 đều đúng 0,0** — ba kỷ không đổi, hiện ra trong chính phép đo ảnh. ⚠️ Trục CHẶNG tiếp tục tụt (16,5
-→ 15,7 → **14,0**) đúng như `TECH_DEBT #55` đã dự đoán: mặt nước GIỐNG NHAU ở cả 6 chặng nên nó pha
-loãng phép đo chặng, y hệt vùng quê. Vẫn cao hơn ngưỡng mắt 12 khoảng 17%.
+→ 15,7 → **13,96**).
+
+⚠️⚠️ **ĐO LẠI 2026-08-20 THEO YÊU CẦU §3 CỦA ĐÀM — ĐIỀU KIỆN "< 14" ĐÃ CHẠM (13,9616), VÀ CHẨN ĐOÁN
+CŨ GHI Ở TRÊN BỊ CHÍNH SỐ ĐO BÁC BỎ.** Tách theo dải thì thấy ngay:
+
+| dải | cặp chặng gần nhất | so ngưỡng mắt 12 |
+|---|---:|---|
+| trời | **9,29** | DƯỚI ngưỡng |
+| thành phố | **11,50** | DƯỚI ngưỡng |
+| mặt đất (gồm vùng quê + nước) | **19,14** | TRÊN ngưỡng — dải KHOẺ NHẤT |
+
+Dải mặt đất qua 6 chặng: 68,8 → 82,2 → 97,6 → 79,8 → 61,2 → 36,7 — **vùng quê CÓ phản ứng với giờ
+trong ngày**, rất mạnh. Và Bước C gần như không đụng tới nó (19,04 → **19,14**, tức nhích LÊN). ⇒
+Câu *"vùng quê không đổi theo giờ nên pha loãng"* **SAI**; thứ đang kéo con số xuống là **TRỜI** và
+**THÀNH PHỐ**, hai dải vốn đã dưới ngưỡng. Bài thuốc mà `TECH_DEBT #55` kê (làm vùng quê đổi theo
+giờ) sẽ bồi thêm cho dải ĐANG KHOẺ NHẤT — đúng thứ không cần. **KHÔNG nới ngưỡng, KHÔNG làm theo
+đơn thuốc cũ; ba phương án mới đã ghi ở `#55`, CHỜ ĐÀM QUYẾT.**
+
+⚠️ Kèm một cái bẫy đã tránh: phép đo trục CHẶNG hiện gộp 6 chặng thành một vector rồi mới so (cách
+A), trong khi trục KỶ đã được dự án sửa sang cách B (so TỪNG chặng rồi lấy trung bình — xem
+`TECH_DEBT #22`). Đo thử cách B: 17,63 → **17,41**, và kỷ tệ nhất của cặp còn KHÁ LÊN (9,09 → 9,70).
+**KHÔNG đổi thước** — ba con số lịch sử 20,7 / 16,5 / 14,0 đều hiệu chuẩn trên cách A; đổi thước
+giữa chừng là tạo ra một ngưỡng chưa hiệu chuẩn, đúng cái phễu Phase 9A.
 
 **KỶ KHÔ — ĐO BẰNG `--frame`, KHÔNG KẾT LUẬN TỪ `md5`.** Kỷ 1 trước↔sau: **0,0%** điểm ảnh đổi quá
 ngưỡng mắt, lệch trung bình **0,00** (md5 cũng trùng, nhưng đó chỉ là bằng chứng phụ). **Đối chứng

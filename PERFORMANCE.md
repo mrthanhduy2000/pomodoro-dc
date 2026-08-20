@@ -29,6 +29,27 @@ thuần**, không liên quan gì tới sức máy. Mốc lệnh vẽ riêng từ
 `bash scripts/bench-macbook.sh` chạy **một lần ở cuối Bước C** như một lượt làm mới số liệu — **không
 phải một cổng, không phải một blocker**. Mọi bộ số dưới đây vẫn giữ nguyên giá trị lịch sử của nó.
 
+⚠️ **ĐÃ CHẠY 2026-08-20 (nghiệm thu Bước C) — VÀ NÓ TỰ DỪNG Ở CẢNH ĐẦU, ĐÚNG THIẾT KẾ.** Hộp cát AI
+tô hình bằng CPU (`ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero)), SwiftShader driver)`),
+nên script in nguyên khối `!!! DỪNG. Trình duyệt KHÔNG dùng card đồ hoạ thật.` rồi thoát thay vì đẻ
+ra một bảng ms vô nghĩa. **Bộ số M3 ngày 2026-08-17 dưới đây vẫn là bộ số hiện hành**; muốn làm mới
+thì phải chạy trên MacBook của Đàm. Cái gác ấy **còn sống, không phải mã chết** — lần chạy này là
+bằng chứng.
+
+✅ **NHƯNG NÓ CHO MỘT ĐỐI CHIẾU CHÉO MIỄN PHÍ, VÀ ĐÓ MỚI LÀ THỨ ĐÁNG GHI.** `renderer.info` đếm cùng
+một thứ bất kể bộ tô hình là GPU hay CPU, nên phần `[stats]` của cảnh đầu tiên vẫn dùng được. Kỷ 3 ·
+12 giờ · `--sessions 80 --level 3` (đúng đầu vào của bảng Bước C bên dưới) ra:
+
+| | thành phố | nền (trời+núi) | tổng |
+|---|---:|---:|---:|
+| lệnh vẽ | 11 | 2 | **13** |
+| tam giác | 77.918 | 44.126 | **122.044** |
+
+Bảng "Sau VIỆC 2 Bước C" ghi kỷ 3 = **122.044 tam giác · 13 lệnh vẽ**. **Khớp từng đơn vị**, bằng
+một đường đo hoàn toàn độc lập (Chromium `renderer.info` ↔ phép duyệt cảnh thuần của
+`scene-count.mjs`). Đây đúng là phép đối chiếu mà `TECH_DEBT #43` kê đơn sau khi 6/15 dòng của bảng
+Phase 11 trôi trong im lặng — và lần này nó nói: **bảng Bước C KHÔNG trôi.**
+
 ---
 
 ## Đo bằng gì, lúc nào

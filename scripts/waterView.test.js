@@ -58,7 +58,26 @@ test('BA LỚP PHẢI CỘNG ĐÚNG 100% — mọi phép chia-một-toàn-thể 
   }
 });
 
-test('TECH_DEBT #57 ĐÃ ĐÓNG — 11 kỷ đạt cổng 5%, và ĐÚNG BA kỷ trượt vì BỀ RỘNG, không vì góc nhìn', () => {
+test('TECH_DEBT #57 ĐÃ ĐÓNG — 11 kỷ vượt cổng 5% THEO PHÉP TIA, và ĐÚNG BA kỷ trượt vì BỀ RỘNG, không vì góc nhìn', () => {
+  // ⚠️⚠️ ĐỌC DÒNG NÀY TRƯỚC KHI TRÍCH CON SỐ 11 ĐI ĐÂU KHÁC (đính chính 2026-08-20).
+  //
+  // Bài này đo bằng `tiLeNuocTrongKhung` — PHÉP TIA — và phép tia **mù với cây cối, nhà cửa, đá,
+  // cư dân**: nó chỉ dò trường cao độ mặt đất. Một tia xuyên qua tán cây rồi chạm mặt nước phía
+  // sau được ghi là "nước", còn màn hình vẽ ra một cái cây. Đối chiếu với số điểm ảnh đếm thẳng
+  // trên ảnh `--mask water` (`scripts/water-score.mjs`), phép tia cao hơn sự thật 1,04–3,01 lần,
+  // và cao nhất đúng ở những kỷ nước HẸP bờ RẬM — tức đúng những kỷ đang đứng sát cổng:
+  //
+  //     kỷ 4  tia 5,02% · màn hình 3,32%      kỷ 5  tia 5,62% · màn hình 3,34%
+  //     kỷ 6  tia 4,13% · màn hình 1,37%      kỷ 13 tia 24,12% · màn hình 23,18%
+  //
+  // ⇒ Trên MÀN HÌNH chỉ **5/14** kỷ đạt 5% (8 · 11 · 13 · 14 · 15), không phải 11. Xem
+  // `TECH_DEBT #63`.
+  //
+  // ⚠️ VẬY VÌ SAO KHÔNG XOÁ BÀI NÀY ĐI. Vì nó vẫn canh đúng thứ nó sinh ra để canh: rằng
+  // `worldYaw` (ADR-041) còn quay mặt nước về phía camera, và rằng đúng ba kỷ hẹp 6·7·10 là ba kỷ
+  // yếu nhất. Cả hai mệnh đề ấy là mệnh đề SO SÁNH giữa các kỷ, và một phép đo lệch ĐỀU THEO MỘT
+  // CHIỀU vẫn giữ được thứ tự. Cái sai nằm ở việc đọc con số tuyệt đối của nó thành một cái cổng.
+  // ⇒ Cổng phần trăm phải chấm bằng `scripts/water-score.mjs`; bài này chỉ khoá phép tia khỏi trôi.
   // ⚠️ BÀI NÀY THAY CHO BÀI "KHUYẾT TẬT VẪN CÒN NGUYÊN". Cái chuông đã reo (2026-08-20) và nay nó
   // đổi việc: từ *canh cho khuyết tật đừng bị quên* sang *canh cho bản vá đừng bị mất*.
   //
@@ -105,7 +124,9 @@ test('TECH_DEBT #57 ĐÃ ĐÓNG — 11 kỷ đạt cổng 5%, và ĐÚNG BA kỷ
     'đúng ba kỷ nước HẸP được miễn cổng 5% (`TECH_DEBT #59`, Đàm chốt hướng (b) ngày 2026-08-20). '
     + 'Danh sách này đổi nghĩa là hoặc có kỷ thứ tư vừa tụt xuống, hoặc một trong ba kỷ ấy vừa '
     + 'được chữa — cả hai trường hợp đều phải xem lại `TECH_DEBT #59` chứ không phải sửa con số ở đây.');
-  assert.equal(DAT.length, 11, 'phải có đúng 11 kỷ đạt cổng 5%');
+  assert.equal(DAT.length, 11,
+    'phải có đúng 11 kỷ vượt 5% THEO PHÉP TIA. ⚠️ KHÔNG phải "11 kỷ đạt cổng 5%" — trên màn hình '
+    + 'chỉ 5 kỷ đạt (xem khối chú thích đầu bài và `TECH_DEBT #63`).');
 
   // Vế thật sự canh bản vá `worldYaw`: 11 kỷ kia phải THẬT SỰ đạt.
   for (const era of DAT) {

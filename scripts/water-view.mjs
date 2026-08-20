@@ -17,6 +17,15 @@
  * trước?"*. Không có một bộ lọc màu nào — `TECH_DEBT #22` đã trả giá ba phase cho việc ĐOÁN xem
  * điểm ảnh nào là cái gì.
  *
+ * ⚠️⚠️ ĐÍNH CHÍNH 2026-08-20 — ĐOẠN NGAY TRÊN CHỈ ĐÚNG MỘT NỬA, VÀ NỬA SAI ĐÃ SINH RA MỘT BỘ SỐ
+ * NGHIỆM THU SAI. Lý lẽ *"đo trần thì phải bắn tia"* vẫn đúng. Nhưng câu *"khỏi đếm điểm ảnh"* thì
+ * sai, vì phép tia ở đây **mù với cây cối, nhà cửa, đá và cư dân** — nó chỉ dò trường cao độ mặt
+ * đất. Đo đối chiếu với `--mask water`: phép tia cao hơn sự thật **1,04 tới 3,01 lần** tuỳ kỷ, và
+ * cao nhất đúng ở những kỷ nước hẹp bờ rậm — tức đúng những kỷ đang đứng sát cổng. Vì tin nó, bảng
+ * nghiệm thu Bước C từng ghi *"11/14 kỷ đạt cổng 5%"* trong khi sự thật trên màn hình là **5/14**.
+ * ⇒ Công cụ này dùng để so CÁC GÓC XOAY của CÙNG MỘT KỶ (cây đứng yên nên sai số triệt tiêu phần
+ * lớn). Cổng phần trăm thì phải chấm trên `--mask water`. Chi tiết ở chú thích `hopBaoNuoc`.
+ *
  * ⚠️ PHÉP ĐO NÀY MIỄN NHIỄM VỚI CÁI BẪY ĐÃ CẮN `frame-fit.mjs` (vector `right` viết ngược dấu, số
  * đúng mà NHÃN mép sai). Lý do: tập tia `fwd + right·sx + up·sy` quét sx, sy trên hai khoảng ĐỐI
  * XỨNG, nên đảo dấu `right` cho ra ĐÚNG CÙNG MỘT TẬP TIA. Nó chỉ ảnh hưởng nếu ta báo cáo "nước
@@ -53,7 +62,40 @@ const chuan = (v) => { const l = Math.hypot(v[0], v[1], v[2]); return [v[0] / l,
 const tru = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
 const cheo = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
 
-/** Hộp bao tấm nước, đọc THẲNG từ hình học đã dựng — không dựng lại bằng công thức thứ hai. */
+/**
+ * Hộp bao tấm nước, đọc THẲNG từ hình học đã dựng — không dựng lại bằng công thức thứ hai.
+ *
+ * ⚠️ ĐỌC KỸ TRƯỚC KHI TIN CON SỐ HÀM NÀY GÓP PHẦN TẠO RA — PHÉP TIA Ở FILE NÀY MÙ VỚI CÂY CỐI.
+ *
+ * Bài học 2026-08-20, và nó đáng nhớ vì tôi đã đoán SAI nguyên nhân trước khi đo. Phép tia ở đây
+ * cho ra một bộ % khung hình **cao hơn sự thật một cách có hệ thống**: đối chiếu với số điểm ảnh
+ * đếm thẳng trên ảnh `--mask water` (mặt nạ tô đúng những điểm ảnh mà GPU thật sự vẽ ra là nước):
+ *
+ *   kỷ  4  tia 5,02% · màn hình 3,32%  (tia cao hơn 1,51 lần)  ⟵ tưởng ĐẠT cổng 5%, thật ra TRƯỢT
+ *   kỷ  5  tia 5,62% · màn hình 3,34%  (1,68 lần)              ⟵ tưởng ĐẠT, thật ra TRƯỢT
+ *   kỷ  6  tia 4,13% · màn hình 1,37%  (3,01 lần)              ⟵ lệch nặng nhất bảng
+ *   kỷ  8  tia 9,96% · màn hình 7,40%  (1,35 lần)
+ *   kỷ 13  tia 24,12% · màn hình 23,18% (1,04 lần)             ⟵ biển: lệch ít nhất
+ *
+ * GIẢ THUYẾT ĐẦU TIÊN (SAI, ghi lại để phiên sau đừng đi lại): *"hộp bao đếm cả lỗ thủng, vì
+ * `buildWaterSurface` bỏ hẳn những ô có `blendAt <= 0` ở cả bốn góc"*. Nghe rất xuôi, và đo được
+ * rằng hộp bao kỷ 5 chỉ được phủ 42,2% bởi `blendAt > 0`. Đã vá theo giả thuyết ấy (thêm điều kiện
+ * `blendAt > 0` ở chỗ bắn tia bên dưới) — và **các con số không nhúc nhích một chữ số nào**. Lý do:
+ * phần hộp bao bị thủng luôn có ĐẤT nhô cao hơn mặt phẳng nước, nên phép so `tNuoc < tDat` vốn đã
+ * loại chúng ra từ trước. Điều kiện mới vì vậy là một phép LOẠI NHANH đúng-về-nguyên-tắc (hỏi đúng
+ * câu mà bên dựng hỏi) chứ KHÔNG phải một bản vá — nó được giữ lại vì rẻ và vì nó chặn ngày nào
+ * hộp bao và tấm nước thật sự lệch nhau, không phải vì hôm nay nó sửa được gì.
+ *
+ * NGUYÊN NHÂN THẬT nằm ở `caoDoTai` bên dưới: nó chỉ dò **trường cao độ mặt đất**
+ * (`surfaceHeightAt`/`horizon.heightAt`) và hoàn toàn KHÔNG biết cây cối, nhà cửa, đá, cư dân tồn
+ * tại. Một tia xuyên qua tán cây rồi chạm mặt nước phía sau ⇒ phép tia ghi "nước", còn màn hình vẽ
+ * ra một cái cây. Vì thế sai số lớn nhất rơi đúng vào những kỷ nước HẸP và bờ RẬM (kỷ 6: 3,01 lần)
+ * và nhỏ nhất ở biển rộng (kỷ 13: 1,04 lần) — đúng thứ tự mà một phép mù-cây phải có.
+ *
+ * ⇒ LUẬT: dùng phép tia ở đây để so các GÓC XOAY của CÙNG MỘT KỶ với nhau (cây đứng yên khi xoay,
+ * nên sai số triệt tiêu phần lớn). ĐỪNG dùng nó làm con số nghiệm thu tuyệt đối, và tuyệt đối
+ * đừng dùng nó để chấm một cái cổng phần trăm — cổng phải chấm trên `--mask water`.
+ */
 function hopBaoNuoc(water) {
   const p = water.geometry.getAttribute('position').array;
   let x0 = Infinity; let x1 = -Infinity; let z0 = Infinity; let z1 = -Infinity;
@@ -117,6 +159,9 @@ export function tiLeNuocTrongKhung({ era, yaw = DEFAULT_YAW, gridSize = GRID, ti
   };
 
   let nuoc = 0; let dat = 0; let khong = 0;
+  // 0 = trời · 1 = đất · 2 = nước. Giữ lại để `duongBoCatKhung` đọc, thay vì quét lần thứ hai bằng
+  // một công thức thứ hai (bài học "một luật một công thức" — cặp công cụ dựng ↔ công cụ đo).
+  const loai = new Uint8Array(raysX * raysY);
   for (let py = 0; py < raysY; py += 1) {
     for (let px = 0; px < raysX; px += 1) {
       const sx = (((px + 0.5) / raysX) * 2 - 1) * tanX;
@@ -133,7 +178,9 @@ export function tiLeNuocTrongKhung({ era, yaw = DEFAULT_YAW, gridSize = GRID, ti
         if (t > 0) {
           const x = E[0] + d[0] * t;
           const z = E[2] + d[2] * t;
-          if (x >= bao.x0 && x <= bao.x1 && z >= bao.z0 && z <= bao.z1) tNuoc = t;
+          // Hộp bao chỉ là phép LOẠI NHANH. Câu hỏi thật phải là câu mà `buildWaterSurface` hỏi.
+          if (x >= bao.x0 && x <= bao.x1 && z >= bao.z0 && z <= bao.z1
+            && terrain.setting.blendAt(x + half, z + half) > 0) tNuoc = t;
         }
       }
 
@@ -146,13 +193,74 @@ export function tiLeNuocTrongKhung({ era, yaw = DEFAULT_YAW, gridSize = GRID, ti
         if (y <= caoDoTai(x, z)) { tDat = t; break; }
       }
 
-      if (tNuoc < tDat) nuoc += 1;
-      else if (tDat < Infinity) dat += 1;
-      else khong += 1;
+      if (tNuoc < tDat) { nuoc += 1; loai[py * raysX + px] = 2; }
+      else if (tDat < Infinity) { dat += 1; loai[py * raysX + px] = 1; }
+      else { khong += 1; loai[py * raysX + px] = 0; }
     }
   }
   const tong = raysX * raysY;
-  return { nuoc: nuoc / tong, dat: dat / tong, khong: khong / tong };
+  return {
+    nuoc: nuoc / tong, dat: dat / tong, khong: khong / tong, loai, raysX, raysY,
+  };
+}
+
+/**
+ * ĐƯỜNG BỜ CẮT KHUNG DÀI BAO NHIÊU — đại lượng Đàm chỉ định làm phương án thay thế cho cổng 5%.
+ *
+ * ⚠️ VÌ SAO CẦN NÓ. Cổng cũ đo **DIỆN TÍCH** nước, còn câu hỏi thật là *"có đọc ra là thành phố
+ * ven nước không"* — mà thứ quyết định điều đó là **đường bờ có cắt qua khung hình không**. Hai
+ * đại lượng ấy rời nhau ở đúng chỗ nguy hiểm: một dải nước áp sát MÉP TRÊN của khung có thể đạt
+ * 5% diện tích mà mắt không đọc ra, vì nó không chia đôi cảnh vật thành "bên này bờ" và "bên kia
+ * bờ". Đây chính là điều kiện xem lại Đàm viết ra ở `TECH_DEBT #61`, và nó ĐÃ kích hoạt ở kỷ 4.
+ *
+ * Cách đo: đếm các cạnh giữa hai tia KỀ NHAU mà một tia trúng nước còn tia kia trúng ĐẤT, rồi chia
+ * cho đường chéo khung (tính theo đơn vị tia). Ra một số không thứ nguyên, so được giữa các kỷ và
+ * giữa hai độ mịn lưới tia.
+ *
+ * ⚠️ CHỈ ĐẾM RANH GIỚI NƯỚC↔ĐẤT, KHÔNG ĐẾM NƯỚC↔TRỜI. Mép xa của một mặt biển giáp với chân
+ * trời, không phải với bờ — gộp chúng lại thì kỷ `sea` được cộng không công một đoạn dài bằng cả
+ * bề ngang khung hình, và đại lượng này lập tức thoái hoá về đúng cái nó sinh ra để thay thế.
+ *
+ * ⚠️ VÀ NÓ KHÔNG THAY THẾ ĐƯỢC CÂU HỎI "NHÌN CÓ RA NƯỚC KHÔNG". Phép đo này thuần HÌNH HỌC — nó
+ * không biết mặt nước được TÔ màu gì. Kỷ 5 là đối chứng sống: đường bờ của nó dài, mà trên màn hình
+ * vẫn không đọc ra là nước vì lòng quá nông nên sắc nước gần như trùng màu cỏ (xem `docSacNuoc`).
+ * Hai câu hỏi khác nhau ⇒ hai phép đo khác nhau, đừng để một cái gánh cả hai.
+ *
+ * @returns {{daiTuongDoi:number, canhBo:number, vaoSauNhat:number}}
+ *   `daiTuongDoi` = chiều dài đường bờ / đường chéo khung ·
+ *   `vaoSauNhat` = tia nước lấn sâu nhất vào trong khung, tính theo tỉ lệ nửa-khung
+ *   (0 = dính mép, 1 = tới tâm) — số chẩn đoán phụ, KHÔNG phải cổng.
+ */
+export function duongBoCatKhung({ era, yaw = DEFAULT_YAW, gridSize = GRID, tia = RAYS_X }) {
+  const { loai, raysX, raysY } = tiLeNuocTrongKhung({ era, yaw, gridSize, tia });
+  const at = (x, y) => loai[y * raysX + x];
+  let canhBo = 0;
+  for (let y = 0; y < raysY; y += 1) {
+    for (let x = 0; x < raysX; x += 1) {
+      const c = at(x, y);
+      if (c !== 2) continue;
+      if (x + 1 < raysX && at(x + 1, y) === 1) canhBo += 1;
+      if (y + 1 < raysY && at(x, y + 1) === 1) canhBo += 1;
+      if (x > 0 && at(x - 1, y) === 1) canhBo += 1;
+      if (y > 0 && at(x, y - 1) === 1) canhBo += 1;
+    }
+  }
+  // Mỗi cạnh bị đếm đúng một lần từ phía NƯỚC (vòng lặp bỏ qua tia không phải nước), nhưng cả bốn
+  // hướng đều được hỏi, nên một cạnh nước↔đất chỉ vào sổ MỘT lần. Không chia đôi.
+  const cheoKhung = Math.hypot(raysX, raysY);
+
+  // Lấn sâu: khoảng cách từ tia nước tới mép khung gần nhất, chuẩn hoá theo nửa-khung.
+  let vaoSauNhat = 0;
+  for (let y = 0; y < raysY; y += 1) {
+    for (let x = 0; x < raysX; x += 1) {
+      if (at(x, y) !== 2) continue;
+      const dx = Math.min(x + 1, raysX - x) / (raysX / 2);
+      const dy = Math.min(y + 1, raysY - y) / (raysY / 2);
+      const d = Math.min(dx, dy);
+      if (d > vaoSauNhat) vaoSauNhat = d;
+    }
+  }
+  return { daiTuongDoi: canhBo / cheoKhung, canhBo, vaoSauNhat };
 }
 
 /**
@@ -177,19 +285,24 @@ export function gocDoiDien(era) {
 }
 
 function chay(eras) {
-  console.log('kỷ · loại nước · bờ  |  MẶC ĐỊNH (45°)  |  TRẦN (đứng đối diện)  |  gấp');
+  console.log('kỷ · loại   · bờ  · xoay |  DIỆN TÍCH mặc định | TRẦN   | gấp  | ĐƯỜNG BỜ | lấn sâu');
   for (const era of eras) {
     const st = getSetting(era);
     const macDinh = tiLeNuocTrongKhung({ era }).nuoc;
     const yawDoi = gocDoiDien(era);
     const tran = tiLeNuocTrongKhung({ era, yaw: yawDoi }).nuoc;
     const gap = macDinh > 0 ? (tran / macDinh).toFixed(1) : (tran > 0 ? '∞' : '—');
+    const bo = duongBoCatKhung({ era });
+    const xoay = `${Math.round((worldYaw(era) * 180) / Math.PI)}°`;
     console.log(
-      `${String(era).padStart(2)} · ${String(st.water).padEnd(8)} · ${String(st.side).padEnd(4)} | ` +
-      `${(macDinh * 100).toFixed(2).padStart(7)}%        | ${(tran * 100).toFixed(2).padStart(7)}%` +
-      `              | ${String(gap).padStart(5)}×`,
+      `${String(era).padStart(2)} · ${String(st.water).padEnd(7)} · ${String(st.side).padEnd(4)} · ` +
+      `${xoay.padStart(4)} | ${(macDinh * 100).toFixed(2).padStart(15)}%   | ` +
+      `${(tran * 100).toFixed(2).padStart(5)}% | ${String(gap).padStart(4)}× | ` +
+      `${bo.daiTuongDoi.toFixed(3).padStart(8)} | ${bo.vaoSauNhat.toFixed(3).padStart(7)}`,
     );
   }
+  console.log('\nĐƯỜNG BỜ = chiều dài ranh giới nước↔ĐẤT chia cho đường chéo khung (không thứ nguyên).');
+  console.log('LẤN SÂU  = tia nước lấn sâu nhất vào trong khung; 0 = dính mép, 1 = tới tâm khung.');
 }
 
 function selftest() {

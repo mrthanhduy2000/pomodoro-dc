@@ -11,6 +11,99 @@
 
 ---
 
+## ADR-043 — TỔNG KẾT VIỆC 2 (mặt nước, 15 kỷ): khuôn **BẢNG → HÌNH → `worldYaw`** đã chạy đủ ba lớp; và bài học lớn nhất KHÔNG nằm ở nước mà ở **cái thước dùng để nghiệm thu nó**
+
+- **Ngày**: 2026-08-20 (viết ở phiên nghiệm thu Bước C, theo lệnh §4 của Đàm)
+
+- **Bối cảnh**: VIỆC 2 đi qua ba bước, mỗi bước một commit riêng, rollback độc lập được:
+  · **Bước A** (`7146cb0`, `178efeb`) — BẢNG `settingStyle.js`: 15 dòng × `water`/`side`/`ground`/
+    `reach`/`width`/`note`, mỗi dòng buộc vào `country` mà `eraStyle.js` khai, có test bắt.
+  · **Bước B** (`e2ee7b1`, `054e868`) — HÌNH `city3d/setting.js` cho 3 kỷ, rồi `worldYaw` (ADR-041).
+  · **Bước C** (`a67970e`) — trải ra **14/15 kỷ** (ADR-042).
+  Đây là lần thứ **SÁU** dùng đúng khuôn ba lớp: `vernacularRoof` · `undergrowth` · `streetStyle` ·
+  `groundFloor` · `floraStyle` · và nay `settingStyle`. Khuôn ấy nay coi như đã chứng minh xong.
+
+- **Vấn đề**: ba câu hỏi phải trả lời được bằng SỐ, không bằng cảm giác — *"nước có ĐỦ NHIỀU không"*
+  · *"lệnh vẽ có phình không"* · *"15 kỷ có còn phân biệt được không"*.
+
+- **BA CON SỐ QUAN TRỌNG NHẤT** (Đàm chỉ định trong §4):
+
+  **(1) NƯỚC CHIẾM BAO NHIÊU KHUNG HÌNH — trước / sau.** Trước VIỆC 2: **0,00%** ở cả 15 kỷ (không
+  có mặt nước nào tồn tại). Sau: 14 kỷ có nước, đo trên ảnh đã dựng
+  (`scripts/water-score.mjs`, khung mặc định 1100×700, `--hour 12`, 40 phiên):
+
+  | nhóm | kỷ | % khung |
+  |---|---|---|
+  | `sea`     | 13 · 14 · 15 | 23,18% · 20,09% · 19,05% |
+  | `estuary` | 8 · 11 | 7,40% · 5,42% |
+  | `river`   | 2 · 3 · 4 · 9 · 12 | 3,77% · 3,87% · 3,32% · 2,82% · 4,84% |
+  | sông hẹp  | 6 · 7 | 1,37% · 1,49% |
+  | `meander` / `canal` | 5 · 10 | 3,34% · 1,18% |
+  | khô (đúng bảng) | 1 | 0,00% |
+
+  ⚠️ **5/14 kỷ đạt cổng 5%**, KHÔNG phải 11 như bảng nghiệm thu đầu tiên ghi — xem `TECH_DEBT #63`.
+  ⚠️ **Nhưng tương phản nước↔đất-sát-bờ là 30,8 tới 115,5 trên ngưỡng mắt 12 ở CẢ 14 kỷ**: chỗ nào
+  có nước thì chỗ ấy ĐỌC RA là nước. Bài toán còn lại thuần tuý là DIỆN TÍCH, không phải màu.
+
+  **(2) LỆNH VẼ TỪNG KỶ.** Luật ADR-028 giữ nguyên hình dạng, chỉ mở rộng hằng số:
+  `lệnh vẽ = (số họ vật liệu) + tamCoDinh(era)`, với `tamCoDinh = 4 + (waterIsBuilt ? 1 : 0)`.
+  ⇒ **đúng +1 lệnh vẽ cho mỗi kỷ có nước, không hơn**, và kỷ 1 (khô) không đổi một đơn vị. Đây là
+  thứ khiến nước không phải một khoản chi mở, và nó được khoá bằng bảng 15 mốc riêng ở
+  `drawCallBudget.test.js` (ADR-028) chứ không bằng một trần chung.
+
+  **(3) CỔNG KHÔNG-TRÔI.** Bản quét 15 kỷ × 6 chặng (md5 `c210cbe93adaa8fc5ea2bd7eafd1dead`):
+  **105/105 cặp kỷ ĐẠT** (gần nhất 21,8 · trung vị 40,7 — đứng yên so với trước Bước C) và
+  **15/15 cặp chặng ĐẠT** nhưng cặp yếu nhất tụt về **13,9616**, tức chạm ngưỡng hành động 14 mà
+  Đàm đặt ra (`TECH_DEBT #55`).
+  ⚠️ **Và đây là điều đáng đọc nhất trong cả ADR này: NƯỚC LÀM HAI TRỤC ĐI HAI HƯỚNG NGƯỢC NHAU, VÌ
+  MỘT LÝ DO CẤU TRÚC.** Mỗi kỷ có một hình nước riêng ⇒ trên trục KỶ, nước là chi tiết **phân
+  biệt**. Nhưng hình nước ấy giống hệt nhau ở cả 6 chặng ngày ⇒ trên trục CHẶNG, nó là chi tiết
+  **chung**, và một phép đo lấy trung bình cả cảnh sẽ bị nó pha loãng. Cùng một thứ, hai trục, hai
+  dấu. ⇒ **Mọi phase sau thêm bất cứ gì KHÔNG phản ứng với giờ trong ngày đều phải đo lại trục
+  chặng TRƯỚC.**
+
+- **Phương án đã cân nhắc và LOẠI**:
+  · **Vẽ một tấm xanh đặt lên mặt đất** — loại ở ADR-040: nó cần một đường bờ, mà đường bờ thì hoặc
+    răng cưa theo lưới hoặc phải sinh thêm hình học; khoét MẶT ĐẤT xuống dưới một mặt phẳng thì bờ
+    tự có, miễn phí, và luôn khớp địa hình.
+  · **Xoay CAMERA để nhìn thấy nước** — Đàm bác thẳng ở ADR-041 (*"KHÔNG SỬA CAMERA, KHÔNG SỬA
+    `side`"*); camera là hằng số mỹ thuật đã hiệu chuẩn nhiều phase, `side` là sự thật lịch sử.
+  · **Nới bề rộng kênh cho đủ 5%** — bác ở `TECH_DEBT #59`: kênh Bridgewater hẹp thật, và mua một
+    con số bằng cách nói dối địa lý chính là thứ ADR-025 đã cấm với mặt đường.
+  · **Đổi cổng sang "chiều dài đường bờ cắt khung"** — Đàm nêu làm phương án dự phòng; đã ĐO và
+    LOẠI (`TECH_DEBT #61`): ba kỷ `sea` — nhóm không thể nhầm được — có đường bờ **ngắn nhất** bảng,
+    tức đại lượng ấy nghịch biến với thứ nó định đo.
+
+- **Quyết định**: giữ nguyên cả ba lớp và cả ba con số như trên. Bổ sung **`scripts/water-score.mjs`**
+  làm công cụ chấm cổng phần trăm (đọc `--mask water`), và **hạ vai** `water-view.mjs` xuống thành
+  công cụ đo TRẦN theo góc xoay.
+
+- **Trade-off**: có thêm một công cụ đo thứ hai cho cùng một đại lượng, tức thêm một chỗ có thể trôi.
+  Chấp nhận vì hai công cụ trả lời **hai câu hỏi khác nhau** (*"hôm nay thấy bao nhiêu"* ↔ *"nhiều
+  nhất có thể là bao nhiêu"*) và vì cái rẻ hơn (`water-view.mjs`, không cần Chromium) là cái duy
+  nhất chạy được trong `npm test`. Ràng buộc kèm theo: chú thích của cả hai file phải nói rõ mình
+  KHÔNG trả lời câu nào — và đó là điều đã làm.
+
+- **Ảnh hưởng**: `settingStyle.js` nay là nguồn sự thật cho **bốn** tầng (`terrain` · `outskirts` ·
+  `horizon` · `terrainMesh`), tất cả đi qua `insetAt`/`blendAt`/`depthAt`. `worldYaw` được áp ở
+  **đúng một chỗ** (`insetAt`), nên địa hình + vùng quê + rặng núi xoay cùng một góc mà không file
+  nào phải biết trường ấy tồn tại.
+
+- **Điều kiện xem lại**: khi Đàm chốt `TECH_DEBT #61` (9 kỷ dưới cổng thì làm gì) · khi mở phase
+  ngữ pháp ven nước (`#60`) · khi `#64` (kỷ 5 là đảo) hoặc `#65` (`canal`/`estuary` không có hình
+  học riêng) được chọn hướng.
+
+- **BÀI HỌC LỚN NHẤT CỦA VIỆC 2, VÀ NÓ KHÔNG NÓI VỀ NƯỚC**: cả ba bước đều đi qua build xanh, lint
+  sạch, test xanh, và một bảng nghiệm thu đầy số — mà con số quan trọng nhất trong bảng ấy
+  (*"11 kỷ đạt cổng"*) sai gần **gấp đôi**, vì cái thước đo nó mù với cây cối. Thứ phát hiện ra
+  không phải một bài test mà là **lệnh của Đàm bắt đi NHÌN hai kỷ cụ thể**. ⇒ *Một cổng nghiệm thu
+  phải được hỏi thêm một câu mà không bài test nào hỏi hộ được: **"cái thước này có nhìn thấy đúng
+  thứ mắt nhìn thấy không?"*** Cách rẻ nhất để trả lời là **hỏi thẳng bên dựng** (`--mask`) thay vì
+  dựng lại một mô hình song song — đúng luật "một luật một công thức", áp cho cặp *công cụ dựng ↔
+  công cụ đo*.
+
+---
+
 ## ADR-042 — Trải một lời hứa từ 2 trường hợp ra 14 thì bốn phép đo cùng gãy một kiểu: chúng được viết thành MỨC, mà thứ chúng nói là QUAN HỆ. Cách xử lý là sửa MẪU SỐ hoặc GHI RA ĐẾM ĐƯỢC — không phải hạ ngưỡng
 
 - **Ngày**: 2026-08-20

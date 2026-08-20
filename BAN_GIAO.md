@@ -69,8 +69,23 @@
 > (`vendor-three` 131,29 kB gzip, trần 135) · bản quét 15 kỷ **15/15 cặp chặng + 105/105 cặp kỷ**
 > trên ngưỡng mắt.
 >
-> **3 — MẶT TRẬN MỚI ĐÃ MỞ: NÂNG CHẤT LƯỢNG HÌNH ẢNH.** Chưa viết một dòng hiệu ứng nào — đúng
-> lệnh: **BƯỚC 1 phải ĐO ngân sách thật trên MacBook M3 của Đàm trước**. Xem mục kế tiếp.
+> **3 — MẶT TRẬN MỚI ĐÃ MỞ: NÂNG CHẤT LƯỢNG HÌNH ẢNH — BƯỚC 1 XONG PHẦN CHUẨN BỊ.**
+> **Chưa viết một dòng hiệu ứng nào**, đúng lệnh: *"không có số thì không bắt đầu Bước 2"*.
+> ⚠️ **CHỜ ĐÀM chạy `bash scripts/bench-macbook.sh` trên MacBook M3** (hộp cát dùng SwiftShader nên
+> mọi ms đo ở đây vô nghĩa — cái gác tự chối đúng thiết kế). Chi tiết đầy đủ: `PERFORMANCE.md`
+> mục **"§3 BƯỚC 1"**. Tóm tắt ba thứ đã sửa trong bộ đo:
+> · **Thêm cảnh thứ 26 — CẢNH NẶNG NHẤT** (kỷ nhiều tam giác nhất × 22 giờ có đèn × cửa sổ lớn).
+>   Ma trận cũ chạy 24 cảnh ở cửa sổ thường rồi đúng MỘT cảnh ở cửa sổ lớn — và cảnh ấy là kỷ 7 ·
+>   12 giờ, tức góc **NHẸ NHẤT** cả bộ. Chỗ đắt nhất chưa bao giờ được đo, mà bảng số trông đã đủ.
+> · **Kỷ nặng nhất được HỎI lúc chạy** (`scene-count.mjs`), không viết cứng — hôm nay là **kỷ 14,
+>   179.182 tam giác**, nhưng "nhiều nhất" là một QUAN HỆ; Phase 11 một mình đã thêm 110.076 tam
+>   giác lên mái. Không hỏi được thì KÊU TO chứ không im lặng dùng số dự phòng. 3 bài test khoá.
+> · **Khối "CÁCH ĐỌC BẢNG NÀY"** in ở cuối báo cáo — vì trần 8 ms định nghĩa ở khung MẶC ĐỊNH
+>   1100×700, còn cảnh nặng nhất chạy ở 1600×1000, nên ms của nó **không so thẳng với 8 ms được**.
+>
+> ⚠️ **RAY TRACING THẬT KHÔNG KHẢ THI** trên nền hiện tại — WebGL2 không có API dò tia phần cứng,
+> WebGPU thì Safari iOS chưa đủ. Thứ giao được là các kỹ thuật cho ra CẢM GIÁC ấy (bóng mềm, che
+> khuất môi trường, phản chiếu mặt nước, khử răng cưa, tone mapping). Đừng hứa tên A rồi giao B.
 >
 > ## 🌊 VIỆC 2 BƯỚC C — MẶT NƯỚC TRẢI RA 14/15 KỶ (2026-08-20, ADR-042)
 >

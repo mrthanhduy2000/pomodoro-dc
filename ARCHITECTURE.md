@@ -649,6 +649,44 @@ Bốn điểm về LUỒNG DỮ LIỆU đáng nhớ ở tầng kiến trúc:
      mềm hẳn đi — mà **quan trắc quan trọng nhất là dải cao độ của ĐẤT không hề thu hẹp**: địa hình
      vẫn cao thấp đúng như cũ, chỉ có các BẬC hoá thành DỐC.
 
+5. ⚠️ **NHIỄU BẺ CONG, KHÔNG CỘNG — VÀ MỖI KỶ KHAI MỘT HƯỚNG THẤP (2026-08-20, ADR-045).** Đây là
+   thay đổi lớn nhất của `terrain.js` kể từ Phase 7B, và nó đổi **ý nghĩa** của trường cao độ chứ
+   không chỉ đổi giá trị.
+   · **Nhiễu nay dịch VỊ TRÍ LẤY MẪU của trường hình học** (`WARP_CELLS = 1,8`), không cộng vào giá
+     trị trả về. Phép cộng cũ **cắt vụn** đường đồng mức — mỗi bướu nhiễu đẻ một cực trị cục bộ —
+     nên một sườn dốc đều biến thành một dãy gợn; đo được **36,7 lần đổi chiều** dọc một đường cắt
+     (một quả đồi thật đổi 1–2 lần). Bẻ cong toạ độ chỉ **uốn lượn** đường đồng mức ⇒ **15,8**.
+   · **Bảng `ERA_TERRAIN` có thêm hai trường: `drain` (hướng thấp — bắc/nam/đông/tây) và `tilt`**
+     (trọng số trộn giữa "hình của kỷ" và "triền dốc đều theo hướng ấy"). `HUONG_THAP` là bốn hàm
+     thuần. Mỗi dòng buộc vào `country` mà `eraStyle.js` khai và phải viết được thành `note` — đây
+     là khuôn ba lớp lần thứ **BẢY**. Không có trường này thì cái "hướng" duy nhất trong cảnh là
+     hướng của hạt nhiễu, tức đất cao thấp **không có lý do địa lý nào**.
+   · **Trong lưới thì THOẢI, ngoài lưới mới GỒ GHỀ, và gồ ghề CÓ HƯỚNG.** `surfaceHeightAt` đổi từ
+     khoảng cách Chebyshev sang `Math.hypot` (vành ngoài thôi vuông góc) rồi cuộn xuống theo đúng
+     `HUONG_THAP` của kỷ (`OUTER_TILT = 0,55`).
+   · ⚠️ **Điểm 2 ở trên (bước CĂNG TRƯỜNG) vẫn đúng, nhưng nay đã biết mặt trái của nó**: chuẩn hoá
+     min/max rồi chia bậc **ĐỀU BỀ RỘNG** trên một **TỔNG** của nhiều trường thì phân bố **luôn dồn
+     về giữa** (định lý giới hạn trung tâm thu nhỏ). Dạng `rolling` vì thế từng có một bậc nuốt 63%
+     số ô đất. Cách chữa **KHÔNG** phải nới cổng 60% mà là chọn `tilt`/`relief` theo địa lý thật —
+     xem ADR-045. Sau đó danh sách ngoại lệ của cổng ấy về **rỗng**, kể cả kỷ 4 (ADR-032 b).
+   · Kết quả đo (`scripts/terrain-score.mjs`, mốc nền `9c7032c`): chênh cao trong lưới tệ nhất
+     **2,70 → 0,90**; bậc giữa hai ô kề nhau **1,15 → 0,45**; số lần đổi chiều **36,7 → 15,8**;
+     **R² hướng 0,174 → 0,434**; khớp KHUÔN sau bản vá **0,776** (**11/14** kỷ đọc ra được hình mình
+     khai — bản nền không trả lời được cột này vì chưa export `geometricTemplate`). Thềm bậc **còn
+     sống ở 14/15 kỷ**. Hình học: **−176 tam giác (−0,012%)**, **0 lệnh vẽ đổi**.
+   · ⚠️ **`drain` PHẢI TRÙNG `settingStyle.side`, và đây là một BẤT BIẾN LIÊN BẢNG có test khoá.**
+     Buộc `drain` vào `country` là chưa đủ — một đất nước có bốn phía, một dòng sông chỉ có MỘT.
+     Lần đầu đặt hai bảng cạnh nhau thì **9/14 kỷ lệch hoặc ngược hẳn**, tức nước chảy lên dốc. Nay
+     `terrain.test.js` khoá `drain === side` ở cả 14 kỷ có nước (`kyKho === [1]`), cùng khuôn với hai
+     bất biến `country` đã có (`floraStyle`↔`eraStyle`, `streetStyle`↔`eraStyle`).
+   · ⚠️ **Biên độ lượn của vành đất ngoài lưới là một QUAN HỆ với `WATER_DROP_BELOW_PLAIN`**
+     (`ROLL_HEADROOM_SHARE = 0,70`), không phải hằng số — và phép nén là **bão hoà `tanh`, không
+     kẹp**, để không phá thứ tự giữa các kỷ. Đây là thứ duy nhất giữ cho vành đất KHÔ không tụt
+     xuống dưới mặt nước.
+   · ⚠️ **Việc này KHÔNG chữa được cái "bệ vuông"** — bo tròn cao nguyên mà giữ đủ 144 ô thành phố
+     trên đất phẳng cần tấm đất rộng thêm **12,2%**, tức đụng `APRON_EDGE`/`terrainSurfaceReach`.
+     Đó là `TECH_DEBT #53`, đang chờ Đàm quyết.
+
 **Ánh sáng và màu là một hệ THỐNG NHẤT, không phải các nút chỉnh rời (2026-08-12, Phase 3C)**:
 bốn thứ dưới đây khoá lẫn nhau, đổi một cái phải soi lại ba cái còn lại.
 1. **Hướng nắng** (`SUN_DIRECTION`, `sceneGraph.js`) phải LỆCH SANG BÊN so với hướng nhìn mặc định

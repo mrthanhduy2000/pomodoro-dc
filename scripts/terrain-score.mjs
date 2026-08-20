@@ -39,9 +39,24 @@
  */
 
 import {
-  buildTerrain, geometricTemplate, ERA_TERRAIN, TERRACE_STEP, APRON_DROP,
+  buildTerrain, ERA_TERRAIN, TERRACE_STEP, APRON_DROP,
   APRON_CELLS, APRON_EDGE, terrainSurfaceReach,
 } from '../src/engine/city3d/terrain.js';
+import * as diaHinh from '../src/engine/city3d/terrain.js';
+
+/**
+ * ⚠️ `geometricTemplate` CHỈ TỒN TẠI Ở BẢN SAU §1(B), VÀ ĐÓ KHÔNG PHẢI MỘT THIẾU SÓT CỦA CÔNG CỤ.
+ *
+ * Trước §1(B), cao độ là `hình + nhiễu` cộng thẳng vào nhau, nên **không có** một "khuôn hình học"
+ * nào để tách ra mà hỏi — chính việc tách được hình khỏi nhiễu LÀ bản vá. Vì vậy khi đo bản nền,
+ * cột `khớpKHUÔN` phải in `—` chứ không được dựng lại công thức của bản nền ở đây: chép công thức
+ * sang công cụ đo là đúng cái bẫy "một luật hai công thức" đã cắn dự án ở Phase 4G.
+ *
+ * Cột đo được ở CẢ HAI vế và trả lời đúng câu "đất có HƯỚNG không" là `R2` (mặt phẳng nghiêng).
+ */
+const khuonCuaKy = typeof diaHinh.geometricTemplate === 'function'
+  ? (era) => diaHinh.geometricTemplate({ era, gridSize: GRID }).field
+  : () => null;
 
 const GRID = 12;
 
@@ -461,20 +476,25 @@ function main() {
     return;
   }
 
-  console.log('kỷ\tdạng\tthềm\trelief\tchênh\tbậc lớn\tđổiTHÔ\tđổiTHỀM\tkhớpKHUÔN\tdư/tổng\tdư đổi\tđỉnh\tđáy');
+  console.log('kỷ\tdạng\tthềm\trelief\tchênh\tbậc lớn\tđổiTHÔ\tđổiTHỀM\tR2hướng\tkhớpKHUÔN\tdư/tổng\tdư đổi\tđỉnh\tđáy');
   const gom = [];
   for (const era of eras) {
     const p = ERA_TERRAIN[era];
     const { h } = truongCuaKy(era);
     const buoc = TERRACE_STEP * (p?.relief ?? 0);
     const d = chamTruong(h, GRID, buoc);
-    const { field: khuon } = geometricTemplate({ era, gridSize: GRID });
-    const du = chamPhanDu(h, khuon, GRID, buoc > 0 ? buoc / 2 : 0);
+    const khuon = khuonCuaKy(era);
+    const du = khuon
+      ? chamPhanDu(h, khuon, GRID, buoc > 0 ? buoc / 2 : 0)
+      : { khopKhuon: null, duBienDo: null, duDoiChieu: null };
     gom.push({ era, ...d, ...du });
     console.log([
       era, p?.shape ?? '?', p?.terraces ?? '?', so(p?.relief ?? 0, 2),
       so(d.chenh, 2), so(d.buoc, 2), d.doiChieuTho, d.doiChieuThem,
-      so(du.khopKhuon, 3), so(du.duBienDo, 2), du.duDoiChieu,
+      d.R2 === null ? '—' : so(d.R2, 3),
+      du.khopKhuon === null ? '—' : so(du.khopKhuon, 3),
+      du.duBienDo === null ? '—' : so(du.duBienDo, 2),
+      du.duDoiChieu === null ? '—' : du.duDoiChieu,
       d.dinh, d.day,
     ].join('\t'));
   }
@@ -483,10 +503,15 @@ function main() {
       const v = gom.map((g) => g[k]).filter((x) => typeof x === 'number');
       return v.length ? v.reduce((s2, x) => s2 + x, 0) / v.length : 0;
     };
-    console.log(`\ntrung bình 15 kỷ: chênh ${so(tb('chenh'), 2)} · bậc lớn nhất ${so(tb('buoc'), 2)} · đổi chiều THÔ ${so(tb('doiChieuTho'), 1)} · đổi chiều THỀM ${so(tb('doiChieuThem'), 1)} · đỉnh ${so(tb('dinh'), 1)} · đáy ${so(tb('day'), 1)}`);
-    console.log(`khớp KHUÔN trung bình ${so(tb('khopKhuon'), 3)} · phần dư chiếm ${so(tb('duBienDo') * 100, 1)}% biên độ · phần dư đổi chiều ${so(tb('duDoiChieu'), 1)} lần/24 đường cắt`);
-    const doc = gom.filter((g) => g.khopKhuon !== null && g.khopKhuon >= 0.7).length;
-    console.log(`kỷ ĐỌC RA được hình mình khai (khớp ≥ 0,70): ${doc}/${gom.filter((g) => g.khopKhuon !== null).length}`);
+    console.log(`\ntrung bình 15 kỷ: chênh ${so(tb('chenh'), 2)} · bậc lớn nhất ${so(tb('buoc'), 2)} · đổi chiều THÔ ${so(tb('doiChieuTho'), 1)} · đổi chiều THỀM ${so(tb('doiChieuThem'), 1)} · R2 hướng ${so(tb('R2'), 3)} · đỉnh ${so(tb('dinh'), 1)} · đáy ${so(tb('day'), 1)}`);
+    const coKhuon = gom.filter((g) => g.khopKhuon !== null);
+    if (coKhuon.length) {
+      console.log(`khớp KHUÔN trung bình ${so(tb('khopKhuon'), 3)} · phần dư chiếm ${so(tb('duBienDo') * 100, 1)}% biên độ · phần dư đổi chiều ${so(tb('duDoiChieu'), 1)} lần/24 đường cắt`);
+      const doc = coKhuon.filter((g) => g.khopKhuon >= 0.7).length;
+      console.log(`kỷ ĐỌC RA được hình mình khai (khớp ≥ 0,70): ${doc}/${coKhuon.length}`);
+    } else {
+      console.log('khớp KHUÔN: — (bản này chưa tách được hình khỏi nhiễu nên KHÔNG có khuôn để hỏi; xem chú thích `khuonCuaKy`)');
+    }
   }
 }
 

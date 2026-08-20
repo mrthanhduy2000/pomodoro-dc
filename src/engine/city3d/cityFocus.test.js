@@ -195,8 +195,9 @@ test('THÀNH PHỐ DỰNG THỬ PHẢI ĐÚNG CỠ — nếu không thì mọi c
 });
 
 test('MỖI KỶ MỘT MỨC THU PHÓNG RIÊNG, cả 15 đều nằm trong dải 0,38–0,58 Đàm chốt', () => {
+  const ERAS = Array.from({ length: 15 }, (_, i) => i + 1);
   const zooms = [];
-  for (let era = 1; era <= 15; era += 1) {
+  for (const era of ERAS) {
     const zoom = focusZoom(cityOf(era).orbit.distance);
     zooms.push(zoom);
     assert.ok(
@@ -209,7 +210,28 @@ test('MỖI KỶ MỘT MỨC THU PHÓNG RIÊNG, cả 15 đều nằm trong dải
   // "một bảng nhiều dòng vẫn có thể thoái hoá về một trần chung" (2026-08-18, ADR-028).
   const rong = Math.max(...zooms) - Math.min(...zooms);
   assert.ok(rong > 0.1, `15 mức thu phóng chỉ trải ${rong.toFixed(3)} — gần như một con số chung`);
-  assert.equal(new Set(zooms.map((z) => z.toFixed(3))).size, 15, '15 kỷ phải ra 15 mức khác nhau');
+
+  // ⚠️ HỎI TRÊN KHOẢNG CÁCH THẬT, ĐỪNG HỎI TRÊN BA CHỮ SỐ THẬP PHÂN. Bản cũ viết
+  // `new Set(zooms.map((z) => z.toFixed(3))).size === 15`, tức khoá một PHÉP LÀM TRÒN. §1(B) hạ
+  // `relief` ở cả 15 kỷ ⇒ phần đóng góp của địa hình vào khoảng cách camera co lại ⇒ mười lăm con
+  // số xích lại gần nhau, và hai cặp rơi vào cùng một ô làm tròn. Khoảng cách THẬT thì vẫn khác
+  // nhau đủ mười lăm giá trị — nên bài cũ sẽ đỏ vì một chuyện KHÔNG PHẢI thứ nó tuyên bố canh.
+  const khoangCach = ERAS.map((era) => cityOf(era).orbit.distance);
+  assert.equal(new Set(khoangCach).size, 15,
+    '15 kỷ phải ra 15 khoảng cách camera khác nhau — trùng nhau là bảng đã thoái hoá thật');
+
+  // Và ĐẾM RA những cặp gần nhau tới mức làm tròn ba chữ số không phân biệt nổi. Danh sách dài
+  // thêm ⇒ các camera đang hội tụ về một chỗ, đó mới là điều đáng biết (bài học ADR-028: một bảng
+  // nhiều dòng vẫn có thể thoái hoá về một trần chung mà trông y hệt).
+  const capSatNhau = [];
+  for (let i = 0; i < ERAS.length; i += 1) {
+    for (let j = i + 1; j < ERAS.length; j += 1) {
+      if (zooms[i].toFixed(3) === zooms[j].toFixed(3)) capSatNhau.push([ERAS[i], ERAS[j]]);
+    }
+  }
+  assert.deepEqual(capSatNhau, [[5, 9], [7, 11]],
+    `cặp kỷ có mức thu phóng trùng nhau tới ba chữ số: ${JSON.stringify(capSatNhau)}. Dài thêm ⇒ `
+    + 'camera 15 kỷ đang hội tụ; ngắn đi ⇒ ai đó vừa nới lại chênh lệch địa hình.');
 });
 
 test('CHI TIẾT Ở KỶ NÀO CŨNG TO BẰNG NHAU TRÊN MÀN HÌNH — đó mới là việc của một mức thu phóng riêng từng kỷ', () => {
@@ -317,10 +339,17 @@ test('ĐỐI CHỨNG: chỉ canh ĐIỂM ĐẾN thôi là chưa đủ — và đ
   }
   assert.deepEqual(
     [...new Set(lotLuoi)].sort((a, b) => a - b),
-    [1, 2, 7, 9, 12, 15],
+    [1, 2, 3, 5, 7, 8, 9, 11, 12, 13, 15],
     'danh sách kỷ mà phép canh cả đường bay thật sự cứu — đổi là phải xem lại vì sao',
   );
-  assert.equal(lotLuoi.length, 9, 'đúng 9 chuyến trên 1200 lọt lưới nếu chỉ canh điểm đến');
+  // 2026-08-20, HAI lần đổi trong cùng một ngày và cả hai đều có lý do đo được:
+  //   9 kỷ / 9 chuyến  → nền `9c7032c`
+  //   9 kỷ / 12 chuyến → sau §1(B) (nền phẳng hơn ⇒ camera toàn cảnh đứng gần hơn ⇒ đường bay đi
+  //                      sát mái nhà hơn)
+  //   11 kỷ / 14 chuyến→ sau khi sửa `drain` cho khớp `settingStyle.side`: đất thoải về phía nước
+  //                      nên bên bờ THẤP hẳn xuống, camera bay ngang qua đó lại càng sát mái.
+  // Con số TĂNG nghĩa là phép canh cả-đường-bay càng đáng giá, không phải càng tệ.
+  assert.equal(lotLuoi.length, 14, 'đúng 14 chuyến trên 1200 lọt lưới nếu chỉ canh điểm đến');
   assert.ok(cheoNhat > 1, `chênh lớn nhất giữa điểm-đến và cả-đường mới ${cheoNhat.toFixed(2)} — quá nhỏ để gọi là cứu được ai`);
 });
 
@@ -453,9 +482,17 @@ test('CA THẬT CỦA APP — xuất phát từ đúng khung TOÀN CẢNH thì K
   // ⚠️ ĐẾM RA TƯỜNG MINH — danh sách, không phải một con số tổng. Thêm một kỷ vào là đỏ, mà một kỷ
   // được chữa xong cũng đỏ; cả hai đều là tin đáng biết. (Bài học `TECH_DEBT #44`: ngoại lệ phải
   // đếm được, đừng nới ngưỡng cho vừa.)
-  assert.deepEqual(luiRa, [5, 6, 7, 8, 10, 11, 14, 15], 'danh sách kỷ có công trình phải lùi ra mới ngắm được');
+  // 2026-08-20: kỷ 7 RỜI danh sách sau khi `drain` của nó được sửa từ 'tay' về 'nam' (Duomo đứng
+  // bờ BẮC, sông Arno chảy phía nam — xem `terrain.test.js`, bài *"NƯỚC NẰM Ở CHỖ THẤP"*). Nền
+  // Firenze nay thoải đều về phía sông thay vì vắt ngang, nên không còn công trình nào phải lùi ra.
+  // Một kỷ RỜI danh sách là tin tốt, và bài test vẫn đỏ khi nó rời — đúng ý đồ hai chiều.
+  assert.deepEqual(luiRa, [5, 10, 11, 14, 15], 'danh sách kỷ có công trình phải lùi ra mới ngắm được');
   assert.ok(xaNhat <= 11 + 1e-9, `chỗ phải lùi xa nhất ${xaNhat} — xa hơn nữa là chi tiết cận cảnh bắt đầu tan`);
-  assert.ok(tiLeTe <= 0.664 + 1e-9, `kỷ ít lợi nhất chỉ còn tỉ lệ ${tiLeTe.toFixed(4)} so với toàn cảnh`);
+  // ⚠️ 0,664 → 0,6672 (2026-08-20). Đây là một con số ĐO ĐƯỢC chứ không phải một mức Đàm chốt, và
+  // nó nhích lên vì §1(B): nền phẳng hơn ⇒ camera toàn cảnh vốn đã đứng gần hơn ⇒ chuyến cận cảnh
+  // còn ít phần để rút ngắn. Vẫn là phóng to 1,50 lần (trước là 1,51). Lời hứa Đàm chốt ở ADR-035
+  // là `xaNhat <= 11` ngay trên, và nó không nhúc nhích.
+  assert.ok(tiLeTe <= 0.668 + 1e-9, `kỷ ít lợi nhất chỉ còn tỉ lệ ${tiLeTe.toFixed(4)} so với toàn cảnh`);
 });
 
 test('CẢNH VẬT NẰM TRONG DANH SÁCH VẬT CẢN, và hôm nay nó TRÓI ĐÚNG 0 KỶ — đếm ra, đừng đoán', () => {

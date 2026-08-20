@@ -12,6 +12,61 @@
 
 ---
 
+## 2026-08-20 — Đất thôi "nhàu": nhiễu bẻ cong level set, mỗi kỷ có một hướng thấp (ADR-045)
+
+**Mục đích.** Đàm nhìn ảnh thu nhỏ và nói mặt đất *"lòi lõm như tấm chăn nhàu"*, và chốt thứ tự
+làm: **quy mô + độ cao TRƯỚC, hiệu ứng SAU** (*"Tô bóng đẹp lên một bố cục sai thì được một bố cục
+sai được tô bóng đẹp"*). Đây là nửa (B) — độ cao. Nửa (A) — quy mô — chưa làm, xem cuối mục.
+
+**Phạm vi.** Sửa: `src/engine/city3d/terrain.js` (bảng `ERA_TERRAIN` 15 dòng + 6 hàm hình dạng +
+`HUONG_THAP` + `surfaceHeightAt` + quan hệ `ROLL_HEADROOM_SHARE`). Sửa test: `terrain.test.js`,
+`horizon.test.js`, `cityFocus.test.js`, `waterView.test.js`. Công cụ: `scripts/terrain-score.mjs`
+(thêm cột R² hướng + khớp KHUÔN), `scripts/scene-tri.mjs` và `scripts/plinth-tri.mjs` (mới).
+**Không** thêm khối, **không** thêm vật liệu, **không** thêm lệnh vẽ.
+
+**Cách chữa (một câu).** Nhiễu trước nay **CỘNG THẲNG vào cao độ** nên nó **cắt vụn** đường đồng
+mức — mỗi bướu nhiễu đẻ một cực trị mới. Nay nhiễu **bẻ cong toạ độ LẤY MẪU** (domain warping) nên
+đường đồng mức chỉ **uốn lượn**, sườn dốc vẫn là sườn dốc. Cộng thêm: mỗi kỷ khai một **hướng thấp**
+(`drain` bắc/nam/đông/tây) buộc vào đúng đất nước `eraStyle.js` đã khai — Firenze tụt về thung lũng
+Arno phía tây, Amsterdam đổ ra biển bắc — nên chỗ cao chỗ thấp có **lý do địa lý**, không phải hạt
+nhiễu. Trong lưới thì thoải; **ngoài** lưới mới gồ ghề, và gồ ghề theo đúng hướng ấy.
+
+**Kết quả (đo bằng `node --import ./scripts/register-esm-loader.mjs scripts/terrain-score.mjs`).**
+
+| Đại lượng | TRƯỚC (`9c7032c`) | SAU |
+|---|---|---|
+| chênh cao trong lưới, kỷ tệ nhất | kỷ 5 = **2,70** đv | kỷ 5 = **0,90** đv |
+| bậc lớn nhất giữa hai ô KỀ NHAU | kỷ 7 = **1,15** ⇒ dốc **172%** | **0,45** (đúng một bậc thềm) |
+| đổi chiều cao dọc đường cắt (THÔ · THỀM) | 36,7 · 13,6 | **15,8 · 9,9** |
+| **R² hướng** (đất có lý do cao thấp không) | **0,174** | **0,434** — gấp 2,5 lần |
+| khớp KHUÔN (đọc ra được hình mình khai) | — (bản nền chưa tách được hình khỏi nhiễu) | **0,776** · **11/14** kỷ |
+| đỉnh · đáy rời rạc trung bình | 1,6 · 1,5 | **0,9 · 1,0** |
+| kỷ ≥3 bậc có một bậc nuốt >60% ô đất | kỷ 4 = 64% | **không kỷ nào** (sát nhất 51,6%) |
+| tam giác thành phố 15 kỷ · lệnh vẽ | 1.490.686 · 9…13 | **1.490.510 (−176, −0,012%)** · **y hệt** |
+
+Thềm bậc **vẫn còn ở 14/15 kỷ** (kỷ 14 Singapore cố ý phẳng) — đúng yêu cầu *"đừng xoá thềm bậc ở
+chỗ nó đúng"*. Ảnh trước/sau ở `--zoom 2`: **34,5–65,1%** điểm ảnh vượt ngưỡng mắt 12/255; ở khung
+app mặc định: **57,9–80,9%**. Bản quét 15 kỷ × 6 chặng vẫn **15/15 cặp chặng · 105/105 cặp kỷ**
+(cặp chặng gần nhất 13,96 → 15,16 · cặp kỷ gần nhất 21,84 → 22,22 — cả hai TỐT LÊN; trung vị
+40,73 → 39,81, nhích xuống 0,92 nên phải theo dõi, tuy còn rất xa ngưỡng mắt 12) ⇒ không trôi.
+
+**⚠️ Một sự thật vật lý lộ ra SAU khi mọi số đã xanh: nước đang chảy lên dốc ở 9/14 kỷ.** `drain`
+được buộc vào `country`, nhưng **`country` không phải ràng buộc chặt nhất** — một đất nước có bốn
+phía, một dòng sông chỉ có MỘT. Đặt bảng `drain` cạnh bảng `settingStyle.side` (nước ở phía nào)
+lần đầu tiên thì 9/14 kỷ lệch hoặc **ngược hẳn**. Đã sửa 9 dòng + test khoá hai chiều. **Cái giá
+phải nói thẳng**: sửa cho đúng vật lý làm cổng "thấy nước" TỆ ĐI ở hai kỷ (kỷ 4: 5,11% → 4,95%;
+kỷ 5: 5,54% → 3,51%) vì đất thoải xuống phía nước ⇒ bờ XA tụt xuống, khuất sau sống đất gần. Danh
+sách miễn trừ đi từ `[6,7,10]` sang `[4,5,6,7,10]` (`TECH_DEBT #59`). **Không** hạ cổng 5% (cái phễu
+Phase 9A) và **không** quay `drain` về giá trị sai (mua một con số bằng cách nói dối địa lý).
+
+**Ảnh hưởng / tương thích.** Không đụng dữ liệu người dùng, không migration, không đổi API. ADR-007
+("chỉ thêm, không bao giờ dời") vẫn được khoá bằng test gọi kèm dữ liệu tiến độ rác. Ngoại lệ `[4]`
+của cổng 60% (ADR-032 b) nay **hết là ngoại lệ** — danh sách trượt về rỗng.
+
+**⚠️ Việc CHƯA làm, nói thẳng.** Nửa **(A) QUY MÔ** chưa đụng tới — mới đo phần chuẩn bị. Còn cái
+hình chữ nhật Đàm chỉ ra thì **không phải mép của tấm đất** (đo rồi: tỉ số bệ chéo/trục 1,306, cao
+độ hai bên mép khớp 0,0000): nó là chỗ **mặt lát và nhà cửa dừng đột ngột**, đúng chẩn đoán ADR-038,
+và Đàm đã chọn hướng **LẤP** cho nó (`outskirts.js` đã làm nửa đầu).
 ## 2026-08-20 (mới nhất) — GỘP `main` + KỶ 5 THÔI LÀ HÒN ĐẢO
 
 **Mục đích.** Hai việc theo lệnh Đàm: (1) gộp nhánh đã sống 25 commit vào `main`; (2) sửa

@@ -3,9 +3,12 @@ import assert from 'node:assert/strict';
 
 import {
   APRON_DROP, APRON_EDGE, ERA_TERRAIN, SMOOTHSTEP_PEAK, STREET_MAX_GRADE, TERRACE_STEP,
-  buildTerrain, eraTerrainProfile, geometricTemplate,
+  WATER_SURFACE_Y, bienDoRollNgoai, buildTerrain, eraTerrainProfile, geometricTemplate,
+  maxRoadRise, nenRoll,
 } from './terrain.js';
 import { buildHorizon } from './horizon.js';
+import { WATER_DROP_BELOW_PLAIN } from './setting.js';
+import { getSetting } from './settingStyle.js';
 import { roadCellCandidates } from '../cityLayout.js';
 
 const ERAS = Array.from({ length: 15 }, (_, i) => i + 1);
@@ -86,33 +89,49 @@ test('kỷ khai TỪ 3 BẬC TRỞ LÊN thì không bậc nào được nuốt q
   // Cách xử lý ĐÚNG là giữ nguyên ngưỡng 60% (nới cho vừa kết quả là mua một con số đẹp) và ĐẾM
   // TƯỜNG MINH kỷ nào đang trượt.
   //
-  // ⚠️ 2026-08-18 — KỶ 4 NAY LÀ MỘT NGOẠI LỆ ĐÃ KHAI, KHÔNG PHẢI MỘT KHUYẾT TẬT CHỜ SỬA (ADR-032
-  // bổ sung (b), đóng `TECH_DEBT #44`). Ba bằng chứng: `ERA_TERRAIN[4]` khai thẳng *"kinh thành
-  // Trung Hoa trên ĐỒNG BẰNG, đồi thấp vây bốn phía"* · kỷ 4 **dùng đủ 3 bậc** đã khai (20% đáy /
-  // 64% đồng bằng / 16% vành đồi — dải đông nhất nằm ở GIỮA, không dồn về một đầu như địa hình bị
-  // sập) · kỷ 9 khai CÙNG một thứ (*"lòng chảo sông Seine, gần phẳng"*) và đo ra 58%, tức vạch 60%
-  // đang cắt ngang giữa hai kỷ mô tả cùng một loại địa hình. **Nợ là thứ mình MẮC; cái này là thứ
-  // mình CHỌN.**
+  // ⚠️ 2026-08-18 — KỶ 4 TỪNG LÀ MỘT NGOẠI LỆ ĐÃ KHAI (ADR-032 bổ sung (b), đóng `TECH_DEBT #44`):
+  // nó đo ra 64% và được ghi thành một LỰA CHỌN chứ không phải một khuyết tật, vì `ERA_TERRAIN[4]`
+  // khai thẳng *"kinh thành Trung Hoa trên ĐỒNG BẰNG"*.
   //
-  // Bài test giữ NGUYÊN hình dạng — nó vẫn là hàng rào, chỉ đổi vai. Đỏ theo HAI chiều: dài ra ⇒
-  // địa hình vừa sập ở một kỷ nữa; ngắn lại ⇒ ai đó vừa làm kỷ 4 gồ ghề lên, và đó là một quyết
-  // định mỹ thuật phải làm có ý thức (sửa cả đây lẫn ADR-032).
+  // ⚠️ 2026-08-20 — DANH SÁCH NGOẠI LỆ NAY RỖNG, VÀ ĐÓ LÀ HỆ QUẢ CỦA §1(B), KHÔNG PHẢI CỦA VIỆC
+  // NỚI NGƯỠNG. Kỷ 4 đo lại được **42%** mà **không ai chỉnh một con số nào của kỷ 4**. Thứ đổi là
+  // CÁCH nhiễu đi vào hình dạng: trước đây nhiễu CỘNG THẲNG vào cao độ, nên phân bố cao độ chính
+  // là "chín con số ngẫu nhiên tình cờ ra sao" (ở tần số ấy cả lưới chỉ lấy mẫu từ ~3×3 giá trị
+  // độc lập); nay nhiễu chỉ BẺ CONG level set của một trường hình học trơn, nên phân bố cao độ là
+  // phân bố của chính cái lòng chảo ấy. ⇒ Lời khai của ADR-032 (b) vẫn ĐÚNG (kỷ 4 là đồng bằng, và
+  // đó là một lựa chọn), nó chỉ không còn phải GÁNH cái ngoại lệ này nữa. Xem ADR-045.
   //
-  // ⚠️ Và nói thật về chính ngưỡng 60%: nó là con số CHỌN TAY, không phải con số đo được, và kỷ 9
-  // chỉ cách vạch 2 điểm. Thứ thật sự canh "địa hình có sập không" là bài "MỌI KỶ PHẢI DÙNG ĐỦ SỐ
-  // BẬC MÌNH KHAI" ở trên — nó hỏi thẳng vào khuyết tật thay vì hỏi qua một tỉ lệ.
+  // ⚠️ MỘT DANH SÁCH RỖNG LÀ MỘT DANH SÁCH YẾU — nó chỉ đỏ được theo MỘT chiều. Bù lại bằng hai
+  // thứ, cả hai đều là thói quen dự án đã trả giá mới có: (a) **gác chạy-rỗng** đếm đúng số kỷ
+  // được xét, để một `continue` đặt nhầm chỗ không làm cả vòng lặp im lặng bỏ qua; (b) **BIÊN đo
+  // được**, ghi thẳng vào thông báo — 2026-08-20 chỗ sát vạch nhất là kỷ 13 với 51,6%, tức còn 8,4
+  // điểm. Một lời hứa đạt nhờ 3% biên là một lời hứa sắp gãy mà không ai biết (bài học Phase 9B),
+  // nên phải biết mình đang cách vạch bao xa chứ đừng chỉ đọc xanh/đỏ.
+  //
+  // ⚠️ Và nói thật về chính ngưỡng 60%: nó là con số CHỌN TAY, không phải con số đo được. Thứ thật
+  // sự canh "địa hình có sập không" là bài "MỌI KỶ PHẢI DÙNG ĐỦ SỐ BẬC MÌNH KHAI" ở trên — nó hỏi
+  // thẳng vào khuyết tật thay vì hỏi qua một tỉ lệ.
   const TRUOT = [];
+  let soKyDaXet = 0;
+  let satVach = { era: 0, share: 0 };
   for (const era of ERAS) {
     const profile = eraTerrainProfile(era);
     if (profile.terraces < 3) continue;
+    soKyDaXet += 1;
     const { topShare } = levelStats(buildTerrain({ era, gridSize: GRID }));
+    if (topShare > satVach.share) satVach = { era, share: topShare };
     if (topShare > 0.60) TRUOT.push(era);
   }
+  assert.equal(
+    soKyDaXet, 8,
+    `chỉ xét ${soKyDaXet} kỷ khai từ 3 bậc trở lên (phải là 8) — hoặc bảng vừa đổi, hoặc vòng lặp `
+    + 'đang bỏ qua kỷ trong im lặng và con số dưới đây không nói về thứ nó tự nhận.',
+  );
   assert.deepEqual(
-    TRUOT, [4],
-    `danh sách kỷ có một bậc nuốt quá 60% mặt ĐẤT đã đổi: ${JSON.stringify(TRUOT)}. Dài ra ⇒ địa `
-    + 'hình vừa sập ở một kỷ nữa. Ngắn lại ⇒ kỷ 4 vừa hoá gồ ghề, mà đồng bằng của nó là một LỰA '
-    + 'CHỌN đã khai (ADR-032 bổ sung (b)) — sửa cả hai nơi cho khớp.',
+    TRUOT, [],
+    `danh sách kỷ có một bậc nuốt quá 60% mặt ĐẤT: ${JSON.stringify(TRUOT)} — sát vạch nhất hiện là `
+    + `kỷ ${satVach.era} với ${(satVach.share * 100).toFixed(1)}%. Dài ra ⇒ địa hình vừa sập ở một `
+    + 'kỷ: sửa GỐC (hình dạng / `tilt` của chính kỷ đó), ĐỪNG nới ngưỡng và đừng thêm ngoại lệ.',
   );
 });
 
@@ -160,25 +179,56 @@ test('cao độ Ô ĐẤT luôn là BỘI SỐ NGUYÊN của một bậc thềm 
   // san thành dốc thoải nên cao độ của chúng là số lẻ. Lý do của bất biến này (mặt đất bằng cho
   // khối đáy phẳng) **không áp cho mặt phố**: không ai đặt nhà lên đó. Vế thứ hai của bài đếm
   // đúng bao nhiêu ô lẻ và chúng nằm ở đâu, để trạng thái ấy TƯỜNG MINH chứ không lặng lẽ.
+  const KY_CO_SAN = [];
   let soODuongLe = 0;
   for (const era of ERAS) {
     const terrain = buildTerrain({ era, gridSize: GRID });
     const unit = TERRACE_STEP * eraTerrainProfile(era).relief;
     if (unit <= 0) continue;
+    let leCuaKy = 0;
     for (const cell of terrain.cells) {
       const steps = cell.h / unit;
       const chan = Math.abs(steps - Math.round(steps)) < 1e-9;
-      if (laDuong(cell)) { if (!chan) soODuongLe += 1; continue; }
+      if (laDuong(cell)) { if (!chan) leCuaKy += 1; continue; }
       assert.ok(
         chan,
         `kỷ ${era} ô ĐẤT (${cell.x},${cell.y}) cao ${cell.h} — không phải bội số của bậc ${unit}`,
       );
     }
+    soODuongLe += leCuaKy;
+    if (leCuaKy > 0) KY_CO_SAN.push(era);
   }
-  // Gác chạy-rỗng KIÊM bằng chứng phép san có làm việc thật: nếu KHÔNG ô đường nào lẻ thì phép san
-  // đã chết trong im lặng và bài trên chỉ đang canh một trường chưa ai đụng tới.
-  assert.ok(soODuongLe > 200,
-    `chỉ có ${soODuongLe} ô đường mang cao độ lẻ — phép san đường gần như không chạy`);
+
+  // ── GÁC CHẠY-RỖNG: phép san đường có thật sự làm việc không? ──────────────────────────────
+  /**
+   * ⚠️ BẢN CŨ HỎI `soODuongLe > 200`, VÀ CON SỐ 200 ẤY LÀ MỘT MỨC TUYỆT ĐỐI HIỆU CHUẨN TRÊN BẢNG
+   * `relief` CŨ. §1(B) hạ `relief` ở cả 15 kỷ ⇒ phép đếm rơi xuống 140 và gác kêu *"phép san gần
+   * như không chạy"* — một lời BÁO ĐỘNG GIẢ, vì phép san vẫn chạy đúng y như trước; thứ đổi là số
+   * chỗ CẦN san. Đúng bẫy Phase 7D: một lời hứa nói về QUAN HỆ mà được viết thành một hằng số.
+   *
+   * Quan hệ thật, và nó suy được chứ không phải chọn tay: phép san chỉ có việc để làm khi một bậc
+   * thềm CAO HƠN mức dốc tối đa mà một con phố chịu được. Bậc thềm = `TERRACE_STEP × relief`; mức
+   * chịu được = `maxRoadRise()`. ⇒ **tập kỷ có ô đường lẻ phải BẰNG tập kỷ có bậc thềm vượt
+   * `maxRoadRise()`** — không nhiều hơn (san ở nơi không cần là đang bẻ cong mặt phố vô cớ), không
+   * ít hơn (bỏ sót một kỷ đáng lẽ phải san là để lại đúng cái vách 173% mà bản vá sinh ra để xoá).
+   *
+   * Hai vế được tính bằng hai đường ĐỘC LẬP: vế trái đo trên cao độ `buildTerrain` THẬT SỰ trả ra,
+   * vế phải suy từ bảng + hằng số. Không bên nào so với một con số thứ ba viết tay.
+   */
+  const KY_DANG_LE_PHAI_SAN = ERAS.filter(
+    (era) => TERRACE_STEP * eraTerrainProfile(era).relief > maxRoadRise() + 1e-9,
+  );
+  assert.deepEqual(
+    KY_CO_SAN, KY_DANG_LE_PHAI_SAN,
+    `kỷ CÓ ô đường lẻ: ${JSON.stringify(KY_CO_SAN)} · kỷ ĐÁNG LẼ phải san (bậc thềm > `
+    + `${maxRoadRise().toFixed(3)}): ${JSON.stringify(KY_DANG_LE_PHAI_SAN)}. Lệch nhau ⇒ hoặc phép `
+    + 'san đã chết trong im lặng, hoặc nó đang san ở chỗ không cần.',
+  );
+  assert.ok(
+    KY_CO_SAN.length >= 5 && soODuongLe > 100,
+    `phép san chỉ chạm ${KY_CO_SAN.length} kỷ / ${soODuongLe} ô đường — quá ít để bài đếm ô ĐẤT ở `
+    + 'trên có nghĩa; nhiều khả năng cả bảng địa hình vừa bị làm phẳng.',
+  );
 });
 
 test('PHỐ KHÔNG BAO GIỜ DỐC HƠN CON PHỐ DỐC NHẤT THẾ GIỚI (34,8% — Baldwin Street)', () => {
@@ -266,7 +316,15 @@ test('ĐỐI CHỨNG: trường CHƯA SAN (bậc thềm thô) phải bị chính
   // Không có bài này thì bài trên có thể xanh vì một lý do chẳng liên quan (vd `heightAt` trả 0).
   // Dựng lại đúng bộ số hỏng cũ: mặt đường bám thẳng lưới bậc thềm, chưa qua phép san. Đo được
   // ngày 2026-08-18 trước bản vá: 205/1320 cặp quá trần, chỗ dốc nhất 173% (kỷ 7).
-  const buoc = TERRACE_STEP * eraTerrainProfile(7).relief;
+  //
+  // ⚠️ CON SỐ 1,15 LÀ MỘT HẰNG SỐ VIẾT NGUYÊN VĂN, VÀ ĐÓ LÀ CHỦ ĐÍCH — KHÔNG ĐƯỢC ĐỌC BẢNG HIỆN
+  // TẠI. Bản đầu viết `eraTerrainProfile(7).relief`, nghe rất "một luật một công thức" nhưng nó
+  // đặt cái ĐỐI CHỨNG lên chính cái bảng mà đối chứng sinh ra để canh: §1(B) hạ `relief` kỷ 7 từ
+  // 1,15 xuống 0,55 và bài này lập tức đỏ với thông báo *"đối chứng đã trôi khỏi thứ nó nhốt"* —
+  // đúng như nó phải thế. Một đối chứng NHỐT một bộ số hỏng ĐÃ XẢY RA TRONG QUÁ KHỨ; quá khứ thì
+  // không đổi theo bảng hôm nay. Ngày nào bảng đổi tiếp, con số 1,15 vẫn phải làm phép đo kêu.
+  const RELIEF_KY7_TRUOC_BAN_VA = 1.15;                   // bảng `ERA_TERRAIN` lúc 2026-08-18
+  const buoc = TERRACE_STEP * RELIEF_KY7_TRUOC_BAN_VA;
   const tho = (x, y) => (x + y >= 8 ? 2 * buoc : 0);      // một ranh thềm HAI bậc cắt ngang phố
   let batDuoc = 0;
   const oDuong = [...O_DUONG].map((k) => k.split('|').map(Number));
@@ -278,7 +336,8 @@ test('ĐỐI CHỨNG: trường CHƯA SAN (bậc thềm thô) phải bị chính
   }
   assert.ok(batDuoc > 0, 'phép đo không còn nhìn thấy một ranh thềm cắt ngang phố — con số 0 kia vô nghĩa');
   assert.ok(SMOOTHSTEP_PEAK * 2 * buoc > 1.7,
-    'bộ số hỏng cũ dựng lại không còn dốc như bản gốc (173%) — đối chứng đã trôi khỏi thứ nó nhốt');
+    `bộ số hỏng cũ dựng lại chỉ còn dốc ${(SMOOTHSTEP_PEAK * 2 * buoc * 100).toFixed(0)}% thay vì `
+    + '173% — ai đó vừa đổi hằng số nhốt-quá-khứ ở trên, đối chứng đã trôi khỏi thứ nó nhốt');
 });
 
 test('SAN ĐƯỜNG KHÔNG ĐƯỢC ĐẨY ĐỘ DỐC SANG NGANG: bờ đất bên lề rộng hơn một bậc ở TỐI ĐA 5 chỗ', () => {
@@ -529,46 +588,134 @@ test('`tintAt` phải TẤT ĐỊNH, nằm trong 0..1, và đổi theo cả hai 
   }
 });
 
-test('KHUÔN HÌNH HỌC phải SẠCH NHIỄU — hai kỷ cùng `shape` ra khuôn giống hệt từng con số', () => {
-  // `geometricTemplate` chỉ có giá trị nếu nó thật sự đã gỡ hết nhiễu ra. Cách kiểm rẻ nhất và
-  // không thể xanh oan: năm kỷ cùng khai `valley` phải cho MỘT khuôn duy nhất. Còn sót một hạt
-  // nhiễu nào (nhiễu lấy hạt giống từ `era`) là năm khuôn ấy khác nhau ngay.
-  const theoDang = new Map();
-  for (const era of ERAS) {
-    const dang = eraTerrainProfile(era).shape;
-    const { field } = geometricTemplate({ era, gridSize: GRID });
-    const van = Array.from(field).map((v) => v.toFixed(9)).join(',');
-    if (!theoDang.has(dang)) theoDang.set(dang, { era, van });
-    else {
-      const dau = theoDang.get(dang);
-      assert.equal(van, dau.van,
-        `kỷ ${era} và kỷ ${dau.era} cùng khai '${dang}' mà ra hai khuôn khác nhau`
-        + ' ⇒ khuôn vẫn còn dính nhiễu, và mọi con số "phần dư" đo bằng nó đều sai');
+test('KHUÔN HÌNH HỌC phải SẠCH NHIỄU — đổi hạt giống mà khuôn không nhúc nhích', () => {
+  // ⚠️ BẢN CŨ HỎI SAI CÂU, VÀ NÓ CHỈ LỘ RA KHI BẢNG ĐỔI. Nó nhóm các kỷ theo `shape` rồi đòi hai
+  // kỷ cùng `shape` phải ra cùng một khuôn. Từ §1(B), khuôn còn phụ thuộc `drain` và `tilt`, nên
+  // hai kỷ cùng khai `valley` ra hai khuôn khác nhau là ĐÚNG chứ không phải lỗi.
+  //
+  // ⚠️ VÀ CÁCH VÁ HIỂN NHIÊN NHẤT LÀ MỘT CÁI BẪY: nhóm theo `shape|drain|tilt` thì **không một cặp
+  // kỷ nào còn trùng khoá**, vòng lặp không so lần nào, và bài test XANH mà chưa kiểm gì cả — một
+  // cái phễu đội lốt một hàng rào (đúng bài học "assert 'có ít nhất một chỗ'", Phase 7A).
+  //
+  // Câu hỏi ĐÚNG là câu mà `geometricTemplate` sinh ra để trả lời: **khuôn có phụ thuộc HẠT GIỐNG
+  // NHIỄU không?** Hạt giống của `buildTerrain` là `${era}|${shape}`, nên chỉ cần dựng một kỷ SONG
+  // SINH — số hiệu khác, mọi tham số y hệt — rồi đòi hai khuôn trùng nhau từng con số. Cách này
+  // kiểm được CẢ 15 hồ sơ thật, không chỉ những hồ sơ tình cờ trùng nhau.
+  //
+  // ⚠️ Kèm VẾ NGƯỢC LẠI, nếu không thì vế trên xanh oan: địa hình THẬT của hai kỷ song sinh phải
+  // KHÁC nhau. Thiếu vế này, một `valueNoise` trả hằng số sẽ làm mọi khuôn trùng nhau và bài test
+  // reo mừng — trong khi "khuôn đã gỡ hết nhiễu" lúc ấy là một câu nói về một cơ chế không tồn tại.
+  const KY_SONG_SINH = 900;
+  const van = (field) => Array.from(field).map((v) => v.toFixed(9)).join(',');
+  const chuKyDat = (era) => buildTerrain({ era, gridSize: GRID }).cells
+    .map((c) => c.h.toFixed(6)).join(',');
+  let soHoSo = 0;
+  let soKhacNhau = 0;
+  try {
+    for (const era of ERAS) {
+      ERA_TERRAIN[KY_SONG_SINH] = { ...eraTerrainProfile(era) };
+      soHoSo += 1;
+      assert.equal(
+        van(geometricTemplate({ era: KY_SONG_SINH, gridSize: GRID }).field),
+        van(geometricTemplate({ era, gridSize: GRID }).field),
+        `kỷ ${era}: chỉ đổi SỐ HIỆU kỷ (mọi tham số y hệt) mà khuôn đã đổi ⇒ khuôn vẫn còn dính `
+        + 'nhiễu, và mọi con số "phần dư" đo bằng nó đều sai',
+      );
+      if (chuKyDat(era) !== chuKyDat(KY_SONG_SINH)) soKhacNhau += 1;
     }
+  } finally {
+    delete ERA_TERRAIN[KY_SONG_SINH];
   }
-  assert.ok(theoDang.size >= 5, `chỉ thấy ${theoDang.size} kiểu địa hình — bảng đã hẹp lại?`);
+  assert.equal(soHoSo, 15, `chỉ kiểm ${soHoSo} hồ sơ — vòng lặp đang bỏ qua kỷ trong im lặng`);
+
+  // Kỷ 14 khai `terraces: 1, relief: 0` — mặt đất PHẲNG TUYỆT ĐỐI do người san (Marina Bay). Ở đó
+  // nhiễu không có gì để điều biến, nên hai kỷ song sinh ra hai mặt đất y hệt nhau, và điều đó
+  // đúng chứ không phải hỏng.
+  //
+  // ⚠️ VÀ KỶ 12 LÀ MỘT NGOẠI LỆ THỨ HAI, ĐO ĐƯỢC, KHÔNG PHẢI MỘT NGƯỠNG BỊ NỚI. Sau khi `drain`
+  // của nó được sửa cho khớp `settingStyle` (Volga ở phía ĐÔNG, không phải nam), trường cao độ
+  // chia đúng **72/72 ô** giữa hai bậc và **0/144 ô** đổi khi đổi hạt giống — trong khi ba kỷ
+  // `plain` còn lại đổi 6–8 ô. Nguyên nhân đo được: kỷ 12 có `tilt` cao nhất nhóm (0,55) mà chỉ
+  // khai **2 bậc**, nên sau khi lượng tử hoá thì cái TRIỀN quyết định trọn vẹn, biên độ bẻ cong
+  // của nhiễu (±0,9 ô) không đủ đẩy ô nào qua ranh giới bậc. Chênh cao thật của kỷ này là 0,11 đơn
+  // vị — dưới một phần tư bậc thềm — nên nó KHÔNG nhìn thấy được; ghi ra ở đây để phiên sau khỏi
+  // tưởng là hỏng, và để nếu có kỷ THỨ BA rơi vào thì bài test tự đỏ. Xem `TECH_DEBT #66`.
+  const KY_PHANG = ERAS.filter((era) => eraTerrainProfile(era).terraces < 2);
+  const KHONG_DOI = [];
+  for (const era of ERAS) {
+    ERA_TERRAIN[KY_SONG_SINH] = { ...eraTerrainProfile(era) };
+    if (chuKyDat(era) === chuKyDat(KY_SONG_SINH)) KHONG_DOI.push(era);
+    delete ERA_TERRAIN[KY_SONG_SINH];
+  }
+  assert.deepEqual(KHONG_DOI, [12, 14],
+    `đúng HAI kỷ có địa hình KHÔNG đổi khi đổi hạt giống: kỷ 14 (phẳng tuyệt đối do người san) và `
+    + `kỷ 12 (triền nuốt trọn nhiễu sau khi chia 2 bậc — xem chú thích trên). Đo được ${KHONG_DOI}. `
+    + 'Danh sách đổi ⇒ hoặc có kỷ thứ ba vừa rơi vào, hoặc một trong hai kỷ ấy vừa được chữa — cả '
+    + 'hai đều phải xem lại `TECH_DEBT #66`, KHÔNG được sửa con số ở đây.');
+  assert.deepEqual(KY_PHANG, [14],
+    'chỉ kỷ 14 khai mặt đất phẳng tuyệt đối; kỷ 12 KHÔNG phẳng (chênh 0,11 đv) — nó chỉ hết nhạy '
+    + 'với hạt giống, và hai chuyện đó khác nhau.');
+  assert.ok(soKhacNhau >= ERAS.length - KHONG_DOI.length,
+    `chỉ ${soKhacNhau} kỷ đổi theo hạt giống — hạt giống gần như không làm gì, nên câu "khuôn đã `
+    + 'gỡ hết nhiễu" ở trên đang nói về một cơ chế rỗng.');
 });
 
-test('ĐẾM ĐƯỢC: những kiểu địa hình KHÔNG có một lý do hình học nào', () => {
-  // ⚠️ ĐÂY LÀ MỘT KHUYẾT TẬT ĐANG ĐƯỢC GHI LẠI CHO ĐẾM ĐƯỢC, KHÔNG PHẢI MỘT LỜI HỨA.
-  // `SHAPES.plain` và `SHAPES.rolling` đều là `(n) => n` — thuần nhiễu, không một thành phần hình
-  // học nào. Nghĩa là năm kỷ (2, 3, 7, 11, 12) có hình dạng mặt đất **không thể** đọc ra lý do,
-  // dù `note` của chúng hứa hẳn "đồng bằng phù sa sông Nin" hay "đồi Toscana nối nhau".
-  // Đo được: khuôn của chúng là một HẰNG SỐ ⇒ phần dư chiếm 100% biên độ.
+test('MỌI KIỂU ĐỊA HÌNH ĐỀU PHẢI CÓ MỘT LÝ DO HÌNH HỌC — không kiểu nào là nhiễu trắng', () => {
+  // ⚠️ BÀI NÀY TỪNG LÀ MỘT CÁI HẸN GIỜ, VÀ NÓ VỪA REO. Bản trước ghi
+  // `assert.deepEqual(vaLyDo.sort(), ['plain', 'rolling'])` — một khuyết tật được ĐẾM chứ không
+  // phải một lời hứa: `SHAPES.plain` và `SHAPES.rolling` khi ấy đều là `(n) => n`, thuần nhiễu,
+  // nên năm kỷ (2, 3, 7, 11, 12) có mặt đất **không thể** đọc ra lý do dù `note` của chúng hứa hẳn
+  // "đồng bằng phù sa sông Nin" hay "đồi Toscana nối nhau". Con số ấy là thứ buộc §1(B) phải mở
+  // bài test này ra đọc — đúng vai của nó: *một mục trong `TECH_DEBT.md` chỉ được đọc khi có người
+  // đi tìm; một con số trong bài test thì tự đòi được đọc.*
   //
-  // Con số ở đây là **cái hẹn giờ duy nhất chạy được**: sửa xong một kiểu thì bài này đỏ và buộc
-  // phải mở ra đọc; thêm một kiểu vô-lý-do mới thì cũng đỏ. Một dòng trong `TECH_DEBT.md` chỉ được
-  // đọc khi có người đi tìm.
+  // Nay cả sáu kiểu đều có thành phần hình học, nên bài đổi vai từ ĐẾM NỢ sang GIỮ LỜI HỨA.
+  // ⚠️ PHẢI TẮT `tilt` MỚI ĐO ĐƯỢC THỨ ĐANG HỎI — và tôi biết điều đó vì phép thử ngược KHÔNG NỔ.
+  // Bản đầu của chính bài này đo thẳng khuôn của kỷ đại diện. Phá thử (`rolling: () => 0.5`, tức
+  // giết sạch hình học của một kiểu) thì bài test vẫn XANH. Lý do: `truongTho` ghép theo công thức
+  // `raw = hinh × (1 − tilt) + trien × tilt`, nên cái triền nghiêng được cộng vào **BÊN NGOÀI** hàm
+  // hình dạng. Kỷ 7 khai `tilt: 0,44` ⇒ khuôn của nó vẫn biến thiên rõ ràng dù hàm hình dạng đã
+  // chết hẳn. Tôi đang đo `shape + tilt·trien` rồi gọi đó là `shape` — đúng hình dạng sai của
+  // `TECH_DEBT #22` (một đại lượng chứa sẵn thứ mình không muốn đo).
+  //
+  // Vá bằng cách hỏi đúng câu: dựng một hồ sơ song sinh với `tilt: 0` để chỉ còn lại hàm hình dạng.
+  // `trien` vẫn được phép xuất hiện — nó là một ĐẦU VÀO HÌNH HỌC (`coast` và `dune` xây trên nó),
+  // khác hẳn với nhiễu.
+  const bienDo = (field) => Math.max(...field) - Math.min(...field);
+  const KIEU = [...new Set(ERAS.map((e) => eraTerrainProfile(e).shape))].sort();
+  const KY_THU = 901;
   const vaLyDo = [];
-  for (const dang of new Set(ERAS.map((e) => eraTerrainProfile(e).shape))) {
-    const era = ERAS.find((e) => eraTerrainProfile(e).shape === dang);
-    const { field } = geometricTemplate({ era, gridSize: GRID });
-    const lo = Math.min(...field);
-    const hi = Math.max(...field);
-    if (hi - lo < 1e-9) vaLyDo.push(dang);
+  let yeuNhat = { dang: '', bien: Infinity };
+  try {
+    for (const dang of KIEU) {
+      const era = ERAS.find((e) => eraTerrainProfile(e).shape === dang);
+      ERA_TERRAIN[KY_THU] = { ...eraTerrainProfile(era), tilt: 0 };
+      const bien = bienDo(geometricTemplate({ era: KY_THU, gridSize: GRID }).field);
+      if (bien < yeuNhat.bien) yeuNhat = { dang, bien };
+      if (bien < 1e-9) vaLyDo.push(dang);
+    }
+  } finally {
+    delete ERA_TERRAIN[KY_THU];
   }
-  assert.deepEqual(vaLyDo.sort(), ['plain', 'rolling'],
-    'danh sách kiểu địa hình THUẦN NHIỄU đã đổi — đọc lại `TECH_DEBT` về địa hình trước khi sửa số này');
+  assert.equal(KIEU.length, 6, `bảng có ${KIEU.length} kiểu địa hình thay vì 6 — bảng vừa đổi`);
+  assert.deepEqual(
+    vaLyDo, [],
+    `kiểu địa hình THUẦN NHIỄU (khuôn phẳng lì, không đọc ra lý do): ${JSON.stringify(vaLyDo)}`,
+  );
+
+  // ⚠️ BIÊN, KHÔNG CHỈ XANH/ĐỎ. "Khác 0" là một cái vạch quá dễ vượt: một kiểu có biên độ 0,01 thì
+  // về mặt toán là "có hình học", còn trên màn hình thì vẫn là nhiễu. Sàn 0,30 chừa chỗ cho việc
+  // chỉnh mỹ thuật sau này mà vẫn bắt được một kiểu đang thoái hoá về phẳng.
+  assert.ok(
+    yeuNhat.bien > 0.30,
+    `kiểu '${yeuNhat.dang}' có khuôn biên độ ${yeuNhat.bien.toFixed(3)} — quá mỏng để mắt đọc ra `
+    + 'một hình dạng; kiểu này đang trôi về nhiễu trắng.',
+  );
+
+  // ĐỐI CHỨNG: phép đo phải bắt được một khuôn phẳng lì thật. Không có vế này thì `bienDo` trả
+  // NaN (hoặc luôn dương) cũng làm bài test xanh.
+  assert.ok(bienDo(new Float64Array(GRID * GRID)) < 1e-9,
+    'phép đo biên độ không nhận ra nổi một trường phẳng lì — con số 0 ở trên vô nghĩa');
 });
 
 test('KHUÔN không được phụ thuộc tiến độ chơi (ADR-007)', () => {
@@ -582,4 +729,88 @@ test('KHUÔN không được phụ thuộc tiến độ chơi (ADR-007)', () => 
     }).field);
     assert.deepEqual(rac, sach, `kỷ ${era}: khuôn đổi khi truyền thêm dữ liệu tiến độ`);
   }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// HAI BẢNG KHÔNG ĐƯỢC TRÔI KHỎI NHAU: `drain` (đất thấp về đâu) ↔ `side` (nước ở đâu)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+test('NƯỚC NẰM Ở CHỖ THẤP — `drain` của mỗi kỷ phải TRÙNG `side` mà `settingStyle` khai', () => {
+  // ⚠️ ĐÂY LÀ BÀI HỌC ĐẮT NHẤT CỦA §1(B), VÀ NÓ LỘ RA SAU KHI MỌI CON SỐ ĐỀU ĐÃ XANH.
+  //
+  // §1(B) thêm trường `drain` — hướng đất thấp của mỗi kỷ — và buộc nó vào `country` ở
+  // `eraStyle.js`, đúng khuôn đã dùng cho `streetStyle`/`floraStyle`/`groundFloorStyle`. Nhưng
+  // `country` KHÔNG phải ràng buộc chặt nhất: một đất nước có bốn phía, còn dòng sông thì chỉ có
+  // MỘT. Kết quả là 9/14 kỷ có nước khai `drain` lệch hoặc NGƯỢC hẳn với `side` — kỷ 5 khai đất
+  // thấp về tây trong khi suối Elzbach ở đông, tức nước đang chảy LÊN DỐC. Không một bài test nào
+  // đỏ, vì hai bảng ấy chưa bao giờ được đặt cạnh nhau.
+  //
+  // ⇒ Luật đúng là một mệnh đề vật lý, không phải một lựa chọn mỹ thuật: **nước đứng ở chỗ thấp**.
+  // Nên `drain` không tự do — nó bị `side` ấn định ở mọi kỷ có nước, và chỉ tự do ở kỷ khô.
+  //
+  // ⚠️ VÀ CÁI GIÁ PHẢI NÓI THẲNG: sửa cho ĐÚNG VẬT LÝ làm cổng "thấy nước" TỆ ĐI ở vài kỷ (bờ xa
+  // tụt xuống khuất sau sống đất gần), xem `TECH_DEBT #59` và `scripts/waterView.test.js`. Đó là
+  // một đánh đổi có thật, và hướng giải quyết KHÔNG phải nói dối địa lý để mua một con số —
+  // ADR-025 đã cấm đúng điều đó với mặt đường.
+  //
+  // THỬ-CHO-ĐỎ: đổi `drain` của kỷ 5 về `'tay'` (giá trị sai cũ) ⇒ đỏ ngay ở kỷ 5.
+  let soKyCoNuoc = 0;
+  for (let era = 1; era <= 15; era += 1) {
+    const setting = getSetting(era);
+    if (!setting || setting.water === 'none') continue;
+    soKyCoNuoc += 1;
+    assert.equal(ERA_TERRAIN[era].drain, setting.side,
+      `kỷ ${era}: đất thấp về "${ERA_TERRAIN[era].drain}" mà nước lại ở "${setting.side}" ⇒ nước `
+      + 'chảy lên dốc. Sửa `drain` ở `ERA_TERRAIN` cho khớp `settingStyle`, ĐỪNG sửa `side` — '
+      + '`settingStyle` là bảng địa thế có khảo cứu, `drain` là bảng đi sau.');
+  }
+  assert.equal(soKyCoNuoc, 14,
+    `chỉ xét được ${soKyCoNuoc} kỷ có nước — bảng địa thế đổi thì con số này phải được xem lại, `
+    + 'không được để vòng lặp im lặng bỏ qua.');
+
+  // Vế còn lại: kỷ KHÔ thì `drain` tự do, nhưng vẫn phải khai một hướng thật (không rỗng).
+  const kyKho = [];
+  for (let era = 1; era <= 15; era += 1) {
+    const setting = getSetting(era);
+    if (setting && setting.water !== 'none') continue;
+    kyKho.push(era);
+    assert.ok(['bac', 'nam', 'dong', 'tay'].includes(ERA_TERRAIN[era].drain),
+      `kỷ ${era} (khô) vẫn phải khai một hướng thấp có thật`);
+  }
+  assert.deepEqual(kyKho, [1],
+    'đúng MỘT kỷ không có nước (Göbekli Tepe). Danh sách đổi ⇒ xem lại cả hai bảng.');
+});
+
+test('VÀNH ĐẤT KHÔNG BAO GIỜ CHẠM MẶT NƯỚC — biên độ lượn là một QUAN HỆ với `WATER_DROP_BELOW_PLAIN`', () => {
+  // ⚠️ Bài học Phase 7D lặp lại lần thứ N: một lời hứa nói về QUAN HỆ mà viết thành HẰNG SỐ thì
+  // gãy trong im lặng. Biên độ lượn của vành đất trước đây là `0,42` viết cứng (±0,21), đúng
+  // **nhờ** `WATER_DROP_BELOW_PLAIN = 0,30` ở một file khác mà nó không hề tham chiếu tới. §1(B)
+  // cộng thêm thành phần nghiêng vào cùng chỗ ấy và đất khô kỷ 8 tụt 0,0288 ô DƯỚI mặt nước.
+  //
+  // THỬ-CHO-ĐỎ: đổi `nenRoll` thành `(tho) => tho` (bỏ bão hoà) ⇒ đỏ ở bài bất biến (3) của
+  // `setting.test.js`; đổi `ROLL_HEADROOM_SHARE` lên 1,2 ⇒ đỏ ở assert đầu bài này.
+  const bienDo = bienDoRollNgoai();
+  assert.ok(bienDo < WATER_DROP_BELOW_PLAIN,
+    `biên độ lượn ${bienDo} phải NHỎ HƠN khoảng hở tới mặt nước ${WATER_DROP_BELOW_PLAIN}, nếu `
+    + 'không thì vành đất khô có thể chui xuống dưới mặt nước.');
+  assert.ok(Math.abs(-APRON_DROP - bienDo - WATER_SURFACE_Y) > 1e-9,
+    'chỗ trũng nhất của vành đất phải còn một khoảng hở THẬT tới mặt nước, không được bằng 0.');
+
+  // BÃO HOÀ, KHÔNG KẸP: dù bơm vào bao nhiêu cũng không vượt biên, mà thứ tự vẫn giữ nguyên.
+  // ⚠️ `<=` CHỨ KHÔNG PHẢI `<`: `tanh` tiệm cận 1 nên ở độ lệch lớn nó CHẠM biên trong số dấu phẩy
+  // động (tanh(5/0,21) = 1,0 tròn). Thứ phải bảo đảm là KHÔNG VƯỢT, và khoảng hở thật tới mặt nước
+  // là `WATER_DROP_BELOW_PLAIN − bienDo = 0,09` — đã assert ở trên.
+  for (const tho of [0.5, 1, 5, 50]) {
+    assert.ok(Math.abs(nenRoll(tho)) <= bienDo + 1e-12,
+      `nén ${tho} ra ${nenRoll(tho)} — phải luôn nằm TRONG biên độ ${bienDo}`);
+  }
+  const mau = [-1, -0.4, -0.2, 0, 0.2, 0.4, 1];
+  for (let i = 1; i < mau.length; i += 1) {
+    assert.ok(nenRoll(mau[i]) > nenRoll(mau[i - 1]),
+      `phép nén phải ĐƠN ĐIỆU NGẶT — kẹp thì mọi kỷ nghiêng mạnh dồn về một giá trị và thứ tự `
+      + 'giữa chúng biến mất (bài học Phase 7D).');
+  }
+  // Và ở vùng lệch nhỏ nó phải gần như KHÔNG đổi gì — bản vá này không được vẽ lại thế giới.
+  assert.ok(Math.abs(nenRoll(0.02) - 0.02) < 1e-3,
+    'ở độ lệch nhỏ, phép nén phải xấp xỉ phép đồng nhất');
 });

@@ -67,14 +67,82 @@ test('15 kỷ không được ra cùng một chân trời', () => {
 test('⚠️ CHÂN TRỜI ĐỘC LẬP VỚI `relief` — hai đại lượng, không phải một', () => {
   // Đây là bài test của bài học "một trường gánh hai việc" (lần thứ 5). Nếu ai đó sau này thấy hai
   // bảng "na ná" rồi gộp lại (hoặc suy chân trời ra từ `relief`), bài này phải đỏ.
-  // Bằng chứng phải là bốn góc: có kỷ đất-thấp/núi-cao VÀ có kỷ đất-cao/núi-thấp. Chỉ cần thiếu một
-  // trong hai chiều là hai đại lượng đã có thể suy ra nhau bằng một phép nhân.
-  const lowGroundHighSky = ERAS.filter((e) => ERA_TERRAIN[e].relief <= 0.95 && HORIZON_STYLES[e].rise >= 3);
-  const highGroundLowSky = ERAS.filter((e) => ERA_TERRAIN[e].relief >= 1.0 && HORIZON_STYLES[e].rise <= 3);
-  assert.ok(lowGroundHighSky.length > 0,
-    'không kỷ nào có đất phẳng mà núi cao (Kyoto) ⇒ chân trời đang chỉ là `relief` nhân lên');
-  assert.ok(highGroundLowSky.length > 0,
-    'không kỷ nào có đất gồ ghề mà chân trời thấp ⇒ chân trời đang chỉ là `relief` nhân lên');
+  //
+  // ⚠️ BẢN CŨ HỎI BẰNG HAI MỨC TUYỆT ĐỐI — `relief <= 0,95` và `relief >= 1,0` — VÀ NÓ ĐÃ CHẾT
+  // ĐÚNG NHƯ BÀI HỌC PHASE 7D BÁO TRƯỚC. §1(B) hạ `relief` ở cả 15 kỷ (đỉnh cũ 1,35 → đỉnh mới
+  // 0,90) vì một lý do chẳng liên quan gì tới chân trời: nền thành phố phải bằng. Lập tức **không
+  // kỷ nào còn `relief >= 1,0`**, nửa sau của phép chứng minh rỗng, và bài test đỏ với thông báo
+  // *"chân trời đang chỉ là relief nhân lên"* — một lời tố cáo HOÀN TOÀN SAI: hai bảng vẫn độc
+  // lập y như trước, chỉ có cái thước là lạc hậu. **Một con số tuyệt đối không diễn đạt được một
+  // luật nói về QUAN HỆ**, và chỗ nguy hiểm là nó không im lặng mà lại kêu oan, tức đẩy phiên sau
+  // đi sửa một thứ đang lành.
+  //
+  // Bản đúng phát biểu thẳng cái quan hệ: nếu `rise` suy ra được từ `relief` bằng MỘT PHÉP NHÂN
+  // (hay bất kỳ hàm đồng biến nào), thì với mọi cặp kỷ, hai hiệu số phải CÙNG DẤU — tức số cặp
+  // NGƯỢC CHIỀU phải bằng 0. Đếm cặp ngược chiều là phép đo không có đơn vị, nên nó sống sót mọi
+  // lần cả hai bảng bị co giãn. Đo 2026-08-20: 15/103 cặp ngược chiều.
+  const capNguocChieu = () => {
+    const cap = [];
+    for (let i = 0; i < ERAS.length; i += 1) {
+      for (let j = i + 1; j < ERAS.length; j += 1) {
+        const a = ERAS[i];
+        const b = ERAS[j];
+        const dDat = ERA_TERRAIN[a].relief - ERA_TERRAIN[b].relief;
+        const dTroi = HORIZON_STYLES[a].rise - HORIZON_STYLES[b].rise;
+        if (Math.abs(dDat) < 1e-9 || Math.abs(dTroi) < 1e-9) continue;   // hoà thì không nói lên gì
+        if (dDat * dTroi < 0) cap.push([a, b]);
+      }
+    }
+    return cap;
+  };
+  const nguoc = capNguocChieu();
+  assert.ok(
+    nguoc.length >= 8,
+    `chỉ ${nguoc.length} cặp kỷ có đất và chân trời NGƯỢC CHIỀU nhau — ít tới mức chân trời gần `
+    + 'như là `relief` nhân lên. Hai bảng đang trôi về làm một.',
+  );
+  // ⚠️ VÀ ĐÂY LÀ SỰ THẬT PHẢI NÓI RA CHỨ ĐỪNG GIẤU: hai bảng **tương quan mạnh** — 15/103 cặp
+  // ngược chiều nghĩa là 85% số cặp cùng chiều. Điều đó ĐÚNG chứ không phải khuyết tật: một nơi có
+  // địa hình cục bộ hiểm trở (mỏm đá Burg Eltz) thường nằm trong vùng núi non, còn một châu thổ
+  // phẳng (sông Nin, Lưỡng Hà) thì chân trời cũng phẳng. Lời hứa ở đây KHÔNG phải "hai bảng không
+  // liên quan gì nhau" — nó là "không suy được bảng này ra bảng kia", và hai câu đó khác nhau.
+  //
+  // Vế thứ hai: phải có đủ CẢ HAI chiều kể được thành câu chuyện — đất phẳng mà núi cao, và đất gồ
+  // ghề mà chân trời thấp. Hỏi bằng KHOẢNG CÁCH THỨ HẠNG giữa hai bảng, không bằng một mức chọn
+  // tay trên thang cao độ (thang ấy co giãn được, thứ hạng thì không). Đo 2026-08-20: kỷ 4 (kinh
+  // thành Trung Hoa trên đồng bằng, đồi vây bốn phía) lệch **+0,357** về phía trời-cao-đất-phẳng;
+  // kỷ 8 (Lisbon dốc đứng mà chân trời khiêm tốn) lệch **+0,286** về phía ngược lại. Vạch 0,20 ≈
+  // "cách nhau ba bậc trong một bảng 15 dòng".
+  const hang = (lay) => {
+    const sapXep = [...ERAS].sort((a, b) => lay(a) - lay(b));
+    return Object.fromEntries(sapXep.map((e, i) => [e, i / (ERAS.length - 1)]));
+  };
+  const lechHang = () => {
+    const hangDat = hang((e) => ERA_TERRAIN[e].relief);
+    const hangTroi = hang((e) => HORIZON_STYLES[e].rise);
+    return Object.fromEntries(ERAS.map((e) => [e, hangTroi[e] - hangDat[e]]));
+  };
+  const lech = lechHang();
+  const datThapTroiCao = ERAS.filter((e) => lech[e] >= 0.20);
+  const datCaoTroiThap = ERAS.filter((e) => lech[e] <= -0.20);
+  assert.ok(datThapTroiCao.length > 0,
+    'không kỷ nào đất phẳng mà núi cao (kinh thành Trung Hoa) ⇒ chân trời đang bám sát `relief`');
+  assert.ok(datCaoTroiThap.length > 0,
+    'không kỷ nào đất gồ ghề mà chân trời thấp (Lisbon) ⇒ chân trời đang bám sát `relief`');
+
+  // ĐỐI CHỨNG: phép đếm phải trả về 0 cho một bảng chân trời ĐƯỢC SUY RA từ `relief`. Không có vế
+  // này thì `capNguocChieu` trả bừa một danh sách dài cũng làm bài test xanh.
+  const goc = ERAS.map((e) => HORIZON_STYLES[e].rise);
+  try {
+    for (const e of ERAS) HORIZON_STYLES[e].rise = ERA_TERRAIN[e].relief * 4 + 1;
+    assert.equal(capNguocChieu().length, 0,
+      'bảng chân trời bịa ra từ chính `relief` mà phép đếm vẫn thấy cặp ngược chiều — phép đo hỏng');
+    const lechBia = lechHang();
+    assert.equal(ERAS.filter((e) => Math.abs(lechBia[e]) >= 0.20).length, 0,
+      'bảng chân trời bịa ra từ chính `relief` mà vẫn có kỷ lệch thứ hạng — phép đo thứ hạng hỏng');
+  } finally {
+    ERAS.forEach((e, i) => { HORIZON_STYLES[e].rise = goc[i]; });
+  }
 });
 
 test('kỷ lạ / thiếu → lùi về kỷ 1, không ném lỗi (dữ liệu cloud có thể hỏng)', () => {

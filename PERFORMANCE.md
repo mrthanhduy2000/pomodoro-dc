@@ -1120,6 +1120,112 @@ hình cũ") đã bị chính số đo bác bỏ.
 
 ---
 
+## Sau §1(B) — đất thôi "nhàu" (2026-08-20, ADR-045)
+
+Đổi cách sinh trường cao độ (`terrain.js`). **Không** thêm khối, **không** thêm vật liệu, **không**
+thêm nguồn sáng, **không** đổi cỡ khung, **không** đổi DPR. Theo mục *"Khi nào phải đo lại"* ở cuối
+file này thì phase như thế **không cần** đo lại frame time — nhưng hình học thì vẫn phải đếm, vì
+trong cảnh có đúng một thứ mà **số lượng và kích thước phụ thuộc CAO ĐỘ**: **bệ kè** (`groundPlacement`).
+
+`grep 'terrain\.' sceneGraph.js` ra đúng ba chỗ: `footprint` (bệ kè — sinh hình học), `surfaceHeightAt`
+(đặt cảnh vật — chỉ đổi Y), `heightAt` (cư dân — chỉ đổi Y). ⇒ mọi chênh lệch tam giác phải nằm ở bệ kè.
+
+⚠️ **MỐC NỀN LÀ `9c7032c`.** Bảng dưới đây đo lại toàn bộ sau khi `rebase`. Bản làm việc trước đó
+của phiên này dựng trên nhánh CŨ `702fa31` (đo ở commit `9d02e9e`, nay đã bị viết lại bởi `rebase`
+nên **không còn trong `git log`**), thiếu 8 commit: mặt nước, vùng quê, bảng địa thế, ADR-038…044.
+Mọi con số của phase này **không so trực tiếp được** với bảng cũ ấy — đừng chép qua lại.
+
+### Công cụ MỚI: `scripts/scene-tri.mjs` — đếm hình học KHÔNG cần Chromium
+
+Nó dựng **đúng cảnh mã sản phẩm dựng** (`createCityScene` chạy thẳng trong Node — nhà máy hình học
+không cần GPU) rồi duyệt scene graph theo đúng luật `WebGLRenderer`. Vì scene graph là **thứ thật**,
+nó **không chép lại một công thức nào** — khác hẳn mọi bản đếm-bằng-tay trước đây, vốn phải chép luật
+đặt khối của `sceneGraph.js` và dính đúng bẫy *"một luật hai công thức"*.
+Chạy 15 kỷ mất **~20 giây** thay vì ~4 phút, và nó tách được số theo TỪNG KHỐI CÓ TÊN — thứ bảng gộp
+của Chromium không cho.
+
+```
+node --import ./scripts/register-esm-loader.mjs scripts/scene-tri.mjs            # bảng 15 kỷ
+node --import ./scripts/register-esm-loader.mjs scripts/scene-tri.mjs --era 8    # tách theo khối
+```
+
+⚠️ **Nghiệm thu của chính công cụ này là một phép ĐỐI CHIẾU CHÉO với Chromium**, không phải một
+`--selftest`: kỷ 8 và kỷ 9, `node scripts/city-preview.mjs --era N --hour 12 --bench 1 --no-shadow`
+⇒ khớp **TỪNG ĐƠN VỊ** cả tam giác lẫn lệnh vẽ. Ngày nào hai bên lệch nhau thì **chỗ lệch chính là
+chỗ hỏng**; đừng chọn bên nghe hợp ý.
+⚠️ Mặc định của nó (giờ 12 · **40 phiên** · cấp 3 · chuỗi 9) **cố ý trùng `city-preview.mjs`** — đổi
+mặc định là đổi cả bảng số, vì mạng đường mở dần theo số phiên (bài học "hai con số cùng tên
+`sessionCount`", `TECH_DEBT #43`).
+
+### Kết quả — tam giác THÀNH PHỐ, đủ 15 kỷ
+
+Cột T đo lại trên `9c7032c` trong một `git worktree` riêng, **không chép** từ bảng phase trước; công
+cụ chép sang cả hai kho và `md5sum` khớp trước khi đo.
+
+| Kỷ | Nước | Tam giác TP T→S | Δ | Lệnh vẽ T→S |
+|---:|---|---:|---:|:--:|
+| 1 | Thổ Nhĩ Kỳ | 82.562 → 82.562 | 0 | 9 → 9 |
+| 2 | Ai Cập | 70.734 → 70.734 | 0 | 12 → 12 |
+| 3 | Iraq | 80.584 → 80.556 | **−28** | 12 → 12 |
+| 4 | Trung Quốc | 128.814 → 128.814 | 0 | 12 → 12 |
+| 5 | Đức | 85.214 → 85.214 | 0 | 11 → 11 |
+| 6 | Việt Nam | 129.360 → 129.348 | **−12** | 12 → 12 |
+| 7 | Ý | 114.948 → 114.864 | **−84** | 12 → 12 |
+| 8 | Bồ Đào Nha | 100.452 → 100.396 | **−56** | 12 → 12 |
+| 9 | Pháp | 94.930 → 94.862 | **−68** | 11 → 11 |
+| 10 | Anh | 74.030 → 74.030 | 0 | 13 → 13 |
+| 11 | Mỹ | 98.982 → 98.982 | 0 | 11 → 11 |
+| 12 | Nga | 79.266 → 79.322 | **+56** | 11 → 11 |
+| 13 | Nhật Bản | 118.724 → 118.724 | 0 | 11 → 11 |
+| 14 | Singapore | 135.694 → 135.694 | 0 | 11 → 11 |
+| 15 | UAE | 96.392 → 96.408 | **+16** | 11 → 11 |
+| **Tổng** | | **1.490.686 → 1.490.510** | **−176 (−0,012%)** | |
+
+Tam giác NỀN (vòm trời + rặng núi) **44.126 ở cả 15 kỷ, cả hai vế** — một hằng số, đúng như nó phải thế.
+
+**Lệnh vẽ: KHÔNG ĐỔI MỘT ĐƠN VỊ NÀO ở cả 15 kỷ**, khớp bảng 15 mốc `MOC_LENH_VE`
+(`drawCallBudget.test.js`) — đúng theo cấu trúc, vì bệ kè dùng vai `stone` đã có sẵn ở mọi kỷ.
+
+### Đối chiếu chéo: đếm RIÊNG bệ kè, khớp từng đơn vị ở 15/15 kỷ
+
+`node --import ./scripts/register-esm-loader.mjs scripts/plinth-tri.mjs` — một đường đo **hoàn toàn
+độc lập**, không chạm three: hỏi thẳng `terrain.footprint(...)` cho từng ô có công trình rồi hỏi
+`countSpecTriangles` (**không** nhân với một hằng số tam giác/bệ — từ Phase 8B số tam giác phụ thuộc
+KÍCH THƯỚC của khối).
+
+| | TRƯỚC | SAU | Δ |
+|---|---:|---:|---:|
+| số bệ kè (15 kỷ) | **31** | **23** | −8 |
+| tam giác bệ kè | **820** | **644** | **−176** |
+
+**−176 bằng ĐÚNG chênh lệch tổng của bảng trên, và khớp ở CẢ 15 KỶ một cách riêng lẻ** (kỷ 3 −28 ·
+6 −12 · 7 −84 · 8 −56 · 9 −68 · 12 +56 · 15 +16, chín kỷ còn lại 0). ⇒ Toàn bộ khác biệt hình học
+của §1(B) nằm ở bệ kè, không sót chỗ nào.
+
+⚠️ **VÀ PHÉP ĐỐI CHIẾU ẤY ĐÃ BẮT ĐƯỢC MỘT LỖI TRONG CHÍNH NÓ — vì một hằng số CHÉP TAY.** Bản đầu
+của `plinth-tri.mjs` viết `const BUILDING_SCALE = 0.86` (số cũ, chép từ trí nhớ). Giá trị thật trong
+`sceneGraph.js` là **1.3**; `span` sai thì `footprint` hỏi một ô khác ⇒ nó đếm được **3 bệ thay vì
+31** và in ra một bảng 15 dòng **trông hoàn toàn bình thường**. Không có gì đỏ lên. Thứ lộ ra sự
+thật là đúng cái phép đối chiếu này: bảng bệ nói **+16** trong khi `scene-tri` nói **−176** — hai
+phép đo cãi nhau, và bên hỏng là bên MỚI. Nay hằng số được **đọc thẳng từ mã nguồn**
+(`sceneGraph.js` không export nó), nên chỉ còn một chỗ giữ con số ấy. ⇒ Bài học cũ, hình dạng mới:
+*"một luật một công thức"* áp cho cả **hằng số của phép đo**, không chỉ cho công thức của nó — và
+**nếu chỉ có một phép đo thì không có gì để cãi nhau, tức không có gì để phát hiện**.
+
+### Vì sao 5 kỷ GIẢM mà 2 kỷ TĂNG
+
+Bệ kè sinh ra khi mặt bằng một công trình vắt qua chỗ đất hụt. Địa hình thoải đi ⇒ **ít chỗ hụt
+hơn** (kỷ 3 · 6 · 7 · 8 · 9 mất bớt bệ; riêng kỷ 7 mất 3/5). Nhưng nó cũng **dịch chỗ** các ranh
+thềm, nên có công trình trước đây đứng trọn trên một bậc nay vắt qua ranh (kỷ 12: 0 → 2 bệ). Kỷ 15
+giữ nguyên 1 bệ nhưng bệ ấy **cao lên** (12 → 28 tam giác) — đúng luật "tam giác theo kích thước"
+của Phase 8B.
+
+### Kết luận hiệu năng
+
+**−0,012% tam giác, 0 lệnh vẽ, 0 vật liệu, 0 nguồn sáng.** Mô hình chi phí trên M3 nói 80% chi phí
+đi theo ĐIỂM ẢNH và 43% chênh lệch hình học chỉ đổi 2,4% thời gian ⇒ **dưới mọi ngưỡng đo được**.
+Không cần đo lại frame time. Vế M3 vẫn nợ y như sau Phase 10/11/12.
+
 ## Sau VIỆC 1 «bỏ cái khay» — vùng quê ngoài lưới (2026-08-19)
 
 **Mốc nền ĐO LẠI Ở HEAD (`702fa31`) trong một `git worktree` riêng, không chép cột "sau" của phase

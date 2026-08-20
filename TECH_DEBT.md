@@ -19,7 +19,13 @@
 > bằng cách chỉnh lại con số nào. Nay còn **1 mục High** (#14) + **2 mục Medium-High** (#3, #13) +
 > **1 mục Medium-High chờ Đàm quyết** (#24) = 4 → xa ngưỡng 8–10 mục, KHÔNG cần Maintenance Sprint.
 >
-> **Cập nhật 2026-08-20 (nghiệm thu Bước C — mới nhất)**: đếm lại bằng máy toàn bộ file ⇒ **3 mục
+> **Cập nhật 2026-08-20 (§1(B) — MỚI NHẤT)**: đếm lại ⇒ **3 mục High còn mở** (#14 · #32 · #53),
+> 0 mục Critical ⇒ **xa ngưỡng 8–10, KHÔNG cần Maintenance Sprint**. Trong phiên §1(B): **MỞ #66**
+> (kỷ 12 không phản ứng với hạt giống nhiễu — Low, đã đo là dưới ngưỡng mắt) và **MỞ LẠI MỘT PHẦN
+> #59** cho kỷ 4 và 5 (cổng "thấy nước" tệ đi vì một bản vá ĐÚNG về vật lý; nguyên nhân khác hẳn ba
+> kỷ 6·7·10 nên hướng chữa cũng khác ⇒ **CHỜ ĐÀM QUYẾT**). Không mục nào bị đóng bằng cách nới ngưỡng.
+>
+> **(Mốc trước) Cập nhật 2026-08-20 (nghiệm thu Bước C)**: đếm lại bằng máy toàn bộ file ⇒ **3 mục
 > High còn mở** (#14 · #32 · #53), 0 mục Critical ⇒ **xa ngưỡng 8–10, KHÔNG cần Maintenance Sprint**.
 > Trong phiên này: **ĐÓNG #56** (12 kỷ chưa dựng nước) và **ĐÓNG #62** (tiền đề sai — kỷ 4 chưa bao
 > giờ vượt cổng); **MỞ #63** (phép tia mù với cây cối ⇒ cổng nước thật là 5/14 chứ không phải 11/14),
@@ -2181,6 +2187,45 @@ ship một trạng thái dở dang, hãy làm nó **ĐẾM ĐƯỢC trong một 
 
 ---
 
+## #66 — KỶ 12 KHÔNG PHẢN ỨNG VỚI HẠT GIỐNG NHIỄU: **0/144 ô đổi bậc** khi đổi hạt, nên một trong hai nguồn biến thiên của nó là mã chết
+
+- **Tên**: `terrain.js` — kỷ 12 (Nga, `plain` · `tilt 0,55` · `terraces 2`) cho ra **cùng một bản đồ
+  bậc thềm** dù hạt giống nhiễu đổi; kỷ 14 cũng vậy nhưng ĐÚNG THIẾT KẾ (`terraces: 1`, cố ý phẳng)
+- **Module**: `src/engine/city3d/terrain.js` (`ERA_TERRAIN[12]`, `truongTho` → chia bậc)
+- **Priority**: Low · **Severity**: Low (không ai nhìn thấy — xem "Current Risk")
+- **Impact**: bài `HẠT GIỐNG PHẢI CÓ TÁC DỤNG` (`terrain.test.js`) nay phải khai hai ngoại lệ
+  tường minh thay vì một:
+
+  ```js
+  assert.deepEqual(KHONG_DOI, [12, 14], '…');
+  assert.deepEqual(KY_PHANG, [14], 'chỉ kỷ 14 được phép phẳng do khai terraces: 1');
+  ```
+
+  Kỷ 14 nằm trong `KY_PHANG` nên nó có lý do; **kỷ 12 thì không**.
+- **Root Cause** (đã đo, không đoán): kỷ 12 khai `tilt = 0,55` với chỉ **2 bậc**. Thành phần triền
+  dốc đều chiếm hơn nửa trọng số, và với hai bậc thì **ranh giới lượng hoá rơi hẳn vào phần triền**
+  — nhiễu còn lại không đủ để đẩy một ô nào qua ranh. Nói cách khác: phép chia bậc **bão hoà**, nên
+  một trong hai nguồn biến thiên của kỷ ấy không tới được đầu ra. Cùng họ với bài học Phase 8D
+  (*"một cơ chế sắp xếp trong một cái hộp đầy là mã chết"*), chỉ khác là cái hộp ở đây là **số bậc**.
+- **Current Risk**: **gần bằng 0, và con số nói ra điều đó**: biên độ cao độ thật của kỷ 12 chỉ
+  **0,11 đơn vị** trên toàn lưới — dưới ngưỡng mắt ở mọi khung hình đang dùng. Đàm không thể thấy
+  sự khác biệt dù hạt có tác dụng hay không.
+- **Future Risk**: ngày nào ai đó nâng `relief` hoặc `terraces` của kỷ 12 (hoặc thêm một kỷ thứ 16
+  cùng hình dạng tham số), họ sẽ **tưởng** hạt giống đang tạo biến thiên trong khi nó không — đúng
+  loại mã chết mà Phase 8D mất cả một phase mới phát hiện. Ngoại lệ `[12, 14]` là thứ giữ cho điều
+  đó không im lặng.
+- **Recommended Solution**: hạ `tilt` của kỷ 12 xuống dưới ~0,45 **hoặc** nâng `terraces` lên 3.
+  ⚠️ **KHÔNG tự làm**: cả hai đều đụng một dòng bảng đã được duyệt kèm `note` địa lý (Stalingrad bám
+  bờ tây sông Volga — đồng bằng thật, nghiêng đều thật), và đổi nó sẽ đổi ảnh của kỷ ấy. Đây là
+  quyết định mỹ thuật, không phải một phép sửa lỗi.
+- **Estimated Complexity**: rất thấp (một con số) — cái đắt là phải đo lại ảnh + cổng không-trôi
+- **Blocking Conditions**: cần Đàm gật, vì nó đụng bảng `ERA_TERRAIN` đã duyệt
+- **Review Trigger**: khi `relief` hoặc `terraces` của kỷ 12 đổi vì bất kỳ lý do gì · hoặc khi có
+  kỷ thứ ba rơi vào `KHONG_DOI` (lúc ấy đây thôi là một ca lẻ và thành một khuyết tật của cơ chế)
+- **Owner**: chưa phân công · **Status**: Open
+
+---
+
 ## #65 — `canal` VÀ `estuary` KHÔNG CÓ MỘT DÒNG HÌNH HỌC NÀO CỦA RIÊNG CHÚNG: BA TRONG SÁU "KIỂU NƯỚC" DỰNG BẰNG CÙNG MỘT ĐOẠN MÃ
 
 - **Tên**: `river` · `canal` · `estuary` chia nhau ĐÚNG một nhánh trong `insetGoc`; thứ phân biệt
@@ -2690,7 +2735,42 @@ của 14 kỷ còn lại. Viết *"không góc nào cứu được"* cho chúng 
 (1,60%) **và mắt cũng không đọc ra là thành phố bên kênh** (ảnh cận cảnh: con kênh là một vệt xanh
 mảnh ở góc trên-trái, thành phố không có quan hệ gì với nó). Tức cổng và mắt **đồng ý** ở ca này —
 chưa có bằng chứng cổng đang đo sai đại lượng.
-- **Owner**: Đàm chốt · **Status**: **✅ Closed (2026-08-20)** — hướng (c) chuyển sang `#60`
+### ⚠️ CẬP NHẬT 2026-08-20 (§1(B), ADR-045) — DANH SÁCH TRƯỢT ĐI TỪ **3 LÊN 5 KỶ**, VÀ NGUYÊN NHÂN LÀ MỘT BẢN VÁ ĐÚNG
+
+§1(B) phát hiện `drain` (hướng đất thấp) **lệch hoặc ngược hẳn** `settingStyle.side` (phía có nước)
+ở **9/14 kỷ** — tức nước đang chảy lên dốc. Sửa 9 dòng cho khớp là **đúng vật lý**, và nó làm cổng
+"thấy nước" **TỆ ĐI** ở hai kỷ:
+
+| kỷ | nền (`9c7032c`) | §1(B) với `drain` SAI | §1(B) với `drain` ĐÚNG |
+|---|---:|---:|---:|
+| 4 | 5,11% ✅ | 4,95% ❌ | **4,95% ❌** |
+| 5 | 5,54% ✅ | 4,40% ❌ | **3,51% ❌** |
+| 7 | 2,41% ❌ | 4,38% ❌ | **3,55% ❌** |
+
+**Lý do vật lý, không phải lỗi**: đất nay thoải xuống *phía có nước*, nên **bờ XA tụt xuống và
+khuất sau sống đất gần** — đúng cách một thung lũng thật che mất khúc sông bên kia.
+
+⚠️ **Hai cách làm bài test hết đỏ đều BỊ BÁC, và cả hai đều đã có tên trong dự án**: **hạ cổng 5%**
+là cái phễu Phase 9A (Đàm đã cấm bằng chữ, ngay ở mục này); **quay `drain` về giá trị sai** là mua
+một con số bằng cách nói dối địa lý (ADR-025 cấm với mặt đường, không có lý do gì để nới ở đây).
+
+⇒ Giữ nguyên khuôn (b) mà Đàm đã chốt, chỉ cập nhật con số:
+
+```js
+assert.deepEqual(TRUOT, [4, 5, 6, 7, 10], '…');
+assert.equal(DAT.length, 9, 'phải có đúng 9 kỷ đạt cổng 5%');
+```
+
+Vẫn tự đỏ cả hai chiều. Bảng ba cột ở trên được chép vào chú thích của chính bài test, để phiên sau
+đọc được **cả con số lẫn lý do** mà không phải đi tìm.
+
+⚠️ **Và đây là một khoản nợ THẬT, không phải một dòng ghi cho đủ**: hai kỷ 4 và 5 hôm nay trượt vì
+một lý do KHÁC hẳn ba kỷ 6·7·10 (chúng trượt vì **bề rộng**, còn 4 và 5 trượt vì **địa hình che**).
+Hướng chữa cũng khác: với 4 và 5 thì hoặc hạ `tilt`, hoặc cho `worldYaw` ngắm dọc theo triền dốc
+thay vì ngang qua nó — **cả hai đều đụng bảng đã duyệt ⇒ CHỜ ĐÀM**, không tự chọn.
+- **Owner**: Đàm chốt · **Status**: **✅ Closed (2026-08-20)** cho ba kỷ 6·7·10 · **⚠️ MỞ LẠI MỘT PHẦN
+  (2026-08-20, §1(B))** cho kỷ **4** và **5** — nguyên nhân khác hẳn (địa hình che, không phải bề
+  rộng), phương án đã nêu, **CHỜ ĐÀM QUYẾT**
 
 ---
 

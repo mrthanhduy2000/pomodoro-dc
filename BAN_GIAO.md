@@ -6,6 +6,82 @@
 > chọn: `ARCHITECTURE_DECISIONS.md`. Nợ kỹ thuật: `TECH_DEBT.md`. Migration: `MIGRATION.md`. Tóm
 > tắt theo mốc: `CHANGELOG.md`.
 > **NGUYÊN TẮC ƯU TIÊN SỐ 1:** (1) mọi phiên AI phải đọc file này + `CLAUDE.md` + các file liên quan TRƯỚC khi làm; (2) sau MỌI cập nhật dù nhỏ, phải cập nhật ngay file này + `CLAUDE.md` + các file liên quan khác.
+> Cập nhật lần cuối: **2026-08-20** — **§1(B): ĐẤT THÔI "NHÀU" — NHIỄU BẺ CONG LEVEL SET THAY VÌ CỘNG VÀO CAO ĐỘ, MỖI KỶ KHAI MỘT HƯỚNG THẤP, VÀ HƯỚNG ẤY PHẢI TRÙNG PHÍA CÓ NƯỚC (ADR-045).**
+>
+> **Đàm ra thứ tự: QUY MÔ + ĐỘ CAO TRƯỚC, HIỆU ỨNG SAU** (*"Tô bóng đẹp lên một bố cục sai thì được
+> một bố cục sai được tô bóng đẹp"*). Phiên này làm nửa **(B) độ cao**. Nửa **(A) quy mô** mới đo
+> phần chuẩn bị, **CHƯA sửa gì**.
+>
+> ⚠️ **MỐC NỀN LÀ `9c7032c`, KHÔNG PHẢI `702fa31`.** Bản làm việc trước đó của phiên này dựng trên
+> một mốc nền CŨ (nhánh đã đi trước 8 commit: mặt nước, vùng quê, bảng địa thế, ADR-038…044, và đã
+> gộp `main`). Đã `rebase` rồi **ĐO LẠI TOÀN BỘ** — mọi con số dưới đây đo giữa `9c7032c` và HEAD,
+> bằng cùng MỘT công cụ chép sang cả hai kho (`md5` khớp). Bài học ghi ở `CLAUDE.md`.
+>
+> **ĐO TRƯỚC, RỒI MỚI SỬA.** Bốn con số định nghĩa chữ "nhàu": chênh cao trong lưới 12×12 tệ nhất
+> **2,70 đv** · bậc giữa hai ô KỀ NHAU **1,15** ⇒ dốc **172%** (gấp 5 lần Baldwin Street) · **đổi
+> chiều cao 36,7 lần** dọc một đường cắt (đồi thật đổi 1–2 lần) · **R² hướng 0,174** — chỉ 17% biên
+> độ cao độ giải thích được bằng một mặt phẳng nghiêng, tức đất cao thấp gần như KHÔNG có lý do.
+>
+> **NGUYÊN NHÂN GỐC — MỘT PHÉP CỘNG.** Nhiễu được **CỘNG THẲNG vào cao độ** (`h = hình + nhiễu`).
+> Phép cộng ấy **CẮT VỤN level set**: mỗi bướu nhiễu đẻ ra một cực trị cục bộ mới, nên một sườn dốc
+> đều biến thành một dãy gợn. Và **không kỷ nào khai hướng dốc**, nên chẳng có lý do hình học nào để
+> chỗ này cao hơn chỗ kia — cái "hướng" duy nhất trong cảnh là hướng của hạt nhiễu.
+> ⇒ **Vá gốc, ba phần ăn khớp**: (1) nhiễu **BẺ CONG toạ độ LẤY MẪU** (`WARP_CELLS = 1,8`) nên level
+> set chỉ **uốn lượn** chứ không đứt — *cùng một hạt nhiễu, cùng một biên độ, mà một cách dùng đẻ ra
+> 36,7 lần đổi chiều còn cách kia đẻ ra 15,8*; (2) mỗi kỷ khai **`drain` — hướng thấp** (bắc/nam/
+> đông/tây) + trọng số `tilt` — khuôn ba lớp lần thứ **BẢY**; (3) **trong lưới thoải, ngoài lưới mới
+> gồ ghề, và gồ ghề CÓ HƯỚNG** (`surfaceHeightAt` đổi Chebyshev → `hypot`, cuộn xuống theo
+> `HUONG_THAP` với `OUTER_TILT = 0,55`).
+>
+> | Đại lượng | TRƯỚC (`9c7032c`) | SAU |
+> |---|---|---|
+> | chênh cao trong lưới, kỷ tệ nhất | kỷ 5 = **2,70** | kỷ 5 = **0,90** |
+> | bậc lớn nhất giữa hai ô KỀ NHAU | kỷ 7 = **1,15** (dốc 172%) | **0,45** (đúng một bậc thềm) |
+> | đổi chiều THÔ · THỀM (24 đường cắt) | 36,7 · 13,6 | **15,8 · 9,9** |
+> | **R² hướng** (đất có lý do cao thấp không) | **0,174** | **0,434** — gấp 2,5 lần |
+> | khớp KHUÔN · số kỷ đọc ra được hình mình khai | — (bản nền chưa tách được hình khỏi nhiễu) | **0,776** · **11/14** |
+> | đỉnh · đáy rời rạc | 1,6 · 1,5 | **0,9 · 1,0** |
+> | kỷ ≥3 bậc có một bậc nuốt >60% ô đất | kỷ 4 = 64% | **không kỷ nào** (sát nhất 51,6%) |
+> | tỉ số bệ CHÉO/TRỤC (1,414 = vuông · 1,00 = tròn) | 1,332 | **1,306** |
+> | tam giác thành phố (15 kỷ) · lệnh vẽ | 1.490.686 · 9…13 | **1.490.510 (−176, −0,012%)** · **y hệt** |
+>
+> **Thềm bậc CÒN SỐNG ở 14/15 kỷ** (kỷ 14 Singapore khai `terraces: 1` — cố ý phẳng), đúng yêu cầu
+> *"đừng xoá thềm bậc ở chỗ nó đúng"*. Ảnh trước/sau (kỷ 1·5·7·13): `--zoom 2` đổi **34,5–65,1%**
+> điểm ảnh vượt ngưỡng mắt 12/255; khung app mặc định **57,9–80,9%**. Cổng không-trôi ĐẠT: **15/15
+> cặp chặng · 105/105 cặp kỷ**; cặp chặng gần nhất 13,96 → **15,16**, cặp kỷ gần nhất 21,84 →
+> **22,22** (cả hai TỐT LÊN), trung vị 40,73 → **39,81** (nhích xuống 0,92 — theo dõi, xa ngưỡng 12).
+>
+> ⚠️ **PHÁT HIỆN ĐẮT NHẤT, VÀ NÓ LỘ RA SAU KHI MỌI SỐ ĐÃ XANH: NƯỚC ĐANG CHẢY LÊN DỐC Ở 9/14 KỶ.**
+> `drain` được buộc vào `country` (`eraStyle.js`) — đúng khuôn, nhưng **`country` KHÔNG phải ràng
+> buộc chặt nhất**: một đất nước có bốn phía, một dòng sông chỉ có MỘT. Đặt bảng `drain` cạnh bảng
+> `settingStyle.side` (nước ở phía nào) lần đầu tiên thì **9/14 kỷ lệch hoặc NGƯỢC HẲN** — kỷ 5 khai
+> đất thấp về tây trong khi suối Elzbach ở đông. Không một bài test nào đỏ, vì hai bảng ấy chưa bao
+> giờ được đặt cạnh nhau. Đã sửa 9 dòng cho khớp + **test khoá hai chiều**.
+> ⚠️ **VÀ CÁI GIÁ PHẢI NÓI THẲNG**: sửa cho ĐÚNG VẬT LÝ làm cổng "thấy nước" **TỆ ĐI** — kỷ 4 (5,11%
+> → 4,95%) và kỷ 5 (5,54% → 3,51%) tụt xuống dưới cổng 5%, nên danh sách miễn trừ đi từ `[6,7,10]`
+> sang `[4,5,6,7,10]`. Lý do vật lý: đất thoải xuống phía nước ⇒ **bờ XA tụt xuống, khuất sau sống
+> đất gần**. Hai cách "chữa" đều bị bác: hạ cổng 5% là cái phễu Phase 9A (Đàm đã chốt), quay `drain`
+> về giá trị sai là **mua một con số bằng cách nói dối địa lý** (ADR-025 cấm). Ghi ở `TECH_DEBT #59`.
+>
+> ⚠️ **MỘT LỖI THỨ HAI, CÙNG HÌNH DẠNG PHASE 7D.** Biên độ lượn của vành đất ngoài lưới viết cứng
+> `0,42` (±0,21), đúng **nhờ** `WATER_DROP_BELOW_PLAIN = 0,30` ở một file khác mà nó không hề tham
+> chiếu tới. §1(B) cộng thêm thành phần nghiêng vào cùng chỗ ấy ⇒ đất KHÔ kỷ 8 tụt **0,0288 ô dưới
+> mặt nước** (một vũng nước ma giữa đồng). Vá bằng cách nói ra QUAN HỆ: `ROLL_HEADROOM_SHARE = 0,70`
+> × `WATER_DROP_BELOW_PLAIN` = đúng 0,21 (không đổi thế giới), và phép nén là **BÃO HOÀ `tanh`,
+> không KẸP** — kẹp thì phá thứ tự giữa các kỷ.
+>
+> ⚠️ **CÁI "MẢNG VUÔNG" — NÓI CHO ĐÚNG NÓ LÀ GÌ.** Nhìn ảnh: *"chăn nhàu"* đã **HẾT**. Còn cái hình
+> chữ nhật thì **KHÔNG phải mép của tấm đất** (đo rồi: tỉ số CHÉO/TRỤC 1,306, cao độ hai bên mép
+> khớp 0,0000) — nó là **chỗ mặt lát và nhà cửa dừng đột ngột**, đúng chẩn đoán ADR-038 của VIỆC 1.
+> Đàm đã CHỌN hướng cho việc này rồi (**LẤP**, không thu nhỏ), và `outskirts.js` đã làm nửa đầu.
+> Đây KHÔNG còn là một câu hỏi chờ Đàm.
+>
+> **956 bài test** (886 + 70, con số THẬT ở dòng cuối `npm test`, không làm tròn), lint sạch, build
+> xanh. ⏳ **CHƯA gộp `main`** — đúng lệnh Đàm.
+>
+> ---
+>
+> **(MỐC TRƯỚC — 2026-08-19)** — **ĐO CÁI ĐĨA ĐẤT: VÀNH NGOÀI LƯỚI CHIẾM ~21% KHUNG HÌNH VÀ KHÔNG PHASE NỘI DUNG NÀO CHẠM TỚI (`TECH_DEBT #53` — CHỜ ĐÀM QUYẾT).**
 > Cập nhật lần cuối: **2026-08-20** — **ĐÃ GỘP `main` (= `b87df3c`, 25 commit). `TECH_DEBT #64` ĐÓNG (kỷ 5 thôi là hòn đảo — ADR-044), nửa mỹ thuật còn lại gộp vào `#65`. MẶT TRẬN MỚI: nâng chất lượng hình ảnh — CHỜ ĐÀM chạy `bash scripts/bench-macbook.sh` trên MacBook M3 trước khi viết dòng hiệu ứng đầu tiên.**
 >
 > ## ✅ ĐÃ GỘP `main` + KỶ 5 THÔI LÀ HÒN ĐẢO (2026-08-20, ADR-044, đóng `TECH_DEBT #64`)
@@ -945,6 +1021,25 @@
   không phải thành phố cạnh một vũng xanh. Ảnh không đạt câu đó thì phase chưa xong, dù mọi con số
   đều xanh."*
 
+> ⚠️ **CHƯƠNG TRÌNH ĐANG CHẠY (cập nhật 2026-08-20) — "QUY MÔ TRƯỚC, HIỆU ỨNG SAU".** Đàm đảo thứ
+> tự vì tôi đã đọc sai yêu cầu của anh: mệnh đề ĐẦU là **quy mô**, mệnh đề HAI là **độ cao**, ánh
+> sáng chỉ là mệnh đề BA và *"tô bóng đẹp lên một bố cục sai thì được một bố cục sai được tô bóng
+> đẹp"*.
+> - **§1 (B) ĐỘ CAO — ✅ XONG** (2026-08-20, ADR-045). Đất trong lưới thôi gợn; ngoài lưới gồ ghề
+>   CÓ HƯỚNG; thềm bậc còn ở 14/15 kỷ. ADR-007 vẫn nguyên.
+> - **§2 (A) QUY MÔ — ⏳ CHỜ ĐÀM, đã đo xong phần chuẩn bị.** Phải tách hai nghĩa: "to hơn **trong
+>   khung hình**" (camera) ≠ "to hơn **so với thế giới**" (tỉ lệ đĩa đất / rặng núi) — **Đàm muốn
+>   nghĩa thứ hai**. Cần gạt trùng với `TECH_DEBT #53`, nên hai việc phải quyết CÙNG LÚC. Ba phương
+>   án + giá + rủi ro ADR-007 đã ghi ở `TECH_DEBT #53`. **KHÔNG tự sửa bán kính đĩa đất, KHÔNG tự
+>   đổi `gridSize`.**
+> - **§3 HIỆU ỨNG — chỉ làm SAU (A) và (B).** Thứ tự rẻ-trước: tone mapping/tương phản → khử răng
+>   cưa → che khuất môi trường (AO) → bóng mềm → phản chiếu mặt nước. Mỗi thứ MỘT commit, trước/sau
+>   đo bằng `sweep-diff.mjs --frame`, ms thật. Trần làm việc **8 ms**. ⚠️ **ĐỪNG HẠ DPR.**
+> - **§4 Q1 — chưa làm**: thêm một biến thể "khung mặc định" của cảnh nặng nhất vào
+>   `scripts/bench-macbook.sh`.
+> - Bộ số M3 vẫn CHƯA có cho các phase gần đây — nhắc Đàm chạy `bash scripts/bench-macbook.sh` khi
+>   tiện. **Không** chặn §1 và §2.
+
 > ⚠️ **CHƯƠNG TRÌNH ĐANG CHẠY (2026-08-18)** — Đàm đã duyệt hướng mỹ thuật Bước 1 và ra một
 > **chương trình làm việc liên tục** cho giai đoạn "tiêu ngân sách" hiệu năng (dư 3,2 lần trên M3),
 > gồm ba phase theo THỨ TỰ CỐ ĐỊNH, với **uỷ quyền tự chạy** giữa các phase:
@@ -996,6 +1091,104 @@
 
 ## 🗒️ Nhật ký cập nhật
 
+### 2026-08-20 — §1(B): đất thôi "nhàu" — nhiễu bẻ cong level set, mỗi kỷ một hướng thấp (ADR-045)
+
+**Vì sao làm bây giờ.** Đàm nói tôi đã đọc sai yêu cầu của anh: mệnh đề ĐẦU TIÊN bị bỏ qua. Nguyên
+văn anh nhắc lại: *"Mở rộng mức độ QUY MÔ, KHÔNG làm một thành phố LÒI LÕM ĐỘ CAO như vậy, nó phải
+hiệu quả và thực tế so với lịch sử và thực tế."* Đó là **hai** khiếu nại tách bạch — (A) thành phố
+quá nhỏ so với thế giới, (B) đất gợn không theo logic địa lý nào — và **ánh sáng là mệnh đề thứ BA,
+không cứu được hai cái trước**: *"Tô bóng đẹp lên một bố cục sai thì được một bố cục sai được tô
+bóng đẹp."* ⇒ Đảo thứ tự: (B) trước, (A) sau, hiệu ứng cuối.
+
+**Số liệu, ảnh, và cổng nghiệm thu**: xem khối tóm tắt ở đầu file này + `CHANGELOG.md` +
+`ARCHITECTURE_DECISIONS.md` ADR-045. Dưới đây chỉ ghi những thứ KHÔNG nằm ở các file ấy — tức các
+bài học và các cái bẫy đã trả giá trong phiên.
+
+**⚠️ BÀI 1 — BA BÀI TEST CŨ CANH MỘT QUAN HỆ BẰNG MỘT MỨC TUYỆT ĐỐI, NÊN CHÚNG KÊU OAN NGAY KHI
+BẢNG ĐƯỢC CO GIÃN.** Sau bản vá có **9 bài đỏ**, và phản xạ sai nhất lúc đó là *"vá hỏng rồi"*.
+Đi kiểm từng bài thì **4 bài chỉ đỏ vì `terrainMaxHeight` tụt** (camera cận cảnh tính khoảng lùi
+theo nó — mã đúng, phép đo già đi), còn 3 bài kia canh một QUAN HỆ bằng một CON SỐ: cổng làm phẳng
+đường viết `soODuongLe > 200`, mà "200" là số ô đo được trên bảng `relief` CŨ. Vá đúng là hỏi chính
+cái quan hệ: tập kỷ được làm phẳng phải **BẰNG** tập kỷ có `TERRACE_STEP × relief > maxRoadRise()`
+— tự đúng ở mọi bảng tương lai. Y hệt bẫy Phase 7D (`roadColor`), lần này ở tầng bài test.
+
+**⚠️ BÀI 2 — MỘT PHÉP PHÁ KHÔNG NỔ, VÀ THỦ PHẠM LÀ CHÍNH BÀI TEST TÔI VỪA VIẾT.** Phép phá M3 (giết
+hàm hình dạng) **không làm đỏ** bài "khuôn hình học phải sạch nhiễu". Theo luật đã ghi, tôi nghi
+phép phá trước — nhưng lần này phép phá đúng. Sự thật: `truongTho` áp `tilt` **NGOÀI** hàm hình
+dạng (`raw = hinh × (1 − tilt) + trien × tilt`), nên một hàm hình dạng đã chết vẫn cho ra một khuôn
+biến thiên nhờ phần `trien`. Bài test đang đo `hình + tilt×triền` rồi **gọi nó là `hình`**. Vá:
+dựng một hồ sơ kỷ song sinh có `tilt: 0` để cô lập đúng đại lượng cần đo. ⇒ **Trước khi tin một
+phép đo, hỏi "đại lượng này có lẫn thứ tôi KHÔNG muốn đo không?"** — cùng họ bài học fBm Phase 9A.
+
+**⚠️ BÀI 3 — MỘT CÁCH VÁ "HIỂN NHIÊN" CÓ THỂ BIẾN BÀI TEST THÀNH RỖNG.** Cách vá đầu tiên nghĩ ra
+cho cổng 60% của kỷ 7 là **nới ngưỡng** hoặc **thêm `7` vào danh sách ngoại lệ**. Cả hai đều làm
+bài test hết đỏ mà không chữa gì — và cái thứ hai còn nguy hiểm hơn vì nó *trông như* một quyết
+định có chủ đích. Chữa đúng là đi hỏi **địa lý**: Firenze nằm TRONG lòng thung lũng Arno nên `tilt`
+phải cao hơn (0,26 → 0,44), và đồi Toscana vốn thoải nên `relief` phải thấp hơn (0,80 → 0,55 —
+mức cũ làm ruộng Tuscany dốc gần bằng Lisbon). Sau đó cổng **tự hết đỏ**, và danh sách ngoại lệ về
+**rỗng** — kể cả kỷ 4 vốn có từ trước (ADR-032 b). Một ngoại lệ biến mất là bằng chứng mạnh hơn
+một ngoại lệ được thêm vào.
+
+**⚠️ BÀI 4 — HAI BẢNG ĐỒNG BIẾN 85% KHÔNG PHẢI LÀ MỘT LỖI.** `horizon.test.js` có bài đòi bảng chân
+trời và bảng địa hình **không được là một**. Ngưỡng thứ hạng 0,4/0,6 nổ. Đi đo thì hai bảng đồng
+biến ~85% — và **đó là đúng về địa lý**: vùng đất gồ ghề thì chân trời cũng cao. Sửa đúng KHÔNG
+phải là chỉnh bảng cho lệch nhau (mua điểm bằng cách nói dối địa lý), mà là hỏi đúng câu: **có đủ
+cặp kỷ NGƯỢC CHIỀU không** (≥8 cặp) và **có kỷ nào lệch THỨ HẠNG rõ không** (≥0,20). Kèm đối chứng
+bơm một bảng suy thẳng từ `relief` và đòi nó ra **0 cặp ngược chiều** — nếu không có đối chứng đó
+thì bài test không còn răng.
+
+**⚠️ BÀI 5 — HAI CÁI BẪY CÔNG CỤ, CẢ HAI ĐỀU Ở PHÍA PHÉP PHÁ.** (a) `--test $T.test.js` bung ra
+`terrain.js.test.js` (file không tồn tại) ⇒ **không bài nào chạy**, và màn hình trông y hệt "phép
+phá không nổ". (b) Phép phá H2 dùng regex `(\d+): \{ rise:` chỉ khớp các dòng kỷ **hai chữ số**
+(dòng một chữ số có hai dấu cách) ⇒ chỉ 6/15 dòng đổi. Cả hai vá bằng cùng một luật: **phép phá
+phải tự đếm xem nó đã đổi ĐÚNG BAO NHIÊU chỗ** (`assert n == 15`), đừng tin là nó đã đổi.
+(c) Nhỏ nhưng mất thì giờ: nháy ngược trong một nhãn bash sinh ra thay-thế-lệnh (`rolling: command
+not found`) — trong shell dùng nháy đơn cho mọi nhãn có tên biến/hàm.
+
+**⚠️ BÀI 6 — MỘT BẢNG ĐƯỢC BUỘC ĐÚNG KHUÔN VẪN CÓ THỂ SAI, VÌ NÓ BỊ BUỘC VÀO THỨ KHÔNG ĐỦ CHẶT.**
+`drain` được buộc vào `country` — đúng khuôn ba lớp đã dùng sáu lần. Vậy mà **một đất nước có bốn
+phía còn một dòng sông chỉ có MỘT**: bảng `settingStyle.side` (nước ở phía nào) đã tồn tại từ trước,
+hai bảng nói về cùng một thế giới, và **chưa bao giờ được đặt cạnh nhau**. Đặt cạnh lần đầu thì
+**9/14 kỷ lệch hoặc NGƯỢC HẲN** — kỷ 5 khai đất thấp về tây trong khi suối Elzbach chảy ở đông, tức
+nước đang chảy lên dốc. Không một bài test nào đỏ, vì không có bài nào biết cả hai bảng cùng tồn
+tại. ⇒ **Trước khi tin một bảng đã "buộc đúng chỗ", hãy đi tìm xem CÓ BẢNG NÀO KHÁC đang nói về
+cùng một sự thật vật lý không** — và nếu có thì buộc thẳng vào nó, chứ đừng buộc cả hai vào một
+thứ chung ở xa hơn. Cùng họ với hai lần khoá `country` trước, khác ở chỗ lần này thứ cần khoá không
+phải một cái tên mà là một **hướng**.
+
+**⚠️ BÀI 7 — VÀ CÁI GIÁ CỦA VIỆC SỬA CHO ĐÚNG PHẢI ĐƯỢC TRẢ, KHÔNG ĐƯỢC GIẤU.** Sửa 9 dòng ấy làm
+cổng "thấy nước" **TỆ ĐI** ở hai kỷ (kỷ 4: 5,11% → 4,95%; kỷ 5: 5,54% → 3,51%), vì đất thoải xuống
+phía nước thì **bờ XA tụt xuống, khuất sau sống đất gần** — một hệ quả vật lý, không phải một lỗi.
+Hai cách làm bài test hết đỏ đều bị bác: **hạ cổng 5%** là cái phễu Phase 9A (Đàm đã chốt cấm), còn
+**quay `drain` về giá trị sai** là mua một con số bằng cách nói dối địa lý (ADR-025 cấm). Cách đúng
+là ghi ngoại lệ ra **tường minh đếm được** (`TRUOT` đi từ `[6,7,10]` sang `[4,5,6,7,10]`) kèm bảng
+ba cột nền/sai/đúng ngay trong chú thích bài test, để phiên sau thấy được cả con số lẫn lý do.
+
+**⚠️ BÀI 8 — PHÉP ĐỐI CHIẾU CHÉO BẮT ĐƯỢC LỖI TRONG CHÍNH NÓ, VÌ MỘT HẰNG SỐ CHÉP TAY.** Để chứng
+minh "toàn bộ chênh lệch hình học nằm ở bệ kè", tôi viết `plinth-tri.mjs` đếm bệ kè bằng một đường
+độc lập — và mở đầu bằng `const BUILDING_SCALE = 0.86`, chép từ trí nhớ. Giá trị thật trong
+`sceneGraph.js` là **1.3**; `span` sai thì `footprint` hỏi một ô khác ⇒ nó đếm được **3 bệ thay vì
+31**, rồi in ra một bảng 15 dòng **trông hoàn toàn bình thường**. Không có gì đỏ lên. Thứ lộ ra sự
+thật là chính phép đối chiếu: bảng bệ nói **+16** còn `scene-tri.mjs` nói **−176**. ⇒ Hai luật:
+*"một luật một công thức"* áp cho cả **hằng số của phép đo** (nay đọc thẳng từ mã nguồn, vì
+`sceneGraph.js` không export nó); và **nếu chỉ có MỘT phép đo thì không có gì để cãi nhau, tức
+không có gì để phát hiện**. Sau khi vá: 31 → 23 bệ, 820 → 644 tam giác, **−176 khớp từng đơn vị ở
+cả 15 kỷ** với bảng của `scene-tri.mjs`.
+
+**⚠️ BÀI 9 — LẦN THỨ HAI TRONG CÙNG MỘT PHIÊN, MỘT QUAN HỆ ĐƯỢC VIẾT THÀNH MỘT HẰNG SỐ.** Biên độ
+lượn của vành đất ngoài lưới viết cứng `0,42` (±0,21), và nó đúng **nhờ** `WATER_DROP_BELOW_PLAIN
+= 0,30` nằm ở `setting.js` — một file mà `terrain.js` không hề tham chiếu tới. §1(B) cộng thêm
+thành phần nghiêng vào đúng chỗ ấy ⇒ đất KHÔ kỷ 8 tụt **0,0288 ô dưới mặt nước**, một vũng nước ma
+giữa đồng. Vá: `ROLL_HEADROOM_SHARE = 0,70 × WATER_DROP_BELOW_PLAIN` (đúng 0,21 — không đổi thế giới
+hôm nay, nhưng từ nay nó tự đi theo), và phép nén là **BÃO HOÀ `tanh`, KHÔNG KẸP** — kẹp thì mọi kỷ
+có triền dốc mạnh bị dồn về đúng ±0,21 và thứ tự giữa các kỷ bị phá.
+
+**Việc chưa làm, và vì sao không tự làm.** Nửa **(A) QUY MÔ** chưa đụng tới — theo đúng lệnh Đàm,
+nó phải được ĐO rồi trình 2–3 phương án kèm giá ms và rủi ro ADR-007, **rồi dừng chờ**. Còn cái hình
+chữ nhật Đàm chỉ ra thì **không phải mép của tấm đất**: đo ra tỉ số bệ CHÉO/TRỤC **1,306** và cao độ
+hai bên mép khớp **0,0000** — không có vách nào cả. Thứ mắt đọc ra là chỗ **mặt lát và nhà cửa dừng
+đột ngột**, đúng chẩn đoán ADR-038 của VIỆC 1, và Đàm đã CHỌN hướng cho nó rồi (**LẤP**, không thu
+nhỏ) — `outskirts.js` đã làm nửa đầu. Đây KHÔNG còn là một câu hỏi chờ Đàm.
 ### 2026-08-20 — BƯỚC C: mặt nước trải ra 14/15 kỷ, đóng `TECH_DEBT #56` (ADR-042)
 
 **LỆNH CỦA ĐÀM** (§0–§4): *"DUYỆT ẢNH — ĐẠT. CHỐT #59 THEO (b). VÀO BƯỚC C. Chạy liên tục, không

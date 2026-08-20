@@ -11,6 +11,125 @@
 
 ---
 
+## ADR-045 — Địa hình: nhiễu phải **BẺ CONG** level set chứ không **CỘNG** vào cao độ; và mỗi kỷ phải khai một **HƯỚNG THẤP** để nền thành phố có lý do phẳng
+
+- **Ngày**: 2026-08-20 (§1(B) của chương trình "QUY MÔ TRƯỚC, HIỆU ỨNG SAU")
+- **Bối cảnh**: Đàm nhìn ảnh thu nhỏ và nói mặt đất *"lòi lõm"*, *"như tấm chăn nhàu"* — và nói rõ
+  đây là một trong **hai** khiếu nại tách bạch, không phải một: (B) độ cao gợn ngẫu nhiên, (A) thành
+  phố quá nhỏ so với thế giới. Anh cũng chốt thứ tự: *"Tô bóng đẹp lên một bố cục sai thì được một
+  bố cục sai được tô bóng đẹp"* ⇒ hiệu ứng (§3) phải đợi (A) và (B). Yêu cầu cụ thể cho (B):
+  *"Nền thành phố phải BẰNG hoặc gần bằng… Độ chênh trong lưới nên nhỏ và **có hướng** (dốc đều về
+  phía nước), không phải gợn ngẫu nhiên. Địa hình **ngoài lưới** mới được gồ ghề, và phải gồ ghề
+  **CÓ HƯỚNG**. Giữ ADR-007. Đừng xoá thềm bậc ở chỗ nó đúng (thị trấn trên đồi); xoá chỗ nó vô nghĩa."*
+- **Vấn đề đo được TRƯỚC khi sửa** (mốc nền `9c7032c`, công cụ `scripts/terrain-score.mjs` chép
+  sang cả hai kho và `md5sum` khớp trước khi đo):
+  - chênh cao **trong lưới 12×12** tệ nhất **2,70 đơn vị** (kỷ 5) — cao hơn cả một căn nhà;
+  - bậc giữa **hai ô KỀ NHAU** lớn nhất **1,15** (kỷ 7) ⇒ dốc **172%**, gấp 5 lần Baldwin Street;
+  - **đổi chiều cao dọc một đường cắt: 36,7 lần** trung bình trên 24 đường cắt. Chính con số này là
+    định nghĩa của chữ *"nhàu"* mà Đàm dùng — một quả đồi thật đổi chiều 1–2 lần, không phải 36;
+  - **R² hướng 0,174** — chỉ 17% biên độ cao độ giải thích được bằng một mặt phẳng nghiêng, tức
+    đất cao thấp gần như **không có lý do**. (Cột "khớp KHUÔN" thì bản nền **không trả lời được**:
+    nó chưa export `geometricTemplate`, nên không có cách nào tách hình khỏi nhiễu ở đó. Công cụ in
+    ra `—` chứ **không** dựng lại công thức của bản nền — làm thế là tự tạo công thức thứ hai cho
+    một luật, đúng bẫy đã cắn nhiều lần. Sau bản vá: **0,776** và **11/14 kỷ** đọc ra được hình
+    mình khai.)
+  - Nguyên nhân gốc: nhiễu được **CỘNG THẲNG vào cao độ** (`h = hình + nhiễu`). Phép cộng ấy **cắt
+    vụn level set** — mỗi bướu nhiễu đẻ ra một cực trị cục bộ mới, nên một sườn dốc đều biến thành
+    một dãy gợn. Và **không kỷ nào khai hướng dốc**, nên chẳng có lý do hình học nào để chỗ này cao
+    hơn chỗ kia; cái "hướng" duy nhất là hướng của hạt nhiễu.
+- **Phương án đã cân nhắc**:
+  1. **Hạ biên độ nhiễu xuống thật thấp** (giữ nguyên phép cộng). Rẻ nhất, một dòng. **Loại**: nó
+     làm mất cả gợn LẪN đồi — mà Đàm nói rõ *"đừng xoá thềm bậc ở chỗ nó đúng"*. Hạ nhiễu là mua
+     phẳng bằng cách bỏ luôn 15 vùng đất khác nhau, tức trả bằng đúng thứ Phase 7B sinh ra để có.
+  2. **Làm mượt trường cao độ sau khi sinh** (lọc trung bình / gaussian). **Loại vì hai lý do độc
+     lập**: (a) phép làm mượt **không có điểm bất động duy nhất** nếu quét theo thứ tự ô, tức kết
+     quả phụ thuộc thứ tự duyệt ⇒ **phá ADR-007** (cao độ phải tất định); (b) nó vẫn để lại cực trị
+     — làm mượt một cái chăn nhàu thì được một cái chăn nhàu mờ, số lần đổi chiều gần như không đổi.
+  3. **Ép cả 12×12 ô thành phố về một mặt phẳng tuyệt đối** (nền phẳng lì, đồi bắt đầu ngay ngoài
+     mép lưới). Đơn giản, chắc chắn hết nhàu. **Loại**: nó xoá thềm bậc ở **cả 15 kỷ**, kể cả nơi
+     thềm bậc là đúng lịch sử (thị trấn trên đồi, Burg Eltz, Lisbon) — lại đúng điều Đàm cấm. Và nó
+     tạo một mép đứng nhân tạo đúng ranh giới lưới, làm cái bệ vuông (khiếu nại A) **nặng thêm**.
+  4. **Bẻ cong toạ độ LẤY MẪU thay vì cộng vào cao độ** (domain warping) + **mỗi kỷ khai một hướng
+     thấp**. Chọn.
+- **Giải pháp chọn** — ba thay đổi ăn khớp nhau, tất cả nằm trong `src/engine/city3d/terrain.js`:
+  - **(1) Nhiễu BẺ CONG, không CỘNG.** `WARP_CELLS = 1,8`: nhiễu dịch **vị trí lấy mẫu** của trường
+    hình học, không dịch giá trị trả về. Level set bị **uốn lượn** chứ không bị **cắt vụn**, nên
+    một sườn dốc đều vẫn là một sườn dốc đều — chỉ là mép của nó không còn thẳng như kẻ thước.
+    Đây là điểm cốt lõi của ADR này: *cùng một hạt nhiễu, cùng một biên độ, mà một cách dùng đẻ ra
+    36,7 lần đổi chiều còn cách kia đẻ ra 15,8.*
+  - **(2) Mỗi kỷ khai một `drain` — HƯỚNG THẤP** (`bac`/`nam`/`dong`/`tay`), cộng một trọng số
+    `tilt` (0…1) trộn giữa "hình của kỷ" và "triền dốc đều theo hướng ấy". `HUONG_THAP` là bảng bốn
+    hàm thuần. Vì sao đây là bảng chứ không phải một con số: một hướng thấp là **một sự thật địa lý
+    của thành phố có thật** mà kỷ ấy lấy mẫu (Firenze tụt về thung lũng Arno phía tây; Amsterdam
+    đổ ra biển bắc), nên nó phải viết được thành `note` và phải **buộc vào `country`** như mọi bảng
+    khác — đây là khuôn ba lớp lần thứ **BẢY** (sau `streetStyle` · `floraStyle` · `groundFloorStyle`
+    · `roofStyle` · `vernacularRoof` · `groundCoverStyle`).
+  - **(3) Trong lưới thì THOẢI, ngoài lưới mới GỒ GHỀ — và gồ ghề CÓ HƯỚNG.** `relief` hạ mạnh ở
+    mọi kỷ; `surfaceHeightAt` đổi từ khoảng cách Chebyshev sang `Math.hypot` (vành ngoài thôi vuông
+    góc) và cuộn xuống theo đúng `HUONG_THAP` của kỷ với `OUTER_TILT = 0,55`.
+- **Trade-off đã trả**:
+  - **Thềm bậc còn sống ở 14/15 kỷ** (kỷ 14 Singapore khai `terraces: 1` — cố ý phẳng), nhưng bậc
+    lớn nhất giữa hai ô kề nhau nay **0,45** thay vì 1,15. Tức thềm vẫn đọc ra được mà không còn
+    vách đứng.
+  - **`rolling` là dạng khó nhất và nó lộ ra một sự thật cấu trúc**: cộng hai trường rồi chuẩn hoá
+    min/max + chia bậc đều bề rộng thì phân bố **luôn dồn về giữa** (định lý giới hạn trung tâm thu
+    nhỏ). Kỷ 7 vì thế có một bậc nuốt 63% số ô đất. **Không chữa bằng cách nới cổng 60%**, mà chữa
+    bằng cách chọn `tilt` theo ĐỊA LÝ (0,26 → 0,44 — Firenze nằm TRONG lòng thung lũng Arno) và hạ
+    `relief` 0,80 → 0,55 vì *đồi Toscana vốn thoải*; sau đó cổng 60% **tự hết đỏ** và danh sách
+    ngoại lệ `TRUOT` về **rỗng** (trước có kỷ 4). Ngoại lệ `[4]` của ADR-032(b) nay **hết là ngoại
+    lệ** — lời khai "đồng bằng" của kỷ 4 vẫn đúng, chỉ là nó không còn cần một chỗ miễn trừ.
+  - **Hình học: −176 tam giác (−0,012%) trên 15 kỷ, 0 lệnh vẽ đổi.** Toàn bộ nằm ở **bệ kè** (31 →
+    23 bệ) — đất thoải đi thì ít chỗ hụt hơn. Đo bằng hai đường độc lập khớp từng đơn vị ở cả 15 kỷ
+    (`scene-tri.mjs` ↔ `plinth-tri.mjs`); xem `PERFORMANCE.md`.
+  - **Cái hình chữ nhật (khiếu nại A) KHÔNG được chữa ở đây — và nó KHÔNG phải mép của tấm đất.**
+    Đo rồi: tỉ số bệ CHÉO/TRỤC **1,306** (vuông hoàn hảo = 1,414; tròn = 1,000) và cao độ hai bên
+    mép khớp **0,0000**, tức không có vách nào cả. Thứ mắt đọc ra là chỗ **mặt lát và nhà cửa dừng
+    đột ngột** — đúng chẩn đoán ADR-038, và Đàm đã chọn hướng **LẤP** (không thu nhỏ), `outskirts.js`
+    đã làm nửa đầu. Còn nếu sau này thật sự muốn bo tròn cao nguyên (siêu ellipse p = 2,5) mà vẫn
+    giữ đủ 144 ô thành phố trên đất phẳng thì cần nửa bề rộng **7,257**, trong khi
+    `7,257 + APRON_EDGE 3,4 = 10,66 > terrainSurfaceReach 9,5` — **thiếu 1,16 ô = 12,2% bán kính
+    tấm đất**, tức đúng cần gạt đang chờ Đàm ở `TECH_DEBT #53`.
+- **⚠️ HAI THỨ CHỈ LỘ RA SAU KHI MỌI CON SỐ ĐÃ XANH — và cả hai đều là bẫy đã có tên trong dự án**:
+  - **(a) `country` KHÔNG phải ràng buộc chặt nhất: nước đang chảy LÊN DỐC ở 9/14 kỷ.** `drain` được
+    buộc vào `country` — đúng khuôn ba lớp, và vẫn chưa đủ, vì **một đất nước có bốn phía còn một
+    dòng sông chỉ có MỘT**. Bảng `settingStyle.side` (nước ở phía nào) đã tồn tại từ trước, nhưng hai
+    bảng **chưa bao giờ được đặt cạnh nhau**; đặt cạnh lần đầu thì **9/14 kỷ lệch hoặc NGƯỢC HẲN**
+    (kỷ 5 khai đất thấp về tây trong khi suối Elzbach chảy ở đông). Không một bài test nào đỏ. Vá:
+    sửa 9 dòng cho khớp + **test khoá hai chiều** (`drain === side` ở 14 kỷ có nước, `kyKho === [1]`)
+    — cùng khuôn với hai lần khoá `country` trước (`floraStyle`↔`eraStyle`, `streetStyle`↔`eraStyle`).
+    ⚠️ **Cái giá đã trả, và nó phải nói thẳng**: sửa cho ĐÚNG VẬT LÝ làm cổng "thấy nước" TỆ ĐI ở hai
+    kỷ (kỷ 4 5,11% → 4,95%; kỷ 5 5,54% → 3,51%), vì đất thoải xuống phía nước ⇒ **bờ XA tụt xuống,
+    khuất sau sống đất gần**. Hai cách "chữa" đều bị bác: **hạ cổng 5%** là cái phễu Phase 9A;
+    **quay `drain` về giá trị sai** là mua một con số bằng cách nói dối địa lý (ADR-025 đã cấm với
+    mặt đường). Danh sách miễn trừ `[6,7,10]` → `[4,5,6,7,10]`, ghi ở `TECH_DEBT #59`.
+  - **(b) Biên độ lượn của vành đất ngoài lưới là một QUAN HỆ, và nó được viết thành một HẰNG SỐ**
+    — đúng bẫy Phase 7D (`roadColor`), lần thứ hai trong cùng phiên. Số `0,42` (±0,21) đúng **nhờ**
+    `WATER_DROP_BELOW_PLAIN = 0,30` nằm ở `setting.js`, một file mà `terrain.js` **không hề tham
+    chiếu tới**. §1(B) cộng thêm thành phần nghiêng vào cùng chỗ ấy ⇒ đất KHÔ của kỷ 8 tụt **0,0288
+    ô dưới mặt nước** — một vũng nước ma giữa đồng. Vá bằng cách **nói ra quan hệ**:
+    `ROLL_HEADROOM_SHARE = 0,70 × WATER_DROP_BELOW_PLAIN` (đúng 0,21 — không đổi thế giới hôm nay,
+    nhưng từ nay nó tự đi theo). ⚠️ Và phép nén phải **BÃO HOÀ (`tanh`), KHÔNG KẸP**: kẹp thì mọi kỷ
+    có triền dốc mạnh bị dồn về đúng ±0,21 và **thứ tự giữa các kỷ bị phá** (bài học Phase 7D/9B).
+- **Ảnh hưởng**:
+  - `terrain.js` (bảng `ERA_TERRAIN` + 6 hàm hình dạng + `HUONG_THAP` + `surfaceHeightAt` +
+    `ROLL_HEADROOM_SHARE`/`nenRoll`); `terrain.test.js`, `horizon.test.js`, `cityFocus.test.js`,
+    `waterView.test.js` phải đổi theo — **9 bài đỏ** sau bản vá, trong đó 4 bài chỉ đỏ vì
+    `terrainMaxHeight` tụt (camera cận cảnh tính khoảng lùi theo nó).
+  - ⚠️ **Ba bài test cũ dùng MỨC TUYỆT ĐỐI để canh một QUAN HỆ** nên chúng kêu oan ngay khi bảng
+    được co giãn — đúng bẫy Phase 7D. Đã đổi sang quan hệ suy được: cổng làm phẳng đường nay đòi
+    tập kỷ được làm phẳng **BẰNG** tập kỷ có `TERRACE_STEP × relief > maxRoadRise()` (không còn
+    `soODuongLe > 200`); `horizon.test.js` đổi từ mức cao độ tuyệt đối sang **số cặp kỷ ngược chiều**
+    và **lệch thứ hạng**.
+  - Ngân sách hiệu năng **không đổi** — không thêm khối, không thêm vật liệu, không thêm lệnh vẽ;
+    chỉ đổi giá trị trả về của một hàm thuần.
+- **Điều kiện xem lại**: (a) khi Đàm chốt `TECH_DEBT #53` — nếu tấm đất được nới thì bo tròn cao
+  nguyên trở nên khả thi và mục "trade-off" cuối ở trên phải viết lại; (b) nếu có kỷ thứ 16 khai
+  một `shape` mới — bài `MỌI KIỂU ĐỊA HÌNH ĐỀU PHẢI CÓ MỘT LÝ DO HÌNH HỌC` sẽ đòi nó chứng minh
+  mình không phải nhiễu trắng, **và** bài khoá `drain === side` sẽ đòi nó khai hướng thấp trùng phía
+  có nước; (c) nếu `SMOOTHSTEP_PEAK` hoặc `STREET_MAX_GRADE` đổi thì `maxRoadRise()` đổi theo, và
+  tập kỷ được làm phẳng đường sẽ đổi — bài test sẽ đỏ, **và đó là ý đồ**; (d) nếu có ai muốn nới
+  `ROLL_HEADROOM_SHARE` lên gần 1 thì phải đo lại `setting.test.js` "không có vũng nước ma" trước —
+  quan hệ ấy là thứ duy nhất giữ vành đất không chạm mặt nước.
 ## ADR-044 — Lối vào của `meander` là một **QUAN HỆ giữa `MEANDER_NECK` và `SHORE_BAND`**, không phải hai hằng số cạnh nhau; và cái hào phải đo bằng khoảng cách **Ơclit**, không phải khoảng cách lưới
 
 - **Ngày**: 2026-08-20 (§2 của Đàm — đóng `TECH_DEBT #64`)

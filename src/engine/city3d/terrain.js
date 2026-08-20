@@ -131,57 +131,131 @@ export function terrainSurfaceReach(gridSize = 12) {
 }
 
 /**
- * Kiểu địa hình — mỗi kiểu là một cách BIẾN ĐỔI trường nhiễu, không phải bảng cao độ chép tay.
+ * HƯỚNG THẤP — phía mà mặt đất đổ xuống. Đây là **LÝ DO** của cả quả đồi.
  *
- * Mỗi hàm ở đây chỉ trả lời DUY NHẤT một câu: **"chỗ nào cao hơn chỗ nào"**. Câu "cao bao nhiêu"
- * là việc của `relief` + `terraces`. Đây đúng luật "một trường một việc" đã trả giá ở Phase 5B với
- * `storyHeight`.
+ * ⚠️ TRƯỜNG NÀY RA ĐỜI VÌ MỘT PHÉP ĐO, KHÔNG VÌ MỘT Ý THÍCH (2026-08-20, §1(B)). Đàm nhìn ảnh kéo
+ * xa rồi nói mặt đất gợn lên gợn xuống *"như tấm chăn nhàu"*, không có lý do địa lý nào. Đo ra:
+ * phần hình dạng KHÔNG giải thích được bằng chính cái khuôn mà kỷ ấy khai chiếm **75,2% biên độ**,
+ * và nó còn đổi chiều **14,3 lần trên 24 đường cắt**. Ngoài đời cao độ luôn có lý do — nước chảy
+ * về đâu thì đất thấp về đó — và cái lý do ấy trước nay KHÔNG hề được khai ở đâu cả.
  *
- * ⚠️ NHƯNG PHẢI NÓI CHO ĐÚNG THỨ ĐANG BẢO ĐẢM ĐIỀU ĐÓ, vì tôi đã suýt ghi sai vào đây. Bản đầu
- * viết `plain: (n) => n * 0.35` — nhét luôn "đồng bằng thì thấp" vào hàm hình dạng — và đo ra
- * **bốn kỷ (2, 3, 11, 12) phẳng TUYỆT ĐỐI**, 15 kỷ chỉ còn 11 trường cao độ khác nhau. Tôi sửa
- * bằng cách cho mọi hàm trả trọn 0..1, rồi viết chú thích rằng ĐÓ là thứ giữ cho lỗi không tái
- * phát. **Sai.** Thử ngược mới lộ ra: sau khi thêm bước **CĂNG TRƯỜNG** ở lượt 2 (xem `buildTerrain`),
- * nhân `plain` với 0,35 cho ra kết quả **y hệt từng con số** — vì phép căng theo min/max của chính
- * kỷ đó xoá sạch mọi hệ số nhân chung. Tức biên độ trong hàm hình dạng nay **không thể** gây lỗi
- * nữa, do CẤU TRÚC chứ không do kỷ luật viết hàm.
+ * Mọi kỷ đều phải có một hướng thấp, kể cả kỷ phẳng: một đồng bằng phù sa vẫn nghiêng về phía
+ * sông, chỉ là nghiêng ít. `tilt` nói nghiêng bao nhiêu.
+ */
+const HUONG_THAP = {
+  bac: (_u, v) => v,       // đất đổ về phía BẮC (-y) ⇒ càng về nam càng cao
+  nam: (_u, v) => 1 - v,   // đất đổ về phía NAM (+y)
+  dong: (u) => 1 - u,      // đất đổ về phía ĐÔNG (+x)
+  tay: (u) => u,           // đất đổ về phía TÂY (-x)
+};
+
+/** Toạ độ dọc TRIỀN: 0 ở mép THẤP, 1 ở mép CAO. `px`/`py` là toạ độ ô (cho phép lệch phân số). */
+function trienAt(px, py, size, drain) {
+  const d = size > 1 ? size - 1 : 1;
+  const f = HUONG_THAP[drain] ?? HUONG_THAP.nam;
+  return Math.min(1, Math.max(0, f(px / d, py / d)));
+}
+
+/**
+ * Số mũ của SIÊU ELLIPSE dùng thay khoảng cách Chebyshev khi tính `edge`.
  *
- * ⇒ Thứ đang gánh bất biến này là **bước căng trường**, không phải quy ước 0..1. Bỏ bước căng đi
- * thì cả ba hàng rào ở `terrain.test.js` đỏ ngay (đã thử). Giữ quy ước 0..1 vẫn tốt cho người đọc,
- * nhưng đừng nhầm nó là lưới an toàn — cùng loại nhầm lẫn với "sương mù quét sắc lên công trình" ở
- * Phase 3Y: sửa đúng KHÔNG chứng minh hiểu đúng.
+ * ⚠️ ĐÂY LÀ BẢN VÁ CHO "CÁI BỆ VUÔNG", VÀ NÓ LẬT MỘT CHÚ THÍCH CŨ. Chú thích cũ chọn Chebyshev với
+ * lý do: *"lưới là hình vuông, nên vành đồi hình vuông ôm sát mép lưới, còn vành hình TRÒN sẽ để
+ * bốn góc lưới tụt xuống thành bốn hố — trông như lỗi chứ không như địa hình."* Lý lẽ ấy đúng cho
+ * một hình TRÒN HOÀN HẢO (p = 2). Nhưng cái giá của nó thì chưa ai đo: bắn 720 tia từ tâm ra tìm
+ * mép cao nguyên, tỉ số bán kính CHÉO/TRỤC ra **1,341** trong khi hình vuông hoàn hảo là
+ * `√2 = 1,414` — tức mặt đất quanh thành phố **là một cái khay vuông tới 95%**, và đó chính là
+ * "mảng vuông nhỏ xíu" Đàm nhìn thấy.
+ *
+ * `p = 2,5` là đường giữa: bốn góc vẫn đầy đặn hơn hình tròn (không thành bốn cái hố), mà cạnh
+ * thì đã cong hẳn. Không phải một con số dung hoà tuỳ hứng — nó được CHỌN BẰNG PHÉP ĐO tỉ số
+ * chéo/trục, xem bảng trong `PERFORMANCE.md`.
+ */
+const SIEU_ELLIPSE_P = 2.5;
+
+/** Khoảng cách BO TRÒN từ tâm lưới, chuẩn hoá 0..1 (1 = tới mép lưới theo trục). */
+function edgeAt(px, py, size) {
+  const c = (size - 1) / 2;
+  if (c <= 0) return 0;
+  const dx = Math.abs(px - c);
+  const dy = Math.abs(py - c);
+  const r = (dx ** SIEU_ELLIPSE_P + dy ** SIEU_ELLIPSE_P) ** (1 / SIEU_ELLIPSE_P);
+  return Math.min(1, r / c);
+}
+
+/**
+ * Bước sóng (tính bằng ô) của mảng đồi thoai thoải và của sóng đụn cát.
+ *
+ * ⚠️ HAI CON SỐ NÀY PHẢI SO VỚI CỠ LƯỚI (12 ô), KHÔNG PHẢI VỚI CẢM GIÁC "đồi nên to bằng nào".
+ * Bản đầu đặt 7,5 và 5,0 — nghe hợp lý, nhưng trên một lưới 12 ô thì đó là **1,6 và 2,2 chu kỳ**,
+ * tức bốn quả đồi và bốn cái hõm chen trong khoảng bằng một thị trấn. Đo ra kỷ 7 nhảy lên **4 đỉnh
+ * rời rạc / 59 lần đổi chiều** và kỷ 15 lên **52 lần đổi chiều ở cấp thềm** — tức là hai kỷ này bị
+ * chính bản vá chống-nhàu làm cho NHÀU HƠN trước. Sửa đúng một nửa còn tệ hơn không sửa, và chỉ
+ * phép đo mới thấy: nhìn ảnh thì "nhiều đồi" trông y hệt "địa hình phong phú".
+ *
+ * Nay đặt sao cho lưới 12 ô chứa **khoảng MỘT** chu kỳ: một lưng đồi và một triền, đúng thứ mắt
+ * đọc ra là "đồi", chứ không phải một tấm tôn lượn sóng.
+ */
+const SWELL_CELLS = 11.0;
+const DUNE_CELLS = 8.0;
+
+/**
+ * Mảng ĐỒI NỐI NHAU — hình ảnh Toscana: những lưng đồi dài, thoải, chạy gần song song.
+ *
+ * ⚠️ **CỘNG hai sóng, ĐỪNG NHÂN.** Bản đầu nhân `sin(x) × sin(y)` — nghe như cách hiển nhiên để có
+ * "đồi theo cả hai chiều", nhưng tích của hai sóng đổi dấu thì cho ra một **BÀN CỜ**: bốn góc phần
+ * tư luân phiên cao–thấp, tức 2 đỉnh và 2 hõm chen trong 12 ô. Đo ra kỷ 7 giữ nguyên **3 đỉnh rời
+ * rạc** kể cả sau khi đã kéo dài bước sóng — vì kéo dài không xoá được cái bàn cờ, nó chỉ làm bàn
+ * cờ to ra. Cộng thì được **những sống dài**: một sóng chính chạy theo một trục, một sóng phụ dài
+ * hơn hẳn uốn nhẹ các sống ấy cho khỏi thẳng đơ. Đó mới là hình Toscana thật.
+ */
+function swellAt(px, py) {
+  const chinh = Math.sin((px / SWELL_CELLS) * Math.PI * 2);
+  const phu = Math.sin((py / (SWELL_CELLS * 1.55)) * Math.PI * 2 + 1.1);
+  return (chinh * 0.72 + phu * 0.28 + 1) / 2;
+}
+
+/** Sóng ĐỤN CÁT — những sống dài SONG SONG, chạy vuông góc với hướng thấp. */
+function duneAt(px, py, size, drain) {
+  return (Math.sin((trienAt(px, py, size, drain) * (size - 1) / DUNE_CELLS) * Math.PI * 2) + 1) / 2;
+}
+
+/**
+ * Kiểu địa hình — mỗi kiểu là một TRƯỜNG HÌNH HỌC TRƠN, không còn là "một cách trộn nhiễu".
+ *
+ * ⚠️ ĐÂY LÀ THAY ĐỔI GỐC CỦA §1(B), VÀ NÓ ĐẢO NGƯỢC CÁCH NHIỄU ĐI VÀO HÌNH DẠNG.
+ * Bản cũ: `cao độ = hình học × w + NHIỄU × (1−w)`, với `w` từ 0 tới 0,7. Nhiễu **CỘNG THẲNG vào
+ * cao độ**, nên nó đẻ thêm đỉnh và hố ở khắp nơi — đo được: kỷ 13 có **4 đỉnh rời rạc**, kỷ 1 có
+ * **4 đáy rời rạc**, trong khi một cái gò hay một lòng chảo đáng lẽ phải có đúng MỘT. Tệ hơn,
+ * `plain` và `rolling` là `(n) => n` — **thuần nhiễu, không một thành phần hình học nào** — nên
+ * năm kỷ (2, 3, 7, 11, 12) có mặt đất không thể đọc ra lý do, kể cả kỷ 7 mà cả bản sắc là *"đồi
+ * Toscana nối nhau"*.
+ *
+ * Bản mới: **nhiễu LÀM CONG level set thay vì CỘNG vào cao độ** (domain warp — xem `truongTho`).
+ * Đây không phải một thủ thuật mới; nó chính là nguyên tắc đã được viết ra ngay trong file này cho
+ * vành ngoài: *"Nhiễu nhân vào BÁN KÍNH chuyển tiếp (không cộng vào cao độ): cộng thì mép vẫn
+ * vuông, chỉ là vuông gợn sóng; nhân thì chính cái ranh giới di chuyển ra vào."* Nay áp cùng
+ * nguyên tắc ấy cho cả quả đồi. Hệ quả: mặt đất vẫn không đều tăm tắp, nhưng mọi chỗ cao chỗ thấp
+ * đều là MỘT hình dạng bị bẻ cong, không phải hai chục cái mụn cộng lại.
+ *
+ * Mỗi hàm nhận `(edge, trien, swell, wave)` — cả bốn đều TRƠN và đều 0..1:
+ *   `edge`  0 ở tâm lưới, 1 ở mép (bo tròn theo siêu ellipse)
+ *   `trien` 0 ở phía đất THẤP, 1 ở phía đất CAO — đây là thứ mang LÝ DO
+ *   `swell` mảng đồi tròn nối nhau · `wave` sóng đụn cát song song
  */
 const SHAPES = {
-  /** Đồng bằng: hình dạng thuần nhiễu. Cái làm nó PHẲNG là `terraces: 2` + `relief` thấp. */
-  plain: (n) => n,
-  /** Đồi thoai thoải nối nhau (Toscana) — cũng thuần nhiễu, nhưng nhiều bậc và relief cao. */
-  rolling: (n) => n,
-  /**
-   * Thung lũng: thấp ở giữa, cao ở rìa. `edge` = 0 ở tâm lưới, 1 ở góc.
-   * Trường nhiễu bị TRỘN với một hàm hình học, nên hai kỷ cùng seed mà khác `shape` vẫn ra hai
-   * địa hình khác hẳn. Trọng số 0,40/0,60: nghiêng về hình học đủ để đọc ra là thung lũng, nhưng
-   * còn đủ nhiễu để hai bên sườn không đối xứng như khuôn đúc.
-   */
-  valley: (n, edge) => n * 0.40 + edge * 0.60,
+  /** Đồng bằng phù sa: nghiêng đều về phía sông, điểm xuyết vài gờ đất (đê tự nhiên). */
+  plain: (edge, trien, swell) => trien * 0.82 + swell * 0.18,
+  /** Đồi Toscana nối nhau — nay có HÌNH THẬT, không còn là nhiễu trắng. */
+  rolling: (edge, trien, swell) => swell * 0.42 + trien * 0.58,
+  /** Thung lũng: thấp ở giữa, cao ở rìa. */
+  valley: (edge) => edge,
   /** Gò/mỏm đá: cao ở giữa, đổ xuống bốn phía (Göbekli Tepe, lâu đài Burg Eltz). */
-  ridge: (n, edge) => n * 0.40 + (1 - edge) * 0.60,
-  /**
-   * Bờ dốc xuống một phía (Lisbon đổ ra cửa sông Tejo).
-   *
-   * `slope` chạy theo MỘT TRỤC THẲNG, không theo đường chéo `(x+y)` — vì bờ sông ngoài đời là một
-   * ĐƯỜNG, không phải một góc chéo.
-   *
-   * ⚠️ Lý do lịch sử, và một lần nữa phải nói cho đúng thứ đang bảo đảm điều gì: bản đầu dùng
-   * đường chéo và đo ra **85% số ô rơi vào cùng một bậc** — cả "thành phố bảy quả đồi" thành một
-   * mặt phẳng có đúng hai góc lệch. Nguyên nhân thuần xác suất: tổng hai toạ độ có **phân bố hình
-   * tam giác** (1 cách ra tổng 0, nhưng 12 cách ra tổng 11), nên phần lớn ô dồn về giữa dải. Tôi
-   * đổi sang trục thẳng và nó hết. **Nhưng thử ngược sau khi thêm bước căng trường thì đường chéo
-   * KHÔNG còn gây lỗi nữa** (kỷ 8 vẫn dùng đủ 5 bậc, mức đông nhất 34% — dưới ngưỡng 60%). Trục
-   * thẳng nay được giữ vì nó ĐÚNG ĐỊA LÝ, không phải vì nó đang cứu phép chia bậc.
-   */
-  coast: (n, edge, slope) => n * 0.30 + slope * 0.70,
-  /** Đụn cát: sóng dài chồng lên nhiễu — không mặt nào thật bằng, nhưng cũng không dốc. */
-  dune: (n, edge, slope, wave) => n * 0.45 + wave * 0.55,
+  ridge: (edge) => 1 - edge,
+  /** Bờ dốc xuống một phía (Lisbon đổ ra cửa sông Tejo) — một triền duy nhất, sạch. */
+  coast: (edge, trien) => trien,
+  /** Đụn cát: những sống dài song song, chạy vuông góc với hướng gió/hướng thấp. */
+  dune: (edge, trien, swell, wave) => wave * 0.55 + trien * 0.45,
 };
 
 /**
@@ -189,27 +263,44 @@ const SHAPES = {
  *
  * ⚠️ Cùng luật với `country`/`landmark` ở `eraStyle.js`: đây KHÔNG phải nhãn dán cho đẹp. Một con
  * số tuỳ hứng ở đây sẽ sinh ra đúng thứ mà Phase 5B đã phải đi sửa — 15 kỷ khác nhau trên giấy mà
- * giống nhau trên màn hình. `terraces` = số bậc thềm (1 = phẳng tuyệt đối), `relief` = độ cao tổng.
+ * giống nhau trên màn hình.
+ *
+ * `terraces` = số bậc thềm CỦA NỀN THÀNH PHỐ (1 = phẳng tuyệt đối) · `relief` = chiều cao một bậc
+ * · `drain` = phía đất đổ xuống · `tilt` = bao nhiêu phần hình dạng là cái triền nghiêng ấy.
+ *
+ * ⚠️ `terraces`/`relief` ĐÃ HẠ Ở CẢ 15 KỶ (2026-08-20, §1(B)) — đây là lệnh của Đàm, không phải một
+ * lượt chỉnh số cho đẹp: *"Nền thành phố phải BẰNG hoặc gần bằng… Địa hình NGOÀI lưới mới được gồ
+ * ghề."* Đo trước khi sửa: chênh cao TRONG lưới 12×12 lên tới **2,70 đơn vị** ở kỷ 5 (một ô rộng 1
+ * đơn vị, một căn nhà cao 1–2), và bậc giữa hai ô KỀ NHAU lên tới **1,15** ⇒ độ dốc **172%**, trong
+ * khi con phố dốc nhất thế giới (Baldwin Street) là 34,8%. Đó không phải một thị trấn trên đồi, đó
+ * là một cái vách.
+ *
+ * ⚠️ VÀ ĐÂY LÀ MỘT LẦN NỮA CỦA "MỘT TRƯỜNG GÁNH HAI VIỆC" — lần thứ SÁU trong dự án này
+ * (`storyHeight` · `roof` · bảng loài cây · `avenue` · `groundFloor`, rồi tới đây). `relief` xưa
+ * nay trả lời đồng thời hai câu: *"vùng đất này hùng vĩ tới đâu"* và *"nền thành phố gập ghềnh tới
+ * đâu"*. Ngoài đời hai câu ấy KHÔNG đi cùng nhau: Positano nằm trên một vách núi dựng đứng mà từng
+ * bậc phố thì vẫn đi bộ được, vì người ta SAN NỀN. Ở đây `terraces`/`relief` nay chỉ còn trả lời
+ * câu thứ hai; câu thứ nhất do `drain`/`tilt` và vành đất ngoài lưới trả lời.
  */
 export const ERA_TERRAIN = {
-  1:  { shape: 'ridge',   terraces: 4, relief: 1.00, note: 'Göbekli Tepe nằm trên một GÒ ĐẤT cao nhìn xuống đồng bằng Harran' },
-  2:  { shape: 'plain',   terraces: 2, relief: 0.45, note: 'đồng bằng phù sa sông Nin — phẳng tới chân trời, chỉ gợn bờ đê' },
-  3:  { shape: 'plain',   terraces: 2, relief: 0.35, note: 'Lưỡng Hà phẳng tuyệt đối; ziggurat là ngọn núi NHÂN TẠO duy nhất' },
-  4:  { shape: 'valley',  terraces: 3, relief: 0.60, note: 'kinh thành Trung Hoa trên đồng bằng, đồi thấp vây bốn phía' },
-  5:  { shape: 'ridge',   terraces: 5, relief: 1.35, note: 'Burg Eltz dựng trên MỎM ĐÁ giữa thung lũng — dốc nhất cả 15 kỷ' },
-  6:  { shape: 'valley',  terraces: 3, relief: 0.55, note: 'làng Bắc Bộ ven sông: đồng trũng, đình làng trên gò cao' },
-  7:  { shape: 'rolling', terraces: 5, relief: 1.15, note: 'đồi Toscana nối nhau — hình ảnh đặc trưng nhất của kỷ này' },
-  8:  { shape: 'coast',   terraces: 5, relief: 1.20, note: 'Lisbon "thành phố bảy quả đồi" đổ dốc xuống cửa sông Tejo' },
-  9:  { shape: 'valley',  terraces: 3, relief: 0.50, note: 'lòng chảo sông Seine, gần phẳng, chỉ nhô đồi Montmartre' },
-  10: { shape: 'valley',  terraces: 4, relief: 0.80, note: 'Manchester trong thung lũng công nghiệp, nhà máy bám sườn' },
-  11: { shape: 'plain',   terraces: 2, relief: 0.40, note: 'Manhattan là một tấm granite gần phẳng — chiều cao đến từ NHÀ' },
-  12: { shape: 'plain',   terraces: 2, relief: 0.30, note: 'thảo nguyên Nga mênh mông, phẳng đến mức thành biểu tượng' },
-  13: { shape: 'valley',  terraces: 4, relief: 0.95, note: 'đô thị Nhật kẹp giữa núi — đất hẹp là lý do có nhà nang' },
-  14: { shape: 'plain',   terraces: 1, relief: 0.00, note: 'Marina Bay là đất LẤN BIỂN: phẳng tuyệt đối, do người san' },
-  15: { shape: 'dune',    terraces: 3, relief: 0.55, note: 'sa mạc Dubai: đụn cát sóng dài, không có mặt nào thật bằng' },
+  1:  { shape: 'ridge',   drain: 'nam',  tilt: 0.25, terraces: 3, relief: 0.62, note: 'Göbekli Tepe nằm trên một GÒ ĐẤT cao nhìn xuống đồng bằng Harran ở phía nam' },
+  2:  { shape: 'plain',   drain: 'dong', tilt: 0.55, terraces: 2, relief: 0.34, note: 'đồng bằng phù sa sông Nin — phẳng tới chân trời, nghiêng đều về phía sông ở phía đông' },
+  3:  { shape: 'plain',   drain: 'tay',  tilt: 0.60, terraces: 2, relief: 0.26, note: 'Lưỡng Hà phẳng tuyệt đối, dốc không nhận ra được về nhánh Euphrates phía tây — mạng kênh của Ur dẫn nước từ đó; ziggurat là ngọn núi NHÂN TẠO duy nhất' },
+  4:  { shape: 'valley',  drain: 'bac',  tilt: 0.22, terraces: 3, relief: 0.40, note: 'Trường An đặt BỜ NAM sông Vị nên đất thoải về phía bắc ra sông; "mặt quay về nam" là hướng CUNG ĐIỆN theo phong thuỷ, không phải hướng đất thấp' },
+  5:  { shape: 'ridge',   drain: 'dong', tilt: 0.30, terraces: 3, relief: 0.90, note: 'Burg Eltz dựng trên MỎM ĐÁ mà suối Elzbach uốn quanh ở phía đông — dốc nhất cả 15 kỷ' },
+  6:  { shape: 'valley',  drain: 'nam',  tilt: 0.35, terraces: 2, relief: 0.44, note: 'đình làng Bắc Bộ quay hướng nam nên bến nước và ao đình ở ngay phía nam: đồng trũng dần về đó, đình trên gò cao' },
+  7:  { shape: 'rolling', drain: 'nam',  tilt: 0.44, terraces: 3, relief: 0.55, note: 'đồi Toscana nối nhau, THOẢI; Duomo đứng BỜ BẮC nên cả vùng tụt dần về lòng sông Arno phía nam' },
+  8:  { shape: 'coast',   drain: 'nam',  tilt: 0.62, terraces: 3, relief: 0.85, note: 'Lisbon "thành phố bảy quả đồi" đổ dốc xuống cửa sông Tejo ở phía nam' },
+  9:  { shape: 'valley',  drain: 'tay',  tilt: 0.30, terraces: 2, relief: 0.36, note: 'lòng chảo sông Seine chảy ở phía tây, gần phẳng, chỉ nhô đồi Montmartre' },
+  10: { shape: 'valley',  drain: 'bac',  tilt: 0.26, terraces: 3, relief: 0.55, note: 'Manchester trong thung lũng công nghiệp, nhà máy bám sườn thoải xuống kênh Bridgewater phía bắc' },
+  11: { shape: 'plain',   drain: 'tay',  tilt: 0.38, terraces: 2, relief: 0.28, note: 'Manhattan là một tấm granite gần phẳng nghiêng về sông Hudson phía tây — chiều cao đến từ NHÀ' },
+  12: { shape: 'plain',   drain: 'dong', tilt: 0.55, terraces: 2, relief: 0.22, note: 'thảo nguyên Nga mênh mông, phẳng đến mức thành biểu tượng; dải phố Stalingrad bám BỜ TÂY nên đất thoải về sông Volga phía đông' },
+  13: { shape: 'valley',  drain: 'dong', tilt: 0.40, terraces: 3, relief: 0.62, note: 'đô thị Nhật kẹp giữa núi, mở ra vịnh phía đông — đất hẹp là lý do có nhà nang' },
+  14: { shape: 'plain',   drain: 'nam',  tilt: 0.00, terraces: 1, relief: 0.00, note: 'Marina Bay là đất LẤN BIỂN: phẳng tuyệt đối, do người san — kỷ DUY NHẤT không có hướng thấp' },
+  15: { shape: 'dune',    drain: 'bac',  tilt: 0.30, terraces: 3, relief: 0.42, note: 'sa mạc Dubai: đụn cát sóng dài song song, thoải về vịnh Ba Tư phía bắc' },
 };
 
-const FALLBACK_TERRAIN = { shape: 'plain', terraces: 2, relief: 0.40, note: '' };
+const FALLBACK_TERRAIN = { shape: 'plain', drain: 'nam', tilt: 0.3, terraces: 2, relief: 0.40, note: '' };
 
 export function eraTerrainProfile(era) {
   return ERA_TERRAIN[era] ?? FALLBACK_TERRAIN;
@@ -246,6 +337,63 @@ function smoothstep(t) { return t * t * (3 - 2 * t); }
 export const WATER_SURFACE_Y = -APRON_DROP - WATER_DROP_BELOW_PLAIN;
 
 /**
+ * NHIỄU BẺ CONG LEVEL SET ĐI BAO XA, tính bằng ô.
+ *
+ * Quá nhỏ (< 1) thì hình học lộ ra là công thức — vành đồi tròn trịa như vẽ bằng compa. Quá lớn
+ * (> 3) thì level set tự cắt nhau và ta quay về đúng chỗ cũ: đỉnh rời rạc, mặt đất nhàu.
+ * 1,8 ô (tức lệch tối đa ±0,9 ô) giữ cho mọi kỷ có đúng MỘT đỉnh và MỘT đáy — có test đếm.
+ */
+const WARP_CELLS = 1.8;
+
+/**
+ * VÀNH ĐẤT NGOÀI LƯỚI nghiêng bao nhiêu theo hướng thấp của kỷ (đơn vị thế giới, trước khi nhân
+ * `tilt` của chính kỷ ấy). Nhỏ hơn một bậc thềm — vành đất là nền, không được tranh chấp với
+ * thành phố; nhưng đủ để bên cao và bên thấp đọc ra khác nhau.
+ */
+const OUTER_TILT = 0.55;
+
+/**
+ * PHẦN KHOẢNG HỞ TỚI MẶT NƯỚC MÀ VÀNH ĐẤT ĐƯỢC PHÉP ĂN.
+ *
+ * ⚠️ ĐÂY LÀ MỘT **QUAN HỆ**, KHÔNG PHẢI MỘT MỨC — VÀ NÓ ĐÃ TỪNG BỊ VIẾT THÀNH MỘT MỨC.
+ *
+ * Vành đất ngoài lưới lượn quanh `-APRON_DROP`, còn mặt nước nằm ở `WATER_SURFACE_Y`, tức thấp
+ * hơn đúng `WATER_DROP_BELOW_PLAIN`. Nên biên độ lượn của vành đất **không phải một lựa chọn mỹ
+ * thuật tự do**: lượn sâu quá mực nước là đẻ ra một *vũng nước ma* giữa đồng khô (bất biến (3)
+ * của `setting.js`). Trước bản vá, biên độ ấy được viết thẳng là `0,42` (tức ±0,21) — một con số
+ * đúng, nhưng đúng **nhờ** một hằng số ở file khác mà nó không hề tham chiếu tới. §1(B) thêm
+ * thành phần NGHIÊNG vào cùng chỗ ấy, không ai phải sửa `0,42`, và đất khô của kỷ 8 tụt xuống
+ * **0,0288 ô dưới mặt nước**. Đúng hình dạng bài học Phase 7D (*mặt đường phát biểu bằng KHOẢNG
+ * CÁCH TỚI MẶT ĐẤT, không bằng một độ sáng tuyệt đối*): một lời hứa nói về QUAN HỆ mà viết thành
+ * HẰNG SỐ thì gãy trong im lặng ở một phiên khác, do tay một người khác.
+ *
+ * 0,70 KHÔNG phải một con số mới chọn tay: `0,70 × WATER_DROP_BELOW_PLAIN (0,30) = 0,21`, đúng
+ * bằng biên độ mà bản trước đang chạy. Bản vá này **không đổi thế giới**, nó chỉ nói ra cái quan
+ * hệ vốn đã ngầm ở đó — và từ nay hạ `WATER_DROP_BELOW_PLAIN` sẽ tự kéo vành đất nông theo, thay
+ * vì lặng lẽ mở một vũng nước ma.
+ */
+const ROLL_HEADROOM_SHARE = 0.70;
+
+/** Biên độ tối đa (theo cả hai chiều) mà vành đất ngoài lưới được lượn quanh `-APRON_DROP`. */
+export function bienDoRollNgoai() {
+  return ROLL_HEADROOM_SHARE * WATER_DROP_BELOW_PLAIN;
+}
+
+/**
+ * Nén một độ lệch thô về trong biên độ cho phép — **BÃO HOÀ, KHÔNG KẸP**.
+ *
+ * Kẹp (`Math.min/max`) thì mọi kỷ nghiêng mạnh đều dồn về đúng một giá trị, tức xoá mất thứ tự
+ * giữa chúng — đúng bài học Phase 7D (*"KẸP thì phá thứ tự, ĐẨY thì không"*) và Phase 9B (*phép
+ * đẩy phải có cả sàn lẫn trần mà vẫn đơn điệu ngặt*). `tanh` gần như là phép đồng nhất ở vùng
+ * lệch nhỏ (phần lớn mặt đất KHÔNG đổi một chút nào) và tiệm cận biên ở vùng lệch lớn, nên nó vừa
+ * giữ nguyên thứ tự vừa không bao giờ chạm mặt nước.
+ */
+export function nenRoll(tho, bienDo = bienDoRollNgoai()) {
+  if (!(bienDo > 0)) return 0;
+  return bienDo * Math.tanh(tho / bienDo);
+}
+
+/**
  * TRƯỜNG THÔ — hình dạng trước khi chia bậc: `shape` áp lên bốn thành phần (nhiễu, `edge`, `slope`,
  * `wave`). Trả về mảng chưa căng, chưa chia bậc.
  *
@@ -255,25 +403,30 @@ export const WATER_SURFACE_Y = -APRON_DROP - WATER_DROP_BELOW_PLAIN;
  * hai bên tự dựng lấy `edge`/`slope`/`wave` thì chúng sẽ lệch nhau ở biên và phép đo sẽ đo một
  * thế giới khác với thế giới được vẽ ra — đúng loại lỗi đã cắn ở `sweep-score.mjs` (Phase 4G).
  *
- * @param {(n:number, edge:number, slope:number, wave:number) => number} shape
+ * @param {(edge:number, trien:number, swell:number, wave:number) => number} shape
  * @param {number} size
- * @param {(x:number, y:number) => number} nhieu  nguồn nhiễu 0..1 tại ô (x, y)
+ * @param {(x:number, y:number) => number} nhieu  nguồn nhiễu 0..1 (dùng để BẺ CONG toạ độ)
+ * @param {object} profile  hồ sơ kỷ — cần `drain` (hướng thấp) và `tilt` (nghiêng bao nhiêu)
  */
-function truongTho(shape, size, nhieu) {
-  const centre = (size - 1) / 2;
+function truongTho(shape, size, nhieu, profile) {
+  const drain = profile?.drain ?? 'nam';
+  const tilt = Math.min(1, Math.max(0, profile?.tilt ?? 0.3));
   const raw = new Float64Array(size * size);
   for (let y = 0; y < size; y += 1) {
     for (let x = 0; x < size; x += 1) {
-      // `edge` = 0 ở tâm, 1 ở góc xa nhất. Dùng khoảng cách Chebyshev (hình vuông) chứ không phải
-      // Euclid: lưới là hình vuông, nên vành đồi hình vuông ôm sát mép lưới, còn vành hình TRÒN sẽ
-      // để bốn góc lưới tụt xuống thành bốn hố — trông như lỗi chứ không như địa hình.
-      const edge = centre > 0
-        ? Math.max(Math.abs(x - centre), Math.abs(y - centre)) / centre
-        : 0;
-      // ⚠️ MỘT TRỤC THẲNG, KHÔNG PHẢI ĐƯỜNG CHÉO — xem lý do đầy đủ ở `SHAPES.coast`.
-      const slope = size > 1 ? y / (size - 1) : 0;
-      const wave = (Math.sin((x + y * 0.6) / NOISE_CELL) + 1) / 2;
-      raw[y * size + x] = shape(nhieu(x, y), edge, slope, wave);
+      // ⚠️ NHIỄU ĐI VÀO ĐÂY — VÀO **TOẠ ĐỘ**, KHÔNG VÀO CAO ĐỘ. Lấy mẫu hình học ở một chỗ hơi
+      // lệch đi thì level set bị bẻ cong; cộng nhiễu vào kết quả thì level set bị XÉ VỤN. Cùng
+      // một hạt nhiễu, hai kết quả khác hẳn nhau — xem khối chú thích của `SHAPES`.
+      const wx = (nhieu(x, y) - 0.5) * WARP_CELLS;
+      const wy = (nhieu(x + 37.5, y + 91.25) - 0.5) * WARP_CELLS;
+      const px = x + wx;
+      const py = y + wy;
+      const edge = edgeAt(px, py, size);
+      const trien = trienAt(px, py, size, drain);
+      const hinh = shape(edge, trien, swellAt(px, py), duneAt(px, py, size, drain));
+      // TRIỀN LUÔN CÓ MẶT, ở mọi kỷ. Đây là thứ giữ cho không kỷ nào còn là nhiễu không lý do —
+      // kể cả kỷ khai `ridge` hay `valley` (một cái gò ngoài đời cũng nằm trên một sườn nghiêng).
+      raw[y * size + x] = hinh * (1 - tilt) + trien * tilt;
     }
   }
   return raw;
@@ -295,7 +448,7 @@ export function geometricTemplate({ era, gridSize = 12 } = {}) {
   const profile = eraTerrainProfile(era);
   const size = Math.max(1, Math.round(Number.isFinite(gridSize) ? gridSize : 12));
   const shape = SHAPES[profile.shape] ?? SHAPES.plain;
-  return { field: truongTho(shape, size, () => 0.5), size, profile };
+  return { field: truongTho(shape, size, () => 0.5, profile), size, profile };
 }
 
 /**
@@ -326,12 +479,11 @@ export function buildTerrain({ era, gridSize = 12 } = {}) {
   // rác khoá điều đó.
   const setting = buildSetting({ era, gridSize: size });
 
-  const centre = (size - 1) / 2;
   const heights = new Float64Array(size * size);
   let maxHeight = 0;
 
   // ── LƯỢT 1: trường thô ────────────────────────────────────────────────────
-  const raw = truongTho(shape, size, (x, y) => valueNoise(seed, x / NOISE_CELL, y / NOISE_CELL));
+  const raw = truongTho(shape, size, (x, y) => valueNoise(seed, x / NOISE_CELL, y / NOISE_CELL), profile);
   let lo = Infinity;
   let hi = -Infinity;
   for (const v of raw) { if (v < lo) lo = v; if (v > hi) hi = v; }
@@ -573,7 +725,14 @@ export function buildTerrain({ era, gridSize = 12 } = {}) {
     const cu = Math.min(size - 0.5, Math.max(-0.5, u));
     const cv = Math.min(size - 0.5, Math.max(-0.5, v));
     const plateau = smoothHeightAt(cu, cv);
-    const outside = Math.max(Math.abs(u - cu), Math.abs(v - cv));
+    // ⚠️ KHOẢNG CÁCH **BO TRÒN**, KHÔNG PHẢI CHEBYSHEV — ĐÂY LÀ BẢN VÁ CHO "CÁI BỆ VUÔNG".
+    // `Math.max(|du|, |dv|)` là khoảng cách tới một hình VUÔNG, nên mọi đường đồng mức quanh thành
+    // phố đều là hình vuông, và mắt đọc ra một cái khay. Đo bằng 720 tia: tỉ số bán kính
+    // CHÉO/TRỤC ra **1,341** trong khi hình vuông hoàn hảo là `√2 = 1,414` — tức 95% là một cái
+    // khay. `hypot` cho bốn góc bo tròn tự nhiên, và nó chỉ LÀM TĂNG `outside` nên lời hứa
+    // "ra khỏi `APRON_EDGE` thì phẳng đúng `-APRON_DROP`" chỉ chặt thêm chứ không lỏng đi
+    // (đã kiểm: ở giữa cạnh tấm đất `outside` = 3,50 > `APRON_EDGE` 3,40, y như trước).
+    const outside = Math.hypot(u - cu, v - cv);
     if (outside <= 0) return plateau;
 
     // Nhiễu nhân vào BÁN KÍNH chuyển tiếp (không cộng vào cao độ): cộng thì mép vẫn vuông, chỉ là
@@ -592,7 +751,29 @@ export function buildTerrain({ era, gridSize = 12 } = {}) {
     // khớp được với tấm ván vùng ngoài. Xem chú thích của `APRON_EDGE`.
     const settle = smoothstep(Math.min(1, Math.max(0,
       (outside - APRON_CELLS) / Math.max(1e-6, APRON_EDGE - APRON_CELLS))));
-    const roll = (valueNoise(`${seed}|roll`, u / 3.4, v / 3.4) - 0.5) * 0.42 * (1 - settle);
+    // ⚠️ VÀNH ĐẤT PHẢI GỒ GHỀ **CÓ HƯỚNG** — lệnh của Đàm ở §1(B): *"cao ở xa nước, thấp dần về
+    // phía nước"*. Trước bản vá, chỗ này chỉ có nhiễu đẳng hướng: vành đất lượn lên lượn xuống đều
+    // nhau mọi phía, tức đúng "tấm chăn nhàu" — gồ ghề mà không có lý do. Nay cộng thêm một
+    // thành phần NGHIÊNG lấy đúng `drain` mà kỷ ấy khai, nên bên cao vẫn cao và bên thấp vẫn thấp
+    // kể cả khi đã ra khỏi lưới.
+    // ⚠️ VÀ NÓ VẪN PHẢI TẮT DẦN VỀ 0 Ở `APRON_EDGE`, y như phần nhiễu. Đây KHÔNG phải một lựa chọn
+    // mỹ thuật mà là một HỢP ĐỒNG với `horizon.js`: tấm chân trời bắt đầu ở `terrainSurfaceReach`
+    // và bắt đầu ở đúng cao độ `-APRON_DROP` (xem `horizon.js` dòng ~185). Để cái nghiêng sống tới
+    // rìa là mở ra một khe hở chạy vòng quanh thành phố — và nó sẽ không đỏ ở đâu cả.
+    // ⚠️ PHÉP KHOÉT LÒNG NƯỚC VẪN BỌC NGOÀI CÙNG (`khoetLongNuoc`, VIỆC 2): cái nghiêng nói *đất*
+    // cao thấp thế nào, còn mặt nước là chỗ đất bị hạ xuống dưới một mặt phẳng. Hai việc khác nhau,
+    // và thứ tự phải là nghiêng TRƯỚC rồi khoét SAU — khoét trước thì cái nghiêng sẽ nâng đáy hồ
+    // lên theo và bờ bên cao sẽ cạn hơn bờ bên thấp.
+    const d = size > 1 ? size - 1 : 1;
+    const huong = HUONG_THAP[profile.drain] ?? HUONG_THAP.nam;
+    // KHÔNG kẹp 0..1: ngoài lưới thì triền phải TIẾP TỤC, nếu kẹp thì cả vành phía cao bằng phẳng
+    // như nhau và cái hướng biến mất đúng ở chỗ cần thấy nó nhất.
+    const nghieng = (huong(u / d, v / d) - 0.5) * OUTER_TILT * (profile.tilt ?? 0);
+    const gon = (valueNoise(`${seed}|roll`, u / 3.4, v / 3.4) - 0.5) * 0.30;
+    // ⚠️ NÉN VỀ TRONG KHOẢNG HỞ TỚI MẶT NƯỚC (`nenRoll`) TRƯỚC KHI TẮT DẦN. Không có bước này
+    // thì `nghieng` cộng `gon` có thể xuống dưới `WATER_SURFACE_Y` và đẻ ra một vũng nước ma
+    // giữa đồng khô — đã đo được 0,0288 ô ở kỷ 8. Xem `ROLL_HEADROOM_SHARE`.
+    const roll = nenRoll(nghieng + gon) * (1 - settle);
     return khoetLongNuoc(u, v, lerp(plateau, -APRON_DROP + roll, t));
   }
 

@@ -120,13 +120,31 @@ test('TECH_DEBT #57 ĐÃ ĐÓNG — 11 kỷ vượt cổng 5% THEO PHÉP TIA, v�
   // ⚠️ MỘT BẢNG TƯỜNG MINH, KHÔNG PHẢI MỘT `continue` IM LẶNG. Đàm: *"tự đỏ CẢ HAI CHIỀU: kỷ thứ
   // tư trượt thì đỏ, một trong ba kỷ được sửa xong cũng đỏ."* Một mục nợ trong tài liệu chỉ được
   // đọc khi có người đi tìm; một con số trong bài test thì TỰ ĐÒI được đọc.
-  assert.deepEqual(TRUOT, [6, 7, 10],
-    'đúng ba kỷ nước HẸP được miễn cổng 5% (`TECH_DEBT #59`, Đàm chốt hướng (b) ngày 2026-08-20). '
-    + 'Danh sách này đổi nghĩa là hoặc có kỷ thứ tư vừa tụt xuống, hoặc một trong ba kỷ ấy vừa '
-    + 'được chữa — cả hai trường hợp đều phải xem lại `TECH_DEBT #59` chứ không phải sửa con số ở đây.');
-  assert.equal(DAT.length, 11,
-    'phải có đúng 11 kỷ vượt 5% THEO PHÉP TIA. ⚠️ KHÔNG phải "11 kỷ đạt cổng 5%" — trên màn hình '
-    + 'chỉ 5 kỷ đạt (xem khối chú thích đầu bài và `TECH_DEBT #63`).');
+  // ⚠️ DANH SÁCH ĐÃ ĐỔI TỪ [6,7,10] SANG [4,5,6,7,10] NGÀY 2026-08-20, VÀ ĐÂY LÀ LÝ DO — KHÔNG
+  // PHẢI MỘT CON SỐ ĐƯỢC SỬA CHO VỪA.
+  //
+  // §1(B) phát hiện `ERA_TERRAIN.drain` (đất thấp về đâu) **lệch hoặc NGƯỢC HẲN** với
+  // `settingStyle.side` (nước ở đâu) ở 9/14 kỷ — kỷ 5 khai đất thấp về tây trong khi suối Elzbach
+  // ở đông, tức nước chảy lên dốc. Sửa cho đúng vật lý (`terrain.test.js`, bài *"NƯỚC NẰM Ở CHỖ
+  // THẤP"*) làm phép tia đo ra ÍT nước hơn ở vài kỷ, vì khi đất thoải xuống phía nước thì BỜ XA
+  // tụt xuống và khuất sau sống đất gần. Đo được, cả ba mốc:
+  //
+  //     kỷ   nền 9c7032c   §1(B) drain SAI   §1(B) drain ĐÚNG
+  //     4      5,11%          4,95%             4,95%
+  //     5      5,54%          4,40%             3,51%
+  //     7      2,41%          4,38%             3,55%
+  //
+  // ⇒ Cái giá là THẬT và đã ghi ở `TECH_DEBT #59`. Hai cách "chữa" đều bị bác thẳng: hạ cổng 5%
+  // là cái phễu Phase 9A (Đàm đã chốt), còn quay `drain` về giá trị sai là **mua một con số bằng
+  // cách nói dối địa lý** — đúng thứ ADR-025 đã cấm với mặt đường. Cách chữa THẬT vẫn là hướng đã
+  // ghi ở `TECH_DEBT #60`: đổi thứ mang bản sắc ven nước sang cầu · bến · thuyền · kè.
+  assert.deepEqual(TRUOT, [4, 5, 6, 7, 10],
+    'đúng NĂM kỷ được miễn cổng 5% theo phép tia (`TECH_DEBT #59`). Danh sách này đổi nghĩa là '
+    + 'hoặc có kỷ thứ sáu vừa tụt xuống, hoặc một trong năm kỷ ấy vừa được chữa — cả hai trường '
+    + 'hợp đều phải xem lại `TECH_DEBT #59` chứ không phải sửa con số ở đây.');
+  assert.equal(DAT.length, 9,
+    'phải có đúng 9 kỷ vượt 5% THEO PHÉP TIA. ⚠️ KHÔNG phải "9 kỷ đạt cổng 5%" — trên màn hình '
+    + 'còn ít hơn (xem khối chú thích đầu bài và `TECH_DEBT #63`).');
 
   // Vế thật sự canh bản vá `worldYaw`: 11 kỷ kia phải THẬT SỰ đạt.
   for (const era of DAT) {

@@ -6,20 +6,28 @@
  * cảng"*): ở khung hình mặc định, mặt biển kỷ 14 chiếm **0,09%** khung hình, trong khi trần — xoay
  * camera sang phía đối diện bờ — là **31,43%**.
  *
+ * ✅ **ĐÃ SỬA 2026-08-20 bằng trường `worldYaw`** (ADR-041): xoay TỜ GIẤY chứ không xoay thế giới —
+ * `side` giữ nguyên sự thật lịch sử, `DEFAULT_YAW` giữ nguyên hằng số mỹ thuật, và chỗ chịu trách
+ * nhiệm cho QUAN HỆ giữa hai thứ ấy nay có tên. Kỷ 14 đi từ **0,09% lên 23,75%**, kỷ 12 từ **2,30%
+ * lên 9,32%**. Cái chuông ở bài cuối đã reo đúng lúc và đã được thay bằng bài khoá TRẠNG THÁI ĐÃ
+ * SỬA — xem chú thích của nó.
+ *
  * ⚠️ VÌ SAO PHẢI LÀ MỘT BÀI TEST CHỨ KHÔNG PHẢI MỘT MỤC `TECH_DEBT`. Luật đã trả giá nhiều lần
  * trong dự án này: *"một bài học được ghi ra KHÔNG chặn được gì; chỉ một bài TEST mới chặn được"*,
  * và cụ thể hơn — *"một con số trong bài test là cái hẹn giờ duy nhất chạy được"* (Phase 10 Bước 1,
  * `door: 'legacy'`). Một mục nợ chỉ được đọc khi có người đi tìm; một con số trong bài test thì TỰ
  * ĐÒI được đọc.
  *
- * ⚠️ BÀI `KHUYẾT TẬT VẪN CÒN NGUYÊN` DƯỚI ĐÂY CỐ Ý ĐỎ KHI AI ĐÓ SỬA XONG. Đó không phải một quả mìn
- * — nó là cái chuông buộc phiên sửa phải mở `TECH_DEBT #57` ra đóng lại tử tế thay vì để mục nợ
- * nằm mãi ở trạng thái Open trong khi mã đã hết bệnh.
+ * ⚠️ BÀI `KHUYẾT TẬT VẪN CÒN NGUYÊN` TỪNG CỐ Ý ĐỎ KHI AI ĐÓ SỬA XONG, và nó **đã reo đúng như thiết
+ * kế**: phiên 2026-08-20 chạy `npm test`, thấy đúng một bài đỏ, kèm câu *"nếu đúng thì hãy ĐÓNG
+ * TECH_DEBT #57 và sửa bài test này — đừng nới ngưỡng"*. Đó là bằng chứng thực nghiệm cho luật
+ * *"một con số trong bài test là cái hẹn giờ duy nhất chạy được"* — mục nợ đã được đóng tử tế thay
+ * vì nằm mãi ở trạng thái Open trong khi mã đã hết bệnh.
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { GOC_DOI_DIEN, tiLeNuocTrongKhung } from './water-view.mjs';
+import { gocDoiDien, tiLeNuocTrongKhung } from './water-view.mjs';
 import { getSetting } from '../src/engine/city3d/settingStyle.js';
 import { ERAS_WITH_WATER_GEOMETRY } from '../src/engine/city3d/setting.js';
 
@@ -38,7 +46,7 @@ test('KỶ KHÔ RA ĐÚNG 0 Ở MỌI GÓC — và có ĐỐI CHỨNG chứng mi
   }
   // ⚠️ Không có vế này thì bài trên vẫn XANH kể cả khi phép đo hỏng hẳn và không bao giờ đếm nổi
   // một tia nước nào — đúng cái phễu "assert có ít nhất một chỗ" đã cắn ở Phase 7A.
-  const thay = tiLeNuocTrongKhung({ era: 14, yaw: GOC_DOI_DIEN.nam, tia: TIA }).nuoc;
+  const thay = tiLeNuocTrongKhung({ era: 14, yaw: gocDoiDien(14), tia: TIA }).nuoc;
   assert.ok(thay > 0.05, `đối chứng: đứng đối diện biển kỷ 14 phải THẤY nước, đo được ${thay}`);
 });
 
@@ -50,23 +58,36 @@ test('BA LỚP PHẢI CỘNG ĐÚNG 100% — mọi phép chia-một-toàn-thể 
   }
 });
 
-test('TECH_DEBT #57 — KHUYẾT TẬT VẪN CÒN NGUYÊN (bài này ĐỎ khi có ai sửa xong, và đó là CHỦ Ý)', () => {
-  // Kỷ 14 khai `side: 'nam'`, camera mặc định đứng ở góc ĐÔNG-NAM rồi nhìn về tây-bắc ⇒ quay lưng
-  // lại biển. Hai quyết định đều đúng một mình và chưa bao giờ được đặt cạnh nhau.
-  assert.equal(getSetting(14).side, 'nam');
+test('TECH_DEBT #57 ĐÃ ĐÓNG — biển kỷ 14 và sông kỷ 12 phải THẬT SỰ nằm trong khung mặc định', () => {
+  // ⚠️ BÀI NÀY THAY CHO BÀI "KHUYẾT TẬT VẪN CÒN NGUYÊN". Cái chuông đã reo (2026-08-20) và nay nó
+  // đổi việc: từ *canh cho khuyết tật đừng bị quên* sang *canh cho bản vá đừng bị mất*.
+  //
+  // Ngưỡng 5% là cổng Đàm ra ở §3. Nó KHÔNG áp cho mọi kỷ có nước, và đó là một sự thật đã đo chứ
+  // không phải một chỗ nới tay: kênh Amsterdam kỷ 10 rộng 0,9 ô, và **không góc nhìn nào** đưa nó
+  // lên 5% khung hình (trần đo được 7,37% ở một góc phá hỏng mọi kỷ khác; ở góc chung tốt nhất nó
+  // chỉ được 1,9%). Kỷ 6 thì trần TOÀN CỤC chỉ 4,44% — dưới 5% ở MỌI góc. Bảng đầy đủ 14 kỷ × 24
+  // góc nằm ở `PERFORMANCE.md`. Vì vậy bài này khoá đúng hai kỷ ĐÃ DỰNG HÌNH, và Bước C sẽ phải
+  // đối mặt với ba kỷ hẹp ấy bằng một câu trả lời khác (`TECH_DEBT #59`).
+  //
+  // THỬ-CHO-ĐỎ: cho `worldYaw` trả 0 ⇒ kỷ 14 tụt về 0,09% ⇒ đỏ ở `assert.ok(macDinh >= 0.05)`.
+  assert.equal(getSetting(14).side, 'nam', 'sự thật lịch sử KHÔNG được đổi để lấy con số');
+  assert.equal(getSetting(12).side, 'dong', 'sự thật lịch sử KHÔNG được đổi để lấy con số');
 
-  const macDinh = tiLeNuocTrongKhung({ era: 14, tia: TIA }).nuoc;
-  const tran = tiLeNuocTrongKhung({ era: 14, yaw: GOC_DOI_DIEN.nam, tia: TIA }).nuoc;
+  for (const era of ERAS_WITH_WATER_GEOMETRY) {
+    const macDinh = tiLeNuocTrongKhung({ era, tia: TIA }).nuoc;
+    assert.ok(macDinh >= 0.05,
+      `kỷ ${era}: mặt nước chỉ chiếm ${(macDinh * 100).toFixed(2)}% khung mặc định, dưới cổng 5% `
+      + 'của §3. `worldYaw` có đang bị vô hiệu hoá không?');
+  }
 
-  assert.ok(macDinh < 0.01,
-    `#57 có vẻ đã được sửa (biển kỷ 14 nay chiếm ${(macDinh * 100).toFixed(2)}% khung mặc định, `
-    + 'trước là 0,09%). Nếu đúng thì hãy ĐÓNG `TECH_DEBT #57` và sửa bài test này — đừng nới ngưỡng.');
-  assert.ok(tran > 0.20,
-    `trần phải còn cao (đo được ${(tran * 100).toFixed(2)}%, mốc 31,43%) — nếu nó tụt thì vấn đề `
-    + 'nay nằm ở HÌNH NƯỚC chứ không còn ở góc camera, và cách chữa hoàn toàn khác.');
-
-  // Khoá chính cái QUAN HỆ, vì đó mới là điều mục nợ nói (bài học Phase 7D: một lời hứa nói về
-  // quan hệ mà cài đặt bằng hằng số thì gãy trong im lặng).
-  assert.ok(tran / macDinh > 50,
-    `trần chỉ gấp ${(tran / macDinh).toFixed(1)}× mặc định (mốc 345,7×)`);
+  // ⚠️ ĐỐI CHỨNG — TRẦN PHẢI CÒN CAO HƠN MẶC ĐỊNH Ở KỶ BIỂN. Không có vế này thì bài trên vẫn xanh
+  // trong một thế giới mà mặt biển đã phình to bất thường (vd `reach` tụt về 0 và nước liếm vào sát
+  // thành phố) — lúc ấy 23% là triệu chứng của một lỗi khác, không phải bằng chứng đã sửa đúng.
+  const tran14 = tiLeNuocTrongKhung({ era: 14, yaw: gocDoiDien(14), tia: TIA }).nuoc;
+  const macDinh14 = tiLeNuocTrongKhung({ era: 14, tia: TIA }).nuoc;
+  assert.ok(tran14 > macDinh14,
+    `kỷ 14: trần ${(tran14 * 100).toFixed(2)}% không cao hơn mặc định ${(macDinh14 * 100).toFixed(2)}%`);
+  assert.ok(macDinh14 / tran14 > 0.5,
+    `kỷ 14: khung mặc định mới chỉ lấy được ${(macDinh14 / tran14 * 100).toFixed(0)}% của trần — `
+    + 'bản vá chưa đưa được biển vào tầm nhìn như đã hứa.');
 });

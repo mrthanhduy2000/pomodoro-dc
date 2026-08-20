@@ -353,6 +353,26 @@ bao giờ NÂNG (`Math.min`, và test bơm thẳng một cao độ −9 vào đ�
 gì đỏ); (3) **mực nước nằm dưới MỌI cao độ đất khô của cả thế giới** — vành đất ngoài lưới gợn
 ±0,21 quanh −0,62 nên chỗ trũng nhất chạm −0,83, mực nước −0,92 nằm dưới nó 0,09; đặt cao hơn thì
 tấm nước phẳng ló lên ở những hõm khô cách con sông hàng chục ô, một vũng nước ma.
+**`worldYaw` — CHỦ SỞ HỮU của quan hệ "bờ nước ↔ góc nhìn mặc định" (2026-08-20, ADR-041)**: hai
+hằng số đều đúng một mình mà chỏi nhau — `side` là sự thật lịch sử (kỷ 14 nhìn NAM ra eo Malacca),
+`DEFAULT_YAW = π/4` là hằng số mỹ thuật đã duyệt — và **quan hệ giữa chúng không ai sở hữu**, nên
+kỷ 14 dựng đủ 16.128 tam giác biển rồi đặt hết ra sau lưng camera (0,09% khung hình). ⚠️ Đây đúng
+hình dạng bẫy **Phase 7D**: *một lời hứa nói về QUAN HỆ được cài đặt bằng hai HẰNG SỐ ở hai file
+không tham chiếu nhau*. Lời giải KHÔNG phải sửa một trong hai vế mà là **đặt tên cho cái quan hệ**:
+`worldYaw(era)` xoay **ĐỊA THẾ** (nước + địa hình + vùng quê + rặng núi) chứ không xoay camera.
+⚠️ **Ba ràng buộc, cả ba đều có test đo**: (1) **SUY RA bằng MỘT công thức**, không khai tay 15 số
+— bảng tay là 15 cơ hội để một dòng lệch đi mà không ai biết; (2) **luôn là bội của 90°** — lưới
+thành phố là HÌNH VUÔNG (nửa cạnh 6, nửa đường chéo 6√2 ≈ 8,49), nên một phép xoay lệch góc đưa nửa
+mặt phẳng nước cắt vào GÓC lưới tới 2,49 ô (đo được: 4/144 ô ngập) ⇒ `quarterTurns()` **TỪ CHỐI
+THẲNG** góc không phải bội 90°, không tự làm tròn; (3) **lưới 12×12 và vị trí nhà KHÔNG xoay** —
+xoay chúng là gãy ADR-007 (bảo tàng bất động). Chỗ cài đặt gọn tới mức đáng ngờ, và đó là dấu hiệu
+tốt: `insetAt` thành một **vỏ bọc** xoay ngược toạ độ hỏi vào rồi gọi `insetGoc`, nên *mọi* thứ đọc
+dấu chân đều xoay theo cùng một góc mà **không nơi nào phải biết tới phép xoay**.
+⚠️ **Không cần hằng số "lệch một góc cho đọc ra là bờ"** mà Đàm cho phép: hình học tặng không —
+camera nhìn theo đường chéo 45°, còn bờ nước luôn vuông góc với trục, nên góc giữa chúng **không
+bao giờ bằng 0**; đo ra rel = ±45° ở cả 14 kỷ, chia đúng 7/7 giữa hai phía. Một hằng số thêm vào
+đây sẽ là một con số không có việc gì làm.
+
 ⚠️ **Dở dang CÓ CHỦ Ý và ĐẾM ĐƯỢC**: bảng khai 14 kỷ có nước, hình mới dựng **2**
 (`ERAS_WITH_WATER_GEOMETRY = [12, 14]`, cộng kỷ 1 khô làm nhân chứng cho ràng buộc lệnh vẽ). Đó là
 lệnh của Đàm, không phải thiếu sót — và `hasWater` (BẢNG khai) được giữ TÁCH khỏi `waterIsBuilt`

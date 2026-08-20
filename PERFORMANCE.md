@@ -11,6 +11,26 @@
 
 ---
 
+## ⚠️ HAI LUẬT ĐÀM RA NGÀY 2026-08-20 — ĐỌC TRƯỚC MỌI THỨ KHÁC TRONG FILE NÀY
+
+Máy đích là **MacBook Air M3**, thừa sức cho khối hình học hiện tại. Vì vậy **số tam giác KHÔNG
+CÒN là một hạng mục cảnh báo**: không ghi *"+55,8% tam giác chưa đo"* như một món nợ đang phình,
+không nhắc `bench-macbook.sh` ở mỗi báo cáo. Thay vào đó, đúng hai luật, và **giữ đúng chừng này**:
+
+**(1) KHÔNG TRÍCH MỘT CON SỐ MILI-GIÂY NÀO CHƯA ĐO.** Không viết *"ước lượng ~0,3 ms"*, không suy
+ra từ mô hình chi phí rồi trình bày như một kết quả. **Không có phép đo thì không có con số — bỏ
+trống, và đừng chú thích vì sao bỏ trống.** (Lý do đã trả giá: mô hình chi phí từng nói dối đúng
+theo hướng trấn an — HUD báo 34.622 tam giác trong khi máy vẽ 78.748.)
+
+**(2) GIỮ NGUYÊN CÁC RÀNG BUỘC ĐẾM ĐƯỢC:** số **lệnh vẽ** · số **họ vật liệu** · số **nguồn sáng**
+· số **texture** · số **shader động**. Đó là các trục ĐẮT thật và kiểm được **miễn phí bằng test
+thuần**, không liên quan gì tới sức máy. Mốc lệnh vẽ riêng từng kỷ nằm ở `drawCallBudget.test.js`.
+
+`bash scripts/bench-macbook.sh` chạy **một lần ở cuối Bước C** như một lượt làm mới số liệu — **không
+phải một cổng, không phải một blocker**. Mọi bộ số dưới đây vẫn giữ nguyên giá trị lịch sử của nó.
+
+---
+
 ## Đo bằng gì, lúc nào
 
 | | |
@@ -1046,23 +1066,10 @@ họ vật liệu `wood` và `foliage`, mà **cả hai họ đã có mặt ở c
 `drawCallBudget.test.js` (4 bài, gồm một đối chứng kéo thêm một họ vào một kỷ và ĐÒI mốc kỷ ấy phải
 đỏ) xanh nguyên.
 
-### Hình học: +55,8%, và nó vẫn nằm trong vùng RẺ — nhưng đây là ƯỚC LƯỢNG, không phải số đo
+### Hình học: +55,8% tam giác (1.386.406 → 2.159.670)
 
-⚠️ **NÓI RÕ: chưa ai chạy `bench-macbook.sh` cho bộ mã này.** Con số ms dưới đây là SUY RA từ mô
-hình chi phí đã đo trên M3, không phải một phép đo mới. Đàm là người chạy được bộ đo thật.
-
-Suy luận, và điều kiện để nó sai:
-- Mô hình đã đo: **≈ 0,87 ms cố định + 1,14 ms mỗi TRIỆU ĐIỂM ẢNH THẬT** ⇒ **80% chi phí đi theo
-  ĐIỂM ẢNH, 20% cố định**; hình học gần như không xuất hiện trong mô hình.
-- Ba bằng chứng đã ghi ở trên vẫn áp dụng, đặc biệt: *"tam giác thành phố chênh 43% giữa kỷ 3 và 11
-  mà thời gian chỉ chênh 2,4%"* và *"rặng núi chiếm 54–63% hình học mỗi khung nhưng 0 ms đo được"*.
-- ⚠️ **Và có một lý do riêng để tin lần này còn rẻ hơn thường**: vùng quê **không thêm điểm ảnh
-  nào**. Nó phủ lên đúng chỗ trước đây là mặt đất trơn — cùng số điểm ảnh, chỉ khác thứ được tô lên.
-  Trục đắt (điểm ảnh) đứng yên; chỉ trục rẻ (tam giác) tăng.
-- ⇒ **Ước lượng: dưới 0,3 ms mỗi khung**, tức cảnh chậm nhất đi từ 5,20 lên khoảng 5,5 ms trên trần
-  làm việc 8 ms. **Điều kiện để ước lượng này SAI**: nếu +773.264 tam giác đủ để đẩy khâu xử lý đỉnh
-  thành nút thắt mới — chưa từng thấy trong bộ số M3, nhưng cũng chưa từng thử ở mức này. Bộ đo thật
-  là thứ duy nhất đóng được câu hỏi.
+Không có con số mili-giây nào ở đây, vì chưa ai đo bộ mã này trên máy thật. Xem **luật ĐO / KHÔNG
+ĐO** ở đầu file: không đo thì để trống.
 
 ### KHÔNG chạm vào ba thứ Đàm cấm
 **0 nguồn sáng mới · 0 texture mới · 0 shader động.** Vùng quê chỉ dùng lại vai màu và nhà máy hình
@@ -1142,27 +1149,86 @@ có cây mọc dưới nước). Cộng lại:
 - kỷ 12 (sông rộng 3,4 ô, vắt dọc cả cảnh): dọn đi ~7.980 tam giác cây/đá, tấm nước chỉ 3.442 ⇒ **nhẹ đi**.
 - kỷ 14 (biển, nửa mặt phẳng phía nam ra tới mép thế giới): tấm nước 16.128, dọn đi ~10.428 ⇒ **nặng thêm 5.700**.
 
-### Hình học vẫn nằm sâu trong vùng RẺ — nhưng đây là ƯỚC LƯỢNG, KHÔNG phải số đo
+### Hình học: +0,05% tổng — con số nhỏ nhất của bất kỳ phase nào trong loạt này
 
-+0,05% tổng là con số nhỏ nhất của bất kỳ phase nào trong loạt này. Theo mô hình chi phí đã đo trên
-M3 (**80% chi phí theo ĐIỂM ẢNH, 20% cố định; 43% chênh tam giác chỉ đổi 2,4% thời gian**), một
-thay đổi hình học cỡ này gần như chắc chắn không đo được.
-
-⚠️ **NHƯNG PHẢI NÓI CHO ĐÚNG: đó là một SUY LUẬN từ mô hình chi phí, không phải một phép đo.**
-Không có một con số mili-giây nào trong mục này. Và mô hình chi phí ấy **đã từng nói dối theo đúng
-hướng trấn an một lần** (ngân sách tam giác 2026-08-17: HUD báo 34.622 trong khi máy vẽ 78.748 —
-thiếu 56%, và không có gì đỏ lên vì công thức chỉ được so với chính nó).
-
-⚠️ **MÓN NỢ ĐANG PHÌNH, và nó KHÔNG phải của phase này.** VIỆC 1 «bỏ cái khay» đã thêm **+55,8%
-tam giác** (1.386.406 → 2.159.670) và **chưa ai đo lại trên phần cứng thật ở mức đó**. Bước B chỉ
-thêm 0,05% lên trên một cái nền chưa được kiểm. Bộ số M3 hiện hành đo ở khoảng **78.748 tam giác
-mỗi khung**; nay là **~2,16 triệu**, tức **gấp 27 lần** — xa ngoài dải đã hiệu chuẩn.
-⇒ **Đàm cần chạy `bash scripts/bench-macbook.sh` trên MacBook.** Cho tới lúc đó, mọi câu "vẫn còn
-dư địa" trong mục này là ngoại suy, không phải kết luận.
+Không có con số mili-giây nào ở đây. Xem **luật ĐO / KHÔNG ĐO** ở đầu file.
 
 ### Vế CHƯA đo — frame time trên M3
 
-Chưa đo. Xem đoạn ngay trên. iPhone thì vẫn chưa ai đo bao giờ (`TECH_DEBT #23`/`#26`).
+Chưa đo.
+
+---
+
+## Sau `worldYaw` — đưa mặt nước vào khung mặc định (2026-08-20, ADR-041)
+
+Đóng `TECH_DEBT #57`. `worldYaw` xoay ĐỊA THẾ (nước + địa hình + vùng quê + rặng núi) chứ không
+xoay camera và không xoay lưới 12×12. Giá trị luôn là bội của 90° và chỉ khác 0 khi bờ nước nằm
+sau lưng camera mặc định.
+
+### Vế đã đo — nước trong khung mặc định
+
+Lệnh: `node --import ./scripts/register-esm-loader.mjs scripts/water-view.mjs --eras 12,14,1`
+
+| kỷ | bờ (`side`, GIỮ NGUYÊN) | `worldYaw` | mặc định TRƯỚC | mặc định SAU | trần | lệnh vẽ |
+|---|---|---:|---:|---:|---:|---:|
+| 14 (biển) | `nam` | +90° | 0,09% | **23,75%** | 31,43% | 11 → 11 |
+| 12 (sông) | `dong` | +90° | 2,30% | **9,32%** | 8,97% | 11 → 11 |
+| 1 (khô) | `none` | 0° | 0,00% | 0,00% | 0,00% | 9 → 9 |
+
+**Lệnh vẽ KHÔNG đổi ở cả 15 kỷ** — `worldYaw` xoay toạ độ, không thêm khối. (+1 lệnh vẽ ở kỷ 12/14
+là của Bước B trước đó, đã khoá trong `drawCallBudget.test.js` bằng bảng `MOC_TRUOC_NUOC`.)
+
+⚠️ **Kỷ 12 SAU (9,32%) cao hơn "trần" (8,97%) — không phải lỗi làm tròn.** Cột trần đo bằng cách
+đứng ĐỐI DIỆN bờ, và với một dải sông thì góc chính diện **không** phải góc tối ưu: nhìn xiên thì
+khúc sông trải dài hơn trong khung. Đo cả 14 kỷ × 24 góc mới thấy điều đó (kỷ 7: 2,69% khi nhìn
+thẳng so với 9,05% khi nhìn xiên). *Một cái tên cột — "trần" — đã hứa nhiều hơn thứ nó đo.*
+
+### ⚠️ BA KỶ NƯỚC HẸP KHÔNG ĐẠT CỔNG 5% Ở **MỌI** GÓC — đo trước khi tiêu ngân sách
+
+| kỷ | nước | bề rộng (ô) | trần TOÀN CỤC (24 góc) |
+|---|---|---:|---:|
+| 6 | sông | 1,2 | **4,44% — dưới 5% ở MỌI góc** |
+| 7 | sông | 1,4 | 9,05% (chỉ ở góc xiên, phá khung kỷ khác) |
+| 10 | kênh | 0,9 | 7,37% (chỉ ở một góc phá hỏng mọi kỷ khác) |
+
+Đây là sự thật về **BỀ RỘNG trong bảng**, không về phép xoay ⇒ chỉnh `worldYaw` cho ba kỷ ấy là
+chỉnh sai chỗ. Ghi thành `TECH_DEBT #59`, chốt trước khi Bước C trải tới chúng.
+
+### Phép đo dải thành phố GẦN NHƯ MÙ với mặt nước — đo được, không phải suy đoán
+
+`sweep-score.mjs` chỉ đọc `BANDS[1]` (0,34–0,68 chiều cao ô), mà nước sống ở **vành ngoài**. So hai
+bản quét TRƯỚC/SAU bằng cùng một công cụ, hai chế độ:
+
+| chế độ | kỷ 12 | kỷ 14 | 13 kỷ còn lại |
+|---|---:|---:|---:|
+| dải thành phố (`sweep-diff`) | **9,7 — DƯỚI ngưỡng mắt 12** | 12,0 (sát ngưỡng) | 0,0 |
+| cả khung hình (`sweep-diff --frame`) | 13,9% điểm ảnh · lệch TB 11,13 | 20,9% · lệch TB 25,89 | 0,0% · 0,02 |
+
+⇒ Nếu chỉ đọc phép đo dải, kỷ 12 sẽ bị báo là *"không phân biệt được bằng mắt"* trong khi mặt nước
+vừa tăng **4 lần**. Đây là §4-Q2 của Đàm, trả lời bằng số: **cổng không-trôi vẫn là `sweep-score`
+(dải), nhưng cổng "thay đổi có lên tới màn hình không" phải là `--frame`** — cùng công cụ, cùng đơn
+vị, cùng ngưỡng 12, không dựng thang mới. Cả bản quét đổi **2,1%** điểm ảnh, lệch TB **68,07** ở
+chỗ đã đổi.
+
+### Cổng không-trôi vẫn đạt
+
+`node scripts/sweep-score.mjs .city-preview/sweep-light-ky1-15.png` → **15/15 cặp chặng · 105/105
+cặp kỷ**, cặp kỷ gần nhất 21,5 · **trung vị 40,7** (trước đó 37,6 — đi LÊN, vì kỷ 12 và 14 nay có
+thêm một dữ kiện riêng mà kỷ khác không có).
+
+### ⚠️ 7/13 kỷ KHÔNG ĐỔI lại lệch `md5` — nhưng ảnh y hệt, đúng `TECH_DEBT #50`
+
+Trong 13 kỷ đáng lẽ không đổi: **6 kỷ trùng từng byte** (2, 6, 7, 9, 10, 15) và **7 kỷ lệch md5**
+(1, 3, 4, 5, 8, 11, 13). Đo bằng `sweep-diff --frame`:
+**0,0% điểm ảnh vượt ngưỡng · lệch trung bình 0,02** — thấp hơn ngưỡng mắt 600 lần, và thấp hơn
+mức của kỷ 12/14 (11,13 / 25,89) khoảng **550 lần**. Đây là nhiễu SwiftShader ±1 theo tải máy, đã
+ghi ở `TECH_DEBT #50`: *trùng md5 ⇒ ảnh y hệt, nhưng khác md5 ⇏ ảnh đã đổi*. Phép đo có đối chứng
+chứng minh nó KHÔNG mù: cùng công cụ, cùng lệnh, nó thấy kỷ 12 và 14 đổi rất rõ.
+
+### Vế CHƯA đo — frame time trên M3
+
+Chưa chạy `bench-macbook.sh` sau thay đổi này. **Không có phép đo thì không có con số** (luật ở đầu
+file) — không ước lượng, để trống.
 
 ---
 
@@ -1171,6 +1237,7 @@ Chưa đo. Xem đoạn ngay trên. iPhone thì vẫn chưa ai đo bao giờ (`TE
 - Sau bất kỳ phase nào **thêm nguồn sáng, đổi shader, đổi bóng đổ, hoặc đổi DPR**.
 - Sau bất kỳ phase nào làm **cỡ khung hình mặc định** đổi.
 - Trước khi kết luận bất cứ điều gì về **iPhone**.
-- **Không** cần đo lại chỉ vì thêm khối / thêm tam giác — trục đó đã chứng minh là rẻ.
+- **Không** cần đo lại chỉ vì thêm khối / thêm tam giác — trục đó đã chứng minh là rẻ, và từ
+  2026-08-20 nó không còn là hạng mục cảnh báo (xem hai luật ở đầu file).
 - ⚠️ **Mỗi phase PHẢI tự đo lại mốc nền của mình**, không được chép cột "sau" của phase trước làm
   cột "trước" của mình. Lý do và cái giá suýt phải trả: mục ❗ ở cuối phần Phase 11.

@@ -489,6 +489,115 @@ export function hasWater(era) {
   return getSetting(era).water !== 'none';
 }
 
+/* ────────────────────────────────────────────────────────────────────────────────────────────
+ * `worldYaw` — XOAY TỜ GIẤY, KHÔNG XOAY THẾ GIỚI
+ *
+ * ⚠️ ĐÂY LÀ "THỨ THỨ BA" (Đàm chốt 2026-08-20). Bài toán `TECH_DEBT #57`: 8/14 kỷ có nước nằm ở
+ * phía camera QUAY LƯNG LẠI, đo được (bảng §1: kỷ 13 và 14 ra 0,00% và 0,09% khung hình). Hai chỗ
+ * dễ đổ lỗi đều KHÔNG sai:
+ *   · `side` là SỰ THẬT LỊCH SỬ — sông Vị chảy phía bắc Trường An, sông Arno phía nam Duomo. Sửa
+ *     nó để lấy một con số đẹp là bán lịch sử, đúng thứ ADR-025 đã cấm với mặt đường.
+ *   · `DEFAULT_YAW` là một HẰNG SỐ MỸ THUẬT đã hiệu chuẩn qua nhiều phase (khung hình, ảnh mốc,
+ *     ADR-034 khoá khoảng cách cận cảnh). Sửa nó là giết mọi ảnh nghiệm thu cũ.
+ * Thứ SAI là **quan hệ giữa hai hằng số ấy không ai sở hữu** — đúng hình dạng bẫy Phase 7D (mặt
+ * đường hứa "nhạt hơn đất" nhưng được viết thành một con số tuyệt đối, nên khi mặt đất đổi ở một
+ * phase khác thì lời hứa chết trong im lặng). `worldYaw` là chỗ DUY NHẤT chịu trách nhiệm cho câu
+ * *"xoay bản đồ đi bao nhiêu để hướng lịch sử ấy rơi vào tầm nhìn?"* — một trường, một việc.
+ *
+ * ── VÌ SAO KẾT QUẢ LUÔN LÀ BỘI SỐ CỦA 90°, VÀ VÌ SAO ĐÓ LÀ ĐIỀU MAY ─────────────────────────
+ * Lưới thành phố là một HÌNH VUÔNG. Mọi công thức mặt nước hiện có đo khoảng cách ra ngoài lưới
+ * bằng `outwardDistances`, tức lấy mốc ở **nửa cạnh = 6 ô**. Nhưng nửa ĐƯỜNG CHÉO của hình vuông
+ * ấy là 6√2 ≈ 8,49. Cho nên xoay mặt nước một góc BẤT KỲ khác bội số 90° thì nửa mặt phẳng nước
+ * cắt vào GÓC lưới — nước ngập vào trong thành phố, gãy ADR-007 và bất biến "chỉ thêm, không bao
+ * giờ dời", mà không có gì đỏ lên. Bội số của 90° thì hình vuông trùng khít chính nó ⇒ phép xoay
+ * là ĐÚNG TUYỆT ĐỐI, không cần một số hiệu chỉnh nào, và mọi bài test hình học cũ vẫn nói về đúng
+ * cái hình cũ. `buildSetting` TỪ CHỐI THẲNG một `worldYaw` không phải bội số 90° (xem `setting.js`).
+ *
+ * ── GÓC LỆCH BỐ CỤC: KHÔNG PHẢI MỘT HẰNG SỐ, NÓ ĐƯỢC HÌNH HỌC PHÁT KHÔNG ───────────────────
+ * Đàm cho phép ĐÚNG MỘT hằng số lệch: *"nước nằm chính giữa khung đọc ra là cái hồ; lệch một góc
+ * mới đọc ra là bờ."* Hoá ra KHÔNG cần khai hằng số nào cả — camera đứng đúng 45°, còn bờ nước chỉ
+ * có bốn hướng chính, nên mọi hướng bờ đều lệch **đúng ±45° hoặc ±135°** so với hướng nhìn. Xoay đi
+ * một phần tư vòng thì ±135° thành ∓45°: nước lọt vào khung, và nó lệch sẵn 45° — đúng góc Đàm mô
+ * tả. Thêm một hằng số lệch nữa lên trên chỉ có thể đẩy nước về CHÍNH GIỮA (thành cái hồ) hoặc ra
+ * SAU LƯNG lần nữa. Đo được, xem `PERFORMANCE.md`.
+ *
+ * ── VÀ VÌ SAO CHỈ XOAY KHI BỜ NƯỚC NẰM SAU LƯNG (xoay ÍT NHẤT có thể) ──────────────────────
+ * Bản đầu của công thức này ép cả 14 kỷ về CÙNG một góc tương đối (−45°). Nó chạy, nó đạt cổng 5%,
+ * và nó SAI theo một hướng không có bài test nào bắt được: `side` khai bốn hướng khác nhau là để
+ * *"15 kỷ không ra cùng một bố cục lệch về một phía"* (luật 3 của bảng này) — mà ép chung một góc
+ * tương đối thì **cả 14 kỷ đều hiện nước ở đúng một chỗ trên màn hình**, tức đúng cái luật 3 sinh
+ * ra để ngăn, chỉ khác là lần này nó chết ở tầng HÌNH chứ không ở tầng BẢNG.
+ * Xoay-ít-nhất giữ được cả hai: 7 kỷ ra một bên khung, 7 kỷ ra bên kia, và **6 kỷ có nước KHÔNG
+ * XOAY MỘT ĐỘ NÀO** (`worldYaw = 0`) nên ảnh của chúng trùng từng byte với trước — nhân chứng rẻ
+ * nhất cho "trường mới chỉ đụng đúng thứ nó phải đụng".
+ * ──────────────────────────────────────────────────────────────────────────────────────────── */
+
+/**
+ * Yaw của MẶT bờ nước, theo ĐÚNG quy ước của `orbitPosition` (`x = sin(yaw)·h`, `z = cos(yaw)·h`).
+ * `nam` = z lớn = 0 · `dong` = x lớn = +90° · `bac` = z nhỏ = 180° · `tay` = x nhỏ = −90°.
+ */
+export const SIDE_YAW = Object.freeze({
+  nam: 0,
+  dong: Math.PI / 2,
+  bac: Math.PI,
+  tay: -Math.PI / 2,
+});
+
+/**
+ * Hướng camera mặc định NHÌN RA XA = `DEFAULT_YAW + π` (camera đứng ở đông-nam, nhìn về tây-bắc).
+ *
+ * ⚠️ ĐÂY LÀ MỘT BẢN CHÉP CÓ CHỦ ĐÍCH, và nó là chỗ duy nhất trong bảng này vi phạm "một luật một
+ * công thức" — nên nó phải có dây buộc. Lý do không `import` thẳng từ `orbit.js`: sẽ tạo VÒNG TRÒN
+ * `orbit → terrain → setting → settingStyle → orbit`. Cách vá đúng nhất (tách hằng số camera ra
+ * một file lá) đòi sửa `orbit.js`, mà Đàm cấm đụng camera ở chương trình này.
+ * ⇒ Dây buộc là `settingStyle.test.js`, nó `import` CẢ HAI rồi đòi hai con số bằng nhau — đúng
+ * khuôn `settingCountryMismatches()` đang buộc bảng này vào `eraStyle.js`.
+ */
+export const DEFAULT_VIEW_FAR_YAW = Math.PI / 4 + Math.PI;
+
+/** Đưa một góc về khoảng (−π, π]. */
+export function normalizeYaw(a) {
+  let x = a % (Math.PI * 2);
+  if (x <= -Math.PI) x += Math.PI * 2;
+  if (x > Math.PI) x -= Math.PI * 2;
+  return x;
+}
+
+/**
+ * Xoay CẢ ĐỊA THẾ của một kỷ đi bao nhiêu quanh trục đứng, để hướng bờ nước lịch sử rơi vào tầm
+ * nhìn của camera mặc định.
+ *
+ * Lưới 12×12 và vị trí công trình KHÔNG xoay (chúng không đọc trường này) — xoay chúng là gãy
+ * ADR-007. Thứ xoay theo là địa hình · vùng quê · rặng núi chân trời, vì cả ba đều suy ra hình
+ * dạng của mình từ `insetAt`/`blendAt`/`depthAt` của lớp địa thế.
+ *
+ * @param {number} era
+ * @param {number} [viewFar] hướng nhìn ra xa (đưa vào được để bài test bơm góc khác)
+ * @returns {number} góc xoay, radian, trong (−π, π]. Kỷ khô → 0.
+ */
+export function worldYaw(era, viewFar = DEFAULT_VIEW_FAR_YAW) {
+  const st = getSetting(era);
+  const mat = SIDE_YAW[st.side];
+  // Kỷ khô (`side: 'none'`) không có bờ nào để quay ra ⇒ 0, và ảnh của nó phải TRÙNG TỪNG BYTE với
+  // trước khi có trường này. Đó là nhân chứng rẻ nhất cho "trường mới không đụng gì ngoài mặt nước".
+  if (mat === undefined) return 0;
+
+  // Bờ nước lệch bao nhiêu so với hướng camera đang nhìn. Dương/âm = lệch về hai bên khác nhau, và
+  // DẤU ẤY PHẢI GIỮ NGUYÊN qua phép xoay — nó chính là thứ làm 14 kỷ không ra cùng một bố cục.
+  const lech = normalizeYaw(mat - viewFar);
+
+  // Đã nằm trong tầm nhìn ⇒ KHÔNG ĐỘNG VÀO. Đây là nửa quan trọng nhất của hàm: 6 kỷ đi qua đây và
+  // giữ nguyên ảnh cũ từng byte. Một công thức "chuẩn hoá tất cả về một góc" sẽ xoay cả sáu kỷ ấy
+  // một cách vô ích, và mỗi lần xoay vô ích là một lần vứt bỏ một tấm ảnh mốc.
+  if (Math.abs(lech) <= Math.PI / 2 + 1e-9) return 0;
+
+  // Nằm sau lưng ⇒ xoay ĐÚNG MỘT phần tư vòng, về phía gần nhất. Với bốn hướng bờ và camera 45°,
+  // `lech` chỉ có thể là ±135°, nên kết quả luôn là ∓45° — trong khung, và lệch sẵn một góc.
+  // ⚠️ Một phần tư vòng chứ không phải nửa vòng: hình vuông trùng khít chính nó ở CẢ HAI, nhưng
+  // nửa vòng là xoay nhiều gấp đôi mức cần, mà xoay càng nhiều thì càng nhiều thứ đổi chỗ.
+  return lech > 0 ? -Math.PI / 2 : Math.PI / 2;
+}
+
 /**
  * Đếm bảng theo BA TRỤC, một công thức duy nhất cho cả bảng thật lẫn bảng giả của đối chứng.
  *

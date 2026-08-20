@@ -42,7 +42,7 @@
  */
 
 import { valueNoise } from './noise';
-import { getSetting, hasWater } from './settingStyle';
+import { getSetting, hasWater, worldYaw } from './settingStyle';
 
 /**
  * Quãng (tính bằng ô) mà mặt đất hạ từ bờ xuống tới đáy.
@@ -243,10 +243,65 @@ function docBo(side, u, v) {
  *   bounds: {u0:number, u1:number, v0:number, v1:number} | null,
  * }}
  */
+/**
+ * `worldYaw` quy ra SỐ PHẦN TƯ VÒNG (0·1·2·3), hoặc `null` nếu góc ấy KHÔNG phải bội số của 90°.
+ *
+ * ⚠️ VÌ SAO CHỈ CHẤP NHẬN BỘI SỐ CỦA 90° — đây là cái bẫy đắt nhất của cả trường `worldYaw`, và nó
+ * im lặng tuyệt đối nếu để lọt. Mọi công thức mặt nước dưới đây đo khoảng cách ra ngoài lưới bằng
+ * `outwardDistances`, tức lấy mốc ở **nửa CẠNH của hình vuông = 6 ô**. Nhưng nửa ĐƯỜNG CHÉO của
+ * cùng hình vuông ấy là 6√2 ≈ 8,49 ô. Xoay nửa mặt phẳng nước đi 45° mà vẫn dùng mốc 6 thì mép
+ * nước cắt vào GÓC lưới tới 2,49 ô — nước ngập vào trong thành phố, gãy ADR-007 và bất biến "chỉ
+ * thêm, không bao giờ dời", trong khi build/lint/test đều xanh và ảnh thì chỉ "hơi lạ".
+ * Bội số của 90° thì hình vuông trùng khít chính nó ⇒ phép xoay là một PHÉP ĐỐI XỨNG CHÍNH XÁC:
+ * không cần số hiệu chỉnh nào, `distanceOutsideGrid` giữ nguyên giá trị, và mọi bài test hình học
+ * cũ vẫn nói về đúng cái hình cũ.
+ *
+ * Muốn dùng một góc khác thì phải đổi mốc `6` thành **hàm tựa** của hình vuông,
+ * `support(θ) = 6·(|sin θ| + |cos θ|)`, ở CẢ nhánh `meander` (nơi vành khăn hugs cả bốn cạnh) —
+ * đó là một phase riêng, không phải một dòng sửa.
+ */
+export function quarterTurns(yaw) {
+  if (!Number.isFinite(yaw)) return null;
+  const q = yaw / (Math.PI / 2);
+  const r = Math.round(q);
+  if (Math.abs(q - r) > 1e-9) return null;
+  return ((r % 4) + 4) % 4;
+}
+
+/**
+ * Đưa một điểm của THẾ GIỚI về hệ toạ độ GỐC của bảng địa thế — tức xoay ngược lại `worldYaw`.
+ *
+ * Quy ước góc bám đúng `orbitPosition` (`x = sin(yaw)·h`, `z = cos(yaw)·h`), nên phép xoay thuận
+ * là `R(ψ): (x,z) → (x·cosψ + z·sinψ, −x·sinψ + z·cosψ)`. Bảng dưới đây là `R(−ψ)` cho ψ = 0/90/
+ * 180/270°, viết thẳng bằng 0 và ±1 thay vì gọi `Math.cos` — không phải để nhanh, mà để KHÔNG có
+ * một sai số dấu phẩy động nào lọt vào một phép đối xứng đáng lẽ chính xác tuyệt đối.
+ */
+const XOAY_NGUOC = [
+  (x, z) => [x, z],
+  (x, z) => [-z, x],
+  (x, z) => [-x, -z],
+  (x, z) => [z, -x],
+];
+
+/** Ảnh của một hộp bao qua phép xoay THUẬN `R(ψ)`. Giữ đúng ±Infinity (biển ra tới chân trời). */
+const XOAY_HOP = [
+  (X0, X1, Z0, Z1) => [X0, X1, Z0, Z1],
+  (X0, X1, Z0, Z1) => [Z0, Z1, -X1, -X0],
+  (X0, X1, Z0, Z1) => [-X1, -X0, -Z1, -Z0],
+  (X0, X1, Z0, Z1) => [-Z1, -Z0, X0, X1],
+];
+
 export function buildSetting({ era, gridSize = 12 } = {}) {
   const style = getSetting(era);
   const size = Number.isFinite(gridSize) && gridSize > 0 ? gridSize : 12;
-  const built = waterIsBuilt(era);
+  const yaw = worldYaw(era);
+  const k = quarterTurns(yaw);
+  // TỪ CHỐI THẲNG, KHÔNG TỰ CHỮA (cùng luật với `isValidSetting`/`isValidGroundFloor`): góc lạ ⇒
+  // coi như kỷ này chưa dựng nước, chứ KHÔNG lặng lẽ kẹp về bội số gần nhất. Kẹp là cách một trường
+  // 15 dòng thoái hoá về 1 dòng — bẫy `MIN_STONE` ở Phase 9D. Và vì bài học Phase 10 Bước 2
+  // (*"'từ chối thẳng' chỉ an toàn khi có người ĐẾM số lần từ chối"*), `setting.worldYaw.test.js`
+  // đòi MỌI kỷ trong `ERAS_WITH_WATER_GEOMETRY` phải thật sự dựng ra nước.
+  const built = waterIsBuilt(era) && k !== null;
   const seed = `w|${era}`;
   const amp = BANK_WOBBLE[style.ground] ?? 0;
 
@@ -257,6 +312,7 @@ export function buildSetting({ era, gridSize = 12 } = {}) {
       style,
       hasWater: hasWater(era),
       built: false,
+      worldYaw: yaw,
       insetAt: () => -Infinity,
       blendAt: () => 0,
       depthAt: () => 0,
@@ -265,13 +321,16 @@ export function buildSetting({ era, gridSize = 12 } = {}) {
   }
 
   const hi = size - 0.5;
+  // Tâm lưới theo toạ độ Ô. Ô chạy [−0,5 … size−0,5] nên tâm là (size−1)/2, và mọi phép xoay đều
+  // quanh ĐÚNG điểm này — lệch tâm là hình vuông không còn trùng khít chính nó.
+  const tam = (size - 1) / 2;
 
   /**
    * Khoảng cách LÙI VÀO trong mặt nước, tính bằng ô: dương ở dưới nước, âm trên cạn, và độ lớn
    * xấp xỉ khoảng cách tới mép nước gần nhất. Đây là đại lượng gốc — cả độ trộn lẫn độ sâu đều
    * suy từ nó, nên chỉ có MỘT chỗ định nghĩa hình dạng mặt nước.
    */
-  function insetAt(u, v) {
+  function insetGoc(u, v) {
     if (!Number.isFinite(u) || !Number.isFinite(v)) return -Infinity;
 
     if (style.water === 'meander') {
@@ -300,6 +359,22 @@ export function buildSetting({ era, gridSize = 12 } = {}) {
     return Math.min(d - gan, (style.reach + style.width + shift) - d);
   }
 
+  /**
+   * Cùng đại lượng như `insetGoc`, nhưng hỏi ở hệ toạ độ của THẾ GIỚI ĐÃ XOAY.
+   *
+   * ⚠️ ĐÂY LÀ CHỖ DUY NHẤT `worldYaw` được áp, và đó là chủ đích: bốn người dùng lớp địa thế
+   * (`terrain.js` · `outskirts.js` · `horizon.js` · `terrainMesh.js`) đều đi qua
+   * `insetAt`/`blendAt`/`depthAt`, nên xoay ở đây là **địa hình + vùng quê + rặng núi chân trời
+   * xoay theo CÙNG một góc** — đúng ràng buộc Đàm ra — mà không một dòng nào của ba file kia phải
+   * biết trường này tồn tại. Lưới 12×12 và vị trí nhà không đọc lớp này nên chúng đứng yên.
+   */
+  const xoayNguoc = XOAY_NGUOC[k];
+  function insetAt(u, v) {
+    if (!Number.isFinite(u) || !Number.isFinite(v)) return -Infinity;
+    const [x, z] = xoayNguoc(u - tam, v - tam);
+    return insetGoc(x + tam, z + tam);
+  }
+
   /** 0 trên cạn hẳn · 1 từ mép nước trở vào. Đây là hệ số kéo mặt đất xuống. */
   function blendAt(u, v) {
     const s = insetAt(u, v);
@@ -321,7 +396,7 @@ export function buildSetting({ era, gridSize = 12 } = {}) {
     ? Infinity
     : style.reach + style.width + amp + PLANE_MARGIN;
   const gonNhat = style.reach - PLANE_MARGIN;
-  const bounds = style.water === 'meander'
+  const goc = style.water === 'meander'
     ? { u0: -0.5 - xaNhat, u1: hi + xaNhat, v0: -0.5 - xaNhat, v1: hi + xaNhat }
     : {
       u0: style.side === 'tay' ? -0.5 - xaNhat : (style.side === 'dong' ? hi + gonNhat : -Infinity),
@@ -329,6 +404,11 @@ export function buildSetting({ era, gridSize = 12 } = {}) {
       v0: style.side === 'bac' ? -0.5 - xaNhat : (style.side === 'nam' ? hi + gonNhat : -Infinity),
       v1: style.side === 'bac' ? -0.5 - gonNhat : (style.side === 'nam' ? hi + xaNhat : Infinity),
     };
+  // Hộp bao phải xoay THUẬN theo thế giới (nó mô tả chỗ ĐỂ TÌM nước, không phải chỗ để hỏi).
+  // Quên bước này thì tấm nước bị kẹp về một hình chữ nhật ở phía CŨ, và ở kỷ 13/14 nó biến mất
+  // sạch — im lặng, vì `buildWaterSurface` chỉ trả `null` chứ không kêu.
+  const [bx0, bx1, bz0, bz1] = XOAY_HOP[k](goc.u0 - tam, goc.u1 - tam, goc.v0 - tam, goc.v1 - tam);
+  const bounds = { u0: bx0 + tam, u1: bx1 + tam, v0: bz0 + tam, v1: bz1 + tam };
 
-  return { style, hasWater: true, built: true, insetAt, blendAt, depthAt, bounds };
+  return { style, hasWater: true, built: true, worldYaw: yaw, insetAt, blendAt, depthAt, bounds };
 }

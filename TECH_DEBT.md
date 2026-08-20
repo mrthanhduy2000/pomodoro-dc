@@ -19,6 +19,13 @@
 > bằng cách chỉnh lại con số nào. Nay còn **1 mục High** (#14) + **2 mục Medium-High** (#3, #13) +
 > **1 mục Medium-High chờ Đàm quyết** (#24) = 4 → xa ngưỡng 8–10 mục, KHÔNG cần Maintenance Sprint.
 >
+> **Cập nhật 2026-08-20 (chốt #57 — `worldYaw`)**: **ĐÓNG #57**, mở **#59**. Đàm bác cả bốn hướng
+> đã đề xuất (*"KHÔNG SỬA CAMERA, KHÔNG SỬA `side`. SỬA THỨ THỨ BA"*) — cả bốn đều hy sinh một
+> trong hai vế, trong khi thứ sai là **quan hệ giữa chúng không ai sở hữu**. Đóng bằng ADR-041.
+> #59 là phần TRẦN của cùng bài toán: ba kỷ nước hẹp (6, 7, 10) không đạt cổng 5% ở BẤT KỲ góc nào
+> — biết TRƯỚC khi Bước C tiêu ngân sách, đúng bài học §2-C. Nay còn **1 mục High** (#14) +
+> **2 mục Medium-High** (#3, #13) + **1 chờ Đàm** (#24) + **#59 Medium** → xa ngưỡng 8–10.
+
 > **Cập nhật 2026-08-18 (Việc 1 — chốt #38)**: **ĐÓNG #38** ngay trong ngày mở. Đàm bác đề xuất
 > "nâng trần chung lên 14" và chọn **15 mốc riêng từng kỷ** + đối chứng bắt buộc; hoá ra cách ấy
 > **không cần đụng `materials.js`** (cổng chỉ ĐỌC bảng vật liệu), nên cái tưởng là blocker thật ra
@@ -2155,6 +2162,48 @@ ship một trạng thái dở dang, hãy làm nó **ĐẾM ĐƯỢC trong một 
 
 ---
 
+## #59 — BA KỶ NƯỚC HẸP KHÔNG THỂ ĐẠT CỔNG 5% Ở **BẤT KỲ** GÓC NHÌN NÀO — đây là bài toán BỀ RỘNG, không phải bài toán góc
+
+- **Tên**: kỷ 6, 7, 10 khai nước quá hẹp; xoay kiểu gì cũng không đưa nổi lên 5% khung hình
+- **Module**: `src/engine/city3d/settingStyle.js` (cột bề rộng nước) · đo bằng `scripts/water-view.mjs`
+- **Priority**: Medium · **Severity**: Medium (Bước C sẽ tiêu ngân sách cho ba kỷ nhìn gần như không thấy)
+- **Impact**: `worldYaw` (ADR-041) đã đưa 11/14 kỷ có nước lên trên cổng 5% của §3. Ba kỷ còn lại
+  thì **không** — và không phải vì xoay sai, mà vì **dòng nước của chúng quá hẹp**:
+
+  | kỷ | nước | bề rộng (ô) | trần TOÀN CỤC (đo 24 góc) | đạt 5%? |
+  |---|---|---:|---:|:--:|
+  | 6 | sông | 1,2 | **4,44%** | ❌ **không ở MỌI góc** |
+  | 7 | sông | 1,4 | 9,05% | chỉ ở góc xiên, phá khung các kỷ khác |
+  | 10 | kênh | 0,9 | 7,37% | chỉ ở một góc phá hỏng mọi kỷ khác |
+
+  ⚠️ **Kỷ 6 là ca cứng nhất và cũng là ca sạch nhất**: trần toàn cục 4,44% nghĩa là *không tồn tại*
+  góc nhìn nào đạt cổng. Đó là một sự thật về **DÒNG BẢNG**, không về phép xoay — nên mọi cố gắng
+  chỉnh `worldYaw` cho kỷ 6 đều là chỉnh sai chỗ.
+- **Root Cause**: cổng 5% được đặt từ hai kỷ ĐÃ DỰNG HÌNH (12 sông rộng, 14 biển) rồi mặc nhiên áp
+  cho cả 14 kỷ. ⚠️ Đúng hình dạng **`TECH_DEBT #38`**: *một con số suy từ một mẫu nhỏ được đọc thành
+  luật của cả tập*. Khác biệt duy nhất là lần này ta biết TRƯỚC khi tiêu ngân sách, chứ không phải sau.
+- **Current Risk**: bằng 0 hôm nay — ba kỷ ấy **chưa dựng hình nước** (`ERAS_WITH_WATER_GEOMETRY`
+  mới có [12, 14], xem #56). Rủi ro chỉ hiện thực khi Bước C trải nốt.
+- **Future Risk**: trải Bước C mà không chốt mục này ⇒ ba kỷ tốn +1 lệnh vẽ và hàng nghìn tam giác
+  cho một dải nước Đàm gần như không thấy — **đúng bài học §2-C** (*đo TRẦN của một cơ chế TRƯỚC khi
+  tiêu ngân sách cho nó*).
+- **Recommended Solution**: **KHÔNG tự chọn — đụng bảng đã duyệt.** Ba hướng:
+  - **(a) Nới bề rộng nước ở ba kỷ ấy.** Giá: đụng sự thật địa lý. Kênh Amsterdam RỘNG 0,9 ô là
+    đúng — kênh thật hẹp thật. Nới là mua một con số bằng cách nói dối, thứ ADR-025 đã cấm.
+  - **(b) Chấp nhận ba kỷ dưới cổng, ghi tường minh ĐẾM ĐƯỢC trong test.** Trung thực nhất; theo
+    đúng khuôn `assert.deepEqual(TRUOT, [...])` đã dùng cho `TECH_DEBT #44`. Kỷ thứ tư trượt thì đỏ,
+    mà một trong ba kỷ được sửa xong cũng đỏ.
+  - **(c) Với nước hẹp thì đổi thứ mang bản sắc**: không đo bằng % khung hình mà bằng **cầu, bến,
+    thuyền, kè** — một con kênh 0,9 ô có bốn cây cầu đọc ra là *Amsterdam* rõ hơn một vệt xanh 5%.
+    Đắt nhất, và cũng là hướng duy nhất giải đúng bài toán *"đọc ra là gì"* thay vì *"chiếm bao nhiêu"*.
+- **Estimated Complexity**: (a) thấp · (b) rất thấp · (c) cao
+- **Blocking Conditions**: nên chốt TRƯỚC khi Bước C trải ba kỷ này (6, 7, 10). Mười một kỷ còn lại
+  không bị chặn.
+- **Review Trigger**: ngay khi Bước C bắt đầu
+- **Owner**: chờ Đàm · **Status**: **Open — CHỜ ĐÀM QUYẾT**
+
+---
+
 ## #58 — ẢNH CHỤP RỘNG HƠN ~1300px CÓ THỂ BỊ NHIỄM MỘT **KHỐI CHỮ NHẬT** Ở GÓC, VÀ CỔNG CHỐNG-RÁCH HIỆN CÓ KHÔNG THỂ THẤY
 
 - **Tên**: lỗi ghép DẢI lúc chụp CDP sinh ra một khối chữ nhật lệch ở ảnh rộng; cổng `soiVetRach`
@@ -2192,7 +2241,7 @@ ship một trạng thái dở dang, hãy làm nó **ĐẾM ĐƯỢC trong một 
 
 ---
 
-## #57 — CAMERA MẶC ĐỊNH ĐỨNG NGAY TRÊN PHÍA CÓ NƯỚC RỒI QUAY LƯNG LẠI: KỶ 14 CHỈ THẤY **0,09%** MẶT BIỂN, TRẦN LÀ **31,43%**
+## #57 — ✅ ĐÃ ĐÓNG (2026-08-20, ADR-041) — Camera mặc định quay lưng lại phía có nước: kỷ 14 chỉ thấy **0,09%** mặt biển, trần là **31,43%**
 
 - **Tên**: bờ nước và góc camera mặc định chỏi nhau; 8/14 kỷ có nước sẽ gần như vô hình
 - **Module**: `src/engine/city3d/settingStyle.js` (cột `side`) ↔ `src/engine/city3d/orbit.js`
@@ -2240,7 +2289,35 @@ ship một trạng thái dở dang, hãy làm nó **ĐẾM ĐƯỢC trong một 
 - **Blocking Conditions**: **Bước C không nên bắt đầu trước khi mục này được chốt** — trải 12 kỷ
   rồi mới đổi góc nhìn là phải nghiệm thu lại toàn bộ hai lần.
 - **Review Trigger**: ngay khi Đàm trả lời cổng "thành phố cảng"
-- **Owner**: chờ Đàm · **Status**: **Open — CHỜ ĐÀM QUYẾT**
+- **Owner**: Đàm đã chốt 2026-08-20 · **Status**: ✅ **ĐÃ ĐÓNG**
+
+### ĐÃ SỬA THẾ NÀO — Đàm bác cả bốn hướng trên và ra hướng thứ NĂM
+
+⚠️ **Bài học đáng giá nhất của mục này nằm ở chỗ cả bốn hướng tôi đề xuất đều SAI CHỖ.** Đàm:
+*"KHÔNG SỬA CAMERA, KHÔNG SỬA `side`. SỬA THỨ THỨ BA."* Câu hỏi đúng không phải *"nên xoay camera
+hay sửa bảng"* mà là ***"vì sao một dữ kiện QUAN TRỌNG của cảnh lại nằm ở một hướng mà KHÔNG CƠ CHẾ
+NÀO chịu trách nhiệm?"*** — `side` đúng (sự thật lịch sử), `DEFAULT_YAW` đúng (hằng số mỹ thuật),
+thứ sai là **quan hệ giữa chúng không ai sở hữu**. Bốn hướng (a)–(d) đều là *"hy sinh một trong hai
+vế"*; hướng thứ năm là **cho cái quan hệ ấy một cái tên**: trường `worldYaw` (ADR-041) xoay ĐỊA THẾ
+(nước + địa hình + vùng quê + rặng núi) chứ không xoay camera và không xoay lưới 12×12.
+
+**Số đo sau khi sửa** (cùng lệnh, cùng công cụ, 2026-08-20):
+
+| kỷ | bờ (`side`, GIỮ NGUYÊN) | `worldYaw` | mặc định TRƯỚC | mặc định SAU | trần |
+|---|---|---:|---:|---:|---:|
+| 14 | `nam` | +90° | 0,09% | **23,75%** | 31,43% |
+| 12 | `dong` | +90° | 2,30% | **9,32%** | 8,97% |
+| 1 | `none` | 0° | 0,00% | 0,00% | 0,00% |
+
+⚠️ Kỷ 12 SAU (9,32%) **cao hơn cả trần cũ** (8,97%) — không phải lỗi làm tròn: trần đo bằng cách
+đứng ĐỐI DIỆN bờ, mà với một dải sông thì góc chính diện KHÔNG phải góc tối ưu (nhìn xiên thì khúc
+sông trải dài hơn trong khung). Đã đo lại cả 14 kỷ × 24 góc, xem `PERFORMANCE.md`.
+
+**Cái canh cho nó không bị mất**: `scripts/waterView.test.js` khoá `macDinh >= 0.05` cho mọi kỷ
+trong `ERAS_WITH_WATER_GEOMETRY`, kèm đối chứng trần. Đây là cách mục nợ này được đóng tử tế thay
+vì nằm mãi ở Open — và bài kiểm cũ (`KHUYẾT TẬT VẪN CÒN NGUYÊN`) **đã reo đúng như thiết kế** khi
+mã hết bệnh, một bằng chứng thực nghiệm cho luật *"một con số trong bài test là cái hẹn giờ duy
+nhất chạy được"*.
 
 ---
 

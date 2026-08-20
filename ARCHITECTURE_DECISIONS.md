@@ -11,6 +11,70 @@
 
 ---
 
+## ADR-041 — `worldYaw`: xoay TỜ GIẤY, không xoay thế giới. Khi hai hằng số đều đúng mà kết quả sai, thứ phải đặt tên là QUAN HỆ giữa chúng
+
+- **Ngày**: 2026-08-20
+- **Bối cảnh**: VIỆC 2 Bước B dựng xong mặt nước cho kỷ 12 và 14, mọi cổng đếm được đều đạt (lệnh
+  vẽ +1 đúng chỗ, 13 kỷ khô không đổi một đơn vị, bờ 0 lỗ, bản quét không trôi) — nhưng cổng
+  KHÔNG-đo-được-bằng-test của Đàm thì trượt thẳng: *"kỷ có biển phải đọc ra là **thành phố cảng**,
+  không phải thành phố cạnh một vũng xanh."* Đo bằng `scripts/water-view.mjs`: mặt biển kỷ 14 chiếm
+  **0,09%** khung hình mặc định, sông kỷ 12 chiếm **2,30%**.
+- **Vấn đề**: hai hằng số bị nghi ngờ đều **KHÔNG sai**.
+  · `side` là **sự thật lịch sử** — sông Vị chảy phía bắc Trường An, sông Arno phía nam Duomo, sông
+  Volga phía đông Stalingrad. Đổi nó để lấy một con số đẹp là bán lịch sử, đúng thứ ADR-025 đã cấm.
+  · `DEFAULT_YAW = π/4` là một **hằng số mỹ thuật đã hiệu chuẩn qua nhiều phase** — khung hình, mọi
+  ảnh mốc, và ADR-034 khoá khoảng cách cận cảnh đều đứng trên nó.
+  Thứ sai là **quan hệ giữa hai hằng số ấy không thuộc về ai**. Đó đúng hình dạng bẫy Phase 7D: mặt
+  đường hứa *"nhạt hơn đất"* nhưng được viết thành một con số tuyệt đối, nên khi mặt đất bị chỉnh ở
+  một phase khác thì lời hứa chết trong im lặng.
+- **Phương án đã cân nhắc**:
+  1. **Xoay camera** (`DEFAULT_YAW` theo kỷ). Rẻ về mã. Giết mọi ảnh mốc, phá hiệu chuẩn cận cảnh
+     của ADR-034, và đụng thẳng danh sách file bị cấm của chương trình này.
+  2. **Đổi `side`** cho những kỷ bị khuất. Rẻ nhất, và là phương án tệ nhất: mua một con số bằng
+     cách nói dối địa lý. `note` của mỗi dòng sẽ kể một câu chuyện rành mạch cho một dữ kiện sai.
+  3. **Nới cổng 5%** xuống mức hiện có. Bỏ răng của chính phép đo vừa dựng ra.
+  4. ✅ **Thêm trường `worldYaw`** — góc xoay CẢ ĐỊA THẾ quanh trục đứng, suy ra từ `side` +
+     `DEFAULT_YAW` bằng MỘT công thức.
+- **Lý do loại bỏ**: (1) và (2) đều bắt một hằng số ĐANG ĐÚNG gánh trách nhiệm cho một QUAN HỆ —
+  tức tái tạo đúng cái bệnh, chỉ đổi chỗ. (3) là bán phép đo.
+- **Giải pháp chọn**: `worldYaw(era)` ở `settingStyle.js`, áp bằng cách **xoay ĐIỂM TRUY VẤN** ở một
+  chỗ duy nhất trong `buildSetting`. Bốn người dùng lớp địa thế (`terrain.js` · `outskirts.js` ·
+  `horizon.js` · `terrainMesh.js`) đều đi qua `insetAt`/`blendAt`/`depthAt`, nên **địa hình + vùng
+  quê + rặng núi chân trời xoay theo cùng một góc** mà không một dòng nào của ba file kia phải biết
+  trường này tồn tại. Lưới 12×12 và vị trí công trình **không đọc lớp này** nên chúng đứng yên.
+  Ba quyết định con, mỗi cái có lý do đo được:
+  - **Chỉ xoay khi bờ nước nằm SAU LƯNG, và xoay đúng một phần tư vòng.** Công thức bản đầu ép cả
+    14 kỷ về CÙNG một góc tương đối; nó đạt cổng 5% và **phá luật (3) của bảng địa thế** (*"15 kỷ
+    không được ra cùng một bố cục lệch về một phía"*) — cả 14 kỷ hiện nước ở đúng một chỗ trên màn
+    hình. Phát hiện bằng cách ĐO (14 kỷ × 24 góc), không bằng cách đọc mã. Bản xoay-ít-nhất giữ
+    được **7 kỷ ra bên này khung / 7 kỷ ra bên kia**, và **6 kỷ có nước không xoay một độ nào**.
+  - **`worldYaw` LUÔN là bội số của 90°, và `buildSetting` TỪ CHỐI THẲNG góc khác.** Lưới là hình
+    VUÔNG: mọi công thức nước lấy mốc ở nửa CẠNH (6 ô) trong khi nửa ĐƯỜNG CHÉO là 6√2 ≈ 8,49. Xoay
+    45° mà vẫn dùng mốc 6 thì nước cắt vào GÓC lưới — đo được **4/144 ô bị ướt**, tức ADR-007 vỡ,
+    trong khi build/lint/test đều xanh. Bội số 90° thì hình vuông trùng khít chính nó ⇒ phép xoay là
+    một ĐỐI XỨNG CHÍNH XÁC, không cần số hiệu chỉnh nào.
+  - **KHÔNG có hằng số lệch nào được khai.** Đàm cho phép một, nhưng hình học phát không: camera
+    đứng đúng 45° và bờ chỉ có bốn hướng, nên mọi kỷ đều lệch ±45° sau khi xoay — đúng góc "đọc ra
+    là BỜ chứ không phải cái hồ" mà Đàm mô tả. Thêm một hằng số nữa chỉ có thể đẩy nước về chính
+    giữa hoặc ra sau lưng lần nữa.
+- **Trade-off**: `settingStyle.js` phải **CHÉP** giá trị `DEFAULT_YAW + π` thay vì `import` — import
+  thẳng tạo vòng `orbit → terrain → setting → settingStyle → orbit`. Đây là một vi phạm có ý thức
+  của luật *"một luật một công thức"*, và nó được trả bằng một **dây buộc trong test** (`settingWorldYaw.test.js`
+  nạp cả hai module rồi đòi hai con số bằng nhau) — đúng khuôn `settingCountryMismatches()` đang
+  buộc bảng địa thế vào `eraStyle.js`. Cách vá triệt để (tách hằng số camera ra một file lá) đòi
+  sửa `orbit.js`, mà chương trình này cấm đụng camera.
+- **Ảnh hưởng**: kỷ 14 đi từ **0,09% → 23,75%** khung hình (trần 31,43%, tức khung mặc định nay lấy
+  được 76% của trần); kỷ 12 từ **2,30% → 9,32%**. **Lệnh vẽ không đổi ở cả 15 kỷ.** Tam giác chỉ đổi
+  ở đúng hai kỷ có nước (12: −2.478 · 14: +8), 13 kỷ còn lại khớp TỪNG ĐƠN VỊ.
+- **Điều kiện xem xét lại**: (a) nếu `DEFAULT_YAW` đổi khỏi π/4 thì `lech` không còn là ±45°/±135°
+  và bất biến "luôn bội số 90°" có thể vỡ — dây buộc trong test sẽ đỏ trước, đó là chủ đích;
+  (b) nếu một kỷ tương lai cần góc KHÔNG phải bội số 90°, phải đổi mốc `6` thành hàm tựa của hình
+  vuông `support(θ) = 6·(|sin θ| + |cos θ|)` ở CẢ nhánh `meander` — đó là một phase riêng, không
+  phải một dòng sửa; (c) ba kỷ nước hẹp (6 · 7 · 10) vẫn dưới cổng 5% ở MỌI góc — xem `TECH_DEBT #59`,
+  đó là bài toán về BỀ RỘNG nước, không phải về góc xoay.
+
+---
+
 ## ADR-040 — Mặt nước là chỗ MẶT ĐẤT THẤP HƠN MỘT MẶT PHẲNG, không phải một tấm xanh đặt lên trên; và bờ nước KHÔNG được vẽ
 
 - **Ngày**: 2026-08-19 (VIỆC 2 Bước B — Đàm: *"BƯỚC A DUYỆT — SỬA MỘT DÒNG, RỒI VÀO BƯỚC B"*)

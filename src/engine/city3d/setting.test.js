@@ -16,7 +16,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import { ERA_STYLES } from './eraStyle.js';
-import { hasWater, SETTING_STYLES } from './settingStyle.js';
+import { hasWater, SETTING_STYLES, SIDE_YAW, worldYaw } from './settingStyle.js';
 import {
   BED_RAMP, ERAS_WITH_WATER_GEOMETRY, PROP_SHORE_CLEAR, SHORE_BAND,
   WATER_BED_DEPTH, WATER_BED_LIP, WATER_DROP_BELOW_PLAIN,
@@ -245,13 +245,29 @@ test('QUAN HỆ `reach ≥ SHORE_BAND` — cả 15 kỷ, và dải bờ phải T
 
   // ĐỐI CHỨNG — dải bờ phải có RĂNG: đi vào trong đúng `SHORE_BAND × 0,5` kể từ mép nước thì độ
   // trộn phải > 0. Không có vế này thì `reach ≥ SHORE_BAND` là một lời hứa về một dải rộng 0.
+  //
+  // ⚠️ PHÉP DÒ NÀY TỪNG GIÀ ĐI MỘT LẦN (2026-08-20). Bản trước viết cứng *"bờ đông"* cho kỷ 12 —
+  // đúng với `side: 'dong'` của bảng, và SAI kể từ khi `worldYaw` xoay địa thế kỷ ấy 90°: nước ra
+  // phía BẮC, phép dò vẫn quét phía đông, và nó báo `0/12 lát cắt` trong khi mặt nước hoàn toàn
+  // lành lặn. Mã đúng, phép đo hỏng — đúng ca đã cắn ở Phase 5B (bài "kỳ quan đối xứng" lọc tháp
+  // góc bằng ngưỡng tuyệt đối `|x| > 0.5`).
+  // ⇒ Nay phép dò đi theo hướng bờ THẬT trên màn hình (`side + worldYaw`), suy ra từ cùng một công
+  // thức mã sản phẩm dùng, nên nó không thể lệch pha với mã lần nữa.
   const s = buildSetting({ era: 12, gridSize: GRID });
-  const hi = GRID - 0.5;
+  const tam = (GRID - 1) / 2;
+  const mat = SIDE_YAW[s.style.side] + worldYaw(12);
+  const nx = Math.sin(mat);
+  const nz = Math.cos(mat);          // hướng RA phía bờ nước
+  const tx = nz;
+  const tz = -nx;                    // hướng DỌC bờ
   let thayUot = 0;
-  for (let v = 0; v < GRID; v += 1) {
-    // Bờ đông: đi từ mép nước lùi vào đất liền nửa dải bờ.
+  for (let i = 0; i < GRID; i += 1) {
+    const doc = i - tam;             // trượt dọc bờ, đúng GRID lát cắt như trước
+    // Đi từ ngoài xa (mép nước + 3) lùi dần vào đất liền.
     for (let d = 0.05; d <= SHORE_BAND * 0.95; d += 0.05) {
-      const u = hi + s.style.reach - d + 3;   // xa hẳn ra ngoài rồi lùi lại
+      const r = tam + 0.5 + s.style.reach - d + 3;
+      const u = tam + nx * r + tx * doc;
+      const v = tam + nz * r + tz * doc;
       if (s.insetAt(u, v) > -SHORE_BAND && s.blendAt(u, v) > 0) { thayUot += 1; break; }
     }
   }

@@ -33,7 +33,7 @@ import { buildWaterSurface } from '../src/components/city/render3d/terrainMesh.j
 import {
   CITY_CAMERA_FOV, DEFAULT_PITCH, DEFAULT_YAW, cityOrbitOptions, orbitPosition,
 } from '../src/engine/city3d/orbit.js';
-import { getSetting } from '../src/engine/city3d/settingStyle.js';
+import { getSetting, SIDE_YAW, worldYaw, normalizeYaw } from '../src/engine/city3d/settingStyle.js';
 import { pathToFileURL } from 'node:url';
 import { resolve } from 'node:path';
 
@@ -159,20 +159,29 @@ export function tiLeNuocTrongKhung({ era, yaw = DEFAULT_YAW, gridSize = GRID, ti
  * Góc đứng ĐỐI DIỆN bờ nước — tức trần lý thuyết của "nhìn thấy nước bao nhiêu".
  * Camera ở `yaw` đứng tại `(sin yaw, cos yaw)`, nên muốn NHÌN về phía nam (z lớn) thì phải đứng ở
  * phía bắc (z nhỏ), v.v. Đây là một QUAN HỆ, không phải một bảng góc chọn tay.
+ *
+ * ⚠️ **PHẢI CỘNG `worldYaw`, KHÔNG ĐƯỢC ĐỌC THẲNG `style.side`** (bài học 2026-08-20, và công cụ
+ * này suýt nói dối lần đầu tiên trong đời nó). `side` là hướng bờ theo LỊCH SỬ; hướng bờ trên MÀN
+ * HÌNH là `side + worldYaw`. Bản đầu của hàm `chay` đọc thẳng `GOC_DOI_DIEN[style.side]` và in ra
+ * *"kỷ 14: mặc định 23,75% · TRẦN 11,87%"* — một cái trần THẤP HƠN giá trị thật, tức một câu vô
+ * nghĩa được trình bày rất chỉnh tề. Cùng họ với `TECH_DEBT #43`: một cột số đúng cho một phiên bản
+ * mã đã không còn tồn tại.
  */
-export const GOC_DOI_DIEN = {
-  nam:  Math.PI,          // đứng bắc, nhìn nam
-  bac:  0,                // đứng nam, nhìn bắc
-  dong: -Math.PI / 2,     // đứng tây, nhìn đông
-  tay:  Math.PI / 2,      // đứng đông, nhìn tây
-};
+const NGUOC = Math.PI;
+
+/** Góc camera phải đứng để nhìn thẳng vào bờ nước của kỷ này, ĐÃ tính `worldYaw`. */
+export function gocDoiDien(era) {
+  const mat = SIDE_YAW[getSetting(era).side];
+  if (mat === undefined) return DEFAULT_YAW;
+  return normalizeYaw(mat + worldYaw(era) + NGUOC);
+}
 
 function chay(eras) {
   console.log('kỷ · loại nước · bờ  |  MẶC ĐỊNH (45°)  |  TRẦN (đứng đối diện)  |  gấp');
   for (const era of eras) {
     const st = getSetting(era);
     const macDinh = tiLeNuocTrongKhung({ era }).nuoc;
-    const yawDoi = st.side in GOC_DOI_DIEN ? GOC_DOI_DIEN[st.side] : DEFAULT_YAW;
+    const yawDoi = gocDoiDien(era);
     const tran = tiLeNuocTrongKhung({ era, yaw: yawDoi }).nuoc;
     const gap = macDinh > 0 ? (tran / macDinh).toFixed(1) : (tran > 0 ? '∞' : '—');
     console.log(
@@ -194,7 +203,7 @@ function selftest() {
 
   // (2) ĐỐI CHỨNG — phải THẤY được nước khi đứng đúng chỗ. Không có vế này thì (1) vẫn xanh kể cả
   //     khi phép đo hỏng hoàn toàn và không bao giờ đếm được một tia nước nào.
-  const bien = tiLeNuocTrongKhung({ era: 14, yaw: GOC_DOI_DIEN.nam }).nuoc;
+  const bien = tiLeNuocTrongKhung({ era: 14, yaw: gocDoiDien(14) }).nuoc;
   bao(bien > 0.05, `kỷ 14 nhìn từ phía đối diện thấy nước rõ (đo được ${(bien * 100).toFixed(2)}%)`);
 
   // (3) Tia GIỮA khung phải đi trúng điểm ngắm — bảo chứng cả ba vector cơ sở cùng lúc. Đây là chỗ

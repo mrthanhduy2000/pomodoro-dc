@@ -12,7 +12,34 @@
 
 ---
 
-## 2026-08-19 (mới nhất) — Mặt nước: sông ở kỷ 12, biển ở kỷ 14 (ADR-040)
+## 2026-08-20 (mới nhất) — `worldYaw`: xoay TỜ GIẤY, không xoay thế giới (ADR-041)
+
+**Mục đích.** Đóng `TECH_DEBT #57`: kỷ 14 dựng đủ hình học biển nhưng camera mặc định quay lưng lại
+nên chỉ thấy **0,09%** khung hình. Đàm bác cả bốn hướng đã đề xuất — *"KHÔNG SỬA CAMERA, KHÔNG SỬA
+`side`. SỬA THỨ THỨ BA"* — vì cả bốn đều hy sinh một trong hai vế, trong khi thứ sai là **quan hệ
+giữa chúng không ai sở hữu** (đúng bẫy Phase 7D).
+
+**Phạm vi.** Sửa: `src/engine/city3d/settingStyle.js` (thêm `worldYaw`/`SIDE_YAW`/`normalizeYaw`) ·
+`setting.js` (`insetAt` thành vỏ bọc xoay ngược toạ độ; `bounds` xoay theo) · `scripts/water-view.mjs`
+(cột "trần" đọc theo góc đã xoay). Mới: `settingWorldYaw.test.js` (8 bài). **Không** đụng camera,
+**không** đụng cột `side`, **không** đụng lưới 12×12.
+
+**Ảnh hưởng.** Kỷ 14 đi từ **0,09% → 23,75%** khung hình, kỷ 12 từ **2,30% → 9,32%** — cả hai vượt
+cổng 5% của Đàm. **Lệnh vẽ không đổi một đơn vị ở cả 15 kỷ** (xoay toạ độ, không thêm khối); 13 kỷ
+không có nước dựng ra ảnh **không phân biệt được bằng mắt** (0,0% điểm ảnh vượt ngưỡng 12, lệch
+trung bình 0,02). Bản quét 15 kỷ vẫn **15/15 · 105/105**, trung vị đi LÊN 37,6 → 40,7.
+
+**Tương thích.** Không có migration. `worldYaw` là hàm THUẦN suy từ `side` + `DEFAULT_YAW` bằng một
+công thức (không phải bảng 15 số khai tay), luôn trả bội của 90° — góc lệch sẽ đưa nửa mặt phẳng
+nước cắt vào góc lưới vuông tới 2,49 ô, nên `quarterTurns()` **từ chối thẳng** thay vì tự làm tròn.
+
+**Mở kèm `TECH_DEBT #59`**: ba kỷ nước hẹp (6 sông 1,2 ô · 7 sông 1,4 ô · 10 kênh 0,9 ô) **không
+đạt cổng 5% ở BẤT KỲ góc nào** — kỷ 6 có trần toàn cục 4,44%. Đó là bài toán BỀ RỘNG chứ không phải
+bài toán góc, đo xong TRƯỚC khi Bước C tiêu ngân sách cho chúng.
+
+---
+
+## 2026-08-19 — Mặt nước: sông ở kỷ 12, biển ở kỷ 14 (ADR-040)
 
 **Mục đích.** Dựng HÌNH cho bảng địa thế đã duyệt ở ADR-039 — nhưng chỉ cho **ba kỷ** để Đàm nhìn
 trước khi trải rộng: kỷ 14 (biển Singapore) · kỷ 12 (sông Nga) · kỷ 1 (khô Thổ Nhĩ Kỳ, làm nhân

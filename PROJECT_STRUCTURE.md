@@ -359,6 +359,13 @@
 │   │   │   │                      #   ⚠️ Nước phải NẰM GỌN trong địa hình: bài test import thẳng
 │   │   │   │                      #   `OUTSKIRT_REACH` và đòi `reach + width ≤` nó — khoá QUAN HỆ,
 │   │   │   │                      #   không khoá con số 8
+│   │   │   │                      #   ⚠️ `worldYaw(era)` (2026-08-20, ADR-041) — CHỦ SỞ HỮU của
+│   │   │   │                      #   QUAN HỆ giữa `side` (sự thật lịch sử) và `DEFAULT_YAW` (hằng
+│   │   │   │                      #   số mỹ thuật). SUY RA bằng MỘT công thức, không khai tay 15
+│   │   │   │                      #   số; luôn là bội của 90° (xoay lệch góc thì nửa mặt phẳng
+│   │   │   │                      #   nước cắt vào GÓC lưới vuông tới 2,49 ô). Xoay ĐỊA THẾ, KHÔNG
+│   │   │   │                      #   xoay camera và KHÔNG xoay lưới 12×12 — xoay lưới là gãy
+│   │   │   │                      #   ADR-007. Test: `settingWorldYaw.test.js`
 │   │   │   ├── setting.js        # HÌNH CỦA ĐỊA THẾ (VIỆC 2 Bước B, ADR-040): dấu chân mặt nước.
 │   │   │   │                      #   `insetAt` (lùi vào nước bao xa) · `blendAt` (hệ số kéo đất
 │   │   │   │                      #   xuống) · `depthAt` · `bounds` (hộp bao tấm nước). THUẦN.
@@ -373,6 +380,10 @@
 │   │   │   │                      #   công thức sang hai bên là mở lại khe hở Phase 9A đã vá
 │   │   │   │                      #   ⚠️ Mép bờ CHỈ được lượn RA XA thành phố (nhiễu 0..1, luôn
 │   │   │   │                      #   CỘNG) — đó là thứ giữ ADR-007 theo CẤU TRÚC
+│   │   │   │                      #   ⚠️ `insetAt` là VỎ BỌC: nó xoay NGƯỢC toạ độ hỏi vào theo
+│   │   │   │                      #   `worldYaw` rồi mới gọi `insetGoc`. Nhờ vậy mọi thứ đọc dấu
+│   │   │   │                      #   chân (địa hình, vùng quê, rặng núi) xoay theo CÙNG một góc
+│   │   │   │                      #   mà không nơi nào phải biết tới phép xoay
 │   │   │   │                      #   ⚠️ `hasWater` (BẢNG khai) ≠ `waterIsBuilt` (HÌNH đã dựng).
 │   │   │   │                      #   `ERAS_WITH_WATER_GEOMETRY = [12, 14]` — dở dang có chủ ý,
 │   │   │   │                      #   có `assert.deepEqual` khoá (`TECH_DEBT #56`)

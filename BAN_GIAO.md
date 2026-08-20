@@ -758,7 +758,15 @@
 - ⚠️ **CẦN ĐÀM THỬ TAY** (không test được trên dev): (a) câu nhắc-sau-phiên hiện sau khi xong PHIÊN THẬT; (b) bài "AI phân tích tổng thể" giờ chạy pro — xem có chậm/khác chất lượng không; (c) dòng "Ghi nhớ" lời khuyên hiện sau ≥3 ngày; (d) thông báo chuỗi-sắp-đứt: **từ nay** (11/7) chiều nào quên làm sẽ nhận push (cần đã bật push iPhone) — đây là lần đầu tiên thực sự có cơ hội chạy thật.
 
 ## 🔜 Sẽ làm tiếp (ưu tiên từ trên xuống)
-- ⚠️ **VIỆC 2 Bước C — CHỜ ĐÀM XEM ẢNH BƯỚC B RỒI GẬT. Bước B đã XONG (ADR-040, 2026-08-19).**
+- ⚠️ **`TECH_DEBT #59` — CHỐT TRƯỚC KHI BƯỚC C TRẢI TỚI KỶ 6, 7, 10.** Ba kỷ nước hẹp không đạt
+  cổng 5% ở **BẤT KỲ** góc nào (kỷ 6 có trần toàn cục 4,44%). Đây là bài toán **BỀ RỘNG trong bảng**,
+  không phải bài toán góc — nên `worldYaw` không chữa được, và trải Bước C tới chúng mà chưa chốt là
+  tiêu ngân sách cho thứ Đàm gần như không nhìn thấy. Ba hướng đã cân sẵn ở `TECH_DEBT #59`
+  (nới bề rộng / chấp nhận + đếm tường minh trong test / đổi thứ mang bản sắc sang cầu-bến-thuyền-kè).
+  **Mười một kỷ còn lại KHÔNG bị chặn.**
+- ⚠️ **VIỆC 2 Bước C — CHỜ ĐÀM XEM ẢNH RỒI GẬT. `TECH_DEBT #57` đã ĐÓNG (ADR-041, 2026-08-20):**
+  camera mặc định nay thật sự nhìn ra nước (kỷ 14: 0,09% → **23,75%** · kỷ 12: 2,30% → **9,32%**),
+  nên phần thưởng của Bước C sẽ không còn nằm ngoài khung hình. Bước B đã XONG (ADR-040, 2026-08-19).
   Bước B đã dựng hình nước cho đúng 3 kỷ (14 biển · 12 sông · 1 khô), mọi ràng buộc Đàm ra đều đo
   được và đã đạt: +1 lệnh vẽ CHỈ ở 2 kỷ có nước · kỷ 1 trùng từng byte · 0 nguồn sáng mới · 0 texture
   mới · 0 shader động · 0 lỗ thủng ở bờ. **Bước C = trải nốt 13 kỷ còn lại**, và chỉ được bắt đầu
@@ -829,6 +837,117 @@
 - **Lịch sử git `main` từng bị xáo** (thao tác git song song): bản đang chạy là `eb44638` — chứa ĐỦ mọi việc gần đây (Hỏi Coach offline + fix đêm khuya + Coach offline analyst). Vài commit cũ (`1e27505`, `9fbcd62`) thành dangling, KHÔNG còn trong `git log` nhưng code vẫn nằm trong bản deploy. Đừng hoảng nếu không thấy chúng.
 
 ## 🗒️ Nhật ký cập nhật
+
+### 2026-08-20 — `worldYaw`: đóng `TECH_DEBT #57`, mở `TECH_DEBT #59` (ADR-041)
+
+**Đàm ra lệnh gì.** *"CHỐT #57 — KHÔNG SỬA CAMERA, KHÔNG SỬA `side`. SỬA THỨ THỨ BA. Chạy liên tục,
+không hỏi vặt."* Kèm §0 (gỡ mục cảnh báo hiệu năng khỏi mọi báo cáo, thay bằng hai luật), §1 (chẩn
+đoán lại trước khi sửa), §2 (phương án `worldYaw`), §3 (cổng nghiệm thu riêng), §4 (ba câu trả lời),
+§5 (Bước C, chỉ sau khi §3 đạt), §6 (cổng chung).
+
+**§1 — CHẨN ĐOÁN LẠI, và kết luận cũ của tôi chỉ đúng một nửa.** Phiên trước tôi ghi nguyên nhân là
+*"camera quay lưng lại biển"*. Đàm bảo đó là **hiện tượng, chưa phải nguyên nhân gốc**, và câu hỏi
+đúng là ***"vì sao một dữ kiện QUAN TRỌNG của cảnh lại nằm ở một hướng mà KHÔNG CƠ CHẾ NÀO chịu
+trách nhiệm?"*** Anh đúng. `side` đúng (Marina Bay thật sự nhìn nam), `DEFAULT_YAW` đúng (hằng số
+mỹ thuật đã duyệt) — thứ sai là **quan hệ giữa hai vế không ai sở hữu**, đúng hình dạng bẫy Phase
+7D (*một lời hứa nói về QUAN HỆ được cài đặt bằng hai HẰNG SỐ ở hai file không tham chiếu nhau*).
+
+Đo trước khi sửa, đủ 15 kỷ: **8/14 kỷ có nước nằm phía khuất — XÁC NHẬN** (kỷ 2, 5, 6, 7, 8, 12,
+13, 14). ⚠️ Nhưng phép đo còn trả về một chuyện tôi không hỏi: tập *"dưới 5% khung hình"* là
+{2, 6, 7, 8, 10, 12, 13, 14} — **một tập KHÁC**. Kỷ 5 khuất nhưng vẫn được 6,64%; kỷ 10 không khuất
+mà chỉ 1,62%. *"Khuất"* và *"không thấy"* là hai đại lượng khác nhau, và nếu chỉ đếm một cái rồi
+gọi tên cái kia thì đã sửa nhầm ba kỷ.
+
+**§2 — CÀI ĐẶT.** `worldYaw(era)` ở `settingStyle.js` (thuần, SUY RA bằng MỘT công thức từ `side` +
+`DEFAULT_YAW`, không khai tay 15 số). `insetAt` ở `setting.js` thành **vỏ bọc**: xoay NGƯỢC toạ độ
+hỏi vào rồi gọi `insetGoc`. Nhờ vậy địa hình + vùng quê + rặng núi xoay theo **cùng một góc** mà
+không nơi nào phải biết tới phép xoay; lưới 12×12 và vị trí nhà **không** xoay (xoay là gãy ADR-007).
+
+⚠️ **CÔNG THỨC ĐẦU TIÊN CỦA TÔI SAI, VÀ PHÉP ĐO BẮT — KHÔNG PHẢI VIỆC ĐỌC MÃ.** Bản đầu căn đều cả
+14 kỷ về rel = −45° cho *"nhất quán"*. Nghe rất hợp lý, và nó **phá luật (3) của chính bảng**: nước
+hiện ra ở **cùng một chỗ trên màn hình ở mọi kỷ**, tức xoá sạch một trục bản sắc mà bảng địa thế
+sinh ra để giữ. Không có gì đỏ lên — test xanh, ảnh vẫn đẹp. Chỉ khi đo 14 kỷ × 24 góc rồi nhìn
+phân bố mới thấy. Bản đúng: **XOAY TỐI THIỂU** — chỉ xoay khi bờ nằm sau lưng, và đúng một phần tư
+vòng. Kết quả rel chia **7/7** giữa +45° và −45°, tức bố cục vẫn còn hai phía.
+
+⚠️ **KHÔNG CẦN HẰNG SỐ "LỆCH MỘT GÓC" MÀ ĐÀM CHO PHÉP.** Anh cho phép đúng một hằng số có lý do
+viết ra (*"nước nằm chính giữa khung đọc ra là cái hồ; lệch một góc mới đọc ra là bờ"*). Hoá ra
+hình học tặng không: camera nhìn theo đường chéo 45°, bờ nước luôn vuông góc với trục, nên góc giữa
+chúng **không bao giờ bằng 0** — đo ra rel = ±45° ở cả 14 kỷ. Thêm một hằng số vào đây là thêm một
+con số không có việc gì làm. **Được phép tiêu một ngân sách không có nghĩa là phải tiêu.**
+
+⚠️ **VÌ SAO CHỈ BỘI CỦA 90°.** Lưới thành phố là HÌNH VUÔNG: nửa cạnh 6, nửa đường chéo 6√2 ≈ 8,49.
+Một phép xoay lệch góc đưa nửa mặt phẳng nước cắt vào GÓC lưới tới **2,49 ô** — đo được **4/144 ô
+ngập**, tức ADR-007 vỡ. Nên `quarterTurns()` **TỪ CHỐI THẲNG** góc không phải bội 90° thay vì tự
+làm tròn (tự chữa là cách một ràng buộc lặng lẽ chết — bẫy `MIN_STONE` Phase 9D).
+
+**§3 + §6 — CỔNG NGHIỆM THU, SỐ THẬT.**
+
+| cổng | kết quả |
+|---|---|
+| nước ≥ 5% khung mặc định ở mọi kỷ ĐÃ DỰNG HÌNH | kỷ 14 **23,75%** · kỷ 12 **9,32%** ✅ |
+| 13 kỷ khô: lệnh vẽ không đổi | 15/15 kỷ không đổi một đơn vị ✅ |
+| 13 kỷ khô: ảnh không đổi | 6 kỷ trùng từng byte · 7 kỷ lệch md5 nhưng **0,0% điểm ảnh vượt ngưỡng, lệch TB 0,02** ✅ |
+| bản quét 15 kỷ không trôi | **15/15 cặp chặng · 105/105 cặp kỷ**, trung vị 37,6 → **40,7** ✅ |
+| ADR-007 + "chỉ thêm, không bao giờ dời" | 0 ô lưới ngập ở cả 15 kỷ, có đối chứng ✅ |
+| `npm test` · lint · build | **938 pass / 0 fail** · sạch · xanh ✅ |
+| cổng MẮT ("đọc ra là thành phố cảng") | ✅ — xem ảnh; kỷ 14 biển chiếm góc trên-trái với đường bờ chạy chéo, các tháp đứng ngay mép nước |
+
+⚠️ **BẢY KỶ LỆCH `md5` MÀ ẢNH KHÔNG ĐỔI — và đây là chỗ suýt đọc thành một hồi quy.** Đúng
+`TECH_DEBT #50`: SwiftShader dựng lệch ±1 theo tải máy. Phép đo pixel cho **0,0% và lệch TB 0,02**,
+so với **11,13 / 25,89** ở kỷ 12 và 14 — cách nhau ~550 lần. Và phép đo ấy có đối chứng chứng minh
+nó KHÔNG mù: **cùng công cụ, cùng lệnh, nó thấy hai kỷ có nước đổi rất rõ**. Không có vế đó thì
+*"0,0%"* chỉ là một con số không biết nói.
+
+**§4-Q2 — ĐO ĐƯỢC RẰNG PHÉP ĐO DẢI GẦN NHƯ MÙ VỚI MẶT NƯỚC.** Đàm cho phép thêm một cổng quét lấy
+mẫu VÀNH NGOÀI, và dặn **tái dùng `sweep-diff` + `--frame`, đừng viết công cụ thứ hai**. Làm đúng
+vậy, và kết quả bảo chứng cho chính lời anh:
+
+| chế độ | kỷ 12 | kỷ 14 | 13 kỷ còn lại |
+|---|---:|---:|---:|
+| dải thành phố (`sweep-score` đang dùng) | **9,7 — DƯỚI ngưỡng mắt 12** | 12,0 (sát ngưỡng) | 0,0 |
+| cả khung hình (`--frame`) | 13,9% điểm ảnh · lệch TB 11,13 | 20,9% · 25,89 | 0,0% · 0,02 |
+
+⇒ Nếu chỉ đọc phép đo dải thì **kỷ 12 bị báo là "không phân biệt được bằng mắt"** trong khi mặt
+nước vừa tăng 4 lần. `sweep-score` vẫn là cổng KHÔNG-TRÔI (đúng việc của nó); cổng *"thay đổi có
+lên tới màn hình không"* phải là `--frame`. Cùng công cụ, cùng đơn vị, cùng ngưỡng 12 — không dựng
+thang mới (bẫy phễu Phase 9A).
+
+**§4-Q3 — ĐỐI CHỨNG TẤM THỨ BA.** Đã thêm bài dựng một tấm đất giả thứ ba, bắt nó đi qua
+`hazXuongDay` và khớp ở chỗ giáp. Thử ngược (thay bằng nội suy tuyến tính) ⇒ đỏ.
+
+⚠️ **MỘT PHÉP PHÁ KHÔNG NỔ, VÀ THỦ PHẠM LÀ CHÍNH PHÉP PHÁ — lần thứ tư trong dự án.** Phép phá số 7
+(`Math.round(q*2) % 4`) vẫn cho ra một phần tư vòng, nên ADR-007 vẫn xanh và tôi suýt kết luận bài
+test ấy mù. Theo đúng luật đã có (*"khi phá mà không nổ, nghi CHÍNH PHÉP PHÁ trước"*), làm lại bằng
+một phép xoay 45° thật ⇒ **4/144 ô ngập, đỏ ngay**. Cả 9 phép phá còn lại đều đỏ đúng chỗ đã nêu
+TRƯỚC.
+
+⚠️ **HAI CÔNG CỤ ĐI SAU MỘT BẢN VÁ THÌ GIÀ ĐI TRONG IM LẶNG.** (a) Cột "trần" của `water-view.mjs`
+đọc `style.side` mà không biết tới phép xoay, nên nó in kỷ 14 trần **11,87%** trong khi mặc định đã
+là 23,75% — một con số vô lý mà vẫn trông chỉnh tề. (b) Bài dò bờ ở `setting.test.js` viết cứng
+*"nước kỷ 12 ở phía đông"*, sau khi xoay thì nước ở phía bắc nên nó báo `0/12 lát cắt` trên một
+hình học hoàn toàn lành. **Cả hai đều là phép đo hỏng, không phải mã hỏng** — và cả hai chỉ lộ ra
+khi chạy, không khi đọc.
+
+⚠️ **MỘT CÁI TÊN CỘT CŨNG HỨA HẸN, VÀ CỘT "TRẦN" HỨA QUÁ.** Kỷ 12 sau khi sửa được **9,32%**, cao
+hơn cả cột "trần" **8,97%**. Không phải lỗi làm tròn: "trần" đo bằng cách đứng ĐỐI DIỆN bờ, mà với
+một dải sông thì góc chính diện **không** phải góc tối ưu — nhìn xiên thì khúc sông trải dài hơn
+trong khung (kỷ 7: 2,69% nhìn thẳng so với 9,05% nhìn xiên). Một cột tên là "trần" mà không phải
+trần là thứ sẽ được trích đi trích lại; đã ghi rõ ở `PERFORMANCE.md`.
+
+**MỞ `TECH_DEBT #59` — ba kỷ nước hẹp, và ta biết TRƯỚC lần này.** Đo cả 14 kỷ × 24 góc: kỷ 6 (sông
+1,2 ô) có **trần TOÀN CỤC 4,44% — dưới cổng 5% ở MỌI góc**; kỷ 7 và 10 chỉ đạt ở những góc phá hỏng
+khung của mọi kỷ khác. Đó là sự thật về **BỀ RỘNG trong bảng**, không về phép xoay ⇒ chỉnh
+`worldYaw` cho chúng là chỉnh sai chỗ. Đúng bài học §2-C (*đo TRẦN của một cơ chế TRƯỚC khi tiêu
+ngân sách*) — khác biệt duy nhất so với Phase 11 là **lần này biết trước khi tiêu**.
+
+**§0 đã áp dụng.** `PERFORMANCE.md` nay mở đầu bằng hai luật Đàm ra; đã gỡ cả hai mục "ƯỚC LƯỢNG
+ms" và đoạn "món nợ đang phình". Số tam giác **không còn là hạng mục cảnh báo**.
+
+**Còn lại cho phiên sau**: §5 Bước C (12 kỷ còn lại) — chỉ bắt đầu sau khi Đàm gật §3, và nên chốt
+`TECH_DEBT #59` trước khi trải tới kỷ 6, 7, 10.
+
+---
 
 ### 2026-08-19 — VIỆC 2 Bước B: mặt nước có hình, cho ĐÚNG 3 kỷ (ADR-040)
 

@@ -1565,6 +1565,56 @@ phải một con số, và nó được ghi ra đúng dạng ấy.
 
 ---
 
+## ⚠️ MỘT TRỤC CHI PHÍ MÀ CẢ FILE NÀY CHƯA TỪNG ĐO: **THỜI GIAN DỰNG CẢNH** (2026-08-21, ADR-048)
+
+Toàn bộ phần trên đo *"GPU phải VẼ bao nhiêu mỗi khung hình"* — tam giác, lệnh vẽ, mili-giây. Không
+một dòng nào đo *"CPU phải TÍNH bao nhiêu để dựng ra cái cảnh ấy lần đầu"*. Hai đại lượng ấy đi cùng
+chiều suốt nhiều phase nên không ai để ý là chỉ có một nửa được canh — cho tới khi ADR-046 tách
+chúng ra:
+
+**ADR-046 thêm 0 tam giác, 0 lệnh vẽ, 0 nguồn sáng — mà +28 giây CPU.** Bảng "Sau «XOÁ CÁI BỆ»" ở
+ngay trên nói đúng sự thật của nó (hình học không nhúc nhích một đơn vị), và nó vẫn bỏ lọt hoàn toàn
+chuyện này.
+
+### Con số
+
+Đo bằng `tach.mjs` (bóc từng phần của việc dựng cảnh, 15 kỷ), ba cây mã chạy **TUẦN TỰ** trên cùng
+một máy 4 nhân. ⚠️ Đo song song thì ba bên giành CPU của nhau và không con số nào so được với con số
+nào — ba lượt đầu của phiên ấy đã phải bỏ đi vì đúng lý do này.
+
+| phần (dựng lưới đủ 15 kỷ) | TRƯỚC ADR-046 (`dfd2b15`) | SAU ADR-046 (`19305ab`) | có bộ nhớ đệm (ADR-048) |
+|---|---:|---:|---:|
+| lưới chân trời | 33,52 giây | 66,41 giây | **20,18 giây** |
+| lưới mặt đất | 2,26 giây | 3,02 giây | **1,30 giây** |
+| `buildTerrain()` · `buildHorizon()` · vùng quê · 300 × `footprint` | ~0,05 giây | ~0,06 giây | ~0,04 giây |
+| **`sceneStats.test.js` (triệu chứng nhìn thấy được)** | **564 giây** | **827 giây** | xem dòng cuối `npm test` |
+
+Nguyên nhân gốc: ADR-046 cho `horizon.heightAt` gọi `terrain.nenKho(...)` ở **mỗi đỉnh** của lưới
+chân trời — lưới lớn nhất cảnh — và mỗi lần lấy mẫu nhiễu tốn **4 lần băm FNV-1a trên một chuỗi ~20
+ký tự**. Cái giá ấy vốn đã có sẵn từ lâu; ADR-046 chỉ làm nó lộ ra. Bản vá **nhớ lại giá trị nút
+lưới** (ADR-048) không đổi một con số nào (đã chứng minh trùng từng byte ở cả 15 kỷ) và kéo xuống
+dưới cả mốc trước ADR-046 — **nhanh hơn 1,66 lần**, vì phần dôi ra ấy chưa bao giờ được ai đặt lên cân.
+
+### Vì sao chưa có cổng cho trục này, và vì sao nó KHÓ
+
+Ghi thành `TECH_DEBT #70`. Chỗ khó không phải viết bài test mà là **chọn đại lượng**: thời gian phụ
+thuộc máy, nên một mốc TUYỆT ĐỐI viết vào test sẽ hoặc kêu oan trên máy chậm, hoặc mù trên máy nhanh
+— đúng bẫy Phase 7D ở dạng tệ nhất. Hai hướng đáng cân nhắc, cả hai đều là QUAN HỆ chứ không phải
+mức: *(a)* tỉ số "lưới chân trời ÷ lưới mặt đất" đo trong CÙNG một lượt chạy (hôm nay là **15,5×**);
+*(b)* đếm thẳng **số lần gọi `valueNoise`** — một phép đếm thì tất định, chạy được ở CI, và nó chính
+là đại lượng sinh ra chi phí.
+
+### Ba điều KHÔNG được suy ra từ bảng này
+
+- ❌ **Không** suy ra được gì về frame time trên máy Đàm. Đây là chi phí DỰNG, chạy một lần lúc mở
+  tab / đổi kỷ; nó không nằm trong bảng FPS và bảng FPS cũng không nằm trong nó.
+- ❌ **Không** suy ra được số giây trên MacBook M3. Bộ số này đo trong hộp cát; phần mang ra ngoài
+  được là phần **CẤU TRÚC** ("chi phí này nổ mỗi lần dựng lại cảnh"), không phải phần SỐ.
+- ❌ **Không** đọc `sceneStats.test.js` 564 → 827 → ? như một thước đo tinh: nó chạy chung máy với
+  mọi bài test khác, nên nó là một **triệu chứng** hữu ích chứ không phải một phép đo sạch.
+
+---
+
 ## Khi nào phải đo lại
 
 - Sau bất kỳ phase nào **thêm nguồn sáng, đổi shader, đổi bóng đổ, hoặc đổi DPR**.
@@ -1574,3 +1624,7 @@ phải một con số, và nó được ghi ra đúng dạng ấy.
   2026-08-20 nó không còn là hạng mục cảnh báo (xem hai luật ở đầu file).
 - ⚠️ **Mỗi phase PHẢI tự đo lại mốc nền của mình**, không được chép cột "sau" của phase trước làm
   cột "trước" của mình. Lý do và cái giá suýt phải trả: mục ❗ ở cuối phần Phase 11.
+- ⚠️ **Sau bất kỳ phase nào đụng vào `terrain.js` / `horizon.js` / `noise.js` / `terrainMesh.js`,
+  phải đo lại THỜI GIAN DỰNG CẢNH** — không chỉ tam giác và lệnh vẽ. ADR-046 chứng minh hai trục ấy
+  có thể đi ngược nhau: 0 tam giác mới mà +28 giây CPU. Lệnh: `node --import
+  ./scripts/register-esm-loader.mjs <scratchpad>/tach.mjs`, chạy TUẦN TỰ cho từng cây mã.

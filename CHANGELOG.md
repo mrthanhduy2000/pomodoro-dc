@@ -12,6 +12,28 @@
 
 ---
 
+## 2026-08-21 — Nhớ lại giá trị nút lưới nhiễu: vá một **hồi quy hiệu năng 1,7 lần** do ADR-046 (ADR-048)
+
+**Mục đích.** Ngay sau khi ship bản "xoá cái bệ", mấy việc đo chạy nền trả về một con số không ai
+chờ: `sceneStats.test.js` đi từ **564 lên 827 giây**, dựng cảnh đủ 15 kỷ từ **40,9 lên 69,3 giây**.
+Không cổng nào đỏ — dự án có ngân sách TAM GIÁC và LỆNH VẼ, không có ngân sách THỜI GIAN DỰNG.
+
+**Phạm vi.** Sửa: `src/engine/city3d/noise.js` (nhớ lại giá trị từng nút lưới + `thongKeNho()`).
+Mới: `src/engine/city3d/noise.test.js` (8 bài, cả 8 đã thử-cho-đỏ). Tài liệu: `PERFORMANCE.md`
+(mục mới về trục chi phí này), `TECH_DEBT.md` (#70), `ARCHITECTURE_DECISIONS.md` (ADR-048),
+`PROJECT_STRUCTURE.md`, `CLAUDE.md`, và con số "~70–90 giây" trong `scripts/sceneTriCross.test.js`
+(nay ~25 giây). **KHÔNG đụng một dòng nào của `terrain.js` / `horizon.js`.**
+
+**Ảnh hưởng.** Lưới chân trời 66,41 → **20,18 giây** (nhanh hơn cả mốc trước ADR-046 là 33,52 giây);
+lưới mặt đất 3,02 → **1,30 giây**; `npm test` 860 → **278 giây**.
+
+**Tương thích.** **Không đổi một con số nào** — đã chứng minh **trùng từng byte ở cả 15 kỷ** so với
+`19305ab` bằng hai lượt băm MD5 phủ **mọi** người dùng `valueNoise`: (1) mảng đỉnh lưới mặt đất +
+lưới chân trời; (2) đầu ra `deriveOutskirts()` + dấu chân mặt nước của `setting.js`. Không có
+migration. Không đổi dữ liệu người dùng.
+
+---
+
 ## 2026-08-21 — Xoá **cái bệ**: thành phố nằm TRONG đồng bằng, không ngồi TRÊN nó (ADR-046, ADR-047)
 
 **Mục đích.** Đàm bác ba vòng liên tiếp, vòng cuối bác cả 15 kỷ: *"VẪN CÒN CÁI BỆ."* Anh cũng chỉ

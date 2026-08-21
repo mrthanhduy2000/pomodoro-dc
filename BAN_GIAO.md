@@ -6,7 +6,63 @@
 > chọn: `ARCHITECTURE_DECISIONS.md`. Nợ kỹ thuật: `TECH_DEBT.md`. Migration: `MIGRATION.md`. Tóm
 > tắt theo mốc: `CHANGELOG.md`.
 > **NGUYÊN TẮC ƯU TIÊN SỐ 1:** (1) mọi phiên AI phải đọc file này + `CLAUDE.md` + các file liên quan TRƯỚC khi làm; (2) sau MỌI cập nhật dù nhỏ, phải cập nhật ngay file này + `CLAUDE.md` + các file liên quan khác.
-> Cập nhật lần cuối: **2026-08-21** — **XOÁ CÁI BỆ: THÀNH PHỐ THÔI ĐỨNG TRÊN MỘT CÁI MẶT BÀN VUÔNG (ADR-046 + ADR-047). CỔNG CHÍNH LÀ MẮT, VÀ 15/15 KỶ ĐẠT.**
+> Cập nhật lần cuối: **2026-08-21** — **VÁ HỒI QUY HIỆU NĂNG 1,7 LẦN DO CHÍNH BẢN "XOÁ CÁI BỆ" GÂY RA (ADR-048). `npm test` 860 → 278 giây, và KHÔNG ĐỔI MỘT CON SỐ NÀO.**
+>
+> ## ⚠️ CHÍNH BẢN VÁ VỪA SHIP ĐÃ MANG THEO MỘT HỒI QUY 1,7 LẦN, VÀ KHÔNG CỔNG NÀO ĐỎ (ADR-048)
+>
+> Ngay sau khi ship `19305ab`, mấy việc đo chạy nền trả về một con số không ai chờ:
+> `sceneStats.test.js` **564 → 827 giây**, một lượt dựng cảnh đủ 15 kỷ **40,9 → 69,3 giây**. Bảng số
+> của bản "xoá cái bệ" nói đúng sự thật của nó (0 tam giác mới, 0 lệnh vẽ mới, 0 nguồn sáng mới) —
+> và nó **bỏ lọt hoàn toàn** chuyện này, vì dự án chưa bao giờ có ngân sách cho **THỜI GIAN DỰNG
+> CẢNH** (`TECH_DEBT #70`).
+>
+> **Gốc**: ADR-046 cho `horizon.heightAt` gọi `terrain.nenKho(...)` ở **mỗi đỉnh** của lưới chân
+> trời — lưới lớn nhất cảnh — mà một lần lấy mẫu nhiễu tốn **4 lần băm FNV-1a trên một chuỗi ~20 ký
+> tự**. Cái giá ấy vốn đã có sẵn từ lâu; ADR-046 chỉ làm nó lộ ra.
+>
+> **Vá**: nhớ lại giá trị từng nút lưới trong `src/engine/city3d/noise.js`. Ba cây mã đo **TUẦN TỰ**
+> trên cùng một máy:
+>
+> | phần (dựng lưới đủ 15 kỷ) | TRƯỚC ADR-046 (`dfd2b15`) | SAU ADR-046 (`19305ab`) | có bộ nhớ đệm |
+> |---|---:|---:|---:|
+> | lưới chân trời | 33,52 giây | 66,41 giây | **20,18 giây** |
+> | lưới mặt đất | 2,26 giây | 3,02 giây | **1,30 giây** |
+> | `npm test` (cả hai lượt) | — | ~860 giây | **278 giây** |
+>
+> Tức không chỉ trả lại chỗ ADR-046 đã tiêu mà còn **nhanh hơn cả trước ADR-046 1,66 lần**.
+>
+> ⚠️ **KHÔNG ĐỔI MỘT CON SỐ NÀO** — băm MD5 ở `git worktree` sạch tại `19305ab` và ở cây làm việc:
+> **trùng từng byte, 15/15 kỷ**, kèm đối chứng (bơm một sai lệch vào nhiễu thì `diff` phải kêu — nó
+> kêu). Phải băm **HAI lượt** mới phủ hết: (1) mảng đỉnh lưới mặt đất + lưới chân trời; (2) đầu ra
+> `deriveOutskirts()` + 12.201 mẫu `insetAt`/`blendAt`/`depthAt` — vì `outskirts.js` và `setting.js`
+> cũng gọi thẳng `valueNoise`, và lượt đầu tôi suýt gọi "xong" khi mới phủ được một nửa.
+>
+> ### Ba thứ đáng nhớ hơn cả bản vá
+>
+> 1. **Bản vá ĐẦU TIÊN đã bị hoàn tác vì chú thích của nó bị chính số đo của nó bác bỏ.** Một phép
+>    chặn-sớm trong `nenKho` nghe cực kỳ hợp lý, tôi viết kèm câu *"tiết kiệm 34,1 giây"*, đo thật
+>    ra **1%** (67,51 → 66,80). Ship một câu như thế là đúng bẫy *"một câu tự trấn an cũng phải được
+>    kiểm như một con số"*.
+> 2. **Một bất biến ĐÚNG THEO CẤU TẠO thì không phải một cái gác.** Tôi viết `assert.equal(nut,
+>    daGhi)` để bắt đụng khoá, lý lẽ nghe rất chặt. Phép thử ngược cho thấy nó **không thể** đỏ:
+>    `if (co !== undefined) return co;` làm một khoá BỊ ĐỤNG trông y hệt một lần TRÚNG bộ nhớ, nên
+>    lần ghi thứ hai không bao giờ xảy ra. Đã gỡ; việc bắt đụng khoá nay do hai bài test làm thật.
+> 3. **Một phép đo THỜI GIAN cũng không được chồng lấn với một phép đo thời gian khác.** Ba lượt đầu
+>    chạy song song trên máy 4 nhân ⇒ ba bên giành CPU của nhau ⇒ bỏ hết, chạy lại tuần tự.
+>
+> ### Nghiệm thu
+>
+> **968 bài test** (`test:fast` `# pass 967 / fail 0 / skipped 1`, **252,2 giây**; `test:cross`
+> `# tests 3 / pass 3 / fail 0`, tự in **25,0 giây**), lint sạch, build xanh. **8 bài mới, cả 8 đã
+> thử-cho-đỏ** — sáu phép phá, mỗi phép nêu TRƯỚC chỗ mong đợi đỏ, chạy trong `git worktree` riêng,
+> và mỗi phép **tự đếm số chỗ khớp và đòi đúng 1** trước khi thay.
+> **0 lệnh vẽ mới · 0 vật liệu mới · 0 nguồn sáng mới** — bản vá không đụng một dòng nào của
+> `terrain.js` / `horizon.js` / `terrainMesh.js` / `sceneGraph.js`.
+> ⏳ **CHƯA gộp `main`** — đúng lệnh Đàm.
+>
+> ---
+>
+> **(MỐC TRƯỚC — cùng ngày 2026-08-21)**
 >
 > ## ⚠️ ĐÀM BÁC BA VÒNG LIỀN, VÀ ANH ĐÚNG — CÁI SAI NẰM Ở *CÂU HỎI*, KHÔNG Ở *CÂU TRẢ LỜI*
 >
@@ -1221,6 +1277,49 @@
 - **Lịch sử git `main` từng bị xáo** (thao tác git song song): bản đang chạy là `eb44638` — chứa ĐỦ mọi việc gần đây (Hỏi Coach offline + fix đêm khuya + Coach offline analyst). Vài commit cũ (`1e27505`, `9fbcd62`) thành dangling, KHÔNG còn trong `git log` nhưng code vẫn nằm trong bản deploy. Đừng hoảng nếu không thấy chúng.
 
 ## 🗒️ Nhật ký cập nhật
+
+### 2026-08-21 — Nhớ lại giá trị nút lưới nhiễu: vá hồi quy hiệu năng do chính ADR-046 (ADR-048)
+
+**Bối cảnh.** Bản "xoá cái bệ" ship xong, báo cáo đã gửi. Mấy việc đo chạy nền quay về sau đó và
+nói một chuyện không có trong báo cáo: `sceneStats.test.js` **564 → 827 giây**, dựng cảnh đủ 15 kỷ
+**40,9 → 69,3 giây**. Trong báo cáo tôi mới ghi *"đang đo, chưa có kết quả nên chưa kết luận"* —
+nay đã có kết luận: **bản vá ấy CHÍNH LÀ nguyên nhân.**
+
+**Truy gốc bằng cách bóc từng phần** (`tach.mjs`): toàn bộ chênh lệch nằm ở **lưới chân trời**
+(33,52 → 66,41 giây) và một phần nhỏ ở lưới mặt đất (2,26 → 3,02). Vì ADR-046 cho `horizon.heightAt`
+gọi `terrain.nenKho(...)` ở **mỗi đỉnh** của lưới lớn nhất cảnh, mà `nenKho` kéo theo 3 lần
+`valueNoise`, và **một** `valueNoise` gọi `latticeValue` **4 lần**, mỗi lần dựng chuỗi
+`t|seed|ix|iy` rồi băm FNV-1a hết chuỗi. Cái giá ấy vốn có sẵn từ lâu — ADR-046 chỉ làm nó lộ ra.
+
+**Bốn phương án, ba bị bác.** (a) chặn sớm trong `nenKho` — **thử rồi bỏ**, chỉ được 1%; (b) đổi
+`hashId` sang băm số nguyên — bác, nó đổi mọi con số ⇒ 15 vùng đất đổi hình vĩnh viễn, đó là một
+quyết định mỹ thuật chứ không phải quyết định hiệu năng; (c) lùi ADR-046 — bác, quay lại đúng cái
+"hai bảng chép nhau" mà nó gỡ; (d) **nhớ lại giá trị nút lưới** — ĐÃ CHỌN, vì nó không đụng công
+thức nên nó **không thể** đổi kết quả.
+
+**Kết quả**: lưới chân trời **66,41 → 20,18 giây** (nhanh hơn cả mốc trước ADR-046 là 33,52), lưới
+mặt đất **3,02 → 1,30**, `npm test` **860 → 278 giây**. Đã chứng minh **trùng từng byte 15/15 kỷ**
+so với `19305ab` bằng hai lượt băm MD5 (mảng đỉnh hai lưới địa hình · đầu ra `deriveOutskirts` và
+dấu chân mặt nước `setting.js`), cả hai đều có đối chứng.
+
+**Hai cái gác, hai câu hỏi khác nhau** — đừng gộp: `BIEN_NHO = 4096` chỉ để gói `(ix, iy)` vào một
+khoá không đụng nhau (biên THẬT đo được là `[−21, 27]`, tức rộng gấp ~150 lần — **cố ý**, vì ra
+ngoài biên chỉ CHẬM chứ không SAI); `TRAN_NUT = 200.000` mới là gác BỘ NHỚ (một lượt quét 15 kỷ ghi
+21.343 nút / 112 hạt giống), chạm trần thì thôi ghi + kêu một lần.
+
+**Đã mở `TECH_DEBT #70`** — dự án có ngân sách TAM GIÁC và LỆNH VẼ, chưa có ngân sách THỜI GIAN
+DỰNG, và ADR-046 chứng minh hai trục ấy có thể đi ngược nhau (0 tam giác mới mà +28 giây CPU). Chỗ
+khó là CHỌN đại lượng: thời gian phụ thuộc máy nên một mốc tuyệt đối sẽ hoặc kêu oan hoặc mù — hai
+hướng đáng cân nhắc đều là QUAN HỆ (tỉ số "chân trời ÷ mặt đất", hôm nay **15,5×**; hoặc đếm thẳng
+số lần gọi `valueNoise`).
+
+**File**: sửa `src/engine/city3d/noise.js`; mới `src/engine/city3d/noise.test.js` (8 bài, cả 8 đã
+thử-cho-đỏ bằng 6 phép phá); tài liệu `ARCHITECTURE_DECISIONS.md` (ADR-048) · `PERFORMANCE.md` ·
+`TECH_DEBT.md` (#70) · `PROJECT_STRUCTURE.md` · `CLAUDE.md` · `CHANGELOG.md` · và con số "~70–90
+giây" trong `scripts/sceneTriCross.test.js` (nay ~25 giây — một con số trong tài liệu đã trôi vì
+chính bản vá này, phải sửa theo).
+
+---
 
 ### 2026-08-21 — Xoá cái bệ: thành phố thôi đứng trên một mặt bàn vuông (ADR-046 + ADR-047)
 

@@ -19,7 +19,12 @@
 > bằng cách chỉnh lại con số nào. Nay còn **1 mục High** (#14) + **2 mục Medium-High** (#3, #13) +
 > **1 mục Medium-High chờ Đàm quyết** (#24) = 4 → xa ngưỡng 8–10 mục, KHÔNG cần Maintenance Sprint.
 >
-> **Cập nhật 2026-08-21 («XOÁ CÁI BỆ» — MỚI NHẤT)**: đếm lại bằng máy toàn bộ file ⇒ **2 mục High
+> **Cập nhật 2026-08-21 (ADR-048, «nhớ giá trị nút lưới nhiễu» — MỚI NHẤT)**: **MỞ #70** — không có
+> cổng nào canh THỜI GIAN dựng cảnh, nên chính bản vá "xoá cái bệ" đã ship kèm một hồi quy 1,7 lần
+> trong im lặng (đã vá, xem ADR-048). Priority Medium ⇒ **số mục High vẫn là 2** (#14 · #53), 0
+> Critical ⇒ vẫn xa ngưỡng 8–10, KHÔNG cần Maintenance Sprint.
+>
+> **(Mốc trước) Cập nhật 2026-08-21 («XOÁ CÁI BỆ»)**: đếm lại bằng máy toàn bộ file ⇒ **2 mục High
 > còn mở** (#14 · #53), 0 mục Critical ⇒ **xa ngưỡng 8–10, KHÔNG cần Maintenance Sprint**. (Con số
 > "3 mục High" của hai mốc trước đếm cả **#32**, mà #32 đã ở trạng thái Resolved từ 2026-08-17 —
 > đính chính, không phải mục nào vừa được đóng.) Trong phiên này: **MỞ #68** (chỉ số bệ chia cho độ
@@ -2196,6 +2201,45 @@ ship một trạng thái dở dang, hãy làm nó **ĐẾM ĐƯỢC trong một 
 - **Blocking Conditions**: không có.
 - **Review Trigger**: khi `crownWeight` tụt xuống 0 cặp tách được (bài `MỖI TRỤC PHẢI CÒN SỐNG` sẽ
   đỏ), hoặc khi có phase thêm kiểu đường nét thứ sáu.
+- **Owner**: chưa phân công · **Status**: Open
+
+---
+
+## #70 — KHÔNG CÓ CỔNG NÀO CANH **THỜI GIAN DỰNG CẢNH**, nên một hồi quy 1,7 lần đã ship mà không gì đỏ lên
+
+> Mở 2026-08-21, sau ADR-048. Đây là hình dạng *"một bài học được ghi ra KHÔNG chặn được gì; chỉ một
+> bài TEST mới chặn được"* — lần này áp cho một đại lượng chưa ai từng canh: **thời gian**.
+
+- **Tên**: ngân sách THỜI GIAN dựng cảnh không có cổng, chỉ có ngân sách TAM GIÁC và LỆNH VẼ
+- **Module**: `src/components/city/render3d/terrainMesh.js` · `src/engine/city3d/{terrain,horizon,noise}.js`
+  · bộ cổng ở `src/components/city/render3d/sceneStats.test.js` + `src/engine/city3d/drawCallBudget.test.js`
+- **Priority**: Medium · **Severity**: Medium (không sai kết quả; sai về TỐC ĐỘ, và sai trong im lặng)
+- **Impact**: ADR-046 làm một lượt dựng cảnh đủ 15 kỷ đi từ **40,9 lên 69,3 giây** và
+  `sceneStats.test.js` từ **564 lên 827 giây** — tức bản vá "xoá cái bệ" đã ship kèm một hồi quy
+  **1,7 lần** mà **build xanh · lint sạch · 960 bài test xanh**, không một cảnh báo nào. Nó chỉ lộ ra
+  vì tôi tình cờ cho một việc đo chạy nền. Dự án đã có cổng cho **tam giác** (`sceneStats.test.js`)
+  và cho **lệnh vẽ** (`drawCallBudget.test.js`, mốc riêng từng kỷ — xem `TECH_DEBT #38`), nhưng cả
+  hai đều đo *"GPU phải vẽ bao nhiêu"*, không cái nào đo *"CPU phải tính bao nhiêu để dựng ra nó"*.
+- **Root Cause**: hai đại lượng ấy là hai thứ khác nhau và trước ADR-046 chúng đi cùng chiều, nên
+  không ai để ý là chỉ có một nửa được canh. ADR-046 tách chúng ra: **0 tam giác mới, 0 lệnh vẽ mới,
+  mà +28 giây CPU** — đúng cái ô trống giữa hai cổng.
+- **Current Risk**: thấp NGAY BÂY GIỜ — ADR-048 đã kéo con số xuống dưới cả mốc trước ADR-046
+  (lưới chân trời 33,52 → **20,18** giây), nên hôm nay còn dư chỗ. Rủi ro là ở lần sau.
+- **Future Risk**: trung bình. Chỗ đau không phải máy dựng ảnh mà là **máy của Đàm**: một hồi quy
+  kiểu này ở tầng dựng lưới biến thành thời gian chờ lúc mở tab Thành Phố và lúc chuyển kỷ, mà
+  `PERFORMANCE.md` thì chỉ đo phần **VẼ** (ms mỗi khung hình), không đo phần **DỰNG**.
+- **Recommended Solution**: một bài test cổng đo thời gian dựng lưới của một hoặc hai kỷ rồi so với
+  một mốc. ⚠️ **Và đây chính là chỗ khó, đừng làm ẩu**: thời gian là đại lượng phụ thuộc máy, nên một
+  mốc TUYỆT ĐỐI viết vào test sẽ hoặc kêu oan trên máy chậm, hoặc mù trên máy nhanh — đúng bẫy
+  Phase 7D ở dạng tệ nhất. Hướng đúng gần như chắc chắn là một **QUAN HỆ đo được trong cùng một lượt
+  chạy**: ví dụ *"dựng lưới chân trời không được tốn quá N lần thời gian dựng lưới mặt đất"* (hôm
+  nay tỉ số ấy là **15,5×** — tự nó đã là một con số đáng nhìn), hoặc đếm thẳng **số lần gọi
+  `valueNoise`** thay vì đếm giây: một phép đếm thì tất định, chạy được ở CI, và nó chính là đại
+  lượng sinh ra chi phí.
+- **Estimated Complexity**: Medium (phần khó nằm ở việc CHỌN đại lượng, không ở việc viết bài test).
+- **Blocking Conditions**: không có.
+- **Review Trigger**: lần kế tiếp có phase nào đụng vào `terrain.js` / `horizon.js` / `noise.js` /
+  `terrainMesh.js`, hoặc khi `npm test` lượt một lại vượt ~10 phút.
 - **Owner**: chưa phân công · **Status**: Open
 
 ---

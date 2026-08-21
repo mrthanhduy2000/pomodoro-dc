@@ -11,6 +11,108 @@
 
 ---
 
+## ADR-048 — Nhớ lại giá trị nút lưới nhiễu: vá một hồi quy hiệu năng do ADR-046, **không đổi một con số nào**
+
+**Ngày**: 2026-08-21
+
+**Bối cảnh.** ADR-046 cho `horizon.heightAt` đọc thẳng `terrain.nenKho(...)` để hai tấm khớp nhau
+**theo cấu tạo** thay vì khớp nhờ một hằng số chép hai nơi. Quyết định ấy đúng và giữ nguyên. Nhưng
+ngay sau khi ship `19305ab`, mấy việc đo chạy nền trả về một con số không ai chờ: `sceneStats.test.js`
+đi từ **564 lên 827 giây**, và một lượt dựng cảnh đủ 15 kỷ đi từ **40,9 lên 69,3 giây**. Không có
+cổng nào đỏ — không có cổng nào canh thời gian dựng cảnh cả (mở `TECH_DEBT #70`).
+
+**Vấn đề.** `horizon.heightAt` chạy ở **mỗi đỉnh** của lưới chân trời — lưới lớn nhất cảnh. Mỗi lần
+gọi `nenKho` kéo theo `dongBangKho` (2 lần `valueNoise`) + `beRongHoa` (1 lần) + `smoothHeightAt`,
+mà **một** `valueNoise` gọi `latticeValue` **4 lần**, mỗi lần dựng chuỗi `t|seed|ix|iy` (~20 ký tự)
+rồi băm FNV-1a chạy hết chuỗi ấy. Cái giá ấy vốn đã có sẵn từ lâu; ADR-046 chỉ làm nó lộ ra.
+
+**Phương án đã cân nhắc.**
+
+*(a) Chặn sớm trong `nenKho` khi hệ số hoà đúng bằng 1* — **ĐÃ THỬ, ĐÃ ĐO, ĐÃ BỎ.** Lý lẽ nghe rất
+xuôi (ra ngoài vùng hoà thì `smoothHeightAt` không còn ảnh hưởng gì, tính làm gì). Đo thật:
+**67,51 → 66,80 giây, đúng 1%**. Và tôi đã kịp viết cho nó một chú thích khẳng định nó tiết kiệm
+"34,1 giây" — một câu bị chính số đo của nó bác bỏ. Ship một chú thích như vậy là đúng cái bẫy
+*"một câu tự trấn an cũng phải được kiểm như một con số"*, nên bản vá bị hoàn tác nguyên vẹn.
+
+*(b) Đổi `hashId` sang một phép băm số nguyên thuần (nhanh hơn nhiều lần)* — **BÁC.** Nó đổi mọi
+giá trị nhiễu ⇒ cả 15 vùng đất đổi hình vĩnh viễn. Đó không phải một quyết định hiệu năng, đó là
+một quyết định mỹ thuật, và nó phải được ra như một quyết định mỹ thuật.
+
+*(c) Lùi ADR-046, cho `horizon` tự tính lấy nền* — **BÁC.** Quay lại đúng cái "hai bảng chép nhau"
+mà ADR-046 sinh ra để gỡ, và mua tốc độ bằng cách trả lại một đường viền ở chỗ giáp.
+
+*(d)* **ĐÃ CHỌN — nhớ lại giá trị của từng nút lưới nhiễu.** Nó không đụng tới công thức, nên nó
+không thể đổi kết quả; nó chỉ thôi tính lại cùng một thứ.
+
+**Giải pháp.** `latticeValue` (`src/engine/city3d/noise.js`) tra một `Map` hai tầng (hạt giống → nút)
+trước khi băm. Đo lại, ba cây mã chạy **TUẦN TỰ** trên cùng một máy:
+
+| phần (dựng lưới đủ 15 kỷ) | TRƯỚC ADR-046 (`dfd2b15`) | SAU ADR-046 (`19305ab`) | có bộ nhớ đệm |
+|---|---:|---:|---:|
+| lưới chân trời | 33,52 giây | 66,41 giây | **20,18 giây** |
+| lưới mặt đất | 2,26 giây | 3,02 giây | **1,30 giây** |
+
+Tức không chỉ trả lại chỗ ADR-046 đã tiêu mà còn **nhanh hơn cả trước ADR-046 1,66 lần**.
+
+**Chứng minh KHÔNG đổi một con số nào.** Băm MD5 ở một `git worktree` sạch tại `19305ab` và ở cây
+làm việc, rồi so hai bên: **trùng từng byte, 15/15 kỷ**. ⚠️ Và phép so ấy phải phủ **MỌI** người
+dùng `valueNoise`, không chỉ chỗ dễ nghĩ tới nhất — lượt đầu tôi mới băm hai lưới địa hình rồi suýt
+gọi đó là xong, trong khi `outskirts.js` (rải cảnh vật vùng quê) và `setting.js` (`insetAt` /
+`blendAt` / `depthAt` — dấu chân mặt nước) cũng gọi thẳng vào đó. Nên có hai lượt băm:
+
+| băm cái gì | phủ tới | kết quả |
+|---|---|---|
+| mọi thuộc tính Float32 + mảng chỉ số của **lưới mặt đất** và **lưới chân trời** | `terrain.js`, `horizon.js`, `terrainMesh.js` | 15/15 kỷ trùng |
+| đầu ra `deriveOutskirts()` + 12.201 mẫu dày `insetAt`/`blendAt`/`depthAt` | `outskirts.js`, `setting.js` | 15/15 kỷ trùng |
+
+Cả hai lượt đều kèm **đối chứng**: bơm một sai lệch vào đúng công thức nhiễu (`ix===3 && iy===3 →
+0,5`) rồi đòi `diff` phải kêu — nó kêu (14/15 dòng đổi ở lượt thứ hai). Không có vế ấy thì "hai file
+giống hệt nhau" cũng là thứ một phép so ĐANG HỎNG in ra.
+
+**Trade-off.** Bộ nhớ. Một lượt quét đủ 15 kỷ ghi **21.343 nút / 112 hạt giống**. Hai cái gác, và
+chúng trả lời **hai câu khác nhau** — đây là phần dễ gộp nhầm nhất của bản vá:
+
+- `BIEN_NHO = 4096` trả lời *"có gói được (ix, iy) vào MỘT số nguyên mà không đụng nhau không?"*.
+  Khoá là `(ix + BO) × HANG + (iy + BO)` với **`HANG = BO × 2`** — viết theo `BO` chứ không viết cứng
+  8192, vì đó là một QUAN HỆ. Biên THẬT đo được là **ix, iy ∈ [−21, 27]** với **0 lần rơi ra ngoài**,
+  tức cái gác đang rộng gấp ~150 lần. Rộng như thế là cố ý: **ra ngoài biên KHÔNG SAI, chỉ CHẬM** —
+  nhánh ngoài tính đúng cùng công thức, chỉ là không nhớ lại. Một cổng NHANH-CHẬM được phép rộng
+  tay theo một luật khác hẳn một cổng ĐÚNG-SAI (đối chiếu: bài học "ngưỡng nới rộng cho chắc là một
+  cái phễu" ở Phase 9A — luật ấy áp cho cổng đúng-sai, không áp cho cổng này).
+- `TRAN_NUT = 200.000` (≈ 9,4 lần số đo thật) mới là cái gác BỘ NHỚ thật — `BIEN_NHO` thì không, vì
+  trong biên ±4096 vẫn còn 67 triệu ô. Chạm trần thì **thôi ghi, vẫn trả đúng giá trị**, và kêu MỘT
+  lần qua `console.warn`.
+
+**Ảnh hưởng.** `src/engine/city3d/noise.js` (bộ nhớ đệm + `thongKeNho()` + xuất `BIEN_NHO`,
+`TRAN_NUT`) · **mới** `src/engine/city3d/noise.test.js` (8 bài, **cả 8 đã thử-cho-đỏ**) ·
+`PERFORMANCE.md` · `TECH_DEBT.md` (#70). Không đụng một dòng nào của `terrain.js` / `horizon.js`.
+
+**Hai bài học rút ra trong lúc làm, đáng giữ hơn cả bản vá.**
+
+1. ⚠️ **Một bất biến ĐÚNG THEO CẤU TẠO thì không phải một cái gác — nó chỉ TRÔNG GIỐNG một cái gác.**
+   Bản đầu của `thongKeNho()` trả thêm `daGhi` (biến đếm số lần ghi) cạnh `nut` (đếm lại từ chính
+   các `Map`), kèm `assert.equal(nut, daGhi)` với lý lẽ rất chặt: *"hai đường đo độc lập, lệch nhau
+   nghĩa là đụng khoá"*. Phép thử ngược cho thấy câu ấy **không bao giờ có thể đỏ**: `if (co !==
+   undefined) return co;` làm một khoá BỊ ĐỤNG trông y hệt một lần TRÚNG bộ nhớ, nên lần ghi thứ hai
+   không bao giờ xảy ra và biến đếm không bao giờ đếm thừa. Đã gỡ cả `daGhi` lẫn câu assert ấy —
+   việc bắt đụng khoá nay do hai bài test làm THẬT (phép đếm số nút bắt được ca "khoá cộng thay vì
+   nhân"; bài "song ánh khoá" hỏi thẳng ở hai góc đối của biên, bắt được ca `HANG` bị hạ còn `BO`).
+   Cùng họ với "một bài test chưa từng thấy đỏ thì chưa phải test", nhưng ở một biến thể khó thấy
+   hơn: ở đây không phải *chưa* đỏ, mà là **không thể** đỏ, và lý do nằm ở một dòng cách đó vài dòng.
+2. ⚠️ **Một phép đo và một lần sửa mã không được chồng lấn nhau về thời gian — và một phép đo THỜI
+   GIAN thì cũng không được chồng lấn với một phép đo thời gian khác.** Ba lượt đo đầu tiên của phiên
+   này chạy song song trên một máy 4 nhân, tức ba bên giành CPU của nhau và không con số nào so được
+   với con số nào. Đã dừng, chạy lại tuần tự. (Vế thứ nhất của luật này đã có từ 2026-08-18; đây là
+   vế thứ hai của nó.)
+
+**Điều kiện xem lại.** (a) Nếu một phase sau lấy mẫu nhiễu ở ô rất mịn hoặc trên một vùng rất rộng,
+`console.warn` chạm trần sẽ kêu — lúc ấy hỏi *"vùng lấy mẫu có cần rộng đến thế không"* TRƯỚC khi
+nâng `TRAN_NUT`. (b) Nếu có ngày cần đổi chính công thức nhiễu, mọi con số của bảng trên vô giá trị
+và phải đo lại — nhưng quan trọng hơn: **phải dựng lại phép so byte-identity trước**, vì lúc ấy nó
+sẽ đỏ, và nó đỏ ĐÚNG.
+
+---
+
 ## ADR-046 — Cái bệ KHÔNG phải một cái BẬC, nó là một **KIỂU PHÂN BỐ ĐỘ DỐC**; và ba nguồn sinh ra nó đều là những **hằng số được chọn ĐỂ LÀM RA nó**
 
 **Ngày**: 2026-08-21

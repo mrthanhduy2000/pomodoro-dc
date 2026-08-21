@@ -26,7 +26,9 @@
  *   (c) Chạy THẬT cả hai đường trên 15 kỷ rồi đòi chúng nhất quán về ĐỊNH TÍNH (kỷ nào có bệ thì
  *       cả hai bên đều thấy, và tổng bệ luôn nằm trong tổng thành phố) — cộng một gác chạy-rỗng.
  *
- * ⚠️ VẾ (c) CHẬM: ~70–90 giây cho 15 kỷ vì nó dựng scene thật 15 lần. Vì vậy `npm test` chạy nó ở
+ * ⚠️ VẾ (c) CHẬM: ~25 giây cho 15 kỷ vì nó dựng scene thật 15 lần (đo 2026-08-21, SAU ADR-048 —
+ * TRƯỚC ADR-048 nó tốn ~70–90 giây, và chính con số ấy là thứ đã chỉ ra một hồi quy hiệu năng
+ * không cổng nào canh; xem `TECH_DEBT #70`). Vì vậy `npm test` chạy nó ở
  * LƯỢT THỨ HAI (`npm run test:cross`), sau khi nhóm test nhanh đã xong và đã in số bài. Bài này tự
  * in thời gian chạy của mình — Đàm yêu cầu con số ấy phải hiện ra, để cái giá của nó không bao giờ
  * trở thành vô hình.
@@ -47,7 +49,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
 /**
- * Vế (c) dựng scene thật 15 lần (~70–90 giây) nên nó chỉ chạy ở LƯỢT HAI của `npm test`
+ * Vế (c) dựng scene thật 15 lần (~25 giây) nên nó chỉ chạy ở LƯỢT HAI của `npm test`
  * (`npm run test:cross`, đặt `DC_CROSS_SLOW=1`). Lượt nhanh vẫn NẠP file này và vẫn chạy vế (a)
  * và (b) — hai vế ấy chỉ tốn vài mili-giây và chính chúng canh cái luật.
  *
@@ -110,7 +112,7 @@ test('ĐỐI CHIẾU CHÉO (b) — MỘT LUẬT MỘT CÔNG THỨC: khối bệ 
 });
 
 test('ĐỐI CHIẾU CHÉO (c) — CHẠY THẬT CẢ HAI ĐƯỜNG TRÊN 15 KỶ — kỷ nào có bệ thì cả hai bên đều phải thấy',
-  { skip: CHAY_CHAM ? false : 'lượt hai: npm run test:cross (~70–90 giây)' }, () => {
+  { skip: CHAY_CHAM ? false : 'lượt hai: npm run test:cross (~25 giây)' }, () => {
   const batDau = Date.now();
   const BUILDING_SCALE = Number(NGUON_SCENE.match(/^const BUILDING_SCALE = ([\d.]+);/m)[1]);
   const bang = [];

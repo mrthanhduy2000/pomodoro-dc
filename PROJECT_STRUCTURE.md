@@ -410,7 +410,16 @@
 │   │   │   │                      #   của địa hình; chỗ ở nhờ ấy thành một vòng import thật khi
 │   │   │   │                      #   `setting.js` cần nhiễu mà `terrain.js` lại cần `setting`.
 │   │   │   │                      #   KHÔNG re-export lại từ `terrain.js` — hai đường nhập cho
-│   │   │   │                      #   một hàm là hai chỗ để phiên sau tin
+│   │   │   │                      #   một hàm là hai chỗ để phiên sau tin.
+│   │   │   │                      #   ⚠️ NHỚ LẠI giá trị từng nút lưới (ADR-048) — vá hồi quy
+│   │   │   │                      #   1,7 lần do ADR-046. KHÔNG đổi một con số nào (đã chứng
+│   │   │   │                      #   minh trùng từng byte 15/15 kỷ). Hai cái gác trả lời HAI
+│   │   │   │                      #   câu: `BIEN_NHO` = gói (ix,iy) vào một khoá không đụng
+│   │   │   │                      #   nhau (ra ngoài chỉ CHẬM, không SAI); `TRAN_NUT` = trần
+│   │   │   │                      #   bộ nhớ (chạm thì thôi ghi + kêu một lần)
+│   │   │   ├── noise.test.js      # 8 bài, cả 8 đã thử-cho-đỏ. Người làm chứng là CÔNG THỨC THÔ
+│   │   │   │                      #   dựng lại trong bài test — chạy CẢ HAI đường rồi so, không
+│   │   │   │                      #   so mỗi bên với một bảng số viết cứng
 │   │   │   ├── groundCoverStyle.js# BẢNG DÙNG ĐẤT 15 KỶ (§2-C, ADR-037): bộ kiểu + trọng số ·
 │   │   │   │                      #   `share` (phần đất trống được dùng) · `scale` · `enclose`.
 │   │   │   │                      #   Trả lời "ở nước ấy mảnh đất cạnh nhà dùng làm gì" — buộc vào

@@ -57,6 +57,12 @@ const NGUOI_DOC_DAU_CHAN = [
     dung: ['blendAt', 'depthAt'],
     de: 'bỏ ô KHÔ khỏi tấm lưới nước, và tô sắc nước ĐẬM DẦN theo độ sâu',
   },
+  {
+    file: 'src/engine/city3d/hinterland.js',
+    dung: ['insetAt'],
+    de: 'tìm MÉP NƯỚC ngoài lưới để đặt bến/cầu đúng chỗ, và giữ mọi thứ KHÔ khỏi mặt nước '
+      + '(cùng hạng với `outskirts.js`) — xem `timNuocNgoaiLuoi`',
+  },
 ];
 
 /**

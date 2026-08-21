@@ -41,20 +41,13 @@ import {
   CITY_CAMERA_FOV, DEFAULT_PITCH, DEFAULT_YAW, cityOrbitOptions, orbitPosition,
 } from '../src/engine/city3d/orbit.js';
 import { buildBuildingSpec } from '../src/engine/city3d/buildingSpec.js';
-import { specSpan } from '../src/engine/city3d/parts.js';
+import { BUILDING_SCALE, specSpan } from '../src/engine/city3d/parts.js';
 import { buildTerrain } from '../src/engine/city3d/terrain.js';
 import { collectCitySpecs } from '../src/engine/city3d/cityParts.js';
 import { computeCityLayout } from '../src/engine/cityLayout.js';
 import { BLUEPRINT_CATALOG, BUILDING_EFFECTS } from '../src/engine/constants.js';
 
 const GRID = 12;
-/**
- * ⚠️ Phải KHỚP `BUILDING_SCALE` trong `sceneGraph.js`. Đây đúng cái bẫy đã làm `sweep-score.mjs`
- * bịa ra 5 lỗi không có thật ở Phase 4G: công cụ đo chép lại một hằng số của công cụ dựng rồi hai
- * bên trôi khỏi nhau. Ở đây chưa tách ra được vì hằng số ấy không được export; nếu có ngày đổi nó
- * mà quên chỗ này, mọi con số dưới đây sai hết mà vẫn trông rất thuyết phục.
- */
-const BUILDING_SCALE = 1.3;
 const MARGIN_OK = 0.04;
 
 /** Hộp bao của mọi công trình trong một kỷ, đã đặt lên địa hình đúng như `sceneGraph.js` đặt. */

@@ -31,6 +31,7 @@
  * hai đơn vị này **đã có tiền lệ lệch nhau**, nên (G1) đòi cả hai chứ không chọn một.
  */
 
+import { BUILDING_SCALE } from './parts.js';
 import { distanceOutsideGrid } from './setting.js';
 import { daysGiacDayDaDat, dienTichHop } from './footprint.js';
 
@@ -70,11 +71,11 @@ export function laDauVetNguoi(item) {
 /** Tỉ lệ dựng mặc định theo từng `kind`, khớp với `sceneGraph.js`. */
 function tiLeMacDinh(item) {
   if (Number.isFinite(item?.source?.scale)) return item.source.scale;
-  // ⚠️ 1,3 là `BUILDING_SCALE` của `sceneGraph.js`. Nó CHƯA export được (file ấy `import 'three'`
-  // nên tầng engine không nạp được), và đó là một khoản nợ đã ghi ở `plinth-tri.mjs`. Ở đây nó
-  // gần như không cắn: mọi công trình/nhà dân đều nằm TRONG lưới, tức không vào phép đếm này.
-  // Vật ngoài lưới thì luôn tự khai `source.scale`, nên nhánh này chỉ chạy cho vật trong lưới.
-  return MUC_NHAN_TAO.has(item?.kind) ? 1.3 : 1;
+  // ⚠️ `BUILDING_SCALE` nay `import` THẲNG từ `parts.js` (2026-08-21). Trước đó nó là một con số
+  // 1,3 chép tay ở đây kèm chú thích tự nhận là nợ — vì hằng số gốc nằm trong `sceneGraph.js`, mà
+  // file ấy `import 'three'` nên tầng thuần không nạp được. Khoản nợ ấy đã trả: hằng số chuyển về
+  // đúng chỗ định nghĩa ngôn ngữ mô tả, nên mọi bản chép tay đều gỡ được.
+  return MUC_NHAN_TAO.has(item?.kind) ? BUILDING_SCALE : 1;
 }
 
 /**

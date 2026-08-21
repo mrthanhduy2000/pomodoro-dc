@@ -12,6 +12,28 @@
 
 ---
 
+## 2026-08-21 — Phase 14 §1(3): một ô không phải một căn nhà, một ô là một KHU PHỐ (ADR-052)
+
+- **Mục đích**: Đàm nói *«mọi thứ hiện tại trông vẫn nhỏ, thành phố không mở rộng mà chỉ là cụm
+  nhỏ»*. Số học của `cityGrid.js` cho biết vì sao: `ROAD_LINES = {0, 4, 8, 11}` ⇒ **80/144 ô là
+  đường (55,6%)**, cộng khu kỳ quan ⇒ chỉ ~30 ô xây được nhà dân, và cả 15 kỷ đã chạm trần ấy từ
+  lâu. «Thêm nhà» là điều **bất khả** nếu không dời ô (ADR-007 cấm) hay nới lưới.
+- **Phạm vi**: hai file mới theo khuôn ba lớp lần thứ **CHÍN** — `city3d/blockStyle.js` (BẢNG 15 kỷ:
+  cols · rows · attach · alley · storey · vary · gableToStreet, mỗi dòng buộc vào `country`) và
+  `city3d/block.js` (HÌNH: đo hình chiếu đáy thật rồi chia thành 4–10 đơn vị). `buildingSpec.js`
+  nhận thêm tham số tuỳ chọn `plot` (co giãn hình chiếu đáy + mặt nạ tường chung) và
+  `cityParts.js` gọi `buildBlockSpec` cho mỗi ô nhà dân. Bảng và hình đều KHÔNG đụng bố cục.
+- **Ảnh hưởng**: khối nhà dân nhìn thấy **371 → 1.812** (×4,88) ở 15 kỷ · 80 phiên. Tam giác cả
+  cảnh 2.425.912 → 3.090.464 (×1,274) — vẫn sâu trong vùng rẻ. **Lệnh vẽ không đổi một đơn vị ở
+  cả 15 kỷ.** Thời gian dựng cảnh ×1,086 (trần 1,25×). Ảnh `--width 1500` đổi 6,0–10,9% điểm ảnh
+  vượt ngưỡng mắt. Cổng chống-trôi bản quét vẫn ĐẠT 0/15 + 0/105.
+- **Mặt trái đã đo**: mỗi CĂN nhà chỉ còn **45% bề ngang cũ** (0,907 → 0,406 ô); cột `storey` bù
+  lại theo chiều cao nên mỗi Ô cao thêm 7,0%. Trục chặng ngày tụt **15,36 → 14,39**, cú tụt
+  một-phase lớn nhất từ trước tới nay, còn cách mốc «< 14» của Đàm đúng **0,39**.
+- **Tương thích**: KHÔNG có migration. ADR-007 nguyên vẹn — có bài test liệt kê **1…120 phiên ×
+  15 kỷ** (≥ 30.000 phép so) khoá mô tả hình học khớp từng byte, và luật *"chỉ thêm, không bao giờ
+  dời"* được giữ bằng cách cho cụm mọc quanh chỗ căn nhà cũ đứng.
+
 ## 2026-08-21 — Phase 14 §1(2): kim tự tháp có hình chóp, ziggurat có thềm (ADR-051)
 
 - **Mục đích**: Đàm nhìn kỷ 2 rồi nói *«kim tự tháp không có khối hình chóp»*. Câu hỏi đúng không

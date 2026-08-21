@@ -26,10 +26,9 @@ import { specBounds } from '../src/engine/city3d/pick.js';
 import { daysGiacDay, trongDaGiac } from '../src/engine/city3d/footprint.js';
 import { doDauVetNgoaiLuoi } from '../src/engine/city3d/humanTrace.js';
 import { BLUEPRINT_CATALOG } from '../src/engine/constants.js';
+import { BUILDING_SCALE } from '../src/engine/city3d/parts.js';
 
 const GRID = 12;
-/** Chép từ `sceneGraph.js` — cùng lý do đã ghi ở `cityFocus.test.js`: file ấy `import 'three'`. */
-const BUILDING_SCALE = 1.3;
 
 /** Diện tích móng (ô lưới vuông) của một mô tả khối, đã nhân tỉ lệ dựng. */
 export function footprintArea(spec, scale) {

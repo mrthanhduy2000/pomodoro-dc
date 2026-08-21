@@ -51,10 +51,9 @@ import {
   SIDES, SIDE_STEPS, carriagewayShape, getStreetStyle, streetCrossSection,
 } from '../src/engine/city3d/streetStyle.js';
 import { BLUEPRINT_CATALOG } from '../src/engine/constants.js';
+import { BUILDING_SCALE } from '../src/engine/city3d/parts.js';
 
 const GRID = 12;
-/** ⚠️ Phải KHỚP `BUILDING_SCALE` ở `sceneGraph.js` — xem chú thích cùng tên trong `frame-fit.mjs`. */
-const BUILDING_SCALE = 1.3;
 /** Dưới mức này thì coi như hai bề rộng bằng nhau (sai số dấu phẩy động, không phải bậc thật). */
 const EPS = 1e-6;
 

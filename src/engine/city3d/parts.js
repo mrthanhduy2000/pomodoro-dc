@@ -56,6 +56,27 @@ export const PART_ROLES = [
 const ROLE_SET = new Set(PART_ROLES);
 
 /** Số cạnh cho phép của lăng trụ. Dưới 3 thì không thành khối; trên 12 thì tốn tam giác vô ích. */
+/**
+ * Hệ số phóng to công trình so với ô lưới: MỘT đơn vị của tầng mô tả = `BUILDING_SCALE` ô.
+ *
+ * ⚠️ Lớn hơn 1 là CỐ Ý: tầng mô tả nghĩ theo đơn vị "một ô", nhưng năm công trình rải trên lưới
+ * 12×12 mà mỗi cái chỉ chiếm đúng một ô thì thành phố trông như năm hạt đậu trên bàn cờ (đã thấy
+ * tận mắt ở ảnh chụp thử đầu tiên). Các khu đất cách nhau ít nhất 2,8 ô nên 1,3 vẫn an toàn tuyệt
+ * đối — kỳ quan rộng nhất (1,7 ô) nở ra 2,2 ô, vẫn chưa chạm hàng xóm.
+ *
+ * ⚠️ NÓ CHUYỂN NHÀ VỀ ĐÂY NGÀY 2026-08-21, VÀ ĐÓ LÀ MỘT BẢN VÁ "MỘT LUẬT MỘT CÔNG THỨC" CÓ NỢ ĐÃ
+ * GHI SẴN. Trước đó nó là một `const` riêng của `sceneGraph.js` — mà file ấy `import 'three'` nên
+ * tầng THUẦN không nạp được, và hậu quả là con số 1,3 bị chép tay ra **sáu** bản: `humanTrace.js`
+ * (kèm hẳn một chú thích tự nhận là nợ), `cityFocus.test.js`, `frame-fit.mjs`, `road-fit.mjs`,
+ * `plan-coverage.mjs`, và `plinth-tri.mjs` — nơi bản chép ghi **0,86** (giá trị đời cũ) nên nó đếm
+ * 3 bệ thay vì 31 rồi in ra một bảng trông hoàn toàn bình thường (2026-08-20).
+ *
+ * ⚠️ Hằng số này KHÔNG phải một chi tiết dựng hình: nó là tỉ lệ quy đổi giữa hai hệ đơn vị của
+ * chính tầng mô tả (đơn vị khối ↔ ô lưới). Chỗ định nghĩa ngôn ngữ mô tả là chỗ đúng để nó đứng,
+ * và từ đây mọi phép đo — kể cả phép đo THUẦN — đều hỏi được cùng một nguồn.
+ */
+export const BUILDING_SCALE = 1.3;
+
 export const MIN_SIDES = 3;
 export const MAX_SIDES = 12;
 
@@ -271,4 +292,36 @@ export function specSpan(parts) {
     );
   }
   return span * 2;
+}
+
+/**
+ * Hình bao CHỮ NHẬT thật của một danh sách khối — trả về `{w, d}` theo đúng hai trục X/Z.
+ *
+ * ⚠️ VÌ SAO KHÔNG DÙNG `specSpan` CHO VIỆC NÀY. `specSpan` trả về MỘT con số: cạnh của hình VUÔNG
+ * bao ngoài, và nó cố ý ước lượng THỪA (khối xoay được tính tới đường chéo). Điều đó đúng cho việc
+ * nó sinh ra — *"chừa chỗ để hai nhà không cắm vào nhau"* — nhưng sai cho câu hỏi *"căn nhà này
+ * rộng bao nhiêu, sâu bao nhiêu"*. Đo thử trên nhà dân 15 kỷ: `specSpan × BUILDING_SCALE` ra 0,933 ô
+ * ở kỷ 1 trong khi hình bao thật là 0,725 × 0,553 — thừa 29% ở trục rộng và không nói gì về trục sâu.
+ * Chia một ô thành khu phố mà dùng con số thừa ấy thì mỗi đơn vị bị co nhỏ hơn chỗ thật sự có.
+ *
+ * ⚠️ *"Một bán kính chỉ là bán kính khi vật thể TRÒN"* — cùng bài học, ở đây là *"một con số chỉ tả
+ * được hình bao khi hình bao VUÔNG"*. Hàm này trả về HAI số vì mặt bằng nhà không vuông.
+ */
+export function specFootprint(parts) {
+  if (!Array.isArray(parts) || parts.length === 0) return { w: 0, d: 0 };
+  let x0 = Infinity; let x1 = -Infinity; let z0 = Infinity; let z1 = -Infinity;
+  for (const part of parts) {
+    if (!part) continue;
+    const ry = part.ry ?? 0;
+    const c = Math.abs(Math.cos(ry));
+    const s = Math.abs(Math.sin(ry));
+    const halfW = ((part.w ?? 0) / 2) * c + ((part.d ?? 0) / 2) * s;
+    const halfD = ((part.w ?? 0) / 2) * s + ((part.d ?? 0) / 2) * c;
+    const x = part.x ?? 0;
+    const z = part.z ?? 0;
+    x0 = Math.min(x0, x - halfW); x1 = Math.max(x1, x + halfW);
+    z0 = Math.min(z0, z - halfD); z1 = Math.max(z1, z + halfD);
+  }
+  if (!Number.isFinite(x0)) return { w: 0, d: 0 };
+  return { w: x1 - x0, d: z1 - z0 };
 }

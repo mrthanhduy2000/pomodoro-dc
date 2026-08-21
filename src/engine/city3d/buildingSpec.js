@@ -103,7 +103,7 @@ const SILL_OVERHANG = 0.035;
  * Chiều cao một mảng nhà. Nâng cấp công trình PHẢI nhìn thấy được là cao lên — đây là phần thưởng
  * hình ảnh cho việc Đàm nâng cấp, nếu không thì cấp 3 chỉ là một con số trong bảng.
  */
-function massHeight(mass, style, archetype, rarity, level) {
+function massHeight(mass, style, archetype, rarity, level, storeyScale = 1) {
   // ⚠️ Nâng cấp là HỆ SỐ NHÂN, không phải "cộng thêm một tầng cho mọi mảng nhà". Bản đầu cộng
   // tầng, và với kỳ quan epic (7 mảng, mảng cao nhất 4 tầng) thì cấp 3 làm công trình vọt lên gấp
   // rưỡi rồi đâm ra khỏi khung hình. Nhân thì mọi mảng lớn lên CÙNG tỉ lệ — công trình cao lên
@@ -117,7 +117,7 @@ function massHeight(mass, style, archetype, rarity, level) {
   // da thú) cao trung bình 1,81 còn kỷ 14 (tháp kính) cao 2,05 — chênh đúng 13%, tức là hai thứ ấy
   // gần như cùng một chiều cao. `?? 1` để một kỷ thiếu trường vẫn dựng được như cũ.
   return mass.s * style.storyHeight * (style.massScale ?? 1) * archetype.heightScale
-    * getRarityScale(rarity) * levelBoost * (mass.low ? 0.34 : 1);
+    * getRarityScale(rarity) * levelBoost * (mass.low ? 0.34 : 1) * storeyScale;
 }
 
 // ─── MÁI ─────────────────────────────────────────────────────────────────────
@@ -371,20 +371,26 @@ export function emitRoof(out, { w, d, top, x, z }, style, ctx) {
  *
  * Vẽ đủ bốn mặt vì camera xoay được 360°: bỏ mặt sau sẽ lộ ra ngay lần đầu Đàm kéo xoay.
  */
-function emitWindows(out, { w, d, base, height, x, z }, style) {
+function emitWindows(out, { w, d, base, height, x, z }, style, matNa) {
   if (style.windows === 'none' || height < 0.3) return;
 
   const stories = Math.max(1, Math.round(height / style.storyHeight));
   // `sideways` = mặt tường nằm trên hai cạnh trái/phải; cửa sổ ở đó chạy dọc trục Z, còn ở mặt
   // trước/sau thì chạy dọc trục X. Một cờ boolean gọn hơn nhiều so với xoay từng khối một.
   const faces = [
-    { nx: 0, nz: 1, span: w, sideways: false },
-    { nx: 0, nz: -1, span: w, sideways: false },
-    { nx: 1, nz: 0, span: d, sideways: true },
-    { nx: -1, nz: 0, span: d, sideways: true },
+    { nx: 0, nz: 1, span: w, sideways: false, ten: 'zp' },
+    { nx: 0, nz: -1, span: w, sideways: false, ten: 'zm' },
+    { nx: 1, nz: 0, span: d, sideways: true, ten: 'xp' },
+    { nx: -1, nz: 0, span: d, sideways: true, ten: 'xm' },
   ];
 
   for (const face of faces) {
+    // ⚠️ TƯỜNG CHUNG THÌ KHÔNG CÓ CỬA SỔ (Phase 14 §1(3)). Mặt nạ VẮNG MẶT ⇒ bốn mặt đều mở, tức
+    // mọi lời gọi cũ (năm kỳ quan, nhà dân đứng một mình) chạy y hệt như trước. Chỉ đơn vị nằm
+    // trong một dãy chung tường mới truyền mặt nạ xuống, và khi ấy mặt bị hàng xóm áp vào sẽ
+    // không được đục cửa — vừa đúng kiến trúc (nhà đấu lưng chỉ có cửa trước và sau), vừa là
+    // khoản tiết kiệm tam giác lớn nhất của cả phase.
+    if (matNa && matNa[face.ten] === false) continue;
     const wallOffset = face.sideways
       ? { x: x + face.nx * (w / 2), z }
       : { x, z: z + face.nz * (d / 2) };
@@ -668,9 +674,20 @@ function emitMotif(out, name, ctx) {
  * @param {string} input.type    'infrastructure' | 'economy' | 'defense' | 'wonder'
  * @param {string} input.rarity  'common' | 'rare' | 'epic'
  * @param {number} [input.level] 1..3 — cấp nâng cấp, làm công trình cao thêm THẬT
+ * @param {{fx:number, fz:number, storey:number}} [input.plot]  MỘT ĐƠN VỊ TRONG KHU PHỐ
+ *   ⚠️ THÊM 2026-08-21 (Phase 14 §1(3)), MẶC ĐỊNH LÀ ĐỒNG NHẤT (1, 1, 1) — nghĩa là mọi lời gọi
+ *   cũ cho ra kết quả BYTE-IDENTICAL. Có bài test khoá điều đó, vì năm kỳ quan của cả 15 kỷ đi qua
+ *   đúng hàm này và ADR-007 cấm chúng đổi hình vì một tham số chúng không dùng tới.
+ *   · `fx`/`fz` co mặt bằng theo TỪNG TRỤC — phải là hai số, không phải một. Một dãy nhà phố hẹp
+ *     ngang mà sâu hun hút thì `fz/fx` tới 3–4 lần; ép một hệ số chung là dựng ra nhà vuông, tức
+ *     xoá đúng thứ làm nên hình dáng nhà phố.
+ *   · `storey` nâng chiều cao. Chia nhỏ mặt bằng mà không nâng chiều cao thì sáu căn nhà thấp chỉ
+ *     là sáu cái lều — xem khối chú thích đầu `blockStyle.js`.
  * @returns {{parts:Array, height:number, span:number, triangles:number}}
  */
-export function buildBuildingSpec({ bpId, era, type, rarity = 'common', level = 1 } = {}) {
+export function buildBuildingSpec({
+  bpId, era, type, rarity = 'common', level = 1, plot,
+} = {}) {
   const id = typeof bpId === 'string' && bpId ? bpId : 'bp_unknown';
   const archetype = getArchetype(type);
   // ⚠️ ĐÂY LÀ CHỖ DUY NHẤT quyết định "công trình này lợp mái kỳ đài hay mái nhà thường", và nó
@@ -688,6 +705,13 @@ export function buildBuildingSpec({ bpId, era, type, rarity = 'common', level = 
   // nguyên khoảng cách giữa chúng thì các mảng nhà chồng lên nhau (kỷ 3 `spread` 1,18 là ca nặng
   // nhất, hai mảng phụ của hạ tầng epic sẽ ăn vào thân chính).
   const spread = Number.isFinite(style.spread) && style.spread > 0 ? style.spread : 1;
+  // ⚠️ MỘT ĐƠN VỊ KHU PHỐ CO THEO **HAI** TRỤC RIÊNG (Phase 14 §1(3)). Kẹp dương tường minh, và
+  // rơi về 1 khi tham số vắng mặt — nhờ đó mọi lời gọi cũ (năm kỳ quan của 15 kỷ) chạy y hệt cũ.
+  const fx = Number.isFinite(plot?.fx) && plot.fx > 0 ? plot.fx : 1;
+  const fz = Number.isFinite(plot?.fz) && plot.fz > 0 ? plot.fz : 1;
+  const storeyScale = Number.isFinite(plot?.storey) && plot.storey > 0 ? plot.storey : 1;
+  const spreadX = spread * fx;
+  const spreadZ = spread * fz;
 
   const parts = [];
   // Độ lệch "tay làm": kỷ tiền sử để khối xiêu vẹo tự nhiên, kỷ hiện đại thẳng băng.
@@ -699,15 +723,18 @@ export function buildBuildingSpec({ bpId, era, type, rarity = 'common', level = 
     // ⚠️ `rough === 0` thì BỎ HẲN phép tính lệch, không nhân với 0. Nhân số âm với 0 trong
     // JavaScript ra `-0`, mà `-0` không bằng `0` theo `Object.is` — nghĩa là bài test đối xứng
     // của kỳ quan sẽ đỏ vì một khối xoay đúng 0 độ. Rẽ nhánh sớm vừa đúng vừa đỡ băm vô ích.
-    const jitterX = rough ? signed(`${id}|jx|${index}`) * rough * 0.06 : 0;
-    const jitterZ = rough ? signed(`${id}|jz|${index}`) * rough * 0.06 : 0;
+    // ⚠️ Độ lệch "tay làm" cũng phải CO THEO TRỤC. Nó là một số tuyệt đối trong đơn vị khối, nên
+    // giữ nguyên nó trên một đơn vị khu phố hẹp bằng một phần tư căn nhà gốc là nhân độ xiêu vẹo
+    // lên bốn lần — cả dãy nhà phố sẽ trông như bị gió thổi.
+    const jitterX = rough ? signed(`${id}|jx|${index}`) * rough * 0.06 * fx : 0;
+    const jitterZ = rough ? signed(`${id}|jz|${index}`) * rough * 0.06 * fz : 0;
     const jitterR = rough ? signed(`${id}|jr|${index}`) * rough * 0.14 : 0;
 
-    const x = mass.x * spread + jitterX;
-    const z = mass.z * spread + jitterZ;
-    const w = mass.w * spread * (rough ? 1 + signed(`${id}|jw|${index}`) * rough * 0.08 : 1);
-    const d = mass.d * spread * (rough ? 1 + signed(`${id}|jd|${index}`) * rough * 0.08 : 1);
-    const height = massHeight(mass, style, archetype, rarity, safeLevel);
+    const x = mass.x * spreadX + jitterX;
+    const z = mass.z * spreadZ + jitterZ;
+    const w = mass.w * spreadX * (rough ? 1 + signed(`${id}|jw|${index}`) * rough * 0.08 : 1);
+    const d = mass.d * spreadZ * (rough ? 1 + signed(`${id}|jd|${index}`) * rough * 0.08 : 1);
+    const height = massHeight(mass, style, archetype, rarity, safeLevel, storeyScale);
     const base = 0;
     const top = base + height;
 
@@ -758,7 +785,7 @@ export function buildBuildingSpec({ bpId, era, type, rarity = 'common', level = 
       const gf = getGroundFloor(era);
       const hasGroundFloor = Boolean(gf);
 
-      if (!mass.tower) emitWindows(parts, { w, d, base, height, x, z }, style);
+      if (!mass.tower) emitWindows(parts, { w, d, base, height, x, z }, style, plot?.faces);
 
       // ⚠️ THÁP GÓC KHÔNG CÓ CỬA, cùng lý do với cửa sổ: chúng chỉ rộng ~0,2 ô, và một công trình
       // phòng thủ hạng epic có tới bốn cái — bốn cái cửa tí hon trên bốn cái tháp canh đọc ra là
@@ -859,11 +886,11 @@ export function buildBuildingSpec({ bpId, era, type, rarity = 'common', level = 
   // chính nó — thứ đáng lẽ phải nhận ra từ xa lại thành thứ khó tìm nhất. Nhà dân vẫn giữ NÉT VẼ
   // của kỷ (mái, cửa sổ, vật liệu, tỉ lệ) qua `eraStyle`, chỉ không mang CĂN CƯỚC.
   const mainMass = masses.find((m) => !m.low) ?? masses[0];
-  const mainMassHeight = massHeight(mainMass, style, archetype, rarity, safeLevel);
+  const mainMassHeight = massHeight(mainMass, style, archetype, rarity, safeLevel, storeyScale);
   const mainCtx = {
     bpId: id, era, rarity, style,
-    w: mainMass.w * spread, d: mainMass.d * spread,
-    x: mainMass.x * spread, z: mainMass.z * spread,
+    w: mainMass.w * spreadX, d: mainMass.d * spreadZ,
+    x: mainMass.x * spreadX, z: mainMass.z * spreadZ,
     base: 0, top: mainMassHeight,
     // Kỳ quan đứng giữa thành phố ⇒ chữ ký phải cân hai bên và tuyệt đối không xoay.
     symmetric: Boolean(archetype.symmetric),

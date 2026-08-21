@@ -27,6 +27,7 @@
  */
 
 import { buildBuildingSpec, buildScaffoldSpec } from './buildingSpec.js';
+import { buildBlockSpec } from './block.js';
 import { deriveHinterland } from './hinterland.js';
 import { deriveOutskirts } from './outskirts.js';
 import { buildPropSpec } from './propSpec.js';
@@ -110,16 +111,19 @@ export function collectCitySpecs({ layout, detail = 'high' } = {}) {
     });
   }
 
+  // ⚠️ MỘT Ô NHÀ DÂN = MỘT KHU PHỐ, KHÔNG PHẢI MỘT CĂN NHÀ (Phase 14 §1(3), ADR-052).
+  // `buildBlockSpec` gọi thẳng `buildBuildingSpec` cho từng đơn vị rồi GỘP lại thành đúng MỘT mô
+  // tả, nên danh sách này vẫn có đúng 30 mục như trước và `sceneGraph.js` không phải sửa gì: cùng
+  // thứ tự hợp đồng, cùng chỉ số cho `addPickTarget`, cùng MỘT bệ kè cho cả khu phố.
   for (const home of layout.dwellings ?? []) {
     out.push({
       kind: 'dwelling',
       source: home,
-      spec: buildBuildingSpec({
+      spec: buildBlockSpec({
         bpId:   dwellingBpId(era, home.x, home.y),
         era,
         type:   home.type,
         rarity: home.rarity,
-        level:  1,
       }),
     });
   }

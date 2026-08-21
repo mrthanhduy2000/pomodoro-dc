@@ -28,21 +28,23 @@ import { collectCitySpecs, KIND_NGOAI_LUOI } from './cityParts.js';
 import { buildTerrain } from './terrain.js';
 import { computeCityLayout } from '../cityLayout.js';
 import { BLUEPRINT_CATALOG } from '../constants.js';
+import { BUILDING_SCALE } from './parts.js';
 
 const GRID = 12;
 /**
- * ⚠️ CHÉP TỪ `sceneGraph.js`, và bài test biết rõ mình đang chép.
+ * ⚠️ CÁCH QUY Ô LƯỚI RA TOẠ ĐỘ THẾ GIỚI vẫn là bản CHÉP từ `sceneGraph.js`, và bài test biết rõ
+ * mình đang chép — file ấy `import 'three'` nên `node --test` không nạp được.
  *
- * Hai con số này (`BUILDING_SCALE`, cách quy ô lưới ra toạ độ thế giới) sống trong một file có
- * `import 'three'`, nên `node --test` không nạp được. Bản dựng lại dưới đây KHÔNG phải nguồn sự
- * thật về vật cản — nguồn sự thật là `city.blockers`, do chính `sceneGraph.js` đọc thẳng từ danh
- * sách khối nó vừa đem đi dựng hình, và có `sceneGraphWiring.test.js` canh đường dây ấy.
- * Việc của bản dựng lại ở đây chỉ là tạo ra một THÀNH PHỐ CÓ THẬT-CỠ để thử phép canh: cao 2,5–7,5
- * đơn vị, rộng 6–8 đơn vị bán kính. Bài `THÀNH PHỐ DỰNG THỬ PHẢI ĐÚNG CỠ` bên dưới khẳng định
- * điều đó bằng số, nên nếu ngày nào mã thật đổi tỉ lệ công trình thì con số ở đây sẽ lệch khỏi tài
- * liệu và có người phải xem lại.
+ * `BUILDING_SCALE` thì KHÔNG còn chép nữa: từ 2026-08-21 nó `export` từ `parts.js` (tầng THUẦN),
+ * nên chỗ này hỏi thẳng nguồn. Xem chú thích của hằng số ấy để biết vì sao — bản chép tay của nó
+ * đã một lần ghi 0,86 và làm cả một bảng số bịa ra trông rất hợp lý.
+ *
+ * Bản dựng lại dưới đây KHÔNG phải nguồn sự thật về vật cản — nguồn sự thật là `city.blockers`, do
+ * chính `sceneGraph.js` đọc thẳng từ danh sách khối nó vừa đem đi dựng hình, và có
+ * `sceneGraphWiring.test.js` canh đường dây ấy. Việc của nó chỉ là tạo ra một THÀNH PHỐ CÓ THẬT-CỠ
+ * để thử phép canh: cao 2,5–7,5 đơn vị, rộng 6–8 đơn vị bán kính. Bài `THÀNH PHỐ DỰNG THỬ PHẢI
+ * ĐÚNG CỠ` bên dưới khẳng định điều đó bằng số.
  */
-const BUILDING_SCALE = 1.3;
 const cellToWorld = (x, y) => ({ x: x - (GRID - 1) / 2, z: y - (GRID - 1) / 2 });
 
 function specSpan(parts) {
@@ -346,7 +348,7 @@ test('ĐỐI CHỨNG: chỉ canh ĐIỂM ĐẾN thôi là chưa đủ — và đ
   }
   assert.deepEqual(
     [...new Set(lotLuoi)].sort((a, b) => a - b),
-    [1, 2, 3, 5, 7, 8, 9, 11, 12, 13, 15],
+    [1, 2, 3, 5, 7, 8, 9, 11, 12, 13, 14, 15],
     'danh sách kỷ mà phép canh cả đường bay thật sự cứu — đổi là phải xem lại vì sao',
   );
   // 2026-08-20, HAI lần đổi trong cùng một ngày và cả hai đều có lý do đo được:
@@ -355,8 +357,13 @@ test('ĐỐI CHỨNG: chỉ canh ĐIỂM ĐẾN thôi là chưa đủ — và đ
   //                      sát mái nhà hơn)
   //   11 kỷ / 14 chuyến→ sau khi sửa `drain` cho khớp `settingStyle.side`: đất thoải về phía nước
   //                      nên bên bờ THẤP hẳn xuống, camera bay ngang qua đó lại càng sát mái.
+  // 2026-08-21, Phase 14 §1(3) — ADR-052 (một ô nhà dân nay là một KHU PHỐ, không phải một căn
+  // nhà): 12 kỷ / 15 chuyến. Kỷ 14 là kỷ MỚI rơi vào danh sách, và nó rơi vào vì đúng thứ phase
+  // ấy làm — nhà dân Singapore nay là dãy shophouse chia làm 8 đơn vị, đứng cao hơn và dày hơn
+  // căn nhà đơn cũ, nên đoạn giữa đường bay đi sát mái chúng. Đây là hệ quả ĐÚNG, không phải hồi
+  // quy: phép canh cả-đường-bay vừa cứu thêm một kỷ nữa.
   // Con số TĂNG nghĩa là phép canh cả-đường-bay càng đáng giá, không phải càng tệ.
-  assert.equal(lotLuoi.length, 14, 'đúng 14 chuyến trên 1200 lọt lưới nếu chỉ canh điểm đến');
+  assert.equal(lotLuoi.length, 15, 'đúng 15 chuyến trên 1200 lọt lưới nếu chỉ canh điểm đến');
   assert.ok(cheoNhat > 1, `chênh lớn nhất giữa điểm-đến và cả-đường mới ${cheoNhat.toFixed(2)} — quá nhỏ để gọi là cứu được ai`);
 });
 

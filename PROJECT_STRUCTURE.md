@@ -165,6 +165,27 @@
 │   │   │   │                      #   CÙNG một phép chuẩn hoá — chép lại `Math.round` + mặc định là
 │   │   │   │                      #   "một luật hai công thức", và hai công thức tương đương trên
 │   │   │   │                      #   giấy gần như luôn lệch nhau ở BIÊN (Phase 3Y)
+│   │   │   ├── blockStyle.js      # BẢNG HÌNH THÁI KHU PHỐ 15 KỶ (Phase 14 §1(3), ADR-052): số cột
+│   │   │   │                      #   × số hàng · kiểu dính (`party`/`loose`/`court`) · bề rộng ngõ
+│   │   │   │                      #   · hệ số `storey` · biên độ `vary` · `gableToStreet`. Mỗi dòng
+│   │   │   │                      #   buộc vào `country` của eraStyle — CÓ TEST BẮT. Khuôn ba lớp
+│   │   │   │                      #   lần thứ CHÍN, giống hệt streetStyle/flora/groundFloor
+│   │   │   │                      #   ⚠️ `isValidBlockStyle` TỪ CHỐI THẲNG dòng sai, không tự chữa —
+│   │   │   │                      #   tự chữa là cách một bảng 15 dòng lặng lẽ thoái hoá về 1 dòng
+│   │   │   │                      #   ⚠️ `deriveBlockUnits` kẹp theo TRẦN THẮNG SÀN: ô chật thì BỚT
+│   │   │   │                      #   cột/hàng, KHÔNG đẻ ra nhà tí hon (bệnh `eaves`/cây nấm đã cắn
+│   │   │   │                      #   ba lần). Sàn là `MIN_UNIT_CELLS`, suy từ `CELL_PIXELS`/
+│   │   │   │                      #   `EYE_PIXELS` của streetStyle + `ROOFTOP_MIN_SPAN` — KHÔNG có
+│   │   │   │                      #   hằng số thứ ba chọn tay
+│   │   │   ├── block.js           # HÌNH của khu phố: đo `specFootprint` của bản THAM CHIẾU (không
+│   │   │   │                      #   bám ô — công trình vốn thò ra ngoài ô neo), chia thành 4–10
+│   │   │   │                      #   đơn vị, rồi GỘP tất cả vào ĐÚNG MỘT mô tả ⇒ `cityParts.js` vẫn
+│   │   │   │                      #   trả về đúng số ô nhà dân như cũ, không đổi giao diện
+│   │   │   │                      #   ⚠️ Đo hình chiếu đáy HAI LƯỢT (dựng thử `fx=1` → đo → dựng
+│   │   │   │                      #   lại). Lượt thứ BA làm sai số TỆ ĐI (0,186 → 0,234 ô) vì
+│   │   │   │                      #   `footprint` là hàm BẬC THANG của `fx` ⇒ lặp KHÔNG hội tụ. Đây
+│   │   │   │                      #   là sự thật về hàm, không phải việc còn dở — đừng đi "hoàn
+│   │   │   │                      #   thiện" nó
 │   │   │   ├── groundFloorStyle.js # BẢNG TẦNG TRỆT 15 KỶ (ADR-026/027, dọn ra riêng ADR-029): cửa
 │   │   │   │                      #   ra vào (kiểu · bề rộng · chiều cao · khuôn · độ hõm · bậc) +
 │   │   │   │                      #   MỘT đặc trưng mặt phố, tách riêng cho kỳ quan và nhà dân.

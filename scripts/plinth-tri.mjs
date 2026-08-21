@@ -25,21 +25,16 @@
  * Dùng: node --import ./scripts/register-esm-loader.mjs scripts/plinth-tri.mjs
  * Mặc định trùng `scene-tri.mjs`/`city-preview.mjs`: giờ 12 · 40 phiên · cấp 3 · chuỗi 9.
  */
-import { readFileSync } from 'node:fs';
 import { computeCityLayout } from '../src/engine/cityLayout.js';
 import { collectCitySpecs } from '../src/engine/city3d/cityParts.js';
 import { buildTerrain } from '../src/engine/city3d/terrain.js';
-import { prism, countSpecTriangles, specSpan } from '../src/engine/city3d/parts.js';
+import { BUILDING_SCALE, prism, countSpecTriangles, specSpan } from '../src/engine/city3d/parts.js';
 import { BLUEPRINT_CATALOG } from '../src/engine/constants.js';
 
-// ⚠️ KHÔNG CHÉP CON SỐ. `BUILDING_SCALE` là hằng số riêng của `sceneGraph.js` (không export), nên
-// đọc thẳng từ MÃ NGUỒN — chép tay ra một bản thứ hai là đúng bẫy "một luật hai công thức", và
-// bản đầu của chính phép đo này đã chép nhầm 0,86 (số cũ) nên nó đếm sót 2/5 bệ mà vẫn in ra một
-// bảng trông rất hợp lý.
-const SRC = readFileSync(new URL('../src/components/city/render3d/sceneGraph.js', import.meta.url), 'utf8');
-const M = SRC.match(/^const BUILDING_SCALE = ([\d.]+);/m);
-if (!M) throw new Error('không đọc được BUILDING_SCALE từ sceneGraph.js');
-const BUILDING_SCALE = Number(M[1]);
+// ⚠️ KHÔNG CHÉP CON SỐ. Bản đầu của chính phép đo này chép tay `BUILDING_SCALE = 0,86` (giá trị đời
+// cũ) nên nó đếm 3 bệ thay vì 31 mà vẫn in ra một bảng trông hoàn toàn bình thường (2026-08-20).
+// Bản vá lúc ấy là đọc hằng số từ MÃ NGUỒN `sceneGraph.js` bằng regex; từ 2026-08-21 hằng số đã
+// chuyển về `parts.js` (tầng THUẦN) nên nay `import` thẳng — không regex, không bản chép nào nữa.
 const CO_BE = new Set(['building', 'scaffold', 'dwelling']);
 let tong = 0, tongBe = 0, duyet = 0;
 const rows = [];
@@ -64,7 +59,7 @@ for (let era = 1; era <= 15; era += 1) {
   tong += tri; tongBe += be;
 }
 if (duyet < 100) throw new Error(`GÁC CHẠY-RỖNG: chỉ duyệt ${duyet} khối — quần thể sai hình dạng`);
-console.log(`BUILDING_SCALE đọc từ sceneGraph.js = ${BUILDING_SCALE}`);
+console.log(`BUILDING_SCALE import từ parts.js = ${BUILDING_SCALE}`);
 console.log('kỷ\tsố bệ\ttam giác bệ');
 console.log(rows.join('\n'));
 console.log(`TỔNG\t${tongBe}\t${tong}\t(duyệt ${duyet} khối)`);

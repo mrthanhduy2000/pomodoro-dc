@@ -19,7 +19,14 @@
 > bằng cách chỉnh lại con số nào. Nay còn **1 mục High** (#14) + **2 mục Medium-High** (#3, #13) +
 > **1 mục Medium-High chờ Đàm quyết** (#24) = 4 → xa ngưỡng 8–10 mục, KHÔNG cần Maintenance Sprint.
 >
-> **Cập nhật 2026-08-21 (Phase 14 §1(2), kim tự tháp + ziggurat — MỚI NHẤT)**: **MỞ #75** (ziggurat
+> **Cập nhật 2026-08-21 (Phase 14 §1(3), hình thái khu phố — MỚI NHẤT)**: **MỞ #77**
+> (`ROOFTOP_MIN_SPAN` là mức tuyệt đối ⇒ 9/15 kỷ mất một phần chi tiết mái khi nhà dân được chia
+> nhỏ; giữ 313/371 ô = 84% — Medium). **RÀ SOÁT #76 đúng hẹn** (Review Trigger của nó là "ngay khi
+> bắt đầu §1(3)"): phân bố mái nhà dân KHÔNG đổi, nhưng số khối nhìn thấy tăng từ 371 lên 1812 ⇒
+> **Severity Low → Medium**, hoãn có lý do ghi rõ, đặt Review Trigger mới. Nay **2 mục High**
+> (#14 · #53), 0 Critical ⇒ vẫn xa ngưỡng 8–10, KHÔNG cần Maintenance Sprint.
+>
+> **(Mốc trước) Cập nhật 2026-08-21 (Phase 14 §1(2), kim tự tháp + ziggurat)**: **MỞ #75** (ziggurat
 > kỷ 3 đã có hình ĐÚNG nhưng tỉ lệ mái/thân chỉ 34,6% ⇒ mắt đọc ra "cao ốc đội mũ"; đây là bài toán
 > KHỐI TÍCH chứ không phải bài toán MÁI — Medium, cố ý hoãn) và **MỞ #76** (mái NHÀ DÂN chỉ có 3 giá
 > trị cho 15 kỷ, trong khi mái kỳ quan đã có 10 — Medium, phải gộp vào §1(3)). Cả hai đều Medium ⇒
@@ -4285,6 +4292,45 @@ cấp `Math.min(3,…)` → `Math.min(9,…)` · cắt bớt danh sách cấp th
 
 ---
 
+## #77 — `ROOFTOP_MIN_SPAN` là một MỨC TUYỆT ĐỐI áp lên những khối chênh nhau nhiều lần, nên 9/15 kỷ mất một phần chi tiết mái ngay khi nhà dân được chia nhỏ
+
+> Mở 2026-08-21 (Phase 14 §1(3), ADR-052). Phát hiện vì `rooftop.test.js` ĐỎ — không phải vì ai đi
+> tìm nó. Nếu bài test ấy không tồn tại thì **13/15 kỷ đã mất SẠCH chi tiết mái nhà dân trong im
+> lặng** (kỷ 1: 17 → 0 ô), và không một cổng nào khác kêu lên.
+
+- **Tên**: trần "mảng nhà hẹp hơn mức này thì không có gì trên mái" viết bằng một con số tuyệt đối
+- **Module**: `src/engine/city3d/rooftop.js` (`ROOFTOP_MIN_SPAN = 0.24`, dòng gác ở `emitRooftop`)
+- **Priority**: Medium · **Severity**: Medium
+- **Số đo (2026-08-21, quần thể 371 ô nhà dân của 15 kỷ ở `sessionCount: 80`)**: giữ được
+  **313/371 ô (84%)**. Chín kỷ dưới 100%: **4 · 5 · 6 · 7 · 8 · 9 · 11 · 12 · 13**. Tệ nhất kỷ 13
+  = **21/29 = 0,724**. Sáu kỷ còn nguyên 100%: 1 · 2 · 3 · 10 · 14 · 15.
+- **Impact**: Phase 11 đã tiêu **110.076 tam giác** để dựng ống khói / bồn nước / cửa sổ mái / lan
+  can. Ở 9 kỷ trên, một phần khoản đầu tư ấy nay không tới được màn hình. Nó chỉ thấy được ở CẬN
+  CẢNH (bản quét 15 kỷ không đủ độ phân giải — xem `TECH_DEBT #41`), nên nó sẽ không tự lộ ra.
+- **Root Cause**: đây là **bẫy Phase 7D lần thứ N** — *"một con số tuyệt đối không diễn đạt được
+  một luật nói về QUAN HỆ"*. Câu mà `ROOFTOP_MIN_SPAN` đang muốn nói là *"chi tiết mái phải còn đủ
+  to để MẮT đọc ra"*, tức một quan hệ giữa cỡ chi tiết và số điểm ảnh nó chiếm; nó lại được viết
+  thành một mức cố định trong hệ đơn vị mô tả, áp chung cho mọi khối bất kể to nhỏ. Cùng họ với
+  `eaves` (Phase 7C) — một số tuyệt đối áp lên những khối chênh nhau nhiều lần thì sớm muộn cũng sai.
+- **Current Risk**: thấp — 84% vẫn còn, và phần mất nằm ở chi tiết chỉ thấy khi zoom.
+- **Future Risk**: **trung bình và tăng dần**. Mọi phase sau chia nhỏ thêm bất cứ thứ gì (nhà dân,
+  công trình phụ, ki-ốt) đều tiêu tiếp vào cùng một khoản dự trữ, mà cái trần này thì không kêu —
+  nó **từ chối thẳng** rồi trả `false`, đúng cách hỏng đã cắn ở Phase 10 Bước 2 (kỷ 14 mất sạch cửa).
+- **Recommended Solution**: viết lại thành QUAN HỆ. Trần phải hỏi *"chi tiết này chiếm bao nhiêu
+  ĐIỂM ẢNH ở khung cận cảnh?"* — hai con số hiệu chuẩn đã có sẵn và đã export (`CELL_PIXELS = 64`,
+  `EYE_PIXELS = 4` ở `streetStyle.js`), nên phép quy đổi không cần hằng số thứ ba chọn tay. Ai làm
+  thì phải kèm một **đối chứng nhốt bộ số hỏng cũ** (bơm lại cỡ khối của bản chia-nhỏ-đầu-tiên và
+  đòi phép đo còn bắt được nó), nếu không cái trần sẽ bị nới dần cho tiện.
+- **Estimated Complexity**: Medium — đụng vào `rooftop.js` là đụng vào 12 bài test đang xanh.
+- **Blocking Conditions**: không có. ⚠️ Nhưng KHÔNG được chữa bằng cách **hạ** `ROOFTOP_MIN_SPAN`:
+  con số ấy tồn tại vì một lý do thật (*"dưới đây mọi chi tiết đều thành vệt bẩn"*), hạ nó là mua
+  một con số đẹp bằng cách rắc vệt bẩn lên mái.
+- **Review Trigger**: khi tỉ lệ giữ chi tiết mái tụt xuống dưới **80%**, hoặc khi có phase nào chia
+  nhỏ thêm khối lần nữa. Cổng đếm nằm ở `block.test.js` (bài `CHI TIẾT MÁI KHÔNG ĐƯỢC CHẾT`), và nó
+  kể tên chín kỷ BẰNG chứ không "bao gồm" — kỷ thứ mười rơi vào thì ĐỎ, mà một kỷ được chữa xong
+  cũng ĐỎ.
+- **Owner**: chưa phân công · **Status**: Open
+
 ## #76 — Từ vựng mái NHÀ DÂN chỉ có **3 giá trị cho 15 kỷ**, trong khi mái KỲ QUAN đã có 10
 
 > Mở 2026-08-21 (Phase 14 §1(2)), phát hiện trong lúc trả lời chính câu hỏi *"bộ từ vựng mái có đủ
@@ -4310,4 +4356,21 @@ cấp `Math.min(3,…)` → `Math.min(9,…)` · cắt bớt danh sách cấp th
 - **Estimated Complexity**: Low nếu làm cùng §1(3); Medium nếu làm riêng.
 - **Blocking Conditions**: không có.
 - **Review Trigger**: **ngay khi bắt đầu §1(3) (hình thái khu phố)** — không được để sang phase sau.
-- **Owner**: chưa phân công · **Status**: Open
+- ⚠️ **ĐÃ RÀ SOÁT ĐÚNG HẸN (2026-08-21, trong §1(3)) — KẾT QUẢ: HOÃN CÓ CHỦ ĐÍCH, KHÔNG PHẢI BỎ QUÊN.**
+  - **Đo lại**: phân bố KHÔNG đổi — `flat` × 7 kỷ · `gable` × 7 kỷ · `cone` × 1 kỷ. Vẫn 3/10 giá trị.
+  - **Dự đoán cũ đã thành sự thật, và đo được**: §1(3) nâng số khối nhìn thấy từ **371 lên 1812**
+    (×4,88). Nghĩa là mái nhà thường nay xuất hiện gấp gần năm lần trên khung hình so với lúc mục
+    này được mở ⇒ **Severity: Low → Medium**.
+  - **Vì sao vẫn KHÔNG làm trong cùng commit**: §1(3) giao hàng bằng **CẶP ẢNH TRƯỚC/SAU**, và cả
+    phase chỉ đổi đúng một thứ (hình thái khu phố). Đổi thêm bảng mái nhà dân trong cùng lượt thì
+    hai thay đổi trộn vào một tấm ảnh và **không ai còn đọc được vế nào làm ra thay đổi nào** —
+    đúng thứ mà quy tắc Commit của `CLAUDE.md` cấm (*"không trộn nhiều thay đổi không liên quan,
+    có thể rollback độc lập"*), và cũng đúng bài học `TECH_DEBT #43` (một bảng số trộn hai thay
+    đổi thì vô dụng). Việc mở rộng còn cần nghiên cứu lịch sử cho **14 kỷ**, tức nó là một phase
+    riêng chứ không phải một dòng sửa kèm.
+  - **Điều đã LÀM được ngay**: bảng khu phố `blockStyle.js` mở thêm **7 trục** phân biệt kỷ
+    (`cols`/`rows`/`attach`/`alley`/`storey`/`vary`/`gableToStreet`), nên "15 kỷ xây cùng một loại
+    nhà" nay sai ở tầng BỐ CỤC dù còn đúng ở tầng MÁI. Đó là giảm nhẹ, không phải chữa khỏi.
+- **Review Trigger (MỚI, thay cho mốc đã dùng)**: **ngay phase sau §1(3)**, hoặc sớm hơn nếu Đàm
+  nhìn ảnh §1(3) rồi nói mái nhà dân trông giống nhau giữa các kỷ.
+- **Owner**: chưa phân công · **Status**: Open (đã rà soát 2026-08-21, hoãn có lý do)

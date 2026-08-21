@@ -11,6 +11,105 @@
 
 ---
 
+## ADR-052 — Một ô nhà dân là một KHU PHỐ, không phải một căn nhà; và «thêm nhà» là điều bất khả, chỉ có «chia nhỏ»
+
+**Ngày**: 2026-08-21 · **Phase 14 §1(3)** · **Trạng thái**: đã áp dụng
+
+### Bối cảnh
+Đàm nhìn thành phố rồi nói: *«mọi thứ hiện tại trông vẫn nhỏ, thành phố không mở rộng mà chỉ là
+cụm nhỏ»*. Đi đếm thì lời phàn nàn ấy có một con số đứng sau:
+
+- `cityGrid.js` khai `ROAD_LINES = {0, 4, 8, 11}` ⇒ **80 trên 144 ô là ô ĐƯỜNG (55,6%)**.
+- 45 ô nữa thuộc vùng kỳ quan, mà chỉ 5 ô trong đó có công trình đứng.
+- ⇒ chỉ còn **30 ô** có thể chứa nhà dân, và **cả 15 kỷ đã chạm trần ấy từ lâu**.
+
+Thứ Đàm nhìn thấy vì vậy là **khoảng 30 căn nhà rải rác trên một mạng đường phủ hơn nửa mặt đất** —
+đúng nghĩa một cụm nhỏ, và không một phép chỉnh mỹ thuật nào chữa được điều đó.
+
+### Vấn đề
+Chỉ thị ban đầu là *"cho mỗi ô nhà dân một CỤM 4–10 căn nhà nhỏ"*, hiểu theo nghĩa **THÊM VÀO**. Đo
+thì cách hiểu ấy **bất khả thi**: **12/15 kỷ có ĐÚNG 0,000 ô² đất trống** trong lưới — không còn
+một chỗ nào để đặt thêm căn nhà thứ hai. Cơ chế duy nhất còn lại là **CHIA NHỎ** chính mặt bằng
+căn nhà đang đứng đó.
+
+Và chia nhỏ mang theo một cái bẫy chết người, phải nói ra trước khi viết một dòng mã nào:
+`pitch = max(0,08, roofPitch) × max(w, d)` — chiều cao mái tỉ lệ với cạnh dài nhất của mặt bằng.
+Chia một mặt bằng ra sáu phần thì sáu cái mái đều **thấp đi**, trong khi `massHeight` (chiều cao
+thân) **không phụ thuộc mặt bằng**. Nghĩa là: **chia nhỏ mà quên nâng cao thì thành phố còn trông
+NHỎ HƠN trước** — sáu căn nhà thấp thay cho một căn nhà thấp là sáu cái lều. Cách hỏng ấy im lặng
+tuyệt đối: build xanh, lint sạch, số khối tăng gấp năm.
+
+### Phương án cân nhắc
+1. **Nới lưới 12×12 rộng ra, hoặc bớt đường.** — BỎ. Lưới là hệ toạ độ của ADR-007 (*"chỉ thêm,
+   không bao giờ dời"*): đổi nó thì mọi thành phố đã niêm phong trong bảo tàng mở ra khác lần
+   trước. Bớt đường thì phá luôn mạng đường vừa sửa xong ở §1(1).
+2. **Lùi camera / thu khung hình cho thành phố «trông to hơn».** — BỎ, và Đàm đã cấm hẳn hướng
+   này từ trước (nó không làm thành phố lớn lên, nó chỉ làm mọi thứ nhỏ đi đều nhau).
+3. **Giải bài «quy mô» bằng thực vật / vùng phụ cận.** — BỎ. Phase 13 VIỆC B đã đi hướng đó, qua cả
+   ba cổng số, và **Đàm bác** — ba trong bốn lời phàn nàn nằm BÊN TRONG lưới. Đàm cũng cấm tường
+   minh việc nâng mật độ cây.
+4. **Trả về N mô tả cho một ô (mỗi căn nhà một mục trong danh sách).** — BỎ. `sceneGraph.js` bám
+   theo CHỈ SỐ của danh sách ấy (`addPickTarget`), và `groundPlacement` gọi một lần cho mỗi mục —
+   N mục nghĩa là N cái bệ kè chồng lên nhau dưới cùng một dãy nhà.
+5. **CHIA NHỎ mặt bằng, GỘP lại thành đúng MỘT mô tả, và NÂNG CAO để bù phần mái mất đi.** — CHỌN.
+
+### Giải pháp được chọn
+Khuôn ba lớp, lần thứ **chín** (sau `vernacularRoof` · `undergrowth` · `streetStyle` · `groundFloor`
+· `floraStyle` · `roofStyle` · `settingStyle` · `hinterlandStyle`):
+
+| Lớp | File | Việc duy nhất |
+|---|---|---|
+| **BẢNG** | `city3d/blockStyle.js` | 15 dòng × 7 trục (`cols`/`rows`/`attach`/`alley`/`storey`/`vary`/`gableToStreet`), mỗi dòng buộc vào `country` mà `eraStyle.js` khai, mỗi dòng kể một khu dân cư CÓ THẬT |
+| **HÌNH** | `city3d/block.js` | đo mặt bằng căn nhà đang đứng đó → chia → dựng từng đơn vị bằng CHÍNH `buildBuildingSpec` → gộp |
+| **NGƯỜI ĐỌC** | `city3d/cityParts.js` | chỉ gọi, vẫn trả về đúng 30 mục như cũ |
+
+Bốn ràng buộc đã được viết thành mã và thành test:
+
+- **`storey` là một cột BẮT BUỘC của bảng**, không phải tuỳ chọn — nó là thứ bù lại phần mái mất đi
+  khi chia nhỏ. Cổng canh nó là bài `CAO LÊN, KHÔNG THẤP ĐI` (`block.test.js`).
+- **TRẦN LUÔN THẮNG SÀN**: ô chật thì ra **ÍT** căn, tuyệt đối không ra những căn tí hon. Phép kẹp
+  bớt cột/hàng cho tới khi mỗi đơn vị còn đủ rộng (`MIN_UNIT_CELLS`).
+- **TƯỜNG CHUNG THÌ KHÔNG CÓ CỬA SỔ** — vừa là sự thật kiến trúc (nhà "back-to-back" chỉ có cửa
+  trước và cửa sau), vừa là khoản tiết kiệm lớn nhất của cả phase (đo ở kỷ 10: **−36%** tam giác).
+- **KHÔNG THÊM MỘT LỆNH VẼ NÀO** — lệnh vẽ đếm theo họ vật liệu của cả kỷ, mà chia nhỏ một căn nhà
+  không đẻ ra họ vật liệu mới. Đã đo: **0 vai lạ ở cả 15 kỷ**.
+
+### Trade-off
+- **Hai lượt dựng cho mỗi đơn vị.** Hình bao của một đơn vị **KHÔNG suy được** từ hình bao của bản
+  tham chiếu, vì mái đua không co theo hệ số thu nhỏ; bản đầu suy như vậy và làm khối thân teo còn
+  ~0,12–0,16 trên một suất đất rộng 0,25–0,35. Phải **dựng thử rồi ĐO** (luật *"đừng DỰ ĐOÁN thứ có
+  thể ĐO"*). Cái giá là gấp đôi số lượt dựng, và nó được canh bởi cổng thời gian dựng cảnh
+  (`TECH_DEBT #70`).
+- **Còn 0,11 ô trôi bề ngang, và nó KHÔNG chữa được bằng một lượt dựng thứ ba.** Hình bao không
+  phải hàm liên tục của hệ số thu nhỏ — bên trong `buildBuildingSpec` có những quyết định RỜI RẠC
+  (số cột cửa sổ, một phép kẹp bám vào rồi nhả ra), nên nó là hàm BẬC THANG. Đã đo: lượt thứ ba
+  kéo sai số tệ nhất từ **0,186 lên 0,234 ô** — nó **PHÂN KỲ** ở kỷ 5 · 8 · 10. Đây là sai số được
+  CHẤP NHẬN và được canh bằng con số, không phải một thứ chờ vá.
+- **9/15 kỷ mất một phần chi tiết mái** (giữ 313/371 ô = 84%, tệ nhất kỷ 13 = 72,4%). Nguyên nhân
+  là `ROOFTOP_MIN_SPAN = 0,24` — một phép "từ chối thẳng" trong `rooftop.js`. Xem `TECH_DEBT #77`.
+- **Tam giác nhà dân ×2,98** (335.740 → 1.000.376), cả cảnh **×1,27**. Chấp nhận được vì
+  `PERFORMANCE.md` đã đo: hình học RẺ, điểm ảnh và ánh sáng mới đắt — và phase này thêm **0 nguồn
+  sáng, 0 lệnh vẽ**.
+
+### Ảnh hưởng
+- `buildBuildingSpec` nhận thêm tham số tuỳ chọn `plot` (`fx`/`fz`/`storey`/`faces`). Đây là hàm mà
+  **cả thành phố** đang gọi, nên nó được khoá bằng **15 chữ ký GOLDEN** sinh trên HAI cây mã
+  (`git worktree` ở `ff8c2a4` và cây làm việc) rồi `diff`: **trùng từng byte**.
+- `cityFocus.test.js` đổi danh sách kỷ cần canh cả-đường-bay từ 11 lên **12 kỷ / 15 chuyến** — kỷ
+  14 là kỷ mới rơi vào, vì dãy shophouse nay cao và dày hơn căn nhà đơn cũ. Hệ quả ĐÚNG, không phải
+  hồi quy.
+
+### Điều kiện xem xét lại
+- Nếu `ROOFTOP_MIN_SPAN` được làm cho co theo cỡ khối (`TECH_DEBT #77`), đo lại tỉ lệ giữ chi tiết
+  mái và **rút ngắn danh sách 9 kỷ** trong `block.test.js` thay vì để nó thành một lời nói dối.
+- Nếu ngày nào lưới thôi là 12×12, hoặc mạng đường bớt chiếm 55,6% mặt đất, thì bài toán gốc đổi
+  và cả ADR này phải được đọc lại từ mục **Bối cảnh**.
+- Biên của bài `CAO LÊN, KHÔNG THẤP ĐI` hiện chỉ còn **0,7%** ở kỷ 1 và kỷ 2 (`storey` 1,95 và
+  1,93 trên trần 2,0). Ai muốn chia nhỏ thêm ở hai kỷ ấy sẽ **hết chỗ nâng** — lúc đó câu trả lời
+  là bớt cột/hàng, KHÔNG phải nới trần.
+
+---
+
 ## ADR-051 — Kim tự tháp và ziggurat là HAI hình khối, không phải một giá trị mái viết khác đi; và một nhánh `default` biến «thiếu `case`» thành «lặng lẽ đổi kiểu»
 
 **Ngày**: 2026-08-21 · **Phase 14 §1(2)** · **Trạng thái**: đã áp dụng

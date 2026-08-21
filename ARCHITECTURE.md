@@ -419,6 +419,40 @@ ba họ có mặt ở 15/15 kỷ, `wall` rơi về `wallMaterial` của chính k
 kỷ**, nên `MOC_LENH_VE` không đổi một đơn vị. `water` bị **cấm** vì chỉ 7/15 kỷ có họ ấy — một cái
 ao nghe rất hợp nhưng nó là một lệnh vẽ phải trả bằng một mục nợ, không phải thứ lén thêm.
 
+**`blockStyle` + `block` (HÌNH THÁI KHU PHỐ) — khuôn ba lớp lần thứ CHÍN, và nó trả lời một câu hỏi
+mà TÁM tầng trước KHÔNG trả lời được (Phase 14 §1(3), 2026-08-21, ADR-052)**: `city3d/blockStyle.js`
+trả lời *"nhà THƯỜNG ở nước ấy, kỷ ấy, dính vào nhau kiểu gì?"* — số cột × số hàng của khu phố ·
+kiểu dính (`party` chung tường · `loose` cách nhau sân vườn · `court` quây quanh sân trong) · bề
+rộng ngõ · hệ số `storey` · biên độ `vary` · `gableToStreet`. `city3d/block.js` biến bảng ấy thành
+hình; `cityParts.js` chỉ ĐỌC.
+
+⚠️ **Vì sao tầng này tồn tại, và vì sao nó KHÔNG phải "thêm nội dung".** Số học của `cityGrid.js`:
+`ROAD_LINES = {0, 4, 8, 11}` ⇒ **80/144 ô là đường (55,6%)**; cộng khu kỳ quan thì chỉ còn **~30 ô
+xây được nhà dân**, và cả 15 kỷ đã chạm trần ấy từ lâu. Nghĩa là **«thêm nhà» là điều BẤT KHẢ** nếu
+không dời ô (ADR-007 cấm) hay nới lưới (Đàm cấm). Cái còn lại duy nhất là **chia nhỏ thứ đứng trong
+một ô đã có**: một ô thôi là *một căn nhà* và trở thành *một khu phố*. Kết quả: **371 → 1.812 khối
+nhìn thấy** mà không một ô nào xê dịch, không một kỳ quan nào bị đụng, và **không một lệnh vẽ nào ở
+cả 15 kỷ**.
+
+Ba điều làm nó an toàn với các bất biến đã có:
+1. **Bám hình chiếu đáy THẬT, không bám ô.** `block.js` dựng thử bản tham chiếu ở `fx = 1`, đo
+   `specFootprint`, rồi mới chia — vì công trình vốn thò ra ngoài ô neo (đã đo: tệ nhất 1,271 ô).
+   ⚠️ Phép đo này chạy **hai lượt**; lượt thứ BA làm sai số **tệ đi** (0,186 → 0,234 ô) vì
+   `footprint` là hàm **BẬC THANG** của `fx` nên phép lặp **không hội tụ** — một sự thật về hàm,
+   không phải một việc còn dở.
+2. **GỘP về đúng MỘT mô tả.** `buildBlockSpec` trả về một `{parts, height, span, triangles, units}`
+   duy nhất, nên `cityParts.js` vẫn phát ra đúng số khối nhà dân như trước ⇒ giao diện tầng trên
+   không đổi, và bộ gộp lưới theo họ vật liệu vẫn gộp y như cũ ⇒ lệnh vẽ đứng yên.
+3. **TRẦN THẮNG SÀN.** Ô chật thì **bớt cột/hàng**, không đẻ ra nhà tí hon (bệnh `eaves`/cây nấm đã
+   cắn ba lần). Sàn `MIN_UNIT_CELLS` suy từ `CELL_PIXELS`/`EYE_PIXELS` của `streetStyle.js` và
+   `ROOFTOP_MIN_SPAN` của `rooftop.js` — **không có hằng số thứ ba chọn tay**.
+
+⚠️ **Cái giá, đã đo:** chia một ô thành 4–10 suất làm **mỗi CĂN chỉ còn 45% bề ngang cũ**
+(cạnh ngắn 0,907 → 0,406 ô). Cột `storey` của bảng sinh ra để bù theo CHIỀU CAO — vì
+`pitch = f(max(w,d))` nên chia nhỏ làm mái thấp xuống, trong khi `massHeight` không phụ thuộc hình
+chiếu đáy — và nó bù đủ: mỗi ô cao thêm **7,0%**, không kỷ nào tụt. Nhưng cái nhà đơn lẻ thì **nhỏ
+đi thật**, và đó là một đánh đổi có chủ đích chứ không phải một lỗi.
+
 **`hinterlandStyle` + `hinterland` (VÙNG PHỤ CẬN) — khuôn ba lớp lần thứ TÁM, và là tầng đầu tiên
 đặt DẤU VẾT CON NGƯỜI ra ngoài lưới 12×12 (Phase 13 VIỆC B, 2026-08-21, ADR-049)**:
 `city3d/hinterlandStyle.js` trả lời *"quanh đô thị ấy, ở nước ấy, kỷ ấy, con người đã làm gì với

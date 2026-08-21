@@ -2155,3 +2155,152 @@ bài học `MAI-SAU-ky9.png` ở Phase 11). Kết quả: kỷ 2 **4,6%** điểm
 bình chỗ đã đổi **54,62**) · kỷ 3 **4,3%** (**97,27**). Ảnh ghép trái-phải để nhìn:
 `<scratchpad>/P14-MAI-ky02.png` và `P14-MAI-ky03.png` — cửa sổ cắt chọn bằng **mật độ điểm ảnh đã
 đổi** chứ không bằng hộp bao (hộp bao bị BÓNG ĐỔ kéo rộng ra 923×599, mà bóng không phải thứ cần nhìn).
+
+## Phase 14 §1(3) «một ô là một KHU PHỐ» — 371 ô ra 1.812 khối, LỆNH VẼ KHÔNG NHÚC NHÍCH (2026-08-21, ADR-052)
+
+**Công cụ · đầu vào · đời ảnh** (ba vế, thiếu vế nào thì con số phải ĐO LẠI — luật Q2 ở `CLAUDE.md`):
+
+```
+# hình học — hai vế CÙNG một dòng lệnh, chỉ khác KHO
+KHO=/tmp/wt-nen SESSIONS=80 HOUR=12 LEVEL=3 node --import ./scripts/register-esm-loader.mjs scripts/scene-count.mjs
+KHO=$PWD        SESSIONS=80 HOUR=12 LEVEL=3 node --import ./scripts/register-esm-loader.mjs scripts/scene-count.mjs
+# ảnh — vế TRƯỚC chạy TRONG worktree, bằng một lệnh `cd` RIÊNG
+node scripts/city-preview.mjs --era <N> --hour 12 --width 1500          # s40 (mặc định)
+node scripts/city-preview.mjs --era <N> --hour 12 --sessions 80 --width 1500
+node scripts/city-preview.mjs --sweep --all --theme light
+node scripts/sweep-score.mjs .city-preview/sweep-light-ky1-15.png
+node scripts/sweep-diff.mjs --frame <TRUOC> <SAU>
+```
+
+Vế TRƯỚC = `git worktree` tại **`ff8c2a4`** ở `/tmp/wt-nen`, ảnh dựng **2026-08-21 21:37–21:39**.
+Vế SAU = cây làm việc (`ff8c2a4` + thay đổi §1(3) chưa commit), ảnh dựng **21:39–21:40**.
+Cả 14 ảnh nghiệm thu có **14 `md5` khác nhau** ⇒ không cặp nào là hai bản sao của cùng một tấm
+(luật từ bài học `MAI-SAU-ky9.png`). `md5` chỉ dùng cho việc ấy, **không** dùng làm phán quyết
+"ảnh có đổi không" (`TECH_DEBT #50`).
+
+### Hình học — ĐỦ 15 KỶ
+
+| kỷ | tam giác TRƯỚC | tam giác SAU | × | lệnh vẽ TRƯỚC → SAU |
+|---:|---:|---:|---:|:---:|
+| 1 | 125.192 | 143.884 | 1,149 | 11 → **11** |
+| 2 | 138.978 | 168.710 | 1,214 | 14 → **14** |
+| 3 | 144.836 | 180.500 | 1,246 | 14 → **14** |
+| 4 | 192.440 | 230.952 | 1,200 | 14 → **14** |
+| 5 | 136.058 | 162.930 | 1,198 | 14 → **14** |
+| 6 | 224.606 | 265.894 | 1,184 | 14 → **14** |
+| 7 | 191.506 | 244.102 | 1,275 | 15 → **15** |
+| 8 | 167.374 | 217.982 | 1,302 | 15 → **15** |
+| 9 | 170.268 | 206.392 | 1,212 | 14 → **14** |
+| 10 | 138.706 | 189.578 | 1,367 | 15 → **15** |
+| 11 | 157.556 | 220.336 | 1,398 | 13 → **13** |
+| 12 | 140.106 | 190.390 | 1,359 | 13 → **13** |
+| 13 | 167.414 | 224.410 | 1,340 | 12 → **12** |
+| 14 | 183.206 | 233.478 | 1,274 | 13 → **13** |
+| 15 | 147.666 | 210.926 | 1,428 | 13 → **13** |
+| **tổng** | **2.425.912** | **3.090.464** | **1,274** | **15/15 KHÔNG ĐỔI** |
+
+⚠️ **Mười lăm con số lệnh-vẽ không đổi là CÁI CÂN, không phải kết quả.** Lệnh vẽ thành phố =
+(số họ vật liệu) + 4, nên chỉ một họ **mới toàn kỷ** mới đẻ ra lệnh vẽ. Cụm khu phố dựng bằng
+**đúng `buildBuildingSpec`** của chính kỷ ấy nên nó không thể mang họ lạ vào — và có một bài test
+canh đúng điều đó (`KHÔNG THÊM MỘT HỌ VẬT LIỆU NÀO`, so tập vai màu của cụm với tập vai màu của
+bản tham chiếu, từng kỷ một). Nếu phép đo bị lệch phiên bản hay chép nhầm cột thì gần như chắc chắn
+15 con số ấy sẽ không còn khớp.
+
++664.552 tam giác (+27,4%) vẫn nằm **sâu trong vùng rẻ**: bộ số M3 đã đo *"hình học thì RẺ — tam
+giác chênh 43% giữa kỷ 3 và 11 mà thời gian chỉ chênh 2,4%"*, và trần còn dư 3,2 lần. Kỷ nặng nhất
+sau bản vá (kỷ 6 = 265.894) vẫn nhẹ hơn mức mà bộ đo M3 từng chạy qua.
+
+### Cổng CPU dựng cảnh (`TECH_DEBT #70`, trần ≤ 1,25×)
+
+Ba lượt mỗi vế, **chạy nối tiếp, không chồng lấn** (luật *"một phép đo thời gian không được chồng
+lấn với một phép đo thời gian khác"*), lệnh `npm run test:cross`:
+
+| | lượt 1 | lượt 2 | lượt 3 | trung vị |
+|---|---:|---:|---:|---:|
+| NỀN (`ff8c2a4`) | 22.065 ms | 22.709 ms | 22.094 ms | **22.094 ms** |
+| SAU (§1(3)) | 23.271 ms | 24.403 ms | 23.999 ms | **23.999 ms** |
+
+⇒ **×1,086** — dưới trần 1,25× và cũng **dưới mốc 1,15×** mà cố vấn đặt làm Review Trigger cho việc
+xây một phép đo thời-gian-dựng-cảnh chuyên biệt. Chưa cần công cụ mới. ⚠️ Giới hạn đã biết của con
+số này (ghi ở chú thích của chính cổng): `test:cross` trộn thời gian nạp module + chạy assert +
+dựng cảnh, nên nó **không** là thời gian dựng cảnh thuần — đừng trích nó như thể là.
+
+Vì sao chỉ +8,6% trong khi số lượt gọi `buildBuildingSpec` đi từ 371 lên **3.624** (hai lượt đo
+hình chiếu đáy cho mỗi đơn vị): thời gian dựng cảnh bị **địa hình** chi phối, không phải bộ sinh
+khối nhà — đúng như ADR-048 đã đo khi nó tìm ra `horizon.heightAt` gọi `terrain.nenKho` ở mỗi đỉnh
+lưới.
+
+### Cổng chống-trôi bản quét — ĐẠT, NHƯNG TRỤC CHẶNG TIÊU MẤT 0,97
+
+Đời ảnh: `sweep-light-ky1-15.png`, cả hai vế dựng lại **sạch** trong cùng phiên 2026-08-21
+(TRƯỚC 21:37 trong worktree `ff8c2a4` · SAU 21:31 trong cây làm việc). Ảnh 1864×3154 · ô 300×186.
+
+| | **TRƯỚC** (`ff8c2a4`, tự đo) | **SAU** (§1(3)) |
+|---|---|---|
+| Cặp chặng gần nhất | **15,36** | **14,39** |
+| Cặp chặng dưới ngưỡng mắt | 0/15 | **0/15** |
+| Cặp kỷ gần nhất | **22,32** | **22,09** |
+| Cặp kỷ — trung vị | **39,83** | **38,34** |
+| Cặp kỷ dưới ngưỡng mắt | 0/105 | **0/105** |
+
+⚠️ **Mốc nền được TỰ ĐO tại `ff8c2a4`, không chép cột "sau" của §1(2)** (`TECH_DEBT #43`). Nó ra
+**đúng** bộ số mà bảng §1(2) đã ghi (15,36 · 22,32 · 39,83) — tức bảng ấy **không trôi**, và đây là
+một phép đối chiếu chéo miễn phí.
+
+⚠️ **TRỤC CHẶNG NAY LÀ 14,39. Mốc thứ ba của Đàm là «< 14 ⇒ phải làm vùng quê đổi theo giờ». Còn
+cách 0,39.** Lịch sử đầy đủ: 20,7 → 16,5 → 15,7 → 15,16 → 16,27 (ADR-046/047 kéo lên) → 15,40
+(§1(1)) → 15,36 (§1(2)) → **14,39** (§1(3)). Đây là **cú tụt một-phase lớn nhất từ trước tới nay**.
+
+### Tách con số gộp ra ba dải — dải nào tiêu 0,97 ấy
+
+Đừng dừng ở *"trục chặng tụt"*: `CLAUDE.md` đã ghi *"tách con số gộp ra từng thành phần và hỏi
+thành phần nào thật sự kéo nó xuống"*. Đo lại bằng **chính `BANDS` và `vecDist` của
+`sweepMetric.mjs`** (một luật một công thức); phép cộng ba dải tái lập **đúng** con số của
+`sweep-score.mjs` tới hai chữ số, nên phép tách này đã tự chứng minh nó đo cùng thứ:
+
+| cặp 6h ↔ 15h | TRƯỚC | SAU | đổi |
+|---|---:|---:|---:|
+| dải **trời** | 8,46 | 8,38 | **−0,08** |
+| dải **thành phố** | 11,95 | 10,73 | −1,22 |
+| dải **đất** | 22,21 | 20,88 | −1,34 |
+| **cả cảnh (9 chiều)** | **15,36** | **14,39** | **−0,97** |
+
+Hai điều đọc ra, và điều thứ hai quan trọng hơn:
+
+1. Dải **trời gần như không nhúc nhích** (−0,08) — đúng như phải thế, cụm khu phố không chạm bầu
+   trời. Toàn bộ 0,97 nằm ở hai dải mà thành phố chiếm.
+2. ⚠️ **Dải trời (8,38) là dải YẾU NHẤT của cặp yếu nhất, và nó đã yếu như vậy TỪ TRƯỚC phase này**
+   (8,46). Nghĩa là trục chặng đang bị kéo xuống chủ yếu bởi **một dải mà §1(3) không thể chạm
+   tới**. ⇒ Nếu ngày nào phải kéo trục chặng lên, **cần gạt là BẦU TRỜI lúc 6h so với 15h**, không
+   phải thành phố. Ghi ra đây để phiên sau khỏi đi chữa nhầm chỗ.
+
+### Ảnh nghiệm thu — `md5` và kết quả `sweep-diff --frame`
+
+| kỷ · số phiên | md5 TRƯỚC | md5 SAU | điểm ảnh vượt ngưỡng mắt | lệch TB chỗ đã đổi |
+|---|---|---|---:|---:|
+| 1 · s40 | `46259cc8…` | `789f922e…` | **6,6%** | 92,28 |
+| 2 · s40 | `09d552be…` | `2d9240eb…` | **8,4%** | 84,45 |
+| 6 · s40 | `f2692ab3…` | `2cf07d5d…` | **6,6%** | 80,97 |
+| 11 · s40 | `08a4c572…` | `f44383af…` | **7,4%** | 89,51 |
+| 14 · s40 | `1338d7a9…` | `c0a77741…` | **6,0%** | 99,20 |
+| 11 · s80 | `e04208a7…` | `f32a321a…` | **10,9%** | 93,35 |
+| 14 · s80 | `f8141752…` | `75698295…` | **9,2%** | 104,45 |
+
+Để so: §1(2) (kim tự tháp + ziggurat) đổi **4,3–4,6%**. §1(3) đổi **6,0–10,9%**, và hai ô mạnh nhất
+là hai ô ở **80 phiên** — đúng như phải thế, vì số ô nhà dân đi từ 17–20 (40 phiên) lên 17–30
+(80 phiên), nên thành phố càng trưởng thành thì bản vá càng lộ ra.
+
+### Mặt trái, đo ra chứ không giấu: mỗi CĂN nhỏ đi, cả KHU cao lên
+
+| | TRƯỚC | SAU | × |
+|---|---:|---:|---:|
+| Cạnh ngắn một căn nhà (trung bình 15 kỷ) | 0,907 ô | **0,406 ô** | **×0,448** |
+| Chiều cao trung bình một ô nhà dân | 1,20 ô | **1,29 ô** | ×1,070 |
+| Số khối nhìn thấy (15 kỷ, 80 phiên) | 371 | **1.812** | ×4,88 |
+| Đơn vị HẸP NHẤT trong cả 15 kỷ | — | **0,314 ô** | (sàn `MIN_UNIT_CELLS` = 0,312) |
+
+Chia một ô thành 4–10 suất thì **mỗi căn chỉ còn 45% bề ngang cũ**. Cột `storey` trong bảng
+`blockStyle.js` sinh ra để bù lại theo CHIỀU CAO (`pitch = f(max(w,d))` nên chia nhỏ làm mái thấp
+xuống, mà `massHeight` thì không phụ thuộc hình chiếu đáy) — bù đủ: chiều cao trung bình mỗi ô
+**tăng 7,0%**, không kỷ nào tụt. Con số 0,314 sát sàn 0,312 chứng minh phép kẹp **TRẦN THẮNG SÀN**
+đang thật sự cắn: ô chật thì bớt cột/hàng, chứ không đẻ ra nhà tí hon.

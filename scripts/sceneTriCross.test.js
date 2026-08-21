@@ -80,7 +80,7 @@ import { createCityScene } from '../src/components/city/render3d/sceneGraph.js';
 import { computeCityLayout } from '../src/engine/cityLayout.js';
 import { collectCitySpecs } from '../src/engine/city3d/cityParts.js';
 import { buildTerrain } from '../src/engine/city3d/terrain.js';
-import { prism, countSpecTriangles, specSpan } from '../src/engine/city3d/parts.js';
+import { BUILDING_SCALE, prism, countSpecTriangles, specSpan } from '../src/engine/city3d/parts.js';
 import { buildScenePalette } from '../src/engine/city3d/palette3d.js';
 import { deriveDaylight } from '../src/engine/city3d/daylight.js';
 import { BLUEPRINT_CATALOG, ERA_METADATA } from '../src/engine/constants.js';
@@ -100,18 +100,22 @@ function locLuatBe(nguon, nhan) {
   return { w: m[1], d: m[2], sides: m[3], taper: m[4], role: m[5] };
 }
 
-test('ĐỐI CHIẾU CHÉO (a) — `plinth-tri` phải ĐỌC `BUILDING_SCALE` từ `sceneGraph.js`, không chép tay', () => {
-  // Đây chính xác là lỗi 2026-08-20. Hai vế: mã sản phẩm vẫn khai hằng số ở dạng regex kia đọc
-  // được, VÀ `plinth-tri` vẫn đọc bằng đường ấy chứ không gán thẳng một con số.
-  const m = NGUON_SCENE.match(/^const BUILDING_SCALE = ([\d.]+);/m);
-  assert.ok(m, '`sceneGraph.js` không còn khai `BUILDING_SCALE` ở dạng `plinth-tri` đọc được ⇒ '
-    + 'công cụ đo sẽ ném lỗi. Sửa CẢ HAI cùng lúc, đừng sửa mỗi một bên.');
-  assert.ok(Number.isFinite(Number(m[1])) && Number(m[1]) > 0, 'giá trị vô lý');
-  assert.match(NGUON_BE, /readFileSync\([^)]*sceneGraph\.js/,
-    '`plinth-tri.mjs` thôi đọc `sceneGraph.js` ⇒ nó đang giữ một bản chép tay của hằng số, đúng '
-    + 'cái bẫy "một luật hai công thức" đã cắn một lần rồi.');
+test('ĐỐI CHIẾU CHÉO (a) — `BUILDING_SCALE` chỉ được có MỘT bản, và cả hai bên phải `import` nó', () => {
+  // Đây chính xác là lỗi 2026-08-20: `plinth-tri` giữ một bản chép tay ghi 0,86 (giá trị đời cũ).
+  // Bản vá đầu bắt nó ĐỌC hằng số từ mã nguồn `sceneGraph.js` bằng regex — đúng nhưng mong manh,
+  // vì nó vẫn nhận rằng hằng số ấy phải nằm trong một file `import 'three'`. Từ 2026-08-21 hằng số
+  // chuyển về `parts.js` (tầng THUẦN), nên cả hai bên `import` cùng một chỗ và không còn bản nào
+  // để trôi. Bài này canh CHÍNH điều đó: không bên nào được gán cứng lại một con số.
+  assert.doesNotMatch(NGUON_SCENE, /^const BUILDING_SCALE = [\d.]+;/m,
+    '`sceneGraph.js` khai lại `BUILDING_SCALE` — nó phải `import` từ `parts.js`.');
   assert.doesNotMatch(NGUON_BE, /^const BUILDING_SCALE = [\d.]+;/m,
     '`plinth-tri.mjs` đang gán cứng `BUILDING_SCALE` — chính là bộ số bịa của 2026-08-20.');
+  for (const [nhan, nguon] of [['sceneGraph.js', NGUON_SCENE], ['plinth-tri.mjs', NGUON_BE]]) {
+    assert.match(nguon, /import \{[^}]*\bBUILDING_SCALE\b[^}]*\} from '[^']*parts(\.js)?'/,
+      `${nhan} không còn \`import\` \`BUILDING_SCALE\` từ \`parts.js\` ⇒ hoặc nó đang dùng một `
+      + 'bản chép tay, hoặc nó thôi nhân tỉ lệ. Cả hai đều làm bảng số nói về một thành phố khác.');
+  }
+  assert.ok(Number.isFinite(BUILDING_SCALE) && BUILDING_SCALE > 0, 'giá trị `BUILDING_SCALE` vô lý');
 });
 
 test('ĐỐI CHIẾU CHÉO (b) — MỘT LUẬT MỘT CÔNG THỨC: khối bệ kè phải trùng từng trường giữa hai file', () => {
@@ -129,7 +133,6 @@ test('ĐỐI CHIẾU CHÉO (b) — MỘT LUẬT MỘT CÔNG THỨC: khối bệ 
 test('ĐỐI CHIẾU CHÉO (c) — CHẠY THẬT CẢ HAI ĐƯỜNG TRÊN 15 KỶ — kỷ nào có bệ thì cả hai bên đều phải thấy',
   { skip: CHAY_CHAM ? false : 'lượt hai: npm run test:cross (~25 giây)' }, () => {
   const batDau = Date.now();
-  const BUILDING_SCALE = Number(NGUON_SCENE.match(/^const BUILDING_SCALE = ([\d.]+);/m)[1]);
   const bang = [];
   let duyet = 0;
   let tongBe = 0;

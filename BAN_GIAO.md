@@ -6,7 +6,81 @@
 > chọn: `ARCHITECTURE_DECISIONS.md`. Nợ kỹ thuật: `TECH_DEBT.md`. Migration: `MIGRATION.md`. Tóm
 > tắt theo mốc: `CHANGELOG.md`.
 > **NGUYÊN TẮC ƯU TIÊN SỐ 1:** (1) mọi phiên AI phải đọc file này + `CLAUDE.md` + các file liên quan TRƯỚC khi làm; (2) sau MỌI cập nhật dù nhỏ, phải cập nhật ngay file này + `CLAUDE.md` + các file liên quan khác.
-> Cập nhật lần cuối: **2026-08-21** — **PHASE 14 §1(2): KIM TỰ THÁP CÓ HÌNH CHÓP, ZIGGURAT CÓ THỀM.** Từ vựng mái kỳ quan 9 → 10 giá trị; mái nhà dân vẫn nghèo (`TECH_DEBT #76`). Xem ADR-051.
+> Cập nhật lần cuối: **2026-08-21** — **PHASE 14 §1(3): MỘT Ô KHÔNG PHẢI MỘT CĂN NHÀ, MỘT Ô LÀ MỘT KHU PHỐ.** 371 ô nhà dân nay dựng ra **1.812 khối** (×4,88) mà **không một ô nào xê dịch** và **không thêm một lệnh vẽ nào ở cả 15 kỷ**. Xem ADR-052.
+>
+> ## ⚠️ PHASE 14 §1(3) — MỘT Ô LÀ MỘT KHU PHỐ, VÀ «THÊM NHÀ» LÀ ĐIỀU BẤT KHẢ
+>
+> Đàm nói *«mọi thứ hiện tại trông vẫn nhỏ, thành phố không mở rộng mà chỉ là cụm nhỏ»*. Số học của
+> chính `cityGrid.js` giải thích vì sao: `ROAD_LINES = {0, 4, 8, 11}` ⇒ **80/144 ô là đường
+> (55,6%)**, cộng khu kỳ quan ⇒ **chỉ ~30 ô xây được nhà dân**, và cả 15 kỷ đã chạm trần ấy từ lâu.
+> Thứ Đàm nhìn thấy không phải một thành phố — nó là **ba mươi căn nhà đứng riêng lẻ trên một mạng
+> đường chiếm quá nửa mặt đất**, tức hình thái LÀNG, giống hệt nhau ở cả 15 kỷ.
+>
+> **Cách sửa KHÔNG phải thêm ô** (ADR-007 cấm dời, cỡ lưới không được đụng) mà là **chia lại thứ
+> đứng trong một ô**: mỗi ô nhà dân nay dựng **một CỤM 4–10 công trình nhỏ**.
+>
+> | | TRƯỚC | SAU |
+> |---|---:|---:|
+> | Khối nhà dân nhìn thấy (15 kỷ · 80 phiên) | 371 | **1.812** (×4,88) |
+> | Lệnh vẽ | 11–15 | **y hệt ở CẢ 15 KỶ** |
+> | Tam giác cả cảnh | 2.425.912 | 3.090.464 (×1,274) |
+> | Thời gian dựng cảnh (`test:cross`, trung vị 3 lượt) | 22.094 ms | 23.999 ms (**×1,086**, trần 1,25×) |
+> | Ảnh `--width 1500` — kỷ 1 · 2 · 6 · 11 · 14 (40 phiên) | — | **6,0–8,4%** điểm ảnh vượt ngưỡng mắt |
+> | Ảnh `--width 1500` — kỷ 11 · 14 (80 phiên) | — | **10,9%** và **9,2%** |
+> | `npm run test:fast` | 1.022 | **1.046** bài · 1.045 xanh · 0 đỏ · 1 bỏ qua |
+>
+> ### Ba lớp, lần thứ CHÍN của cùng một khuôn
+>
+> `city3d/blockStyle.js` = **BẢNG 15 kỷ** (cols · rows · attach · alley · storey · vary ·
+> gableToStreet, mỗi dòng buộc vào `country` mà `eraStyle.js` khai, có test bắt) ·
+> `city3d/block.js` = **HÌNH** (đo hình chiếu đáy thật rồi chia) · `cityParts.js` **chỉ ĐỌC**.
+> Mỗi dòng trả lời được *"nhà thường ở nước ấy dính nhau kiểu gì?"* — Çatalhöyük dính liền không
+> ngõ · Deir el-Medina hai dãy thẳng băng · Ur/tứ hợp viện/UAE quây sân · Việt Nam **KHÔNG** dính
+> tường (`loose`, ngõ rộng nhất bảng 0,26) · Đức và Bồ Đào Nha quay **đầu hồi** ra phố.
+>
+> ### Bốn ràng buộc, cả bốn đều có test khoá
+>
+> - **ADR-007 nguyên vẹn.** Bài `ADR-007 QUA THỜI GIAN` chạy **1…120 phiên × 15 kỷ** (≥ 30.000 phép
+>   so) và đòi mô tả hình học khớp từng byte. Cụm mọc **quanh** chỗ căn nhà cũ đứng, không dời nó.
+> - **Bám hình chiếu đáy THẬT, không bám ô.** `block.js` đo `specFootprint` của bản tham chiếu rồi
+>   mới chia — vì công trình vốn thò ra ngoài ô neo.
+> - **TRẦN THẮNG SÀN.** Ô chật thì **bớt cột/hàng**, không đẻ nhà tí hon. Đơn vị hẹp nhất trong cả
+>   15 kỷ là **0,314 ô** trên sàn 0,312 ⇒ phép kẹp đang thật sự cắn.
+> - **Không thêm họ vật liệu nào**, nên không thêm lệnh vẽ nào — có bài test so tập vai màu của cụm
+>   với tập vai màu của bản tham chiếu, từng kỷ một.
+>
+> ### ⚠️ MẶT TRÁI PHẢI NÓI RA, KHÔNG GIẤU SAU CON SỐ 1.812
+>
+> Chia một ô thành 4–10 suất thì **mỗi căn chỉ còn 45% bề ngang cũ** (cạnh ngắn 0,907 → 0,406 ô).
+> Cột `storey` sinh ra để bù theo CHIỀU CAO và nó bù đủ (mỗi ô cao thêm **7,0%**, không kỷ nào tụt),
+> nhưng **cái nhà đơn lẻ thì nhỏ đi thật**. Nếu Đàm đọc «vẫn nhỏ» theo nghĩa *từng công trình* chứ
+> không phải *cả khối phố*, thì đây là hướng ĐI NGƯỢC và phải nói thẳng ra chứ không bù bằng số.
+>
+> ### ⚠️ TRỤC CHẶNG NGÀY TỤT 0,97 — CÚ TỤT MỘT-PHASE LỚN NHẤT TỪ TRƯỚC TỚI NAY
+>
+> **15,36 → 14,39.** Mốc thứ ba của Đàm là **«< 14 ⇒ phải làm vùng quê đổi theo giờ»**; còn cách
+> **0,39**. Cổng chống-trôi vẫn ĐẠT (0/15 cặp chặng · 0/105 cặp kỷ). Tách ra ba dải thì thấy dải
+> **trời gần như không đổi (−0,08)** trong khi thành phố −1,22 và đất −1,34 ⇒ toàn bộ cú tụt nằm ở
+> hai dải thành phố chiếm. Và điều đáng giữ lại: **dải trời (8,38) mới là dải yếu nhất, và nó yếu
+> như vậy từ TRƯỚC phase này** — nên nếu phải kéo trục chặng lên, cần gạt là **BẦU TRỜI 6h ↔ 15h**,
+> không phải thành phố. Bảng đầy đủ + lệnh tái lập: `PERFORMANCE.md` mục «Phase 14 §1(3)».
+>
+> ### Bài học mới của phiên này
+>
+> - ⚠️ **Một `bpId` chép tay là một thành phố KHÁC.** Bài test mới của tôi tự dựng
+>   `` `dw-${era}-${x}-${y}` `` trong khi `dwellingBpId` thật là `` `dw|${era}|${x}|${y}` `` ⇒ 9/11
+>   assert đỏ về một quần thể không tồn tại. Cùng họ với `BUILDING_SCALE = 0.86` chép tay ở
+>   `plinth-tri.mjs`: **hằng số và bộ sinh khoá của một phép đo cũng phải `import`, không được nhớ.**
+> - ⚠️ **Vá vòng thứ ba của hình chiếu đáy KHÔNG hội tụ — và đó là một sự thật về HÀM, không phải
+>   một việc còn dở.** Thêm một lượt hiệu chỉnh nữa làm sai số **tệ đi** (0,186 → 0,234 ô) vì
+>   `footprint` là hàm **BẬC THANG** của `fx`, không liên tục. Ghi ra để phiên sau khỏi đi "hoàn
+>   thiện" một thứ đã đo là không hoàn thiện được.
+> - ⚠️ **Một phép phá có thể KHÔNG HỢP LỆ chứ không chỉ là hỏng.** Ép kỷ quây sân (4/12/15) sang
+>   `loose` làm số đơn vị nhảy 10 → 12 > `MAX_UNITS` ⇒ validator từ chối ⇒ cả kỷ sụp về MỘT căn và
+>   tam giác **giảm 70%**. Phép phá phải chọn kỷ mà nó thật sự phá được (kỷ 10: +56,2% tam giác).
+> - ⚠️ **Suýt chấm điểm một bản quét CŨ.** File `.png` nằm đúng đường dẫn mong đợi, nhưng `ps` cho
+>   thấy 4 tiến trình chromium vẫn đang chạy và mốc thời gian là của phiên trước. **Xác nhận tiến
+>   trình dựng đã THOÁT và mốc thời gian tươi TRƯỚC khi chấm.**
 >
 > ## ⚠️ PHASE 14 §1(2) — CÂU HỎI ĐÚNG KHÔNG PHẢI «VÁ KỶ 2 THẾ NÀO»
 >

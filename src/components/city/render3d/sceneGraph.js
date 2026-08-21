@@ -47,7 +47,7 @@ import { materialProfile } from '../../../engine/city3d/materials';
 import { applySurfaceDetail, specularGainFor } from './surfaceDetail';
 import { getEraStyle } from '../../../engine/city3d/eraStyle';
 import { collectCitySpecs, KIND_NGOAI_LUOI, NHOM_CUA_KIND } from '../../../engine/city3d/cityParts';
-import { prism, specSpan } from '../../../engine/city3d/parts';
+import { BUILDING_SCALE, prism, specSpan } from '../../../engine/city3d/parts';
 import { buildTerrain } from '../../../engine/city3d/terrain';
 import { buildHorizon } from '../../../engine/city3d/horizon';
 import { placeBounds, specBounds } from '../../../engine/city3d/pick';
@@ -57,15 +57,6 @@ import { buildMergedGeometry } from './geometryFactory';
 import {
   ROAD_LIFT, buildHorizonSurface, buildRoadSurface, buildTerrainSurface, buildWaterSurface,
 } from './terrainMesh';
-
-/**
- * Hệ số phóng to công trình so với ô lưới.
- * ⚠️ Lớn hơn 1 là CỐ Ý: tầng mô tả nghĩ theo đơn vị "một ô", nhưng năm công trình rải trên lưới
- * 12×12 mà mỗi cái chỉ chiếm đúng một ô thì thành phố trông như năm hạt đậu trên bàn cờ (đã thấy
- * tận mắt ở ảnh chụp thử đầu tiên). Các khu đất cách nhau ít nhất 2,8 ô nên 1,3 vẫn an toàn
- * tuyệt đối — kỳ quan rộng nhất (1,7 ô) nở ra 2,2 ô, vẫn chưa chạm hàng xóm.
- */
-const BUILDING_SCALE = 1.3;
 
 /** Một ô lưới = 1 đơn vị thế giới. Giữ số tròn để mọi phép tính đọc được bằng mắt. */
 export const TILE_UNIT = 1;

@@ -627,7 +627,24 @@ test('⚠️ VẬT CẢN CHỈ GỒM KHỐI TRONG LƯỚI THÀNH PHỐ — cây 
  * 19,80). Đây chính là cái bẫy `computeBoundingSphere` đã cắn ngày 2026-08-19 — bán kính chỉ là bán
  * kính khi vật thể TRÒN. Bản đầu của ADR-038 ước lượng "~14" theo nửa cạnh và đã phải sửa.
  */
-const NGUONG_HOP_BAO_CITY = 20.12;
+const NGUONG_HOP_BAO_CITY = 20.92;
+
+/**
+ * ⚠️ ĐO LẠI NGÀY 2026-08-21 (Phase 13 VIỆC B) — 20,12 → **20,92**, VÀ ĐÂY LÀ LÝ DO.
+ *
+ * Chính bài test này dặn: *"Nếu đây là chủ ý thì ĐO LẠI rồi sửa trần kèm lý do, đừng nới cho vừa."*
+ * Nên: giá trị THẬT lớn nhất đo được là **20,5114** (kỷ 6, 12 phiên) trên 15 kỷ × 2 mốc tuổi, cộng
+ * đúng biên 2% cũ ⇒ 20,92. Cũ là 19,7239 + 2%.
+ *
+ * ⚠️ VÀ PHẦN TĂNG **KHÔNG** ĐẾN TỪ VIỆC VỚI TAY XA HƠN. `HINTERLAND_REACH` = 8 = `OUTSKIRT_REACH`,
+ * tức vùng phụ cận dừng đúng chỗ vùng quê dừng. Chênh 0,79 đến từ chỗ khác: cảnh vật vùng quê là
+ * những vật NHỎ đứng ở tâm ô, còn tường thành và mặt đường ngoại ô là những DẢI có bề rộng, nên
+ * góc xa nhất của khối ngoài cùng thò ra thêm ~0,6–0,8 so với TÂM của nó. Đo tách từng nhóm cho
+ * thấy đúng thế: vùng quê lớn nhất 19,71 (kỷ 3) · vùng phụ cận lớn nhất 20,44 (kỷ 6).
+ *
+ * ⇒ Biên 2% vẫn giữ nguyên tinh thần cũ: nó CỐ Ý không đủ để che việc nâng `HINTERLAND_REACH`
+ * 8 → 9 (sẽ đưa hộp bao lên ~22), tức thứ cần đỏ vẫn đỏ.
+ */
 
 function banKinhBao(scene, tên) {
   let r = 0;

@@ -1,6 +1,21 @@
 /**
  * drawCallBudget.test.js — MỐC LỆNH VẼ RIÊNG CHO TỪNG KỶ.
  *
+ * ⚠️ ĐỌC ĐOẠN NÀY TRƯỚC (Đàm chốt 2026-08-21, §0 của Phase 13): **BẢNG NÀY NAY LÀ MỘT CÁI CÂN,
+ * KHÔNG PHẢI MỘT CÁI CỔNG.** Luật cũ *"không được thêm một lệnh vẽ nào"* đã bị THU HỒI, vì số đo
+ * trên máy thật bác nó: Apple M3, cảnh chậm nhất **5,20 ms** trên trần 16,67 ms ⇒ **dư 3,2 lần**,
+ * và **80% chi phí tính theo ĐIỂM ẢNH** chứ không theo hình học (`PERFORMANCE.md`). Nguyên văn:
+ * *"Tôi cần thành phố rộng hơn, quy mô hơn nữa và giống với thực tế lịch sử hơn nữa, không quan
+ * trọng hiệu năng"* · *"Máy tôi là M3 MacBook Air chứ có yếu đâu"*.
+ *
+ * Vậy vì sao KHÔNG xoá file này đi? Vì cái cổng và cái cân trả lời hai câu khác nhau. Cổng hỏi
+ * *"có được phép tốn thêm không?"* — câu ấy nay là **được**. Cân hỏi *"số ấy có đổi mà không ai
+ * biết không?"* — câu ấy vẫn phải là **không**. Bỏ bảng đi là thả tự do cho trôi âm thầm, mà trôi
+ * âm thầm chính là thứ đã để `PERFORMANCE.md` sai 6/15 dòng suốt một phase (`TECH_DEBT #43`).
+ *
+ * ⇒ Cách dùng từ nay: một dòng đi lên thì **đo lại, ghi ngày, và nói ra nó kéo thêm HỌ VẬT LIỆU
+ * nào**. Cái vẫn bị cấm không phải việc tăng, mà là việc tăng **không giải thích được**.
+ *
  * ⚠️ VÌ SAO KHÔNG CÓ MỘT CÁI TRẦN CHUNG (Đàm chốt 2026-08-18)
  *
  * Tài liệu từng ghi *"không quá 13 lệnh vẽ"*. Con số ấy đo trên đúng BA kỷ (6 · 9 · 13) rồi được
@@ -93,10 +108,38 @@ function tamCoDinh(era) {
  * không bằng cách đọc hai bảng bằng mắt.
  */
 const MOC_LENH_VE = {
+  1: 9, 2: 12, 3: 12, 4: 12, 5: 12,
+  6: 12, 7: 13, 8: 13, 9: 12, 10: 13,
+  11: 11, 12: 11, 13: 11, 14: 11, 15: 11,
+};
+
+/**
+ * BẢNG MỐC TRƯỚC KHI CÓ VÙNG PHỤ CẬN — đo ngày 2026-08-20, giữ nguyên văn làm ĐỐI CHỨNG THỨ HAI.
+ *
+ * ⚠️ VÌ SAO THÊM MỘT BẢNG NỮA THAY VÌ SỬA PHÉP TRỪ CŨ. Phép trừ cũ (`MOC_LENH_VE − MOC_TRUOC_NUOC`)
+ * là câu hỏi *"mặt nước tốn bao nhiêu?"*. Nếu để Phase 13 cộng thêm vào chính hiệu số ấy thì nó
+ * thành một con số TRỘN HAI THAY ĐỔI, và không ai còn đọc được vế nào tốn bao nhiêu — đúng bài học
+ * *"một con số đúng vẫn trả lời sai câu hỏi nếu nó trộn hai đại lượng"* (Performance Gate vòng 2,
+ * hằng số nền pha loãng 43% xuống 16%). Nên mỗi phase một mốc, mỗi mốc một phép trừ riêng.
+ */
+const MOC_TRUOC_PHU_CAN = {
   1: 9, 2: 12, 3: 12, 4: 12, 5: 11,
   6: 12, 7: 12, 8: 12, 9: 11, 10: 13,
   11: 11, 12: 11, 13: 11, 14: 11, 15: 11,
 };
+
+/**
+ * ⚠️ BỐN KỶ MÀ VÙNG PHỤ CẬN KÉO THÊM ĐÚNG MỘT HỌ VẬT LIỆU — VÀ CẢ BỐN CÙNG MỘT LÝ DO.
+ *
+ * Kỷ 5 · 7 · 8 · 9 dựng bến hoặc cầu bắc qua mặt nước, nên chúng kéo họ `water` vào khối gộp thành
+ * phố — một họ mà thành phố của chính chúng chưa từng dùng. Mười một kỷ còn lại **không đổi một
+ * đơn vị**: hoặc chúng đã có sẵn họ `water` (kỷ 12–15), hoặc bảng khai `dock: 'none'` (kỷ 1).
+ *
+ * ⚠️ KHAI RA TƯỜNG MINH VÀ SO BẰNG `deepEqual`, KHÔNG PHẢI "bao gồm". Kỷ thứ năm trượt vào thì đỏ;
+ * một trong bốn kỷ này được sửa cho hết trượt thì CŨNG đỏ. Đó là hai chiều, và chỉ phép so bằng
+ * mới có cả hai — *"bao gồm" là cách một bản vá lặng lẽ thành một cái chăn trùm* (`TECH_DEBT #52`).
+ */
+const KY_PHU_CAN_THEM_HO = [5, 7, 8, 9];
 
 /**
  * BẢNG MỐC TRƯỚC KHI CÓ MẶT NƯỚC — đo ngày 2026-08-18, giữ nguyên văn để làm ĐỐI CHỨNG.
@@ -258,10 +301,10 @@ test('MẶT NƯỚC TỐN ĐÚNG +1 LỆNH VẼ, VÀ CHỈ Ở KỶ ĐÃ DỰNG 
   for (const era of ERAS) {
     const truoc = MOC_TRUOC_NUOC[era];
     assert.ok(Number.isFinite(truoc), `kỷ ${era} thiếu mốc trước-nước — đối chứng mất một dòng`);
-    const hieu = MOC_LENH_VE[era] - truoc;
+    const hieu = MOC_TRUOC_PHU_CAN[era] - truoc;
     const coNuoc = waterIsBuilt(era);
     assert.equal(hieu, coNuoc ? 1 : 0,
-      `kỷ ${era}: mốc đi từ ${truoc} lên ${MOC_LENH_VE[era]} (lệch ${hieu}) trong khi kỷ này `
+      `kỷ ${era}: mốc đi từ ${truoc} lên ${MOC_TRUOC_PHU_CAN[era]} (lệch ${hieu}) trong khi kỷ này `
       + `${coNuoc ? 'CÓ' : 'KHÔNG có'} mặt nước đã dựng. Nước được phép tốn đúng +1 lệnh vẽ và chỉ `
       + 'ở kỷ có nước — mọi thay đổi khác phải đo lại rồi ghi ngày mới, không được đi ké dòng này.');
     if (coNuoc) soKyTang += 1;
@@ -293,4 +336,42 @@ test('KỶ KHÔ KHÔNG ĐƯỢC ĐỔI MỘT ĐƠN VỊ NÀO — KỶ 1 LÀM CH�
     assert.equal(lenhVe(era), MOC_TRUOC_NUOC[era],
       `kỷ ${era} không có mặt nước nhưng số lệnh vẽ đã đổi khỏi mốc trước-nước (${MOC_TRUOC_NUOC[era]}).`);
   }
+});
+
+test('VÙNG PHỤ CẬN CHỈ ĐƯỢC TỐN +1 LỆNH VẼ, VÀ CHỈ Ở KỶ KÉO THÊM MỘT HỌ VẬT LIỆU', () => {
+  /**
+   * ⚠️ §0 CỦA PHASE 13 ĐÃ THU HỒI CÁI HÀNG RÀO, NHƯNG KHÔNG THU HỒI PHÉP ĐẾM — và đây là chỗ phân
+   * biệt hai chuyện đó. Đàm viết: *"Máy tôi là M3 MacBook Air chứ có yếu đâu"*, và số đo đồng ý:
+   * cảnh chậm nhất 5,20 ms trên trần 16,67 ms ⇒ **dư 3,2 lần**, mà 80% chi phí tính theo ĐIỂM ẢNH
+   * chứ không theo hình học (`PERFORMANCE.md`). Nên "thêm một lệnh vẽ" thôi KHÔNG còn là lý do để
+   * chặn một phase.
+   *
+   * Nhưng bảng này vẫn phải sống, vì nó trả lời một câu KHÁC: *"số ấy có đổi mà không ai biết
+   * không?"* Một mốc đo được, cập nhật có chủ đích, vẫn bắt được **trôi âm thầm** — thứ mà việc bỏ
+   * hẳn bảng đi sẽ thả tự do. Nói gọn: nay nó là một **CÁI CÂN**, không phải một **CÁI CỔNG**.
+   *
+   * THỬ-CHO-ĐỎ (đã chạy thật, nêu trước chỗ mong đợi đỏ): sửa `KY_PHU_CAN_THEM_HO` thành
+   * `[5, 7, 8]` ⇒ đỏ ở `deepEqual` với thông báo kể tên kỷ 9.
+   */
+  const tang = [];
+  for (const era of ERAS) {
+    const truoc = MOC_TRUOC_PHU_CAN[era];
+    assert.ok(Number.isFinite(truoc), `kỷ ${era} thiếu mốc trước-phụ-cận — đối chứng mất một dòng`);
+    const hieu = MOC_LENH_VE[era] - truoc;
+    assert.ok(hieu === 0 || hieu === 1,
+      `kỷ ${era}: mốc đi từ ${truoc} lên ${MOC_LENH_VE[era]} (lệch ${hieu}). Vùng phụ cận được `
+      + 'phép kéo thêm TỐI ĐA một họ vật liệu; lệch 2 nghĩa là nó kéo hai họ, và lúc đó phải đi tìm '
+      + 'xem hình nào dùng vai lạ chứ không phải sửa con số cho vừa.');
+    if (hieu === 1) tang.push(era);
+  }
+  assert.deepEqual(tang, KY_PHU_CAN_THEM_HO,
+    'danh sách kỷ tốn thêm lệnh vẽ đã đổi. Cả bốn kỷ trong bảng đều tăng vì CÙNG một họ (`water`, '
+    + 'do bến/cầu chạm mặt nước). Một kỷ thứ năm trượt vào thì phải nói được nó kéo họ NÀO và vì '
+    + 'sao — đừng thêm số vào bảng trước rồi mới đi tìm lý do.');
+
+  // Gác chạy-rỗng: bảng phải THẬT SỰ có kỷ tăng và THẬT SỰ có kỷ đứng yên. Không có vế này thì một
+  // `MOC_LENH_VE` bị chép đè bằng chính `MOC_TRUOC_PHU_CAN` sẽ cho ra `tang = []` và bài test xanh
+  // trơn tru về một thế giới mà phase này chưa hề xảy ra.
+  assert.ok(tang.length > 0 && tang.length < ERAS.length,
+    'hoặc không kỷ nào tăng, hoặc mọi kỷ đều tăng — cả hai đều là dấu hiệu bảng bị chép đè.');
 });

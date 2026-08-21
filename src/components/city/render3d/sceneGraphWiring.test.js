@@ -263,8 +263,12 @@ test('CÔNG TRÌNH ĐỨNG Ở CAO ĐỘ CAO NHẤT DƯỚI BÓNG MÌNH, và ph�
   );
   // ⚠️ Móng phải đi vào CÙNG danh sách `placements` — nếu không nó chỉ là dữ liệu chết, và đây đúng
   // là bẫy Phase 4H (`summarizeMuseum` có test riêng, test xanh, không ai gọi).
+  // ⚠️ HỎI CÁI CỬA DUY NHẤT (`dayKhoi`), KHÔNG HỎI `placements.push`. Phase 13 gom mọi lối đẩy khối
+  // vào một hàm bắt buộc kèm NHÃN, vì phép chia nhóm cũ dùng vị trí trong mảng và nó sẽ chấm nhầm
+  // ruộng thành cây ngay khi có loại khối thứ sáu. Câu hỏi mới CHẶT HƠN câu cũ: nó đòi móng vừa
+  // vào đúng danh sách, vừa mang đúng nhãn `buildings` — bản cũ chỉ hỏi được vế thứ nhất.
   assert.ok(
-    /placements\.push\(\.\.\.plinths\)/.test(CALLS),
+    /for \(const plinth of plinths\) dayKhoi\(NHOM_CUA_KIND\.building, plinth\)/.test(CALLS),
     'Móng được TÍNH nhưng không được ĐƯA VÀO cảnh — đúng bẫy Phase 4H: hàm chạy đúng, có test '
     + 'riêng, và không ai gọi. Không có gì đỏ, chỉ có mấy góc nhà treo lơ lửng.',
   );
@@ -291,7 +295,7 @@ test('NHÀ DÂN PHẢI ĐƯỢC DỰNG THẬT VÀO CẢNH, không chỉ được
   // …và phải đi vào CÙNG `placements` với công trình, tức cùng khối hình gộp. Đẩy sang một mesh
   // riêng thì mỗi kỷ cộng thêm một lệnh vẽ — chính thứ ngân sách hiệu năng đang giữ.
   assert.ok(
-    /placements\.push\(built\.placement\)/.test(CALLS),
+    /dayKhoi\(NHOM_CUA_KIND\.dwelling, built\.placement\)/.test(CALLS),
     'Nhà dân không vào chung `placements` — mất gộp hình, cảnh sẽ tốn thêm lệnh vẽ.',
   );
   // Nhà dân KHÔNG được nhận `addPickTarget`: chạm vào một căn nhà vô danh mà hiện bảng thông tin

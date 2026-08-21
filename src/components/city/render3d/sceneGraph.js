@@ -46,7 +46,7 @@ import {
 import { materialProfile } from '../../../engine/city3d/materials';
 import { applySurfaceDetail, specularGainFor } from './surfaceDetail';
 import { getEraStyle } from '../../../engine/city3d/eraStyle';
-import { collectCitySpecs } from '../../../engine/city3d/cityParts';
+import { collectCitySpecs, KIND_NGOAI_LUOI, NHOM_CUA_KIND } from '../../../engine/city3d/cityParts';
 import { prism, specSpan } from '../../../engine/city3d/parts';
 import { buildTerrain } from '../../../engine/city3d/terrain';
 import { buildHorizon } from '../../../engine/city3d/horizon';
@@ -356,8 +356,22 @@ export const MAX_PIXEL_RATIO = 2;
  * dựng (*"cắt khối gộp thành phố"* · *"cắt tấm mặt đất"*), và mỗi nhát cắt có giá riêng bằng lệnh
  * vẽ. Gộp phẳng thì hỏi `--mask ground-grid` sẽ cắt oan cả thành phố.
  */
-export const NHOM_TACH_THANH_PHO = ['buildings', 'props', 'landscape'];
+export const NHOM_TACH_THANH_PHO = ['buildings', 'props', 'landscape', 'hinterland'];
 export const NHOM_TACH_MAT_DAT = ['ground-grid', 'ground-apron'];
+
+/**
+ * Hai nhóm nằm NGOÀI lưới 12×12, gom thành một tập có tên vì có nhiều chỗ phải hỏi cùng câu hỏi
+ * *"khối này thuộc thành phố hay thuộc thế giới quanh nó?"* — bộ lọc vật cản camera là một, phép
+ * đo dấu chân người của cổng (G1) là hai.
+ *
+ * ⚠️ `landscape` (cây cối) và `hinterland` (ruộng, đê, tường, bến) TÁCH RIÊNG chứ không gộp làm
+ * một nhãn, và đó là điều kiện CẦN của cổng (G1): nó đo *"bao nhiêu phần khung hình là DẤU CHÂN
+ * NGƯỜI ngoài lưới"*. Gộp chung thì cây cối lọt vào tử số, và con số ấy sẽ nói dối theo đúng cái
+ * cách đã làm VIỆC 1 tưởng là mình đã giải xong bài toán quy mô.
+ */
+export const NGOAI_LUOI = new Set(
+  [...KIND_NGOAI_LUOI].map((kind) => NHOM_CUA_KIND[kind]),
+);
 
 /** Ô lưới (x, y) → toạ độ thế giới, gốc toạ độ đặt giữa thành phố. */
 export function cellToWorld(x, y, gridSize) {
@@ -914,6 +928,27 @@ export function createCityScene({
   const placements = [];
   const buildingPlacements = [];
 
+  /**
+   * ⚠️ MỘT CỬA DUY NHẤT ĐỂ ĐẨY KHỐI VÀO CẢNH, VÀ NÓ BẮT BUỘC PHẢI KÈM NHÃN.
+   *
+   * Chú thích của chính file này đã dự đoán quả mìn: *"Bản đầu loại vùng quê khỏi `blockers` bằng
+   * `placements.slice(0, length − soKhoiVungQue)` — đúng kết quả hôm nay, nhưng nó ngầm đòi vùng
+   * quê phải LUÔN được đẩy vào cuối cùng. Ngày nào có ai đẩy thêm một loại khối nữa sau nó, phép
+   * cắt ấy lấy nhầm và camera bắt đầu đâm xuyên nhà — im lặng tuyệt đối."* Phase 13 VIỆC B chính
+   * là cái ngày ấy: vùng phụ cận được đẩy SAU vùng quê, nên `slice(-soKhoiVungQue)` sẽ lặng lẽ
+   * chấm ruộng và tường thành làm "cây cối".
+   *
+   * ⇒ Nay mọi phép chia nhóm hỏi NHÃN (`theoNhan`), không hỏi chỉ số. Gán nhãn TẠI CHỖ ĐẨY nghĩa
+   * là không thể quên: hàm này là đường DUY NHẤT vào `placements`, và có test đọc mã nguồn khoá
+   * điều đó ở `sceneGraphWiring.test.js`.
+   */
+  const dayKhoi = (nhomDo, placement) => {
+    placement.nhomDo = nhomDo;
+    placements.push(placement);
+    return placement;
+  };
+  const theoNhan = (ten) => placements.filter((pl) => pl.nhomDo === ten);
+
   for (const item of cityParts) {
     if (item.kind !== 'building') continue;
     const building = item.source;
@@ -923,7 +958,7 @@ export function createCityScene({
       ry: ((building.x + building.y) % 4) * (Math.PI / 2),
     });
     if (built.plinth) plinths.push(built.plinth);
-    placements.push(built.placement);
+    dayKhoi(NHOM_CUA_KIND.building, built.placement);
     buildingPlacements.push(built.placement);
   }
 
@@ -940,7 +975,7 @@ export function createCityScene({
     // ⚠️ Giàn giáo cũng cần MÓNG như công trình thật: nó đang chiếm đúng khu đất ấy, và nếu chỉ
     // công trình xong mới có bệ kè thì đúng lúc xây xong sẽ thấy cả toà nhà nhảy lên một bậc.
     if (built.plinth) plinths.push(built.plinth);
-    placements.push(placement);
+    dayKhoi(NHOM_CUA_KIND.scaffold, placement);
     // Giàn giáo cũng chạm được: đó chính là công trình Đàm đang chờ, nên nó phải là thứ dễ hỏi
     // "còn bao lâu nữa?" nhất trong cả cảnh — chứ không phải thứ duy nhất không bấm được.
     addPickTarget(placement, { kind: 'scaffold', bpId: scaffold.bpId });
@@ -966,17 +1001,15 @@ export function createCityScene({
       ry: ((home.x * 3 + home.y) % 4) * (Math.PI / 2),
     });
     if (built.plinth) plinths.push(built.plinth);
-    placements.push(built.placement);
+    dayKhoi(NHOM_CUA_KIND.dwelling, built.placement);
   }
 
   // ── Cảnh vật: cây, đá, đèn, mặt nước, ruộng ──────────────────────────────
   // `deriveProps` đã sinh sẵn danh sách này từ Phase 1 (bộ vẽ 2D dùng từ lâu) nhưng bộ vẽ 3D
   // trước nay mới chỉ đọc mỗi đường sá. Gộp chúng vào CÙNG khối hình học với công trình để không
   // tốn thêm lệnh vẽ nào — chúng đều đứng yên nên chẳng có lý do gì phải tách ra.
-  let soKhoiCanhVat = 0;
   for (const item of cityParts) {
     if (item.kind !== 'prop') continue;
-    soKhoiCanhVat += 1;
     const prop = item.source;
     // ⚠️ CẢNH VẬT NAY LỆCH KHỎI TÂM Ô (Phase 8D) — và cái lệch ấy PHẢI đi vào cả hai phép tính
     // dưới đây, không được chỉ một. Toạ độ ngang lấy `ox/oy` mà cao độ vẫn hỏi tâm ô thì cái cây
@@ -986,7 +1019,7 @@ export function createCityScene({
     const ux = prop.x + (prop.ox ?? 0);
     const uy = prop.y + (prop.oy ?? 0);
     const { x, z } = cellToWorld(ux, uy, gridSize);
-    placements.push({
+    dayKhoi(NHOM_CUA_KIND.prop, {
       // Cảnh vật nhỏ (cây, đá, đèn) chỉ chiếm một ô nên không cần móng — nó ngồi thẳng lên thềm.
       // ⚠️ `surfaceHeightAt` (mặt đất LIÊN TỤC), KHÔNG phải `heightAt` (cao độ rời rạc của TÂM ô).
       // Ở đúng tâm ô hai hàm cho cùng một số, nên bản cũ đúng; ở toạ độ lẻ thì chỉ `surfaceHeightAt`
@@ -1003,15 +1036,10 @@ export function createCityScene({
     });
   }
 
-  // ⚠️ RANH GIỚI NHÓM — ghi lại NGAY TẠI CHỖ ĐẶT, không dò ngược bằng hình dạng sau này.
-  // `placements` xếp theo đúng thứ tự: [công trình · giàn giáo · nhà dân] rồi [cảnh vật] rồi [móng].
-  // Móng luôn thuộc về một thứ ĐÃ XÂY (cảnh vật không có móng), nên "phần đã xây" = đoạn đầu cộng
-  // toàn bộ móng. Con số này chỉ có một chỗ dùng: chế độ ĐO (`tachDeDo`) — xem ngay dưới.
-  const soKhoiDaXay = placements.length - soKhoiCanhVat;
-
   // Móng xếp SAU cùng: chúng chỉ là khối lấp, không phải thứ chạm vào được, nên phải nằm ngoài
   // vùng chỉ số mà `addPickTarget` đã bám theo (`placements[index]`).
-  placements.push(...plinths);
+  // ⚠️ Móng mang nhãn `buildings` vì nó luôn thuộc về một thứ ĐÃ XÂY — cảnh vật không có móng.
+  for (const plinth of plinths) dayKhoi(NHOM_CUA_KIND.building, plinth);
 
   // ── Vùng quê: cây cối, bờ bụi, đá tảng NGOÀI lưới thành phố ──────────────
   /**
@@ -1027,25 +1055,41 @@ export function createCityScene({
    * **không có gì đỏ lên**. Hai tấm khớp nhau TUYỆT ĐỐI tại chỗ giáp (đo được 0,0000 ở kỷ 1 · 7 ·
    * 14, và `terrainMesh.test.js` khoá điều đó), nên chọn tấm nào ở đúng biên cũng ra cùng một số.
    */
-  let soKhoiVungQue = 0;
   for (const item of cityParts) {
     if (item.kind !== 'outskirt') continue;
-    soKhoiVungQue += 1;
     const wild = item.source;
     const { x, z } = cellToWorld(wild.x, wild.y, gridSize);
     const trongDiaDat = Math.max(Math.abs(x), Math.abs(z)) <= horizon.innerEdge;
-    placements.push({
+    dayKhoi(NHOM_CUA_KIND.outskirt, {
       x, z,
       y: trongDiaDat ? terrain.surfaceHeightAt(wild.x, wild.y) : horizon.heightAt(x, z),
       // Xoay tự do: vùng quê mà thẳng hàng theo lưới thì nó chỉ là một cái khay thứ hai.
       ry: (wild.x * 0.83 + wild.y * 1.37) % (Math.PI * 2),
       scale: wild.scale,
       spec: item.spec,
-      // ⚠️ NHÃN TƯỜNG MINH, KHÔNG PHẢI VỊ TRÍ TRONG MẢNG. Bản đầu loại vùng quê khỏi `blockers`
-      // bằng `placements.slice(0, length - soKhoiVungQue)` — đúng kết quả hôm nay, nhưng nó ngầm
-      // đòi vùng quê phải LUÔN được đẩy vào cuối cùng. Ngày nào có ai đẩy thêm một loại khối nữa
-      // sau nó, phép cắt ấy lấy nhầm và camera bắt đầu đâm xuyên nhà — im lặng tuyệt đối.
-      vungQue: true,
+    });
+  }
+
+  // ── Vùng phụ cận: ruộng, đê, tường thành, cổng, bến, xóm vệ tinh, đường rời khung ─────────
+  /**
+   * ⚠️ ĐÂY LÀ THỨ TRẢ LỜI CÂU *"vì sao thành phố vẫn trông nhỏ"* MÀ VIỆC 1 KHÔNG TRẢ LỜI ĐƯỢC.
+   * Vành ngoài đã được lấp một lần bằng cây cối (kỷ 12 đi từ 64,82% xuống 38,61% đất trống) và
+   * Đàm **vẫn nói thành phố nhỏ** — đó là dữ liệu, không phải ý kiến: thực vật không mang tín
+   * hiệu quy mô. Thứ mắt đọc ra là "một nơi RỘNG" là DẤU CHÂN NGƯỜI trải ra ngoài.
+   *
+   * Cao độ hỏi ĐÚNG HAI TẤM như vùng quê ngay trên — cùng một luật, cùng một công thức.
+   */
+  for (const item of cityParts) {
+    if (item.kind !== 'hinterland') continue;
+    const hl = item.source;
+    const { x, z } = cellToWorld(hl.x, hl.y, gridSize);
+    const trongDiaDat = Math.max(Math.abs(x), Math.abs(z)) <= horizon.innerEdge;
+    dayKhoi(NHOM_CUA_KIND.hinterland, {
+      x, z,
+      y: trongDiaDat ? terrain.surfaceHeightAt(hl.x, hl.y) : horizon.heightAt(x, z),
+      ry: hl.ry ?? 0,
+      scale: hl.scale ?? 1,
+      spec: item.spec,
     });
   }
 
@@ -1086,7 +1130,11 @@ export function createCityScene({
    */
   const blockers = [];
   for (const placement of placements) {
-    if (placement.vungQue) continue;   // vùng quê KHÔNG chặn camera — lý do ở chú thích ngay trên
+    // Vùng quê VÀ vùng phụ cận KHÔNG chặn camera — lý do đầy đủ ở chú thích ngay trên, và nó áp
+    // cho cả hai vì cùng một cớ: chúng đứng NGOÀI lưới, trên thứ địa hình mà bộ hoạch định đường
+    // bay không hề biết tới (`terrain.footprint` chỉ mô tả thành phố). Chặn cái cây mà không chặn
+    // quả đồi dưới nó là mua một sự an toàn GIẢ — `TECH_DEBT #54`.
+    if (NGOAI_LUOI.has(placement.nhomDo)) continue;
     const box = placeBounds(specBounds(placement.spec), {
       x: placement.x, z: placement.z, y: placement.y, scale: placement.scale,
     });
@@ -1109,14 +1157,7 @@ export function createCityScene({
    * không bao giờ đi vào nhánh này. Có test khoá mặc định ở `sceneStats.test.js`.
    */
   const nhomHinhHoc = tachThanhPho
-    ? [
-      ['buildings', [...placements.slice(0, soKhoiDaXay), ...plinths]],
-      ['props', placements.slice(soKhoiDaXay, soKhoiDaXay + soKhoiCanhVat)],
-      // ⚠️ NHÓM THỨ BA, KHÔNG PHẢI CỜ THỨ BA — vùng quê chỉ cần cắt thêm một nhát ở khối đã có.
-      // Nhưng ngưỡng "cái thứ ba" của Đàm ĐÃ CHẠM, nên hai cờ boolean cũ đã được gom thành một
-      // `tachDeDo` ngay trong cùng commit ấy — xem khối chú thích ở `createCityScene`.
-      ['landscape', soKhoiVungQue ? placements.slice(-soKhoiVungQue) : []],
-    ]
+    ? NHOM_TACH_THANH_PHO.map((ten) => [ten, theoNhan(ten)])
     : [['city', placements]];
 
   for (const [tenNhom, nhom] of nhomHinhHoc) {

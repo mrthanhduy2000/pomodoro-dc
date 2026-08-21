@@ -27,8 +27,41 @@
  */
 
 import { buildBuildingSpec, buildScaffoldSpec } from './buildingSpec.js';
+import { deriveHinterland } from './hinterland.js';
 import { deriveOutskirts } from './outskirts.js';
 import { buildPropSpec } from './propSpec.js';
+
+/**
+ * KIND → TÊN NHÓM HÌNH HỌC. Một bảng, hai người đọc, và đó chính là lý do nó nằm ở tầng THUẦN.
+ *
+ * ⚠️ SINH RA TỪ MỘT BÀI TEST ĐỎ THẬT, KHÔNG PHẢI ĐỀ PHÒNG SUÔNG. `cityFocus.test.js` tự dựng lại
+ * danh sách vật cản bằng một vòng lặp riêng và tự khai trong chú thích là *"cùng luật với
+ * `sceneGraph.js`"*. Lời tự nhận ấy đúng cho tới đúng cái ngày Phase 13 thêm loại khối thứ sáu:
+ * `sceneGraph.js` loại vùng phụ cận ra khỏi vật cản, bản chép tay thì không, và bài test đỏ với
+ * thông báo *"bán kính phố = 21,44"* — một con số nói về một thành phố không tồn tại.
+ *
+ * Đây đúng bài học đã ghi ở `CLAUDE.md`: *"một bài test dựng lại đầu vào bằng đường riêng thì nó
+ * đang canh bản dựng lại ấy, không canh mã sản phẩm"* — và cách chữa không phải thêm một dòng
+ * `continue` nữa (chỗ thứ bảy viết sau này sẽ lại quên), mà là **một luật một công thức**.
+ */
+export const NHOM_CUA_KIND = {
+  building:   'buildings',
+  scaffold:   'buildings',
+  dwelling:   'buildings',
+  prop:       'props',
+  outskirt:   'landscape',
+  hinterland: 'hinterland',
+};
+
+/**
+ * Những loại khối đứng NGOÀI lưới 12×12 — chúng không chặn camera cận cảnh.
+ *
+ * Lý do đầy đủ ở `sceneGraph.js` (tóm tắt: cho cái cây vào danh sách vật cản mà bỏ quả đồi nó
+ * đứng trên thì tệ hơn không cho gì — mặt đất vùng quê kỷ 8 dâng tới +2,18 mà bộ hoạch định đường
+ * bay không hề biết; `TECH_DEBT #54`). Vùng phụ cận thừa hưởng đúng lý do ấy: nó cũng nằm ngoài
+ * lưới, cũng đứng trên thứ địa hình mà `terrain.footprint` không mô tả.
+ */
+export const KIND_NGOAI_LUOI = new Set(['outskirt', 'hinterland']);
 
 /**
  * Nhà dân KHÔNG có bản vẽ nên không có `bpId` thật. Khoá hình dáng của nó gồm cả TOẠ ĐỘ, để hai căn
@@ -143,6 +176,27 @@ export function collectCitySpecs({ layout, detail = 'high' } = {}) {
       source: wild,
       spec: buildPropSpec({ kind: wild.kind, era, seed: wild.seed, detail: wild.detail ?? detail }),
     });
+  }
+
+  /**
+   * ⚠️ VÙNG PHỤ CẬN (Phase 13 VIỆC B) — RUỘNG, ĐÊ, TƯỜNG, CỔNG, BẾN, XÓM VỆ TINH, ĐƯỜNG RỜI KHUNG.
+   *
+   * Vì sao nó là một loại RIÊNG chứ không nhét chung `outskirt`: vùng quê trả lời câu *"ngoài phố
+   * có cây cối gì"*, còn vùng phụ cận trả lời câu *"con người đã chạm tới đâu"*. Đàm đã lấp cái
+   * vành ngoài một lần bằng thực vật (VIỆC 1) và **vẫn nói thành phố nhỏ** — đó là DỮ LIỆU, không
+   * phải ý kiến: thực vật không mang tín hiệu quy mô. Thứ đọc ra là "một nơi RỘNG" là DẤU CHÂN
+   * NGƯỜI trải ra ngoài, nên hai thứ ấy phải đếm riêng được thì mới đo được cổng (G1).
+   *
+   * ⚠️ `deriveHinterland` TỰ TRA BẢNG và tự dựng `spec` (khác `deriveOutskirts`, nơi bên gọi dựng
+   * spec hộ). Lý do ở chú thích của chính hàm ấy: bảng mà để bên gọi truyền vào thì sớm muộn sẽ có
+   * một chỗ gọi quên truyền, và kỷ đó lặng lẽ mất vùng phụ cận.
+   *
+   * ⚠️ KHÔNG phụ thuộc tiến độ chơi: chữ ký chỉ có `era` + `gridSize`, và `hinterland.test.js` gọi
+   * kèm DỮ LIỆU RÁC (`built`, `sessionCount`…) rồi đòi kết quả y hệt — đúng khuôn đã dùng cho
+   * `buildTerrain` ở Phase 7B.
+   */
+  for (const item of deriveHinterland({ era, gridSize: layout.gridSize })) {
+    out.push({ kind: 'hinterland', source: item, spec: item.spec });
   }
 
   return out;

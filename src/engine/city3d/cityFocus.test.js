@@ -24,7 +24,7 @@ import {
   orbitPosition,
 } from './orbit.js';
 import { specBounds, placeBounds } from './pick.js';
-import { collectCitySpecs } from './cityParts.js';
+import { collectCitySpecs, KIND_NGOAI_LUOI } from './cityParts.js';
 import { buildTerrain } from './terrain.js';
 import { computeCityLayout } from '../cityLayout.js';
 import { BLUEPRINT_CATALOG } from '../constants.js';
@@ -73,15 +73,22 @@ function buildCity(era) {
   for (const item of collectCitySpecs({ layout, detail: 'high' })) {
     const src = item.source;
     /**
-     * ⚠️ VÙNG QUÊ CỐ Ý ĐỨNG NGOÀI DANH SÁCH VẬT CẢN — cùng luật với `sceneGraph.js`, đọc lý do đầy
-     * đủ ở đó (tóm tắt: cho cái cây vào mà bỏ quả đồi nó đứng trên thì tệ hơn không cho gì; kỷ 8
-     * có mặt đất vùng quê dâng tới +2,18 mà bộ lập kế hoạch không hề biết — `TECH_DEBT #54`).
+     * ⚠️ MỌI THỨ NGOÀI LƯỚI CỐ Ý ĐỨNG NGOÀI DANH SÁCH VẬT CẢN — cùng luật với `sceneGraph.js`, đọc
+     * lý do đầy đủ ở đó (tóm tắt: cho cái cây vào mà bỏ quả đồi nó đứng trên thì tệ hơn không cho
+     * gì; kỷ 8 có mặt đất vùng quê dâng tới +2,18 mà bộ lập kế hoạch không hề biết — `TECH_DEBT
+     * #54`). Vùng phụ cận (Phase 13) thừa hưởng đúng lý do ấy.
+     *
+     * ⚠️ VÀ CÂU "cùng luật với `sceneGraph.js`" NAY LÀ MỘT SỰ THẬT ĐƯỢC MÃ BẢO ĐẢM, KHÔNG CÒN LÀ
+     * MỘT LỜI TỰ NHẬN. Bản trước viết thẳng `item.kind === 'outskirt'` ở đây và `placement.vungQue`
+     * ở bên kia — hai công thức cho một luật, và chúng trôi khỏi nhau đúng cái ngày Phase 13 thêm
+     * loại khối thứ sáu: bài test này đỏ với `bán kính phố = 21,44`, một con số nói về một thành
+     * phố không tồn tại. Nay cả hai bên đọc `KIND_NGOAI_LUOI` ở `cityParts.js`.
      *
      * ⚠️ VÀ NÓ PHẢI ĐƯỢC **ĐẾM**, không được `continue` im lặng. Một `continue` đặt nhầm chỗ sẽ
      * lặng lẽ nuốt luôn nhà cửa và cả bài test này đo một thành phố rỗng mà vẫn xanh — bài
      * `THÀNH PHỐ DỰNG THỬ PHẢI ĐÚNG CỠ` bên dưới đòi con số này khác 0.
      */
-    if (item.kind === 'outskirt') { soVungQue += 1; continue; }
+    if (KIND_NGOAI_LUOI.has(item.kind)) { soVungQue += 1; continue; }
     let box;
     if (item.kind === 'prop') {
       const ux = src.x + (src.ox ?? 0);

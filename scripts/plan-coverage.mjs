@@ -24,6 +24,7 @@ import { computeCityLayout } from '../src/engine/cityLayout.js';
 import { collectCitySpecs } from '../src/engine/city3d/cityParts.js';
 import { specBounds } from '../src/engine/city3d/pick.js';
 import { daysGiacDay, trongDaGiac } from '../src/engine/city3d/footprint.js';
+import { doDauVetNgoaiLuoi } from '../src/engine/city3d/humanTrace.js';
 import { BLUEPRINT_CATALOG } from '../src/engine/constants.js';
 
 const GRID = 12;
@@ -357,6 +358,40 @@ if (process.argv.includes('--selftest')) {
     }
   }
   console.log(`✓ selftest: diện tích đúng bậc hai của tỉ lệ; kỷ 7 đi từ ${(tre * 100).toFixed(1)}% lên ${(gia * 100).toFixed(1)}%; không kỷ nào vượt 100%`);
+  process.exit(0);
+}
+
+/**
+ * ⚠️ CHẾ ĐỘ `--dau-chan`: CỔNG (G1) CỦA PHASE 13 — *"bao nhiêu DẤU VẾT CON NGƯỜI nằm NGOÀI lưới?"*
+ *
+ * Đặt ở đây chứ không ở một công cụ thứ hai, vì nó dùng đúng bộ khung mà file này đã dựng: cùng
+ * `computeCityLayout`, cùng `collectCitySpecs`, cùng mốc phiên. Một công cụ thứ hai sẽ phải chép
+ * lại cả ba, và bài học `plinth-tri.mjs` còn rất mới — một hằng số chép tay (`BUILDING_SCALE`
+ * 0,86 thay vì 1,3) làm nó đếm 3 bệ thay vì 31, im lặng tuyệt đối.
+ *
+ * ⚠️ ĐÂY LÀ ĐƠN VỊ **SỐ VẬT + DIỆN TÍCH MẶT BẰNG**, KHÔNG PHẢI % KHUNG HÌNH. Hai đơn vị ấy đã có
+ * tiền lệ lệch nhau (xem khối chú thích đầu file), nên (G1) đòi CẢ HAI: cột này, và `mask-count`
+ * đếm điểm ảnh. Chọn một là tự cho mình quyền đọc con số dễ hơn.
+ */
+if (process.argv.includes('--dau-chan')) {
+  const MOC_G1 = 80;
+  console.log('kỷ | vật ngoài lưới / tổng vật người | diện tích (ô²) | xa nhất (ô) | loại');
+  let tongNgoai = 0, tongDT = 0;
+  for (let era = 1; era <= 15; era += 1) {
+    const ids = BLUEPRINT_CATALOG[era].map((b) => b.id);
+    const layout = computeCityLayout({
+      built: ids, levels: Object.fromEntries(ids.map((i) => [i, 3])), era,
+      stats: { sessionCount: MOC_G1, streakLength: 9 },
+    });
+    const r = doDauVetNgoaiLuoi({ items: collectCitySpecs({ layout, detail: 'high' }), gridSize: GRID });
+    tongNgoai += r.soVat; tongDT += r.dienTich;
+    const loai = Object.entries(r.theoLoai).sort((a, b) => b[1] - a[1])
+      .slice(0, 4).map(([k, n]) => `${k}×${n}`).join(' ');
+    console.log(`${String(era).padStart(2)} | ${String(r.soVat).padStart(6)} / ${String(r.soVatTong).padStart(4)}`
+      + ` | ${r.dienTich.toFixed(1).padStart(14)} | ${r.xaNhat.toFixed(2).padStart(11)} | ${loai}`);
+  }
+  console.log(`\nTỔNG 15 kỷ: ${tongNgoai} vật ngoài lưới · ${tongDT.toFixed(1)} ô² · `
+    + `trung bình ${(tongNgoai / 15).toFixed(1)} vật/kỷ`);
   process.exit(0);
 }
 

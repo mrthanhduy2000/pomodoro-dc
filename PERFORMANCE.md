@@ -2062,3 +2062,96 @@ ngay trên.
 so với 0,62% ở bảng cũ) và dải 3 vẫn đã bão hoà dấu vết người (**61,32%**, so với 58,05%). Cả hai
 lý do loại vẫn đứng, và **dải 2 vẫn là dải xa nhất còn tấm đất thật**. Bảng số bị thay bằng bảng ở
 mục này; **lý lẽ chọn dải 2 giữ nguyên.**
+
+---
+
+## Phase 14 §1(2) «kim tự tháp + ziggurat» — 13/15 KỶ KHÔNG ĐỔI MỘT ĐƠN VỊ (2026-08-21, ADR-051)
+
+**Lệnh đã sinh ra bảng này** (chạy y hệt cho cả hai vế, chỉ khác `KHO`):
+
+```
+git worktree add /tmp/truoc 0fbd47f && ln -s "$PWD/node_modules" /tmp/truoc/node_modules
+KHO=/tmp/truoc node --import ./scripts/register-esm-loader.mjs scripts/scene-count.mjs
+KHO=$PWD      node --import ./scripts/register-esm-loader.mjs scripts/scene-count.mjs
+```
+Tham số in ra ngay trong đầu ra: `SESSIONS=80 HOUR=12 LEVEL=3`. Vế TRƯỚC = `0fbd47f` (§1(1) đã vá
+mạng đường), vế SAU = cây làm việc của §1(2). **Không có ảnh nào tham gia bảng này** — `scene-count`
+không cần Chromium, nên không có "đời ảnh" để ghi.
+
+| kỷ | tam giác TRƯỚC | tam giác SAU | Δ | lệnh vẽ |
+|---|---|---|---|---|
+| **2** (Ai Cập, `cone` → `pyramid`) | 138.824 | **138.978** | **+154** (+0,11%) | 14 → **14** |
+| **3** (Iraq, `stepped` → `ziggurat`) | 144.528 | **144.836** | **+308** (+0,21%) | 14 → **14** |
+| 1 · 4 · 5 · 6 · 7 · 8 · 9 · 10 · 11 · 12 · 13 · 14 · 15 | — | — | **0** | **không đổi** |
+| **tổng 15 kỷ** | 2.425.450 | **2.425.912** | **+462** (= 154 + 308, khớp từng đơn vị) | — |
+
+⚠️ **Mười ba con số 0 kia không phải "kết quả" — chúng là CÁI CÂN.** Bản vá này chỉ chạm hai dòng
+của một bảng 15 dòng, nên nếu phép đo bị lệch phiên bản, lẫn tải máy, hay chép nhầm cột thì gần như
+chắc chắn chúng sẽ không còn là 0. Đây đúng là thứ đã cứu bảng Bước C và là thứ `TECH_DEBT #43` kê
+đơn sau khi 6/15 dòng của bảng Phase 11 trôi trong im lặng.
+
+**Vì sao lệnh vẽ không nhúc nhích**: đền thờ trên đỉnh ziggurat mang vai `trim`, mà `trim` **đã có
+mặt ở kỷ 3 từ trước**. Lệnh vẽ thành phố = (số họ vật liệu) + 4, nên chỉ một họ **mới toàn kỷ** mới
+đẻ ra lệnh vẽ — xem `drawCallBudget.test.js`.
+
+### Cổng chống-trôi bản quét — VÀ MỘT ĐÍNH CHÍNH VỀ VIỆC AI ĐÃ TIÊU BIÊN
+
+```
+node scripts/city-preview.mjs --sweep --all --theme light
+node scripts/sweep-score.mjs .city-preview/sweep-light-ky1-15.png
+```
+Đời ảnh: `.city-preview/sweep-light-ky1-15.png`, dựng lại **sạch** cho cả hai vế trong cùng phiên
+2026-08-21 (vế TRƯỚC dựng trong `git worktree` tại `0fbd47f`). Ảnh 1864×3154 · ô 300×186.
+
+| | mốc ghi ở `CLAUDE.md` (sau ADR-046/047) | **TRƯỚC** (`0fbd47f`, tự đo) | **SAU** (§1(2)) |
+|---|---|---|---|
+| Cặp chặng gần nhất | 16,27 | **15,40** | **15,36** |
+| Cặp chặng dưới ngưỡng mắt | 0/15 | **0/15** | **0/15** |
+| Cặp kỷ gần nhất | 22,13 | **22,32** | **22,32** |
+| Cặp kỷ — trung vị | 39,35 | **39,83** | **39,83** |
+| Cặp kỷ dưới ngưỡng mắt | 0/105 | **0/105** | **0/105** |
+
+⚠️ **ĐỌC BẢNG NÀY THEO ĐÚNG THỨ TỰ CỘT, ĐỪNG SO CỘT 1 VỚI CỘT 3.** Nếu chép cột "sau" của phase
+trước làm mốc nền (đúng cái bẫy `TECH_DEBT #43`) thì kết luận sẽ là *"§1(2) làm trục chặng tụt 0,91"*
+— **sai**. Tự đo mốc nền tại `0fbd47f` cho thấy **§1(2) chỉ dịch 0,04** trên trục chặng và **0,00**
+trên trục kỷ. Toàn bộ 0,87 còn lại đã bị tiêu bởi **§1(1)** — bản vá chiều quay tam giác, thứ làm
+diện tích mặt đường **nhìn thấy được** đi từ 80,8% lên 100,0%.
+
+Và đó là một hệ quả **đoán trước được**: mặt đường là một bề mặt gần như nằm ngang, phản ứng với
+giờ trong ngày **yếu hơn** trung bình cả cảnh, nên thêm 19,2% mặt đường vào khung hình là thêm **chi
+tiết CHUNG** chứ không phải chi tiết PHÂN BIỆT — đúng khuôn đã ghi ở `CLAUDE.md` (*"một phép đo lấy
+trung bình trên vùng rộng sẽ tụt điểm mỗi lần ta thêm thứ gì đó KHÔNG phụ thuộc trục nó đang đo"*).
+Trục KỶ ngược lại **tốt lên** (22,13 → 22,32 · trung vị 39,35 → 39,83), vì mỗi kỷ một mặt đường
+riêng ⇒ trên trục ấy mặt đường là chi tiết PHÂN BIỆT. Cùng một thay đổi, hai trục, hai dấu ngược
+nhau — lần thứ hai dự án gặp đúng hình dạng này (lần đầu: mặt nước ở Bước C).
+
+⚠️ **BIÊN CÒN LẠI CỦA TRỤC CHẶNG: 15,36 trên ngưỡng mắt 12, tức 28%.** Ba mốc Đàm ra là **≥20,7 tự
+phục hồi · <17 khuyết tật thật · <14 phải làm vùng quê đổi theo giờ**. Mốc thứ hai **đã chạm từ
+trước phase này**; mốc thứ ba còn cách **1,36**. Lịch sử đầy đủ: 20,7 → 16,5 → 15,7 → 15,16 →
+16,27 (ADR-046/047 kéo lên) → **15,40** (§1(1)) → **15,36** (§1(2)). ⇒ **Phase sau thêm bất cứ thứ
+gì KHÔNG phản ứng với giờ trong ngày thì phải đo lại con số này TRƯỚC.** §1(3) sắp thêm 120–300 khối
+nhà — tường nhà thì CÓ phản ứng với hướng nắng, nên hướng đi có lợi, nhưng vẫn phải đo.
+
+### Ảnh nghiệm thu §1(2) — ĐỜI ẢNH VÀ DẤU VÂN TAY
+
+```
+# vế TRƯỚC — chạy TRONG worktree 0fbd47f, bằng một lệnh cd RIÊNG (cd ghép sang lệnh sau là cái bẫy
+# đã sinh ra một bảng số so bản cũ với chính nó)
+node scripts/city-preview.mjs --era 2 --hour 12 --sessions 80 --width 1500 --theme light
+node scripts/city-preview.mjs --era 3 --hour 12 --sessions 80 --width 1500 --theme light
+# vế SAU — cùng dòng lệnh, trong cây làm việc
+node scripts/sweep-diff.mjs --frame <TRUOC> <SAU>
+```
+
+| ảnh | md5 |
+|---|---|
+| `MAI-TRUOC-ky02.png` | `131daf0f20c3aba6889e3e55071403df` |
+| `MAI-SAU-ky02.png` | `d0def2bf2bf34e1830245865cf654e40` |
+| `MAI-TRUOC-ky03.png` | `a81cd2991a258c07a95e355d60f2705b` |
+| `MAI-SAU-ky03.png` | `f2fbeb18bba814ca5fa2402f34dda0b4` |
+
+Bốn `md5` khác nhau ⇒ cặp trước/sau **không phải hai bản sao của cùng một tấm** (luật nghiệm thu từ
+bài học `MAI-SAU-ky9.png` ở Phase 11). Kết quả: kỷ 2 **4,6%** điểm ảnh vượt ngưỡng mắt (lệch trung
+bình chỗ đã đổi **54,62**) · kỷ 3 **4,3%** (**97,27**). Ảnh ghép trái-phải để nhìn:
+`<scratchpad>/P14-MAI-ky02.png` và `P14-MAI-ky03.png` — cửa sổ cắt chọn bằng **mật độ điểm ảnh đã
+đổi** chứ không bằng hộp bao (hộp bao bị BÓNG ĐỔ kéo rộng ra 923×599, mà bóng không phải thứ cần nhìn).

@@ -140,7 +140,12 @@ function massHeight(mass, style, archetype, rarity, level) {
  *   `eaveY` đỉnh tường (chân mái) · `apexY` điểm cao nhất · `deck` mặt bằng ĐỨNG ĐƯỢC (`null` khi
  *   mái dốc — và `null` phải được tôn trọng, không được xấp xỉ) · `ridges` các sống mái.
  */
-function emitRoof(out, { w, d, top, x, z }, style, ctx) {
+// ⚠️ `export` KHÔNG phải để tiện dùng lại — không ai ngoài file này gọi nó. Nó để BÀI TEST hỏi
+// thẳng nhà máy mái *"kiểu mái này có dựng ra khối nào không?"*. Hỏi qua công trình đã lắp
+// xong thì không trả lời được: `emitSignature` dựng khối ở ĐÚNG chỗ mái đứng (cùng `x`/`z`,
+// cùng cao độ đỉnh tường), nên một nhánh mái đã bị xoá vẫn 'có khối ở đó' — đã đo và thấy
+// đúng như vậy ở kỷ 3 (2026-08-21), suýt ship một cái gác không thể đỏ.
+export function emitRoof(out, { w, d, top, x, z }, style, ctx) {
   const eaves = eaveOverhang(style, w, d);
   const rw = w + eaves * 2;
   const rd = d + eaves * 2;
@@ -219,6 +224,47 @@ function emitRoof(out, { w, d, top, x, z }, style, ctx) {
         cd *= 0.72;
       }
       anchors.apexY = cy;
+      break;
+    }
+
+    // ⚠️ `ziggurat` KHÔNG PHẢI `stepped` VIẾT KHÁC ĐI — hai kỷ kề nhau về mặt từ vựng nhưng ngược
+    // nhau về mặt kiến trúc, và trước 2026-08-21 chúng dùng chung MỘT nhánh mã.
+    //
+    //   `stepped`  = luật giật cấp (setback) cao ốc New York 1916 → mặt tường **ĐỨNG**, thềm thu
+    //                vào từ mép mái, số tầng ít, mỗi thềm chỉ là một cái mũ trên đỉnh toà nhà.
+    //   `ziggurat` = đền thờ Lưỡng Hà → mặt tường **XIÊN VÀO** (batter), thềm thu vào từ mép
+    //                THÂN NHÀ chứ không từ mép mái, và trên đỉnh có một ngôi đền nhỏ.
+    //
+    // Ba khác biệt ấy đều đo được, và cái thứ hai mới là cái quyết định mắt có đọc ra "giật cấp"
+    // hay không: `stepped` mở đầu ở `rw` — tức RỘNG HƠN thân nhà — nên bậc đầu tiên KHÔNG tạo ra
+    // một cái thềm nào cả, nó chỉ nối tiếp mặt tường. Đàm nhìn kỷ 3 và nói *"kim tự tháp không có
+    // khối hình chóp"*: đúng, vì bậc duy nhất mắt thấy được là bậc thứ hai, cao 0,32 trên một
+    // thân nhà cao 1,87.
+    //
+    // Công trình có thật: **ziggurat thành Ur** (Nasiriyah, Iraq) — 3 thềm chồng, đáy 64×45 m,
+    // tường thềm 1 nghiêng vào rõ rệt, đền thờ nhỏ trên đỉnh. Tỉ lệ ở đây là tỉ lệ ĐỌC ĐƯỢC ở cỡ
+    // hiển thị thật chứ không phải tỉ lệ đo đạc khảo cổ (Ur thật có thềm 1 cao 11 m trên đáy 64 m
+    // = 0,17 lần bề ngang; ở cỡ một ô lưới thì một thềm mảnh như vậy còn chưa tới hai điểm ảnh).
+    case 'ziggurat': {
+      // Thu vào theo TỈ LỆ THÂN NHÀ, không theo bề ngang mái — đó là chỗ tạo ra cái thềm.
+      const PLAN = [0.8, 0.58, 0.42];
+      const CAO = [0.62, 0.46, 0.32];
+      const BATTER = 0.88;   // mặt tường nghiêng vào — dấu hiệu nhận dạng số một của ziggurat
+      let cy = top;
+      for (let i = 0; i < PLAN.length; i += 1) {
+        const tw = w * PLAN[i];
+        const td = d * PLAN[i];
+        const h = pitch * CAO[i];
+        out.push(prism({ x, z, y: cy, w: tw, d: td, h, sides: 4, taper: BATTER, role: 'roof' }));
+        cy += h;
+        anchors.deck = { x, z, y: cy, w: tw * BATTER, d: td * BATTER };
+      }
+      // Đền thờ trên đỉnh (cella). Vai `trim` chứ không phải `roof`: ở Ur nó lợp gạch men khác hẳn
+      // thân ziggurat. `trim` đã có mặt ở kỷ này rồi nên KHÔNG thêm họ vật liệu nào — luật lệnh vẽ
+      // ở `drawCallBudget.test.js` không bị đụng tới.
+      const dw = w * 0.24;
+      out.push(prism({ x, z, y: cy, w: dw, d: d * 0.24, h: pitch * 0.4, sides: 4, taper: 0.94, role: 'trim' }));
+      anchors.apexY = cy + pitch * 0.4;
       break;
     }
 

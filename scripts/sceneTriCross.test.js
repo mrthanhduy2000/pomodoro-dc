@@ -33,6 +33,21 @@
  * in thời gian chạy của mình — Đàm yêu cầu con số ấy phải hiện ra, để cái giá của nó không bao giờ
  * trở thành vô hình.
  *
+ * ⚠️ VÀ ĐÂY LÀ GIỚI HẠN PHẢI NÓI RA (Đàm chốt 2026-08-21, §3 Q3 của Phase 14): **con số ~25 giây
+ * này KHÔNG phải một phép đo thời gian dựng cảnh, và đừng giả vờ nó là.** Nó là thời gian của MỘT
+ * bài test cụ thể — trong đó có cả chi phí nạp module, chi phí của `plinth-tri.mjs`, và cả tải máy
+ * lúc ấy. `TECH_DEBT #70` sinh ra vì dự án CHƯA CÓ cổng nào canh thời gian dựng cảnh; bài này chỉ
+ * tình cờ **nhạy** với đại lượng đó, chứ nó không đo đại lượng đó. Dùng nó làm "cổng hiệu năng"
+ * là đúng cái sai đã ghi ở `CLAUDE.md` — *một con số đúng vẫn có thể trả lời SAI câu hỏi mình đang
+ * hỏi*.
+ *   ⇒ **Không dựng một bộ đo riêng cho thời gian dựng cảnh vào lúc này** (chỉ thị Đàm: chi phí lớn
+ *     hơn lợi ích khi chưa có phase nào đụng `terrain.js`/`horizon.js`/`noise.js`).
+ *   ⇒ **REVIEW TRIGGER**: khi tỉ số **(giây in ra) ÷ 25** vượt **1,15×** — tức khoảng **≥ 29 giây**
+ *     trên máy rảnh — thì DỪNG và đi tìm nguyên nhân, đừng chỉnh con số 25 trong chú thích này.
+ *     Cổng cứng của `TECH_DEBT #70` vẫn là **≤ 1,25×**; 1,15× là mức CẢNH BÁO sớm hơn một nhịp.
+ *   ⇒ Con số ấy phải đo trên **máy rảnh**: hai phép đo thời gian chồng lấn nhau thì không phép nào
+ *     so được với phép nào (bài học ADR-048).
+ *
  * THỬ-CHO-ĐỎ — cả ba vế đã chạy thật trong một `git worktree` riêng (2026-08-21), mỗi lần nêu
  * TRƯỚC chỗ phải đỏ rồi mới phá:
  *   (a) thay `readFileSync(...sceneGraph.js)` bằng một chuỗi cứng ⇒ đỏ đúng ở assert

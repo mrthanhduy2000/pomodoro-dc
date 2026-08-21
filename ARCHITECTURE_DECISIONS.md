@@ -11,6 +11,113 @@
 
 ---
 
+## ADR-051 — Kim tự tháp và ziggurat là HAI hình khối, không phải một giá trị mái viết khác đi; và một nhánh `default` biến «thiếu `case`» thành «lặng lẽ đổi kiểu»
+
+**Ngày**: 2026-08-21 · **Phase 14 §1(2)** · **Trạng thái**: đã áp dụng
+
+### Bối cảnh
+Đàm nhìn thành phố rồi nói: *«kim tự tháp không có khối hình chóp»*. Đi đọc bảng thì lời phàn nàn
+ấy đúng theo hai cách khác nhau ở hai kỷ kề nhau:
+
+- **Kỷ 2 (Ai Cập)** khai `roof: 'cone'`. `cone` là lăng trụ **TÁM cạnh** thóp về một điểm — trên
+  màn hình nó ra một cái **lều rạp xiếc tròn**. Nền văn minh mà cả thế giới nhận ra bằng đúng một
+  hình khối lại là kỷ duy nhất không có hình khối ấy. Và `pyramid` (bốn cạnh, `taper` gần 0) đã tồn
+  tại trong mã từ lâu, chỉ chưa ai nối vào đây.
+- **Kỷ 3 (Iraq, ziggurat thành Ur)** dùng CHUNG nhánh `stepped` với **kỷ 11 (cao ốc giật cấp
+  Manhattan)** — hai thứ ngược nhau về kiến trúc. `stepped` mở đầu ở `rw` (= thân nhà + 2·`eaves`,
+  tức **RỘNG HƠN** thân) nên bậc thứ nhất không tạo ra một cái thềm nào, nó chỉ nối tiếp mặt tường
+  đi lên; mắt chỉ đọc được bậc thứ hai trở đi, cao 0,32 trên một thân nhà cao 1,87.
+
+Đo bảng từ vựng: **9 giá trị mái kỳ quan cho 15 kỷ** (`flat` 3 kỷ · `cone`/`stepped`/`tiered`/`gable`
+mỗi cặp 2 kỷ). Câu hỏi cố vấn đặt ra — *"`roof` có đủ từ vựng để nói 'kim tự tháp' không?"* — có
+câu trả lời bằng số: **chưa**.
+
+### Vấn đề
+Vá riêng kỷ 2 thì sửa được triệu chứng và bỏ nguyên nhân. Hai kỷ kề nhau đang được yêu cầu kể hai
+câu chuyện kiến trúc ngược nhau — **Giza TRƠN, Ur GIẬT CẤP** — bằng một bộ từ vựng không phân biệt
+nổi chúng. Và bất kỳ giá trị mới nào cũng phải trả lời được *"công trình có thật nào trông như
+vậy?"*, nếu không thì nó là mã chết mang hình dạng một tính năng.
+
+### Phương án cân nhắc
+1. **Chỉ đổi kỷ 2 sang `pyramid`, để kỷ 3 nguyên.** — BỎ. Nó chữa đúng một nửa lời phàn nàn và để
+   nguyên cái gốc: hai kỷ vẫn dùng chung một nhánh mã cho hai hình khối ngược nhau.
+2. **Thêm cả `mastaba` (ghế đá mộ Ai Cập) cho đủ bộ Ai Cập.** — BỎ. **Không kỷ nào có chủ cho nó**:
+   kỷ 2 đã lấy kim tự tháp, và không kỷ nào khác nói về Ai Cập. Đây đúng là từ vựng chết mà mục
+   Playbook cấm; nay đã có bài test `TỪ VỰNG MÁI (a)` bắt.
+3. **Nâng `roofPitch` của kỷ 3 để khối ziggurat áp đảo thân nhà.** — BỎ. `roofPitch` **gánh hai
+   việc**: nó vừa quyết mái kỳ đài, vừa quyết bề dày gờ chắn mái của NHÀ DÂN (kỷ 3 khai
+   `vernacularRoof: 'flat'`, mà nhánh `flat` tính `lip`/`cap` theo `pitch`). Nâng lên 1,05 thì mỗi
+   căn nhà bùn đội một tấm slab dày 45% chiều cao của chính nó. Đây là lần thứ SÁU của hình dạng
+   *"một trường gánh hai việc"* trong dự án — và lần này nó bị bắt TRƯỚC khi ship, không phải sau.
+4. **✅ Tách `ziggurat` thành một giá trị riêng, và nối kỷ 2 vào `pyramid`.** — CHỌN.
+
+### Giải pháp chọn
+`ROOF_KINDS` đi từ 9 lên 10 giá trị. Kỷ 2 khai `roof: 'pyramid'` (giữ nguyên `roofPitch` 0,72 và
+`eaves` 0,2); kỷ 3 khai `roof: 'ziggurat'`, một nhánh MỚI trong `emitRoof` khác `stepped` ở **ba
+điểm đo được**, và điểm thứ hai mới là điểm quyết định mắt có đọc ra "giật cấp" hay không:
+
+| | `stepped` (setback New York 1916) | `ziggurat` (Ur) |
+|---|---|---|
+| mặt tường thềm | **ĐỨNG** (`taper: 1`) | **NGHIÊNG VÀO** (`taper: 0,88`) |
+| thềm dưới cùng thu vào từ | mép **MÁI** (`rw`, rộng hơn thân) | mép **THÂN NHÀ** (0,80·w, hẹp hơn thân) |
+| trên đỉnh | không có gì | **đền thờ nhỏ** (cella), vai màu riêng |
+
+`landmark` của kỷ 2 đổi từ «làng ven sông Nin» sang «kim tự tháp Giza» — trường ấy là **lời giải
+thích cho những con số nằm cùng dòng**, nên nó phải nói đúng công trình mà các con số đang mô tả.
+Chú thích `vernacularRoof: 'flat'` giữ nguyên và nay đọc còn rõ hơn: kỳ đài của một nền văn minh và
+cái nhà người ta ở hằng ngày gần như không bao giờ cùng một hình mái.
+
+Tỉ lệ dốc của kim tự tháp KHÔNG phải con số chọn cho tiện: Đại Kim Tự Tháp Giza cao 146,6 m trên
+đáy 230,3 m = **0,637 lần bề ngang**; ở đây đo được **0,533** (mái phủ `rw = w + 2·eaves` nên đáy
+rộng hơn thân). Bài test khoá dải [0,40 ; 0,90], bao lấy cả tỉ lệ thật lẫn số đang dựng.
+
+### Trade-off
+- **Cái được**: kỷ 2 có một khối chóp bốn mặt thật, đáy rộng **135%** thân nhà và cao **76%** thân
+  nhà — một KHỐI, không phải một cái mũ. Kỷ 3 có ba thềm nghiêng thu dần cộng một đền nhỏ trên
+  đỉnh. Bảng từ vựng rộng thêm một giá trị; hai kỷ kề nhau thôi dùng chung một nhánh mã.
+- **Cái mất**: **+154 tam giác** ở kỷ 2 và **+308** ở kỷ 3 (0,16% và 0,30%). **Lệnh vẽ KHÔNG đổi**
+  (14 ở cả hai kỷ) vì `ziggurat` chỉ dùng hai vai màu `roof`/`trim` mà kỷ 3 đã có sẵn.
+- **Cái CHƯA giải quyết, và phải nói thẳng**: khối ziggurat mới chiếm **35% chiều cao** thân nhà nó
+  đứng lên. Ở Ur thì cả công trình LÀ cái ziggurat, không có thân nhà nào bên dưới. Đẩy tỉ lệ ấy
+  lên bằng cách kéo cao các thềm sẽ làm chúng dày hơn tỉ lệ thật của Ur (thềm 1 cao 11 m trên đáy
+  64 m = 0,17 lần bề ngang) — tức **mua một ấn tượng bằng cách nói dối tỉ lệ**, đúng thứ ADR-025 đã
+  cấm với mặt đường. Đây là bài toán **KHỐI** (`massScale`, `getMassing`), không phải bài toán MÁI.
+  Ghi thành `TECH_DEBT #75`.
+
+### Ảnh hưởng
+- `src/engine/city3d/eraStyle.js` — `ROOF_KINDS` +1 giá trị; kỷ 2 và kỷ 3 đổi `roof`; kỷ 2 đổi
+  `landmark`.
+- `src/engine/city3d/buildingSpec.js` — thêm `case 'ziggurat'`; **`emitRoof` nay được `export`**,
+  và đó không phải để tiện dùng lại (không ai ngoài file ấy gọi nó) mà để bài test hỏi THẲNG nhà
+  máy mái — xem mục "Điều kiện xem lại".
+- `src/engine/city3d/buildingSpec.test.js` — 5 bài mới, cả 5 đã thử-cho-đỏ.
+- KHÔNG đụng: bảng màu · mạng đường · địa hình · camera · ADR-007.
+
+### Điều kiện xem lại
+- Khi có kỷ thứ 16, hoặc khi một kiểu mái chạm 4 kỷ — bài `TỪ VỰNG MÁI (c)` sẽ đỏ, và câu trả lời
+  đúng là *"kỷ ấy thật sự lợp mái gì?"* chứ không phải nới cái chốt.
+- Khi `TECH_DEBT #75` được mở: nếu khối kỳ quan kỷ 3 được hạ xuống thì tỉ lệ thềm/thân đổi, và các
+  ngưỡng trong bài `KỶ 3 — ZIGGURAT` phải được đo lại (chúng là QUAN HỆ nên phần lớn sẽ tự đúng).
+- ⚠️ **Nếu ai đó gỡ `export` của `emitRoof` cho "sạch"**: bài `TỪ VỰNG MÁI (b)` sẽ không dựng được.
+  Đừng thay nó bằng phép đo trên công trình đã lắp xong — đã thử và nó **không thể đỏ** (xem dưới).
+
+### Bài học kèm theo — hai lần phép thử ngược bác bỏ chính chú thích tôi vừa viết
+1. **Bản đầu của bài `TỪ VỰNG MÁI (b)`** đo *"khối kết cấu cao nhất có vươn lên trên đỉnh thân nhà
+   chính không"* trên kỳ quan THẬT. Xoá hẳn `case 'ziggurat'` ⇒ **vẫn xanh**, vì `emitSignature`
+   của kỷ 3 (`ziggurStair`) dựng bậc thang ở đúng chỗ ấy, cùng `x`/`z`, cùng cao độ. Một cái gác
+   không thể đỏ, và lý do nằm ở một file khác.
+2. **Bản thứ hai** hỏi thẳng `emitRoof` và assert `out.length >= 1`, với chú thích khẳng định
+   *"`switch` không có nhánh `default` nên thiếu `case` thì không dựng ra gì"*. Phá lại ⇒ **vẫn
+   xanh**: `emitRoof` **CÓ** `default`, và nó đẩy ra một tấm phiến trơn. Câu khẳng định của tôi về
+   chính đoạn mã mình vừa sửa là SAI, và rủi ro thật thì **ngược lại và tệ hơn**: một giá trị mái
+   thiếu `case` không biến mất — nó **lặng lẽ hoá thành một tấm phiến trơn**, tức kỷ ấy mất căn
+   cước mái mà vẫn "có mái", và trên ảnh nó trông như một quyết định mỹ thuật.
+
+   ⇒ Bản đúng dựng một kiểu mái KHÔNG TỒN TẠI để lấy đúng hình của nhánh `default`, rồi đòi mọi
+   kiểu thật phải khác nó. Đây là *"một câu tự trấn an cũng phải được kiểm như một con số"*
+   (Phase 4G) ở biến thể nguy hiểm nhất: câu ấy nói về **chính đoạn mã mình đang sửa**, nên nó
+   nghe chắc chắn nhất và ít bị nghi nhất.
+
 ## ADR-050 — Chiều quay tam giác là một LUẬT CỦA HỆ, phải bịt ở CÁI CỬA DUY NHẤT; và một bài test đo VỊ TRÍ thì mù hoàn toàn với ĐỘ HIỂN THỊ
 
 **Ngày**: 2026-08-21 · **Phase 14 §1(1)** · **Trạng thái**: đã áp dụng

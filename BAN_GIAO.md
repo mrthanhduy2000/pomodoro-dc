@@ -6,7 +6,65 @@
 > chọn: `ARCHITECTURE_DECISIONS.md`. Nợ kỹ thuật: `TECH_DEBT.md`. Migration: `MIGRATION.md`. Tóm
 > tắt theo mốc: `CHANGELOG.md`.
 > **NGUYÊN TẮC ƯU TIÊN SỐ 1:** (1) mọi phiên AI phải đọc file này + `CLAUDE.md` + các file liên quan TRƯỚC khi làm; (2) sau MỌI cập nhật dù nhỏ, phải cập nhật ngay file này + `CLAUDE.md` + các file liên quan khác.
-> Cập nhật lần cuối: **2026-08-21** — **PHASE 14 §1(1): MẠNG ĐƯỜNG THÔI ĐỨT NÉT.** Bisect nói VIỆC B vô can; thủ phạm là chiều quay tam giác, có sẵn từ lâu. Xem ADR-050.
+> Cập nhật lần cuối: **2026-08-21** — **PHASE 14 §1(2): KIM TỰ THÁP CÓ HÌNH CHÓP, ZIGGURAT CÓ THỀM.** Từ vựng mái kỳ quan 9 → 10 giá trị; mái nhà dân vẫn nghèo (`TECH_DEBT #76`). Xem ADR-051.
+>
+> ## ⚠️ PHASE 14 §1(2) — CÂU HỎI ĐÚNG KHÔNG PHẢI «VÁ KỶ 2 THẾ NÀO»
+>
+> Đàm nói *«kim tự tháp không có khối hình chóp»*. Chỉ thị §1(2) cấm vá riêng kỷ 2 và bắt hỏi:
+> **bộ từ vựng mái có đủ giàu để 15 kỷ nói ra 15 câu khác nhau không?** Đếm ra:
+>
+> | | số giá trị dùng | phân bố |
+> |---|---|---|
+> | Mái **KỲ QUAN** (`roof`) | **9 giá trị / 15 kỷ** | `flat`×3 · `cone`/`stepped`/`tiered`/`gable`×2 |
+> | Mái **NHÀ DÂN** (`vernacularRoof`) | **3 giá trị / 15 kỷ** | `flat`×7 · `gable`×7 · `cone`×1 |
+>
+> ⇒ **Nghèo thật, và nghèo ở hai chỗ khác nhau.** Kỳ quan đã sửa trong phase này; nhà dân ghi thành
+> `TECH_DEBT #76` và **phải gộp vào §1(3)** (cùng trả lời một câu: *nhà thường ở nước này ra sao?*).
+>
+> ### Hai khuyết tật cụ thể, cả hai đều là «dùng nhầm một giá trị đã có»
+>
+> - **Kỷ 2 (Ai Cập)** khai `roof: 'cone'` — mà `cone` là lăng trụ **8 cạnh** thu về đỉnh ⇒ một cái
+>   **lều rạp xiếc**. Giá trị `pyramid` (4 cạnh, `taper: 0`) **đã tồn tại sẵn** và chỉ kỷ 9 dùng.
+>   Không cần cơ chế mới: `prism` với `sides: 4` + `taper: 0` **chính là** một chóp bốn mặt thật.
+>   Nay kỷ 2 → `pyramid`, `landmark` đổi từ *"làng ven sông Nin"* thành ***"kim tự tháp Giza"***.
+> - **Kỷ 3 (Ur)** dùng chung `stepped` với **kỷ 11** (setback cao ốc New York 1916). Hai công trình
+>   ấy **không phải một thứ**: Giza thì **NHẴN**, ziggurat Ur thì **GIẬT CẤP** — và `stepped` thu vào
+>   từ **mép MÁI** (rộng hơn tường vì `eaves`) nên bậc đầu tiên không tạo ra thềm nào đọc được.
+>   Nay có `case 'ziggurat'` riêng: ba thềm thu vào theo tỉ lệ **THÂN NHÀ**, mặt tường **nghiêng**
+>   (`taper 0,88` — dấu hiệu nhận dạng số một của ziggurat), đền thờ trên đỉnh.
+>
+> **`mastaba` cố ý KHÔNG thêm**: không kỷ nào sở hữu nó ⇒ sẽ là từ vựng chết. Bài test
+> *"không giá trị chết"* nay canh đúng điều đó.
+>
+> ### Nghiệm thu
+>
+> | | trước | sau |
+> |---|---|---|
+> | Lệnh vẽ kỷ 2 / kỷ 3 | 14 / 14 | **14 / 14** (không thêm họ vật liệu nào) |
+> | Tam giác cả cảnh — kỷ 2 | 138.824 | **138.978** (+154 · +0,11%) |
+> | Tam giác cả cảnh — kỷ 3 | 144.528 | **144.836** (+308 · +0,21%) |
+> | 13 kỷ còn lại | — | **không đổi MỘT ĐƠN VỊ** (đối chứng có sẵn) |
+> | Ảnh `--width 1500` — kỷ 2 | — | **4,6%** điểm ảnh vượt ngưỡng mắt (lệch TB **54,62**) |
+> | Ảnh `--width 1500` — kỷ 3 | — | **4,3%** (**97,27**) |
+> | `npm run test:fast` | 1.017 | **1.022** bài · 1.021 xanh · 0 đỏ · 1 bỏ qua |
+>
+> **5 bài test mới**, tất cả đã thử-cho-đỏ đúng chỗ đã nêu trước. Hai bài canh hình bằng **QUAN HỆ**
+> chứ không bằng mức (chóp phải rộng hơn thân · độ dốc trong 0,40–0,90, Giza thật 0,637 · thềm phải
+> hẹp dần đơn điệu). Ba bài canh chính cái BẢNG.
+>
+> ⚠️ **Hai lần bài test của chính tôi xanh oan, cả hai cùng một gốc**: `emitRoof` **CÓ** nhánh
+> `default` phát ra một tấm phiến trơn, nên "thiếu `case`" **không** làm mất khối — nó **lặng lẽ đổi
+> kiểu**. Bài đầu hỏi qua kỳ quan đã lắp ráp (mà `emitSignature` dựng khối ở ĐÚNG x/z/độ cao của
+> mái) nên gỡ `case 'ziggurat'` vẫn xanh. Bài thứ hai tôi tự viết chú thích *"`switch` không có
+> `default`"* — **một câu khẳng định về đoạn mã tôi vừa sửa, và nó sai**. Vá: `export emitRoof` để
+> hỏi thẳng nhà máy mái, rồi so **dấu vân tay hình học** của từng kiểu với dấu vân tay của nhánh
+> `default`.
+>
+> ### Nợ ghi ra
+> `TECH_DEBT #75` — ziggurat cao **34,6%** thân nhà bên dưới (kim tự tháp kỷ 2: **76%**) nên vẫn đọc
+> ra *"cao ốc đội mũ"*. Đây là bài toán **KHỐI TÍCH** (`massScale`), **không** phải bài toán mái;
+> nâng `roofPitch` là bẫy *"một trường gánh hai việc"* lần thứ sáu (nó cũng định độ dày lan can mái
+> `flat` của **nhà dân**). `TECH_DEBT #76` — mái nhà dân 3 giá trị / 15 kỷ.
 >
 > ## ⚠️ PHASE 14 §1(1) — «NÉT ĐỨT» LÀ MỘT KHUYẾT TẬT CÓ THẬT, NHƯNG KHÔNG PHẢI HỒI QUY
 >
@@ -76,10 +134,9 @@
 > chứng chứng minh phép đo không kêu oan mọi thứ. `npm test` (lượt nhanh): **1.017 bài · 1.016 xanh
 > · 0 đỏ · 1 bỏ qua**. Lint sạch. Build xanh.
 >
-> ### Ba việc còn lại của Phase 14 (chưa làm)
-> **§1(2)** từ vựng mái (kim tự tháp / mastaba / ziggurat) — đã xác nhận bằng mắt: kỳ quan kỷ 2 đang
-> đội một **hình nón nhiều cạnh**, không phải chóp bốn mặt. **§1(3)** hình thái khu phố (*một ô là
-> một KHU PHỐ*). **§3** năm câu trả lời của cố vấn (Q2 đã ghi vào `CLAUDE.md`; Q1/Q3/Q5 còn lại).
+> ### Việc còn lại của Phase 14 (chưa làm)
+> **§1(2) ĐÃ XONG** (xem khối trên). **§1(3)** hình thái khu phố (*một ô là một KHU PHỐ*) — phải gộp
+> luôn `TECH_DEBT #76`. **§3** năm câu trả lời của cố vấn (Q1/Q2 đã xong; Q3/Q4/Q5 còn lại).
 >
 > ## ⚠️ PHASE 13 — DỪNG THEO ĐÚNG §7(a) VÀ §7(b), KHÔNG PHẢI VÌ BẾ TẮC
 >
@@ -1410,6 +1467,38 @@
 - **Lịch sử git `main` từng bị xáo** (thao tác git song song): bản đang chạy là `eb44638` — chứa ĐỦ mọi việc gần đây (Hỏi Coach offline + fix đêm khuya + Coach offline analyst). Vài commit cũ (`1e27505`, `9fbcd62`) thành dangling, KHÔNG còn trong `git log` nhưng code vẫn nằm trong bản deploy. Đừng hoảng nếu không thấy chúng.
 
 ## 🗒️ Nhật ký cập nhật
+
+### 2026-08-21 — Phase 14 §1(2): kim tự tháp có hình chóp, ziggurat có thềm (ADR-051)
+
+**Vì sao làm.** Câu thứ hai trong bốn câu Đàm bác VIỆC B: *«kim tự tháp không có khối hình chóp»*.
+Chỉ thị §1(2) cấm vá riêng kỷ 2 — phải hỏi **cả bộ từ vựng**.
+
+**Đếm trước khi sửa.** Mái kỳ quan: **9 giá trị / 15 kỷ**. Mái nhà dân: **3 giá trị / 15 kỷ**
+(`flat`×7 · `gable`×7 · `cone`×1). Nghèo thật, và nghèo ở hai chỗ khác nhau.
+
+**Hai khuyết tật.** Kỷ 2 khai `cone` = lăng trụ **8 cạnh** ⇒ lều rạp xiếc; `pyramid` (4 cạnh) đã có
+sẵn mà chỉ kỷ 9 dùng. Kỷ 3 (Ur) dùng chung `stepped` với kỷ 11 (setback New York 1916) — nhưng
+**Giza NHẴN còn ziggurat GIẬT CẤP**, và `stepped` thu vào từ mép MÁI (rộng hơn tường) nên bậc đầu
+không đọc ra thềm.
+
+**Bản vá.** `ROOF_KINDS` 9 → 10 (thêm `ziggurat`); kỷ 2 → `pyramid` + `landmark: 'kim tự tháp Giza'`;
+kỷ 3 → `ziggurat` với `case` riêng (ba thềm thu theo tỉ lệ **THÂN NHÀ**, mặt tường nghiêng
+`taper 0,88`, đền thờ trên đỉnh mang vai `trim` đã có sẵn ⇒ **0 họ vật liệu mới**). `mastaba` cố ý
+KHÔNG thêm — không kỷ nào sở hữu nó ⇒ từ vựng chết.
+
+**Số.** Lệnh vẽ **14/14 không đổi**. Tam giác cả cảnh (`scene-count.mjs`, `SESSIONS=80 HOUR=12
+LEVEL=3`): kỷ 2 138.824 → **138.978** (+0,11%) · kỷ 3 144.528 → **144.836** (+0,21%) · **13 kỷ còn
+lại không đổi một đơn vị**. Ảnh `--width 1500`: kỷ 2 **4,6%** điểm ảnh vượt ngưỡng mắt (lệch TB 54,62) ·
+kỷ 3 **4,3%** (97,27). Ảnh ghép trước/sau: `<scratchpad>/P14-MAI-ky02.png` và `P14-MAI-ky03.png`. `npm run test:fast`: 1.017 → **1.022** bài, 0 đỏ. Lint sạch.
+
+**Bài học (đã ghi vào `CLAUDE.md`).** Hai bài test của chính tôi xanh oan vì `emitRoof` **CÓ** nhánh
+`default` — "thiếu `case`" **không** làm mất khối mà **lặng lẽ đổi kiểu**. Tệ hơn: tôi đã tự viết
+chú thích *"`switch` không có `default`"* về đúng đoạn mã mình vừa sửa.
+
+**Nợ.** `TECH_DEBT #75` (ziggurat cao 34,6% thân nhà ⇒ vẫn đọc ra "cao ốc đội mũ" — bài toán KHỐI
+TÍCH, không phải mái) · `TECH_DEBT #76` (mái nhà dân 3 giá trị / 15 kỷ, gộp vào §1(3)).
+
+---
 
 ### 2026-08-21 — Phase 13 VIỆC B: vùng phụ cận của đô thị — thành phố thôi là một cụm nhà giữa đồng không (ADR-049)
 

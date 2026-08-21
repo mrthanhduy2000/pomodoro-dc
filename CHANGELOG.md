@@ -12,6 +12,38 @@
 
 ---
 
+## 2026-08-21 — Phase 14 §1(2): kim tự tháp có hình chóp, ziggurat có thềm (ADR-051)
+
+- **Mục đích**: Đàm nhìn kỷ 2 rồi nói *«kim tự tháp không có khối hình chóp»*. Câu hỏi đúng không
+  phải *"vá kỷ 2 thế nào"* mà là *"bộ từ vựng mái có đủ giàu để 15 kỷ nói ra 15 câu khác nhau
+  không?"* — và câu trả lời đo được là **CÓ ở kỳ quan, KHÔNG ở nhà dân**.
+- **Nguyên nhân gốc**: kỷ 2 (Ai Cập) khai `roof: 'cone'`, mà `cone` là một lăng trụ **8 cạnh** thu
+  về đỉnh ⇒ render ra một cái lều rạp xiếc, không phải kim tự tháp. Giá trị `pyramid` (4 cạnh) đã
+  tồn tại sẵn trong bảng nhưng chỉ có kỷ 9 dùng. Kỷ 3 (Ur) thì dùng chung `stepped` với kỷ 11
+  (setback cao ốc New York 1916) — mà `stepped` thu vào từ **mép MÁI** (rộng hơn tường) nên bậc đầu
+  tiên không tạo ra cái thềm nào đọc được.
+- **Phạm vi**: `ROOF_KINDS` mở rộng **9 → 10** giá trị (thêm `ziggurat`); kỷ 2 → `pyramid` (kèm
+  `landmark: 'kim tự tháp Giza'`); kỷ 3 → `ziggurat` với `case` hình học mới (ba thềm thu vào theo
+  tỉ lệ **THÂN NHÀ**, mặt tường nghiêng `taper 0,88`, đền thờ trên đỉnh mang vai `trim` đã có sẵn ở
+  kỷ ấy). `mastaba` **cố ý KHÔNG thêm** — không kỷ nào sở hữu nó ⇒ sẽ là từ vựng chết.
+- **Ảnh hưởng**: **lệnh vẽ không đổi (14/14)** vì không thêm họ vật liệu nào. Tam giác cả cảnh
+  (`KHO=… node --import ./scripts/register-esm-loader.mjs scripts/scene-count.mjs`, `SESSIONS=80
+  HOUR=12 LEVEL=3`): kỷ 2 138.824 → **138.978** (+154 · +0,11%) · kỷ 3 144.528 → **144.836**
+  (+308 · +0,21%) · **13 kỷ còn lại không đổi MỘT ĐƠN VỊ** — đó vừa là kết quả vừa là đối chứng
+  cho chính phép đo. Nhìn bằng mắt (`sweep-diff --frame` so với `0fbd47f`): kỷ 2 đổi **4,6%** điểm
+  ảnh vượt ngưỡng mắt (lệch trung bình **54,62**), kỷ 3 **4,3%** (**97,27**).
+- **Tương thích**: không migration, không đụng state/Supabase/ADR-007.
+- **Lưới an toàn mới**: 5 bài trong `buildingSpec.test.js` (1017 → **1022** bài). Hai bài canh hình
+  của kỷ 2 và kỷ 3 bằng **quan hệ** chứ không bằng mức (chóp phải rộng hơn thân, độ dốc trong
+  0,40–0,90 — Giza thật 0,637; thềm phải thu vào từ mép THÂN và hẹp dần đơn điệu). Ba bài canh chính
+  cái BẢNG: không giá trị chết · mọi kiểu phải dựng ra hình RIÊNG (so dấu vân tay với nhánh
+  `default`) · bảng không được dẹt.
+- **Nợ ghi ra**: `TECH_DEBT #75` (tỉ lệ mái/thân kỷ 3 mới 34,6% ⇒ vẫn đọc ra "cao ốc đội mũ"; đó là
+  bài toán KHỐI TÍCH, không phải bài toán mái) · `TECH_DEBT #76` (mái NHÀ DÂN chỉ 3 giá trị cho 15
+  kỷ, phải gộp vào §1(3)).
+
+---
+
 ## 2026-08-21 — Phase 14 §1(1): mạng đường thôi đứt nét — 13,9–34,4% mặt đường chưa từng được vẽ (ADR-050)
 
 - **Mục đích**: Đàm nhìn kỷ 1 và kỷ 2 rồi nói *«cái đường có nét đứt trông giả tạo kinh khủng»*.

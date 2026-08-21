@@ -16,8 +16,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import { BLUEPRINT_CATALOG, BUILDING_EFFECTS } from '../constants.js';
-import { buildBuildingSpec, buildScaffoldSpec } from './buildingSpec.js';
-import { ERA_STYLES, getEraStyle, ROOF_KINDS, WINDOW_KINDS } from './eraStyle.js';
+import { buildBuildingSpec, buildScaffoldSpec, emitRoof } from './buildingSpec.js';
+import {
+  ERA_STYLES, getEraStyle, getVernacularStyle, ROOF_KINDS, WINDOW_KINDS,
+} from './eraStyle.js';
 import { ARCHETYPES, getMassing } from './archetypes.js';
 import { MAX_SIDES, MIN_SIDES, PART_ROLES, countTriangles } from './parts.js';
 import { SIGNATURE_KINDS, emitSignature } from './signature.js';
@@ -774,4 +776,206 @@ test('GỜ TẦNG MỌC THEO CHIỀU CAO THẬT, và không mảng nào quá tr�
   // mỹ thuật có lý do đo được (trên cỡ hiển thị thật, dải thứ tư trở đi chỉ còn rộng ~2 điểm ảnh),
   // không phải khoá một phép làm tròn — nên khoá nó là đúng việc.
   assert.ok(MAX_COURSES <= 4, `trần gờ tầng ${MAX_COURSES} quá cao — mặt tường sẽ thành sọc ngựa vằn`);
+});
+
+
+// ─── 9. TỪ VỰNG MÁI: KIM TỰ THÁP VÀ ZIGGURAT LÀ HAI THỨ, KHÔNG PHẢI MỘT ──────
+//
+// Đàm nhìn thành phố ngày 2026-08-21 và nói: *"kim tự tháp không có khối hình chóp"*. Đúng, và
+// nguyên nhân không phải một con số sai mà là **từ vựng nghèo**: kỷ 2 (Ai Cập) khai `cone` — lăng
+// trụ TÁM cạnh thóp về một điểm, tức một cái lều rạp xiếc — còn kỷ 3 (ziggurat thành Ur) dùng
+// CHUNG một nhánh mã với kỷ 11 (cao ốc giật cấp Manhattan), hai thứ ngược nhau về kiến trúc.
+//
+// Ba bài dưới đây khoá lại cả ba vế: hình kỷ 2 phải là chóp BỐN mặt · hình kỷ 3 phải là chồng
+// thềm XIÊN thu vào từ mép thân nhà · và bảng từ vựng không được có giá trị chết hoặc giá trị
+// dựng ra hư không.
+
+/** Kỳ quan của một kỷ, dựng ở cấp cao nhất — công trình mà Đàm nhìn vào khi phàn nàn. */
+function kyQuan(era) {
+  const bp = BLUEPRINT_CATALOG[era].find((b) => BUILDING_EFFECTS[b.id]?.type === 'wonder');
+  assert.ok(bp, `kỷ ${era} không có kỳ quan — bảng bản vẽ hỏng`);
+  return buildBuildingSpec({ bpId: bp.id, era, type: 'wonder', rarity: bp.rarity, level: 3 });
+}
+
+/** Thân nhà chính = khối `wall` RỘNG NHẤT, tức mảng nhà mà mái chính đội lên. */
+function thanNhaChinh(spec) {
+  return [...spec.parts].filter((p) => p.role === 'wall' && !p.deco).sort((a, b) => b.w - a.w)[0];
+}
+
+test('KỶ 2 — AI CẬP PHẢI CÓ MỘT KHỐI CHÓP BỐN MẶT THẬT, KHÔNG PHẢI CÁI LỀU TÁM CẠNH', () => {
+  // ⚠️ Bài này KHÔNG hỏi `getEraStyle(2).roof === 'pyramid'` — đó là hỏi lại chính cái bảng vừa
+  // điền, đúng bẫy `TECH_DEBT #42` ("assert con số đã KHAI thay vì con số đã DỰNG"). Nó hỏi HÌNH:
+  // khối đội lên thân nhà chính có đúng BỐN mặt và có thóp gần về một điểm không.
+  //
+  // THỬ-CHO-ĐỎ (đã chạy 2026-08-21): trả kỷ 2 về `roof: 'cone'` ⇒ đỏ ở assert `sides === 4`
+  // (dựng ra `sides: 8`).
+  const spec = kyQuan(2);
+  const than = thanNhaChinh(spec);
+  const dinhThan = than.y + than.h;
+
+  // Khối mái đội lên đúng thân nhà ấy: cùng chỗ đứng, chân nằm ở đỉnh thân.
+  const mai = spec.parts.filter((p) => p.role === 'roof' && !p.deco && !p.rooftop
+    && Math.abs(p.y - dinhThan) < 1e-6 && Math.abs(p.x - than.x) < 1e-6);
+  assert.equal(mai.length, 1, `kỳ quan kỷ 2 phải có đúng một khối mái đội lên thân chính, đếm được ${mai.length}`);
+
+  const chop = mai[0];
+  assert.equal(chop.shape, 'prism', 'chóp phải là lăng trụ');
+  assert.equal(chop.sides, 4, `kim tự tháp phải có BỐN mặt, đang dựng ${chop.sides} cạnh`);
+  assert.ok(chop.taper <= 0.1, `chóp phải thóp gần về một điểm, taper đang là ${chop.taper}`);
+
+  // Và nó phải là một KHỐI, không phải một cái mũ. Hai quan hệ, không phải hai mức:
+  //   · đáy chóp RỘNG HƠN thân nhà nó đứng lên (đo 2026-08-21: 1,537 / 1,137 = **135%**)
+  //   · chóp cao ÍT NHẤT một nửa thân nhà      (đo 2026-08-21: 0,818 / 1,079 = **76%**)
+  // Ngưỡng đặt ở 100% và 50% — cách số đo thật 35% và 52%, đủ chỗ cho việc chỉnh mỹ thuật mà vẫn
+  // đỏ ngay nếu chóp co lại thành một chỏm trang trí.
+  assert.ok(chop.w >= than.w,
+    `đáy chóp ${chop.w.toFixed(3)} hẹp hơn thân nhà ${than.w.toFixed(3)} — đó là cái mũ, không phải kim tự tháp`);
+  assert.ok(chop.h >= than.h * 0.5,
+    `chóp cao ${chop.h.toFixed(3)} so với thân ${than.h.toFixed(3)} — dưới một nửa thì mắt đọc ra "nhà có mái nhọn"`);
+
+  // Tỉ lệ thật của Đại Kim Tự Tháp Giza: 146,6 m trên đáy 230,3 m = 0,637. Ở đây đo được 0,533
+  // (mái phủ `rw = w + 2·eaves` nên đáy rộng hơn thân). Dải [0,40 ; 0,90] bao lấy cả tỉ lệ thật
+  // lẫn số đang dựng, và loại cả hai đầu hỏng: bẹt như cái mâm, hoặc nhọn hoắt như cái nón.
+  const doc = chop.h / chop.w;
+  assert.ok(doc >= 0.4 && doc <= 0.9, `dốc chóp ${doc.toFixed(3)} nằm ngoài dải [0,40 ; 0,90]`);
+});
+
+test('KỶ 3 — ZIGGURAT PHẢI CÓ THỀM THẬT: THU VÀO TỪ MÉP THÂN NHÀ, MẶT TƯỜNG NGHIÊNG', () => {
+  // ⚠️ ĐÂY LÀ CHỖ `stepped` HỎNG, VÀ NÓ HỎNG KHÔNG PHẢI VÌ SỐ TẦNG. `stepped` mở đầu ở `rw`
+  // (= thân nhà + 2·eaves, tức RỘNG HƠN thân) nên bậc thứ nhất không tạo ra một cái thềm nào —
+  // nó chỉ nối tiếp mặt tường đi lên. Mắt vì thế chỉ đọc được bậc thứ hai trở đi.
+  //
+  // THỬ-CHO-ĐỎ (đã chạy 2026-08-21): trả kỷ 3 về `roof: 'stepped'` ⇒ ĐỎ với thông báo *"ziggurat
+  // phải có ít nhất 3 thềm, đếm được 2"*. Con số 2 chứ không phải 3 là một chi tiết đáng giữ:
+  // `stepped` dựng ĐÚNG 3 bậc nhưng bậc đầu mang vai `trim` chứ không phải `roof` — tức ngay ở
+  // tầng vai màu, bậc dưới cùng của setback Manhattan đã KHÔNG được coi là mái.
+  const spec = kyQuan(3);
+  const than = thanNhaChinh(spec);
+  const dinhThan = than.y + than.h;
+
+  const chong = spec.parts
+    .filter((p) => p.role === 'roof' && !p.deco && !p.rooftop
+      && Math.abs(p.x - than.x) < 1e-6 && Math.abs(p.z - than.z) < 1e-6 && p.y >= dinhThan - 1e-6)
+    .sort((a, b) => a.y - b.y);
+
+  assert.ok(chong.length >= 3, `ziggurat phải có ít nhất 3 thềm, đếm được ${chong.length}`);
+
+  // (a) THỀM THẬT: thềm dưới cùng phải HẸP HƠN thân nhà đỡ nó. Đo 2026-08-21: 1,095 / 1,369 = 80%.
+  assert.ok(chong[0].w < than.w,
+    `thềm dưới cùng rộng ${chong[0].w.toFixed(3)} ≥ thân nhà ${than.w.toFixed(3)} — không có thềm nào để mắt đọc`);
+
+  // (b) THU DẦN: mỗi thềm hẹp hơn thềm dưới nó. Quan hệ, không phải mức — nên nó không già đi khi
+  //     ai đó chỉnh tỉ lệ.
+  for (let i = 1; i < chong.length; i += 1) {
+    assert.ok(chong[i].w < chong[i - 1].w,
+      `thềm ${i + 1} rộng ${chong[i].w.toFixed(3)} không hẹp hơn thềm ${i} (${chong[i - 1].w.toFixed(3)})`);
+  }
+
+  // (c) MẶT TƯỜNG NGHIÊNG VÀO (batter) — dấu hiệu nhận dạng số một của ziggurat, và là thứ luật
+  //     giật cấp New York 1916 KHÔNG có (mặt cao ốc setback dựng đứng).
+  for (const [i, p] of chong.entries()) {
+    assert.ok(p.taper > 0 && p.taper < 1,
+      `thềm ${i + 1} có taper ${p.taper} — mặt tường dựng đứng thì đó là setback Manhattan, không phải ziggurat Ur`);
+  }
+
+  // (d) ĐỀN NHỎ TRÊN ĐỈNH. Ở Ur nó lợp gạch men khác hẳn thân ziggurat ⇒ vai màu khác.
+  const dinhChong = chong[chong.length - 1].y + chong[chong.length - 1].h;
+  const den = spec.parts.filter((p) => !p.deco && !p.rooftop && p.role !== 'roof'
+    && Math.abs(p.x - than.x) < 1e-6 && Math.abs(p.y - dinhChong) < 1e-6);
+  assert.equal(den.length, 1, `phải có đúng một đền nhỏ trên đỉnh ziggurat, đếm được ${den.length}`);
+  assert.ok(den[0].w < chong[chong.length - 1].w, 'đền trên đỉnh phải hẹp hơn thềm cao nhất');
+});
+
+/**
+ * Một chỗ đứng giả để hỏi THẲNG nhà máy mái. Mọi trường giữ nguyên qua các kiểu mái, chỉ đổi đúng
+ * `roof` — nếu lấy công trình thật thì bề ngang, số mảng nhà và chữ ký kiến trúc cùng đổi theo kỷ,
+ * và phép đo hết nói được về cái biến mình đang hỏi.
+ */
+function loMai(kind) {
+  const out = [];
+  const style = { ...getEraStyle(1), roof: kind, roofPitch: 0.4, eaves: 0.08 };
+  const neo = emitRoof(out, { w: 1, d: 1, top: 2, x: 0, z: 0 }, style, {
+    bpId: 'bp_do_mai', era: 1, rarity: 'epic', level: 3,
+    w: 1, d: 1, x: 0, z: 0, base: 0, top: 2, style, symmetric: true,
+  });
+  return { out, neo };
+}
+
+test('TỪ VỰNG MÁI (a) — không giá trị chết: mọi kiểu trong `ROOF_KINDS` phải có kỷ khai nó', () => {
+  // Thêm một giá trị vào `ROOF_KINDS` mà không kỷ nào khai thì nó là mã chết mang hình dạng một
+  // tính năng. Đây là lý do `mastaba` (ghế đá mộ Ai Cập) đã được cân nhắc rồi BỎ ngày 2026-08-21:
+  // nó không có chủ — kỷ 2 lấy kim tự tháp, và không kỷ nào khác nói về Ai Cập.
+  //
+  // THỬ-CHO-ĐỎ (đã chạy 2026-08-21): thêm `'mastaba'` vào `ROOF_KINDS` ⇒ đỏ đúng ở đây.
+  const dungBoi = new Set();
+  for (const era of ERAS) {
+    dungBoi.add(getEraStyle(era).roof);
+    dungBoi.add(getVernacularStyle(era).roof);
+  }
+  for (const kind of ROOF_KINDS) {
+    assert.ok(dungBoi.has(kind), `kiểu mái "${kind}" không kỷ nào dùng — từ vựng chết`);
+  }
+});
+
+test('TỪ VỰNG MÁI (b) — mọi kiểu phải dựng ra hình RIÊNG, không rơi về tấm mặc định', () => {
+  // ⚠️ BẢN ĐẦU CỦA BÀI NÀY DỰA TRÊN MỘT CÂU KHẲNG ĐỊNH SAI VỀ MÃ, VÀ PHÉP THỬ NGƯỢC ĐÃ BẮT ĐƯỢC.
+  // Tôi viết: *"`switch` trong `emitRoof` không có nhánh `default`, nên một kiểu mái thiếu `case`
+  // sẽ không dựng ra gì cả"* rồi assert `out.length >= 1`. Xoá hẳn `case 'ziggurat'` thì bài test
+  // **VẪN XANH** — vì `emitRoof` CÓ `default`, và nó đẩy ra một tấm phiến trơn (`role: 'trim'`,
+  // cao `pitch × 0.5`).
+  //
+  // Nghĩa là rủi ro thật NGƯỢC với điều tôi tưởng, và tệ hơn: một giá trị mái thiếu `case` không
+  // biến mất — nó **lặng lẽ hoá thành một tấm phiến trơn**, tức kỷ ấy mất căn cước mái mà vẫn
+  // "có mái". Không có gì đỏ lên, và trên ảnh nó trông như một quyết định mỹ thuật.
+  //
+  // Nên câu hỏi đúng không phải *"có dựng ra khối nào không"* mà là *"có dựng ra hình KHÁC tấm mặc
+  // định không"*. Đối chứng nằm ngay trong bài: dựng một kiểu mái KHÔNG TỒN TẠI để lấy đúng hình
+  // của nhánh `default`, rồi đòi mọi kiểu thật phải khác nó.
+  //
+  // THỬ-CHO-ĐỎ (đã chạy 2026-08-21): đổi tên `case 'ziggurat'` thành một tên không ai dùng ⇒ đỏ
+  // đúng ở đây, nêu đích danh `ziggurat`.
+  const vanTay = (parts) => parts
+    .map((p) => `${p.shape}|${p.sides ?? '-'}|${(p.taper ?? 1).toFixed(2)}|${p.role}|${p.h.toFixed(4)}|${p.w.toFixed(4)}|${p.y.toFixed(4)}`)
+    .join(' , ');
+
+  const macDinh = loMai('__KHONG_PHAI_MOT_KIEU_MAI__');
+  assert.equal(macDinh.out.length, 1, 'nhánh `default` của emitRoof phải đẩy đúng một tấm phiến — đối chứng hỏng');
+  const vanTayMacDinh = vanTay(macDinh.out);
+
+  for (const kind of ROOF_KINDS) {
+    const { out, neo } = loMai(kind);
+    assert.ok(out.length >= 1, `kiểu mái "${kind}" không dựng ra khối nào`);
+    assert.ok(neo.apexY > 2,
+      `kiểu mái "${kind}" có đỉnh ${neo.apexY} không cao hơn đỉnh tường 2 — mái phải nhô lên trên tường`);
+    for (const p of out) {
+      assert.ok(ROLE_SET.has(p.role), `kiểu mái "${kind}" dựng khối mang vai lạ "${p.role}"`);
+    }
+    assert.notEqual(vanTay(out), vanTayMacDinh,
+      `kiểu mái "${kind}" dựng ra ĐÚNG tấm phiến của nhánh \`default\` — nhiều khả năng thiếu \`case\` cho nó`);
+  }
+});
+
+test('TỪ VỰNG MÁI (c) — bảng không được dẹt: 15 kỷ phải còn ít nhất 10 kiểu mái kỳ quan', () => {
+  // Đo 2026-08-21, SAU khi tách `ziggurat` khỏi `stepped` và đổi kỷ 2 sang `pyramid`:
+  //   cone:1 · pyramid:2 · ziggurat:1 · tiered:2 · gable:2 · dome:1 · sawtooth:1 · stepped:1 ·
+  //   flat:3 · blade:1  →  **10 kiểu, đông nhất là `flat` với 3 kỷ (12·13·14)**.
+  // Trước bản này: 9 kiểu. Hai con số, không phải một — đúng bài học Bước 2 Phase 10: số kiểu nói
+  // bảng có RỘNG không, còn "đông nhất" nói bảng có DỒN CỤC không, và một con số không thay được
+  // con số kia.
+  //
+  // ⚠️ Con số 3 là một CÁI CHỐT, không phải một cái trần rộng rãi: kiểu nào chạm 4 thì đỏ, và lúc
+  // đó câu hỏi đúng là *"kỷ ấy thật sự lợp mái gì?"* chứ không phải *"nới cái chốt"*.
+  //
+  // THỬ-CHO-ĐỎ (đã chạy 2026-08-21): đổi kỷ 11 từ `stepped` sang `flat` ⇒ `flat` lên 4 kỷ, đỏ ở
+  // assert "dồn cục"; và số kiểu tụt còn 9, đỏ luôn ở assert "nghèo đi".
+  const dem = new Map();
+  for (const era of ERAS) {
+    const r = getEraStyle(era).roof;
+    dem.set(r, (dem.get(r) ?? 0) + 1);
+  }
+  const dongNhat = Math.max(...dem.values());
+  assert.ok(dem.size >= 10,
+    `chỉ ${dem.size} kiểu mái kỳ quan cho 15 kỷ — nghèo đi so với mốc 10 của 2026-08-21`);
+  assert.ok(dongNhat <= 3,
+    `${dongNhat} kỷ cùng dùng một kiểu mái kỳ quan — bảng đang dồn cục, xem lại kỷ mới thêm`);
 });

@@ -73,7 +73,8 @@
  *   `cone`     nón tròn — mái rơm, lều
  *   `gable`    dốc hai phía — nhà gỗ, nhà đá
  *   `flat`     bằng — nhà đất, bê tông, kính
- *   `stepped`  giật cấp — ziggurat, mái bằng có tum
+ *   `stepped`  giật cấp mặt ĐỨNG — luật setback cao ốc New York 1916
+ *   `ziggurat` giật cấp mặt XIÊN + đền nhỏ trên đỉnh — ziggurat thành Ur
  *   `tiered`   nhiều tầng mái chồng, diềm cong — kiến trúc Á Đông
  *   `dome`     vòm — Phục Hưng, Khai Sáng
  *   `pyramid`  chóp bốn mặt — tháp, đền
@@ -81,7 +82,7 @@
  *   `blade`    phiến mỏng lơ lửng — kiến trúc tương lai
  */
 export const ROOF_KINDS = [
-  'cone', 'gable', 'flat', 'stepped', 'tiered', 'dome', 'pyramid', 'sawtooth', 'blade',
+  'cone', 'gable', 'flat', 'stepped', 'ziggurat', 'tiered', 'dome', 'pyramid', 'sawtooth', 'blade',
 ];
 
 /**
@@ -130,15 +131,27 @@ export const ERA_STYLES = {
   },
   2: {
     name: 'vách đất & mái tranh',
-    country: 'Ai Cập', landmark: 'làng ven sông Nin',
+    country: 'Ai Cập', landmark: 'kim tự tháp Giza',
     signature: 'batter',
     roofColor: '#c5a159',   // mái tranh sông Nin — rơm khô rám nắng
     wallMaterial: 'mudbrick', roofMaterial: 'thatch',   // gạch bùn phơi nắng + mái lá cọ
     bodySides: 4, bodyTaper: 0.94, storyHeight: 0.66,
     massScale: 0.46, spread: 0.98,
-    roof: 'cone', roofPitch: 0.72, eaves: 0.2,
-    // Nhà làng ven sông Nin là gạch bùn MÁI BẰNG — người ta phơi đồ và ngủ trên nóc. Mái tranh
-    // hình nón dành cho nhà kho/nhà chung, không phải nhà ở thường ngày.
+    // ⚠️ CHÓP BỐN MẶT, KHÔNG PHẢI NÓN TRÒN — sửa 2026-08-21, Đàm: *"kim tự tháp không có khối
+    // hình chóp"*. Trước bản này kỷ 2 khai `cone`, mà `cone` là lăng trụ **8 CẠNH** thóp về một
+    // điểm: trên màn hình nó ra một cái lều rạp xiếc tròn, và Ai Cập — nền văn minh mà cả thế
+    // giới nhận ra bằng đúng một hình khối — lại là kỷ duy nhất không có hình khối ấy.
+    // `pyramid` (4 cạnh, `taper` gần 0) đã có sẵn từ lâu và chưa ai nối vào đây.
+    // ⚠️ `roofPitch` 0,72 GIỮ NGUYÊN và nó không phải con số chọn cho tiện: Đại Kim Tự Tháp Giza
+    // cao 146,6 m trên đáy 230,3 m = **0,637 lần bề ngang**, còn ở đây mái phủ `rw = w + 2·eaves`
+    // nên 0,72 quy ra ≈ 0,61 lần bề ngang đáy — sát tỉ lệ thật, chỉ dựng đứng hơn một chút cho
+    // hình bóng dứt khoát ở cỡ hiển thị nhỏ.
+    // ⚠️ Và `eaves` 0,2 KHÔNG phải diềm mái ở đây: nó thò ra 8,8% mỗi bên, đọc ra là cái **bệ
+    // nền** mà kim tự tháp thật đứng lên (Giza nằm trên một mặt bằng đá đã san phẳng).
+    roof: 'pyramid', roofPitch: 0.72, eaves: 0.2,
+    // Nhà làng ven sông Nin là gạch bùn MÁI BẰNG — người ta phơi đồ và ngủ trên nóc. Đây đúng là
+    // chỗ `vernacularRoof` sinh ra để nói: kỳ đài của một nền văn minh và cái nhà người ta ở hằng
+    // ngày gần như không bao giờ cùng một hình mái.
     vernacularRoof: 'flat',
     // lối cát ven sông Nin, đất pha cát phơi nắng
     roadMaterial: 'dirt', roadColor: '#b9a173',
@@ -154,7 +167,12 @@ export const ERA_STYLES = {
     wallMaterial: 'mudbrick', roofMaterial: 'mudbrick',   // ziggurat không lợp — chính nó là gạch
     bodySides: 4, bodyTaper: 0.86, storyHeight: 0.6,
     massScale: 0.78, spread: 1.18,
-    roof: 'stepped', roofPitch: 0.3, eaves: 0.06,
+    // ⚠️ `ziggurat`, KHÔNG phải `stepped` — tách ra 2026-08-21. Hai giá trị này từng là MỘT, và
+    // hậu quả là ziggurat thành Ur với cao ốc giật cấp Manhattan (kỷ 11) dựng ra bằng cùng một
+    // nhánh mã. Xem khối chú thích ở `case 'ziggurat'` trong `buildingSpec.js`: khác biệt quyết
+    // định nằm ở chỗ thềm thu vào từ mép THÂN NHÀ (nên có thềm thật để mắt đọc) và mặt tường
+    // NGHIÊNG VÀO, thứ mà luật setback New York không có.
+    roof: 'ziggurat', roofPitch: 0.3, eaves: 0.06,
     // Giật cấp là hình dáng của ZIGGURAT — đền thờ. Nhà dân Lưỡng Hà là gạch bùn mái BẰNG quây
     // quanh sân trong. Cho cả phố giật cấp thì thành 30 cái ziggurat tí hon vây quanh ziggurat thật.
     vernacularRoof: 'flat',

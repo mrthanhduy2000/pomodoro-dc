@@ -543,6 +543,19 @@ dáng giữa hai lần mở app — mở rộng ADR-007 từ vị trí sang hìn
 `BufferGeometry`, màu đi qua thuộc tính màu ĐỈNH chứ không qua material. Nhờ vậy "mỗi công trình
 một hình dáng riêng" tốn **5–7 lệnh vẽ** cho cả thành phố, không phải 750.
 
+**TỪ VỰNG MÁI — một BẢNG có thể nghèo mà không ai biết (2026-08-21, Phase 14 §1(2), ADR-051)**:
+`ROOF_KINDS` trong `eraStyle.js` là danh sách **đóng** các hình mái mà 15 kỷ được phép nói; `emitRoof`
+trong `buildingSpec.js` là nhà máy dựng chúng, và mỗi kỷ khai **hai** giá trị riêng biệt —
+`roof` (kỳ quan) và `vernacularRoof` (nhà dân, tách ra từ Phase 7C vì ngoài đời hai câu ấy gần như
+không bao giờ cùng đáp án). ⚠️ Cái bảng này có **hai** cách hỏng, và cả hai đều im lặng: **(a) từ
+vựng chết** — thêm một giá trị mà không kỷ nào khai; **(b) từ vựng nghèo** — nhiều kỷ dùng chung một
+giá trị cho hai công trình thật vốn khác nhau (kỷ 3 «ziggurat Ur» và kỷ 11 «setback New York 1916»
+từng chung `stepped`, trong khi ziggurat thu vào từ mép TƯỜNG và có mặt tường NGHIÊNG còn setback thu
+vào từ mép MÁI và thẳng đứng). Ba bài test trong `buildingSpec.test.js` canh đúng ba chiều ấy: không
+giá trị chết · mọi kiểu phải dựng ra **hình riêng** (so dấu vân tay hình học với nhánh `default` của
+`emitRoof` — nhánh ấy khiến "thiếu một `case`" **không** làm mất khối mà **lặng lẽ đổi kiểu**) · bảng
+không được dẹt. Hiện: kỳ quan dùng **10/10** giá trị, nhà dân mới **3/10** (`TECH_DEBT #76`).
+
 **KHỐI KIẾN TRÚC — vì sao chiều sâu mặt tường cũng nằm ở tầng THUẦN (2026-08-15, Phase 8A)**: một
 mảng tường không có gì cắt ngang thì mắt đọc ra một hình chữ nhật tô màu, không đọc ra một khối
 đặc. Trước Phase 8A, thân một căn nhà dân đúng là **MỘT** khối hộp (`wall:1`), và cả cảnh chỉ dùng

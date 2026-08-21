@@ -19,7 +19,13 @@
 > bằng cách chỉnh lại con số nào. Nay còn **1 mục High** (#14) + **2 mục Medium-High** (#3, #13) +
 > **1 mục Medium-High chờ Đàm quyết** (#24) = 4 → xa ngưỡng 8–10 mục, KHÔNG cần Maintenance Sprint.
 >
-> **Cập nhật 2026-08-21 (Phase 13 VIỆC B, vùng phụ cận — MỚI NHẤT)**: **MỞ #74** (vùng phụ cận
+> **Cập nhật 2026-08-21 (Phase 14 §1(2), kim tự tháp + ziggurat — MỚI NHẤT)**: **MỞ #75** (ziggurat
+> kỷ 3 đã có hình ĐÚNG nhưng tỉ lệ mái/thân chỉ 34,6% ⇒ mắt đọc ra "cao ốc đội mũ"; đây là bài toán
+> KHỐI TÍCH chứ không phải bài toán MÁI — Medium, cố ý hoãn) và **MỞ #76** (mái NHÀ DÂN chỉ có 3 giá
+> trị cho 15 kỷ, trong khi mái kỳ quan đã có 10 — Medium, phải gộp vào §1(3)). Cả hai đều Medium ⇒
+> **số mục High vẫn là 2** (#14 · #53), 0 Critical ⇒ vẫn xa ngưỡng 8–10, KHÔNG cần Maintenance Sprint.
+>
+> **(Mốc trước) Cập nhật 2026-08-21 (Phase 13 VIỆC B, vùng phụ cận)**: **MỞ #74** (vùng phụ cận
 > không lớn lên theo số phiên ⇒ tín hiệu quy mô nằm NGOÀI vòng lặp phần thưởng — Medium, CHỜ ĐÀM
 > QUYẾT, cùng một câu hỏi với #14). **CẬP NHẬT #53**: hướng Đàm chọn (LẤP) nay đã được thực hiện ở
 > phần *dấu vết con người*, và ba con số cũ của mục ấy đã được ĐO LẠI. Số mục High vẫn là 2
@@ -4236,3 +4242,72 @@ cấp `Math.min(3,…)` → `Math.min(9,…)` · cắt bớt danh sách cấp th
 - **Blocking Conditions**: không có — đây là nợ ĐƯỢC CHỌN mang, không phải nợ bị kẹt.
 - **Review Trigger**: **lần đầu tiên có một phase thật sự cần đổi `CITY_GRID_SIZE`.**
 - **Owner**: chưa phân công · **Status**: Open — cố ý hoãn
+
+---
+
+## #75 — Ziggurat kỷ 3 đã có hình ĐÚNG nhưng vẫn đọc ra là «một khối cao đội cái mũ giật cấp» — đây là bài toán KHỐI TÍCH, không phải bài toán MÁI
+
+> Mở 2026-08-21 (Phase 14 §1(2)). Nợ này **được chọn mang**, không phải nợ bị kẹt: hình đã đúng
+> lịch sử, thứ còn lệch là TỈ LỆ giữa mái và thân, mà thân thì nằm ở một tầng khác hẳn.
+
+- **Tên**: `massScale`/`getMassing` cho kỷ 3 dựng một thân nhà cao gấp ba lần khối ziggurat đặt lên nó
+- **Module**: `src/engine/city3d/eraStyle.js` (`massScale`, `storyHeight`) + `src/engine/city3d/buildingSpec.js` (`getMassing`)
+- **Priority**: Medium · **Severity**: Low (mỹ thuật, không ảnh hưởng dữ liệu/hiệu năng)
+- **Impact**: Ở Ur, **cả toà nhà LÀ cái ziggurat** — không có "thân nhà" nào bên dưới. Trong app thì
+  ba thềm giật cấp đang ngồi trên một khối tường trơn cao hơn chúng, nên mắt đọc ra "một cao ốc đội
+  mũ" chứ không đọc ra "một ngọn núi nhân tạo". Hình đúng, tỉ lệ sai.
+- **Số đo (2026-08-21, kỳ quan `bp_ziggutat` cấp 3)**: thân nhà cao **1,663** · ba thềm ziggurat cao
+  **0,575** (= **34,6%** thân) · kể cả đền trên đỉnh thì **0,739** (**44%** thân, **31%** tổng chiều
+  cao). Để so sánh, kim tự tháp kỷ 2 sau bản vá cùng ngày: mái **0,818** trên thân **1,079** =
+  **76%** thân, **43%** tổng — và chính tỉ lệ ấy là lý do kỷ 2 đọc ra ngay còn kỷ 3 thì không.
+- **Root Cause**: `emitRoof` chỉ được cấp phần chiều cao **phía trên `top`**, mà `top` do khối tích
+  quyết định. Muốn ziggurat chiếm phần lớn công trình thì phải hạ `massScale`/`storyHeight` của kỷ 3
+  **và** cho `roofPitch` phần bù lại — tức sửa ở tầng KHỐI TÍCH, không sửa được ở tầng MÁI.
+- ⚠️ **Vì sao KHÔNG vá bằng cách nâng `roofPitch` kỷ 3**: `roofPitch` là **một trường gánh hai việc**
+  (lần thứ sáu của hình dạng ấy trong dự án) — nó vừa định chiều cao mái kỳ quan, vừa định độ dày
+  lan can của mái `flat` mà **nhà dân** kỷ 3 dùng (`lip = max(0,05, pitch × 0,28)` và
+  `capH = max(0,05, pitch × 0,34)` trong `emitRoof`). Nâng nó lên là làm mọi nhà dân kỷ 3 đội một
+  vành bê tông dày, để chữa một công trình duy nhất. Cái bẫy này đã bắt được **trước khi ship**.
+- ⚠️ **Vì sao KHÔNG nâng `PLAN`/`CAO` của `case 'ziggurat'`**: tỉ lệ thật của Ur là thềm 1 cao ≈11 m
+  trên đáy 64×45 m, tức **h/w ≈ 0,17**; giá trị đang chạy đã cao hơn thế vì lý do đọc-được-ở-xa.
+  Nâng thêm nữa là **mua một ấn tượng bằng cách nói dối tỉ lệ** — đúng thứ ADR-025 cấm với mặt đường.
+- **Current Risk**: Thấp. Kỷ 3 nay đã phân biệt được với kỷ 11 (`stepped`) và có thềm đọc ra được.
+- **Future Risk**: Trung bình — nếu §1(3) (khu phố nhiều nhà) làm nhà dân đông lên, kỳ quan sẽ phải
+  nổi bật hơn nữa mới giữ được vai trò "nhận ra từ xa" mà Phase 7C đặt ra.
+- **Recommended Solution**: một phase KHỐI TÍCH riêng, đặt câu hỏi cho **cả 15 kỷ** chứ không riêng
+  kỷ 3: *"tỉ lệ mái/thân của kỳ quan kỷ này phải là bao nhiêu để nó đọc ra đúng công trình thật?"*
+  Kèm một phép đo tỉ lệ mái/thân cho cả 15 kỷ (hôm nay chưa ai đo đại lượng này).
+- **Estimated Complexity**: Medium.
+- **Blocking Conditions**: không có.
+- **Review Trigger**: **khi §1(3) (khu phố) xong và Đàm nhìn lại kỷ 3** — hoặc sớm hơn, nếu có phase
+  nào đụng vào `massScale`.
+- **Owner**: chưa phân công · **Status**: Open — cố ý hoãn
+
+---
+
+## #76 — Từ vựng mái NHÀ DÂN chỉ có **3 giá trị cho 15 kỷ**, trong khi mái KỲ QUAN đã có 10
+
+> Mở 2026-08-21 (Phase 14 §1(2)), phát hiện trong lúc trả lời chính câu hỏi *"bộ từ vựng mái có đủ
+> giàu không?"* — câu trả lời là **có ở kỳ quan, KHÔNG ở nhà dân**.
+
+- **Tên**: `vernacularRoof` chỉ dùng 3 trên 10 giá trị của `ROOF_KINDS`
+- **Module**: `src/engine/city3d/eraStyle.js` (trường `vernacularRoof`, 15 dòng)
+- **Priority**: Medium · **Severity**: Low hôm nay, sẽ tăng khi §1(3) xong
+- **Số đo (2026-08-21)**: `flat` × **7 kỷ** · `gable` × **7 kỷ** · `cone` × **1 kỷ** (kỷ 1). Tức
+  14/15 kỷ chia nhau đúng **hai** hình mái. Bộ mái kỳ quan cùng lúc đó dùng **8/10** giá trị.
+- **Impact**: Hôm nay mỗi kỷ chỉ hiện **6–30 nhà dân** rải rác nên chưa ai để ý. **§1(3) sẽ nâng con
+  số ấy lên 120–300** — lúc đó "hai hình mái cho cả 15 kỷ" chính là thứ mắt nhìn thấy nhiều nhất
+  trong khung hình, và nó sẽ đọc ra là *"15 kỷ xây cùng một loại nhà"*.
+- **Root Cause**: `vernacularRoof` sinh ra ở Phase 7C để **tách** mái nhà dân khỏi mái kỳ quan (một
+  trường gánh hai việc). Việc tách đã làm đúng, nhưng bảng mới chỉ được điền bằng những giá trị đã
+  có sẵn lúc ấy — chưa ai quay lại hỏi *"mỗi nước dựng mái nhà thường ra sao?"*.
+- ⚠️ **Cấm rơi im lặng về mặc định**: nếu mở rộng thì mọi giá trị mới phải khai đủ cho **cả 15 kỷ**,
+  kỷ chưa nghiên cứu khai một giá trị "chưa đụng tới" ĐẾM ĐƯỢC bằng test (tiền lệ `door: 'legacy'`
+  ở Phase 10). Bài `TỪ VỰNG MÁI (a) — không giá trị chết` trong `buildingSpec.test.js` đã canh sẵn
+  chiều ngược lại: thêm một giá trị vào `ROOF_KINDS` mà không kỷ nào khai thì test ĐỎ.
+- **Recommended Solution**: gộp vào **chính §1(3)** — bảng hình thái khu phố và bảng mái nhà dân trả
+  lời cùng một câu hỏi (*"nhà thường ở nước này trông thế nào?"*), làm rời nhau thì hai bảng sẽ trôi.
+- **Estimated Complexity**: Low nếu làm cùng §1(3); Medium nếu làm riêng.
+- **Blocking Conditions**: không có.
+- **Review Trigger**: **ngay khi bắt đầu §1(3) (hình thái khu phố)** — không được để sang phase sau.
+- **Owner**: chưa phân công · **Status**: Open

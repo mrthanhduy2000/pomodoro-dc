@@ -23,21 +23,35 @@
  * `scripts/cityPreviewSource.test.js` chỉ cứu được dự án vào những lần nó ĐƯỢC CHẠY.
  *
  * ── PHÉP THỬ NGƯỢC ĐÃ CHẠY THẬT (không chép lại từ bài cũ) ──────────────────────────────────
- * Bịt mắt phép đo bằng cách cho `doDauVetNgoaiLuoi` bỏ qua vế vị trí — thay
- *     `const d = distanceOutsideGrid(x, y, gridSize); if (d <= 0) continue;`
- * bằng
- *     `const d = 0; if (d <= 0) continue;`
- * (tức "không có gì ở ngoài lưới cả", đúng hình dạng của cái mù (b)). Nêu TRƯỚC: bài "ĐỐI CHỨNG
- * TIÊM" phải đỏ ở dòng `soVat` = 1. Đã chạy: **đỏ đúng ở đó** (bài 2 và bài 3), 6 bài còn lại xanh.
+ * Ba phép phá, chạy trong `git worktree` riêng ở `b11a3d6`, mỗi phép tự đếm số chỗ khớp và đòi
+ * đúng 1, có `grep` xác nhận dòng chèn vào đúng hình dạng, `git diff --stat` xác nhận file đã đổi.
  *
- * ⚠️ VÀ CHÍNH SỰ IM LẶNG CỦA BÀI 1 LÀ THỨ ĐÁNG ĐỌC NHẤT: bài "mốc nền" **vẫn XANH** khi phép đo bị
- * bịt mắt — vì một phép đo mù và một thế giới trống rỗng cho ra CÙNG một con số 0. Đó là bằng chứng
- * trực tiếp rằng mốc nền tự nó không chứng minh được gì, và đối chứng tiêm không phải thủ tục thừa.
+ * (A) BỊT MẮT — `const d = distanceOutsideGrid(...)` → `const d = 0`. Nêu trước: bài 2 đỏ ở VẾ A,
+ *     bài 3 đỏ ở `mot.soVat`. Đã chạy: **4/8 đỏ**, gồm đúng hai chỗ ấy (dòng 215 và 290).
+ * (B) ĐẨY VÙNG PHỤ CẬN RA XA HƠN CHỖ TIÊM — `HINTERLAND_REACH` 8 → 12. Nêu trước: precondition
+ *     đỏ ở CẢ bài 2 và bài 3. Đã chạy: **đúng 2 bài ấy**, in ra "với tới 12.450 ô, chạm vào chỗ
+ *     tiêm (mép gần ở 10). Hãy TĂNG XA_TIEM, đừng nới dung sai." Đây là phép phá quan trọng nhất
+ *     của bộ này: nó chứng minh bài test **không thể chết trong im lặng** ở phase sau.
+ * (C) MÙ VỚI VÙNG GẦN — `if (d <= 0)` → `if (d <= 0 || d < 5)`. Nêu trước: CHỈ bài 2 đỏ, ở VẾ A;
+ *     bài 3 phải XANH vì nó tiêm ở 12 ô. Đã chạy: **đúng như vậy**. Đó là bằng chứng VẾ A bắt được
+ *     một thứ mà không assert nào khác trong file bắt được — nếu bài 3 cũng đỏ thì VẾ A đã là bản
+ *     sao thừa và phải xoá đi.
  *
- * Phép phá thứ hai, ở một chiều khác: cho `laDauVetNguoi` trả `true` cho mọi thứ (tức cây cối cũng
+ * Phép phá thứ tư, ở một chiều khác: cho `laDauVetNguoi` trả `true` cho mọi thứ (tức cây cối cũng
  * tính là dấu vết con người — đúng cách rẻ tiền để "quy mô hơn" mà §2 cấm). Nêu trước: bài "CÂY CỐI
- * NGOÀI LƯỚI…" và bài phân loại phải đỏ. Đã chạy: **6/8 bài đỏ**, gồm đúng hai bài ấy. Cả hai lần
- * đều `diff` xác nhận file đã đổi thật, và phép thay thế tự đếm số chỗ khớp rồi đòi đúng 1.
+ * NGOÀI LƯỚI…" và bài phân loại phải đỏ. Đã chạy: **6/8 bài đỏ**, gồm đúng hai bài ấy.
+ *
+ * ⚠️ ĐÍNH CHÍNH MỘT CÂU TRONG CHÍNH KHỐI CHÚ THÍCH NÀY — và nó là bài học đáng giữ nhất ở đây.
+ * Bản trước viết: *"chính sự IM LẶNG của bài 1 là thứ đáng đọc nhất — bài 'mốc nền' vẫn XANH khi
+ * phép đo bị bịt mắt, vì một phép đo mù và một thế giới trống rỗng cho ra CÙNG một con số 0."*
+ * Câu ấy ĐÚNG vào ngày nó được viết và **hết đúng ngay khi vùng phụ cận được dựng**: nay bịt mắt
+ * thì bài 1 ĐỎ (phép phá A ở trên). Cái cổng (G1) đi từ **không có răng** sang **có răng** mà
+ * không ai sửa một dòng nào của nó — thứ đổi là THẾ GIỚI nó đang đo.
+ * ⇒ Hai hệ quả: (1) một câu giải thích về hành vi của bài test cũng già đi y như một con số, nên
+ * nó phải được CHẠY LẠI chứ không chép sang phase sau (*"sửa đúng không chứng minh hiểu đúng, và
+ * lời giải thích mới là thứ phiên sau kế thừa rồi dựa vào"*); (2) đối chứng tiêm là thứ **duy
+ * nhất** canh được (G1) trong quãng thời gian thế giới còn trống — tức đúng quãng ta cần nó nhất,
+ * và đúng quãng nó trông thừa nhất.
  */
 
 import test from 'node:test';

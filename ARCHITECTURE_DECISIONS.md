@@ -11,6 +11,135 @@
 
 ---
 
+## ADR-046 — Cái bệ KHÔNG phải một cái BẬC, nó là một **KIỂU PHÂN BỐ ĐỘ DỐC**; và ba nguồn sinh ra nó đều là những **hằng số được chọn ĐỂ LÀM RA nó**
+
+**Ngày**: 2026-08-21
+
+**Bối cảnh.** Từ Phase 8C, mặt đất là một mặt liên tục và mọi phép đo "có gián đoạn không" đều
+xanh. Đàm vẫn bác, ba vòng liên tiếp, và vòng cuối bác cả 15 kỷ: *"VẪN CÒN CÁI BỆ, Ở TẤT CẢ 15
+KỶ."* Anh cũng chỉ ra rằng chỉ thị trước đó của chính cố vấn — *"trong lưới thành phố thì thoải,
+ngoài lưới mới gồ ghề"* — **chính là định nghĩa của một cái bệ**: *"Không phải thực thi sai; chỉ
+thị sai."* Phát biểu lại cho đúng: **địa hình là MỘT mặt liên tục; thành phố NẰM TRÊN một phần đất
+vốn đã bằng hơn, và ranh giới của vùng bằng ấy TUYỆT ĐỐI KHÔNG được trùng ranh giới lưới 12×12.**
+
+**Vấn đề.** Phép đo đang hỏi sai câu. *"Một cái bệ KHÔNG cần một bậc để đọc ra là bệ"* — bậc là
+**gián đoạn**, bệ là một **kiểu phân bố độ dốc**: phẳng ở giữa, dốc gấp ở một vành, phẳng lại ở
+ngoài. Mọi phép đo cũ đi tìm gián đoạn nên chúng **về mặt cấu trúc không thể thấy** thứ Đàm thấy
+(cùng họ bài học Phase 9B). Đo lại bằng đại lượng đúng (`scripts/plateau-score.mjs`: vành đồng tâm
+bước 0,5 ô; **chỉ số bệ = dốc lớn nhất vành 6–9 ÷ dốc trung bình vành 0–5** — một QUAN HỆ, không
+phải một mức): **10/15 kỷ ≥ 5**, tệ nhất kỷ 14 = **26,98**, và **cả 15 kỷ nhảy trong đúng dải
+bán kính 7,25–8,75** — tức bước nhảy do LƯỚI quyết định chứ không do địa hình.
+
+**Phương án đã cân nhắc.**
+- *(a) Nới ngưỡng / chấp nhận.* Bác — ba vòng con số đã xanh trong khi mắt vẫn thấy sai; nới là
+  đúng cái phễu Phase 9A.
+- *(b) Làm gợn sóng mạnh hơn ở vùng ngoài.* Bác — nó bồi thêm cho dải đang khoẻ mà không chạm vào
+  ba nguồn thật; và bài học 2026-08-20 đã dạy đúng chuyện ấy (tách con số gộp ra từng dải trước
+  khi sửa theo một chẩn đoán).
+- *(c) Bỏ hẳn cao độ, làm đất phẳng.* Bác — Đàm ra ràng buộc rõ: *"mục tiêu là xoá cái BỆ, không
+  phải xoá quả ĐỒI"*.
+- *(d) ĐÃ CHỌN — sửa cả ba hằng số sinh ra cái bệ, và biến bề rộng vùng bằng thành một đại lượng
+  THẤT THƯỜNG theo hướng.*
+
+**Giải pháp.** Ba nguồn, ba bản vá, và cả ba đều là *"một hằng số được chọn ĐỂ LÀM RA cái bệ"*:
+1. **Vùng bằng quá hẹp** — `APRON_CELLS` 2,6 → **7,5**, và nhân thêm `APRON_SPREAD = 0,62` bằng
+   một tầng nhiễu **RẤT thô** (cỡ ô 9, gần bằng cả cạnh lưới) ⇒ bề rộng thật **2,85 … 12,15 ô**
+   tuỳ hướng. Nới rộng thôi thì chưa đủ: mép vẫn là một đường cách đều mép lưới, tức vẫn là hình
+   vuông bo góc, chỉ to hơn. Nhiễu MỊN cũng vô dụng — nó chỉ làm răng cưa một đường tròn mà mắt
+   vẫn đọc ra đường tròn ấy.
+2. **`APRON_DROP` là một cái bậc được KHAI BÁO** — 0,62 → **0,18**. Con số cũ được chọn để *"đủ để
+   đọc ra thành phố nằm trên cao"*. Đặt cạnh sự thật: `terrainMaxHeight` của **11/15 kỷ nhỏ hơn
+   0,62** (kỷ 11 chỉ 0,14) ⇒ cái vành quanh thành phố cao gấp **4,4 lần** toàn bộ địa hình bên
+   trong. Không có ngọn đồi nào — chỉ có một mặt bàn. Không về 0 được vì mặt nước
+   (`WATER_SURFACE_Y = −APRON_DROP − WATER_DROP_BELOW_PLAIN`) phải nằm dưới mọi đất khô kể cả ô
+   thấp nhất của lưới.
+3. **`settle`-về-phẳng tại `APRON_EDGE`** — **XOÁ HẲN**. Nó ép mọi kỷ về **cùng một mặt phẳng ở
+   cùng một bán kính**, tạo ra một vành **phẳng tuyệt đối rộng 5,7 ô** (từ 8,9 ra tới chân núi).
+   *Một mặt bàn đứng giữa một sàn nhà* — và không phép đo gián đoạn nào thấy được, vì **cả hai bên
+   đều phẳng**. Hằng số đổi tên `APRON_EDGE` → **`PLATE_PAD_CELLS`** vì cái tên cũ đã thành một
+   lời nói dối (nó hứa một sự phẳng không còn tồn tại); giá trị giữ 3,4 để `terrainSurfaceReach`
+   không đổi (9,5) — đổi nó là đổi ngân sách tam giác, một khoản tiền khác phải đo riêng.
+
+Cộng thêm hai thứ đi kèm, đều là hệ quả bắt buộc chứ không phải trang trí:
+- **`nenRoll` thành BÃO HOÀ KHÔNG ĐỐI XỨNG** (`bienDoRollLen = bienDoRollNgoai + APRON_DROP`).
+  Cái trần 0,21 tồn tại vì đúng MỘT lý do: đất khô không được chui xuống dưới mặt nước — lý do ấy
+  **chỉ nói về chiều XUỐNG**. Áp nó cho cả chiều LÊN là bẫy Phase 7D ở dạng ngược, và chính cái
+  kẹp thừa ấy giữ cho đồng bằng vĩnh viễn nằm dưới nền phố. Nay phân bố của đồng bằng đối xứng
+  quanh **nền phố** ⇒ có những chỗ đồng bằng **CAO HƠN** thành phố. Đó là phát biểu bằng số của
+  câu *"thành phố NẰM TRONG đồng bằng, không NGỒI TRÊN nó"*.
+- **`horizon.heightAt` đọc thẳng `terrain.nenKho(...)`** làm nền rồi mới cộng núi. Lời hứa thật
+  của Phase 9A (hai cái nêm sáng ở chỗ giáp) đòi **hai tấm KHỚP NHAU**, chứ không đòi cả hai phải
+  bằng một hằng số — nay chúng khớp **theo cấu tạo**, ở mọi hướng, mà không bên nào phải phẳng.
+
+**Trade-off.**
+- Vùng bằng rộng gấp gần ba lần ⇒ mắt phải đi xa hơn mới gặp đồi. Chấp nhận: đó đúng là *"đồng
+  bằng rộng gấp nhiều lần cái làng nằm trên nó"* mà Đàm mô tả.
+- Đồng bằng nay có chỗ cao hơn nền phố ⇒ ở vài hướng, sống đất gần che bớt bờ nước xa. Cái giá này
+  đã có tên và đã được đo từ trước: `TECH_DEBT #59` (bề rộng nước) — **KHÔNG** hạ cổng 5% để mua
+  lại một con số đẹp (ADR-025 cấm đúng điều đó).
+- `nenKho` được hỏi cho **TỪNG ĐỈNH của cả hai tấm lưới** (hàng chục nghìn lần mỗi lần dựng cảnh),
+  nên hai biến của triền thoát nước phải hoisted ra ngoài vòng lấy mẫu. Ngân sách hình học **không
+  đổi một đơn vị** — cùng số đỉnh, cùng số lệnh vẽ, cùng số vật liệu, cùng số nguồn sáng.
+
+**Ảnh hưởng.** `src/engine/city3d/terrain.js` (4 hằng số + `nenKho`/`dongBangKho`/`beRongHoa`
+thay `surfaceHeightAt` cũ) · `src/engine/city3d/horizon.js` (nền đọc từ `terrain`) ·
+`src/components/city/render3d/terrainMesh.js` (thứ tự tầng màu, xem ADR-047) ·
+`src/components/city/render3d/sceneGraph.js` (tên hằng số). ADR-007 **nguyên vẹn**: trong lưới,
+`nenKho` trả về **y hệt** `smoothHeightAt` — không đổi một chữ số, nên nhà cũ không nhích một phân.
+
+**Điều kiện xem lại.** Nếu một phase sau thêm thứ gì phủ lên vùng ngoài lưới (ruộng, làng vệ tinh,
+đường liên tỉnh) thì phải chạy lại `plateau-score.mjs` TRƯỚC — thứ mới ấy có thể dựng lại một vành
+đồng tâm mới ở một bán kính mới, và triệu chứng sẽ y hệt cái bệ này.
+
+---
+
+## ADR-047 — Một phép hoà màu đặt SAI THỨ TỰ trong một chồng tầng: nó không sai về công thức, nó chỉ **xoá hai tầng nằm sau nó**
+
+**Ngày**: 2026-08-21
+
+**Bối cảnh.** Sau khi ADR-046 xoá cái bệ về mặt HÌNH HỌC, mắt vẫn đọc ra một **đường viền vuông
+sắc lẹm** chạy quanh thành phố ở cả 15 kỷ — trên màn hình nó hiện thành một hình thoi, vì camera
+nhìn chéo. Ba giả thuyết đầu đều bị chính số đo bác bỏ, và ghi lại đây vì *một bản vá đúng-về-lý-lẽ
+mà không đổi được gì thì nó vừa loại trừ giúp ta một nghi phạm*: (1) số hạng đỉnh chói của `lift`
+— đo ra ≤ **8,8**/255, dưới ngưỡng mắt 12; (2) bóng đổ — chạy `--no-shadow` thì hình thoi **vẫn
+nguyên**; (3) pháp tuyến hai tấm lệch nhau — kỷ 15 chênh Lambert tối đa **3,9**/255.
+
+**Vấn đề.** `groundColorAt` có ba tầng (nền theo cao độ → vết loang → sườn dốc lộ đất) và **một
+phép hoà** ra màu của vùng đất bao quanh. Phép hoà ấy đứng **CUỐI**. Tại rìa tấm đất thành phố hệ
+số hoà đúng bằng **1**, nên nó **xoá sạch** tầng 2 và tầng 3 — trong khi tấm chân trời ngay bên
+cạnh vẫn còn đủ cả hai. Đo trên chính tầng màu thuần: bước màu ngang qua chỗ giáp có **trung vị
+20,0–36,4 và p99 59,9–74,3** trên thang RGB/255 ở **cả 15 kỷ** — gấp 2–6 lần ngưỡng mắt 12. Độ tản
+màu tại rìa: **đúng 0** (một dải màu chết) so với **47,6–55,6** sau bản vá.
+
+**Phương án đã cân nhắc.** *(a)* Giảm cường độ phép hoà — bác, nó chỉ làm đường viền nhạt đi chứ
+không xoá, và làm hỏng luôn việc hoà màu vốn đúng. *(b)* Cho tấm chân trời bỏ vân ở vành trong để
+"khớp" — bác, đó là mua sự khớp nhau bằng cách làm hỏng cả hai. *(c)* **ĐÃ CHỌN — chuyển phép hoà
+lên nằm giữa tầng 1 và tầng 2**, để vết loang và sườn lộ đất được áp SAU khi màu nền đã hoà xong.
+
+**Giải pháp.** Đổi thứ tự: tầng 1 → **hoà ra `outerRgb`** → tầng 2 → tầng 3. Trong lưới
+(`outside` = 0) kết quả **không đổi một chữ số**. Kết quả đo lại: bước màu qua chỗ giáp trên ảnh
+dựng thật (kỷ 15) **26,8 → ~6** (tối đa 4,4); tại các đỉnh mà hai tấm dùng chung, chênh màu còn
+**0,1–2,4**/255.
+
+**Trade-off.** Vết loang nay nhân vào một màu đã nhạt hơn ⇒ vùng đất xa tối đi khoảng **0,01–0,02**
+(vì `Math.min(1, c × m)` chỉ kẹp phía sáng). Đủ nhỏ để dưới ngưỡng mắt, nhưng **đủ lớn để làm rơi
+phép tự-kiểm hình học của `sweep-score.mjs`**, thứ khi ấy đang được viết thành một MỨC tuyệt đối
+với biên vỏn vẹn **0,010** = đúng một đơn vị làm tròn. Xem mục "Ảnh hưởng".
+
+**Ảnh hưởng.** `src/components/city/render3d/terrainMesh.js` (thứ tự tầng) · bài test mới
+*"RÌA TẤM ĐẤT PHẢI KHỚP TẤM CHÂN TRỜI VỀ MÀU — và phải còn VÂN khi ra tới rìa"* (hỏi tại các đỉnh
+hai tấm **dùng chung**, cộng một vế đối chứng đòi độ tản màu ở rìa phải còn ít nhất một nửa so với
+trong lòng — không có vế ấy thì "khớp màu" đạt được bằng cách làm cả hai tấm chết như nhau) ·
+`scripts/sweep-score.mjs`: phép tự-kiểm đổi từ **MỨC** (`dL > nL + 0,15`) sang **QUAN HỆ**
+(`dL > nL × 1,6`), ngưỡng lấy từ hai đầu ĐO ĐƯỢC (tỉ số nền thật **1,93 … 2,45**), kèm một **đối
+chứng bắt buộc**: lấy mẫu lệch nửa hàng thì cổng PHẢI kêu, không kêu thì tự thoát lỗi.
+
+**Điều kiện xem lại.** Mọi lần thêm một tầng màu mới vào `groundColorAt`, hỏi trước: *"tầng này
+nằm trước hay sau phép hoà ra vùng ngoài, và ở rìa thì hệ số hoà bằng bao nhiêu?"* — hệ số bằng 1
+nghĩa là mọi thứ nằm sau nó **không tồn tại** ở rìa.
+
+---
+
 ## ADR-045 — Địa hình: nhiễu phải **BẺ CONG** level set chứ không **CỘNG** vào cao độ; và mỗi kỷ phải khai một **HƯỚNG THẤP** để nền thành phố có lý do phẳng
 
 - **Ngày**: 2026-08-20 (§1(B) của chương trình "QUY MÔ TRƯỚC, HIỆU ỨNG SAU")

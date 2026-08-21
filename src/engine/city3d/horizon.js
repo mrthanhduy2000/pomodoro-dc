@@ -33,7 +33,9 @@
  */
 
 import { valueNoise } from './noise';
-import { APRON_DROP, WATER_SURFACE_Y, terrainSurfaceReach } from './terrain';
+import {
+  APRON_DROP, WATER_SURFACE_Y, bienDoRollLen, buildTerrain, terrainMaxHeight, terrainSurfaceReach,
+} from './terrain';
 import { buildSetting, hazXuongDay } from './setting';
 
 /** Bao xa thì hết thế giới, tính bằng CẠNH LƯỚI. Phải nhỏ hơn bán kính vòm trời (3,6 × lưới). */
@@ -83,9 +85,15 @@ const MIN_SAMPLES_PER_CELL = 2.6;
 /**
  * Vùng đất xa bắt đầu nhô lên từ đâu, tính bằng CẠNH LƯỚI kể từ tâm.
  *
- * ⚠️ PHẢI LỚN HƠN mép ngoài của tấm địa hình thành phố (`0,5 + APRON_EDGE` ô ≈ 0,33 × lưới) — chỗ
- * giáp giữa hai tấm phải PHẲNG ở cả hai bên thì mới không lộ đường nối. Chừa thêm một quãng nữa để
- * mắt đọc ra "một vùng đất bằng rồi mới tới chân núi", chứ không phải núi mọc ngay sát nhà.
+ * ⚠️ PHẢI LỚN HƠN mép ngoài của tấm địa hình thành phố (`0,5 + PLATE_PAD_CELLS` ô ≈ 0,33 × lưới).
+ * ⚠️ **LỜI HỨA Ở ĐÂY ĐÃ ĐƯỢC PHÁT BIỂU LẠI (2026-08-21, ADR-046) — ĐỌC KỸ, ĐỪNG KHÔI PHỤC BẢN CŨ.**
+ * Bản cũ đòi *"chỗ giáp giữa hai tấm phải PHẲNG ở cả hai bên thì mới không lộ đường nối"* — một
+ * MỨC, và chính cái mức ấy (`settle`-về-phẳng tại mép) là một trong ba thứ đẻ ra cái bệ. Lời hứa
+ * thật xưa nay chỉ là *hai tấm phải KHỚP NHAU tại chỗ giáp* — một QUAN HỆ, và một quan hệ thì không
+ * đòi bên nào phẳng cả. Nay `heightAt` của tấm chân trời đọc thẳng `terrain.nenKho(...)` làm nền,
+ * nên hai tấm khớp **theo cấu tạo** ở mọi hướng dù cả hai đều đang lượn. `HORIZON_ONSET` vẫn phải
+ * lớn hơn mép tấm phố, nhưng nay là để mắt đọc ra "một vùng đất thoải rồi mới tới chân núi", chứ
+ * không phải núi mọc ngay sát nhà — đó là lý do DUY NHẤT còn lại của con số này.
  */
 export const HORIZON_ONSET = 0.62;
 
@@ -165,9 +173,25 @@ function clamp01(t) { return t < 0 ? 0 : (t > 1 ? 1 : t); }
  * Đỉnh cao nhất mà vùng đất xa của một kỷ CÓ THỂ đạt tới — tính bằng công thức, không dựng cả
  * trường rồi đo. Cùng lý do tồn tại với `terrainMaxHeight`: tầng vẽ cần biết trước để đặt sương và
  * để kiểm bằng test, mà "dựng ra rồi đo" thì không dùng được ở tầng thuần.
+ *
+ * ⚠️ ĐÂY LÀ MỘT QUAN HỆ, KHÔNG PHẢI MỘT MỨC — VÀ NÓ VỪA GÃY ĐÚNG KIỂU PHASE 7D (2026-08-21).
+ * Bản cũ trả về đúng `style.rise`, và câu ấy chỉ đúng chừng nào NỀN của tấm chân trời là một hằng
+ * số. Từ §2(b) nền ấy là chính mặt đất `terrain.nenKho`, nên cao độ thật là `nền + rise × …` —
+ * con số cũ lập tức thành lời nói dối ở hai kỷ đồng bằng: kỷ 3 đo được 0,732 trên trần 0,50 và
+ * kỷ 12 đo được 0,840 trên trần 0,80. Không có gì đỏ lên trong tầng vẽ, vì chỗ dùng nó
+ * (`terrainMesh.js`) kẹp `lift` về 1 — tức đỉnh núi cứ thế bão hoà màu và không ai biết.
+ *
+ * Nay hỏi CHÍNH hai thứ hợp thành cao độ ấy:
+ *   · trần của nền  = `max(terrainMaxHeight + APRON_DROP, bienDoRollLen())` — hoặc mặt đất thành
+ *     phố cao hơn (kỷ có đồi), hoặc gợn của chính đồng bằng cao hơn (kỷ phẳng); `tanh` cho ra một
+ *     cận trên ĐÚNG cho vế sau nên đây là cận chặt, không phải một con số nới cho yên tâm.
+ *   · trần của núi  = `rise` (vì `t`, `shape`, `luiNui` đều nằm trong [0, 1]).
+ * Đo thật 15 kỷ sau bản vá: dùng hết 45–82% trần, không kỷ nào vượt. Trần rộng ra ⇒ dải màu đỉnh
+ * núi nhạt đi một chút so với trước, và đó là giá phải trả cho một con số nói thật.
  */
 export function horizonMaxHeight(era) {
-  return Math.max(0, getHorizonStyle(era).rise);
+  const nen = Math.max(terrainMaxHeight(era) + APRON_DROP, bienDoRollLen());
+  return nen + Math.max(0, getHorizonStyle(era).rise);
 }
 
 /**
@@ -189,16 +213,22 @@ export function horizonMaxHeight(era) {
  *   innerEdge: number, reach: number, maxHeight: number, style: object,
  * }}
  */
-export function buildHorizon({ era, gridSize = 12 } = {}) {
+export function buildHorizon({ era, gridSize = 12, terrain } = {}) {
   const style = getHorizonStyle(era);
   const size = Number.isFinite(gridSize) && gridSize > 0 ? gridSize : 12;
+  // ⚠️ NỀN CỦA TẤM CHÂN TRỜI LÀ CHÍNH MẶT ĐẤT CỦA `terrain.js`, KHÔNG PHẢI MỘT HẰNG SỐ (2026-08-21).
+  // Nhận sẵn từ ngoài nếu người gọi đã dựng (tránh dựng hai lần mỗi cảnh); tự dựng nếu không, để
+  // hàm này còn gọi được một mình trong test. Cả hai đường chỉ nhận `era` + `gridSize` nên bất
+  // biến ADR-007 không đổi.
+  const dat = terrain ?? buildTerrain({ era, gridSize: size });
   const seed = `h|${era}`;
   const half = (size - 1) / 2;
   const setting = buildSetting({ era, gridSize: size });
 
   // Mép TRONG: ĐỌC từ chính công thức sinh ra mép ngoài của tấm địa hình thành phố, không suy lại
-  // bằng tay. Hai tấm phải gặp nhau ở đây, cùng cao độ `-APRON_DROP`; lệch một chút là có một khe
-  // hở chạy vòng quanh thành phố (đã xảy ra thật — xem `TERRAIN_SUB` ở `terrain.js`).
+  // bằng tay. Hai tấm phải gặp nhau ở đây — nay **ở đúng cao độ đất thật tại chỗ ấy**, khác nhau
+  // theo từng hướng, chứ không còn ở một hằng số chung; lệch một chút là có một khe hở chạy vòng
+  // quanh thành phố (đã xảy ra thật — xem `TERRAIN_SUB` ở `terrain.js`).
   const innerEdge = terrainSurfaceReach(size);
   const reach = size * HORIZON_REACH;
   // Bước lưới suy từ chỗ giáp ⇒ luôn có một đỉnh nằm đúng trên đó.
@@ -233,7 +263,13 @@ export function buildHorizon({ era, gridSize = 12 } = {}) {
     // Khoảng cách Chebyshev — CÙNG phép đo mà vùng đất thoải của `terrain.js` dùng. Dùng Euclid ở
     // đây thì bốn góc thế giới tụt xuống thành bốn cái hố vuông góc với vành núi hình tròn.
     const d = Math.max(Math.abs(x), Math.abs(z));
-    if (d <= onset) return khoetLongNuoc(x, z, -APRON_DROP);
+    // ⚠️ NỀN = MẶT ĐẤT THẬT, KHÔNG PHẢI `-APRON_DROP` (2026-08-21, §2(b) của lệnh Đàm). Lý do gốc
+    // của Phase 9A — hai cái nêm sáng ở chỗ giáp — ràng buộc *chỗ giáp phải KHỚP*, nó KHÔNG ràng
+    // buộc *phải tụt một hằng số*. Hằng số ấy đẻ ra một vành phẳng tuyệt đối rộng 5,7 ô quanh
+    // thành phố, và đó là cái sàn để mắt đọc phần đất trong lưới thành một mặt bàn. Nay hỏi thẳng
+    // `dat.nenKho` (mặt đất khô LIÊN TỤC, chưa khoét nước) nên hai tấm khớp theo cấu tạo.
+    const nen = dat.nenKho(x + half, z + half);
+    if (d <= onset) return khoetLongNuoc(x, z, nen);
 
     const t = smoothstep(Math.min(1, (d - onset) / span));
 
@@ -273,7 +309,8 @@ export function buildHorizon({ era, gridSize = 12 } = {}) {
     const massif = valueNoise(`${seed}|b`, x / (baseCell * 3.1), z / (baseCell * 3.1));
 
     // Nhân chứ không cộng: khối núi VẮNG MẶT thì phải kéo cả tầng chi tiết xuống theo, không để lại
-    // một đám lấm tấm lơ lửng. Trần 1,0 giữ nguyên nên `horizonMaxHeight` vẫn là một cái kẹp đúng.
+    // một đám lấm tấm lơ lửng. `shape` vẫn nằm trong [0, 1] nên số hạng núi vẫn bị `rise` chặn trên
+    // — nhưng đó chỉ là MỘT trong hai vế của `horizonMaxHeight`; vế còn lại là nền, xem chú thích ở đó.
     const shape = (0.34 + massif * 0.66) * fractal;
     // ⚠️ NÚI PHẢI TẮT DẦN TRÊN MỘT QUÃNG RỘNG HƠN HẲN DẢI BỜ, và đây không phải "hai công thức cho
     // một luật". Phép khoét lòng nước (`khoetLongNuoc`) dùng ĐÚNG dải bờ 0,9 ô mà `terrain.js`
@@ -284,7 +321,7 @@ export function buildHorizon({ era, gridSize = 12 } = {}) {
     // KHÔNG THỂ làm hai tấm lệch nhau — có bài test đo đúng chỗ giáp ở cả 15 kỷ để chứng minh.
     const luiNui = 1 - smoothstep(clamp01((setting.insetAt(x + half, z + half) + MOUNTAIN_FADE)
       / MOUNTAIN_FADE));
-    return khoetLongNuoc(x, z, -APRON_DROP + style.rise * t * shape * luiNui);
+    return khoetLongNuoc(x, z, nen + style.rise * t * shape * luiNui);
   }
 
   /**

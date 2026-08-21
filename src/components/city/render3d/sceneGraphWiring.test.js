@@ -219,7 +219,7 @@ test('BA TẤM ĐỊA HÌNH PHẢI ĐƯỢC DỰNG THẬT VÀO CẢNH', () => {
   // không đổi: hai tấm phải gặp nhau ở đúng `-APRON_DROP`. Nay nó được khoá ở nơi đúng hơn nhiều —
   // `horizon.test.js` đo CAO ĐỘ THẬT ở chỗ giáp, thay vì đọc một dòng gán toạ độ.
   assert.ok(
-    /buildHorizon\(\{ era: layout\.era, gridSize \}\)/.test(CALLS),
+    /buildHorizon\(\{ era: layout\.era, gridSize, terrain \}\)/.test(CALLS),
     'Cảnh không còn dựng vùng đất xa ⇒ thế giới lại kết thúc bằng một mảng phẳng một màu.',
   );
   // ⚠️ KHOÁ TIỀN TỐ, KHÔNG KHOÁ TRỌN DANH SÁCH THAM SỐ. Bản đầu viết `\(\{ horizon, palette \}\)`

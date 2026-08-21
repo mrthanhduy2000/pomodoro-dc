@@ -735,7 +735,10 @@ export function createCityScene({
   // Nay là địa hình thật theo kỷ (`horizon.js`): kỷ 13 có núi vây quanh vì đô thị Nhật kẹp giữa
   // núi, kỷ 12 phẳng lì vì thảo nguyên Nga phẳng thật. Dữ liệu địa lý ấy đã nằm sẵn trong dự án từ
   // Phase 7B — chỉ là tầng vẽ chưa từng đọc tới nó.
-  const horizon = buildHorizon({ era: layout.era, gridSize });
+  // ⚠️ TRUYỀN `terrain` VÀO: tấm chân trời đọc `terrain.nenKho` làm NỀN (2026-08-21) nên hai tấm
+  // khớp nhau theo cấu tạo. Không truyền thì `buildHorizon` tự dựng một `buildTerrain` thứ hai —
+  // vẫn ra đúng số (hàm thuần, cùng `era`+`gridSize`), nhưng tốn gấp đôi công mỗi lần dựng cảnh.
+  const horizon = buildHorizon({ era: layout.era, gridSize, terrain });
   const horizonSurface = buildHorizonSurface({ horizon, palette, terrain, gridSize });
   const outskirtsMaterial = track(applySurfaceDetail(new MeshStandardMaterial({
     vertexColors: true,

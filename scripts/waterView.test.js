@@ -58,7 +58,7 @@ test('BA LỚP PHẢI CỘNG ĐÚNG 100% — mọi phép chia-một-toàn-thể 
   }
 });
 
-test('TECH_DEBT #57 ĐÃ ĐÓNG — 11 kỷ vượt cổng 5% THEO PHÉP TIA, và ĐÚNG BA kỷ trượt vì BỀ RỘNG, không vì góc nhìn', () => {
+test('TECH_DEBT #57 ĐÃ ĐÓNG — 6 kỷ vượt cổng 5% THEO PHÉP TIA; 3 kỷ trượt vì BỀ RỘNG, 5 kỷ vì ĐỊA HÌNH CHE', () => {
   // ⚠️⚠️ ĐỌC DÒNG NÀY TRƯỚC KHI TRÍCH CON SỐ 11 ĐI ĐÂU KHÁC (đính chính 2026-08-20).
   //
   // Bài này đo bằng `tiLeNuocTrongKhung` — PHÉP TIA — và phép tia **mù với cây cối, nhà cửa, đá,
@@ -138,12 +138,35 @@ test('TECH_DEBT #57 ĐÃ ĐÓNG — 11 kỷ vượt cổng 5% THEO PHÉP TIA, v�
   // là cái phễu Phase 9A (Đàm đã chốt), còn quay `drain` về giá trị sai là **mua một con số bằng
   // cách nói dối địa lý** — đúng thứ ADR-025 đã cấm với mặt đường. Cách chữa THẬT vẫn là hướng đã
   // ghi ở `TECH_DEBT #60`: đổi thứ mang bản sắc ven nước sang cầu · bến · thuyền · kè.
-  assert.deepEqual(TRUOT, [4, 5, 6, 7, 10],
-    'đúng NĂM kỷ được miễn cổng 5% theo phép tia (`TECH_DEBT #59`). Danh sách này đổi nghĩa là '
-    + 'hoặc có kỷ thứ sáu vừa tụt xuống, hoặc một trong năm kỷ ấy vừa được chữa — cả hai trường '
-    + 'hợp đều phải xem lại `TECH_DEBT #59` chứ không phải sửa con số ở đây.');
-  assert.equal(DAT.length, 9,
-    'phải có đúng 9 kỷ vượt 5% THEO PHÉP TIA. ⚠️ KHÔNG phải "9 kỷ đạt cổng 5%" — trên màn hình '
+  // ⚠️ DANH SÁCH ĐỔI LẦN THỨ HAI, TỪ [4,5,6,7,10] SANG [2,3,4,5,6,7,9,10] NGÀY 2026-08-21 — CÙNG
+  // MỘT CHỨNG BỆNH, LẦN NÀY DO BẢN VÁ "XOÁ CÁI BỆ" (§2 lệnh Đàm). Đồng bằng quanh thành phố nay
+  // GỢN thật (trước là một mặt phẳng tuyệt đối rộng 5,7 ô), nên bờ XA của mặt nước bị sống đất gần
+  // che nhiều hơn. Đo bằng CÙNG một lệnh, hai cây mã (`dfd2b15` ↔ HEAD), phép tia 88 tia:
+  //
+  //     kỷ    TRƯỚC    SAU      kỷ    TRƯỚC    SAU
+  //      2    5,50 ✅  3,92 ❌    9    5,93 ✅  4,73 ❌
+  //      3    5,22 ✅  4,61 ❌   10    1,54 ❌  1,62 ❌
+  //      4    4,95 ❌  3,92 ❌   11   10,15 ✅  9,25 ✅
+  //      5    3,51 ❌  3,63 ❌   12    9,19 ✅  8,81 ✅
+  //      6    4,10 ❌  2,23 ❌   13   21,77 ✅ 18,83 ✅
+  //      7    3,55 ❌  3,27 ❌   14   23,72 ✅ 21,57 ✅
+  //      8   11,91 ✅ 10,98 ✅   15   20,52 ✅ 19,32 ✅
+  //
+  // ⚠️ ĐỌC CHO ĐÚNG: ba kỷ mới trượt (2 · 3 · 9) trượt bằng **chưa tới 1,3 điểm phần trăm**, và cả
+  // ba đều thuộc chứng **ĐỊA HÌNH CHE** (`TECH_DEBT #67`), KHÔNG thuộc chứng **BỀ RỘNG**
+  // (`TECH_DEBT #59`, đã đóng cho 6 · 7 · 10). Hai chứng, hai cách chữa, hai điều kiện đóng — Đàm
+  // ra lệnh tách chúng ra chính vì con số gộp này không nói được ai bệnh gì.
+  //
+  // ⚠️ VÀ KHÔNG NỚI CỔNG 5% XUỐNG CHO VỪA. Cấm bằng chữ ở `TECH_DEBT #59`: *"Nới một ngưỡng cho vừa
+  // kết quả là cái phễu Phase 9A."* Cũng KHÔNG quay đồng bằng về phẳng để lấy lại con số — đó là
+  // trả lại đúng cái bệ mà Đàm bác ba vòng liền.
+  assert.deepEqual(TRUOT, [2, 3, 4, 5, 6, 7, 9, 10],
+    'đúng TÁM kỷ được miễn cổng 5% theo phép tia — 6·7·10 vì BỀ RỘNG (`TECH_DEBT #59`, đã đóng) và '
+    + '2·3·4·5·9 vì ĐỊA HÌNH CHE (`TECH_DEBT #67`, chờ Đàm). Danh sách này đổi nghĩa là hoặc có kỷ '
+    + 'thứ chín vừa tụt xuống, hoặc một trong tám kỷ ấy vừa được chữa — cả hai trường hợp đều phải '
+    + 'xem lại hai mục nợ ấy chứ không phải sửa con số ở đây.');
+  assert.equal(DAT.length, 6,
+    'phải có đúng 6 kỷ vượt 5% THEO PHÉP TIA. ⚠️ KHÔNG phải "6 kỷ đạt cổng 5%" — trên màn hình '
     + 'còn ít hơn (xem khối chú thích đầu bài và `TECH_DEBT #63`).');
 
   // Vế thật sự canh bản vá `worldYaw`: 11 kỷ kia phải THẬT SỰ đạt.
@@ -154,16 +177,20 @@ test('TECH_DEBT #57 ĐÃ ĐÓNG — 11 kỷ vượt cổng 5% THEO PHÉP TIA, v�
       + 'của §3. `worldYaw` có đang bị vô hiệu hoá không?');
   }
 
-  // ⚠️ ĐO BIÊN, ĐỪNG CHỈ ĐỌC XANH/ĐỎ (luật Phase 9B). Kỷ mỏng nhất trong nhóm ĐẠT hiện chỉ hơn
-  // cổng **0,11 điểm phần trăm** (kỷ 4: 5,11% ở độ mịn của bài test này, 5,02% ở độ mịn đầy đủ).
-  // Đó là một lời hứa đang đạt nhờ 2% biên — ghi ra để phiên sau biết nó mỏng tới đâu, và để một
-  // thay đổi nhỏ ở kỷ 4 không lặng lẽ đẩy nó sang bảng `TRUOT`.
+  // ⚠️ ĐO BIÊN, ĐỪNG CHỈ ĐỌC XANH/ĐỎ (luật Phase 9B). Con số này đã đổi HAI lần và mỗi lần nó nói
+  // một chuyện khác — nên nó phải được KHOÁ, không phải được đọc lướt:
+  //   · trước 2026-08-21 kỷ mỏng nhất trong nhóm ĐẠT là **kỷ 4 với 5,11%** — hơn cổng đúng 0,11
+  //     điểm phần trăm, tức một lời hứa đang đạt nhờ 2% biên;
+  //   · sau bản vá "xoá cái bệ", kỷ 4 đã rơi hẳn sang `TRUOT`, và kỷ mỏng nhất còn lại là **kỷ 12
+  //     với 8,81%** — biên dày lên 76%. Nghe như một tin tốt, nhưng nó là tin tốt của một nhóm đã
+  //     mất ba thành viên: nhóm ĐẠT thu từ 9 xuống 6 kỷ. **Biên dày lên vì những ca mỏng đã bị loại
+  //     ra khỏi phép đo, không vì ca nào khoẻ lên.** Ghi thẳng ra để phiên sau khỏi đọc nhầm.
   const mongNhat = Math.min(...DAT.map((era) => doDuoc.get(era)));
   assert.ok(mongNhat >= CONG,
     `kỷ mỏng nhất trong nhóm ĐẠT chỉ được ${(mongNhat * 100).toFixed(2)}%`);
-  assert.ok(mongNhat < 0.06,
+  assert.ok(mongNhat < 0.10,
     `kỷ mỏng nhất trong nhóm ĐẠT đã lên ${(mongNhat * 100).toFixed(2)}% — nếu biên đã dày lên thật `
-    + 'thì cập nhật chú thích trên, đừng để nó nói dối về một biên 0,11 điểm phần trăm không còn nữa.');
+    + 'thì cập nhật chú thích trên, đừng để nó nói dối về một biên 8,81% không còn nữa.');
 
   // ⚠️ ĐỐI CHỨNG — TRẦN PHẢI CÒN CAO HƠN MẶC ĐỊNH Ở KỶ BIỂN. Không có vế này thì bài trên vẫn xanh
   // trong một thế giới mà mặt biển đã phình to bất thường (vd `reach` tụt về 0 và nước liếm vào sát

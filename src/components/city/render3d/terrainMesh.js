@@ -45,7 +45,7 @@
 import { BufferAttribute, BufferGeometry, Color } from 'three';
 
 import {
-  APRON_CELLS, APRON_DROP, APRON_EDGE, TERRAIN_SUB, WATER_SURFACE_Y,
+  APRON_DROP, PLATE_PAD_CELLS, TERRAIN_SUB, WATER_SURFACE_Y,
 } from '../../../engine/city3d/terrain';
 import { WATER_BED_DEPTH, WATER_TINT } from '../../../engine/city3d/setting';
 import {
@@ -207,6 +207,37 @@ function surfaceKit({ terrain, gridSize, layout, palette }) {
       out[i] = lerp(lerp(a[i], b[i], tx), lerp(c[i], d[i], tx), ty);
     }
 
+    // ── Ra khỏi lưới thì màu NỀN nhạt dần về màu vùng đất bao quanh ──────────
+    //
+    // ⚠️ PHÉP HOÀ NÀY PHẢI ĐỨNG **TRƯỚC** TẦNG 2 VÀ TẦNG 3. Trước 2026-08-21 nó đứng SAU, và đó
+    // chính là cái đường viền vuông sắc lẹm chạy quanh thành phố mà Đàm nhìn thấy ở cả 15 kỷ.
+    // Cơ chế: ở mép tấm thì `outside` = 3,5 ô nên `t` đã bằng 1, mà `lerp(x, outerRgb, 1)` = đúng
+    // `outerRgb` — tức phép hoà **XOÁ SẠCH** cả vết loang lẫn sườn-dốc-lộ-đất vừa tính xong. Cả
+    // vành ngoài của tấm đất (bán kính 8,55 → 9,5) vì thế ra ĐÚNG MỘT MÀU PHẲNG, trong khi tấm
+    // chân trời ngay sát bên vẫn còn đủ hai tầng. Đo trên chính ảnh dựng: bước màu ngang qua chỗ
+    // giáp có trung vị 20–36 và p99 60–74 trên thang RGB/255 ở **cả 15 kỷ** — gấp 2–6 lần ngưỡng
+    // mắt 12. Nó nấp được lâu vì cái BỆ cao độ còn to tiếng hơn; §2 xoá cái bệ xong thì nó thành
+    // hình vuông duy nhất còn lại trong khung, và mắt tìm ra ngay.
+    //
+    // Bệnh gốc là MỘT PHÉP LERP GÁNH HAI VIỆC (cùng họ "một trường gánh hai việc", đã cắn năm lần
+    // ở `storyHeight`/`roof`/bảng loài cây/`avenue`): nó vừa trả lời *"đất ở đây là đất thành phố
+    // hay đất vùng ngoài?"* — một câu về NỀN, đúng — vừa vô tình trả lời *"đất ở đây có vân không?"*
+    // — một câu nó không có quyền trả lời, vì vân là thứ CẢ HAI TẤM đều phải có. Tách ra bằng cách
+    // hoà nền TRƯỚC rồi mới đắp vân lên trên, thì hai tấm kết thúc bằng đúng cùng một bộ tầng.
+    //
+    // Trong lưới (`outside` = 0) kết quả KHÔNG đổi một chữ số: `t` = 0 nên phép hoà là phép đồng
+    // nhất, và thứ tự "nền → vân → dốc" vẫn y như cũ.
+    //
+    // Bề rộng dải hoà bám `PLATE_PAD_CELLS` chứ KHÔNG bám `APRON_CELLS` (bề rộng dải hoà CAO ĐỘ,
+    // nay rộng tới 12 ô, vượt xa mép tấm): cao độ được phép hoà tiếp sang tấm chân trời vì bên kia
+    // đọc cùng một hàm nền, còn MÀU NỀN thì mỗi tấm tự pha lấy nên phải pha xong trong phạm vi tấm.
+    const outside = Math.max(0, Math.max(-0.5 - u, u - (gridSize - 0.5)),
+      Math.max(-0.5 - v, v - (gridSize - 0.5)));
+    if (outside > 0) {
+      const t = smoothstep(Math.min(1, outside / (PLATE_PAD_CELLS * 0.75)));
+      for (let i = 0; i < 3; i += 1) out[i] = lerp(out[i], outerRgb[i], t);
+    }
+
     // ── Tầng 2: vết loang ────────────────────────────────────────────────────
     const mottle = 1 + (terrain.tintAt(u, v) - 0.5) * 2 * MOTTLE_AMPLITUDE;
     for (let i = 0; i < 3; i += 1) out[i] = Math.min(1, out[i] * mottle);
@@ -214,13 +245,6 @@ function surfaceKit({ terrain, gridSize, layout, palette }) {
     // ── Tầng 3: sườn dốc lộ đất ──────────────────────────────────────────────
     applyBareEarth(out, normal);
 
-    // Ra khỏi lưới thì nhạt dần về màu vùng ngoài — cùng lý do với `surfaceHeightAt`.
-    const outside = Math.max(0, Math.max(-0.5 - u, u - (gridSize - 0.5)),
-      Math.max(-0.5 - v, v - (gridSize - 0.5)));
-    if (outside > 0) {
-      const t = smoothstep(Math.min(1, outside / (APRON_CELLS * 0.75)));
-      for (let i = 0; i < 3; i += 1) out[i] = lerp(out[i], outerRgb[i], t);
-    }
     return out;
   }
 
@@ -281,7 +305,7 @@ export function buildTerrainSurface({ terrain, gridSize, layout, palette, tach =
   // ── Lưới đỉnh ─────────────────────────────────────────────────────────────
   // Trải từ ngoài rìa vùng đất thoải, qua cao nguyên, ra rìa bên kia.
   //
-  // ⚠️ RỘNG BAO NHIÊU LÀ MỘT KHOẢN TIỀN, KHÔNG PHẢI MỘT Ý THÍCH. Lấy ĐÚNG tới `APRON_EDGE`: ra
+  // ⚠️ RỘNG BAO NHIÊU LÀ MỘT KHOẢN TIỀN, KHÔNG PHẢI MỘT Ý THÍCH. Lấy ĐÚNG tới `PLATE_PAD_CELLS`: ra
   // khỏi mốc đó mặt đất phẳng tuyệt đối (xem `terrain.js`), nên thêm đỉnh nữa là thêm tam giác để
   // tả một mặt phẳng — mà tấm ván vùng ngoài của `sceneGraph.js` đã tả nó rồi, bằng 12 tam giác.
   //
@@ -294,7 +318,7 @@ export function buildTerrainSurface({ terrain, gridSize, layout, palette, tach =
   // **không có gì đỏ lên** — ảnh vẫn đẹp, mặt đất vẫn mượt, chỉ là sai. Neo `u0` vào bội số của
   // bước lưới thì mọi toạ độ NGUYÊN chắc chắn là một đỉnh.
   const du = 1 / SUB;
-  const padSteps = Math.ceil((0.5 + APRON_EDGE) * SUB);
+  const padSteps = Math.ceil((0.5 + PLATE_PAD_CELLS) * SUB);
   const u0 = -padSteps * du;
   const steps = (gridSize - 1) * SUB + padSteps * 2;
 

@@ -40,7 +40,7 @@
 
 import {
   buildTerrain, ERA_TERRAIN, TERRACE_STEP, APRON_DROP,
-  APRON_CELLS, APRON_EDGE, terrainSurfaceReach,
+  APRON_CELLS, PLATE_PAD_CELLS, terrainSurfaceReach,
 } from '../src/engine/city3d/terrain.js';
 import * as diaHinh from '../src/engine/city3d/terrain.js';
 
@@ -316,7 +316,18 @@ export function chamTruong(h, size, buoc) {
  * kính theo ĐƯỜNG CHÉO với bán kính theo TRỤC:
  *   · tỉ số ≈ **1,414** (`√2`) ⇒ ranh giới là một hình VUÔNG hoàn hảo — bốn góc thò ra đúng √2 lần.
  *   · tỉ số ≈ **1,00**        ⇒ ranh giới TRÒN/hữu cơ, không còn góc để mắt bắt.
- * Đơn vị giữ nguyên là "ô", nên con số này so thẳng được với `APRON_CELLS`/`APRON_EDGE`.
+ * Đơn vị giữ nguyên là "ô", nên con số này so thẳng được với `APRON_CELLS`/`PLATE_PAD_CELLS`.
+ *
+ * ⚠️ **TIỀN ĐỀ CỦA PHÉP ĐO NÀY ĐÃ BỊ GỠ MỘT NỬA (2026-08-21, ADR-046) — ĐỌC TRƯỚC KHI TRÍCH SỐ.**
+ * Mốc `san = -APRON_DROP` bên dưới ra đời khi vành ngoài còn được `settle` **về phẳng tuyệt đối**
+ * tại `APRON_EDGE`: lúc ấy `-APRON_DROP` đúng là **một mặt sàn có thật**, và "bán kính chỗ đất tụt
+ * xuống nửa đường giữa cao nguyên và sàn" là một câu hỏi có nghĩa đen. ADR-046 **xoá hẳn** phép
+ * `settle` ấy, nên ngoài vành không còn sàn nào cả — đất cứ lượn tiếp. ⇒ Con số `tỉ số` in ra vẫn
+ * là **một phép đo thật về HÌNH DẠNG của đường đồng mức nửa-đường**, và nó vẫn trả lời được câu
+ * *"ranh giới ấy vuông hay tròn"*; nhưng nó **KHÔNG còn** trả lời được câu *"vành ngoài có phẳng
+ * không"* — câu đó nay không còn nghĩa. Muốn hỏi *"có phải một cái bệ không"* thì dùng
+ * `scripts/plateau-score.mjs` (chỉ số bệ = dốc lớn nhất vành 6–9 ÷ dốc trung bình vành 0–5), đúng
+ * bài học ADR-019: một kết luận chết theo tiền đề của nó, dù không dòng nào của nó sai.
  */
 export function chamBeVuong(era, gridSize = GRID, soTia = 720) {
   const t = buildTerrain({ era, gridSize });
@@ -448,7 +459,7 @@ function main() {
 
   if (argv.includes('--ngoai')) {
     console.log(`bệ vuông: tỉ số CHÉO/TRỤC — 1,414 = vuông hoàn hảo · 1,00 = tròn`);
-    console.log(`(APRON_CELLS = ${so(APRON_CELLS, 2)} · APRON_EDGE = ${so(APRON_EDGE, 2)} · APRON_DROP = ${so(APRON_DROP, 2)})`);
+    console.log(`(APRON_CELLS = ${so(APRON_CELLS, 2)} · PLATE_PAD_CELLS = ${so(PLATE_PAD_CELLS, 2)} · APRON_DROP = ${so(APRON_DROP, 2)})`);
     console.log('kỷ\ttỉ số\tr trục\tr chéo\tr min\tr max\tbão hoà');
     let tong = 0;
     let bh = 0;

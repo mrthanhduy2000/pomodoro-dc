@@ -1505,6 +1505,66 @@ thay vì đẻ ra 25 dòng số vô giá trị. **Không có phép đo thì khô
 
 ---
 
+## Sau «XOÁ CÁI BỆ» — hình học KHÔNG NHÚC NHÍCH MỘT ĐƠN VỊ ở cả 15 kỷ (2026-08-21, ADR-046/047)
+
+**Mốc nền `dfd2b15`**, đo lại tại chỗ trong một `git worktree` ở đúng HEAD (luật `TECH_DEBT #43`),
+bằng **cùng một dòng lệnh** chỉ khác biến `KHO`:
+
+```
+KHO=<đường dẫn kho> SESSIONS=40 node --import ./scripts/register-esm-loader.mjs scripts/scene-count.mjs
+```
+
+| kỷ | tam giác TRƯỚC | tam giác SAU | lệnh vẽ TRƯỚC | lệnh vẽ SAU |
+|---:|---:|---:|---:|---:|
+| 1 | 126.688 | **126.688** | 11 | **11** |
+| 2 | 114.860 | **114.860** | 14 | **14** |
+| 3 | 124.682 | **124.682** | 14 | **14** |
+| 4 | 172.940 | **172.940** | 14 | **14** |
+| 5 | 129.340 | **129.340** | 13 | **13** |
+| 6 | 173.474 | **173.474** | 14 | **14** |
+| 7 | 158.990 | **158.990** | 14 | **14** |
+| 8 | 144.522 | **144.522** | 14 | **14** |
+| 9 | 138.988 | **138.988** | 13 | **13** |
+| 10 | 118.156 | **118.156** | 15 | **15** |
+| 11 | 143.108 | **143.108** | 13 | **13** |
+| 12 | 123.448 | **123.448** | 13 | **13** |
+| 13 | 162.850 | **162.850** | 13 | **13** |
+| 14 | 179.820 | **179.820** | 13 | **13** |
+| 15 | 140.534 | **140.534** | 13 | **13** |
+| **tổng** | **2.152.400** | **2.152.400** | — | — |
+
+**0 tam giác · 0 lệnh vẽ · 0 vật liệu · 0 nguồn sáng.** Hai con số cuối kiểm bằng cách đếm thẳng
+trên mã nguồn: `sceneGraph.js` có **4** `new *Light(` và **10** `new Mesh*Material(` ở CẢ HAI cây,
+và `git diff -- src/` **không thêm một dòng nào** khớp `new *Light(` hay `new Mesh*Material(`.
+
+### ⚠️ HAI CỘT Y HỆT NHAU KHÔNG PHẢI "KHÔNG CÓ GÌ ĐỔI" — PHẢI HỎI PHÉP ĐO CÓ NHÌN TỚI CHỖ ĐÃ SỬA KHÔNG
+
+Đây đúng cái bẫy đã ghi trong `CLAUDE.md` (*"khi một phép đo ra kết quả y hệt lần trước, câu hỏi
+đầu tiên KHÔNG phải 'vậy là không đổi à?' mà là 'phép đo này có NHÌN TỚI chỗ tôi vừa sửa
+không?'"*). Trả lời cho lần này: **KHÔNG, và đó là điều đúng đắn.** Tam giác và lệnh vẽ là đại
+lượng của **TÔ-PÔ** (bao nhiêu đỉnh, bao nhiêu họ vật liệu); bản vá này chỉ dời **VỊ TRÍ** của các
+đỉnh sẵn có — `terrainSurfaceReach(12)` giữ nguyên **9,5** nên tấm lưới giữ nguyên số đỉnh, và số
+bệ kè cũng không đổi vì cao độ **trong lưới** không đổi một chữ số. Hai cột bằng nhau vì vậy là
+**kết quả mong muốn**, không phải bằng chứng "chưa đổi gì".
+
+Thứ chứng minh bản vá tới được màn hình là một phép đo **KHÁC HẲN** — so ảnh render (`sweep-diff
+--frame`, 15 cặp, cùng một dòng lệnh, hai cây mã): **18,9 %–39,3 %** điểm ảnh đổi quá ngưỡng mắt
+12/255, lệch trung bình cả khung **12,79–30,70**. Kỷ nào cũng vượt ngưỡng, không kỷ nào im lặng.
+
+**Đối chứng cho chính phép đo này** (bắt buộc, nếu không thì "hai cột bằng nhau" cũng có thể là
+`KHO` không ăn): chạy lại đúng lệnh ấy với `KHO` trỏ vào `base11` (`e95cdf1`, Phase 12) ra tổng
+**1.321.686** — khác hẳn, tức biến `KHO` thật sự đổi cây mã.
+
+### Vế CHƯA đo — frame time trên M3
+
+Không chạy được ở đây (SwiftShader, script tự dừng ở cảnh đầu — đúng thiết kế). Nhưng phase này
+**không đụng một trong ba trục tính tiền nào**: 0 nguồn sáng mới · 0 shader mới · khung hình không
+đổi, và hình học thì y hệt tới từng đơn vị. Theo mô hình chi phí ở đầu file (80 % theo điểm ảnh,
+20 % cố định), **không có đường nào để phase này làm chậm máy** — đây là suy luận CẤU TRÚC, không
+phải một con số, và nó được ghi ra đúng dạng ấy.
+
+---
+
 ## Khi nào phải đo lại
 
 - Sau bất kỳ phase nào **thêm nguồn sáng, đổi shader, đổi bóng đổ, hoặc đổi DPR**.

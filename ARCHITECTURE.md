@@ -683,9 +683,16 @@ Bốn điểm về LUỒNG DỮ LIỆU đáng nhớ ở tầng kiến trúc:
      (`ROLL_HEADROOM_SHARE = 0,70`), không phải hằng số — và phép nén là **bão hoà `tanh`, không
      kẹp**, để không phá thứ tự giữa các kỷ. Đây là thứ duy nhất giữ cho vành đất KHÔ không tụt
      xuống dưới mặt nước.
-   · ⚠️ **Việc này KHÔNG chữa được cái "bệ vuông"** — bo tròn cao nguyên mà giữ đủ 144 ô thành phố
-     trên đất phẳng cần tấm đất rộng thêm **12,2%**, tức đụng `APRON_EDGE`/`terrainSurfaceReach`.
-     Đó là `TECH_DEBT #53`, đang chờ Đàm quyết.
+   · ⚠️ **ĐÍNH CHÍNH 2026-08-21 (ADR-046) — CÂU DƯỚI ĐÂY TỪNG ĐÚNG VÀ NAY ĐÃ SAI.** Bản trước ghi:
+     *"Việc này KHÔNG chữa được cái 'bệ vuông' — bo tròn cao nguyên mà giữ đủ 144 ô thành phố trên
+     đất PHẲNG cần tấm đất rộng thêm 12,2%, tức đụng `APRON_EDGE`/`terrainSurfaceReach`."* Lập luận
+     ấy chặt chẽ nhưng đứng trên một tiền đề đã bị gỡ: **144 ô thành phố KHÔNG cần đứng trên đất
+     phẳng** — chúng chỉ cần đứng trên đất *thoải hơn* (nhà vẫn đứng ở cao độ cao nhất dưới bóng
+     mình, phần hụt vẫn có bệ kè). Bỏ chữ "phẳng" đi thì không còn phải nới tấm đất, và cái bệ được
+     xoá bằng ba việc khác hẳn: nới **vùng bằng** rộng 2,85…12,15 ô với mép **méo** (`APRON_CELLS`
+     × `APRON_SPREAD`), hạ `APRON_DROP` 0,62 → 0,18, và **xoá hẳn** phép `settle`-về-phẳng
+     (`APRON_EDGE` đổi tên → `PLATE_PAD_CELLS`, giá trị giữ 3,4 nên `terrainSurfaceReach` KHÔNG
+     đổi). `TECH_DEBT #53` vì vậy cũng phải đọc kèm khối đính chính ở đầu mục ấy.
 
 **Ánh sáng và màu là một hệ THỐNG NHẤT, không phải các nút chỉnh rời (2026-08-12, Phase 3C)**:
 bốn thứ dưới đây khoá lẫn nhau, đổi một cái phải soi lại ba cái còn lại.

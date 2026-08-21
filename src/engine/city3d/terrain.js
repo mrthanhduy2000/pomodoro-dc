@@ -91,27 +91,76 @@ export function maxBankRise() {
  */
 const NOISE_CELL = 4.5;
 
-/** Vùng đất thoải quanh cao nguyên thành phố, tính bằng ô. Bán kính THẬT bị nhiễu nhân vào. */
-export const APRON_CELLS = 2.6;
-/** Vùng ngoài thấp hơn chân cao nguyên bao nhiêu — đủ để đọc ra "thành phố nằm trên cao". */
-export const APRON_DROP = 0.62;
 /**
- * Ra khỏi mốc này (tính bằng ô, kể từ mép lưới) thì mặt đất **phẳng đúng** `-APRON_DROP` — hết gợn.
+ * BỀ RỘNG DANH NGHĨA của dải HOÀ giữa nền phố và đồng bằng mở, tính bằng ô.
  *
- * ⚠️ ĐÂY LÀ MỘT LỜI HỨA VỚI MỘT FILE KHÁC, KHÔNG PHẢI MỘT CON SỐ MỸ THUẬT. Tấm lưới mặt đất phải
- * kết thúc ở đâu đó, và từ đó trở ra là tấm ván "vùng đất bao quanh" của `sceneGraph.js`. Hai mặt
- * ấy chỉ nối liền được nếu chúng ĐỒNG PHẲNG tại chỗ giáp — mà tấm ván thì phẳng, nên vế còn lại
- * buộc phải phẳng theo. Nếu gợn sóng còn sống tới rìa lưới thì chỗ giáp sẽ là một đường răng cưa
- * lộ cả gầm, và nó **không đỏ ở đâu cả** — chỉ là một vết nứt quanh thành phố.
+ * ⚠️ 2026-08-21 — CON SỐ NÀY ĐI TỪ 2,6 LÊN 7,5, VÀ ĐÓ LÀ NỬA THỨ NHẤT CỦA BẢN VÁ "XOÁ CÁI BỆ".
+ * Đàm bác cả 15 kỷ: *"vẫn còn cái bệ"*. Đo bằng `scripts/plateau-score.mjs` (vành đồng tâm bước
+ * 0,5 ô, chỉ số bệ = dốc lớn nhất vành 6–9 ÷ dốc trung bình vành 0–5): **10/15 kỷ ≥ 5**, tệ nhất
+ * kỷ 14 = 26,98, và **cả 15 kỷ nhảy trong đúng một dải 7,25–8,75** — tức bước nhảy không do địa
+ * hình quyết định mà do LƯỚI quyết định. Với bề rộng 2,6 ô thì cả một khoảng tụt 0,62 đơn vị bị
+ * nhồi vào chưa tới ba ô: đó chính là cái vành mà mắt đọc ra là mép bàn.
+ *
+ * ⚠️ VÀ NÓ KHÔNG PHẢI MỘT CON SỐ CỐ ĐỊNH NỮA — xem `APRON_SPREAD`. Một dải hoà rộng bằng nhau ở
+ * mọi hướng vẫn là một hình học, chỉ là một hình học rộng hơn.
  */
-export const APRON_EDGE = 3.4;
+export const APRON_CELLS = 7.5;
+
+/**
+ * Dải hoà rộng hẹp THẤT THƯỜNG bao nhiêu quanh bề rộng danh nghĩa (±62% ⇒ **2,85 … 12,15 ô**).
+ *
+ * ⚠️ ĐÂY LÀ THỨ TRẢ LỜI ĐÚNG CÂU CỦA ĐÀM: *"ranh giới của vùng bằng TUYỆT ĐỐI KHÔNG được trùng với
+ * ranh giới lưới 12×12"*. Nới rộng dải hoà thôi thì chưa đủ — mép của nó vẫn là một đường cách đều
+ * mép lưới, tức vẫn là hình vuông bo góc, chỉ là to hơn. Nhân bề rộng với một tầng nhiễu RẤT thô
+ * (cỡ ô 9, tức một hai bướu cho cả thế giới) thì chỗ này đồng bằng ăn sát chân phố, chỗ kia nó
+ * chạy ra xa mười hai ô — và không còn một bán kính nào để mắt bám vào.
+ */
+export const APRON_SPREAD = 0.62;
+
+/**
+ * Đồng bằng mở nằm thấp hơn **NỀN** phố bao nhiêu.
+ *
+ * ⚠️ 2026-08-21 — 0,62 → 0,18, VÀ ĐÂY LÀ NỬA THỨ HAI, QUAN TRỌNG HƠN, CỦA BẢN VÁ. Con số cũ được
+ * chọn để *"đủ để đọc ra thành phố nằm trên cao"* — tức nó được chọn ĐỂ LÀM RA một cái bệ. Đặt nó
+ * cạnh sự thật: `terrainMaxHeight` của 11 trên 15 kỷ **nhỏ hơn 0,62**; kỷ 11 chỉ 0,14. Nghĩa là
+ * cái vành quanh thành phố cao gấp **4,4 lần** toàn bộ địa hình bên trong thành phố. Không có
+ * ngọn đồi nào cả — chỉ có một cái mặt bàn.
+ *
+ * ⚠️ VÌ SAO KHÔNG PHẢI 0. Mặt nước là cao độ tuyệt đối DUY NHẤT của thế giới này
+ * (`WATER_SURFACE_Y = −APRON_DROP − WATER_DROP_BELOW_PLAIN`) và nó phải nằm dưới MỌI đất khô, kể
+ * cả ô thấp nhất của lưới (cao độ 0). Nên đồng bằng buộc phải nằm dưới 0 một chút để còn chỗ cho
+ * mặt nước. 0,18 là mức nhỏ nhất còn giữ được lời hứa ấy mà vẫn **nhỏ hơn biên độ gợn của chính
+ * đồng bằng** (0,21) — tức có những chỗ đồng bằng CAO HƠN nền phố. Đó mới là câu "thành phố nằm
+ * TRONG đồng bằng", chứ không phải "ngồi TRÊN" nó.
+ */
+export const APRON_DROP = 0.18;
+
+/**
+ * Tấm lưới mặt đất thành phố phủ thêm bao nhiêu ô ra ngoài mép lưới 12×12.
+ *
+ * ⚠️ ĐỔI TÊN TỪ `APRON_EDGE` (2026-08-21) VÌ CÁI TÊN CŨ ĐÃ THÀNH MỘT LỜI NÓI DỐI. Nó từng hứa
+ * *"ra khỏi mốc này thì mặt đất phẳng đúng `-APRON_DROP`"* — và chính lời hứa ấy là nguồn thứ ba
+ * của cái bệ: nó ép **mọi kỷ về cùng một mặt phẳng ở cùng một bán kính**, tạo ra đúng cái vành mà
+ * mắt đọc ra. Lời hứa đã bị xoá, nên cái tên cũng phải đi theo; để lại là gài mìn cho phiên sau.
+ *
+ * ⚠️ VÀ LỜI HỨA THẬT VỚI `horizon.js` KHÔNG HỀ MẤT — nó chỉ được phát biểu lại cho đúng. Lý do gốc
+ * (Phase 9A, hai cái nêm sáng ở chỗ giáp) đòi **hai tấm phải KHỚP NHAU tại chỗ giáp**, chứ không
+ * đòi cả hai phải bằng một hằng số. Nay tấm chân trời đọc thẳng `terrain.nenKho(...)` làm nền, nên
+ * chúng khớp **theo cấu tạo**, ở mọi hướng, mà không cần ai phẳng cả. Đúng bài học Phase 7D: một
+ * lời hứa nói về QUAN HỆ mà viết thành một MỨC thì gãy trong im lặng.
+ *
+ * Còn lại đúng một nghĩa, và nghĩa ấy thuần kỹ thuật: **tấm lưới phải kết thúc ở đâu đó**. Giá trị
+ * giữ nguyên 3,4 để `terrainSurfaceReach` không đổi (9,5) — đổi nó là đổi số đỉnh của tấm lưới,
+ * tức đổi ngân sách tam giác, một khoản tiền khác hẳn và phải được đo riêng.
+ */
+export const PLATE_PAD_CELLS = 3.4;
 
 /**
  * Số ô con trên MỘT ô thành phố của tấm địa hình.
  *
  * ⚠️ SỐNG Ở ĐÂY (tầng thuần) CHỨ KHÔNG Ở `terrainMesh.js`, VÀ ĐÓ LÀ MỘT BẢN VÁ, KHÔNG PHẢI SỞ
  * THÍCH. `horizon.js` cần biết tấm địa hình phủ TỚI ĐÂU để nối liền vào; Phase 9A bản đầu tự suy
- * lại con số ấy bằng tay (`(size−1)/2 + 0,5 + APRON_EDGE` = 9,4) trong khi tấm đất thật phủ tới
+ * lại con số ấy bằng tay (`(size−1)/2 + 0,5 + PLATE_PAD_CELLS` = 9,4) trong khi tấm đất thật phủ tới
  * **9,5** — vì `padSteps` có phép LÀM TRÒN LÊN mà bản suy tay không có. Chênh 0,1 đơn vị ấy, cộng
  * thêm một phép làm tròn nữa ở lưới chân trời, mở ra một khe hở 0,5 đơn vị chạy vòng quanh thành
  * phố; trên ảnh chụp nó hiện thành hai cái nêm sáng chói ở hai góc dưới khung hình.
@@ -126,7 +175,7 @@ export const TERRAIN_SUB = 3;
  */
 export function terrainSurfaceReach(gridSize = 12) {
   const size = Number.isFinite(gridSize) && gridSize > 0 ? gridSize : 12;
-  const padSteps = Math.ceil((0.5 + APRON_EDGE) * TERRAIN_SUB);
+  const padSteps = Math.ceil((0.5 + PLATE_PAD_CELLS) * TERRAIN_SUB);
   return (size - 1) / 2 + padSteps / TERRAIN_SUB;
 }
 
@@ -374,13 +423,36 @@ const OUTER_TILT = 0.55;
  */
 const ROLL_HEADROOM_SHARE = 0.70;
 
-/** Biên độ tối đa (theo cả hai chiều) mà vành đất ngoài lưới được lượn quanh `-APRON_DROP`. */
+/**
+ * Biên độ lượn **XUỐNG** của đồng bằng mở quanh `-APRON_DROP`. Đây là vế bị MẶT NƯỚC chặn.
+ */
 export function bienDoRollNgoai() {
   return ROLL_HEADROOM_SHARE * WATER_DROP_BELOW_PLAIN;
 }
 
 /**
- * Nén một độ lệch thô về trong biên độ cho phép — **BÃO HOÀ, KHÔNG KẸP**.
+ * Biên độ lượn **LÊN** của đồng bằng mở — rộng hơn, và đó không phải một sự nới tay.
+ *
+ * ⚠️ 2026-08-21. Cái trần 0,21 tồn tại vì MỘT lý do duy nhất: đất khô không được chui xuống dưới
+ * mặt nước. Lý do ấy **chỉ nói về chiều XUỐNG**. Áp nó cho cả chiều LÊN là đúng cái bẫy Phase 7D
+ * ở dạng ngược: một ràng buộc một phía bị viết thành một cái kẹp hai phía, và cái kẹp thừa ấy
+ * chính là thứ giữ cho đồng bằng vĩnh viễn nằm dưới nền phố — tức giữ cho cái bệ tồn tại.
+ *
+ * Con số là một QUAN HỆ, không phải một lựa chọn: `xuống + APRON_DROP`. Cộng lại thì đỉnh gợn cao
+ * nhất của đồng bằng nằm CAO HƠN nền phố đúng bằng mức nó lượn xuống dưới mức trung bình của chính
+ * nó ⇒ phân bố của đồng bằng đối xứng quanh **nền phố**, không phải quanh một mức thấp hơn. Đó là
+ * phát biểu bằng số của câu *"thành phố NẰM TRONG đồng bằng, không NGỒI TRÊN nó"*.
+ */
+export function bienDoRollLen() {
+  return bienDoRollNgoai() + APRON_DROP;
+}
+
+/**
+ * Nén một độ lệch thô về trong biên độ cho phép — **BÃO HOÀ, KHÔNG KẸP**, và **KHÔNG ĐỐI XỨNG**.
+ *
+ * Hai biên độ khác nhau cho hai chiều (`bienDoRollNgoai` xuống · `bienDoRollLen` lên) vì chỉ
+ * chiều xuống mới bị mặt nước chặn. Vẫn ĐƠN ĐIỆU NGẶT trên cả trục, và đạo hàm ở 0 bằng 1 ở cả
+ * hai phía nên không có chỗ gãy ở gốc.
  *
  * Kẹp (`Math.min/max`) thì mọi kỷ nghiêng mạnh đều dồn về đúng một giá trị, tức xoá mất thứ tự
  * giữa chúng — đúng bài học Phase 7D (*"KẸP thì phá thứ tự, ĐẨY thì không"*) và Phase 9B (*phép
@@ -388,7 +460,8 @@ export function bienDoRollNgoai() {
  * lệch nhỏ (phần lớn mặt đất KHÔNG đổi một chút nào) và tiệm cận biên ở vùng lệch lớn, nên nó vừa
  * giữ nguyên thứ tự vừa không bao giờ chạm mặt nước.
  */
-export function nenRoll(tho, bienDo = bienDoRollNgoai()) {
+export function nenRoll(tho, xuong = bienDoRollNgoai(), len = bienDoRollLen()) {
+  const bienDo = tho >= 0 ? len : xuong;
   if (!(bienDo > 0)) return 0;
   return bienDo * Math.tanh(tho / bienDo);
 }
@@ -705,76 +778,96 @@ export function buildTerrain({ era, gridSize = 12 } = {}) {
     for (let x = 0; x < size; x += 1) cells.push({ x, y, h: heights[y * size + x] });
   }
 
+  // Hoành/tung dùng chung cho triền thoát nước — hoisted ra khỏi vòng lấy mẫu vì `nenKho` được
+  // hỏi cho TỪNG ĐỈNH của cả hai tấm lưới (hàng chục nghìn lần mỗi lần dựng cảnh).
+  const dCanh = size > 1 ? size - 1 : 1;
+  const huongThap = HUONG_THAP[profile.drain] ?? HUONG_THAP.nam;
+
   /**
-   * Cao độ mặt đất ở BẤT KỲ đâu — kể cả ngoài lưới thành phố. Đây là hàm mà tấm lưới mặt đất
-   * (`render3d/terrainMesh.js`) hỏi cho từng đỉnh, và là **nguồn DUY NHẤT** cho hình dạng mặt đất.
+   * ĐỒNG BẰNG MỞ — cao độ đất KHÔ ở vùng ngoài, tại **bất kỳ đâu** trên thế giới.
    *
-   * ⚠️ VÌ SAO VÙNG ĐẤT NGOÀI PHẢI NẰM CHUNG MỘT HÀM VỚI VÙNG TRONG. Trước Phase 8C, "thành phố" là
-   * 144 ô hộp còn "vùng đất bao quanh" là một tấm ván vuông riêng đặt thấp hơn — hai thứ không biết
-   * nhau, nên chỗ giáp ranh luôn là một MÉP VUÔNG SẮC LẸM, và ảnh chụp đọc ra đúng "một miếng bìa
-   * đặt giữa hư không". Nối chúng vào một hàm thì mép ấy không còn tồn tại để mà sắc.
+   * ⚠️ ĐÂY LÀ THỨ THAY THẾ HẰNG SỐ `-APRON_DROP` (2026-08-21). Trước bản vá, mọi thứ ra khỏi
+   * `PLATE_PAD_CELLS` đều bằng đúng một con số, và tấm chân trời cũng bắt đầu từ đúng con số ấy —
+   * nên quanh thành phố có một vành **phẳng tuyệt đối rộng 5,7 ô** (từ 8,9 ra tới chỗ núi bắt
+   * đầu). Một mặt bàn đứng giữa một sàn nhà: đó là toàn bộ cái bệ mà Đàm nhìn thấy, và không phép
+   * đo "có gián đoạn không" nào thấy được nó, vì **không hề có gián đoạn** — cả hai bên đều phẳng.
    *
-   * Ba việc hàm này làm ở vùng ngoài:
-   *   1. **Hạ dần** xuống `APRON_DROP` — thành phố thành một cao nguyên, không phải một cái khay.
-   *   2. **Ranh giới LƯỢN**, không vuông: bán kính vùng chuyển tiếp bị nhiễu nhân vào, nên chỗ đất
-   *      thoải ra xa, chỗ dốc gấp. Đây là "irregular silhouette" — thứ mà một hình vuông hoàn hảo
-   *      không bao giờ có, và là dấu hiệu số một để mắt đọc ra "bàn cờ".
-   *   3. **Gợn sóng** nhẹ, nên vùng ngoài không phải một mặt phẳng chết.
+   * Hai tần số, có chủ đích: tầng thô (cỡ ô 3,4) cho mảng đồi thoải, tầng mịn (cỡ ô 1,55) cho gợn
+   * ruộng. Một tầng duy nhất thì đồng bằng ra một hàm sin, mắt đọc ngay là nhân tạo.
+   *
+   * `nghieng` là TRIỀN THOÁT NƯỚC — cùng hàm `HUONG_THAP` mà trong lưới dùng, nên bên cao vẫn cao
+   * và bên thấp vẫn thấp khi đi ra khỏi phố. KHÔNG kẹp 0..1: ngoài lưới thì triền phải TIẾP TỤC.
+   *
+   * `nenRoll` bão hoà (không kẹp) nên tổng bao nhiêu cũng không bao giờ chui xuống dưới mặt nước —
+   * và nó bão hoà KHÔNG ĐỐI XỨNG: xuống bị mặt nước chặn, lên thì không. Xem `bienDoRollLen`.
    */
-  function surfaceHeightAt(u, v) {
+  function dongBangKho(u, v) {
+    const nghieng = (huongThap(u / dCanh, v / dCanh) - 0.5) * OUTER_TILT * (profile.tilt ?? 0);
+    const tho = (valueNoise(`${seed}|roll`, u / 3.4, v / 3.4) - 0.5) * 0.30;
+    const min = (valueNoise(`${seed}|roll2`, u / 1.55, v / 1.55) - 0.5) * 0.16;
+    return -APRON_DROP + nenRoll(nghieng + tho + min);
+  }
+
+  /**
+   * BỀ RỘNG DẢI HOÀ tại một điểm — rộng hẹp thất thường theo một tầng nhiễu RẤT thô.
+   *
+   * ⚠️ ĐÂY LÀ CÂU TRẢ LỜI CHO *"ranh giới vùng bằng TUYỆT ĐỐI KHÔNG được trùng ranh giới lưới"*.
+   * Cỡ ô 9 (gần bằng cả cạnh lưới) ⇒ chỉ một hai bướu cho toàn thế giới ⇒ đồng bằng ăn sát chân
+   * phố ở hướng này và chạy ra xa mười hai ô ở hướng kia. Nhiễu MỊN ở đây thì vô dụng: nó chỉ làm
+   * răng cưa một đường tròn, mà mắt vẫn đọc ra đường tròn ấy.
+   */
+  function beRongHoa(u, v) {
+    const n = valueNoise(`${seed}|dongbang`, u / 9, v / 9);
+    return Math.max(0.5, APRON_CELLS * (1 + (n - 0.5) * 2 * APRON_SPREAD));
+  }
+
+  /** Điểm này có nằm trong lưới 12×12 (kể cả nửa ô mép) không. */
+  function trongLuoi(u, v) {
+    return u >= -0.5 && u <= size - 0.5 && v >= -0.5 && v <= size - 0.5;
+  }
+
+  /**
+   * MẶT ĐẤT KHÔ ở bất kỳ đâu — **MỘT MẶT LIÊN TỤC DUY NHẤT**, chưa khoét lòng nước.
+   *
+   * ⚠️ HÀM NÀY LÀ NỀN CHUNG CỦA **CẢ HAI** TẤM LƯỚI. `terrainMesh` hỏi nó qua `surfaceHeightAt`;
+   * `horizon.heightAt` cũng hỏi đúng nó rồi mới cộng núi lên trên. Vì vậy chỗ giáp ở 9,5 khớp
+   * nhau **theo cấu tạo**, ở mọi hướng, mà không bên nào phải phẳng — đó chính là lời hứa thật của
+   * Phase 9A (hai cái nêm sáng), được phát biểu lại thành một QUAN HỆ thay vì một MỨC.
+   *
+   * Ba việc, và không việc nào tạo ra một bán kính để mắt bám vào:
+   *   1. **TRONG lưới**: y hệt `smoothHeightAt` — không đổi một chữ số. ADR-007 nguyên vẹn, nhà
+   *      vẫn đứng đúng cao độ `heights[]` mà `footprint` trả về.
+   *   2. **HOÀ** từ nền phố sang đồng bằng mở trên một dải rộng **2,85 … 12,15 ô** tuỳ hướng
+   *      (`beRongHoa`). `smoothstep` có đạo hàm 0 ở hai đầu ⇒ đất RỜI nền phố với độ dốc thêm
+   *      bằng 0, tức không có mép nào để nhìn thấy.
+   *   3. **ĐỒNG BẰNG MỞ** gợn liên tục ra tới tận chân núi — không còn vành phẳng nào.
+   */
+  function nenKho(u, v) {
     const cu = Math.min(size - 0.5, Math.max(-0.5, u));
     const cv = Math.min(size - 0.5, Math.max(-0.5, v));
-    const plateau = smoothHeightAt(cu, cv);
-    // ⚠️ KHOẢNG CÁCH **BO TRÒN**, KHÔNG PHẢI CHEBYSHEV — ĐÂY LÀ BẢN VÁ CHO "CÁI BỆ VUÔNG".
-    // `Math.max(|du|, |dv|)` là khoảng cách tới một hình VUÔNG, nên mọi đường đồng mức quanh thành
-    // phố đều là hình vuông, và mắt đọc ra một cái khay. Đo bằng 720 tia: tỉ số bán kính
-    // CHÉO/TRỤC ra **1,341** trong khi hình vuông hoàn hảo là `√2 = 1,414` — tức 95% là một cái
-    // khay. `hypot` cho bốn góc bo tròn tự nhiên, và nó chỉ LÀM TĂNG `outside` nên lời hứa
-    // "ra khỏi `APRON_EDGE` thì phẳng đúng `-APRON_DROP`" chỉ chặt thêm chứ không lỏng đi
-    // (đã kiểm: ở giữa cạnh tấm đất `outside` = 3,50 > `APRON_EDGE` 3,40, y như trước).
+    const nenPho = smoothHeightAt(cu, cv);
+    // ⚠️ KHOẢNG CÁCH **BO TRÒN**, KHÔNG PHẢI CHEBYSHEV. `Math.max(|du|, |dv|)` là khoảng cách tới
+    // một hình VUÔNG, nên mọi đường đồng mức quanh thành phố đều là hình vuông và mắt đọc ra một
+    // cái khay. Đo bằng 720 tia: tỉ số bán kính CHÉO/TRỤC ra **1,341** trong khi hình vuông hoàn
+    // hảo là `√2 = 1,414` — tức 95% là một cái khay. `hypot` cho bốn góc bo tròn tự nhiên.
     const outside = Math.hypot(u - cu, v - cv);
-    if (outside <= 0) return plateau;
+    if (outside <= 0) return nenPho;
+    const t = smoothstep(Math.min(1, outside / beRongHoa(u, v)));
+    return lerp(nenPho, dongBangKho(u, v), t);
+  }
 
-    // Nhiễu nhân vào BÁN KÍNH chuyển tiếp (không cộng vào cao độ): cộng thì mép vẫn vuông, chỉ là
-    // vuông gợn sóng; nhân thì chính cái ranh giới di chuyển ra vào, tức hình dáng cao nguyên đổi.
-    // ⚠️ SÀN 0,62 CHỨ KHÔNG PHẢI 0,45: bán kính chuyển tiếp hẹp nhất phải còn đủ rộng cho lưới đỉnh
-    // lấy được vài mẫu ngang qua nó. Ở 0,45 thì chỗ dốc nhất chỉ rộng 1,17 ô ≈ 3 mẫu, và một sườn
-    // dốc dựng từ 3 mẫu thì lại đúng là một cái BẬC — tức là đi vòng một vòng để về chỗ cũ.
-    const wobble = 0.62 + valueNoise(`${seed}|rim`, u / 2.6, v / 2.6) * 0.8;
-    // ⚠️ KẸP TRẦN BÁN KÍNH Ở `APRON_EDGE`. Không kẹp thì chỗ nào nhiễu cho `wobble` lớn nhất sẽ có
-    // bán kính 3,69 ô > 3,4 ô — tức tại rìa lưới nó vẫn đang trên đường dốc, chưa chạm đáy, và lời
-    // hứa "ra khỏi `APRON_EDGE` thì phẳng đúng `-APRON_DROP`" thành sai ở đúng vài chỗ. Loại sai
-    // này im lặng và rời rạc: một vết hở ở góc này, không hở ở góc kia.
-    const radius = Math.min(APRON_EDGE, APRON_CELLS * wobble);
-    const t = smoothstep(Math.min(1, outside / radius));
-    // Gợn sóng TẮT DẦN về 0 khi ra tới `APRON_EDGE`, để rìa tấm lưới phẳng đúng `-APRON_DROP` và
-    // khớp được với tấm ván vùng ngoài. Xem chú thích của `APRON_EDGE`.
-    const settle = smoothstep(Math.min(1, Math.max(0,
-      (outside - APRON_CELLS) / Math.max(1e-6, APRON_EDGE - APRON_CELLS))));
-    // ⚠️ VÀNH ĐẤT PHẢI GỒ GHỀ **CÓ HƯỚNG** — lệnh của Đàm ở §1(B): *"cao ở xa nước, thấp dần về
-    // phía nước"*. Trước bản vá, chỗ này chỉ có nhiễu đẳng hướng: vành đất lượn lên lượn xuống đều
-    // nhau mọi phía, tức đúng "tấm chăn nhàu" — gồ ghề mà không có lý do. Nay cộng thêm một
-    // thành phần NGHIÊNG lấy đúng `drain` mà kỷ ấy khai, nên bên cao vẫn cao và bên thấp vẫn thấp
-    // kể cả khi đã ra khỏi lưới.
-    // ⚠️ VÀ NÓ VẪN PHẢI TẮT DẦN VỀ 0 Ở `APRON_EDGE`, y như phần nhiễu. Đây KHÔNG phải một lựa chọn
-    // mỹ thuật mà là một HỢP ĐỒNG với `horizon.js`: tấm chân trời bắt đầu ở `terrainSurfaceReach`
-    // và bắt đầu ở đúng cao độ `-APRON_DROP` (xem `horizon.js` dòng ~185). Để cái nghiêng sống tới
-    // rìa là mở ra một khe hở chạy vòng quanh thành phố — và nó sẽ không đỏ ở đâu cả.
-    // ⚠️ PHÉP KHOÉT LÒNG NƯỚC VẪN BỌC NGOÀI CÙNG (`khoetLongNuoc`, VIỆC 2): cái nghiêng nói *đất*
-    // cao thấp thế nào, còn mặt nước là chỗ đất bị hạ xuống dưới một mặt phẳng. Hai việc khác nhau,
-    // và thứ tự phải là nghiêng TRƯỚC rồi khoét SAU — khoét trước thì cái nghiêng sẽ nâng đáy hồ
-    // lên theo và bờ bên cao sẽ cạn hơn bờ bên thấp.
-    const d = size > 1 ? size - 1 : 1;
-    const huong = HUONG_THAP[profile.drain] ?? HUONG_THAP.nam;
-    // KHÔNG kẹp 0..1: ngoài lưới thì triền phải TIẾP TỤC, nếu kẹp thì cả vành phía cao bằng phẳng
-    // như nhau và cái hướng biến mất đúng ở chỗ cần thấy nó nhất.
-    const nghieng = (huong(u / d, v / d) - 0.5) * OUTER_TILT * (profile.tilt ?? 0);
-    const gon = (valueNoise(`${seed}|roll`, u / 3.4, v / 3.4) - 0.5) * 0.30;
-    // ⚠️ NÉN VỀ TRONG KHOẢNG HỞ TỚI MẶT NƯỚC (`nenRoll`) TRƯỚC KHI TẮT DẦN. Không có bước này
-    // thì `nghieng` cộng `gon` có thể xuống dưới `WATER_SURFACE_Y` và đẻ ra một vũng nước ma
-    // giữa đồng khô — đã đo được 0,0288 ô ở kỷ 8. Xem `ROLL_HEADROOM_SHARE`.
-    const roll = nenRoll(nghieng + gon) * (1 - settle);
-    return khoetLongNuoc(u, v, lerp(plateau, -APRON_DROP + roll, t));
+  /**
+   * Cao độ mặt đất mà tầng vẽ hỏi cho từng đỉnh — `nenKho` cộng phép khoét lòng nước.
+   *
+   * ⚠️ PHÉP KHOÉT CHỈ CÓ MẶT Ở VÙNG NGOÀI LƯỚI, và đó là một sự thật chứ không phải một lời hứa.
+   * Bảng khai `reach ≥ SHORE_BAND` ở mọi kỷ và mép bờ gần chỉ được lượn RA XA, nên độ trộn luôn
+   * bằng 0 trong lưới; nhưng "luôn bằng 0" là một lời hứa, còn "không có mặt trong hàm" thì không
+   * thể hỏng. Xem chú thích của `khoetLongNuoc`.
+   */
+  function surfaceHeightAt(u, v) {
+    const kho = nenKho(u, v);
+    if (trongLuoi(u, v)) return kho;
+    return khoetLongNuoc(u, v, kho);
   }
 
   /**
@@ -817,6 +910,13 @@ export function buildTerrain({ era, gridSize = 12 } = {}) {
 
   return {
     heightAt, smoothHeightAt, surfaceHeightAt, tintAt, footprint, cells, maxHeight, profile,
+    // ⚠️ `nenKho` TRẢ RA CHO `horizon.js`, VÀ ĐÓ LÀ CẢ BẢN VÁ "XOÁ CÁI BỆ" GÓI TRONG MỘT DÒNG.
+    // Tấm chân trời trước đây bắt đầu từ hằng số `-APRON_DROP`; nay nó bắt đầu từ ĐÚNG cao độ đất
+    // thật tại chỗ giáp, khác nhau theo từng hướng. Hai tấm vì thế khớp nhau theo cấu tạo, và
+    // không còn cái vành phẳng nào để mắt đọc ra mép bàn. Đây là `surfaceHeightAt` CHƯA khoét lòng
+    // nước — bên kia tự khoét bằng cùng một hàm `setting.hazXuongDay`, nếu trả ra bản đã khoét thì
+    // nó bị khoét HAI lần và hai tấm lệch nhau ở đúng chỗ có nước.
+    nenKho,
     // Trả ra chứ không bắt tầng vẽ tự `buildSetting` lần nữa: hai lần dựng là hai cơ hội để một bên
     // truyền `gridSize` khác bên kia, và triệu chứng sẽ là tấm nước lệch khỏi lòng nước vài phần
     // mười ô — đúng loại lỗi im lặng mà "một luật một công thức" sinh ra để chặn.

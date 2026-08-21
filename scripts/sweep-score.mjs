@@ -123,10 +123,10 @@ const ERAS = ERA_LIST.length;
 
 const png = decodePng(readFileSync(FILE));
 
-function pixelsIn(col, row, band) {
+function pixelsIn(col, row, band, dy = 0) {
   const x0 = X0 + col * CELL_W;
-  const y0 = Y0 + row * ROW_STRIDE + Math.round(CELL_H * band.from);
-  const y1 = Y0 + row * ROW_STRIDE + Math.round(CELL_H * band.to);
+  const y0 = Y0 + row * ROW_STRIDE + Math.round(CELL_H * band.from) + dy;
+  const y1 = Y0 + row * ROW_STRIDE + Math.round(CELL_H * band.to) + dy;
   const out = [];
   for (let y = y0; y < y1; y += 1) {
     for (let x = x0; x < x0 + CELL_W; x += 1) {
@@ -168,18 +168,52 @@ if (png.width < needW || png.height < needH) {
   process.exit(2);
 }
 
+//
+// ⚠️ 2026-08-21 — NGƯỠNG NÀY TỪNG LÀ MỘT **MỨC** DIỄN ĐẠT MỘT **QUAN HỆ**, đúng bẫy Phase 7D, và
+// nó nằm ngay trong công cụ dùng để chấm mọi phase mỹ thuật. Bản cũ đòi `dL > nL + 0,15` — một
+// hiệu số TUYỆT ĐỐI. Đo ra thì hiệu số thật ở mốc nền `dfd2b15` chỉ nằm trong dải **0,16…0,22**,
+// tức biên của cổng là **0,010 ở kỷ 1 và kỷ 4** — ĐÚNG MỘT ĐƠN VỊ LÀM TRÒN của `describe().l`
+// (hai chữ số thập phân). Một cổng có biên bằng một đơn vị làm tròn thì nó không còn canh cái nó
+// định canh; nó canh sự may rủi. Và nó đã nổ thật: bản vá thứ tự tầng màu (cùng ngày) làm vùng đất
+// xa tối đi ~0,01–0,02 vì vết loang nay còn sống tới rìa, và ba kỷ 2 · 4 · 6 rơi xuống đúng 0,000
+// — trong khi **không một toạ độ ô nào xê dịch** (hình học đọc thẳng từ `.geom.json`).
+//
+// Điều cổng này THẬT SỰ muốn hỏi là *"ô bình minh có sáng HƠN HẲN ô đêm không?"* — một quan hệ.
+// Viết thành tỉ lệ thì nó miễn nhiễm với việc cả cảnh sáng lên hay tối đi, mà vẫn sụp ngay khi ô
+// bị lấy nhầm. Tỉ lệ thật ở mốc nền: **1,93…2,45 lần**; ngưỡng 1,6 nằm giữa hai đầu ĐO ĐƯỢC, không
+// phải một con số chọn tay.
+//
+// ⚠️ KHÔNG được nới ngưỡng cho tiện (phễu Phase 9A), nên đi kèm là một **ĐỐI CHỨNG BẮT BUỘC**: lấy
+// mẫu lệch xuống nửa hàng — đúng cái hỏng mà cổng này sinh ra để bắt — và ĐÒI nó phải kêu. Không
+// có vế ấy thì không ai biết cổng còn răng hay không.
 const dawnCol = geom.hours.indexOf(6);
 const nightCol = geom.hours.indexOf(22);
+const TỈ_LỆ_TỐI_THIỂU = 1.6;
 if (dawnCol >= 0 && nightCol >= 0) {
+  const sángTối = (row, dy) => {
+    const dL = describe(...mean(pixelsIn(dawnCol, row, BANDS[0], dy)).map(Math.round)).l;
+    const nL = describe(...mean(pixelsIn(nightCol, row, BANDS[0], dy)).map(Math.round)).l;
+    return { dL, nL, đạt: dL > nL * TỈ_LỆ_TỐI_THIỂU };
+  };
   const bad = [];
   for (let row = 0; row < ERAS; row += 1) {
-    const dL = describe(...mean(pixelsIn(dawnCol, row, BANDS[0])).map(Math.round)).l;
-    const nL = describe(...mean(pixelsIn(nightCol, row, BANDS[0])).map(Math.round)).l;
-    if (!(dL > nL + 0.15)) bad.push(`kỷ ${ERA_LIST[row]} (bình minh L=${dL} · đêm L=${nL})`);
+    const { dL, nL, đạt } = sángTối(row, 0);
+    if (!đạt) {
+      bad.push(`kỷ ${ERA_LIST[row]} (bình minh L=${dL} · đêm L=${nL} · tỉ lệ ${(dL / (nL || 1e-6)).toFixed(2)})`);
+    }
   }
-  console.log(`tự-kiểm hình học: trời bình minh sáng hơn trời đêm ở ${ERAS - bad.length}/${ERAS} hàng`
+  console.log(`tự-kiểm hình học: bình minh sáng hơn đêm ≥ ${TỈ_LỆ_TỐI_THIỂU}× ở ${ERAS - bad.length}/${ERAS} hàng`
     + (bad.length ? `  ✗ SAI Ở ${bad.join(', ')} — toạ độ ô lệch, ĐỪNG tin số bên dưới` : '  ✓ hợp lý'));
   if (bad.length) process.exit(2);
+
+  const lệch = Math.round(ROW_STRIDE / 2);
+  const sốKêu = Array.from({ length: ERAS }, (_, row) => sángTối(row, lệch)).filter((r) => !r.đạt).length;
+  if (sốKêu === 0) {
+    console.error(`✗ ĐỐI CHỨNG HỎNG: lấy mẫu lệch ${lệch}px (nửa hàng) mà cổng vẫn im ở cả ${ERAS} hàng`
+      + ' — cổng tự-kiểm không còn răng, ĐỪNG tin số bên dưới.');
+    process.exit(2);
+  }
+  console.log(`  đối chứng: lấy mẫu lệch ${lệch}px thì cổng kêu ở ${sốKêu}/${ERAS} hàng ✓`);
 }
 if (SELFTEST) console.log('⚠️ --selftest: ĐÃ BỎ bộ lọc "8% tươi nhất" — số cặp-kỷ phải TỆ ĐI rõ rệt.');
 

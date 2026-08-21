@@ -6,7 +6,129 @@
 > chọn: `ARCHITECTURE_DECISIONS.md`. Nợ kỹ thuật: `TECH_DEBT.md`. Migration: `MIGRATION.md`. Tóm
 > tắt theo mốc: `CHANGELOG.md`.
 > **NGUYÊN TẮC ƯU TIÊN SỐ 1:** (1) mọi phiên AI phải đọc file này + `CLAUDE.md` + các file liên quan TRƯỚC khi làm; (2) sau MỌI cập nhật dù nhỏ, phải cập nhật ngay file này + `CLAUDE.md` + các file liên quan khác.
-> Cập nhật lần cuối: **2026-08-20** — **§1(B): ĐẤT THÔI "NHÀU" — NHIỄU BẺ CONG LEVEL SET THAY VÌ CỘNG VÀO CAO ĐỘ, MỖI KỶ KHAI MỘT HƯỚNG THẤP, VÀ HƯỚNG ẤY PHẢI TRÙNG PHÍA CÓ NƯỚC (ADR-045).**
+> Cập nhật lần cuối: **2026-08-21** — **XOÁ CÁI BỆ: THÀNH PHỐ THÔI ĐỨNG TRÊN MỘT CÁI MẶT BÀN VUÔNG (ADR-046 + ADR-047). CỔNG CHÍNH LÀ MẮT, VÀ 15/15 KỶ ĐẠT.**
+>
+> ## ⚠️ ĐÀM BÁC BA VÒNG LIỀN, VÀ ANH ĐÚNG — CÁI SAI NẰM Ở *CÂU HỎI*, KHÔNG Ở *CÂU TRẢ LỜI*
+>
+> Ba vòng trước, mọi con số đều xanh trong khi mắt Đàm vẫn thấy một cái bệ. Anh chỉ thẳng ra chỗ
+> hỏng, và nó nằm trong chính chỉ thị của cố vấn: *"trong lưới thành phố thì thoải, ngoài lưới mới
+> gồ ghề"* — **đó là ĐỊNH NGHĨA của một cái bệ**. Đàm: *"Không phải thực thi sai; chỉ thị sai."*
+> Phát biểu lại cho đúng: **địa hình là MỘT mặt liên tục; thành phố NẰM TRÊN một phần đất vốn đã
+> bằng hơn, và ranh giới của vùng bằng ấy TUYỆT ĐỐI KHÔNG được trùng ranh giới lưới 12×12** —
+> *"ngoài đời đồng bằng rộng gấp nhiều lần cái làng nằm trên nó; không có nơi nào mà đất bằng kết
+> thúc đúng ở mép nhà cuối cùng."*
+>
+> **Và phép đo cũ hỏi sai câu.** *"Một cái bệ KHÔNG cần một bậc để đọc ra là bệ. Bậc là GIÁN ĐOẠN;
+> bệ là một KIỂU PHÂN BỐ ĐỘ DỐC."* Mọi công cụ trước đây đều đi tìm gián đoạn (so cao độ hai bên
+> mép, dò tường đứng, đo bước màu) nên chúng **về mặt cấu trúc không thể** thấy thứ đang hỏi — đúng
+> bài học Phase 9B. Công cụ mới `scripts/plateau-score.mjs` hỏi bằng một **QUAN HỆ**: vành đồng tâm
+> bước 0,5 ô, **chỉ số bệ = dốc lớn nhất vành 6–9 ÷ dốc trung bình vành 0–5**.
+>
+> ### ⭐ CỔNG CHÍNH — MẮT, 15 DÒNG (Đàm: *"con số KHÔNG được dùng để kết luận, chỉ dùng để chẩn đoán"*)
+>
+> Ảnh `--zoom 2` cả 15 kỷ, TRƯỚC (`dfd2b15`) và SAU, cùng một dòng lệnh. Câu hỏi cho từng tấm:
+> **"có đọc ra một mặt bàn vuông nổi lên không?"**
+>
+> | kỷ | TRƯỚC | SAU | ghi chú khi nhìn tấm SAU |
+> |---:|:--:|:--:|---|
+> | 1 | có | **KHÔNG** | một quả đồi thoải liền mạch, làng nằm trên lưng đồi |
+> | 2 | có | **KHÔNG** | đất lượn, con sông uốn — không còn hai bờ song song thẳng tắp |
+> | 3 | **có, rõ nhất bảng** | **KHÔNG** | hình thoi nổi + dải bóng dọc mép **biến mất hẳn**; còn một quầng đất trọc vàng nhạt quanh phố nhưng đó là **MÀU**, mép mềm, không phải bậc |
+> | 4 | có | **KHÔNG** | đồi sau lưng nối liền xuống đồng, sông uốn |
+> | 5 | có | **KHÔNG** | đất lượn liền tới chân núi. ⚠️ **Vẫn thấy một khung vuông** — đó là **cái hào nước** hình chữ nhật bo góc, thuộc `TECH_DEBT #65` (nửa mỹ thuật của #64), **không phải bậc địa hình** |
+> | 6 | có | **KHÔNG** | sông uốn, đất lượn hai bên |
+> | 7 | có | **KHÔNG** | đồi Toscana thoải cả hai phía, không còn mép |
+> | 8 | có | **KHÔNG** | bờ sông rộng uốn cong, đất lượn |
+> | 9 | có | **KHÔNG** | đất lượn, sông uốn |
+> | 10 | có | **KHÔNG** | đồi sau lưng liền mạch xuống thung lũng |
+> | 11 | **có, rõ nhất bảng** | **KHÔNG** | cặp ảnh quyết định: hình thoi nổi + mép thẳng + dải bóng ⇒ **hết sạch**, chỉ còn đất lượn |
+> | 12 | có | **KHÔNG** | bờ nước uốn, đất lượn |
+> | 13 | có | **KHÔNG** | núi Phú Sĩ + đất lượn; mép biển thẳng là **đường chân trời biển khơi**, đúng vật lý |
+> | 14 | có | **KHÔNG** | Singapore vốn phẳng, nhưng **đường bờ biển nay CONG** — trước là một đường chéo thẳng tắp, chính là mép tấm đất vuông lộ ra |
+> | 15 | có | **KHÔNG** | bờ biển cong, đất lượn ra tận mép khung |
+>
+> ⇒ **15/15 kỷ KHÔNG còn đọc ra mặt bàn.** Thứ còn sót là **một cái hào NƯỚC vuông ở kỷ 5** — một
+> khuyết tật khác, đã có mục nợ riêng, và nó là hình dạng của MẶT NƯỚC chứ không phải của MẶT ĐẤT.
+>
+> ### Ba nguồn — và cả ba đều là *một hằng số được chọn ĐỂ LÀM RA cái bệ*
+>
+> | # | Nguồn | TRƯỚC | SAU |
+> |---|---|---|---|
+> | a | vùng đất bằng quá hẹp, mép cách đều mép lưới | `APRON_CELLS = 2,6` ô, mép là hình vuông bo góc | `APRON_CELLS = 7,5` **nhân** `APRON_SPREAD = 0,62` bằng một tầng nhiễu **rất thô (cỡ ô 9)** ⇒ bề rộng thật **2,85…12,15 ô tuỳ hướng**, mép **méo** |
+> | b | một cái bậc được **KHAI BÁO** | `APRON_DROP = 0,62` | **0,18** — nhỏ hơn biên độ gợn của chính đồng bằng, nên **có chỗ đồng bằng CAO HƠN nền phố** |
+> | c | phép `settle`-về-phẳng tại mép | ép **mọi kỷ về cùng một mặt phẳng ở cùng một bán kính** ⇒ vành phẳng tuyệt đối rộng 5,7 ô | **XOÁ HẲN**; hằng số đổi tên `APRON_EDGE` → `PLATE_PAD_CELLS` (giá trị giữ 3,4 ⇒ `terrainSurfaceReach` = 9,5 **không đổi**) |
+>
+> ⚠️ **Nới rộng THÔI thì chưa đủ** — mép vẫn cách đều mép lưới, tức vẫn là một hình vuông bo góc chỉ
+> to hơn. Và **nhiễu MỊN thì vô dụng**: nó chỉ làm răng cưa một đường tròn mà mắt vẫn đọc ra đường
+> tròn ấy. Phải là nhiễu **RẤT THÔ** thì mép mới thật sự méo.
+>
+> ### Bảng số — chỉ để CHẨN ĐOÁN, không dùng để kết luận
+>
+> | Đại lượng | TRƯỚC (`dfd2b15`) | SAU |
+> |---|---|---|
+> | **chỉ số bệ** trung bình (15 kỷ) | **8,27** | **3,08** (−63%) |
+> | chỉ số bệ tệ nhất | kỷ 14 = **26,98** | kỷ 14 = **9,75** |
+> | số kỷ có chỉ số ≥ 5 (đọc ra là bệ) | **10/15** | **3/15** |
+> | **độ NHÔ** trung bình (nền phố cao hơn đồng bằng bao nhiêu) | **0,286** | **0,047** (−84%) |
+> | bán kính chỗ nhảy | 4 giá trị, trải **1,5 ô** (7,25…8,75) | 5 giá trị, trải **2,5 ô** (6,25…8,75) |
+> | ranh giới vuông hay tròn (`terrain-score --ngoai`) | **1,306** (1,414 = vuông hoàn hảo) · **0/10.800** tia bão hoà | **NaN ở 13/15 kỷ · 5.323/10.800 tia bão hoà** — không còn cái sàn nào để mà tụt xuống; hai kỷ đo được là **0,926** và **1,130**, tức **TRÒN** |
+> | điểm ảnh đổi quá ngưỡng mắt 12/255 (`sweep-diff --frame`, 15 cặp) | — | **18,9 %–39,3 %** · lệch trung bình **12,79–30,70** |
+> | tam giác · lệnh vẽ (15 kỷ, `SESSIONS=40`) | 2.152.400 · 11…15 | **2.152.400** · **11…15** — y hệt tới từng đơn vị |
+>
+> ⚠️ **TRẦN CỦA CHÍNH PHÉP ĐO, PHẢI NÓI RA:** mẫu số của chỉ số bệ là dốc **trong lưới**, nên kỷ nào
+> **cố ý phẳng** sẽ luôn cho chỉ số cao dù không hề có bệ. Đúng ba kỷ còn ≥ 5 là ba kỷ ấy: **3**
+> (đồng bằng Lưỡng Hà, dốc trong 0,021) · **11** (Manhattan, 0,023) · **14** (Singapore, **0,000**
+> — chia cho số không). Ở cả ba, **độ NHÔ chỉ 0,026–0,028** — tức thành phố nhô lên bằng **4 %** cái
+> bậc cũ, và mắt đã xác nhận không thấy gì (bảng 15 dòng ở trên). ⇒ **Ở những kỷ cố ý phẳng phải
+> đọc cột ĐỘ NHÔ, đừng đọc cột chỉ số.**
+>
+> ⚠️ **VÀ MỘT CỘT KHÔNG DÙNG ĐƯỢC LÀM BẰNG CHỨNG, NÓI THẲNG:** cột *"đồng bằng có chỗ cao hơn nền
+> phố"* ra **12/15 ở CẢ hai vế** — nó không phân biệt được trước với sau, nên nó **không phải** bằng
+> chứng cho bản vá này (nó dùng giá trị LỚN NHẤT của vành ngoài, mà vành ngoài luôn có một chỗ cao
+> ở phía chân núi). Ghi ra để phiên sau đừng trích nhầm nó.
+>
+> ### ⚠️ HAI CỘT TAM GIÁC Y HỆT NHAU — VÀ ĐÓ LÀ KẾT QUẢ ĐÚNG, KHÔNG PHẢI "CHƯA ĐỔI GÌ"
+>
+> Luật của dự án: *khi một phép đo ra kết quả y hệt lần trước, câu hỏi đầu tiên là "phép đo này có
+> NHÌN TỚI chỗ tôi vừa sửa không?"*. Trả lời: **KHÔNG.** Tam giác/lệnh vẽ là đại lượng của **TÔ-PÔ**
+> (bao nhiêu đỉnh, bao nhiêu họ vật liệu), còn bản vá này chỉ **dời VỊ TRÍ các đỉnh sẵn có** —
+> `terrainSurfaceReach(12)` giữ nguyên 9,5 nên tấm lưới giữ nguyên số đỉnh, và số bệ kè cũng không
+> đổi vì cao độ **trong lưới** không đổi một chữ số. Thứ chứng minh bản vá tới được màn hình là một
+> phép đo **KHÁC HẲN**: so ảnh render (18,9–39,3 % điểm ảnh). Và bản thân phép đếm cũng có đối
+> chứng — chạy lại đúng lệnh ấy với `KHO` trỏ `base11` (`e95cdf1`) ra **1.321.686**, khác hẳn, tức
+> biến `KHO` thật sự đổi cây mã.
+>
+> ### Ba bài học mới (đã ghi vào `CLAUDE.md`)
+>
+> 1. **Một cái bệ không cần một cái bậc.** Ba vòng con số xanh vì mọi phép đo đều đi tìm *gián đoạn*
+>    trong khi thứ cần đo là *phân bố độ dốc*. Trước khi tin một phép đo nói "không có gì", hỏi
+>    *"đại lượng này có chứa được thứ tôi đang tìm không?"*
+> 2. **`nenRoll` phải bão hoà KHÔNG ĐỐI XỨNG.** Cái trần tồn tại vì đúng MỘT lý do — đất khô không
+>    được chui xuống dưới mặt nước — và lý do ấy **chỉ nói về chiều XUỐNG**. Áp cho cả chiều LÊN là
+>    bẫy Phase 7D ở dạng ngược, và chính cái kẹp thừa ấy giữ cho đồng bằng vĩnh viễn nằm dưới nền phố.
+> 3. **Lời hứa Phase 9A với `horizon.js` KHÔNG mất, chỉ được phát biểu lại thành một QUAN HỆ.** Nó
+>    đòi *hai tấm KHỚP NHAU tại chỗ giáp*, chứ không đòi cả hai bằng một hằng số. Nay
+>    `horizon.heightAt` đọc thẳng `terrain.nenKho(...)` nên chúng khớp **theo cấu tạo**, ở mọi hướng,
+>    mà không bên nào phải phẳng.
+>
+> ### Nghiệm thu
+>
+> **960 bài test** (dòng cuối lượt `test:fast`, `# pass 959 / fail 0 / skipped 1` — bài chậm chạy ở
+> lượt hai: `# tests 3 / pass 3 / fail 0`, tự in **85,9 giây**), lint sạch, build xanh.
+> **0 lệnh vẽ mới · 0 vật liệu mới · 0 nguồn sáng mới** (đếm thẳng mã nguồn: 4 `new *Light(` và 10
+> `new Mesh*Material(` ở CẢ HAI cây; `git diff -- src/` không thêm dòng nào khớp hai mẫu ấy).
+> Bất biến chạy lại kèm số: **ADR-007** — 141.135 điểm mẫu × 15 kỷ, gọi kèm dữ liệu rác, **0 điểm
+> lệch**; **"chỉ thêm, không bao giờ dời"** — 150 cặp × 15 kỷ, **0 ô dời, 0 ô biến mất**; **ADR-046
+> tự nhận** *"trong lưới `nenKho` == `smoothHeightAt`"* — 30.375 điểm, lệch lớn nhất **đúng 0**, kèm
+> đối chứng ngoài lưới **0,9328 > 0** (không có vế này thì phép đo trên là rỗng).
+> Cổng không-trôi ĐẠT: **15/15 cặp chặng · 105/105 cặp kỷ**; cặp chặng gần nhất 15,16 → **16,27**
+> (**TỐT LÊN — lần đầu tiên sau ba lần tụt liên tiếp**, vì vùng quê nay lượn liên tục nên sườn dốc
+> bắt nắng theo giờ), cặp kỷ 22,22 → 22,13, trung vị 39,81 → 39,35.
+> ⏳ **CHƯA gộp `main`** — đúng lệnh Đàm.
+>
+> ---
+>
+> **(MỐC TRƯỚC — 2026-08-20)** — **§1(B): ĐẤT THÔI "NHÀU" — NHIỄU BẺ CONG LEVEL SET THAY VÌ CỘNG VÀO CAO ĐỘ (ADR-045).**
 >
 > **Đàm ra thứ tự: QUY MÔ + ĐỘ CAO TRƯỚC, HIỆU ỨNG SAU** (*"Tô bóng đẹp lên một bố cục sai thì được
 > một bố cục sai được tô bóng đẹp"*). Phiên này làm nửa **(B) độ cao**. Nửa **(A) quy mô** mới đo
@@ -75,6 +197,15 @@
 > khớp 0,0000) — nó là **chỗ mặt lát và nhà cửa dừng đột ngột**, đúng chẩn đoán ADR-038 của VIỆC 1.
 > Đàm đã CHỌN hướng cho việc này rồi (**LẤP**, không thu nhỏ), và `outskirts.js` đã làm nửa đầu.
 > Đây KHÔNG còn là một câu hỏi chờ Đàm.
+>
+> > ⚠️⚠️ **ĐÍNH CHÍNH 2026-08-21 — ĐOẠN NGAY TRÊN LÀ MỘT KẾT LUẬN SAI, VÀ NÓ SAI VÌ PHÉP ĐO CHỨNG
+> > MINH NÓ ĐI TÌM SAI ĐẠI LƯỢNG.** Câu *"cái hình chữ nhật KHÔNG phải mép của tấm đất"* dựa trên
+> > hai con số đo **GIÁN ĐOẠN** (tỉ số CHÉO/TRỤC · cao độ hai bên mép khớp 0,0000). Cả hai con số ấy
+> > **vẫn đúng** — và kết luận rút ra từ chúng thì **sai**, vì *một cái bệ không cần một cái bậc*
+> > (bệ là một KIỂU PHÂN BỐ ĐỘ DỐC). Đo lại bằng đại lượng đúng (`plateau-score.mjs`): chỉ số bệ
+> > trung bình **8,27**, **10/15 kỷ ≥ 5**, và **cả 15 kỷ nhảy trong đúng dải bán kính 7,25–8,75** —
+> > tức bước nhảy do **LƯỚI** quyết chứ không do địa hình. Cái bệ **CÓ THẬT**, Đàm đúng, và ba vòng
+> > "số đã xanh" chỉ chứng minh một điều: **ba vòng ấy đều hỏi sai câu.** Xem ADR-046.
 >
 > **956 bài test** (886 + 70, con số THẬT ở dòng cuối `npm test`, không làm tròn), lint sạch, build
 > xanh. ⏳ **CHƯA gộp `main`** — đúng lệnh Đàm.
@@ -1091,6 +1222,46 @@
 
 ## 🗒️ Nhật ký cập nhật
 
+### 2026-08-21 — Xoá cái bệ: thành phố thôi đứng trên một mặt bàn vuông (ADR-046 + ADR-047)
+
+**Vì sao làm bây giờ.** Đàm bác kết quả ba vòng liền — *"VẪN CÒN CÁI BỆ, Ở TẤT CẢ 15 KỶ"* — và anh
+chỉ ra chỗ hỏng nằm trong chính chỉ thị của cố vấn, không nằm ở khâu thực thi. Số liệu, ảnh, bảng
+15 dòng của cổng mắt và cổng nghiệm thu: xem khối tóm tắt ở ĐẦU file này + `CHANGELOG.md` +
+`ARCHITECTURE_DECISIONS.md` ADR-046/047. Dưới đây chỉ ghi những thứ KHÔNG nằm ở các file ấy.
+
+**⚠️ BÀI 1 — "ĐO KỸ HƠN" KHÔNG CỨU ĐƯỢC MỘT PHÉP ĐO HỎI SAI ĐẠI LƯỢNG.** Ba vòng trước đều đi tìm
+một **gián đoạn** (tường đứng ở mép · bước màu · cao độ hai bên mép). Cả ba đều đo **đúng**, cho ra
+những con số **đúng**, và rút ra một kết luận **sai** — vì thứ Đàm nhìn thấy không phải một gián
+đoạn mà là một **kiểu phân bố độ dốc**. Cái giá: ba vòng làm việc, và một dòng trong `BAN_GIAO.md`
+tuyên bố *"cái hình chữ nhật KHÔNG phải mép của tấm đất"* (nay đã đính chính tại chỗ). ⇒ Khi người
+dùng bác một kết quả mà mọi con số đều xanh, **đừng đi đo kỹ hơn cùng một đại lượng — hãy hỏi
+"đại lượng này có chứa được thứ họ đang thấy không?"**.
+
+**⚠️ BÀI 2 — MỘT CÔNG CỤ TỰ THÚ NHẬN BẤT LỰC CÒN GIÁ TRỊ HƠN MỘT CÔNG CỤ TRẢ VỀ MỘT CON SỐ.**
+`terrain-score.mjs --ngoai` sau bản vá **không đo được nữa**: 5.323/10.800 tia chạy hết đất mà chưa
+chạm mốc, nên nó in cảnh báo rồi trả `NaN`. Trước bản vá thì **0/10.800** tia bão hoà — mọi tia đều
+tìm thấy cái sàn phẳng. **Chính sự bất lực ấy là bằng chứng mạnh nhất trong cả phiên**: không còn
+cái sàn nào để mà tụt xuống. Nếu công cụ đã "thông minh" thay bằng `reach` cho gọn thì bằng chứng
+ấy biến mất trong im lặng — cái **gác chống bão hoà** viết từ một phase khác mới là thứ cứu.
+
+**⚠️ BÀI 3 — MỘT CỜ CỦA NODE BỊ BỎ QUA TRONG IM LẶNG.** `--test-skip-pattern` có trong `node --help`,
+không báo lỗi gì, và **không ăn**: bài chậm vẫn chạy, `# skipped 0`. Nếu tin nó thì lượt "nhanh" âm
+thầm gánh thêm 86 giây mà chẳng có gì nói ra. Cách đang dùng — biến môi trường `DC_CROSS_SLOW` +
+`{ skip: … }` — làm `# skipped 1` **HIỆN RA**, nên ngày nào nó thôi bỏ qua thì con số ấy tự nói.
+⇒ *Một cơ chế bỏ-qua phải ĐẾM ĐƯỢC ở đầu ra, nếu không thì không phân biệt được "đã bỏ qua" với
+"đã chạy".*
+
+**⚠️ BÀI 4 — PHÉP THỬ NGƯỢC ĐỎ VÌ SAI LÝ DO.** Lượt thử ngược đầu tiên trong `git worktree` đỏ với
+`ERR_MODULE_NOT_FOUND: three` — kho tạm không có `node_modules`. Kết quả ấy **vô giá trị** và đã
+được tuyên bố vô giá trị ngay tại chỗ; phải `ln -s node_modules`, chạy một lượt **NỀN-XANH** (2 pass
+/ 0 fail) rồi mới được tin bất kỳ màu đỏ nào sau đó. ⇒ *Trước khi tin một phép phá làm test đỏ,
+phải chứng minh test XANH khi chưa phá.*
+
+**Việc chưa làm, cố ý.** Cái hào nước vuông ở kỷ 5 (`TECH_DEBT #65`) — nó là hình dạng của MẶT
+NƯỚC, không phải của mặt đất, nên nó không thuộc phạm vi lần này; đã ghi rõ trong bảng 15 dòng.
+
+---
+
 ### 2026-08-20 — §1(B): đất thôi "nhàu" — nhiễu bẻ cong level set, mỗi kỷ một hướng thấp (ADR-045)
 
 **Vì sao làm bây giờ.** Đàm nói tôi đã đọc sai yêu cầu của anh: mệnh đề ĐẦU TIÊN bị bỏ qua. Nguyên
@@ -1674,6 +1845,15 @@ lưới. `APRON_EDGE = 3,4` sinh ra ở commit `1efa7fe` (Phase 8C/ADR-019) vớ
 đĩa phải phẳng ở chỗ giáp tấm chân trời, không thì hở khe răng cưa (Phase 9A đã trả giá bằng hai
 mảng sáng). Nhưng lý do ấy chỉ ràng buộc **QUAN HỆ** `APRON_EDGE ≥ APRON_CELLS`, không ràng buộc
 giá trị — nên nó không giải thích được vì sao phải là 3,4.
+
+> ⚠️ **ĐÍNH CHÍNH 2026-08-21 (ADR-046) — ĐOẠN NGAY TRÊN ĐỨNG TRÊN MỘT TIỀN ĐỀ NAY ĐÃ BỊ GỠ.** Câu
+> *"đĩa phải PHẲNG ở chỗ giáp tấm chân trời"* là một MỨC, và chính nó (phép `settle`-về-phẳng tại
+> mép) là một trong ba thứ đẻ ra cái bệ. Lời hứa thật với `horizon.js` xưa nay chỉ là *hai tấm phải
+> KHỚP NHAU tại chỗ giáp* — một QUAN HỆ, không đòi bên nào phẳng. Nay `horizon.heightAt` đọc thẳng
+> `terrain.nenKho(...)` nên hai tấm khớp **theo cấu tạo** dù cả hai đang lượn. Hằng số `APRON_EDGE`
+> **đổi tên thành `PLATE_PAD_CELLS`** (giá trị giữ nguyên 3,4 ⇒ `terrainSurfaceReach` = 9,5 KHÔNG
+> đổi, số đỉnh tấm lưới không đổi, nên **mọi con số 19×19 / 60,1% / 84–88% ở trên vẫn nguyên giá
+> trị**). Chỗ duy nhất hết đúng là *lý do* của con số 3,4, không phải bản thân con số.
 
 ⚠️ **ĐÍNH CHÍNH con số tôi đưa Đàm trước đó: 69% → 60,1%.** Tôi đã đọc 13,5 / 8,5 / 7,5 trong
 `sceneStats.test.js` như bán kính ĐĨA, trong khi chúng là bán kính **hình cầu bao của tấm VUÔNG**

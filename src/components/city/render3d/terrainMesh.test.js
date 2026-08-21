@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { Color } from 'three';
 
 import {
-  ROAD_LIFT, ROAD_PART, buildRoadSurface, buildTerrainSurface, buildWaterSurface,
+  ROAD_LIFT, ROAD_PART, buildHorizonSurface, buildRoadSurface, buildTerrainSurface, buildWaterSurface,
 } from './terrainMesh.js';
 import { APRON_DROP, WATER_SURFACE_Y, buildTerrain } from '../../../engine/city3d/terrain.js';
 import { buildHorizon } from '../../../engine/city3d/horizon.js';
@@ -45,6 +45,7 @@ function dựng(era) {
   return {
     terrain,
     layout,
+    palette,
     ground: buildTerrainSurface({ terrain, gridSize: GRID, layout, palette }),
     road: buildRoadSurface({ terrain, gridSize: GRID, layout, palette }),
   };
@@ -124,40 +125,126 @@ test('MẶT ĐẤT LIỀN MẠCH: hai đỉnh kề nhau không được chênh n
   }
 });
 
-test('RÌA TẤM ĐẤT PHẲNG ĐÚNG `-APRON_DROP` để khớp tấm ván vùng ngoài — TRỪ chỗ có nước', () => {
-  // Tấm ván vùng ngoài của `sceneGraph.js` ngồi ở đúng cao độ này. Rìa lưới còn gợn ⇒ hở một khe
-  // răng cưa vòng quanh thành phố, im lặng.
+test('RÌA TẤM ĐẤT PHẢI KHỚP TẤM CHÂN TRỜI — một QUAN HỆ, không phải một MỨC', () => {
+  // ⚠️ 2026-08-21 — BÀI NÀY LÀ BẢN THỨ BA CỦA CÙNG MỘT LỜI HỨA, VÀ CẢ BA ĐỀU TỪNG VIẾT SAI KIỂU
+  // (hai bản kia ở `terrain.test.js` và `horizon.test.js`). Lời hứa gốc (Phase 9A, hai cái nêm sáng
+  // chói ở chỗ giáp) là **hai tấm phải KHỚP NHAU**; cả ba bản đều viết thành *"cả hai phải bằng
+  // `-APRON_DROP`"* — đúng bẫy Phase 7D. Cái giá là một vành phẳng tuyệt đối rộng 5,7 ô quanh thành
+  // phố: cái sàn để mắt đọc phần đất trong lưới thành một mặt bàn (§0 lệnh Đàm 2026-08-21).
   //
-  // ⚠️ VIỆC 2 Bước B (2026-08-19): con sông kỷ 12 chảy RA KHỎI rìa tấm đất (đúng như một con sông
-  // phải thế — nó không dừng lại ở mép thành phố), nên ở đúng những đỉnh ấy cao độ thấp hơn
-  // `-APRON_DROP` là ĐÚNG. Không bỏ qua trắng: chỗ ướt vẫn phải khớp với `surfaceHeightAt`, và
-  // phải đếm cả hai nhóm để bài test không rỗng dần theo mỗi kỷ được dựng nước.
+  // Bài này canh thứ mà hai bản kia KHÔNG canh được: **lưới đỉnh dựng ra** có nằm đúng trên trường
+  // cao độ không. Trường đúng mà lưới đặt lệch nửa ô thì hậu quả y hệt, và im lặng tuyệt đối.
+  // Hỏi thẳng `horizon.heightAt` (chứ không phải `terrain.surfaceHeightAt`) vì tấm chân trời mới là
+  // thứ NẰM CẠNH nó trên màn hình — đó đúng là hai bên của cái khe hở cần canh.
+  //
+  // Nhánh ướt/khô đã GỘP: hai tấm nay dùng chung một nền (`terrain.nenKho`) và chung một phép khoét,
+  // nên câu hỏi ướt và câu hỏi khô là CÙNG một câu. Một ngoại lệ biến mất.
   let soKho = 0;
   let soUot = 0;
+  const cao = [];
   for (const era of ERAS) {
     const { ground, terrain } = dựng(era);
+    const horizon = buildHorizon({ era, gridSize: GRID, terrain });
     const v = đỉnh(ground);
     const maxX = Math.max(...v.map((p) => p[0]));
     const half = (GRID - 1) / 2;
     for (const [x, y, z] of v) {
       if (Math.abs(Math.abs(x) - maxX) > 1e-6 && Math.abs(Math.abs(z) - maxX) > 1e-6) continue;
-      if (terrain.setting.blendAt(x + half, z + half) > 0) {
-        soUot += 1;
-        assert.ok(Math.abs(y - terrain.surfaceHeightAt(x + half, z + half)) < 1e-5,
-          `kỷ ${era}: đỉnh rìa có nước (${x.toFixed(2)},${z.toFixed(2)}) ở ${y.toFixed(4)}, lệch `
-          + `khỏi trường cao độ ${terrain.surfaceHeightAt(x + half, z + half).toFixed(4)}`);
-        continue;
-      }
-      soKho += 1;
-      assert.ok(
-        Math.abs(y + APRON_DROP) < 1e-6,
-        `kỷ ${era}: đỉnh rìa (${x.toFixed(2)},${z.toFixed(2)}) ở cao độ ${y.toFixed(4)}, `
-        + `đáng lẽ ${-APRON_DROP}`,
-      );
+      if (terrain.setting.blendAt(x + half, z + half) > 0) soUot += 1; else soKho += 1;
+      cao.push(y);
+      assert.ok(Math.abs(y - horizon.heightAt(x, z)) < 1e-5,
+        `kỷ ${era}: đỉnh rìa (${x.toFixed(2)},${z.toFixed(2)}) ở ${y.toFixed(4)}, còn tấm chân trời `
+        + `ở ${horizon.heightAt(x, z).toFixed(4)} — có một khe hở chạy vòng quanh thành phố`);
     }
   }
-  assert.ok(soKho > 3000, `chỉ còn ${soKho} đỉnh rìa khô — lời hứa "phẳng đúng" đang rỗng dần`);
-  assert.ok(soUot > 0, 'không đỉnh rìa nào chạm nước — nhánh mới chưa bao giờ chạy');
+  assert.ok(soKho > 3000, `chỉ còn ${soKho} đỉnh rìa khô — lời hứa "hai tấm khớp" đang rỗng dần`);
+  assert.ok(soUot > 0, 'không đỉnh rìa nào chạm nước — nhánh phép khoét chưa bao giờ chạy');
+
+  // ⚠️ ĐỐI CHỨNG — HAI TẤM PHẲNG THÌ CŨNG KHỚP. Không có vế này thì bài trên vẫn XANH TRỌN VẸN
+  // trong đúng cái thế giới cũ có cái bệ: "khớp nhau" canh cái KHE HỞ, nó không canh cái BỆ.
+  const trai = Math.max(...cao) - Math.min(...cao);
+  assert.ok(trai > 0.3,
+    `cao độ rìa chỉ trải ${trai.toFixed(4)} đơn vị — nó đang phẳng trở lại, tức cái vành mà mắt đọc `
+    + 'ra là mép bàn vừa quay về.');
+});
+
+test('RÌA TẤM ĐẤT PHẢI KHỚP TẤM CHÂN TRỜI VỀ **MÀU** — và phải còn VÂN khi ra tới rìa', () => {
+  // ⚠️ 2026-08-21 — BÀI NÀY SINH RA TỪ MỘT ĐƯỜNG VIỀN VUÔNG SẮC LẸM CHẠY QUANH THÀNH PHỐ Ở CẢ 15
+  // KỶ. Bài ngay bên trên canh CAO ĐỘ ở đúng chỗ giáp ấy và nó xanh tuyệt đối (lệch đúng 0) — thế
+  // mà mắt vẫn thấy một hình vuông. Đó là bài học Phase 9B đúng nguyên văn: *"đại lượng tôi vừa
+  // vặn có nằm trong thứ công cụ này đo không?"* Cao độ khớp KHÔNG kéo theo màu khớp, và không một
+  // bài nào trong dự án từng hỏi câu thứ hai.
+  //
+  // Bệnh: `groundColorAt` áp vết loang + sườn-dốc-lộ-đất RỒI mới hoà về `outerRgb`. Ở mép tấm hệ số
+  // hoà đã bằng 1, nên phép hoà XOÁ SẠCH hai tầng vừa tính — cả vành ngoài ra đúng một màu phẳng,
+  // trong khi tấm chân trời ngay sát bên vẫn còn đủ hai tầng. Đo trên chính ảnh dựng (kỷ 15, quét
+  // ngang y=550): 113,124,111 → 132,144,129, tức **26,8 trên thang RGB/255**, gấp hơn hai lần
+  // ngưỡng mắt 12. Đo trên tầng thuần thì trung vị 20–36 và p99 60–74 ở **cả 15 kỷ**.
+  //
+  // Hai vế, và vế thứ hai mới là vế nhốt được thế giới cũ:
+  //   (a) QUAN HỆ — ở những đỉnh mà HAI tấm cùng có, màu hai bên phải bằng nhau dưới ngưỡng mắt.
+  //   (b) ĐỐI CHỨNG — vành rìa phải còn VÂN. Không có vế (b) thì vế (a) vẫn xanh trong thế giới cũ
+  //       ở phần lớn số đỉnh, vì chỗ nào vết loang tình cờ ≈ 1 thì hai bên vẫn khớp; và tệ hơn,
+  //       cách "sửa" rẻ nhất để vế (a) xanh là làm PHẲNG cả hai tấm — đúng thứ ta vừa gỡ bỏ.
+  const NGƯỠNG_MẮT = 12 / 255;
+  let sốCặp = 0;
+  let lệchMax = 0;
+  for (const era of ERAS) {
+    const { ground, terrain, palette } = dựng(era);
+    const horizon = buildHorizon({ era, gridSize: GRID, terrain });
+    const chânTrời = buildHorizonSurface({ horizon, palette, terrain, gridSize: GRID });
+    assert.ok(chânTrời, `kỷ ${era}: không dựng được tấm chân trời`);
+
+    const đọc = (surface) => {
+      const p = surface.geometry.getAttribute('position').array;
+      const c = surface.geometry.getAttribute('color').array;
+      const out = [];
+      for (let i = 0; i < p.length; i += 3) {
+        out.push({ x: p[i], z: p[i + 2], c: [c[i], c[i + 1], c[i + 2]] });
+      }
+      return out;
+    };
+    const đất = đọc(ground);
+    const trời = đọc(chânTrời);
+    const maxX = Math.max(...đất.map((v) => Math.abs(v.x)));
+    const khoá = (v) => `${v.x.toFixed(5)}|${v.z.toFixed(5)}`;
+    const bảng = new Map();
+    for (const v of trời) if (!bảng.has(khoá(v))) bảng.set(khoá(v), v);
+
+    const rìa = đất.filter((v) => Math.abs(Math.abs(v.x) - maxX) < 1e-6
+      || Math.abs(Math.abs(v.z) - maxX) < 1e-6);
+    for (const v of rìa) {
+      const o = bảng.get(khoá(v));
+      if (!o) continue;   // hai lưới có bước khác nhau nên chỉ trùng ở vài đỉnh — xem gác đếm dưới
+      sốCặp += 1;
+      const d = Math.hypot(v.c[0] - o.c[0], v.c[1] - o.c[1], v.c[2] - o.c[2]);
+      if (d > lệchMax) lệchMax = d;
+      assert.ok(d < NGƯỠNG_MẮT,
+        `kỷ ${era}: ở (${v.x.toFixed(2)},${v.z.toFixed(2)}) tấm đất tô ${v.c.map((k) => Math.round(k * 255))}`
+        + ` còn tấm chân trời tô ${o.c.map((k) => Math.round(k * 255))} — lệch ${(d * 255).toFixed(1)}/255,`
+        + ' tức một đường viền vuông mắt đọc ra được, chạy vòng quanh thành phố');
+    }
+
+    // ── (b) ĐỐI CHỨNG: vành rìa phải còn VÂN ────────────────────────────────
+    // Trong thế giới cũ mọi đỉnh rìa ra ĐÚNG `outerRgb`, nên con số này bằng ĐÚNG 0 ở cả 15 kỷ.
+    // So với chính phần trong lưới (một QUAN HỆ, không phải một mức) — mỗi kỷ một bảng màu riêng
+    // nên một ngưỡng tuyệt đối sẽ đúng ở vài kỷ và chỏi ở số còn lại (bẫy Phase 7D).
+    const tản = (mẫu, k) => {
+      const a = mẫu.map((v) => v.c[k]);
+      return Math.max(...a) - Math.min(...a);
+    };
+    const trong = đất.filter((v) => Math.abs(v.x) < 4 && Math.abs(v.z) < 4);
+    for (let k = 0; k < 3; k += 1) {
+      assert.ok(tản(rìa, k) > tản(trong, k) * 0.5,
+        `kỷ ${era}: kênh ${k} — vành rìa chỉ tản ${(tản(rìa, k) * 255).toFixed(1)}/255 trong khi phần `
+        + `trong lưới tản ${(tản(trong, k) * 255).toFixed(1)}/255. Vành ngoài đang bị san phẳng thành `
+        + 'một màu, và cái mép phẳng ấy chính là đường viền hình vuông.');
+    }
+  }
+  assert.equal(sốCặp, ERAS.length * 6,
+    `chỉ tìm được ${sốCặp} cặp đỉnh trùng nhau (đáng lẽ ${ERAS.length * 6}) — bước lưới của một `
+    + 'trong hai tấm vừa đổi, và vế (a) đang chạy gần như rỗng.');
+  assert.ok(lệchMax > 0, 'lệch max bằng 0 tuyệt đối — nghi chính phép đo, không phải mã.');
 });
 
 test('MẶT ĐƯỜNG BÁM SÁT SƯỜN DỐC — đúng `ROAD_LIFT` phía trên mặt đất, không phải một phiến phẳng', () => {

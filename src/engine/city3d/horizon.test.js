@@ -153,65 +153,65 @@ test('kỷ lạ / thiếu → lùi về kỷ 1, không ném lỗi (dữ liệu c
   }
 });
 
-test('⚠️ CHỖ GIÁP PHẢI PHẲNG ĐÚNG `-APRON_DROP` — nếu không thì có một khe hở vòng quanh thành phố', () => {
-  // Tấm địa hình thành phố kết thúc ở `innerEdge` với cao độ chính xác `-APRON_DROP` (xem
-  // `terrain.js`). Vùng đất xa phải bắt đầu ở ĐÚNG con số đó. Lệch một phần nghìn thì mắt không
-  // thấy khe, nhưng lệch một phần mười thì có một bậc chạy vòng quanh — và không có gì đỏ lên.
+test('⚠️ HAI TẤM PHẢI KHỚP NHAU Ở CHỖ GIÁP — một QUAN HỆ, không phải một MỨC', () => {
+  // ⚠️ 2026-08-21 — BÀI NÀY TỪNG TÊN LÀ *"CHỖ GIÁP PHẢI PHẲNG ĐÚNG `-APRON_DROP`"*, VÀ CHÍNH CÁI
+  // TÊN ẤY LÀ MỘT TRONG BA NGUỒN CỦA CÁI BỆ. Lý do gốc của Phase 9A — hai cái nêm sáng chói ở chỗ
+  // giáp — ràng buộc **hai tấm phải KHỚP NHAU**; nó KHÔNG hề ràng buộc *cả hai phải bằng một hằng
+  // số*. Viết lời hứa quan hệ ấy thành một mức là đúng cái bẫy Phase 7D, và giá phải trả lần này
+  // là một vành phẳng tuyệt đối rộng 5,7 ô chạy vòng quanh thành phố — cái sàn để mắt đọc phần đất
+  // trong lưới thành một mặt bàn.
   //
-  // ⚠️ VIỆC 2 Bước B (2026-08-19): chỗ nào có NƯỚC thì mốc không còn là hằng số ấy nữa, vì cả hai
-  // tấm cùng bị khoét xuống. Lời hứa gốc không đổi — hai tấm phải khớp nhau — nên chỗ ướt chuyển
-  // sang hỏi thẳng `terrain.surfaceHeightAt`, KHÔNG bỏ qua trắng (bỏ qua trắng thì bài này rỗng
-  // dần mỗi lần thêm một kỷ được dựng nước, mà rỗng dần thì không ai thấy).
+  // Nay tấm chân trời lấy nền từ chính `terrain.nenKho`, nên hai tấm khớp **theo cấu tạo**. Bài này
+  // vì thế không còn canh một con số nữa; nó canh ba thứ vẫn có thể gãy trong im lặng:
+  //   · đổi hệ toạ độ (`half`) lệch một nửa ô ⇒ hai tấm trượt khỏi nhau mà vẫn "trông liền";
+  //   · một bên khoét nước còn bên kia không (hai `setting` khác nhau, hoặc quên `khoetLongNuoc`);
+  //   · ai đó trả nền chân trời về một hằng số ⇒ vành phẳng quay lại.
   //
-  // ⚠️ BƯỚC C (2026-08-20) — PHÉP ĐO PHẢI CHẠM ĐÚNG CHỖ NÓ NÓI. Bài này lấy mẫu ở BA khoảng cách,
-  // và chúng KHÔNG hỏi cùng một câu:
-  //   · `innerEdge`      = đúng chỗ giáp — CẢ HAI tấm đều được vẽ ở đây ⇒ hỏi được "hai tấm có khớp
-  //                        nhau không". Đo thật: lệch lớn nhất **1,11e-16** (16 điểm ướt).
-  //   · `innerEdge+0.3`  = ngay bên ngoài — vẫn cả hai tấm ⇒ vẫn hỏi được. Đo thật: **đúng 0** (15 điểm).
-  //   · `innerEdge-2`    = NẰM TRONG tấm đất thành phố, nơi tấm chân trời KHÔNG hề được vẽ ra. Ở đây
-  //                        `h.heightAt` chỉ là một giá trị toán học, không phải thứ Đàm nhìn thấy.
-  // Bản trước hỏi "hai tấm có khớp không" ở CẢ BA, kể cả cái thứ ba — tức so hai tấm ở chỗ chỉ có
-  // một tấm tồn tại. Nó xanh nhiều tháng chỉ vì hai kỷ có nước lúc ấy (12 và 14) tình cờ có
-  // `blend = 1` tại các điểm lấy mẫu: khi blend bằng 1 thì cả hai tấm cùng sập về đúng đáy
-  // `WATER_SURFACE_Y − depthAt`, nền của chúng bị nuốt sạch nên không thể lệch. Kỷ sông hẹp có blend
-  // LỬNG ở đó ⇒ hai cái nền khác nhau lộ ra, lệch tới 2,16e-1 (kỷ 6). Cùng họ bài học
-  // `diemToanTheGioi`: phép đo không với tới (hoặc không áp dụng được) chỗ nó tự nhận là đang đo.
-  // ⇒ Điểm ƯỚT ở mốc TRONG được bỏ qua — nhưng bỏ qua phải ĐẾM ĐƯỢC, nếu không nó lặng lẽ nuốt dần
-  // cả bài test. `BO_QUA_KY` tự đỏ CẢ HAI CHIỀU: kỷ thứ mười lấn nước vào tới đó thì đỏ, mà một
-  // trong chín kỷ ấy rút nước ra cũng đỏ.
-  let soKho = 0;
+  // ⚠️ VÀ NHÁNH ƯỚT/KHÔ ĐÃ GỘP LÀM MỘT — MỘT NGOẠI LỆ BIẾN MẤT. Bản trước phải bỏ qua các điểm ướt
+  // ở mốc "trong" và giữ hẳn một danh sách 9 kỷ (`BO_QUA_KY`), vì lúc ấy hai tấm có hai cái NỀN
+  // khác nhau nên ở chỗ blend lửng chúng lệch tới 2,16e-1. Nay nền là một, nên câu hỏi ướt và câu
+  // hỏi khô là CÙNG một câu. Đo thật ở HEAD: 270 điểm (50 điểm chạm nước), lệch lớn nhất **đúng 0**.
+  let soDiem = 0;
   let soUot = 0;
-  const boQua = [];
+  let lechMax = 0;
+  const cao = [];
   for (const era of ERAS) {
-    const h = buildHorizon({ era, gridSize: 12 });
     const t = buildTerrain({ era, gridSize: 12 });
+    const h = buildHorizon({ era, gridSize: 12, terrain: t });
     const half = (12 - 1) / 2;
     for (const [moc, d] of [['giáp', h.innerEdge], ['ngoài', h.innerEdge + 0.3], ['trong', h.innerEdge - 2]]) {
       for (const [x, z] of [[d, 0], [0, d], [-d, 0], [0, -d], [d, d], [-d, d * 0.4]]) {
-        const uot = t.setting.blendAt(x + half, z + half) > 0;
-        if (uot && moc === 'trong') {
-          boQua.push(era);
-          continue;
-        }
-        if (uot) {
-          soUot += 1;
-          assert.ok(Math.abs(h.heightAt(x, z) - t.surfaceHeightAt(x + half, z + half)) < 1e-9,
-            `kỷ ${era}: chỗ giáp có nước (${x}, ${z}, mốc "${moc}") — chân trời ${h.heightAt(x, z)} `
-            + `≠ địa hình ${t.surfaceHeightAt(x + half, z + half)}`);
-          continue;
-        }
-        soKho += 1;
-        assert.equal(h.heightAt(x, z), -APRON_DROP,
-          `kỷ ${era}: chỗ giáp (${x}, ${z}, mốc "${moc}") cao ${h.heightAt(x, z)} thay vì ${-APRON_DROP}`);
+        soDiem += 1;
+        if (t.setting.blendAt(x + half, z + half) > 0) soUot += 1;
+        const troi = h.heightAt(x, z);
+        const dat = t.surfaceHeightAt(x + half, z + half);
+        lechMax = Math.max(lechMax, Math.abs(troi - dat));
+        cao.push(troi);
+        assert.ok(Math.abs(troi - dat) < 1e-9,
+          `kỷ ${era}: chỗ giáp (${x}, ${z}, mốc "${moc}") — chân trời ${troi} ≠ địa hình ${dat}`);
       }
     }
   }
-  assert.ok(soKho > 200, `chỉ còn ${soKho} điểm giáp khô — lời hứa "phẳng đúng" đang rỗng dần`);
-  // Phải chạy ở CẢ HAI mốc ngoài, không chỉ một: hôm nay 16 điểm ở "giáp" + 15 ở "ngoài" = 31.
-  assert.ok(soUot > 25, `chỉ ${soUot} điểm giáp chạm nước — nhánh so hai tấm đang teo lại`);
-  assert.deepEqual([...new Set(boQua)].sort((a, b) => a - b), [3, 5, 6, 7, 8, 9, 10, 11, 12],
-    `những kỷ có nước lấn vào TRONG tấm đất tới ${'`innerEdge-2`'} đã đổi — bảng này phải đổi theo, `
-    + 'và phải kiểm lại bằng mắt rằng chỗ giáp vẫn liền');
+  assert.equal(soDiem, 270, 'số điểm lấy mẫu đã đổi — kiểm lại vòng lặp trước khi tin con số nào');
+  // Gác chạy-rỗng cho nhánh nước: mất nước thì bài này thôi canh được phép khoét, mà mất trong im lặng.
+  assert.ok(soUot > 25, `chỉ ${soUot} điểm giáp chạm nước — nhánh so phép khoét đang teo lại`);
+
+  // ⚠️ ĐỐI CHỨNG 1 — HAI TẤM PHẲNG THÌ CŨNG KHỚP. Không có vế này thì bài trên vẫn XANH TRỌN VẸN
+  // trong đúng cái thế giới cũ có cái bệ. "Khớp nhau" canh cái KHE HỞ; nó không canh cái BỆ.
+  // Đo thật: cao độ ở 270 điểm ấy trải 1,789 đơn vị.
+  const trai = Math.max(...cao) - Math.min(...cao);
+  assert.ok(trai > 0.5,
+    `cao độ ở chỗ giáp chỉ trải ${trai.toFixed(4)} đơn vị — nó đang phẳng trở lại, tức cái vành mà `
+    + 'mắt đọc ra là mép bàn vừa quay về (§2(b) lệnh Đàm 2026-08-21).');
+
+  // ⚠️ ĐỐI CHỨNG 2 — NHỐT THẾ GIỚI CŨ. Bản cũ đòi mọi điểm giáp KHÔ phải bằng đúng `-APRON_DROP`.
+  // Đòi hỏi ấy nay sai tới 0,939 đơn vị ở chỗ lệch nhất, nên nếu ai đó khôi phục nó thì phải thấy
+  // ngay là nó nói về một thế giới khác, chứ không phải "chỉ hơi lệch".
+  const lechHang = Math.max(...cao.map((c) => Math.abs(c + APRON_DROP)));
+  assert.ok(lechHang > 0.3,
+    `chỗ giáp chỉ còn lệch ${lechHang.toFixed(4)} so với hằng số ${-APRON_DROP} — lời hứa cũ "phẳng `
+    + 'đúng một mức" đang đúng trở lại, tức nền chân trời vừa bị đưa về hằng số.');
+  assert.equal(lechMax, 0, 'hai tấm hết khớp TUYỆT ĐỐI — nền của chúng đã tách khỏi nhau');
 });
 
 test('⚠️ KHÔNG PHỤ THUỘC TIẾN ĐỘ NGƯỜI CHƠI — gọi kèm dữ liệu rác vẫn phải ra y hệt', () => {
@@ -281,7 +281,7 @@ test('⚠️ fBm PHẢI THẬT SỰ NHIỀU TẦNG — một vòng `for` chạy 
   }
 });
 
-test('⚠️ `rough` PHẢI ĐỔI ĐƯỢC BỀ MẶT — đo bằng ĐỘ CONG ở đúng cỡ lưới', () => {
+test('⚠️ `rough` PHẢI ĐỔI ĐƯỢC BỀ MẶT — đo bằng ĐỘ CONG của RIÊNG số hạng núi', () => {
   // Đây là bài test đắt giá nhất file này, vì nó là bài DUY NHẤT phân biệt được "fBm đang chạy" với
   // "fBm là mã chết". Thử ngược thật (ép `octaves = 1`) cho ra: kỷ 13 tụt 0,0111 → 0,0038 và kỷ 5
   // tụt 0,0115 → 0,0045, trong khi kỷ 12/15 đứng yên (0,00088 → 0,00083). Ngưỡng dưới đây nằm giữa
@@ -293,22 +293,32 @@ test('⚠️ `rough` PHẢI ĐỔI ĐƯỢC BỀ MẶT — đo bằng ĐỘ CONG
   // ấy thì hai bản giống nhau. Sai phân bậc hai cho dốc thẳng ra 0 nên chỉ còn nghe thấy chi tiết.
   // Lần thứ 19 công cụ đo tự chế nói dối, và lần này nó nói dối theo hướng "chê oan".
   //
-  // ⚠️ VIỆC 2 Bước B (2026-08-19) — MẶT NƯỚC LÀM CHÍNH PHÉP ĐO NÀY NÓI DỐI, VÀ ĐÂY LÀ LẦN THỨ HAI
-  // CÙNG MỘT HÌNH DẠNG SAI. Con sông kỷ 12 khoét hai bờ dốc vào tấm chân trời, mà bờ sông thì có
-  // ĐỘ CONG rất lớn — nên phép đo nhảy từ 0,00088 lên **0,01618** và bài test đỏ với thông báo
-  // *"kỷ 12 khai rough 0,16 nhưng bề mặt gồ ghề"*. Thảo nguyên Nga vẫn trơn y như cũ; thứ gồ ghề
-  // là BỜ SÔNG, một đại lượng chẳng liên quan gì tới `rough`. Đúng bài học Phase 9A: *"hỏi xem đại
-  // lượng này có chứa thứ mình KHÔNG muốn đo không"*.
+  // ⚠️ VIỆC 2 Bước B (2026-08-19) — MẶT NƯỚC LÀM CHÍNH PHÉP ĐO NÀY NÓI DỐI. Con sông kỷ 12 khoét hai
+  // bờ dốc vào tấm chân trời, mà bờ sông thì có ĐỘ CONG rất lớn — nên phép đo nhảy từ 0,00088 lên
+  // **0,01618** và bài test đỏ với thông báo *"kỷ 12 khai rough 0,16 nhưng bề mặt gồ ghề"*. Thảo
+  // nguyên Nga vẫn trơn y như cũ; thứ gồ ghề là BỜ SÔNG. Cách sửa: bỏ những mẫu chạm nước ra khỏi
+  // mẫu số, và bỏ cả ba điểm của khuôn sai phân.
   //
-  // Cách sửa ĐÚNG không phải nới ngưỡng (nới là bỏ răng cho cả năm kỷ) mà là **bỏ những mẫu chạm
-  // nước ra khỏi mẫu số** — và phải bỏ cả ba điểm của khuôn sai phân, vì chỉ cần một điểm bị khoét
-  // là cả bộ ba đã mang thông tin về bờ. Kèm một gác chạy-rỗng: nếu phép loại ấy ăn quá nhiều mẫu
-  // thì bài test này thành rỗng, và rỗng thì nó không còn phân biệt được fBm sống với fBm chết.
+  // ⚠️ 2026-08-21 — LẦN THỨ BA CÙNG MỘT HÌNH DẠNG SAI, VÀ LẦN NÀY THỦ PHẠM LÀ CHÍNH BẢN VÁ §2(b).
+  // Nền của tấm chân trời nay là mặt đất thật (`terrain.nenKho`), mà mặt đất ấy có gợn riêng của nó
+  // (hai tầng nhiễu ở cỡ 3,4 và 1,55 ô) — tức phép đo bắt đầu nghe thấy một thứ chẳng liên quan gì
+  // tới `rough`. Kỷ 3 (Lưỡng Hà, `rough` 0,15, `rise` chỉ 0,5 nên phép chia khuếch đại) nhảy lên
+  // **0,00761** và đỏ; kỷ 14 lên 0,01192. Không phải mã hỏng — phép đo đang trộn hai đại lượng, đúng
+  // bài học Phase 9A (*"đại lượng này có chứa thứ mình KHÔNG muốn đo không?"*).
+  //
+  // ⇒ Trừ nền ra rồi mới đo: `núi(x,z) = heightAt − nenKho`. Ở vùng khô thì `khoetLongNuoc` trả về
+  // nguyên nền, nên hiệu ấy CHÍNH XÁC là số hạng `rise × t × shape × luiNui` — không xấp xỉ.
+  // Đo thật sau khi trừ: kỷ 3 về 0,00134 · kỷ 12 0,00086 · kỷ 15 0,00122 · kỷ 5 0,01151 · kỷ 13
+  // 0,01019 — tức hai đầu tách xa nhau hơn cả bản trước bản vá.
   const curvature = (era) => {
-    const h = buildHorizon({ era, gridSize: 12 });
+    const t = buildTerrain({ era, gridSize: 12 });
+    const h = buildHorizon({ era, gridSize: 12, terrain: t });
     const setting = buildSetting({ era, gridSize: 12 });
     const half = (12 - 1) / 2;
     const uot = (x, z) => setting.blendAt(x + half, z + half) > 0;
+    // CHỈ số hạng núi. Trừ đúng cái trường mà `horizon.js` cộng vào, không dựng lại một bản
+    // "tương đương" — một luật một công thức.
+    const nui = (x, z) => h.heightAt(x, z) - t.nenKho(x + half, z + half);
     const s = h.step;
     let sum = 0;
     let n = 0;
@@ -316,10 +326,11 @@ test('⚠️ `rough` PHẢI ĐỔI ĐƯỢC BỀ MẶT — đo bằng ĐỘ CONG
     for (let x = -h.reach; x <= h.reach; x += s) {
       for (let z = -h.reach; z <= h.reach; z += s) {
         if (uot(x - s, z) || uot(x, z) || uot(x + s, z)) { boQuaVìNuoc += 1; continue; }
-        const a = h.heightAt(x - s, z);
-        const b = h.heightAt(x, z);
-        const c = h.heightAt(x + s, z);
-        if (a === -APRON_DROP && b === -APRON_DROP && c === -APRON_DROP) continue;
+        const a = nui(x - s, z);
+        const b = nui(x, z);
+        const c = nui(x + s, z);
+        // Vành trong `onset`: số hạng núi bằng 0 tuyệt đối ⇒ không mang tin gì về `rough`.
+        if (a === 0 && b === 0 && c === 0) continue;
         sum += Math.abs(a - 2 * b + c);
         n += 1;
       }

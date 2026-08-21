@@ -19,7 +19,20 @@
 > bằng cách chỉnh lại con số nào. Nay còn **1 mục High** (#14) + **2 mục Medium-High** (#3, #13) +
 > **1 mục Medium-High chờ Đàm quyết** (#24) = 4 → xa ngưỡng 8–10 mục, KHÔNG cần Maintenance Sprint.
 >
-> **Cập nhật 2026-08-20 (§1(B) — MỚI NHẤT)**: đếm lại ⇒ **3 mục High còn mở** (#14 · #32 · #53),
+> **Cập nhật 2026-08-21 («XOÁ CÁI BỆ» — MỚI NHẤT)**: đếm lại bằng máy toàn bộ file ⇒ **2 mục High
+> còn mở** (#14 · #53), 0 mục Critical ⇒ **xa ngưỡng 8–10, KHÔNG cần Maintenance Sprint**. (Con số
+> "3 mục High" của hai mốc trước đếm cả **#32**, mà #32 đã ở trạng thái Resolved từ 2026-08-17 —
+> đính chính, không phải mục nào vừa được đóng.) Trong phiên này: **MỞ #68** (chỉ số bệ chia cho độ
+> dốc trong lưới ⇒ ba kỷ cố ý phẳng luôn điểm cao — Low, đã có cột thứ hai để đọc thay) và **MỞ #69**
+> (`terrain-score --ngoai` trả về NaN ở 13/15 kỷ vì tiền đề `settle` đã bị gỡ — Low, công cụ đã tự
+> khai bệnh). **CẬP NHẬT #53**: nửa "địa thế theo kỷ" nay đã đi thêm một bước lớn — cái BỆ (mặt bàn
+> vuông nổi lên) đã bị xoá ở **15/15 kỷ theo cổng mắt**, nhưng **ba con số của #53 (21% khung · 35,1%
+> đất trơ · 63,0% là vành ngoài) CHƯA được đo lại** sau ADR-046 nên mục vẫn để **Open**, không tự
+> đóng. **KHÔNG mục nào bị đóng bằng cách nới ngưỡng.** ⚠️ Nhắc lại một sự thật đã đo: **kỷ 5 vẫn
+> hiện một đường hào VUÔNG** — đó là hình dạng NƯỚC (`#65`, nửa mỹ thuật của `#64`), **không** phải
+> một bậc địa hình, nên nó KHÔNG được tính là "bệ chưa xoá xong".
+
+> **(Mốc trước) Cập nhật 2026-08-20 (§1(B))**: đếm lại ⇒ **3 mục High còn mở** (#14 · #32 · #53),
 > 0 mục Critical ⇒ **xa ngưỡng 8–10, KHÔNG cần Maintenance Sprint**. Trong phiên §1(B): **MỞ #66**
 > (kỷ 12 không phản ứng với hạt giống nhiễu — Low, đã đo là dưới ngưỡng mắt) và **MỞ LẠI MỘT PHẦN
 > #59** cho kỷ 4 và 5 (cổng "thấy nước" tệ đi vì một bản vá ĐÚNG về vật lý; nguyên nhân khác hẳn ba
@@ -2187,6 +2200,120 @@ ship một trạng thái dở dang, hãy làm nó **ĐẾM ĐƯỢC trong một 
 
 ---
 
+## #69 — `terrain-score.mjs --ngoai` NAY TRẢ VỀ **NaN Ở 13/15 KỶ**: một công cụ đo mà tiền đề của nó đã bị gỡ mất một nửa
+
+> Mở 2026-08-21, cùng phiên với ADR-046/047 («xoá cái bệ»). Đây KHÔNG phải một lỗi chạy — nó là hình
+> dạng đã cắn dự án nhiều lần: **một công cụ đo đúng cho tới ngày thế giới nó đo bị đổi, rồi nó tiếp
+> tục in ra số mà không ai biết số ấy đã hết nghĩa** (`TECH_DEBT #22`, ADR-014→ADR-019).
+
+- **Tên**: phép đo "vành ngoài vuông hay tròn" mất mất một nửa năng lực vì `settle` đã bị xoá
+- **Module**: `scripts/terrain-score.mjs` (`chamBeVuong`, nhánh `--ngoai`)
+- **Priority**: Low · **Severity**: Low (không mã sản phẩm nào hỏng; thứ hỏng là một CÔNG CỤ chẩn đoán)
+- **Impact**: `chamBeVuong` dựng trên giả định `san = -APRON_DROP` — tức *"ra tới vành ngoài thì mọi
+  tia đều chạm đúng một mặt phẳng, nên tia nào chạm SỚM hơn là tia đi qua chỗ đất còn nhô"*. ADR-046
+  xoá phép ép-về-phẳng (`settle`), nên vành ngoài nay **gợn liên tục** và rất nhiều tia **không bao
+  giờ chạm** mức `san` ⇒ mẫu số 0 ⇒ **NaN**. Đo thật sau bản vá: **13/15 kỷ ra NaN**, với
+  **5.323/10.800 tia bão hoà**; chỉ kỷ 1 (0,926) và kỷ 5 (1,130) còn đo được — và cả hai đều nói
+  "tròn", đúng như mong đợi. TRƯỚC bản vá: 1,306 với **0/10.800** tia bão hoà.
+- **Root Cause**: công cụ hỏi *"tia chạm mặt phẳng đáy ở bán kính nào"*, mà **mặt phẳng đáy ấy nay
+  không tồn tại**. Câu hỏi vẫn hợp lệ về mặt hình học (vuông hay tròn), chỉ có **cách hỏi** là đã
+  chết theo tiền đề.
+- **Current Risk**: thấp — công cụ đã có một khối cảnh báo tiếng Việt dài ngay trên `chamBeVuong` nói
+  rõ nó còn trả lời được câu gì và KHÔNG còn trả lời được câu gì, và `PROJECT_STRUCTURE.md` đã ghi
+  kèm dòng ấy vào bảng công cụ. Việc "vành ngoài có phẳng không" nay do `scripts/plateau-score.mjs`
+  trả lời bằng một đại lượng khác hẳn (phân bố độ dốc theo vành đồng tâm).
+- **Future Risk**: trung bình nếu KHÔNG ghi ra — một phiên sau chạy `--ngoai`, thấy `NaN`, rồi hoặc
+  (a) tưởng địa hình hỏng, hoặc (b) "sửa" bằng cách hạ `san` xuống cho có số, tức **thay một tiền đề
+  chết bằng một tiền đề bịa**. Cả hai đều là cách hỏng đã có tên trong `CLAUDE.md`.
+- **Recommended Solution**: hai hướng, chưa chọn. **(1)** đổi `chamBeVuong` sang hỏi bằng một mức
+  **TƯƠNG ĐỐI** (phân vị cao độ của chính vành đó) thay vì một mức tuyệt đối — đúng bài học Phase 7D
+  (*"câu này có chứa chữ 'so với' không?"*); **(2)** gỡ hẳn nhánh `--ngoai` và để `plateau-score.mjs`
+  gánh trọn, chấp nhận mất trục "vuông hay tròn". ⚠️ Hướng (2) rẻ hơn nhưng mất một trục **đã từng
+  bắt được lỗi thật**, nên đừng chọn nó chỉ vì tiện.
+- **Estimated Complexity**: Low (một hàm thuần, đã có `--selftest` 4/4 xanh để bám vào).
+- **Blocking Conditions**: không có.
+- **Review Trigger**: lần kế tiếp có ai chạy `terrain-score.mjs --ngoai` và thấy `NaN`, hoặc khi có
+  phase đụng lại `APRON_DROP`/`APRON_SPREAD`.
+- **Owner**: chưa phân công · **Status**: Open (cố ý — công cụ đã tự khai bệnh, chưa cần chữa ngay)
+
+---
+
+## #68 — "CHỈ SỐ BỆ" CHIA CHO ĐỘ DỐC TRONG LƯỚI, NÊN BA KỶ **CỐ Ý PHẲNG** SẼ MÃI MÃI ĐIỂM CAO DÙ KHÔNG CÓ BỆ NÀO
+
+> Mở 2026-08-21. Ghi ra vì đây là loại số **rất dễ bị đọc thành một hồi quy** ở phiên sau, đúng hình
+> dạng *"một con số đúng trả lời sai câu hỏi"* (bài học Performance Gate vòng 2, 2026-08-17).
+
+- **Tên**: mẫu số của chỉ số bệ có thể tiến về 0, nên tỉ số phóng to vô hạn ở kỷ địa hình phẳng
+- **Module**: `scripts/plateau-score.mjs` (`chiSoBe`)
+- **Priority**: Low · **Severity**: Low (phép đo vẫn đúng công thức; rủi ro nằm ở việc ĐỌC nó)
+- **Impact**: `chỉ số bệ = (dốc lớn nhất vành 6–9) ÷ (dốc trung bình vành 0–5)`. Đó là một QUAN HỆ,
+  đúng như §1 yêu cầu — nhưng ba kỷ khai địa hình gần như phẳng có mẫu số cực nhỏ (kỷ 3: **0,021** ·
+  kỷ 11: **0,023** · kỷ 14: **0,000**), nên tỉ số của chúng luôn nằm ở đầu bảng kể cả khi vành ngoài
+  hoàn toàn lành. Bằng chứng trực tiếp: **độ NHÔ** của đúng ba kỷ ấy sau bản vá chỉ **0,026–0,028**
+  (trung bình 15 kỷ: 0,047), tức chúng nằm trong nhóm **TỐT NHẤT** bảng theo đại lượng tuyệt đối.
+- **Root Cause**: một tỉ số không phân biệt được *"tử số lớn"* với *"mẫu số nhỏ"*. Với đất phẳng chủ
+  ý, mẫu số nhỏ là **đúng thiết kế**, không phải triệu chứng.
+- **Current Risk**: thấp — bảng in ra đã có **hai** cột (chỉ số bệ và độ NHÔ) và báo cáo phiên
+  2026-08-21 đã nói thẳng *"ở ba kỷ này hãy đọc cột độ NHÔ"*.
+- **Future Risk**: trung bình — một phiên sau chạy công cụ, thấy kỷ 14 = 9,75 rồi kết luận *"cái bệ
+  quay lại rồi"* và đi sửa một thứ không hỏng (đúng cách `TECH_DEBT #22` đã tiêu mất ba phase).
+- **Recommended Solution**: in thêm một **cột cảnh báo tường minh** khi mẫu số dưới một ngưỡng đã
+  hiệu chuẩn (vd `dốc trong lưới < 0,05` ⇒ in `⚠️ đất phẳng chủ ý — đọc cột độ NHÔ`), thay vì để
+  người đọc tự nhớ. **KHÔNG** chữa bằng cách cộng một hằng số vào mẫu số — đó là mua một con số đẹp
+  bằng cách làm hỏng một quan hệ (thứ ADR-025 đã cấm với mặt đường).
+- **Estimated Complexity**: Low (một dòng in, cộng một bài test đối chứng dựng đất phẳng tuyệt đối
+  và ĐÒI cột cảnh báo phải bật).
+- **Blocking Conditions**: không có.
+- **Review Trigger**: lần kế tiếp có ai trích chỉ số bệ để kết luận về một kỷ có `relief` thấp.
+- **Owner**: chưa phân công · **Status**: Open
+
+---
+
+## #67 — **ĐỊA HÌNH CHE**: kỷ 4 và 5 tụt dưới cổng "thấy nước" 5% vì một bản vá ĐÚNG về vật lý, không vì bề rộng
+
+> Tách khỏi `#59` ngày 2026-08-21 theo lệnh Đàm (*"`#59` chứa hai loại nguyên nhân: TÁCH. Hai bệnh,
+> hai cách chữa, hai điều kiện đóng"*). `#59` giữ nửa **bề rộng** (đã đóng); mục này giữ nửa **che khuất**.
+
+- **Tên**: bờ XA của mặt nước tụt xuống theo triền đất và khuất sau sống đất gần ⇒ diện tích nước
+  nhìn thấy được tụt dưới cổng 5% ở kỷ 4 và kỷ 5
+- **Module**: `src/engine/city3d/terrain.js` (`drain`/`tilt`) · `settingStyle.js` (`side`) ·
+  `sceneGraph.js` (`worldYaw`, ADR-041) · đo bằng `scripts/water-score.mjs`
+- **Priority**: Medium · **Severity**: Low–Medium (hai kỷ, và mắt vẫn ĐỌC RA là nước — xem dưới)
+- **Impact**: §1(B) phát hiện `drain` (hướng đất thấp) **lệch hoặc ngược hẳn** `settingStyle.side`
+  (phía có nước) ở **9/14 kỷ** — tức nước đang chảy lên dốc. Sửa 9 dòng cho khớp là **đúng vật lý**,
+  và nó làm cổng "thấy nước" **TỆ ĐI** ở hai kỷ:
+
+  | kỷ | nền (`9c7032c`) | §1(B) với `drain` SAI | §1(B) với `drain` ĐÚNG |
+  |---|---:|---:|---:|
+  | 4 | 5,11% ✅ | 4,95% ❌ | **4,95% ❌** |
+  | 5 | 5,54% ✅ | 4,40% ❌ | **3,51% ❌** |
+  | 7 | 2,41% ❌ | 4,38% ❌ | **3,55% ❌** (kỷ này thuộc `#59`, ghi ở đây để so) |
+
+- **Root Cause**: **một hệ quả vật lý, không phải một lỗi.** Đất nay thoải xuống *phía có nước*, nên
+  bờ XA tụt xuống và khuất sau sống đất gần — đúng cách một thung lũng thật che mất khúc sông bên
+  kia. Nguyên nhân này **khác hẳn** `#59`: ở đó dòng nước hẹp tới mức *không tồn tại góc nhìn nào*
+  đạt cổng; ở đây nước đủ rộng, chỉ là bị **che**.
+- **Current Risk**: thấp. Cột thứ hai của bảng nghiệm thu (tương phản nước↔bờ) vẫn **30,8–115,5**
+  trên ngưỡng mắt 12 ở cả 14 kỷ ⇒ *chỗ nào có nước thì mắt vẫn ĐỌC RA là nước*. Cái trượt là cột
+  **DIỆN TÍCH**, không phải cột **ĐỌC RA** (xem bài học "hai câu hỏi, đừng để một cột gánh cả hai").
+- **Future Risk**: nếu phiên sau đọc `TRUOT = [4, 5, 6, 7, 10]` rồi đi chữa cả năm kỷ bằng MỘT cách
+  thì chắc chắn sai ở một nửa — đó đúng là lý do Đàm bắt tách mục.
+- **Recommended Solution**: **KHÔNG tự chọn — đụng bảng đã duyệt.** Hai hướng, cả hai đều đã đo được:
+  - **(a) Hạ `tilt` ở kỷ 4 và 5.** Rẻ nhất. Giá: `tilt` là thứ cho đất *một lý do* để cao thấp
+    (ADR-045); hạ nó là trả lại một phần cái "đất cao thấp không vì gì cả".
+  - **(b) Cho `worldYaw` ngắm DỌC theo triền dốc thay vì ngang qua nó.** Đúng bài toán hơn (nhìn
+    xuôi dòng thì không có sống đất nào chắn), nhưng `worldYaw` là một bảng đã duyệt ở ADR-041 và
+    đổi nó là đổi bố cục của kỷ ấy.
+  - ❌ **Đã BÁC hai cách**: hạ cổng 5% (cái phễu Phase 9A — Đàm cấm bằng chữ ở `#59`) và quay `drain`
+    về giá trị sai (mua một con số bằng cách nói dối địa lý — ADR-025 cấm).
+- **Estimated Complexity**: (a) rất thấp · (b) trung bình
+- **Blocking Conditions**: **CHỜ ĐÀM QUYẾT** — cả hai hướng đều đụng bảng đã duyệt
+- **Review Trigger**: khi có ai đó định sửa `TRUOT` trong `scripts/waterView.test.js`, hoặc khi
+  `tilt`/`worldYaw` của kỷ 4 · 5 được đụng tới vì bất kỳ lý do nào khác
+- **Owner**: Đàm chốt · **Status**: **Open — CHỜ ĐÀM QUYẾT**
+
+---
+
 ## #66 — KỶ 12 KHÔNG PHẢN ỨNG VỚI HẠT GIỐNG NHIỄU: **0/144 ô đổi bậc** khi đổi hạt, nên một trong hai nguồn biến thiên của nó là mã chết
 
 - **Tên**: `terrain.js` — kỷ 12 (Nga, `plain` · `tilt 0,55` · `terraces 2`) cho ra **cùng một bản đồ
@@ -2668,7 +2795,14 @@ hai con số. Việc *nâng* 9 kỷ kia lên trên 5% nếu có làm thì thuộ
 
 ---
 
-## #59 — ✅ ĐÃ ĐÓNG (2026-08-20, Đàm chốt hướng (b)) — Ba kỷ nước hẹp không thể đạt cổng 5% ở **bất kỳ** góc nhìn nào: đây là bài toán BỀ RỘNG, không phải bài toán góc
+## #59 — ✅ ĐÃ ĐÓNG (2026-08-20, Đàm chốt hướng (b)) — **BỀ RỘNG**: ba kỷ nước hẹp (6 · 7 · 10) không thể đạt cổng 5% ở **bất kỳ** góc nhìn nào
+
+> ⚠️ **MỤC NÀY ĐÃ ĐƯỢC TÁCH ĐÔI (2026-08-21, Đàm ra lệnh: *"`#59` chứa hai loại nguyên nhân: TÁCH"*).**
+> Nó từng ôm cả hai chứng bệnh: **(1) nước quá HẸP** (kỷ 6 · 7 · 10) và **(2) địa hình CHE** (kỷ 4 · 5,
+> phát sinh ở §1(B) khi `drain` được sửa cho khớp `side`). Hai chứng ấy có nguyên nhân khác nhau, hướng
+> chữa khác nhau, và **điều kiện đóng khác nhau** — gộp chung thì mục này không bao giờ đóng dứt điểm
+> được, vì một nửa đã xong còn một nửa chờ Đàm. Nửa **(2)** nay sống riêng ở **`#67`**.
+> Mục này từ đây **CHỈ** nói về bề rộng, và nó **ĐÃ ĐÓNG**.
 
 - **Tên**: kỷ 6, 7, 10 khai nước quá hẹp; xoay kiểu gì cũng không đưa nổi lên 5% khung hình
 - **Module**: `src/engine/city3d/settingStyle.js` (cột bề rộng nước) · đo bằng `scripts/water-view.mjs`
@@ -2735,42 +2869,16 @@ của 14 kỷ còn lại. Viết *"không góc nào cứu được"* cho chúng 
 (1,60%) **và mắt cũng không đọc ra là thành phố bên kênh** (ảnh cận cảnh: con kênh là một vệt xanh
 mảnh ở góc trên-trái, thành phố không có quan hệ gì với nó). Tức cổng và mắt **đồng ý** ở ca này —
 chưa có bằng chứng cổng đang đo sai đại lượng.
-### ⚠️ CẬP NHẬT 2026-08-20 (§1(B), ADR-045) — DANH SÁCH TRƯỢT ĐI TỪ **3 LÊN 5 KỶ**, VÀ NGUYÊN NHÂN LÀ MỘT BẢN VÁ ĐÚNG
+### ⚠️ CẬP NHẬT 2026-08-20 → ĐÃ TÁCH SANG `#67` (2026-08-21)
 
-§1(B) phát hiện `drain` (hướng đất thấp) **lệch hoặc ngược hẳn** `settingStyle.side` (phía có nước)
-ở **9/14 kỷ** — tức nước đang chảy lên dốc. Sửa 9 dòng cho khớp là **đúng vật lý**, và nó làm cổng
-"thấy nước" **TỆ ĐI** ở hai kỷ:
+§1(B) làm danh sách trượt cổng đi từ 3 lên 5 kỷ, và hai kỷ mới (4 và 5) trượt vì **địa hình che**,
+không vì bề rộng. Toàn bộ bảng số + phân tích của nửa ấy nay nằm ở **`#67`**; con số đang khoá trong
+`scripts/waterView.test.js` là con số CHUNG của cả hai chứng (`TRUOT = [4, 5, 6, 7, 10]`,
+`DAT.length === 9`) và nó sẽ đổi khi **một trong hai** mục được chữa — đó chính là lý do phải đọc cả
+hai mục trước khi sửa con số ấy.
 
-| kỷ | nền (`9c7032c`) | §1(B) với `drain` SAI | §1(B) với `drain` ĐÚNG |
-|---|---:|---:|---:|
-| 4 | 5,11% ✅ | 4,95% ❌ | **4,95% ❌** |
-| 5 | 5,54% ✅ | 4,40% ❌ | **3,51% ❌** |
-| 7 | 2,41% ❌ | 4,38% ❌ | **3,55% ❌** |
-
-**Lý do vật lý, không phải lỗi**: đất nay thoải xuống *phía có nước*, nên **bờ XA tụt xuống và
-khuất sau sống đất gần** — đúng cách một thung lũng thật che mất khúc sông bên kia.
-
-⚠️ **Hai cách làm bài test hết đỏ đều BỊ BÁC, và cả hai đều đã có tên trong dự án**: **hạ cổng 5%**
-là cái phễu Phase 9A (Đàm đã cấm bằng chữ, ngay ở mục này); **quay `drain` về giá trị sai** là mua
-một con số bằng cách nói dối địa lý (ADR-025 cấm với mặt đường, không có lý do gì để nới ở đây).
-
-⇒ Giữ nguyên khuôn (b) mà Đàm đã chốt, chỉ cập nhật con số:
-
-```js
-assert.deepEqual(TRUOT, [4, 5, 6, 7, 10], '…');
-assert.equal(DAT.length, 9, 'phải có đúng 9 kỷ đạt cổng 5%');
-```
-
-Vẫn tự đỏ cả hai chiều. Bảng ba cột ở trên được chép vào chú thích của chính bài test, để phiên sau
-đọc được **cả con số lẫn lý do** mà không phải đi tìm.
-
-⚠️ **Và đây là một khoản nợ THẬT, không phải một dòng ghi cho đủ**: hai kỷ 4 và 5 hôm nay trượt vì
-một lý do KHÁC hẳn ba kỷ 6·7·10 (chúng trượt vì **bề rộng**, còn 4 và 5 trượt vì **địa hình che**).
-Hướng chữa cũng khác: với 4 và 5 thì hoặc hạ `tilt`, hoặc cho `worldYaw` ngắm dọc theo triền dốc
-thay vì ngang qua nó — **cả hai đều đụng bảng đã duyệt ⇒ CHỜ ĐÀM**, không tự chọn.
-- **Owner**: Đàm chốt · **Status**: **✅ Closed (2026-08-20)** cho ba kỷ 6·7·10 · **⚠️ MỞ LẠI MỘT PHẦN
-  (2026-08-20, §1(B))** cho kỷ **4** và **5** — nguyên nhân khác hẳn (địa hình che, không phải bề
-  rộng), phương án đã nêu, **CHỜ ĐÀM QUYẾT**
+- **Owner**: Đàm chốt · **Status**: **✅ Closed (2026-08-20)** — ba kỷ 6 · 7 · 10, đúng khuôn (b);
+  điều kiện xem lại duy nhất là nếu ai đó muốn nới bề rộng nước của chúng (⇒ nói dối địa lý, đã bị bác)
 
 ---
 
@@ -3087,8 +3195,29 @@ mất chỗ để ghi *"kỷ này khai có nước mà chưa dựng"* — thứ 
 
 ## #53 — VÀNH ĐẤT NGOÀI LƯỚI CHIẾM ~21% KHUNG HÌNH VÀ KHÔNG MỘT PHASE NỘI DUNG NÀO CHẠM TỚI ĐƯỢC
 
+> ⚠️ **ĐÍNH CHÍNH 2026-08-21 — MỘT TIỀN ĐỀ CỦA MỤC NÀY ĐÃ BỊ GỠ, NÊN PHẦN LẬP LUẬN DỰA VÀO NÓ HẾT
+> ĐÚNG** (đúng khuôn ADR-019: *"một kết luận đúng có thể hết đúng mà không ai động vào nó, vì TIỀN
+> ĐỀ của nó bị gỡ ở một phase khác"*). Mục này viện dẫn `APRON_EDGE` và lời hứa *"tấm đất phải phẳng
+> đúng `−APRON_DROP` ở chỗ giáp rặng núi"*. **Cả hai đều không còn tồn tại** sau ADR-046: hằng số
+> đổi tên thành `PLATE_PAD_CELLS`, và phép ép-về-phẳng (`settle`) đã bị **xoá hẳn** vì chính nó là
+> một trong ba nguồn sinh ra cái bệ. Lời hứa THẬT với `horizon.js` không mất mà được phát biểu lại
+> thành một QUAN HỆ — `horizon.heightAt` nay đọc thẳng `terrain.nenKho(...)` nên hai tấm khớp nhau
+> **theo cấu tạo**, không cần bên nào phẳng. ⇒ **Câu *"lời hứa ấy chỉ ràng buộc `APRON_EDGE ≥
+> APRON_CELLS`"* nay SAI theo cả hai chiều**: nó không còn ràng buộc gì cả, VÀ trên thực tế
+> `APRON_CELLS` (7,5, thất thường tới 12,15) nay **lớn hơn hẳn** `PLATE_PAD_CELLS` (3,4) — tức dải
+> hoà chạy vượt ra ngoài tấm lưới thành phố và tiếp tục trên tấm chân trời, đúng như phải thế.
+>
+> **Ba con số của mục này (21% khung · 35,1% đất trơ · 63,0% là vành ngoài) CHƯA ĐƯỢC ĐO LẠI** sau
+> ADR-046, nên đừng trích chúng như số hiện hành. Chúng gần như chắc chắn đã đổi: vùng đất bao quanh
+> nay **gợn liên tục thay vì phẳng tuyệt đối**, tức nó thôi là một mảng chết — nhưng "thôi là mảng
+> chết" và "thôi trống" là hai chuyện khác nhau, và chỉ phép đo mới phân biệt được. Đo lại bằng
+> `node scripts/city-preview.mjs --era N --sessions 80 --mask ...` rồi `scripts/*-score.mjs` trước
+> khi mở bất kỳ phase nội dung nào dựa trên mục này. **Hướng Đàm đã chọn (LẤP, không thu nhỏ, không
+> siết khung) KHÔNG đổi** — chỉ có mấy con số và tên hằng số là cũ.
+
+
 - **Tên**: Vành đất ngoài lưới thành phố là vùng trống lớn nhất còn lại — và nó KHÔNG giảm khi Đàm chơi
-- **Module**: `src/engine/city3d/terrain.js` (`APRON_CELLS`/`APRON_EDGE`) · `render3d/terrainMesh.js` · khung hình (`orbit.js`)
+- **Module**: `src/engine/city3d/terrain.js` (`APRON_CELLS`/`APRON_SPREAD`/`PLATE_PAD_CELLS` — tên cũ `APRON_EDGE`, đổi 2026-08-21) · `render3d/terrainMesh.js` · khung hình (`orbit.js`)
 - **Priority**: High · **Severity**: Medium (mỹ thuật, không phải lỗi chạy)
 - **Impact**: Ở mốc 80 phiên, trung bình 15 kỷ: **đất trơ chiếm 35,1% khung hình, và 63,0% chỗ trơ ấy
   là VÀNH NGOÀI** — phần mà `§2-C` (mảng phủ) lẫn `§2-B` (nhà dân) đều không đặt được thứ gì lên,

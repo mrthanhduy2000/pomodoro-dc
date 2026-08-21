@@ -2,8 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
-  APRON_DROP, APRON_EDGE, ERA_TERRAIN, SMOOTHSTEP_PEAK, STREET_MAX_GRADE, TERRACE_STEP,
-  WATER_SURFACE_Y, bienDoRollNgoai, buildTerrain, eraTerrainProfile, geometricTemplate,
+  APRON_DROP, PLATE_PAD_CELLS, ERA_TERRAIN, SMOOTHSTEP_PEAK, STREET_MAX_GRADE, TERRACE_STEP,
+  WATER_SURFACE_Y, bienDoRollLen, bienDoRollNgoai, buildTerrain, eraTerrainProfile, geometricTemplate,
   maxRoadRise, nenRoll,
 } from './terrain.js';
 import { buildHorizon } from './horizon.js';
@@ -463,11 +463,27 @@ test('MẶT ĐẤT PHẢI THẬT SỰ DỐC GIỮA HAI TÂM Ô — không đư�
   assert.ok(checked >= 50, `chỉ kiểm được ${checked} chỗ chênh bậc — bài test này đang chạy không`);
 });
 
-test('RA KHỎI `APRON_EDGE` THÌ MẶT ĐẤT PHẲNG ĐÚNG `-APRON_DROP` — TRỪ chỗ có nước', () => {
-  // ⚠️ Đây là LỜI HỨA VỚI `sceneGraph.js`: tấm ván vùng ngoài ngồi ở đúng cao độ ấy, nên nếu rìa
-  // tấm địa hình còn gợn thì chỗ giáp sẽ là một đường răng cưa hở cả gầm — vòng quanh thành phố,
-  // và im lặng. Kiểm ở NHIỀU hướng vì bán kính chuyển tiếp bị nhiễu nhân vào: chỗ nào nhiễu lớn
-  // nhất mới là chỗ chạm trần, và đúng chỗ đó mới lộ lỗi.
+test('RÌA TẤM ĐẤT PHẢI KHỚP TẤM CHÂN TRỜI — một QUAN HỆ, không phải một MỨC', () => {
+  // ⚠️ 2026-08-21 — BÀI NÀY TỪNG HỎI SAI CÂU, VÀ CHÍNH NÓ LÀ MỘT TRONG BA THỨ GIỮ CHO CÁI BỆ SỐNG.
+  // Bản cũ đòi rìa tấm đất **phẳng đúng `-APRON_DROP`**, với lý do "tấm ván vùng ngoài phẳng nên vế
+  // còn lại buộc phải phẳng theo". Lý do ấy đúng ở Phase 9A và đã hết đúng: lời hứa thật với
+  // `horizon.js` là **hai tấm phải KHỚP NHAU tại chỗ giáp**, chứ không phải *cả hai phải bằng một
+  // hằng số*. Viết một QUAN HỆ thành một MỨC là đúng bẫy Phase 7D — và ở đây cái giá phải trả rất
+  // cụ thể: một hằng số ở cả hai bên ⇒ một vành phẳng tuyệt đối rộng 5,7 ô quanh thành phố ⇒ phần
+  // đất trong lưới đọc ra thành một mặt bàn. Đàm bác ở cả 15 kỷ.
+  //
+  // ⚠️ VÀ ĐIỀU ĐÁNG NHỚ NHẤT: NỬA ĐÚNG CỦA BÀI NÀY ĐÃ NẰM SẴN TRONG CHÍNH NÓ. Nhánh "chỗ có nước"
+  // (thêm ở Bước B, 2026-08-19) từ lâu đã hỏi đúng câu — nó gọi `horizon.heightAt` rồi đòi hai bên
+  // bằng nhau, vì ở chỗ có nước thì "mốc khớp là cao độ đã khoét chứ không phải một hằng số". Bản
+  // vá hôm nay chỉ là cho nhánh KHÔ hỏi **đúng câu mà nhánh ƯỚT đã hỏi**. Một bài test chứa cả câu
+  // đúng lẫn câu sai cạnh nhau, và câu sai sống sót vì nó chưa bao giờ được đặt cạnh câu kia.
+  //
+  // Kiểm ở NHIỀU hướng vì bề rộng dải hoà bị nhiễu nhân vào: chỗ nào nhiễu lớn nhất mới là chỗ
+  // căng nhất, và đúng chỗ đó mới lộ lỗi.
+  //
+  // THỬ-CHO-ĐỎ (nêu TRƯỚC chỗ mong đỏ): trong `horizon.js`, đổi `dat.nenKho(x + half, z + half)`
+  // thành `-APRON_DROP` (tức trả về đúng hành vi cũ) ⇒ ĐỎ ở assert `Math.abs(cao - troi) < 1e-9`
+  // ngay kỷ đầu tiên, vì rìa tấm đất nay gợn theo đồng bằng còn tấm chân trời thì phẳng.
   //
   // ⚠️ VIỆC 2 Bước B (2026-08-19) THÊM MỘT NGOẠI LỆ, VÀ NGOẠI LỆ ẤY PHẢI ĐẾM ĐƯỢC. Mặt nước khoét
   // mặt đất xuống dưới `-APRON_DROP` ở đúng những chỗ nó chảy qua, nên câu "phẳng đúng" hết đúng ở
@@ -485,7 +501,7 @@ test('RA KHỎI `APRON_EDGE` THÌ MẶT ĐẤT PHẲNG ĐÚNG `-APRON_DROP` — 
   //
   // ⚠️ Và bảng "kỷ nào có rìa chạm nước" là một sự thật ĐỊA LÝ đáng ghi ra, không phải một con số
   // phụ: bốn kỷ có nước mà rìa vẫn khô trọn (4 · 5 · 10 · 15) không phải lỗi — vòng rìa nằm ở
-  // khoảng cách `APRON_EDGE` = 3,4 ô ngoài lưới, nên nước `reach: 1` (kỷ 5, 10 — sát chân phố) rơi
+  // khoảng cách `PLATE_PAD_CELLS` = 3,4 ô ngoài lưới, nên nước `reach: 1` (kỷ 5, 10 — sát chân phố) rơi
   // vào PHÍA TRONG vòng ấy, còn nước `reach: 5`/`reach: 6` (kỷ 4, 15 — sông xa, biển xa) rơi ra
   // PHÍA NGOÀI. Bảng này đỏ cả hai chiều nên nó là chỗ duy nhất một thay đổi `reach` bị chặn lại.
   //
@@ -498,6 +514,7 @@ test('RA KHỎI `APRON_EDGE` THÌ MẶT ĐẤT PHẲNG ĐÚNG `-APRON_DROP` — 
   //     tưởng `tiLeKho` canh được bề rộng — nó canh SỐ CẠNH bị cắt, mà đó là chuyện của `reach`.
   let soDiemKho = 0;
   let soDiemUot = 0;
+  let chenhRia = 0;
   const KY_RIA_CHAM_NUOC = [];
   for (const era of ERAS) {
     const terrain = buildTerrain({ era, gridSize: GRID });
@@ -507,9 +524,9 @@ test('RA KHỎI `APRON_EDGE` THÌ MẶT ĐẤT PHẲNG ĐÚNG `-APRON_DROP` — 
     let uotKy = 0;
     for (let t = 0; t <= 24; t += 1) {
       const along = -0.5 + (GRID * t) / 24;
-      const out = GRID - 0.5 + APRON_EDGE + 0.01;
-      for (const [u, v] of [[-0.5 - APRON_EDGE - 0.01, along], [out, along],
-        [along, -0.5 - APRON_EDGE - 0.01], [along, out]]) {
+      const out = GRID - 0.5 + PLATE_PAD_CELLS + 0.01;
+      for (const [u, v] of [[-0.5 - PLATE_PAD_CELLS - 0.01, along], [out, along],
+        [along, -0.5 - PLATE_PAD_CELLS - 0.01], [along, out]]) {
         const cao = terrain.surfaceHeightAt(u, v);
         if (terrain.setting.blendAt(u, v) > 0) {
           soDiemUot += 1;
@@ -522,19 +539,21 @@ test('RA KHỎI `APRON_EDGE` THÌ MẶT ĐẤT PHẲNG ĐÚNG `-APRON_DROP` — 
         }
         soDiemKho += 1;
         khoKy += 1;
-        assert.ok(
-          Math.abs(cao + APRON_DROP) < 1e-9,
-          `kỷ ${era} tại (${u.toFixed(2)},${v.toFixed(2)}): rìa ở ${cao}, `
-          + `đáng lẽ ${-APRON_DROP} — sẽ hở một khe giữa địa hình và tấm ván vùng ngoài`,
-        );
+        const troiKho = horizon.heightAt(u - half, v - half);
+        assert.ok(Math.abs(cao - troiKho) < 1e-9,
+          `kỷ ${era} tại (${u.toFixed(2)},${v.toFixed(2)}): hai tấm lệch nhau ở chỗ giáp — `
+          + `địa hình ${cao.toFixed(6)}, chân trời ${troiKho.toFixed(6)} — sẽ hở một khe chạy `
+          + 'vòng quanh thành phố, và nó không đỏ ở đâu khác cả');
+        // Và rìa PHẢI CÒN GỢN: nếu nó lại phẳng lì thì cái bệ đã quay về mà bài test vẫn xanh.
+        chenhRia = Math.max(chenhRia, Math.abs(cao + APRON_DROP));
       }
     }
     // Gác chạy-rỗng TỪNG KỶ: kỷ nào cũng phải còn phần lớn rìa khô, nếu không thì lời hứa "phẳng
     // đúng" đã mất răng ở đúng kỷ ấy mà cái tổng thì không hé một lời. Đo thật: thấp nhất 75,0%.
     const tiLeKho = khoKy / (khoKy + uotKy);
     assert.ok(tiLeKho >= 0.70,
-      `kỷ ${era}: chỉ còn ${(tiLeKho * 100).toFixed(1)}% vòng rìa là khô — lời hứa "phẳng đúng ở `
-      + `-APRON_DROP" đã gần như không còn chỗ nào để mà đúng.`);
+      `kỷ ${era}: chỉ còn ${(tiLeKho * 100).toFixed(1)}% vòng rìa là khô — nhánh khô của bài này `
+      + 'đã gần như không còn chỗ nào để mà canh.');
     if (uotKy > 0) KY_RIA_CHAM_NUOC.push(era);
   }
   // Gác chạy-rỗng toàn cục, thô: đo thật 1259 khô / 241 ướt trên 1500 điểm.
@@ -543,31 +562,166 @@ test('RA KHỎI `APRON_EDGE` THÌ MẶT ĐẤT PHẲNG ĐÚNG `-APRON_DROP` — 
     `chỉ ${soDiemUot} điểm rìa chạm nước — nhánh so hai tấm đang teo lại, không còn canh được gì`);
   assert.deepEqual(KY_RIA_CHAM_NUOC, [2, 3, 6, 7, 8, 9, 11, 12, 13, 14],
     'bảng kỷ có vòng rìa chạm nước đã đổi — nghĩa là một `reach` nào đó vừa vượt hoặc vừa tụt qua '
-    + `mốc APRON_EDGE = ${APRON_EDGE}; kiểm lại bằng mắt rồi mới sửa bảng này.`);
+    + `mốc PLATE_PAD_CELLS = ${PLATE_PAD_CELLS}; kiểm lại bằng mắt rồi mới sửa bảng này.`);
+
+  // ⚠️ ĐỐI CHỨNG NGƯỢC — RÌA PHẢI CÒN GỢN. Không có vế này thì bài trên vẫn XANH TRỌN VẸN nếu ai đó
+  // cho cả hai tấm quay về phẳng đúng một hằng số: hai tấm phẳng thì tất nhiên khớp nhau. Tức là
+  // "hai bên khớp nhau" một mình KHÔNG hề canh được cái bệ — nó chỉ canh cái khe hở. Đo thật ở
+  // HEAD: chênh lớn nhất giữa rìa và mức `-APRON_DROP` là 0,4+ đơn vị.
+  assert.ok(chenhRia > 0.05,
+    `rìa tấm đất chỉ còn lệch ${chenhRia.toFixed(4)} so với mức phẳng ${-APRON_DROP} — nó đang `
+    + 'phẳng trở lại, tức cái vành mà mắt đọc ra là mép bàn vừa quay về (§2 lệnh Đàm 2026-08-21).');
 });
 
-test('VÙNG ĐẤT NGOÀI PHẢI THẤP HƠN CAO NGUYÊN, và ranh giới phải LƯỢN chứ không vuông', () => {
-  // Hai nửa của cùng một điều Đàm yêu cầu ("irregular silhouettes"). Nửa (a): thành phố phải nằm
-  // TRÊN một cao nguyên, không phải trên một cái khay. Nửa (b): bán kính chuyển tiếp bị nhiễu nhân
-  // vào, nên nếu nó ra một hằng số thì mép lại vuông vức — và một mép vuông hoàn hảo chính là dấu
-  // hiệu số một để mắt đọc ra "bàn cờ".
+test('THÀNH PHỐ NẰM TRONG ĐỒNG BẰNG, KHÔNG NGỒI TRÊN MỘT CÁI BỆ', () => {
+  // ⚠️ 2026-08-21 — BÀI NÀY THAY BÀI CŨ *"VÙNG ĐẤT NGOÀI PHẢI THẤP HƠN CAO NGUYÊN"*, VÀ CHÍNH BÀI
+  // CŨ LÀ MỘT TRONG BA THỨ GIỮ CHO CÁI BỆ SỐNG. Nó đòi `hi > 0.02` — tức đòi vùng ngoài phải THẤP
+  // HƠN thành phố ở mọi kỷ, tức nó **canh cho cái bệ tồn tại**, và nó làm việc ấy rất tốt suốt
+  // nhiều tháng. Đàm bác cả 15 kỷ vòng này; lệnh của anh: *"thành phố NẰM TRÊN một phần đất vốn đã
+  // bằng hơn"*, không phải "nằm trên một cái bục".
+  //
+  // Hai vế, và chúng canh hai chuyện KHÁC NHAU — đừng gộp:
+  //   (a) **ĐỒNG BẰNG PHẢI CÓ CHỖ CAO HƠN NỀN PHỐ.** Đây là phép thử trực tiếp nhất cho "có phải
+  //       mặt bàn không": một mặt bàn thì mọi hướng nhìn đều thấy nó nổi trên nền, nên chỉ cần
+  //       MỘT hướng mà đất ngoài cao hơn đất trong là đã không thể là mặt bàn. Ba kỷ được miễn,
+  //       và danh sách miễn phải ĐẾM ĐƯỢC chứ không phải một cái ngưỡng nới rộng.
+  //   (b) **MÉP VÙNG BẰNG PHẢI MÉO.** Nới rộng dải hoà thôi thì chưa đủ: một dải rộng bằng nhau ở
+  //       mọi hướng vẫn là một hình vuông bo góc, chỉ là to hơn. Đo bằng ĐỘ TRẢI của cao độ trên
+  //       một vòng tròn cùng bán kính — mép tròn/vuông đều tăm tắp thì con số này bé.
+  // ⚠️ ĐIỂM LẤY MẪU PHẢI THẬT SỰ NẰM NGOÀI HỘP LƯỚI — BẢN ĐẦU CỦA CHÍNH PHÉP ĐO NÀY ĐO NHẦM
+  // THÀNH PHỐ. Nó quét vòng tròn bán kính 6..9 rồi lấy MAX, mà `nenKho` clamp toạ độ về hộp lưới
+  // trước khi hoà, nên điểm trên trục ở bán kính 6 rơi ĐÚNG mép hộp (11,5 = `GRID − 0,5`) và trả
+  // về nguyên cao độ thành phố. Cái MAX vì thế luôn nằm ở `outside ≈ 0`, và con số in ra là những
+  // giá trị bậc thềm tròn trịa (0,310000 · 0,450000 · 0,180000) — dấu vân tay của mặt đất TRONG
+  // phố. Tức bài test tưởng đang hỏi *"đồng bằng có cao hơn phố không"* nhưng thật ra hỏi *"mép
+  // phố có cao hơn trung bình phố không"*, một câu gần như luôn đúng và chẳng nói gì về cái bệ.
+  // Đúng bài học Phase 9A: *"đại lượng này có chứa thứ mình KHÔNG muốn đo không?"*.
+  //
+  // ⇒ Lọc theo ĐÚNG đại lượng mà `nenKho` dùng để hoà (khoảng cách Euclid từ điểm tới HỘP, tính
+  // bằng ô) và chỉ nhận điểm cách hộp ≥ 1,5 ô. Bán kính dừng ở 10 vì `onset` ≥ 10,1 — quá đó là
+  // NÚI, một đại lượng khác (`horizon.js`), và lấy nó vào đây là tự cho điểm.
+  const CACH_HOP = 1.5;
+  const treo = [];
+  const bien = [];
   for (const era of ERAS) {
     const terrain = buildTerrain({ era, gridSize: GRID });
-    const rim = [];
-    for (let t = 0; t <= 40; t += 1) {
-      const along = -0.5 + (GRID * t) / 40;
-      // Đi ra ngoài đúng 1 ô rồi đo tụt bao nhiêu — số này chính là "ranh giới nằm ở đâu".
-      rim.push(terrain.smoothHeightAt(0, Math.min(GRID - 1, Math.max(0, along)))
-        - terrain.surfaceHeightAt(-1.5, along));
+    const half = (GRID - 1) / 2;
+    // Nền phố: trung bình cao độ 12×12 (chính thứ mà "nhô lên" nói tới).
+    let tongPho = 0;
+    for (let y = 0; y < GRID; y += 1) for (let x = 0; x < GRID; x += 1) tongPho += terrain.heightAt(x, y);
+    const nenPho = tongPho / (GRID * GRID);
+
+    // Vành đồng bằng. Dùng `nenKho` — đất KHÔ, chưa khoét nước: một cái hồ thì tất nhiên thấp hơn
+    // phố, và nó không nói gì về việc có bệ hay không.
+    let caoNhat = -Infinity;
+    let soMau = 0;
+    for (let r = 6; r <= 10; r += 0.25) {
+      for (let i = 0; i < 128; i += 1) {
+        const a = (i / 128) * Math.PI * 2;
+        const u = Math.cos(a) * r + half;
+        const v = Math.sin(a) * r + half;
+        const cu = Math.min(GRID - 0.5, Math.max(-0.5, u));
+        const cv = Math.min(GRID - 0.5, Math.max(-0.5, v));
+        if (Math.hypot(u - cu, v - cv) < CACH_HOP) continue;
+        soMau += 1;
+        const h = terrain.nenKho(u, v);
+        if (h > caoNhat) caoNhat = h;
+      }
     }
-    const lo = Math.min(...rim); const hi = Math.max(...rim);
-    assert.ok(hi > 0.02, `kỷ ${era}: vùng ngoài không hề thấp hơn cao nguyên`);
-    assert.ok(
-      hi - lo > 0.05,
-      `kỷ ${era}: mức tụt ở rìa gần như không đổi (${lo.toFixed(3)}..${hi.toFixed(3)}) — ranh giới `
-      + 'đang là một hình vuông đều tăm tắp, đúng thứ làm cảnh đọc ra bàn cờ',
-    );
+    assert.equal(soMau, 888, `kỷ ${era}: số mẫu vành đồng bằng đã đổi — kiểm lại phép lọc`);
+    bien.push(caoNhat - nenPho);
+    if (!(caoNhat > nenPho)) treo.push(era);
+
+    // (b) độ trải cao độ trên MỘT vòng tròn — mép đều tăm tắp thì gần 0.
+    // ⚠️ BÁN KÍNH 10 CHỨ KHÔNG PHẢI 7,5, VÀ ĐÓ LÀ MỘT PHÉP ĐO CHỨ KHÔNG PHẢI MỘT LỰA CHỌN. Phải hỏi
+    // ở chỗ dải hoà ĐANG diễn ra: bề rộng danh nghĩa là `APRON_CELLS` 7,5 ô kể từ mép hộp (5,5),
+    // nên giữa dải rơi vào khoảng 9–10. Hỏi ở 6,5 (mới ra khỏi hộp 1 ô) thì ba kỷ có nền phố phẳng
+    // ở rìa (4 · 9 · 14) ra 0,007–0,014 — đúng, vì ở đó dải hoà **chưa bắt đầu**, chứ không phải vì
+    // mép vuông. Hỏi sai chỗ thì phép đo kêu oan, và một cảnh báo kêu oan còn tệ hơn không có
+    // (`TECH_DEBT #52`). Đo thật ở bán kính 10 trên 15 kỷ: thấp nhất 0,299 (kỷ 14) — ngưỡng 0,25
+    // để lại 20% biên, và nó nằm giữa hai đầu ĐO ĐƯỢC (xem đối chứng ngay dưới, ra đúng 0,000).
+    const vong = [];
+    for (let i = 0; i < 96; i += 1) {
+      const a = (i / 96) * Math.PI * 2;
+      vong.push(terrain.nenKho(Math.cos(a) * 10 + half, Math.sin(a) * 10 + half));
+    }
+    const trai = Math.max(...vong) - Math.min(...vong);
+    assert.ok(trai > 0.25,
+      `kỷ ${era}: trên một vòng tròn bán kính 10 ô, cao độ chỉ trải ${trai.toFixed(3)} — mép vùng `
+      + 'bằng đang là một hình đều tăm tắp, đúng thứ làm mắt đọc ra một cái khay.');
   }
+  // ⚠️ DANH SÁCH MIỄN PHẢI ĐẾM ĐƯỢC, KHÔNG PHẢI MỘT NGƯỠNG NỚI RỘNG (bài học `TECH_DEBT #44`).
+  // Đỏ CẢ HAI CHIỀU: thêm một kỷ vào danh sách ⇒ đỏ (cái bệ đang lan ra); sửa xong một kỷ trong
+  // danh sách ⇒ cũng đỏ (phải xoá nó khỏi đây). **Hôm nay danh sách RỖNG** — cả 15 kỷ đều có chỗ
+  // đồng bằng cao hơn nền phố, tức không kỷ nào là mặt bàn xét theo cột này.
+  //
+  // ⚠️ NHƯNG ĐỌC CHO ĐÚNG ĐỘ MẠNH CỦA NÓ: đây là một phép thử BOOLEAN, và biên của nó rất khác nhau
+  // giữa các kỷ. Đo thật (đơn vị thế giới; một căn nhà cao 1,5–3):
+  //   kỷ 8 = 0,378 · 7 = 0,255 · 15 = 0,218 · 13 = 0,182 · 10 = 0,126 · 5 = 0,108 · 4 = 0,104
+  //   · 2 = 0,085 · 3 = 0,073 · 11 = 0,072 · 6 = 0,062 · 12 = 0,054 · 9 = 0,036 · 1 = 0,023
+  //   · **kỷ 14 = 0,0099** ← mỏng nhất, và nó mỏng vì `terraces: 1, relief: 0, tilt: 0` (Marina Bay
+  //     là đất lấn biển, người san phẳng tuyệt đối) nên đồng bằng chỉ hơn nền phố đúng phần gợn
+  //     vượt quá `APRON_DROP`. Con số ấy DƯỚI ngưỡng nhìn thấy; kỷ 14 vượt cột này về mặt toán học
+  //     nhưng cột này KHÔNG kết luận được cho nó — cổng mắt (bảng 15 dòng) mới kết luận.
+  // Không đặt thêm một ngưỡng "phải nhô ≥ X" ở đây: chưa có phép hiệu chuẩn nào cho *"cao bao nhiêu
+  // thì mắt đọc ra"* theo đơn vị thế giới, và bịa một ngưỡng chưa hiệu chuẩn đúng là cái phễu
+  // Phase 9A. Ghi số ra để phiên sau theo dõi biên, chứ không cắm ngưỡng.
+  assert.deepEqual(treo, [],
+    `kỷ ${treo.join(',')} có đồng bằng KHÔNG chỗ nào cao hơn nền phố — thành phố đang ngồi TRÊN một `
+    + 'cái bệ ở kỷ đó (§0 lệnh Đàm 2026-08-21). Xem bảng biên trong chú thích ngay trên assert này.');
+  assert.equal(bien.length, ERAS.length);
+
+  // ⚠️ ĐỐI CHỨNG NHỐT THẾ GIỚI CŨ (bài học Phase 9A: một ngưỡng không có đối chứng sẽ bị nới dần
+  // cho tiện). Dựng lại ĐÚNG hình dạng trước bản vá — hoà về hằng số `-0,62` trong 2,6 ô rồi phẳng
+  // tuyệt đối từ 3,4 ô trở ra — rồi đòi phép đo (b) phải BẮT ĐƯỢC nó. Ở bán kính 10 thì thế giới
+  // cũ phẳng lì, độ trải đúng 0,000, và mọi kỷ đều trượt ngưỡng 0,25.
+  const cu = (u, v) => {
+    const cu2 = Math.min(11.5, Math.max(-0.5, u));
+    const cv2 = Math.min(11.5, Math.max(-0.5, v));
+    const outside = Math.hypot(u - cu2, v - cv2);
+    if (outside <= 0) return 0;
+    const t = Math.min(1, outside / 2.6);
+    return -0.62 * (t * t * (3 - 2 * t));
+  };
+  const vongCu = [];
+  for (let i = 0; i < 96; i += 1) {
+    const a = (i / 96) * Math.PI * 2;
+    vongCu.push(cu(Math.cos(a) * 10 + 5.5, Math.sin(a) * 10 + 5.5));
+  }
+  const traiCu = Math.max(...vongCu) - Math.min(...vongCu);
+  assert.ok(traiCu <= 0.25,
+    `đối chứng: thế giới TRƯỚC bản vá phải TRƯỢT ngưỡng, mà nó ra ${traiCu.toFixed(3)} — phép đo `
+    + '(b) đã mất răng, nó không còn phân biệt được mép méo với mép đều.');
+
+  // …và ĐỐI CHỨNG CHO CẢ VẾ (a): trong thế giới cũ, mọi điểm cách hộp ≥ 1,5 ô đều nằm ở
+  // −0,62 × smoothstep(1,5/2,6) = −0,392, tức THẤP HƠN nền phố của MỌI kỷ (nền phố ≥ 0). Nghĩa là
+  // vế (a) phải kêu ĐỦ CẢ 15 KỶ nếu ai đó khôi phục hình dạng cũ. Không có vế này thì
+  // `deepEqual(treo, [])` chỉ chứng minh "hôm nay không kỷ nào trượt", chứ không chứng minh phép đo
+  // còn bắt được cái bệ.
+  const treoCu = [];
+  for (const era of ERAS) {
+    const terrain = buildTerrain({ era, gridSize: GRID });
+    let tongPho = 0;
+    for (let y = 0; y < GRID; y += 1) for (let x = 0; x < GRID; x += 1) tongPho += terrain.heightAt(x, y);
+    const nenPho = tongPho / (GRID * GRID);
+    let caoNhat = -Infinity;
+    for (let r = 6; r <= 10; r += 0.25) {
+      for (let i = 0; i < 128; i += 1) {
+        const a = (i / 128) * Math.PI * 2;
+        const u = Math.cos(a) * r + 5.5;
+        const v = Math.sin(a) * r + 5.5;
+        const cu2 = Math.min(11.5, Math.max(-0.5, u));
+        const cv2 = Math.min(11.5, Math.max(-0.5, v));
+        if (Math.hypot(u - cu2, v - cv2) < CACH_HOP) continue;
+        const h = cu(u, v);
+        if (h > caoNhat) caoNhat = h;
+      }
+    }
+    if (!(caoNhat > nenPho)) treoCu.push(era);
+  }
+  assert.deepEqual(treoCu, ERAS,
+    `đối chứng: thế giới TRƯỚC bản vá phải làm vế (a) kêu ĐỦ 15 kỷ, mà nó chỉ kêu `
+    + `[${treoCu.join(',')}] — vế (a) đã mất răng.`);
 });
 
 test('`tintAt` phải TẤT ĐỊNH, nằm trong 0..1, và đổi theo cả hai trục', () => {
@@ -734,6 +888,16 @@ test('KHUÔN không được phụ thuộc tiến độ chơi (ADR-007)', () => 
 // ═══════════════════════════════════════════════════════════════════════════════
 // HAI BẢNG KHÔNG ĐƯỢC TRÔI KHỎI NHAU: `drain` (đất thấp về đâu) ↔ `side` (nước ở đâu)
 // ═══════════════════════════════════════════════════════════════════════════════
+//
+// ⚠️ NHẮC CHO PHIÊN SAU — ĐÂY LÀ CHỖ THỨ **BA** của cùng một hình dạng bài test: *"hai bảng độc
+// lập phải khớp nhau về một TRƯỜNG GIÁ TRỊ"*. Ba chỗ hiện có:
+//   1. `src/engine/craftProgress.test.js`  — `BLUEPRINT_META` ↔ `BUILDING_EFFECTS` · `sessionsToComplete`
+//   2. `src/engine/city3d/settingStyle.test.js` — bảng địa thế ↔ `ERA_STYLES` · khoá kỷ + `country`
+//   3. chỗ này                              — `ERA_TERRAIN.drain` ↔ `settingStyle.side`
+// Đàm đã chốt (2026-08-21): **CHƯA gom thành một hàm dùng chung** — ba bản chép tay rẻ hơn một
+// trừu tượng chưa được chứng minh, và mỗi bài ở đây còn mang một câu chuyện riêng mà một hàm gộp
+// sẽ nuốt mất. **Khi cái thứ TƯ xuất hiện thì gom cả bốn NGAY TRONG COMMIT sinh ra cái thứ tư** —
+// đừng gom trước, và cũng đừng để nó thành cái thứ năm rồi mới nhớ ra.
 
 test('NƯỚC NẰM Ở CHỖ THẤP — `drain` của mỗi kỷ phải TRÙNG `side` mà `settingStyle` khai', () => {
   // ⚠️ ĐÂY LÀ BÀI HỌC ĐẮT NHẤT CỦA §1(B), VÀ NÓ LỘ RA SAU KHI MỌI CON SỐ ĐỀU ĐÃ XANH.
@@ -790,6 +954,7 @@ test('VÀNH ĐẤT KHÔNG BAO GIỜ CHẠM MẶT NƯỚC — biên độ lượn
   // THỬ-CHO-ĐỎ: đổi `nenRoll` thành `(tho) => tho` (bỏ bão hoà) ⇒ đỏ ở bài bất biến (3) của
   // `setting.test.js`; đổi `ROLL_HEADROOM_SHARE` lên 1,2 ⇒ đỏ ở assert đầu bài này.
   const bienDo = bienDoRollNgoai();
+  const bienDoLen = bienDoRollLen();
   assert.ok(bienDo < WATER_DROP_BELOW_PLAIN,
     `biên độ lượn ${bienDo} phải NHỎ HƠN khoảng hở tới mặt nước ${WATER_DROP_BELOW_PLAIN}, nếu `
     + 'không thì vành đất khô có thể chui xuống dưới mặt nước.');
@@ -800,9 +965,21 @@ test('VÀNH ĐẤT KHÔNG BAO GIỜ CHẠM MẶT NƯỚC — biên độ lượn
   // ⚠️ `<=` CHỨ KHÔNG PHẢI `<`: `tanh` tiệm cận 1 nên ở độ lệch lớn nó CHẠM biên trong số dấu phẩy
   // động (tanh(5/0,21) = 1,0 tròn). Thứ phải bảo đảm là KHÔNG VƯỢT, và khoảng hở thật tới mặt nước
   // là `WATER_DROP_BELOW_PLAIN − bienDo = 0,09` — đã assert ở trên.
+  // ⚠️ HAI BIÊN ĐỘ, KHÔNG PHẢI MỘT (2026-08-21). Cái trần này tồn tại vì MỘT lý do: đất khô không
+  // được chui xuống dưới mặt nước — một ràng buộc **chỉ nói về chiều XUỐNG**. Bản cũ áp nó cho cả
+  // hai chiều, và cái kẹp thừa ấy chính là thứ giữ cho đồng bằng vĩnh viễn nằm dưới nền phố, tức
+  // giữ cho cái bệ tồn tại. Đây là bẫy Phase 7D ở dạng ngược: một ràng buộc MỘT PHÍA bị viết thành
+  // một cái kẹp HAI PHÍA.
+  // THỬ-CHO-ĐỎ: cho `bienDoRollLen` trả về `bienDoRollNgoai()` ⇒ ĐỎ ở assert `bienDoLen > bienDo`
+  // ngay dưới, và kéo theo đỏ ở bài `THÀNH PHỐ NẰM TRONG ĐỒNG BẰNG` (12 kỷ tụt xuống còn 0).
+  assert.ok(bienDoLen > bienDo,
+    `biên độ lượn LÊN (${bienDoLen}) phải rộng hơn biên độ lượn XUỐNG (${bienDo}) — chỉ chiều `
+    + 'xuống mới bị mặt nước chặn.');
   for (const tho of [0.5, 1, 5, 50]) {
-    assert.ok(Math.abs(nenRoll(tho)) <= bienDo + 1e-12,
-      `nén ${tho} ra ${nenRoll(tho)} — phải luôn nằm TRONG biên độ ${bienDo}`);
+    assert.ok(nenRoll(tho) <= bienDoLen + 1e-12,
+      `nén ${tho} ra ${nenRoll(tho)} — chiều LÊN phải nằm trong ${bienDoLen}`);
+    assert.ok(nenRoll(-tho) >= -bienDo - 1e-12,
+      `nén ${-tho} ra ${nenRoll(-tho)} — chiều XUỐNG phải nằm trong ${bienDo} (mặt nước!)`);
   }
   const mau = [-1, -0.4, -0.2, 0, 0.2, 0.4, 1];
   for (let i = 1; i < mau.length; i += 1) {

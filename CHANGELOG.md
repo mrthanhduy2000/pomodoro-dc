@@ -12,6 +12,42 @@
 
 ---
 
+## 2026-08-21 — Xoá **cái bệ**: thành phố nằm TRONG đồng bằng, không ngồi TRÊN nó (ADR-046, ADR-047)
+
+**Mục đích.** Đàm bác ba vòng liên tiếp, vòng cuối bác cả 15 kỷ: *"VẪN CÒN CÁI BỆ."* Anh cũng chỉ
+ra chỉ thị trước đó của cố vấn (*"trong lưới thoải, ngoài lưới gồ ghề"*) **chính là định nghĩa của
+một cái bệ** — *"Không phải thực thi sai; chỉ thị sai."*
+
+**Phạm vi.** Sửa: `src/engine/city3d/terrain.js` (4 hằng số + `nenKho`/`dongBangKho`/`beRongHoa`
+thay `surfaceHeightAt` cũ + `nenRoll` bão hoà không đối xứng), `src/engine/city3d/horizon.js` (nền
+đọc thẳng `terrain.nenKho`), `src/components/city/render3d/terrainMesh.js` (thứ tự tầng màu),
+`src/components/city/render3d/sceneGraph.js` (đổi tên hằng số). Công cụ mới:
+`scripts/plateau-score.mjs`; vá `scripts/sweep-score.mjs`. Test mới: `scripts/sceneTriCross.test.js`
+(đối chiếu chéo `scene-tri` ↔ `plinth-tri`, chạy ở lượt hai của `npm test`).
+**Không** thêm lệnh vẽ, **không** thêm vật liệu, **không** thêm nguồn sáng.
+
+**Cách chữa (một câu).** Phép đo cũ đi tìm một cái **BẬC**, mà cái bệ là một **KIỂU PHÂN BỐ ĐỘ
+DỐC** — nên nó về mặt cấu trúc không thể thấy thứ Đàm thấy. Đo bằng đại lượng đúng (dốc vành ngoài
+÷ dốc vành trong) thì ba nguồn lộ ra, và cả ba đều là *một hằng số được chọn ĐỂ LÀM RA cái bệ*:
+vùng bằng rộng 2,6 ô (nay **7,5 ô, thất thường 2,85–12,15 tuỳ hướng**), `APRON_DROP` 0,62 khai
+thẳng một bậc (nay **0,18**, trong khi 11/15 kỷ có địa hình nội thành thấp hơn 0,62), và một phép
+`settle` ép mọi kỷ về **cùng một mặt phẳng ở cùng một bán kính** (nay **xoá hẳn**).
+
+**Ảnh hưởng.** Cổng chính là **mắt**: 15 ảnh kéo xa (`--zoom 2`), **15/15 kỷ không còn đọc ra một
+mặt bàn vuông**. Chỉ số bệ (`plateau-score.mjs`): trước **10/15 kỷ ≥ 5**, tệ nhất 26,98. Bản quét
+15 kỷ × 6 chặng vẫn qua cổng không-trôi và còn nhích lên: cặp chặng gần nhất **15,16 → 16,27**,
+cặp kỷ gần nhất **22,22 → 22,13**, trung vị **39,81 → 39,35**, 0/15 và 0/105 dưới ngưỡng mắt.
+Kèm một bản vá màu (ADR-047): phép hoà ra màu vùng ngoài đứng CUỐI nên nó **xoá** vết loang và
+sườn lộ đất ở đúng rìa tấm đất, đẻ ra một đường viền vuông sắc lẹm (trung vị **20–36**/255 ở cả 15
+kỷ, ngưỡng mắt 12); chuyển nó lên giữa tầng 1 và tầng 2 ⇒ còn **~6**.
+
+**Tương thích.** ADR-007 nguyên vẹn — trong lưới, cao độ **không đổi một chữ số**, nhà cũ không
+nhích một phân. Hằng số `APRON_EDGE` đổi tên thành `PLATE_PAD_CELLS` (chỉ dùng nội bộ tầng 3D,
+không có dữ liệu người dùng nào tham chiếu). `npm test` nay chạy **hai lượt**: `test:fast` (số bài
+thật nằm ở dòng cuối lượt này) rồi `test:cross` (~70 giây, tự in thời gian chạy).
+
+---
+
 ## 2026-08-20 — Đất thôi "nhàu": nhiễu bẻ cong level set, mỗi kỷ có một hướng thấp (ADR-045)
 
 **Mục đích.** Đàm nhìn ảnh thu nhỏ và nói mặt đất *"lòi lõm như tấm chăn nhàu"*, và chốt thứ tự

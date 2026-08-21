@@ -6,7 +6,55 @@
 > chọn: `ARCHITECTURE_DECISIONS.md`. Nợ kỹ thuật: `TECH_DEBT.md`. Migration: `MIGRATION.md`. Tóm
 > tắt theo mốc: `CHANGELOG.md`.
 > **NGUYÊN TẮC ƯU TIÊN SỐ 1:** (1) mọi phiên AI phải đọc file này + `CLAUDE.md` + các file liên quan TRƯỚC khi làm; (2) sau MỌI cập nhật dù nhỏ, phải cập nhật ngay file này + `CLAUDE.md` + các file liên quan khác.
-> Cập nhật lần cuối: **2026-08-21** — **VÁ HỒI QUY HIỆU NĂNG 1,7 LẦN DO CHÍNH BẢN "XOÁ CÁI BỆ" GÂY RA (ADR-048). `npm test` 860 → 278 giây, và KHÔNG ĐỔI MỘT CON SỐ NÀO.**
+> Cập nhật lần cuối: **2026-08-21** — **PHASE 13 §2–§3: ĐO MỐC NỀN, VÀ HAI ĐIỀU KIỆN DỪNG CỦA ĐÀM ĐÃ KÍCH HOẠT ĐÚNG NHƯ DỰ PHÒNG.** Chưa sửa một dòng mã sản phẩm nào của thành phố.
+>
+> ## ⚠️ PHASE 13 — DỪNG THEO ĐÚNG §7(a) VÀ §7(b), KHÔNG PHẢI VÌ BẾ TẮC
+>
+> Đàm ra §7: *"Làm liên tục, không hỏi lại… DỪNG chỉ khi (a) phép kiểm hình-chiếu-đáy cho thấy khu
+> giữ chỗ phải lớn hơn 1 ô… (b) (M2) không hiệu chuẩn được về một mức sàn vừa cho ra đúng 1 dải ở
+> mốc nền vừa không phải một cái phễu…"*. **Cả hai đã xảy ra**, và cả hai đều được phát hiện đúng
+> bằng cái phép kiểm mà chính Đàm bắt phải làm TRƯỚC khi viết mã. Chi tiết: `TECH_DEBT #71` và `#72`.
+>
+> - **§7(a) — VIỆC A đổi tính chất.** Khu 3×3 quanh kỳ quan **không** giữ chỗ cho một Ô, nó giữ chỗ
+>   cho **HÌNH CHIẾU ĐÁY**: **225/225** lượt công trình có hình chiếu tràn ra ngoài ô neo, xa nhất
+>   **1,271 ô** (thành quan Việt, kỷ 6). Thu về 5 ô neo sẽ để nhà dân cắm vào kỳ quan với mức chồng
+>   lấn **1,5025 ô² = 2,14×** ca xấu nhất thế giới hôm nay đã chấp nhận. Số ô giải phóng được, tính
+>   lại bằng luật suy TỪ hình chiếu: **12,2 ô/kỷ**, KHÔNG phải 40.
+> - **§7(b) — (M2) không có răng.** Mốc nền đạt **15/15 kỷ ≥3 dải ở MỌI mức sàn từ 0,5% tới 20%**,
+>   trong khi mục tiêu đặt ra là "≥3 dải ở ≥12/15 kỷ". Không tồn tại mức sàn nào cho ra 1 dải. Đã đề
+>   xuất phép đo thay thế, mốc nền **0/446**, không mua được bằng cách thêm cây.
+>
+> ### Bài học 1 — TÔI ĐO TRẦN CỦA CÁI NÚM, KHÔNG PHẢI TRẦN CỦA TRỤC (Đàm yêu cầu ghi lại)
+>
+> Đo trần của trục (B) "mật độ trong lưới", tôi nâng `ERA_DENSITY` lên 1,0 và báo **+1,11 đpt** là
+> trần của trục ấy. Sai: `ERA_DENSITY` chỉ nhân với `DWELLING_PLOT_COUNT`, mà con số ấy được tính
+> **sau khi đã loại 45 ô khu kỳ quan**. Vặn cái núm tới kịch cũng không chạm được vào 40 ô bị giữ
+> chỗ vĩnh viễn — tức tôi đo trần của một cái NÚM rồi gọi nó là trần của một cái TRỤC.
+> ⇒ **Trước khi báo "trục này chỉ được tới đây", hỏi: cái tôi vừa vặn có chạm tới MỌI thứ giới hạn
+> trục ấy không, hay chỉ tới một trong số đó?** Cách kiểm rẻ: đọc công thức của đại lượng vừa vặn
+> rồi tìm xem có thừa số nào bị tính từ TRƯỚC, nằm ngoài tầm với của cái núm.
+>
+> ### Bài học 2 — DỰNG LẠI MỘT CÔNG CỤ TỪ TRÍ NHỚ LÀ DỰNG LẠI CẢ NHỮNG PHIÊN BẢN **SAI** CỦA NÓ
+>
+> Giữa phiên, kho mã và toàn bộ thư mục nháp bị khôi phục về một ảnh chụp cũ hơn (`git fetch` xác
+> nhận hai commit `19305ab` + `d72c033` vẫn còn trên GitHub — không mất gì, chỉ là cây làm việc bị
+> lùi 2 commit và mọi công cụ nháp biến mất). Dựng lại `the-gioi.mjs` từ trí nhớ, tôi viết
+> `u0 = -0,5 - padSteps × du` và ra "tấm đất cạnh 20,00 ô, 64,0% ngoài lưới" — rồi **suýt ghi nó vào
+> báo cáo như một ĐÍNH CHÍNH** cho con số cũ 19,00 / 60,1%. Sự thật ngược lại: con số cũ đúng, và
+> cái `-0,5` kia là **một lỗi mã sản phẩm đã sửa xong từ lâu**, có hẳn 8 dòng chú thích giải thích
+> ngay phía trên dòng ấy (`terrainMesh.js:312-318`).
+> ⇒ Nguy hiểm gấp đôi vì nó **sai theo hướng TỰ TIN**: một "đính chính" nghe như bằng chứng của sự
+> cẩn thận. Cách chặn đã cắm vào chính công cụ ấy: **một phép đối chiếu chéo bắt buộc** — cùng một
+> đại lượng suy bằng hai đường độc lập (`terrainSurfaceReach()` đo từ tâm ↔ lưới đỉnh dựng từ
+> `u0`/`steps`), `throw` nếu lệch. Nếu chỉ có MỘT phép đo thì không có gì để cãi nhau, tức không có
+> gì để phát hiện.
+>
+> ### Bài học 3 — MỘT PHÉP CHIA-TOÀN-THỂ PHẢI IN RA TỔNG, VÀ LẦN NÀY NÓ BẮT ĐƯỢC LỖI TRONG 5 GIÂY
+>
+> Bảng 9 lớp mặt nạ gộp lại ra **89–98%**, không phải 100%. Nguyên nhân tầm thường: tôi quên mất lớp
+> `road` trong danh sách gộp. Không có luật "in tổng và đòi 100%" thì bảng thiếu 7,45 điểm phần trăm
+> ấy đã đi thẳng vào báo cáo, và mọi con số (M1) sẽ thấp hơn sự thật một cách có hệ thống.
+
 >
 > ## ⚠️ CHÍNH BẢN VÁ VỪA SHIP ĐÃ MANG THEO MỘT HỒI QUY 1,7 LẦN, VÀ KHÔNG CỔNG NÀO ĐỎ (ADR-048)
 >
@@ -1277,6 +1325,29 @@
 - **Lịch sử git `main` từng bị xáo** (thao tác git song song): bản đang chạy là `eb44638` — chứa ĐỦ mọi việc gần đây (Hỏi Coach offline + fix đêm khuya + Coach offline analyst). Vài commit cũ (`1e27505`, `9fbcd62`) thành dangling, KHÔNG còn trong `git log` nhưng code vẫn nằm trong bản deploy. Đừng hoảng nếu không thấy chúng.
 
 ## 🗒️ Nhật ký cập nhật
+
+### 2026-08-21 — Phase 13 §2–§3: đo mốc nền «quy mô», hai điều kiện DỪNG kích hoạt
+
+**Không sửa một dòng mã sản phẩm nào của thành phố 3D.** Chỉ thêm công cụ đo + test + tài liệu.
+
+- **`scripts/mask-count.mjs`** — thêm `countBands(pixels, width, height, bands)` và cờ CLI
+  `--bands N`. Một công cụ, không phải công cụ thứ hai (luật "một luật một công thức": cặp
+  công-cụ-dựng ↔ công-cụ-đo đã nói dối một lần ở Phase 4G). Kèm vá một lỗi nhỏ: `--bands 6` có
+  GIÁ TRỊ đi kèm mà bộ lọc tham số cũ lọc theo tiền tố `--`, nên số `6` sẽ lọt vào danh sách TÊN
+  LỚP và làm nhãn lệch một nấc trong im lặng.
+- **`scripts/maskCount.test.js`** (MỚI, 5 bài) — chuyển phép tự kiểm chia dải từ `--selftest`
+  (chỉ chạy khi có người NHỚ gõ) thành một cổng chạy trong `npm test`. Bốn phép phá đã thử: dải
+  dùng chiều cao cố định · lệch chỉ số một nấc · bỏ cổng kiểm số dải · mọi dải đếm cả ảnh — **cả
+  bốn đỏ đúng bài đã nêu trước khi chạy**, khôi phục xong xanh lại.
+- **`PERFORMANCE.md`** — mục "Phase 13 §2" với mốc nền (M1) = **36,84%**, hồ sơ 6 dải của (M2),
+  phép kiểm chiều sâu bằng `horizon`/`ground-grid`, và ghi lại con số tôi tự sửa lại của chính mình.
+- **`TECH_DEBT.md`** — **MỞ #71** (khu 3×3 giữ chỗ cho hình chiếu, không cho một ô), **#72** ((M2)
+  không có răng + phương án thay thế), **#73** (camera buộc cứng vào `gridSize`, Low, cố ý hoãn
+  theo đúng chỉ thị §5 của Đàm).
+- **Cổng**: `npm test` **973 bài · 972 pass · 1 skip · 0 fail** · `test:cross` 3/3 · `npm run lint`
+  sạch · `npm run build` xanh.
+- **CHƯA làm** (chờ Đàm quyết): VIỆC A (thu khu giữ chỗ) và VIỆC B (`hinterlandStyle.js`).
+
 
 ### 2026-08-21 — Nhớ lại giá trị nút lưới nhiễu: vá hồi quy hiệu năng do chính ADR-046 (ADR-048)
 

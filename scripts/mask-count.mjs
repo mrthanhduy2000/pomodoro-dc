@@ -60,6 +60,31 @@ export function countChannels(pixels) {
   return out;
 }
 
+/**
+ * ĐẾM THEO DẢI NGANG — dùng cho phép đo (M2) "dấu vết con người trải tới mấy tầng chiều sâu".
+ *
+ * ⚠️ DẢI TRÊN MÀN HÌNH KHÔNG PHẢI CHIỀU SÂU THẾ GIỚI, và đây là chỗ dễ nói dối nhất của phép đo
+ * này. Camera ngẩng 34,4° và mặt đất có cao độ, nên quan hệ hàng-ảnh ↔ chiều sâu là ĐƠN ĐIỆU
+ * nhưng KHÔNG tuyến tính: một dải ở gần đỉnh khung phủ nhiều ô thế giới hơn một dải ở đáy. Vì
+ * vậy con số này chỉ được đọc là *"dấu vết con người có mặt ở mấy tầng khác nhau của khung hình"*,
+ * KHÔNG được đọc là *"trải xa bao nhiêu ô"*. Tính đơn điệu ấy phải được ĐO trên ảnh thật (xem
+ * `--selftest-sau` ở `scripts/band-depth.mjs`), không được suy từ lý lẽ.
+ *
+ * Trả về mảng N phần tử, mỗi phần tử là kết quả `countChannels` của riêng dải ấy.
+ */
+export function countBands(pixels, width, height, bands) {
+  if (!Number.isInteger(bands) || bands < 1) throw new Error('số dải phải là số nguyên ≥ 1');
+  const out = [];
+  for (let b = 0; b < bands; b += 1) {
+    // ⚠️ Mốc chia phải suy từ CÙNG một công thức cho cả hai đầu, nếu không dải cuối sẽ hụt hoặc
+    // thừa vài hàng và tổng các dải không bằng cả khung — một sai lệch im lặng.
+    const y0 = Math.floor((b * height) / bands);
+    const y1 = Math.floor(((b + 1) * height) / bands);
+    out.push(countChannels(pixels.subarray(y0 * width * 4, y1 * width * 4)));
+  }
+  return out;
+}
+
 function selftest() {
   // Bốn điểm ảnh, mỗi lớp một cái: đỏ · lục · lam · đen.
   const px = new Uint8Array([255, 0, 0, 255, 0, 255, 0, 255, 0, 0, 255, 255, 0, 0, 0, 255]);
@@ -90,14 +115,42 @@ function selftest() {
   // thường, nếu không nó sẽ nuốt oan cả một dải màu tối của cảnh.
   const cl = countChannels(new Uint8Array([1, 2, 4, 255]));
   if (cl.ngoai !== 0 || cl.nen !== 1) throw new Error('selftest hỏng: màu gần-mốc bị loại oan');
-  console.log('✓ selftest: tách đúng 3 kênh + nền, kể cả khi hai kênh cùng độ sáng; nền trang bị loại khỏi mẫu số');
+
+  // ── ĐỐI CHỨNG DẢI NGANG ────────────────────────────────────────────────────────────────────
+  // Ảnh 2×6: đặt MỘT điểm ảnh đỏ ở hàng 4. Chia 6 dải ⇒ nó PHẢI rơi vào dải thứ 5 (chỉ số 4).
+  // ⚠️ Đây là phép kiểm SỐ HỌC của việc chia dải. Nó KHÔNG chứng minh dải trên màn hình tương
+  // ứng chiều sâu thế giới — đại lượng ấy phải đo trên ảnh render thật (`scripts/band-depth.mjs`).
+  // Ghi rõ ranh giới ấy ra đây, vì "tự kiểm xanh" rất dễ bị đọc thành "cả phép đo đã được bảo chứng".
+  {
+    const W = 2, H = 6;
+    const px = new Uint8Array(W * H * 4);
+    for (let i = 0; i < W * H; i += 1) px[i * 4 + 3] = 255;   // đen tuyền, alpha đủ
+    px[(4 * W + 0) * 4] = 255;                                 // hàng 4, cột 0 → đỏ
+    const bs = countBands(px, W, H, 6);
+    if (bs.length !== 6) throw new Error('selftest hỏng: sai số dải');
+    const coDo = bs.map((b) => b.do);
+    if (JSON.stringify(coDo) !== JSON.stringify([0, 0, 0, 0, 1, 0])) {
+      throw new Error(`selftest hỏng: điểm ảnh hàng 4 rơi nhầm dải — ${JSON.stringify(coDo)}`);
+    }
+    // Tổng các dải phải bằng đúng cả khung: không hàng nào bị bỏ, không hàng nào bị đếm hai lần.
+    const tongDai = bs.reduce((s2, b) => s2 + b.tong, 0);
+    if (tongDai !== countChannels(px).tong) throw new Error('selftest hỏng: các dải không phủ kín khung');
+    // Và số dải KHÔNG chia hết chiều cao cũng phải phủ kín (6 hàng / 4 dải).
+    const bs4 = countBands(px, W, H, 4);
+    if (bs4.reduce((s2, b) => s2 + b.tong, 0) !== W * H) throw new Error('selftest hỏng: 4 dải trên 6 hàng bị hụt');
+  }
+  console.log('✓ selftest: tách đúng 3 kênh + nền, kể cả khi hai kênh cùng độ sáng; nền trang bị loại khỏi mẫu số; chia dải ngang phủ kín khung');
 }
 
 function main() {
   const argv = process.argv.slice(2);
   if (argv.includes('--selftest')) { selftest(); process.exit(0); }
 
-  const [file, ...names] = argv.filter((a) => !a.startsWith('--'));
+  // ⚠️ `--bands 6` có một GIÁ TRỊ đi kèm, và giá trị ấy không bắt đầu bằng `--`. Lọc thô theo
+  // tiền tố sẽ nhét số 6 vào danh sách TÊN LỚP, làm nhãn lệch một nấc mà không có gì đỏ lên.
+  const CO_GIA_TRI = new Set(['--bands']);
+  const tuDo = argv.filter((a, i) => !a.startsWith('--') && !CO_GIA_TRI.has(argv[i - 1]));
+  const [file, ...names] = tuDo;
   if (!file) {
     console.error('Dùng: node scripts/mask-count.mjs <ảnh.png> [tên-đỏ tên-lục tên-lam]');
     process.exit(1);
@@ -122,6 +175,22 @@ function main() {
   console.log(`  ${nhan[1].padEnd(12)} ${pct(c.luc)}%`);
   console.log(`  ${nhan[2].padEnd(12)} ${pct(c.lam)}%`);
   console.log(`  ${'(nền/khác)'.padEnd(12)} ${pct(c.nen)}%`);
+
+  // ── (M2) CHIA DẢI NGANG ────────────────────────────────────────────────────────────────────
+  // `--bands N` in thêm bảng N dải, mỗi ô là % CỦA RIÊNG DẢI ẤY (không phải % cả khung) — vì
+  // ngưỡng của (M2) phát biểu là "dải này có bao nhiêu phần trăm là dấu vết con người", nên mẫu
+  // số phải là diện tích dải. Chia cho cả khung thì dải nào cũng nhỏ và ngưỡng thành vô nghĩa.
+  const iB = argv.indexOf('--bands');
+  if (iB >= 0) {
+    const n = Number(argv[iB + 1]);
+    const bs = countBands(img.pixels, img.width, img.height, n);
+    console.log(`  ── ${n} dải ngang (dải 1 = XA nhất / trên cùng khung) · % CỦA RIÊNG DẢI ──`);
+    console.log(`     ${'dải'.padEnd(5)}${nhan[0].padStart(12)}${nhan[1].padStart(12)}${nhan[2].padStart(12)}`);
+    bs.forEach((b, i) => {
+      const p2 = (v) => (b.tong ? ((v / b.tong) * 100).toFixed(2) : '0.00').padStart(12);
+      console.log(`     ${String(i + 1).padEnd(5)}${p2(b.do)}${p2(b.luc)}${p2(b.lam)}`);
+    });
+  }
 }
 
 // ⚠️ CHẠY CLI CHỈ KHI ĐƯỢC GỌI THẲNG. Cùng khuôn với `png-probe.mjs`: nếu để mã CLI ở cấp module

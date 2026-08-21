@@ -19,7 +19,15 @@
 > bằng cách chỉnh lại con số nào. Nay còn **1 mục High** (#14) + **2 mục Medium-High** (#3, #13) +
 > **1 mục Medium-High chờ Đàm quyết** (#24) = 4 → xa ngưỡng 8–10 mục, KHÔNG cần Maintenance Sprint.
 >
-> **Cập nhật 2026-08-21 (ADR-048, «nhớ giá trị nút lưới nhiễu» — MỚI NHẤT)**: **MỞ #70** — không có
+> **Cập nhật 2026-08-21 (Phase 13 §2–§3, đo mốc nền — MỚI NHẤT)**: **MỞ #71** (khu 3×3 giữ chỗ cho
+> HÌNH CHIẾU chứ không cho một ô ⇒ VIỆC A giải phóng 12,2 ô/kỷ chứ không phải 40 — Medium, CHỜ ĐÀM),
+> **MỞ #72** (cổng (M2) đã đạt sẵn 15/15 ở mọi mức sàn ⇒ không có răng — Medium, CHỜ ĐÀM) và **MỞ
+> #73** (camera buộc cứng vào `gridSize` — Low, cố ý hoãn theo đúng chỉ thị §5 của Đàm). Cả ba đều
+> Medium/Low ⇒ **số mục High vẫn là 2** (#14 · #53), 0 Critical ⇒ vẫn xa ngưỡng 8–10, KHÔNG cần
+> Maintenance Sprint. ⚠️ Không mục nào được đóng bằng cách nới ngưỡng; hai mục #71 và #72 chính là
+> hai điều kiện DỪNG mà Đàm đặt sẵn trong §7, và chúng đã kích hoạt đúng như dự phòng.
+>
+> **(Mốc trước) Cập nhật 2026-08-21 (ADR-048, «nhớ giá trị nút lưới nhiễu»)**: **MỞ #70** — không có
 > cổng nào canh THỜI GIAN dựng cảnh, nên chính bản vá "xoá cái bệ" đã ship kèm một hồi quy 1,7 lần
 > trong im lặng (đã vá, xem ADR-048). Priority Medium ⇒ **số mục High vẫn là 2** (#14 · #53), 0
 > Critical ⇒ vẫn xa ngưỡng 8–10, KHÔNG cần Maintenance Sprint.
@@ -4039,3 +4047,127 @@ rỗng · đối chứng chọn họ ĐÃ CÓ · bảng 14 dòng bằng nhau + 1
 dòng · `SWEEP_MAX` 150→0 · `kieuNhaDan` trả rỗng · đối chứng dùng nhịp già thay nhịp trẻ · nới kẹp
 cấp `Math.min(3,…)` → `Math.min(9,…)` · cắt bớt danh sách cấp thử. **Cả 12 đều đỏ đúng câu assert
 đã nêu trước khi chạy.**
+
+---
+
+## #71 — Khu 3×3 quanh kỳ quan KHÔNG giữ chỗ cho một Ô, nó giữ chỗ cho HÌNH CHIẾU ĐÁY — và 225/225 công trình đều tràn ra ngoài ô neo
+
+> Mở 2026-08-21, do phép kiểm bắt buộc của §3 (Phase 13). Đây là câu trả lời cho một câu hỏi mà
+> chính Đàm bắt phải hỏi TRƯỚC khi viết mã, và câu trả lời là "không" — nên VIỆC A đổi tính chất.
+
+- **Tên**: Kích thước khu giữ chỗ chưa bao giờ được suy từ hình học, và không ai biết nó đang giữ gì
+- **Module**: `src/engine/cityGrid.js` (`BUILDING_ZONES`) · `src/engine/city3d/dwellings.js`
+  (`DWELLING_PLOTS`) · `src/engine/cityLayout.js` (`placeBuilding`)
+- **Priority**: Medium · **Severity**: Medium
+- **Impact**: Phương án "thu khu giữ chỗ về đúng 5 ô neo" — thứ được ước lượng là giải phóng **40 ô**
+  — thật ra chỉ giải phóng **12,2 ô/kỷ** (trải 5…24 ô tuỳ kỷ), vì phần lớn 40 ô kia đang bị chính
+  hình chiếu đáy của công trình chiếm.
+- **Root Cause**: `BUILDING_ZONES` khai 5 khu 3×3 = 45 ô, còn `placeBuilding` chỉ dùng khu ấy để
+  **chọn một ô neo** (`zone.x + hashPick(...)`). Không có chỗ nào trong mã nối bề rộng khu với bề
+  rộng công trình. Con số 3×3 là một lựa chọn không có phép đo đứng sau — đúng hình dạng *"một con
+  số tuyệt đối không diễn đạt được một luật nói về QUAN HỆ"* (bẫy Phase 7D): lời hứa thật là *"chừa
+  đủ chỗ cho công trình"*, mà một hằng số thì không nhìn thấy công trình.
+- **Số đo (2026-08-21, `d72c033`, kịch bản `$SP/hinhchieu*.mjs`, 15 kỷ × 3 cấp, `sessionCount: 400`)**:
+  | đại lượng | giá trị |
+  |---|---|
+  | công trình có hình chiếu VƯỢT ra ngoài ô neo | **225/225** (100%) |
+  | vượt xa nhất | **1,271 ô** — `bp_thanh_quan_viet` (kỷ 6, wonder/epic) |
+  | ĐỐI CHỨNG — chồng lấn nhà dân × công trình HÔM NAY | **29 chỗ**, lớn nhất **0,7025 ô²**, trung vị 0,0505 |
+  | nếu chỉ giữ 5 ô neo: ô mở thêm | 29,9 ô/kỷ, trong đó **17,7 ô có chồng lấn** |
+  | chồng lấn xấu nhất của ca mới | **1,5025 ô²** = **2,14×** mức xấu nhất hôm nay đã chấp nhận |
+  | nếu giữ chỗ SUY TỪ hình chiếu (giữ ô nào nhà dân sẽ chạm công trình) | mở thêm **12,2 ô/kỷ** |
+- ⚠️ **Bài học nằm ở ĐỐI CHỨNG, không ở con số chính.** Vòng 1 của phép kiểm chọn ngưỡng "chồng lấn
+  phải bằng 0" — nghe an toàn — và báo **6.036 vi phạm**. Nhưng thế giới HÔM NAY đã có **29 chỗ chồng
+  lấn** với ca xấu nhất **0,7025 ô²**, tức ngưỡng 0 là một ngưỡng mà sản phẩm đang chạy cũng trượt.
+  Không đo đối chứng thì con số 6.036 sẽ được đọc thành "phương án này hỏng nặng", trong khi câu đúng
+  là "nó tệ hơn hiện trạng **2,14 lần**". Đây là bẫy phễu Phase 9A đi theo chiều ngược: ngưỡng quá
+  CHẶT cũng nói dối, chỉ là nó gây hoảng thay vì trấn an.
+- ⚠️ **Và vòng 2 lại nói quá vì CÁI BÚT.** Đo bằng `specBounds` (hộp bao CẢ công trình) ra "hình
+  chiếu chạm 44,3 ô" — nhiều hơn cả 45 ô đang giữ. Sai vì một kỳ quan bốn tháp góc có hộp bao phủ
+  trọn khoảng giữa, nơi không có gì. Đo lại bằng **từng MẢNG một** mới ra bộ số trong bảng. Cùng
+  bài học §3a (2026-08-19): hộp bao cả công trình nói quá 4,86 đpt, hình thật từng khối chỉ 0,13.
+- **Current Risk**: Không có — hôm nay khu 3×3 đủ rộng nên không ai bị cắm nhà vào giữa kỳ quan.
+- **Future Risk**: Bất kỳ phase nào thêm loại công trình mới, hoặc nới `spread`/`massScale`, đều có
+  thể làm hình chiếu vượt khỏi khu 3×3 mà **không có gì đỏ lên** — và lúc ấy nhà dân sẽ mọc xuyên
+  qua tường kỳ quan. Đã có 2,1 ô/kỷ tràn ra ngoài khu và 20,9 ô/kỷ đạp lên ô ĐƯỜNG (đường thì
+  không kêu, vì mặt đường được vẽ dưới chân công trình).
+- **Recommended Solution**: KHÔNG thay 3×3 bằng một con số khác. Suy vùng giữ chỗ TỪ hình chiếu đáy
+  thật, đúng cách `plan-coverage.mjs` đang tô, rồi để `deriveDwellings` nhận vùng ấy thay vì hỏi
+  `isBuildingZone`. ⚠️ Hệ quả kiến trúc: tập ô nhà dân **thôi là hằng số cấp module** và trở thành
+  **phụ thuộc kỷ** — nên phải nối các ô mới vào ĐUÔI danh sách đã sắp xếp, giữ nguyên 30 chỉ số đầu,
+  nếu không mọi căn nhà hiện có của Đàm sẽ đổi chỗ.
+- **Estimated Complexity**: Medium (đụng chữ ký `deriveDwellings`, cần test khoá 30 ô đầu bất động).
+- **Blocking Conditions**: **CHỜ ĐÀM QUYẾT** — §7(a) của chỉ thị Phase 13 buộc dừng đúng ở đây.
+- **Review Trigger**: khi có phase thêm loại công trình mới, hoặc nới `spread`/`massScale`.
+- **Owner**: chưa phân công · **Status**: Open — chờ quyết định
+
+---
+
+## #72 — Phép đo (M2) «mấy tầng chiều sâu có dấu vết con người» ĐÃ ĐẠT SẴN mục tiêu trước khi làm gì cả: 15/15 kỷ, ở MỌI mức sàn thử
+
+> Mở 2026-08-21. Một cái cổng không có răng, phát hiện được vì đã làm đúng thứ tự Đàm ra: **in giá
+> trị THẬT trước, chọn ngưỡng sau**.
+
+- **Tên**: (M2) đo một đại lượng đã bão hoà, nên nó không phân biệt được trước với sau
+- **Module**: `scripts/mask-count.mjs` (`countBands`) — công cụ vẫn ĐÚNG; chỗ hỏng là ĐỊNH NGHĨA phép đo
+- **Priority**: Medium · **Severity**: Medium
+- **Impact**: Nếu dùng (M2) làm cổng nghiệm thu cho VIỆC B, cổng ấy sẽ xanh dù VIỆC B không dựng gì.
+- **Số đo (2026-08-21, `d72c033`, bản quét 15 kỷ `--sessions 80 --hour 12 --theme light`, 6 dải)**:
+  dấu vết con người theo dải (dải 1 = XA nhất), trung bình 15 kỷ:
+  **0,41 · 21,37 · 60,96 · 60,31 · 47,49 · 30,36 %**
+  | mức sàn thử | 0,5 | 1 | 2 | 3 | 5 | 8 | 10 | 15 | 20 |
+  |---|---|---|---|---|---|---|---|---|---|
+  | số dải đạt (TB) | 5,3 | 5,2 | 5,0 | 5,0 | 5,0 | 4,9 | 4,9 | 4,7 | 4,3 |
+  | số kỷ đạt ≥3 dải | **15/15** | 15/15 | 15/15 | 15/15 | 15/15 | 15/15 | 15/15 | 15/15 | **15/15** |
+  Mục tiêu Đàm đặt là *"≥3 dải ở ít nhất 12/15 kỷ"* ⇒ **mốc nền đã 15/15 ở mọi mức sàn từ 0,5% tới
+  20%**. Không có mức sàn nào cho ra "đúng 1 dải" như giả định ban đầu.
+- **Root Cause**: mẫu số của (M2) là **diện tích của chính dải ấy**, mà tấm đất thành phố phủ gần
+  hết 5/6 dải, nên dải nào chứa tấm đất thì cũng chứa dấu vết con người. (M2) đang đo *"thành phố có
+  lấp đầy giữa khung hình không"* — điều đã đúng sẵn — chứ không đo *"dấu vết con người có vươn ra XA
+  không"*. Cùng họ `TECH_DEBT #44`: mẫu số lẫn thứ không thuộc câu hỏi.
+- ⚠️ **Nhưng chính bảng ấy lại NÓI RA khuyết tật Đàm mô tả, chỉ là ở HÌNH DẠNG chứ không ở SỐ ĐẾM**:
+  hồ sơ 6 dải là một cái BƯỚU — 0,41 ở dải xa nhất, vọt lên 60,96 ở giữa, rồi tụt về 30,36 ở dải gần
+  nhất. Dấu vết con người mất hẳn ở CẢ HAI đầu chiều sâu. Đó đúng là "một hòn đảo giữa một tấm đất
+  trống", và nó đọc được từ số. Vậy nên bảng dải vẫn ĐÁNG GIỮ — **để BÁO CÁO hình dạng, không để làm
+  CỔNG**.
+- **Recommended Solution** (chờ Đàm chốt): thay cổng bằng **% khung hình là dấu vết con người NẰM
+  NGOÀI lưới 12×12**. Đã đo mốc nền: **0/446** công trình + nhà dân + giàn giáo + ô đường của cả 15
+  kỷ nằm ngoài lưới ⇒ mốc nền **bằng 0 theo cấu trúc**. Phép đo này (a) có răng thật, (b) **không
+  thể mua bằng cách thêm cây** — cây thuộc `props`/`landscape`, không thuộc dấu vết con người, đúng
+  điều Đàm cấm tuyệt đối, (c) chỉ nhúc nhích nếu VIỆC B thật sự dựng thứ gì đó ngoài lưới.
+  ⚠️ Mốc nền bằng 0 thì phải kèm **một đối chứng chứng minh phép đo CÓ THỂ thấy giá trị khác 0**,
+  nếu không nó là bài test luôn-xanh (bài học lùm cây Phase 8D).
+- **Estimated Complexity**: Low (đặt tên khối cho tầng hinterland rồi đếm bằng đúng `mask-count.mjs`).
+- **Blocking Conditions**: **CHỜ ĐÀM QUYẾT** — §7(b) buộc dừng và trình bày phương án thay thế,
+  cấm nới sàn.
+- **Review Trigger**: ngay khi VIỆC B bắt đầu.
+- **Owner**: chưa phân công · **Status**: Open — chờ quyết định
+
+---
+
+## #73 — Camera bị buộc cứng vào `CITY_GRID_SIZE`, nên "lưới to hơn" và "nhà cao hơn" TỰ TRIỆT TIÊU nhau
+
+> Mở 2026-08-21 theo đúng chỉ thị §5 (Q2) của Đàm: ghi lại, **KHÔNG tách bây giờ**.
+
+- **Tên**: `gridSize` gánh hai việc — vừa là "lưới địa chỉ rộng mấy ô", vừa là "mắt đứng lùi bao xa"
+- **Module**: `src/engine/city3d/orbit.js` (`cityOrbitOptions`)
+- **Priority**: **Low** · **Severity**: Low
+- **Impact**: Mọi phương án làm thành phố "trông rộng hơn" bằng cách nới lưới hoặc nâng `massScale`
+  đều bị camera lùi ra đúng bằng phần vừa thêm ⇒ tỉ lệ khung hình không đổi, có khi còn tệ đi.
+- **Root Cause**: `distance = gridSize × factor + terrainLift × TERRAIN_TO_DISTANCE`. Ngoài đời hai
+  đại lượng ấy không tỉ lệ với nhau: một thành phố rộng gấp đôi thì người ta **không** tự động đứng
+  lùi gấp đôi. Đây là lần thứ **năm** của hình dạng *"một trường gánh hai việc"* (sau `storyHeight`,
+  `roof`, bảng loài cây, `avenue`).
+- **Số đo (2026-08-21)**: lưới 12 → 16 làm khoảng cách camera đi **13,24 → 17,39** (kỷ 1) ·
+  14,98 → 19,62 (kỷ 8) · 16,85 → 22,47 (kỷ 14). Hệ quả đo được trên chỉ số "% khung hình là thành
+  phố": nới lưới lên 16 ra **−4,21 đpt** (đi LÙI), nâng `massScale` ×1,3 ra **−1,03 đpt** (cũng lùi).
+- **Recommended Solution**: tách `gridSize` (địa chỉ) khỏi một trường mới kiểu `viewSpan` (tầm mắt),
+  đúng khuôn `storyHeight`/`massScale` của Phase 5B.
+- ⚠️ **VÌ SAO CHƯA LÀM (Đàm chốt 2026-08-21)**: (a) không phase nào hiện nay đổi `CITY_GRID_SIZE`,
+  nên tách ra là dựng một cơ chế **không ai chạy** — đúng thứ mã chết vừa đo được ở 40 ô khu kỳ
+  quan; (b) tách xong thì cái núm còn lại duy nhất là *"đứng gần hơn"*, tức phương án **(D) siết
+  khung** mà Đàm **đã bác hai lần**; (c) chưa đủ dữ kiện để viết một ADR tử tế.
+- **Estimated Complexity**: Medium.
+- **Blocking Conditions**: không có — đây là nợ ĐƯỢC CHỌN mang, không phải nợ bị kẹt.
+- **Review Trigger**: **lần đầu tiên có một phase thật sự cần đổi `CITY_GRID_SIZE`.**
+- **Owner**: chưa phân công · **Status**: Open — cố ý hoãn

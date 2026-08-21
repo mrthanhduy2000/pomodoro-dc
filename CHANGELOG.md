@@ -12,6 +12,22 @@
 
 ---
 
+## 2026-08-21 — Phase 13 §2–§3: đo mốc nền «quy mô», hai điều kiện DỪNG kích hoạt
+
+- **Mục đích**: trước khi làm thành phố "rộng hơn, quy mô hơn", dựng cho xong hai phép đo sẽ dùng
+  để chấm việc ấy, và chạy phép kiểm bắt buộc mà chỉ thị đặt ra trước khi đụng vào mã.
+- **Phạm vi**: **KHÔNG sửa một dòng mã sản phẩm nào của thành phố 3D.** Thêm `countBands` +
+  `--bands N` vào `scripts/mask-count.mjs`; thêm `scripts/maskCount.test.js` (5 bài, 4 phép phá đều
+  đỏ đúng chỗ đã nêu trước); cập nhật `PERFORMANCE.md`, `TECH_DEBT.md`, `BAN_GIAO.md`.
+- **Kết quả đo**: mốc nền (M1) "dấu vết con người" = **36,84%** khung hình (15 kỷ). Hồ sơ chiều sâu
+  6 dải là một cái bướu **0,41 · 21,37 · 60,96 · 60,31 · 47,49 · 30,36** — dấu vết con người mất hẳn
+  ở cả hai đầu. **0/446** công trình + nhà dân + đường của cả 15 kỷ nằm ngoài lưới 12×12.
+- **Ảnh hưởng**: hai việc đã lên kế hoạch đều phải chờ quyết định — khu 3×3 quanh kỳ quan hoá ra giữ
+  chỗ cho **hình chiếu đáy** chứ không cho một ô (225/225 công trình tràn ra ngoài ô neo), và cổng
+  (M2) đã đạt sẵn 15/15 ở mọi mức sàn nên không phân biệt được trước với sau. Xem `TECH_DEBT` #71,
+  #72, #73.
+- **Tương thích**: không đổi hành vi sản phẩm, không migration, không đụng state/DB.
+
 ## 2026-08-21 — Nhớ lại giá trị nút lưới nhiễu: vá một **hồi quy hiệu năng 1,7 lần** do ADR-046 (ADR-048)
 
 **Mục đích.** Ngay sau khi ship bản "xoá cái bệ", mấy việc đo chạy nền trả về một con số không ai

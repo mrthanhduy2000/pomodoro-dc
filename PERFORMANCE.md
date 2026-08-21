@@ -1628,3 +1628,98 @@ là đại lượng sinh ra chi phí.
   phải đo lại THỜI GIAN DỰNG CẢNH** — không chỉ tam giác và lệnh vẽ. ADR-046 chứng minh hai trục ấy
   có thể đi ngược nhau: 0 tam giác mới mà +28 giây CPU. Lệnh: `node --import
   ./scripts/register-esm-loader.mjs <scratchpad>/tach.mjs`, chạy TUẦN TỰ cho từng cây mã.
+
+---
+
+## Phase 13 §2 — MỐC NỀN CỦA HAI PHÉP ĐO «QUY MÔ» (M1) và (M2) (2026-08-21)
+
+> Đo trên cây mã **`d72c033`**. Lệnh dựng: `node scripts/city-preview.mjs --era <N> --hour 12
+> --sessions 80 --theme light --mask <a,b,c>` (3 lượt mặt nạ cho mỗi kỷ). Lệnh đếm:
+> `node scripts/mask-count.mjs <ảnh> <tên-đỏ> <tên-lục> <tên-lam> [--bands 6]`.
+>
+> ⚠️ **VÌ SAO PHẢI ĐO LẠI TỪ ĐẦU.** Bộ số §2 đo trước đó **mất nguồn gốc**: giữa phiên, kho mã và
+> toàn bộ thư mục nháp bị khôi phục về một ảnh chụp cũ hơn, nên không con số nào còn truy được về
+> đúng cặp (công cụ, đầu vào) đã sinh ra nó. Đúng bài học `MAI-SAU-ky9.png`: *một con số không truy
+> được về CÔNG CỤ và ĐẦU VÀO của nó thì bằng không*. Đo lại thì **plan-coverage khớp từng chữ số**
+> (21,4 / 39,3 / 58,3% ở 20/50/80 phiên) và **frame-fit khớp từng dòng** (13/15 kỷ bị cắt, hệ số cần
+> 1,88) ⇒ hai bộ ấy vẫn dùng được. Xem mục "một con số đã sửa" bên dưới.
+
+### (M1) — % KHUNG HÌNH LÀ DẤU VẾT CON NGƯỜI
+
+Dấu vết con người = `buildings` + `props` + `residents` + `road`. Trung bình 15 kỷ: **36,84%**
+(thấp nhất kỷ 15 = 28,20 · cao nhất kỷ 8 = 44,63). Cột phụ *"khung hình là thành phố"*
+(`buildings` + `props` + `residents`, không kể đường): **29,39%**. Đường riêng: **7,45%**.
+
+| kỷ | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| (M1) % | 20,95 | 35,14 | 35,61 | 42,86 | 31,36 | 43,55 | 43,34 | **44,63** | 39,79 | 37,85 | 43,91 | 37,24 | 30,58 | 37,55 | **28,20** |
+
+⚠️ **BẢNG NÀY IN RA TỔNG, VÀ TỔNG PHẢI RA ~100%.** Cộng đủ 9 lớp (`buildings` · `props` ·
+`residents` · `road` · `ground-grid` · `ground-apron` · `landscape` · `water` · `horizon`) ra
+**100,98 – 101,65%** ở cả 15 kỷ. Phần dôi ~1% là **viền răng cưa bị đếm ở CẢ HAI lượt** (chỗ giáp
+ranh giữa hai lớp là màu pha; ở lượt A nó đỏ-nhạt của lớp A, ở lượt B nó đỏ-nhạt của lớp B). Đó là
+một sai số đo được và có trần ⇒ **lệch quá 3% mới là bảng hỏng**. Bản gộp đầu tiên của phiên này ra
+89–98% và nguyên nhân hoá ra tầm thường: **tôi quên mất lớp `road`** — nếu không có luật "phải in
+tổng và đòi 100%" thì bảng ấy đã đi thẳng vào báo cáo.
+
+### (M2) — SỐ TẦNG CHIỀU SÂU CÓ DẤU VẾT CON NGƯỜI: **PHÉP ĐO NÀY KHÔNG CÓ RĂNG**
+
+`scripts/mask-count.mjs --bands 6` chia khung hình thành 6 dải ngang (dải 1 = trên cùng = XA nhất),
+mỗi ô là % **của riêng dải ấy**. Trung bình 15 kỷ:
+
+| dải | 1 (xa) | 2 | 3 | 4 | 5 | 6 (gần) |
+|---|---|---|---|---|---|---|
+| % dấu vết con người | **0,41** | 21,37 | 60,96 | 60,31 | 47,49 | 30,36 |
+
+| mức sàn thử | 0,5% | 1% | 2% | 3% | 5% | 8% | 10% | 15% | 20% |
+|---|---|---|---|---|---|---|---|---|---|
+| số dải đạt (TB 15 kỷ) | 5,3 | 5,2 | 5,0 | 5,0 | 5,0 | 4,9 | 4,9 | 4,7 | 4,3 |
+| số kỷ đạt ≥3 dải | 15/15 | 15/15 | **15/15** | 15/15 | 15/15 | 15/15 | 15/15 | 15/15 | 15/15 |
+
+⚠️ **MỤC TIÊU «≥3 DẢI Ở ≥12/15 KỶ» ĐÃ ĐẠT SẴN Ở MỌI MỨC SÀN TỪ 0,5% TỚI 20%, TRƯỚC KHI LÀM GÌ CẢ.**
+Không tồn tại mức sàn nào cho ra "đúng 1 dải" như giả định ban đầu. Nguyên nhân: mẫu số là diện tích
+của chính dải ấy, mà tấm đất thành phố phủ gần hết 5/6 dải ⇒ (M2) đang đo *"thành phố có lấp đầy
+giữa khung hình không"* (đã đúng sẵn), không đo *"dấu vết con người có vươn ra XA không"*. Chi tiết
+và phương án thay thế: `TECH_DEBT #72`.
+
+⚠️ **NHƯNG HỒ SƠ 6 DẢI VẪN ĐÁNG GIỮ — ĐỂ BÁO CÁO HÌNH DẠNG, KHÔNG ĐỂ LÀM CỔNG.** Nó là một cái
+BƯỚU: 0,41 → 21,37 → **60,96** → 60,31 → 47,49 → 30,36. Dấu vết con người mất hẳn ở **cả hai** đầu
+chiều sâu. Đó chính là "một hòn đảo giữa một tấm đất trống", và nó đọc được từ số.
+
+### DẢI TRÊN MÀN HÌNH CÓ THẬT SỰ LÀ CHIỀU SÂU THẾ GIỚI KHÔNG — ĐÃ ĐO, KHÔNG SUY
+
+⚠️ Đây là cái bẫy lớn nhất của (M2), và nó **không** được kiểm bằng cách vặn một cái núm khác (bẫy
+đã cắn ở Phase 4C/4G/7B). Phép kiểm dùng hai vật thể mà **chiều sâu thế giới đã biết từ mã**:
+`horizon` (`buildHorizon(era).reach = 36,00` — xa nhất cảnh) và `ground-grid` (nửa rộng 6 — ở giữa).
+
+| kỷ | lớp | dải 1 | 2 | 3 | 4 | 5 | 6 |
+|---|---|---|---|---|---|---|---|
+| 8 | `horizon` (xa 36) | **69,98** | 17,55 | 0,01 | **0,00** | **0,00** | **0,00** |
+| 8 | `ground-grid` (giữa) | **0,00** | 6,70 | 9,75 | 18,89 | **22,47** | 15,08 |
+| 15 | `horizon` | 32,93 | **46,52** | 27,86 | 2,35 | 0,00 | 2,53 |
+| 15 | `ground-grid` | **0,00** | 0,00 | 0,52 | 12,42 | 13,26 | **19,08** |
+
+⇒ Vật xa nhất chiếm 70% dải 1 rồi **về đúng 0** ở nửa gần; lưới phố **đúng 0** ở dải 1 rồi lên đỉnh
+ở dải 5–6. Quan hệ dải ↔ chiều sâu là **đơn điệu**, đã đo trên ảnh render thật. ⚠️ Kỷ 15 còn 2,53%
+`horizon` ở dải 6 (so với đỉnh 46,52) — một ngoại lệ nhỏ đã ghi ra, không được lặng lẽ bỏ qua.
+⚠️ Và quan hệ ấy **đơn điệu chứ KHÔNG tuyến tính** (camera ngẩng 34,4°, mặt đất có cao độ), nên con
+số (M2) chỉ được đọc là *"có mặt ở mấy tầng"*, tuyệt đối **không** được đọc là *"trải xa bao nhiêu ô"*.
+
+### MỘT CON SỐ ĐÃ SỬA: DẤU VẾT CON NGƯỜI NGOÀI LƯỚI = **0/446**
+
+Đếm thuần trên engine, gộp 15 kỷ ở `sessionCount: 400`: công trình + nhà dân + giàn giáo + ô đường
+= **446 vật, KHÔNG một vật nào nằm ngoài lưới 12×12**. Vật xa tâm nhất cách 5,5 ô, trong khi mép
+tấm đất ở **9,5 ô**. Đây là mốc nền của phép đo thay thế đề xuất ở `TECH_DEBT #72`.
+
+### VÀ MỘT CON SỐ CŨ ĐÃ TỪNG BỊ TÔI BÁO SAI RỒI TỰ SỬA LẠI
+
+Trong lúc dựng lại các công cụ nháp đã mất, `the-gioi.mjs` cho ra *"tấm đất cạnh 20,00 ô, 64,0% nằm
+ngoài lưới"* và tôi suýt ghi con số ấy vào báo cáo như một **đính chính** cho con số cũ (19,00 ô /
+60,1%). Sự thật ngược lại: **19,00 / 361 / 60,1% mới đúng**, và công cụ vừa dựng lại mới là thứ sai
+— nó chép lại công thức `u0 = -0,5 - padSteps × du`, tức **một lỗi mà mã sản phẩm đã sửa xong từ
+lâu**, với lời giải thích nằm ngay trong 8 dòng chú thích phía trên (`terrainMesh.js:312-318`).
+⇒ **Dựng lại một công cụ từ trí nhớ là dựng lại cả những phiên bản SAI của nó.** Cách chặn rẻ nhất
+và nay đã cắm vào chính công cụ đó: **một phép đối chiếu chéo bắt buộc** — cùng một đại lượng phải
+suy được bằng hai đường (`terrainSurfaceReach()` đo từ tâm ↔ lưới đỉnh dựng từ `u0`/`steps`), và
+`throw` nếu hai đường lệch nhau. Nếu chỉ có một đường thì không có gì để cãi nhau, tức không có gì
+để phát hiện.

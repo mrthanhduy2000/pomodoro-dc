@@ -45,16 +45,55 @@
 
 import { readFileSync } from 'node:fs';
 import { decodePng } from './png-probe.mjs';
-import { BANDS, cityRect, EYE, gridVector, vecDist } from './sweepMetric.mjs';
+import {
+  BANDS, cityRect, coTheoMatNa, EYE, gridVector, soHaiKhung, vecDist,
+} from './sweepMetric.mjs';
 
 const argv = process.argv.slice(2);
 const SELFTEST = argv.includes('--selftest');
 const FRAME = argv.includes('--frame');
-const [TRUOC, SAU] = argv.filter((a) => !a.startsWith('--'));
+/**
+ * `--chi <mặt-nạ.png>:<r|g|b>` — CHỈ so những điểm ảnh mà mặt nạ ấy tô kênh ấy.
+ *
+ * ⚠️ VÌ SAO NÓ NẰM Ở ĐÂY chứ không phải một script thứ ba: đây vẫn là đúng một câu hỏi *"hai ảnh
+ * này khác nhau bao nhiêu"*, chỉ khác **mẫu số**. Viết riêng ra là chép ngưỡng mắt 12 lần thứ ba,
+ * đúng bẫy "một luật hai công thức". Và bài học đo mật độ nhà (2026-08-19) nói thẳng: **mẫu số là
+ * vế không ai kiểm** — nên vế ấy phải nằm cạnh vế tử, trong cùng một hàm.
+ *
+ * Luật chọn điểm ảnh dùng CHUNG với `mask-count.mjs`: kênh trội, và phải ≥ NGUONG_MAT_NA. Không
+ * dùng ngưỡng tuyệt đối trên một kênh (viền răng cưa sẽ lọt cả ba nhóm).
+ */
+// ⚠️ `indexOf` trả về -1 khi không có cờ, và `-1 + 1 === 0` ⇒ nhánh dự phòng sẽ nhặt đúng THAM SỐ
+// ĐẦU TIÊN rồi coi nó là mặt nạ. Bản đầu dính đúng lỗi đó và mọi lần gọi KHÔNG có `--chi` đều chết
+// với thông báo về `--chi`. Phải hỏi "cờ có mặt không" TRƯỚC, đừng hỏi "chỉ số là bao nhiêu".
+const viTriChi = argv.findIndex((a) => a === '--chi' || a.startsWith('--chi='));
+const CHI = viTriChi < 0 ? ''
+  : (argv[viTriChi].startsWith('--chi=') ? argv[viTriChi].slice(6) : (argv[viTriChi + 1] ?? ''));
+const NGUONG_MAT_NA = 40;
+const [TRUOC, SAU] = argv.filter((a) => !a.startsWith('--') && a !== CHI);
 
 if (!TRUOC || !SAU) {
-  console.error('Dùng: node scripts/sweep-diff.mjs <trước.png> <sau.png> [--frame] [--selftest]');
+  console.error('Dùng: node scripts/sweep-diff.mjs <trước.png> <sau.png> [--frame] [--chi <mặt-nạ.png>:<r|g|b>] [--selftest]');
   process.exit(1);
+}
+
+/** Cờ bật/tắt từng điểm ảnh theo mặt nạ. Trả về `null` nếu không dùng `--chi`. */
+function docMatNa(width, height) {
+  if (!CHI) return null;
+  const m = CHI.match(/^(.*):([rgb])$/);
+  if (!m) { console.error('✗ `--chi` phải có dạng <đường-dẫn.png>:<r|g|b>'); process.exit(1); }
+  const [, duong, kenh] = m;
+  const mn = decodePng(readFileSync(duong));
+  if (mn.width !== width || mn.height !== height) {
+    console.error(`✗ Mặt nạ khác cỡ ảnh: ${mn.width}×${mn.height} ≠ ${width}×${height}.`);
+    process.exit(3);
+  }
+  const { co, dem } = coTheoMatNa(mn, kenh, NGUONG_MAT_NA);
+  if (dem === 0) {
+    console.error(`✗ Mặt nạ "${duong}" kênh ${kenh} không chọn được điểm ảnh nào — sai kênh?`);
+    process.exit(3);
+  }
+  return { co, dem, duong, kenh };
 }
 
 /**
@@ -80,7 +119,7 @@ function soKhungHinh() {
   }
   // Phép tự-kiểm phải chạm đúng chiều nó bảo chứng: "cùng toạ độ ⇒ cùng điểm ảnh".
   if (SELFTEST) {
-    const tu = doHaiAnh(a, a);
+    const tu = soHaiKhung(a, a);
     console.log(`tự-kiểm "ảnh so với chính nó": ${tu.tiLe.toFixed(6)}% điểm ảnh đổi · lệch TB ${tu.lechTB.toFixed(6)}`);
     if (tu.tiLe > 1e-9 || tu.lechTB > 1e-9) {
       console.error('✗ Phép lấy mẫu KHÔNG tất định — mọi số dưới đây là rác.');
@@ -88,28 +127,28 @@ function soKhungHinh() {
     }
     console.log('✓ phép lấy mẫu tất định\n');
   }
-  const r = doHaiAnh(a, b);
+  const mn = docMatNa(a.width, a.height);
+  // Đối chứng của chính `--chi`: một mặt nạ bật MỌI điểm ảnh phải cho ra ĐÚNG bộ số không-mặt-nạ.
+  // Không có vế này thì một lỗi trong vòng lặp mặt nạ sẽ đi thẳng vào báo cáo.
+  if (SELFTEST && mn) {
+    const het = soHaiKhung(a, b, new Uint8Array(a.width * a.height).fill(1));
+    const khong = soHaiKhung(a, b);
+    if (Math.abs(het.lechTB - khong.lechTB) > 1e-9 || het.xet !== khong.xet) {
+      console.error('✗ Nhánh mặt nạ KHÔNG trùng nhánh không-mặt-nạ khi bật hết — vòng lặp sai.');
+      process.exit(4);
+    }
+    console.log(`✓ mặt nạ bật-hết trùng khớp nhánh thường (${het.xet} điểm ảnh)\n`);
+  }
+  const r = soHaiKhung(a, b, mn?.co ?? null);
   console.log(`${TRUOC}\n  ↕ so ĐIỂM ẢNH ĐỐI ĐIỂM ẢNH với\n${SAU}\n`);
   console.log(`── ${a.width}×${a.height} · khoảng cách RGB/255 · ngưỡng mắt ${EYE} ──`);
+  if (mn) {
+    console.log(`  CHỈ trong mặt nạ ${mn.duong} kênh ${mn.kenh}: ${mn.dem} điểm ảnh `
+      + `(${((mn.dem / (a.width * a.height)) * 100).toFixed(2)}% khung hình)`);
+  }
   console.log(`  điểm ảnh đổi QUÁ ngưỡng mắt : ${r.tiLe.toFixed(1)}%`);
   console.log(`  lệch trung bình (mọi điểm ảnh): ${r.lechTB.toFixed(2)}`);
   console.log(`  lệch trung bình (chỉ chỗ đã đổi): ${r.lechTBDoi.toFixed(2)}`);
-}
-
-/** Khoảng cách RGB/255 từng điểm ảnh. Trả về tỉ lệ % vượt ngưỡng + hai mức lệch trung bình. */
-function doHaiAnh(a, b) {
-  const n = a.width * a.height;
-  let vuot = 0, tong = 0, tongDoi = 0;
-  for (let i = 0; i < n; i += 1) {
-    const o = i * 4;
-    const dr = a.pixels[o] - b.pixels[o];
-    const dg = a.pixels[o + 1] - b.pixels[o + 1];
-    const db = a.pixels[o + 2] - b.pixels[o + 2];
-    const d = Math.sqrt(dr * dr + dg * dg + db * db);
-    tong += d;
-    if (d >= EYE) { vuot += 1; tongDoi += d; }
-  }
-  return { tiLe: (vuot / n) * 100, lechTB: tong / n, lechTBDoi: vuot ? tongDoi / vuot : 0 };
 }
 
 if (FRAME) { soKhungHinh(); process.exit(0); }

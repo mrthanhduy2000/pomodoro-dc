@@ -92,3 +92,63 @@ export function vecDist(a, b) {
 
 /** Ngưỡng mắt phân biệt, /255 — hiệu chuẩn ở Phase 3Y (0,31↔5,9px · 0,52↔29,8px · 1,28↔75,1px). */
 export const EYE = 12;
+
+/**
+ * So HAI KHUNG HÌNH điểm ảnh đối điểm ảnh — khoảng cách RGB/255 từng điểm, rồi gộp lại.
+ *
+ * ⚠️ NÓ NẰM Ở ĐÂY, KHÔNG NẰM TRONG `sweep-diff.mjs`, vì đúng một lý do: `sweep-diff.mjs` chạy mã
+ * ở cấp cao nhất (đọc `process.argv`, `process.exit`) nên **không import được từ một bài test**.
+ * Một phép đo không test được thì chỉ còn `--selftest`, mà `--selftest` là thứ chỉ chạy khi có
+ * người NHỚ gõ — dự án đã trả giá đúng chỗ này ba lần. Đưa phần thuần sang đây thì nó vào được
+ * `npm test`, và ngưỡng mắt `EYE` vẫn chỉ có MỘT bản (một luật một công thức).
+ *
+ * `co` (tuỳ chọn) là mảng cờ 0/1 dài `width × height`: chỉ những điểm ảnh bật cờ mới được xét.
+ * ⚠️ Nó đổi **MẪU SỐ**, không chỉ đổi tử số — và mẫu số là vế không ai kiểm (bài học đo mật độ
+ * nhà, 2026-08-19), nên `xet` được trả về để bên gọi in ra được.
+ */
+export function soHaiKhung(a, b, co = null) {
+  if (a.width !== b.width || a.height !== b.height) {
+    throw new Error(`hai ảnh khác cỡ: ${a.width}×${a.height} ≠ ${b.width}×${b.height}`);
+  }
+  const n = a.width * a.height;
+  let vuot = 0, tong = 0, tongDoi = 0, xet = 0;
+  for (let i = 0; i < n; i += 1) {
+    if (co && !co[i]) continue;
+    xet += 1;
+    const o = i * 4;
+    const dr = a.pixels[o] - b.pixels[o];
+    const dg = a.pixels[o + 1] - b.pixels[o + 1];
+    const db = a.pixels[o + 2] - b.pixels[o + 2];
+    const d = Math.sqrt(dr * dr + dg * dg + db * db);
+    tong += d;
+    if (d >= EYE) { vuot += 1; tongDoi += d; }
+  }
+  return {
+    tiLe: xet ? (vuot / xet) * 100 : 0,
+    lechTB: xet ? tong / xet : 0,
+    lechTBDoi: vuot ? tongDoi / vuot : 0,
+    xet,
+  };
+}
+
+/**
+ * Cờ bật/tắt từng điểm ảnh theo một ảnh MẶT NẠ: bật khi kênh `kenh` **trội hẳn** và ≥ `nguong`.
+ *
+ * ⚠️ TRỘI HẲN, KHÔNG PHẢI VƯỢT NGƯỠNG. Viền răng cưa giữa hai lớp là màu PHA, nên một phép kiểm
+ * "kênh này ≥ 40" sẽ nhận cùng một điểm ảnh vào CẢ HAI nhóm. Luật này dùng chung với
+ * `mask-count.mjs` — đổi một bên mà quên bên kia là đúng bẫy "một luật hai công thức".
+ */
+export function coTheoMatNa(matNa, kenh, nguong = 40) {
+  const idx = { r: 0, g: 1, b: 2 }[kenh];
+  if (idx === undefined) throw new Error(`kênh phải là r/g/b, nhận "${kenh}"`);
+  const n = matNa.width * matNa.height;
+  const co = new Uint8Array(n);
+  let dem = 0;
+  for (let i = 0; i < n; i += 1) {
+    const o = i * 4;
+    const v = [matNa.pixels[o], matNa.pixels[o + 1], matNa.pixels[o + 2]];
+    const khac = Math.max(...v.filter((_, k) => k !== idx));
+    if (v[idx] >= nguong && v[idx] > khac) { co[i] = 1; dem += 1; }
+  }
+  return { co, dem };
+}

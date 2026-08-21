@@ -1688,6 +1688,10 @@ chiều sâu. Đó chính là "một hòn đảo giữa một tấm đất trố
 
 ### DẢI TRÊN MÀN HÌNH CÓ THẬT SỰ LÀ CHIỀU SÂU THẾ GIỚI KHÔNG — ĐÃ ĐO, KHÔNG SUY
 
+> ⚠️ **BỘ SỐ TRONG BẢNG NGAY DƯỚI ĐÂY ĐÃ BỊ THAY THẾ (2026-08-21).** Nó do một script nháp sinh ra
+> trước khi `countBands` vào `mask-count.mjs`, và không tái lập được ở bất kỳ mốc phiên nào. Bộ số
+> hiện hành nằm ở mục "Phase 13 VIỆC B §1" cuối file. **Kết luận định tính thì không đổi.**
+
 ⚠️ Đây là cái bẫy lớn nhất của (M2), và nó **không** được kiểm bằng cách vặn một cái núm khác (bẫy
 đã cắn ở Phase 4C/4G/7B). Phép kiểm dùng hai vật thể mà **chiều sâu thế giới đã biết từ mã**:
 `horizon` (`buildHorizon(era).reach = 36,00` — xa nhất cảnh) và `ground-grid` (nửa rộng 6 — ở giữa).
@@ -1723,3 +1727,103 @@ và nay đã cắm vào chính công cụ đó: **một phép đối chiếu ch�
 suy được bằng hai đường (`terrainSurfaceReach()` đo từ tâm ↔ lưới đỉnh dựng từ `u0`/`steps`), và
 `throw` nếu hai đường lệch nhau. Nếu chỉ có một đường thì không có gì để cãi nhau, tức không có gì
 để phát hiện.
+
+---
+
+## Phase 13 VIỆC B §1 — DẢI NÀO ĐƯỢC LÀM CỔNG (G2): SÁU CON SỐ, VÀ HAI DẢI BỊ LOẠI (2026-08-21)
+
+Chỉ thị bắt buộc đo **trước** khi chọn ngưỡng (G2): *"đo tỉ lệ `ground-apron` + `ground-grid` trong
+từng dải, in đủ 6 con số, xác định dải xa nhất mà tấm đất còn chiếm tỉ lệ đáng kể, và đặt cổng ở
+dải ĐÓ."* Lý do có chỉ thị ấy: dải 1 trông như chỗ trống lớn nhất, nhưng nếu nó không có ĐẤT thì
+đặt cổng ở đó là tạo một cổng chỉ đạt được bằng cách **dựng nhà trên sườn núi chân trời**.
+
+Lệnh đo (cùng một công cụ cho mọi cột, `--sessions 80 --hour 12 --theme light`):
+
+```
+node scripts/mask-count.mjs .city-preview/city-eraNN-light-h12-s80-mask-ground_grid_ground_apron_horizon.png \
+     ground-grid ground-apron horizon --bands 6
+node scripts/mask-count.mjs .city-preview/city-eraNN-light-h12-s80-mask-city_road_residents.png \
+     city road residents --bands 6
+```
+
+### SÁU CON SỐ — trung bình 15 kỷ, % của RIÊNG dải ấy (dải 1 = XA nhất / trên cùng khung)
+
+| dải | tấm đất = grid+apron | `ground-grid` | `ground-apron` | chân trời | dấu vết con người |
+|---|---|---|---|---|---|
+| **1 (xa nhất)** | **0,62** | **0,00** | 0,62 | **98,95** | 0,31 |
+| **2** | **15,03** | 2,95 | 12,08 | 68,06 | 17,70 |
+| 3 | 24,47 | 10,56 | 13,92 | 18,93 | 58,05 |
+| 4 | 41,70 | 27,83 | 13,87 | 1,00 | 59,10 |
+| 5 | 56,77 | 23,38 | 33,39 | 0,00 | 44,53 |
+| 6 (gần nhất) | 71,91 | 17,64 | 54,28 | 0,22 | 28,65 |
+
+Trải từng kỷ của cột "tấm đất" ở bốn dải xa nhất:
+
+| kỷ | 1 | 2 | 3 | 4 |
+|---|---|---|---|---|
+| 1 | 0,04 | 23,35 | 52,89 | 79,14 |
+| 2 | 4,18 | 41,41 | 36,92 | 43,82 |
+| 3 | 2,29 | 31,75 | 34,61 | 43,19 |
+| 4 | 0,50 | 15,60 | 24,07 | 32,36 |
+| 5 | 0,00 | **1,17** | 22,14 | 66,66 |
+| 6 | 1,88 | 26,67 | 27,26 | 26,94 |
+| 7 | 0,00 | 5,61 | **10,97** | 34,43 |
+| 8 | 0,00 | 7,98 | 25,03 | 41,38 |
+| 9 | 0,11 | 14,45 | 20,77 | 22,41 |
+| 10 | 0,00 | 6,91 | 16,53 | 43,60 |
+| 11 | 0,22 | 16,15 | 23,29 | 40,42 |
+| 12 | 0,13 | 20,51 | 29,02 | 37,31 |
+| 13 | 0,00 | 4,32 | 14,28 | 43,11 |
+| 14 | 0,00 | 6,78 | 17,38 | 34,74 |
+| 15 | 0,00 | **2,83** | 11,93 | 35,93 |
+
+### KẾT LUẬN: CỔNG (G2) ĐẶT Ở **DẢI 2**
+
+- **Dải 1 — LOẠI.** 13/15 kỷ có `ground-grid` đúng **0,00** và tấm đất trung bình **0,62%**, trong
+  khi chân trời chiếm **98,95%**. Đây không phải "chỗ trống": đây là **núi và trời**. Cái bẫy mà chỉ
+  thị cảnh báo là có thật và đã được xác nhận bằng số.
+- **Dải 3 — LOẠI, nhưng vì lý do NGƯỢC LẠI.** Nó có thừa đất (24,47%) nhưng dấu vết con người đã
+  **58,05%** — tức đã ở gần đỉnh bướu (59,10 ở dải 4). Một cổng đặt ở chỗ đã bão hoà thì không đo
+  được gì; nó xanh sẵn trước khi làm gì cả, đúng cái phễu đã hạ bệ (M2) (`TECH_DEBT #72`).
+- **Dải 2 — CHỌN.** Đây là dải **xa nhất còn chứa tấm đất**: 15,03% trung bình, và **15/15 kỷ đều
+  khác 0**. Dấu vết con người ở đó mới **17,70%**, tức còn nguyên chỗ để tăng. Nó cũng đúng là **vai
+  xa của cái bướu** — chỗ hồ sơ chiều sâu tụt từ 58,05 xuống 17,70 rồi chết hẳn.
+
+### ⚠️ DẢI 2 CÓ BA KỶ MỎNG, VÀ ĐÓ LÀ LÝ DO CỔNG PHẢI LÀ MỘT **QUAN HỆ**
+
+Kỷ 5 (1,17%), kỷ 15 (2,83%), kỷ 13 (4,32%) gần như không có đất ở dải 2 — chúng là kỷ có chân trời
+cao nhất bảng (75,94 · 84,38 · 90,33). Một **sàn tuyệt đối** đặt ở dải 2 sẽ **không thể đạt** ở ba
+kỷ ấy dù có xây kín từng điểm ảnh đất còn lại. Đây đúng bẫy Phase 7D (*"một con số tuyệt đối không
+diễn đạt được một luật nói về QUAN HỆ"*), và cách vá là **chuẩn hoá theo phần đất thật sự có**, chứ
+không phải nới sàn cho vừa kỷ tệ nhất (nới là bỏ răng cho 12 kỷ còn lại).
+
+### ⚠️ VÀ MỘT CON SỐ ĐÃ HỎNG: DẢI TRÊN MÀN HÌNH KHÔNG TÁCH ĐƯỢC "XA" KHỎI "CAO"
+
+Phép chuẩn hoá đầu tiên tôi thử — *"phần đất xa nhìn thấy được đã có dấu vết người chưa"*, mẫu số =
+`đất + người` trong dải 2 — cho ra **58,39%** trung bình, kỷ 5 tới **95,25%**. Đọc vội thì nó nói
+*"dải 2 đã gần kín dấu vết người rồi, chẳng còn gì để làm"*. Sai, và sai vì một lý do cấu tạo:
+**dải màn hình là hàng điểm ảnh, không phải chiều sâu thế giới.** Với MẶT ĐẤT thì hai thứ ấy đi
+cùng nhau (đã đo, xem mục "DẢI TRÊN MÀN HÌNH CÓ THẬT SỰ LÀ CHIỀU SÂU THẾ GIỚI KHÔNG"), nhưng với
+vật thể **CAO** thì không: nóc nhà của chính đô thị ở tiền cảnh vẫn chiếm hàng điểm ảnh trên cao.
+Nên phần lớn 17,70% "dấu vết người ở dải 2" hôm nay là **đường bờ mái của chính đô thị in lên nền
+núi**, không phải thứ gì ở xa.
+
+⇒ Hệ quả bắt buộc cho phần dựng: vùng phụ cận phải có **lớp mặt nạ RIÊNG** (`hinterland`) để đếm
+tách khỏi `city`. Không tách thì một con số tăng lên không phân biệt được *"đã vươn ra xa"* với
+*"đô thị vừa cao thêm"* — đúng hình dạng `TECH_DEBT #22` (một phép đo gộp hai thứ rồi bị đọc thành
+một thứ).
+
+### ⚠️ ĐÍNH CHÍNH — BẢNG "DẢI TRÊN MÀN HÌNH…" Ở MỤC TRƯỚC KHÔNG TÁI LẬP ĐƯỢC
+
+Bảng ấy ghi kỷ 8 `horizon` dải 1 = **69,98** và `ground-grid` dải 2 = **6,70**. Đo lại bằng công cụ
+đã commit (`mask-count.mjs --bands`, có `scripts/maskCount.test.js` khoá số học chia dải) trên
+**cả ba** mốc phiên s20/s50/s80 đều ra `horizon` dải 1 = **100,00** và `ground-grid` dải 2 =
+**1,50 / 1,15 / 0,69**. Không mốc nào tái lập được bộ số cũ.
+
+Nguyên nhân truy được tới đâu thì ghi tới đó: bộ số cũ do một **script nháp** trong thư mục tạm sinh
+ra **trước khi** `countBands` được đưa vào `mask-count.mjs`; script ấy đã mất cùng lượt khôi phục
+snapshot và **không được dựng lại từ trí nhớ** (đúng luật §6). Đây chính là *"hai công cụ đếm cùng
+một thứ = một luật hai công thức"* — cặp công-cụ-dựng ↔ công-cụ-đo đã nói dối vì đúng chuyện này ở
+Phase 4G. **Bộ số hiện hành là bộ đo bằng công cụ đã commit và đã có test; bảng cũ bị thay thế.**
+Kết luận ĐỊNH TÍNH của bảng cũ (chân trời dồn về dải xa, `ground-grid` dồn về dải gần, và trục dải
+↔ chiều sâu là đơn điệu với mặt đất) **vẫn đứng vững** — nó còn mạnh hơn ở bộ số mới.

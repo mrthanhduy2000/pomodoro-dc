@@ -6,7 +6,80 @@
 > chọn: `ARCHITECTURE_DECISIONS.md`. Nợ kỹ thuật: `TECH_DEBT.md`. Migration: `MIGRATION.md`. Tóm
 > tắt theo mốc: `CHANGELOG.md`.
 > **NGUYÊN TẮC ƯU TIÊN SỐ 1:** (1) mọi phiên AI phải đọc file này + `CLAUDE.md` + các file liên quan TRƯỚC khi làm; (2) sau MỌI cập nhật dù nhỏ, phải cập nhật ngay file này + `CLAUDE.md` + các file liên quan khác.
-> Cập nhật lần cuối: **2026-08-21** — **PHASE 13 §2–§3: ĐO MỐC NỀN, VÀ HAI ĐIỀU KIỆN DỪNG CỦA ĐÀM ĐÃ KÍCH HOẠT ĐÚNG NHƯ DỰ PHÒNG.** Chưa sửa một dòng mã sản phẩm nào của thành phố.
+> Cập nhật lần cuối: **2026-08-21** — **PHASE 14 §1(1): MẠNG ĐƯỜNG THÔI ĐỨT NÉT.** Bisect nói VIỆC B vô can; thủ phạm là chiều quay tam giác, có sẵn từ lâu. Xem ADR-050.
+>
+> ## ⚠️ PHASE 14 §1(1) — «NÉT ĐỨT» LÀ MỘT KHUYẾT TẬT CÓ THẬT, NHƯNG KHÔNG PHẢI HỒI QUY
+>
+> Đàm nhìn kỷ 1, 2, 14 rồi bác VIỆC B bằng bốn câu. Câu đầu: *«Giờ tự dưng cái đường có nét đứt
+> trông giả tạo kinh khủng»*. Chữ **«tự dưng»** chỉ vào một hồi quy, nên việc đầu tiên là **BISECT,
+> KHÔNG phải đoán nguyên nhân** (đúng chỉ thị §1(1)).
+>
+> **KẾT QUẢ BISECT: nét đứt có ở `main` (`d72c033`) Y HỆT như ở HEAD (`c50e727`).** VIỆC B không gây
+> ra nó. Điều VIỆC B làm là **đặt cạnh con đường đứt một vùng phụ cận liền mạch**, và mắt chỉ đọc
+> ra "đứt" khi có "liền" bên cạnh để so — đúng cái luật đã ghi từ Phase 3G: *lỗi mỹ thuật gần như
+> luôn là lỗi SO SÁNH*. Điều kiện dừng §5(a) **KHÔNG kích hoạt**: đây là một lỗi chiều quay tam
+> giác trần trụi, không phải một quyết định mỹ thuật cũ có chú thích giải thích.
+>
+> ### Bốn giả thuyết, cả bốn đều bị chính số đo bác bỏ
+>
+> | # | Giả thuyết | Phép đo | Kết quả |
+> |---|---|---|---|
+> | 1 | Lưới ô đường thiếu ô | đếm ô trên trục đường, đếm cặp kề nhau | **80/144 ô · 88 cặp kề · 0 khe** |
+> | 2 | Hình học dựng ra bị hở | rasterise hình học đã phát, 6 mẫu/ô | mạng `#` **liền tuyệt đối** |
+> | 3 | Tấm đất chôn mất mặt đường | hiệu số cao độ đất − đường, phân vị | **−0,0140** ở cả p25/trung vị/p75 = đúng `ROAD_LIFT` |
+> | 4 | Z-fighting do độ chính xác bộ đệm sâu | nhân `ROAD_LIFT` lên **10 lần**, dựng lại | **ảnh không đổi một chút nào** |
+>
+> Cũng đã loại: địa hình gồ ghề (kỷ 2 relief 0,170 ĐỨT · kỷ 11 relief 0,140 LIỀN — ngược chiều giả
+> thuyết), cư dân, cây cối, bóng đổ và sương mù (ảnh mặt nạ không có đèn nên chúng không thể chạm
+> vào).
+>
+> ### Thủ phạm: CHIỀU QUAY — một đại lượng chưa ai từng hỏi
+>
+> `FrontSide` là mặc định của vật liệu three: tam giác nào xếp ngược chiều thì **bị vứt đi**, dù ba
+> đỉnh nằm đúng chỗ. Đếm ra: **13,9–34,4% tam giác mặt đường xếp úp** ở cả 15 kỷ. Một phép đo thứ
+> hai độc lập xác nhận — pháp tuyến KHAI ngược chiều quay **đúng bằng cùng con số** ở mọi kỷ
+> (168/168 · 176/176 · 212/212 · 672/672 …).
+>
+> Phân loại theo phía thì chúng nằm gọn ở **cánh tay TÂY và cánh tay NAM** của lòng đường; lớp vỉa
+> hè, bó vỉa, vạch kẻ **không sót một tam giác nào**. Lý do: sáu chỗ gọi `quad(...)` của vỉa hè và
+> vạch kẻ đều bọc `Math.min`/`Math.max`, tức luật đã được phát biểu ở SÁU nơi và bị quên ở nơi thứ
+> bảy — hàm `dai()`. **Vì sao kỷ 2 «đứt» còn kỷ 11 «liền»**: kỷ 2 không có vỉa hè/bó vỉa/vạch kẻ nên
+> mặt đường CHỈ có lòng đường, mất một nửa là thấy ngay; kỷ 11 có ba lớp kia phủ lên che bớt.
+>
+> ### Bản vá: một cái cửa, một luật
+>
+> `quad4` — cửa DUY NHẤT mà mọi tấm nằm ngang của mạng đường đi qua — nay tự tính **diện tích có
+> dấu** rồi đảo `p1`↔`p3` nếu cần. Ba phương án khác đã LOẠI, ghi rõ lý do ở ADR-050: đảo dấu tại
+> bốn chỗ gọi (lần phát biểu thứ bảy) · bắt `dai()` chuẩn hoá `from`/`to` (**chữa được cánh TÂY,
+> KHÔNG chữa cánh NAM** — một bản vá đúng nửa) · `DoubleSide` (không sửa gì, chỉ TẮT phép kiểm).
+>
+> ### Nghiệm thu
+>
+> | | trước | sau |
+> |---|---|---|
+> | Diện tích mặt đường **nhìn thấy được** (15 kỷ) | **80,8%** | **100,0%** |
+> | — kỷ 1 (Đàm kêu) | **65,8%** | 100% |
+> | — kỷ 2 (Đàm kêu) | **71,5%** | 100% |
+> | Tổng diện tích hình học, 15 kỷ | 742,274 ô² | **742,274 ô²** (trùng 3 chữ số thập phân từng kỷ) |
+> | Tam giác kỷ 1 / kỷ 2 | 81.066 / 94.698 | **y hệt** |
+> | Lệnh vẽ kỷ 1 / kỷ 2 | 11 / 14 | **y hệt** |
+>
+> Ảnh `--width 1500` (`node scripts/city-preview.mjs --era N --hour 12 --sessions 80 --width 1500
+> --theme light`, vế TRƯỚC dựng trong `git worktree` tại `c50e727`): kỷ 1 **2,3%** điểm ảnh đổi quá
+> ngưỡng mắt (lệch trung bình chỗ đã đổi **86,90**), kỷ 2 **2,7%** (**43,50**). Ảnh ghép trước/sau:
+> `<scratchpad>/P14-CAP-ky01.png` và `P14-CAP-ky02.png`.
+>
+> **Test**: `terrainMesh.test.js` thêm bài *"MỌI TAM GIÁC NẰM NGANG PHẢI NGỬA MẶT LÊN TRỜI"*. Thử
+> ngược đã chạy theo đúng kỷ luật §4 — nêu TRƯỚC nơi nó sẽ đỏ (15 kỷ · chỉ tấm đường · lớp lòng
+> đường · phía tây+nam), chạy trên mã chưa vá và thấy **đỏ đúng chỗ ấy, 5.492 tam giác**, vá xong
+> thì xanh. Tấm ĐẤT xanh sẵn (0/6.498 ở cả 15 kỷ) nên nó vừa là vế thứ hai của phép đo vừa là đối
+> chứng chứng minh phép đo không kêu oan mọi thứ. `npm test` (lượt nhanh): **1.017 bài · 1.016 xanh
+> · 0 đỏ · 1 bỏ qua**. Lint sạch. Build xanh.
+>
+> ### Ba việc còn lại của Phase 14 (chưa làm)
+> **§1(2)** từ vựng mái (kim tự tháp / mastaba / ziggurat) — đã xác nhận bằng mắt: kỳ quan kỷ 2 đang
+> đội một **hình nón nhiều cạnh**, không phải chóp bốn mặt. **§1(3)** hình thái khu phố (*một ô là
+> một KHU PHỐ*). **§3** năm câu trả lời của cố vấn (Q2 đã ghi vào `CLAUDE.md`; Q1/Q3/Q5 còn lại).
 >
 > ## ⚠️ PHASE 13 — DỪNG THEO ĐÚNG §7(a) VÀ §7(b), KHÔNG PHẢI VÌ BẾ TẮC
 >

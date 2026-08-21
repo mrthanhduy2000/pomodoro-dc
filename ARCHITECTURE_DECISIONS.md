@@ -11,6 +11,80 @@
 
 ---
 
+## ADR-050 — Chiều quay tam giác là một LUẬT CỦA HỆ, phải bịt ở CÁI CỬA DUY NHẤT; và một bài test đo VỊ TRÍ thì mù hoàn toàn với ĐỘ HIỂN THỊ
+
+**Ngày**: 2026-08-21 · **Phase 14 §1(1)** · **Trạng thái**: đã áp dụng
+
+### Bối cảnh
+Đàm nhìn kỷ 1 và kỷ 2 rồi nói: *«Giờ tự dưng cái đường có nét đứt trông giả tạo kinh khủng»*. Chữ
+«tự dưng» chỉ thẳng vào một hồi quy, nên việc đầu tiên là **BISECT chứ không phải đoán nguyên
+nhân**. Dựng cùng một cảnh ở `main` (`d72c033`) và ở HEAD (`c50e727`): **nét đứt y hệt nhau ở cả
+hai**. VIỆC B không gây ra nó — vùng phụ cận chỉ làm nó DỄ THẤY hơn, vì trước đó mắt không có gì
+liền mạch bên cạnh để mà so.
+
+Rồi bốn giả thuyết lần lượt bị chính số đo bác bỏ: **(a)** *"lưới ô đường thiếu ô"* — đếm ra
+**80/144 ô đúng trên trục đường, 88 cặp kề nhau, 0 khe**; **(b)** *"hình học dựng ra bị hở"* —
+rasterise hình học đã phát vào không gian ô ở 6 mẫu/ô cho ra một mạng `#` **liền tuyệt đối**;
+**(c)** *"tấm đất chôn mất mặt đường"* — hiệu số cao độ đất − đường là **−0,0140 ở cả p25, trung vị
+và p75**, đúng bằng `ROAD_LIFT`; **(d)** *"z-fighting do độ chính xác bộ đệm sâu"* — nhân `ROAD_LIFT`
+lên **10 lần** rồi dựng lại, **ảnh không đổi một chút nào**.
+
+Thứ trả lời được là một phép đo về một đại lượng chưa ai từng hỏi: **CHIỀU QUAY**. Đếm ra
+**13,9–34,4% tam giác mặt đường được xếp theo chiều quay ÚP**, và `FrontSide` (mặc định của three)
+vứt sạch chúng. Phân loại tiếp thì chúng nằm gọn ở **cánh tay TÂY và cánh tay NAM** của lòng đường,
+không sót một tam giác nào ở lớp vỉa hè / bó vỉa / vạch kẻ.
+
+### Vấn đề
+Luật *"tấm nằm ngang phải ngửa mặt lên trời"* đã được phát biểu ở **SÁU** chỗ gọi — mọi lời
+`quad(...)` của vỉa hè và vạch kẻ đều bọc `Math.min`/`Math.max` để ép góc sau lớn hơn góc trước —
+và bị **quên ở chỗ thứ bảy**: hàm `dai()` dựng bốn cánh tay của lòng đường, nơi cánh TÂY chạy từ
+`-cu` **xuống** `-0,5` và cánh NAM chạy theo trục `v` (trục có dấu ngược trong mặt phẳng `x–z`).
+
+### Phương án cân nhắc
+1. **Đảo dấu tại bốn chỗ gọi `dai()`** — nhỏ nhất, hiển ngôn nhất. **LOẠI**: nó là lần thứ BẢY
+   phát biểu lại cùng một luật, tức đúng cái đã đẻ ra khuyết tật này. Cánh tay thứ năm viết sau này
+   sẽ quên lần thứ tám (bài học Phase 11: *"bịt mười lăm chỗ thì chỗ thứ mười sáu sẽ quên"*).
+2. **Bắt `dai()` tự chuẩn hoá `from`/`to`** — chữa được cánh TÂY nhưng **không chữa được cánh NAM**,
+   vì cánh NAM đúng thứ tự mà vẫn ngược chiều: nguyên nhân của nó nằm ở phép đổi trục `u,v → x,z`,
+   không nằm ở thứ tự tham số. Một bản vá đúng một nửa là loại nguy hiểm nhất — nó làm con số tụt
+   đủ nhiều để trông như đã xong.
+3. **Đặt `side: DoubleSide` cho vật liệu mặt đường** — làm nét đứt biến mất ngay. **LOẠI**: nó không
+   sửa gì cả, nó chỉ TẮT phép kiểm; và nó nhân đôi số mảnh phải tô cho mọi tam giác mặt đường, kể
+   cả những tam giác đang đúng. Mua một hình ảnh đúng bằng cách bỏ một lưới an toàn.
+4. ✅ **`quad4` tự sửa chiều quay** — cái cửa DUY NHẤT mà mọi tấm nằm ngang của mạng đường đi qua
+   (`quad` uỷ quyền cho nó; `dai` gọi thẳng nó). Một luật, một công thức, một chỗ.
+
+### Giải pháp chọn
+`quad4` tính **diện tích có dấu (shoelace)** của tứ giác trong mặt phẳng `(u, v)`; hệ toạ độ thế
+giới là `x = toWorld(u)`, `z = toWorld(v)` với `y` hướng lên, nên **mặt ngửa ⇔ diện tích ÂM**.
+Dương thì đổi chỗ `p1` với `p3` — đường chéo `p0–p2` giữ nguyên nên **vẫn đúng hai tam giác ấy**,
+chỉ quay ngược lại. Bằng 0 ⇒ tấm suy biến, để nguyên (đằng nào cũng vô hình).
+
+### Trade-off
+Đây là **ẩn** thay vì **hiển ngôn**, tức đi ngược nguyên tắc *Explicit over Implicit*. Chấp nhận,
+vì luật này không phải một lựa chọn mỹ thuật mà là một **ràng buộc vật lý của bộ tô hình**: không
+tồn tại chỗ gọi nào muốn một mặt đường úp xuống. Khi một luật đúng cho 100% trường hợp thì đặt nó ở
+cửa vào rẻ hơn và an toàn hơn là nhắc lại ở từng chỗ gọi. Sáu lời `Math.min`/`Math.max` cũ được
+giữ nguyên: chúng nay là thừa nhưng vô hại, và chúng vẫn nói đúng ý định của hình chữ nhật.
+
+### Ảnh hưởng
+* **Diện tích mặt đường nhìn thấy được: 80,8% → 100,0%** trên tổng 15 kỷ (đo bằng tổng diện tích
+  tam giác NGỬA chiếu xuống mặt phẳng, `/tmp/probe-area.mjs`, thuần Node). Hai kỷ Đàm kêu chính là
+  hai kỷ TỆ NHẤT bảng: **kỷ 1 = 65,8%** và **kỷ 2 = 71,5%**.
+* **Hình học KHÔNG đổi một chữ số**: cột tổng diện tích trùng tới ba chữ số thập phân ở cả 15 kỷ
+  (25,078 · 36,214 · … · 59,487), số tam giác trùng từng đơn vị (kỷ 1: 81.066 · kỷ 2: 94.698), số
+  lệnh vẽ trùng (11 · 14). Bản vá chỉ đổi THỨ TỰ ba đỉnh.
+* Ảnh `--width 1500` kỷ 1 và kỷ 2: **2,3%** và **2,7%** điểm ảnh đổi quá ngưỡng mắt, lệch trung
+  bình chỗ đã đổi **86,90** và **43,50** — tức đổi ít chỗ nhưng đổi rất mạnh ở đúng những chỗ ấy.
+
+### Điều kiện xem lại
+Thêm một lớp mới vào mạng đường (làn xe đạp, đảo giao thông, gờ giảm tốc…) thì **không phải làm
+gì** — nó đi qua `quad4` là tự đúng. Nhưng nếu có ngày phải dựng một mặt **THẲNG ĐỨNG** khác ngoài
+`curbFace`, phải nhớ `quad4` chỉ đúng cho tấm NẰM NGANG: nó chuẩn hoá theo mặt phẳng `(u, v)`, mà
+một mặt đứng thì diện tích chiếu xuống mặt phẳng ấy bằng 0.
+
+---
+
 ## ADR-049 — Vùng phụ cận của đô thị là một NGỮ PHÁP RIÊNG, không phải một mật độ cảnh vật cao hơn
 
 **Ngày**: 2026-08-21 · **Phase 13 VIỆC B** · **Trạng thái**: đã áp dụng

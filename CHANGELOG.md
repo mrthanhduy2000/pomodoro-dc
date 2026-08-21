@@ -12,6 +12,28 @@
 
 ---
 
+## 2026-08-21 — Phase 14 §1(1): mạng đường thôi đứt nét — 13,9–34,4% mặt đường chưa từng được vẽ (ADR-050)
+
+- **Mục đích**: Đàm nhìn kỷ 1 và kỷ 2 rồi nói *«cái đường có nét đứt trông giả tạo kinh khủng»*.
+  Bisect trước, sửa sau: nét đứt **có sẵn ở `main` (`d72c033`)** — VIỆC B vô can, nó chỉ làm khuyết
+  tật dễ thấy hơn.
+- **Nguyên nhân gốc**: `FrontSide` (mặc định của three) vứt mọi tam giác xếp NGƯỢC CHIỀU. Hàm
+  `dai()` dựng bốn cánh tay lòng đường, trong đó cánh **TÂY** chạy từ giá trị lớn xuống giá trị nhỏ
+  và cánh **NAM** chạy theo trục `v` — cả hai cho ra chiều quay úp, nên bị cắt sạch. Khúc hiện ≈
+  khúc mất ≈ nửa ô, đúng hình dạng một nét đứt.
+- **Phạm vi**: một hàm duy nhất — `quad4` trong
+  `src/components/city/render3d/terrainMesh.js` nay tự chuẩn hoá chiều quay bằng diện tích có dấu.
+  Không đổi bảng nào, không đổi engine, không thêm lớp mới.
+- **Ảnh hưởng**: diện tích mặt đường **nhìn thấy được** đi từ **80,8% → 100,0%** trên 15 kỷ (kỷ 1:
+  65,8% → 100% · kỷ 2: 71,5% → 100%). **Hình học không đổi một chữ số**: tổng diện tích trùng tới
+  ba chữ số thập phân ở cả 15 kỷ, số tam giác và số lệnh vẽ trùng từng đơn vị.
+- **Tương thích**: không có migration. Không đụng state, không đụng Supabase, không đụng ADR-007.
+- **Lưới an toàn mới**: `terrainMesh.test.js` thêm bài *"MỌI TAM GIÁC NẰM NGANG PHẢI NGỬA MẶT LÊN
+  TRỜI"* — duyệt cả 15 kỷ, cả tấm đất lẫn tấm đường, có gác chạy-rỗng và gác "đủ bốn phía". Bài này
+  **ĐỎ ở cả 15 kỷ trên mã chưa vá** (5.492 tam giác) và xanh sau khi vá.
+
+---
+
 ## 2026-08-21 — Phase 13 VIỆC B: vùng phụ cận của đô thị (ADR-049)
 
 - **Mục đích**: làm thành phố đọc ra là **một NƠI LỚN**, không phải một cụm nhà đẹp. Vòng trước đã

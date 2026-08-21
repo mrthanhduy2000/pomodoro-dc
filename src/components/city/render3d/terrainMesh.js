@@ -500,10 +500,37 @@ export function buildRoadSurface({ terrain, gridSize, layout, palette }) {
    * (`carriagewayShape`) thì mép ngoài của một dải đường không còn song song với tim đường, nên ô
    * lát ở mép là một hình THANG. Ép nó về chữ nhật thì hoặc thừa ra ngoài mép, hoặc hụt vào để lộ
    * cỏ — cả hai đều đúng cái răng cưa mà cánh tay loe sinh ra để xoá.
+   *
+   * ⚠️⚠️ VÀ CHIỀU QUAY PHẢI ĐƯỢC SỬA **Ở ĐÂY**, KHÔNG BẮT BÊN GỌI NHỚ. Vật liệu three mặc định là
+   * `FrontSide`: ba đỉnh nằm đúng chỗ nhưng xếp theo chiều ngược thì cả tam giác bị vứt đi — hình
+   * học hoàn hảo trong bộ nhớ, mặt đường thủng một nửa trên màn hình. Luật ấy TỪNG được phát biểu
+   * ở SÁU chỗ gọi (mọi lời `quad(...)` của vỉa hè và vạch kẻ đều bọc `Math.min`/`Math.max` để ép
+   * góc sau lớn hơn góc trước) và bị quên ở chỗ thứ bảy — hàm `dai()` bên dưới, nơi cánh tay TÂY
+   * chạy từ `-cu` xuống `-0,5` và cánh tay NAM chạy theo trục `v`, cả hai đều cho ra chiều quay
+   * ngược. Hậu quả: **13,9–34,4% tam giác mặt đường chưa từng hiện lên màn hình** ở cả 15 kỷ, con
+   * đường đọc ra thành từng khúc rời có khe hở đúng nửa ô. Đúng bài học Phase 11: *"bịt mười lăm
+   * chỗ thì chỗ thứ mười sáu viết sau này sẽ quên"* — nên nay luật chỉ còn MỘT bản, đặt ở cái cửa
+   * duy nhất mà mọi tấm nằm ngang của mạng đường đều đi qua.
+   *
+   * Dấu của diện tích có hướng (shoelace) trong mặt phẳng `(u, v)`: hệ toạ độ thế giới là
+   * `x = toWorld(u)`, `z = toWorld(v)` với `y` hướng lên, nên **mặt ngửa ⇔ diện tích có dấu ÂM**.
+   * Bằng 0 ⇒ tấm suy biến, không có mặt để mà quay ⇒ để nguyên (đằng nào cũng vô hình).
    */
+  const dienTichCoDau = (q) => {
+    let s = 0;
+    for (let i = 0; i < 4; i += 1) {
+      const a = q[i]; const b = q[(i + 1) % 4];
+      s += a[0] * b[1] - b[0] * a[1];
+    }
+    return s;
+  };
   const quad4 = (p0, p1, p2, p3, rgb, lift, part) => {
-    push(p0[0], p0[1], rgb, lift); push(p1[0], p1[1], rgb, lift); push(p2[0], p2[1], rgb, lift);
-    push(p0[0], p0[1], rgb, lift); push(p2[0], p2[1], rgb, lift); push(p3[0], p3[1], rgb, lift);
+    // Đảo thì đổi chỗ p1 với p3: đường chéo p0–p2 giữ nguyên nên VẪN LÀ ĐÚNG HAI TAM GIÁC ẤY,
+    // chỉ quay ngược lại. Đổi chỗ p0/p2 cũng lật chiều nhưng lại đổi luôn cách chia đôi tấm.
+    const đảo = dienTichCoDau([p0, p1, p2, p3]) > 0;
+    const a = p0; const b = đảo ? p3 : p1; const c = p2; const d = đảo ? p1 : p3;
+    push(a[0], a[1], rgb, lift); push(b[0], b[1], rgb, lift); push(c[0], c[1], rgb, lift);
+    push(a[0], a[1], rgb, lift); push(c[0], c[1], rgb, lift); push(d[0], d[1], rgb, lift);
     sink.kinds.push(part, part);
     sink.tris += 2;
   };

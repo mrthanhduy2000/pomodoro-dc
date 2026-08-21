@@ -715,3 +715,75 @@ test('MÀU NƯỚC ĐI TỪ CẠN SANG SÂU — đó là thứ thay cho sóng, n
     'bảng kỷ có tín hiệu cạn-sâu mờ hơn cổng cũ đã đổi — nếu vì nước rộng ra thì mừng, nhưng phải '
     + 'sửa bảng này và ghi lại; nếu vì nước hẹp thêm thì đó là hồi quy.');
 });
+
+/**
+ * ⚠️ BÀI NÀY CANH MỘT ĐẠI LƯỢNG KHÁC HẲN MỌI BÀI Ở TRÊN: **CHIỀU QUAY**, tức thứ quyết định một
+ * tam giác CÓ ĐƯỢC VẼ RA HAY KHÔNG.
+ *
+ * Bài `LÒNG ĐƯỜNG DỰNG ĐÚNG HÌNH MÀ carriagewayShape KHAI` ở trên đã xanh nhiều tháng trong khi
+ * **13,9–34,4% số tam giác mặt đường không hề hiện lên màn hình**. Nó không sai: nó hỏi *"các
+ * đỉnh có nằm đúng chỗ không"*, và câu trả lời là CÓ. Nhưng ba đỉnh nằm đúng chỗ mà xếp theo
+ * chiều ngược thì `FrontSide` (mặc định của three) vứt cả tam giác đi — hình học vẫn hoàn hảo
+ * trong bộ nhớ, mặt đường vẫn thủng một nửa trên màn hình. Cùng họ `TECH_DEBT #42` (*"assert con
+ * số đã KHAI thay vì con số đã DỰNG"*), đẩy thêm một bậc: ở đây assert đúng con số đã DỰNG, mà
+ * vẫn mù, vì **VỊ TRÍ và ĐỘ HIỂN THỊ là hai đại lượng**.
+ *
+ * Triệu chứng Đàm thấy: con đường hiện ra thành từng khúc rời có khe hở — «nét đứt trông giả tạo
+ * kinh khủng». Đo được: khúc hiện ≈ khúc mất ≈ nửa ô, vì đúng hai trong bốn cánh tay bị vứt.
+ *
+ * ⚠️ THỬ NGƯỢC (đã chạy trước khi giữ lại): trên mã CHƯA vá, bài này ĐỎ ở **cả 15 kỷ**, chỉ ở tấm
+ * ĐƯỜNG, và chỉ ở hai phía `tây` + `nam` của lớp `LÒNG ĐƯỜNG` — 168…988 tam giác mỗi kỷ, tổng
+ * 5.492. Tấm ĐẤT xanh sẵn (0/6.498 ở cả 15 kỷ) nên nó vừa là vế thứ hai của phép đo vừa là đối
+ * chứng chứng minh phép đo KHÔNG kêu oan mọi thứ.
+ */
+test('MỌI TAM GIÁC NẰM NGANG PHẢI NGỬA MẶT LÊN TRỜI — nằm đúng chỗ chưa đủ, phải NHÌN THẤY được', () => {
+  const TÊN_LỚP = ['lòng đường', 'vỉa hè', 'bó vỉa', 'vạch kẻ'];
+  /** Phân loại một tam giác về phía nào của tâm ô — để câu báo lỗi chỉ thẳng vào cánh tay hỏng. */
+  const phía_của = (cu, cv) => {
+    const du = cu - Math.round(cu); const dv = cv - Math.round(cv);
+    if (Math.abs(du) <= 1e-9 && Math.abs(dv) <= 1e-9) return 'lõi';
+    return Math.abs(du) > Math.abs(dv) ? (du < 0 ? 'tây' : 'đông') : (dv < 0 ? 'bắc' : 'nam');
+  };
+
+  const hỏng = [];
+  let đãXét = 0;
+  const phíaĐãGặp = new Set();
+  for (let era = 1; era <= 15; era += 1) {
+    const { ground, road } = dựng(era);
+    for (const [tên, surface] of [['đất', ground], ['đường', road]]) {
+      if (!surface) continue;
+      const p = surface.geometry.getAttribute('position').array;
+      for (let t = 0, tri = 0; t < p.length; t += 9, tri += 1) {
+        // Thành phần Y của tích có hướng (v1−v0) × (v2−v0). Dương ⇒ mặt hướng lên, ÂM ⇒ hướng
+        // xuống ⇒ bị `FrontSide` cắt bỏ. Chỉ cần thành phần Y: mọi tấm ở đây đều nằm ngang.
+        const ax = p[t + 3] - p[t]; const az = p[t + 5] - p[t + 2];
+        const bx = p[t + 6] - p[t]; const bz = p[t + 8] - p[t + 2];
+        const cy = az * bx - ax * bz;
+        if (Math.abs(cy) <= 1e-12) continue;          // tam giác suy biến — không có mặt để mà quay
+        đãXét += 1;
+        const cu = về_ô((p[t] + p[t + 3] + p[t + 6]) / 3);
+        const cv = về_ô((p[t + 2] + p[t + 5] + p[t + 8]) / 3);
+        const phía = phía_của(cu, cv);
+        if (tên === 'đường') phíaĐãGặp.add(phía);
+        if (cy < 0) {
+          const lớp = surface.kinds ? TÊN_LỚP[surface.kinds[tri]] : '—';
+          hỏng.push(`kỷ ${era} · tấm ${tên} · lớp ${lớp} · phía ${phía}`);
+        }
+      }
+    }
+  }
+
+  // ⚠️ GÁC CHẠY-RỖNG. Không có hai dòng này thì một thay đổi làm mạng đường biến mất sẽ khiến bài
+  // test xanh rực rỡ về một thế giới không có đường nào. Bốn phía phải CÓ MẶT thì phép đo mới thật
+  // sự chạm tới cả bốn cánh tay — đúng cái mà bản đầu của phép đo này bỏ sót.
+  assert.ok(đãXét > 60_000, `phép đo chạy rỗng: chỉ xét ${đãXét} tam giác`);
+  for (const phía of ['tây', 'đông', 'bắc', 'nam']) {
+    assert.ok(phíaĐãGặp.has(phía), `mặt đường không có cánh tay phía ${phía} nào — phép đo mù một chiều`);
+  }
+
+  const gộp = new Map();
+  for (const h of hỏng) gộp.set(h, (gộp.get(h) ?? 0) + 1);
+  const bảng = [...gộp.entries()].map(([k, n]) => `  ${k} × ${n}`).join('\n');
+  assert.equal(hỏng.length, 0,
+    `${hỏng.length} tam giác nằm ngang bị xếp NGƯỢC CHIỀU nên không được vẽ ra:\n${bảng}`);
+});

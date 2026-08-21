@@ -19,7 +19,13 @@
 > bằng cách chỉnh lại con số nào. Nay còn **1 mục High** (#14) + **2 mục Medium-High** (#3, #13) +
 > **1 mục Medium-High chờ Đàm quyết** (#24) = 4 → xa ngưỡng 8–10 mục, KHÔNG cần Maintenance Sprint.
 >
-> **Cập nhật 2026-08-21 (Phase 13 §2–§3, đo mốc nền — MỚI NHẤT)**: **MỞ #71** (khu 3×3 giữ chỗ cho
+> **Cập nhật 2026-08-21 (Phase 13 VIỆC B, vùng phụ cận — MỚI NHẤT)**: **MỞ #74** (vùng phụ cận
+> không lớn lên theo số phiên ⇒ tín hiệu quy mô nằm NGOÀI vòng lặp phần thưởng — Medium, CHỜ ĐÀM
+> QUYẾT, cùng một câu hỏi với #14). **CẬP NHẬT #53**: hướng Đàm chọn (LẤP) nay đã được thực hiện ở
+> phần *dấu vết con người*, và ba con số cũ của mục ấy đã được ĐO LẠI. Số mục High vẫn là 2
+> (#14 · #53) ⇒ xa ngưỡng 8–10, KHÔNG cần Maintenance Sprint.
+>
+> **(Mốc trước) Cập nhật 2026-08-21 (Phase 13 §2–§3, đo mốc nền)**: **MỞ #71** (khu 3×3 giữ chỗ cho
 > HÌNH CHIẾU chứ không cho một ô ⇒ VIỆC A giải phóng 12,2 ô/kỷ chứ không phải 40 — Medium, CHỜ ĐÀM),
 > **MỞ #72** (cổng (M2) đã đạt sẵn 15/15 ở mọi mức sàn ⇒ không có răng — Medium, CHỜ ĐÀM) và **MỞ
 > #73** (camera buộc cứng vào `gridSize` — Low, cố ý hoãn theo đúng chỉ thị §5 của Đàm). Cả ba đều
@@ -3247,6 +3253,28 @@ mất chỗ để ghi *"kỷ này khai có nước mà chưa dựng"* — thứ 
 
 ## #53 — VÀNH ĐẤT NGOÀI LƯỚI CHIẾM ~21% KHUNG HÌNH VÀ KHÔNG MỘT PHASE NỘI DUNG NÀO CHẠM TỚI ĐƯỢC
 
+> ⚠️ **CẬP NHẬT 2026-08-21 (Phase 13 VIỆC B, ADR-049) — NỬA CÒN LẠI ĐÃ LÀM, VÀ BA CON SỐ «CHƯA ĐO
+> LẠI» Ở KHỐI DƯỚI NAY ĐÃ CÓ SỐ THẬT.** Vùng phụ cận (`hinterlandStyle.js` + `hinterland.js`) là
+> tầng nội dung ĐẦU TIÊN đặt được dấu vết CON NGƯỜI ra ngoài lưới 12×12 — thứ mà cả `§2-B` lẫn
+> `§2-C` về mặt cấu tạo không làm được. Đo trên bộ ảnh s80 dựng lại cùng ngày (chi tiết ở
+> `PERFORMANCE.md` mục "Phase 13 VIỆC B"):
+>
+> | | TRƯỚC (`e455114`) | SAU (`8bc80ab`) |
+> |---|---|---|
+> | dấu vết người ngoài lưới — số vật | **0** | **2241** (1697,6 ô², TB 149,4/kỷ) |
+> | dấu vết người ngoài lưới — % khung | **0,00** | **4,22** (0,25 … 8,49) |
+> | (M1) dấu vết người cả khung | 37,18% | **41,43%** (tăng ở 15/15 kỷ) |
+> | dải 2 (dải xa nhất còn tấm đất) | 21,56% | **32,81%** (tăng ở 15/15 kỷ) |
+> | tấm đất (grid+apron) 6 dải | 2,02 · 19,67 · 26,24 · 37,39 · 44,24 · 54,26 | 1,29 · 16,18 · 25,11 · 37,37 · 43,66 · 50,86 |
+>
+> ⚠️ **NHƯNG MỤC NÀY CHƯA ĐÓNG, VÀ LÝ DO ĐÁNG ĐỌC.** Vành ngoài KHÔNG còn là *mảng chết*, nhưng nó
+> vẫn KHÔNG *giảm khi Đàm chơi* — vùng phụ cận là một tầng **ĐỊA LÝ** (không nhận `built`/
+> `sessionCount`, có test gọi kèm dữ liệu rác khoá điều đó), nên 2241 vật ở mốc 80 phiên **bằng
+> đúng** số vật ở mốc 0 phiên. Tức nửa "trống" của mục này đã đóng; nửa "**không phải phần thưởng
+> của việc chơi**" thì chưa, và nó đã được tách ra thành mục riêng **`#74`**. Câu gốc của mục này —
+> *"càng chơi lâu, phần trống Đàm nhìn thấy càng là phần không ai chạm được"* — nay phải đọc thành
+> *"phần ấy đã có nội dung, nhưng nội dung ấy không lớn lên theo công sức của Đàm"*.
+
 > ⚠️ **ĐÍNH CHÍNH 2026-08-21 — MỘT TIỀN ĐỀ CỦA MỤC NÀY ĐÃ BỊ GỠ, NÊN PHẦN LẬP LUẬN DỰA VÀO NÓ HẾT
 > ĐÚNG** (đúng khuôn ADR-019: *"một kết luận đúng có thể hết đúng mà không ai động vào nó, vì TIỀN
 > ĐỀ của nó bị gỡ ở một phase khác"*). Mục này viện dẫn `APRON_EDGE` và lời hứa *"tấm đất phải phẳng
@@ -4144,6 +4172,43 @@ cấp `Math.min(3,…)` → `Math.min(9,…)` · cắt bớt danh sách cấp th
 - **Owner**: chưa phân công · **Status**: Open — chờ quyết định
 
 ---
+
+---
+
+## #74 — Vùng phụ cận KHÔNG lớn lên theo số phiên, nên **tín hiệu quy mô nằm ngoài vòng lặp phần thưởng**
+
+- **Tên**: Thứ làm đô thị trông rộng thì có sẵn từ phiên số 0, và không bao giờ đổi
+- **Module**: `src/engine/city3d/hinterland.js` (`planHinterland`) · `city3d/hinterlandStyle.js`
+- **Priority**: Medium · **Severity**: Low (mỹ thuật/động lực, không phải lỗi chạy)
+- **Impact**: `hinterland` được dựng đúng khuôn `outskirts` — **tầng ĐỊA LÝ, không phải tầng TIẾN
+  ĐỘ** — nên nó không nhận `built`/`levels`/`sessionCount` và có test gọi kèm dữ liệu rác khoá điều
+  đó. Hệ quả đo được: 2241 vật ngoài lưới ở mốc 80 phiên **cũng đúng bằng** số vật ở mốc 0 phiên.
+  Người mới mở app lần đầu thấy y hệt vùng phụ cận mà người chơi 120 phiên thấy. Toàn bộ phần
+  "rộng hơn, quy mô hơn" mà Đàm yêu cầu vì vậy là một **món quà tặng trước**, không phải một phần
+  thưởng kiếm được — trong khi mọi tầng khác của thành phố (nhà, đường, nhà dân, mảng phủ) đều lớn
+  lên theo phiên.
+- **Root Cause**: chỉ thị §4 của Đàm cho phép vùng phụ cận phụ thuộc số phiên *"nhưng nếu có thì
+  phải theo bất biến **chỉ thêm, không bao giờ dời**"*. Tôi chọn KHÔNG phụ thuộc, vì hai lý do đo
+  được: (a) `outskirts` đã là tầng địa lý và hai tầng ngoài lưới mà một cái đứng yên một cái lớn dần
+  sẽ trôi khỏi nhau đúng như hai bảng mật độ đã suýt trôi ở ADR-038; (b) bất biến "chỉ thêm" đòi một
+  phép quét liệt kê 1…120 phiên × 15 kỷ để chứng minh, và phép quét ấy chưa được viết (xem #71 —
+  cùng một món nợ, cùng một lý do hoãn).
+- **Current Risk**: Thấp. Không ai mất gì; chỉ là một cơ hội chưa dùng.
+- **Future Risk**: Trung bình. Nếu sau này Đàm muốn *"vùng quê mở rộng theo chuỗi ngày"* thì phải
+  làm ĐÚNG bất biến "chỉ thêm, không bao giờ dời" — mà ba đường rò rỉ của bất biến ấy đã được liệt
+  kê sẵn ở #71 (ngân sách suy từ số ô còn trống · bộ lọc va chạm chạy SAU khi sắp xếp · `hashPick`
+  lấy dư theo ĐỘ DÀI danh sách). Làm ẩu thì mỗi phiên xong lại có một cái ruộng NHẢY CHỖ, đúng thứ
+  ADR-007 sinh ra để cấm.
+- **Recommended Solution**: nếu Đàm muốn, cho `hamletCount` (và CHỈ nó) tăng theo mốc phiên bằng
+  cách **nối thêm vào ĐUÔI** danh sách đã có, kèm một bài test liệt kê 1…120 phiên × 15 kỷ đòi mọi
+  vật cũ giữ nguyên toạ độ từng chữ số.
+- **Estimated Complexity**: Trung bình (phép quét liệt kê là phần tốn nhất, không phải phần dựng).
+- **Blocking Conditions**: cần Đàm quyết — đây là một câu hỏi **thiết kế trò chơi** (*"cái rộng lớn
+  là quà tặng hay là phần thưởng?"*), không phải một câu hỏi kỹ thuật. Nó là cùng một câu hỏi với
+  #14.
+- **Review Trigger**: khi #14 được chốt, hoặc lần đầu Đàm nói *"vùng quanh thành phố nên lớn lên
+  theo tôi"*.
+- **Owner**: chưa ai · **Status**: MỞ, CHỜ ĐÀM QUYẾT
 
 ## #73 — Camera bị buộc cứng vào `CITY_GRID_SIZE`, nên "lưới to hơn" và "nhà cao hơn" TỰ TRIỆT TIÊU nhau
 

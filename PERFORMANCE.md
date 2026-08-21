@@ -1827,3 +1827,238 @@ một thứ = một luật hai công thức"* — cặp công-cụ-dựng ↔ c�
 Phase 4G. **Bộ số hiện hành là bộ đo bằng công cụ đã commit và đã có test; bảng cũ bị thay thế.**
 Kết luận ĐỊNH TÍNH của bảng cũ (chân trời dồn về dải xa, `ground-grid` dồn về dải gần, và trục dải
 ↔ chiều sâu là đơn điệu với mặt đất) **vẫn đứng vững** — nó còn mạnh hơn ở bộ số mới.
+
+## Phase 13 VIỆC B — VÙNG PHỤ CẬN: BA CỔNG (G1)(G2)(G3), TRƯỚC ↔ SAU (2026-08-21, ADR-049)
+
+Cặp mốc: **TRƯỚC = `e455114`** (bảng + tầng hình học đã có, **chưa nối vào cảnh**) ↔ **SAU = `8bc80ab`**
+(đã nối). Chọn `e455114` chứ không phải `d72c033` có chủ đích: hai cây mã chỉ khác nhau ĐÚNG một
+vòng lặp đọc trong `sceneGraph.js`, nên mọi chênh lệch dưới đây quy được về đúng một nguyên nhân.
+
+Mọi ảnh dựng bằng **cùng một dòng lệnh** ở cả hai cây:
+
+```
+node scripts/city-preview.mjs --era N --hour 12 --sessions 80 --theme light --mask "<bộ lớp>"
+node scripts/mask-count.mjs   <ảnh mặt nạ> <tên lớp…> --bands 6
+```
+
+⚠️ **Bộ ảnh của cả hai cây đã kiểm mốc thời gian trước khi trích số** (TRƯỚC 16:22–16:44 · SAU
+16:24–16:39, cùng ngày) — xem mục "MỘT CÁI CỔNG CACHE…" bên dưới, vì đúng phiên này đã bị một bộ
+ảnh cũ nói dối một lần.
+
+### (G3) / (M1) — DẤU VẾT CON NGƯỜI TRÊN CẢ KHUNG HÌNH
+
+Định nghĩa (M1) giữ nguyên như mốc nền §2: `buildings + props + residents + road`, cộng thêm
+`hinterland` ở bản SAU. **Cây cối KHÔNG tính** — `humanTrace.js` xếp chúng vào thiên nhiên, và cả
+phase này sinh ra vì lý do đó.
+
+| kỷ | (M1) TRƯỚC | (M1) SAU | Δ | dải 2 TRƯỚC | dải 2 SAU | Δ | vùng phụ cận (% khung) |
+|---|---|---|---|---|---|---|---|
+| 1 | 21,77 | 22,02 | **+0,25** | 14,62 | 15,66 | **+1,04** | 0,25 |
+| 2 | 35,46 | 44,00 | **+8,54** | 19,58 | 42,46 | **+22,88** | 8,54 |
+| 3 | 35,90 | 42,93 | **+7,03** | 15,29 | 33,92 | **+18,63** | 7,03 |
+| 4 | 43,17 | 45,95 | **+2,78** | 34,18 | 39,53 | **+5,35** | 2,78 |
+| 5 | 31,55 | 33,65 | **+2,10** | 38,43 | 44,01 | **+5,58** | 2,10 |
+| 6 | 43,69 | 52,02 | **+8,33** | 27,49 | 45,81 | **+18,32** | 8,33 |
+| 7 | 43,69 | 50,16 | **+6,47** | 31,03 | 48,25 | **+17,22** | 6,47 |
+| 8 | 44,99 | 49,75 | **+4,76** | 25,00 | 39,56 | **+14,56** | 4,76 |
+| 9 | 40,16 | 48,29 | **+8,13** | 18,78 | 40,99 | **+22,21** | 8,13 |
+| 10 | 38,22 | 43,36 | **+5,14** | 18,64 | 37,68 | **+19,04** | 5,14 |
+| 11 | 44,27 | 46,65 | **+2,38** | 31,90 | 40,95 | **+9,05** | 2,38 |
+| 12 | 37,57 | 39,58 | **+2,01** | 12,21 | 17,41 | **+5,20** | 2,01 |
+| 13 | 30,99 | 32,87 | **+1,88** | 6,32 | 10,41 | **+4,09** | 1,88 |
+| 14 | 37,83 | 39,86 | **+2,03** | 17,45 | 21,75 | **+4,30** | 2,03 |
+| 15 | 28,48 | 30,31 | **+1,83** | 12,52 | 13,69 | **+1,17** | 1,83 |
+| **TB** | **37,18** | **41,43** | **+4,24** | **21,56** | **32,81** | **+11,24** | **4,24** |
+
+**(G3) ĐẠT**: tăng ở **15/15 kỷ**, trung bình 37,18 → **41,43** (+4,24 điểm phần trăm).
+
+⚠️ **VÀ CỘT CUỐI CHÍNH LÀ ĐỐI CHỨNG MẠNH NHẤT CỦA CẢ BẢNG.** Δ của (M1) **bằng ĐÚNG** tỉ lệ điểm
+ảnh của riêng lớp `hinterland`, tới hai chữ số thập phân, ở **cả 15 kỷ**. Nghĩa là toàn bộ phần
+tăng đến từ chính vùng phụ cận và **không một điểm ảnh nào khác trong khung hình dịch chuyển** —
+ADR-007 ("bảo tàng bất động") được xác nhận ở tầng điểm ảnh chứ không phải chỉ ở tầng lý lẽ. Nếu
+vùng phụ cận có lỡ đụng vào toạ độ trong lưới thì hai cột này **không thể** bằng nhau.
+
+Kiểm TỔNG mọi lớp trên cả khung (luật bắt buộc): TRƯỚC **101,84–102,62%** · SAU **101,91–102,97%**
+— phần dôi 1–3% là viền răng cưa bị đếm ở hai lượt, đúng dung sai đã ghi.
+
+### (G2) — HỒ SƠ CHIỀU SÂU: SÁU CON SỐ MẶT ĐẤT BẮT BUỘC, VÀ DẢI 2 LÀ CỔNG
+
+Chỉ thị đòi in **đủ sáu** con số `ground-apron + ground-grid` từng dải trước khi chọn cổng. Đây là
+bảng đầy đủ (trung bình 15 kỷ, **% của RIÊNG dải ấy**, dải 1 = XA nhất / trên cùng khung):
+
+| lớp | dải 1 | dải 2 | dải 3 | dải 4 | dải 5 | dải 6 |
+|---|---|---|---|---|---|---|
+| `ground-grid` TRƯỚC/SAU | 0,00 / 0,00 | 3,66 / 3,66 | 11,72 / 11,72 | 30,06 / 30,06 | 25,05 / 25,05 | 21,02 / 21,02 |
+| `ground-apron` TRƯỚC/SAU | 2,01 / 1,28 | 16,00 / 12,51 | 14,52 / 13,39 | 7,33 / 7,31 | 19,19 / 18,61 | 33,24 / 29,84 |
+| **TẤM ĐẤT TRƯỚC** | **2,02** | **19,67** | **26,24** | **37,39** | **44,24** | **54,26** |
+| **TẤM ĐẤT SAU** | **1,29** | **16,18** | **25,11** | **37,37** | **43,66** | **50,86** |
+| `horizon` TRƯỚC/SAU | 67,27 / 61,72 | 28,13 / 22,12 | 3,48 / 3,17 | 0,16 / 0,16 | 0,00 / 0,00 | 0,17 / 0,15 |
+| `water` TRƯỚC/SAU | 19,93 / 19,37 | 12,64 / 12,23 | 4,17 / 4,01 | 0,06 / 0,06 | 0,12 / 0,09 | 0,60 / 0,53 |
+| `landscape` TRƯỚC/SAU | 11,63 / 11,15 | 21,14 / 20,23 | 7,38 / 7,23 | 3,75 / 3,75 | 9,67 / 9,62 | 16,02 / 15,78 |
+| `hinterland` SAU | **7,94** | **11,24** | 1,83 | 0,02 | 0,69 | 3,74 |
+| **DẤU VẾT NGƯỜI TRƯỚC** | **0,41** | **21,56** | **61,32** | **61,04** | **47,93** | **30,72** |
+| **DẤU VẾT NGƯỜI SAU** | **8,35** | **32,81** | **63,15** | **61,06** | **48,62** | **34,46** |
+| TỔNG mọi lớp TRƯỚC | 101,26 | 103,15 | 102,59 | 102,39 | 101,96 | 101,77 |
+| TỔNG mọi lớp SAU | 101,88 | 103,56 | 102,68 | 102,39 | 101,99 | 101,78 |
+
+**Cổng (G2) đặt ở DẢI 2 — ĐẠT.** Dải 2 đi **21,56 → 32,81** (+11,24), tăng ở **15/15 kỷ**
+(+1,04 kỷ 1 … +22,88 kỷ 2).
+
+Bướu đã bẹt đi, đo bằng hai tỉ số:
+
+| | TRƯỚC | SAU |
+|---|---|---|
+| đỉnh bướu ÷ dải 2 | 61,32 / 21,56 = **2,84** | 63,15 / 32,81 = **1,92** |
+| đỉnh bướu ÷ dải 1 | 61,32 / 0,41 = **149,6** | 63,15 / 8,35 = **7,6** |
+
+Vì sao dải 2 là dải đúng, đọc thẳng từ bảng: **dải 1 chỉ có 2,02% mặt đất** (phần còn lại là chân
+trời 67,27 + mặt nước 19,93 + cây 11,63) ⇒ một cổng đặt ở đó chỉ đạt được bằng cách **dựng nhà trên
+sườn núi chân trời**, đúng cái bẫy chỉ thị đã cảnh báo. **Dải 3 thì ngược lại**: thừa đất (26,24)
+nhưng dấu vết người đã **61,32%** — sát đỉnh bướu, tức xanh sẵn trước khi làm gì cả, đúng cái phễu
+đã hạ bệ (M2) (`TECH_DEBT #72`). Dải 2 là **dải xa nhất còn có tấm đất thật** (19,67%) mà dấu vết
+người mới 21,56% — còn nguyên chỗ để tăng.
+
+⚠️ Ba dòng cuối bảng là **phép cộng bắt buộc**. Năm trong sáu dải nằm trong dung sai 3%; **dải 2 dôi
+3,15% (TRƯỚC) và 3,56% (SAU)** — hơi quá dung sai, và cơ chế thì rõ: dải 2 là dải có **nhiều đường
+bao nhất** (đường bờ mái của đô thị cắt lên nền núi, cộng tán cây), mà mỗi đường bao là một hàng
+điểm ảnh pha bị đếm ở hai lượt. SAU dôi hơn TRƯỚC đúng 0,41 điểm — bằng việc vùng phụ cận thêm
+đường bao vào chính dải ấy. Ghi ra thay vì làm tròn cho đẹp: dung sai 3% hiệu chuẩn cho **cả khung**
+(nơi phép kiểm này ĐẠT: 101,84–102,97%), chưa từng hiệu chuẩn cho **từng dải**.
+
+⚠️ **VÀ ĐỌC HÀNG `ground-grid`: NÓ ĐỨNG YÊN TỚI TỪNG PHẦN TRĂM Ở CẢ SÁU DẢI.** Cùng với
+`buildings` · `props` · `residents` · `road` cũng đứng yên y hệt ở cả sáu dải, đây là bằng chứng thứ
+hai (độc lập với cột Δ ở trên) rằng vùng phụ cận **không chạm vào bất cứ thứ gì trong lưới**. Thứ
+duy nhất giảm là những lớp mà nó **che khuất**: chân trời, vành đất ngoài lưới, cây, mặt nước — và
+tổng phần giảm ở dải 1 (−7,32) khớp với phần vùng phụ cận chiếm được (+7,94) trong sai số răng cưa.
+
+### (G1) — DẤU VẾT CON NGƯỜI **NGOÀI LƯỚI**: MỐC NỀN LÀ 0,00 TUYỆT ĐỐI
+
+Chỉ thị đòi đếm bằng **CẢ HAI đơn vị**. Mốc nền của cả hai: **0** (đã đo ở §2 — 0/446 vật, 0,00%).
+
+**Đơn vị 1 — SỐ VẬT THỂ** (`node --import ./scripts/register-esm-loader.mjs scripts/plan-coverage.mjs --dau-chan`,
+thuần engine, không cần trình duyệt):
+
+| kỷ | vật ngoài lưới / tổng vật người | diện tích (ô²) | xa nhất (ô) | loại nhiều nhất |
+|---|---|---|---|---|
+| 1 | **27** / 57 | 6,9 | 7,70 | roadway×16 hamlet×6 quarry×2 huntingCamp×2 |
+| 2 | 251 / 291 | 187,2 | 8,00 | rampart×104 parcel×88 waterwork×26 roadway×16 |
+| 3 | 210 / 252 | 149,3 | 8,00 | rampart×79 parcel×76 waterwork×28 roadway×16 |
+| 4 | 229 / 274 | 152,8 | 7,90 | rampart×104 parcel×72 waterwork×24 roadway×16 |
+| 5 | 94 / 135 | 47,6 | 8,00 | waterwork×28 rampart×20 parcel×17 roadway×14 |
+| 6 | 239 / 280 | 377,1 | 8,00 | parcel×96 rampart×78 waterwork×32 roadway×14 |
+| 7 | 216 / 258 | 160,6 | 8,00 | parcel×84 rampart×74 waterwork×28 roadway×16 |
+| 8 | 171 / 215 | 97,1 | 8,00 | rampart×74 parcel×43 waterwork×32 roadway×9 |
+| 9 | 221 / 263 | 165,0 | 8,00 | rampart×79 parcel×78 waterwork×26 roadway×16 |
+| 10 | 135 / 180 | 118,7 | 8,00 | parcel×64 waterwork×32 roadway×15 hamlet×12 |
+| 11 | 104 / 146 | 69,6 | 8,00 | waterwork×32 parcel×30 hamlet×13 roadway×11 |
+| 12 | 177 / 218 | 97,1 | 8,00 | rampart×74 parcel×44 waterwork×32 roadway×12 |
+| 13 | 62 / 101 | 24,6 | 7,90 | waterwork×22 roadway×16 hamlet×12 railway×8 |
+| 14 | 65 / 115 | 26,7 | 7,90 | waterwork×20 roadway×16 hamlet×10 elevatedRoad×8 |
+| 15 | **40** / 82 | 17,3 | 7,70 | roadway×16 hamlet×11 elevatedRoad×8 crane×2 |
+| **TỔNG** | **2241** | **1697,6 ô²** | | trung bình **149,4 vật/kỷ** |
+
+**Kỷ 1 (27 vật) và kỷ 15 (40 vật) là hai kỷ THƯA NHẤT bảng** — đúng như chỉ thị đòi: đó là hai ca
+nghiệm thu, và nếu bảng làm chúng trông như mười ba kỷ kia thì bảng sai chứ không phải cổng sai.
+Săn bắt hái lượm không có ruộng có đê; Dubai không có thành luỹ.
+
+**Đơn vị 2 — TỈ LỆ ĐIỂM ẢNH + TƯƠNG PHẢN.** Lớp mặt nạ riêng `hinterland` cho tỉ lệ diện tích; tương
+phản đo bằng `sweep-diff.mjs --frame --chi <mặt nạ>:<kênh>` giữa hai bản dựng, **chỉ trong vùng phụ
+cận** (đo trên cả khung sẽ pha loãng ~25 lần — đúng hình dạng `TECH_DEBT #22`):
+
+| kỷ | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | TB |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| % khung | 0,25 | 8,49 | 7,00 | 2,76 | 2,09 | 8,28 | 6,44 | 4,74 | 8,10 | 5,13 | 2,37 | 2,00 | 1,87 | 2,02 | 1,82 | **4,22** |
+| tương phản /255 | 61,7 | 93,0 | 86,0 | 74,4 | 62,2 | 79,0 | 84,0 | 67,3 | 87,6 | 74,5 | 77,6 | 69,4 | **44,7** | 61,7 | 46,9 | **71,3** |
+
+**(G1) ĐẠT, và đạt rộng**: yêu cầu là ≥ 8/15 kỷ có cụm đọc ra được (tương phản ≥ ngưỡng mắt 12);
+đo được **15/15**, kỷ yếu nhất (13) vẫn **3,7 lần** ngưỡng.
+
+**SÀN TOÀN CỤC — chốt SAU khi đo, ghi ra để phase sau còn đối chiếu:**
+- diện tích trung bình 15 kỷ **≥ 3,0%** khung hình — đo được **4,22%**;
+- **≥ 12/15 kỷ** có tương phản ≥ 12 — đo được **15/15**;
+- **≥ 8/15 kỷ** có diện tích ≥ 2,0% — đo được **12/15**.
+
+⚠️ **HAI MẶT NẠ ĐỘC LẬP ĐÃ ĐƯỢC ĐẶT CẠNH NHAU, VÀ CHÚNG KHỚP.** Cùng một vùng có thể hỏi bằng hai
+ảnh mặt nạ khác nhau — `hinterland,buildings,props` (kênh đỏ) và `road,hinterland,landscape` (kênh
+lục). Chênh lệch tương phản giữa hai đường đo: **lớn nhất 1,96 · trung bình 1,07**, tức **16% của
+ngưỡng mắt** — không đủ để đổi một kết luận nào. Và chênh lệch ấy **có dấu hệ thống**: mặt nạ B
+luôn đọc CAO hơn và chọn ÍT điểm ảnh hơn ở cả 15 kỷ, đúng như phải thế — hàng xóm của nó (`road`,
+`landscape`) ăn mất viền răng cưa, mà viền răng cưa là chỗ đổi ÍT nhất (nửa nền, nửa vật). Một cơ
+chế giải thích được, không phải nhiễu. Nếu chỉ có MỘT phép đo thì không có gì để cãi nhau, tức
+không có gì để phát hiện.
+
+### CỔNG CPU DỰNG CẢNH — 1,067× (TRẦN 1,25×) ✓
+
+`npm run test:cross`, ba lượt mỗi bên, **chạy nối tiếp, không chồng lấn** (luật `ADR-048(c)`):
+
+| | lượt 1 | lượt 2 | lượt 3 | trung vị |
+|---|---|---|---|---|
+| `main` (`d72c033`) | 21,0 s | 22,3 s | 21,0 s | **21,0 s** |
+| HEAD (vùng phụ cận) | 22,5 s | 22,4 s | 22,1 s | **22,4 s** |
+
+**Tỉ số 22,4 / 21,0 = 1,067×** — dưới xa trần 1,25×.
+
+⚠️ **CỔNG NÀY CANH MỘT TRỤC KHÁC VỚI FPS, VÀ ĐÓ LÀ LÝ DO NÓ KHÔNG ĐƯỢC NỚI.** Chỉ thị §0 nói *"không
+quan trọng hiệu năng"*, và câu đó đúng **cho FPS trên M3** (còn dư 3,2 lần, hình học gần như miễn
+phí). Nó **KHÔNG** áp cho trục này: thời gian **DỰNG CẢNH** là chi phí CPU một lần mỗi lần đổi kỷ —
+nó không xuất hiện trong bảng FPS, nó xuất hiện ở **độ trễ lúc Đàm bấm sang kỷ khác**, và
+`ADR-048` đã bắt được một hồi quy +28 giây mà build/lint/960 bài test đều xanh. Hai trục, hai ngân
+sách; giữ nguyên 1,25×.
+
+### CÁC CỔNG CÒN LẠI
+
+- **Chống trôi bản quét**: **15/15** cặp chặng (gần nhất **15,45**) · **105/105** cặp kỷ (gần nhất
+  **22,08** · trung vị **39,34**) · «✓ TOÀN BỘ 90 Ô PHÂN BIỆT ĐƯỢC». Đối chứng tự-kiểm của chính
+  công cụ kêu ở 4/15 hàng khi lấy mẫu lệch 104px — cổng còn răng.
+- **Không thêm nguồn sáng · không hạ DPR · không thêm lượt vẽ toàn màn hình**: giữ nguyên.
+- `npm run test:fast`: **1016 bài · 1015 pass · 0 fail · 1 skipped** · `npm run test:cross`: 3 pass,
+  0 fail · `npm run lint` sạch · `npm run build` xanh (54 mục precache, 1837,58 KiB).
+
+### §5(b) — DẢI 6 (ĐẦU GẦN) KHÔNG ĐÁNG SỬA, GHI LẠI ĐỂ KHỎI ĐI LẠI
+
+Dải 6 là dải **gần nhất**, và dấu vết người ở đó chỉ **30,72 → 34,46%** — thấp hơn cả dải 2 sau khi
+vá. Đây **không** phải khuyết tật của nội dung: nó là hệ quả trực tiếp của **góc ngẩng camera**
+(mép dưới khung hình rơi vào vành đất trống ngay trước chân đô thị). Mọi cách chữa đều phải đụng
+khung hình — tức đụng `ADR-034`/`ADR-035` và cả bộ số đã hiệu chuẩn theo chúng.
+**Review Trigger: *"nếu có phase lật quyết định góc ngẩng camera"*.** Trước đó thì đừng đụng.
+
+### ⚠️ MỘT CÁI CỔNG CACHE «CÓ FILE RỒI THÌ BỎ QUA» ĐÃ LÀM BẢNG SỐ ĐẦU TIÊN CỦA PHIÊN NÀY THÀNH RÁC
+
+Script dựng ảnh có một dòng trông vô hại: `[ -f "$png" ] || node scripts/city-preview.mjs …`. Nó
+tiết kiệm thật — và nó biến **tên file thành bằng chứng về nội dung file**, đúng quả mìn
+`MAI-SAU-ky9.png` (Phase 11). Lượt so ảnh đầu tiên báo **kỷ 1 đổi 74,2% khung hình, lệch trung bình
+61,82** — bất khả thi khi vùng phụ cận của kỷ ấy chỉ chiếm **0,25%** khung. Soi mốc thời gian thì
+ảnh "SAU" của kỷ 1 đề ngày **08-19**, tức hai ngày trước; kỷ 6 và kỷ 7 cũng cũ. Xoá sạch rồi dựng
+lại **cả 15 kỷ** (không chỉ ba kỷ hỏng — một bộ ảnh nhiều mốc thời gian chính là cái bẫy *"một phép
+đo trải trên nhiều trạng thái mã"*, 2026-08-18) thì kỷ 1 ra **0,30% / 0,18**.
+
+⇒ **Ba luật**: **(a)** thứ lộ ra sự thật KHÔNG phải một cổng nào cả — không cổng nào có thể thấy —
+mà là **một mâu thuẫn nội tại**: con số báo cáo không thể sống chung với một con số khác đã biết
+(74,2% đổi trong khi vật chỉ chiếm 0,25%). Luôn giữ trong đầu ít nhất một đại lượng thứ hai để đối
+chiếu, nếu không thì một bảng số hoàn toàn hợp lý sẽ đi thẳng vào báo cáo; **(b)** cổng cache phải
+so **DẤU VÂN TAY CỦA ĐẦU VÀO** (commit + tham số), không so **sự tồn tại của tên file** — hoặc đơn
+giản là bỏ cache đi, vì 25 giây dựng lại rẻ hơn một kết luận mỹ thuật sai; **(c)** khi phát hiện
+vài phần tử cũ thì **dựng lại TOÀN BỘ tập**, đừng chỉ vá những phần tử đã bắt được — phần chưa bắt
+được mới là phần nguy hiểm.
+
+### ⚠️ ĐÍNH CHÍNH — BẢNG SÁU DẢI Ở MỤC §1 KHÔNG TÁI LẬP ĐƯỢC TRÊN BỘ ẢNH s80
+
+Mục "Phase 13 VIỆC B §1" ở trên in một bảng sáu dải và ghi lệnh đo là `--sessions 80`. Đo lại bằng
+đúng công cụ đã commit trên bộ ảnh **s80** thì **không khớp**, và chỗ lệch không nhỏ:
+
+| | dải 1 | dải 2 | dải 3 | dải 4 | dải 5 | dải 6 |
+|---|---|---|---|---|---|---|
+| §1 ghi «chân trời» | 98,95 | 68,06 | 18,93 | 1,00 | 0,00 | 0,22 |
+| đo lại trên **s80** | **67,27** | **28,13** | **3,48** | 0,16 | 0,00 | 0,17 |
+| đo trên **s20** (08-19) | 98,92 | 68,17 | 18,92 | 1,00 | 0,00 | 0,22 |
+| đo trên **s50** (08-19) | 98,92 | 68,02 | 18,87 | 1,00 | 0,00 | 0,22 |
+
+Hàng của §1 khớp bộ **s20/s50** tới **hai chữ số ở cả sáu dải**, và lệch hẳn khỏi bộ s80. ⇒ bảng §1
+được tính từ **một bộ ảnh khác với dòng lệnh nó tự in ra** — cùng hình dạng `TECH_DEBT #43` (chép
+cột "sau" của phase trước làm cột "trước" của phase mình), và cùng cơ chế với cái cổng cache ở mục
+ngay trên.
+
+**Kết luận của §1 KHÔNG đổi**: đo lại bằng bộ số đúng thì dải 1 vẫn gần như không có đất (**2,02%**,
+so với 0,62% ở bảng cũ) và dải 3 vẫn đã bão hoà dấu vết người (**61,32%**, so với 58,05%). Cả hai
+lý do loại vẫn đứng, và **dải 2 vẫn là dải xa nhất còn tấm đất thật**. Bảng số bị thay bằng bảng ở
+mục này; **lý lẽ chọn dải 2 giữ nguyên.**

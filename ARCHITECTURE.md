@@ -418,6 +418,33 @@ hai loại bị loại đều **NẰM TRÊN** mặt đất, hai loại được 
 ba họ có mặt ở 15/15 kỷ, `wall` rơi về `wallMaterial` của chính kỷ đó) sinh ra **0 họ mới ở cả 15
 kỷ**, nên `MOC_LENH_VE` không đổi một đơn vị. `water` bị **cấm** vì chỉ 7/15 kỷ có họ ấy — một cái
 ao nghe rất hợp nhưng nó là một lệnh vẽ phải trả bằng một mục nợ, không phải thứ lén thêm.
+
+**`hinterlandStyle` + `hinterland` (VÙNG PHỤ CẬN) — khuôn ba lớp lần thứ TÁM, và là tầng đầu tiên
+đặt DẤU VẾT CON NGƯỜI ra ngoài lưới 12×12 (Phase 13 VIỆC B, 2026-08-21, ADR-049)**:
+`city3d/hinterlandStyle.js` trả lời *"quanh đô thị ấy, ở nước ấy, kỷ ấy, con người đã làm gì với
+đất?"* — ruộng (`fields` + `fieldDensity`) · công trình nước (`waterworks`) · tường bao + cổng
+(`wall`/`gate`) · đường rời khung (`outboundRoad`) · xóm vệ tinh (`hamletCount` × `hamletSize`) ·
+bến cảng (`dock`) · hạ tầng riêng kỷ (`infra`). `city3d/hinterland.js` biến bảng ấy thành hình.
+⚠️ **Vì sao phải có tầng này, và vì sao KHÔNG giải được bằng cây cối.** `outskirts` (ADR-038) đã lấp
+cái vành trống một lần và đo được thật (kỷ 12: 64,82% → 38,61% đất trơ) — rồi Đàm vẫn nói thành phố
+nhỏ. Phép đo chỉ ra vì sao: **0/446 dấu vết con người nằm ngoài lưới**, trong khi tấm đất rộng gấp
+~2,5 lần lưới ⇒ **60,1% mặt đất không có một dấu vết người nào**. Cây lấp được CHỖ TRỐNG nhưng không
+mang **tín hiệu quy mô**: một cánh rừng vô tận quanh một cụm nhà làm cụm nhà ấy trông CÔ LẬP hơn,
+không lớn hơn. Đây là hai câu hỏi khác nhau, nên chúng là hai tầng khác nhau — `outskirts` trả lời
+*"đất này mọc gì"*, `hinterland` trả lời *"đất này ai dùng"*.
+⚠️ **Ba ràng buộc liên bảng, cả ba đều có test khoá**: (1) mỗi dòng buộc vào `country` của
+`eraStyle.js` (test hỏi TỪ KHOÁ trong `note`) — không có nó thì 15 dòng là 15 lần chọn bừa; (2)
+`dock` CHỈ được khai ở kỷ mà `settingStyle` có nước — cùng hình dạng ràng buộc `drain` ↔ `side`;
+(3) **KHOÁ HAI CHIỀU theo lịch sử**: kỷ cổ KHÔNG được có ruộng ô vuông / đường sắt / ống khói, kỷ
+hiện đại KHÔNG được thiếu hạ tầng của mình. Thiếu chiều thứ hai thì cách rẻ nhất để nâng điểm quy mô
+là rắc ruộng đều khắp 15 kỷ — **mua điểm bằng cách nói dối lịch sử**, đúng thứ ADR-025 đã cấm với
+mặt đường. Kỷ 1 và kỷ 15 là **hai ca nghiệm thu**: đo ra 27 và 40 vật ngoài lưới, so với 251 ở kỷ 2
+— nếu bảng làm hai kỷ ấy trông giống mười ba kỷ kia thì bảng sai, không phải cổng sai.
+⚠️ **Bất biến giữ nguyên**: `HINTERLAND_REACH = 8` **BẰNG** `OUTSKIRT_REACH` (không phải một con số
+mới — tầm với thế giới đã có chủ), `HINTERLAND_CLEAR = 1.4` chừa một vành trống sát mép lưới nên
+vùng phụ cận **không chạm toạ độ của bất cứ thứ gì trong lưới** (ADR-007 nguyên vẹn), và tầng này
+là **ĐỊA LÝ chứ không phải TIẾN ĐỘ** — không nhận `built`/`levels`/`sessionCount`, có test gọi kèm
+dữ liệu rác khoá điều đó, y như `outskirts`.
 ⚠️ **Trần của lớp này, đo được**: ép phủ mọi ô đất trống cũng chỉ hạ "đất trống" thêm ~6–7 điểm phần
 trăm, vì **ô lưới trống chỉ chiếm ~12–16% số điểm ảnh "đất" nhìn thấy được** — phần còn lại là vạt
 đất NGOÀI lưới thành phố (đĩa đất bán kính 13,5 so với thành phố ~7,5). Mọi cách làm chỉ đụng tới ô

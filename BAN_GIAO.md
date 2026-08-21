@@ -1215,6 +1215,18 @@
 - ⚠️ **CẦN ĐÀM THỬ TAY** (không test được trên dev): (a) câu nhắc-sau-phiên hiện sau khi xong PHIÊN THẬT; (b) bài "AI phân tích tổng thể" giờ chạy pro — xem có chậm/khác chất lượng không; (c) dòng "Ghi nhớ" lời khuyên hiện sau ≥3 ngày; (d) thông báo chuỗi-sắp-đứt: **từ nay** (11/7) chiều nào quên làm sẽ nhận push (cần đã bật push iPhone) — đây là lần đầu tiên thực sự có cơ hội chạy thật.
 
 ## 🔜 Sẽ làm tiếp (ưu tiên từ trên xuống)
+- ⚠️ **CHỜ ĐÀM — SAU PHASE 13 VIỆC B (vùng phụ cận).** (a) **Nhìn 15 kỷ** rồi gật hoặc chỉnh hướng
+  mỹ thuật — ba cổng đo đều đạt rộng, nhưng điều kiện DỪNG (c) của chỉ thị là *"dựng xong, (G1) đạt,
+  mà ẢNH XẤU ĐI"*, và chỉ mắt Đàm mới trả lời được câu đó. (b) Quyết **có gộp `main`** hay không cho
+  các commit trên nhánh `claude/xay-san-pham-huong-nay-nasr3n`. **KHÔNG tự gộp.**
+- ⚠️ **`TECH_DEBT #74` — CHỜ ĐÀM QUYẾT (câu hỏi thiết kế game, cùng họ `#14`).** Vùng phụ cận là
+  tầng ĐỊA LÝ nên **2241 vật ở mốc 80 phiên bằng đúng số vật ở mốc 0 phiên** — nó làm thành phố
+  trông lớn ngay từ phiên đầu, nhưng nó **không lớn lên theo công sức của Đàm**. Ba hướng (giữ
+  nguyên là bối cảnh / cho một phần mở dần theo phiên / trộn) đã ghi ở mục nợ; chưa tự chọn, vì
+  chọn sai hướng là làm hỏng vòng lặp phần thưởng chứ không phải làm hỏng một con số.
+- ⚠️ **`TECH_DEBT #54` — vùng phụ cận KHÔNG chặn camera cận cảnh.** Kế thừa có chủ ý: bộ hoạch định
+  đường bay chỉ biết CÔNG TRÌNH chứ không biết ĐỊA HÌNH, nên chặn cây/ruộng mà không chặn quả đồi
+  bên dưới là mua một sự an toàn GIẢ. Xem lại khi nào bộ hoạch định biết đọc cao độ.
 - ⚠️ **CHỜ ĐÀM — BA VIỆC SAU BƯỚC C.** (a) **Xem 4 ảnh** `estuary` kỷ 8 · `estuary` kỷ 11 · `canal`
   kỷ 10 · `meander` kỷ 5 rồi gật hoặc chỉnh hướng mỹ thuật. (b) Chạy **một lượt**
   `bash scripts/bench-macbook.sh` trên MacBook để làm mới số liệu (KHÔNG phải cổng, không chặn gì) —
@@ -1325,6 +1337,91 @@
 - **Lịch sử git `main` từng bị xáo** (thao tác git song song): bản đang chạy là `eb44638` — chứa ĐỦ mọi việc gần đây (Hỏi Coach offline + fix đêm khuya + Coach offline analyst). Vài commit cũ (`1e27505`, `9fbcd62`) thành dangling, KHÔNG còn trong `git log` nhưng code vẫn nằm trong bản deploy. Đừng hoảng nếu không thấy chúng.
 
 ## 🗒️ Nhật ký cập nhật
+
+### 2026-08-21 — Phase 13 VIỆC B: vùng phụ cận của đô thị — thành phố thôi là một cụm nhà giữa đồng không (ADR-049)
+
+**Vì sao làm.** Vòng trước đã lấp vành đất ngoài lưới bằng cây cối (VIỆC 1, `outskirts.js`) — kỷ 12
+đi từ 64,82% đất trống xuống 38,61% — **và Đàm vẫn nói thành phố nhỏ**. Đó là dữ liệu chứ không phải
+ý kiến, và nó nói một điều rất cụ thể: **thảm thực vật KHÔNG mang tín hiệu quy mô.** Một cánh rừng
+vô tận quanh một cụm nhà làm cụm nhà ấy trông **cô lập hơn**, không lớn hơn. Thứ khiến mắt đọc ra
+"đây là một NƠI LỚN" là **dấu vết CON NGƯỜI trải ra ngoài**: ruộng có bờ, kênh mương, thành luỹ có
+cổng, một con đường đi khỏi khung hình, xóm vệ tinh, bến cảng, ống khói, cần cẩu. Và mốc nền thì
+tuyệt đối: **0/446** vật do con người dựng của cả 15 kỷ nằm ngoài lưới 12×12, trong khi **60,1%**
+diện tích tấm đất là phần ngoài lưới.
+
+**Đã làm gì.** Khuôn ba lớp lần thứ **TÁM** (sau `vernacularRoof` · `undergrowth` · `streetStyle` ·
+`groundFloor` · `floraStyle` · `settingStyle` · `roofStyle`):
+- **BẢNG** `src/engine/city3d/hinterlandStyle.js` — 15 dòng × 9 trục (hình thái ruộng · kênh · đê ·
+  thuỷ lợi · thành luỹ + cổng · đường đi khỏi khung · xóm vệ tinh · bến cảng · hạ tầng riêng kỷ).
+  Mỗi dòng buộc vào `country` mà `eraStyle.js` khai, **có test khoá hai bảng với nhau**.
+  `isValidHinterland` **TỪ CHỐI THẲNG** dòng sai, không tự chữa (bẫy `MIN_STONE` của Phase 9D), và
+  có assert đếm ở đầu bên kia bắt ca "khai hợp lệ mà không dựng ra khối nào" (bài học Phase 10
+  Bước 2).
+- **HÌNH HỌC** `src/engine/city3d/hinterland.js` — 12 loại. `kind` lạ trả về **mảng rỗng**, không
+  trả về một hình mặc định.
+- **NGƯỜI DÙNG** `outskirts.js` / `sceneGraph.js` **chỉ ĐỌC** — thêm đúng một vòng lặp.
+- **Khoá lịch sử HAI CHIỀU bằng test**: kỷ cổ **không được có** ruộng ô vuông · đường sắt · ống
+  khói; kỷ hiện đại **không được thiếu** hạ tầng của mình. Không có vế thứ hai thì cách rẻ nhất để
+  nâng điểm quy mô là rắc ruộng khắp 15 kỷ — tức **mua điểm bằng cách nói dối lịch sử**. Bến cảng
+  chỉ được có ở kỷ mà `settingStyle.js` khai có nước, khoá cứng bằng test.
+- **Hai ca nghiệm thu là kỷ 1 và kỷ 15**: nếu bảng làm chúng trông như mười ba kỷ kia thì bảng sai
+  chứ không phải cổng sai. Đo ra: kỷ 1 = **27 vật**, kỷ 15 = **40 vật** — đúng hai kỷ thưa nhất
+  bảng (kỷ 2 là 251). Săn bắt hái lượm không có ruộng có đê; Dubai không có thành luỹ.
+
+**Ba cổng — TRƯỚC (`e455114`, bảng đã có nhưng CHƯA nối) ↔ SAU (`8bc80ab`, đã nối):**
+
+| | TRƯỚC | SAU |
+|---|---|---|
+| **(G1)** vật ngoài lưới | **0** | **2241** (1697,6 ô², TB 149,4/kỷ) |
+| **(G1)** % khung hình | **0,00** | **4,22** (0,25 … 8,49) |
+| **(G1)** tương phản trong vùng | — | **44,7 … 93,0** ⇒ **15/15 kỷ** ≥ ngưỡng mắt 12 (yêu cầu 8/15) |
+| **(G2)** dải 2 (dải xa nhất còn tấm đất) | 21,56% | **32,81%** — tăng ở **15/15 kỷ** |
+| **(G3)** (M1) cả khung | 37,18% | **41,43%** — tăng ở **15/15 kỷ** |
+
+Sáu con số mặt đất bắt buộc (grid+apron, TB 15 kỷ, dải 1 = xa nhất): TRƯỚC
+`2,02 · 19,67 · 26,24 · 37,39 · 44,24 · 54,26` → SAU `1,29 · 16,18 · 25,11 · 37,37 · 43,66 · 50,86`.
+Cổng (G2) đặt ở **dải 2** vì dải 1 chỉ có 2,02% đất (còn lại là núi/nước/cây — đặt cổng ở đó là ép
+dựng nhà trên sườn núi) và dải 3 đã bão hoà 61,32% dấu vết người. Bướu chiều sâu bẹt lại: đỉnh ÷
+dải 2 đi từ **2,84** xuống **1,92**.
+
+**Đối chứng mạnh nhất, và nó miễn phí.** Δ của (M1) **bằng ĐÚNG** tỉ lệ điểm ảnh của riêng lớp
+`hinterland`, tới hai chữ số, ở **cả 15 kỷ**; và các hàng `ground-grid` · `buildings` · `props` ·
+`residents` · `road` **đứng yên tới từng phần trăm ở cả sáu dải**. Nghĩa là toàn bộ phần tăng đến từ
+chính vùng phụ cận và **không một điểm ảnh nào trong lưới dịch chuyển** — ADR-007 được xác nhận ở
+tầng điểm ảnh chứ không phải chỉ ở tầng lý lẽ.
+
+**Các cổng còn lại.** Chống trôi bản quét **15/15** cặp chặng (gần nhất 15,45) và **105/105** cặp kỷ
+(gần nhất 22,08 · trung vị 39,34). Cổng CPU dựng cảnh **1,067×** (trần 1,25× — *giữ nguyên, không
+nới*: chỉ thị "không quan trọng hiệu năng" nói về FPS trên M3, còn cổng này canh độ trễ lúc đổi kỷ,
+một trục khác hẳn). Không thêm nguồn sáng, không hạ DPR, không thêm lượt vẽ toàn màn hình.
+`npm run test:fast` **1016 bài · 1015 pass · 0 fail · 1 skipped** · `test:cross` 3 pass ·
+`npm run lint` sạch · `npm run build` xanh.
+
+**⚠️ BÀI HỌC LỚN NHẤT CỦA PHIÊN — MỘT CÁI CỔNG CACHE ĐẺ RA MỘT BẢNG SỐ HOÀN TOÀN HỢP LÝ.** Script
+dựng ảnh có dòng `[ -f "$png" ] || node scripts/city-preview.mjs …`. Nó biến **sự tồn tại của một
+tên file** thành **bằng chứng về nội dung file** — đúng quả mìn `MAI-SAU-ky9.png` của Phase 11, ở
+dạng khó thấy hơn vì lần này không ai chép nhầm gì: tên vẫn đúng, chỉ NGÀY là cũ. Lượt so ảnh đầu
+tiên báo **kỷ 1 đổi 74,2% khung hình**, trong khi vùng phụ cận của kỷ ấy chỉ chiếm **0,25%** khung.
+Thứ lộ ra sự thật **không phải một cổng nào cả** (build xanh, lint sạch, test xanh, `md5` hai vế
+khác nhau, phép cộng các lớp vẫn ~100%) mà là **một mâu thuẫn nội tại**: hai con số ấy không thể
+cùng đúng. Xoá sạch rồi dựng lại **cả 15 kỷ** (không chỉ ba kỷ đã bắt được) thì kỷ 1 ra **0,30%**.
+Đã ghi thành luật ở `CLAUDE.md`.
+
+**⚠️ VÀ MỘT BẢNG SỐ CỦA CHÍNH PHASE NÀY ĐÃ PHẢI ĐÍNH CHÍNH.** Bảng sáu dải ở mục §1 (bảng dùng để
+CHỌN dải làm cổng) không tái lập được trên bộ ảnh s80: hàng "chân trời" của nó khớp bộ ảnh **s20/s50
+của hai hôm trước** tới hai chữ số ở cả sáu dải, còn bộ s80 cho ra số khác hẳn (98,95 → **67,27** ở
+dải 1). Cùng hình dạng `TECH_DEBT #43`. **Kết luận chọn dải 2 KHÔNG đổi** khi tính lại bằng số đúng
+— cả hai lý do loại (dải 1 không có đất, dải 3 đã bão hoà) đều còn nguyên, chỉ có con số bị thay.
+
+**Nợ mới.** `TECH_DEBT #74` — vùng phụ cận là tầng **ĐỊA LÝ**, không nhận `built`/`sessionCount`
+(có test gọi kèm dữ liệu rác khoá điều đó), nên **2241 vật ở mốc 80 phiên bằng đúng số vật ở mốc 0
+phiên**. Tức nửa "vành ngoài trống" của `#53` đã đóng, nhưng nửa "nội dung ấy không lớn lên theo
+công sức của Đàm" thì chưa — và đó là một câu hỏi thiết kế game, cùng họ `#14`, phải Đàm quyết.
+
+**Còn lại.** Vùng phụ cận **không vào `blockers`** nên camera cận cảnh không né nó — kế thừa có chủ
+ý từ `TECH_DEBT #54` (bộ hoạch định đường bay chỉ biết CÔNG TRÌNH chứ không biết ĐỊA HÌNH, nên chặn
+cây mà không chặn quả đồi bên dưới là mua một sự an toàn GIẢ). Đã đẩy lên nhánh
+`claude/xay-san-pham-huong-nay-nasr3n`, **CHƯA gộp `main`** — chờ Đàm.
 
 ### 2026-08-21 — Phase 13 §2–§3: đo mốc nền «quy mô», hai điều kiện DỪNG kích hoạt
 

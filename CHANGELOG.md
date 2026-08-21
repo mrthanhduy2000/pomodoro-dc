@@ -12,6 +12,35 @@
 
 ---
 
+## 2026-08-21 — Phase 13 VIỆC B: vùng phụ cận của đô thị (ADR-049)
+
+- **Mục đích**: làm thành phố đọc ra là **một NƠI LỚN**, không phải một cụm nhà đẹp. Vòng trước đã
+  lấp vành ngoài bằng cây cối và Đàm **vẫn nói thành phố nhỏ** — đó là dữ liệu, không phải ý kiến:
+  thảm thực vật không mang tín hiệu quy mô. Thứ đọc ra "nơi lớn" là **dấu vết CON NGƯỜI trải ra
+  ngoài**: ruộng có bờ, kênh mương, thành luỹ có cổng, con đường đi khỏi khung hình, xóm vệ tinh,
+  bến cảng, đường sắt, cần cẩu.
+- **Phạm vi**: hai file engine mới — `src/engine/city3d/hinterlandStyle.js` (BẢNG 15 kỷ × 9 trục,
+  buộc vào `country` của `eraStyle.js`, `isValidHinterland` **từ chối thẳng** dòng sai) và
+  `src/engine/city3d/hinterland.js` (12 loại hình học). `outskirts.js` / `sceneGraph.js` **chỉ
+  ĐỌC**. Khuôn ba lớp lần thứ **TÁM**. Thêm lớp mặt nạ `hinterland` để đếm tách khỏi `city`. Công cụ:
+  `sweep-diff.mjs --chi <mặt nạ>:<kênh>`, phần thuần chuyển sang `sweepMetric.mjs` để test được.
+- **Kết quả đo** (TRƯỚC `e455114` ↔ SAU `8bc80ab`, cùng một dòng lệnh, ảnh đã kiểm mốc thời gian):
+  - **(G1)** dấu vết người ngoài lưới **0 → 2241 vật** (1697,6 ô²) và **0,00% → 4,22%** khung hình;
+    tương phản trong vùng ấy **44,7–93,0** trên ngưỡng mắt 12 ⇒ **15/15 kỷ đọc ra được** (yêu cầu
+    8/15). Hai mặt nạ độc lập khớp nhau trong **1,96** (16% ngưỡng mắt).
+  - **(G2)** dải xa nhất còn tấm đất (dải 2) **21,56% → 32,81%**, tăng ở **15/15 kỷ**; bướu chiều sâu
+    bẹt lại (đỉnh ÷ dải 2: 2,84 → **1,92**).
+  - **(G3)** (M1) cả khung **37,18% → 41,43%**, tăng ở **15/15 kỷ**.
+  - Δ của (M1) **bằng đúng** tỉ lệ điểm ảnh của riêng lớp `hinterland` ở cả 15 kỷ ⇒ không một điểm
+    ảnh nào trong lưới dịch chuyển (ADR-007 xác nhận ở tầng điểm ảnh).
+  - Cổng CPU dựng cảnh **1,067×** (trần 1,25×) · chống trôi bản quét 15/15 + 105/105 · lint sạch ·
+    build xanh · `test:fast` **1016 bài, 0 fail, 1 skipped**.
+- **Ảnh hưởng**: +1 lệnh vẽ ở 4 kỷ (5·7·8·9, do họ vật liệu `water`) — ngân sách lệnh vẽ nay là dữ
+  liệu theo dõi chứ không còn là hàng rào (§0 của chỉ thị). Vùng phụ cận **không vào `blockers`** nên
+  camera cận cảnh không né nó (kế thừa `TECH_DEBT #54`). Mở `TECH_DEBT #74`: vùng phụ cận là tầng
+  ĐỊA LÝ nên **không lớn lên theo số phiên** — tín hiệu quy mô nằm ngoài vòng lặp phần thưởng.
+- **Tương thích**: không đổi state, không migration, không đụng DB. Bố cục trong lưới bất biến.
+
 ## 2026-08-21 — Phase 13 §2–§3: đo mốc nền «quy mô», hai điều kiện DỪNG kích hoạt
 
 - **Mục đích**: trước khi làm thành phố "rộng hơn, quy mô hơn", dựng cho xong hai phép đo sẽ dùng

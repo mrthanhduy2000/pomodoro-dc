@@ -11,6 +11,67 @@
 
 ---
 
+## ADR-049 — Vùng phụ cận của đô thị là một NGỮ PHÁP RIÊNG, không phải một mật độ cảnh vật cao hơn
+
+**Ngày**: 2026-08-21 · **Phase 13 VIỆC B** · **Trạng thái**: đã áp dụng
+
+### Bối cảnh
+VIỆC 1 lấp cái vành đất trống quanh thành phố bằng cây/bụi/đá (`outskirts.js`). Nó CHẠY THẬT và đo
+được: kỷ 12 đi từ 64,82% đất trống xuống 38,61%. Rồi Đàm nhìn lại và **vẫn nói thành phố nhỏ**.
+
+Đó là dữ liệu, không phải ý kiến. Và nó bác bỏ chính giả thuyết đã dẫn tới VIỆC 1 (*"chỗ trống làm
+thành phố trông nhỏ"*). Phép đo (G1) chỉ ra vì sao: **0/446 dấu vết con người nằm ngoài lưới
+12×12**, trong khi tấm đất rộng gấp ~2,5 lần lưới ⇒ **60,1% mặt đất không có một dấu vết người
+nào**. Cây cối lấp được CHỖ TRỐNG nhưng không mang **tín hiệu quy mô**: một cánh rừng vô tận quanh
+một cụm nhà làm cụm nhà ấy trông CÔ LẬP hơn, không lớn hơn.
+
+### Vấn đề
+Làm đô thị đọc ra "rộng hơn, quy mô hơn" mà không được (a) đổi `CITY_GRID_SIZE`, (b) đổi
+`massScale`, (c) thu tấm đất hay siết khung hình, (d) tăng mật độ thực vật.
+
+### Phương án cân nhắc
+1. **Nâng `EDGE_DENSITY`/`FAR_DENSITY`** — rẻ nhất. **LOẠI**: đã làm một lần và thất bại; và (G1)
+   phân loại theo BẢN CHẤT nên con số sẽ đứng yên đúng như nó phải thế.
+2. **Lưới 12 → 16** — **LOẠI bằng số**: camera buộc cứng `distance = gridSize × factor` nên chỉ số
+   đi LÙI 4,21 đpt. Tự triệt tiêu.
+3. **Nhân `massScale`** — **LOẠI bằng số**: lùi 1,03 đpt và làm `TECH_DEBT #24` xấu đi (1,88 → 1,92).
+4. **Mở 40 ô chết trong khu 3×3 kỳ quan** — **HOÃN**: đo ra 225/225 công trình tràn khỏi ô neo
+   (kỷ 6 tệ nhất 1,271 ô) ⇒ khu ấy giữ chỗ cho HÌNH CHIẾU chứ không giữ một ô; số ô thật sự giải
+   phóng được chỉ 12,2/kỷ, không phải 40.
+5. **Dựng vùng phụ cận** — **CHỌN**.
+
+### Giải pháp
+Khuôn ba lớp, lần thứ **TÁM** (`vernacularRoof` · `undergrowth` · `streetStyle` · `groundFloor` ·
+`floraStyle` · `settingStyle` · `hinterlandStyle`):
+
+    eraStyle.country ─┐
+                      ├─→ hinterlandStyle (BẢNG 15 dòng) ─→ hinterland.js (HÌNH) ─→ sceneGraph (ĐỌC)
+    settingStyle.water ┘
+
+Chín trục, mỗi trục MỘT việc: hình thái ruộng · công trình nước · tường bao · đường rời khung ·
+xóm vệ tinh (số cụm × cỡ cụm) · bến cảng · hạ tầng riêng kỷ.
+
+### Trade-off đã chấp nhận
+- **+1 lệnh vẽ ở 4/15 kỷ** (5 · 7 · 8 · 9), toàn bộ từ họ vật liệu `water` (bến/cầu). Luật cũ
+  *"không thêm một lệnh vẽ nào"* đã bị Đàm **thu hồi** ở §0 (M3 dư 3,2 lần); `MOC_LENH_VE` nay là
+  một **CÁI CÂN**, không phải một **CÁI CỔNG**.
+- Trần hộp bao cảnh 20,12 → 20,92. **Tầm với KHÔNG đổi** (`HINTERLAND_REACH` = `OUTSKIRT_REACH` = 8);
+  thứ lớn lên là BỀ RỘNG khối.
+
+### Ảnh hưởng
+- Hai file mới ở `src/engine/city3d/` (bảng 534 dòng · hình 978 dòng) + 4 file test mới/đã mở rộng.
+- `sceneGraph.js` thêm MỘT vòng lặp đọc, không thêm nhánh nào khác. `outskirts.js` không đổi.
+- Vùng phụ cận **KHÔNG vào `blockers`** của camera cận cảnh — cùng một cớ với vùng quê: nó đứng
+  ngoài lưới, trên thứ địa hình mà bộ hoạch định đường bay không biết tới (`TECH_DEBT #54`).
+- Mở `TECH_DEBT #74`: vùng phụ cận là tầng ĐỊA LÝ nên nó không lớn lên theo số phiên.
+
+### Điều kiện xem lại
+Nếu một phase sau đổi `CITY_GRID_SIZE`, hoặc nếu Đàm nói vùng phụ cận làm khung hình rối, hoặc khi
+`TECH_DEBT #14`/`#74` được chốt (lúc ấy câu hỏi *"quy mô là quà tặng hay phần thưởng"* mới có đáp
+án, và nó có thể đảo phần "tầng địa lý" của quyết định này).
+
+---
+
 ## ADR-048 — Nhớ lại giá trị nút lưới nhiễu: vá một hồi quy hiệu năng do ADR-046, **không đổi một con số nào**
 
 **Ngày**: 2026-08-21

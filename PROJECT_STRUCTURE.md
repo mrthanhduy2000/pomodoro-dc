@@ -348,6 +348,34 @@
 │   │   │   │                      #   ⚠️ KHÔNG có bảng 15 kỷ riêng — ĐỌC `floraStyle.js`, có test
 │   │   │   │                      #   khoá tương quan hạng. Bảng 15 kỷ thuộc về `settingStyle.js`
 │   │   │   │                      #   (VIỆC 2: biển/sông/không nước), là câu hỏi KHÁC
+│   │   │   ├── hinterlandStyle.js # BẢNG VÙNG PHỤ CẬN 15 KỶ (Phase 13 VIỆC B, ADR-049): quanh
+│   │   │   │                      #   đô thị ấy, ở nước ấy, kỷ ấy, CON NGƯỜI đã làm gì với đất?
+│   │   │   │                      #   9 trục: `fields` (hình thái ruộng) · `fieldDensity` ·
+│   │   │   │                      #   `waterworks` · `wall` + `gate` · `outboundRoad` (đường rời
+│   │   │   │                      #   khung) · `hamletCount` × `hamletSize` (xóm vệ tinh) ·
+│   │   │   │                      #   `dock` · `infra` (hạ tầng riêng kỷ). Khuôn ba lớp lần thứ
+│   │   │   │                      #   TÁM. Buộc vào `country` của eraStyle — có test khoá
+│   │   │   │                      #   ⚠️ `isValidHinterland` TỪ CHỐI THẲNG, KHÔNG tự chữa (bẫy
+│   │   │   │                      #   `MIN_STONE` Phase 9D). Kèm phép ĐẾM ở đầu bên kia: kỷ nào
+│   │   │   │                      #   khai hợp lệ mà KHÔNG dựng ra khối nào thì test đỏ
+│   │   │   │                      #   ⚠️ KHOÁ HAI CHIỀU BẰNG TEST: kỷ cổ KHÔNG được có ruộng ô
+│   │   │   │                      #   vuông / đường sắt / ống khói; kỷ hiện đại KHÔNG được thiếu
+│   │   │   │                      #   hạ tầng của mình. Thiếu một chiều thì cách rẻ nhất để nâng
+│   │   │   │                      #   điểm quy mô là rắc ruộng khắp 15 kỷ = mua điểm bằng cách
+│   │   │   │                      #   nói dối lịch sử
+│   │   │   │                      #   ⚠️ `dock` CHỈ được khai ở kỷ mà `settingStyle` có nước —
+│   │   │   │                      #   test khoá liên bảng, giống ràng buộc `drain` ↔ `side`
+│   │   │   ├── hinterland.js      # HÌNH HỌC vùng phụ cận: `planHinterland` (đặt vật) +
+│   │   │   │                      #   `buildHinterlandSpec` (dựng khối). 12 loại: parcel ·
+│   │   │   │                      #   hamlet · roadway · waterwork · rampart · gatehouse · dock
+│   │   │   │                      #   + 5 hạ tầng riêng kỷ. `HINTERLAND_REACH = 8` (BẰNG
+│   │   │   │                      #   `OUTSKIRT_REACH`, không phải một con số mới) ·
+│   │   │   │                      #   `HINTERLAND_CLEAR = 1.4` chừa một vành trống sát mép lưới
+│   │   │   │                      #   ⚠️ `kind` lạ → MẢNG RỖNG, KHÔNG rơi về hình mặc định —
+│   │   │   │                      #   khác `buildPropSpec` (rơi về `tree`), và khác có lý do:
+│   │   │   │                      #   một `kind` lạ ở đây nghĩa là bảng khai thứ chưa ai dựng
+│   │   │   │                      #   ⚠️ TẦNG ĐỊA LÝ như `outskirts`: không nhận `built`/
+│   │   │   │                      #   `levels`/`sessionCount`, có test gọi kèm DỮ LIỆU RÁC
 │   │   │   ├── settingStyle.js    # BẢNG ĐỊA THẾ 15 KỶ (VIỆC 2 Bước A, ADR-039): thành phố NẰM Ở
 │   │   │   │                      #   ĐÂU và VÌ SAO. `water` (none/river/meander/canal/estuary/
 │   │   │   │                      #   sea — `meander` = khúc uốn ÔM BA MẶT, kỷ 5 Burg Eltz) ·

@@ -229,25 +229,35 @@ test('HÌNH BÓNG ĐỔI THEO PHA BƯỚC — và mô hình 2 hộp cũ ra ĐÚN
   // ⚠️ `assert.deepEqual` chứ không phải "bao gồm": kỷ thứ ba rơi vào thì ĐỎ, mà kỷ 6 được chữa
   // xong cũng ĐỎ. Một danh sách "bao gồm" là cách một bản vá lặng lẽ thành cái chăn trùm.
   const CHE = banA.filter((r) => r.chenhNguoi < 0.06).map((r) => r.era);
-  // ⚠️ DANH SÁCH NÀY ĐÃ NGẮN ĐI: [6, 7] → [6] (2026-08-23), và đó là bằng chứng mạnh hơn một
-  // ngoại lệ được THÊM VÀO. Nguyên nhân là BÀN CHÂN: nó thò ra phía trước ở đầu mút cẳng chân, nên
-  // cụm chân nay trải rộng hơn cái vành mũ 1,9 `headW` của kỷ 7 và dáng đi ĐỌC RA ĐƯỢC ở đường bao
-  // ngoài. Kỷ 6 vẫn kẹt vì nón lá rộng 2,2 `headW` — vẫn hơn cả sải chân.
+  // ⚠️ DANH SÁCH NÀY ĐÃ CẠN: [6, 7] → [6] → **[] (2026-08-23, ADR-055)**, và một ngoại lệ BIẾN MẤT
+  // là bằng chứng mạnh hơn một ngoại lệ được THÊM VÀO. Hai nguyên nhân, cả hai đều đo được:
+  //   • BÀN CHÂN (khối mới) thò ra phía trước ở đầu mút cẳng chân ⇒ cụm chân trải rộng hơn cái
+  //     vành mũ 1,9 `headW` của kỷ 7, nên dáng đi đọc ra được ở đường bao ngoài.
+  //   • NÓN LÁ kỷ 6 thu từ 2,2 xuống 1,71 `headW` (xem `headgearPieces` — nó được phép thu vì bề
+  //     rộng của một cái nón KHÔNG bị cái đầu ràng buộc theo tỉ lệ, chỉ bị chặn dưới).
   // Nếu bản vá nào sau này làm danh sách này DÀI RA thì gần như chắc chắn nó đang vá triệu chứng.
-  assert.deepEqual(CHE, [6],
-    `kỷ có đường bao ngoài gần như đứng yên: [${CHE}] — mong đợi đúng [6]`);
+  assert.deepEqual(CHE, [],
+    `kỷ có đường bao ngoài gần như đứng yên: [${CHE}] — mong đợi RỖNG`);
 
-  // ⚠️ VÀ NGOẠI LỆ PHẢI ĐƯỢC GIẢI THÍCH, KHÔNG CHỈ ĐƯỢC DUNG THỨ. Cả hai kỷ ấy đội thứ RỘNG HƠN
-  // hoặc XẤP XỈ sải chân, nên cái đĩa quyết cả hai đầu hình bóng. Nếu ngày nào một kỷ lọt vào danh
-  // sách trên mà KHÔNG có nguyên nhân này thì đây là chỗ đỏ.
-  for (const era of CHE) {
-    const body = buildHumanBody(era);
-    const doiDau = body.parts.find((q) => q.joint === 'head' && q.role !== 'skin');
-    const saiChan = spanCua(body, chanCua(body), 0);
-    assert.ok(doiDau && doiDau.w >= saiChan * 0.9,
-      `kỷ ${era} có đường bao đứng yên nhưng KHÔNG phải vì đội đầu rộng`
-      + ` (${(doiDau?.w ?? 0).toFixed(4)} so với sải chân ${saiChan.toFixed(4)}) — đi tìm nguyên nhân thật`);
-  }
+  // ⚠️ MỘT DANH SÁCH RỖNG LÀM CHO MỌI VÒNG LẶP TRÊN NÓ THÀNH VÔ NGHĨA, nên chỗ này KHÔNG duyệt
+  // `CHE` nữa (duyệt một tập rỗng là "kết luận sạch từ một tập RỖNG", đúng cái bẫy đã cắn
+  // `shot.mjs --fit`). Thay bằng một phép đo NÓI ĐƯỢC VÌ SAO nó rỗng: lấy kỷ đội thứ RỘNG NHẤT
+  // bảng — ca khó nhất, vì cái đĩa trên đầu là thứ duy nhất có thể quyết cả hai đầu hình bóng —
+  // rồi đòi sải chân của chính kỷ ấy phải VƯỢT bề ngang đội đầu. Đây là một QUAN HỆ, không phải
+  // một mức, nên nó không già đi khi bảng mũ được chỉnh (bài học Phase 7D).
+  const độiRộngNhất = ERAS
+    .map((era) => {
+      const body = buildHumanBody(era);
+      const q = body.parts.find((x) => x.id === 'headgear');
+      return { era, body, rộngMũ: q ? q.w : 0 };
+    })
+    .reduce((a, b) => (a.rộngMũ >= b.rộngMũ ? a : b));
+  assert.ok(độiRộngNhất.rộngMũ > 0, 'không kỷ nào đội gì ⇒ phép đo này không còn ca khó nhất để canh');
+  const sảiChânCaKhó = spanCua(độiRộngNhất.body, chanCua(độiRộngNhất.body), 0);
+  assert.ok(sảiChânCaKhó > độiRộngNhất.rộngMũ,
+    `kỷ ${độiRộngNhất.era} đội thứ rộng nhất bảng (${độiRộngNhất.rộngMũ.toFixed(4)}) mà sải chân chỉ`
+    + ` ${sảiChânCaKhó.toFixed(4)} ⇒ cái đĩa trên đầu quyết cả hai đầu hình bóng, và danh sách CHE`
+    + ' sắp có người quay lại');
 
   // ── ĐỐI CHỨNG: mô hình 2 hộp cũ ─────────────────────────────────────────────────────────────
   // Cả hai hộp treo vào khớp `torso`, mà khớp ấy có góc CỐ ĐỊNH — nên bề rộng phải đứng yên tuyệt
@@ -271,8 +281,10 @@ test('HÌNH BÓNG ĐỔI THEO PHA BƯỚC — và mô hình 2 hộp cũ ra ĐÚN
     .reduce((a, b) => (a.chenhNguoi < b.chenhNguoi ? a : b));
   console.log(`[humanPose] 15 kỷ · hai chân tách ${(sanA.chenhChan * 100).toFixed(1)}%…`
     + `${(Math.max(...banA.map((r) => r.chenhChan)) * 100).toFixed(1)}% chiều cao (sàn ở kỷ ${sanA.era})`
-    + ` · đường bao ngoài thấp nhất ngoài ngoại lệ: kỷ ${sanB.era} ${(sanB.chenhNguoi * 100).toFixed(1)}%`
-    + ` · nón lá kỷ 6 + mũ vành kỷ 7 che dáng đi ở đường bao · mô hình 2 hộp cũ: 0,0%`);
+    + ` · đường bao ngoài thấp nhất: kỷ ${sanB.era} ${(sanB.chenhNguoi * 100).toFixed(1)}%`
+    + ` · 0 kỷ bị đội đầu che dáng đi (ca khó nhất: kỷ ${độiRộngNhất.era}, mũ`
+    + ` ${độiRộngNhất.rộngMũ.toFixed(4)} so với sải chân ${sảiChânCaKhó.toFixed(4)})`
+    + ` · mô hình 2 hộp cũ: 0,0%`);
 });
 
 test('CÁI NHÚN là hệ quả của chân trụ, không phải một hàm sin riêng', () => {

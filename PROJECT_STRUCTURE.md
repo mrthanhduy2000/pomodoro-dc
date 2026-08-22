@@ -66,6 +66,12 @@
 │   │   │       │                   #   lúc chạy nếu không dựng cả WebGL (mảng vật liệu có lấy từ
 │   │   │       │                   #   `merged.families` không · có còn là PBR không · kim loại có
 │   │   │       │                   #   `envMap` không). Cùng khuôn `cityViewShellWiring.test.js`
+│   │   │       ├── humanGeometry.js # Hồ sơ khuôn THUẦN (`humanShape.js`) → BufferGeometry KHÔNG
+│   │   │       │                   #   chỉ mục, pháp tuyến PHẲNG theo mặt (2026-08-23, ADR-055).
+│   │   │       │                   #   ⚠️ Phẳng là CÓ CHỦ Ý: normal mượt kiểu SphereGeometry sẽ
+│   │   │       │                   #   cho ra một cư dân bóng loáng giữa một thành phố lập thể —
+│   │   │       │                   #   một dị vật, không phải một cải tiến. Đúng lý do `parts.js`
+│   │   │       │                   #   cũng phẳng (ADR-019 nói về mặt ĐẤT thì ngược lại: mượt)
 │   │   │       ├── geometryFactory.js # Mô tả hình học THUẦN → MỘT BufferGeometry đã gộp, chia
 │   │   │       │                   #   NHÓM theo họ vật liệu (`addGroup`). Mọi công trình = 1 khối
 │   │   │       │                   #   hình học nhưng 5–7 lệnh vẽ (một lệnh mỗi họ), KHÔNG phải 750
@@ -499,10 +505,23 @@
 │   │   │   │                      #   2026-08-23 — test in ra "đã thiết kế thật: N/15 kỷ"
 │   │   │   │                      #   ⚠️ headMaterial natural/dyed (ADR-054): nón lá và cái quần
 │   │   │   │                      #   KHÔNG cùng một lò nhuộm. TRƠ ở 5 kỷ, danh sách có test khoá
-│   │   │   ├── human.js           # THƯ VIỆN HÌNH NGƯỜI: đầu · thân · tay · chân · đội đầu · đồ
-│   │   │   │                      #   mang theo, mỗi hộp gắn MỘT khớp + MỘT vai màu. Hệ toạ độ
-│   │   │   │                      #   riêng: +x = hướng đi · +y = lên · +z = bên TRÁI người
-│   │   │   │                      #   ⚠️ THỨ TỰ hộp là HỢP ĐỒNG với sceneGraph (i×n + k)
+│   │   │   ├── humanShape.js      # BỘ 7 KHUÔN CƠ THỂ (2026-08-23, ADR-055): box · prism · limb ·
+│   │   │   │                      #   flare · cone · dome · hat. Mỗi khuôn là một MẶT TRÒN XOAY
+│   │   │   │                      #   khai bằng {sides, rings} — THUẦN, không import three
+│   │   │   │                      #   ⚠️ Quy ước "MẶT PHẲNG = 1,0" (R = 0,5/cos(π/sides)) nên độ
+│   │   │   │                      #   trải x/z ĐÚNG BẰNG hộp cũ ⇒ mọi phép đo hình bóng và mọi
+│   │   │   │                      #   con số tỉ lệ cơ thể không phải hiệu chuẩn lại
+│   │   │   │                      #   ⚠️ sides=4 qua CÙNG công thức tái tạo CHÍNH XÁC hộp đơn vị:
+│   │   │   │                      #   `box` không phải nhánh đặc biệt, nó là một ca của một luật
+│   │   │   ├── human.js           # THƯ VIỆN HÌNH NGƯỜI: đầu · thân · tay · chân · BÀN CHÂN · đội
+│   │   │   │                      #   đầu · đồ mang theo, mỗi khối gắn MỘT khớp + MỘT vai màu +
+│   │   │   │                      #   MỘT khuôn. Hệ toạ độ riêng: +x = hướng đi · +y = lên ·
+│   │   │   │                      #   +z = bên TRÁI người
+│   │   │   │                      #   ⚠️ THỨ TỰ khối là HỢP ĐỒNG với sceneGraph (i×n + k)
+│   │   │   │                      #   ⚠️ `shape` BẮT BUỘC, không mặc định — một trường có mặc
+│   │   │   │                      #   định là một trường sẽ bị quên (bẫy vernacularRoof Phase 7C)
+│   │   │   │                      #   humanShapesUsed(era) = SỐ LỆNH VẼ cư dân tiêu, không phải
+│   │   │   │                      #   một tiện ích; drawCallBudget đọc THẲNG nó, không chép số
 │   │   │   ├── humanPose.js       # DÁNG ĐI: poseAt(body, QUÃNG ĐƯỜNG ĐÃ ĐI) → góc từng khớp
 │   │   │   │                      #   ⚠️ Hàm của QUÃNG ĐƯỜNG, không phải của thời gian — nhờ vậy
 │   │   │   │                      #   bàn chân KHÔNG trượt trên đất, và cái nhún là HỆ QUẢ của
@@ -682,7 +701,7 @@
 | `node scripts/shot.mjs --phone --fit` | có nút nào chữ tràn / bị xén / bị dấu "…" cắt không |
 | `node scripts/shot.mjs --phone --fit --el "<chữ>"` | font-size/padding/overflow THẬT của một phần tử (dùng khi `--fit` và mắt bất đồng) |
 | `node scripts/city-preview.mjs --sweep --all` | dựng bảng 15 kỷ × 6 chặng ngày thành MỘT tấm ảnh |
-| `node --import ./scripts/register-esm-loader.mjs scripts/human-strip.mjs` | **dán 15 cư dân cạnh nhau, phóng 5 lần, để MẮT chấm.** Vị trí cư dân được ĐO từ mặt nạ GPU (`--mask residents`), KHÔNG dựng lại camera — bài học *một luật hai công thức*. KHÔNG có cache: cổng `[ -f ]` là quả mìn *tên file làm bằng chứng về nội dung file*. Chính công cụ này đã phơi ra lỗi «15 kỷ một màu vải» của ADR-054 mà mọi cổng số đều báo xanh |
+| `node --import ./scripts/register-esm-loader.mjs scripts/human-strip.mjs` | **dán 15 cư dân cạnh nhau, phóng 5 lần, để MẮT chấm.** Vị trí cư dân được ĐO từ mặt nạ GPU (`--mask residents`), KHÔNG dựng lại camera — bài học *một luật hai công thức*. KHÔNG có cache: cổng `[ -f ]` là quả mìn *tên file làm bằng chứng về nội dung file*. Chính công cụ này đã phơi ra lỗi «15 kỷ một màu vải» của ADR-054 mà mọi cổng số đều báo xanh, rồi ở ADR-055 lại phơi ra cái nón lá kỷ 6 rộng tới mức **nuốt trọn người** (65% chiều cao khung) |
 | `node scripts/sweep-score.mjs <ảnh quét>` | **chấm** bảng đó: 15 cặp chặng + 105 cặp kỷ, cặp nào dưới ngưỡng mắt. Ruột phép đo nằm ở `scripts/sweepMetric.mjs` (thuần, có `sweepMetric.test.js` canh) — file `sweep-score.mjs` chỉ là lớp vỏ đọc `process.argv` + in bảng, nên **đừng chép công thức sang chỗ khác, hãy `import` từ `sweepMetric.mjs`** |
 | `node scripts/shadow-score.mjs <ảnh>` | **chấm bóng đổ**: sàn độ sáng · % khung hình bị nghiền · khoảng cách sáng-tối · độ tươi · chênh sắc nóng-lạnh. Đo PHÂN BỐ chứ không chấm vài điểm — chấm tay rất dễ trúng mặt đường (vật liệu đen sẵn) rồi ghi công cho bóng đổ. `--selftest` có 5 ca, trong đó một ca tách riêng "chữa đúng" khỏi "chữa ngây thơ làm nhạt ảnh" |
 | `node scripts/png-probe.mjs <ảnh> --top 10` | màu THẬT trên màn hình tại một điểm/vùng |

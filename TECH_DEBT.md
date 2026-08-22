@@ -13,10 +13,11 @@
 > mà không được refactor triệt để, phải CHỦ ĐỘNG đề xuất mở một "Maintenance Sprint" (nêu rõ mục
 > tiêu/phạm vi/lợi ích/rủi ro/tiêu chí hoàn thành) thay vì tiếp tục cộng thêm tính năng mới.
 >
-> **Trạng thái ngưỡng hiện tại (2026-08-22)**: thêm **#78** (14/15 kỷ chưa có bản sắc con người) ở
-> mức **Medium**, mở có chủ đích đúng phạm vi Đàm giao. Đếm lại toàn file: **1 mục Priority High
-> còn mở** (#53, đang đóng dần), **0 mục Critical** → xa ngưỡng 8–10 mục, KHÔNG cần Maintenance
-> Sprint. ⚠️ Con số này đếm bằng cách quét trường `**Priority**` của TỪNG mục, không chép lại từ
+> **Trạng thái ngưỡng hiện tại (2026-08-23, sau ADR-055)**: thêm **#80** (cư dân chiếm 0,29% khung
+> hình ⇒ chi tiết cơ thể chỉ đọc được ở cận cảnh) ở mức **Medium** và **#81** (mũ có chỏm thừa
+> hưởng phép phóng đại của cái đầu) ở mức **Low**. Đếm lại toàn file bằng cách quét trường
+> `**Priority**` của TỪNG mục: **1 mục Priority High còn mở** (#53, đang đóng dần), **0 mục
+> Critical** → xa ngưỡng 8–10 mục, KHÔNG cần Maintenance Sprint. ⚠️ Con số này đếm bằng cách quét trường `**Priority**` của TỪNG mục, không chép lại từ
 > dòng cũ — dòng ngưỡng bên dưới đã đứng yên từ 2026-08-16 trong khi file nở từ #33 lên #78, đúng
 > kiểu "một con số tự trấn an" mà `CLAUDE.md` bắt phải kiểm như mọi con số khác.
 >
@@ -4381,6 +4382,78 @@ cấp `Math.min(3,…)` → `Math.min(9,…)` · cắt bớt danh sách cấp th
 - **Review Trigger (MỚI, thay cho mốc đã dùng)**: **ngay phase sau §1(3)**, hoặc sớm hơn nếu Đàm
   nhìn ảnh §1(3) rồi nói mái nhà dân trông giống nhau giữa các kỷ.
 - **Owner**: chưa phân công · **Status**: Open (đã rà soát 2026-08-21, hoãn có lý do)
+
+---
+
+## #81 — Mũ CÓ CHỎM thừa hưởng phép phóng đại của cái đầu, nên rộng ~1,5 lần vai thay vì ~0,7 như đời thật
+
+- **Tên**: cái đầu to gấp 1,54 lần đời thật kéo theo mọi thứ đội lên nó
+- **Module**: `src/engine/city3d/human.js` (`headgearPieces`, kiểu `brim`) · `humanDims` (`headW`)
+- **Priority**: Low · **Severity**: Low
+- **Impact**: Đo được. `headW = 0,20 × chiều cao` trong khi người thật ~0,13 ⇒ **phóng đại 1,54
+  lần**, và đó là một quyết định CÓ CHỦ Ý về khả năng đọc (ở 14 điểm ảnh, một cái đầu đúng tỉ lệ
+  chỉ còn 1,8 điểm ảnh). Nhưng mũ vành cứng phải có **chỏm lồng vừa sọ**, nên bề rộng của nó bị
+  cột chặt vào `headW`: 1,9 `headW` = 0,38 chiều cao = **1,52 lần bề ngang vai**, trong khi một
+  chiếc mũ phớt thật rộng 30 cm trên vai 45 cm = **0,67 lần**. Sai số **2,3 lần**, ở 3 kỷ (7 · 8 ·
+  11). Trên ảnh dựng, kỷ 11 (mũ nỉ SẪM) đọc ra là một mảng tối che kín phần thân trên.
+- **Root Cause**: một đại lượng đã bị phóng đại có chủ ý (`headW`) được dùng làm **hệ quy chiếu**
+  cho một đại lượng khác, nên phép phóng đại được thừa kế mà không ai viết ra. Từng con số riêng
+  lẻ đều "đúng theo vật thật" (chỏm 1,18 `headW`, vành gấp 1,61 lần chỏm — cả hai đều là tỉ lệ của
+  một chiếc mũ có thật), nên không có chỗ nào để mà đỏ lên.
+- **Current Risk**: Thấp. Nó chỉ đọc được ở khung cận cảnh, và ở đó nó vẫn ra "người đội mũ rộng
+  vành" chứ không ra một vật lạ.
+- **Future Risk**: Trung bình nếu thêm kỷ nào đội mũ rộng hơn nữa (mũ cói Trung Hoa, mũ cao bồi),
+  hoặc nếu ngày nào cư dân được vẽ to hơn trên khung (`TECH_DEBT #80`) — lúc đó sai số 2,3 lần sẽ
+  chuyển từ "hơi to" sang "sai".
+- **Recommended Solution**: **KHÔNG phải thu nhỏ cái mũ** — đã thử ngày 2026-08-23 và bài test
+  *"mũ vành phải đội vừa cái đầu"* bắt được ngay (vành 1,38 `headW` cho ra chỏm 0,86 `headW`, hẹp
+  hơn cả cái sọ). Sửa gốc là **giảm phóng đại của `headW`** (0,20 → ~0,17) rồi bù khả-năng-đọc
+  bằng tương phản màu thay vì bằng kích thước. ⚠️ Cái giá: `headW` nằm trong hầu hết mọi kích
+  thước của bảng đội đầu và trong `humanIdentity.test.js`, nên đây là một lần **hiệu chuẩn lại cả
+  bảng**, không phải một lần sửa số.
+- **Estimated Complexity**: Trung bình (một hằng số, nhưng ripple qua 7 kiểu đội đầu + hai bộ chấm
+  bản sắc + bảng ngưỡng mắt).
+- **Blocking Conditions**: Không có. Hoãn vì `TECH_DEBT #80` nói rằng ở khung mặc định KHÔNG ai
+  nhìn thấy khác biệt này, nên sửa nó bây giờ là tiêu công cho một thứ chưa ai thấy.
+- **Review Trigger**: khi cư dân được vẽ lớn hơn trên khung mặc định, HOẶC khi có kỷ thứ tư khai
+  `headgear: 'brim'`.
+- **Owner**: chưa ai · **Status**: mở
+
+---
+
+## #80 — Cư dân chiếm 0,29% khung hình ở góc mặc định, nên MỌI chi tiết cơ thể chỉ đọc được khi camera bay tới gần
+
+- **Tên**: chi tiết cơ thể là phần thưởng của cận cảnh, không phải của toàn cảnh
+- **Module**: `src/engine/city3d/human.js` · `humanShape.js` · `sceneGraph.js` (cụm cư dân)
+- **Priority**: Medium · **Severity**: Low
+- **Impact**: Đo ngày 2026-08-23 trên cặp ảnh `--era 1 --hour 12 --sessions 80` (1100×700, ngưỡng
+  mắt 12/255), so commit `f5a4e11` với bộ 7 khuôn: **cả khung hình chỉ 0,2% điểm ảnh đổi quá ngưỡng
+  (lệch trung bình 0,09)**, trong khi **riêng trong mặt nạ cư dân là 57,5% (lệch trung bình
+  22,26)**. Mặt nạ ấy chỉ có 2.198 điểm ảnh = **0,29% khung**. Nói cách khác: bản vá đổi rất mạnh
+  đúng chỗ nó sống, và không thể dịch nổi con số toàn khung vì chỗ ấy quá nhỏ.
+- **Root Cause**: KHÔNG phải cơ thể thiếu chi tiết. Cư dân cao **12–30 điểm ảnh** ở góc mặc định
+  (`human-strip.mjs` in ra bảng này mỗi lần chạy), nên mọi thứ nhỏ hơn một bộ phận đều rơi xuống
+  dưới `EYE_PIXELS = 4`. Cùng gốc với `TECH_DEBT #41` (chi tiết mái) và với bài học Phase 11: *cả
+  thành phố quá nhỏ trong khung hình*.
+- **Current Risk**: Thấp — đã có ADR-034 (chạm vào công trình thì camera bay tới), và ở khoảng cách
+  ấy chi tiết đọc ra rõ.
+- **Future Risk**: Trung bình theo nghĩa **ngân sách**: mỗi phase sau dễ lặp lại đúng sai lầm của
+  Phase 11 (tiêu 110.076 tam giác lên mái rồi mới biết bản quét không phân biệt nổi). Ở đây chi phí
+  đã trả là +2…+5 lệnh vẽ và ×2…×3 tam giác cư dân, và nó ĐƯỢC BIẾT TRƯỚC — nhưng lần sau thì chưa
+  chắc ai đọc lại mục này.
+- **Recommended Solution**: hai hướng, và chúng khác hẳn nhau: (a) **nếu muốn cư dân đọc được ở
+  toàn cảnh** thì đó là bài toán KHUNG HÌNH (`TECH_DEBT #73` — camera bị buộc cứng vào
+  `CITY_GRID_SIZE`), không phải bài toán mô hình; (b) **nếu chấp nhận nó là phần thưởng cận cảnh**
+  thì phải làm cho việc bay tới gần dễ xảy ra hơn (hôm nay phải chạm vào một công trình, chứ không
+  chạm được vào một người).
+- **Estimated Complexity**: (a) Lớn — đụng camera, ảnh hưởng mọi phép đo mỹ thuật đã hiệu chuẩn.
+  (b) Nhỏ.
+- **Blocking Conditions**: Không có; đây là một **sự thật đã đo**, ghi ra để phiên sau không lặp
+  lại cùng một kỳ vọng rồi lại ngạc nhiên.
+- **Review Trigger**: trước khi bắt đầu BẤT KỲ phase nào thêm chi tiết vào cư dân — đọc mục này và
+  trả lời trước câu hỏi của Đàm (HỆ QUẢ 2b, 2026-08-18): *"cái này dành cho khung TOÀN CẢNH hay
+  khung CẬN CẢNH?"*
+- **Owner**: chưa ai · **Status**: mở
 
 ---
 

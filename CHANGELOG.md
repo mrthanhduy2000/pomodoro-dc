@@ -12,6 +12,36 @@
 
 ---
 
+## 2026-08-23 (tối) — Cơ thể cư dân thôi là chồng gạch: 7 khuôn mặt tròn xoay, mỗi kỷ một bộ
+
+- **Mục đích**: Đàm — *"làm cho chân thật nhất, ít ô vuông hơn và giống 3D hơn, làm kỹ từng kỷ"*.
+- **Phạm vi + ảnh hưởng**:
+  - `src/engine/city3d/humanShape.js` **MỚI** (thuần): bộ **7 khuôn** dựng bằng mặt tròn xoay —
+    `box` · `prism` · `limb` · `flare` · `cone` · `dome` · `hat`. Một hộp cho mắt **3 mảng sáng**,
+    một lăng trụ 8 mặt cho **8** ⇒ khối đọc ra là khối. Chọn khuôn theo câu hỏi vật lý *"bộ phận
+    này thon về phía nào"*, không theo thẩm mỹ.
+  - Quy ước **"mặt phẳng = 1,0"** (`R = 0,5/cos(π/sides)`) nên độ trải x/z **đúng bằng hộp cũ** ⇒
+    `partCornersAt`/`silhouetteSpanX`/`human-scale.mjs` và toàn bộ bảng tỉ lệ cơ thể **không phải
+    hiệu chuẩn lại một con số nào**. `sides = 4` qua cùng công thức tái tạo **chính xác** hộp đơn vị.
+  - **Bàn chân là khối mới** (giữ khuôn `box` có chủ ý): nó che mặt cắt vuông góc từng ngửa lên
+    bắt nắng ở cuối cẳng chân, và thêm một mấu nhô về phía trước cho hình bóng.
+  - **Nón lá kỷ 6 thu từ 2,2 xuống 1,71 `headW`** — bản đầu giữ 2,2 với lý lẽ *"đo theo đầu thì
+    đúng"*, ảnh dựng bác bỏ ngay (cái mũ nuốt trọn người, 65% chiều cao khung → nay 50%). Mũ vành
+    **giữ 1,9** vì chỏm phải lồng vừa sọ — một bài test bắt được lúc tôi thử thu nhỏ nó.
+  - **Sửa một ngân sách lạc hậu 5,4 lần theo hướng SIẾT**: chú thích trong `human.js` tính trần
+    "136 tam giác mỗi người" từ mẫu số kỷ 1 = 19.434, trong khi kỷ 1 nay là **104.958** (Phase 14
+    §1(3)). Trần thật là **319**. Loại lạc hậu này im lặng vĩnh viễn vì nó không làm gì hỏng.
+  - **Sửa một hằng số ngân sách lệnh vẽ sai +1 ở CẢ 15 KỶ** kể từ ADR-053: bài test so **một công
+    thức với một bảng suy từ chính công thức ấy** — một cái gương, không phải một cái cân. Nay
+    bảng được neo vào **ba phép đo Chromium độc lập**.
+  - Danh sách ngoại lệ của phép đo dáng đi **cạn hẳn**: `[6, 7]` → `[6]` → **`[]`**.
+- **Tương thích**: **tam giác mỗi người 108 → 220…324** (ca xấu nhất kỷ 1 = 5,40% trên trần 6%) ·
+  **lệnh vẽ +2…+5 mỗi kỷ** (cư dân tiêu đúng `số khuôn − 1`). Chấp nhận theo lời Đàm 2026-08-21
+  (*"không quan trọng hiệu năng"*). Người dùng không phải làm gì.
+- **Số**: xem `BAN_GIAO.md` cùng ngày. Chi tiết quyết định: **ADR-055**.
+
+---
+
 ## 2026-08-23 (chiều) — Con người có bản sắc ở đủ 15 kỷ; và một cái nón lá màu đen đã tố cáo hai lỗi
 
 - **Mục đích**: hoàn tất `TECH_DEBT #78` (14/15 kỷ còn dùng chung một mốc người phổ thông), rồi

@@ -42,7 +42,7 @@
  * (*"cư dân tốn một lượng CỐ ĐỊNH nên tỉ lệ cao nhất ở kỷ có mẫu số nhỏ nhất"*) đứng trên tiền đề
  * "tử số cố định" — mà từ bản này mỗi kỷ dựng một cơ thể khác nhau (220…324 tam giác, chênh 1,47
  * lần). Ca xấu nhất nay là `max` của một tỉ số hai đại lượng cùng biến thiên, nên phải TÍNH ĐỦ 15
- * DÒNG mới biết nó ở đâu (`sceneGraphWiring.test.js` làm việc đó). Kết quả vẫn là kỷ 1 — 5,48% —
+ * DÒNG mới biết nó ở đâu (`sceneGraphWiring.test.js` làm việc đó). Kết quả vẫn là kỷ 1 — 5,40% —
  * nhưng nay ta BIẾT thế chứ không SUY thế.
  *
  * ⚠️ VÌ SAO KHÔNG DÙNG `parts.js`. Nhà máy hình khối của công trình chỉ xoay quanh TRỤC ĐỨNG
@@ -219,6 +219,37 @@ function garmentPiece(kind, d) {
  * VẬT LIỆU (mũ rơm Firenze và mũ phớt New York đều là `brim`), và vật liệu mới là thứ quyết
  * định nhạt hay sẫm. Suy từ `kind` là dựng lại đúng cái bẫy đã gỡ ở ADR-054.
  */
+/**
+ * ⚠️ CỠ MŨ ĐO TRONG **HAI HỆ QUY CHIẾU** VÀ HAI HỆ ẤY CÃI NHAU — đây là cái bẫy riêng của bảng này.
+ *
+ * Cái đầu trong dự án này **cố ý to gấp 1,54 lần đời thật** (0,20 chiều cao thay vì ~0,13), vì ở 14
+ * điểm ảnh một cái đầu đúng tỉ lệ chỉ còn 1,8 điểm ảnh và biến mất. Hệ quả không ai viết ra: **mọi
+ * thứ đo theo cái đầu cũng bị phóng 1,54 lần theo**.
+ *
+ * Nón lá thật rộng 40 cm trên một cái đầu 15 cm ⇒ **2,67 lần bề ngang đầu**. Chép đúng con số ấy
+ * (bản đầu để 2,2, đã là dè dặt) thì trên màn hình nó rộng 0,44 chiều cao người, tức **1,76 lần bề
+ * ngang vai** — và ảnh dựng ra đúng như thế: một **cái nấm trắng nuốt trọn người**, chỉ còn hai
+ * chân thò ra. Đo trên hình bóng: cái mũ chiếm 65% chiều cao khung của cư dân.
+ *
+ * Nhưng đo theo VAI thì cũng sai ngược lại: nón lá 40 cm trên vai 45 cm = 0,89 lần bề ngang vai =
+ * 0,22 chiều cao người — **hẹp hơn cả cái đầu đã phóng to**, tức không còn ra cái nón nữa.
+ *
+ * ⇒ Với NÓN LÁ, lấy **TRUNG BÌNH NHÂN của hai hệ**: √(0,534 × 0,22) = 0,343 chiều cao =
+ * **1,71 headW**, chiều cao giữ nguyên tỉ số 0,42 với đường kính (con số của vật thật) nên phép
+ * thu nhỏ không làm nó bẹt ra. Sau bản này cái mũ chiếm 50% chiều cao khung thay vì 65%.
+ *
+ * ⚠️ **NHƯNG PHÉP ẤY KHÔNG ÁP ĐƯỢC CHO MŨ CÓ CHỎM, và một bài test đã bắt được lúc tôi thử.** Nón
+ * lá chỉ bị cái đầu ràng buộc một chiều (vành phải RỘNG HƠN đầu — một cận dưới rất lỏng), nên nó
+ * được phép trôi về phía hệ quy chiếu vai. Mũ vành thì **CHỎM phải lồng vừa cái sọ**, tức bề rộng
+ * của nó BỊ CỘT CHẶT vào `headW`; thu nhỏ nó là dựng ra một cái mũ nhỏ hơn cái đầu. Xem `case
+ * 'brim'` bên dưới.
+ *
+ * Bài học chung: khi một bảng có một đại lượng đã bị phóng đại **có chủ ý**, mọi thứ neo vào nó
+ * thừa kế luôn phép phóng đại ấy — và không có gì đỏ lên, vì từng con số riêng lẻ đều "đúng theo
+ * vật thật". Hỏi *"tôi đang đo theo cái gì, và cái đó có đúng tỉ lệ không?"*; rồi hỏi tiếp *"cái
+ * neo ấy là một TỈ LỆ hay chỉ là một CẬN?"* — hai câu ấy cho hai câu trả lời khác nhau, và chính
+ * chỗ khác nhau đó là chỗ tôi đã sai.
+ */
 function headgearPieces(kind, d, material) {
   // Sợi mộc thì NHẠT hơn áo; vải nhuộm thì cùng lò với quần nên SẪM hơn áo.
   const vai = material === 'natural' ? 'straw' : 'cloth2';
@@ -245,6 +276,13 @@ function headgearPieces(kind, d, material) {
     // Chiều cao 0,78 `headH` (vành ~9% chiều cao ấy) — tỉ lệ của một cái mũ thật; bản cũ để vành
     // cao đúng 0,16 `headH` và KHÔNG có chỏm, nên nhìn từ camera chếch 34° nó là một tấm ván, và
     // trên dải 15 kỷ ba ô đội mũ vành (7 · 8 · 11) hiện ra là ba hình thoi che kín cư dân.
+    // ⚠️ BỀ RỘNG NÀY **BỊ CÁI ĐẦU RÀNG BUỘC**, KHÔNG ĐƯỢC THU NHỎ TỰ DO — và tôi đã thử thu nhỏ,
+    // rồi bài test *"mũ vành phải đội vừa cái đầu"* bắt được: hồ sơ `hat` có chỏm rộng 0,62 lần
+    // vành, nên vành 1,38 `headW` cho ra chỏm 0,86 `headW` — **hẹp hơn cái sọ nó đang đội lên**.
+    // Một cái mũ không lồng vừa đầu thì đúng là "khối lơ lửng" mà cả bản này sinh ra để xoá.
+    // ⇒ Với mũ CÓ CHỎM, hệ quy chiếu đúng là CÁI ĐẦU, không phải cái vai: chỏm 1,18 `headW` (thừa
+    // 18% để lồng vào), vành gấp 1,61 lần chỏm (vật thật: 1,7–1,9). Nó thừa hưởng luôn phép phóng
+    // đại của cái đầu, và đó là cái giá phải trả, không phải một khuyết tật sửa được bằng số.
     case 'brim':
       return [piece('headgear', vai, 'hat', 'head',
         [d.headW * 1.9, d.headH * 0.78, d.headW * 1.9],
@@ -263,13 +301,18 @@ function headgearPieces(kind, d, material) {
     // Bản cũ: một khối hộp rộng `2,2 × headW` mà chỉ cao `0,34 × headH`. Tỉ lệ ấy không phải một
     // cái nón, nó là một cái ĐĨA — và trên dải 15 kỷ, ô kỷ 6 hiện ra đúng là một hình thoi trắng,
     // không nhìn thấy người đâu cả.
-    // Nón lá thật: đường kính ~40 cm trên một cái đầu ~15 cm, cao ~0,42 lần đường kính. Giữ nguyên
-    // đường kính 2,2 (con số ấy ĐÚNG), sửa chiều cao 0,34 → 0,92 lần `headH`, và đổi khuôn sang
-    // `cone` để nó có một cái CHÓP. Tám mặt nghiêng bắt nắng tám mức khác nhau ⇒ đọc ra là khối.
+    // Nón lá thật: đường kính ~40 cm trên một cái đầu ~15 cm, cao ~0,42 lần đường kính. Sửa hai
+    // thứ, và chỉ một trong hai là chuyện chiều cao:
+    //   • KHUÔN: hộp → `cone`, để nó có một cái CHÓP. Tám mặt nghiêng bắt nắng tám mức khác nhau
+    //     ⇒ đọc ra là khối chứ không phải một tấm bìa.
+    //   • BỀ RỘNG: 2,2 → **1,71 `headW`** (xem khối chú thích "hai hệ quy chiếu" ở đầu hàm). Bản
+    //     đầu giữ 2,2 với lý lẽ *"đo theo đầu thì con số ấy đúng"* — và ảnh dựng ra bác bỏ ngay:
+    //     cái mũ nuốt trọn người, chiếm 65% chiều cao khung, chỉ còn hai chân thò ra. Nay 50%.
+    // Chiều cao giữ ĐÚNG tỉ số 0,42 với đường kính ⇒ 0,72 `headH`; thu nhỏ mà không làm nó bẹt.
     case 'conical':
       return [piece('headgear', vai, 'cone', 'head',
-        [d.headW * 2.2, d.headH * 0.92, d.headW * 2.2],
-        [0, d.headH * 1.08, 0])];
+        [d.headW * 1.71, d.headH * 0.72, d.headW * 1.71],
+        [0, d.headH * 1.06, 0])];
     default:
       return [];
   }

@@ -708,18 +708,29 @@ test('⚠️ PHÉP GHÉP MA TRẬN CỦA CẢNH PHẢI KHỚP VỚI `partCenterA
 
 /**
  * TAM GIÁC CẢ CẢNH của từng kỷ — thành phố + nền (vòm trời 960 + rặng núi 43.166 = 44.126, hằng số
- * ở cả 15 kỷ). Đo ngày **2026-08-23** bằng:
+ * ở cả 15 kỷ). Đo ngày **2026-08-23 (tối)** bằng ĐÚNG lệnh này:
  *
- *     node --import ./scripts/register-esm-loader.mjs scripts/scene-tri.mjs
+ *     node --import ./scripts/register-esm-loader.mjs scripts/scene-tri.mjs --sessions 80
+ *
+ * ⚠️ ĐÃ ĐỐI CHIẾU CHÉO VỚI CHROMIUM ở kỷ 1: `node scripts/city-preview.mjs --era 1 --hour 12
+ * --sessions 80` in ra **107.262 tam giác thành phố** — khớp **từng đơn vị** với dòng 1 của bảng
+ * này, bằng một đường đo hoàn toàn độc lập. Không có vế đối chiếu ấy thì bảng chỉ là một phép đo
+ * so với chính nó (bài học `TECH_DEBT #43`).
+ *
+ * ⚠️ **BẢNG CŨ ĐO Ở `--sessions 40` VÀ TRÊN CƠ THỂ CŨ, NÊN NÓ TRỘN HAI THỨ.** Mẫu số này gồm CẢ
+ * cư dân, mà cư dân chính là thứ bản này đổi ⇒ giữ nguyên bảng cũ là chấm tử số mới trên một mẫu
+ * số của thế giới cũ. Nó sai theo hướng bảo thủ (mẫu số nhỏ hơn ⇒ tỉ lệ cao hơn thật), nên nó
+ * không làm hỏng gì — và đó đúng là lý do một bảng như thế sống lâu. Ghi rõ SỐ PHIÊN ở đây vì
+ * `sessionCount` đổi thì cả thành phố đổi (kỷ 1: 110.110 ở 40 phiên, 107.262 ở 80 phiên).
  *
  * ⚠️ ĐÂY LÀ SỐ ĐO, KHÔNG PHẢI SỐ CHỌN — sửa một dòng thì phải chạy lại lệnh trên và ghi lại ngày.
- * Con số nào cũng già đi: bảng trước bản này ghi kỷ 1 = 65.912 (đo trước Phase 10), rồi 149.084
- * (2026-08-22), còn chú thích trong `human.js` thì kẹt ở 63.560 suốt hai phase.
+ * Con số nào cũng già đi: bảng này từng ghi kỷ 1 = 65.912 (đo trước Phase 10), rồi 149.084
+ * (2026-08-22, cơ thể cũ · 40 phiên), còn chú thích trong `human.js` thì kẹt ở 63.560 suốt hai phase.
  */
 const CANH_TAM_GIAC = {
-  1: 149084, 2: 173782, 3: 185182, 4: 233820, 5: 164740,
-  6: 270914, 7: 240442, 8: 211570, 9: 203688, 10: 179560,
-  11: 202912, 12: 180516, 13: 210802, 14: 220452, 15: 190634,
+  1: 151388, 2: 176214, 3: 187220, 4: 238120, 5: 170434,
+  6: 273006, 7: 251718, 8: 226382, 9: 213896, 10: 197530,
+  11: 227952, 12: 198342, 13: 230682, 14: 238966, 15: 217646,
 };
 
 test('⚠️ NGÂN SÁCH TAM GIÁC CƯ DÂN KHÔNG QUÁ 6% CẢNH — chấm TỪNG KỶ trên cảnh CỦA CHÍNH KỶ ẤY', () => {
@@ -732,7 +743,8 @@ test('⚠️ NGÂN SÁCH TAM GIÁC CƯ DÂN KHÔNG QUÁ 6% CẢNH — chấm T�
   // TÍNH ĐỦ 15 DÒNG.
   // ⇒ Đây là bài học "một kết luận đúng có thể hết đúng mà không ai động vào nó, vì TIỀN ĐỀ của nó
   // bị gỡ ở một phase khác" (Phase 8C) — lần này tiền đề bị gỡ là *"tử số cố định"*.
-  // (Kết quả: kỷ 1 vẫn là ca xấu nhất — 5,48% — nhưng nay ta BIẾT thế chứ không suy thế.)
+  // (Kết quả: kỷ 1 vẫn là ca xấu nhất — 5,40% trên trần 6%, biên còn 10,0% — nhưng nay ta BIẾT
+  // thế chứ không suy thế.)
   const MAX_PARTS = 11;
   let tệNhất = null;
   for (let era = 1; era <= 15; era += 1) {
@@ -770,76 +782,4 @@ test('⚠️ NGÂN SÁCH TAM GIÁC CƯ DÂN KHÔNG QUÁ 6% CẢNH — chấm T�
   console.log(`[cư dân] 15 kỷ · ca xấu nhất kỷ ${tệNhất.era}: ${tệNhất.tri} tam giác/người`
     + ` × ${MAX_RESIDENTS} = ${(tệNhất.tyLe * 100).toFixed(2)}% cảnh (trần 6%)`
     + ` · nặng nhất ${Math.max(...Object.keys(CANH_TAM_GIAC).map((e) => humanBodyTriangles(+e)))} tam giác/người`);
-});
-
-test('⚠️ PHÉP GHÉP MA TRẬN CỦA CẢNH PHẢI KHỚP VỚI `partCenterAt` — chạy CẢ HAI BÊN', () => {
-  // ⚠️ VÌ SAO KHÔNG SO VỚI MỘT HẰNG SỐ VIẾT TAY: bài học `countTriangles` (Phase 8B). Một chú
-  // thích tự nhận "có test đối chiếu hai bên" trong khi bài test chỉ so mỗi bên với một con số
-  // thứ ba đã sống sót sáu tháng. Ở đây phải chạy THẬT cả hai đường: đường của mã sản phẩm
-  // (quaternion của three, đúng biểu thức trong `sceneGraph.js`) và đường của tầng thuần
-  // (`partCenterAt`). Không bên nào được so với một con số thứ ba.
-  //
-  // ⚠️ VÀ ĐÂY LÀ MỘT BÀI TEST CHÉP BIỂU THỨC — thứ mà `CLAUDE.md` vốn cấm. Ngoại lệ có lý do: cái
-  // đang được canh CHÍNH LÀ "hai cách viết khác nhau có ra cùng một điểm không". Bỏ bản chép đi
-  // thì không còn gì để đối chiếu. Nhưng phải biết giới hạn của nó: sửa CẢ HAI bên cùng lúc thì
-  // bài này vẫn xanh (đã thử ngược đúng như vậy), nên nó canh sự TRÔI KHỎI NHAU, không canh tính
-  // đúng tuyệt đối. Tính đúng do bài "chân không trượt" ở `humanPose.test.js` canh.
-  const body = buildHumanBody(1);
-  const heading = new Quaternion();
-  const jointSpin = new Quaternion();
-  const limb = new Vector3();
-  const FORWARD = new Vector3(0, 0, 1);
-  const UPV = new Vector3(0, 1, 0);
-
-  for (const travelled of [0, 0.037, 0.19, 5.5]) {
-    for (const góc of [0, 0.7, -2.4]) {
-      const pose = poseAt(body, travelled);
-      heading.setFromAxisAngle(UPV, -góc);
-      for (const part of body.parts) {
-        const joint = pose.joints[part.joint];
-        // ĐƯỜNG 1 — y hệt `sceneGraph.js`.
-        jointSpin.setFromAxisAngle(FORWARD, joint.a);
-        limb.set(part.rest.x, part.rest.y, part.rest.z).applyQuaternion(jointSpin);
-        limb.set(joint.x + limb.x, joint.y + limb.y, joint.z + limb.z);
-        const cụcBộ = { x: limb.x, y: limb.y, z: limb.z };
-        // ĐƯỜNG 2 — tầng thuần, lượng giác viết tay.
-        const thuần = partCenterAt(part, pose);
-        for (const trục of ['x', 'y', 'z']) {
-          assert.ok(Math.abs(cụcBộ[trục] - thuần[trục]) < 1e-12,
-            `bộ phận "${part.id}" trục ${trục}: cảnh dựng ${cụcBộ[trục]}, tầng thuần nói`
-            + ` ${thuần[trục]} — hai bên đã trôi khỏi nhau`);
-        }
-      }
-    }
-  }
-});
-
-test('⚠️ NGÂN SÁCH TAM GIÁC CƯ DÂN KHÔNG QUÁ 6% CẢNH — chấm ở kỷ XẤU NHẤT', () => {
-  // ⚠️ CHẤM Ở KỶ ÍT TAM GIÁC NHẤT, KHÔNG PHẢI KỶ BẤT KỲ. Cư dân tốn một lượng gần như CỐ ĐỊNH
-  // (28 người × số hộp), nên tỉ lệ của họ cao nhất ở kỷ có mẫu số nhỏ nhất. Chấm ở kỷ 13 sẽ ra
-  // một con số dễ chịu và SAI — đúng cái bẫy "một hằng số nằm trong cả tử lẫn mẫu" của
-  // Performance Gate vòng 2.
-  const MAX_BOXES = 11;      // 136 tam giác/người ÷ 12 tam giác/hộp, xem `human.js`
-  // ⚠️ ĐÂY LÀ SỐ ĐO, KHÔNG PHẢI SỐ CHỌN — và nó GIÀ ĐI. Đo lại bằng:
-  //     node scripts/city-preview.mjs --era 1 --hour 12 --bench 1   (đọc dòng `[stats] | tam giác`)
-  // Lần đo gần nhất 2026-08-22, sau Phase 14: thành phố 104.958 + nền 44.126 = 149.084.
-  // ⚠️ Con số cũ ở đây là 65.912 (đo TRƯỚC Phase 10–14) — giữ nguyên nó thì phép chia ra một trần
-  // CHẶT HƠN thực tế, tức bài test vẫn xanh mà lời chú thích thành nói dối. Chọn nói thật rồi bù
-  // lại bằng một trần cho chính cái trần (dòng dưới), đúng khuôn `MAX_COURSES <= 4` của Phase 8A:
-  // một mẫu số nở ra không được phép tự động cấp quota cho một cơ thể phình ra.
-  const TỔNG_KỶ_1 = 149084;
-  for (let era = 1; era <= 15; era += 1) {
-    const n = buildHumanBody(era).parts.length;
-    assert.ok(n <= MAX_BOXES, `kỷ ${era} dựng ${n} hộp mỗi người — vượt trần ${MAX_BOXES}`);
-  }
-  // Và trần ấy phải THẬT SỰ suy từ ngân sách, không phải một con số chọn tay.
-  assert.ok(MAX_BOXES * 12 * MAX_RESIDENTS <= TỔNG_KỶ_1 * 0.06,
-    `trần ${MAX_BOXES} hộp cho ra ${MAX_BOXES * 12 * MAX_RESIDENTS} tam giác, vượt 6% của`
-    + ` ${TỔNG_KỶ_1} (= ${Math.round(TỔNG_KỶ_1 * 0.06)}) — trần đã trôi khỏi ngân sách`);
-  // ⚠️ TRẦN CHO CHÍNH CÁI TRẦN. Không có dòng này thì mỗi phase sau làm cảnh nặng thêm sẽ tự động
-  // nới quota cho cư dân, và "≤6% tổng cảnh" — một QUAN HỆ — sẽ trôi mà vẫn xanh. 11 hộp là con số
-  // Đàm chốt cho một nhân vật cao 18 px: quá nữa thì thêm hộp cũng không thêm điểm ảnh nào đọc được.
-  assert.ok(MAX_BOXES <= 11,
-    `trần ${MAX_BOXES} hộp/người đã bị nâng — ở cỡ 18 px thì hộp thứ 12 không đổi được điểm ảnh nào,`
-    + ' nên nâng trần là mua tam giác bằng tiền mà không mua được gì cho mắt');
 });

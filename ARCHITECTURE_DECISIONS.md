@@ -11,6 +11,126 @@
 
 ---
 
+## ADR-055 — Cơ thể cư dân dựng bằng MẶT TRÒN XOAY khai bằng dữ liệu thuần, không bằng hình khối của three; và một ngân sách lạc hậu theo hướng SIẾT thì im lặng vĩnh viễn
+
+**Ngày:** 2026-08-23
+**Trạng thái:** đã áp dụng
+
+### Bối cảnh
+ADR-053 cho cư dân một bộ xương có khớp; ADR-054 chữa màu. Đàm nhìn kết quả rồi ra chỉ thị tiếp:
+*"Tiếp tục tối ưu hoá model con người, làm cho chân thật nhất, ít ô vuông hơn và giống 3D hơn, làm
+kỹ từng kỷ."*
+
+Chữ **"ít ô vuông hơn"** mô tả chính xác thứ đang có: mọi bộ phận của mọi kỷ đều là
+`new BoxGeometry(1, 1, 1)` co giãn bằng ma trận. Một cái đầu là hộp, một cái nón lá là hộp, một cái
+vò gốm là hộp.
+
+### Vấn đề — HAI thứ, và cái thứ hai mới là thứ giữ cho cái thứ nhất tồn tại lâu như vậy
+
+**(1) MỘT KHỐI HỘP CHỈ CHO MẮT BA MẢNG SÁNG.** Với một nguồn sáng định hướng, một hộp lộ ra tối đa
+ba mặt: đỉnh, một mặt hướng nắng, một mặt khuất. Ba mảng phẳng cạnh nhau đọc ra là **một tấm bìa
+gấp**, không đọc ra là một cái khối — và mười một tấm bìa gấp xếp chồng lên nhau vẫn là bìa. Đây
+không phải chuyện thiếu chi tiết (thêm hộp không chữa được), mà là chuyện **số mức chuyển sáng**.
+Một lăng trụ 8 mặt cho **tám** mảng chuyển dần; tám mức chính là thứ mắt gọi là "tròn".
+
+**(2) NGÂN SÁCH TAM GIÁC GHI TRONG `human.js` ĐÃ LẠC HẬU 5,4 LẦN — THEO HƯỚNG SIẾT.** Chú thích ở
+đó tính trần "136 tam giác mỗi người" từ mẫu số *"kỷ 1 = 19.434 tam giác thành phố"*. Đo lại
+(`scripts/scene-tri.mjs`): kỷ 1 nay là **104.958**, vì Phase 14 §1(3) làm mỗi ô thành một KHU PHỐ.
+Cùng 6%, cùng `MAX_RESIDENTS = 28`, trần thật là **319 tam giác mỗi người**. Cơ thể lúc ấy tiêu 108.
+
+⚠️ **Một trần lạc hậu theo hướng SIẾT thì không ai phát hiện.** Nó không làm gì hỏng — nó chỉ làm
+một hướng đi tốt trông như đã bị cấm. Trần lạc hậu theo hướng nới thì sớm muộn có người kêu máy
+giật; trần lạc hậu theo hướng siết thì **im lặng vĩnh viễn**. Đây là mặt còn lại của bài học
+Performance Gate 2026-08-17, và nó chính là thứ đã giữ cơ thể ở dạng chồng-gạch lâu hơn cần thiết.
+
+### Phương án đã cân nhắc
+
+**A. Giữ hộp, chia nhỏ thêm.** Bắp tay tách khỏi cẳng tay, đùi tách khỏi cẳng chân, thêm bàn tay.
+**Loại**, hai lý do độc lập: (i) Đàm đã chốt trần **11 khối/người** (*"ở cỡ 18 px thì hộp thứ 12
+không đổi được điểm ảnh nào"*) và bộ hiện tại đã dùng 9–11; (ii) căn bản hơn, thêm hộp **không xoá
+được cái phẳng, nó nhân bản cái phẳng** — hai mươi hai mảng sáng phẳng thay vì mười một.
+
+**B. Dùng `SphereGeometry`/`CylinderGeometry`/`CapsuleGeometry` của three.** Rẻ nhất về công viết.
+**Loại**, ba lý do: (i) `src/engine/city3d/` là tầng **THUẦN**, không được `import` three — đưa
+hình khối của three vào đây là phá đúng ranh giới mà `flora.js` (ADR-020) và `streetStyle.js`
+(ADR-025) đã dựng; (ii) các khối ấy sinh **normal nội suy mượt**, trong khi toàn bộ ngôn ngữ hình
+ảnh của thành phố là **mặt phẳng cắt gọt** — một cư dân bóng mượt đứng giữa một thành phố lập thể
+đọc ra là một dị vật, không phải một cải tiến; (iii) chúng không tham số hoá được theo *"thon về
+phía nào"*, mà đó chính là thứ phân biệt một cái chân với một cái vò gốm.
+
+**C. (CHỌN) Một bộ khuôn dựng bằng MẶT TRÒN XOAY, khai bằng dữ liệu thuần, normal PHẲNG theo mặt.**
+
+### Giải pháp
+`src/engine/city3d/humanShape.js` (thuần) — bảy khuôn, mỗi khuôn là một hồ sơ dữ liệu
+`{sides, rings: [[y, r]]}`:
+
+| khuôn | mặt | tam giác | dùng cho | vì sao |
+|---|---|---|---|---|
+| `box` | 4 | 12 | bàn chân · cặp/vali | đế phẳng, gót vuông — vuông là ĐÚNG ở đây |
+| `prism` | 8 | 28 | búi tóc · da thú · vải quấn · cán giáo · bó củi | vật QUẤN hoặc VÓT tròn |
+| `limb` | 8 | 28 | tay · chân · thân · áo khoác · âu phục | thon xuống dưới (đùi > bắp chân) |
+| `flare` | 8 | 28 | áo chùng · áo choàng · khăn trùm · vò gốm | gấu BUÔNG thì xoè ra |
+| `cone` | 8 | 14 | nón lá | có CHÓP |
+| `dome` | 8 | 44 | đầu · mũ trụ · mũ vải mềm | sọ tròn, bẹt đỉnh, thon cằm |
+| `hat` | 8 | 60 | mũ vành cứng | vành + chỏm là MỘT vật |
+
+Ba quyết định con, mỗi cái đều có thể tự đứng làm một bài học:
+
+**(a) "MẶT PHẲNG = 1,0", KHÔNG PHẢI "BÁN KÍNH = 0,5".** Bán kính đỉnh dựng bằng
+`R = 0,5 / cos(π/sides)` và các đỉnh lệch pha nửa cung, nên **độ trải theo x và z đúng bằng ±0,5** —
+y hệt hộp cũ. Nhờ vậy `partCornersAt`, `silhouetteSpanX`, `human-scale.mjs`, `humanPose.js` và mọi
+con số hiệu chuẩn quanh chúng **không phải đổi một dòng nào**. Nếu chọn quy ước "bán kính = 0,5"
+thì mọi khối co lại 7,6% và toàn bộ bảng tỉ lệ cơ thể phải hiệu chuẩn lại — một phép đổi đơn vị
+âm thầm, đúng loại việc đẻ ra nợ. (`sides = 4` qua đúng công thức ấy tái tạo **chính xác** hộp đơn
+vị, nên `box` không phải một nhánh đặc biệt mà là một trường hợp của cùng một luật.)
+
+**(b) `shape` LÀ THAM SỐ BẮT BUỘC, không có mặc định.** Cho nó rơi ngầm về `'box'` thì mọi khối
+viết sau này sẽ lặng lẽ quay lại làm viên gạch — đúng cái đã xảy ra với `vernacularRoof` khi nó còn
+là trường tuỳ chọn (Phase 7C). Khai sai tên khuôn thì **ném ngay ở tầng thuần**.
+
+**(c) MŨ VÀNH LÀ MỘT KHỐI, VÀ CÁI TRẦN CỦA ĐÀM ĐÃ ÉP RA CÂU TRẢ LỜI ĐÚNG.** Bản đầu dựng nó bằng
+HAI khối (đĩa + chỏm) vì *"một cái mũ vành thì có hai phần"*. Nó đẩy kỷ 8 lên **12 khối**, vượt
+trần 11, và bài test đỏ. Phản xạ sai là nới trần. Hỏi lại *"ngoài đời đây là mấy vật?"* — **một**;
+và một cái mũ là một mặt tròn xoay liền khối, thứ `humanShape.js` dựng được. Kết quả **vừa giữ
+trần, vừa đúng hình học hơn, vừa rẻ hơn 12 tam giác**.
+
+`src/components/city/render3d/humanGeometry.js` biến hồ sơ thuần thành `BufferGeometry` **không
+chỉ mục** với normal phẳng theo mặt. `sceneGraph.js` gom khối theo KHUÔN: mỗi khuôn một
+`InstancedMesh` (một `InstancedMesh` chỉ mang được một hình học).
+
+### Trade-off — nói thẳng cái giá
+- **Tam giác mỗi người 108 → 220…324** (×2,0…×3,0). Trần thật là 319 với mẫu số của kỷ 1; ca xấu
+  nhất đo đủ 15 dòng là **kỷ 1 = 5,40%** trên trần 6% ⇒ biên còn **10,0%**. Kỷ 8 tiêu nhiều tam
+  giác nhất (324) nhưng mẫu số của nó lớn hơn nên tỉ lệ thấp hơn.
+- **Lệnh vẽ: cư dân nay tiêu đúng `(số khuôn − 1)` lệnh thêm mỗi kỷ, tức +2…+5.** Trước bản này cả
+  cơ thể là một khuôn duy nhất nên chi phí ấy bằng 0. Đây là một khoản chi có thật, và nó được
+  chấp nhận theo đúng lời Đàm 2026-08-21 (*"không quan trọng hiệu năng, máy tôi là M3"*) — bảng
+  lệnh vẽ nay là một CÁI CÂN, không phải một CÁI CỔNG.
+- **"Ca xấu nhất là kỷ 1" thôi là một LẬP LUẬN, nay là một KẾT LUẬN.** Lý lẽ cũ (*"cư dân tốn một
+  lượng CỐ ĐỊNH nên tỉ lệ cao nhất ở kỷ có mẫu số nhỏ nhất"*) đứng trên tiền đề "tử số cố định",
+  mà từ bản này mỗi kỷ một cơ thể khác nhau. Nay phải **tính đủ 15 dòng** mới biết ca xấu nhất ở
+  đâu. Kết quả vẫn là kỷ 1 — nhưng ta BIẾT thế chứ không SUY thế.
+
+### Ảnh hưởng
+- `humanShape.js` · `humanGeometry.js` MỚI; `human.js` không còn khối `box` nào ngoài bàn chân,
+  cái cặp và mô hình `lowDetail`.
+- `drawCallBudget.test.js`: hằng số `TAM_CO_DINH_KHO = 4` **sai +1 ở CẢ 15 KỶ** kể từ ADR-053 (nó
+  gộp hai lưới cư dân làm một mà không ai sửa hằng số). Không lộ ra vì bài test so **một công thức
+  với một bảng suy từ chính công thức ấy** — một cái gương, không phải một cái cân. Nay bảng được
+  **neo vào ba phép đo Chromium độc lập** và phần cư dân đọc thẳng `humanShapesUsed(era)`.
+- `humanPose.test.js`: cụm chân nay là 4 khối (chân + bàn chân mỗi bên); danh sách ngoại lệ đếm
+  được của phép đo hình bóng **tốt lên** từ `[6, 7]` xuống `[6]`.
+
+### Điều kiện xem lại
+- Nếu Đàm muốn cư dân đọc rõ ở khung TOÀN CẢNH (không phải cận cảnh): bản này **không** giải bài
+  toán đó — ở 14–18 điểm ảnh, tám mảng sáng và ba mảng sáng chênh nhau dưới ngưỡng mắt. Bài toán
+  ấy là bài toán KHUNG HÌNH, xem `TECH_DEBT #80`.
+- Nếu một kỷ nào đó cần khuôn thứ tám: thêm vào `PROFILES`, và bài test *"mọi khuôn phải có ít nhất
+  một kỷ dùng tới"* sẽ đỏ nếu nó thành một trục chết.
+- Nếu trần 11 khối được nới: đọc lại (c) trước — cái trần ấy đã ép ra một thiết kế tốt hơn một lần.
+
+---
+
 ## ADR-054 — Vật liệu của thứ đội trên đầu là một TRỤC RIÊNG, không phải một sắc độ của quần; và một tham số bị một biến cùng tên che khuất đã giết hai tính năng trong im lặng
 
 **Ngày:** 2026-08-23

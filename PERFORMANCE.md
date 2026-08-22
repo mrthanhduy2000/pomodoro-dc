@@ -2304,3 +2304,103 @@ Chia một ô thành 4–10 suất thì **mỗi căn chỉ còn 45% bề ngang c
 xuống, mà `massHeight` thì không phụ thuộc hình chiếu đáy) — bù đủ: chiều cao trung bình mỗi ô
 **tăng 7,0%**, không kỷ nào tụt. Con số 0,314 sát sàn 0,312 chứng minh phép kẹp **TRẦN THẮNG SÀN**
 đang thật sự cắn: ô chật thì bớt cột/hàng, chứ không đẻ ra nhà tí hon.
+
+---
+
+## Phase 15 — CƠ THỂ CƯ DÂN DỰNG BẰNG MẶT TRÒN XOAY (2026-08-23, ADR-055)
+
+**CÔNG CỤ · ĐẦU VÀO · ĐỜI ẢNH** (ba vế bắt buộc, xem `CLAUDE.md`):
+
+- Hình học: `node --import ./scripts/register-esm-loader.mjs scripts/scene-tri.mjs` (mặc định
+  **40 phiên · cấp 3 · giờ 12 · chuỗi 9**) — chạy trên **cả hai** cây mã, cây "trước" là một
+  `git worktree` ở commit **`f5a4e11`** đặt tại `/private/tmp/dc-base`.
+- Neo Chromium: `node scripts/city-preview.mjs --era 1 --hour 12 --bench 1` → khối `[stats]` in
+  **`| lệnh vẽ | 11 | 2 | 13 | 13 |`** và **`| tam giác | 110.110 | 44.126 | 154.236 |`**, khớp
+  **từng đơn vị** với dòng kỷ 1 của bảng dưới. Không có vế neo này thì bảng chỉ là một công thức
+  tự soi gương — đúng lỗi mà chính phase này đi sửa (xem mục "hằng số sai +1" bên dưới).
+- Ảnh so trước/sau: `.city-preview/city-era01-light-h12-s80.png` ở cả hai cây, dựng **nối tiếp
+  nhau trên máy rảnh** (nhiễu SwiftShader ±1 phụ thuộc tải máy — `TECH_DEBT #50`), ngày 2026-08-23.
+
+### Hình học — 15/15 kỷ, trước ↔ sau
+
+| kỷ | tam giác TP trước | sau | Δ | lệnh vẽ TP trước | sau | Δ | khuôn cơ thể |
+|---:|---:|---:|---:|---:|---:|---:|---:|
+| 1 | 104.958 | 110.110 | +5.152 | 8 | 11 | +3 | 4 |
+| 2 | 129.656 | 134.808 | +5.152 | 11 | 15 | +4 | 5 |
+| 3 | 141.056 | 145.760 | +4.704 | 11 | 15 | +4 | 5 |
+| 4 | 189.694 | 194.846 | +5.152 | 11 | 14 | +3 | 4 |
+| 5 | 120.614 | 125.766 | +5.152 | 11 | 15 | +4 | 5 |
+| 6 | 226.788 | 231.378 | +4.590 | 11 | 16 | +5 | 6 |
+| 7 | 196.316 | 201.916 | +5.600 | 12 | 16 | +4 | 5 |
+| 8 | 167.444 | 173.492 | +6.048 | 12 | 17 | +5 | 6 |
+| 9 | 159.562 | 164.714 | +5.152 | 11 | 13 | +2 | 3 |
+| 10 | 135.434 | 141.034 | +5.600 | 12 | 16 | +4 | 5 |
+| 11 | 158.786 | 164.386 | +5.600 | 10 | 13 | +3 | 4 |
+| 12 | 136.390 | 141.990 | +5.600 | 10 | 13 | +3 | 4 |
+| 13 | 166.676 | 170.780 | +4.104 | 10 | 12 | +2 | 3 |
+| 14 | 176.326 | 179.998 | +3.672 | 10 | 12 | +2 | 3 |
+| 15 | 146.508 | 151.212 | +4.704 | 10 | 13 | +3 | 4 |
+
+⚠️ **CỘT LỆNH VẼ KHỚP `số khuôn − 1` Ở CẢ MƯỜI LĂM DÒNG, KHÔNG MỘT NGOẠI LỆ.** Một
+`InstancedMesh` chỉ mang được một hình học, nên gom khối theo khuôn ⇒ cư dân tiêu đúng
+`humanShapesUsed(era).length` lệnh vẽ thay vì 1. Đây là một **khoản chi có thật**, chấp nhận theo
+lời Đàm 2026-08-21 (*"không quan trọng hiệu năng, máy tôi là M3"*).
+
+⚠️ **CỘT TAM GIÁC CÓ MỘT PHÉP ĐỐI CHIẾU CHÉO ĐẸP HƠN CẢ CON SỐ.** Chia `Δ` cho
+`humanBodyTriangles(era) − 12 × (số khối − 2)` thì **cả 15 kỷ ra một SỐ NGUYÊN**: **28,000** ở 12
+kỷ và **27,000** ở kỷ 6 · 13 · 14. Số nguyên ấy chính là **số cư dân** của kỷ đó (tuyến đi bám
+mạng đường, mà mạng đường thì đổi theo kỷ). Nếu `humanBodyTriangles` (tầng thuần) lệch dù chỉ một
+tam giác so với thứ cảnh thật dựng ra, phép chia này sẽ ra một số lẻ ở đâu đó. Không có chỗ nào lẻ.
+
+### Ngân sách cư dân — chấm TỪNG KỶ, không chấm ở kỷ 1 rồi suy
+
+| | trước | sau |
+|---|---|---|
+| tam giác mỗi người | 84…108 (= 12 × số khối) | **220…324** |
+| ca xấu nhất (tam giác cư dân ÷ cả cảnh) | ~2,0% | **5,40% — kỷ 1** (trần 6%, biên còn 10,0%) |
+| trần khối/người | 11 (Đàm chốt) | **11, GIỮ NGUYÊN** |
+
+⚠️ **"KỶ 1 LÀ CA XẤU NHẤT" THÔI LÀ MỘT LẬP LUẬN, NAY LÀ MỘT KẾT LUẬN.** Lý lẽ cũ (*"cư dân tốn một
+lượng CỐ ĐỊNH nên tỉ lệ cao nhất ở kỷ có mẫu số nhỏ nhất"*) đứng trên tiền đề **"tử số cố định"**,
+mà từ bản này mỗi kỷ dựng một cơ thể khác nhau (220…324, chênh 1,47 lần). Ca xấu nhất nay là `max`
+của một tỉ số hai đại lượng **cùng biến thiên** ⇒ phải tính đủ 15 dòng mới biết nó ở đâu. Kết quả
+vẫn là kỷ 1, nhưng nay ta BIẾT thế chứ không SUY thế. (Bài học Phase 8C: *một kết luận đúng có thể
+hết đúng mà không ai động vào nó, vì TIỀN ĐỀ của nó bị gỡ ở một phase khác*.)
+
+### Hai con số ngân sách đã lạc hậu, và cả hai đều im lặng
+
+**(1) Trần tam giác trong `human.js` lạc hậu 5,4 lần — THEO HƯỚNG SIẾT.** Nó tính "136 tam giác
+mỗi người" từ mẫu số *"kỷ 1 = 19.434 tam giác thành phố"*; kỷ 1 nay là **104.958** (Phase 14 §1(3)
+làm mỗi ô thành một khu phố). Trần thật: **319**. ⚠️ Một trần lạc hậu theo hướng **nới** thì sớm
+muộn có người kêu máy giật; lạc hậu theo hướng **siết** thì **im lặng vĩnh viễn** — nó không làm
+gì hỏng, nó chỉ làm một hướng đi tốt trông như đã bị cấm.
+
+**(2) `TAM_CO_DINH_KHO = 4` sai +1 ở CẢ 15 KỶ kể từ ADR-053 (2026-08-22).** Hằng số ấy đếm cư dân
+là HAI mesh (thân + đầu) đúng như mô hình hai hộp thời trước; ADR-053 gộp chúng làm một và tiết
+kiệm thật một lệnh vẽ, hằng số thì đứng yên. ⚠️ **Vì sao không có gì đỏ lên:** bài test so
+`hoVatLieu(era).length + tamCoDinh(era)` với bảng `MOC_LENH_VE` — mà bảng ấy **được suy ra từ
+chính công thức đó**. Hai vế cùng chứa một hằng số sai nên chúng khớp nhau hoàn hảo trong khi cùng
+lệch khỏi thực tế. Đó là *"một ngân sách tự tính mà chưa bao giờ được đặt cạnh sự thật"* tái diễn
+**trong chính file sinh ra để chống trôi âm thầm**. Cách vá không phải đổi 4 thành 3 (lại một hằng
+số chờ trôi) mà là **hỏi thẳng thứ đang đếm**: `humanShapesUsed(era).length`, cộng ba cái neo
+Chromium (kỷ 1 · 8 · 13 → 11 · 17 · 12).
+
+### Đàm có THẤY không — hai con số, và chúng nói hai chuyện khác nhau
+
+Cùng một cặp ảnh (`--era 1 --hour 12 --sessions 80`, khung app 1100×700, ngưỡng mắt 12/255):
+
+| phạm vi đo | điểm ảnh đổi quá ngưỡng mắt | lệch trung bình |
+|---|---:|---:|
+| **cả khung hình** | **0,2%** | 0,09 |
+| **chỉ điểm ảnh cư dân** (mặt nạ `--mask residents`, 2.198 điểm = 0,29% khung) | **57,5%** | **22,26** |
+
+⚠️ **ĐỌC ĐÚNG HAI DÒNG NÀY.** Dòng trên KHÔNG nói "bản vá vô dụng" — nó nói cư dân chiếm 0,29%
+khung hình, nên bất cứ thứ gì xảy ra với họ cũng không thể dịch được con số toàn khung. Dòng dưới
+mới là câu trả lời: **ở đúng chỗ cư dân đứng, hơn một nửa số điểm ảnh đổi quá ngưỡng mắt, và lệch
+trung bình gần gấp đôi ngưỡng**. Đây là bài học Phase 11 áp dụng đúng chiều: *bản quét 15 kỷ chỉ
+dùng để canh KHÔNG-TRÔI, không dùng để chứng minh một phase chi tiết có tác dụng*.
+
+⚠️ Và theo luật Đàm ra 2026-08-18 (HỆ QUẢ 2b), câu trả lời phải nói TRƯỚC chứ không bào chữa sau:
+**đây là công việc cho khung CẬN CẢNH** (`ADR-034` cho camera bay tới khi chạm công trình) và cho
+dải `human-strip.mjs` phóng 5 lần. Ở khung toàn cảnh, một cư dân cao 12–30 điểm ảnh thì 8 mảng
+sáng và 3 mảng sáng chênh nhau dưới ngưỡng mắt — điều đó đã biết trước khi viết dòng mã đầu tiên.

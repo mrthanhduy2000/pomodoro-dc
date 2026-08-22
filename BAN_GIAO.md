@@ -6,7 +6,23 @@
 > chọn: `ARCHITECTURE_DECISIONS.md`. Nợ kỹ thuật: `TECH_DEBT.md`. Migration: `MIGRATION.md`. Tóm
 > tắt theo mốc: `CHANGELOG.md`.
 > **NGUYÊN TẮC ƯU TIÊN SỐ 1:** (1) mọi phiên AI phải đọc file này + `CLAUDE.md` + các file liên quan TRƯỚC khi làm; (2) sau MỌI cập nhật dù nhỏ, phải cập nhật ngay file này + `CLAUDE.md` + các file liên quan khác.
-> Cập nhật lần cuối: **2026-08-23 (chiều)** — **CON NGƯỜI CÓ BẢN SẮC Ở ĐỦ 15 KỶ**, và một cái
+> Cập nhật lần cuối: **2026-08-23 (tối)** — **CƠ THỂ CƯ DÂN THÔI LÀ MỘT CHỒNG GẠCH** (ADR-055).
+> Đàm: *"làm cho chân thật nhất, ít ô vuông hơn và giống 3D hơn, làm kỹ từng kỷ"*. Mọi bộ phận
+> trước nay đều là `BoxGeometry(1,1,1)`, mà một hộp chỉ cho mắt **BA mảng sáng** — ba mảng phẳng
+> đọc ra là một tấm bìa gấp, và mười một tấm bìa gấp xếp chồng vẫn là bìa. Nay có **`humanShape.js`
+> — bộ 7 khuôn mặt tròn xoay** (`box · prism · limb · flare · cone · dome · hat`), chọn theo câu
+> hỏi vật lý *"bộ phận này thon về phía nào"*; lăng trụ 8 mặt cho **TÁM** mảng chuyển dần, và tám
+> mức chính là thứ mắt gọi là "tròn". Thêm **bàn chân**; **nón lá kỷ 6** thu 2,2 → 1,71 `headW`
+> (nó từng nuốt trọn người, chiếm 65% chiều cao khung → nay 50%). Số: tam giác mỗi người
+> **108 → 220…324**, ca xấu nhất **kỷ 1 = 5,40%** cả cảnh trên trần 6%; **lệnh vẽ +2…+5 mỗi kỷ**
+> (đúng `số khuôn − 1`, khớp ở CẢ 15 kỷ). Đo bằng mắt: cả khung hình chỉ **0,2%** điểm ảnh đổi quá
+> ngưỡng, nhưng **riêng trong mặt nạ cư dân là 57,5%** — hai con số ấy nói hai chuyện khác nhau,
+> đọc kỹ `PERFORMANCE.md` mục Phase 15. Dọc đường tìm ra **hai ngân sách đã lạc hậu mà không có gì
+> đỏ lên**: trần tam giác trong `human.js` **lạc hậu 5,4 lần theo hướng SIẾT** (loại lạc hậu im
+> lặng vĩnh viễn, vì nó không làm gì hỏng, nó chỉ làm một hướng đi tốt trông như bị cấm), và
+> `TAM_CO_DINH_KHO = 4` **sai +1 ở cả 15 kỷ** từ ADR-053 vì bài test so một công thức với một bảng
+> suy từ chính công thức ấy — một cái gương, không phải một cái cân.
+> (Mốc trước, 2026-08-23 chiều) — **CON NGƯỜI CÓ BẢN SẮC Ở ĐỦ 15 KỶ**, và một cái
 > **nón lá màu đen** đã tố cáo hai lỗi mà mọi cổng số đều báo xanh (ADR-054). Lỗi thứ nhất **đang
 > chạy trên production**: ở `palette3d.js`, tham số `era` bị một biến MÀU cùng tên che khuất, nên
 > `getFloraStyle`/`getHumanStyle` nhận một object màu rồi rơi về kỷ 1 ⇒ **15 kỷ dùng chung một màu
@@ -1564,6 +1580,70 @@
 - **Lịch sử git `main` từng bị xáo** (thao tác git song song): bản đang chạy là `eb44638` — chứa ĐỦ mọi việc gần đây (Hỏi Coach offline + fix đêm khuya + Coach offline analyst). Vài commit cũ (`1e27505`, `9fbcd62`) thành dangling, KHÔNG còn trong `git log` nhưng code vẫn nằm trong bản deploy. Đừng hoảng nếu không thấy chúng.
 
 ## 🗒️ Nhật ký cập nhật
+
+### 2026-08-23 (tối) — Cơ thể cư dân dựng bằng MẶT TRÒN XOAY, mỗi kỷ một bộ khuôn (ADR-055)
+
+**Lệnh của Đàm**: *"Tiếp tục tối ưu hoá model con người, làm cho chân thật nhất, ít ô vuông hơn và
+giống 3D hơn, làm kỹ từng kỷ."*
+
+**Đã làm gì**
+- **`src/engine/city3d/humanShape.js` MỚI** (thuần, không import three): 7 khuôn dựng bằng **mặt
+  tròn xoay** khai bằng dữ liệu `{sides, rings: [[y, r]]}` — `box`(12 tam giác) · `prism`(28) ·
+  `limb`(28) · `flare`(28) · `cone`(14) · `dome`(44) · `hat`(60).
+- **`src/components/city/render3d/humanGeometry.js` MỚI**: hồ sơ thuần → `BufferGeometry` **không
+  chỉ mục, pháp tuyến PHẲNG theo mặt** (phẳng là có chủ ý — normal mượt kiểu `SphereGeometry` sẽ
+  cho ra một cư dân bóng loáng giữa một thành phố lập thể).
+- **`human.js`**: `piece(id, role, shape, joint, size, rest)` với `shape` **BẮT BUỘC** (không mặc
+  định — một trường có mặc định là một trường sẽ bị quên, bẫy `vernacularRoof` Phase 7C). Tay/chân/
+  thân → `limb`; đầu → `dome`; **bàn chân MỚI** → `box`; 7 kiểu trang phục, 7 kiểu đội đầu, 6 đồ
+  mang theo mỗi thứ một khuôn có lý do vật lý.
+- **`sceneGraph.js`**: cư dân gom theo KHUÔN, mỗi khuôn một `InstancedMesh`.
+
+**Ba thứ hỏng tìm được dọc đường, không cái nào có gì đỏ lên**
+1. **Trần tam giác trong `human.js` lạc hậu 5,4 lần THEO HƯỚNG SIẾT**: ghi "136 tam giác/người" từ
+   mẫu số *"kỷ 1 = 19.434"*, trong khi kỷ 1 nay là **104.958** (Phase 14 §1(3)). Trần thật **319**.
+   ⚠️ Lạc hậu theo hướng nới thì có người kêu máy giật; theo hướng **siết** thì im lặng vĩnh viễn.
+2. **`TAM_CO_DINH_KHO = 4` sai +1 ở CẢ 15 KỶ** kể từ ADR-053 (nó đếm cư dân là hai mesh; ADR-053 đã
+   gộp làm một). Không đỏ vì bài test so `hoVatLieu + tamCoDinh` với `MOC_LENH_VE`, **mà bảng ấy
+   suy ra từ chính công thức đó**. Vá bằng cách **hỏi thẳng** `humanShapesUsed(era).length` + neo
+   vào 3 phép đo Chromium (kỷ 1 · 8 · 13 → 11 · 17 · 12).
+3. **Hai bài test TRÙNG ở cuối `sceneGraphWiring.test.js`** (bản cũ còn nguyên bên dưới bản mới).
+   Chúng vẫn XANH, và một trong hai còn khẳng định `MAX_BOXES × 12` — tức "mọi bộ phận là hộp", một
+   luật đã chết. Đã xoá; file từ 25 bài về **23 bài**.
+
+**Ba lần chính bài test/ảnh dựng bác bỏ tôi**
+- Bản đầu dựng mũ vành bằng **HAI khối** (đĩa + chỏm) ⇒ kỷ 8 lên **12 khối**, vượt trần 11 của Đàm.
+  Phản xạ sai là nới trần; hỏi lại *"ngoài đời đây là mấy vật?"* — **một** ⇒ khuôn `hat` một mặt
+  tròn xoay: giữ trần, đúng hình học hơn, rẻ hơn 12 tam giác.
+- Thu **cả** nón lá lẫn mũ vành xuống theo "trung bình nhân hai hệ quy chiếu" ⇒ bài *"mũ vành phải
+  đội vừa cái đầu"* ĐỎ (vành 1,38 `headW` ⇒ chỏm 0,86 `headW`, hẹp hơn cái sọ). Nón lá được phép
+  thu (cái đầu chỉ là **cận dưới**), mũ có chỏm thì không (cái đầu là **tỉ lệ**). Ghi `TECH_DEBT #81`.
+- Bản đầu của phép đo hình bóng tự viết một cách "ngoài ra ngoài từ gốc" và **kết tội oan khuôn
+  `hat`** 16/60 mặt — phép ấy chỉ đúng cho khối hình sao, mà `hat` có một bậc lõm. Thay bằng
+  **chiều cạnh có hướng + thể tích có dấu**: cả 7 khuôn sạch.
+
+**Số**
+- Tam giác/người **108 → 220…324**; ca xấu nhất **kỷ 1 = 5,40%** cả cảnh (trần 6%, biên 10,0%).
+- Lệnh vẽ **+2…+5 mỗi kỷ**, khớp `số khuôn − 1` ở **15/15 kỷ**.
+- Đối chiếu chéo: `Δ tam giác cảnh ÷ Δ tam giác mỗi người` ra **số nguyên ở cả 15 kỷ** (28 ở 12 kỷ,
+  27 ở kỷ 6 · 13 · 14 — chính là số cư dân của kỷ ấy). Neo Chromium kỷ 1: `[stats]` in
+  `| lệnh vẽ | 11 | 2 | 13 |` và `| tam giác | 110.110 | 44.126 | 154.236 |`, khớp từng đơn vị.
+- Ảnh: cả khung **0,2%** điểm ảnh đổi quá ngưỡng mắt · **chỉ trong mặt nạ cư dân 57,5%** (lệch
+  trung bình 22,26 trên ngưỡng 12).
+- Danh sách ngoại lệ của phép đo dáng đi **cạn hẳn**: `[6, 7]` → `[6]` → **`[]`**.
+- `npm test` (lượt nhanh) · lint sạch · build OK.
+
+**Tài liệu đã cập nhật**: `ARCHITECTURE_DECISIONS.md` (ADR-055) · `ARCHITECTURE.md` ·
+`PROJECT_STRUCTURE.md` · `PERFORMANCE.md` (mục Phase 15, đủ ba vế CÔNG CỤ · ĐẦU VÀO · ĐỜI ẢNH) ·
+`TECH_DEBT.md` (#80, #81 + dòng ngưỡng) · `CHANGELOG.md` · `CLAUDE.md` · file này.
+
+**Việc phiên sau cần biết**
+- Đọc `TECH_DEBT #80` **TRƯỚC** khi thêm bất cứ chi tiết nào vào cư dân: ở góc mặc định họ chiếm
+  **0,29% khung hình**, nên đó là công việc cho khung **CẬN CẢNH**, không phải toàn cảnh.
+- Đừng thu nhỏ mũ vành: `TECH_DEBT #81` giải thích vì sao nó bị cái đầu cột chặt, và bản vá gốc là
+  giảm phóng đại `headW` — một lần hiệu chuẩn lại cả bảng, không phải một lần sửa số.
+
+---
 
 ### 2026-08-23 (chiều) — Bản sắc con người đủ 15 kỷ, và một cái nón lá màu đen tố cáo hai lỗi (ADR-054)
 

@@ -919,9 +919,10 @@ trượt vài khung.
 
 **Cư dân là một BỘ XƯƠNG, và dáng đi là hàm của QUÃNG ĐƯỜNG (2026-08-22, ADR-053)**: ba tầng, mỗi
 tầng một việc, đúng khuôn `floraStyle.js` ↔ `flora.js` — `engine/city3d/humanStyle.js` = **BẢNG 15
-kỷ × 11 trục** (`country` khoá cứng vào `eraStyle.js`, 14 kỷ chưa làm trỏ preset **có tên**
-`mocPhoThong`) · `engine/city3d/human.js` = **THƯ VIỆN HÌNH** (danh sách hộp, mỗi hộp gắn một khớp +
-một vai màu) · `engine/city3d/humanPose.js` = **DÁNG ĐI** (`poseAt(body, travelled)` → góc từng
+kỷ × 11 trục** (`country` khoá cứng vào `eraStyle.js`; đủ 15/15 kỷ từ 2026-08-23) ·
+`engine/city3d/humanShape.js` = **BỘ 7 KHUÔN** (mặt tròn xoay khai bằng dữ liệu) ·
+`engine/city3d/human.js` = **THƯ VIỆN HÌNH** (danh sách khối, mỗi khối gắn một khớp + một vai màu +
+một khuôn) · `engine/city3d/humanPose.js` = **DÁNG ĐI** (`poseAt(body, travelled)` → góc từng
 khớp) · `residents.js` giữ nguyên "bao nhiêu người, đi đâu" · `sceneGraph.js` chỉ ghép ma trận.
 ⚠️ **Dáng đi phải là hàm của QUÃNG ĐƯỜNG ĐÃ ĐI, không phải của thời gian.** Pha bước =
 `travelled / (stride × chiều dài cẳng chân)`. Nếu lấy một hằng số thời gian riêng thì người đi
@@ -929,14 +930,24 @@ nhanh và người đi chậm cùng nhịp chân ⇒ **bàn chân trượt trên
 (`bob`) là **HỆ QUẢ** của chân trụ đang nghiêng (`legLen × (cos θ − 1)`) chứ không phải một sóng
 sin riêng — nó đã được **chuyển hẳn** khỏi `residents.js`, và `sceneGraphWiring.test.js` cấm
 `+ spot.bob` quay lại.
-⚠️ **MỘT `InstancedMesh` trên hộp đơn vị 1×1×1 cho CẢ cộng đồng.** Kích thước mỗi bộ phận đi vào ma
-trận co giãn; khớp xoay quanh **một trục ngang duy nhất** (mặt phẳng đi tới) ở tầng ma trận, KHÔNG
-thêm trục nghiêng vào `parts.js`. Nhờ vậy 28 người × 9 hộp = 252 khối vẫn là **1 lệnh vẽ** — số
-lệnh vẽ của cả cảnh còn **GIẢM 11 → 10** vì hai mesh cũ (thân + đầu) gộp làm một. Tam giác cư dân
-kỷ 1 = **3.024 = 2,03% tổng cảnh** (trần 6%) nhưng **2,88% riêng phần thành phố** — đọc đúng con số
-cho đúng câu hỏi (bài học Performance Gate vòng 2).
+⚠️ **MỘT `InstancedMesh` MỖI KHUÔN (2026-08-23, ADR-055) — trước đó là một `InstancedMesh` duy nhất
+trên hộp đơn vị.** Kích thước mỗi bộ phận vẫn đi vào ma trận co giãn; khớp vẫn xoay quanh **một
+trục ngang duy nhất** (mặt phẳng đi tới) ở tầng ma trận, KHÔNG thêm trục nghiêng vào `parts.js`.
+Cái đổi là hình học: một `InstancedMesh` chỉ mang được MỘT hình học, nên gom khối theo khuôn ⇒
+**`humanShapesUsed(era).length` CHÍNH LÀ số lệnh vẽ cư dân tiêu**, tức thêm `(số khuôn − 1)` =
+**+2…+5 lệnh vẽ mỗi kỷ**. Đây là một khoản chi có thật, chấp nhận theo đúng lời Đàm 2026-08-21
+(*"không quan trọng hiệu năng"*); bảng lệnh vẽ nay là một **cái cân**, không phải một **cái cổng**.
+⚠️ **Quy ước hình học: "MẶT PHẲNG = 1,0", không phải "bán kính = 0,5"** — bán kính đỉnh dựng bằng
+`R = 0,5/cos(π/sides)` và các đỉnh lệch pha nửa cung, nên độ trải x/z của mọi khuôn **đúng bằng
+±0,5**, y hệt hộp cũ. Nhờ vậy `partCornersAt`/`silhouetteSpanX`/`human-scale.mjs` và toàn bộ bảng
+tỉ lệ cơ thể **không phải hiệu chuẩn lại một con số nào**.
+⚠️ **Tam giác mỗi người 108 → 220…324 (tuỳ kỷ).** Trần đã đo lại là **319** với mẫu số kỷ 1; ca xấu
+nhất phải tính đủ 15 dòng chứ không suy được nữa (mỗi kỷ một cơ thể khác nhau) — kết quả **kỷ 1 =
+5,40%** trên trần 6%. Con số cũ ghi trong `human.js` lạc hậu **5,4 lần theo hướng SIẾT**, và loại
+lạc hậu đó im lặng vĩnh viễn vì nó không làm gì hỏng, nó chỉ làm một hướng đi tốt trông như bị cấm.
 ⚠️ **`lowDetail` quay về ĐÚNG mô hình 2 hộp cũ** (`buildHumanBodyLowDetail`), và chính hàm đó cũng
-là ĐỐI CHỨNG của mọi phép đo dáng đi: một mô hình không có khớp thì hình bóng phải đổi **0**.
+là ĐỐI CHỨNG của mọi phép đo dáng đi: một mô hình không có khớp thì hình bóng phải đổi **0**. Hai
+khối ấy **phải giữ khuôn `box`** — "nâng cấp" cho đẹp là phá chính vai trò đối chứng của chúng.
 
 **Database schema — KHÔNG có migration tự động**: mọi thay đổi cấu trúc bảng Supabase (`game_state`,
 `timer_live`, `push_jobs`, `push_subscriptions`...) đòi hỏi chạy TAY một file `.sql` trong

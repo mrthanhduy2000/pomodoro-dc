@@ -3,6 +3,11 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { Quaternion, Vector3 } from 'three';
+
+import { buildHumanBody } from '../../../engine/city3d/human.js';
+import { partCenterAt, poseAt } from '../../../engine/city3d/humanPose.js';
+import { MAX_RESIDENTS } from '../../../engine/city3d/residents.js';
 
 /**
  * KHOÁ ĐƯỜNG DÂY GIỮA NHÀ MÁY HÌNH HỌC VÀ CẢNH — bằng cách đọc thẳng mã nguồn.
@@ -616,4 +621,93 @@ test('⚠️ CỜ CHỈ-DÙNG-ĐỂ-ĐO KHÔNG ĐƯỢC XUẤT HIỆN TRONG VỎ
   // Và đối chứng: công cụ chụp PHẢI truyền nó, nếu không thì `--mask` đang đo một tấm rỗng.
   assert.ok(PREVIEW_CODE.includes('tachDeDo'),
     '`tachDeDo` không có trong city-preview.mjs — không ai bật cờ này thì phép đo mặt nạ vô nghĩa');
+});
+
+// ─── CƯ DÂN CÓ KHỚP ───────────────────────────────────────────────────────────────────────────
+
+test('⚠️ CƯ DÂN PHẢI ĐI QUA `humanPose` — không được có nhánh tự tính tư thế', () => {
+  // ⚠️ Đúng bẫy Phase 4H một lần nữa: `humanPose.js` có bài test riêng chạy đủ 8 bài và xanh hết,
+  // mà nếu `sceneGraph.js` không gọi nó thì cả tầng tư thế là mã chết — lint không bắt (hàm CÓ
+  // được dùng, bởi chính bài test của nó), build không bắt, và trên màn hình chỉ là những viên
+  // gạch trôi y như trước, không ai nhớ là đáng lẽ phải khác.
+  assert.ok(/poseAt\(body, spot\.travelled\)/.test(CALLS),
+    'Cư dân không còn hỏi `humanPose`. Cả tầng dáng đi thành mã chết mà không có gì đỏ lên.');
+  assert.ok(/buildHumanBody\(layout\.era\)/.test(CALLS),
+    'Cơ thể không còn dựng theo KỶ — 15 kỷ sẽ quay về cùng một hình người.');
+
+  // ⚠️ CÁI NHÚN CHỈ ĐƯỢC KHAI Ở MỘT CHỖ. Trước phase này nó nằm trong `residents.js` dưới dạng
+  // một hàm sin riêng; nếu chỗ đặt chân lại cộng thêm `bob` lần nữa thì người nhún hai lần và
+  // lệch pha với bước chân. Đây là bẫy "một luật hai công thức" ở dạng nguy hiểm nhất: cả hai
+  // công thức đều chạy, không cái nào lỗi.
+  assert.ok(!/\+ spot\.bob/.test(CALLS),
+    'Chỗ đặt chân còn cộng `spot.bob` — cái nhún nay là hệ quả của chân trụ, cộng thêm là nhún đôi.');
+
+  // Cả cộng đồng phải nằm trong MỘT lệnh vẽ: một hình học hộp đơn vị, kích thước vào ma trận scale.
+  assert.ok(/new BoxGeometry\(1, 1, 1\)/.test(CALLS),
+    'Không còn dùng hộp đơn vị. Mỗi bộ phận một `BoxGeometry` riêng = 9 lệnh vẽ thay vì 1.');
+  assert.ok(/scale\.set\(part\.w, part\.h, part\.d\)/.test(CALLS),
+    'Kích thước bộ phận không còn đi vào ma trận scale.');
+
+  // Máy yếu phải quay về đúng mô hình 2 hộp, không được rơi vào nhánh đầy đủ.
+  assert.ok(/lowDetail \? buildHumanBodyLowDetail\(/.test(CALLS),
+    '`lowDetail` không còn quay về mô hình 2 hộp — máy yếu sẽ phải dựng đủ 9 bộ phận mỗi người.');
+});
+
+test('⚠️ PHÉP GHÉP MA TRẬN CỦA CẢNH PHẢI KHỚP VỚI `partCenterAt` — chạy CẢ HAI BÊN', () => {
+  // ⚠️ VÌ SAO KHÔNG SO VỚI MỘT HẰNG SỐ VIẾT TAY: bài học `countTriangles` (Phase 8B). Một chú
+  // thích tự nhận "có test đối chiếu hai bên" trong khi bài test chỉ so mỗi bên với một con số
+  // thứ ba đã sống sót sáu tháng. Ở đây phải chạy THẬT cả hai đường: đường của mã sản phẩm
+  // (quaternion của three, đúng biểu thức trong `sceneGraph.js`) và đường của tầng thuần
+  // (`partCenterAt`). Không bên nào được so với một con số thứ ba.
+  //
+  // ⚠️ VÀ ĐÂY LÀ MỘT BÀI TEST CHÉP BIỂU THỨC — thứ mà `CLAUDE.md` vốn cấm. Ngoại lệ có lý do: cái
+  // đang được canh CHÍNH LÀ "hai cách viết khác nhau có ra cùng một điểm không". Bỏ bản chép đi
+  // thì không còn gì để đối chiếu. Nhưng phải biết giới hạn của nó: sửa CẢ HAI bên cùng lúc thì
+  // bài này vẫn xanh (đã thử ngược đúng như vậy), nên nó canh sự TRÔI KHỎI NHAU, không canh tính
+  // đúng tuyệt đối. Tính đúng do bài "chân không trượt" ở `humanPose.test.js` canh.
+  const body = buildHumanBody(1);
+  const heading = new Quaternion();
+  const jointSpin = new Quaternion();
+  const limb = new Vector3();
+  const FORWARD = new Vector3(0, 0, 1);
+  const UPV = new Vector3(0, 1, 0);
+
+  for (const travelled of [0, 0.037, 0.19, 5.5]) {
+    for (const góc of [0, 0.7, -2.4]) {
+      const pose = poseAt(body, travelled);
+      heading.setFromAxisAngle(UPV, -góc);
+      for (const part of body.parts) {
+        const joint = pose.joints[part.joint];
+        // ĐƯỜNG 1 — y hệt `sceneGraph.js`.
+        jointSpin.setFromAxisAngle(FORWARD, joint.a);
+        limb.set(part.rest.x, part.rest.y, part.rest.z).applyQuaternion(jointSpin);
+        limb.set(joint.x + limb.x, joint.y + limb.y, joint.z + limb.z);
+        const cụcBộ = { x: limb.x, y: limb.y, z: limb.z };
+        // ĐƯỜNG 2 — tầng thuần, lượng giác viết tay.
+        const thuần = partCenterAt(part, pose);
+        for (const trục of ['x', 'y', 'z']) {
+          assert.ok(Math.abs(cụcBộ[trục] - thuần[trục]) < 1e-12,
+            `bộ phận "${part.id}" trục ${trục}: cảnh dựng ${cụcBộ[trục]}, tầng thuần nói`
+            + ` ${thuần[trục]} — hai bên đã trôi khỏi nhau`);
+        }
+      }
+    }
+  }
+});
+
+test('⚠️ NGÂN SÁCH TAM GIÁC CƯ DÂN KHÔNG QUÁ 6% CẢNH — chấm ở kỷ XẤU NHẤT', () => {
+  // ⚠️ CHẤM Ở KỶ ÍT TAM GIÁC NHẤT, KHÔNG PHẢI KỶ BẤT KỲ. Cư dân tốn một lượng gần như CỐ ĐỊNH
+  // (28 người × số hộp), nên tỉ lệ của họ cao nhất ở kỷ có mẫu số nhỏ nhất. Chấm ở kỷ 13 sẽ ra
+  // một con số dễ chịu và SAI — đúng cái bẫy "một hằng số nằm trong cả tử lẫn mẫu" của
+  // Performance Gate vòng 2.
+  const MAX_BOXES = 11;      // 136 tam giác/người ÷ 12 tam giác/hộp, xem `human.js`
+  const TỔNG_KỶ_1 = 65912;   // đo bằng `stats.geometry.triangles.total`, kỷ 1, 80 phiên
+  for (let era = 1; era <= 15; era += 1) {
+    const n = buildHumanBody(era).parts.length;
+    assert.ok(n <= MAX_BOXES, `kỷ ${era} dựng ${n} hộp mỗi người — vượt trần ${MAX_BOXES}`);
+  }
+  // Và trần ấy phải THẬT SỰ suy từ ngân sách, không phải một con số chọn tay.
+  assert.ok(MAX_BOXES * 12 * MAX_RESIDENTS <= TỔNG_KỶ_1 * 0.06,
+    `trần ${MAX_BOXES} hộp cho ra ${MAX_BOXES * 12 * MAX_RESIDENTS} tam giác, vượt 6% của`
+    + ` ${TỔNG_KỶ_1} (= ${Math.round(TỔNG_KỶ_1 * 0.06)}) — trần đã trôi khỏi ngân sách`);
 });

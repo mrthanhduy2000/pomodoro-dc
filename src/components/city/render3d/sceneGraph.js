@@ -51,7 +51,9 @@ import { BUILDING_SCALE, prism, specSpan } from '../../../engine/city3d/parts';
 import { buildTerrain } from '../../../engine/city3d/terrain';
 import { buildHorizon } from '../../../engine/city3d/horizon';
 import { placeBounds, specBounds } from '../../../engine/city3d/pick';
-import { RESIDENT_HEIGHT, buildResidents, residentAt } from '../../../engine/city3d/residents';
+import { buildResidents, residentAt } from '../../../engine/city3d/residents';
+import { buildHumanBody, buildHumanBodyLowDetail } from '../../../engine/city3d/human';
+import { poseAt } from '../../../engine/city3d/humanPose';
 import { fogDensityFor, sunDirectionAt } from '../../../engine/city3d/daylight';
 import { buildMergedGeometry } from './geometryFactory';
 import {
@@ -233,6 +235,17 @@ export function measureSceneGeometry(root) {
 
 /** Trục đứng, dùng lại cho mọi phép xoay người — tạo mới trong vòng lặp là rác cho bộ dọn. */
 const UP = new Vector3(0, 1, 0);
+
+/**
+ * Trục quay của MỌI khớp người: trục z cục bộ, tức trục ngang chạy qua hai vai.
+ *
+ * ⚠️ MỘT TRỤC LÀ ĐỦ, VÀ ĐÓ LÀ MỘT LỰA CHỌN CHỨ KHÔNG PHẢI MỘT GIỚI HẠN. Đi bộ là chuyển động
+ * trong mặt phẳng ĐỨNG DỌC theo hướng đi: hông đưa ra trước và ra sau, vai đu ngược lại, thân
+ * khom tới. Không có khớp nào của dáng đi cần xoay quanh hai trục kia. Thêm trục thứ hai là thêm
+ * một quaternion nhân mỗi bộ phận mỗi khung hình để đổi lấy một thứ không đọc ra được ở 14 điểm
+ * ảnh — đúng lý lẽ đã dùng khi từ chối thêm trục nghiêng cho `parts.js`.
+ */
+const FORWARD_AXIS = new Vector3(0, 0, 1);
 
 /**
  * Hướng mặt trời (đã chuẩn hoá): phương vị 150°, cao 30°.
@@ -659,6 +672,11 @@ export function createCityScene({
   const rotation = new Quaternion();
   const scale = new Vector3(1, 1, 1);
   const tint = new Color();
+  // Riêng cho cư dân: hướng đi của người, phép xoay của một khớp, và chỗ tính tâm một bộ phận.
+  // Tách khỏi `rotation`/`position` vì khối cư dân dùng cả bốn CÙNG LÚC trong một biểu thức ghép.
+  const heading = new Quaternion();
+  const jointSpin = new Quaternion();
+  const limb = new Vector3();
 
   /**
    * MẶT ĐƯỜNG CÓ VẬT LIỆU RIÊNG — không dùng chung `tileMaterial` với mặt đất nữa.
@@ -1219,20 +1237,31 @@ export function createCityScene({
   // đó biến nó thành NƠI CÓ NGƯỜI Ở — và biến "mở khoá thêm một công trình" thành "chỗ này đông
   // hơn tuần trước". Toàn bộ cộng đồng đi qua MỘT `InstancedMesh` = một lệnh vẽ.
   const residents = still ? [] : buildResidents(layout, stats);
-  let bodyMesh = null;
-  let headMesh = null;
+  let peopleMesh = null;
   /** Đặt lại vị trí cả cộng đồng theo thời gian. `null` khi thành phố không có ai. */
   let placeResidents = null;
   if (residents.length > 0) {
-    // ⚠️ HAI KHỐI, KHÔNG PHẢI MỘT — và đây là khác biệt giữa "cư dân" với "viên gạch màu".
-    // Bản đầu dùng đúng một hộp cho cả người. Ảnh chụp gần cho thấy kết quả: những viên gạch màu
-    // trôi trên đường, không ai đọc ra là người. Thứ làm mắt nhận ra dáng người ở cỡ vài điểm ảnh
-    // KHÔNG phải tay chân hay mặt mũi — mà là một chấm NHỎ HƠN, SÁNG HƠN đặt trên một khối lớn
-    // hơn, tối hơn. Đó là toàn bộ ngôn ngữ của quân cờ vua và của hình nhân Lego.
-    // Giá: 12 tam giác mỗi người, thêm ĐÚNG một lệnh vẽ cho cả cộng đồng (đầu ai cũng một màu nên
-    // không cần màu theo thực thể).
-    const HEAD_HEIGHT = RESIDENT_HEIGHT * 0.28;
-    const BODY_HEIGHT = RESIDENT_HEIGHT - HEAD_HEIGHT;
+    // ⚠️ MỘT CƠ THỂ CÓ KHỚP, KHÔNG PHẢI HAI CÁI HỘP — và đây là khác biệt giữa "cư dân" với
+    // "viên gạch màu biết trôi".
+    //
+    // Mô hình cũ là đúng hai hộp (thân + đầu) dựng thẳng đứng, cộng một hàm sin nhún người. Nó đã
+    // là một bước tiến thật so với MỘT hộp — cái chấm nhỏ sáng hơn trên khối lớn tối hơn chính là
+    // ngôn ngữ của quân cờ và của hình nhân Lego. Nhưng nó dừng ở đó: **cả 15 kỷ ai cũng là cùng
+    // một viên gạch nhún**, và không có gì trong hình dáng nói được người thời nào.
+    //
+    // ⚠️ CON SỐ CHO PHÉP LÀM VIỆC NÀY ĐÃ ĐƯỢC ĐO TRƯỚC KHI VIẾT DÒNG MÃ NÀO
+    // (`scripts/human-scale.mjs`, đối chiếu với ảnh thật bằng `--mask resident,resident-head`):
+    // trên MacBook Air M3 của Đàm, một cư dân kỷ 1 cao **trung vị 14,4 điểm ảnh CSS**. Ở cỡ đó
+    // một chi rộng bằng 1/4 thân chiếm 2 tới 3 điểm ảnh — đủ để đọc ra HÌNH BÓNG ĐỔI THEO PHA
+    // BƯỚC. Nếu con số ấy ra 4 (đúng như trên iPhone) thì cả khối này đã không đáng viết.
+    //
+    // ⚠️ HÌNH HỌC LÀ MỘT HỘP ĐƠN VỊ 1×1×1 DUY NHẤT, kích thước đi vào MA TRẬN SCALE. Nhờ vậy cả
+    // cộng đồng — 28 người × 9 bộ phận — nằm gọn trong MỘT `InstancedMesh` = MỘT lệnh vẽ, bằng
+    // đúng mô hình hai hộp cũ (vốn tốn hai lệnh vẽ). Dựng mỗi bộ phận một `BoxGeometry` riêng thì
+    // ra 9 lệnh vẽ và mất sạch cái lợi của instancing.
+    const body = lowDetail ? buildHumanBodyLowDetail(layout.era) : buildHumanBody(layout.era);
+    const parts = body.parts;
+    const slots = residents.length * parts.length;
 
     const residentMaterial = track(new MeshStandardMaterial({
       roughness: 0.88,          // vải vóc, không phải nhựa
@@ -1243,38 +1272,39 @@ export function createCityScene({
       opacity: dimmed ? 0.62 : 1,
     }));
 
-    const bodyGeometry = track(new BoxGeometry(0.085, BODY_HEIGHT, 0.085));
-    bodyMesh = new InstancedMesh(bodyGeometry, residentMaterial, residents.length);
+    const unitBox = track(new BoxGeometry(1, 1, 1));
+    peopleMesh = new InstancedMesh(unitBox, residentMaterial, slots);
+    // ⚠️ ĐẶT TÊN LÀ ĐỂ **ĐO ĐƯỢC**, đúng lý do đã ghi ở khối mặt đất và mặt đường phía trên: muốn
+    // hỏi "một cư dân cao bao nhiêu điểm ảnh trên màn hình Đàm" thì phải biết điểm ảnh nào là
+    // người, và `TECH_DEBT #22` đã trả giá ba phase cho việc ĐOÁN chuyện đó bằng màu. Không có cái
+    // tên này thì cư dân rơi vào "sọt đen" của `city-preview.mjs --mask`, và một phép đo mật độ
+    // nhà sẽ đọc phần đen ấy thành trời hoặc thành nền. Đo lần đầu (kỷ 7, 50 phiên, khung toàn
+    // cảnh) ra 15,7% khung hình — lớn hơn nhiều so với cảm giác "vài chấm nhỏ".
+    // ⚠️ SỐ NHIỀU. `sceneStats.test.js` khoá cứng đúng chuỗi này; đổi sang số ít là đỏ ngay.
+    peopleMesh.name = 'residents';
+    // Người quá nhỏ để đổ bóng ra hồn, nhưng NHẬN bóng thì có: đi vào bóng nhà là tối đi.
+    peopleMesh.castShadow = false;
+    peopleMesh.receiveShadow = true;
+    // ⚠️ Ma trận đổi mỗi khung hình — báo cho three biết để nó khỏi cố tối ưu bộ đệm tĩnh.
+    peopleMesh.instanceMatrix.setUsage(DynamicDrawUsage);
 
-    const headGeometry = track(new BoxGeometry(0.062, HEAD_HEIGHT, 0.062));
-    headMesh = new InstancedMesh(headGeometry, residentMaterial, residents.length);
-
-    const skin = palette.roles?.skin ?? palette.roles?.trim ?? palette.wall;
-    for (const mesh of [bodyMesh, headMesh]) {
-      // ⚠️ ĐẶT TÊN LÀ ĐỂ ĐO ĐƯỢC — cùng lý do đã ghi ở mặt đất và mặt đường phía trên. Không có
-      // cái tên này thì cư dân rơi vào "sọt đen" của `city-preview.mjs --mask`, và một phép đo mật
-      // độ nhà sẽ đọc phần đen ấy thành trời hoặc thành nền. Đo lần đầu (kỷ 7, 50 phiên, khung
-      // toàn cảnh) ra 15,7% khung hình — lớn hơn nhiều so với cảm giác "vài chấm nhỏ".
-      mesh.name = 'residents';
-      // Người quá nhỏ để đổ bóng ra hồn, nhưng NHẬN bóng thì có: đi vào bóng nhà là tối đi.
-      mesh.castShadow = false;
-      mesh.receiveShadow = true;
-      // ⚠️ Ma trận đổi mỗi khung hình — báo cho three biết để nó khỏi cố tối ưu bộ đệm tĩnh.
-      mesh.instanceMatrix.setUsage(DynamicDrawUsage);
+    // Màu theo VAI của từng bộ phận. Năm vai đọc thẳng từ bảng màu, mà bảng màu thì đọc `cloth`
+    // từ `humanStyle.js` — một luật, một chỗ khai (xem `palette3d.js` mục `cloth`).
+    const roleColor = {
+      skin: palette.roles?.skin ?? palette.wall,
+      cloth: palette.roles?.cloth ?? palette.roof,
+      cloth2: palette.roles?.cloth2 ?? palette.roles?.trim ?? palette.roof,
+      hair: palette.roles?.hair ?? palette.roles?.dark ?? palette.wall,
+      gear: palette.roles?.gear ?? palette.roles?.wood ?? palette.wall,
+    };
+    for (let i = 0; i < residents.length; i += 1) {
+      for (let k = 0; k < parts.length; k += 1) {
+        peopleMesh.setColorAt(i * parts.length + k,
+          tint.setHex(roleColor[parts[k].role] ?? roleColor.cloth));
+      }
     }
-
-    // Màu áo: lấy quanh vai `roof`/`gold`/`wood` để cư dân thuộc cùng họ màu với thành phố họ ở.
-    const shirtRoles = ['roof', 'gold', 'wood', 'trim'];
-    residents.forEach((_route, index) => {
-      bodyMesh.setColorAt(index, tint.setHex(
-        palette.roles?.[shirtRoles[index % shirtRoles.length]] ?? palette.roof,
-      ));
-      headMesh.setColorAt(index, tint.setHex(skin));
-    });
-    if (bodyMesh.instanceColor) bodyMesh.instanceColor.needsUpdate = true;
-    if (headMesh.instanceColor) headMesh.instanceColor.needsUpdate = true;
-    addMesh(bodyMesh);
-    addMesh(headMesh);
+    if (peopleMesh.instanceColor) peopleMesh.instanceColor.needsUpdate = true;
+    addMesh(peopleMesh);
 
     // Gọi mỗi khung hình khi có hoạt hoạ.
     // ⚠️ Nhận THỜI GIAN làm tham số chứ không tự cộng dồn — nhờ vậy rời tab nửa tiếng rồi quay lại
@@ -1284,26 +1314,42 @@ export function createCityScene({
         const spot = residentAt(residents[i], timeSeconds);
         if (!spot) continue;
         const { x, z } = cellToWorld(spot.x, spot.y, gridSize);
-        rotation.setFromAxisAngle(UP, -spot.angle);
-        scale.set(1, 1, 1);
 
         // Chân đặt lên MẶT ĐƯỜNG, không phải mặt nền. Đường nhô cao hơn nền một chút (xem khối
         // đường phía trên) — bỏ qua chênh lệch này thì cư dân lún nửa bàn chân xuống mặt đường.
         // ⚠️ Cư dân là chỗ THỨ SÁU phải hỏi địa hình, và là chỗ dễ quên nhất vì nó nằm trong một
         // hàm chạy mỗi khung hình chứ không nằm cạnh năm chỗ kia. Quên thì cả thành phố đi bộ
         // xuyên qua sườn đồi ở cao độ 0.
-        const feet = terrain.heightAt(spot.x, spot.y) + ROAD_SURFACE_Y + spot.bob;
+        // ⚠️ VÀ KHÔNG CỘNG `bob` VÀO ĐÂY NỮA: cái nhún nay là HỆ QUẢ của chân trụ đang nghiêng,
+        // `humanPose` đã nhét nó vào chiều cao hông rồi. Cộng thêm lần nữa là nhún hai lần.
+        const feet = terrain.heightAt(spot.x, spot.y) + ROAD_SURFACE_Y;
 
-        position.set(x, feet + BODY_HEIGHT / 2, z);
-        matrix.compose(position, rotation, scale);
-        bodyMesh.setMatrixAt(i, matrix);
-
-        position.set(x, feet + BODY_HEIGHT + HEAD_HEIGHT / 2, z);
-        matrix.compose(position, rotation, scale);
-        headMesh.setMatrixAt(i, matrix);
+        // ⚠️ KHỚP XOAY Ở TẦNG MA TRẬN, KHÔNG Ở `parts.js`. Nhà máy hình khối của công trình chỉ
+        // xoay quanh trục đứng; thêm trục nghiêng vào đó là chạm vào nền móng của cả 75 công
+        // trình để đổi lấy một thứ chỉ cư dân cần. Ở đây phép xoay vốn đã miễn phí.
+        //
+        // Ghép: T(người) · R_y(hướng đi) · [ T(gốc khớp) · R_z(góc khớp) · T(tâm hộp) · S(cỡ) ].
+        // Viết bằng một `compose` duy nhất thay vì bốn phép nhân ma trận — rẻ hơn và ít chỗ sai
+        // hơn, vì mọi thứ nằm trong một biểu thức đọc được một lượt.
+        const pose = poseAt(body, spot.travelled);
+        heading.setFromAxisAngle(UP, -spot.angle);
+        for (let k = 0; k < parts.length; k += 1) {
+          const part = parts[k];
+          const joint = pose.joints[part.joint];
+          jointSpin.setFromAxisAngle(FORWARD_AXIS, joint.a);
+          // Tâm hộp trong hệ CỤC BỘ: gốc khớp cộng phần tịnh tiến đã bị khớp xoay.
+          limb.set(part.rest.x, part.rest.y, part.rest.z).applyQuaternion(jointSpin);
+          limb.set(joint.x + limb.x, joint.y + limb.y, joint.z + limb.z);
+          // Rồi đưa cả cụm sang hệ THẾ GIỚI bằng hướng đi của người.
+          limb.applyQuaternion(heading);
+          position.set(x + limb.x, feet + limb.y, z + limb.z);
+          rotation.copy(heading).multiply(jointSpin);
+          scale.set(part.w, part.h, part.d);
+          matrix.compose(position, rotation, scale);
+          peopleMesh.setMatrixAt(i * parts.length + k, matrix);
+        }
       }
-      bodyMesh.instanceMatrix.needsUpdate = true;
-      headMesh.instanceMatrix.needsUpdate = true;
+      peopleMesh.instanceMatrix.needsUpdate = true;
       // Trả quaternion về đơn vị: các chỗ khác trong file này dùng chung biến `rotation` và
       // ngầm giả định nó không xoay.
       rotation.identity();

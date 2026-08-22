@@ -10,6 +10,27 @@
 
 ---
 
+## 2026-08-22 — `residentAt()` trả `travelled` thay cho `bob` (API module nội bộ)
+
+- **Đổi gì**: `src/engine/city3d/residents.js` — `residentAt(route, time)` **không còn trả trường
+  `bob`**; thay vào đó trả **`travelled`** (quãng đường đã đi, đơn vị ô). `buildResidentRoute` nay
+  nhận thêm tham số thứ ba `walkSpeed` (mặc định = `HUMAN_PRESETS.mocPhoThong.walkSpeed`, đúng bằng
+  hằng số `WALK_SPEED` cũ). Hằng số `RESIDENT_HEIGHT` và `MAX_RESIDENTS` giữ nguyên tên lẫn giá trị.
+- **Vì sao**: cái nhún (`bob`) nay là **HỆ QUẢ** của chân trụ đang nghiêng, tính trong `humanPose.js`
+  (`legLen × (cos θ − 1)`), chứ không còn là một sóng sin riêng. Để `residents.js` cũng khai một
+  `bob` nữa là **hai chỗ cùng phát biểu một luật** — đúng thứ `CLAUDE.md` cấm, và là một trong ba
+  cái bẫy Đàm nêu đích danh khi giao việc. Bên gọi cần `travelled` vì pha bước phải suy từ QUÃNG
+  ĐƯỜNG (nếu suy từ thời gian thì bàn chân trượt trên đất).
+- **Phá vỡ tương thích ngược?**: **KHÔNG với dữ liệu** — cư dân vẫn được **suy ra** từ tiến độ,
+  không có gì lưu vào `localStorage` hay `game_state`, nên không có save nào cần migrate. **CÓ với
+  mã gọi**: chỉ một nơi gọi (`src/components/city/render3d/sceneGraph.js`) và nó đã sửa; nếu sau này
+  có nơi khác đọc `spot.bob` thì sẽ nhận `undefined`. `sceneGraphWiring.test.js` có một bài **cấm
+  `+ spot.bob` quay lại** để lỗi ấy đỏ ngay thay vì làm cư dân nhún hai lần trong im lặng.
+- **Cần làm gì khi nâng cấp**: không có. Không cần chạy SQL, không cần xoá cache, không cần đổi
+  biến môi trường.
+
+---
+
 ## 2026-08-12 — `settingsStore` version 6 → 7: thêm `cityRenderMode` + `cityPerfHud`
 
 - **Đổi gì**: `src/store/settingsStore.js` có thêm 2 trường — `cityRenderMode`

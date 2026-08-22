@@ -38,6 +38,7 @@
  *   node scripts/shot.mjs --dark --hour 22 --out d.png
  *   node scripts/shot.mjs --tab "Thống kê" --full --out e.png   # chụp trọn chiều dài trang
  *   node scripts/shot.mjs --phone --fit                     # ĐO chữ có tràn khỏi nút không
+ *   node scripts/shot.mjs --tab "Thành Phố" --probe "..."   # hỏi thẳng trình duyệt một con số
  *   node scripts/shot.mjs --phone --full --crop "@Khởi động" --out f.png   # cắt quanh một chữ
  *   node scripts/shot.mjs --full --crop "0,1860,390,300" --out g.png       # cắt theo toạ độ
  *
@@ -360,6 +361,26 @@ const info = await evaluate(`(function(){
 const { iw, ih, sw, sh, innerSh, innerTag } = JSON.parse(info);
 // Chiều dài THẬT để chụp trọn trang = cái nào dài hơn giữa tài liệu và khung cuộn bên trong.
 const fullH = Math.max(sh, innerSh ?? 0);
+
+// ─── `--probe "<biểu thức JS>"` — HỎI THẲNG TRÌNH DUYỆT MỘT CON SỐ ───────────────────────────
+//
+// ⚠️ Vì sao nằm Ở ĐÂY chứ không phải một script đo riêng: y hệt lý do của `--fit` ngay bên dưới.
+// Phần khó và đã được kiểm chứng của file này là phần DỰNG (chặn Supabase, bề ngang THẬT bằng
+// `setDeviceMetricsOverride`, đợi bằng thời gian thật cho rAF chạy, gieo `--fixture`, mở `--tab`,
+// bấm `--click`, rồi cổng "app đã mọc ra chưa"). Chép ngần ấy sang một file đo mới là nhân đôi
+// đúng phần dễ sai nhất, và bản chép sẽ trôi khỏi bản gốc — đúng điều "Composition over
+// Duplication" cấm. `--el` đã có sẵn nhưng nó tìm phần tử BẰNG CHỮ, nên nó mù với những thứ
+// không có chữ nào: khung 3D, canvas, lớp phủ.
+//
+// ⚠️ Chú thích về đoạn mã trình duyệt phải nằm NGOÀI chuỗi (xem cảnh báo dài ở khối `--fit`).
+// Biểu thức được bọc trong `String(...)`, nên trả về đối tượng thì nên tự `JSON.stringify`.
+const PROBE = arg('--probe', null);
+if (PROBE) {
+  const out = await evaluate(`String((function(){ return (${PROBE}); })())`);
+  console.log(`[probe] innerWidth=${iw} innerHeight=${ih} · ${out}`);
+  ws.close(); chrome.kill(); server.close();
+  process.exit(0);
+}
 
 // ─── `--fit` — ĐO CHỮ CÓ TRÀN RA NGOÀI NÚT KHÔNG, bằng số ────────────────────────────────────
 //

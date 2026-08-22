@@ -63,10 +63,12 @@ Danh sách đầy đủ: `AI_HANDOFF_KNOWLEDGE.md` Phần 9.
 
 ## Technical debt cần biết ngay
 
-Xem đầy đủ ở `TECH_DEBT.md`. Đáng chú ý nhất: **nghi vấn 3 kỹ năng prestige (nhánh Thăng Hoa)
-không thực sự được nối dây vào `triggerPrestige()`** dù mô tả hứa hẹn đặc quyền — CHƯA xác minh
-chắc chắn, ưu tiên trung bình-cao vì ảnh hưởng trực tiếp trải nghiệm/niềm tin. Hiện tại **0 mục
-Priority High/Critical** — chưa tới ngưỡng đề xuất Maintenance Sprint (8–10 mục).
+Xem đầy đủ ở `TECH_DEBT.md` (mục "Trạng thái ngưỡng hiện tại" ở đầu file là nguồn số chính xác —
+đừng tin con số chép lại ở đây nếu hai chỗ lệch nhau). Đáng chú ý nhất: **nghi vấn 3 kỹ năng
+prestige (nhánh Thăng Hoa) không thực sự được nối dây vào `triggerPrestige()`** dù mô tả hứa hẹn
+đặc quyền — CHƯA xác minh chắc chắn, ưu tiên trung bình-cao vì ảnh hưởng trực tiếp trải nghiệm/niềm
+tin. Tính tới **2026-08-22**: **1 mục Priority High** (#14) + 3 mục Medium-High (#3, #13, #24) —
+chưa tới ngưỡng đề xuất Maintenance Sprint (8–10 mục).
 
 ## Những quyết định kiến trúc PHẢI hiểu trước khi động vào vùng liên quan
 
@@ -117,7 +119,15 @@ Danh sách đầy đủ 14 mục: `AI_HANDOFF_KNOWLEDGE.md` Phần 14.
    trung thật không thể phục hồi.
 3. **Đừng đặt số cụ thể trong ví dụ minh hoạ (few-shot) cho AI** nếu model có xu hướng nhái khuôn
    — từng khiến model chép thẳng số ví dụ ra làm câu trả lời "thật".
-4. **Phân loại lệnh "nghiên cứu" vs "làm" trước khi hành động** — nghiên cứu = chỉ trình bày rồi
+4. ⚠️ **CÔNG CỤ ĐO TỰ CHẾ ĐÃ NÓI DỐI 23 LẦN TRONG DỰ ÁN NÀY — nghi ngờ nó ĐÚNG BẰNG nghi ngờ mã
+   sản phẩm.** Đây là bài học chiếm nhiều dòng nhất trong `CLAUDE.md`, và nó lặp lại vì mỗi lần
+   trông đều khác nhau: có lần nó trấn an sai (HUD báo thiếu 56% tam giác), có lần gây hoảng sai
+   ("70/105 cặp kỷ trùng màu" — số thật là 5), có lần **chê oan** một bản vá đúng, có lần cho số
+   đúng nhưng trả lời sai câu hỏi. Ba phản xạ rẻ nhất: (a) số đo nào gây bất ngờ thì **kiểm CÔNG CỤ
+   trước, kiểm mã sau**; (b) mọi phép đo phải kèm một **ĐỐI CHỨNG nhốt bộ số hỏng cũ** hoặc một
+   trường hợp bắt buộc phải ra 0; (c) hỏi *"đại lượng tôi đang đo có chứa thứ tôi KHÔNG muốn đo
+   không?"* — một hằng số nằm trong cả tử lẫn mẫu sẽ pha loãng mọi so sánh trong im lặng.
+5. **Phân loại lệnh "nghiên cứu" vs "làm" trước khi hành động** — nghiên cứu = chỉ trình bày rồi
    dừng, KHÔNG tự sửa/deploy. Câu mơ hồ → mặc định coi là nghiên cứu + hỏi lại.
 
 ## Nếu cần làm gì tiếp theo

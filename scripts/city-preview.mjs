@@ -114,6 +114,17 @@ function parseArgs(argv) {
     // thành phố thiếu vành đai rồi kết luận là vành đai không chạy. Đúng họ với bài học `--cell`
     // ở Phase 4G: một tham số mà công cụ tự đoán thì sớm muộn cũng đoán sai.
     sessions: 40,
+    // Thời điểm hoạt hoạ (giây) để đặt cư dân vào. ⚠️ TRƯỚC PHASE CƯ DÂN-CÓ-KHỚP con số này VIẾT
+    // CỨNG là 17,5 ở hai chỗ trong file, nên MỌI ảnh từng chụp đều bắt cùng một tư thế. Khi người
+    // chỉ là hai cái hộp thì điều đó vô hại; từ lúc có dáng đi thì nó nghĩa là không ai soi được
+    // chu kỳ bước, và một bản vá dáng đi hỏng sẽ trông y hệt một bản vá đúng.
+    t: 17.5,
+    // ⚠️ DỰNG BẰNG ĐƯỜNG `lowDetail` (máy yếu). Tồn tại vì trước đó KHÔNG CÓ CÁCH NÀO nhìn thấy
+    // đường ấy: nó chỉ chạy trên máy bị coi là yếu, tức gần như không bao giờ chạy trên máy người
+    // phát triển. Một nhánh mã không ai nhìn được là một nhánh sẽ hỏng trong im lặng.
+    // Nó cũng là ĐỐI CHỨNG của phép đo dáng đi: mô hình 2 hộp phải cho ra hình bóng KHÔNG đổi
+    // theo pha bước, và một phép đo không chứng minh được điều đó thì đang bắt nhiễu.
+    lowDetail: false,
     // Tỉ lệ điểm ảnh. Rỗng = dùng đúng MAX_PIXEL_RATIO của app — ĐÂY LÀ MẶC ĐỊNH ĐÚNG, đừng đổi.
     // ⚠️ Cờ này tồn tại để THỬ NGƯỢC được lời hứa "trang xem thử dựng ở đúng tầng chất lượng của
     // app": Phase 9C phát hiện nó đã dựng ở DPR 1 suốt nhiều tháng mà không có gì báo, và một lời
@@ -165,6 +176,8 @@ function parseArgs(argv) {
     else if (key === '--eras') { args.eraList = String(value).split(',').map(Number); i += 1; }
     else if (key === '--pending') { args.pending = Number(value); i += 1; }
     else if (key === '--sessions') { args.sessions = Number(value); i += 1; }
+    else if (key === '--t') { args.t = Number(value); i += 1; }
+    else if (key === '--lowdetail') { args.lowDetail = true; }
     else if (key === '--dpr') { args.dpr = Number(value); i += 1; }
     else if (key === '--bench') { args.bench = Number(value); i += 1; }
     else if (key === '--mask') { args.mask = String(value); i += 1; }
@@ -193,7 +206,7 @@ function run(cmd, cmdArgs, options = {}) {
  */
 function entrySource({
   era, level, theme, zoom = 1, focus = 0, hour = null, pending = 0, sessions = 40, dpr = null, bench = 0,
-  mask = null, noShadow = false,
+  mask = null, noShadow = false, t = 17.5, lowDetail = false,
 }) {
   return `
 import { computeCityLayout } from '${ROOT}/src/engine/cityLayout.js';
@@ -221,6 +234,8 @@ const FOCUS = ${focus};
 const HOUR = ${hour === null ? 'null' : hour};
 const PENDING = ${pending};
 const SESSIONS = ${sessions};
+const ANIM_T = ${t};
+const LOW_DETAIL = ${lowDetail ? 'true' : 'false'};
 const DPR = ${dpr === null ? 'MAX_PIXEL_RATIO' : dpr};
 const BENCH = ${bench};
 
@@ -275,15 +290,18 @@ renderer.shadowMap.needsUpdate = true;
 // ⚠️ Bản trước dịch tay ở ĐÂY (MASK.includes “buildings” …), tức cùng một luật sống ở hai
 // chỗ. Thêm nhóm 'landscape' đã phải sửa cả hai; quên chỗ này thì --mask landscape đo một tấm
 // rỗng mà không có gì đỏ lên. Nay chỉ còn một công thức, nằm cạnh mã dựng.
+//
+// lowDetail: cờ LOD thấp, dùng làm ĐỐI CHỨNG khi đo cư dân (mô hình 2 hộp không có khớp nào).
 const city = createCityScene({
-  layout, palette, daylight, renderer, stats: { sessionCount: SESSIONS, streakLength: 9 },
+  layout, palette, daylight, renderer, lowDetail: LOW_DETAIL,
+  stats: { sessionCount: SESSIONS, streakLength: 9 },
   tachDeDo: MASK_NAMES,
 });
 
 // Đẩy đồng hồ tới một thời điểm giữa chừng. Ở t = 0 mọi cư dân đều đứng ở đầu tuyến của mình —
 // đúng chỗ dễ trùng nhau nhất, tức là ảnh chụp sẽ nói dối theo hướng lạc quan về chuyện họ có
 // TRẢI ĐỀU trên phố hay không.
-city.updateResidents(17.5);
+city.updateResidents(ANIM_T);
 
 const camera = new PerspectiveCamera(CITY_CAMERA_FOV, VIEW_W / VIEW_H, 0.5, layout.gridSize * 8);
 // Dùng CHUNG bộ tham số camera với app; ZOOM chỉ để soi chi tiết, mặc định 1 = đúng khung app.
@@ -578,7 +596,7 @@ document.body.dataset.ready = '1';
  * 74 ô đầu trống trơn, và không có lỗi nào hiện ra. Ở đây: vẽ một cảnh → sao chép điểm ảnh sang
  * canvas 2D của bảng → DỌN cảnh → dựng cảnh kế tiếp trên đúng context cũ.
  */
-function sweepSource({ level, theme, cell, combos, sessions = 40 }) {
+function sweepSource({ level, theme, cell, combos, sessions = 40, t = 17.5 }) {
   return `
 import { computeCityLayout } from '${ROOT}/src/engine/cityLayout.js';
 import { buildScenePalette } from '${ROOT}/src/engine/city3d/palette3d.js';
@@ -591,6 +609,7 @@ import { PerspectiveCamera, WebGLRenderer } from 'three';
 const LEVEL = ${level};
 const IS_DARK = ${theme === 'dark'};
 const SESSIONS = ${sessions};
+const ANIM_T = ${t};
 const CELL_W = ${cell};
 const CELL_H = Math.round(${cell} * 0.62);
 const LABEL_H = 22;
@@ -662,7 +681,7 @@ for (let row = 0; row < eras.length; row += 1) {
       layout, palette, daylight, renderer, stats: { sessionCount: SESSIONS, streakLength: 9 },
     });
     renderer.shadowMap.needsUpdate = true;
-    city.updateResidents(17.5);
+    city.updateResidents(ANIM_T);
 
     const orbitOptions = cityOrbitOptions(layout.gridSize, layout.era);
     const orbit = createOrbit(orbitOptions);
@@ -1426,6 +1445,7 @@ async function main() {
       // (Phase 4G) bắt phải ghi kèm thay vì để bên đọc đoán. Nhìn một bản quét dựng ở 40 phiên rồi
       // kết luận "vành đai không chạy" là lỗi hoàn toàn có thể xảy ra nếu con số này không đi kèm.
       sessions: args.sessions,
+      t: args.t,
     }, null, 2)}\n`);
 
     console.log(`✓ quét ${eras.length} kỷ × ${sweepHours.length} chặng → ${pngPath}`);
@@ -1486,7 +1506,16 @@ async function main() {
       // Chỉ gắn nhãn khi KHÁC mặc định, để mọi tên file cũ vẫn tra được (không viết lại lịch sử).
       const widthTag = args.width === 1100 ? '' : `-w${args.width}`;
       const zoomTag = args.zoom === 1 ? '' : `-z${String(args.zoom).replace('.', 'p')}`;
-      const pngPath = resolve(OUT_DIR, `city-era${String(era).padStart(2, '0')}-${args.theme}${hourTag}${sessTag}${widthTag}${zoomTag}${maskTag}${shadowTag}${focusTag}.png`);
+      // ⚠️ LẦN THỨ BẢY VÀ THỨ TÁM CỦA ĐÚNG CÁI BẪY TRÊN — `--t` VÀ `--lowdetail` (2026-08-22).
+      // `--t` chọn THỜI ĐIỂM hoạt hoạ: chụp bốn thời điểm của một chu kỳ bước rồi để chúng đè lên
+      // nhau thì còn lại đúng cái cuối, mà ba tấm cũ vẫn nằm sẵn trên đĩa từ lần chạy trước — một
+      // công cụ im lặng đưa dữ liệu cũ còn tệ hơn không có công cụ. `--lowdetail` thì dựng một mô
+      // hình người KHÁC HẲN (2 hộp, không khớp), tức đúng tấm ảnh dùng làm ĐỐI CHỨNG; để nó đè lên
+      // ảnh thật là tự tay xoá vế đối chứng của mọi phép đo dáng đi.
+      // Chỉ gắn khi KHÁC mặc định, để mọi tên file lịch sử vẫn tra được.
+      const tTag = args.t === 17.5 ? '' : `-t${String(args.t).replace('.', 'p')}`;
+      const lodTag = args.lowDetail ? '-lod' : '';
+      const pngPath = resolve(OUT_DIR, `city-era${String(era).padStart(2, '0')}-${args.theme}${hourTag}${sessTag}${widthTag}${zoomTag}${tTag}${lodTag}${maskTag}${shadowTag}${focusTag}.png`);
       let info = '';
       let hop = null;
       try {

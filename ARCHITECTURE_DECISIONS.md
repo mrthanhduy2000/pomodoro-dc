@@ -11,6 +11,83 @@
 
 ---
 
+## ADR-053 — Cư dân là một BỘ XƯƠNG có khớp, dựng bằng MỘT InstancedMesh hộp đơn vị; dáng đi là hàm của QUÃNG ĐƯỜNG đã đi, không phải của thời gian
+
+- **Ngày**: 2026-08-22
+- **Bối cảnh**: Đàm yêu cầu *"dựng lại mô hình người trong thành phố 3D thành một cơ thể có khớp
+  hoạt động, và cho kỷ 1 một bản sắc con người riêng"*, kèm ràng buộc rất chặt: tầng engine THUẦN
+  (không three/DOM/Date/Math.random), **không thêm thư viện, không GLTF, không skinning, không
+  animation clip**, cả cộng đồng nằm trong **1–2 lệnh vẽ**, tam giác cư dân **≤6% tổng cảnh**, và
+  bob (cái nhún) phải **chuyển hẳn** khỏi `residents.js`.
+- **Vấn đề**: cư dân cũ là **hai hộp** (thân + đầu) cộng một cái nhún hình sin. Hai hộp thì không
+  có gì để nhìn, mà cũng không có gì để PHÂN BIỆT: 15 kỷ đi bộ giống hệt nhau, nên phần thưởng của
+  việc đi hết 15 kỷ không chạm tới con người trong thành phố. Nhưng trước khi dựng bất cứ thứ gì
+  phải trả lời được một câu đo được: **ở khung 3D thật trên máy Đàm, một cư dân cao bao nhiêu điểm
+  ảnh?** — vì nếu câu trả lời là 4 px thì mọi khớp xương đều là mã chết.
+- **Phương án cân nhắc**:
+  1. **Giữ 2 hộp, chỉ đổi màu/kích thước theo kỷ.** Rẻ nhất, và đủ để "15 kỷ khác nhau" trên giấy.
+     Loại: thứ mắt đọc được ở cỡ 14 px không phải màu mà là **hình bóng ĐANG ĐỔI** — một khối cứng
+     đứng yên thì đọc ra "một cái cột", bất kể sơn màu gì.
+  2. **Mỗi bộ phận một `Mesh` riêng, xoay bằng `Object3D` cha-con.** Đúng cách three thường làm và
+     rẻ về mặt trí óc. Loại: 28 người × 9 bộ phận = **252 lệnh vẽ**, gấp 25 lần cả thành phố hiện
+     tại (10 lệnh). Vi phạm thẳng ràng buộc Đàm đặt.
+  3. **Skinning / GLTF / animation clip.** Loại thẳng: Đàm cấm, và nó kéo theo một thư viện, một
+     định dạng tệp, một ống dẫn tài sản — cho một nhân vật cao 14 px.
+  4. **Thêm trục xoay nghiêng vào `parts.js`** để khối tự nghiêng được. Loại: Đàm cấm thẳng, và nó
+     sẽ đẩy một khái niệm của RIÊNG con người vào nhà máy hình học dùng chung cho nhà cửa, cây cối
+     — đúng thứ `TECH_DEBT #29` đang phải trả giá theo chiều ngược lại.
+  5. ⭐ **MỘT `InstancedMesh` trên một hộp đơn vị 1×1×1; mỗi bộ phận của mỗi người là một instance,
+     kích thước đi vào ma trận co giãn, khớp xoay ở tầng ma trận** — chọn.
+- **Giải pháp chọn**: ba file thuần mới, tách đúng khuôn `floraStyle.js` ↔ `flora.js` (ADR-020) đã
+  chứng minh:
+  - `src/engine/city3d/humanStyle.js` — **BẢNG 15 kỷ × 11 trục** (`stature` · `build` · `legShare` ·
+    `stance` · `garment` · `headgear` · `carry` · `stride` · `walkSpeed` · `armSwing` · `cloth`),
+    mỗi dòng buộc vào đúng `country` mà `eraStyle.js` khai (có test bắt), 14 kỷ chưa làm trỏ một
+    preset **CÓ TÊN** (`mocPhoThong`) chứ không rơi ngầm về mặc định.
+  - `src/engine/city3d/human.js` — **THƯ VIỆN HÌNH**: khớp `humanDims` (tỉ lệ cơ thể) và
+    `buildHumanBody` (danh sách hộp, mỗi hộp gắn vào một khớp + một vai màu).
+  - `src/engine/city3d/humanPose.js` — **DÁNG ĐI**: `poseAt(body, travelled)` trả góc từng khớp.
+  - `residents.js` giữ nguyên trách nhiệm cũ (bao nhiêu người, đi đâu) và **trả `travelled` thay cho
+    `bob`**; `sceneGraph.js` chỉ còn ghép ma trận.
+- **Trade-off**: (a) **một trục xoay mỗi khớp** (trục ngang, mặt phẳng đi tới) — đủ cho đi bộ, không
+  đủ cho quay người/vung tay ngang; đây là lựa chọn có chủ đích ở cỡ 14 px, không phải thiếu sót.
+  (b) Tam giác cư dân **672 → 3.024** (+350%), tức **4,57% tổng cảnh** (trần Đàm đặt: 6%) nhưng
+  **13,8% riêng phần thành phố** — hai con số trả lời hai câu khác nhau, phải đọc đúng câu (bài học
+  Performance Gate vòng 2). (c) Số lệnh vẽ **GIẢM 11 → 10**: hai `InstancedMesh` (thân + đầu) gộp
+  làm một. (d) Trên iPhone cư dân chỉ cao **3,3–5,1 px**, đầu người **1 px** — mọi thứ dựng ở đây
+  **không đọc được trên điện thoại**; Đàm đã chọn nhắm riêng MacBook Air M3 và điều đó được ghi
+  thẳng vào mã để phiên sau không đọc sự im lặng thành "vậy cũng ổn".
+- **Ảnh hưởng (đo được)**: trên khung 3D thật **990×614** của Đàm, cư dân kỷ 1 cao **14,4 px** (trung
+  vị; 16,9 px với người gần camera nhất) — đủ để đọc **hình bóng đang đổi**, không đủ để đọc "kia là
+  cánh tay". Dáng đi làm hình bóng đổi **1,8 px trên bề rộng 9,5 px (19%)** theo phép chiếu, và
+  **0,83× → 1,80× tỉ lệ rộng/cao** theo phép đo trên ẢNH THẬT 1500 px có ghép cặp từng cư dân; cả
+  hai đều kèm ĐỐI CHỨNG là mô hình 2 hộp cũ (ra **0,0064 px** và **1,0000 ± 0,00%**). Kỷ 1 khác
+  preset ở **10/11 trục**.
+- **⚠️ Phát hiện kèm theo, quan trọng cho mọi phiên sau**:
+  1. **`stride` PHẢI là bội số của CẲNG CHÂN, không phải số ô.** Bản đầu khai `0,78` ô, trong khi
+     cẳng chân kỷ 1 dài `0,118` ô ⇒ bàn chân phải với ra xa hơn cả chiều dài chân, `asin` kẹp hông
+     về 90° và cả 15 kỷ duỗi chân ngang. Đây là bài học Phase 7D ("một số tuyệt đối không diễn đạt
+     được một quan hệ") áp cho một giá trị có **hai** đầu vào biến động (`stature`, `legShare`).
+     Con số hỏng `0,78` nay bị nhốt lại bằng một assert trong `humanStyle.test.js`.
+  2. **Đo hình bóng CHÉO NHAU GIỮA HAI KHUNG HÌNH là bất khả thi ở đây, và nó nói dối rất thuyết
+     phục.** Trong 0,57 giây cư dân đi được ~10 px — xa hơn cả bề ngang cơ thể — nên mọi phép so
+     hai khung đều bị **TỊNH TIẾN** và **CHE KHUẤT** át hẳn. Bằng chứng không cãi được: mô hình 2
+     hộp, thứ **không có khớp nào**, đo ra diện tích hình bóng đổi **94,2%**. Cách chữa không phải
+     nới ngưỡng mà là **KHỬ** nhiễu: hai bản dựng ở CÙNG thời điểm thì vị trí/hướng/vật che giống
+     hệt nhau ⇒ ghép từng người với chính mình rồi lấy TỈ SỐ.
+  3. **So pha 0 với pha ½ thì hình bóng KHÔNG đổi** — ở pha ½ hai chân chỉ đổi vai cho nhau, ảnh
+     là ảnh gương của đúng bề rộng ấy. Phải so pha 0 với pha ¼.
+  4. **Công cụ đo tự chế nói dối lần thứ 23**, và lần này lệch **1,36 lần**: bản đầu của
+     `human-scale.mjs` chiếu một ĐOẠN THẲNG từ chân lên đỉnh đầu (8,1 px) trong khi mắt đọc KHỐI
+     ĐẶC (11,0 px đo trên ảnh thật) — camera nghiêng 34° nên mặt trên cũng chiếm chỗ theo chiều dọc.
+     Sau khi chiếu đủ 8 đỉnh của mọi hộp: **11,1 so với 11,0**.
+- **Điều kiện xem lại**: khi làm kỷ thứ 2 trở đi (`TECH_DEBT #78` — 14 kỷ còn lại); nếu số cư dân
+  vượt 28 hoặc số hộp mỗi người vượt 11 (bài test ngân sách sẽ đỏ); nếu sau này muốn quay người
+  hoặc vung tay ngang (lúc đó phải thêm trục thứ hai cho khớp và đo lại ngân sách); hoặc nếu
+  màn Thành Phố được đưa lên iPhone như một trải nghiệm thật chứ không phải bản thu nhỏ.
+
+---
+
 ## ADR-052 — Một ô nhà dân là một KHU PHỐ, không phải một căn nhà; và «thêm nhà» là điều bất khả, chỉ có «chia nhỏ»
 
 **Ngày**: 2026-08-21 · **Phase 14 §1(3)** · **Trạng thái**: đã áp dụng

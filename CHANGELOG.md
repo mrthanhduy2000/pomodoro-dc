@@ -12,6 +12,33 @@
 
 ---
 
+## 2026-08-22 — Cư dân có KHỚP XƯƠNG, và kỷ 1 có bản sắc con người riêng (ADR-053)
+
+- **Mục đích**: cư dân cũ là **hai cái hộp** cộng một cái nhún hình sin — không có gì để nhìn, và
+  15 kỷ đi bộ giống hệt nhau. Dựng lại thành một cơ thể có khớp hoạt động, đồng thời mở khung bản
+  sắc con người cho cả 15 kỷ (Đàm yêu cầu **hoàn thiện kỷ 1**, khung dựng sẵn cho 14 kỷ còn lại).
+- **Đo TRƯỚC khi dựng (Giai đoạn 0)**: trên khung 3D thật **990×614** của MacBook Air M3, cư dân kỷ
+  1 cao **14,4 px** (trung vị) — đủ để đọc *hình bóng đang đổi*, không đủ để đọc *"kia là cánh
+  tay"*. Trên iPhone (324×201) chỉ **3,3–5,1 px**, đầu người **1 px**: Đàm chọn nhắm riêng MacBook.
+- **Phạm vi**: thêm `src/engine/city3d/humanStyle.js` (bảng 15 kỷ × 11 trục) · `human.js` (thư viện
+  hình: 7 trang phục, 7 kiểu đội đầu, 6 đồ mang theo) · `humanPose.js` (dáng đi) và ba file test đi
+  kèm; `residents.js` trả `travelled` thay cho `bob` và lấy tốc độ đi từ bảng kỷ; `palette3d.js`
+  thêm 4 vai màu (`cloth`/`cloth2`/`hair`/`gear`); `sceneGraph.js` gộp hai `InstancedMesh` cũ thành
+  **một** trên hộp đơn vị 1×1×1; công cụ đo mới `scripts/human-scale.mjs` + cờ `--t` / `--lowdetail`
+  cho `city-preview.mjs` + cờ `--probe` cho `scripts/shot.mjs`.
+- **Ảnh hưởng**: số lệnh vẽ cả cảnh **GIẢM 11 → 10**. Tam giác cư dân **672 → 3.024** =
+  **4,57% tổng cảnh** (trần Đàm đặt 6%) và **13,8% riêng phần thành phố**. Dáng đi làm hình bóng
+  đổi **19%** theo phép chiếu và **0,83× → 1,80×** tỉ lệ rộng/cao theo phép đo trên ảnh thật — cả
+  hai kèm đối chứng mô hình 2 hộp (0,0064 px và 1,0000 ± 0,00%). Kỷ 1 khác mốc phổ thông **10/11
+  trục**. `lowDetail` quay về **đúng** mô hình 2 hộp cũ; `still` giữ nguyên (không có cư dân).
+- **Tương thích**: không đụng dữ liệu lưu — dân số vẫn **suy ra** từ tiến độ, thêm **0 byte** vào
+  khối JSONB. Không thêm thư viện, không GLTF, không skinning. Tầng engine vẫn thuần.
+- **Còn lại**: 14/15 kỷ vẫn dùng chung preset `mocPhoThong` — mở thành `TECH_DEBT #78`, và bài test
+  in ra `[humanStyle] đã thiết kế thật: 1/15 kỷ` mỗi lần chạy `npm test` để con số ấy không lặng lẽ
+  bị đọc thành "xong rồi".
+
+---
+
 ## 2026-08-21 — Phase 14 §1(3): một ô không phải một căn nhà, một ô là một KHU PHỐ (ADR-052)
 
 - **Mục đích**: Đàm nói *«mọi thứ hiện tại trông vẫn nhỏ, thành phố không mở rộng mà chỉ là cụm

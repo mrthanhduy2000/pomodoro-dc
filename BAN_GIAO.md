@@ -6,7 +6,20 @@
 > chọn: `ARCHITECTURE_DECISIONS.md`. Nợ kỹ thuật: `TECH_DEBT.md`. Migration: `MIGRATION.md`. Tóm
 > tắt theo mốc: `CHANGELOG.md`.
 > **NGUYÊN TẮC ƯU TIÊN SỐ 1:** (1) mọi phiên AI phải đọc file này + `CLAUDE.md` + các file liên quan TRƯỚC khi làm; (2) sau MỌI cập nhật dù nhỏ, phải cập nhật ngay file này + `CLAUDE.md` + các file liên quan khác.
-> Cập nhật lần cuối: **2026-08-21** — **PHASE 14 §1(3): MỘT Ô KHÔNG PHẢI MỘT CĂN NHÀ, MỘT Ô LÀ MỘT KHU PHỐ.** 371 ô nhà dân nay dựng ra **1.812 khối** (×4,88) mà **không một ô nào xê dịch** và **không thêm một lệnh vẽ nào ở cả 15 kỷ**. Xem ADR-052.
+> Cập nhật lần cuối: **2026-08-22** — **CƯ DÂN CÓ KHỚP XƯƠNG, KỶ 1 CÓ BẢN SẮC CON NGƯỜI RIÊNG.**
+> Hai cái hộp + một sóng sin nay thành **9 hộp gắn 6 khớp**, xoay ở tầng ma trận, gộp trong **MỘT**
+> `InstancedMesh` hộp đơn vị ⇒ lệnh vẽ cả cảnh **GIẢM 11 → 10**, tam giác cư dân 672 → 3.024 =
+> **4,57% tổng cảnh** (trần Đàm đặt 6%) và **13,8% riêng thành phố**. Ba tầng mới, đúng khuôn
+> `floraStyle` ↔ `flora`: `humanStyle.js` (bảng 15 kỷ × 11 trục) · `human.js` (thư viện hình) ·
+> `humanPose.js` (dáng đi). ⚠️ **Dáng đi là hàm của QUÃNG ĐƯỜNG ĐÃ ĐI**, không phải của thời gian —
+> nếu không thì người nhanh và người chậm cùng nhịp chân và **bàn chân trượt trên đất**; `bob` đã
+> chuyển hẳn khỏi `residents.js` và thành HỆ QUẢ của chân trụ đang nghiêng. Đo trước khi dựng: cư
+> dân cao **14,4 px** trên khung 990×614 thật của Đàm (iPhone chỉ 3,3–5,1 px — Đàm chọn bỏ qua).
+> Dáng đi làm hình bóng đổi **19%** (phép chiếu) và **0,83× → 1,80×** (ảnh thật 1500 px, ghép cặp
+> từng người), cả hai kèm đối chứng 2-hộp ra **0,0064 px** và **1,0000 ± 0,00%**. Kỷ 1 khác preset
+> **10/11 trục**. 14 kỷ còn lại → `TECH_DEBT #78`. Chi tiết: nhật ký 2026-08-22 + ADR-053.
+>
+> Trước đó: **2026-08-21** — **PHASE 14 §1(3): MỘT Ô KHÔNG PHẢI MỘT CĂN NHÀ, MỘT Ô LÀ MỘT KHU PHỐ.** 371 ô nhà dân nay dựng ra **1.812 khối** (×4,88) mà **không một ô nào xê dịch** và **không thêm một lệnh vẽ nào ở cả 15 kỷ**. Xem ADR-052.
 >
 > ## ⚠️ PHASE 14 §1(3) — MỘT Ô LÀ MỘT KHU PHỐ, VÀ «THÊM NHÀ» LÀ ĐIỀU BẤT KHẢ
 >
@@ -1541,6 +1554,78 @@
 - **Lịch sử git `main` từng bị xáo** (thao tác git song song): bản đang chạy là `eb44638` — chứa ĐỦ mọi việc gần đây (Hỏi Coach offline + fix đêm khuya + Coach offline analyst). Vài commit cũ (`1e27505`, `9fbcd62`) thành dangling, KHÔNG còn trong `git log` nhưng code vẫn nằm trong bản deploy. Đừng hoảng nếu không thấy chúng.
 
 ## 🗒️ Nhật ký cập nhật
+
+### 2026-08-22 — Cư dân có KHỚP XƯƠNG; kỷ 1 có bản sắc con người riêng (ADR-053)
+
+**Yêu cầu của Đàm**: dựng lại mô hình người thành **một cơ thể có khớp hoạt động**, cho kỷ 1 bản
+sắc riêng, **chỉ hoàn thiện kỷ 1 nhưng khung phải dựng cho cả 15 kỷ**. Ràng buộc: tầng engine THUẦN
+· **không thêm thư viện, không GLTF, không skinning, không animation clip** · không thêm trục
+nghiêng vào `parts.js` · cả cộng đồng trong **1–2 lệnh vẽ** · tam giác cư dân **≤6% tổng cảnh** ·
+mỗi bài test phải **thử-cho-đỏ** trước khi được ghi là xong.
+
+**GIAI ĐOẠN 0 — đo trước, hỏi, rồi mới viết mã sản phẩm.** Đàm bắt dừng lại ở đây, và đó là quyết
+định đúng: nếu cư dân chỉ cao 4 px thì mọi khớp xương đều là mã chết. Công cụ mới
+`scripts/human-scale.mjs` dựng **đúng camera của app** (`cityOrbitOptions` + `CITY_CAMERA_FOV` +
+`createOrbit`) rồi dùng chính `camera.project()` của three — cấm viết công thức chiếu thứ hai.
+Kết quả trên khung 3D THẬT (đo bằng `shot.mjs --probe`, không đoán):
+
+| khung 3D | cỡ thật | cư dân kỷ 1 (trung vị) | gần nhất | kéo sát hết cỡ |
+|---|---|---|---|---|
+| MacBook Air M3 | 990×614 | **14,4 px** | 16,9 px | 30,6 px |
+| iPhone 390 | 324×201 | **4,0 px** | 5,1 px | 8,5 px |
+
+⇒ Chi tiết nhỏ nhất mắt đọc được là **2–3 px**, nên ở 14,4 px đọc được **hình bóng ĐANG ĐỔI** nhưng
+KHÔNG đọc được *"kia là cánh tay"*. Đàm chọn: **nhắm riêng MacBook Air M3, bỏ qua iPhone** — và cả
+bốn trục bản sắc cho kỷ 1 (trang phục + đội đầu · sải chân + nhịp · đồ mang theo · tỉ lệ + dáng
+đứng). ⚠️ Việc iPhone không đọc được đã ghi thẳng vào mã, để phiên sau không đọc sự im lặng thành
+"vậy cũng ổn".
+
+**Kiến trúc — ba tầng, đúng khuôn `floraStyle.js` ↔ `flora.js` (ADR-020) đã chứng minh:**
+- `humanStyle.js` — **BẢNG 15 kỷ × 11 trục**, `country` khoá cứng vào `eraStyle.js` (test bắt),
+  14 kỷ chưa làm trỏ preset **CÓ TÊN** `mocPhoThong`. Bộ kiểm `isValidHumanStyle` **TỪ CHỐI** giá
+  trị ngoài dải thay vì kẹp im lặng (bài học `MIN_STONE`).
+- `human.js` — **THƯ VIỆN HÌNH**: 7 trang phục · 7 kiểu đội đầu · 6 đồ mang theo. Hệ toạ độ riêng
+  (+x hướng đi, +y lên, +z bên trái người). ⚠️ **Thứ tự hộp là HỢP ĐỒNG** với `sceneGraph`.
+- `humanPose.js` — **DÁNG ĐI**: `poseAt(body, travelled)` → góc từng khớp.
+- `residents.js` giữ nguyên "bao nhiêu người, đi đâu", trả `travelled` thay `bob`.
+- `sceneGraph.js` chỉ ghép ma trận: **MỘT** `InstancedMesh` trên hộp đơn vị 1×1×1.
+
+**Kỷ 1 — Göbekli Tepe, Anatolia (Thổ Nhĩ Kỳ), khác preset 10/11 trục**: khoác da thú lệch vai (kỷ
+DUY NHẤT phá đối xứng trái-phải) · tóc búi · vác giáo · cao hơn 18% (bộ xương săn bắt hái lượm cao
+hơn nông dân đến sau) · sải chân 1,85 lần cẳng chân và tốc độ chậm ⇒ **nhịp bước thưa nhất**.
+
+**Số liệu nghiệm thu (mọi con số đều có ĐỐI CHỨNG đi kèm):**
+| đại lượng | trước | sau | trần |
+|---|---|---|---|
+| lệnh vẽ cả cảnh | 11 | **10** | 1–2 lệnh cho cư dân ✓ |
+| tam giác cư dân | 672 | **3.024** | — |
+| … trên TỔNG cảnh 66.100 | 1,02% | **4,57%** | 6% ✓ |
+| … trên riêng THÀNH PHỐ 21.974 | 3,4% | **13,8%** | (câu hỏi khác) |
+| hình bóng đổi theo pha bước (phép chiếu) | 0 | **1,8 px / 9,5 px = 19%** | đối chứng 2 hộp: 0,0064 px |
+| … (ảnh thật 1500 px, ghép cặp) | 1,000× | **0,83× → 1,80×** | đối chứng ghép: 1,0000 ± 0,00% |
+
+**⚠️ BA BÀI HỌC PHẢI GIỮ (chi tiết đầy đủ ở `CLAUDE.md` + ADR-053):**
+1. **`stride` phải là bội số của CẲNG CHÂN, không phải số ô.** Bản đầu khai `0,78` ô trong khi cẳng
+   chân kỷ 1 dài `0,118` ô ⇒ `asin` kẹp hông về 90°, cả 15 kỷ duỗi chân ngang. Con số hỏng ấy nay bị
+   **nhốt lại bằng một assert**.
+2. **Đo hình bóng CHÉO NHAU GIỮA HAI KHUNG HÌNH là bất khả thi ở đây.** Trong 0,57 s cư dân đi ~10
+   px — xa hơn cả bề ngang cơ thể. Bằng chứng: mô hình 2 hộp, thứ **không có khớp nào**, đo ra diện
+   tích hình bóng đổi **94,2%**. Cách chữa là **KHỬ** nhiễu (ghép từng người với chính mình giữa hai
+   bản dựng CÙNG thời điểm), không phải nới ngưỡng.
+3. **So pha 0 với pha ½ thì hình bóng KHÔNG đổi** — pha ½ chỉ đổi vai hai chân, ảnh là ảnh gương của
+   đúng bề rộng ấy. Phải so pha 0 với pha ¼.
+
+**Kiểm tra**: `npm test` **795 bài / 794 xanh** — bài đỏ duy nhất là `src/hooks/useTimer.test.js:865`,
+file **CHƯA ĐƯỢC THEO DÕI** (`??` trong git) do một phiên trước để lại; đã xác nhận không liên quan
+bằng cách cất hết thay đổi của task này rồi chạy lại (vẫn đỏ). `npm run lint` sạch · `npm run build`
+thành công. Ảnh 4 pha bước dán cạnh nhau (kèm hàng mặt nạ tách hình bóng):
+`.city-preview/ky1-dang-di-4-pha.png`.
+
+**Còn lại**: 14/15 kỷ vẫn dùng chung preset — `TECH_DEBT #78`, và `npm test` **in ra**
+`[humanStyle] đã thiết kế thật: 1/15 kỷ` mỗi lần chạy để con số ấy không lặng lẽ bị đọc thành
+"xong rồi".
+
+---
 
 ### 2026-08-21 — Phase 14 §1(2): kim tự tháp có hình chóp, ziggurat có thềm (ADR-051)
 

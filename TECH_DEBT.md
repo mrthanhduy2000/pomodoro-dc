@@ -13,7 +13,14 @@
 > mà không được refactor triệt để, phải CHỦ ĐỘNG đề xuất mở một "Maintenance Sprint" (nêu rõ mục
 > tiêu/phạm vi/lợi ích/rủi ro/tiêu chí hoàn thành) thay vì tiếp tục cộng thêm tính năng mới.
 >
-> **Trạng thái ngưỡng hiện tại (2026-08-16, cập nhật sau Phase 9D)**: **#30 và #27 đã ĐÓNG CẢ HAI**
+> **Trạng thái ngưỡng hiện tại (2026-08-22)**: thêm **#78** (14/15 kỷ chưa có bản sắc con người) ở
+> mức **Medium**, mở có chủ đích đúng phạm vi Đàm giao. Đếm lại toàn file: **1 mục Priority High
+> còn mở** (#53, đang đóng dần), **0 mục Critical** → xa ngưỡng 8–10 mục, KHÔNG cần Maintenance
+> Sprint. ⚠️ Con số này đếm bằng cách quét trường `**Priority**` của TỪNG mục, không chép lại từ
+> dòng cũ — dòng ngưỡng bên dưới đã đứng yên từ 2026-08-16 trong khi file nở từ #33 lên #78, đúng
+> kiểu "một con số tự trấn an" mà `CLAUDE.md` bắt phải kiểm như mọi con số khác.
+>
+> **(2026-08-16, sau Phase 9D)**: **#30 và #27 đã ĐÓNG CẢ HAI**
 > — đúng như hai mục ấy đã tự nối cứng, chúng là một bài toán duy nhất (*màu là trục DUY NHẤT mang
 > bản sắc mặt đường*) và được giải cùng lúc bằng cách mở thêm chín trục cấu trúc, chứ không phải
 > bằng cách chỉnh lại con số nào. Nay còn **1 mục High** (#14) + **2 mục Medium-High** (#3, #13) +
@@ -4374,3 +4381,38 @@ cấp `Math.min(3,…)` → `Math.min(9,…)` · cắt bớt danh sách cấp th
 - **Review Trigger (MỚI, thay cho mốc đã dùng)**: **ngay phase sau §1(3)**, hoặc sớm hơn nếu Đàm
   nhìn ảnh §1(3) rồi nói mái nhà dân trông giống nhau giữa các kỷ.
 - **Owner**: chưa phân công · **Status**: Open (đã rà soát 2026-08-21, hoãn có lý do)
+
+---
+
+## #78 — 14/15 kỷ vẫn dùng chung MỘT mốc người phổ thông (chỉ kỷ 1 có bản sắc thật)
+
+- **Tên**: `HUMAN_STYLES` mới thiết kế thật 1/15 dòng
+- **Module**: `src/engine/city3d/humanStyle.js` (bảng) · `src/engine/city3d/human.js` (thư viện hình
+  — hiện mới có 7 loại trang phục, 7 loại đội đầu, 6 loại đồ mang theo, đủ dùng cho vài kỷ nữa
+  nhưng chưa đủ cho cả 15)
+- **Priority**: Medium · **Severity**: Low
+- **Impact**: Đi từ kỷ 2 tới kỷ 15, con người trong thành phố **không đổi gì cả** — cùng áo chẽn,
+  cùng đầu trần, cùng tay không, cùng sải chân 1,62 và tốc độ 0,42. Đúng thứ bệnh mà bảng cây cối
+  (trước Phase 8D) và bảng mặt đường (trước Phase 9D) đã mắc, chỉ khác là lần này nó **được khai
+  báo công khai** chứ không núp sau một giá trị mặc định ngầm.
+- **Root Cause**: có chủ đích. Đàm yêu cầu *"chỉ hoàn thiện kỷ 1, nhưng khung phải dựng cho cả 15
+  kỷ"* — nên khung, bảng, bộ kiểm và phép đo đã xong; chỉ 14 dòng dữ liệu là chưa.
+- **Current Risk**: Không có rủi ro kỹ thuật. `getHumanStyle` luôn trả bộ ĐẦY ĐỦ, bộ kiểm
+  `isValidHumanStyle` chặn dòng sai, và bài test **in ra** `[humanStyle] đã thiết kế thật: 1/15 kỷ`
+  mỗi lần chạy `npm test` — nên con số này không thể lặng lẽ bị đọc thành "xong rồi".
+- **Future Risk**: Nếu để lâu, cái preset `mocPhoThong` sẽ dần được coi là "người nói chung" và
+  phiên sau sẽ chỉnh THẲNG vào nó khi thấy một kỷ nào đó trông chưa ưng — lúc ấy 14 kỷ cùng đổi
+  theo và không ai biết. ⚠️ Chỉnh preset là chỉnh 14 kỷ một lúc; muốn sửa một kỷ thì phải **tách
+  dòng riêng cho kỷ ấy trước**.
+- **Recommended Solution**: mỗi kỷ thêm một dòng, và dòng ấy phải trả lời được đúng câu mà kỷ 1 đã
+  trả lời: *"người ở nước ấy, thời ấy, mặc gì và đi thế nào?"* — `country` đã bị khoá cứng vào
+  `eraStyle.js` nên câu hỏi luôn có địa chỉ. Bài test đòi **≥5 trục khác preset** cho mọi kỷ được
+  liệt vào `designedEras()`, nên không thể "làm cho có" bằng cách đổi một số thập phân. Ưu tiên
+  theo mức tương phản với kỷ 1: kỷ 14 (Singapore, sơ mi công sở, cặp tài liệu, bước ngắn nhanh) và
+  kỷ 5 (Đức trung cổ, áo choàng dài, mũ trùm) là hai kỷ cho khác biệt lớn nhất trên mỗi giờ bỏ ra.
+- **Estimated Complexity**: Thấp cho mỗi kỷ (1 dòng bảng + có thể 1–2 hình mới trong `human.js`);
+  trung bình nếu làm cả 14 kỷ một lượt.
+- **Blocking Conditions**: Không có. Chỉ cần Đàm quyết làm kỷ nào tiếp.
+- **Review Trigger**: khi Đàm yêu cầu kỷ tiếp theo, hoặc khi số kỷ đã thiết kế đủ nhiều để cần một
+  phép chấm bản sắc kiểu `streetStyle.test.js` (105 cặp × N trục) thay cho phép so với preset.
+- **Owner**: phiên AI kế tiếp · **Status**: Open (có chủ đích, đúng phạm vi Đàm giao)

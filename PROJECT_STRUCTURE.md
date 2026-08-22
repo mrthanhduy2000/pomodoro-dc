@@ -492,9 +492,24 @@
 │   │   │   ├── daylight.js        # 6 CHẶNG TRONG NGÀY: hướng/độ ấm/cường độ nắng, đèn nền, sắc
 │   │   │   │                      #   trời, đèn cửa sổ, đèn hắt ra sân. THUẦN — nhận GIỜ làm tham
 │   │   │   │                      #   số, không đụng `Date` (tầng ngoài lo lấy giờ Việt Nam)
+│   │   │   ├── humanStyle.js      # BẢNG CON NGƯỜI 15 KỶ (2026-08-22, ADR-053): tỉ lệ cơ thể ·
+│   │   │   │                      #   dáng đứng · trang phục · đội đầu · đồ mang theo · sải chân ·
+│   │   │   │                      #   tốc độ · biên độ vung tay · màu vải. `country` KHOÁ vào
+│   │   │   │                      #   eraStyle.js (test bắt). 14 kỷ chưa làm trỏ preset CÓ TÊN
+│   │   │   │                      #   `mocPhoThong` — test in ra "đã thiết kế thật: N/15 kỷ"
+│   │   │   ├── human.js           # THƯ VIỆN HÌNH NGƯỜI: đầu · thân · tay · chân · đội đầu · đồ
+│   │   │   │                      #   mang theo, mỗi hộp gắn MỘT khớp + MỘT vai màu. Hệ toạ độ
+│   │   │   │                      #   riêng: +x = hướng đi · +y = lên · +z = bên TRÁI người
+│   │   │   │                      #   ⚠️ THỨ TỰ hộp là HỢP ĐỒNG với sceneGraph (i×n + k)
+│   │   │   ├── humanPose.js       # DÁNG ĐI: poseAt(body, QUÃNG ĐƯỜNG ĐÃ ĐI) → góc từng khớp
+│   │   │   │                      #   ⚠️ Hàm của QUÃNG ĐƯỜNG, không phải của thời gian — nhờ vậy
+│   │   │   │                      #   bàn chân KHÔNG trượt trên đất, và cái nhún là HỆ QUẢ của
+│   │   │   │                      #   chân trụ đang nghiêng chứ không phải một sin riêng
 │   │   │   ├── residents.js       # CƯ DÂN: dân số suy từ tiến độ, tuyến đi bám ĐƯỜNG SÁ
 │   │   │   │                      #   ⚠️ residentAt(route, TIME) — chuyển động là hàm của thời
 │   │   │   │                      #   gian, không phải biến cộng dồn (test được + rời tab đúng)
+│   │   │   │                      #   ⚠️ CHỈ lo "bao nhiêu người, đi đâu". Dáng đi nằm ở
+│   │   │   │                      #   humanPose.js — hai chỗ không được cùng khai một luật
 │   │   │   ├── pick.js            # CHẠM VÀO CÔNG TRÌNH: hộp bao + tia cắt hộp, THUẦN
 │   │   │   │                      #   ⚠️ Không dùng Raycaster của three: cả thành phố gộp thành
 │   │   │   │                      #   MỘT mesh (1 lệnh vẽ), ném tia vào đó chỉ biết trúng "thành

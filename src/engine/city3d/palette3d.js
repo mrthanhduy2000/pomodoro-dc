@@ -28,6 +28,7 @@
 
 import { getEraStyle } from './eraStyle';
 import { getFloraStyle } from './floraStyle';
+import { getHumanStyle } from './humanStyle';
 
 /**
  * Trần độ tươi của MÁI — hướng mỹ thuật trầm (Townscaper): mái là vật liệu lợp, không phải nhựa dẻo.
@@ -559,6 +560,7 @@ export function buildScenePalette({ tokens, eraColor, era: eraNumber, daylight }
 
   // Thảm thực vật của kỷ — nguồn của hai vai `leaf`/`leaf2` ngay dưới. Xem ghi chú tại chỗ.
   const flora = getFloraStyle(era);
+  const human = getHumanStyle(era);
   // Theme tối cắt độ tươi đi một nửa: ban đêm mắt người gần như không đọc được sắc ở vùng tối
   // (thị giác chuyển sang tế bào que), nên giữ nguyên độ tươi chỉ làm tán lá thành mảng xanh giả.
   const leafSat = isDark ? flora.leafSat * 0.52 : flora.leafSat;
@@ -624,6 +626,24 @@ export function buildScenePalette({ tokens, eraColor, era: eraNumber, daylight }
     // đọc ra "người" giữa một rừng tường và mái. Sáng hơn hẳn ở cả hai theme vì ở cỡ vài điểm ảnh,
     // độ SÁNG là thứ duy nhất phân biệt được, không phải sắc.
     skin:  paint(30, 0.30, 0.78, 0.66),
+    // ⚠️ MÀU VẢI ĐỌC TỪ `humanStyle.js`, KHÔNG VIẾT CỨNG Ở ĐÂY — y hệt lý do màu lá đọc từ
+    // `floraStyle.js` ngay bên trên. Màu quần áo là thuộc tính của NGHỀ NHUỘM thời ấy (thuốc
+    // khoáng đục thời cổ, thuốc aniline rực từ giữa thế kỷ 19), không phải một lựa chọn hoà sắc.
+    // Khai ở đây thì ngày nào có người thiết kế lại trang phục của một kỷ, màu sẽ đứng yên và
+    // không có gì đỏ lên.
+    //
+    // ⚠️ VÀ CỐ Ý KHÔNG PHA SẮC KỶ (`eraMix` = 0, dùng `paint` chứ không dùng `material`). Cư dân
+    // phải TÁCH ra khỏi họ màu của tường và mái để mắt bám vào được — đúng lý do dòng `skin` ngay
+    // trên cũng không pha. Pha vào thì người chìm nghỉm vào chính cái thành phố họ đang đi trong đó.
+    cloth: paint(human.cloth.hue, human.cloth.sat, human.cloth.light, human.cloth.light * 0.72),
+    // Vải phụ (đội đầu, viền): cùng họ, ĐẬM hơn để đầu tách khỏi thân ở cỡ vài điểm ảnh.
+    cloth2: paint(human.cloth.hue - 8, human.cloth.sat * 0.9, human.cloth.light * 0.66,
+      human.cloth.light * 0.48),
+    // Tóc: nâu rất đậm, không theo kỷ. Tóc thì thời nào cũng cùng một dải màu.
+    hair: paint(22, 0.34, 0.22, 0.17),
+    // Đồ mang theo: gỗ, xương, kim loại xỉn. Phải TỐI hơn cả vải để cái giáo đọc ra là một vệt
+    // riêng chứ không dính vào tay áo.
+    gear: paint(28, 0.26, 0.34, 0.26),
     // Ô cửa ĐANG SÁNG ĐÈN (chỉ dùng khi trời đã tối — xem `daylight.js`).
     // ⚠️ Vẽ bằng vật liệu KHÔNG nhận ánh sáng, nên màu này hiện ra Y NGUYÊN chứ không bị nhân với
     // ánh sáng cảnh. Vì vậy nó phải là màu của **ánh đèn nhìn từ xa** — vàng ấm, sáng nhưng không

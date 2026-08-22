@@ -917,6 +917,27 @@ chuyển động" của hệ điều hành hoặc khi xem bảo tàng. Đặt tr
 trần** (`slowThresholdFor` = min(24, trần × 0,7)); giữ nguyên 24 sẽ đuổi máy khoẻ xuống 2D chỉ vì
 trượt vài khung.
 
+**Cư dân là một BỘ XƯƠNG, và dáng đi là hàm của QUÃNG ĐƯỜNG (2026-08-22, ADR-053)**: ba tầng, mỗi
+tầng một việc, đúng khuôn `floraStyle.js` ↔ `flora.js` — `engine/city3d/humanStyle.js` = **BẢNG 15
+kỷ × 11 trục** (`country` khoá cứng vào `eraStyle.js`, 14 kỷ chưa làm trỏ preset **có tên**
+`mocPhoThong`) · `engine/city3d/human.js` = **THƯ VIỆN HÌNH** (danh sách hộp, mỗi hộp gắn một khớp +
+một vai màu) · `engine/city3d/humanPose.js` = **DÁNG ĐI** (`poseAt(body, travelled)` → góc từng
+khớp) · `residents.js` giữ nguyên "bao nhiêu người, đi đâu" · `sceneGraph.js` chỉ ghép ma trận.
+⚠️ **Dáng đi phải là hàm của QUÃNG ĐƯỜNG ĐÃ ĐI, không phải của thời gian.** Pha bước =
+`travelled / (stride × chiều dài cẳng chân)`. Nếu lấy một hằng số thời gian riêng thì người đi
+nhanh và người đi chậm cùng nhịp chân ⇒ **bàn chân trượt trên mặt đất**. Cùng lý do đó, cái nhún
+(`bob`) là **HỆ QUẢ** của chân trụ đang nghiêng (`legLen × (cos θ − 1)`) chứ không phải một sóng
+sin riêng — nó đã được **chuyển hẳn** khỏi `residents.js`, và `sceneGraphWiring.test.js` cấm
+`+ spot.bob` quay lại.
+⚠️ **MỘT `InstancedMesh` trên hộp đơn vị 1×1×1 cho CẢ cộng đồng.** Kích thước mỗi bộ phận đi vào ma
+trận co giãn; khớp xoay quanh **một trục ngang duy nhất** (mặt phẳng đi tới) ở tầng ma trận, KHÔNG
+thêm trục nghiêng vào `parts.js`. Nhờ vậy 28 người × 9 hộp = 252 khối vẫn là **1 lệnh vẽ** — số
+lệnh vẽ của cả cảnh còn **GIẢM 11 → 10** vì hai mesh cũ (thân + đầu) gộp làm một. Tam giác cư dân
+kỷ 1 = **3.024 = 4,57% tổng cảnh** (trần 6%) nhưng **13,8% riêng phần thành phố** — đọc đúng con số
+cho đúng câu hỏi (bài học Performance Gate vòng 2).
+⚠️ **`lowDetail` quay về ĐÚNG mô hình 2 hộp cũ** (`buildHumanBodyLowDetail`), và chính hàm đó cũng
+là ĐỐI CHỨNG của mọi phép đo dáng đi: một mô hình không có khớp thì hình bóng phải đổi **0**.
+
 **Database schema — KHÔNG có migration tự động**: mọi thay đổi cấu trúc bảng Supabase (`game_state`,
 `timer_live`, `push_jobs`, `push_subscriptions`...) đòi hỏi chạy TAY một file `.sql` trong
 `supabase/` TRƯỚC KHI deploy code phụ thuộc vào nó — không dùng Prisma/Drizzle/ORM migration nào.

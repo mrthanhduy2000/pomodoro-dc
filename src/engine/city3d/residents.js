@@ -18,14 +18,25 @@
  */
 
 import { hashId, unit } from '../hashId';
+import { HUMAN_PRESETS, getHumanStyle } from './humanStyle';
 
 /** Trần cư dân. Đây là ngưỡng HIỆU NĂNG: mỗi người là một thực thể phải cập nhật mỗi khung hình. */
 export const MAX_RESIDENTS = 28;
 
-/** Tốc độ đi bộ, tính bằng ô lưới mỗi giây. Người thật đi ~1,4 m/s; ở đây một ô ≈ một sải phố. */
-const WALK_SPEED = 0.42;
+/**
+ * Tốc độ đi bộ mặc định, ô lưới mỗi giây.
+ * ⚠️ ĐỌC TỪ `humanStyle.js`, KHÔNG VIẾT LẠI SỐ. Tốc độ đi nay là một TRỤC BẢN SẮC theo kỷ (người
+ * đi săn thong thả khác người phố Manhattan), nên nó phải có đúng một chỗ khai. Giữ hằng số ở đây
+ * là dựng sẵn hai nguồn sự thật cho cùng một đại lượng — chính là hình dạng sai đã cắn dự án ở
+ * `daylight.test.js` và `palette3d.js`.
+ */
+const DEFAULT_WALK_SPEED = HUMAN_PRESETS.mocPhoThong.walkSpeed;
 
-/** Chiều cao người, tính theo đơn vị ô. Nhỏ có chủ ý: người phải làm nhà trông TO. */
+/**
+ * Chiều cao người cỡ chuẩn, đơn vị ô. Nhỏ có chủ ý: người phải làm nhà trông TO.
+ * ⚠️ NAY CHỈ LÀ CỠ CHUẨN — chiều cao THẬT của một kỷ là `HUMAN_BASE_HEIGHT × stature`
+ * (`human.js` / `humanStyle.js`). Giữ tên cũ và giá trị cũ để mọi chỗ đang đọc nó không đổi nghĩa.
+ */
 export const RESIDENT_HEIGHT = 0.2;
 
 /**
@@ -53,9 +64,10 @@ export function deriveResidentCount({ buildingCount = 0, sessionCount = 0, strea
  *
  * @param {number} index      thứ tự cư dân — hạt giống tất định
  * @param {Array} roadCells   các ô đường, dạng `{x, y}`
+ * @param {number} [walkSpeed] tốc độ đi của kỷ (ô/giây); rỗng thì dùng mốc phổ thông
  * @returns {{path:Array<{x:number,y:number}>, length:number, speed:number, phase:number}|null}
  */
-export function buildResidentRoute(index, roadCells) {
+export function buildResidentRoute(index, roadCells, walkSpeed = DEFAULT_WALK_SPEED) {
   if (!Array.isArray(roadCells) || roadCells.length < 2) return null;
 
   // ⚠️ KHÔNG ĐƯỢC đi theo thứ tự của mảng `roadCells`. Mảng đó đã bị `computeCityLayout` sắp lại
@@ -107,7 +119,7 @@ export function buildResidentRoute(index, roadCells) {
   return {
     path,
     length,
-    speed: WALK_SPEED * (0.75 + unit(`${seed}|s`) * 0.5),
+    speed: walkSpeed * (0.75 + unit(`${seed}|s`) * 0.5),
     // Lệch pha: không có nó thì tất cả cùng xuất phát một chỗ, thành một đoàn diễu hành.
     phase: unit(`${seed}|p`),
   };
@@ -122,7 +134,13 @@ export function buildResidentRoute(index, roadCells) {
  * bị bỏ lỡ, và quan trọng nhất: khi Đàm rời tab rồi quay lại sau nửa tiếng, thành phố hiện ra ở
  * đúng trạng thái ĐÁNG LẼ phải có, chứ không phải đứng im đúng chỗ lúc bị đóng băng.
  *
- * @returns {{x:number, y:number, angle:number, bob:number}} toạ độ Ô LƯỚI, không phải toạ độ thế giới
+ * ⚠️ TRẢ VỀ `travelled` (QUÃNG ĐƯỜNG ĐÃ ĐI) CHỨ KHÔNG PHẢI `bob`, và đó là một chỗ đổi trách nhiệm
+ * có chủ ý. File này trả lời "đi ĐÂU"; tư thế là việc của `humanPose.js`. Trước phase này cái nhún
+ * người (`bob`) nằm ngay đây dưới dạng một hàm sin riêng — tức tư thế bị khai ở hai chỗ, và ngày
+ * nào có ai chỉnh sải chân thì cái nhún sẽ lệch pha với bước chân mà không có gì đỏ lên. Nay chỉ
+ * còn MỘT đại lượng đi ra khỏi đây, và mọi khớp đều suy từ nó.
+ *
+ * @returns {{x:number, y:number, angle:number, travelled:number}} toạ độ Ô LƯỚI, không phải thế giới
  */
 export function residentAt(route, time) {
   if (!route) return null;
@@ -143,9 +161,7 @@ export function residentAt(route, time) {
         x: a.x + (b.x - a.x) * k,
         y: a.y + (b.y - a.y) * k,
         angle: Math.atan2(b.y - a.y, b.x - a.x),
-        // Nhấp nhô theo bước chân. Biên độ rất nhỏ — đủ để mắt đọc ra "đang đi" thay vì "đang
-        // trượt", mà không thành nhảy lò cò.
-        bob: Math.abs(Math.sin(travelled * 9)) * 0.022,
+        travelled,
       };
     }
     remaining -= segment;
@@ -153,7 +169,7 @@ export function residentAt(route, time) {
 
   // Không tới đây được với dữ liệu hợp lệ; giữ nhánh này để không bao giờ trả `null` giữa chừng.
   const first = route.path[0];
-  return { x: first.x, y: first.y, angle: 0, bob: 0 };
+  return { x: first.x, y: first.y, angle: 0, travelled: 0 };
 }
 
 /**
@@ -173,9 +189,12 @@ export function buildResidents(layout, stats = {}) {
     streakLength: stats.streakLength,
   });
 
+  // Tốc độ đi là một trục bản sắc theo kỷ — lấy từ bảng, không dùng hằng số chung.
+  const walkSpeed = getHumanStyle(layout?.era).walkSpeed;
+
   const residents = [];
   for (let i = 0; i < count; i += 1) {
-    const route = buildResidentRoute(i, roads);
+    const route = buildResidentRoute(i, roads, walkSpeed);
     if (route) residents.push(route);
   }
   return residents;

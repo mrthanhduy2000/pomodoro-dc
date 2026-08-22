@@ -15,6 +15,7 @@ import assert from 'node:assert/strict';
 
 import {
   CARRY_KINDS,
+  HEAD_MATERIALS,
   GARMENT_KINDS,
   HEADGEAR_KINDS,
   HUMAN_AXES,
@@ -26,6 +27,8 @@ import {
   isValidHumanStyle,
 } from './humanStyle.js';
 import { ERA_STYLES } from './eraStyle.js';
+import { buildHumanBody } from './human.js';
+import { poseAt } from './humanPose.js';
 
 test('đủ 15 kỷ, mỗi dòng hợp lệ, kỷ chưa làm phải trỏ preset CÓ TÊN', () => {
   const eras = Object.keys(HUMAN_STYLES).map(Number).sort((a, b) => a - b);
@@ -81,20 +84,46 @@ test('kỷ ĐÃ THIẾT KẾ khác mốc phổ thông ở ÍT NHẤT 5 trục', 
 
   // ⚠️ IN RA SỐ KỶ ĐÃ LÀM THẬT. "Có đủ 15 dòng" KHÔNG bằng "đã làm đủ 15 kỷ", và không in ra thì
   // phiên sau sẽ đọc bảng xanh thành "xong rồi". Xem `TECH_DEBT.md`.
-  console.log(`[humanStyle] đã thiết kế thật: ${designed.length}/15 kỷ (${designed.join(', ')})`
-    + ` · 14 kỷ còn lại trỏ preset "mocPhoThong"`);
+  // ⚠️ SỐ KỶ CÒN LẠI PHẢI ĐƯỢC TÍNH, KHÔNG ĐƯỢC VIẾT CỨNG. Bản cũ in thẳng chữ "14 kỷ còn lại" và
+  // nó vẫn in đúng như thế sau khi cả 14 kỷ đã được thiết kế xong — một dòng báo cáo nói dối.
+  const conLai = 15 - designed.length;
+  console.log(`[humanStyle] đã thiết kế thật: ${designed.length}/15 kỷ`
+    + (conLai > 0 ? ` (${designed.join(', ')}) · ${conLai} kỷ còn lại trỏ preset "mocPhoThong"`
+      : ' — ĐỦ CẢ 15 KỶ, không kỷ nào còn trỏ preset'));
 });
 
-test('tần số bước SUY RA, và 15 kỷ không được ra cùng một nhịp', () => {
-  // ⚠️ Bài này canh đúng cái lý do `cadence` KHÔNG được khai thành trường thứ ba: nó phải luôn
-  // khớp với cặp (tốc độ, sải chân). Tính lại từ hai trường ấy rồi so.
+test('tần số bước SUY RA đúng ĐƠN VỊ, và 15 kỷ không ra cùng một nhịp', () => {
+  // ⚠️ BẢN CŨ CỦA BÀI NÀY LÀ MỘT BÀI TEST KHÔNG CÓ RĂNG, VÀ NÓ CHE MỘT LỖI ĐƠN VỊ THẬT.
+  // Nó viết `assert.equal(cadenceOf(s), s.walkSpeed / s.stride)` — tức CHÉP LẠI đúng thân hàm rồi
+  // hỏi hàm có bằng chính nó không. Một bài như thế xanh vĩnh viễn với mọi công thức, kể cả công
+  // thức sai đơn vị (xem `cadenceOf`: `stride` đo bằng bội số cẳng chân nên thương số ấy KHÔNG
+  // phải 1/giây, và nó xếp sai thứ tự kỷ 6 với kỷ 14).
+  // ⇒ Nay ĐỐI CHIẾU CHÉO với một đường đo ĐỘC LẬP: `poseAt(...).cycle` là chiều dài một chu kỳ
+  // bước tính bằng ô, do `humanPose.js` dựng ra từ hình học thật. Tần số = tốc độ / chu kỳ. Hai
+  // đường phải khớp — nếu chỉ có MỘT phép tính thì không có gì để cãi nhau, tức không có gì để
+  // phát hiện (bài học `TECH_DEBT #43`).
   for (let era = 1; era <= 15; era += 1) {
     const s = getHumanStyle(era);
-    assert.equal(cadenceOf(s), s.walkSpeed / s.stride, `kỷ ${era}: tần số lệch khỏi hai trục gốc`);
+    const body = buildHumanBody(era);
+    const doiChung = s.walkSpeed / poseAt(body, 0).cycle;
+    assert.ok(Math.abs(cadenceOf(s) - doiChung) < 1e-9,
+      `kỷ ${era}: cadenceOf ra ${cadenceOf(s).toFixed(4)} còn đường đo qua humanPose ra`
+      + ` ${doiChung.toFixed(4)} — hai công thức đã trôi khỏi nhau`);
   }
-  // Kỷ 1 bước dài và chậm ⇒ nhịp THƯA nhất trong những kỷ đã thiết kế.
+
+  // Kỷ 1 bước dài và chậm ⇒ nhịp THƯA nhất trong 15 kỷ; kỷ 13 (Tokyo) gấp nhất.
+  const nhip = Array.from({ length: 15 }, (_, i) => ({ era: i + 1, v: cadenceOf(getHumanStyle(i + 1)) }));
+  const thap = nhip.reduce((a, b) => (a.v < b.v ? a : b));
+  const cao = nhip.reduce((a, b) => (a.v > b.v ? a : b));
+  assert.equal(thap.era, 1, `nhịp thưa nhất phải là kỷ 1 (săn bắt), thấy kỷ ${thap.era}`);
+  assert.equal(cao.era, 13, `nhịp gấp nhất phải là kỷ 13 (Tokyo), thấy kỷ ${cao.era}`);
+  assert.ok(cao.v / thap.v > 2.5,
+    `nhịp gấp nhất chỉ hơn nhịp thưa nhất ${(cao.v / thap.v).toFixed(2)} lần — 15 kỷ đi gần như cùng nhịp`);
   assert.ok(cadenceOf(getHumanStyle(1)) < cadenceOf(HUMAN_PRESETS.mocPhoThong),
     'người đi săn phải bước thưa hơn mốc phổ thông — đó là điểm của cặp (sải dài, chậm)');
+
+  console.log(`[humanStyle] nhịp bước: thưa nhất kỷ ${thap.era} ${thap.v.toFixed(2)} chu kỳ/giây`
+    + ` · gấp nhất kỷ ${cao.era} ${cao.v.toFixed(2)} · gấp ${(cao.v / thap.v).toFixed(2)} lần`);
 });
 
 test('dữ liệu rác không làm nổ màn hình Thành Phố', () => {
@@ -123,4 +152,45 @@ test('bộ kiểm TỪ CHỐI giá trị ngoài dải thay vì kẹp im lặng',
     'sải chân 0,78 là con số của bản HỎNG cũ (đơn vị ô) — bộ kiểm phải còn bắt được nó');
   assert.equal(isValidHumanStyle({ ...ok, garment: 'áo dài' }), false);
   assert.equal(isValidHumanStyle({ ...ok, legShare: 0.95 }), false);
+  // ⚠️ VẬT LIỆU ĐỘI ĐẦU LÀ TRƯỜNG BẮT BUỘC, KHÔNG ĐƯỢC RƠI NGẦM VỀ MẶC ĐỊNH. Nếu nó tuỳ chọn thì
+  // kỷ thêm sau này sẽ lặng lẽ đội một cái nón lá màu quần — đúng khuyết tật vừa sửa.
+  const { headMaterial: _bỏ, ...thiếu } = ok;
+  assert.equal(isValidHumanStyle(thiếu), false, 'thiếu `headMaterial` phải bị TỪ CHỐI');
+  assert.equal(isValidHumanStyle({ ...ok, headMaterial: 'nỉ' }), false, 'vật liệu lạ phải bị từ chối');
+});
+
+test('VẬT LIỆU ĐỘI ĐẦU — trục mới phải THẬT SỰ tới được hình, và chỗ nó TRƠ phải đếm được', () => {
+  // ⚠️ VÌ SAO PHẢI ĐẾM CHỖ TRƠ. `headMaterial` chỉ đổi được vai màu cho bốn kiểu đội đầu bằng vải
+  // (`headcloth`/`brim`/`cap`/`conical`); với `none` thì không có hộp nào, với `bun` thì vai là
+  // `hair`, với `helm` thì vai là `gear`. Nghĩa là ở năm kỷ, trường này khai gì cũng KHÔNG đổi một
+  // điểm ảnh nào. Một trường vừa-khai-vừa-vô-nghĩa mà không ai đếm chính là chỗ ẩn náu tốt cho một
+  // lỗi: ngày nào kỷ 13 đổi sang đội mũ thì nó sẽ dùng giá trị mà chưa ai từng nhìn lại.
+  const trơ = [];
+  const theoVai = { straw: [], cloth2: [] };
+  for (let era = 1; era <= 15; era += 1) {
+    const hg = buildHumanBody(era).parts.find((x) => x.id === 'headgear');
+    if (!hg || hg.role === 'hair' || hg.role === 'gear') { trơ.push(era); continue; }
+    assert.ok(Object.hasOwn(theoVai, hg.role), `kỷ ${era}: vai đội đầu lạ "${hg.role}"`);
+    theoVai[hg.role].push(era);
+  }
+  assert.deepEqual(trơ, [1, 3, 12, 13, 14],
+    'danh sách kỷ mà `headMaterial` không đổi được điểm ảnh nào đã thay đổi — kiểm lại từng kỷ');
+
+  // Trục phải dùng CẢ HAI giá trị, nếu không nó là một trục chết (bài học Phase 8D: một cơ chế
+  // vẫn chạy nhưng không đổi được gì thì vẫn xanh).
+  for (const vl of HEAD_MATERIALS) {
+    const vai = vl === 'natural' ? 'straw' : 'cloth2';
+    assert.ok(theoVai[vai].length >= 2,
+      `vật liệu "${vl}" chỉ có ${theoVai[vai].length} kỷ dùng — trục đang thoái hoá về một giá trị`);
+  }
+
+  // Và vai màu phải khớp ĐÚNG thứ bảng khai — không được suy từ `kind`.
+  for (const era of theoVai.straw) {
+    assert.equal(getHumanStyle(era).headMaterial, 'natural', `kỷ ${era}: vai "straw" mà bảng khai "dyed"`);
+  }
+  for (const era of theoVai.cloth2) {
+    assert.equal(getHumanStyle(era).headMaterial, 'dyed', `kỷ ${era}: vai "cloth2" mà bảng khai "natural"`);
+  }
+  console.log(`[humanStyle] vật liệu đội đầu: sợi mộc ${theoVai.straw.join(', ')}`
+    + ` · vải nhuộm ${theoVai.cloth2.join(', ')} · trơ ${trơ.join(', ')}`);
 });

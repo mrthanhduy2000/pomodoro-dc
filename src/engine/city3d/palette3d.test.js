@@ -767,3 +767,92 @@ test('NGÕ PHỐ SUY TỪ ĐẠI LỘ, không mượn màu đá xây tường', 
     assert.notEqual(p.roadLane, p.roles?.stone, `kỷ ${era}: ngõ vẫn đang lấy màu đá xây tường`);
   }
 });
+
+// ═════════════════════════════════════════════════════════════════════════════════════════════════
+// BẢNG NGUỒN PHẢI TỚI ĐƯỢC BẢNG MÀU — bài này sinh ra từ một lỗi ĐÃ CHẠY TRÊN PRODUCTION
+// ═════════════════════════════════════════════════════════════════════════════════════════════════
+test('15 KỶ RA 15 MÀU LÁ VÀ 15 MÀU VẢI — bảng nguồn phải TỚI được bảng màu', () => {
+  // ⚠️ VÌ SAO CÓ BÀI NÀY (2026-08-23). `buildScenePalette` nhận tham số `era` (một SỐ KỶ) nhưng đổi
+  // tên nó thành `eraNumber` ngay dòng khai báo, rồi gán đè một `const era` KHÁC — một MÀU — ở
+  // dòng sau. Từ đó `getFloraStyle(era)` và `getHumanStyle(era)` truyền một OBJECT MÀU vào hai hàm
+  // chờ một số kỷ. Cả hai hàm ấy CỐ Ý rơi về kỷ 1 với dữ liệu lạ (không được ném lỗi giữa màn hình
+  // Thành Phố), nên hậu quả là **15 kỷ dùng chung một màu lá và một màu vải, im lặng tuyệt đối**:
+  // build xanh · lint sạch · toàn bộ test xanh · không một cảnh báo nào.
+  //
+  // Tính năng "mỗi kỷ một màu lá" là một mảng công việc của Phase 8D (`floraStyle.js` khai đủ 15
+  // giá trị `leafHue` khác nhau) và nó **chưa bao giờ chạy thật trên production**. Nó chỉ lộ ra khi
+  // 15 cư dân được dán cạnh nhau và **cả 15 đều nâu** (`scripts/human-strip.mjs`).
+  //
+  // ⇒ Bài này canh đúng chỗ đứt: BẢNG có khác nhau, mà BẢNG MÀU dựng ra một giá trị. Cùng họ với
+  // `summarizeMuseum` (Phase 4H) — một thứ làm xong 90% rồi thiếu đúng một dòng nối, và thứ duy
+  // nhất bắt được là một bài test hỏi ở ĐẦU BÊN KIA.
+  const VAI = ['leaf', 'leaf2', 'cloth', 'cloth2'];
+  const đếm = {};
+  for (const vai of VAI) {
+    đếm[vai] = new Set(Array.from({ length: 15 }, (_, i) => String(
+      buildScenePalette({ era: i + 1, tokens: LIGHT_TOKENS }).roles[vai])));
+  }
+  for (const vai of VAI) {
+    assert.ok(đếm[vai].size >= 12,
+      `vai màu "${vai}" chỉ ra ${đếm[vai].size} giá trị trên 15 kỷ — bảng nguồn KHÔNG tới được`
+      + ' bảng màu. Kiểm xem `buildScenePalette` có đang truyền `eraNumber` (số) hay `sacKy` (màu)'
+      + ' vào `getFloraStyle`/`getHumanStyle`.');
+  }
+
+  // ⚠️ ĐỐI CHỨNG NHỐT ĐÚNG BỘ SỐ HỎNG CŨ. Không có vế này thì bài trên vẫn xanh nếu ai đó nới
+  // ngưỡng, và cũng không phân biệt được "đã sửa" với "chưa bao giờ hỏng". Bộ hỏng cũ là: KHÔNG
+  // truyền số kỷ ⇒ mọi kỷ rơi về một bảng ⇒ ĐÚNG 1 giá trị.
+  const khôngTruyền = new Set(Array.from({ length: 15 }, () => String(
+    buildScenePalette({ tokens: LIGHT_TOKENS }).roles.leaf)));
+  assert.equal(khôngTruyền.size, 1,
+    'không truyền số kỷ mà vẫn ra nhiều màu lá ⇒ phép đo này đang đo nhiễu, không đo cái nối');
+
+  // Và vế thứ hai của cùng cái đối chứng: hai kỷ KHÁC nhau phải cho hai màu khác nhau ở CẢ hai
+  // họ vai màu — hỏi từng chiều một, đừng hỏi tổng (bài học Phase 10 Bước 2).
+  const a = buildScenePalette({ era: 6, tokens: LIGHT_TOKENS }).roles;
+  const b = buildScenePalette({ era: 15, tokens: LIGHT_TOKENS }).roles;
+  assert.notEqual(String(a.leaf), String(b.leaf), 'kỷ 6 và kỷ 15 ra cùng một màu lá');
+  assert.notEqual(String(a.cloth), String(b.cloth), 'kỷ 6 (nâu củ nâu) và kỷ 15 (trắng kandura) ra cùng một màu vải');
+});
+
+// ═════════════════════════════════════════════════════════════════════════════════════════════════
+// SỢI MỘC PHẢI NHẠT HƠN VẢI NHUỘM — bài này sinh ra từ một cái nón lá màu đen
+// ═════════════════════════════════════════════════════════════════════════════════════════════════
+test('vai màu `straw` (sợi mộc) tách khỏi `cloth2` (vải nhuộm) và khỏi `skin` ở CẢ 15 KỶ', async () => {
+  const { buildHumanBody } = await import('./human.js');
+  // ⚠️ NGƯỠNG MẮT 12/255 ≈ 0,047 trên thang độ đậm 0..1 — cùng con số đã hiệu chuẩn ở Phase 3Y và
+  // dùng lại ở `streetStyle.js`. KHÔNG chọn tay một ngưỡng mới ở đây.
+  const NGUONG = 12 / 255;
+  const độĐậm = (n) => luminance({ r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 });
+
+  const khôngTáchKhỏiÁo = [];
+  for (let era = 1; era <= 15; era += 1) {
+    const p = buildScenePalette({ era, tokens: LIGHT_TOKENS }).roles;
+
+    // (1) LỜI HỨA VẬT LIỆU — đây là điều bản vá này thật sự bảo đảm, và nó phải đúng ở MỌI kỷ.
+    // ⚠️ Nó KHÔNG đúng theo cấu tạo: `cloth2` có độ sáng HSL tối đa 0,66 so với 0,86 của `straw`,
+    // nhưng độ ĐẬM còn phụ thuộc góc màu và độ tươi — một kỷ khai vải vàng rực rất sáng có thể
+    // đẩy `cloth2` vượt lên. Vì vậy bài này CÓ THỂ đỏ, tức nó là một cái gác thật.
+    assert.ok(độĐậm(p.straw) - độĐậm(p.cloth2) > NGUONG,
+      `kỷ ${era}: sợi mộc (${độĐậm(p.straw).toFixed(3)}) không nhạt hơn vải nhuộm`
+      + ` (${độĐậm(p.cloth2).toFixed(3)}) quá ngưỡng mắt`);
+
+    // (2) MŨ NHẠT KHÔNG ĐƯỢC ĐỌC RA THÀNH MỘT CÁI ĐẦU TRỌC TO.
+    assert.ok(Math.abs(độĐậm(p.straw) - độĐậm(p.skin)) > NGUONG,
+      `kỷ ${era}: sợi mộc lẫn vào màu da — cái mũ sẽ đọc ra là một cái đầu`);
+
+    // (3) Gom danh sách kỷ mà thứ đội đầu KHÔNG tách khỏi áo. Xem đối chứng ngay dưới.
+    const hg = buildHumanBody(era).parts.find((x) => x.id === 'headgear');
+    if (hg && Math.abs(độĐậm(p[hg.role]) - độĐậm(p.cloth)) <= NGUONG) khôngTáchKhỏiÁo.push(era);
+  }
+
+  // ⚠️ NGOẠI LỆ TƯỜNG MINH ĐẾM ĐƯỢC, KHÔNG PHẢI MỘT NGƯỠNG NỚI RA. Hai kỷ này có thứ đội đầu
+  // không đọc ra được ở xa, và **cả hai đều đúng với sự thật vật lý** — ép chúng tương phản là mua
+  // một con số bằng cách nói dối lịch sử, đúng thứ ADR-025 cấm:
+  //   • kỷ 12 — mũ sắt SSh-40 Stalingrad được SƠN đúng màu áo bông, cố tình để không nổi bật;
+  //   • kỷ 15 — khăn ghutra trắng trên áo kandura trắng, cả hai đều là vải chưa nhuộm; ngoài đời
+  //     thứ tách chúng là sợi dây agal ĐEN, mà bộ từ vựng hiện chưa có.
+  // Kỷ thứ ba rơi vào đây ⇒ đỏ (một khuyết tật mới). Một trong hai kỷ này được sửa ⇒ cũng đỏ.
+  assert.deepEqual(khôngTáchKhỏiÁo, [12, 15],
+    'danh sách kỷ có đội đầu không tách khỏi áo đã đổi — xem lại từng kỷ, ĐỪNG nới ngưỡng');
+});

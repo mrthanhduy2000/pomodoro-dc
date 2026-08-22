@@ -11,6 +11,96 @@
 
 ---
 
+## ADR-054 — Vật liệu của thứ đội trên đầu là một TRỤC RIÊNG, không phải một sắc độ của quần; và một tham số bị một biến cùng tên che khuất đã giết hai tính năng trong im lặng
+
+**Ngày:** 2026-08-23
+**Trạng thái:** đã áp dụng
+
+### Bối cảnh
+`humanStyle.js` vừa được thiết kế đủ 15 kỷ (ADR-053). Bộ chấm bản sắc bằng SỐ báo xanh sạch:
+105/105 cặp kỷ khác nhau ở ít nhất một thứ mắt đọc được, trung vị 8/9 trục. Theo mọi cổng số thì
+việc đã xong.
+
+Rồi 15 cư dân được dán cạnh nhau và phóng to (`scripts/human-strip.mjs`) — **cả 15 đều nâu**.
+
+### Vấn đề — HAI lỗi độc lập, cùng lộ ra trong một lần nhìn
+
+**(1) MỘT THAM SỐ BỊ CHE KHUẤT BỞI MỘT BIẾN CÙNG TÊN.** `buildScenePalette({ …, era: eraNumber, … })`
+đổi tên tham số `era` (một SỐ KỶ) thành `eraNumber` ngay dòng khai báo, rồi vài dòng sau gán một
+`const era` KHÁC — một MÀU. Từ đó hai dòng ở cuối hàm:
+
+```js
+const flora = getFloraStyle(era);   // ← truyền một OBJECT MÀU vào hàm chờ một SỐ KỶ
+const human = getHumanStyle(era);
+```
+
+Cả hai hàm ấy **cố ý** rơi về kỷ 1 với dữ liệu lạ (không được ném lỗi giữa màn hình Thành Phố), nên
+hậu quả là **15 kỷ dùng chung một màu lá và một màu vải** — build xanh · lint sạch · toàn bộ test
+xanh · không một cảnh báo nào. Mảng "mỗi kỷ một `leafHue`" của Phase 8D **chưa bao giờ chạy thật
+trên production**.
+
+**(2) MỘT VAI MÀU GÁNH HAI VIỆC — lần thứ SÁU của họ lỗi ấy.** Mọi thứ đội trên đầu (trừ búi tóc và
+mũ trụ) đều lấy vai `cloth2`, mà `cloth2` được định nghĩa là *"quần/chân, tối nhất bộ"* và suy ra
+bằng `cloth × 0,66`. Nghĩa là **cái nón và cái quần bị buộc phải cùng một lò nhuộm**, và cái nón
+VĨNH VIỄN tối hơn cái áo. Đo cả 15 kỷ (độ đậm 0..1):
+
+| kỷ | thứ đội | thật ngoài đời | trước | sau |
+|---|---|---|---|---|
+| 6 Việt Nam | nón lá | lá cọ phơi, không nhuộm | **0,170** (tối nhì bảng) | 0,879 |
+| 5 Đức | khăn lanh | lanh mộc | 0,196 | 0,879 |
+| 7 Ý | mũ rơm Firenze | rơm | 0,249 | 0,879 |
+| 8 Bồ Đào Nha | mũ rơm ngư dân | cói | 0,311 | 0,879 |
+| 2 Ai Cập | khăn nemes | lanh tẩy trắng | 0,499 | 0,879 |
+| 15 UAE | khăn ghutra | bông trắng | 0,586 | 0,879 |
+| 4 · 9 · 10 · 11 | futou · casquette · mũ nồi · mũ phớt | vải/nỉ NHUỘM | sẫm — **ĐÚNG** | không đổi |
+
+### Phương án đã cân nhắc
+1. **Chỉnh tay `cloth2` của riêng kỷ 6 cho sáng lên.** Bác: `cloth2` cũng là màu QUẦN, nên nó sẽ
+   cho người Việt mặc quần trắng; và nó vá đúng một kỷ trong sáu kỷ cùng bệnh (đúng cái đã xảy ra
+   với `eaves` ở Phase 7C — vá cho một kỷ rồi bệnh gốc quay lại khi có 30 công trình mỗi kỷ).
+2. **Suy vai màu từ `kind` (`conical`/`brim` ⇒ nhạt).** Bác: **mũ rơm Firenze và mũ phớt New York
+   đều là `brim`** nhưng một cái rơm một cái nỉ nhuộm. Suy từ hình là dựng lại đúng cái bẫy đang gỡ.
+3. **Bốn giá trị vật liệu (rơm · lanh · len · nỉ).** Bác: ở cỡ cư dân đo được (14–31 điểm ảnh) len
+   và nỉ chênh nhau **dưới ngưỡng mắt** ⇒ một trục CHẾT, đúng thứ Phase 11 đã trả giá.
+
+### Giải pháp đã chọn
+**(1)** Đổi tên biến màu thành `sacKy` — một cái tên không thể bị nhầm với số kỷ — và truyền
+`eraNumber` vào hai hàm. Khoá bằng `palette3d.test.js` mục *15 KỶ RA 15 MÀU LÁ VÀ 15 MÀU VẢI*, kèm
+đối chứng nhốt đúng bộ hỏng cũ (không truyền số kỷ ⇒ phải ra ĐÚNG 1 giá trị).
+
+**(2)** Thêm trục bảng `headMaterial ∈ {'natural','dyed'}` (bắt buộc cả 15 dòng, validator TỪ CHỐI
+thẳng dòng thiếu) và vai màu thứ sáu `straw` trong `palette3d.js`. `headgearBox` chọn vai theo VẬT
+LIỆU, không theo hình. **Giá: 0 lệnh vẽ, 0 tam giác** — cả cộng đồng đi qua một `InstancedMesh` và
+màu vào qua `setColorAt`, nên số vai màu không phải một ngân sách.
+
+`straw` cố ý KHÔNG theo kỷ, và lý lẽ ở đây mạnh hơn ở `hair`/`gear`: thứ làm cho mọi vật liệu trong
+nhóm này giống nhau chính là **sự vắng mặt của thuốc nhuộm**.
+
+### Đánh đổi — nói thẳng, không giấu
+- **Hai kỷ vẫn có đội đầu không tách khỏi áo, và cả hai đều ĐÚNG với sự thật vật lý:** kỷ 12 (mũ sắt
+  SSh-40 Stalingrad được SƠN đúng màu áo bông để nguỵ trang) và kỷ 15 (ghutra trắng trên kandura
+  trắng — ngoài đời thứ tách chúng là sợi dây agal ĐEN mà bộ từ vựng chưa có). Ép chúng tương phản
+  là mua một con số bằng cách nói dối lịch sử, đúng thứ ADR-025 cấm. Ghi thành **ngoại lệ tường
+  minh đếm được** `assert.deepEqual(khôngTáchKhỏiÁo, [12, 15])` — kỷ thứ ba rơi vào là đỏ, mà một
+  trong hai kỷ này được sửa cũng đỏ.
+- **Năm kỷ có `headMaterial` TRƠ** (1 · 3 · 12 · 13 · 14 — không đội gì, hoặc búi tóc lấy vai `hair`,
+  hoặc mũ trụ lấy vai `gear`). Khai một trường mà nó không đổi được điểm ảnh nào là chỗ ẩn náu tốt
+  cho một lỗi ⇒ danh sách ấy được khoá bằng `assert.deepEqual(trơ, [1, 3, 12, 13, 14])`.
+- **Nón lá kỷ 6 nay che gần trọn thân người** khi nhìn từ góc mặc định. Đây là hệ quả hình học đã
+  biết (nón lá thật rộng ~2,5 lần đầu) và nó đã được ghi thành ngoại lệ `[6, 7]` của phép đo hình
+  bóng ở `humanPose.test.js`. Đổi lại, kỷ 6 nay nhận ra được ngay từ xa.
+
+### Ảnh hưởng
+`palette3d.js` (vai `straw`, đổi tên `sacKy`) · `humanStyle.js` (trục `headMaterial`, 15 dòng) ·
+`human.js` (`HUMAN_ROLES` 6 vai, `headgearBox` nhận vật liệu) · `sceneGraph.js` (một dòng bảng màu)
+· 3 file test. Tam giác và lệnh vẽ **không đổi một đơn vị**.
+
+### Điều kiện xem lại
+Khi có kỷ thứ 16, hoặc khi ai đó muốn tách vai `gear` (nay đang gánh gỗ + xương + kim loại — cùng
+hình dạng lỗi, xem `TECH_DEBT #79`).
+
+---
+
 ## ADR-053 — Cư dân là một BỘ XƯƠNG có khớp, dựng bằng MỘT InstancedMesh hộp đơn vị; dáng đi là hàm của QUÃNG ĐƯỜNG đã đi, không phải của thời gian
 
 - **Ngày**: 2026-08-22

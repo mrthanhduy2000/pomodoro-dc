@@ -494,9 +494,11 @@
 │   │   │   │                      #   số, không đụng `Date` (tầng ngoài lo lấy giờ Việt Nam)
 │   │   │   ├── humanStyle.js      # BẢNG CON NGƯỜI 15 KỶ (2026-08-22, ADR-053): tỉ lệ cơ thể ·
 │   │   │   │                      #   dáng đứng · trang phục · đội đầu · đồ mang theo · sải chân ·
-│   │   │   │                      #   tốc độ · biên độ vung tay · màu vải. `country` KHOÁ vào
-│   │   │   │                      #   eraStyle.js (test bắt). 14 kỷ chưa làm trỏ preset CÓ TÊN
-│   │   │   │                      #   `mocPhoThong` — test in ra "đã thiết kế thật: N/15 kỷ"
+│   │   │   │                      #   tốc độ · biên độ vung tay · màu vải · VẬT LIỆU ĐỘI ĐẦU.
+│   │   │   │                      #   `country` KHOÁ vào eraStyle.js (test bắt). ĐỦ 15/15 kỷ từ
+│   │   │   │                      #   2026-08-23 — test in ra "đã thiết kế thật: N/15 kỷ"
+│   │   │   │                      #   ⚠️ headMaterial natural/dyed (ADR-054): nón lá và cái quần
+│   │   │   │                      #   KHÔNG cùng một lò nhuộm. TRƠ ở 5 kỷ, danh sách có test khoá
 │   │   │   ├── human.js           # THƯ VIỆN HÌNH NGƯỜI: đầu · thân · tay · chân · đội đầu · đồ
 │   │   │   │                      #   mang theo, mỗi hộp gắn MỘT khớp + MỘT vai màu. Hệ toạ độ
 │   │   │   │                      #   riêng: +x = hướng đi · +y = lên · +z = bên TRÁI người
@@ -510,6 +512,11 @@
 │   │   │   │                      #   gian, không phải biến cộng dồn (test được + rời tab đúng)
 │   │   │   │                      #   ⚠️ CHỈ lo "bao nhiêu người, đi đâu". Dáng đi nằm ở
 │   │   │   │                      #   humanPose.js — hai chỗ không được cùng khai một luật
+│   │   │   ├── humanIdentity.test.js # CHẤM BẢN SẮC CON NGƯỜI, hai bộ chấm ĐỘC LẬP:
+│   │   │   │                      #   (A) "bảng có thật không" — 9 trục × 105 cặp
+│   │   │   │                      #   (B) "Đàm có THẤY không" — CHỈ trục đo được trên ngưỡng mắt
+│   │   │   │                      #   ⚠️ build/legShare/stance/armSwing CỐ Ý vắng mặt ở (B):
+│   │   │   │                      #   trải rộng tối đa 2,05/3,13/1,35/3,01 điểm ảnh — dưới 4
 │   │   │   ├── pick.js            # CHẠM VÀO CÔNG TRÌNH: hộp bao + tia cắt hộp, THUẦN
 │   │   │   │                      #   ⚠️ Không dùng Raycaster của three: cả thành phố gộp thành
 │   │   │   │                      #   MỘT mesh (1 lệnh vẽ), ném tia vào đó chỉ biết trúng "thành
@@ -675,6 +682,7 @@
 | `node scripts/shot.mjs --phone --fit` | có nút nào chữ tràn / bị xén / bị dấu "…" cắt không |
 | `node scripts/shot.mjs --phone --fit --el "<chữ>"` | font-size/padding/overflow THẬT của một phần tử (dùng khi `--fit` và mắt bất đồng) |
 | `node scripts/city-preview.mjs --sweep --all` | dựng bảng 15 kỷ × 6 chặng ngày thành MỘT tấm ảnh |
+| `node --import ./scripts/register-esm-loader.mjs scripts/human-strip.mjs` | **dán 15 cư dân cạnh nhau, phóng 5 lần, để MẮT chấm.** Vị trí cư dân được ĐO từ mặt nạ GPU (`--mask residents`), KHÔNG dựng lại camera — bài học *một luật hai công thức*. KHÔNG có cache: cổng `[ -f ]` là quả mìn *tên file làm bằng chứng về nội dung file*. Chính công cụ này đã phơi ra lỗi «15 kỷ một màu vải» của ADR-054 mà mọi cổng số đều báo xanh |
 | `node scripts/sweep-score.mjs <ảnh quét>` | **chấm** bảng đó: 15 cặp chặng + 105 cặp kỷ, cặp nào dưới ngưỡng mắt. Ruột phép đo nằm ở `scripts/sweepMetric.mjs` (thuần, có `sweepMetric.test.js` canh) — file `sweep-score.mjs` chỉ là lớp vỏ đọc `process.argv` + in bảng, nên **đừng chép công thức sang chỗ khác, hãy `import` từ `sweepMetric.mjs`** |
 | `node scripts/shadow-score.mjs <ảnh>` | **chấm bóng đổ**: sàn độ sáng · % khung hình bị nghiền · khoảng cách sáng-tối · độ tươi · chênh sắc nóng-lạnh. Đo PHÂN BỐ chứ không chấm vài điểm — chấm tay rất dễ trúng mặt đường (vật liệu đen sẵn) rồi ghi công cho bóng đổ. `--selftest` có 5 ca, trong đó một ca tách riêng "chữa đúng" khỏi "chữa ngây thơ làm nhạt ảnh" |
 | `node scripts/png-probe.mjs <ảnh> --top 10` | màu THẬT trên màn hình tại một điểm/vùng |

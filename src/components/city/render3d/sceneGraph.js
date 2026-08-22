@@ -1294,6 +1294,8 @@ export function createCityScene({
       skin: palette.roles?.skin ?? palette.wall,
       cloth: palette.roles?.cloth ?? palette.roof,
       cloth2: palette.roles?.cloth2 ?? palette.roles?.trim ?? palette.roof,
+      // Sợi mộc (nón lá, mũ rơm, khăn lanh) — xem `humanStyle.js` mục `HEAD_MATERIALS`.
+      straw: palette.roles?.straw ?? palette.roles?.cloth2 ?? palette.roof,
       hair: palette.roles?.hair ?? palette.roles?.dark ?? palette.wall,
       gear: palette.roles?.gear ?? palette.roles?.wood ?? palette.wall,
     };

@@ -6,14 +6,16 @@
 > chọn: `ARCHITECTURE_DECISIONS.md`. Nợ kỹ thuật: `TECH_DEBT.md`. Migration: `MIGRATION.md`. Tóm
 > tắt theo mốc: `CHANGELOG.md`.
 > **NGUYÊN TẮC ƯU TIÊN SỐ 1:** (1) mọi phiên AI phải đọc file này + `CLAUDE.md` + các file liên quan TRƯỚC khi làm; (2) sau MỌI cập nhật dù nhỏ, phải cập nhật ngay file này + `CLAUDE.md` + các file liên quan khác.
-> Cập nhật lần cuối: **2026-08-23** — **ĐÃ LÊN PRODUCTION.** `main` nhận 13 commit (11 của các
-> phiên khác: Phase 13 VIỆC B + Phase 14 §1, ADR-046→052 — chúng chưa từng lên production trước
-> hôm nay). Bộ test nay **XANH SẠCH 0 đỏ**: bài `useTimer.test.js` đỏ vĩnh viễn hoá ra là **phép
-> đo già đi** (chờ cứng 500 ms trong khi `BREAK_START_DELAY_MS` đã lên 3200), đã vá bằng cách đọc
-> thẳng hằng số sản phẩm rồi đưa cả 41 bài vào repo. Và một chú thích của chính tôi đã bị số đo
-> bác bỏ: `stature: 1.18` KHÔNG phải *"sự thật nhân chủng học"* mà là **phóng đại có khai báo**
-> (tỉ số thật 1,07–1,10). Trên iPhone thì **10/11 trục bản sắc cư dân không đọc ra được** — đã đo,
-> đã ghi thẳng vào `TECH_DEBT #78` thay vì im lặng.
+> Cập nhật lần cuối: **2026-08-23 (chiều)** — **CON NGƯỜI CÓ BẢN SẮC Ở ĐỦ 15 KỶ**, và một cái
+> **nón lá màu đen** đã tố cáo hai lỗi mà mọi cổng số đều báo xanh (ADR-054). Lỗi thứ nhất **đang
+> chạy trên production**: ở `palette3d.js`, tham số `era` bị một biến MÀU cùng tên che khuất, nên
+> `getFloraStyle`/`getHumanStyle` nhận một object màu rồi rơi về kỷ 1 ⇒ **15 kỷ dùng chung một màu
+> lá và một màu vải**, tức mảng "mỗi kỷ một `leafHue`" của Phase 8D **chưa bao giờ chạy thật**. Lỗi
+> thứ hai: vai `cloth2` gánh cả QUẦN lẫn ĐỘI ĐẦU, nên nón lá và cái quần bị buộc cùng một lò nhuộm
+> — nón lá kỷ 6 render ra độ đậm **0,170**, tối thứ nhì cả bảng. Vá bằng vai màu thứ sáu `straw` +
+> trục bảng `headMaterial`, **tốn 0 lệnh vẽ và 0 tam giác**: 0,170 → **0,879**. Bài học lớn nhất
+> phiên này: *một cổng số xanh không chứng minh được gì với mắt — phải DÁN 15 thứ cạnh nhau rồi
+> NHÌN.*
 > (Mốc trước, 2026-08-22) **CƯ DÂN CÓ KHỚP XƯƠNG, KỶ 1 CÓ BẢN SẮC CON NGƯỜI RIÊNG.**
 > Hai cái hộp + một sóng sin nay thành **9 hộp gắn 6 khớp**, xoay ở tầng ma trận, gộp trong **MỘT**
 > `InstancedMesh` hộp đơn vị ⇒ lệnh vẽ cả cảnh **GIẢM 11 → 10**, tam giác cư dân 672 → 3.024 =
@@ -1562,6 +1564,59 @@
 - **Lịch sử git `main` từng bị xáo** (thao tác git song song): bản đang chạy là `eb44638` — chứa ĐỦ mọi việc gần đây (Hỏi Coach offline + fix đêm khuya + Coach offline analyst). Vài commit cũ (`1e27505`, `9fbcd62`) thành dangling, KHÔNG còn trong `git log` nhưng code vẫn nằm trong bản deploy. Đừng hoảng nếu không thấy chúng.
 
 ## 🗒️ Nhật ký cập nhật
+
+### 2026-08-23 (chiều) — Bản sắc con người đủ 15 kỷ, và một cái nón lá màu đen tố cáo hai lỗi (ADR-054)
+
+**Việc**: đóng `TECH_DEBT #78` — 14/15 kỷ còn dùng chung một mốc người phổ thông.
+
+**Đã làm**
+1. **`humanStyle.js` — thiết kế thật đủ 15 dòng.** Mỗi dòng buộc vào `country` mà `eraStyle.js`
+   khai và có `note` giải thích, không dòng nào còn trỏ preset. 15 bộ ba (trang phục · đội đầu · đồ
+   mang) phân biệt nhau, phủ trọn cả ba bộ từ vựng.
+2. **Sửa một lỗi ĐƠN VỊ trong `cadenceOf`.** Nó tự xưng là "chu kỳ mỗi giây" mà trả về
+   `walkSpeed / stride`, trong khi `stride` đo bằng **bội số cẳng chân** — mà cẳng chân chênh 1,37
+   lần qua 15 kỷ, đủ để **xếp sai thứ tự** kỷ 6 với kỷ 14. Nó sống sót vì khi chỉ có MỘT kỷ được
+   thiết kế thì không có thứ tự nào để mà sai. `HUMAN_BASE_HEIGHT` chuyển sang `humanStyle.js`
+   (`human.js` `import` rồi `export` lại) — chép số 0,2 sang là "một luật hai công thức".
+3. **⚠️ TÌM RA MỘT LỖI ĐANG CHẠY TRÊN PRODUCTION** (ADR-054 phần 1). `buildScenePalette` nhận tham
+   số `era` (SỐ KỶ), đổi tên nó thành `eraNumber`, rồi gán đè một `const era` khác — một MÀU. Hai
+   dòng cuối hàm gọi `getFloraStyle(era)` / `getHumanStyle(era)` trông hoàn toàn đúng và thật ra
+   đang truyền một object màu; cả hai hàm cố ý rơi về kỷ 1 với dữ liệu lạ ⇒ **15 kỷ dùng chung một
+   màu lá và một màu vải**. Mảng "mỗi kỷ một `leafHue`" của **Phase 8D chưa bao giờ chạy thật**.
+   Build xanh, lint sạch, mọi test xanh, không một cảnh báo nào. Vá gốc bằng cách đổi tên biến màu
+   thành `sacKy` và truyền `eraNumber`; khoá bằng test có đối chứng nhốt bộ hỏng cũ.
+4. **⚠️ TÁCH VAI MÀU `straw`** (ADR-054 phần 2). Mọi thứ đội đầu bằng vải đều lấy vai `cloth2` — mà
+   `cloth2` là màu QUẦN, suy ra bằng `cloth × 0,66` ⇒ **nón lá và cái quần bị buộc cùng một lò
+   nhuộm**, và nón vĩnh viễn tối hơn áo. Đo 15 kỷ: nón lá kỷ 6 ra độ đậm **0,170**, tối thứ nhì cả
+   bảng. Thêm trục bảng `headMaterial ∈ {natural, dyed}` (bắt buộc 15 dòng, validator TỪ CHỐI
+   thẳng) + vai màu thứ sáu `straw`. **Giá: 0 lệnh vẽ, 0 tam giác.** Sau vá: **0,170 → 0,879**.
+5. **Sửa hai hàm đo tìm bộ phận theo VAI MÀU** trong `humanIdentity.test.js` — mũ trụ kỷ 12 cũng
+   mang vai `gear` và đứng trước trong danh sách hộp, nên trục "đồ mang" của kỷ ấy xưa nay đo nhầm
+   **cái mũ (2,2 px) thay vì khẩu súng (22,7 px)**. Nay hỏi theo `id`. Đúng bẫy Phase 8A.
+6. **Công cụ mới `scripts/human-strip.mjs`** — dán 15 cư dân cạnh nhau, phóng 5 lần. Vị trí ĐO từ
+   mặt nạ GPU chứ không dựng lại camera. Chính nó phơi ra mục 3.
+
+**Số nghiệm thu**: 1113 bài nhanh (1112 xanh · 1 bỏ qua có chủ đích) + 3 bài đối chiếu chéo · lint
+sạch · build OK. Bản sắc: (A) 105/105 cặp, yếu nhất 5/9 trục, trung vị 8/9; (B) 105/105 cặp khác
+nhau ở ít nhất một thứ mắt đọc được ở 18 điểm ảnh. Đội đầu: sợi mộc 2·5·6·7·8·15 · vải nhuộm
+4·9·10·11 · trơ 1·3·12·13·14.
+
+**Ngoại lệ đã ghi tường minh (KHÔNG nới ngưỡng)**: kỷ 12 và 15 có đội đầu không tách khỏi áo, và
+**cả hai đều đúng sự thật vật lý** — mũ sắt SSh-40 Stalingrad được SƠN đúng màu áo bông để nguỵ
+trang; ghutra trắng trên kandura trắng ngoài đời cũng không tách nhau (thứ tách chúng là sợi agal
+đen, bộ từ vựng chưa có). `assert.deepEqual(khôngTáchKhỏiÁo, [12, 15])`.
+
+**Ba câu tự trấn an bị chính số đo bác bỏ trong phiên này**
+- *"màu `straw` chắc cháy trắng vì nắng nhân 2,15"* → đo điểm ảnh thật: `rgb(216,214,199)`, **0%
+  cháy**. Giữ nguyên giá trị, không chỉnh gì.
+- *"nhánh `?? era` là một cái gác"* → nó là **nhánh CHẾT** (`getEraStyle` rơi về kỷ 1 với mọi đầu
+  vào lạ nên `roofColor` luôn parse được), nên khi nó còn viết `?? era` thì **không bài test nào có
+  thể đỏ** — thứ duy nhất bắt được là `no-undef` của ESLint.
+- *"kỷ 12 và 15 là khuyết tật"* → không: chúng là sự thật vật lý, ép tương phản là nói dối lịch sử.
+
+**Nợ mới**: `TECH_DEBT #79` — vai `gear` gánh ba vật liệu (gỗ · xương · kim loại). **Đã đóng**: #78.
+
+---
 
 ### 2026-08-23 — Dọn ba thứ trước khi deploy, và một câu tự trấn an bị chính số đo bác bỏ
 

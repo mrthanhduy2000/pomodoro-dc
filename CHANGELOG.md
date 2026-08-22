@@ -12,6 +12,28 @@
 
 ---
 
+## 2026-08-23 (chiều) — Con người có bản sắc ở đủ 15 kỷ; và một cái nón lá màu đen đã tố cáo hai lỗi
+
+- **Mục đích**: hoàn tất `TECH_DEBT #78` (14/15 kỷ còn dùng chung một mốc người phổ thông), rồi
+  **nhìn bằng mắt** thay vì dừng ở cổng số.
+- **Phạm vi + ảnh hưởng**:
+  - `humanStyle.js`: **15/15 dòng được thiết kế thật**, không kỷ nào còn trỏ preset. Mỗi dòng buộc
+    vào `country` mà `eraStyle.js` khai, kèm `note` giải thích. Chấm được: 105/105 cặp kỷ khác nhau,
+    yếu nhất 5/9 trục, trung vị 8/9; và 105/105 cặp khác nhau ở ít nhất một thứ **mắt đọc được**.
+  - **Sửa một lỗi ĐANG CHẠY TRÊN PRODUCTION** (ADR-054): trong `palette3d.js`, tham số `era` bị đổi
+    tên rồi bị một biến MÀU cùng tên che khuất, nên `getFloraStyle`/`getHumanStyle` nhận một object
+    màu và rơi về kỷ 1 ⇒ **15 kỷ dùng chung một màu lá và một màu vải**. Mảng "mỗi kỷ một `leafHue`"
+    của Phase 8D chưa từng chạy thật. Không cổng nào đỏ; nó chỉ lộ ra khi dán 15 cư dân cạnh nhau.
+  - **Tách vai màu `straw`** khỏi `cloth2` + trục bảng `headMaterial` (ADR-054): nón lá kỷ 6 đi từ độ
+    đậm **0,170 lên 0,879**; sáu kỷ sợi mộc được sửa, bốn kỷ vải nhuộm giữ nguyên vì tối là đúng.
+  - Sửa hai hàm đo trong `humanIdentity.test.js` tìm bộ phận theo **vai màu** — mũ trụ kỷ 12 cũng
+    mang vai `gear` nên trục "đồ mang" của kỷ ấy xưa nay đo nhầm cái mũ thay vì khẩu súng.
+  - Công cụ mới `scripts/human-strip.mjs`; nợ mới `TECH_DEBT #79` (vai `gear` gánh ba vật liệu).
+- **Tương thích**: **tam giác và lệnh vẽ không đổi một đơn vị**. Người dùng không phải làm gì.
+- **Số**: 1113 bài nhanh (1112 xanh, 1 bỏ qua có chủ đích) + 3 bài đối chiếu chéo · lint sạch · build OK.
+
+---
+
 ## 2026-08-23 — Dọn ba thứ trước khi deploy: bài test đỏ vĩnh viễn, luật gộp `main`, và một lý do đi sau con số
 
 - **Mục đích**: ba việc dọn dẹp, không thêm tính năng. Cả ba đều là *"thứ đang sai mà không có gì

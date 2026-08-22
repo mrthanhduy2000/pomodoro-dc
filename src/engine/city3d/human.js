@@ -37,21 +37,27 @@
  * phép xoay nghiêng nằm ở tầng ma trận của three trong `sceneGraph.js`, nơi nó vốn đã miễn phí.
  */
 
-import { getHumanStyle } from './humanStyle';
+import { HUMAN_BASE_HEIGHT, getHumanStyle } from './humanStyle';
 
 /**
  * Chiều cao cư dân cỡ chuẩn, đơn vị ô. `stature` của mỗi kỷ nhân vào con số này.
- * ⚠️ SỐ NÀY GIỮ NGUYÊN 0,2 — bằng đúng `RESIDENT_HEIGHT` cũ. Nhà cửa, camera và bản quét 15 kỷ đều
- * đã hiệu chuẩn quanh nó; đổi nó là đổi cân đối của cả cảnh, và đó là một quyết định mỹ thuật
- * riêng, không phải một hệ quả của việc thêm tay chân.
+ * ⚠️ ĐỊNH NGHĨA ĐÃ CHUYỂN SANG `humanStyle.js` (2026-08-23), ở đây chỉ `export` LẠI để mọi chỗ gọi
+ * cũ không phải đổi. Lý do chuyển: `cadenceOf` cần chiều dài cẳng chân mới ra ĐÚNG ĐƠN VỊ, mà file
+ * này thì `import` `humanStyle.js` nên không thể `import` ngược lại; chép số 0,2 sang bên ấy là
+ * "một luật hai công thức". Xem chú thích tại chỗ định nghĩa.
+ * ⚠️ Vẫn GIỮ NGUYÊN 0,2 — bằng đúng `RESIDENT_HEIGHT` cũ. Nhà cửa, camera và bản quét 15 kỷ đều đã
+ * hiệu chuẩn quanh nó; đổi nó là đổi cân đối của cả cảnh.
  */
-export const HUMAN_BASE_HEIGHT = 0.2;
+export { HUMAN_BASE_HEIGHT };
 
 /**
  * Vai màu. Năm vai, không hơn — mỗi vai là một màu phải tính ra rồi nhồi vào `instanceColor`, và
  * ở cỡ 14 điểm ảnh thì vai thứ sáu không đọc ra được nữa.
  */
-export const HUMAN_ROLES = ['skin', 'cloth', 'cloth2', 'hair', 'gear'];
+// ⚠️ `straw` LÀ VAI THỨ SÁU, THÊM 2026-08-23, VÀ NÓ TỐN ĐÚNG 0 LỆNH VẼ + 0 TAM GIÁC — cả cộng
+// đồng đi qua MỘT `InstancedMesh` và màu vào qua `setColorAt`, nên số vai màu không phải một
+// ngân sách. Xem `humanStyle.js` mục `HEAD_MATERIALS` để biết vì sao nó phải tách khỏi `cloth2`.
+export const HUMAN_ROLES = ['skin', 'cloth', 'cloth2', 'straw', 'hair', 'gear'];
 
 /** Tên các khớp. `sceneGraph.js` và `humanPose.js` cùng đọc danh sách này — một chỗ khai duy nhất. */
 export const HUMAN_JOINTS = ['torso', 'head', 'shoulderL', 'shoulderR', 'hipL', 'hipR'];
@@ -168,8 +174,16 @@ function garmentBox(kind, d) {
   }
 }
 
-/** ĐỘI ĐẦU. Gắn vào khớp `head` nên nó nghiêng theo đầu. */
-function headgearBox(kind, d) {
+/**
+ * ĐỘI ĐẦU. Gắn vào khớp `head` nên nó nghiêng theo đầu.
+ *
+ * ⚠️ VAI MÀU CỦA NÓ KHÔNG SUY TỪ `kind` MÀ TỪ `material` — hai cái mũ CÙNG HÌNH có thể khác
+ * VẬT LIỆU (mũ rơm Firenze và mũ phớt New York đều là `brim`), và vật liệu mới là thứ quyết
+ * định nhạt hay sẫm. Suy từ `kind` là dựng lại đúng cái bẫy vừa gỡ.
+ */
+function headgearBox(kind, d, material) {
+  // Sợi mộc thì NHẠT hơn áo; vải nhuộm thì cùng lò với quần nên SẪM hơn áo.
+  const vaiVai = material === 'natural' ? 'straw' : 'cloth2';
   switch (kind) {
     case 'none':
       return null;
@@ -178,11 +192,11 @@ function headgearBox(kind, d) {
         [d.headW * 0.46, d.headH * 0.44, d.headW * 0.46],
         [-d.headW * 0.10, d.headH * 1.08, 0]);
     case 'headcloth':
-      return box('headgear', 'cloth2', 'head',
+      return box('headgear', vaiVai, 'head',
         [d.headW * 1.16, d.headH * 0.92, d.headW * 1.20],
         [-d.headW * 0.06, d.headH * 0.66, 0]);
     case 'brim':
-      return box('headgear', 'cloth2', 'head',
+      return box('headgear', vaiVai, 'head',
         [d.headW * 1.9, d.headH * 0.16, d.headW * 1.9],
         [0, d.headH * 1.02, 0]);
     case 'helm':
@@ -190,11 +204,11 @@ function headgearBox(kind, d) {
         [d.headW * 1.06, d.headH * 0.78, d.headW * 1.06],
         [0, d.headH * 0.86, 0]);
     case 'cap':
-      return box('headgear', 'cloth2', 'head',
+      return box('headgear', vaiVai, 'head',
         [d.headW * 1.22, d.headH * 0.34, d.headW * 1.08],
         [d.headW * 0.14, d.headH * 0.92, 0]);
     case 'conical':
-      return box('headgear', 'cloth2', 'head',
+      return box('headgear', vaiVai, 'head',
         [d.headW * 2.2, d.headH * 0.34, d.headW * 2.2],
         [0, d.headH * 1.04, 0]);
     default:
@@ -279,7 +293,7 @@ export function buildHumanBody(era) {
 
   const garment = garmentBox(style.garment, d);
   if (garment) parts.push(garment);
-  const headgear = headgearBox(style.headgear, d);
+  const headgear = headgearBox(style.headgear, d, style.headMaterial);
   if (headgear) parts.push(headgear);
   const carry = carryBox(style.carry, d);
   if (carry) parts.push(carry);

@@ -4384,7 +4384,49 @@ cấp `Math.min(3,…)` → `Math.min(9,…)` · cắt bớt danh sách cấp th
 
 ---
 
-## #78 — 14/15 kỷ vẫn dùng chung MỘT mốc người phổ thông (chỉ kỷ 1 có bản sắc thật)
+## #79 — Vai màu `gear` gánh BA vật liệu (gỗ · xương · kim loại), nên mũ sắt kỷ 12 lẫn vào áo bông
+
+- **Tên**: `gear` là một vai màu, ba vật liệu
+- **Module**: `src/engine/city3d/palette3d.js` (vai `gear`) · `src/engine/city3d/human.js` (`carryBox`,
+  `headgearBox` kiểu `helm`)
+- **Priority**: Low · **Severity**: Low
+- **Impact**: Đo được: mũ trụ kỷ 12 cách áo bông **+0,011 độ đậm**, tức dưới ngưỡng mắt (0,047) **4,3
+  lần** ⇒ nó không đọc ra được ở khung mặc định. Cùng vai ấy còn tô cây giáo kỷ 1 (gỗ + đá lửa), bó
+  củi, cái vò gốm, cái cặp da và bộ đồ nghề — năm vật liệu khác nhau, một mã màu.
+- **Root Cause**: cùng hình dạng với khuyết tật vừa đóng ở ADR-054 (`cloth2` gánh quần + đội đầu),
+  chỉ khác chỗ. Chú thích của `gear` tự khai luôn là *"gỗ, xương, kim loại xỉn"* — ba thứ trong một
+  dòng, và ai đọc cũng lướt qua vì nó nghe như một lời mô tả chứ không như một lời thú nhận.
+- **Current Risk**: Thấp và **có phần là sự thật**. Mũ SSh-40 Stalingrad ngoài đời được SƠN đúng màu
+  áo bông để nguỵ trang, nên riêng kỷ 12 thì tương phản thấp là ĐÚNG. Rủi ro thật nằm ở chỗ khác:
+  ngày nào có kỷ đội mũ trụ **thép trần** (Rus trung cổ, hiệp sĩ) thì nó sẽ ra màu gỗ.
+- **Future Risk**: Trung bình khi bộ từ vựng đồ mang theo dài ra. Một cái cặp da đen và một bó lúa
+  vàng cùng màu là thứ mắt bắt được ngay khi hai kỷ đứng cạnh nhau.
+- **Recommended Solution**: tách vai `metal` (xám lạnh, tươi thấp, độ đậm ~0,55) khỏi `gear`, rồi
+  cho `carryBox`/`headgearBox` chọn theo một trục vật liệu — **giống hệt cách ADR-054 đã làm cho đội
+  đầu**, và cũng tốn 0 lệnh vẽ, 0 tam giác. ⚠️ Nhưng phải trả lời TRƯỚC: cây giáo kỷ 1 là gỗ + đá,
+  không phải kim loại ⇒ trục ấy thuộc về từng ĐỒ VẬT của từng kỷ, không thuộc về `kind`.
+- **Estimated Complexity**: Nhỏ (một trục bảng + một vai màu + một bài test quan hệ).
+- **Blocking Conditions**: Không có. Hoãn vì hôm nay nó chỉ ảnh hưởng đúng một kỷ, và ở đúng kỷ ấy
+  thì tương phản thấp lại là sự thật lịch sử.
+- **Review Trigger**: khi thêm một kỷ đội mũ kim loại trần, HOẶC khi bộ từ vựng `CARRY_KINDS` vượt 8
+  giá trị.
+- **Owner**: chưa ai · **Status**: mở
+
+---
+
+## #78 — 14/15 kỷ vẫn dùng chung MỘT mốc người phổ thông (chỉ kỷ 1 có bản sắc thật) — ✅ ĐÃ ĐÓNG 2026-08-23
+
+> **✅ ĐÃ ĐÓNG 2026-08-23.** Cả 15 dòng nay được thiết kế thật, mỗi dòng buộc vào `country` mà
+> `eraStyle.js` khai và có `note` giải thích. `designedEras()` báo **15/15**, không kỷ nào còn trỏ
+> preset. Bộ chấm `humanIdentity.test.js` đo được: (A) 105/105 cặp khác nhau, yếu nhất **5/9 trục**
+> (kỷ 4↔15), trung vị **8/9**; (B) 105/105 cặp khác nhau ở ít nhất một thứ **mắt đọc được ở 18
+> điểm ảnh**. Tam giác không đổi (tối đa 9 hộp/người, 2,03% ngân sách).
+> ⚠️ **Mục *«phần nào của việc này chỉ phục vụ máy bàn»* bên dưới VẪN NGUYÊN GIÁ TRỊ** — nó là kết
+> luận đã đo, không phải một việc còn dở: trên iPhone 10/11 trục bản sắc không đọc ra được. Ba
+> hướng ĐỀ XUẤT ở mục Recommended Solution chưa hướng nào được làm.
+> ⚠️ Và một khuyết tật do chính việc này phơi ra đã được vá riêng ở **ADR-054**: 15 kỷ từng dùng
+> chung MỘT màu vải và MỘT màu lá vì một tham số bị một biến cùng tên che khuất ở `palette3d.js`.
+
 
 - **Tên**: `HUMAN_STYLES` mới thiết kế thật 1/15 dòng
 - **Module**: `src/engine/city3d/humanStyle.js` (bảng) · `src/engine/city3d/human.js` (thư viện hình

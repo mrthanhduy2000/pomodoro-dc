@@ -20,6 +20,7 @@ import {
   footContactAt,
   footOffsetAt,
   partCenterAt,
+  partCornersAt,
   poseAt,
   silhouetteSpanX,
 } from './humanPose.js';
@@ -142,30 +143,94 @@ test('BIÊN ĐỘ KHỚP CÓ TRẦN: tay không quay như chong chóng, chân kh
   }
 });
 
+/**
+ * Bề rộng hình bóng (theo TRỤC ĐI) của một TẬP CON các bộ phận, tại một quãng đường đã đi.
+ * `silhouetteSpanX` của mã sản phẩm lấy TOÀN BỘ bộ phận; hàm này cho phép hỏi riêng "chỉ hai chân"
+ * — xem lý do ở bài test ngay dưới.
+ */
+function spanCua(body, parts, travelled) {
+  const pose = poseAt(body, travelled);
+  let lo = Infinity;
+  let hi = -Infinity;
+  for (const part of parts) {
+    for (const c of partCornersAt(part, pose)) {
+      if (c.x < lo) lo = c.x;
+      if (c.x > hi) hi = c.x;
+    }
+  }
+  return hi - lo;
+}
+
+const chanCua = (body) => body.parts.filter((q) => q.joint === 'hipL' || q.joint === 'hipR');
+
 test('HÌNH BÓNG ĐỔI THEO PHA BƯỚC — và mô hình 2 hộp cũ ra ĐÚNG 0', () => {
   // ⚠️ SO PHA 0 VỚI PHA 0,25 — KHÔNG PHẢI 0,5, VÀ ĐÂY LÀ MỘT CÁI BẪY THẬT.
   // Yêu cầu ban đầu ghi "đo bề ngang ở pha 0 và pha 0,5". Nhưng ở pha 0,5 hai chân chỉ ĐỔI CHỖ
   // cho nhau: chân trái đang ở trước thì thành chân phải ở trước. Hình bóng là ẢNH GƯƠNG của pha
-  // 0, tức **bề rộng y hệt**, và phép đo sẽ ra 0 trên một dáng đi hoàn toàn đúng. Đó chính là loại
-  // phép đo "về mặt cấu trúc không thể thấy thứ nó đang hỏi" mà Phase 9B đã trả giá (đo phân bố
-  // độ sáng để tìm mép bóng mềm). Bề rộng nhỏ nhất nằm ở pha 0,25 — lúc hai chân chụm và hai tay
-  // buông thẳng. Đó mới là cực trị đối diện.
+  // 0, tức **bề rộng y hệt**, và phép đo sẽ ra 0 trên một dáng đi hoàn toàn đúng. Bề rộng nhỏ
+  // nhất nằm ở pha 0,25 — lúc hai chân chụm và hai tay buông thẳng.
+  //
+  // ⚠️ VÀ ĐÂY LÀ BẢN VÁ THỨ HAI (2026-08-23) — LẦN NÀY PHÉP ĐO BỊ PHA LOÃNG BỞI NHỮNG BỘ PHẬN
+  // **ĐỨNG YÊN MÀ RỘNG**, VÀ NÓ CHỈ LỘ RA KHI BẢNG ĐỦ 15 KỶ.
+  // Bản cũ đo bề rộng CẢ NGƯỜI. Khi chỉ có kỷ 1 (búi tóc bé) thì bề rộng ấy do hai chân quyết, nên
+  // nó đúng là "dáng đi đổi bao nhiêu". Thêm 14 kỷ thì nón lá kỷ 6 **rộng hơn cả sải chân**
+  // (1,12 lần) và mũ vành kỷ 7 gần bằng (0,92 lần) — cái đĩa ấy quyết cả `min` lẫn `max` ở CẢ HAI
+  // pha, nên hiệu số về gần 0 (kỷ 6: **2,1%**) trong khi hai chân vẫn tách ra **31,7%**. Cơ chế
+  // chạy hoàn hảo; phép đo mù.
+  // ⇒ Cùng đúng hình dạng `TECH_DEBT #22` (trung bình trên vùng quá rộng pha loãng tín hiệu ~10
+  // lần) và bài học ngân sách tam giác 2026-08-17 (hằng số nền pha loãng 43% xuống 16%): **một
+  // phần con số KHÔNG ĐỔI qua các trường hợp đang so thì phần đó phải được tách ra**.
+  // ⇒ Nên nay có HAI phép đo, mỗi phép trả lời một câu:
+  //     (A) CHỈ HAI CHÂN  → "cơ chế dáng đi có chạy không?"  — mọi kỷ phải đạt.
+  //     (B) CẢ NGƯỜI      → "đường bao NGOÀI có đổi không?" — có ngoại lệ, và ngoại lệ được ĐẾM.
   const RỘNG = 0;
   const HẸP = 0.25;
 
+  // ── (A) CƠ CHẾ: hai chân phải tách ra, ở CẢ 15 KỶ ───────────────────────────────────────────
+  // Ngưỡng 0,20 chiều cao người. ⚠️ ĐO BIÊN chứ đừng chỉ đọc xanh/đỏ (bài học Phase 9B): sàn thật
+  // đo được là **25,1% ở kỷ 4** (áo chấm sàn + sải ngắn nhất bộ), tức biên 25%. Trần là 45,2% ở
+  // kỷ 1. Nếu một phase sau kéo sàn ấy xuống dưới 20% thì cái đỏ là ĐÚNG, đừng nới ngưỡng.
+  const banA = [];
   for (const era of ERAS) {
     const body = buildHumanBody(era);
     const { cycle } = poseAt(body, 0);
     const H = body.dims.height;
-    const rộng = silhouetteSpanX(body, cycle * RỘNG);
-    const hẹp = silhouetteSpanX(body, cycle * HẸP);
-    const chênh = (rộng - hẹp) / H;
-    // Ngưỡng 0,15 chiều cao người. Hiệu chuẩn: trên MacBook Air M3 một cư dân kỷ 1 cao trung vị
-    // 18,3 điểm ảnh (`scripts/human-scale.mjs`), nên 0,15 × chiều cao ≈ **2,7 điểm ảnh** — vừa
-    // đúng ngưỡng Nyquist để mắt đọc ra một thay đổi đường bao thay vì một chỗ răng cưa.
-    assert.ok(chênh > 0.15,
-      `kỷ ${era}: hình bóng chỉ đổi ${(chênh * 100).toFixed(1)}% chiều cao giữa hai pha`
-      + ` (rộng ${rộng.toFixed(4)} / hẹp ${hẹp.toFixed(4)}) — chưa đủ để mắt đọc ra là ĐANG ĐI`);
+    const chan = chanCua(body);
+    assert.equal(chan.length, 2, `kỷ ${era}: phải có đúng 2 khối chân, thấy ${chan.length}`);
+    const chenhChan = (spanCua(body, chan, cycle * RỘNG) - spanCua(body, chan, cycle * HẸP)) / H;
+    const chenhNguoi = (silhouetteSpanX(body, cycle * RỘNG) - silhouetteSpanX(body, cycle * HẸP)) / H;
+    banA.push({ era, chenhChan, chenhNguoi });
+
+    assert.ok(chenhChan > 0.20,
+      `kỷ ${era}: hai chân chỉ tách ${(chenhChan * 100).toFixed(1)}% chiều cao giữa hai pha`
+      + ' — cơ chế dáng đi không chạy');
+
+    // ⚠️ BẤT BIẾN CÓ RĂNG: đường bao NGOÀI không bao giờ được đổi NHIỀU HƠN hai chân. Thứ duy nhất
+    // chuyển động là chân và tay, mà tay thì gắn vào thân nên biên độ ngang của nó nhỏ hơn chân.
+    // Nếu vế này đỏ thì có một vật ĐỨNG YÊN đang đu đưa — đúng cái lỗi "cây giáo thành quả lắc" mà
+    // bài dưới bắt, chỉ khác là bài này bắt được cả những vật KHÔNG gắn vào tay cầm.
+    assert.ok(chenhNguoi <= chenhChan + 1e-9,
+      `kỷ ${era}: đường bao ngoài đổi ${(chenhNguoi * 100).toFixed(1)}% trong khi hai chân chỉ đổi`
+      + ` ${(chenhChan * 100).toFixed(1)}% — có thứ đứng yên đang đu đưa`);
+  }
+
+  // ── (B) ĐƯỜNG BAO NGOÀI: ngoại lệ phải ĐẾM ĐƯỢC, không được nới ngưỡng ───────────────────────
+  // ⚠️ `assert.deepEqual` chứ không phải "bao gồm": kỷ thứ ba rơi vào thì ĐỎ, mà kỷ 6 được chữa
+  // xong cũng ĐỎ. Một danh sách "bao gồm" là cách một bản vá lặng lẽ thành cái chăn trùm.
+  const CHE = banA.filter((r) => r.chenhNguoi < 0.06).map((r) => r.era);
+  assert.deepEqual(CHE, [6, 7],
+    `kỷ có đường bao ngoài gần như đứng yên: [${CHE}] — mong đợi đúng [6, 7]`);
+
+  // ⚠️ VÀ NGOẠI LỆ PHẢI ĐƯỢC GIẢI THÍCH, KHÔNG CHỈ ĐƯỢC DUNG THỨ. Cả hai kỷ ấy đội thứ RỘNG HƠN
+  // hoặc XẤP XỈ sải chân, nên cái đĩa quyết cả hai đầu hình bóng. Nếu ngày nào một kỷ lọt vào danh
+  // sách trên mà KHÔNG có nguyên nhân này thì đây là chỗ đỏ.
+  for (const era of CHE) {
+    const body = buildHumanBody(era);
+    const doiDau = body.parts.find((q) => q.joint === 'head' && q.role !== 'skin');
+    const saiChan = spanCua(body, chanCua(body), 0);
+    assert.ok(doiDau && doiDau.w >= saiChan * 0.9,
+      `kỷ ${era} có đường bao đứng yên nhưng KHÔNG phải vì đội đầu rộng`
+      + ` (${(doiDau?.w ?? 0).toFixed(4)} so với sải chân ${saiChan.toFixed(4)}) — đi tìm nguyên nhân thật`);
   }
 
   // ── ĐỐI CHỨNG: mô hình 2 hộp cũ ─────────────────────────────────────────────────────────────
@@ -181,12 +246,17 @@ test('HÌNH BÓNG ĐỔI THEO PHA BƯỚC — và mô hình 2 hộp cũ ra ĐÚN
   // ⚠️ VÀ PHẢI KIỂM RẰNG NÓ ĐO ĐƯỢC GÌ ĐÓ. Một phép đo luôn trả 0 cũng qua được assert trên; đó
   // đúng là cái bẫy "kết luận sạch từ một tập RỖNG" đã cắn `shot.mjs --fit`.
   assert.ok(rộngCũ > 0, 'phép đo ra 0 trên chính mô hình cũ ⇒ nó chưa hề đo gì');
+  // Và mô hình cũ KHÔNG có khối chân riêng — nên phép đo (A) phải trả về một tập rỗng ở đó, chứ
+  // không phải một con số nhỏ trông như "gần đúng".
+  assert.equal(chanCua(cũ).length, 0, 'mô hình 2 hộp mà có khối gắn vào khớp hông ⇒ đối chứng hỏng');
 
-  console.log(`[humanPose] kỷ 1: hình bóng đổi ${(
-    (silhouetteSpanX(buildHumanBody(1), 0)
-      - silhouetteSpanX(buildHumanBody(1), poseAt(buildHumanBody(1), 0).cycle * HẸP))
-    / buildHumanBody(1).dims.height * 100).toFixed(1)}% chiều cao giữa hai pha`
-    + ` · mô hình 2 hộp cũ: 0,0%`);
+  const sanA = banA.reduce((a, b) => (a.chenhChan < b.chenhChan ? a : b));
+  const sanB = banA.filter((r) => !CHE.includes(r.era))
+    .reduce((a, b) => (a.chenhNguoi < b.chenhNguoi ? a : b));
+  console.log(`[humanPose] 15 kỷ · hai chân tách ${(sanA.chenhChan * 100).toFixed(1)}%…`
+    + `${(Math.max(...banA.map((r) => r.chenhChan)) * 100).toFixed(1)}% chiều cao (sàn ở kỷ ${sanA.era})`
+    + ` · đường bao ngoài thấp nhất ngoài ngoại lệ: kỷ ${sanB.era} ${(sanB.chenhNguoi * 100).toFixed(1)}%`
+    + ` · nón lá kỷ 6 + mũ vành kỷ 7 che dáng đi ở đường bao · mô hình 2 hộp cũ: 0,0%`);
 });
 
 test('CÁI NHÚN là hệ quả của chân trụ, không phải một hàm sin riêng', () => {
@@ -250,7 +320,22 @@ test('TAY ĐANG CẦM ĐỒ gần như không vung — cây giáo không đượ
     // ⚠️ VÀ NHỐT LUÔN CON SỐ HỎNG CŨ. Không có vế này thì ngưỡng "một nửa" sẽ bị nới dần cho tiện.
     assert.ok(bận < 20 * Math.PI / 180,
       `kỷ ${era}: tay cầm đồ còn vung ${(bận * 180 / Math.PI).toFixed(1)}° — bản hỏng cũ là 52,7°`);
-    // Và tay rảnh vẫn phải vung THẬT, nếu không thì bài trên xanh nhờ cả hai tay cùng đứng im.
-    assert.ok(rảnh > 20 * Math.PI / 180, `kỷ ${era}: tay rảnh cũng đứng im — dáng đi chết cứng`);
+    // ⚠️ VÀ TAY RẢNH PHẢI VUNG THẬT — NHƯNG VUNG BAO NHIÊU LÀ CHUYỆN CỦA BẢNG, KHÔNG PHẢI CỦA BÀI
+    // TEST. Bản cũ viết `rảnh > 20°`, một MỨC TUYỆT ĐỐI hiệu chuẩn trên kỷ 1 (`armSwing` 0,46 ⇒
+    // 52,7°). Khi đủ 15 kỷ thì nó kêu OAN ở kỷ 6: người gánh đòn khai `armSwing` 0,12 nên tay rảnh
+    // vung 13,8° — ĐÚNG như bảng khai, và cái đỏ ấy là *phép đo già đi*, không phải mã hỏng. Đúng
+    // bẫy Phase 7D: một con số tuyệt đối không diễn đạt được một luật nói về QUAN HỆ.
+    // Nay hỏi chính cái quan hệ: biên độ tay rảnh phải bằng ĐÚNG `2 × armSwing` (vì
+    // `a = aTorso − swing·cos(2π·pha)`). Nếu cả hai tay cùng đứng im thì `rảnh ≈ 0` trong khi bảng
+    // khai 0,12 ⇒ vẫn ĐỎ. Chặt hơn bản cũ, và không thể già đi.
+    const khai = 2 * getHumanStyle(era).armSwing;
+    assert.ok(Math.abs(rảnh - khai) < 1e-9,
+      `kỷ ${era}: tay rảnh vung ${(rảnh * 180 / Math.PI).toFixed(1)}° trong khi bảng khai`
+      + ` armSwing ${getHumanStyle(era).armSwing} (⇒ phải là ${(khai * 180 / Math.PI).toFixed(1)}°)`
+      + ' — hoặc tay đứng im, hoặc có thứ khác đang ghì nó lại');
+    // Và bảng KHÔNG được khai `armSwing: 0` cho một kỷ có mang đồ: khi ấy vế "tay bận < nửa tay
+    // rảnh" thành 0 < 0 và cả bài mất răng.
+    assert.ok(getHumanStyle(era).armSwing > 0.05,
+      `kỷ ${era} mang đồ mà khai armSwing ${getHumanStyle(era).armSwing} — phép so hai tay mất nghĩa`);
   }
 });

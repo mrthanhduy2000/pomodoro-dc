@@ -226,7 +226,15 @@ export function roadContrastGap(offsetAbs, {
 export function buildScenePalette({ tokens, eraColor, era: eraNumber, daylight } = {}) {
   const t = { ...FALLBACK_TOKENS, ...(tokens ?? {}) };
   const base = parseCssColor(t.canvas2) ?? parseCssColor(FALLBACK_TOKENS.canvas2);
-  const era = parseCssColor(eraColor) ?? parseCssColor(t.accent) ?? parseCssColor(FALLBACK_TOKENS.accent);
+  // ⚠️ TÊN BIẾN NÀY TỪNG LÀ `era`, VÀ CÁI TÊN ẤY ĐÃ GIẾT HAI TÍNH NĂNG TRONG IM LẶNG.
+  // Tham số vào tên là `era` (một SỐ KỶ) nhưng bị đổi tên thành `eraNumber` ngay ở dòng khai báo,
+  // rồi một `const era` khác — một MÀU — được gán đè ngay bên dưới. Từ đó, mọi dòng viết
+  // `getXxxStyle(era)` trong thân hàm này trông hoàn toàn đúng và thật ra đang truyền một OBJECT
+  // MÀU vào một hàm chờ một số kỷ. Cả `getFloraStyle` lẫn `getHumanStyle` đều rơi về kỷ 1 cho
+  // dữ liệu lạ (đúng thiết kế: không ném lỗi giữa màn hình Thành Phố), nên **không có gì đỏ lên**
+  // — chỉ có 15 kỷ dùng chung một màu lá và một màu vải. Xem `palette3d.test.js`, mục 15 KỶ 15 MÀU.
+  // ⇒ Nay nó tên `sacKy` (SẮC của kỷ), một cái tên không thể bị nhầm với số kỷ.
+  const sacKy = parseCssColor(eraColor) ?? parseCssColor(t.accent) ?? parseCssColor(FALLBACK_TOKENS.accent);
   const ink = parseCssColor(t.ink) ?? parseCssColor(FALLBACK_TOKENS.ink);
 
   // ⚠️ VẬT LIỆU LỢP MÁI — tra ở ĐÚNG MỘT CHỖ, ngay đây, chứ không bắt từng bên gọi tự truyền vào.
@@ -234,9 +242,15 @@ export function buildScenePalette({ tokens, eraColor, era: eraNumber, daylight }
   // cả ba nhớ truyền `roofColor` là dựng sẵn cái bẫy "một luật ba chỗ phát biểu" mà dự án này đã
   // trả giá nhiều lần — chỉ cần một chỗ quên là trang xem thử đóng khung khác app, và không có gì
   // đỏ lên. Truyền `era` thì bảng màu tự tra.
+  // ⚠️ VẾ `?? sacKy` HÔM NAY LÀ NHÁNH CHẾT, và điều đó đáng ghi ra: `getEraStyle` rơi về kỷ 1 với
+  // mọi đầu vào lạ nên `roofColor` LUÔN parse được. Chính vì nhánh này không đi tới được mà khi
+  // nó còn viết `?? era` (một biến không tồn tại sau lần đổi tên) thì **không một bài test nào
+  // có thể đỏ** — thứ duy nhất bắt được là `no-undef` của ESLint. Đây là mặt bù của bài học
+  // *"một bất biến đúng theo cấu tạo thì không phải một cái gác"*: nhánh chết thì test bất lực,
+  // và lint mới là lưới. Giữ vế này làm phòng hờ nếu `getEraStyle` đổi luật rơi về sau này.
   const roofSource = Number.isFinite(eraNumber)
-    ? (parseCssColor(getEraStyle(eraNumber)?.roofColor) ?? era)
-    : era;
+    ? (parseCssColor(getEraStyle(eraNumber)?.roofColor) ?? sacKy)
+    : sacKy;
 
   // ⚠️ MẶT ĐƯỜNG cũng tra ở ĐÚNG chỗ này, cùng lý do với mái ngay trên (Phase 7D).
   // Trước bản này `road` là MỘT mã màu viết cứng dùng chung cho cả 15 kỷ — nghĩa là con đường mòn
@@ -279,7 +293,7 @@ export function buildScenePalette({ tokens, eraColor, era: eraNumber, daylight }
   // Sắc kỷ chỉ đóng góp GÓC MÀU. Độ tươi và độ đậm của nó bị bỏ đi có chủ đích: `accentColor`
   // trong `ERA_METADATA` là màu chọn cho CHỮ trên nền tối (rất tươi, rất sáng), dùng thẳng lên
   // mặt tường sẽ ra thành phố nhựa dẻo. Ở đây chỉ mượn "kỷ này thuộc họ xanh lá / cam / tím".
-  const eraHsl = rgbToHsl(era);
+  const eraHsl = rgbToHsl(sacKy);
   const eraHue = eraHsl.h;
 
   /**
@@ -559,8 +573,10 @@ export function buildScenePalette({ tokens, eraColor, era: eraNumber, daylight }
   const WALL_ERA = 0.18;
 
   // Thảm thực vật của kỷ — nguồn của hai vai `leaf`/`leaf2` ngay dưới. Xem ghi chú tại chỗ.
-  const flora = getFloraStyle(era);
-  const human = getHumanStyle(era);
+  // ⚠️ `eraNumber`, KHÔNG PHẢI `era`. Xem khối cảnh báo ở chỗ khai `sacKy`: hai dòng này từng
+  // truyền một object MÀU vào đây, và cả 15 kỷ nhận về bảng của kỷ 1.
+  const flora = getFloraStyle(eraNumber);
+  const human = getHumanStyle(eraNumber);
   // Theme tối cắt độ tươi đi một nửa: ban đêm mắt người gần như không đọc được sắc ở vùng tối
   // (thị giác chuyển sang tế bào que), nên giữ nguyên độ tươi chỉ làm tán lá thành mảng xanh giả.
   const leafSat = isDark ? flora.leafSat * 0.52 : flora.leafSat;
@@ -639,6 +655,15 @@ export function buildScenePalette({ tokens, eraColor, era: eraNumber, daylight }
     // Vải phụ (đội đầu, viền): cùng họ, ĐẬM hơn để đầu tách khỏi thân ở cỡ vài điểm ảnh.
     cloth2: paint(human.cloth.hue - 8, human.cloth.sat * 0.9, human.cloth.light * 0.66,
       human.cloth.light * 0.48),
+    // SỢI MỘC: lá cọ, rơm, cói, vải lanh/bông chưa nhuộm hoặc đã tẩy nắng.
+    // ⚠️ CỐ Ý KHÔNG THEO KỶ, và lý lẽ ở đây MẠNH hơn ở `hair`/`gear`: thứ làm cho mọi vật liệu
+    // trong nhóm này giống nhau chính là **sự VẮNG MẶT của thuốc nhuộm**. Nón lá Việt, mũ rơm
+    // Firenze, khăn lanh Đức và khăn ghutra UAE nhạt vì cùng một lý do vật lý, không phải vì ai đó
+    // chọn cho chúng cùng một màu.
+    // ⚠️ VÀ NÓ PHẢI TÁCH KHỎI `skin`, nếu không thì một cái mũ nhạt đội trên một cái đầu nhạt sẽ
+    // đọc ra thành một cái đầu trọc to. Nên: vàng hơn (46° so với 30°), nhạt hơn, ít tươi hơn —
+    // có bài test đo đúng khoảng cách này ở `palette3d.test.js`.
+    straw: paint(46, 0.24, 0.86, 0.70),
     // Tóc: nâu rất đậm, không theo kỷ. Tóc thì thời nào cũng cùng một dải màu.
     hair: paint(22, 0.34, 0.22, 0.17),
     // Đồ mang theo: gỗ, xương, kim loại xỉn. Phải TỐI hơn cả vải để cái giáo đọc ra là một vệt

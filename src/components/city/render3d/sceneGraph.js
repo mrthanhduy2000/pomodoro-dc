@@ -1251,9 +1251,9 @@ export function createCityScene({
     //
     // ⚠️ CON SỐ CHO PHÉP LÀM VIỆC NÀY ĐÃ ĐƯỢC ĐO TRƯỚC KHI VIẾT DÒNG MÃ NÀO
     // (`scripts/human-scale.mjs`, đối chiếu với ảnh thật bằng `--mask resident,resident-head`):
-    // trên MacBook Air M3 của Đàm, một cư dân kỷ 1 cao **trung vị 14,4 điểm ảnh CSS**. Ở cỡ đó
+    // trên MacBook Air M3 của Đàm, một cư dân kỷ 1 cao **trung vị 18,3 điểm ảnh CSS**. Ở cỡ đó
     // một chi rộng bằng 1/4 thân chiếm 2 tới 3 điểm ảnh — đủ để đọc ra HÌNH BÓNG ĐỔI THEO PHA
-    // BƯỚC. Nếu con số ấy ra 4 (đúng như trên iPhone) thì cả khối này đã không đáng viết.
+    // BƯỚC. Nếu con số ấy ra 6 (đúng như trên iPhone) thì cả khối này đã không đáng viết.
     //
     // ⚠️ HÌNH HỌC LÀ MỘT HỘP ĐƠN VỊ 1×1×1 DUY NHẤT, kích thước đi vào MA TRẬN SCALE. Nhờ vậy cả
     // cộng đồng — 28 người × 9 bộ phận — nằm gọn trong MỘT `InstancedMesh` = MỘT lệnh vẽ, bằng

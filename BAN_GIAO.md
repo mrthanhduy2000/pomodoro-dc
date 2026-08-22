@@ -9,14 +9,14 @@
 > Cập nhật lần cuối: **2026-08-22** — **CƯ DÂN CÓ KHỚP XƯƠNG, KỶ 1 CÓ BẢN SẮC CON NGƯỜI RIÊNG.**
 > Hai cái hộp + một sóng sin nay thành **9 hộp gắn 6 khớp**, xoay ở tầng ma trận, gộp trong **MỘT**
 > `InstancedMesh` hộp đơn vị ⇒ lệnh vẽ cả cảnh **GIẢM 11 → 10**, tam giác cư dân 672 → 3.024 =
-> **4,57% tổng cảnh** (trần Đàm đặt 6%) và **13,8% riêng thành phố**. Ba tầng mới, đúng khuôn
+> **2,03% tổng cảnh** (trần Đàm đặt 6%) và **2,88% riêng thành phố**. Ba tầng mới, đúng khuôn
 > `floraStyle` ↔ `flora`: `humanStyle.js` (bảng 15 kỷ × 11 trục) · `human.js` (thư viện hình) ·
 > `humanPose.js` (dáng đi). ⚠️ **Dáng đi là hàm của QUÃNG ĐƯỜNG ĐÃ ĐI**, không phải của thời gian —
 > nếu không thì người nhanh và người chậm cùng nhịp chân và **bàn chân trượt trên đất**; `bob` đã
 > chuyển hẳn khỏi `residents.js` và thành HỆ QUẢ của chân trụ đang nghiêng. Đo trước khi dựng: cư
-> dân cao **14,4 px** trên khung 990×614 thật của Đàm (iPhone chỉ 3,3–5,1 px — Đàm chọn bỏ qua).
-> Dáng đi làm hình bóng đổi **19%** (phép chiếu) và **0,83× → 1,80×** (ảnh thật 1500 px, ghép cặp
-> từng người), cả hai kèm đối chứng 2-hộp ra **0,0064 px** và **1,0000 ± 0,00%**. Kỷ 1 khác preset
+> dân cao **18,3 px** trên khung 990×614 thật của Đàm (iPhone chỉ 4,4–9,6 px — Đàm chọn bỏ qua).
+> Dáng đi làm hình bóng đổi **18%** (phép chiếu) và **0,73× → 1,89×** (ảnh thật 1500 px, ghép cặp
+> từng người), cả hai kèm đối chứng 2-hộp ra **0,0083 px** và **1,0000 ± 0,00%**. Kỷ 1 khác preset
 > **10/11 trục**. 14 kỷ còn lại → `TECH_DEBT #78`. Chi tiết: nhật ký 2026-08-22 + ADR-053.
 >
 > Trước đó: **2026-08-21** — **PHASE 14 §1(3): MỘT Ô KHÔNG PHẢI MỘT CĂN NHÀ, MỘT Ô LÀ MỘT KHU PHỐ.** 371 ô nhà dân nay dựng ra **1.812 khối** (×4,88) mà **không một ô nào xê dịch** và **không thêm một lệnh vẽ nào ở cả 15 kỷ**. Xem ADR-052.
@@ -1571,10 +1571,10 @@ Kết quả trên khung 3D THẬT (đo bằng `shot.mjs --probe`, không đoán)
 
 | khung 3D | cỡ thật | cư dân kỷ 1 (trung vị) | gần nhất | kéo sát hết cỡ |
 |---|---|---|---|---|
-| MacBook Air M3 | 990×614 | **14,4 px** | 16,9 px | 30,6 px |
-| iPhone 390 | 324×201 | **4,0 px** | 5,1 px | 8,5 px |
+| MacBook Air M3 | 990×614 | **18,3 px** | 29,3 px | 58,1 px |
+| iPhone 390 | 324×201 | **6,0 px** | 9,6 px | 19,0 px |
 
-⇒ Chi tiết nhỏ nhất mắt đọc được là **2–3 px**, nên ở 14,4 px đọc được **hình bóng ĐANG ĐỔI** nhưng
+⇒ Chi tiết nhỏ nhất mắt đọc được là **2–3 px**, nên ở 18,3 px đọc được **hình bóng ĐANG ĐỔI** nhưng
 KHÔNG đọc được *"kia là cánh tay"*. Đàm chọn: **nhắm riêng MacBook Air M3, bỏ qua iPhone** — và cả
 bốn trục bản sắc cho kỷ 1 (trang phục + đội đầu · sải chân + nhịp · đồ mang theo · tỉ lệ + dáng
 đứng). ⚠️ Việc iPhone không đọc được đã ghi thẳng vào mã, để phiên sau không đọc sự im lặng thành
@@ -1598,11 +1598,12 @@ hơn nông dân đến sau) · sải chân 1,85 lần cẳng chân và tốc đ�
 | đại lượng | trước | sau | trần |
 |---|---|---|---|
 | lệnh vẽ cả cảnh | 11 | **10** | 1–2 lệnh cho cư dân ✓ |
-| tam giác cư dân | 672 | **3.024** | — |
-| … trên TỔNG cảnh 66.100 | 1,02% | **4,57%** | 6% ✓ |
-| … trên riêng THÀNH PHỐ 21.974 | 3,4% | **13,8%** | (câu hỏi khác) |
-| hình bóng đổi theo pha bước (phép chiếu) | 0 | **1,8 px / 9,5 px = 19%** | đối chứng 2 hộp: 0,0064 px |
-| … (ảnh thật 1500 px, ghép cặp) | 1,000× | **0,83× → 1,80×** | đối chứng ghép: 1,0000 ± 0,00% |
+| tam giác cả cảnh | 146.732 | **149.084** | (đo ở `de2eb02` và `HEAD`, cùng nền) |
+| tam giác cư dân | 672 | **3.024** | chênh **+2.352** = 28 người × 7 hộp × 12 ✓ khớp mô hình |
+| … trên TỔNG cảnh | 0,46% | **2,03%** | 6% ✓ |
+| … trên riêng THÀNH PHỐ | 0,65% | **2,88%** | (câu hỏi khác) |
+| hình bóng đổi theo pha bước (phép chiếu) | 0 | **1,9 px / 10,8 px = 18%** | đối chứng 2 hộp: 0,0083 px |
+| … (ảnh thật 1500 px, ghép cặp) | 1,000× | **0,73× → 1,89×** | đối chứng ghép: 1,0000 ± 0,00% |
 
 **⚠️ BA BÀI HỌC PHẢI GIỮ (chi tiết đầy đủ ở `CLAUDE.md` + ADR-053):**
 1. **`stride` phải là bội số của CẲNG CHÂN, không phải số ô.** Bản đầu khai `0,78` ô trong khi cẳng
@@ -1614,6 +1615,14 @@ hơn nông dân đến sau) · sải chân 1,85 lần cẳng chân và tốc đ�
    bản dựng CÙNG thời điểm), không phải nới ngưỡng.
 3. **So pha 0 với pha ½ thì hình bóng KHÔNG đổi** — pha ½ chỉ đổi vai hai chân, ảnh là ảnh gương của
    đúng bề rộng ấy. Phải so pha 0 với pha ¼.
+
+**⚠️ PHÁT HIỆN NGOÀI PHẠM VI, ĐÃ SỬA LUÔN VÌ RỦI RO THẤP**: cổng "chạy thẳng" của `city-preview.mjs`,
+`png-probe.mjs` và `mask-count.mjs` viết là ``file://${process.argv[1]}``, nên khi gõ bằng **đường
+dẫn tương đối** (đúng lệnh mà `CLAUDE.md` ghi) hoặc trên đường dẫn có dấu tiếng Việt thì cổng KHÔNG
+mở: công cụ **không in gì và thoát mã 0**. Ba công cụ đo chính của dự án đang chết như vậy trên máy
+Đàm. Đã đổi sang `pathToFileURL(resolve(...))` — đúng khuôn `water-score.mjs` vẫn dùng — và khoá
+bằng hai bài test (đọc mã + chạy thật), cả hai đã thử-cho-đỏ. Chi tiết: `CLAUDE.md`, bài học "công
+cụ đo nói dối lần thứ 24".
 
 **Kiểm tra**: `npm test` **795 bài / 794 xanh** — bài đỏ duy nhất là `src/hooks/useTimer.test.js:865`,
 file **CHƯA ĐƯỢC THEO DÕI** (`??` trong git) do một phiên trước để lại; đã xác nhận không liên quan

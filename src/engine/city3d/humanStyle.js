@@ -14,7 +14,7 @@
  * Con số quyết định việc này đáng làm hay không đã được ĐO trước khi viết một dòng mã nào
  * (`scripts/human-scale.mjs`, đối chiếu với ảnh thật bằng `--mask resident,resident-head`):
  * trên MacBook Air M3 của Đàm (1470 × 956 điểm logic ⇒ khung 3D 990 × 614), một cư dân kỷ 1 cao
- * **trung vị 14,4 điểm ảnh CSS** (dải 10,0 tới 20,7; kéo sát nhất 24,5). Ở cỡ đó một chi rộng
+ * **trung vị 18,3 điểm ảnh CSS** (dải 13,5 tới 29,3; kéo sát nhất 58,1). Ở cỡ đó một chi rộng
  * bằng 1/4 thân chiếm 2 tới 3 điểm ảnh — đủ để đọc ra **HÌNH BÓNG ĐỔI THEO PHA BƯỚC**, chưa đủ
  * để đọc ra "đây là cánh tay". Toàn bộ bảng dưới đây được thiết kế theo đúng ranh giới ấy: mọi
  * trục đều phải đổi được ĐƯỜNG BAO hoặc MÀU, vì đó là hai thứ duy nhất còn sống ở 14 điểm ảnh.
@@ -154,7 +154,7 @@ export const HUMAN_STYLES = {
     // ⚠️ CAO HƠN PRESET, VÀ ĐÓ LÀ SỰ THẬT NHÂN CHỦNG HỌC CHỨ KHÔNG PHẢI ĐỂ DỄ NHÌN. Xương người
     // săn bắt hái lượm Cận Đông trước Cách mạng Đá mới CAO HƠN người nông nghiệp ngay sau đó —
     // tầm vóc tụt xuống khi khẩu phần chuyển sang ngũ cốc đơn điệu. Kỷ 1 là kỷ DUY NHẤT trong 15
-    // kỷ nằm trước bước tụt ấy. (Tiện lợi đi kèm: 1,18 lần đưa trung vị từ 14,4 lên ~17 điểm ảnh
+    // kỷ nằm trước bước tụt ấy. (Tiện lợi đi kèm: 1,18 lần đưa trung vị từ 15,5 lên 18,3 điểm ảnh
     // trên máy Đàm — nhưng nếu lý do lịch sử không có thì con số này đã không được phép đổi.)
     stature: 1.18,
     // Vạm vỡ: săn bắt là lao động toàn thân, và bộ xương thời ấy dày hơn hẳn người nông nghiệp.

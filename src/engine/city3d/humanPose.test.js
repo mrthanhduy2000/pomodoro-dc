@@ -161,7 +161,7 @@ test('HÌNH BÓNG ĐỔI THEO PHA BƯỚC — và mô hình 2 hộp cũ ra ĐÚN
     const hẹp = silhouetteSpanX(body, cycle * HẸP);
     const chênh = (rộng - hẹp) / H;
     // Ngưỡng 0,15 chiều cao người. Hiệu chuẩn: trên MacBook Air M3 một cư dân kỷ 1 cao trung vị
-    // 14,4 điểm ảnh (`scripts/human-scale.mjs`), nên 0,15 × chiều cao ≈ **2,2 điểm ảnh** — vừa
+    // 18,3 điểm ảnh (`scripts/human-scale.mjs`), nên 0,15 × chiều cao ≈ **2,7 điểm ảnh** — vừa
     // đúng ngưỡng Nyquist để mắt đọc ra một thay đổi đường bao thay vì một chỗ răng cưa.
     assert.ok(chênh > 0.15,
       `kỷ ${era}: hình bóng chỉ đổi ${(chênh * 100).toFixed(1)}% chiều cao giữa hai pha`

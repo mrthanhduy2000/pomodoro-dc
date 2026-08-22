@@ -270,7 +270,7 @@ function tựKiểm() {
   // ⚠️ NGƯỠNG 0,05 px CHỨ KHÔNG PHẢI 0 TUYỆT ĐỐI, và lý do đáng ghi: mô hình 2 hộp KHÔNG có khớp
   // nào quay, nhưng nó vẫn NHÚN — `bob` nằm ở chiều cao hông, tức cả hai hộp dịch lên xuống theo
   // pha bước. Dịch chỗ thì phối cảnh đổi một tí, và bề rộng trên màn hình đổi theo. Đo được
-  // 0,0064 px, tức 1/280 của tín hiệu thật. Ở tầng thuần (`humanPose.test.js`) con số ấy là 0
+  // 0,0083 px, tức 1/280 của tín hiệu thật. Ở tầng thuần (`humanPose.test.js`) con số ấy là 0
   // TUYỆT ĐỐI vì ở đó không có phối cảnh — hai phép đo trả lời hai câu khác nhau, và cả hai đúng.
   const ok = mới > 1 && cũ < 0.05;
   console.log(`  ${ok ? '✓' : '✗'} đối chứng: dáng đi đổi ${f1(mới)} px, mô hình 2 hộp cũ đổi`

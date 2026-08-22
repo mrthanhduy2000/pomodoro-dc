@@ -26,13 +26,13 @@
   ảnh?** — vì nếu câu trả lời là 4 px thì mọi khớp xương đều là mã chết.
 - **Phương án cân nhắc**:
   1. **Giữ 2 hộp, chỉ đổi màu/kích thước theo kỷ.** Rẻ nhất, và đủ để "15 kỷ khác nhau" trên giấy.
-     Loại: thứ mắt đọc được ở cỡ 14 px không phải màu mà là **hình bóng ĐANG ĐỔI** — một khối cứng
+     Loại: thứ mắt đọc được ở cỡ 18 px không phải màu mà là **hình bóng ĐANG ĐỔI** — một khối cứng
      đứng yên thì đọc ra "một cái cột", bất kể sơn màu gì.
   2. **Mỗi bộ phận một `Mesh` riêng, xoay bằng `Object3D` cha-con.** Đúng cách three thường làm và
      rẻ về mặt trí óc. Loại: 28 người × 9 bộ phận = **252 lệnh vẽ**, gấp 25 lần cả thành phố hiện
      tại (10 lệnh). Vi phạm thẳng ràng buộc Đàm đặt.
   3. **Skinning / GLTF / animation clip.** Loại thẳng: Đàm cấm, và nó kéo theo một thư viện, một
-     định dạng tệp, một ống dẫn tài sản — cho một nhân vật cao 14 px.
+     định dạng tệp, một ống dẫn tài sản — cho một nhân vật cao 18 px.
   4. **Thêm trục xoay nghiêng vào `parts.js`** để khối tự nghiêng được. Loại: Đàm cấm thẳng, và nó
      sẽ đẩy một khái niệm của RIÊNG con người vào nhà máy hình học dùng chung cho nhà cửa, cây cối
      — đúng thứ `TECH_DEBT #29` đang phải trả giá theo chiều ngược lại.
@@ -50,18 +50,18 @@
   - `residents.js` giữ nguyên trách nhiệm cũ (bao nhiêu người, đi đâu) và **trả `travelled` thay cho
     `bob`**; `sceneGraph.js` chỉ còn ghép ma trận.
 - **Trade-off**: (a) **một trục xoay mỗi khớp** (trục ngang, mặt phẳng đi tới) — đủ cho đi bộ, không
-  đủ cho quay người/vung tay ngang; đây là lựa chọn có chủ đích ở cỡ 14 px, không phải thiếu sót.
-  (b) Tam giác cư dân **672 → 3.024** (+350%), tức **4,57% tổng cảnh** (trần Đàm đặt: 6%) nhưng
-  **13,8% riêng phần thành phố** — hai con số trả lời hai câu khác nhau, phải đọc đúng câu (bài học
+  đủ cho quay người/vung tay ngang; đây là lựa chọn có chủ đích ở cỡ 18 px, không phải thiếu sót.
+  (b) Tam giác cư dân **672 → 3.024** (+350%), tức **2,03% tổng cảnh** (trần Đàm đặt: 6%) nhưng
+  **2,88% riêng phần thành phố** — hai con số trả lời hai câu khác nhau, phải đọc đúng câu (bài học
   Performance Gate vòng 2). (c) Số lệnh vẽ **GIẢM 11 → 10**: hai `InstancedMesh` (thân + đầu) gộp
-  làm một. (d) Trên iPhone cư dân chỉ cao **3,3–5,1 px**, đầu người **1 px** — mọi thứ dựng ở đây
+  làm một. (d) Trên iPhone cư dân chỉ cao **4,4–9,6 px**, đầu người **1 px** — mọi thứ dựng ở đây
   **không đọc được trên điện thoại**; Đàm đã chọn nhắm riêng MacBook Air M3 và điều đó được ghi
   thẳng vào mã để phiên sau không đọc sự im lặng thành "vậy cũng ổn".
-- **Ảnh hưởng (đo được)**: trên khung 3D thật **990×614** của Đàm, cư dân kỷ 1 cao **14,4 px** (trung
-  vị; 16,9 px với người gần camera nhất) — đủ để đọc **hình bóng đang đổi**, không đủ để đọc "kia là
-  cánh tay". Dáng đi làm hình bóng đổi **1,8 px trên bề rộng 9,5 px (19%)** theo phép chiếu, và
-  **0,83× → 1,80× tỉ lệ rộng/cao** theo phép đo trên ẢNH THẬT 1500 px có ghép cặp từng cư dân; cả
-  hai đều kèm ĐỐI CHỨNG là mô hình 2 hộp cũ (ra **0,0064 px** và **1,0000 ± 0,00%**). Kỷ 1 khác
+- **Ảnh hưởng (đo được)**: trên khung 3D thật **990×614** của Đàm, cư dân kỷ 1 cao **18,3 px** (trung
+  vị; 29,3 px với người gần camera nhất) — đủ để đọc **hình bóng đang đổi**, không đủ để đọc "kia là
+  cánh tay". Dáng đi làm hình bóng đổi **1,9 px trên bề rộng 10,8 px (18%)** theo phép chiếu, và
+  **0,73× → 1,89× tỉ lệ rộng/cao** theo phép đo trên ẢNH THẬT 1500 px có ghép cặp từng cư dân; cả
+  hai đều kèm ĐỐI CHỨNG là mô hình 2 hộp cũ (ra **0,0083 px** và **1,0000 ± 0,00%**). Kỷ 1 khác
   preset ở **10/11 trục**.
 - **⚠️ Phát hiện kèm theo, quan trọng cho mọi phiên sau**:
   1. **`stride` PHẢI là bội số của CẲNG CHÂN, không phải số ô.** Bản đầu khai `0,78` ô, trong khi

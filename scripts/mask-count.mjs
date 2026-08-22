@@ -25,6 +25,8 @@
 
 import { existsSync, readFileSync } from 'node:fs';
 import { decodePng } from './png-probe.mjs';
+import { pathToFileURL } from 'node:url';
+import { resolve } from 'node:path';
 
 /** Dưới mức này ở CẢ BA kênh thì coi là nền đen (không thuộc lớp nào được đặt tên). */
 const MIN = 40;
@@ -196,4 +198,4 @@ function main() {
 // ⚠️ CHẠY CLI CHỈ KHI ĐƯỢC GỌI THẲNG. Cùng khuôn với `png-probe.mjs`: nếu để mã CLI ở cấp module
 // thì mọi lượt `import { countChannels }` từ một script khác sẽ chạy luôn phần đọc tham số dòng
 // lệnh, thấy thiếu tên file rồi `process.exit(1)` — một hàm thuần bỗng giết tiến trình gọi nó.
-if (import.meta.url === `file://${process.argv[1]}`) main();
+if (import.meta.url === pathToFileURL(resolve(process.argv[1] ?? '')).href) main();

@@ -27,6 +27,8 @@
 
 import { readFileSync } from 'node:fs';
 import { deflateSync, inflateSync } from 'node:zlib';
+import { pathToFileURL } from 'node:url';
+import { resolve } from 'node:path';
 
 /** Giải mã PNG 8-bit → `{ width, height, pixels }` với `pixels` là RGBA phẳng. */
 export function decodePng(buffer) {
@@ -309,4 +311,4 @@ function main() {
   }
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) main();
+if (import.meta.url === pathToFileURL(resolve(process.argv[1] ?? '')).href) main();

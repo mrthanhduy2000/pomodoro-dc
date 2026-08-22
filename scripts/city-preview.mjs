@@ -25,6 +25,7 @@ import { basename, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { decodePng, encodePng, ghepDoc } from './png-probe.mjs';
+import { pathToFileURL } from 'node:url';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const OUT_DIR = resolve(ROOT, '.city-preview');
@@ -1604,7 +1605,7 @@ function selftest() {
 
 // ⚠️ CHẠY CLI CHỈ KHI ĐƯỢC GỌI THẲNG — để `cityPreviewSource.test.js` `import` được `kiemKhungNhin`
 // mà không mở trình duyệt. Cùng khuôn với `png-probe.mjs` và `mask-count.mjs`.
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (import.meta.url === pathToFileURL(resolve(process.argv[1] ?? '')).href) {
   if (process.argv.includes('--selftest')) { selftest(); process.exit(0); }
   main().catch((error) => {
     console.error(error);

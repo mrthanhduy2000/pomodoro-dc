@@ -933,7 +933,7 @@ sin riêng — nó đã được **chuyển hẳn** khỏi `residents.js`, và `
 trận co giãn; khớp xoay quanh **một trục ngang duy nhất** (mặt phẳng đi tới) ở tầng ma trận, KHÔNG
 thêm trục nghiêng vào `parts.js`. Nhờ vậy 28 người × 9 hộp = 252 khối vẫn là **1 lệnh vẽ** — số
 lệnh vẽ của cả cảnh còn **GIẢM 11 → 10** vì hai mesh cũ (thân + đầu) gộp làm một. Tam giác cư dân
-kỷ 1 = **3.024 = 4,57% tổng cảnh** (trần 6%) nhưng **13,8% riêng phần thành phố** — đọc đúng con số
+kỷ 1 = **3.024 = 2,03% tổng cảnh** (trần 6%) nhưng **2,88% riêng phần thành phố** — đọc đúng con số
 cho đúng câu hỏi (bài học Performance Gate vòng 2).
 ⚠️ **`lowDetail` quay về ĐÚNG mô hình 2 hộp cũ** (`buildHumanBodyLowDetail`), và chính hàm đó cũng
 là ĐỐI CHỨNG của mọi phép đo dáng đi: một mô hình không có khớp thì hình bóng phải đổi **0**.

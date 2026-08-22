@@ -466,3 +466,42 @@ test('TÊN FILE — `--zoom` phải có mặt trong tên ảnh, và mặc địn
     'mặc định `zoom` không còn là 1 ⇒ mọi tên file KHÔNG có nhãn thu phóng đang nói dối.'
     + ' Phải đổi `zoomTag` sang luôn-gắn-nhãn và dựng lại mọi md5 mốc nền ở PERFORMANCE.md');
 });
+
+test('⚠️ CỔNG "CHẠY THẲNG" PHẢI DÙNG `pathToFileURL` — không thì công cụ IM LẶNG không làm gì', () => {
+  // ⚠️ ĐÃ CẮN THẬT, 2026-08-22. Ba công cụ đo viết cổng CLI là
+  //     if (import.meta.url === `file://${process.argv[1]}`)
+  // Nghe đúng, và sai ở hai chỗ mà dự án này gặp CẢ HAI mỗi ngày:
+  //   (a) `process.argv[1]` giữ nguyên đường dẫn TƯƠNG ĐỐI người ta gõ (`scripts/city-preview.mjs`),
+  //       còn `import.meta.url` luôn TUYỆT ĐỐI ⇒ không bao giờ bằng nhau. Chính lệnh mà `CLAUDE.md`
+  //       ghi để chạy bản quét là lệnh tương đối.
+  //   (b) đường dẫn dự án có dấu tiếng Việt + khoảng trắng ("Bản sao Pomodoro Game - USING") nên
+  //       `import.meta.url` mã hoá phần trăm còn phép nối chuỗi thì không — cùng họ với cái bẫy
+  //       NFC/NFD đã làm chết LaunchAgent của app tray.
+  // Triệu chứng là thứ tệ nhất một công cụ đo có thể có: **không in gì, thoát mã 0**. Trông y hệt
+  // "chạy xong mà không có gì bất thường". `water-score.mjs` đã dùng đúng cách từ trước — tức đây
+  // đúng là "một luật hai công thức", và cái viết cẩu thả hơn là cái đang cai trị ba file.
+  const HỎNG = 'file://${process.argv[1]}';
+  for (const tên of ['city-preview.mjs', 'png-probe.mjs', 'mask-count.mjs', 'water-score.mjs']) {
+    const mã = readFileSync(path.join(GỐC, 'scripts', tên), 'utf8');
+    assert.ok(!mã.includes(HỎNG),
+      `${tên}: cổng CLI nối chuỗi \`file://\` + argv[1]. Gọi bằng đường dẫn tương đối (hoặc đường`
+      + ' dẫn có dấu) thì cổng KHÔNG mở, công cụ im lặng thoát 0. Dùng'
+      + ' `pathToFileURL(resolve(process.argv[1] ?? \'\')).href`.');
+  }
+});
+
+test('⚠️ ĐỐI CHỨNG: gọi bằng ĐƯỜNG DẪN TƯƠNG ĐỐI thì công cụ phải THẬT SỰ in ra thứ gì đó', () => {
+  // Bài trên đọc mã nguồn; bài này chạy thật. Cần cả hai: đọc mã bắt được đúng khuôn sai đã biết,
+  // chạy thật bắt được mọi khuôn sai CHƯA biết. `png-probe.mjs` không tham số thì in dòng hướng
+  // dẫn rồi thoát — rẻ, không mở trình duyệt, và nó CHỈ in được nếu cổng CLI đã mở.
+  // ⚠️ Thiếu tham số thì nó in hướng dẫn rồi thoát mã KHÁC 0, nên `execFileSync` NÉM. Phải đọc
+  // stdout từ chính lỗi ấy — bản đầu của bài test này đỏ vì lý do đó, trong khi công cụ chạy đúng.
+  let ra = '';
+  try {
+    ra = execFileSync(process.execPath, ['scripts/png-probe.mjs'], { cwd: GỐC, encoding: 'utf8' });
+  } catch (e) {
+    ra = `${e.stdout ?? ''}${e.stderr ?? ''}`;
+  }
+  assert.match(ra, /Cách dùng/,
+    'Gọi `node scripts/png-probe.mjs` (đường dẫn TƯƠNG ĐỐI) không in gì — cổng "chạy thẳng" đóng.');
+});

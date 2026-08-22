@@ -701,7 +701,14 @@ test('⚠️ NGÂN SÁCH TAM GIÁC CƯ DÂN KHÔNG QUÁ 6% CẢNH — chấm ở
   // một con số dễ chịu và SAI — đúng cái bẫy "một hằng số nằm trong cả tử lẫn mẫu" của
   // Performance Gate vòng 2.
   const MAX_BOXES = 11;      // 136 tam giác/người ÷ 12 tam giác/hộp, xem `human.js`
-  const TỔNG_KỶ_1 = 65912;   // đo bằng `stats.geometry.triangles.total`, kỷ 1, 80 phiên
+  // ⚠️ ĐÂY LÀ SỐ ĐO, KHÔNG PHẢI SỐ CHỌN — và nó GIÀ ĐI. Đo lại bằng:
+  //     node scripts/city-preview.mjs --era 1 --hour 12 --bench 1   (đọc dòng `[stats] | tam giác`)
+  // Lần đo gần nhất 2026-08-22, sau Phase 14: thành phố 104.958 + nền 44.126 = 149.084.
+  // ⚠️ Con số cũ ở đây là 65.912 (đo TRƯỚC Phase 10–14) — giữ nguyên nó thì phép chia ra một trần
+  // CHẶT HƠN thực tế, tức bài test vẫn xanh mà lời chú thích thành nói dối. Chọn nói thật rồi bù
+  // lại bằng một trần cho chính cái trần (dòng dưới), đúng khuôn `MAX_COURSES <= 4` của Phase 8A:
+  // một mẫu số nở ra không được phép tự động cấp quota cho một cơ thể phình ra.
+  const TỔNG_KỶ_1 = 149084;
   for (let era = 1; era <= 15; era += 1) {
     const n = buildHumanBody(era).parts.length;
     assert.ok(n <= MAX_BOXES, `kỷ ${era} dựng ${n} hộp mỗi người — vượt trần ${MAX_BOXES}`);
@@ -710,4 +717,10 @@ test('⚠️ NGÂN SÁCH TAM GIÁC CƯ DÂN KHÔNG QUÁ 6% CẢNH — chấm ở
   assert.ok(MAX_BOXES * 12 * MAX_RESIDENTS <= TỔNG_KỶ_1 * 0.06,
     `trần ${MAX_BOXES} hộp cho ra ${MAX_BOXES * 12 * MAX_RESIDENTS} tam giác, vượt 6% của`
     + ` ${TỔNG_KỶ_1} (= ${Math.round(TỔNG_KỶ_1 * 0.06)}) — trần đã trôi khỏi ngân sách`);
+  // ⚠️ TRẦN CHO CHÍNH CÁI TRẦN. Không có dòng này thì mỗi phase sau làm cảnh nặng thêm sẽ tự động
+  // nới quota cho cư dân, và "≤6% tổng cảnh" — một QUAN HỆ — sẽ trôi mà vẫn xanh. 11 hộp là con số
+  // Đàm chốt cho một nhân vật cao 18 px: quá nữa thì thêm hộp cũng không thêm điểm ảnh nào đọc được.
+  assert.ok(MAX_BOXES <= 11,
+    `trần ${MAX_BOXES} hộp/người đã bị nâng — ở cỡ 18 px thì hộp thứ 12 không đổi được điểm ảnh nào,`
+    + ' nên nâng trần là mua tam giác bằng tiền mà không mua được gì cho mắt');
 });

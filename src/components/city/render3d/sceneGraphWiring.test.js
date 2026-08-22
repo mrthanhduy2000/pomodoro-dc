@@ -5,7 +5,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Quaternion, Vector3 } from 'three';
 
-import { buildHumanBody } from '../../../engine/city3d/human.js';
+import { buildHumanBody, humanBodyTriangles } from '../../../engine/city3d/human.js';
 import { partCenterAt, poseAt } from '../../../engine/city3d/humanPose.js';
 import { MAX_RESIDENTS } from '../../../engine/city3d/residents.js';
 
@@ -642,15 +642,134 @@ test('⚠️ CƯ DÂN PHẢI ĐI QUA `humanPose` — không được có nhánh 
   assert.ok(!/\+ spot\.bob/.test(CALLS),
     'Chỗ đặt chân còn cộng `spot.bob` — cái nhún nay là hệ quả của chân trụ, cộng thêm là nhún đôi.');
 
-  // Cả cộng đồng phải nằm trong MỘT lệnh vẽ: một hình học hộp đơn vị, kích thước vào ma trận scale.
-  assert.ok(/new BoxGeometry\(1, 1, 1\)/.test(CALLS),
-    'Không còn dùng hộp đơn vị. Mỗi bộ phận một `BoxGeometry` riêng = 9 lệnh vẽ thay vì 1.');
+  // ⚠️ HÌNH HỌC GOM THEO **KHUÔN**, KHÔNG PHẢI THEO BỘ PHẬN (2026-08-23). Dòng này từng đòi
+  // `new BoxGeometry(1, 1, 1)` — cả cộng đồng trong một hộp đơn vị, 1 lệnh vẽ. Nay mỗi khuôn một
+  // `InstancedMesh` (3 tới 6 tuỳ kỷ). Cái phải canh KHÔNG đổi: **các bộ phận cùng khuôn phải gộp
+  // chung**, chứ nếu dựng một mesh cho mỗi BỘ PHẬN thì ra 11 lệnh vẽ và mất sạch cái lợi của
+  // instancing. Vòng lặp `for (const shape of shapesUsed)` chính là chỗ nói lên điều đó.
+  assert.ok(/for \(const shape of shapesUsed\)/.test(CALLS),
+    'Cư dân không còn gom theo KHUÔN. Mỗi bộ phận một mesh = 11 lệnh vẽ thay vì 3–6.');
+  assert.ok(/buildHumanShapeGeometry\(shape\)/.test(CALLS),
+    'Hình học cư dân không còn đến từ `humanShape.js` — có ai đó dựng lại đa giác bằng tay.');
   assert.ok(/scale\.set\(part\.w, part\.h, part\.d\)/.test(CALLS),
     'Kích thước bộ phận không còn đi vào ma trận scale.');
+
+  // ⚠️ MỌI MESH CƯ DÂN PHẢI CÙNG MANG TÊN `residents`. `--mask residents`, `human-strip.mjs` và
+  // `sceneStats.test.js` đều hỏi theo tên; đặt tên rời là làm mù mọi phép đo dựng quanh nó.
+  assert.equal((CALLS.match(/mesh\.name = 'residents'/g) ?? []).length, 1,
+    'Tên mesh cư dân phải khai đúng MỘT chỗ — hai chỗ là hai chỗ để trôi khỏi nhau.');
 
   // Máy yếu phải quay về đúng mô hình 2 hộp, không được rơi vào nhánh đầy đủ.
   assert.ok(/lowDetail \? buildHumanBodyLowDetail\(/.test(CALLS),
     '`lowDetail` không còn quay về mô hình 2 hộp — máy yếu sẽ phải dựng đủ 9 bộ phận mỗi người.');
+});
+
+test('⚠️ PHÉP GHÉP MA TRẬN CỦA CẢNH PHẢI KHỚP VỚI `partCenterAt` — chạy CẢ HAI BÊN', () => {
+  // ⚠️ VÌ SAO KHÔNG SO VỚI MỘT HẰNG SỐ VIẾT TAY: bài học `countTriangles` (Phase 8B). Một chú
+  // thích tự nhận "có test đối chiếu hai bên" trong khi bài test chỉ so mỗi bên với một con số
+  // thứ ba đã sống sót sáu tháng. Ở đây phải chạy THẬT cả hai đường: đường của mã sản phẩm
+  // (quaternion của three, đúng biểu thức trong `sceneGraph.js`) và đường của tầng thuần
+  // (`partCenterAt`). Không bên nào được so với một con số thứ ba.
+  //
+  // ⚠️ VÀ ĐÂY LÀ MỘT BÀI TEST CHÉP BIỂU THỨC — thứ mà `CLAUDE.md` vốn cấm. Ngoại lệ có lý do: cái
+  // đang được canh CHÍNH LÀ "hai cách viết khác nhau có ra cùng một điểm không". Bỏ bản chép đi
+  // thì không còn gì để đối chiếu. Nhưng phải biết giới hạn của nó: sửa CẢ HAI bên cùng lúc thì
+  // bài này vẫn xanh (đã thử ngược đúng như vậy), nên nó canh sự TRÔI KHỎI NHAU, không canh tính
+  // đúng tuyệt đối. Tính đúng do bài "chân không trượt" ở `humanPose.test.js` canh.
+  const body = buildHumanBody(1);
+  const heading = new Quaternion();
+  const jointSpin = new Quaternion();
+  const limb = new Vector3();
+  const FORWARD = new Vector3(0, 0, 1);
+  const UPV = new Vector3(0, 1, 0);
+
+  for (const travelled of [0, 0.037, 0.19, 5.5]) {
+    for (const góc of [0, 0.7, -2.4]) {
+      const pose = poseAt(body, travelled);
+      heading.setFromAxisAngle(UPV, -góc);
+      for (const part of body.parts) {
+        const joint = pose.joints[part.joint];
+        // ĐƯỜNG 1 — y hệt `sceneGraph.js`.
+        jointSpin.setFromAxisAngle(FORWARD, joint.a);
+        limb.set(part.rest.x, part.rest.y, part.rest.z).applyQuaternion(jointSpin);
+        limb.set(joint.x + limb.x, joint.y + limb.y, joint.z + limb.z);
+        const cụcBộ = { x: limb.x, y: limb.y, z: limb.z };
+        // ĐƯỜNG 2 — tầng thuần, lượng giác viết tay.
+        const thuần = partCenterAt(part, pose);
+        for (const trục of ['x', 'y', 'z']) {
+          assert.ok(Math.abs(cụcBộ[trục] - thuần[trục]) < 1e-12,
+            `bộ phận "${part.id}" trục ${trục}: cảnh dựng ${cụcBộ[trục]}, tầng thuần nói`
+            + ` ${thuần[trục]} — hai bên đã trôi khỏi nhau`);
+        }
+      }
+    }
+  }
+});
+
+/**
+ * TAM GIÁC CẢ CẢNH của từng kỷ — thành phố + nền (vòm trời 960 + rặng núi 43.166 = 44.126, hằng số
+ * ở cả 15 kỷ). Đo ngày **2026-08-23** bằng:
+ *
+ *     node --import ./scripts/register-esm-loader.mjs scripts/scene-tri.mjs
+ *
+ * ⚠️ ĐÂY LÀ SỐ ĐO, KHÔNG PHẢI SỐ CHỌN — sửa một dòng thì phải chạy lại lệnh trên và ghi lại ngày.
+ * Con số nào cũng già đi: bảng trước bản này ghi kỷ 1 = 65.912 (đo trước Phase 10), rồi 149.084
+ * (2026-08-22), còn chú thích trong `human.js` thì kẹt ở 63.560 suốt hai phase.
+ */
+const CANH_TAM_GIAC = {
+  1: 149084, 2: 173782, 3: 185182, 4: 233820, 5: 164740,
+  6: 270914, 7: 240442, 8: 211570, 9: 203688, 10: 179560,
+  11: 202912, 12: 180516, 13: 210802, 14: 220452, 15: 190634,
+};
+
+test('⚠️ NGÂN SÁCH TAM GIÁC CƯ DÂN KHÔNG QUÁ 6% CẢNH — chấm TỪNG KỶ trên cảnh CỦA CHÍNH KỶ ẤY', () => {
+  // ⚠️ BẢN CŨ CHẤM MỌI KỶ TRÊN MẪU SỐ CỦA KỶ 1, VÀ LÝ LẼ CỦA NÓ ĐÃ HẾT ĐÚNG MÀ KHÔNG AI ĐỘNG VÀO.
+  // Nguyên văn: *"Cư dân tốn một lượng gần như CỐ ĐỊNH (28 người × số hộp), nên tỉ lệ của họ cao
+  // nhất ở kỷ có mẫu số nhỏ nhất"*. Câu ấy đúng **chừng nào tử số là hằng số** — mà từ 2026-08-23
+  // thì không: mỗi kỷ dựng một cơ thể khác nhau (220 tới 324 tam giác, chênh 1,47 lần). Từ lúc TỬ
+  // SỐ thôi cố định, "chấm ở kỷ có mẫu số nhỏ nhất" không còn là chấm ở ca xấu nhất nữa — ca xấu
+  // nhất là `max` của một tỉ số hai đại lượng cùng biến thiên, và cách duy nhất biết nó ở đâu là
+  // TÍNH ĐỦ 15 DÒNG.
+  // ⇒ Đây là bài học "một kết luận đúng có thể hết đúng mà không ai động vào nó, vì TIỀN ĐỀ của nó
+  // bị gỡ ở một phase khác" (Phase 8C) — lần này tiền đề bị gỡ là *"tử số cố định"*.
+  // (Kết quả: kỷ 1 vẫn là ca xấu nhất — 5,48% — nhưng nay ta BIẾT thế chứ không suy thế.)
+  const MAX_PARTS = 11;
+  let tệNhất = null;
+  for (let era = 1; era <= 15; era += 1) {
+    const n = buildHumanBody(era).parts.length;
+    assert.ok(n <= MAX_PARTS, `kỷ ${era} dựng ${n} khối mỗi người — vượt trần ${MAX_PARTS}`);
+
+    const tri = humanBodyTriangles(era);
+    const canh = CANH_TAM_GIAC[era];
+    const tyLe = (tri * MAX_RESIDENTS) / canh;
+    if (!tệNhất || tyLe > tệNhất.tyLe) tệNhất = { era, tri, tyLe };
+    assert.ok(tyLe <= 0.06,
+      `kỷ ${era}: ${tri} tam giác/người × ${MAX_RESIDENTS} người = ${tri * MAX_RESIDENTS},`
+      + ` tức ${(tyLe * 100).toFixed(2)}% của cảnh ${canh} — vượt trần 6%`);
+  }
+
+  // ⚠️ TRẦN CHO CHÍNH CÁI TRẦN, GIỮ NGUYÊN 11 KHỐI — VÀ ĐÂY LÀ CHỖ CÁI CỔNG ĐÃ LÀM ĐÚNG VIỆC.
+  // Con số 11 là Đàm chốt cho một nhân vật cao 18 px (*"quá nữa thì thêm hộp cũng không thêm điểm
+  // ảnh nào đọc được"*). Bản vá "cơ thể hết ô vuông" (2026-08-23) đụng vào nó thật: mũ vành lúc
+  // đầu được dựng bằng HAI khối (đĩa + chỏm), đẩy kỷ 8 lên **12 khối** và làm bài này ĐỎ.
+  // Hai cách vá hiển nhiên đều sai — nới trần lên 12 là cái phễu Phase 9A; bỏ bàn chân đi là trả
+  // bằng đúng thứ vừa mua. Cách đúng là hỏi lại *"ngoài đời cái mũ là MẤY vật?"*: một. Gộp lại
+  // thành khuôn `hat` (một mặt tròn xoay) thì kỷ 8 về 11 khối, hình học ĐÚNG HƠN, và RẺ HƠN 12
+  // tam giác. ⇒ **Khi một cái cổng chặn lại, hãy để nó chỉ ra một thiết kế đúng hơn.**
+  assert.ok(MAX_PARTS <= 11,
+    `trần ${MAX_PARTS} khối/người đã bị nâng — ở cỡ 18 px thì khối thứ 12 không đổi được điểm ảnh`
+    + ' nào, nên nâng trần là mua tam giác bằng tiền mà không mua được gì cho mắt');
+
+  // ⚠️ VÀ MỘT TRẦN TUYỆT ĐỐI CHO SỐ TAM GIÁC, ĐỘC LẬP VỚI CẢNH. Không có nó thì mỗi phase sau làm
+  // thành phố nặng thêm sẽ TỰ ĐỘNG cấp thêm quota cho cư dân, và "≤6%" — một QUAN HỆ — trôi mà vẫn
+  // xanh. 340 là số đo hôm nay (324, kỷ 8) cộng đúng một khối `box` dự phòng, KHÔNG phải một con
+  // số tròn chọn cho dễ nhìn.
+  assert.ok(tệNhất.tri <= 340,
+    `kỷ ${tệNhất.era} dựng ${tệNhất.tri} tam giác/người — vượt trần tuyệt đối 340`);
+
+  console.log(`[cư dân] 15 kỷ · ca xấu nhất kỷ ${tệNhất.era}: ${tệNhất.tri} tam giác/người`
+    + ` × ${MAX_RESIDENTS} = ${(tệNhất.tyLe * 100).toFixed(2)}% cảnh (trần 6%)`
+    + ` · nặng nhất ${Math.max(...Object.keys(CANH_TAM_GIAC).map((e) => humanBodyTriangles(+e)))} tam giác/người`);
 });
 
 test('⚠️ PHÉP GHÉP MA TRẬN CỦA CẢNH PHẢI KHỚP VỚI `partCenterAt` — chạy CẢ HAI BÊN', () => {

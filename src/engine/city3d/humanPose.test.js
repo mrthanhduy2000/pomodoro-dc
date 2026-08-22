@@ -188,15 +188,26 @@ test('HÌNH BÓNG ĐỔI THEO PHA BƯỚC — và mô hình 2 hộp cũ ra ĐÚN
 
   // ── (A) CƠ CHẾ: hai chân phải tách ra, ở CẢ 15 KỶ ───────────────────────────────────────────
   // Ngưỡng 0,20 chiều cao người. ⚠️ ĐO BIÊN chứ đừng chỉ đọc xanh/đỏ (bài học Phase 9B): sàn thật
-  // đo được là **25,1% ở kỷ 4** (áo chấm sàn + sải ngắn nhất bộ), tức biên 25%. Trần là 45,2% ở
+  // đo được là **24,7% ở kỷ 4** (áo chấm sàn + sải ngắn nhất bộ), tức biên 23,5%. Trần là 44,3% ở
   // kỷ 1. Nếu một phase sau kéo sàn ấy xuống dưới 20% thì cái đỏ là ĐÚNG, đừng nới ngưỡng.
+  // ⚠️ HAI CON SỐ ẤY VỪA DỊCH NHẸ (25,1→24,7 · 45,2→44,3) khi cụm chân được thêm BÀN CHÂN
+  // (2026-08-23), và chúng dịch XUỐNG chứ không lên — nghe ngược, nên phải nói ra lý do: bàn chân
+  // cộng một lượng gần như KHÔNG ĐỔI vào cả hai pha (nó dài theo trục đi ở mọi tư thế), nên nó vào
+  // cả số bị trừ lẫn số trừ và làm loãng HIỆU SỐ đúng vài phần trăm. Cùng hình dạng `TECH_DEBT #22`
+  // — chỉ khác là ở đây mức loãng nhỏ và đã được đo, chứ không bị đọc nhầm thành hồi quy.
   const banA = [];
   for (const era of ERAS) {
     const body = buildHumanBody(era);
     const { cycle } = poseAt(body, 0);
     const H = body.dims.height;
     const chan = chanCua(body);
-    assert.equal(chan.length, 2, `kỷ ${era}: phải có đúng 2 khối chân, thấy ${chan.length}`);
+    // ⚠️ BỐN, KHÔNG PHẢI HAI — "chân" nay là một CỤM: cẳng chân + bàn chân mỗi bên (2026-08-23).
+    // Gác chạy-rỗng này vẫn giữ nguyên công dụng (bộ lọc trả về rỗng thì `spanCua` ra −∞ và mọi
+    // assert dưới đều xanh oan), chỉ là con số đúng đã đổi. Và nó PHẢI đổi theo: để nguyên 2 thì
+    // hoặc test đỏ oan, hoặc — tệ hơn — có người "sửa" bằng cách lọc riêng `id.startsWith('leg')`,
+    // lúc ấy vế bất biến ngay dưới sẽ đỏ THẬT vì bàn chân thò ra trước làm đường bao ngoài đổi
+    // NHIỀU HƠN phần cẳng chân, và người ta sẽ đi chữa một cơ chế hoàn toàn lành.
+    assert.equal(chan.length, 4, `kỷ ${era}: phải có đúng 4 khối cụm chân, thấy ${chan.length}`);
     const chenhChan = (spanCua(body, chan, cycle * RỘNG) - spanCua(body, chan, cycle * HẸP)) / H;
     const chenhNguoi = (silhouetteSpanX(body, cycle * RỘNG) - silhouetteSpanX(body, cycle * HẸP)) / H;
     banA.push({ era, chenhChan, chenhNguoi });
@@ -218,8 +229,13 @@ test('HÌNH BÓNG ĐỔI THEO PHA BƯỚC — và mô hình 2 hộp cũ ra ĐÚN
   // ⚠️ `assert.deepEqual` chứ không phải "bao gồm": kỷ thứ ba rơi vào thì ĐỎ, mà kỷ 6 được chữa
   // xong cũng ĐỎ. Một danh sách "bao gồm" là cách một bản vá lặng lẽ thành cái chăn trùm.
   const CHE = banA.filter((r) => r.chenhNguoi < 0.06).map((r) => r.era);
-  assert.deepEqual(CHE, [6, 7],
-    `kỷ có đường bao ngoài gần như đứng yên: [${CHE}] — mong đợi đúng [6, 7]`);
+  // ⚠️ DANH SÁCH NÀY ĐÃ NGẮN ĐI: [6, 7] → [6] (2026-08-23), và đó là bằng chứng mạnh hơn một
+  // ngoại lệ được THÊM VÀO. Nguyên nhân là BÀN CHÂN: nó thò ra phía trước ở đầu mút cẳng chân, nên
+  // cụm chân nay trải rộng hơn cái vành mũ 1,9 `headW` của kỷ 7 và dáng đi ĐỌC RA ĐƯỢC ở đường bao
+  // ngoài. Kỷ 6 vẫn kẹt vì nón lá rộng 2,2 `headW` — vẫn hơn cả sải chân.
+  // Nếu bản vá nào sau này làm danh sách này DÀI RA thì gần như chắc chắn nó đang vá triệu chứng.
+  assert.deepEqual(CHE, [6],
+    `kỷ có đường bao ngoài gần như đứng yên: [${CHE}] — mong đợi đúng [6]`);
 
   // ⚠️ VÀ NGOẠI LỆ PHẢI ĐƯỢC GIẢI THÍCH, KHÔNG CHỈ ĐƯỢC DUNG THỨ. Cả hai kỷ ấy đội thứ RỘNG HƠN
   // hoặc XẤP XỈ sải chân, nên cái đĩa quyết cả hai đầu hình bóng. Nếu ngày nào một kỷ lọt vào danh

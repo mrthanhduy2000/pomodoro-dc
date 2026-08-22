@@ -19,16 +19,31 @@
  * gì đỏ lên** vì hình học vẫn hợp lệ.
  *
  * ══════════════════════════════════════════════════════════════════════════════════════════════
- * ⚠️ NGÂN SÁCH: 11 HỘP MỖI NGƯỜI, VÀ CON SỐ ĐÓ ĐƯỢC ĐO CHỨ KHÔNG ĐOÁN
+ * ⚠️ NGÂN SÁCH: 319 TAM GIÁC MỖI NGƯỜI — VÀ CON SỐ CŨ Ở ĐÂY ĐÃ LẠC HẬU 5,4 LẦN
  * ══════════════════════════════════════════════════════════════════════════════════════════════
- * Trần đã thoả thuận: tam giác cư dân không vượt 6% tổng cảnh. Đo bằng `stats.geometry` (ba con
- * số đã tách thành phố/nền/tổng, xem `measureSceneGeometry`): kỷ 1 có 19.434 tam giác thành phố +
- * 44.126 nền = **63.560**, nên 6% = **3.814**. Chia cho `MAX_RESIDENTS` = 28 người ra **136 tam
- * giác mỗi người**, tức **11 hộp** (mỗi hộp 12 tam giác). Kỷ 1 hiện dùng 9 hộp = 108 tam giác
- * mỗi người = 3.024 tổng = **4,8% cảnh**.
- * ⚠️ Kỷ 1 là ca XẤU NHẤT trong 15 kỷ (ít tam giác thành phố nhất ⇒ mẫu số nhỏ nhất ⇒ tỉ lệ cao
- * nhất). Chấm ngân sách ở kỷ 7 hay kỷ 13 sẽ ra một con số dễ chịu hơn và SAI — đúng cái bẫy
- * "một hằng số nằm trong cả tử lẫn mẫu" của Performance Gate vòng 2.
+ * Trần đã thoả thuận: tam giác cư dân không vượt **6% tổng cảnh**. Tỉ lệ ấy KHÔNG đổi; cái đổi là
+ * mẫu số, và nó đổi mà chú thích này đứng yên suốt hai phase:
+ *
+ *     ghi ở đây trước 2026-08-23:  kỷ 1 = 19.434 tam giác thành phố + 44.126 nền = 63.560
+ *     đo lại 2026-08-23:           kỷ 1 = **104.958** + 44.126 = **149.084**
+ *     lệnh đo: node --import ./scripts/register-esm-loader.mjs scripts/scene-tri.mjs
+ *
+ * Thành phố phình 5,4 lần ở Phase 14 §1(3) ("một ô là một KHU PHỐ"). Với cùng 6% và cùng
+ * `MAX_RESIDENTS = 28`, trần thật ở kỷ 1 là **8.945 / 28 = 319 tam giác mỗi người**, không phải
+ * 136. Cơ thể trước bản này tiêu 108 (9 hộp × 12).
+ *
+ * ⚠️ MỘT TRẦN LẠC HẬU THEO HƯỚNG **SIẾT** THÌ KHÔNG AI PHÁT HIỆN — nó không làm gì hỏng, nó chỉ
+ * làm một hướng đi tốt trông như đã bị cấm. Trần lạc hậu theo hướng nới thì sớm muộn có người kêu
+ * máy giật; trần lạc hậu theo hướng siết thì im lặng vĩnh viễn. Đây là mặt còn lại của bài học
+ * Performance Gate 2026-08-17 (*"một ngân sách tự tính mà chưa bao giờ được đặt cạnh sự thật thì
+ * không phải ngân sách"*), và nó đã giữ cơ thể ở dạng chồng-gạch lâu hơn cần thiết.
+ *
+ * ⚠️ VÀ "CHẤM Ở KỶ 1 VÌ NÓ XẤU NHẤT" NAY LÀ MỘT KẾT LUẬN CHỨ KHÔNG CÒN LÀ MỘT LẬP LUẬN. Lý lẽ cũ
+ * (*"cư dân tốn một lượng CỐ ĐỊNH nên tỉ lệ cao nhất ở kỷ có mẫu số nhỏ nhất"*) đứng trên tiền đề
+ * "tử số cố định" — mà từ bản này mỗi kỷ dựng một cơ thể khác nhau (220…324 tam giác, chênh 1,47
+ * lần). Ca xấu nhất nay là `max` của một tỉ số hai đại lượng cùng biến thiên, nên phải TÍNH ĐỦ 15
+ * DÒNG mới biết nó ở đâu (`sceneGraphWiring.test.js` làm việc đó). Kết quả vẫn là kỷ 1 — 5,48% —
+ * nhưng nay ta BIẾT thế chứ không SUY thế.
  *
  * ⚠️ VÌ SAO KHÔNG DÙNG `parts.js`. Nhà máy hình khối của công trình chỉ xoay quanh TRỤC ĐỨNG
  * (`ry`) — nó không nghiêng được, và một cái chân thì bắt buộc phải nghiêng. Thêm trục nghiêng vào
@@ -38,6 +53,7 @@
  */
 
 import { HUMAN_BASE_HEIGHT, getHumanStyle } from './humanStyle';
+import { isValidHumanShape, shapeTriangles } from './humanShape';
 
 /**
  * Chiều cao cư dân cỡ chuẩn, đơn vị ô. `stature` của mỗi kỷ nhân vào con số này.
@@ -113,11 +129,24 @@ export function humanDims(style) {
   };
 }
 
-/** Một hộp gắn vào một khớp. `rest` là tâm hộp SO VỚI gốc khớp, trước khi khớp xoay. */
-function box(id, role, joint, size, rest) {
+/**
+ * Một khối gắn vào một khớp. `rest` là tâm khối SO VỚI gốc khớp, trước khi khớp xoay.
+ *
+ * ⚠️ `shape` LÀ THAM SỐ BẮT BUỘC, KHÔNG CÓ MẶC ĐỊNH — và đó là một quyết định, không phải sự khắt
+ * khe thừa. Cho nó rơi ngầm về `'box'` thì mọi khối viết sau này sẽ lặng lẽ quay lại làm viên gạch,
+ * đúng cái đã xảy ra với `vernacularRoof` khi nó còn là trường tuỳ chọn (Phase 7C): một trường có
+ * mặc định là một trường sẽ bị quên. Khai sai tên khuôn thì ném ngay ở tầng thuần.
+ *
+ * ⚠️ `w`/`h`/`d` VẪN LÀ BỀ RỘNG NHÌN THẤY, y như thời mọi thứ là hộp. `humanShape.js` dựng khuôn
+ * theo quy ước "mặt phẳng = 1,0" nên độ trải theo x và z của khối ĐÚNG BẰNG độ trải của hộp cũ ⇒
+ * `partCornersAt` / `silhouetteSpanX` / `human-scale.mjs` không phải đổi một dòng nào.
+ */
+function piece(id, role, shape, joint, size, rest) {
+  if (!isValidHumanShape(shape)) throw new Error(`human.js: khối "${id}" khai khuôn lạ "${shape}"`);
   return {
     id,
     role,
+    shape,
     joint,
     w: size[0],
     h: size[1],
@@ -132,41 +161,50 @@ function box(id, role, joint, size, rest) {
  * ⚠️ MỖI KIỂU PHẢI ĐỔI ĐƯỜNG BAO Ở MỘT CHỖ KHÁC NHAU, nếu không nó chỉ là một khối vải đổi màu.
  * Ở 14 điểm ảnh, mắt không đọc được chất liệu, không đọc được nếp gấp, không đọc được đường may —
  * nó chỉ đọc được **người này phình ra ở đâu**. Vai thì khác hông, hông thì khác gấu áo.
+ *
+ * ⚠️ VÀ TỪ 2026-08-23, MỖI KIỂU CÒN PHẢI TRẢ LỜI "KHỐI VẢI NÀY LÀ HÌNH GÌ" — vì một tấm da thú
+ * choàng quanh người và một cái áo choàng xoè gấu KHÔNG cùng một khối, dù cả hai đều là "vải".
+ * Quy tắc chọn khuôn ở đây là VẬT LÝ chứ không phải mỹ thuật: vải QUẤN quanh thân thì tròn đều
+ * (`prism`); vải BUÔNG tự do thì gấu xoè ra (`flare`); vải CẮT MAY theo người thì rộng ở vai và
+ * thu xuống eo (`limb`). Ba câu ấy phân loại đủ bảy kiểu mà không cần một lựa chọn tuỳ hứng nào.
  */
-function garmentBox(kind, d) {
+function garmentPiece(kind, d) {
   switch (kind) {
     case 'none':
       return null;
     // Tấm da thú vắt qua MỘT vai: lệch hẳn sang một bên, phủ chéo xuống hông đối diện. Đây là
     // khối DUY NHẤT trong bộ phá thế đối xứng trái-phải, và chính sự bất đối xứng ấy là thứ đọc
-    // ra được ở cỡ nhỏ — mắt bắt bất đối xứng nhạy hơn bắt chi tiết.
+    // ra được ở cỡ nhỏ — mắt bắt bất đối xứng nhạy hơn bắt chi tiết. Da thú QUẤN quanh thân.
     case 'pelt':
-      return box('garment', 'cloth', 'torso',
+      return piece('garment', 'cloth', 'prism', 'torso',
         [d.torsoD * 1.16, d.torsoH * 0.86, d.torsoW * 0.72],
         [d.torsoD * 0.06, d.torsoH * 0.52, d.torsoW * 0.30]);
-    // Vải quấn ngang hông: phình ở GIỮA thân, vai để trần.
+    // Vải quấn ngang hông: phình ở GIỮA thân, vai để trần. Quấn ⇒ `prism`.
     case 'wrap':
-      return box('garment', 'cloth', 'torso',
+      return piece('garment', 'cloth', 'prism', 'torso',
         [d.torsoD * 1.18, d.torsoH * 0.46, d.torsoW * 1.14],
         [0, d.torsoH * 0.24, 0]);
-    // Áo chùng thẳng: cả thân thành một khối, gấu buông xuống quá hông.
+    // Áo chùng thẳng: gấu buông xuống quá hông và XOÈ ra — `flare`. Trước đây là một khối hộp
+    // thẳng đứng, tức một cái ống, và một cái ống thì không đọc ra là vải đang buông.
     case 'tunic':
-      return box('garment', 'cloth', 'torso',
+      return piece('garment', 'cloth', 'flare', 'torso',
         [d.torsoD * 1.12, d.torsoH * 1.02, d.torsoW * 1.10],
         [0, d.torsoH * 0.40, 0]);
-    // Áo choàng chấm đất: gấu buông XUỐNG DƯỚI gốc khớp thân, nuốt luôn phần trên hai chân.
+    // Áo choàng chấm đất: gấu buông XUỐNG DƯỚI gốc khớp thân, nuốt luôn phần trên hai chân. Chú
+    // thích cũ đã tự nói ra hình đúng của nó — *"đường bao thành hình chuông"* — mà khối dựng ra
+    // thì vẫn là hộp. Nay `flare` làm đúng câu ấy.
     case 'robe':
-      return box('garment', 'cloth', 'torso',
+      return piece('garment', 'cloth', 'flare', 'torso',
         [d.torsoD * 1.20, d.torsoH + d.legLen * 0.72, d.torsoW * 1.22],
         [0, (d.torsoH - d.legLen * 0.72) * 0.5, 0]);
-    // Áo khoác có vai: phình ở TRÊN, thóp ở dưới.
+    // Áo khoác có vai: phình ở TRÊN, thóp ở dưới — đúng định nghĩa `limb` (rộng trên, thon dưới).
     case 'coat':
-      return box('garment', 'cloth', 'torso',
+      return piece('garment', 'cloth', 'limb', 'torso',
         [d.torsoD * 1.22, d.torsoH * 0.82, d.torsoW * 1.26],
         [0, d.torsoH * 0.62, 0]);
-    // Âu phục may đo: bó sát nhất bộ — đường bao gần như bằng thân.
+    // Âu phục may đo: bó sát nhất bộ — cùng khuôn với áo khoác nhưng đường bao gần bằng thân.
     case 'suit':
-      return box('garment', 'cloth', 'torso',
+      return piece('garment', 'cloth', 'limb', 'torso',
         [d.torsoD * 1.06, d.torsoH * 1.00, d.torsoW * 1.04],
         [0, d.torsoH * 0.48, 0]);
     default:
@@ -175,75 +213,105 @@ function garmentBox(kind, d) {
 }
 
 /**
- * ĐỘI ĐẦU. Gắn vào khớp `head` nên nó nghiêng theo đầu.
+ * ĐỘI ĐẦU. Gắn vào khớp `head` nên nó nghiêng theo đầu. Trả về MỘT MẢNG, có thể rỗng.
  *
  * ⚠️ VAI MÀU CỦA NÓ KHÔNG SUY TỪ `kind` MÀ TỪ `material` — hai cái mũ CÙNG HÌNH có thể khác
  * VẬT LIỆU (mũ rơm Firenze và mũ phớt New York đều là `brim`), và vật liệu mới là thứ quyết
- * định nhạt hay sẫm. Suy từ `kind` là dựng lại đúng cái bẫy vừa gỡ.
+ * định nhạt hay sẫm. Suy từ `kind` là dựng lại đúng cái bẫy đã gỡ ở ADR-054.
  */
-function headgearBox(kind, d, material) {
+function headgearPieces(kind, d, material) {
   // Sợi mộc thì NHẠT hơn áo; vải nhuộm thì cùng lò với quần nên SẪM hơn áo.
-  const vaiVai = material === 'natural' ? 'straw' : 'cloth2';
+  const vai = material === 'natural' ? 'straw' : 'cloth2';
   switch (kind) {
     case 'none':
-      return null;
+      return [];
+    // Búi tóc: một cái nút TRÒN, không phải một viên gạch nhỏ.
     case 'bun':
-      return box('headgear', 'hair', 'head',
-        [d.headW * 0.46, d.headH * 0.44, d.headW * 0.46],
-        [-d.headW * 0.10, d.headH * 1.08, 0]);
+      return [piece('headgear', 'hair', 'prism', 'head',
+        [d.headW * 0.48, d.headH * 0.44, d.headW * 0.48],
+        [-d.headW * 0.12, d.headH * 1.06, 0])];
+    // Khăn trùm (nemes Ai Cập · khăn lanh Đức · ghutra UAE): bó quanh trán rồi XOÈ xuống vai. Đó
+    // đúng là `flare` — và nó là lý do khăn nemes không được là một cái hộp: hình bóng đặc trưng
+    // của nó nằm ở chỗ nó loe ra hai bên má.
     case 'headcloth':
-      return box('headgear', vaiVai, 'head',
-        [d.headW * 1.16, d.headH * 0.92, d.headW * 1.20],
-        [-d.headW * 0.06, d.headH * 0.66, 0]);
+      return [piece('headgear', vai, 'flare', 'head',
+        [d.headW * 1.30, d.headH * 1.10, d.headW * 1.34],
+        [-d.headW * 0.05, d.headH * 0.60, 0])];
+    // ⚠️ MŨ VÀNH CỨNG = MỘT KHỐI, và con đường tới đó đáng ghi lại. Bản đầu dựng nó bằng HAI khối
+    // (đĩa + chỏm) vì "một cái mũ vành thì có hai phần" — nghe hợp lý, và nó đẩy kỷ 8 lên 12 khối,
+    // vượt trần 11 mà Đàm chốt. Thay vì nới trần, hỏi lại *"ngoài đời đây là mấy vật?"*: một. Một
+    // cái mũ là một mặt tròn xoay liền khối, và `humanShape.js` dựng mặt tròn xoay được. Kết quả
+    // vừa giữ trần, vừa đúng hình học hơn, vừa rẻ hơn 12 tam giác. Xem khuôn `hat`.
+    // Chiều cao 0,78 `headH` (vành ~9% chiều cao ấy) — tỉ lệ của một cái mũ thật; bản cũ để vành
+    // cao đúng 0,16 `headH` và KHÔNG có chỏm, nên nhìn từ camera chếch 34° nó là một tấm ván, và
+    // trên dải 15 kỷ ba ô đội mũ vành (7 · 8 · 11) hiện ra là ba hình thoi che kín cư dân.
     case 'brim':
-      return box('headgear', vaiVai, 'head',
-        [d.headW * 1.9, d.headH * 0.16, d.headW * 1.9],
-        [0, d.headH * 1.02, 0]);
+      return [piece('headgear', vai, 'hat', 'head',
+        [d.headW * 1.9, d.headH * 0.78, d.headW * 1.9],
+        [0, d.headH * 1.19, 0])];
+    // Mũ trụ: một cái VÒM kim loại. `dome` là hình học của chính vật ấy, không phải một cách điệu.
     case 'helm':
-      return box('headgear', 'gear', 'head',
-        [d.headW * 1.06, d.headH * 0.78, d.headW * 1.06],
-        [0, d.headH * 0.86, 0]);
+      return [piece('headgear', 'gear', 'dome', 'head',
+        [d.headW * 1.10, d.headH * 0.82, d.headW * 1.10],
+        [0, d.headH * 0.88, 0])];
+    // Mũ vải mềm ôm sát sọ (futou · casquette · mũ nồi tweed) — ôm sọ thì phải cùng khuôn với sọ.
     case 'cap':
-      return box('headgear', vaiVai, 'head',
-        [d.headW * 1.22, d.headH * 0.34, d.headW * 1.08],
-        [d.headW * 0.14, d.headH * 0.92, 0]);
+      return [piece('headgear', vai, 'dome', 'head',
+        [d.headW * 1.16, d.headH * 0.42, d.headW * 1.10],
+        [d.headW * 0.10, d.headH * 0.94, 0])];
+    // ⚠️ NÓN LÁ — KHUYẾT TẬT NẶNG NHẤT CỦA CẢ BỘ, VÀ NÓ LÀ MỘT KHUYẾT TẬT VỀ CHIỀU CAO.
+    // Bản cũ: một khối hộp rộng `2,2 × headW` mà chỉ cao `0,34 × headH`. Tỉ lệ ấy không phải một
+    // cái nón, nó là một cái ĐĨA — và trên dải 15 kỷ, ô kỷ 6 hiện ra đúng là một hình thoi trắng,
+    // không nhìn thấy người đâu cả.
+    // Nón lá thật: đường kính ~40 cm trên một cái đầu ~15 cm, cao ~0,42 lần đường kính. Giữ nguyên
+    // đường kính 2,2 (con số ấy ĐÚNG), sửa chiều cao 0,34 → 0,92 lần `headH`, và đổi khuôn sang
+    // `cone` để nó có một cái CHÓP. Tám mặt nghiêng bắt nắng tám mức khác nhau ⇒ đọc ra là khối.
     case 'conical':
-      return box('headgear', vaiVai, 'head',
-        [d.headW * 2.2, d.headH * 0.34, d.headW * 2.2],
-        [0, d.headH * 1.04, 0]);
+      return [piece('headgear', vai, 'cone', 'head',
+        [d.headW * 2.2, d.headH * 0.92, d.headW * 2.2],
+        [0, d.headH * 1.08, 0])];
     default:
-      return null;
+      return [];
   }
 }
 
 /**
  * ĐỒ MANG THEO. Gắn vào khớp `shoulderR` (trừ `pot` đội đầu) nên nó ĐU THEO TAY khi đi — thứ đó
  * mới đọc ra là "đang cầm", chứ một khối đứng yên cạnh người thì đọc ra là "một cái cột".
+ *
+ * ⚠️ KHUÔN Ở ĐÂY CHỌN THEO CÁCH VẬT ẤY ĐƯỢC LÀM RA: thứ tiện/vót/bó thì tròn (`prism`), thứ nặn
+ * bằng đất thì bụng phình cổ thon (`flare`), thứ đóng bằng ván và bản lề thì vuông (`box`). Cái
+ * cặp là chỗ DUY NHẤT trong cả cơ thể mà một viên gạch là câu trả lời đúng — bỏ `box` đi để "cho
+ * tròn hết" là đổi một sự đơn điệu này lấy một sự đơn điệu khác.
  */
-function carryBox(kind, d) {
+function carryPiece(kind, d) {
   switch (kind) {
     case 'none':
       return null;
     // Vệt DỌC cao quá đầu. Trục dễ đọc nhất ở cỡ nhỏ vì nó thò hẳn ra ngoài đường bao người, và
-    // vì mắt bắt đường thẳng đứng đơn độc rất nhanh.
+    // vì mắt bắt đường thẳng đứng đơn độc rất nhanh. Cán gỗ vót tròn ⇒ `prism`.
     case 'spear':
-      return box('carry', 'gear', 'shoulderR',
+      return piece('carry', 'gear', 'prism', 'shoulderR',
         [d.limbW * 0.42, d.height * 1.24, d.limbW * 0.42],
         [d.limbW * 0.9, -d.armLen * 0.36, -d.limbW * 0.5]);
+    // Bó củi / bó lúa buộc dây: mặt cắt tròn.
     case 'bundle':
-      return box('carry', 'gear', 'shoulderR',
+      return piece('carry', 'gear', 'prism', 'shoulderR',
         [d.torsoD * 0.9, d.torsoH * 0.40, d.torsoW * 1.5],
         [-d.torsoD * 0.3, d.armLen * 0.16, -d.torsoW * 0.25]);
+    // Vò gốm đội đầu: bụng phình, cổ thon — `flare` là đúng mặt cắt dọc của một cái vò.
     case 'pot':
-      return box('carry', 'gear', 'head',
-        [d.headW * 1.0, d.headH * 0.8, d.headW * 1.0],
-        [0, d.headH * 1.35, 0]);
+      return piece('carry', 'gear', 'flare', 'head',
+        [d.headW * 1.02, d.headH * 0.84, d.headW * 1.02],
+        [0, d.headH * 1.36, 0]);
+    // Cán cuốc / cán búa: gỗ vót tròn.
     case 'tool':
-      return box('carry', 'gear', 'shoulderR',
+      return piece('carry', 'gear', 'prism', 'shoulderR',
         [d.limbW * 0.5, d.armLen * 0.62, d.limbW * 0.5],
         [d.limbW * 1.1, -d.armLen * 0.78, -d.limbW * 0.4]);
+    // Cặp / vali: đóng bằng ván và bản lề — vuông, và vuông là ĐÚNG.
     case 'case':
-      return box('carry', 'gear', 'shoulderR',
+      return piece('carry', 'gear', 'box', 'shoulderR',
         [d.torsoD * 0.34, d.torsoH * 0.42, d.torsoW * 0.62],
         [d.limbW * 0.6, -d.armLen * 1.02, -d.limbW * 0.8]);
     default:
@@ -266,36 +334,73 @@ export function buildHumanBody(era) {
   const style = getHumanStyle(era);
   const d = humanDims(style);
 
-  // ⚠️ CHÂN TRƯỚC, và không phải để cho gọn: chân là hộp DUY NHẤT bắt buộc phải có ở mọi kỷ để
-  // phép đo "hình bóng đổi theo pha bước" còn ý nghĩa. Đặt chúng ở đầu danh sách thì một bài test
-  // muốn cắt riêng chân ra chỉ cần lấy hai phần tử đầu, khỏi phải lọc theo `id` — mà lọc theo tên
-  // vai/`role` chính là cái bẫy đã cắn ở Phase 8A ("hỏi theo `role` thì ba nguyên mẫu tàng hình").
+  // ⚠️ CHÂN TRƯỚC, và không phải để cho gọn: chân là khối DUY NHẤT bắt buộc phải có ở mọi kỷ để
+  // phép đo "hình bóng đổi theo pha bước" còn ý nghĩa. Đặt cụm chân ở đầu danh sách thì một bài
+  // test muốn cắt riêng chân ra chỉ cần lấy bốn phần tử đầu, khỏi phải lọc theo `id` — mà lọc theo
+  // tên vai/`role` chính là cái bẫy đã cắn ở Phase 8A ("hỏi theo `role` thì ba nguyên mẫu tàng
+  // hình") và lại cắn lần nữa ở ADR-054 (mũ trụ `gear` nhận vơ chỗ của khẩu súng `gear`).
   // ⚠️ VAI MÀU PHẢI DỰNG RA BA TẦNG ĐẬM NHẠT, KHÔNG ĐƯỢC ĐỂ CẢ NGƯỜI MỘT MÀU — và bản đầu đã sai
   // đúng như vậy: mọi bộ phận đều mang vai `skin`, mà `skin` là màu SÁNG NHẤT bảng (độ đậm 0,78,
   // cố ý chói để một cái đầu tí xíu còn nổi lên giữa rừng tường và mái). Kết quả trên ảnh chụp gần
-  // là **một con ma trắng**: 8 trong 9 hộp cùng một màu, không đọc ra bộ phận nào.
+  // là **một con ma trắng**: 8 trong 9 khối cùng một màu, không đọc ra bộ phận nào.
   //
   // Cái mô hình 2 hộp cũ làm ĐÚNG mà tôi suýt đánh mất: nó có một khối lớn TỐI (màu vai `roof`) và
   // một chấm nhỏ SÁNG (màu `skin`) — và chính khoảng cách đậm nhạt ấy là thứ làm mắt đọc ra người
   // ở cỡ vài điểm ảnh, chứ không phải số lượng bộ phận. Nay giữ nguyên cấu trúc đó và chia ba tầng:
   //   • ĐẦU + TAY = `skin` (sáng nhất) — đầu là dấu hiệu "đây là người", tay là thứ đang vung.
   //   • THÂN = `cloth` (giữa) — khối lớn nhất, phải TỐI hơn đầu để đầu còn nổi.
-  //   • CHÂN = `cloth2` (tối nhất) — nhờ vậy lúc hai chân tách ra, mắt đọc được một chữ V SẪM ở
-  //     dưới thân, tức đúng cái tín hiệu "đang bước" mà cả phase này sinh ra để tạo.
+  //   • CHÂN + BÀN CHÂN = `cloth2` (tối nhất) — nhờ vậy lúc hai chân tách ra, mắt đọc được một chữ
+  //     V SẪM ở dưới thân, tức đúng cái tín hiệu "đang bước" mà cả phase này sinh ra để tạo.
+  //
+  // ══════════════════════════════════════════════════════════════════════════════════════════
+  // ⚠️ VÌ SAO TỪ 2026-08-23 KHÔNG CÒN KHỐI NÀO LÀ HỘP (trừ bàn chân và cái cặp)
+  // ══════════════════════════════════════════════════════════════════════════════════════════
+  // Một khối hộp chỉ cho mắt **BA mảng sáng** (đỉnh, một mặt hướng nắng, một mặt khuất), và ba
+  // mảng phẳng thì đọc ra là một tấm bìa gấp, không đọc ra là một cái khối. Một lăng trụ 8 mặt cho
+  // **TÁM mảng** chuyển dần — đó chính là thứ mắt gọi là "tròn", và nó tốn 28 tam giác thay vì 12.
+  // Với ngân sách 319 tam giác mỗi người thì đó là một món hời không có lý do gì để từ chối.
+  //
+  // Chọn khuôn nào cho khối nào KHÔNG phải chuyện thẩm mỹ tuỳ hứng, mà là câu hỏi *"ngoài đời bộ
+  // phận này thon về phía nào?"*:
+  //   • TAY và CHÂN thon xuống dưới (đùi to hơn bắp chân, bắp tay to hơn cổ tay) ⇒ `limb`.
+  //   • THÂN cũng `limb` — vai rộng hơn eo. Đây là khối LỚN NHẤT trong bộ, nên nó là chỗ phép đổi
+  //     khuôn ăn tiền nhất: một cái thân hình hộp là lý do chính khiến cả bộ đọc ra là "chồng gạch".
+  //   • ĐẦU là `dome` — sọ tròn, hơi bẹt ở đỉnh, thon ở cằm. Ba vòng chứ không phải hai, vì đầu là
+  //     thứ mắt soi kỹ nhất và cũng là thứ quyết định "người hay gạch".
+  //   • BÀN CHÂN giữ `box`, CÓ CHỦ Ý: bàn chân thật thì phẳng ở đế, vuông ở gót, và ở cỡ 2 điểm
+  //     ảnh thì 8 mặt không đọc ra được gì mà vẫn tính tiền. Bỏ hộp đi ở mọi chỗ "cho nhất quán"
+  //     là đổi một sự đơn điệu này lấy một sự đơn điệu khác.
+  //
+  // ⚠️ VÀ BÀN CHÂN LÀ KHỐI MỚI, KHÔNG PHẢI MỘT CHI TIẾT TRANG TRÍ. Trước bản này cái chân kết thúc
+  // đột ngột ở mặt đất bằng một mặt cắt vuông góc — đứng yên thì không sao, nhưng lúc chân nghiêng
+  // theo pha bước thì mặt cắt ấy ngửa lên và bắt nắng, tạo một chấm sáng lơ lửng ngay chỗ đáng lẽ
+  // là bàn chân. Một khối bẹt nằm ngang vừa che mặt cắt ấy, vừa cho hình bóng một cái mấu nhô về
+  // phía trước, tức thêm một dấu hiệu "đang bước" mà không tốn thêm khuôn nào (nó dùng lại `box`).
   const parts = [
-    box('legL', 'cloth2', 'hipL', [d.limbW, d.legLen, d.limbW], [0, -d.legLen * 0.5, 0]),
-    box('legR', 'cloth2', 'hipR', [d.limbW, d.legLen, d.limbW], [0, -d.legLen * 0.5, 0]),
-    box('torso', 'cloth', 'torso', [d.torsoD, d.torsoH, d.torsoW], [0, d.torsoH * 0.5, 0]),
-    box('head', 'skin', 'head', [d.headW, d.headH, d.headW], [0, d.headH * 0.5, 0]),
-    box('armL', 'skin', 'shoulderL', [d.limbW * 0.9, d.armLen, d.limbW * 0.9], [0, -d.armLen * 0.5, 0]),
-    box('armR', 'skin', 'shoulderR', [d.limbW * 0.9, d.armLen, d.limbW * 0.9], [0, -d.armLen * 0.5, 0]),
+    piece('legL', 'cloth2', 'limb', 'hipL', [d.limbW, d.legLen, d.limbW], [0, -d.legLen * 0.5, 0]),
+    piece('legR', 'cloth2', 'limb', 'hipR', [d.limbW, d.legLen, d.limbW], [0, -d.legLen * 0.5, 0]),
+    piece('footL', 'cloth2', 'box', 'hipL',
+      [d.limbW * 1.7, d.limbW * 0.62, d.limbW * 1.0],
+      [d.limbW * 0.42, -d.legLen + d.limbW * 0.31, 0]),
+    piece('footR', 'cloth2', 'box', 'hipR',
+      [d.limbW * 1.7, d.limbW * 0.62, d.limbW * 1.0],
+      [d.limbW * 0.42, -d.legLen + d.limbW * 0.31, 0]),
+    piece('torso', 'cloth', 'limb', 'torso', [d.torsoD, d.torsoH, d.torsoW], [0, d.torsoH * 0.5, 0]),
+    piece('head', 'skin', 'dome', 'head', [d.headW, d.headH, d.headW], [0, d.headH * 0.5, 0]),
+    piece('armL', 'skin', 'limb', 'shoulderL',
+      [d.limbW * 0.9, d.armLen, d.limbW * 0.9], [0, -d.armLen * 0.5, 0]),
+    piece('armR', 'skin', 'limb', 'shoulderR',
+      [d.limbW * 0.9, d.armLen, d.limbW * 0.9], [0, -d.armLen * 0.5, 0]),
   ];
 
-  const garment = garmentBox(style.garment, d);
+  const garment = garmentPiece(style.garment, d);
   if (garment) parts.push(garment);
-  const headgear = headgearBox(style.headgear, d, style.headMaterial);
-  if (headgear) parts.push(headgear);
-  const carry = carryBox(style.carry, d);
+  // ⚠️ ĐỘI ĐẦU TRẢ VỀ MỘT MẢNG, không phải một khối — vì một cái mũ ngoài đời có thể là một vật
+  // (nón lá, mũ trụ) mà cũng có thể là nhiều vật chồng lên nhau. Trả về mảng ngay từ đầu thì
+  // ngày nào cần hai lớp sẽ không phải sửa chữ ký hàm — và quan trọng hơn, nó buộc chỗ gọi phải
+  // viết vòng lặp, tức không âm thầm chỉ lấy khối đầu tiên.
+  for (const hg of headgearPieces(style.headgear, d, style.headMaterial)) parts.push(hg);
+  const carry = carryPiece(style.carry, d);
   if (carry) parts.push(carry);
 
   return {
@@ -304,7 +409,7 @@ export function buildHumanBody(era) {
     parts,
     /**
      * Khớp vai nào đang BẬN cầm đồ (hoặc `null`). ⚠️ SUY TỪ CHÍNH DANH SÁCH HỘP, không khai thêm
-     * một trường song song — nếu khai riêng thì ngày nào có người đổi `carryBox` sang treo vào
+     * một trường song song — nếu khai riêng thì ngày nào có người đổi `carryPiece` sang treo vào
      * vai kia, hai bên sẽ lệch và không có gì đỏ lên.
      */
     carryArm: carry && carry.joint.startsWith('shoulder') ? carry.joint : null,
@@ -328,8 +433,48 @@ export function buildHumanBodyLowDetail(era) {
     style,
     dims: d,
     parts: [
-      box('body', 'cloth', 'torso', [0.085, bodyH, 0.085], [0, bodyH * 0.5 - d.legLen, 0]),
-      box('head', 'skin', 'torso', [0.062, d.headH, 0.062], [0, bodyH + d.headH * 0.5 - d.legLen, 0]),
+      // ⚠️ HAI KHỐI NÀY PHẢI GIỮ NGUYÊN KHUÔN `box`, KHÔNG ĐƯỢC "NÂNG CẤP" CHO ĐẸP. Vai trò thứ
+      // hai của mô hình này là ĐỐI CHỨNG: nó phải là một vật KHÔNG có khớp nào và KHÔNG có chi
+      // tiết nào, để mọi phép đo về dáng đi hay về độ "tròn" chứng minh được rằng nó ra 0 ở đây.
+      piece('body', 'cloth', 'box', 'torso', [0.085, bodyH, 0.085], [0, bodyH * 0.5 - d.legLen, 0]),
+      piece('head', 'skin', 'box', 'torso',
+        [0.062, d.headH, 0.062], [0, bodyH + d.headH * 0.5 - d.legLen, 0]),
     ],
   };
+}
+
+/**
+ * Tổng tam giác của MỘT cư dân ở kỷ này.
+ *
+ * ⚠️ ĐẾM TỪ CHÍNH DANH SÁCH KHỐI ĐÃ DỰNG, TUYỆT ĐỐI KHÔNG DỰ ĐOÁN BẰNG MỘT CÔNG THỨC RIÊNG. Đây
+ * là bài học Performance Gate 2026-08-17 viết lại lần thứ hai: `sceneGraph.js` từng dự đoán số
+ * tam giác bằng `residents × 24` và lệch **56%** so với thứ máy thật sự vẽ, vì công thức ấy chỉ
+ * được so với chính nó. Ở đây mỗi kỷ dùng một bộ khuôn khác nhau (220…324 tam giác, chênh 1,47
+ * lần) nên một hằng số nhân sẽ sai ngay từ ngày đầu chứ không cần đợi phase sau.
+ */
+export function humanBodyTriangles(era) {
+  const { parts } = buildHumanBody(era);
+  let tong = 0;
+  for (const part of parts) tong += shapeTriangles(part.shape);
+  return tong;
+}
+
+/**
+ * Những khuôn mà cơ thể kỷ này dùng tới, theo THỨ TỰ XUẤT HIỆN.
+ *
+ * ⚠️ ĐÂY LÀ MỘT ĐẠI LƯỢNG NGÂN SÁCH, KHÔNG PHẢI MỘT TIỆN ÍCH. `sceneGraph.js` dựng MỘT
+ * `InstancedMesh` cho MỖI khuôn (một `InstancedMesh` chỉ mang được một hình học), nên **số khuôn
+ * chính là số lệnh vẽ mà cộng đồng cư dân tiêu**. Trước bản này cả cơ thể là một khuôn duy nhất
+ * nên chi phí ấy vô hình và không ai phải nghĩ tới; nay nó là 3…6 tuỳ kỷ, và `drawCallBudget.test.js`
+ * đọc thẳng hàm này thay vì chép lại một con số — chép là cách một bảng ngân sách trôi khỏi sự thật
+ * trong im lặng (`TECH_DEBT #43`).
+ *
+ * ⚠️ THỨ TỰ PHẢI ỔN ĐỊNH giữa hai lần gọi, vì `sceneGraph.js` dùng nó để chia ô trong từng lưới.
+ * Nó ổn định theo cấu tạo: `buildHumanBody` trả về danh sách khối theo một thứ tự cố định.
+ */
+export function humanShapesUsed(era) {
+  const { parts } = buildHumanBody(era);
+  const dung = [];
+  for (const part of parts) if (!dung.includes(part.shape)) dung.push(part.shape);
+  return dung;
 }

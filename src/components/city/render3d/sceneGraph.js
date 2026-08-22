@@ -21,7 +21,6 @@
 import {
   AmbientLight,
   BackSide,
-  BoxGeometry,
   BufferAttribute,
   Color,
   DirectionalLight,
@@ -53,6 +52,7 @@ import { buildHorizon } from '../../../engine/city3d/horizon';
 import { placeBounds, specBounds } from '../../../engine/city3d/pick';
 import { buildResidents, residentAt } from '../../../engine/city3d/residents';
 import { buildHumanBody, buildHumanBodyLowDetail } from '../../../engine/city3d/human';
+import { buildHumanShapeGeometry } from './humanGeometry';
 import { poseAt } from '../../../engine/city3d/humanPose';
 import { fogDensityFor, sunDirectionAt } from '../../../engine/city3d/daylight';
 import { buildMergedGeometry } from './geometryFactory';
@@ -1237,7 +1237,6 @@ export function createCityScene({
   // đó biến nó thành NƠI CÓ NGƯỜI Ở — và biến "mở khoá thêm một công trình" thành "chỗ này đông
   // hơn tuần trước". Toàn bộ cộng đồng đi qua MỘT `InstancedMesh` = một lệnh vẽ.
   const residents = still ? [] : buildResidents(layout, stats);
-  let peopleMesh = null;
   /** Đặt lại vị trí cả cộng đồng theo thời gian. `null` khi thành phố không có ai. */
   let placeResidents = null;
   if (residents.length > 0) {
@@ -1255,13 +1254,14 @@ export function createCityScene({
     // một chi rộng bằng 1/4 thân chiếm 2 tới 3 điểm ảnh — đủ để đọc ra HÌNH BÓNG ĐỔI THEO PHA
     // BƯỚC. Nếu con số ấy ra 6 (đúng như trên iPhone) thì cả khối này đã không đáng viết.
     //
-    // ⚠️ HÌNH HỌC LÀ MỘT HỘP ĐƠN VỊ 1×1×1 DUY NHẤT, kích thước đi vào MA TRẬN SCALE. Nhờ vậy cả
-    // cộng đồng — 28 người × 9 bộ phận — nằm gọn trong MỘT `InstancedMesh` = MỘT lệnh vẽ, bằng
-    // đúng mô hình hai hộp cũ (vốn tốn hai lệnh vẽ). Dựng mỗi bộ phận một `BoxGeometry` riêng thì
-    // ra 9 lệnh vẽ và mất sạch cái lợi của instancing.
+    // ⚠️ KÍCH THƯỚC ĐI VÀO **MA TRẬN SCALE**, KHÔNG VÀO HÌNH HỌC — đó vẫn là điều làm instancing
+    // đáng giá: mọi khối cùng khuôn dùng chung đúng một bộ đỉnh, dù chúng to nhỏ khác nhau.
+    // ⚠️ NHƯNG KHÔNG CÒN "MỘT HỘP ĐƠN VỊ DUY NHẤT" NỮA (2026-08-23). Chỗ này từng ghi *"cả cộng
+    // đồng nằm gọn trong MỘT `InstancedMesh` = MỘT lệnh vẽ"*, và câu ấy đã hết đúng: nay là một
+    // mesh cho mỗi KHUÔN (3 tới 6 tuỳ kỷ). Sửa câu chú thích cùng lúc với mã là bắt buộc — một
+    // lời giải thích sai là thứ phiên sau kế thừa rồi dựa vào (bài học Phase 3Y/8C).
     const body = lowDetail ? buildHumanBodyLowDetail(layout.era) : buildHumanBody(layout.era);
     const parts = body.parts;
-    const slots = residents.length * parts.length;
 
     const residentMaterial = track(new MeshStandardMaterial({
       roughness: 0.88,          // vải vóc, không phải nhựa
@@ -1272,23 +1272,47 @@ export function createCityScene({
       opacity: dimmed ? 0.62 : 1,
     }));
 
-    const unitBox = track(new BoxGeometry(1, 1, 1));
-    peopleMesh = new InstancedMesh(unitBox, residentMaterial, slots);
-    // ⚠️ ĐẶT TÊN LÀ ĐỂ **ĐO ĐƯỢC**, đúng lý do đã ghi ở khối mặt đất và mặt đường phía trên: muốn
-    // hỏi "một cư dân cao bao nhiêu điểm ảnh trên màn hình Đàm" thì phải biết điểm ảnh nào là
-    // người, và `TECH_DEBT #22` đã trả giá ba phase cho việc ĐOÁN chuyện đó bằng màu. Không có cái
-    // tên này thì cư dân rơi vào "sọt đen" của `city-preview.mjs --mask`, và một phép đo mật độ
-    // nhà sẽ đọc phần đen ấy thành trời hoặc thành nền. Đo lần đầu (kỷ 7, 50 phiên, khung toàn
-    // cảnh) ra 15,7% khung hình — lớn hơn nhiều so với cảm giác "vài chấm nhỏ".
-    // ⚠️ SỐ NHIỀU. `sceneStats.test.js` khoá cứng đúng chuỗi này; đổi sang số ít là đỏ ngay.
-    peopleMesh.name = 'residents';
-    // Người quá nhỏ để đổ bóng ra hồn, nhưng NHẬN bóng thì có: đi vào bóng nhà là tối đi.
-    peopleMesh.castShadow = false;
-    peopleMesh.receiveShadow = true;
-    // ⚠️ Ma trận đổi mỗi khung hình — báo cho three biết để nó khỏi cố tối ưu bộ đệm tĩnh.
-    peopleMesh.instanceMatrix.setUsage(DynamicDrawUsage);
+    // ⚠️ MỘT `InstancedMesh` CHO MỖI **KHUÔN**, KHÔNG PHẢI MỘT CHO CẢ CƠ THỂ NỮA.
+    //
+    // Trước 2026-08-23 cả cộng đồng đi qua đúng MỘT `BoxGeometry(1,1,1)`: rẻ nhất có thể (1 lệnh
+    // vẽ) và cũng là lý do một cư dân đọc ra là **một chồng gạch** — chân hộp, tay hộp, đầu hộp,
+    // nón hộp. Nay mỗi bộ phận khai một khuôn (`engine/city3d/humanShape.js`) và các bộ phận CÙNG
+    // KHUÔN gộp chung một mesh, nên số lệnh vẽ = số khuôn kỷ ấy dùng: 3 (kỷ 9 · 13 · 14) tới 6
+    // (kỷ 6, kỷ duy nhất có nón lá). `lowDetail` chỉ dùng `box` ⇒ vẫn đúng 1 lệnh vẽ.
+    //
+    // ⚠️ MỌI MESH CÙNG MANG TÊN `residents` — bắt buộc, không phải tiện tay. `city-preview.mjs
+    // --mask residents` và `human-strip.mjs` hỏi cư dân THEO TÊN, và `sceneStats.test.js` khoá
+    // `[...new Set(tên)] === ['residents']`. Đặt tên rời (`residents-limb`…) là làm mù mọi phép đo
+    // đã dựng quanh cái tên ấy, và phép đo mật độ sẽ đọc cư dân thành nền trời (bài học 2026-08-19,
+    // "sọt đen không tên" chiếm 15,6% khung hình).
+    const shapesUsed = [];
+    for (const part of parts) if (!shapesUsed.includes(part.shape)) shapesUsed.push(part.shape);
 
-    // Màu theo VAI của từng bộ phận. Năm vai đọc thẳng từ bảng màu, mà bảng màu thì đọc `cloth`
+    /** Với mỗi bộ phận: mesh của nó, và chỗ đứng của nó trong mesh ấy. */
+    const meshOf = new Array(parts.length);
+    const slotOf = new Array(parts.length);
+    const peopleMeshes = [];
+    for (const shape of shapesUsed) {
+      const idx = [];
+      for (let k = 0; k < parts.length; k += 1) if (parts[k].shape === shape) idx.push(k);
+      const mesh = new InstancedMesh(
+        track(buildHumanShapeGeometry(shape)), residentMaterial, residents.length * idx.length);
+      // ⚠️ ĐẶT TÊN LÀ ĐỂ **ĐO ĐƯỢC**, đúng lý do đã ghi ở khối mặt đất và mặt đường phía trên: muốn
+      // hỏi "một cư dân cao bao nhiêu điểm ảnh trên màn hình Đàm" thì phải biết điểm ảnh nào là
+      // người, và `TECH_DEBT #22` đã trả giá ba phase cho việc ĐOÁN chuyện đó bằng màu.
+      // ⚠️ SỐ NHIỀU. `sceneStats.test.js` khoá cứng đúng chuỗi này; đổi sang số ít là đỏ ngay.
+      mesh.name = 'residents';
+      // Người quá nhỏ để đổ bóng ra hồn, nhưng NHẬN bóng thì có: đi vào bóng nhà là tối đi.
+      mesh.castShadow = false;
+      mesh.receiveShadow = true;
+      // ⚠️ Ma trận đổi mỗi khung hình — báo cho three biết để nó khỏi cố tối ưu bộ đệm tĩnh.
+      mesh.instanceMatrix.setUsage(DynamicDrawUsage);
+      for (let t = 0; t < idx.length; t += 1) { meshOf[idx[t]] = mesh; slotOf[idx[t]] = t; }
+      mesh.userData.partsPerResident = idx.length;
+      peopleMeshes.push(mesh);
+    }
+
+    // Màu theo VAI của từng bộ phận. Sáu vai đọc thẳng từ bảng màu, mà bảng màu thì đọc `cloth`
     // từ `humanStyle.js` — một luật, một chỗ khai (xem `palette3d.js` mục `cloth`).
     const roleColor = {
       skin: palette.roles?.skin ?? palette.wall,
@@ -1301,12 +1325,15 @@ export function createCityScene({
     };
     for (let i = 0; i < residents.length; i += 1) {
       for (let k = 0; k < parts.length; k += 1) {
-        peopleMesh.setColorAt(i * parts.length + k,
+        const mesh = meshOf[k];
+        mesh.setColorAt(i * mesh.userData.partsPerResident + slotOf[k],
           tint.setHex(roleColor[parts[k].role] ?? roleColor.cloth));
       }
     }
-    if (peopleMesh.instanceColor) peopleMesh.instanceColor.needsUpdate = true;
-    addMesh(peopleMesh);
+    for (const mesh of peopleMeshes) {
+      if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+      addMesh(mesh);
+    }
 
     // Gọi mỗi khung hình khi có hoạt hoạ.
     // ⚠️ Nhận THỜI GIAN làm tham số chứ không tự cộng dồn — nhờ vậy rời tab nửa tiếng rồi quay lại
@@ -1339,7 +1366,7 @@ export function createCityScene({
           const part = parts[k];
           const joint = pose.joints[part.joint];
           jointSpin.setFromAxisAngle(FORWARD_AXIS, joint.a);
-          // Tâm hộp trong hệ CỤC BỘ: gốc khớp cộng phần tịnh tiến đã bị khớp xoay.
+          // Tâm khối trong hệ CỤC BỘ: gốc khớp cộng phần tịnh tiến đã bị khớp xoay.
           limb.set(part.rest.x, part.rest.y, part.rest.z).applyQuaternion(jointSpin);
           limb.set(joint.x + limb.x, joint.y + limb.y, joint.z + limb.z);
           // Rồi đưa cả cụm sang hệ THẾ GIỚI bằng hướng đi của người.
@@ -1348,10 +1375,11 @@ export function createCityScene({
           rotation.copy(heading).multiply(jointSpin);
           scale.set(part.w, part.h, part.d);
           matrix.compose(position, rotation, scale);
-          peopleMesh.setMatrixAt(i * parts.length + k, matrix);
+          const mesh = meshOf[k];
+          mesh.setMatrixAt(i * mesh.userData.partsPerResident + slotOf[k], matrix);
         }
       }
-      peopleMesh.instanceMatrix.needsUpdate = true;
+      for (const mesh of peopleMeshes) mesh.instanceMatrix.needsUpdate = true;
       // Trả quaternion về đơn vị: các chỗ khác trong file này dùng chung biến `rotation` và
       // ngầm giả định nó không xoay.
       rotation.identity();

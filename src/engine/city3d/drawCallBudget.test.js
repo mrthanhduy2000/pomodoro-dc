@@ -58,37 +58,39 @@ import { BLUEPRINT_CATALOG } from '../constants.js';
 import { collectCitySpecs } from './cityParts.js';
 import { getEraStyle, ERA_STYLES } from './eraStyle.js';
 import { materialFamilyFor, MATERIAL_ORDER } from './materials.js';
+import { humanShapesUsed } from './human.js';
 import { waterIsBuilt } from './setting.js';
 
 const ERAS = Object.keys(ERA_STYLES).map(Number).sort((a, b) => a - b);
 
 /**
- * Bốn tấm cố định nằm NGOÀI khối gộp, có ở MỌI kỷ và không phụ thuộc kỷ nào:
- * nền ô lưới · mặt đường · thân cư dân · đầu cư dân.
+ * ⚠️ HAI TẤM CỐ ĐỊNH — VÀ CON SỐ NÀY VỪA ĐƯỢC SỬA TỪ **4** XUỐNG **2 + số khuôn cư dân**
+ * (2026-08-23), SAU KHI ĐẶT CẢ BẢNG CẠNH PHÉP ĐO THẬT LẦN ĐẦU TIÊN.
  *
- * ⚠️ Con số 4 KHÔNG được viết ra từ việc đếm bằng mắt trong `sceneGraph.js` — nó là hiệu số đo
- * được giữa phép đo thật và số họ vật liệu, và nó ra ĐÚNG 4 ở cả 15 kỷ.
+ * Chú thích cũ ghi bốn tấm là *"nền ô lưới · mặt đường · **thân cư dân · đầu cư dân**"* — tức nó
+ * đếm cư dân là HAI mesh, đúng như mô hình hai hộp thời ấy. **ADR-053 (2026-08-22) đã gộp hai mesh
+ * đó làm một**, tiết kiệm thật một lệnh vẽ ở cả 15 kỷ; hằng số này thì đứng yên, và cả bảng
+ * `MOC_LENH_VE` cao hơn sự thật đúng **+1 ở mười lăm dòng** kể từ hôm ấy.
+ *
+ * ⚠️ VÌ SAO KHÔNG CÓ GÌ ĐỎ LÊN, VÀ ĐÂY MỚI LÀ BÀI HỌC: bài *"QUAN HỆ ... phải còn đúng với phép đo
+ * thật"* ở cuối file so `hoVatLieu(era).length + tamCoDinh(era)` với `MOC_LENH_VE[era]` — nhưng
+ * `MOC_LENH_VE` **được suy ra từ chính công thức ấy**. Hai vế của phép so đều chứa cùng một hằng
+ * số sai, nên chúng khớp nhau hoàn hảo trong khi cùng lệch khỏi thực tế. Đó đúng là *"một ngân
+ * sách tự tính mà chưa bao giờ được đặt cạnh sự thật"* (Performance Gate 2026-08-17) — tái diễn
+ * trong chính file sinh ra để chống trôi âm thầm, và tệ hơn một bậc: ở đó công thức lệch với thực
+ * tế, ở đây công thức lệch với thực tế **rồi cái bảng dùng để kiểm nó cũng lệch y hệt**.
+ *
+ * ⇒ Cách vá không phải sửa 4 thành 3 (lại một hằng số chờ trôi) mà là **HỎI THẲNG thứ đang đếm**:
+ * `humanShapesUsed(era).length`. Từ nay thêm/bớt một khuôn cơ thể là con số này tự đổi.
+ *
+ * ⚠️ VÀ BẢNG MỚI ĐÃ ĐƯỢC NEO VÀO THỰC TẾ: ba kỷ (1 · 8 · 13) đo lại bằng `city-preview --bench`
+ * trong Chromium ngày 2026-08-23 ra ĐÚNG 11 · 17 · 12, khớp từng đơn vị với công thức. Không có
+ * cái neo ấy thì bảng này lại chỉ là một công thức tự soi gương.
  */
-const TAM_CO_DINH_KHO = 4;
+const TAM_NEN_KHO = 2;      // nền ô lưới + mặt đường
 
-/**
- * ⚠️ VÀ ĐÂY LÀ TẤM THỨ NĂM — CHỈ Ở KỶ CÓ NƯỚC ĐÃ DỰNG HÌNH (VIỆC 2 Bước B, 2026-08-19).
- *
- * Chú thích cũ của `TAM_CO_DINH` đã dự đoán đúng cái ngày này: *"nếu một phase sau thêm một tấm cố
- * định (ví dụ tách mặt nước ra khối riêng) thì con số này phải đổi"*. Nó vừa đến — nhưng nó đến
- * theo một hình dạng mà chú thích ấy KHÔNG lường: tấm nước **không có ở mọi kỷ**, nên hằng số cũ
- * không thể là một hằng số nữa, nó phải là một HÀM CỦA KỶ.
- *
- * Đây chính là ràng buộc Đàm ra chữ một: *"Nước: tối đa +1 lệnh vẽ, CHỈ ở kỷ có nước. Cập nhật
- * `MOC_LENH_VE` theo TỪNG KỶ, ghi rõ kỷ nào tăng và vì sao. KHÔNG nâng trần chung."* Viết thành
- * `TAM_CO_DINH_KHO + 1` cho cả 15 kỷ là đúng cái "nâng trần chung" đã bị cấm: 13 kỷ khô sẽ được
- * tặng một lệnh vẽ trống để trôi vào trong im lặng.
- *
- * ⚠️ Hỏi `waterIsBuilt` (HÌNH đã dựng) chứ KHÔNG hỏi `hasWater` (BẢNG khai có nước). Bảng khai 14
- * kỷ có nước; hình mới dựng 2. Hỏi nhầm thì 12 kỷ nhận trước một lệnh vẽ chúng chưa hề tiêu.
- */
 function tamCoDinh(era) {
-  return TAM_CO_DINH_KHO + (waterIsBuilt(era) ? 1 : 0);
+  return TAM_NEN_KHO + humanShapesUsed(era).length + (waterIsBuilt(era) ? 1 : 0);
 }
 
 /**
@@ -108,9 +110,24 @@ function tamCoDinh(era) {
  * không bằng cách đọc hai bảng bằng mắt.
  */
 const MOC_LENH_VE = {
-  1: 9, 2: 12, 3: 12, 4: 12, 5: 12,
-  6: 12, 7: 13, 8: 13, 9: 12, 10: 13,
-  11: 11, 12: 11, 13: 11, 14: 11, 15: 11,
+  1: 11, 2: 15, 3: 15, 4: 14, 5: 15,
+  6: 16, 7: 16, 8: 17, 9: 13, 10: 16,
+  11: 13, 12: 13, 13: 12, 14: 12, 15: 13,
+};
+
+/**
+ * MỐC NGAY TRƯỚC KHI CƠ THỂ CÓ NHIỀU KHUÔN — đo ngày **2026-08-23** tại commit `f5a4e11` trong một
+ * `git worktree` riêng, bằng `scripts/scene-tri.mjs`, và neo lại bằng `city-preview --bench` ở kỷ 1
+ * (ra đúng 8 ở CẢ cấp 1 lẫn cấp 3).
+ *
+ * ⚠️ TỰ ĐO MỐC NỀN CỦA MÌNH, ĐỪNG CHÉP CỘT "SAU" CỦA PHASE TRƯỚC (`TECH_DEBT #43`). Nếu chép
+ * `MOC_TRUOC_PHU_CAN` làm mốc nền cho bản này thì mọi hiệu số sẽ lệch +1, vì bảng ấy mang sẵn hằng
+ * số `TAM_CO_DINH_KHO = 4` đã hỏng — và cái lệch ấy trông hoàn toàn hợp lý.
+ */
+const MOC_TRUOC_HINH_KHOI = {
+  1: 8, 2: 11, 3: 11, 4: 11, 5: 11,
+  6: 11, 7: 12, 8: 12, 9: 11, 10: 12,
+  11: 10, 12: 10, 13: 10, 14: 10, 15: 10,
 };
 
 /**
@@ -123,9 +140,9 @@ const MOC_LENH_VE = {
  * hằng số nền pha loãng 43% xuống 16%). Nên mỗi phase một mốc, mỗi mốc một phép trừ riêng.
  */
 const MOC_TRUOC_PHU_CAN = {
-  1: 9, 2: 12, 3: 12, 4: 12, 5: 11,
-  6: 12, 7: 12, 8: 12, 9: 11, 10: 13,
-  11: 11, 12: 11, 13: 11, 14: 11, 15: 11,
+  1: 8, 2: 11, 3: 11, 4: 11, 5: 10,
+  6: 11, 7: 11, 8: 11, 9: 10, 10: 12,
+  11: 10, 12: 10, 13: 10, 14: 10, 15: 10,
 };
 
 /**
@@ -152,9 +169,9 @@ const KY_PHU_CAN_THEM_HO = [5, 7, 8, 9];
  * *"Kỷ 1 làm chứng cho ràng buộc cứng: kỷ không nước giữ nguyên mốc lệnh vẽ, không đổi một đơn vị."*
  */
 const MOC_TRUOC_NUOC = {
-  1: 9, 2: 11, 3: 11, 4: 11, 5: 10,
-  6: 11, 7: 11, 8: 11, 9: 10, 10: 12,
-  11: 10, 12: 10, 13: 10, 14: 10, 15: 10,
+  1: 8, 2: 10, 3: 10, 4: 10, 5: 9,
+  6: 10, 7: 10, 8: 10, 9: 9, 10: 11,
+  11: 9, 12: 9, 13: 9, 14: 9, 15: 9,
 };
 
 /** Dựng đúng thành phố mà phép đo đã chụp: cả 5 bản vẽ, cấp 1, 40 phiên, chuỗi 9. */
@@ -275,17 +292,27 @@ test('BẢNG MỐC PHẢI LÀ 15 MỐC RIÊNG, KHÔNG PHẢI MỘT TRẦN CHUNG 
     + 'tức bảng riêng từng kỷ mất lý do tồn tại. Xem lại phép đo.');
 });
 
-test('QUAN HỆ "lệnh vẽ = số họ + 4" phải còn đúng với phép đo thật ngày 2026-08-18', () => {
-  // ⚠️ Đây là bài giữ cho ba bài trên còn Ý NGHĨA. Chúng đếm HỌ VẬT LIỆU; điều biến phép đếm ấy
-  // thành một phát biểu về LỆNH VẼ là hằng số 4. Nếu một phase sau tách thêm một tấm cố định ra
-  // khỏi khối gộp thì hằng số đổi, và lúc đó ba bài trên vẫn xanh trong khi chúng đang nói sai —
-  // đúng bẫy "phép đo đúng nhưng đo sai đại lượng". Bài này nhốt sẵn bộ số đã đo để chuyện đó
-  // không thể xảy ra trong im lặng.
+test('QUAN HỆ "lệnh vẽ = số họ + 2 + số khuôn cư dân (+1 nếu có nước)" phải khớp phép đo thật', () => {
+  // ⚠️ ĐÂY LÀ BÀI ĐÃ TỪNG XANH TRONG KHI CẢ BẢNG SAI +1 Ở MƯỜI LĂM DÒNG — đọc kỹ trước khi tin nó.
+  // Nó so `hoVatLieu + tamCoDinh` với `MOC_LENH_VE`, mà `MOC_LENH_VE` lại được SUY RA từ chính công
+  // thức ấy. Hai vế cùng chứa một hằng số hỏng thì chúng khớp nhau hoàn hảo trong khi cùng lệch
+  // khỏi thực tế (xem chú thích `TAM_NEN_KHO`: ADR-053 gộp hai mesh cư dân làm một, hằng số 4 không
+  // ai sửa). ⇒ Một bài test tự soi gương thì không phải một cái gác.
+  // Cái vá là ba dòng `assert.equal` NEO ngay bên dưới: chúng chép lại số đo Chromium thật, tức
+  // một đường đo hoàn toàn độc lập với công thức này.
   for (const era of ERAS) {
     assert.equal(hoVatLieu(era).length + tamCoDinh(era), MOC_LENH_VE[era],
       `kỷ ${era}: số họ + ${tamCoDinh(era)} không còn khớp mốc đo được. Hoặc có tấm cố định mới (thì `
       + 'sửa `tamCoDinh` và đo lại cả bảng), hoặc thành phố đã đổi họ vật liệu.');
   }
+
+  // ⚠️ NEO VÀO THỰC TẾ — ba kỷ đo lại bằng Chromium ngày **2026-08-23**:
+  //     node scripts/city-preview.mjs --era N --hour 12 --bench 1 --no-shadow
+  // đọc cột đầu của dòng `[stats] | lệnh vẽ | …`. Không có ba dòng này thì cả file chỉ là một công
+  // thức tự soi gương, và nó ĐÃ từng lệch +1 suốt một phase mà không gì đỏ lên.
+  assert.equal(MOC_LENH_VE[1], 11, 'kỷ 1: Chromium đo 11 lệnh vẽ thành phố ngày 2026-08-23');
+  assert.equal(MOC_LENH_VE[8], 17, 'kỷ 8: Chromium đo 17 lệnh vẽ thành phố ngày 2026-08-23');
+  assert.equal(MOC_LENH_VE[13], 12, 'kỷ 13: Chromium đo 12 lệnh vẽ thành phố ngày 2026-08-23');
 });
 
 test('MẶT NƯỚC TỐN ĐÚNG +1 LỆNH VẼ, VÀ CHỈ Ở KỶ ĐÃ DỰNG HÌNH NƯỚC', () => {
@@ -326,16 +353,58 @@ test('KỶ KHÔ KHÔNG ĐƯỢC ĐỔI MỘT ĐƠN VỊ NÀO — KỶ 1 LÀM CH�
   //
   // THỬ-CHO-ĐỎ: bỏ điều kiện `waterIsBuilt` trong `tamCoDinh` ⇒ kỷ 1 đỏ ngay ở dòng đầu (10 ≠ 9).
   assert.equal(waterIsBuilt(1), false, 'kỷ 1 phải là kỷ KHÔ — cả bộ ba Bước B dựa vào điều đó');
-  assert.equal(lenhVe(1), MOC_TRUOC_NUOC[1],
-    'kỷ 1 (Thổ Nhĩ Kỳ, khô) đã đổi số lệnh vẽ. Đây là kỷ Đàm chọn làm nhân chứng cho ràng buộc '
-    + '"nước không được tính tiền lên kỷ không có nước" — nó đỏ nghĩa là ràng buộc ấy vừa vỡ.');
+
+  // ⚠️ LỜI HỨA PHẢI ĐƯỢC PHÁT BIỂU LẠI, KHÔNG PHẢI BỎ ĐI (2026-08-23). Bản cũ đòi `lenhVe(1)` bằng
+  // ĐÚNG mốc trước-nước — đúng chừng nào không phase nào sau đó chạm vào kỷ 1. Phase "cơ thể có
+  // nhiều khuôn" chạm: kỷ 1 tốn thêm 3 lệnh vẽ, vì cư dân đi từ 1 khuôn lên 4. Cách vá SAI là xoá
+  // bài này ("nó cản đường"); cách vá đúng là tách hiệu số ra thành các nguyên nhân ĐẾM ĐƯỢC rồi
+  // đòi phần còn lại bằng 0. Nước vẫn phải không tính tiền lên kỷ khô, và nay điều đó vẫn kiểm được.
+  const doHinhKhoi = humanShapesUsed(1).length - 1;   // cư dân xưa là ĐÚNG một mesh
+  assert.equal(lenhVe(1) - doHinhKhoi, MOC_TRUOC_NUOC[1],
+    `kỷ 1 (Thổ Nhĩ Kỳ, khô) tốn ${lenhVe(1)} lệnh vẽ; trừ ${doHinhKhoi} lệnh do cơ thể có nhiều `
+    + `khuôn thì còn ${lenhVe(1) - doHinhKhoi}, đáng lẽ phải bằng mốc trước-nước ${MOC_TRUOC_NUOC[1]}. `
+    + 'Đây là kỷ Đàm chọn làm nhân chứng cho ràng buộc "nước không được tính tiền lên kỷ không có '
+    + 'nước" — phần dư khác 0 nghĩa là có thứ khác vừa lén tính tiền lên nó.');
 
   const kho = ERAS.filter((e) => !waterIsBuilt(e));
   assert.equal(kho.length, 1, 'sau Bước C chỉ còn ĐÚNG một kỷ khô (kỷ 1)');
   for (const era of kho) {
-    assert.equal(lenhVe(era), MOC_TRUOC_NUOC[era],
-      `kỷ ${era} không có mặt nước nhưng số lệnh vẽ đã đổi khỏi mốc trước-nước (${MOC_TRUOC_NUOC[era]}).`);
+    assert.equal(lenhVe(era) - (humanShapesUsed(era).length - 1), MOC_TRUOC_NUOC[era],
+      `kỷ ${era} không có mặt nước nhưng số lệnh vẽ đã đổi khỏi mốc trước-nước (${MOC_TRUOC_NUOC[era]}) `
+      + 'bởi một nguyên nhân KHÁC hình khối cư dân.');
   }
+});
+
+test('CƠ THỂ NHIỀU KHUÔN TỐN ĐÚNG (số khuôn − 1) LỆNH VẼ, TỪNG KỶ MỘT', () => {
+  // ⚠️ MỘT PHÉP TRỪ RIÊNG CHO PHASE NÀY — đúng luật file này đã tự đặt: *mỗi phase một mốc, mỗi
+  // mốc một phép trừ riêng*. Trước 2026-08-23 cả cộng đồng đi qua ĐÚNG MỘT `InstancedMesh` (một
+  // hộp đơn vị), nên cái giá của việc cơ thể thôi làm chồng gạch phải bằng đúng `số khuôn − 1`.
+  //
+  // THỬ-CHO-ĐỎ (nêu TRƯỚC): cho `headgearPieces` trả về hai khối cho `brim` (một `prism` + một
+  // `dome`) ⇒ kỷ 7 · 8 · 11 đỏ, vì số khuôn nhích lên mà `MOC_LENH_VE` thì không.
+  const boSung = [];
+  for (const era of ERAS) {
+    const truoc = MOC_TRUOC_HINH_KHOI[era];
+    assert.ok(Number.isFinite(truoc), `kỷ ${era} thiếu mốc trước-hình-khối`);
+    const soKhuon = humanShapesUsed(era).length;
+    const hieu = MOC_LENH_VE[era] - truoc;
+    assert.equal(hieu, soKhuon - 1,
+      `kỷ ${era}: mốc đi từ ${truoc} lên ${MOC_LENH_VE[era]} (lệch ${hieu}) trong khi cơ thể kỷ này `
+      + `dùng ${soKhuon} khuôn (${humanShapesUsed(era).join(', ')}) ⇒ đáng lẽ lệch ${soKhuon - 1}. `
+      + 'Lệch nhiều hơn nghĩa là có thứ KHÁC cũng vừa thêm một lệnh vẽ và đang đi ké dòng này.');
+    boSung.push(soKhuon);
+  }
+
+  // ⚠️ GÁC CHẠY-RỖNG HAI PHÍA. Nếu mọi kỷ dùng cùng một số khuôn thì phép trừ trên vẫn xanh trơn
+  // tru trong khi nó chẳng phân biệt được gì — và lúc ấy "một mesh cho mỗi khuôn" thật ra đã thoái
+  // hoá về "một mesh cho tất cả", đúng thứ bảng-15-dòng sinh ra để bắt.
+  assert.ok(Math.max(...boSung) - Math.min(...boSung) >= 2,
+    `số khuôn của 15 kỷ nằm gọn trong ${Math.min(...boSung)}–${Math.max(...boSung)} — bộ khuôn đang `
+    + 'hành xử như một khuôn chung, tức 15 kỷ lại dựng cùng một hình người.');
+  assert.ok(Math.min(...boSung) >= 3, 'kỷ mỏng nhất phải còn ít nhất 3 khuôn (chi · hộp · vòm)');
+
+  console.log(`[lệnh vẽ] cư dân: ${Math.min(...boSung)}–${Math.max(...boSung)} khuôn/kỷ`
+    + ` ⇒ +${Math.min(...boSung) - 1}…+${Math.max(...boSung) - 1} lệnh vẽ so với mô hình một-hộp`);
 });
 
 test('VÙNG PHỤ CẬN CHỈ ĐƯỢC TỐN +1 LỆNH VẼ, VÀ CHỈ Ở KỶ KÉO THÊM MỘT HỌ VẬT LIỆU', () => {
@@ -357,9 +426,13 @@ test('VÙNG PHỤ CẬN CHỈ ĐƯỢC TỐN +1 LỆNH VẼ, VÀ CHỈ Ở KỶ 
   for (const era of ERAS) {
     const truoc = MOC_TRUOC_PHU_CAN[era];
     assert.ok(Number.isFinite(truoc), `kỷ ${era} thiếu mốc trước-phụ-cận — đối chứng mất một dòng`);
-    const hieu = MOC_LENH_VE[era] - truoc;
+    // ⚠️ CỘT "SAU" LÀ `MOC_TRUOC_HINH_KHOI`, KHÔNG PHẢI `MOC_LENH_VE` (sửa 2026-08-23). Phase
+    // "cơ thể có nhiều khuôn" nằm SAU vùng phụ cận, nên để `MOC_LENH_VE` ở đây là trộn hai thay
+    // đổi vào một hiệu số và không ai còn đọc được vế nào tốn bao nhiêu — đúng luật file này đã
+    // tự đặt ra: *mỗi phase một mốc, mỗi mốc một phép trừ riêng*.
+    const hieu = MOC_TRUOC_HINH_KHOI[era] - truoc;
     assert.ok(hieu === 0 || hieu === 1,
-      `kỷ ${era}: mốc đi từ ${truoc} lên ${MOC_LENH_VE[era]} (lệch ${hieu}). Vùng phụ cận được `
+      `kỷ ${era}: mốc đi từ ${truoc} lên ${MOC_TRUOC_HINH_KHOI[era]} (lệch ${hieu}). Vùng phụ cận được `
       + 'phép kéo thêm TỐI ĐA một họ vật liệu; lệch 2 nghĩa là nó kéo hai họ, và lúc đó phải đi tìm '
       + 'xem hình nào dùng vai lạ chứ không phải sửa con số cho vừa.');
     if (hieu === 1) tang.push(era);

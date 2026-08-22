@@ -67,12 +67,18 @@ import { isValidHumanShape, shapeTriangles } from './humanShape';
 export { HUMAN_BASE_HEIGHT };
 
 /**
- * Vai màu. Năm vai, không hơn — mỗi vai là một màu phải tính ra rồi nhồi vào `instanceColor`, và
- * ở cỡ 14 điểm ảnh thì vai thứ sáu không đọc ra được nữa.
+ * Vai màu — **SÁU vai**, và con số ấy là một quyết định về KHẢ ĐỌC chứ không phải về hiệu năng.
+ *
+ * ⚠️ Câu cũ ở đây ghi *"năm vai, không hơn … vai thứ sáu không đọc ra được nữa"*, rồi ADR-054 thêm
+ * `straw` ngay bên dưới mà không sửa câu ấy — một chú thích tự mâu thuẫn với chính dòng mã cách nó
+ * ba dòng. Sự thật đo được: vai thứ sáu ĐỌC RA ĐƯỢC (nón lá kỷ 6 đi từ độ đậm 0,170 lên 0,879,
+ * cách vai `cloth2` xa gấp nhiều lần ngưỡng mắt); thứ giới hạn số vai là *"mắt còn phân biệt được
+ * bao nhiêu sắc trên một hình 14 điểm ảnh"*, và ngưỡng ấy phải được ĐO chứ không được đoán.
+ *
+ * ⚠️ SỐ VAI MÀU KHÔNG PHẢI MỘT NGÂN SÁCH: màu vào qua `setColorAt` của từng `InstancedMesh`, nên
+ * thêm một vai tốn **0 lệnh vẽ và 0 tam giác**. (Thứ TỐN lệnh vẽ là số KHUÔN — xem
+ * `humanShapesUsed`.) Đừng tiết kiệm ở chỗ không tính tiền.
  */
-// ⚠️ `straw` LÀ VAI THỨ SÁU, THÊM 2026-08-23, VÀ NÓ TỐN ĐÚNG 0 LỆNH VẼ + 0 TAM GIÁC — cả cộng
-// đồng đi qua MỘT `InstancedMesh` và màu vào qua `setColorAt`, nên số vai màu không phải một
-// ngân sách. Xem `humanStyle.js` mục `HEAD_MATERIALS` để biết vì sao nó phải tách khỏi `cloth2`.
 export const HUMAN_ROLES = ['skin', 'cloth', 'cloth2', 'straw', 'hair', 'gear'];
 
 /** Tên các khớp. `sceneGraph.js` và `humanPose.js` cùng đọc danh sách này — một chỗ khai duy nhất. */

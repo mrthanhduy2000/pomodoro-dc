@@ -1235,7 +1235,9 @@ export function createCityScene({
   // ── Cư dân ────────────────────────────────────────────────────────────────
   // Một thành phố không có người là một mô hình kiến trúc. Vài chấm di chuyển giữa những khối nhà
   // đó biến nó thành NƠI CÓ NGƯỜI Ở — và biến "mở khoá thêm một công trình" thành "chỗ này đông
-  // hơn tuần trước". Toàn bộ cộng đồng đi qua MỘT `InstancedMesh` = một lệnh vẽ.
+  // hơn tuần trước". Cả cộng đồng đi qua MỘT `InstancedMesh` cho MỖI KHUÔN cơ thể (2026-08-23,
+  // ADR-055) — trước đó là đúng một mesh duy nhất, vì mọi bộ phận đều là hộp. Xem chú thích
+  // "GOM KHỐI THEO KHUÔN" ngay bên dưới để biết vì sao không thể gộp lại làm một.
   const residents = still ? [] : buildResidents(layout, stats);
   /** Đặt lại vị trí cả cộng đồng theo thời gian. `null` khi thành phố không có ai. */
   let placeResidents = null;

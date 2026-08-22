@@ -4415,4 +4415,61 @@ cấp `Math.min(3,…)` → `Math.min(9,…)` · cắt bớt danh sách cấp th
 - **Blocking Conditions**: Không có. Chỉ cần Đàm quyết làm kỷ nào tiếp.
 - **Review Trigger**: khi Đàm yêu cầu kỷ tiếp theo, hoặc khi số kỷ đã thiết kế đủ nhiều để cần một
   phép chấm bản sắc kiểu `streetStyle.test.js` (105 cặp × N trục) thay cho phép so với preset.
+- ⚠️ **PHẦN NÀY CHỈ PHỤC VỤ MÁY BÀN — ĐÃ ĐO, KHÔNG PHẢI PHỎNG ĐOÁN** (bổ sung 2026-08-23, theo
+  yêu cầu kiểm chéo). Báo cáo trước dựa vào câu *"Đàm chỉ dùng MacBook Air M3"* rồi lấy đó làm cớ
+  bỏ qua iPhone. Câu ấy **chưa được kiểm**, và nó sai về mặt hệ thống: `renderMode.js` KHÔNG loại
+  iPhone khỏi 3D (chú thích trong đó nói rõ coi *"thiếu `deviceMemory`"* là máy yếu thì mọi iPhone
+  đều rớt, tức giết luôn mục tiêu), `CLAUDE.md` ghi *"Web Vercel là bản đầy đủ, dùng trên iPhone và
+  Mac"*, và Đàm dùng iPhone 17 Pro Max hằng ngày. Nên phải đo, và đây là số đo.
+  - **Khung 3D đo thật** (`node scripts/shot.mjs --tab "Thành Phố" --width 390 --probe …` trên bản
+    dựng ngày 2026-08-23, KHÔNG nhân nhẩm từ CSS): iPhone 390 ⇒ **324 × 201** điểm ảnh CSS
+    (bộ đệm 648 × 402, `devicePixelRatio` 2). Máy bàn chạm trần **990 × 614** từ bề ngang 1440 trở
+    lên, nên MacBook Air M3 (1470 điểm logic) đúng là 990 × 614.
+  - **Cư dân kỷ 1 cao bao nhiêu** (`human-scale.mjs --eras 1`): MacBook **18,3 px** trung vị
+    (13,5–29,3; kéo sát nhất 29,5) · iPhone **6,0 px** trung vị (4,4–9,6; kéo sát nhất 9,7).
+  - **Từng bộ phận, đo riêng, so với ngưỡng mắt 4 px của dự án** (`EYE_PIXELS`, `streetStyle.js`):
+
+    | bộ phận (kỷ 1) | MacBook cao × rộng | iPhone cao × rộng |
+    |---|---|---|
+    | thân (hình bóng trang phục) | 7,8 × 6,2 ✅ | 2,5 × 2,0 ❌ |
+    | khoác da thú (mảng lệch vai) | 6,7 × 5,3 ✅ | 2,2 × 1,8 ❌ |
+    | đầu | 5,9 × 5,5 ✅ | 1,9 × 1,8 ❌ |
+    | chân | 8,2 × 3,9 ⚠️ | 2,7 × 1,3 ❌ |
+    | tay | 6,0 × 3,5 ⚠️ | 2,0 × 1,1 ❌ |
+    | cây giáo | 17,2 × 3,8 ⚠️ | 5,6 × 1,2 ❌ |
+    | **búi tóc** | **2,7 × 2,5 ❌** | 0,9 × 0,8 ❌ |
+
+  - **Dáng đi** (`human-scale.mjs --gait --eras 1`, cùng chỗ cùng hướng khác pha): hình bóng đổi
+    **1,9 px trên bề rộng 10,8 px** ở MacBook, nhưng chỉ **0,6 px trên 3,5 px** ở iPhone.
+  - ⇒ **KẾT LUẬN TRUNG THỰC — trên iPhone thì 10/11 trục bản sắc KHÔNG đọc ra được.** Cụ thể:
+    tỉ lệ cơ thể (chênh so với preset chỉ ~0,9 px) · dáng đứng (lệch dưới một điểm ảnh) · hình
+    bóng trang phục · đội đầu · sải chân · tần số bước · biên độ vung tay · tốc độ đi (chỉ đọc
+    được nếu nhìn liên tục vài giây) · và cả cụm dáng đi gộp lại (0,6 px). **Đồ mang theo** là trục
+    duy nhất còn cửa: cây giáo cao 5,6 px và tách khỏi thân, tức một vệt dọc mảnh — nhưng rộng
+    1,2 px nên sau khử răng cưa nó là một vết mờ, xếp loại **MARGINAL, không phải đọc được**.
+    **Màu vải** không cần độ phân giải không gian nên về lý còn sống, nhưng nó chỉ còn ~5 điểm ảnh
+    vuông pha rất mạnh với nền đất ⇒ cũng marginal.
+  - ⚠️ **VÀ MỘT SỰ THẬT KHÓ CHỊU NGAY TRÊN CHÍNH MÁY ĐÍCH**: **búi tóc 2,7 × 2,5 px ở MacBook cũng
+    đã DƯỚI ngưỡng mắt 4 px.** Tức trong bốn trục Đàm chọn cho kỷ 1, trục *"đội đầu"* gần như không
+    trả về gì kể cả trên máy bàn. Ba trục kia (trang phục + khoác da thú, đồ mang theo, tỉ lệ cơ
+    thể + dáng đứng) thì đọc được rõ. Ghi ra đây vì im lặng chuyện này chính là cách một trục chết
+    được tính vào công lao — đúng bài học cơ chế *"lùm cây"* chết trong im lặng ở Phase 8D.
+  - **Recommended Solution cho phần iPhone (CHỈ ĐỀ XUẤT, CHƯA LÀM — cần Đàm quyết)**: KHÔNG nên
+    phóng to cư dân (nó phá tỉ lệ với nhà, và ADR-053 buộc mọi trục phải có lý do lịch sử
+    viết ra được — xem đính chính `stature: 1.18` ngày 2026-08-23: phóng đại thì được, miễn KHAI RA). Ba hướng, xếp theo mức tôi tin:
+    1. **Chấp nhận và ghi rõ** — iPhone xem thành phố ở mức *bố cục và màu*, máy bàn mới là chỗ
+       xem *con người*. Rẻ nhất, trung thực nhất, và khớp với việc màn Thành Phố vốn là màn để
+       ngắm chứ không phải màn thao tác. Hôm nay dự án đang ở đúng trạng thái này.
+    2. **Cho iPhone một mức thu-phóng mặc định GẦN HƠN** — kéo sát nhất đã đưa cư dân lên 9,7 px,
+       vẫn dưới ngưỡng cho từng bộ phận nhưng đủ để cả người đọc ra là một người. Rủi ro: đổi khung
+       mặc định là đổi thứ Đàm đã quen nhìn, và mọi con số nghiệm thu ảnh phải đo lại.
+    3. **ADR-034 đã có sẵn lối đi đúng: chạm vào một công trình thì camera bay tới** (`FOCUS_VIEW_
+       DISTANCE = 7,5`). Mở rộng cho phép chạm vào một **cư dân** thì con người sẽ đọc ra được ở
+       mọi khung hình mà không đụng gì tới khung mặc định. Đây là hướng tôi tin nhất về lâu dài,
+       nhưng nó là một tính năng tương tác chứ không phải một chỉnh số, nên phải là task riêng.
+  - **Cách tái lập mọi con số trên** (đủ ba vế CÔNG CỤ · ĐẦU VÀO · ĐỜI ẢNH theo luật `PERFORMANCE.md`):
+    `node scripts/shot.mjs --tab "Thành Phố" --width 390 --probe "…getBoundingClientRect()…"` (cần
+    `CHROME_PATH` trỏ Chrome, và `npm run build` TRƯỚC vì `shot.mjs` phục vụ `dist/`) ·
+    `node --import ./scripts/register-esm-loader.mjs scripts/human-scale.mjs --eras 1` ·
+    `… scripts/human-scale.mjs --gait --eras 1`. Đo trên cây mã tại commit `be9d2ea`.
 - **Owner**: phiên AI kế tiếp · **Status**: Open (có chủ đích, đúng phạm vi Đàm giao)

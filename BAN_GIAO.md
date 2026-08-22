@@ -6,7 +6,15 @@
 > chọn: `ARCHITECTURE_DECISIONS.md`. Nợ kỹ thuật: `TECH_DEBT.md`. Migration: `MIGRATION.md`. Tóm
 > tắt theo mốc: `CHANGELOG.md`.
 > **NGUYÊN TẮC ƯU TIÊN SỐ 1:** (1) mọi phiên AI phải đọc file này + `CLAUDE.md` + các file liên quan TRƯỚC khi làm; (2) sau MỌI cập nhật dù nhỏ, phải cập nhật ngay file này + `CLAUDE.md` + các file liên quan khác.
-> Cập nhật lần cuối: **2026-08-22** — **CƯ DÂN CÓ KHỚP XƯƠNG, KỶ 1 CÓ BẢN SẮC CON NGƯỜI RIÊNG.**
+> Cập nhật lần cuối: **2026-08-23** — **ĐÃ LÊN PRODUCTION.** `main` nhận 13 commit (11 của các
+> phiên khác: Phase 13 VIỆC B + Phase 14 §1, ADR-046→052 — chúng chưa từng lên production trước
+> hôm nay). Bộ test nay **XANH SẠCH 0 đỏ**: bài `useTimer.test.js` đỏ vĩnh viễn hoá ra là **phép
+> đo già đi** (chờ cứng 500 ms trong khi `BREAK_START_DELAY_MS` đã lên 3200), đã vá bằng cách đọc
+> thẳng hằng số sản phẩm rồi đưa cả 41 bài vào repo. Và một chú thích của chính tôi đã bị số đo
+> bác bỏ: `stature: 1.18` KHÔNG phải *"sự thật nhân chủng học"* mà là **phóng đại có khai báo**
+> (tỉ số thật 1,07–1,10). Trên iPhone thì **10/11 trục bản sắc cư dân không đọc ra được** — đã đo,
+> đã ghi thẳng vào `TECH_DEBT #78` thay vì im lặng.
+> (Mốc trước, 2026-08-22) **CƯ DÂN CÓ KHỚP XƯƠNG, KỶ 1 CÓ BẢN SẮC CON NGƯỜI RIÊNG.**
 > Hai cái hộp + một sóng sin nay thành **9 hộp gắn 6 khớp**, xoay ở tầng ma trận, gộp trong **MỘT**
 > `InstancedMesh` hộp đơn vị ⇒ lệnh vẽ cả cảnh **GIẢM 11 → 10**, tam giác cư dân 672 → 3.024 =
 > **2,03% tổng cảnh** (trần Đàm đặt 6%) và **2,88% riêng thành phố**. Ba tầng mới, đúng khuôn
@@ -1554,6 +1562,69 @@
 - **Lịch sử git `main` từng bị xáo** (thao tác git song song): bản đang chạy là `eb44638` — chứa ĐỦ mọi việc gần đây (Hỏi Coach offline + fix đêm khuya + Coach offline analyst). Vài commit cũ (`1e27505`, `9fbcd62`) thành dangling, KHÔNG còn trong `git log` nhưng code vẫn nằm trong bản deploy. Đừng hoảng nếu không thấy chúng.
 
 ## 🗒️ Nhật ký cập nhật
+
+### 2026-08-23 — Dọn ba thứ trước khi deploy, và một câu tự trấn an bị chính số đo bác bỏ
+
+**Yêu cầu của Đàm**: lệnh LÀM, tự deploy tới production, không hỏi xin phép gộp `main`. Kèm ba
+việc dọn (A) + đo iPhone thật (B) + kiểm một câu tự trấn an của chính tôi (C).
+
+**A1 — luật gộp `main` đã đảo chiều.** `CLAUDE.md` dòng 453 ghi *"đang ở nhánh phụ → hỏi Đàm cho
+gộp vào `main`"*, và **chính câu đó đã khiến tôi dừng lại hỏi** ở cuối phiên trước. Đàm chốt
+2026-08-22: *"sau này tự deploy, tôi không có việc gì phải tự deploy cả"*. Luật mới: **TỰ gộp rồi
+push**; chỉ dừng hỏi khi gỡ xung đột đòi **vứt bỏ công của phiên khác**; **vẫn phải báo rõ đã đưa
+lên production những gì NGOÀI phần việc của mình**; push xong vẫn xác nhận Vercel "Ready".
+
+**A2 — bài test đỏ vĩnh viễn: mã đúng, PHÉP ĐO GIÀ ĐI.** `src/hooks/useTimer.test.js` nằm ngoài
+git từ một phiên trước và đỏ ở dòng 865. Truy ra: bài ấy chờ cứng `advance(500)` trong khi
+`BREAK_START_DELAY_MS` đã được nâng **500 → 3200 ms** (để đồng hồ nghỉ không cắt ngang lễ mừng —
+`timerSession.test.js` có hẳn hai bài canh cặp số ấy). ⚠️ Chép con số mới vào cũng sai y hệt, chỉ
+là chưa cắn: nay bài đọc thẳng hằng số sản phẩm và **ghim CẢ HAI phía ngưỡng** (`BREAK_START_DELAY_MS
+- 1` phải CHƯA mở, `+1` phải mở) — một phía thôi là cái phễu, vì `advance(999999)` cũng qua được vế
+"phải mở". Hai phép thử ngược: phá sản phẩm cho nổ ngay ⇒ **ĐỎ** đúng vế sớm; đổi hằng số
+3200 → 2500 ⇒ **vẫn XANH**, tức nó không thể già đi lần nữa. **Đã `git add` vào repo**: hook lớn
+nhất dự án (1408 dòng) từ chỗ không có bài test nào trong repo nay có **41 bài**.
+
+**A3 — bài bị bỏ qua là bài nào.** `scripts/sceneTriCross.test.js:134` —
+*"ĐỐI CHIẾU CHÉO (c) — CHẠY THẬT CẢ HAI ĐƯỜNG TRÊN 15 KỶ"*. Nó **KHÔNG** bị bỏ qua trong im lặng:
+`grep` không thấy `test.skip` vì cờ nằm ở tuỳ chọn `{ skip: CHAY_CHAM ? false : '…' }` do biến môi
+trường `DC_CROSS_SLOW` quyết. Lượt nhanh bỏ qua nó (nó dựng scene thật 15 lần, ~25 giây), **lượt
+hai của chính `npm test` chạy nó** (`npm run test:cross`). Đã xác nhận: lượt hai ra **3 bài, 3
+xanh, 0 bỏ qua**. Con số `# skipped 1` ở lượt nhanh là **cố ý và có ích** — nó hiện ra để nếu ngày
+nào cơ chế bỏ qua hỏng thì con số tự nói (bản đầu dùng `--test-skip-pattern` và cờ ấy bị Node bỏ
+qua trong im lặng).
+
+**B — iPhone: đo thật, và câu cũ của tôi là một giả định chưa kiểm.** Báo cáo trước lấy *"Đàm chỉ
+dùng MacBook Air M3"* làm cớ bỏ qua iPhone. Nhưng `renderMode.js` **không** loại iPhone khỏi 3D, và
+`CLAUDE.md` ghi *"Web Vercel là bản đầy đủ, dùng trên iPhone và Mac"*. Đo bằng `shot.mjs --probe`
+trên bản dựng thật: iPhone 390 ⇒ khung 3D **324×201**; máy bàn chạm trần **990×614** từ bề ngang
+1440 (MacBook Air M3 = 1470 điểm logic ⇒ đúng 990×614). Cư dân kỷ 1: **18,3 px** ở MacBook so với
+**6,0 px** ở iPhone. Đo TỪNG bộ phận so ngưỡng mắt 4 px ⇒ **10/11 trục không đọc ra được trên
+iPhone**; dáng đi đổi hình bóng **0,6 px** (MacBook 1,9 px). ⚠️ Và một sự thật khó chịu ngay trên
+máy đích: **búi tóc 2,7 × 2,5 px cũng đã DƯỚI ngưỡng** — tức trong bốn trục Đàm chọn cho kỷ 1,
+trục *"đội đầu"* gần như không trả về gì kể cả ở 990×614. Bảng đầy đủ + ba hướng xử lý (chỉ đề
+xuất): `TECH_DEBT #78`.
+
+**C — một lý do đi sau con số, do chính tôi viết.** Chú thích của `stature: 1.18` khẳng định *"đó
+là sự thật nhân chủng học chứ không phải để dễ nhìn"*, rồi mở ngoặc coi phần điểm ảnh là *"tiện lợi
+đi kèm"*. Kiểm: **HƯỚNG** suy được từ nguồn (người săn bắt hái lượm Cận Đông cao hơn người nông
+nghiệp ngay sau đó); **ĐỘ LỚN thì không** — tỉ số thường trích là ~175–177 cm so với ~161–166 cm,
+tức **1,07–1,10**, còn 1,18 lớn gấp **~1,7 lần**. Đo thẳng để trả lời câu *"bỏ phần điểm ảnh đi
+thì có chọn 1,18 không?"*: 1,00 → **15,6 px** · 1,10 → **17,0 px** · 1,18 → **18,3 px** ⇒ **KHÔNG**,
+nó đã là ~1,10. ⇒ Nói đúng bản chất: **con số mỹ thuật được một sự thật lịch sử ĐỠ LƯNG về hướng**.
+**Giữ nguyên giá trị, đổi nhãn** — ADR-025 cấm *nói dối* lịch sử chứ không cấm cách điệu, và lời
+giải thích mới là thứ phiên sau kế thừa rồi dựa vào.
+
+**Nghiệm thu**: `npm test` **1107 bài · 1106 xanh · 0 đỏ · 1 bỏ qua có chủ đích** (lượt hai: 3/3
+xanh) · `npm run lint` sạch · `npm run build` thành công · bản quét 5 kỷ × 6 chặng
+(`sweep-light-ky1-15.png`, md5 `eb3a05ff…`) sạch: 5 kỷ phân biệt rõ, 6 chặng ngày phân biệt rõ,
+khu phố (Phase 14 §1(3)) và vùng quê (Phase 13 VIỆC B) đều hiện đúng, mặt đường liền mạch.
+
+**Đã đưa lên production những gì NGOÀI phần việc của mình**: `main` được gộp nhanh 13 commit, trong
+đó **11 commit là của các phiên khác** (Phase 13 VIỆC B + Phase 14 §1(1)(2)(3), ADR-046 tới -052,
+nợ #70 tới #77) — chúng chưa từng lên `pomodoro-dc.vercel.app` trước hôm nay. 2 commit còn lại là
+của phiên cư dân có khớp. (Báo cáo trước ghi nhầm "12 trong 13"; đếm thật là 11.)
+
+---
 
 ### 2026-08-22 — Cư dân có KHỚP XƯƠNG; kỷ 1 có bản sắc con người riêng (ADR-053)
 

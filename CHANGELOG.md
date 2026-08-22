@@ -12,6 +12,31 @@
 
 ---
 
+## 2026-08-23 — Dọn ba thứ trước khi deploy: bài test đỏ vĩnh viễn, luật gộp `main`, và một lý do đi sau con số
+
+- **Mục đích**: ba việc dọn dẹp, không thêm tính năng. Cả ba đều là *"thứ đang sai mà không có gì
+  đỏ lên"*.
+- **Phạm vi + ảnh hưởng**:
+  - `src/hooks/useTimer.test.js` **vào repo lần đầu** (1273 dòng, 41 bài). Nó vốn nằm ngoài git từ
+    một phiên trước và **đỏ vĩnh viễn**: chờ cứng `advance(500)` trong khi `BREAK_START_DELAY_MS`
+    đã được nâng lên **3200 ms**. Mã đúng, phép đo già đi. Nay bài ấy đọc thẳng hằng số sản phẩm và
+    **ghim CẢ HAI phía ngưỡng**. Hook lớn nhất dự án (1408 dòng) từ chỗ **không có test nào trong
+    repo** nay có 41 bài. Bộ test: **1107 bài · 1106 xanh · 0 đỏ · 1 bỏ qua có chủ đích**.
+  - `CLAUDE.md` — luật gộp `main` đảo chiều theo quyết định của Đàm ngày 2026-08-22: nhánh phụ thì
+    **TỰ gộp rồi push, không hỏi**; chỉ dừng hỏi khi gỡ xung đột đòi vứt bỏ công của phiên khác;
+    vẫn phải **báo rõ đã đưa lên production những gì ngoài phần việc của mình**.
+  - `humanStyle.js` + ADR-053 — đính chính `stature: 1.18` của kỷ 1. Chú thích cũ gọi nó là *"sự
+    thật nhân chủng học"*; đo lại thì **hướng** suy được từ nguồn nhưng **độ lớn thì không** (tỉ số
+    thật ~1,07–1,10; 1,18 lớn gấp ~1,7 lần). Giữ nguyên giá trị, **đổi nhãn** thành phóng đại có
+    khai báo. Không đổi một điểm ảnh nào.
+  - `TECH_DEBT #78` — đo iPhone thay vì suy đoán. Khung 3D thật **324×201**, cư dân **6,0 px**,
+    **10/11 trục bản sắc không đọc ra được**, dáng đi chỉ đổi **0,6 px**. Và ngay trên MacBook,
+    **búi tóc 2,7×2,5 px cũng đã dưới ngưỡng mắt 4 px**.
+- **Tương thích**: không đổi API, không đổi dữ liệu, không đổi hình ảnh. Chỉ test + tài liệu + một
+  khối chú thích.
+
+---
+
 ## 2026-08-22 — Cư dân có KHỚP XƯƠNG, và kỷ 1 có bản sắc con người riêng (ADR-053)
 
 - **Mục đích**: cư dân cũ là **hai cái hộp** cộng một cái nhún hình sin — không có gì để nhìn, và

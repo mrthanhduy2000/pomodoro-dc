@@ -151,11 +151,32 @@ export const HUMAN_STYLES = {
   1: {
     country: 'Thổ Nhĩ Kỳ',
     note: 'Göbekli Tepe — người săn bắt hái lượm Anatolia: khoác da thú lệch vai, tóc búi, vác giáo',
-    // ⚠️ CAO HƠN PRESET, VÀ ĐÓ LÀ SỰ THẬT NHÂN CHỦNG HỌC CHỨ KHÔNG PHẢI ĐỂ DỄ NHÌN. Xương người
-    // săn bắt hái lượm Cận Đông trước Cách mạng Đá mới CAO HƠN người nông nghiệp ngay sau đó —
-    // tầm vóc tụt xuống khi khẩu phần chuyển sang ngũ cốc đơn điệu. Kỷ 1 là kỷ DUY NHẤT trong 15
-    // kỷ nằm trước bước tụt ấy. (Tiện lợi đi kèm: 1,18 lần đưa trung vị từ 15,5 lên 18,3 điểm ảnh
-    // trên máy Đàm — nhưng nếu lý do lịch sử không có thì con số này đã không được phép đổi.)
+    // ⚠️ ĐÍNH CHÍNH 2026-08-23 — CHÚ THÍCH CŨ Ở ĐÂY LÀ MỘT LÝ DO ĐI SAU CON SỐ, VÀ ĐÃ BỊ ĐO BÁC BỎ.
+    // Bản cũ viết: *"cao hơn preset, VÀ ĐÓ LÀ SỰ THẬT NHÂN CHỦNG HỌC CHỨ KHÔNG PHẢI ĐỂ DỄ NHÌN"*,
+    // rồi mở ngoặc thừa nhận phần điểm ảnh như một *"tiện lợi đi kèm"*. Đem kiểm đúng cách mà
+    // `CLAUDE.md` đòi cho mọi câu tự trấn an (bài học Phase 4G) thì nó không đứng vững:
+    //
+    //   HƯỚNG thì suy được từ nguồn. Xương người săn bắt hái lượm Cận Đông trước Cách mạng Đá mới
+    //   CAO HƠN người nông nghiệp ngay sau đó — tầm vóc tụt khi khẩu phần chuyển sang ngũ cốc đơn
+    //   điệu, và kỷ 1 là kỷ DUY NHẤT trong 15 kỷ nằm trước bước tụt ấy. Điều này vẫn đúng.
+    //
+    //   ĐỘ LỚN thì KHÔNG suy được. Các bộ số thường trích cho vùng Đông Địa Trung Hải là khoảng
+    //   175–177 cm (Hậu kỳ Đá cũ / Trung thạch) so với 161–166 cm (Đá mới sớm tới Đồ đồng) ⇒ tỉ số
+    //   thật cỡ **1,07 đến 1,10**. Con số 1,18 ở đây lớn gấp khoảng **1,7 lần** hiệu ứng thật.
+    //
+    // Đo thẳng để trả lời câu *"bỏ phần điểm ảnh đi thì có chọn 1,18 không?"*
+    // (`human-scale.mjs --eras 1`, khung 990×614): 1,00 → 15,6 px · **1,10 → 17,0 px** ·
+    // 1,18 → 18,3 px. Câu trả lời là **KHÔNG** — nếu chỉ đi theo nguồn thì nó đã là ~1,10.
+    //
+    // ⇒ NÓI CHO ĐÚNG BẢN CHẤT: đây là **một con số MỸ THUẬT (phóng đại có chủ đích) ĐƯỢC một sự
+    // thật lịch sử ĐỠ LƯNG về HƯỚNG**, KHÔNG phải một con số SUY RA từ nguồn. Phóng đại một khác
+    // biệt có thật, đúng chiều, trong một thành phố cách điệu nơi con người chỉ cao 18 điểm ảnh —
+    // điều đó hợp lệ. Thứ KHÔNG hợp lệ là dán nhãn nó thành "sự thật nhân chủng học", vì phiên sau
+    // sẽ kế thừa lời giải thích ấy rồi dựa vào (đúng bài học "sửa đúng không chứng minh hiểu đúng",
+    // Phase 3Y/4D). Muốn kéo về đúng nguồn thì đổi sang 1.10 và chấp nhận mất 1,3 điểm ảnh; muốn
+    // giữ phóng đại thì giữ nguyên — nhưng đừng gọi nó là thứ nó không phải.
+    // ⚠️ Và ADR-025 vẫn được tôn trọng: cấm là cấm *mua một con số bằng cách NÓI DỐI lịch sử*.
+    // Phóng đại có khai báo thì không phải nói dối; đúng cái sai vừa được sửa ở ngay trên đây.
     stature: 1.18,
     // Vạm vỡ: săn bắt là lao động toàn thân, và bộ xương thời ấy dày hơn hẳn người nông nghiệp.
     build: 1.12,

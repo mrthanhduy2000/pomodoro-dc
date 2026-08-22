@@ -81,6 +81,26 @@
      `human-scale.mjs` chiếu một ĐOẠN THẲNG từ chân lên đỉnh đầu (8,1 px) trong khi mắt đọc KHỐI
      ĐẶC (11,0 px đo trên ảnh thật) — camera nghiêng 34° nên mặt trên cũng chiếm chỗ theo chiều dọc.
      Sau khi chiếu đủ 8 đỉnh của mọi hộp: **11,1 so với 11,0**.
+- ⚠️ **ĐÍNH CHÍNH 2026-08-23 (a) — MỘT TRONG CÁC CON SỐ CỦA ADR NÀY LÀ PHÓNG ĐẠI CÓ CHỦ ĐÍCH, VÀ
+  CHÚ THÍCH CŨ ĐÃ GỌI NÓ SAI TÊN.** `stature: 1.18` của kỷ 1 được chú thích là *"sự thật nhân
+  chủng học chứ không phải để dễ nhìn"*, kèm một dấu ngoặc coi phần điểm ảnh là *"tiện lợi đi
+  kèm"*. Kiểm lại: **HƯỚNG** thì suy được từ nguồn (người săn bắt hái lượm Cận Đông trước Cách
+  mạng Đá mới cao hơn người nông nghiệp ngay sau đó, và kỷ 1 là kỷ duy nhất nằm trước bước tụt
+  ấy), nhưng **ĐỘ LỚN thì không**: tỉ số thường trích là ~175–177 cm so với ~161–166 cm, tức
+  **1,07–1,10**, còn 1,18 lớn gấp ~1,7 lần hiệu ứng thật. Đo thẳng (`human-scale.mjs --eras 1`):
+  1,00 → 15,6 px · **1,10 → 17,0 px** · 1,18 → 18,3 px ⇒ bỏ phần điểm ảnh đi thì con số đã là
+  ~1,10. ⇒ Đây là **một con số mỹ thuật được một sự thật lịch sử ĐỠ LƯNG về hướng**, không phải một
+  con số suy ra từ nguồn. **Giữ nguyên giá trị** (phóng đại một khác biệt có thật, đúng chiều,
+  trong một thành phố cách điệu là hợp lệ) nhưng **đổi nhãn**, vì ADR-025 cấm *nói dối* lịch sử chứ
+  không cấm cách điệu, và vì lời giải thích mới là thứ phiên sau kế thừa rồi dựa vào (Phase 3Y/4D).
+- ⚠️ **ĐÍNH CHÍNH 2026-08-23 (b) — TRÊN iPHONE THÌ 10/11 TRỤC CỦA BẢNG NÀY KHÔNG ĐỌC RA ĐƯỢC.** ADR
+  này được quyết dựa trên khung 990×614 của MacBook Air M3, với lý lẽ *"Đàm chỉ dùng MacBook"* —
+  một câu chưa được kiểm, và `renderMode.js` KHÔNG loại iPhone khỏi 3D. Đo khung thật bằng
+  `shot.mjs --probe`: iPhone 390 ⇒ **324×201**, cư dân **6,0 px** (so với 18,3 px). Từng bộ phận
+  đều dưới ngưỡng mắt 4 px (đầu 1,9 · thân 2,5 · giáo 5,6×1,2), dáng đi chỉ đổi hình bóng **0,6 px**
+  (MacBook: 1,9 px). ⚠️ Và ngay trên máy đích, **búi tóc 2,7×2,5 px cũng đã dưới ngưỡng** — tức
+  trục *"đội đầu"* gần như không trả về gì kể cả ở 990×614. Bảng đầy đủ + ba hướng xử lý đề xuất:
+  `TECH_DEBT #78`.
 - **Điều kiện xem lại**: khi làm kỷ thứ 2 trở đi (`TECH_DEBT #78` — 14 kỷ còn lại); nếu số cư dân
   vượt 28 hoặc số hộp mỗi người vượt 11 (bài test ngân sách sẽ đỏ); nếu sau này muốn quay người
   hoặc vung tay ngang (lúc đó phải thêm trục thứ hai cho khớp và đo lại ngân sách); hoặc nếu

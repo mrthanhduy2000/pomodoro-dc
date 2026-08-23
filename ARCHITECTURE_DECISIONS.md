@@ -11,6 +11,129 @@
 
 ---
 
+## ADR-056 — DÁNG ĐI là một trục bản sắc riêng, và bốn chiều chuyển động mới đều phải luồn qua ràng buộc "bàn chân không được trượt"
+
+**Ngày:** 2026-08-24
+**Trạng thái:** đã áp dụng
+
+### Bối cảnh
+ADR-053 cho cư dân bộ xương có khớp, ADR-055 cho họ hình khối tròn xoay. Đàm nhìn kết quả rồi ra
+chỉ thị tiếp: *"Tiếp tục trau chuốt, ít ảnh phẳng hơn, tạo nhiều đặc trưng hơn, di chuyển mượt mà
+hơn (nhiều kiểu di chuyển), mỗi kỷ phải tốt hơn, mỗi người phải ra dáng người hơn và không cử động
+như robot, hình ảnh 3D hơn, đẹp hơn."*
+
+### Vấn đề — HAI thứ, và chúng độc lập với nhau
+
+**(1) "KHÔNG CỬ ĐỘNG NHƯ ROBOT" LÀ MỘT LỜI TỐ CÁO CHÍNH XÁC VỀ HÌNH HỌC, KHÔNG PHẢI MỘT CẢM GIÁC.**
+Trước bản này, toàn bộ chuyển động của một cư dân nằm gọn trong **một mặt phẳng đứng dọc theo hướng
+đi**: hai cái que xoay quanh hông, hai cái que xoay quanh vai, một cái nhún suy ra từ chân trụ. Ba
+chiều chuyển động mà người thật có — **lắc ngang**, **vai xoay ngược hông**, **đầu gối co** — đều
+bằng **0 tuyệt đối**, không phải "nhỏ".
+
+Trong ba cái đó, cái đắt nhất là đầu gối, và lý do thì không phải thẩm mỹ mà là hình học: chân cứng
+dài đúng `legLen` thì ở GIỮA pha đưa chân, hông đang cao đúng `legLen` (chân trụ thẳng đứng) còn
+chân đưa cũng duỗi thẳng xuống `legLen` ⇒ **bàn chân ở đúng cao độ 0, tức nó quệt mặt đường**. Đó
+chính là dáng đi compa của hình nhân đồ chơi.
+
+**(2) `stride` · `walkSpeed` · `armSwing` CHỈ CHỈNH ĐƯỢC ĐỘ LỚN CỦA CÙNG MỘT CHUYỂN ĐỘNG.** Chúng
+cho ra người bước dài hơn hoặc gấp hơn; chúng không cho ra một **CÁCH ĐI** khác. Người gánh nước,
+người đội thúng, người lê chân trong tuyết và người tất bật trên vỉa hè Tokyo khác nhau ở chỗ hoàn
+toàn khác, và không trục nào trong ba trục ấy diễn đạt nổi.
+
+**(3) HÌNH KHỐI CỦA ADR-055 VẪN CÒN QUÁ THẲNG.** Mỗi khuôn khi đó có đúng HAI vành, mà với pháp
+tuyến phẳng theo từng mặt thì hai vành cho ra đúng **một dải sáng** theo chiều dọc: tám mặt bên đều
+là hình thang phẳng, sáng đều từ chân lên đỉnh. Bỏ hộp rồi mà mắt vẫn đọc ra "ống nhựa".
+
+### Phương án đã cân nhắc
+
+**A. Thêm khớp thật (tách chân làm đùi + cẳng, tay làm bắp + cẳng).** Đúng nhất về giải phẫu.
+**Loại**: tốn 4 khối/người, đẩy 4 kỷ từ 11 lên 15 khối, vượt trần 11 mà Đàm chốt. Và trần ấy có căn
+cứ đo được (*"ở cỡ 18 px thì khối thứ 12 không đổi được điểm ảnh nào"*).
+
+**B. Một trường "biên độ nhún" trong bảng dáng đi**, để kỷ 6 nảy theo đòn gánh. **Loại sau khi đã
+thử**: nó đẩy hông LÊN TRÊN chiều cao đứng yên, phá thẳng bất biến *"cái nhún luôn kéo xuống"* — mà
+bất biến ấy đúng vì một lý do vật lý thật: mô hình này **không có cổ chân**, nên "nhón chân" là điều
+nó không được phép giả vờ. Cái nảy nay diễn đạt bằng `headTrack` ÂM (thân trên nảy mạnh hơn hông),
+cùng một hiện tượng nói bằng một đại lượng mà mô hình này có thật.
+
+**C. Cho cả thân LẪN hông lắc ngang.** Đúng nhất về sinh cơ học. **Loại**: bộ khớp chỉ xoay quanh
+MỘT trục (trước-sau), nên chân không dạng ra bù được ⇒ bàn chân trượt ngang 3 tới 4 điểm ảnh với
+kiểu `roll`. Chỉ thân trên lắc; phần còn thiếu ghi ở `TECH_DEBT #82`.
+
+**D. Cho đai hông xoay ngược cùng đai vai.** Đúng nhất. **Loại sau khi ĐO**: biên độ
+`hipZ · sin(0,14) ≈ 0,0028 ô` = **0,2 điểm ảnh**, dưới ngưỡng mắt kể cả ở khung cận cảnh, trong khi
+nó buộc phải thêm một số hạng bù vào chính cái luật chống-trượt cộng hai cái trần trong bài test.
+Xoay riêng vai đã cho ra trọn vẹn độ xoay TƯƠNG ĐỐI — thứ mắt thật sự đọc.
+
+### Giải pháp đã chọn
+
+**(a) TRỤC THỨ 12 `gait`, KHUÔN BA LỚP LẦN THỨ MƯỜI.** `city3d/humanGait.js` = BẢNG 9 kiểu đi ×
+4 trường thuần (`knee` · `sway` · `twist` · `headTrack`) → `humanPose.js` = CHUYỂN ĐỘNG →
+`sceneGraph.js` = chỉ ghép ma trận. Mỗi kỷ khai một kiểu, buộc vào `country` và vào chính những
+trường đã có (kỷ 2 `glide` vì `carry: 'pot'`; kỷ 6 `bounce` vì cái đòn gánh cũng là thứ ép
+`stride: 1,34`).
+
+**(b) ĐẦU GỐI GIẢ, VÀ GỌI ĐÚNG TÊN NÓ.** Khối cứng không gập được, nên chân **rút ngắn** giữa pha
+đưa chân. Thứ mắt đọc ở 18 điểm ảnh không phải cái đầu gối mà là **QUỸ ĐẠO BÀN CHÂN**, và quỹ đạo
+ấy thì đúng: bàn chân nay nhấc lên `legLen × (1 − knee)` = 5% (lê) tới 34% (đi đều) chiều dài chân.
+
+⚠️ **Hàm rút chân phải là `sin²`, và đó là một ĐỊNH LÝ chứ không phải một lựa chọn cho mượt.** Góc
+hông là `asin(off / (legLen·f))`, nên rút chân là NHÂN góc lên, mà góc hông có trần
+`asin(stride/4)`. Với `s = sin(πu)`, cần `√(1−s²) ≤ f`. Dùng `f = 1 − c·s` thì gần hai đầu pha vế
+phải tụt TUYẾN TÍNH còn vế trái tụt theo `s²/2` ⇒ bất đẳng thức **vỡ ngay sát mép, ở MỌI giá trị
+`knee < 1`**. Dùng `f = 1 − c·s²` thì đặt `g(s) = 1 − c·s² − √(1−s²)`: `g(0) = 0`, `g(1) = 1 − c > 0`,
+`g′(s) = s·(1/√(1−s²) − 2c) > 0` với mọi `c ≤ 0,5` ⇒ `g ≥ 0`. Đúng khi và chỉ khi **`knee ≥ 0,5`**,
+và `isValidGaitProfile` từ chối thẳng mọi giá trị dưới đó.
+
+**(c) HAI CHIỀU CHUYỂN ĐỘNG MỚI, CẢ HAI TỐN 0 KHỐI.** Lắc ngang chỉ áp cho thân/vai/đầu; vai xoay
+ngược quanh trục đứng, diễn đạt bằng một độ lệch x đối xứng nên không cần thêm trục quay nào vào
+đường ghép ma trận.
+
+**(d) HỒ SƠ KHUÔN NHIỀU VÀNH, CỘNG KHUÔN THỨ TÁM `chest`.** Mỗi khuôn nay có ít nhất một **điểm đổi
+chiều** (đầu gối thắt, eo thắt, sườn nón lõm) — chỗ GÃY giữa hai dải sáng mới là thứ mắt gọi là "có
+khối". Thân phải tách ra khuôn riêng vì một cái chân thắt ở đầu gối rồi nhỏ hẳn ở cổ chân, còn một
+cái thân thắt ở EO rồi nở lại ở hông: hai đường cong ngược nhau ở nửa dưới, dùng chung một hồ sơ thì
+một trong hai phải sai. Lần thứ BẢY của họ *"một trường gánh hai việc"*, lần này thứ gánh hai việc
+là một HỒ SƠ HÌNH HỌC.
+
+### Trade-off
+- **Tam giác mỗi người 220…324 → 476…628** (nặng nhất kỷ 8). Ca xấu nhất theo tỉ lệ là kỷ 1:
+  **9,68%** cảnh. Trần tỉ lệ nâng **6% → 11%** — xem mục dưới, đây là chỗ phải đọc kỹ nhất.
+- **Lệnh vẽ +1 mỗi kỷ** (khuôn `chest`): 11…17 → 12…18.
+- **Trần 11 khối/người KHÔNG đổi.** Cái tăng là số tam giác mỗi khối, không phải số khối.
+- `twist` **dưới ngưỡng mắt ở khung mặc định** (≈0,5 điểm ảnh mỗi vai). Nó dành cho khung cận cảnh
+  (ADR-034), và điều đó được khai ngay trong chú thích của bảng theo đúng luật HỆ QUẢ 2b.
+- Đai hông không xoay, thân dưới không lắc ⇒ `TECH_DEBT #82`.
+
+### ⚠️ Vì sao được phép nâng trần tam giác 6% → 11%
+Con số 6% **chưa bao giờ được buộc vào một phép đo thời gian nào** — nó là một trần tự đặt, và một
+trần tự đặt rất dễ bị đọc thành một sự thật vật lý. Bốn căn cứ, xếp từ mạnh xuống yếu:
+1. `PERFORMANCE.md` đo trên chính MacBook Air M3 của Đàm: cảnh chậm nhất **5,20 ms** trên trần
+   16,67 ms ⇒ **dư 3,2 lần**; mô hình chi phí là *"0,87 ms cố định + 1,14 ms mỗi triệu điểm ảnh
+   thật"* ⇒ **80% chi phí theo ĐIỂM ẢNH**. Bằng chứng trực tiếp: tam giác thành phố chênh **43%**
+   giữa kỷ 3 và 11 mà thời gian chỉ chênh **2,4%**.
+2. Cư dân **không đổ bóng** ⇒ không tốn gì ở lượt dựng bản đồ bóng, lượt đắt nhất mà hình học trả.
+3. Đàm gỡ cổng hiệu năng 2026-08-21 và 2026-08-24 lại yêu cầu đúng hướng này.
+4. Trần 11 KHỐI không đổi ⇒ không đụng vào luận cứ khả-đọc-ở-18-px.
+
+⚠️ **GIỚI HẠN PHẢI NÓI THẲNG: chưa đo lại mili-giây.** Hộp cát chạy SwiftShader, mà luật dự án là
+*"một con số đo trong hộp cát chỉ được dùng để so các trường hợp TRONG hộp cát ấy"*. Bốn căn cứ trên
+đều suy từ phép đo CŨ trên máy thật. Xác nhận bằng `bash scripts/bench-macbook.sh` trên máy Đàm.
+
+### Ảnh hưởng
+`humanGait.js` (mới) · `humanShape.js` (8 khuôn, hồ sơ nhiều vành) · `humanStyle.js` (trục thứ 12) ·
+`humanPose.js` (4 chiều chuyển động mới, `stretchOf`, `legFactorAt`) · `human.js` (thân và áo cắt
+may dùng `chest`) · `sceneGraph.js` (áp hệ số rút chân vào ma trận) · bảng `MOC_LENH_VE`,
+`MOC_TRUOC_HINH_KHOI`, `CANH_TAM_GIAC` đo lại.
+
+### Điều kiện xem lại
+- Nếu trần 11 khối được nới thì đầu gối THẬT (tách đùi/cẳng) là bước tiếp theo, và lúc đó `knee`
+  đổi nghĩa từ "chân còn bao nhiêu phần" sang "gối gập bao nhiêu độ".
+- Nếu bộ khớp có thêm trục quay thứ hai thì `TECH_DEBT #82` (hông lắc, hông xoay) mở lại được.
+- Nếu Đàm đo `bench-macbook.sh` ra trên 8 ms thì phải xem lại trần 11%.
+
+---
+
 ## ADR-055 — Cơ thể cư dân dựng bằng MẶT TRÒN XOAY khai bằng dữ liệu thuần, không bằng hình khối của three; và một ngân sách lạc hậu theo hướng SIẾT thì im lặng vĩnh viễn
 
 **Ngày:** 2026-08-23

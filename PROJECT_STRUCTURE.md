@@ -505,9 +505,23 @@
 │   │   │   │                      #   2026-08-23 — test in ra "đã thiết kế thật: N/15 kỷ"
 │   │   │   │                      #   ⚠️ headMaterial natural/dyed (ADR-054): nón lá và cái quần
 │   │   │   │                      #   KHÔNG cùng một lò nhuộm. TRƠ ở 5 kỷ, danh sách có test khoá
-│   │   │   ├── humanShape.js      # BỘ 7 KHUÔN CƠ THỂ (2026-08-23, ADR-055): box · prism · limb ·
-│   │   │   │                      #   flare · cone · dome · hat. Mỗi khuôn là một MẶT TRÒN XOAY
-│   │   │   │                      #   khai bằng {sides, rings} — THUẦN, không import three
+│   │   │   │                      #   ⚠️ Trục thứ 12 `gait` (2026-08-24, ADR-056) — mỗi kỷ một
+│   │   │   │                      #   KIỂU ĐI có thật, buộc vào country; 9 kiểu, không kỷ liền
+│   │   │   │                      #   nhau nào trùng kiểu (có test khoá)
+│   │   │   ├── humanGait.js       # BẢNG 9 KIỂU ĐI (2026-08-24, ADR-056): stride · glide · march ·
+│   │   │   │                      #   mince · trudge · bounce · roll · bustle · saunter. Mỗi kiểu
+│   │   │   │                      #   4 trường: knee (co gối giả) · sway (nghiêng thân) ·
+│   │   │   │                      #   twist (vai xoay ngược hông) · headTrack (đầu giữ thăng bằng)
+│   │   │   │                      #   ⚠️ knee ∈ [0,5 … 1] KHÔNG phải một ngưỡng chọn tay — dưới
+│   │   │   │                      #   0,5 thì bàn chân TRƯỢT (chứng minh + đối chứng trong test)
+│   │   │   ├── humanShape.js      # BỘ 8 KHUÔN CƠ THỂ (2026-08-24, ADR-056): box · prism · limb ·
+│   │   │   │                      #   chest · flare · cone · dome · hat. Mỗi khuôn là một MẶT
+│   │   │   │                      #   TRÒN XOAY khai bằng {sides, rings} — THUẦN, không import
+│   │   │   │                      #   three
+│   │   │   │                      #   ⚠️ SỐ VÀNH quyết định "phẳng hay không", KHÔNG phải số mặt:
+│   │   │   │                      #   khuôn 2 vành cho ĐÚNG MỘT dải sáng dọc dù sides bằng bao
+│   │   │   │                      #   nhiêu. Mọi khuôn cong nay có ≥1 ĐIỂM UỐN (thắt gối, eo,
+│   │   │   │                      #   sườn lõm) — đó mới là thứ mắt đọc ra là khối
 │   │   │   │                      #   ⚠️ Quy ước "MẶT PHẲNG = 1,0" (R = 0,5/cos(π/sides)) nên độ
 │   │   │   │                      #   trải x/z ĐÚNG BẰNG hộp cũ ⇒ mọi phép đo hình bóng và mọi
 │   │   │   │                      #   con số tỉ lệ cơ thể không phải hiệu chuẩn lại
@@ -526,6 +540,11 @@
 │   │   │   │                      #   ⚠️ Hàm của QUÃNG ĐƯỜNG, không phải của thời gian — nhờ vậy
 │   │   │   │                      #   bàn chân KHÔNG trượt trên đất, và cái nhún là HỆ QUẢ của
 │   │   │   │                      #   chân trụ đang nghiêng chứ không phải một sin riêng
+│   │   │   │                      #   ⚠️ `stretchOf(part, pose)` = CO GỐI GIẢ: mesh cứng không gập
+│   │   │   │                      #   được nên chân đưa bị RÚT NGẮN. Hệ số phải là sin² chứ không
+│   │   │   │                      #   phải sin — sin làm bàn chân trượt ở MỌI knee < 1 (ADR-056)
+│   │   │   │                      #   ⚠️ Nó chỉ nhân vào rest.y và part.h, TUYỆT ĐỐI không nhân
+│   │   │   │                      #   vào x/z — nhân vào x/z là làm chân teo lại chứ không co
 │   │   │   ├── residents.js       # CƯ DÂN: dân số suy từ tiến độ, tuyến đi bám ĐƯỜNG SÁ
 │   │   │   │                      #   ⚠️ residentAt(route, TIME) — chuyển động là hàm của thời
 │   │   │   │                      #   gian, không phải biến cộng dồn (test được + rời tab đúng)

@@ -920,7 +920,8 @@ trượt vài khung.
 **Cư dân là một BỘ XƯƠNG, và dáng đi là hàm của QUÃNG ĐƯỜNG (2026-08-22, ADR-053)**: ba tầng, mỗi
 tầng một việc, đúng khuôn `floraStyle.js` ↔ `flora.js` — `engine/city3d/humanStyle.js` = **BẢNG 15
 kỷ × 11 trục** (`country` khoá cứng vào `eraStyle.js`; đủ 15/15 kỷ từ 2026-08-23) ·
-`engine/city3d/humanShape.js` = **BỘ 7 KHUÔN** (mặt tròn xoay khai bằng dữ liệu) ·
+`engine/city3d/humanShape.js` = **BỘ 8 KHUÔN** (mặt tròn xoay khai bằng dữ liệu) ·
+`engine/city3d/humanGait.js` = **BẢNG 9 KIỂU ĐI** (2026-08-24, ADR-056) ·
 `engine/city3d/human.js` = **THƯ VIỆN HÌNH** (danh sách khối, mỗi khối gắn một khớp + một vai màu +
 một khuôn) · `engine/city3d/humanPose.js` = **DÁNG ĐI** (`poseAt(body, travelled)` → góc từng
 khớp) · `residents.js` giữ nguyên "bao nhiêu người, đi đâu" · `sceneGraph.js` chỉ ghép ma trận.
@@ -948,6 +949,33 @@ lạc hậu đó im lặng vĩnh viễn vì nó không làm gì hỏng, nó ch�
 ⚠️ **`lowDetail` quay về ĐÚNG mô hình 2 hộp cũ** (`buildHumanBodyLowDetail`), và chính hàm đó cũng
 là ĐỐI CHỨNG của mọi phép đo dáng đi: một mô hình không có khớp thì hình bóng phải đổi **0**. Hai
 khối ấy **phải giữ khuôn `box`** — "nâng cấp" cho đẹp là phá chính vai trò đối chứng của chúng.
+
+**DÁNG ĐI LÀ MỘT TRỤC BẢN SẮC RIÊNG, VÀ BỐN CHIỀU CHUYỂN ĐỘNG MỚI ĐỀU LUỒN QUA MỘT RÀNG BUỘC
+(2026-08-24, ADR-056)**: `humanGait.js` là **BẢNG 9 KIỂU ĐI** (`stride · glide · march · mince ·
+trudge · bounce · roll · bustle · saunter`), mỗi kiểu 4 trường — `knee` (co gối giả) · `sway`
+(nghiêng thân sang bên) · `twist` (vai xoay ngược hông) · `headTrack` (đầu giữ thăng bằng). Trục
+thứ 12 `gait` trong `humanStyle.js` buộc vào `country`, và không kỷ liền nhau nào dùng chung một
+kiểu (có test khoá).
+⚠️ **CO GỐI GIẢ, VÀ HỆ SỐ PHẢI LÀ `sin²` CHỨ KHÔNG PHẢI `sin`.** Mesh cứng không gập được, nên
+chân đưa bị **RÚT NGẮN** (`stretchOf` nhân vào `rest.y` và `part.h`, TUYỆT ĐỐI không nhân vào
+x/z). Đây không phải trang trí: một chân **cứng đơ dài đúng `legLen` thì QUỆT ĐẤT ở giữa pha đưa**
+(hông ở `legLen·cos 0`, chân đưa thẳng đứng dài `legLen` ⇒ bàn chân ở y = 0) — chính cái quệt ấy
+là định nghĩa toán học của dáng com-pa mà mắt gọi là "robot". Nhưng phép rút ngắn lại nới trần của
+góc hông (`asin(off / (legLen · f))`), nên nó **có thể làm bàn chân trượt**. Đặt `s = sin(πu)`:
+cần `√(1 − s²) ≤ f`. Với `f = 1 − c·sin(πu)` vế phải tụt **tuyến tính** ở hai đầu pha trong khi vế
+trái tụt như `s²/2` ⇒ **vỡ ở MỌI `knee < 1`**. Với `f = 1 − c·sin²(πu)` thì `g(s) = 1 − c·s² −
+√(1 − s²)` có `g(0) = 0`, `g(1) = 1 − c > 0`, `g′(s) = s·(1/√(1−s²) − 2c) > 0` với mọi `c ≤ 0,5`
+⇒ đúng iff **`knee ≥ 0,5`**. Con số 0,5 trong `isValidGaitProfile` vì vậy là một **định lý**,
+không phải một ngưỡng chọn tay, và có đối chứng dựng lại bản `sin` hỏng bắt nó phải vượt trần.
+⚠️ **Ba chiều còn lại tốn 0 khối**: `sway` nghiêng thân/đầu sang bên theo `sin(2πphase)`; `twist`
+xoay vai ngược chiều hông bằng cách **dịch hai khớp vai theo trục đi tới** (`shoulderZ · sin θ`) —
+mesh cứng nên xoay được diễn đạt bằng phép dịch; `headTrack` cho đầu **bù lại cái nhún**
+(`−headTrack · bob`), giá trị ÂM (kỷ 6) nghĩa là đầu nhún MẠNH hơn thân. Cả ba đi vào cùng ma trận
+đã có, nên **0 lệnh vẽ mới, 0 khối mới**.
+⚠️ **Tam giác mỗi người 220…324 → 476…628; lệnh vẽ +1 mỗi kỷ** (khuôn `chest` mới cho thân và áo
+may đo). Trần tỉ lệ nâng **6% → 11%** với bằng chứng đo được, KHÔNG nâng lặng lẽ; ca xấu nhất **kỷ
+1 = 9,68%**. ⚠️ Giới hạn phải nói thẳng: **ms mỗi khung CHƯA đo lại** (hộp cát chỉ có SwiftShader),
+nên đây là một trần theo TỈ LỆ HÌNH HỌC, không phải một lời hứa về tốc độ.
 
 **Database schema — KHÔNG có migration tự động**: mọi thay đổi cấu trúc bảng Supabase (`game_state`,
 `timer_live`, `push_jobs`, `push_subscriptions`...) đòi hỏi chạy TAY một file `.sql` trong

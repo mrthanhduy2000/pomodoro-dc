@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { Quaternion, Vector3 } from 'three';
 
 import { buildHumanBody, humanBodyTriangles } from '../../../engine/city3d/human.js';
-import { partCenterAt, poseAt } from '../../../engine/city3d/humanPose.js';
+import { partCenterAt, poseAt, stretchOf } from '../../../engine/city3d/humanPose.js';
 import { MAX_RESIDENTS } from '../../../engine/city3d/residents.js';
 
 /**
@@ -651,8 +651,16 @@ test('⚠️ CƯ DÂN PHẢI ĐI QUA `humanPose` — không được có nhánh 
     'Cư dân không còn gom theo KHUÔN. Mỗi bộ phận một mesh = 11 lệnh vẽ thay vì 3–6.');
   assert.ok(/buildHumanShapeGeometry\(shape\)/.test(CALLS),
     'Hình học cư dân không còn đến từ `humanShape.js` — có ai đó dựng lại đa giác bằng tay.');
-  assert.ok(/scale\.set\(part\.w, part\.h, part\.d\)/.test(CALLS),
-    'Kích thước bộ phận không còn đi vào ma trận scale.');
+  assert.ok(/scale\.set\(part\.w, part\.h \* keo, part\.d\)/.test(CALLS),
+    'Kích thước bộ phận không còn đi vào ma trận scale, hoặc hệ số rút chân đã rơi khỏi chiều cao.');
+  // ⚠️ HỆ SỐ RÚT CHÂN PHẢI ÁP CHO **CẢ HAI**: chiều cao khối VÀ `rest.y` (khối treo cách khớp bao
+  // xa). Áp một mà quên hai thì bàn chân rời khỏi cẳng chân — hình học vẫn hợp lệ nên không có gì
+  // đỏ lên, và chỉ ảnh chụp gần mới thấy. Không bài test hành vi nào chạm tới được chỗ này vì nó
+  // nằm trong hàm dựng cảnh, nên phải canh bằng chính mã nguồn.
+  assert.ok(/limb\.set\(part\.rest\.x, part\.rest\.y \* keo, part\.rest\.z\)/.test(CALLS),
+    'Hệ số rút chân không còn áp cho `rest.y` — bàn chân sẽ rời khỏi cẳng chân lúc đưa chân.');
+  assert.ok(/const keo = stretchOf\(part, pose\)/.test(CALLS),
+    'Hệ số rút chân không còn đọc qua `stretchOf` — có ai đó chép lại `pose.stretch?.[…] ?? 1`.');
 
   // ⚠️ MỌI MESH CƯ DÂN PHẢI CÙNG MANG TÊN `residents`. `--mask residents`, `human-strip.mjs` và
   // `sceneStats.test.js` đều hỏi theo tên; đặt tên rời là làm mù mọi phép đo dựng quanh nó.
@@ -691,7 +699,8 @@ test('⚠️ PHÉP GHÉP MA TRẬN CỦA CẢNH PHẢI KHỚP VỚI `partCenterA
         const joint = pose.joints[part.joint];
         // ĐƯỜNG 1 — y hệt `sceneGraph.js`.
         jointSpin.setFromAxisAngle(FORWARD, joint.a);
-        limb.set(part.rest.x, part.rest.y, part.rest.z).applyQuaternion(jointSpin);
+        limb.set(part.rest.x, part.rest.y * stretchOf(part, pose), part.rest.z)
+          .applyQuaternion(jointSpin);
         limb.set(joint.x + limb.x, joint.y + limb.y, joint.z + limb.z);
         const cụcBộ = { x: limb.x, y: limb.y, z: limb.z };
         // ĐƯỜNG 2 — tầng thuần, lượng giác viết tay.
@@ -728,9 +737,9 @@ test('⚠️ PHÉP GHÉP MA TRẬN CỦA CẢNH PHẢI KHỚP VỚI `partCenterA
  * (2026-08-22, cơ thể cũ · 40 phiên), còn chú thích trong `human.js` thì kẹt ở 63.560 suốt hai phase.
  */
 const CANH_TAM_GIAC = {
-  1: 151388, 2: 176214, 3: 187220, 4: 238120, 5: 170434,
-  6: 273006, 7: 251718, 8: 226382, 9: 213896, 10: 197530,
-  11: 227952, 12: 198342, 13: 230682, 14: 238966, 15: 217646,
+  1: 158556, 2: 185174, 3: 195284, 4: 247080, 5: 179394,
+  6: 281966, 7: 260230, 8: 234894, 9: 222856, 10: 206490,
+  11: 236464, 12: 207302, 13: 238746, 14: 246134, 15: 226606,
 };
 
 test('⚠️ NGÂN SÁCH TAM GIÁC CƯ DÂN KHÔNG QUÁ 6% CẢNH — chấm TỪNG KỶ trên cảnh CỦA CHÍNH KỶ ẤY', () => {
@@ -746,6 +755,29 @@ test('⚠️ NGÂN SÁCH TAM GIÁC CƯ DÂN KHÔNG QUÁ 6% CẢNH — chấm T�
   // (Kết quả: kỷ 1 vẫn là ca xấu nhất — 5,40% trên trần 6%, biên còn 10,0% — nhưng nay ta BIẾT
   // thế chứ không suy thế.)
   const MAX_PARTS = 11;
+  // ⚠️ TRẦN TỈ LỆ ĐÃ ĐƯỢC NÂNG 6% → 11% NGÀY 2026-08-24, VÀ ĐÂY LÀ CHỖ PHẢI ĐỌC TRƯỚC KHI TIN NÓ.
+  //
+  // Con số 6% chưa bao giờ được buộc vào một phép đo THỜI GIAN nào — nó là một trần tự đặt, và một
+  // trần tự đặt thì rất dễ được đọc thành một sự thật vật lý. Bốn căn cứ để nâng, xếp từ mạnh
+  // xuống yếu:
+  //   1. `PERFORMANCE.md` đo trên chính MacBook Air M3 của Đàm: cảnh CHẬM NHẤT tốn **5,20 ms** trên
+  //      trần 16,67 ms của 60 hình/giây ⇒ **còn dư 3,2 lần**. Và mô hình chi phí đo được là
+  //      *"≈ 0,87 ms cố định + 1,14 ms mỗi TRIỆU ĐIỂM ẢNH THẬT"* — tức **80% chi phí đi theo ĐIỂM
+  //      ẢNH, không theo tam giác**. Bằng chứng trực tiếp: tam giác thành phố chênh **43%** giữa
+  //      kỷ 3 và kỷ 11 mà thời gian chỉ chênh **2,4%**.
+  //   2. Cư dân **KHÔNG đổ bóng** (`castShadow = false`), nên họ không tốn gì ở lượt dựng bản đồ
+  //      bóng — lượt đắt nhất mà hình học phải trả.
+  //   3. Đàm gỡ cổng hiệu năng ngày 2026-08-21 (*"không quan trọng hiệu năng… máy tôi là M3
+  //      MacBook Air chứ có yếu đâu"*) và ngày 2026-08-24 lại yêu cầu đúng hướng này
+  //      (*"ít ảnh phẳng hơn… hình ảnh 3D hơn, đẹp hơn"*).
+  //   4. Trần 11 KHỐI của Đàm KHÔNG đổi. Cái tăng là số tam giác MỖI khối, không phải số khối —
+  //      tức không đổi gì ở luận cứ *"ở cỡ 18 px thì khối thứ 12 không đọc ra"*.
+  //
+  // ⚠️ VÀ ĐÂY LÀ GIỚI HẠN PHẢI NÓI THẲNG: **chưa đo lại mili-giây.** Hộp cát dựng bằng SwiftShader
+  // (bộ tô hình chạy trên CPU), mà luật của dự án là *"một con số đo trong hộp cát chỉ được dùng để
+  // so các trường hợp TRONG hộp cát ấy"*. Bốn căn cứ trên đều là suy từ phép đo CŨ trên máy thật,
+  // không phải phép đo MỚI. Muốn xác nhận: `bash scripts/bench-macbook.sh` trên máy Đàm.
+  const TRAN_TY_LE = 0.11;
   let tệNhất = null;
   for (let era = 1; era <= 15; era += 1) {
     const n = buildHumanBody(era).parts.length;
@@ -755,9 +787,10 @@ test('⚠️ NGÂN SÁCH TAM GIÁC CƯ DÂN KHÔNG QUÁ 6% CẢNH — chấm T�
     const canh = CANH_TAM_GIAC[era];
     const tyLe = (tri * MAX_RESIDENTS) / canh;
     if (!tệNhất || tyLe > tệNhất.tyLe) tệNhất = { era, tri, tyLe };
-    assert.ok(tyLe <= 0.06,
+    assert.ok(tyLe <= TRAN_TY_LE,
       `kỷ ${era}: ${tri} tam giác/người × ${MAX_RESIDENTS} người = ${tri * MAX_RESIDENTS},`
-      + ` tức ${(tyLe * 100).toFixed(2)}% của cảnh ${canh} — vượt trần 6%`);
+      + ` tức ${(tyLe * 100).toFixed(2)}% của cảnh ${canh} — vượt trần`
+      + ` ${(TRAN_TY_LE * 100).toFixed(0)}%`);
   }
 
   // ⚠️ TRẦN CHO CHÍNH CÁI TRẦN, GIỮ NGUYÊN 11 KHỐI — VÀ ĐÂY LÀ CHỖ CÁI CỔNG ĐÃ LÀM ĐÚNG VIỆC.
@@ -776,10 +809,11 @@ test('⚠️ NGÂN SÁCH TAM GIÁC CƯ DÂN KHÔNG QUÁ 6% CẢNH — chấm T�
   // thành phố nặng thêm sẽ TỰ ĐỘNG cấp thêm quota cho cư dân, và "≤6%" — một QUAN HỆ — trôi mà vẫn
   // xanh. 340 là số đo hôm nay (324, kỷ 8) cộng đúng một khối `box` dự phòng, KHÔNG phải một con
   // số tròn chọn cho dễ nhìn.
-  assert.ok(tệNhất.tri <= 340,
-    `kỷ ${tệNhất.era} dựng ${tệNhất.tri} tam giác/người — vượt trần tuyệt đối 340`);
+  assert.ok(tệNhất.tri <= 640,
+    `kỷ ${tệNhất.era} dựng ${tệNhất.tri} tam giác/người — vượt trần tuyệt đối 640`);
 
   console.log(`[cư dân] 15 kỷ · ca xấu nhất kỷ ${tệNhất.era}: ${tệNhất.tri} tam giác/người`
-    + ` × ${MAX_RESIDENTS} = ${(tệNhất.tyLe * 100).toFixed(2)}% cảnh (trần 6%)`
+    + ` × ${MAX_RESIDENTS} = ${(tệNhất.tyLe * 100).toFixed(2)}% cảnh (trần`
+    + ` ${(TRAN_TY_LE * 100).toFixed(0)}%)`
     + ` · nặng nhất ${Math.max(...Object.keys(CANH_TAM_GIAC).map((e) => humanBodyTriangles(+e)))} tam giác/người`);
 });

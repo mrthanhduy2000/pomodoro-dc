@@ -6,7 +6,25 @@
 > chọn: `ARCHITECTURE_DECISIONS.md`. Nợ kỹ thuật: `TECH_DEBT.md`. Migration: `MIGRATION.md`. Tóm
 > tắt theo mốc: `CHANGELOG.md`.
 > **NGUYÊN TẮC ƯU TIÊN SỐ 1:** (1) mọi phiên AI phải đọc file này + `CLAUDE.md` + các file liên quan TRƯỚC khi làm; (2) sau MỌI cập nhật dù nhỏ, phải cập nhật ngay file này + `CLAUDE.md` + các file liên quan khác.
-> Cập nhật lần cuối: **2026-08-23 (tối)** — **CƠ THỂ CƯ DÂN THÔI LÀ MỘT CHỒNG GẠCH** (ADR-055).
+> Cập nhật lần cuối: **2026-08-24** — **CƯ DÂN THÔI ĐI NHƯ ROBOT** (ADR-056). Đàm: *"ít ảnh phẳng
+> hơn, tạo nhiều đặc trưng hơn, di chuyển mượt mà hơn (nhiều kiểu di chuyển), mỗi kỷ phải tốt hơn,
+> mỗi người phải ra dáng người hơn và không cử động như robot, hình ảnh 3D hơn, đẹp hơn"*. Bốn
+> việc: **(1)** `humanGait.js` MỚI — **bảng 9 KIỂU ĐI** (`stride · glide · march · mince · trudge ·
+> bounce · roll · bustle · saunter`), trục thứ **12** của bảng con người, buộc vào `country`, không
+> kỷ liền nhau nào trùng kiểu; **(2)** **CO GỐI GIẢ** — mesh cứng không gập được nên chân đưa bị
+> rút ngắn, và đây mới là nguyên nhân gốc của dáng "robot": một chân cứng dài đúng `legLen`
+> **QUỆT ĐẤT** ở giữa pha đưa (đối chứng đo được: nâng bàn chân **đúng 0%**, bằng 0 theo cấu tạo).
+> Hệ số phải là **`sin²` chứ không phải `sin`** — bản `sin` làm bàn chân TRƯỢT ở **mọi**
+> `knee < 1`, và ngưỡng `knee ≥ 0,5` là một **định lý** chứ không phải một số chọn tay; **(3)** ba
+> chiều nữa tốn **0 khối, 0 lệnh vẽ**: nghiêng thân sang bên · vai xoay ngược hông · đầu bù cái
+> nhún; **(4)** khuôn **`chest`** mới và mọi khuôn cong nay có **≥1 ĐIỂM UỐN** — vì **số VÀNH**,
+> chứ không phải số mặt, mới quyết định "phẳng hay không" (khuôn 2 vành cho đúng MỘT dải sáng dọc
+> dù `sides` bằng bao nhiêu). Số: tam giác mỗi người **220…324 → 476…628**; **khối vẫn 9…11**
+> (trần Đàm đặt còn nguyên); **lệnh vẽ +1 ở CẢ 15 kỷ**; trần tỉ lệ **6% → 11%** kèm bốn bằng chứng,
+> ca xấu nhất **kỷ 1 = 9,68%**. ⚠️ **`ms` mỗi khung CHƯA đo lại** (hộp cát chỉ có SwiftShader) —
+> 11% là trần theo tỉ lệ hình học, không phải lời hứa về tốc độ. Chi tiết: `PERFORMANCE.md` mục
+> Phase 16.
+> (Mốc trước, 2026-08-23 tối) — **CƠ THỂ CƯ DÂN THÔI LÀ MỘT CHỒNG GẠCH** (ADR-055).
 > Đàm: *"làm cho chân thật nhất, ít ô vuông hơn và giống 3D hơn, làm kỹ từng kỷ"*. Mọi bộ phận
 > trước nay đều là `BoxGeometry(1,1,1)`, mà một hộp chỉ cho mắt **BA mảng sáng** — ba mảng phẳng
 > đọc ra là một tấm bìa gấp, và mười một tấm bìa gấp xếp chồng vẫn là bìa. Nay có **`humanShape.js`
@@ -1580,6 +1598,55 @@
 - **Lịch sử git `main` từng bị xáo** (thao tác git song song): bản đang chạy là `eb44638` — chứa ĐỦ mọi việc gần đây (Hỏi Coach offline + fix đêm khuya + Coach offline analyst). Vài commit cũ (`1e27505`, `9fbcd62`) thành dangling, KHÔNG còn trong `git log` nhưng code vẫn nằm trong bản deploy. Đừng hoảng nếu không thấy chúng.
 
 ## 🗒️ Nhật ký cập nhật
+
+### 2026-08-24 — Dáng đi thành một trục bản sắc, và khuôn cơ thể hết phẳng (ADR-056)
+
+**Lệnh của Đàm**: *"Tiếp tục trau chuốt, ít ảnh phẳng hơn, tạo nhiều đặc trưng hơn, di chuyển mượt
+mà hơn (nhiều kiểu di chuyển), mỗi kỷ phải tốt hơn, mỗi người phải ra dáng người hơn và không cử
+động như robot, hình ảnh 3D hơn, đẹp hơn."*
+
+**Đã làm gì**
+- **`src/engine/city3d/humanGait.js` MỚI** (thuần): bảng **9 kiểu đi** × 4 trường — `knee` (co gối
+  giả) · `sway` (nghiêng thân sang bên) · `twist` (vai xoay ngược hông) · `headTrack` (đầu giữ
+  thăng bằng). Kèm `isValidGaitProfile` **TỪ CHỐI THẲNG** dòng sai, không tự chữa.
+- **`humanStyle.js`**: trục thứ **12** `gait`, đủ 15/15 kỷ, mỗi dòng có lý do buộc vào `country`
+  (thợ săn sải dài · thầy tế lướt · lính đều bước · quý tộc bước ngắn · phu than lê chân · gánh
+  hàng rong nhún · thuỷ thủ lắc · thư ký hối hả · dạo phố thong dong).
+- **`humanPose.js`**: `stretchOf` + `legFactorAt` (co gối giả, hệ số `sin²`), `sway`, `twist` (dịch
+  hai khớp vai theo trục đi tới — mesh cứng nên "xoay" diễn đạt bằng phép dịch), `headTrack`.
+- **`humanShape.js`**: khuôn **`chest`** mới (60 tam giác) cho thân và áo may đo; `limb` · `flare` ·
+  `cone` · `dome` · `hat` được thêm vành để có **điểm uốn** — 76/60/46/76/76 tam giác.
+- **`sceneGraph.js`**: nhân hệ số co gối vào `rest.y` và `part.h` (**không** vào x/z).
+- **`humanGait.test.js` MỚI** (8 bài, tất cả đã thử-cho-đỏ) + cập nhật `drawCallBudget.test.js`,
+  `sceneGraphWiring.test.js`.
+
+**Số**
+- Tam giác mỗi người **220…324 → 476…628**; **khối mỗi người vẫn 9…11**.
+- Lệnh vẽ thành phố **+1 ở CẢ 15 kỷ** (đúng bằng khuôn `chest` mới, vì lệnh vẽ cư dân = số khuôn).
+- Tổng tam giác 15 kỷ **2.537.606 → 2.665.286 (+5,0%)**.
+- Trần tỉ lệ **6% → 11%**; ca xấu nhất **kỷ 1 = 5,40% → 9,68%**.
+- Nâng bàn chân lúc đưa chân: **5% (trudge) … 34% (march)** chiều dài chân, **đúng thứ tự `knee`**.
+- Ba bất biến cũ còn ở mức sai số máy: trượt **1,39e-17** · `|foot.y|` lúc trụ **1,39e-17** · vượt
+  trần góc hông **5,55e-17**.
+- Bản sắc dáng đi: **36/36 cặp khác nhau ở 4/4 trường**.
+- Test **1131 bài, 1130 đạt, 0 hỏng, 1 bỏ qua**; lint sạch.
+
+**Bốn bài học (đã ghi vào `CLAUDE.md`)**
+1. **Số VÀNH, không phải số MẶT**, quyết định "phẳng hay không" — khuôn 2 vành cho đúng MỘT dải
+   sáng dọc dù `sides` bằng bao nhiêu. Lần thứ **bảy** của "một trường gánh hai việc", lần này thứ
+   gánh hai việc là một **hồ sơ hình học**.
+2. **`sin²` là một định lý, không phải một lựa chọn cho mượt** — có chứng minh và có đối chứng
+   dựng lại bản `sin` hỏng bắt nó phải vượt trần.
+3. **Một phép thử ngược ra "16 đạt, 0 hỏng" vì bất biến ấy KHÔNG THỂ đỏ** (assert chỉ lấy mẫu ở pha
+   trụ, nơi hệ số bằng 1 theo cấu tạo). Lần thứ hai sau ADR-048.
+4. **`TECH_DEBT #43` lần thứ hai trong một tuần**: ba phép đo cãi nhau về lệnh vẽ kỷ 13 (12 · 13 ·
+   14) chỉ vì hai fixture khác `sessionCount`, cộng một lỗi **NHÃN** (Chromium in số CẢ KHUNG =
+   công thức **+2**, chứ không phải số thành phố). Suýt mở một mục nợ về một lỗi không tồn tại.
+
+**Còn lại (đã ghi nợ)**: `TECH_DEBT #82` — hông chưa lắc ngang, đai hông chưa xoay, vì bộ khớp chỉ
+có **một** trục quay. Ở khung mặc định không đọc ra được (`#80`), nên hoãn có chủ ý.
+
+---
 
 ### 2026-08-23 (tối) — Cơ thể cư dân dựng bằng MẶT TRÒN XOAY, mỗi kỷ một bộ khuôn (ADR-055)
 

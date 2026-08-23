@@ -110,9 +110,9 @@ function tamCoDinh(era) {
  * không bằng cách đọc hai bảng bằng mắt.
  */
 const MOC_LENH_VE = {
-  1: 11, 2: 15, 3: 15, 4: 14, 5: 15,
-  6: 16, 7: 16, 8: 17, 9: 13, 10: 16,
-  11: 13, 12: 13, 13: 12, 14: 12, 15: 13,
+  1: 12, 2: 16, 3: 16, 4: 15, 5: 16,
+  6: 17, 7: 17, 8: 18, 9: 14, 10: 17,
+  11: 14, 12: 14, 13: 13, 14: 13, 15: 14,
 };
 
 /**
@@ -306,13 +306,26 @@ test('QUAN HỆ "lệnh vẽ = số họ + 2 + số khuôn cư dân (+1 nếu c�
       + 'sửa `tamCoDinh` và đo lại cả bảng), hoặc thành phố đã đổi họ vật liệu.');
   }
 
-  // ⚠️ NEO VÀO THỰC TẾ — ba kỷ đo lại bằng Chromium ngày **2026-08-23**:
-  //     node scripts/city-preview.mjs --era N --hour 12 --bench 1 --no-shadow
-  // đọc cột đầu của dòng `[stats] | lệnh vẽ | …`. Không có ba dòng này thì cả file chỉ là một công
-  // thức tự soi gương, và nó ĐÃ từng lệch +1 suốt một phase mà không gì đỏ lên.
-  assert.equal(MOC_LENH_VE[1], 11, 'kỷ 1: Chromium đo 11 lệnh vẽ thành phố ngày 2026-08-23');
-  assert.equal(MOC_LENH_VE[8], 17, 'kỷ 8: Chromium đo 17 lệnh vẽ thành phố ngày 2026-08-23');
-  assert.equal(MOC_LENH_VE[13], 12, 'kỷ 13: Chromium đo 12 lệnh vẽ thành phố ngày 2026-08-23');
+  // ⚠️ NEO VÀO THỰC TẾ. Không có ba dòng này thì cả file chỉ là một công thức tự soi gương, và nó
+  // ĐÃ từng lệch +1 suốt một phase mà không gì đỏ lên.
+  // ⚠️ NEO VÀO CHROMIUM, VÀ PHẢI TRỪ ĐÚNG HAI TẤM NỀN. `renderer.info.render.calls` đếm CẢ KHUNG
+  // HÌNH, tức cộng thêm vòm trời và rặng núi — hai mesh cố định ở mọi kỷ, không nằm trong
+  // `hoVatLieu`. Bản trước ghi *"Chromium đo 11 lệnh vẽ thành phố"* trong khi Chromium chưa bao giờ
+  // in ra con số 11: nó in ra con số của cả khung hình. Một lỗi NHÃN, đúng họ `frame-fit.mjs`
+  // (Phase 7B) — số thì đúng, ý nghĩa thì sai, và phần dễ kiểm nhất của nó vẫn "khớp".
+  //
+  // ⚠️ VÀ PHẢI ĐO Ở ĐÚNG FIXTURE CỦA CHÍNH BÀI TEST NÀY (`--sessions 40 --level 1`, xem
+  // `thanhPhoDoDuoc`). Trong lúc dựng bảng này tôi đã đo nhầm ở `--sessions 80 --level 3` và ra
+  // kỷ 13 = 12 thay vì 13 — rồi suýt kết luận rằng công thức sai. Hai con số ấy nói về HAI THÀNH
+  // PHỐ KHÁC NHAU (mạng đường và số nhà dân mở dần theo `sessionCount`). Đúng bài học
+  // `TECH_DEBT #43`: *khi chép một fixture, cái được chép là một LỰA CHỌN của file ấy, không phải
+  // mặc định của hệ thống.*
+  //
+  // Đo ngày 2026-08-24: `node scripts/city-preview.mjs --era N --hour 12 --sessions 40 --level 1`
+  // ⇒ kỷ 1 = **14** · kỷ 8 = **20** · kỷ 13 = **15**, tức đúng bảng dưới đây cộng 2 ở CẢ BA kỷ.
+  assert.equal(MOC_LENH_VE[1], 14 - 2, 'kỷ 1: Chromium đo 14 lệnh vẽ cả khung ngày 2026-08-24');
+  assert.equal(MOC_LENH_VE[8], 20 - 2, 'kỷ 8: Chromium đo 20 lệnh vẽ cả khung ngày 2026-08-24');
+  assert.equal(MOC_LENH_VE[13], 15 - 2, 'kỷ 13: Chromium đo 15 lệnh vẽ cả khung ngày 2026-08-24');
 });
 
 test('MẶT NƯỚC TỐN ĐÚNG +1 LỆNH VẼ, VÀ CHỈ Ở KỶ ĐÃ DỰNG HÌNH NƯỚC', () => {

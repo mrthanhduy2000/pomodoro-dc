@@ -203,14 +203,17 @@ function garmentPiece(kind, d) {
       return piece('garment', 'cloth', 'flare', 'torso',
         [d.torsoD * 1.20, d.torsoH + d.legLen * 0.72, d.torsoW * 1.22],
         [0, (d.torsoH - d.legLen * 0.72) * 0.5, 0]);
-    // Áo khoác có vai: phình ở TRÊN, thóp ở dưới — đúng định nghĩa `limb` (rộng trên, thon dưới).
+    // ⚠️ ÁO CẮT MAY DÙNG KHUÔN `chest`, KHÔNG DÙNG `limb` (đổi 2026-08-23). Vải cắt may thì bám
+    // theo đúng cái thân bên dưới: nở ở vai, thắt ở eo, nở lại ở hông. `limb` nay là hồ sơ của một
+    // cái CHÂN thật (thắt ở đầu gối, nhỏ hẳn ở cổ chân) nên mặc nó lên người sẽ ra một cái áo bó
+    // chặt quanh bụng rồi loe ra ở ngực — ngược hẳn hình cái áo khoác.
     case 'coat':
-      return piece('garment', 'cloth', 'limb', 'torso',
+      return piece('garment', 'cloth', 'chest', 'torso',
         [d.torsoD * 1.22, d.torsoH * 0.82, d.torsoW * 1.26],
         [0, d.torsoH * 0.62, 0]);
     // Âu phục may đo: bó sát nhất bộ — cùng khuôn với áo khoác nhưng đường bao gần bằng thân.
     case 'suit':
-      return piece('garment', 'cloth', 'limb', 'torso',
+      return piece('garment', 'cloth', 'chest', 'torso',
         [d.torsoD * 1.06, d.torsoH * 1.00, d.torsoW * 1.04],
         [0, d.torsoH * 0.48, 0]);
     default:
@@ -434,7 +437,7 @@ export function buildHumanBody(era) {
     piece('footR', 'cloth2', 'box', 'hipR',
       [d.limbW * 1.7, d.limbW * 0.62, d.limbW * 1.0],
       [d.limbW * 0.42, -d.legLen + d.limbW * 0.31, 0]),
-    piece('torso', 'cloth', 'limb', 'torso', [d.torsoD, d.torsoH, d.torsoW], [0, d.torsoH * 0.5, 0]),
+    piece('torso', 'cloth', 'chest', 'torso', [d.torsoD, d.torsoH, d.torsoW], [0, d.torsoH * 0.5, 0]),
     piece('head', 'skin', 'dome', 'head', [d.headW, d.headH, d.headW], [0, d.headH * 0.5, 0]),
     piece('armL', 'skin', 'limb', 'shoulderL',
       [d.limbW * 0.9, d.armLen, d.limbW * 0.9], [0, -d.armLen * 0.5, 0]),

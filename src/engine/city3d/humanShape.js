@@ -1,5 +1,5 @@
 /**
- * humanShape.js — BỘ HÌNH KHỐI CỦA CƠ THỂ. Sáu cái khuôn, và không cái nào là một viên gạch.
+ * humanShape.js — BỘ HÌNH KHỐI CỦA CƠ THỂ. Tám cái khuôn, và chỉ một cái là viên gạch.
  *
  * THUẦN: không three, không DOM, không `Date`, không `Math.random`. File này chỉ sinh ra TOẠ ĐỘ;
  * việc biến toạ độ thành `BufferGeometry` là của `components/city/render3d/humanGeometry.js`.
@@ -57,8 +57,18 @@
  *    khối phình ra ngoài hộp và mọi phép đo hình bóng nói dối theo hướng TRẤN AN.
  */
 
-/** Sáu khuôn. Thứ tự không quan trọng, nhưng danh sách thì phải đủ — `human.js` kiểm theo nó. */
-export const HUMAN_SHAPES = ['box', 'prism', 'limb', 'flare', 'cone', 'dome', 'hat'];
+/**
+ * Tám khuôn. Thứ tự không quan trọng, nhưng danh sách thì phải đủ — `human.js` kiểm theo nó.
+ *
+ * ⚠️ `chest` LÀ KHUÔN THỨ TÁM, VÀ NÓ SINH RA VÌ MỘT RÀNG BUỘC CHỨ KHÔNG VÌ MUỐN THÊM.
+ * Trước bản này cái THÂN dùng chung khuôn `limb` với chân và tay. Điều đó chấp nhận được khi
+ * `limb` còn là một cái ống thẳng thon nhẹ. Nhưng một cái chân THẬT thắt lại ở đầu gối và nhỏ hẳn
+ * ở cổ chân, mà một cái thân thì thắt ở EO rồi nở lại ở hông — hai đường cong ngược nhau ở nửa
+ * dưới. Dùng chung một hồ sơ nghĩa là một trong hai phải sai. ⇒ Đây là lần thứ BẢY của họ bài học
+ * *"một trường gánh hai việc"*, chỉ khác là thứ gánh hai việc lần này là một HỒ SƠ HÌNH HỌC.
+ * Giá phải trả: đúng **một lệnh vẽ mỗi kỷ** (số lệnh vẽ cư dân = số khuôn kỷ ấy dùng).
+ */
+export const HUMAN_SHAPES = ['box', 'prism', 'limb', 'chest', 'flare', 'cone', 'dome', 'hat'];
 
 /**
  * Hồ sơ từng khuôn. `sides` = số cạnh đa giác; `rings` = [y, r] từ đáy lên đỉnh.
@@ -66,6 +76,20 @@ export const HUMAN_SHAPES = ['box', 'prism', 'limb', 'flare', 'cone', 'dome', 'h
  * ⚠️ TÁM CẠNH LÀ NGƯỠNG "ĐỌC RA HÌNH TRỤ", KHÔNG PHẢI MỘT SỐ CHỌN BỪA. Sáu cạnh vẫn còn thấy rõ
  * góc ở cỡ phóng 5 lần mà Đàm dùng để chấm; mười hai cạnh thì tốn gấp rưỡi tam giác để đổi lấy một
  * khác biệt nằm dưới ngưỡng mắt. Tám là chỗ mà đường bao thôi có góc mà chi phí chưa nhảy.
+ *
+ * ⚠️ SỐ VÀNH MỚI LÀ THỨ QUYẾT ĐỊNH "CÓ CÒN TRÔNG PHẲNG KHÔNG", KHÔNG PHẢI SỐ CẠNH — và đây là
+ * điều dễ hiểu ngược nhất trong cả file. Vì pháp tuyến là PHẲNG THEO TỪNG MẶT (xem `humanShapeMesh`),
+ * một khuôn hai vành cho ra đúng **một dải sáng** theo chiều dọc: tám mặt bên đều là hình thang
+ * phẳng, sáng đều từ chân lên đỉnh, và mắt đọc ra một cái ống nhựa. Thêm một vành ở giữa với bán
+ * kính LỆCH khỏi đường thẳng nối hai đầu là thêm một dải sáng nữa — và chính chỗ GÃY giữa hai dải
+ * ấy mới là thứ mắt gọi là "có khối". Nói cách khác: **chỗ phình và chỗ thắt không phải trang trí
+ * giải phẫu, chúng là nguồn sáng của mô hình này.** Đó là lý do mọi hồ sơ dưới đây đều có ít nhất
+ * một điểm đổi chiều, và là lý do bản trước (mỗi khuôn hai vành) vẫn bị đọc ra là "ảnh phẳng" dù
+ * đã bỏ hộp.
+ *
+ * ⚠️ VÀ KHÔNG ĐƯỢC LÀM MƯỢT ĐI. Cám dỗ tiếp theo luôn là "thêm mười vành cho nó tròn hẳn". Làm thế
+ * là mất hết cạnh bắt sáng và khối trở nên tròn nhũn, đúng thất bại đã ghi ở `geometryFactory.js`:
+ * "giống 3D hơn" ở đây đến từ SỐ MẶT BẮT SÁNG KHÁC NHAU, không đến từ độ mượt.
  */
 const PROFILES = {
   /**
@@ -75,36 +99,66 @@ const PROFILES = {
    */
   box: { sides: 4, rings: [[-0.5, 1], [0.5, 1]] },
 
-  /** TRỤ TÁM CẠNH — thứ tròn đều: cán giáo, bó củi, vành mũ, khăn quấn. */
+  /** TRỤ TÁM CẠNH — thứ tròn đều và thẳng thật: cán giáo, bó củi, búi tóc, vò nước. */
   prism: { sides: 8, rings: [[-0.5, 1], [0.5, 1]] },
 
   /**
-   * CHI THON — rộng ở TRÊN, thon xuống DƯỚI. Đùi to hơn cổ chân, bắp tay to hơn cổ tay, vai rộng
-   * hơn eo. Ba câu ấy là cùng một hình.
-   * ⚠️ CHIỀU THON PHẢI KHỚP CÁCH `human.js` TREO HỘP: chân/tay có `rest.y` ÂM (tâm nằm DƯỚI khớp),
+   * CHI — CẢ cái chân (hông → cổ chân) hoặc CẢ cánh tay (vai → cổ tay) trong một khối.
+   *
+   * ⚠️ BỐN ĐIỂM MỐC, VÀ CẢ BỐN LÀ GIẢI PHẪU CHỨ KHÔNG PHẢI THẨM MỸ: cổ chân/cổ tay là chỗ NHỎ NHẤT
+   * cơ thể (0,52); bắp chân/cẳng tay phình lại (0,78); **đầu gối/khuỷu THẮT VÀO** (0,68) — đây là
+   * điểm đổi chiều, thứ duy nhất phân biệt một cái chân với một cái ống côn; đùi/bắp tay là chỗ to
+   * nhất (1,00); rồi bo lại ở đầu gắn vào khớp (0,88) để cái đĩa phẳng trên đỉnh nhỏ đi.
+   *
+   * ⚠️ CHIỀU THON PHẢI KHỚP CÁCH `human.js` TREO KHỐI: chân/tay có `rest.y` ÂM (tâm nằm DƯỚI khớp),
    * nên +y của khuôn là đầu gắn vào khớp = đầu to. Đảo chiều là được một cái chân hình củ cải.
    */
-  limb: { sides: 8, rings: [[-0.5, 0.66], [0.5, 1]] },
-
-  /** VÁY XOÈ — rộng ở DƯỚI, thu lên TRÊN. Gấu áo chùng, khăn nemes phủ vai, cái vò bụng phình. */
-  flare: { sides: 8, rings: [[-0.5, 1], [0.5, 0.55]] },
+  limb: {
+    sides: 8,
+    rings: [[-0.5, 0.52], [-0.26, 0.78], [-0.02, 0.68], [0.30, 1.00], [0.50, 0.88]],
+  },
 
   /**
-   * NÓN — thu về một mũi nhọn. Đây là khuôn RẺ NHẤT bộ (14 tam giác) và cũng là khuôn sửa được
-   * khuyết tật nặng nhất: nón lá kỷ 6 trước nay là một tấm dẹt cao bằng 0,34 lần cái đầu, nhìn từ
-   * camera chếch thành một hình thoi trắng che kín người.
+   * THÂN — và cả áo khoác/âu phục, vì một tấm vải CẮT MAY thì bám theo đúng cái thân bên dưới.
+   * Hông (0,82) → **EO thắt** (0,74) → ngực/vai nở (1,00) → bo vai (0,80).
+   *
+   * ⚠️ CÁI BO Ở ĐỈNH LÀ PHẦN ĐÁNG TIỀN NHẤT CỦA KHUÔN NÀY. Camera của app chếch 34°, nên MẶT TRÊN
+   * của thân là một trong những mảng lớn nhất mà mắt nhìn thẳng vào. Một cái đĩa phẳng ở đó là
+   * đúng thứ "ô vuông" đập vào mắt trước tiên, và nó không biến mất chỉ vì thành phẳng bên đã tròn.
    */
-  cone: { sides: 8, rings: [[-0.5, 1], [0.5, 0]] },
+  chest: { sides: 8, rings: [[-0.5, 0.82], [-0.16, 0.74], [0.22, 1.00], [0.50, 0.80]] },
+
+  /**
+   * VÁY XOÈ — vải BUÔNG TỰ DO: gấu áo chùng, khăn nemes phủ vai, cái vò bụng phình.
+   * ⚠️ BA ĐOẠN VỚI ĐỘ DỐC KHÁC NHAU (−0,14 · −0,18 · −0,13) cho ra một đường CHUÔNG chứ không phải
+   * một hình nón cụt. Nếu ba đoạn cùng độ dốc thì ba dải sáng gộp lại thành một — tức tốn thêm hai
+   * vành để đổi lấy đúng thứ đã có, một trục chết mang dáng một cải tiến.
+   */
+  flare: { sides: 8, rings: [[-0.5, 1.00], [-0.18, 0.86], [0.18, 0.68], [0.50, 0.55]] },
+
+  /**
+   * NÓN — thu về một mũi nhọn. Khuôn RẺ NHẤT bộ (46 tam giác) và cũng là khuôn sửa được khuyết tật
+   * nặng nhất: nón lá kỷ 6 trước nay là một tấm dẹt cao bằng 0,34 lần cái đầu, nhìn từ camera chếch
+   * thành một hình thoi trắng che kín người.
+   * ⚠️ SƯỜN HƠI LÕM (1,00 → 0,62 → 0,30 → nhọn: các bước −0,38 · −0,32 · −0,30 trên những đoạn cao
+   * dần) — đúng dáng một cái nón lá thật, vì nan tre cong chứ không thẳng. Một hình nón toán học
+   * có tám mặt bên PHẲNG và trông y hệt một cái phễu.
+   */
+  cone: { sides: 8, rings: [[-0.5, 1.00], [-0.12, 0.62], [0.22, 0.30], [0.50, 0]] },
 
   /**
    * VÒM — cái đầu, và chỉ cái đầu cùng vài thứ đội lên nó.
-   * ⚠️ ĐỈNH KHÔNG NHỌN (`r = 0,46`): một cái sọ nhọn đọc ra là cái nón. Vành giữa phình đúng 1,0 ở
-   * hơi trên tâm — đó là chỗ rộng nhất của hộp sọ thật, và nó là thứ làm khối này khác hẳn `cone`.
-   * Đây là khuôn ĐẮT NHẤT bộ (44 tam giác) và nó xứng: ở góc camera 34° thì MẶT TRÊN của cái đầu
-   * chiếm phần lớn số điểm ảnh của cả cơ thể, nên một mặt vuông phẳng ở đó là thứ "ô vuông" đập
-   * vào mắt trước tiên.
+   * Hàm/cằm thu lại (0,66) → gò má (0,88) → chỗ rộng nhất hộp sọ (1,00, hơi trên tâm) → đỉnh sọ
+   * bo dần (0,86 → 0,44).
+   * ⚠️ ĐỈNH KHÔNG NHỌN: một cái sọ nhọn đọc ra là cái nón. ⚠️ VÀ ĐÁY PHẢI THU LẠI: bản trước để
+   * 0,86 ở đáy nên cái đầu là một cái ống có nắp vòm — nhìn gần thì phần dưới tai thẳng đứng như
+   * một cái cốc. Đây là khuôn ĐẮT NHẤT bộ cùng `limb` và `hat` (76 tam giác) và nó xứng: ở góc
+   * camera 34° thì mặt trên cái đầu chiếm phần lớn số điểm ảnh của cả cơ thể.
    */
-  dome: { sides: 8, rings: [[-0.5, 0.86], [0.12, 1], [0.5, 0.46]] },
+  dome: {
+    sides: 8,
+    rings: [[-0.5, 0.66], [-0.26, 0.88], [0.06, 1.00], [0.32, 0.86], [0.50, 0.44]],
+  },
 
   /**
    * MŨ VÀNH CỨNG — VÀNH và CHỎM trong MỘT khối, và đây là khuôn duy nhất trong bộ sinh ra vì một
@@ -115,17 +169,20 @@ const PROFILES = {
    * trần 11 mà Đàm chốt (*"ở cỡ 18 px thì hộp thứ 12 không đổi được điểm ảnh nào"*). Hai cách vá
    * hiển nhiên đều SAI: nới trần lên 12 là cái phễu Phase 9A, còn bỏ bàn chân đi là trả bằng đúng
    * thứ vừa mua. Cách đúng là hỏi lại *"ngoài đời đây là MẤY vật?"* — và câu trả lời là **một**.
-   * Một cái mũ phớt không phải một cái đĩa đặt dưới một cái chỏm; nó là một mặt tròn xoay liền
-   * khối, và một mặt tròn xoay thì `humanShape.js` dựng được trong đúng một khối.
    *
    * ⇒ Bài học: khi một cái cổng chặn bạn lại, **hãy để nó chỉ ra một thiết kế đúng hơn** thay vì
-   * đi vòng qua nó. Ở đây cái cổng vừa giữ được trần 11 khối, vừa cho ra hình học ĐÚNG HƠN bản
-   * mình định ship, vừa RẺ HƠN (60 tam giác so với 28 + 44 = 72).
+   * đi vòng qua nó.
    *
+   * ⚠️ CẤU TRÚC VÀNH PHẢI LÀ HAI MỨC y THẤP NHẤT (đáy vành và mặt trên vành), vì
+   * `humanShape.test.js` ĐỌC CẤU TRÚC ẤY để tìm ra chỏm — nó không cắm một ngưỡng y chọn tay.
+   * Đổi thứ tự vành mà quên điều này thì bài test đo nhầm chỗ và vẫn xanh.
    * ⚠️ CHỎM PHẢI RỘNG HƠN CÁI ĐẦU (0,62 × bề rộng vành = 1,18 × `headW` với vành 1,9 `headW`).
    * Bản đầu để 0,42 ⇒ chỏm hẹp hơn sọ, tức cái mũ không đội vừa cái đầu nó đang đội lên.
    */
-  hat: { sides: 8, rings: [[-0.5, 1], [-0.4, 1], [-0.36, 0.62], [0.5, 0.52]] },
+  hat: {
+    sides: 8,
+    rings: [[-0.5, 1.00], [-0.40, 1.00], [-0.36, 0.62], [0.16, 0.60], [0.50, 0.46]],
+  },
 };
 
 /** Bán kính ngoại tiếp cho quy ước "bề rộng đo ngang mặt phẳng = 1,0". Xem QUY ƯỚC mục 1. */

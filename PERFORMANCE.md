@@ -2404,3 +2404,112 @@ dùng để canh KHÔNG-TRÔI, không dùng để chứng minh một phase chi t
 **đây là công việc cho khung CẬN CẢNH** (`ADR-034` cho camera bay tới khi chạm công trình) và cho
 dải `human-strip.mjs` phóng 5 lần. Ở khung toàn cảnh, một cư dân cao 12–30 điểm ảnh thì 8 mảng
 sáng và 3 mảng sáng chênh nhau dưới ngưỡng mắt — điều đó đã biết trước khi viết dòng mã đầu tiên.
+
+---
+
+## Phase 16 — DÁNG ĐI THÀNH MỘT TRỤC BẢN SẮC, VÀ KHUÔN CƠ THỂ HẾT PHẲNG (2026-08-24, ADR-056)
+
+**CÔNG CỤ · ĐẦU VÀO · ĐỜI ẢNH** (ba vế bắt buộc, xem `CLAUDE.md`):
+
+- Hình học: `node --import ./scripts/register-esm-loader.mjs scripts/scene-tri.mjs --sessions 80`
+  (giờ 12 · cấp 3 · chuỗi 9) — chạy trên **cả hai** cây mã trong cùng một phiên, trên máy rảnh,
+  **nối tiếp nhau**. Cây "trước" là một `git worktree --detach` ở commit **`4ce0fee`** đặt tại
+  `/private/tmp/dc-base16`. ⚠️ Bảng này **KHÔNG** chép cột "sau" của Phase 15: cột ấy đo ở
+  **40 phiên**, còn bảng này ở **80 phiên**, mà mạng đường và số nhà dân mở dần theo `sessionCount`
+  ⇒ chép sang là dựng lại đúng `TECH_DEBT #43`.
+- Neo Chromium: `node scripts/city-preview.mjs --era 1 --hour 12 --sessions 80 --level 3 --bench 1`
+  → khối `[stats]` in **14 lệnh vẽ cả khung** = **12 lệnh vẽ thành phố + 2** (vòm trời + rặng núi
+  chân trời). ⚠️ Con số Chromium in ra là số của **CẢ KHUNG**, không phải của riêng thành phố —
+  nhãn cũ trong `drawCallBudget.test.js` từng ghi *"Chromium đo 11 lệnh vẽ thành phố"* và đó là một
+  lỗi NHÃN (cùng họ `frame-fit.mjs`, Phase 7B), đã sửa.
+- Cơ thể: `buildHumanBody(era)` + `shapeTriangles` (thuần, không Chromium).
+- Ảnh: `.city-preview/human-strip-ky1-15.png` (dải 15 kỷ, phóng 5 lần), dựng 2026-08-24 bằng
+  `node --import ./scripts/register-esm-loader.mjs scripts/human-strip.mjs`.
+
+### Hình học cả cảnh — 15/15 kỷ, trước ↔ sau (80 phiên)
+
+| kỷ | tam giác TP trước | sau | Δ | lệnh vẽ TP trước | sau | Δ |
+|---:|---:|---:|---:|---:|---:|---:|
+| 1 | 107.262 | 114.430 | +7.168 | 11 | 12 | +1 |
+| 2 | 132.088 | 141.048 | +8.960 | 15 | 16 | +1 |
+| 3 | 143.094 | 151.158 | +8.064 | 15 | 16 | +1 |
+| 4 | 193.994 | 202.954 | +8.960 | 14 | 15 | +1 |
+| 5 | 126.308 | 135.268 | +8.960 | 15 | 16 | +1 |
+| 6 | 228.880 | 237.840 | +8.960 | 16 | 17 | +1 |
+| 7 | 207.592 | 216.104 | +8.512 | 16 | 17 | +1 |
+| 8 | 182.256 | 190.768 | +8.512 | 17 | 18 | +1 |
+| 9 | 169.770 | 178.730 | +8.960 | 13 | 14 | +1 |
+| 10 | 153.404 | 162.364 | +8.960 | 16 | 17 | +1 |
+| 11 | 183.826 | 192.338 | +8.512 | 13 | 14 | +1 |
+| 12 | 154.216 | 163.176 | +8.960 | 13 | 14 | +1 |
+| 13 | 186.556 | 194.620 | +8.064 | 11 | 12 | +1 |
+| 14 | 194.840 | 202.008 | +7.168 | 12 | 13 | +1 |
+| 15 | 173.520 | 182.480 | +8.960 | 13 | 14 | +1 |
+| **tổng** | **2.537.606** | **2.665.286** | **+127.680** | | | |
+
+⚠️ **Cột lệnh vẽ đúng +1 ở CẢ 15 KỶ, và đó là một phép kiểm chứ không phải một sự trùng hợp.** Số
+lệnh vẽ cư dân = **số khuôn cơ thể kỷ ấy dùng** (một `InstancedMesh` mỗi khuôn, ADR-055). Phase 16
+thêm đúng MỘT khuôn (`chest`, cho thân và cho áo may đo), và `chest` có mặt ở mọi kỷ ⇒ +1 ở mọi
+kỷ. Nếu một kỷ nào ra +0 hoặc +2 thì hoặc bảng sai, hoặc `chest` chưa tới được kỷ đó.
+
+### Cơ thể — mỗi người, 15/15 kỷ
+
+| kỷ | khối | tam giác/người trước | sau | kỷ | khối | trước | sau |
+|---:|---:|---:|---:|---:|---:|---:|---:|
+| 1 | 11 | 292 | **548** | 9 | 11 | 292 | **612** |
+| 2 | 11 | 292 | **612** | 10 | 11 | 292 | **628** |
+| 3 | 10 | 264 | **552** | 11 | 10 | 264 | **600** |
+| 4 | 10 | 264 | **600** | 12 | 11 | 292 | **628** |
+| 5 | 11 | 292 | **612** | 13 | 10 | 264 | **536** |
+| 6 | 11 | 292 | **598** | 14 | 9 | 220 | **476** |
+| 7 | 10 | 264 | **600** | 15 | 10 | 264 | **584** |
+| 8 | 11 | 292 | **628** | | | | |
+
+- **Số khối mỗi người: 9…11 — KHÔNG đổi một đơn vị.** Trần Đàm đặt (*"ở cỡ 18 px thì hộp thứ 12
+  không đổi được điểm ảnh nào"*) còn nguyên. Toàn bộ phần thêm là **vành khuôn**, không phải khối.
+- Tam giác mỗi người **220…324 → 476…628** (≈ ×1,9).
+
+### Trần tỉ lệ: 6% → 11%, và vì sao được phép nâng
+
+Ca xấu nhất (tỉ lệ tam giác cư dân trên tổng tam giác cảnh, tính đủ 15 dòng vì mỗi kỷ một cơ thể
+khác nhau): **kỷ 1 = 5,40% → 9,68%** (28 cư dân × 548 tam giác ÷ 158.556 tam giác cả cảnh).
+
+Bốn bằng chứng, ghi ra để phiên sau kiểm lại được chứ không phải để trấn an:
+
+1. Đàm đã **thu hồi cổng hiệu năng** ngày 2026-08-21: *"không quan trọng hiệu năng"* ·
+   *"Máy tôi là M3 MacBook Air chứ có yếu đâu"*.
+2. `PERFORMANCE.md` (đo trên máy thật, Apple M3): **hình học thì RẺ** — tam giác thành phố chênh
+   43% giữa kỷ 3 và kỷ 11 mà thời gian chỉ chênh 2,4%; **80% chi phí đi theo ĐIỂM ẢNH**, mà Phase
+   16 không thêm một điểm ảnh nào (cư dân vẫn chiếm 0,29% khung).
+3. Phase 16 thêm **0 nguồn sáng**, và ánh sáng mới là thứ đo được (bật đèn 22h = +19%).
+4. Tổng tam giác cả 15 kỷ tăng **5,0%** (2,54 triệu → 2,67 triệu), trong khi ngân sách đo được còn
+   dư **3,2 lần**.
+
+⚠️ **GIỚI HẠN PHẢI NÓI THẲNG: `ms` mỗi khung CHƯA được đo lại.** Hộp cát chỉ có SwiftShader (bộ tô
+hình bằng CPU), và luật của dự án là *một con số đo trong hộp cát chỉ được dùng để so các trường
+hợp TRONG hộp cát ấy với nhau*. Vì vậy 11% là một trần theo **TỈ LỆ HÌNH HỌC**, không phải một lời
+hứa về tốc độ. Ai chạy được `bash scripts/bench-macbook.sh` trên MacBook của Đàm thì nên đo lại và
+ghi số thật vào đây.
+
+### Dáng đi — bàn chân rời đất bao nhiêu
+
+Đo bằng `humanGait.test.js` (thuần, 135 tổ hợp kỷ × kiểu đi). Độ nâng bàn chân lúc đưa chân, tính
+theo phần trăm chiều dài chân:
+
+| kiểu đi | trudge | mince | glide | saunter | roll | bounce | stride | bustle | march |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| nâng bàn chân | 5% | 8% | 12% | 16% | 18% | 20% | 26% | 30% | 34% |
+
+Thứ tự này **khớp đúng thứ tự của `knee`** (có test đòi), nên nó không phải chín con số rời rạc mà
+là một trục có hướng. Ba bất biến vẫn ở mức sai số máy: bàn chân trượt **1,39e-17 ô** · `|foot.y|`
+lúc trụ **1,39e-17** · vượt trần góc hông **5,55e-17**.
+
+⚠️ **Đối chứng: chân CỨNG ĐƠ nâng đúng 0%** — không phải "gần 0", mà bằng 0 theo cấu tạo (hông ở
+`legLen·cos 0`, chân đưa thẳng đứng dài `legLen` ⇒ bàn chân ở y = 0). Đó là lý do một mesh cứng
+không co gối **buộc phải** trông như robot, và là lý do con số 0% ở trên là một cái cân chứ không
+phải một dòng thừa.
+
+### Bản sắc dáng đi
+
+36 cặp trong 9 kiểu đi, mỗi cặp so 4 trường: **cả 36 cặp khác nhau ở 4/4 trường**. Không kỷ liền
+nhau nào dùng chung một kiểu, và cả 9 kiểu đều được ít nhất một kỷ dùng (có test khoá cả ba).

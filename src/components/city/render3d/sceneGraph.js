@@ -53,7 +53,7 @@ import { placeBounds, specBounds } from '../../../engine/city3d/pick';
 import { buildResidents, residentAt } from '../../../engine/city3d/residents';
 import { buildHumanBody, buildHumanBodyLowDetail } from '../../../engine/city3d/human';
 import { buildHumanShapeGeometry } from './humanGeometry';
-import { poseAt } from '../../../engine/city3d/humanPose';
+import { poseAt, stretchOf } from '../../../engine/city3d/humanPose';
 import { fogDensityFor, sunDirectionAt } from '../../../engine/city3d/daylight';
 import { buildMergedGeometry } from './geometryFactory';
 import {
@@ -1368,14 +1368,21 @@ export function createCityScene({
           const part = parts[k];
           const joint = pose.joints[part.joint];
           jointSpin.setFromAxisAngle(FORWARD_AXIS, joint.a);
+          // ⚠️ ĐẦU GỐI GIẢ: chi treo vào hông RÚT NGẮN lại giữa pha đưa chân, nên cả chiều cao
+          // khối lẫn `rest.y` (tâm khối treo cách khớp bao xa) phải nhân cùng một hệ số. Nhân một
+          // mà quên hai thì bàn chân rời khỏi cẳng chân — hình học vẫn hợp lệ nên KHÔNG có gì đỏ
+          // lên, chỉ có một bàn chân bay lơ lửng mà chỉ ảnh chụp gần mới thấy.
+          // ⚠️ Đọc qua `stretchOf` chứ không tự viết `pose.stretch?.[…] ?? 1`: bốn nơi cần con số
+          // này, và bốn bản chép sẽ trôi khỏi nhau.
+          const keo = stretchOf(part, pose);
           // Tâm khối trong hệ CỤC BỘ: gốc khớp cộng phần tịnh tiến đã bị khớp xoay.
-          limb.set(part.rest.x, part.rest.y, part.rest.z).applyQuaternion(jointSpin);
+          limb.set(part.rest.x, part.rest.y * keo, part.rest.z).applyQuaternion(jointSpin);
           limb.set(joint.x + limb.x, joint.y + limb.y, joint.z + limb.z);
           // Rồi đưa cả cụm sang hệ THẾ GIỚI bằng hướng đi của người.
           limb.applyQuaternion(heading);
           position.set(x + limb.x, feet + limb.y, z + limb.z);
           rotation.copy(heading).multiply(jointSpin);
-          scale.set(part.w, part.h, part.d);
+          scale.set(part.w, part.h * keo, part.d);
           matrix.compose(position, rotation, scale);
           const mesh = meshOf[k];
           mesh.setMatrixAt(i * mesh.userData.partsPerResident + slotOf[k], matrix);

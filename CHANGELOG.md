@@ -12,6 +12,41 @@
 
 ---
 
+## 2026-08-24 — Cư dân thôi đi như robot: 9 kiểu đi, co gối giả, và khuôn cơ thể hết phẳng
+
+- **Mục đích**: Đàm — *"ít ảnh phẳng hơn, tạo nhiều đặc trưng hơn, di chuyển mượt mà hơn (nhiều
+  kiểu di chuyển), mỗi kỷ phải tốt hơn, mỗi người phải ra dáng người hơn và không cử động như
+  robot, hình ảnh 3D hơn, đẹp hơn"*.
+- **Phạm vi + ảnh hưởng**:
+  - `src/engine/city3d/humanGait.js` **MỚI** (thuần): **bảng 9 KIỂU ĐI** — `stride · glide · march
+    · mince · trudge · bounce · roll · bustle · saunter`, mỗi kiểu 4 trường (`knee` · `sway` ·
+    `twist` · `headTrack`). Trục thứ **12** của bảng con người, buộc vào `country`; không kỷ liền
+    nhau nào trùng kiểu.
+  - **CO GỐI GIẢ** (`stretchOf` trong `humanPose.js`): mesh cứng không gập được, nên chân đưa bị
+    **rút ngắn**. Đây là nguyên nhân gốc của dáng "robot" — một chân cứng dài đúng `legLen`
+    **quệt đất** ở giữa pha đưa, và đó là định nghĩa toán học của dáng com-pa.
+  - Hệ số phải là **`sin²` chứ không phải `sin`**: bản `sin` làm bàn chân **trượt ở mọi
+    `knee < 1`**. Ngưỡng `knee ≥ 0,5` là một **định lý**, không phải một con số chọn tay (chứng
+    minh + đối chứng dựng lại bản hỏng, xem ADR-056).
+  - **Ba chiều chuyển động nữa, tốn 0 khối và 0 lệnh vẽ**: thân/đầu nghiêng sang bên (`sway`), vai
+    xoay ngược chiều hông (`twist`), đầu bù lại cái nhún (`headTrack`, giá trị âm ở kỷ 6 = đầu nhún
+    mạnh hơn thân).
+  - **Khuôn `chest` MỚI** cho thân và áo may đo; mọi khuôn cong nay có **≥1 điểm uốn**. Lý do:
+    **số VÀNH** quyết định "phẳng hay không", không phải số mặt — khuôn 2 vành cho đúng MỘT dải
+    sáng dọc dù `sides` bằng bao nhiêu.
+- **Số**: tam giác mỗi người **220…324 → 476…628**; **khối mỗi người vẫn 9…11** (trần Đàm đặt còn
+  nguyên); **lệnh vẽ +1 ở CẢ 15 kỷ** (đúng bằng khuôn `chest` mới); tổng tam giác 15 kỷ **+5,0%**.
+  Trần tỉ lệ nâng **6% → 11%** kèm bốn bằng chứng đo được, ca xấu nhất **kỷ 1 = 9,68%**. Bàn chân
+  nâng lúc đưa chân **5%…34%** chiều dài chân tuỳ kiểu đi, đúng thứ tự `knee`.
+- **Tương thích**: không có migration. `lowDetail` giữ nguyên mô hình 2 hộp (nó là **đối chứng**
+  của mọi phép đo dáng đi). Ba bất biến cũ còn nguyên ở mức sai số máy: bàn chân không trượt, bàn
+  chân chạm đất lúc trụ, góc hông không vượt trần.
+- **Giới hạn nói thẳng**: `ms` mỗi khung **chưa đo lại** (hộp cát chỉ có SwiftShader) ⇒ 11% là trần
+  theo tỉ lệ hình học, không phải lời hứa về tốc độ. Hông chưa lắc ngang và đai hông chưa xoay
+  (`TECH_DEBT #82`) vì bộ khớp chỉ có một trục quay.
+
+---
+
 ## 2026-08-23 (tối) — Cơ thể cư dân thôi là chồng gạch: 7 khuôn mặt tròn xoay, mỗi kỷ một bộ
 
 - **Mục đích**: Đàm — *"làm cho chân thật nhất, ít ô vuông hơn và giống 3D hơn, làm kỹ từng kỷ"*.

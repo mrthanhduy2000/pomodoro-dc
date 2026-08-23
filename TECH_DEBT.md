@@ -13,9 +13,10 @@
 > mà không được refactor triệt để, phải CHỦ ĐỘNG đề xuất mở một "Maintenance Sprint" (nêu rõ mục
 > tiêu/phạm vi/lợi ích/rủi ro/tiêu chí hoàn thành) thay vì tiếp tục cộng thêm tính năng mới.
 >
-> **Trạng thái ngưỡng hiện tại (2026-08-23, sau ADR-055)**: thêm **#80** (cư dân chiếm 0,29% khung
-> hình ⇒ chi tiết cơ thể chỉ đọc được ở cận cảnh) ở mức **Medium** và **#81** (mũ có chỏm thừa
-> hưởng phép phóng đại của cái đầu) ở mức **Low**. Đếm lại toàn file bằng cách quét trường
+> **Trạng thái ngưỡng hiện tại (2026-08-24, sau ADR-056)**: thêm **#82** (bộ khớp chỉ có một trục
+> quay ⇒ hông không lắc ngang, đai hông không xoay) ở mức **Low**. Trước đó: **#80** (cư dân chiếm
+> 0,29% khung hình ⇒ chi tiết cơ thể chỉ đọc được ở cận cảnh) ở mức **Medium** và **#81** (mũ có
+> chỏm thừa hưởng phép phóng đại của cái đầu) ở mức **Low**. Đếm lại toàn file bằng cách quét trường
 > `**Priority**` của TỪNG mục: **1 mục Priority High còn mở** (#53, đang đóng dần), **0 mục
 > Critical** → xa ngưỡng 8–10 mục, KHÔNG cần Maintenance Sprint. ⚠️ Con số này đếm bằng cách quét trường `**Priority**` của TỪNG mục, không chép lại từ
 > dòng cũ — dòng ngưỡng bên dưới đã đứng yên từ 2026-08-16 trong khi file nở từ #33 lên #78, đúng
@@ -4382,6 +4383,39 @@ cấp `Math.min(3,…)` → `Math.min(9,…)` · cắt bớt danh sách cấp th
 - **Review Trigger (MỚI, thay cho mốc đã dùng)**: **ngay phase sau §1(3)**, hoặc sớm hơn nếu Đàm
   nhìn ảnh §1(3) rồi nói mái nhà dân trông giống nhau giữa các kỷ.
 - **Owner**: chưa phân công · **Status**: Open (đã rà soát 2026-08-21, hoãn có lý do)
+
+---
+
+## #82 — Bộ khớp cư dân chỉ có MỘT trục quay, nên hông không lắc ngang và đai hông không xoay
+
+- **Tên**: hai chiều chuyển động của người đi bộ bị bỏ lại vì bộ khớp chỉ quay quanh một trục
+- **Module**: `src/engine/city3d/human.js` (`joint` của từng khối) · `humanPose.js` (`poseAt`) ·
+  `render3d/sceneGraph.js` (phép ghép ma trận)
+- **Priority**: Low · **Severity**: Low
+- **Impact**: Đo được, và đã CỐ Ý bỏ trong ADR-056. Người đi bộ thật có **6 chiều** ở đai hông
+  (Inman): gập/duỗi, lắc ngang (pelvic list, biên độ ~5°), xoay quanh trục đứng (~8°). ADR-056 làm
+  được 4 chiều mới nhưng **hai chiều còn lại đòi một trục quay THỨ HAI** ở khớp hông và khớp đai
+  hông. Hệ quả nhìn thấy được ở cận cảnh: hai chân luôn nằm trong đúng một mặt phẳng đứng, nên
+  người vẫn hơi "đi trên đường ray"; ở khung toàn cảnh thì **không đọc ra** (`TECH_DEBT #80`).
+- **Root Cause**: `sceneGraph.js` xoay mỗi khối bằng **một quaternion quanh MỘT trục ngang duy
+  nhất** (mặt phẳng đi tới) — một quyết định của ADR-053 để giữ phép ghép ma trận rẻ và để
+  `partCornersAt` (tầng thuần) tái lập được ĐÚNG phép biến đổi ấy. Thêm trục thứ hai thì **hai
+  chỗ** phải cùng đổi, mà chúng là hai công thức phải khớp nhau từng chữ số (có test đối chiếu
+  chéo canh).
+- **Current Risk**: Thấp. Không có gì hỏng; đây là một chiều chân thực còn thiếu, không phải một
+  khuyết tật.
+- **Future Risk**: Trung bình nếu có phase nào đưa camera lại gần cư dân hơn nữa (`TECH_DEBT #80`
+  / ADR-034 mở đường ấy) — lúc đó "đi trên đường ray" sẽ thành thứ đọc ra được.
+- **Recommended Solution**: cho `poseAt` trả về **hai** góc mỗi khớp (`pitch` quanh trục ngang,
+  `roll` quanh trục đi tới) rồi ghép `quatPitch × quatRoll` ở CẢ `sceneGraph.js` lẫn
+  `partCornersAt`. ⚠️ Phải giữ **ràng buộc bàn chân không trượt** làm cổng: mọi biên độ mới phải
+  đi qua đúng bài test 135 tổ hợp kỷ × kiểu đi đã có, và phải kèm một đối chứng dựng lại bản hỏng.
+- **Estimated Complexity**: Trung bình (hai công thức phải khớp nhau, cộng một vòng thử ngược đầy
+  đủ để chứng minh bài test có răng ở chiều mới).
+- **Blocking Conditions**: Không có. Hoãn vì ở khung mặc định nó không đổi được điểm ảnh nào.
+- **Review Trigger**: khi khung cận cảnh (`FOCUS_VIEW_DISTANCE`) được kéo gần hơn nữa, HOẶC khi có
+  người kêu cư dân "đi cứng" sau ADR-056.
+- **Owner**: chưa ai · **Status**: mở
 
 ---
 

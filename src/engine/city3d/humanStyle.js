@@ -46,6 +46,8 @@
  * vải quấn, khoác, buộc. Mũ có vành cứng cần nghề làm nỉ. Ba lô đeo vai hai quai là thế kỷ 20.
  */
 
+import { isValidGait } from './humanGait';
+
 /**
  * HÌNH BÓNG TRANG PHỤC mà `human.js` dựng được. Khai ở đây (chứ không ở `human.js`) vì bảng dưới
  * phải kiểm được: một kỷ lỡ khai kiểu không tồn tại thì test bắt ngay, không đợi tới lúc nhìn ảnh.
@@ -136,6 +138,8 @@ export const HUMAN_PRESETS = {
     headgear: 'none',
     headMaterial: 'dyed',
     carry: 'none',
+    // Cố ý nhạt, đúng tinh thần preset: một kiểu đi không nói lên điều gì về thời nào.
+    gait: 'saunter',
     stride: 1.62,
     // ⚠️ GIỮ ĐÚNG 0,42 — bằng hằng số `WALK_SPEED` mà `residents.js` dùng trước phase này. Nhờ vậy
     // 14 kỷ chưa thiết kế đi y hệt tốc độ cũ, và 8 bài test cư dân có sẵn vẫn đo đúng thứ chúng đo.
@@ -231,6 +235,9 @@ export const HUMAN_STYLES = {
     // gấp. Đó là hai dáng đi khác hẳn nhau mà mắt đọc được ngay cả khi không thấy rõ cái chân.
     // 1,85 lần cẳng chân — dài nhất trong 15 kỷ (người thật ≈ 1,67). Đi săn trên địa hình hoang
     // thì bước dài và thưa: đỡ mệt, đỡ gây tiếng động.
+    // Sải dài thong dong trên địa hình hoang: không vỉa hè, không đám đông, không giờ giấc.
+    // Chân nhấc thoải mái vì đường đất gồ ghề — quét chân là vấp.
+    gait: 'stride',
     stride: 1.85,
     // ⚠️ CHẬM THỨ NHÌ BỘ (kỷ 4 chậm hơn: 0,28). Nhưng cặp (SẢI DÀI NHẤT + chậm) vẫn cho ra TẦN
     // SỐ BƯỚC THẤP NHẤT 15 kỷ — và đó chính là điểm của việc khai hai trục thay vì một: kỷ 4 đi
@@ -280,6 +287,10 @@ export const HUMAN_STYLES = {
     // Khăn nemes là vải LANH TẨY TRẮNG — người Ai Cập tẩy lanh dưới nắng, và trắng là màu của sự sạch trong nghi lễ. Nó phải SÁNG HƠN áo, không tối hơn.
     headMaterial: 'natural',
     carry: 'pot',
+    // ⚠️ SUY THẲNG TỪ `carry: 'pot'`, KHÔNG PHẢI MỘT LỰA CHỌN RỜI. Đội vật trên đầu chỉ giữ được
+    // khi cái đầu trôi trên một đường gần thẳng; người đội đầu biến cột sống thành bộ giảm xóc.
+    // Đây là kỷ DUY NHẤT có `headTrack` gần 1, và nó gần 1 vì một lý do vật lý chứ không vì đẹp.
+    gait: 'glide',
     stride: 1.52,
     walkSpeed: 0.36,
     // ⚠️ VUNG TAY RẤT ÍT, và đây là HỆ QUẢ của `carry: 'pot'` chứ không phải một lựa chọn rời: một
@@ -307,6 +318,9 @@ export const HUMAN_STYLES = {
     // Ur là thành phố THƯƠNG MẠI; hàng xuất khẩu chủ lực là len. Kiện hàng trên vai là hình ảnh
     // của chính nền kinh tế dựng nên cái ziggurat kia.
     carry: 'bundle',
+    // Ur III là nhà nước quan liêu đầu tiên của lịch sử: sổ sách, định mức, đoàn phu khuân vác.
+    // Đi đều, nhấc chân cao — dáng của người đi trong một trật tự có người đếm.
+    gait: 'march',
     stride: 1.44,
     walkSpeed: 0.38,
     armSwing: 0.22,
@@ -335,6 +349,9 @@ export const HUMAN_STYLES = {
     // trong ống tay áo là tư thế đi đứng chính thức, không phải vì đang bận cầm vật gì.
     carry: 'none',
     // Sải NGẮN NHẤT bộ: đi trong áo chấm sàn thì bước dài là giẫm lên gấu áo. Ràng buộc vật lý.
+    // Áo chấm sàn ghì chân lại: bước dài là giẫm lên gấu áo. Cùng ràng buộc VẬT LÝ với kỷ 7 và
+    // kỷ 15 — ba kỷ mặc áo dài, ba kỷ cùng một kiểu đi, và đó là điều đúng chứ không phải trùng lặp.
+    gait: 'mince',
     stride: 1.28,
     // Chậm nhất bộ.
     walkSpeed: 0.28,
@@ -362,6 +379,8 @@ export const HUMAN_STYLES = {
     headMaterial: 'natural',
     // Thành thị Đức trung cổ là thành thị PHƯỜNG HỘI: người trên phố là thợ, không phải hiệp sĩ.
     carry: 'tool',
+    // Thợ phường hội trong một thành phố nhỏ: không vội, không mang nặng trên vai, đường phố ngắn.
+    gait: 'saunter',
     stride: 1.62,
     walkSpeed: 0.44,
     armSwing: 0.34,
@@ -389,6 +408,10 @@ export const HUMAN_STYLES = {
     carry: 'bundle',
     // ⚠️ SẢI NGẮN + NHỊP NHANH, và đây là VẬT LÝ của cái đòn gánh: đòn tre nảy theo nhịp, người
     // gánh phải bước khớp với chu kỳ nảy ấy chứ không được bước dài tuỳ ý.
+    // ⚠️ ĐÒN TRE LÀ MỘT CÁI LÒ XO. Tải trọng nảy NGƯỢC pha với hông, nên vai và đầu nhún mạnh hơn
+    // hông — kỷ DUY NHẤT có `headTrack` âm. Nhịp bước phải khớp chu kỳ nảy ấy, và `stride: 1,34`
+    // ngắn ở trên chính là hệ quả của cùng một cái đòn.
+    gait: 'bounce',
     stride: 1.34,
     walkSpeed: 0.40,
     // Một tay giữ đòn ⇒ vung tay ít. Cùng họ với kỷ 2 và kỷ 4, khác lý do.
@@ -411,6 +434,9 @@ export const HUMAN_STYLES = {
     // Cappello di paglia di Firenze — mũ RƠM Toscana, hàng xuất khẩu nổi tiếng của Ý thế kỷ 18–19.
     headMaterial: 'natural',
     carry: 'none',
+    // Áo chùng lucco chấm đất — cùng ràng buộc với kỷ 4, khác thế kỷ và khác lục địa. `note` ở trên
+    // đã ghi 'chân bị áo nuốt': dáng đi phải nói lại đúng điều ấy, không được nói ngược.
+    gait: 'mince',
     stride: 1.55,
     walkSpeed: 0.42,
     armSwing: 0.28,
@@ -435,6 +461,9 @@ export const HUMAN_STYLES = {
     // ⚠️ SẢI RỘNG + VUNG TAY RỘNG — "dáng đi của thuỷ thủ": chân dạng, tay mở để giữ thăng bằng.
     // Một dáng đi hình thành từ chỗ LÀM VIỆC chứ không từ quần áo, và đó là điều làm nó khác kỷ 7
     // ngay bên cạnh dù hai kỷ chỉ cách nhau vài chục năm.
+    // ⚠️ LẮC NGANG MẠNH NHẤT BỘ, và nó không phải tính cách mà là NGHỀ: người sống trên boong tàu
+    // học cách dồn trọng tâm sang bên để bù độ nghiêng, rồi giữ dáng ấy cả khi lên bờ.
+    gait: 'roll',
     stride: 1.70,
     walkSpeed: 0.46,
     armSwing: 0.40,
@@ -456,6 +485,9 @@ export const HUMAN_STYLES = {
     headMaterial: 'dyed',
     // Giấy tờ, sắc lệnh, thỉnh nguyện thư: kỷ của CHỮ VIẾT và thủ tục.
     carry: 'case',
+    // Paris cách mạng: thị dân đi giao thỉnh nguyện thư, không phải đi dạo. Thân xoay mạnh, chân
+    // nhấc gọn — dáng của người đi trên vỉa hè đông và có việc gấp.
+    gait: 'bustle',
     stride: 1.60,
     walkSpeed: 0.48,
     armSwing: 0.32,
@@ -483,6 +515,9 @@ export const HUMAN_STYLES = {
     carry: 'bundle',
     // Sải ngắn (mệt) nhưng tốc độ CAO (chuông nhà máy) ⇒ tần số bước cao thứ nhì bộ. Cặp trái
     // chiều này là thứ một trường "nhịp đi" duy nhất sẽ không bao giờ diễn đạt nổi.
+    // ⚠️ CÙNG MỘT CÂU CHUYỆN VỚI `stance: 0,14` VÀ `stature: 0,93` Ở TRÊN. Đứng máy sợi 12 tiếng thì
+    // chân không còn nhấc nổi; thân đổ nặng sang bên mỗi bước. Không phải đi, là lê.
+    gait: 'trudge',
     stride: 1.46,
     walkSpeed: 0.52,
     armSwing: 0.26,
@@ -506,6 +541,9 @@ export const HUMAN_STYLES = {
     headMaterial: 'dyed',
     carry: 'none',
     // Sải dài + nhanh: nhịp phố Manhattan, và khác hẳn cặp (sải ngắn + nhanh) của kỷ 10 và kỷ 13.
+    // Manhattan: sải dài, dáng thẳng, đường thẳng và rộng. Dùng chung kiểu với kỷ 1 và điều đó
+    // ĐÚNG — hai kỷ ấy đi cùng một CÁCH, chỉ khác NHỊP (0,30 so với 0,58 ô mỗi giây).
+    gait: 'stride',
     stride: 1.74,
     walkSpeed: 0.58,
     armSwing: 0.36,
@@ -530,6 +568,9 @@ export const HUMAN_STYLES = {
     // BAO, không nói về công dụng: ở 18 điểm ảnh, một vật dài mảnh dựng chéo trên vai cho ra đúng
     // một vệt dọc, dù nó là gỗ hay là thép. Hai kỷ ấy cách nhau 11 kỷ và khác nhau ở 8 trục khác.
     carry: 'spear',
+    // Tuyết sâu tới bắp chân, trang bị nặng, rét. Cùng kiểu với kỷ 10 vì cùng một hệ quả cơ thể,
+    // dù hai nguyên nhân khác hẳn nhau (kiệt sức nhà máy ↔ tuyết và giá rét).
+    gait: 'trudge',
     stride: 1.50,
     // Trong nhóm BỐN kỷ đi chậm nhất (0,34; sau kỷ 4 · 1 · 15): tuyết sâu, kiệt sức.
     walkSpeed: 0.34,
@@ -555,6 +596,9 @@ export const HUMAN_STYLES = {
     // ngắn, nhưng nhịp thì gấp; kết quả là TẦN SỐ BƯỚC CAO NHẤT trong 15 kỷ (**4,62 chu kỳ/giây**
     // so với 1,37 của kỷ 1 — gấp **3,36 lần**). Đây chính là cặp giá trị mà cả trục `stride` lẫn trục
     // `walkSpeed` sinh ra để diễn đạt, và một trường duy nhất thì không thể.
+    // ⚠️ ĐỐI CỰC CỦA KỶ 1 Ở CẢ BA TRỤC CHUYỂN ĐỘNG: sải ngắn nhất, nhịp cao nhất, và nay là kiểu đi
+    // gấp gáp nhất. Vỉa hè Tokyo giờ tan tầm không cho phép bước dài.
+    gait: 'bustle',
     stride: 1.40,
     walkSpeed: 0.62,
     armSwing: 0.24,
@@ -578,6 +622,9 @@ export const HUMAN_STYLES = {
     // Trơ (không đội gì).
     headMaterial: 'dyed',
     carry: 'case',
+    // Marina Bay: lối đi có mái, khí hậu nóng nhưng trong bóng râm, và một thành phố nổi tiếng vì
+    // trật tự. Bước gọn và đều — không lê như kỷ 12, cũng không chen như kỷ 13 ngay trước nó.
+    gait: 'march',
     stride: 1.58,
     walkSpeed: 0.56,
     armSwing: 0.30,
@@ -600,6 +647,9 @@ export const HUMAN_STYLES = {
     headMaterial: 'natural',
     carry: 'none',
     // Sải ngắn: áo dài cộng với nắng gắt. Cùng lý do vật lý với kỷ 4, khác mức.
+    // Kandura chấm mắt cá cộng nắng 40°C: bước ngắn, chân gần như không nhấc, thân không lắc.
+    // Cùng ràng buộc áo dài với kỷ 4 và kỷ 7 — ba kỷ, ba lục địa, một hình học.
+    gait: 'mince',
     stride: 1.38,
     // ⚠️ CHẬM, VÀ ĐÓ LÀ KHÍ HẬU CHỨ KHÔNG PHẢI TÍNH CÁCH: tốc độ đi bộ ngoài trời giảm theo nhiệt
     // độ. Kỷ 15 giàu và hiện đại nhất bảng nhưng đi chậm hơn kỷ 10 nghèo khổ — một cặp số nói được
@@ -616,7 +666,7 @@ export const HUMAN_STYLES = {
 export const HUMAN_AXES = [
   'stature', 'build', 'legShare', 'stance',
   'garment', 'headgear', 'headMaterial', 'carry',
-  'stride', 'walkSpeed', 'armSwing', 'cloth',
+  'gait', 'stride', 'walkSpeed', 'armSwing', 'cloth',
 ];
 
 /**
@@ -635,6 +685,7 @@ export function getHumanStyle(era) {
     headgear: HEADGEAR_SET.has(merged.headgear) ? merged.headgear : 'none',
     headMaterial: HEAD_MATERIAL_SET.has(merged.headMaterial) ? merged.headMaterial : 'dyed',
     carry: CARRY_SET.has(merged.carry) ? merged.carry : 'none',
+    gait: isValidGait(merged.gait) ? merged.gait : 'saunter',
   };
 }
 
@@ -715,6 +766,7 @@ export function isValidHumanStyle(row) {
   if (!HEADGEAR_SET.has(row.headgear)) return false;
   if (!HEAD_MATERIAL_SET.has(row.headMaterial)) return false;
   if (!CARRY_SET.has(row.carry)) return false;
+  if (!isValidGait(row.gait)) return false;
   // Trần 2,4 lần cẳng chân: quá mức đó thì `asin(stride / 4)` vượt 37° và chân bắt đầu duỗi ngang.
   if (!(row.stride > 0.8 && row.stride <= 2.4)) return false;
   if (!(row.walkSpeed > 0.05 && row.walkSpeed < 2)) return false;

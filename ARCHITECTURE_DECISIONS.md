@@ -11,6 +11,85 @@
 
 ---
 
+## ADR-058 — TIM ĐƯỜNG là một trục bản sắc, và độ lệch của nó là thuộc tính của RANH GIỚI chứ không phải của Ô
+
+**Ngày:** 2026-08-24
+**Trạng thái:** đã áp dụng. Mở rộng `streetStyle.js` (Phase 9D / ADR-025) sang chiều DỌC con đường,
+và thêm hạng đường thứ BA. Không đảo ngược quyết định nào.
+
+### Bối cảnh
+Đàm: *"đường đi hiện tại chỉ là những đường thẳng, không giống đường ngoài đời, không uốn cong, và
+nó cũng như quy hoạch quá — các thời trước làm gì có quy hoạch đường thẳng tấp thế, và hiện tại ít
+đường và loại đường quá. Hãy tìm hiểu các kỷ có bao nhiêu đường, hình thái, .. và build nó + mở
+rộng đường đi"*.
+
+### Vấn đề
+Lời ấy chỉ vào một chỗ **TRỐNG trong kiến trúc**, không phải một con số sai. `streetStyle.js` đã mở
+mười trục bản sắc cho **MẶT CẮT NGANG** của con đường — rộng bao nhiêu, lát bằng gì, viên to cỡ nào,
+có bó vỉa không. Nhưng cả mười trục ấy nói về *một lát cắt*, mà một lát cắt thì không có hình dạng
+theo chiều dọc. **TIM ĐƯỜNG chưa bao giờ là một trục bản sắc**: `terrainMesh.js` dựng mọi lòng
+đường **chính giữa ô lưới**, nên Göbekli Tepe 9500 năm trước và Dubai hôm nay dùng chung một tấm
+lưới bàn cờ hoàn hảo.
+
+Cộng thêm một lỗ hổng thứ hai đo được: `streetCrossSection(style, isLane)` nhận một **boolean**, nên
+cả mạng đường chỉ có đúng HAI bề rộng — trong khi **đường vành đai chiếm 36/80 ô (45% cả mạng)** và
+được vẽ y hệt ngõ phố.
+
+### Phương án đã cân nhắc
+
+**(A) Thêm ô đường** — cách hiểu đen của "mở rộng đường đi". **BỊ LOẠI BỞI PHÉP ĐO TRẦN**, chạy
+TRƯỚC khi viết dòng mã nào (luật của dự án): 80/144 ô đã là đường (55,6%), 45 ô hứa cho kỳ quan,
+**chỉ còn 30 ô trống** — và đúng 30 ô ấy là `DWELLING_PLOTS`, tức TOÀN BỘ nhà dân. Mỗi ô đường thêm
+vào là một khu nhà bị xoá. Đây chính xác cái trần Phase 14 §1(3) đã đụng khi Đàm đòi "thêm nhà".
+
+**(B) Đổi mạng đường theo kỷ** (kỷ này lưới, kỷ kia ngoằn ngoèo bằng cách đổi Ô NÀO là đường) — bị
+loại vì nó dời nhà dân giữa các kỷ và đổi cao độ địa hình, tức đụng vào một vùng đã có ADR-007 canh,
+để đổi lấy một hiệu quả mà phương án (C) cho gần như miễn phí.
+
+**(C) ĐÃ CHỌN — không thêm ô, đổi thứ NẰM TRONG một ô.** Con đường trong ô được phép **lệch khỏi
+tâm ô và lượn**, bề rộng **thắt/phình dọc đường**, và hạng đường lên **ba**. Cùng số ô, cùng số
+lệnh vẽ.
+
+### Giải pháp
+Khuôn ba lớp lần thứ **MƯỜI** (sau `vernacularRoof` · `floraStyle` · `streetStyle` ·
+`groundFloorStyle` · `roofStyle` · `settingStyle` · `hinterlandStyle` · `blockStyle` · `humanStyle`):
+
+- **BẢNG** `city3d/networkStyle.js` — 15 kỷ × 4 trục (`plan` · `bend` · `coil` · `ragged`),
+  `country` khoá cứng vào `eraStyle.js` bằng test.
+- **HÌNH** `city3d/roadPath.js` — `boundaryBend` · `buildRoadPaths` · `roadHalfWidth`.
+- **NGƯỜI ĐỌC** `terrainMesh.js` (dựng mặt đường) và `residents.js` (cư dân đi bộ) — chỉ ĐỌC.
+
+**Luật sống còn: độ lệch là thuộc tính của RANH GIỚI, không phải của Ô.** Ô (x,y) và ô (x+1,y) cùng
+hỏi `boundaryBend(era, 'u', x+1, y)` cho chỗ giáp của chúng, nên chúng **không thể** lệch nhau —
+không phải "rất khó lệch". Đây đúng phép `min` đối xứng đã xoá bậc bề rộng ở Phase 12 (ADR-031),
+dùng lại cho độ lệch. Đo: **lệch 0 tuyệt đối trên 1.320 cặp ô kề nhau × 15 kỷ**.
+
+**Hạng thứ ba (`ring`) không có vỉa hè** — và đó là một sự thật đô thị, không phải một mẹo để nó
+vừa ô: đường chạy vòng ngoài rìa là đường ĐI QUA, không phải đường ĐI DẠO, nên không ai lát vỉa hè
+(từ Zwinger trung cổ tới vành đai cao tốc hôm nay). Nó cũng chính là thứ cho hạng này một dáng riêng
+mắt đọc ra ngay, độc lập với bề rộng.
+
+### Trade-off đã chấp nhận, nói thẳng
+- **Đường càng rộng càng KHÔNG THỂ lượn** — chỗ trống để lượn là `0,5 − nửa bề rộng − vỉa hè`. Ở kỷ
+  hiện đại, lòng đường cộng vỉa hè đã lấp gần trọn ô. Đây **không phải khuyết tật**: nó khớp lịch sử
+  (lối mòn hẹp thì lượn, đại lộ Xô Viết thì thẳng) và nó là một ràng buộc HÌNH HỌC, không phải một
+  con số chọn tay. Kết quả đo: **3/15 kỷ lượn rõ (≥ 0,25 lần bề rộng), 2 kỷ thẳng tuyệt đối theo
+  chủ đích (4, 11), 10 kỷ lượn nhẹ.**
+- Ngưỡng "0,25 lần bề rộng = mắt đọc ra được" **CHƯA được hiệu chuẩn bằng một phép dựng ảnh**; nó là
+  một mốc làm việc, và phải nói rõ như vậy thay vì trình bày như một con số đã đo (`TECH_DEBT #83`).
+- Diện tích mặt đường nhìn thấy được **giảm 8%** ở kỷ 6 — một phần do `widthJitter` thắt lại, một
+  phần do đường lượn đi khuất sau nhà.
+
+### Ảnh hưởng
+Lệnh vẽ **KHÔNG đổi** ở cả 15 kỷ (mặt đường vẫn là MỘT khối, màu đi theo đỉnh). Tam giác mặt đường
++52% ở kỷ 6 và +63% ở kỷ 9, trên một thành phần chiếm ~0,8% cảnh ⇒ không đo được ở tổng.
+ADR-007 nguyên vẹn: không ô nào xê dịch, `roadCellCandidates()` không đổi một byte.
+
+### Điều kiện xem lại
+Nếu một kỷ nào đó cần lượn mạnh hơn cái trần hình học cho phép, thì cần gạt ĐÚNG là bề rộng lòng
+đường hoặc vỉa hè của kỷ ấy trong `streetStyle.js` — **không phải** nới `EDGE_KEEP` hay bỏ phép kẹp,
+vì cả hai đều dẫn thẳng tới mặt đường lấn sang thửa đất bên cạnh.
+
 ## ADR-057 — Chân giải bằng KHỚP NGƯỢC: đặt bàn chân trước, suy ngược ra góc đùi và góc gối
 
 **Ngày:** 2026-08-24

@@ -331,6 +331,13 @@
 │   │   │   │                      #   cả. Bảng 15 MỐC LỆNH VẼ riêng từng kỷ (ADR-028) + đối chứng.
 │   │   │   │                      #   Chạy được trong `npm test` nhờ quan hệ ĐO ĐƯỢC
 │   │   │   │                      #   `lệnh vẽ thành phố = (số họ vật liệu) + 4`, đúng 15/15 kỷ
+│   │   │   ├── networkStyle.js   # BẢNG HÌNH THÁI MẠNG ĐƯỜNG 15 KỶ (ADR-058): kiểu quy hoạch
+│   │   │   │                     # (`plan`: grid/axial/organic/terrace/radial) · biên độ lượn
+│   │   │   │                     # (`bend`, TỈ LỆ của chỗ trống) · bước sóng (`coil`, số ô) ·
+│   │   │   │                     # biến thiên bề rộng (`ragged`). `country` khoá vào eraStyle.
+│   │   │   ├── roadPath.js       # HÌNH của bảng trên: `boundaryBend` (độ lệch tim đường TẠI MỘT
+│   │   │   │                     # RANH GIỚI — đối xứng theo cấu tạo) · `buildRoadPaths` (nguồn
+│   │   │   │                     # DUY NHẤT cho cả terrainMesh lẫn residents) · `roadHalfWidth`.
 │   │   │   ├── streetStyle.js     # BẢNG ĐƯỜNG PHỐ 15 KỶ (Phase 9D, ADR-025): bề rộng đại lộ · bề
 │   │   │   │                      #   rộng ngõ · vật liệu lát · cỡ viên · độ mòn · bó vỉa · vỉa hè
 │   │   │   │                      #   · vạch kẻ · kiểu mép. Nguồn DUY NHẤT trả lời "ở kỷ này con

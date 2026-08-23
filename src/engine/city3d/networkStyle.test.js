@@ -20,6 +20,7 @@ import {
 import {
   MAX_PINCH, boundaryBend, buildRoadPaths, rankBendScale, roadHalfWidth, widthJitter,
 } from './roadPath.js';
+import { ROAD_RANKS, rankOfRoad } from './streetStyle.js';
 import { ERA_STYLES } from './eraStyle.js';
 import { roadCellCandidates } from '../cityLayout.js';
 
@@ -118,7 +119,7 @@ test('LƯỢN KHÔNG ĐƯỢC ĐẨY LÒNG ĐƯỜNG RA KHỎI Ô CỦA NÓ — 
   for (const era of ERAS) {
     const P = buildRoadPaths(era, Ô_ĐƯỜNG);
     for (const c of Ô_ĐƯỜNG) {
-      const nửa = roadHalfWidth(era, c.x, c.y, c.variant === 1 || c.variant === 2);
+      const nửa = roadHalfWidth(era, c.x, c.y, rankOfRoad(c.variant, c.tier));
       const lõi = P.coreOf(c.x, c.y);
       for (const [tên, lệch] of [['u', lõi.du], ['v', lõi.dv]]) {
         assert.ok(Math.abs(lệch) + nửa <= 0.5 + 1e-9,
@@ -175,14 +176,14 @@ test('BIÊN ĐỘ LƯỢN CỦA NGÕ PHẢI SỐNG Ở MỌI KỶ BIẾT LƯỢN
   // độ rồi lấy `min` TẠI RANH GIỚI. Bài này canh không cho ai gộp ngược lại.
   for (const era of ERAS) {
     if (NETWORK_STYLES[era].bend === 0) continue;
-    assert.ok(rankBendScale(era, true) > 0.01,
+    assert.ok(rankBendScale(era, 'lane') > 0.01,
       `kỷ ${era} (${NETWORK_STYLES[era].country}) khai bend ${NETWORK_STYLES[era].bend} `
-      + `mà NGÕ chỉ lượn được ${rankBendScale(era, true).toFixed(4)} ô — biên độ đang bị đại lộ nuốt`);
+      + `mà NGÕ chỉ lượn được ${rankBendScale(era, 'lane').toFixed(4)} ô — biên độ đang bị đại lộ nuốt`);
   }
   // Và ba kỷ từng bị nuốt phải lượn RÕ: đây là chính bộ số hỏng cũ, viết ra để không nới tay lại.
   for (const era of [7, 8, 13]) {
-    assert.ok(rankBendScale(era, true) > 0.05,
-      `kỷ ${era} lượn quá ít (${rankBendScale(era, true).toFixed(4)} ô) — bộ số hỏng cũ đã quay lại`);
+    assert.ok(rankBendScale(era, 'lane') > 0.05,
+      `kỷ ${era} lượn quá ít (${rankBendScale(era, 'lane').toFixed(4)} ô) — bộ số hỏng cũ đã quay lại`);
   }
 });
 
@@ -219,4 +220,20 @@ test('`boundaryBend` LUÔN nằm trong [−1, 1] — nếu không thì mọi ph�
     }
   }
   assert.equal(ngoài, 0, `${ngoài} giá trị độ lệch chuẩn hoá nằm ngoài [−1, 1]`);
+});
+
+test('BA HẠNG ĐƯỜNG ĐỀU CÓ MẶT TRONG MẠNG THẬT — hạng thứ ba không được là mã chết', () => {
+  // ⚠️ Thêm một hạng vào bảng mà mạng đường không sinh ra ô nào thuộc hạng ấy thì nó là một nhánh
+  // mã chưa từng chạy — đúng hình dạng cơ chế "lùm cây" đã chết im lặng ở Phase 8D.
+  const đếm = new Map(ROAD_RANKS.map((r) => [r, 0]));
+  for (const c of Ô_ĐƯỜNG) {
+    const r = rankOfRoad(c.variant, c.tier);
+    đếm.set(r, đếm.get(r) + 1);
+  }
+  for (const r of ROAD_RANKS) {
+    assert.ok(đếm.get(r) > 0, `hạng "${r}" không có một ô đường nào — hạng chết`);
+  }
+  // Vành đai chiếm gần nửa mạng; con số ấy chính là lý do nó đáng có hạng riêng.
+  assert.ok(đếm.get('ring') >= 30,
+    `vành đai chỉ có ${đếm.get('ring')} ô — kiểm lại trường tier có xuống tới layout.props không`);
 });

@@ -61,6 +61,31 @@ export const SIDES = ['west', 'east', 'north', 'south'];
  */
 export const SIDE_STEPS = { west: [-1, 0], east: [1, 0], north: [0, -1], south: [0, 1] };
 
+/**
+ * BA HẠNG ĐƯỜNG. Trước 2026-08-24 chỉ có HAI — `streetCrossSection(style, isLane)` nhận một
+ * BOOLEAN, nên cả mạng đường chỉ có đúng hai bề rộng.
+ *
+ * ⚠️ VÀ ĐÓ LÀ MỘT LỖ HỔNG ĐO ĐƯỢC, KHÔNG PHẢI MỘT LỰA CHỌN. Đường vành đai chiếm **36 trong 80 ô
+ * đường (45% cả mạng)** mà được vẽ y hệt ngõ phố. Đàm: *"hiện tại ít đường và LOẠI ĐƯỜNG quá"* —
+ * gần một nửa mạng đường đang không có tiếng nói riêng.
+ *
+ * ⚠️ MỘT BOOLEAN THÌ KHÔNG BAO GIỜ ĐẾM ĐƯỢC TỚI BA. Đây là lý do đổi sang chuỗi thay vì thêm một
+ * cờ thứ hai: hai cờ boolean cho ra bốn tổ hợp mà chỉ ba tổ hợp có nghĩa, và tổ hợp thứ tư sẽ im
+ * lặng rơi về một hạng nào đó — đúng cái bẫy "một trường gánh hai việc" đã cắn dự án bảy lần.
+ */
+export const ROAD_RANKS = ['avenue', 'lane', 'ring'];
+
+/**
+ * Ô đường này thuộc hạng nào — MỘT chỗ duy nhất quyết định, vì cả `terrainMesh.js`, `roadPath.js`
+ * lẫn bài test đều cần câu trả lời và ba bản chép tay là ba cơ hội để chúng trôi khỏi nhau.
+ *
+ * `tier` 1 = vành đai (Phase 6C thêm), `variant` 0 = đại lộ/ngã tư, còn lại = ngõ phố.
+ */
+export function rankOfRoad(variant, tier) {
+  if (tier === 1) return 'ring';
+  return variant === 1 || variant === 2 ? 'lane' : 'avenue';
+}
+
 const PAVING_SET = new Set(PAVING_KINDS);
 const MARKING_SET = new Set(MARKING_KINDS);
 
@@ -98,7 +123,7 @@ export const STREET_STYLES = {
     // ⚠️ `wear` CAO gần nhất bộ, và đó KHÔNG phải để tách khỏi kỷ 2 — nó suy thẳng từ câu `note`.
     // Một vệt cỏ bị giẫm mòn thì lấm tấm theo đúng nghĩa đen: chỗ trơ đất, chỗ còn túm cỏ sống sót,
     // chỗ lòi sỏi. Đó là mặt đường KHÔNG ĐỀU NHẤT trong cả 15 kỷ, vì nó chưa hề được làm phẳng.
-    avenue: 0.46, lane: 0.26, paving: 'dirt', stone: 0, wear: 0.36,
+    avenue: 0.46, lane: 0.26, ring: 0.34, paving: 'dirt', stone: 0, wear: 0.36,
     curb: 0, walk: 0, markings: 'none', edge: 'blend',
   },
   2: {
@@ -107,7 +132,7 @@ export const STREET_STYLES = {
     // ⚠️ ĐỐI CỰC CỦA KỶ 1, VÀ CŨNG SUY TỪ `note`: phù sa mịn sông Nin bị gió và chân người san đều
     // liên tục. Cùng là `dirt` nhưng một bên lấm tấm cỏ-đất-sỏi, một bên phẳng lì như bột — hai kỷ
     // đầu KHÔNG có bó vỉa/vỉa hè/vạch kẻ để mà khác nhau, nên bề rộng và độ đều PHẢI làm hết việc.
-    avenue: 0.60, lane: 0.38, paving: 'dirt', stone: 0, wear: 0.12,
+    avenue: 0.60, lane: 0.38, ring: 0.48, paving: 'dirt', stone: 0, wear: 0.12,
     curb: 0, walk: 0, markings: 'none', edge: 'blend',
   },
   3: {
@@ -118,7 +143,7 @@ export const STREET_STYLES = {
     // Đường rước Lưỡng Hà rộng vì nó phục vụ NGHI LỄ (kiệu thần, đám rước) chứ không phục vụ giao
     // thông, nên nó không bị nhà cửa lấn vào như phố buôn bán thời sau. Con số cũ 0,68 mâu thuẫn
     // với chính chữ "đường rước" trong `note` ngay trên nó.
-    avenue: 0.80, lane: 0.42, paving: 'brick', stone: 0.30, wear: 0.30,
+    avenue: 0.80, lane: 0.42, ring: 0.60, paving: 'brick', stone: 0.30, wear: 0.30,
     curb: 0, walk: 0, markings: 'none', edge: 'blend',
   },
   4: {
@@ -129,7 +154,7 @@ export const STREET_STYLES = {
     // hàng cây: làn giữa (chi dao) dành cho vua, hai làn bên cho dân. Nên kỷ này CÓ dải đi bộ hai
     // bên, nhưng KHÔNG có bó vỉa — thứ ngăn cách là rãnh và cây, không phải một hòn đá dựng đứng
     // (bó vỉa là phát minh La Mã, mãi kỷ 7 mới có).
-    avenue: 0.80, lane: 0.44, paving: 'gravel', stone: 0.19, wear: 0.24,
+    avenue: 0.80, lane: 0.44, ring: 0.66, paving: 'gravel', stone: 0.19, wear: 0.24,
     curb: 0, walk: 0.08, markings: 'none', edge: 'blend',
   },
   5: {
@@ -137,7 +162,7 @@ export const STREET_STYLES = {
     note: 'phố cổ trung cổ — ngõ HẸP quanh co, đá cuội tròn không đều, nước chảy giữa lòng đường',
     // Đá cuội trung cổ nhặt ở suối: viên to nhỏ lẫn lộn — cỡ trung bình, nhưng `wear` CAO NHẤT bộ
     // (0,46) mới là thứ kể ra sự lộn xộn ấy, không phải cỡ viên.
-    avenue: 0.66, lane: 0.30, paving: 'cobble', stone: 0.16, wear: 0.46,
+    avenue: 0.66, lane: 0.30, ring: 0.44, paving: 'cobble', stone: 0.16, wear: 0.46,
     curb: 0, walk: 0, markings: 'none', edge: 'hard',
   },
   6: {
@@ -149,13 +174,13 @@ export const STREET_STYLES = {
     // ⚠️ VÀ ĐẠI LỘ CŨNG PHẢI HẸP, KHÔNG CHỈ NGÕ. Con số cũ 0,70 rộng hơn cả đường rước thành Ur —
     // tức bảng đang nói ngược với câu `note` của chính nó. "36 phố phường" không có đại lộ nào:
     // thứ rộng nhất ở đó vẫn chỉ là một phố buôn bán vừa đủ hai chiều gánh hàng tránh nhau.
-    avenue: 0.62, lane: 0.24, paving: 'brick', stone: 0.17, wear: 0.38,
+    avenue: 0.62, lane: 0.24, ring: 0.44, paving: 'brick', stone: 0.17, wear: 0.38,
     curb: 0, walk: 0, markings: 'none', edge: 'hard',
   },
   7: {
     country: 'Ý',
     note: 'Firenze — phiến đá lớn cắt vuông, bó vỉa đá thấp kiểu La Mã (phát minh của chính họ)',
-    avenue: 0.76, lane: 0.36, paving: 'flagstone', stone: 0.34, wear: 0.26,
+    avenue: 0.76, lane: 0.36, ring: 0.62, paving: 'flagstone', stone: 0.34, wear: 0.26,
     curb: 0.035, walk: 0.09, markings: 'none', edge: 'hard',
   },
   8: {
@@ -163,7 +188,7 @@ export const STREET_STYLES = {
     note: 'calçada portuguesa — đá vôi viên rất nhỏ lát tay thành hoa văn, vỉa hè rõ',
     // VIÊN NHỎ NHẤT TRONG CẢ 15 KỶ — đúng bằng `MIN_STONE`, tức mịn hết mức màn hình còn dựng ra
     // được. Khai nhỏ hơn nữa thì không mịn thêm, chỉ thành nhiễu (xem `MIN_STONE`).
-    avenue: 0.74, lane: 0.34, paving: 'cobble', stone: 0.145, wear: 0.34,
+    avenue: 0.74, lane: 0.34, ring: 0.60, paving: 'cobble', stone: 0.145, wear: 0.34,
     curb: 0.04, walk: 0.13, markings: 'none', edge: 'hard',
   },
   9: {
@@ -179,7 +204,7 @@ export const STREET_STYLES = {
     // chỉ ~13m. Khai 0,94 là kể ngược câu chuyện: nó biến Paris thành một xa lộ. Nay lòng đường
     // 0,54 và vỉa hè 0,22 — RỘNG NHẤT cả bảng, đúng thứ Paris nổi tiếng. "Tương phản mạnh nhất"
     // vẫn giữ, vì nó là tỉ số đại lộ/ngõ (0,54 / 0,20 = 2,70 — vẫn cao nhất 15 kỷ).
-    avenue: 0.54, lane: 0.20, paving: 'cobble', stone: 0.155, wear: 0.28,
+    avenue: 0.54, lane: 0.20, ring: 0.68, paving: 'cobble', stone: 0.155, wear: 0.28,
     curb: 0.05, walk: 0.22, markings: 'none', edge: 'hard',
   },
   10: {
@@ -192,7 +217,7 @@ export const STREET_STYLES = {
     // Vỉa hè đá phiến Manchester HẸP thật — phố back-to-back chen chúc, lối đi bộ chỉ vừa hai
     // người tránh nhau. Đây là kỷ duy nhất có bó vỉa CAO mà vỉa hè lại hẹp: bó vỉa cao để chắn
     // bánh xe ngựa chở than, không phải để tôn một lối dạo.
-    avenue: 0.78, lane: 0.42, paving: 'brick', stone: 0.16, wear: 0.42,
+    avenue: 0.78, lane: 0.42, ring: 0.62, paving: 'brick', stone: 0.16, wear: 0.42,
     curb: 0.055, walk: 0.10, markings: 'none', edge: 'hard',
   },
   11: {
@@ -205,7 +230,7 @@ export const STREET_STYLES = {
     // trục tách hai kỷ ấy ra. Lòng đường Manhattan bị xẻ đi xẻ lại suốt đời: hơi nước, tàu điện
     // ngầm, ống nước, cáp điện — mỗi lần vá là một mảng nhựa khác tuổi, khác màu. Ổ gà New York là
     // một định chế văn hoá. Singapore thì thảm lại theo chu kỳ và cấm xe nặng vào nhiều tuyến.
-    avenue: 0.62, lane: 0.50, paving: 'asphalt', stone: 0, wear: 0.24,
+    avenue: 0.62, lane: 0.50, ring: 0.76, paving: 'asphalt', stone: 0, wear: 0.24,
     curb: 0.05, walk: 0.17, markings: 'center', edge: 'hard',
   },
   12: {
@@ -214,13 +239,13 @@ export const STREET_STYLES = {
     // Tverskaya được nới năm 1937–38 theo Tổng quy hoạch Moskva: tổng ~60m, lòng đường ~40m, vỉa hè
     // ~10m mỗi bên ⇒ lòng đường chiếm hai phần ba hành lang. Đó là tỉ lệ 0,66/0,17; bảng lấy
     // 0,70/0,14 để kỷ này giữ được nét "lòng đường áp đảo" so với Paris và Singapore.
-    avenue: 0.70, lane: 0.46, paving: 'slab', stone: 0.46, wear: 0.14,
+    avenue: 0.70, lane: 0.46, ring: 0.82, paving: 'slab', stone: 0.46, wear: 0.14,
     curb: 0.045, walk: 0.14, markings: 'none', edge: 'hard',
   },
   13: {
     country: 'Nhật Bản',
     note: 'phố Nhật — lòng đường HẸP lại (đất đắt), nhựa mịn, vạch sang đường kẻ dày',
-    avenue: 0.72, lane: 0.38, paving: 'asphalt', stone: 0, wear: 0.12,
+    avenue: 0.72, lane: 0.38, ring: 0.60, paving: 'asphalt', stone: 0, wear: 0.12,
     curb: 0.04, walk: 0.12, markings: 'crossing', edge: 'hard',
   },
   14: {
@@ -234,7 +259,7 @@ export const STREET_STYLES = {
     // sách "Thành phố Vườn" (Lý Quang Diệu, 1967): hành lang đường được chia bớt cho dải trồng cây
     // và hàng cây bóng mát, chứ không dồn hết cho nhựa. Tán cây Orchard Road là sản phẩm của luật,
     // không phải của may mắn. Lại một lần nữa: "hiện đại hơn" KHÔNG đồng nghĩa "đường rộng hơn".
-    avenue: 0.54, lane: 0.44, paving: 'asphalt', stone: 0, wear: 0.10,
+    avenue: 0.54, lane: 0.44, ring: 0.72, paving: 'asphalt', stone: 0, wear: 0.10,
     curb: 0.045, walk: 0.19, markings: 'dashed', edge: 'hard',
   },
   15: {
@@ -245,7 +270,7 @@ export const STREET_STYLES = {
     // vượt; thành phố được dựng quanh xe hơi và điều hoà. Lối đi bộ rộng chỉ có trong vài khu dựng
     // riêng cho việc dạo (Mohammed Bin Rashid Boulevard ở Downtown, The Walk ở JBR, Dubai Marina),
     // và chúng có MÁI CHE — thứ chống 45°C, khác hẳn cái trottoir Paris dựng để ngồi cà phê.
-    avenue: 0.84, lane: 0.52, paving: 'slab', stone: 0.30, wear: 0.08,
+    avenue: 0.84, lane: 0.52, ring: 0.72, paving: 'slab', stone: 0.30, wear: 0.08,
     curb: 0.05, walk: 0.07, markings: 'dashed', edge: 'hard',
   },
 };
@@ -257,7 +282,10 @@ export const STREET_STYLES = {
  */
 const FALLBACK = {
   country: '', note: 'kỷ chưa khai — lối đất trung tính',
-  avenue: 0.66, lane: 0.42, paving: 'dirt', stone: 0, wear: 0.20,
+  // ⚠️ DÒNG DỰ PHÒNG CŨNG PHẢI QUA ĐƯỢC `isValidStreetStyle`, và có bài test đòi đúng điều đó.
+  // Thêm một trục vào bảng mà quên dòng này thì mọi kỷ lạ (dữ liệu hỏng, kỷ tương lai) rơi vào một
+  // dòng KHÔNG hợp lệ — tức đúng lúc cần một lưới đỡ nhất thì lưới đỡ lại thủng.
+  avenue: 0.66, lane: 0.42, ring: 0.54, paving: 'dirt', stone: 0, wear: 0.20,
   curb: 0, walk: 0, markings: 'none', edge: 'blend',
 };
 
@@ -353,6 +381,25 @@ export const MIN_WALK = EYE_PIXELS / CELL_PIXELS;
 export const MAX_AVENUE = 0.96;
 
 /**
+ * VÀNH ĐAI phải chênh hai hạng kia ÍT NHẤT chừng này (phần của một ô) thì mắt mới đọc ra là một
+ * hạng riêng. Suy từ hai con số đã hiệu chuẩn: một ô ≈ `CELL_PIXELS` điểm ảnh, và một khác biệt
+ * hẹp hơn `EYE_PIXELS` thì không đọc chắc được.
+ *
+ * ⚠️ **CHỈ ÁP CHO `ring`, KHÔNG ÁP CHO CẶP `avenue` ↔ `lane`** — và đây là một bản vá cho chính
+ * tôi, do bài test bắt được. Bản đầu tôi bắt cả ba cặp phải cách nhau, với lý lẽ nghe rất chặt
+ * ("ba hạng thì hạng nào cũng phải đọc ra được"). Nó lập tức làm **kỷ 11 và 14 thành không hợp lệ**
+ * — mà hai kỷ ấy khai đại lộ và ngõ gần bằng nhau **CÓ CHỦ ĐÍCH**: `streetStyle` đã ghi rõ từ Phase
+ * 9D rằng *"lưới Manhattan thì mọi phố gần bằng nhau (tương phản yếu)"*, và đó chính là một trục
+ * bản sắc. Một luật mới không được phủ định một quyết định cũ đã có lý do viết ra; nếu nó làm thế
+ * thì gần như chắc chắn luật mới mới là cái sai.
+ *
+ * ⚠️ VÀ VÌ CON SỐ NÀY MỘT MÌNH KHÔNG ĐỦ MẠNH (0,0625 ô ≈ 4 điểm ảnh bề rộng), bản sắc của vành đai
+ * KHÔNG dựa vào nó: thứ làm nó đọc ra ngay là **không có vỉa hè** (mặt đường chạm thẳng vào cỏ) và
+ * **không có vạch kẻ**. Con số này chỉ là cái SÀN chặn bảng thoái hoá về hai hạng.
+ */
+export const MIN_RANK_GAP = EYE_PIXELS / CELL_PIXELS;
+
+/**
  * Số ô con chia trên MỘT ô đường, suy từ cỡ viên lát.
  *
  * ⚠️ ĐÂY LÀ CHỖ CỠ VIÊN TRỞ THÀNH HÌNH HỌC THẬT, không phải một con số trang trí. Hình học của
@@ -374,10 +421,34 @@ export function pavingSubdivision(style) {
  * @param {object} style   kết quả `getStreetStyle`
  * @param {boolean} isLane true = ngõ phố (variant 1/2), false = đại lộ/ngã tư
  */
-export function streetCrossSection(style, isLane) {
+export function streetCrossSection(style, rank) {
   const s = style ?? FALLBACK;
-  const width = isLane ? s.lane : s.avenue;
+  /**
+   * ⚠️ NHẬN CẢ BOOLEAN, VÀ PHẢI ÁNH XẠ ĐÚNG NGHĨA CŨ (`true` = ngõ). Trước 2026-08-24 tham số này
+   * là một boolean `isLane`; nếu chỗ nào sót lại chưa đổi mà ta để boolean rơi về `'avenue'` thì
+   * `true` — vốn nghĩa là NGÕ — bỗng dựng ra một ĐẠI LỘ. Tức một lời gọi cũ không nổ, không cảnh
+   * báo, chỉ lặng lẽ trả về ĐÚNG NGƯỢC thứ nó xin. Ánh xạ đúng nghĩa cũ thì chỗ sót giữ nguyên
+   * hành vi cũ thay vì đảo ngược, và có bài test ghim lại luật này.
+   */
+  const hạng = typeof rank === 'boolean'
+    ? (rank ? 'lane' : 'avenue')
+    : (ROAD_RANKS.includes(rank) ? rank : 'avenue');
+  const width = hạng === 'ring' ? (s.ring ?? s.lane) : (hạng === 'lane' ? s.lane : s.avenue);
   const half = Math.max(0.08, Math.min(1, width)) / 2;
+  /**
+   * ⚠️ ĐƯỜNG VÀNH ĐAI **KHÔNG CÓ VỈA HÈ**, VÀ ĐÓ LÀ MỘT SỰ THẬT ĐÔ THỊ CHỨ KHÔNG PHẢI MỘT MẸO ĐỂ
+   * NÓ VỪA Ô. Con đường chạy vòng ngoài rìa là đường ĐI QUA, không phải đường ĐI DẠO: nó men theo
+   * chân tường thành, theo bờ kênh, theo mép ruộng. Ở đó không có mặt tiền cửa hàng nên không ai
+   * lát vỉa hè — từ Zwinger trung cổ tới đường vành đai cao tốc hôm nay đều vậy.
+   *
+   * Nó cũng chính là thứ cho hạng này một DÁNG riêng mà mắt đọc ra ngay, độc lập với bề rộng: mặt
+   * đường chạm thẳng vào cỏ, không có dải nhạt viền hai bên như đại lộ và ngõ phố.
+   *
+   * ⚠️ VÀ NÓ CỞI ĐÚNG CÁI NÚT ĐÃ CHẶN BỀ RỘNG. `walk` bị kẹp `≤ 0,5 − half`, nên ở kỷ vỉa hè rộng
+   * (kỷ 9 khai 0,22) thì mọi hạng đường bị ép xuống dưới 0,56 ô và không còn chỗ cho một hạng thứ
+   * ba phân biệt được. Bỏ vỉa hè ở vành đai thì trần của nó là cả nửa ô.
+   */
+  if (hạng === 'ring') return { half, walk: 0, curb: 0 };
   // Vỉa hè và bó vỉa nằm NGOÀI lòng đường, nhưng không được tràn ra khỏi ô: hai ô đường kề nhau mà
   // vỉa hè chồng lên nhau thì sinh ra một dải chọi mặt (z-fight) chạy dọc cả thành phố.
   const room = Math.max(0, 0.5 - half);
@@ -472,6 +543,12 @@ export function isValidStreetStyle(style) {
     && MARKING_SET.has(style.markings)
     && Number.isFinite(style.avenue) && style.avenue > 0 && style.avenue <= MAX_AVENUE
     && Number.isFinite(style.lane) && style.lane > 0 && style.lane <= MAX_AVENUE
+    // ⚠️ VÀNH ĐAI PHẢI KHÁC CẢ HAI HẠNG KIA MỘT KHOẢNG **MẮT ĐỌC RA ĐƯỢC**. Không có luật này thì
+    // cách rẻ nhất để "có ba hạng đường" là khai `ring` bằng đúng `lane` — bảng vẫn hợp lệ, mã vẫn
+    // chạy, và hạng thứ ba chết trong im lặng đúng như 45% mạng đường đã chết suốt trước đó.
+    && Number.isFinite(style.ring) && style.ring > 0 && style.ring <= MAX_AVENUE
+    && Math.abs(style.ring - style.avenue) >= MIN_RANK_GAP - 1e-9
+    && Math.abs(style.ring - style.lane) >= MIN_RANK_GAP - 1e-9
     // ⚠️ `stone` chỉ được là 0 (liền khối) hoặc một cỡ MÀN HÌNH DỰNG RA ĐƯỢC. Xem `MIN_STONE`: khai
     // nhỏ hơn thì cái kẹp trong `pavingSubdivision` sẽ nuốt mất phần chênh lệch trong im lặng.
     && Number.isFinite(style.stone) && style.stone >= 0 && style.stone < 1

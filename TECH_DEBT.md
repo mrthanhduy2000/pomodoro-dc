@@ -13,7 +13,9 @@
 > mà không được refactor triệt để, phải CHỦ ĐỘNG đề xuất mở một "Maintenance Sprint" (nêu rõ mục
 > tiêu/phạm vi/lợi ích/rủi ro/tiêu chí hoàn thành) thay vì tiếp tục cộng thêm tính năng mới.
 >
-> **Trạng thái ngưỡng hiện tại (2026-08-24 tối, sau ADR-057)**: **#82 ĐÃ ĐÓNG** — chân giải bằng
+> **Trạng thái ngưỡng hiện tại (2026-08-24 tối muộn, sau ADR-058)**: thêm **#83** (ngưỡng "lượn
+> bao nhiêu thì mắt đọc ra" chưa hiệu chuẩn) ở mức **Low** — không đụng ngưỡng Maintenance Sprint.
+> **(2026-08-24 tối, sau ADR-057)**: **#82 ĐÃ ĐÓNG** — chân giải bằng
 > khớp ngược nên cả ba chiều bị cấm đều thành miễn phí. (Ghi chú cũ giữ lại bên dưới.)
 > **(2026-08-24 sáng, sau ADR-056)**: thêm **#82** (bộ khớp chỉ có một trục
 > quay ⇒ hông không lắc ngang, đai hông không xoay) ở mức **Low**. Trước đó: **#80** (cư dân chiếm
@@ -4385,6 +4387,37 @@ cấp `Math.min(3,…)` → `Math.min(9,…)` · cắt bớt danh sách cấp th
 - **Review Trigger (MỚI, thay cho mốc đã dùng)**: **ngay phase sau §1(3)**, hoặc sớm hơn nếu Đàm
   nhìn ảnh §1(3) rồi nói mái nhà dân trông giống nhau giữa các kỷ.
 - **Owner**: chưa phân công · **Status**: Open (đã rà soát 2026-08-21, hoãn có lý do)
+
+---
+
+## #83 — Ngưỡng "lượn bao nhiêu thì mắt đọc ra" CHƯA được hiệu chuẩn bằng một phép dựng ảnh
+
+- **Tên**: mốc `0,25 lần bề rộng` trong `scripts/road-bend.mjs` là một con số LÀM VIỆC, không phải
+  một con số đã đo
+- **Module**: `scripts/road-bend.mjs` (dòng tổng kết `N/15 kỷ có đường lượn ĐỌC RA ĐƯỢC`)
+- **Priority**: Low · **Severity**: Low
+- **Impact**: Con số `3/15 kỷ` mà công cụ in ra phụ thuộc hoàn toàn vào mốc ấy. Đặt 0,20 thì thành
+  `6/15`, đặt 0,30 thì thành `2/15` — tức một câu kết luận về CHẤT LƯỢNG đang treo trên một con số
+  chưa ai chứng minh. Bản thân phép đo (`lệch ÷ bề rộng`) thì đã đúng đại lượng và có `--selftest`
+  bảo chứng; chỗ chưa chắc chỉ là cái MỐC.
+- **Root Cause**: dự án có hai con số đã hiệu chuẩn cho MẮT — `CELL_PIXELS = 64` và `EYE_PIXELS = 4`
+  (bề rộng nhỏ nhất còn đọc ra được), cùng `ngưỡng mắt 12/255` cho MÀU (hiệu chuẩn ở Phase 3Y).
+  Nhưng **chưa có con số nào cho "một đường cong lệch bao nhiêu thì đọc ra là cong"** — đó là một
+  đại lượng khác hẳn hai cái kia, và tôi đã chọn 0,25 bằng suy luận chứ không bằng phép dựng ảnh.
+- **Current Risk**: Thấp. Không có mã sản phẩm nào đọc con số này; nó chỉ nằm trong một dòng tổng
+  kết của công cụ đo. Mọi cổng THẬT (`networkStyle.test.js`) đều canh bằng bất biến hình học, không
+  canh bằng mốc này.
+- **Future Risk**: Trung bình — đúng hình dạng cái phễu Phase 9A: một ngưỡng đặt "cho chắc" rồi ở
+  lại mãi, và phiên sau sẽ trích `3/15` như thể đó là một phép đo.
+- **Recommended Solution**: hiệu chuẩn đúng cách dự án đã hiệu chuẩn ngưỡng mắt 12: dựng một loạt
+  ảnh CÙNG một kỷ với biên độ lượn tăng dần (0,05 · 0,10 · 0,20 · 0,40 · 0,80 lần bề rộng), đo phần
+  trăm điểm ảnh lệch quá ngưỡng mắt giữa mỗi bản và bản thẳng, rồi lấy mốc ở chỗ con số ấy vượt
+  khỏi nền nhiễu. Sau đó ghi con số kèm ĐÚNG lệnh đã sinh ra nó (luật §3-Q2 của `PERFORMANCE.md`).
+- **Estimated Complexity**: Thấp (một vòng ~6 lần dựng ảnh, ~3 phút máy).
+- **Blocking Conditions**: Không có.
+- **Review Trigger**: khi có ai định trích con số `N/15 kỷ` vào một báo cáo, HOẶC khi một phase sau
+  dùng nó để quyết định có nên chỉnh `bend` của một kỷ hay không.
+- **Owner**: chưa ai · **Status**: 🔴 mở
 
 ---
 

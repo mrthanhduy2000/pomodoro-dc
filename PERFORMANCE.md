@@ -2307,6 +2307,100 @@ xuống, mà `massHeight` thì không phụ thuộc hình chiếu đáy) — bù
 
 ---
 
+## Phase 18 — ĐƯỜNG PHỐ BIẾT UỐN CONG, VÀ MẠNG ĐƯỜNG CÓ BA HẠNG (2026-08-24, ADR-058)
+
+⚠️ **Ba vế truy nguồn (luật §3-Q2)** — CÔNG CỤ · ĐẦU VÀO · ĐỜI ẢNH:
+- **Công cụ**: `node scripts/city-preview.mjs --era 6 --hour 12 --width 1500 [--mask road]` ·
+  `node --import ./scripts/register-esm-loader.mjs scripts/road-bend.mjs`
+- **Đầu vào**: kỷ 6 · 12 giờ · `--width 1500` · mặc định 40 phiên (ảnh) / 400 phiên (`road-bend`)
+- **Đời ảnh**: vế TRƯỚC dựng trong `git worktree` tại `2f8e6f6`; vế SAU dựng ở cây làm việc sau khi
+  đủ cả bẻ-cong lẫn hạng thứ ba. Hai lượt dựng bằng **cùng một dòng lệnh**, `cd` vào từng kho ở
+  **lệnh riêng** (bài học "cd sống sót sang lệnh kế tiếp").
+
+### Mặt đường đổi bao nhiêu — đo trong VÙNG MẶT ĐƯỜNG, không đo trên cả khung
+
+| đại lượng | TRƯỚC | SAU |
+|---|---:|---:|
+| diện tích mặt đường nhìn thấy được (kỷ 6) | 14.493 px | 13.338 px (**−8,0%**) |
+| chỉ có ở bản TRƯỚC | — | 4.011 px |
+| chỉ có ở bản SAU | — | 2.856 px |
+| **mặt đường ĐỔI CHỖ** | — | **6.867 px ≈ 47% diện tích của chính nó** |
+| cả khung hình, vượt ngưỡng mắt 12 | — | 0,67% điểm ảnh |
+
+⚠️ **ĐỘ CHÍNH XÁC CỦA CON SỐ ẤY LÀ HAI CHỮ SỐ, KHÔNG PHẢI BA — đã đo nhiễu chứ không đoán.** Dựng
+lại mặt nạ kỷ 6 **hai lần trên CÙNG một cây mã** ra 13.520 và 13.338 điểm ảnh, tức **chênh 1,4%**
+(SwiftShader chia ô rasterise theo số luồng dùng được — `TECH_DEBT #50`). Nhiễu 1,4% thì không thể
+dựng ra một con số dịch chuyển 47%, nên KẾT LUẬN vững; nhưng viết "47,4%" là hứa một độ chính xác
+phép đo không có. Ghi **≈47%**.
+
+⚠️ **HAI CON SỐ CUỐI NÓI HAI CHUYỆN KHÁC NHAU, ĐỪNG TRỘN.** "0,67% cả khung" nghe như không có gì
+xảy ra — nhưng mặt đường chỉ chiếm **1,38% khung hình** ở góc nhìn mặc định, nên mẫu số ấy pha loãng
+tín hiệu gần 70 lần. Đây đúng hình dạng `TECH_DEBT #22`. Con số trả lời câu *"con đường có đổi
+không"* là **≈47%**, với mẫu số là chính mặt đường (lấy qua mặt nạ `--mask road`, tức do bên DỰNG
+khai chứ không đoán bằng màu).
+
+### Độ lượn theo kỷ — `lệch tim đường ÷ bề rộng lòng đường`
+
+Đo bằng `scripts/road-bend.mjs`, **trên tam giác ĐÃ DỰNG** (không đọc lại bảng — một công cụ hỏi
+lại chính nguồn mà mã sản phẩm dùng thì là một cái GƯƠNG, không phải một cái CÂN).
+
+| kỷ | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 |
+|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|
+| trung bình | 0,739 | 0,148 | 0,137 | **0,000** | 0,488 | 0,542 | 0,163 | 0,169 | 0,100 | 0,065 | **0,000** | 0,004 | 0,182 | 0,008 | 0,032 |
+| con lượn nhất | 1,263 | 0,225 | 0,318 | 0,000 | 0,952 | 1,225 | 0,378 | 0,356 | 0,247 | 0,109 | 0,000 | 0,010 | 0,343 | 0,011 | 0,060 |
+
+**Kỷ 4 và 11 ra đúng 0,000 là ĐÚNG, không phải hỏng** — chúng khai `bend: 0` (Chang'an nhà Đường và
+Commissioners' Plan 1811 của Manhattan), và `--selftest` của công cụ có một **đối chứng bắt buộc**
+đòi kỷ 4 phải đo ra đúng 1,0000 độ uốn khúc: nếu phép đo lệch chỗ, chính ca ấy sẽ đỏ.
+
+⚠️ **VÌ SAO 10 KỶ CÒN LẠI CHỈ LƯỢN NHẸ — ĐÂY LÀ MỘT CÁI TRẦN HÌNH HỌC, ĐÃ ĐO, KHÔNG PHẢI MỘT LỰA
+CHỌN.** Chỗ trống để lượn là `0,5 − nửa bề rộng − vỉa hè`. Trần `lệch ÷ bề rộng` nếu đặt `bend: 1,00`
+cho mọi kỷ:
+
+| kỷ | 1 | 2 | 5 | 6 | 9 | 13 | 11 | 14 |
+|---|--:|--:|--:|--:|--:|--:|--:|--:|
+| TRẦN (ngõ) | 1,197 | 0,728 | 0,978 | 1,404 | 0,772 | 0,346 | **0,110** | **0,138** |
+
+Kỷ 11 và 14 **không thể** lượn quá ~0,12 lần bề rộng dù khai gì, vì lòng đường cộng vỉa hè của chúng
+đã lấp gần trọn hành lang ô. Muốn nới thì cần gạt ĐÚNG là bề rộng/vỉa hè trong `streetStyle.js`,
+**không phải** `EDGE_KEEP` hay phép kẹp.
+
+### Giá phải trả
+
+| | TRƯỚC | SAU |
+|---|---:|---:|
+| lệnh vẽ (kỷ 6, `--width 1500`) | 20 | **20 — KHÔNG ĐỔI** |
+| tam giác mặt đường, kỷ 1 | 492 | 492 |
+| tam giác mặt đường, kỷ 6 | 1.538 | 2.334 (**+52%**) |
+| tam giác mặt đường, kỷ 9 | 1.816 | 2.964 (**+63%**) |
+| tam giác mặt đường, kỷ 11 | 1.140 | 1.108 (−3%) |
+
+⚠️ **MẶT ĐƯỜNG KHÔNG NẰM TRONG CON SỐ "tam giác thành phố" MÀ `city-preview` IN RA** — nó là một
+khối riêng (`road`), không thuộc `city` (274.574) cũng không thuộc nền (44.126 = vòm trời 960 +
+rặng núi 43.166). Suýt đọc nhầm điều này thành *"hạng thứ ba không có tác dụng"* vì con số tổng
+đứng yên; phải đếm riêng bằng `buildRoadSurface(...).kinds` mới thấy. Mặt đường chiếm ~0,8% cảnh
+nên +52% ở đó không đo được ở tổng.
+
+### Thời gian dựng cảnh — đo CẢ HAI VẾ, vì ADR-048 đã dạy rằng cổng nào cũng có thể mù với nó
+
+| | `npm run test:cross`, lượt sạch (không chạy gì song song) |
+|---|---:|
+| tại HEAD `2f8e6f6` (trong `git worktree` riêng) | **37.354 ms** |
+| sau bản vá | **38.115 ms** (**+2,0%**) |
+
+⚠️ **+2% NẰM TRONG NHIỄU — VÀ CON SỐ ~25 GIÂY GHI Ở `CLAUDE.md` LÀ CỦA MỘT MÁY KHÁC, KHÔNG PHẢI MỘT
+HỒI QUY.** Lượt đo đầu tiên ra 38,1 giây làm tôi tưởng có hồi quy 50% so với mốc ~25 giây trong tài
+liệu. Cách kiểm đúng không phải đi soi mã mà là **đo lại chính HEAD bằng cùng một lệnh trên cùng
+cái máy này** — ra 37,4 giây. ⇒ *Một mốc thời gian chỉ so được với một mốc thời gian đo trên CÙNG
+máy; đem so với một con số trong tài liệu là so hai máy khác nhau.* (Và lượt đo đầu của tôi còn
+chạy chồng lên `npm run build` — đúng thứ mà luật "phép đo thời gian không được chồng lấn" cấm; kết
+quả may mà không lệch, nhưng nó đã có thể lệch.)
+
+**Lệnh vẽ không đổi vì mặt đường vẫn là MỘT khối** — ba hạng khác nhau ở bề rộng và ở màu ĐỈNH, mà
+màu đỉnh thì không tính tiền lệnh vẽ. `drawCallBudget.test.js` xanh nguyên.
+
+---
+
 ## Phase 15 — CƠ THỂ CƯ DÂN DỰNG BẰNG MẶT TRÒN XOAY (2026-08-23, ADR-055)
 
 **CÔNG CỤ · ĐẦU VÀO · ĐỜI ẢNH** (ba vế bắt buộc, xem `CLAUDE.md`):

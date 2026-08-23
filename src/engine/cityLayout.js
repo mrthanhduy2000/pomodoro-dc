@@ -522,7 +522,12 @@ export function deriveProps({ era, buildingCount, sessionCount, streakLength, oc
     const key = cellKey(cell.x, cell.y);
     if (taken.has(key)) continue;
     taken.add(key);
-    props.push({ kind: 'road', x: cell.x, y: cell.y, variant: cell.variant });
+    // ⚠️ `tier` PHẢI ĐI THEO — nó là thứ duy nhất phân biệt VÀNH ĐAI với ngõ phố. Trước
+    // 2026-08-24 nó bị bỏ lại ở đây, nên 36/80 ô vành đai xuống tới tầng vẽ dưới lốt ngõ phố và
+    // được dựng y hệt: gần một nửa mạng đường không có tiếng nói riêng. Xem `rankOfRoad`.
+    props.push({
+      kind: 'road', x: cell.x, y: cell.y, variant: cell.variant, tier: cell.tier,
+    });
     roadsPlaced += 1;
   }
 

@@ -264,6 +264,36 @@ mật độ tăng dần theo kỷ (17 căn kỷ 1 → 30 căn kỷ 15). ⚠️ N
 đi qua **đúng** `buildBuildingSpec` như công trình thật, chỉ khác cờ `plain` (tắt chữ ký kiến trúc +
 mô-típ) và mái `vernacularRoof` — nhờ vậy chúng thừa hưởng mái/vật liệu/tỉ lệ của kỷ mà không tranh
 mất hình bóng của 5 kỳ quan.
+**Mạng đường — hai tầng bản sắc, và một luật đối xứng giữ chúng không gãy (ADR-025 + ADR-058)**:
+`streetStyle.js` trả lời câu về **MẶT CẮT NGANG** (rộng bao nhiêu, lát bằng gì, có bó vỉa/vỉa hè/vạch
+kẻ không), còn `networkStyle.js` + `roadPath.js` trả lời câu về **CHIỀU DỌC** (con đường có thẳng
+không, lượn kiểu gì, thắt phình ra sao). Trước ADR-058 chỉ có tầng thứ nhất, nên mọi lòng đường được
+dựng **chính giữa ô lưới** và cả 15 kỷ dùng chung một tấm lưới bàn cờ.
+
+⚠️ **Luật sống còn của tầng mới: độ lệch tim đường là thuộc tính của RANH GIỚI, không phải của Ô.**
+Ô `(x,y)` và ô `(x+1,y)` cùng hỏi `boundaryBend(era, 'u', x+1, y)` cho chỗ giáp của chúng, nên chúng
+**không thể** khai lệch nhau — không phải "rất khó lệch". Đây đúng phép `min` đối xứng mà ADR-031 đã
+dùng để xoá bậc BỀ RỘNG ở Phase 12, áp lại cho ĐỘ LỆCH. Biên độ tại một ranh giới là `min` biên độ
+của hai hạng đường gặp nhau ở đó, nên đối xứng vẫn giữ kể cả nơi đại lộ gặp ngõ.
+
+⚠️ **Một nguồn duy nhất cho hai người đọc.** `buildRoadPaths(era, roadCells)` là chỗ DUY NHẤT dựng
+ra tim đường; `terrainMesh.js` đặt mặt đường theo nó và `residents.js` đặt bàn chân cư dân theo nó
+(qua `walkThrough`, trả về đúng dãy điểm mà mặt đường được dựng quanh). Nếu hai bên tự tính lấy thì
+sẽ có ngày cư dân đi song song **bên cạnh** mặt đường — một lỗi mà không cổng số nào bắt được, vì
+hai bên đều "đúng" theo công thức của riêng mình. Có bài test đối chiếu chéo đặt vị trí cư dân lên
+tam giác mặt đường ĐÃ DỰNG.
+
+⚠️ **Hình học tự ép đúng lịch sử.** Chỗ trống để lượn là `0,5 − nửa bề rộng − vỉa hè`, nên đường
+càng rộng càng KHÔNG THỂ lượn. Lối mòn Göbekli Tepe (rộng 0,46 ô) còn 0,27 ô để lượn; đại lộ hiện
+đại có vỉa hè rộng thì gần như không còn chỗ. Bảng chỉ khai **TỈ LỆ** của chỗ trống ấy, không khai
+số ô — đúng luật Phase 7D (*một lời hứa nói về QUAN HỆ phải viết thành con số quan hệ*).
+
+**Ba hạng đường, không phải hai.** `rankOfRoad(variant, tier)` là chỗ duy nhất quyết định hạng:
+`ring` (vành đai, `tier` 1) · `avenue` · `lane`. Trước ADR-058 tham số này là một **boolean**, nên
+36/80 ô vành đai (**45% cả mạng**) được dựng y hệt ngõ phố. Vành đai **không có vỉa hè và không có
+vạch kẻ** — đó là sự thật đô thị (đường ĐI QUA chứ không phải đường ĐI DẠO), và cũng chính là thứ
+cho nó một dáng riêng độc lập với bề rộng.
+
 **`props` (cảnh vật) — thảm thực vật có ngữ pháp riêng (Phase 8D, ADR-020/021)**: cùng khuôn ba
 lớp với nhà cửa, chỉ khác trục. `city3d/floraStyle.js` là BẢNG (15 kỷ → loài + cỡ + mật độ + tầng
 cây bụi + màu lá, mỗi dòng buộc vào `country` mà `eraStyle.js` đã khai); `city3d/flora.js` là THƯ

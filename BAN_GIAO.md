@@ -6,7 +6,36 @@
 > chọn: `ARCHITECTURE_DECISIONS.md`. Nợ kỹ thuật: `TECH_DEBT.md`. Migration: `MIGRATION.md`. Tóm
 > tắt theo mốc: `CHANGELOG.md`.
 > **NGUYÊN TẮC ƯU TIÊN SỐ 1:** (1) mọi phiên AI phải đọc file này + `CLAUDE.md` + các file liên quan TRƯỚC khi làm; (2) sau MỌI cập nhật dù nhỏ, phải cập nhật ngay file này + `CLAUDE.md` + các file liên quan khác.
-> Cập nhật lần cuối: **2026-08-24 (tối)** — **CHÂN CÓ ĐẦU GỐI THẬT, GIẢI BẰNG KHỚP NGƯỢC**
+> Cập nhật lần cuối: **2026-08-24 (tối muộn)** — **ĐƯỜNG PHỐ BIẾT UỐN CONG, VÀ MẠNG ĐƯỜNG CÓ BA
+> HẠNG** (ADR-058). Đàm: *"đường đi hiện tại chỉ là những đường thẳng, không giống đường ngoài đời,
+> không uốn cong, và nó cũng như quy hoạch quá — các thời trước làm gì có quy hoạch đường thẳng tấp
+> thế, và hiện tại ít đường và loại đường quá"*.
+>
+> **ĐO TRẦN TRƯỚC KHI LÀM, và phép đo bác bỏ cách hiểu đen của "mở rộng đường đi":** 80/144 ô đã là
+> đường (55,6%), 45 ô hứa cho kỳ quan, **chỉ còn 30 ô trống** — mà đúng 30 ô ấy là TOÀN BỘ nhà dân.
+> Mỗi ô đường thêm vào là một khu nhà bị xoá. Cùng cái trần Phase 14 §1(3) đã đụng. ⇒ **KHÔNG thêm
+> ô; đổi thứ NẰM TRONG một ô.**
+>
+> Bốn việc: **(1)** `networkStyle.js` MỚI — **bảng 15 kỷ × 4 trục hình thái quy hoạch** (`plan` ·
+> `bend` · `coil` · `ragged`), mỗi dòng buộc vào một nước có thật: Çatalhöyük **không có đường**
+> (đi trên mái), Chang'an nhà Đường lưới vuông tuyệt đối, Manhattan Commissioners' Plan 1811,
+> Alfama **trước** động đất 1755, Tokyo dựng lại trên đúng ranh thửa Edo sau 1945. **(2)**
+> `roadPath.js` MỚI — tim đường lượn, và **độ lệch là thuộc tính của RANH GIỚI chứ không phải của
+> Ô**, nên hai ô kề nhau *không thể* lệch nhau (đo: **0 tuyệt đối trên 1.320 cặp × 15 kỷ**). **(3)**
+> **HẠNG ĐƯỜNG THỨ BA**: `streetCrossSection` trước nhận một **boolean**, nên **36/80 ô vành đai
+> (45% cả mạng)** được vẽ y hệt ngõ phố — nay vành đai có bề rộng riêng, **không vỉa hè, không vạch
+> kẻ**. **(4)** Cư dân đi theo **chính** tim đường ấy, không đi tâm ô nữa.
+>
+> Số: mặt đường **đổi chỗ ≈47% diện tích của chính nó** (kỷ 6, mặt nạ `road`) · cả khung hình đổi
+> 0,67% — *hai con số ấy nói hai chuyện khác nhau, mặt đường chỉ chiếm 1,38% khung* · **lệnh vẽ
+> KHÔNG đổi ở cả 15 kỷ** · tam giác mặt đường +52% (kỷ 6) trên một thành phần chiếm ~0,8% cảnh ·
+> ADR-007 nguyên vẹn. Công cụ mới `scripts/road-bend.mjs` (`--selftest` 7 mục, có đối chứng bắt
+> buộc kỷ 4 phải ra đúng 1,0000). Chi tiết: `PERFORMANCE.md` mục Phase 18 + ADR-058.
+>
+> ⚠️ **Ngưỡng "0,25 lần bề rộng = mắt đọc ra được" CHƯA hiệu chuẩn bằng ảnh dựng** → `TECH_DEBT #83`.
+> Đừng trích con số "3/15 kỷ" như thể nó là một phép đo.
+>
+> (Mốc trước, 2026-08-24 tối) — **CHÂN CÓ ĐẦU GỐI THẬT, GIẢI BẰNG KHỚP NGƯỢC**
 > (ADR-057, **đóng `TECH_DEBT #82`**). Đàm: *"Không đo, tiếp tục làm, không hỏi vặt, làm sao cho
 > con người có nhiều góc bo tròn, **cử động khớp thật**, **có thể vẽ thêm tam giác/khối mỗi ngưới
 > tới lúc nó bo tròn**, 3D nhiều hơn, tăng thêm kiểu đi, chuyển động thật và ít mặt phẳng hơn"*.
@@ -1622,6 +1651,75 @@
 - **Lịch sử git `main` từng bị xáo** (thao tác git song song): bản đang chạy là `eb44638` — chứa ĐỦ mọi việc gần đây (Hỏi Coach offline + fix đêm khuya + Coach offline analyst). Vài commit cũ (`1e27505`, `9fbcd62`) thành dangling, KHÔNG còn trong `git log` nhưng code vẫn nằm trong bản deploy. Đừng hoảng nếu không thấy chúng.
 
 ## 🗒️ Nhật ký cập nhật
+
+### 2026-08-24 (tối muộn) — Đường phố biết uốn cong, và mạng đường có ba hạng (ADR-058)
+
+**Lệnh của Đàm**: *"Hãy cải thiện đường đi, hiện tại nó chỉ là những đường thẳng, không giống đường
+ngoài đời, không uốn cong, và nó cũng như quy hoạch quá, các thời trước làm gì có quy hoạch đường
+thẳng tấp thế, và hiện tại ít đường và loại đường quá. Hãy tìm hiểu các kỷ có bao nhiêu đường, hình
+thái, .. và build nó + mở rộng đường đi."*
+
+#### Đo trần TRƯỚC khi viết dòng mã nào — và nó bác bỏ một nửa cách hiểu của chỉ thị
+
+| thứ | số ô | phần lưới 144 |
+|---|---:|---:|
+| ô đường hiện có | 80 | 55,6% |
+| ô hứa cho kỳ quan | 45 | (11 ô chồng lên đường) |
+| **ô còn trống** | **30** | **20,8%** |
+
+Và đúng 30 ô ấy là `DWELLING_PLOTS` — **toàn bộ nhà dân**. "Thêm ô đường" = xoá nhà. Cùng cái trần
+Phase 14 §1(3), cùng câu trả lời: **đổi thứ NẰM TRONG một ô**.
+
+#### Chỗ trống thật sự nằm ở đâu
+
+`streetStyle.js` (Phase 9D) có mười trục, nhưng cả mười nói về **MẶT CẮT NGANG**, mà một lát cắt thì
+không có hình dạng theo chiều dọc. **TIM ĐƯỜNG chưa bao giờ là một trục** — mọi lòng đường được dựng
+chính giữa ô lưới, nên 15 kỷ dùng chung một tấm lưới bàn cờ. Đó là lý do nhìn đâu cũng thấy "quy
+hoạch": không phải vì mạng đường được quy hoạch, mà vì **mã không có cách nào diễn đạt một con đường
+KHÔNG thẳng**.
+
+#### Đã làm
+
+1. **`city3d/networkStyle.js` (MỚI)** — bảng 15 kỷ × 4 trục: `plan` (grid/axial/organic/terrace/
+   radial) · `bend` (biên độ, **TỈ LỆ của chỗ trống** chứ không phải số ô) · `coil` (bước sóng, số
+   ô) · `ragged` (biến thiên bề rộng). `country` khoá cứng vào `eraStyle.js` bằng test.
+2. **`city3d/roadPath.js` (MỚI)** — lớp HÌNH. Luật sống còn: **độ lệch là thuộc tính của RANH GIỚI**.
+3. **Hạng đường thứ BA** — `streetCrossSection` đổi từ boolean sang HẠNG; `rankOfRoad(variant, tier)`
+   là chỗ duy nhất quyết định. `cityLayout.js` nay truyền `tier` xuống prop (trước bị bỏ lại, nên
+   36/80 ô vành đai vô hình với tầng vẽ).
+4. **Cư dân đi theo chính tim đường ấy** (`walkThrough`), không đi tâm ô nữa.
+5. **`scripts/road-bend.mjs` (MỚI)** — đo trên tam giác ĐÃ DỰNG, `--selftest` 7 mục.
+
+#### Số
+
+| | TRƯỚC | SAU |
+|---|---:|---:|
+| mặt đường đổi chỗ (kỷ 6, mặt nạ `road`) | — | **≈47% diện tích của chính nó** (nhiễu dựng ảnh ±1,4%) |
+| cả khung hình vượt ngưỡng mắt 12 | — | 0,67% (mặt đường chỉ chiếm 1,38% khung) |
+| lệnh vẽ, 15 kỷ | 11–20 | **y hệt** |
+| tam giác mặt đường, kỷ 6 | 1.538 | 2.334 (+52%) |
+| lệch tim đường ÷ bề rộng, kỷ 1 · 6 · 4 | 0 · 0 · 0 | 0,739 · 0,542 · **0,000** (kỷ 4 thẳng có chủ đích) |
+| `npm run test:fast` | 1.133 | **1.146** bài · 1.145 xanh · 0 đỏ · 1 bỏ qua |
+
+#### Ba lỗi thật bắt được dọc đường (chi tiết ở `CLAUDE.md`)
+
+1. **Biên độ lượn tính theo bề rộng KHAI** trong khi bề rộng THẬT đã nhân `widthJitter` tới 1,35 lần
+   ⇒ `0,25 + 0,3105 = 0,5605 > 0,5`, mặt đường lấn sang thửa đất bên cạnh. **Không nổ ngay** vì cả
+   hai đại lượng đều theo băm — "đúng nhờ may mắn".
+2. **Một biên độ cho cả kỷ** ⇒ **7/15 kỷ ra biên độ đúng bằng 0**, gồm cả kỷ lượn nhất bảng — kèm
+   một đoạn chú thích tự trấn an rằng đó là "đánh đổi có chủ đích".
+3. **Kỷ 13 ghi "Edo jōkamachi"** trong khi `eraStyle` khai landmark là **tháp nang Nakagin (1972)**
+   và `streetStyle` khai nhựa đường — ba bảng suýt kể ba câu chuyện khác nhau về cùng một kỷ.
+
+#### Còn lại
+
+- `TECH_DEBT #83` (Low): ngưỡng *"0,25 lần bề rộng = mắt đọc ra được"* **chưa hiệu chuẩn bằng ảnh
+  dựng**. Đừng trích con số "3/15 kỷ" như thể nó là một phép đo.
+- 10/15 kỷ chỉ lượn nhẹ, và đó là một **trần hình học** đã đo (lòng đường + vỉa hè lấp gần trọn ô ở
+  kỷ hiện đại), không phải một việc chưa làm xong. Muốn nới thì cần gạt đúng là bề rộng/vỉa hè trong
+  `streetStyle.js`.
+
+---
 
 ### 2026-08-24 (tối) — Chân có đầu gối thật: giải bằng khớp ngược (ADR-057, đóng `TECH_DEBT #82`)
 

@@ -49,9 +49,10 @@ import {
 } from '../../../engine/city3d/terrain';
 import { WATER_BED_DEPTH, WATER_TINT } from '../../../engine/city3d/setting';
 import {
-  SIDES, SIDE_STEPS, carriagewayShape, getStreetStyle, pavingSubdivision, streetCrossSection,
+  SIDES, SIDE_STEPS, carriagewayShape, getStreetStyle, pavingSubdivision, rankOfRoad,
+  streetCrossSection,
 } from '../../../engine/city3d/streetStyle';
-import { buildRoadPaths, isLaneVariant, roadHalfWidth } from '../../../engine/city3d/roadPath';
+import { buildRoadPaths, roadHalfWidth } from '../../../engine/city3d/roadPath';
 
 /**
  * Số ô con trên MỘT ô thành phố, cho tấm ĐẤT.
@@ -469,6 +470,15 @@ export function buildRoadSurface({ terrain, gridSize, layout, palette }) {
    * đổi tỉ lệ thuận áp lên những giá trị chênh nhau nhiều lần thì sớm muộn cũng sai ở một đầu.
    */
   const lighten = (rgb, t) => rgb.map((c) => c + (1 - c) * t);
+  /**
+   * ĐƯỜNG VÀNH ĐAI SÁNG NHẤT TRONG BA HẠNG — và đó là một quan sát vật lý, không phải một lựa chọn
+   * hoà sắc. Nó chạy ngoài rìa, không có rãnh thoát, không ai quét: bụi từ ruộng và từ chính bánh
+   * xe phủ lên thành một lớp màng bạc. Thứ tự ba hạng vì thế là `vành đai > đại lộ > ngõ phố`, mà
+   * ngõ tối nhất vì nhà hai bên che bớt trời (xem `roadLane` ở `palette3d.js`).
+   *
+   * ⚠️ PHA VỀ TRẮNG, KHÔNG NHÂN HỆ SỐ — cùng lý do đã ghi cho vỉa hè ngay dưới đây.
+   */
+  const ringRgb = lighten(avenueRgb, 0.12);
   const walkRgb = lighten(avenueRgb, 0.16);
   const curbRgb = lighten(avenueRgb, 0.26);
   const markRgb = [0.92, 0.88, 0.66];   // vạch sơn bạc màu — không trắng tinh, đó là sơn cũ
@@ -482,7 +492,10 @@ export function buildRoadSurface({ terrain, gridSize, layout, palette }) {
   const halfOf = new Map();
   for (const prop of layout?.props ?? []) {
     if (prop?.kind !== 'road') continue;
-    halfOf.set(`${prop.x}|${prop.y}`, roadHalfWidth(era, prop.x, prop.y, isLaneVariant(prop.variant)));
+    halfOf.set(
+      `${prop.x}|${prop.y}`,
+      roadHalfWidth(era, prop.x, prop.y, rankOfRoad(prop.variant, prop.tier)),
+    );
   }
   /** Nửa bề rộng của ô hàng xóm, hoặc `null` khi phía ấy không có đường. */
   const nbHalf = (x, y) => {
@@ -572,10 +585,11 @@ export function buildRoadSurface({ terrain, gridSize, layout, palette }) {
 
   for (const prop of layout?.props ?? []) {
     if (prop?.kind !== 'road') continue;
-    const isLane = isLaneVariant(prop.variant);
-    const baseRgb = isLane ? laneRgb : avenueRgb;
-    const cross = streetCrossSection(street, isLane);
-    const myHalf = roadHalfWidth(era, prop.x, prop.y, isLane);
+    const hạng = rankOfRoad(prop.variant, prop.tier);
+    const isLane = hạng === 'lane';
+    const baseRgb = hạng === 'ring' ? ringRgb : (isLane ? laneRgb : avenueRgb);
+    const cross = streetCrossSection(street, hạng);
+    const myHalf = roadHalfWidth(era, prop.x, prop.y, hạng);
 
     // ⚠️ HÌNH DẠNG LẤY TỪ HÀNG XÓM, KHÔNG TỪ `variant`. Xem `carriagewayShape` để biết vì sao —
     // tóm tắt: một ô đường KHÔNG phải một hình chữ nhật. Nó là một LÕI ở giữa cộng tối đa bốn CÁNH
@@ -746,7 +760,11 @@ export function buildRoadSurface({ terrain, gridSize, layout, palette }) {
     // ⚠️ HƯỚNG VẠCH CŨNG ĐỌC TỪ HÀNG XÓM: vạch phải chạy DỌC theo hướng con đường đi, mà hướng ấy
     // là "phía nào có ô đường nối tiếp". Suy từ `variant` thì ngã tư (variant 0) luôn ra một hướng
     // cố định và vạch sẽ cắt ngang chính con đường ở một nửa số ngã tư.
-    if (street.markings !== 'none' && !isLane) {
+    // ⚠️ CHỈ TRÊN ĐẠI LỘ THẬT — vành đai KHÔNG có vạch. Trước khi có hạng thứ ba, điều kiện là
+    // `!isLane`, mà vành đai khi ấy mang `variant` 1/2 nên nó tự động bị loại. Nay vành đai là một
+    // hạng riêng, nên phải nói TƯỜNG MINH, không thì 36 ô vành đai bỗng mọc vạch tim đường — thứ
+    // mà một con đường không vỉa hè chạy men bờ ruộng không bao giờ có.
+    if (street.markings !== 'none' && hạng === 'avenue') {
       const dọc = shape.arms.north !== null || shape.arms.south !== null;   // chạy theo trục v?
       const along = dọc ? 'v' : 'u';
       const halfU = (u1 - u0) / 2; const halfV = (v1 - v0) / 2;

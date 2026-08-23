@@ -12,6 +12,31 @@
 
 ---
 
+## 2026-08-24 — Đường phố biết uốn cong, và mạng đường có ba hạng (ADR-058)
+
+**Mục đích.** Đàm: *"đường đi hiện tại chỉ là những đường thẳng, không giống đường ngoài đời, không
+uốn cong, và nó cũng như quy hoạch quá… hiện tại ít đường và loại đường quá"*.
+
+**Phạm vi.**
+- **MỚI** `src/engine/city3d/networkStyle.js` — bảng 15 kỷ × 4 trục hình thái mạng đường, mỗi dòng
+  buộc vào một nước có thật (Çatalhöyük không có đường · Chang'an nhà Đường lưới tuyệt đối ·
+  Manhattan Commissioners' Plan 1811 · Alfama trước động đất 1755 · Tokyo dựng lại trên ranh thửa Edo).
+- **MỚI** `src/engine/city3d/roadPath.js` — tim đường lượn; độ lệch là thuộc tính của RANH GIỚI nên
+  hai ô kề nhau không thể lệch nhau.
+- **MỚI** `scripts/road-bend.mjs` — đo độ lượn trên tam giác ĐÃ DỰNG, có `--selftest` 7 mục.
+- `streetStyle.js` — hạng đường thứ BA (`ring`, không vỉa hè, không vạch kẻ) cho 36/80 ô vành đai
+  vốn đang được vẽ y hệt ngõ phố; `streetCrossSection` đổi từ boolean sang HẠNG.
+- `cityLayout.js` — `tier` nay đi theo prop đường (trước bị bỏ lại, nên vành đai vô hình với tầng vẽ).
+- `residents.js` — cư dân đi theo chính tim đường ấy, không đi tâm ô nữa.
+
+**Ảnh hưởng.** Mặt đường đổi chỗ **≈47% diện tích của chính nó** (kỷ 6, đo trên mặt nạ `road`).
+Lệnh vẽ **KHÔNG đổi** ở cả 15 kỷ. ADR-007 nguyên vẹn — không ô nào xê dịch.
+
+**Tương thích.** Không có migration. Dữ liệu người dùng không đụng tới. Bảng cũ đọc được nguyên vẹn;
+`streetCrossSection` vẫn nhận boolean theo đúng nghĩa cũ để không có lời gọi sót nào bị đảo ngược.
+
+---
+
 ## 2026-08-24 (tối) — Chân có đầu gối THẬT: giải bằng khớp ngược, 14 kiểu đi, 9 khuôn tròn hơn
 
 **Mục đích**: Đàm ra chỉ thị *"làm sao cho con người có nhiều góc bo tròn, **cử động khớp thật**,

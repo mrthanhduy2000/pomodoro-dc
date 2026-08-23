@@ -69,7 +69,9 @@
 
 import { unit, signed } from '../hashId.js';
 import { getNetworkStyle } from './networkStyle.js';
-import { SIDE_STEPS, carriagewayShape, getStreetStyle, streetCrossSection } from './streetStyle.js';
+import {
+  SIDE_STEPS, carriagewayShape, getStreetStyle, rankOfRoad, streetCrossSection,
+} from './streetStyle.js';
 
 /** Hai trục của mạng đường. `u` = đường chạy theo x (lệch theo y); `v` = chạy theo y (lệch theo x). */
 export const ROAD_AXES = ['u', 'v'];
@@ -88,9 +90,9 @@ export const ROAD_AXES = ['u', 'v'];
  */
 export const EDGE_KEEP = 0.02;
 
-export function rankBendScale(era, isLane) {
+export function rankBendScale(era, rank) {
   const style = getNetworkStyle(era);
-  const cross = streetCrossSection(getStreetStyle(era), isLane);
+  const cross = streetCrossSection(getStreetStyle(era), rank);
   /**
    * ⚠️ TRỪ THEO BỀ RỘNG **RỘNG NHẤT CÓ THỂ**, KHÔNG THEO BỀ RỘNG KHAI TRONG BẢNG — và đây là một
    * lỗi thật, do chính bài test `LƯỢN KHÔNG ĐƯỢC ĐẨY LÒNG ĐƯỜNG RA KHỎI Ô` bắt được.
@@ -110,7 +112,11 @@ export function rankBendScale(era, isLane) {
   return usable * style.bend;
 }
 
-/** Ô này thuộc hạng nào. `variant` 0 = đại lộ/ngã tư · 1,2 = ngõ phố. Một chỗ duy nhất định nghĩa. */
+/**
+ * ⚠️ TÊN CŨ, GIỮ LẠI LÀM CẦU NỐI CHO MÃ CHỈ CẦN BIẾT "CÓ PHẢI NGÕ KHÔNG".
+ * Từ 2026-08-24 hạng đường là BA giá trị (`rankOfRoad`), không còn là một boolean — hàm này chỉ
+ * còn đúng khi ô ấy KHÔNG phải vành đai, nên đừng dùng nó để quyết bề rộng.
+ */
 export function isLaneVariant(variant) {
   return variant === 1 || variant === 2;
 }
@@ -228,9 +234,9 @@ export function buildRoadPaths(era, roadCells, mid = 5.5) {
   const halfAt = new Map();
   for (const cell of roadCells ?? []) {
     const key = `${cell.x}|${cell.y}`;
-    const isLane = isLaneVariant(cell.variant);
-    scaleAt.set(key, rankBendScale(era, isLane));
-    halfAt.set(key, roadHalfWidth(era, cell.x, cell.y, isLane));
+    const hạng = rankOfRoad(cell.variant, cell.tier);
+    scaleAt.set(key, rankBendScale(era, hạng));
+    halfAt.set(key, roadHalfWidth(era, cell.x, cell.y, hạng));
   }
   const scaleOf = (x, y) => scaleAt.get(`${x}|${y}`) ?? 0;
 
@@ -362,8 +368,8 @@ export function buildRoadPaths(era, roadCells, mid = 5.5) {
  * ⚠️ KẸP THEO VỈA HÈ (`0,5 − walk`), KHÔNG KẸP THEO 0,5. Phình quá chỗ trống thì vỉa hè của hai ô
  * kề nhau chồng lên nhau và sinh một dải chọi mặt (z-fight) chạy dọc cả thành phố.
  */
-export function roadHalfWidth(era, x, y, isLane) {
-  const cross = streetCrossSection(getStreetStyle(era), isLane);
+export function roadHalfWidth(era, x, y, rank) {
+  const cross = streetCrossSection(getStreetStyle(era), rank);
   return Math.max(0.04, Math.min(cross.half * widthJitter(era, x, y), 0.5 - cross.walk));
 }
 

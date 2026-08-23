@@ -10,11 +10,11 @@ import { buildHorizon } from '../../../engine/city3d/horizon.js';
 import { ERAS_WITH_WATER_GEOMETRY, WATER_TINT } from '../../../engine/city3d/setting.js';
 import { buildScenePalette } from '../../../engine/city3d/palette3d.js';
 import {
-  STREET_STYLES, carriagewayShape, getStreetStyle,
+  STREET_STYLES, carriagewayShape, getStreetStyle, rankOfRoad,
 } from '../../../engine/city3d/streetStyle.js';
 import { computeCityLayout } from '../../../engine/cityLayout.js';
 import { buildResidents, residentAt } from '../../../engine/city3d/residents.js';
-import { buildRoadPaths, isLaneVariant, roadHalfWidth } from '../../../engine/city3d/roadPath.js';
+import { buildRoadPaths, roadHalfWidth } from '../../../engine/city3d/roadPath.js';
 import { BLUEPRINT_CATALOG } from '../../../engine/constants.js';
 
 /**
@@ -319,7 +319,10 @@ test('LÒNG ĐƯỜNG DỰNG ĐÚNG HÌNH MÀ `carriagewayShape` KHAI — LÕI +
       // ở đây là bỏ qua biến thiên "chỗ thắt chỗ phình", tức bài test sẽ canh một con đường KHÁC
       // với con đường đang được dựng (đúng bẫy `TECH_DEBT #42`: assert con số đã KHAI thay vì con
       // số đã DỰNG).
-      nửaCủa.set(`${prop.x}|${prop.y}`, roadHalfWidth(era, prop.x, prop.y, isLaneVariant(prop.variant)));
+      nửaCủa.set(
+        `${prop.x}|${prop.y}`,
+        roadHalfWidth(era, prop.x, prop.y, rankOfRoad(prop.variant, prop.tier)),
+      );
     }
     const paths = buildRoadPaths(era, (layout.props ?? []).filter((p) => p.kind === 'road'));
     const hàngXóm = (x, y) => ({
@@ -356,8 +359,9 @@ test('LÒNG ĐƯỜNG DỰNG ĐÚNG HÌNH MÀ `carriagewayShape` KHAI — LÕI +
       if (prop.kind !== 'road') continue;
       const trong = theo_ô.get(`${prop.x}|${prop.y}`);
       if (!trong || trong.length === 0) continue;
-      const isLane = isLaneVariant(prop.variant);
-      const cross = { half: roadHalfWidth(era, prop.x, prop.y, isLane) };
+      const hạng = rankOfRoad(prop.variant, prop.tier);
+      const isLane = hạng === 'lane';
+      const cross = { half: roadHalfWidth(era, prop.x, prop.y, hạng) };
       const shape = carriagewayShape(cross.half, hàngXóm(prop.x, prop.y));
       const nối = {
         west: shape.arms.west !== null, east: shape.arms.east !== null,

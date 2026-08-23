@@ -93,9 +93,19 @@ test('cư dân luôn đi TRÊN ĐƯỜNG, không cắt ngang bãi đất trống
   const residents = buildResidents(LAYOUT, { sessionCount: 40, streakLength: 9 });
   assert.ok(residents.length > 0, 'thành phố đủ 5 công trình mà không có ai ở');
 
+  // ⚠️ ĐIỂM TUYẾN NAY LÀ SỐ THỰC, KHÔNG CÒN LÀ TOẠ ĐỘ Ô. Từ khi tim đường biết lượn, cư dân đi
+  // theo CHÍNH tim đường ấy (`roadPath.js`), nên một điểm tuyến hợp lệ nằm ở đâu đó bên trong ô
+  // chứ không đúng tâm ô. Hỏi "toạ độ này có phải một ô đường không" bằng phép so chuỗi sẽ đỏ với
+  // mọi kỷ biết lượn — mà cái đỏ ấy là phép đo già đi, không phải mã hỏng.
+  //
+  // Vế thay thế CHẶT HƠN vế cũ: không chỉ đòi "nằm trong một ô đường" mà còn đòi **nằm trong lòng
+  // đường**. Đây chính là lời hứa mà `terrainMesh.test.js` từng bảo vệ GIÁN TIẾP bằng assert "mặt
+  // đường phải cân giữa tâm ô, vì cư dân đi đúng tâm ô" — nay nó được đo THẲNG ở đúng chỗ nó nói về.
   for (const route of residents) {
-    for (const cell of route.path) {
-      assert.ok(roadKeys.has(`${cell.x},${cell.y}`), `tuyến đi qua ô không phải đường: ${cell.x},${cell.y}`);
+    for (const p of route.path) {
+      const ô = `${Math.round(p.x)},${Math.round(p.y)}`;
+      assert.ok(roadKeys.has(ô),
+        `tuyến đi qua ô không phải đường: (${p.x.toFixed(3)}, ${p.y.toFixed(3)}) → ô ${ô}`);
     }
     // Hai điểm liên tiếp phải KỀ NHAU trên lưới, nếu không người sẽ trượt xuyên qua nhà.
     for (let i = 0; i < route.path.length; i += 1) {

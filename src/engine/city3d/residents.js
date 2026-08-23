@@ -18,6 +18,7 @@
  */
 
 import { hashId, unit } from '../hashId';
+import { buildRoadPaths } from './roadPath';
 import { HUMAN_PRESETS, getHumanStyle } from './humanStyle';
 
 /** Trần cư dân. Đây là ngưỡng HIỆU NĂNG: mỗi người là một thực thể phải cập nhật mỗi khung hình. */
@@ -62,12 +63,23 @@ export function deriveResidentCount({ buildingCount = 0, sessionCount = 0, strea
  * đi dọc trục đường thì mắt tự hiểu "họ đang đi từ nhà này sang nhà kia". Vì `cityLayout` mở
  * đường dần theo số phiên, cư dân cũng tự động chỉ đi trong phần phố đã mở.
  *
+ * ⚠️ TUYẾN PHẢI BÁM **TIM ĐƯỜNG**, KHÔNG BÁM TÂM Ô — và đây là chỗ đổi kể từ khi đường biết lượn.
+ * Trước đây mọi con đường đều nằm chính giữa ô của nó, nên "đi từ tâm ô này sang tâm ô kia" vừa
+ * đơn giản vừa đúng. Nay tim đường lệch khỏi tâm ô tới 0,19 ô ở kỷ 1, mà lòng ngõ chỉ rộng 0,26 ô
+ * — tức đi theo tâm ô là đi **ra ngoài mặt đường**, trên cỏ, cạnh con đường.
+ *
+ * ⚠️ VÀ PHẢI CHÈN CẢ ĐIỂM Ở RANH GIỚI Ô, không chỉ dời tâm ô đi. Tim đường là một đường GẤP KHÚC
+ * `tâm ô → ranh giới → tâm ô`; nối thẳng hai tâm ô liền nhau sẽ CẮT GÓC qua chỗ ngoặt, và ở khúc
+ * cua gấp thì đường cắt ấy đi ra ngoài lòng đường. Chèn điểm ranh giới thì tuyến trùng KHÍT với
+ * tim đường mà tầng vẽ dùng — vì cả hai đọc chung `buildRoadPaths`.
+ *
  * @param {number} index      thứ tự cư dân — hạt giống tất định
- * @param {Array} roadCells   các ô đường, dạng `{x, y}`
+ * @param {Array} roadCells   các ô đường, dạng `{x, y, variant}`
  * @param {number} [walkSpeed] tốc độ đi của kỷ (ô/giây); rỗng thì dùng mốc phổ thông
+ * @param {number} [era]      kỷ — quyết định tim đường lượn thế nào
  * @returns {{path:Array<{x:number,y:number}>, length:number, speed:number, phase:number}|null}
  */
-export function buildResidentRoute(index, roadCells, walkSpeed = DEFAULT_WALK_SPEED) {
+export function buildResidentRoute(index, roadCells, walkSpeed = DEFAULT_WALK_SPEED, era = null) {
   if (!Array.isArray(roadCells) || roadCells.length < 2) return null;
 
   // ⚠️ KHÔNG ĐƯỢC đi theo thứ tự của mảng `roadCells`. Mảng đó đã bị `computeCityLayout` sắp lại
@@ -104,8 +116,36 @@ export function buildResidentRoute(index, roadCells, walkSpeed = DEFAULT_WALK_SP
 
   // Khép kín bằng cách ĐI NGƯỢC LẠI chính lộ trình vừa đi. Vì mỗi bước ngược là một bước xuôi đảo
   // chiều, tính kề nhau được bảo đảm miễn phí — không cần tìm đường về.
-  const path = outbound.slice();
-  for (let i = outbound.length - 2; i > 0; i -= 1) path.push(outbound[i]);
+  const cells = outbound.slice();
+  for (let i = outbound.length - 2; i > 0; i -= 1) cells.push(outbound[i]);
+  if (cells.length < 2) return null;
+
+  // ── ĐỔI DÃY Ô THÀNH DÃY ĐIỂM TRÊN TIM ĐƯỜNG ────────────────────────────────────────────────
+  // Mỗi ô góp TÂM LÕI của nó, và giữa hai ô liền nhau chèn thêm ĐIỂM RANH GIỚI. Cả hai con số đều
+  // hỏi `buildRoadPaths` — chính hàm mà `terrainMesh.js` dựng mặt đường theo.
+  const paths = buildRoadPaths(era, roadCells);
+  const phíaTới = (a, b) => {
+    if (b.x > a.x) return 'east';
+    if (b.x < a.x) return 'west';
+    return b.y > a.y ? 'south' : 'north';
+  };
+  const path = [];
+  for (let i = 0; i < cells.length; i += 1) {
+    const trước = cells[(i - 1 + cells.length) % cells.length];
+    const here = cells[i];
+    const next = cells[(i + 1) % cells.length];
+    // `walkThrough` trả về đúng dãy điểm mà mặt đường được dựng quanh nó — một nguồn duy nhất.
+    // ⚠️ `phíaTới(here, trước)` LÀ PHÍA CƯ DÂN VỪA ĐI VÀO — không phải phía họ vừa rời khỏi, nên
+    // KHÔNG được đảo chiều. Bản đầu đảo nó và sinh ra bước nhảy 1,46 ô: điểm vào bị đặt ở ranh
+    // giới ĐỐI DIỆN, tức tuyến vọt chéo qua cả ô rồi quay lại.
+    for (const p of paths.walkThrough(here.x, here.y, phíaTới(here, trước), phíaTới(here, next))) {
+      const cuối = path[path.length - 1];
+      // Bỏ điểm trùng: ở đoạn thẳng, mép lõi và điểm biên có thể rơi vào nhau, mà hai điểm trùng
+      // nhau tạo một đoạn dài 0 — `residentAt` bỏ qua được, nhưng nó làm bẩn phép đo bước nhảy.
+      if (cuối && Math.abs(cuối.x - p.x) < 1e-9 && Math.abs(cuối.y - p.y) < 1e-9) continue;
+      path.push(p);
+    }
+  }
   if (path.length < 2) return null;
 
   let length = 0;
@@ -194,7 +234,7 @@ export function buildResidents(layout, stats = {}) {
 
   const residents = [];
   for (let i = 0; i < count; i += 1) {
-    const route = buildResidentRoute(i, roads, walkSpeed);
+    const route = buildResidentRoute(i, roads, walkSpeed, layout?.era);
     if (route) residents.push(route);
   }
   return residents;

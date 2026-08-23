@@ -10,9 +10,11 @@ import { buildHorizon } from '../../../engine/city3d/horizon.js';
 import { ERAS_WITH_WATER_GEOMETRY, WATER_TINT } from '../../../engine/city3d/setting.js';
 import { buildScenePalette } from '../../../engine/city3d/palette3d.js';
 import {
-  STREET_STYLES, carriagewayShape, getStreetStyle, streetCrossSection,
+  STREET_STYLES, carriagewayShape, getStreetStyle,
 } from '../../../engine/city3d/streetStyle.js';
 import { computeCityLayout } from '../../../engine/cityLayout.js';
+import { buildResidents, residentAt } from '../../../engine/city3d/residents.js';
+import { buildRoadPaths, isLaneVariant, roadHalfWidth } from '../../../engine/city3d/roadPath.js';
 import { BLUEPRINT_CATALOG } from '../../../engine/constants.js';
 
 /**
@@ -313,9 +315,13 @@ test('LÒNG ĐƯỜNG DỰNG ĐÚNG HÌNH MÀ `carriagewayShape` KHAI — LÕI +
     for (const prop of layout.props ?? []) {
       if (prop.kind !== 'road') continue;
       ôĐường.add(`${prop.x}|${prop.y}`);
-      const lane = prop.variant === 1 || prop.variant === 2;
-      nửaCủa.set(`${prop.x}|${prop.y}`, streetCrossSection(street, lane).half);
+      // ⚠️ HỎI CHÍNH `roadHalfWidth` — hàm mà bên dựng dùng. Chép lại `streetCrossSection(...).half`
+      // ở đây là bỏ qua biến thiên "chỗ thắt chỗ phình", tức bài test sẽ canh một con đường KHÁC
+      // với con đường đang được dựng (đúng bẫy `TECH_DEBT #42`: assert con số đã KHAI thay vì con
+      // số đã DỰNG).
+      nửaCủa.set(`${prop.x}|${prop.y}`, roadHalfWidth(era, prop.x, prop.y, isLaneVariant(prop.variant)));
     }
+    const paths = buildRoadPaths(era, (layout.props ?? []).filter((p) => p.kind === 'road'));
     const hàngXóm = (x, y) => ({
       west: nửaCủa.has(`${x - 1}|${y}`) ? nửaCủa.get(`${x - 1}|${y}`) : null,
       east: nửaCủa.has(`${x + 1}|${y}`) ? nửaCủa.get(`${x + 1}|${y}`) : null,
@@ -350,14 +356,16 @@ test('LÒNG ĐƯỜNG DỰNG ĐÚNG HÌNH MÀ `carriagewayShape` KHAI — LÕI +
       if (prop.kind !== 'road') continue;
       const trong = theo_ô.get(`${prop.x}|${prop.y}`);
       if (!trong || trong.length === 0) continue;
-      const isLane = prop.variant === 1 || prop.variant === 2;
-      const cross = streetCrossSection(street, isLane);
+      const isLane = isLaneVariant(prop.variant);
+      const cross = { half: roadHalfWidth(era, prop.x, prop.y, isLane) };
       const shape = carriagewayShape(cross.half, hàngXóm(prop.x, prop.y));
-      const ext = shape.reach;
       const nối = {
         west: shape.arms.west !== null, east: shape.arms.east !== null,
         north: shape.arms.north !== null, south: shape.arms.south !== null,
       };
+      const tim = paths.coreOf(prop.x, prop.y);
+      const us = trong.map(([x]) => về_ô(x));
+      const vs = trong.map(([, , z]) => về_ô(z));
       // ⚠️ MỘT Ô KHÔNG BAO GIỜ ĐƯỢC RỘNG HƠN CHÍNH CON ĐƯỜNG CỦA NÓ. Đây là thứ giết cái phình
       // 0,5 ô ở ngã ba — bản trước Phase 12 cho mọi ô có nhánh nở ra trọn ô bất kể nhánh ấy hẹp
       // cỡ nào, và đó là nguồn của ~50% số bậc mép đường.
@@ -367,13 +375,36 @@ test('LÒNG ĐƯỜNG DỰNG ĐÚNG HÌNH MÀ `carriagewayShape` KHAI — LÕI +
           `kỷ ${era} ô (${prop.x},${prop.y}): lõi theo ${trục} rộng ${giá}, hơn cả con đường ${cross.half}`,
         );
       }
-      const us = trong.map(([x]) => về_ô(x));
-      const vs = trong.map(([, , z]) => về_ô(z));
+      // ── HỘP BAO PHẢI KHỚP THỨ HAI HÀM THUẦN KHAI RA ───────────────────────────────────────
+      // ⚠️ TỪ KHI TIM ĐƯỜNG LƯỢN, HỘP BAO KHÔNG CÒN LÀ `tâm ô ± ext`. Cái lõi lệch đi theo tim
+      // đường, và mỗi cánh tay còn QUÉT NGANG khi tim đường ở ranh giới lệch khác tim đường ở
+      // mép lõi. Nên hộp bao mong đợi phải dựng từ CÙNG hai hàm thuần mà bên dựng gọi
+      // (`carriagewayShape` + `buildRoadPaths`), chứ không phải từ một giả định "đường nằm giữa ô"
+      // — giả định ấy chính là thứ vừa bị gỡ bỏ.
+      const du = tim.du; const dv = tim.dv;
+      const cx = prop.x + du; const cy = prop.y + dv;
+      const cu = shape.coreU; const cv = shape.coreV;
+      const uLo = []; const uHi = []; const vLo = []; const vHi = [];
+      const gom = (lo, hi, tLo, tHi) => { lo.push(tLo); hi.push(tHi); };
+      gom(uLo, uHi, cx - cu, cx + cu);          // lõi
+      gom(vLo, vHi, cy - cv, cy + cv);
+      for (const [phía, dấu] of [['west', -1], ['east', 1]]) {
+        if (shape.arms[phía] === null) continue;
+        const biên = prop.y + paths.edgeOf(prop.x, prop.y, phía);
+        gom(uLo, uHi, prop.x + dấu * 0.5, prop.x + dấu * 0.5);       // vươn tới ranh giới ô
+        gom(vLo, vHi, biên - shape.arms[phía], biên + shape.arms[phía]);
+      }
+      for (const [phía, dấu] of [['north', -1], ['south', 1]]) {
+        if (shape.arms[phía] === null) continue;
+        const biên = prop.x + paths.edgeOf(prop.x, prop.y, phía);
+        gom(vLo, vHi, prop.y + dấu * 0.5, prop.y + dấu * 0.5);
+        gom(uLo, uHi, biên - shape.arms[phía], biên + shape.arms[phía]);
+      }
       const mép = [
-        ['tây', Math.min(...us), prop.x - ext.west],
-        ['đông', Math.max(...us), prop.x + ext.east],
-        ['bắc', Math.min(...vs), prop.y - ext.north],
-        ['nam', Math.max(...vs), prop.y + ext.south],
+        ['tây', Math.min(...us), Math.min(...uLo)],
+        ['đông', Math.max(...us), Math.max(...uHi)],
+        ['bắc', Math.min(...vs), Math.min(...vLo)],
+        ['nam', Math.max(...vs), Math.max(...vHi)],
       ];
       for (const [tên, đo, mong] of mép) {
         assert.ok(
@@ -381,6 +412,17 @@ test('LÒNG ĐƯỜNG DỰNG ĐÚNG HÌNH MÀ `carriagewayShape` KHAI — LÕI +
           `kỷ ${era} ô (${prop.x},${prop.y}) variant ${prop.variant}: mép ${tên} ở ${đo.toFixed(4)}, `
           + `đáng lẽ ${mong.toFixed(4)}`,
         );
+      }
+      // ⚠️ VÀ DÙ LƯỢN TỚI ĐÂU, LÒNG ĐƯỜNG KHÔNG ĐƯỢC TRÀN RA KHỎI Ô CỦA NÓ. Không có vế này thì
+      // một biên độ lượn khai quá tay sẽ đẩy mặt đường đè lên thửa đất bên cạnh, và triệu chứng
+      // (nhà mọc trên mặt đường) trông như lỗi của bộ đặt nhà chứ không như lỗi của mạng đường.
+      for (const u of us) {
+        assert.ok(Math.abs(u - prop.x) <= 0.5 + 1e-6,
+          `kỷ ${era} ô (${prop.x},${prop.y}): lòng đường tràn khỏi ô theo u (${u.toFixed(4)})`);
+      }
+      for (const w of vs) {
+        assert.ok(Math.abs(w - prop.y) <= 0.5 + 1e-6,
+          `kỷ ${era} ô (${prop.x},${prop.y}): lòng đường tràn khỏi ô theo v (${w.toFixed(4)})`);
       }
       // LIỀN MẠCH: cạnh nào giáp một ô đường khác thì lòng đường PHẢI chạm đúng ranh giới ô, nếu
       // không sẽ có khe cỏ chen giữa hai đoạn đường.
@@ -398,23 +440,25 @@ test('LÒNG ĐƯỜNG DỰNG ĐÚNG HÌNH MÀ `carriagewayShape` KHAI — LÕI +
         );
         liền += 1;
       }
-      // CÂN GIỮA theo trục NGANG của chính nó — chỉ xét ô không phải ngã ba/ngã tư trên trục ấy.
+      // ── ĐẾM ĐỘ PHỦ: bài này phải gặp CẢ HAI hạng đường, nếu không nó đang chạy gần như rỗng ──
+      //
+      // ⚠️ HAI ASSERT TỪNG NẰM Ở ĐÂY ĐÃ ĐƯỢC GỠ, VÀ ĐÂY LÀ LÝ DO — KHÔNG PHẢI VÌ CHÚNG PHIỀN.
+      // Chúng là: (a) *"tâm hộp bao theo u phải trùng `prop.x`"* và (b) *"bề ngang hộp bao phải
+      // đúng bằng `coreU × 2`"*. Cả hai đều ngầm giả định **con đường nằm chính giữa ô và không
+      // quét ngang**, mà từ khi tim đường lượn thì cánh tay CÓ quét ngang: nó đi từ độ lệch ở mép
+      // lõi tới độ lệch ở ranh giới ô, nên hộp bao theo u của một ô đường DỌC là một dải rộng hơn
+      // cái lõi, và tâm dải ấy không nhất thiết trùng tim đường tại tâm ô. Giữ chúng lại thì bài
+      // test sẽ hoàn tác chính bản vá (bẫy Phase 9B).
+      //
+      // Thứ thay thế KHÔNG lỏng hơn mà CHẶT HƠN: vế "HỘP BAO PHẢI KHỚP THỨ HAI HÀM THUẦN KHAI RA"
+      // ở trên ghim **cả bốn mép ở giá trị chính xác** dựng từ `carriagewayShape` + `buildRoadPaths`
+      // — mà ghim cả hai đầu thì ghim luôn cả tâm lẫn bề rộng. Với kỷ khai `bend: 0` (kỷ 4, 11) nó
+      // rút gọn về đúng hai assert cũ, nên không mất một chút độ phủ nào ở đó.
+      //
+      // Còn lời hứa mà (a) THẬT SỰ bảo vệ — *"cư dân không được đi sát mép đường"* — nay có bài
+      // test riêng đo thẳng vị trí cư dân so với lòng đường (`residents.test.js`), thay vì suy gián
+      // tiếp qua một giả định về hình học.
       if (!nối.west && !nối.east) {
-        const tâm = (Math.min(...us) + Math.max(...us)) / 2;
-        assert.ok(
-          Math.abs(tâm - prop.x) < 1e-6,
-          `kỷ ${era} ô (${prop.x},${prop.y}) lệch tâm ngang ${(tâm - prop.x).toFixed(4)} ô — `
-          + 'cư dân đi đúng tâm ô sẽ đi sát mép đường',
-        );
-        // ⚠️ SO VỚI `shape.coreU`, KHÔNG VỚI `cross.half`. Từ Phase 12 một ô có thể HẸP HƠN con
-        // đường nó khai — đó chính là bản vá: ô nào chỉ chạm toàn ngõ thì thu về đúng bề ngõ thay
-        // vì phình ra. Trần `coreU ≤ cross.half` đã được canh riêng ở trên, nên vế "không rộng hơn
-        // con đường của mình" vẫn còn nguyên răng.
-        assert.ok(
-          Math.abs((Math.max(...us) - Math.min(...us)) - shape.coreU * 2) < 1e-6,
-          `kỷ ${era} ô (${prop.x},${prop.y}) rộng ${(Math.max(...us) - Math.min(...us)).toFixed(4)}, `
-          + `đáng lẽ ${(shape.coreU * 2).toFixed(4)}`,
-        );
         if (isLane) ngõ += 1; else đại_lộ += 1;
       }
     }
@@ -786,4 +830,81 @@ test('MỌI TAM GIÁC NẰM NGANG PHẢI NGỬA MẶT LÊN TRỜI — nằm đú
   const bảng = [...gộp.entries()].map(([k, n]) => `  ${k} × ${n}`).join('\n');
   assert.equal(hỏng.length, 0,
     `${hỏng.length} tam giác nằm ngang bị xếp NGƯỢC CHIỀU nên không được vẽ ra:\n${bảng}`);
+});
+
+test('CƯ DÂN PHẢI ĐỨNG TRÊN LÒNG ĐƯỜNG THẬT — đối chiếu chéo giữa hai hệ thống, đủ 15 kỷ', () => {
+  // ⚠️ ĐÂY LÀ BÀI TEST ĐẮT NHẤT CỦA CẢ BẢN VÁ "ĐƯỜNG BIẾT LƯỢN", VÀ NÓ PHẢI TỒN TẠI.
+  //
+  // Khi mọi con đường còn nằm chính giữa ô, "cư dân đi trên đường" là hệ quả HIỂN NHIÊN của việc
+  // họ đi từ tâm ô này sang tâm ô kia — không cần ai canh. Từ khi tim đường lệch khỏi tâm ô (tới
+  // 0,19 ô ở kỷ 1, trong khi lòng ngõ chỉ rộng 0,26 ô), điều đó thành một lời hứa MỎNG MANH: chỉ
+  // cần `residents.js` quên gọi `buildRoadPaths`, hoặc gọi với một `era` khác, là cả thành phố có
+  // người đi song song NGAY BÊN CẠNH mặt đường, trên cỏ.
+  //
+  // ⚠️ VÀ KHÔNG CỔNG NÀO KHÁC BẮT ĐƯỢC: hình học vẫn hợp lệ, mọi bài test hình học vẫn xanh, ngân
+  // sách tam giác không đổi, lệnh vẽ không đổi. Chỉ có mắt Đàm thấy sai. Đúng họ với lỗi
+  // `palette3d.js` (ADR-054) — *một cổng số xanh không chứng minh được thứ nó đọc tới được điểm ảnh*.
+  //
+  // ⚠️ CÁCH HỎI PHẢI LÀ **ĐỐI CHIẾU CHÉO**, KHÔNG PHẢI HỎI LẠI CÙNG MỘT HÀM. Nếu bài này tính tim
+  // đường bằng `buildRoadPaths` rồi so với vị trí cư dân — cũng do `buildRoadPaths` sinh ra — thì
+  // nó là một cái GƯƠNG, không phải một cái CÂN (bài học `drawCallBudget` 2026-08-23). Nên nó hỏi
+  // hai hệ thống ĐỘC LẬP: vị trí cư dân (`residents.js`) đặt cạnh TAM GIÁC ĐÃ DỰNG của mặt đường
+  // (`buildRoadSurface`), rồi kiểm bằng hình học điểm-trong-tam-giác thuần.
+  const trongTamGiác = (px, py, A, B, C) => {
+    // Toạ độ trọng tâm (barycentric). Dung sai nới theo cỡ tam giác chứ không phải một hằng số
+    // tuyệt đối — viên lát nhỏ nhất chỉ rộng ~1/7 ô, mà sai số dấu phẩy động thì tỉ lệ với cỡ.
+    const d = (B[1] - C[1]) * (A[0] - C[0]) + (C[0] - B[0]) * (A[1] - C[1]);
+    if (Math.abs(d) < 1e-12) return false;
+    const a = ((B[1] - C[1]) * (px - C[0]) + (C[0] - B[0]) * (py - C[1])) / d;
+    const b = ((C[1] - A[1]) * (px - C[0]) + (A[0] - C[0]) * (py - C[1])) / d;
+    const c = 1 - a - b;
+    return a >= -1e-9 && b >= -1e-9 && c >= -1e-9;
+  };
+
+  let đãĐo = 0;
+  const hỏng = [];
+  for (const era of ERAS) {
+    const { layout, road } = dựng(era);
+    if (!road) continue;
+    const v = đỉnh(road);
+    // Gom tam giác LÒNG ĐƯỜNG theo ô để khỏi quét cả vạn tam giác cho mỗi vị trí.
+    const theoÔ = new Map();
+    for (let t = 0; t < road.kinds.length; t += 1) {
+      if (road.kinds[t] !== ROAD_PART.CARRIAGEWAY) continue;
+      const i = t * 3;
+      const tam = [
+        [về_ô(v[i][0]), về_ô(v[i][2])],
+        [về_ô(v[i + 1][0]), về_ô(v[i + 1][2])],
+        [về_ô(v[i + 2][0]), về_ô(v[i + 2][2])],
+      ];
+      const cx = Math.round((tam[0][0] + tam[1][0] + tam[2][0]) / 3);
+      const cz = Math.round((tam[0][1] + tam[1][1] + tam[2][1]) / 3);
+      // Một tam giác nằm sát ranh giới có thể phục vụ cả ô bên cạnh — ghi vào cả chín ô quanh đó
+      // thì phép tra không bao giờ bỏ sót, mà vẫn rẻ hơn quét toàn bộ nhiều bậc.
+      for (let dy = -1; dy <= 1; dy += 1) {
+        for (let dx = -1; dx <= 1; dx += 1) {
+          const k = `${cx + dx}|${cz + dy}`;
+          if (!theoÔ.has(k)) theoÔ.set(k, []);
+          theoÔ.get(k).push(tam);
+        }
+      }
+    }
+
+    for (const route of buildResidents(layout, { sessionCount: 400, streakLength: 30 })) {
+      // Lấy mẫu theo THỜI GIAN, không theo đỉnh tuyến: đỉnh thì theo cấu tạo luôn nằm trên tim
+      // đường, còn khúc GIỮA hai đỉnh mới là chỗ một tuyến cắt góc sẽ lòi ra ngoài mép.
+      for (let k = 0; k < 40; k += 1) {
+        const p = residentAt(route, (k * route.length) / (40 * route.speed));
+        const ứng = theoÔ.get(`${Math.round(p.x)}|${Math.round(p.y)}`) ?? [];
+        const ở_trên = ứng.some((tam) => trongTamGiác(p.x, p.y, tam[0], tam[1], tam[2]));
+        if (!ở_trên) hỏng.push(`kỷ ${era} (${p.x.toFixed(3)}, ${p.y.toFixed(3)})`);
+        đãĐo += 1;
+      }
+    }
+  }
+  assert.equal(hỏng.length, 0,
+    `${hỏng.length}/${đãĐo} vị trí cư dân KHÔNG nằm trên một tam giác lòng đường nào `
+    + `— cư dân đang đi cạnh mặt đường: ${hỏng.slice(0, 5).join(' · ')}`);
+  // Gác chạy-rỗng: thiếu vế này thì một `continue` đặt nhầm chỗ sẽ làm bài xanh mà chẳng đo gì.
+  assert.ok(đãĐo > 3000, `mới đo ${đãĐo} vị trí — bài này đang chạy gần như rỗng`);
 });

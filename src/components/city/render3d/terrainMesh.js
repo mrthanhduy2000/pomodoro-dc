@@ -51,6 +51,7 @@ import { WATER_BED_DEPTH, WATER_TINT } from '../../../engine/city3d/setting';
 import {
   SIDES, SIDE_STEPS, carriagewayShape, getStreetStyle, pavingSubdivision, streetCrossSection,
 } from '../../../engine/city3d/streetStyle';
+import { buildRoadPaths, isLaneVariant, roadHalfWidth } from '../../../engine/city3d/roadPath';
 
 /**
  * Số ô con trên MỘT ô thành phố, cho tấm ĐẤT.
@@ -435,6 +436,16 @@ export function buildRoadSurface({ terrain, gridSize, layout, palette }) {
   const kit = surfaceKit({ terrain, gridSize, layout, palette });
   const street = getStreetStyle(layout?.era);
   const sub = pavingSubdivision(street);
+  const era = layout?.era;
+
+  /**
+   * TIM ĐƯỜNG — dựng MỘT LẦN cho cả mạng, rồi mọi ô hỏi nó.
+   * ⚠️ Đây là cùng một hàm mà `residents.js` gọi. Nếu hai bên tự tính lấy thì đúng một ngày nào đó
+   * cư dân sẽ đi lơ lửng bên cạnh mặt đường mà không có gì đỏ lên — xem `roadPath.js`.
+   */
+  const roadProps = (layout?.props ?? []).filter((prop) => prop?.kind === 'road');
+  const paths = buildRoadPaths(era, roadProps);
+
 
   const scratch = new Color();
   const rgbOf = (hex) => { scratch.setHex(hex); return [scratch.r, scratch.g, scratch.b]; };
@@ -471,8 +482,7 @@ export function buildRoadSurface({ terrain, gridSize, layout, palette }) {
   const halfOf = new Map();
   for (const prop of layout?.props ?? []) {
     if (prop?.kind !== 'road') continue;
-    const isLane = prop.variant === 1 || prop.variant === 2;
-    halfOf.set(`${prop.x}|${prop.y}`, streetCrossSection(street, isLane).half);
+    halfOf.set(`${prop.x}|${prop.y}`, roadHalfWidth(era, prop.x, prop.y, isLaneVariant(prop.variant)));
   }
   /** Nửa bề rộng của ô hàng xóm, hoặc `null` khi phía ấy không có đường. */
   const nbHalf = (x, y) => {
@@ -562,17 +572,37 @@ export function buildRoadSurface({ terrain, gridSize, layout, palette }) {
 
   for (const prop of layout?.props ?? []) {
     if (prop?.kind !== 'road') continue;
-    const isLane = prop.variant === 1 || prop.variant === 2;
+    const isLane = isLaneVariant(prop.variant);
     const baseRgb = isLane ? laneRgb : avenueRgb;
     const cross = streetCrossSection(street, isLane);
+    const myHalf = roadHalfWidth(era, prop.x, prop.y, isLane);
 
     // ⚠️ HÌNH DẠNG LẤY TỪ HÀNG XÓM, KHÔNG TỪ `variant`. Xem `carriagewayShape` để biết vì sao —
     // tóm tắt: một ô đường KHÔNG phải một hình chữ nhật. Nó là một LÕI ở giữa cộng tối đa bốn CÁNH
     // TAY, vì một hình chữ nhật chỉ có hai bề rộng còn một ngã tư cần tới bốn.
-    const shape = carriagewayShape(cross.half, nbHalf(prop.x, prop.y));
-    const ext = shape.reach;
-    const u0 = prop.x - ext.west; const u1 = prop.x + ext.east;
-    const v0 = prop.y - ext.north; const v1 = prop.y + ext.south;
+    const shape = carriagewayShape(myHalf, nbHalf(prop.x, prop.y));
+
+    /**
+     * ── TIM ĐƯỜNG LỆCH ĐI BAO NHIÊU TRONG Ô NÀY ─────────────────────────────
+     * ⚠️ CHỈ LỆCH THEO TRỤC MÀ Ô NÀY THẬT SỰ CÓ ĐƯỜNG. Một ô chỉ có đường ngang mà cũng nhận độ
+     * lệch `du` thì cái lõi bị đẩy dọc theo chính hướng con đường — vô nghĩa (đường có lượn theo
+     * chiều đi của nó đâu), và nó làm hai cánh tay dài ngắn lệch nhau không vì lý do gì.
+     */
+    const tim = paths.coreOf(prop.x, prop.y);
+    const du = tim.du;                  // lệch theo x của con đường DỌC
+    const dv = tim.dv;                  // lệch theo y của con đường NGANG
+    const cx = prop.x + du; const cy = prop.y + dv;
+    const bienTay = paths.edgeOf(prop.x, prop.y, 'west');
+    const bienDong = paths.edgeOf(prop.x, prop.y, 'east');
+    const bienBac = paths.edgeOf(prop.x, prop.y, 'north');
+    const bienNam = paths.edgeOf(prop.x, prop.y, 'south');
+
+    // Hộp bao lòng đường, ĐÃ LỆCH. Phía có cánh tay thì vươn tới đúng ranh giới ô (nên nó KHÔNG
+    // lệch — ranh giới là ranh giới); phía không có thì dừng ở mép lõi, và mép lõi thì lệch theo.
+    const u0 = shape.arms.west !== null ? prop.x - 0.5 : cx - shape.coreU;
+    const u1 = shape.arms.east !== null ? prop.x + 0.5 : cx + shape.coreU;
+    const v0 = shape.arms.north !== null ? prop.y - 0.5 : cy - shape.coreV;
+    const v1 = shape.arms.south !== null ? prop.y + 0.5 : cy + shape.coreV;
 
     // ── LÒNG ĐƯỜNG — LÕI + CÁNH TAY, chia theo CỠ VIÊN LÁT ─────────────────────
     // ⚠️ Bốn đỉnh của một ô con nhận CÙNG một màu ⇒ viên lát PHẲNG có mép rõ. Hình học ở đây không
@@ -599,10 +629,22 @@ export function buildRoadSurface({ terrain, gridSize, layout, palette }) {
     };
 
     /**
-     * Một DẢI đường chạy dọc trục `axis` từ `from` tới `to`, nửa bề rộng đi từ `hFrom` tới `hTo`.
-     * `hFrom === hTo` ⇒ dải thẳng; khác nhau ⇒ dải LOE (ngõ nhỏ nhập vào đại lộ).
+     * Một DẢI đường chạy dọc trục `axis` từ `from` tới `to` (TOẠ ĐỘ TUYỆT ĐỐI trên trục ấy), nửa
+     * bề rộng đi từ `hFrom` tới `hTo`, và TIM ĐƯỜNG đi từ `cFrom` tới `cTo` (độ lệch so với tâm ô).
+     *
+     * `hFrom === hTo` ⇒ bề rộng đều; khác nhau ⇒ dải LOE (ngõ nhỏ nhập vào đại lộ).
+     * `cFrom === cTo` ⇒ dải thẳng;    khác nhau ⇒ dải LƯỢN.
+     *
+     * ⚠️ `from`/`to` NAY LÀ TOẠ ĐỘ TUYỆT ĐỐI, không còn là độ lệch so với `prop.x`/`prop.y`. Đổi
+     * như vậy vì khi lõi đã lệch đi thì hai cánh tay của cùng một ô KHÔNG còn dài bằng nhau, nên
+     * "độ lệch so với tâm ô" thôi là một cách nói gọn — nó buộc mỗi chỗ gọi phải tự cộng trừ `du`
+     * một lần nữa, tức bốn cơ hội để một dấu lạc.
+     *
+     * ⚠️ TIM ĐƯỜNG NỘI SUY TUYẾN TÍNH TỪ MÉP LÕI RA RANH GIỚI Ô. Ở ranh giới nó bằng đúng con số
+     * mà ô hàng xóm cũng tính ra (xem `roadPath.js`: độ lệch là thuộc tính của RANH GIỚI, không
+     * phải của Ô) ⇒ hai ô kề nhau khớp khít, con đường không gãy bậc ở mọi chỗ giáp.
      */
-    const dai = (axis, from, to, hFrom, hTo) => {
+    const dai = (axis, from, to, hFrom, hTo, cFrom, cTo) => {
       // ⚠️ DẢI DÀI BẰNG KHÔNG THÌ BỎ QUA. Nó xảy ra khi lõi chạm đúng ranh giới ô, và nếu vẫn đẩy
       // vào lưới thì ta có những tam giác SUY BIẾN (diện tích 0) nằm đúng trên ranh giới — vô hình
       // trên màn hình nhưng đủ để làm hỏng mọi phép đo gom-tam-giác-theo-ô (trọng tâm rơi đúng vào
@@ -610,19 +652,21 @@ export function buildRoadSurface({ terrain, gridSize, layout, palette }) {
       if (Math.abs(to - from) < 1e-9) return;
       const nDoc = oCon(to - from);
       const nNgang = oCon(2 * Math.max(hFrom, hTo));
-      const truc = axis === 'u' ? prop.x : prop.y;
       const ngang = axis === 'u' ? prop.y : prop.x;
       for (let i = 0; i < nDoc; i += 1) {
         const ta = i / nDoc; const tb = (i + 1) / nDoc;
         const a = from + (to - from) * ta; const b = from + (to - from) * tb;
         const ha = hFrom + (hTo - hFrom) * ta; const hb = hFrom + (hTo - hFrom) * tb;
+        // Tim đường tại hai đầu của lát cắt này.
+        const ca = ngang + cFrom + (cTo - cFrom) * ta;
+        const cb = ngang + cFrom + (cTo - cFrom) * tb;
         for (let j = 0; j < nNgang; j += 1) {
           const sa = j / nNgang; const sb = (j + 1) / nNgang;
-          const a0 = ngang - ha + 2 * ha * sa; const a1 = ngang - ha + 2 * ha * sb;
-          const b0 = ngang - hb + 2 * hb * sa; const b1 = ngang - hb + 2 * hb * sb;
+          const a0 = ca - ha + 2 * ha * sa; const a1 = ca - ha + 2 * ha * sb;
+          const b0 = cb - hb + 2 * hb * sa; const b1 = cb - hb + 2 * hb * sb;
           const P = axis === 'u'
-            ? [[truc + a, a0], [truc + a, a1], [truc + b, b1], [truc + b, b0]]
-            : [[a0, truc + a], [a1, truc + a], [b1, truc + b], [b0, truc + b]];
+            ? [[a, a0], [a, a1], [b, b1], [b, b0]]
+            : [[a0, a], [a1, a], [b1, b], [b0, b]];
           const cu = (P[0][0] + P[2][0]) / 2; const cv = (P[0][1] + P[2][1]) / 2;
           quad4(P[0], P[1], P[2], P[3], monTai(cu, cv), 0, ROAD_PART.CARRIAGEWAY);
         }
@@ -635,8 +679,8 @@ export function buildRoadSurface({ terrain, gridSize, layout, palette }) {
     const nU = oCon(2 * cu); const nV = oCon(2 * cv);
     for (let j = 0; j < nV; j += 1) {
       for (let i = 0; i < nU; i += 1) {
-        const ua = prop.x - cu + (2 * cu * i) / nU; const ub = prop.x - cu + (2 * cu * (i + 1)) / nU;
-        const va = prop.y - cv + (2 * cv * j) / nV; const vb = prop.y - cv + (2 * cv * (j + 1)) / nV;
+        const ua = cx - cu + (2 * cu * i) / nU; const ub = cx - cu + (2 * cu * (i + 1)) / nU;
+        const va = cy - cv + (2 * cv * j) / nV; const vb = cy - cv + (2 * cv * (j + 1)) / nV;
         quad(ua, va, ub, vb, monTai((ua + ub) / 2, (va + vb) / 2), 0, ROAD_PART.CARRIAGEWAY);
       }
     }
@@ -644,10 +688,12 @@ export function buildRoadSurface({ terrain, gridSize, layout, palette }) {
     // và KHÔNG chồng lên nhau. Chồng nhau thì hai tấm đồng phẳng chọi nhau (z-fight) thành một vệt
     // nhấp nháy chạy dọc cả mạng đường — đúng loại lỗi chỉ hiện ra khi camera nhúc nhích.
     // Cánh chạy theo `u` rộng `coreV` ở gốc (bằng con đường ngang), cánh chạy theo `v` rộng `coreU`.
-    if (shape.arms.west !== null) dai('u', -cu, -0.5, cv, shape.arms.west);
-    if (shape.arms.east !== null) dai('u', cu, 0.5, cv, shape.arms.east);
-    if (shape.arms.north !== null) dai('v', -cv, -0.5, cu, shape.arms.north);
-    if (shape.arms.south !== null) dai('v', cv, 0.5, cu, shape.arms.south);
+    // Mỗi cánh tay: chạy từ MÉP LÕI (đã lệch) ra tới RANH GIỚI Ô (không lệch — ranh giới là ranh
+    // giới), tim đường nội suy từ độ lệch của lõi tới độ lệch của chính ranh giới ấy.
+    if (shape.arms.west !== null) dai('u', cx - cu, prop.x - 0.5, cv, shape.arms.west, dv, bienTay);
+    if (shape.arms.east !== null) dai('u', cx + cu, prop.x + 0.5, cv, shape.arms.east, dv, bienDong);
+    if (shape.arms.north !== null) dai('v', cy - cv, prop.y - 0.5, cu, shape.arms.north, du, bienBac);
+    if (shape.arms.south !== null) dai('v', cy + cv, prop.y + 0.5, cu, shape.arms.south, du, bienNam);
 
     // ── BÓ VỈA + VỈA HÈ ───────────────────────────────────────────────────────
     // Chỉ dựng ở CẠNH NGOÀI — cạnh nào giáp một ô đường khác thì không có vỉa hè, vì hai con đường
@@ -666,12 +712,13 @@ export function buildRoadSurface({ terrain, gridSize, layout, palette }) {
         const outward = side.du !== 0 ? side.du : side.dv;
         // Mép trong = đúng mép lòng đường phía ấy; vỉa hè chạy dọc trọn bề của trục vuông góc, nên
         // ở ngã tư nó ôm sát tới tận chỗ con đường cắt ngang thay vì hụt một khúc.
-        const inner = outward < 0
-          ? (axis === 'u' ? ext.west : ext.north)
-          : (axis === 'u' ? ext.east : ext.south);
+        // ⚠️ ĐO TỪ TIM ĐƯỜNG ĐÃ LỆCH, KHÔNG TỪ TÂM Ô. Vỉa hè dính vào MÉP LÒNG ĐƯỜNG; đo từ tâm ô
+        // thì con đường lượn đi còn vỉa hè đứng yên, và giữa chúng hở ra một vệt cỏ chạy dọc phố.
+        // Chỉ dựng ở cạnh KHÔNG có cánh tay, nên mép lòng đường phía ấy đúng bằng mép lõi.
+        const inner = axis === 'u' ? shape.coreU : shape.coreV;
         const outer = inner + cross.walk;
-        const c0 = (axis === 'u' ? prop.x : prop.y) + outward * inner;
-        const c1 = (axis === 'u' ? prop.x : prop.y) + outward * outer;
+        const c0 = (axis === 'u' ? cx : cy) + outward * inner;
+        const c1 = (axis === 'u' ? cx : cy) + outward * outer;
         const a0 = axis === 'u' ? v0 : u0;
         const a1 = axis === 'u' ? v1 : u1;
 
@@ -704,7 +751,10 @@ export function buildRoadSurface({ terrain, gridSize, layout, palette }) {
       const along = dọc ? 'v' : 'u';
       const halfU = (u1 - u0) / 2; const halfV = (v1 - v0) / 2;
       const halfMark = Math.min(halfU, halfV) * MARKING_WIDTH;
-      const centre = dọc ? (u0 + u1) / 2 : (v0 + v1) / 2;
+      // ⚠️ TIM VẠCH LÀ TIM ĐƯỜNG ĐÃ LỆCH (`cx`/`cy`), KHÔNG PHẢI TRUNG ĐIỂM HỘP BAO. Hộp bao vươn
+      // tới ranh giới ô ở phía có cánh tay và dừng ở mép lõi ở phía không có, nên trung điểm của
+      // nó lệch khỏi tim đường ở mọi ô đầu mút — vạch sẽ chạy chệch sang một bên lòng đường.
+      const centre = dọc ? cx : cy;
       const from = dọc ? v0 : u0;
       const span = dọc ? v1 - v0 : u1 - u0;
 

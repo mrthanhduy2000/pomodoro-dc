@@ -13,7 +13,9 @@
 > mà không được refactor triệt để, phải CHỦ ĐỘNG đề xuất mở một "Maintenance Sprint" (nêu rõ mục
 > tiêu/phạm vi/lợi ích/rủi ro/tiêu chí hoàn thành) thay vì tiếp tục cộng thêm tính năng mới.
 >
-> **Trạng thái ngưỡng hiện tại (2026-08-24, sau ADR-056)**: thêm **#82** (bộ khớp chỉ có một trục
+> **Trạng thái ngưỡng hiện tại (2026-08-24 tối, sau ADR-057)**: **#82 ĐÃ ĐÓNG** — chân giải bằng
+> khớp ngược nên cả ba chiều bị cấm đều thành miễn phí. (Ghi chú cũ giữ lại bên dưới.)
+> **(2026-08-24 sáng, sau ADR-056)**: thêm **#82** (bộ khớp chỉ có một trục
 > quay ⇒ hông không lắc ngang, đai hông không xoay) ở mức **Low**. Trước đó: **#80** (cư dân chiếm
 > 0,29% khung hình ⇒ chi tiết cơ thể chỉ đọc được ở cận cảnh) ở mức **Medium** và **#81** (mũ có
 > chỏm thừa hưởng phép phóng đại của cái đầu) ở mức **Low**. Đếm lại toàn file bằng cách quét trường
@@ -4415,7 +4417,16 @@ cấp `Math.min(3,…)` → `Math.min(9,…)` · cắt bớt danh sách cấp th
 - **Blocking Conditions**: Không có. Hoãn vì ở khung mặc định nó không đổi được điểm ảnh nào.
 - **Review Trigger**: khi khung cận cảnh (`FOCUS_VIEW_DISTANCE`) được kéo gần hơn nữa, HOẶC khi có
   người kêu cư dân "đi cứng" sau ADR-056.
-- **Owner**: chưa ai · **Status**: mở
+- **Owner**: chưa ai · **Status**: ✅ **ĐÃ ĐÓNG 2026-08-24 (ADR-057)** — và cách đóng không giống
+  cách đã kê đơn ở trên, nên đọc kỹ đoạn này. "Recommended Solution" đề xuất **thêm một trục quay
+  thứ hai rồi đi bù** cho mọi thứ nó làm xê dịch. Cách thật sự dùng là **đảo chiều nhân quả**: chân
+  giải bằng KHỚP NGƯỢC (đặt bàn chân trước, suy ngược ra góc đùi và góc gối), nên bàn chân thành
+  ĐẦU VÀO thay vì ĐẦU RA. Từ lúc đó, cả ba mục bị cấm (lắc ngang · nghiêng đai hông · xoay đai
+  hông) **biến mất cùng lúc và miễn phí** — không một số hạng bù nào, vì cái chân tự lo phần còn
+  lại. ⇒ **Bài học**: khi một mục nợ liệt kê nhiều hạn chế mà mọi hạn chế đều quy về cùng một câu
+  *"vì X là kết quả chứ không phải đầu vào"*, hãy hỏi có đảo được X không, thay vì đi bù từng mục.
+  Trục thứ hai (`b`) vẫn được thêm đúng như kê đơn, và cổng "bàn chân không trượt" vẫn giữ nguyên
+  vai trò — nay chạy trên **210 tổ hợp** (14 kiểu × 15 kỷ) và đo được **4,86 × 10⁻¹⁷ ô**.
 
 ---
 

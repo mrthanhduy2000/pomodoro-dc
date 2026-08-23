@@ -156,7 +156,12 @@ test('SỐ TAM GIÁC ĐẾM TỪ MẢNG ĐÃ DỰNG, VÀ MỌI KHUÔN PHẢI KH�
   for (const [ten, n] of bang) {
     assert.equal(n, humanShapeMesh(ten).positions.length / 9,
       `khuôn "${ten}": \`shapeTriangles\` và mảng toạ độ đã trôi khỏi nhau`);
-    assert.ok(n >= 12 && n <= 80, `khuôn "${ten}" có ${n} tam giác — ngoài dải hợp lý 12…80`);
+    // ⚠️ TRẦN NÂNG 80 → 160 Ở ADR-057, và đây là một QUYẾT ĐỊNH ĐƯỢC ĐÀM RA CHỨ KHÔNG PHẢI MỘT
+    // CÁI PHỄU (bẫy Phase 9A): *"có thể vẽ thêm tam giác/khối mỗi người tới lúc nó bo tròn"*. Trần
+    // cũ 80 chỉ đủ cho 12 mặt × 2 vành; muốn hết phẳng thì phải có ÍT NHẤT ba vành (một khuôn hai
+    // vành cho ra ĐÚNG MỘT dải sáng dọc dù `sides` bằng bao nhiêu), và ba vành 12 mặt đã là 116.
+    // Sàn 12 giữ nguyên: đó là cái hộp, khuôn rẻ nhất bảng.
+    assert.ok(n >= 12 && n <= 160, `khuôn "${ten}" có ${n} tam giác — ngoài dải hợp lý 12…160`);
   }
   // ⚠️ HAI KHUÔN TRÙNG ĐỈNH LÀ MỘT TRỤC CHẾT (bài học Phase 11). Nó không làm gì hỏng, nó chỉ tiêu
   // một lệnh vẽ để dựng lại một khối đã có — và không có gì đỏ lên.

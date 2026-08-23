@@ -81,8 +81,20 @@ export { HUMAN_BASE_HEIGHT };
  */
 export const HUMAN_ROLES = ['skin', 'cloth', 'cloth2', 'straw', 'hair', 'gear'];
 
-/** Tên các khớp. `sceneGraph.js` và `humanPose.js` cùng đọc danh sách này — một chỗ khai duy nhất. */
-export const HUMAN_JOINTS = ['torso', 'head', 'shoulderL', 'shoulderR', 'hipL', 'hipR'];
+/**
+ * Tên các khớp. `sceneGraph.js` và `humanPose.js` cùng đọc danh sách này — một chỗ khai duy nhất.
+ *
+ * ⚠️ TỪ ADR-057 CÓ **KHỚP GỐI VÀ KHỚP KHUỶU THẬT**, cộng một khớp `pelvis` làm gốc cho cả nửa dưới.
+ * Trước đó chân là MỘT khối cứng treo vào hông và "đầu gối" chỉ là một phép rút ngắn khối ấy.
+ * Vị trí của `kneeL/R` và `elbowL/R` KHÔNG khai trong bảng nào — chúng được `humanPose.js` TÍNH RA
+ * từ chỗ đặt bàn chân / bàn tay, đúng tinh thần động học ngược. Khai cứng chúng ở đây là dựng lại
+ * một luật thứ hai cho cùng một chuyện.
+ */
+export const HUMAN_JOINTS = [
+  'pelvis', 'torso', 'head',
+  'shoulderL', 'shoulderR', 'elbowL', 'elbowR',
+  'hipL', 'hipR', 'kneeL', 'kneeR',
+];
 
 /**
  * Kích thước cơ thể suy từ một dòng bảng kỷ. Tách riêng khỏi `parts` vì `humanPose.js` cần đúng
@@ -99,6 +111,7 @@ export function humanDims(style) {
   const headH = H * 0.20;
   const torsoH = H - legLen - headH;
   const b = style.build;
+  const armLen = (H - legLen - headH) + legLen * 0.22;
   return {
     height: H,
     legLen,
@@ -131,7 +144,26 @@ export function humanDims(style) {
     hipZ: H * 0.075 * b,
     shoulderZ: H * 0.125 * b,
     /** Tay dài tới giữa đùi — mốc giải phẫu quen thuộc, và nó khiến bàn tay đu đúng tầm hông. */
-    armLen: (H - legLen - headH) + legLen * 0.22,
+    armLen,
+    /**
+     * ⚠️ CHIỀU DÀI TỪNG ĐOẠN CHI — MỚI TỪ ADR-057, và chúng phải cộng lại ĐÚNG BẰNG chi trọn vẹn.
+     * `humanPose.js` giải bài động học ngược bằng đúng hai con số này (luật cô-sin trên tam giác
+     * đùi–cẳng–đường-nối-hông-tới-bàn-chân), nên nếu tổng của chúng lệch khỏi `legLen` thì chiều
+     * cao hông tính ở một chỗ sẽ không khớp tầm với của chân tính ở chỗ kia, và bàn chân sẽ hoặc
+     * lún xuống đất hoặc không chạm tới — im lặng, vì hình học vẫn hợp lệ.
+     *
+     * Tỉ lệ 0,52 / 0,48: người thật có xương đùi hơi dài hơn xương chày, và ở đây `legLen` đo từ
+     * hông xuống MẶT ĐẤT (đã gộp cả bàn chân) nên phần dưới lại càng không được dài hơn.
+     */
+    thighLen: legLen * 0.52,
+    shinLen: legLen * 0.48,
+    /**
+     * Cánh tay trên / cẳng tay / bàn tay. Người thật: cánh tay trên ≈ cẳng tay + bàn tay, và bàn
+     * tay chiếm khoảng một phần bảy cả cánh tay. Ba số này cộng lại đúng bằng `armLen`.
+     */
+    upperArmLen: armLen * 0.47,
+    forearmLen: armLen * 0.39,
+    handLen: armLen * 0.14,
   };
 }
 
@@ -429,20 +461,59 @@ export function buildHumanBody(era) {
   // là bàn chân. Một khối bẹt nằm ngang vừa che mặt cắt ấy, vừa cho hình bóng một cái mấu nhô về
   // phía trước, tức thêm một dấu hiệu "đang bước" mà không tốn thêm khuôn nào (nó dùng lại `box`).
   const parts = [
-    piece('legL', 'cloth2', 'limb', 'hipL', [d.limbW, d.legLen, d.limbW], [0, -d.legLen * 0.5, 0]),
-    piece('legR', 'cloth2', 'limb', 'hipR', [d.limbW, d.legLen, d.limbW], [0, -d.legLen * 0.5, 0]),
-    piece('footL', 'cloth2', 'box', 'hipL',
+    // ── CHÂN: ĐÙI → GỐI → CẲNG CHÂN → BÀN CHÂN ────────────────────────────────────────────
+    // ⚠️ Đây là chỗ ADR-057 đổi nhiều nhất. Trước đó mỗi chân là MỘT khối cứng treo vào hông, và
+    // "đầu gối" chỉ là phép rút ngắn khối ấy giữa pha đưa chân. Nay là hai khối và một khớp thật;
+    // vị trí khớp gối KHÔNG khai ở đây mà do `humanPose.js` giải ra từ chỗ đặt bàn chân.
+    // ⚠️ CẲNG CHÂN MẢNH HƠN ĐÙI (0,86) — nếu để bằng nhau thì hai khối nối nhau thành một cái ống
+    // dài và cái khớp gối vừa thêm vào sẽ không đọc ra được, tức tiêu hai khối cho một hình cũ.
+    piece('thighL', 'cloth2', 'limb', 'hipL',
+      [d.limbW, d.thighLen, d.limbW], [0, -d.thighLen * 0.5, 0]),
+    piece('thighR', 'cloth2', 'limb', 'hipR',
+      [d.limbW, d.thighLen, d.limbW], [0, -d.thighLen * 0.5, 0]),
+    piece('shinL', 'cloth2', 'calf', 'kneeL',
+      [d.limbW * 0.86, d.shinLen, d.limbW * 0.86], [0, -d.shinLen * 0.5, 0]),
+    piece('shinR', 'cloth2', 'calf', 'kneeR',
+      [d.limbW * 0.86, d.shinLen, d.limbW * 0.86], [0, -d.shinLen * 0.5, 0]),
+    // ⚠️ BÀN CHÂN NAY TREO VÀO KHỚP GỐI, KHÔNG TREO VÀO HÔNG. Treo vào hông thì lúc gối gập, bàn
+    // chân đứng nguyên chỗ cũ trong khi cẳng chân đã đi chỗ khác — một bàn chân bay lơ lửng, và
+    // hình học vẫn hợp lệ nên KHÔNG có gì đỏ lên.
+    piece('footL', 'cloth2', 'box', 'kneeL',
       [d.limbW * 1.7, d.limbW * 0.62, d.limbW * 1.0],
-      [d.limbW * 0.42, -d.legLen + d.limbW * 0.31, 0]),
-    piece('footR', 'cloth2', 'box', 'hipR',
+      [d.limbW * 0.42, -d.shinLen + d.limbW * 0.31, 0]),
+    piece('footR', 'cloth2', 'box', 'kneeR',
       [d.limbW * 1.7, d.limbW * 0.62, d.limbW * 1.0],
-      [d.limbW * 0.42, -d.legLen + d.limbW * 0.31, 0]),
+      [d.limbW * 0.42, -d.shinLen + d.limbW * 0.31, 0]),
+
+    // ── THÂN: XƯƠNG CHẬU → LỒNG NGỰC → ĐẦU ────────────────────────────────────────────────
+    // ⚠️ XƯƠNG CHẬU LÀ KHỐI MỚI, VÀ NÓ SỬA MỘT KHUYẾT TẬT CÓ TỪ ĐẦU: hai cái chân trước nay mọc
+    // thẳng ra từ đáy cái thân, cách nhau đúng `2 × hipZ`, và giữa chúng là một khe TRỐNG chạy
+    // suốt bề rộng hông. Ở cận cảnh khe ấy đọc ra là hai cái que cắm vào một cái thùng. Một khối
+    // bẹt nằm ngang bắc qua hai chỏm hông vừa bịt khe, vừa cho hình bóng một chỗ nở ra ở ngang
+    // hông — thứ mà mọi hình người thật đều có.
+    // Vai màu `cloth2` (cùng quần) chứ không `cloth`: ngoài đời cái quần bắt đầu từ đúng chỗ này.
+    piece('pelvis', 'cloth2', 'chest', 'pelvis',
+      [d.torsoD * 0.96, d.torsoH * 0.32, d.torsoW * 0.88], [0, d.torsoH * 0.06, 0]),
     piece('torso', 'cloth', 'chest', 'torso', [d.torsoD, d.torsoH, d.torsoW], [0, d.torsoH * 0.5, 0]),
     piece('head', 'skin', 'dome', 'head', [d.headW, d.headH, d.headW], [0, d.headH * 0.5, 0]),
-    piece('armL', 'skin', 'limb', 'shoulderL',
-      [d.limbW * 0.9, d.armLen, d.limbW * 0.9], [0, -d.armLen * 0.5, 0]),
-    piece('armR', 'skin', 'limb', 'shoulderR',
-      [d.limbW * 0.9, d.armLen, d.limbW * 0.9], [0, -d.armLen * 0.5, 0]),
+
+    // ── TAY: CÁNH TAY TRÊN → KHUỶU → CẲNG TAY → BÀN TAY ───────────────────────────────────
+    // ⚠️ BÀN TAY DÙNG KHUÔN `dome` CHỨ KHÔNG THÊM KHUÔN MỚI, và đó là một quyết định về LỆNH VẼ:
+    // số khuôn một kỷ dùng CHÍNH LÀ số lệnh vẽ cư dân tiêu (xem `humanShapesUsed`). `dome` thì kỷ
+    // nào cũng đã có sẵn (cái đầu), nên hai bàn tay tốn **0 lệnh vẽ**. Một nắm tay cũng đúng là
+    // một cái vòm hơi bẹt, nên đây không phải một phép tiết kiệm làm hỏng hình.
+    piece('upperArmL', 'skin', 'limb', 'shoulderL',
+      [d.limbW * 0.9, d.upperArmLen, d.limbW * 0.9], [0, -d.upperArmLen * 0.5, 0]),
+    piece('upperArmR', 'skin', 'limb', 'shoulderR',
+      [d.limbW * 0.9, d.upperArmLen, d.limbW * 0.9], [0, -d.upperArmLen * 0.5, 0]),
+    piece('forearmL', 'skin', 'calf', 'elbowL',
+      [d.limbW * 0.78, d.forearmLen, d.limbW * 0.78], [0, -d.forearmLen * 0.5, 0]),
+    piece('forearmR', 'skin', 'calf', 'elbowR',
+      [d.limbW * 0.78, d.forearmLen, d.limbW * 0.78], [0, -d.forearmLen * 0.5, 0]),
+    piece('handL', 'skin', 'dome', 'elbowL',
+      [d.limbW * 0.94, d.handLen, d.limbW * 0.74], [0, -d.forearmLen - d.handLen * 0.5, 0]),
+    piece('handR', 'skin', 'dome', 'elbowR',
+      [d.limbW * 0.94, d.handLen, d.limbW * 0.74], [0, -d.forearmLen - d.handLen * 0.5, 0]),
   ];
 
   const garment = garmentPiece(style.garment, d);

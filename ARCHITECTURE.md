@@ -920,8 +920,8 @@ trượt vài khung.
 **Cư dân là một BỘ XƯƠNG, và dáng đi là hàm của QUÃNG ĐƯỜNG (2026-08-22, ADR-053)**: ba tầng, mỗi
 tầng một việc, đúng khuôn `floraStyle.js` ↔ `flora.js` — `engine/city3d/humanStyle.js` = **BẢNG 15
 kỷ × 11 trục** (`country` khoá cứng vào `eraStyle.js`; đủ 15/15 kỷ từ 2026-08-23) ·
-`engine/city3d/humanShape.js` = **BỘ 8 KHUÔN** (mặt tròn xoay khai bằng dữ liệu) ·
-`engine/city3d/humanGait.js` = **BẢNG 9 KIỂU ĐI** (2026-08-24, ADR-056) ·
+`engine/city3d/humanShape.js` = **BỘ 9 KHUÔN** (mặt tròn xoay khai bằng dữ liệu) ·
+`engine/city3d/humanGait.js` = **BẢNG 14 KIỂU ĐI** (2026-08-24, ADR-057) ·
 `engine/city3d/human.js` = **THƯ VIỆN HÌNH** (danh sách khối, mỗi khối gắn một khớp + một vai màu +
 một khuôn) · `engine/city3d/humanPose.js` = **DÁNG ĐI** (`poseAt(body, travelled)` → góc từng
 khớp) · `residents.js` giữ nguyên "bao nhiêu người, đi đâu" · `sceneGraph.js` chỉ ghép ma trận.
@@ -976,6 +976,48 @@ mesh cứng nên xoay được diễn đạt bằng phép dịch; `headTrack` ch
 may đo). Trần tỉ lệ nâng **6% → 11%** với bằng chứng đo được, KHÔNG nâng lặng lẽ; ca xấu nhất **kỷ
 1 = 9,68%**. ⚠️ Giới hạn phải nói thẳng: **ms mỗi khung CHƯA đo lại** (hộp cát chỉ có SwiftShader),
 nên đây là một trần theo TỈ LỆ HÌNH HỌC, không phải một lời hứa về tốc độ.
+
+**CHÂN GIẢI BẰNG KHỚP NGƯỢC: ĐẶT BÀN CHÂN TRƯỚC, SUY NGƯỢC RA GÓC ĐÙI VÀ GÓC GỐI (2026-08-24,
+ADR-057)** — đảo ngược nửa sau của ADR-056 và **đóng `TECH_DEBT #82`**. Đàm: *"cử động khớp thật …
+có thể vẽ thêm tam giác/khối mỗi ngưới tới lúc nó bo tròn"*, tức thu hồi tường minh cả cái mẹo
+co-gối-giả lẫn trần 11 khối mỗi người.
+⚠️ **Ba dòng đầu của `poseAt` là ba dòng quan trọng nhất file**: chúng đặt hai bàn chân trong KHÔNG
+GIAN THẾ GIỚI (`footOffsetAt` cho toạ độ dọc đường đi, `footLiftAt` cho độ nâng lúc đưa, `splay`
+cho bề ngang), rồi `solveTwoBone` giải ngược ra góc đùi và góc gối bằng định lý hàm cosin. Mọi thứ
+bên dưới là HỆ QUẢ, và không dòng nào bên dưới được phép sửa lại chúng.
+⚠️ **Vì sao đảo chiều nhân quả lại xoá được nhiều ràng buộc CÙNG LÚC.** Với khớp thuận (khai góc,
+tính ra bàn chân), bàn chân là ĐẦU RA — nên mỗi chuyển động mới của thân đều làm nó dịch chỗ, và
+phải đi bù bằng một số hạng hiệu chỉnh riêng. Đó chính là lý do `TECH_DEBT #82` cấm ba thứ: đai
+hông không được lắc ngang, không được nghiêng, không được xoay. Với khớp ngược, bàn chân là ĐẦU
+VÀO, nên cả ba thành **miễn phí** và cái chân tự lo phần còn lại. ⇒ **Khi một danh sách hạn chế
+dài ra mà mọi mục đều quy về cùng một câu *"vì X là kết quả chứ không phải đầu vào"*, hãy hỏi có
+đảo được X không, thay vì đi bù từng mục.**
+⚠️ **`pose.reach` là bất biến cốt lõi** — tỉ số giữa khoảng cách hông→bàn chân và tổng chiều dài
+hai đoạn xương. Chạm 1 là chân duỗi thẳng đơ; vượt 1 là bàn chân nằm ngoài tầm với, phép giải buộc
+phải kẹp lại, và bàn chân TRƯỢT. Nó chỉ vào NGUYÊN NHÂN, còn "trượt" chỉ là triệu chứng. Đo được:
+cao nhất **0,9928** (kỷ 12, `march`), trượt lớn nhất trên 210 tổ hợp **4,86 × 10⁻¹⁷ ô** — sai số
+dấu phẩy động, không phải một dung sai.
+⚠️ **Khớp nay có HAI trục**: `a` ngửa quanh trục ngang-màn-hình (bước chân), `b` lắc quanh trục đi
+tới (đai hông nghiêng). Thứ tự ghép **cố định `Rx(b) · Rz(a)`** ở cả `rotateByJoint` (tầng thuần)
+lẫn `sceneGraph.js` (`jointSpin.premultiply(jointRoll)`), và `sceneGraphWiring.test.js` chạy CẢ HAI
+đường rồi so — ghép ngược thứ tự ra một tư thế khác hẳn mà vẫn hợp lệ về hình học, tức không gì
+đỏ lên.
+⚠️ **Bảng dáng đi 9 → 14 kiểu, 4 → 6 trục** (`lift · flex · sway · twist · headTrack · splay`).
+Trường `knee` và toàn bộ định lý `sin²`/`knee ≥ 0,5` của ADR-056 **đã bỏ** — không phải vì sai mà
+vì tiền đề *"mesh cứng không gập được"* bị gỡ (bẫy Phase 8C). `gaitOf()` nay nhận CẢ một hồ sơ đầy
+đủ chứ không chỉ một tên, vì bài "dây nối" cần bơm được một giá trị KHÔNG có trong bảng; đổi lại,
+test ĐÒI bảng kỷ khai `gait` là một chuỗi ở cả 15 kỷ, để bảng không lợi dụng lối bơm ấy.
+⚠️ **SỐ VÀNH quyết định "phẳng hay không", KHÔNG phải số mặt.** Một khuôn 2 vành cho ra ĐÚNG MỘT
+dải sáng dọc dù `sides` bằng 8, 12 hay 64 — cả 8 mặt bên đều là hình thang PHẲNG. Thứ sinh ra dải
+sáng thứ hai là một **ĐIỂM UỐN** trên đường sinh. Nay 12 mặt và 3–6 vành, mỗi khuôn cong có ít
+nhất một điểm uốn (thắt gối, eo, sườn lõm). Đây là lần thứ **bảy** của *"một trường gánh hai việc"*
+— lần này thứ gánh hai việc là một hồ sơ `{sides, rings}` bị đọc gộp thành một chữ "mượt".
+⚠️ **Giá phải trả, nói thẳng**: 11 → **16…18 khối**/người · 220…324 → **1.616…1.928 tam giác**
+(×6,4) · **+1 lệnh vẽ ở cả 15 kỷ** (khuôn `calf`). Cư dân chiếm **16,3%…26,1%** tam giác cảnh; trần
+tỉ lệ nâng 11% → **30%** và trần khối 11 → **18**, cả hai theo lệnh tường minh của Đàm kèm bốn căn
+cứ đo được (dư 3,2 lần trên máy thật · 80% chi phí đi theo ĐIỂM ẢNH · cư dân không đổ bóng · lệnh
+vẽ chỉ +1). ⚠️ **ms mỗi khung CHƯA đo lại** (hộp cát chỉ có SwiftShader) — đây là một trần theo TỈ
+LỆ HÌNH HỌC, không phải một lời hứa về tốc độ; muốn xác nhận thì `bash scripts/bench-macbook.sh`.
 
 **Database schema — KHÔNG có migration tự động**: mọi thay đổi cấu trúc bảng Supabase (`game_state`,
 `timer_live`, `push_jobs`, `push_subscriptions`...) đòi hỏi chạy TAY một file `.sql` trong

@@ -53,7 +53,7 @@ import { placeBounds, specBounds } from '../../../engine/city3d/pick';
 import { buildResidents, residentAt } from '../../../engine/city3d/residents';
 import { buildHumanBody, buildHumanBodyLowDetail } from '../../../engine/city3d/human';
 import { buildHumanShapeGeometry } from './humanGeometry';
-import { poseAt, stretchOf } from '../../../engine/city3d/humanPose';
+import { poseAt } from '../../../engine/city3d/humanPose';
 import { fogDensityFor, sunDirectionAt } from '../../../engine/city3d/daylight';
 import { buildMergedGeometry } from './geometryFactory';
 import {
@@ -246,6 +246,12 @@ const UP = new Vector3(0, 1, 0);
  * ảnh — đúng lý lẽ đã dùng khi từ chối thêm trục nghiêng cho `parts.js`.
  */
 const FORWARD_AXIS = new Vector3(0, 0, 1);
+/**
+ * Trục ĐI TỚI — trục thứ HAI của mỗi khớp, mới từ ADR-057. Xoay quanh nó là dạng chân ra ngoài,
+ * khép chân vào, nghiêng thân sang bên. Trước ADR-057 bộ khớp chỉ có một trục và mọi chuyển động
+ * NGANG đều bị cấm, vì mô hình thuận không bù lại được chỗ bàn chân (`TECH_DEBT #82`, nay đã đóng).
+ */
+const TRAVEL_AXIS = new Vector3(1, 0, 0);
 
 /**
  * Hướng mặt trời (đã chuẩn hoá): phương vị 150°, cao 30°.
@@ -676,6 +682,7 @@ export function createCityScene({
   // Tách khỏi `rotation`/`position` vì khối cư dân dùng cả bốn CÙNG LÚC trong một biểu thức ghép.
   const heading = new Quaternion();
   const jointSpin = new Quaternion();
+  const jointRoll = new Quaternion();
   const limb = new Vector3();
 
   /**
@@ -1367,22 +1374,27 @@ export function createCityScene({
         for (let k = 0; k < parts.length; k += 1) {
           const part = parts[k];
           const joint = pose.joints[part.joint];
+          // ⚠️ HAI TRỤC, VÀ THỨ TỰ GHÉP LÀ MỘT HỢP ĐỒNG VỚI TẦNG THUẦN: `Rx(b) · Rz(a)`, tức
+          // nghiêng trước-sau xong rồi mới lật cả mặt phẳng ấy sang bên. `humanPose.rotateByJoint`
+          // là bản viết bằng số học thuần của ĐÚNG phép này. Hai bên là hai công thức cho cùng một
+          // luật (bẫy `sweep-score.mjs` ↔ `city-preview.mjs`, Phase 4G), và thứ giữ chúng khỏi trôi
+          // là bài đối chiếu chéo trong `sceneGraphWiring.test.js` — nó dựng cảnh thật rồi so từng
+          // toạ độ với `partCenterAt`. Đừng đổi thứ tự `premultiply` mà không chạy bài đó.
           jointSpin.setFromAxisAngle(FORWARD_AXIS, joint.a);
-          // ⚠️ ĐẦU GỐI GIẢ: chi treo vào hông RÚT NGẮN lại giữa pha đưa chân, nên cả chiều cao
-          // khối lẫn `rest.y` (tâm khối treo cách khớp bao xa) phải nhân cùng một hệ số. Nhân một
-          // mà quên hai thì bàn chân rời khỏi cẳng chân — hình học vẫn hợp lệ nên KHÔNG có gì đỏ
-          // lên, chỉ có một bàn chân bay lơ lửng mà chỉ ảnh chụp gần mới thấy.
-          // ⚠️ Đọc qua `stretchOf` chứ không tự viết `pose.stretch?.[…] ?? 1`: bốn nơi cần con số
-          // này, và bốn bản chép sẽ trôi khỏi nhau.
-          const keo = stretchOf(part, pose);
+          jointRoll.setFromAxisAngle(TRAVEL_AXIS, joint.b);
+          jointSpin.premultiply(jointRoll);
           // Tâm khối trong hệ CỤC BỘ: gốc khớp cộng phần tịnh tiến đã bị khớp xoay.
-          limb.set(part.rest.x, part.rest.y * keo, part.rest.z).applyQuaternion(jointSpin);
+          // ⚠️ KHÔNG CÒN HỆ SỐ RÚT CHÂN NÀO. Trước ADR-057, chi treo vào hông bị rút ngắn giữa pha
+          // đưa chân (đầu gối GIẢ) nên cả `rest.y` lẫn `part.h` phải nhân thêm một hệ số. Nay đầu
+          // gối là một KHỚP THẬT: cẳng chân là một khối riêng treo vào `kneeL/R`, và chỗ đặt khớp
+          // gối do `humanPose.js` giải ra từ chỗ đặt bàn chân. Không còn gì để rút.
+          limb.set(part.rest.x, part.rest.y, part.rest.z).applyQuaternion(jointSpin);
           limb.set(joint.x + limb.x, joint.y + limb.y, joint.z + limb.z);
           // Rồi đưa cả cụm sang hệ THẾ GIỚI bằng hướng đi của người.
           limb.applyQuaternion(heading);
           position.set(x + limb.x, feet + limb.y, z + limb.z);
           rotation.copy(heading).multiply(jointSpin);
-          scale.set(part.w, part.h * keo, part.d);
+          scale.set(part.w, part.h, part.d);
           matrix.compose(position, rotation, scale);
           const mesh = meshOf[k];
           mesh.setMatrixAt(i * mesh.userData.partsPerResident + slotOf[k], matrix);

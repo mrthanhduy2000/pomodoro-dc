@@ -1,5 +1,5 @@
 /**
- * humanPose.js — TƯ THẾ tại một thời điểm. Trả về góc của từng khớp và chỗ đặt từng khớp.
+ * humanPose.js — TƯ THẾ tại một thời điểm. Trả về chỗ đặt và góc của từng khớp.
  *
  * THUẦN: không three, không DOM, không `Date`, không `Math.random`.
  *
@@ -12,26 +12,42 @@
  * một người và **trượt** ở 27 người còn lại. Bàn chân sẽ quét trên mặt đường như trượt patin, và
  * đó là loại lỗi mắt bắt ra ngay nhưng miệng không gọi tên được.
  *
- * ⇒ Hàm này nhận `travelled` (quãng đường đã đi, đơn vị ô) chứ không nhận `t`. Mô hình cũ đã làm
- * đúng tinh thần ấy cho cái nhún (`bob` tính theo `travelled`); ở đây nó thành luật cho MỌI khớp.
+ * ⇒ Hàm này nhận `travelled` (quãng đường đã đi, đơn vị ô) chứ không nhận `t`.
  *
- * ⚠️ CHÂN CẮM XUỐNG ĐẤT LÀ MỘT RÀNG BUỘC, KHÔNG PHẢI MỘT HIỆU ỨNG. Trong pha tiếp đất, bàn chân
- * phải ĐỨNG YÊN trong toạ độ THẾ GIỚI trong khi thân đi qua nó. Viết ra thành công thức: độ dịch
- * của bàn chân so với hông phải giảm ĐÚNG BẰNG quãng đường thân tiến được, tức
- * `d(footOffset)/d(travelled) = -1`. Cả pha tiếp đất dưới đây là một đoạn THẲNG theo `travelled`
- * đúng vì lý do đó — không phải vì thẳng thì dễ viết.
+ * ══════════════════════════════════════════════════════════════════════════════════════════════
+ * ⚠️ ĐỘNG HỌC NGƯỢC (2026-08-25, ADR-057) — ĐỔI CHIỀU NHÂN QUẢ CỦA CẢ FILE NÀY
+ * ══════════════════════════════════════════════════════════════════════════════════════════════
+ * Mọi bản trước làm theo chiều THUẬN: khai góc hông → suy ra bàn chân rơi đâu. Chiều ấy đẻ ra ba
+ * hệ quả, và cả ba đều được ghi lại như những ràng buộc bất khả kháng:
+ *   · chân phải là MỘT khối cứng, vì thêm một khớp gối nghĩa là thêm một ẩn không giải được;
+ *   · cái hông KHÔNG được dịch ngang, vì bàn chân sẽ trượt theo (3 tới 4 điểm ảnh với kiểu `roll`);
+ *   · đai hông KHÔNG được xoay, hoặc phải TRỪ tay đúng đoạn hông vừa xoay khỏi độ dịch bàn chân.
  *
- * ⚠️ VÀ CÁI NHÚN NGƯỜI KHÔNG PHẢI MỘT HÀM SIN RIÊNG — NÓ LÀ HỆ QUẢ CỦA CÁI CHÂN.
- * Chân là một khối cứng dài `legLen`; khi nó nghiêng một góc `a` thì hông chỉ còn cao
- * `legLen × cos a` so với bàn chân. Thân vì thế TỰ hạ xuống ở đầu và cuối bước, TỰ cao nhất ở
- * giữa pha tiếp đất — đúng hình dạng nhún của người thật, và đúng pha. Thêm một hàm sin riêng cho
- * cái nhún là tạo ra một luật thứ hai cho cùng một chuyện, rồi hai luật ấy sẽ lệch pha nhau vào
- * ngày có ai chỉnh `stride`. Mô hình cũ có một `Math.abs(Math.sin(travelled * 9)) * 0.022` như
- * vậy; nó đã bị GỠ HẲN khỏi `residents.js` chứ không để lại song song.
+ * Bản này đảo chiều: **khai CHỖ ĐẶT BÀN CHÂN trước, rồi giải ngược ra góc đùi và góc gối** (luật
+ * cô-sin trên tam giác đùi–cẳng–đường-nối). Cả ba ràng buộc trên **bốc hơi cùng một lúc**, và
+ * chúng bốc hơi vì cùng MỘT lý do: bàn chân nay là ĐẦU VÀO của bài toán, nên không có cách nào để
+ * nó bị đặt sai chỗ. Hông muốn dịch ngang bao nhiêu, xoay bao nhiêu, nhún bao nhiêu cũng được —
+ * cái chân tự tìm lại đúng bàn chân đã khai, y như người thật.
+ *
+ * ⚠️ VÀ KHÔNG CÓ MỘT SỐ HẠNG BÙ NÀO TRONG FILE NÀY. Nếu ngày nào bạn thấy mình đang viết một phép
+ * trừ để "bù lại chỗ hông vừa xoay", nghĩa là một chỗ nào đó đã tuột về chiều thuận — đó chính là
+ * dấu hiệu sớm nhất, và nó đáng để dừng lại đọc kỹ hơn là đi tinh chỉnh con số.
+ *
+ * ⚠️ CÁI NHÚN VẪN LÀ HỆ QUẢ, KHÔNG PHẢI MỘT HÀM SIN RIÊNG. Chiều cao hông được suy từ chân TRỤ:
+ * `hipY = √(legLen² − off²) × (1 − flex)`. Vế đầu là hình học (chân nghiêng thì hông thấp xuống),
+ * vế sau là gối chùng. Thêm một hàm sin riêng cho cái nhún là tạo ra một luật thứ hai cho cùng một
+ * chuyện, rồi hai luật ấy sẽ lệch pha nhau vào ngày có ai chỉnh `stride`.
+ *
+ * ⚠️ VÀ CHÍNH CÔNG THỨC ẤY BẢO ĐẢM BÀI TOÁN LUÔN GIẢI ĐƯỢC. Khoảng cách hông↔bàn chân trong mặt
+ * phẳng đứng là `√(off² + hipY²) = legLen·√(sin²α + (1−flex)²cos²α) ≤ legLen` với mọi `flex ≥ 0`.
+ * Tức tầm với của chân KHÔNG BAO GIỜ bị vượt vì lý do trước-sau; phần dự trữ còn lại
+ * (`legLen² − …` = `(legLen²−off²)·flex(2−flex)`) chính là thứ trả tiền cho độ dịch NGANG của hông.
+ * `humanGait.test.js` đo tỉ số tầm với thật ở đủ 14 kiểu × 15 kỷ để con số ấy không bao giờ là một
+ * lời hứa suông.
  */
 
 import { humanDims } from './human';
-import { gaitOf, THORAX_TWIST_RAD } from './humanGait';
+import { gaitOf, PELVIS_TWIST_RAD, THORAX_TWIST_RAD } from './humanGait';
 
 /** Gói một số thực về [0, 1). */
 function wrap01(v) {
@@ -43,45 +59,55 @@ function clamp(v, lo, hi) {
   return v < lo ? lo : (v > hi ? hi : v);
 }
 
-/**
- * Hệ số rút chi của khối `part` ở tư thế `pose`. Khớp nào không khai thì bằng 1.
- *
- * ⚠️ MỘT HÀM, MỘT CHỖ ĐỌC. Bốn nơi cần con số này (`partCenterAt`, `partCornersAt`,
- * `footContactAt`, và `sceneGraph.js`), và chép `pose.stretch?.[part.joint] ?? 1` ra bốn chỗ là
- * dựng sẵn bốn cơ hội để chúng trôi khỏi nhau — đúng quả mìn "một luật hai công thức" đã cắn ở
- * `daylight.test.js` và ở `cadenceOf`. `sceneGraph.js` nhập chính hàm này chứ không tự viết lại.
- */
-export function stretchOf(part, pose) {
-  return pose?.stretch?.[part?.joint] ?? 1;
-}
-
 /** Tay đang cầm đồ chỉ còn vung bằng ngần này lần tay không. Xem chú thích trong `poseAt`. */
 const CARRY_ARM_DAMP = 0.2;
 
 /**
- * ĐẦU GỐI GIẢ — chân còn lại bao nhiêu phần chiều dài, ở pha `p` của chu kỳ.
- *
- * Pha TIẾP ĐẤT trả về đúng 1: chân đang chịu toàn bộ trọng lượng thì nó thẳng, và mọi bất biến
- * cũ (bàn chân cắm đất, cái nhún suy từ chân trụ, trần góc hông) dựa vào đúng con số 1 ấy.
- * Pha ĐƯA CHÂN rút chân lại theo `sin²`, sâu nhất ở giữa pha rồi trở về 1 ở hai đầu.
- *
- * ⚠️ VÌ SAO `sin²` CHỨ KHÔNG `sin` — ĐÂY LÀ ĐIỀU KIỆN ĐỂ TRẦN GÓC HÔNG CÒN ĐÚNG, KHÔNG PHẢI MỘT
- * LỰA CHỌN CHO MƯỢT. Góc hông là `asin(off / (legLen·f))`, nên rút chân ngắn lại là NHÂN góc lên.
- * Với `s = sin(πu)`: biên độ pha đưa chân là `(cycle/4)·√(1−s²)`, cần `√(1−s²) ≤ f`.
- *   · `f = 1 − c·sin(πu)`  ⇒ gần hai đầu pha, vế phải tụt TUYẾN TÍNH còn vế trái tụt theo `s²/2`
- *     ⇒ bất đẳng thức **vỡ ngay sát mép**, ở MỌI giá trị `knee < 1`. Sai không triệu chứng.
- *   · `f = 1 − c·sin²(πu)` ⇒ đặt `g(s) = 1 − c·s² − √(1−s²)`: `g(0) = 0`, `g(1) = 1 − c > 0`, và
- *     `g′(s) = s·(1/√(1−s²) − 2c) > 0` với mọi `c ≤ 0,5` ⇒ `g ≥ 0` trên cả đoạn.
- * ⇒ Đúng vì `knee ≥ 0,5`, và `isValidGaitProfile` từ chối thẳng mọi giá trị dưới đó.
+ * Khuỷu tay gập sẵn bấy nhiêu radian ngay cả khi tay buông thõng (≈ 9°), rồi gập thêm `ELBOW_GAIN`
+ * lần phần tay đưa RA TRƯỚC. Người thật đi bộ gập khuỷu 20 tới 60°, sâu nhất lúc tay ở phía trước.
+ * ⚠️ CHỈ GẬP THÊM KHI TAY RA TRƯỚC, không gập khi tay ra sau — khuỷu chỉ có một chiều gập, và một
+ * cẳng tay duỗi ngược ra sau đọc ra ngay là gãy tay.
+ * ⚠️ EXPORT vì `humanPose.test.js` canh dải gập khuỷu bằng chính hai con số này. Chép tay sang bên
+ * test là "một luật hai công thức" — chúng sẽ trôi khỏi nhau và bài test vẫn xanh.
  */
-export function legFactorAt(p, knee) {
-  if (p < 0.5) return 1;
-  const s = Math.sin(Math.PI * (p - 0.5) * 2);
-  return 1 - (1 - knee) * s * s;
+export const ELBOW_REST_RAD = 0.16;
+export const ELBOW_GAIN = 0.9;
+
+/** Hai tay hơi dạng ra ngoài để cẳng tay không xuyên qua sườn. ≈ 6,3°. */
+const ARM_SPLAY_RAD = 0.11;
+
+/** Đai hông nghiêng tối đa bấy nhiêu radian khi `sway` chạm trần bảng (≈ 5,2°, đúng dải người thật). */
+const PELVIS_LIST_RAD = 0.09;
+
+/** Thân trên nghiêng ngược lại bấy nhiêu radian để cái đầu bớt lắc theo hông. */
+const TRUNK_COUNTER_RAD = 0.12;
+
+/**
+ * XOAY MỘT ĐỘ LỆCH QUANH MỘT KHỚP — **một hàm, một chỗ khai, bốn chỗ đọc.**
+ *
+ * `a` quay quanh trục z cục bộ (mặt phẳng đứng dọc theo hướng đi: đưa chân ra trước / ra sau).
+ * `b` quay quanh trục x cục bộ (trục ĐI TỚI: dạng chân ra ngoài / khép vào, nghiêng thân sang bên).
+ * Thứ tự cố định: **`Rx(b) · Rz(a)`** — nghiêng trước-sau xong rồi mới lật cả mặt phẳng ấy sang bên.
+ *
+ * ⚠️ `sceneGraph.js` PHẢI GHÉP QUATERNION THEO ĐÚNG THỨ TỰ NÀY (`Rz` rồi `premultiply` `Rx`). Hai
+ * bên là hai công thức cho cùng một luật, và dự án đã trả giá đúng chỗ đó (`sweep-score.mjs` chép
+ * lệch một mặc định của `city-preview.mjs` rồi in ra cả một bộ số bịa, Phase 4G). Cái giữ chúng
+ * khỏi trôi là bài đối chiếu chéo trong `sceneGraphWiring.test.js`: nó dựng cảnh thật rồi so từng
+ * toạ độ với `partCenterAt`.
+ */
+export function rotateByJoint(a, b, v) {
+  const ca = Math.cos(a);
+  const sa = Math.sin(a);
+  const cb = Math.cos(b);
+  const sb = Math.sin(b);
+  const x = v.x * ca - v.y * sa;
+  const y0 = v.x * sa + v.y * ca;
+  const z0 = v.z;
+  return { x, y: y0 * cb - z0 * sb, z: y0 * sb + z0 * cb };
 }
 
 /**
- * Độ dịch của BÀN CHÂN so với hông, theo hướng đi, ở một pha `p` của chu kỳ.
+ * Độ dịch của BÀN CHÂN so với trục hông, theo hướng đi, ở một pha `p` của chu kỳ.
  *
  * `cycle` là quãng đường thân đi được trong MỘT chu kỳ trọn vẹn của một chân.
  * Nửa đầu (p < 0,5) là TIẾP ĐẤT, nửa sau là ĐƯA CHÂN.
@@ -104,18 +130,76 @@ export function footOffsetAt(p, cycle) {
 }
 
 /**
+ * BÀN CHÂN NHẤC CAO BAO NHIÊU ở pha `p`. Pha tiếp đất trả về **đúng 0** — đó là định nghĩa của
+ * "đang chạm đất", và mọi bài test cắm chân dựa vào con số 0 ấy chứ không dựa vào một dung sai.
+ *
+ * ⚠️ HAI ĐẦU PHA ĐƯA CHÂN CŨNG PHẢI VỀ ĐÚNG 0, nếu không thì lúc bàn chân đặt xuống nó vẫn còn
+ * lơ lửng rồi "nhảy" xuống đất giữa hai khung hình. `sin(πu)` cho đúng điều đó: bằng 0 ở u = 0 và
+ * u = 1, cao nhất ở giữa, và đạo hàm ở hai đầu khác 0 nên bàn chân đáp xuống DỨT KHOÁT chứ không
+ * bồng bềnh — đúng cách người ta đặt chân.
+ */
+export function footLiftAt(p, height) {
+  if (p < 0.5) return 0;
+  return height * Math.sin(Math.PI * (p - 0.5) * 2);
+}
+
+/**
+ * ĐỘNG HỌC NGƯỢC HAI ĐOẠN — cho một khớp gốc và một đầu mút cần với tới, trả về góc của đoạn TRÊN,
+ * góc của đoạn DƯỚI, chỗ đặt khớp GIỮA, và tỉ số tầm với đã dùng.
+ *
+ * ⚠️ KHỚP GIỮA CHĨA RA **TRƯỚC** (`psi + alpha`, không phải `psi − alpha`). Đó là chiều gập của
+ * đầu gối người: gối nhô ra trước, cẳng chân hất về sau. Chọn dấu kia cho ra một cái chân gập
+ * ngược như chân chim — hình học vẫn hợp lệ, không có gì đỏ lên, và trông sai ngay lập tức.
+ *
+ * ⚠️ `voi` LÀ MỘT SỐ ĐO ĐƯỢC TRẢ RA NGOÀI, KHÔNG PHẢI MỘT PHÉP KẸP IM LẶNG. Nếu nó chạm 1 thì chi
+ * đang phải duỗi thẳng đơ để với tới đích, tức bảng dáng đi đã khai một thứ cơ thể không làm được.
+ * Trả nó ra để bài test đo được thay vì để nó lặng lẽ bị `acos` kẹp về 0 — một phép kẹp im lặng ở
+ * đây chính là hình dạng của mọi cái phễu mà dự án đã trả giá (Phase 9A).
+ */
+export function solveTwoBone(joint, target, l1, l2) {
+  const vx = target.x - joint.x;
+  const vy = target.y - joint.y;
+  const vz = target.z - joint.z;
+  // Mặt phẳng của chi được xác định bởi trục ĐI TỚI và đường nối khớp → đích. `b` là góc lật của
+  // mặt phẳng ấy quanh trục đi tới.
+  const b = Math.atan2(-vz, -vy);
+  const p = Math.hypot(vy, vz);
+  const reach = l1 + l2;
+  const d = Math.hypot(vx, p);
+  const voi = reach > 0 ? d / reach : 0;
+  const dc = Math.min(d, reach * 0.999);
+  const psi = Math.atan2(vx, p);
+  const cosA = dc > 0 ? (dc * dc + l1 * l1 - l2 * l2) / (2 * dc * l1) : 1;
+  const alpha = Math.acos(clamp(cosA, -1, 1));
+  const a1 = psi + alpha;
+  // Đầu mút của đoạn trên, TRONG MẶT PHẲNG chi (trục ngang = hướng đi, trục dọc = xuống).
+  const kx = l1 * Math.sin(a1);
+  const ky = -l1 * Math.cos(a1);
+  const tx = dc * Math.sin(psi);
+  const ty = -dc * Math.cos(psi);
+  const a2 = Math.atan2(tx - kx, -(ty - ky));
+  const mid = rotateByJoint(a1, b, { x: 0, y: -l1, z: 0 });
+  return {
+    a1,
+    a2,
+    b,
+    voi,
+    mid: { x: joint.x + mid.x, y: joint.y + mid.y, z: joint.z + mid.z },
+  };
+}
+
+/**
  * Tư thế của một cư dân sau khi đã đi được `travelled` ô.
  *
  * ⚠️ QUY ƯỚC DẤU — đọc kỹ, nó KHÔNG đối xứng và đó là hình học chứ không phải nhầm lẫn.
- * Mọi góc trả về là góc THÔ để đưa thẳng vào một phép xoay quanh trục z cục bộ (`Rz(a)`), tức
- * `sceneGraph.js` không phải suy diễn gì thêm. Với một chi CHĨA XUỐNG (chân, tay), `a` dương đưa
- * đầu mút RA TRƯỚC. Với thân CHĨA LÊN, cùng phép xoay ấy lại đưa đỉnh RA SAU — nên độ khom
- * `stance` vào đây với dấu ÂM. Bài test kiểm bằng TOẠ ĐỘ THẾ GIỚI của bàn chân, không kiểm bằng
- * dấu của góc, đúng vì lý do này.
+ * Mọi góc trả về là góc THÔ để đưa thẳng vào `rotateByJoint`, tức `sceneGraph.js` không phải suy
+ * diễn gì thêm. Với một chi CHĨA XUỐNG (chân, tay), `a` dương đưa đầu mút RA TRƯỚC. Với thân CHĨA
+ * LÊN, cùng phép xoay ấy lại đưa đỉnh RA SAU — nên độ khom `stance` vào đây với dấu ÂM. Bài test
+ * kiểm bằng TOẠ ĐỘ THẾ GIỚI của bàn chân, không kiểm bằng dấu của góc, đúng vì lý do này.
  *
  * @param {{style:object, dims:object}} body  kết quả `buildHumanBody`
  * @param {number} travelled                  quãng đường đã đi, đơn vị ô
- * @returns {{bob:number, cycle:number, phase:number, joints:object}}
+ * @returns {{bob:number, cycle:number, phase:number, reach:number, joints:object}}
  */
 export function poseAt(body, travelled) {
   const style = body?.style;
@@ -130,115 +214,141 @@ export function poseAt(body, travelled) {
   const phaseR = wrap01(phase + 0.5);
   const turn = Math.PI * 2 * phase;
 
-  const offL = footOffsetAt(phase, cycle);
-  const offR = footOffsetAt(phaseR, cycle);
-  const fL = legFactorAt(phase, g.knee);
-  const fR = legFactorAt(phaseR, g.knee);
-  const aHipL = Math.asin(clamp(offL / (d.legLen * fL), -1, 1));
-  const aHipR = Math.asin(clamp(offR / (d.legLen * fR), -1, 1));
+  // ── CHỖ ĐẶT HAI BÀN CHÂN — ĐẦU VÀO CỦA CẢ BÀI TOÁN ──────────────────────────
+  // ⚠️ Đây là ba dòng quan trọng nhất file. Mọi thứ bên dưới là hệ quả của chúng, và không có
+  // dòng nào bên dưới được phép sửa lại chúng.
+  const footZ = d.hipZ * (1 + g.splay);
+  const liftH = g.lift * d.legLen;
+  const footL = { x: footOffsetAt(phase, cycle), y: footLiftAt(phase, liftH), z: footZ };
+  const footR = { x: footOffsetAt(phaseR, cycle), y: footLiftAt(phaseR, liftH), z: -footZ };
 
-  // Chân nào đang TIẾP ĐẤT thì chân đó quyết định độ cao của hông. Đúng một chân tiếp đất tại mỗi
-  // thời điểm, vì hai chân lệch pha đúng nửa chu kỳ. Trong pha tiếp đất `legFactorAt` trả về đúng
-  // 1, nên biểu thức dưới đây y hệt bản trước khi có đầu gối — cái nhún KHÔNG đổi một chữ số.
-  const aStance = phase < 0.5 ? aHipL : aHipR;
-  const bob = d.legLen * (Math.cos(aStance) - 1);
+  // ── CHIỀU CAO HÔNG — SUY TỪ CHÂN TRỤ, KHÔNG PHẢI MỘT HÀM SIN RIÊNG ──────────
+  // Đúng một chân tiếp đất tại mỗi thời điểm (hai chân lệch pha nửa chu kỳ), nên chân ấy quyết
+  // định hông cao bao nhiêu. `flex` hạ thêm xuống: gối chùng thì cả người thấp đi.
+  const offStance = phase < 0.5 ? footL.x : footR.x;
+  const hipY = Math.sqrt(Math.max(0, d.legLen * d.legLen - offStance * offStance)) * (1 - g.flex);
+  const bob = hipY - d.legLen;
 
-  const hipY = d.legLen + bob;
-  const aTorso = -style.stance;
-  const sinT = Math.sin(aTorso);
-  const cosT = Math.cos(aTorso);
-
-  // ── LẮC NGANG (chỉ thân trên) ───────────────────────────────────────────────
-  // Chu kỳ bằng đúng một chu kỳ chân: trọng tâm dồn về phía chân đang trụ. Ở pha 0,25 (giữa pha
-  // trụ của chân TRÁI) thì `sin` bằng 1 ⇒ thân dạt sang +z, mà +z là bên trái. Đúng chiều.
-  // ⚠️ HÔNG KHÔNG DẠT THEO — xem chú thích `sway` ở `humanGait.js`. Dạt hông thì bàn chân trượt
-  // ngang trên mặt đường (3 tới 4 điểm ảnh với kiểu `roll`), vì bộ khớp ở đây chỉ xoay quanh MỘT
-  // trục nên cái chân không dạng ra bù được. Thiếu sót ấy ghi ở `TECH_DEBT`, không giả vờ đã có.
+  // ── ĐAI HÔNG: DỊCH NGANG, NGHIÊNG, VÀ XOAY ─────────────────────────────────
+  // Cả ba thứ này trước ADR-057 đều bị CẤM vì chúng làm bàn chân trượt. Nay bàn chân là đầu vào
+  // nên chúng chỉ còn là ba con số, và cái chân tự lo phần còn lại.
   const sway = g.sway * d.torsoW * Math.sin(turn);
+  const list = -PELVIS_LIST_RAD * g.sway * 2 * Math.sin(turn);
+  const pelvisTwist = g.twist * PELVIS_TWIST_RAD * Math.cos(turn);
+  const cosTw = Math.cos(pelvisTwist);
+  const sinTw = Math.sin(pelvisTwist);
 
-  // ── THÂN TRÊN BÁM CÁI NHÚN TỚI ĐÂU ──────────────────────────────────────────
+  /** Chỗ đặt một chỏm hông sau khi đai hông đã nghiêng rồi xoay. `side` = +1 (trái) hoặc −1 (phải). */
+  const hipAt = (side) => {
+    const v = rotateByJoint(0, list, { x: 0, y: 0, z: side * d.hipZ });
+    return { x: v.x * cosTw + v.z * sinTw, y: hipY + v.y, z: -v.x * sinTw + v.z * cosTw + sway };
+  };
+  const hipPosL = hipAt(1);
+  const hipPosR = hipAt(-1);
+
+  const legL = solveTwoBone(hipPosL, footL, d.thighLen, d.shinLen);
+  const legR = solveTwoBone(hipPosR, footR, d.thighLen, d.shinLen);
+  const reach = Math.max(legL.voi, legR.voi);
+
+  // ── THÂN TRÊN ──────────────────────────────────────────────────────────────
+  const aTorso = -style.stance;
+  // Thân nghiêng NGƯỢC lại phía hông vừa dạt sang, để cái đầu bớt lắc theo. Người thật làm đúng
+  // vậy, và nó là lý do cái đầu người đi bộ vẽ ra một đường gần thẳng chứ không phải hình sin.
+  const bTorso = -TRUNK_COUNTER_RAD * g.sway * 2 * Math.sin(turn);
   // `bob` luôn ≤ 0. `headTrack = 1` ⇒ `lift = −bob ≥ 0`, tức thân trên được nâng lại đúng bằng
   // phần hông vừa hạ ⇒ cái đầu trôi trên một đường thẳng (người đội vò). `headTrack` ÂM ⇒ thân
   // trên hạ THÊM, tức nhún mạnh hơn hông (đòn gánh tre nảy ngược pha).
-  // ⚠️ CÁI THÂN VẪN NEO Ở HÔNG, nên giữa đỉnh thân và cái đầu có thể hở tối đa `|bob|` — đo được
-  // dưới 1,2 điểm ảnh ở khung cận cảnh, và cái đầu vốn chồm lên đỉnh thân nên khe ấy không mở ra.
-  // Kéo giãn cả cái thân để bịt nốt sẽ tốn một trường `stretch` thứ hai cho một thứ không nhìn
-  // thấy — đúng loại chi tiết mà HỆ QUẢ 2b bảo phải từ chối.
   const lift = -g.headTrack * bob;
 
-  // ── ĐAI VAI XOAY NGƯỢC ──────────────────────────────────────────────────────
-  // Người thật đi bộ thì lồng ngực xoay ngược chiều với chân đang bước tới, để triệt mô men xoắn.
-  // Bỏ nó đi chính là thứ làm một hình nhân trông như robot dù chân tay đã đúng pha.
-  //
-  // ⚠️ CHỈ XOAY VAI, KHÔNG XOAY HÔNG — VÀ ĐÓ LÀ MỘT QUYẾT ĐỊNH CÓ ĐO, KHÔNG PHẢI MỘT THIẾU SÓT.
-  // Ngoài đời đai hông cũng xoay (±4…8°) và nó đóng góp khoảng 6% độ dài bước. Đưa nó vào đây thì
-  // khớp háng dịch ra trước, nên phép tính góc hông phải TRỪ đúng đoạn ấy đi để bàn chân còn đáp
-  // xuống chỗ cũ — tức một số hạng bù mới trong chính cái luật chống-trượt, cộng hai cái trần trong
-  // `humanPose.test.js` phải viết lại theo. Cái giá ấy đổi lấy **0,2 điểm ảnh** (biên độ
-  // `hipZ · sin(0,14) ≈ 0,0028 ô` ở khung mặc định), tức DƯỚI ngưỡng mắt kể cả ở khung cận cảnh.
-  // ⇒ Không làm. Thứ mắt đọc được vốn là độ xoay TƯƠNG ĐỐI giữa vai và hông, mà xoay riêng vai đã
-  // cho ra trọn vẹn độ tương đối ấy.
-  //
-  // ⚠️ Chỉ lấy số hạng x của phép xoay; phần z co lại theo `cos(θ)` bị bỏ qua có chủ ý — với θ tối
-  // đa 15° thì nó hẹp đi 3,4%, tức dưới một phần mười điểm ảnh. Ghi ra để đây là một xấp xỉ ĐÃ
-  // KHAI chứ không phải một chỗ quên.
-  const shoulderTwist = -g.twist * THORAX_TWIST_RAD * Math.cos(turn);
-  const twistDx = d.shoulderZ * Math.sin(shoulderTwist);
+  const pelvisPos = { x: 0, y: hipY, z: sway };
+  const topOfTorso = rotateByJoint(aTorso, bTorso, { x: 0, y: d.torsoH, z: 0 });
+  const headPos = {
+    x: pelvisPos.x + topOfTorso.x,
+    y: pelvisPos.y + topOfTorso.y + lift,
+    z: pelvisPos.z + topOfTorso.z,
+  };
 
-  // Vai đi theo thân: điểm treo vai phải được thân xoay rồi mới dùng, nếu không thì thân khom mà
-  // hai tay vẫn treo ở chỗ cũ và cánh tay lòi ra khỏi ngực.
+  // ── ĐAI VAI XOAY NGƯỢC ĐAI HÔNG ────────────────────────────────────────────
+  // Người thật đi bộ thì lồng ngực xoay ngược chiều với đai hông, để triệt mô men xoắn. Bỏ nó đi
+  // chính là thứ làm một hình nhân trông như robot dù chân tay đã đúng pha.
+  const shoulderTwist = -g.twist * THORAX_TWIST_RAD * Math.cos(turn);
+  const cosSw = Math.cos(shoulderTwist);
+  const sinSw = Math.sin(shoulderTwist);
   const shoulderY = d.torsoH * 0.88;
-  const shoulderPx = -shoulderY * sinT;
-  const shoulderPy = hipY + shoulderY * cosT + lift;
+  /** Chỗ đặt một chỏm vai: theo thân đã khom và nghiêng, rồi xoay quanh trục đứng. */
+  const shoulderAt = (side) => {
+    const v = rotateByJoint(aTorso, bTorso, { x: 0, y: shoulderY, z: side * d.shoulderZ });
+    return {
+      x: v.x * cosSw + v.z * sinSw,
+      y: pelvisPos.y + v.y + lift,
+      z: -v.x * sinSw + v.z * cosSw + pelvisPos.z,
+    };
+  };
 
   // Tay vung NGƯỢC chân cùng bên — người thật giữ thăng bằng xoay bằng cách ấy, và ở cỡ nhỏ thì
-  // chính sự ngược pha đó làm hình bóng "đi" thay vì "trượt". Cộng thêm độ khom của thân để tay
-  // treo đúng theo lồng ngực.
+  // chính sự ngược pha đó làm hình bóng "đi" thay vì "trượt".
   //
-  // ⚠️ TAY ĐANG CẦM ĐỒ THÌ GẦN NHƯ KHÔNG VUNG — và bỏ qua điều đó đã cho ra một lỗi nhìn thấy
-  // rõ trên ảnh chụp gần: cây giáo của kỷ 1 treo vào vai phải nên nó vung theo, **nghiêng qua lại
-  // 52,7°**. Một bàn tay đu 52° thì bình thường; một cây gậy dài hơn cả người đu 52° thì thành cái
-  // quả lắc đồng hồ, và mắt đọc ra ngay là sai dù không gọi được tên. Ngoài đời, tay cầm vật nặng
-  // là tay GIỮ YÊN — đó là cách người ta khỏi đánh rơi nó.
-  // Hệ quả phụ mà lại rất đáng: hai tay vung KHÁC nhau, và sự bất đối xứng ấy đọc ra được ở cỡ
-  // nhỏ tốt hơn hẳn bản thân cái vật đang cầm.
+  // ⚠️ TAY ĐANG CẦM ĐỒ THÌ GẦN NHƯ KHÔNG VUNG — bỏ qua điều đó đã cho ra một lỗi nhìn thấy rõ trên
+  // ảnh chụp gần: cây giáo của kỷ 1 treo vào vai phải nên nó vung theo, **nghiêng qua lại 52,7°**.
+  // Một bàn tay đu 52° thì bình thường; một cây gậy dài hơn cả người đu 52° thì thành cái quả lắc
+  // đồng hồ. Ngoài đời, tay cầm vật nặng là tay GIỮ YÊN.
   const swing = style.armSwing;
   const swingR = body.carryArm === 'shoulderR' ? swing * CARRY_ARM_DAMP : swing;
   const swingL = body.carryArm === 'shoulderL' ? swing * CARRY_ARM_DAMP : swing;
-  const aArmL = aTorso - swingL * Math.cos(turn);
-  const aArmR = aTorso - swingR * Math.cos(Math.PI * 2 * phaseR);
+  const devL = -swingL * Math.cos(turn);
+  const devR = -swingR * Math.cos(Math.PI * 2 * phaseR);
+  const aArmL = aTorso + devL;
+  const aArmR = aTorso + devR;
+  // Khuỷu gập sẵn một chút, và gập THÊM khi tay đưa ra trước. Chỉ một chiều — khuỷu không duỗi
+  // ngược được, và một cẳng tay bẻ ngược ra sau đọc ra ngay là gãy tay.
+  const elbowL = ELBOW_REST_RAD + ELBOW_GAIN * Math.max(0, devL);
+  const elbowR = ELBOW_REST_RAD + ELBOW_GAIN * Math.max(0, devR);
+  const shoulderPosL = shoulderAt(1);
+  const shoulderPosR = shoulderAt(-1);
+  const bArmL = -ARM_SPLAY_RAD;
+  const bArmR = ARM_SPLAY_RAD;
+  /** Chỗ đặt khuỷu = đầu mút của cánh tay trên. */
+  const elbowPos = (sh, a, b) => {
+    const v = rotateByJoint(a, b, { x: 0, y: -d.upperArmLen, z: 0 });
+    return { x: sh.x + v.x, y: sh.y + v.y, z: sh.z + v.z };
+  };
 
   return {
     bob,
     cycle,
     phase,
     /**
-     * ĐẦU GỐI GIẢ: chân còn lại bao nhiêu phần chiều dài, theo từng bên. Mọi nơi đọc `part.h` của
-     * một khối treo vào hông PHẢI nhân thêm hệ số này — `partCenterAt`, `partCornersAt`,
-     * `footContactAt` và `sceneGraph.js` đều làm vậy. Bỏ sót một chỗ thì bàn chân rời khỏi cẳng
-     * chân, và không có gì đỏ lên vì hình học vẫn hợp lệ.
+     * Tỉ số tầm với lớn nhất của hai chân ở tư thế này (1 = chân đang phải duỗi thẳng đơ mới với
+     * tới bàn chân). ⚠️ TRẢ RA NGOÀI ĐỂ BÀI TEST ĐO ĐƯỢC, không giấu trong một phép kẹp — xem chú
+     * thích `solveTwoBone`.
      */
-    stretch: { hipL: fL, hipR: fR },
+    reach,
     joints: {
-      hipL: { x: 0, y: hipY, z: d.hipZ, a: aHipL },
-      hipR: { x: 0, y: hipY, z: -d.hipZ, a: aHipR },
-      torso: { x: 0, y: hipY, z: sway, a: aTorso },
+      pelvis: { x: pelvisPos.x, y: pelvisPos.y, z: pelvisPos.z, a: 0, b: list },
+      torso: { x: pelvisPos.x, y: pelvisPos.y, z: pelvisPos.z, a: aTorso, b: bTorso },
       head: {
-        x: -d.torsoH * sinT,
-        y: hipY + d.torsoH * cosT + lift,
-        z: sway,
+        x: headPos.x,
+        y: headPos.y,
+        z: headPos.z,
         // Đầu ngẩng lại một nửa độ khom: người khom lưng vẫn nhìn về phía trước chứ không nhìn
         // xuống chân. Đây là góc TUYỆT ĐỐI, không phải góc so với thân.
         a: aTorso * 0.5,
+        b: bTorso * 0.5,
       },
-      shoulderL: { x: shoulderPx + twistDx, y: shoulderPy, z: sway + d.shoulderZ, a: aArmL },
-      shoulderR: { x: shoulderPx - twistDx, y: shoulderPy, z: sway - d.shoulderZ, a: aArmR },
+      hipL: { x: hipPosL.x, y: hipPosL.y, z: hipPosL.z, a: legL.a1, b: legL.b },
+      hipR: { x: hipPosR.x, y: hipPosR.y, z: hipPosR.z, a: legR.a1, b: legR.b },
+      kneeL: { x: legL.mid.x, y: legL.mid.y, z: legL.mid.z, a: legL.a2, b: legL.b },
+      kneeR: { x: legR.mid.x, y: legR.mid.y, z: legR.mid.z, a: legR.a2, b: legR.b },
+      shoulderL: { x: shoulderPosL.x, y: shoulderPosL.y, z: shoulderPosL.z, a: aArmL, b: bArmL },
+      shoulderR: { x: shoulderPosR.x, y: shoulderPosR.y, z: shoulderPosR.z, a: aArmR, b: bArmR },
+      elbowL: { ...elbowPos(shoulderPosL, aArmL, bArmL), a: aArmL + elbowL, b: bArmL },
+      elbowR: { ...elbowPos(shoulderPosR, aArmR, bArmR), a: aArmR + elbowR, b: bArmR },
     },
   };
 }
 
 /**
- * Vị trí TÂM của một hộp trong hệ toạ độ cục bộ của người, ở tư thế `pose`.
+ * Vị trí TÂM của một khối trong hệ toạ độ cục bộ của người, ở tư thế `pose`.
  *
  * ⚠️ TỒN TẠI ĐỂ BÀI TEST HỎI ĐÚNG THỨ `sceneGraph.js` DỰNG. Không có hàm này thì bài test phải
  * chép lại phép ghép ma trận, và bản chép sẽ trôi khỏi bản gốc — đúng cái đã xảy ra giữa
@@ -248,46 +358,30 @@ export function poseAt(body, travelled) {
 export function partCenterAt(part, pose) {
   const j = pose?.joints?.[part.joint];
   if (!j) return null;
-  const cos = Math.cos(j.a);
-  const sin = Math.sin(j.a);
-  // ⚠️ CHỈ `rest.y` NHÂN HỆ SỐ RÚT CHÂN, KHÔNG PHẢI `rest.x`/`rest.z`. Hệ số ấy là chiều dài chi
-  // còn lại; `rest.x`/`rest.z` là độ lệch NGANG (bàn chân lệch ra ngoài trục chân) và chúng không
-  // ngắn lại khi gối co. Nhân nhầm cả ba thì bàn chân chụm vào trong mỗi lần đưa chân.
-  const ry = part.rest.y * stretchOf(part, pose);
-  return {
-    x: j.x + part.rest.x * cos - ry * sin,
-    y: j.y + part.rest.x * sin + ry * cos,
-    z: j.z + part.rest.z,
-  };
+  const v = rotateByJoint(j.a, j.b ?? 0, part.rest);
+  return { x: j.x + v.x, y: j.y + v.y, z: j.z + v.z };
 }
 
 /**
- * TÁM ĐỈNH của một hộp ở tư thế `pose`, trong hệ cục bộ.
+ * TÁM ĐỈNH của hộp bao một khối ở tư thế `pose`, trong hệ cục bộ.
  *
  * ⚠️ TỒN TẠI VÌ HÌNH BÓNG LÀ CHUYỆN CỦA KHỐI ĐẶC, KHÔNG PHẢI CỦA TÂM HỘP. `scripts/human-scale.mjs`
  * đã nói dối đúng một lần vì lý do này: nó chiếu một ĐOẠN THẲNG từ bàn chân lên đỉnh đầu và ra
  * 8,1 điểm ảnh, trong khi ảnh thật đo được 11,0 — camera nhìn chếch nên mặt trên của khối cũng
- * chiếm chỗ theo chiều dọc màn hình. Bài test "hình bóng đổi theo pha bước" hỏi bề rộng, nên nó
- * phải hỏi ĐỈNH chứ không hỏi tâm.
+ * chiếm chỗ theo chiều dọc màn hình.
  */
 export function partCornersAt(part, pose) {
   const j = pose?.joints?.[part.joint];
   if (!j) return [];
   const c = partCenterAt(part, pose);
-  const cos = Math.cos(j.a);
-  const sin = Math.sin(j.a);
-  const he = stretchOf(part, pose);
+  const a = j.a;
+  const b = j.b ?? 0;
   const out = [];
   for (const sx of [-0.5, 0.5]) {
     for (const sy of [-0.5, 0.5]) {
       for (const sz of [-0.5, 0.5]) {
-        const ox = sx * part.w;
-        const oy = sy * part.h * he;
-        out.push({
-          x: c.x + ox * cos - oy * sin,
-          y: c.y + ox * sin + oy * cos,
-          z: c.z + sz * part.d,
-        });
+        const v = rotateByJoint(a, b, { x: sx * part.w, y: sy * part.h, z: sz * part.d });
+        out.push({ x: c.x + v.x, y: c.y + v.y, z: c.z + v.z });
       }
     }
   }
@@ -317,12 +411,16 @@ export function silhouetteSpanX(body, travelled) {
 }
 
 /**
- * Điểm CHẠM ĐẤT của một bàn chân, trong hệ cục bộ. Đầu mút dưới của hộp chân, sau khi hông xoay.
- * Bài test "chân không trượt" cộng con số này vào quãng đường đã đi rồi đòi kết quả đứng yên.
+ * Điểm CHẠM ĐẤT ở đầu mút dưới của một khối chi, trong hệ cục bộ. Bài test "chân không trượt" cộng
+ * con số này vào quãng đường đã đi rồi đòi kết quả đứng yên ở CẢ BA TRỤC.
+ *
+ * ⚠️ TRUYỀN VÀO KHỐI **CẲNG CHÂN**, KHÔNG PHẢI KHỐI ĐÙI — từ ADR-057 bàn chân nằm ở đầu mút dưới
+ * của cẳng chân, treo vào khớp GỐI. Truyền nhầm khối đùi thì hàm này trả về chỗ đặt đầu gối và
+ * bài test sẽ đo một thứ hoàn toàn khác mà vẫn ra những con số trông hợp lý.
  */
 export function footContactAt(part, pose) {
   const j = pose?.joints?.[part.joint];
   if (!j) return null;
-  const len = part.h * stretchOf(part, pose);
-  return { x: j.x + len * Math.sin(j.a), y: j.y - len * Math.cos(j.a), z: j.z };
+  const v = rotateByJoint(j.a, j.b ?? 0, { x: 0, y: -part.h, z: 0 });
+  return { x: j.x + v.x, y: j.y + v.y, z: j.z + v.z };
 }

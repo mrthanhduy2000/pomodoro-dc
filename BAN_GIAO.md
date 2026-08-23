@@ -6,7 +6,31 @@
 > chọn: `ARCHITECTURE_DECISIONS.md`. Nợ kỹ thuật: `TECH_DEBT.md`. Migration: `MIGRATION.md`. Tóm
 > tắt theo mốc: `CHANGELOG.md`.
 > **NGUYÊN TẮC ƯU TIÊN SỐ 1:** (1) mọi phiên AI phải đọc file này + `CLAUDE.md` + các file liên quan TRƯỚC khi làm; (2) sau MỌI cập nhật dù nhỏ, phải cập nhật ngay file này + `CLAUDE.md` + các file liên quan khác.
-> Cập nhật lần cuối: **2026-08-24** — **CƯ DÂN THÔI ĐI NHƯ ROBOT** (ADR-056). Đàm: *"ít ảnh phẳng
+> Cập nhật lần cuối: **2026-08-24 (tối)** — **CHÂN CÓ ĐẦU GỐI THẬT, GIẢI BẰNG KHỚP NGƯỢC**
+> (ADR-057, **đóng `TECH_DEBT #82`**). Đàm: *"Không đo, tiếp tục làm, không hỏi vặt, làm sao cho
+> con người có nhiều góc bo tròn, **cử động khớp thật**, **có thể vẽ thêm tam giác/khối mỗi ngưới
+> tới lúc nó bo tròn**, 3D nhiều hơn, tăng thêm kiểu đi, chuyển động thật và ít mặt phẳng hơn"*.
+> Hai vế in đậm là **hai lệnh thu hồi tường minh**: cái mẹo co-gối-giả của ADR-056, và trần **11
+> khối mỗi người** mà chính Đàm đặt ra trước đó.
+> Bốn việc: **(1)** **KHỚP NGƯỢC** — `poseAt` viết lại hoàn toàn, ba dòng đầu đặt hai bàn chân
+> trong không gian THẾ GIỚI rồi `solveTwoBone` suy ngược ra góc đùi và góc gối bằng định lý hàm
+> cosin. Đảo chiều nhân quả ấy làm đai hông được **lắc ngang · nghiêng · xoay MIỄN PHÍ** (cả ba
+> trước đó bị `TECH_DEBT #82` cấm, và cả ba biến mất **cùng lúc** chứ không phải gỡ từng cái), và
+> làm trường `knee` cùng toàn bộ định lý `sin²` của ADR-056 **biến mất** — không phải vì sai mà vì
+> tiền đề *"mesh cứng không gập được"* đã bị gỡ (bẫy Phase 8C). **(2)** **CƠ THỂ**: 11 → **16…18
+> khối**, 3 → **11 khớp**; mỗi chân nay là đùi + cẳng chân + bàn chân, mỗi tay là cánh tay + cẳng
+> tay + bàn tay. **(3)** **BO TRÒN**: bộ khuôn 8 → **9** (thêm `calf`), mọi khuôn không phải hộp đi
+> từ 8 lên **12 mặt** và 3–6 **VÀNH** — vì **số vành**, chứ không phải số mặt, mới quyết định
+> "phẳng hay không". **(4)** **BẢNG DÁNG ĐI 9 → 14 kiểu, 4 → 6 trục** (`lift · flex · sway · twist
+> · headTrack · splay`), cộng khớp **hai trục** (`Rx(b) · Rz(a)`, thứ tự cố định ở cả tầng thuần
+> lẫn tầng cảnh).
+> Số: tam giác mỗi người **220…324 → 1.616…1.928** (×6,4) · tam giác cả 15 kỷ **+4,1%** · **+1 lệnh
+> vẽ ở CẢ 15 kỷ** (khuôn `calf`) · trần khối **11 → 18** và trần tỉ lệ **11% → 30%**, cả hai theo
+> lệnh tường minh của Đàm kèm bốn căn cứ đo được · trượt chân **4,86 × 10⁻¹⁷ ô** trên **210 tổ
+> hợp** · `reach` cao nhất **0,9928**. ⚠️ **`ms` mỗi khung CHƯA đo lại** (hộp cát chỉ có
+> SwiftShader) — 30% là trần theo tỉ lệ hình học, không phải lời hứa về tốc độ; muốn xác nhận thì
+> `bash scripts/bench-macbook.sh`. Chi tiết: `PERFORMANCE.md` mục Phase 17.
+> (Mốc trước, 2026-08-24 sáng) — **CƯ DÂN THÔI ĐI NHƯ ROBOT** (ADR-056). Đàm: *"ít ảnh phẳng
 > hơn, tạo nhiều đặc trưng hơn, di chuyển mượt mà hơn (nhiều kiểu di chuyển), mỗi kỷ phải tốt hơn,
 > mỗi người phải ra dáng người hơn và không cử động như robot, hình ảnh 3D hơn, đẹp hơn"*. Bốn
 > việc: **(1)** `humanGait.js` MỚI — **bảng 9 KIỂU ĐI** (`stride · glide · march · mince · trudge ·
@@ -1598,6 +1622,65 @@
 - **Lịch sử git `main` từng bị xáo** (thao tác git song song): bản đang chạy là `eb44638` — chứa ĐỦ mọi việc gần đây (Hỏi Coach offline + fix đêm khuya + Coach offline analyst). Vài commit cũ (`1e27505`, `9fbcd62`) thành dangling, KHÔNG còn trong `git log` nhưng code vẫn nằm trong bản deploy. Đừng hoảng nếu không thấy chúng.
 
 ## 🗒️ Nhật ký cập nhật
+
+### 2026-08-24 (tối) — Chân có đầu gối thật: giải bằng khớp ngược (ADR-057, đóng `TECH_DEBT #82`)
+
+**Lệnh của Đàm**: *"Không đo, tiếp tục làm, không hỏi vặt, làm sao cho con người có nhiều góc bo
+tròn, cử động khớp thật, có thể vẽ thêm tam giác/khối mỗi ngưới tới lúc nó bo tròn, 3D nhiều hơn,
+tăng thêm kiểu đi, chuyển động thật và ít mặt phẳng hơn."*
+
+Ba chữ *"không đo"* = bỏ qua phép đo hiệu năng trên MacBook mà tôi đã đề xuất làm việc kế tiếp.
+Hai vế *"cử động khớp thật"* và *"vẽ thêm tam giác/khối"* là hai lệnh **thu hồi tường minh**.
+
+**Đã làm gì**
+- **`humanPose.js` VIẾT LẠI HOÀN TOÀN — khớp ngược.** Ba dòng đầu của `poseAt` đặt hai bàn chân
+  trong KHÔNG GIAN THẾ GIỚI (`footOffsetAt` dọc đường đi · `footLiftAt` độ nâng lúc đưa · `splay`
+  bề ngang), rồi `solveTwoBone` giải ngược ra góc đùi và góc gối bằng định lý hàm cosin. `stretchOf`
+  và `legFactorAt` bị **xoá**; `sceneGraph.js` bỏ theo. Thêm `pose.reach` (tỉ số hông→bàn chân trên
+  tổng chiều dài xương) làm bất biến cốt lõi.
+- **`human.js`**: 11 → **16…18 khối**, 3 → **11 khớp** (thêm `pelvis`, `elbowL/R`, `kneeL/R`).
+  `humanDims` thêm `thighLen · shinLen · upperArmLen · forearmLen · handLen`.
+- **`humanShape.js`**: bộ 8 → **9 khuôn** (thêm `calf` — cẳng chân, có thắt gối). Mọi khuôn không
+  phải hộp đi từ 8 lên **12 mặt** và 3–6 vành; mỗi khuôn cong có ít nhất một **ĐIỂM UỐN**.
+- **`humanGait.js`**: 9 → **14 kiểu** (thêm `prowl · shuffle · swagger · plod · scurry`), 4 → **6
+  trục** (`lift · flex · sway · twist · headTrack · splay`). `gaitOf()` nay nhận cả một hồ sơ đầy
+  đủ chứ không chỉ một tên — đó là lối bơm mà bài "dây nối" cần; đổi lại, test ĐÒI bảng kỷ khai
+  `gait` là một **chuỗi** ở cả 15 kỷ để bảng không lợi dụng lối ấy.
+- **`humanStyle.js`**: gán lại kiểu đi cho cả 15 kỷ, mỗi dòng kèm lý do buộc vào `country`.
+- **`sceneGraph.js`**: khớp **hai trục** (`TRAVEL_AXIS` mới), ghép theo thứ tự cố định
+  `jointSpin.premultiply(jointRoll)` = `Rx(b) · Rz(a)`.
+
+**Số đo**
+- Trượt chân **4,86 × 10⁻¹⁷ ô** trên **210 tổ hợp** (14 kiểu × 15 kỷ) — sai số dấu phẩy động.
+- `reach` cao nhất **0,9928** (kỷ 12, `march`). Nhánh kẹp của `solveTwoBone` **chưa bao giờ chạy**.
+- Gối gập **−84,3°…−13,8°**, dấu luôn ÂM ⇒ không bao giờ bẻ ngược.
+- Tam giác mỗi người **1.616…1.928**; tam giác 15 kỷ **3.068.606 → 3.194.262 (+4,1%)**.
+- Lệnh vẽ **+1 ở cả 15 kỷ**, neo Chromium ở kỷ 1 · 8 · 13 (**13 · 19 · 14** thành phố).
+- Cư dân chiếm **16,27%…26,12%** tam giác cảnh; ca xấu nhất kỷ 1.
+
+**Sáu bài test đỏ, không bài nào đỏ vì mã hỏng** — và đây là phần đáng đọc nhất. Bốn bài đo một mô
+hình đã chết; hai bài đếm sai số khối. Ca đáng nhớ nhất: *"biên độ khớp có trần"* đòi góc đùi
+`≤ asin(stride/4)`, một trần suy từ tam giác vuông của mô hình chân CỨNG. Có đầu gối thật thì đùi
+**phải** nghiêng nhiều hơn thế (**57,3°** so với **27,5°** ở kỷ 1) — giữ nguyên con số ấy làm trần
+là dùng một bài test để hoàn tác một bản vá đúng. Đã **đổi vai của nó thành SÀN**, rồi thay chỗ
+trống bằng những bất biến thật của mô hình mới.
+
+**Một phép phá không nổ, và không có gì hỏng cả**: bơm `splay` lên tận trần dải hợp lệ mà bàn chân
+không trượt một chút nào — vì **không một cần gạt nào của bảng dáng đi có thể làm bàn chân trượt**,
+nó là ĐẦU VÀO nên đứng yên theo cấu tạo. Phải phá bằng `stride: 5` (bảng CƠ THỂ). Đã ghi thẳng câu
+trả lời ấy vào chú thích, kẻo phiên sau đọc thành một lỗ hổng.
+
+**Nghiệm thu**: `npm test` **1133 bài, 0 đỏ, 1 skipped** · `npm run lint` sạch · `npm run build`
+xanh · ảnh `.city-preview/human-strip-ky1-15.png` dựng lại sạch.
+
+**Tài liệu đã cập nhật**: ADR-057 · `ARCHITECTURE.md` · `PROJECT_STRUCTURE.md` · `PERFORMANCE.md`
+(Phase 17) · `TECH_DEBT.md` (**đóng #82**) · `CHANGELOG.md` · `CLAUDE.md` · `BAN_GIAO.md`.
+
+**Việc phiên sau cần biết**: **`ms` mỗi khung CHƯA đo lại.** Hộp cát chỉ có SwiftShader nên mọi con
+số thời gian ở đây vô nghĩa. Trần 30% là một trần theo TỈ LỆ HÌNH HỌC, không phải một lời hứa về
+tốc độ. Muốn xác nhận: `bash scripts/bench-macbook.sh` trên MacBook M3 của Đàm.
+
+---
 
 ### 2026-08-24 — Dáng đi thành một trục bản sắc, và khuôn cơ thể hết phẳng (ADR-056)
 

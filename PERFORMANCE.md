@@ -2407,6 +2407,106 @@ sáng và 3 mảng sáng chênh nhau dưới ngưỡng mắt — điều đó đ
 
 ---
 
+## Phase 17 — CHÂN CÓ ĐẦU GỐI THẬT, GIẢI BẰNG KHỚP NGƯỢC (2026-08-24 tối, ADR-057)
+
+**CÔNG CỤ · ĐẦU VÀO · ĐỜI ẢNH** (ba vế bắt buộc, xem `CLAUDE.md`):
+
+- Hình học: `node --import ./scripts/register-esm-loader.mjs scripts/scene-tri.mjs --sessions 80`
+  (giờ 12 · cấp 3 · chuỗi 9). Cột "trước" là bảng **Phase 16** ngay bên dưới, đo bằng ĐÚNG lệnh
+  này ở cùng fixture — nên lần này việc dùng lại nó **không** phạm `TECH_DEBT #43`; điều kiện là
+  hai vế cùng lệnh, cùng `sessionCount`, cùng cấp. Đã kiểm bằng một phép đối chiếu độc lập: khuôn
+  `calf` có mặt ở cả 15 kỷ và lệnh vẽ nhích đúng +1 ở cả 15 kỷ.
+- Neo Chromium (lệnh vẽ): `node scripts/city-preview.mjs --era N --hour 12 --sessions 40 --level 1
+  --bench 1 --no-shadow` ⇒ kỷ **1 = 15** · kỷ **8 = 21** · kỷ **13 = 16** lệnh vẽ CẢ KHUNG, tức
+  **13 · 19 · 14** cho riêng thành phố (trừ vòm trời + rặng núi). Khớp từng đơn vị với `scene-tri`
+  ở cùng fixture, bằng một đường đo hoàn toàn độc lập.
+- Neo Chromium (tam giác): `--era 1 … --sessions 40 --level 1` ⇒ **152.558** tam giác thành phố,
+  và `scene-tri.mjs` ở cùng fixture cũng ra **152.558**.
+- Ảnh: `.city-preview/human-strip-ky1-15.png`, dựng lại sạch lúc **21:42 ngày 2026-08-24**.
+
+### Tam giác thành phố — 15 kỷ, 80 phiên
+
+| kỷ | trước (Phase 16) | sau (ADR-057) | chênh | % |
+|---:|---:|---:|---:|---:|
+| 1 | 107.262 | 149.710 | **+42.448** | +39.6% |
+| 2 | 132.088 | 177.224 | **+45.136** | +34.2% |
+| 3 | 143.094 | 185.766 | **+42.672** | +29.8% |
+| 4 | 193.994 | 238.234 | **+44.240** | +22.8% |
+| 5 | 126.308 | 171.444 | **+45.136** | +35.7% |
+| 6 | 228.880 | 273.792 | **+44.912** | +19.6% |
+| 7 | 207.592 | 251.384 | **+43.792** | +21.1% |
+| 8 | 182.256 | 227.168 | **+44.912** | +24.6% |
+| 9 | 169.770 | 214.010 | **+44.240** | +26.1% |
+| 10 | 153.404 | 198.764 | **+45.360** | +29.6% |
+| 11 | 183.826 | 227.618 | **+43.792** | +23.8% |
+| 12 | 154.216 | 199.576 | **+45.360** | +29.4% |
+| 13 | 186.556 | 228.108 | **+41.552** | +22.3% |
+| 14 | 194.840 | 233.928 | **+39.088** | +20.1% |
+| 15 | 173.520 | 217.536 | **+44.016** | +25.4% |
+| **tổng** | **2,537,606** | **3,194,262** | **+656,656** | **+25.9%** |
+
+### Cơ thể mỗi kỷ
+
+| kỷ | khối/người | tam giác/người | × 28 cư dân | % tam giác cảnh |
+|---:|---:|---:|---:|---:|
+| 1 | 18 | 1.808 | 50.624 | 26.12% |
+| 2 | 18 | 1.904 | 53.312 | 24.08% |
+| 3 | 17 | 1.788 | 50.064 | 21.78% |
+| 4 | 17 | 1.860 | 52.080 | 18.44% |
+| 5 | 18 | 1.904 | 53.312 | 24.73% |
+| 6 | 18 | 1.882 | 52.696 | 16.58% |
+| 7 | 17 | 1.860 | 52.080 | 17.62% |
+| 8 | 18 | 1.928 | 53.984 | 19.90% |
+| 9 | 18 | 1.872 | 52.416 | 20.31% |
+| 10 | 18 | 1.928 | 53.984 | 22.23% |
+| 11 | 17 | 1.860 | 52.080 | 19.17% |
+| 12 | 18 | 1.928 | 53.984 | 22.15% |
+| 13 | 17 | 1.732 | 48.496 | 17.81% |
+| 14 | 16 | 1.616 | 45.248 | 16.27% |
+| 15 | 17 | 1.836 | 51.408 | 19.65% |
+
+**Lệnh vẽ: +1 ở CẢ 15 KỶ, không ngoại lệ.** Con số 1 ấy có tên — khuôn `calf` (cẳng chân) là một
+`InstancedMesh` nữa. Không kỷ nào +2 (nghĩa là còn thứ khác đi ké), không kỷ nào +0 (nghĩa là kỷ ấy
+chưa nhận bản vá). `drawCallBudget.test.js` canh vế này bằng một phép trừ riêng
+(`MOC_TRUOC_KHOP_NGUOC`), không cộng dồn vào phép trừ của mặt nước hay của vùng phụ cận.
+
+### Hai trần đã nâng, và vì sao đó không phải một cái phễu
+
+| trần | trước | sau | căn cứ |
+|---|---:|---:|---|
+| khối / người | 11 | **18** | Đàm thu hồi tường minh: *"có thể vẽ thêm tam giác/khối mỗi ngưới tới lúc nó bo tròn"*. Trần cũ có lý lẽ đúng (*"ở cỡ 18 px thì khối thứ 12 không đọc ra"*) nhưng lý lẽ ấy nói về khung TOÀN CẢNH, mà ADR-034 đã thêm lối đưa mắt tới gần từ lâu. Tiền đề đổi trước, lệnh thu hồi tới sau. |
+| % tam giác cảnh | 11% | **30%** | Ca xấu nhất ĐO ĐƯỢC là **kỷ 1 = 26,12%**; 30% chừa **12,9% biên** — đủ cho một chi tiết nhỏ về sau, không đủ để cơ thể lặng lẽ to gấp rưỡi. |
+| tam giác / người (tuyệt đối) | 640 | **2.100** | Số đo hôm nay (1.928) cộng đúng một khuôn `limb` dự phòng (116). Trần tuyệt đối này tồn tại để một phase sau làm thành phố nặng thêm **không tự động cấp thêm quota** cho cư dân. |
+
+Bốn căn cứ để tin là an toàn, xếp từ mạnh xuống yếu: **(1)** đo trên chính MacBook Air M3 của Đàm,
+cảnh chậm nhất **5,20 ms** trên trần 16,67 ms ⇒ dư **3,2 lần**, và mô hình chi phí là *"≈ 0,87 ms
+cố định + 1,14 ms mỗi TRIỆU ĐIỂM ẢNH THẬT"* ⇒ **80% chi phí đi theo ĐIỂM ẢNH, không theo tam
+giác** (bằng chứng trực tiếp: tam giác chênh 43% giữa kỷ 3 và kỷ 11 mà thời gian chỉ chênh 2,4%);
+**(2)** cư dân **không đổ bóng**, nên họ không tốn gì ở lượt dựng bản đồ bóng — lượt đắt nhất mà
+hình học phải trả; **(3)** Đàm gỡ cổng hiệu năng ngày 2026-08-21; **(4)** lệnh vẽ chỉ +1, và lệnh
+vẽ mới là thứ đắt trên GPU tích hợp.
+
+⚠️ **GIỚI HẠN PHẢI NÓI THẲNG: ms mỗi khung CHƯA ĐO LẠI.** Hộp cát dựng bằng SwiftShader (bộ tô hình
+chạy trên CPU), mà luật của dự án là *"một con số đo trong hộp cát chỉ được dùng để so các trường
+hợp TRONG hộp cát ấy"*. Bốn căn cứ trên đều là suy từ phép đo **CŨ** trên máy thật, không phải phép
+đo **MỚI**. Muốn xác nhận: `bash scripts/bench-macbook.sh` trên máy Đàm.
+
+### Dáng đi — số đo
+
+- **Trượt chân**: **4,86 × 10⁻¹⁷ ô** trên 210 tổ hợp (14 kiểu × 15 kỷ). Đây là sai số dấu phẩy
+  động, không phải một dung sai — bàn chân đứng yên **theo cấu tạo**, vì nó là ĐẦU VÀO của phép
+  giải khớp ngược.
+- **`reach`** (tỉ số hông→bàn chân trên tổng chiều dài xương): cao nhất **0,9928** ở kỷ 12
+  (`march`, sải chân dài nhất bảng). Nhánh kẹp của `solveTwoBone` vì vậy **chưa bao giờ chạy** —
+  và đúng vì thế phải có một bài test bơm `stride: 5` chứng minh nó vẫn còn hoạt động.
+- **Nâng bàn chân lúc đưa**, theo % chiều dài chân: 12 · 6 · 7 · 4 · 16 · 10 · 10 · 9 · 11 · 3 ·
+  13 · 22 · 8 · 2 · 6. Thấp nhất là kỷ 14 (`shuffle` — lê chân, đúng như khai `lift: 0.02`), cao
+  nhất là kỷ 12 (`march` — bước duyệt binh).
+- **Gối gập**: −84,3° tới −13,8° qua 15 kỷ. Dấu luôn ÂM ⇒ gối không bao giờ bẻ ngược.
+- **Bảng dáng đi**: 14 kiểu · 91 cặp · cặp gần nhau nhất vẫn khác **3/6 trường**.
+
+---
+
 ## Phase 16 — DÁNG ĐI THÀNH MỘT TRỤC BẢN SẮC, VÀ KHUÔN CƠ THỂ HẾT PHẲNG (2026-08-24, ADR-056)
 
 **CÔNG CỤ · ĐẦU VÀO · ĐỜI ẢNH** (ba vế bắt buộc, xem `CLAUDE.md`):

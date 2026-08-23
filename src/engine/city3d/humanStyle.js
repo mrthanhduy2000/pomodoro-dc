@@ -237,7 +237,9 @@ export const HUMAN_STYLES = {
     // thì bước dài và thưa: đỡ mệt, đỡ gây tiếng động.
     // Sải dài thong dong trên địa hình hoang: không vỉa hè, không đám đông, không giờ giấc.
     // Chân nhấc thoải mái vì đường đất gồ ghề — quét chân là vấp.
-    gait: 'stride',
+    // ⚠️ ĐỔI TỪ `stride` SANG `prowl` (ADR-057): thợ săn rình mồi hạ trọng tâm — `flex` SÂU
+    // NHẤT bảng. Trước ADR-057 không có trục nào diễn đạt được điều đó, vì gối là gối GIẢ.
+    gait: 'prowl',
     stride: 1.85,
     // ⚠️ CHẬM THỨ NHÌ BỘ (kỷ 4 chậm hơn: 0,28). Nhưng cặp (SẢI DÀI NHẤT + chậm) vẫn cho ra TẦN
     // SỐ BƯỚC THẤP NHẤT 15 kỷ — và đó chính là điểm của việc khai hai trục thay vì một: kỷ 4 đi
@@ -290,6 +292,7 @@ export const HUMAN_STYLES = {
     // ⚠️ SUY THẲNG TỪ `carry: 'pot'`, KHÔNG PHẢI MỘT LỰA CHỌN RỜI. Đội vật trên đầu chỉ giữ được
     // khi cái đầu trôi trên một đường gần thẳng; người đội đầu biến cột sống thành bộ giảm xóc.
     // Đây là kỷ DUY NHẤT có `headTrack` gần 1, và nó gần 1 vì một lý do vật lý chứ không vì đẹp.
+    // Đội vò trên đầu: cái đầu là mặt phẳng chuẩn, mọi thứ khác phải êm quanh nó.
     gait: 'glide',
     stride: 1.52,
     walkSpeed: 0.36,
@@ -320,7 +323,9 @@ export const HUMAN_STYLES = {
     carry: 'bundle',
     // Ur III là nhà nước quan liêu đầu tiên của lịch sử: sổ sách, định mức, đoàn phu khuân vác.
     // Đi đều, nhấc chân cao — dáng của người đi trong một trật tự có người đếm.
-    gait: 'march',
+    // ⚠️ ĐỔI TỪ `march` SANG `plod` (ADR-057): phu xây ziggurat khiêng gạch bùn, không phải
+    // lính duyệt binh. Gánh nặng thì gối chùng để giảm xóc — nay có trục `flex` để nói điều đó.
+    gait: 'plod',
     stride: 1.44,
     walkSpeed: 0.38,
     armSwing: 0.22,
@@ -351,6 +356,7 @@ export const HUMAN_STYLES = {
     // Sải NGẮN NHẤT bộ: đi trong áo chấm sàn thì bước dài là giẫm lên gấu áo. Ràng buộc vật lý.
     // Áo chấm sàn ghì chân lại: bước dài là giẫm lên gấu áo. Cùng ràng buộc VẬT LÝ với kỷ 7 và
     // kỷ 15 — ba kỷ mặc áo dài, ba kỷ cùng một kiểu đi, và đó là điều đúng chứ không phải trùng lặp.
+    // Quy chế lễ nghi cung đình: bước nhỏ, hai bàn chân đặt SÁT trục giữa (`splay` âm).
     gait: 'mince',
     stride: 1.28,
     // Chậm nhất bộ.
@@ -380,7 +386,9 @@ export const HUMAN_STYLES = {
     // Thành thị Đức trung cổ là thành thị PHƯỜNG HỘI: người trên phố là thợ, không phải hiệp sĩ.
     carry: 'tool',
     // Thợ phường hội trong một thành phố nhỏ: không vội, không mang nặng trên vai, đường phố ngắn.
-    gait: 'saunter',
+    // ⚠️ ĐỔI TỪ `saunter` SANG `stride` (ADR-057): thợ mộc Fachwerk đi giữa những con phố
+    // đất rộng, không vướng đám đông — sải dài và vai đảo theo bước.
+    gait: 'stride',
     stride: 1.62,
     walkSpeed: 0.44,
     armSwing: 0.34,
@@ -411,6 +419,8 @@ export const HUMAN_STYLES = {
     // ⚠️ ĐÒN TRE LÀ MỘT CÁI LÒ XO. Tải trọng nảy NGƯỢC pha với hông, nên vai và đầu nhún mạnh hơn
     // hông — kỷ DUY NHẤT có `headTrack` âm. Nhịp bước phải khớp chu kỳ nảy ấy, và `stride: 1,34`
     // ngắn ở trên chính là hệ quả của cùng một cái đòn.
+    // ⚠️ ĐÒN TRE LÀ MỘT CÁI LÒ XO. Tải trọng nảy NGƯỢC pha với hông, nên vai và đầu nhún mạnh
+    // hơn hông — kỷ DUY NHẤT có `headTrack` âm.
     gait: 'bounce',
     stride: 1.34,
     walkSpeed: 0.40,
@@ -436,7 +446,9 @@ export const HUMAN_STYLES = {
     carry: 'none',
     // Áo chùng lucco chấm đất — cùng ràng buộc với kỷ 4, khác thế kỷ và khác lục địa. `note` ở trên
     // đã ghi 'chân bị áo nuốt': dáng đi phải nói lại đúng điều ấy, không được nói ngược.
-    gait: 'mince',
+    // ⚠️ ĐỔI TỪ `mince` SANG `saunter` (ADR-057): dạo quảng trường Firenze, không vội và
+    // không nghi lễ. `mince` nay để dành cho quy chế cung đình kỷ 4.
+    gait: 'saunter',
     stride: 1.55,
     walkSpeed: 0.42,
     armSwing: 0.28,
@@ -463,6 +475,8 @@ export const HUMAN_STYLES = {
     // ngay bên cạnh dù hai kỷ chỉ cách nhau vài chục năm.
     // ⚠️ LẮC NGANG MẠNH NHẤT BỘ, và nó không phải tính cách mà là NGHỀ: người sống trên boong tàu
     // học cách dồn trọng tâm sang bên để bù độ nghiêng, rồi giữ dáng ấy cả khi lên bờ.
+    // Thuỷ thủ: lắc NHIỀU NHẤT bảng và chân dạng RỘNG NHẤT bảng. Hai thứ ấy đi với nhau —
+    // đó là cách người ta đứng vững trên một cái sàn đang nghiêng.
     gait: 'roll',
     stride: 1.70,
     walkSpeed: 0.46,
@@ -487,7 +501,9 @@ export const HUMAN_STYLES = {
     carry: 'case',
     // Paris cách mạng: thị dân đi giao thỉnh nguyện thư, không phải đi dạo. Thân xoay mạnh, chân
     // nhấc gọn — dáng của người đi trên vỉa hè đông và có việc gấp.
-    gait: 'bustle',
+    // ⚠️ ĐỔI TỪ `bustle` SANG `swagger` (ADR-057): người dạo phố Haussmann đi để ĐƯỢC NHÌN.
+    // Vai đảo rộng, ngực ưỡn — `bustle` (lách người trên vỉa hè chật) để dành cho kỷ 11.
+    gait: 'swagger',
     stride: 1.60,
     walkSpeed: 0.48,
     armSwing: 0.32,
@@ -517,6 +533,7 @@ export const HUMAN_STYLES = {
     // chiều này là thứ một trường "nhịp đi" duy nhất sẽ không bao giờ diễn đạt nổi.
     // ⚠️ CÙNG MỘT CÂU CHUYỆN VỚI `stance: 0,14` VÀ `stature: 0,93` Ở TRÊN. Đứng máy sợi 12 tiếng thì
     // chân không còn nhấc nổi; thân đổ nặng sang bên mỗi bước. Không phải đi, là lê.
+    // Ca kíp nhà máy: kiệt sức, gối chùng nặng, chân không buồn nhấc.
     gait: 'trudge',
     stride: 1.46,
     walkSpeed: 0.52,
@@ -543,7 +560,9 @@ export const HUMAN_STYLES = {
     // Sải dài + nhanh: nhịp phố Manhattan, và khác hẳn cặp (sải ngắn + nhanh) của kỷ 10 và kỷ 13.
     // Manhattan: sải dài, dáng thẳng, đường thẳng và rộng. Dùng chung kiểu với kỷ 1 và điều đó
     // ĐÚNG — hai kỷ ấy đi cùng một CÁCH, chỉ khác NHỊP (0,30 so với 0,58 ô mỗi giây).
-    gait: 'stride',
+    // ⚠️ ĐỔI TỪ `stride` SANG `bustle` (ADR-057): vỉa hè Manhattan giờ tan sở. Thân XOAY mạnh
+    // nhất bảng để lách người, mà lắc ngang thì gần như không — không có chỗ mà lắc.
+    gait: 'bustle',
     stride: 1.74,
     walkSpeed: 0.58,
     armSwing: 0.36,
@@ -570,7 +589,9 @@ export const HUMAN_STYLES = {
     carry: 'spear',
     // Tuyết sâu tới bắp chân, trang bị nặng, rét. Cùng kiểu với kỷ 10 vì cùng một hệ quả cơ thể,
     // dù hai nguyên nhân khác hẳn nhau (kiệt sức nhà máy ↔ tuyết và giá rét).
-    gait: 'trudge',
+    // ⚠️ ĐỔI TỪ `trudge` SANG `march` (ADR-057): đi đều. Nhấc chân CAO NHẤT bảng và gối duỗi
+    // THẲNG NHẤT bảng — hai con số ấy chỉ nói được từ khi có `lift` và `flex` riêng.
+    gait: 'march',
     stride: 1.50,
     // Trong nhóm BỐN kỷ đi chậm nhất (0,34; sau kỷ 4 · 1 · 15): tuyết sâu, kiệt sức.
     walkSpeed: 0.34,
@@ -598,7 +619,9 @@ export const HUMAN_STYLES = {
     // `walkSpeed` sinh ra để diễn đạt, và một trường duy nhất thì không thể.
     // ⚠️ ĐỐI CỰC CỦA KỶ 1 Ở CẢ BA TRỤC CHUYỂN ĐỘNG: sải ngắn nhất, nhịp cao nhất, và nay là kiểu đi
     // gấp gáp nhất. Vỉa hè Tokyo giờ tan tầm không cho phép bước dài.
-    gait: 'bustle',
+    // ⚠️ ĐỔI TỪ `bustle` SANG `scurry` (ADR-057): bước ngắn mà tần suất cao. Thân gần như
+    // KHÔNG lắc (0,03) — lắc thì mất thời gian, và đó chính là chỗ nó khác `bustle`.
+    gait: 'scurry',
     stride: 1.40,
     walkSpeed: 0.62,
     armSwing: 0.24,
@@ -624,7 +647,9 @@ export const HUMAN_STYLES = {
     carry: 'case',
     // Marina Bay: lối đi có mái, khí hậu nóng nhưng trong bóng râm, và một thành phố nổi tiếng vì
     // trật tự. Bước gọn và đều — không lê như kỷ 12, cũng không chen như kỷ 13 ngay trước nó.
-    gait: 'march',
+    // ⚠️ ĐỔI TỪ `march` SANG `shuffle` (ADR-057): lê dép trong nắng ẩm. Bàn chân NHẤC ÍT NHẤT
+    // bảng (0,02) vì dép sẽ tuột nếu nhấc — một dáng đi có thật, không phải một biến thể chậm.
+    gait: 'shuffle',
     stride: 1.58,
     walkSpeed: 0.56,
     armSwing: 0.30,
@@ -649,7 +674,10 @@ export const HUMAN_STYLES = {
     // Sải ngắn: áo dài cộng với nắng gắt. Cùng lý do vật lý với kỷ 4, khác mức.
     // Kandura chấm mắt cá cộng nắng 40°C: bước ngắn, chân gần như không nhấc, thân không lắc.
     // Cùng ràng buộc áo dài với kỷ 4 và kỷ 7 — ba kỷ, ba lục địa, một hình học.
-    gait: 'mince',
+    // ⚠️ ĐỔI TỪ `mince` SANG `glide` (ADR-057): kandura chấm đất phủ kín bàn chân, nên thứ mắt
+    // đọc được là cả người TRÔI đi. Trùng kiểu với kỷ 2 và điều đó có lý: cùng một nguyên nhân
+    // (thứ che khuất cái chân) cho ra cùng một dáng.
+    gait: 'glide',
     stride: 1.38,
     // ⚠️ CHẬM, VÀ ĐÓ LÀ KHÍ HẬU CHỨ KHÔNG PHẢI TÍNH CÁCH: tốc độ đi bộ ngoài trời giảm theo nhiệt
     // độ. Kỷ 15 giàu và hiện đại nhất bảng nhưng đi chậm hơn kỷ 10 nghèo khổ — một cặp số nói được

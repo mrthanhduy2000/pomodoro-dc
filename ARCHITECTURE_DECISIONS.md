@@ -11,6 +11,117 @@
 
 ---
 
+## ADR-057 — Chân giải bằng KHỚP NGƯỢC: đặt bàn chân trước, suy ngược ra góc đùi và góc gối
+
+**Ngày:** 2026-08-24
+**Trạng thái:** đã áp dụng — **đảo ngược nửa sau của ADR-056** (bỏ trường `knee` và định lý `sin²`),
+vì TIỀN ĐỀ của nó đã bị gỡ. Đồng thời **đóng `TECH_DEBT #82`**.
+
+### Bối cảnh
+Đàm xem thành phố sau ADR-056 rồi ra một chỉ thị gộp nhiều việc: *"làm sao cho con người có nhiều
+góc bo tròn, **cử động khớp thật**, **có thể vẽ thêm tam giác/khối mỗi ngưới tới lúc nó bo tròn**,
+3D nhiều hơn, tăng thêm kiểu đi, chuyển động thật và ít mặt phẳng hơn"*. Hai vế in đậm là hai lệnh
+thu hồi tường minh: (a) *khớp thật* bác chính cái mẹo của ADR-056; (b) *vẽ thêm tam giác/khối* thu
+hồi trần **11 khối mỗi người** mà chính Đàm đặt ra trước đó.
+
+### Vấn đề
+ADR-056 chữa dáng com-pa bằng cách **rút ngắn chân lúc đưa** (`stretchOf`), vì một mesh cứng không
+gập được. Cái mẹo ấy đúng trong khuôn khổ của nó và đắt về mặt khái niệm:
+
+- Chân vẫn là **một đoạn thẳng**. Mắt không bao giờ thấy một đầu gối, chỉ thấy một cái chân co giãn
+  như ống lồng.
+- Nó kéo theo cả một định lý (`knee ≥ 0,5`, hệ số phải là `sin²` chứ không phải `sin`) chỉ để bàn
+  chân khỏi trượt — tức một ràng buộc phức tạp sinh ra để phục vụ một mô hình sai.
+- Và nó **cấm ba chuyển động có thật**, ghi thành `TECH_DEBT #82`: hông không lắc ngang được, đai
+  hông không nghiêng được, đai hông không xoay được. Cả ba đều bị cấm vì cùng một lý do: chúng làm
+  bàn chân dịch chỗ, mà bàn chân là **KẾT QUẢ** của chuỗi khớp nên không ai giữ nó lại được.
+
+### Phương án đã cân nhắc
+1. **Giữ chân một khối, thêm một khối "bắp chân" trang trí gập theo một hàm sin riêng.** Rẻ nhất.
+   Bác: hai khối chuyển động theo hai luật độc lập thì chúng rời nhau ở đúng chỗ đáng lẽ là khớp
+   gối — đúng bẫy *"một luật hai công thức"*, và tệ hơn, cả hai công thức đều chạy nên không cái
+   nào lỗi.
+2. **Khớp thuận (forward kinematics): khai góc hông và góc gối theo pha bước, rồi tính ra bàn chân
+   ở đâu.** Đây là cách hiển nhiên, và nó **giữ nguyên toàn bộ bệnh cũ**: bàn chân vẫn là kết quả,
+   nên muốn nó đứng yên thì phải đi hiệu chỉnh ngược từng số hạng một. Thêm lắc hông là thêm một số
+   hạng bù; thêm xoay đai hông là thêm một số hạng bù nữa. Mỗi chuyển động mới đẻ ra một phép bù,
+   và `TECH_DEBT #82` sẽ không bao giờ đóng được.
+3. **Khớp ngược (inverse kinematics): đặt bàn chân TRƯỚC, rồi giải ngược ra góc đùi và góc gối.**
+   Đắt hơn về khái niệm (phải giải một tam giác bằng định lý hàm cosin) nhưng nó **lật ngược quan
+   hệ nhân quả**, và mọi thứ khác rơi ra theo.
+
+### Giải pháp đã chọn — phương án 3
+`poseAt` mở đầu bằng đúng ba dòng đặt hai bàn chân trong KHÔNG GIAN THẾ GIỚI, rồi `solveTwoBone`
+giải ngược. Hệ quả không phải một cái lợi mà là **bốn cái lợi cùng lúc**, và cả bốn đều *đúng theo
+cấu tạo* chứ không phải *đúng nhờ hiệu chỉnh*:
+
+- **Bàn chân đứng yên tuyệt đối** trong pha tiếp đất — đo được **4,86 × 10⁻¹⁷ ô** trên 210 tổ hợp
+  (14 kiểu đi × 15 kỷ). Đó là sai số dấu phẩy động, không phải một dung sai.
+- **Đai hông được phép lắc ngang, nghiêng, và xoay** — cả ba miễn phí, vì cái chân tự lo phần còn
+  lại. `TECH_DEBT #82` đóng lại không cần một số hạng bù nào.
+- **Trường `knee` và định lý `sin²` biến mất**, không phải vì chúng sai mà vì tiền đề *"mesh cứng
+  không gập được"* đã bị gỡ (bẫy Phase 8C).
+- **`reach` trở thành một bất biến đọc được**: tỉ số giữa khoảng cách hông→bàn chân và tổng chiều
+  dài hai đoạn xương. Chạm 1 là chân duỗi thẳng đơ; vượt 1 là bàn chân nằm ngoài tầm với và phép
+  giải buộc phải kẹp lại ⇒ trượt. Nó chỉ thẳng vào NGUYÊN NHÂN, còn "bàn chân trượt" chỉ là triệu
+  chứng. Đo được: cao nhất **0,9928** ở kỷ 12 (`march`, sải chân dài nhất bảng).
+
+Kèm theo, ba việc còn lại của chỉ thị:
+- **Bo tròn**: bộ khuôn 7 → **9** (thêm `calf` cho cẳng chân, `flare` cho tà áo loe), và mọi khuôn
+  không phải hộp đi từ 8 lên **12 mặt** cùng 3 tới 6 **VÀNH**. ⚠️ Số **vành** mới là thứ quyết định
+  "nhìn có phẳng không", không phải số mặt — xem mục Bài học.
+- **Khớp hai trục**: mỗi khớp nay có `a` (ngửa quanh trục ngang-màn-hình) và `b` (lắc quanh trục đi
+  tới), ghép theo thứ tự cố định `Rx(b) · Rz(a)` ở cả tầng thuần lẫn tầng cảnh.
+- **Bảng dáng đi 9 → 14 kiểu, 4 → 6 trục** (`lift · flex · sway · twist · headTrack · splay`).
+
+### Trade-off
+- **Giá phải trả**: +1 lệnh vẽ ở **cả 15 kỷ** (khuôn `calf` là một `InstancedMesh` nữa) và tam giác
+  mỗi người đi từ 220…324 lên **1.616…1.928** (×6,4). Cư dân nay chiếm **16,3%…26,1%** tam giác
+  cảnh, so với trần cũ 6%. Đây là cái giá Đàm đã cho phép tường minh, không phải một cái phễu.
+- **Chưa đo lại mili-giây.** Hộp cát dựng bằng SwiftShader (bộ tô hình chạy trên CPU), mà luật của
+  dự án là *"một con số đo trong hộp cát chỉ được dùng để so các trường hợp TRONG hộp cát ấy"*. Bốn
+  căn cứ để tin là an toàn (dư 3,2 lần trên máy thật · 80% chi phí đi theo ĐIỂM ẢNH chứ không theo
+  tam giác · cư dân không đổ bóng · lệnh vẽ chỉ +1) đều là suy từ phép đo CŨ trên MacBook của Đàm,
+  không phải phép đo MỚI. Muốn xác nhận: `bash scripts/bench-macbook.sh`.
+- **Phép giải phức tạp hơn**: `solveTwoBone` có một nhánh kẹp khi bàn chân ngoài tầm với. Nhánh ấy
+  hôm nay **không bao giờ chạy** (0,9928 < 1), và đó là lý do phải có một bài test bơm `stride: 5`
+  để chứng minh nó vẫn còn hoạt động — một nhánh chưa từng chạy là một nhánh chưa từng được kiểm.
+
+### Ảnh hưởng
+- `humanPose.js` viết lại hoàn toàn; `stretchOf` và `legFactorAt` bị xoá, `sceneGraph.js` bỏ theo.
+- `human.js`: 11 → 16…18 khối, 3 → 11 khớp (thêm `pelvis`, `elbowL/R`, `kneeL/R`).
+- Bảng ngân sách `MOC_LENH_VE` và `CANH_TAM_GIAC` đo lại toàn bộ, neo bằng Chromium ở 3 kỷ.
+
+### Điều kiện xem lại
+Nếu `bash scripts/bench-macbook.sh` trên máy Đàm cho ra một cảnh vượt **8 ms** (mức làm việc đã
+chốt ở `PERFORMANCE.md`), thì cắt số vành của các khuôn xuống trước, đừng cắt số khớp — vành là
+thứ mắt chỉ thấy khi nhìn gần, còn khớp là thứ thấy ở mọi khoảng cách vì nó đổi ĐƯỜNG VIỀN.
+
+### Bài học rút ra
+1. ⚠️ **Số VÀNH quyết định "phẳng hay không", không phải số MẶT.** Một khuôn hai vành cho ra ĐÚNG
+   MỘT dải sáng dọc dù `sides` bằng 8, 12 hay 64 — vì cả 8 mặt bên đều là hình thang PHẲNG. Thứ
+   sinh ra dải sáng thứ hai là một **ĐIỂM UỐN** trên đường sinh (thắt gối, eo, sườn lõm). Đọc một
+   hồ sơ `{sides, rings}` thì phải hỏi **hai** câu riêng: *"nhìn từ trên xuống nó tròn tới đâu"* và
+   *"nhìn ngang nó có gãy khúc không"*. Trộn hai câu ấy vào một chữ "mượt" là lần thứ **bảy** của
+   *"một trường gánh hai việc"* trong dự án này.
+2. ⚠️ **Đổi chiều nhân quả của một mô hình có thể xoá nhiều ràng buộc CÙNG LÚC.** Ba mục cấm của
+   `TECH_DEBT #82` không được gỡ từng cái một — chúng biến mất cùng nhau, vì cả ba đều là hệ quả
+   của việc bàn chân là ĐẦU RA. Khi một danh sách hạn chế dài ra mà mọi mục đều quy về cùng một câu
+   *"vì X là kết quả chứ không phải đầu vào"*, hãy hỏi có đảo được X không, thay vì đi bù từng mục.
+3. ⚠️ **Một cái trần do người dùng đặt ra thì chỉ người dùng thu hồi được, và khi họ thu hồi thì
+   phải ghi lại NGUYÊN VĂN.** Trần 11 khối có một lý lẽ đúng (*"ở cỡ 18 px thì khối thứ 12 không
+   đổi được điểm ảnh nào"*), nhưng lý lẽ ấy nói về khung TOÀN CẢNH, mà ADR-034 đã thêm lối đưa mắt
+   tới gần từ lâu. Tiền đề đổi trước, lệnh thu hồi tới sau.
+4. ⚠️ **Một bản vá đúng làm đỏ sáu bài test cũ, và KHÔNG bài nào đỏ vì mã hỏng.** Bốn bài đo một
+   mô hình đã chết (`legFactorAt`, hệ số `sin²`, chân là một khối, trần 80 tam giác), hai bài đếm
+   sai số khối vì cụm chân nay có 6 khối chứ không phải 4. Phản xạ sai nhất lúc ấy là nới ngưỡng
+   cho hết đỏ. Ví dụ cụ thể: bài *"biên độ khớp có trần"* đòi góc đùi ≤ `asin(stride/4)` — một trần
+   suy từ tam giác vuông của mô hình chân CỨNG. Có đầu gối thật thì đùi **phải** nghiêng nhiều hơn
+   thế (đo được 57,3° so với 27,5° ở kỷ 1). Giữ nguyên con số ấy làm trần là dùng một bài test để
+   hoàn tác một bản vá đúng; cách đúng là **đổi vai của nó thành SÀN**.
+
+---
+
 ## ADR-056 — DÁNG ĐI là một trục bản sắc riêng, và bốn chiều chuyển động mới đều phải luồn qua ràng buộc "bàn chân không được trượt"
 
 **Ngày:** 2026-08-24

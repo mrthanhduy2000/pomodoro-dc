@@ -15,8 +15,11 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import { buildHumanBody, buildHumanBodyLowDetail, humanDims } from './human.js';
+import { gaitOf } from './humanGait.js';
 import { getHumanStyle } from './humanStyle.js';
 import {
+  ELBOW_GAIN,
+  ELBOW_REST_RAD,
   footContactAt,
   footOffsetAt,
   partCenterAt,
@@ -59,7 +62,10 @@ test('CHÂN KHÔNG TRƯỢT: bàn chân đứng yên trong THẾ GIỚI suốt p
   // vị trí bàn chân rồi xem nó có nhúc nhích không.
   for (const era of ERAS) {
     const body = buildHumanBody(era);
-    const legL = body.parts.find((p) => p.id === 'legL');
+    // ⚠️ CẲNG CHÂN, KHÔNG PHẢI ĐÙI (từ ADR-057). Bàn chân nằm ở đầu mút dưới của cẳng chân, treo
+    // vào khớp GỐI. Hỏi khối đùi thì hàm trả về chỗ đặt đầu gối, và bài test sẽ đo một thứ hoàn
+    // toàn khác mà vẫn ra những con số trông hợp lý.
+    const legL = body.parts.find((p) => p.id === 'shinL');
     const { cycle } = poseAt(body, 0);
 
     let lo = Infinity;
@@ -107,39 +113,88 @@ test('ĐỐI CHỨNG cho phép đo chân: một dáng đi HỎNG phải bị b�
     `phép đo không bắt được dáng đi hỏng (chỉ thấy trượt ${(hi - lo).toFixed(5)} ô)`);
 });
 
-test('BIÊN ĐỘ KHỚP CÓ TRẦN: tay không quay như chong chóng, chân không duỗi ngang', () => {
+test('BIÊN ĐỘ KHỚP CÓ TRẦN: chân không duỗi quá tầm, gối không bẻ ngược, tay không như chong chóng', () => {
   for (const era of ERAS) {
     const style = getHumanStyle(era);
     const body = buildHumanBody(era);
     const { cycle } = poseAt(body, 0);
-    // Trần hông suy THẲNG từ sải chân đã khai: bàn chân xa nhất là `cycle/4`, chân dài `legLen`.
-    const trầnHông = Math.asin(Math.min(1, style.stride / 4));
+
+    // ⚠️ ĐỌC KỸ TRƯỚC KHI SỬA — TRẦN CŨ `asin(stride/4)` ĐÃ CHẾT CÙNG CHÂN CỨNG (ADR-057).
+    // Nó suy từ một tam giác vuông: chân là MỘT đoạn thẳng dài `legLen`, bàn chân xa nhất `cycle/4`
+    // ⇒ đùi nghiêng đúng `asin`. Có đầu gối thật thì đùi phải nghiêng NHIỀU HƠN thế, vì cẳng chân
+    // gập lại "ăn bớt" một đoạn với. Đo được: kỷ 1 hông 57,3° trong khi trần cũ nói 27,5°.
+    // Giữ nguyên con số ấy làm trần là ép mã sản phẩm quay lại mô hình chân cứng — tức dùng một
+    // bài test để hoàn tác một bản vá đúng. Nay nó đổi vai: thành SÀN.
+    const gócBànChân = Math.asin(Math.min(1, style.stride / 4));
     const trầnTay = Math.abs(style.stance) + style.armSwing;
+    const trầnKhuỷu = ELBOW_REST_RAD + ELBOW_GAIN * style.armSwing;
 
     let hôngMax = 0;
     let tayMax = 0;
+    let khuỷuMin = Infinity;
+    let khuỷuMax = -Infinity;
+    let gốiMax = -Infinity;
+    let vớiMax = 0;
     for (let i = 0; i < 240; i += 1) {
       const pose = poseAt(body, (cycle * i) / 240);
+
+      // (1) CHÂN KHÔNG BAO GIỜ ĐÒI VƯƠN QUÁ TẦM. Đây là bất biến CỐT LÕI của phép giải khớp
+      // ngược: `reach` là tỉ số giữa khoảng cách hông→bàn chân và (đùi + cẳng chân). Chạm 1 nghĩa
+      // là chân duỗi thẳng đơ; vượt 1 nghĩa là bàn chân nằm ở chỗ chân KHÔNG với tới, và lúc ấy
+      // hàm giải phải kẹp lại ⇒ bàn chân TRƯỢT. Bài `CHÂN KHÔNG TRƯỢT` sẽ đỏ theo, nhưng bài này
+      // đỏ TRƯỚC và chỉ thẳng vào nguyên nhân.
+      assert.ok(Number.isFinite(pose.reach) && pose.reach < 1,
+        `kỷ ${era}: chân phải vươn ${pose.reach.toFixed(4)} lần tầm với — quá tầm`);
+      vớiMax = Math.max(vớiMax, pose.reach);
+
       for (const [tên, j] of Object.entries(pose.joints)) {
-        assert.ok(Number.isFinite(j.a), `kỷ ${era}: khớp ${tên} ra góc không hợp lệ`);
-        // Trần chung, thô nhưng tuyệt đối: không khớp nào của DÁNG ĐI được vượt 52°.
-        assert.ok(Math.abs(j.a) < 0.9,
-          `kỷ ${era}: khớp ${tên} quay ${(j.a * 180 / Math.PI).toFixed(1)}° — quá 52°`);
+        assert.ok(Number.isFinite(j.a), `kỷ ${era}: khớp ${tên} ra góc ngửa không hợp lệ`);
+        assert.ok(Number.isFinite(j.b ?? 0), `kỷ ${era}: khớp ${tên} ra góc lắc không hợp lệ`);
+        // Trần THÔ, tuyệt đối: không khớp nào của DÁNG ĐI được quay quá 91°. Đây KHÔNG phải cái
+        // gác chính (bốn phép dưới mới là) — nó chỉ bắt ca mã pose loạn hẳn. Ca xấu nhất đo được
+        // là gối kỷ 1 (`prowl`, chùng nhất bảng) ở 84,3°.
+        assert.ok(Math.abs(j.a) < 1.6,
+          `kỷ ${era}: khớp ${tên} quay ${(j.a * 180 / Math.PI).toFixed(1)}° — quá 91°`);
         if (tên.startsWith('hip')) hôngMax = Math.max(hôngMax, Math.abs(j.a));
         if (tên.startsWith('shoulder')) tayMax = Math.max(tayMax, Math.abs(j.a));
       }
+      for (const bên of ['L', 'R']) {
+        // (2) GỐI KHÔNG BẺ NGƯỢC. Góc cẳng chân trừ góc đùi là độ gập của gối, và ở người nó chỉ
+        // gập được về MỘT phía. Dấu phải âm ở MỌI thời điểm, MỌI kỷ — dương một lần là đầu gối
+        // vừa gập ngược ra sau, thứ mà mắt đọc ra ngay là "con bọ" chứ không phải người.
+        const gối = pose.joints[`knee${bên}`].a - pose.joints[`hip${bên}`].a;
+        assert.ok(gối < 0,
+          `kỷ ${era}: gối ${bên} bẻ ngược ${(gối * 180 / Math.PI).toFixed(1)}°`);
+        gốiMax = Math.max(gốiMax, gối);
+        // (3) KHUỶU CHỈ GẬP VÀO, KHÔNG BAO GIỜ DUỖI QUÁ THẲNG, và không quá tầm đã khai.
+        const khuỷu = pose.joints[`elbow${bên}`].a - pose.joints[`shoulder${bên}`].a;
+        khuỷuMin = Math.min(khuỷuMin, khuỷu);
+        khuỷuMax = Math.max(khuỷuMax, khuỷu);
+      }
     }
-    // Trần CHẶT, buộc vào chính con số đã khai — nếu ai nâng `stride` thì trần tự nâng theo, còn
-    // nếu mã pose lén quay thêm thì bài này đỏ ngay.
-    assert.ok(hôngMax <= trầnHông + 1e-9,
-      `kỷ ${era}: hông quay ${(hôngMax * 180 / Math.PI).toFixed(1)}° vượt trần`
-      + ` ${(trầnHông * 180 / Math.PI).toFixed(1)}° suy từ sải chân ${style.stride}`);
+
+    // (4) SÀN HÔNG — buộc vào chính con số đã khai. Nâng `stride` thì sàn tự nâng theo; mã pose
+    // lén thu biên độ chân lại thì bài này đỏ ngay. Đây là vế thay cho cái trần đã chết ở trên.
+    assert.ok(hôngMax > gócBànChân + 1e-9,
+      `kỷ ${era}: đùi chỉ nghiêng ${(hôngMax * 180 / Math.PI).toFixed(1)}°, không hơn góc bàn chân`
+      + ` ${(gócBànChân * 180 / Math.PI).toFixed(1)}° — có đầu gối thật thì nó PHẢI nghiêng hơn`);
     assert.ok(tayMax <= trầnTay + 1e-9,
       `kỷ ${era}: tay quay ${(tayMax * 180 / Math.PI).toFixed(1)}° vượt trần`
       + ` ${(trầnTay * 180 / Math.PI).toFixed(1)}° suy từ (độ khom + biên độ vung)`);
-    // Và phải THẬT SỰ dùng gần hết biên độ đã khai — một trần không bao giờ chạm tới thì con số
-    // trong bảng chỉ là chữ trang trí.
-    assert.ok(hôngMax > trầnHông * 0.98, `kỷ ${era}: hông không bao giờ dùng tới sải chân đã khai`);
+    assert.ok(tayMax > trầnTay * 0.98,
+      `kỷ ${era}: tay không bao giờ dùng tới biên độ vung đã khai`);
+    assert.ok(khuỷuMin >= ELBOW_REST_RAD - 1e-9 && khuỷuMax <= trầnKhuỷu + 1e-9,
+      `kỷ ${era}: khuỷu chạy [${(khuỷuMin * 180 / Math.PI).toFixed(1)},`
+      + `${(khuỷuMax * 180 / Math.PI).toFixed(1)}]° ngoài dải cho phép`);
+    assert.ok(khuỷuMax > khuỷuMin + 0.02,
+      `kỷ ${era}: khuỷu đứng yên ⇒ trục gập tay là một trục CHẾT`);
+    // Gối phải THẬT SỰ gập, không chỉ hơi nhúc nhích — nếu không thì cả phép giải khớp ngược chỉ
+    // là một cách viết dài dòng của mô hình chân cứng cũ.
+    assert.ok(gốiMax < -0.1,
+      `kỷ ${era}: gối gập nhiều nhất mới ${(gốiMax * 180 / Math.PI).toFixed(1)}° — gần như thẳng đơ`);
+    // Và tầm với phải được dùng gần hết: một cái chân chỉ vươn 40% tầm thì sải chân đã khai
+    // không hề tới được màn hình.
+    assert.ok(vớiMax > 0.6, `kỷ ${era}: chân chỉ vươn tối đa ${vớiMax.toFixed(3)} lần tầm`);
   }
 });
 
@@ -161,7 +216,13 @@ function spanCua(body, parts, travelled) {
   return hi - lo;
 }
 
-const chanCua = (body) => body.parts.filter((q) => q.joint === 'hipL' || q.joint === 'hipR');
+/**
+ * CỤM CHÂN — đùi (khớp hông) + cẳng chân và bàn chân (khớp GỐI).
+ * ⚠️ Từ ADR-057 phải hỏi CẢ BỐN khớp. Lọc mỗi `hip*` thì chỉ còn hai cái đùi, và hai cái đùi thì
+ * tách ra ÍT hơn hẳn cả cụm chân — phép đo sẽ nói thiếu mà không có gì đỏ lên.
+ */
+const chanCua = (body) => body.parts.filter(
+  (q) => q.joint === 'hipL' || q.joint === 'hipR' || q.joint === 'kneeL' || q.joint === 'kneeR');
 
 test('HÌNH BÓNG ĐỔI THEO PHA BƯỚC — và mô hình 2 hộp cũ ra ĐÚNG 0', () => {
   // ⚠️ SO PHA 0 VỚI PHA 0,25 — KHÔNG PHẢI 0,5, VÀ ĐÂY LÀ MỘT CÁI BẪY THẬT.
@@ -201,13 +262,14 @@ test('HÌNH BÓNG ĐỔI THEO PHA BƯỚC — và mô hình 2 hộp cũ ra ĐÚN
     const { cycle } = poseAt(body, 0);
     const H = body.dims.height;
     const chan = chanCua(body);
-    // ⚠️ BỐN, KHÔNG PHẢI HAI — "chân" nay là một CỤM: cẳng chân + bàn chân mỗi bên (2026-08-23).
+    // ⚠️ SÁU, KHÔNG PHẢI BỐN — "chân" nay là một CỤM: đùi + cẳng chân + bàn chân mỗi bên
+    // (ADR-057; trước đó là 4, và trước nữa là 2).
     // Gác chạy-rỗng này vẫn giữ nguyên công dụng (bộ lọc trả về rỗng thì `spanCua` ra −∞ và mọi
     // assert dưới đều xanh oan), chỉ là con số đúng đã đổi. Và nó PHẢI đổi theo: để nguyên 2 thì
     // hoặc test đỏ oan, hoặc — tệ hơn — có người "sửa" bằng cách lọc riêng `id.startsWith('leg')`,
     // lúc ấy vế bất biến ngay dưới sẽ đỏ THẬT vì bàn chân thò ra trước làm đường bao ngoài đổi
     // NHIỀU HƠN phần cẳng chân, và người ta sẽ đi chữa một cơ chế hoàn toàn lành.
-    assert.equal(chan.length, 4, `kỷ ${era}: phải có đúng 4 khối cụm chân, thấy ${chan.length}`);
+    assert.equal(chan.length, 6, `kỷ ${era}: phải có đúng 6 khối cụm chân, thấy ${chan.length}`);
     const chenhChan = (spanCua(body, chan, cycle * RỘNG) - spanCua(body, chan, cycle * HẸP)) / H;
     const chenhNguoi = (silhouetteSpanX(body, cycle * RỘNG) - silhouetteSpanX(body, cycle * HẸP)) / H;
     banA.push({ era, chenhChan, chenhNguoi });
@@ -292,17 +354,26 @@ test('CÁI NHÚN là hệ quả của chân trụ, không phải một hàm sin 
   const { cycle } = poseAt(body, 0);
   const legLen = body.dims.legLen;
 
-  // Cao nhất ở GIỮA pha tiếp đất (chân trụ thẳng đứng), thấp nhất ở hai đầu bước. Đó là hình dạng
+  // Cao nhất ở GIỮA pha tiếp đất (chân trụ dựng đứng), thấp nhất ở hai đầu bước. Đó là hình dạng
   // nhún của người thật — và nó phải rơi ra từ hình học, không phải từ một biên độ chọn tay.
   const giữa = poseAt(body, cycle * 0.25).bob;
   const đầu = poseAt(body, cycle * 0.0).bob;
   assert.ok(giữa > đầu, 'hông phải cao nhất ở giữa pha tiếp đất');
-  assert.ok(Math.abs(giữa) < 1e-9, 'giữa pha tiếp đất thì chân trụ thẳng, hông đúng bằng chiều dài chân');
 
-  // Biên độ suy thẳng từ góc hông lớn nhất — không có hằng số nào chọn tay ở đây.
+  // ⚠️ TỪ ADR-057 CÓ THÊM MỘT SỐ HẠNG, VÀ NÓ KHÔNG PHẢI "MỘT LUẬT THỨ HAI" — nó là gối chùng
+  // (`flex`). Bản trước đòi `bob` ở giữa pha tiếp đất bằng ĐÚNG 0, tức ngầm khẳng định chân trụ
+  // lúc nào cũng duỗi thẳng đơ. Điều đó đúng khi chân là một khối cứng và SAI ngay khi có đầu gối
+  // thật: người đi bộ thật không bao giờ khoá gối ở giữa pha trụ, và đó chính là thứ phân biệt
+  // dáng rình (`flex` 0,14) với dáng đi đều (`flex` 0,01).
+  // ⇒ Công thức đầy đủ: `hipY = √(legLen² − off²) × (1 − flex)`. Vẫn KHÔNG có hằng số chọn tay
+  // nào; cả hai vế đều suy từ bảng.
   const style = getHumanStyle(1);
+  const g = gaitOf(style.gait);
   const trầnHông = Math.asin(Math.min(1, style.stride / 4));
-  assert.ok(Math.abs(đầu - legLen * (Math.cos(trầnHông) - 1)) < 1e-9,
+  assert.ok(Math.abs(giữa - (-legLen * g.flex)) < 1e-9,
+    `giữa pha tiếp đất, hông phải thấp đúng bằng phần gối chùng (${(-legLen * g.flex).toFixed(6)}),`
+    + ` đo được ${giữa.toFixed(6)}`);
+  assert.ok(Math.abs(đầu - legLen * (Math.cos(trầnHông) * (1 - g.flex) - 1)) < 1e-9,
     'biên độ nhún không khớp với hình học chân trụ ⇒ có một luật thứ hai đang chen vào');
 
   // Và nhún luôn KÉO XUỐNG, không bao giờ đẩy người lên trên chiều cao đứng yên.

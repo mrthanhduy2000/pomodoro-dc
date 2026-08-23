@@ -505,19 +505,25 @@
 │   │   │   │                      #   2026-08-23 — test in ra "đã thiết kế thật: N/15 kỷ"
 │   │   │   │                      #   ⚠️ headMaterial natural/dyed (ADR-054): nón lá và cái quần
 │   │   │   │                      #   KHÔNG cùng một lò nhuộm. TRƠ ở 5 kỷ, danh sách có test khoá
-│   │   │   │                      #   ⚠️ Trục thứ 12 `gait` (2026-08-24, ADR-056) — mỗi kỷ một
-│   │   │   │                      #   KIỂU ĐI có thật, buộc vào country; 9 kiểu, không kỷ liền
-│   │   │   │                      #   nhau nào trùng kiểu (có test khoá)
-│   │   │   ├── humanGait.js       # BẢNG 9 KIỂU ĐI (2026-08-24, ADR-056): stride · glide · march ·
-│   │   │   │                      #   mince · trudge · bounce · roll · bustle · saunter. Mỗi kiểu
-│   │   │   │                      #   4 trường: knee (co gối giả) · sway (nghiêng thân) ·
-│   │   │   │                      #   twist (vai xoay ngược hông) · headTrack (đầu giữ thăng bằng)
-│   │   │   │                      #   ⚠️ knee ∈ [0,5 … 1] KHÔNG phải một ngưỡng chọn tay — dưới
-│   │   │   │                      #   0,5 thì bàn chân TRƯỢT (chứng minh + đối chứng trong test)
-│   │   │   ├── humanShape.js      # BỘ 8 KHUÔN CƠ THỂ (2026-08-24, ADR-056): box · prism · limb ·
-│   │   │   │                      #   chest · flare · cone · dome · hat. Mỗi khuôn là một MẶT
-│   │   │   │                      #   TRÒN XOAY khai bằng {sides, rings} — THUẦN, không import
-│   │   │   │                      #   three
+│   │   │   │                      #   ⚠️ Trục thứ 12 `gait` (2026-08-24, ADR-056/057) — mỗi kỷ
+│   │   │   │                      #   một KIỂU ĐI có thật, buộc vào country; 14 kiểu, không kỷ
+│   │   │   │                      #   liền nhau nào trùng kiểu, và cả 14 phải có người dùng (test)
+│   │   │   ├── humanGait.js       # BẢNG 14 KIỂU ĐI (2026-08-24, ADR-057): stride · glide · march ·
+│   │   │   │                      #   mince · trudge · bounce · roll · bustle · saunter · prowl ·
+│   │   │   │                      #   shuffle · swagger · plod · scurry. Mỗi kiểu 6 trường:
+│   │   │   │                      #   lift (nâng bàn chân) · flex (gối chùng lúc trụ) ·
+│   │   │   │                      #   sway (đai hông lắc ngang) · twist (vai xoay ngược hông) ·
+│   │   │   │                      #   headTrack (đầu giữ thăng bằng) · splay (bàn chân dạng/chụm)
+│   │   │   │                      #   ⚠️ Trường `knee` và định lý sin²/`knee ≥ 0,5` của ADR-056
+│   │   │   │                      #   ĐÃ BỎ — tiền đề "mesh cứng không gập được" bị gỡ khi chân
+│   │   │   │                      #   có đầu gối thật (bẫy Phase 8C). Xem ADR-057
+│   │   │   │                      #   ⚠️ gaitOf() nhận CẢ một hồ sơ đầy đủ, không chỉ một tên —
+│   │   │   │                      #   đó là lối bơm mà bài "dây nối" cần. Đổi lại, test ĐÒI bảng
+│   │   │   │                      #   kỷ khai `gait` là một CHUỖI ở cả 15 kỷ
+│   │   │   ├── humanShape.js      # BỘ 9 KHUÔN CƠ THỂ (2026-08-24, ADR-057): box · prism · limb ·
+│   │   │   │                      #   calf · chest · flare · cone · dome · hat. Mỗi khuôn là một
+│   │   │   │                      #   MẶT TRÒN XOAY khai bằng {sides, rings} — THUẦN, không
+│   │   │   │                      #   import three. 12 mặt, 3–6 vành (trừ `box`: 4 mặt, 2 vành)
 │   │   │   │                      #   ⚠️ SỐ VÀNH quyết định "phẳng hay không", KHÔNG phải số mặt:
 │   │   │   │                      #   khuôn 2 vành cho ĐÚNG MỘT dải sáng dọc dù sides bằng bao
 │   │   │   │                      #   nhiêu. Mọi khuôn cong nay có ≥1 ĐIỂM UỐN (thắt gối, eo,
@@ -540,11 +546,16 @@
 │   │   │   │                      #   ⚠️ Hàm của QUÃNG ĐƯỜNG, không phải của thời gian — nhờ vậy
 │   │   │   │                      #   bàn chân KHÔNG trượt trên đất, và cái nhún là HỆ QUẢ của
 │   │   │   │                      #   chân trụ đang nghiêng chứ không phải một sin riêng
-│   │   │   │                      #   ⚠️ `stretchOf(part, pose)` = CO GỐI GIẢ: mesh cứng không gập
-│   │   │   │                      #   được nên chân đưa bị RÚT NGẮN. Hệ số phải là sin² chứ không
-│   │   │   │                      #   phải sin — sin làm bàn chân trượt ở MỌI knee < 1 (ADR-056)
-│   │   │   │                      #   ⚠️ Nó chỉ nhân vào rest.y và part.h, TUYỆT ĐỐI không nhân
-│   │   │   │                      #   vào x/z — nhân vào x/z là làm chân teo lại chứ không co
+│   │   │   │                      #   ⚠️ KHỚP NGƯỢC (ADR-057): ĐẶT BÀN CHÂN TRƯỚC rồi `solveTwoBone`
+│   │   │   │                      #   suy ngược ra góc đùi + góc gối bằng định lý hàm cosin. Nhờ
+│   │   │   │                      #   đảo chiều nhân quả ấy, đai hông được lắc ngang / nghiêng /
+│   │   │   │                      #   xoay MIỄN PHÍ (đóng TECH_DEBT #82) và `stretchOf` biến mất
+│   │   │   │                      #   ⚠️ `pose.reach` = tỉ số (hông→bàn chân) / (đùi + cẳng chân).
+│   │   │   │                      #   ≥ 1 nghĩa là bàn chân NGOÀI TẦM VỚI ⇒ phép giải kẹp ⇒ trượt.
+│   │   │   │                      #   Nó chỉ vào NGUYÊN NHÂN; "trượt" chỉ là triệu chứng
+│   │   │   │                      #   ⚠️ Khớp có HAI trục: `a` ngửa quanh trục ngang-màn-hình,
+│   │   │   │                      #   `b` lắc quanh trục đi tới. Thứ tự ghép CỐ ĐỊNH `Rx(b)·Rz(a)`
+│   │   │   │                      #   ở cả `rotateByJoint` lẫn `sceneGraph.js` (có test đối chiếu)
 │   │   │   ├── residents.js       # CƯ DÂN: dân số suy từ tiến độ, tuyến đi bám ĐƯỜNG SÁ
 │   │   │   │                      #   ⚠️ residentAt(route, TIME) — chuyển động là hàm của thời
 │   │   │   │                      #   gian, không phải biến cộng dồn (test được + rời tab đúng)

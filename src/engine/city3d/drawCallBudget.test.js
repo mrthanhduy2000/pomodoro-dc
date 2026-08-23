@@ -104,12 +104,36 @@ function tamCoDinh(era) {
  * về vật liệu thời công nghiệp Anh, không phải một khuyết tật — và tuyệt đối KHÔNG được gộp hai
  * vật liệu ấy lại để lấy một con số đẹp hơn (ADR-025 đã cấm đúng kiểu mua-số-bằng-cách-nói-dối này).
  *
+ * ⚠️ ĐO LẠI NGÀY **2026-08-24** SAU ADR-057 (chân có đầu gối thật): mỗi kỷ **+1**, không ngoại lệ.
+ * Hai đường đo độc lập cùng nói một con số — `node --import ./scripts/register-esm-loader.mjs
+ * scripts/scene-tri.mjs --eras 1..15 --sessions 40 --level 1` (thuần Node, duyệt cảnh) và
+ * `node scripts/city-preview.mjs --era N --hour 12 --bench 1 --no-shadow` (Chromium, đọc thẳng
+ * `renderer.info`) ở ba kỷ neo **1 · 8 · 13 = 13 · 19 · 14**. Không có cái neo ấy thì bảng 15 dòng
+ * chỉ là một công thức tự soi gương.
+ *
  * ⚠️ ĐO LẠI NGÀY 2026-08-20 SAU BƯỚC C (trải nước ra đủ 14 kỷ). So với `MOC_TRUOC_NUOC` bên dưới:
  * **kỷ 1 KHÔNG đổi một đơn vị, mười bốn kỷ còn lại đúng +1** — không kỷ nào +2, không kỷ khô nào
  * nhích. Đó chính là ràng buộc Đàm ra, và nó được kiểm bằng một PHÉP TRỪ ở bài test cuối file chứ
  * không bằng cách đọc hai bảng bằng mắt.
  */
 const MOC_LENH_VE = {
+  1: 13, 2: 17, 3: 17, 4: 16, 5: 17,
+  6: 18, 7: 18, 8: 19, 9: 15, 10: 18,
+  11: 15, 12: 15, 13: 14, 14: 14, 15: 15,
+};
+
+/**
+ * MỐC NGAY TRƯỚC KHI CHÂN CÓ ĐẦU GỐI THẬT (ADR-057) — đo ngày **2026-08-24** tại commit `ee6aee7`.
+ * Giữ nguyên văn làm ĐỐI CHỨNG, và bài test cuối file lấy hiệu số của đúng hai bảng này.
+ *
+ * ⚠️ HIỆU SỐ PHẢI LÀ **+1 Ở CẢ 15 KỶ**, và con số 1 ấy có tên: cơ thể mới tách cẳng chân ra khỏi
+ * đùi bằng một khuôn riêng (`calf`), tức thêm ĐÚNG MỘT khuôn ⇒ đúng một `InstancedMesh` ⇒ đúng một
+ * lệnh vẽ. Không kỷ nào +2 (nghĩa là còn thứ khác đi ké), không kỷ nào +0 (nghĩa là kỷ ấy chưa
+ * nhận bản vá). Đây là phép trừ riêng của phase này — KHÔNG được cộng dồn vào phép trừ của mặt
+ * nước hay của vùng phụ cận, vì một hiệu số trộn hai thay đổi thì không ai đọc được vế nào tốn
+ * bao nhiêu (bài học Performance Gate vòng 2).
+ */
+const MOC_TRUOC_KHOP_NGUOC = {
   1: 12, 2: 16, 3: 16, 4: 15, 5: 16,
   6: 17, 7: 17, 8: 18, 9: 14, 10: 17,
   11: 14, 12: 14, 13: 13, 14: 13, 15: 14,
@@ -321,11 +345,13 @@ test('QUAN HỆ "lệnh vẽ = số họ + 2 + số khuôn cư dân (+1 nếu c�
   // `TECH_DEBT #43`: *khi chép một fixture, cái được chép là một LỰA CHỌN của file ấy, không phải
   // mặc định của hệ thống.*
   //
-  // Đo ngày 2026-08-24: `node scripts/city-preview.mjs --era N --hour 12 --sessions 40 --level 1`
-  // ⇒ kỷ 1 = **14** · kỷ 8 = **20** · kỷ 13 = **15**, tức đúng bảng dưới đây cộng 2 ở CẢ BA kỷ.
-  assert.equal(MOC_LENH_VE[1], 14 - 2, 'kỷ 1: Chromium đo 14 lệnh vẽ cả khung ngày 2026-08-24');
-  assert.equal(MOC_LENH_VE[8], 20 - 2, 'kỷ 8: Chromium đo 20 lệnh vẽ cả khung ngày 2026-08-24');
-  assert.equal(MOC_LENH_VE[13], 15 - 2, 'kỷ 13: Chromium đo 15 lệnh vẽ cả khung ngày 2026-08-24');
+  // Đo lại ngày **2026-08-24 (tối)** sau ADR-057, bằng ĐÚNG fixture của bài test này:
+  //     node scripts/city-preview.mjs --era N --hour 12 --sessions 40 --level 1 --bench 1 --no-shadow
+  // ⇒ kỷ 1 = **15** · kỷ 8 = **21** · kỷ 13 = **16** cả khung, tức đúng bảng dưới đây cộng 2 ở CẢ
+  // BA kỷ, và đúng +1 so với bộ neo cũ (14 · 20 · 15).
+  assert.equal(MOC_LENH_VE[1], 15 - 2, 'kỷ 1: Chromium đo 15 lệnh vẽ cả khung ngày 2026-08-24');
+  assert.equal(MOC_LENH_VE[8], 21 - 2, 'kỷ 8: Chromium đo 21 lệnh vẽ cả khung ngày 2026-08-24');
+  assert.equal(MOC_LENH_VE[13], 16 - 2, 'kỷ 13: Chromium đo 16 lệnh vẽ cả khung ngày 2026-08-24');
 });
 
 test('MẶT NƯỚC TỐN ĐÚNG +1 LỆNH VẼ, VÀ CHỈ Ở KỶ ĐÃ DỰNG HÌNH NƯỚC', () => {
@@ -460,4 +486,35 @@ test('VÙNG PHỤ CẬN CHỈ ĐƯỢC TỐN +1 LỆNH VẼ, VÀ CHỈ Ở KỶ 
   // trơn tru về một thế giới mà phase này chưa hề xảy ra.
   assert.ok(tang.length > 0 && tang.length < ERAS.length,
     'hoặc không kỷ nào tăng, hoặc mọi kỷ đều tăng — cả hai đều là dấu hiệu bảng bị chép đè.');
+});
+
+test('ADR-057: CẲNG CHÂN TÁCH RA KHỎI ĐÙI TỐN ĐÚNG **MỘT** LỆNH VẼ, Ở CẢ 15 KỶ', () => {
+  // ⚠️ MỘT PHÉP TRỪ RIÊNG CHO PHASE NÀY — đúng luật file này đã tự đặt: *mỗi phase một mốc, mỗi mốc
+  // một phép trừ riêng*. Cộng dồn vào phép trừ của phase trước thì ra một hiệu số TRỘN HAI THAY
+  // ĐỔI, và không ai còn đọc được vế nào tốn bao nhiêu.
+  //
+  // Vì sao đúng 1: chân cũ là MỘT khối `limb` từ hông xuống bàn chân. Chân mới là đùi (`limb`, đã
+  // có) + cẳng chân (`calf`, MỚI) + bàn chân (`box`, đã có) ⇒ bộ khuôn của mọi kỷ dài thêm đúng
+  // một phần tử ⇒ đúng một `InstancedMesh`.
+  //
+  // THỬ-CHO-ĐỎ (nêu TRƯỚC): đổi khuôn cẳng chân từ `calf` sang `limb` (dùng lại khuôn đùi) ⇒ số
+  // khuôn không nhích, hiệu số về 0, và cả 15 kỷ đỏ.
+  const lech = [];
+  for (const era of ERAS) {
+    const truoc = MOC_TRUOC_KHOP_NGUOC[era];
+    assert.ok(Number.isFinite(truoc), `kỷ ${era} thiếu mốc trước-khớp-ngược`);
+    const hieu = MOC_LENH_VE[era] - truoc;
+    assert.equal(hieu, 1,
+      `kỷ ${era}: mốc đi từ ${truoc} lên ${MOC_LENH_VE[era]} (lệch ${hieu}). Đầu gối thật chỉ được`
+      + ' tốn ĐÚNG một lệnh vẽ — lệch hơn nghĩa là có thứ khác đang đi ké dòng này, lệch 0 nghĩa là'
+      + ' kỷ ấy chưa nhận bản vá.');
+    lech.push(hieu);
+    // Và cái khuôn mới ấy phải THẬT SỰ có mặt ở mọi kỷ — nếu không thì hiệu số +1 đang được trả
+    // bằng một thứ khác và phép trừ trên chỉ đúng nhờ một sự trùng hợp (bẫy Phase 7D).
+    assert.ok(humanShapesUsed(era).includes('calf'),
+      `kỷ ${era}: bộ khuôn không có \`calf\` — cẳng chân chưa tách khỏi đùi`);
+    assert.ok(humanShapesUsed(era).includes('limb'),
+      `kỷ ${era}: bộ khuôn không có \`limb\``);
+  }
+  assert.equal(new Set(lech).size, 1, 'phải là +1 ĐỒNG ĐỀU ở 15 kỷ, không phải trung bình +1');
 });

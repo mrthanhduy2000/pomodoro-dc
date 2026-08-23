@@ -12,6 +12,41 @@
 
 ---
 
+## 2026-08-24 (tối) — Chân có đầu gối THẬT: giải bằng khớp ngược, 14 kiểu đi, 9 khuôn tròn hơn
+
+**Mục đích**: Đàm ra chỉ thị *"làm sao cho con người có nhiều góc bo tròn, **cử động khớp thật**,
+**có thể vẽ thêm tam giác/khối mỗi ngưới tới lúc nó bo tròn**, 3D nhiều hơn, tăng thêm kiểu đi,
+chuyển động thật và ít mặt phẳng hơn"* — hai vế in đậm là hai lệnh thu hồi tường minh (cái mẹo
+co-gối-giả của ADR-056, và trần 11 khối mỗi người).
+
+**Phạm vi**
+- **Khớp ngược** (`humanPose.js` viết lại hoàn toàn): đặt hai bàn chân trong không gian thế giới
+  TRƯỚC, rồi `solveTwoBone` suy ngược ra góc đùi và góc gối bằng định lý hàm cosin. Đảo chiều nhân
+  quả ấy làm **đai hông được lắc ngang, nghiêng và xoay MIỄN PHÍ** ⇒ **đóng `TECH_DEBT #82`**, và
+  làm trường `knee` cùng toàn bộ định lý `sin²` của ADR-056 **biến mất** (tiền đề bị gỡ, bẫy
+  Phase 8C). `stretchOf` và `legFactorAt` bị xoá.
+- **Cơ thể**: 11 → **16…18 khối**, 3 → **11 khớp** (thêm `pelvis`, `elbowL/R`, `kneeL/R`). Mỗi chân
+  nay là đùi + cẳng chân + bàn chân; mỗi tay là cánh tay + cẳng tay + bàn tay.
+- **Khuôn**: bộ 8 → **9** (thêm `calf`), mọi khuôn không phải hộp đi từ 8 lên **12 mặt** và 3–6
+  **vành**. ⚠️ Số VÀNH mới là thứ quyết định "nhìn có phẳng không", không phải số mặt.
+- **Dáng đi**: bảng 9 → **14 kiểu**, 4 → **6 trục** (`lift · flex · sway · twist · headTrack ·
+  splay`). Mỗi kỷ một kiểu, buộc vào `country`, cả 14 kiểu đều có người dùng.
+- **Khớp hai trục**: `a` ngửa quanh trục ngang-màn-hình, `b` lắc quanh trục đi tới, ghép theo thứ
+  tự cố định `Rx(b) · Rz(a)` ở cả tầng thuần lẫn `sceneGraph.js`.
+
+**Ảnh hưởng**: tam giác mỗi người 220…324 → **1.616…1.928** (×6,4); tam giác cả 15 kỷ +4,1%; **+1
+lệnh vẽ ở cả 15 kỷ** (khuôn `calf`). Trần khối 11 → **18** và trần tỉ lệ 11% → **30%**, cả hai theo
+lệnh tường minh của Đàm kèm bốn căn cứ đo được. ⚠️ **ms mỗi khung CHƯA đo lại** — hộp cát chỉ có
+SwiftShader; muốn xác nhận thì `bash scripts/bench-macbook.sh` trên máy Đàm.
+
+**Tương thích**: không đụng dữ liệu người dùng, không đụng sync, không đụng API. Bàn chân đứng yên
+tuyệt đối (**4,86 × 10⁻¹⁷ ô** trên 210 tổ hợp) nên ADR-007 (vị trí bất biến) nguyên vẹn.
+
+**Tài liệu**: ADR-057 · `ARCHITECTURE.md` · `PROJECT_STRUCTURE.md` · `PERFORMANCE.md` (Phase 17) ·
+`TECH_DEBT.md` (**đóng #82**) · `CLAUDE.md` · `BAN_GIAO.md`.
+
+---
+
 ## 2026-08-24 — Cư dân thôi đi như robot: 9 kiểu đi, co gối giả, và khuôn cơ thể hết phẳng
 
 - **Mục đích**: Đàm — *"ít ảnh phẳng hơn, tạo nhiều đặc trưng hơn, di chuyển mượt mà hơn (nhiều

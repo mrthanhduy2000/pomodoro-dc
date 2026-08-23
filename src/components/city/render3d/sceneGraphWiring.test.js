@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { Quaternion, Vector3 } from 'three';
 
 import { buildHumanBody, humanBodyTriangles } from '../../../engine/city3d/human.js';
-import { partCenterAt, poseAt, stretchOf } from '../../../engine/city3d/humanPose.js';
+import { partCenterAt, poseAt } from '../../../engine/city3d/humanPose.js';
 import { MAX_RESIDENTS } from '../../../engine/city3d/residents.js';
 
 /**
@@ -651,16 +651,30 @@ test('⚠️ CƯ DÂN PHẢI ĐI QUA `humanPose` — không được có nhánh 
     'Cư dân không còn gom theo KHUÔN. Mỗi bộ phận một mesh = 11 lệnh vẽ thay vì 3–6.');
   assert.ok(/buildHumanShapeGeometry\(shape\)/.test(CALLS),
     'Hình học cư dân không còn đến từ `humanShape.js` — có ai đó dựng lại đa giác bằng tay.');
-  assert.ok(/scale\.set\(part\.w, part\.h \* keo, part\.d\)/.test(CALLS),
-    'Kích thước bộ phận không còn đi vào ma trận scale, hoặc hệ số rút chân đã rơi khỏi chiều cao.');
-  // ⚠️ HỆ SỐ RÚT CHÂN PHẢI ÁP CHO **CẢ HAI**: chiều cao khối VÀ `rest.y` (khối treo cách khớp bao
-  // xa). Áp một mà quên hai thì bàn chân rời khỏi cẳng chân — hình học vẫn hợp lệ nên không có gì
-  // đỏ lên, và chỉ ảnh chụp gần mới thấy. Không bài test hành vi nào chạm tới được chỗ này vì nó
-  // nằm trong hàm dựng cảnh, nên phải canh bằng chính mã nguồn.
-  assert.ok(/limb\.set\(part\.rest\.x, part\.rest\.y \* keo, part\.rest\.z\)/.test(CALLS),
-    'Hệ số rút chân không còn áp cho `rest.y` — bàn chân sẽ rời khỏi cẳng chân lúc đưa chân.');
-  assert.ok(/const keo = stretchOf\(part, pose\)/.test(CALLS),
-    'Hệ số rút chân không còn đọc qua `stretchOf` — có ai đó chép lại `pose.stretch?.[…] ?? 1`.');
+  assert.ok(/scale\.set\(part\.w, part\.h, part\.d\)/.test(CALLS),
+    'Kích thước bộ phận không còn đi vào ma trận scale.');
+  assert.ok(/limb\.set\(part\.rest\.x, part\.rest\.y, part\.rest\.z\)/.test(CALLS),
+    'Chỗ treo khối vào khớp không còn đọc từ `part.rest`.');
+  // ⚠️ HỆ SỐ RÚT CHÂN (`stretchOf`) ĐÃ BIẾN MẤT Ở ADR-057, VÀ ĐÓ LÀ ĐÚNG. Nó tồn tại vì mesh cứng
+  // không gập được nên chân đưa phải bị rút ngắn để khỏi quệt đất. Nay chân có đầu gối THẬT: cẳng
+  // chân là một khối riêng, gập tại khớp gối, giải bằng khớp ngược, nên bàn chân nằm ĐÚNG chỗ ta
+  // đặt nó — không còn gì phải rút ngắn. Tiền đề bị gỡ ⇒ kết luận đi theo (bẫy Phase 8C).
+  // Ba dòng canh ở đây được ĐỔI CHỦ ĐỀ chứ không phải nới lỏng: vẫn canh đúng cái dây nối
+  // `part.rest` / `part.w,h,d` → ma trận, chỉ bỏ đi cái hệ số không còn nữa.
+  assert.ok(!/stretchOf/.test(CODE),
+    '`stretchOf` quay lại `sceneGraph.js` — chân nay có đầu gối thật, không cần rút ngắn giả.');
+
+  // ⚠️ KHỚP CÓ **HAI** TRỤC TỪ ADR-057, VÀ THỨ TỰ GHÉP LÀ MỘT PHẦN CỦA LUẬT. `a` là ngửa quanh
+  // trục NGANG-MÀN-HÌNH (bước chân), `b` là lắc quanh trục ĐI TỚI (đai hông nghiêng). Ghép ngược
+  // thứ tự thì ra một tư thế khác hẳn mà vẫn hợp lệ về hình học — không gì đỏ lên, chỉ có cái hông
+  // lắc sai chiều. `rotateByJoint` của tầng thuần ghép theo đúng thứ tự `Rx(b) · Rz(a)`, và bài
+  // đối chiếu ma trận ngay dưới sẽ đỏ nếu hai bên trôi khỏi nhau.
+  assert.ok(/jointSpin\.setFromAxisAngle\(FORWARD_AXIS, joint\.a\)/.test(CALLS),
+    'Trục ngửa của khớp không còn là `FORWARD_AXIS`.');
+  assert.ok(/jointRoll\.setFromAxisAngle\(TRAVEL_AXIS, joint\.b\)/.test(CALLS),
+    'Trục lắc thứ hai của khớp đã rơi mất — đai hông sẽ thôi nghiêng, `sway` thành nửa trục chết.');
+  assert.ok(/jointSpin\.premultiply\(jointRoll\)/.test(CALLS),
+    'Thứ tự ghép hai trục khớp đã đổi — phải là `Rx(b) · Rz(a)`, đúng như `rotateByJoint`.');
 
   // ⚠️ MỌI MESH CƯ DÂN PHẢI CÙNG MANG TÊN `residents`. `--mask residents`, `human-strip.mjs` và
   // `sceneStats.test.js` đều hỏi theo tên; đặt tên rời là làm mù mọi phép đo dựng quanh nó.
@@ -669,7 +683,7 @@ test('⚠️ CƯ DÂN PHẢI ĐI QUA `humanPose` — không được có nhánh 
 
   // Máy yếu phải quay về đúng mô hình 2 hộp, không được rơi vào nhánh đầy đủ.
   assert.ok(/lowDetail \? buildHumanBodyLowDetail\(/.test(CALLS),
-    '`lowDetail` không còn quay về mô hình 2 hộp — máy yếu sẽ phải dựng đủ 9 bộ phận mỗi người.');
+    '`lowDetail` không còn quay về mô hình 2 hộp — máy yếu sẽ phải dựng đủ 16+ bộ phận mỗi người.');
 });
 
 test('⚠️ PHÉP GHÉP MA TRẬN CỦA CẢNH PHẢI KHỚP VỚI `partCenterAt` — chạy CẢ HAI BÊN', () => {
@@ -687,8 +701,10 @@ test('⚠️ PHÉP GHÉP MA TRẬN CỦA CẢNH PHẢI KHỚP VỚI `partCenterA
   const body = buildHumanBody(1);
   const heading = new Quaternion();
   const jointSpin = new Quaternion();
+  const jointRoll = new Quaternion();
   const limb = new Vector3();
   const FORWARD = new Vector3(0, 0, 1);
+  const TRAVEL = new Vector3(1, 0, 0);
   const UPV = new Vector3(0, 1, 0);
 
   for (const travelled of [0, 0.037, 0.19, 5.5]) {
@@ -697,13 +713,15 @@ test('⚠️ PHÉP GHÉP MA TRẬN CỦA CẢNH PHẢI KHỚP VỚI `partCenterA
       heading.setFromAxisAngle(UPV, -góc);
       for (const part of body.parts) {
         const joint = pose.joints[part.joint];
-        // ĐƯỜNG 1 — y hệt `sceneGraph.js`.
+        // ĐƯỜNG 1 — y hệt `sceneGraph.js`, gồm CẢ HAI trục khớp và đúng thứ tự ghép.
         jointSpin.setFromAxisAngle(FORWARD, joint.a);
-        limb.set(part.rest.x, part.rest.y * stretchOf(part, pose), part.rest.z)
+        jointRoll.setFromAxisAngle(TRAVEL, joint.b ?? 0);
+        jointSpin.premultiply(jointRoll);
+        limb.set(part.rest.x, part.rest.y, part.rest.z)
           .applyQuaternion(jointSpin);
         limb.set(joint.x + limb.x, joint.y + limb.y, joint.z + limb.z);
         const cụcBộ = { x: limb.x, y: limb.y, z: limb.z };
-        // ĐƯỜNG 2 — tầng thuần, lượng giác viết tay.
+        // ĐƯỜNG 2 — tầng thuần, lượng giác viết tay (`rotateByJoint`).
         const thuần = partCenterAt(part, pose);
         for (const trục of ['x', 'y', 'z']) {
           assert.ok(Math.abs(cụcBộ[trục] - thuần[trục]) < 1e-12,
@@ -717,14 +735,14 @@ test('⚠️ PHÉP GHÉP MA TRẬN CỦA CẢNH PHẢI KHỚP VỚI `partCenterA
 
 /**
  * TAM GIÁC CẢ CẢNH của từng kỷ — thành phố + nền (vòm trời 960 + rặng núi 43.166 = 44.126, hằng số
- * ở cả 15 kỷ). Đo ngày **2026-08-23 (tối)** bằng ĐÚNG lệnh này:
+ * ở cả 15 kỷ). Đo lại ngày **2026-08-24 (tối)** sau ADR-057 bằng ĐÚNG lệnh này:
  *
  *     node --import ./scripts/register-esm-loader.mjs scripts/scene-tri.mjs --sessions 80
  *
- * ⚠️ ĐÃ ĐỐI CHIẾU CHÉO VỚI CHROMIUM ở kỷ 1: `node scripts/city-preview.mjs --era 1 --hour 12
- * --sessions 80` in ra **107.262 tam giác thành phố** — khớp **từng đơn vị** với dòng 1 của bảng
- * này, bằng một đường đo hoàn toàn độc lập. Không có vế đối chiếu ấy thì bảng chỉ là một phép đo
- * so với chính nó (bài học `TECH_DEBT #43`).
+ * ⚠️ ĐÃ ĐỐI CHIẾU CHÉO VỚI CHROMIUM ở kỷ 1 (`--sessions 40 --level 1 --bench 1`): Chromium in
+ * **152.558** tam giác thành phố, và `scene-tri.mjs` ở CÙNG fixture cũng ra **152.558** — khớp
+ * từng đơn vị bằng một đường đo hoàn toàn độc lập. Bảng dưới đây đo ở `--sessions 80` nên con số
+ * khác (149.710); hai fixture, hai thành phố, đừng đem so chéo (`TECH_DEBT #43`).
  *
  * ⚠️ **BẢNG CŨ ĐO Ở `--sessions 40` VÀ TRÊN CƠ THỂ CŨ, NÊN NÓ TRỘN HAI THỨ.** Mẫu số này gồm CẢ
  * cư dân, mà cư dân chính là thứ bản này đổi ⇒ giữ nguyên bảng cũ là chấm tử số mới trên một mẫu
@@ -737,12 +755,12 @@ test('⚠️ PHÉP GHÉP MA TRẬN CỦA CẢNH PHẢI KHỚP VỚI `partCenterA
  * (2026-08-22, cơ thể cũ · 40 phiên), còn chú thích trong `human.js` thì kẹt ở 63.560 suốt hai phase.
  */
 const CANH_TAM_GIAC = {
-  1: 158556, 2: 185174, 3: 195284, 4: 247080, 5: 179394,
-  6: 281966, 7: 260230, 8: 234894, 9: 222856, 10: 206490,
-  11: 236464, 12: 207302, 13: 238746, 14: 246134, 15: 226606,
+  1: 193836, 2: 221350, 3: 229892, 4: 282360, 5: 215570,
+  6: 317918, 7: 295510, 8: 271294, 9: 258136, 10: 242890,
+  11: 271744, 12: 243702, 13: 272234, 14: 278054, 15: 261662,
 };
 
-test('⚠️ NGÂN SÁCH TAM GIÁC CƯ DÂN KHÔNG QUÁ 6% CẢNH — chấm TỪNG KỶ trên cảnh CỦA CHÍNH KỶ ẤY', () => {
+test('⚠️ NGÂN SÁCH TAM GIÁC CƯ DÂN — chấm TỪNG KỶ trên cảnh CỦA CHÍNH KỶ ẤY', () => {
   // ⚠️ BẢN CŨ CHẤM MỌI KỶ TRÊN MẪU SỐ CỦA KỶ 1, VÀ LÝ LẼ CỦA NÓ ĐÃ HẾT ĐÚNG MÀ KHÔNG AI ĐỘNG VÀO.
   // Nguyên văn: *"Cư dân tốn một lượng gần như CỐ ĐỊNH (28 người × số hộp), nên tỉ lệ của họ cao
   // nhất ở kỷ có mẫu số nhỏ nhất"*. Câu ấy đúng **chừng nào tử số là hằng số** — mà từ 2026-08-23
@@ -754,8 +772,19 @@ test('⚠️ NGÂN SÁCH TAM GIÁC CƯ DÂN KHÔNG QUÁ 6% CẢNH — chấm T�
   // bị gỡ ở một phase khác" (Phase 8C) — lần này tiền đề bị gỡ là *"tử số cố định"*.
   // (Kết quả: kỷ 1 vẫn là ca xấu nhất — 5,40% trên trần 6%, biên còn 10,0% — nhưng nay ta BIẾT
   // thế chứ không suy thế.)
-  const MAX_PARTS = 11;
-  // ⚠️ TRẦN TỈ LỆ ĐÃ ĐƯỢC NÂNG 6% → 11% NGÀY 2026-08-24, VÀ ĐÂY LÀ CHỖ PHẢI ĐỌC TRƯỚC KHI TIN NÓ.
+  // ⚠️ TRẦN KHỐI 11 → 18 NGÀY 2026-08-24, VÀ NÓ LÀ MỘT LỆNH CỦA ĐÀM, KHÔNG PHẢI MỘT CÁI PHỄU.
+  // Nguyên văn: *"có thể vẽ thêm tam giác/khối mỗi ngưới tới lúc nó bo tròn"* — tức trần cũ được
+  // THU HỒI một cách tường minh, y như cổng hiệu năng bị thu hồi ngày 2026-08-21. Trần cũ có lý
+  // lẽ riêng của nó (*"ở cỡ 18 px thì khối thứ 12 không đổi được điểm ảnh nào"*), và lý lẽ ấy nói
+  // về ĐỘ PHÂN GIẢI ở khung TOÀN CẢNH; nay đã có lối đưa mắt tới gần (ADR-034: chạm vào một công
+  // trình thì camera bay tới, khoảng cách khoá ở 7,5), nên cùng cái khối ấy ở khung CẬN CẢNH chiếm
+  // gấp nhiều lần số điểm ảnh. Đó là tiền đề đã đổi, không phải một cái cớ (bẫy Phase 8C, đọc
+  // ngược chiều).
+  // Con số 18 là số đo hôm nay (kỷ 1 · 2 · 5 · 6 · 8 · 9 · 10 · 12 dựng đúng 18 khối), KHÔNG phải
+  // một con số tròn chọn cho dễ nhìn — thêm một khối nữa thì bài này đỏ và người thêm phải nói ra
+  // cái khối ấy là VẬT gì ngoài đời (đúng câu hỏi đã cứu cái mũ vành khỏi bị dựng bằng hai khối).
+  const MAX_PARTS = 18;
+  // ⚠️ TRẦN TỈ LỆ 6% → 11% (2026-08-24 sáng) → **30%** (2026-08-24 tối). ĐỌC TRƯỚC KHI TIN NÓ.
   //
   // Con số 6% chưa bao giờ được buộc vào một phép đo THỜI GIAN nào — nó là một trần tự đặt, và một
   // trần tự đặt thì rất dễ được đọc thành một sự thật vật lý. Bốn căn cứ để nâng, xếp từ mạnh
@@ -768,16 +797,22 @@ test('⚠️ NGÂN SÁCH TAM GIÁC CƯ DÂN KHÔNG QUÁ 6% CẢNH — chấm T�
   //   2. Cư dân **KHÔNG đổ bóng** (`castShadow = false`), nên họ không tốn gì ở lượt dựng bản đồ
   //      bóng — lượt đắt nhất mà hình học phải trả.
   //   3. Đàm gỡ cổng hiệu năng ngày 2026-08-21 (*"không quan trọng hiệu năng… máy tôi là M3
-  //      MacBook Air chứ có yếu đâu"*) và ngày 2026-08-24 lại yêu cầu đúng hướng này
-  //      (*"ít ảnh phẳng hơn… hình ảnh 3D hơn, đẹp hơn"*).
-  //   4. Trần 11 KHỐI của Đàm KHÔNG đổi. Cái tăng là số tam giác MỖI khối, không phải số khối —
-  //      tức không đổi gì ở luận cứ *"ở cỡ 18 px thì khối thứ 12 không đọc ra"*.
+  //      MacBook Air chứ có yếu đâu"*), rồi ngày 2026-08-24 gỡ nốt trần khối bằng đúng câu
+  //      *"có thể vẽ thêm tam giác/khối mỗi ngưới tới lúc nó bo tròn"*.
+  //   4. Cả 28 cư dân vẫn đi qua đúng 6 tới 8 `InstancedMesh` (một cái mỗi KHUÔN), nên số tam giác
+  //      tăng KHÔNG kéo theo số lệnh vẽ tăng — `drawCallBudget.test.js` canh vế ấy riêng và nó chỉ
+  //      nhích đúng +1 cho cả bản vá này.
+  //
+  // Vì sao 30% mà không phải một con số khác: ca xấu nhất ĐO ĐƯỢC hôm nay là **kỷ 1 = 26,12%**
+  // (1.808 tam giác/người × 28 trên một cảnh 193.836). 30% chừa lại **12,9% biên** — đủ để một
+  // phase sau thêm một chi tiết nhỏ mà chưa phải mở lại bảng, và KHÔNG đủ để cơ thể lặng lẽ to
+  // gấp rưỡi. Trần này vẫn là một cái CÂN (bắt trôi âm thầm), không còn là một cái CỔNG.
   //
   // ⚠️ VÀ ĐÂY LÀ GIỚI HẠN PHẢI NÓI THẲNG: **chưa đo lại mili-giây.** Hộp cát dựng bằng SwiftShader
   // (bộ tô hình chạy trên CPU), mà luật của dự án là *"một con số đo trong hộp cát chỉ được dùng để
   // so các trường hợp TRONG hộp cát ấy"*. Bốn căn cứ trên đều là suy từ phép đo CŨ trên máy thật,
   // không phải phép đo MỚI. Muốn xác nhận: `bash scripts/bench-macbook.sh` trên máy Đàm.
-  const TRAN_TY_LE = 0.11;
+  const TRAN_TY_LE = 0.30;
   let tệNhất = null;
   for (let era = 1; era <= 15; era += 1) {
     const n = buildHumanBody(era).parts.length;
@@ -801,16 +836,16 @@ test('⚠️ NGÂN SÁCH TAM GIÁC CƯ DÂN KHÔNG QUÁ 6% CẢNH — chấm T�
   // bằng đúng thứ vừa mua. Cách đúng là hỏi lại *"ngoài đời cái mũ là MẤY vật?"*: một. Gộp lại
   // thành khuôn `hat` (một mặt tròn xoay) thì kỷ 8 về 11 khối, hình học ĐÚNG HƠN, và RẺ HƠN 12
   // tam giác. ⇒ **Khi một cái cổng chặn lại, hãy để nó chỉ ra một thiết kế đúng hơn.**
-  assert.ok(MAX_PARTS <= 11,
-    `trần ${MAX_PARTS} khối/người đã bị nâng — ở cỡ 18 px thì khối thứ 12 không đổi được điểm ảnh`
-    + ' nào, nên nâng trần là mua tam giác bằng tiền mà không mua được gì cho mắt');
+  assert.ok(MAX_PARTS <= 18,
+    `trần ${MAX_PARTS} khối/người đã bị nâng quá 18 — mỗi lần nâng phải là một lệnh tường minh của`
+    + ' Đàm kèm lý do, không được nâng cho vừa một bản vá');
 
   // ⚠️ VÀ MỘT TRẦN TUYỆT ĐỐI CHO SỐ TAM GIÁC, ĐỘC LẬP VỚI CẢNH. Không có nó thì mỗi phase sau làm
   // thành phố nặng thêm sẽ TỰ ĐỘNG cấp thêm quota cho cư dân, và "≤6%" — một QUAN HỆ — trôi mà vẫn
-  // xanh. 340 là số đo hôm nay (324, kỷ 8) cộng đúng một khối `box` dự phòng, KHÔNG phải một con
-  // số tròn chọn cho dễ nhìn.
-  assert.ok(tệNhất.tri <= 640,
-    `kỷ ${tệNhất.era} dựng ${tệNhất.tri} tam giác/người — vượt trần tuyệt đối 640`);
+  // xanh. 2.100 là số đo hôm nay (1.928 — kỷ 8 · 10 · 12) cộng đúng một khuôn `limb` dự phòng
+  // (116 tam giác) làm biên, KHÔNG phải một con số tròn chọn cho dễ nhìn.
+  assert.ok(tệNhất.tri <= 2100,
+    `kỷ ${tệNhất.era} dựng ${tệNhất.tri} tam giác/người — vượt trần tuyệt đối 2.100`);
 
   console.log(`[cư dân] 15 kỷ · ca xấu nhất kỷ ${tệNhất.era}: ${tệNhất.tri} tam giác/người`
     + ` × ${MAX_RESIDENTS} = ${(tệNhất.tyLe * 100).toFixed(2)}% cảnh (trần`

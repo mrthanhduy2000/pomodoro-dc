@@ -1,4 +1,57 @@
-> Cập nhật lần cuối: **2026-08-24 (đêm)** — **CẮT CHI PHÍ MỖI PHIÊN: 6.323 DÒNG BẮT BUỘC ĐỌC → 55**.
+> Cập nhật lần cuối: **2026-08-24 (đêm 2)** — **PHASE 22: MỖI CĂN NHÀ CÓ ĐẤT CỦA NÓ.**
+>
+> ## 2026-08-24 (đêm 2) — PHASE 22: TRẦN ĐỘ PHỦ THỬA · KHOẢNG LÙI · NHÀ QUAY RA ĐƯỜNG (ADR-060)
+>
+> Đàm: *"nhà nó san sát nhau một cách khó hiểu và không giống thực tế, rất phi logic"*.
+>
+> **Chẩn đoán bằng số:** đo độ phủ thật của 371 ô nhà dân (15 kỷ, 120 phiên) — **54,8 % … 96,0 %,
+> trung vị 88,4 %**. Nhìn từ trên xuống thì 13/15 kỷ là một MẢNG MÁI LIỀN; lời của Đàm không phải
+> cảm giác. Ba trục còn thiếu: không có trần độ phủ · không có khoảng lùi · **hướng nhà băm từ toạ
+> độ ô** (`((x*3+y)%4)*90°` ở `sceneGraph.js`) nên trung bình 3/4 số nhà quay lưng ra phố.
+>
+> **Đã làm (5 việc):** **(1)** `coverage` — trần độ phủ thửa, 15 dòng, `MAX_COVERAGE = 0,70`, TỪ
+> CHỐI THẲNG ở validator. **(2)** `setFront`/`setBack`/`setSide` + `setJitter` — ba mặt ba luật
+> (ngoài đời mặt phố do quy chế, mặt sau là chỗ riêng tư, hông là phòng cháy và thoát nước mái);
+> hàng/cột ngoài cùng được lấn vào chính dải khoảng lùi của mình theo hạt giống. **(3)** tường
+> chung nay CHỈ chạy dọc mặt phố (`zm`/`zp` luôn hở = sân sau: `cavaedium` · `cour` · ngõ dịch vụ ·
+> giếng trời); `party` còn đúng 6 kỷ có nhà phố thật (7·8·9·10·11·14), năm kỷ đổi sang `loose`/
+> `court` cho khớp chính `note` của mình. **(4)** `dwellingFacing` (`dwellings.js`) suy hướng mặt
+> tiền từ bộ khung đường của kỷ, lệch tối đa 16° quanh bội số 90° để dãy nhà **lượn theo đường
+> cong**; nhờ nó hàng 0 LUÔN là hàng giáp phố — điều kiện cần để (2) và (3) có nghĩa. **(5)**
+> `sizeVary` + `vary` nới rộng: cỡ mặt bằng, chiều cao và hướng sống mái đều lệch theo hạt giống.
+>
+> **Kết quả đo:** độ phủ **38,8 % … 70,0 %** (trước 54,8–96,0). Cổng chống trôi 15 kỷ **0/15 cặp
+> chặng · 0/105 cặp kỷ** dưới ngưỡng mắt; trục chặng 15,33 → **15,28**, trục kỷ 20,24 → **20,67**,
+> trung vị 37,66 → 37,30 (mốc nền TỰ ĐO trong `git worktree` ở HEAD `6e84f92`, KHÔNG chép cột
+> "sau" của phase trước — bài học `TECH_DEBT #43`; con số 14,39 ghi ở `CLAUDE.md` là của một HEAD
+> cũ hơn và không so trực tiếp được).
+>
+> **Cái giá, nói thẳng ra:** chi tiết mái nhà dân **332/371 → 266/371 ô** (`TECH_DEBT #86`). Nó bị
+> SỐ HỌC ép chứ không phải một lỗi: một đơn vị phải rộng 0,37–0,48 ô thì mái mới đội được chi tiết,
+> mà `4 × 0,45² = 0,81 ô²` ⇒ **độ phủ ~81 %**. *"Mọi mái đều có chi tiết"* và *"nhìn từ trên xuống
+> thấy đất giữa các căn"* **không thể cùng đúng** trên một thửa 1 ô với 4 căn. Chọn vế sau vì
+> `TECH_DEBT #41` đã đo chi tiết mái nằm dưới ngưỡng mắt ở 90/90 ô tại góc mặc định. Kèm theo: nới
+> trần `storey` 2,0 → 2,4 (BẮT BUỘC — thu mặt bằng là hạ chóp mái; và lý do của trần cũ nói về một
+> QUAN HỆ *"thấp hơn kỳ quan"*, đo thật là **0,484…0,745**, còn xa mới chạm).
+>
+> **Phát hiện kèm theo (`TECH_DEBT #87`):** `soiVetRach` **mù với vết rách theo Ô CHỮ NHẬT** —
+> ~40 % số lần chụp ở `--width 1500 --pitch 85` cho ra ảnh rách mà cả ba lượt thử lại đều cho qua.
+> Có sẵn từ trước (gặp cả ở HEAD trong worktree). Mọi ảnh nghiệm thu phiên này đã soi bằng MẮT và
+> dựng lại 3 lần cho 3 kỷ.
+>
+> **Công cụ:** thêm `--pitch <độ>` cho `city-preview.mjs` — điều kiện nghiệm thu của Đàm là một GÓC
+> NHÌN cụ thể mà công cụ chưa chụp được. Đi qua đúng `orbit.set` của app nên vẫn bị `clampPitch`
+> kẹp về `MAX_PITCH` (~85°): một góc Đàm tự kéo tới được, không phải camera bịa riêng cho ảnh đẹp.
+>
+> **Ảnh:** `.city-preview/sweep-light-ky1-15.png` · `city-era{01,06,07,11,12,14}-light-h12-s120-w1500-p85.png`
+> (nhìn từ trên xuống, 120 phiên) · `city-era{07,11}-light-h12-s120-w1500-z0p62-p55.png` (cận cảnh).
+>
+> **Cổng:** `npm test` **1.156 bài · 1.155 pass · 0 fail · 1 skipped** (+ lượt đối chiếu chéo 3/3)
+> · lint sạch · build xanh.
+>
+> ---
+>
+> (Mốc trước, 2026-08-24 đêm) — **CẮT CHI PHÍ MỖI PHIÊN: 6.323 DÒNG BẮT BUỘC ĐỌC → 55**.
 > Đàm: *"mỗi lượt sửa quá ít thay đổi và không hiệu quả, không cần đo performance quá nhiều…
 > quy ước lại cách ra prompt đi"*.
 >

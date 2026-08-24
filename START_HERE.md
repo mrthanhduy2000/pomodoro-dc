@@ -27,11 +27,13 @@ Mặt trận đang làm: **thành phố 3D** (`src/engine/city3d/` + `src/compon
    `api/_tests/`. Hiện có 10 function thật.
 
 ## Đang ở đâu
-- Nhánh production: `main`. Mốc gần nhất: **ADR-059** (mỗi kỷ MỘT MẠNG ĐƯỜNG riêng — hết bàn
-  cờ; `roadPlan.js` nối các điểm mốc bằng cung cong ⇒ giao lộ chữ T/Y/ngã năm).
+- Nhánh production: `main`. Mốc gần nhất: **ADR-060** (TRẦN ĐỘ PHỦ THỬA — mỗi căn nhà có đất của
+  nó: độ phủ 88,4% → 38,8–70,0%; thêm khoảng lùi trước/sau/hông; tường chung chỉ chạy dọc mặt phố;
+  nhà quay mặt ra con đường gần nhất qua `dwellingFacing`). Trước đó: **ADR-059** (mỗi kỷ MỘT MẠNG
+  ĐƯỜNG riêng — hết bàn cờ; `roadPlan.js` nối các điểm mốc bằng cung cong ⇒ giao lộ T/Y/ngã năm).
 - Cảnh 3D: 15 kỷ, mỗi kỷ buộc vào một nước có thật (`country`/`landmark` ở `eraStyle.js`).
   Các bảng bản sắc 15 kỷ đã có: mái · tầng trệt · mặt đường · thực vật · địa thế/nước ·
-  vùng phụ cận · khu phố · dáng đi · mạng đường.
+  vùng phụ cận · khu phố · dáng đi · mạng đường · **độ phủ thửa + khoảng lùi**.
 - Lưới thành phố **12×12**. Từ ADR-059 mỗi kỷ có mạng đường RIÊNG (**29…83 ô**, không còn
   là 80 ô chung); 45 ô hứa cho kỳ quan (chỉ 5 ô có nhà); còn **371 ô nhà dân trên cả 15 kỷ**,
   đã chạm trần. Muốn thành phố đông hơn thì đổi thứ NẰM TRONG một ô, đừng thêm ô.
@@ -41,9 +43,12 @@ Mặt trận đang làm: **thành phố 3D** (`src/engine/city3d/` + `src/compon
   **KHÔNG đo lại** trừ khi Đàm thấy khung hình giật trên máy thật.
 
 ## Việc tiếp theo (chưa làm)
-1. **Kim tự tháp / ziggurat** — kỷ 2 (Ai Cập) và kỷ 3 (Iraq) đang ra mái nón nhiều cạnh,
+1. **Lấp phần đất vừa mở ra** — ADR-060 nhường lại 30–60% mỗi thửa cho sân/vườn, và hiện phần lớn
+   là đất trơn. Sân lát · vườn rau · giếng · hàng rào · chuồng theo từng kỷ sẽ biến "chỗ trống" ấy
+   thành nội dung (bảng `groundCoverStyle.js` đã có sẵn khung để mở rộng).
+2. **Kim tự tháp / ziggurat** — kỷ 2 (Ai Cập) và kỷ 3 (Iraq) đang ra mái nón nhiều cạnh,
    không có khối chóp bốn mặt. `prism` với `sides: 4` + `taper: 0` chính là thứ cần.
-2. **"Giống 3D hơn"** — bóng đổ nét hơn (`SHADOW_MAP_DESKTOP` 2048 → 4096, siết
+3. **"Giống 3D hơn"** — bóng đổ nét hơn (`SHADOW_MAP_DESKTOP` 2048 → 4096, siết
    `sun.shadow.camera` về phạm vi thành phố) + thêm che khuất môi trường (AO).
 
 ## Lệnh hay dùng
@@ -52,6 +57,7 @@ npm install --legacy-peer-deps          # cần flag này
 npm test                                # in số bài THẬT ở dòng cuối
 npm run lint && npm run build
 node scripts/city-preview.mjs --era 6 --hour 12 --width 1500     # soi một kỷ
+node scripts/city-preview.mjs --era 6 --hour 12 --pitch 85       # nhìn TỪ TRÊN XUỐNG
 node scripts/city-preview.mjs --sweep --eras 1,2,3,4,5           # bảng so sánh
 ```
 

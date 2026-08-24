@@ -12,6 +12,31 @@
 
 ---
 
+## 2026-08-24 (đêm 2) — Thành phố 3D: mỗi căn nhà có ĐẤT của nó (ADR-060)
+
+**Mục đích.** Đàm: *"nhà nó san sát nhau một cách khó hiểu và không giống thực tế, rất phi logic"*.
+Đo ra: độ phủ thửa của 371 ô nhà dân là **54,8–96,0 %, trung vị 88,4 %** — 13/15 kỷ là một mảng mái
+liền khi nhìn từ trên xuống.
+
+**Phạm vi.** `city3d/blockStyle.js` (6 cột mới: `coverage` · `setFront`/`setBack`/`setSide` ·
+`setJitter` · `sizeVary`; `deriveBlockUnits` chạy 5 bước) · `city3d/dwellings.js`
+(`dwellingFacing` suy hướng mặt tiền từ bộ khung đường của kỷ) · `render3d/sceneGraph.js` (một
+dòng `ry`) · `scripts/city-preview.mjs` (cờ `--pitch`). Không đụng kỳ quan, không đụng
+`buildingSpec.js`, không thêm lệnh vẽ.
+
+**Ảnh hưởng.** Độ phủ thửa **38,8–70,0 %**; nhà quay mặt ra đường thay vì quay theo một con số băm
+từ toạ độ ô; tường chung chỉ còn chạy dọc mặt phố (giữa hai hàng luôn có sân sau); cỡ mặt bằng,
+chiều cao và hướng sống mái lệch nhau theo hạt giống. Trần `storey` 2,0 → 2,4 để thành phố không
+thấp đi khi mặt bằng thu lại. Cổng chống trôi 15 kỷ giữ nguyên (0/15 và 0/105 dưới ngưỡng mắt).
+
+**Cái giá.** Chi tiết mái nhà dân 332/371 → 266/371 ô (`TECH_DEBT #86`) — một ràng buộc số học,
+không phải một lỗi: xem ADR-060.
+
+**Tương thích.** Không có migration. Vị trí mọi công trình và mọi ô nhà dân đã xây giữ nguyên
+(ADR-007); `dwellingFacing` là hàm thuần của `(kỷ, ô)`. Hình DÁNG nhà dân đổi — đó là mục đích.
+
+---
+
 ## 2026-08-24 (đêm) — Quy trình làm việc: cắt 6.323 dòng bắt buộc đọc xuống 55
 
 **Mục đích.** Mỗi phiên đang tiêu ~80% sức vào đọc tài liệu, đo đạc và viết báo cáo, chỉ ~20% vào

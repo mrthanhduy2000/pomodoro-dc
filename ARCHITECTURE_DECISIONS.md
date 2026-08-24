@@ -11,6 +11,100 @@
 
 ---
 
+## ADR-060 — TRẦN ĐỘ PHỦ THỬA: đất trống giữa các căn nhà là một trục bản sắc, và nó KHÔNG thể cùng đúng với «mọi mái đều có chi tiết»
+
+**Ngày:** 2026-08-24
+**Trạng thái:** đã áp dụng. **KHÔNG đảo ngược ADR-052** (một ô nhà dân vẫn là một KHU PHỐ) — nó
+thêm sáu trục vào cùng cái bảng ấy, và nới trần `storey` từ 2,0 lên 2,4 vì một lý do đo được.
+
+### Bối cảnh
+
+Đàm nhìn thành phố và nói:
+
+> *"nhà nó san sát nhau một cách khó hiểu và không giống thực tế, rất phi logic"*
+
+Bộ xương đường và thửa đã đạt sau ADR-059. Chỗ hỏng nằm **bên trong thửa**.
+
+### Vấn đề
+
+Đo độ phủ thật của 371 ô nhà dân (`deriveBlockUnits`, 15 kỷ, 120 phiên) trước bản vá:
+
+| kỷ | 1 | 9 | 10 | 2·5·8·14 | 3·7 | 13 | 11 | 15 | 12 | 4 | 6 |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| độ phủ | **96,0%** | 94,1% | 92,2% | 90,2–90,3% | 88,4% | 86,5% | 84,6% | 82,8% | 82,6% | 78,1% | 54,8% |
+
+**Trung vị 88,4%.** Nhìn từ trên xuống thì 13/15 kỷ là một MẢNG MÁI LIỀN — lời của Đàm không phải
+cảm giác, nó là con số ấy. Ba nguyên nhân, mỗi cái một trục còn thiếu:
+
+1. **Không có trần độ phủ.** `deriveBlockUnits` chia trọn mặt bằng cho `cols × rows` đơn vị; thứ
+   duy nhất chừa lại đất là `alley` (0,02…0,26), và nó chỉ là khe GIỮA hai đơn vị.
+2. **Không có khoảng lùi.** Nhà đứng sát tới tận ranh thửa ở cả bốn mặt.
+3. **Hướng nhà băm từ toạ độ ô** (`((x * 3 + y) % 4) * 90°`, `sceneGraph.js`) — **không hề biết
+   con đường nằm ở đâu**, nên trung bình 3/4 số nhà quay lưng hoặc quay hông ra phố.
+
+### Phương án cân nhắc
+
+**(A) Nới thửa cho rộng ra.** Bác: `block.test.js` có một bất biến *"khu phố không được rộng hơn
+căn nhà cũ"* và ô lưới 12×12 đã kín — đúng cái trần mà ADR-052 đã đo.
+
+**(B) Bớt số căn mỗi thửa (ít nhà hơn, mỗi căn to hơn, chừa đất).** Bác: `MIN_UNITS = 4` là lời
+hứa trung tâm của ADR-052, và bớt đi là đi ngược đúng câu Đàm nói ở phase trước (*"thành phố
+không mở rộng mà chỉ là cụm nhỏ"*).
+
+**(C) Giữ số căn, THU MẶT BẰNG từng căn cho tới khi độ phủ dưới trần.** ✅ **Chọn.**
+
+### Giải pháp
+
+Sáu cột mới ở `blockStyle.js` (`coverage` · `setFront`/`setBack`/`setSide` · `setJitter` ·
+`sizeVary`), và `deriveBlockUnits` chạy **năm bước theo đúng thứ tự**: khoảng lùi cắt thửa xuống
+phần được xây → bớt hàng/cột cho đủ `MIN_UNIT_CELLS` → rắc chênh cỡ theo hạt giống → thu theo trần
+độ phủ → xê dịch trong suất đất. Cộng `dwellingFacing` (`dwellings.js`) suy hướng mặt tiền từ bộ
+khung đường của kỷ, nhờ đó **hàng 0 của lưới khu phố LUÔN là hàng giáp phố** — điều kiện cần để
+`setFront`/`setBack` và luật *"tường chung chỉ chạy dọc mặt phố"* có nghĩa.
+
+Kết quả đo được: độ phủ **38,8% … 70,0%** (trước: 54,8…96,0, trung vị 88,4).
+
+### Trade-off — VÀ NÓ BỊ SỐ HỌC ÉP, KHÔNG PHẢI MỘT LỰA CHỌN TUỲ HỨNG
+
+Đo `emitRooftop` (nó từ chối khi cạnh ngắn của mái < `ROOFTOP_MIN_SPAN`): một đơn vị phải rộng
+**0,37…0,48 ô** thì mái mới đội được chi tiết Phase 11. Một thửa rộng ~1 ô, chia tối thiểu 4 đơn vị:
+
+> 4 × (0,45 ô)² = 0,81 ô² ⇒ **độ phủ ~81%**
+
+⇒ *"mọi căn đều có chi tiết mái"* và *"nhìn từ trên xuống thấy đất giữa các căn"* là hai điều
+**không thể cùng đúng** trên một thửa 1 ô với 4 căn. Dự án trước nay chọn vế đầu — và 88,4% chính
+là cái giá của lựa chọn ấy. Phase 22 chọn vế sau, vì `TECH_DEBT #41` đã đo rằng chi tiết mái nằm
+**dưới ngưỡng mắt ở 90/90 ô** tại góc nhìn mặc định, còn đất giữa các căn thì đọc ra ngay ở đúng
+góc Đàm dùng để chấm. Giá phải trả: chi tiết mái **332/371 → 266/371 ô** (`TECH_DEBT #86`).
+
+**Nới trần `storey` 2,0 → 2,4** là hệ quả BẮT BUỘC, không phải một lần nới cho tiện: chóp mái cao
+theo bề ngang mái, nên thu mặt bằng là hạ chiều cao, và không bù lại thì phase này sẽ làm thành phố
+THẤP ĐI — đúng cách hỏng mà ADR-052 sinh ra để ngăn. Lý do của cái trần cũ nói về một **QUAN HỆ**
+(nhà dân phải thấp hơn kỳ quan) trong khi 2,0 là một **MỨC** — đúng bẫy Phase 7D. Đo quan hệ thật:
+nhà dân cao nhất ÷ kỳ quan cao nhất = **0,484…0,745**, tức cái trần cũ đang chặn ở một chỗ còn xa
+mới chạm tới thứ nó nói là đang bảo vệ. Đây cũng là phép đánh đổi mà quy hoạch đô thị thật đã dùng
+cả trăm năm: **ít đất hơn thì đổi lấy cao hơn** (luật giật cấp New York 1916, mikrorayon).
+
+### Ảnh hưởng
+
+`blockStyle.js` (bảng + `deriveBlockUnits`) · `dwellings.js` (`dwellingFacing`) · `sceneGraph.js`
+(một dòng `ry`) · `scripts/city-preview.mjs` (cờ `--pitch`). **Không đụng** `buildingSpec.js`,
+không đụng kỳ quan, không thêm một lệnh vẽ nào. ADR-007 nguyên vẹn: vị trí ô nhà dân không đổi,
+và `dwellingFacing` là hàm THUẦN của `(kỷ, ô)`.
+
+Năm kỷ đổi `attach` để đúng với chính `note` của mình: **1 · 2 · 5** `party` → `loose` (Çatalhöyük
+có sân rác lộ thiên giữa các cụm; Deir el-Medina có khe giữa hai dãy; phố Đức trung cổ chừa khe
+`Zwischenraum` thoát nước mái), **3 · 13** `party` → `court` (nhà sân trong thành Ur và machiya có
+`tsuboniwa` — cả hai vốn đã tự khai "sân trong" trong `note`). `party` nay còn đúng sáu kỷ có nhà
+phố thật: **7 · 8 · 9 · 10 · 11 · 14**.
+
+### Điều kiện xem lại
+
+Nếu phase sau muốn đòi lại chi tiết mái thì đường ra **KHÔNG** phải nới ngưỡng mà là hạ `MIN_UNITS`
+hoặc nới thửa — cả hai đều cần một ADR riêng vì chúng đảo ngược ADR-052.
+
+---
+
 ## ADR-059 — MẠNG ĐƯỜNG là một trục bản sắc: mỗi kỷ tự sinh lấy tập ô đường của mình bằng những CUNG CONG, thay cho một bàn cờ chung cho cả 15 kỷ
 
 **Ngày:** 2026-08-24

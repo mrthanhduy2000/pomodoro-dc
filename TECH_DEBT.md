@@ -13,7 +13,8 @@
 > mà không được refactor triệt để, phải CHỦ ĐỘNG đề xuất mở một "Maintenance Sprint" (nêu rõ mục
 > tiêu/phạm vi/lợi ích/rủi ro/tiêu chí hoàn thành) thay vì tiếp tục cộng thêm tính năng mới.
 >
-> **Trạng thái ngưỡng hiện tại (2026-08-24 chiều, sau ADR-059)**: thêm **#84** (kỷ 1 và 2 thấp đi
+> **Trạng thái ngưỡng hiện tại (2026-08-24 đêm, sau ADR-060)**: thêm **#86** (chi tiết mái mất một phần — cái giá ĐÃ ĐẾM của trần độ phủ thửa, Low) và **#87** (`soiVetRach` mù với vết rách theo Ô, Medium). Ghi chú của lần trước:
+> **(2026-08-24 chiều, sau ADR-059)**: thêm **#84** (kỷ 1 và 2 thấp đi
 > ~4% sau khi ô nhà dân thành khu phố — đã đếm tường minh) ở mức **Low**; **#85 mở rồi ĐÓNG ngay
 > trong phiên** (`road-bend.mjs` đo một đại lượng mà ADR-059 đã thay — và trong lúc vá thì lộ ra
 > `--selftest` của nó ĐỎ trên một mạng đường lành, vì đối chứng hỏi sai đại lượng). Đếm lại toàn file bằng cách quét trường
@@ -4393,6 +4394,68 @@ cấp `Math.min(3,…)` → `Math.min(9,…)` · cắt bớt danh sách cấp th
 - **Review Trigger (MỚI, thay cho mốc đã dùng)**: **ngay phase sau §1(3)**, hoặc sớm hơn nếu Đàm
   nhìn ảnh §1(3) rồi nói mái nhà dân trông giống nhau giữa các kỷ.
 - **Owner**: chưa phân công · **Status**: Open (đã rà soát 2026-08-21, hoãn có lý do)
+
+---
+
+## #86 — Trần độ phủ thửa (ADR-060) lấy mất chi tiết mái ở 7/15 kỷ: 332/371 → 266/371 ô
+
+- **Tên**: chi tiết mái nhà dân mất một phần khi mặt bằng đơn vị bị thu lại
+- **Module**: `src/engine/city3d/blockStyle.js` + `rooftop.js` (`ROOFTOP_MIN_SPAN`)
+- **Priority**: Low · **Severity**: Low
+- **Impact**: ống khói · bồn nước · cửa sổ mái (Phase 11) thôi được dựng ở những đơn vị hẹp hơn
+  `ROOFTOP_MIN_SPAN`. Đo được: **266/371 ô** còn chi tiết mái (trước ADR-060: 332/371). Bảy kỷ
+  dưới 70%: kỷ 2 = 0,368 · 12 = 0,296 · 15 = 0,433 · 6 = 0,435 · 9 = 0,538 · 11 = 0,643 · 4 = 0,682.
+  ⚠️ Ở góc nhìn MẶC ĐỊNH thì chưa ai thấy được — `TECH_DEBT #41` đã đo 90/90 ô dưới ngưỡng mắt cho
+  đúng họ chi tiết này. Nó chỉ mất khi ZOOM SÁT MÁI.
+- **Root Cause**: **một ràng buộc số học, không phải một lỗi.** Một đơn vị phải rộng 0,37…0,48 ô
+  thì mái mới đội được chi tiết; một thửa ~1 ô chia tối thiểu 4 đơn vị ⇒ `4 × 0,45² = 0,81 ô²`
+  ⇒ **độ phủ ~81%**. Tức *"mọi mái đều có chi tiết"* và *"nhìn từ trên xuống thấy đất giữa các
+  căn"* không thể cùng đúng. Đàm đòi vế sau, tường minh, và anh chấm nó bằng mắt.
+- **Current Risk**: Thấp — không nhìn thấy ở khung mặc định.
+- **Future Risk**: Trung bình nếu có phase làm về CẬN CẢNH mái (`FOCUS_VIEW_DISTANCE`), vì lúc ấy
+  bảy kỷ trên sẽ hiện ra là mái trơn.
+- **Recommended Solution**: **KHÔNG nới ngưỡng.** Ba đường thật sự, xếp theo giá tăng dần:
+  (a) hạ `MIN_UNITS` từ 4 xuống 3 cho riêng những kỷ có `coverage` thấp — mỗi căn to hơn, vẫn đủ
+  đất trống; (b) nới thửa (đụng bất biến *"khu phố không rộng hơn căn nhà cũ"*); (c) hạ
+  `ROOFTOP_MIN_SPAN` kèm một bộ chi tiết mái GỌN HƠN cho nhà dân. Cả (a) và (b) đảo ngược một
+  phần ADR-052 nên phải có ADR riêng.
+- **Estimated Complexity**: Trung bình
+- **Blocking Conditions**: cần Đàm quyết ưu tiên (đất trống ↔ chi tiết mái) — anh đã quyết một lần
+  ở Phase 22 và quyết chọn đất trống.
+- **Review Trigger**: khi có phase làm về cận cảnh mái, hoặc khi Đàm nói mái nhà dân trông trơn.
+- **Owner**: chưa phân công · **Status**: Open (đã đếm tường minh ở `block.test.js`, bài
+  `CHI TIẾT MÁI — cái giá của trần độ phủ`, danh sách `MAT_CHI_TIET_MAI` viết BẰNG chứ không
+  "bao gồm" — kỷ thứ tám rơi vào thì đỏ, mà một kỷ được chữa xong cũng đỏ)
+
+---
+
+## #87 — `soiVetRach` KHÔNG bắt được vết rách theo Ô CHỮ NHẬT của Chromium, chỉ bắt được vết rách theo DÒNG
+
+- **Tên**: bộ dò ảnh rách bỏ lọt đúng hình dạng rách đang xảy ra nhiều nhất
+- **Module**: `scripts/city-preview.mjs` (`soiVetRach`)
+- **Priority**: Medium · **Severity**: Medium
+- **Impact**: Ở `--width 1500 --pitch 85` (3 dải chụp), **khoảng 40% số lần chụp cho ra một tấm ảnh
+  rách** — và nó lọt qua cả ba lượt thử lại của `soiVetRach` rồi được ghi ra đĩa như một tấm ảnh
+  lành. Đã gặp thật ở kỷ 6 · 7 · 14 trong phiên Phase 22, và **gặp cả trong worktree ở HEAD**, tức
+  nó có sẵn từ trước chứ không phải do bản vá nào. Một tấm ảnh rách trông hoàn toàn hợp lý: nội
+  dung vẫn là cảnh thật, chỉ là vài mảng thuộc về một khung hình khác. Nếu ai trích số từ nó thì
+  con số sai vài điểm phần trăm mà không gì kêu — đúng ca `TECH_DEBT #52`.
+- **Root Cause**: `soiVetRach` quét MÉP HÀNG (`mocDai` là các mốc chia dải, và phép soi đi theo
+  từng dòng). Vết rách quan sát được lại có **cả mép DỌC nằm GIỮA một dải** (đo được ở kỷ 14: mép
+  dọc tại x ≈ 800 trong dải 0 và x ≈ 1210 trong dải 1) — dấu vân tay của việc Chromium composite
+  theo Ô CHỮ NHẬT chứ không theo dòng: một ô lấy nội dung từ khung hình trước. Một phép soi chỉ đi
+  theo dòng thì về mặt cấu trúc không thể thấy một mép dọc.
+- **Current Risk**: Trung bình — mọi ảnh nghiệm thu phải soi bằng MẮT trước khi dùng, không được
+  tin cổng tự động. Trong phiên Phase 22 đã làm đúng thế (dựng lại 3 lần cho 3 kỷ).
+- **Future Risk**: Cao nếu có phase nào chấm số trên ảnh dựng ở bề ngang lớn mà không nhìn ảnh.
+- **Recommended Solution**: mở rộng `soiVetRach` sang mép DỌC (cùng công thức, đổi trục), HOẶC —
+  rẻ hơn và chắc hơn — chụp **hai lượt liên tiếp rồi so byte**: một vết rách theo ô là ngẫu nhiên
+  nên hai lượt gần như không bao giờ rách giống hệt nhau (đã quan sát: cùng lệnh, cùng cây mã, ba
+  lượt kỷ 14 cho ba md5 khác nhau và chỉ lượt cuối lành).
+- **Estimated Complexity**: Thấp
+- **Blocking Conditions**: Không có.
+- **Review Trigger**: ngay khi có phase cần trích SỐ từ ảnh dựng ở `--width` lớn.
+- **Owner**: chưa phân công · **Status**: Open (phát hiện 2026-08-24, Phase 22)
 
 ---
 

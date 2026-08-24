@@ -927,10 +927,16 @@ test('MẢNG PHỦ — kỷ khai `share` CAO nhất luôn phủ nhiều hơn k�
     if (soMangPhu(cao, moc) > soMangPhu(thap, moc)) continue;
     hoa.push(moc);
   }
-  assert.deepEqual(hoa, [150],
+  //
+  // ⚠️ PHASE 21 §5 CHỮA XONG MỐC 150, VÀ KHÔNG PHẢI BẰNG CÁCH ĐỤNG VÀO `GROUND_COVER_STYLES`. §5
+  // nâng số thửa kỷ 1 từ 6 lên 11 (kèm `minSide` 2 → 1), nên bộ xương kỷ 1 dày lên: **ô đường kỷ 1
+  // đi từ 39 lên 57** (kỷ 14 = 88), tức mẫu số của hai kỷ xích lại gần nhau và phép so đầu-cuối
+  // công bằng trở lại. Đo ở mốc 150: kỷ 14 phủ **8** mảng, kỷ 1 phủ **6** — trước §5 cả hai cùng
+  // ra 8 nên chúng hoà. Danh sách nay RỖNG: lời hứa `share` giữ được ở CẢ BẢY mốc tuổi.
+  assert.deepEqual(hoa, [],
     `mốc mà kỷ ${cao} (share cao nhất) KHÔNG phủ nhiều hơn kỷ ${thap} (share thấp nhất) nay là `
-    + `[${hoa.join(',')}] — dài ra là mẫu số vừa lệch thêm ở một mốc nữa, ngắn đi là mốc 150 vừa `
-    + 'được chữa (hãy cập nhật con số ~33 so với ~12 ô trống trong chú thích)');
+    + `[${hoa.join(',')}] — danh sách này phải RỖNG; dài ra là mẫu số vừa lệch ở một mốc nào đó `
+    + '(hãy đo lại số ô đường của hai kỷ ấy trước khi nghi bảng `share`)');
 });
 
 test('MẢNG PHỦ — ĐỐI CHỨNG: chưa bỏ công thì chưa được thưởng (thành phố sơ khai vẫn phải thưa)', () => {

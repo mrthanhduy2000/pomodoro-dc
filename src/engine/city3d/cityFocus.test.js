@@ -363,9 +363,15 @@ test('ĐỐI CHỨNG: chỉ canh ĐIỂM ĐẾN thôi là chưa đủ — và đ
   }
   assert.deepEqual(
     [...new Set(lotLuoi)].sort((a, b) => a - b),
-    [2, 6, 8, 10, 15],
+    [1, 8, 10, 15],
     'danh sách kỷ mà phép canh cả đường bay thật sự cứu — đổi là phải xem lại vì sao',
   );
+  // ⚠️ 2026-08-24, PHASE 21 §5 (nâng số thửa của bảy kỷ) — **4 kỷ / 7 chuyến**: kỷ 2 · 6 · 13 RỜI,
+  // kỷ 1 RƠI VÀO. Nguyên nhân KHÔNG nằm ở đường bay mà ở BỐ CỤC: số thửa quyết ranh giới thửa →
+  // quyết tập ô đường → quyết ô nào là nhà dân, nên §5 dời chỗ nhà ở cả 15 kỷ. Đây là một danh
+  // sách ĐỐI CHỨNG (nó đếm những chuyến mà điểm đến thoáng nhưng đoạn giữa thì không), nên con số
+  // NGẮN đi không có nghĩa phép canh kém đi — bài `phaiLuiRa` ở trên vẫn khác rỗng, tức cơ chế vẫn
+  // đang cứu thật. Chênh lệch lớn nhất giữa "điểm đến" và "cả đường" nay là **1,0960**.
   // 2026-08-20, HAI lần đổi trong cùng một ngày và cả hai đều có lý do đo được:
   //   9 kỷ / 9 chuyến  → nền `9c7032c`
   //   9 kỷ / 12 chuyến → sau §1(B) (nền phẳng hơn ⇒ camera toàn cảnh đứng gần hơn ⇒ đường bay đi
@@ -421,7 +427,7 @@ test('ĐỐI CHỨNG: chỉ canh ĐIỂM ĐẾN thôi là chưa đủ — và đ
   // phình ra trùm lên ngõ — đúng chỗ camera bay ngang — không còn nữa.
   // ⚠️ Thứ ĐÁNG canh ở đây không phải danh sách mà là con số cuối: chừng nào nó còn khác 0 thì phép
   // canh cả-đường-bay vẫn đang cứu người thật, tức cơ chế lấy mẫu 48 chặng chưa thành mã chết.
-  assert.equal(lotLuoi.length, 10, 'đúng 10 chuyến trên 1200 lọt lưới nếu chỉ canh điểm đến');
+  assert.equal(lotLuoi.length, 7, 'đúng 7 chuyến trên 1200 lọt lưới nếu chỉ canh điểm đến');
   assert.ok(cheoNhat > 1, `chênh lớn nhất giữa điểm-đến và cả-đường mới ${cheoNhat.toFixed(2)} — quá nhỏ để gọi là cứu được ai`);
 });
 

@@ -82,6 +82,7 @@
 
 import { CITY_GRID_SIZE } from '../cityGrid';
 import { parcelCapacity } from './parcelCapacity';
+import { parcelRoles, MIN_DWELLING_PARCELS } from './parcelRoles';
 
 /**
  * NĂM KIỂU LƯỢN mà `roadPath.js` dựng được. Mỗi giá trị phải được ÍT NHẤT MỘT kỷ dùng — có test
@@ -168,9 +169,17 @@ export const NETWORK_STYLES = {
     // lớn/nhỏ chỉ **1,60**, phẳng nhất cả 15 kỷ. Tức một con số nói "rất đa dạng" bị một con số
     // khác nuốt mất trong im lặng. Hạ về 2 thì nó lên **6,00** — cao nhất bảng, đúng thứ tự phải
     // có. Khối nhà Çatalhöyük dính liền nhưng KHÔNG đều: nó là một mớ ô lớn nhỏ chen nhau.
+    // ⚠️⚠️ **VÀ CON SỐ 6,00 Ở TRÊN ĐO MỘT THỨ KHÁC VỚI THỨ NÓ TỰ XƯNG — PHASE 21 §5 ĐÃ ĐO LẠI.**
+    // `parcels` là TỔNG số thửa, mà **5 thửa đầu luôn bị 5 bản vẽ kỳ quan lấy** và 1–2 thửa nữa
+    // thành quảng trường ⇒ khai 6 thửa nghĩa là **KHÔNG CÒN MỘT THỬA NHÀ Ở NÀO**. Cả khu dân cư
+    // là một mảnh đất chưa chia, tức đúng cái vẻ "ngăn nếp, phẳng lì" Đàm bác — và cái tỉ số
+    // 6,00 ấy là tỉ số giữa các KHU KỲ QUAN, không phải giữa các thửa đất. Đo lại với 11 thửa:
+    // thửa nhà ra **22 · 5 · 2 · 5 ô** (tỉ số 11,00) — đúng câu Đàm đặt ra, *"mảnh đất bé xíu
+    // cạnh khu vườn lớn"*. `minSide: 1` là thứ cho phép mảnh 2 ô ấy tồn tại, và nó đúng lịch sử
+    // hơn cả 2: tổ ong Çatalhöyük gồm những buồng nhỏ xíu dính nhau, không phải những lô vuông.
     note: 'Çatalhöyük/Göbekli Tepe — chưa có "đường": vệt chân người mòn giữa các lều, đi cả trên mái',
     plan: 'organic', bend: 0.85, arms: 3, loops: 0, tangle: 0.20,
-    parcels: 6, sizeVary: 0.86, minSide: 2,
+    parcels: 11, sizeVary: 0.86, minSide: 1,
   },
   2: {
     country: 'Ai Cập',
@@ -184,9 +193,15 @@ export const NETWORK_STYLES = {
     // nối tiếp (phòng trước · phòng khách có bàn thờ · kho · bếp có sân sau). Một thửa mỏng 2 ô
     // không chứa nổi hình dạng ấy. Đây cũng là kỷ khai `sizeVary` thấp thứ nhì (0,28) nên sàn dày
     // không nuốt mất gì — nhà nước dựng thì các thửa vốn phải bằng nhau.
+    // ⚠️ `parcels: 9` CHỨ KHÔNG PHẢI 7 (Phase 21 §5). Bảy thửa thì sau khi 5 bản vẽ kỳ quan
+    // lấy 5 và quảng trường lấy 1, khu dân cư chỉ còn **ĐÚNG MỘT** mảnh chưa chia — không có "các
+    // thửa" để mà nói chúng khác cỡ hay giống cỡ. Chín thửa cho ra ba thửa nhà **12 · 9 · 9 ô**,
+    // tỉ số 1,33: gần như đều nhau, và ở kỷ NÀY đó là câu trả lời ĐÚNG — Deir el-Medina là làng
+    // thợ do nhà nước dựng, những dãy nhà giống hệt nhau trong một vòng tường. `minSide: 3` giữ
+    // nguyên vì thửa ở đây là những khối dày, không phải mảnh vụn.
     note: 'Deir el-Medina — làng thợ do nhà nước dựng: một phố thẳng duy nhất, hai dãy nhà đều nhau',
     plan: 'axial', bend: 0.22, arms: 2, loops: 0, tangle: 0.05,
-    parcels: 7, sizeVary: 0.28, minSide: 3,
+    parcels: 9, sizeVary: 0.28, minSide: 3,
   },
   3: {
     country: 'Iraq',
@@ -225,9 +240,15 @@ export const NETWORK_STYLES = {
     // mòn dẫn tới chợ, rồi nhà bám theo ranh giới thửa đất, rồi thửa đất bám theo địa hình. Nên
     // `plan: 'radial'` với `arms` 5 và một vòng khép kín (tường thành) là cách kể đúng nhất —
     // thứ mà khách du lịch gọi là "quyến rũ" còn người đánh xe ngựa gọi là địa ngục.
+    // ⚠️ `parcels: 9` CHỨ KHÔNG PHẢI 6 (Phase 21 §5) — sáu thửa nghĩa là 5 khu kỳ quan + 1
+    // quảng trường và **không còn thửa nhà ở nào**. Chín cho ra ba thửa nhà 9 · 7 · 8 ô.
+    // ⚠️ Và `minSide` GIỮ NGUYÊN 2, dù hạ xuống 1 sẽ cho thửa lệch hơn: đo ra thì `minSide: 1`
+    // bóp mọi khu kỳ quan xuống còn 4·1·1·1·4 ô (so với 4·1·4·1·4) — tức mua sự đa dạng của đất
+    // ở bằng cách xoá mất chỗ đứng của chính những công trình Đàm xây ra. Kỷ này khai `radial`
+    // chứ không phải `organic`, nên nó KHÔNG nằm trong lời hứa "thửa phải chênh rõ rệt".
     note: 'phố cổ trung cổ — ngõ mọc theo ranh thửa đất và đường ra chợ, đổi hướng vài mét một lần',
     plan: 'radial', bend: 0.75, arms: 5, loops: 1, tangle: 0.30,
-    parcels: 6, sizeVary: 0.82, minSide: 2,
+    parcels: 9, sizeVary: 0.82, minSide: 2,
   },
   6: {
     country: 'Việt Nam',
@@ -239,9 +260,13 @@ export const NETWORK_STYLES = {
     // đánh theo BỀ NGANG mặt phố, nên ai cũng xây hẹp và sâu tới 60–80 m), và cả một dãy phố nghề
     // là nhiều dải đất rất mảnh xếp cạnh nhau. Sàn 2 ô gộp chúng lại thành những khối vuông vức —
     // đúng cái vẻ "quy hoạch" mà phase này sinh ra để xoá.
+    // ⚠️ `parcels: 12` CHỨ KHÔNG PHẢI 7 (Phase 21 §5) — bảy thửa để lại **đúng một** mảnh nhà
+    // ở, tức làng không hề được chia. Mười hai cho ra năm thửa nhà **2 · 3 · 10 · 4 · 7 ô**
+    // (tỉ số 5,00), và đó chính là hình dạng của một làng Bắc Bộ: vài mảnh vườn rộng cạnh những
+    // mảnh thổ cư con con, tụ quanh cái ao chung chứ không xếp theo hàng.
     note: 'phố cổ Hà Nội — phố bám theo đê và dòng sông Tô Lịch cũ, cong theo dòng nước chứ không theo trục',
     plan: 'organic', bend: 0.80, arms: 4, loops: 1, tangle: 0.55,
-    parcels: 7, sizeVary: 0.74, minSide: 1,
+    parcels: 12, sizeVary: 0.74, minSide: 1,
   },
   7: {
     country: 'Ý',
@@ -249,9 +274,16 @@ export const NETWORK_STYLES = {
     // (lưới vuông) → bị lấp đầy bằng ngõ trung cổ (lượn) → rồi Phục Hưng chọc vài trục thẳng qua.
     // Ba lớp ấy còn nguyên trên bản đồ hôm nay. Biên độ vừa phải là cách duy nhất trung thực để kể
     // một thành phố vừa có lưới vừa không.
+    // ⚠️ `parcels: 11, minSide: 1` CHỨ KHÔNG PHẢI 9/2 (Phase 21 §5). Chín thửa để lại ba thửa
+    // nhà **7 · 8 · 7 ô** — tỉ số 1,14, tức ba mảnh gần như bằng nhau: một cái bàn cờ, đúng thứ
+    // Đàm bác, và nó nói dối cái `note` ngay dưới (trại quân La Mã chỉ là LÕI nhỏ giữa Firenze;
+    // phần còn lại là ngõ trung cổ bồi quanh với thửa to nhỏ lẫn lộn). Với 11 thửa và sàn 1 ô:
+    // **2 · 3 · 10 · 5 ô**, tỉ số 5,00 — mảnh đất bé xíu cạnh vườn palazzo, đúng phố cổ Ý.
+    // ⚠️ Chọn 11 chứ không 12 vì đã ĐO cả hai: 12 thửa bóp khu kỳ quan xuống 4·4·1·1·1 ô, còn 11
+    // giữ được 4·4·4·4·1 — cùng một tỉ số thửa nhà mà không phải trả bằng chỗ đứng của kỳ quan.
     note: 'Firenze — lưới trại quân La Mã bị ngõ trung cổ lấp đầy, rồi Phục Hưng chọc trục thẳng qua',
     plan: 'organic', bend: 0.55, arms: 4, loops: 1, tangle: 0.40,
-    parcels: 9, sizeVary: 0.6, minSide: 2,
+    parcels: 11, sizeVary: 0.6, minSide: 1,
   },
   8: {
     country: 'Bồ Đào Nha',
@@ -270,6 +302,12 @@ export const NETWORK_STYLES = {
     // quảng trường tròn (Étoile có 12 đại lộ toả ra). Nên đặc trưng của nó không phải "cong" mà là
     // "doãng khỏi trục lưới, càng ra xa tâm càng doãng". Bước sóng dài nhất bảng: một đại lộ
     // Haussmann chạy hàng cây số mà không đổi hướng một lần nào.
+    // ⚠️ **KỶ NÀY GIỮ NGUYÊN 9/2, VÀ ĐÓ LÀ MỘT KẾT QUẢ ĐO CHỨ KHÔNG PHẢI MỘT CHỖ CHƯA LÀM**
+    // (Phase 21 §5). Chín thửa để lại ba thửa nhà 8 · 4 · 4 ô — tỉ số 2,00, không cao, nhưng kỷ
+    // này khai `radial` chứ không phải `organic` nên nó KHÔNG nằm trong lời hứa "thửa phải chênh
+    // rõ rệt". Đã thử `minSide: 1` (những mảnh "mũi tàu" mỏng dính mà đại lộ Haussmann để lại là
+    // một lý lẽ lịch sử thật): tỉ số thửa nhà vọt lên 5,25 **nhưng cả năm khu kỳ quan cùng tụt
+    // xuống 1 ô**, tức đổi lấy một con số bằng cách xoá chỗ đứng của công trình. Không đổi.
     note: 'Paris Haussmann — đại lộ chọc xuyên phố trung cổ, toả ra từ quảng trường tròn (Étoile: 12 nhánh)',
     plan: 'radial', bend: 0.30, arms: 6, loops: 1, tangle: 0.10,
     parcels: 9, sizeVary: 0.55, minSide: 2,
@@ -311,9 +349,19 @@ export const NETWORK_STYLES = {
     // *микрорайон* là một siêu ô phố 10–60 ha có trường, nhà trẻ, cửa hàng nằm TRONG nó, tức mỗi
     // ô phố lớn gấp nhiều lần một block Manhattan. Chang'an chia 108 phường; Moscow Xô Viết thì
     // chia ÍT mảnh và mỗi mảnh TO. Khai 9 như trước là kể ngược câu chuyện.
+    // ⚠️ `parcels: 8` CHỨ KHÔNG PHẢI 6 (Phase 21 §5) — sáu thửa để lại **0** thửa nhà ở, nên cả
+    // khu dân cư là một mảng đặc chưa chia. Tám cho ra hai thửa nhà lớn: vài siêu ô gần bằng
+    // nhau, đúng микрорайон Xô-viết, nơi đơn vị quy hoạch là cả một tiểu khu chứ không phải từng
+    // lô đất. `minSide: 2` giữ nguyên: ở đây KHÔNG có mảnh vụn.
+    // ⚠️ **VÀ VÌ SAO 8 CHỨ KHÔNG PHẢI 9 — MỘT PHÉP ĐO, KHÔNG PHẢI MỘT CHỌN BỪA.** Thử 9 trước, và
+    // bài `15 KỶ RA 15 BỘ XƯƠNG` ĐỎ NGAY: kỷ này và **kỷ 4 (Chang'an) ra bộ xương TRÙNG KHÍT** —
+    // cùng `grid`, cùng `loops: 1`, cùng `minSide: 2`, `bend`/`tangle` đều ~0 nên vị trí nhát cắt
+    // chỉ còn phụ thuộc SỐ THỬA; cho hai kỷ cùng một số là cho chúng cùng một thành phố. Tám vừa
+    // gỡ trùng vừa đúng lịch sử hơn: Chang'an nhà Đường chia **108 phường** — một lưới rất mịn;
+    // tiểu khu Xô-viết thì đi ngược lại, ít ô hơn nhưng mỗi ô to hơn hẳn.
     note: 'siêu ô phố Xô Viết — vài đại lộ rất rộng để duyệt binh thay cho nhiều phố nhỏ',
     plan: 'grid', bend: 0.10, arms: 3, loops: 1, tangle: 0.00,
-    parcels: 6, sizeVary: 0.1, minSide: 2,
+    parcels: 8, sizeVary: 0.1, minSide: 2,
   },
   13: {
     country: 'Nhật Bản',
@@ -333,9 +381,15 @@ export const NETWORK_STYLES = {
     // Tokyo là quê hương của *kyōshō jūtaku* (nhà siêu nhỏ trên mảnh đất dưới 50 m²), hệ quả trực
     // tiếp của việc thừa kế ranh thửa Edo cộng thuế thừa kế buộc chia nhỏ đất. Không nơi nào trong
     // bảng này có thửa nhỏ hơn thế, và đó chính là điều làm kỷ 13 khác kỷ 11 dù cả hai đều đông đúc.
+    // ⚠️ `parcels: 13` CHỨ KHÔNG PHẢI 12 (Phase 21 §5), và lý do là một bài test chứ không phải
+    // một cảm giác: sau khi §5 nâng số thửa cho sáu kỷ, trục `parcels` co lại còn **5 giá trị
+    // khác nhau** và bài `BẢNG CÒN LÀ MỘT BẢNG` đỏ — một bảng 15 dòng mà cả cột chỉ có 5 câu trả
+    // lời thì nó đang thoái hoá về một dòng. Kỷ này là chỗ đúng để nới, vì nó là kỷ chia đất mịn
+    // nhất bảng theo lịch sử: Tokyo dựng lại sau 1945 trên **đúng ranh thửa Edo**, mà thửa Edo
+    // nổi tiếng nhỏ và nhiều — đó chính là thứ đẻ ra những căn nhà mặt tiền 3 mét của Tokyo.
     note: 'Tokyo hiện đại — dựng lại trên đúng ranh thửa Edo sau 1945, phố hẹp và cong, phần lớn không tên',
     plan: 'organic', bend: 0.70, arms: 5, loops: 1, tangle: 0.75,
-    parcels: 12, sizeVary: 0.66, minSide: 1,
+    parcels: 13, sizeVary: 0.66, minSide: 1,
   },
   14: {
     country: 'Singapore',
@@ -400,6 +454,19 @@ export function isValidNetworkStyle(style) {
    */
   const canh = style.loops > 0 ? CITY_GRID_SIZE - 2 : CITY_GRID_SIZE;
   if (style.parcels > parcelCapacity(canh, canh, style.minSide)) return false;
+  /**
+   * ⚠️ **VÀ PHẢI CÒN LẠI THỬA ĐẤT Ở — cái sàn này mới là thứ Phase 21 §5 tìm ra.** Trần ở trên
+   * chặn *"khai nhiều quá thì bộ sinh dựng không nổi"*; nó không nói một chữ nào về đầu KIA. Mà
+   * đầu kia mới là chỗ đã hỏng suốt từ Phase 20: `parcels` đọc lên như *"thành phố chia làm mấy
+   * mảnh"*, nhưng **5 mảnh đầu luôn bị 5 bản vẽ kỳ quan lấy** rồi 1–2 mảnh nữa thành quảng
+   * trường ⇒ khai 6 thì khu dân cư là **một mảnh chưa hề được chia**. Sáu trên mười lăm kỷ ở đúng
+   * trạng thái đó (1 · 5 · 7 · 9 · 12 và gần thế là 2 · 6), và không có gì đỏ lên: cả cái nhãn
+   * `organic` lẫn `sizeVary: 0,86` vẫn ở đó, chỉ là chúng chẳng có gì để mà chia.
+   * ⚠️ Hỏi `parcelRoles` chứ không viết `style.parcels >= 8`: con số 8 là HỆ QUẢ của luật chia
+   * vai, và ngày nào luật ấy đổi (thêm một thửa nghĩa trang, một bãi chợ thứ ba…) thì con số
+   * chép tay ở đây sẽ đúng-nhờ-một-thứ-chẳng-liên-quan — đúng bẫy Phase 7D.
+   */
+  if (parcelRoles(style.parcels).dwelling < MIN_DWELLING_PARCELS) return false;
   // ⚠️ Kỷ khai `grid` mà lại lượn mạnh là bảng đang tự mâu thuẫn: `plan` nói "bàn cờ có chủ ý" còn
   // `bend` nói "ngoằn ngoèo". Một trong hai đang nói dối, và không có cách nào biết cái nào —
   // nên chặn ngay tại bảng thay vì để nó dựng ra một thứ không ai giải thích được.

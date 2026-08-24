@@ -31,6 +31,7 @@
 import { hashId } from '../hashId';
 import { CITY_GRID_SIZE as GRID } from '../cityGrid';
 import { getNetworkStyle } from './networkStyle';
+import { parcelRoles } from './parcelRoles';
 import { getSetting } from './settingStyle';
 import { parcelCapacity, canSplitRegion } from './parcelCapacity';
 import { arcTrace, gom, vaLienThong, tiaMangDuong } from '../roadPlan';
@@ -638,7 +639,10 @@ function generate(era) {
   // mọi mảnh đất đều có nhà thì đọc ra là một khối đặc, và Đàm đã gọi đúng tên nó — "xếp chồng lên
   // nhau". Chỗ trống mới là thứ cho mắt biết đâu là ranh giới giữa các khu.
   const spare = ranked.slice(5);
-  const plazaCount = spare.length === 0 ? 0 : Math.min(spare.length, 1 + (spare.length >= 5 ? 1 : 0));
+  // ⚠️ Số quảng trường hỏi `parcelRoles` — CÙNG một hàm mà `isValidNetworkStyle` dùng để từ
+  // chối một dòng bảng khai ít thửa tới mức không còn thửa đất ở nào. Phát biểu lại công thức
+  // ở đây là "một luật hai công thức", và hai bên sẽ lệch nhau ở đúng chỗ biên.
+  const plazaCount = parcelRoles(parcels.length).plaza;
   const plazaSet = new Set();
   spare.slice(0, plazaCount).forEach((p) => {
     p.use = 'plaza';

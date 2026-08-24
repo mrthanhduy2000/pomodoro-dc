@@ -2420,6 +2420,19 @@ ship một trạng thái dở dang, hãy làm nó **ĐẾM ĐƯỢC trong một 
 > nhờ một thứ chẳng liên quan thì gãy trong im lặng đúng lúc thứ đó đổi* — nên nó được ghi ra ở đây
 > thay vì để yên trong một con số test.
 
+> ⚠️ **CẬP NHẬT 2026-08-24 (Phase 21) — VÀ ĐÚNG CÁI GÃY ẤY ĐÃ XẢY RA, RỒI TỰ LÀNH LẠI TRONG CÙNG
+> MỘT PHASE.** Kỷ 5 đổi phe **hai lần nữa** trong Phase 21: bản hợp nhất (ranh giới thửa đi theo
+> cung) kéo nó **7,30% → 3,63% ❌**, rồi §5 (nâng số thửa của bảy kỷ) kéo nó **3,63% → 7,00% ✅**.
+> Cả hai lần cùng MỘT cơ chế và **không lần nào có ai đụng tới nước**: `terrain.js` san phẳng dải
+> đất dưới chân mạng đường, nên đổi mạng đường là đổi hình dạng đồng bằng, là đổi việc sống đất gần
+> có che bờ xa hay không (`roadCells` kỷ 5: 80 → 83).
+> ⇒ **Đây là lần thứ NĂM kỷ 5 đổi phe** (5,54 → 3,51 → 7,30 → 3,63 → 7,00). Điều phải đọc ra không
+> phải "kỷ 5 đã khỏi" mà là **kỷ 5 đứng đúng ở ranh giới nên mọi thay đổi địa hình đều lật được
+> nó** — nó không có bệnh riêng, nó là cái phong vũ biểu. Mục này vẫn **MỞ** cho kỷ 4 (3,92%, chưa
+> lần nào vượt cổng), và cách chữa THẬT vẫn là hướng `#60` (cầu · bến · thuyền · kè).
+> ⚠️ §5 làm **13/14 kỷ đi LÊN** một chút, nhưng ba kỷ hẹp 6·7·10 vẫn ở 2,88 · 3,53 · 1,85 — xác
+> nhận lại rằng chứng BỀ RỘNG (`#59`) là một chứng KHÁC, không san đất nào chữa được.
+
 > Tách khỏi `#59` ngày 2026-08-21 theo lệnh Đàm (*"`#59` chứa hai loại nguyên nhân: TÁCH. Hai bệnh,
 > hai cách chữa, hai điều kiện đóng"*). `#59` giữ nửa **bề rộng** (đã đóng); mục này giữ nửa **che khuất**.
 
@@ -4594,8 +4607,34 @@ cấp `Math.min(3,…)` → `Math.min(9,…)` · cắt bớt danh sách cấp th
   công trình có thật, nên sửa nó là sửa một lời khai lịch sử chứ không phải vặn một cái núm; nằm
   ngoài phạm vi Phase 20. (b) liên đới `#77` (cùng nói về `ROOFTOP_MIN_SPAN`) — nên làm CÙNG LÚC,
   không vá riêng kỷ 6.
-- **Review Trigger**: mỗi lần chạm `block.js`, `blockStyle.js`, cột `storey`, hoặc `ROOFTOP_MIN_SPAN`.
-- **Owner**: chưa giao · **Status**: MỞ
+- **Review Trigger**: mỗi lần chạm `block.js`, `blockStyle.js`, cột `storey`, `ROOFTOP_MIN_SPAN`,
+  **hoặc bảng `networkStyle.js`** (cột `parcels`/`minSide` — xem cập nhật bên dưới).
+- **Owner**: chưa giao · **Status**: MỞ (đã thu hẹp hai lần, xem bên dưới)
+
+### ⚠️ CẬP NHẬT 2026-08-24 (Phase 21) — CẢ HAI NỬA ĐỀU THU HẸP, VÀ CẢ HAI ĐỀU KHÔNG PHẢI DO AI ĐI CHỮA CHÚNG
+
+Bảng số ở trên đo trên quần thể **432** ô của Phase 20. Phase 21 đổi quần thể hai lần (hợp nhất với
+ADR-059 ⇒ 476 ô; rồi §5 nâng số thửa của bảy kỷ ⇒ **473** ô), và cả hai lần đều làm bảng dịch mà
+**không ai đụng vào `storey`, `ROOFTOP_MIN_SPAN`, hay `blockStyle.js`**:
+
+| | Phase 20 (432 ô) | hợp nhất (476 ô) | sau §5 (473 ô) |
+|---|---|---|---|
+| (a) kỷ THẤP ĐI | `[1, 2, 6, 7]`, tệ nhất 0,9508 | `[1, 7]`, tệ nhất 0,9386 | **`[5]`, tệ nhất 0,9942** |
+| (b) kỷ mất >⅓ chi tiết mái | `[6]` (0,593) | `[]` (kỷ 6 = 0,893) | **`[]`** (kỷ 6 = 0,844) |
+| (b) tổng ô còn chi tiết mái | 389/432 (90%) | 469/476 (98,5%) | **463/473 (97,9%)** |
+
+⚠️ **ĐỌC ĐÚNG NGUYÊN NHÂN, ĐỪNG ĐỌC THÀNH "ĐÃ CHỮA".** Số thửa quyết ranh giới thửa → quyết tập ô
+đường → quyết ô nào là nhà dân **và ô ấy là loại gì**. `workshop` là nguyên mẫu thấp-rộng cho cả hai
+con số tệ nhất bảng, nên một kỷ có nhiều `workshop` hơn sẽ tụt ở CẢ HAI vế. Tức đây là **một hỗn hợp
+nguyên mẫu dịch chỗ**, không phải một cơ chế được vá — bằng chứng: kỷ 5 vừa TỤT xuống dưới 1 trong
+khi kỷ 1 và 7 tự khỏi, và kỷ 6 vừa TỆ ĐI (0,893 → 0,844) dù `alley` của nó không đổi một chữ số.
+**Nguyên nhân gốc ở mục Root Cause vẫn nguyên vẹn**: hai lời hứa vẫn được phát biểu bằng MỨC TUYỆT
+ĐỐI áp lên một đơn vị vừa bị chia nhỏ, nên chúng còn dịch mỗi lần bảng mạng đường đổi.
+
+⚠️ **KHÔNG NỚI GÌ CẢ, VÀ CÓ SIẾT MỘT CHỖ.** Sàn 0,7 giữ nguyên · ngưỡng 1 giữ nguyên · cổng 0,95
+giữ nguyên. Cửa sổ GHIM quanh kỷ tệ nhất dịch theo giá trị thật (0,85–0,95 → 0,80–0,90) vì nó là
+một cái ghim chứ không phải một cái sàn. Trần trôi hình bao thì **SIẾT** 0,13 → 0,10 (giá trị thật
+0,1259 → 0,0919) — siết một cái trần thì không bao giờ giấu được khuyết tật.
 
 ---
 

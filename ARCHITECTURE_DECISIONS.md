@@ -11,6 +11,101 @@
 
 ---
 
+## ADR-065 — **BÀN CỜ LÀ MỘT MỐC LỊCH SỬ, KHÔNG PHẢI MỘT CÁCH SẮP XẾP MẶC ĐỊNH**: bố cục bên trong một thửa có trục `layout`, và một khu nhà phải NẰM TRONG thửa của nó
+
+- **Ngày**: 2026-08-24
+- **Bối cảnh**: Phase 21 §3–§5. Phase 20 (ADR-060) đã đổi được **bộ xương** thành phố — đường thôi
+  là hàng và cột, thửa khác cỡ khác hình. Đàm xem bản quét và vẫn nói: *«nhà vẫn xếp rất ngăn nếp
+  trông như quy hoạch, dù quy hoạch ô bàn cờ chỉ bùng nổ và trở thành chuẩn mực từ thế kỷ 19 (Cách
+  mạng Công nghiệp). Và việc mở rộng thành phố không phải là nhà xếp chồng lên nhau, nó rất phản
+  thực tế và lịch sử.»* Ba lời phê riêng biệt trong một câu, và cả ba đều đúng vào một chỗ mà
+  Phase 20 **không hề chạm tới**: bên trong MỘT thửa, `blockStyle.js` (ADR-052) vẫn dựng khu nhà
+  bằng một lưới `cols × rows` cho cả 15 kỷ.
+- **Vấn đề**: ba khuyết tật, và điều đáng nói là **chúng chỉ lộ ra khi đứng cạnh nhau**:
+  1. **NGĂN NẾP** — `cols × rows` là một cái bàn cờ thu nhỏ. Đổi bộ xương ở tầng trên rồi mà tầng
+     dưới vẫn là lưới thì mắt vẫn đọc ra lưới; hai tầng chỉ khác nhau về cỡ.
+  2. **CHỒNG LÊN NHAU** — đo lần đầu ra **290 cặp** khối nhà dân đè lên nhau, chỗ sâu nhất
+     **−0,441 ô**, khối rộng nhất **1,734 ô** (tức một khu nhà tràn qua trọn ô bên cạnh). Không có
+     gì đỏ lên suốt từ Phase 14 §1(3), vì chưa bài test nào hỏi câu ấy.
+  3. **THỬA VẪN KHÁ ĐỀU NHAU** — và khi đi đo mới lộ ra nguyên nhân thật, ở một chỗ không ai ngờ:
+     ⚠️ **6/15 kỷ có ĐÚNG 0 thửa dành cho nhà dân.** `WONDER_PARCELS = 5` ăn trước, phần dư mới
+     chia cho nhà; kỷ nào khai `parcels: 6` thì còn đúng 1 thửa, mà thửa ấy lại bị lấy làm sân.
+     Nghĩa là con số "tỉ số thửa lớn nhất / nhỏ nhất" mà ta định đem đi chấm **đang đo các khu đất
+     kỳ quan**, không đo đất ở — một phép đo trả lời rất tự tin về một đại lượng khác.
+- **Phương án cân nhắc**:
+  1. **Rải theo hạt giống rồi tránh nhau (scatter-and-retry)** cho kỷ 1–9. Loại: cần một phép kiểm
+     chồng lấn + một số lần thử lại, tức **hai hằng số phải hiệu chuẩn** và một nhánh "thử mãi
+     không được thì làm gì". Đúng họ những cơ chế đã chết trong im lặng ở Phase 8D (lùm cây).
+  2. **Chia thửa đệ quy lệch tâm (BSP) cho kỷ 1–9, giữ `cols × rows` cho kỷ 10–15** — chọn.
+  3. **Bỏ hẳn `cols × rows`, cho cả 15 kỷ dùng BSP.** Loại: nó xoá luôn cái mốc lịch sử Đàm vừa
+     ra — Manhattan 1811 và Barcelona của Cerdà **phải** đọc ra là lưới, đó là bản sắc của chúng.
+  4. Cho chồng lấn: **nới khoảng cách giữa các suất đất**. Loại: nó không chữa gốc (khối tự nó
+     rộng hơn suất đất của nó) và nó ăn mất chính phần đất vừa chia ra.
+- **Lý do chọn**:
+  - **Các lá của một cây BSP rời nhau THEO CẤU TẠO.** Không cần phép kiểm chồng lấn, không có số
+    lần thử lại để phải hiệu chuẩn, không có nhánh thất bại. Và nó **tái dùng đúng cơ chế
+    `cityPlan.js`** đang chạy ở tầng trên — một luật một công thức, ở hai cấp.
+  - **Mốc lịch sử áp thẳng, không chỉnh khéo**: kỷ **1–9** không được xếp hàng lối ở bất kỳ tầng
+    nào; kỷ **10–15** thì được. Khoá bằng test **hai chiều** (kỷ 1–9 **phải trượt** phép kiểm "là
+    lưới đều"; kỷ 11–15 **phải đạt**) — một chiều thôi thì cách rẻ nhất để test hết đỏ là làm mọi
+    kỷ hữu cơ, tức xoá mất nửa kia của mốc.
+- **Giải pháp**:
+  - **§3 — trục `layout`.** `BLOCK_LAYOUT = ['organic', 'grid']` trong `blockStyle.js`. Kỷ 1–9 khai
+    `units` (số suất đất) và đi qua `xepHuuCo()`: chia thửa đệ quy lệch tâm, **mỗi lần cắt chọn
+    vùng LỚN NHẤT còn chia được, cắt theo cạnh DÀI hơn**, tỉ lệ cắt lấy từ hạt giống. Kỷ có sân
+    (`attach: 'court'`) cắt thêm một lá rồi xoá lá gần tâm nhất làm sân chung — **chỉ khi còn ≥ 5
+    lá**, vì một cái sân cần ít nhất bốn nhà vây quanh. Kỷ 10–15 giữ `cols × rows` (`xepLuoi`),
+    không đổi một dòng.
+  - **§4 vế 1 — khu nhà NẰM TRONG thửa của nó.** Ba việc, mỗi việc đo riêng:
+
+    | | cặp chồng lấn | sâu nhất | khối rộng nhất |
+    |---|---|---|---|
+    | nền `84d31e2` | 290 | −0,441 ô | 1,734 ô |
+    | + `BLOCK_MAX_CELLS = 1` | 84 | −0,078 | 1,092 |
+    | + giải affine lượt thứ ba | 20 | −0,044 | 1,048 |
+    | + `EAVE_LAND_FACTOR = 1,05` | **15** | **−0,015** | 1,062 |
+
+    −0,015 ô ở `CELL_PIXELS = 64` là khoảng **1 điểm ảnh**, dưới sàn mắt 4 điểm ảnh.
+    ⚠️ Lượt thứ ba là một phép **GIẢI**, không phải một vòng lặp: `specFootprint` là hàm **BẬC
+    THANG** của `fx` (số cửa sổ, số cột, số bậc đều là số nguyên) nên lặp tới hội tụ thì **phân
+    kỳ** — đo được lượt ba đi XA hơn lượt hai. Hai lượt cho ra hai điểm, và một đường thẳng qua hai
+    điểm thì giải được. (Cùng bài học Phase 14 §1(3): *trước khi lặp tới hội tụ, hỏi "hàm này có
+    liên tục không?"*.)
+  - **§4 vế 2 — thành phố LAN RA.** Đã đúng sẵn theo cấu tạo (`dwellingPlots` xếp theo khoảng cách
+    tới tâm tăng dần, `deriveDwellings` lấy **tiền tố**), nhưng **chưa bài nào canh**. Nay có: so
+    20 phiên với 120 phiên, đủ 15 kỷ — bán kính xa nhất đi từ 1,5–3,5 lên 4,5–5,5 và hộp bao nở
+    **1,65 lần** (kỷ 4) tới **12,0 lần** (kỷ 13). Đảo thứ tự sắp xếp thì bài đỏ ngay ở kỷ đầu tiên
+    — đã thử.
+  - **§5 — tách vai của thửa ra một module lá.** `parcelRoles.js` (0 lời `import`) giữ **một** công
+    thức chia vai `wonder / plaza / dwelling`, và **cả `cityPlan.js` lẫn `networkStyle.js` cùng
+    gọi nó** — nếu không thì cái trần sức chứa và phép chia vai sẽ trôi khỏi nhau và lại đẻ ra
+    những kỷ 0 thửa nhà. `isValidNetworkStyle` nay **từ chối thẳng** dòng nào để lại
+    `< MIN_DWELLING_PARCELS` (= 2) thửa nhà, không tự chữa. Bảy kỷ được nới `parcels`
+    (1: 6→11 · 2: 7→9 · 5: 6→9 · 6: 7→12 · 7: 9→11 · 12: 6→8 · 13: 12→13); kỷ 9 xét rồi **giữ
+    nguyên**, ghi lại lý do tại chỗ.
+- **Trade-off**:
+  - **§4 đã trả giá, và nói thẳng ra**: `BLOCK_MAX_CELLS = 1` khoá số suất đất ở 4 cho cả 15 kỷ ⇒
+    cột `units`/`cols`/`rows` của bảng khu phố tạm thành một **trục chết**. Đã đếm ra tường minh
+    bằng một bài test đi qua đúng đường dựng thật, kèm ba phương án đã đo, ghi ở `TECH_DEBT #88`.
+    **Không nới trần**: đo được trần 2 thì khối lại xuyên qua nhau.
+  - **§5 làm bảy mốc số cũ già đi**, và chúng được ghim lại **sau khi đo**, không một cái sàn hay
+    trần chất lượng nào bị nới (một cái trần còn được SIẾT: `TRAN_TROI` 0,13 → 0,10 ô). Tốt lên:
+    chiều cao nhà kỷ 1 và 7 hết trượt · kỷ 5 thôi bị khung hình thu nhỏ vô cớ (biên 0,2294 →
+    0,0400) · mảng phủ đất nay đạt ở **cả bảy** mốc phiên (trước hụt ở mốc 150) · nước nhìn thấy
+    được tăng ở **13/14 kỷ** và kỷ 5 vượt cổng 5% (3,63 → 7,00). Xấu đi và không giấu: ô mất chi
+    tiết mái **7/476 (1,5%) → 10/473 (2,1%)**, kỷ tệ nhất 0,893 → 0,844. Nguyên nhân là một phép
+    **đổi tỉ lệ loại nhà** (thêm ô đường ⇒ đổi ô nào là nhà ⇒ đổi tỉ lệ `workshop`, nguyên mẫu
+    thấp-rộng có tỉ số xấu nhất), **không phải** một cơ chế hỏng.
+- **Ảnh hưởng**: `blockStyle.js` (trục `layout` + `xepHuuCo`) · `block.js` (trần một ô, giải affine,
+  `EAVE_LAND_FACTOR`) · `cityPlan.js` + `networkStyle.js` (cùng gọi `parcelRoles`) · module mới
+  `parcelRoles.js`. **ADR-007 nguyên vẹn**: mọi thứ vẫn là hàm thuần của `era` (+ vị trí ô), và bài
+  test "chỉ thêm, không bao giờ dời" vẫn xanh cho 1…120 phiên × 15 kỷ.
+- **Điều kiện xem lại**: (a) `TECH_DEBT #88` — nếu tìm được cách cho suất đất > 4 mà khối vẫn không
+  xuyên nhau thì cột `units` sống lại; (b) nếu Đàm thấy kỷ 10 (bản lề) nên ngả hẳn về một phía;
+  (c) nếu có kỷ thứ 16 được thêm, nó phải tự khai `layout` — không có mặc định.
+
+---
+
 ## ADR-064 — Hợp nhất hai nhánh: **BSP quyết cắt Ở ĐÂU, cung cong quyết cắt theo HÌNH GÌ**; và một thửa là TẬP Ô, không phải hình chữ nhật đã khai
 
 - **Ngày**: 2026-08-24

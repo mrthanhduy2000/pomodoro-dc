@@ -311,7 +311,15 @@ test('KHUNG HÌNH SÁT NHẤT CÓ THỂ MÀ VẪN KHÔNG CẮT CÔNG TRÌNH NÀO
   // Kỷ 5 dư nhiều nhất bảng vì `minSide: 2` + `sizeVary: 0,82` đẩy thửa lớn vào giữa, nên rìa lưới
   // của nó thưa hẳn.
   //
-  // Thêm một kỷ thứ tư vào danh sách này là thêm một kỷ bị thu nhỏ vô cớ, và một trong ba kỷ này
+  //
+  // ⚠️ PHASE 21 §5 ĐỔI NÓ LẦN NỮA, SANG [4, 14] — **KỶ 5 RỜI DANH SÁCH, VÀ ĐÓ LÀ TỐT LÊN**. §5 nâng
+  // số thửa kỷ 5 từ 6 lên 9 (giữ `minSide: 2`), nên đúng cái nguyên nhân ghi ở đoạn trên — *"thửa
+  // lớn dồn vào giữa nên rìa lưới thưa hẳn"* — bị gỡ: rìa nay có thửa nhỏ, khối xa nhất nhích ra,
+  // đường FIT đòi xa hơn và thắng lại đường `massScale`. Biên đo được sau §5: kỷ 4 = `0,0798` ·
+  // kỷ 14 = `0,0913` · **13 kỷ còn lại đúng `0,0400`** (kỷ 5 từ `0,2294` về `0,0400`, tức nó thôi
+  // bị thu nhỏ vô cớ). Đây là hệ quả ĐÚNG của §5, không phải một cái ngưỡng được nới.
+  //
+  // Thêm một kỷ thứ ba vào danh sách này là thêm một kỷ bị thu nhỏ vô cớ, và một trong hai kỷ này
   // rơi ra cũng phải xem lại — cả hai chiều đều đỏ.
   const DU_DIA = [];
   for (let era = 1; era <= 15; era += 1) {
@@ -321,7 +329,7 @@ test('KHUNG HÌNH SÁT NHẤT CÓ THỂ MÀ VẪN KHÔNG CẮT CÔNG TRÌNH NÀO
     });
     if (xau.margin > FRAME_FIT_MARGIN + 1e-3) DU_DIA.push(era);
   }
-  assert.deepEqual(DU_DIA, [4, 5, 14],
+  assert.deepEqual(DU_DIA, [4, 14],
     `những kỷ đứng XA HƠN mức vừa đủ đã đổi: ${JSON.stringify(DU_DIA)}`);
 
   // (c) SÀN GIỮ NGUYÊN, KHÔNG ĐỔI MỘT CHỮ SỐ. Vế này chưa bao giờ mâu thuẫn với lời hứa nào:

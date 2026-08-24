@@ -180,13 +180,32 @@ test('TECH_DEBT #57 ĐÃ ĐÓNG — 6 kỷ vượt cổng 5% THEO PHÉP TIA; 3 k
   // được nó. Chữa nó bằng cách chỉnh riêng kỷ 5 là chữa triệu chứng; cách chữa THẬT vẫn là hướng
   // ở `TECH_DEBT #60` (cầu · bến · thuyền · kè thay cho diện tích mặt nước).
   // ⚠️ VÀ KHÔNG NỚI CỔNG 5%, KHÔNG QUAY `drain`/đồng bằng về giá trị cũ để lấy lại con số.
-  assert.deepEqual(TRUOT, [2, 3, 4, 5, 6, 7, 9, 10],
-    'đúng TÁM kỷ được miễn cổng 5% theo phép tia — 6·7·10 vì BỀ RỘNG (`TECH_DEBT #59`) và '
-    + '2·3·4·5·9 vì ĐỊA HÌNH CHE (`TECH_DEBT #67`, chờ Đàm). Danh sách này đổi nghĩa là hoặc có kỷ '
-    + 'thứ chín vừa tụt xuống, hoặc một trong tám kỷ ấy vừa được chữa — cả hai trường hợp đều phải '
+  //
+  // ⚠️ 2026-08-24, PHASE 21 §5 — **KỶ 5 ĐỔI PHE LẦN THỨ NĂM: 3,63% → 7,00% ✅**, và lần này lời
+  // giải thích ở ngay đoạn trên đã dự đoán đúng cơ chế: §5 nâng số thửa của bảy kỷ ⇒ `roadCells`
+  // của kỷ 5 đi từ 80 lên 83 ⇒ dải đất được `terrain.js` san phẳng dưới chân mạng đường đổi hình ⇒
+  // sống đất che bờ xa của suối Elzbach thấp xuống. Cùng công cụ, cùng 88 tia, chỉ khác cây mã.
+  //
+  //     kỷ   TRƯỚC §5   SAU §5        kỷ   TRƯỚC §5   SAU §5
+  //      2     3,92 ❌   4,69 ❌        9     4,73 ❌   4,89 ❌
+  //      3     4,61 ❌   4,85 ❌       10     1,62 ❌   1,85 ❌
+  //      4     3,92 ❌   3,92 ❌       11     9,25 ✅   9,64 ✅
+  //      5     3,63 ❌   **7,00 ✅**   12     8,81 ✅   8,66 ✅
+  //      6     2,23 ❌   2,88 ❌       13    18,83 ✅  22,63 ✅
+  //      7     3,27 ❌   3,53 ❌       14    21,57 ✅  21,57 ✅
+  //      8    10,98 ✅  11,99 ✅       15    19,32 ✅  19,93 ✅
+  //
+  // ⚠️ ĐỌC CHO ĐÚNG: **13/14 kỷ đi LÊN** (chỉ kỷ 12 nhích xuống 0,15 đpt, kỷ 14 đứng yên), tức §5
+  // không "chỉnh riêng kỷ 5" mà làm cả bảng khá lên một chút — nhưng ba kỷ hẹp 6·7·10 vẫn còn cách
+  // cổng rất xa (2,88 · 3,53 · 1,85), đúng như chứng **BỀ RỘNG** đã ghi: xoay hay san đất không
+  // cứu được một con kênh rộng 0,9 ô. Cổng 5% KHÔNG nới, `drain` KHÔNG quay lại giá trị sai.
+  assert.deepEqual(TRUOT, [2, 3, 4, 6, 7, 9, 10],
+    'đúng BẢY kỷ được miễn cổng 5% theo phép tia — 6·7·10 vì BỀ RỘNG (`TECH_DEBT #59`) và '
+    + '2·3·4·9 vì ĐỊA HÌNH CHE (`TECH_DEBT #67`, chờ Đàm). Danh sách này đổi nghĩa là hoặc có kỷ '
+    + 'thứ tám vừa tụt xuống, hoặc một trong bảy kỷ ấy vừa được chữa — cả hai trường hợp đều phải '
     + 'xem lại hai mục nợ ấy chứ không phải sửa con số ở đây.');
-  assert.equal(DAT.length, 6,
-    'phải có đúng 6 kỷ vượt 5% THEO PHÉP TIA. ⚠️ KHÔNG phải "6 kỷ đạt cổng 5%" — trên màn hình '
+  assert.equal(DAT.length, 7,
+    'phải có đúng 7 kỷ vượt 5% THEO PHÉP TIA. ⚠️ KHÔNG phải "7 kỷ đạt cổng 5%" — trên màn hình '
     + 'còn ít hơn (xem khối chú thích đầu bài và `TECH_DEBT #63`).');
 
   // Vế thật sự canh bản vá `worldYaw`: 11 kỷ kia phải THẬT SỰ đạt.

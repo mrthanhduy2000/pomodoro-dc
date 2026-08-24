@@ -27,8 +27,8 @@
  *   node --import ./scripts/register-esm-loader.mjs scripts/plateau-score.mjs --era 5 --hoso
  *   node --import ./scripts/register-esm-loader.mjs scripts/plateau-score.mjs --selftest
  */
-import { buildTerrain, terrainSurfaceReach } from '../src/engine/city3d/terrain.js';
-import { buildHorizon } from '../src/engine/city3d/horizon.js';
+import { buildTerrain, terrainSurfaceReach } from '../../src/engine/city3d/terrain.js';
+import { buildHorizon } from '../../src/engine/city3d/horizon.js';
 
 const GRID = 12;
 const HALF = (GRID - 1) / 2;

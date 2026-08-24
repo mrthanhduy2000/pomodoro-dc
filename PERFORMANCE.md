@@ -2367,7 +2367,7 @@ nó vẫn xanh.
 
 ⚠️ **Ba vế truy nguồn (luật §3-Q2)** — CÔNG CỤ · ĐẦU VÀO · ĐỜI ẢNH:
 - **Công cụ**: `node scripts/city-preview.mjs --era 6 --hour 12 --width 1500 [--mask road]` ·
-  `node --import ./scripts/register-esm-loader.mjs scripts/road-bend.mjs`
+  `node --import ./scripts/register-esm-loader.mjs scripts/archive/road-bend.mjs`
 - **Đầu vào**: kỷ 6 · 12 giờ · `--width 1500` · mặc định 40 phiên (ảnh) / 400 phiên (`road-bend`)
 - **Đời ảnh**: vế TRƯỚC dựng trong `git worktree` tại `2f8e6f6`; vế SAU dựng ở cây làm việc sau khi
   đủ cả bẻ-cong lẫn hạng thứ ba. Hai lượt dựng bằng **cùng một dòng lệnh**, `cd` vào từng kho ở
@@ -2397,7 +2397,7 @@ khai chứ không đoán bằng màu).
 
 ### Độ lượn theo kỷ — `lệch tim đường ÷ bề rộng lòng đường`
 
-Đo bằng `scripts/road-bend.mjs`, **trên tam giác ĐÃ DỰNG** (không đọc lại bảng — một công cụ hỏi
+Đo bằng `scripts/archive/road-bend.mjs`, **trên tam giác ĐÃ DỰNG** (không đọc lại bảng — một công cụ hỏi
 lại chính nguồn mà mã sản phẩm dùng thì là một cái GƯƠNG, không phải một cái CÂN).
 
 | kỷ | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 |

@@ -56,14 +56,14 @@
  *   · 0,60+ = lượn rõ rệt, tim đường lệch quá nửa bề rộng
  */
 
-import { buildTerrain } from '../src/engine/city3d/terrain.js';
-import { buildScenePalette } from '../src/engine/city3d/palette3d.js';
-import { buildRoadSurface } from '../src/components/city/render3d/terrainMesh.js';
-import { computeCityLayout } from '../src/engine/cityLayout.js';
-import { BLUEPRINT_CATALOG } from '../src/engine/constants.js';
-import { ROAD_PART } from '../src/components/city/render3d/terrainMesh.js';
-import { getNetworkStyle } from '../src/engine/city3d/networkStyle.js';
-import { buildRoadPlan } from '../src/engine/roadPlan.js';
+import { buildTerrain } from '../../src/engine/city3d/terrain.js';
+import { buildScenePalette } from '../../src/engine/city3d/palette3d.js';
+import { buildRoadSurface } from '../../src/components/city/render3d/terrainMesh.js';
+import { computeCityLayout } from '../../src/engine/cityLayout.js';
+import { BLUEPRINT_CATALOG } from '../../src/engine/constants.js';
+import { ROAD_PART } from '../../src/components/city/render3d/terrainMesh.js';
+import { getNetworkStyle } from '../../src/engine/city3d/networkStyle.js';
+import { buildRoadPlan } from '../../src/engine/roadPlan.js';
 
 const GRID = 12;
 const ERAS = Array.from({ length: 15 }, (_, i) => i + 1);

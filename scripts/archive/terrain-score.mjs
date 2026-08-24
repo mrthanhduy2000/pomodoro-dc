@@ -41,8 +41,8 @@
 import {
   buildTerrain, ERA_TERRAIN, TERRACE_STEP, APRON_DROP,
   APRON_CELLS, PLATE_PAD_CELLS, terrainSurfaceReach,
-} from '../src/engine/city3d/terrain.js';
-import * as diaHinh from '../src/engine/city3d/terrain.js';
+} from '../../src/engine/city3d/terrain.js';
+import * as diaHinh from '../../src/engine/city3d/terrain.js';
 
 /**
  * ⚠️ `geometricTemplate` CHỈ TỒN TẠI Ở BẢN SAU §1(B), VÀ ĐÓ KHÔNG PHẢI MỘT THIẾU SÓT CỦA CÔNG CỤ.

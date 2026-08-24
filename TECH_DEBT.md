@@ -4399,7 +4399,7 @@ cấp `Math.min(3,…)` → `Math.min(9,…)` · cắt bớt danh sách cấp th
 ## #85 — `road-bend.mjs` đo trên một đại lượng mà ADR-059 đã thay: nó vẫn hỏi "tim đường lệch bao nhiêu trong ô", trong khi bản sắc nay nằm ở HÌNH DẠNG CỦA CẢ MẠNG
 
 - **Tên**: công cụ đo độ lượn đường đứng sau một lần đổi trục
-- **Module**: `scripts/road-bend.mjs`
+- **Module**: `scripts/archive/road-bend.mjs`
 - **Priority**: Low · **Severity**: Low
 - **Impact**: Công cụ vẫn CHẠY và vẫn đo đúng thứ nó nói (`lệch ÷ bề rộng lòng đường`), nhưng sau
   ADR-059 đại lượng ấy chỉ còn là một PHẦN nhỏ của câu hỏi *"con đường ở kỷ này có cong không"* —
@@ -4465,9 +4465,9 @@ trong chú thích thì đừng để `--selftest` của chính nó vẫn dùng �
 
 ## #83 — Ngưỡng "lượn bao nhiêu thì mắt đọc ra" CHƯA được hiệu chuẩn bằng một phép dựng ảnh
 
-- **Tên**: mốc `0,25 lần bề rộng` trong `scripts/road-bend.mjs` là một con số LÀM VIỆC, không phải
+- **Tên**: mốc `0,25 lần bề rộng` trong `scripts/archive/road-bend.mjs` là một con số LÀM VIỆC, không phải
   một con số đã đo
-- **Module**: `scripts/road-bend.mjs` (dòng tổng kết `N/15 kỷ có đường lượn ĐỌC RA ĐƯỢC`)
+- **Module**: `scripts/archive/road-bend.mjs` (dòng tổng kết `N/15 kỷ có đường lượn ĐỌC RA ĐƯỢC`)
 - **Priority**: Low · **Severity**: Low
 - **Impact**: Con số `3/15 kỷ` mà công cụ in ra phụ thuộc hoàn toàn vào mốc ấy. Đặt 0,20 thì thành
   `6/15`, đặt 0,30 thì thành `2/15` — tức một câu kết luận về CHẤT LƯỢNG đang treo trên một con số

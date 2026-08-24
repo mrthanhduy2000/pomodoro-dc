@@ -12,6 +12,30 @@
 
 ---
 
+## 2026-08-24 (đêm) — Quy trình làm việc: cắt 6.323 dòng bắt buộc đọc xuống 55
+
+**Mục đích.** Mỗi phiên đang tiêu ~80% sức vào đọc tài liệu, đo đạc và viết báo cáo, chỉ ~20% vào
+xây. Ba phase liên tiếp qua sạch mọi cổng số mà vẫn bị bác về mặt thị giác.
+
+**Phạm vi.** Chỉ tài liệu và `scripts/`. **Không sửa một dòng nào trong `src/`.**
+
+- **`START_HERE.md`** (mới, 55 dòng) — file DUY NHẤT bắt buộc đọc mỗi phiên.
+- **`PHASE_RULES.md`** (mới) — quy trình cho phase mỹ thuật: sản phẩm là ẢNH · không đo hiệu năng ·
+  không viết công cụ đo mới · test chỉ giữ bất biến ADR-007 · tài liệu 2 file · báo cáo 5 dòng ·
+  làm hết 4–8 việc trong một lượt · khung prompt cố định 4 mục ≤60 dòng.
+- **`BAN_GIAO.md`** 5.821 → 397 dòng; phần cũ nguyên vẹn ở `docs/archive/`.
+- **`CLAUDE.md`** quy tắc số 1 và số 2 viết lại; phần Governance Protocol giữ làm kho tra cứu và
+  vẫn có hiệu lực cho phase kiến trúc/hạ tầng (sync, database, AI Coach, deploy, bảo mật).
+- **`scripts/`** 10 công cụ dùng-một-lần chuyển sang `scripts/archive/`.
+
+**Ảnh hưởng.** Không đổi hành vi app. Định nghĩa "phiên thành công" đổi từ *mọi cổng xanh* sang
+**≥4 thay đổi nhìn thấy được trong ảnh**.
+
+**Tương thích.** Không mất tài liệu nào — chỉ chuyển chỗ. Báo cáo 11 mục vẫn bắt buộc cho phase
+kiến trúc/hạ tầng.
+
+---
+
 ## 2026-08-24 (chiều) — MỖI KỶ MỘT MẠNG ĐƯỜNG RIÊNG: hết bàn cờ, có giao lộ thật (ADR-059)
 
 **Mục đích.** Đàm bác chính bản vá buổi sáng: *"Không phải là kiểu đường lồi lõm, mà là dạng đường

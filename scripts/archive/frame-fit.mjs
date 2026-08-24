@@ -39,13 +39,13 @@
 
 import {
   CITY_CAMERA_FOV, DEFAULT_PITCH, DEFAULT_YAW, cityOrbitOptions, orbitPosition,
-} from '../src/engine/city3d/orbit.js';
-import { buildBuildingSpec } from '../src/engine/city3d/buildingSpec.js';
-import { BUILDING_SCALE, specSpan } from '../src/engine/city3d/parts.js';
-import { buildTerrain } from '../src/engine/city3d/terrain.js';
-import { collectCitySpecs } from '../src/engine/city3d/cityParts.js';
-import { computeCityLayout } from '../src/engine/cityLayout.js';
-import { BLUEPRINT_CATALOG, BUILDING_EFFECTS } from '../src/engine/constants.js';
+} from '../../src/engine/city3d/orbit.js';
+import { buildBuildingSpec } from '../../src/engine/city3d/buildingSpec.js';
+import { BUILDING_SCALE, specSpan } from '../../src/engine/city3d/parts.js';
+import { buildTerrain } from '../../src/engine/city3d/terrain.js';
+import { collectCitySpecs } from '../../src/engine/city3d/cityParts.js';
+import { computeCityLayout } from '../../src/engine/cityLayout.js';
+import { BLUEPRINT_CATALOG, BUILDING_EFFECTS } from '../../src/engine/constants.js';
 
 const GRID = 12;
 const MARGIN_OK = 0.04;

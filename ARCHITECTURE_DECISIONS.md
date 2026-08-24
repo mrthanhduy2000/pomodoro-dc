@@ -11,6 +11,129 @@
 
 ---
 
+## ADR-059 — MẠNG ĐƯỜNG là một trục bản sắc: mỗi kỷ tự sinh lấy tập ô đường của mình bằng những CUNG CONG, thay cho một bàn cờ chung cho cả 15 kỷ
+
+**Ngày:** 2026-08-24
+**Trạng thái:** đã áp dụng. **ĐẢO NGƯỢC NỬA SAU của ADR-058** (phần "độ lệch tim đường sinh bằng
+nhiễu băm nhiều tần số" và trục `coil`/`ragged`), giữ nguyên nửa đầu (độ lệch là thuộc tính của
+RANH GIỚI). Thay `ROAD_CELLS` — một hằng số cấp module đã sống từ Phase 6C.
+
+### Bối cảnh
+
+Đàm nhìn thành phố và nói hai lần, lần sau bác chính bản vá của lần trước:
+
+> *"Hãy cải thiện đường đi, hiện tại nó chỉ là những đường thẳng, không giống đường ngoài đời,
+> không uốn cong, và nó cũng như quy hoạch quá, các thời trước làm gì có quy hoạch đường thẳng tấp
+> thế, và hiện tại ít đường và loại đường quá."*
+
+> *"Không phải là kiểu đường lồi lõm, mà là dạng đường cong hay không cong, như thể là có giao lộ,
+> đường uốn quanh ấy, hãy làm lại … hiện tại ở thời nguyên thuỷ hay các thời trước làm gì có đường
+> dạng bàn cờ, hiểu không."*
+
+Trước ADR này, `cityLayout.js` có một hằng số `ROAD_CELLS` dựng từ bốn trục `x, y ∈ {0, 4, 8, 11}`
+— **một mạng bàn cờ 80 ô dùng chung cho cả 15 kỷ**, từ Göbekli Tepe 9500 năm trước tới Dubai.
+
+### Vấn đề
+
+ADR-058 đã cố chữa đúng lời phàn nàn ấy, và chữa **sai chỗ**: nó cho tim đường lượn nhẹ **bên
+trong ô của nó**. Sai lầm bắt nguồn từ một suy luận của chính tôi mà Đàm đã bác:
+
+> Đo được rằng **không thêm được ô đường** (80/144 ô đã là đường, 30 ô còn lại đúng bằng toàn bộ
+> nhà dân), rồi từ đó suy ra rằng **không đổi được mạng đường**.
+
+Hai mệnh đề ấy KHÔNG tương đương. Phép đo kia chặn cơ chế **THÊM**; nó không nói một chữ nào về cơ
+chế **SẮP XẾP LẠI**. Hậu quả: nhìn từ trên xuống, cả 15 kỷ vẫn là 4 hàng × 4 cột cắt nhau vuông
+góc — tức vẫn nguyên cái bàn cờ Đàm chỉ vào ngay từ đầu. Lượn vài phần trăm ô bên trong một ô
+không đổi được điều đó, vì thứ mắt đọc ra là **HÌNH DẠNG CỦA CẢ MẠNG**, không phải mép của một đoạn.
+
+Thêm một vấn đề thứ hai, cùng gốc: bảng `networkStyle.js` khi ấy có `coil` (bước sóng lượn) và
+`ragged` (biến thiên bề rộng) — cả hai đều chỉ mô tả mép của một đoạn đường. `ragged` còn đẻ ra
+đúng thứ Đàm gọi là **"lồi lõm"**: cùng một con đường chỗ nở chỗ tóp theo băm.
+
+### Phương án đã cân nhắc
+
+1. **Giữ bàn cờ, chỉnh mạnh tay hơn các trục cũ** (`coil` ngắn hơn, `bend` cao hơn).
+2. **Thêm ô đường** cho mạng phong phú hơn.
+3. **Mỗi kỷ tự sinh lấy tập ô đường** bằng cách nối các điểm mốc bằng những cung cong.
+
+### Lý do loại bỏ
+
+- **(1)** Đây chính là thứ vừa bị bác. Về mặt cấu tạo nó không thể đổi hình dạng mạng: `coil` và
+  `bend` cùng lắm dịch mép đường vài phần trăm ô, còn tập ô thì đứng yên.
+- **(2)** **ĐÃ ĐO TRẦN TRƯỚC KHI VIẾT MÃ** (luật Đàm chốt 2026-08-19): `ROAD_LINES = {0,4,8,11}`
+  cho 80/144 ô là đường (55,6%); cộng 45 ô vùng kỳ quan thì **chỉ còn ~30 ô chứa được nhà dân**,
+  và cả 15 kỷ đã đứng ở đúng cái trần ấy. Mỗi ô đường thêm vào là một khu nhà bị xoá.
+
+### Giải pháp được chọn — phương án (3), khuôn ba lớp lần thứ MƯỜI
+
+- **`src/engine/roadPlan.js`** (MỚI) = **BỘ SINH**: mỗi kỷ khai một danh sách **đường nối** giữa
+  các điểm mốc (5 khu kỳ quan · tâm · các cửa ngõ ở mép lưới), mỗi đường nối được rasterise thành
+  một **cung cong** (`arcTrace`) chứ không phải một đoạn thẳng. Hai cung cắt nhau ở đâu thì ở đó có
+  **giao lộ** — chữ T, chữ Y, ngã năm — thay vì 16 ngã tư vuông góc đều tăm tắp.
+- **`city3d/networkStyle.js`** = **BẢNG 15 kỷ × 6 trục**: `plan` (grid/axial/organic/terrace/radial)
+  · `bend` · `arms` · `loops` · `tangle` · `diagonal`. Bỏ hẳn `coil` và `ragged`.
+- **`city3d/roadPath.js`** = **HÌNH**: nay chỉ TRA BẢNG `crossings` mà `arcTrace` ghi ra, không
+  sinh ra đường lượn nào của riêng mình.
+- **`cityLayout.js` · `terrain.js` · `dwellings.js` · `cityMoment.js`** = chỉ ĐỌC.
+
+**Năm kiểu khung**, mỗi kiểu trả lời *"ở nước ấy thời ấy, con đường mọc ra từ ĐÂU?"*: bàn cờ
+(Trường An · Manhattan · Singapore · siêu ô phố Xô Viết) · một xương sống (Deir el-Medina · đường
+rước thành Ur · trục Sheikh Zayed) · mạng rối (Çatalhöyük · phố cổ Hà Nội · Firenze · Edo) · nan
+quạt + vòng thành (Đức trung cổ · Paris) · thềm theo đường đồng mức (Alfama · đồi Pennine).
+
+### Ba điều KHÔNG được làm sai, và cả ba đã trả giá trong chính phiên này
+
+**(a) MỘT KHỐI 2×2 TOÀN ĐƯỜNG KHÔNG PHẢI MỘT CON ĐƯỜNG — NÓ LÀ MỘT CÁI SÂN LÁT.** Mỗi cung được
+rasterise ĐỘC LẬP, nên hai cung chạy gần song song cách nhau một ô sẽ tô kín cả dải giữa chúng. Đo
+trên bản nháp: **13/15 kỷ có mảng 2×2**, và ở kỷ 13 thì **92% số ô đường nằm trong một mảng như
+thế** — nửa dưới thành phố là một vũng bê tông liền. Đây **cùng họ với thứ Đàm đã bác**, chỉ ở một
+cấp khác: thứ làm mắt đọc ra "phố" không phải bản thân mặt đường mà là **ĐẤT HAI BÊN NÓ**. Vá bằng
+`tiaMangDuong` — bỏ dần những ô vừa nằm trong mảng 2×2 vừa bỏ đi được mà mạng vẫn liền. Sau khi
+tỉa: **0–4 khối mỗi kỷ**.
+
+**(b) VÀNH ĐAI KHÔNG ĐƯỢC TỈA.** Bản đầu của phép tỉa ăn cả `tier: 1`, và nó ăn mất chính những
+cái vòng: kỷ 5 (Đức, khai `loops: 1`) đi từ 5 chu trình độc lập xuống **0** — cả thành phố thành
+một cái CÂY, trong khi bảng khai rành rành là có tường thành. Đúng bẫy `MIN_STONE` (Phase 9D).
+Lý lẽ để chừa: một mảng 2×2 sinh ra vì hai cung **tình cờ** chạy sát nhau, còn vành đai là một cấu
+trúc **có chủ đích**.
+
+**(c) MỘT KHÚC CUA KHÔNG PHẢI MỘT NGÃ TƯ.** Bản đầu gán vai ĐẠI LỘ cho mọi ô vừa có hàng xóm ngang
+vừa có hàng xóm dọc — một luật mượn từ Phase 6C, đúng cho mạng BÀN CỜ nơi ngang-và-dọc chỉ xảy ra ở
+chỗ hai trục cắt nhau. Trong một mạng CONG thì gần như mọi ô đều là một khúc cua, nên luật ấy biến
+cả mạng thành đại lộ (kỷ 5: 105 ô thì gần hết mang vai đại lộ).
+
+### Trade-off — cái giá đã trả, nói thẳng
+
+- ⚠️ **MẤT LỜI HỨA TƯƠNG THÍCH NGƯỢC "THÀNH PHỐ ĐÀM ĐANG CÓ KHÔNG TỰ SẮP XẾP LẠI"** (Phase 6C).
+  Mạng đổi thì thứ tự mở đường đổi — không có cách nào vừa đổi mạng vừa giữ nguyên thứ tự của mạng
+  cũ, mà đổi mạng chính là thứ Đàm yêu cầu. Thứ CÒN giữ được là **luật xếp**: `tier` sắp trước mọi
+  thứ khác, nên ở mỗi kỷ vành đai vẫn mở sau cùng (thành phố lớn từ trong ra ngoài).
+- **Số ô đường đổi theo kỷ** (29 … 83, trước là 80 cho mọi kỷ) ⇒ `ROAD_CELL_COUNT` thôi làm MẪU SỐ
+  và chỉ còn dùng để cấp phát bộ đệm; mọi chỗ hiện tiến độ phải hỏi `roadCellCount(era)`.
+- **Bốn kỷ có mạng đường là một CÂY** (không đường vòng nào): 1 · 2 · 8 · 15. Cả bốn đều đúng lịch
+  sử và được **đếm tường minh** trong test.
+- **Hai kỷ không có vành đai** (1 · 2) — cũng đếm tường minh.
+
+### Ảnh hưởng
+
+- **ADR-007 KHÔNG bị đụng**: vị trí 5 kỳ quan suy từ `wonderAnchor(bpId, rank)`, chỉ phụ thuộc
+  `bpId` — có test khoá bằng cách gọi kèm dữ liệu rác.
+- **Mặt tiền kỳ quan TỐT LÊN**: mạng bàn cờ cũ để **2/75** kỳ quan không có ô đường kề bên; mạng
+  mới là **0/75** (nhờ nhánh cụt dẫn vào).
+- `city3d/terrain.js` san cao độ theo mạng đường ⇒ mạng **phải là hàm thuần của `era`**; có test
+  gọi kèm `sessionCount`/`built` rác và đòi kết quả y hệt.
+- Kỷ 10 (Manchester) phải nâng `tilt` 0,26 → 0,36 vì phép đếm "một bậc thềm nuốt quá 60% mặt ĐẤT"
+  nay chạy trên một tập ô đất khác. Lý do lịch sử có thật, không phải nới ngưỡng: kênh Rochdale
+  phải qua **9 âu thuyền trong 1,6 km** giữa lòng thành phố.
+
+### Điều kiện xem lại
+
+Nếu lưới 12×12 được nới ra, hoặc nếu có ai muốn mạng đường **đổi theo tiến độ** (mở dần theo hình
+dạng chứ không theo thứ tự): cả hai đều đụng vào bất biến cao độ mặt đất, phải đọc lại mục "Ảnh
+hưởng" trước khi làm gì.
+
+---
+
 ## ADR-058 — TIM ĐƯỜNG là một trục bản sắc, và độ lệch của nó là thuộc tính của RANH GIỚI chứ không phải của Ô
 
 **Ngày:** 2026-08-24

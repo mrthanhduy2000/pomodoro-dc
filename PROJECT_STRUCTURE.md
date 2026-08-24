@@ -111,12 +111,27 @@
 │   │   │                     #   Tách khỏi cityLayout.js ở Phase 7C để cắt vòng import
 │   │   │                     #   cityLayout ↔ city3d/dwellings. cityLayout TÁI XUẤT, không chép.
 │   │   ├── cityGrid.js        # FILE LÁ: hợp đồng về mảnh đất — lưới 12×12, 5 khu đất đã hứa cho
-│   │   │                     #   kỳ quan (BUILDING_ZONES), các hàng/cột có đường. Cùng lý do tách
-│   │   │                     #   như hashId.js. Sai lệch giữa hai bên = nhà mọc đè kỳ quan, IM LẶNG.
+│   │   │                     #   kỳ quan (BUILDING_ZONES). Cùng lý do tách như hashId.js. Sai lệch
+│   │   │                     #   giữa hai bên = nhà mọc đè kỳ quan, IM LẶNG. ⚠️ `ROAD_LINES` chỉ
+│   │   │                     #   còn là DI SẢN của mạng bàn cờ trước ADR-059 — mạng đường nay do
+│   │   │                     #   `roadPlan.js` sinh theo kỷ.
+│   │   ├── roadPlan.js        # BỘ SINH MẠNG ĐƯỜNG THEO KỶ (ADR-059) — hàm THUẦN của DUY NHẤT
+│   │   │                     #   `era`, có memo. Nối các ĐIỂM MỐC (5 khu kỳ quan · tâm · cửa ngõ)
+│   │   │                     #   bằng những CUNG CONG (`arcTrace`) ⇒ giao lộ chữ T/Y/ngã năm thay
+│   │   │                     #   vì 16 ngã tư vuông góc. 5 kiểu khung: bàn cờ · xương sống · mạng
+│   │   │                     #   rối · nan quạt+vòng · thềm dốc. `wonderAnchor` (nguồn DUY NHẤT
+│   │   │                     #   cho vị trí kỳ quan — `placeBuilding` GỌI nó, không chép lại) ·
+│   │   │                     #   `tiaMangDuong` (bỏ ô làm mặt đường phình thành SÂN LÁT, chừa
+│   │   │                     #   vành đai) · `vaLienThong`. ⚠️ KHÔNG được phụ thuộc tiến độ:
+│   │   │                     #   terrain.js san cao độ theo nó (ADR-007). File LÁ, không import
+│   │   │                     #   ngược lên cityLayout.
 │   │   ├── cityLayout.js      # THÀNH PHỐ PIXEL: suy ra bố cục từ danh sách công trình (băm tất
-│   │   │                     #   ⚠️ `roadCellCandidates()` (2026-08-18) = tập ỨNG VIÊN đường, hằng
-│   │   │                     #   số, ĐỪNG nhầm với mạng đã hiện trong `layout.props` — cái sau đổi
-│   │   │                     #   theo tiến độ. 3 bài test ở cityLayout.test.js khoá cả hai chiều
+│   │   │                     #   ⚠️ `roadCellCandidates(era)` = tập ỨNG VIÊN đường CỦA MỘT KỶ (từ
+│   │   │                     #   ADR-059 nó KHÔNG còn là hằng số cấp module), ĐỪNG nhầm với mạng
+│   │   │                     #   đã hiện trong `layout.props` — cái sau còn đổi theo tiến độ.
+│   │   │                     #   `roadCellCount(era)` là MẪU SỐ; `ROAD_CELL_COUNT` chỉ còn dùng
+│   │   │                     #   để cấp phát bộ đệm. 3 bài test ở cityLayout.test.js khoá cả hai
+│   │   │                     #   chiều
 │   │   │                     #   định, KHÔNG lưu toạ độ). Bất biến: cùng đầu vào → cùng bố cục
 │   │   │                     #   vĩnh viễn + xây thêm nhà không làm xê dịch nhà cũ.
 │   │   ├── cityArchive.js     # THÀNH PHỐ PIXEL: "bảo tàng" các kỷ đã niêm phong (ghi lại công
@@ -331,13 +346,18 @@
 │   │   │   │                      #   cả. Bảng 15 MỐC LỆNH VẼ riêng từng kỷ (ADR-028) + đối chứng.
 │   │   │   │                      #   Chạy được trong `npm test` nhờ quan hệ ĐO ĐƯỢC
 │   │   │   │                      #   `lệnh vẽ thành phố = (số họ vật liệu) + 4`, đúng 15/15 kỷ
-│   │   │   ├── networkStyle.js   # BẢNG HÌNH THÁI MẠNG ĐƯỜNG 15 KỶ (ADR-058): kiểu quy hoạch
-│   │   │   │                     # (`plan`: grid/axial/organic/terrace/radial) · biên độ lượn
-│   │   │   │                     # (`bend`, TỈ LỆ của chỗ trống) · bước sóng (`coil`, số ô) ·
-│   │   │   │                     # biến thiên bề rộng (`ragged`). `country` khoá vào eraStyle.
+│   │   │   ├── networkStyle.js   # BẢNG HÌNH THÁI MẠNG ĐƯỜNG 15 KỶ (ADR-058 → ADR-059): kiểu khung
+│   │   │   │                     # (`plan`: grid/axial/organic/terrace/radial) · độ cong từng con
+│   │   │   │                     # đường (`bend`) · số đường chính (`arms`) · số vòng khép kín
+│   │   │   │                     # (`loops`) · độ rối (`tangle`) · `diagonal` (Broadway, chỉ kỷ 11).
+│   │   │   │                     # ⚠️ ĐÃ BỎ `coil`/`ragged` ở ADR-059 — cả hai chỉ đổi được MÉP một
+│   │   │   │                     # đoạn đường, và `ragged` chính là thứ Đàm gọi là "lồi lõm".
+│   │   │   │                     # `country` khoá vào eraStyle, CÓ TEST BẮT.
 │   │   │   ├── roadPath.js       # HÌNH của bảng trên: `boundaryBend` (độ lệch tim đường TẠI MỘT
-│   │   │   │                     # RANH GIỚI — đối xứng theo cấu tạo) · `buildRoadPaths` (nguồn
-│   │   │   │                     # DUY NHẤT cho cả terrainMesh lẫn residents) · `roadHalfWidth`.
+│   │   │   │                     # RANH GIỚI — nay TRA THẲNG bảng `crossings` mà `arcTrace` ghi
+│   │   │   │                     # ra, không sinh nhiễu; đối xứng theo cấu tạo) · `buildRoadPaths`
+│   │   │   │                     # (nguồn DUY NHẤT cho cả terrainMesh lẫn residents) ·
+│   │   │   │                     # `roadHalfWidth` (nay ĐỀU TUYỆT ĐỐI dọc một hạng đường).
 │   │   │   ├── streetStyle.js     # BẢNG ĐƯỜNG PHỐ 15 KỶ (Phase 9D, ADR-025): bề rộng đại lộ · bề
 │   │   │   │                      #   rộng ngõ · vật liệu lát · cỡ viên · độ mòn · bó vỉa · vỉa hè
 │   │   │   │                      #   · vạch kẻ · kiểu mép. Nguồn DUY NHẤT trả lời "ở kỷ này con

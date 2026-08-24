@@ -2307,6 +2307,62 @@ xuống, mà `massHeight` thì không phụ thuộc hình chiếu đáy) — bù
 
 ---
 
+## Phase 19 — MỖI KỶ MỘT MẠNG ĐƯỜNG RIÊNG (2026-08-24 chiều, ADR-059)
+
+> **Công cụ · Đầu vào · Đời ảnh** (luật §3-Q2, phải đủ cả ba thì một con số mới truy được nguồn):
+> bảng dưới KHÔNG đo bằng ảnh — nó đo thuần trên `buildRoadPlan(era, getNetworkStyle(era)).cells`,
+> chạy bằng Node, không cần Chromium. Vì vậy nó miễn nhiễm với nhiễu SwiftShader (`TECH_DEBT #50`)
+> và với trần 4 MiB của ổ cắm CDP. Lệnh tái lập nằm ngay dưới bảng.
+
+**Cột đọc thế nào.** *ô đường* = tổng ô mạng của kỷ ấy (trước ADR-059: **80 ô cho MỌI kỷ**).
+*giao lộ* = ô có ≥3 nhánh (một mạng "dấu cộng" có đúng 1). *vòng* = `E − V + 1` trên đồ thị ô kề
+cạnh — số chu trình độc lập, 0 nghĩa là mạng là một cái CÂY. *ô ngoài trục cũ* = ô KHÔNG nằm trên
+bốn trục `x, y ∈ {0, 4, 8, 11}` của mạng bàn cờ cũ; **đây là cột trả lời thẳng câu của Đàm** *"làm
+gì có đường dạng bàn cờ"*. *mảng 2×2* = số khối 2×2 toàn đường (một cái sân lát, không phải một
+con đường) — **trước phép tỉa `tiaMangDuong` là 0…56 mỗi kỷ, tổng 250**.
+
+| kỷ | plan | ô đường | đại lộ | ngõ | vành đai | giao lộ | vòng | ô ngoài trục cũ | mảng 2×2 |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| 1 | organic | 45 | 18 | 27 | 0 | 5 | 0 | 25 | 0 |
+| 2 | axial | 29 | 13 | 16 | 0 | 3 | 0 | 19 | 0 |
+| 3 | axial | 43 | 13 | 13 | 17 | 10 | 3 | 24 | 3 |
+| 4 | grid | 80 | 24 | 20 | 36 | 12 | 9 | 0 | 0 |
+| 5 | radial | 55 | 21 | 13 | 21 | 14 | 5 | 24 | 4 |
+| 6 | organic | 63 | 19 | 38 | 6 | 15 | 5 | 35 | 4 |
+| 7 | organic | 63 | 15 | 34 | 14 | 12 | 4 | 33 | 4 |
+| 8 | terrace | 60 | 16 | 14 | 30 | 8 | 0 | 30 | 0 |
+| 9 | radial | 58 | 22 | 16 | 20 | 12 | 4 | 33 | 3 |
+| 10 | terrace | 56 | 15 | 17 | 24 | 10 | 1 | 33 | 1 |
+| 11 | grid | 83 | 34 | 15 | 34 | 16 | 7 | 8 | 0 |
+| 12 | grid | 67 | 12 | 17 | 38 | 7 | 4 | 19 | 0 |
+| 13 | organic | 61 | 16 | 38 | 7 | 14 | 4 | 29 | 4 |
+| 14 | grid | 83 | 23 | 15 | 45 | 19 | 5 | 29 | 3 |
+| 15 | axial | 41 | 12 | 21 | 8 | 6 | 0 | 26 | 0 |
+| **tổng** | | **887** | **273** | **314** | **300** | **163** | **51** | **367** | **26** |
+
+```
+node --import ./scripts/register-esm-loader.mjs -e "
+  import('./src/engine/roadPlan.js').then(async (R) => {
+    const N = await import('./src/engine/city3d/networkStyle.js');
+    for (let e = 1; e <= 15; e++) console.log(e, R.buildRoadPlan(e, N.getNetworkStyle(e)).cells.length);
+  })"
+```
+
+**Ba con số đáng đọc nhất.**
+- **15 kỷ ra 15 mạng KHÁC NHAU** (so bằng tập ô, có test `deepEqual` bắt) — trước là 1 mạng cho 15 kỷ.
+- **Mặt tiền kỳ quan TỐT LÊN**: mạng bàn cờ cũ để **2/75** kỳ quan không có ô đường nào kề bên; mạng
+  mới là **0/75**. Đây là điểm mạnh DUY NHẤT mà mạng cũ có (`cityLayout.js` ghi rõ lý do bốn trục
+  `{0,4,8,11}` được chọn), nên nó là cột phải không được đi lùi.
+- **Đất trống cho nhà dân 368 → 371 ô** — mạng mới thưa hơn ở phần lớn kỷ (29…83 ô so với 80 cố
+  định), nhưng chênh lệch bị các kỷ dày (11 · 14) bù lại gần hết.
+
+⚠️ **KHÔNG có bảng tam giác / lệnh vẽ ở đây, và đó là cố ý.** Mạng đường đổi thì số tam giác mặt
+đường đổi theo số ô, tức nó là một hệ quả HIỂN NHIÊN của bảng trên chứ không phải một phép đo thêm
+thông tin. Cổng thật cho lệnh vẽ là `drawCallBudget.test.js` (bảng 15 mốc riêng từng kỷ, ADR-028) và
+nó vẫn xanh.
+
+---
+
 ## Phase 18 — ĐƯỜNG PHỐ BIẾT UỐN CONG, VÀ MẠNG ĐƯỜNG CÓ BA HẠNG (2026-08-24, ADR-058)
 
 ⚠️ **Ba vế truy nguồn (luật §3-Q2)** — CÔNG CỤ · ĐẦU VÀO · ĐỜI ẢNH:

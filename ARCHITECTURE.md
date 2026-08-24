@@ -256,25 +256,47 @@ tính lệch nhau. Mỗi giàn giáo mang theo đủ ba thứ một màn hình c
 đặc quyền sẽ mở khoá — **đi tới đó để làm gì**). ⚠️ Giàn giáo được đặt chỗ TRƯỚC khi sinh cảnh vật,
 nếu không cây sẽ mọc giữa công trường.
 **`dwellings` (Phase 7C, ADR-015)** là hàm THUẦN của `(kỷ, số công trình đã xây, số phiên)` — không
-lưu byte nào vào state. 30 ô đất trống (những ô không phải đường, không thuộc 5 khu đất đã hứa cho
-kỳ quan) chia ba khu theo khoảng cách tới tâm: ngoại vi → khu dân cư → trung tâm, mỗi khu cho phép
-công năng và cỡ nhà riêng. Cứ 2 phiên (~50 phút) mọc thêm một căn, **mọc từ trong ra ngoài**, trần
+lưu byte nào vào state. Những ô đất trống (không phải đường, không thuộc 5 khu đất đã hứa cho kỳ
+quan) chia ba khu **theo THỨ HẠNG trong danh sách ô** (6 ô đầu = trung tâm · 12 ô kế = khu dân cư ·
+còn lại = ngoại vi), mỗi khu cho phép công năng và cỡ nhà riêng. ⚠️ Từ ADR-059 số ô đất trống đổi
+theo kỷ (46 … 100 ô), nên phân khu phải hỏi THỨ HẠNG chứ không hỏi tỉ lệ phần trăm — hỏi tỉ lệ thì
+một kỷ nhiều đất sẽ có 14 ô "trung tâm", tức cái gradient trung tâm→ngoại vi tan ra. Trần mật độ
+neo vào `LEGACY_PLOT_COUNT = 30` để mạng đường đổi không lặng lẽ nhân đôi số nhà. Cứ 2 phiên (~50 phút) mọc thêm một căn, **mọc từ trong ra ngoài**, trần
 mật độ tăng dần theo kỷ (17 căn kỷ 1 → 30 căn kỷ 15). ⚠️ Nhà dân cũng phải đặt chỗ TRƯỚC `deriveProps`
 — cùng lý do với giàn giáo, và cùng kiểu hỏng im lặng (một cái cây mọc trong phòng khách). Nhà dân
 đi qua **đúng** `buildBuildingSpec` như công trình thật, chỉ khác cờ `plain` (tắt chữ ký kiến trúc +
 mô-típ) và mái `vernacularRoof` — nhờ vậy chúng thừa hưởng mái/vật liệu/tỉ lệ của kỷ mà không tranh
 mất hình bóng của 5 kỳ quan.
-**Mạng đường — hai tầng bản sắc, và một luật đối xứng giữ chúng không gãy (ADR-025 + ADR-058)**:
-`streetStyle.js` trả lời câu về **MẶT CẮT NGANG** (rộng bao nhiêu, lát bằng gì, có bó vỉa/vỉa hè/vạch
-kẻ không), còn `networkStyle.js` + `roadPath.js` trả lời câu về **CHIỀU DỌC** (con đường có thẳng
-không, lượn kiểu gì, thắt phình ra sao). Trước ADR-058 chỉ có tầng thứ nhất, nên mọi lòng đường được
-dựng **chính giữa ô lưới** và cả 15 kỷ dùng chung một tấm lưới bàn cờ.
+**Mạng đường — BA tầng bản sắc, và một luật đối xứng giữ chúng không gãy (ADR-025 + ADR-058 + ADR-059)**:
+`roadPlan.js` trả lời câu **Ô NÀO LÀ ĐƯỜNG** (hình dạng của cả mạng), `streetStyle.js` trả lời câu về
+**MẶT CẮT NGANG** (rộng bao nhiêu, lát bằng gì, có bó vỉa/vỉa hè/vạch kẻ không), còn `networkStyle.js`
++ `roadPath.js` trả lời câu về **CHIỀU DỌC** (con đường có thẳng không, lượn kiểu gì).
 
-⚠️ **Luật sống còn của tầng mới: độ lệch tim đường là thuộc tính của RANH GIỚI, không phải của Ô.**
+⚠️ **Tầng thứ nhất là tầng MẠNH NHẤT, và nó ra đời sau cùng.** Trước ADR-059, `cityLayout.js` có một
+hằng số `ROAD_CELLS` dựng từ bốn trục `x, y ∈ {0, 4, 8, 11}` — **một bàn cờ 80 ô dùng chung cho cả 15
+kỷ**, từ Göbekli Tepe tới Dubai. ADR-058 đã cố chữa lời phàn nàn "đường trông như quy hoạch" bằng
+cách cho tim đường lượn nhẹ BÊN TRONG ô của nó, và chữa sai chỗ: thứ mắt đọc ra là **hình dạng của
+cả mạng**, không phải mép của một đoạn. Nay mỗi kỷ tự sinh lấy tập ô đường của mình bằng cách nối
+các điểm mốc (5 khu kỳ quan · tâm · cửa ngõ) bằng những **cung cong**; hai cung cắt nhau ở đâu thì ở
+đó có **giao lộ** — chữ T, chữ Y, ngã năm — thay vì 16 ngã tư vuông góc đều tăm tắp.
+
+⚠️ **Luật sống còn của tầng thứ ba: độ lệch tim đường là thuộc tính của RANH GIỚI, không phải của Ô.**
 Ô `(x,y)` và ô `(x+1,y)` cùng hỏi `boundaryBend(era, 'u', x+1, y)` cho chỗ giáp của chúng, nên chúng
 **không thể** khai lệch nhau — không phải "rất khó lệch". Đây đúng phép `min` đối xứng mà ADR-031 đã
-dùng để xoá bậc BỀ RỘNG ở Phase 12, áp lại cho ĐỘ LỆCH. Biên độ tại một ranh giới là `min` biên độ
-của hai hạng đường gặp nhau ở đó, nên đối xứng vẫn giữ kể cả nơi đại lộ gặp ngõ.
+dùng để xoá bậc BỀ RỘNG ở Phase 12, áp lại cho ĐỘ LỆCH. Từ ADR-059, con số ấy còn **đọc thẳng từ một
+ô nhớ duy nhất** (`crossings`, ghi ra lúc rasterise cung) chứ không sinh lại bằng nhiễu băm — nên
+không còn cả khả năng hai công thức "tương đương" lệch nhau ở biên, và mỗi khúc lượn đều **đến từ
+chính hình dạng con đường** chứ không từ một dãy số ngẫu nhiên.
+
+⚠️ **Mạng đường của một kỷ KHÔNG được đổi theo tiến độ.** `city3d/terrain.js` san cao độ mặt đất theo
+nó; cao độ mà nhúc nhích thì nhà đã xây sẽ lún hoặc nhô (ADR-007). Nên `buildRoadPlan` là hàm THUẦN
+của DUY NHẤT `era`, có test khoá bằng cách gọi kèm dữ liệu rác. Đổi theo KỶ thì hoàn toàn được.
+
+⚠️ **Một khối 2×2 toàn đường không phải một con đường — nó là một cái sân lát.** Mỗi cung được
+rasterise độc lập, nên hai cung chạy gần song song cách nhau một ô sẽ tô kín cả dải giữa chúng (đo
+trên bản nháp: 13/15 kỷ, và kỷ 13 có 92% số ô đường nằm trong một mảng như thế). `tiaMangDuong` bỏ
+dần những ô vừa nằm trong mảng vừa bỏ đi được mà mạng vẫn liền — **trừ vành đai**, vì vành đai là
+một cấu trúc có chủ đích chứ không phải sản phẩm phụ của hai cung chồng nhau.
 
 ⚠️ **Một nguồn duy nhất cho hai người đọc.** `buildRoadPaths(era, roadCells)` là chỗ DUY NHẤT dựng
 ra tim đường; `terrainMesh.js` đặt mặt đường theo nó và `residents.js` đặt bàn chân cư dân theo nó

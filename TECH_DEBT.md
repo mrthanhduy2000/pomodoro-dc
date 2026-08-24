@@ -13,7 +13,13 @@
 > mà không được refactor triệt để, phải CHỦ ĐỘNG đề xuất mở một "Maintenance Sprint" (nêu rõ mục
 > tiêu/phạm vi/lợi ích/rủi ro/tiêu chí hoàn thành) thay vì tiếp tục cộng thêm tính năng mới.
 >
-> **Trạng thái ngưỡng hiện tại (2026-08-24 tối muộn, sau ADR-058)**: thêm **#83** (ngưỡng "lượn
+> **Trạng thái ngưỡng hiện tại (2026-08-24 chiều, sau ADR-059)**: thêm **#84** (kỷ 1 và 2 thấp đi
+> ~4% sau khi ô nhà dân thành khu phố — đã đếm tường minh) ở mức **Low**; **#85 mở rồi ĐÓNG ngay
+> trong phiên** (`road-bend.mjs` đo một đại lượng mà ADR-059 đã thay — và trong lúc vá thì lộ ra
+> `--selftest` của nó ĐỎ trên một mạng đường lành, vì đối chứng hỏi sai đại lượng). Đếm lại toàn file bằng cách quét trường
+> `**Priority**` của TỪNG mục: **1 mục Priority High còn mở** (#53), **0 mục Critical** → xa ngưỡng
+> 8–10 mục, KHÔNG cần Maintenance Sprint.
+> **(2026-08-24 tối muộn, sau ADR-058)**: thêm **#83** (ngưỡng "lượn
 > bao nhiêu thì mắt đọc ra" chưa hiệu chuẩn) ở mức **Low** — không đụng ngưỡng Maintenance Sprint.
 > **(2026-08-24 tối, sau ADR-057)**: **#82 ĐÃ ĐÓNG** — chân giải bằng
 > khớp ngược nên cả ba chiều bị cấm đều thành miễn phí. (Ghi chú cũ giữ lại bên dưới.)
@@ -4387,6 +4393,73 @@ cấp `Math.min(3,…)` → `Math.min(9,…)` · cắt bớt danh sách cấp th
 - **Review Trigger (MỚI, thay cho mốc đã dùng)**: **ngay phase sau §1(3)**, hoặc sớm hơn nếu Đàm
   nhìn ảnh §1(3) rồi nói mái nhà dân trông giống nhau giữa các kỷ.
 - **Owner**: chưa phân công · **Status**: Open (đã rà soát 2026-08-21, hoãn có lý do)
+
+---
+
+## #85 — `road-bend.mjs` đo trên một đại lượng mà ADR-059 đã thay: nó vẫn hỏi "tim đường lệch bao nhiêu trong ô", trong khi bản sắc nay nằm ở HÌNH DẠNG CỦA CẢ MẠNG
+
+- **Tên**: công cụ đo độ lượn đường đứng sau một lần đổi trục
+- **Module**: `scripts/road-bend.mjs`
+- **Priority**: Low · **Severity**: Low
+- **Impact**: Công cụ vẫn CHẠY và vẫn đo đúng thứ nó nói (`lệch ÷ bề rộng lòng đường`), nhưng sau
+  ADR-059 đại lượng ấy chỉ còn là một PHẦN nhỏ của câu hỏi *"con đường ở kỷ này có cong không"* —
+  phần lớn hơn hẳn nằm ở tập ô đường (`roadPlan.js`), thứ công cụ này không nhìn tới. Ai chạy nó rồi
+  đọc con số như một lời phán về bản sắc đường sẽ đọc thiếu.
+- **Root Cause**: nó sinh ra ở ADR-058, khi tim-đường-lượn-trong-ô là cơ chế DUY NHẤT. ADR-059 thêm
+  một tầng NẰM TRÊN nó mà không ai đi sửa lại phạm vi của công cụ — đúng hình dạng "một phép đo tự
+  xưng là toàn thế giới trong khi nó chỉ nhìn 1/10 thế giới" (Bước C mặt nước, 2026-08-20).
+- **Current Risk**: Thấp. Không cổng nào đọc nó; `networkStyle.test.js` và `cityLayout.test.js` canh
+  hình dạng mạng bằng bất biến hình học riêng.
+- **Future Risk**: Trung bình — một công cụ đo còn chạy được mà đã hết đúng-việc là loại nói dối khó
+  thấy nhất (lần thứ 22 trong lịch sử dự án đều thuộc họ này).
+- **Recommended Solution**: đổi TÊN dòng tổng kết cho nói đúng phạm vi (*"trong ô"*), rồi thêm một
+  dòng thứ hai đo hình dạng mạng (số giao lộ · số vòng · số ô nằm ngoài bốn trục bàn cờ cũ).
+- **Estimated Complexity**: Thấp.
+- **Blocking Conditions**: Không có.
+- **Review Trigger**: —
+- **Owner**: phiên 2026-08-24 (chiều) · **Status**: ✅ **ĐÃ ĐÓNG cùng ngày**
+
+### Đã xử lý thế nào (2026-08-24, ADR-059)
+
+Thêm `hìnhMạng(era)` — một phép đo THUẦN trên `buildRoadPlan` (không đụng hình học đã dựng, không
+cần Chromium) — và bảng nay in **hai nửa**: *trong ô* (`LỆCH÷BỀ RỘNG`) và *cả mạng* (ô · giao lộ ·
+vòng · ô ngoài bốn trục bàn cờ cũ), kèm hai dòng tổng kết tách bạch với một chú thích cấm đọc gộp.
+
+⚠️ **VÀ TRONG LÚC VÁ THÌ LỘ RA MỘT LỖI THỨ HAI, NẶNG HƠN, ĐÃ SỐNG TỪ ADR-058**: mục `--selftest`
+*"kỷ 1 lượn nhất bảng"* đòi `uốnTB > 1.01` — tức **độ uốn khúc** (sinuosity), đúng cái đại lượng mà
+khối chú thích ở ĐẦU CHÍNH FILE ẤY đã ghi rõ là SAI cho câu hỏi này (nó tăng theo bình phương độ dốc
+nên gần như mù với một con đường lượn biên độ nhỏ mà dài). Đo ra: kỷ 1 lệch **0,734 lần bề rộng**
+mà sinuosity chỉ **1,0083** ⇒ đối chứng **ĐỎ trên một mạng đường hoàn toàn lành**. Một công cụ có
+`--selftest` đỏ thì còn tệ hơn không có công cụ. Nay nó hỏi `tỉSốTB`, đúng đại lượng mà bảng in ra.
+**Bài học: một đối chứng phải hỏi cùng đại lượng mà bảng công bố — nếu file tự bác một đại lượng
+trong chú thích thì đừng để `--selftest` của chính nó vẫn dùng đại lượng ấy.**
+
+---
+
+## #84 — Kỷ 1 và kỷ 2 THẤP ĐI sau khi ô nhà dân thành khu phố, và mọi cần gạt đã cạn
+
+- **Tên**: hai kỷ không giữ được lời hứa "chia khu phố xong thành phố không thấp đi" (ADR-052)
+- **Module**: `src/engine/city3d/block.js` + `blockStyle.js` (kỷ 1 · 2)
+- **Priority**: Low · **Severity**: Low
+- **Impact**: Chiều cao trung bình của nhà dân ở kỷ 1 còn **0,9584** lần bản một-căn-một-ô (kỷ 2:
+  **0,9669**) — tức thấp đi ~4%, dưới ngưỡng mắt ở khung toàn cảnh nhưng vẫn là một lời hứa bị vỡ.
+  Được ĐẾM TƯỜNG MINH bằng `THAP_DI = [1, 2]` trong `block.test.js`: kỷ thứ ba rơi vào thì đỏ, mà
+  một trong hai kỷ này được chữa thì cũng đỏ.
+- **Root Cause**: biên gốc của hai kỷ ấy xưa nay đã rất mỏng (đo lại được **1,0072** và **1,0078**),
+  nên chỉ cần chia ô thành nhiều đơn vị nhỏ hơn là mất. Kỷ 1 đã đứng đúng `MIN_UNITS = 4` (không chia
+  ít hơn được nữa) và `storey` đã kịch trần 2,0; kỷ 2 thì cách chữa duy nhất còn lại sẽ mâu thuẫn với
+  chính `note` lịch sử của nó (xóm thợ Deir el-Medina — nhà một tầng, mái bằng).
+- **Current Risk**: Thấp — 4% nằm dưới ngưỡng mắt ở khung mặc định (một căn nhà kỷ 1 cao chừng 40–60
+  điểm ảnh, 4% là 2 điểm ảnh).
+- **Future Risk**: Thấp, nhưng sẽ TĂNG nếu có phase sau chia nhỏ đơn vị thêm lần nữa.
+- **Recommended Solution**: nếu muốn chữa thì phải chữa ở tầng BẢNG chứ không ở phép kẹp — cho kỷ 1
+  và 2 một `massScale` riêng cho nhà dân (tách khỏi `massScale` của kỳ quan), đúng khuôn "một trường
+  gánh hai việc" đã tách sáu lần trước. Tuyệt đối KHÔNG hạ `MIN_UNITS` để lấy lại chiều cao: đó là
+  mua một con số bằng cách bỏ chính thứ ADR-052 sinh ra để có.
+- **Estimated Complexity**: Trung bình (một trục mới trong bảng, phải buộc vào `country` và có test).
+- **Blocking Conditions**: Không có.
+- **Review Trigger**: khi `MIN_UNITS` được đổi, hoặc khi có phase chia nhỏ đơn vị nhà dân lần nữa.
+- **Owner**: chưa ai · **Status**: 🔴 mở
 
 ---
 

@@ -6,7 +6,56 @@
 > chọn: `ARCHITECTURE_DECISIONS.md`. Nợ kỹ thuật: `TECH_DEBT.md`. Migration: `MIGRATION.md`. Tóm
 > tắt theo mốc: `CHANGELOG.md`.
 > **NGUYÊN TẮC ƯU TIÊN SỐ 1:** (1) mọi phiên AI phải đọc file này + `CLAUDE.md` + các file liên quan TRƯỚC khi làm; (2) sau MỌI cập nhật dù nhỏ, phải cập nhật ngay file này + `CLAUDE.md` + các file liên quan khác.
-> Cập nhật lần cuối: **2026-08-24 (tối muộn)** — **ĐƯỜNG PHỐ BIẾT UỐN CONG, VÀ MẠNG ĐƯỜNG CÓ BA
+> Cập nhật lần cuối: **2026-08-24 (chiều)** — **MỖI KỶ MỘT MẠNG ĐƯỜNG RIÊNG: HẾT BÀN CỜ, CÓ GIAO
+> LỘ THẬT** (ADR-059). Đàm bác chính bản vá liền trước: *"Không phải là kiểu đường lồi lõm, mà là
+> dạng đường cong hay không cong, như thể là có giao lộ, đường uốn quanh ấy, hãy làm lại … hiện tại
+> ở thời nguyên thuỷ hay các thời trước làm gì có đường dạng bàn cờ, hiểu không"*.
+>
+> ⚠️ **VÀ ANH ĐÚNG VỀ MỘT SUY LUẬN SAI CỦA TÔI, KHÔNG CHỈ VỀ THẨM MỸ.** Bản trước tôi đo được rằng
+> **không THÊM được ô đường** (80/144 ô đã là đường, 30 ô còn lại đúng bằng toàn bộ nhà dân), rồi
+> từ đó suy ra rằng **không ĐỔI được mạng đường** — nên chỉ cho tim đường lượn nhẹ BÊN TRONG ô của
+> nó. Hai mệnh đề ấy KHÔNG tương đương: phép đo kia chặn cơ chế **THÊM**, nó không nói một chữ nào
+> về cơ chế **SẮP XẾP LẠI**. Hậu quả: nhìn từ trên xuống, cả 15 kỷ vẫn là 4 hàng × 4 cột cắt nhau
+> vuông góc. **Bài học về CÁCH HỎI, không phải về mã: khi một phép đo chặn đường, hãy hỏi *"nó chặn
+> ĐÚNG cái gì?"* trước khi để nó chặn luôn những hướng nó không nói tới.**
+>
+> **Bốn việc.** **(1)** `src/engine/roadPlan.js` MỚI — mỗi kỷ tự sinh lấy tập ô đường bằng cách nối
+> các ĐIỂM MỐC (5 khu kỳ quan · tâm · cửa ngõ) bằng những **CUNG CONG**; hai cung cắt nhau ở đâu thì
+> ở đó có **giao lộ** chữ T/Y/ngã năm. Năm kiểu khung: bàn cờ (Trường An · Manhattan · Singapore ·
+> siêu ô phố Xô Viết) · một xương sống (Deir el-Medina · đường rước thành Ur · trục Sheikh Zayed) ·
+> mạng rối (Çatalhöyük · phố cổ Hà Nội · Firenze · Edo) · nan quạt + vòng thành (Đức trung cổ ·
+> Paris) · thềm theo đường đồng mức (Alfama · đồi Pennine). **(2)** `networkStyle.js` ĐỔI BỘ TRỤC —
+> bỏ `coil`/`ragged` (chỉ đổi được MÉP một đoạn; `ragged` chính là thứ Đàm gọi là "lồi lõm"), thêm
+> `plan`/`arms`/`loops`/`tangle`/`diagonal`. **(3)** `roadPath.boundaryBend` nay **TRA THẲNG** chỗ
+> cung cắt qua ranh giới (`arcTrace` ghi ra lúc rasterise) chứ không sinh nhiễu băm — nên **mọi khúc
+> lượn đều đến từ chính hình dạng con đường**, và kỷ khai `bend: 0` ra bảng rỗng ⇒ thẳng băng, không
+> cần một nhánh `if` riêng. **(4)** `tiaMangDuong` — bỏ những ô làm mặt đường **phình thành SÂN LÁT**.
+>
+> ⚠️ **MỘT KHỐI 2×2 TOÀN ĐƯỜNG KHÔNG PHẢI MỘT CON ĐƯỜNG.** Mỗi cung rasterise độc lập, nên hai cung
+> chạy gần song song cách nhau một ô sẽ tô kín cả dải giữa chúng: **13/15 kỷ** có mảng như thế, và
+> kỷ 13 có **92% số ô đường** nằm trong một mảng — nửa dưới thành phố là một vũng bê tông liền. Đây
+> **cùng họ với thứ Đàm đã bác**, chỉ ở một cấp khác: thứ làm mắt đọc ra "phố" không phải bản thân
+> mặt đường mà là **ĐẤT HAI BÊN NÓ**. Sau khi tỉa: **0–4 khối mỗi kỷ**. ⚠️ Nhưng **vành đai KHÔNG
+> được tỉa** — bản đầu ăn cả `tier: 1` và nó ăn mất chính những cái vòng (kỷ 5, khai `loops: 1`, đi
+> từ 5 chu trình xuống **0**: cả thành phố thành một cái CÂY trong khi bảng khai rành rành có tường
+> thành — bẫy `MIN_STONE`).
+>
+> **Số.** 15 kỷ ra **15 mạng khác nhau** (29 … 83 ô) · **3 … 19 giao lộ** mỗi kỷ · mặt tiền kỳ quan
+> **TỐT LÊN**: 2/75 → **0/75** kỳ quan không có lối vào · đất trống cho nhà dân 368 → **371 ô** ·
+> ADR-007 nguyên vẹn. `npm test` **1151 xanh + 1 bỏ qua**, đối chiếu chéo 3/3 (28,0 giây), lint sạch,
+> build xanh.
+>
+> ⚠️ **CÁI GIÁ ĐÃ TRẢ, NÓI THẲNG:** lời hứa *"thành phố Đàm đang có không tự sắp xếp lại sau
+> deploy"* (Phase 6C) **đã mất** — mạng đổi thì thứ tự mở đường đổi, và đổi mạng chính là thứ Đàm
+> yêu cầu. Thứ CÒN giữ: ở mỗi kỷ, đường vành đai vẫn mở SAU cùng (thành phố lớn từ trong ra ngoài).
+> Bốn kỷ có mạng là một CÂY (1 · 2 · 8 · 15) và hai kỷ không có vành đai (1 · 2) — cả hai danh sách
+> đều **đếm tường minh trong test**, kỷ thứ năm rơi vào thì đỏ. Nợ mới: `TECH_DEBT #84` (kỷ 1 và 2
+> thấp đi ~4% sau ADR-052 — mọi cần gạt đã cạn). `#85` mở rồi **đóng ngay trong phiên**:
+> `road-bend.mjs` nay in CẢ HAI nửa (trong ô ↔ cả mạng), và trong lúc vá thì lộ ra `--selftest`
+> của chính nó **ĐỎ trên một mạng đường lành** vì đối chứng hỏi `uốnTB` (sinuosity) — đúng cái đại
+> lượng mà khối chú thích ở đầu file ấy đã tự bác. Chi tiết: **ADR-059**.
+>
+> (Mốc trước, 2026-08-24 tối muộn) — **ĐƯỜNG PHỐ BIẾT UỐN CONG, VÀ MẠNG ĐƯỜNG CÓ BA
 > HẠNG** (ADR-058). Đàm: *"đường đi hiện tại chỉ là những đường thẳng, không giống đường ngoài đời,
 > không uốn cong, và nó cũng như quy hoạch quá — các thời trước làm gì có quy hoạch đường thẳng tấp
 > thế, và hiện tại ít đường và loại đường quá"*.

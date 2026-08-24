@@ -12,6 +12,38 @@
 
 ---
 
+## 2026-08-24 (chiều) — MỖI KỶ MỘT MẠNG ĐƯỜNG RIÊNG: hết bàn cờ, có giao lộ thật (ADR-059)
+
+**Mục đích.** Đàm bác chính bản vá buổi sáng: *"Không phải là kiểu đường lồi lõm, mà là dạng đường
+cong hay không cong, như thể là có giao lộ, đường uốn quanh ấy, hãy làm lại … hiện tại ở thời nguyên
+thuỷ hay các thời trước làm gì có đường dạng bàn cờ, hiểu không"*.
+
+**Phạm vi.**
+- **MỚI** `src/engine/roadPlan.js` — bộ sinh mạng đường theo KỶ. Nối các điểm mốc (5 khu kỳ quan ·
+  tâm · cửa ngõ) bằng những **cung cong**, 5 kiểu khung (bàn cờ · xương sống · mạng rối · nan quạt +
+  vòng thành · thềm theo đường đồng mức). Thay hằng số `ROAD_CELLS` — một bàn cờ 80 ô dùng chung cho
+  cả 15 kỷ, sống từ Phase 6C.
+- `networkStyle.js` — **đổi bộ trục**: bỏ `coil` và `ragged` (chỉ đổi được MÉP một đoạn đường, và
+  `ragged` chính là thứ Đàm gọi là "lồi lõm"), thêm `plan` · `arms` · `loops` · `tangle` · `diagonal`.
+- `roadPath.js` — `boundaryBend` nay **TRA THẲNG** chỗ cung cắt qua ranh giới, không sinh nhiễu băm;
+  `roadHalfWidth` **đều tuyệt đối** dọc một hạng đường.
+- `cityLayout.js` · `dwellings.js` · `terrain.js` · `cityMoment.js` — mọi phép hỏi mạng đường nay
+  nhận `era`. `describeRoadCell` đặt tên theo VAI TRÒ thật của ô (ngã tư · ngã ba · ngõ cụt · vành
+  đai), không theo toạ độ.
+- `terrain.js` — kỷ 10 (Manchester) nâng `tilt` 0,26 → 0,36; lý do lịch sử có thật (kênh Rochdale
+  qua 9 âu thuyền trong 1,6 km giữa lòng thành phố), không phải nới ngưỡng.
+
+**Ảnh hưởng.** 15 kỷ ra **15 mạng đường khác nhau** (29 … 83 ô, trước là 80 cho mọi kỷ) · **3 … 19
+giao lộ** mỗi kỷ · mảng "sân lát" 2×2 từ **56 khối (kỷ 13)** xuống **0–4**. Mặt tiền kỳ quan **TỐT
+LÊN**: 2/75 → **0/75** kỳ quan không có lối vào. ADR-007 nguyên vẹn (không kỳ quan nào xê dịch).
+Nhiều đất trống hơn cho nhà dân: 368 → **371 ô**.
+
+**Tương thích.** Không có migration, không đụng dữ liệu người dùng. ⚠️ **CÓ MỘT LỜI HỨA BỊ MẤT**:
+"thành phố Đàm đang có không tự sắp xếp lại sau deploy" (Phase 6C) — mạng đổi thì thứ tự mở đường
+đổi, và đổi mạng chính là thứ được yêu cầu. Thứ còn giữ: ở mỗi kỷ, đường vành đai vẫn mở SAU cùng.
+
+---
+
 ## 2026-08-24 — Đường phố biết uốn cong, và mạng đường có ba hạng (ADR-058)
 
 **Mục đích.** Đàm: *"đường đi hiện tại chỉ là những đường thẳng, không giống đường ngoài đời, không

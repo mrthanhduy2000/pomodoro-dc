@@ -38,7 +38,9 @@ import { hashId } from '../hashId';
 // THẲNG từ `cityGrid.js`, KHÔNG chép lại. Bản đầu của file này chép chúng vào đây kèm một đoạn
 // chú thích tự trấn an rằng "đã khoá bằng test đối chiếu" — xem đầu `cityGrid.js` để biết vì sao
 // lý lẽ đó sai và vì sao tách file lá mới là cách chặn tận gốc.
-import { CITY_GRID_SIZE as GRID, isRoadLine, isBuildingZone } from '../cityGrid';
+import { CITY_GRID_SIZE as GRID, isBuildingZone } from '../cityGrid';
+import { buildRoadPlan } from '../roadPlan';
+import { getNetworkStyle } from './networkStyle';
 
 /** Ranh giới ba khu, đo bằng khoảng cách Chebyshev tới tâm lưới (5,5 / 5,5). */
 const CIVIC_MAX = 2.5;
@@ -115,10 +117,54 @@ function centreDistance(x, y) {
   return Math.max(Math.abs(x - c), Math.abs(y - c));
 }
 
+/**
+ * Khu của một ô theo KHOẢNG CÁCH TUYỆT ĐỐI tới tâm.
+ *
+ * ⚠️ **KHÔNG CÒN LÀ THỨ QUYẾT ĐỊNH KHU CỦA MỘT Ô ĐẤT** kể từ 2026-08-24 — xem `PHAN_KHU` bên dưới.
+ * Giữ lại vì nó vẫn là câu trả lời đúng cho câu hỏi *"ô này nằm ở vành nào của lưới"*, và có bài
+ * test khoá ý nghĩa ấy.
+ */
 export function districtAt(x, y) {
   const d = centreDistance(x, y);
   if (d <= CIVIC_MAX) return 'civic';
   if (d <= RESIDENTIAL_MAX) return 'residential';
+  return 'outskirts';
+}
+
+/**
+ * ⚠️ **KHU ĐẤT CHIA THEO THỨ HẠNG, KHÔNG THEO KHOẢNG CÁCH TUYỆT ĐỐI — và đây là một hồi quy đã đo.**
+ *
+ * Mạng bàn cờ cũ chạy xuyên qua giữa lưới (hàng/cột 4 và 8), nên số ô trống SÁT TÂM rất ít; 30 ô
+ * đất chia ra **6 civic / 12 residential / 12 outskirts** (20 / 40 / 40 %), và toàn bộ `DISTRICT_RULES`
+ * cùng bảng khu phố của Phase 14 §1(3) được hiệu chuẩn trên tỉ lệ ấy.
+ *
+ * Mạng theo kỷ mở lại phần giữa lưới ⇒ ô trống dồn về gần tâm. Đo được ở kỷ 1: **cả 17 căn nhà rơi
+ * vào `civic`**, tức thành phố mất sạch dải chuyển ngoại-vi → khu-ở → trung-tâm, và vì `civic` toàn
+ * `shop` nên phép chia khu phố dựng ra một thành phố **THẤP ĐI 0,945 lần** — đúng cái hỏng mà cả
+ * ADR-052 sinh ra để ngăn. Một thay đổi về ĐƯỜNG đang lặng lẽ xoá một trục bản sắc của NHÀ.
+ *
+ * ⇒ Chia theo THỨ HẠNG trong danh sách đã sắp từ tâm ra ngoài, với đúng tỉ lệ 20/40/40 mà mạng cũ
+ * cho ra. Nhờ vậy ba khu LUÔN tồn tại và LUÔN đúng tỉ lệ, dù mạng đường của kỷ ấy chừa lại 27 ô hay
+ * 77 ô. Thứ tự "mọc từ trong ra ngoài" giữ nguyên; chỉ có cái nhãn khu là thôi phụ thuộc vào việc
+ * hôm nay con đường tình cờ đi qua đâu.
+ */
+/**
+ * ⚠️ MỐC CHIA TÍNH BẰNG **SỐ Ô TUYỆT ĐỐI**, KHÔNG BẰNG PHẦN TRĂM DANH SÁCH — và bản đầu của chính
+ * đoạn này đã sai đúng ở đó. Lấy 20% của cả danh sách nghe hợp lý, nhưng danh sách nay dài 27…77 ô
+ * tuỳ kỷ trong khi **nhiều nhất chỉ 30 căn nhà được xây** (xem `LEGACY_PLOT_COUNT`). Kết quả ở kỷ
+ * 1: 20% của 70 ô = 14 ô đầu là `civic`, nên 17 căn nhà ra **14 civic / 3 residential** — vẫn dồn
+ * cục, chỉ là dồn kiểu khác. Đo lại thì lời hứa "thành phố không thấp đi" vẫn đỏ (0,9586).
+ *
+ * Mạng bàn cờ cũ cho ra đúng **6 civic · 12 residential · 12 outskirts** trên 30 ô, tức 17 căn đầu
+ * là 6 civic + 11 residential. Ghim thẳng hai con số 6 và 18 thì mọi kỷ tái lập ĐÚNG cách chia ấy,
+ * bất kể mạng đường của nó chừa lại bao nhiêu đất.
+ */
+export const CIVIC_PLOTS = 6;
+export const RESIDENTIAL_PLOTS = 18;
+
+function khuTheoHang(i) {
+  if (i < CIVIC_PLOTS) return 'civic';
+  if (i < RESIDENTIAL_PLOTS) return 'residential';
   return 'outskirts';
 }
 
@@ -134,12 +180,32 @@ export function districtAt(x, y) {
  * Phá hoà (hai ô cùng khoảng cách) bằng `y` rồi `x` — TẤT ĐỊNH, không băm. Băm ở đây sẽ làm thành
  * phố mọc lỗ chỗ như da beo thay vì loang đều ra.
  */
-export const DWELLING_PLOTS = (() => {
+const NHO_O_DAT = new Map();
+
+/**
+ * Toàn bộ ô đất xây được CỦA MỘT KỶ, **đã sắp thứ tự MỌC**: từ trung tâm ra ngoài.
+ *
+ * ⚠️ **NAY LÀ HÀM THEO KỶ, TRƯỚC LÀ HẰNG SỐ CẤP MODULE.** Mạng đường từ 2026-08-24 mỗi kỷ một
+ * hình (`roadPlan.js`), nên "ô nào không phải đường" cũng đổi theo kỷ. Giữ nó làm hằng số thì nhà
+ * dân sẽ mọc **giữa lòng đường** ở 14/15 kỷ — và không có gì đỏ lên, vì bố cục vẫn hợp lệ.
+ *
+ * ⚠️ THỨ TỰ VẪN LÀ MỘT LỜI HỨA, VÀ NÓ VẪN CÒN NGUYÊN: trong MỘT kỷ, thứ tự không phụ thuộc tiến
+ * độ, nên **căn nhà thứ 7 của Đàm mãi mãi là căn nhà thứ 7**. Thứ đổi là giữa hai KỶ khác nhau —
+ * mà hai kỷ vốn đã là hai thành phố khác nhau.
+ *
+ * Phá hoà (hai ô cùng khoảng cách) bằng `y` rồi `x` — TẤT ĐỊNH, không băm.
+ */
+export function dwellingPlots(era) {
+  const eraNum = Number.isFinite(era) ? era : 1;
+  if (NHO_O_DAT.has(eraNum)) return NHO_O_DAT.get(eraNum);
+  const duong = new Set(
+    buildRoadPlan(eraNum, getNetworkStyle(eraNum)).cells.map((c) => `${c.x}|${c.y}`),
+  );
   const plots = [];
   for (let y = 0; y < GRID; y += 1) {
     for (let x = 0; x < GRID; x += 1) {
-      if (isRoadLine(x, y) || isBuildingZone(x, y)) continue;
-      plots.push({ x, y, district: districtAt(x, y), distance: centreDistance(x, y) });
+      if (duong.has(`${x}|${y}`) || isBuildingZone(x, y)) continue;
+      plots.push({ x, y, distance: centreDistance(x, y) });
     }
   }
   plots.sort((a, b) => (
@@ -147,10 +213,15 @@ export const DWELLING_PLOTS = (() => {
       : a.y !== b.y ? a.y - b.y
         : a.x - b.x
   ));
-  return plots;
-})();
+  // Nhãn khu gán SAU khi sắp — vì nó là một hàm của THỨ HẠNG, không phải của toạ độ.
+  const xong = plots.map((p, i) => ({ ...p, district: khuTheoHang(i) }));
+  NHO_O_DAT.set(eraNum, xong);
+  return xong;
+}
 
-export const DWELLING_PLOT_COUNT = DWELLING_PLOTS.length;
+export function dwellingPlotCount(era) {
+  return dwellingPlots(era).length;
+}
 
 /** Chọn công năng + cỡ nhà cho một ô. Tất định theo `(kỷ, ô)` — nhà không bao giờ đổi kiểu. */
 function pickKind(era, plot) {
@@ -165,9 +236,27 @@ function pickKind(era, plot) {
 }
 
 /** Trần mật độ của một kỷ, tính ra SỐ Ô. */
+/**
+ * ⚠️ **MẪU SỐ CỦA MẬT ĐỘ BỊ GHIM Ở 30 — VÀ ĐÂY LÀ MỘT QUYẾT ĐỊNH CÓ CHỦ ĐÍCH, KHÔNG PHẢI SƠ SUẤT.**
+ *
+ * Mạng bàn cờ cũ chừa lại đúng **30 ô** cho nhà dân ở mọi kỷ, và toàn bộ bảng `ERA_DENSITY` (0,55…
+ * 1,00) được hiệu chuẩn trên mẫu số ấy. Mạng theo kỷ (2026-08-24) chừa lại **27…77 ô** tuỳ kỷ.
+ *
+ * Nếu để mẫu số trôi theo thì một thay đổi về ĐƯỜNG sẽ lặng lẽ **nhân đôi số nhà** ở nửa số kỷ —
+ * kỷ 1 đi từ 17 lên 39 căn. Đo được ngay: cả bộ test của Phase 14 §1(3) (chia ô thành khu phố) đỏ
+ * lên, vì mọi ngưỡng ở đó hiệu chuẩn trên quần thể 371 ô của mạng cũ. Tức một phase về đường sẽ
+ * kéo theo một phase về nhà mà không ai yêu cầu, và hai thay đổi trộn vào nhau thì không còn đo
+ * riêng được cái nào (luật *"một commit một mục tiêu"*).
+ *
+ * ⇒ Giữ mẫu số ở 30. Đất dôi ra thành khoảng trống/vườn — và đó là một CƠ HỘI đã ghi lại cho phiên
+ * sau (`TECH_DEBT #84`), không phải một thứ bị bỏ quên.
+ * ⚠️ Vẫn kẹp theo số ô THẬT: kỷ nào chừa lại ít hơn 30 ô thì nhà phải ít đi, không thể mọc ra khỏi đất.
+ */
+export const LEGACY_PLOT_COUNT = 30;
+
 export function densityCap(era) {
   const ratio = ERA_DENSITY[era] ?? ERA_DENSITY[1];
-  return Math.round(DWELLING_PLOT_COUNT * ratio);
+  return Math.round(Math.min(dwellingPlotCount(era), LEGACY_PLOT_COUNT) * ratio);
 }
 
 /**
@@ -189,12 +278,13 @@ export function deriveDwellings({ era, buildingCount, sessionCount } = {}) {
   const sessions = Number.isFinite(sessionCount) ? Math.max(0, Math.floor(sessionCount)) : 0;
   if (built <= 0) return [];
 
+  const o = dwellingPlots(eraNum);
   const earned = Math.floor(sessions / SESSIONS_PER_DWELLING);
-  const count = Math.min(densityCap(eraNum), earned);
+  const count = Math.min(densityCap(eraNum), earned, o.length);
 
   const out = [];
   for (let i = 0; i < count; i += 1) {
-    const plot = DWELLING_PLOTS[i];
+    const plot = o[i];
     const kind = pickKind(eraNum, plot);
     out.push({
       x: plot.x,

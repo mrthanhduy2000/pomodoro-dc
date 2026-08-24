@@ -63,6 +63,7 @@ import { computeCityLayout } from '../src/engine/cityLayout.js';
 import { BLUEPRINT_CATALOG } from '../src/engine/constants.js';
 import { ROAD_PART } from '../src/components/city/render3d/terrainMesh.js';
 import { getNetworkStyle } from '../src/engine/city3d/networkStyle.js';
+import { buildRoadPlan } from '../src/engine/roadPlan.js';
 
 const GRID = 12;
 const ERAS = Array.from({ length: 15 }, (_, i) => i + 1);
@@ -210,6 +211,34 @@ function đoKỷ(era) {
 }
 
 /**
+ * HÌNH DẠNG CỦA CẢ MẠNG — vế mà `độUốnKhúc` không nhìn tới.
+ *
+ * ⚠️ Đo THUẦN trên `buildRoadPlan`, không đụng hình học đã dựng: ba con số này nói về *ô nào là
+ * đường*, không nói về mép một đoạn đường. Chúng là thứ trả lời thẳng câu của Đàm — *"làm gì có
+ * đường dạng bàn cờ"* — trong khi cột `LỆCH÷BỀ RỘNG` trả lời câu *"con đường ấy có cong không"*.
+ * Hai câu khác nhau, nên hai phép đo, và bảng in cả hai.
+ */
+function hìnhMạng(era) {
+  const cells = buildRoadPlan(era, getNetworkStyle(era)).cells;
+  const có = new Set(cells.map((c) => `${c.x}|${c.y}`));
+  const nhánh = (c) => [[1, 0], [-1, 0], [0, 1], [0, -1]]
+    .filter(([dx, dy]) => có.has(`${c.x + dx}|${c.y + dy}`)).length;
+  let cạnh = 0;
+  for (const c of cells) {
+    if (có.has(`${c.x + 1}|${c.y}`)) cạnh += 1;
+    if (có.has(`${c.x}|${c.y + 1}`)) cạnh += 1;
+  }
+  // Bốn trục của mạng bàn cờ trước ADR-059 — ô nằm NGOÀI chúng là ô mà mạng cũ không thể có.
+  const trụcCũ = new Set([0, 4, 8, 11]);
+  return {
+    ô: cells.length,
+    giaoLộ: cells.filter((c) => nhánh(c) >= 3).length,
+    vòng: cạnh - cells.length + 1,
+    ngoàiTrục: cells.filter((c) => !trụcCũ.has(c.x) && !trụcCũ.has(c.y)).length,
+  };
+}
+
+/**
  * ⚠️ PHÉP TỰ KIỂM PHẢI CHỨNG MINH PHÉP ĐO **PHÂN BIỆT ĐƯỢC** THẲNG VỚI CONG, không chỉ chứng minh
  * nó chạy. Bài học `--selftest` ở Phase 4C/4G: *"một phép tự kiểm chứng minh bộ lọc CÓ tác dụng,
  * KHÔNG chứng minh nó có tác dụng ĐÚNG"*.
@@ -237,9 +266,28 @@ function selftest() {
   const kỷThẳng = đoKỷ(4);
   kiểm('kỷ 4 (Chang\'an, khai thẳng tuyệt đối) đo ra 1,000',
     kỷThẳng && Math.abs(kỷThẳng.uốnTB - 1) < 1e-6);
+  /**
+   * ⚠️ **ĐỐI CHỨNG NÀY TỪNG HỎI SAI ĐẠI LƯỢNG, VÀ NÓ HỎI SAI ĐÚNG CÁI MÀ CHÍNH FILE NÀY ĐÃ BÁC.**
+   * Bản trước đòi `uốnTB > 1.01` — tức **độ uốn khúc** (sinuosity), thứ mà khối chú thích ở đầu
+   * file đã ghi rõ là ĐẠI LƯỢNG SAI cho câu hỏi này (nó tăng theo BÌNH PHƯƠNG độ dốc nên gần như
+   * mù với một con đường lượn biên độ nhỏ mà dài; kỷ 1 lệch 0,73 lần bề rộng mà sinuosity chỉ
+   * 1,0083). Một đối chứng hỏi sai đại lượng thì hoặc nó kêu oan, hoặc nó bỏ sót — ở đây là kêu
+   * oan. Nay nó hỏi **`tỉSốTB`**, đúng đại lượng mà bảng in ra và mà mắt thật sự so.
+   */
   const kỷCong = đoKỷ(1);
-  kiểm('kỷ 1 (Çatalhöyük, lượn nhất bảng) đo ra RÕ hơn 1',
-    kỷCong && kỷCong.uốnTB > 1.01);
+  kiểm('kỷ 1 (Göbekli Tepe, lượn nhất bảng) lệch RÕ so với bề rộng lòng đường',
+    kỷCong && kỷCong.tỉSốTB > 0.3);
+  /**
+   * ⚠️ **ĐỐI CHỨNG VỀ HÌNH DẠNG CẢ MẠNG — VẾ MÀ CÔNG CỤ NÀY XƯA NAY KHÔNG CÓ (`TECH_DEBT #85`).**
+   * Từ ADR-059, bản sắc đường nằm phần lớn ở TẬP Ô nào là đường, chứ không ở mép của một đoạn. Một
+   * công cụ chỉ đo được vế thứ hai mà tự xưng là đo "đường lượn" chính là hình dạng nói dối đã cắn
+   * dự án nhiều lần (*"một phép đo tự xưng là toàn thế giới trong khi nó chỉ nhìn 1/10 thế giới"*).
+   */
+  kiểm('kỷ 4 (bàn cờ thẳng tuyệt đối) ⇒ 0 ô đường nằm ngoài bốn trục lưới cũ',
+    hìnhMạng(4).ngoàiTrục === 0);
+  const m1 = hìnhMạng(1);
+  kiểm('kỷ 1 (mạng rối) ⇒ nhiều ô ngoài trục lưới cũ VÀ có giao lộ thật',
+    m1.ngoàiTrục >= 15 && m1.giaoLộ >= 3);
   console.log(hỏng === 0 ? '\n✅ phép đo phân biệt được thẳng với cong' : `\n❌ ${hỏng} mục hỏng`);
   return hỏng === 0 ? 0 : 1;
 }
@@ -248,23 +296,35 @@ function main() {
   if (process.argv.includes('--selftest')) return selftest();
   console.log('ĐỘ UỐN KHÚC CỦA MẠNG ĐƯỜNG — đo trên tam giác ĐÃ DỰNG, không đọc lại bảng');
   console.log('1,000 = thẳng như thước · 1,05 = mắt vừa đọc ra · 1,3+ = ngoằn ngoèo rõ\n');
-  console.log('kỷ | nước           | kiểu     | bend | LỆCH÷BỀ RỘNG | con lượn nhất | uốn khúc');
-  console.log('---|----------------|----------|------|--------------|---------------|---------');
+  console.log('kỷ | nước           | kiểu     | bend | LỆCH÷BỀ RỘNG | lượn nhất | ô | giao lộ | vòng | ngoài trục cũ');
+  console.log('---|----------------|----------|------|--------------|-----------|---|---------|------|--------------');
   const tất = [];
   for (const era of ERAS) {
     const s = getNetworkStyle(era);
     const đo = đoKỷ(era);
+    const m = hìnhMạng(era);
     if (!đo) { console.log(`${String(era).padStart(2)} | (không dựng được)`); continue; }
     tất.push(đo.tỉSốTB);
     console.log(
       `${String(era).padStart(2)} | ${s.country.padEnd(14)} | ${s.plan.padEnd(8)} | `
       + `${s.bend.toFixed(2)} | ${đo.tỉSốTB.toFixed(3).padStart(12)} | `
-      + `${đo.tỉSốMax.toFixed(3).padStart(13)} | ${đo.uốnTB.toFixed(4)}`,
+      + `${đo.tỉSốMax.toFixed(3).padStart(9)} | ${String(m.ô).padStart(2)} | `
+      + `${String(m.giaoLộ).padStart(7)} | ${String(m.vòng).padStart(4)} | ${String(m.ngoàiTrục).padStart(13)}`,
     );
   }
+  /**
+   * ⚠️ **HAI DÒNG TỔNG KẾT, VÀ CHÚNG NÓI HAI CHUYỆN KHÁC NHAU — ĐỪNG ĐỌC GỘP.**
+   * Dòng thứ nhất nói về MỘT ĐOẠN đường (nó có lượn trong ô của nó không); dòng thứ hai nói về CẢ
+   * MẠNG (ô nào là đường). Sau ADR-059, vế thứ hai mới là vế mang phần lớn bản sắc — công cụ này
+   * ra đời ở ADR-058 khi chỉ có vế thứ nhất, và việc thiếu vế thứ hai từng là `TECH_DEBT #85`.
+   */
   const cong = tất.filter((v) => v >= 0.25).length;
-  console.log(`\n${cong}/${tất.length} kỷ có đường lượn ĐỌC RA ĐƯỢC (lệch ≥ 0,25 lần bề rộng).`);
-  console.log('Kỷ 4 và 11 khai thẳng tuyệt đối nên 1,0000 ở đó là ĐÚNG, không phải hỏng.');
+  console.log(`\n[trong ô]  ${cong}/${tất.length} kỷ có tim đường lệch ≥ 0,25 lần bề rộng lòng đường.`);
+  console.log('           Kỷ 4 và 11 khai thẳng tuyệt đối nên 0,000 ở đó là ĐÚNG, không phải hỏng.');
+  const bànCờ = ERAS.filter((e) => hìnhMạng(e).ngoàiTrục === 0);
+  console.log(`[cả mạng]  ${15 - bànCờ.length}/15 kỷ có ô đường NGOÀI bốn trục bàn cờ cũ `
+    + `— chỉ kỷ [${bànCờ.join(', ')}] còn là bàn cờ thuần, và đó là lời khai của bảng.`);
+  console.log('⚠️ Con số 0,25 là một mốc LÀM VIỆC chưa hiệu chuẩn bằng ảnh dựng — `TECH_DEBT #83`.');
   return 0;
 }
 

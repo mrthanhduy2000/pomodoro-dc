@@ -103,22 +103,26 @@ export const PLAN_KINDS = ['grid', 'axial', 'organic', 'terrace', 'radial'];
 const PLAN_SET = new Set(PLAN_KINDS);
 
 /**
- * BỐN TRỤC BẢN SẮC. Đọc kỹ trước khi chỉnh — hai trục đầu trông giống nhau nhưng trả lời hai câu
- * khác hẳn, và trộn chúng lại chính là cái bẫy "một trường gánh hai việc" đã cắn dự án này BẢY lần
- * (`storyHeight` · `roof` · bảng loài cây · `avenue` · vai màu `cloth2` · `eaves` · hồ sơ khuôn).
+ * NĂM TRỤC BẢN SẮC — **NÓI VỀ HÌNH DẠNG CỦA CẢ MẠNG ĐƯỜNG, KHÔNG PHẢI VỀ MÉP MỘT ĐOẠN ĐƯỜNG.**
  *
- * `plan`   — KIỂU lượn (danh sách trên). Trả lời *"hình dạng con đường do cái gì quyết định?"*
- * `bend`   — BIÊN ĐỘ lượn, tính theo PHẦN CHỖ TRỐNG còn lại trong ô (0..1). Trả lời *"lượn xa
- *            khỏi tim ô bao nhiêu?"* 0 = thẳng tuyệt đối.
- * `coil`   — BƯỚC SÓNG, tính bằng SỐ Ô cho một chu kỳ lượn đầy đủ. Trả lời *"lượn DÀY hay THƯA?"*
- *            Nhỏ = ngoằn ngoèo gấp khúc (ngõ trung cổ); lớn = một cung dài thoải (đại lộ).
- *            ⚠️ TÁCH KHỎI `bend` VÌ CHÚNG ĐỘC LẬP NGOÀI ĐỜI: một con đèo có biên độ rất lớn mà
- *            bước sóng cũng rất dài (cung thoải), còn một ngõ trung cổ thì biên độ nhỏ mà bước
- *            sóng ngắn (gấp khúc liên tục). Gộp làm một là mất đúng sự phân biệt ấy.
- * `ragged` — BIÊN ĐỘ THAY ĐỔI BỀ RỘNG dọc con đường (0..1). Trả lời *"đường có chỗ thắt chỗ phình
- *            không?"* Đây là trục thứ hai của "tự nhiên", và nó độc lập với ba trục trên: một con
- *            đường có thể thẳng băng mà bề rộng lộn xộn (đường đất bị xe cày), hoặc lượn rất đẹp
- *            mà bề rộng đều tăm tắp (đại lộ Haussmann uốn quanh một quảng trường).
+ * ⚠️ BỘ TRỤC NÀY ĐÃ THAY BỘ TRỤC CŨ, VÀ LÝ DO ĐÁNG GHI LẠI. Bản đầu có `coil` (bước sóng lượn) và
+ * `ragged` (biến thiên bề rộng) — cả hai đều mô tả **mép của một đoạn đường bên trong ô của nó**.
+ * Đàm nhìn kết quả và bác đúng chỗ: *"không phải kiểu đường lồi lõm, mà là dạng đường cong hay
+ * không cong, như thể là có giao lộ, đường uốn quanh ấy"*. Hai trục cũ **về mặt cấu tạo không thể**
+ * đổi được hình dạng mạng — dù chỉnh tới đâu thì nhìn từ trên xuống vẫn là 4 hàng × 4 cột.
+ *
+ * `plan`   — **KHUNG MẠNG mọc ra từ đâu**. Đây nay là trục MẠNH NHẤT, vì nó quyết định ô nào là
+ *            đường chứ không chỉ quyết định con đường trông thế nào. Xem `roadPlan.js`.
+ * `bend`   — **ĐỘ CONG của từng con đường** (0..1). 0 = kẻ bằng thước. Đây là "đường uốn quanh".
+ * `arms`   — **SỐ ĐƯỜNG CHÍNH**: mấy nan toả từ chợ, mấy thềm trên sườn dốc, mấy trục xuyên tâm.
+ * `loops`  — **SỐ VÒNG khép kín** (đường vành đai / vòng theo tường thành). 0 = không có vòng nào.
+ * `tangle` — **ĐỘ RỐI**: bao nhiêu ngõ phụ mọc thêm ngoài khung chính, và chúng ngoằn ngoèo cỡ nào.
+ *            Đây là thứ phân biệt một làng chài với Tokyo, dù cả hai đều `organic`.
+ *
+ * ⚠️ `arms` · `loops` · `tangle` CÙNG QUYẾT ĐỊNH SỐ Ô ĐƯỜNG, mà số ô đường thì trừ thẳng vào đất
+ * xây nhà (144 ô, 45 ô hứa cho kỳ quan, phần còn lại chia nhau). Khai tay quá thì thành phố hết
+ * chỗ ở; khai ít quá thì mỗi phiên không còn ô đường nào để mở (lời hứa "thành phố lớn thêm" của
+ * Phase 6C). `isValidNetworkStyle` chặn cả hai đầu bằng `MIN_ROAD_CELLS`/`MAX_ROAD_CELLS`.
  */
 export const NETWORK_STYLES = {
   1: {
@@ -129,7 +133,7 @@ export const NETWORK_STYLES = {
     // vệt mòn giữa các vòng cột. Vậy nên đây phải là kỷ lượn nhiều nhất bảng — một vệt chân người
     // đi mòn thì không có lý do gì để thẳng, và nó cũng chẳng có ai để mà thẳng cho.
     note: 'Çatalhöyük/Göbekli Tepe — chưa có "đường": vệt chân người mòn giữa các lều, đi cả trên mái',
-    plan: 'organic', bend: 1.00, coil: 3.2, ragged: 0.85,
+    plan: 'organic', bend: 0.85, arms: 3, loops: 0, tangle: 0.20,
   },
   2: {
     country: 'Ai Cập',
@@ -139,16 +143,16 @@ export const NETWORK_STYLES = {
     // hai bên, cả làng bọc trong một bức tường. Nó do NHÀ NƯỚC dựng cho công nhân, nên nó thẳng.
     // Vẫn `axial` chứ không `grid` vì nó chỉ có MỘT trục, không phải một tấm lưới.
     note: 'Deir el-Medina — làng thợ do nhà nước dựng: một phố thẳng duy nhất, hai dãy nhà đều nhau',
-    plan: 'axial', bend: 0.30, coil: 11.0, ragged: 0.20,
+    plan: 'axial', bend: 0.22, arms: 2, loops: 0, tangle: 0.05,
   },
   3: {
     country: 'Iraq',
     // Ur có HAI hình thái sống cạnh nhau, và đó chính là điều đáng kể: đường rước (Processional
     // Way) rộng và thẳng phục vụ nghi lễ, còn khu ở (khu AH mà Woolley đào) là một mê cung ngõ hẹp
-    // ngoằn ngoèo không theo trục nào. `ragged` cao là cách bảng này kể lại sự tương phản ấy —
-    // cùng một con đường mà chỗ mở ra thành sân, chỗ thắt lại chỉ lọt một con lừa.
+    // ngoằn ngoèo không theo trục nào. `plan: 'axial'` kể vế thứ nhất (một xương sống thẳng), còn
+    // `tangle` 0,35 kể vế thứ hai — đám ngõ phụ mọc thêm ngoài cái xương sống ấy.
     note: 'thành Ur — đường rước thẳng cho kiệu thần, nhưng khu ở là mê cung ngõ hẹp ngoằn ngoèo',
-    plan: 'axial', bend: 0.55, coil: 8.0, ragged: 0.62,
+    plan: 'axial', bend: 0.40, arms: 4, loops: 1, tangle: 0.35,
   },
   4: {
     country: 'Trung Quốc',
@@ -159,17 +163,16 @@ export const NETWORK_STYLES = {
     // vũ trụ quan (thành phố là hình ảnh của trật tự trời đất), không phải một tiện ích giao thông.
     // Cho nó lượn dù chỉ một chút là nói dối về chính điều làm nó nổi tiếng.
     note: 'Chang\'an nhà Đường — 108 phường có tường bao, lưới vuông góc tuyệt đối, đại lộ Chu Tước rộng 150m',
-    plan: 'grid', bend: 0.00, coil: 12.0, ragged: 0.08,
+    plan: 'grid', bend: 0.00, arms: 4, loops: 0, tangle: 0.00,
   },
   5: {
     country: 'Đức',
-    // ⚠️ LƯỢN GẤP NHẤT BẢNG (`coil` 2,6 — bước sóng ngắn nhất). Phố trung cổ Đức không do ai vẽ:
-    // nó mọc từ đường mòn dẫn tới chợ, rồi nhà bám theo ranh giới thửa đất, rồi thửa đất bám theo
-    // địa hình. Kết quả là những con ngõ đổi hướng vài mét một lần — thứ mà khách du lịch gọi là
-    // "quyến rũ" và người đánh xe ngựa gọi là địa ngục. Biên độ KHÔNG phải cao nhất bảng (kỷ 1 mới
-    // cao nhất) nhưng TẦN SỐ thì có: đó đúng là sự khác nhau giữa "vệt mòn giữa đồng" và "ngõ phố".
+    // ⚠️ NAN QUẠT TOẢ TỪ CHỢ, KHÔNG PHẢI LƯỚI. Phố trung cổ Đức không do ai vẽ: nó mọc từ đường
+    // mòn dẫn tới chợ, rồi nhà bám theo ranh giới thửa đất, rồi thửa đất bám theo địa hình. Nên
+    // `plan: 'radial'` với `arms` 5 và một vòng khép kín (tường thành) là cách kể đúng nhất —
+    // thứ mà khách du lịch gọi là "quyến rũ" còn người đánh xe ngựa gọi là địa ngục.
     note: 'phố cổ trung cổ — ngõ mọc theo ranh thửa đất và đường ra chợ, đổi hướng vài mét một lần',
-    plan: 'organic', bend: 0.86, coil: 2.6, ragged: 0.70,
+    plan: 'radial', bend: 0.75, arms: 5, loops: 1, tangle: 0.30,
   },
   6: {
     country: 'Việt Nam',
@@ -177,7 +180,7 @@ export const NETWORK_STYLES = {
     // của nó do MẶT NƯỚC quyết định, không do người vẽ. Hàng Bạc, Hàng Đào, Hàng Buồm đều cong
     // theo dòng chảy cũ. Bước sóng dài hơn kỷ 5 vì một khúc sông thì lượn thoải hơn một ranh thửa.
     note: 'phố cổ Hà Nội — phố bám theo đê và dòng sông Tô Lịch cũ, cong theo dòng nước chứ không theo trục',
-    plan: 'organic', bend: 0.82, coil: 4.4, ragged: 0.55,
+    plan: 'organic', bend: 0.80, arms: 4, loops: 1, tangle: 0.55,
   },
   7: {
     country: 'Ý',
@@ -186,7 +189,7 @@ export const NETWORK_STYLES = {
     // Ba lớp ấy còn nguyên trên bản đồ hôm nay. Biên độ vừa phải là cách duy nhất trung thực để kể
     // một thành phố vừa có lưới vừa không.
     note: 'Firenze — lưới trại quân La Mã bị ngõ trung cổ lấp đầy, rồi Phục Hưng chọc trục thẳng qua',
-    plan: 'organic', bend: 0.72, coil: 5.5, ragged: 0.44,
+    plan: 'organic', bend: 0.55, arms: 4, loops: 1, tangle: 0.40,
   },
   8: {
     country: 'Bồ Đào Nha',
@@ -195,7 +198,7 @@ export const NETWORK_STYLES = {
     // thời Manueline (Đại Hàng Hải, ~1500), tức Lisbon của Alfama: phố leo sườn đồi dốc đứng, bám
     // đường đồng mức, đi ngang một đoạn rồi bẻ góc rồi lại đi ngang. Đó đúng định nghĩa `terrace`.
     note: 'Alfama trước động đất 1755 — phố leo sườn đồi theo đường đồng mức, đi ngang rồi bẻ góc',
-    plan: 'terrace', bend: 0.85, coil: 3.6, ragged: 0.50,
+    plan: 'terrace', bend: 0.60, arms: 4, loops: 0, tangle: 0.30,
   },
   9: {
     country: 'Pháp',
@@ -205,7 +208,7 @@ export const NETWORK_STYLES = {
     // "doãng khỏi trục lưới, càng ra xa tâm càng doãng". Bước sóng dài nhất bảng: một đại lộ
     // Haussmann chạy hàng cây số mà không đổi hướng một lần nào.
     note: 'Paris Haussmann — đại lộ chọc xuyên phố trung cổ, toả ra từ quảng trường tròn (Étoile: 12 nhánh)',
-    plan: 'radial', bend: 0.52, coil: 12.0, ragged: 0.16,
+    plan: 'radial', bend: 0.30, arms: 6, loops: 1, tangle: 0.10,
   },
   10: {
     country: 'Anh',
@@ -214,16 +217,17 @@ export const NETWORK_STYLES = {
     // rồi lệch hẳn ở ranh thửa. Đó là `terrace` theo đúng cả hai nghĩa của từ (thềm dốc, và nhà
     // liền dãy). Biên độ thấp hơn Lisbon vì đồi Pennine thoải hơn sườn Alfama nhiều.
     note: 'phố công nghiệp — dãy nhà back-to-back do nhiều chủ đất dựng, khớp lệch nhau ở ranh thửa',
-    plan: 'terrace', bend: 0.48, coil: 4.8, ragged: 0.40,
+    plan: 'terrace', bend: 0.35, arms: 5, loops: 0, tangle: 0.20,
   },
   11: {
     country: 'Mỹ',
     // ⚠️ KỶ THỨ HAI VÀ CUỐI CÙNG ĐƯỢC KHAI `bend: 0`. Commissioners' Plan 1811 chia Manhattan
     // thành 12 đại lộ × 155 phố cắt vuông góc, và để làm được điều đó người ta đã BẠT PHẲNG cả một
-    // địa hình đồi đá — tức cái lưới này thắng địa hình chứ không nhượng bộ nó. `ragged` thấp nhất
-    // bảng cùng kỷ 12: bê tông đổ khuôn thì không có chỗ thắt chỗ phình.
+    // địa hình đồi đá — tức cái lưới này thắng địa hình chứ không nhượng bộ nó. `tangle` 0 vì
+    // lưới ấy không chừa chỗ cho một con ngõ tự phát nào.
     note: 'Manhattan — Commissioners\' Plan 1811: 12 đại lộ × 155 phố vuông góc, bạt phẳng cả đồi đá để có lưới',
-    plan: 'grid', bend: 0.00, coil: 12.0, ragged: 0.06,
+    plan: 'grid', bend: 0.00, arms: 4, loops: 0, tangle: 0.00,
+    diagonal: true,
   },
   12: {
     country: 'Nga',
@@ -234,7 +238,7 @@ export const NETWORK_STYLES = {
     // thẳng rồi (đại lộ rộng 0,96 ô ⇒ chỉ còn 0,02 ô chỗ trống), nên con số này gần như chỉ là
     // một lời khai về Ý ĐỊNH, và đó là chủ đích.
     note: 'siêu ô phố Xô Viết — vài đại lộ rất rộng để duyệt binh thay cho nhiều phố nhỏ',
-    plan: 'grid', bend: 0.12, coil: 10.0, ragged: 0.06,
+    plan: 'grid', bend: 0.10, arms: 3, loops: 0, tangle: 0.00,
   },
   13: {
     country: 'Nhật Bản',
@@ -251,7 +255,7 @@ export const NETWORK_STYLES = {
     // án tái thiết Ishikawa sau 1945 gần như bị bỏ, nên thành phố mọc lại TRÊN ĐÚNG ranh thửa cũ
     // của Edo. Phố hẹp, cong, phần lớn không có tên (địa chỉ đánh theo ô phố chứ không theo phố).
     note: 'Tokyo hiện đại — dựng lại trên đúng ranh thửa Edo sau 1945, phố hẹp và cong, phần lớn không tên',
-    plan: 'organic', bend: 0.92, coil: 3.0, ragged: 0.58,
+    plan: 'organic', bend: 0.70, arms: 5, loops: 1, tangle: 0.75,
   },
   14: {
     country: 'Singapore',
@@ -260,7 +264,7 @@ export const NETWORK_STYLES = {
     // vì đảo Singapore có đồi và bờ biển, còn Manhattan thì đã bị bạt phẳng — hai kiểu "lưới" khác
     // nhau ở đúng chỗ ấy.
     note: 'Jackson Plan 1822 — lưới khu sắc tộc rất nghiêm, nay thêm cao tốc uốn theo bờ đảo',
-    plan: 'grid', bend: 0.18, coil: 9.0, ragged: 0.12,
+    plan: 'grid', bend: 0.25, arms: 4, loops: 1, tangle: 0.05,
   },
   15: {
     country: 'UAE',
@@ -268,25 +272,9 @@ export const NETWORK_STYLES = {
     // bên. `axial` chứ không `grid` vì Dubai không có lưới — nó có MỘT trục xương sống và mọi thứ
     // treo vào đó. Biên độ nhỏ, bước sóng rất dài: một đại lộ sa mạc có uốn thì cũng uốn cả cây số.
     note: 'trục Sheikh Zayed — một xương sống thẳng chạy song song bờ biển, siêu ô phố treo hai bên',
-    plan: 'axial', bend: 0.22, coil: 12.0, ragged: 0.10,
+    plan: 'axial', bend: 0.20, arms: 3, loops: 1, tangle: 0.05,
   },
 };
-
-/**
- * ⚠️ HAI CÁI TRẦN, VÀ CẢ HAI LÀ SỰ THẬT VỀ MẮT CHỨ KHÔNG PHẢI SỞ THÍCH.
- *
- * `MAX_COIL` — bước sóng dài hơn cả bề ngang lưới (12 ô) thì con đường chỉ còn thấy được một phần
- * của một chu kỳ, tức nó đọc ra là một đường THẲNG HƠI XIÊN, không phải một đường cong. Khai 40 và
- * khai 12 cho ra cùng một thứ trên màn hình ⇒ mọi giá trị trên 12 là một trục CHẾT. Chặn thẳng,
- * đúng bài học `MIN_STONE`: thà bắt bảng khai một giá trị dựng ra được còn hơn để cái kẹp âm thầm
- * nuốt cả một trục.
- *
- * `MIN_COIL` — bước sóng ngắn hơn 2 ô thì con đường đổi hướng nhanh hơn mật độ ô lưới lấy mẫu
- * được (Nyquist). Kết quả không phải "lượn gấp hơn" mà là RĂNG CƯA ngẫu nhiên — mua nhiễu bằng
- * tiền tam giác, đúng cái bẫy "không noisy" mà `MIN_STONE` đã nhốt một lần.
- */
-export const MIN_COIL = 2.0;
-export const MAX_COIL = 12.0;
 
 /**
  * ⚠️ SỐ KỶ ĐƯỢC PHÉP KHAI `bend: 0` — MỘT CON SỐ TRONG BÀI TEST LÀ CÁI HẸN GIỜ DUY NHẤT CHẠY ĐƯỢC.
@@ -305,9 +293,9 @@ export function isValidNetworkStyle(style) {
   if (typeof style.note !== 'string' || style.note.length === 0) return false;
   if (!PLAN_SET.has(style.plan)) return false;
   if (!Number.isFinite(style.bend) || style.bend < 0 || style.bend > 1) return false;
-  if (!Number.isFinite(style.ragged) || style.ragged < 0 || style.ragged > 1) return false;
-  // ⚠️ Bước sóng phải nằm trong dải màn hình dựng ra được — xem `MIN_COIL`/`MAX_COIL`.
-  if (!Number.isFinite(style.coil) || style.coil < MIN_COIL || style.coil > MAX_COIL) return false;
+  if (!Number.isFinite(style.arms) || style.arms < 2 || style.arms > 8) return false;
+  if (!Number.isFinite(style.loops) || style.loops < 0 || style.loops > 3) return false;
+  if (!Number.isFinite(style.tangle) || style.tangle < 0 || style.tangle > 1) return false;
   // ⚠️ Kỷ khai `grid` mà lại lượn mạnh là bảng đang tự mâu thuẫn: `plan` nói "bàn cờ có chủ ý" còn
   // `bend` nói "ngoằn ngoèo". Một trong hai đang nói dối, và không có cách nào biết cái nào —
   // nên chặn ngay tại bảng thay vì để nó dựng ra một thứ không ai giải thích được.

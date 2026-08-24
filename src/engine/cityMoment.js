@@ -25,7 +25,7 @@
  */
 
 import {
-  BLUEPRINT_LOOKUP, ROAD_CELL_COUNT, deriveProps, describeRoadCell,
+  BLUEPRINT_LOOKUP, deriveProps, describeRoadCell, roadCellCount,
 } from './cityLayout.js';
 import { deriveResidentCount } from './city3d/residents.js';
 
@@ -221,7 +221,11 @@ function buildTickMoment({ era, buildingCount, sessionCount, streakLength } = {}
   const roadsBefore = before.filter((p) => p.kind === 'road').length;
   const roadsAfter = after.filter((p) => p.kind === 'road').length;
 
-  if (roadsAfter > roadsBefore && ROAD_CELL_COUNT > 0) {
+  // ⚠️ MẪU SỐ THEO KỶ, KHÔNG PHẢI MỘT HẰNG SỐ CHUNG. Từ 2026-08-24 mỗi kỷ có một mạng đường riêng
+  // (42…93 ô), nên một mẫu số chung sẽ nói dối ở 14/15 kỷ — và nói dối theo hướng tệ nhất cho một
+  // thanh tiến độ: nó không bao giờ đầy, hoặc đầy từ lúc chưa xong.
+  const tongO = roadCellCount(era);
+  if (roadsAfter > roadsBefore && tongO > 0) {
     // ⚠️ TÌM ĐÚNG Ô VỪA MỞ, KHÔNG SUY RA TỪ SỐ ĐẾM. Cám dỗ là viết `ROAD_CELLS[roadsAfter - 1]` —
     // ngắn hơn và *gần như* luôn đúng. Nhưng `deriveProps` BỎ QUA những ô đường trùng chỗ với một
     // công trình đã đặt (`taken`), nên chỉ số trong danh sách và số ô thật sự đặt được lệch nhau
@@ -229,23 +233,23 @@ function buildTickMoment({ era, buildingCount, sessionCount, streakLength } = {}
     // ra một cái tên hợp lý, chỉ là tên của con đường khác.
     const seenBefore = new Set(before.filter((p) => p.kind === 'road').map((p) => `${p.x},${p.y}`));
     const opened = after.find((p) => p.kind === 'road' && !seenBefore.has(`${p.x},${p.y}`));
-    const what = opened ? describeRoadCell(opened.x, opened.y) : 'một đoạn đường';
+    const what = opened ? describeRoadCell(opened.x, opened.y, era) : 'một đoạn đường';
     // CỘT MỐC: ô đường CUỐI CÙNG của cả mạng lưới. Đây là dòng chữ cuối cùng về đường mà Đàm còn
     // được đọc trong kỷ này — sau đó nhánh đường tắt hẳn. Nói thẳng ra thì nó là một cái đích vừa
     // chạm tới; để nguyên câu "vừa mở thêm một đoạn…" thì cái đích ấy trôi qua không ai biết.
-    // ⚠️ Vẫn là mệnh đề ĐÚNG suy từ số liệu (`roadsAfter === ROAD_CELL_COUNT`), không phải lời khen
-    // rỗng — đúng luật trung thực ở đầu file.
-    const complete = roadsAfter >= ROAD_CELL_COUNT;
+    // ⚠️ Vẫn là mệnh đề ĐÚNG suy từ số liệu (`roadsAfter === tongO`), không phải lời khen rỗng —
+    // đúng luật trung thực ở đầu file.
+    const complete = roadsAfter >= tongO;
     return {
       kind: 'tick',
       bpId: null,
       icon: '🛣️',
       headline: complete ? 'Mạng đường đã hoàn chỉnh' : 'Thành phố mở rộng',
       detail: complete
-        ? `Vành đai vừa khép kín · đủ ${ROAD_CELL_COUNT}/${ROAD_CELL_COUNT} ô đường`
-        : `Vừa mở thêm ${what} · ${roadsAfter}/${ROAD_CELL_COUNT} ô đường`,
-      progress: roadsAfter / ROAD_CELL_COUNT,
-      fromProgress: roadsBefore / ROAD_CELL_COUNT,
+        ? `Mạng đường vừa khép kín · đủ ${tongO}/${tongO} ô đường`
+        : `Vừa mở thêm ${what} · ${roadsAfter}/${tongO} ô đường`,
+      progress: roadsAfter / tongO,
+      fromProgress: roadsBefore / tongO,
     };
   }
 

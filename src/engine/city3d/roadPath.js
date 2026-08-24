@@ -67,7 +67,7 @@
  * Đó là lý do bảng `networkStyle.js` chỉ khai TỈ LỆ chứ không khai số ô.
  */
 
-import { unit, signed } from '../hashId.js';
+import { buildRoadPlan } from '../roadPlan.js';
 import { getNetworkStyle } from './networkStyle.js';
 import {
   SIDE_STEPS, carriagewayShape, getStreetStyle, rankOfRoad, streetCrossSection,
@@ -91,25 +91,21 @@ export const ROAD_AXES = ['u', 'v'];
 export const EDGE_KEEP = 0.02;
 
 export function rankBendScale(era, rank) {
-  const style = getNetworkStyle(era);
   const cross = streetCrossSection(getStreetStyle(era), rank);
   /**
-   * ⚠️ TRỪ THEO BỀ RỘNG **RỘNG NHẤT CÓ THỂ**, KHÔNG THEO BỀ RỘNG KHAI TRONG BẢNG — và đây là một
-   * lỗi thật, do chính bài test `LƯỢN KHÔNG ĐƯỢC ĐẨY LÒNG ĐƯỜNG RA KHỎI Ô` bắt được.
+   * ⚠️ **KHÔNG NHÂN THÊM `style.bend` Ở ĐÂY NỮA — ĐÓ SẼ LÀ ĐẾM HAI LẦN.**
    *
-   * Bề rộng thật của một ô đã được nhân `widthJitter` (chỗ thắt chỗ phình), tối đa `1 + MAX_PINCH`
-   * lần bề rộng khai. Tính biên độ lượn theo bề rộng KHAI thì ở ô nào rơi vào lúc phình to nhất,
-   * `độ lệch + nửa bề rộng` vượt quá nửa ô ⇒ mặt đường lấn sang thửa đất bên cạnh. Đo được ở kỷ 1:
-   * 0,25 + 0,3105 = **0,5605 > 0,5**.
+   * Trước ADR-059, độ lệch tim đường sinh ra bằng nhiễu băm, nên nó cần một hệ số nói *"kỷ này
+   * lượn nhiều hay ít"*. Nay độ lệch đến THẲNG từ cung cong đã dựng ra mạng đường
+   * (`arcTrace.crossings`), mà độ vồng của cung ấy vốn đã tính theo `bend` rồi. Nhân lần nữa ở
+   * đây thì kỷ nào cong sẽ bị bóp lại đúng bình phương hệ số của chính nó — một cái kẹp âm thầm,
+   * đúng họ `MIN_STONE` (Phase 9D).
    *
-   * ⚠️ NGUY HIỂM Ở CHỖ NÓ KHÔNG NỔ NGAY. Hai đại lượng đều theo băm, nên phải ĐÚNG ô nào vừa phình
-   * to nhất vừa lượn xa nhất mới lòi ra — tức bản vá "đúng nhờ may mắn" sẽ sống cho tới ngày có ai
-   * chỉnh một con số trong bảng. Trừ sẵn ở đây thì `độ lệch + nửa bề rộng ≤ 0,5 − EDGE_KEEP` là
-   * một bất đẳng thức ĐÚNG THEO CẤU TẠO, không phụ thuộc hạt băm.
+   * ⇒ Hàm này nay trả lời ĐÚNG MỘT câu: *"hạng đường này còn bao nhiêu chỗ để xê dịch ngang mà
+   * không lòi ra khỏi ô?"* — thuần hình học, không mang ý đồ mỹ thuật nào.
    */
-  const rộngNhất = Math.min(cross.half * (1 + MAX_PINCH * style.ragged), 0.5 - cross.walk);
-  const usable = Math.max(0, 0.5 - rộngNhất - cross.walk - EDGE_KEEP);
-  return usable * style.bend;
+  const usable = Math.max(0, 0.5 - cross.half - cross.walk - EDGE_KEEP);
+  return usable;
 }
 
 /**
@@ -127,92 +123,41 @@ export function isLaneVariant(variant) {
  * sóng. Cùng lý do `stoneNoise` trong `terrainMesh.js` lấy hạt theo toạ độ TUYỆT ĐỐI.
  * Số vô tỉ ở đây làm đúng việc đó: nó bảo đảm pha không bao giờ khớp lại với lưới số nguyên.
  */
-const PHI = 1.618033988749895;
-
 /**
- * Độ lệch tim đường tại MỘT RANH GIỚI Ô, chuẩn hoá về [−1, 1].
+ * Độ lệch tim đường tại MỘT RANH GIỚI Ô, chuẩn hoá về [−1, 1] (±1 = mép ô).
  *
- * ⚠️ ĐỌC KỸ Ý NGHĨA THAM SỐ — ĐÂY LÀ CHỖ DUY NHẤT ĐỐI XỨNG ĐƯỢC BẢO ĐẢM, VÀ NÓ DỰA VÀO VIỆC BÊN
- * GỌI TRUYỀN ĐÚNG TOẠ ĐỘ RANH GIỚI:
- *   · `axis 'u'` — con đường chạy ngang (theo x), lệch theo y. Ranh giới nằm tại `x = i − 0,5`,
- *     trên hàng `j`. Ô (i−1, j) gọi nó là ranh giới ĐÔNG của mình; ô (i, j) gọi nó là ranh giới
- *     TÂY. Hai ô truyền CÙNG `(i, j)` ⇒ cùng kết quả.
- *   · `axis 'v'` — con đường chạy dọc (theo y), lệch theo x. Ranh giới nằm tại `y = j − 0,5`,
- *     trên cột `i`.
+ * ══════════════════════════════════════════════════════════════════════════════════════════════
+ * ⚠️ NÓ ĐỌC THẲNG CHỖ CUNG CẮT QUA RANH GIỚI ẤY — KHÔNG SINH RA MỘT ĐƯỜNG LƯỢN NÀO CỦA RIÊNG MÌNH
+ * ══════════════════════════════════════════════════════════════════════════════════════════════
+ * Bản trước dựng độ lệch bằng **nhiễu băm nhiều tần số** (mỗi `plan` một công thức sóng riêng).
+ * Đàm bác thẳng: *"không phải kiểu đường lồi lõm, mà là dạng đường cong hay không cong"*. Và anh
+ * đúng về mặt cơ chế chứ không chỉ về mặt thẩm mỹ: một dãy số ngẫu nhiên **không mang thông tin
+ * về con đường**, nên nó chỉ có thể làm mép đường gợn lên gợn xuống. Mắt đọc cái gợn ấy ra
+ * *nhiễu*, không ra *đường cong* — y hệt bài học "bậc thang ngẫu nhiên ≠ cung cong" ở đầu
+ * `roadPlan.js`.
+ *
+ * Nay hình dạng đến từ ĐÚNG một nguồn: cung cong đã sinh ra mạng đường. Lúc rasterise, `arcTrace`
+ * ghi lại vị trí THẬT của cung tại mỗi ranh giới nó đi qua; hàm này chỉ tra bảng ấy. Hệ quả:
+ *   · chỗ nào cung cong nhiều thì đường lượn nhiều, cung thẳng thì đường thẳng — **không có
+ *     lượn nào không có lý do**;
+ *   · kỷ khai `bend: 0` (Chang'an, Manhattan) ra bảng rỗng ⇒ đường thẳng băng, tự nhiên, không
+ *     cần một nhánh `if` riêng;
+ *   · và một mạng CONG thôi đọc ra như bậc thang, vì tim đường đi qua đúng chỗ cung đi qua.
+ *
+ * ⚠️ ĐỐI XỨNG VẪN ĐƯỢC BẢO ĐẢM THEO CẤU TẠO, và nay còn chặt hơn trước: khoá của bảng là **RANH
+ * GIỚI**, nên hai ô kề nhau không tra hai chỗ khác nhau mà tra ĐÚNG MỘT Ô NHỚ. Không còn cả khả
+ * năng hai công thức tương đương lệch nhau ở biên.
  *
  * @param {number} era
- * @param {'u'|'v'} axis   con đường chạy theo trục nào
+ * @param {'u'|'v'} axis   con đường chạy theo trục nào ('u' = theo x, lệch theo y)
  * @param {number} i       toạ độ x của ranh giới (axis 'u') hoặc cột (axis 'v')
  * @param {number} j       hàng (axis 'u') hoặc toạ độ y của ranh giới (axis 'v')
- * @param {number} [mid]   tâm lưới, chỉ dùng cho kiểu `radial`
  * @returns {number} trong [−1, 1]
  */
-export function boundaryBend(era, axis, i, j, mid = 5.5) {
-  const style = getNetworkStyle(era);
-  if (style.bend <= 0) return 0;
-
-  // `t` = vị trí DỌC con đường (nó lượn theo chiều đi); `lane` = con đường thứ mấy (mỗi con đường
-  // song song phải lượn khác nhau, nếu không cả mạng lượn đồng pha thành một tấm vải gợn sóng).
-  const t = axis === 'u' ? i : j;
-  const lane = axis === 'u' ? j : i;
-  const seed = `bend|${era}|${axis}|${lane}`;
-  const pha = unit(seed) * 2 * Math.PI;
-  const w = (2 * Math.PI) / Math.max(2, style.coil);
-
-  switch (style.plan) {
-    // Bàn cờ có chủ ý: gần như thẳng. Vẫn để một sóng rất dài, rất nhỏ — một tấm lưới THẬT cũng
-    // không bao giờ hoàn hảo tuyệt đối, và nếu kỷ muốn thẳng tuyệt đối thì nó khai `bend: 0`.
-    case 'grid':
-      return 0.35 * Math.sin(t * w * 0.5 + pha);
-
-    // Một cung dài duy nhất: nửa chu kỳ trải trên cả chiều dài con đường. Đường nghi lễ thẳng về ý
-    // đồ nhưng cong nhẹ theo địa thế vì nó có trước máy trắc địa.
-    case 'axial':
-      return Math.sin((t / 12) * Math.PI + pha * 0.15);
-
-    // Lượn tự do: BA tần số chồng nhau. Một tần số thôi thì ra một sóng sin đều tăm tắp — mắt đọc
-    // ra "hoạ tiết", không đọc ra "tự nhiên". Ba tần số lệch pha vô tỉ thì không lặp lại.
-    case 'organic': {
-      const a = Math.sin(t * w + pha);
-      const b = 0.5 * Math.sin(t * w * PHI * 2 + pha * 1.7);
-      const c = 0.25 * Math.sin(t * w * PHI * 3.3 + pha * 2.3);
-      /**
-       * ⚠️ CHIA CHO 1,25 RỒI KẸP, KHÔNG CHIA CHO 1,75 (= tổng biên độ ba tần số).
-       *
-       * Chia cho tổng biên độ thì bảo đảm không bao giờ vượt ±1 — nhưng ba sóng lệch pha vô tỉ gần
-       * như KHÔNG BAO GIỜ cùng đạt đỉnh một lúc, nên giá trị thật chỉ quanh quẩn ±0,46 (RMS). Tức
-       * con đường chỉ dùng chưa tới một nửa chỗ mà nó được phép lượn — đo được: kỷ 7 chỉ đạt 24%
-       * cái trần của chính nó. Đó là một cái kẹp âm thầm nuốt mất một trục, đúng họ `MIN_STONE`.
-       *
-       * Chia cho 1,25 rồi KẸP về [−1, 1] thì giữ nguyên lời hứa "không bao giờ vượt ±1" (phép kẹp
-       * lo việc đó, và mọi phép tính chỗ trống phía sau dựa vào đúng lời hứa ấy), mà tận dụng được
-       * gần gấp rưỡi. Phần bị kẹp (~13% số điểm) cho ra một đoạn tim đường THẲNG ở chỗ lẽ ra là
-       * đỉnh sóng — và điều đó ĐÚNG về mặt đô thị: một con ngõ tự phát chạy men theo ranh thửa đất
-       * rồi mới bẻ, chứ không lượn tròn như một dòng sông.
-       */
-      return Math.max(-1, Math.min(1, (a + b + c) / 1.25));
-    }
-
-    // Gấp khúc ngắn rồi GIỮ: phố bám đường đồng mức. `floor` tạo ra thềm, phần lẻ làm chỗ bẻ góc.
-    case 'terrace': {
-      const step = Math.max(2, Math.round(style.coil));
-      const k = Math.floor((t + pha) / step);
-      return signed(`${seed}|them|${k}`);
-    }
-
-    // Lệch TĂNG DẦN theo khoảng cách tới tâm: đại lộ toả ra từ quảng trường, càng xa càng doãng.
-    case 'radial': {
-      // ⚠️ HỆ SỐ NỀN 0,75 CHỨ KHÔNG PHẢI 0,6 — bản đầu cho biên độ mỗi con đường dao động trong
-      // [0,2 · 1,0], nên phân nửa số đại lộ gần như thẳng và cả kỷ chỉ dùng 13% cái trần của nó.
-      // Dải [0,5 · 1,0] vẫn giữ được sự khác nhau giữa các nhánh toả ra (đó là điểm của `radial`)
-      // mà không để nhánh nào chết hẳn.
-      const d = (t - mid) / mid;
-      return Math.max(-1, Math.min(1, d)) * (0.75 + 0.25 * Math.sin(pha));
-    }
-
-    default:
-      return 0;
-  }
+export function boundaryBend(era, axis, i, j) {
+  const eraNum = Number.isFinite(era) ? era : 1;
+  const { crossings } = buildRoadPlan(eraNum, getNetworkStyle(eraNum));
+  return crossings.get(`${axis}|${i}|${j}`) ?? 0;
 }
 
 /**
@@ -223,13 +168,12 @@ export function boundaryBend(era, axis, i, j, mid = 5.5) {
  *
  * @param {number} era
  * @param {Array<{x:number,y:number,variant:number}>} roadCells các ô đường ĐANG HIỆN
- * @param {number} [mid] tâm lưới (cho kiểu `radial`)
  * @returns {{centreOf:Function, edgeOf:Function, scaleOf:Function}}
  *   · `centreOf(x, y)` → `{du, dv}` độ lệch tim đường tại TÂM ô, đơn vị: phần của một ô.
  *   · `edgeOf(x, y, side)` → số, độ lệch tại RANH GIỚI phía ấy của ô (đã lấy `min` với hàng xóm).
  *   · `scaleOf(x, y)` → biên độ của riêng ô ấy (dùng cho test/công cụ đo).
  */
-export function buildRoadPaths(era, roadCells, mid = 5.5) {
+export function buildRoadPaths(era, roadCells) {
   const scaleAt = new Map();
   const halfAt = new Map();
   for (const cell of roadCells ?? []) {
@@ -273,10 +217,10 @@ export function buildRoadPaths(era, roadCells, mid = 5.5) {
     switch (side) {
       // Ranh giới TÂY của ô (x,y) nằm tại `x − 0,5`; ô (x−1,y) gọi đúng ranh giới ấy là ĐÔNG của
       // nó và truyền cùng bộ `(x, y)` vào `boundaryBend` ⇒ hai bên trùng khít theo cấu tạo.
-      case 'west':  return boundaryBend(era, 'u', x, y, mid) * scaleEdge(x, y, x - 1, y);
-      case 'east':  return boundaryBend(era, 'u', x + 1, y, mid) * scaleEdge(x, y, x + 1, y);
-      case 'north': return boundaryBend(era, 'v', x, y, mid) * scaleEdge(x, y, x, y - 1);
-      case 'south': return boundaryBend(era, 'v', x, y + 1, mid) * scaleEdge(x, y, x, y + 1);
+      case 'west':  return boundaryBend(era, 'u', x, y) * scaleEdge(x, y, x - 1, y);
+      case 'east':  return boundaryBend(era, 'u', x + 1, y) * scaleEdge(x, y, x + 1, y);
+      case 'north': return boundaryBend(era, 'v', x, y) * scaleEdge(x, y, x, y - 1);
+      case 'south': return boundaryBend(era, 'v', x, y + 1) * scaleEdge(x, y, x, y + 1);
       default:      return 0;
     }
   };
@@ -358,41 +302,28 @@ export function buildRoadPaths(era, roadCells, mid = 5.5) {
 }
 
 /**
- * NỬA BỀ RỘNG THẬT của lòng đường ở một ô — đã nhân biến thiên "chỗ thắt chỗ phình".
+ * NỬA BỀ RỘNG lòng đường ở một ô.
  *
  * ⚠️ ĐẶT Ở ĐÂY, KHÔNG ĐẶT TRONG `terrainMesh.js`, VÌ NÓ CÓ **BA** NGƯỜI ĐỌC: bên dựng hình, bảng
  * tra hàng xóm của chính bên ấy, và bài test hình học. Ba bản chép tay của cùng một công thức là
  * ba cơ hội để chúng trôi khỏi nhau, mà triệu chứng thì im lặng: hàng xóm đọc một bề rộng còn ô
  * đang dựng dùng một bề rộng khác ⇒ bậc ở mép đường quay lại đúng như trước Phase 12.
  *
- * ⚠️ KẸP THEO VỈA HÈ (`0,5 − walk`), KHÔNG KẸP THEO 0,5. Phình quá chỗ trống thì vỉa hè của hai ô
- * kề nhau chồng lên nhau và sinh một dải chọi mặt (z-fight) chạy dọc cả thành phố.
+ * ⚠️ **ĐỀU TUYỆT ĐỐI DỌC MỘT HẠNG ĐƯỜNG — ĐÃ TỪNG CÓ MỘT HỆ SỐ "CHỖ THẮT CHỖ PHÌNH" Ở ĐÂY VÀ NÓ
+ * ĐÃ BỊ GỠ.** Hệ số ấy (`widthJitter`, biên độ tới ±35%) nhân bề rộng theo băm từng ô, nên cùng
+ * một con đường chỗ nở chỗ tóp — đúng chữ **"lồi lõm"** mà Đàm dùng để bác cả bản trước. Nó cũng
+ * là thứ đã đẻ ra một lỗi hình học thật (ô vừa phình to nhất vừa lượn xa nhất thì
+ * `độ lệch + nửa bề rộng = 0,5605 > 0,5` ⇒ mặt đường lấn sang thửa đất bên cạnh), và cách "vá"
+ * khi ấy là trừ hao sẵn cái biên độ phình — tức trả bằng chính chỗ để lượn.
+ *
+ * ⇒ Bề rộng nay chỉ đến từ BẢNG (`streetStyle.js`), và mọi bản sắc "đường này rộng đường kia hẹp"
+ * nằm ở HẠNG ĐƯỜNG chứ không ở nhiễu. Bất đẳng thức `độ lệch + nửa bề rộng ≤ 0,5 − EDGE_KEEP`
+ * nhờ đó đúng THEO CẤU TẠO (xem `rankBendScale`), không còn phụ thuộc hạt băm nào.
+ *
+ * ⚠️ KẸP THEO VỈA HÈ (`0,5 − walk`), KHÔNG KẸP THEO 0,5: bề rộng cộng vỉa hè mà vượt chỗ trống thì
+ * vỉa hè của hai ô kề nhau chồng lên nhau và sinh một dải chọi mặt (z-fight) chạy dọc cả thành phố.
  */
 export function roadHalfWidth(era, x, y, rank) {
   const cross = streetCrossSection(getStreetStyle(era), rank);
-  return Math.max(0.04, Math.min(cross.half * widthJitter(era, x, y), 0.5 - cross.walk));
-}
-
-/**
- * Trần biến thiên bề rộng. Một con đường thắt lại quá nửa thì nó thôi là một con đường và thành
- * hai cái sân nối nhau bằng một khe — đúng khuyết tật "mấy cái sân đỗ xe rời rạc" mà bản đầu của
- * Phase 9D đã dựng ra và phải vá. 0,35 là mức còn đọc ra một con đường liên tục.
- */
-export const MAX_PINCH = 0.35;
-
-/**
- * Hệ số nhân BỀ RỘNG của một ô đường — chỗ thắt chỗ phình.
- *
- * ⚠️ KHÔNG CẦN ĐỐI XỨNG Ở RANH GIỚI, VÀ ĐÓ KHÔNG PHẢI SƠ SUẤT: `carriagewayShape` đã đặt bề rộng
- * chỗ giáp là `min(nửa của tôi, nửa của hàng xóm)` — một biểu thức đối xứng — nên dù hai ô kề nhau
- * khai hai bề rộng khác nhau thì chỗ GIÁP vẫn khớp khít, và phần chênh biến thành một đoạn LOE.
- * Tức luật sẵn có của Phase 12 đã lo hộ; thêm một phép đối xứng nữa ở đây là dựng hai công thức
- * cho cùng một luật, thứ mà `CLAUDE.md` cấm.
- *
- * @returns {number} quanh 1, trong `[1 − MAX_PINCH, 1 + MAX_PINCH]`
- */
-export function widthJitter(era, x, y) {
-  const ragged = getNetworkStyle(era).ragged;
-  if (ragged <= 0) return 1;
-  return 1 + signed(`rag|${era}|${x}|${y}`) * ragged * MAX_PINCH;
+  return Math.max(0.04, Math.min(cross.half, 0.5 - cross.walk));
 }

@@ -30,6 +30,8 @@ import {
   ROAD_MAIN_AXIS, ROAD_CROSS_AXIS, RING_LOW, RING_HIGH,
 } from './cityGrid';
 import { describeCraftProgress } from './craftProgress';
+import { buildRoadPlan, wonderAnchor } from './roadPlan';
+import { getNetworkStyle } from './city3d/networkStyle';
 
 // ─── HẰNG SỐ LƯỚI ────────────────────────────────────────────────────────────
 // ⚠️ TÁI XUẤT từ `cityGrid.js`, KHÔNG phải bản sao — xem chú thích đầu file đó.
@@ -142,53 +144,26 @@ for (const [eraKey, list] of Object.entries(BLUEPRINT_CATALOG)) {
  * mỗi phiên mở thêm ĐÚNG MỘT ô đường (xem `roadBudget` bên dưới). Mạng cũ có 23 ô nên hết chuyện
  * để mở sau 23 phiên; mạng mới có 44 ô, tức gần gấp đôi số phiên có thứ nhúc nhích.
  */
-const ROAD_CELLS = (() => {
-  const seen = new Set();
-  const cells = [];
-  const add = (x, y, variant, tier) => {
-    const key = cellKey(x, y);
-    if (seen.has(key)) return;
-    seen.add(key);
-    cells.push({ x, y, variant, tier });
-  };
-  // ⚠️ NGÃ TƯ CỦA HAI PHỐ PHỤ PHẢI ĐẶT TRƯỚC, và phải mang vai đại lộ (rộng hết ô). Nếu để nó rơi
-  // vào một trong hai phố hẹp thì mặt đường bị THẮT LẠI đúng chỗ giao nhau, trông như đường cụt.
-  add(ROAD_CROSS_AXIS, ROAD_CROSS_AXIS, 0, 0);
-  for (let i = 0; i < CITY_GRID_SIZE; i += 1) {
-    add(ROAD_MAIN_AXIS, i, 0, 0);       // đại lộ dọc
-    add(i, ROAD_MAIN_AXIS, 0, 0);       // đại lộ ngang
-    add(ROAD_CROSS_AXIS, i, 1, 0);      // phố dọc  — hẹp bề ngang
-    add(i, ROAD_CROSS_AXIS, 2, 0);      // phố ngang — hẹp bề sâu
-  }
-  // ── VÀNH ĐAI (tier 1) ──
-  // Bốn góc đặt TRƯỚC và mang vai đại lộ, đúng cùng lý do với ngã tư hai phố phụ ở trên: góc là
-  // chỗ đoạn dọc gặp đoạn ngang, để nó rơi vào một trong hai bề hẹp thì mặt đường thắt lại ngay
-  // khúc cua — trông như đường cụt chứ không như một vành đai chạy vòng.
-  for (const cx of [RING_LOW, RING_HIGH]) {
-    for (const cy of [RING_LOW, RING_HIGH]) add(cx, cy, 0, 1);
-  }
-  for (let i = 0; i < CITY_GRID_SIZE; i += 1) {
-    add(RING_LOW, i, 1, 1);             // vành đai cạnh trái  — đoạn dọc
-    add(RING_HIGH, i, 1, 1);            // vành đai cạnh phải  — đoạn dọc
-    add(i, RING_LOW, 2, 1);             // vành đai cạnh trên  — đoạn ngang
-    add(i, RING_HIGH, 2, 1);            // vành đai cạnh dưới  — đoạn ngang
-  }
-  const mid = (CITY_GRID_SIZE - 1) / 2;
-  return cells.sort((a, b) => {
-    // ⚠️ `tier` XẾP TRƯỚC khoảng cách — xem giải thích ở khối chú thích của mạng đường. Đây cũng
-    // chính là thứ giữ cho 44 ô của mạng cũ y nguyên thứ tự, nên thành phố Đàm đang có không bị
-    // sắp xếp lại khi vành đai ra đời.
-    if (a.tier !== b.tier) return a.tier - b.tier;
-    const da = Math.abs(a.x - mid) + Math.abs(a.y - mid);
-    const db = Math.abs(b.x - mid) + Math.abs(b.y - mid);
-    if (da !== db) return da - db;
-    // Đại lộ mở trước phố nhánh ở cùng khoảng cách — thành phố mọc ra từ trục chính, không phải
-    // từ mấy mẩu vỉa hè rời rạc.
-    if (a.variant !== b.variant) return a.variant - b.variant;
-    if (a.y !== b.y) return a.y - b.y;
-    return a.x - b.x;
-  });
-})();
+/**
+ * ⚠️ **KHỐI `ROAD_CELLS` (HẰNG SỐ CẤP MODULE) ĐÃ BỊ GỠ 2026-08-24 — ĐỌC KỸ TRƯỚC KHI DỰNG LẠI.**
+ *
+ * Nó từng dựng đúng bốn hàng và bốn cột (`x,y ∈ {0, 4, 8, 11}`) cho **cả 15 kỷ**, kèm một khối chú
+ * thích dài giải thích vì sao đó là bộ trục DUY NHẤT đúng: nó chạy sát mép mọi khu đất nên công
+ * trình nào cũng có mặt tiền, còn *"đường ngoằn ngoèo sinh bằng băm thì tự nhiên hơn nhưng sẽ cắt
+ * qua giữa các khu đất và biến mặt tiền thành ngõ cụt"*.
+ *
+ * Lý lẽ ấy **đúng về mối lo và sai về kết luận**. Đàm: *"ở thời nguyên thuỷ hay các thời trước làm
+ * gì có đường dạng bàn cờ"* — và anh đúng: quy hoạch lưới vuông góc là một phát minh có ngày tháng
+ * (Hippodamus, thế kỷ 5 TCN), áp nó cho một làng đồ đá mới là nói ngược lịch sử. Mối lo về mặt
+ * tiền thì có thật, nhưng nó **đo được và chữa được**, không cần phải trả bằng cả bản sắc:
+ *
+ *   · mạng bàn cờ cũ  → **2/75** kỳ quan không có ô đường nào kề bên
+ *   · mạng theo kỷ mới → **0/75** (nhờ nhánh cụt dẫn vào, xem `buildRoadPlan`)
+ *
+ * ⇒ Mạng đường nay là hàm THUẦN của `era` (`roadPlan.js`). Bất biến còn phải giữ **không đổi**:
+ * mạng của MỘT kỷ không được phụ thuộc `sessionCount`/`built`, vì `city3d/terrain.js` san cao độ
+ * mặt đất theo nó. Có test khoá bằng cách gọi kèm dữ liệu rác.
+ */
 
 /**
  * TÊN của đoạn đường đi qua ô này — để câu báo sau mỗi phiên nói được *cái gì* vừa mở, thay vì
@@ -205,31 +180,24 @@ const ROAD_CELLS = (() => {
  *
  * @returns {string} cụm để nối sau chữ "Vừa mở thêm ".
  */
-export function describeRoadCell(x, y) {
-  const onMainV  = x === ROAD_MAIN_AXIS;
-  const onMainH  = y === ROAD_MAIN_AXIS;
-  const onCrossV = x === ROAD_CROSS_AXIS;
-  const onCrossH = y === ROAD_CROSS_AXIS;
+export function describeRoadCell(x, y, era = 1) {
+  const plan = buildRoadPlan(era, getNetworkStyle(era));
+  const o = plan.cells.find((c) => c.x === x && c.y === y);
+  if (!o) return 'một đoạn đường mới';
 
-  // Giao của hai trục bất kỳ ⇒ ngã tư. Nói "một đoạn đại lộ" ở đây thì đúng nhưng bỏ mất tin hay
-  // nhất: chỗ này vừa NỐI hai con đường vào nhau.
-  if ((onMainV || onCrossV) && (onMainH || onCrossH)) return 'một ngã tư mới';
-  if (onMainV) return 'một đoạn đại lộ dọc';
-  if (onMainH) return 'một đoạn đại lộ ngang';
-  if (onCrossV) return 'một đoạn phố dọc';
-  if (onCrossH) return 'một đoạn phố ngang';
+  // ⚠️ TÊN SUY TỪ VAI TRÒ THẬT CỦA Ô, KHÔNG SUY TỪ TOẠ ĐỘ. Bản cũ hỏi *"x có bằng 4 không"* — một
+  // câu chỉ có nghĩa khi mạng đường là bốn hàng bốn cột. Với mạng theo kỷ thì toạ độ không còn nói
+  // lên vai trò gì cả, nên phải hỏi chính bộ khung đã sinh ra ô ấy.
+  const co = new Set(plan.cells.map((c) => `${c.x}|${c.y}`));
+  const soNhanh = [[1, 0], [-1, 0], [0, 1], [0, -1]]
+    .filter(([dx, dy]) => co.has(`${x + dx}|${y + dy}`)).length;
 
-  // ── VÀNH ĐAI ──
-  // ⚠️ CHIA NHỎ CÓ LÝ DO ĐO ĐƯỢC, không phải cho phong phú. Vành đai chiếm 36/80 ô, nên nếu cả 36
-  // ô dùng chung một câu thì Đàm đọc đúng một dòng chữ suốt 36 phiên liền — tái diễn y hệt cái
-  // bệnh mà `cityMoment.js` đã đo và chữa một lần rồi ("82% số phiên đọc đúng 4 chữ"). Ba cách gọi
-  // dưới đây đều SUY TỪ TOẠ ĐỘ, không thêm một dữ kiện nào không có thật.
-  // ⚠️ KHÔNG dùng phương hướng (bắc/nam/đông/tây): lưới thành phố không có hướng nào cả, và camera
-  // 3D thì xoay được — "phía bắc" nghe hay hơn nhưng nó là một điều bịa.
-  const vertical = x === RING_LOW || x === RING_HIGH;
-  const horizontal = y === RING_LOW || y === RING_HIGH;
-  if (vertical && horizontal) return 'một khúc cua vành đai';
-  return vertical ? 'một đoạn vành đai dọc' : 'một đoạn vành đai ngang';
+  if (o.tier === 1) return soNhanh >= 3 ? 'một ngã rẽ trên đường vành đai' : 'một đoạn vành đai';
+  if (soNhanh >= 4) return 'một ngã tư mới';
+  if (soNhanh === 3) return 'một ngã ba mới';
+  if (soNhanh <= 1) return 'một đoạn ngõ cụt';
+  if (o.variant === 0) return 'một đoạn đại lộ';
+  return 'một đoạn ngõ phố';
 }
 
 /**
@@ -238,12 +206,28 @@ export function describeRoadCell(x, y) {
  * thanh tiến độ sau mỗi phiên, và một mẫu số viết cứng sẽ nói dối ngay lần đầu ai đó thêm một
  * trục đường mới.
  */
-export const ROAD_CELL_COUNT = ROAD_CELLS.length;
+export function roadCellCount(era = 1) {
+  return buildRoadPlan(era, getNetworkStyle(era)).cells.length;
+}
 
 /**
- * DANH SÁCH ỨNG VIÊN của mạng đường — 80 ô, **hằng số cấp module**, suy ra DUY NHẤT từ
- * `CITY_GRID_SIZE`/`ROAD_MAIN_AXIS`/`ROAD_CROSS_AXIS`/`RING_LOW`/`RING_HIGH`. Không phụ thuộc
- * `era`, `built`, `levels`, hay `sessionCount` — có bài test khoá lại (`roadCells.test.js`).
+ * ⚠️ GIỮ LẠI DƯỚI DẠNG TRẦN LỚN NHẤT trong 15 kỷ — CHỈ để cấp phát bộ đệm (`MAX_PROPS`).
+ * TUYỆT ĐỐI KHÔNG dùng nó làm MẪU SỐ cho thanh tiến độ: mỗi kỷ có số ô đường riêng (42…93), nên
+ * một mẫu số chung sẽ nói dối ở 14/15 kỷ. Dùng `roadCellCount(era)`.
+ */
+export const ROAD_CELL_COUNT = (() => {
+  let max = 0;
+  for (let era = 1; era <= 15; era += 1) max = Math.max(max, roadCellCount(era));
+  return max;
+})();
+
+/**
+ * DANH SÁCH ỨNG VIÊN của mạng đường **CỦA MỘT KỶ** — hàm THUẦN của DUY NHẤT `era` (`roadPlan.js`).
+ *
+ * ⚠️ **TRƯỚC ADR-059 NÓ LÀ MỘT HẰNG SỐ CẤP MODULE, NAY KHÔNG CÒN — VÀ SỰ KHÁC NHAU ẤY LÀ THỨ ĐÁNG
+ * ĐỌC KỸ NHẤT Ở ĐÂY.** Không phụ thuộc `built`, `levels`, hay `sessionCount` (có test gọi kèm dữ
+ * liệu rác khoá lại), nhưng CÓ phụ thuộc `era`. Ai còn gọi nó không truyền `era` sẽ nhận mạng của
+ * kỷ 1 — đúng, nhưng chỉ đúng cho kỷ 1.
  *
  * ⚠️ **ĐÂY LÀ DANH SÁCH ỨNG VIÊN, KHÔNG PHẢI MẠNG ĐƯỜNG ĐANG HIỆN TRÊN MÀN HÌNH.** Hai thứ đó
  * KHÁC NHAU, và nhầm chúng là nhầm ở chỗ nguy hiểm nhất: `deriveProps` mở dần theo `sessionCount`
@@ -261,8 +245,9 @@ export const ROAD_CELL_COUNT = ROAD_CELLS.length;
  * Trả về BẢN SAO NÔNG mỗi lần gọi: mảng gốc là trạng thái dùng chung của module, để lọt ra ngoài
  * thì một dòng `.sort()` vô ý ở nơi khác sẽ sắp xếp lại thứ tự mở đường của cả thành phố.
  */
-export function roadCellCandidates() {
-  return ROAD_CELLS.map((c) => ({ x: c.x, y: c.y, variant: c.variant, tier: c.tier }));
+export function roadCellCandidates(era = 1) {
+  return buildRoadPlan(era, getNetworkStyle(era)).cells
+    .map((c) => ({ x: c.x, y: c.y, variant: c.variant, tier: c.tier }));
 }
 
 /**
@@ -360,14 +345,11 @@ function findFreeCell(startX, startY, occupied) {
 export function placeBuilding(bpId, occupiedSet = new Set()) {
   const occupied = occupiedSet instanceof Set ? occupiedSet : new Set();
   const meta = BLUEPRINT_LOOKUP[bpId];
-  const zone = meta ? BUILDING_ZONES[meta.rank] : null;
 
-  const anchorX = zone
-    ? zone.x + hashPick(`x|${bpId}`, zone.w)
-    : hashPick(`x|${bpId}`, CITY_GRID_SIZE);
-  const anchorY = zone
-    ? zone.y + hashPick(`y|${bpId}`, zone.h)
-    : hashPick(`y|${bpId}`, CITY_GRID_SIZE);
+  // ⚠️ CÔNG THỨC Ô NEO NAY NẰM Ở `roadPlan.js` — MỘT LUẬT MỘT CÔNG THỨC. Bộ sinh mạng đường cần
+  // biết công trình đứng đâu để chừa mặt tiền; nếu mỗi bên tự tính thì có ngày đường dẫn tới một
+  // chỗ trống còn công trình thì không có lối vào, mà triệu chứng ấy im lặng hoàn toàn.
+  const { x: anchorX, y: anchorY } = wonderAnchor(bpId, meta ? meta.rank : -1);
 
   if (!occupied.has(cellKey(anchorX, anchorY))) return { x: anchorX, y: anchorY };
   return findFreeCell(anchorX, anchorY, occupied) ?? { x: anchorX, y: anchorY };
@@ -515,9 +497,10 @@ export function deriveProps({ era, buildingCount, sessionCount, streakLength, oc
 
   // (1) Đường sá — mở dần từ trung tâm ra ngoài theo số phiên. Chưa có công trình nào thì chưa có
   //     đường (bãi đất trống mới khai hoang).
-  const roadBudget = nBuild > 0 ? Math.min(ROAD_CELLS.length, nSession) : 0;
+  const oDuong = buildRoadPlan(eraNum, getNetworkStyle(eraNum)).cells;
+  const roadBudget = nBuild > 0 ? Math.min(oDuong.length, nSession) : 0;
   let roadsPlaced = 0;
-  for (const cell of ROAD_CELLS) {
+  for (const cell of oDuong) {
     if (roadsPlaced >= roadBudget) break;
     const key = cellKey(cell.x, cell.y);
     if (taken.has(key)) continue;

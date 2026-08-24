@@ -348,7 +348,7 @@ test('ĐỐI CHỨNG: chỉ canh ĐIỂM ĐẾN thôi là chưa đủ — và đ
   }
   assert.deepEqual(
     [...new Set(lotLuoi)].sort((a, b) => a - b),
-    [1, 2, 3, 5, 7, 8, 9, 11, 12, 13, 14, 15],
+    [3, 5, 7, 8, 9, 12, 13],
     'danh sách kỷ mà phép canh cả đường bay thật sự cứu — đổi là phải xem lại vì sao',
   );
   // 2026-08-20, HAI lần đổi trong cùng một ngày và cả hai đều có lý do đo được:
@@ -363,7 +363,17 @@ test('ĐỐI CHỨNG: chỉ canh ĐIỂM ĐẾN thôi là chưa đủ — và đ
   // căn nhà đơn cũ, nên đoạn giữa đường bay đi sát mái chúng. Đây là hệ quả ĐÚNG, không phải hồi
   // quy: phép canh cả-đường-bay vừa cứu thêm một kỷ nữa.
   // Con số TĂNG nghĩa là phép canh cả-đường-bay càng đáng giá, không phải càng tệ.
-  assert.equal(lotLuoi.length, 15, 'đúng 15 chuyến trên 1200 lọt lưới nếu chỉ canh điểm đến');
+  //
+  // ⚠️ 2026-08-24, ADR-059 (mỗi kỷ một mạng đường riêng): **12 kỷ / 15 chuyến → 7 kỷ / 7 chuyến**
+  // — lần đầu con số này ĐI XUỐNG, và lý do đáng đọc kỹ vì nó dễ bị đọc nhầm thành hồi quy.
+  // Danh sách này KHÔNG đo "phép canh còn tốt không"; nó đo *"có bao nhiêu chuyến bay mà điểm đến
+  // thoáng nhưng đoạn giữa thì không"*. Đổi mạng đường thì đổi luôn chỗ đứng của nhà dân: ở kỷ 1,
+  // 2, 9, 15 con đường nay chạy ĐÚNG qua hành lang mà camera bay, nên đoạn giữa hết bị mái nhà
+  // cản — tức chuyến bay ấy vốn đã thoáng, không cần ai cứu.
+  // ⇒ Phép canh cả-đường-bay **không mất răng**: nó vẫn cứu 7 chuyến ở 7 kỷ, và bài
+  // `ĐƯỜNG BAY PHẢI THOÁNG SUỐT CẢ CHẶNG` bên trên vẫn đòi 1200/1200 chuyến thoáng. Thứ giảm là
+  // số ca mà thành phố tự nó gây nguy hiểm, và giảm là tốt.
+  assert.equal(lotLuoi.length, 7, 'đúng 7 chuyến trên 1200 lọt lưới nếu chỉ canh điểm đến');
   assert.ok(cheoNhat > 1, `chênh lớn nhất giữa điểm-đến và cả-đường mới ${cheoNhat.toFixed(2)} — quá nhỏ để gọi là cứu được ai`);
 });
 

@@ -10,6 +10,7 @@ import {
   ROAD_CELL_COUNT,
   cellToScreen,
   roadCellCandidates,
+  roadCellCount,
   computeCityLayout,
   deriveProps,
   describeRoadCell,
@@ -448,36 +449,82 @@ test('GIÀN GIÁO — dữ liệu lạ thì reward là null chứ KHÔNG ném l�
 
 // ─── 13. MẠNG ĐƯỜNG ─────────────────────────────────────────────────────────
 
-test('MẠNG ĐƯỜNG là một mạng lưới, không phải một dấu cộng', () => {
-  // Đàm 2026-08-14: *"đường đi cũng nên phức tạp hơn"*. Trước đó cả thành phố chỉ có cột x=4 và
-  // hàng y=4 — 23 ô trên lưới 144 ô, tức hai con đường mòn cắt nhau giữa đồng.
-  const props = deriveProps({ era: 1, buildingCount: 5, sessionCount: 1e6, streakLength: 100 });
-  const roads = props.filter((p) => p.kind === 'road');
+const ERAS_15 = Array.from({ length: 15 }, (_, i) => i + 1);
 
-  // (a) ĐỦ NHIỀU. 40 là hàng rào đặt dưới giá trị thật (44 trừ vài ô bị công trình chiếm) và trên
-  //     hẳn vùng hỏng (23 của mạng cũ).
-  assert.ok(roads.length >= 40,
-    `chỉ có ${roads.length} ô đường — mạng cũ đã có 23, thêm chừng này thì mắt không nhận ra`);
+test('MẠNG ĐƯỜNG là một MẠNG LƯỚI — đo bằng GIAO LỘ và VÒNG, không đo bằng hàng và cột', () => {
+  /**
+   * ⚠️ **BÀI NÀY ĐÃ ĐỔI ĐẠI LƯỢNG Ở ADR-059, VÀ LÝ DO ĐÁNG GHI LẠI.** Bản trước hỏi *"có ít nhất
+   * 2 cột và 2 hàng chạy suốt lưới không"* — một câu chỉ trả lời được bởi một mạng BÀN CỜ, và nó
+   * đã lặng lẽ trở thành thứ **ép** mạng đường phải là bàn cờ: mọi bản vá làm đường cong đi đều
+   * bị nó kêu đỏ. Đàm chỉ thẳng vào đúng chỗ đó: *"làm gì có đường dạng bàn cờ"*.
+   *
+   * Đại lượng ĐÚNG cho câu *"đây có phải một mạng lưới không"* là hai thứ, và cả hai đều KHÔNG
+   * nói gì về hướng của con đường:
+   *   · **GIAO LỘ** — ô có từ 3 nhánh trở lên (ngã ba, ngã tư, ngã năm). Một dấu cộng có đúng 1.
+   *   · **VÒNG** — chu trình độc lập, tính bằng Euler `E − V + 1` trên đồ thị ô kề cạnh. Một cái
+   *     cây (mọi nhánh cụt, không đường vòng) có 0; một mạng lưới thật thì có nhiều.
+   * Đó cũng đúng chữ Đàm dùng: *"như thể là có giao lộ, đường uốn quanh ấy"*.
+   */
+  const sốVòng = [];
+  const sốGiaoLộ = [];
+  for (const era of ERAS_15) {
+    const roads = deriveProps({ era, buildingCount: 5, sessionCount: 1e6, streakLength: 100 })
+      .filter((p) => p.kind === 'road');
+    const có = new Set(roads.map((r) => `${r.x}|${r.y}`));
 
-  // (b) VÀ ĐỦ RỘNG THEO CẢ HAI CHIỀU. Vế (a) một mình vẫn xanh nếu ai đó kéo dài một con đường
-  //     duy nhất; thứ làm nên "mạng lưới" là có nhiều đường SONG SONG cắt nhau.
-  const cols = new Set(roads.map((r) => r.x));
-  const rows = new Set(roads.map((r) => r.y));
-  const fullCols = [...cols].filter((x) => roads.filter((r) => r.x === x).length >= 10);
-  const fullRows = [...rows].filter((y) => roads.filter((r) => r.y === y).length >= 10);
-  assert.ok(fullCols.length >= 2 && fullRows.length >= 2,
-    `chỉ có ${fullCols.length} trục dọc và ${fullRows.length} trục ngang chạy suốt — `
-    + 'chưa chia được thành phố thành các ô phố');
+    // (a) ĐỦ NHIỀU. 27 là hàng rào đặt dưới kỷ thưa nhất (kỷ 2, 29 ô — làng thợ Deir el-Medina,
+    //     một con phố duy nhất) và trên hẳn vùng hỏng (mạng "dấu cộng" đời đầu chỉ có 23 ô).
+    assert.ok(roads.length >= 27,
+      `kỷ ${era} chỉ có ${roads.length} ô đường — mạng "dấu cộng" đời đầu đã có 23`);
 
-  // (c) BA HẠNG ĐƯỜNG phải cùng có mặt. `variant` không phải nhãn trang trí: bộ vẽ 3D đọc nó để
-  //     quyết bề rộng mặt đường (`LANE_WIDTH` trong `sceneGraph.js`). Nếu mọi ô cùng một hạng thì
-  //     thêm bao nhiêu đường cũng chỉ ra một tấm lưới đều tăm tắp.
-  const variants = new Set(roads.map((r) => r.variant));
-  for (const v of [0, 1, 2]) {
-    assert.ok(variants.has(v), `thiếu hẳn hạng đường ${v} ⇒ mất thứ bậc đại lộ ↔ ngõ phố`);
+    // (b) CÓ GIAO LỘ THẬT. Đây là vế Đàm xin, và nó là thứ một dấu cộng không thể có nhiều.
+    const nhánh = (r) => [[1, 0], [-1, 0], [0, 1], [0, -1]]
+      .filter(([dx, dy]) => có.has(`${r.x + dx}|${r.y + dy}`)).length;
+    const giaoLộ = roads.filter((r) => nhánh(r) >= 3).length;
+    assert.ok(giaoLộ >= 3,
+      `kỷ ${era} chỉ có ${giaoLộ} giao lộ — con đường không gặp con đường nào`);
+    sốGiaoLộ.push(giaoLộ);
+
+    /**
+     * (c) CÓ VÒNG — nhưng **KHÔNG PHẢI KỶ NÀO CŨNG CẦN, VÀ ĐÓ LÀ MỘT SỰ THẬT LỊCH SỬ.**
+     * `E − V + 1` trên đồ thị ô kề cạnh = số chu trình độc lập. BỐN kỷ ra 0 và cả bốn đều ĐÚNG:
+     * Göbekli Tepe là những lối mòn toả ra từ khu đền (chưa phải một đô thị), làng thợ
+     * Deir el-Medina là MỘT con phố duy nhất, Alfama là những thềm dốc nối nhau chứ không vòng,
+     * còn Dubai là một xương sống với siêu ô phố treo hai bên. Ép chúng phải có vòng là mua một
+     * con số bằng cách nói dối lịch sử (ADR-025 cấm). Nên đây là một vế **THEO BẢNG**, không phải
+     * một cái sàn chung.
+     */
+    let cạnh = 0;
+    for (const r of roads) {
+      if (có.has(`${r.x + 1}|${r.y}`)) cạnh += 1;
+      if (có.has(`${r.x}|${r.y + 1}`)) cạnh += 1;
+    }
+    sốVòng.push(cạnh - roads.length + 1);
+
+    // (d) BA HẠNG ĐƯỜNG. `variant`/`tier` không phải nhãn trang trí: tầng vẽ đọc chúng để quyết bề
+    //     rộng mặt đường. Mọi ô cùng một hạng thì thêm bao nhiêu đường cũng ra một tấm lưới đều.
+    const hạng = new Set(roads.map((r) => r.variant));
+    assert.ok(hạng.size >= 2,
+      `kỷ ${era} chỉ có ${hạng.size} hạng đường ⇒ mất thứ bậc đại lộ ↔ ngõ phố`);
   }
 
-  // (d) KHÔNG ô đường nào đè lên công trình.
+  /**
+   * (e) VÀ CẢ BẢNG PHẢI **TRẢI RA**, không dồn về một mức — đây là thứ giữ răng cho hai cái sàn
+   * rất thấp ở trên. Nếu chỉ có sàn thì cả 15 kỷ cùng thoái hoá về một cái cây ba ngã ba vẫn xanh.
+   *
+   * ⚠️ **BỐN KỶ RA 0 VÒNG ĐƯỢC ĐẾM TƯỜNG MINH**, không nuốt im lặng: kỷ thứ năm rơi vào thì đỏ, mà
+   * một trong bốn kỷ này có vòng trở lại thì cũng đỏ. Số đo 2026-08-24: vòng 0…9 · giao lộ 3…19.
+   */
+  const khôngVòng = ERAS_15.filter((_, i) => sốVòng[i] === 0);
+  assert.deepEqual(khôngVòng, [1, 2, 8, 15],
+    `kỷ không có đường vòng nào nay là [${khôngVòng}] — mỗi kỷ trong danh sách phải kể được vì sao `
+    + 'mạng đường của nó là một cái CÂY có thật trong lịch sử, không phải một bộ sinh vừa hỏng');
+  assert.ok(Math.max(...sốVòng) >= 6,
+    `kỷ rối nhất bảng chỉ có ${Math.max(...sốVòng)} đường vòng — cả 15 kỷ đang là những cái cây`);
+  assert.ok(Math.max(...sốGiaoLộ) >= 12,
+    `kỷ nhiều giao lộ nhất chỉ có ${Math.max(...sốGiaoLộ)} — cả bảng đang dồn về một mức`);
+
+  // (f) KHÔNG ô đường nào đè lên công trình.
   const layout = computeCityLayout({ built: ERA_1, era: 1, stats: { sessionCount: 1e6, streakLength: 100 } });
   const houses = new Set(layout.buildings.map((b) => `${b.x},${b.y}`));
   for (const road of layout.props.filter((p) => p.kind === 'road')) {
@@ -485,97 +532,96 @@ test('MẠNG ĐƯỜNG là một mạng lưới, không phải một dấu cộn
   }
 });
 
-test('VÀNH ĐAI mở SAU toàn bộ mạng cũ — thành phố Đàm đang có không được tự sắp xếp lại', () => {
-  // ⚠️ ĐÂY LÀ BÀI TEST QUAN TRỌNG NHẤT CỦA PHASE 6C, và nó canh một thứ **không nhìn thấy được
-  // trong ảnh chụp**: tính TƯƠNG THÍCH NGƯỢC của một thành phố đang chạy thật.
-  // `ROAD_CELLS` xếp theo khoảng cách tới tâm. Nếu vành đai chỉ được thả vào rồi để phép xếp đó
-  // lo, thì ô giữa cạnh viền `(0,5)` (cách tâm 6) sẽ CHEN LÊN TRƯỚC đoạn cuối đại lộ `(4,11)`
-  // (cách tâm 7) — nghĩa là với một người đã chơi tới phiên 30, thứ tự 30 ô đường của họ đổi hẳn
-  // và thành phố **tự sắp xếp lại** sau một lần deploy. Không có gì đỏ lên, không ai mất dữ liệu,
-  // chỉ là một buổi sáng mở app thấy phố mình khác đi.
-  // Trường `tier` chặn đúng điều đó. Bài này khoá nó bằng cách: 44 ô đầu tiên (đúng bằng cỡ mạng
-  // cũ) phải KHÔNG có ô nào nằm trên viền — tức toàn bộ mạng cũ mở xong rồi vành đai mới bắt đầu.
-  const OLD_NETWORK_SIZE = 44;
-  // ⚠️ "NẰM TRÊN VIỀN" KHÔNG BẰNG "LÀ VÀNH ĐAI" — bản đầu của bài test này dùng phép thử hình học
-  // `x === 0 || y === 0 || …` và nó ĐỎ ngay, kêu tên ô `(4, 0)`. Ô đó nằm trên viền thật, nhưng nó
-  // là **đầu mút của đại lộ dọc** chạy từ tâm ra tới mép — thuộc mạng cũ, tier 0, mở từ lâu. Phép
-  // đo sai chứ không phải mã sai (đúng luật "số đo nào gây bất ngờ thì kiểm CÔNG CỤ trước").
-  // Nguồn sự thật duy nhất cho câu hỏi "ô này thuộc con đường nào" là `describeRoadCell` — dùng
-  // luôn nó, thay vì phát biểu lại cùng một luật bằng một công thức thứ hai.
-  const onRing = (c) => describeRoadCell(c.x, c.y).includes('vành đai');
-
-  // Dựng lại THỨ TỰ MỞ bằng cách tăng dần `sessionCount` rồi ghi lại ô nào mới xuất hiện — thay vì
-  // đọc thẳng `ROAD_CELLS` (không xuất ra ngoài). Cách này còn hơn ở chỗ nó đo đúng thứ Đàm gặp:
-  // thứ tự SAU khi đã trừ những ô bị công trình chiếm.
-  const order = [];
-  for (let n = 1; n <= ROAD_CELL_COUNT + 5; n += 1) {
-    const roads = deriveProps({ era: 1, buildingCount: 5, sessionCount: n, streakLength: 0 })
-      .filter((p) => p.kind === 'road');
-    const seen = new Set(order.map((c) => `${c.x},${c.y}`));
-    for (const r of roads) if (!seen.has(`${r.x},${r.y}`)) order.push(r);
-  }
-
-  const early = order.slice(0, OLD_NETWORK_SIZE - 8); // trừ hao vài ô bị công trình chiếm
-  const strays = early.filter(onRing);
-  assert.equal(strays.length, 0,
-    `${strays.length} ô vành đai (vd ${strays[0] && `${strays[0].x},${strays[0].y}`}) chen vào `
-    + `${OLD_NETWORK_SIZE} ô đầu ⇒ thành phố của người đang chơi sẽ tự sắp xếp lại sau deploy`);
-
-  // Và vành đai PHẢI có thật ở cuối — nếu không thì bài trên xanh một cách vô nghĩa (không có
-  // vành đai thì đương nhiên không có ô nào chen vào).
-  assert.ok(order.filter(onRing).length >= 30,
-    `chỉ có ${order.filter(onRing).length} ô vành đai — mạng lưới chưa hề mở rộng ra viền`);
-  assert.ok(ROAD_CELL_COUNT >= 76,
-    `mạng đường chỉ có ${ROAD_CELL_COUNT} ô — vành đai đáng lẽ phải đưa nó lên khoảng 80`);
-});
-
-test('TÊN ĐOẠN ĐƯỜNG nói đúng loại đường của ô đó', () => {
-  // Câu báo sau mỗi phiên nay nói *cái gì* vừa mở ("vừa mở thêm một đoạn đại lộ ngang") thay vì
-  // "một đoạn đường" lặp lại 80 lần. Cái tên đó chỉ có giá trị nếu nó ĐÚNG — một cái tên sai còn
-  // tệ hơn không có tên, đúng luật trung thực của `cityMoment.js`.
-  assert.equal(describeRoadCell(4, 0), 'một đoạn đại lộ dọc');
-  assert.equal(describeRoadCell(0, 4), 'một đoạn đại lộ ngang');
-  assert.equal(describeRoadCell(8, 2), 'một đoạn phố dọc');
-  assert.equal(describeRoadCell(2, 8), 'một đoạn phố ngang');
-  assert.equal(describeRoadCell(0, 6), 'một đoạn vành đai dọc');
-  assert.equal(describeRoadCell(11, 6), 'một đoạn vành đai dọc');
-  assert.equal(describeRoadCell(6, 0), 'một đoạn vành đai ngang');
-  assert.equal(describeRoadCell(6, 11), 'một đoạn vành đai ngang');
-  // Bốn góc vành đai là chỗ đoạn dọc gặp đoạn ngang — đường ở đó BẺ CUA chứ không CẮT NHAU, nên
-  // gọi là "ngã tư" sẽ sai. Đủ cả bốn góc vì mỗi góc là một tổ hợp `RING_LOW`/`RING_HIGH` riêng.
-  assert.equal(describeRoadCell(0, 0), 'một khúc cua vành đai');
-  assert.equal(describeRoadCell(0, 11), 'một khúc cua vành đai');
-  assert.equal(describeRoadCell(11, 0), 'một khúc cua vành đai');
-  assert.equal(describeRoadCell(11, 11), 'một khúc cua vành đai');
-  // Giao của hai trục bất kỳ ⇒ ngã tư. Đủ CẢ BỐN tổ hợp, vì mỗi tổ hợp đi qua một nhánh `if` khác
-  // nhau và bỏ sót một nhánh thì tên rơi về "đại lộ"/"phố" — nghe vẫn hợp lý nên không ai để ý.
-  assert.equal(describeRoadCell(4, 4), 'một ngã tư mới');
-  assert.equal(describeRoadCell(4, 8), 'một ngã tư mới');
-  assert.equal(describeRoadCell(8, 4), 'một ngã tư mới');
-  assert.equal(describeRoadCell(8, 8), 'một ngã tư mới');
-
-  // ⚠️ MỌI ô đường thật đều phải có tên — không ô nào rơi ra ngoài bảng. Đây là vế bảo vệ cho việc
-  // hàm này suy tên từ TOẠ ĐỘ: thêm một trục đường mới mà quên sửa hàm thì ô của nó sẽ lặng lẽ
-  // mang tên "đường vành đai" dù nó nằm giữa thành phố.
-  const roads = deriveProps({ era: 1, buildingCount: 5, sessionCount: 1e6, streakLength: 100 })
-    .filter((p) => p.kind === 'road');
-  for (const r of roads) {
-    const name = describeRoadCell(r.x, r.y);
-    assert.ok(typeof name === 'string' && name.startsWith('một'), `ô (${r.x},${r.y}) không có tên`);
-    if (name.includes('vành đai')) {
-      assert.ok(r.x === 0 || r.y === 0 || r.x === CITY_GRID_SIZE - 1 || r.y === CITY_GRID_SIZE - 1,
-        `ô (${r.x},${r.y}) nằm giữa thành phố nhưng bị gọi là vành đai`);
+test('VÀNH ĐAI VẪN MỞ SAU CÙNG — trường `tier` là thứ duy nhất giữ được lời hứa thứ tự', () => {
+  /**
+   * ⚠️ **ĐỌC KỸ: LỜI HỨA CỦA BÀI NÀY ĐÃ HẸP LẠI Ở ADR-059, VÀ ĐÓ LÀ MỘT CÁI GIÁ ĐÃ TRẢ CÓ CHỦ Ý.**
+   *
+   * Bản Phase 6C của bài này hứa *"thành phố Đàm đang có không được tự sắp xếp lại"* — một lời hứa
+   * TƯƠNG THÍCH NGƯỢC, canh việc một người đã chơi tới phiên 30 sẽ không mở app ra thấy phố mình
+   * khác đi. Lời hứa ấy **không thể giữ nữa**, vì Đàm yêu cầu đổi chính cái mạng đường
+   * (*"hiện tại ở thời nguyên thuỷ hay các thời trước làm gì có đường dạng bàn cờ"*). Mạng đổi thì
+   * thứ tự mở đổi — không có cách nào vừa đổi mạng vừa giữ nguyên thứ tự của mạng cũ.
+   *
+   * ⇒ Ghi cái giá ấy ra thay vì lặng lẽ xoá bài test: thứ CÒN giữ được là **luật xếp** (`tier`
+   * sắp trước mọi thứ khác), và đó là thứ bảo đảm rằng ở MỖI kỷ, đường vành đai vẫn mở sau cùng —
+   * thành phố lớn từ trong ra ngoài, không nhảy ra viền rồi mới quay vào giữa.
+   */
+  for (const era of ERAS_15) {
+    const thứTự = [];
+    const đãThấy = new Set();
+    const tổng = roadCellCount(era);
+    for (let n = 1; n <= tổng + 5; n += 1) {
+      const roads = deriveProps({ era, buildingCount: 5, sessionCount: n, streakLength: 0 })
+        .filter((p) => p.kind === 'road');
+      for (const r of roads) {
+        if (đãThấy.has(`${r.x},${r.y}`)) continue;
+        đãThấy.add(`${r.x},${r.y}`);
+        thứTự.push(r);
+      }
     }
+    const vànhĐai = thứTự.map((c, i) => (c.tier === 1 ? i : -1)).filter((i) => i >= 0);
+    const trongPhố = thứTự.map((c, i) => (c.tier === 1 ? -1 : i)).filter((i) => i >= 0);
+    if (vànhĐai.length === 0) continue; // kỷ 1 và 2 không có vành đai — xem `networkStyle.test.js`
+    assert.ok(Math.min(...vànhĐai) > Math.max(...trongPhố),
+      `kỷ ${era}: có ô vành đai (thứ ${Math.min(...vànhĐai)}) mở TRƯỚC ô trong phố cuối cùng `
+      + `(thứ ${Math.max(...trongPhố)}) — thành phố nhảy ra viền rồi mới quay vào giữa`);
   }
-
-  // ⚠️ VÀ KHÔNG ĐƯỢC CHỈ CÓ MỘT CÁI TÊN. 36/80 ô là vành đai; nếu cả 36 dùng chung một câu thì Đàm
-  // đọc đúng một dòng chữ suốt 36 phiên liền — tái diễn đúng cái bệnh mà `cityMoment.js` đã đo và
-  // chữa một lần ("82% số phiên đọc đúng 4 chữ"). Đây là hàng rào chống việc gộp lại cho gọn.
-  const names = new Set(roads.map((r) => describeRoadCell(r.x, r.y)));
-  assert.ok(names.size >= 6,
-    `mạng đường chỉ có ${names.size} cách gọi (${[...names].join(' · ')}) — chưa đủ để 80 phiên `
-    + 'mở đường không đọc ra như một câu lặp lại');
 });
+
+test('TÊN ĐOẠN ĐƯỜNG nói đúng loại đường của ô đó — ở CẢ 15 KỶ', () => {
+  /**
+   * Câu báo sau mỗi phiên nói *cái gì* vừa mở ("vừa mở thêm một ngã ba mới") thay vì "một đoạn
+   * đường" lặp lại 80 lần. Cái tên đó chỉ có giá trị nếu nó ĐÚNG — một cái tên sai còn tệ hơn
+   * không có tên, đúng luật trung thực của `cityMoment.js`.
+   *
+   * ⚠️ **BÀI NÀY TRƯỚC ĐÂY ASSERT TỪNG TOẠ ĐỘ MỘT** (`describeRoadCell(4, 0) === 'một đoạn đại lộ
+   * dọc'`). Điều đó chỉ có nghĩa khi mạng đường là bốn hàng bốn cột và mọi kỷ dùng chung một mạng.
+   * Nay tên suy từ VAI TRÒ THẬT của ô (số nhánh + `tier` + `variant`), nên bài test cũng phải hỏi
+   * bằng vai trò — hỏi bằng toạ độ là hỏi một thế giới không còn tồn tại.
+   */
+  const nhánhCủa = (era, có, x, y) => [[1, 0], [-1, 0], [0, 1], [0, -1]]
+    .filter(([dx, dy]) => có.has(`${x + dx}|${y + dy}`)).length;
+
+  let tổngTên = 0;
+  for (const era of ERAS_15) {
+    const cells = roadCellCandidates(era);
+    const có = new Set(cells.map((c) => `${c.x}|${c.y}`));
+    const tên = new Set();
+    for (const c of cells) {
+      const n = describeRoadCell(c.x, c.y, era);
+      assert.ok(typeof n === 'string' && n.startsWith('một'), `kỷ ${era} ô (${c.x},${c.y}) không có tên`);
+      tên.add(n);
+      tổngTên += 1;
+      // ⚠️ VẾ ĐÚNG-SAI, không chỉ vế có-tên: một hàm luôn trả "một đoạn đường mới" cũng qua được
+      // assert trên. Tên phải KHỚP với vai trò thật của ô.
+      const nh = nhánhCủa(era, có, c.x, c.y);
+      if (c.tier === 1) {
+        assert.ok(n.includes('vành đai'),
+          `kỷ ${era} ô (${c.x},${c.y}) là vành đai mà lại tên "${n}"`);
+      } else if (nh >= 4) {
+        assert.equal(n, 'một ngã tư mới', `kỷ ${era} ô (${c.x},${c.y}) có 4 nhánh mà tên "${n}"`);
+      } else if (nh === 3) {
+        assert.equal(n, 'một ngã ba mới', `kỷ ${era} ô (${c.x},${c.y}) có 3 nhánh mà tên "${n}"`);
+      } else if (nh <= 1) {
+        assert.equal(n, 'một đoạn ngõ cụt', `kỷ ${era} ô (${c.x},${c.y}) là ngõ cụt mà tên "${n}"`);
+      } else {
+        assert.ok(n.includes('đại lộ') || n.includes('ngõ phố'),
+          `kỷ ${era} ô (${c.x},${c.y}) là một đoạn đường thường mà tên "${n}"`);
+      }
+    }
+    // ⚠️ VÀ KHÔNG ĐƯỢC CHỈ CÓ MỘT CÁI TÊN. Nếu cả mạng dùng chung một câu thì Đàm đọc đúng một
+    // dòng chữ suốt hàng chục phiên liền — tái diễn đúng cái bệnh mà `cityMoment.js` đã đo và chữa
+    // một lần ("82% số phiên đọc đúng 4 chữ").
+    assert.ok(tên.size >= 4,
+      `kỷ ${era} chỉ có ${tên.size} cái tên cho ${cells.length} ô đường — Đàm sẽ đọc lặp`);
+  }
+  // Gác chạy-rỗng: một vòng lặp bỏ sót mọi thứ cũng "không có ô nào sai tên".
+  assert.ok(tổngTên > 800, `mới đặt tên cho ${tổngTên} ô — bài này đang chạy gần như rỗng`);
+
+  // Ô KHÔNG phải đường thì phải nói rõ là không biết, đừng bịa ra một cái tên nghe hợp lý.
+  assert.equal(describeRoadCell(-5, -5, 1), 'một đoạn đường mới');
+});
+
 
 test('MỖI PHIÊN MỞ THÊM ĐÚNG MỘT Ô ĐƯỜNG — thành phố lớn lên nhìn thấy được', () => {
   // Đây là lời hứa game hoá cốt lõi ("mỗi phiên hoàn thành thì phải có nhà xây lên hay gì đó") ở
@@ -645,33 +691,53 @@ function layoutAt(era, ids, sessionCount) {
   });
 }
 
-test('ỨNG VIÊN MẠNG ĐƯỜNG LÀ HẰNG SỐ — không đổi theo kỷ, theo công trình, theo số phiên', () => {
-  // Hàm không nhận tham số nào, nên "không đổi theo X" được chứng minh bằng hai vế:
-  //  (a) hai lần gọi ra kết quả y hệt — và bản trả về là BẢN SAO, sửa nó không làm bẩn lần sau;
-  //  (b) nó là TẬP CHA của mọi tập đã hiện, quét qua 15 kỷ × nhiều mốc phiên (vế (b) ở bài sau).
-  const a = roadCellCandidates();
-  assert.deepEqual(a, roadCellCandidates(), 'hai lần gọi ra hai danh sách khác nhau');
-  assert.equal(a.length, ROAD_CELL_COUNT, 'danh sách ứng viên phải đúng bằng mẫu số đang công bố');
+test('ỨNG VIÊN MẠNG ĐƯỜNG KHÔNG ĐỔI THEO TIẾN ĐỘ — nhưng CÓ đổi theo kỷ, và đó là chủ đích', () => {
+  /**
+   * ⚠️ **BẤT BIẾN ĐÃ HẸP LẠI Ở ADR-059, VÀ PHẢI ĐỌC ĐÚNG PHẦN CÒN LẠI.** Trước đây danh sách này
+   * là một hằng số cấp module, nên bài test cũ hứa *"không đổi theo kỷ, theo công trình, theo số
+   * phiên"*. Nay mỗi kỷ một mạng riêng — đó chính là thứ Đàm yêu cầu — nên vế "theo kỷ" đã chết.
+   *
+   * Vế còn lại mới là vế ĐẮT: `city3d/terrain.js` san cao độ mặt đất theo danh sách này, và cao độ
+   * tuyệt đối không được nhúc nhích khi Đàm xây thêm một căn nhà (ADR-007). Nên nó vẫn phải là hàm
+   * THUẦN của DUY NHẤT `era`. Khoá bằng cách gọi kèm DỮ LIỆU RÁC (khuôn Phase 7B): "hàm hiện không
+   * nhận tham số đó" là một sự thật rất dễ mất — người sau chỉ cần thêm một tham số tuỳ chọn.
+   */
+  for (let era = 1; era <= 15; era += 1) {
+    const a = roadCellCandidates(era);
+    assert.deepEqual(a, roadCellCandidates(era), `kỷ ${era}: hai lần gọi ra hai danh sách khác nhau`);
+    assert.equal(a.length, roadCellCount(era), `kỷ ${era}: danh sách phải đúng bằng mẫu số công bố`);
 
-  // Bản sao thật: đầu độc kết quả rồi gọi lại, danh sách gốc phải nguyên vẹn.
-  // ⚠️ MỐC SO SÁNH PHẢI LÀ MỘT ẢNH CHỤP RỜI, KHÔNG PHẢI MỘT LẦN GỌI THỨ HAI. Bản đầu của bài này
-  // giữ mốc bằng `const b = roadCellCandidates()` rồi đầu độc `a` — mà nếu hàm trả về CHÍNH mảng
-  // gốc thì `a` và `b` là một, nên phép đầu độc bẩn cả hai vế và `deepEqual` vẫn xanh. Phép phá
-  // (bỏ `.map`) đã KHÔNG nổ vì đúng lý do đó: hỏng nằm ở bài test, không ở phép phá.
-  const moc = JSON.stringify(a);
-  a.sort((p, q) => q.x - p.x);
-  a[0].x = -999;
-  assert.equal(JSON.stringify(roadCellCandidates()), moc,
-    'danh sách gốc bị sửa từ bên ngoài — nó không phải bản sao');
+    // Bản sao thật: đầu độc kết quả rồi gọi lại, danh sách gốc phải nguyên vẹn.
+    // ⚠️ MỐC SO SÁNH PHẢI LÀ MỘT ẢNH CHỤP RỜI, KHÔNG PHẢI MỘT LẦN GỌI THỨ HAI. Bản đầu của bài này
+    // giữ mốc bằng `const b = roadCellCandidates()` rồi đầu độc `a` — mà nếu hàm trả về CHÍNH mảng
+    // gốc thì `a` và `b` là một, nên phép đầu độc bẩn cả hai vế và `deepEqual` vẫn xanh. Phép phá
+    // (bỏ `.map`) đã KHÔNG nổ vì đúng lý do đó: hỏng nằm ở bài test, không ở phép phá.
+    const moc = JSON.stringify(a);
+    a.sort((p, q) => q.x - p.x);
+    a[0].x = -999;
+    assert.equal(JSON.stringify(roadCellCandidates(era)), moc,
+      `kỷ ${era}: danh sách gốc bị sửa từ bên ngoài — nó không phải bản sao`);
+  }
+
+  // ⚠️ VÀ VẾ NGƯỢC LẠI, VIẾT RA TƯỜNG MINH: 15 kỷ phải ra 15 danh sách KHÁC NHAU. Không có vế này
+  // thì mọi assert ở trên vẫn xanh khi cả 15 kỷ lặng lẽ dùng chung một mạng — đúng tình trạng
+  // trước ADR-059, và đúng thứ Đàm đã bác.
+  const chữKý = new Set();
+  for (let era = 1; era <= 15; era += 1) {
+    chữKý.add(roadCellCandidates(era).map((c) => `${c.x},${c.y}`).sort().join('|'));
+  }
+  assert.equal(chữKý.size, 15, `15 kỷ chỉ ra ${chữKý.size} mạng đường khác nhau`);
 });
 
-test('ỨNG VIÊN LÀ TẬP CHA THẬT SỰ của mọi mạng đường đã hiện, ở mọi kỷ và mọi mốc phiên', () => {
+test('ỨNG VIÊN LÀ TẬP CHA THẬT SỰ của mạng đường đã hiện — ở MỌI kỷ và mọi mốc phiên', () => {
   // Đây là vế khiến `terrain.js` được phép dựa vào danh sách ứng viên: đặt luật lên tập cha là
   // một lời hứa CHẶT HƠN mọi tập con, nên không thể hụt ở một tổ hợp chưa nghĩ tới.
-  const ungVien = new Set(roadCellCandidates().map((c) => `${c.x}|${c.y}`));
+  // ⚠️ TẬP CHA PHẢI HỎI ĐÚNG KỶ ĐANG DỰNG. Hỏi `roadCellCandidates()` không tham số là hỏi mạng
+  // của kỷ 1, và nó sẽ kêu oan ở 14 kỷ còn lại.
   let soLuotDuyet = 0;
   let tongOHien = 0;
   for (let era = 1; era <= 15; era += 1) {
+    const ungVien = new Set(roadCellCandidates(era).map((c) => `${c.x}|${c.y}`));
     const ids = BLUEPRINT_CATALOG[era].map((bp) => bp.id);
     for (const phien of [0, 1, 7, 20, 44, 60, 80, 120, 200]) {
       for (const built of [[], ids.slice(0, 2), ids]) {
@@ -763,10 +829,23 @@ test('MẢNG PHỦ — kỷ khai `share` CAO nhất luôn phủ nhiều hơn k�
   const thap = shares.reduce((m, r) => (r[1] < m[1] ? r : m))[0];
   const cao = shares.reduce((m, r) => (r[1] > m[1] ? r : m))[0];
   assert.notEqual(thap, cao, 'bảng dẹt: `share` cao nhất và thấp nhất là cùng một kỷ');
+  /**
+   * ⚠️ **SO TỈ LỆ, KHÔNG SO SỐ ĐẾM — VÀ ĐÂY LÀ MỘT LỖI PHÉP ĐO THẬT, ADR-059 ĐÃ LÀM NÓ LỘ RA.**
+   *
+   * `share` là một PHẦN của đất trống (`floor(ứngViên × share × nhịp)`), nên số đếm chỉ so được
+   * khi hai kỷ có CÙNG lượng đất trống. Trước ADR-059 điều đó đúng — cả 15 kỷ dùng chung một mạng
+   * đường 80 ô. Nay mỗi kỷ một mạng riêng (35…98 ô), nên kỷ 14 tuy khai `share` cao nhất bảng
+   * (0,66) vẫn phủ ÍT mảng hơn kỷ 1 về số đếm: nó chỉ còn 49 ô đất trong khi kỷ 1 còn 98.
+   *
+   * Đo lại theo TỈ LỆ thì thứ hạng nguyên vẹn ở cả 7 mốc tuổi (kỷ 14: 0,31…0,67 · kỷ 1:
+   * 0,05…0,13). Đúng bài học `TECH_DEBT #22` một lần nữa: *"mẫu số của tôi có lẫn thứ không thuộc
+   * câu hỏi không?"* — ở đây mẫu số **thiếu** một thứ thuộc câu hỏi.
+   */
+  const tỉLệPhủ = (era, moc) => soMangPhu(era, moc) / (CITY_GRID_SIZE * CITY_GRID_SIZE - roadCellCount(era));
   for (const moc of MOC_TUOI) {
-    assert.ok(soMangPhu(cao, moc) > soMangPhu(thap, moc),
-      `mốc ${moc} phiên: kỷ ${cao} (share cao nhất) phủ ${soMangPhu(cao, moc)} mảng, `
-      + `không nhiều hơn kỷ ${thap} (share thấp nhất) ${soMangPhu(thap, moc)}`);
+    assert.ok(tỉLệPhủ(cao, moc) > tỉLệPhủ(thap, moc),
+      `mốc ${moc} phiên: kỷ ${cao} (share cao nhất) phủ ${(tỉLệPhủ(cao, moc) * 100).toFixed(1)}% `
+      + `đất trống, không nhiều hơn kỷ ${thap} (share thấp nhất) ${(tỉLệPhủ(thap, moc) * 100).toFixed(1)}%`);
   }
 });
 

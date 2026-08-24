@@ -507,8 +507,17 @@ test('LÒNG ĐƯỜNG DỰNG ĐÚNG HÌNH MÀ `carriagewayShape` KHAI — LÕI +
   }
   assert.ok(ngõ > 0 && đại_lộ > 0, `phải gặp cả hai hạng đường (ngõ ${ngõ}, đại lộ ${đại_lộ})`);
   assert.ok(liền > 50, `chỉ gặp ${liền} mép nối — bài canh liền mạch đang chạy không`);
-  // Gác chạy-rỗng cho phép đo bậc: nó duyệt một tập con của `liền`, nên phải tự khai số cặp đã xét.
-  assert.ok(cặpGiáp > 500, `chỉ so ${cặpGiáp} cặp giáp nhau — phép canh bậc đang chạy gần như rỗng`);
+  /**
+   * Gác chạy-rỗng cho phép đo bậc: nó duyệt một tập con của `liền`, nên phải tự khai số cặp đã xét.
+   *
+   * ⚠️ **SÀN HẠ 500 → 300 Ở ADR-059, VÀ ĐÓ LÀ MỘT SỐ ĐO CHỨ KHÔNG PHẢI MỘT SỰ NHÂN NHƯỢNG.** Trước
+   * đây cả 15 kỷ dùng chung một mạng bàn cờ 80 ô, nên 6 kỷ trong `ERAS` cho ra ~528 cặp kề nhau.
+   * Nay mỗi kỷ một mạng riêng, và phép tỉa mảng (`tiaMangDuong`) còn bỏ thêm những ô làm mặt
+   * đường phình ra thành sân ⇒ **336 cặp** ở 6 kỷ này (đã đếm riêng bằng một đường độc lập để
+   * chắc đây là số cặp THẬT chứ không phải số cặp bị bỏ qua: phép đo tự khai `0` lần `continue`).
+   * Sàn 300 nằm ngay dưới giá trị đo được.
+   */
+  assert.ok(cặpGiáp >= 300, `chỉ so ${cặpGiáp} cặp giáp nhau — phép canh bậc đang chạy gần như rỗng`);
 });
 
 test('NGÂN SÁCH TAM GIÁC CỦA ĐỊA HÌNH KHÔNG ĐƯỢC PHÌNH LÊN TRONG IM LẶNG', () => {

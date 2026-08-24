@@ -11,14 +11,21 @@ Phân loại lệnh của Đàm thành 2 nhóm:
 - Lý do: app production của Đàm (push = Vercel deploy ra mọi thiết bị). Anh cần kiểm soát (nghiên cứu thì đừng động vào), nhưng đã ra lệnh làm thì khỏi hỏi tới lui — giải thích cho anh hiểu rồi deploy luôn. Chi tiết: memory `ask-before-acting.md`.
 
 ## ⚠️ NGUYÊN TẮC ƯU TIÊN SỐ 1 (mọi phiên AI — quan trọng hơn mọi thứ khác)
-1. **TRƯỚC khi làm:** đọc `BAN_GIAO.md` + `CLAUDE.md` (file này), RỒI đọc các file liên quan tới việc sắp làm — hiểu rõ ngữ cảnh trước, đừng sửa mò. (Hook `.claude/session-start-bangiao.sh` tự chèn BAN_GIAO.md đầu mỗi phiên, nhưng vẫn phải đọc kỹ.)
-2. **SAU khi có cập nhật (dù nhỏ):** cập nhật ngay `CLAUDE.md` + `BAN_GIAO.md` **và các file liên quan khác** (README, ghi chú...) cho khớp. Làm xong việc mà chưa cập nhật tài liệu = **CHƯA XONG**.
+1. **TRƯỚC khi làm:** đọc **`START_HERE.md`** (≤60 dòng) — đó là file DUY NHẤT bắt buộc đọc mỗi phiên. Rồi đọc **`PHASE_RULES.md`** nếu đang làm một phase. Mọi file khác (kể cả `CLAUDE.md` này và `BAN_GIAO.md`) là **KHO TRA CỨU**: chỉ mở phần `grep` trúng thứ đang cần, KHÔNG đọc trọn. *(Đổi 2026-08-24: quy tắc cũ bắt đọc trọn `CLAUDE.md` + `BAN_GIAO.md` = **6.323 dòng** mỗi phiên — đó là lý do mỗi phiên chỉ còn ~20% sức để xây. Nhật ký cũ đã chuyển sang `docs/archive/`.)*
+2. **SAU khi có cập nhật:** ghi `BAN_GIAO.md` + `CHANGELOG.md`. File khác **chỉ sửa khi thay đổi làm nội dung nó SAI SỰ THẬT** (bảng ở mục Governance Protocol vẫn đúng về *file nào giữ vai trò gì*, nhưng KHÔNG còn bắt sửa cho đủ bộ mỗi lần — xem `PHASE_RULES.md` §5). Đổi trạng thái hoặc việc tiếp theo thì phải sửa `START_HERE.md`.
 3. Bàn giao thiết kế chi tiết nằm ở thư mục memory:
    `/Users/damduy/.claude/projects/-Users-damduy-Downloads-Claude-Code-B-n-sao-Pomodoro-Game---USING/memory/`
    (đặc biệt `upgrade-roadmap.md` cho AI Coach, `ui-review-2026-06.md` cho UI, `resonance-update.md` cho game loop).
 4. Luôn chạy `git status` tươi — đừng tin ảnh chụp git cũ.
 5. Muốn biết **file nằm ở đâu** → `PROJECT_STRUCTURE.md`. Muốn biết **bức tranh kiến trúc lớn** (luồng dữ liệu, vì sao chia lớp thế này) → `ARCHITECTURE.md`. Cả hai PHẢI cập nhật cùng lúc với mọi thay đổi cấu trúc (đúng quy tắc số 2 ở trên).
 6. ⚠️ **File này là NGUỒN SỰ THẬT DUY NHẤT về quy tắc, cho MỌI AI** (Claude Code, Codex, ChatGPT...) — tên file có chữ "CLAUDE" chỉ vì lịch sử, KHÔNG có nghĩa quy tắc chỉ dành cho Claude. `AGENTS.md` (điểm vào của Codex) **chỉ là con trỏ trỏ về đây**, tuyệt đối KHÔNG chép nội dung sang. **TUYỆT ĐỐI không tạo bản sao tài liệu quy tắc cho từng công cụ AI** — đã thử 2026-07-31 và thất bại: bản sao sinh câu vô nghĩa + đường dẫn `.Codex/` không tồn tại, rồi trôi khỏi bản gốc chỉ sau 5 ngày (thiếu nguyên mục "3 cái bẫy menu bar"). Đây chính là điều quy tắc **Composition over Duplication** ở mục Playbook cấm. Chi tiết: `AGENTS.md`.
+
+>⚠️ **ĐỌC TRƯỚC:** phần lớn nghi thức trong file này đã được THU GỌN từ 2026-08-24.
+>Quy trình đang có hiệu lực cho phase mỹ thuật thành phố 3D nằm ở **`PHASE_RULES.md`**
+>(sản phẩm là ẢNH · không đo hiệu năng · không viết công cụ đo mới · test chỉ giữ bất biến
+>ADR-007 · tài liệu 2 file · báo cáo 5 dòng · làm hết 4–8 việc trong một lượt).
+>Phần dưới đây giữ lại làm KHO TRA CỨU và vẫn đúng cho phase kiến trúc/hạ tầng
+>(Supabase sync, database, AI Coach, deploy, bảo mật).
 
 ## 📋 PROJECT GOVERNANCE PROTOCOL (2026-07-12 — áp dụng vĩnh viễn, mọi phiên AI tương lai)
 

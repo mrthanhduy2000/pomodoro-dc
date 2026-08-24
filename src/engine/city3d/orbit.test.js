@@ -292,13 +292,27 @@ test('KHUNG HÌNH SÁT NHẤT CÓ THỂ MÀ VẪN KHÔNG CẮT CÔNG TRÌNH NÀO
   // (b) KHÔNG MỘT LI THỪA. Đây là vế ĐỐI CHỨNG, và nó là chỗ lời Đàm ở Phase 5A vẫn sống: thiếu
   // nó thì (a) vẫn xanh ngay cả khi ai đó nhân đôi mọi khoảng cách "cho chắc ăn", tức quay lại
   // đúng cái *"thu quá xa rồi bị mờ"*. Cách canh: biên thật phải BẰNG mức fit đã nhắm, không được
-  // rộng hơn — 14/15 kỷ đo được đúng `0,0400`, tức camera đứng ở khoảng cách sát nhất có thể.
+  // rộng hơn — 12/15 kỷ đo được đúng `0,0400`, tức camera đứng ở khoảng cách sát nhất có thể.
   //
-  // ⚠️ NGOẠI LỆ TƯỜNG MINH ĐẾM ĐƯỢC, KHÔNG NỚI NGƯỠNG CHO CẢ BẢNG (`TECH_DEBT #44`). Kỷ 15 ra
-  // `0,0736` vì `cityOrbitOptions` lấy `max()` của HAI đường: khoảng cách theo `massScale` (1,571)
-  // vốn đã lớn hơn mức fit cần (1,52), nên ở kỷ ấy fit không phải bên quyết định. Đó là dư địa
-  // THẬT (~3,3%) và nó có lý do đọc được, không phải nhiễu. Thêm một kỷ thứ hai vào danh sách này
-  // là thêm một kỷ bị thu nhỏ vô cớ, và kỷ 15 rơi ra cũng phải xem lại — cả hai chiều đều đỏ.
+  // ⚠️ NGOẠI LỆ TƯỜNG MINH ĐẾM ĐƯỢC, KHÔNG NỚI NGƯỠNG CHO CẢ BẢNG (`TECH_DEBT #44`). `cityOrbitOptions`
+  // lấy `max()` của HAI đường: khoảng cách suy từ `massScale` và khoảng cách vừa đủ để lọt khung
+  // (`cityFrameDistance`). Kỷ nào đường `massScale` thắng thì kỷ ấy đứng xa hơn mức fit đòi — dư
+  // địa THẬT, có lý do đọc được, không phải nhiễu.
+  //
+  // ⚠️ PHASE 20 ĐỔI DANH SÁCH NÀY TỪ [15] SANG [14], VÀ ĐÓ LÀ MỘT SỐ ĐO CHỨ KHÔNG PHẢI MỘT LỰA
+  // CHỌN. Bộ xương cũ để cả vành ngoài lưới làm đường (`ROAD_LINES` chứa 0 và 11) nên công trình
+  // dừng ở ô 10; bộ xương sinh theo kỷ nay cho thửa chạm vành ngoài, tức khối xa nhất nhích ra và
+  // đường FIT đòi xa hơn trước.
+  //
+  // ⚠️ PHASE 21 ĐỔI NÓ LẦN NỮA, SANG [4, 5, 14] — CŨNG LÀ SỐ ĐO. Bản hợp nhất cho ranh giới thửa
+  // đi theo CUNG CONG (ADR-059) nên tập ô xây được của mỗi kỷ đổi, và khối xa nhất của kỷ 4 với kỷ
+  // 5 lùi vào trong ⇒ đường FIT của chúng đòi GẦN hơn, để `massScale` thắng. Biên đo được ở mốc
+  // hợp nhất: kỷ 4 = `0,0798` · kỷ 5 = `0,2294` · kỷ 14 = `0,0913`, so với `0,0400` của 12 kỷ kia.
+  // Kỷ 5 dư nhiều nhất bảng vì `minSide: 2` + `sizeVary: 0,82` đẩy thửa lớn vào giữa, nên rìa lưới
+  // của nó thưa hẳn.
+  //
+  // Thêm một kỷ thứ tư vào danh sách này là thêm một kỷ bị thu nhỏ vô cớ, và một trong ba kỷ này
+  // rơi ra cũng phải xem lại — cả hai chiều đều đỏ.
   const DU_DIA = [];
   for (let era = 1; era <= 15; era += 1) {
     const opts = cityOrbitOptions(GRID, era);
@@ -307,7 +321,7 @@ test('KHUNG HÌNH SÁT NHẤT CÓ THỂ MÀ VẪN KHÔNG CẮT CÔNG TRÌNH NÀO
     });
     if (xau.margin > FRAME_FIT_MARGIN + 1e-3) DU_DIA.push(era);
   }
-  assert.deepEqual(DU_DIA, [15],
+  assert.deepEqual(DU_DIA, [4, 5, 14],
     `những kỷ đứng XA HƠN mức vừa đủ đã đổi: ${JSON.stringify(DU_DIA)}`);
 
   // (c) SÀN GIỮ NGUYÊN, KHÔNG ĐỔI MỘT CHỮ SỐ. Vế này chưa bao giờ mâu thuẫn với lời hứa nào:

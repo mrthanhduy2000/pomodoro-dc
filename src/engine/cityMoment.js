@@ -221,11 +221,11 @@ function buildTickMoment({ era, buildingCount, sessionCount, streakLength } = {}
   const roadsBefore = before.filter((p) => p.kind === 'road').length;
   const roadsAfter = after.filter((p) => p.kind === 'road').length;
 
-  // ⚠️ MẪU SỐ THEO KỶ, KHÔNG PHẢI MỘT HẰNG SỐ CHUNG. Từ 2026-08-24 mỗi kỷ có một mạng đường riêng
-  // (42…93 ô), nên một mẫu số chung sẽ nói dối ở 14/15 kỷ — và nói dối theo hướng tệ nhất cho một
-  // thanh tiến độ: nó không bao giờ đầy, hoặc đầy từ lúc chưa xong.
-  const tongO = roadCellCount(era);
-  if (roadsAfter > roadsBefore && tongO > 0) {
+  // ⚠️ MẪU SỐ THEO KỶ (Phase 20): số ô đường nay khác nhau ở cả 15 kỷ (34…92). Giữ một hằng số
+  // chung thì thanh tiến độ nói dối ở 14 kỷ — và nói dối lặng lẽ, vì một phân số sai vẫn là một
+  // phân số trông hợp lý.
+  const roadTotal = roadCellCount(era);
+  if (roadsAfter > roadsBefore && roadTotal > 0) {
     // ⚠️ TÌM ĐÚNG Ô VỪA MỞ, KHÔNG SUY RA TỪ SỐ ĐẾM. Cám dỗ là viết `ROAD_CELLS[roadsAfter - 1]` —
     // ngắn hơn và *gần như* luôn đúng. Nhưng `deriveProps` BỎ QUA những ô đường trùng chỗ với một
     // công trình đã đặt (`taken`), nên chỉ số trong danh sách và số ô thật sự đặt được lệch nhau
@@ -237,19 +237,19 @@ function buildTickMoment({ era, buildingCount, sessionCount, streakLength } = {}
     // CỘT MỐC: ô đường CUỐI CÙNG của cả mạng lưới. Đây là dòng chữ cuối cùng về đường mà Đàm còn
     // được đọc trong kỷ này — sau đó nhánh đường tắt hẳn. Nói thẳng ra thì nó là một cái đích vừa
     // chạm tới; để nguyên câu "vừa mở thêm một đoạn…" thì cái đích ấy trôi qua không ai biết.
-    // ⚠️ Vẫn là mệnh đề ĐÚNG suy từ số liệu (`roadsAfter === tongO`), không phải lời khen rỗng —
-    // đúng luật trung thực ở đầu file.
-    const complete = roadsAfter >= tongO;
+    // ⚠️ Vẫn là mệnh đề ĐÚNG suy từ số liệu (`roadsAfter === roadTotal`), không phải lời khen
+    // rỗng — đúng luật trung thực ở đầu file.
+    const complete = roadsAfter >= roadTotal;
     return {
       kind: 'tick',
       bpId: null,
       icon: '🛣️',
       headline: complete ? 'Mạng đường đã hoàn chỉnh' : 'Thành phố mở rộng',
       detail: complete
-        ? `Mạng đường vừa khép kín · đủ ${tongO}/${tongO} ô đường`
-        : `Vừa mở thêm ${what} · ${roadsAfter}/${tongO} ô đường`,
-      progress: roadsAfter / tongO,
-      fromProgress: roadsBefore / tongO,
+        ? `Mạng đường vừa khép kín · đủ ${roadTotal}/${roadTotal} ô đường`
+        : `Vừa mở thêm ${what} · ${roadsAfter}/${roadTotal} ô đường`,
+      progress: roadsAfter / roadTotal,
+      fromProgress: roadsBefore / roadTotal,
     };
   }
 

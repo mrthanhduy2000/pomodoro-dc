@@ -67,8 +67,7 @@
  * Đó là lý do bảng `networkStyle.js` chỉ khai TỈ LỆ chứ không khai số ô.
  */
 
-import { buildRoadPlan } from '../roadPlan.js';
-import { getNetworkStyle } from './networkStyle.js';
+import { buildCityPlan } from './cityPlan.js';
 import {
   SIDE_STEPS, carriagewayShape, getStreetStyle, rankOfRoad, streetCrossSection,
 } from './streetStyle.js';
@@ -156,8 +155,9 @@ export function isLaneVariant(variant) {
  */
 export function boundaryBend(era, axis, i, j) {
   const eraNum = Number.isFinite(era) ? era : 1;
-  const { crossings } = buildRoadPlan(eraNum, getNetworkStyle(eraNum));
-  return crossings.get(`${axis}|${i}|${j}`) ?? 0;
+  // Đọc THẲNG bảng trong bộ nhớ đệm, không qua `planCrossings` (bản ấy sao chép cả Map, mà hàm
+  // này bị gọi cho từng ranh giới của từng ô mỗi lần dựng mặt đường). Chỉ ĐỌC, không sửa.
+  return buildCityPlan(eraNum).crossings.get(`${axis}|${i}|${j}`) ?? 0;
 }
 
 /**

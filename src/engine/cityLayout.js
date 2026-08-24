@@ -25,17 +25,13 @@ import { deriveDwellings } from './city3d/dwellings';
 import { getFloraStyle } from './city3d/floraStyle';
 import { getGroundCoverStyle, pickCoverKind } from './city3d/groundCoverStyle';
 import { hashId } from './hashId';
-import {
-  CITY_GRID_SIZE, BUILDING_ZONES,
-  ROAD_MAIN_AXIS, ROAD_CROSS_AXIS, RING_LOW, RING_HIGH,
-} from './cityGrid';
+import { CITY_GRID_SIZE } from './cityGrid';
+import { planIsRoad, planRoadCellCount, planRoadCells, planWonderZone } from './city3d/cityPlan';
 import { describeCraftProgress } from './craftProgress';
-import { buildRoadPlan, wonderAnchor } from './roadPlan';
-import { getNetworkStyle } from './city3d/networkStyle';
 
 // ─── HẰNG SỐ LƯỚI ────────────────────────────────────────────────────────────
 // ⚠️ TÁI XUẤT từ `cityGrid.js`, KHÔNG phải bản sao — xem chú thích đầu file đó.
-export { CITY_GRID_SIZE, BUILDING_ZONES };
+export { CITY_GRID_SIZE };
 export const TILE_W = 64;              // bề rộng ô isometric (px)
 export const TILE_H = 32;              // bề cao ô isometric (px) — tỉ lệ 2:1
 /**
@@ -85,94 +81,42 @@ for (const [eraKey, list] of Object.entries(BLUEPRINT_CATALOG)) {
 }
 
 /**
- * Mạng đường. Đàm 2026-08-14: *"đường đi cũng nên phức tạp hơn"* — và anh đúng: trước đó cả thành
- * phố chỉ có **một dấu cộng** (cột x=4 + hàng y=4), tức 23 ô đường trên lưới 144 ô. Một dấu cộng
- * thì không đọc ra là thành phố; nó đọc ra là hai con đường mòn cắt nhau giữa đồng.
+ * ─── MẠNG ĐƯỜNG: NAY SINH THEO KỶ, KHÔNG CÒN LÀ BỐN TRỤC CỐ ĐỊNH (Phase 20, ADR-060) ──────────
  *
- * ⚠️ VÌ SAO CHỌN ĐÚNG BỐN TRỤC NÀY, KHÔNG PHẢI VẼ ĐƯỜNG NGOẰN NGOÈO CHO "TỰ NHIÊN":
- * Năm khu đất công trình nằm ở `BUILDING_ZONES` — bốn góc (x/y trong 1–3 và 8–10) và trung tâm
- * (5–7). Bốn đường thẳng x ∈ {4, 8} và y ∈ {4, 8} là bộ trục DUY NHẤT vừa chia lưới thành các ô
- * phố đều nhau, vừa **chạy sát mép mọi khu đất** — nghĩa là mỗi công trình đều có mặt tiền quay ra
- * đường, đúng như một thành phố thật. Đường ngoằn ngoèo sinh bằng băm thì "tự nhiên" hơn nhưng sẽ
- * cắt qua giữa các khu đất và biến mặt tiền thành ngõ cụt.
+ * Trước 2026-08-24, file này tự dựng mạng đường từ bốn hằng số ở `cityGrid.js`
+ * (`ROAD_LINES = {0, 4, 8, 11}`) — **giống hệt nhau ở cả 15 kỷ**, đối xứng bốn chiều hoàn hảo.
+ * Đàm nhìn bản quét rồi gọi đúng tên nó: *"rất bài bản và xếp chồng lên nhau"*, *"không phải cứ
+ * 3x3 được"*. Nay đường là RANH GIỚI GIỮA CÁC THỬA ĐẤT, và thửa thì sinh theo kỷ ở
+ * `city3d/cityPlan.js`. Hệ quả đo được: số ô đường đi từ **34** (kỷ 1, vài mảng nhà rất lớn) tới
+ * **92** (kỷ 11, Manhattan) thay vì đúng 80 ở mọi kỷ.
  *
- * `ROAD_MAIN_AXIS` (4) là trục CHÍNH — hai đại lộ xuyên suốt; `ROAD_CROSS_AXIS` (8) là trục PHỤ.
+ * ⚠️ BA LỜI HỨA CŨ ĐƯỢC GIỮ NGUYÊN, và chúng là lý do bộ sinh mới phải bắt chước bộ cũ chứ không
+ * được tự do:
+ *   (1) **`variant` vẫn là ba vai** mà bộ vẽ 3D đọc để quyết bề rộng mặt đường: `0` đại lộ / ngã tư
+ *       (rộng hết ô) · `1` phố DỌC (hẹp bề ngang) · `2` phố NGANG (hẹp bề sâu). Không có thứ bậc
+ *       bề rộng thì thêm bao nhiêu ô cũng chỉ ra một tấm lưới đều.
+ *   (2) **Ngã tư luôn mang vai đại lộ.** Để nó rơi vào một bề hẹp thì mặt đường THẮT LẠI đúng chỗ
+ *       giao nhau, trông như đường cụt (luật từ Phase 6C).
+ *   (3) **Thứ tự mở là `tier` → khoảng cách tới tâm → vai → y → x**, tức thành phố mọc từ TRONG ra
+ *       NGOÀI và vành đai mở SAU toàn bộ mạng trong. Mỗi phiên mở đúng một ô, nên thứ tự này chính
+ *       là thứ Đàm nhìn thấy lớn lên — nó là một lời hứa, không phải chi tiết cài đặt.
  *
- * `variant` KHÔNG phải nhãn trang trí — bộ vẽ 3D đọc nó để quyết bề rộng mặt đường:
- *   `0` đại lộ / ngã tư — rộng hết ô
- *   `1` phố DỌC (chạy theo trục y) — hẹp bề ngang, chừa hai mép cỏ
- *   `2` phố NGANG (chạy theo trục x) — hẹp bề sâu
- * Nhờ hai bề rộng khác nhau mà mắt đọc ra thứ bậc *đại lộ ↔ ngõ phố*; nếu mọi đường cùng một bề
- * rộng thì thêm bao nhiêu ô cũng chỉ ra một tấm lưới đều tăm tắp, không ra một thành phố.
- *
- * ── ĐƯỜNG VÀNH ĐAI (thêm 2026-08-14, Phase 6C) ────────────────────────────────────────────────
- * Đàm: *"mở rộng thêm, làm cầu kỳ lên"*. Nhưng lý do làm việc này KHÔNG phải mỹ thuật — nó là
- * **con số đo được**. Đo `buildGrowthMoment` qua 200 phiên × 5 kỷ × 3 mức công trình, nhánh
- * "xưởng trống" (ca chiếm ~85% số phiên thật):
- *
- *   | mốc phiên | nói được điều gì đó | tin gì            |
- *   |---|---|---|
- *   | 1–44      | **100 %**           | 🛣️ mở đường       |
- *   | 45–60     | 38 %                | 🌳 cảnh vật, 👥 cư dân |
- *   | 61–88     | 6 %                 | 👥 cư dân          |
- *   | 89–120    | 3 %                 | 👥 cư dân          |
- *   | 121+      | **0 %**             | — im lặng hoàn toàn |
- *
- * ⇒ **Mạng đường LÀ động cơ của cảm giác "có gì đó mọc lên"**, và nó tắt đúng ở phiên 44. Mọi thứ
- * còn lại (cư dân, cảnh vật) chỉ đủ kéo lê thêm vài chục phiên rồi cũng hết. Vành đai kéo mốc
- * 100% từ phiên 44 lên phiên 80 — nhân đôi quãng đường mà mỗi phiên đều có thứ để chỉ vào.
- *
- * ⚠️ VÌ SAO ĐẶT VÀNH ĐAI Ở ĐÚNG VIỀN NGOÀI (x/y ∈ {0, 11}), KHÔNG PHẢI VÒNG TRONG:
- * `BUILDING_ZONES` chiếm x/y ∈ 1–3 và 8–10 (bốn góc) + 5–7 (trung tâm). Hàng/cột 0 và 11 là dải
- * DUY NHẤT không chạm khu đất nào — mọi vòng khác sẽ cắt ngang qua giữa các lô và biến mặt tiền
- * thành ngõ cụt, đúng lý do đã loại "đường ngoằn ngoèo cho tự nhiên" ở đoạn trên.
- *
- * ⚠️ VÀNH ĐAI MỞ SAU TOÀN BỘ MẠNG CŨ (`tier`), KHÔNG trộn lẫn theo khoảng cách. Nếu chỉ xếp theo
- * khoảng cách tới tâm thì ô giữa cạnh viền (`(0,5)` — cách tâm 6) sẽ chen lên trước đoạn cuối của
- * đại lộ (`(4,11)` — cách tâm 7), tức vành đai mọc lỗ chỗ khi lưới trong còn dang dở. Thành phố
- * thật lớn từ trong ra ngoài, và **quan trọng hơn**: giữ `tier` nghĩa là **44 ô đầu tiên vẫn y
- * nguyên thứ tự cũ**, nên thành phố Đàm đang có KHÔNG bị sắp xếp lại. Bất biến này có bài test
- * riêng khoá lại.
- */
-/** Viền ngoài cùng của lưới — nơi duy nhất không chạm khu đất công trình nào. */
-
-/**
- * Các ô đường, sắp xếp từ TRUNG TÂM ra NGOÀI. Đường được "mở" dần theo số phiên, nên thành phố
- * trông như đang lớn lên thay vì hiện ra trọn vẹn ngay từ phiên đầu.
- *
- * ⚠️ Thứ tự này KHÔNG chỉ để đẹp — nó là một phần của lời hứa "mỗi phiên thấy thành phố lớn thêm":
- * mỗi phiên mở thêm ĐÚNG MỘT ô đường (xem `roadBudget` bên dưới). Mạng cũ có 23 ô nên hết chuyện
- * để mở sau 23 phiên; mạng mới có 44 ô, tức gần gấp đôi số phiên có thứ nhúc nhích.
- */
-/**
- * ⚠️ **KHỐI `ROAD_CELLS` (HẰNG SỐ CẤP MODULE) ĐÃ BỊ GỠ 2026-08-24 — ĐỌC KỸ TRƯỚC KHI DỰNG LẠI.**
- *
- * Nó từng dựng đúng bốn hàng và bốn cột (`x,y ∈ {0, 4, 8, 11}`) cho **cả 15 kỷ**, kèm một khối chú
- * thích dài giải thích vì sao đó là bộ trục DUY NHẤT đúng: nó chạy sát mép mọi khu đất nên công
- * trình nào cũng có mặt tiền, còn *"đường ngoằn ngoèo sinh bằng băm thì tự nhiên hơn nhưng sẽ cắt
- * qua giữa các khu đất và biến mặt tiền thành ngõ cụt"*.
- *
- * Lý lẽ ấy **đúng về mối lo và sai về kết luận**. Đàm: *"ở thời nguyên thuỷ hay các thời trước làm
- * gì có đường dạng bàn cờ"* — và anh đúng: quy hoạch lưới vuông góc là một phát minh có ngày tháng
- * (Hippodamus, thế kỷ 5 TCN), áp nó cho một làng đồ đá mới là nói ngược lịch sử. Mối lo về mặt
- * tiền thì có thật, nhưng nó **đo được và chữa được**, không cần phải trả bằng cả bản sắc:
- *
- *   · mạng bàn cờ cũ  → **2/75** kỳ quan không có ô đường nào kề bên
- *   · mạng theo kỷ mới → **0/75** (nhờ nhánh cụt dẫn vào, xem `buildRoadPlan`)
- *
- * ⇒ Mạng đường nay là hàm THUẦN của `era` (`roadPlan.js`). Bất biến còn phải giữ **không đổi**:
- * mạng của MỘT kỷ không được phụ thuộc `sessionCount`/`built`, vì `city3d/terrain.js` san cao độ
- * mặt đất theo nó. Có test khoá bằng cách gọi kèm dữ liệu rác.
+ * ⚠️ VÀ LÝ DO SÂU HƠN ĐỂ KHÔNG BỎ MẠNG ĐƯỜNG ĐI: nó là ĐỘNG CƠ của cảm giác "có gì đó mọc lên".
+ * Đo `buildGrowthMoment` qua 200 phiên × 5 kỷ × 3 mức công trình, nhánh "xưởng trống" (~85% số
+ * phiên thật): phiên 1–44 nói được điều gì đó **100%** số lần, 45–60 còn 38%, 61–88 còn 6%, từ 121
+ * trở đi **0%**. Mạng đường tắt ở đâu thì cảm giác lớn lên tắt ở đó. Vì vậy kỷ nào nhiều thửa hơn
+ * thì cũng có nhiều phiên "có thứ để chỉ vào" hơn — một hệ quả, không phải một cái núm riêng.
  */
 
 /**
  * TÊN của đoạn đường đi qua ô này — để câu báo sau mỗi phiên nói được *cái gì* vừa mở, thay vì
  * "vừa mở thêm một đoạn đường" lặp lại 80 lần.
  *
- * ⚠️ THUẦN SUY RA TỪ TOẠ ĐỘ, không có bảng tên nào chép tay. Nếu ai đó đổi `ROAD_MAIN_AXIS` hay
- * thêm một trục mới mà quên sửa hàm này, tên sẽ sai — nên hàm nằm NGAY CẠNH chỗ dựng mạng đường,
- * không nằm ở `cityMoment.js`. Cùng lý do `ROAD_CELL_COUNT` suy ra từ `ROAD_CELLS` chứ không viết
- * cứng: một cái tên viết ở xa nguồn của nó là một lời nói dối đang chờ ngày tới.
+ * ⚠️ ĐỌC THẲNG TỪ Ô MÀ BỘ SINH VỪA DỰNG, không suy lại từ toạ độ. Bản trước Phase 20 hỏi
+ * `x === ROAD_MAIN_AXIS` — đúng chừng nào mạng đường còn là bốn trục cố định, và **chết lặng lẽ**
+ * ngay khi bộ xương sinh theo kỷ: mọi ô sẽ rơi vào nhánh cuối và Đàm đọc đúng một câu suốt cả kỷ.
+ * Đây chính là bẫy "một luật hai công thức" — nay chỉ còn một công thức, ở `cityPlan.js`, và hàm
+ * này chỉ dịch nó sang tiếng Việt.
  *
  * ⚠️ Trả về một CỤM đầy đủ (đã gồm mạo từ) chứ không phải một danh từ trần, vì tiếng Việt ghép
  * khác nhau tuỳ loại: *"một đoạn đại lộ ngang"* nhưng *"một ngã tư mới"* — ghép sai thì câu đọc
@@ -180,61 +124,67 @@ for (const [eraKey, list] of Object.entries(BLUEPRINT_CATALOG)) {
  *
  * @returns {string} cụm để nối sau chữ "Vừa mở thêm ".
  */
-export function describeRoadCell(x, y, era = 1) {
-  const plan = buildRoadPlan(era, getNetworkStyle(era));
-  const o = plan.cells.find((c) => c.x === x && c.y === y);
-  if (!o) return 'một đoạn đường mới';
+export function describeRoadCell(x, y, era) {
+  const cell = planRoadCells(era).find((c) => c.x === x && c.y === y);
+  if (!cell) return 'một đoạn đường';
 
-  // ⚠️ TÊN SUY TỪ VAI TRÒ THẬT CỦA Ô, KHÔNG SUY TỪ TOẠ ĐỘ. Bản cũ hỏi *"x có bằng 4 không"* — một
-  // câu chỉ có nghĩa khi mạng đường là bốn hàng bốn cột. Với mạng theo kỷ thì toạ độ không còn nói
-  // lên vai trò gì cả, nên phải hỏi chính bộ khung đã sinh ra ô ấy.
-  const co = new Set(plan.cells.map((c) => `${c.x}|${c.y}`));
-  const soNhanh = [[1, 0], [-1, 0], [0, 1], [0, -1]]
-    .filter(([dx, dy]) => co.has(`${x + dx}|${y + dy}`)).length;
+  // ⚠️ "CHỖ HAI CON ĐƯỜNG GẶP NHAU" PHẢI HỎI HÀNG XÓM, KHÔNG HỎI CỜ `junction` — VÀ ĐÂY LÀ MỘT
+  // NHÁNH CHẾT ĐÃ ĐO ĐƯỢC, KHÔNG PHẢI MỘT LO XA. Bản đầu của Phase 20 giữ nguyên câu cũ
+  // `if (cell.junction) return 'một ngã tư mới'`, và nó **không bao giờ chạy**: `junction` nghĩa là
+  // "ô này nằm trên CẢ HAI lát cắt", mà một nhát cắt BSP luôn nằm gọn TRONG vùng của nó nên nó
+  // không thể đè lên một nhát cũ — hai con đường gặp nhau ở hình chữ T, tức hai ô KỀ NHAU chứ
+  // không phải một ô chung. Đo đủ 15 kỷ: `junction` chỉ bật ở 4 góc vành đai, mà nhánh vành đai
+  // đứng TRƯỚC nên câu "một ngã tư mới" chưa từng tới được mắt Đàm một lần nào.
+  // Trong khi đó ngã tư THẬT (ô có đủ 4 hàng xóm là đường) có 0–7 ô mỗi kỷ, và ngã ba 0–12 ô.
+  // ⇒ Hỏi đúng thứ mắt đọc ra: **đếm hàng xóm**. Đây là câu hỏi của tầng KỂ CHUYỆN, không đụng một
+  // chữ nào tới `variant` — bề rộng chỗ nối đã do cơ chế "lõi + bốn cánh tay" của ADR-031 lo, và
+  // nó lo đúng cho cả hình chữ T.
+  const nb = (planIsRoad(era, x + 1, y) ? 1 : 0) + (planIsRoad(era, x - 1, y) ? 1 : 0)
+    + (planIsRoad(era, x, y + 1) ? 1 : 0) + (planIsRoad(era, x, y - 1) ? 1 : 0);
 
-  if (o.tier === 1) return soNhanh >= 3 ? 'một ngã rẽ trên đường vành đai' : 'một đoạn vành đai';
-  if (soNhanh >= 4) return 'một ngã tư mới';
-  if (soNhanh === 3) return 'một ngã ba mới';
-  if (soNhanh <= 1) return 'một đoạn ngõ cụt';
-  if (o.variant === 0) return 'một đoạn đại lộ';
-  return 'một đoạn ngõ phố';
+  // ── VÀNH ĐAI (`tier` 1) ──
+  // ⚠️ CHIA NHỎ CÓ LÝ DO ĐO ĐƯỢC, không phải cho phong phú. Vành đai chiếm tới 44 ô ở kỷ có nó,
+  // nên nếu cả 44 ô dùng chung một câu thì Đàm đọc đúng một dòng chữ suốt 44 phiên liền — tái diễn
+  // y hệt cái bệnh mà `cityMoment.js` đã đo và chữa một lần rồi ("82% số phiên đọc đúng 4 chữ").
+  // ⚠️ KHÔNG dùng phương hướng (bắc/nam/đông/tây): camera 3D xoay được — "phía bắc" nghe hay hơn
+  // nhưng nó là một điều bịa.
+  if (cell.tier >= 1) {
+    if (cell.junction) return 'một khúc cua vành đai';
+    if (nb >= 3) return 'một lối rẽ ra vành đai';
+    return cell.variant === 1 ? 'một đoạn vành đai dọc' : 'một đoạn vành đai ngang';
+  }
+
+  // Chỗ đường gặp đường. Nói "một đoạn đại lộ" ở đây thì đúng nhưng bỏ mất tin hay nhất: chỗ này
+  // vừa NỐI hai con đường vào nhau, và đó là thứ mắt nhận ra ngay khi nhìn từ trên xuống.
+  if (nb >= 4) return 'một ngã tư mới';
+  if (nb === 3) return 'một ngã ba mới';
+  if (cell.avenue) return 'một đoạn đại lộ';
+  return cell.variant === 1 ? 'một đoạn phố dọc' : 'một đoạn phố ngang';
 }
 
 /**
- * Tổng số ô đường của mạng lưới — MẪU SỐ để nói "đã mở được bao nhiêu".
- * ⚠️ Suy ra từ chính `ROAD_CELLS`, KHÔNG viết cứng: `cityMoment.js` dùng số này làm mẫu số cho
- * thanh tiến độ sau mỗi phiên, và một mẫu số viết cứng sẽ nói dối ngay lần đầu ai đó thêm một
- * trục đường mới.
- */
-export function roadCellCount(era = 1) {
-  return buildRoadPlan(era, getNetworkStyle(era)).cells.length;
-}
-
-/**
- * ⚠️ GIỮ LẠI DƯỚI DẠNG TRẦN LỚN NHẤT trong 15 kỷ — CHỈ để cấp phát bộ đệm (`MAX_PROPS`).
- * TUYỆT ĐỐI KHÔNG dùng nó làm MẪU SỐ cho thanh tiến độ: mỗi kỷ có số ô đường riêng (42…93), nên
- * một mẫu số chung sẽ nói dối ở 14/15 kỷ. Dùng `roadCellCount(era)`.
- */
-export const ROAD_CELL_COUNT = (() => {
-  let max = 0;
-  for (let era = 1; era <= 15; era += 1) max = Math.max(max, roadCellCount(era));
-  return max;
-})();
-
-/**
- * DANH SÁCH ỨNG VIÊN của mạng đường **CỦA MỘT KỶ** — hàm THUẦN của DUY NHẤT `era` (`roadPlan.js`).
+ * Tổng số ô đường của MỘT KỶ — MẪU SỐ để nói "đã mở được bao nhiêu".
  *
- * ⚠️ **TRƯỚC ADR-059 NÓ LÀ MỘT HẰNG SỐ CẤP MODULE, NAY KHÔNG CÒN — VÀ SỰ KHÁC NHAU ẤY LÀ THỨ ĐÁNG
- * ĐỌC KỸ NHẤT Ở ĐÂY.** Không phụ thuộc `built`, `levels`, hay `sessionCount` (có test gọi kèm dữ
- * liệu rác khoá lại), nhưng CÓ phụ thuộc `era`. Ai còn gọi nó không truyền `era` sẽ nhận mạng của
- * kỷ 1 — đúng, nhưng chỉ đúng cho kỷ 1.
+ * ⚠️ TỪ PHASE 20 NÓ LÀ MỘT HÀM THEO KỶ, KHÔNG CÒN LÀ MỘT HẰNG SỐ CHUNG. Số ô đường là HỆ QUẢ của
+ * số thửa, mà số thửa khác nhau ở cả 15 kỷ — đo được 34…92 ô. Giữ một hằng số chung thì thanh tiến
+ * độ sau mỗi phiên sẽ nói dối ở 14 kỷ, và nói dối lặng lẽ: mẫu số sai vẫn ra một phân số hợp lý.
+ * ⚠️ Vẫn suy ra từ chính bộ sinh, KHÔNG viết cứng — cùng lý do như trước: một cái tên viết ở xa
+ * nguồn của nó là một lời nói dối đang chờ ngày tới.
+ */
+export function roadCellCount(era) {
+  return planRoadCellCount(era);
+}
+
+/**
+ * DANH SÁCH ỨNG VIÊN của mạng đường ở một kỷ — suy ra DUY NHẤT từ `era`, qua `cityPlan.js`.
+ * Không phụ thuộc `built`, `levels`, hay `sessionCount` — có bài test khoá lại (`roadCells.test.js`
+ * và `cityPlan.test.js`).
  *
  * ⚠️ **ĐÂY LÀ DANH SÁCH ỨNG VIÊN, KHÔNG PHẢI MẠNG ĐƯỜNG ĐANG HIỆN TRÊN MÀN HÌNH.** Hai thứ đó
  * KHÁC NHAU, và nhầm chúng là nhầm ở chỗ nguy hiểm nhất: `deriveProps` mở dần theo `sessionCount`
- * (`roadBudget`) **và bỏ qua ô nào đã bị một công trình chiếm** (`if (taken.has(key)) continue`),
- * mà vị trí công trình thì đổi theo kỷ (`hashPick`). Đo thật trên 15 kỷ × 151 mốc phiên: **1.818
- * trong 2.265 tổ hợp cho ra một tập ô đường KHÔNG phải tiền tố của danh sách này**, và riêng ở mốc
- * 40 phiên, 15 kỷ cho ra **10 tập khác nhau**. Tập hiện trên màn hình là con thật sự, nhưng nó
+ * (`roadBudget`) **và bỏ qua ô nào đã bị một công trình chiếm** (`if (taken.has(key)) continue`).
+ * Đo thật trên 15 kỷ × 151 mốc phiên (bộ xương cũ): **1.818 trong 2.265 tổ hợp cho ra một tập ô
+ * đường KHÔNG phải tiền tố của danh sách này**. Tập hiện trên màn hình là con thật sự, nhưng nó
  * KHÔNG bất biến.
  *
  * ⇒ Ai cần một mạng đường **KHÔNG ĐỔI THEO TIẾN ĐỘ** — cụ thể là `city3d/terrain.js`, vì cao độ
@@ -242,12 +192,12 @@ export const ROAD_CELL_COUNT = (() => {
  * ĐÚNG danh sách này, không được đi hỏi `layout.props`. Nó là **tập cha thực sự** của mọi tập đã
  * hiện, nên đặt luật lên nó là một lời hứa CHẶT HƠN, không phải lỏng hơn.
  *
- * Trả về BẢN SAO NÔNG mỗi lần gọi: mảng gốc là trạng thái dùng chung của module, để lọt ra ngoài
- * thì một dòng `.sort()` vô ý ở nơi khác sẽ sắp xếp lại thứ tự mở đường của cả thành phố.
+ * Trả về BẢN SAO NÔNG mỗi lần gọi (`planRoadCells` đã lo): mảng gốc là trạng thái dùng chung của
+ * module, để lọt ra ngoài thì một dòng `.sort()` vô ý ở nơi khác sẽ sắp xếp lại thứ tự mở đường
+ * của cả thành phố.
  */
-export function roadCellCandidates(era = 1) {
-  return buildRoadPlan(era, getNetworkStyle(era)).cells
-    .map((c) => ({ x: c.x, y: c.y, variant: c.variant, tier: c.tier }));
+export function roadCellCandidates(era) {
+  return planRoadCells(era);
 }
 
 /**
@@ -257,13 +207,18 @@ export function roadCellCandidates(era = 1) {
  * ⚠️ NAY LÀ TỔNG SUY RA, KHÔNG PHẢI SỐ VIẾT CỨNG — và đây là lý do, không phải nới cho tiện.
  * Trước 2026-08-14 nó là `96`, chọn hồi mạng đường có 44 ô (44 + 34 = 78, dư 18). Vành đai đưa
  * đường lên 80 ⇒ 80 + 34 = 114, tức con số 96 **đã lặng lẽ hết đúng** và bài test trần sẽ đỏ.
- * Đó chính xác là kiểu số cũ đi trong im lặng mà cả file này đã gặp nhiều lần (`ROAD_CELL_COUNT`
- * cũng từng phải chuyển sang suy-ra vì lý do y hệt).
+ * Đó chính xác là kiểu số cũ đi trong im lặng mà cả file này đã gặp nhiều lần.
+ * ⚠️ TỪ PHASE 20 SỐ Ô ĐƯỜNG KHÁC NHAU THEO KỶ (34…92), nên trần này lấy kỷ NHIỀU ĐƯỜNG NHẤT —
+ * nó là một cái trần cho MỌI kỷ, và một cái trần thì phải bao được trường hợp xấu nhất. Quét cả 15
+ * kỷ ngay lúc nạp module, KHÔNG viết cứng số 92: viết cứng thì ngày ai đó sửa một dòng
+ * `networkStyle` là con số này lặng lẽ hết đúng.
  * ⚠️ ĐỌC CHO ĐÚNG NÓ CÒN BẮT ĐƯỢC GÌ: vì là tổng đúng bằng hai trần thành phần, nó **không** còn
  * bắt được lỗi "một tầng vượt trần của chính tầng đó" — hai trần kia mới làm việc ấy. Việc nó còn
  * làm được: chặn ca hai danh sách bị nối nhầm, và cho bên gọi một con số để cấp phát bộ đệm.
  */
-export const MAX_PROPS = ROAD_CELL_COUNT + MAX_SCATTER_PROPS;
+export const MAX_PROPS = Math.max(
+  ...Array.from({ length: 15 }, (_, i) => roadCellCount(i + 1)),
+) + MAX_SCATTER_PROPS;
 
 /** Bảng loại cảnh vật rải rác + trọng số (tổng = 20). Thứ tự cố định → tất định. */
 const SCATTER_KINDS = [
@@ -336,20 +291,26 @@ function findFreeCell(startX, startY, occupied) {
  *
  * @param {string} bpId          id bản vẽ
  * @param {Set<string>} [occupiedSet]  các ô đã bị chiếm, dạng `"x,y"`
+ * @param {number} [era]          kỷ — quyết khu đất nằm ở đâu (Phase 20)
  * @returns {{x:number,y:number}} toạ độ ô, luôn nằm trong [0, CITY_GRID_SIZE)
  *
  * Bản vẽ có trong `BLUEPRINT_CATALOG` → neo vào khu đất riêng theo thứ hạng (không bao giờ va chạm
- * với công trình cùng kỷ). Id lạ (dữ liệu hỏng từ cloud) → neo bằng băm trên toàn lưới rồi dò xoắn
+ * với công trình cùng kỷ). ⚠️ Khu đất ấy nay do `cityPlan.js` sinh THEO KỶ, không còn là năm ô 3×3
+ * cố định — nhưng lời hứa thì y nguyên: năm khu KHÔNG giao nhau, và với một kỷ đã cho thì chúng
+ * đứng im vĩnh viễn (ADR-007, có test khoá cả hai vế ở `cityPlan.test.js`). Id lạ (dữ liệu hỏng từ cloud) → neo bằng băm trên toàn lưới rồi dò xoắn
  * ốc. Dò xoắn ốc chỉ là lưới an toàn: với dữ liệu hợp lệ nó không bao giờ phải chạy.
  */
-export function placeBuilding(bpId, occupiedSet = new Set()) {
+export function placeBuilding(bpId, occupiedSet = new Set(), era = 1) {
   const occupied = occupiedSet instanceof Set ? occupiedSet : new Set();
   const meta = BLUEPRINT_LOOKUP[bpId];
+  const zone = meta ? planWonderZone(era, meta.rank) : null;
 
-  // ⚠️ CÔNG THỨC Ô NEO NAY NẰM Ở `roadPlan.js` — MỘT LUẬT MỘT CÔNG THỨC. Bộ sinh mạng đường cần
-  // biết công trình đứng đâu để chừa mặt tiền; nếu mỗi bên tự tính thì có ngày đường dẫn tới một
-  // chỗ trống còn công trình thì không có lối vào, mà triệu chứng ấy im lặng hoàn toàn.
-  const { x: anchorX, y: anchorY } = wonderAnchor(bpId, meta ? meta.rank : -1);
+  const anchorX = zone
+    ? zone.x + hashPick(`x|${bpId}`, zone.w)
+    : hashPick(`x|${bpId}`, CITY_GRID_SIZE);
+  const anchorY = zone
+    ? zone.y + hashPick(`y|${bpId}`, zone.h)
+    : hashPick(`y|${bpId}`, CITY_GRID_SIZE);
 
   if (!occupied.has(cellKey(anchorX, anchorY))) return { x: anchorX, y: anchorY };
   return findFreeCell(anchorX, anchorY, occupied) ?? { x: anchorX, y: anchorY };
@@ -497,20 +458,15 @@ export function deriveProps({ era, buildingCount, sessionCount, streakLength, oc
 
   // (1) Đường sá — mở dần từ trung tâm ra ngoài theo số phiên. Chưa có công trình nào thì chưa có
   //     đường (bãi đất trống mới khai hoang).
-  const oDuong = buildRoadPlan(eraNum, getNetworkStyle(eraNum)).cells;
-  const roadBudget = nBuild > 0 ? Math.min(oDuong.length, nSession) : 0;
+  const roadCells = roadCellCandidates(eraNum);
+  const roadBudget = nBuild > 0 ? Math.min(roadCells.length, nSession) : 0;
   let roadsPlaced = 0;
-  for (const cell of oDuong) {
+  for (const cell of roadCells) {
     if (roadsPlaced >= roadBudget) break;
     const key = cellKey(cell.x, cell.y);
     if (taken.has(key)) continue;
     taken.add(key);
-    // ⚠️ `tier` PHẢI ĐI THEO — nó là thứ duy nhất phân biệt VÀNH ĐAI với ngõ phố. Trước
-    // 2026-08-24 nó bị bỏ lại ở đây, nên 36/80 ô vành đai xuống tới tầng vẽ dưới lốt ngõ phố và
-    // được dựng y hệt: gần một nửa mạng đường không có tiếng nói riêng. Xem `rankOfRoad`.
-    props.push({
-      kind: 'road', x: cell.x, y: cell.y, variant: cell.variant, tier: cell.tier,
-    });
+    props.push({ kind: 'road', x: cell.x, y: cell.y, variant: cell.variant });
     roadsPlaced += 1;
   }
 
@@ -797,7 +753,7 @@ export function computeCityLayout({ built, levels, era, stats, pending } = {}) {
   const occupied = new Set();
   const buildings = validIds.map((bpId) => {
     const meta = BLUEPRINT_LOOKUP[bpId];
-    const { x, y } = placeBuilding(bpId, occupied);
+    const { x, y } = placeBuilding(bpId, occupied, eraNum);
     occupied.add(cellKey(x, y));
     const rawLevel = levelMap[bpId];
     return {
@@ -850,7 +806,7 @@ export function computeCityLayout({ built, levels, era, stats, pending } = {}) {
       return true;
     })
     .map((item) => {
-      const { x, y } = placeBuilding(item.bpId, occupied);
+      const { x, y } = placeBuilding(item.bpId, occupied, eraNum);
       occupied.add(cellKey(x, y));
       // ⚠️ TIẾN ĐỘ TÍNH Ở `craftProgress.js`, KHÔNG tính tại chỗ nữa (Phase 4E). Trước đây chính
       // con số này được tính ở đây MỘT KIỂU (kẹp đủ mọi biên) và ở `BuildingWorkshop.jsx` một kiểu

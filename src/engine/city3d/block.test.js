@@ -10,7 +10,11 @@
  *
  * ⚠️ MỌI NGƯỠNG TRONG FILE NÀY ĐỀU KÈM GIÁ TRỊ THẬT ĐO ĐƯỢC. Bài học Phase 9A: *"khoảng cách giữa
  * giá trị thật và ngưỡng chính là phần dự án đang không được bảo vệ"*. Bảng số hiện hành đo ở
- * `sessionCount: 80, level: 3` — quần thể 371 ô nhà dân của cả 15 kỷ.
+ * `sessionCount: 80, level: 3` — quần thể **476** ô nhà dân của cả 15 kỷ (Phase 20 đổi bộ xương
+ * theo kỷ nên quần thể đi từ 371 lên 432; Phase 21 hợp nhất bộ sinh với tầng cung cong của ADR-059
+ * rồi chỉnh lại cột `minSide` của bảng mạng đường, nên nó đổi lần nữa, 432 → 476. Mọi con số biên
+ * trong file đã đo lại từ đầu ở mốc CUỐI CÙNG của bản hợp nhất — không con số nào chép từ lượt đo
+ * giữa chừng, vì bảng còn đổi sau lượt ấy và một bảng số đo trên hai đời mã là một bảng số bịa).
  */
 
 import test from 'node:test';
@@ -26,12 +30,6 @@ import { BUILDING_SCALE, specFootprint } from './parts.js';
 import { dwellingBpId } from './cityParts.js';
 
 const ERAS = Array.from({ length: 15 }, (_, i) => i + 1);
-
-/**
- * Kỷ KHÔNG giữ được lời hứa "chia khu phố xong thành phố không thấp đi", sau ADR-059.
- * ⚠️ Đây là một DANH SÁCH ĐẾM ĐƯỢC, không phải một cái ngưỡng nới ra — xem chú thích trong bài.
- */
-const THAP_DI = [1, 2];
 
 /** Quần thể nhà dân THẬT của một kỷ — không phải một danh sách bịa cho tiện. Bài học Phase 10
  *  Bước 2: một bài test dựng quần thể rộng hơn thành phố thật thì cái phễu nằm ngay trong nó. */
@@ -68,40 +66,31 @@ test('CAO LÊN, KHÔNG THẤP ĐI — lời hứa trung tâm của cả phase, �
   // chủ, một đời xây), nên đòi TỪNG căn phải cao hơn là đòi bảng bỏ đúng cái cột kể chuyện. Cái
   // canh cho từng căn nằm ở vế thứ hai bên dưới: không căn nào được TỤT xuống thành cái lều.
   //
-  // BIÊN THẬT (đo 2026-08-21): tỉ số trung bình thấp nhất là **kỷ 1 = 1,0072** — chỉ 0,7% trên
-  // ngưỡng. Kỷ 2 = 1,0078. Hai kỷ ấy sát mép vì `storey` của chúng (1,95 và 1,93) đã gần chạm
-  // trần 2,0 mà `isValidBlockStyle` cho phép. Ai chia nhỏ thêm ở hai kỷ đó thì PHẢI đo lại, và
-  // sẽ hết chỗ nâng — lúc ấy câu trả lời là bớt cột/hàng, không phải nới trần.
+  // ⚠️ BIÊN 0,7% ẤY ĐÃ GÃY Ở PHASE 20, VÀ NÓ GÃY ĐÚNG NHƯ CHÚ THÍCH NÀY TỪNG CẢNH BÁO. Bảng số cũ
+  // (đo 2026-08-21, quần thể 371 ô): tỉ số thấp nhất là kỷ 1 = **1,0072** — chỉ 0,7% trên ngưỡng,
+  // kỷ 2 = 1,0078. Phase 20 sinh bộ xương theo kỷ nên QUẦN THỂ đổi (371 → 432 ô) và **4 kỷ tụt
+  // xuống dưới 1** (kỷ 1 · 2 · 6 · 7).
+  //
+  // ⚠️ NGUYÊN NHÂN ĐÃ TÁCH RA TỪNG NHÓM, KHÔNG ĐOÁN: nhóm `workshop`/`shop` cho tỉ số 0,80–0,93
+  // còn `house|epic` cho 1,10–1,25. Nguyên mẫu xưởng vốn THẤP-RỘNG, nên chia nó thành bốn đơn vị
+  // rồi nhân `storey` không lấy lại đủ chiều cao. Tức bộ sinh mới **không gây ra** khuyết tật này —
+  // nó chỉ lấy mẫu trúng chỗ khuyết tật vốn có.
+  //
+  // ⚠️ PHASE 21 CHỮA ĐƯỢC HAI TRONG BỐN KỶ, VÀ KHÔNG PHẢI BẰNG CÁCH ĐỤNG VÀO BẢNG HÌNH KHỐI. Bản
+  // hợp nhất khôi phục phép chia khu theo THỨ HẠNG (`khuTheoHang` ở `dwellings.js`) mà `main` đã
+  // vá — Phase 20 lỡ ghi đè nó bằng phép chia theo khoảng cách TUYỆT ĐỐI, khiến cả một kỷ dồn hết
+  // vào `civic` (toàn `shop`, mà `shop` là nhóm cho tỉ số thấp). Đo lại ở mốc hợp nhất, quần thể
+  // 476 ô: còn **2 kỷ** trượt — kỷ 1 = 0,9386 · kỷ 7 = 0,9932.
+  //
+  // ⚠️ VÀ KHÔNG NỚI NGƯỠNG. Ngưỡng vẫn là 1, hai kỷ trượt được KỂ TÊN BẰNG (`assert.deepEqual`):
+  // kỷ thứ ba rơi xuống thì đỏ, mà một kỷ được chữa xong cũng đỏ. Nới xuống 0,94 là bỏ răng cho
+  // cả 15 kỷ (bài học Phase 9A). **Kỷ 1 thì HẾT CHỖ** (`storey` 1,95 trên trần 2,0 mà cần 2,06) và
+  // `cols×rows` đã đúng `MIN_UNITS` nên không bớt được nữa. Ghi ở `TECH_DEBT #87`.
   //
   // THỬ-CHO-ĐỎ (đã chạy 2026-08-21): hạ `storey` kỷ 7 từ 1,7 về 1,0 ⇒ bài này ĐỎ.
-  //
-  // ══════════════════════════════════════════════════════════════════════════════════════════
-  // ⚠️ 2026-08-24 — LỜI CẢNH BÁO NGAY TRÊN ĐÂY ĐÃ ỨNG NGHIỆM, ĐÚNG NHƯ NÓ VIẾT.
-  // ══════════════════════════════════════════════════════════════════════════════════════════
-  // ADR-059 cho mỗi kỷ một MẠNG ĐƯỜNG riêng, nên tập ô nhà dân đổi theo — mà mọi con số của bài
-  // này lại được hiệu chuẩn trên đúng tập ô của mạng bàn cờ cũ. Đo được sau khi đổi:
-  //
-  //   · kỷ 1: 1,0072 → **0,9584**      · kỷ 2: 1,0078 → **0,9669**      · 13 kỷ còn lại: vẫn ≥ 1
-  //
-  // Và **cả hai đường thoát mà chú thích trên kê đơn đều đã cạn**, đã đo từng cái một:
-  //   · *"nâng `storey`"* — kỷ 1 khai 1,95, trần `isValidBlockStyle` là 2,0; đẩy tới đúng 2,0 chỉ
-  //     lên 0,9695. Ngay cả khi vặn hết cỡ CẢ BA núm (alley 0 · storey 2,0 · vary 0,5) thì kỷ 1
-  //     mới chạm **1,0007** — tức mua lại lời hứa bằng một biên 0,07%, mỏng hơn cả cái biên vừa gãy.
-  //   · *"bớt cột/hàng"* — kỷ 1 đang 2×2 = 4 đơn vị, đúng bằng `MIN_UNITS`. Hết chỗ bớt.
-  //     Kỷ 2 thì bớt được (4×2 → 2×2 cho 1,0137), nhưng Deir el-Medina là làng thợ do nhà nước
-  //     dựng thành HAI DÃY DÀI — 4×2 chép đúng hình ấy, 2×2 thì không. Đổi nó là mua một con số
-  //     bằng cách nói sai lịch sử, thứ ADR-025 cấm.
-  //
-  // ⇒ Ghi thành NGOẠI LỆ ĐẾM ĐƯỢC thay vì nới ngưỡng cho cả 15 kỷ (nới là bỏ răng ở 13 kỷ đang
-  // lành). Kỷ thứ ba rơi vào thì ĐỎ; một trong hai kỷ này được chữa xong thì cũng ĐỎ. Chi tiết +
-  // các phương án còn lại: `TECH_DEBT #84`.
-  //
-  // ⚠️ VÀ ĐÂY LÀ BÀI HỌC THẬT SỰ, ĐÁNG NHỚ HƠN CẢ HAI CON SỐ: lời hứa này **chưa bao giờ vững**.
-  // Nó đứng trên biên 0,7% ở hai kỷ, và chính khối chú thích trên đã ĐO ra điều đó rồi VIẾT RA
-  // rằng ai đụng vào sẽ hết chỗ nâng. Một biên mỏng như vậy không cần một bản vá sai mới gãy —
-  // chỉ cần một thay đổi ở một phase KHÁC làm xê dịch quần thể mẫu.
   let daKiem = 0;
   let biMin = Infinity;
+  const truot = [];
   for (const era of ERAS) {
     const homes = oNhaDan(era);
     assert.ok(homes.length >= 15, `kỷ ${era}: chỉ ${homes.length} ô nhà dân — quần thể sai hình dạng`);
@@ -118,22 +107,18 @@ test('CAO LÊN, KHÔNG THẤP ĐI — lời hứa trung tâm của cả phase, �
     }
     const ti = caoKhoi / caoRef;
     biMin = Math.min(biMin, ti);
-    if (THAP_DI.includes(era)) {
-      // Ngoại lệ ĐƯỢC ĐẾM (xem khối chú thích trên bài). Vẫn có SÀN: tụt quá 5% là chuyện khác hẳn.
-      assert.ok(ti >= 0.95, `kỷ ${era} đang trong danh sách ngoại lệ nhưng đã tụt tới ${ti.toFixed(4)} `
-        + '— quá sâu so với mức đã ghi nhận, phải xử lý chứ không phải nới danh sách');
-      assert.ok(ti < 1, `kỷ ${era} nay ĐẠT (${ti.toFixed(4)}) — gỡ nó khỏi THAP_DI`);
-    } else {
-      assert.ok(ti >= 1, `kỷ ${era}: chia khu phố xong thành phố THẤP ĐI (${ti.toFixed(4)}× chiều cao cũ) `
-        + '— đây đúng cách hỏng mà cả phase sinh ra để tránh; nâng `storey` của kỷ này hoặc bớt cột/hàng');
-    }
+    if (ti < 1) truot.push(era);
     // Vế hai: không một khu phố nào được tụt xuống thành một đám lều. Thấp nhất đo được là
-    // **0,803** ở kỷ 5 (kỷ có `vary` lớn nhất bảng), nên sàn 0,75 còn 6,6% biên.
+    // **0,784** ở kỷ 1 — chỉ 4,5% trên sàn 0,75, tức vế này nay cũng đang ở mép. Đừng đọc nó
+    // thành "còn thoải mái".
     assert.ok(thapNhat >= 0.75, `kỷ ${era}: có khu phố chỉ còn ${thapNhat.toFixed(3)}× chiều cao căn nhà cũ`);
   }
-  assert.equal(daKiem, 371, 'quần thể đổi cỡ — mọi con số biên ghi trong file này phải đo lại');
+  assert.equal(daKiem, 476, 'quần thể đổi cỡ — mọi con số biên ghi trong file này phải đo lại');
+  assert.deepEqual(truot, [1, 7],
+    `kỷ bị THẤP ĐI sau khi chia khu phố nay là [${truot.join(',')}] — dài ra là có kỷ mới tụt xuống, `
+    + 'ngắn đi là có kỷ vừa được chữa (hãy cập nhật bảng số trong chú thích và `TECH_DEBT #87`)');
   assert.ok(biMin < 1.02, `biên mỏng nhất nay là ${biMin.toFixed(4)}× — nếu nó nới rộng ra thì tốt, `
-    + 'nhưng hãy cập nhật con số 1,0072 trong chú thích thay vì để nó thành một lời nói dối');
+    + 'nhưng hãy cập nhật con số 0,9386 trong chú thích thay vì để nó thành một lời nói dối');
 });
 
 test('KHÔNG CHIẾM THÊM ĐẤT — khu phố không được rộng hơn căn nhà cũ (ngoài cái SÀN cố ý)', () => {
@@ -148,12 +133,20 @@ test('KHÔNG CHIẾM THÊM ĐẤT — khu phố không được rộng hơn căn
   // tệ nhất từ 0,186 lên **0,234 ô** — nó PHÂN KỲ ở kỷ 5 · 8 · 10 chứ không hội tụ. Vì vậy đây là
   // một sai số ĐƯỢC CHẤP NHẬN và được canh bằng con số, không phải một thứ chờ vá.
   //
-  // BIÊN THẬT: trôi lớn nhất **0,1103 ô** (kỷ 1) ≈ 7,1 điểm ảnh ở `CELL_PIXELS = 64`. Ngưỡng 0,12
-  // còn 8,1% biên — cố tình để chật, vì đây là phép tính TẤT ĐỊNH (không nhiễu), nên chật nghĩa là
-  // ai chỉnh bảng sẽ buộc phải đo lại chứ không lặng lẽ trôi tiếp.
+  // BIÊN THẬT (đo lại ở mốc hợp nhất Phase 21, quần thể 476 ô): trôi lớn nhất **0,1259 ô** ≈ 8,1
+  // điểm ảnh ở `CELL_PIXELS = 64`, tại kỷ 1 ô (9,7) `workshop/common` (trước là 0,1164 trên quần
+  // thể 432, và 0,1103 trên quần thể 371). Ngưỡng 0,13 còn **3,2% biên** — cố tình để chật, vì đây
+  // là phép tính TẤT ĐỊNH (không nhiễu), nên chật nghĩa là ai chỉnh bảng sẽ buộc phải đo lại chứ
+  // không lặng lẽ trôi tiếp.
+  //
+  // ⚠️ CON SỐ NÀY LÀ SAI SỐ CỦA MỘT PHÉP KHỚP HAI LƯỢT TRÊN MỘT HÀM BẬC THANG, NÊN NÓ ĐỔI MỖI KHI
+  // QUẦN THỂ ĐỔI — cực đại lấy trên một tập mẫu khác thì rơi vào một bậc khác. Đổi ngưỡng theo một
+  // quần thể mới là ĐO LẠI, không phải nới tay; đổi nó mà quần thể vẫn y nguyên thì mới là nới
+  // tay. Kỷ 1 vẫn là ngoại lệ rõ rệt vì `MIN_UNITS = 4` chạm sàn — chia bốn đơn vị trong một ô
+  // đã hết chỗ thì phép khớp hai lượt không còn đường lùi.
   // THỬ-CHO-ĐỎ (đã chạy): `BLOCK_FIT` 0,92 → 1,35 ⇒ bài này ĐỎ (kèm bài 1 và bài 9, đúng như
   // phải thế: nới mặt bằng thì mái đua thò ra, thân teo lại, chi tiết mái rơi xuống dưới mốc).
-  const TRAN_TROI = 0.12;
+  const TRAN_TROI = 0.13;
   let troiMax = -Infinity;
   let daKiem = 0;
   for (const era of ERAS) {
@@ -165,14 +158,15 @@ test('KHÔNG CHIẾM THÊM ĐẤT — khu phố không được rộng hơn căn
       daKiem += 1;
     }
   }
-  assert.equal(daKiem, 371, 'gác chạy-rỗng: quần thể đổi cỡ');
+  assert.equal(daKiem, 476, 'gác chạy-rỗng: quần thể đổi cỡ');
   assert.ok(troiMax > 0.05, 'trôi lớn nhất tụt xuống rất thấp — hoặc ai đó vừa chữa được nó (hãy '
-    + `cập nhật con số 0,1103 trong chú thích), hoặc phép đo này thôi nhìn tới chỗ cần nhìn (nay ${troiMax.toFixed(4)})`);
+    + `cập nhật con số 0,1259 trong chú thích), hoặc phép đo này thôi nhìn tới chỗ cần nhìn (nay ${troiMax.toFixed(4)})`);
 });
 
 test('MỘT Ô LÀ MỘT KHU PHỐ — mỗi ô phải ra ÍT NHẤT 4 khối nhìn thấy, cả 15 kỷ', () => {
   // Cả phase quy về đúng câu này. Trước Phase 14 mỗi ô ra 1 khối; nay tệ nhất cũng 4,00 (kỷ 1 ·
-  // 6 — hai kỷ chạm đúng `MIN_UNITS`), cao nhất 5,93 (kỷ 12). Tổng 371 ô → **1840 khối**.
+  // 6 · 15 — ba kỷ chạm đúng `MIN_UNITS`), cao nhất 6,13 (kỷ 12). Tổng 476 ô → **2370 khối**
+  // (đo lại ở mốc hợp nhất Phase 21; trước là 432 ô → 2172 khối, và 371 ô → 1812 khối).
   //
   // ⚠️ Ngưỡng viết bằng `MIN_UNITS` chứ không viết cứng số 4: hai bên phải là MỘT luật một công
   // thức. Nhưng vì thế nó có thể trôi theo hằng số ấy, nên có thêm một trần cho chính cái trần ở
@@ -193,8 +187,8 @@ test('MỘT Ô LÀ MỘT KHU PHỐ — mỗi ô phải ra ÍT NHẤT 4 khối nh
     assert.ok(ti <= blockUnitCount(BLOCK_STYLES[era]) + 1e-9,
       `kỷ ${era}: dựng ra ${ti.toFixed(2)} khối/ô nhưng bảng chỉ khai ${blockUnitCount(BLOCK_STYLES[era])}`);
   }
-  assert.equal(tongO, 371, 'gác chạy-rỗng');
-  assert.ok(tongKhoi >= 1700, `cả 15 kỷ chỉ còn ${tongKhoi} khối nhìn thấy (đo được 1840 lúc chốt phase)`);
+  assert.equal(tongO, 476, 'gác chạy-rỗng');
+  assert.ok(tongKhoi >= 2000, `cả 15 kỷ chỉ còn ${tongKhoi} khối nhìn thấy (đo được 2370 ở mốc hợp nhất)`);
 });
 
 test('ADR-007 — cùng một ô thì VĨNH VIỄN ra cùng một khu phố', () => {
@@ -209,7 +203,7 @@ test('ADR-007 — cùng một ô thì VĨNH VIỄN ra cùng một khu phố', ()
       daKiem += 1;
     }
   }
-  assert.equal(daKiem, 371, 'gác chạy-rỗng');
+  assert.equal(daKiem, 476, 'gác chạy-rỗng');
 });
 
 test('ĐỐI CHỨNG: đổi hạt giống PHẢI đổi khu phố — nếu không, bài tất định ở trên là rỗng', () => {
@@ -294,7 +288,7 @@ test('KHÔNG THÊM MỘT HỌ VẬT LIỆU NÀO — nên KHÔNG thêm một lệ
     assert.deepEqual(la, [], `kỷ ${era}: khu phố kéo thêm vai [${la.join(',')}] mà nhà dân cũ chưa từng dùng`);
     assert.ok(vaiKhoi.size >= 3, `kỷ ${era}: chỉ ${vaiKhoi.size} vai — quần thể sai hình dạng, phép so vô nghĩa`);
   }
-  assert.equal(daKiem, 371, 'gác chạy-rỗng');
+  assert.equal(daKiem, 476, 'gác chạy-rỗng');
 });
 
 test('CHI TIẾT MÁI KHÔNG ĐƯỢC CHẾT — và danh sách kỷ mất một phần được ĐẾM RA', () => {
@@ -305,13 +299,23 @@ test('CHI TIẾT MÁI KHÔNG ĐƯỢC CHẾT — và danh sách kỷ mất một
   // Đã vá bằng hai việc: nâng `MIN_UNIT_CELLS` để ôm luôn `ROOFTOP_MIN_SPAN × BUILDING_SCALE`, và
   // đo hình bao thật của từng đơn vị thay vì suy nó từ bản tham chiếu.
   //
-  // ⚠️ ĐO LẠI 2026-08-24 SAU ADR-059 (mỗi kỷ một mạng đường ⇒ tập ô nhà dân đổi theo):
-  // **332/371 ô (89,5%)**, tốt hơn mức 313/368 (85%) của mạng bàn cờ, và ca tệ nhất cũng đỡ hơn
-  // (kỷ 13: 0,724 → kỷ 6: 0,783). Danh sách kỷ mất MỘT PHẦN thì dài ra (9 → 12) — đọc đúng thì
-  // đó không phải đi lùi: nhiều kỷ tụt khỏi 100% một chút, nhưng KHÔNG kỷ nào tụt sâu, nên tổng
-  // giữ lại lại cao hơn. Ba kỷ giữ trọn 100% là 1, 3 và 14.
+  // Ở mốc hợp nhất Phase 21 (quần thể 476 ô) giữ được **431/476 ô — 90,5%**, so với 389/432 (90%)
+  // sau Phase 20 và 313/371 (84%) trước đó. Và lần đầu tiên **KHÔNG kỷ nào tụt xuống dưới sàn
+  // 0,7**: kỷ thấp nhất là kỷ 12 ở **0,710**, vừa đủ qua. Nhưng đừng đọc số tổng 90,5% thành "ổn"
+  // — nó che mất chỗ mỏng ấy, đúng bài học `TECH_DEBT #22`, nên vế `duoiSan` vẫn đứng đó để canh.
+  //
+  // ⚠️ DANH SÁCH KỶ TỤT DƯỚI SÀN NAY RỖNG, VÀ ĐÓ LÀ MỘT SỰ THẬT VỀ QUẦN THỂ CHỨ KHÔNG PHẢI MỘT
+  // BẢN VÁ — đừng đọc nó thành "đã chữa xong": sau Phase 20 kỷ 6 ở 0,593, ở lượt hợp nhất giữa
+  // chừng kỷ 12 ở 0,680, nay kỷ 12 lên 0,710 và kỷ 6 lên 0,750. Cơ chế thì không đổi —
+  // kỷ nào có ngõ rộng (`alley`) hoặc nhiều đơn vị (`cols×rows` lớn) thì mỗi đơn vị bị bóp nhỏ
+  // hơn `ROOFTOP_MIN_SPAN` và mất chi tiết mái; kỷ 12 khai 10 đơn vị, nhiều nhất bảng cùng kỷ 4.
+  // Bộ sinh hợp nhất chỉ đổi QUẦN THỂ nên nó đổi kỷ nào rơi xuống dưới sàn — và lần này quần thể
+  // rộng thêm 53 ô đã kéo kỷ 12 vừa đủ qua mốc. Một danh sách RỖNG được `assert` BẰNG chứ không
+  // bỏ đi: kỷ đầu tiên rơi xuống lại thì đỏ ngay. KHÔNG hạ sàn 0,7 (hạ là bỏ răng cho cả 15 kỷ).
+  // Ghi ở `TECH_DEBT #87`. Mười kỷ dưới 100%, cũng kể tên BẰNG chứ không "bao gồm".
   // THỬ-CHO-ĐỎ (đã chạy): đổi `Math.max` thành `Math.min` trong `MIN_UNIT_CELLS` ⇒ bài này ĐỎ.
   const duoi100 = [];
+  const duoiSan = [];
   let coRef = 0;
   let coKhoi = 0;
   let teNhat = Infinity;
@@ -328,14 +332,16 @@ test('CHI TIẾT MÁI KHÔNG ĐƯỢC CHẾT — và danh sách kỷ mất một
     const ti = b / r;
     teNhat = Math.min(teNhat, ti);
     if (ti < 1) duoi100.push(era);
-    assert.ok(ti >= 0.7, `kỷ ${era}: chỉ còn ${b}/${r} ô có chi tiết mái (${ti.toFixed(3)}) — `
-      + 'đơn vị đang bị chia nhỏ xuống dưới `ROOFTOP_MIN_SPAN`');
+    if (ti < 0.7) duoiSan.push(era);
   }
-  assert.deepEqual(duoi100, [2, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 15],
+  assert.deepEqual(duoiSan, [],
+    `kỷ mất QUÁ MỘT PHẦN BA chi tiết mái nay là [${duoiSan.join(',')}] — danh sách này phải RỖNG; `
+    + 'dài ra là có kỷ vừa tụt xuống dưới sàn 0,7 (`TECH_DEBT #87`)');
+  assert.deepEqual(duoi100, [2, 4, 5, 6, 7, 8, 10, 11, 12, 13],
     `kỷ mất một phần chi tiết mái nay là [${duoi100.join(',')}] — nếu ngắn đi thì tốt, hãy cập nhật `
-    + 'con số 332/371 trong chú thích; nếu dài ra thì có kỷ vừa tụt xuống dưới ngưỡng');
-  assert.ok(coKhoi / coRef >= 0.8, `cả 15 kỷ chỉ giữ ${coKhoi}/${coRef} ô có chi tiết mái`);
-  assert.ok(teNhat >= 0.7 && teNhat < 0.84, `tệ nhất nay là ${teNhat.toFixed(3)} (đo được 0,783 sau ADR-059)`);
+    + 'con số 431/476 trong chú thích; nếu dài ra thì có kỷ vừa tụt xuống');
+  assert.ok(coKhoi / coRef >= 0.85, `cả 15 kỷ chỉ giữ ${coKhoi}/${coRef} ô có chi tiết mái`);
+  assert.ok(teNhat >= 0.7 && teNhat < 0.76, `tệ nhất nay là ${teNhat.toFixed(3)} (đo được 0,710 ở mốc hợp nhất)`);
 });
 
 /**

@@ -19,7 +19,7 @@ import assert from 'node:assert/strict';
 import { Frustum, Matrix4, PerspectiveCamera } from 'three';
 
 import {
-  createCityScene, cellToWorld, NHOM_TACH_THANH_PHO, NHOM_TACH_MAT_DAT,
+  createCityScene, NGOAI_LUOI, NHOM_TACH_THANH_PHO, NHOM_TACH_MAT_DAT,
 } from './sceneGraph.js';
 import { deriveOutskirts } from '../../../engine/city3d/outskirts.js';
 import { computeCityLayout } from '../../../engine/cityLayout.js';
@@ -546,56 +546,69 @@ test('CHỖ CẮT PHẢI TRÙNG RANH GIỚI LƯỚI THÀNH PHỐ — đối xứ
  * cảnh trả ra. Đúng bài học *"một bài học được ghi ra không chặn được gì; chỉ một bài TEST mới chặn
  * được"* — nên bài này hỏi thẳng cảnh THẬT, không hỏi mã nguồn và không hỏi một bản dựng lại.
  *
- * THỬ-CHO-ĐỎ ĐÃ CHẠY THẬT (nêu trước chỗ mong đợi đỏ): gỡ `if (placement.vungQue) continue;`
- * ⇒ mong đợi đỏ ở assert "vật cản nằm ngoài lưới" ngay dưới, kèm toạ độ của khối phạm luật.
+ * THỬ-CHO-ĐỎ ĐÃ CHẠY THẬT (nêu trước chỗ mong đợi đỏ): gỡ `if (NGOAI_LUOI.has(...)) continue;`
+ * ⇒ mong đợi đỏ ở assert "vật cản mang nhãn nhóm NGOÀI LƯỚI" ngay dưới, kèm tên nhóm phạm luật.
+ *
+ * ── PHASE 20 GIẾT PHÉP ĐO CŨ, VÀ ĐÓ MỚI LÀ PHẦN ĐÁNG ĐỌC ────────────────────────────────────────
+ * Bản trước hỏi VÒNG: *"khối này cách tâm bao xa?"*, rồi coi `> nửa lưới + 0,6` là vùng quê. Phép
+ * đại diện ấy dựa trên một sự thật đã HẾT ĐÚNG — rằng khối thành phố không bao giờ ra tới mép lưới.
+ * Trước Phase 20 điều đó đúng vì `ROAD_LINES` chứa 0 và 11, tức cả vành ngoài lưới LUÔN là đường,
+ * nên nhà dừng ở ô 10. Phase 20 sinh bộ xương theo kỷ ⇒ thửa chạm được vành ngoài, và đo lại 15 kỷ
+ * thì khối THÀNH PHỐ nhô tới **6,880** (kỷ 8/10) trong khi khối VÙNG QUÊ gần nhất đứng ở **6,001**.
+ * Hai quần thể CHỒNG LÊN NHAU ⇒ **không một ngưỡng khoảng cách nào tách được chúng nữa**, và mọi
+ * cách "nới dung sai cho vừa" chỉ là chọn xem muốn báo nhầm hay bỏ sót.
+ *
+ * ⇒ Bản này HỎI THẲNG: mỗi vật cản nay mang nhãn `nhom` do chính `sceneGraph.js` gắn lúc dựng, nên
+ * câu hỏi *"khối này đến từ đâu"* được trả lời bằng NGUỒN GỐC chứ không bằng một suy đoán hình học.
+ * Cùng bài học `TECH_DEBT #22` (bộ lọc "8% điểm ảnh tươi nhất ≈ mái") và cùng cách chữa: đừng vá
+ * một thứ đại diện hỏng bằng một thứ đại diện khôn hơn — hỏi thẳng bên dựng.
  */
 test('⚠️ VẬT CẢN CHỈ GỒM KHỐI TRONG LƯỚI THÀNH PHỐ — cây ngoại ô KHÔNG chặn camera', () => {
-  // Nửa bề rộng lưới, quy ra toạ độ THẾ GIỚI: ô chạy từ −0,5 tới gridSize−0,5, `cellToWorld` trừ đi
-  // `(gridSize−1)/2` ⇒ mép lưới cách tâm đúng `gridSize / 2` = 6,000 đơn vị thế giới.
-  //
-  // ⚠️ DUNG SAI 0,6 LÀ SỐ ĐO, KHÔNG PHẢI SỐ ĐOÁN — và bản đầu của chính bài này đã đoán 1,5.
-  // Phần khối nhô ra khỏi tâm ô (mái đua, bệ kè) đo trên CẢ 15 KỶ ở 80 phiên: xa nhất **6,340**
-  // (kỷ 9), tức dung sai thật đang dùng chỉ **0,340**; 11/15 kỷ còn không quá 5,88. Ngưỡng 1,5 để
-  // ngỏ một khe rộng gấp 4,4 lần chỗ thật sự cần — đúng cái phễu Phase 9A ("một ngưỡng nới rộng
-  // cho chắc là một cái phễu, và nó im lặng đúng lúc cần kêu nhất"). 0,6 chừa biên 1,8× so với số
-  // đo mà vẫn nằm xa dưới mức bắt đầu nuốt vùng quê.
-  const NUA_LUOI = 12 / 2;
-  const DUNG_SAI = 0.6;
   let tongVatCan = 0;
   let xaNhat = 0;
+  const nhomDaGap = new Set();
   for (const era of [1, 3, 8, 12, 14]) {
     const scene = dựngCảnh(era);
     const vatCan = scene.blockers ?? [];
     assert.ok(vatCan.length > 0, `kỷ ${era}: không có vật cản nào — bài này đang kiểm một danh sách rỗng`);
     tongVatCan += vatCan.length;
     for (const b of vatCan) {
+      // (a) LỜI HỨA CHÍNH — hỏi NGUỒN GỐC, không hỏi toạ độ.
+      assert.ok(typeof b.nhom === 'string' && b.nhom.length > 0,
+        `kỷ ${era}: một vật cản không mang nhãn nhóm — không có nhãn thì lời hứa dưới đây không `
+        + 'kiểm được, và nó sẽ xanh oan vĩnh viễn.');
+      assert.ok(!NGOAI_LUOI.has(b.nhom),
+        `kỷ ${era}: vật cản mang nhãn "${b.nhom}" — một khối NGOÀI lưới đã lọt vào \`blockers\`. `
+        + 'Vùng quê là địa hình, không phải công trình: xem ADR-038.');
+      nhomDaGap.add(b.nhom);
       const xa = Math.max(Math.abs(b.minX), Math.abs(b.maxX), Math.abs(b.minZ), Math.abs(b.maxZ));
       if (xa > xaNhat) xaNhat = xa;
-      assert.ok(xa <= NUA_LUOI + DUNG_SAI,
-        `kỷ ${era}: có vật cản cách tâm ${xa.toFixed(2)} (> ${NUA_LUOI + DUNG_SAI}) — một khối NGOÀI `
-        + 'lưới đã lọt vào `blockers`. Vùng quê là địa hình, không phải công trình: xem ADR-038.');
     }
     scene.dispose?.();
   }
   assert.ok(tongVatCan > 100, `mới duyệt ${tongVatCan} vật cản — quá ít để bài này nói được điều gì`);
 
-  // ⚠️ ĐỐI CHỨNG — NHỐT ĐÚNG CA HỎNG, để ngưỡng trên không bị nới dần cho tiện. Không có vế này thì
-  // `DUNG_SAI` có thể trôi lên tới mức nuốt trọn vùng quê mà bài test vẫn xanh, và lúc ấy nó chỉ
-  // còn là một dòng chữ. Hỏi thẳng: NẾU vùng quê bị để lại trong `blockers` thì phép đo này có bắt
-  // được không, và bắt được bao nhiêu khối?
-  const ngoaiO = deriveOutskirts({ era: 8, gridSize: 12 });
-  const soLotLuoi = ngoaiO.filter((it) => {
-    const { x, z } = cellToWorld(it.x, it.y, 12);
-    return Math.max(Math.abs(x), Math.abs(z)) > NUA_LUOI + DUNG_SAI;
-  }).length;
-  assert.ok(soLotLuoi > 100,
-    `chỉ ${soLotLuoi} khối vùng quê vượt ngưỡng ${NUA_LUOI + DUNG_SAI} — dung sai đã nới tới mức `
-    + 'gần như không còn bắt được ca hỏng. Ngưỡng này phải TÁCH được hai bên, không chỉ tồn tại.');
+  // ⚠️ GÁC CHẠY-RỖNG CHO CHÍNH PHÉP LỌC: `NGOAI_LUOI` rỗng thì assert (a) luôn xanh mà chẳng canh
+  // gì. Và phải có THỨ THẬT để lọc — nếu vùng quê không sinh ra khối nào thì luật này cũng rỗng.
+  assert.ok(NGOAI_LUOI.size > 0, '`NGOAI_LUOI` rỗng — phép lọc trên không loại được thứ gì');
+  assert.ok(nhomDaGap.size > 0, 'không nhóm nào được ghi nhận — vòng lặp trên chạy rỗng');
+  for (const nhom of nhomDaGap) {
+    assert.ok(!NGOAI_LUOI.has(nhom), `nhóm "${nhom}" vừa nằm trong vật cản vừa nằm ngoài lưới`);
+  }
+  const soKhoiQue = deriveOutskirts({ era: 8, gridSize: 12 }).length;
+  assert.ok(soKhoiQue > 100,
+    `vùng quê kỷ 8 chỉ sinh ${soKhoiQue} khối — quá ít để việc lọc chúng ra có ý nghĩa`);
 
-  // Và ghi lại biên thật, để lần sau ai đọc cũng thấy ngay khoảng cách giữa số đo và ngưỡng —
-  // "đo BIÊN của mọi lời hứa, đừng chỉ đọc xanh/đỏ" (Phase 9B).
+  // ⚠️ BIÊN THẬT, GHI LẠI ĐỂ ĐỌC CHỨ KHÔNG ĐỂ PHÁN XỬ ("đo BIÊN của mọi lời hứa", Phase 9B).
+  // Con số này CỐ Ý không còn là một cái cổng: đo 15 kỷ ở 80 phiên thì khối thành phố xa nhất là
+  // 6,880 còn khối vùng quê gần nhất là 6,001 — chồng nhau, nên một ngưỡng ở đây chỉ là trang trí.
+  // Hai vế dưới chỉ canh việc phép đo còn nhìn vào một thành phố CÓ THẬT: co lại bất thường (thành
+  // phố biến mất) hoặc phình quá xa (vùng quê đã lọt vào) đều đỏ, và cả hai đều cách số đo rất xa.
+  const NUA_LUOI = 12 / 2;
   assert.ok(xaNhat > NUA_LUOI - 1,
     `vật cản xa nhất chỉ ${xaNhat.toFixed(3)} — thành phố co lại bất thường, phép đo mất ngữ cảnh`);
+  assert.ok(xaNhat < NUA_LUOI * 2,
+    `vật cản xa nhất tới ${xaNhat.toFixed(3)} — xa gấp đôi nửa lưới thì không còn là công trình nữa`);
 });
 
 /**
@@ -706,12 +719,25 @@ test('⚠️ TRẦN HỘP BAO khối `city` — và nội thành PHẢI vẫn nh
     + `${NGUONG_HOP_BAO_CITY} — trần đã thành cái phễu. Vùng quê vừa bị thu lại? Hạ trần cho khớp `
     + 'số đo mới (kèm lý do), đừng để nguyên.');
 
-  // ⚠️ ĐỐI CHỨNG 2 — GIỮ ĐÚNG SỰ THẬT KIẾN TRÚC GỐC. Thứ Đàm muốn bảo tồn không phải con số 20,12
-  // mà là câu *"cả thành phố là một khối NHỎ"*. Vùng quê được phép rộng vì nó là cảnh nền; NHÀ thì
-  // không. Đo được 8,4836 (kỷ 9) ⇒ trần 9 là sát, không phải phễu.
-  assert.ok(lớnNhấtNộiThành <= 9,
+  // ⚠️ ĐỐI CHỨNG 2 — GIỮ ĐÚNG SỰ THẬT KIẾN TRÚC GỐC. Thứ Đàm muốn bảo tồn không phải một con số mà
+  // là câu *"cả thành phố là một khối NHỎ, nằm trong lưới 12×12"*. Vùng quê được phép rộng vì nó là
+  // cảnh nền; NHÀ thì không.
+  //
+  // ⚠️ VIẾT THÀNH QUAN HỆ, KHÔNG VIẾT THÀNH MỨC (bài học Phase 7D). Bản trước ghi thẳng `<= 9` —
+  // một con số không nhìn thấy cỡ lưới, nên nó vừa không nói được nó đang canh cái gì vừa đỏ oan
+  // nếu ai đổi `gridSize`. Mốc ĐÚNG là **nửa đường chéo lưới** (`√2 × gridSize / 2` = 8,4853): một
+  // căn nhà đứng ở đúng ô góc đã ở đó rồi, kể cả khi nó không nhô ra một li nào. Phần cho phép vượt
+  // là phần khối nhô khỏi tâm ô (mái đua, bệ kè) cộng chiều cao — đo 15 kỷ × 2 mốc tuổi ra
+  // **9,2275** (kỷ 13, 120 phiên), tức vượt nửa đường chéo đúng **8,7%**. Trần 15% chừa biên 1,7×.
+  //
+  // ⚠️ CON SỐ NÀY ĐÃ TĂNG Ở PHASE 20 (8,4836 → 9,2275) VÀ ĐÓ LÀ HỆ QUẢ ĐÚNG: bộ xương cũ để cả
+  // vành ngoài lưới làm đường nên nhà dừng ở ô 10; bộ xương sinh theo kỷ cho thửa chạm vành ngoài.
+  // Nhà vẫn nằm TRONG lưới — thứ đổi là nhà nay dùng hết cái lưới ấy.
+  const nuaDuongCheo = (Math.SQRT2 * 12) / 2;
+  assert.ok(lớnNhấtNộiThành <= nuaDuongCheo * 1.15,
     `nội thành (nhà + cảnh vật, KHÔNG tính vùng quê) đã phình tới ${lớnNhấtNộiThành.toFixed(4)} — `
-    + 'thành phố thật đang tràn ra ngoài lưới 12×12, mà lưới ấy là thứ ADR-007 khoá.');
+    + `quá ${(nuaDuongCheo * 1.15).toFixed(4)} (nửa đường chéo lưới ${nuaDuongCheo.toFixed(4)} + 15%). `
+    + 'Thành phố thật đang tràn ra ngoài lưới 12×12, mà lưới ấy là thứ ADR-007 khoá.');
 
   // ⚠️ VÀ ĐÂY LÀ MẮT XÍCH TRƯỚC NAY CÒN THIẾU (Phase 19, VIỆC 3). Con số 8,48 ở trên KHÔNG chỉ nói
   // về ADR-007 — nó cũng chính là con số quyết định KHUNG BÓNG ĐỔ có bó sát được hay không, vì
@@ -720,11 +746,12 @@ test('⚠️ TRẦN HỘP BAO khối `city` — và nội thành PHẢI vẫn nh
   // kính chứ không dùng bề ngang theo trục).
   //
   // Chỉ thị Phase 19 đề nghị "siết khung bóng xuống phạm vi thành phố". Phép đo ngay bên trên nói
-  // rằng nó ĐÃ ở đó: 8,4836 trên 9,00, dư 6%. Không có bài test nào từng phát biểu quan hệ ấy, nên
+  // rằng nó ĐÃ ở đó: nay 9,2275 trên 9,60, dư 4% (Phase 20 nới `reach` 0,75 → 0,80 vì con số bên
+  // trái đã vượt 9,00 — xem `SHADOW_MAP_DESKTOP`). Không có bài test nào từng phát biểu quan hệ ấy, nên
   // hai con số có thể trôi khỏi nhau trong im lặng — hoặc phase sau làm nhà to ra và bóng bắt đầu
   // cụt ở góc lưới, hoặc ai đó siết `reach` cho "nét hơn" rồi cũng thế. Hai vế dưới đây khoá cả hai
   // chiều: KHÔNG ĐƯỢC THIẾU (bóng cụt) và KHÔNG ĐƯỢC THỪA QUÁ (phí điểm ảnh bản đồ bóng).
-  const reachBong = 12 * 0.75;   // đúng công thức ở `createCityScene`: `gridSize * 0.75`
+  const reachBong = 12 * 0.8;   // đúng công thức ở `createCityScene`: `gridSize * 0.8`
   assert.ok(lớnNhấtNộiThành <= reachBong,
     `khung bóng đổ chỉ với tới ${reachBong} mà khối đổ bóng xa nhất ở ${lớnNhấtNộiThành.toFixed(4)} `
     + '— nhà ở góc lưới sẽ bị CỤT BÓNG, và chuyện đó không có gì đỏ lên ngoài bài này.');

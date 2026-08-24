@@ -166,13 +166,27 @@ test('TECH_DEBT #57 ĐÃ ĐÓNG — 6 kỷ vượt cổng 5% THEO PHÉP TIA; 3 k
   // 1,62 lần cỡ lưới), mà mặt nước thì nằm NGOÀI thành phố — lùi ra bao nhiêu thì nước lọt vào
   // khung thêm bấy nhiêu. Đây là hệ quả thật, không phải phép đo trôi: cùng công cụ, cùng số tia.
   // ⇒ `TECH_DEBT #67` (ĐỊA HÌNH CHE) nay còn 2·3·4·9, không còn kỷ 5.
-  assert.deepEqual(TRUOT, [2, 3, 4, 6, 7, 9, 10],
-    'đúng BẢY kỷ được miễn cổng 5% theo phép tia — 6·7·10 vì BỀ RỘNG (`TECH_DEBT #59`) và '
-    + '2·3·4·9 vì ĐỊA HÌNH CHE (`TECH_DEBT #67`, chờ Đàm). Danh sách này đổi nghĩa là hoặc có kỷ '
-    + 'thứ tám vừa tụt xuống, hoặc một trong bảy kỷ ấy vừa được chữa — cả hai trường hợp đều phải '
+  //
+  // ⚠️ 2026-08-24, PHASE 21 (hợp nhất) — **KỶ 5 QUAY LẠI, VÀ NÓ QUAY LẠI ĐÚNG CHỖ CŨ: 7,30% →
+  // 3,63%.** Nguyên nhân đã truy chứ không đoán: bản hợp nhất cho ranh giới thửa đi theo CUNG, mà
+  // `terrain.js` san phẳng dải đất dưới chân MẠNG ĐƯỜNG (`roadCellCandidates`) — đường đổi thì
+  // hình dạng đồng bằng quanh thành phố đổi theo, và bờ XA của con suối Elzbach lại khuất sau một
+  // sống đất gần. Tức đây vẫn là chứng **ĐỊA HÌNH CHE** (`TECH_DEBT #67`), không phải chứng
+  // **BỀ RỘNG** (`TECH_DEBT #59`, đã đóng cho 6·7·10) — cùng cơ chế đã đẩy nó xuống 3,51% hồi
+  // 2026-08-21 và cùng cơ chế đã kéo nó lên 7,30% hồi Phase 19 VIỆC 5.
+  //
+  // ⚠️ Đây là lần thứ TƯ kỷ 5 đổi phe (5,54 → 3,51 → 7,30 → 3,63), và điều đáng đọc ra là: nó
+  // KHÔNG có bệnh riêng của nó, nó chỉ đứng đúng ở ranh giới nên mọi thay đổi về địa hình đều lật
+  // được nó. Chữa nó bằng cách chỉnh riêng kỷ 5 là chữa triệu chứng; cách chữa THẬT vẫn là hướng
+  // ở `TECH_DEBT #60` (cầu · bến · thuyền · kè thay cho diện tích mặt nước).
+  // ⚠️ VÀ KHÔNG NỚI CỔNG 5%, KHÔNG QUAY `drain`/đồng bằng về giá trị cũ để lấy lại con số.
+  assert.deepEqual(TRUOT, [2, 3, 4, 5, 6, 7, 9, 10],
+    'đúng TÁM kỷ được miễn cổng 5% theo phép tia — 6·7·10 vì BỀ RỘNG (`TECH_DEBT #59`) và '
+    + '2·3·4·5·9 vì ĐỊA HÌNH CHE (`TECH_DEBT #67`, chờ Đàm). Danh sách này đổi nghĩa là hoặc có kỷ '
+    + 'thứ chín vừa tụt xuống, hoặc một trong tám kỷ ấy vừa được chữa — cả hai trường hợp đều phải '
     + 'xem lại hai mục nợ ấy chứ không phải sửa con số ở đây.');
-  assert.equal(DAT.length, 7,
-    'phải có đúng 7 kỷ vượt 5% THEO PHÉP TIA. ⚠️ KHÔNG phải "7 kỷ đạt cổng 5%" — trên màn hình '
+  assert.equal(DAT.length, 6,
+    'phải có đúng 6 kỷ vượt 5% THEO PHÉP TIA. ⚠️ KHÔNG phải "6 kỷ đạt cổng 5%" — trên màn hình '
     + 'còn ít hơn (xem khối chú thích đầu bài và `TECH_DEBT #63`).');
 
   // Vế thật sự canh bản vá `worldYaw`: 11 kỷ kia phải THẬT SỰ đạt.
@@ -191,6 +205,9 @@ test('TECH_DEBT #57 ĐÃ ĐÓNG — 6 kỷ vượt cổng 5% THEO PHÉP TIA; 3 k
   //     với 8,81%** — biên dày lên 76%. Nghe như một tin tốt, nhưng nó là tin tốt của một nhóm đã
   //     mất ba thành viên: nhóm ĐẠT thu từ 9 xuống 6 kỷ. **Biên dày lên vì những ca mỏng đã bị loại
   //     ra khỏi phép đo, không vì ca nào khoẻ lên.** Ghi thẳng ra để phiên sau khỏi đọc nhầm.
+  //   · sau hợp nhất Phase 21, kỷ mỏng nhất còn lại là **kỷ 12 với 8,64%**. Nhóm ĐẠT thu tiếp từ
+  //     7 xuống 6 kỷ (kỷ 5 rơi ra), nên đây lại là cùng một hiện tượng: biên không dày lên, chỉ có
+  //     ca mỏng bị loại ra khỏi phép đo.
   const mongNhat = Math.min(...DAT.map((era) => doDuoc.get(era)));
   assert.ok(mongNhat >= CONG,
     `kỷ mỏng nhất trong nhóm ĐẠT chỉ được ${(mongNhat * 100).toFixed(2)}%`);

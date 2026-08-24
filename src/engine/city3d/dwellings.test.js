@@ -5,52 +5,57 @@
  * đường, hay nhà mọc trước cả công trình đầu tiên. Không cái nào làm đỏ build hay lint — bố cục vẫn
  * hợp lệ, chỉ là sai. Chúng chỉ lộ ra khi có người ngồi nhìn ảnh chụp, mà ảnh chụp thì không chạy
  * trong CI.
+ *
+ * ── VÌ SAO CẢ FILE NÀY ĐÃ ĐỔI SANG "THEO KỶ" (2026-08-24, Phase 20) ──────────────────────────────
+ * Trước Phase 20, danh sách ô đất trống là MỘT hằng số 30 ô dùng chung cho cả 15 kỷ, vì bộ xương
+ * đường sá cũng là một hằng số. Nay bộ xương được SINH RA theo kỷ (`cityPlan.js`), nên số ô xây
+ * được đi từ 22 tới 49 tuỳ kỷ. Mọi bài dưới đây vì thế phải hỏi TỪNG KỶ MỘT — hỏi một kỷ rồi suy ra
+ * cho 14 kỷ kia đúng là cái bẫy đã sinh ra `TECH_DEBT #38` (một trần đo trên ba kỷ được đọc thành
+ * luật của cả mười lăm).
  */
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
-  SESSIONS_PER_DWELLING, districtAt, densityCap, deriveDwellings,
-  dwellingPlotCount, dwellingPlots, sessionsToNextDwelling,
+  SESSIONS_PER_DWELLING, dwellingPlots, dwellingPlotCount,
+  districtAt, densityCap, deriveDwellings, sessionsToNextDwelling,
 } from './dwellings';
-import { CITY_GRID_SIZE, isBuildingZone } from '../cityGrid';
-import { buildRoadPlan } from '../roadPlan';
-import { getNetworkStyle } from './networkStyle';
+import { planIsRoad, planIsWonderZone, planIsPlaza } from './cityPlan';
+import { CITY_GRID_SIZE } from '../cityGrid';
 import { computeCityLayout } from '../cityLayout';
 import { BLUEPRINT_CATALOG } from '../constants';
 
 const ERAS = Array.from({ length: 15 }, (_, i) => i + 1);
 const key = (c) => `${c.x},${c.y}`;
 
-test('Ô ĐẤT TRỐNG: không ô nào nằm trên đường hay trong khu đất kỳ quan — ĐỦ 15 KỶ', () => {
-  // ⚠️ NAY PHẢI DUYỆT CẢ 15 KỶ. Trước ADR-059 danh sách ô đất là một hằng số cấp module nên hỏi
-  // một lần là đủ; nay mỗi kỷ có một mạng đường riêng, nên "ô này có nằm trên đường không" là một
-  // câu hỏi THEO KỶ. Hỏi bằng `isRoadLine` (bàn cờ cũ) thì bài test canh một thành phố không còn
-  // tồn tại — và nó sẽ XANH trong khi nhà dân mọc giữa lòng đường ở 14/15 kỷ.
+test('Ô ĐẤT TRỐNG: không ô nào nằm trên đường, trong khu đất kỳ quan, hay giữa quảng trường', () => {
+  let soKy = 0;
   for (const era of ERAS) {
     const plots = dwellingPlots(era);
-    assert.ok(plots.length > 0, `kỷ ${era}: không còn ô đất nào`);
-    const duong = new Set(
-      buildRoadPlan(era, getNetworkStyle(era)).cells.map((c) => `${c.x}|${c.y}`),
-    );
+    assert.ok(dwellingPlotCount(era) > 0, `kỷ ${era} không có ô đất nào`);
     for (const plot of plots) {
-      assert.ok(!duong.has(`${plot.x}|${plot.y}`), `kỷ ${era}: ô (${plot.x},${plot.y}) nằm trên đường`);
-      assert.ok(!isBuildingZone(plot.x, plot.y), `kỷ ${era}: ô (${plot.x},${plot.y}) lấn khu đất kỳ quan`);
+      assert.ok(!planIsRoad(era, plot.x, plot.y), `kỷ ${era}: ô (${key(plot)}) nằm trên đường`);
+      assert.ok(!planIsWonderZone(era, plot.x, plot.y), `kỷ ${era}: ô (${key(plot)}) lấn đất kỳ quan`);
+      assert.ok(!planIsPlaza(era, plot.x, plot.y), `kỷ ${era}: ô (${key(plot)}) lấn quảng trường`);
       assert.ok(plot.x >= 0 && plot.x < CITY_GRID_SIZE && plot.y >= 0 && plot.y < CITY_GRID_SIZE);
     }
     // Không ô nào trùng ô nào — hai căn nhà chồng lên nhau là lỗi im lặng nhất trong cả file này.
-    assert.equal(new Set(plots.map(key)).size, plots.length, `kỷ ${era}: có ô trùng`);
+    assert.equal(new Set(plots.map(key)).size, dwellingPlotCount(era));
+    soKy += 1;
   }
+  assert.equal(soKy, 15, 'gác chạy-rỗng: vòng lặp phải duyệt đủ 15 kỷ');
 });
 
-test('BA KHU ĐỀU CÓ THẬT — không khu nào rỗng', () => {
+test('BA KHU ĐỀU CÓ THẬT ở MỌI KỶ — không kỷ nào mất hẳn một khu', () => {
   // ⚠️ Đàm yêu cầu đích danh "ngoại vi → khu dân cư → trung tâm → landmark". Nếu một ngưỡng bị
   // chỉnh lệch thì một khu có thể biến mất sạch mà mọi bài test khác vẫn xanh, và thành phố lại
   // thành "rải rác ngẫu nhiên" — đúng thứ anh nói là KHÔNG được.
-  // ⚠️ VÀ NAY PHẢI ĐÚNG Ở CẢ 15 KỶ — đây chính là bài test bắt được hồi quy của ADR-059: mạng
-  // đường mới mở lại phần giữa lưới, nên nếu khu vẫn chia theo KHOẢNG CÁCH TUYỆT ĐỐI thì cả 17
-  // căn của kỷ 1 rơi hết vào `civic` và hai khu kia biến mất. Xem `khuTheoHang` ở `dwellings.js`.
+  //
+  // ⚠️ Nay phải hỏi TỪNG KỶ, vì mỗi kỷ có một bộ xương đường riêng: một bố cục lỡ trải đường phủ
+  // kín vành trong sẽ xoá sạch khu "civic" của ĐÚNG kỷ ấy, còn 14 kỷ kia vẫn đủ ba khu. Biên hiện
+  // hẹp nhất là 1 ô (kỷ 6 và kỷ 9 chỉ có đúng một ô "civic") — nên bài này thật sự có răng.
+  let soKy = 0;
   for (const era of ERAS) {
     const byDistrict = new Map();
     for (const plot of dwellingPlots(era)) {
@@ -60,7 +65,9 @@ test('BA KHU ĐỀU CÓ THẬT — không khu nào rỗng', () => {
       assert.ok(byDistrict.get(d) > 0, `kỷ ${era}: khu "${d}" không có ô nào`);
     }
     assert.equal([...byDistrict.values()].reduce((a, b) => a + b, 0), dwellingPlotCount(era));
+    soKy += 1;
   }
+  assert.equal(soKy, 15, 'gác chạy-rỗng: vòng lặp phải duyệt đủ 15 kỷ');
 });
 
 test('KHU ĐI THEO KHOẢNG CÁCH TỚI TÂM, không đảo lộn', () => {
@@ -98,22 +105,36 @@ test('MỖI 2 PHIÊN THÊM MỘT CĂN — và câu đếm ngược khớp với 
   assert.ok(SESSIONS_PER_DWELLING >= 1);
 });
 
-test('TRẦN MẬT ĐỘ: kỷ càng hiện đại càng dày, và không bao giờ vượt số ô đất có thật', () => {
-  let prevDense = 0;
+test('TRẦN MẬT ĐỘ: đo bằng TỈ LỆ lấp đầy, không bằng số ô đếm được', () => {
+  // ⚠️ BÀI NÀY ĐÃ ĐỔI CÁCH HỎI Ở PHASE 20, và lý do chính là bài học đã ghi trong `CLAUDE.md`:
+  // *"một con số tuyệt đối không diễn đạt được MẬT ĐỘ trong một không gian hữu hạn"*. Trước đây
+  // mọi kỷ có chung 30 ô đất nên số ô đếm được VÀ tỉ lệ lấp đầy là một; nay mẫu số đi từ 22 (kỷ 15,
+  // nhiều đường + vành đai) tới 49 (kỷ 14), nên kỷ 15 dày ĐẶC (lấp 100% đất trống) mà vẫn ra ÍT ô
+  // hơn kỷ 1 thưa thoáng (lấp 56%). Hỏi bằng số ô là hỏi nhầm đại lượng.
+  let prevRatio = 0;
+  let soKy = 0;
   for (const era of ERAS) {
     const cap = densityCap(era);
-    assert.ok(cap > 0 && cap <= dwellingPlotCount(era), `kỷ ${era} trần ${cap} vô lý`);
+    const plots = dwellingPlotCount(era);
+    assert.ok(cap > 0 && cap <= plots, `kỷ ${era} trần ${cap} vô lý trên ${plots} ô đất`);
     assert.equal(deriveDwellings({ era, buildingCount: 5, sessionCount: 100000 }).length, cap,
       `kỷ ${era} không dừng ở trần mật độ`);
+    const ratio = cap / plots;
     if (era > 1) {
       // Không đòi tăng nghiêm ngặt (kỷ 12 thời chiến thưa hơn kỷ 11 là có chủ đích), chỉ đòi
       // đầu và cuối hành trình phải khác nhau rõ.
-      assert.ok(cap >= prevDense - 3, `kỷ ${era} thưa hụt hẳn so với kỷ trước`);
+      assert.ok(ratio >= prevRatio - 0.05,
+        `kỷ ${era} lấp ${(ratio * 100).toFixed(0)}% — thưa hụt hẳn so với kỷ trước ${(prevRatio * 100).toFixed(0)}%`);
     }
-    prevDense = cap;
+    prevRatio = ratio;
+    soKy += 1;
   }
-  assert.ok(densityCap(15) > densityCap(1) * 1.4,
-    'kỷ 15 phải dày hơn kỷ 1 rõ rệt — nếu không thì 15 kỷ đọc ra cùng một mật độ');
+  assert.equal(soKy, 15, 'gác chạy-rỗng: vòng lặp phải duyệt đủ 15 kỷ');
+
+  const r1 = densityCap(1) / dwellingPlotCount(1);
+  const r15 = densityCap(15) / dwellingPlotCount(15);
+  assert.ok(r15 > r1 * 1.4,
+    `kỷ 15 lấp ${(r15 * 100).toFixed(0)}% còn kỷ 1 lấp ${(r1 * 100).toFixed(0)}% — phải khác nhau rõ rệt, nếu không thì 15 kỷ đọc ra cùng một mật độ`);
 });
 
 test('TẤT ĐỊNH: cùng đầu vào cho ra cùng thành phố, mãi mãi', () => {
@@ -131,10 +152,25 @@ test('TẤT ĐỊNH: cùng đầu vào cho ra cùng thành phố, mãi mãi', ()
   assert.deepEqual(later.slice(0, early.length), early, 'nhà cũ bị xáo chỗ khi thành phố lớn lên');
 });
 
+test('DANH SÁCH Ô ĐẤT KHÔNG BIẾT TIẾN ĐỘ — gọi kèm dữ liệu rác vẫn ra y hệt (ADR-007)', () => {
+  // ⚠️ `dwellingPlots` nhận `era` và CHỈ `era`. "Hàm hiện không nhận tham số đó" là một sự thật rất
+  // dễ mất: người sau chỉ cần thêm một tham số tuỳ chọn là bất biến chết mà mọi test vẫn xanh. Cách
+  // khoá rẻ nhất (Phase 7B) là gọi kèm dữ liệu rác rồi đòi kết quả Y HỆT lần gọi sạch.
+  let soKy = 0;
+  for (const era of ERAS) {
+    const sach = JSON.stringify(dwellingPlots(era));
+    const rac = JSON.stringify(dwellingPlots(era, { built: ['a', 'b'], sessionCount: 999, buildings: [1, 2, 3] }));
+    assert.equal(rac, sach, `kỷ ${era}: danh sách ô đất đổi khi có dữ liệu tiến độ`);
+    soKy += 1;
+  }
+  assert.equal(soKy, 15, 'gác chạy-rỗng: vòng lặp phải duyệt đủ 15 kỷ');
+});
+
 test('ĐỐI CHỨNG TOÀN LƯỚI: nhà dân · công trình · giàn giáo · cảnh vật không ai đứng đè ai', () => {
   // ⚠️ Bài quan trọng nhất file. Sáu bài trên canh `dwellings.js` một mình; bài này dựng cả bố cục
   // thật qua `computeCityLayout` và đếm ô — đúng bài học "test tầng engine chứng minh hàm chạy
   // đúng, không chứng minh hàm được nối đúng" (Phase 4H).
+  let soKy = 0;
   for (const era of ERAS) {
     const ids = (BLUEPRINT_CATALOG[era] ?? []).map((b) => b.id);
     const layout = computeCityLayout({
@@ -157,14 +193,11 @@ test('ĐỐI CHỨNG TOÀN LƯỚI: nhà dân · công trình · giàn giáo · 
     for (const p of layout.props) claim(p, 'cảnh vật');
 
     assert.ok(layout.dwellings.length > 0, `kỷ ${era} không có nhà dân nào`);
-    // ⚠️ Hỏi mạng đường CỦA CHÍNH KỶ ẤY, không hỏi bàn cờ cũ (`isRoadLine`). Sau ADR-059 mỗi kỷ
-    // một mạng riêng, nên một phép hỏi theo hằng số sẽ xanh trong khi nhà mọc giữa lòng đường.
-    const duong = new Set(
-      buildRoadPlan(era, getNetworkStyle(era)).cells.map((c) => `${c.x}|${c.y}`),
-    );
     for (const h of layout.dwellings) {
-      assert.ok(!duong.has(`${h.x}|${h.y}`), `kỷ ${era}: nhà dân (${key(h)}) nằm giữa đường`);
-      assert.ok(!isBuildingZone(h.x, h.y), `kỷ ${era}: nhà dân (${key(h)}) lấn đất kỳ quan`);
+      assert.ok(!planIsRoad(era, h.x, h.y), `kỷ ${era}: nhà dân (${key(h)}) nằm giữa đường`);
+      assert.ok(!planIsWonderZone(era, h.x, h.y), `kỷ ${era}: nhà dân (${key(h)}) lấn đất kỳ quan`);
     }
+    soKy += 1;
   }
+  assert.equal(soKy, 15, 'gác chạy-rỗng: vòng lặp phải duyệt đủ 15 kỷ');
 });

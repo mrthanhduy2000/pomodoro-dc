@@ -238,6 +238,45 @@ tuyệt đối (**4,86 × 10⁻¹⁷ ô** trên 210 tổ hợp) nên ADR-007 (v�
 - **Tương thích**: không đổi API, không đổi dữ liệu, không đổi hình ảnh. Chỉ test + tài liệu + một
   khối chú thích.
 
+## 2026-08-24 — Phase 20: BỎ LƯỚI CỨNG, bộ xương thành phố SINH THEO KỶ (ADR-060)
+
+- **Mục đích**: Đàm nhìn bản quét rồi nói *"nhà vẫn quy hoạch rất kỳ quặc, rất bài bản và xếp chồng
+  lên nhau"* · *"cho tôi một sự sắp xếp thành phố ngẫu nhiên và mang tính đặc thù, không phải cứ
+  3x3 được, nó phải nhiều thứ và đa dạng hơn"*. Chẩn đoán: cả 15 kỷ dùng **chung một bộ xương**
+  (`ROAD_LINES = {0,4,8,11}` + 5 khu kỳ quan 3×3), và **không thứ nào trong đó phụ thuộc kỷ**. Mọi
+  phase trước đều sửa thứ nằm TRONG một ô nên bộ xương chưa bao giờ đổi — mà bộ xương mới là thứ
+  mắt đọc ra ĐẦU TIÊN khi nhìn từ trên cao.
+- **Phạm vi**:
+  1. **`city3d/networkStyle.js` (BẢNG)** — 15 kỷ × 5 trục: `plan` (`organic`/`axial`/`grid`) ·
+     `parcels` (6…14 thửa) · `sizeVary` (0,05…0,86) · `ring` · `minSide`. Mỗi dòng buộc vào
+     `country` mà `eraStyle.js` khai, có test bắt. ⚠️ *"Kỳ quan chọn thửa nào"* và *"bao nhiêu thửa
+     để trống"* **cố ý KHÔNG có cột riêng** — cái đầu suy từ `plan`, cái sau suy từ số thửa dôi ra;
+     một cột riêng sẽ cho phép khai những tổ hợp vô nghĩa (`grid` + "gần nước nhất") mà không gì bắt.
+  2. **`city3d/cityPlan.js` (HÌNH)** — **chia đôi đệ quy lệch tâm (BSP)** ra danh sách THỬA ĐẤT.
+     Chọn BSP chứ không Voronoi vì ranh giới Voronoi XIÊN, mà cả tầng dựng mặt đường chỉ nói được
+     tiếng "ô thẳng trục" — BSP tái dùng nguyên tầng ấy.
+  3. **Đường là RANH GIỚI THỬA, không phải hàng và cột** — và nó là **HỆ QUẢ, không phải một cột
+     của bảng**: mỗi nhát cắt chừa lại một hàng/cột làm lối đi ⇒ số ô đường tự đi từ hằng số **80**
+     sang **34…92 tuỳ kỷ (trung bình 59,7)**, không ai phải chọn tay 15 con số.
+  4. **Kỳ quan CHIẾM THỬA**, không còn khu 3×3. `BUILDING_ZONES` · `ROAD_LINES` · `ROAD_MAIN_AXIS` ·
+     `ROAD_CROSS_AXIS` · `RING_LOW`/`RING_HIGH` **đã xoá hẳn**; `cityGrid.js` nay chỉ còn đúng một
+     câu (`CITY_GRID_SIZE = 12`).
+  5. **ADR-007 khoá bằng hai bài**: gọi kèm **dữ liệu rác** (`built`/`sessionCount`/`buildings`) đòi
+     kết quả trùng từng byte, và **liệt kê đủ 1…120 phiên × 15 kỷ**.
+  6. **Nghiệm thu bằng số, không bằng mắt**: độ đối xứng bốn chiều của ô kỳ quan **100,0% → tối đa
+     20,0%** (và **9,6%** nếu bỏ ba kỷ `grid`, nơi đối xứng là ĐÚNG). Thang lấy 0% là mức trùng hợp
+     ngẫu nhiên, và nó tự nghiệm thu: thứ vốn đối xứng hoàn hảo đo ra đúng 100,0%.
+- **Ảnh hưởng — MỘT CÁI GIÁ PHẢI ĐÀM QUYẾT, KHÔNG PHẢI TÔI**: bộ xương mới **DỜI công trình đã xây**.
+  Không kiểm được bản lưu thật của Đàm từ hộp cát này (Supabase bị proxy chặn), nhưng theo bản quy
+  hoạch mới thì **75/75 công trình (5 mỗi kỷ × 15 kỷ) sẽ đổi chỗ**. ADR-007 chỉ hứa *"từ nay không
+  dời"*; việc đổi bộ xương thì tự nó là một lần dời. Ghi ở phần Trade-off của ADR-060.
+- **Phụ**: trục CHẶNG NGÀY của bản quét **11,33 → 12,44** (qua lại ngưỡng mắt 12, 0/15) và trục KỶ
+  **19,18 → 21,77** · trung vị **36,31 → 38,48** (0/105). ⚠️ Nhưng `TECH_DEBT #86` **VẪN MỞ**: tách
+  ba dải cho thấy toàn bộ phần tăng nằm ở dải ĐẤT (+2,37), còn **dải TRỜI — cái cần gạt đã nêu đích
+  danh — gần như không nhúc nhích** (4,12 → 4,05) và dải THÀNH PHỐ còn **tệ đi** (6,51 → 5,56).
+  Cổng qua nhờ một dải chẳng liên quan; đó không phải lời giải cho #86.
+- **Tương thích**: không đụng state, không đụng schema, không migration. Chỉ tầng bố cục + hình ảnh.
+
 ## 2026-08-24 — Phase 19: khối kiến trúc, bóng đổ, khung hình (ADR-062/063/061)
 
 - **Mục đích**: Đàm nhìn kỷ 1 · 2 · 14 và nói *"đường có nét đứt trông giả tạo kinh khủng · kim tự
@@ -262,7 +301,7 @@ tuyệt đối (**4,86 × 10⁻¹⁷ ô** trên 210 tổ hợp) nên ADR-007 (v�
   lần đầu xuống dưới ngưỡng mắt 12. Đã **tách một biến** để biết ai tiêu tiền: cây có đủ 4 việc mỹ
   thuật nhưng hoàn tác riêng khung hình ra **14,23** ⇒ bốn việc kia tốn 0,16, **2,90 là của riêng
   phép lùi khung**. Nguyên nhân là pha loãng (`TECH_DEBT #22`), không phải 15 kỷ giống nhau hơn.
-  ⇒ Ghi thành `TECH_DEBT #79` với **ba hướng cho Đàm chọn**; không tự chọn, không nới ngưỡng.
+  ⇒ Ghi thành `TECH_DEBT #86` với **ba hướng cho Đàm chọn**; không tự chọn, không nới ngưỡng.
 - **Tương thích**: không đụng state, không đụng schema, không migration. Chỉ tầng hình ảnh.
 
 ---

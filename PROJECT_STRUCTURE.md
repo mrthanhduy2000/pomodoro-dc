@@ -110,21 +110,20 @@
 │   │   ├── hashId.js          # FILE LÁ: băm tất định FNV-1a. KHÔNG import gì — đó là điểm chính.
 │   │   │                     #   Tách khỏi cityLayout.js ở Phase 7C để cắt vòng import
 │   │   │                     #   cityLayout ↔ city3d/dwellings. cityLayout TÁI XUẤT, không chép.
-│   │   ├── cityGrid.js        # FILE LÁ: hợp đồng về mảnh đất — lưới 12×12, 5 khu đất đã hứa cho
-│   │   │                     #   kỳ quan (BUILDING_ZONES). Cùng lý do tách như hashId.js. Sai lệch
-│   │   │                     #   giữa hai bên = nhà mọc đè kỳ quan, IM LẶNG. ⚠️ `ROAD_LINES` chỉ
-│   │   │                     #   còn là DI SẢN của mạng bàn cờ trước ADR-059 — mạng đường nay do
-│   │   │                     #   `roadPlan.js` sinh theo kỷ.
-│   │   ├── roadPlan.js        # BỘ SINH MẠNG ĐƯỜNG THEO KỶ (ADR-059) — hàm THUẦN của DUY NHẤT
-│   │   │                     #   `era`, có memo. Nối các ĐIỂM MỐC (5 khu kỳ quan · tâm · cửa ngõ)
-│   │   │                     #   bằng những CUNG CONG (`arcTrace`) ⇒ giao lộ chữ T/Y/ngã năm thay
-│   │   │                     #   vì 16 ngã tư vuông góc. 5 kiểu khung: bàn cờ · xương sống · mạng
-│   │   │                     #   rối · nan quạt+vòng · thềm dốc. `wonderAnchor` (nguồn DUY NHẤT
-│   │   │                     #   cho vị trí kỳ quan — `placeBuilding` GỌI nó, không chép lại) ·
-│   │   │                     #   `tiaMangDuong` (bỏ ô làm mặt đường phình thành SÂN LÁT, chừa
-│   │   │                     #   vành đai) · `vaLienThong`. ⚠️ KHÔNG được phụ thuộc tiến độ:
-│   │   │                     #   terrain.js san cao độ theo nó (ADR-007). File LÁ, không import
-│   │   │                     #   ngược lên cityLayout.
+│   │   ├── cityGrid.js        # FILE LÁ: nay CHỈ còn ĐÚNG MỘT câu — `CITY_GRID_SIZE = 12`.
+│   │   │                     #   ⚠️ Phase 20 GỠ `BUILDING_ZONES` · `ROAD_MAIN/CROSS_AXIS` ·
+│   │   │                     #   `RING_LOW/HIGH` · `ROAD_LINES`: bốn hằng số ấy KHÔNG phụ thuộc kỷ
+│   │   │                     #   nên cả 15 kỷ dùng chung một bộ xương (4 khu kỳ quan ở góc đo ra
+│   │   │                     #   ĐÚNG 100% đối xứng bốn chiều). Bộ xương nay SINH THEO KỶ ở
+│   │   │                     #   city3d/cityPlan.js. Con số 12 ở lại đây vì cả cityPlan lẫn
+│   │   │                     #   cityLayout/dwellings đều cần, và file lá thì không tạo vòng import.
+│   │   ├── roadPlan.js        # HỘP ĐỒ NGHỀ CUNG CONG (ADR-059, thu gọn ở Phase 21). Nay KHÔNG còn
+│   │   │                     #   sinh bố cục — nó chỉ trả lời MỘT câu: *"nối A với B thì con đường
+│   │   │                     #   ấy đi qua những ô nào, và nó cắt qua mỗi ranh giới ở chỗ nào?"*
+│   │   │                     #   `arcTrace` · `gom` · `vaLienThong` · `tiaMangDuong` · `gates`.
+│   │   │                     #   ⚠️ Phase 21 XOÁ `buildRoadPlan` + 5 bộ dựng khung + `wonderAnchor`:
+│   │   │                     #   chúng kẻ đường từ 5 khu kỳ quan CỐ ĐỊNH, tức chính "vẻ quy hoạch"
+│   │   │                     #   mà Đàm bác. Câu *"đất chia thế nào"* nay ở city3d/cityPlan.js.
 │   │   ├── cityLayout.js      # THÀNH PHỐ PIXEL: suy ra bố cục từ danh sách công trình (băm tất
 │   │   │                     #   ⚠️ `roadCellCandidates(era)` = tập ỨNG VIÊN đường CỦA MỘT KỶ (từ
 │   │   │                     #   ADR-059 nó KHÔNG còn là hằng số cấp module), ĐỪNG nhầm với mạng
@@ -156,6 +155,31 @@
 │   │   │                     #   ⚠️ Trả `null` khi không có gì thật để nói — thà im lặng còn hơn
 │   │   │                     #   một câu chúc mừng rỗng (cùng luật chống-bịa với AI Coach)
 │   │   ├── city3d/            # Logic THUẦN của bộ vẽ 3D — cấm import three, cấm DOM
+│   │   │   ├── networkStyle.js    # BẢNG BỘ XƯƠNG THÀNH PHỐ, 15 kỷ — khuôn ba lớp lần thứ TÁM,
+│   │   │   │                      #   HỢP NHẤT hai nhánh ở Phase 21 (ADR-064). Tám trục:
+│   │   │   │                      #   · `plan` grid/axial/organic/terrace/radial — tính cách bố cục
+│   │   │   │                      #   · `bend` độ cong từng con đường · `tangle` độ rối (ADR-059)
+│   │   │   │                      #   · `arms` số đường chính · `loops` số vòng khép kín
+│   │   │   │                      #   · `diagonal` Broadway (CHỈ kỷ 11, có test đếm)
+│   │   │   │                      #   · `parcels` số thửa · `sizeVary` độ chênh cỡ thửa
+│   │   │   │                      #   · `minSide` khu phố sâu bao nhiêu (ADR-060)
+│   │   │   │                      #   ⚠️ ĐÃ BỎ `coil`/`ragged` ở ADR-059 — cả hai chỉ đổi được MÉP
+│   │   │   │                      #   một đoạn đường, và `ragged` chính là thứ Đàm gọi là "lồi lõm".
+│   │   │   │                      #   `country` khoá cứng vào eraStyle.js BẰNG TEST. Validator TỪ
+│   │   │   │                      #   CHỐI THẲNG dòng khai `parcels` vượt `parcelCapacity` — không
+│   │   │   │                      #   tự làm tròn (bẫy `MIN_STONE`). Hình dựng ở city3d/cityPlan.js.
+│   │   │   ├── parcelCapacity.js  # FILE LÁ: trần số thửa `(minSide+1)·k − 1 ≤ L` + `canSplitRegion`.
+│   │   │   │                      #   ⚠️ CHỦ SỞ HỮU DUY NHẤT của câu "vùng này còn cắt được không" —
+│   │   │   │                      #   đừng viết lại luật ấy bằng công thức thứ hai ở cityPlan.js.
+│   │   │   ├── cityPlan.js        # HÌNH của bộ xương: chia đôi đệ quy LỆCH TÂM (BSP) → thửa đất.
+│   │   │   │                      #   ⚠️ ĐẦU VÀO CHỈ CÓ `era` — không built/sessionCount/buildings.
+│   │   │   │                      #   Đó là điều kiện sống còn của ADR-007, khoá bằng test gọi kèm
+│   │   │   │                      #   DỮ LIỆU RÁC + quét 1…120 phiên × 15 kỷ.
+│   │   │   │                      #   ⚠️ ĐƯỜNG LÀ RANH GIỚI THỬA: số ô đường là HỆ QUẢ của số thửa,
+│   │   │   │                      #   KHÔNG có bảng "kỷ này bao nhiêu ô đường" (một hệ quả không
+│   │   │   │                      #   trôi được khỏi thứ sinh ra nó; một bảng thứ hai thì có).
+│   │   │   │                      #   Chọn BSP chứ không Voronoi vì Voronoi cho ranh giới XIÊN mà
+│   │   │   │                      #   cả tầng dựng đường chỉ biết ô vuông — xem ADR-060.
 │   │   │   ├── renderMode.js      # Luật chọn 3D/2D (FAIL-CLOSED: không chắc → 2D)
 │   │   │   ├── renderLoop.js      # Nhịp khung hình: đứng yên = 0 nhịp rAF + trần FPS khi có hoạt hoạ
 │   │   │   ├── orbit.js           # Toán camera xoay (tự viết, KHÔNG dùng OrbitControls). Từ VIỆC 2
@@ -361,13 +385,6 @@
 │   │   │   │                      #   cả. Bảng 15 MỐC LỆNH VẼ riêng từng kỷ (ADR-028) + đối chứng.
 │   │   │   │                      #   Chạy được trong `npm test` nhờ quan hệ ĐO ĐƯỢC
 │   │   │   │                      #   `lệnh vẽ thành phố = (số họ vật liệu) + 4`, đúng 15/15 kỷ
-│   │   │   ├── networkStyle.js   # BẢNG HÌNH THÁI MẠNG ĐƯỜNG 15 KỶ (ADR-058 → ADR-059): kiểu khung
-│   │   │   │                     # (`plan`: grid/axial/organic/terrace/radial) · độ cong từng con
-│   │   │   │                     # đường (`bend`) · số đường chính (`arms`) · số vòng khép kín
-│   │   │   │                     # (`loops`) · độ rối (`tangle`) · `diagonal` (Broadway, chỉ kỷ 11).
-│   │   │   │                     # ⚠️ ĐÃ BỎ `coil`/`ragged` ở ADR-059 — cả hai chỉ đổi được MÉP một
-│   │   │   │                     # đoạn đường, và `ragged` chính là thứ Đàm gọi là "lồi lõm".
-│   │   │   │                     # `country` khoá vào eraStyle, CÓ TEST BẮT.
 │   │   │   ├── roadPath.js       # HÌNH của bảng trên: `boundaryBend` (độ lệch tim đường TẠI MỘT
 │   │   │   │                     # RANH GIỚI — nay TRA THẲNG bảng `crossings` mà `arcTrace` ghi
 │   │   │   │                     # ra, không sinh nhiễu; đối xứng theo cấu tạo) · `buildRoadPaths`

@@ -328,20 +328,27 @@ export function applyPaintedLook(renderer) {
 /**
  * Cỡ bản đồ bóng đổ.
  *
- * ⚠️ MÁY BÀN 4096 (Phase 19). Khung bóng bó sát lưới (`reach = gridSize × 0,75` ⇒ 18 đơn vị ngang
- * cho lưới 12), nên mật độ đi 1024 → 57 điểm/đơn vị · 2048 → 114 · **4096 → 228**. Chi tiết nhỏ
- * nhất cần đọc ra bóng là gờ mái và chân tường (Phase 8A) — cỡ ~0,08 đơn vị, tức 4,5 điểm ở 1024
- * (chỉ ra một vệt răng cưa), 9 điểm ở 2048, **18 điểm ở 4096**: tới đây mới thật sự là một cái
+ * ⚠️ MÁY BÀN 4096 (Phase 19). Khung bóng bó sát lưới (`reach = gridSize × 0,80` ⇒ 19,2 đơn vị ngang
+ * cho lưới 12), nên mật độ đi 1024 → 53 điểm/đơn vị · 2048 → 107 · **4096 → 213**. Chi tiết nhỏ
+ * nhất cần đọc ra bóng là gờ mái và chân tường (Phase 8A) — cỡ ~0,08 đơn vị, tức 4,3 điểm ở 1024
+ * (chỉ ra một vệt răng cưa), 8,5 điểm ở 2048, **17 điểm ở 4096**: tới đây mới thật sự là một cái
  * bóng có mép. Đây đúng chỗ Đàm yêu cầu ưu tiên chất lượng hình ảnh và MacBook là máy chính, và
  * `PERFORMANCE.md` đo được máy còn dư 3,2 lần.
  *
  * ⚠️ VÀ ĐÂY LÀ CẦN GẠT DUY NHẤT CÒN LẠI — KHUNG BÓNG THÌ ĐÃ BÓ SÁT RỒI, ĐỪNG SIẾT NỮA. Chỉ thị
  * Phase 19 đề nghị "siết `sun.shadow.camera` từ `reach` xuống phạm vi thành phố"; đo ra thì `reach`
- * ĐÃ LÀ phạm vi thành phố. Bán kính xa nhất của một khối ĐỔ BÓNG (quét cả 15 kỷ, mọi công trình ở
- * cấp 3 + toàn bộ nhà dân ở 120 phiên, lấy `|toạ độ ô| + nửa bề ngang × BUILDING_SCALE`) là **8,48**
- * (kỷ 9), trên `reach` 9,00 — dư đúng **0,52**, tức 6%. Siết thêm là bắt đầu cắt cụt bóng của những
- * căn nhà ở góc lưới. Có `sceneStats.test.js` khoá con số này, và nó sẽ đỏ nếu một phase sau làm
- * công trình to ra vượt quá chỗ dư ấy.
+ * ĐÃ LÀ phạm vi thành phố.
+ *
+ * ⚠️ PHASE 20 ĐÃ NỚI `reach` TỪ 0,75 LÊN 0,80, VÀ ĐÓ LÀ MỘT BẢN VÁ LỖI CHỨ KHÔNG PHẢI MỘT LỰA CHỌN
+ * MỸ THUẬT. Bộ xương cũ để cả vành ngoài lưới làm đường (`ROAD_LINES` chứa 0 và 11) nên công trình
+ * dừng ở ô 10, và bán kính xa nhất của một khối ĐỔ BÓNG là **8,4836** — vừa vặn dưới `reach` 9,00.
+ * Bộ xương sinh theo kỷ nay cho thửa chạm vành ngoài ⇒ đo lại 15 kỷ × 2 mốc tuổi thì bán kính ấy
+ * lên **9,2275** (kỷ 13 ở 120 phiên), tức **VƯỢT `reach` cũ 0,23 đơn vị**: nhà ở góc lưới đã bắt
+ * đầu bị CỤT BÓNG, và không có gì đỏ lên ngoài `sceneStats.test.js`. `reach` mới = 12 × 0,80 =
+ * **9,60**, dư **0,37** (4%). Giá phải trả đã tính: khung rộng thêm 6,7% ⇒ mật độ điểm ảnh bản đồ
+ * bóng giảm đúng 6,7% (228 → 213 điểm/đơn vị ở 4096), tức gờ mái vẫn còn 17 điểm — vẫn là một cái
+ * bóng có mép. Siết trở lại 0,75 là cắt cụt bóng thật; nới tiếp là tiêu điểm ảnh vào chỗ trống, và
+ * `sceneStats.test.js` đỏ ở CẢ HAI chiều.
  *
  * ⚠️ Điện thoại GIỮ 512 — không phải vì tiếc, mà vì bóng ở đó vẽ lại rất hiếm (render-on-demand)
  * và bộ nhớ texture là thứ iOS Safari giết tab vì nó. 4096² × 4 byte = **64 MB** cho MỘT bản đồ —
@@ -1165,7 +1172,14 @@ export function createCityScene({
     const box = placeBounds(specBounds(placement.spec), {
       x: placement.x, z: placement.z, y: placement.y, scale: placement.scale,
     });
-    if (box) blockers.push(box);
+    // ⚠️ `nhom` KHÔNG phải trường trang trí — nó là thứ DUY NHẤT trả lời được câu *"khối này đến từ
+    // đâu"* ở đầu bên kia. Bài test canh luật này (`sceneStats.test.js`) trước đây phải hỏi VÒNG,
+    // bằng khoảng cách tới tâm: "xa hơn nửa lưới + dung sai ⇒ chắc là vùng quê". Phép đại diện ấy
+    // chết ở Phase 20: thửa nay chạm được vành ngoài lưới nên khối THÀNH PHỐ nhô tới 6,88 trong khi
+    // khối VÙNG QUÊ gần nhất đứng ở 6,00 — hai quần thể CHỒNG LÊN NHAU, không một ngưỡng khoảng
+    // cách nào tách được chúng nữa. Đúng `TECH_DEBT #22`: một thứ đại diện là một giả định đội lốt
+    // một phép đo, và nó chết trong im lặng ở một phase khác do tay một người khác.
+    if (box) blockers.push({ ...box, nhom: placement.nhomDo });
   }
 
   /**
@@ -1579,9 +1593,9 @@ export function createCityScene({
   sun.shadow.mapSize.setScalar(isMobile ? SHADOW_MAP_MOBILE : SHADOW_MAP_DESKTOP);
 
   // Khung bóng bó SÁT đúng lưới — rộng thừa thì mất độ nét, thiếu thì cụt bóng ở rìa.
-  // ⚠️ ĐÃ ĐO, ĐỪNG SIẾT THÊM: khối đổ bóng xa tâm nhất trong cả 15 kỷ nằm ở bán kính 8,48 còn
-  // `reach` là 9,00 (xem `SHADOW_MAP_DESKTOP`). Chỗ dư 6% ấy là toàn bộ biên an toàn.
-  const reach = gridSize * 0.75;
+  // ⚠️ ĐÃ ĐO, ĐỪNG SIẾT THÊM: khối đổ bóng xa tâm nhất trong cả 15 kỷ nằm ở bán kính 9,2275 còn
+  // `reach` là 9,60 (xem `SHADOW_MAP_DESKTOP`). Chỗ dư 4% ấy là toàn bộ biên an toàn.
+  const reach = gridSize * 0.8;
   sun.shadow.camera.left = -reach;
   sun.shadow.camera.right = reach;
   sun.shadow.camera.top = reach;

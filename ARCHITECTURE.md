@@ -246,7 +246,11 @@ phiên" vẫn là câu dùng được, "3/ phiên" thì không.
 **Luồng vẽ Thành Phố — bố cục TRỪU TƯỢNG tách khỏi cách vẽ (2026-08-12)**: một chiều, 3 chặng.
 (1) `CityView.jsx` chọn NGUỒN dữ liệu — kỷ hiện tại lấy state sống, kỷ đã niêm phong lấy ảnh chụp
 trong `cityArchive`; đây là chỗ dễ sai nhất cả màn hình. (2) `computeCityLayout` (engine thuần) trả
-về **ô lưới `(x, y)`, không phải pixel** — cùng một bố cục dùng được cho mọi cách vẽ. Bố cục gồm
+về **ô lưới `(x, y)`, không phải pixel** — cùng một bố cục dùng được cho mọi cách vẽ. ⚠️ Từ Phase 20
+(ADR-060) nó **không còn tự biết đường và khu kỳ quan nằm đâu**: nó hỏi `city3d/cityPlan.js`
+(`planIsRoad` · `planRoadCells` · `planWonderZone`) — một hàm THUẦN của **duy nhất `era`**. Nghĩa là
+bộ xương khác nhau ở cả 15 kỷ mà bất biến ADR-007 vẫn đứng nguyên, vì `sessionCount`/`built` không
+lọt được vào bản quy hoạch. Bố cục gồm
 `buildings` (đã xây) · **`dwellings` (nhà dân)** · `props` (cảnh vật) · **`scaffolds` (đang xây)** ·
 `ground`. `scaffolds` nhận
 THẲNG shape của `craftingQueue` trong store (`{ bpId, sessionsRemaining }`) và tự quy ra tiến độ —
@@ -478,13 +482,22 @@ kiểu dính (`party` chung tường · `loose` cách nhau sân vườn · `cour
 rộng ngõ · hệ số `storey` · biên độ `vary` · `gableToStreet`. `city3d/block.js` biến bảng ấy thành
 hình; `cityParts.js` chỉ ĐỌC.
 
-⚠️ **Vì sao tầng này tồn tại, và vì sao nó KHÔNG phải "thêm nội dung".** Số học của `cityGrid.js`:
-`ROAD_LINES = {0, 4, 8, 11}` ⇒ **80/144 ô là đường (55,6%)**; cộng khu kỳ quan thì chỉ còn **~30 ô
-xây được nhà dân**, và cả 15 kỷ đã chạm trần ấy từ lâu. Nghĩa là **«thêm nhà» là điều BẤT KHẢ** nếu
-không dời ô (ADR-007 cấm) hay nới lưới (Đàm cấm). Cái còn lại duy nhất là **chia nhỏ thứ đứng trong
-một ô đã có**: một ô thôi là *một căn nhà* và trở thành *một khu phố*. Kết quả: **371 → 1.812 khối
-nhìn thấy** mà không một ô nào xê dịch, không một kỳ quan nào bị đụng, và **không một lệnh vẽ nào ở
-cả 15 kỷ**.
+⚠️ **Vì sao tầng này tồn tại, và vì sao nó KHÔNG phải "thêm nội dung".** Số học của bộ xương CŨ
+(`cityGrid.js` khi ấy còn khai `ROAD_LINES = {0, 4, 8, 11}`): **80/144 ô là đường (55,6%)**; cộng
+khu kỳ quan thì chỉ còn **~30 ô xây được nhà dân**, và cả 15 kỷ đã chạm trần ấy từ lâu. Nghĩa là
+**«thêm nhà» là điều BẤT KHẢ** nếu không dời ô (ADR-007 cấm) hay nới lưới (Đàm cấm). Cái còn lại
+duy nhất là **chia nhỏ thứ đứng trong một ô đã có**: một ô thôi là *một căn nhà* và trở thành *một
+khu phố*. Kết quả: **371 → 1.812 khối nhìn thấy** mà không một ô nào xê dịch, không một kỳ quan nào
+bị đụng, và **không một lệnh vẽ nào ở cả 15 kỷ**.
+
+⚠️ **CẬP NHẬT 2026-08-24 (Phase 20, ADR-060) — HAI CON SỐ TRÊN LÀ CỦA BỘ XƯƠNG CŨ, ĐỪNG TRÍCH LẠI
+LÀM SỐ HIỆN HÀNH.** `ROAD_LINES` **không còn tồn tại**; bộ xương nay SINH THEO KỶ (xem mục
+«`networkStyle` + `cityPlan`» ngay dưới), nên số ô đường đi từ một hằng số 80 thành **34…92 tuỳ kỷ
+(trung bình 59,7)**. Cái trần *"~30 ô xây được nhà dân"* vì vậy cũng đổi theo từng kỷ. **Lý lẽ của
+tầng khu phố thì KHÔNG đổi một chữ** — nó nói về việc chia nhỏ thứ đứng TRONG một ô, mà một ô vẫn
+là một ô; chỉ có SỐ ô dành cho nhà dân là nay do bản quy hoạch quyết định chứ không do một hằng số.
+Ghi ra thay vì lặng lẽ đo lại, đúng cách `TECH_DEBT #22` đã xử bộ lọc "8% mái": một con số của thế
+giới cũ mà không nói rõ là cũ thì phiên sau sẽ dùng nó như số hiện hành.
 
 Ba điều làm nó an toàn với các bất biến đã có:
 1. **Bám hình chiếu đáy THẬT, không bám ô.** `block.js` dựng thử bản tham chiếu ở `fx = 1`, đo
@@ -504,6 +517,52 @@ Ba điều làm nó an toàn với các bất biến đã có:
 `pitch = f(max(w,d))` nên chia nhỏ làm mái thấp xuống, trong khi `massHeight` không phụ thuộc hình
 chiếu đáy — và nó bù đủ: mỗi ô cao thêm **7,0%**, không kỷ nào tụt. Nhưng cái nhà đơn lẻ thì **nhỏ
 đi thật**, và đó là một đánh đổi có chủ đích chứ không phải một lỗi.
+
+**`networkStyle` + `cityPlan` (BỘ XƯƠNG THÀNH PHỐ) — khuôn ba lớp lần thứ MƯỜI, và là tầng đầu tiên
+đụng tới thứ mắt đọc ra TRƯỚC NHẤT khi nhìn từ trên cao (Phase 20, 2026-08-24, ADR-060)**:
+`city3d/networkStyle.js` trả lời *"thành phố ở nước ấy, kỷ ấy, được QUY HOẠCH theo lối nào?"* — năm
+trục: `plan` (`organic` · `axial` · `grid`) · `parcels` (số thửa) · `sizeVary` (độ chênh cỡ thửa,
+0,05…0,86) · `ring` (có đường vành đai không) · `minSide` (thửa hẹp nhất được phép). `city3d/cityPlan.js`
+biến bảng ấy thành **danh sách THỬA ĐẤT** (tâm · rộng · sâu · công năng) bằng **chia đôi đệ quy lệch
+tâm (BSP)**; `cityLayout.js` và `dwellings.js` chỉ ĐỌC.
+
+⚠️ **Hai thứ CỐ Ý không có cột riêng, và đó là quyết định chứ không phải thiếu sót.** (a) *"Kỳ quan
+chọn thửa nào"* **suy ra từ `plan`**: `grid` → thửa GIỮA nhất (Trường An đối xứng theo trục nam-bắc)
+· `axial` → thửa sát TRỤC nhất · `organic` → thửa gần NƯỚC nhất, và kỷ nào không có nước (kỷ 1,
+Göbekli Tepe dựng trên sống núi khô) thì tụ quanh một điểm neo bốc theo hạt giống. Một cột riêng sẽ
+cho phép khai `grid` + "gần nước nhất" — một tổ hợp vô nghĩa mà không gì bắt được. (b) *"Bao nhiêu
+thửa để trống"* **suy ra từ số thửa dôi ra sau khi 5 kỳ quan đã nhận chỗ** (1 thửa, hoặc 2 nếu dôi
+≥5) — tức kỷ chia vụn thì tự có nhiều quảng trường hơn, đúng như một thành phố đông thì nhiều chợ
+hơn. ⚠️ Và **hạng 4 nhận thửa TỐT NHẤT, không phải thửa thứ năm còn lại** — vì hạng 4 là `wonder` ở
+cả 15/15 kỷ theo `BLUEPRINT_CATALOG`, một hợp đồng có sẵn chứ không phải quy ước mới.
+
+⚠️ **Ba điều phải hiểu, và không điều nào đọc ra được từ cái bảng.**
+
+1. **ĐƯỜNG LÀ HỆ QUẢ, KHÔNG PHẢI MỘT CỘT CỦA BẢNG.** Mỗi nhát cắt của BSP chừa lại đúng một
+   hàng (hoặc một cột) ô làm lối đi ⇒ **không có bảng nào khai "kỷ này bao nhiêu ô đường"**. Nhiều
+   thửa nhỏ thì tự nhiều ngõ; ít thửa lớn thì tự ít đường. Đây là lý do con số ô đường đi từ một
+   hằng số **80** (bộ xương cũ) sang **34…92 tuỳ kỷ, trung bình 59,7** mà không ai phải chọn tay 15
+   con số — chọn tay 15 con số là đúng cái đã sinh ra bệnh "bảng thoái hoá về một dòng" (`MIN_STONE`
+   Phase 9D).
+2. **VÌ SAO CHIA ĐÔI ĐỆ QUY CHỨ KHÔNG PHẢI VORONOI** (chỉ thị của Đàm cho phép cả hai). Voronoi cho
+   ranh giới **XIÊN**, mà **toàn bộ tầng dựng mặt đường chỉ nói được tiếng "ô thẳng trục"**:
+   `terrainMesh.js` dựng từng ô với 3 biến thể, `streetCrossSection`/`carriagewayShape` đều là mặt
+   cắt vuông góc. Chọn Voronoi thì phải viết lại cả tầng ấy — tức tiêu ngân sách vào chỗ Đàm không
+   nhìn thấy, để đổi lấy một thứ bị **rasterise về đúng lưới ô** ở bước cuối. BSP tái dùng nguyên
+   tầng đường đang chạy.
+3. **ADR-007 LÀ ĐIỀU KIỆN SỐNG CÒN CỦA TẦNG NÀY.** `cityPlan(era)` nhận **DUY NHẤT `era`** — không
+   `sessionCount`, không `built`, không `buildings`. Khoá bằng hai bài: gọi kèm **dữ liệu rác** rồi
+   đòi kết quả **trùng từng byte** (đúng khuôn đã dùng cho `buildTerrain` ở Phase 7B), và **liệt kê
+   đủ 1…120 phiên × 15 kỷ** rồi đòi bản quy hoạch đứng yên. ⚠️ Nhưng bất biến ấy chỉ nói *"từ nay
+   trở đi không dời"*; **bản thân việc đổi bộ xương thì DỜI mọi công trình đã xây** — đó là một
+   quyết định của Đàm, ghi ở phần Trade-off của ADR-060, không phải một thứ tầng này tự giải quyết
+   được.
+
+⚠️ **Đo được, không phải cảm nhận:** độ đối xứng bốn chiều của các ô kỳ quan đi từ **100,0%** (bộ
+xương cũ — bốn khu 3×3 ở bốn góc, đối xứng HOÀN HẢO theo đúng nghĩa đen) xuống **tối đa 20,0%** và
+**9,6% nếu bỏ ba kỷ `grid`** (ở `grid` thì đối xứng là ĐÚNG, không phải lỗi). Thang đo lấy 0% là
+mức trùng hợp ngẫu nhiên (`p² + (1−p)²`) chứ không phải 0 tuyệt đối — và nó **tự nghiệm thu**: thứ
+vốn đối xứng hoàn hảo đo ra đúng 100,0%.
 
 **`hinterlandStyle` + `hinterland` (VÙNG PHỤ CẬN) — khuôn ba lớp lần thứ TÁM, và là tầng đầu tiên
 đặt DẤU VẾT CON NGƯỜI ra ngoài lưới 12×12 (Phase 13 VIỆC B, 2026-08-21, ADR-049)**:

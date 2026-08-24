@@ -363,7 +363,7 @@ test('ĐỐI CHỨNG: chỉ canh ĐIỂM ĐẾN thôi là chưa đủ — và đ
   }
   assert.deepEqual(
     [...new Set(lotLuoi)].sort((a, b) => a - b),
-    [3, 5, 7, 8, 9, 12, 13],
+    [2, 6, 8, 10, 13, 15],
     'danh sách kỷ mà phép canh cả đường bay thật sự cứu — đổi là phải xem lại vì sao',
   );
   // 2026-08-20, HAI lần đổi trong cùng một ngày và cả hai đều có lý do đo được:
@@ -383,17 +383,6 @@ test('ĐỐI CHỨNG: chỉ canh ĐIỂM ĐẾN thôi là chưa đủ — và đ
   // xa hơn ⇒ đoạn giữa đường bay không còn quét sát mái nhà kỷ 5 nữa. Đây là hệ quả ĐÚNG, không
   // phải phép canh bị mù: `phaiLuiRa` ở bài trên vẫn khác rỗng, tức cơ chế vẫn đang chạy thật.
   // Con số TĂNG nghĩa là phép canh cả-đường-bay càng đáng giá, không phải càng tệ.
-  //
-  // ⚠️ 2026-08-24, ADR-059 (mỗi kỷ một mạng đường riêng): **12 kỷ / 15 chuyến → 7 kỷ / 7 chuyến**
-  // — lần đầu con số này ĐI XUỐNG, và lý do đáng đọc kỹ vì nó dễ bị đọc nhầm thành hồi quy.
-  // Danh sách này KHÔNG đo "phép canh còn tốt không"; nó đo *"có bao nhiêu chuyến bay mà điểm đến
-  // thoáng nhưng đoạn giữa thì không"*. Đổi mạng đường thì đổi luôn chỗ đứng của nhà dân: ở kỷ 1,
-  // 2, 9, 15 con đường nay chạy ĐÚNG qua hành lang mà camera bay, nên đoạn giữa hết bị mái nhà
-  // cản — tức chuyến bay ấy vốn đã thoáng, không cần ai cứu.
-  // ⇒ Phép canh cả-đường-bay **không mất răng**: nó vẫn cứu 7 chuyến ở 7 kỷ, và bài
-  // `ĐƯỜNG BAY PHẢI THOÁNG SUỐT CẢ CHẶNG` bên trên vẫn đòi 1200/1200 chuyến thoáng. Thứ giảm là
-  // số ca mà thành phố tự nó gây nguy hiểm, và giảm là tốt.
-  //
   // ⚠️ 2026-08-24, Phase 19 VIỆC 2 (ADR-062, nguyên mẫu `monolith`): **11 kỷ / 14 chuyến — kỷ 2
   // RỜI danh sách**, và đây là lần đầu một kỷ rời đi mà KHÔNG phải vì ai đó chữa nó. Đã đo thay vì
   // đoán: trong 80 chuyến của kỷ 2 thì **8 chuyến kẹt đường bay và đúng 8 chuyến kẹt điểm đến —
@@ -402,12 +391,27 @@ test('ĐỐI CHỨNG: chỉ canh ĐIỂM ĐẾN thôi là chưa đủ — và đ
   // nào vừa đứng sát nó vừa thoáng — chỗ nào đường bay đâm vào khối thì chỗ đứng cuối cùng cũng
   // đâm vào. Trước đó nó là một cái hộp thấp đội mũ nhọn, và khe hở giữa mũ với hộp chính là chỗ
   // đẻ ra những chuyến "đến được mà bay tới không được".
+  // ⚠️ 2026-08-24, PHASE 21 (hợp nhất ADR-059 + chia thửa) — **6 kỷ: [2, 6, 8, 10, 13, 15]**. Năm
+  // kỷ RỜI (3 · 4 · 5 · 7 · 12), hai kỷ RƠI VÀO (10 · 15). Đây là danh sách ngắn nhất từ trước tới
+  // nay, và lý do KHÔNG phải phép canh bị mù — nó là hệ quả trực tiếp của việc ranh giới thửa nay
+  // là một CUNG: một hành lang cong thì camera bay dọc theo nó ít khi đi thẳng vào sườn một khu
+  // nhà, trong khi một hành lang thẳng thì hoặc thoáng hoàn toàn hoặc bị chắn hoàn toàn. Bài
+  // `phaiLuiRa` ở trên vẫn khác rỗng ⇒ cơ chế vẫn đang làm việc thật. Số chuyến lọt lưới: 12 → 11.
   // ⇒ Con số GIẢM ở đây KHÔNG có nghĩa phép canh kém đi; nó có nghĩa kỷ 2 đã đổi thể loại hình
   //   khối. Nếu ngày nào kỷ 2 quay lại danh sách này thì hoặc khối đặc đã bị tháo ra thành nhà +
   //   mái, hoặc nó đã teo lại — cả hai đều đáng biết.
   // 2026-08-24 (Phase 19 VIỆC 5): 14 → **13 chuyến**, cùng nguyên nhân với việc kỷ 5 rơi khỏi danh
   // sách trên — khung toàn cảnh lùi ra nên điểm xuất phát của mọi chuyến bay cũng lùi theo.
-  assert.equal(lotLuoi.length, 7, 'đúng 7 chuyến trên 1200 lọt lưới nếu chỉ canh điểm đến');
+  // ⚠️ 2026-08-24, PHASE 20 (ADR-060): **9 kỷ / 12 chuyến, và danh sách gần như ĐỔI HẲN** —
+  // [1,3,7,8,9,11,12,13,14,15] → [2,3,4,5,6,7,8,12,13]. Sáu kỷ rời đi (1·9·10·11·14·15), năm kỷ
+  // rơi vào (2·4·5·6). Đây KHÔNG phải một hồi quy và cũng không phải một cải thiện: bộ xương thành
+  // phố nay được SINH THEO KỶ, nên câu hỏi *"bay từ khung toàn cảnh tới kỳ quan thì có đi ngang
+  // chỗ dày nhà không"* được hỏi trên MƯỜI LĂM bố cục khác nhau thay vì trên một bố cục dùng chung.
+  // Không có lý do nào để danh sách cũ còn đúng, và việc nó đổi gần hết chính là bằng chứng bộ
+  // xương đã thật sự khác nhau giữa các kỷ.
+  // ⚠️ Thứ ĐÁNG canh ở đây không phải danh sách mà là con số cuối: chừng nào nó còn khác 0 thì phép
+  // canh cả-đường-bay vẫn đang cứu người thật, tức cơ chế lấy mẫu 48 chặng chưa thành mã chết.
+  assert.equal(lotLuoi.length, 11, 'đúng 11 chuyến trên 1200 lọt lưới nếu chỉ canh điểm đến');
   assert.ok(cheoNhat > 1, `chênh lớn nhất giữa điểm-đến và cả-đường mới ${cheoNhat.toFixed(2)} — quá nhỏ để gọi là cứu được ai`);
 });
 
@@ -549,7 +553,23 @@ test('CA THẬT CỦA APP — xuất phát từ đúng khung TOÀN CẢNH thì K
   // qua chỗ dày nhà hơn, nên cần lùi thêm ở đích. Đây là cơ chế chữa THỨ NHẤT (lùi ra) làm đúng
   // việc của nó — vế `phaiNgang` ngay dưới vẫn RỖNG, tức không kỷ nào phải ngẩng lên, và đó mới
   // là ranh giới Đàm chốt ở ADR-035.
-  assert.deepEqual(luiRa, [5, 10, 11, 13, 14, 15], 'danh sách kỷ có công trình phải lùi ra mới ngắm được');
+  // ⚠️ 2026-08-24, PHASE 20 (ADR-060): danh sách về **RỖNG** — không kỷ nào còn phải lùi ra ở ca
+  // thường gặp. Đây là lần đầu nó rỗng, nên phải nói rõ hai điều kẻo phiên sau đọc nhầm:
+  //   (1) VÌ SAO. Bộ xương cũ nhét năm kỳ quan vào năm khu 3×3 cố định, nhà dân bu kín xung quanh,
+  //       nên lối tiếp cận bị chính nhà dân chắn. Bộ xương sinh theo kỷ cho MỖI kỳ quan một THỬA
+  //       riêng có đường làm ranh giới, tức luôn có một hành lang mở dẫn tới nó. Đo được: chỗ hẹp
+  //       nhất trong 75 chuyến là **1,8856** trên mức đòi hỏi 1,00 — dư 89%, không phải sát nút.
+  //   (2) CƠ CHẾ CHƯA CHẾT. Danh sách rỗng ở đây KHÔNG có nghĩa "lùi ra" thành mã chết: bài 1200
+  //       chuyến ở trên vẫn đòi `phaiLuiRa.length > 0` và vẫn xanh, tức vẫn có góc xuất phát bắt
+  //       nó phải làm việc. Hai bài chia nhau đúng hai câu hỏi khác nhau, như chú thích đầu bài nói.
+  // Một kỷ rơi VÀO danh sách này lại là tin đáng biết ngay: nghĩa là bố cục kỷ ấy đã bịt mất hành
+  // lang dẫn tới một kỳ quan.
+  // ⚠️ 2026-08-24, PHASE 21 (hợp nhất): **kỷ 14 rơi VÀO**, và nó rơi vào vì đúng cơ chế câu trên
+  // vừa mô tả, chỉ là chiều ngược. Bản hợp nhất cho ranh giới thửa đi theo cung, nên hành lang dẫn
+  // tới kỳ quan của kỷ 14 (Singapore, `minSide: 1` — thửa mỏng nhất bảng) bị chính cung ấy bóp lại
+  // ở một khúc. Cơ chế chữa THỨ NHẤT (lùi ra) làm đúng việc của nó; vế `phaiNgang` ngay dưới vẫn
+  // RỖNG, tức không kỷ nào phải ngẩng lên — đó mới là ranh giới Đàm chốt ở ADR-035.
+  assert.deepEqual(luiRa, [14], 'danh sách kỷ có công trình phải lùi ra mới ngắm được');
   assert.ok(xaNhat <= 11 + 1e-9, `chỗ phải lùi xa nhất ${xaNhat} — xa hơn nữa là chi tiết cận cảnh bắt đầu tan`);
   // ⚠️ 0,664 → 0,6672 (2026-08-20). Đây là một con số ĐO ĐƯỢC chứ không phải một mức Đàm chốt, và
   // nó nhích lên vì §1(B): nền phẳng hơn ⇒ camera toàn cảnh vốn đã đứng gần hơn ⇒ chuyến cận cảnh

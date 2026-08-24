@@ -11,6 +11,88 @@
 
 ---
 
+## ADR-064 — Hợp nhất hai nhánh: **BSP quyết cắt Ở ĐÂU, cung cong quyết cắt theo HÌNH GÌ**; và một thửa là TẬP Ô, không phải hình chữ nhật đã khai
+
+- **Ngày**: 2026-08-24
+- **Bối cảnh**: Phase 21. Hai nhánh đã đi giải **cùng một bài toán** — *"xoá vẻ quy hoạch của bộ
+  xương thành phố"* — bằng hai lời giải khác nhau, trong hai phiên không nhìn thấy nhau. `main` có
+  **ADR-059**: mỗi kỷ tự sinh tập ô đường bằng những **CUNG CONG** (`arcTrace` trong `roadPlan.js`),
+  cho ra đường lượn và giao lộ chữ T/Y thật. Nhánh Phase 20 có **ADR-060**: **chia thửa đệ quy**
+  (`cityPlan.js`), cho ra thửa **khác cỡ khác hình** thay cho 9 siêu-ô đều tăm tắp. Đàm ra lệnh hợp
+  nhất, và nói rõ giữ `cityPlan` làm nguồn sự thật về bố cục còn ADR-059 làm tầng hình dạng của
+  đường. Hai bên còn **trùng số ADR 056 và 057** cho hai nội dung khác hẳn nhau, và trùng cả
+  `TECH_DEBT #79`/`#80`.
+- **Vấn đề**: gộp mù thì mất một trong hai. Ghép được hay không phụ thuộc vào một câu hỏi chưa ai
+  đặt ra: **hai bộ sinh ấy có đang trả lời cùng một câu hỏi không?** Đọc kỹ cả hai thì **không**:
+  chia thửa trả lời *"đất chia thế nào"*, cung cong trả lời *"một ranh giới có hình gì"*. Mọi ranh
+  giới BSP đều **thẳng băng** (đó là một nửa của cái vẻ "quy hoạch" còn sót lại), còn bộ sinh
+  nan-quạt/bàn-cờ của ADR-059 thì **không có khái niệm thửa** nên không thể cho thửa to nhỏ khác
+  nhau. Mỗi bên thiếu đúng thứ bên kia có.
+  ⚠️ Nhưng ghép xong thì một mệnh đề ngầm bị phá: `cityPlan` xưa nay coi **một thửa LÀ hình chữ
+  nhật** `(x0,y0,x1,y1)` mà phép chia đệ quy khai ra. Cho nhát cắt vồng lên thì con đường **ăn vào
+  bên trong hình chữ nhật ấy**, và bài "thửa + đường = 144 ô" thủng — không phải vì một lỗi tính
+  toán mà vì hai định nghĩa của chữ "thửa" bắt đầu nói về hai thứ khác nhau.
+- **Phương án cân nhắc**:
+  1. **Chỉ giữ ADR-059, bỏ chia thửa.** Loại: mất luôn thửa khác cỡ — đúng thứ Đàm nêu tên
+     (*"không phải cứ 3x3 được, nó phải nhiều thứ và đa dạng hơn"*).
+  2. **Chỉ giữ chia thửa, bỏ cung cong.** Loại: mất đường lượn và giao lộ thật, tức quay lại đúng
+     câu Đàm đã bác ở Phase 19 (*"nó chỉ là những đường thẳng"*).
+  3. **Ghép, và kẹp cung cong lại cho nó đừng ăn vào thửa** (giữ định nghĩa thửa = hình chữ nhật).
+     Loại: cái kẹp ấy phải chặt tới mức cung gần như thẳng, tức giữ được cái tên mà mất cái việc.
+  4. **Ghép, và ĐỔI ĐỊNH NGHĨA của "thửa"** — chọn.
+- **Lý do chọn**: hình chữ nhật là **Ý ĐỊNH**, con đường đã dựng mới là **SỰ THẬT**. Nên thửa nay
+  là **tập ô**: mỗi ô không phải đường được giao cho hình chữ nhật **gần nhất** (`chuO` +
+  `cellSet`). Phép giao ấy **phủ kín và không chồng lấn theo cấu tạo** — ô nằm trong một hình thì
+  khoảng cách 0, các hình rời nhau nên không tranh chấp — nên bài "thửa + đường = 144" không thể
+  thủng lại vì một lý do hình học. Hình chữ nhật vẫn được giữ, nhưng chỉ để trả lời ba câu về Ý
+  ĐỊNH (*"thửa này sâu bao nhiêu" · "tâm nó ở đâu" · "nó có mỏng hơn `minSide` không"*); mọi câu
+  hỏi ở cấp Ô đều hỏi `cells`.
+  ⚠️ Và đây **không phải một phép vá cho test hết đỏ**: một thửa có mép cong thì khu nhà bên trong
+  nó thôi là một hình chữ nhật đều đặn — tức nó chính là thứ chỉ thị đòi.
+- **Giải pháp**:
+  - `buildCityPlan(era)` (ADR-060) quyết **CHỖ CẮT**; mỗi nhát cắt gọi `arcTrace` (ADR-059) để lấy
+    **HÌNH DẠNG** của nét cắt ấy, kèm `crossings` — tim đường cắt qua mỗi ranh giới ô ở đâu, chuẩn
+    hoá `[−1, 1]` — thứ mà `roadPath.boundaryBend` đọc để mặt đường **đọc ra là cong** thay vì một
+    bậc thang.
+  - **Độ vồng có TRẦN, và trần ấy là một QUAN HỆ**: `maxDev` = phần đất DƯ của bên hẹp hơn sau khi
+    đã chừa đủ `minSide`; dư 0 ⇒ cắt thẳng, không ngoại lệ. Cộng `BOW_MAX_SHARE = 0.25` — một cung
+    không bao giờ được vồng quá một phần tư chính chiều dài của nó (vồng 3 ô trên nhát cắt dài 12 ô
+    là một con phố cong; vồng 3 ô trên nhát cắt dài 4 ô là một nhát chém chéo). Bản đầu viết
+    `Math.min(..., 2)` — đúng bẫy Phase 7D, vừa quá rộng cho nhát ngắn vừa quá chặt cho nhát dài.
+  - `buildRoadPlan` cùng năm bộ dựng khung của ADR-059 (nan quạt, bàn cờ, xương cá, vành đai, hữu
+    cơ) **bị xoá**: chúng trả lời câu *"đất chia thế nào"* bằng một đường khác, và giữ cả hai là
+    giữ hai nguồn sự thật cho một đại lượng. Ba hàm còn sống của `roadPlan.js` (`arcTrace`, `gom`,
+    `vaLienThong`, `tiaMangDuong`) đều thuộc tầng **hình dạng**, không thuộc tầng bố cục.
+  - `networkStyle.js` (BẢNG) nay có 8 trục, trong đó `parcels`/`sizeVary`/`minSide` là của tầng bố
+    cục còn `bow`/`wiggle`/`loops` là của tầng hình dạng. Đo lại toàn bộ ở bảng CUỐI CÙNG: quần thể
+    ô nhà dân **476** (đi từ 371 → 432 → 476), **2.370** khối, chi tiết mái giữ **431/476 = 90,5%**.
+  - **Đánh số lại cho hết trùng**: số của `main` giữ nguyên nghĩa; entry của nhánh này đổi
+    ADR-057 → **ADR-060** (chia thửa) · ADR-056 → **ADR-061** (khung hình) · ADR-054 → **ADR-062**
+    (`monolith`) · ADR-055 → **ADR-063** (che khuất môi trường); `TECH_DEBT #79` → **#86**,
+    `#80` → **#87**. ⚠️ Vì vậy thứ tự VẬT LÝ của file này không còn giảm dần đơn điệu ở đoạn
+    059…053 — đó là dấu vết của lần hợp nhất, không phải một chỗ hỏng.
+- **✅ ADR-007 — ĐÀM ĐÃ DUYỆT PHƯƠNG ÁN (a), ghi lại ở đây vì nó là một quyết định kiến trúc, không
+  phải một chi tiết thi công**: chấp nhận **dời 75/75 công trình ĐÚNG MỘT LẦN**, và sau lần ship
+  này bố cục mỗi kỷ **đóng băng vĩnh viễn**. Không dựng hai bộ sinh song song (một cho thành phố cũ,
+  một cho thành phố mới) — hai bộ sinh là hai nguồn sự thật, và nguồn thứ hai sẽ trôi khỏi nguồn thứ
+  nhất trong im lặng. ⚠️ **Từ ngày ship, đổi bộ sinh bố cục của một kỷ là một quyết định DI TRÚ,
+  phải hỏi Đàm trước** — không phải một lần chỉnh tham số. Bất biến gốc của ADR-007 (*"chỉ thêm,
+  không bao giờ dời"*) **vẫn phải xanh cho mọi mốc phiên 1…120 × 15 kỷ**, chỉ là nó được phát biểu
+  lại cho đúng: bất biến ấy nói về **trong cùng một phiên bản bộ sinh**, không nói về hai phiên bản
+  khác nhau của phần mềm.
+- **Trade-off**: (a) mất 5 bộ dựng khung của ADR-059 — chúng đã được đo, đã ship, và bị xoá sau
+  chưa tới một ngày; cái được là **một** nguồn sự thật thay vì hai. (b) Thành phố đã xây của Đàm
+  dựng lại khác đi một lần. (c) Bảng số hiệu năng của Phase 19 trong `PERFORMANCE.md` **không tái
+  lập được nữa** (lệnh trong đó gọi `buildRoadPlan`) — đã ghi đính chính tại chỗ thay vì xoá bảng,
+  vì nó vẫn là bản ghi đúng của thời điểm nó được đo.
+- **Ảnh hưởng**: `cityPlan.js` · `networkStyle.js` · `roadPlan.js` (xoá 5 bộ dựng) · `cityGrid.js` ·
+  `dwellings.js` · `roadPath.js` · `scripts/archive/road-bend.mjs` (đổi nguồn sang `planRoadCells`).
+  Bảy tài liệu phải gỡ xung đột. `TECH_DEBT` không mở mục mới, không đóng mục nào.
+- **Điều kiện xem lại**: nếu sau này cần ranh giới **XIÊN** (Voronoi) thì đây là chỗ phải quay lại —
+  và lúc ấy phải viết lại cả tầng dựng đường, vì `terrainMesh`/`streetCrossSection`/`carriagewayShape`
+  chỉ biết ô vuông (lý do loại Voronoi ở ADR-060 vẫn còn nguyên giá trị).
+
+---
 ## ADR-059 — MẠNG ĐƯỜNG là một trục bản sắc: mỗi kỷ tự sinh lấy tập ô đường của mình bằng những CUNG CONG, thay cho một bàn cờ chung cho cả 15 kỷ
 
 **Ngày:** 2026-08-24
@@ -759,11 +841,128 @@ hình dạng lỗi, xem `TECH_DEBT #79`).
   chứng minh: cây mã có đủ VIỆC 1+2+3+4 nhưng **hoàn tác riêng `orbit.js`** ra **14,23** — tức bốn
   việc kia cộng lại chỉ tốn 0,16, còn **2,90 là của riêng phép lùi này**. Và phép lùi KHÔNG rút
   ngắn được: hạ biên an toàn từ 4% xuống 0% chỉ lấy lại 3,3% khoảng cách.
-- **Ảnh hưởng**: đóng `TECH_DEBT #24`; mở `TECH_DEBT #79` (trục chặng dưới ngưỡng). Cặp đôi này là
+- **Ảnh hưởng**: đóng `TECH_DEBT #24`; mở `TECH_DEBT #86` (trục chặng dưới ngưỡng). Cặp đôi này là
   một **quyết định của Đàm**, không phải của tôi — hai thứ anh đã yêu cầu đang xung đột nhau, và
   cách duy nhất sai là lặng lẽ chọn hộ rồi nới ngưỡng (phễu Phase 9A).
 - **Điều kiện xem lại**: khi trục chặng được nâng lại bằng cần gạt THẬT (bầu trời lúc 6h so với
-  15h — xem `TECH_DEBT #79`), hoặc khi Đàm chốt hướng.
+  15h — xem `TECH_DEBT #86`), hoặc khi Đàm chốt hướng.
+
+---
+
+
+## ADR-060 — Bộ xương thành phố SINH THEO KỶ bằng chia đôi đệ quy; đường là RANH GIỚI THỬA, không phải hàng và cột
+
+- **Ngày**: 2026-08-24
+- **Bối cảnh**: Phase 20. Đàm nhìn bản quét 15 kỷ rồi nói hai câu, và cả hai đều nói về cùng một
+  thứ: *"nhà vẫn quy hoạch rất kỳ quặc, nó rất bài bản và xếp chồng lên nhau"* · *"cho tôi một sự
+  sắp xếp thành phố ngẫu nhiên và mang tính đặc thù, không phải cứ 3x3 được, nó phải nhiều thứ và
+  đa dạng hơn"*.
+- **Vấn đề**: bộ xương nằm ở hai hằng số trong `cityGrid.js`, và **không hằng số nào nhận `era`**:
+  `ROAD_LINES = {0,4,8,11}` (4 hàng + 4 cột ⇒ 9 siêu-ô đều tăm tắp) và `BUILDING_ZONES` (5 khu
+  **3×3** ở bốn góc + tâm). Đo lại để khỏi nói bằng cảm giác — quy về thang *0% = đúng mức ngẫu
+  nhiên, 100% = đối xứng bốn chiều hoàn hảo*: **bốn khu kỳ quan ở góc đạt đúng 100,0%**, cả 5 khu
+  đạt 90,3% (khu tâm lệch một ô vì 12 là số chẵn), mạng đường đạt 55,0%. Tức phần MANG BẢN SẮC
+  NHẤT — chỗ đứng của năm kỳ quan — đối xứng bốn chiều **tuyệt đối, ở cả 15 kỷ**. Mà đối xứng bốn
+  chiều là đặc điểm của kinh đô ĐƯỢC QUY HOẠCH (Trường An, Washington), không phải Çatalhöyük,
+  không phải Alfama, không phải Tokyo. Mọi phase trước đều sửa thứ nằm TRONG một ô (mái, tầng trệt,
+  mặt đường, cụm nhà) nên bộ xương chưa bao giờ đổi — và bộ xương mới là thứ mắt đọc ra ĐẦU TIÊN
+  khi nhìn thành phố từ trên cao.
+- **Phương án cân nhắc**:
+  1. **Giữ lưới, chỉ đa dạng hoá bên trong ô.** Loại: đó chính xác là thứ tám phase vừa qua đã làm,
+     và Đàm vẫn nói *"rất bài bản"*. Cái bị kêu là bộ xương, không phải nội thất.
+  2. **Voronoi từ điểm gieo + nới lỏng** (chỉ thị nêu tên). Loại — và loại bằng phép ĐO chứ không
+     bằng cảm tính: Voronoi cho ranh giới **XIÊN**, mà toàn bộ tầng dựng đường chỉ biết ô vuông
+     (`terrainMesh.js` dựng mặt đường theo TỪNG Ô với ba vai; `streetCrossSection` phát biểu bề
+     rộng theo MẶT CẮT NGANG của một ô; `carriagewayShape` loe theo bốn hướng vuông góc). Ranh giới
+     xiên KHÔNG diễn đạt được bằng bộ từ vựng ấy ⇒ phải viết lại cả tầng đường, kéo theo mất hết
+     bó vỉa/vỉa hè/vạch kẻ theo kỷ mà Phase 9D dựng. Đó là một phase khác, không phải một lựa chọn
+     trong phase này.
+  3. **Viết tay 15 bố cục.** Loại: 15 lần chọn bừa, không có luật nào ràng, và kỷ thứ 16 không có
+     đường nào để sinh ra.
+  4. **Chia đôi đệ quy lệch tâm (BSP)** — chọn.
+- **Lý do chọn**: BSP cho ranh giới THẲNG trùng khít lưới ô ⇒ **dùng lại nguyên tầng đường đã có**,
+  không phá gì. Và nó KHÔNG "đều" như tên gọi gợi ý: chỗ cắt lệch tâm theo `sizeVary`, vùng được
+  chọn để cắt cũng bốc theo hạt giống, nên hai kỷ cùng số thửa vẫn ra hai hình khác hẳn. Bàn cờ chỉ
+  xuất hiện khi `sizeVary` ≈ 0 — tức đúng ba kỷ khai `grid`, và ở đó nó ĐÚNG (Trường An, Manhattan,
+  Tokyo thật sự là bàn cờ). Điểm quyết định thứ hai: **đường là HỆ QUẢ của số thửa**, không có bảng
+  "kỷ này bao nhiêu ô đường" nào cả — mỗi nhát cắt để lại một hàng/cột làm lối đi, nên nhiều thửa
+  nhỏ ⇒ nhiều ngõ, ít thửa lớn ⇒ ít đường. Một hệ quả thì không thể trôi khỏi thứ sinh ra nó; một
+  bảng thứ hai thì có (đúng bài học `TECH_DEBT #43`). Kết quả đo trên thang trên: cao nhất còn
+  **20,0% (kỷ 4, `grid` — được phép)**, và cao nhất trong các kỷ KHÔNG phải `grid` là **9,6%**.
+- **Trade-off — VÀ ĐÂY LÀ PHẦN PHẢI ĐỌC, KHÔNG ĐƯỢC BỎ QUA**: bộ xương mới **dời chỗ TOÀN BỘ 75
+  công trình — 5/5 ở cả 15 kỷ**. Không có bộ xương nào vừa khác cái cũ vừa giữ nguyên chỗ cũ; đó là
+  hai yêu cầu loại trừ nhau, không phải một khuyết tật cần vá. ADR-007 (*"bảo tàng bất động"*) nói
+  vị trí một công trình **không bao giờ được đổi**, và nó vẫn đúng — nhưng nó là lời hứa cho thời
+  gian VỀ SAU, và điều kiện của nó là *bố cục phải là hàm thuần của riêng `era`*, thứ mà `cityPlan`
+  giữ nguyên (có test gọi kèm dữ liệu rác + quét 1…120 phiên × 15 kỷ đòi kết quả y hệt). Cái giá
+  phải trả là MỘT LẦN, đúng lúc đổi bộ sinh. ⇒ **Đây là quyết định của Đàm, không phải của tôi.**
+  Kể từ ngày ship, bộ sinh của một kỷ bị ĐÓNG BĂNG.
+- **Ảnh hưởng**: `cityGrid.js` co lại còn đúng một hằng số (`CITY_GRID_SIZE`), gỡ `BUILDING_ZONES` ·
+  `ROAD_MAIN_AXIS` · `ROAD_CROSS_AXIS` · `RING_LOW/HIGH` · `ROAD_LINES`. Thêm hai file theo khuôn ba
+  lớp lần thứ **MƯỜI**: `networkStyle.js` (BẢNG, 5 trục × 15 kỷ — `plan` · `parcels` · `sizeVary` ·
+  `ring` · `minSide`; `country` khoá cứng vào `eraStyle`) và `cityPlan.js` (HÌNH). Bản quét lên ở cả
+  hai trục: CHẶNG NGÀY **11,33 → 12,44** (qua lại ngưỡng mắt 12, 0/15), KỶ gần nhất **19,18 → 21,77**
+  · trung vị **36,31 → 38,48** (0/105).
+  ⚠️ **ĐÍNH CHÍNH TRONG CHÍNH ADR NÀY — BẢN ĐẦU GHI "ĐÓNG `TECH_DEBT #86`" VÀ ĐÓ LÀ MỘT KẾT LUẬN
+  SAI, ĐÃ ĐO VÀ TỰ BÁC BỎ.** Lời giải thích đi kèm cũng sai (*"bộ xương mỗi kỷ nay đổ bóng khác nhau
+  nên các chặng không còn bị 15 bản sao pha loãng"*) — nghe cực kỳ xuôi, và tách ba dải của đúng cặp
+  yếu nhất (6h↔15h) thì nó ngược hẳn: **trời 4,12 → 4,05 (−0,07)** · thành phố 6,51 → 5,56 (**tệ
+  đi**) · **đất 18,05 → 20,42 (+2,37 — TOÀN BỘ phần tăng)**. Mà dải TRỜI mới là cần gạt đã được nêu
+  đích danh HAI LẦN ở `CLAUDE.md`. ⇒ **`#86` GIỮ NGUYÊN TRẠNG THÁI MỞ**; cổng qua nhờ một dải chẳng
+  liên quan tới chẩn đoán, và biên chỉ **0,44**. Cơ chế khả dĩ cho phần tăng ở dải đất — ghi là
+  **TƯƠNG QUAN, chưa chứng minh nhân quả** — là số ô đường thôi là hằng số 80 mà thành 34…92 tuỳ kỷ.
+  Bài học: **một cái cổng đo một con số GỘP thì không phân biệt được "đã chữa đúng bệnh" với "một
+  dải chẳng liên quan tình cờ khoẻ lên"**, và nhận công cho lần thứ hai thì phiên sau sẽ đóng mục nợ
+  ấy trong khi bệnh còn nguyên.
+- **Điều kiện xem lại**: (a) nếu có kỷ thứ 16, nó chỉ cần thêm MỘT dòng vào bảng — không được sửa
+  bộ sinh, vì sửa bộ sinh là dời thành phố của 15 kỷ cũ; (b) nếu sau này tầng dựng đường học được
+  ranh giới xiên thì Voronoi mới trở thành một lựa chọn thật, và lúc ấy phải cân lại bằng ẢNH chứ
+  không bằng lý lẽ; (c) trần `minSide` là một ràng buộc SỐ HỌC (`(minSide+1)·k − 1 ≤ L`) — muốn một
+  kỷ `grid` có nhiều thửa hơn thì phải hạ `minSide` hoặc bỏ vành đai, không có đường thứ ba.
+
+---
+
+
+- **Ngày**: 2026-08-24
+- **Bối cảnh**: Phase 19 VIỆC 5 — Đàm yêu cầu *"nóc nhà thôi bị mép khung cắt"*, kèm ràng buộc rất
+  hẹp: sửa trong `orbit.js`, **giữ `distance = gridSize × factor`, chỉ nới `factor`**, nghiệm thu
+  bằng ẢNH. Đây là `TECH_DEBT #24`, mở từ Phase 7B.
+- **Vấn đề**: `orbit.test.js` có một bài tên *"KỶ THẤP GIỮ NGUYÊN KHUNG SÁT"* đòi `factor ≤ 1,35`,
+  đặt ở Phase 5A với lý do đúng đắn *"đừng thu quá xa rồi bị mờ"*. Đo ra thì **13/15 kỷ cần ≥ 1,47**
+  và kỷ 8 cần **1,88** mới không cắt công trình nào. Tức cái trần ấy và lời hứa "không cắt" **không
+  thể cùng đúng** — và chính cái trần là thứ đã ĐẺ RA `TECH_DEBT #24`, chứ không phải một khuyết
+  tật nào khác. Một cái trần được đặt khi thành phố còn thấp, rồi ở lại sau khi ADR-052 chia ô
+  thành khu phố và nhà cao lên: đúng hình dạng ADR-019 (*một kết luận đúng hết đúng vì tiền đề của
+  nó bị gỡ ở một phase khác*).
+- **Phương án cân nhắc**:
+  1. **Giữ trần 1,35, chấp nhận cắt.** Loại: đó là chính cái Đàm yêu cầu sửa.
+  2. **Nới trần lên 1,88 cho cả 15 kỷ.** Loại: kỷ 1 chỉ cần 1,307, ép nó ra 1,88 là bắt thành phố
+     nhỏ nhất chịu cái giá của thành phố lớn nhất — và một trần chung là đúng bẫy Phase 7D mà
+     ADR-028 đã gỡ một lần cho ngân sách lệnh vẽ.
+  3. **Nâng `target.y` (chĩa camera lên) thay vì lùi ra.** Loại — và loại bằng SỐ, không bằng lý
+     lẽ: đo mép nào là mép sát nhất ở cả 15 kỷ thì **mép TRÊN không bao giờ là mép quyết định**
+     (DƯỚI 7 kỷ · TRÁI 6 · PHẢI 2). Cái ràng buộc là hai bên hông và mép dưới, mà chĩa lên/xuống
+     thì không chữa được mép hông.
+  4. ⭐ **Mỗi kỷ một `factor` RIÊNG, bằng đúng khoảng cách TỐI THIỂU để biên mép còn `FRAME_FIT_MARGIN`**
+     — chọn. Tìm bằng chia đôi 40 bước trên [0,8; 4,0], có nhớ kết quả.
+- **Lý do chọn**: nó biến một con số VIẾT TAY thành một con số ĐO ĐƯỢC. Bằng chứng nó tối thiểu
+  thật: **14/15 kỷ ra biên đúng `0,0400` = sàn**, không dư một li; chỉ kỷ 15 dư (0,0736) vì nó bị
+  một sàn KHÁC trói (khoảng lùi theo `massScale`), và ngoại lệ ấy được ghi **tường minh đếm được**
+  (`assert.deepEqual(DU_DIA, [15])`) theo đúng khuôn `TECH_DEBT #44` — kỷ thứ hai dư thì đỏ, mà kỷ
+  15 hết dư cũng đỏ.
+- **Trade-off — VÀ ĐÂY LÀ PHẦN PHẢI ĐỌC, KHÔNG ĐƯỢC BỎ QUA**: hệ số trung bình đi từ nền 1,18 lên
+  **1,626**, tức thành phố đứng xa hơn ~38% và chiếm khoảng **53% diện tích khung** so với trước.
+  Cái giá ấy hiện ra ở đúng một chỗ đo được: **trục CHẶNG NGÀY của bản quét tụt 14,39 → 11,33**,
+  xuống DƯỚI ngưỡng mắt 12 — vì các dải đo là phân số CỐ ĐỊNH của ô, nên thành phố nhỏ lại thì mỗi
+  dải bị pha loãng thêm nền trời và nền đất (đúng hình dạng `TECH_DEBT #22`). Đã tách một biến để
+  chứng minh: cây mã có đủ VIỆC 1+2+3+4 nhưng **hoàn tác riêng `orbit.js`** ra **14,23** — tức bốn
+  việc kia cộng lại chỉ tốn 0,16, còn **2,90 là của riêng phép lùi này**. Và phép lùi KHÔNG rút
+  ngắn được: hạ biên an toàn từ 4% xuống 0% chỉ lấy lại 3,3% khoảng cách.
+- **Ảnh hưởng**: đóng `TECH_DEBT #24`; mở `TECH_DEBT #86` (trục chặng dưới ngưỡng). Cặp đôi này là
+  một **quyết định của Đàm**, không phải của tôi — hai thứ anh đã yêu cầu đang xung đột nhau, và
+  cách duy nhất sai là lặng lẽ chọn hộ rồi nới ngưỡng (phễu Phase 9A).
+- **Điều kiện xem lại**: khi trục chặng được nâng lại bằng cần gạt THẬT (bầu trời lúc 6h so với
+  15h — xem `TECH_DEBT #86`), hoặc khi Đàm chốt hướng.
 
 ---
 

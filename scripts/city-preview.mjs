@@ -88,6 +88,20 @@ function parseArgs(argv) {
      * 0 = tắt (khung toàn cảnh như cũ).
      */
     focus: 0,
+    /**
+     * `--topdown` — NHÌN THẲNG TỪ TRÊN XUỐNG (bản đồ quy hoạch).
+     *
+     * ⚠️ ĐÂY LÀ MỘT KHUNG HÌNH KHÔNG CÓ TRONG APP, VÀ NÓ CỐ Ý NHƯ VẬY. Khung app ngẩng 34,4° nên
+     * mái nhà che gần hết mặt đường; muốn trả lời câu *"bộ xương thành phố có còn đối xứng bốn
+     * chiều không"* (điều kiện nghiệm thu của Phase 20) thì phải nhìn thẳng xuống. Vì vậy nó
+     * KHÔNG đi qua `createOrbit`: bộ điều khiển ấy kẹp góc ngẩng ở `MAX_PITCH` đúng để app không
+     * bao giờ ngả thành ảnh chụp trực thăng — kẹp ấy là một lời hứa với Đàm, đừng nới nó ra chỉ để
+     * chụp một tấm ảnh nghiệm thu.
+     *
+     * ⚠️ ĐỪNG DÙNG ẢNH NÀY ĐỂ KẾT LUẬN VỀ MỸ THUẬT. Nó chỉ trả lời về BỐ CỤC (đường đi đâu, thửa
+     * to nhỏ ra sao). Mọi kết luận về ánh sáng/màu/bóng phải đọc từ khung thường.
+     */
+    topdown: false,
     // Giờ Việt Nam giả lập để soi từng chặng trong ngày (0–23). Rỗng = giữa trưa trung tính.
     // ⚠️ LÀ MẢNG, và đây là sửa một cái bẫy đã cắn thật: bản đầu để `hour` là MỘT số, nên
     // `--hour 6 --hour 12 --hour 22` chỉ vẽ mỗi giờ 22 rồi in đúng một dòng "✓" — mà hai file kia
@@ -178,6 +192,7 @@ function parseArgs(argv) {
     else if (key === '--height') { args.height = Number(value); i += 1; }
     else if (key === '--zoom') { args.zoom = Number(value); i += 1; }
     else if (key === '--focus') { args.focus = Number(value); i += 1; }
+    else if (key === '--topdown') args.topdown = true;
     else if (key === '--hour') { args.hours.push(Number(value)); i += 1; }
     else if (key === '--sweep') args.sweep = true;
     else if (key === '--cell') { args.cell = Number(value); i += 1; }
@@ -215,10 +230,10 @@ function run(cmd, cmdArgs, options = {}) {
  */
 function entrySource({
   era, level, theme, zoom = 1, focus = 0, hour = null, pending = 0, sessions = 40, dpr = null, bench = 0,
-  mask = null, noShadow = false, noAo = false, t = 17.5, lowDetail = false,
+  mask = null, noShadow = false, noAo = false, t = 17.5, lowDetail = false, topdown = false,
 }) {
   return `
-import { computeCityLayout, ROAD_CELL_COUNT } from '${ROOT}/src/engine/cityLayout.js';
+import { computeCityLayout, roadCellCount } from '${ROOT}/src/engine/cityLayout.js';
 import { buildScenePalette } from '${ROOT}/src/engine/city3d/palette3d.js';
 import { deriveDaylight } from '${ROOT}/src/engine/city3d/daylight.js';
 import { applyPaintedLook, createCityScene, MAX_PIXEL_RATIO } from '${ROOT}/src/components/city/render3d/sceneGraph.js';
@@ -241,6 +256,7 @@ const LEVEL = ${level};
 const IS_DARK = ${theme === 'dark'};
 const ZOOM = ${zoom};
 const FOCUS = ${focus};
+const TOPDOWN = ${topdown ? 'true' : 'false'};
 const HOUR = ${hour === null ? 'null' : hour};
 const PENDING = ${pending};
 const SESSIONS = ${sessions};
@@ -354,6 +370,25 @@ const eye = orbit.getPosition();
 const target = orbit.getTarget();
 camera.position.set(eye.x, eye.y, eye.z);
 camera.lookAt(target.x, target.y, target.z);
+
+// ⚠️ NHÌN THẲNG XUỐNG — đè lên camera vừa đặt, KHÔNG đi qua 'orbit'. Lý do đầy đủ ở chú thích của
+// cờ '--topdown' trong 'parseArgs'; tóm tắt: 'createOrbit' kẹp góc ngẩng ở 'MAX_PITCH' và cái kẹp
+// ấy là một lời hứa với Đàm (app không được ngả thành ảnh trực thăng), nên công cụ nghiệm thu
+// không được nới nó ra.
+//
+// Độ cao suy từ HÌNH HỌC, không chọn tay: nửa lưới là 'gridSize / 2', chừa thêm 15% lề, và trục
+// DỌC mới là trục chật (khung 1100×700 rộng hơn cao). Nhìn thẳng xuống với vector 'up' mặc định
+// (0,1,0) là một ca suy biến, nên đặt 'up' về (0,0,-1): bắc ở trên, tây ở trái.
+if (TOPDOWN) {
+  const nuaLuoi = (layout.gridSize / 2) * 1.15;
+  const nuaGoc = (CITY_CAMERA_FOV / 2) * Math.PI / 180;
+  const cao = (nuaLuoi / Math.tan(nuaGoc)) * ZOOM;
+  camera.up.set(0, 0, -1);
+  camera.position.set(0, cao, 0);
+  camera.lookAt(0, 0, 0);
+  console.log('[topdown] nhìn thẳng xuống từ độ cao ' + cao.toFixed(2)
+    + ' · phủ ' + (nuaLuoi * 2).toFixed(2) + ' ô theo chiều dọc khung');
+}
 
 if (NO_SHADOW) {
   // Tắt ở CẢ HAI đầu: đèn thôi ném bóng, và bộ dựng thôi lấy mẫu bản đồ bóng. Tắt mỗi một đầu thì
@@ -600,13 +635,15 @@ document.getElementById('info').textContent =
   // mặc định ('--sessions 40' trên 80 ô đường) sẽ hiện một thành phố mới xây một nửa, và người
   // xem đọc những đoạn đường cụt ấy thành một khuyết tật dựng hình. Chuyện đó đã xảy ra thật:
   // Phase 19 mở ra với một lời chê “đường có nét đứt trông giả tạo” mà thủ phạm chỉ là con số 40.
-  // Con số lấy THẲNG từ 'ROAD_CELL_COUNT', không viết cứng — nó suy từ chính 'ROAD_CELLS'.
-  + ' · đường ' + soODuong + '/' + ROAD_CELL_COUNT
-  // ⚠️ ĐIỀU KIỆN LÀ 'SESSIONS', KHÔNG PHẢI 'soODuong < ROAD_CELL_COUNT'. Vài ô đường VĨNH VIỄN
+  // Con số lấy THẲNG từ 'roadCellCount(ERA)', không viết cứng — nó suy từ chính bộ xương của kỷ.
+  // ⚠️ TỪ PHASE 20 NÓ KHÁC NHAU THEO KỶ (34…92 ô), nên phải hỏi kèm 'ERA'; một hằng số chung ở
+  // đây sẽ nói dối ở 14 kỷ.
+  + ' · đường ' + soODuong + '/' + roadCellCount(ERA)
+  // ⚠️ ĐIỀU KIỆN LÀ 'SESSIONS', KHÔNG PHẢI 'soODuong < tổng ô'. Vài ô đường VĨNH VIỄN
   // bị công trình chiếm (đo được: 2 ô ở kỷ 1), nên so với trần lý thuyết thì cảnh báo kêu oan
   // ngay cả khi mạng đã mở hết — mà một cảnh báo kêu oan còn tệ hơn không có cảnh báo. Thứ cần
   // hỏi là *ngân sách còn đang là chỗ thắt cổ chai không*, và đó đúng là 'SESSIONS < tổng số ô'.
-  + (SESSIONS < ROAD_CELL_COUNT ? ' ⚠ MẠNG ĐƯỜNG CHƯA MỞ HẾT — tăng --sessions' : '')
+  + (SESSIONS < roadCellCount(ERA) ? ' ⚠ MẠNG ĐƯỜNG CHƯA MỞ HẾT — tăng --sessions' : '')
   + ' · ' + city.stats.drawCalls + ' lệnh vẽ · '
   // Ba con số, theo đúng thứ tự bảng [stats]: thành phố + nền = tổng. Dòng chú thích dưới ảnh xem
   // thử là chỗ DUY NHẤT Đàm đọc mà không cần mở terminal, nên nó không được nói ít hơn bảng đo.
@@ -627,7 +664,7 @@ document.body.dataset.ready = '1';
  */
 function sweepSource({ level, theme, cell, combos, sessions = 40, t = 17.5 }) {
   return `
-import { computeCityLayout, ROAD_CELL_COUNT } from '${ROOT}/src/engine/cityLayout.js';
+import { computeCityLayout } from '${ROOT}/src/engine/cityLayout.js';
 import { buildScenePalette } from '${ROOT}/src/engine/city3d/palette3d.js';
 import { deriveDaylight } from '${ROOT}/src/engine/city3d/daylight.js';
 import { applyPaintedLook, createCityScene, MAX_PIXEL_RATIO } from '${ROOT}/src/components/city/render3d/sceneGraph.js';
@@ -1323,6 +1360,9 @@ async function shoot(chrome, url, pngPath,
     const mocDai = dsBang.map((b) => b.y).filter((y) => y > 0);
     const SO_LUOT = 3;
     let ghep = null;
+    // Chữ ký của những mép bị tố ở lượt TRƯỚC — dùng để tách "vết rách" khỏi "nội dung" bằng tính
+    // lặp lại thay vì bằng một ngưỡng nữa. Lý do đầy đủ ở chỗ dùng, bên dưới.
+    let chuKyTruoc = '';
     for (let luot = 1; luot <= SO_LUOT; luot += 1) {
       const dai = [];
       for (const b of dsBang) {
@@ -1345,6 +1385,36 @@ async function shoot(chrome, url, pngPath,
       }
       const soi = soiVetRach(ghep, mocDai, hangCauTruc);
       if (!soi.hong) break;
+
+      /**
+       * ⚠️ MỘT VẾT RÁCH LÀ MỘT CUỘC ĐUA, NÊN NÓ KHÔNG THỂ RƠI ĐÚNG MỘT CHỖ HAI LẦN LIÊN TIẾP.
+       *
+       * Cổng chống-rách hiệu chuẩn trên ảnh MỘT-CẢNH ở khung app (ngẩng 34,4°), nơi không có mép
+       * ngang nào sắc lẹm chạy hết bề ngang. Bảng quét từng làm nó kêu oan 30 chỗ và đã được chữa
+       * bằng cách kể tên các dải nhãn (`hangCauTruc`). Phase 20 thêm quần thể THỨ BA: khung nhìn
+       * thẳng từ trên xuống (`--topdown`), nơi một con đường chạy đúng hướng đông-tây LÀ một mép
+       * ngang sắc lẹm chạy hết bề ngang — đúng hình dạng mà cổng này sinh ra để bắt, chỉ khác là
+       * lần này nó là NỘI DUNG chứ không phải lỗi. Đo được: kỷ 1 báo hàng 317 (27,7%) và hàng 331
+       * (35,7%) — **y hệt nhau tới một chữ số thập phân ở cả ba lượt chụp độc lập**.
+       *
+       * ⇒ Cách tách hai quần thể KHÔNG phải một ngưỡng thứ tư (thêm ngưỡng là thêm chỗ để nới —
+       * bài học Phase 9A), mà là chính TÍNH LẶP LẠI. Một vết rách sinh ra từ việc chụp trúng lúc
+       * khung hình đang được ghép dở: nó phụ thuộc thời điểm, nên hai lượt chụp độc lập không thể
+       * cho ra cùng một hàng với cùng một bề rộng bước. Một mép do nội dung thì lặp lại y hệt mãi
+       * mãi. Phép phân biệt này KHÔNG có tham số nào để nới, và nó áp cho mọi khung hình chứ không
+       * riêng '--topdown' — nghĩa là nó cũng bảo vệ luôn những khung hình sau này chưa ai nghĩ tới.
+       *
+       * ⚠️ VÀ NÓ VẪN GHI NHẬT KÝ + NÓI RA MÀN HÌNH. Một cổng tự tha cho mình trong im lặng là một
+       * cổng không còn ai kiểm được (`TECH_DEBT #52`).
+       */
+      const chuKy = soi.xau.map((m) => `${m.y}:${m.buoc.toFixed(4)}`).join('|');
+      if (chuKy && chuKy === chuKyTruoc) {
+        process.stderr.write(`  ℹ️  mép ngang LẶP LẠI Y HỆT ở lượt chụp độc lập thứ ${luot} `
+          + `(${soi.xau.map((m) => `hàng ${m.y}`).join(' · ')}) ⇒ đây là NỘI DUNG, không phải vết `
+          + 'rách — một vết rách phụ thuộc thời điểm chụp nên không lặp lại đúng chỗ được. Nhận ảnh.\n');
+        break;
+      }
+      chuKyTruoc = chuKy;
 
       // NHẬT KÝ (`TECH_DEBT #52`): ghi TRƯỚC khi quyết định chụp lại hay bỏ cuộc, để cả lượt cuối
       // — lượt ném lỗi — cũng để lại dấu vết. Ghi hỏng thì kệ, không được để việc ghi nhật ký làm
@@ -1550,7 +1620,11 @@ async function main() {
       // Chỉ gắn khi KHÁC mặc định, để mọi tên file lịch sử vẫn tra được.
       const tTag = args.t === 17.5 ? '' : `-t${String(args.t).replace('.', 'p')}`;
       const lodTag = args.lowDetail ? '-lod' : '';
-      const pngPath = resolve(OUT_DIR, `city-era${String(era).padStart(2, '0')}-${args.theme}${hourTag}${sessTag}${widthTag}${zoomTag}${tTag}${lodTag}${maskTag}${shadowTag}${aoTag}${focusTag}.png`);
+      // ⚠️ LẦN THỨ CHÍN CỦA ĐÚNG CÁI BẪY TRÊN — `--topdown` (Phase 20). Nó là một KHUNG HÌNH KHÁC
+      // HẲN (nhìn thẳng xuống, không phải khung app), nên dùng chung tên file với ảnh thường là
+      // cách chắc chắn nhất để một phép so trước/sau chấm hai thứ không so được với nhau.
+      const topTag = args.topdown ? '-topdown' : '';
+      const pngPath = resolve(OUT_DIR, `city-era${String(era).padStart(2, '0')}-${args.theme}${hourTag}${sessTag}${widthTag}${zoomTag}${tTag}${lodTag}${maskTag}${shadowTag}${aoTag}${focusTag}${topTag}.png`);
       let info = '';
       let hop = null;
       try {
@@ -1589,6 +1663,7 @@ async function main() {
         sessions: args.sessions,
         mask: args.mask,
         focus: args.focus,
+        topdown: args.topdown,
         zoom: args.zoom,
         theme: args.theme,
       }, null, 2)}\n`);

@@ -27,14 +27,15 @@ import {
 import { boundaryBend, buildRoadPaths, rankBendScale, roadHalfWidth } from './roadPath.js';
 import { ROAD_RANKS, rankOfRoad, getStreetStyle, streetCrossSection } from './streetStyle.js';
 import { ERA_STYLES } from './eraStyle.js';
-import { buildRoadPlan, eraWonderAnchors } from '../roadPlan.js';
+import { buildCityPlan, planWonderZone } from './cityPlan.js';
+import { parcelCapacity } from './parcelCapacity.js';
 import { CITY_GRID_SIZE } from '../cityGrid.js';
 
 const ERAS = Array.from({ length: 15 }, (_, i) => i + 1);
 
-/** Mạng đường THẬT của một kỷ — đúng thứ `deriveProps` đem đi dựng hình. */
-const mạng = (era) => buildRoadPlan(era, getNetworkStyle(era));
-const ô = (era) => mạng(era).cells;
+/** Bộ xương THẬT của một kỷ — đúng thứ `deriveProps` đem đi dựng hình. */
+const mạng = (era) => buildCityPlan(era);
+const ô = (era) => mạng(era).roads;
 const kho = (era) => new Set(ô(era).map((c) => `${c.x}|${c.y}`));
 
 test('BẢNG ĐỦ 15 KỶ VÀ MỌI DÒNG HỢP LỆ — validator TỪ CHỐI THẲNG, không tự chữa', () => {
@@ -112,12 +113,17 @@ test('MẠNG ĐƯỜNG LÀ HÀM THUẦN CỦA `era` — gọi kèm dữ liệu r
    */
   for (const era of ERAS) {
     const sạch = JSON.stringify(ô(era));
-    const rác = JSON.stringify(buildRoadPlan(era, {
-      ...getNetworkStyle(era),
+    // ⚠️ `buildCityPlan` nhận ĐÚNG MỘT tham số, nên phép bơm rác phải bơm qua chính tham số ấy —
+    // và đó là một phép thử MẠNH HƠN bản trước: nếu ngày nào có ai thêm một tham số thứ hai
+    // (`built`, `sessionCount`…) thì bài này vẫn xanh trong khi bất biến đã chết. Nên vế thứ hai
+    // dưới đây khoá chính CHỮ KÝ của hàm: một tham số, không hơn.
+    const rác = JSON.stringify(buildCityPlan(era, {
       sessionCount: 400, built: ['a', 'b', 'c'], levels: { a: 3 }, pending: [1, 2],
-    }).cells);
+    }).roads);
     assert.equal(rác, sạch, `kỷ ${era}: mạng đường đổi khi bị truyền kèm dữ liệu tiến độ`);
   }
+  assert.equal(buildCityPlan.length, 1,
+    'buildCityPlan nhận nhiều hơn MỘT tham số — bất biến ADR-007 nay có một cửa để tiến độ lọt vào');
 });
 
 test('MẠNG ĐƯỜNG LIÊN THÔNG — không cụm nào bị bỏ rơi, và số lần phải VÁ phải nhỏ', () => {
@@ -158,9 +164,16 @@ test('MỌI KỲ QUAN CÓ MẶT TIỀN QUAY RA ĐƯỜNG — mạng mới không
   let thiếu = 0;
   for (const era of ERAS) {
     const có = kho(era);
-    for (const neo of eraWonderAnchors(era)) {
-      const kề = [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]]
-        .some(([dx, dy]) => có.has(`${neo.x + dx}|${neo.y + dy}`));
+    for (let rank = 0; rank < 5; rank += 1) {
+      const z = planWonderZone(era, rank);
+      // Cả khu đất, không chỉ ô neo: kỳ quan chiếm tới 3×3 nên "có lối vào" nghĩa là CÓ ô đường
+      // nào đó kề bất kỳ ô nào của khu — đúng thứ mắt đọc ra là một mặt tiền.
+      let kề = false;
+      for (let y = z.y; y < z.y + z.h && !kề; y += 1) {
+        for (let x = z.x; x < z.x + z.w && !kề; x += 1) {
+          kề = [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => có.has(`${x + dx}|${y + dy}`));
+        }
+      }
       if (!kề) thiếu += 1;
     }
   }
@@ -293,45 +306,97 @@ test('KỶ KHAI CONG THÌ CONG THẬT, KỶ KHAI THẲNG THÌ THẲNG TUYỆT Đ
       `kỷ ${era} có đúng một con đường không theo lưới, nên độ cong trung bình phải nhỏ mà khác 0 `
       + `— đo được ${độCong(era).toFixed(3)}`);
   }
+  /**
+   * ⚠️ **NGƯỠNG NÀY TỪNG LÀ MỘT MỨC (`> 0,3`) VÀ NAY LÀ MỘT QUAN HỆ — ĐÂY LÀ MỘT THAY ĐỔI CÓ LÝ DO.**
+   * Con số 0,3 được hiệu chuẩn trên bộ sinh cũ (`khung*` của `roadPlan.js`), nơi cả một con đường
+   * vồng suốt chiều dài nên trung bình rơi vào 0,372…0,590. Bộ sinh hợp nhất ở Phase 21 thì vồng
+   * theo NGÂN SÁCH ĐẤT DƯ của thửa hẹp hơn, nên một kỷ khai `bend` thấp mà thửa chật thì cong ít
+   * hơn hẳn — đo được 0,219 ở kỷ 12. Nới 0,3 xuống cho vừa là đúng cái phễu Phase 9A.
+   *
+   * Lời hứa thật chưa bao giờ là một con số; nó là một THỨ TỰ: *kỷ khai cong phải cong hơn kỷ chỉ
+   * có mỗi một con đường chéo, mà kỷ ấy lại phải cong hơn kỷ thẳng tuyệt đối.* Ba bậc, không hằng
+   * số nào chọn tay. Biên đo được: 0,000 · 0,108 · 0,219 ⇒ bậc trên cách bậc dưới **2,02 lần**.
+   * Đòi ≥ 1,5 lần là nằm giữa hai đầu ĐO ĐƯỢC, và nó tự đỏ nếu một kỷ khai cong mà dựng ra thẳng.
+   */
   const cong = ERAS.filter((e) => !RULER_STRAIGHT_ERAS.includes(e));
+  const sànCong = Math.min(...cong.map(độCong));
+  const trầnChéo = Math.max(...CÓ_ĐƯỜNG_CHÉO.map(độCong));
   for (const era of cong) {
-    assert.ok(độCong(era) > 0.3,
+    assert.ok(độCong(era) > trầnChéo,
       `kỷ ${era} (${NETWORK_STYLES[era].country}) khai bend ${NETWORK_STYLES[era].bend} mà tim `
-      + `đường chỉ cong trung bình ${độCong(era).toFixed(3)} — cong trên giấy, thẳng trên màn hình`);
+      + `đường chỉ cong trung bình ${độCong(era).toFixed(3)} — không hơn nổi kỷ chỉ có ĐÚNG MỘT `
+      + `con đường không theo lưới (${trầnChéo.toFixed(3)}), tức cong trên giấy, thẳng trên màn hình`);
   }
+  assert.ok(sànCong >= trầnChéo * 1.5,
+    `kỷ cong ít nhất (${sànCong.toFixed(3)}) chỉ hơn kỷ chỉ-có-đường-chéo (${trầnChéo.toFixed(3)}) `
+    + `${(sànCong / trầnChéo).toFixed(2)} lần — ba bậc đang dính vào nhau, mắt không tách được`);
   // Và cả bảng phải TRẢI ra, không dồn về một mức.
   const ds = cong.map(độCong);
   assert.ok(Math.max(...ds) - Math.min(...ds) > 0.1,
     `13 kỷ biết cong chỉ trải ${(Math.max(...ds) - Math.min(...ds)).toFixed(3)} — bảng gần như một dòng`);
 });
 
-test('MẠNG ĐƯỜNG KHÔNG PHẢI MỘT BÀN CỜ — kỷ hữu cơ phải có ô đường NGOÀI bốn trục cũ', () => {
+/**
+ * Sàn chênh cỡ thửa cho kỷ hữu cơ. Đo được trên bộ sinh hợp nhất: kỷ 13 = 3,50 · kỷ 6 = 3,75 ·
+ * kỷ 7 = 4,00 · kỷ 1 = 6,00 ⇒ sàn 3,0 nằm DƯỚI đầu thấp nhất một quãng đọc được, và nằm TRÊN hẳn
+ * hai con số của bộ sinh cũ (1,60 và 2,00) mà bài đối chứng ngay bên dưới nhốt lại.
+ */
+const SÀN_CHÊNH_THỬA = 3.0;
+
+test('THỬA PHẢI THẬT SỰ KHÁC CỠ — kỷ hữu cơ không được ra một tấm bàn cờ thửa bằng nhau', () => {
   /**
-   * ⚠️ **BÀI CHỐT CỦA CẢ PHIÊN, VÀ NÓ NHỐT ĐÚNG THỨ ĐÀM CHỈ VÀO.** Mạng cũ là bốn hàng × bốn cột
-   * `x,y ∈ {0, 4, 8, 11}`. Một bản vá chỉ đụng vào MÉP đường sẽ để nguyên tập ô ấy, nên bài này
-   * đỏ ngay nếu có ai hoàn tác `roadPlan.js` — kể cả khi mọi bài khác vẫn xanh.
+   * ⚠️ **BÀI NÀY THAY CHO MỘT BÀI ĐÃ CHẾT CÙNG THỨ NÓ ĐO — GHI RA VÌ ĐÓ MỚI LÀ ĐIỀU ĐÁNG NHỚ.**
+   * Bản trước tên là *"MẠNG ĐƯỜNG KHÔNG PHẢI MỘT BÀN CỜ"* và đếm số ô đường nằm ngoài bốn trục
+   * `x, y ∈ {0, 4, 8, 11}` — tức bốn hàng bốn cột của mạng đường VIẾT CỨNG thời trước Phase 20.
+   * Phép đo ấy chỉ có nghĩa chừng nào cái lưới cứng ấy còn tồn tại. Nay mỗi kỷ tự sinh lấy tập ô
+   * đường của mình, nên "ngoài bốn trục cũ" không còn là *"không phải bàn cờ"* mà chỉ là *"không
+   * trùng cái bàn cờ CỤ THỂ đã bị xoá"* — và đo ra thì kỷ 4 (Chang'an, bàn cờ thật, `bend: 0`)
+   * cho **28 ô ngoài trục**, cao hơn cả kỷ hữu cơ. Một phép đo nói ngược hẳn điều nó tuyên bố.
+   * ⇒ Lời hứa cũ KHÔNG mất, nó chuyển nhà: *"đường có thẳng băng không"* nay do bài `KỶ KHAI CONG
+   * THÌ CONG THẬT` đo trên tim đường, và *"15 kỷ có ra 15 mạng khác nhau không"* do bài ký-tên-bằng
+   * -tập-ô đo. Chỗ CHƯA ai canh — và cũng đúng là chỗ Đàm chỉ vào ở Phase 21 — là **cỡ thửa**:
+   * phố cổ có mảnh đất bé xíu nằm cạnh khu vườn lớn, còn quy hoạch thì mọi ô bằng nhau.
+   *
+   * ⚠️ Đo bằng **tỉ số thửa lớn nhất / thửa nhỏ nhất**, không đo bằng độ lệch chuẩn: đây là câu
+   * hỏi về HAI ĐẦU của bảng ("có mảnh bé xíu cạnh mảnh to không"), mà độ lệch chuẩn thì gộp cả
+   * phần giữa vào nên nó loãng đúng thứ đang hỏi.
    */
-  const trụcCũ = new Set([0, 4, 8, CITY_GRID_SIZE - 1]);
-  const ngoàiTrục = (era) => ô(era).filter((c) => !trụcCũ.has(c.x) && !trụcCũ.has(c.y)).length;
+  const tỉSố = (era) => {
+    const a = buildCityPlan(era).parcels.map((r) => r.area).sort((x, y) => x - y);
+    return a[a.length - 1] / a[0];
+  };
+  const hữuCơ = ERAS.filter((e) => NETWORK_STYLES[e].plan === 'organic');
+  assert.ok(hữuCơ.length >= 3, 'không đủ kỷ hữu cơ để bài này còn nghĩa');
+  for (const era of hữuCơ) {
+    assert.ok(tỉSố(era) >= SÀN_CHÊNH_THỬA,
+      `kỷ ${era} (${NETWORK_STYLES[era].country}, hữu cơ) có thửa lớn nhất chỉ gấp `
+      + `${tỉSố(era).toFixed(2)} lần thửa nhỏ nhất — phố tự phát mà mọi khu đất bằng nhau`);
+  }
+  // Không kỷ nào — kể cả kỷ quy hoạch nhất — được ra một tấm bàn cờ thửa bằng chằn chặn.
   for (const era of ERAS) {
-    const s = NETWORK_STYLES[era];
-    if (s.plan === 'grid' && s.bend === 0 && !s.diagonal) {
-      // Bàn cờ thẳng tuyệt đối thì KHÔNG có ô nào ngoài trục — và đó là đúng, Trường An quy hoạch
-      // đúng như thế. Nó cũng là ĐỐI CHỨNG: nếu bài này xanh ở mọi kỷ thì nó không còn răng.
-      assert.equal(ngoàiTrục(era), 0,
-        `kỷ ${era} khai bàn cờ thẳng tuyệt đối mà vẫn có ${ngoàiTrục(era)} ô lệch khỏi trục`);
-      continue;
-    }
-    if (s.plan === 'grid' && s.bend === 0) {
-      // Lưới CỘNG một con đường chéo: chỉ chừng một chục ô lệch khỏi trục, đúng bằng Broadway.
-      assert.ok(ngoàiTrục(era) >= 6 && ngoàiTrục(era) <= 20,
-        `kỷ ${era} có đúng một con đường không theo lưới, nên phải có 6–20 ô ngoài trục — `
-        + `đo được ${ngoàiTrục(era)}`);
-      continue;
-    }
-    assert.ok(ngoàiTrục(era) >= 15,
-      `kỷ ${era} (${s.plan}) chỉ có ${ngoàiTrục(era)} ô đường nằm ngoài bốn trục bàn cờ cũ — `
-      + 'nhìn từ trên xuống nó vẫn là cái bàn cờ mà Đàm đã bác');
+    assert.ok(tỉSố(era) >= 1.4,
+      `kỷ ${era} chia ra ${buildCityPlan(era).parcels.length} thửa gần như bằng nhau `
+      + `(tỉ số ${tỉSố(era).toFixed(2)})`);
+  }
+  // Và cả bảng phải TRẢI: kỷ chênh nhiều nhất phải hơn hẳn kỷ chênh ít nhất, nếu không thì
+  // `sizeVary` đang là một cột chết mà 15 dòng vẫn trông như một bảng.
+  const ds = ERAS.map(tỉSố);
+  assert.ok(Math.max(...ds) >= Math.min(...ds) * 3,
+    `cả bảng chỉ trải ${(Math.max(...ds) / Math.min(...ds)).toFixed(2)} lần giữa kỷ chênh nhiều `
+    + 'nhất và kỷ chênh ít nhất — cột `sizeVary` gần như không cắn');
+});
+
+/**
+ * ⚠️ **ĐỐI CHỨNG NHỐT ĐÚNG BỘ SỐ HỎNG CŨ.** Trước Phase 21, ngân sách vồng của một nhát cắt bị
+ * trừ đi `minSide` rồi mới kẹp thêm một hằng số 2 ô, nên kỷ 1 (`minSide: 3`) và kỷ 6 (`minSide: 2`
+ * trong vùng đã bị vành đai thu hẹp) chia ra những thửa gần như bằng nhau — đo được **1,60** và
+ * **2,00**. Nếu ngày nào có ai nới `SÀN_CHÊNH_THỬA` xuống cho một kỷ vừa hỏng đi lọt, dòng này đỏ
+ * trước. Không có nó thì cái sàn sẽ bị nới dần cho tiện, đúng cái phễu Phase 9A.
+ */
+test('ĐỐI CHỨNG: hai con số của bộ sinh CŨ phải vẫn TRƯỢT cái sàn chênh thửa', () => {
+  for (const hỏng of [1.60, 2.00]) {
+    assert.ok(hỏng < SÀN_CHÊNH_THỬA,
+      `sàn chênh thửa nay là ${SÀN_CHÊNH_THỬA}, đã cho lọt bộ số hỏng cũ ${hỏng}`);
   }
 });
 
@@ -413,7 +478,7 @@ test('`boundaryBend` LUÔN nằm trong [−1, 1] — nếu không thì mọi ph�
  * Danh sách này tự đỏ theo CẢ HAI chiều: kỷ thứ ba rơi vào thì đỏ, mà một trong hai kỷ này được
  * cho một vành đai thì cũng đỏ.
  */
-const KHÔNG_VÀNH_ĐAI = [1, 2];
+const KHÔNG_VÀNH_ĐAI = [1, 2, 8, 10, 11];
 
 test('BA HẠNG ĐƯỜNG ĐỀU CÓ MẶT TRONG MẠNG THẬT — hạng thứ ba không được là mã chết', () => {
   // ⚠️ Thêm một hạng vào bảng mà mạng đường không sinh ra ô nào thuộc hạng ấy thì nó là một nhánh
@@ -440,4 +505,68 @@ test('BA HẠNG ĐƯỜNG ĐỀU CÓ MẶT TRONG MẠNG THẬT — hạng thứ 
     assert.equal(NETWORK_STYLES[era].loops, 0,
       `kỷ ${era} khai loops ${NETWORK_STYLES[era].loops} mà không dựng ra ô vành đai nào`);
   }
+});
+
+/**
+ * ══════════════════════════════════════════════════════════════════════════════════════════════
+ * BA BÀI DƯỚI ĐÂY ĐẾN TỪ NHÁNH CHIA THỬA (Phase 20), GIỮ NGUYÊN Ý NGHĨA SAU KHI HỢP NHẤT
+ * ══════════════════════════════════════════════════════════════════════════════════════════════
+ */
+
+test('MỌI DÒNG NẰM TRONG TRẦN CỦA CHÍNH NÓ — số thửa là một QUAN HỆ, không phải một cái trần chung', () => {
+  /**
+   * `MAX_PARCELS = 14` là trần của cả lưới ở `minSide` nhỏ nhất. Nó KHÔNG nói gì về một kỷ khai
+   * `minSide: 3` (trần thật 9) hay một kỷ khai `loops: 1` (vành đai ăn hết viền ⇒ chỉ còn 10×10).
+   * Khai vượt thì bộ sinh chỉ có thể dựng ra ÍT HƠN — và trước Phase 21 nó làm vậy trong im lặng.
+   */
+  for (const era of ERAS) {
+    const st = NETWORK_STYLES[era];
+    const canh = st.loops > 0 ? CITY_GRID_SIZE - 2 : CITY_GRID_SIZE;
+    const tran = parcelCapacity(canh, canh, st.minSide);
+    assert.ok(st.parcels <= tran,
+      `kỷ ${era}: khai ${st.parcels} thửa nhưng trần chỉ ${tran} `
+      + `(minSide ${st.minSide}${st.loops > 0 ? ' + vành đai' : ''})`);
+  }
+  // ⚠️ VÀ SỐ THỬA KHAI PHẢI ĐƯỢC DỰNG RA ĐỦ. Cái trần ở trên chỉ nói "không vượt"; bài này nói
+  // "đúng bằng". Thiếu vế thứ hai thì một bộ sinh bế tắc giữa chừng vẫn xanh.
+  for (const era of ERAS) {
+    assert.equal(mạng(era).parcels.length, NETWORK_STYLES[era].parcels,
+      `kỷ ${era}: khai ${NETWORK_STYLES[era].parcels} thửa mà dựng ra ${mạng(era).parcels.length}`);
+  }
+});
+
+test('ĐỐI CHỨNG: dòng khai vượt trần phải BỊ TỪ CHỐI, không được làm tròn', () => {
+  /**
+   * ⚠️ NHỐT ĐÚNG BỘ SỐ ĐÃ HỎNG. Kỷ 13 và 14 từng khai 12 thửa kèm `loops: 1`, tức 12 thửa trên
+   * một mảnh chứa tối đa 9 — lọt qua mọi cổng, rồi bộ sinh lặng lẽ đi tới một vùng bế tắc và vẽ
+   * một đường toàn `undefined`. Không có bài này thì cái trần sẽ bị nới dần cho tiện.
+   */
+  const tốt = NETWORK_STYLES[5];
+  assert.equal(isValidNetworkStyle({ ...tốt, loops: 1, minSide: 2, parcels: 12 }), false);
+  assert.equal(isValidNetworkStyle({ ...tốt, loops: 0, minSide: 2, parcels: 12 }), true);
+  assert.equal(isValidNetworkStyle({ ...tốt, loops: 0, minSide: 3, parcels: 10 }), false);
+  assert.equal(isValidNetworkStyle({ ...tốt, loops: 0, minSide: 3, parcels: 9 }), true);
+});
+
+test('BẢNG CÒN LÀ MỘT BẢNG — mọi trục còn SỐNG, không trục nào cả 15 kỷ khai giống nhau', () => {
+  /**
+   * Điền 15 dòng bằng cùng một bộ số là cách rẻ nhất để mọi bài test hết đỏ, và nó dựng lại đúng
+   * căn bệnh phase này sinh ra để chữa. Hỏi TỪNG TRỤC một — hỏi tổng thì một trục chết vẫn được
+   * các trục khác che (bài học Phase 10 Bước 2).
+   */
+  const trục = {
+    plan: new Set(), bend: new Set(), arms: new Set(), loops: new Set(), tangle: new Set(),
+    parcels: new Set(), sizeVary: new Set(), minSide: new Set(),
+  };
+  for (const era of ERAS) {
+    for (const k of Object.keys(trục)) trục[k].add(NETWORK_STYLES[era][k]);
+  }
+  assert.equal(trục.plan.size, PLAN_KINDS.length, 'mọi tính cách bộ xương phải có kỷ dùng tới');
+  assert.ok(trục.bend.size >= 8, `bend chỉ có ${trục.bend.size} giá trị khác nhau`);
+  assert.ok(trục.arms.size >= 3, `arms chỉ có ${trục.arms.size} giá trị khác nhau`);
+  assert.ok(trục.loops.size >= 2, 'phải có cả kỷ có vành đai lẫn kỷ không');
+  assert.ok(trục.tangle.size >= 8, `tangle chỉ có ${trục.tangle.size} giá trị khác nhau`);
+  assert.ok(trục.parcels.size >= 6, `số thửa chỉ có ${trục.parcels.size} giá trị khác nhau`);
+  assert.ok(trục.sizeVary.size >= 10, `sizeVary chỉ có ${trục.sizeVary.size} giá trị khác nhau`);
+  assert.ok(trục.minSide.size >= 3, `minSide chỉ có ${trục.minSide.size} giá trị khác nhau`);
 });

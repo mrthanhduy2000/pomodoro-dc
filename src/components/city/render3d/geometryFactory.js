@@ -34,6 +34,7 @@ import { BufferAttribute, BufferGeometry, Color } from 'three';
 
 import { getEraStyle } from '../../../engine/city3d/eraStyle';
 import { MATERIAL_ORDER, contactShade, materialFamilyFor } from '../../../engine/city3d/materials';
+import { buildOcclusionGrid, occlusionShade } from '../../../engine/city3d/occlusion';
 import { bevelWidth } from '../../../engine/city3d/parts';
 
 /** Bộ đệm tích luỹ trong lúc dựng. Mảng JS thường rồi mới đổ sang Float32Array một lần. */
@@ -50,7 +51,7 @@ function createSink() {
  * công trình NGỒI trên đất thay vì nổi lều bều, và nó tốn 0 đồng lúc chạy vì tính sẵn một lần ở
  * đây. Ô cửa sáng đèn truyền `false` — chúng tự phát sáng, tối chân thì thành vô lý.
  */
-function pushTriangle(sink, a, b, c, rgb, shade) {
+function pushTriangle(sink, a, b, c, rgb, shade, occ = null) {
   const ux = b[0] - a[0];
   const uy = b[1] - a[1];
   const uz = b[2] - a[2];
@@ -67,7 +68,13 @@ function pushTriangle(sink, a, b, c, rgb, shade) {
   for (const p of [a, b, c]) {
     sink.pos.push(p[0], p[1], p[2]);
     sink.nor.push(nx, ny, nz);
-    const k = shade ? contactShade(p[1]) : 1;
+    // Hai tầng bóng nướng sẵn, NHÂN vào nhau, và chúng trả lời hai câu khác nhau:
+    //   · `contactShade` — "điểm này cách mặt đất bao xa" (chỉ trục ĐỨNG)
+    //   · `occlusionShade` — "quanh điểm này có bao nhiêu vật chắn" (đủ BA chiều)
+    // Tầng thứ hai là thứ tầng thứ nhất về mặt cấu trúc không thể thấy: khe giữa hai căn nhà dính
+    // tường (ADR-052) nằm ở CÙNG một cao độ với mặt tường trống trải bên cạnh nó.
+    const k = (shade ? contactShade(p[1]) : 1)
+      * (shade && occ ? occlusionShade(occ, p[0], p[1], p[2], nx, ny, nz) : 1);
     sink.col.push(rgb.r * k, rgb.g * k, rgb.b * k);
   }
   sink.triangles += 1;
@@ -92,7 +99,7 @@ function place(px, py, pz, transform) {
  * thì hộp vuông (n = 4) sẽ rộng hơn ý định 41%, và mọi công trình sẽ lấn sang ô bên cạnh.
  * Góc bắt đầu `π/n` là thứ làm mặt phẳng quay ra trước thay vì một góc nhọn chĩa vào người xem.
  */
-function emitPrism(sink, part, transform, rgb, shade, bevel = 0) {
+function emitPrism(sink, part, transform, rgb, shade, bevel = 0, occ = null) {
   const n = part.sides;
   const half = Math.PI / n;
   const rx = (part.w / 2) / Math.cos(half);
@@ -120,8 +127,8 @@ function emitPrism(sink, part, transform, rgb, shade, bevel = 0) {
   const band = (lower, upper) => {
     for (let i = 0; i < n; i += 1) {
       const j = (i + 1) % n;
-      pushTriangle(sink, lower[i], upper[i], upper[j], rgb, shade);
-      pushTriangle(sink, lower[i], upper[j], lower[j], rgb, shade);
+      pushTriangle(sink, lower[i], upper[i], upper[j], rgb, shade, occ);
+      pushTriangle(sink, lower[i], upper[j], lower[j], rgb, shade, occ);
     }
   };
 
@@ -130,10 +137,10 @@ function emitPrism(sink, part, transform, rgb, shade, bevel = 0) {
     const bottom = ring(1, part.y);
     const apex = place(0, top, 0, transform);
     for (let i = 0; i < n; i += 1) {
-      pushTriangle(sink, bottom[i], apex, bottom[(i + 1) % n], rgb, shade);
+      pushTriangle(sink, bottom[i], apex, bottom[(i + 1) % n], rgb, shade, occ);
     }
     for (let i = 1; i < n - 1; i += 1) {
-      pushTriangle(sink, bottom[0], bottom[i], bottom[i + 1], rgb, shade);
+      pushTriangle(sink, bottom[0], bottom[i], bottom[i + 1], rgb, shade, occ);
     }
     return;
   }
@@ -159,17 +166,17 @@ function emitPrism(sink, part, transform, rgb, shade, bevel = 0) {
 
   // Mặt trên: quạt tam giác theo chiều NGƯỢC vòng để pháp tuyến hướng lên.
   for (let i = 1; i < n - 1; i += 1) {
-    pushTriangle(sink, upper[0], upper[i + 1], upper[i], rgb, shade);
+    pushTriangle(sink, upper[0], upper[i + 1], upper[i], rgb, shade, occ);
   }
   // Mặt đáy: chiều thuận → pháp tuyến hướng xuống. Vẫn phải vẽ vì camera hạ được xuống thấp và
   // khối lơ lửng (kỷ 15) thì nhìn thấy đáy thật.
   for (let i = 1; i < n - 1; i += 1) {
-    pushTriangle(sink, bottom[0], bottom[i], bottom[i + 1], rgb, shade);
+    pushTriangle(sink, bottom[0], bottom[i], bottom[i + 1], rgb, shade, occ);
   }
 }
 
 /** Mái dốc hai phía. Nóc chạy dọc trục X cục bộ; `ry` của khối lo phần xoay. */
-function emitGable(sink, part, transform, rgb, shade) {
+function emitGable(sink, part, transform, rgb, shade, occ = null) {
   const hw = part.w / 2;
   const hd = part.d / 2;
   const y0 = part.y;
@@ -182,14 +189,14 @@ function emitGable(sink, part, transform, rgb, shade) {
   const R0 = place(-hw, y1, 0, transform);
   const R1 = place(hw, y1, 0, transform);
 
-  pushTriangle(sink, D, C, R1, rgb, shade);      // mặt dốc hướng +Z
-  pushTriangle(sink, D, R1, R0, rgb, shade);
-  pushTriangle(sink, B, A, R0, rgb, shade);      // mặt dốc hướng −Z
-  pushTriangle(sink, B, R0, R1, rgb, shade);
-  pushTriangle(sink, B, R1, C, rgb, shade);      // đầu hồi +X
-  pushTriangle(sink, A, D, R0, rgb, shade);      // đầu hồi −X
-  pushTriangle(sink, A, B, C, rgb, shade);       // đáy
-  pushTriangle(sink, A, C, D, rgb, shade);
+  pushTriangle(sink, D, C, R1, rgb, shade, occ);      // mặt dốc hướng +Z
+  pushTriangle(sink, D, R1, R0, rgb, shade, occ);
+  pushTriangle(sink, B, A, R0, rgb, shade, occ);      // mặt dốc hướng −Z
+  pushTriangle(sink, B, R0, R1, rgb, shade, occ);
+  pushTriangle(sink, B, R1, C, rgb, shade, occ);      // đầu hồi +X
+  pushTriangle(sink, A, D, R0, rgb, shade, occ);      // đầu hồi −X
+  pushTriangle(sink, A, B, C, rgb, shade, occ);       // đáy
+  pushTriangle(sink, A, C, D, rgb, shade, occ);
 }
 
 /**
@@ -203,8 +210,45 @@ function emitGable(sink, part, transform, rgb, shade) {
  * @returns {{geometry:BufferGeometry, triangles:number, families:string[]}|null}
  *          `null` khi không có gì để vẽ. `families[i]` là họ vật liệu của nhóm `materialIndex = i`.
  */
+/**
+ * Đặt một khối của một công trình vào toạ độ THẾ GIỚI.
+ *
+ * ⚠️ TÁCH RA THÀNH HÀM RIÊNG VÌ NAY CÓ **HAI** LƯỢT DUYỆT ĐỌC CÙNG PHÉP BIẾN ĐỔI NÀY: lượt đo
+ * (dựng lưới che khuất) và lượt dựng (đẩy tam giác). Hai lượt mà mỗi lượt tự viết lại phép xoay
+ * thì đúng bẫy "một luật hai công thức", và cái lệch sẽ im lặng — AO đo một thành phố, GPU vẽ một
+ * thành phố khác, ảnh vẫn ra bình thường chỉ có vệt tối nằm sai chỗ.
+ *
+ * Hai phép xoay chồng nhau và chúng KHÔNG giống nhau:
+ *   · đỉnh của khối quay theo TỔNG hai góc (khối tự xoay, rồi cả công trình xoay)
+ *   · TÂM của khối chỉ quay theo góc của công trình
+ */
+function partWorld(item, part) {
+  const scale = Number.isFinite(item.scale) ? item.scale : 1;
+  const baseRy = Number.isFinite(item.ry) ? item.ry : 0;
+  const spin = baseRy + (part.ry ?? 0);
+  const lx = part.x * scale;
+  const lz = part.z * scale;
+  const baseCos = Math.cos(baseRy);
+  const baseSin = Math.sin(baseRy);
+  const transform = {
+    cos: Math.cos(spin),
+    sin: Math.sin(spin),
+    ox: item.x + (lx * baseCos - lz * baseSin),
+    oy: (item.y ?? 0) + part.y * scale,
+    oz: item.z + (lx * baseSin + lz * baseCos),
+  };
+  // Toạ độ của khối đã nằm trọn trong `transform`, nên bản sao dưới đây lấy gốc y = 0 và chỉ giữ
+  // kích thước. Nhân `scale` ở đây thay vì ở tầng mô tả để tầng mô tả luôn thuần đơn vị ô.
+  const scaled = {
+    ...part, y: 0, w: part.w * scale, d: part.d * scale, h: part.h * scale,
+  };
+  return {
+    transform, scaled, spin, scale,
+  };
+}
+
 export function buildMergedGeometry(
-  placements, palette, { skipDeco = false, glowRole = null, era = null } = {},
+  placements, palette, { skipDeco = false, glowRole = null, era = null, ao = true } = {},
 ) {
   const style = getEraStyle(era);
   // Một bể riêng cho MỖI họ vật liệu. Tạo lười (chỉ khi họ đó thật sự có tam giác) để một kỷ dùng
@@ -237,44 +281,35 @@ export function buildMergedGeometry(
     return rgb;
   };
 
+  // ── LƯỢT ĐO: dựng lưới che khuất từ chính những khối sắp được dựng ────────────────────────
+  // ⚠️ CHỈ NƯỚNG MỘT LẦN, LÚC DỰNG HÌNH — không phải SSAO chạy mỗi khung. Cảnh này vẽ theo yêu cầu
+  // (`renderLoop.js`), nên bất cứ thứ gì tính mỗi khung đều phá đúng cơ chế giữ cho iPhone mát máy.
+  // ⚠️ VÀ NÓ CHỈ CÓ THỂ LÀM TỐI ĐI, KHÔNG BAO GIỜ LÀM SÁNG LÊN (`occlusionShade` ≤ 1). Đó là lý do
+  // về mặt CẤU TẠO nó không thể gây ra cái hỏng "trắng bệch như sữa" mà dự án đã suýt chết hai lần
+  // (AgX tone mapping, rồi bản đồ môi trường ở Phase 7A) — hai lần ấy đều là thứ CỘNG ánh sáng vào.
+  const occ = ao
+    ? buildOcclusionGrid(placements.flatMap((item) => {
+      const ps = item?.spec?.parts;
+      if (!Array.isArray(ps)) return [];
+      return ps
+        .filter((part) => !(skipDeco && part.deco))
+        .map((part) => {
+          const { transform, scaled, spin } = partWorld(item, part);
+          return {
+            x: transform.ox, y: transform.oy, z: transform.oz, ry: spin,
+            w: scaled.w, d: scaled.d, h: scaled.h,
+          };
+        });
+    }))
+    : null;
+
   for (const item of placements) {
     const parts = item?.spec?.parts;
     if (!Array.isArray(parts) || parts.length === 0) continue;
 
-    const scale = Number.isFinite(item.scale) ? item.scale : 1;
-    const baseRy = Number.isFinite(item.ry) ? item.ry : 0;
-
     for (const part of parts) {
       if (skipDeco && part.deco) continue;
-
-      // Hai phép xoay chồng nhau và chúng KHÔNG giống nhau:
-      //   · đỉnh của khối quay theo TỔNG hai góc (khối tự xoay, rồi cả công trình xoay)
-      //   · TÂM của khối chỉ quay theo góc của công trình
-      // Dùng chung một góc cho cả hai là lỗi kinh điển: khối tự xoay đúng nhưng bị văng khỏi vị
-      // trí, và nó chỉ lộ ra ở những kỷ có `rough` cao — tức là rất muộn.
-      const spin = baseRy + (part.ry ?? 0);
-      const lx = part.x * scale;
-      const lz = part.z * scale;
-      const baseCos = Math.cos(baseRy);
-      const baseSin = Math.sin(baseRy);
-
-      const transform = {
-        cos: Math.cos(spin),
-        sin: Math.sin(spin),
-        ox: item.x + (lx * baseCos - lz * baseSin),
-        oy: (item.y ?? 0) + part.y * scale,
-        oz: item.z + (lx * baseSin + lz * baseCos),
-      };
-
-      // Toạ độ của khối đã nằm trọn trong `transform`, nên bản sao dưới đây lấy gốc y = 0 và chỉ
-      // giữ kích thước. Nhân `scale` ở đây thay vì ở tầng mô tả để tầng mô tả luôn thuần đơn vị ô.
-      const scaled = {
-        ...part,
-        y: 0,
-        w: part.w * scale,
-        d: part.d * scale,
-        h: part.h * scale,
-      };
+      const { transform, scaled, scale } = partWorld(item, part);
 
       const glowing = glowSink !== null && part.role === glowRole;
       const target = glowing ? glowSink : sinkFor(materialFamilyFor(part.role, style));
@@ -286,8 +321,8 @@ export function buildMergedGeometry(
       // cùng một câu trên cùng một dữ liệu là cách duy nhất giữ hai bên không bao giờ lệch. Hỏi
       // trên số đã nhân 1,3 thì những khối nằm sát ngưỡng sẽ được vát ở đây mà không được đếm ở
       // kia, và cái lệch đó im lặng: nó chỉ hiện ra dưới dạng bảng ngân sách báo sai.
-      if (part.shape === 'gable') emitGable(target, scaled, transform, rgb, shade);
-      else emitPrism(target, scaled, transform, rgb, shade, bevelWidth(part) * scale);
+      if (part.shape === 'gable') emitGable(target, scaled, transform, rgb, shade, occ);
+      else emitPrism(target, scaled, transform, rgb, shade, bevelWidth(part) * scale, occ);
     }
   }
 

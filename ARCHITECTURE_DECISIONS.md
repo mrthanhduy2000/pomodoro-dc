@@ -657,6 +657,118 @@ hình dạng lỗi, xem `TECH_DEBT #79`).
 
 ---
 
+## ADR-063 — Che khuất môi trường nướng vào MÀU ĐỈNH: 0 lệnh vẽ, 0 tam giác, và vì thế CHỈ ẢNH mới chứng minh được nó chạy
+
+- **Ngày**: 2026-08-24
+- **Bối cảnh**: Phase 19 VIỆC 4 — Đàm muốn *"hiệu ứng hơn, ánh sáng đổ bóng… giống 3D hoá hơn nữa"*,
+  kèm một điều kiện dừng viết hoa: **nếu ảnh ngả TRẮNG BỆCH thì BỎ NGAY, không được chỉnh cho nó
+  qua cổng.**
+- **Vấn đề**: cảnh chỉ có một mặt trời + một đèn bán cầu, nên mọi góc lõm (chân tường giáp đất, khe
+  giữa hai khối, dưới mái đua) đều nhận đúng lượng sáng như mặt phẳng trống — thứ làm khối đọc ra
+  là khối chính là cái tối dần ở chỗ hai mặt gặp nhau.
+- **Phương án cân nhắc**:
+  1. **SSAO/GTAO hậu kỳ** (`EffectComposer`). Loại: thêm một lượt vẽ toàn khung, tính tiền theo
+     ĐIỂM ẢNH — mà `PERFORMANCE.md` đã đo 80% chi phí khung hình là điểm ảnh. Đắt đúng chỗ đắt nhất.
+  2. **Thêm đèn.** Loại: đo được mỗi nguồn sáng ≈ +19% một khung, và nó làm sáng đều chứ không làm
+     tối chỗ lõm — sai bài toán.
+  3. ⭐ **Nướng sẵn vào MÀU ĐỈNH lúc gộp hình học** (`occlusion.js` → `buildMergedGeometry`) — chọn.
+- **Lý do chọn**: vật liệu đã dùng `vertexColors`, nên chỗ chứa đã có sẵn; phép tính chạy MỘT LẦN
+  lúc dựng cảnh, không chạy mỗi khung. **0 lệnh vẽ thêm, 0 tam giác thêm** — đã đo, kỷ 6 = 13 và
+  kỷ 11 = 12 ở cả hai phía, y hệt.
+- **Giả định**: cảnh dựng lại khi thành phố đổi, và AO chỉ phụ thuộc hình học tĩnh (không phụ thuộc
+  giờ trong ngày). Hệ quả **phải biết trước**: AO là chi tiết CHUNG trên trục chặng ngày.
+- **Rủi ro mới**: chính vì nó không đổi một con số nào trong `renderer.info`, **không có cách nào
+  ngoài ẢNH để biết nó có chạy hay không** — một bản vá chết sẽ im lặng tuyệt đối. Vì thế cờ
+  `--no-ao` của `city-preview.mjs` KHÔNG phải một tuỳ chọn tiện tay: nó là **đối chứng bắt buộc**,
+  và tên file mang hậu tố `-noao` để hai vế không bao giờ ghi đè nhau.
+- **Ảnh hưởng**: đo trên cặp ảnh dựng từ CÙNG một cây mã, kỷ 2 · 6 · 11 ở 1500px: **2,2–4,1% điểm
+  ảnh đổi quá ngưỡng mắt**, lệch tại chỗ đã đổi **15,87 · 16,55 · 15,90** (ngưỡng 12). Đọc cột đầu
+  thôi sẽ kết luận "vô hình" — đó đúng là cái sai của Phase 11; hiệu ứng CỤC BỘ thì phải đọc cột
+  "chỉ chỗ đã đổi". **Điều kiện dừng của Đàm KHÔNG kích hoạt**: sàn độ sáng đi XUỐNG, dải tương
+  phản NỞ RA, độ tươi không tụt — cả ba đều ngược hướng "trắng bệch".
+- **Điều kiện xem lại**: nếu một phase sau làm khối nhà nhỏ đi nữa thì kiểm lại xem vùng lõm còn đủ
+  điểm ảnh để đọc ra không.
+
+---
+
+## ADR-062 — Nguyên mẫu thứ 8 `monolith`: công trình LÀ khối, không phải nhà đội mái
+
+- **Ngày**: 2026-08-24
+- **Bối cảnh**: Phase 19 VIỆC 2. Đàm nhìn kỷ 2 và nói *"kim tự tháp không có khối hình chóp"*.
+- **Vấn đề**: `roof: 'pyramid'` đã tồn tại và kỷ 2 khai đúng — **bệnh nằm cao hơn một tầng**. Cả 7
+  nguyên mẫu đều là THÂN + MÁI, nên Đại Kim Tự Tháp dựng ra là *một hộp gạch bùn đội cái nón*: có
+  tường, có cửa, có mái đua `eaves: 0.2` loe chân thành cây nấm. Kỷ 3 (ziggurat Ur) cùng bệnh —
+  đúng `TECH_DEBT #75`, vốn đã chẩn đoán ra rằng *"đây là bài toán KHỐI TÍCH, không phải bài toán
+  MÁI"* mà chưa ai làm.
+- **Phương án cân nhắc**:
+  1. **Cho kỷ 2 khai `eaves: 0`, `windows: 'none'`, thân thật thấp.** Loại: đó là dùng một chuỗi
+     giá trị biên để GIẢ một hình khối khác — mọi luật của nguyên mẫu nhà vẫn chạy bên dưới, và
+     phase sau đụng vào `groundFloor`/`rooftop` sẽ làm cửa mọc lại trên mặt kim tự tháp.
+  2. **Thêm một kiểu mái `pyramid-full` cao bằng cả công trình.** Loại: cùng bệnh — vẫn phải có
+     một cái thân ở dưới để mà đội, và ADR-051 vừa dạy đúng bài này (một `switch` mái không tách
+     được hai công trình khác nhau về KHỐI).
+  3. ⭐ **Một nguyên mẫu thứ 8, `monolith`, dựng thẳng từ mặt đất: không thân tường, không
+     `groundFloor`, không `eaves`, không `rooftop`** — chọn.
+- **Lý do chọn**: đúng khuôn ba lớp đã dùng chín lần (BẢNG khai → NHÀ MÁY HÌNH dựng → nơi dùng chỉ
+  ĐỌC). Nó cũng làm cho *"không có cửa trên kim tự tháp"* thành một sự thật CẤU TRÚC thay vì một
+  con số khai khéo — thứ duy nhất sống sót qua các phase sau.
+- **Trade-off**: hai kỷ mất mọi chi tiết của tầng trệt và mái. Đó là **đúng ý đồ**, không phải mất
+  mát: một khối đá thì không có cửa sổ.
+- **Ảnh hưởng**: kỷ 2 ra chóp TRƠN (tỉ lệ cao:đáy 0,64 như Giza), kỷ 3 ra GIẬT CẤP có cầu thang
+  chính diện — hai kỷ liền nhau, hai hình khác hẳn, và bản quét chấm cặp 2↔3 vẫn trên ngưỡng.
+  Đóng `TECH_DEBT #75`.
+- **Điều kiện xem lại**: nếu có kỷ thứ ba cần khối đặc (lăng mộ, gò đền), khai thêm dòng vào bảng
+  chứ đừng thêm nhánh `if` theo số kỷ.
+
+---
+
+## ADR-061 — Khung hình lùi ra tới mức TỐI THIỂU đủ để không cắt công trình nào; và cái trần 1,35 cũ và lời hứa "không cắt" là hai thứ KHÔNG THỂ CÙNG ĐÚNG
+
+- **Ngày**: 2026-08-24
+- **Bối cảnh**: Phase 19 VIỆC 5 — Đàm yêu cầu *"nóc nhà thôi bị mép khung cắt"*, kèm ràng buộc rất
+  hẹp: sửa trong `orbit.js`, **giữ `distance = gridSize × factor`, chỉ nới `factor`**, nghiệm thu
+  bằng ẢNH. Đây là `TECH_DEBT #24`, mở từ Phase 7B.
+- **Vấn đề**: `orbit.test.js` có một bài tên *"KỶ THẤP GIỮ NGUYÊN KHUNG SÁT"* đòi `factor ≤ 1,35`,
+  đặt ở Phase 5A với lý do đúng đắn *"đừng thu quá xa rồi bị mờ"*. Đo ra thì **13/15 kỷ cần ≥ 1,47**
+  và kỷ 8 cần **1,88** mới không cắt công trình nào. Tức cái trần ấy và lời hứa "không cắt" **không
+  thể cùng đúng** — và chính cái trần là thứ đã ĐẺ RA `TECH_DEBT #24`, chứ không phải một khuyết
+  tật nào khác. Một cái trần được đặt khi thành phố còn thấp, rồi ở lại sau khi ADR-052 chia ô
+  thành khu phố và nhà cao lên: đúng hình dạng ADR-019 (*một kết luận đúng hết đúng vì tiền đề của
+  nó bị gỡ ở một phase khác*).
+- **Phương án cân nhắc**:
+  1. **Giữ trần 1,35, chấp nhận cắt.** Loại: đó là chính cái Đàm yêu cầu sửa.
+  2. **Nới trần lên 1,88 cho cả 15 kỷ.** Loại: kỷ 1 chỉ cần 1,307, ép nó ra 1,88 là bắt thành phố
+     nhỏ nhất chịu cái giá của thành phố lớn nhất — và một trần chung là đúng bẫy Phase 7D mà
+     ADR-028 đã gỡ một lần cho ngân sách lệnh vẽ.
+  3. **Nâng `target.y` (chĩa camera lên) thay vì lùi ra.** Loại — và loại bằng SỐ, không bằng lý
+     lẽ: đo mép nào là mép sát nhất ở cả 15 kỷ thì **mép TRÊN không bao giờ là mép quyết định**
+     (DƯỚI 7 kỷ · TRÁI 6 · PHẢI 2). Cái ràng buộc là hai bên hông và mép dưới, mà chĩa lên/xuống
+     thì không chữa được mép hông.
+  4. ⭐ **Mỗi kỷ một `factor` RIÊNG, bằng đúng khoảng cách TỐI THIỂU để biên mép còn `FRAME_FIT_MARGIN`**
+     — chọn. Tìm bằng chia đôi 40 bước trên [0,8; 4,0], có nhớ kết quả.
+- **Lý do chọn**: nó biến một con số VIẾT TAY thành một con số ĐO ĐƯỢC. Bằng chứng nó tối thiểu
+  thật: **14/15 kỷ ra biên đúng `0,0400` = sàn**, không dư một li; chỉ kỷ 15 dư (0,0736) vì nó bị
+  một sàn KHÁC trói (khoảng lùi theo `massScale`), và ngoại lệ ấy được ghi **tường minh đếm được**
+  (`assert.deepEqual(DU_DIA, [15])`) theo đúng khuôn `TECH_DEBT #44` — kỷ thứ hai dư thì đỏ, mà kỷ
+  15 hết dư cũng đỏ.
+- **Trade-off — VÀ ĐÂY LÀ PHẦN PHẢI ĐỌC, KHÔNG ĐƯỢC BỎ QUA**: hệ số trung bình đi từ nền 1,18 lên
+  **1,626**, tức thành phố đứng xa hơn ~38% và chiếm khoảng **53% diện tích khung** so với trước.
+  Cái giá ấy hiện ra ở đúng một chỗ đo được: **trục CHẶNG NGÀY của bản quét tụt 14,39 → 11,33**,
+  xuống DƯỚI ngưỡng mắt 12 — vì các dải đo là phân số CỐ ĐỊNH của ô, nên thành phố nhỏ lại thì mỗi
+  dải bị pha loãng thêm nền trời và nền đất (đúng hình dạng `TECH_DEBT #22`). Đã tách một biến để
+  chứng minh: cây mã có đủ VIỆC 1+2+3+4 nhưng **hoàn tác riêng `orbit.js`** ra **14,23** — tức bốn
+  việc kia cộng lại chỉ tốn 0,16, còn **2,90 là của riêng phép lùi này**. Và phép lùi KHÔNG rút
+  ngắn được: hạ biên an toàn từ 4% xuống 0% chỉ lấy lại 3,3% khoảng cách.
+- **Ảnh hưởng**: đóng `TECH_DEBT #24`; mở `TECH_DEBT #79` (trục chặng dưới ngưỡng). Cặp đôi này là
+  một **quyết định của Đàm**, không phải của tôi — hai thứ anh đã yêu cầu đang xung đột nhau, và
+  cách duy nhất sai là lặng lẽ chọn hộ rồi nới ngưỡng (phễu Phase 9A).
+- **Điều kiện xem lại**: khi trục chặng được nâng lại bằng cần gạt THẬT (bầu trời lúc 6h so với
+  15h — xem `TECH_DEBT #79`), hoặc khi Đàm chốt hướng.
+
+---
+
+---
+
 ## ADR-053 — Cư dân là một BỘ XƯƠNG có khớp, dựng bằng MỘT InstancedMesh hộp đơn vị; dáng đi là hàm của QUÃNG ĐƯỜNG đã đi, không phải của thời gian
 
 - **Ngày**: 2026-08-22

@@ -203,16 +203,26 @@ test('THÀNH PHỐ DỰNG THỬ PHẢI ĐÚNG CỠ — nếu không thì mọi c
   assert.ok(banKinh > 5 && banKinh < 12, `bán kính phố = ${banKinh.toFixed(2)}, ngoài dải 5–12`);
 });
 
-test('MỖI KỶ MỘT MỨC THU PHÓNG RIÊNG, cả 15 đều nằm trong dải 0,38–0,58 Đàm chốt', () => {
+test('MỖI KỶ MỘT MỨC THU PHÓNG RIÊNG, và KHOẢNG CÁCH THẬT thì y hệt nhau ở cả 15 kỷ', () => {
   const ERAS = Array.from({ length: 15 }, (_, i) => i + 1);
   const zooms = [];
+  // ⚠️ BÀI NÀY TỪNG KẸP `0,38–0,58` VÀ ĐÃ BỎ VẾ ẤY (Phase 19, VIỆC 5) — ĐỌC LÝ DO TRƯỚC KHI DỰNG
+  // LẠI. Dải ấy KHÔNG phải một lời hứa; nó là một QUAN SÁT. `focusZoom = 7,5 / khoảng-cách-toàn-
+  // cảnh`, nên nó tụt xuống mỗi khi khung toàn cảnh lùi ra — mà VIỆC 5 vừa lùi khung ra ở cả 15 kỷ
+  // để không công trình nào bị mép cắt nữa. Dải đo lại: **0,333 (kỷ 8) … 0,478 (kỷ 1)**.
+  //
+  // Điều KHÔNG đổi một chữ số là thứ ADR-034 thật sự khoá: **khoảng cách thật `FOCUS_VIEW_DISTANCE
+  // = 7,5`**. Đó mới là thứ Đàm quan tâm — nó là lý do một cái ống khói ở kỷ 1 và một cái ở kỷ 15
+  // chiếm ĐÚNG BẰNG NHAU số điểm ảnh. Mức thu phóng chỉ là con số trung gian để tới được nó.
+  // ⇒ Nên bài này nay canh chính lời hứa ấy, thay vì canh cái bóng của nó. Nếu có ai làm mức thu
+  // phóng phụ thuộc kỷ theo một cách KHÁC (bảng tay, hằng số mỗi kỷ), vế dưới đây đỏ ngay.
   for (const era of ERAS) {
-    const zoom = focusZoom(cityOf(era).orbit.distance);
+    const d = cityOf(era).orbit.distance;
+    const zoom = focusZoom(d);
     zooms.push(zoom);
-    assert.ok(
-      zoom >= 0.38 && zoom <= 0.58,
-      `kỷ ${era} thu phóng ${zoom.toFixed(3)} — ra ngoài dải 0,38–0,58`,
-    );
+    assert.ok(Math.abs(zoom * d - FOCUS_VIEW_DISTANCE) < 1e-9,
+      `kỷ ${era}: thu phóng ${zoom.toFixed(3)} × khung ${d.toFixed(2)} = ${(zoom * d).toFixed(3)}, `
+      + `không ra đúng ${FOCUS_VIEW_DISTANCE} ⇒ ống khói kỷ này to nhỏ khác kỷ khác`);
   }
   // ⚠️ VÀ PHẢI THẬT SỰ KHÁC NHAU. Không có vế này thì mười lăm con số bằng nhau vẫn qua bài trên,
   // tức "mỗi kỷ một mức riêng" thoái hoá về "một mức chung" mà không có gì đỏ lên — đúng bẫy
@@ -238,7 +248,12 @@ test('MỖI KỶ MỘT MỨC THU PHÓNG RIÊNG, cả 15 đều nằm trong dải
       if (zooms[i].toFixed(3) === zooms[j].toFixed(3)) capSatNhau.push([ERAS[i], ERAS[j]]);
     }
   }
-  assert.deepEqual(capSatNhau, [[5, 9], [7, 11]],
+  // ⚠️ DANH SÁCH NÀY ĐÃ VỀ RỖNG (Phase 19, VIỆC 5) — và nó về rỗng theo hướng TỐT. Trước VIỆC 5,
+  // khoảng cách camera suy từ `massScale`, mà `massScale` thì nhiều kỷ khai gần bằng nhau ⇒ hai cặp
+  // (5,9) và (7,11) rơi vào cùng một ô làm tròn. Nay mỗi kỷ lấy khoảng cách ĐO ĐƯỢC từ chính mặt
+  // bằng công trình của nó, nên mười lăm con số tách hẳn ra. Đúng như câu dưới đây đã hẹn sẵn:
+  // *"ngắn đi ⇒ ai đó vừa nới lại chênh lệch"*. Danh sách dài trở lại là tín hiệu xấu.
+  assert.deepEqual(capSatNhau, [],
     `cặp kỷ có mức thu phóng trùng nhau tới ba chữ số: ${JSON.stringify(capSatNhau)}. Dài thêm ⇒ `
     + 'camera 15 kỷ đang hội tụ; ngắn đi ⇒ ai đó vừa nới lại chênh lệch địa hình.');
 });
@@ -362,6 +377,11 @@ test('ĐỐI CHỨNG: chỉ canh ĐIỂM ĐẾN thôi là chưa đủ — và đ
   // ấy làm — nhà dân Singapore nay là dãy shophouse chia làm 8 đơn vị, đứng cao hơn và dày hơn
   // căn nhà đơn cũ, nên đoạn giữa đường bay đi sát mái chúng. Đây là hệ quả ĐÚNG, không phải hồi
   // quy: phép canh cả-đường-bay vừa cứu thêm một kỷ nữa.
+  // 2026-08-24, Phase 19 VIỆC 5 — 10 kỷ: **kỷ 5 RƠI RA**, và đây là lần đầu danh sách NGẮN đi.
+  // Lý do đo được: VIỆC 5 lùi khung toàn cảnh ra ở cả 15 kỷ (kỷ 5 đi từ 1,42 lên 1,62 lần cỡ lưới),
+  // mà điểm XUẤT PHÁT của mọi chuyến bay chính là chỗ camera toàn cảnh đang đứng. Xuất phát cao và
+  // xa hơn ⇒ đoạn giữa đường bay không còn quét sát mái nhà kỷ 5 nữa. Đây là hệ quả ĐÚNG, không
+  // phải phép canh bị mù: `phaiLuiRa` ở bài trên vẫn khác rỗng, tức cơ chế vẫn đang chạy thật.
   // Con số TĂNG nghĩa là phép canh cả-đường-bay càng đáng giá, không phải càng tệ.
   //
   // ⚠️ 2026-08-24, ADR-059 (mỗi kỷ một mạng đường riêng): **12 kỷ / 15 chuyến → 7 kỷ / 7 chuyến**
@@ -373,6 +393,20 @@ test('ĐỐI CHỨNG: chỉ canh ĐIỂM ĐẾN thôi là chưa đủ — và đ
   // ⇒ Phép canh cả-đường-bay **không mất răng**: nó vẫn cứu 7 chuyến ở 7 kỷ, và bài
   // `ĐƯỜNG BAY PHẢI THOÁNG SUỐT CẢ CHẶNG` bên trên vẫn đòi 1200/1200 chuyến thoáng. Thứ giảm là
   // số ca mà thành phố tự nó gây nguy hiểm, và giảm là tốt.
+  //
+  // ⚠️ 2026-08-24, Phase 19 VIỆC 2 (ADR-062, nguyên mẫu `monolith`): **11 kỷ / 14 chuyến — kỷ 2
+  // RỜI danh sách**, và đây là lần đầu một kỷ rời đi mà KHÔNG phải vì ai đó chữa nó. Đã đo thay vì
+  // đoán: trong 80 chuyến của kỷ 2 thì **8 chuyến kẹt đường bay và đúng 8 chuyến kẹt điểm đến —
+  // hai tập TRÙNG KHÍT, giao của "điểm đến thoáng" với "đường bay kẹt" nay rỗng**. Lý do là hình
+  // học: kim tự tháp Giza nay là MỘT khối đặc 3,51 × 3,51 × 2,24 mọc từ mặt đất, nên không có chỗ
+  // nào vừa đứng sát nó vừa thoáng — chỗ nào đường bay đâm vào khối thì chỗ đứng cuối cùng cũng
+  // đâm vào. Trước đó nó là một cái hộp thấp đội mũ nhọn, và khe hở giữa mũ với hộp chính là chỗ
+  // đẻ ra những chuyến "đến được mà bay tới không được".
+  // ⇒ Con số GIẢM ở đây KHÔNG có nghĩa phép canh kém đi; nó có nghĩa kỷ 2 đã đổi thể loại hình
+  //   khối. Nếu ngày nào kỷ 2 quay lại danh sách này thì hoặc khối đặc đã bị tháo ra thành nhà +
+  //   mái, hoặc nó đã teo lại — cả hai đều đáng biết.
+  // 2026-08-24 (Phase 19 VIỆC 5): 14 → **13 chuyến**, cùng nguyên nhân với việc kỷ 5 rơi khỏi danh
+  // sách trên — khung toàn cảnh lùi ra nên điểm xuất phát của mọi chuyến bay cũng lùi theo.
   assert.equal(lotLuoi.length, 7, 'đúng 7 chuyến trên 1200 lọt lưới nếu chỉ canh điểm đến');
   assert.ok(cheoNhat > 1, `chênh lớn nhất giữa điểm-đến và cả-đường mới ${cheoNhat.toFixed(2)} — quá nhỏ để gọi là cứu được ai`);
 });
@@ -510,7 +544,12 @@ test('CA THẬT CỦA APP — xuất phát từ đúng khung TOÀN CẢNH thì K
   // bờ BẮC, sông Arno chảy phía nam — xem `terrain.test.js`, bài *"NƯỚC NẰM Ở CHỖ THẤP"*). Nền
   // Firenze nay thoải đều về phía sông thay vì vắt ngang, nên không còn công trình nào phải lùi ra.
   // Một kỷ RỜI danh sách là tin tốt, và bài test vẫn đỏ khi nó rời — đúng ý đồ hai chiều.
-  assert.deepEqual(luiRa, [5, 10, 11, 14, 15], 'danh sách kỷ có công trình phải lùi ra mới ngắm được');
+  // 2026-08-24 (Phase 19 VIỆC 5): **kỷ 13 rơi VÀO** danh sách. Khung toàn cảnh kỷ 13 lùi ra
+  // (1,52 → 1,635 lần cỡ lưới) ⇒ chuyến bay tới trung tâm vũ trụ xuất phát từ xa hơn và đi ngang
+  // qua chỗ dày nhà hơn, nên cần lùi thêm ở đích. Đây là cơ chế chữa THỨ NHẤT (lùi ra) làm đúng
+  // việc của nó — vế `phaiNgang` ngay dưới vẫn RỖNG, tức không kỷ nào phải ngẩng lên, và đó mới
+  // là ranh giới Đàm chốt ở ADR-035.
+  assert.deepEqual(luiRa, [5, 10, 11, 13, 14, 15], 'danh sách kỷ có công trình phải lùi ra mới ngắm được');
   assert.ok(xaNhat <= 11 + 1e-9, `chỗ phải lùi xa nhất ${xaNhat} — xa hơn nữa là chi tiết cận cảnh bắt đầu tan`);
   // ⚠️ 0,664 → 0,6672 (2026-08-20). Đây là một con số ĐO ĐƯỢC chứ không phải một mức Đàm chốt, và
   // nó nhích lên vì §1(B): nền phẳng hơn ⇒ camera toàn cảnh vốn đã đứng gần hơn ⇒ chuyến cận cảnh

@@ -83,6 +83,16 @@
 > hiện một đường hào VUÔNG** — đó là hình dạng NƯỚC (`#65`, nửa mỹ thuật của `#64`), **không** phải
 > một bậc địa hình, nên nó KHÔNG được tính là "bệ chưa xoá xong".
 
+> **Trạng thái ngưỡng hiện tại (2026-08-24)**: Phase 19 **ĐÓNG 2 mục** (`#24` khung hình cắt công
+> trình · `#75` ziggurat đọc ra là khối đội mũ) và **MỞ 1** (`#79`, trục chặng ngày dưới ngưỡng mắt
+> — cái giá của ADR-061, đang chờ Đàm chọn hướng). Đếm lại bằng cách quét trường `**Priority**` của
+> TỪNG mục rồi loại mục đã đóng: **79 mục · 59 còn mở · 0 Critical**. High thì phải nói rõ cách
+> đếm, vì đây đúng chỗ dòng này đã trôi một lần: đếm **đúng chữ `High`** ra **2** (`#14`, `#53`);
+> đếm **gộp cả `Medium-High`** ra **6** (`#3`, `#13`, `#14`, `#15`, `#53`, `#79`). Cả hai con số
+> đều **dưới ngưỡng 8–10** ⇒ **KHÔNG cần Maintenance Sprint**. ⚠️ Lần trước dòng này ghi "1 mục
+> High" mà không nói đếm kiểu gì, nên không ai tái lập được — một con số nghiệm thu phải đi kèm
+> cách đo ra nó, kể cả khi con số ấy chỉ nằm trong một dòng tài liệu.
+
 > **(Mốc trước) Cập nhật 2026-08-20 (§1(B))**: đếm lại ⇒ **3 mục High còn mở** (#14 · #32 · #53),
 > 0 mục Critical ⇒ **xa ngưỡng 8–10, KHÔNG cần Maintenance Sprint**. Trong phiên §1(B): **MỞ #66**
 > (kỷ 12 không phản ứng với hạt giống nhiễu — Low, đã đo là dưới ngưỡng mắt) và **MỞ LẠI MỘT PHẦN
@@ -1012,6 +1022,21 @@
 ---
 
 ## #24 — MỌI KỶ ĐỀU CÓ CÔNG TRÌNH BỊ MÉP KHUNG HÌNH CẮT — và không ai đo cho tới hôm nay
+
+> ✅ **ĐÃ ĐÓNG 2026-08-24 (Phase 19 VIỆC 5, ADR-056).** `cityOrbitOptions` nay tính khoảng cách
+> RIÊNG TỪNG KỶ bằng chia đôi, lấy đúng mức TỐI THIỂU để biên mép còn `FRAME_FIT_MARGIN = 0,04`.
+> Đo lại bằng `node scripts/frame-fit.mjs`: **0/15 kỷ có công trình bị cắt** (trước: 14/15), hệ số
+> **1,307 … 1,878**. Bằng chứng nó tối thiểu thật: **14/15 kỷ ra biên đúng 0,0400 = sàn**, kỷ 15 dư
+> 0,0736 vì bị một sàn khác trói, và ngoại lệ ấy được ghi tường minh đếm được trong `orbit.test.js`.
+>
+> ⚠️ **VÀ THỦ PHẠM HOÁ RA LÀ MỘT BÀI TEST, KHÔNG PHẢI MỘT KHUYẾT TẬT.** Bài *"KỶ THẤP GIỮ NGUYÊN
+> KHUNG SÁT"* (Phase 5A) đòi `factor ≤ 1,35`. Đo ra thì 13/15 kỷ cần ≥ 1,47 ⇒ cái trần ấy và lời
+> hứa "không cắt công trình nào" **không thể cùng đúng**, và chính nó đã đẻ ra mục nợ này. Một cái
+> trần đặt lúc thành phố còn thấp, ở lại sau khi ADR-052 chia ô thành khu phố — đúng hình dạng
+> ADR-019 (*tiền đề bị gỡ ở một phase khác, kết luận chết theo mà không ai biết*).
+>
+> ⚠️ **CÁI GIÁ ĐÃ TRẢ, ghi ở `#79`**: thành phố nay đứng xa hơn ~38% và trục CHẶNG NGÀY của bản
+> quét tụt 14,39 → 11,33. Đóng mục này KHÔNG miễn phí, và mục #79 là chỗ ghi phần chưa trả xong.
 
 > ⚠️ **CẬP NHẬT 2026-08-18 (Phase 12) — BỘ SỐ GỐC CỦA MỤC NÀY ĐO THIẾU 30% CHIỀU CAO.**
 > `frame-fit.mjs` nhân `BUILDING_SCALE` (1,3) vào bề NGANG nhưng quên nhân vào chiều CAO, trong khi
@@ -2361,6 +2386,19 @@ ship một trạng thái dở dang, hãy làm nó **ĐẾM ĐƯỢC trong một 
 
 ## #67 — **ĐỊA HÌNH CHE**: kỷ 4 và 5 tụt dưới cổng "thấy nước" 5% vì một bản vá ĐÚNG về vật lý, không vì bề rộng
 
+> ⚠️ **CẬP NHẬT 2026-08-24 (Phase 19) — KỶ 5 TỰ LÀNH, VÀ NÓ LÀNH VÌ MỘT LÝ DO CHẲNG LIÊN QUAN GÌ
+> TỚI MỤC NÀY.** ADR-056 lùi khung toàn cảnh ra ở cả 15 kỷ để không cắt công trình nào. Mặt nước
+> thì nằm **NGOÀI** lưới thành phố, nên lùi ra là kéo thêm nước vào khung: kỷ 5 đi **3,51% → 7,30%**,
+> vượt cổng 5%. `waterView.test.js` đã cập nhật: `TRUOT` từ `[2,3,4,5,6,7,9,10]` còn
+> `[2,3,4,6,7,9,10]`, `DAT.length` 6 → 7.
+> ⇒ Mục này nay **chỉ còn kỷ 4**.
+>
+> ⚠️ **NHƯNG ĐỪNG ĐÓNG NỬA NÀY VỘI — nó đang ĐỨNG NHỜ ADR-056, mà ADR-056 thì đang chờ Đàm quyết**
+> (xem `#79`: phép lùi ấy làm trục chặng ngày tụt xuống dưới ngưỡng mắt). Nếu Đàm chọn hoàn tác
+> phép lùi thì kỷ 5 **tụt lại** xuống 3,51%. Đây đúng hình dạng bài học Phase 7D: *một lời hứa đúng
+> nhờ một thứ chẳng liên quan thì gãy trong im lặng đúng lúc thứ đó đổi* — nên nó được ghi ra ở đây
+> thay vì để yên trong một con số test.
+
 > Tách khỏi `#59` ngày 2026-08-21 theo lệnh Đàm (*"`#59` chứa hai loại nguyên nhân: TÁCH. Hai bệnh,
 > hai cách chữa, hai điều kiện đóng"*). `#59` giữ nửa **bề rộng** (đã đóng); mục này giữ nửa **che khuất**.
 
@@ -2886,6 +2924,17 @@ hai con số. Việc *nâng* 9 kỷ kia lên trên 5% nếu có làm thì thuộ
 ---
 
 ## #59 — ✅ ĐÃ ĐÓNG (2026-08-20, Đàm chốt hướng (b)) — **BỀ RỘNG**: ba kỷ nước hẹp (6 · 7 · 10) không thể đạt cổng 5% ở **bất kỳ** góc nhìn nào
+
+> ⚠️ **CẬP NHẬT 2026-08-24 (Phase 19) — MỘT LỜI KHẲNG ĐỊNH TRONG CHÍNH TIÊU ĐỀ MỤC NÀY ĐÃ BỊ BÁC BỎ
+> BẰNG SỐ.** Tiêu đề nói kỷ 6 *"không thể đạt cổng 5% ở **bất kỳ** góc nhìn nào"*. Đo lại sau
+> ADR-056: **trần toàn cục của kỷ 6 đi từ 4,36% lên 7,24%** — tức nay CÓ góc cứu được, chữ "bất kỳ"
+> hết đúng. Nguyên nhân không phải bề rộng đổi (bảng `settingStyle` không đụng tới) mà là khung
+> toàn cảnh lùi ra, kéo thêm mặt nước ngoài lưới vào khung.
+> ⇒ `waterView.test.js` đã **đảo vế** bài kỷ 6 kèm giải thích: góc MẶC ĐỊNH vẫn trượt (2,59% < 5%)
+> **nhưng** trần toàn cục nay > 5%. Hai câu ấy phải cùng được khẳng định, vì chỉ câu đầu thì đọc
+> thành "vẫn hỏng", chỉ câu sau thì đọc thành "đã xong".
+> ⚠️ Kết luận **BỀ RỘNG** của mục này (kỷ 7 và 10) vẫn nguyên giá trị, và mục vẫn ĐÓNG — thứ đổi là
+> một chữ trong tiêu đề, không phải hướng chữa. Và nó cũng đứng nhờ ADR-056 (xem `#79`).
 
 > ⚠️ **MỤC NÀY ĐÃ ĐƯỢC TÁCH ĐÔI (2026-08-21, Đàm ra lệnh: *"`#59` chứa hai loại nguyên nhân: TÁCH"*).**
 > Nó từng ôm cả hai chứng bệnh: **(1) nước quá HẸP** (kỷ 6 · 7 · 10) và **(2) địa hình CHE** (kỷ 4 · 5,
@@ -4273,6 +4322,14 @@ cấp `Math.min(3,…)` → `Math.min(9,…)` · cắt bớt danh sách cấp th
 
 ## #75 — Ziggurat kỷ 3 đã có hình ĐÚNG nhưng vẫn đọc ra là «một khối cao đội cái mũ giật cấp» — đây là bài toán KHỐI TÍCH, không phải bài toán MÁI
 
+> ✅ **ĐÃ ĐÓNG 2026-08-24 (Phase 19 VIỆC 2, ADR-054)** — và đóng đúng bằng cách mà chính mục này đã
+> chẩn đoán: **bài toán KHỐI TÍCH**. Không chỉnh `massScale`, không thêm kiểu mái; thêm hẳn nguyên
+> mẫu thứ 8 `monolith` — công trình LÀ khối, dựng thẳng từ mặt đất, **không thân tường, không
+> `groundFloor`, không `eaves`, không `rooftop`**. Kỷ 3 nay đọc ra là GIẬT CẤP (thềm + tường
+> nghiêng batter + đền trắng trên đỉnh + cầu thang chính diện), kỷ 2 là CHÓP TRƠN. Cái "thân nhà
+> cao gấp ba" mà mục này đo được **không còn tồn tại** — không phải nhỏ đi, mà là không được dựng
+> ra nữa.
+
 > Mở 2026-08-21 (Phase 14 §1(2)). Nợ này **được chọn mang**, không phải nợ bị kẹt: hình đã đúng
 > lịch sử, thứ còn lệch là TỈ LỆ giữa mái và thân, mà thân thì nằm ở một tầng khác hẳn.
 
@@ -4651,6 +4708,54 @@ trong chú thích thì đừng để `--selftest` của chính nó vẫn dùng �
 > ⚠️ Và một khuyết tật do chính việc này phơi ra đã được vá riêng ở **ADR-054**: 15 kỷ từng dùng
 > chung MỘT màu vải và MỘT màu lá vì một tham số bị một biến cùng tên che khuất ở `palette3d.js`.
 
+## #79 — Trục CHẶNG NGÀY của bản quét tụt xuống DƯỚI ngưỡng mắt (11,33) — cái giá của ADR-061, và cần gạt để nâng nó lên KHÔNG nằm ở thành phố
+
+> Mở 2026-08-24 (Phase 19 VIỆC 6). Đây là nợ **được chọn mang có ý thức**, và nó là một **CÂU HỎI
+> CHO ĐÀM**, không phải một việc tôi được tự quyết: hai thứ anh đã yêu cầu đang xung đột nhau.
+
+- **Tên**: bản quét 15 kỷ × 6 chặng — cặp `bình minh 6h ↔ chiều 15h` = **11,33**, dưới ngưỡng mắt 12
+- **Module**: `src/engine/city3d/orbit.js` (nguyên nhân) · `src/engine/city3d/daylight.js` (cần gạt)
+  · đo bằng `scripts/city-preview.mjs --sweep` + `scripts/sweep-score.mjs`
+- **Priority**: Medium-High · **Severity**: Medium (mỹ thuật; không ảnh hưởng dữ liệu/hiệu năng)
+- **Impact**: hai trong sáu chặng ngày là **CÙNG MỘT BỨC ẢNH** với mắt người. Thứ mất đi là phần
+  thưởng của việc mở app vào những giờ khác nhau. ⚠️ Trục **KỶ vẫn ĐẠT** — 0/105 cặp dưới ngưỡng,
+  gần nhất 19,18, trung vị 36,31 — nên *"15 kỷ còn phân biệt được"*, đúng điều VIỆC 6 hỏi, là CÓ.
+- **Root Cause — ĐÃ TÁCH MỘT BIẾN, KHÔNG PHẢI SUY ĐOÁN**: ba lượt quét đầy đủ trên ba cây mã:
+
+  | cây mã | trục chặng | trục kỷ | trung vị |
+  |---|---|---|---|
+  | mốc nền `be9d2ea` (tự đo, không chép của phase trước) | **14,39** ✓ | 22,13 | 38,59 |
+  | Phase 19 **trừ** `orbit.js` (đủ VIỆC 1+2+3+4) | **14,23** ✓ | 21,24 | 38,67 |
+  | Phase 19 **đủ** | **11,33** ✗ | 19,18 | 36,31 |
+
+  ⇒ bốn việc kia cộng lại tốn **0,16**; **2,90 là của riêng phép lùi khung hình** (ADR-061). Cơ chế:
+  các dải đo là phân số **CỐ ĐỊNH** của ô (trời 2–30% · thành phố 34–68% · đất 72–98%), nên thành
+  phố nhỏ lại thì mỗi dải bị pha loãng thêm nền — đúng hình dạng `TECH_DEBT #22`.
+- **Current Risk**: thấp — không ai mất dữ liệu, không ai thấy lỗi. Nó chỉ làm nhạt đi một phần
+  thưởng.
+- **Future Risk**: cao nếu bị **hiểu nhầm**. Một phiên sau đọc "11,33 < 12" rồi đi sửa MÀU thành
+  phố sẽ chữa nhầm chỗ. Tách ba dải của đúng cặp yếu nhất (mốc nền → nay):
+  **trời 8,38 → 4,12** · thành phố 10,74 → 6,51 · **đất 20,88 → 18,05**.
+  ⇒ Đất vẫn khoẻ gấp bốn lần trời. **Cần gạt nằm ở BẦU TRỜI lúc 6h so với 15h** — đúng kết luận mà
+  `CLAUDE.md` đã ghi sau Phase 14 §1(3), nay được xác nhận lại bằng một bộ số mới.
+  ⚠️ Và nó **bác bỏ lần thứ hai** chỉ thị cũ *"phải làm vùng quê đổi theo giờ"*: vùng quê nằm ở dải
+  ĐẤT, dải đang mạnh nhất bảng.
+- **Recommended Solution — BA HƯỚNG, ĐÀM CHỌN, TÔI KHÔNG TỰ CHỌN**:
+  - **(a) Giữ khung mới, nâng bầu trời.** Được cả hai lời hứa. Là một thay đổi MỸ THUẬT vào vòng
+    ngày (`daylight.js`), nằm ngoài phạm vi Phase 19 nên tôi không tự làm.
+  - **(b) Hoàn tác ADR-061.** Lấy lại 14,39 và mở lại `TECH_DEBT #24` (nóc nhà bị cắt ở 14/15 kỷ).
+  - **(c) Giữ nguyên, chấp nhận hai chặng nhìn giống nhau** cho tới khi có phase riêng cho bầu trời.
+  ❌ **KHÔNG được nới ngưỡng 12** (phễu Phase 9A) và ❌ **KHÔNG được đổi cách cắt dải để lấy lại con
+  số** — ba mốc 20,7/17/14 của Đàm đều hiệu chuẩn trên cách đo hiện tại; đổi ruột thước mà giữ vạch
+  cũ là tạo ra một ngưỡng chưa hiệu chuẩn (`TECH_DEBT #55`).
+- **Estimated Complexity**: (a) trung bình · (b) thấp · (c) không
+- **Blocking Conditions**: chờ Đàm chọn hướng.
+- **Review Trigger**: mỗi lần chạm `orbit.js`, `daylight.js`, hoặc kích thước công trình.
+- **Owner**: chưa giao · **Status**: MỞ — chờ quyết định
+
+---
+
+## #78 — 14/15 kỷ vẫn dùng chung MỘT mốc người phổ thông (chỉ kỷ 1 có bản sắc thật)
 
 - **Tên**: `HUMAN_STYLES` mới thiết kế thật 1/15 dòng
 - **Module**: `src/engine/city3d/humanStyle.js` (bảng) · `src/engine/city3d/human.js` (thư viện hình

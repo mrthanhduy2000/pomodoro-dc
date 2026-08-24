@@ -149,6 +149,22 @@ export const ERA_STYLES = {
     // ⚠️ Và `eaves` 0,2 KHÔNG phải diềm mái ở đây: nó thò ra 8,8% mỗi bên, đọc ra là cái **bệ
     // nền** mà kim tự tháp thật đứng lên (Giza nằm trên một mặt bằng đá đã san phẳng).
     roof: 'pyramid', roofPitch: 0.72, eaves: 0.2,
+    // ⚠️ KỲ QUAN KỶ NÀY LÀ MỘT KHỐI ĐẶC, KHÔNG PHẢI NHÀ ĐỘI MÁI (Phase 19, ADR-062).
+    // `rise` = tỉ lệ CAO : ĐÁY của chính công trình có thật: Giza cao 146,6 m trên đáy 230,3 m
+    // = 0,637. Đây là trường RIÊNG chứ không mượn `roofPitch`, vì `roofPitch` còn phải phục vụ
+    // nhà dân của kỷ này (`vernacularRoof: 'flat'`) — một trường gánh hai việc là cái bẫy đã cắn
+    // dự án năm lần, lần này không đi vào nữa.
+    // ⚠️ `eaves: 0.2` ở trên VẪN ĐÚNG và vẫn dùng — cho nhà dân. Nhánh khối đặc tự ép diềm về 0,
+    // vì kim tự tháp không có diềm mái, và cái diềm ấy đang nới đáy ra thành hình nấm.
+    // `base` = cạnh đáy, đơn vị mô tả, TUYỆT ĐỐI (không nhân `spread` — xem `archetypes.js`).
+    // Chọn 3,2 vì đó là mức làm kỳ quan CAO GẤP ~2× căn nhà dân cao nhất của kỷ này (đo được
+    // 1,035), tức ngang tỉ lệ áp đảo mà kỷ 1 (1,60×) và kỷ 4 (2,03×) vốn đã có. Đáy 3,2 cũng
+    // giữ Giza RỘNG HƠN Ur (2,9) — đúng chiều lịch sử (230 m so với 64 m).
+    // ⚠️ `signature: null` LÀ MỘT LỰA CHỌN, KHÔNG PHẢI CHỖ CÒN THIẾU. Chữ ký của kỷ 2 là `batter`
+    // (tường talud + gờ cavetto loe dưới mái) — hai nét của NHÀ CỬA Ai Cập, và cái gờ cavetto rộng
+    // 1,18× thân sẽ đậu ngay trên ĐỈNH NHỌN của kim tự tháp thành một cái đĩa bay. Giza là mặt đá
+    // ốp TRƠN, không có gờ nào: để trống ở đây chính là chép đúng công trình thật.
+    monument: { form: 'monolith', base: 2.7, rise: 0.637, signature: null },
     // Nhà làng ven sông Nin là gạch bùn MÁI BẰNG — người ta phơi đồ và ngủ trên nóc. Đây đúng là
     // chỗ `vernacularRoof` sinh ra để nói: kỳ đài của một nền văn minh và cái nhà người ta ở hằng
     // ngày gần như không bao giờ cùng một hình mái.
@@ -173,6 +189,14 @@ export const ERA_STYLES = {
     // định nằm ở chỗ thềm thu vào từ mép THÂN NHÀ (nên có thềm thật để mắt đọc) và mặt tường
     // NGHIÊNG VÀO, thứ mà luật setback New York không có.
     roof: 'ziggurat', roofPitch: 0.3, eaves: 0.06,
+    // ⚠️ KHỐI ĐẶC, cùng lý do với kỷ 2 (Phase 19, ADR-062). Ziggurat thành Ur: đáy 64×45 m, cao
+    // khoảng 30 m ⇒ 30/64 ≈ 0,47 — THẤP VÀ BÈ hơn Giza rõ rệt. Đúng cái khác biệt cần đọc ra
+    // giữa hai kỷ kề nhau: kỷ 2 CHÓP TRƠN vươn cao, kỷ 3 GIẬT CẤP trải rộng.
+    // CẦU THANG CHÍNH DIỆN mà Đàm yêu cầu chính là `ziggurStair` — chữ ký kiến trúc đã dựng sẵn từ
+    // Phase 6A. Nó khai LẠI ở đây chứ không tự chảy xuống từ `signature` ở trên, vì hai câu hỏi
+    // khác nhau: `signature` nói *"nhà cửa kỷ này có nét gì"*, `monument.signature` nói *"đứng trên
+    // KHỐI ĐẶC thì còn cái gì"*. Kỷ 2 là ca chứng minh hai câu ấy không thể gộp (xem trên).
+    monument: { form: 'monolith', base: 2.8, rise: 0.47, signature: 'ziggurStair' },
     // Giật cấp là hình dáng của ZIGGURAT — đền thờ. Nhà dân Lưỡng Hà là gạch bùn mái BẰNG quây
     // quanh sân trong. Cho cả phố giật cấp thì thành 30 cái ziggurat tí hon vây quanh ziggurat thật.
     vernacularRoof: 'flat',

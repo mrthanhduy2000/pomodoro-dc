@@ -328,15 +328,26 @@ export function applyPaintedLook(renderer) {
 /**
  * Cỡ bản đồ bóng đổ.
  *
- * ⚠️ MÁY BÀN 2048, KHÔNG PHẢI 1024. Khung bóng bó sát lưới (`reach = gridSize × 0,75` ⇒ 18 đơn vị
- * ngang cho lưới 12), nên 1024 cho ~57 điểm/đơn vị còn 2048 cho ~114. Chi tiết nhỏ nhất cần đọc ra
- * bóng là gờ mái và chân tường (Phase 8A) — cỡ ~0,08 đơn vị, tức 4,5 điểm ở 1024: không đủ để ra
- * một cái bóng, chỉ đủ ra một vệt răng cưa. Đây đúng chỗ Đàm yêu cầu ưu tiên chất lượng hình ảnh
- * và MacBook là máy chính.
+ * ⚠️ MÁY BÀN 4096 (Phase 19). Khung bóng bó sát lưới (`reach = gridSize × 0,75` ⇒ 18 đơn vị ngang
+ * cho lưới 12), nên mật độ đi 1024 → 57 điểm/đơn vị · 2048 → 114 · **4096 → 228**. Chi tiết nhỏ
+ * nhất cần đọc ra bóng là gờ mái và chân tường (Phase 8A) — cỡ ~0,08 đơn vị, tức 4,5 điểm ở 1024
+ * (chỉ ra một vệt răng cưa), 9 điểm ở 2048, **18 điểm ở 4096**: tới đây mới thật sự là một cái
+ * bóng có mép. Đây đúng chỗ Đàm yêu cầu ưu tiên chất lượng hình ảnh và MacBook là máy chính, và
+ * `PERFORMANCE.md` đo được máy còn dư 3,2 lần.
+ *
+ * ⚠️ VÀ ĐÂY LÀ CẦN GẠT DUY NHẤT CÒN LẠI — KHUNG BÓNG THÌ ĐÃ BÓ SÁT RỒI, ĐỪNG SIẾT NỮA. Chỉ thị
+ * Phase 19 đề nghị "siết `sun.shadow.camera` từ `reach` xuống phạm vi thành phố"; đo ra thì `reach`
+ * ĐÃ LÀ phạm vi thành phố. Bán kính xa nhất của một khối ĐỔ BÓNG (quét cả 15 kỷ, mọi công trình ở
+ * cấp 3 + toàn bộ nhà dân ở 120 phiên, lấy `|toạ độ ô| + nửa bề ngang × BUILDING_SCALE`) là **8,48**
+ * (kỷ 9), trên `reach` 9,00 — dư đúng **0,52**, tức 6%. Siết thêm là bắt đầu cắt cụt bóng của những
+ * căn nhà ở góc lưới. Có `sceneStats.test.js` khoá con số này, và nó sẽ đỏ nếu một phase sau làm
+ * công trình to ra vượt quá chỗ dư ấy.
+ *
  * ⚠️ Điện thoại GIỮ 512 — không phải vì tiếc, mà vì bóng ở đó vẽ lại rất hiếm (render-on-demand)
- * và bộ nhớ texture là thứ iOS Safari giết tab vì nó. 2048² × 4 byte = 16 MB cho MỘT bản đồ.
+ * và bộ nhớ texture là thứ iOS Safari giết tab vì nó. 4096² × 4 byte = **64 MB** cho MỘT bản đồ —
+ * con số ấy chấp nhận được trên bộ nhớ hợp nhất của Mac, KHÔNG chấp nhận được trên iPhone.
  */
-export const SHADOW_MAP_DESKTOP = 2048;
+export const SHADOW_MAP_DESKTOP = 4096;
 export const SHADOW_MAP_MOBILE = 512;
 
 /**
@@ -567,7 +578,7 @@ function createSkyEnvironment(renderer, skyLook, groundColor) {
  */
 export function createCityScene({
   layout, palette, dimmed = false, lowDetail = false, stats = {}, still = false, daylight = null,
-  maxLamps = 3, renderer = null, isMobile = false, tachDeDo = null,
+  maxLamps = 3, renderer = null, isMobile = false, tachDeDo = null, ao = true,
 }) {
   const nhomCanTach = new Set(Array.isArray(tachDeDo) ? tachDeDo : []);
   const tachThanhPho = NHOM_TACH_THANH_PHO.some((ten) => nhomCanTach.has(ten));
@@ -1183,6 +1194,13 @@ export function createCityScene({
     // tốn thêm lệnh vẽ nào.
     glowRole: daylight?.windowsLit ? 'glass' : null,
     era: layout.era,
+    // ⚠️ CHE KHUẤT MÔI TRƯỜNG (AO) — CỜ NÀY TỒN TẠI ĐỂ CÓ ĐỐI CHỨNG, KHÔNG PHẢI ĐỂ CHỈNH.
+    // Nó nướng sẵn vào MÀU ĐỈNH nên bật/tắt KHÔNG đổi một lệnh vẽ nào, không đổi một tam giác nào
+    // (đã đo: kỷ 6 = 13 lệnh vẽ · kỷ 11 = 12, y hệt cả hai phía). Vậy nên thứ duy nhất phân biệt
+    // được hai bản là ẢNH — và một hiệu ứng chỉ đo được bằng ảnh thì BẮT BUỘC phải có đường tắt
+    // nó đi, nếu không thì mọi câu "nhờ AO mà đậm hơn" là một lời nói không kiểm được.
+    // `city-preview.mjs --no-ao` là bên duy nhất truyền `false`; app luôn bật.
+    ao,
   }) : null;
   if (merged) {
     if (merged.geometry) {
@@ -1561,6 +1579,8 @@ export function createCityScene({
   sun.shadow.mapSize.setScalar(isMobile ? SHADOW_MAP_MOBILE : SHADOW_MAP_DESKTOP);
 
   // Khung bóng bó SÁT đúng lưới — rộng thừa thì mất độ nét, thiếu thì cụt bóng ở rìa.
+  // ⚠️ ĐÃ ĐO, ĐỪNG SIẾT THÊM: khối đổ bóng xa tâm nhất trong cả 15 kỷ nằm ở bán kính 8,48 còn
+  // `reach` là 9,00 (xem `SHADOW_MAP_DESKTOP`). Chỗ dư 6% ấy là toàn bộ biên an toàn.
   const reach = gridSize * 0.75;
   sun.shadow.camera.left = -reach;
   sun.shadow.camera.right = reach;

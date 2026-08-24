@@ -160,13 +160,19 @@ test('TECH_DEBT #57 ĐÃ ĐÓNG — 6 kỷ vượt cổng 5% THEO PHÉP TIA; 3 k
   // ⚠️ VÀ KHÔNG NỚI CỔNG 5% XUỐNG CHO VỪA. Cấm bằng chữ ở `TECH_DEBT #59`: *"Nới một ngưỡng cho vừa
   // kết quả là cái phễu Phase 9A."* Cũng KHÔNG quay đồng bằng về phẳng để lấy lại con số — đó là
   // trả lại đúng cái bệ mà Đàm bác ba vòng liền.
-  assert.deepEqual(TRUOT, [2, 3, 4, 5, 6, 7, 9, 10],
-    'đúng TÁM kỷ được miễn cổng 5% theo phép tia — 6·7·10 vì BỀ RỘNG (`TECH_DEBT #59`, đã đóng) và '
-    + '2·3·4·5·9 vì ĐỊA HÌNH CHE (`TECH_DEBT #67`, chờ Đàm). Danh sách này đổi nghĩa là hoặc có kỷ '
-    + 'thứ chín vừa tụt xuống, hoặc một trong tám kỷ ấy vừa được chữa — cả hai trường hợp đều phải '
+  // ⚠️ 2026-08-24, Phase 19 VIỆC 5 — **KỶ 5 ĐÃ ĐƯỢC CHỮA, VÀ NÓ ĐƯỢC CHỮA BỞI MỘT PHASE KHÔNG NÓI
+  // GÌ VỀ NƯỚC.** Đo lại: kỷ 5 đi từ **3,51% lên 7,30%** (cổng 5%), tức nó vượt cổng với biên 46%.
+  // Nguyên nhân: VIỆC 5 lùi khung toàn cảnh ra để không công trình nào bị mép cắt (kỷ 5: 1,42 →
+  // 1,62 lần cỡ lưới), mà mặt nước thì nằm NGOÀI thành phố — lùi ra bao nhiêu thì nước lọt vào
+  // khung thêm bấy nhiêu. Đây là hệ quả thật, không phải phép đo trôi: cùng công cụ, cùng số tia.
+  // ⇒ `TECH_DEBT #67` (ĐỊA HÌNH CHE) nay còn 2·3·4·9, không còn kỷ 5.
+  assert.deepEqual(TRUOT, [2, 3, 4, 6, 7, 9, 10],
+    'đúng BẢY kỷ được miễn cổng 5% theo phép tia — 6·7·10 vì BỀ RỘNG (`TECH_DEBT #59`) và '
+    + '2·3·4·9 vì ĐỊA HÌNH CHE (`TECH_DEBT #67`, chờ Đàm). Danh sách này đổi nghĩa là hoặc có kỷ '
+    + 'thứ tám vừa tụt xuống, hoặc một trong bảy kỷ ấy vừa được chữa — cả hai trường hợp đều phải '
     + 'xem lại hai mục nợ ấy chứ không phải sửa con số ở đây.');
-  assert.equal(DAT.length, 6,
-    'phải có đúng 6 kỷ vượt 5% THEO PHÉP TIA. ⚠️ KHÔNG phải "6 kỷ đạt cổng 5%" — trên màn hình '
+  assert.equal(DAT.length, 7,
+    'phải có đúng 7 kỷ vượt 5% THEO PHÉP TIA. ⚠️ KHÔNG phải "7 kỷ đạt cổng 5%" — trên màn hình '
     + 'còn ít hơn (xem khối chú thích đầu bài và `TECH_DEBT #63`).');
 
   // Vế thật sự canh bản vá `worldYaw`: 11 kỷ kia phải THẬT SỰ đạt.
@@ -219,10 +225,18 @@ test('KỶ 6 TRƯỢT VÌ BỀ RỘNG — không góc nào trong 24 góc cứu �
     const yaw = (k / 24) * Math.PI * 2;
     tranToanCuc = Math.max(tranToanCuc, tiLeNuocTrongKhung({ era: 6, yaw, tia: TIA }).nuoc);
   }
-  assert.ok(tranToanCuc < 0.05,
-    `kỷ 6: có một góc đưa mặt nước lên ${(tranToanCuc * 100).toFixed(2)}% — vượt cổng 5%. Nếu đúng `
-    + 'thì `TECH_DEBT #59` đã hết đúng ở kỷ này: xem lại nó thay vì sửa ngưỡng ở đây.');
-  assert.ok(tranToanCuc > 0.03,
-    `kỷ 6: trần toàn cục tụt còn ${(tranToanCuc * 100).toFixed(2)}% — thấp bất thường so với 4,36% `
-    + 'đo được ngày 2026-08-20. Mặt nước có còn được dựng không?');
+  // ⚠️ 2026-08-24 — BÀI NÀY ĐÃ ĐẢO CHIỀU, VÀ NÓ ĐẢO CHIỀU VÌ CHÍNH SỐ ĐO CỦA NÓ.
+  // Bài cũ đòi `trần toàn cục < 5%` để CHỨNG MINH câu *"kỷ 6 trượt vì BỀ RỘNG, không góc nào cứu
+  // được"*. Sau VIỆC 5 (khung toàn cảnh lùi ra ở cả 15 kỷ) trần ấy lên **7,24%** — tức câu kia
+  // **HẾT ĐÚNG**: có góc cứu được kỷ 6. Đúng như bài cũ đã tự hẹn: *"xem lại `TECH_DEBT #59` thay
+  // vì sửa ngưỡng ở đây"* — đã xem lại và ghi vào mục nợ ấy.
+  // Sự thật còn lại, và nó vẫn đáng canh: ở góc MẶC ĐỊNH — góc Đàm thật sự nhìn thấy — kỷ 6 vẫn
+  // chỉ được 2,59%, dưới cổng. Nên nay bài canh ĐÚNG hai vế ấy, mỗi vế một chiều:
+  const macDinh6 = tiLeNuocTrongKhung({ era: 6, tia: TIA }).nuoc;
+  assert.ok(macDinh6 < 0.05,
+    `kỷ 6 ở góc MẶC ĐỊNH đã lên ${(macDinh6 * 100).toFixed(2)}% — nếu thật thì kỷ 6 hết trượt, `
+    + 'gỡ nó khỏi `TRUOT` ở bài trên và đóng phần kỷ 6 của `TECH_DEBT #59`.');
+  assert.ok(tranToanCuc > 0.05,
+    `kỷ 6: trần toàn cục tụt còn ${(tranToanCuc * 100).toFixed(2)}% — dưới 5%, tức đã quay lại thế `
+    + 'giới trước VIỆC 5 nơi không góc nào cứu được kỷ này. Khung toàn cảnh có bị kéo gần lại không?');
 });

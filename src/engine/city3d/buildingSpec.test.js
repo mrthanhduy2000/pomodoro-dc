@@ -16,7 +16,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import { BLUEPRINT_CATALOG, BUILDING_EFFECTS } from '../constants.js';
-import { buildBuildingSpec, buildScaffoldSpec, emitRoof } from './buildingSpec.js';
+import { buildBuildingSpec, buildScaffoldSpec, emitMonolith, emitRoof } from './buildingSpec.js';
 import {
   ERA_STYLES, getEraStyle, getVernacularStyle, ROOF_KINDS, WINDOW_KINDS,
 } from './eraStyle.js';
@@ -797,93 +797,169 @@ function kyQuan(era) {
   return buildBuildingSpec({ bpId: bp.id, era, type: 'wonder', rarity: bp.rarity, level: 3 });
 }
 
-/** Thân nhà chính = khối `wall` RỘNG NHẤT, tức mảng nhà mà mái chính đội lên. */
-function thanNhaChinh(spec) {
-  return [...spec.parts].filter((p) => p.role === 'wall' && !p.deco).sort((a, b) => b.w - a.w)[0];
-}
+// ⚠️ ĐÃ XOÁ `thanNhaChinh` (2026-08-24). Nó lấy khối `wall` rộng nhất — tức mảng nhà mà mái chính
+// đội lên — và hai bài dùng nó (kỷ 2, kỷ 3) đều đã được viết lại quanh nguyên mẫu `monolith`, nơi
+// **không có khối `wall` nào cả**. Giữ lại một hàm chỉ chạy được trong thế giới cũ là để sẵn một
+// cái bẫy: bài sau gọi nó cho kỷ 2 sẽ nhận `undefined` rồi nổ ở một dòng chẳng liên quan.
 
-test('KỶ 2 — AI CẬP PHẢI CÓ MỘT KHỐI CHÓP BỐN MẶT THẬT, KHÔNG PHẢI CÁI LỀU TÁM CẠNH', () => {
-  // ⚠️ Bài này KHÔNG hỏi `getEraStyle(2).roof === 'pyramid'` — đó là hỏi lại chính cái bảng vừa
-  // điền, đúng bẫy `TECH_DEBT #42` ("assert con số đã KHAI thay vì con số đã DỰNG"). Nó hỏi HÌNH:
-  // khối đội lên thân nhà chính có đúng BỐN mặt và có thóp gần về một điểm không.
+test('KỶ 2 — AI CẬP LÀ MỘT KHỐI ĐẶC MỌC THẲNG TỪ MẶT ĐẤT, KHÔNG PHẢI CÁI NHÀ ĐỘI MŨ NHỌN', () => {
+  // ⚠️ BÀI NÀY HỎI MẠNH HƠN BẢN TRƯỚC 2026-08-24, VÀ ĐÓ LÀ CẢ NỘI DUNG CỦA `monolith`.
+  // Bản cũ chỉ hỏi được *"cái mũ có rộng bằng thân nhà không"* — vì lúc ấy kim tự tháp Giza thật sự
+  // LÀ một cái hộp gạch bùn đội mũ nhọn, và câu hỏi mạnh nhất có thể đặt ra cho một cái mũ là nó
+  // đừng bé quá. Nay khối đặc mọc thẳng từ đất nên câu hỏi đúng đã đổi hẳn: **KHÔNG ĐƯỢC CÓ THÂN
+  // NHÀ**. Đó là một lời hứa vắng mặt — thứ chỉ đếm được, không đo được — nên nó phải là assert
+  // đầu tiên, không phải một ghi chú.
   //
-  // THỬ-CHO-ĐỎ (đã chạy 2026-08-21): trả kỷ 2 về `roof: 'cone'` ⇒ đỏ ở assert `sides === 4`
-  // (dựng ra `sides: 8`).
+  // THỬ-CHO-ĐỎ (đã chạy 2026-08-24):
+  //   · bỏ `form: 'monolith'` ở `eraStyle.js` kỷ 2 ⇒ ĐỎ ngay ở (a) *"còn 1 khối thân tường"*.
+  //   · trả `roof` kỷ 2 về `'cone'`                ⇒ ĐỎ ở (b) `sides === 4` (dựng ra `sides: 8`).
   const spec = kyQuan(2);
-  const than = thanNhaChinh(spec);
-  const dinhThan = than.y + than.h;
 
-  // Khối mái đội lên đúng thân nhà ấy: cùng chỗ đứng, chân nằm ở đỉnh thân.
-  const mai = spec.parts.filter((p) => p.role === 'roof' && !p.deco && !p.rooftop
-    && Math.abs(p.y - dinhThan) < 1e-6 && Math.abs(p.x - than.x) < 1e-6);
-  assert.equal(mai.length, 1, `kỳ quan kỷ 2 phải có đúng một khối mái đội lên thân chính, đếm được ${mai.length}`);
+  // (a) KHÔNG THÂN TƯỜNG, KHÔNG TẦNG TRỆT, KHÔNG CHI TIẾT MÁI. Ba thứ này là ba tầng chi tiết mà
+  //     mọi nguyên mẫu khác đều có; một kim tự tháp có bất kỳ thứ nào trong đó là đã sai thể loại.
+  const than = spec.parts.filter((p) => p.role === 'wall' && !p.deco);
+  assert.equal(than.length, 0,
+    `kỳ quan kỷ 2 còn ${than.length} khối thân tường — khối đặc thì không có tường để mà đội mái`);
+  assert.equal(spec.parts.filter((p) => p.ground).length, 0, 'khối đặc không có tầng trệt (cửa ra vào)');
+  assert.equal(spec.parts.filter((p) => p.rooftop).length, 0, 'khối đặc không có chi tiết trên mái');
 
-  const chop = mai[0];
+  // (b) ĐÚNG MỘT KHỐI CHỊU LỰC, bốn mặt, thóp gần về một điểm. Đếm TOÀN BỘ khối không-trang-trí
+  //     chứ không lọc theo `role` — lọc theo vai màu thì một khối lạ mọc thêm sẽ tàng hình
+  //     (đúng bẫy `role` đã cắn ở Phase 8A: vai màu là VẬT LIỆU, không phải chức năng kết cấu).
+  const khoi = spec.parts.filter((p) => !p.deco && !p.rooftop);
+  assert.equal(khoi.length, 1, `kim tự tháp phải là ĐÚNG MỘT khối, đếm được ${khoi.length}`);
+  const chop = khoi[0];
   assert.equal(chop.shape, 'prism', 'chóp phải là lăng trụ');
   assert.equal(chop.sides, 4, `kim tự tháp phải có BỐN mặt, đang dựng ${chop.sides} cạnh`);
   assert.ok(chop.taper <= 0.1, `chóp phải thóp gần về một điểm, taper đang là ${chop.taper}`);
 
-  // Và nó phải là một KHỐI, không phải một cái mũ. Hai quan hệ, không phải hai mức:
-  //   · đáy chóp RỘNG HƠN thân nhà nó đứng lên (đo 2026-08-21: 1,537 / 1,137 = **135%**)
-  //   · chóp cao ÍT NHẤT một nửa thân nhà      (đo 2026-08-21: 0,818 / 1,079 = **76%**)
-  // Ngưỡng đặt ở 100% và 50% — cách số đo thật 35% và 52%, đủ chỗ cho việc chỉnh mỹ thuật mà vẫn
-  // đỏ ngay nếu chóp co lại thành một chỏm trang trí.
-  assert.ok(chop.w >= than.w,
-    `đáy chóp ${chop.w.toFixed(3)} hẹp hơn thân nhà ${than.w.toFixed(3)} — đó là cái mũ, không phải kim tự tháp`);
-  assert.ok(chop.h >= than.h * 0.5,
-    `chóp cao ${chop.h.toFixed(3)} so với thân ${than.h.toFixed(3)} — dưới một nửa thì mắt đọc ra "nhà có mái nhọn"`);
+  // (c) MỌC TỪ MẶT ĐẤT. Không có con số nào ở đây: chân khối phải đúng bằng chân công trình.
+  assert.equal(chop.y, 0, `chân kim tự tháp đang ở cao độ ${chop.y} — nó phải mọc thẳng từ mặt đất`);
 
-  // Tỉ lệ thật của Đại Kim Tự Tháp Giza: 146,6 m trên đáy 230,3 m = 0,637. Ở đây đo được 0,533
-  // (mái phủ `rw = w + 2·eaves` nên đáy rộng hơn thân). Dải [0,40 ; 0,90] bao lấy cả tỉ lệ thật
-  // lẫn số đang dựng, và loại cả hai đầu hỏng: bẹt như cái mâm, hoặc nhọn hoắt như cái nón.
+  // (d) TỈ LỆ GIZA. Đại Kim Tự Tháp: 146,6 m trên đáy 230,3 m = **0,637**. Đây là con số DỰNG RA,
+  //     không phải con số khai trong bảng (`TECH_DEBT #42`) — nếu diềm mái hay phép kẹp `roofPitch`
+  //     lẻn vào thì tỉ lệ này lệch ngay. Dải hẹp [0,60 ; 0,68] vì nay không còn gì làm nó trôi.
   const doc = chop.h / chop.w;
-  assert.ok(doc >= 0.4 && doc <= 0.9, `dốc chóp ${doc.toFixed(3)} nằm ngoài dải [0,40 ; 0,90]`);
+  assert.ok(doc >= 0.6 && doc <= 0.68,
+    `dốc chóp ${doc.toFixed(4)} nằm ngoài dải Giza [0,60 ; 0,68] — kim tự tháp thật là 0,637`);
+
+  // (e) DIỀM MÁI KHÔNG ĐƯỢC CHẠM VÀO KHỐI ĐẶC — hỏi bằng QUAN HỆ, không bằng mức (bẫy Phase 7D).
+  //     Kỷ 2 khai `eaves: 0.2`, và đó là con số ĐÚNG cho nhà ở Ai Cập. Nhưng một cái diềm mái trên
+  //     kim tự tháp sẽ loe chân đế ra thành cái nấm (đúng bệnh `eaves` đã vá ở Phase 7C). Nhân
+  //     `eaves` lên hơn bốn lần mà khối dựng ra phải KHÔNG đổi một chữ số nào.
+  const doEaves = (eaves) => {
+    const st = { ...getEraStyle(2), eaves };
+    const out = [];
+    emitMonolith(out, { x: 0, z: 0, y: 0, base: 2, rise: 0.6 }, st,
+      { bpId: 'do-eaves', era: 2, rarity: 'epic', level: 3, style: st, symmetric: true });
+    return JSON.stringify(out);
+  };
+  const beo = doEaves(0.2);
+  assert.notEqual(beo, '[]', 'phép thử chạy rỗng — `emitMonolith` không dựng ra khối nào');
+  assert.equal(beo, doEaves(0.9),
+    'nhân `eaves` lên mà khối đặc đổi theo — diềm mái đang loe chân kim tự tháp thành cái nấm');
 });
 
-test('KỶ 3 — ZIGGURAT PHẢI CÓ THỀM THẬT: THU VÀO TỪ MÉP THÂN NHÀ, MẶT TƯỜNG NGHIÊNG', () => {
-  // ⚠️ ĐÂY LÀ CHỖ `stepped` HỎNG, VÀ NÓ HỎNG KHÔNG PHẢI VÌ SỐ TẦNG. `stepped` mở đầu ở `rw`
-  // (= thân nhà + 2·eaves, tức RỘNG HƠN thân) nên bậc thứ nhất không tạo ra một cái thềm nào —
-  // nó chỉ nối tiếp mặt tường đi lên. Mắt vì thế chỉ đọc được bậc thứ hai trở đi.
+test('KỶ 3 — ZIGGURAT LÀ KHỐI GIẬT CẤP MỌC TỪ MẶT ĐẤT, CÓ ĐỀN TRÊN ĐỈNH VÀ CẦU THANG CHÍNH DIỆN', () => {
+  // ⚠️ KỶ 2 VÀ KỶ 3 DÙNG CHUNG MỘT NGUYÊN MẪU (`monolith`) MÀ PHẢI ĐỌC RA HAI HÌNH KHÁC HẲN —
+  // Giza chóp trơn, Ur giật cấp. Hai kỷ liền nhau, nên nếu chúng hoà vào nhau thì cả `monolith` chỉ
+  // là một cách viết khác của "kim tự tháp". Bài này canh nửa Ur; nửa Giza ở bài ngay trên.
   //
-  // THỬ-CHO-ĐỎ (đã chạy 2026-08-21): trả kỷ 3 về `roof: 'stepped'` ⇒ ĐỎ với thông báo *"ziggurat
-  // phải có ít nhất 3 thềm, đếm được 2"*. Con số 2 chứ không phải 3 là một chi tiết đáng giữ:
-  // `stepped` dựng ĐÚNG 3 bậc nhưng bậc đầu mang vai `trim` chứ không phải `roof` — tức ngay ở
-  // tầng vai màu, bậc dưới cùng của setback Manhattan đã KHÔNG được coi là mái.
+  // THỬ-CHO-ĐỎ (đã chạy 2026-08-24): trả `roof` kỷ 3 về `'pyramid'` ⇒ ĐỎ ở (b) *"ziggurat phải có
+  // ít nhất 3 thềm, đếm được 1"*.
   const spec = kyQuan(3);
-  const than = thanNhaChinh(spec);
-  const dinhThan = than.y + than.h;
+
+  // (a) KHÔNG THÂN TƯỜNG — cùng lời hứa với kỷ 2.
+  assert.equal(spec.parts.filter((p) => p.role === 'wall' && !p.deco).length, 0,
+    'ziggurat còn thân tường — khối đặc thì không có tường');
 
   const chong = spec.parts
     .filter((p) => p.role === 'roof' && !p.deco && !p.rooftop
-      && Math.abs(p.x - than.x) < 1e-6 && Math.abs(p.z - than.z) < 1e-6 && p.y >= dinhThan - 1e-6)
+      && Math.abs(p.x) < 1e-6 && Math.abs(p.z) < 1e-6)
     .sort((a, b) => a.y - b.y);
-
   assert.ok(chong.length >= 3, `ziggurat phải có ít nhất 3 thềm, đếm được ${chong.length}`);
 
-  // (a) THỀM THẬT: thềm dưới cùng phải HẸP HƠN thân nhà đỡ nó. Đo 2026-08-21: 1,095 / 1,369 = 80%.
-  assert.ok(chong[0].w < than.w,
-    `thềm dưới cùng rộng ${chong[0].w.toFixed(3)} ≥ thân nhà ${than.w.toFixed(3)} — không có thềm nào để mắt đọc`);
+  // (b) THỀM DƯỚI CÙNG CHẠM ĐẤT. Bản cũ chỉ hỏi được "thềm dưới hẹp hơn thân nhà"; nay không còn
+  //     thân nhà nào để so, và câu hỏi đúng mạnh hơn hẳn: nó phải LÀ nền móng.
+  assert.equal(chong[0].y, 0, `thềm dưới cùng đang ở cao độ ${chong[0].y} — ziggurat mọc từ mặt đất`);
 
-  // (b) THU DẦN: mỗi thềm hẹp hơn thềm dưới nó. Quan hệ, không phải mức — nên nó không già đi khi
-  //     ai đó chỉnh tỉ lệ.
+  // (c) THU DẦN: mỗi thềm hẹp hơn thềm dưới nó. Quan hệ, không phải mức ⇒ không già đi khi chỉnh tỉ lệ.
   for (let i = 1; i < chong.length; i += 1) {
     assert.ok(chong[i].w < chong[i - 1].w,
       `thềm ${i + 1} rộng ${chong[i].w.toFixed(3)} không hẹp hơn thềm ${i} (${chong[i - 1].w.toFixed(3)})`);
   }
 
-  // (c) MẶT TƯỜNG NGHIÊNG VÀO (batter) — dấu hiệu nhận dạng số một của ziggurat, và là thứ luật
+  // (d) MẶT TƯỜNG NGHIÊNG VÀO (batter) — dấu hiệu nhận dạng số một của ziggurat, và là thứ luật
   //     giật cấp New York 1916 KHÔNG có (mặt cao ốc setback dựng đứng).
   for (const [i, p] of chong.entries()) {
     assert.ok(p.taper > 0 && p.taper < 1,
       `thềm ${i + 1} có taper ${p.taper} — mặt tường dựng đứng thì đó là setback Manhattan, không phải ziggurat Ur`);
   }
 
-  // (d) ĐỀN NHỎ TRÊN ĐỈNH. Ở Ur nó lợp gạch men khác hẳn thân ziggurat ⇒ vai màu khác.
+  // (e) ĐỀN NHỎ TRÊN ĐỈNH. Ở Ur nó lợp gạch men khác hẳn thân ziggurat ⇒ vai màu khác.
   const dinhChong = chong[chong.length - 1].y + chong[chong.length - 1].h;
   const den = spec.parts.filter((p) => !p.deco && !p.rooftop && p.role !== 'roof'
-    && Math.abs(p.x - than.x) < 1e-6 && Math.abs(p.y - dinhChong) < 1e-6);
+    && Math.abs(p.x) < 1e-6 && Math.abs(p.z) < 1e-6 && Math.abs(p.y - dinhChong) < 1e-3);
   assert.equal(den.length, 1, `phải có đúng một đền nhỏ trên đỉnh ziggurat, đếm được ${den.length}`);
   assert.ok(den[0].w < chong[chong.length - 1].w, 'đền trên đỉnh phải hẹp hơn thềm cao nhất');
+
+  // (f) CẦU THANG CHÍNH DIỆN — Đàm yêu cầu đích danh, và nó là thứ phân biệt Ur với một cái bánh
+  //     ga-tô ba tầng. Hỏi bằng HÌNH: một dãy bậc nằm LỆCH khỏi trục (z > 0, tức mặt trước) và cao
+  //     DẦN LÊN khi tiến vào thân — bậc càng gần thân thì càng phải với lên cao.
+  const bac = spec.parts
+    .filter((p) => !p.deco && !p.rooftop && p.z > 1e-6 && Math.abs(p.x) < 1e-6 && p.y === 0)
+    .sort((a, b) => b.z - a.z);
+  assert.ok(bac.length >= 3, `cầu thang chính diện phải có ít nhất 3 bậc, đếm được ${bac.length}`);
+  for (let i = 1; i < bac.length; i += 1) {
+    assert.ok(bac[i].h > bac[i - 1].h,
+      `bậc thứ ${i + 1} (z=${bac[i].z.toFixed(3)}) cao ${bac[i].h.toFixed(3)} không hơn bậc trước `
+      + `${bac[i - 1].h.toFixed(3)} — cầu thang phải leo lên, không phải một hàng cọc`);
+  }
+  assert.ok(bac[bac.length - 1].h > chong[0].h,
+    'bậc trên cùng của cầu thang chưa với tới quá thềm thứ nhất — nó chưa dẫn lên đâu cả');
+});
+
+test('KỶ 2 ↔ KỶ 3 — CÙNG NGUYÊN MẪU `monolith` MÀ PHẢI RA HAI HÌNH ĐỌC ĐƯỢC LÀ KHÁC NHAU', () => {
+  // Hai kỷ LIỀN NHAU dùng chung một nguyên mẫu là chỗ dễ hoà vào nhau nhất. Đo bằng ĐƯỜNG VIỀN:
+  // cắt ngang khối ở 10 độ cao rồi hỏi bề ngang còn lại — chóp trơn thì thu đều tăm tắp, giật cấp
+  // thì đứng yên rồi tụt hẫng. Đếm số lần "đứng yên" là đếm số thềm, không cần biết `roof` khai gì.
+  const be = (era) => {
+    const spec = kyQuan(era);
+    const khoi = spec.parts.filter((p) => !p.deco && !p.rooftop);
+    const cao = Math.max(...khoi.map((p) => p.y + p.h));
+    return Array.from({ length: 10 }, (_, i) => {
+      const y = (cao * (i + 0.5)) / 10;
+      let w = 0;
+      for (const p of khoi) {
+        if (y < p.y || y > p.y + p.h) continue;
+        const t = p.h > 0 ? (y - p.y) / p.h : 0;
+        w = Math.max(w, p.w * (1 + (p.taper - 1) * t));
+      }
+      return w;
+    });
+  };
+  const giza = be(2);
+  const ur = be(3);
+  // Δ = bề ngang mất đi giữa hai lát kề nhau. Chóp trơn ⇒ Δ **hằng số** (thu đều). Giật cấp ⇒ Δ
+  // nhảy: nhỏ khi đang đi trong lòng một thềm, vọt lên khi vượt qua mép thềm. Đo được 2026-08-24:
+  //   kỷ 2 · Δ = 0,330 ×9        → max/min = **1,00**
+  //   kỷ 3 · Δ = 0,127 0,127 0,691 0,124 0,124 0,538 0,129 0,647 0,029 → max/min = **23,4**
+  // Hai con số cách nhau 23 lần, nên ngưỡng đặt ở đâu trong khoảng ấy cũng được; lấy 1,05 và 5.
+  const nhip = (v) => {
+    const d = v.slice(1).map((w, i) => v[i] - w);
+    assert.ok(d.every((x) => x > 1e-9), 'có lát không hẹp đi — khối đang phình ra khi lên cao');
+    return Math.max(...d) / Math.min(...d);
+  };
+  const deuGiza = nhip(giza);
+  const nhayUr = nhip(ur);
+  assert.ok(deuGiza <= 1.05,
+    `kỷ 2 thu KHÔNG đều (max/min Δ = ${deuGiza.toFixed(2)}) — Giza phải là một mặt phẳng nghiêng liền`);
+  assert.ok(nhayUr >= 5,
+    `kỷ 3 thu đều quá (max/min Δ = ${nhayUr.toFixed(2)}) — mắt sẽ đọc ra một cái chóp, không phải GIẬT CẤP`);
+  // Và đếm THẲNG số mép thềm: Δ nào lớn hơn 3 lần Δ nhỏ nhất là một lần vượt mép.
+  const nhoNhat = Math.min(...ur.slice(1).map((w, i) => ur[i] - w));
+  const mep = ur.slice(1).filter((w, i) => ur[i] - w > nhoNhat * 3).length;
+  assert.ok(mep >= 2, `kỷ 3 chỉ đếm được ${mep} mép thềm trên đường viền — chưa đủ để gọi là ziggurat`);
 });
 
 /**

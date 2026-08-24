@@ -175,6 +175,15 @@
 │   │   │   │                      #   giữa `geometryFactory` (đánh số nhóm) và `sceneGraph` (dựng
 │   │   │   │                      #   mảng vật liệu) — hai bên tự sắp riêng thì mái mang độ bóng
 │   │   │   │                      #   của mặt nước, mắt thấy ngay mà đọc code thì không
+│   │   │   ├── occlusion.js       # CHE KHUẤT MÔI TRƯỜNG (AO) — NỬA CÒN LẠI của `contactShade` ở
+│   │   │   │                      #   `materials.js`: cái kia chỉ hỏi "đỉnh này cao bao nhiêu", cái
+│   │   │   │                      #   này hỏi "quanh đỉnh này có bao nhiêu vật chắn" (đủ BA chiều).
+│   │   │   │                      #   Nướng vào MÀU ĐỈNH lúc gộp hình học ⇒ 0đ lúc chạy (ADR-063)
+│   │   │   │                      #   ⚠️ Nó KHÔNG đổi một lệnh vẽ nào, KHÔNG đổi một tam giác nào —
+│   │   │   │                      #   nên `renderer.info` MÙ HOÀN TOÀN với nó, và **chỉ ẢNH mới
+│   │   │   │                      #   chứng minh được nó chạy**. Vì thế `city-preview.mjs --no-ao`
+│   │   │   │                      #   là ĐỐI CHỨNG BẮT BUỘC, không phải một tuỳ chọn tiện tay; ảnh
+│   │   │   │                      #   mang hậu tố `-noao` để hai vế không bao giờ ghi đè nhau
 │   │   │   ├── eraStyle.js        # NGỮ PHÁP theo 15 kỷ: vật liệu, kiểu mái, cửa sổ, mô-típ
 │   │   │   │                      #   ⚠️ `wallMaterial`/`roofMaterial` là BỀ MẶT (nhám/bóng), tách
 │   │   │   │                      #   hẳn khỏi `wallColor`/`roofColor` (sắc). Cùng bài học "một
@@ -292,6 +301,12 @@
 │   │   │   │                      #   như `country`/`landmark`: số không có lời giải thích là số
 │   │   │   │                      #   tuỳ hứng — thứ đã sinh ra "15 kỷ cao bằng nhau" ở Phase 5B
 │   │   │   ├── archetypes.js      # Bóng dáng theo 4 LOẠI (hạ tầng/kinh tế/phòng thủ/kỳ quan)
+│   │   │   │                      # ⚠️ NAY CÓ 8 NGUYÊN MẪU: 7 cái đầu đều là THÂN + MÁI, cái thứ 8
+│   │   │   │                      #   `monolith` thì KHÔNG — công trình LÀ khối, dựng thẳng từ mặt
+│   │   │   │                      #   đất: không thân tường, không `groundFloor`, không `eaves`,
+│   │   │   │                      #   không `rooftop` (ADR-062). Dùng cho kim tự tháp kỷ 2 và
+│   │   │   │                      #   ziggurat kỷ 3. Cần khối đặc nữa thì KHAI THÊM DÒNG vào bảng,
+│   │   │   │                      #   đừng thêm nhánh `if` theo số kỷ
 │   │   │   │                      #   + quy mô theo 3 ĐỘ HIẾM
 │   │   │   ├── signature.js       # CHỮ KÝ KIẾN TRÚC: mỗi kỷ MỘT bộ phận lấy từ công trình CÓ THẬT
 │   │   │   │                      #   của nước biểu tượng (cột chữ T Göbekli Tepe · cầu thang

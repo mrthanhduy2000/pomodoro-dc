@@ -20,7 +20,11 @@
  * và một ống khói ở kỷ 15 chiếm ĐÚNG BẰNG NHAU số điểm ảnh trên màn hình** — bởi số điểm ảnh trên
  * mỗi đơn vị thế giới chỉ phụ thuộc khoảng cách, không phụ thuộc kỷ. Một mức thu phóng riêng cho
  * mỗi kỷ mà không giữ được lời hứa ấy thì chỉ là mười lăm con số tuỳ hứng.
- * Mức thu phóng suy ra: **0,395 (kỷ 15) … 0,557 (kỷ 2)** — nằm trọn trong dải 0,38–0,58 Đàm chốt.
+ * Mức thu phóng suy ra: **0,333 (kỷ 8) … 0,478 (kỷ 1)** — đo lại 2026-08-24 sau Phase 19 VIỆC 5,
+ * khi khung toàn cảnh lùi ra ở cả 15 kỷ để không công trình nào bị mép cắt. ⚠️ Dải này là một
+ * QUAN SÁT, không phải một lời hứa: nó tụt xuống mỗi lần khung toàn cảnh lùi ra, trong khi thứ
+ * thật sự được khoá — `FOCUS_VIEW_DISTANCE` — không đổi một chữ số. Bộ số cũ (0,395…0,557) mô tả
+ * khung toàn cảnh TRƯỚC VIỆC 5; đừng đem so trực tiếp với bộ số trên.
  *
  * ═══ CAMERA TUYỆT ĐỐI KHÔNG ĐƯỢC CHUI VÀO TRONG PHỐ — VÀ PHẢI CANH CẢ ĐƯỜNG BAY ═══
  *

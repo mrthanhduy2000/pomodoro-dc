@@ -154,6 +154,13 @@ function parseArgs(argv) {
     // `TECH_DEBT #30` đo con số 0,113 của nhựa đường kỷ 11 ở đúng điều kiện này — giữ nguyên cờ
     // này là cách duy nhất để số mới còn so được với số cũ.
     noShadow: false,
+    // ⚠️ TẮT CHE KHUẤT MÔI TRƯỜNG (AO) — CỜ ĐỐI CHỨNG, KHÔNG PHẢI CỜ CHỈNH.
+    // AO được nướng vào MÀU ĐỈNH nên nó KHÔNG hiện ra ở bất kỳ con số nào của `renderer.info`:
+    // bật hay tắt vẫn đúng bằng ấy lệnh vẽ, đúng bằng ấy tam giác (đã đo kỷ 6 = 13 · kỷ 11 = 12 ở
+    // cả hai phía). Thứ duy nhất phân biệt được hai bản là TẤM ẢNH — nên nếu không có đường tắt nó
+    // đi thì mọi câu "nhờ AO mà khối đọc ra là 3D" là một lời nói không kiểm được, đúng loại câu
+    // tự trấn an mà dự án này đã trả giá nhiều lần.
+    noAo: false,
     // ⚠️ DÙNG GPU THẬT thay vì SwiftShader. Mặc định TẮT vì hộp cát dựng ảnh không có card đồ hoạ —
     // nhưng trên MacBook của Đàm thì BẮT BUỘC bật, nếu không mọi con số đo được vẫn là số của một
     // cỗ máy tô hình bằng CPU, chỉ khác là lần này nó đội lốt "đo trên máy thật". Công cụ luôn in
@@ -183,6 +190,7 @@ function parseArgs(argv) {
     else if (key === '--bench') { args.bench = Number(value); i += 1; }
     else if (key === '--mask') { args.mask = String(value); i += 1; }
     else if (key === '--no-shadow') args.noShadow = true;
+    else if (key === '--no-ao') args.noAo = true;
     else if (key === '--gpu') args.gpu = true;
     // Chỉ KIỂM xem có Chromium không rồi thoát — không gói bundle, không mở trình duyệt.
     // ⚠️ Tồn tại để `bench-macbook.sh` hỏi được câu "máy này có Chromium chưa" mà KHÔNG phải chép
@@ -207,10 +215,10 @@ function run(cmd, cmdArgs, options = {}) {
  */
 function entrySource({
   era, level, theme, zoom = 1, focus = 0, hour = null, pending = 0, sessions = 40, dpr = null, bench = 0,
-  mask = null, noShadow = false, t = 17.5, lowDetail = false,
+  mask = null, noShadow = false, noAo = false, t = 17.5, lowDetail = false,
 }) {
   return `
-import { computeCityLayout } from '${ROOT}/src/engine/cityLayout.js';
+import { computeCityLayout, ROAD_CELL_COUNT } from '${ROOT}/src/engine/cityLayout.js';
 import { buildScenePalette } from '${ROOT}/src/engine/city3d/palette3d.js';
 import { deriveDaylight } from '${ROOT}/src/engine/city3d/daylight.js';
 import { applyPaintedLook, createCityScene, MAX_PIXEL_RATIO } from '${ROOT}/src/components/city/render3d/sceneGraph.js';
@@ -226,6 +234,7 @@ const MASK = ${mask === null ? 'null' : JSON.stringify(mask)};
 // khác.
 const MASK_NAMES = MASK ? MASK.split(',').map((s) => s.trim()).filter(Boolean) : [];
 const NO_SHADOW = ${noShadow ? 'true' : 'false'};
+const NO_AO = ${noAo ? 'true' : 'false'};
 
 const ERA = ${era};
 const LEVEL = ${level};
@@ -251,6 +260,8 @@ const levels = Object.fromEntries(built.map((id) => [id, LEVEL]));
 const layout = computeCityLayout({
   built, levels, era: ERA, stats: { sessionCount: SESSIONS, streakLength: 9 }, pending: pendingQueue,
 });
+// Đếm ô đường CÓ THẬT trong bố cục vừa dựng — hỏi chính 'layout', không suy lại từ 'SESSIONS'.
+const soODuong = (layout.props ?? []).filter((p) => p.kind === 'road').length;
 
 // Token màu lấy thẳng từ giá trị mặc định của hai theme trong src/index.css — trang này không có
 // cây DOM của app nên không đọc được biến CSS thật.
@@ -297,6 +308,7 @@ const city = createCityScene({
   layout, palette, daylight, renderer, lowDetail: LOW_DETAIL,
   stats: { sessionCount: SESSIONS, streakLength: 9 },
   tachDeDo: MASK_NAMES,
+  ao: !NO_AO,
 });
 
 // Đẩy đồng hồ tới một thời điểm giữa chừng. Ở t = 0 mọi cư dân đều đứng ở đầu tuyến của mình —
@@ -354,6 +366,11 @@ if (NO_SHADOW) {
   renderer.shadowMap.enabled = false;
   console.log('[no-shadow] đã tắt ' + tắt + ' nguồn bóng');
 }
+
+// ⚠️ TỰ KHAI RA. AO nướng vào màu đỉnh nên tấm ảnh KHÔNG có cách nào tự nói nó được dựng có hay
+// không có AO — không lệnh vẽ nào đổi, không tam giác nào đổi. Dòng này (cộng hậu tố '-noao' trong
+// tên file) là hai thứ duy nhất giữ cho một cặp ảnh trước/sau còn truy được nguồn.
+if (NO_AO) console.log('[no-ao] che khuất môi trường ĐÃ TẮT — đây là ảnh ĐỐI CHỨNG');
 
 if (MASK) {
   // ⚠️ THAY VẬT LIỆU, KHÔNG XOÁ ĐỐI TƯỢNG. Xoá thì thứ nằm SAU nó lộ ra và mặt nạ sẽ nhận vơ những
@@ -579,6 +596,17 @@ document.title = 'READY ' + JSON.stringify(city.stats);
 document.getElementById('info').textContent =
   'Kỷ ' + ERA + ' — ' + (ERA_METADATA[ERA]?.label ?? '?') + ' · cấp ' + LEVEL
   + ' · ' + pendingQueue.length + ' công trường'
+  // ⚠️ MẠNG ĐƯỜNG MỞ DẦN THEO SỐ PHIÊN — phải nói ra khi nó CHƯA ĐỦ, nếu không mỗi ảnh xem thử
+  // mặc định ('--sessions 40' trên 80 ô đường) sẽ hiện một thành phố mới xây một nửa, và người
+  // xem đọc những đoạn đường cụt ấy thành một khuyết tật dựng hình. Chuyện đó đã xảy ra thật:
+  // Phase 19 mở ra với một lời chê “đường có nét đứt trông giả tạo” mà thủ phạm chỉ là con số 40.
+  // Con số lấy THẲNG từ 'ROAD_CELL_COUNT', không viết cứng — nó suy từ chính 'ROAD_CELLS'.
+  + ' · đường ' + soODuong + '/' + ROAD_CELL_COUNT
+  // ⚠️ ĐIỀU KIỆN LÀ 'SESSIONS', KHÔNG PHẢI 'soODuong < ROAD_CELL_COUNT'. Vài ô đường VĨNH VIỄN
+  // bị công trình chiếm (đo được: 2 ô ở kỷ 1), nên so với trần lý thuyết thì cảnh báo kêu oan
+  // ngay cả khi mạng đã mở hết — mà một cảnh báo kêu oan còn tệ hơn không có cảnh báo. Thứ cần
+  // hỏi là *ngân sách còn đang là chỗ thắt cổ chai không*, và đó đúng là 'SESSIONS < tổng số ô'.
+  + (SESSIONS < ROAD_CELL_COUNT ? ' ⚠ MẠNG ĐƯỜNG CHƯA MỞ HẾT — tăng --sessions' : '')
   + ' · ' + city.stats.drawCalls + ' lệnh vẽ · '
   // Ba con số, theo đúng thứ tự bảng [stats]: thành phố + nền = tổng. Dòng chú thích dưới ảnh xem
   // thử là chỗ DUY NHẤT Đàm đọc mà không cần mở terminal, nên nó không được nói ít hơn bảng đo.
@@ -599,7 +627,7 @@ document.body.dataset.ready = '1';
  */
 function sweepSource({ level, theme, cell, combos, sessions = 40, t = 17.5 }) {
   return `
-import { computeCityLayout } from '${ROOT}/src/engine/cityLayout.js';
+import { computeCityLayout, ROAD_CELL_COUNT } from '${ROOT}/src/engine/cityLayout.js';
 import { buildScenePalette } from '${ROOT}/src/engine/city3d/palette3d.js';
 import { deriveDaylight } from '${ROOT}/src/engine/city3d/daylight.js';
 import { applyPaintedLook, createCityScene, MAX_PIXEL_RATIO } from '${ROOT}/src/components/city/render3d/sceneGraph.js';
@@ -1106,13 +1134,13 @@ const nghi = (ms) => new Promise((r) => setTimeout(r, ms));
  * `#info` qua CDP rồi trả về để chỗ gọi in ra terminal. Đổi chỗ hiển thị, không bỏ thông tin.
  */
 async function shoot(chrome, url, pngPath,
-  { width, height, bench = 0, mask = null, noShadow = false, gpu = false, focus = 0,
+  { width, height, bench = 0, mask = null, noShadow = false, noAo = false, gpu = false, focus = 0,
     hangCauTruc = [] }) {
   // Lúc đo hiệu năng thì PHẢI để stderr chảy ra, vì dòng [bench] đi bằng đường đó — và lúc dựng
   // mặt nạ cũng vậy, vì dòng [mask] là thứ DUY NHẤT chứng minh mặt nạ khớp đúng khối cần khớp.
   // ⚠️ Chế độ cận cảnh cũng phải mở đường này: dòng [focus] là thứ DUY NHẤT nói ra camera đã đứng
   // ở đâu. Ngoài mấy ca đó thì im, vì Chromium trong hộp cát này chửi dbus không ngớt.
-  const choNoi = bench > 0 || !!mask || noShadow || focus > 0;
+  const choNoi = bench > 0 || !!mask || noShadow || noAo || focus > 0;
 
   // ⚠️ KHUNG NHÌN RỘNG RÃI CÓ CHỦ Ý. Cắt theo hộp bao rồi thì thừa bao nhiêu cũng không vào ảnh;
   // thứ duy nhất phải chắc là canvas KHÔNG bị xén. Vẫn kiểm lại bằng `kiemKhungNhin` phía dưới —
@@ -1485,6 +1513,12 @@ async function main() {
       // (mở nhầm file cũ rồi kết luận bản vá không ăn thua).
       const maskTag = args.mask ? `-mask-${args.mask.replace(/[^a-z0-9]+/gi, '_')}` : '';
       const shadowTag = args.noShadow ? '-noshadow' : '';
+      // ⚠️ LẦN THỨ CHÍN CỦA ĐÚNG CÁI BẪY TRÊN — `--no-ao` (2026-08-24). Cặp ảnh trước/sau của AO
+      // là thứ DUY NHẤT chứng minh được hiệu ứng ấy có tác dụng (nó không hiện ra ở lệnh vẽ hay
+      // tam giác). Để hai vế dùng chung một tên file thì vế sau đè vế trước và phép so sẽ chấm một
+      // tấm ảnh với chính nó — đúng bài học `MAI-SAU-ky9.png`, nơi hai con số nghiệm thu mái phải
+      // vứt đi vì tấm "cận mái" trùng TỪNG BYTE với ảnh khung thường.
+      const aoTag = args.noAo ? '-noao' : '';
       // ⚠️ CHẾ ĐỘ CẬN CẢNH CŨNG PHẢI CÓ TÊN RIÊNG, cùng lý do với mặt nạ ở trên — mà lý do ấy vừa
       // trả giá thật ngày 2026-08-18: hai con số nghiệm thu mái (4,5% / 16,5%) phải vứt đi vì tấm
       // ảnh mang tên "cận mái" hoá ra trùng TỪNG BYTE với ảnh khung thường. Một khung hình khác
@@ -1516,7 +1550,7 @@ async function main() {
       // Chỉ gắn khi KHÁC mặc định, để mọi tên file lịch sử vẫn tra được.
       const tTag = args.t === 17.5 ? '' : `-t${String(args.t).replace('.', 'p')}`;
       const lodTag = args.lowDetail ? '-lod' : '';
-      const pngPath = resolve(OUT_DIR, `city-era${String(era).padStart(2, '0')}-${args.theme}${hourTag}${sessTag}${widthTag}${zoomTag}${tTag}${lodTag}${maskTag}${shadowTag}${focusTag}.png`);
+      const pngPath = resolve(OUT_DIR, `city-era${String(era).padStart(2, '0')}-${args.theme}${hourTag}${sessTag}${widthTag}${zoomTag}${tTag}${lodTag}${maskTag}${shadowTag}${aoTag}${focusTag}.png`);
       let info = '';
       let hop = null;
       try {

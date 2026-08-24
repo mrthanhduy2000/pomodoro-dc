@@ -306,6 +306,80 @@
 
 ### (Nhật ký cũ hơn → `docs/archive/BAN_GIAO_ARCHIVE_2026-08-24.md`)
 
+### 2026-08-24 — Phase 19: khối kiến trúc, bóng đổ, khung hình (ADR-062 `monolith` · ADR-063 AO · ADR-061 khung hình)
+
+**Đàm nói gì**: *"đường có nét đứt trông giả tạo kinh khủng · kim tự tháp không có khối hình chóp"*
+(nhìn kỷ 1 · 2 · 14), cộng một yêu cầu cũ chưa ai làm: *"hiệu ứng hơn, ánh sáng đổ bóng… giống 3D
+hoá hơn nữa"*. Sáu việc, làm hết rồi báo một lượt.
+
+1. **Đường nét đứt** — bisect TRƯỚC, đoán sau, vì chữ *"tự dưng"* chỉ vào một hồi quy.
+2. **Nguyên mẫu thứ 8 `monolith`** (ADR-062). Bệnh KHÔNG nằm ở `roof: 'pyramid'` — kỷ 2 khai đúng
+   từ lâu. Bệnh nằm cao hơn một tầng: **cả 7 nguyên mẫu đều là THÂN + MÁI**, nên Đại Kim Tự Tháp
+   dựng ra là *một hộp gạch bùn đội cái nón*, có tường, có cửa, có mái đua loe chân thành cây nấm.
+   Nay `monolith` dựng thẳng từ mặt đất: **không thân tường, không `groundFloor`, không `eaves`,
+   không `rooftop`**. Kỷ 2 = chóp TRƠN (tỉ lệ cao:đáy 0,64 như Giza) · kỷ 3 = GIẬT CẤP (thềm +
+   tường nghiêng batter + đền trắng trên đỉnh + cầu thang chính diện). **Đóng `TECH_DEBT #75`** —
+   và đóng đúng bằng cách mục ấy đã tự chẩn đoán: *bài toán KHỐI TÍCH, không phải bài toán MÁI*.
+3. **Bóng đổ nét hơn**: `SHADOW_MAP_DESKTOP` 2048 → **4096**; điện thoại **GIỮ 512** (4096² × 4 byte
+   = 64 MB texture — iOS Safari giết tab vì đúng thứ đó). Đo bằng cặp ảnh khác nhau ĐÚNG một hằng
+   số: 0,2–0,3% điểm ảnh đổi, nhưng **16,07–16,33 tại chỗ đã đổi** ⇒ có thật, rất cục bộ, chỉ là
+   một vệt mỏng dọc MÉP bóng. ⚠️ **Nửa sau của chỉ thị đã ĐO VÀ BÁC BỎ**: `reach` (9,00) ĐÃ LÀ phạm
+   vi thành phố — khối đổ bóng xa nhất trên cả 15 kỷ ở bán kính **8,48**, dư đúng 6%. Siết thêm là
+   cắt cụt bóng của nhà ở góc lưới, nên tôi KHÔNG siết và ghi lý do vào mã.
+4. **Che khuất môi trường (AO)** (ADR-063): nướng vào **MÀU ĐỈNH** lúc gộp hình học ⇒ **0 lệnh vẽ,
+   0 tam giác** thêm (đã đo: kỷ 6 = 13 · kỷ 11 = 12, y hệt cả hai phía). Chính vì thế
+   `renderer.info` mù hoàn toàn với nó, nên `--no-ao` là **đối chứng BẮT BUỘC**, không phải tuỳ
+   chọn tiện tay. Đo: **2,2–4,1% điểm ảnh đổi · 15,87–16,55 tại chỗ đã đổi**. ⚠️ **Điều kiện dừng
+   của Đàm KHÔNG kích hoạt**: sàn độ sáng đi XUỐNG, dải tương phản NỞ RA, độ tươi không tụt — cả ba
+   đều ngược hướng "trắng bệch".
+5. **Nóc nhà thôi bị mép khung cắt** (ADR-061) — **đóng `TECH_DEBT #24`**, mở từ Phase 7B. Và thủ
+   phạm hoá ra là **một BÀI TEST**: bài *"KỶ THẤP GIỮ NGUYÊN KHUNG SÁT"* (Phase 5A) đòi
+   `factor ≤ 1,35`, trong khi 13/15 kỷ cần ≥ 1,47 ⇒ cái trần ấy và lời hứa "không cắt" **không thể
+   cùng đúng**. Nay mỗi kỷ một khoảng cách riêng, tìm bằng chia đôi: **0/15 kỷ bị cắt**, hệ số
+   1,307…1,878, và **14/15 kỷ ra biên đúng 0,0400 = sàn** ⇒ tối thiểu thật, không dư một li.
+6. **Quét lại 15 kỷ**: **105/105 cặp kỷ ĐẠT** (gần nhất 19,18 · trung vị 36,31) — điều VIỆC 6 hỏi
+   là CÓ.
+
+⚠️ **CÁI GIÁ, VÀ VÌ SAO TÔI KHÔNG TỰ CHỌN HỘ.** Trục CHẶNG NGÀY tụt **14,39 → 11,33**, lần đầu
+xuống dưới ngưỡng mắt 12. Tôi **không gán cả −3,06 cho "Phase 19"** mà đi tách một biến — ba lượt
+quét đầy đủ trên ba cây mã, mốc nền TỰ ĐO trong `git worktree` chứ không chép của phase trước
+(`TECH_DEBT #43`):
+
+| cây mã | trục chặng | trục kỷ |
+|---|---:|---:|
+| mốc nền `be9d2ea` | **14,39** ✓ | 22,13 |
+| đủ VIỆC 1+2+3+4, **hoàn tác riêng `orbit.js`** | **14,23** ✓ | 21,24 |
+| Phase 19 đủ | **11,33** ✗ | 19,18 |
+
+⇒ Bốn việc mỹ thuật tốn **0,16**; **2,90 là của riêng phép lùi khung hình**. Cơ chế là **pha loãng**
+(`TECH_DEBT #22`): dải đo là phân số CỐ ĐỊNH của ô, thành phố nhỏ lại thì mỗi dải lẫn thêm nền —
+**không phải 15 kỷ/6 chặng thật sự giống nhau hơn**. Bằng chứng phụ: **12/15 cặp chặng TỐT LÊN**
+(bình minh↔hoàng hôn 23,17 → 32,75), chỉ ba cặp *bình minh/sáng ↔ giữa ngày* đi xuống.
+
+Tách ba dải của cặp yếu nhất: **trời 8,38 → 4,12** · thành phố 10,74 → 6,51 · **đất 20,88 → 18,05**
+⇒ đất vẫn khoẻ **gấp bốn lần** trời. **Cần gạt nằm ở BẦU TRỜI lúc 6h so với 15h** — xác nhận lại
+kết luận đã ghi sau Phase 14, và **bác bỏ lần thứ hai** chỉ thị cũ *"làm vùng quê đổi theo giờ"*.
+
+Đây là **xung đột giữa hai thứ Đàm đã yêu cầu**, nên ba hướng nằm ở `TECH_DEBT #79` chờ Đàm chọn.
+❌ Không nới ngưỡng 12 (phễu Phase 9A) · ❌ không đổi cách cắt dải để lấy lại con số (`#55`).
+
+**Hai món quà phụ, cả hai đều nhờ phép lùi khung** (⚠️ và cả hai sẽ mất nếu Đàm chọn hoàn tác):
+kỷ 5 **tự lành** cổng "thấy nước" (3,51% → **7,30%**) vì nước nằm ngoài lưới thành phố ⇒ `#67` nay
+chỉ còn kỷ 4; và một chữ trong tiêu đề `#59` bị bác bỏ bằng số — kỷ 6 *"không đạt ở **bất kỳ** góc
+nào"* nay có trần toàn cục **7,24%** (trước 4,36%), nên bài test kỷ 6 đã được **đảo vế** kèm giải
+thích (góc mặc định vẫn trượt 2,59%, **nhưng** trần toàn cục đã > 5% — phải khẳng định cả hai câu).
+
+**Hai lỗ hổng tài liệu phát hiện trong lúc làm**: `START_HERE.md` và `PHASE_RULES.md` mà chỉ thị bảo
+đọc trước **chưa từng tồn tại trong bất kỳ commit nào, trên bất kỳ nhánh nào** — nên "tóm tắt 5
+dòng theo §6" không đọc được luật gốc. Và `shadow-score.mjs` nằm ở `scripts/`, không phải
+`scripts/archive/` như chỉ thị ghi.
+
+**Nghiệm thu**: `npm test` **1067 bài · 1066 xanh · 0 đỏ · `# skipped 1`** + đối chiếu chéo 3/3 ·
+`npm run lint` sạch · `npm run build` xanh. Ảnh giao: kỷ **2 · 3 · 6 · 11 · 14** ở `--width 1500`,
+cặp AO (kỷ 2 · 6 · 11), cặp bóng đổ (kỷ 6 · 11 ở 15h), và bản quét 15 kỷ × 6 chặng.
+
+---
+
 ### 2026-08-24 (tối muộn) — Đường phố biết uốn cong, và mạng đường có ba hạng (ADR-058)
 
 **Lệnh của Đàm**: *"Hãy cải thiện đường đi, hiện tại nó chỉ là những đường thẳng, không giống đường

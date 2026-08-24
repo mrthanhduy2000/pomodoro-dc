@@ -238,6 +238,33 @@ tuyệt đối (**4,86 × 10⁻¹⁷ ô** trên 210 tổ hợp) nên ADR-007 (v�
 - **Tương thích**: không đổi API, không đổi dữ liệu, không đổi hình ảnh. Chỉ test + tài liệu + một
   khối chú thích.
 
+## 2026-08-24 — Phase 19: khối kiến trúc, bóng đổ, khung hình (ADR-062/063/061)
+
+- **Mục đích**: Đàm nhìn kỷ 1 · 2 · 14 và nói *"đường có nét đứt trông giả tạo kinh khủng · kim tự
+  tháp không có khối hình chóp"*, cộng một yêu cầu cũ chưa làm: *"hiệu ứng hơn, ánh sáng đổ bóng…
+  giống 3D hoá hơn nữa"*. Sáu việc.
+- **Phạm vi**:
+  1. **Đường nét đứt** — bisect trước, đoán sau.
+  2. **Nguyên mẫu thứ 8 `monolith`** (ADR-062): công trình LÀ khối, không phải nhà đội mái. Kỷ 2 ra
+     chóp TRƠN (tỉ lệ Giza 0,64), kỷ 3 ra GIẬT CẤP có cầu thang chính diện. **Đóng `TECH_DEBT #75`.**
+  3. **Bóng đổ nét hơn**: bản đồ bóng máy bàn 2048 → **4096** (điện thoại GIỮ 512 — 4096² là 64 MB
+     texture, iOS Safari giết tab vì thứ đó). ⚠️ Nửa sau của chỉ thị — *"siết khung bóng xuống phạm
+     vi thành phố"* — **đã đo và bác bỏ**: `reach` (9,00) ĐÃ LÀ phạm vi thành phố, khối đổ bóng xa
+     nhất ở 8,48 ⇒ dư 6%, siết thêm là cắt cụt bóng nhà ở góc lưới.
+  4. **Che khuất môi trường (AO)** (ADR-063): nướng vào MÀU ĐỈNH ⇒ **0 lệnh vẽ, 0 tam giác** thêm.
+     Điều kiện dừng của Đàm (*"ảnh ngả trắng bệch thì BỎ NGAY"*) **không kích hoạt** — sàn độ sáng
+     đi XUỐNG, dải tương phản NỞ RA.
+  5. **Nóc nhà thôi bị mép khung cắt** (ADR-061): khoảng cách camera nay tính RIÊNG TỪNG KỶ, bằng
+     đúng mức tối thiểu để không cắt gì. **0/15 kỷ bị cắt** (trước 14/15). **Đóng `TECH_DEBT #24`**,
+     mở từ Phase 7B.
+  6. **Quét lại 15 kỷ**: **105/105 cặp kỷ ĐẠT** (gần nhất 19,18 · trung vị 36,31).
+- **Ảnh hưởng — VÀ MỘT CÁI GIÁ PHẢI NÓI THẲNG**: trục CHẶNG NGÀY của bản quét tụt **14,39 → 11,33**,
+  lần đầu xuống dưới ngưỡng mắt 12. Đã **tách một biến** để biết ai tiêu tiền: cây có đủ 4 việc mỹ
+  thuật nhưng hoàn tác riêng khung hình ra **14,23** ⇒ bốn việc kia tốn 0,16, **2,90 là của riêng
+  phép lùi khung**. Nguyên nhân là pha loãng (`TECH_DEBT #22`), không phải 15 kỷ giống nhau hơn.
+  ⇒ Ghi thành `TECH_DEBT #79` với **ba hướng cho Đàm chọn**; không tự chọn, không nới ngưỡng.
+- **Tương thích**: không đụng state, không đụng schema, không migration. Chỉ tầng hình ảnh.
+
 ---
 
 ## 2026-08-22 — Cư dân có KHỚP XƯƠNG, và kỷ 1 có bản sắc con người riêng (ADR-053)

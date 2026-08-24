@@ -137,6 +137,53 @@ export const ARCHETYPES = {
     },
   },
 
+  /**
+   * KHỐI ĐẶC — công trình LÀ cái khối, không phải một cái nhà đội mái. (Phase 19, ADR-062)
+   *
+   * ⚠️ VÌ SAO PHẢI CÓ NGUYÊN MẪU THỨ TÁM THAY VÌ CHỈNH `wonder` CHO KHÉO. Bảy nguyên mẫu cũ đều
+   * dựng theo cùng một câu: THÂN TƯỜNG + MÁI. Câu ấy đúng với đền, cung điện, nhà máy, cao ốc —
+   * và sai hoàn toàn với kim tự tháp. Giza không có tường, không có cửa sổ, không có diềm mái;
+   * nó là một khối đá đặc đi thẳng từ cát lên đỉnh. Đội một cái chóp lên nóc một hộp gạch bùn thì
+   * ra "cái nhà đội mũ chóp", đúng như Đàm đã nhìn thấy và gọi là *"kim tự tháp không có khối
+   * hình chóp"*. Không có hệ số nào chỉnh khéo được chuyện đó, vì cái sai nằm ở CÂU chứ không ở
+   * con số — cùng hình dạng với bài học "một trường gánh hai việc", nhưng ở tầng ngữ pháp.
+   *
+   * ⚠️ CỜ `monolith` BỎ NĂM THỨ, và phải bỏ đủ cả năm: thân tường · chân tường · cửa sổ · tầng
+   * trệt · phần trên mái. Bỏ thiếu một thứ là lại ra cái nhà đội mũ. `buildingSpec.js` đọc cờ này
+   * ở ĐÚNG MỘT chỗ (đầu vòng lặp mảng nhà) rồi thoát sớm — một cửa, không phải năm cái `if`.
+   *
+   * ⚠️ CHIỀU CAO KHÔNG SUY TỪ SỐ TẦNG. Một kim tự tháp không có tầng nào; thứ định nghĩa nó là
+   * TỈ LỆ CAO:ĐÁY (Giza 146,6 m trên 230,3 m = 0,637). Tỉ lệ ấy khai ở `eraStyle.js` (`monument`)
+   * vì nó là sự thật về CÔNG TRÌNH CÓ THẬT của kỷ đó, không phải về loại hình nói chung — ziggurat
+   * Ur thấp và bè hơn Giza nhiều. `heightScale` vì vậy KHÔNG được dùng cho nhánh này.
+   *
+   * ⚠️ BỀ NGANG CŨNG KHAI Ở `eraStyle.js` (`monument.base`), VÀ NÓ LÀ SỐ TUYỆT ĐỐI — cố ý KHÔNG
+   * nhân `spread`. `spread` trả lời *"nền văn minh này xây nhà bè hay mảnh"*; cạnh đáy kim tự tháp
+   * thì không phải một đặc điểm của nhà cửa Ai Cập, nó là kích thước của MỘT công trình có thật.
+   * Để `spread` chạm vào là dựng ra một Ur BÈ HƠN Giza (spread kỷ 3 là 1,18 còn kỷ 2 là 0,98),
+   * tức lấy tham số nhà ở lật ngược một sự thật lịch sử — đúng thứ ADR-025 cấm.
+   *
+   * ⚠️ VÌ VẬY `w`/`d` DƯỚI ĐÂY LÀ HỆ SỐ TƯƠNG ĐỐI (epic = 1), KHÔNG PHẢI BỀ NGANG. Đơn vị thật
+   * nằm ở `monument.base`. Hôm nay khối đặc chỉ xuất hiện ở hạng `epic` (kỳ quan), nên hai hạng
+   * kia là đường lui hợp lý chứ không phải số đã đo.
+   *
+   * ⚠️ VÀ ĐỪNG CHÉP LẠI CÂU "ĐÁY PHẢI ≤ 1,7 Ô KẺO TRÀN SANG KHU ĐẤT BÊN CẠNH" — bản nháp đầu của
+   * chính chú thích này viết như vậy, và nó SAI: đo ra thì kỳ quan kỷ 4 đã trải 3,216 đơn vị mô tả
+   * (× `BUILDING_SCALE` 1,3 = 4,18 ô) từ lâu mà không có gì hỏng. Không hề có cái trần 1,7 nào.
+   */
+  monolith: {
+    label: 'khối đặc',
+    monolith: true,
+    symmetric: true,
+    // Không dùng tới (chiều cao lấy từ tỉ lệ cao:đáy) — để 1 cho ai đọc `massHeight` khỏi nhầm.
+    heightScale: 1,
+    masses: {
+      common: [{ x: 0, z: 0, w: 0.65, d: 0.65, s: 1 }],
+      rare: [{ x: 0, z: 0, w: 0.82, d: 0.82, s: 1 }],
+      epic: [{ x: 0, z: 0, w: 1, d: 1, s: 1 }],
+    },
+  },
+
   // ── NHÀ DÂN (Phase 7C) ───────────────────────────────────────────────────
   //
   // ⚠️ VÌ SAO NHÀ DÂN DÙNG ĐÚNG BỘ MÁY NÀY CHỨ KHÔNG PHẢI MỘT HỆ THỐNG SONG SONG.

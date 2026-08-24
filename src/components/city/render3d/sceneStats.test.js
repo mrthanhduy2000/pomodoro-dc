@@ -712,4 +712,24 @@ test('⚠️ TRẦN HỘP BAO khối `city` — và nội thành PHẢI vẫn nh
   assert.ok(lớnNhấtNộiThành <= 9,
     `nội thành (nhà + cảnh vật, KHÔNG tính vùng quê) đã phình tới ${lớnNhấtNộiThành.toFixed(4)} — `
     + 'thành phố thật đang tràn ra ngoài lưới 12×12, mà lưới ấy là thứ ADR-007 khoá.');
+
+  // ⚠️ VÀ ĐÂY LÀ MẮT XÍCH TRƯỚC NAY CÒN THIẾU (Phase 19, VIỆC 3). Con số 8,48 ở trên KHÔNG chỉ nói
+  // về ADR-007 — nó cũng chính là con số quyết định KHUNG BÓNG ĐỔ có bó sát được hay không, vì
+  // `sun.shadow.camera` là một hộp vuông cạnh `2 × reach` trong không gian đèn, mà thứ nó phải phủ
+  // là đúng cái hộp bao nội thành này (hộp bao không đổi khi mặt trời xoay — đó là lý do dùng bán
+  // kính chứ không dùng bề ngang theo trục).
+  //
+  // Chỉ thị Phase 19 đề nghị "siết khung bóng xuống phạm vi thành phố". Phép đo ngay bên trên nói
+  // rằng nó ĐÃ ở đó: 8,4836 trên 9,00, dư 6%. Không có bài test nào từng phát biểu quan hệ ấy, nên
+  // hai con số có thể trôi khỏi nhau trong im lặng — hoặc phase sau làm nhà to ra và bóng bắt đầu
+  // cụt ở góc lưới, hoặc ai đó siết `reach` cho "nét hơn" rồi cũng thế. Hai vế dưới đây khoá cả hai
+  // chiều: KHÔNG ĐƯỢC THIẾU (bóng cụt) và KHÔNG ĐƯỢC THỪA QUÁ (phí điểm ảnh bản đồ bóng).
+  const reachBong = 12 * 0.75;   // đúng công thức ở `createCityScene`: `gridSize * 0.75`
+  assert.ok(lớnNhấtNộiThành <= reachBong,
+    `khung bóng đổ chỉ với tới ${reachBong} mà khối đổ bóng xa nhất ở ${lớnNhấtNộiThành.toFixed(4)} `
+    + '— nhà ở góc lưới sẽ bị CỤT BÓNG, và chuyện đó không có gì đỏ lên ngoài bài này.');
+  assert.ok(lớnNhấtNộiThành >= reachBong * 0.85,
+    `khối đổ bóng xa nhất chỉ ${lớnNhấtNộiThành.toFixed(4)} trong khi khung bóng với tới ${reachBong}`
+    + ' — thừa hơn 15%, tức đang tiêu điểm ảnh bản đồ bóng vào chỗ không có gì. Siết `reach` lại '
+    + '(và ghi số đo mới vào chú thích `SHADOW_MAP_DESKTOP`), đừng để nguyên.');
 });

@@ -223,6 +223,102 @@ export function dwellingPlotCount(era) {
   return dwellingPlots(era).length;
 }
 
+/**
+ * BIÊN LỆCH KHỎI GÓC VUÔNG khi quay mặt tiền ra đường.
+ *
+ * Nhà quay chéo hẳn so với lưới đọc ra là "đặt ẩu" — đó là lý do `sceneGraph.js` xưa nay chỉ dùng
+ * bội số 90°. Nhưng khoá cứng vào bội số 90° thì một con đường CONG (ADR-059 cho mỗi kỷ một mạng
+ * riêng, phần lớn là cung cong) sẽ có một dãy nhà quay răng cưa bên cạnh: căn thì đúng hướng, căn
+ * thì lệch 45° mà vẫn bị làm tròn về cùng một góc.
+ *
+ * ⇒ Giữ bội số 90° làm KHUNG, cho phép lệch tối đa 16° quanh nó. Đủ để cả dãy "lượn theo" con
+ * đường ở chỗ nó bẻ, chưa đủ để một căn đọc ra là đặt xiên.
+ */
+export const FACING_TILT_MAX = (16 * Math.PI) / 180;
+
+/** Bán kính (Chebyshev) đi tìm đường quanh một thửa. 2 ô là đủ: thửa nào cũng có đường trong tầm ấy. */
+const TAM_TIM_DUONG = 2;
+
+const NHO_HUONG = new Map();
+
+/**
+ * HƯỚNG MẶT TIỀN của một thửa nhà dân, tính bằng radian, dùng thẳng làm `ry` của cả khu phố.
+ *
+ * ⚠️ VÌ SAO CÁI NÀY TỒN TẠI (Phase 22). Đàm: *"nhà nó san sát nhau một cách khó hiểu và không
+ * giống thực tế, rất phi logic"*. Một phần của cái "phi logic" ấy đo được: `sceneGraph.js` xoay
+ * mỗi khu phố bằng `((x * 3 + y) % 4) * 90°` — một con số BĂM TỪ TOẠ Độ Ô, **không hề biết con
+ * đường nằm ở đâu**. Nghĩa là một căn nhà quay mặt ra đường chỉ do may rủi, và trung bình 3/4 số
+ * nhà quay lưng hoặc quay hông ra phố. Ngoài đời không có khu dân cư nào như vậy: mặt tiền quay
+ * ra đường là ràng buộc mạnh nhất của mọi nền văn hoá xây nhà, mạnh hơn cả hướng nắng.
+ *
+ * Và nó là ĐIỀU KIỆN CẦN cho ba trục khác của Phase 22: `setFront` (lùi mặt phố), `setBack`
+ * (sân sau) và luật *"tường chung chỉ chạy dọc mặt phố"* đều nói về **hàng 0 của lưới khu phố**.
+ * Ba trục ấy chỉ có nghĩa khi hàng 0 THẬT SỰ là hàng giáp phố — mà trước hàm này thì không.
+ *
+ * ── CÁCH TÍNH ────────────────────────────────────────────────────────────────────────────────
+ *   1. Gom mọi ô đường trong bán kính 2 quanh thửa, giữ lại nhóm GẦN NHẤT (nới 0,5 ô để một ngã
+ *      ba hai nhánh cùng khoảng cách vẫn được tính cả hai — nhờ đó nhà ở góc quay ra phân giác).
+ *   2. Cộng vector hướng, trọng số 1/d: đường càng gần càng có tiếng nói lớn.
+ *   3. Đổi sang góc quay sao cho **phía −z của lưới khu phố (hàng 0) chỉ đúng vào đường**, rồi
+ *      làm tròn về bội số 90° và cho lệch tối đa `FACING_TILT_MAX` về phía góc thật.
+ *
+ * ⚠️ HÀM CỦA `(kỷ, ô)` VÀ CHỈ THẾ — không nhận `built`, `sessionCount`, `levels`. Mạng đường của
+ * một kỷ là hằng số của kỷ ấy (`buildRoadPlan` chỉ nhận `era`), nên hướng nhà cũng vậy: căn nhà
+ * thứ 7 của Đàm quay hướng nào hôm nay thì mãi mãi quay hướng ấy. Có test gọi kèm dữ liệu rác.
+ *
+ * ⚠️ ĐỪNG HỎI `deriveProps` HAY MẠNG ĐƯỜNG **ĐANG HIỆN** — mạng đã hiện mở dần theo số phiên nên
+ * nó KHÔNG bất biến (xem `roadCellCandidates` và bài học 2026-08-18: *"tôi sắp dùng X, hay dùng
+ * một thứ ĐƯỢC SUY RA từ X?"*). Ở đây dùng đúng bộ khung đầy đủ của kỷ.
+ *
+ * @param {number} era
+ * @param {number} x  toạ độ ô
+ * @param {number} y
+ * @returns {number} góc quay quanh trục đứng, radian
+ */
+export function dwellingFacing(era, x, y) {
+  const eraNum = Number.isFinite(era) ? era : 1;
+  const khoa = `${eraNum}|${x}|${y}`;
+  if (NHO_HUONG.has(khoa)) return NHO_HUONG.get(khoa);
+
+  const duong = buildRoadPlan(eraNum, getNetworkStyle(eraNum)).cells;
+  let gan = Infinity;
+  const quanh = [];
+  for (const c of duong) {
+    const dx = c.x - x;
+    const dy = c.y - y;
+    if (Math.abs(dx) > TAM_TIM_DUONG || Math.abs(dy) > TAM_TIM_DUONG) continue;
+    const d = Math.hypot(dx, dy);
+    if (d <= 0) continue;
+    quanh.push({ dx, dy, d });
+    if (d < gan) gan = d;
+  }
+
+  let vx = 0;
+  let vz = 0;
+  for (const c of quanh) {
+    if (c.d > gan + 0.5) continue;
+    vx += c.dx / (c.d * c.d);
+    vz += c.dy / (c.d * c.d);
+  }
+
+  // Không tìm thấy đường nào (thửa bị vây kín), hoặc hai nhánh triệt tiêu nhau đúng bằng 0: rơi về
+  // đúng công thức băm cũ. Nó không đẹp, nhưng nó TẤT ĐỊNH và không bao giờ để lại một góc NaN.
+  let goc;
+  if (Math.hypot(vx, vz) < 1e-9) {
+    goc = ((x * 3 + y) % 4) * (Math.PI / 2);
+  } else {
+    // `atan2(vx, −vz)`: góc θ đưa vector địa phương (0, −1) — tức phía −z, hàng 0 — thành
+    // (sin θ, −cos θ). Cho nó trùng hướng ra đường thì sin θ = vx và −cos θ = vz.
+    const that = Math.atan2(vx, -vz);
+    const goc90 = Math.round(that / (Math.PI / 2)) * (Math.PI / 2);
+    let lech = that - goc90;
+    lech = Math.max(-FACING_TILT_MAX, Math.min(FACING_TILT_MAX, lech));
+    goc = goc90 + lech;
+  }
+  NHO_HUONG.set(khoa, goc);
+  return goc;
+}
+
 /** Chọn công năng + cỡ nhà cho một ô. Tất định theo `(kỷ, ô)` — nhà không bao giờ đổi kiểu. */
 function pickKind(era, plot) {
   const rules = DISTRICT_RULES[plot.district] ?? DISTRICT_RULES.residential;
@@ -293,6 +389,10 @@ export function deriveDwellings({ era, buildingCount, sessionCount } = {}) {
       type: kind.type,
       rarity: kind.rarity,
       index: i,
+      // ⚠️ HƯỚNG MẶT TIỀN ĐI THEO BỐ CỤC, KHÔNG ĐỂ TẦNG DỰNG CẢNH TỰ BĂM RA (Phase 22). Đây là
+      // một sự thật THUẦN về mảnh đất (con đường nằm phía nào), nên nó thuộc về tầng này — và
+      // nhờ vậy `block.js` lẫn bài test đều hỏi được cùng một nguồn.
+      facing: dwellingFacing(eraNum, plot.x, plot.y),
     });
   }
   return out;

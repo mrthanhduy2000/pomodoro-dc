@@ -1013,8 +1013,14 @@ export function createCityScene({
   for (const item of cityParts) {
     if (item.kind !== 'dwelling') continue;
     const home = item.source;
+    // ⚠️ HƯỚNG NHÀ ĐỌC TỪ BỐ CỤC, KHÔNG BĂM TẠI CHỖ NỮA (Phase 22). Công thức cũ
+    // `((x * 3 + y) % 4) * 90°` không hề biết con đường nằm ở đâu, nên trung bình 3/4 số nhà quay
+    // lưng hoặc quay hông ra phố. `dwellingFacing` (`dwellings.js`) hỏi thẳng bộ khung đường của
+    // kỷ — và vì hàng 0 của lưới khu phố là hàng giáp phố, chính phép xoay này mới làm cho ba trục
+    // `setFront` / `setBack` / "tường chung chỉ chạy dọc mặt phố" có nghĩa.
+    // Rơi về công thức cũ khi bố cục chưa khai `facing` (bố cục cũ đọc từ bản lưu).
     const built = groundPlacement(home, item.spec, {
-      ry: ((home.x * 3 + home.y) % 4) * (Math.PI / 2),
+      ry: Number.isFinite(home.facing) ? home.facing : ((home.x * 3 + home.y) % 4) * (Math.PI / 2),
     });
     if (built.plinth) plinths.push(built.plinth);
     dayKhoi(NHOM_CUA_KIND.dwelling, built.placement);

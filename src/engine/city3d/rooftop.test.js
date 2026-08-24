@@ -243,7 +243,13 @@ test('KHÔNG CÓ HAI CÁI MÁI GIỐNG HỆT NHAU trong cùng một kỷ — đo
       if (item.kind === 'dwelling') nd.push(chuKy(mai));
     }
     assert.ok(ct.length >= 5, `kỷ ${era}: chỉ ${ct.length} công trình có mái — quần thể sai hình dạng`);
-    assert.ok(nd.length >= 6, `kỷ ${era}: chỉ ${nd.length} nhà dân có mái — quần thể sai hình dạng`);
+    // ⚠️ SÀN HẠ 6 → 4 Ở PHASE 22, VÀ ĐÓ LÀ CÁI GIÁ ĐÃ ĐẾM CHỨ KHÔNG PHẢI MỘT LẦN NỚI CHO TIỆN.
+    // Trần độ phủ thửa thu mặt bằng nhà dân lại, nên nhiều đơn vị rơi xuống dưới `ROOFTOP_MIN_SPAN`
+    // và không đội gì trên mái nữa. Số liệu đầy đủ + lý do vì sao đánh đổi này bị SỐ HỌC ép (4 căn
+    // đủ to để có chi tiết mái ⇒ độ phủ ~81%, tức không thể vừa có chi tiết mái vừa thấy đất) nằm
+    // ở `block.test.js`, bài `CHI TIẾT MÁI — cái giá của trần độ phủ`. Ca chật nhất là kỷ 12
+    // (mikrorayon, độ phủ 46,5%): **5 nhà dân có mái** ở mốc 40 phiên.
+    assert.ok(nd.length >= 4, `kỷ ${era}: chỉ ${nd.length} nhà dân có mái — quần thể sai hình dạng`);
     assert.equal(new Set(ct).size, ct.length,
       `kỷ ${era}: ${ct.length - new Set(ct).size} công trình đội mái y hệt nhau`);
     assert.equal(new Set(nd).size, nd.length,

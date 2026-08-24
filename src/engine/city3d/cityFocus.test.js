@@ -348,9 +348,14 @@ test('ĐỐI CHỨNG: chỉ canh ĐIỂM ĐẾN thôi là chưa đủ — và đ
   }
   assert.deepEqual(
     [...new Set(lotLuoi)].sort((a, b) => a - b),
-    [3, 5, 7, 8, 9, 12, 13],
+    [3, 5, 8, 9, 12, 13],
     'danh sách kỷ mà phép canh cả đường bay thật sự cứu — đổi là phải xem lại vì sao',
   );
+  // 2026-08-24, Phase 22 (trần độ phủ thửa + nhà quay mặt ra đường): **kỷ 7 RƠI RA**, danh sách
+  // ngắn lại còn 6 kỷ. Đọc đúng thì đó không phải một cái gác vừa mất răng: nhà dân kỷ 7 (insula
+  // La Mã, dày nhất bảng) nay chỉ được chiếm 68% thửa thay vì 88,4%, nên chính đoạn giữa đường
+  // bay — chỗ trước đây đi sát mái — nay có đất trống để lách qua. Một kỷ rơi RA khỏi danh sách
+  // "suýt va chạm" là dấu hiệu cảnh đang thoáng hơn, đúng thứ phase này đi làm.
   // 2026-08-20, HAI lần đổi trong cùng một ngày và cả hai đều có lý do đo được:
   //   9 kỷ / 9 chuyến  → nền `9c7032c`
   //   9 kỷ / 12 chuyến → sau §1(B) (nền phẳng hơn ⇒ camera toàn cảnh đứng gần hơn ⇒ đường bay đi
@@ -373,7 +378,8 @@ test('ĐỐI CHỨNG: chỉ canh ĐIỂM ĐẾN thôi là chưa đủ — và đ
   // ⇒ Phép canh cả-đường-bay **không mất răng**: nó vẫn cứu 7 chuyến ở 7 kỷ, và bài
   // `ĐƯỜNG BAY PHẢI THOÁNG SUỐT CẢ CHẶNG` bên trên vẫn đòi 1200/1200 chuyến thoáng. Thứ giảm là
   // số ca mà thành phố tự nó gây nguy hiểm, và giảm là tốt.
-  assert.equal(lotLuoi.length, 7, 'đúng 7 chuyến trên 1200 lọt lưới nếu chỉ canh điểm đến');
+  // 2026-08-24, Phase 22: 7 → **6** chuyến, và kỷ rơi ra là kỷ 7 (xem chú thích ở danh sách trên).
+  assert.equal(lotLuoi.length, 6, 'đúng 6 chuyến trên 1200 lọt lưới nếu chỉ canh điểm đến');
   assert.ok(cheoNhat > 1, `chênh lớn nhất giữa điểm-đến và cả-đường mới ${cheoNhat.toFixed(2)} — quá nhỏ để gọi là cứu được ai`);
 });
 

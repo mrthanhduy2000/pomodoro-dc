@@ -28,10 +28,16 @@ import { dwellingBpId } from './cityParts.js';
 const ERAS = Array.from({ length: 15 }, (_, i) => i + 1);
 
 /**
- * Kỷ KHÔNG giữ được lời hứa "chia khu phố xong thành phố không thấp đi", sau ADR-059.
+ * Kỷ KHÔNG giữ được lời hứa "chia khu phố xong thành phố không thấp đi".
  * ⚠️ Đây là một DANH SÁCH ĐẾM ĐƯỢC, không phải một cái ngưỡng nới ra — xem chú thích trong bài.
+ *
+ * ⚠️ **NGẮN LẠI Ở PHASE 22: [1, 2] → [1].** Trần độ phủ thửa thu mặt bằng nhà dân lại, mà chóp mái
+ * cao theo bề ngang mái, nên phase này BẮT BUỘC phải nâng `storey` bù lại (xem `MAX_STOREY`). Cái
+ * bù ấy kéo kỷ 2 từ 0,9669 lên **1,0436** — nó vượt hẳn lời hứa chứ không còn là ngoại lệ. Kỷ 1
+ * vẫn ở lại: nó là kỷ duy nhất khai `storey` chạm đúng trần 2,4 mà vẫn chỉ đạt **0,9585**.
+ * ⚠️ Một ngoại lệ BIẾN MẤT là bằng chứng mạnh hơn một ngoại lệ được THÊM VÀO.
  */
-const THAP_DI = [1, 2];
+const THAP_DI = [1];
 
 /** Quần thể nhà dân THẬT của một kỷ — không phải một danh sách bịa cho tiện. Bài học Phase 10
  *  Bước 2: một bài test dựng quần thể rộng hơn thành phố thật thì cái phễu nằm ngay trong nó. */
@@ -148,9 +154,12 @@ test('KHÔNG CHIẾM THÊM ĐẤT — khu phố không được rộng hơn căn
   // tệ nhất từ 0,186 lên **0,234 ô** — nó PHÂN KỲ ở kỷ 5 · 8 · 10 chứ không hội tụ. Vì vậy đây là
   // một sai số ĐƯỢC CHẤP NHẬN và được canh bằng con số, không phải một thứ chờ vá.
   //
-  // BIÊN THẬT: trôi lớn nhất **0,1103 ô** (kỷ 1) ≈ 7,1 điểm ảnh ở `CELL_PIXELS = 64`. Ngưỡng 0,12
-  // còn 8,1% biên — cố tình để chật, vì đây là phép tính TẤT ĐỊNH (không nhiễu), nên chật nghĩa là
-  // ai chỉnh bảng sẽ buộc phải đo lại chứ không lặng lẽ trôi tiếp.
+  // BIÊN THẬT (đo lại 2026-08-24, sau Phase 22): trôi lớn nhất **0,0286 ô** (kỷ 14) ≈ 1,8 điểm ảnh
+  // ở `CELL_PIXELS = 64`, tụt từ 0,1103 ô. ⚠️ ĐÂY LÀ HỆ QUẢ CỦA TRẦN ĐỘ PHỦ THỬA, không phải một
+  // bản vá riêng: khi khu phố chỉ được chiếm 39–70% thửa thì mái đua của hai đơn vị ngoài cùng
+  // không còn chỗ nào để đẩy khu phố rộng hơn căn nhà cũ. Ngưỡng 0,12 nay rộng gấp bốn lần biên
+  // thật; giữ nguyên chứ không siết, vì nó đang canh một ca (mái đua thò ra) mà phase sau có thể
+  // làm sống lại — và siết một ngưỡng xuống sát biên hôm nay là gài một quả mìn cho phase sau.
   // THỬ-CHO-ĐỎ (đã chạy): `BLOCK_FIT` 0,92 → 1,35 ⇒ bài này ĐỎ (kèm bài 1 và bài 9, đúng như
   // phải thế: nới mặt bằng thì mái đua thò ra, thân teo lại, chi tiết mái rơi xuống dưới mốc).
   const TRAN_TROI = 0.12;
@@ -166,8 +175,8 @@ test('KHÔNG CHIẾM THÊM ĐẤT — khu phố không được rộng hơn căn
     }
   }
   assert.equal(daKiem, 371, 'gác chạy-rỗng: quần thể đổi cỡ');
-  assert.ok(troiMax > 0.05, 'trôi lớn nhất tụt xuống rất thấp — hoặc ai đó vừa chữa được nó (hãy '
-    + `cập nhật con số 0,1103 trong chú thích), hoặc phép đo này thôi nhìn tới chỗ cần nhìn (nay ${troiMax.toFixed(4)})`);
+  assert.ok(troiMax > 0.005, 'trôi lớn nhất tụt xuống gần 0 — hoặc trần độ phủ vừa chữa nốt phần '
+    + `còn lại (hãy cập nhật con số 0,0286 trong chú thích), hoặc phép đo này thôi nhìn tới chỗ cần nhìn (nay ${troiMax.toFixed(4)})`);
 });
 
 test('MỘT Ô LÀ MỘT KHU PHỐ — mỗi ô phải ra ÍT NHẤT 4 khối nhìn thấy, cả 15 kỷ', () => {
@@ -297,24 +306,38 @@ test('KHÔNG THÊM MỘT HỌ VẬT LIỆU NÀO — nên KHÔNG thêm một lệ
   assert.equal(daKiem, 371, 'gác chạy-rỗng');
 });
 
-test('CHI TIẾT MÁI KHÔNG ĐƯỢC CHẾT — và danh sách kỷ mất một phần được ĐẾM RA', () => {
-  // ⚠️ ĐÂY LÀ QUẢ MÌN ĐÃ NỔ MỘT LẦN TRONG CHÍNH PHASE NÀY, ghi lại để phiên sau khỏi giẫm lại.
-  // `emitRooftop` có một phép từ chối thẳng: `min(rw, rd) < ROOFTOP_MIN_SPAN (0,24)` thì KHÔNG
-  // dựng gì trên mái. Bản chia nhỏ đầu tiên làm mọi đơn vị rơi xuống dưới mốc ấy ⇒ **13/15 kỷ mất
-  // SẠCH chi tiết mái nhà dân** (kỷ 1: 17 → 0) trong im lặng — chỉ `rooftop.test.js` kêu lên.
-  // Đã vá bằng hai việc: nâng `MIN_UNIT_CELLS` để ôm luôn `ROOFTOP_MIN_SPAN × BUILDING_SCALE`, và
-  // đo hình bao thật của từng đơn vị thay vì suy nó từ bản tham chiếu.
+/**
+ * Kỷ mà chi tiết mái (ống khói · bồn nước · cửa sổ mái, Phase 11) chỉ còn lại DƯỚI 70% số ô, sau
+ * khi Phase 22 áp trần độ phủ thửa. Con số đo được 2026-08-24, kèm ngay đây để không phải đi tìm:
+ *
+ *   kỷ  2 = 0,368 · 12 = 0,296 · 15 = 0,433 · 6 = 0,435 · 9 = 0,538 · 11 = 0,643 · 4 = 0,682
+ *
+ * ⚠️ DANH SÁCH VIẾT **BẰNG**, KHÔNG PHẢI "BAO GỒM": kỷ thứ tám rơi vào thì đỏ, mà một trong bảy
+ * kỷ này được chữa xong cũng đỏ.
+ */
+const MAT_CHI_TIET_MAI = [2, 4, 6, 9, 11, 12, 15];
+
+test('CHI TIẾT MÁI — cái giá của trần độ phủ, ĐẾM RA chứ không giấu', () => {
+  // ⚠️ ĐÂY LÀ MỘT ĐÁNH ĐỔI BỊ ÉP BỞI SỐ HỌC, KHÔNG PHẢI MỘT HỒI QUY. Đo được (`emitRooftop` từ
+  // chối khi cạnh ngắn của mái < `ROOFTOP_MIN_SPAN`): một đơn vị phải rộng **0,37…0,48 ô** thì
+  // mái nó mới đội được chi tiết. Một thửa rộng ~1 ô, chia tối thiểu `MIN_UNITS` = 4 đơn vị:
   //
-  // ⚠️ ĐO LẠI 2026-08-24 SAU ADR-059 (mỗi kỷ một mạng đường ⇒ tập ô nhà dân đổi theo):
-  // **332/371 ô (89,5%)**, tốt hơn mức 313/368 (85%) của mạng bàn cờ, và ca tệ nhất cũng đỡ hơn
-  // (kỷ 13: 0,724 → kỷ 6: 0,783). Danh sách kỷ mất MỘT PHẦN thì dài ra (9 → 12) — đọc đúng thì
-  // đó không phải đi lùi: nhiều kỷ tụt khỏi 100% một chút, nhưng KHÔNG kỷ nào tụt sâu, nên tổng
-  // giữ lại lại cao hơn. Ba kỷ giữ trọn 100% là 1, 3 và 14.
-  // THỬ-CHO-ĐỎ (đã chạy): đổi `Math.max` thành `Math.min` trong `MIN_UNIT_CELLS` ⇒ bài này ĐỎ.
-  const duoi100 = [];
+  //     4 đơn vị × (0,45 ô)²  =  0,81 ô²  ⇒  **độ phủ ~81%**
+  //
+  // Tức *"mọi căn đều có chi tiết mái"* và *"nhìn từ trên xuống thấy đất giữa các căn"* là hai
+  // điều **không thể cùng đúng** trên một thửa 1 ô với 4 căn. Trước Phase 22 dự án chọn vế đầu và
+  // độ phủ là **88,4% (trung vị)** — chính con số Đàm nhìn rồi bác: *"nhà nó san sát nhau một
+  // cách khó hiểu và không giống thực tế, rất phi logic"*.
+  //
+  // Phase 22 chọn vế sau, và chọn có cân nhắc: chi tiết mái là **phần thưởng khi NHÌN GẦN** —
+  // `TECH_DEBT #41` đã đo 90/90 ô dưới ngưỡng mắt ở góc nhìn mặc định — còn đất giữa các căn thì
+  // đọc ra ngay ở đúng góc Đàm dùng để chấm. Giá phải trả: **332/371 → 266/371 ô**.
+  //
+  // ⇒ Ghi thành NGOẠI LỆ ĐẾM ĐƯỢC. Đường thoát thật sự (nếu phase sau muốn đòi lại) KHÔNG phải
+  // nới ngưỡng mà là hạ `MIN_UNITS` hoặc nới thửa — cả hai đều là quyết định cần ADR riêng.
+  const duoi70 = [];
   let coRef = 0;
   let coKhoi = 0;
-  let teNhat = Infinity;
   for (const era of ERAS) {
     let r = 0;
     let b = 0;
@@ -326,16 +349,18 @@ test('CHI TIẾT MÁI KHÔNG ĐƯỢC CHẾT — và danh sách kỷ mất một
     coRef += r;
     coKhoi += b;
     const ti = b / r;
-    teNhat = Math.min(teNhat, ti);
-    if (ti < 1) duoi100.push(era);
-    assert.ok(ti >= 0.7, `kỷ ${era}: chỉ còn ${b}/${r} ô có chi tiết mái (${ti.toFixed(3)}) — `
-      + 'đơn vị đang bị chia nhỏ xuống dưới `ROOFTOP_MIN_SPAN`');
+    if (ti < 0.7) duoi70.push(era);
+    // Kể cả trong danh sách ngoại lệ vẫn có SÀN: mất quá 3/4 là chuyện khác hẳn, và lúc ấy phải
+    // đi xem `MIN_UNIT_CELLS` chứ không phải nới danh sách.
+    assert.ok(ti >= 0.25, `kỷ ${era}: chỉ còn ${b}/${r} ô có chi tiết mái (${ti.toFixed(3)}) — `
+      + 'sâu hơn hẳn mức đã ghi nhận, phải xử lý chứ không phải nới danh sách');
   }
-  assert.deepEqual(duoi100, [2, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 15],
-    `kỷ mất một phần chi tiết mái nay là [${duoi100.join(',')}] — nếu ngắn đi thì tốt, hãy cập nhật `
-    + 'con số 332/371 trong chú thích; nếu dài ra thì có kỷ vừa tụt xuống dưới ngưỡng');
-  assert.ok(coKhoi / coRef >= 0.8, `cả 15 kỷ chỉ giữ ${coKhoi}/${coRef} ô có chi tiết mái`);
-  assert.ok(teNhat >= 0.7 && teNhat < 0.84, `tệ nhất nay là ${teNhat.toFixed(3)} (đo được 0,783 sau ADR-059)`);
+  assert.deepEqual(duoi70, MAT_CHI_TIET_MAI,
+    `kỷ mất quá 30% chi tiết mái nay là [${duoi70.join(',')}] — nếu ngắn đi thì tốt (hãy cập nhật `
+    + 'con số 266/371 trong chú thích); nếu dài ra thì có kỷ vừa tụt thêm');
+  // ⚠️ Sàn tổng: 0,64 chứ không phải 0,8 như trước Phase 22 — và con số ấy là một QUYẾT ĐỊNH đã
+  // ghi ở trên, không phải một lần nới cho tiện. Biên thật 266/371 = 0,717.
+  assert.ok(coKhoi / coRef >= 0.64, `cả 15 kỷ chỉ giữ ${coKhoi}/${coRef} ô có chi tiết mái`);
 });
 
 /**

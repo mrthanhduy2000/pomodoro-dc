@@ -513,25 +513,20 @@ export function deriveBlockUnits({ style, seed = 'block', blockW = 1, blockD = 1
        * đẩy độ phủ VƯỢT TRẦN mà không ai kêu: phép thu đã chạy xong rồi mới có người nới cỡ nhà
        * lên. Một cái trần chỉ giữ được nếu không có bước nào đứng sau nó làm ngược lại.
        */
-      rawUnits.push({
+      const rieng = {
         col,
         row,
         key,
         sanW: Math.min(pitchX, sanW * (1 + unit(`${key}|fw`) * style.sizeVary * SAN_NO)),
         sanD: Math.min(pitchZ, sanD * (1 + unit(`${key}|fd`) * style.sizeVary * SAN_NO)),
-        w: 0,
-        d: 0,
-      });
+      };
+      rieng.w = Math.min(pitchX, Math.max(rieng.sanW, pitchX * keep * heW));
+      rieng.d = Math.min(pitchZ, Math.max(rieng.sanD, pitchZ * keep * heD));
+      rieng.sanChan = rieng.w <= rieng.sanW + 1e-9 || rieng.d <= rieng.sanD + 1e-9;
+      rawUnits.push(rieng);
     }
   }
   if (rawUnits.length === 0) return [];
-  for (const u of rawUnits) {
-    const heW = 1 + (unit(`${u.key}|sw`) - 0.5) * style.sizeVary;
-    const heD = 1 + (unit(`${u.key}|sd`) - 0.5) * style.sizeVary;
-    u.w = Math.min(pitchX, Math.max(u.sanW, pitchX * keep * heW));
-    u.d = Math.min(pitchZ, Math.max(u.sanD, pitchZ * keep * heD));
-    u.sanChan = u.w <= u.sanW + 1e-9 || u.d <= u.sanD + 1e-9;
-  }
 
   // ── BƯỚC 4: TRẦN ĐỘ PHỦ THỬA ───────────────────────────────────────────────────────────────
   // Đo độ phủ THẬT so với CẢ thửa (không phải so với phần xây được — khoảng lùi cũng là đất của

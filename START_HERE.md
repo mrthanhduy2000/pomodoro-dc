@@ -27,24 +27,32 @@ Mặt trận đang làm: **thành phố 3D** (`src/engine/city3d/` + `src/compon
    `api/_tests/`. Hiện có 10 function thật.
 
 ## Đang ở đâu
-- Nhánh production: `main`. Mốc gần nhất: **ADR-059** (mỗi kỷ MỘT MẠNG ĐƯỜNG riêng — hết bàn
-  cờ; `roadPlan.js` nối các điểm mốc bằng cung cong ⇒ giao lộ chữ T/Y/ngã năm).
+- Nhánh production: `main`. **Nhánh đang làm: `claude/xay-san-pham-huong-nay-nasr3n`, CHƯA
+  gộp** — chỉ thị Phase 21 ghi rõ *"Push nhánh phụ, không tự gộp `main`"* (đây là một ngoại lệ
+  cho ĐÚNG phase này; luật thường trực ở mục 2 bên trên vẫn là tự gộp).
+- Mốc gần nhất: **Phase 21** (ADR-064 hợp nhất hai nhánh · ADR-065 bàn cờ là một mốc lịch sử).
+  Bộ xương thành phố: BSP quyết cắt Ở ĐÂU, cung cong quyết cắt theo HÌNH GÌ; **một thửa là TẬP
+  Ô**, không phải hình chữ nhật đã khai.
 - Cảnh 3D: 15 kỷ, mỗi kỷ buộc vào một nước có thật (`country`/`landmark` ở `eraStyle.js`).
   Các bảng bản sắc 15 kỷ đã có: mái · tầng trệt · mặt đường · thực vật · địa thế/nước ·
-  vùng phụ cận · khu phố · dáng đi · mạng đường.
-- Lưới thành phố **12×12**. Từ ADR-059 mỗi kỷ có mạng đường RIÊNG (**29…83 ô**, không còn
-  là 80 ô chung); 45 ô hứa cho kỳ quan (chỉ 5 ô có nhà); còn **371 ô nhà dân trên cả 15 kỷ**,
-  đã chạm trần. Muốn thành phố đông hơn thì đổi thứ NẰM TRONG một ô, đừng thêm ô.
-  ⚠️ Hỏi mạng đường thì phải truyền `era`: `roadCellCandidates(era)` / `roadCellCount(era)` —
-  gọi thiếu tham số sẽ **im lặng** trả lời về kỷ 1.
+  vùng phụ cận · khu phố (có trục `layout`) · dáng đi · mạng đường.
+- Lưới thành phố **12×12**. Mỗi kỷ có mạng đường RIÊNG (**44…88 ô**, không còn là 80 ô chung).
+  Thửa chia vai ở `city3d/parcelRoles.js`: 5 kỳ quan (536 ô) · 1–2 sân bỏ trống (155 ô) ·
+  còn lại nhà dân (**371 ô trên cả 15 kỷ**, đã chạm trần). Muốn thành phố đông hơn thì đổi thứ
+  NẰM TRONG một ô, đừng thêm ô.
+  ⚠️ Hỏi mạng đường thì phải truyền `era`: `roadCellCandidates(era)` / `roadCellCount(era)`
+  (ở `src/engine/cityLayout.js`) — gọi thiếu tham số sẽ **im lặng** trả lời về kỷ 1.
 - Hiệu năng: đã đo dứt điểm trên Apple M3 — **dư 3,2 lần**, hình học gần như miễn phí.
   **KHÔNG đo lại** trừ khi Đàm thấy khung hình giật trên máy thật.
 
 ## Việc tiếp theo (chưa làm)
-1. **Kim tự tháp / ziggurat** — kỷ 2 (Ai Cập) và kỷ 3 (Iraq) đang ra mái nón nhiều cạnh,
-   không có khối chóp bốn mặt. `prism` với `sides: 4` + `taper: 0` chính là thứ cần.
-2. **"Giống 3D hơn"** — bóng đổ nét hơn (`SHADOW_MAP_DESKTOP` 2048 → 4096, siết
-   `sun.shadow.camera` về phạm vi thành phố) + thêm che khuất môi trường (AO).
+1. 🔴 **CHỜ ĐÀM NHÌN ẢNH PHASE 21** — bản quét 15 kỷ + 12 ảnh nhìn thẳng từ trên xuống (kỷ
+   1 · 3 · 7 · 10 · 11 · 14, mỗi kỷ ở 20 phiên và 120 phiên). Nghiệm thu bằng MẮT: kỷ 1–9
+   không được thấy hàng lối nào; kỷ 11–15 thì phải thấy.
+2. **`TECH_DEBT #88`** — trần một-ô (`BLOCK_MAX_CELLS = 1`) đang khoá số suất đất ở 4 ở cả 15
+   kỷ, làm cột `units`/`cols`/`rows` của bảng khu phố thành trục chết. Ba phương án đã đo.
+3. **`TECH_DEBT #86` vẫn MỞ** dù cổng trục chặng ngày đã qua (12,44) — dải TRỜI, cần gạt đã
+   nêu đích danh hai lần, gần như không nhúc nhích. Đừng đọc con số gộp là "đã giải".
 
 ## Lệnh hay dùng
 ```

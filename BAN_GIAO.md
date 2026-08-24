@@ -1,4 +1,67 @@
-> Cập nhật lần cuối: **2026-08-24 (đêm)** — **CẮT CHI PHÍ MỖI PHIÊN: 6.323 DÒNG BẮT BUỘC ĐỌC → 55**.
+> Cập nhật lần cuối: **2026-08-24 (khuya)** — **PHASE 21: HỢP NHẤT HAI NHÁNH, RỒI XOÁ NỐT VẺ QUY
+> HOẠCH**. Đàm xem bản quét Phase 20: *«nhà vẫn xếp rất ngăn nếp trông như quy hoạch, dù quy hoạch
+> ô bàn cờ chỉ bùng nổ và trở thành chuẩn mực từ thế kỷ 19 (Cách mạng Công nghiệp). Và việc mở rộng
+> thành phố không phải là nhà xếp chồng lên nhau, nó rất phản thực tế và lịch sử.»*
+>
+> **§1 HỢP NHẤT (ADR-064).** Hai nhánh đã giải **cùng một bài toán hai lần** trong hai phiên không
+> nhìn thấy nhau: `main` có cung cong (ADR-059), nhánh này có chia thửa đệ quy (ADR-060), và còn
+> **trùng số ADR 056/057** cho hai nội dung khác hẳn. Câu hỏi mở khoá được việc gộp là một câu chưa
+> ai đặt: *"hai bộ sinh ấy có đang trả lời cùng một câu hỏi không?"* — **KHÔNG**. Chia thửa trả lời
+> *"đất chia thế nào"*, cung cong trả lời *"một ranh giới có hình gì"*. ⇒ **BSP quyết cắt Ở ĐÂU,
+> cung cong quyết cắt theo HÌNH GÌ.** Kèm theo, một mệnh đề ngầm phải đổi: **một thửa nay là TẬP Ô**
+> (mỗi ô không phải đường thuộc về hình chữ nhật gần nhất), không phải hình chữ nhật đã khai — vì
+> hình chữ nhật là **Ý ĐỊNH** còn con đường đã dựng mới là **SỰ THẬT**. ADR đánh số lại cho hết
+> trùng (060 · 061 · 062 · 063 · 064).
+>
+> **§2 ADR-007 — ĐÀM DUYỆT PHƯƠNG ÁN (a).** Dời 75/75 công trình **MỘT LẦN**, sau đó bố cục mỗi kỷ
+> **đóng băng vĩnh viễn**. Không hai bộ sinh song song. ⚠️ Từ ngày gộp `main`, đổi bộ sinh bố cục
+> của một kỷ là **một quyết định DI TRÚ, phải hỏi trước**.
+>
+> **§3 BÀN CỜ LÀ MỘT MỐC LỊCH SỬ, KHÔNG PHẢI MẶC ĐỊNH (ADR-065).** Phase 20 đổi được bộ xương, mà
+> **bên trong một thửa vẫn là lưới `cols × rows`** cho cả 15 kỷ — hai tầng chỉ khác nhau về cỡ, nên
+> mắt vẫn đọc ra lưới. Nay `blockStyle.js` có trục `layout`: kỷ **1–9** khai `organic` (chia thửa
+> đệ quy lệch tâm, không hàng không cột), kỷ **10–15** khai `grid` (giữ nguyên, không đổi một dòng).
+> Chọn BSP chứ không rải-rồi-tránh-nhau vì **các lá của một cây BSP rời nhau THEO CẤU TẠO** — không
+> phép kiểm chồng lấn, không số lần thử lại phải hiệu chuẩn. Khoá bằng test **HAI CHIỀU** (kỷ 1–9
+> phải TRƯỢT phép kiểm "là lưới đều", kỷ 11–15 phải ĐẠT); một chiều thôi thì cách rẻ nhất để hết đỏ
+> là làm mọi kỷ hữu cơ, tức xoá mất nửa kia của mốc.
+>
+> **§4 KHỐI NẰM TRONG THỬA CỦA NÓ, THÀNH PHỐ LAN RA NGOÀI.** Đo lần đầu: **290 cặp** khối nhà dân
+> đè lên nhau, sâu nhất **−0,441 ô**, khối rộng nhất **1,734 ô** — tức tràn qua trọn ô bên cạnh, và
+> không cổng nào từng hỏi câu ấy. Ba việc, mỗi việc đo riêng: `BLOCK_MAX_CELLS = 1` (290→84) · giải
+> affine lượt ba (84→20) · `EAVE_LAND_FACTOR = 1,05` (20→**15**, sâu nhất **−0,015 ô ≈ 1 điểm ảnh**,
+> dưới sàn mắt 4). ⚠️ Lượt ba là một phép **GIẢI**, không phải vòng lặp: `specFootprint` là hàm **BẬC
+> THANG** của `fx` nên lặp tới hội tụ thì **PHÂN KỲ** (đo được lượt ba đi XA hơn lượt hai). Vế "lan
+> ra" vốn đã đúng theo cấu tạo nhưng **chưa bài nào canh**; nay có: 20 phiên so 120 phiên, đủ 15 kỷ,
+> hộp bao nở **1,65 lần** (kỷ 4) tới **12,0 lần** (kỷ 13).
+>
+> **§5 SÁU KỶ TỪNG CÓ ĐÚNG 0 THỬA NHÀ DÂN — và phép đo "thửa có khác cỡ không" đang đo nhầm.**
+> `WONDER_PARCELS = 5` ăn trước, nên kỷ nào khai `parcels: 6` chỉ còn 1 thửa dư mà thửa ấy lại bị
+> lấy làm sân ⇒ con số tỉ số xưa nay là tỉ số của các **KHU ĐẤT KỲ QUAN**. Vá bằng module lá
+> `parcelRoles.js` (0 lời `import`) giữ **MỘT** công thức chia vai, và **cả `cityPlan` lẫn
+> `networkStyle` cùng gọi nó** — trước đó mỗi bên tự tính một nửa và hai nửa trôi khỏi nhau.
+> Validator **TỪ CHỐI THẲNG** dòng để lại < 2 thửa nhà. Sau khi sửa: mọi kỷ có ≥2 thửa nhà và ≥1
+> sân (23 thửa sân trên 15 kỷ). Tỉ số ô đất lớn nhất/nhỏ nhất theo hình thái — `organic` **trung vị
+> 5,50** · `terrace` 4,67 · `grid` 2,25 · `radial` 2,00 · `axial` 1,25 ⇒ phố cổ chênh **gấp 4,4 lần**
+> nhóm axial, và nó chênh bằng chính hình thái mạng đường chứ không bằng một cột số chọn tay.
+>
+> ⚠️ **CÁI GIÁ CỦA §5, NÓI THẲNG.** Thêm ô đường ⇒ đổi ô nào là nhà ⇒ **đổi tỉ lệ loại nhà**
+> (`workshop` là nguyên mẫu thấp-rộng, tỉ số xấu nhất). Bảy mốc ghim cũ già đi ở năm file; **tất cả
+> được ghim lại SAU khi đo**, không một sàn/trần chất lượng nào bị nới — một cái trần còn được
+> **SIẾT** (`TRAN_TROI` 0,13 → 0,10 ô). *Tốt lên*: chiều cao nhà kỷ 1 và 7 hết trượt · kỷ 5 thôi bị
+> khung hình thu nhỏ vô cớ (biên 0,2294 → 0,0400) · mảng phủ đất nay đạt ở **cả bảy** mốc phiên
+> (trước hụt ở mốc 150) · nước nhìn thấy được tăng ở **13/14 kỷ**, kỷ 5 vượt cổng 5% (3,63 → 7,00).
+> *Xấu đi*: ô mất chi tiết mái **7/476 (1,5%) → 10/473 (2,1%)**, kỷ tệ nhất 0,893 → 0,844.
+>
+> **Bài học lớn nhất của phase**: `TECH_DEBT #87` đã được ghi lại **hai lần** như thể cơ chế đang
+> được chữa dần, trong khi cả hai lần nó chỉ **đổi tỉ lệ loại nhà**. Một mục nợ thu hẹp không có
+> nghĩa là bệnh của nó đang lành — phải hỏi *"cái gì vừa đổi, và nó có phải cơ chế tôi đang tố
+> không?"* trước khi ghi một con số đẹp hơn vào cột trạng thái.
+>
+> Cổng: `npm test` **1.184 bài · 1.183 pass · 0 fail · 1 skipped** (+ đối chiếu chéo 3/3) · lint
+> sạch · build xanh. **Chưa gộp `main`** (chỉ thị Phase 21 ghi rõ: *"Push nhánh phụ, không tự gộp"*).
+>
+> (Mốc trước, 2026-08-24 đêm) — **CẮT CHI PHÍ MỖI PHIÊN: 6.323 DÒNG BẮT BUỘC ĐỌC → 55**.
 > Đàm: *"mỗi lượt sửa quá ít thay đổi và không hiệu quả, không cần đo performance quá nhiều…
 > quy ước lại cách ra prompt đi"*.
 >
@@ -183,29 +246,30 @@
 - ⚠️ **CẦN ĐÀM THỬ TAY** (không test được trên dev): (a) câu nhắc-sau-phiên hiện sau khi xong PHIÊN THẬT; (b) bài "AI phân tích tổng thể" giờ chạy pro — xem có chậm/khác chất lượng không; (c) dòng "Ghi nhớ" lời khuyên hiện sau ≥3 ngày; (d) thông báo chuỗi-sắp-đứt: **từ nay** (11/7) chiều nào quên làm sẽ nhận push (cần đã bật push iPhone) — đây là lần đầu tiên thực sự có cơ hội chạy thật.
 
 ## 🔜 Sẽ làm tiếp (ưu tiên từ trên xuống)
-- 🔴 **CHỜ ĐÀM QUYẾT — PHASE 20 SẼ DỜI CHỖ 75/75 CÔNG TRÌNH ĐÃ XÂY (5 mỗi kỷ × 15 kỷ).** Đây là
-  điều kiện DỪNG của VIỆC 5 trong chỉ thị, và nó **đã kích hoạt**. Không kiểm được bản lưu thật của
-  Đàm (Supabase bị proxy hộp cát chặn, `403`), nhưng câu trả lời không phụ thuộc vào đó: bộ xương
-  mới đặt cả 5 khu kỳ quan ở chỗ khác ở **cả 15 kỷ**, nên kỷ nào đã xây thứ gì thì thứ đó dời.
-  *"Bộ xương khác cái cũ"* và *"công trình đứng nguyên chỗ cũ"* là hai yêu cầu **loại trừ nhau** —
-  không phải một khuyết tật cần vá. Mã đã sẵn sàng trên nhánh; **chưa gộp `main`**, nên chưa có gì
-  chạm vào dữ liệu thật. Ba lựa chọn: (a) chấp nhận, gộp — thành phố mọi kỷ đổi bố cục MỘT LẦN rồi
-  đóng băng vĩnh viễn; (b) không gộp — giữ bộ xương cũ, chấp nhận 15 kỷ vẫn chung một bộ xương đối
-  xứng; (c) gộp nhưng chỉ áp cho kỷ CHƯA có công trình nào — **tôi khuyên KHÔNG**, vì nó tạo ra hai
-  bộ sinh song song vĩnh viễn, tức đúng bệnh *"một luật hai công thức"* ở tầng nguy hiểm nhất.
-- ⚠️ **CHỜ ĐÀM — NHÌN ẢNH PHASE 20** (bản quét 15 kỷ + 6 ảnh nhìn từ trên xuống kỷ 1 · 3 · 4 · 7 ·
-  11 · 14, `--width 1500`). Cổng số đã đạt, nhưng cổng thật là mắt Đàm. ⚠️ Và một điều tôi phải nói
-  thẳng: **nhà dân BÊN TRONG một thửa vẫn xếp thành hàng lối đều đặn** (đó là `blockStyle` của
-  Phase 14, không phải tầng vừa làm). Nếu chữ *"rất bài bản"* còn nhắm vào cái đó thì Phase 20 chưa
-  chạm tới, và việc tiếp theo phải là hình thái BÊN TRONG khu phố.
+- 🔴 **CHỜ ĐÀM — NHÌN ẢNH PHASE 21.** Bản quét 15 kỷ + **12 ảnh nhìn thẳng từ trên xuống** (kỷ
+  1 · 3 · 7 · 10 · 11 · 14, mỗi kỷ chụp ở **20 phiên và 120 phiên** để thấy thành phố lan ra),
+  `--width 1500`. **Nghiệm thu bằng MẮT, không bằng cổng số**: kỷ 1–9 không được thấy hàng lối nào;
+  kỷ 11–15 thì phải thấy. Cổng số chỉ nói được rằng mã làm đúng thứ nó được bảo làm.
+- ✅ **ADR-007 — ĐÀM ĐÃ DUYỆT PHƯƠNG ÁN (a)** (khép lại mục "CHỜ ĐÀM QUYẾT" của Phase 20): chấp nhận
+  dời 75/75 công trình **MỘT LẦN**, sau đó bố cục mỗi kỷ **đóng băng vĩnh viễn**. Không dựng hai bộ
+  sinh song song. ⚠️ **Từ ngày gộp `main`, đổi bộ sinh bố cục của một kỷ là một quyết định DI TRÚ —
+  phải hỏi Đàm trước**, vì nó dời công trình trong bản lưu thật. Ghi ở ADR-064.
 - ⚠️ **`TECH_DEBT #86` VẪN MỞ dù cổng đã qua (11,33 → 12,44).** Đừng đọc con số ấy là "đã giải":
   tách ba dải cho thấy toàn bộ phần tăng nằm ở dải ĐẤT (+2,37), còn dải TRỜI — cần gạt đã nêu đích
   danh hai lần — gần như không nhúc nhích (4,12 → 4,05) và dải THÀNH PHỐ còn tệ đi. Biên chỉ 0,44.
   Ba hướng của Đàm vẫn còn nguyên.
-- ⚠️ **`TECH_DEBT #87` (mới) — hai phần, đã đo bản vá nhưng CHƯA áp.** (a) 4 kỷ `[1,2,6,7]` ngắn đi
-  sau khi chia khu phố, biên mỏng nhất 0,9508×; (b) kỷ 6 mất 40,7% chi tiết mái. Bản vá đụng bảng
-  `storey` lịch sử của Phase 14 và kỷ 1 không còn chỗ (1,95 trên trần 2,0, cần 2,05). **Cấm** hạ sàn
-  0,7 hoặc hạ ngưỡng 0,95 để lấy lại con số.
+- ⚠️ **`TECH_DEBT #87` — ĐÃ THU HẸP HAI LẦN, VẪN MỞ.** (a) danh sách kỷ ngắn đi sau khi chia khu
+  phố: `[1,2,6,7]` → `[1,7]` (hợp nhất) → **`[5]`** (sau §5), biên mỏng nhất 0,9508 → 0,9386 →
+  **0,9942**; (b) ô mất chi tiết mái **7/476 (1,5%) → 10/473 (2,1%)**, kỷ tệ nhất 0,893 → 0,844 —
+  tức nửa (b) **XẤU ĐI** ở §5. ⚠️ Cả hai lần chuyển đều là hệ quả của một phép **đổi tỉ lệ loại
+  nhà** (thêm ô đường ⇒ đổi ô nào là nhà ⇒ đổi tỉ lệ `workshop`, nguyên mẫu thấp-rộng có tỉ số xấu
+  nhất), **không phải** cơ chế được sửa. Bản vá thật vẫn đụng bảng `storey` lịch sử của Phase 14 và
+  kỷ 1 vẫn không còn chỗ (1,95 trên trần 2,0, cần 2,05). **Cấm** hạ sàn 0,7 hoặc hạ ngưỡng 0,95 để
+  lấy lại con số.
+- ⚠️ **`TECH_DEBT #88` (mới, Phase 21 §4) — cột `units`/`cols`/`rows` của bảng khu phố tạm là TRỤC
+  CHẾT.** `BLOCK_MAX_CELLS = 1` (thứ chặn khối nhà xuyên qua nhau) khoá số suất đất ở **4 ở cả 15
+  kỷ**. Đã đếm ra tường minh bằng một bài test đi qua đúng đường dựng thật, kèm ba phương án đã đo.
+  **Không nới trần**: đo được trần 2 thì khối lại xuyên qua nhau.
 - ⚠️ **CHỜ ĐÀM — SAU PHASE 13 VIỆC B (vùng phụ cận).** (a) **Nhìn 15 kỷ** rồi gật hoặc chỉnh hướng
   mỹ thuật — ba cổng đo đều đạt rộng, nhưng điều kiện DỪNG (c) của chỉ thị là *"dựng xong, (G1) đạt,
   mà ẢNH XẤU ĐI"*, và chỉ mắt Đàm mới trả lời được câu đó. (b) Quyết **có gộp `main`** hay không cho

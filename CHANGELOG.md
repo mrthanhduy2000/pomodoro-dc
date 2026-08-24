@@ -12,6 +12,40 @@
 
 ---
 
+## 2026-08-24 (khuya) — PHASE 21: hợp nhất hai nhánh, và bàn cờ trở thành một mốc lịch sử (ADR-064, ADR-065)
+
+**Mục đích.** Đàm xem bản quét Phase 20 và vẫn bác: *«nhà vẫn xếp rất ngăn nếp trông như quy hoạch,
+dù quy hoạch ô bàn cờ chỉ bùng nổ và trở thành chuẩn mực từ thế kỷ 19»*. Phase 20 đã đổi được **bộ
+xương** thành phố nhưng chưa chạm vào **bên trong một thửa**.
+
+**Phạm vi.** Chỉ tầng dựng hình 3D (`src/engine/city3d/`) và tài liệu. Không đụng timer, store,
+sync, AI Coach, hay bất kỳ luồng dữ liệu nào.
+
+- **§1 Hợp nhất hai nhánh (ADR-064)** — `main` có đường lượn theo cung cong (ADR-059), nhánh này có
+  chia thửa đệ quy (ADR-060). Hai bên trả lời hai câu khác nhau nên **ghép được**: BSP quyết cắt Ở
+  ĐÂU, cung cong quyết cắt theo HÌNH GÌ. Một thửa nay là **tập ô**, không phải hình chữ nhật đã
+  khai. ADR đánh số lại cho hết trùng (060 · 061 · 062 · 063 · 064).
+- **§2 ADR-007** — Đàm duyệt: dời 75/75 công trình **một lần**, sau đó bố cục mỗi kỷ đóng băng vĩnh
+  viễn. Từ ngày gộp `main`, đổi bộ sinh bố cục của một kỷ là **một quyết định di trú, phải hỏi**.
+- **§3 Trục `layout` trong `blockStyle.js` (ADR-065)** — kỷ **1–9** `organic` (chia thửa đệ quy,
+  không hàng không cột), kỷ **10–15** `grid` (giữ nguyên). Khoá bằng test hai chiều.
+- **§4 Khối nhà nằm trong thửa của nó** — cặp khối đè lên nhau **290 → 15**, chỗ sâu nhất
+  −0,441 → **−0,015 ô** (≈1 điểm ảnh, dưới sàn mắt 4). Thêm bài canh "thành phố lan RA NGOÀI":
+  hộp bao ở 120 phiên nở **1,65–12,0 lần** so với 20 phiên.
+- **§5 `parcelRoles.js` (module mới)** — 6/15 kỷ từng có **đúng 0 thửa dành cho nhà dân**, nên phép
+  đo "thửa có khác cỡ không" đang đo các khu đất kỳ quan. Sau khi sửa, tỉ số ô đất lớn nhất/nhỏ
+  nhất: `organic` **5,50** · `terrace` 4,67 · `grid` 2,25 · `radial` 2,00 · `axial` 1,25.
+
+**Ảnh hưởng.** ⚠️ **Bố cục của cả 15 kỷ đổi** — công trình đã xây sẽ đứng ở chỗ khác **một lần** khi
+bản này lên production (Đàm đã duyệt, §2). Sau lần đó, mỗi kỷ đóng băng vĩnh viễn và bất biến "chỉ
+thêm, không bao giờ dời" vẫn xanh cho 1…120 phiên × 15 kỷ. Không mất dữ liệu, không migration.
+Cái giá đã đo và không giấu: ô mất chi tiết mái 1,5% → 2,1% (`TECH_DEBT #87` vẫn mở); cột
+`units`/`cols`/`rows` tạm là trục chết vì trần một-ô (`TECH_DEBT #88`).
+
+**Tương thích.** Không đổi schema, không đổi API, không đổi cách chạy/build/deploy.
+
+---
+
 ## 2026-08-24 (đêm) — Quy trình làm việc: cắt 6.323 dòng bắt buộc đọc xuống 55
 
 **Mục đích.** Mỗi phiên đang tiêu ~80% sức vào đọc tài liệu, đo đạc và viết báo cáo, chỉ ~20% vào

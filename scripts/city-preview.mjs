@@ -77,6 +77,19 @@ function parseArgs(argv) {
     // phân biệt "hình người" với "vệt nhiễu".
     zoom: 1,
     /**
+     * Góc NGẨNG của camera, tính bằng ĐỘ. `null` = dùng đúng góc app dùng.
+     *
+     * Sinh ra ở Phase 22 vì điều kiện nghiệm thu của Đàm là một GÓC NHÌN cụ thể: *"nhìn từ
+     * trên xuống phải thấy ĐẤT giữa các căn nhà, không phải một mảng mái liền"*. Ở góc mặc
+     * định (34 độ) mái nhà che gần hết khoảng đất giữa chúng, nên tấm ảnh không trả lời được
+     * câu hỏi ấy dù câu trả lời có là gì.
+     *
+     * KHÔNG vượt rào: nó đi qua đúng `orbit.set` của app, nên vẫn bị `clampPitch` kẹp về
+     * `MAX_PITCH` (~85 độ) — tức đây là một góc mà Đàm CÓ THỂ tự kéo tới được trên máy anh,
+     * không phải một camera bịa ra chỉ để chụp đẹp.
+     */
+    pitch: null,
+    /**
      * `--focus N` — CHỤP ĐÚNG CHẾ ĐỘ CẬN CẢNH CỦA APP: bay tới công trình mốc thứ N (1–5) rồi
      * đứng ở chỗ mà `planCityFocus` đã chứng minh là thoáng.
      *
@@ -170,6 +183,7 @@ function parseArgs(argv) {
     else if (key === '--width') { args.width = Number(value); i += 1; }
     else if (key === '--height') { args.height = Number(value); i += 1; }
     else if (key === '--zoom') { args.zoom = Number(value); i += 1; }
+    else if (key === '--pitch') { args.pitch = Number(value); i += 1; }
     else if (key === '--focus') { args.focus = Number(value); i += 1; }
     else if (key === '--hour') { args.hours.push(Number(value)); i += 1; }
     else if (key === '--sweep') args.sweep = true;
@@ -207,7 +221,7 @@ function run(cmd, cmdArgs, options = {}) {
  */
 function entrySource({
   era, level, theme, zoom = 1, focus = 0, hour = null, pending = 0, sessions = 40, dpr = null, bench = 0,
-  mask = null, noShadow = false, t = 17.5, lowDetail = false,
+  mask = null, noShadow = false, t = 17.5, lowDetail = false, pitch = null,
 }) {
   return `
 import { computeCityLayout } from '${ROOT}/src/engine/cityLayout.js';
@@ -231,6 +245,7 @@ const ERA = ${era};
 const LEVEL = ${level};
 const IS_DARK = ${theme === 'dark'};
 const ZOOM = ${zoom};
+const PITCH_DEG = ${pitch === null ? 'null' : pitch};
 const FOCUS = ${focus};
 const HOUR = ${hour === null ? 'null' : hour};
 const PENDING = ${pending};
@@ -312,6 +327,14 @@ const orbit = createOrbit({
   distance: orbitOptions.distance * ZOOM,
   minDistance: orbitOptions.minDistance * Math.min(1, ZOOM),
 });
+// Góc ngẩng do người chụp chọn. Đi qua đúng 'orbit.set' của app nên vẫn bị kẹp về 'MAX_PITCH'
+// (~85 độ) — một góc Đàm tự kéo tới được, không phải một camera bịa riêng cho ảnh nghiệm thu.
+if (PITCH_DEG !== null) {
+  orbit.set({ pitch: PITCH_DEG * Math.PI / 180 });
+  console.log('[pitch] xin ' + PITCH_DEG.toFixed(1) + ' độ · nhận '
+    + (orbit.getState().pitch * 180 / Math.PI).toFixed(1) + ' độ (đã qua clampPitch của app)');
+}
+
 // ⚠️ CHẾ ĐỘ CẬN CẢNH GỌI ĐÚNG HÀM MÀ APP GỌI ('planCityFocus'), với ĐÚNG danh sách vật cản mà cảnh
 // vừa dựng ra ('city.blockers'). Không có dòng nào ở đây tự tính lại góc hay khoảng cách — nếu có,
 // tấm ảnh nghiệm thu sẽ mô tả một chế độ cận cảnh không tồn tại trong app.
@@ -1516,7 +1539,11 @@ async function main() {
       // Chỉ gắn khi KHÁC mặc định, để mọi tên file lịch sử vẫn tra được.
       const tTag = args.t === 17.5 ? '' : `-t${String(args.t).replace('.', 'p')}`;
       const lodTag = args.lowDetail ? '-lod' : '';
-      const pngPath = resolve(OUT_DIR, `city-era${String(era).padStart(2, '0')}-${args.theme}${hourTag}${sessTag}${widthTag}${zoomTag}${tTag}${lodTag}${maskTag}${shadowTag}${focusTag}.png`);
+      // ⚠️ LẦN THỨ CHÍN CỦA ĐÚNG CÁI BẪY TRÊN — `--pitch` (2026-08-24). Nó đổi GÓC NHÌN, tức đổi
+      // hẳn thứ tấm ảnh trả lời được; một ảnh nhìn từ trên xuống đè lên ảnh khung thường là mất
+      // luôn vế "Đàm thật sự thấy gì" của cặp nghiệm thu.
+      const pitchTag = args.pitch === null ? '' : `-p${String(args.pitch).replace('.', 'p')}`;
+      const pngPath = resolve(OUT_DIR, `city-era${String(era).padStart(2, '0')}-${args.theme}${hourTag}${sessTag}${widthTag}${zoomTag}${tTag}${lodTag}${pitchTag}${maskTag}${shadowTag}${focusTag}.png`);
       let info = '';
       let hop = null;
       try {

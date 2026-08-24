@@ -4446,12 +4446,18 @@ cấp `Math.min(3,…)` → `Math.min(9,…)` · cắt bớt danh sách cấp th
   theo Ô CHỮ NHẬT chứ không theo dòng: một ô lấy nội dung từ khung hình trước. Một phép soi chỉ đi
   theo dòng thì về mặt cấu trúc không thể thấy một mép dọc.
 - **Current Risk**: Trung bình — mọi ảnh nghiệm thu phải soi bằng MẮT trước khi dùng, không được
-  tin cổng tự động. Trong phiên Phase 22 đã làm đúng thế (dựng lại 3 lần cho 3 kỷ).
+  tin cổng tự động, và **không được tin md5** (xem Recommended Solution). Trong phiên Phase 22 đã
+  soi mắt cả 8 tấm giao nộp và dựng lại cho tới khi sạch ở 4 tấm.
 - **Future Risk**: Cao nếu có phase nào chấm số trên ảnh dựng ở bề ngang lớn mà không nhìn ảnh.
-- **Recommended Solution**: mở rộng `soiVetRach` sang mép DỌC (cùng công thức, đổi trục), HOẶC —
-  rẻ hơn và chắc hơn — chụp **hai lượt liên tiếp rồi so byte**: một vết rách theo ô là ngẫu nhiên
-  nên hai lượt gần như không bao giờ rách giống hệt nhau (đã quan sát: cùng lệnh, cùng cây mã, ba
-  lượt kỷ 14 cho ba md5 khác nhau và chỉ lượt cuối lành).
+- **Recommended Solution**: mở rộng `soiVetRach` sang mép DỌC — cùng công thức, đổi trục, và mốc
+  cần soi là mọi cột chứ không chỉ mốc chia dải (vết rách quan sát được nằm GIỮA dải).
+  ⚠️ **CÁCH "CHỤP HAI LƯỢT RỒI SO BYTE" KHÔNG DÙNG ĐƯỢC — đã thử và bị chính số đo bác bỏ.** Nghe
+  rất hợp lý (vết rách ngẫu nhiên thì hai lượt không rách giống nhau), nhưng `TECH_DEBT #50` đã đo:
+  **md5 của ảnh dựng đổi theo TẢI MÁY** (SwiftShader chia ô rasterise theo số luồng dùng được, lệch
+  ±1 trên một kênh). Thử thật trong phiên Phase 22: kỷ 1 phải dựng **5 lượt** mới thấy hai md5
+  trùng nhau, mà cả 5 tấm đều LÀNH. Tức "khác md5" không hề nghĩa là "có tấm rách" — đúng chiều mà
+  `#50` đã cấm đọc. Nếu muốn so hai lượt thì phải so **số điểm ảnh lệch quá ngưỡng mắt 12/255**,
+  không so byte.
 - **Estimated Complexity**: Thấp
 - **Blocking Conditions**: Không có.
 - **Review Trigger**: ngay khi có phase cần trích SỐ từ ảnh dựng ở `--width` lớn.

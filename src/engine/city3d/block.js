@@ -53,11 +53,41 @@ export const BLOCK_FIT = 0.92;
  * 0,92 chứ không phải 1,0: chừa lại 0,08 ô làm khe giữa hai ô kề nhau, để hai khu phố cạnh nhau
  * còn đọc ra là HAI khu chứ không dính thành một tảng.
  *
- * ⚠️ Nó là một cái SÀN, không phải một cái trần: 12/15 kỷ có căn nhà RỘNG HƠN một ô (tới 1,35 ô ở
- * kỷ 6) và những kỷ ấy giữ nguyên bề ngang cũ. Đây đúng luật *"trần luôn thắng sàn"* ở chiều
- * ngược lại — sàn không bao giờ được phép co thứ đang lớn hơn nó.
+ * ⚠️ Nó là một cái SÀN, và mãi tới Phase 21 nó mới có một cái TRẦN đi kèm (xem ngay dưới). Chú
+ * thích cũ ở đây từng viện dẫn luật *"trần luôn thắng sàn"* để giải thích vì sao 12/15 kỷ được
+ * phép rộng hơn một ô — nhưng luật ấy nói về quan hệ giữa MỘT sàn và MỘT trần, mà ở đây trần
+ * chưa bao giờ tồn tại. Một câu tự trấn an viện dẫn đúng tên một cái luật vẫn có thể sai, và nó
+ * sai theo cách khó thấy nhất: nghe như chuyện đã được cân nhắc rồi.
  */
 export const BLOCK_MIN_CELLS = 0.92;
+
+/**
+ * Bề ngang TỐI ĐA của một khu phố, đo bằng ô lưới. **Đúng một ô — không hơn một chút nào.**
+ *
+ * ⚠️ ĐÂY LÀ CÁI TRẦN MÀ `BLOCK_MIN_CELLS` XƯA NAY NHẮC TỚI MÀ KHÔNG CÓ. Trước Phase 21 bề ngang
+ * khu phố chỉ có sàn: `max(hình bao × BUILDING_SCALE × BLOCK_FIT, 0,92)`. Vế `max` thì chặn được
+ * phía nhỏ, còn phía LỚN thì để ngỏ hoàn toàn — hình bao của bản tham chiếu muốn to bao nhiêu
+ * cũng được. Đo ra: khu phố rộng nhất **2,006 ô** (kỷ 8) trên một ô lưới rộng đúng 1,0, và **cả
+ * 15 kỷ** đều có khối đè lên khối của ô bên cạnh — 81 cặp ở kỷ 1, sâu nhất **0,813 ô** (kỷ 8).
+ * Đó chính là thứ Đàm gọi tên: *"việc mở rộng thành phố không phải là nhà xếp chồng lên nhau, nó
+ * rất phản thực tế và lịch sử."* Hai căn nhà xuyên qua nhau nửa mét là chuyện không xảy ra ở bất
+ * kỳ thời đại nào.
+ *
+ * ⚠️ **1,0 KHÔNG PHẢI MỘT CON SỐ CHỌN TAY — nó là bề rộng của chính ô lưới.** Một ô là toàn bộ
+ * đất mà khu phố ấy sở hữu; ô bên cạnh thuộc về người khác. Đây là một QUAN HỆ (nằm trong thửa
+ * của mình), không phải một ngưỡng thẩm mỹ, nên không có gì để nới ra cho tiện về sau.
+ *
+ * ⚠️ **KHE GIỮA HAI NHÀ KHÔNG NẰM Ở ĐÂY, NÓ NẰM Ở `alley`.** Hai khu phố kề nhau đều rộng 1,0 thì
+ * chúng chạm nhau ĐÚNG MÉP — không chồng một chút nào. Phần đất thật sự dựng nhà là `1,0 × (1 −
+ * alley)`, nên khe giữa hai dãy chính bằng `alley` của kỷ ấy: nhà ba gian Việt (0,26) tách hẳn
+ * nhau, còn nhà phố Anh đấu lưng (0,03) thì gần như dính tường. Đúng chữ Đàm dùng: *"nhà dính
+ * tường thì dính THẲNG HÀNG, không xuyên qua nhau."*
+ *
+ * ⚠️ Trần này **luôn thắng sàn**: `1,0 > 0,92` nên hôm nay hai vế không cãi nhau, nhưng thứ tự
+ * `Math.min(Math.max(...))` viết ra để nếu ngày nào sàn bị nâng quá 1,0 thì trần vẫn cắt xuống —
+ * chứ không phải để khu phố lặng lẽ tràn ra khỏi ô lần nữa.
+ */
+export const BLOCK_MAX_CELLS = 1;
 
 /** Xoay một mô tả khối quanh gốc của chính nó — CÙNG công thức mà `geometryFactory` dùng cho
  *  `placement.ry`: tâm khối quay theo góc, còn góc riêng của khối thì CỘNG thêm. Dùng hai công
@@ -94,8 +124,10 @@ export function buildBlockSpec({ bpId, era, type, rarity = 'common' } = {}) {
 
   // BƯỚC 2 — đo chỗ đất, quy sang Ô LƯỚI (hệ đơn vị mà `MIN_UNIT_CELLS` và mắt Đàm cùng dùng).
   const goc = specFootprint(ref.parts);
-  const blockW = Math.max(goc.w * BUILDING_SCALE * BLOCK_FIT, BLOCK_MIN_CELLS);
-  const blockD = Math.max(goc.d * BUILDING_SCALE * BLOCK_FIT, BLOCK_MIN_CELLS);
+  // ⚠️ KẸP HAI ĐẦU, và trần đứng NGOÀI sàn (`min` bọc `max`) — xem `BLOCK_MAX_CELLS`.
+  const kep = (v) => Math.min(Math.max(v, BLOCK_MIN_CELLS), BLOCK_MAX_CELLS);
+  const blockW = kep(goc.w * BUILDING_SCALE * BLOCK_FIT);
+  const blockD = kep(goc.d * BUILDING_SCALE * BLOCK_FIT);
 
   // BƯỚC 3 — chia.
   const units = deriveBlockUnits({ style, seed: bpId, blockW, blockD });
@@ -141,18 +173,47 @@ export function buildBlockSpec({ bpId, era, type, rarity = 'common' } = {}) {
       plot: { fx: 1, fz: 1, storey: u.storey, faces },
     });
     const gocU = specFootprint(thu.parts);
-    const spec = buildBuildingSpec({
+    const k1 = gocU.w > 0 ? doiW / gocU.w : 1;
+    const k2 = gocU.d > 0 ? doiD / gocU.d : 1;
+    const hai = buildBuildingSpec({
       bpId: `${bpId}#${u.col},${u.row}`,
       era,
       type,
       rarity,
       level: 1,
-      plot: {
-        fx: gocU.w > 0 ? doiW / gocU.w : 1,
-        fz: gocU.d > 0 ? doiD / gocU.d : 1,
-        storey: u.storey,
-        faces,
-      },
+      plot: { fx: k1, fz: k2, storey: u.storey, faces },
+    });
+    // ⚠️ LƯỢT THỨ BA — VÌ HAI LƯỢT KHÔNG THỂ TRÚNG ĐÍCH, VÀ LÝ DO NẰM Ở PHÉP TOÁN CHỨ KHÔNG Ở
+    // CÁCH VIẾT MÃ. Hình bao của một căn nhà theo hệ số co là một hàm AFFINE chứ không phải tuyến
+    // tính: `hình bao(fx) = thân × fx + mái đua`, trong đó mái đua có một phần TUYỆT ĐỐI không co
+    // theo `fx`. Lượt hai chia đích cho hình bao đo ở `fx = 1`, tức nó ngầm coi hàm ấy đi qua gốc
+    // toạ độ — nên nó LUÔN dựng ra một căn rộng hơn chỗ đất đã chia, một cách có hệ thống và luôn
+    // cùng một dấu. Đo được: khu phố tràn ra khỏi ô tới 0,168 ô, và 84 cặp nhà dân xuyên vào nhau.
+    //
+    // Hai điểm đã có — `(1, gocU)` và `(k, hai)` — xác định đúng một đường thẳng, nên giải thẳng
+    // ra hệ số cần dùng thay vì lặp. Đã đo lặp: nó KHÔNG hội tụ về đích ở mọi ca, vì phần tuyệt
+    // đối của mái đua là một SÀN CỨNG — kỷ 10 xin 0,20 thì bốn lượt liên tiếp mới xuống 0,2226 và
+    // vẫn đang bò. Lặp thêm là đuổi theo một thứ không tồn tại; giải phương trình thì xong trong
+    // một lượt, và khi cái sàn ấy chặn thật (`m ≤ 0`) thì hàm dưới đây trả lại hệ số cũ chứ không
+    // giả vờ đạt được.
+    const giai = (dich, f1, k, f2) => {
+      if (Math.abs(1 - k) < 1e-9) return k;
+      const m = (f1 - f2) / (1 - k);
+      if (!(m > 1e-9)) return k;
+      const c = f1 - m;
+      const fx = (dich - c) / m;
+      return Number.isFinite(fx) && fx > 1e-6 ? fx : k;
+    };
+    const nhi = specFootprint(hai.parts);
+    const fx = giai(doiW, gocU.w, k1, nhi.w);
+    const fz = giai(doiD, gocU.d, k2, nhi.d);
+    const spec = (fx === k1 && fz === k2) ? hai : buildBuildingSpec({
+      bpId: `${bpId}#${u.col},${u.row}`,
+      era,
+      type,
+      rarity,
+      level: 1,
+      plot: { fx, fz, storey: u.storey, faces },
     });
     parts.push(...xoayVaDoi(spec.parts, u.ry, u.ox / BUILDING_SCALE, u.oz / BUILDING_SCALE));
   }

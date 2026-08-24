@@ -164,9 +164,17 @@ test('KHÔNG CHIẾM THÊM ĐẤT — khu phố không được rộng hơn căn
 });
 
 test('MỘT Ô LÀ MỘT KHU PHỐ — mỗi ô phải ra ÍT NHẤT 4 khối nhìn thấy, cả 15 kỷ', () => {
-  // Cả phase quy về đúng câu này. Trước Phase 14 mỗi ô ra 1 khối; nay tệ nhất cũng 4,00 (kỷ 1 ·
-  // 6 · 15 — ba kỷ chạm đúng `MIN_UNITS`), cao nhất 6,13 (kỷ 12). Tổng 476 ô → **2370 khối**
-  // (đo lại ở mốc hợp nhất Phase 21; trước là 432 ô → 2172 khối, và 371 ô → 1812 khối).
+  // Cả phase quy về đúng câu này. Trước Phase 14 mỗi ô ra 1 khối; nay **cả 15 kỷ ra đúng 4,00**.
+  // Tổng 476 ô → **1904 khối** (đo lại ở mốc CUỐI của Phase 21; trước §4 là 2370 khối, trước đó
+  // nữa 432 ô → 2172 và 371 ô → 1812).
+  //
+  // ⚠️ CON SỐ 4,00 ĐỀU TĂM TẮP Ở CẢ 15 KỶ LÀ MỘT SỰ THẬT CẦN ĐỌC, KHÔNG PHẢI MỘT DẤU HIỆU LÀNH.
+  // Phase 21 §4 đóng trần khu phố ở ĐÚNG MỘT Ô để hai căn nhà kề nhau thôi xuyên qua nhau, và
+  // ràng buộc ấy khoá luôn số suất đất: 1,0 ô chia cho sàn 0,3276 ra 3,05 ⇒ tối đa 2 suất mỗi
+  // trục ⇒ 4. Nghĩa là cột `units`/`cols`/`rows` của bảng nay là một trục CHẾT — 15 dòng khai
+  // 4…10 mà dựng ra một con số duy nhất. Đó là SỐ HỌC, không phải một tham số chỉnh được, nên nó
+  // được ĐẾM RA tường minh ở `blockStyle.test.js` (`KHÔNG KỶ NÀO ĐẠT SỐ SUẤT ĐẤT ĐÃ KHAI`) và ghi
+  // ở `TECH_DEBT #88` thay vì bị giấu sau một ngưỡng rộng tay.
   //
   // ⚠️ Ngưỡng viết bằng `MIN_UNITS` chứ không viết cứng số 4: hai bên phải là MỘT luật một công
   // thức. Nhưng vì thế nó có thể trôi theo hằng số ấy, nên có thêm một trần cho chính cái trần ở
@@ -188,7 +196,42 @@ test('MỘT Ô LÀ MỘT KHU PHỐ — mỗi ô phải ra ÍT NHẤT 4 khối nh
       `kỷ ${era}: dựng ra ${ti.toFixed(2)} khối/ô nhưng bảng chỉ khai ${blockUnitCount(BLOCK_STYLES[era])}`);
   }
   assert.equal(tongO, 476, 'gác chạy-rỗng');
-  assert.ok(tongKhoi >= 2000, `cả 15 kỷ chỉ còn ${tongKhoi} khối nhìn thấy (đo được 2370 ở mốc hợp nhất)`);
+  assert.ok(tongKhoi >= 1850, `cả 15 kỷ chỉ còn ${tongKhoi} khối nhìn thấy (đo được 1904 ở mốc cuối Phase 21)`);
+});
+
+test('TRỤC CHẾT ĐƯỢC ĐẾM RA: mọi ô của mọi kỷ đều ra ĐÚNG 4 suất đất', () => {
+  // ⚠️ BÀI TEST NÀY GHI LẠI MỘT KHUYẾT TẬT, KHÔNG BẢO CHỨNG MỘT LỜI HỨA — đọc kỹ trước khi "sửa".
+  // Phase 21 §4 đóng trần khu phố ở ĐÚNG MỘT Ô (`BLOCK_MAX_CELLS`) để hai căn nhà kề nhau thôi
+  // xuyên qua nhau — đúng thứ Đàm đòi («nhà xếp chồng lên nhau… rất phản thực tế»). Cái giá là
+  // một ràng buộc SỐ HỌC không chỉnh được: một ô rộng 1,0 chia cho sàn `MIN_UNIT_CELLS` = 0,3276
+  // chỉ chứa nổi 2 suất mỗi trục ⇒ **4**. Nên cột `units`/`cols`/`rows` của `blockStyle.js` — 15
+  // dòng khai 4…10 — nay dựng ra đúng MỘT con số. Đó là định nghĩa của một trục CHẾT (bài học
+  // `MIN_STONE` Phase 9D), và một trục chết phải được ĐẾM RA chứ không được để im lặng.
+  //
+  // Vì sao là một bài test chứ không chỉ là một dòng trong `TECH_DEBT.md`: một mục nợ chỉ được
+  // đọc khi có người đi tìm, còn một con số trong bài test thì TỰ ĐÒI được đọc (Phase 10 Bước 1).
+  // Ghi ở `TECH_DEBT #88`.
+  //
+  // ⚠️ VÀ NÓ PHẢI HỎI QUA `buildBlockSpec`, TỨC ĐƯỜNG MÀ MÀN HÌNH ĐI. Bản đầu tôi viết bài này ở
+  // `blockStyle.test.js` và hỏi thẳng `deriveBlockUnits({ blockW: 1, blockD: 1 })` — nó xanh, nó
+  // đọc lên hợp lý, và phép thử ngược cho thấy nó **không thể** đỏ: `deriveBlockUnits` nhận bề
+  // ngang làm THAM SỐ, nên cái trần nằm ở `block.js` không đi qua nó. Tôi đã suýt ship một dòng
+  // THỬ-CHO-ĐỎ nói dối về chính bài test mình vừa viết.
+  // THỬ-CHO-ĐỎ (ĐÃ CHẠY THẬT): `BLOCK_MAX_CELLS = 2` ⇒ khối/ô đi từ 4,00 lên dải 4,00–5,94
+  // (tổng 1904 → 2254) ⇒ bài này ĐỎ ở vế `raBaoNhieu`.
+  const raBaoNhieu = new Set();
+  let daKiem = 0;
+  for (const era of ERAS) {
+    for (const home of oNhaDan(era)) {
+      raBaoNhieu.add(khoiCua(era, home).units);
+      daKiem += 1;
+    }
+  }
+  assert.equal(daKiem, 476, 'gác chạy-rỗng');
+  assert.deepEqual([...raBaoNhieu].sort((a, b) => a - b), [4],
+    `số suất đất dựng ra nay là {${[...raBaoNhieu].join(',')}} — nhiều hơn một giá trị nghĩa là `
+    + 'trục đã SỐNG LẠI (mừng!), hãy cập nhật `TECH_DEBT #88` và hai bảng số trong file này; ít '
+    + 'hơn 4 nghĩa là một ô đã chật tới mức không chia nổi, đó mới là lỗi');
 });
 
 test('ADR-007 — cùng một ô thì VĨNH VIỄN ra cùng một khu phố', () => {
@@ -299,20 +342,18 @@ test('CHI TIẾT MÁI KHÔNG ĐƯỢC CHẾT — và danh sách kỷ mất một
   // Đã vá bằng hai việc: nâng `MIN_UNIT_CELLS` để ôm luôn `ROOFTOP_MIN_SPAN × BUILDING_SCALE`, và
   // đo hình bao thật của từng đơn vị thay vì suy nó từ bản tham chiếu.
   //
-  // Ở mốc hợp nhất Phase 21 (quần thể 476 ô) giữ được **431/476 ô — 90,5%**, so với 389/432 (90%)
-  // sau Phase 20 và 313/371 (84%) trước đó. Và lần đầu tiên **KHÔNG kỷ nào tụt xuống dưới sàn
-  // 0,7**: kỷ thấp nhất là kỷ 12 ở **0,710**, vừa đủ qua. Nhưng đừng đọc số tổng 90,5% thành "ổn"
-  // — nó che mất chỗ mỏng ấy, đúng bài học `TECH_DEBT #22`, nên vế `duoiSan` vẫn đứng đó để canh.
+  // Ở mốc CUỐI của Phase 21 (quần thể 476 ô) giữ được **469/476 ô — 98,5%**, so với 431/476 giữa
+  // chừng, 389/432 (90%) sau Phase 20 và 313/371 (84%) trước đó. Nhưng đừng đọc số tổng 98,5%
+  // thành "ổn" — nó che mất chỗ mỏng, đúng bài học `TECH_DEBT #22`, nên vế `duoiSan` vẫn đứng đó.
   //
-  // ⚠️ DANH SÁCH KỶ TỤT DƯỚI SÀN NAY RỖNG, VÀ ĐÓ LÀ MỘT SỰ THẬT VỀ QUẦN THỂ CHỨ KHÔNG PHẢI MỘT
-  // BẢN VÁ — đừng đọc nó thành "đã chữa xong": sau Phase 20 kỷ 6 ở 0,593, ở lượt hợp nhất giữa
-  // chừng kỷ 12 ở 0,680, nay kỷ 12 lên 0,710 và kỷ 6 lên 0,750. Cơ chế thì không đổi —
-  // kỷ nào có ngõ rộng (`alley`) hoặc nhiều đơn vị (`cols×rows` lớn) thì mỗi đơn vị bị bóp nhỏ
-  // hơn `ROOFTOP_MIN_SPAN` và mất chi tiết mái; kỷ 12 khai 10 đơn vị, nhiều nhất bảng cùng kỷ 4.
-  // Bộ sinh hợp nhất chỉ đổi QUẦN THỂ nên nó đổi kỷ nào rơi xuống dưới sàn — và lần này quần thể
-  // rộng thêm 53 ô đã kéo kỷ 12 vừa đủ qua mốc. Một danh sách RỖNG được `assert` BẰNG chứ không
-  // bỏ đi: kỷ đầu tiên rơi xuống lại thì đỏ ngay. KHÔNG hạ sàn 0,7 (hạ là bỏ răng cho cả 15 kỷ).
-  // Ghi ở `TECH_DEBT #87`. Mười kỷ dưới 100%, cũng kể tên BẰNG chứ không "bao gồm".
+  // ⚠️ DANH SÁCH KỶ TỤT DƯỚI SÀN NAY RỖNG, VÀ ĐÓ LÀ MỘT SỰ THẬT VỀ QUẦN THỂ + BẢNG SỐ CHỨ KHÔNG
+  // PHẢI MỘT LỜI HỨA — đừng đọc nó thành "đã chữa xong một lần cho mãi mãi". Cơ chế không đổi:
+  // kỷ nào có ngõ rộng (`alley`) thì mỗi căn bị bóp mỏng hơn `ROOFTOP_MIN_SPAN` và mất chi tiết
+  // mái. Phase 21 §4 phải hạ ngõ kỷ 6 từ 0,26 xuống 0,18 đúng vì lý do ấy (đo được: 0,429 → 0,893
+  // — xem chú thích tại dòng kỷ 6 của `blockStyle.js`), và hệ số `EAVE_LAND_FACTOR` được chọn
+  // bằng một bảng quét ba cột chứ không bằng cảm giác. Một danh sách RỖNG được `assert` BẰNG chứ
+  // không bỏ đi: kỷ đầu tiên rơi xuống lại thì đỏ ngay. KHÔNG hạ sàn 0,7 (hạ là bỏ răng cho cả 15
+  // kỷ). Ghi ở `TECH_DEBT #87`. Bốn kỷ dưới 100%, cũng kể tên BẰNG chứ không "bao gồm".
   // THỬ-CHO-ĐỎ (đã chạy): đổi `Math.max` thành `Math.min` trong `MIN_UNIT_CELLS` ⇒ bài này ĐỎ.
   const duoi100 = [];
   const duoiSan = [];
@@ -337,11 +378,11 @@ test('CHI TIẾT MÁI KHÔNG ĐƯỢC CHẾT — và danh sách kỷ mất một
   assert.deepEqual(duoiSan, [],
     `kỷ mất QUÁ MỘT PHẦN BA chi tiết mái nay là [${duoiSan.join(',')}] — danh sách này phải RỖNG; `
     + 'dài ra là có kỷ vừa tụt xuống dưới sàn 0,7 (`TECH_DEBT #87`)');
-  assert.deepEqual(duoi100, [2, 4, 5, 6, 7, 8, 10, 11, 12, 13],
+  assert.deepEqual(duoi100, [6, 10, 11, 13],
     `kỷ mất một phần chi tiết mái nay là [${duoi100.join(',')}] — nếu ngắn đi thì tốt, hãy cập nhật `
-    + 'con số 431/476 trong chú thích; nếu dài ra thì có kỷ vừa tụt xuống');
-  assert.ok(coKhoi / coRef >= 0.85, `cả 15 kỷ chỉ giữ ${coKhoi}/${coRef} ô có chi tiết mái`);
-  assert.ok(teNhat >= 0.7 && teNhat < 0.76, `tệ nhất nay là ${teNhat.toFixed(3)} (đo được 0,710 ở mốc hợp nhất)`);
+    + 'con số 469/476 trong chú thích; nếu dài ra thì có kỷ vừa tụt xuống');
+  assert.ok(coKhoi / coRef >= 0.95, `cả 15 kỷ chỉ giữ ${coKhoi}/${coRef} ô có chi tiết mái (đo được 469/476)`);
+  assert.ok(teNhat >= 0.85 && teNhat < 0.95, `tệ nhất nay là ${teNhat.toFixed(3)} (đo được 0,893 kỷ 6 ở mốc cuối)`);
 });
 
 /**

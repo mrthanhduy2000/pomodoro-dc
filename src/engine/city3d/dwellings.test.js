@@ -152,6 +152,59 @@ test('TẤT ĐỊNH: cùng đầu vào cho ra cùng thành phố, mãi mãi', ()
   assert.deepEqual(later.slice(0, early.length), early, 'nhà cũ bị xáo chỗ khi thành phố lớn lên');
 });
 
+test('THÀNH PHỐ LAN RA NGOÀI, KHÔNG DÀY LÊN TẠI CHỖ — đo ở 20 phiên và 120 phiên, đủ 15 kỷ', () => {
+  /**
+   * Đàm nói thẳng cái hỏng: *"việc mở rộng thành phố không phải là nhà xếp chồng lên nhau, nó rất
+   * phản thực tế và lịch sử"*. Vế "chồng lên nhau" là chuyện hình học, đã chữa ở `block.js`. Vế
+   * còn lại là chuyện TĂNG TRƯỞNG, và nó cần một con số riêng: vùng đã xây phải RỘNG RA, chứ không
+   * phải cùng một vùng ấy được nhét thêm nhà.
+   *
+   * ⚠️ HAI ĐẠI LƯỢNG, VÀ CHÚNG KHÔNG THAY NHAU ĐƯỢC. Đếm SỐ NHÀ thì luôn tăng theo định nghĩa (mỗi
+   * 2 phiên một căn), nên nó KHÔNG phân biệt được "lan ra" với "dày lên" — đúng bẫy `TECH_DEBT #22`
+   * ở dạng ngược: một phép đo luôn đúng thì không nói được gì. Hai đại lượng dưới đây thì có:
+   *   · `Rmax`  — ô đã xây xa tâm nhất (khoảng cách Chebyshev). Dày lên tại chỗ ⇒ nó ĐỨNG YÊN.
+   *   · `hộp`   — diện tích hộp bao của vùng đã xây, tính bằng số ô.
+   *
+   * Cả hai đo được ở đây vì `dwellingPlots` xếp ô theo khoảng cách tới tâm TĂNG DẦN còn
+   * `deriveDwellings` lấy một TIỀN TỐ của danh sách ấy — nên "lan ra" không phải một hành vi được
+   * tinh chỉnh, nó đúng THEO CẤU TẠO. Bài này canh cái cấu tạo ấy: đảo thứ tự sắp xếp (ngoài vào
+   * trong) thì `Rmax@20` bằng luôn `Rmax@120` và bài đỏ ở kỷ đầu tiên.
+   *
+   * Số đo 2026-08-24 (PHASE 21 VIỆC 4, `buildingCount: 5`): `Rmax` 1,5–3,5 → 4,5–5,5 ở CẢ 15 kỷ;
+   * hộp bao nở từ 1,65 lần (kỷ 4) tới 12,0 lần (kỷ 13). Không kỷ nào đứng yên.
+   */
+  const C = (CITY_GRID_SIZE - 1) / 2;
+  const rmax = (list) => list.reduce(
+    (m, d) => Math.max(m, Math.abs(d.x - C), Math.abs(d.y - C)), 0,
+  );
+  const hopBao = (list) => {
+    if (!list.length) return 0;
+    const xs = list.map((d) => d.x);
+    const ys = list.map((d) => d.y);
+    return (Math.max(...xs) - Math.min(...xs) + 1) * (Math.max(...ys) - Math.min(...ys) + 1);
+  };
+
+  let soKy = 0;
+  for (const era of ERAS) {
+    const tre = deriveDwellings({ era, buildingCount: 5, sessionCount: 20 });
+    const gia = deriveDwellings({ era, buildingCount: 5, sessionCount: 120 });
+    assert.ok(tre.length > 0, `kỷ ${era}: thành phố trẻ rỗng — gác chạy-rỗng`);
+    assert.ok(gia.length > tre.length, `kỷ ${era}: chơi thêm 100 phiên mà không thêm căn nào`);
+    // Nhà cũ không bao giờ dời (ADR-007) — hỏi ở CẢ 15 kỷ, không chỉ một kỷ mẫu.
+    assert.deepEqual(gia.slice(0, tre.length), tre, `kỷ ${era}: nhà cũ bị xáo chỗ khi thành phố lớn lên`);
+    assert.ok(
+      rmax(gia) > rmax(tre),
+      `kỷ ${era}: vùng đã xây KHÔNG rộng ra — Rmax vẫn ${rmax(tre).toFixed(1)}, tức nhà mới chỉ nhét vào chỗ cũ`,
+    );
+    assert.ok(
+      hopBao(gia) > hopBao(tre),
+      `kỷ ${era}: hộp bao vùng đã xây không nở (${hopBao(tre)} → ${hopBao(gia)})`,
+    );
+    soKy += 1;
+  }
+  assert.equal(soKy, 15, 'gác chạy-rỗng: vòng lặp phải duyệt đủ 15 kỷ');
+});
+
 test('DANH SÁCH Ô ĐẤT KHÔNG BIẾT TIẾN ĐỘ — gọi kèm dữ liệu rác vẫn ra y hệt (ADR-007)', () => {
   // ⚠️ `dwellingPlots` nhận `era` và CHỈ `era`. "Hàm hiện không nhận tham số đó" là một sự thật rất
   // dễ mất: người sau chỉ cần thêm một tham số tuỳ chọn là bất biến chết mà mọi test vẫn xanh. Cách

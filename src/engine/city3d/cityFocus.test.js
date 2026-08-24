@@ -363,7 +363,7 @@ test('ĐỐI CHỨNG: chỉ canh ĐIỂM ĐẾN thôi là chưa đủ — và đ
   }
   assert.deepEqual(
     [...new Set(lotLuoi)].sort((a, b) => a - b),
-    [2, 6, 8, 10, 13, 15],
+    [2, 6, 8, 10, 15],
     'danh sách kỷ mà phép canh cả đường bay thật sự cứu — đổi là phải xem lại vì sao',
   );
   // 2026-08-20, HAI lần đổi trong cùng một ngày và cả hai đều có lý do đo được:
@@ -409,9 +409,19 @@ test('ĐỐI CHỨNG: chỉ canh ĐIỂM ĐẾN thôi là chưa đủ — và đ
   // chỗ dày nhà không"* được hỏi trên MƯỜI LĂM bố cục khác nhau thay vì trên một bố cục dùng chung.
   // Không có lý do nào để danh sách cũ còn đúng, và việc nó đổi gần hết chính là bằng chứng bộ
   // xương đã thật sự khác nhau giữa các kỷ.
+  // ⚠️ 2026-08-24, PHASE 21 VIỆC 4 (khối nhà không được lấn ra khỏi ô của nó): **5 kỷ / 10 chuyến —
+  // kỷ 13 RỜI danh sách**. Đã ĐO cả hai vế thay vì đoán, bằng cùng một phép đếm chạy trên nền
+  // `84d31e2` và trên cây hiện tại:
+  //     kỷ 13, nền  : đích-kẹt 1 · đường-kẹt 2 ⇒ lọt lưới 1
+  //     kỷ 13, nay  : đích-kẹt 1 · đường-kẹt 1 ⇒ lọt lưới 0
+  // Tức ĐÚNG MỘT chuyến từng quét sát mái ở đoạn giữa nay đã thoáng, còn chuyến kẹt còn lại thì
+  // kẹt ở CẢ hai đầu nên phép canh điểm-đến một mình đã bắt được. Hai tập TRÙNG KHÍT — cùng hình
+  // dạng với kỷ 2 sau ADR-062, không phải phép canh bị mù. Lý do hình học: nhà dân nay bị trần
+  // `BLOCK_MAX_CELLS = 1` giữ trong ô của nó (khối rộng nhất 1,734 → 1,062 ô), nên cái phần từng
+  // phình ra trùm lên ngõ — đúng chỗ camera bay ngang — không còn nữa.
   // ⚠️ Thứ ĐÁNG canh ở đây không phải danh sách mà là con số cuối: chừng nào nó còn khác 0 thì phép
   // canh cả-đường-bay vẫn đang cứu người thật, tức cơ chế lấy mẫu 48 chặng chưa thành mã chết.
-  assert.equal(lotLuoi.length, 11, 'đúng 11 chuyến trên 1200 lọt lưới nếu chỉ canh điểm đến');
+  assert.equal(lotLuoi.length, 10, 'đúng 10 chuyến trên 1200 lọt lưới nếu chỉ canh điểm đến');
   assert.ok(cheoNhat > 1, `chênh lớn nhất giữa điểm-đến và cả-đường mới ${cheoNhat.toFixed(2)} — quá nhỏ để gọi là cứu được ai`);
 });
 

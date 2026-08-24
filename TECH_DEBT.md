@@ -4501,6 +4501,61 @@ cấp `Math.min(3,…)` → `Math.min(9,…)` · cắt bớt danh sách cấp th
 > `gear` · cư dân chiếm 0,29% khung hình). Theo đúng luật đã áp cho ADR — *số của `main` giữ
 > nguyên nghĩa* — chúng đổi thành **#86** (trục chặng ngày) và **#87** (khu phố làm 4 kỷ thấp đi).
 
+## #88 — Trần "một khu phố không rộng quá MỘT Ô" khoá luôn số suất đất ở 4, làm cột `units`/`cols`/`rows` của bảng khu phố thành một TRỤC CHẾT
+
+> Mở 2026-08-24 (Phase 21 §4). Đây là **cái giá đã đo được** của việc chữa đúng thứ Đàm chỉ ra
+> (*«việc mở rộng thành phố không phải là nhà xếp chồng lên nhau, nó rất phản thực tế và lịch
+> sử»*), không phải một lỗi cài đặt. Ghi ra vì nó là một trục CHẾT, mà một trục chết bị bỏ im
+> lặng chính là thứ `MIN_STONE` (Phase 9D) đã dạy.
+
+- **Tên**: 15 dòng bảng khai 4…10 suất đất, dựng ra đúng MỘT con số — 4
+- **Module**: `src/engine/city3d/block.js` (`BLOCK_MAX_CELLS`) · `blockStyle.js`
+  (`MIN_UNIT_CELLS`, cột `units`/`cols`/`rows`) — khoá bằng `block.test.js`
+  (`TRỤC CHẾT ĐƯỢC ĐẾM RA`)
+- **Priority**: Medium · **Severity**: Low (mỹ thuật; không đụng dữ liệu, không đụng hiệu năng)
+- **Impact**: một trong bảy trục của bảng khu phố ngừng nói. Trước §4 thì khối/ô trải **4,00–6,13**;
+  nay **4,00 ở cả 15 kỷ**, tổng khối 2370 → **1904** (−19,7%). Sáu trục còn lại (`layout`, `attach`,
+  `alley`, `storey`, `vary`, `gableToStreet`) vẫn sống, và HÌNH của bốn suất đất vẫn khác nhau giữa
+  kỷ hữu cơ và kỷ lưới — nên mắt vẫn phân biệt được 15 kỷ; thứ mất là **mật độ** khác nhau giữa các
+  kỷ ở cấp MỘT Ô. (Mật độ ở cấp THÀNH PHỐ thì không mất: số ô nhà dân vẫn trải 28…71 tuỳ kỷ.)
+- **Root Cause**: SỐ HỌC, không phải một tham số chỉnh sai. Một ô rộng 1,0 chia cho sàn
+  `MIN_UNIT_CELLS = 0,3276` ra 3,05 ⇒ tối đa **2 suất mỗi trục ⇒ 4**. Mà trần 1,0 ô là mức
+  **nhỏ nhất có thể** để hai khu phố ở hai ô kề nhau chạm nhau mà không xuyên qua nhau — đo được
+  96,1% ô nhà dân CÓ láng giềng kề cạnh (616 ô ứng viên, cả 15 kỷ), nên không thể nới trần theo
+  từng ô mà vẫn giữ lời hứa. Hai vế "không xuyên qua nhau" và "mỗi ô 4–10 căn có chi tiết mái"
+  **loại trừ nhau** trong một ô 1,0.
+- **Current Risk**: thấp. Không ai mất dữ liệu; ảnh vẫn đọc ra 15 kỷ khác nhau.
+- **Future Risk**: trung bình — rủi ro thật là **có người đọc bảng rồi tưởng cột `units` đang có
+  tác dụng**, sửa nó, đo không thấy gì đổi, rồi kết luận sai về một chỗ khác. Bài test kể tên
+  (`raBaoNhieu` phải BẰNG `[4]`) là thứ chặn điều đó: nó đỏ cả khi trục sống lại lẫn khi có ô chật
+  tới mức không chia nổi.
+- **Recommended Solution — BA HƯỚNG, ĐÃ ĐO, KHÔNG TỰ CHỌN**:
+  (a) **HAI SÀN**: sàn "mắt còn đọc ra là căn nhà" (`3 × EYE_PIXELS / CELL_PIXELS` = 0,1875) cho
+  mọi suất, cộng luật "mỗi khu phố phải giữ ÍT NHẤT một suất trên sàn mái" — một khuôn viên gồm
+  nhà chính + nhà phụ, đúng đời thật. Đo được: sàn 0,1875 thì **cả 15 kỷ đạt đúng số đã khai**
+  (trung bình 7,27 khối/ô). ⚠️ Chỉ chạy được cho kỷ hữu cơ (1–9); kỷ lưới (10–15) chia đều
+  `cols × rows` nên hoặc tất cả đạt sàn mái hoặc không cái nào — cần một lưới KHÔNG ĐỀU (lô mặt
+  phố sâu hơn lô phía trong, đúng dãy phố thật) thì mới áp được.
+  (b) **THỬA TO HƠN MỘT Ô**: cho một khu phố trải trên nhiều ô của cùng một thửa `cityPlan`
+  (`planParcelAt` đã có sẵn, hiện chưa ai dùng ngoài test). Đây là hướng đúng nhất về kiến trúc —
+  ngoài đời một dãy phố là một THỬA chứ không phải một ô — nhưng nó đụng `dwellings.js` (một nhà
+  dân = một ô) nên là một thay đổi có tầm ADR.
+  (c) **CHẤP NHẬN**: bỏ cột `units`/`cols`/`rows` khỏi bảng, thay bằng một hằng số 4, và lấy mật
+  độ từ số Ô của kỷ. Rẻ nhất, và trung thực nhất với thứ đang chạy.
+  ❌ **KHÔNG nới `BLOCK_MAX_CELLS`** để lấy lại con số — nới là dựng lại đúng cái chồng lấn Đàm
+  vừa bác (đo được: trần 2 ô ⇒ khối/ô 4,00–5,94, và nhà lại xuyên qua nhau).
+- **Estimated Complexity**: (a) trung bình cho kỷ 1–9, cao cho kỷ 10–15 · (b) cao (tầm ADR) ·
+  (c) thấp
+- **Blocking Conditions**: (a) và (b) đều đổi HÌNH của mọi nhà dân ⇒ phải đi kèm một lượt quét 15
+  kỷ + ảnh nhìn từ trên xuống để Đàm nghiệm thu bằng mắt; không phải việc làm kèm trong một phase
+  khác. (b) còn liên đới ADR-007 (một nhà dân đổi từ "một ô" sang "một phần thửa" là đổi bộ sinh).
+- **Review Trigger**: mỗi lần chạm `BLOCK_MAX_CELLS`, `MIN_UNIT_CELLS`, hoặc cột
+  `units`/`cols`/`rows` của `blockStyle.js`.
+- **Owner**: chưa giao · **Status**: MỞ
+
+---
+
+
 ## #87 — Chia ô thành khu phố làm 4 kỷ THẤP ĐI và kỷ 6 mất một phần ba chi tiết mái; cả hai đều bị chặn bởi bảng lịch sử của Phase 14
 
 > Mở 2026-08-24 (Phase 20). Hai khuyết tật khác nhau nhưng **cùng một nguyên nhân gốc và cùng một

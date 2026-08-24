@@ -12,6 +12,7 @@ import assert from 'node:assert/strict';
 
 import {
   BLOCK_ATTACH, BLOCK_LAYOUT, BLOCK_STYLES, MIN_UNITS, MAX_UNITS, MIN_UNIT_CELLS,
+  EAVE_LAND_FACTOR,
   blockUnitCount, deriveBlockUnits, getBlockStyle, isValidBlockStyle, laLuoiDeu,
 } from './blockStyle.js';
 import { ERA_STYLES } from './eraStyle.js';
@@ -135,10 +136,20 @@ test('BẢNG KHÔNG DẸT — mọi TRỤC đều còn sống, và mọi kiểu 
 test('`MIN_UNIT_CELLS` là MAX của HAI ngưỡng đã hiệu chuẩn, không phải một số chọn tay', () => {
   // Vế (a) mắt còn đọc ra là căn nhà · vế (b) mái còn đội được chi tiết Phase 11. Bài này khoá cả
   // hai vế CÙNG một công thức mà mã sản phẩm dùng — chép lại giá trị là "một luật hai công thức".
+  //
+  // ⚠️ VẾ (b) CÓ THÊM `EAVE_LAND_FACTOR` TỪ PHASE 21, và bài test phải nhập nó chứ không chép số:
+  // `ROOFTOP_MIN_SPAN` là ngưỡng của MẶT MÁI còn `MIN_UNIT_CELLS` là sàn của SUẤT ĐẤT, hai đại
+  // lượng khác nhau. Nhưng nhập một hằng số vào test thì test TRÔI THEO hằng số ấy (bài học
+  // `MAX_COURSES` Phase 8A), nên phải kèm một TRẦN CHO CHÍNH CÁI TRẦN: hệ số phải nằm trong dải
+  // đã quét, và nếu ai nâng nó lên quá 1,3 thì đó là một quyết định mới cần đo lại, không phải
+  // một phép chỉnh.
   const mat = (3 * EYE_PIXELS) / CELL_PIXELS;
-  const mai = ROOFTOP_MIN_SPAN * BUILDING_SCALE;
+  const mai = ROOFTOP_MIN_SPAN * BUILDING_SCALE * EAVE_LAND_FACTOR;
   assert.equal(MIN_UNIT_CELLS, Math.max(mat, mai));
   assert.ok(mai > mat, 'vế mái không còn là vế chặt hơn — xem lại vì sao vẫn lấy MAX');
+  assert.ok(EAVE_LAND_FACTOR >= 1 && EAVE_LAND_FACTOR <= 1.3,
+    `hệ số ${EAVE_LAND_FACTOR} nằm ngoài dải đã quét (1,00…1,20) — phải quét lại bảng ba cột ở `
+    + '`blockStyle.js` trước khi chốt, đừng chỉnh tay');
 });
 
 test('`getBlockStyle` KẸP về dải 1..15, kỷ lạ rơi về kỷ 1', () => {
@@ -327,5 +338,5 @@ test('KỶ 1–9: các suất đất RỜI NHAU theo cấu tạo — không căn
       }
     }
   }
-  assert.ok(cap >= 900, `chỉ kiểm được ${cap} cặp — vòng lặp đang chạy gần rỗng`);
+  assert.ok(cap >= 800, `chỉ kiểm được ${cap} cặp — vòng lặp đang chạy gần rỗng (đo được 882)`);
 });

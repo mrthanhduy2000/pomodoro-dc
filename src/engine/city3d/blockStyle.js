@@ -96,6 +96,11 @@ export const BLOCK_ATTACH = ['party', 'loose', 'court'];
 export const BLOCK_LAYOUT = ['organic', 'grid'];
 
 /**
+ * Phần đất mà MÁI ĐUA ăn thêm ngoài mặt mái — xem khối chú thích của `MIN_UNIT_CELLS` ngay dưới.
+ */
+export const EAVE_LAND_FACTOR = 1.05;
+
+/**
  * BỀ NGANG NHỎ NHẤT một đơn vị được phép có, đo bằng Ô LƯỚI.
  *
  * ⚠️ SUY RA TỪ BA CON SỐ ĐÃ HIỆU CHUẨN, KHÔNG PHẢI MỘT NGƯỠNG MỚI CHỌN TAY. Cắm một con số mới ở
@@ -116,10 +121,45 @@ export const BLOCK_LAYOUT = ['organic', 'grid'];
  * Thứ bắt được là `rooftop.test.js` (*"kỷ 1: chỉ 0 nhà dân có mái — quần thể sai hình dạng"*).
  *
  * ⇒ Lấy MAX của hai vế: một đơn vị phải vừa đọc ra được là căn nhà, vừa đội được cái mái của nó.
+ *
+ * ⚠️ **VẾ (b) ĐO SAI ĐẠI LƯỢNG SUỐT TỪ ĐẦU, VÀ NÓ ĐÚNG ĐƯỢC LÀ NHỜ MỘT LỖI KHÁC** (Phase 21).
+ * `ROOFTOP_MIN_SPAN` là ngưỡng của **MẶT MÁI**, còn `MIN_UNIT_CELLS` là sàn của **SUẤT ĐẤT** — hai
+ * thứ khác nhau đúng bằng phần mái đua ăn ra ngoài. Đặt chúng bằng nhau tức là ngầm coi mái đua
+ * rộng bằng không. Nó vẫn xanh nhiều tháng vì phép co hai lượt (xem `block.js`) dựng ra căn nhà
+ * **rộng hơn suất đất khoảng 15%** một cách có hệ thống, và đúng 15% ấy che lấp chỗ thiếu. Phase 21
+ * vá phép co cho trúng đích ⇒ khuyết tật lộ ra ngay: với bảng lúc ấy (ngõ kỷ 6 còn 0,26) thì kỷ 6
+ * và kỷ 10 cùng tụt xuống dưới sàn 0,7 của `block.test.js`; hạ ngõ kỷ 6 rồi thì chỉ còn kỷ 10.
+ * **Một lời hứa đang xanh nhờ chính khuyết tật mà ta sắp sửa** — bài học Phase 9B, lặp lại ở một
+ * file khác.
+ *
+ * ⚠️ HỆ SỐ 1,05 LÀ MỘT SỐ **ĐO ĐƯỢC, KHÔNG PHẢI MỘT SỐ SUY RA** — và phải đọc đúng như thế.
+ * Tôi đặt tên nó theo cơ chế mình tin (mái đua ăn thêm đất) rồi quét cả dải để kiểm; bảng số dưới
+ * đây **bác bỏ chính cái mô hình ấy**: nếu hệ số chỉ là phần đất mái đua ăn thêm thì nới nó ra
+ * phải làm chi tiết mái TỐT LÊN, mà đo ra là đơn điệu NGƯỢC LẠI. Nên nó được giữ là một BIÊN đo
+ * được, và cái tên chỉ nói nó ra đời để làm gì, không nói nó là một phép tính.
+ * Quét trên quần thể THẬT (476 ô, `sessionCount: 80`), chấm bằng ba cột cùng lúc:
+ *
+ *     hệ số   sàn      khối/ô        còn chi tiết mái   kỷ tệ nhất   kỷ dưới sàn 0,7
+ *      1,00   0,3120   4,00–5,20          91,6%            0,550           [10]
+ *   →  1,05   0,3276   4,00–4,00          98,5%            0,893            []
+ *      1,10   0,3432   4,00–4,00          98,3%            0,857            []
+ *      1,15   0,3588   4,00–4,00          97,9%            0,786            []
+ *      1,20   0,3744   4,00–4,00          97,5%            0,750            []
+ *
+ * 1,05 là **mức NHỎ NHẤT làm danh sách "dưới sàn" rỗng hẳn**, và nó ĐÈ BẸP 1,20 ở cả hai cột mái
+ * (98,5% so với 97,5%; kỷ tệ nhất 0,893 so với 0,750). Chọn 1,20 vì "chắc tay hơn" là chọn một
+ * con số vừa xa hơn vừa tệ hơn — đúng loại quyết định mà một bảng đo chặn lại được còn trực giác
+ * thì không.
+ *
+ * ⚠️ VÀ ĐỌC CỘT "khối/ô" TRƯỚC KHI ĐỘNG VÀO HỆ SỐ NÀY: từ 1,05 trở lên thì **cả 15 kỷ ra đúng
+ * 4,00 khối mỗi ô**, tức cột `units`/`cols`/`rows` của bảng thành một trục CHẾT. Thủ phạm KHÔNG
+ * phải hệ số này mà là `BLOCK_MAX_CELLS` (xem `block.js`): một ô rộng 1,0 chia cho sàn 0,33 ra
+ * 3,0 ⇒ tối đa 2 suất mỗi trục ⇒ 4. Đây là một ràng buộc SỐ HỌC, không phải một tham số chỉnh
+ * được; ghi ở `TECH_DEBT #88`.
  */
 export const MIN_UNIT_CELLS = Math.max(
   (3 * EYE_PIXELS) / CELL_PIXELS,
-  ROOFTOP_MIN_SPAN * BUILDING_SCALE,
+  ROOFTOP_MIN_SPAN * BUILDING_SCALE * EAVE_LAND_FACTOR,
 );
 
 /** Số đơn vị nhỏ nhất / lớn nhất một khu phố được phép có. Ngoài dải này thì bảng bị TỪ CHỐI. */
@@ -182,10 +222,17 @@ export const BLOCK_STYLES = {
   },
   6: {
     country: 'Việt Nam',
-    layout: 'organic', units: 4, attach: 'loose', alley: 0.26, storey: 1.4, vary: 0.2,
+    layout: 'organic', units: 4, attach: 'loose', alley: 0.18, storey: 1.4, vary: 0.2,
     gableToStreet: false,
     // ⚠️ KỶ DUY NHẤT KHÔNG CHUNG TƯỜNG, và đó là điểm phân biệt chứ không phải thiếu sót: làng Bắc
     // Bộ là nhà ba gian đứng giữa sân vườn, ngăn nhau bằng hàng rào cây chứ không bằng tường gạch.
+    // ⚠️ NGÕ HẠ 0,26 → 0,18 Ở PHASE 21, VÌ MỘT SỐ ĐO CHỨ KHÔNG VÌ THẨM MỸ. Ngõ ăn vào bề ngang
+    // của chính căn nhà (`unitW = lot × (1 − alley)`), nên kỷ nào có ngõ rộng nhất bảng thì nhà
+    // của nó mỏng nhất bảng — và sau khi khu phố bị đóng trần MỘT Ô (`BLOCK_MAX_CELLS`) thì kỷ 6
+    // là kỷ duy nhất tụt xuống dưới mốc mái còn đội được chi tiết. Đo trên quần thể thật, cùng
+    // một lượt, chỉ đổi mỗi con số này: **0,26 → giữ 42,9% chi tiết mái (DƯỚI sàn 0,7 của
+    // `block.test.js`) · 0,18 → 89,3%**. 0,18 vẫn là ngõ RỘNG NHẤT bảng, gấp 1,8 lần kỷ đứng thứ
+    // hai (kỷ 4 = 0,10), nên lời khai "quây lỏng, ngăn bằng hàng rào cây" vẫn đọc ra được bằng mắt.
     note: 'làng Bắc Bộ — nhà ba gian có sân vườn, ngăn bằng hàng rào cây, quây lỏng quanh ao',
   },
   7: {
@@ -437,7 +484,7 @@ function xepHuuCo(style, seed, blockW, blockD) {
       const r = manh[i];
       const w = r.x1 - r.x0;
       const d = r.z1 - r.z0;
-      if (Math.max(w, d) < sanManh * 2) continue;
+      if (Math.max(w, d) < sanManh * 2) continue;   // còn ít nhất MỘT trục đủ dài
       const a = w * d;
       if (a > dienTich) { dienTich = a; chon = i; }
     }
@@ -448,8 +495,16 @@ function xepHuuCo(style, seed, blockW, blockD) {
     // Cắt theo cạnh dài hơn — cắt cạnh ngắn thì ra hai mảnh dẹt như que, và một dãy que thì lại
     // đọc ra thành hàng lối. Hai cạnh gần bằng nhau (chênh dưới 12%) thì để hạt giống chọn trục,
     // nếu không thì mọi mảnh vuông của mọi kỷ đều cắt cùng một chiều.
+    // ⚠️ VÀ TRỤC ĐÃ CHỌN PHẢI TỰ NÓ ĐỦ DÀI. Bản đầu gác bằng `Math.max(w, d) >= sanManh * 2` rồi
+    // để hạt giống chọn trục — nên khi hai cạnh gần bằng nhau mà chỉ cạnh DÀI đủ chỗ, hạt giống
+    // vẫn có thể chọn cạnh NGẮN và đẻ ra hai mảnh dưới sàn. Đo được ở kỷ 4 (2,4×1,6): hai suất
+    // đất hụt 7,2 × 10⁻⁶ và 4,7 × 10⁻⁴ ô — nhỏ, nhưng nó là một lỗ hổng thật chứ không phải nhiễu
+    // số thực, và `TRẦN LUÔN THẮNG SÀN` bắt được nó. Chọn trục TRƯỚC, rồi nếu trục ấy không đủ
+    // dài thì đổi sang trục kia; cả hai không đủ thì mảnh này thôi chia.
+    const duDai = (canh) => canh >= sanManh * 2;
     const canBang = Math.abs(w - d) < 0.12 * Math.max(w, d);
-    const doc = canBang ? unit(`${seed}|truc|${lan}`) < 0.5 : w >= d;
+    let doc = canBang ? unit(`${seed}|truc|${lan}`) < 0.5 : w >= d;
+    if (!duDai(doc ? w : d)) doc = !doc;
     const dai = doc ? w : d;
     // Chỗ cắt lệch tâm. `lo`/`hi` là hai đầu mà cả hai nửa còn trên sàn; trong khoảng đó thì hạt
     // giống quyết. KHÔNG kẹp ra khỏi giữa: một nhát cắt rơi đúng giữa là chuyện bình thường, cái

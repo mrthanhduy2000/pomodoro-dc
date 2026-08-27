@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
+import { useEnterMotion } from '../lib/motionPresets';
 
 import {
   RICH_TEXT_TONE_MAP,
@@ -436,6 +437,7 @@ export function RichNoteEditor({
   inputStyle,
   roomy = false,
 }) {
+  const enterMotion = useEnterMotion();
   const editorRef = useRef(null);
   const savedRangeRef = useRef(null);
   const lastCommittedValueRef = useRef(String(value ?? ''));
@@ -964,9 +966,7 @@ export function RichNoteEditor({
       <AnimatePresence initial={false}>
         {showGuide && (
           <motion.div
-            initial={{ opacity: 0, y: -6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -6 }}
+            {...enterMotion}
             className={`grid gap-2 rounded-[18px] border px-3 py-3 text-[11px] leading-5 sm:grid-cols-2 ${
               lightTheme
                 ? 'border-[var(--line)] bg-[rgba(250,249,246,0.9)] text-[var(--muted)]'

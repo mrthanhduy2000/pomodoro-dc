@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
+import { useEnterMotion } from '../lib/motionPresets';
 
 import useGameStore from '../store/gameStore';
 import { countActiveCrafting } from '../engine/eraLegacy';
@@ -108,6 +109,7 @@ function getActionLabel(action) {
 }
 
 export default function NotificationCenter({ onNavigate }) {
+  const enterMotion = useEnterMotion();
   const isOpen = useGameStore((state) => state.ui.notificationCenterOpen);
   const notificationFeed = useGameStore((state) => state.ui.notificationFeed);
   const setNotificationCenterOpen = useGameStore((state) => state.setNotificationCenterOpen);
@@ -429,10 +431,7 @@ export default function NotificationCenter({ onNavigate }) {
       <AnimatePresence>
         {isOpen && (
           <motion.section
-            initial={{ opacity: 0, y: -12, scale: 0.98 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -10, scale: 0.98 }}
-            transition={{ duration: 0.18, ease: 'easeOut' }}
+            {...enterMotion}
             className="pointer-events-auto absolute right-0 top-[calc(100%+10px)] w-[min(320px,calc(100vw-2rem))] overflow-hidden border"
             style={{
               maxHeight: 'min(64vh, 640px)',
@@ -721,10 +720,7 @@ export default function NotificationCenter({ onNavigate }) {
             <motion.div
               key={popup.id}
               layout
-              initial={{ opacity: 0, y: -12, scale: 0.98 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -8, scale: 0.98 }}
-              transition={{ duration: 0.18, ease: 'easeOut' }}
+              {...enterMotion}
               className="pointer-events-auto overflow-hidden border"
               style={{
                 border: 'var(--skin-card-border-width,1px) solid rgba(var(--accent-rgb),0.16)',

@@ -4,6 +4,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
+import { useCustomMotion, usePressMotion, useSnapMotion } from '../lib/motionPresets';
 import useSettingsStore from '../store/settingsStore';
 import useGameStore from '../store/gameStore';
 import ExportImport from './ExportImport';
@@ -153,6 +154,18 @@ function choiceStyle(active, lightTheme) {
 }
 
 export default function Settings() {
+  const pressMotion = usePressMotion();
+  // Phóng to khi DI CHUỘT không thuộc ba nhịp — đi qua cái gác ngoại lệ để cũng im khi Giảm
+  // chuyển động. ⚠️ Trước đây màn này khai BA mức phóng khác nhau (1,01 · 1,02 · 1,03) cho
+  // cùng một cử chỉ, rải trên 13 nút — nay một mức, vì không nút nào đáng được nhấc cao hơn nút khác.
+  const hoverGrow = useCustomMotion({ whileHover: { scale: 1.02 } });
+  // NGOẠI LỆ (mang bố cục) — khối gập/mở đổi CHIỀU CAO. `enter` không diễn đạt được một khối
+  // đang cao dần ra, và bỏ hẳn thì `height: 0` ở lại ⇒ nội dung biến mất.
+  const gapMoMotion = useSnapMotion({
+    initial: { opacity: 0, height: 0 },
+    animate: { opacity: 1, height: 'auto' },
+    exit: { opacity: 0, height: 0 },
+  });
   const {
     soundEnabled,
     setSoundEnabled,
@@ -338,8 +351,8 @@ export default function Settings() {
                   return (
                     <motion.button
                       key={opt.value}
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
+                      {...hoverGrow}
+                      {...pressMotion}
                       onClick={() => setDailyGoalType(opt.value)}
                       className="rounded-2xl px-3 py-3 text-left transition-all"
                       style={choiceStyle(active, lightTheme)}
@@ -423,8 +436,8 @@ export default function Settings() {
               return (
                 <motion.button
                   key={opt.value}
-                  whileHover={{ scale: 1.03 }}
-                  whileTap={{ scale: 0.97 }}
+                  {...hoverGrow}
+                  {...pressMotion}
                   onClick={() => setAmbientSound(opt.value)}
                   className="rounded-2xl px-3 py-3 text-left transition-all"
                   style={choiceStyle(active, lightTheme)}
@@ -447,9 +460,7 @@ export default function Settings() {
 
           {ambientSound !== 'none' && (
             <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
+              {...gapMoMotion}
               className="overflow-hidden"
             >
               <div className="mt-4 flex items-center justify-between">
@@ -493,9 +504,7 @@ export default function Settings() {
             <AnimatePresence>
               {soundEnabled && (
                 <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
+                  {...gapMoMotion}
                   className="space-y-3 overflow-hidden"
                 >
                   <div>
@@ -551,8 +560,8 @@ export default function Settings() {
               return (
                 <motion.button
                   key={opt.value}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
+                  {...hoverGrow}
+                  {...pressMotion}
                   onClick={() => setSoundPack(opt.value)}
                   className="flex items-center gap-2.5 rounded-2xl px-3 py-3 text-sm font-medium transition-all"
                   style={choiceStyle(active, lightTheme)}
@@ -605,8 +614,8 @@ export default function Settings() {
                 <p>3. Mở lại app từ icon ngoài màn hình chính rồi quay lại đây để bật thông báo.</p>
                 {!isInstalled && canInstall && (
                   <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
+                    {...hoverGrow}
+                    {...pressMotion}
                     onClick={install}
                     className="mt-3 px-4 py-3 text-sm font-semibold"
                     style={lightTheme ? {
@@ -631,8 +640,8 @@ export default function Settings() {
               <>
                 {notificationPermission === 'default' && (
                   <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
+                    {...hoverGrow}
+                    {...pressMotion}
                     onClick={requestNotificationPermission}
                     className="w-full py-3 text-sm font-semibold"
                     style={lightTheme ? {
@@ -697,8 +706,8 @@ export default function Settings() {
                   return (
                     <motion.button
                       key={opt.value}
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
+                      {...hoverGrow}
+                      {...pressMotion}
                       onClick={() => setThemeMode(opt.value)}
                       className="rounded-2xl px-3 py-3 text-left transition-all"
                       style={choiceStyle(active, lightTheme)}
@@ -721,8 +730,8 @@ export default function Settings() {
                   return (
                     <motion.button
                       key={opt.value}
-                      whileHover={{ scale: 1.01 }}
-                      whileTap={{ scale: 0.99 }}
+                      {...hoverGrow}
+                      {...pressMotion}
                       onClick={() => setUiTheme(opt.value)}
                       className="flex items-start justify-between gap-3 rounded-2xl px-3 py-3 text-left transition-all"
                       style={choiceStyle(active, lightTheme)}
@@ -765,8 +774,8 @@ export default function Settings() {
                       key={opt.value}
                       type="button"
                       disabled={!opt.ready}
-                      whileHover={opt.ready ? { scale: 1.02 } : undefined}
-                      whileTap={opt.ready ? { scale: 0.98 } : undefined}
+                      {...(opt.ready ? hoverGrow : {})}
+                      {...(opt.ready ? pressMotion : {})}
                       onClick={() => opt.ready && setUiSkin(opt.value)}
                       className="rounded-2xl px-3 py-3 text-left transition-all"
                       style={{ ...choiceStyle(active, lightTheme), opacity: opt.ready ? 1 : 0.5, cursor: opt.ready ? 'pointer' : 'not-allowed' }}
@@ -802,8 +811,8 @@ export default function Settings() {
                   return (
                     <motion.button
                       key={opt.value}
-                      whileHover={{ scale: 1.01 }}
-                      whileTap={{ scale: 0.99 }}
+                      {...hoverGrow}
+                      {...pressMotion}
                       onClick={() => setCityRenderMode(opt.value)}
                       className="flex items-start justify-between gap-3 rounded-2xl px-3 py-3 text-left transition-all"
                       style={choiceStyle(active, lightTheme)}
@@ -879,8 +888,8 @@ export default function Settings() {
               {prestigeCount > 0 && ` (Lần ${prestigeCount + 1})`}
             </p>
             <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
+              {...hoverGrow}
+              {...pressMotion}
               onClick={openPrestigeModal}
               className="w-full py-3 text-sm font-semibold"
               style={lightTheme ? {
@@ -919,8 +928,8 @@ export default function Settings() {
                     Cài lên màn hình chính để mở nhanh và dùng như một cửa sổ app riêng.
                   </p>
                   <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
+                    {...hoverGrow}
+                    {...pressMotion}
                     onClick={install}
                     className="w-full py-3 text-sm font-semibold"
                     style={lightTheme ? {
@@ -970,8 +979,8 @@ export default function Settings() {
             Chỉ dùng khi bạn thực sự muốn bắt đầu lại từ đầu.
           </p>
           <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
+            {...hoverGrow}
+            {...pressMotion}
             onClick={handleReset}
             className={`w-full py-3 text-sm font-semibold transition-all ${resetConfirm ? 'animate-pulse' : ''}`}
             style={resetConfirm ? (
@@ -1070,6 +1079,12 @@ function Divider({ lightTheme = false }) {
 }
 
 function ToggleRow({ label, description, value, onChange, compact = false, disabled = false, lightTheme = false }) {
+  // NGOẠI LỆ (mang bố cục) — vị trí núm gạt CHÍNH LÀ bật/tắt: bỏ `animate` đi thì núm kẹt bên
+  // trái trong khi nền đã đổi màu sang "đang bật", tức hai câu trả lời trái ngược nhau.
+  const knobMotion = useSnapMotion({
+    animate: { x: value ? 26 : 2 },
+    transition: { type: 'spring', stiffness: 500, damping: 30 },
+  });
   return (
     <div className={`flex items-center justify-between gap-3 ${compact ? '' : ''} ${disabled ? 'pointer-events-none opacity-40' : ''}`}>
       <div className="min-w-0 flex-1">
@@ -1096,8 +1111,7 @@ function ToggleRow({ label, description, value, onChange, compact = false, disab
         }}
       >
         <motion.span
-          animate={{ x: value ? 26 : 2 }}
-          transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+          {...knobMotion}
           className="absolute left-0 top-1 h-4 w-4 rounded-full shadow"
           style={{ background: value ? '#fffdf9' : (lightTheme ? '#faf9f6' : 'var(--muted)') }}
         />

@@ -8,6 +8,7 @@
 
 import React, { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useSnapMotion } from '../lib/motionPresets';
 import useGameStore from '../store/gameStore';
 import { ACHIEVEMENTS } from '../engine/constants';
 import { initialsFromLabel } from '../utils/labelMark';
@@ -24,6 +25,16 @@ function getAchievementMark(ach) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export default function AchievementToast() {
+  // NGOẠI LỆ (mang bố cục) — thẻ đặt `left-1/2` rồi kéo ngược lại bằng `x: '-50%'` để CĂN GIỮA.
+  // Đó là bố cục, không phải chuyển động: dùng cái gác bỏ-hẳn thì thẻ lệch sang phải đúng nửa
+  // bề ngang của chính nó. `useSnapMotion` giữ đích và chỉ bỏ quãng đường.
+  // ⚠️ Đã suýt viết nhầm `useCustomMotion` ở đây — chú thích nói "nhảy tới đích" mà mã lại bỏ hẳn.
+  const toastMotion = useSnapMotion({
+    initial: { opacity: 0, y: -56, x: '-50%' },
+    animate: { opacity: 1, y: 0, x: '-50%' },
+    exit: { opacity: 0, y: -56, x: '-50%' },
+    transition: { type: 'spring', damping: 22, stiffness: 280 },
+  });
   const achievementQueue              = useGameStore((s) => s.ui.achievementQueue);
   const dismissAchievementNotification = useGameStore((s) => s.dismissAchievementNotification);
 
@@ -41,10 +52,7 @@ export default function AchievementToast() {
       {ach && (
         <motion.div
           key={ach.id}
-          initial={{ opacity: 0, y: -56, x: '-50%' }}
-          animate={{ opacity: 1, y: 0,   x: '-50%' }}
-          exit={{    opacity: 0, y: -56, x: '-50%' }}
-          transition={{ type: 'spring', damping: 22, stiffness: 280 }}
+          {...toastMotion}
           className="fixed left-1/2 top-16 z-50 flex min-w-[260px] max-w-[360px] cursor-pointer items-center gap-4 px-5 py-4 select-none"
           style={{
             background: 'var(--card-bg-solid)',

@@ -11,7 +11,8 @@
  * là chuyện của DỮ LIỆU, không phải chuyện của cách vẽ.
  */
 
-import { motion, useReducedMotion } from 'framer-motion';
+import { motion } from 'framer-motion';
+import { useEnterMotion, useSnapMotion } from '../../lib/motionPresets';
 
 import { summarizeMuseum } from '../../engine/cityCompletion';
 import { deriveResidentCount } from '../../engine/city3d/residents';
@@ -89,7 +90,9 @@ function EmptyState({ icon, title, children }) {
 export default function CityViewShell({
   eras, viewing, layout, stats, onSelectEra, selectedId = null, children,
 }) {
-  const reduceMotion = useReducedMotion();
+  const enterMotion = useEnterMotion();
+  // NGOẠI LỆ (mang bố cục) — bề dài thanh CHÍNH LÀ tiến độ xây của giàn giáo ấy.
+  const barMotion = useSnapMotion({ transition: { duration: 0.5, ease: 'easeOut' } });
 
   const scaffolds = layout.scaffolds ?? [];
   const era = viewing?.era;
@@ -184,9 +187,7 @@ export default function CityViewShell({
         ) : (
           <motion.div
             key={era}
-            initial={reduceMotion ? false : { opacity: 0, scale: 0.98 }}
-            animate={reduceMotion ? undefined : { opacity: 1, scale: 1 }}
-            transition={{ duration: 0.28, ease: 'easeOut' }}
+            {...enterMotion}
           >
             {children}
           </motion.div>
@@ -303,9 +304,9 @@ export default function CityViewShell({
                     <motion.div
                       className="h-full rounded-full"
                       style={{ background: eraSolid(era), opacity: next ? 1 : 0.55 }}
-                      initial={reduceMotion ? false : { width: 0 }}
+                      initial={{ width: 0 }}
                       animate={{ width: `${Math.max(3, item.progress * 100)}%` }}
-                      transition={{ duration: 0.5, ease: 'easeOut' }}
+                      {...barMotion}
                     />
                   </div>
                   {item.reward && (

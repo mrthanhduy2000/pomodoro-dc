@@ -129,6 +129,26 @@ export function useRewardMotion() {
  */
 
 /**
+ * DỜI GIỜ MỘT NHỊP — cho danh sách hiện ra SO LE.
+ *
+ * ⚠️ ĐÂY KHÔNG PHẢI NHỊP THỨ TƯ, VÀ CŨNG KHÔNG PHẢI MỘT NGOẠI LỆ. Một danh sách hiện so le vẫn
+ * dùng ĐÚNG nhịp `enter` — chỉ khác thời điểm bắt đầu. Không có hàm này thì mỗi danh sách lại phải
+ * tự khai một `initial`/`animate`/`transition` riêng chỉ để cài được một con số `delay`, tức đẻ ra
+ * đúng thứ file này sinh ra để xoá (đã đếm được 5 danh sách như vậy).
+ *
+ * Là HÀM THUẦN chứ không phải hook, nên gọi được BÊN TRONG `.map()` — chỗ mà hook bị cấm.
+ *
+ * ⚠️ Nó tự giữ được lời hứa "Giảm chuyển động": lúc ấy preset là object RỖNG nên không có
+ * `transition` để dời, và hàm trả lại đúng object rỗng ấy. Không cần chỗ gọi kiểm tra gì thêm.
+ *
+ *     {danhSach.map((mon, i) => <Motion.li key={mon.id} {...withDelay(enterMotion, i * 0.03)}>…)}
+ */
+export function withDelay(preset, seconds) {
+  if (!preset.transition) return preset;
+  return { ...preset, transition: { ...preset.transition, delay: seconds } };
+}
+
+/**
  * LỚP PHỦ TỐI CỦA MODAL — ngoại lệ DUY NHẤT được đặt tên sẵn, vì nó lặp lại ở BẢY chỗ.
  *
  * ⚠️ ĐÂY KHÔNG PHẢI NHỊP THỨ TƯ: nó không có quãng đường, không có lò xo, chỉ có "có mặt hay

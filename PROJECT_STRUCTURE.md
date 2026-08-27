@@ -858,7 +858,16 @@ mươi file — đo được **năm** thời lượng khác nhau (0,18 · 0,22 �
     đặc bên dưới nó; `actionButtonPress.test.js` khoá cứng quan hệ ấy và cấm `scale` ở
     `whileHover`. Một nhịp `press` dùng `scale` sẽ phá cả hai. Nó vẫn được gác Giảm chuyển động
     bằng một phép trải ghi đè đặt SAU hai dòng đó.
-- Có lưới tự động: `src/lib/motionPresets.test.js` (6 bài, cả 9 phép thử ngược đều đã thấy đỏ).
+- Danh sách hiện SO LE vẫn là nhịp `enter`, chỉ lệch giờ — dùng `withDelay(enterMotion, i * 0.03)`
+  (hàm THUẦN nên gọi được trong `.map()`, và nó tự giữ lời hứa Giảm chuyển động). Đừng khai một
+  `initial`/`animate` riêng chỉ để cài được một con số `delay`.
+- **HAI lưới tự động, canh hai thứ khác nhau — cần cả hai:**
+  - `src/lib/motionPresets.test.js` (7 bài) — ba nhịp có ĐÚNG không.
+  - `src/lib/motionCoverage.test.js` (2 bài) — cả app có DÙNG chúng không. Nó đếm khai báo rời
+    rạc ở từng file rồi so với một BẢNG NGOẠI LỆ tường minh; file ngoài bảng phải bằng 0, và
+    file trong bảng mà dọn bớt rồi thì phải HẠ số xuống (nếu không, phần dư thành chỗ trống
+    miễn phí cho lần trôi sau). Thêm một dòng vào bảng ấy là một QUYẾT ĐỊNH, không phải một
+    thao tác dọn dẹp.
 - Đo tiêu chí nghiệm thu: `npm run build && node scripts/motion-still.mjs` — bấm chuyển tab rồi
   đếm điểm ảnh lệch giữa hai khung hình cách nhau 90ms, chạy CẢ HAI chế độ (một con số 0 chỉ có
   nghĩa khi chế độ thường ra một con số khác 0).

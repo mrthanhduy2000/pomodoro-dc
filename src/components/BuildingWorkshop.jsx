@@ -10,6 +10,7 @@
 
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useCustomMotion, useEnterMotion, usePressMotion, useSnapMotion } from '../lib/motionPresets';
 import useGameStore from '../store/gameStore';
 import {
   blueprintEraOf, countActiveCrafting, countLegacyCrafting, listRestorableBlueprints,
@@ -94,6 +95,8 @@ function ResourceCost({ era, cost, bookResources, lightTheme = false }) {
 
 // ─── Hàng đợi xây dựng ────────────────────────────────────────────────────────
 function QueueSection({ queue, activeBook, cancelCrafting, lightTheme }) {
+  // NGOẠI LỆ (mang bố cục) — bề dài thanh CHÍNH LÀ tiến độ xây của công trình ấy.
+  const barMotion = useSnapMotion({});
   if (queue.length === 0) return null;
   // ⚠️ SỐ Ô PHẢI ĐẾM BẰNG `countActiveCrafting`, KHÔNG dùng `queue.length` — từ Phase 4D hàng đợi
   // có thể chứa "di sản" của kỷ đã đóng, mà di sản KHÔNG chiếm ô. Dùng `.length` thì màn hình sẽ
@@ -170,6 +173,7 @@ function QueueSection({ queue, activeBook, cancelCrafting, lightTheme }) {
                       style={lightTheme ? { background: 'var(--accent)' } : undefined}
                       initial={{ width: 0 }}
                       animate={{ width: `${pct}%` }}
+                      {...barMotion}
                     />
                   </div>
                   <span className="mono text-xs tabular-nums flex-shrink-0" style={lightTheme ? { color: 'var(--muted)', fontFamily: MONO_FONT } : { color: '#94a3b8', fontFamily: MONO_FONT }}>
@@ -201,6 +205,10 @@ function QueueSection({ queue, activeBook, cancelCrafting, lightTheme }) {
 
 // ─── Card bản vẽ sẵn sàng xây ─────────────────────────────────────────────────
 function ReadyCard({ bpId, bookResources, resourcesRefined, craftingQueue, onStart, lightTheme, restoration = false }) {
+  const enterMotion = useEnterMotion();
+  const pressMotion = usePressMotion();
+  // Phóng to khi DI CHUỘT không thuộc ba nhịp — đi qua cái gác ngoại lệ.
+  const hoverGrow = useCustomMotion({ whileHover: { scale: 1.05 } });
   const bpDef = getBpDef(bpId);
   const spec  = BUILDING_SPECS[bpId] ?? {};
   const meta  = BLUEPRINT_META[bpId] ?? {};
@@ -217,7 +225,7 @@ function ReadyCard({ bpId, bookResources, resourcesRefined, craftingQueue, onSta
   const eraRefMeta = ERA_REFINED[meta.era] ?? {};
 
   return (
-    <motion.div layout initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
+    <motion.div layout {...enterMotion}
       className="rounded-[24px] p-4 border"
       style={lightTheme ? paperPanel(lightTheme) : undefined}
     >
@@ -273,8 +281,8 @@ function ReadyCard({ bpId, bookResources, resourcesRefined, craftingQueue, onSta
           )}
         </div>
         <motion.button
-          whileHover={canAfford ? { scale: 1.05 } : {}}
-          whileTap={canAfford ? { scale: 0.95 } : {}}
+          {...(canAfford ? hoverGrow : {})}
+          {...(canAfford ? pressMotion : {})}
           onClick={() => canAfford && onStart(bpId)}
           disabled={!canAfford}
           title={reason ?? ''}
@@ -375,6 +383,7 @@ function BuiltCard({ bpId, level, resourcesRefined, onUpgrade, lightTheme }) {
 
 // ─── Main Component ────────────────────────────────────────────────────────────
 export default function BuildingWorkshop() {
+  const enterMotion = useEnterMotion();
   const blueprints       = useGameStore((s) => s.blueprints);
   const buildings        = useGameStore((s) => s.buildings);
   const resources        = useGameStore((s) => s.resources);
@@ -566,7 +575,7 @@ export default function BuildingWorkshop() {
       {/* Toast */}
       <AnimatePresence>
         {toast && (
-          <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+          <motion.div {...enterMotion}
             className="p-3 rounded-[18px] text-sm font-medium text-center"
             style={lightTheme
               ? toast.ok

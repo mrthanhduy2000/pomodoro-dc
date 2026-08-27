@@ -12,6 +12,7 @@
  */
 
 import { motion } from 'framer-motion';
+import { useEnterMotion } from '../../lib/motionPresets';
 
 import { cardStyle, eraSolid } from './cityTokens';
 
@@ -23,7 +24,8 @@ const TYPE_LABEL = {
   wonder: 'kỳ quan',
 };
 
-export default function BuildingCard({ item, era, reduceMotion = false, onClose }) {
+export default function BuildingCard({ item, era, onClose }) {
+  const enterMotion = useEnterMotion();
   if (!item) return null;
 
   const scaffold = item.kind === 'scaffold';
@@ -34,9 +36,7 @@ export default function BuildingCard({ item, era, reduceMotion = false, onClose 
       // Khoá theo bpId ⇒ chạm sang công trình khác thì thẻ ĐỔI HẲN chứ không trượt nội dung, và
       // mắt nhận ra ngay là mình vừa chọn thứ khác.
       key={item.bpId}
-      initial={reduceMotion ? false : { opacity: 0, y: 8 }}
-      animate={reduceMotion ? undefined : { opacity: 1, y: 0 }}
-      transition={{ duration: 0.18, ease: 'easeOut' }}
+      {...enterMotion}
       className="pointer-events-auto w-full max-w-[320px] p-3"
       style={{ ...cardStyle, backdropFilter: 'blur(10px)' }}
       role="dialog"

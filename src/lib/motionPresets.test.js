@@ -13,6 +13,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { spring } from 'motion-dom';
+import { withDelay } from './motionPresets.js';
 
 const SOURCE = await readFile(new URL('./motionPresets.js', import.meta.url), 'utf8');
 
@@ -45,6 +46,23 @@ test('ĐÚNG BA PRESET, KHÔNG HƠN — nhịp thứ tư là bước đầu quay
   const guards = [...CODE.matchAll(/export function (use\w+)\((\w+)\)\s*\{/g)].map((m) => m[1]);
   assert.deepEqual(guards.sort(), ['useCustomMotion', 'useSnapMotion'],
     `Đọc ra ${guards.length} cái gác: ${guards.join(', ')} — regex có thể đã hỏng.`);
+});
+
+test('`withDelay` DỜI GIỜ MÀ KHÔNG PHÁ LỜI HỨA GIẢM CHUYỂN ĐỘNG', () => {
+  // Đây là hàm THUẦN nên đo thẳng được, không phải đọc mã.
+  const nhip = { initial: { opacity: 0 }, animate: { opacity: 1 }, transition: { duration: 0.18, ease: 'x' } };
+
+  const doi = withDelay(nhip, 0.09);
+  assert.equal(doi.transition.delay, 0.09, 'Phải cài được `delay`.');
+  assert.equal(doi.transition.duration, 0.18, 'Phải GIỮ nguyên thời lượng của nhịp gốc.');
+  assert.equal(doi.transition.ease, 'x', 'Phải GIỮ nguyên đường cong của nhịp gốc.');
+  assert.deepEqual(nhip.transition, { duration: 0.18, ease: 'x' }, '`withDelay` không được sửa nhịp gốc tại chỗ.');
+
+  // ⚠️ VẾ QUAN TRỌNG NHẤT: lúc bật Giảm chuyển động thì preset là object RỖNG. Nếu `withDelay`
+  // vẫn gắn một `transition` vào đó, phần tử sẽ có `transition` mà không có `animate` — vô hại hôm
+  // nay, nhưng nó là một mảnh nhịp sống sót qua cái gác, và mảnh ấy sẽ lớn dần.
+  assert.deepEqual(withDelay({}, 0.5), {},
+    '`withDelay` phải trả lại ĐÚNG object rỗng khi nhịp đã bị cái gác dập tắt — không được tự mọc ra `transition`.');
 });
 
 test('CẢ BA TỰ IM KHI BẬT GIẢM CHUYỂN ĐỘNG — chỗ gọi không phải tự kiểm tra', () => {

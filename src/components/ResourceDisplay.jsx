@@ -1,5 +1,6 @@
 import React from 'react';
-import { motion, useReducedMotion } from 'framer-motion';
+import { motion } from 'framer-motion';
+import { useSnapMotion } from '../lib/motionPresets';
 
 import useGameStore from '../store/gameStore';
 import useSettingsStore from '../store/settingsStore';
@@ -31,6 +32,8 @@ function getCurrentStage(eraMeta, totalEP) {
 }
 
 export default function ResourceDisplay() {
+  // NGOẠI LỆ (mang bố cục) — bề dài thanh CHÍNH LÀ phần trăm đã đi của chặng.
+  const barMotion = useSnapMotion({ transition: { duration: 0.45, ease: 'easeOut' } });
   const activeBook = useGameStore((s) => s.progress.activeBook);
   const allResources = useGameStore((s) => s.resources);
   const totalEP = useGameStore((s) => s.progress.totalEP);
@@ -38,7 +41,6 @@ export default function ResourceDisplay() {
   const tinhThe = useGameStore((s) => s.tinhThe);
   const resourcesRefined = useGameStore((s) => s.resourcesRefined);
   const uiTheme = useSettingsStore((s) => s.uiTheme);
-  const reduceMotion = useReducedMotion();
 
   const lightTheme = uiTheme === 'light';
   const bookKey = `book${activeBook}`;
@@ -116,11 +118,10 @@ export default function ResourceDisplay() {
         <div className="mt-2.5 h-[3px] overflow-hidden rounded-full bg-[var(--line)]">
           <motion.div
             className="h-full rounded-full"
-            initial={reduceMotion ? false : { width: 0 }}
-            animate={reduceMotion ? undefined : { width: `${stagePct}%` }}
-            transition={reduceMotion ? undefined : { duration: 0.45, ease: 'easeOut' }}
+            initial={{ width: 0 }}
+            animate={{ width: `${stagePct}%` }}
+            {...barMotion}
             style={{
-              width: reduceMotion ? `${stagePct}%` : undefined,
               background: 'linear-gradient(90deg, var(--accent), var(--accent2))',
             }}
           />

@@ -5,6 +5,7 @@ import React, {
   useState,
 } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
+import { useEnterMotion, withDelay } from '../lib/motionPresets';
 
 import {
   ACHIEVEMENTS,
@@ -328,6 +329,7 @@ function AchievementCard({
 }
 
 export default function Achievements() {
+  const enterMotion = useEnterMotion();
   const unlockedIds = useGameStore((state) => state.achievements?.unlocked ?? []);
   const timeline = useGameStore((state) => state.achievements?.timeline ?? {});
 
@@ -486,9 +488,7 @@ export default function Achievements() {
     <div className="space-y-5 text-[var(--ink)]">
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1.5fr)_minmax(320px,0.75fr)]">
         <MotionSection
-          initial={{ opacity: 0, y: 18 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.26, ease: 'easeOut' }}
+          {...enterMotion}
           className="overflow-hidden p-6"
           style={CARD_SURFACE}
         >
@@ -586,9 +586,7 @@ export default function Achievements() {
         </MotionSection>
 
         <MotionAside
-          initial={{ opacity: 0, y: 18 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, ease: 'easeOut', delay: 0.04 }}
+          {...withDelay(enterMotion, 0.04)}
           className="p-5"
           style={CARD_SURFACE}
         >
@@ -753,10 +751,7 @@ export default function Achievements() {
                   <MotionDiv
                     key={entry.id}
                     layout
-                    initial={{ opacity: 0, y: 12 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -8 }}
-                    transition={{ duration: 0.2, ease: 'easeOut', delay: Math.min(index, 5) * 0.02 }}
+                    {...withDelay(enterMotion, Math.min(index, 5) * 0.02)}
                   >
                     <AchievementCard
                       entry={entry}

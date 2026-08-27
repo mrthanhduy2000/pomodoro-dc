@@ -12,6 +12,7 @@
 
 import React, { useEffect, useId, useRef, useState, useMemo, useTransition, useDeferredValue } from 'react';
 import { motion as Motion, AnimatePresence, useReducedMotion } from 'framer-motion';
+import { useCustomMotion, useEnterMotion, useSnapMotion, withDelay } from '../lib/motionPresets';
 import useGameStore from '../store/gameStore';
 import { RichTextView } from './RichText';
 import { createRichTextPreview } from '../utils/richText';
@@ -725,7 +726,21 @@ const BarChart = React.memo(function BarChart({ data, valueKey = 'minutes', heig
 
 // ─── SVG Area/Line Chart — redesign with readable axes, labels and focus state ─
 function AreaChart({ data, valueKey = 'minutes', height = 80, accentColor = ACCENT }) {
-  const shouldReduceMotion = useReducedMotion();
+  // NGOẠI LỆ (trang trí) — biểu đồ TỰ VẼ RA: `pathLength` là chuyện riêng của SVG, `enter`
+  // (opacity + y) không diễn đạt được một nét đang được kéo dài ra. Bỏ hẳn thì nét vẫn nằm đó,
+  // vẽ sẵn đầy đủ — đúng thứ cần khi người dùng xin đừng chuyển động.
+  // ⚠️ Trước đây hai nhánh của CHÍNH hàm này khai hai bộ số khác nhau (0,35/0,70 và 0,40/0,82)
+  // cho cùng một hiệu ứng — nay một bộ, vì mắt không có lý do gì để thấy hai biểu đồ vẽ khác nhịp.
+  const veNenMotion = useCustomMotion({
+    initial: { opacity: 0 },
+    animate: { opacity: 1 },
+    transition: { duration: 0.35, ease: 'easeOut' },
+  });
+  const veNetMotion = useCustomMotion({
+    initial: { pathLength: 0, opacity: 0.4 },
+    animate: { pathLength: 1, opacity: 1 },
+    transition: { duration: 0.7, ease: 'easeOut' },
+  });
   const chartId = useId().replace(/:/g, '');
   const isCompact = height <= 72;
   const pointCount = data.length;
@@ -906,9 +921,7 @@ function AreaChart({ data, valueKey = 'minutes', height = 80, accentColor = ACCE
             <Motion.path
               d={chart.areaPath}
               fill={`url(#${areaGradientId})`}
-              initial={shouldReduceMotion ? false : { opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.35, ease: 'easeOut' }}
+              {...veNenMotion}
             />
             <Motion.path
               d={chart.linePath}
@@ -918,9 +931,7 @@ function AreaChart({ data, valueKey = 'minutes', height = 80, accentColor = ACCE
               strokeLinecap="round"
               strokeLinejoin="round"
               filter={`url(#${lineGlowId})`}
-              initial={shouldReduceMotion ? false : { pathLength: 0, opacity: 0.4 }}
-              animate={{ pathLength: 1, opacity: 1 }}
-              transition={{ duration: 0.7, ease: 'easeOut' }}
+              {...veNetMotion}
             />
 
             <line
@@ -1192,9 +1203,7 @@ function AreaChart({ data, valueKey = 'minutes', height = 80, accentColor = ACCE
           <Motion.path
             d={chart.areaPath}
             fill={`url(#${areaGradientId})`}
-            initial={shouldReduceMotion ? false : { opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.4, ease: 'easeOut' }}
+            {...veNenMotion}
           />
           <Motion.path
             d={chart.linePath}
@@ -1204,9 +1213,7 @@ function AreaChart({ data, valueKey = 'minutes', height = 80, accentColor = ACCE
             strokeLinecap="round"
             strokeLinejoin="round"
             filter={`url(#${lineGlowId})`}
-            initial={shouldReduceMotion ? false : { pathLength: 0, opacity: 0.45 }}
-            animate={{ pathLength: 1, opacity: 1 }}
-            transition={{ duration: 0.82, ease: 'easeOut' }}
+            {...veNetMotion}
           />
 
           <line
@@ -1659,11 +1666,12 @@ function CategoryDonutChart({ catStats, totalMins, totalSess }) {
 // ─── Overview Cards ──────────────────────────────────────────────────────────
 function OverviewHeroMetric({ icon, label, value, detail, accent = ACCENT, chart, className = '' }) {
   const isMarker = typeof icon === 'string' && /^[A-Z0-9]{1,3}$/.test(icon.trim());
+  // Nhấc khi DI CHUỘT không thuộc ba nhịp — đi qua cái gác ngoại lệ để cũng im khi Giảm chuyển động.
+  const hoverLift = useCustomMotion({ whileHover: { y: -2 }, transition: { duration: 0.18, ease: 'easeOut' } });
 
   return (
     <Motion.div
-      whileHover={{ y: -2 }}
-      transition={{ duration: 0.18, ease: 'easeOut' }}
+      {...hoverLift}
       className={`rounded-[24px] px-3.5 py-3.5 sm:px-4 sm:py-4 md:px-5 md:py-5 ${className}`}
       style={{ background: PANEL_BG_SOFT, border: `1px solid ${PANEL_BORDER}` }}
     >
@@ -1729,6 +1737,7 @@ function formatWeekdayLabel(dateStr) {
 }
 
 function WeekPulseList({ weeklyData }) {
+  const enterMotion = useEnterMotion();
   const maxMinutes = Math.max(...weeklyData.map((day) => day.minutes), 1);
 
   return (
@@ -1740,9 +1749,7 @@ function WeekPulseList({ weeklyData }) {
         return (
           <Motion.div
             key={day.date}
-            initial={{ opacity: 0, x: 10 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: Math.min(index * 0.03, 0.18), duration: 0.22 }}
+            {...withDelay(enterMotion, Math.min(index * 0.03, 0.18))}
             className="grid grid-cols-[44px_minmax(0,1fr)_auto] items-center gap-3 rounded-[20px] px-3 py-2.5"
             style={{ background: PANEL_BG_SOFT, border: `1px solid ${PANEL_BORDER}` }}
           >
@@ -2600,7 +2607,10 @@ const FocusHourSpotlight = React.memo(function FocusHourSpotlight({ summary, per
 const FocusTab = React.memo(function FocusTab({ history }) {
   const [focusPeriod, setFocusPeriod] = useState('all');
   const [isPeriodPending, startPeriodTransition] = useTransition();
-  const shouldReduceMotion = useReducedMotion();
+  const enterMotion = useEnterMotion();
+  // NGOẠI LỆ (mang bố cục) — bề dài cột CHÍNH LÀ số phiên của khoảng ấy; `initial`/`animate`
+  // ở lại tại chỗ vì chúng đọc biến của vòng lặp, cái gác chỉ lo `transition`.
+  const thanhCotMotion = useSnapMotion({ transition: { duration: 0.45, ease: 'easeOut' } });
   const deferredFocusPeriod = useDeferredValue(focusPeriod);
   const focusSummary = useMemo(
     () => summarizeFocusStats(history, deferredFocusPeriod),
@@ -2753,9 +2763,7 @@ const FocusTab = React.memo(function FocusTab({ history }) {
       ) : (
         <>
           <Motion.section
-            initial={shouldReduceMotion ? undefined : { opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.28, ease: 'easeOut' }}
+            {...enterMotion}
             className="relative overflow-hidden rounded-[30px] p-4 md:p-5 lg:p-6"
             style={{
               background: BG_CARD,
@@ -2928,9 +2936,9 @@ const FocusTab = React.memo(function FocusTab({ history }) {
                         style={{ background: PANEL_BG_SOFT, border: `1px solid ${PANEL_BORDER}` }}
                       >
                         <Motion.div
-                          initial={shouldReduceMotion ? undefined : { scaleX: 0 }}
+                          initial={{ scaleX: 0 }}
                           animate={{ scaleX: bucketScale }}
-                          transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.45, ease: 'easeOut' }}
+                          {...thanhCotMotion}
                           className="h-full rounded-full"
                           style={{
                             background: `linear-gradient(90deg, ${bucket.accent}, ${bucket.accent}bb)`,
@@ -3037,6 +3045,8 @@ const CAT_PERIODS = [
 
 function CategoryTab({ history, sessionCategories }) {
   const [catPeriod, setCatPeriod] = useState('all');
+  // NGOẠI LỆ (mang bố cục) — bề dài thanh CHÍNH LÀ tỉ lệ của loại việc ấy.
+  const thanhMotion = useSnapMotion({ transition: { duration: 0.7, ease: 'easeOut' } });
 
   const filteredHistory = useMemo(
     () => filterByPeriod(history, catPeriod),
@@ -3481,7 +3491,7 @@ function CategoryTab({ history, sessionCategories }) {
                   <Motion.div
                     initial={{ width: 0 }}
                     animate={{ width: `${pct}%` }}
-                    transition={{ duration: 0.7, ease: 'easeOut' }}
+                    {...thanhMotion}
                     className="h-full rounded-full"
                     style={{ background: `linear-gradient(90deg, ${cat.color}, ${cat.color}aa)` }}
                   />
@@ -3754,6 +3764,7 @@ function CategoryTab({ history, sessionCategories }) {
 
 // ─── Tab: Nhật Ký Phiên ───────────────────────────────────────────────────────
 function JournalTab({ history, sessionCategories }) {
+  const enterMotion = useEnterMotion();
   const [filterCat,    setFilterCat]    = useState(null); // null = tất cả
   const [page,         setPage]         = useState(0);
   const [confirmDelete, setConfirmDelete] = useState(null); // id phiên đang chờ xác nhận
@@ -3981,9 +3992,7 @@ function JournalTab({ history, sessionCategories }) {
           return (
             <Motion.div
               key={h.id ?? idx}
-              initial={{ opacity: 0, x: -8 }}
-              animate={{ opacity: 1,  x: 0  }}
-              transition={{ delay: Math.min(idx * 0.02, 0.3) }}
+              {...withDelay(enterMotion, Math.min(idx * 0.02, 0.3))}
               className="group rounded-[24px] border px-4 py-4 shadow-sm"
               style={{
                 background: JOURNAL_ROW_BG,
@@ -4459,6 +4468,7 @@ function JournalTab({ history, sessionCategories }) {
 
 // ─── NotesTab ─────────────────────────────────────────────────────────────────
 function NotesTab({ savedNotes, sessionCategories }) {
+  const enterMotion = useEnterMotion();
   const [confirmDeleteNoteId, setConfirmDeleteNoteId] = useState(null);
   const deleteSavedNoteEntry = useGameStore((s) => s.deleteSavedNoteEntry);
   const catMap = useMemo(() => {
@@ -4563,9 +4573,7 @@ function NotesTab({ savedNotes, sessionCategories }) {
               return (
                 <Motion.div
                   key={entry.id ?? idx}
-                  initial={{ opacity: 0, y: 6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: Math.min(idx * 0.03, 0.3) }}
+                  {...withDelay(enterMotion, Math.min(idx * 0.03, 0.3))}
                   className="rounded-[28px] border px-4 py-4 space-y-3.5"
                   style={{ background: BG_CARD, borderColor: PANEL_BORDER, borderLeft: `4px solid ${accent}`, boxShadow: '0 12px 26px rgba(31,30,29,0.05)' }}
                 >
@@ -4737,6 +4745,7 @@ const TABS = [
 ];
 
 export default function StatsDashboard() {
+  const enterMotion       = useEnterMotion();
   const history           = useGameStore((s) => s.history);
   const savedNotes        = useGameStore((s) => s.savedNotes ?? []);
   const progress          = useGameStore((s) => s.progress);
@@ -4860,10 +4869,7 @@ export default function StatsDashboard() {
       <AnimatePresence mode="wait">
         <Motion.div
           key={activeTab}
-          initial={{ opacity: 0, y: 6 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -6 }}
-          transition={{ duration: 0.18 }}
+          {...enterMotion}
         >
           {activeTab === 'overview' && (
             <OverviewTab history={history} progress={progress} streak={streak} prestige={prestige} buildings={buildings} />

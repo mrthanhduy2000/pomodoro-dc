@@ -32,9 +32,13 @@ Mặt trận đang làm: **thành phố 3D** (`src/engine/city3d/` + `src/compon
 - Chuyển động: **ĐÚNG BA NHỊP**, nguồn duy nhất `src/lib/motionPresets.js` — `enter` (thứ xuất
   hiện) · `press` (thứ bấm được) · `reward` (phần thưởng, cột mốc). Cả ba **tự im** khi bật
   "Giảm chuyển động" nên chỗ gọi đừng tự kiểm tra. ⚠️ Đừng gõ lại `initial`/`animate` bằng tay,
-  đừng thêm nhịp thứ tư (`motionPresets.test.js` đếm và sẽ đỏ). Ngoại lệ đi qua `useCustomMotion`
-  (bỏ hẳn) hoặc `useSnapMotion` (nhảy tới đích, cho thứ mà `animate` MANG BỐ CỤC — trả rỗng ở đó
-  là vỡ giao diện), và phải kèm một dòng lý do. **KHÔNG áp cho thành phố 3D.**
+  đừng thêm nhịp thứ tư (`motionPresets.test.js` đếm và sẽ đỏ). Danh sách hiện SO LE thì dùng
+  `withDelay(enterMotion, i * 0.03)` — vẫn là nhịp `enter`, chỉ lệch giờ. Ngoại lệ đi qua
+  `useCustomMotion` (bỏ hẳn) hoặc `useSnapMotion` (nhảy tới đích, cho thứ mà `animate` MANG BỐ
+  CỤC — trả rỗng ở đó là VỠ giao diện), và phải kèm một dòng lý do. **KHÔNG áp cho thành phố 3D.**
+  ⚠️ `motionCoverage.test.js` canh CẢ CÂY: file ngoài bảng ngoại lệ phải có 0 khai báo rời rạc,
+  và file trong bảng mà dọn bớt rồi thì phải HẠ số xuống. Thêm một dòng vào bảng ấy là một
+  quyết định, không phải một thao tác dọn dẹp.
 - Giao diện: **5 skin**, mặc định là **"Sân Chơi" (`arcade`)** — phẳng, sans đậm, thẻ có chân bóng
   đặc 3px. Danh sách skin + mặc định có MỘT nguồn duy nhất: `src/store/uiSkins.js`. ⚠️ Thêm skin thì
   phải đủ ba chỗ (danh sách · `SKIN_OPTIONS` ở `Settings.jsx` · khối `[data-skin=…]` ở `index.css`)

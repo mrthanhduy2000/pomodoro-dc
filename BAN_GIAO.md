@@ -1,4 +1,58 @@
-> Cập nhật lần cuối: **2026-08-27 (tối)** — **MỌI CHUYỂN ĐỘNG VỀ ĐÚNG BA NHỊP.**
+> Cập nhật lần cuối: **2026-08-27 (khuya)** — **BA NHỊP PHỦ KÍN GIAO DIỆN + CỔNG CHẶN HỒI QUY.**
+> Vòng hai của việc gom nhịp. **Đo bằng chính phép đếm đã vá, trên cả hai mốc** (`git worktree`
+> tại `95fb96b` cho vế TRƯỚC — đừng chép cột "sau" của lượt trước, bài học `TECH_DEBT #43`):
+> **410 khai báo rời rạc trên 30 file → 54 trên 11 file (−87%)**, quét 44 file `.jsx`.
+> Ba ổ lớn nhất đã dọn (`StatsDashboard` 36→4 · `Settings` 32→0 · `SkillTree` 10→0), cùng 15
+> file vừa và nhỏ.
+>
+> **THÊM MỘT PHÉP DỜI GIỜ, KHÔNG PHẢI MỘT NHỊP THỨ TƯ.** `withDelay(enterMotion, i * 0.03)` —
+> danh sách hiện SO LE vẫn dùng ĐÚNG nhịp `enter`, chỉ khác thời điểm bắt đầu. Là hàm THUẦN nên
+> gọi được trong `.map()` (chỗ hook bị cấm), và nó tự giữ lời hứa Giảm chuyển động: lúc ấy preset
+> là object rỗng, không có `transition` để dời, nên nó trả lại đúng object rỗng ấy. Không có nó
+> thì 5 danh sách kia mỗi cái lại phải tự khai một bộ `initial`/`animate` riêng chỉ để cài một
+> con số `delay` — tức đẻ ra đúng thứ đang đi xoá.
+>
+> **CỔNG MỚI `src/lib/motionCoverage.test.js`** — `motionPresets.test.js` canh ba nhịp có ĐÚNG
+> không; nó KHÔNG canh được cả app có DÙNG chúng không. Cổng mới đếm khai báo rời rạc từng file
+> rồi so với BẢNG NGOẠI LỆ tường minh (đúng khuôn `assert.deepEqual(TRUOT, [4])` của địa hình).
+> Có **cả hai vế**: file ngoài bảng phải bằng 0, **và** file trong bảng mà dọn bớt rồi thì phải hạ
+> số xuống — không có vế sau thì bảng chỉ có thể to ra và những con số cũ lặng lẽ thành chỗ trống
+> cho lần trôi sau.
+>
+> **⚠️ PHÉP THỬ NGƯỢC BẮT ĐƯỢC MỘT LỖ THẬT TRONG CHÍNH CÁI CỔNG VỪA VIẾT — VÀ NÓ SUÝT LÀM TÔI KẾT
+> LUẬN NGƯỢC.** Ba phép phá đầu tiên chạy ra "2 vẫn xanh"; phản xạ đầu là *"bài test không có
+> răng"*. Sai — theo đúng luật đã ghi (Phase 8A) thì nghi PHÉP PHÁ trước, và lần này cả hai đều
+> hỏng: tôi bơm khai báo vào **chung một dòng với thẻ**, trong khi phép đếm neo `^\s*` vào ĐẦU
+> DÒNG. Nhưng đi tiếp một bước nữa mới ra chuyện đáng nói: **cái neo ấy là một lỗ thật**. Lối viết
+> gọn một dòng CÓ THẬT trong kho — `FocusRail.jsx` **3 dòng**, `BuildingWorkshop.jsx` **2 dòng** —
+> và cả hai file ấy tôi đã **bỏ sót hoàn toàn** ở lượt quét trước vì chính cái neo đó. Vá phép đếm
+> xong thì tổng nhảy từ 55 lên 65 và hai file kia lộ ra. ⇒ *Khi phép phá không nổ, nghi phép phá
+> trước — rồi hỏi tiếp "vì sao nó không nổ?", vì câu trả lời có thể là một lỗ trong chính phép đo.*
+>
+> **⚠️ VÀ MỘT PHÉP PHÁ THỨ NĂM CHỈ RA BÀI ĐỐI CHỨNG CHƯA NHỐT ĐÚNG LỖI VỪA TÌM.** Neo lại `^\s*`
+> vào phép đếm thì **cả 4 phép phá kia vẫn đỏ mà cổng vẫn xanh** — vì sau khi dọn xong, mọi khai
+> báo CÒN LẠI đều tình cờ nằm ở đầu dòng, nên phép quét file không phân biệt được hai bản regex.
+> Chỉ một ca tổng hợp viết-gọn-một-dòng trong bài đối chứng mới phân biệt được. ⇒ *Đối chứng phải
+> nhốt đúng bộ số hỏng vừa tìm ra, không phải một ca "tương tự".*
+>
+> **⚠️ SUÝT SHIP MỘT CHÚ THÍCH NÓI NGƯỢC VỚI MÃ.** `AchievementToast` được viết `useCustomMotion`
+> (bỏ hẳn) trong khi chú thích ngay trên nó ghi "nhảy tới đích". Thẻ ấy đặt `left-1/2` rồi kéo
+> ngược lại bằng `x: '-50%'` để CĂN GIỮA — bỏ hẳn là dải thông báo lệch sang phải đúng nửa bề
+> ngang của chính nó. Đã đổi sang `useSnapMotion`. Thứ bắt được là việc **đọc lại chú thích mình
+> vừa viết và hỏi nó có khớp mã không**, không phải một cổng nào cả.
+>
+> **DỌN KÈM:** prop `reducedMotion` truyền tay xuống `SkillNode`/`SynergyPanel`/`BuildingCard`/
+> `TodayMissionRow` nay là prop CHẾT (cái gác đã lo) — đã gỡ khỏi cả chữ ký lẫn chỗ gọi; 4 bản vá
+> tay kiểu `width: reduceMotion ? … : undefined` cũng đã gỡ vì `useSnapMotion` đã làm đúng việc đó
+> ("một luật một công thức"). ⚠️ `reduceMotion` của `CityStage` thì GIỮ — nó còn nuôi `CityScene3D`.
+>
+> **CỐ Ý ĐỨNG NGOÀI:** `city/CityGrowthMoment.jsx` (13) là một **đoạn phim 3,2 giây** có ba luật
+> cứng riêng, và nó **không hề được dựng** khi bật Giảm chuyển động (`App.jsx` chặn từ đầu) — ép nó
+> vào `enter` là làm hỏng một cảnh diễn để đổi lấy một con số đẹp. `render3d/` vẫn nguyên (three.js).
+>
+> ---
+>
+> Cập nhật trước đó: **2026-08-27 (tối)** — **MỌI CHUYỂN ĐỘNG VỀ ĐÚNG BA NHỊP.**
 > `initial`/`animate`/`transition` đang khai rời rạc ở hơn ba mươi file. Đếm được **5 thời lượng**
 > (0,18 · 0,22 · 0,26 · 0,28 · 0,35 giây) và **7 đường cong** khác nhau; riêng bảng điều khiển đồng
 > hồ khai **y hệt nhau bốn lần**. Nay: `src/lib/motionPresets.js` xuất ra ĐÚNG ba nhịp —

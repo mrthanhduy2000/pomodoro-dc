@@ -1,5 +1,6 @@
 import React from 'react';
-import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
+import { useCustomMotion, useEnterMotion, usePressMotion, useSnapMotion } from '../lib/motionPresets';
 
 import useGameStore from '../store/gameStore';
 import useSettingsStore from '../store/settingsStore';
@@ -29,6 +30,10 @@ function scaleMissionXP(xp, multiplier) {
 }
 
 export default function DailyMissions() {
+  const enterMotion = useEnterMotion();
+  const pressMotion = usePressMotion();
+  // Nhấc khi DI CHUỘT không thuộc ba nhịp — đi qua cái gác ngoại lệ.
+  const hoverLift = useCustomMotion({ whileHover: { y: -1 } });
   const missions = useGameStore((s) => s.missions);
   const weeklyChain = useGameStore((s) => s.weeklyChain);
   const streak = useGameStore((s) => s.streak);
@@ -38,7 +43,6 @@ export default function DailyMissions() {
   const claimWeeklyStep = useGameStore((s) => s.claimWeeklyStep);
   const refreshDailyMissions = useGameStore((s) => s.refreshDailyMissions);
   const uiTheme = useSettingsStore((s) => s.uiTheme);
-  const reduceMotion = useReducedMotion();
 
   React.useEffect(() => {
     refreshDailyMissions();
@@ -132,7 +136,6 @@ export default function DailyMissions() {
                 key={mission.id}
                 mission={mission}
                 rewardXP={scaleMissionXP(mission.rewardXP, missionRewardMultiplier)}
-                reduceMotion={reduceMotion}
               />
             ))}
           </div>
@@ -149,11 +152,9 @@ export default function DailyMissions() {
             <AnimatePresence initial={false}>
               {allClaimed && !missions.bonusClaimedToday ? (
                 <motion.button
-                  initial={{ opacity: 0, y: 4 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 4 }}
-                  whileHover={reduceMotion ? undefined : { y: -1 }}
-                  whileTap={reduceMotion ? undefined : { scale: 0.98 }}
+                  {...enterMotion}
+                  {...hoverLift}
+                  {...pressMotion}
                   type="button"
                   onClick={claimMissionAllBonus}
                   className="whitespace-nowrap px-4 py-2 text-[12px] font-semibold"
@@ -247,8 +248,8 @@ export default function DailyMissions() {
               </div>
               {canClaimWeeklyStep ? (
                 <motion.button
-                  whileHover={reduceMotion ? undefined : { y: -1 }}
-                  whileTap={reduceMotion ? undefined : { scale: 0.98 }}
+                  {...hoverLift}
+                  {...pressMotion}
                   type="button"
                   onClick={claimWeeklyStep}
                   className="whitespace-nowrap px-4 py-2 text-[12px] font-semibold"
@@ -333,7 +334,9 @@ function QuietSection({ children, eyebrow, lightTheme, meta, title }) {
   );
 }
 
-function TodayMissionRow({ mission, reduceMotion, rewardXP }) {
+function TodayMissionRow({ mission, rewardXP }) {
+  // NGOẠI LỆ (mang bố cục) — bề dài thanh CHÍNH LÀ tiến độ của nhiệm vụ.
+  const barMotion = useSnapMotion({ transition: { duration: 0.45, ease: 'easeOut' } });
   const pct = Math.max(0, Math.min(100, (mission.progress / Math.max(1, mission.goal)) * 100));
   const done = mission.claimed || mission.progress >= mission.goal;
 
@@ -372,11 +375,10 @@ function TodayMissionRow({ mission, reduceMotion, rewardXP }) {
       <div className="mt-2 h-[2px] overflow-hidden rounded-full bg-[var(--line)]">
         <motion.div
           className="h-full rounded-full"
-          initial={reduceMotion ? false : { width: 0 }}
-          animate={reduceMotion ? undefined : { width: `${pct}%` }}
-          transition={reduceMotion ? undefined : { duration: 0.45, ease: 'easeOut' }}
+          initial={{ width: 0 }}
+          animate={{ width: `${pct}%` }}
+          {...barMotion}
           style={{
-            width: reduceMotion ? `${pct}%` : undefined,
             background: done ? 'var(--good)' : 'var(--accent)',
           }}
         />

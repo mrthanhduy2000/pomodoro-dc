@@ -12,6 +12,34 @@
 
 ---
 
+## 2026-08-27 (khuya) — Báo cáo tuần thôi tự bật; luật mức độ làm phiền hết ngoại lệ
+
+**Mục đích.** ADR-060 chốt "chặn màn hình chỉ dành cho bốn việc buộc phải quyết định", nhưng để lại
+đúng một ngoại lệ: sáng thứ Hai `checkWeeklyReport` tự mở `WeeklyReportModal` toàn màn hình. Ngoại
+lệ ấy bị chặn bởi một khuyết tật ở tầng dữ liệu, không phải vì lười — xem `TECH_DEBT #87`.
+
+**Phạm vi.** Store + tầng hiển thị phần thưởng. Không đụng công thức tính thưởng, engine game,
+thành phố 3D. Thêm MỘT trường vào dữ liệu bền; không cần migration.
+
+- **`src/store/gameStore.js`** — tách `lastWeeklyReportDate` (*đã MỜI tuần này*) khỏi
+  `lastWeeklyReportSeenDate` (*đã XEM*, mới). `checkWeeklyReport` không mở hộp thoại nữa mà bật
+  `ui.weeklyReportPending`; `openWeeklyReport` mở `'previous'` ở cú bấm đầu tiên trong tuần rồi ghi
+  "đã xem"; `dismissWeeklyReportToast` (mới) chỉ tắt lời mời; `dismissWeeklyReport` thôi ghi ngày.
+- **`src/engine/rewardFeed.js`** — nguồn toast thứ bảy `weekly`, đứng ĐẦU `SOURCE_ORDER` (nó chỉ
+  đến một lần mỗi tuần và không thể tự đến lần thứ hai, nên không được rơi khỏi ba thẻ đầu).
+- **`src/components/RewardToastHost.jsx`** — hết giờ → `dismissWeeklyReportToast`; bấm vào →
+  `openWeeklyReport()` của store, nơi giữ luật `'previous'` + luật ghi "đã xem".
+- **`src/App.jsx`** — gỡ chú thích "ngoại lệ duy nhất" ở `OverlayStack`; thêm chấm "chưa xem" trên
+  nút *Báo cáo tuần* ở thanh bên — lưới an toàn KHÔNG hết hạn cho việc lỡ toast.
+- **`src/store/gameStore.weeklyReport.test.js`** (mới, 9 bài) — chạy store thật với đồng hồ đóng
+  băng ở một thứ Hai giờ VN, có bài đối chứng khẳng định mốc ấy là thứ Hai. Bảy phép thử ngược đều
+  đỏ đúng bài dự kiến, trong đó có phép dựng lại chính khuyết tật cũ.
+
+**Tương thích.** Máy cũ nạp lên có `lastWeeklyReportSeenDate` rỗng ⇒ chấm sáng một lần, cú bấm đầu
+tiên đưa đúng bản tuần trước. Đó là hành vi đúng, không phải ca cần migration.
+
+---
+
 ## 2026-08-27 (tối) — Một ngôn ngữ hình cho mọi phần thưởng, và phân tầng mức độ làm phiền
 
 **Mục đích.** App có bảy đường trao thưởng và bảy cách trình bày — riêng `LootDropModal` đã có ba

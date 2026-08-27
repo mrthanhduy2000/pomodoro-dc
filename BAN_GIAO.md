@@ -1,3 +1,48 @@
+> Cập nhật lần cuối: **2026-08-27 (khuya)** — **BÁO CÁO TUẦN THÔI TỰ BẬT ⇒ LUẬT MỨC ĐỘ LÀM PHIỀN
+> HẾT NGOẠI LỆ** (ADR-061, đóng `TECH_DEBT #87` đúng ngày nó được mở). Sáng thứ Hai xưa nay
+> `checkWeeklyReport` tự mở một hộp thoại toàn màn hình — thứ DUY NHẤT còn chặn màn hình mà không
+> nằm trong bốn việc ADR-060 cho phép. Nay nó chỉ MỜI bằng một thẻ toast góc màn hình.
+>
+> **⚠️ ĐIỀU KIỆN BẮT BUỘC ĐÃ LÀM TRƯỚC, KHÔNG BỎ QUA.** `TECH_DEBT #87` cấm đụng vào tính năng này
+> cho tới khi tách được "đã xem" khỏi "đã bỏ qua" — vì `dismissWeeklyReport` ghi
+> `lastWeeklyReportDate` ở MỌI lần đóng, mà chính trường ấy chặn `checkWeeklyReport` chạy lại. Đẩy
+> thẳng sang toast 4 giây mà giữ nguyên cách ghi = **lỡ một cái toast là mất báo cáo của cả tuần**.
+> Nay hai trường, hai câu hỏi: `lastWeeklyReportDate` (*đã MỜI*) · `lastWeeklyReportSeenDate`
+> (*đã XEM*). Đây là lần thứ **BẢY** của khuôn "một trường gánh hai việc", và lần đầu nó gánh hai
+> việc ở tầng DỮ LIỆU BỀN chứ không ở tầng hình.
+>
+> **Ba luật đi kèm — gỡ cái nào là bản vá thoái hoá về đúng cái bẫy nó vừa gỡ:**
+> **(1) MỞ = đã xem; ĐÓNG = không ghi gì; TOAST HẾT GIỜ = không ghi gì.**
+> **(2) Cú mở ĐẦU TIÊN trong tuần rơi vào `'previous'`** — không có luật này thì đổi sang toast là
+> âm thầm đổi luôn NỘI DUNG Đàm nhận: nút thanh bên xưa nay mở `'current'` (tuần đang chạy dở), còn
+> hộp thoại tự bật thì mở `'previous'` (tuần đã xong).
+> **(3) Chấm ở nút "Báo cáo tuần" là LƯỚI AN TOÀN, không phải trang trí** — nó do
+> `lastWeeklyReportSeenDate` điều khiển nên KHÔNG hết hạn. Thiếu nó thì một lời mời 4 giây bị lỡ sẽ
+> không để lại dấu vết nào.
+>
+> **⚠️ HAI CÁI BẪY CÔNG CỤ TRONG CHÍNH PHIÊN NÀY, CẢ HAI ĐỀU DO PHÉP THAY CHUỖI:**
+> **(a) `s.count(old)` là phép đếm CHUỖI CON, không phải đếm DÒNG.** Mẫu `        lastWeeklyReportDate:`
+> (8 dấu cách) nằm gọn bên trong dòng `          lastWeeklyReportDate:` (10 dấu cách) mà bước trước
+> vừa chèn ⇒ cổng "phải khớp đúng 1 chỗ" nổ, dù cả hai chỗ đều có thật và đều khác nhau. Cắn **hai
+> lần** (`gameStore.js` rồi `App.jsx`). Vá: neo bằng DÒNG ĐỨNG SAU (`prestige: {`,
+> `levelUpQueueLength,`) để mỗi mẫu là duy nhất. May là cổng ấy chặn TRƯỚC khi ghi file, nên không
+> lần nào sửa hỏng — *một phép thay chuỗi không tự đếm số chỗ khớp là một quả mìn*.
+> **(b) MỘT BÀI TEST XANH OAN, VÀ CHỈ PHÉP THỬ NGƯỢC BẮT ĐƯỢC.** Bài "thẻ tuần phải đứng ĐẦU chồng
+> toast" dựng đúng MỘT thẻ rồi hỏi `toasts[0].source === 'weekly'` — nó xanh kể cả khi gỡ `'weekly'`
+> khỏi `SOURCE_ORDER`, vì **một danh sách một phần tử thì phần tử nào cũng đứng đầu**. Một phép sắp
+> xếp chỉ kiểm được khi có thứ để sắp. Đã thêm một thẻ thứ hai vào chồng; nay nó đỏ đúng lúc cần.
+>
+> **Đã NHÌN, không chỉ đọc cổng số**: bật tạm cờ trong bản build cục bộ để chụp thẻ toast thật
+> (`📊 Tổng kết tuần trước · TỐT · Xem lại bảy ngày vừa qua.`) và chấm cam trên nút *Báo cáo tuần*.
+> Lượt chụp đầu **không thấy thẻ đâu** — đúng vì nó đã tự tắt sau 4 giây trước lúc chụp, tức chính
+> cơ chế đang cần kiểm đã chạy. Câu mô tả đầu tiên còn bị **xén cụt** trong thẻ nên đã rút gọn; đó là
+> thứ chỉ ảnh chụp nói được, không cổng nào nói. Hai phép bật tạm đã hoàn tác và **kiểm bằng `md5sum`**.
+>
+> Cổng: **1243 bài · 0 đỏ · `# skipped 1`** · lint sạch · build xanh. Bài mới
+> `gameStore.weeklyReport.test.js` (9 bài) chạy **store THẬT** với đồng hồ đóng băng ở một thứ Hai
+> giờ VN — kèm một bài đối chứng khẳng định mốc ấy đúng là thứ Hai, vì chạy vào thứ Ba thì cả file
+> sẽ "xanh vì không đo gì". Bảy phép thử ngược đều đỏ đúng bài dự kiến.
+
 > Cập nhật lần cuối: **2026-08-27 (tối)** — **MỌI PHẦN THƯỞNG NÓI CHUNG MỘT THỨ TIẾNG, VÀ CHỈ
 > BỐN VIỆC CÒN ĐƯỢC CHẶN MÀN HÌNH** (ADR-060).
 >

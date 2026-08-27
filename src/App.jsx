@@ -1424,6 +1424,14 @@ export default function App() {
   const eraCrisisModalOpen = useGameStore((s) => s.ui.eraCrisisModalOpen);
   const prestigeModalOpen = useGameStore((s) => s.ui.prestigeModalOpen);
   const weeklyReportOpen = useGameStore((s) => s.ui.weeklyReportOpen);
+  const weeklyReportPending = useGameStore((s) => s.ui.weeklyReportPending);
+  const lastWeeklyReportSeenDate = useGameStore((s) => s.lastWeeklyReportSeenDate);
+  // ⚠️ Dùng CHÍNH `localWeekMondayStr` mà store gọi (`getWeekMonday` chỉ là một lớp bọc quanh nó),
+  // không tự dựng lại phép tính "thứ Hai của tuần này" — hai công thức cho một luật thì sớm muộn
+  // một bên trôi, và triệu chứng ở đây sẽ là cái chấm sáng/tắt lệch một ngày mà chẳng ai truy ra.
+  // `history.length > 0` khớp đúng điều kiện của `checkWeeklyReport`: người dùng mới chưa có phiên
+  // nào thì bản tổng kết rỗng, chấm vào đó là chỉ vào một trang trắng.
+  const weeklyReportUnseen = history.length > 0 && lastWeeklyReportSeenDate !== localWeekMondayStr();
   const levelUpQueueLength = useGameStore((s) => s.ui.levelUpQueue.length);
   const achievementQueueLength = useGameStore((s) => s.ui.achievementQueue.length);
   // Hai kênh phần thưởng nhẹ này store đã ghi từ lâu nhưng TRƯỚC 2026-08-27 không
@@ -1632,6 +1640,7 @@ export default function App() {
               attentionTabIds={attentionTabIds}
               isOpen={sidebarOpen}
               onOpenWeeklyReport={openWeeklyReport}
+              weeklyReportUnseen={weeklyReportUnseen}
               onSelect={selectTab}
               onToggle={() => setSidebarOpen((value) => !value)}
             />
@@ -2002,6 +2011,7 @@ export default function App() {
           eraCrisisModalOpen,
           prestigeModalOpen,
           weeklyReportOpen,
+          weeklyReportPending,
           levelUpQueueLength,
           achievementQueueLength,
           missionCompletedCount,
@@ -2015,6 +2025,7 @@ export default function App() {
           eraCrisisModalOpen={eraCrisisModalOpen}
           prestigeModalOpen={prestigeModalOpen}
           weeklyReportOpen={weeklyReportOpen}
+          weeklyReportPending={weeklyReportPending}
           levelUpQueueLength={levelUpQueueLength}
           achievementQueueLength={achievementQueueLength}
           missionCompletedCount={missionCompletedCount}
@@ -2069,6 +2080,7 @@ function OverlayStack({
   eraCrisisModalOpen,
   prestigeModalOpen,
   weeklyReportOpen,
+  weeklyReportPending,
   levelUpQueueLength,
   achievementQueueLength,
   missionCompletedCount,
@@ -2117,11 +2129,11 @@ function OverlayStack({
   // lên kỷ (`showLootModal` khi `eraChanged`) · thảm hoạ · khủng hoảng kỷ. Thăng
   // hoa do Đàm bấm ở Cài đặt, còn `detail === 'loot'|'level'` là do Đàm bấm vào thẻ —
   // một hộp thoại Đàm tự mở thì không phải "làm phiền".
-  // ⚠️ NGOẠI LỆ DUY NHẤT: `weeklyReportOpen` VẪN tự bật sáng thứ Hai, tức nó chặn
-  // màn hình mà không nằm trong bốn việc được phép. CỐ Ý để lại: báo cáo tuần
-  // không phải một phần thưởng mà là một bản tổng kết, và đẩy nó xuống toast 4
-  // giây nghĩa là lỡ một cái toast = mất báo cáo của cả tuần (`dismissWeeklyReport`
-  // đánh dấu tuần đã xem). Ghi ở `TECH_DEBT.md` #87 để nó được ĐẾM, không bị quên.
+  // ⚠️ HẾT NGOẠI LỆ (2026-08-27, đóng `TECH_DEBT #87`). `weeklyReportOpen` từng TỰ bật sáng
+  // thứ Hai, tức nó chặn màn hình mà không nằm trong bốn việc được phép. Nay `checkWeeklyReport`
+  // chỉ bật một lời MỜI (`weeklyReportPending` → một thẻ toast); cờ này chỉ lên khi Đàm bấm —
+  // nút ở thanh bên hoặc chính cái thẻ ấy — nên nó rơi vào đúng câu đã ghi ở trên: "một hộp
+  // thoại Đàm tự mở thì không phải làm phiền".
   const blocking = showMoment || showLootModal || disasterModalOpen || eraCrisisModalOpen
     || prestigeModalOpen || weeklyReportOpen || showLevelModal;
 
@@ -2131,6 +2143,7 @@ function OverlayStack({
     || hasLevelUp
     || achievementQueueLength > 0
     || missionCompletedCount > 0
+    || weeklyReportPending
   );
 
   if (!blocking && !hasToast) return null;
@@ -2157,7 +2170,7 @@ function OverlayStack({
   );
 }
 
-function EditorialSidebar({ activeTab, attentionTabIds, isOpen, onOpenWeeklyReport, onSelect, onToggle }) {
+function EditorialSidebar({ activeTab, attentionTabIds, isOpen, onOpenWeeklyReport, onSelect, onToggle, weeklyReportUnseen = false }) {
   // ⚠️ NGOẠI LỆ CÓ LÝ DO — cùng chuyện với cột phải: cột trái THU GỌN chứ không XUẤT HIỆN, và
   // bề ngang do chính `animate` khai nên phải NHẢY tới đích chứ không được bỏ đi (`useSnapMotion`).
   const railMotion = useSnapMotion({
@@ -2214,8 +2227,13 @@ function EditorialSidebar({ activeTab, attentionTabIds, isOpen, onOpenWeeklyRepo
       </nav>
 
       <div className="mt-auto flex flex-col gap-1 px-2.5 pb-3 pt-3">
+        {/* ⚠️ CHẤM NÀY LÀ LƯỚI AN TOÀN CỦA VIỆC BỎ HỘP THOẠI TỰ BẬT (`TECH_DEBT #87`). Thẻ toast
+            sáng thứ Hai tự tắt sau 4 giây và có thể bị lỡ; cái chấm thì ở lại tới khi Đàm mở bản
+            tổng kết ra thật. Không có nó thì việc bỏ chặn màn hình đúng là "đổi một phiền toái
+            nhỏ lấy một mất mát thật" — và cú bấm ấy mở thẳng bản TUẦN TRƯỚC, xem `openWeeklyReport`. */}
         <SidebarItem
           active={false}
+          attention={weeklyReportUnseen}
           icon={<AppIcon.report size={18} />}
           isOpen={isOpen}
           label="Báo cáo tuần"

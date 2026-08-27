@@ -27,7 +27,12 @@ Mặt trận đang làm: **thành phố 3D** (`src/engine/city3d/` + `src/compon
    `api/_tests/`. Hiện có 10 function thật.
 
 ## Đang ở đâu
-- Nhánh production: `main`. Mốc gần nhất: **ADR-060** (MỘT thẻ phần thưởng chung cho cả app +
+- Nhánh production: `main`. Mốc gần nhất: **ADR-061** (báo cáo tuần thôi tự bật sáng thứ Hai ⇒ luật
+  mức độ làm phiền **hết ngoại lệ**). ⚠️ Nó chạy được nhờ tách MỘT trường thành HAI:
+  `lastWeeklyReportDate` = *đã MỜI* · `lastWeeklyReportSeenDate` = *đã XEM*. Luật: **mở = đã xem,
+  đóng = không ghi gì, toast hết giờ = không ghi gì**; cú mở đầu tiên trong tuần phải là bản
+  `'previous'`; chấm ở nút "Báo cáo tuần" là LƯỚI AN TOÀN (không hết hạn), đừng gỡ.
+  Trước đó: **ADR-060** (MỘT thẻ phần thưởng chung cho cả app +
   luật mức độ làm phiền: **chặn màn hình CHỈ dành cho lên kỷ · thăng hoa · khủng hoảng kỷ · thảm
   hoạ**; mọi phần thưởng khác đi qua chồng toast `RewardToastHost`, tự tắt sau 4 giây).
   Trước đó: **ADR-059** (mỗi kỷ MỘT MẠNG ĐƯỜNG riêng — hết bàn cờ; `roadPlan.js` nối các điểm mốc
@@ -61,9 +66,6 @@ Mặt trận đang làm: **thành phố 3D** (`src/engine/city3d/` + `src/compon
   **KHÔNG đo lại** trừ khi Đàm thấy khung hình giật trên máy thật.
 
 ## Việc tiếp theo (chưa làm)
-0. **Báo cáo tuần vẫn tự bật sáng thứ Hai** — ngoại lệ DUY NHẤT của luật mức độ làm phiền
-   (ADR-060). ⚠️ Đọc `TECH_DEBT #87` TRƯỚC: phải tách "đã xem" khỏi "đã bỏ qua" rồi mới đụng,
-   nếu không lỡ một cái toast 4 giây = mất báo cáo của cả tuần.
 1. **Kim tự tháp / ziggurat** — kỷ 2 (Ai Cập) và kỷ 3 (Iraq) đang ra mái nón nhiều cạnh,
    không có khối chóp bốn mặt. `prism` với `sides: 4` + `taper: 0` chính là thứ cần.
 2. **"Giống 3D hơn"** — bóng đổ nét hơn (`SHADOW_MAP_DESKTOP` 2048 → 4096, siết

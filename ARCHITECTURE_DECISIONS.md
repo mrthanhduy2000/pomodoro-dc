@@ -11,6 +11,67 @@
 
 ---
 
+## ADR-061 — Tách "đã MỜI" khỏi "đã XEM" để gỡ nốt ngoại lệ cuối của luật mức độ làm phiền
+
+**Ngày:** 2026-08-27
+**Trạng thái:** đã áp dụng. Không đảo ngược ADR nào — nó HOÀN TẤT ADR-060, đóng `TECH_DEBT #87`.
+
+**Bối cảnh.** ADR-060 chốt: chặn màn hình chỉ dành cho bốn việc buộc phải QUYẾT ĐỊNH (lên kỷ ·
+thăng hoa · khủng hoảng kỷ · thảm hoạ). Nhưng nó để lại đúng MỘT ngoại lệ, và ghi rõ lý do:
+`checkWeeklyReport` vẫn tự mở `WeeklyReportModal` sáng thứ Hai. Ngoại lệ ấy không phải vì lười —
+nó bị chặn bởi một khuyết tật ở tầng dữ liệu.
+
+**Vấn đề.** `dismissWeeklyReport` ghi `lastWeeklyReportDate` ở MỌI lần đóng, và cùng một trường ấy
+là thứ chặn `checkWeeklyReport` chạy lại. Tức một trường đang trả lời HAI câu hỏi khác nhau —
+*"tuần này đã mời chưa?"* và *"Đàm đã xem chưa?"*. Chừng nào còn gộp thì đẩy bản tổng kết xuống một
+toast 4 giây là **đổi một phiền toái nhỏ lấy một mất mát thật**: lỡ một cái toast = mất báo cáo của
+cả tuần. Đây là lần thứ **BẢY** của khuôn *"một trường gánh hai việc"* (`storyHeight` · `roof` ·
+bảng loài cây · `avenue` · vai màu `cloth2` · hồ sơ `{sides, rings}`), và lần đầu nó gánh hai việc
+ở tầng DỮ LIỆU BỀN chứ không ở tầng hình.
+
+**Phương án đã cân nhắc.**
+- **(A) Cứ đẩy xuống toast, giữ nguyên một trường.** Rẻ nhất, và chính `TECH_DEBT #87` đã cấm: nó
+  biến một phiền toái đo được thành một mất mát im lặng.
+- **(B) Giữ hộp thoại tự bật, chấp nhận ngoại lệ vĩnh viễn.** Loại: một ngoại lệ là chỗ để ngoại lệ
+  thứ hai bám vào (*"nếu báo cáo tuần được phép tự bật thì cái này cũng được"*), và luật mức độ làm
+  phiền chỉ sống được khi không có ngoại lệ nào.
+- **(C) Cho toast KHÔNG tự tắt, phải bấm mới mất.** Loại: đó là một hộp thoại đội lốt toast, và nó
+  phá luật 4 giây mà `RewardToastHost` vừa dựng cho cả sáu kênh còn lại.
+- **(D — đã chọn) Tách đôi trường, cộng một lưới an toàn KHÔNG hết hạn.**
+
+**Giải pháp.** Hai trường bền, hai câu hỏi:
+`lastWeeklyReportDate` = *đã MỜI tuần này* (ghi lúc `checkWeeklyReport` bật lời mời, để không mời
+lại mỗi lần mở app) · `lastWeeklyReportSeenDate` = *đã MỞ bản tổng kết ra* (ghi lúc
+`openWeeklyReport`). Toast hết 4 giây gọi `dismissWeeklyReportToast`, thứ **chỉ tắt lời mời và
+không ghi ngày nào**.
+
+⚠️ **Ba luật đi kèm, đừng gỡ cái nào:**
+1. **MỞ = đã xem; ĐÓNG = không ghi gì.** Ghi ở lúc đóng là dựng lại đúng cái bẫy cũ ở một chỗ khác.
+2. **Cú mở ĐẦU TIÊN trong tuần rơi vào chế độ `'previous'`.** Không có luật này thì việc đổi sang
+   toast âm thầm đổi luôn NỘI DUNG Đàm nhận được — nút ở thanh bên xưa nay mở `'current'` (tuần
+   đang chạy dở), còn hộp thoại tự bật thì mở `'previous'` (tuần đã xong).
+3. **Chấm ở nút "Báo cáo tuần" là LƯỚI AN TOÀN, không phải trang trí.** Nó do
+   `lastWeeklyReportSeenDate` điều khiển nên nó KHÔNG hết hạn. Thiếu nó thì phương án (D) thoái hoá
+   về phương án (A): một lời mời 4 giây có thể bị lỡ, và không còn dấu vết nào cho biết đã lỡ.
+
+**Đánh đổi.** Thêm một trường vào dữ liệu bền (đi qua `normalizePersistedGameState`, ảnh chụp thăng
+hoa và `partialize` lên Supabase) — giá phải trả để một trường thôi gánh hai việc. Máy cũ nạp lên có
+`lastWeeklyReportSeenDate` rỗng ⇒ chấm sáng một lần và cú bấm đầu tiên đưa đúng bản tuần trước; đó
+là hành vi ĐÚNG chứ không phải một ca cần migration.
+
+**Ảnh hưởng.** ADR-060 nay không còn ngoại lệ nào: `blocking` ở `OverlayStack` chỉ còn chứa những
+hộp thoại do Đàm bấm hoặc do bốn việc bắt buộc phải quyết định.
+
+**Điều kiện xem lại.** Khi có mục thứ hai xin được tự bật — lúc đó câu hỏi không phải "cho nó bật
+không" mà là "nó có buộc phải quyết định gì không".
+
+**Khoá bằng test.** `src/store/gameStore.weeklyReport.test.js` (9 bài, chạy store THẬT với đồng hồ
+đóng băng ở một thứ Hai giờ VN, có bài đối chứng khẳng định mốc ấy đúng là thứ Hai). Bảy phép thử
+ngược đều đỏ đúng bài dự kiến — trong đó có phép dựng lại chính khuyết tật cũ (toast hết giờ cũng
+ghi "đã xem") và phép bỏ luật `'previous'`.
+
+---
+
 ## ADR-060 — MỘT ngôn ngữ hình cho mọi phần thưởng, và một luật MỨC ĐỘ LÀM PHIỀN có phân tầng
 
 **Ngày:** 2026-08-27

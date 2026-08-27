@@ -13,10 +13,13 @@
 > mà không được refactor triệt để, phải CHỦ ĐỘNG đề xuất mở một "Maintenance Sprint" (nêu rõ mục
 > tiêu/phạm vi/lợi ích/rủi ro/tiêu chí hoàn thành) thay vì tiếp tục cộng thêm tính năng mới.
 >
-> **Trạng thái ngưỡng hiện tại (2026-08-27 tối, sau ADR-060 "một ngôn ngữ hình cho phần thưởng")**:
-> thêm **#87** (báo cáo tuần vẫn tự bật sáng thứ Hai — ngoại lệ DUY NHẤT của luật mức độ làm phiền)
-> ở mức **Low**. Vẫn **1 mục Priority High còn mở** (#53), **0 mục Critical** → xa ngưỡng
-> Maintenance Sprint.
+> **Trạng thái ngưỡng hiện tại (2026-08-27 tối, sau ADR-061 "tách đã-mời khỏi đã-xem")**:
+> **#87 ĐÃ ĐÓNG cùng ngày mở** — báo cáo tuần thôi tự bật, và luật mức độ làm phiền của ADR-060 nay
+> **không còn ngoại lệ nào**. Vẫn **1 mục Priority High còn mở** (#53), **0 mục Critical** → xa
+> ngưỡng Maintenance Sprint.
+>
+> *(mốc trước)* **(2026-08-27 tối, sau ADR-060 "một ngôn ngữ hình cho phần thưởng")**: thêm **#87**
+> (báo cáo tuần vẫn tự bật sáng thứ Hai) ở mức **Low**.
 >
 > *(mốc trước)* **(2026-08-27, sau khi viết lại `ActionButton`)**: thêm **#86**
 > (137 nút tự vẽ không đọc token skin) ở mức **Medium** — vẫn **1 mục Priority High còn mở**
@@ -4445,7 +4448,7 @@ trong chú thích thì đừng để `--selftest` của chính nó vẫn dùng �
 
 ---
 
-## #87 — Báo cáo tuần VẪN tự bật sáng thứ Hai, tức nó là ngoại lệ duy nhất của luật "chỉ bốn việc được chặn màn hình"
+## #87 — ~~Báo cáo tuần VẪN tự bật sáng thứ Hai~~ ✅ **ĐÃ ĐÓNG 2026-08-27 (ADR-061)**
 
 - **Tên**: `weeklyReportOpen` tự bật (không do Đàm bấm) và mở một hộp thoại toàn màn hình.
 - **Module**: `src/App.jsx` (`OverlayStack`) · `src/store/gameStore.js` (`checkWeeklyReport`) ·
@@ -4469,7 +4472,16 @@ trong chú thích thì đừng để `--selftest` của chính nó vẫn dùng �
 - **Estimated Complexity**: Small (nếu đã tách xong hai trạng thái trên); Medium nếu tính cả việc tách.
 - **Blocking Conditions**: không có blocker kỹ thuật; chỉ chờ quyết định của Đàm về đánh đổi ở trên.
 - **Review Trigger**: khi Đàm nói báo cáo tuần làm phiền, hoặc khi có mục thứ hai xin được tự bật.
-- **Owner**: chưa giao · **Status**: OPEN (ghi 2026-08-27, ADR-060).
+- **Owner**: chưa giao · **Status**: ✅ **ĐÓNG 2026-08-27** (ADR-061) — cùng ngày mở.
+- **Đã làm gì**: tách trường theo đúng "ĐIỀU KIỆN BẮT BUỘC" ở trên trước khi đụng vào tính năng.
+  `lastWeeklyReportDate` = *đã MỜI* · `lastWeeklyReportSeenDate` = *đã XEM*. `checkWeeklyReport`
+  nay chỉ bật `ui.weeklyReportPending` (một thẻ toast, nguồn `weekly` trong `rewardFeed.js`); hộp
+  thoại chỉ mở khi Đàm bấm. Toast hết 4 giây gọi `dismissWeeklyReportToast` — **không ghi ngày nào**.
+- **Lưới an toàn** (thứ khiến bản vá này KHÔNG phải là đánh đổi mà mục này cảnh báo): chấm "chưa
+  xem" ở nút *Báo cáo tuần* trên thanh bên, do `lastWeeklyReportSeenDate` điều khiển nên nó KHÔNG
+  hết hạn; và cú bấm đầu tiên trong tuần mở thẳng bản `'previous'` — đúng thứ hộp thoại tự bật đưa ra.
+- **Khoá bằng test**: `src/store/gameStore.weeklyReport.test.js` (9 bài, 7 phép thử ngược đã đỏ),
+  trong đó có bài dựng lại chính khuyết tật cũ và ĐÒI nó phải đỏ.
 
 ---
 

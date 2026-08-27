@@ -1,5 +1,6 @@
 import React from 'react';
-import { motion, useReducedMotion } from 'framer-motion';
+import { motion } from 'framer-motion';
+import { useSnapMotion } from '../lib/motionPresets';
 
 import useGameStore from '../store/gameStore';
 import useSettingsStore from '../store/settingsStore';
@@ -17,6 +18,10 @@ function getEraXPRange(bookNumber) {
 }
 
 export default function RankDisplay() {
+  // NGOẠI LỆ (mang bố cục) — cả ba thanh dưới đây có bề dài CHÍNH LÀ con số chúng đang kể
+  // (EP trong kỷ · cổng EP · tiến độ thử thách hạng). `initial`/`animate` ở lại tại chỗ vì
+  // mỗi thanh một biểu thức; cái gác chỉ lo `transition`.
+  const barMotion = useSnapMotion({ transition: { duration: 0.45, ease: 'easeOut' } });
   const activeBook = useGameStore((s) => s.progress.activeBook);
   const rankSystem = useGameStore((s) => s.rankSystem);
   const rankChallenge = useGameStore((s) => s.rankChallenge);
@@ -24,7 +29,6 @@ export default function RankDisplay() {
   const initiateChallenge = useGameStore((s) => s.initiateRankChallenge);
   const eraCrisis = useGameStore((s) => s.eraCrisis);
   const uiTheme = useSettingsStore((s) => s.uiTheme);
-  const reduceMotion = useReducedMotion();
 
   const lightTheme = uiTheme === 'light';
   const bookKey = `book${activeBook}`;
@@ -99,11 +103,10 @@ export default function RankDisplay() {
         <div className="mt-3 h-[2px] overflow-hidden rounded-full bg-[var(--line)]">
           <motion.div
             className="h-full rounded-full"
-            initial={reduceMotion ? false : { width: 0 }}
-            animate={reduceMotion ? undefined : { width: `${Math.max(0, Math.min(100, (epInEra / eraGap) * 100))}%` }}
-            transition={reduceMotion ? undefined : { duration: 0.45, ease: 'easeOut' }}
+            initial={{ width: 0 }}
+            animate={{ width: `${Math.max(0, Math.min(100, (epInEra / eraGap) * 100))}%` }}
+            {...barMotion}
             style={{
-              width: reduceMotion ? `${Math.max(0, Math.min(100, (epInEra / eraGap) * 100))}%` : undefined,
               background: 'var(--ink)',
             }}
           />
@@ -139,11 +142,10 @@ export default function RankDisplay() {
             <div className="mt-3 h-[2px] overflow-hidden rounded-full bg-[var(--line)]">
               <motion.div
                 className="h-full rounded-full"
-                initial={reduceMotion ? false : { width: 0 }}
-                animate={reduceMotion ? undefined : { width: `${epGatePct}%` }}
-                transition={reduceMotion ? undefined : { duration: 0.45, ease: 'easeOut' }}
+                initial={{ width: 0 }}
+                animate={{ width: `${epGatePct}%` }}
+                {...barMotion}
                 style={{
-                  width: reduceMotion ? `${epGatePct}%` : undefined,
                   background: 'var(--accent)',
                 }}
               />
@@ -226,11 +228,10 @@ export default function RankDisplay() {
           <div className="mt-3 h-[2px] overflow-hidden rounded-full bg-[var(--line)]">
             <motion.div
               className="h-full rounded-full"
-              initial={reduceMotion ? false : { width: 0 }}
-              animate={reduceMotion ? undefined : { width: `${Math.max(0, Math.min(100, (rankChallenge.sessionsCompleted / Math.max(1, rankChallenge.sessionsRequired)) * 100))}%` }}
-              transition={reduceMotion ? undefined : { duration: 0.45, ease: 'easeOut' }}
+              initial={{ width: 0 }}
+              animate={{ width: `${Math.max(0, Math.min(100, (rankChallenge.sessionsCompleted / Math.max(1, rankChallenge.sessionsRequired)) * 100))}%` }}
+              {...barMotion}
               style={{
-                width: reduceMotion ? `${Math.max(0, Math.min(100, (rankChallenge.sessionsCompleted / Math.max(1, rankChallenge.sessionsRequired)) * 100))}%` : undefined,
                 background: 'var(--accent)',
               }}
             />

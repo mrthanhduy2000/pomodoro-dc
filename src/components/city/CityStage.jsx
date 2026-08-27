@@ -18,6 +18,7 @@
 
 import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
+import { useEnterMotion } from '../../lib/motionPresets';
 
 import useSettingsStore from '../../store/settingsStore';
 import {
@@ -79,6 +80,7 @@ export default function CityStage({
   /** Phần tử của `layout.buildings` / `layout.scaffolds` đang được chọn, đã kèm `kind`. */
   selection = null,
 }) {
+  const enterMotion = useEnterMotion();
   const preference = useSettingsStore((s) => s.cityRenderMode);
   const showHud = useSettingsStore((s) => s.cityPerfHud);
 
@@ -178,10 +180,7 @@ export default function CityStage({
               {selection && (
                 <motion.button
                   type="button"
-                  initial={reduceMotion ? false : { opacity: 0, y: -6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: -6 }}
-                  transition={{ duration: reduceMotion ? 0 : 0.18 }}
+                  {...enterMotion}
                   onClick={() => onPick?.(null)}
                   className="pointer-events-auto rounded-full px-3 py-1.5 text-[11px] font-medium shadow-sm"
                   style={{ background: 'var(--canvas)', color: 'var(--ink)', border: '1px solid var(--line)' }}
@@ -200,7 +199,6 @@ export default function CityStage({
                 <BuildingCard
                   item={selection}
                   era={layout.era}
-                  reduceMotion={reduceMotion}
                   onClose={() => onPick?.(null)}
                 />
               )}

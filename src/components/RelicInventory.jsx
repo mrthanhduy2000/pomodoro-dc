@@ -4,6 +4,7 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
+import { useCustomMotion, useEnterMotion, usePressMotion } from '../lib/motionPresets';
 import useGameStore from '../store/gameStore';
 import useSettingsStore from '../store/settingsStore';
 import {
@@ -154,6 +155,10 @@ export default function RelicInventory() {
 }
 
 function RelicCard({ relic, stage, lightTheme }) {
+  const enterMotion = useEnterMotion();
+  const pressMotion = usePressMotion();
+  // Phóng to khi DI CHUỘT không thuộc ba nhịp — đi qua cái gác ngoại lệ.
+  const hoverGrow = useCustomMotion({ whileHover: { scale: 1.02 } });
   const evolveRelic = useGameStore((s) => s.evolveRelic);
   const resourcesRefined = useGameStore((s) => s.resourcesRefined);
   const buildings = useGameStore((s) => s.buildings);
@@ -176,8 +181,7 @@ function RelicCard({ relic, stage, lightTheme }) {
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
+      {...enterMotion}
       className={`p-5 ${lightTheme ? '' : `rounded-[var(--skin-radius-card,28px)] border ${token.darkCard}`}`}
       style={lightTheme ? paperCardStyle(lightTheme, token.accentBorder, 'rgba(31, 30, 29, 0.05)') : undefined}
     >
@@ -317,8 +321,8 @@ function RelicCard({ relic, stage, lightTheme }) {
                 </label>
               )}
               <motion.button
-                whileHover={canEvolve ? { scale: 1.02 } : undefined}
-                whileTap={canEvolve ? { scale: 0.98 } : undefined}
+                {...(canEvolve ? hoverGrow : {})}
+                {...(canEvolve ? pressMotion : {})}
                 onClick={() => canEvolve && evolveRelic(relic.id, useTinhThe && hasTinhThe ? { ttchToSpend: true } : undefined)}
                 disabled={!canEvolve}
                 className="mt-3 w-full rounded-[var(--skin-radius-control,16px)] py-2.5 text-sm font-semibold transition-colors"

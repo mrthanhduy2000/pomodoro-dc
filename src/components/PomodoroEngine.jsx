@@ -2539,25 +2539,44 @@ function CategoryManager({ categories, onClose, onAdd, onDelete }) {
   );
 }
 
+/**
+ * ActionButton — nút hành động chuẩn của app.
+ *
+ * ⚠️ MÀU ĐỌC TỪ TOKEN, KHÔNG RẼ NHÁNH THEO `lightTheme`. Bản cũ khai hai bảng màu cứng (một cho
+ * sáng, một cho tối) với mã màu chốt thẳng vào chuỗi lớp — nên **đổi skin không đổi được nút**:
+ * app có 5 skin × 2 chế độ = 10 tổ hợp, mà bảng cứng chỉ biết 2. Nay mỗi biến thể chỉ trỏ tới
+ * token; token đã tự đổi theo CẢ skin lẫn chế độ sáng/tối, nên nút đi theo miễn phí. Vì vậy
+ * component này KHÔNG còn đọc `useSettingsStore` nữa — nó không cần biết đang ở chế độ nào.
+ *
+ * ⚠️ BÓNG LÀ BÓNG ĐẶC (`0 4px 0 0`), KHÔNG PHẢI BÓNG MỜ. Bóng mờ nhiều lớp làm nút trông như một
+ * thẻ giấy đang trôi; một vạch đặc dày 4px dưới đáy làm nó trông như một PHÍM BẤM có chiều dày.
+ * Cả cảm giác bấm nằm ở chỗ đó: `whileTap` hạ nút xuống **đúng 4px** — bằng chiều dày vạch —
+ * đồng thời `active:shadow-none` xoá vạch, nên mép dưới của nút đứng yên tại chỗ và mắt đọc ra
+ * "nút vừa lún xuống chạm mặt bàn". Lệch hai con số ấy là hỏng hiệu ứng.
+ *
+ * ⚠️ VÌ SAO BÓNG XOÁ BẰNG CSS `active:` CHỨ KHÔNG BẰNG `whileTap: { boxShadow }` — đây là cái bẫy
+ * đắt nhất ở đây. Framer Motion animate `boxShadow` bằng cách ghi một **style inline đã resolve**
+ * (`var(--line-2)` bị thay bằng mã màu cụ thể tại thời điểm chạm). Style inline thắng mọi lớp CSS,
+ * và nó ở lại sau khi animation kết thúc ⇒ nút sẽ **đóng băng màu bóng của skin cũ**: đổi skin
+ * xong, mọi nút đã từng được bấm vẫn giữ bóng cũ, mà không có gì đỏ lên. Dùng `active:` thì `var()`
+ * còn sống, nên bóng luôn đi theo skin. Framer chỉ lo `y` — thứ không chứa màu.
+ *
+ * ⚠️ `transition` CHỈ LIỆT KÊ THUỘC TÍNH CSS THẬT SỰ SỞ HỮU. Bản cũ dùng `transition-all`, mà
+ * `all` bao gồm `transform` — thứ Framer đang tự animate bằng vòng lặp riêng của nó. Hai bên cùng
+ * điều khiển một thuộc tính thì trình duyệt phải nội suy lại từng giá trị Framer ghi ra, và cú bấm
+ * thành nhão. Bỏ `transform` khỏi danh sách thì cú lún đanh lại.
+ */
 function ActionButton({ children, className = '', disabled = false, onClick, size = 'default', title, variant = 'soft', ...motionProps }) {
-  const uiTheme = useSettingsStore((s) => s.uiTheme);
-  const lightTheme = uiTheme === 'light';
-
-  const themeMap = lightTheme
-    ? {
-        primary: 'border-transparent bg-[var(--ink)] text-[var(--canvas)] shadow-[0_12px_24px_rgba(31,30,29,0.14)] hover:bg-[var(--ink-2)]',
-        accent: 'border-transparent bg-[var(--accent)] text-white shadow-[0_12px_24px_rgba(201,100,66,0.16)] hover:bg-[var(--accent2)]',
-        soft: 'border-[var(--line)] bg-white text-[var(--ink)] shadow-[0_8px_16px_rgba(31,30,29,0.05)] hover:border-[var(--line-2)] hover:bg-[rgba(244,242,236,0.96)]',
-        info: 'border-[rgba(201,100,66,0.14)] bg-[rgba(255,247,237,0.98)] text-[var(--accent2)] shadow-[0_8px_16px_rgba(201,100,66,0.06)] hover:bg-[rgba(255,239,228,0.98)]',
-        danger: 'border-[rgba(31,30,29,0.08)] bg-[rgba(244,242,236,0.96)] text-[var(--ink)] shadow-[0_8px_16px_rgba(31,30,29,0.04)] hover:border-[var(--line-2)] hover:bg-white',
-      }
-    : {
-        primary: 'text-[var(--ink)] bg-white/[0.08] border-white/10 shadow-[0_4px_20px_rgba(0,0,0,0.14)] hover:bg-white/[0.10]',
-        accent: 'text-white bg-[rgba(var(--accent-rgb),0.88)] border-[rgba(var(--accent-rgb),0.24)] shadow-[0_4px_20px_rgba(var(--accent-rgb),0.18)] hover:bg-[rgba(var(--accent-rgb),0.78)]',
-        soft: 'text-[var(--ink)] bg-white/[0.05] border-white/8 shadow-[0_4px_16px_rgba(0,0,0,0.12)] hover:bg-white/[0.08]',
-        info: 'text-[var(--accent-light)] bg-white/[0.05] border-[rgba(var(--accent-rgb),0.18)] shadow-[0_4px_16px_rgba(0,0,0,0.12)] hover:bg-white/[0.08]',
-        danger: 'text-[var(--accent-light)] bg-white/[0.05] border-[rgba(var(--accent-rgb),0.18)] shadow-[0_4px_16px_rgba(0,0,0,0.12)] hover:bg-white/[0.08]',
-      };
+  // Bóng đặc dày ĐÚNG bằng quãng lún của `whileTap` bên dưới. Đổi một con số thì phải đổi cả hai.
+  const themeMap = {
+    primary: 'border-transparent bg-[var(--ink)] text-[var(--canvas)] shadow-[0_4px_0_0_var(--line-2)]',
+    accent: 'border-transparent bg-[var(--accent)] text-white shadow-[0_4px_0_0_var(--accent2)]',
+    soft: 'border-[var(--line-2)] bg-[var(--card-bg-solid)] text-[var(--ink)] shadow-[0_4px_0_0_var(--line-2)]',
+    // `--accent-soft` chưa skin nào khai (2026-08-27) nên hôm nay fallback luôn là đường chạy thật.
+    // Giữ nguyên lối `var(a, b)` để skin nào muốn có nền nhấn riêng thì chỉ cần khai thêm token.
+    info: 'border-transparent bg-[var(--accent-soft,var(--card-bg-solid2))] text-[var(--accent-ink)] shadow-[0_4px_0_0_var(--line-2)]',
+    danger: 'border-transparent bg-[var(--card-bg-solid2)] text-[var(--ink)] shadow-[0_4px_0_0_var(--line-2)]',
+  };
 
   // ⚠️ MỖI `size` LÀ MỘT BỘ TRỌN VẸN, CỐ Ý — đừng "gọn hơn" bằng cách để nơi gọi chồng thêm lớp.
   // `sizeMap[size] ?? sizeMap.default` chỉ phát ra ĐÚNG MỘT bộ, nên không có hai lớp nào cùng khai
@@ -2582,14 +2601,27 @@ function ActionButton({ children, className = '', disabled = false, onClick, siz
       disabled={disabled}
       title={title}
       data-variant={variant}
-      whileHover={disabled ? undefined : { scale: 1.03, y: -1 }}
-      whileTap={disabled ? undefined : { scale: 0.97 }}
+      // Nhấc nhẹ 1px + sáng lên 6%: đủ để biết con trỏ đang ở đâu, không đủ để chữ nhoè.
+      // (Bản cũ dùng `scale: 1.03` — phóng to cả khối làm chữ bị nội suy lại nên MỜ đi đúng lúc
+      // người dùng đang nhìn vào nó.)
+      whileHover={disabled ? undefined : { y: -1 }}
+      whileTap={disabled ? undefined : { y: 4 }}
       onClick={onClick}
-      className={`inline-flex max-w-full items-center justify-center rounded-2xl border text-center transition-all ${
+      // ⚠️ `disabled:shadow-none` chứ KHÔNG phải `shadow-none` trần. Lớp trần có cùng độ đặc hiệu
+      // (0,1,0) với `shadow-[0_4px…]` của biến thể, nên ai thắng là do THỨ TỰ trong bảng kiểu
+      // Tailwind quyết — hôm nay đo được `.shadow-none` tình cờ đứng sau nên nó thắng, nhưng đó là
+      // một sự trùng hợp, không phải một luật. `:disabled` nâng độ đặc hiệu lên (0,2,0) nên nó
+      // thắng bất kể thứ tự. Cùng lý do với `active:shadow-none`. (Đây đúng là cái canh bạc mà
+      // chú thích của `sizeMap` ngay trên đã cảnh báo — chỉ khác là ở thuộc tính `box-shadow`.)
+      className={`inline-flex max-w-full items-center justify-center rounded-2xl border text-center transition-[background-color,border-color,color,box-shadow,filter] duration-150 disabled:shadow-none ${
         sizeMap[size] ?? sizeMap.default
       } ${
         themeMap[variant] ?? themeMap.soft
-      } ${disabled ? 'cursor-not-allowed opacity-45' : ''} ${className}`}
+      } ${
+        disabled
+          ? 'cursor-not-allowed opacity-45'
+          : 'hover:brightness-[1.06] active:shadow-none'
+      } ${className}`}
       {...motionProps}
     >
       {children}

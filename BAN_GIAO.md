@@ -1,3 +1,68 @@
+> Cập nhật lần cuối: **2026-08-27 (chiều)** — **`ActionButton` NGHE THEO SKIN + CÓ CẢM GIÁC BẤM LÚN.**
+> Ba bệnh đã chữa: `themeMap` khai màu cứng theo `lightTheme` (chỉ đúng **2 trong 10** tổ hợp skin ×
+> chế độ) · bóng MỜ nhiều lớp làm nút trông như thẻ giấy · `whileHover scale 1.03` phóng to cả khối
+> nên chữ nhoè đúng lúc đang nhìn. Nay: một bảng màu DUY NHẤT đọc token · bóng ĐẶC `0 4px 0 0` ·
+> nhấc `y:-1` + sáng 6% khi rê chuột · `whileTap y:4` + `active:shadow-none` để nút lún đúng bằng
+> chiều dày vạch rồi vạch biến mất.
+>
+> **`sizeMap` GIỮ NGUYÊN TỪNG KÝ TỰ** — không so bằng mắt mà bằng một phép so chuỗi trong chính
+> script sửa file (`assert a == b` cho cả ba mục). `actionButtonSizing.test.js` vẫn xanh.
+>
+> **⚠️ BỐN CÁI BẪY, CÁI NÀO CŨNG IM LẶNG:**
+> **(1) FRAMER ANIMATE `boxShadow` SẼ ĐÓNG BĂNG MÀU CỦA SKIN CŨ.** Cách hiển nhiên để "bỏ bóng khi
+> bấm" là `whileTap: { y: 4, boxShadow: '…' }`. Nhưng Framer animate bằng cách ghi **style inline đã
+> resolve** (`var(--line-2)` → mã màu cụ thể) và để lại đó; style inline thắng mọi lớp CSS ⇒ mọi nút
+> từng được bấm sẽ giữ bóng của skin cũ sau khi đổi skin, **mà không có gì đỏ lên**, và nó phá đúng
+> tiêu chí nghiệm thu thứ hai. Vá: bóng tắt bằng CSS `active:shadow-none` (giữ `var()` còn sống),
+> Framer chỉ lo `y` — thứ không chứa màu. Đã khoá bằng test.
+> **(2) `shadow-none` TRẦN THẮNG/THUA TUỲ THỨ TỰ BẢNG KIỂU.** Nhánh disabled bản đầu dùng
+> `shadow-none` trần — cùng độ đặc hiệu (0,1,0) với `shadow-[0_4px…]` của biến thể. Đo được:
+> `.shadow-none` ở vị trí 44292, `.shadow-[0_4px…]` ở 43329 ⇒ hôm nay `shadow-none` thắng **nhờ tình
+> cờ đứng sau**. Một lần nâng Tailwind là nút disabled có bóng lại. Vá: `disabled:shadow-none`
+> (`:disabled` nâng lên 0,2,0 ⇒ thắng bất kể thứ tự). Đây đúng canh bạc mà chú thích `sizeMap` cảnh
+> báo, chỉ khác thuộc tính.
+> **(3) `transition-all` ĐÁNH NHAU VỚI FRAMER.** `all` bao gồm `transform`, thứ Framer đang tự
+> animate bằng vòng lặp riêng — trình duyệt phải nội suy lại từng giá trị Framer ghi ra và cú bấm
+> thành nhão. Nay liệt kê đúng 5 thuộc tính CSS thật sự sở hữu, `transform` để Framer lo một mình.
+> **(4) SKIN THỤY SĨ ÉP `box-shadow: none !important` LÊN NÚT PRIMARY.** Dòng ấy viết khi nút còn
+> dùng bóng mờ, và nó đúng lúc đó. Nhưng bóng đặc không còn là trang trí — nó là thứ cú bấm LÚN VÀO;
+> giữ dòng ấy thì riêng Thụy Sĩ có nút tụt 4px mà chẳng có gì để tụt vào. **Đã bỏ đúng một dòng đó**,
+> giữ nguyên ba dòng màu (quyết định "CTA đỏ thay vì đen" không đổi). Vạch đặc `#100f0b` dưới khối đỏ
+> `#df3a1e` chính là ngôn ngữ Thụy Sĩ, không phải bóng mờ mà dòng cũ muốn cấm.
+>
+> **⚠️ CÔNG CỤ ĐO NÓI DỐI BA LẦN TRONG PHIÊN NÀY, VÀ LẦN NÀO CŨNG THEO HƯỚNG ĐỔ OAN CHO MÃ:**
+> **(a)** Đổi `data-skin` trong DOM rồi đọc `getComputedStyle` ra **cùng một bộ số ở cả 5 skin** —
+> tưởng "đổi skin không ăn". Nhưng phép gỡ rối cho thấy `--ink` trên **đúng cái nút đó** CÓ đổi
+> (`#171614` → `#1f1e1d`). Mâu thuẫn nội tại ⇒ nghi công cụ. Bỏ hẳn lối đổi-thuộc-tính, đo bằng
+> **nạp trang thật cho từng skin** (cờ `--skin`) thì 6 tổ hợp ra 6 bộ giá trị khác nhau. **Một phép
+> đo đổi trạng thái RỒI đọc ngay trong cùng một lượt script là thứ không nên tin.**
+> **(b)** `--press` bản đầu bấm vào toạ độ `y=914` — **dưới khung nhìn 900px**, vì nút bị cuộn khuất.
+> Toạ độ của một nút ngoài màn hình vẫn là số hợp lệ, nên nó báo "nút không lún" cho một cơ chế lành.
+> Nay có gác `elementFromPoint` BẮT BUỘC trúng đích, và tự `scrollIntoView` trước.
+> **(c)** `--probe` khai `awaitPromise: true` nhưng lại bọc `String(...)` ở NGOÀI ⇒ mọi biểu thức bất
+> đồng bộ trả về đúng chuỗi `"[object Promise]"` — một dòng kết quả trông hoàn toàn bình thường mà
+> không chứa số nào thật. Đã vá thành `Promise.resolve(...).then(String)`.
+>
+> **⚠️ MỘT GAP PHẢI NÓI THẲNG: nửa Framer của cú bấm KHÔNG quan sát được trong Chromium headless.**
+> `--press` đo được nửa CSS (**bóng biến mất khi giữ ✓**) nhưng Framer ghi `style=""` và không dịch
+> nút. Đã đo **mốc nền tại commit trước** (bản cũ `whileHover scale 1.03 / whileTap scale 0.97`):
+> **hành xử y hệt** ⇒ đây là đặc tính môi trường đo, **không phải hồi quy**. Framer vẫn chạy trong
+> cùng trang (nút chọn skin ở Cài đặt đổi `none → matrix(1.02…)`), nên nguyên nhân chưa truy ra. Vì
+> vậy bất biến quan trọng nhất — *quãng lún BẰNG chiều dày bóng* — được khoá ở tầng MÃ NGUỒN
+> (`actionButtonPress.test.js`, 5 bài, **cả 6 phép thử ngược đều đỏ đúng chỗ**), chỗ nó thật sự có
+> thể trôi. Một phép phá tự tố cáo khớp 2 chỗ và đã được làm lại bằng neo duy nhất.
+>
+> **VIỆC 4 — kết quả là 0 chỗ chuyển được, và đó là câu trả lời thật chứ không phải bỏ dở.** Đếm
+> được **137 nút tự vẽ trên 28 file**; soi TỪNG ứng viên có hình dạng nút thật (29 cái). Không cái
+> nào chuyển được mà không đổi hình dạng, vì `sizeMap` là bộ **ĐÓNG gồm 3 cỡ, cả ba đều `text-lg
+> px-7 rounded-2xl`** — đo riêng cho hàng nút lớn của đồng hồ. Ba nhóm lý do: có **trạng thái được
+> chọn** (`ActionButton` không có khái niệm đó) · nhỏ hơn hẳn và `rounded-full` · và `ActionButton`
+> **không được export** (nằm trong `PomodoroEngine.jsx` 2.598 dòng). Đã ghi `TECH_DEBT #86` kèm
+> **bảng từng file + lý do** và một lộ trình 4 bước theo đúng thứ tự.
+>
+> Cổng: `npm test` **1.163 bài · 1.162 pass · 0 fail · 1 skipped** (+5 bài mới) · `test:cross` 3/3 ·
+> lint sạch · build xanh. Đo trên trình duyệt thật: 6 tổ hợp skin × chế độ ra 6 bộ màu nút khác nhau.
+
 > Cập nhật lần cuối: **2026-08-27** — **SKIN THỨ 5 "SÂN CHƠI" (arcade), ĐẶT LÀM MẶC ĐỊNH.**
 > Nền cho hướng game hoá đơn giản, hiện đại: bỏ giấy, bỏ serif, bỏ gradient, bỏ kính mờ ⇒ mặt
 > phẳng sạch · chữ sans đậm (Inter 800, không thêm font mới) · **BÓNG ĐẶC** — một vạch màu dày 3px

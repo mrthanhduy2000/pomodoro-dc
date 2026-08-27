@@ -383,9 +383,86 @@ const fullH = Math.max(sh, innerSh ?? 0);
 //
 // ⚠️ Chú thích về đoạn mã trình duyệt phải nằm NGOÀI chuỗi (xem cảnh báo dài ở khối `--fit`).
 // Biểu thức được bọc trong `String(...)`, nên trả về đối tượng thì nên tự `JSON.stringify`.
+// ─── `--press "<chữ trên nút>"` — BẤM GIỮ MỘT NÚT RỒI ĐO, bằng số ───────────────────────────
+//
+// ⚠️ Vì sao KHÔNG đo bằng `--probe` với `dispatchEvent`: CSS `:active` chỉ được trình duyệt bật
+// bởi INPUT THẬT. Một `new PointerEvent(...)` tổng hợp làm Framer Motion phản ứng (nó nghe sự kiện
+// JS) nhưng KHÔNG làm `:active` khớp — nên phép đo sẽ thấy nút hạ xuống mà bóng vẫn còn, tức
+// **báo hỏng một cơ chế đang chạy đúng**. `Input.dispatchMouseEvent` của CDP đi qua đúng đường mà
+// chuột thật đi, nên cả hai nửa cùng nổ.
+//
+// ⚠️ Và vì sao nằm Ở ĐÂY chứ không phải một script đo riêng: y hệt lý do của `--probe` ngay trên.
+//
+// In ra ba mốc: nghỉ → đang giữ → đã nhả. Cả ba đọc CÙNG hai đại lượng (dịch chuyển dọc và độ dày
+// bóng) để so trực tiếp được với nhau.
+const PRESS = arg('--press', null);
+if (PRESS) {
+  const found = await evaluate(`(function(){
+    var t = ${JSON.stringify(PRESS)};
+    var bs = Array.prototype.slice.call(document.querySelectorAll('button'));
+    var el = bs.filter(function(b){ return !b.disabled && b.textContent.trim().indexOf(t) !== -1; })[0];
+    if (!el) return JSON.stringify({ err: 'không thấy nút BẬT nào chứa chữ đó. Có: '
+      + bs.filter(function(b){return !b.disabled;}).map(function(b){return JSON.stringify(b.textContent.trim().slice(0,26));}).join(', ') });
+    window.__pressEl = el;
+    // ⚠️ Nút có thể đang bị CUỘN KHUẤT (app cuộn trong một khung bên trong, cao hơn khung nhìn
+    // nhiều lần). Toạ độ của một nút ngoài màn hình vẫn là một con số hợp lệ, nên không cuộn thì
+    // phép đo sẽ bấm vào chỗ trống rồi báo "nút không lún" — hỏng theo hướng đổ oan cho mã.
+    el.scrollIntoView({ block: 'center', inline: 'center' });
+    var r = el.getBoundingClientRect();
+    var x = Math.round(r.left + r.width/2), y = Math.round(r.top + r.height/2);
+    var at = document.elementFromPoint(x, y);
+    return JSON.stringify({ x: x, y: y,
+      trung: !!(at && (at === el || el.contains(at))),
+      dang_cham: at ? (at.tagName + (at.className ? '.' + String(at.className).split(' ')[0] : '')) : null });
+  })()`);
+  const hit = JSON.parse(found);
+  if (hit.err) { console.log('[press] ❌ ' + hit.err); ws.close(); chrome.kill(); server.close(); process.exit(2); }
+  // ⚠️ Gác BẮT BUỘC: toạ độ không trúng nút thì mọi con số bên dưới là số của một cú bấm vào chỗ
+  // khác — tức phép đo sẽ báo "không lún" cho một cơ chế hoàn toàn lành.
+  if (!hit.trung) { console.log(`[press] ❌ toạ độ (${hit.x},${hit.y}) KHÔNG trúng nút — đang chạm ${hit.dang_cham}`); ws.close(); chrome.kill(); server.close(); process.exit(2); }
+  // Chuột thật bao giờ cũng DI tới trước rồi mới nhấn; thiếu bước này một số handler bỏ qua.
+  await cdp('Input.dispatchMouseEvent', { type: 'mouseMoved', x: hit.x, y: hit.y, buttons: 0 });
+  await sleep(120);
+
+  // Đọc: dịch chuyển dọc (Framer ghi vào transform) + độ dày bóng (CSS `active:` quyết).
+  const doc = `(function(){
+    var el = window.__pressEl, cs = getComputedStyle(el);
+    var m = new DOMMatrixReadOnly(cs.transform === 'none' ? '' : cs.transform);
+    return JSON.stringify({ y: Math.round(m.m42 * 100) / 100, bong: cs.getPropertyValue('--tw-shadow').trim(),
+      inline: el.getAttribute('style') || '', con_trong_dom: document.body.contains(el) });
+  })()`;
+  const nghi = JSON.parse(await evaluate(doc));
+  await cdp('Input.dispatchMouseEvent', { type: 'mousePressed', x: hit.x, y: hit.y, button: 'left', buttons: 1, clickCount: 1 });
+  await sleep(320);                                   // chờ lò xo của Framer đứng yên
+  const giu = JSON.parse(await evaluate(doc));
+  await cdp('Input.dispatchMouseEvent', { type: 'mouseReleased', x: hit.x, y: hit.y, button: 'left', buttons: 0, clickCount: 1 });
+  await sleep(420);
+  const nha = JSON.parse(await evaluate(doc));
+
+  const day = /0 (\d+)px/.exec(nghi.bong);
+  console.log(`[press] nút chứa "${PRESS}"`);
+  console.log(`  nghỉ    : y=${nghi.y}px · bóng=${nghi.bong} · style="${nghi.inline}"`);
+  console.log(`  ĐANG GIỮ: y=${giu.y}px · bóng=${giu.bong} · style="${giu.inline}"`);
+  console.log(`  đã nhả  : y=${nha.y}px · bóng=${nha.bong} · cònTrongDOM=${nha.con_trong_dom}`);
+  const dayNghi = day ? Number(day[1]) : null;
+  const lun = giu.y - nghi.y;
+  const matBong = /^0 0 /.test(giu.bong) || giu.bong === 'none';
+  const batLen = Math.abs(nha.y - nghi.y) < 0.5 && nha.bong === nghi.bong;
+  console.log(`  ⇒ lún ${lun}px so với chiều dày bóng ${dayNghi}px : ${lun === dayNghi ? '✓ KHỚP' : '✗ LỆCH'}`);
+  console.log(`  ⇒ bóng biến mất lúc giữ : ${matBong ? '✓' : '✗'}`);
+  console.log(`  ⇒ nhả ra bật về như cũ  : ${batLen ? '✓' : '✗'}`);
+  ws.close(); chrome.kill(); server.close();
+  process.exit(lun === dayNghi && matBong && batLen ? 0 : 1);
+}
+
 const PROBE = arg('--probe', null);
 if (PROBE) {
-  const out = await evaluate(`String((function(){ return (${PROBE}); })())`);
+  // ⚠️ `Promise.resolve(...).then(String)` chứ KHÔNG phải `String(...)`. Bản cũ bọc `String()` ở
+  // ngoài cùng, nên một biểu thức bất đồng bộ bị biến thành chuỗi "[object Promise]" NGAY LẬP TỨC
+  // — `awaitPromise: true` của CDP không còn gì để chờ. Triệu chứng là một dòng kết quả trông
+  // hoàn toàn bình thường mà chẳng chứa số nào thật: đúng kiểu công cụ đo nói dối. Nay chuỗi hoá
+  // SAU khi promise đã xong, nên probe đo được cả những thứ cần chờ (hoạt hoạ, cử chỉ, mạng).
+  const out = await evaluate(`Promise.resolve((function(){ return (${PROBE}); })()).then(String)`);
   console.log(`[probe] innerWidth=${iw} innerHeight=${ih} · ${out}`);
   ws.close(); chrome.kill(); server.close();
   process.exit(0);

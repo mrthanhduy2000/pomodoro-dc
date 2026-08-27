@@ -12,6 +12,50 @@
 
 ---
 
+## 2026-08-27 (chiều) — Nút hành động nghe theo skin, và có cảm giác bấm lún xuống
+
+**Mục đích.** `ActionButton` là nút chuẩn của app nhưng nó khai hai bảng màu chốt cứng rẽ theo
+`lightTheme` — chỉ đúng ở 2 trong 10 tổ hợp skin × chế độ, nên đổi skin không đổi được nút. Bóng mờ
+nhiều lớp làm nó trông như thẻ giấy trôi thay vì một phím bấm, và `whileHover scale 1.03` phóng to
+cả khối nên chữ nhoè đúng lúc con trỏ đang ở trên nó.
+
+**Phạm vi.** Tầng giao diện. Không đụng engine game, thành phố 3D, sync, hay `sizeMap`.
+
+- **`src/components/PomodoroEngine.jsx`** — `ActionButton` viết lại: một `themeMap` DUY NHẤT trỏ
+  toàn token (`--ink`, `--accent`, `--card-bg-solid`, `--accent-soft` có fallback, `--card-bg-solid2`),
+  bỏ hẳn nhánh `lightTheme` và bỏ luôn việc đọc `useSettingsStore`. Bóng đặc `0 4px 0 0`; `whileTap
+  { y: 4 }` + `active:shadow-none` (lún đúng bằng chiều dày vạch rồi vạch biến mất); `whileHover
+  { y: -1 }` + `hover:brightness-[1.06]`; `disabled:shadow-none`. `sizeMap` **giữ nguyên từng ký tự**.
+- **`src/components/actionButtonPress.test.js`** (mới, 5 bài) — khoá: quãng lún BẰNG chiều dày bóng ·
+  không mã màu cứng và không rẽ theo `lightTheme` · không `scale` khi hover · bóng tắt bằng độ đặc
+  hiệu chứ không bằng thứ tự bảng kiểu · không để Framer animate `boxShadow`/màu. Cả 6 phép thử
+  ngược đều đỏ đúng bài dự kiến.
+- **`src/index.css`** — bỏ đúng một dòng `box-shadow: none !important` trong luật nút primary của
+  skin Thụy Sĩ. Dòng ấy viết cho bóng MỜ; với bóng ĐẶC nó làm nút tụt 4px mà không có gì để tụt vào.
+  Ba dòng màu giữ nguyên — quyết định "CTA đỏ thay vì đen" của skin đó không đổi.
+- **`scripts/shot.mjs`** — thêm cờ `--press "<chữ>"` (bấm giữ một nút bằng input CDP thật rồi đo
+  quãng lún + độ dày bóng ở ba mốc nghỉ/giữ/nhả), và **vá `--probe`**: nó khai `awaitPromise` nhưng
+  bọc `String()` ở ngoài nên mọi biểu thức bất đồng bộ trả về `"[object Promise]"` — một dòng kết
+  quả trông bình thường mà không chứa số nào thật.
+- **`TECH_DEBT.md`** — thêm **#86**: 137 nút tự vẽ trên 28 file không đọc token skin, kèm bảng từng
+  file + lý do không chuyển được, và lộ trình 4 bước.
+
+**Ảnh hưởng.** Nút đổi màu theo cả 5 skin và cả hai chế độ (đo trên trình duyệt thật: 6 tổ hợp ra 6
+bộ giá trị khác nhau). Người dùng thấy nút có "chân" và lún xuống khi bấm. Không có thay đổi nào về
+kích thước hay bố cục nút.
+
+**Tương thích.** Không có migration. Không đổi API của `ActionButton` (vẫn `variant`/`size`/`disabled`).
+
+**Đã biết, chưa xử lý.** (a) Nửa Framer của cú bấm không quan sát được trong Chromium headless —
+mốc nền tại commit trước hành xử y hệt nên không phải hồi quy, nhưng nguyên nhân chưa truy ra; bất
+biến được khoá ở tầng mã nguồn thay thế. (b) 137 nút tự vẽ vẫn chốt cứng bảng màu editorial — xem
+`TECH_DEBT #86`.
+
+**Cổng.** `npm test` 1.163 bài · 1.162 pass · 0 fail · 1 skipped · `test:cross` 3/3 · lint sạch ·
+build xanh.
+
+---
+
 ## 2026-08-27 — Skin thứ 5 "Sân Chơi" (arcade), đặt làm mặc định
 
 **Mục đích.** Nền cho hướng game hoá đơn giản, hiện đại. Bỏ giấy, bỏ serif, bỏ gradient, bỏ kính

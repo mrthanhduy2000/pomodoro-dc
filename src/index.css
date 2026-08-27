@@ -341,12 +341,19 @@ html, body, #root {
   font-weight: 800 !important;
   letter-spacing: -0.03em;
 }
-/* Nút hành động CHÍNH = khối đỏ Thụy Sĩ dứt khoát (thay vì đen) — CTA táo bạo */
+/* Nút hành động CHÍNH = khối đỏ Thụy Sĩ dứt khoát (thay vì đen) — CTA táo bạo.
+   ⚠️ ĐÃ BỎ `box-shadow: none !important` (2026-08-27). Dòng ấy viết khi nút còn dùng bóng MỜ
+   nhiều lớp, và mục đích của nó là "skin này không có bóng mờ" — đúng với tinh thần phẳng của lưới
+   Thụy Sĩ. Nhưng từ khi `ActionButton` đổi sang BÓNG ĐẶC, cái vạch dưới đáy nút không còn là trang
+   trí: nó là thứ mà cú bấm LÚN VÀO (nút hạ đúng 4px = đúng chiều dày vạch, rồi vạch biến mất). Giữ
+   dòng này thì riêng skin Thụy Sĩ có nút primary tụt xuống 4px mà chẳng có gì để tụt vào — trông
+   như lỗi bố cục chứ không như một cú bấm. Và một vạch ĐẶC, không nhoè, màu `--line-2` = `#100f0b`
+   dưới một khối đỏ `#df3a1e` chính là ngôn ngữ Thụy Sĩ (khối lệch cạnh cứng), không phải bóng mờ
+   mà dòng cũ muốn cấm. Ba dòng màu còn lại GIỮ NGUYÊN — quyết định "CTA đỏ thay vì đen" không đổi. */
 [data-skin="swiss"] button[data-variant="primary"]:not(:disabled) {
   background: var(--accent) !important;
   border-color: var(--accent) !important;
   color: #fff !important;
-  box-shadow: none !important;
 }
 /* Sân Chơi (arcade) — MẶC ĐỊNH. Nền cho hướng game hoá đơn giản, hiện đại: bỏ giấy, bỏ serif,
    bỏ gradient, bỏ kính mờ. Còn lại ba thứ: MẶT PHẲNG sạch, CHỮ SANS ĐẬM, và BÓNG ĐẶC — một

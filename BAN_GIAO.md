@@ -54,9 +54,18 @@
 > 90ms) · **`reward`** (scale 0,9→1 bằng lò xo 420/18). Cả ba là hook và **tự trả về object rỗng**
 > khi `useReducedMotion()` bật ⇒ chỗ gọi không phải tự kiểm tra.
 >
-> **9 file đã đổi:** `App.jsx` · `PomodoroEngine.jsx` · `DisasterModal` · `EraCrisisModal` ·
-> `LevelUpModal` · `LootDropModal` · `PrestigeModal` · `WeeklyReportModal` · `OnboardingOverlay`.
-> **KHÔNG đụng `src/components/city/render3d/`** (three.js, một hệ khác hẳn).
+> **11 file đã đổi:** `App.jsx` · `PomodoroEngine.jsx` · `DisasterModal` · `EraCrisisModal` ·
+> `LevelUpModal` · `LootDropModal` · `PrestigeModal` · `WeeklyReportModal` · `OnboardingOverlay` ·
+> `BlueprintInventory` · `SkillTree`. **KHÔNG đụng `src/components/city/render3d/`** (three.js).
+>
+> ⚠️ **HAI FILE CUỐI SUÝT BỊ BỎ SÓT, VÌ "MODAL" KHÔNG PHẢI LÚC NÀO CŨNG TÊN `*Modal.jsx`.**
+> Quét theo tên file ra đúng 7 modal và tôi đã tưởng thế là hết. Quét lại theo **HÌNH DẠNG**
+> (`grep 'fixed inset-0'`) ra thêm ba ứng viên, và hai trong ba là modal thật nằm LỒNG trong một
+> file lớn hơn: `BlueprintDetailPanel` (trong `BlueprintInventory.jsx`) và `PurchaseConfirmDialog`
+> (trong `SkillTree.jsx`) — mỗi cái đủ bộ lớp phủ + thân, đúng khuôn rời rạc cần dọn. Ứng viên thứ
+> ba (`ExportImport`) là một `<div>` trần không có chuyển động nào, nên không phải việc.
+> ⇒ **Đi tìm một LOẠI thứ thì quét theo hình dạng của nó, đừng quét theo quy ước đặt tên** — quy
+> ước đặt tên chỉ đúng cho những cái ai đó đã nhớ mà đặt tên đúng.
 >
 > **⚠️ BỐN ĐIỀU ĐÃ TRẢ GIÁ, CÁI NÀO CŨNG IM LẶNG:**
 > **(1) CHỈ THỊ GỐC TỰ MÂU THUẪN, VÀ MỘT NỬA CỦA NÓ LÀ QUẢ MÌN.** Chỉ thị ghi `reward` là *"scale
@@ -94,6 +103,14 @@
 > thấy đỏ** (thêm preset thứ tư · bỏ gác · guard hết rỗng · đổi thời lượng · bỏ `exit` · đưa
 > `transition` ra ngoài · lò xo 3 mốc · lò xo hết vọt lố · lớp phủ mượn `y`). Bài "lò xo" **không
 > đọc mã** — nó chạy thẳng `spring()` thật rồi ĐO đỉnh, thay vì tin con số chép trong chú thích.
+>
+> **ĐẾM ĐƯỢC:** khai báo rời rạc trong 11 file ấy đi từ **228 xuống 34** (−85%). Và 34 kia phải
+> nói cho đúng, đừng gộp thành một câu: **24 là ngoại lệ NẰM TRONG phạm vi, mỗi cái có một dòng
+> chú thích nêu lý do** (thanh tiến độ đọc biến vòng lặp · hiệu ứng so le · pháo hoa · `ActionButton`);
+> **10 còn lại nằm ở phần KHÔNG-phải-modal của `SkillTree`** (nhịp thở của nút kỹ năng, quầng sáng
+> hiệp trợ, thanh tiến độ nhánh) — **ngoài phạm vi việc này, giữ nguyên**. Chúng vẫn tự xử lý
+> `reducedMotion` bằng tay theo lối cũ ở 6/10 dòng; 4 dòng còn lại (thanh tiến độ nhánh, huy hiệu)
+> thì không. Đó là việc của một lượt sau, không phải một lời hứa đã hoàn thành ở lượt này.
 >
 > **TIÊU CHÍ NGHIỆM THU ĐÃ ĐƯỢC ĐO, KHÔNG PHẢI KHAI.** `scripts/motion-still.mjs` **MỚI**: bấm
 > chuyển tab rồi chụp HAI khung hình cách nhau 90ms và đếm điểm ảnh lệch. Chạy CẢ HAI chế độ, vì

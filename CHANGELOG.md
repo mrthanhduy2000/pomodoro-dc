@@ -67,9 +67,12 @@ sync, hay AI Coach.
   gọi không phải tự kiểm tra. Kèm hai cái GÁC cho ngoại lệ (`useCustomMotion` bỏ hẳn ·
   `useSnapMotion` nhảy thẳng tới đích khi `animate` mang bố cục) và hằng `SCRIM_FADE` dùng chung
   cho lớp phủ tối của modal.
-- **9 file đã đổi** — `App.jsx`, `PomodoroEngine.jsx`, `DisasterModal`, `EraCrisisModal`,
-  `LevelUpModal`, `LootDropModal`, `PrestigeModal`, `WeeklyReportModal`, `OnboardingOverlay`.
-  Bốn nhóm nút của bảng điều khiển đồng hồ trước đây khai **y hệt nhau bốn lần**, nay một nhịp.
+- **11 file đã đổi** — `App.jsx`, `PomodoroEngine.jsx`, `DisasterModal`, `EraCrisisModal`,
+  `LevelUpModal`, `LootDropModal`, `PrestigeModal`, `WeeklyReportModal`, `OnboardingOverlay`,
+  `BlueprintInventory`, `SkillTree`. Bốn nhóm nút của bảng điều khiển đồng hồ trước đây khai
+  **y hệt nhau bốn lần**, nay một nhịp. ⚠️ Hai file cuối chứa modal nằm LỒNG bên trong
+  (`BlueprintDetailPanel`, `PurchaseConfirmDialog`) — quét theo tên file `*Modal.jsx` sẽ bỏ sót
+  chúng; phải quét theo HÌNH DẠNG (`fixed inset-0`).
 - **`src/lib/motionPresets.test.js` (MỚI)** — 6 bài đọc-mã-nguồn, cả **9 phép thử ngược** đều đã
   thấy đỏ. Nó ĐẾM số preset (nhịp thứ tư là đỏ) và chặn một quả mìn thật: framer-motion 12 **ném
   lỗi ở bản dev và im lặng ở bản production** khi một lò xo nhận quá hai mốc.

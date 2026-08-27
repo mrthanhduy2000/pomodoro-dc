@@ -27,13 +27,19 @@ Mặt trận đang làm: **thành phố 3D** (`src/engine/city3d/` + `src/compon
    `api/_tests/`. Hiện có 10 function thật.
 
 ## Đang ở đâu
-- Nhánh production: `main`. Mốc gần nhất: **ADR-059** (mỗi kỷ MỘT MẠNG ĐƯỜNG riêng — hết bàn
-  cờ; `roadPlan.js` nối các điểm mốc bằng cung cong ⇒ giao lộ chữ T/Y/ngã năm).
+- Nhánh production: `main`. Mốc gần nhất: **ADR-060** (MỘT thẻ phần thưởng chung cho cả app +
+  luật mức độ làm phiền: **chặn màn hình CHỈ dành cho lên kỷ · thăng hoa · khủng hoảng kỷ · thảm
+  hoạ**; mọi phần thưởng khác đi qua chồng toast `RewardToastHost`, tự tắt sau 4 giây).
+  Trước đó: **ADR-059** (mỗi kỷ MỘT MẠNG ĐƯỜNG riêng — hết bàn cờ; `roadPlan.js` nối các điểm mốc
+  bằng cung cong ⇒ giao lộ chữ T/Y/ngã năm).
 - Giao diện: **5 skin**, mặc định là **"Sân Chơi" (`arcade`)** — phẳng, sans đậm, thẻ có chân bóng
   đặc 3px. Danh sách skin + mặc định có MỘT nguồn duy nhất: `src/store/uiSkins.js`. ⚠️ Thêm skin thì
   phải đủ ba chỗ (danh sách · `SKIN_OPTIONS` ở `Settings.jsx` · khối `[data-skin=…]` ở `index.css`)
   **và** một khối `[data-theme="dark"][data-skin=…]`, vì khối `[data-theme="dark"]` đứng sau mọi
   khối skin với độ đặc hiệu bằng nhau nên nó thắng. `uiSkins.test.js` canh cả bốn.
+- Phần thưởng: MỘT thẻ chung `components/shared/RewardCard.jsx`, MỘT thang độ hiếm **đúng bốn
+  bậc** ở `engine/rewardTiers.js` (thường/tốt/hiếm/huyền thoại). ⚠️ Đừng thêm bậc thứ năm và đừng
+  vẽ thẻ phần thưởng riêng ở một màn nào nữa — `rewardTiers.test.js` khoá con số 4.
 - Cảnh 3D: 15 kỷ, mỗi kỷ buộc vào một nước có thật (`country`/`landmark` ở `eraStyle.js`).
   Các bảng bản sắc 15 kỷ đã có: mái · tầng trệt · mặt đường · thực vật · địa thế/nước ·
   vùng phụ cận · khu phố · dáng đi · mạng đường.
@@ -46,6 +52,9 @@ Mặt trận đang làm: **thành phố 3D** (`src/engine/city3d/` + `src/compon
   **KHÔNG đo lại** trừ khi Đàm thấy khung hình giật trên máy thật.
 
 ## Việc tiếp theo (chưa làm)
+0. **Báo cáo tuần vẫn tự bật sáng thứ Hai** — ngoại lệ DUY NHẤT của luật mức độ làm phiền
+   (ADR-060). ⚠️ Đọc `TECH_DEBT #87` TRƯỚC: phải tách "đã xem" khỏi "đã bỏ qua" rồi mới đụng,
+   nếu không lỡ một cái toast 4 giây = mất báo cáo của cả tuần.
 1. **Kim tự tháp / ziggurat** — kỷ 2 (Ai Cập) và kỷ 3 (Iraq) đang ra mái nón nhiều cạnh,
    không có khối chóp bốn mặt. `prism` với `sides: 4` + `taper: 0` chính là thứ cần.
 2. **"Giống 3D hơn"** — bóng đổ nét hơn (`SHADOW_MAP_DESKTOP` 2048 → 4096, siết

@@ -2070,7 +2070,7 @@ function OverlayStack({
   // màn hình mà không nằm trong bốn việc được phép. CỐ Ý để lại: báo cáo tuần
   // không phải một phần thưởng mà là một bản tổng kết, và đẩy nó xuống toast 4
   // giây nghĩa là lỡ một cái toast = mất báo cáo của cả tuần (`dismissWeeklyReport`
-  // đánh dấu tuần đã xem). Ghi ở `TECH_DEBT.md` #83 để nó được ĐẾM, không bị quên.
+  // đánh dấu tuần đã xem). Ghi ở `TECH_DEBT.md` #87 để nó được ĐẾM, không bị quên.
   const blocking = showMoment || showLootModal || disasterModalOpen || eraCrisisModalOpen
     || prestigeModalOpen || weeklyReportOpen || showLevelModal;
 

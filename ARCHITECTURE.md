@@ -156,24 +156,60 @@ useTimer.commitCompletedSession()
 gameStore.completeFocusSession()  ── đặt ui.lootModalOpen = true NGAY LẬP TỨC
         │                            (ba bài test khẳng định điều này)
         ▼
-App.jsx <GlobalOverlays> ── {lootModalOpen && <RewardSequence />}
+App.jsx <OverlayStack>
         │
         ├─ useCityGrowthMoment → engine/cityMoment.buildGrowthMoment()
-        │        │
-        │        ├── có công trình vừa xong / có giàn giáo vừa cao thêm ⇒ trả về một khoảnh khắc
-        │        └── thành phố KHÔNG đổi gì ⇒ trả `null`  (im lặng, không khen rỗng)
+        │        ├── có công trình vừa xong / giàn giáo vừa cao thêm ⇒ một khoảnh khắc
+        │        └── thành phố KHÔNG đổi gì ⇒ `null`  (im lặng, không khen rỗng)
         │
-        ├─ CÓ khoảnh khắc & Đàm không bật giảm chuyển động
-        │        └→ <CityGrowthMoment> 3,2 giây → onDone → LootDropModal
+        ├─ CÓ khoảnh khắc & không bật giảm chuyển động
+        │        └→ <CityGrowthMoment> 3,2 giây → onDone
         │           (song song: LootDropModal.preload() nạp sẵn gói mã)
         │
-        └─ MỌI trường hợp khác → <LootDropModal> NGAY
+        └─ rồi PHÂN TẦNG theo mức độ làm phiền (ADR-060):
+                 ├─ pendingReward.eraChanged  ⇒ <LootDropModal> — LÊN KỶ được chặn màn hình
+                 └─ mọi phiên khác            ⇒ một THẺ trong <RewardToastHost>
+                                                 bấm vào thẻ ⇒ mở <LootDropModal> đầy đủ
 ```
 
 **Luật của tầng này (ADR-010)**: trạng thái của một hoạt hoạ 3 giây **không phải dữ liệu** — nó là
 vòng đời của một component. Store không biết gì về khoảnh khắc này, nên không có cờ nào có thể kẹt
 ở trạng thái bật và chặn mất phần thưởng vĩnh viễn. Cổng **hỏng theo hướng MỞ**: phần thưởng hiện ra
 TRỪ KHI khoảnh khắc đang thật sự chạy.
+
+⚠️ **Lễ mừng thành phố chạy sau MỌI phiên, không chỉ khi hộp thoại mở.** Trước ADR-060 nó nằm trong
+`RewardSequence` — component chỉ dựng khi hộp thoại phần thưởng bật — nên buộc cổng hộp thoại lại
+mà quên tách nó ra sẽ **giết lễ mừng ở mọi phiên thường, trong im lặng**. Đúng cái bẫy ấy đã xảy ra
+trong chính phiên viết ADR-060 và nay có test canh.
+
+### 6.3 Phân tầng mức độ làm phiền (ADR-060)
+
+Mọi phần thưởng của app đi qua **một** thẻ chung (`components/shared/RewardCard.jsx`) với **một**
+thang độ hiếm bốn bậc (`engine/rewardTiers.js`). Cái quyết định nó hiện ra **thế nào** là câu hỏi
+*"việc này có buộc Đàm phải QUYẾT ĐỊNH gì không?"*:
+
+```
+                    ui.* (store ghi y như cũ, KHÔNG đổi luật tính thưởng)
+                                 │
+        ┌────────────────────────┴────────────────────────┐
+        │                                                 │
+  CHẶN MÀN HÌNH (modal)                        TOAST GÓC MÀN HÌNH
+  lên kỷ · thăng hoa ·                         engine/rewardFeed.buildRewardToasts()
+  khủng hoảng kỷ · thảm hoạ                              │
+        │                                        ≤3 thẻ + "và N phần thưởng khác"
+  buộc phải quyết định gì đó                     tự tắt sau 4s · bấm → chi tiết
+                                                         │
+                                    phiên thường · di vật · thành tích ·
+                                    nhiệm vụ ngày · lên cấp · danh xưng
+```
+
+⚠️ `rewardFeed.js` chỉ **ĐỌC** các trường `ui.*` mà store đã ghi sẵn — nó không đụng
+`completeFocusSession` (hàm dài nhất dự án) và không đổi một con số thưởng nào. Đồng hồ 4 giây
+**dừng** khi có hộp thoại chặn màn hình, nếu không nó cháy hết sau lưng lớp mờ.
+
+⚠️ Ngoại lệ DUY NHẤT còn lại: **báo cáo tuần vẫn tự bật sáng thứ Hai** — cố ý, vì
+`dismissWeeklyReport` đánh dấu tuần đã xem nên lỡ một toast = mất báo cáo cả tuần
+(`TECH_DEBT #87`).
 
 ⚠️ `ui.pendingReward.newlyBuiltIds` là trường **chỉ để hiển thị**: `ui` không nằm trong `partialize`
 của store, nên nó không lên Supabase — không thêm một byte nào vào JSONB đang tranh chấp CAS

@@ -13,7 +13,12 @@
 > mà không được refactor triệt để, phải CHỦ ĐỘNG đề xuất mở một "Maintenance Sprint" (nêu rõ mục
 > tiêu/phạm vi/lợi ích/rủi ro/tiêu chí hoàn thành) thay vì tiếp tục cộng thêm tính năng mới.
 >
-> **Trạng thái ngưỡng hiện tại (2026-08-27, sau khi viết lại `ActionButton`)**: thêm **#86**
+> **Trạng thái ngưỡng hiện tại (2026-08-27 tối, sau ADR-060 "một ngôn ngữ hình cho phần thưởng")**:
+> thêm **#87** (báo cáo tuần vẫn tự bật sáng thứ Hai — ngoại lệ DUY NHẤT của luật mức độ làm phiền)
+> ở mức **Low**. Vẫn **1 mục Priority High còn mở** (#53), **0 mục Critical** → xa ngưỡng
+> Maintenance Sprint.
+>
+> *(mốc trước)* **(2026-08-27, sau khi viết lại `ActionButton`)**: thêm **#86**
 > (137 nút tự vẽ không đọc token skin) ở mức **Medium** — vẫn **1 mục Priority High còn mở**
 > (#53), **0 mục Critical** → xa ngưỡng Maintenance Sprint.
 >
@@ -4437,6 +4442,34 @@ mà sinuosity chỉ **1,0083** ⇒ đối chứng **ĐỎ trên một mạng đ�
 `--selftest` đỏ thì còn tệ hơn không có công cụ. Nay nó hỏi `tỉSốTB`, đúng đại lượng mà bảng in ra.
 **Bài học: một đối chứng phải hỏi cùng đại lượng mà bảng công bố — nếu file tự bác một đại lượng
 trong chú thích thì đừng để `--selftest` của chính nó vẫn dùng đại lượng ấy.**
+
+---
+
+## #87 — Báo cáo tuần VẪN tự bật sáng thứ Hai, tức nó là ngoại lệ duy nhất của luật "chỉ bốn việc được chặn màn hình"
+
+- **Tên**: `weeklyReportOpen` tự bật (không do Đàm bấm) và mở một hộp thoại toàn màn hình.
+- **Module**: `src/App.jsx` (`OverlayStack`) · `src/store/gameStore.js` (`checkWeeklyReport`) ·
+  `src/components/WeeklyReportModal.jsx`.
+- **Priority**: Low · **Severity**: Low.
+- **Impact**: sáng thứ Hai đầu tiên trong tuần, Đàm mở app và bị chặn bởi một bản tổng kết mà anh
+  không xin. Đúng loại làm phiền mà ADR-060 sinh ra để dẹp — nhưng nó là bản tổng kết chứ không
+  phải một phần thưởng, nên nó nằm ngoài phạm vi bảy đường trao thưởng của phase này.
+- **Root Cause**: `checkWeeklyReport` đặt `weeklyReportOpen: true` + `weeklyReportMode: 'previous'`
+  vào sáng thứ Hai. Có sẵn hai chế độ (`'previous'` = tự bật · `'current'` = Đàm bấm ở thanh bên),
+  nên phân biệt "tự bật" với "được gọi" là chuyện SẴN CÓ, không cần thêm cờ mới.
+- **Current Risk**: thấp — mỗi tuần đúng một lần.
+- **Future Risk**: nó là ngoại lệ duy nhất còn lại; ngoại lệ nào cũng là chỗ để ngoại lệ thứ hai
+  bám vào (*"nếu báo cáo tuần được phép tự bật thì cái này cũng được"*).
+- **Recommended Solution**: `showWeeklyModal = weeklyReportOpen && (weeklyReportMode === 'current'
+  || detail === 'weekly')`, và chế độ `'previous'` sinh một thẻ toast bấm-để-mở.
+- **⚠️ ĐIỀU KIỆN BẮT BUỘC trước khi làm** (đây là lý do phase này KHÔNG làm luôn): `dismissWeeklyReport`
+  ghi `lastWeeklyReportDate` ⇒ **đóng một lần là mất báo cáo của cả tuần**. Một toast tự tắt sau 4
+  giây mà cũng gọi hàm ấy thì lỡ một cái toast = mất báo cáo. Phải tách "đã xem" khỏi "đã bỏ qua"
+  TRƯỚC, nếu không bản vá đổi một phiền toái nhỏ lấy một mất mát thật.
+- **Estimated Complexity**: Small (nếu đã tách xong hai trạng thái trên); Medium nếu tính cả việc tách.
+- **Blocking Conditions**: không có blocker kỹ thuật; chỉ chờ quyết định của Đàm về đánh đổi ở trên.
+- **Review Trigger**: khi Đàm nói báo cáo tuần làm phiền, hoặc khi có mục thứ hai xin được tự bật.
+- **Owner**: chưa giao · **Status**: OPEN (ghi 2026-08-27, ADR-060).
 
 ---
 

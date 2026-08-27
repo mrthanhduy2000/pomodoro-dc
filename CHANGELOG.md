@@ -12,6 +12,45 @@
 
 ---
 
+## 2026-08-27 (tối) — Một ngôn ngữ hình cho mọi phần thưởng, và phân tầng mức độ làm phiền
+
+**Mục đích.** App có bảy đường trao thưởng và bảy cách trình bày — riêng `LootDropModal` đã có ba
+hình cho ba loại thưởng trong cùng một hộp thoại, và bốn từ vựng độ hiếm rời nhau cùng trả lời một
+câu hỏi *"cái này quý tới đâu?"*. Đồng thời mọi phần thưởng, lớn hay nhỏ, đều mở một hộp thoại toàn
+màn hình: nhận một hòn đá và lên một kỷ nguyên mới gây ra cùng một mức gián đoạn.
+
+**Phạm vi.** Tầng hiển thị + hai hàm thuần ở `engine/`. **Không đổi một luật tính thưởng nào** —
+store vẫn bật `lootModalOpen` đồng bộ y như cũ.
+
+- **`src/engine/rewardTiers.js` (mới)** — thang độ hiếm DUY NHẤT, đúng bốn bậc: thường `--muted` ·
+  tốt `--good` · hiếm `--warn` · huyền thoại `--accent`. Kèm ánh xạ từ cả bốn từ vựng sẵn có (độ
+  hiếm bản vẽ · hạng thành tích · hệ số nhân phiên · bucket nhiệm vụ). Màu là BIẾN CSS chứ không
+  phải mã màu, nên đúng ở cả 10 tổ hợp skin × chế độ.
+- **`src/components/shared/RewardCard.jsx` (mới)** — thẻ phần thưởng dùng chung, đặt cạnh
+  `BadgeKit.jsx`. Nhận `icon` · `name` · `tier` · `description` · `amount`. Độ hiếm đọc được cả khi
+  không nhìn màu: nhãn chữ + dải chấm, màu chỉ là tín hiệu thứ ba.
+- **`src/engine/rewardFeed.js` (mới)** — hàm THUẦN gom sáu kênh thưởng nhẹ thành một hàng đợi toast,
+  cắt còn tối đa 3 thẻ + dòng "và N phần thưởng khác".
+- **`src/components/RewardToastHost.jsx` (mới)** — chồng toast ở góc màn hình, mỗi thẻ một đồng hồ
+  riêng 4 giây, bấm vào mở chi tiết. Thay `AchievementToast.jsx` (**đã xoá**).
+- **`src/App.jsx`** — `GlobalOverlays` nay thi hành LUẬT MỨC ĐỘ LÀM PHIỀN: chặn màn hình chỉ dành
+  cho **lên kỷ · thăng hoa · khủng hoảng kỷ · thảm hoạ**; mọi thứ còn lại đi qua toast.
+- **`LootDropModal.jsx` · `DailyMissions.jsx`** — chuyển sang `RewardCard`. Ở `DailyMissions` chỉ
+  phần TRẢ THƯỞNG dùng thẻ; các dòng nhiệm vụ giữ nguyên dạng hàng vì thẻ không có thanh tiến độ.
+- **`LevelUpModal.jsx`** — không còn tự bật; nó thành phần CHI TIẾT mở khi bấm thẻ.
+- **`src/store/gameStore.js`** — `dismissAchievementNotification`/`dismissMissionNotification` nhận
+  thêm **id tuỳ chọn**; không truyền thì hành vi y hệt bản cũ.
+
+**Ảnh hưởng.** Ba kênh `relicNotification` · `rankUpNotification` · `missionCompletedIds` được store
+ghi từ lâu mà **không màn hình nào đọc** — nghĩa là nhận một di vật xưa nay không hiện gì cả. Chồng
+toast là chỗ đọc đầu tiên của cả ba.
+
+**Tương thích.** Không có migration. Không đụng dữ liệu lưu (`ui` không nằm trong `partialize` nên
+không lên Supabase). Ngoại lệ duy nhất còn lại của luật mới: báo cáo tuần vẫn tự bật sáng thứ Hai —
+cố ý, ghi ở `TECH_DEBT #87`. Chi tiết quyết định: **ADR-060**.
+
+---
+
 ## 2026-08-27 (chiều) — Nút hành động nghe theo skin, và có cảm giác bấm lún xuống
 
 **Mục đích.** `ActionButton` là nút chuẩn của app nhưng nó khai hai bảng màu chốt cứng rẽ theo

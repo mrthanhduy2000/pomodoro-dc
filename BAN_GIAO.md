@@ -1,3 +1,54 @@
+> Cập nhật lần cuối: **2026-08-27 (tối)** — **MỌI PHẦN THƯỞNG NÓI CHUNG MỘT THỨ TIẾNG, VÀ CHỈ
+> BỐN VIỆC CÒN ĐƯỢC CHẶN MÀN HÌNH** (ADR-060).
+>
+> Bảy đường trao thưởng, bảy cách vẽ — và riêng `LootDropModal` đã có **BA hình cho ba loại thưởng
+> trong CÙNG một hộp thoại** (`SupportRewardCard` · thẻ `ResourceCascade` · `BonusPill`). Về màu thì
+> có **bốn từ vựng rời nhau** cùng trả lời một câu hỏi *"cái này quý tới đâu?"*. Nay tất cả đi qua
+> `src/components/shared/RewardCard.jsx` với **đúng bốn bậc** (thường `--muted` · tốt `--good` ·
+> hiếm `--warn` · huyền thoại `--accent`), mỗi bậc có **nhãn chữ + dải chấm** nên đọc được cả khi
+> không nhìn màu.
+>
+> **LUẬT MỚI (Đàm ra):** chặn màn hình CHỈ dành cho **lên kỷ · thăng hoa · khủng hoảng kỷ · thảm
+> hoạ** — bốn việc buộc phải QUYẾT ĐỊNH. Phiên thường, di vật, thành tích, nhiệm vụ ngày, lên cấp
+> nay trượt vào góc màn hình, tự tắt sau 4 giây, bấm vào mới mở chi tiết; quá 3 thẻ thì phần dư gộp
+> thành một dòng *"và N phần thưởng khác"*.
+>
+> **⚠️ PHÁT HIỆN LỚN NHẤT CỦA PHIÊN: BA KÊNH THÔNG BÁO ĐÃ CHẾT TỪ LÂU MÀ KHÔNG AI BIẾT.**
+> `relicNotification` · `rankUpNotification` · `missionCompletedIds` được store GHI đầy đủ, có cả
+> hàm dismiss riêng — mà **không một màn hình nào ĐỌC**. Nghĩa là **nhận một di vật (phần thưởng quý
+> nhất game, chỉ có khi vượt qua một khủng hoảng kỷ) xưa nay không hiện gì cả**. Không có gì đỏ lên:
+> build xanh, lint sạch, test xanh. Đúng hình dạng `TECH_DEBT` Phase 4H (*hàm engine chưa có ai gọi*).
+> Chồng toast là chỗ đọc ĐẦU TIÊN của cả ba.
+>
+> **⚠️ MỘT HỒI QUY ĐÃ TỰ GÂY RA RỒI TỰ BẮT — ghi lại vì nó suýt lọt.** Lễ mừng thành phố
+> (`CityGrowthMoment`) nằm TRONG `RewardSequence`, mà `RewardSequence` chỉ dựng khi hộp thoại phần
+> thưởng bật. Bản vá đầu siết đúng cái cổng ấy ⇒ **lễ mừng "vừa xây xong một công trình" biến mất ở
+> mọi phiên thường**, im lặng tuyệt đối. Nay nó bám `lootModalOpen` (mọi phiên) và nằm trong
+> `blocking` để đồng hồ toast không cháy sau lưng nó. Đã khoá bằng test đã-thử-cho-đỏ.
+>
+> **⚠️ BỐ CỤC THẺ BỊ ẢNH DỰNG BÁC HAI LẦN, KHÔNG PHẢI MỘT.** Bản 1 xếp `[bậc] [mô tả]` chung hàng ⇒
+> mô tả cắt còn *"Tài ng…"*, *"Đ.."*. Bản 2 đưa bậc lên cạnh TÊN ⇒ lần này TÊN chịu trận:
+> *"Nghiên cứu"* → *"N."*. Bản 3 (đang dùng): tên chiếm trọn hàng trên với `line-clamp-2`, `[bậc]
+> [mô tả]` ở hàng dưới có `flex-wrap`. Ở khung **390px** thẻ chỉ rộng **308px**, nên `truncate` cho
+> ra *"Thưởng trọn n…"* — chỉ ảnh trên khung điện thoại mới lộ ra, khung 1280 hoàn toàn không thấy.
+>
+> **Không đổi một luật tính thưởng nào.** Store vẫn bật `lootModalOpen` ĐỒNG BỘ y như cũ (ba bài ở
+> `completeFocusSession.test.js` khẳng định điều đó) — thay đổi nằm hoàn toàn ở tầng hiển thị, đúng
+> điểm cắm `RewardSequence` đã chọn từ Phase 4′. `dismissAchievementNotification`/
+> `dismissMissionNotification` nhận thêm **id tuỳ chọn** (không truyền thì hành vi y hệt bản cũ): ba
+> thẻ chồng nhau có ba đồng hồ riêng nên thẻ thứ ba có thể hết trước thẻ thứ nhất, và `slice(1)` lúc
+> đó bỏ nhầm một thành tích Đàm chưa kịp đọc.
+>
+> **Ngoại lệ DUY NHẤT còn lại:** báo cáo tuần vẫn tự bật sáng thứ Hai. Cố ý — nó là bản tổng kết chứ
+> không phải phần thưởng, và `dismissWeeklyReport` đánh dấu tuần đã xem, nên lỡ một cái toast 4 giây
+> = **mất báo cáo của cả tuần**. Ghi `TECH_DEBT #87` kèm điều kiện bắt buộc phải làm trước.
+>
+> Test **1163 → 1187 bài, 0 đỏ** (+24: 5 thang bậc · 11 hàng đợi toast · 8 nối dây). Lint sạch,
+> build xanh. Ảnh nghiệm thu: chồng 3 thẻ + dòng phần dư · thẻ trong hộp thoại phần thưởng · thẻ ở
+> Nhiệm vụ (cả 1280 và 390) · hộp thoại lên kỷ vẫn chặn màn hình đầy đủ.
+
+---
+
 > Cập nhật lần cuối: **2026-08-27 (chiều)** — **`ActionButton` NGHE THEO SKIN + CÓ CẢM GIÁC BẤM LÚN.**
 > Ba bệnh đã chữa: `themeMap` khai màu cứng theo `lightTheme` (chỉ đúng **2 trong 10** tổ hợp skin ×
 > chế độ) · bóng MỜ nhiều lớp làm nút trông như thẻ giấy · `whileHover scale 1.03` phóng to cả khối

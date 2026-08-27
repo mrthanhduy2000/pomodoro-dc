@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { SCRIM_FADE, useCustomMotion, useEnterMotion, usePressMotion } from '../lib/motionPresets';
 
 import useGameStore from '../store/gameStore';
 import {
@@ -109,7 +110,14 @@ export default function PrestigeModal() {
   const totalEP = useGameStore((state) => state.progress.totalEP);
 
   const [confirmed, setConfirmed] = useState(false);
+  const enterMotion = useEnterMotion();
+  const pressMotion = usePressMotion();
+  // Nhấc khi DI CHUỘT không thuộc ba nhịp — đi qua cái gác ngoại lệ để cũng im khi Giảm chuyển động.
+  const hoverLift = useCustomMotion({ whileHover: { y: -1 } });
+  // Lớp phủ tối chỉ mờ dần, không trôi — xem `SCRIM_FADE` ở `motionPresets.js`.
+  const scrimMotion = useCustomMotion(SCRIM_FADE);
 
+  // ⚠️ Mọi hook PHẢI nằm TRÊN dòng này — đây là lối ra sớm.
   if (!isOpen) return null;
 
   const canPrestige = totalEP >= PRESTIGE_EP_REQUIREMENT;
@@ -138,18 +146,13 @@ export default function PrestigeModal() {
   return (
     <AnimatePresence>
       <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
+        {...scrimMotion}
         className="fixed inset-0 z-50 flex items-center justify-center p-4"
         style={{ backgroundColor: 'rgba(31, 30, 29, 0.34)', backdropFilter: 'blur(10px)' }}
         onClick={handleClose}
       >
         <motion.div
-          initial={{ y: 26, scale: 0.96, opacity: 0 }}
-          animate={{ y: 0, scale: 1, opacity: 1 }}
-          exit={{ y: 16, scale: 0.97, opacity: 0 }}
-          transition={{ duration: 0.28, ease: 'easeOut' }}
+          {...enterMotion}
           className="relative w-full max-w-3xl border p-6"
           style={{
             background: 'var(--card-bg-solid)',
@@ -242,9 +245,7 @@ export default function PrestigeModal() {
             <AnimatePresence>
               {confirmed && (
                 <motion.div
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -6 }}
+                  {...enterMotion}
                   className="border px-4 py-3"
                   style={{
                     borderColor: 'rgba(var(--accent-rgb),0.18)',
@@ -281,8 +282,8 @@ export default function PrestigeModal() {
               </button>
               <motion.button
                 type="button"
-                whileHover={canPrestige ? { y: -1 } : {}}
-                whileTap={canPrestige ? { scale: 0.99 } : {}}
+                {...(canPrestige ? hoverLift : {})}
+                {...(canPrestige ? pressMotion : {})}
                 onClick={canPrestige ? handlePrestige : undefined}
                 disabled={!canPrestige}
                 className="flex-1 border px-5 py-3 text-sm font-semibold transition"

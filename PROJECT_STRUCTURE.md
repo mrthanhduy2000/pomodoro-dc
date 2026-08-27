@@ -611,7 +611,16 @@
 │   │   │                     #   useCityFocusTease (trước) + useCityGrowthMoment (sau). Dùng chung
 │   │   │                     #   một snapshot memo theo NỘI DUNG
 │   │   └── useGameLoop.js
-│   ├── lib/                   # Tích hợp dịch vụ ngoài (KHÔNG phải logic game thuần)
+│   ├── lib/                   # Hạ tầng dùng chung, KHÔNG phải logic game thuần: tích hợp dịch vụ
+│   │                          #   ngoài, và từ 2026-08-27 thêm từ vựng chuyển động của giao diện
+│   │   ├── motionPresets.js    # BA NHỊP CHUYỂN ĐỘNG DUY NHẤT của app (`enter`/`press`/`reward`).
+│   │   │                       #   ⚠️ ĐÚNG BA, KHÔNG HƠN — nhịp thứ tư là bước đầu quay lại tình
+│   │   │                       #   trạng cũ (hơn 30 file mỗi chỗ một thời lượng). Cả ba TỰ trả về
+│   │   │                       #   object rỗng khi bật "Giảm chuyển động", nên chỗ gọi KHÔNG
+│   │   │                       #   phải tự kiểm tra. Kèm hai cái GÁC cho ngoại lệ (`useCustomMotion`
+│   │   │                       #   bỏ hẳn · `useSnapMotion` nhảy thẳng tới đích khi `animate` mang
+│   │   │                       #   bố cục) và hằng `SCRIM_FADE` cho lớp phủ tối của modal.
+│   │   │                       #   ⚠️ KHÔNG dùng cho thành phố 3D — chuyển động ở đó là chuyện khác.
 │   │   ├── supabase.js         # Supabase client (anon key, hardcode — không cần .env)
 │   │   ├── syncService.js      # Đồng bộ 2 chiều "First Action Wins" (xem ARCHITECTURE.md)
 │   │   ├── timerLiveService.js # Đồng bộ trạng thái timer cho Electron tray + push webhook
@@ -818,6 +827,41 @@ tự viết trong chuỗi**. Ở ca thật: lớp truyền thêm THUA, nút ch�
 - Có lưới tự động: `src/components/actionButtonSizing.test.js` (đọc mã nguồn, cả 3 bài đã được
   thử-cho-đỏ). Kiểm bằng mắt/bằng số: `node scripts/shot.mjs --phone --fit` và
   `node scripts/shot.mjs --phone --fit --el "<chữ trên nút>"` (in ra font-size/padding THẬT).
+
+## Quy tắc chuyển động: BA NHỊP, và mọi ngoại lệ phải tự khai lý do
+
+⚠️ **Bài học 2026-08-27.** Trước đó `initial`/`animate`/`transition` được khai RỜI RẠC ở hơn ba
+mươi file — đo được **năm** thời lượng khác nhau (0,18 · 0,22 · 0,26 · 0,28 · 0,35 giây) và **bảy**
+đường cong (`easeOut`, `[0.4,0,0.2,1]`, `[0.22,1,0.36,1]`, spring 200/300/360/380/420…). Mắt không
+đọc ra "app này mượt"; nó đọc ra "mỗi chỗ một kiểu". Kèm theo, tuỳ chọn **Giảm chuyển động** của hệ
+điều hành được xử lý bằng tay ở từng file với **ba tên biến khác nhau** (`reduceMotion`,
+`shouldReduceMotion`, `prefersReducedMotion`) — tức "một luật ba mươi công thức", và nó hỏng lặng lẽ
+ở đúng những chỗ người ta quên.
+
+- ✅ **Đúng**: `const enterMotion = useEnterMotion();` rồi `<Motion.div {...enterMotion}>`.
+  Ba nhịp ở `src/lib/motionPresets.js` — `enter` (thứ xuất hiện) · `press` (thứ bấm được) ·
+  `reward` (phần thưởng và cột mốc). **Cả ba TỰ im khi bật Giảm chuyển động.**
+- ❌ Đừng gõ lại `initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}` — đó chính là
+  cái đã sinh ra năm thời lượng.
+- ❌ Đừng thêm nhịp thứ tư. Hỏi trước: *"nó thật sự là một nhịp MỚI, hay chỉ là một chỗ đáng lẽ
+  phải dùng `enter`?"* — gần như luôn là vế sau. `motionPresets.test.js` ĐẾM và sẽ đỏ.
+- **Ngoại lệ thì đi qua GÁC, và phải kèm một dòng lý do.** Câu hỏi phân loại:
+  ***"bỏ hẳn `animate` đi thì phần tử còn ở đúng chỗ của nó không?"***
+  - CÒN → `useCustomMotion` (lớp phủ tối, đốm sáng, nhịp thở nền, pháo hoa) — bỏ hẳn.
+  - KHÔNG → `useSnapMotion` (bề ngang cột, vị trí núm gạt, chiều dài thanh tiến độ, vòng đếm giờ)
+    — giữ nguyên đích, chỉ bỏ QUÃNG ĐƯỜNG. ⚠️ Trả object rỗng ở những chỗ này là **vỡ bố cục**:
+    cột phải khai bề ngang bằng chính `animate`, bỏ đi thì nó bung ra chiếm cả màn hình.
+- **Hai chỗ CỐ Ý đứng ngoài, đừng "dọn" chúng:**
+  - `src/components/city/render3d/` — chuyển động thành phố 3D là một hệ khác hẳn (three.js,
+    không phải framer-motion).
+  - `ActionButton` (`PomodoroEngine.jsx`) — cú lún `whileTap y:4` BẰNG ĐÚNG chiều dày vạch bóng
+    đặc bên dưới nó; `actionButtonPress.test.js` khoá cứng quan hệ ấy và cấm `scale` ở
+    `whileHover`. Một nhịp `press` dùng `scale` sẽ phá cả hai. Nó vẫn được gác Giảm chuyển động
+    bằng một phép trải ghi đè đặt SAU hai dòng đó.
+- Có lưới tự động: `src/lib/motionPresets.test.js` (6 bài, cả 9 phép thử ngược đều đã thấy đỏ).
+- Đo tiêu chí nghiệm thu: `npm run build && node scripts/motion-still.mjs` — bấm chuyển tab rồi
+  đếm điểm ảnh lệch giữa hai khung hình cách nhau 90ms, chạy CẢ HAI chế độ (một con số 0 chỉ có
+  nghĩa khi chế độ thường ra một con số khác 0).
 
 ## Quy tắc đặt tên
 

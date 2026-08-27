@@ -10,6 +10,7 @@
 
 import React, { useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { SCRIM_FADE, useCustomMotion, useEnterMotion, useSnapMotion } from '../lib/motionPresets';
 import useGameStore from '../store/gameStore';
 import {
   localDateStr,
@@ -295,6 +296,9 @@ function HighlightCard({ eyebrow, value, caption, color = INK_SOFT }) {
 }
 
 function DailyBars({ byDay }) {
+  // NGOẠI LỆ (mang bố cục) — bề dài cột CHÍNH LÀ số phút của ngày/mục ấy. `initial`/`animate`
+  // phải ở lại tại chỗ vì chúng đọc biến của vòng lặp; cái gác chỉ lo phần `transition`.
+  const barMotion = useSnapMotion({ transition: { duration: 0.5 } });
   const max = Math.max(...byDay, 1);
   return (
     <div className="space-y-2">
@@ -310,7 +314,7 @@ function DailyBars({ byDay }) {
               <motion.div
                 initial={{ width: 0 }}
                 animate={{ width: `${pct}%` }}
-                transition={{ duration: 0.5, delay: index * 0.04 }}
+                {...barMotion}
                 className="h-full rounded-md"
                 style={{
                   background: isMax ? ACCENT : 'var(--timer-track, #e5dfd2)',
@@ -366,6 +370,9 @@ function HourHeatmap({ byHour }) {
 }
 
 function CategoryBars({ catMinutes, sessionCategories }) {
+  // NGOẠI LỆ (mang bố cục) — bề dài cột CHÍNH LÀ số phút của ngày/mục ấy. `initial`/`animate`
+  // phải ở lại tại chỗ vì chúng đọc biến của vòng lặp; cái gác chỉ lo phần `transition`.
+  const barMotion = useSnapMotion({ transition: { duration: 0.5 } });
   const categoryMap = {};
   (sessionCategories ?? []).forEach((category) => {
     categoryMap[category.id] = category;
@@ -402,7 +409,7 @@ function CategoryBars({ catMinutes, sessionCategories }) {
               <motion.div
                 initial={{ width: 0 }}
                 animate={{ width: `${pct}%` }}
-                transition={{ duration: 0.5 }}
+                {...barMotion}
                 className="h-full rounded-full"
                 style={{ background: color }}
               />
@@ -446,6 +453,14 @@ function WeeklyReportModalContent({
   streak,
 }) {
   const [selectedMode, setSelectedMode] = useState(initialMode);
+  const enterMotion = useEnterMotion();
+  // Lớp phủ tối chỉ mờ dần, không trôi — xem `SCRIM_FADE` ở `motionPresets.js`.
+  const scrimMotion = useCustomMotion(SCRIM_FADE);
+  // NGOẠI LỆ (mang bố cục) — hai thanh so sánh tuần: bề dài CHÍNH LÀ số giờ. `initial`/`animate`
+  // ở lại tại chỗ vì mỗi thanh một giá trị; cái gác chỉ lo `transition`.
+  // ⚠️ Đã BỎ `delay: 0.08` của thanh dưới: hai thanh là MỘT phép so sánh, lệch nhịp thì mắt đọc
+  //    ra hai sự kiện rời nhau thay vì một cặp.
+  const comparisonBarMotion = useSnapMotion({ transition: { duration: 0.55 } });
 
   const { curr, prev, rangeStart, rangeEnd, summaryLabel } = useMemo(() => {
     const isCurrentWeek = selectedMode === 'current';
@@ -503,18 +518,13 @@ function WeeklyReportModalContent({
 
   return (
     <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
+      {...scrimMotion}
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
       style={{ background: 'rgba(31,30,29,0.34)', backdropFilter: 'blur(8px)' }}
       onClick={(event) => event.target === event.currentTarget && dismissWeeklyReport()}
     >
       <motion.div
-        initial={{ scale: 0.94, y: 24 }}
-        animate={{ scale: 1, y: 0 }}
-        exit={{ scale: 0.94, y: 24 }}
-        transition={{ type: 'spring', damping: 24, stiffness: 300 }}
+        {...enterMotion}
         className="flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden"
         style={{
           background: 'var(--modal-bg, rgba(255,255,255,0.96))',
@@ -645,7 +655,7 @@ function WeeklyReportModalContent({
                 <motion.div
                   initial={{ width: 0 }}
                   animate={{ width: `${currComparisonWidth}%` }}
-                  transition={{ duration: 0.55 }}
+                  {...comparisonBarMotion}
                   className="h-full rounded-full"
                   style={{ background: grade.color }}
                 />
@@ -660,7 +670,7 @@ function WeeklyReportModalContent({
                     <motion.div
                       initial={{ width: 0 }}
                       animate={{ width: `${prevComparisonWidth}%` }}
-                      transition={{ duration: 0.55, delay: 0.08 }}
+                      {...comparisonBarMotion}
                       className="h-full rounded-full"
                       style={{ background: 'rgba(31,30,29,0.24)' }}
                     />

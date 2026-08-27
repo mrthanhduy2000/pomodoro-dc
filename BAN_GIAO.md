@@ -1,3 +1,67 @@
+> Cập nhật lần cuối: **2026-08-27 (tối)** — **MỌI CHUYỂN ĐỘNG VỀ ĐÚNG BA NHỊP.**
+> `initial`/`animate`/`transition` đang khai rời rạc ở hơn ba mươi file. Đếm được **5 thời lượng**
+> (0,18 · 0,22 · 0,26 · 0,28 · 0,35 giây) và **7 đường cong** khác nhau; riêng bảng điều khiển đồng
+> hồ khai **y hệt nhau bốn lần**. Nay: `src/lib/motionPresets.js` xuất ra ĐÚNG ba nhịp —
+> **`enter`** (opacity 0→1, y 6→0, 180ms, ease `[0.22,1,0.36,1]`) · **`press`** (scale 1→0,97,
+> 90ms) · **`reward`** (scale 0,9→1 bằng lò xo 420/18). Cả ba là hook và **tự trả về object rỗng**
+> khi `useReducedMotion()` bật ⇒ chỗ gọi không phải tự kiểm tra.
+>
+> **9 file đã đổi:** `App.jsx` · `PomodoroEngine.jsx` · `DisasterModal` · `EraCrisisModal` ·
+> `LevelUpModal` · `LootDropModal` · `PrestigeModal` · `WeeklyReportModal` · `OnboardingOverlay`.
+> **KHÔNG đụng `src/components/city/render3d/`** (three.js, một hệ khác hẳn).
+>
+> **⚠️ BỐN ĐIỀU ĐÃ TRẢ GIÁ, CÁI NÀO CŨNG IM LẶNG:**
+> **(1) CHỈ THỊ GỐC TỰ MÂU THUẪN, VÀ MỘT NỬA CỦA NÓ LÀ QUẢ MÌN.** Chỉ thị ghi `reward` là *"scale
+> 0,9 sang 1,04 rồi về 1"* KÈM *"spring stiffness 420 damping 18"*. Hai vế **không thể cùng đúng**:
+> framer-motion 12.38 chặn thẳng lò xo có quá hai mốc (`JSAnimation.mjs`: *"Only two keyframes
+> currently supported with spring and inertia animations"*) — và `invariant` ấy **NÉM LỖI ở bản dev,
+> IM LẶNG ở bản production**, tức viết `[0.9, 1.04, 1]` là gài một quả mìn chỉ nổ ở một trong hai
+> môi trường. Đo đỉnh thật của `spring(420, 18)` đi từ 0,9 tới 1 bằng chính `spring()` của
+> `motion-dom`: **1,0215 ở mốc 171ms, đứng yên ở 337ms**. ⇒ **Đã giữ đúng 420/18 như chỉ thị ghi**;
+> hình dạng "co lại → vọt quá → về 1" vẫn nguyên, chỉ là cú vọt cao **2,2% thay vì 4%**. Muốn đúng
+> 4% thì hạ **`damping` 18 → 11,5** (đo được 1,0399) — đổi MỘT con số ở `motionPresets.js`. Bài học:
+> *độ vọt lố của lò xo là HỆ QUẢ, không phải thứ mình liệt kê ra.*
+> **(2) TRẢ OBJECT RỖNG CÓ THỂ **VỠ BỐ CỤC**, NÊN PHẢI CÓ HAI CÁI GÁC CHỨ KHÔNG PHẢI MỘT.** Chỉ thị
+> nói cả ba preset trả về rỗng — đúng cho thứ TRANG TRÍ. Nhưng cột phải khai bề ngang **bằng chính
+> `animate={{ width }}`** chứ không bằng CSS: bỏ đi thì cột mất bề ngang và bung ra chiếm cả màn
+> hình — một cách "tắt hoạt hoạ" bằng cách phá giao diện. Câu hỏi phân loại: ***"bỏ hẳn `animate`
+> đi thì phần tử còn ở đúng chỗ của nó không?"*** CÒN → `useCustomMotion` (bỏ hẳn). KHÔNG →
+> `useSnapMotion` (giữ đích, `duration: 0`). Bốn thứ thuộc nhóm hai: bề ngang hai cột · núm gạt chế
+> độ nghiêm ngặt · thanh tiến độ · vòng đếm giờ.
+> **(3) `transition` CỦA `press` PHẢI NẰM TRONG `whileTap`, KHÔNG PHẢI Ở CẤP NGOÀI.** Nhiều nút vừa
+> có `whileTap` vừa có `animate` riêng (thẻ preset nhấc lên khi đang chọn, núm gạt trượt…). Đặt
+> `transition` ở cấp ngoài thì việc trải preset **ĐÈ MẤT** `transition` của thẻ — không có gì đỏ
+> lên, chỉ có nhịp của thứ khác bị đổi. Đã khoá bằng test.
+> **(4) HOOK ĐẶT SAU MỘT LỐI RA SỚM.** `PrestigeModal` có `if (!isOpen) return null;` ở giữa thân
+> hàm; đặt bốn hook bên dưới nó là vi phạm quy tắc hook. **`npm run lint` bắt được ngay** (test
+> KHÔNG bắt được — đây là loại lỗi chỉ có lint thấy, đúng bài học ADR-054).
+>
+> **NGOẠI LỆ ĐỀU ĐẾM ĐƯỢC VÀ ĐỀU CÓ CHÚ THÍCH LÝ DO TẠI CHỖ:** `ActionButton` giữ cú lún `y:4` vì
+> nó BẰNG ĐÚNG chiều dày vạch bóng đặc (`actionButtonPress.test.js` khoá cứng quan hệ ấy **và cấm
+> `scale` ở `whileHover`** — một nhịp `press` dùng `scale` sẽ phá cả hai); các hiệu ứng SO LE
+> (`ResourceCascade`, viên tài nguyên của `EraChangeBanner`) giữ độ trễ vì độ trễ CHÍNH LÀ thứ chúng
+> tồn tại để làm; pháo hoa (`ParticleField`, `ParticleRain`) `return null` hẳn khi Giảm chuyển động.
+>
+> **Lưới tự động:** `src/lib/motionPresets.test.js` **MỚI** — 6 bài, **cả 9 phép thử ngược đều đã
+> thấy đỏ** (thêm preset thứ tư · bỏ gác · guard hết rỗng · đổi thời lượng · bỏ `exit` · đưa
+> `transition` ra ngoài · lò xo 3 mốc · lò xo hết vọt lố · lớp phủ mượn `y`). Bài "lò xo" **không
+> đọc mã** — nó chạy thẳng `spring()` thật rồi ĐO đỉnh, thay vì tin con số chép trong chú thích.
+>
+> **TIÊU CHÍ NGHIỆM THU ĐÃ ĐƯỢC ĐO, KHÔNG PHẢI KHAI.** `scripts/motion-still.mjs` **MỚI**: bấm
+> chuyển tab rồi chụp HAI khung hình cách nhau 90ms và đếm điểm ảnh lệch. Chạy CẢ HAI chế độ, vì
+> một con số "0 điểm ảnh lệch" tự nó không chứng minh gì — nó cũng đúng y hệt khi cú bấm trượt
+> hoặc app chưa mọc ra. Hai lượt liên tiếp: **THƯỜNG 40.385 rồi 39.370 điểm ảnh đổi** (3,51% /
+> 3,42%, lệch lớn nhất 255 ⇒ thước CÓ răng) · **GIẢM CHUYỂN ĐỘNG 0 rồi 0, lệch lớn nhất 0**.
+> Cột thường trôi vài phần trăm là đúng (hai khung rơi vào hai thời điểm khác nhau của cùng một
+> hoạt hoạ); cột giảm **không trôi**, và chính sự không-trôi ấy mới là bằng chứng.
+> ⚠️ Cổng "app đã mọc ra chưa" trong script đó KHÔNG được thay bằng một phép đợi cố định: bảng
+> kiểu Google Fonts là tài nguyên CHẶN RENDER, trong hộp cát không có mạng ngoài thì
+> `document.readyState` kẹt ở `loading` rất lâu — bản đầu đợi cố định 6 giây ra **0 nút** và suýt
+> cho ra kết luận "không có hoạt hoạ nào" hoàn toàn sai, ở CẢ HAI chế độ.
+>
+> Cổng: `npm test` **1.169 bài · 1.168 pass · 0 fail · 1 skipped** · `test:cross` 3/3 (32,1 giây) ·
+> lint sạch · build xanh · `scripts/shot.mjs` chụp lại trang chủ 1280px: không tràn, mọi khối còn đủ.
+
 > Cập nhật lần cuối: **2026-08-27 (chiều)** — **`ActionButton` NGHE THEO SKIN + CÓ CẢM GIÁC BẤM LÚN.**
 > Ba bệnh đã chữa: `themeMap` khai màu cứng theo `lightTheme` (chỉ đúng **2 trong 10** tổ hợp skin ×
 > chế độ) · bóng MỜ nhiều lớp làm nút trông như thẻ giấy · `whileHover scale 1.03` phóng to cả khối

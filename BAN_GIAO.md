@@ -1,3 +1,46 @@
+> Cập nhật lần cuối: **2026-08-27 (tối muộn)** — **ĐÓNG NGOẠI LỆ CUỐI CÙNG: BÁO CÁO TUẦN THÔI TỰ
+> BẬT, VÀ IPHONE LẦN ĐẦU CÓ ĐƯỜNG VÀO** (ADR-061, đóng `TECH_DEBT #87` mở cùng ngày).
+>
+> **⚠️ SỰ THẬT QUYẾT ĐỊNH CẢ HƯỚNG ĐI, VÀ NÓ KHÔNG NẰM TRONG MỤC NỢ:** đi đọc mã mới thấy **trên
+> iPhone KHÔNG có đường nào mở báo cáo tuần** — nút duy nhất ở thanh bên desktop (`hidden md:flex`).
+> Nghĩa là cái hộp thoại tự bật sáng thứ Hai không chỉ là cách báo cáo *xuất hiện*, nó là cách báo
+> cáo *tồn tại* trên thiết bị Đàm dùng nhiều nhất. ⇒ **Đơn thuốc ghi sẵn ở `TECH_DEBT #87` ("đẩy
+> xuống toast + tách hai trạng thái") là đơn SAI**: một toast 4 giây trên thiết bị không có lối vào
+> nào khác CHÍNH LÀ khuyết tật "lỡ một cái là mất cả tuần", chỉ mặc áo mới. Đúng bài học của
+> `TECH_DEBT #82`: *cái "Recommended Solution" được viết lúc người viết còn đứng TRONG mô hình cũ.*
+>
+> **Đã làm thay:** gỡ hẳn `checkWeeklyReport()` (store + hai chỗ gọi ở `App.jsx`) · tín hiệu thành
+> một **CHẤM "chưa xem"** suy từ `lastWeeklyReportDate` bằng hàm thuần `isWeeklyReportUnread`
+> (`engine/navAttention.js`) — nó **không thể bị lỡ** vì nó không có hẹn giờ, sáng cho tới khi Đàm
+> thật sự mở ra xem · **thêm mục "Báo cáo tuần" vào menu "Thêm" trên điện thoại** (điều kiện AN
+> TOÀN, không phải tiện ích) · `openWeeklyReport()` mở thẳng vào tab **"Tuần trước"** khi chưa xem,
+> vì đó chính là bản báo cáo cái chấm đang trỏ tới.
+>
+> **⚠️ MỘT TRƯỜNG GÁNH HAI VIỆC — LẦN THỨ BẢY, VÀ LỜI GIẢI KHÁC SÁU LẦN TRƯỚC.**
+> `lastWeeklyReportDate` vừa là cổng *"tuần này đã TỰ BẬT chưa"* vừa là dấu *"đã XEM chưa"*; hai
+> câu hỏi ấy trùng nhau **chỉ vì** tự-bật-một-lần cũng đồng nghĩa với đã-thấy-một-lần — một sự
+> trùng hợp, không phải một quan hệ. Sáu lần trước lời giải là TÁCH ĐÔI cái trường. Lần này lời
+> giải là **bỏ đi cái việc thứ hai**, và trường ấy tự hết gánh nặng mà không cần thêm một trường
+> đồng bộ nào. ⇒ Gặp trường gánh hai việc, hỏi thêm: ***"có phải một trong hai việc đáng lẽ không
+> nên tồn tại không?"***
+>
+> **⚠️ MỘT BÀI TEST CỦA PHIÊN KHÁC ĐỎ, VÀ MÃ KHÔNG HỀ SAI.** `appNavigation.test.js` khớp NGUYÊN
+> VĂN `new Set(inventoryNeedsAttention ? ['inventory'] : [])`, nên nó đỏ ngay khi cái tập ấy nhận
+> nguồn thứ hai — dù chú thích của chính nó chỉ tuyên bố *"tập tab có chấm phải suy từ
+> `inventoryNeedsAttention`"*, điều mã mới vẫn làm đúng. **Không bóp mã cho vừa regex**: đã sửa
+> assert để hỏi đúng NGUỒN TÍN HIỆU thay vì HÌNH DẠNG MÃ, rồi thêm một assert nữa cho nguồn mới —
+> bài test nay chặt HƠN bản cũ. Một bài test khoá cách viết thì nó chặn cả những thay đổi đúng, và
+> dạy người sửa một bài học sai.
+>
+> Cổng: **1240 bài · 0 đỏ · `# skipped 1`** · lint sạch · build xanh. Ảnh: chấm cam trên "Báo cáo
+> tuần" ở thanh bên desktop · menu "Thêm" trên iPhone nay ba mục (Thống kê · Cài đặt · Báo cáo
+> tuần, có chấm) · bấm vào mở đúng tab "Tuần trước".
+>
+> ⚠️ **VERCEL "READY" VẪN CHƯA TỰ XÁC NHẬN ĐƯỢC** từ hộp cát này (proxy chặn `pomodoro-dc.vercel.app`,
+> 403 ở bước CONNECT; repo không có GitHub Actions) — đã kiểm lại, vẫn đúng như phiên trước ghi.
+
+---
+
 > Cập nhật lần cuối: **2026-08-27 (tối)** — **MỌI PHẦN THƯỞNG NÓI CHUNG MỘT THỨ TIẾNG, VÀ CHỈ
 > BỐN VIỆC CÒN ĐƯỢC CHẶN MÀN HÌNH** (ADR-060).
 >

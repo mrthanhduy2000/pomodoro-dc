@@ -1,5 +1,12 @@
 /**
- * "THÀNH TÍCH MỚI MỞ KHOÁ" — phần bền của cái chấm trên tab "Hành trang".
+ * CÁC CHẤM "CÓ THỨ CHƯA XEM" TRÊN THANH ĐIỀU HƯỚNG.
+ *
+ * Hai cái chấm, hai nguồn sự thật khác nhau — và sự khác nhau ấy là CÓ CHỦ ĐÍCH:
+ *   · thành tích  → dấu "đã xem" ở localStorage, tức chuyện của TỪNG MÁY;
+ *   · báo cáo tuần → `lastWeeklyReportDate` trong state ĐỒNG BỘ, tức chuyện của VÁN CHƠI.
+ * Xem lý do ở chú thích của từng hàm bên dưới.
+ *
+ * ── (1) "THÀNH TÍCH MỚI MỞ KHOÁ" ────────────────────────────────────────────
  *
  * Vấn đề: `ui.achievementQueue` là hàng đợi TOAST, nó tự rút cạn khi toast hiện xong, nên nó
  * KHÔNG trả lời được câu "Đàm đã ngó qua danh sách thành tích chưa?". Còn `achievements.timeline`
@@ -62,4 +69,36 @@ export function writeSeenAchievements(storage, unlockedIds) {
     // Ghi hỏng thì cái chấm sẽ sáng lại ở lần mở sau — phiền một chút, không phải lỗi chặn.
   }
   return ids;
+}
+
+/**
+ * ── (2) "BÁO CÁO TUẦN CHƯA XEM" ─────────────────────────────────────────────
+ *
+ * Trước 2026-08-27 (tối) báo cáo tuần TỰ BẬT một hộp thoại toàn màn hình vào sáng thứ Hai. Nó là
+ * ngoại lệ duy nhất còn lại của luật *"chặn màn hình chỉ dành cho bốn việc buộc phải quyết định"*
+ * (ADR-060) — mà một bản tổng kết thì không buộc quyết định gì.
+ *
+ * ⚠️ VÌ SAO KHÔNG ĐẨY NÓ XUỐNG TOAST như mọi thứ khác: trên iPhone **không có đường nào khác để
+ * mở báo cáo tuần** — cái nút duy nhất nằm ở thanh bên desktop (`hidden md:flex`). Một toast tự
+ * tắt sau 4 giây, cộng với `dismissWeeklyReport` đánh dấu "tuần này đã xem", nghĩa là **lỡ một
+ * cái toast là mất báo cáo của cả tuần**, đúng trên thiết bị Đàm dùng nhiều nhất. Đổi một phiền
+ * toái nhỏ lấy một mất mát thật thì không phải một bản vá.
+ *
+ * ⇒ Thay bằng một cái CHẤM: nó không chen ngang, và nó KHÔNG THỂ bị lỡ vì nó suy ra từ trạng thái
+ * đã lưu chứ không phải từ một cái hẹn giờ. Chấm sáng từ thứ Hai cho tới khi Đàm thật sự mở ra
+ * xem, và tắt đúng lúc đó.
+ *
+ * ⚠️ ĐỌC TỪ STATE ĐỒNG BỘ, KHÔNG PHẢI localStorage (ngược với dấu thành tích ở trên). Đây không
+ * phải chuyện không nhất quán: "đã xem báo cáo TUẦN NÀY chưa" là một sự thật về VÁN CHƠI — xem
+ * trên Mac rồi thì mở iPhone không nên thấy chấm nữa. Còn "đã ngó qua danh sách thành tích chưa"
+ * là chuyện của từng màn hình, nên nó ở lại từng máy.
+ *
+ * @param lastReadWeek - `lastWeeklyReportDate` đã lưu (khoá tuần dạng thứ Hai, hoặc `null`)
+ * @param weekMonday   - khoá tuần HIỆN TẠI
+ * @param hasHistory   - đã có phiên nào chưa; tài khoản mới tinh thì không có gì để báo cáo
+ */
+export function isWeeklyReportUnread({ lastReadWeek, weekMonday, hasHistory }) {
+  if (!hasHistory) return false;
+  if (!weekMonday) return false;
+  return lastReadWeek !== weekMonday;
 }

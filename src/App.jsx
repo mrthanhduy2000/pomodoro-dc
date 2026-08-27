@@ -17,6 +17,7 @@ import { useGameLoop } from './hooks/useGameLoop';
 import { useCityGrowthMoment } from './hooks/useCityMoment';
 import useGameStore from './store/gameStore';
 import useInventoryAttention from './hooks/useInventoryAttention';
+import { isWeeklyReportUnread } from './engine/navAttention';
 import useSettingsStore from './store/settingsStore';
 import { ERA_METADATA, ERA_THRESHOLDS } from './engine/constants';
 import { countSessionsOnDay, getLevelProgress, sumFocusMinutesOnDay } from './engine/gameMath';
@@ -1292,7 +1293,6 @@ export default function App() {
   const timerSessionRunning = useGameStore((s) => s.timerSession.isRunning);
   const timerSessionPausedAt = useGameStore((s) => s.timerSession.pausedAt);
   const refreshDailyMissions = useGameStore((s) => s.refreshDailyMissions);
-  const checkWeeklyReport = useGameStore((s) => s.checkWeeklyReport);
   const openWeeklyReport = useGameStore((s) => s.openWeeklyReport);
   const missionBoundaryRef = useRef({ day: localDateStr(), week: localWeekMondayStr() });
 
@@ -1318,9 +1318,8 @@ export default function App() {
     void refreshPushState();
     checkRankChallengeDeadlines();
     refreshDailyMissions();
-    checkWeeklyReport();
     initSync();
-  }, [storesHydrated, hydrateEngines, refreshPushState, checkRankChallengeDeadlines, refreshDailyMissions, checkWeeklyReport]);
+  }, [storesHydrated, hydrateEngines, refreshPushState, checkRankChallengeDeadlines, refreshDailyMissions]);
 
   useEffect(() => {
     const handleVisibilityChange = () => {
@@ -1356,10 +1355,10 @@ export default function App() {
 
       if (!boundaryChanged) return;
 
-      const weekChanged = missionBoundaryRef.current.week !== week;
+      // ⚠️ Sang tuần mới KHÔNG còn tự bật báo cáo tuần (ADR-061) — cái chấm trên mục "Báo cáo
+      // tuần" tự sáng vì nó suy ra từ `lastWeeklyReportDate`, không cần ai đi bật.
       missionBoundaryRef.current = { day, week };
       refreshDailyMissions();
-      if (weekChanged) checkWeeklyReport();
     };
 
     missionBoundaryRef.current = { day: localDateStr(), week: localWeekMondayStr() };
@@ -1383,7 +1382,7 @@ export default function App() {
       window.removeEventListener('focus', handleFocus);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [storesHydrated, checkEraCrisisDeadlines, checkWeeklyReport, refreshDailyMissions, timerSessionRunning]);
+  }, [storesHydrated, checkEraCrisisDeadlines, refreshDailyMissions, timerSessionRunning]);
 
   const isOnBreak = useGameStore((s) => s.ui.isOnBreak);
   const breakSecsLeft = useGameStore((s) => s.ui.breakSecondsLeft);
@@ -1468,12 +1467,24 @@ export default function App() {
     markAchievementsSeen,
     unseenAchievementCount,
   } = useInventoryAttention();
+  // "Báo cáo tuần chưa xem" — thay cho việc TỰ BẬT hộp thoại sáng thứ Hai (ADR-061).
+  // ⚠️ Không phải một TAB, nhưng vẫn đi qua đúng cái tập này: chỗ dùng chỉ hỏi "mục này có chấm
+  // không", nên một mục-là-hành-động cũng trả lời được câu ấy. Đây đúng là chỗ mở rộng mà chú
+  // thích ngay dưới đã hứa.
+  const weeklyReportUnread = useGameStore((s) => isWeeklyReportUnread({
+    lastReadWeek: s.lastWeeklyReportDate,
+    weekMonday: localWeekMondayStr(),
+    hasHistory: s.history.length > 0,
+  }));
   // Một TẬP chứ không phải một cờ `inventoryNeedsAttention` truyền thẳng: thanh bên và thanh dưới
   // đều chỉ hỏi "mục này có chấm không", nên ngày mai thêm chấm cho một tab khác thì không phải
   // đi mở lại hai component điều hướng.
   const attentionTabIds = useMemo(
-    () => new Set(inventoryNeedsAttention ? ['inventory'] : []),
-    [inventoryNeedsAttention],
+    () => new Set([
+      ...(inventoryNeedsAttention ? ['inventory'] : []),
+      ...(weeklyReportUnread ? ['weeklyReport'] : []),
+    ]),
+    [inventoryNeedsAttention, weeklyReportUnread],
   );
   // ⚠️ MỌI đường vào điều hướng phải đi qua đây, kể cả khi nơi gọi truyền id CŨ
   // (`skills`/`collection`/`achievements`) — `resolveTabTarget` dịch chúng thành
@@ -1889,7 +1900,7 @@ export default function App() {
                   borderColor: 'var(--line)',
                   background: 'var(--panel-soft)',
                   boxShadow: '0 16px 34px rgba(31,30,29,0.12)',
-                  gridTemplateColumns: `repeat(${Math.min(3, Math.max(1, MOBILE_SECONDARY_TABS.length))}, minmax(0, 1fr))`,
+                  gridTemplateColumns: `repeat(${Math.min(3, Math.max(1, MOBILE_SECONDARY_TABS.length + 1))}, minmax(0, 1fr))`,
                 }}
               >
                 {MOBILE_SECONDARY_TABS.map((tab) => {
@@ -1911,6 +1922,34 @@ export default function App() {
                     </button>
                   );
                 })}
+                {/*
+                  ⚠️ MỤC NÀY LÀ ĐIỀU KIỆN AN TOÀN CỦA ADR-061, KHÔNG PHẢI MỘT TIỆN ÍCH THÊM VÀO.
+                  Trước nó, iPhone **không có đường nào** mở báo cáo tuần — cái nút duy nhất nằm ở
+                  thanh bên desktop (`hidden md:flex`), nên báo cáo chỉ tới được Đàm bằng đúng cái
+                  hộp thoại tự bật mà ADR-061 vừa gỡ. Gỡ tự-bật mà không thêm mục này thì trên
+                  thiết bị Đàm dùng nhiều nhất, báo cáo tuần biến mất hoàn toàn.
+                  Nó là HÀNH ĐỘNG chứ không phải tab, nên nó không nằm trong `MOBILE_SECONDARY_TABS`
+                  (mảng ấy nuôi `selectTab`, mà không có tab nào tên `weeklyReport`) — bù lại số cột
+                  ở trên phải cộng thêm 1, đúng tinh thần "đọc từ danh sách, không chốt cứng".
+                */}
+                <button
+                  type="button"
+                  onClick={() => { openWeeklyReport(); setMoreMenuOpen(false); }}
+                  className="flex min-h-[56px] flex-col items-center justify-center gap-1 rounded-[16px] px-1 py-2 text-[11px] font-medium leading-none transition-colors"
+                  style={{ color: 'var(--muted)', background: 'transparent', border: '1px solid transparent' }}
+                >
+                  <span className="relative">
+                    <AppIcon.report size={17} />
+                    {attentionTabIds.has('weeklyReport') && (
+                      <span
+                        aria-hidden="true"
+                        className="absolute -right-1.5 -top-1 h-[6px] w-[6px] rounded-full"
+                        style={{ background: 'var(--accent)' }}
+                      />
+                    )}
+                  </span>
+                  <span className="truncate">Báo cáo tuần</span>
+                </button>
               </Motion.div>
             </>
           )}
@@ -2113,15 +2152,17 @@ function OverlayStack({
     if (lootModalOpen) LootDropModal.preload?.();
   }, [lootModalOpen]);
 
-  // Mọi thứ đang chặn màn hình. Sáu số hạng, nhưng chỉ BA trong số đó tự bật:
-  // lên kỷ (`showLootModal` khi `eraChanged`) · thảm hoạ · khủng hoảng kỷ. Thăng
-  // hoa do Đàm bấm ở Cài đặt, còn `detail === 'loot'|'level'` là do Đàm bấm vào thẻ —
-  // một hộp thoại Đàm tự mở thì không phải "làm phiền".
-  // ⚠️ NGOẠI LỆ DUY NHẤT: `weeklyReportOpen` VẪN tự bật sáng thứ Hai, tức nó chặn
-  // màn hình mà không nằm trong bốn việc được phép. CỐ Ý để lại: báo cáo tuần
-  // không phải một phần thưởng mà là một bản tổng kết, và đẩy nó xuống toast 4
-  // giây nghĩa là lỡ một cái toast = mất báo cáo của cả tuần (`dismissWeeklyReport`
-  // đánh dấu tuần đã xem). Ghi ở `TECH_DEBT.md` #87 để nó được ĐẾM, không bị quên.
+  // Mọi thứ đang chặn màn hình. Sáu số hạng, nhưng chỉ BA trong số đó TỰ BẬT:
+  // lên kỷ (`showLootModal` khi `eraChanged`) · thảm hoạ · khủng hoảng kỷ — đúng ba
+  // việc buộc Đàm phải quyết định gì đó. Ba số hạng còn lại đều do Đàm tự mở:
+  // thăng hoa (nút ở Cài đặt) · `detail === 'loot'|'level'` (bấm vào thẻ) ·
+  // `weeklyReportOpen` (nút "Báo cáo tuần"). Một hộp thoại Đàm TỰ MỞ thì không phải
+  // "làm phiền" — luật của ADR-060 nói về việc CHEN NGANG, không nói về việc chặn.
+  //
+  // ⚠️ TỪ ADR-061 KHÔNG CÒN NGOẠI LỆ NÀO. Báo cáo tuần từng tự bật sáng thứ Hai;
+  // nay tín hiệu của nó là một CHẤM trên mục "Báo cáo tuần" (`attentionTabIds`),
+  // và cái chấm ấy không thể bị lỡ vì nó suy ra từ `lastWeeklyReportDate` đã lưu
+  // chứ không từ một cái hẹn giờ. Đừng dựng lại `checkWeeklyReport`.
   const blocking = showMoment || showLootModal || disasterModalOpen || eraCrisisModalOpen
     || prestigeModalOpen || weeklyReportOpen || showLevelModal;
 
@@ -2216,6 +2257,7 @@ function EditorialSidebar({ activeTab, attentionTabIds, isOpen, onOpenWeeklyRepo
       <div className="mt-auto flex flex-col gap-1 px-2.5 pb-3 pt-3">
         <SidebarItem
           active={false}
+          attention={attentionTabIds?.has('weeklyReport') ?? false}
           icon={<AppIcon.report size={18} />}
           isOpen={isOpen}
           label="Báo cáo tuần"

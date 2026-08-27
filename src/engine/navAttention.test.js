@@ -6,6 +6,7 @@ import {
   pickUnseenAchievements,
   readSeenAchievements,
   writeSeenAchievements,
+  isWeeklyReportUnread,
 } from './navAttention.js';
 
 /** localStorage giả — đủ dùng, và có công tắc "hỏng" để thử đúng ca Safari riêng tư. */
@@ -73,4 +74,44 @@ test('storage hỏng hoặc dữ liệu méo thì trả `null`, không ném lỗ
   const saiHinh = fakeStorage();
   saiHinh.map.set(NAV_SEEN_KEY, JSON.stringify({ achievements: 'không phải mảng' }));
   assert.equal(readSeenAchievements(saiHinh), null);
+});
+
+// ─── (2) BÁO CÁO TUẦN CHƯA XEM (ADR-061) ─────────────────────────────────────
+
+test('chấm "báo cáo tuần" sáng khi tuần này chưa mở ra xem, và TẮT ngay khi đã xem', () => {
+  const weekMonday = '2026-08-24';
+
+  assert.equal(
+    isWeeklyReportUnread({ lastReadWeek: null, weekMonday, hasHistory: true }),
+    true,
+    'chưa từng xem báo cáo nào ⇒ phải có chấm',
+  );
+  assert.equal(
+    isWeeklyReportUnread({ lastReadWeek: '2026-08-17', weekMonday, hasHistory: true }),
+    true,
+    'mới xem báo cáo TUẦN TRƯỚC ⇒ tuần này vẫn chưa xem',
+  );
+  assert.equal(
+    isWeeklyReportUnread({ lastReadWeek: weekMonday, weekMonday, hasHistory: true }),
+    false,
+    'đã xem đúng tuần này ⇒ chấm phải tắt',
+  );
+});
+
+/**
+ * ⚠️ TÀI KHOẢN MỚI TINH PHẢI IM LẶNG — cùng luật với dấu thành tích ở trên. Không có phiên nào
+ * thì `lastWeeklyReportDate` cũng là `null`, và nếu chỉ so hai khoá tuần thì Đàm mở app lần đầu
+ * đã thấy một cái chấm trỏ vào một bản báo cáo RỖNG. Cái chấm ấy không sai về mặt logic, nó chỉ
+ * nói dối về việc "có thứ đáng xem".
+ */
+test('chưa có phiên nào thì KHÔNG có chấm, dù chưa xem bao giờ', () => {
+  assert.equal(
+    isWeeklyReportUnread({ lastReadWeek: null, weekMonday: '2026-08-24', hasHistory: false }),
+    false,
+  );
+});
+
+test('thiếu khoá tuần thì im lặng chứ không sáng bừa', () => {
+  assert.equal(isWeeklyReportUnread({ lastReadWeek: null, weekMonday: null, hasHistory: true }), false);
+  assert.equal(isWeeklyReportUnread({ lastReadWeek: '2026-08-24', weekMonday: undefined, hasHistory: true }), false);
 });

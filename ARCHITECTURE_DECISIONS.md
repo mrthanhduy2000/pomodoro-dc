@@ -11,6 +11,63 @@
 
 ---
 
+## ADR-061 — Báo cáo tuần đổi từ HỘP THOẠI TỰ BẬT sang một CHẤM "chưa xem", và iPhone lần đầu có đường vào
+
+**Ngày:** 2026-08-27 (tối, ngay sau ADR-060)
+**Trạng thái:** đã áp dụng. Đóng ngoại lệ duy nhất mà ADR-060 để lại (`TECH_DEBT #87`).
+
+**Bối cảnh.** ADR-060 lập luật: chặn màn hình chỉ dành cho **lên kỷ · thăng hoa · khủng hoảng kỷ ·
+thảm hoạ**. Báo cáo tuần được để lại làm ngoại lệ CÓ GHI SỔ vì gỡ nó lúc ấy sẽ đổi một phiền toái
+nhỏ lấy một mất mát thật.
+
+**Vấn đề — và nó không phải chuyện làm phiền.** Đi đọc mã mới thấy sự thật quyết định cả hướng đi:
+**trên iPhone KHÔNG có đường nào mở báo cáo tuần.** Nút duy nhất nằm ở thanh bên desktop
+(`hidden md:flex`). Nghĩa là cái hộp thoại tự bật sáng thứ Hai không chỉ là cách báo cáo *xuất
+hiện* — nó là cách duy nhất báo cáo *tồn tại* trên thiết bị Đàm dùng nhiều nhất. Và
+`dismissWeeklyReport` đánh dấu "tuần này đã xem", nên **đóng vội một lần là mất báo cáo cả tuần**.
+
+**Phương án đã cân nhắc.**
+- **(A) Đẩy xuống toast như mọi thứ khác trong ADR-060.** Loại — và đây là điểm quan trọng nhất
+  của ADR này: một toast tự tắt sau 4 giây, trên một thiết bị không có đường vào nào khác, chính
+  là *"lỡ một cái toast = mất báo cáo cả tuần"*. Nó KHÔNG phải bản vá; nó là cùng một khuyết tật
+  mặc áo mới.
+- **(B) Toast + thêm một trường `weeklyReportOfferedDate`** để tách "đã được MỜI" khỏi "đã XEM".
+  Loại: nó chữa được chuyện mời-lại, nhưng vẫn không trả lời được câu *"lỡ rồi thì vào bằng lối
+  nào"*, và nó thêm một trường đồng bộ cho một việc mà một cái chấm làm được không cần trường nào.
+- **(C — đã chọn) Bỏ HẲN việc tự bật; tín hiệu là một CHẤM "chưa xem", cộng một lối vào trên
+  điện thoại.**
+
+**Giải pháp.**
+- Gỡ `checkWeeklyReport()` khỏi store và cả hai chỗ gọi ở `App.jsx`.
+- `isWeeklyReportUnread()` (thuần, ở `engine/navAttention.js`) → chấm trên mục "Báo cáo tuần",
+  đi qua đúng `attentionTabIds` mà phiên trước đã dựng cho tab "Hành trang".
+- **Thêm mục "Báo cáo tuần" vào menu "Thêm" trên điện thoại** — đây là ĐIỀU KIỆN AN TOÀN, không
+  phải tiện ích. Thiếu nó thì ADR này là một hồi quy.
+- `openWeeklyReport()` mở thẳng vào tab **"Tuần trước"** khi tuần này chưa xem — đó chính là bản
+  báo cáo cái chấm đang trỏ tới.
+
+**⚠️ MỘT TRƯỜNG GÁNH HAI VIỆC, LẦN THỨ BẢY.** `lastWeeklyReportDate` vừa là cổng *"tuần này đã TỰ
+BẬT chưa"* vừa là dấu *"đã XEM chưa"*. Hai câu hỏi khác nhau trùng nhau **chỉ vì** tự-bật-một-lần
+cũng đồng nghĩa với đã-thấy-một-lần — một sự trùng hợp, không phải một quan hệ. Điều đáng chú ý:
+lần này lời giải KHÔNG phải tách đôi cái trường (phương án B), mà là **bỏ đi cái việc thứ hai**.
+Khi một trường gánh hai việc, hỏi thêm *"có phải một trong hai việc ấy đáng lẽ không nên tồn tại
+không?"* — rẻ hơn nhiều so với việc nuôi hai trường.
+
+**Trade-off.**
+- Sáng thứ Hai không còn gì bật ra. Đàm phải THẤY cái chấm rồi tự bấm. Đổi lại nó không thể bị lỡ:
+  chấm suy ra từ trạng thái đã lưu, không từ một cái hẹn giờ, nên nó sáng cho tới khi được xem.
+- Cái chấm ở thanh bên desktop **nằm dưới đáy**, ít nổi hơn một hộp thoại. Chấp nhận: đó đúng là
+  ý nghĩa của "không chen ngang".
+
+**Ảnh hưởng.** Không migration: `lastWeeklyReportDate` giữ nguyên tên, kiểu và cách đồng bộ — chỉ
+NGHĨA của nó hẹp lại. Dữ liệu cũ đọc vẫn đúng. `weeklyReportOpen` vẫn nằm trong `blocking`, nhưng
+nay nó chỉ bật khi Đàm tự bấm, nên nó không còn là ngoại lệ của ADR-060.
+
+**Điều kiện xem lại.** Nếu Đàm nói *"tôi không để ý thấy cái chấm"* thì bàn lại việc thêm MỘT toast
+nhắc (lúc ấy an toàn, vì lối vào trên điện thoại đã có). Đừng dựng lại hộp thoại tự bật.
+
+---
+
 ## ADR-060 — MỘT ngôn ngữ hình cho mọi phần thưởng, và một luật MỨC ĐỘ LÀM PHIỀN có phân tầng
 
 **Ngày:** 2026-08-27

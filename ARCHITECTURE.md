@@ -207,9 +207,29 @@ thang độ hiếm bốn bậc (`engine/rewardTiers.js`). Cái quyết định n
 `completeFocusSession` (hàm dài nhất dự án) và không đổi một con số thưởng nào. Đồng hồ 4 giây
 **dừng** khi có hộp thoại chặn màn hình, nếu không nó cháy hết sau lưng lớp mờ.
 
-⚠️ Ngoại lệ DUY NHẤT còn lại: **báo cáo tuần vẫn tự bật sáng thứ Hai** — cố ý, vì
-`dismissWeeklyReport` đánh dấu tuần đã xem nên lỡ một toast = mất báo cáo cả tuần
-(`TECH_DEBT #87`).
+⚠️ **KHÔNG CÒN NGOẠI LỆ NÀO (ADR-061).** Báo cáo tuần từng tự bật sáng thứ Hai; nay tín hiệu của
+nó là một **CHẤM "chưa xem"** trên mục "Báo cáo tuần", suy ra từ `lastWeeklyReportDate` bằng hàm
+thuần `isWeeklyReportUnread` (`engine/navAttention.js`):
+
+```
+lastWeeklyReportDate (state ĐỒNG BỘ)  ──→ isWeeklyReportUnread()
+                                                  │
+                                        attentionTabIds ∋ 'weeklyReport'
+                                                  │
+                        ┌─────────────────────────┴─────────────────────────┐
+                  thanh bên desktop                          menu "Thêm" trên iPhone
+                  "Báo cáo tuần" + chấm                      "Báo cáo tuần" + chấm
+                        └─────────────────────────┬─────────────────────────┘
+                                        openWeeklyReport()
+                                   (mở vào tab "Tuần trước" nếu chưa xem)
+                                                  │
+                                        dismissWeeklyReport() → đánh dấu ĐÃ XEM ⇒ chấm tắt
+```
+
+⚠️ **LỐI VÀO TRÊN ĐIỆN THOẠI LÀ ĐIỀU KIỆN AN TOÀN, KHÔNG PHẢI TIỆN ÍCH.** Trước ADR-061, nút mở
+báo cáo tuần chỉ có ở thanh bên desktop (`hidden md:flex`) — nghĩa là trên iPhone, hộp thoại tự
+bật không phải cách báo cáo *xuất hiện* mà là cách nó *tồn tại*. Gỡ tự-bật mà không thêm mục vào
+menu "Thêm" thì báo cáo tuần biến mất khỏi thiết bị Đàm dùng nhiều nhất.
 
 ⚠️ `ui.pendingReward.newlyBuiltIds` là trường **chỉ để hiển thị**: `ui` không nằm trong `partialize`
 của store, nên nó không lên Supabase — không thêm một byte nào vào JSONB đang tranh chấp CAS

@@ -12,6 +12,34 @@
 
 ---
 
+## 2026-08-27 (tối muộn) — Báo cáo tuần thôi tự bật; iPhone lần đầu có đường vào
+
+**Mục đích.** ADR-060 để lại đúng một ngoại lệ: báo cáo tuần vẫn tự bật một hộp thoại toàn màn hình
+sáng thứ Hai. Đóng nốt ngoại lệ ấy.
+
+**Phạm vi.** Tầng giao diện + một hàm thuần. Không đụng engine game, thành phố 3D, sync.
+
+- **`src/engine/navAttention.js`** — thêm `isWeeklyReportUnread()` (thuần): "tuần này đã mở báo cáo
+  ra xem chưa". Đọc từ state ĐỒNG BỘ (`lastWeeklyReportDate`), khác với dấu "thành tích đã xem"
+  nằm ở localStorage — cố ý: xem trên Mac rồi thì iPhone không nên còn chấm.
+- **`src/store/gameStore.js`** — **gỡ hẳn `checkWeeklyReport()`**. `openWeeklyReport()` nay mở
+  thẳng vào tab "Tuần trước" khi tuần này chưa xem.
+- **`src/App.jsx`** — chấm "chưa xem" trên mục "Báo cáo tuần" ở thanh bên desktop, và **thêm mục
+  "Báo cáo tuần" vào menu "Thêm" trên điện thoại**. Cả hai đi qua `attentionTabIds` sẵn có.
+- **`src/appNavigation.test.js`** — sửa một assert khớp nguyên văn hình dạng mã (nó đỏ oan khi tập
+  chấm nhận nguồn thứ hai) thành assert hỏi đúng nguồn tín hiệu, rồi thêm assert cho nguồn mới.
+
+**Ảnh hưởng.** Trước thay đổi này, trên iPhone **không có đường nào** mở báo cáo tuần — nút duy
+nhất nằm ở thanh bên desktop. Mục mới trong menu "Thêm" là điều kiện an toàn của cả thay đổi, không
+phải một tiện ích: thiếu nó thì gỡ tự-bật là làm báo cáo tuần biến mất khỏi thiết bị dùng nhiều
+nhất.
+
+**Tương thích.** Không migration. `lastWeeklyReportDate` giữ nguyên tên, kiểu và cách đồng bộ — chỉ
+NGHĨA hẹp lại thành "đã thật sự xem". Dữ liệu cũ đọc vẫn đúng. Chi tiết: **ADR-061**;
+`TECH_DEBT #87` đã đóng.
+
+---
+
 ## 2026-08-27 (tối) — Một ngôn ngữ hình cho mọi phần thưởng, và phân tầng mức độ làm phiền
 
 **Mục đích.** App có bảy đường trao thưởng và bảy cách trình bày — riêng `LootDropModal` đã có ba

@@ -45,6 +45,7 @@ import {
   getVietnamYear,
 } from '../engine/time';
 import { mergeCityArchive, normalizeCityArchive } from '../engine/cityArchive';
+import { isWeeklyReportUnread } from '../engine/navAttention';
 import {
   canRestoreBlueprint, countActiveCrafting, pickLegacyCompletions, splitCraftingQueue,
 } from '../engine/eraLegacy';
@@ -5999,18 +6000,32 @@ const useGameStore = create(
         set((prev) => ({ ui: { ...prev.ui, prestigeModalOpen: false } })),
 
       // ── Weekly Report ──────────────────────────────────────────────────────
-      checkWeeklyReport: () => {
+      /**
+       * ⚠️ `checkWeeklyReport` ĐÃ BỊ GỠ (2026-08-27 tối, ADR-061). Nó là thứ TỰ BẬT một hộp thoại
+       * toàn màn hình vào sáng thứ Hai — ngoại lệ cuối cùng của luật "chặn màn hình chỉ dành cho
+       * bốn việc buộc phải quyết định" (ADR-060). Nay tín hiệu "có báo cáo mới" là một CHẤM trên
+       * mục "Báo cáo tuần", suy ra từ `lastWeeklyReportDate` (xem `engine/navAttention.js`).
+       * Đừng dựng lại hàm này: một cái chấm không thể bị lỡ, một hộp thoại tự bật thì bị đóng vội.
+       *
+       * ⚠️ VÀ `lastWeeklyReportDate` NAY CHỈ CÒN MỘT NGHĨA. Trước đây nó gánh hai việc: vừa là
+       * cổng "tuần này đã TỰ BẬT chưa", vừa là dấu "đã XEM chưa" — hai câu hỏi khác nhau trùng
+       * nhau chỉ vì tự-bật-một-lần cũng đồng nghĩa với đã-thấy-một-lần. Bỏ phần tự bật thì nó còn
+       * đúng một nghĩa: **tuần này Đàm đã thật sự mở báo cáo ra xem**.
+       */
+      openWeeklyReport: () => {
         const state = get();
-        const monday = getWeekMonday();
-        // Chỉ hiện nếu hôm nay là thứ 2 VÀ chưa hiện tuần này
-        const isMonday = getVietnamDayOfWeek() === 1;
-        if (isMonday && state.lastWeeklyReportDate !== monday && state.history.length > 0) {
-          set((prev) => ({ ui: { ...prev.ui, weeklyReportOpen: true, weeklyReportMode: 'previous' } }));
-        }
+        // Mở thẳng vào TUẦN TRƯỚC khi tuần này chưa xem — đó chính là bản báo cáo cái chấm đang
+        // trỏ tới. Mở vào "tuần này" lúc ấy là đưa ra một tuần còn dở dang và giấu mất bản đã
+        // xong. (Hộp thoại vẫn có hai tab nên Đàm đổi lại được bất cứ lúc nào.)
+        const unread = isWeeklyReportUnread({
+          lastReadWeek: state.lastWeeklyReportDate,
+          weekMonday: getWeekMonday(),
+          hasHistory: state.history.length > 0,
+        });
+        set((prev) => ({
+          ui: { ...prev.ui, weeklyReportOpen: true, weeklyReportMode: unread ? 'previous' : 'current' },
+        }));
       },
-
-      openWeeklyReport: () =>
-        set((prev) => ({ ui: { ...prev.ui, weeklyReportOpen: true, weeklyReportMode: 'current' } })),
 
       dismissWeeklyReport: () => {
         const monday = getWeekMonday();

@@ -13,10 +13,10 @@
 > mà không được refactor triệt để, phải CHỦ ĐỘNG đề xuất mở một "Maintenance Sprint" (nêu rõ mục
 > tiêu/phạm vi/lợi ích/rủi ro/tiêu chí hoàn thành) thay vì tiếp tục cộng thêm tính năng mới.
 >
-> **Trạng thái ngưỡng hiện tại (2026-08-27 tối, sau ADR-060 "một ngôn ngữ hình cho phần thưởng")**:
-> thêm **#87** (báo cáo tuần vẫn tự bật sáng thứ Hai — ngoại lệ DUY NHẤT của luật mức độ làm phiền)
-> ở mức **Low**. Vẫn **1 mục Priority High còn mở** (#53), **0 mục Critical** → xa ngưỡng
-> Maintenance Sprint.
+> **Trạng thái ngưỡng hiện tại (2026-08-27 tối, sau ADR-060 + ADR-061)**: **#87 mở rồi ĐÓNG ngay
+> trong ngày** — báo cáo tuần thôi tự bật, và iPhone lần đầu có đường vào. Không còn ngoại lệ nào
+> của luật mức độ làm phiền. Vẫn **1 mục Priority High còn mở** (#53), **0 mục Critical** → xa
+> ngưỡng Maintenance Sprint.
 >
 > *(mốc trước)* **(2026-08-27, sau khi viết lại `ActionButton`)**: thêm **#86**
 > (137 nút tự vẽ không đọc token skin) ở mức **Medium** — vẫn **1 mục Priority High còn mở**
@@ -4445,7 +4445,7 @@ trong chú thích thì đừng để `--selftest` của chính nó vẫn dùng �
 
 ---
 
-## #87 — Báo cáo tuần VẪN tự bật sáng thứ Hai, tức nó là ngoại lệ duy nhất của luật "chỉ bốn việc được chặn màn hình"
+## #87 — Báo cáo tuần VẪN tự bật sáng thứ Hai — ✅ ĐÃ ĐÓNG 2026-08-27 (tối), ADR-061
 
 - **Tên**: `weeklyReportOpen` tự bật (không do Đàm bấm) và mở một hộp thoại toàn màn hình.
 - **Module**: `src/App.jsx` (`OverlayStack`) · `src/store/gameStore.js` (`checkWeeklyReport`) ·
@@ -4469,7 +4469,18 @@ trong chú thích thì đừng để `--selftest` của chính nó vẫn dùng �
 - **Estimated Complexity**: Small (nếu đã tách xong hai trạng thái trên); Medium nếu tính cả việc tách.
 - **Blocking Conditions**: không có blocker kỹ thuật; chỉ chờ quyết định của Đàm về đánh đổi ở trên.
 - **Review Trigger**: khi Đàm nói báo cáo tuần làm phiền, hoặc khi có mục thứ hai xin được tự bật.
-- **Owner**: chưa giao · **Status**: OPEN (ghi 2026-08-27, ADR-060).
+- **Owner**: đã xử lý · **Status**: ✅ **CLOSED** (mở 2026-08-27 cùng ADR-060, đóng cùng ngày bởi ADR-061).
+
+**Đã đóng thế nào — và vì sao KHÔNG theo cách đã kê ở trên.** Mục này kê đơn "toast + tách hai
+trạng thái". Đi làm mới lộ ra thứ khiến đơn ấy sai: **trên iPhone không có đường nào khác để mở
+báo cáo tuần** (nút duy nhất ở thanh bên `hidden md:flex`), nên một toast 4 giây trên thiết bị đó
+CHÍNH LÀ khuyết tật "lỡ một cái là mất cả tuần", chỉ mặc áo mới. Đã làm thay:
+`checkWeeklyReport()` bị gỡ hẳn · tín hiệu thành một CHẤM "chưa xem" suy từ `lastWeeklyReportDate`
+(không thể bị lỡ vì nó không có hẹn giờ) · và **thêm mục "Báo cáo tuần" vào menu "Thêm" trên điện
+thoại** — điều kiện an toàn, không phải tiện ích.
+⚠️ **Bài học đáng giữ**: cái "Recommended Solution" viết lúc mở một mục nợ được nghĩ ra khi người
+viết còn đứng TRONG mô hình cũ. Đọc nó như một gợi ý, đừng đọc như một chỉ thị — cùng hình dạng
+với `TECH_DEBT #82`, nơi đơn thuốc cũng bị chính việc đi làm bác bỏ.
 
 ---
 

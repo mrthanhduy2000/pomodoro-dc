@@ -27,11 +27,12 @@ Mặt trận đang làm: **thành phố 3D** (`src/engine/city3d/` + `src/compon
    `api/_tests/`. Hiện có 10 function thật.
 
 ## Đang ở đâu
-- Nhánh production: `main`. Mốc gần nhất: **ADR-060** (MỘT thẻ phần thưởng chung cho cả app +
-  luật mức độ làm phiền: **chặn màn hình CHỈ dành cho lên kỷ · thăng hoa · khủng hoảng kỷ · thảm
-  hoạ**; mọi phần thưởng khác đi qua chồng toast `RewardToastHost`, tự tắt sau 4 giây).
-  Trước đó: **ADR-059** (mỗi kỷ MỘT MẠNG ĐƯỜNG riêng — hết bàn cờ; `roadPlan.js` nối các điểm mốc
-  bằng cung cong ⇒ giao lộ chữ T/Y/ngã năm).
+- Nhánh production: `main`. Mốc gần nhất: **ADR-060 + ADR-061** — MỘT thẻ phần thưởng chung cho cả
+  app, và luật mức độ làm phiền: **chặn màn hình CHỈ dành cho lên kỷ · thăng hoa · khủng hoảng kỷ ·
+  thảm hoạ**; mọi phần thưởng khác đi qua chồng toast `RewardToastHost` (tự tắt sau 4 giây), còn
+  báo cáo tuần đi qua một CHẤM "chưa xem". ⚠️ **Không còn ngoại lệ nào — đừng thêm thứ gì TỰ BẬT
+  hộp thoại.** Trước đó: **ADR-059** (mỗi kỷ MỘT MẠNG ĐƯỜNG riêng — hết bàn cờ; `roadPlan.js` nối
+  các điểm mốc bằng cung cong ⇒ giao lộ chữ T/Y/ngã năm).
 - Chuyển động: **ĐÚNG BA NHỊP**, nguồn duy nhất `src/lib/motionPresets.js` — `enter` (thứ xuất
   hiện) · `press` (thứ bấm được) · `reward` (phần thưởng, cột mốc). Cả ba **tự im** khi bật
   "Giảm chuyển động" nên chỗ gọi đừng tự kiểm tra. ⚠️ Đừng gõ lại `initial`/`animate` bằng tay,
@@ -49,6 +50,9 @@ Mặt trận đang làm: **thành phố 3D** (`src/engine/city3d/` + `src/compon
 - Phần thưởng: MỘT thẻ chung `components/shared/RewardCard.jsx`, MỘT thang độ hiếm **đúng bốn
   bậc** ở `engine/rewardTiers.js` (thường/tốt/hiếm/huyền thoại). ⚠️ Đừng thêm bậc thứ năm và đừng
   vẽ thẻ phần thưởng riêng ở một màn nào nữa — `rewardTiers.test.js` khoá con số 4.
+- ⚠️ **Mọi thứ mới muốn "báo cho Đàm biết" thì chọn MỘT trong ba, không tự bật hộp thoại**: toast
+  (`engine/rewardFeed.js`) · chấm chú ý (`engine/navAttention.js` → `attentionTabIds`) · chuông
+  thông báo (`ui.notificationFeed`). `rewardToastWiring.test.js` canh việc này.
 - Cảnh 3D: 15 kỷ, mỗi kỷ buộc vào một nước có thật (`country`/`landmark` ở `eraStyle.js`).
   Các bảng bản sắc 15 kỷ đã có: mái · tầng trệt · mặt đường · thực vật · địa thế/nước ·
   vùng phụ cận · khu phố · dáng đi · mạng đường.
@@ -61,9 +65,6 @@ Mặt trận đang làm: **thành phố 3D** (`src/engine/city3d/` + `src/compon
   **KHÔNG đo lại** trừ khi Đàm thấy khung hình giật trên máy thật.
 
 ## Việc tiếp theo (chưa làm)
-0. **Báo cáo tuần vẫn tự bật sáng thứ Hai** — ngoại lệ DUY NHẤT của luật mức độ làm phiền
-   (ADR-060). ⚠️ Đọc `TECH_DEBT #87` TRƯỚC: phải tách "đã xem" khỏi "đã bỏ qua" rồi mới đụng,
-   nếu không lỡ một cái toast 4 giây = mất báo cáo của cả tuần.
 1. **Kim tự tháp / ziggurat** — kỷ 2 (Ai Cập) và kỷ 3 (Iraq) đang ra mái nón nhiều cạnh,
    không có khối chóp bốn mặt. `prism` với `sides: 4` + `taper: 0` chính là thứ cần.
 2. **"Giống 3D hơn"** — bóng đổ nét hơn (`SHADOW_MAP_DESKTOP` 2048 → 4096, siết

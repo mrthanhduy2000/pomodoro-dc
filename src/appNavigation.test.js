@@ -121,8 +121,18 @@ test('chấm "có việc cần xem" được nối ở CẢ hai thanh điều h�
     /attentionTabIds\.has\(tab\.id\)/.test(APP_SOURCE),
     'Thanh dưới iPhone không hỏi `attentionTabIds` — chấm chú ý tắt câm trên điện thoại.',
   );
+  // ⚠️ HỎI NGUỒN TÍN HIỆU, KHÔNG HỎI HÌNH DẠNG MÃ (sửa 2026-08-27 tối, ADR-061).
+  // Bản đầu khớp nguyên văn `new Set(inventoryNeedsAttention ? […] : [])`, nên nó ĐỎ ngay khi cái
+  // tập ấy nhận thêm nguồn thứ hai (chấm "báo cáo tuần chưa xem") — mã hoàn toàn đúng, chỉ đổi
+  // cách viết. Một bài test khoá cách viết thì nó chặn cả những thay đổi ĐÚNG, và người sửa sẽ
+  // học được bài học sai: bóp mã cho vừa regex. Nay nó hỏi đúng điều chú thích trên tuyên bố.
   assert.ok(
-    /new Set\(inventoryNeedsAttention \? \['inventory'\] : \[\]\)/.test(APP_SOURCE),
+    /inventoryNeedsAttention \? \['inventory'\] : \[\]/.test(APP_SOURCE),
     'Tập tab có chấm không còn suy từ `inventoryNeedsAttention` — cái chấm mất nguồn tín hiệu.',
+  );
+  assert.ok(
+    /weeklyReportUnread \? \['weeklyReport'\] : \[\]/.test(APP_SOURCE),
+    'Tập tab có chấm không còn suy từ `weeklyReportUnread` — báo cáo tuần mất tín hiệu DUY NHẤT '
+    + 'của nó, vì từ ADR-061 nó không tự bật hộp thoại nữa.',
   );
 });

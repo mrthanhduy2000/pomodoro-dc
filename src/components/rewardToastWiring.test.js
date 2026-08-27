@@ -166,3 +166,61 @@ test('lễ mừng thành phố vẫn chạy sau MỌI phiên, không bị buộc
   assert.ok(blocking, 'không đọc được `blocking`');
   assert.match(blocking[1], /showMoment/, '`blocking` bỏ sót lễ mừng');
 });
+
+/**
+ * ⚠️ NGOẠI LỆ CUỐI CÙNG ĐÃ ĐÓNG (ADR-061) — và bài này canh nó không mọc lại.
+ * Báo cáo tuần từng TỰ BẬT một hộp thoại toàn màn hình sáng thứ Hai: nó chặn màn hình mà không
+ * nằm trong bốn việc buộc phải quyết định. Nay tín hiệu của nó là một CHẤM trên mục "Báo cáo
+ * tuần", suy ra từ `lastWeeklyReportDate` đã lưu.
+ *
+ * Cách hỏng có thật: một phiên sau thấy "báo cáo tuần không còn tự hiện" và tưởng là lỗi, rồi
+ * dựng lại `checkWeeklyReport()`. Lúc ấy build vẫn xanh, lint vẫn sạch, và luật lại có ngoại lệ.
+ */
+test('báo cáo tuần KHÔNG còn tự bật — chỉ mở khi Đàm bấm', () => {
+  assert.ok(
+    !/checkWeeklyReport/.test(APP_CODE),
+    '`checkWeeklyReport` đã quay lại — đó là thứ tự bật hộp thoại báo cáo tuần vào sáng thứ Hai',
+  );
+
+  const store = readFileSync(join(HERE, '..', 'store', 'gameStore.js'), 'utf8');
+  assert.ok(
+    !/^\s*checkWeeklyReport:/m.test(codeOnly(store)),
+    'store lại có action `checkWeeklyReport` — xem ADR-061 trước khi dựng lại',
+  );
+
+  // Và phải còn ĐÚNG một đường mở: do Đàm bấm.
+  assert.match(APP_CODE, /openWeeklyReport/, 'không còn đường nào mở báo cáo tuần');
+});
+
+/**
+ * ⚠️ ĐIỀU KIỆN AN TOÀN CỦA ADR-061: trước nó, iPhone không có đường nào mở báo cáo tuần (nút duy
+ * nhất nằm ở thanh bên `hidden md:flex`). Gỡ tự-bật mà thiếu mục này thì trên thiết bị Đàm dùng
+ * nhiều nhất, báo cáo tuần biến mất hoàn toàn — một mất mát thật đổi lấy một phiền toái nhỏ.
+ */
+test('báo cáo tuần có đường vào trên ĐIỆN THOẠI, không chỉ ở thanh bên desktop', () => {
+  const mobileMenu = APP_CODE.slice(APP_CODE.indexOf('MOBILE_SECONDARY_TABS.map'));
+  assert.ok(
+    /openWeeklyReport\(\)/.test(mobileMenu),
+    'menu "Thêm" trên điện thoại không có mục mở báo cáo tuần',
+  );
+  // Số cột của menu ấy phải đếm cả mục vừa thêm, nếu không nó tràn hàng.
+  assert.match(
+    APP_CODE,
+    /MOBILE_SECONDARY_TABS\.length \+ 1/,
+    'số cột menu "Thêm" chưa cộng thêm mục báo cáo tuần',
+  );
+});
+
+test('chấm "chưa xem" của báo cáo tuần đi qua đúng tập chú ý đang có', () => {
+  assert.match(APP_CODE, /isWeeklyReportUnread/, 'App không còn hỏi "báo cáo tuần đã xem chưa"');
+  assert.match(
+    APP_CODE,
+    /attentionTabIds\?\.has\('weeklyReport'\)/,
+    'thanh bên desktop không còn đọc chấm báo cáo tuần',
+  );
+  assert.match(
+    APP_CODE,
+    /attentionTabIds\.has\('weeklyReport'\)/,
+    'menu điện thoại không còn đọc chấm báo cáo tuần',
+  );
+});

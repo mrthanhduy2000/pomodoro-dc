@@ -35,6 +35,9 @@ Mặt trận đang làm: **thành phố 3D** (`src/engine/city3d/` + `src/compon
   đừng thêm nhịp thứ tư (`motionPresets.test.js` đếm và sẽ đỏ). Ngoại lệ đi qua `useCustomMotion`
   (bỏ hẳn) hoặc `useSnapMotion` (nhảy tới đích, cho thứ mà `animate` MANG BỐ CỤC — trả rỗng ở đó
   là vỡ giao diện), và phải kèm một dòng lý do. **KHÔNG áp cho thành phố 3D.**
+- Điều hướng: **5 mục** ở thanh bên desktop (Tập trung · Hành trang · Thành Phố · Thống kê · Cài
+  đặt); iPhone **4 nút + "Thêm"**. Kỹ năng/Kho báu/Thành tích là ba TAB CON của "Hành trang" và
+  **vẫn mang id cũ** — thông báo đã lưu trỏ vào chúng, `resolveTabTarget` (`App.jsx`) là cửa dịch.
 - Giao diện: **5 skin**, mặc định là **"Sân Chơi" (`arcade`)** — phẳng, sans đậm, thẻ có chân bóng
   đặc 3px. Danh sách skin + mặc định có MỘT nguồn duy nhất: `src/store/uiSkins.js`. ⚠️ Thêm skin thì
   phải đủ ba chỗ (danh sách · `SKIN_OPTIONS` ở `Settings.jsx` · khối `[data-skin=…]` ở `index.css`)

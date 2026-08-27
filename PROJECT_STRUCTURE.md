@@ -100,6 +100,9 @@
 │   │   │                     #   Cả 2 khối giao diện mục tiêu đều đọc file này ⇒ không lệch nhau.
 │   │   └── ...                # Các màn hình còn lại: Achievements, SkillTree, BuildingWorkshop,
 │   │                          #   BlueprintInventory, RelicInventory, Settings, DailyMissions...
+│   │                          #   ⚠️ Từ 2026-08-27 ba màn Kỹ năng/Kho báu/Thành tích KHÔNG còn là
+│   │                          #   mục điều hướng riêng — chúng là ba TAB CON của "Hành trang"
+│   │                          #   (`INVENTORY_TABS` trong App.jsx). Bản thân component không đổi.
 │   ├── engine/                # Logic THUẦN (không JSX, không Zustand) — công thức game, dễ test
 │   │   ├── coach/             # TOÀN BỘ "bộ não" AI Coach (model-agnostic, hiện chạy Gemini)
 │   │   │   ├── prompt.js          # 2 prompt hệ thống (chat/phân tích) + dựng prompt + sanitize
@@ -610,6 +613,15 @@
 │   │   ├── soundEngine.js / ambientEngine.js # Âm thanh 100% procedural (Web Audio API)
 │   │   ├── pushPayloads.js    # Nội dung thông báo push (title/body/tag) — dùng chung client+server
 │   │   ├── time.js            # Helper giờ/ngày/tuần theo múi giờ VN (mọi engine phải dùng cái này)
+│   │   ├── opportunities.js   # "Có việc gì đáng vào xem không?" — kỹ năng đủ SP · bản vẽ đủ RP ·
+│   │   │                     #   công trình đủ tài nguyên. THUẦN. ⚠️ Có ĐÚNG HAI người đọc (chuông
+│   │   │                     #   thông báo + chấm trên tab Hành trang); chép công thức về lại
+│   │   │                     #   NotificationCenter là "một luật hai công thức", và hai bản sao sẽ
+│   │   │                     #   trôi khỏi nhau ở BIÊN rồi nói ngược nhau mà không gì đỏ lên
+│   │   ├── navAttention.js    # Dấu "thành tích đã xem" (localStorage `dc-nav-seen-v1`). ⚠️ `null`
+│   │   │                     #   (chưa từng ghi) KHÁC `[]` (đã ghi, đang rỗng) — nhập hai thứ đó
+│   │   │                     #   làm một thì lần đầu mở app cái chấm sáng oan cho hàng chục thành
+│   │   │                     #   tích Đàm đã xem từ lâu
 │   │   ├── timerSession.js / breaks.js / challengeEngine.js / notifications.js # engine chuyên biệt khác
 │   ├── hooks/                 # React hook — cầu nối giữa store và engine/component
 │   │   ├── useTimer.js         # LỚN — toàn bộ state machine đồng hồ Pomodoro/Stopwatch
@@ -617,6 +629,11 @@
 │   │   ├── useCityMoment.js   # Cầu nối store → engine/cityMoment.js, CẢ HAI đầu của một phiên:
 │   │   │                     #   useCityFocusTease (trước) + useCityGrowthMoment (sau). Dùng chung
 │   │   │                     #   một snapshot memo theo NỘI DUNG
+│   │   ├── useInventoryAttention.js # Chấm "có việc cần xem" trên tab Hành trang. Đọc engine/
+│   │   │                     #   opportunities.js (dùng CHUNG với chuông thông báo) + dấu "đã xem"
+│   │   │                     #   ở engine/navAttention.js. ⚠️ Selector trả về BOOLEAN, không phải
+│   │   │                     #   mảng — gốc app bọc cả cảnh 3D, cho nó render lại theo từng con số
+│   │   │                     #   tài nguyên là trả một cái giá không ai đo được cho một chấm 5px
 │   │   └── useGameLoop.js
 │   ├── lib/                   # Hạ tầng dùng chung, KHÔNG phải logic game thuần: tích hợp dịch vụ
 │   │                          #   ngoài, và từ 2026-08-27 thêm từ vựng chuyển động của giao diện

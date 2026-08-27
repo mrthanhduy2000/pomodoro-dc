@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { SCRIM_FADE, useCustomMotion, useEnterMotion, usePressMotion, useSnapMotion } from '../lib/motionPresets';
 
 import useGameStore from '../store/gameStore';
 import { formatDeadlineRemaining } from '../engine/challengeEngine';
@@ -8,6 +9,10 @@ const DISPLAY_FONT = '"Source Serif 4", Georgia, serif';
 const MONO_FONT = '"JetBrains Mono", "SFMono-Regular", Menlo, monospace';
 
 function EditorialButton({ children, onClick, tone = 'ink' }) {
+  // Nhấc khi DI CHUỘT không thuộc ba nhịp (xuất hiện / bấm / thưởng) — đi qua cái gác ngoại lệ
+  // để nó cũng im khi bật Giảm chuyển động.
+  const hoverLift = useCustomMotion({ whileHover: { y: -1 } });
+  const pressMotion = usePressMotion();
   const styles = tone === 'accent'
     ? {
         borderColor: 'rgba(var(--accent-rgb),0.16)',
@@ -25,8 +30,8 @@ function EditorialButton({ children, onClick, tone = 'ink' }) {
   return (
     <motion.button
       type="button"
-      whileHover={{ y: -1 }}
-      whileTap={{ scale: 0.99 }}
+      {...hoverLift}
+      {...pressMotion}
       onClick={onClick}
       className="border px-6 py-3 text-sm font-semibold"
       style={{ borderRadius: 'var(--skin-radius-control,14px)', ...styles }}
@@ -45,6 +50,10 @@ function DecisionCard({
   onClick,
   tone = 'sacrifice',
 }) {
+  // Nhấc khi DI CHUỘT không thuộc ba nhịp (xuất hiện / bấm / thưởng) — đi qua cái gác ngoại lệ
+  // để nó cũng im khi bật Giảm chuyển động.
+  const hoverLift = useCustomMotion({ whileHover: { y: -2 } });
+  const pressMotion = usePressMotion();
   const theme = tone === 'challenge'
     ? {
         edge: 'rgba(var(--accent-rgb),0.18)',
@@ -60,8 +69,8 @@ function DecisionCard({
   return (
     <motion.button
       type="button"
-      whileHover={{ y: -2 }}
-      whileTap={{ scale: 0.99 }}
+      {...hoverLift}
+      {...pressMotion}
       onClick={onClick}
       className="w-full border px-4 py-4 text-left"
       style={{
@@ -138,6 +147,9 @@ function EraCrisisContent() {
     return () => window.clearInterval(intervalId);
   }, [eraCrisis.challengeDeadline]);
 
+  const enterMotion = useEnterMotion();
+  // Lớp phủ tối chỉ mờ dần, không trôi — xem `SCRIM_FADE` ở `motionPresets.js`.
+  const scrimMotion = useCustomMotion(SCRIM_FADE);
   const handleSacrifice = () => resolveEraCrisis('sacrifice');
   const handleChallenge = () => {
     resolveEraCrisis('challenge');
@@ -146,17 +158,12 @@ function EraCrisisContent() {
 
   return (
     <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
+      {...scrimMotion}
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
       style={{ backgroundColor: 'rgba(31, 30, 29, 0.34)', backdropFilter: 'blur(10px)' }}
     >
       <motion.div
-        initial={{ y: 24, scale: 0.96, opacity: 0 }}
-        animate={{ y: 0, scale: 1, opacity: 1 }}
-        exit={{ y: 14, scale: 0.97, opacity: 0 }}
-        transition={{ duration: 0.28, ease: 'easeOut' }}
+        {...enterMotion}
         className="relative w-full max-w-2xl border"
         style={{
           borderRadius: 'var(--skin-radius-card,18px)',
@@ -232,17 +239,17 @@ function EraCrisisContent() {
 }
 
 function AnnounceView({ eraCrisis, onNext }) {
+  const enterMotion = useEnterMotion();
+  // NGOẠI LỆ (trang trí) — vòng tròn báo động THỞ, lặp vô hạn: không phải một nhịp xuất hiện.
+  const breathMotion = useCustomMotion({
+    initial: { scale: 0.9 },
+    animate: { scale: [0.96, 1.02, 1] },
+    transition: { duration: 1.6, repeat: Infinity, ease: 'easeInOut' },
+  });
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 16 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -10 }}
-      className="text-center"
-    >
+    <motion.div {...enterMotion} className="text-center">
       <motion.div
-        initial={{ scale: 0.9 }}
-        animate={{ scale: [0.96, 1.02, 1] }}
-        transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
+        {...breathMotion}
         className="mono mx-auto mb-5 flex h-28 w-28 items-center justify-center rounded-full border text-[14px] font-semibold uppercase tracking-[0.24em]"
         style={{
           borderColor: 'rgba(var(--accent-rgb),0.18)',
@@ -295,14 +302,10 @@ function AnnounceView({ eraCrisis, onNext }) {
 
 function ChooseView({ eraCrisis, onSacrifice, onChallenge }) {
   const { sacrificeOption, challengeOption } = eraCrisis;
+  const enterMotion = useEnterMotion();
 
   return (
-    <motion.div
-      initial={{ opacity: 0, x: 18 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: -12 }}
-      className="space-y-5"
-    >
+    <motion.div {...enterMotion} className="space-y-5">
       <div className="text-center">
         <p
           className="mono text-[10px] font-semibold uppercase tracking-[0.24em]"
@@ -347,14 +350,15 @@ function ChallengeProgressView({ eraCrisis, timeLeft, onClose }) {
   const done = eraCrisis.challengeSessionsDone;
   const required = eraCrisis.challengeSessionsRequired;
   const percent = Math.min(100, (done / required) * 100);
+  const enterMotion = useEnterMotion();
+  // NGOẠI LỆ (mang bố cục) — bề dài thanh CHÍNH LÀ số phiên đã xong; bỏ đi thì thanh luôn đầy.
+  const progressMotion = useSnapMotion({
+    animate: { width: `${percent}%` },
+    transition: { duration: 0.5 },
+  });
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -8 }}
-      className="text-center"
-    >
+    <motion.div {...enterMotion} className="text-center">
       <div
         className="mono mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full border text-[12px] font-semibold uppercase tracking-[0.18em]"
         style={{
@@ -398,8 +402,7 @@ function ChallengeProgressView({ eraCrisis, timeLeft, onClose }) {
         <div className="mt-3 h-[3px] overflow-hidden rounded-full bg-[var(--line)]">
           <motion.div
             className="h-full rounded-full"
-            animate={{ width: `${percent}%` }}
-            transition={{ duration: 0.5 }}
+            {...progressMotion}
             style={{ background: 'var(--accent)' }}
           />
         </div>

@@ -195,10 +195,12 @@ test('Nháy khi tăng: đúng `--good`, và tôn trọng giảm chuyển động
   assert.match(CODE, /flashing \? 'var\(--good\)' : 'var\(--ink\)'/,
     'Số tăng thì nháy `var(--good)`, hết nháy thì về `var(--ink)`.');
 
-  assert.match(CODE, /transition:\s*reduceMotion \|\| flashing \? 'none'/,
-    'Bật giảm chuyển động ⇒ đổi màu TỨC THÌ, không tween.\n'
-    + '⚠️ Vế `|| flashing` cũng bắt buộc: có tween lúc VÀO thì màu xanh phai dần vào thay vì\n'
-    + 'nháy lên, tức mất đúng cái tín hiệu đang muốn gửi.');
+  assert.match(CODE, /transition: enterTransition && !flashing/,
+    'Bật Giảm chuyển động ⇒ đổi màu TỨC THÌ, không tween. Tín hiệu "đang bật" là\n'
+    + '`enterTransition` rỗng (xem `motionPresets.js`), KHÔNG phải một `useReducedMotion()` tự gọi.\n'
+    + '⚠️ Vế `!flashing` cũng bắt buộc: có tween lúc VÀO thì màu xanh phai dần vào thay vì nháy lên,\n'
+    + 'tức mất đúng cái tín hiệu đang muốn gửi.');
+  assert.match(CODE, /: 'none',/, 'Nhánh còn lại phải là `none` — không tween.');
 
   assert.match(CODE, /setTimeout\([\s\S]{0,80}?,\s*FLASH_MS\)/,
     'Thời lượng nháy phải đọc từ `FLASH_MS`, đừng viết cứng 400 ở đây (một luật một công thức).');
@@ -230,4 +232,24 @@ test('Mọi con số đi qua `NUMBER_STYLE` — không chỗ nào tự khai `tab
   const spread = CODE.match(/\.\.\.NUMBER_STYLE/g) ?? [];
   assert.ok(spread.length >= 3,
     `Chỉ ${spread.length} chỗ trải \`NUMBER_STYLE\` — mọi phần tử có chữ số (số, đơn vị, nhãn kỷ) đều phải có.`);
+});
+
+test('Chuyển động đi qua bộ ba nhịp chung, không tự gọi `useReducedMotion`', () => {
+  // Luật toàn app từ 2026-08-27 (`src/lib/motionPresets.js`): đừng gõ lại `initial`/`animate` bằng
+  // tay, và chỗ gọi không tự kiểm tra Giảm chuyển động. Thẻ này có ĐÚNG một ngoại lệ hợp lệ —
+  // thanh tiến độ, nơi `animate` MANG BỐ CỤC (bề rộng chính LÀ tiến độ) ⇒ `useSnapMotion`.
+  assert.ok(!/useReducedMotion/.test(CODE),
+    'Đừng tự gọi `useReducedMotion()`. Ba nhịp tự im khi Đàm bật Giảm chuyển động, và với ngoại lệ\n'
+    + 'thì `useEnterMotion()` trả object rỗng — đó đã là tín hiệu rồi. Mỗi chỗ tự kiểm tra là\n'
+    + '"một luật ba mươi công thức", đúng thứ `motionPresets.js` sinh ra để xoá.');
+
+  assert.match(CODE, /useSnapMotion\(\{/,
+    'Thanh tiến độ phải đi qua `useSnapMotion` — bỏ hẳn `animate` thì bề rộng về 0 và thanh biến mất,\n'
+    + 'nên nó KHÔNG dùng được `useCustomMotion`.');
+
+  // Thời lượng/đường cong mượn nguyên nhịp `enter`. Viết cứng một con số ở đây là đẻ ra thời lượng
+  // thứ sáu — đúng tình trạng mà `motionPresets.js` vừa dọn (5 thời lượng, 7 đường cong).
+  assert.ok(!/duration:\s*[\d.]+/.test(CODE),
+    'Không viết cứng thời lượng trong file này — mượn `enterTransition` của nhịp `enter`.');
+  assert.match(CODE, /const \{ transition: enterTransition \} = useEnterMotion\(\);/);
 });

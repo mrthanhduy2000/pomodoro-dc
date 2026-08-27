@@ -24,13 +24,16 @@
  *     Đây là thứ quyết định "con số được đọc trước": cùng một hàng, cái to và đậm thắng.
  *   • `shouldFlashOnIncrease()` — số TĂNG thì nháy `var(--good)` trong `FLASH_MS`.
  *
- * ⚠️ `useReducedMotion`: bật giảm chuyển động thì màu vẫn đổi (thông tin không được mất)
- * nhưng đổi **tức thì** — không có tween. Kỹ thuật: tắt `transition` ở nhánh reduceMotion.
- * Lúc BẮT ĐẦU nháy cũng luôn tắt `transition`, kể cả khi cho phép hoạt hoạ — nếu không thì
- * màu xanh *phai dần vào* thay vì *nháy*, tức mất đúng cái tín hiệu đang muốn gửi.
+ * ⚠️ GIẢM CHUYỂN ĐỘNG: màu vẫn đổi (thông tin không được mất) nhưng đổi **tức thì** — không tween.
+ * Tín hiệu "đang bật" KHÔNG lấy bằng `useReducedMotion()` tự gọi mà bằng `useEnterMotion()` trả về
+ * object RỖNG (xem `src/lib/motionPresets.js`: chỗ gọi không phải tự kiểm tra).
+ * Lúc BẮT ĐẦU nháy thì luôn tắt `transition`, kể cả khi cho phép hoạt hoạ — nếu không thì màu xanh
+ * *phai dần vào* thay vì *nháy*, tức mất đúng cái tín hiệu đang muốn gửi.
  */
 import React, { useEffect, useState } from 'react';
-import { motion, useReducedMotion } from 'framer-motion';
+import { motion } from 'framer-motion';
+
+import { EASE, useEnterMotion, useSnapMotion } from '../lib/motionPresets';
 
 import useGameStore from '../store/gameStore';
 import useSettingsStore from '../store/settingsStore';
@@ -98,7 +101,11 @@ function useIncreaseFlash(value) {
 
 /** Con số: tabular-nums + nháy `--good` khi tăng. Mọi con số của file này đi qua đây. */
 function FlashNumber({ value, size, format }) {
-  const reduceMotion = useReducedMotion();
+  // ⚠️ Ngoại lệ có lý do: đây là `transition` của CSS, không phải prop của `motion.*`, nên ba nhịp
+  // không trải vào được. Nhưng nó vẫn đi qua `useEnterMotion()` chứ không tự gọi `useReducedMotion`:
+  // hook ấy trả object RỖNG khi Đàm bật Giảm chuyển động, nên `enterTransition === undefined` chính
+  // là tín hiệu ấy — và thời lượng lẫn đường cong mượn nguyên nhịp `enter`, không đẻ con số thứ sáu.
+  const { transition: enterTransition } = useEnterMotion();
   const flashing = useIncreaseFlash(value);
 
   return (
@@ -109,9 +116,11 @@ function FlashNumber({ value, size, format }) {
         fontSize: `${size}px`,
         fontFamily: 'var(--skin-font-display)',
         color: flashing ? 'var(--good)' : 'var(--ink)',
-        // Nháy thì vào TỨC THÌ (fade-in sẽ nuốt mất cú nháy); chỉ đường VỀ mới được mượt,
-        // và cũng chỉ khi Đàm không bật giảm chuyển động.
-        transition: reduceMotion || flashing ? 'none' : 'color 260ms ease-out',
+        // Nháy thì vào TỨC THÌ (fade-in sẽ nuốt mất cú nháy); chỉ đường VỀ mới được mượt, và cũng
+        // chỉ khi không bật Giảm chuyển động (`enterTransition` rỗng = đang bật).
+        transition: enterTransition && !flashing
+          ? `color ${enterTransition.duration}s cubic-bezier(${EASE.join(', ')})`
+          : 'none',
       }}
     >
       {format ? format(value) : value.toLocaleString()}
@@ -160,7 +169,6 @@ export default function ResourceDisplay() {
   const resourcesRefined = useGameStore((s) => s.resourcesRefined);
   const currentStreak = useGameStore((s) => s.streak?.currentStreak ?? 0);
   const uiTheme = useSettingsStore((s) => s.uiTheme);
-  const reduceMotion = useReducedMotion();
   const [khoOpen, setKhoOpen] = useState(false);
 
   const lightTheme = uiTheme === 'light';
@@ -179,6 +187,13 @@ export default function ResourceDisplay() {
     label: def.label,
     value: allResources[bookKey]?.[def.id] ?? 0,
   }));
+
+  const { transition: enterTransition } = useEnterMotion();
+  const barMotion = useSnapMotion({
+    initial: { width: 0 },
+    animate: { width: `${stagePct}%` },
+    transition: enterTransition,
+  });
 
   return (
     <section
@@ -230,16 +245,11 @@ export default function ResourceDisplay() {
         className="mt-2.5 h-1.5 w-full overflow-hidden rounded-full"
         style={{ background: 'var(--line)' }}
       >
-        <motion.div
-          className="h-full rounded-full"
-          initial={reduceMotion ? false : { width: 0 }}
-          animate={reduceMotion ? undefined : { width: `${stagePct}%` }}
-          transition={reduceMotion ? undefined : { duration: 0.45, ease: 'easeOut' }}
-          style={{
-            width: reduceMotion ? `${stagePct}%` : undefined,
-            background: 'var(--accent)',
-          }}
-        />
+        {/* Ngoại lệ có lý do: `animate` ở đây MANG BỐ CỤC — bề rộng CHÍNH LÀ tiến độ, trả rỗng là
+            thanh biến mất. Đúng ca mà `useSnapMotion` sinh ra (chú thích của nó gọi tên thẳng
+            "chiều dài thanh tiến độ"): bật Giảm chuyển động thì nhảy tới đích, bố cục vẫn đúng.
+            Thời lượng và đường cong mượn nguyên của nhịp `enter` — đừng đẻ ra con số thứ sáu. */}
+        <motion.div className="h-full rounded-full" {...barMotion} style={{ background: 'var(--accent)' }} />
       </div>
 
       {/* ── 2 & 3. CHUỖI · TINH THỂ — hai con số còn lại, hết. ───────────────────────── */}

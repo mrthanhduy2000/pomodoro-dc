@@ -52,6 +52,17 @@
 >
 > Cổng sau khi gộp: **1181 bài · 0 đỏ · `# skipped 1`** · lint sạch · build 3,27s · chụp lại ảnh
 > nghiệm thu: thanh tiến độ vẫn chạy đúng `var(--accent)`, không tràn.
+>
+> ⚠️ **CHƯA TỰ XÁC NHẬN ĐƯỢC VERCEL "READY" TỪ HỘP CÁT NÀY — VÀ ĐÂY LÀ VIỆC ĐÀM PHẢI LIẾC MẮT.**
+> Luật số 2 ở `START_HERE.md` bắt "push xong phải xác nhận Vercel hiện Ready". Phiên này chạy trong
+> hộp cát từ xa, nơi chính sách mạng **chặn `pomodoro-dc.vercel.app`** (proxy trả 403 ở bước CONNECT)
+> và repo **không có GitHub Actions** (`total_count: 0` — deploy đi qua tích hợp GitHub của Vercel,
+> thứ gắn *commit status*, mà bộ công cụ GitHub ở đây không đọc được commit status). ⇒ Xác nhận được
+> tới đâu thì ghi tới đó: commit `2d1a096` **đã nằm trên `origin/main`**, và bản trên `main` **có đủ**
+> `resourceDisplayFormat.js` + `resourceDisplay.test.js` + đúng ba `<TopStat>`. Việc còn lại — tab
+> Deployments hiện "Ready" — **chưa ai kiểm**. Đúng bài học `8ee264d`: *code xanh + commit thành công
+> KHÔNG có nghĩa là đã thực sự lên production*. Phiên sau chạy trong hộp cát này đừng mất công thử
+> `curl` lại; hoặc nhờ Đàm liếc, hoặc chạy từ máy Đàm.
 > Cập nhật lần cuối: **2026-08-27 (tối)** — **ĐỒNG HỒ TRẢ LỜI HAI CÂU HỎI THAY VÌ MỘT.**
 > Vòng chính dày 14px (từ 7), bo tròn hai đầu, màu theo token — tập trung `--accent`, nghỉ (ngắn
 > LẪN dài) `--good`, nền `--timer-track`. Thêm **vòng thứ hai** mảnh 4px nằm ngoài, cách đúng 8px,

@@ -46,7 +46,6 @@ const NGOAI_LE = {
   'components/LootDropModal.jsx': 9,         // so le (2 chỗ) + mưa hạt (trả `null` khi Giảm chuyển động)
   'components/PomodoroEngine.jsx': 3,        // `ActionButton` (lún = chiều dày bóng) + thẻ preset đang chọn
   'components/RankDisplay.jsx': 6,           // mang bố cục: 3 thanh tiến độ
-  'components/ResourceDisplay.jsx': 2,       // mang bố cục: thanh chặng
   'components/StatsDashboard.jsx': 4,        // mang bố cục: cột phân bố + thanh loại việc
   'components/WeeklyReportModal.jsx': 8,     // mang bố cục: 4 thanh so sánh tuần
   'components/city/CityGrowthMoment.jsx': 13, // cảnh diễn 3,2 giây, không dựng khi Giảm chuyển động

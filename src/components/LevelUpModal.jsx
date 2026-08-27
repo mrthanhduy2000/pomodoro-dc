@@ -3,7 +3,6 @@ import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { SCRIM_FADE, useCustomMotion, useEnterMotion, useRewardMotion } from '../lib/motionPresets';
 
 import useGameStore from '../store/gameStore';
-import soundEngine from '../engine/soundEngine';
 
 const DISPLAY_FONT = '"Source Serif 4", Georgia, serif';
 const MONO_FONT = '"JetBrains Mono", "SFMono-Regular", Menlo, monospace';
@@ -21,7 +20,22 @@ const PARTICLES = Array.from({ length: 10 }, (_, index) => ({
   ][index % 3],
 }));
 
-export default function LevelUpModal() {
+/**
+ * ⚠️ TỪ 2026-08-27 (ADR-060) MÀN NÀY KHÔNG CÒN TỰ BẬT. Lên cấp không buộc Đàm
+ * quyết định gì nên nó thuộc nhóm toast; hộp thoại này là phần CHI TIẾT, chỉ mở
+ * khi Đàm bấm vào thẻ (`GlobalOverlays` truyền `autoDismissMs={0}`).
+ *
+ * ⚠️ HAI THỨ ĐÃ RỜI ĐI, VÀ CẢ HAI ĐỀU CÓ LÝ DO — đừng "khôi phục cho đầy đủ":
+ *   • Hẹn giờ tự đóng: một hộp thoại Đàm CHỦ ĐỘNG mở mà tự biến mất sau 4 giây
+ *     là lấy mất đúng thứ anh vừa xin xem.
+ *   • `soundEngine.playLevelUp()`: chồng toast đã phát đúng MỘT tiếng lúc thẻ
+ *     xuất hiện. Kêu lại ở đây là một lần lên cấp phát tiếng hai lần.
+ *
+ * `autoDismissMs` giữ lại làm CÔNG TẮC chứ không phải mặc định ẩn: mặc định là 0
+ * (không hẹn giờ), nên nếu ngày nào có người muốn màn này tự bật lại thì phải
+ * truyền số vào một cách tường minh và sẽ đọc thấy khối chú thích này.
+ */
+export default function LevelUpModal({ autoDismissMs = 0 }) {
   const queue = useGameStore((state) => state.ui.levelUpQueue);
   const dismissLevelUp = useGameStore((state) => state.dismissLevelUp);
   const enterMotion = useEnterMotion();
@@ -33,12 +47,11 @@ export default function LevelUpModal() {
   const current = queue[0] ?? null;
 
   useEffect(() => {
-    if (!current) return;
-    soundEngine.playLevelUp();
-    const timeoutId = window.setTimeout(dismissLevelUp, 4000);
+    if (!current || autoDismissMs <= 0) return undefined;
+    const timeoutId = window.setTimeout(dismissLevelUp, autoDismissMs);
     return () => window.clearTimeout(timeoutId);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [current?.newLevel]);
+  }, [current?.newLevel, autoDismissMs]);
 
   return (
     <AnimatePresence>

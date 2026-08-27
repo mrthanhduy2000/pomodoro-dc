@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, Suspense } from 'react';
+import React, { useEffect, useMemo, useRef, useState, Suspense } from 'react';
 import { AnimatePresence, motion as Motion, useReducedMotion } from 'framer-motion';
 import { useEnterMotion, useSnapMotion } from './lib/motionPresets';
 import { initSync } from './lib/syncService';
@@ -16,9 +16,10 @@ import { RichTextView } from './components/RichText';
 import { useGameLoop } from './hooks/useGameLoop';
 import { useCityGrowthMoment } from './hooks/useCityMoment';
 import useGameStore from './store/gameStore';
+import useInventoryAttention from './hooks/useInventoryAttention';
 import useSettingsStore from './store/settingsStore';
 import { ERA_METADATA, ERA_THRESHOLDS } from './engine/constants';
-import { getLevelProgress, isCancelledHistoryEntry } from './engine/gameMath';
+import { countSessionsOnDay, getLevelProgress, sumFocusMinutesOnDay } from './engine/gameMath';
 import {
   formatVietnamDate,
   formatVietnamTime,
@@ -50,7 +51,7 @@ const EraCrisisModal = createRecoverableLazy(() => import('./components/EraCrisi
 const PrestigeModal = createRecoverableLazy(() => import('./components/PrestigeModal.jsx'), 'prestige-modal');
 const LevelUpModal = createRecoverableLazy(() => import('./components/LevelUpModal.jsx'), 'level-up-modal');
 const WeeklyReportModal = createRecoverableLazy(() => import('./components/WeeklyReportModal.jsx'), 'weekly-report-modal');
-const AchievementToast = createRecoverableLazy(() => import('./components/AchievementToast.jsx'), 'achievement-toast');
+const RewardToastHost = createRecoverableLazy(() => import('./components/RewardToastHost.jsx'), 'reward-toast-host');
 const OnboardingOverlay = createRecoverableLazy(() => import('./components/OnboardingOverlay.jsx'), 'onboarding-overlay');
 
 function createBoundaryLogger(scope) {
@@ -113,27 +114,11 @@ const AppIcon = {
       <path d="M12 8v4l2.5 2.5" />
     </Glyph>
   ),
-  skills: (props) => (
-    <Glyph {...props}>
-      <path d="M12 3v18" />
-      <path d="M12 7c3 0 5-2 8-2" />
-      <path d="M12 11c-3 0-5-2-8-2" />
-      <path d="M12 15c3 0 5-2 8-2" />
-    </Glyph>
-  ),
   vault: (props) => (
     <Glyph {...props}>
       <path d="M4 8l8-4 8 4v8l-8 4-8-4z" />
       <path d="M4 8l8 4 8-4" />
       <path d="M12 12v8" />
-    </Glyph>
-  ),
-  trophy: (props) => (
-    <Glyph {...props}>
-      <path d="M8 4h8v5a4 4 0 0 1-8 0z" />
-      <path d="M5 5h3v3a3 3 0 0 1-3-3z" />
-      <path d="M19 5h-3v3a3 3 0 0 0 3-3z" />
-      <path d="M9 14h6l-1 5h-4z" />
     </Glyph>
   ),
   stats: (props) => (
@@ -203,9 +188,7 @@ const AppIcon = {
 
 const DESKTOP_TABS = [
   { id: 'focus', label: 'Tập trung', shortLabel: 'Tập trung', Icon: AppIcon.focus },
-  { id: 'skills', label: 'Kỹ năng', shortLabel: 'Kỹ năng', Icon: AppIcon.skills },
-  { id: 'collection', label: 'Kho báu', shortLabel: 'Kho báu', Icon: AppIcon.vault },
-  { id: 'achievements', label: 'Thành tích', shortLabel: 'Thành tích', Icon: AppIcon.trophy },
+  { id: 'inventory', label: 'Hành trang', shortLabel: 'Hành trang', Icon: AppIcon.vault },
   { id: 'city', label: 'Thành Phố', shortLabel: 'Thành Phố', Icon: AppIcon.city },
   { id: 'stats', label: 'Thống kê', shortLabel: 'Thống kê', Icon: AppIcon.stats },
   { id: 'settings', label: 'Cài đặt', shortLabel: 'Cài đặt', Icon: AppIcon.settings },
@@ -214,19 +197,57 @@ const DESKTOP_TABS = [
 const MOBILE_TABS = [
   { id: 'focus', label: 'Tập trung', shortLabel: 'Tập trung', Icon: AppIcon.focus },
   { id: 'missions', label: 'Nhiệm vụ', shortLabel: 'Nhiệm vụ', Icon: AppIcon.missions },
-  { id: 'skills', label: 'Kỹ năng', shortLabel: 'Kỹ năng', Icon: AppIcon.skills },
-  { id: 'collection', label: 'Kho báu', shortLabel: 'Kho báu', Icon: AppIcon.vault },
-  { id: 'achievements', label: 'Thành tích', shortLabel: 'Thành tích', Icon: AppIcon.trophy },
+  { id: 'inventory', label: 'Hành trang', shortLabel: 'Hành trang', Icon: AppIcon.vault },
   { id: 'city', label: 'Thành Phố', shortLabel: 'Thành Phố', Icon: AppIcon.city },
   { id: 'stats', label: 'Thống kê', shortLabel: 'Thống kê', Icon: AppIcon.stats },
   { id: 'settings', label: 'Cài đặt', shortLabel: 'Cài đặt', Icon: AppIcon.settings },
 ];
 
 // Mobile: 4 tab chính luôn hiện + nút "Thêm" mở các tab phụ → đỡ chật trên iPhone.
-// "Thành Phố" CỐ Ý không nằm trong nhóm chính: thanh dưới iPhone giữ đúng 4 nút.
-const MOBILE_PRIMARY_IDS = ['focus', 'missions', 'skills', 'stats'];
+//
+// ⚠️ ĐỔI 2026-08-27 — ĐỌC TRƯỚC KHI SỬA LẠI. Dòng này trước đây ghi: *"Thành Phố CỐ Ý không nằm
+// trong nhóm chính: thanh dưới iPhone giữ đúng 4 nút"*. Lý do ấy vẫn còn nguyên giá trị (bốn nút
+// là bốn nút), nhưng TIỀN ĐỀ của nó đã chết: hồi đó điều hướng có 8 mục và riêng Kỹ năng · Kho báu
+// · Thành tích đã ăn ba ô, nên phải hy sinh một mục — và Thành Phố là mục bị hy sinh. Nay ba mục
+// ấy gộp thành MỘT ("Hành trang") nên ô thứ tư được trả lại đúng cho Thành Phố. Thứ đổi chỗ là
+// "Thống kê" — nó đi sang nút "Thêm" cùng "Cài đặt", vì hai mục đó là chỗ để NGỒI ĐỌC chứ không
+// phải chỗ bấm vào giữa một phiên.
+const MOBILE_PRIMARY_IDS = ['focus', 'missions', 'inventory', 'city'];
 const MOBILE_PRIMARY_TABS = MOBILE_TABS.filter((t) => MOBILE_PRIMARY_IDS.includes(t.id));
 const MOBILE_SECONDARY_TABS = MOBILE_TABS.filter((t) => !MOBILE_PRIMARY_IDS.includes(t.id));
+
+// Ba màn cũ nay là ba TAB CON của "Hành trang".
+//
+// ⚠️ GIỮ NGUYÊN ID CŨ (`skills` · `collection` · `achievements`), đừng đổi cho "gọn". Thông báo đã
+// LƯU trong localStorage của Đàm vẫn mang `action: { tab: 'skills' }` và `{ tab: 'collection',
+// collectionTab: 'workshop' }`; đổi id ở đây thì mỗi thông báo cũ bấm vào sẽ không đi đâu cả, và
+// KHÔNG có gì đỏ lên — build xanh, test xanh, chỉ có một nút chết. `resolveTabTarget` bên dưới
+// dịch id cũ sang "tab Hành trang + tab con", nên mọi lời gọi `selectTab('skills')` cũ vẫn đúng.
+const INVENTORY_TABS = [
+  {
+    id: 'skills',
+    label: 'Kỹ năng',
+    subtitle: 'Mở khóa các nhánh tăng trưởng dài hạn và định hình phong cách tập trung.',
+  },
+  {
+    id: 'collection',
+    label: 'Kho báu',
+    subtitle: 'Theo dõi di vật, bản vẽ và lịch sử phiên dưới cùng một bề mặt điều hướng.',
+  },
+  {
+    id: 'achievements',
+    label: 'Thành tích',
+    subtitle: 'Nhìn lại các cột mốc đã đạt và khoảng cách tới các biểu tượng kế tiếp.',
+  },
+];
+
+const INVENTORY_SUB_IDS = INVENTORY_TABS.map((tab) => tab.id);
+
+/** Dịch một id điều hướng (kể cả id cũ đã lưu trong thông báo) sang "tab nào + tab con nào". */
+function resolveTabTarget(tab) {
+  if (INVENTORY_SUB_IDS.includes(tab)) return { tab: 'inventory', sub: tab };
+  return { tab, sub: null };
+}
 
 const COLLECTION_TABS = [
   { id: 'relics', label: 'Di vật' },
@@ -1405,6 +1426,11 @@ export default function App() {
   const weeklyReportOpen = useGameStore((s) => s.ui.weeklyReportOpen);
   const levelUpQueueLength = useGameStore((s) => s.ui.levelUpQueue.length);
   const achievementQueueLength = useGameStore((s) => s.ui.achievementQueue.length);
+  // Hai kênh phần thưởng nhẹ này store đã ghi từ lâu nhưng TRƯỚC 2026-08-27 không
+  // màn hình nào đọc (xem chú thích đầu `engine/rewardFeed.js`) — chồng toast là
+  // chỗ đọc đầu tiên, nên chúng phải nằm trong điều kiện dựng lớp phủ.
+  const missionCompletedCount = useGameStore((s) => (s.ui.missionCompletedIds ?? []).length);
+  const relicPending = useGameStore((s) => Boolean(s.ui.relicNotification));
 
   const eraMeta = ERA_METADATA[activeBook] ?? ERA_METADATA[1];
   const eraStart = ERA_THRESHOLDS[`ERA_${activeBook - 1}_END`] ?? 0;
@@ -1414,6 +1440,7 @@ export default function App() {
   const { progressPct: levelPct } = getLevelProgress(totalEXP);
 
   const [activeTab, setActiveTab] = useState('focus');
+  const [inventoryTab, setInventoryTab] = useState('skills');
   const [collectionTab, setCollectionTab] = useState('relics');
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [supportRailOpen, setSupportRailOpen] = useState(true);
@@ -1435,12 +1462,37 @@ export default function App() {
   const isDesktop = useMinWidth(1024);
   const isWideViewport = useMinWidth(768);
   const showFocusFullscreen = focusFullscreen && activeTab === 'focus';
+  const activeInventoryTab = INVENTORY_TABS.find((tab) => tab.id === inventoryTab) ?? INVENTORY_TABS[0];
+  const {
+    hasAttention: inventoryNeedsAttention,
+    markAchievementsSeen,
+    unseenAchievementCount,
+  } = useInventoryAttention();
+  // Một TẬP chứ không phải một cờ `inventoryNeedsAttention` truyền thẳng: thanh bên và thanh dưới
+  // đều chỉ hỏi "mục này có chấm không", nên ngày mai thêm chấm cho một tab khác thì không phải
+  // đi mở lại hai component điều hướng.
+  const attentionTabIds = useMemo(
+    () => new Set(inventoryNeedsAttention ? ['inventory'] : []),
+    [inventoryNeedsAttention],
+  );
+  // ⚠️ MỌI đường vào điều hướng phải đi qua đây, kể cả khi nơi gọi truyền id CŨ
+  // (`skills`/`collection`/`achievements`) — `resolveTabTarget` dịch chúng thành
+  // "tab Hành trang + tab con", nên không nơi gọi nào phải biết chuyện gộp tab đã xảy ra.
   const selectTab = (tab) => {
-    setActiveTab(tab);
-    if (tab !== 'focus') {
+    const target = resolveTabTarget(tab);
+    if (target.sub) setInventoryTab(target.sub);
+    setActiveTab(target.tab);
+    if (target.tab !== 'focus') {
       setFocusFullscreen(false);
     }
   };
+
+  // Cái chấm tắt khi Đàm ĐÃ XEM, không phải khi anh đi ngang qua: chỉ mở tab con "Thành tích"
+  // mới ghi dấu. Mở "Hành trang" rồi ngồi ở "Kỹ năng" thì thành tích mới vẫn còn là chưa xem.
+  useEffect(() => {
+    if (activeTab !== 'inventory' || inventoryTab !== 'achievements') return;
+    markAchievementsSeen();
+  }, [activeTab, inventoryTab, markAchievementsSeen, unseenAchievementCount]);
 
   useEffect(() => {
     if (!focusFullscreen) return undefined;
@@ -1518,16 +1570,11 @@ export default function App() {
   const weekdayLabel = getWeekdayLabel();
   const greeting = getGreeting(getVietnamHour());
   const todayKey = localDateStr();
-  const sessionsCompletedToday = dailyTracking?.date === todayKey
-    ? (dailyTracking.sessionsCompleted ?? 0)
-    : 0;
-  const focusMinutesToday = history.reduce(
-    (sum, entry) => {
-      if (isCancelledHistoryEntry(entry) || entry?.completed === false) return sum;
-      return localDateStr(entry.timestamp) === todayKey ? sum + (entry.minutes ?? 0) : sum;
-    },
-    0,
-  );
+  // ⚠️ Hai con số này dùng chung công thức với vòng MỤC TIÊU NGÀY quanh đồng hồ
+  // (`PomodoroEngine.jsx`). Đừng tính lại tại chỗ: hai chỗ cùng nói "hôm nay đi được bao nhiêu"
+  // mà lệch nhau thì màn hình tự mâu thuẫn với chính nó, và không có gì đỏ lên.
+  const sessionsCompletedToday = countSessionsOnDay(dailyTracking, todayKey);
+  const focusMinutesToday = sumFocusMinutesOnDay(history, todayKey);
   const focusHoursToday = formatDurationMinutes(focusMinutesToday);
   const hasFocusSessionInProgress = timerSessionRunning && !isOnBreak;
   const isFocusSessionPaused = hasFocusSessionInProgress && Boolean(timerSessionPausedAt);
@@ -1582,6 +1629,7 @@ export default function App() {
           >
             <EditorialSidebar
               activeTab={activeTab}
+              attentionTabIds={attentionTabIds}
               isOpen={sidebarOpen}
               onOpenWeeklyReport={openWeeklyReport}
               onSelect={selectTab}
@@ -1737,20 +1785,23 @@ export default function App() {
                 area="workspace hiện tại"
                 description="Nội dung tab đang mở gặp lỗi. Chuyển tab hoặc thử render lại khu vực này để tiếp tục."
                 onError={WORKSPACE_ERROR_LOGGER}
-                resetKeys={[activeTab, collectionTab]}
+                resetKeys={[activeTab, inventoryTab, collectionTab]}
                 variant="section"
               >
                 <AnimatePresence mode="wait">
-                  {activeTab === 'skills' && (
-                    <TabPane key="skills">
+                  {activeTab === 'inventory' && (
+                    <TabPane key="inventory">
                       <ShellPane
-                        title="Kỹ năng"
-                        subtitle="Mở khóa các nhánh tăng trưởng dài hạn và định hình phong cách tập trung."
+                        title="Hành trang"
+                        subtitle={activeInventoryTab.subtitle}
                         topRail={!isDesktop && !showFocusFullscreen ? renderTopRail() : null}
                       >
-                        <DeferredTabContent>
-                          <SkillTree onOpenAchievements={() => selectTab('achievements')} />
-                        </DeferredTabContent>
+                        <InventoryView
+                          collectionTab={collectionTab}
+                          onChange={setInventoryTab}
+                          onCollectionChange={setCollectionTab}
+                          sub={inventoryTab}
+                        />
                       </ShellPane>
                     </TabPane>
                   )}
@@ -1767,32 +1818,6 @@ export default function App() {
                           <ResourceDisplay />
                           <RankDisplay />
                         </div>
-                      </ShellPane>
-                    </TabPane>
-                  )}
-
-                  {activeTab === 'collection' && (
-                    <TabPane key="collection">
-                      <ShellPane
-                        title="Kho báu"
-                        subtitle="Theo dõi di vật, bản vẽ và lịch sử phiên dưới cùng một bề mặt điều hướng."
-                        topRail={!isDesktop && !showFocusFullscreen ? renderTopRail() : null}
-                      >
-                        <CollectionView sub={collectionTab} onChange={setCollectionTab} />
-                      </ShellPane>
-                    </TabPane>
-                  )}
-
-                  {activeTab === 'achievements' && (
-                    <TabPane key="achievements">
-                      <ShellPane
-                        title="Thành tích"
-                        subtitle="Nhìn lại các cột mốc đã đạt và khoảng cách tới các biểu tượng kế tiếp."
-                        topRail={!isDesktop && !showFocusFullscreen ? renderTopRail() : null}
-                      >
-                        <DeferredTabContent>
-                          <Achievements />
-                        </DeferredTabContent>
                       </ShellPane>
                     </TabPane>
                   )}
@@ -1852,10 +1877,20 @@ export default function App() {
                 onClick={() => setMoreMenuOpen(false)}
                 aria-hidden="true"
               />
+              {/*
+                ⚠️ Số cột đọc từ chính danh sách, KHÔNG chốt cứng `grid-cols-3`: nhóm phụ vừa đi
+                từ 4 mục xuống 2 (Thống kê · Cài đặt), và một lưới 3 cột cho 2 mục để lại một ô
+                trống ngay giữa thanh — không có gì đỏ lên, chỉ trông như hỏng.
+              */}
               <Motion.div
                 {...enterMotion}
-                className="pointer-events-auto relative mb-2 grid w-full max-w-[760px] grid-cols-3 gap-1 rounded-[22px] border p-1.5 backdrop-blur-xl"
-                style={{ borderColor: 'var(--line)', background: 'var(--panel-soft)', boxShadow: '0 16px 34px rgba(31,30,29,0.12)' }}
+                className="pointer-events-auto relative mb-2 grid w-full max-w-[760px] gap-1 rounded-[22px] border p-1.5 backdrop-blur-xl"
+                style={{
+                  borderColor: 'var(--line)',
+                  background: 'var(--panel-soft)',
+                  boxShadow: '0 16px 34px rgba(31,30,29,0.12)',
+                  gridTemplateColumns: `repeat(${Math.min(3, Math.max(1, MOBILE_SECONDARY_TABS.length))}, minmax(0, 1fr))`,
+                }}
               >
                 {MOBILE_SECONDARY_TABS.map((tab) => {
                   const active = activeTab === tab.id;
@@ -1902,7 +1937,19 @@ export default function App() {
                     boxShadow: active ? '0 8px 14px rgba(31,30,29,0.03)' : 'none',
                   }}
                 >
-                  <tab.Icon size={15} />
+                  <span className="relative">
+                    <tab.Icon size={15} />
+                    {attentionTabIds.has(tab.id) && (
+                      // Chấm chú ý nằm ở GÓC ICON; chấm "đang mở" nằm ở đáy nút. Hai chấm nói hai
+                      // chuyện khác nhau nên chúng không được ở cùng một chỗ, kể cả khi tab này
+                      // vừa đang mở vừa đang có việc.
+                      <span
+                        aria-hidden="true"
+                        className="absolute -right-1.5 -top-1 h-[6px] w-[6px] rounded-full"
+                        style={{ background: 'var(--accent)' }}
+                      />
+                    )}
+                  </span>
                   <span className="truncate">{tab.shortLabel}</span>
                   {active && (
                     <span
@@ -1957,6 +2004,8 @@ export default function App() {
           weeklyReportOpen,
           levelUpQueueLength,
           achievementQueueLength,
+          missionCompletedCount,
+          relicPending,
         ]}
         variant="section"
       >
@@ -1968,6 +2017,9 @@ export default function App() {
           weeklyReportOpen={weeklyReportOpen}
           levelUpQueueLength={levelUpQueueLength}
           achievementQueueLength={achievementQueueLength}
+          missionCompletedCount={missionCompletedCount}
+          relicPending={relicPending}
+          onNavigate={handleNotificationNavigate}
         />
         <Suspense fallback={null}>
           <OnboardingOverlay />
@@ -1978,42 +2030,40 @@ export default function App() {
 }
 
 /**
- * RewardSequence — thứ tự hiện ra sau khi một phiên hoàn thành:
- * **khoảnh khắc thành phố lớn lên (nếu có) → hộp thoại phần thưởng**.
+ * GlobalOverlays — nơi LUẬT MỨC ĐỘ LÀM PHIỀN được thi hành (2026-08-27, ADR-060).
  *
- * ⚠️ ĐIỂM CẮM ĐÃ CHỌN RẤT KỸ: `lootModalOpen` trong store vẫn bật ĐỒNG BỘ y như cũ (ba bài test ở
- * `completeFocusSession.test.js` khẳng định điều đó) — ta CHỈ hoãn phần HIỂN THỊ. Sửa store để hoãn
- * là cách chắc chắn làm vỡ ba bài test đó, và đụng vào đúng hàm dài nhất dự án.
+ * ⚠️ CHẶN MÀN HÌNH CHỈ DÀNH CHO BỐN VIỆC, và cả bốn đều buộc Đàm phải QUYẾT ĐỊNH
+ * gì đó: lên kỷ · thăng hoa · khủng hoảng kỷ · thảm hoạ. Mọi phần thưởng còn lại
+ * đi qua `RewardToastHost` — tự tắt sau 4 giây, bấm vào mới mở chi tiết.
  *
- * ⚠️ VÌ SAO LÀ MỘT COMPONENT RIÊNG chứ không phải vài dòng trong `GlobalOverlays`: nó được dựng
- * MỚI mỗi lần hộp thoại phần thưởng bật, nên `seen` tự khởi động lại ở `false` — không cần một
- * `useEffect` đi dọn state, tức là không có chỗ nào để quên dọn. Vòng đời của React làm hộ.
+ * ⚠️ CỔNG "LÊN KỶ" ĐỌC `pendingReward.eraChanged`, KHÔNG ĐỌC MỘT CỜ MỚI NÀO. Store
+ * vẫn bật `lootModalOpen` ĐỒNG BỘ y như cũ (ba bài test ở `completeFocusSession.test.js`
+ * khẳng định điều đó) — ta chỉ đổi phần HIỂN THỊ, đúng điểm cắm mà `RewardSequence`
+ * (component đã gộp vào đây) chọn từ trước. Sửa store để hoãn/đổi luồng là cách chắc
+ * chắn làm vỡ ba bài đó, và đụng vào đúng hàm dài nhất dự án.
  *
- * ⚠️ CỔNG NÀY HỎNG THEO HƯỚNG MỞ: phần thưởng hiện ra TRỪ KHI khoảnh khắc đang thật sự chạy.
- * Không có gì thật để khoe · Đàm bật giảm chuyển động · khoảnh khắc đã xong — mọi nhánh đều dẫn
- * thẳng tới phần thưởng. Không có đường nào để màn hình phần thưởng biến mất.
+ * ⚠️ `detail` là trạng thái CỤC BỘ, không vào store: nó chỉ sống đúng một lượt xem,
+ * không cần đồng bộ lên Supabase, và cho vào store là thêm một trường `ui` nữa mà
+ * ngày mai lại có người quên dọn.
  */
-function RewardSequence() {
-  const growth = useCityGrowthMoment(true);
-  const reduceMotion = useReducedMotion();
-  const [seen, setSeen] = useState(false);
-  const showMoment = !!growth && !seen && !reduceMotion;
-
-  // ⚠️ NẠP TRƯỚC gói mã của màn phần thưởng NGAY BÂY GIỜ, trong lúc khoảnh khắc đang chạy.
-  // Đo bằng máy (bản Phase 4′): trước khi có dòng này, gói `loot-drop-modal` chỉ bắt đầu tải SAU
-  // khi khoảnh khắc kết thúc — tức là ta vừa đẩy nó lùi 3,2 giây so với trước. Trên mạng yếu, cái
-  // giá đó là một khoảng trắng ngay sau 25 phút làm việc thật. Tải song song thì lúc cần đã có sẵn.
-  useEffect(() => { LootDropModal.preload?.(); }, []);
-
-  if (showMoment) {
-    return (
-      <CityGrowthMoment moment={growth.moment} era={growth.era} onDone={() => setSeen(true)} />
-    );
-  }
-  return <LootDropModal />;
+function GlobalOverlays(props) {
+  const { lootModalOpen } = props;
+  // ⚠️ MẸO VÒNG ĐỜI (kế thừa từ `RewardSequence`, component nay đã gộp vào
+  // `OverlayStack`), và vì đúng lý do cũ: `detail` ("Đàm đã bấm xem chi tiết") phải trở về `null` khi phần thưởng
+  // ĐỔI, nếu không phần thưởng KẾ TIẾP sẽ tự mở hộp thoại mà không ai bấm — tức
+  // luật "chỉ bốn việc được chặn màn hình" lặng lẽ hỏng sau đúng một lần bấm.
+  // Đặt `key` để React dựng lại thì state tự sạch; một `useEffect` đi dọn state là
+  // chỗ để quên dọn, và React cũng cấm gọi `setState` thẳng trong thân effect.
+  const levelUpHead = useGameStore((s) => s.ui.levelUpQueue[0]?.newLevel ?? null);
+  return (
+    <OverlayStack
+      key={`${lootModalOpen ? 'loot' : 'none'}:${levelUpHead ?? 'none'}`}
+      {...props}
+    />
+  );
 }
 
-function GlobalOverlays({
+function OverlayStack({
   lootModalOpen,
   disasterModalOpen,
   eraCrisisModalOpen,
@@ -2021,35 +2071,93 @@ function GlobalOverlays({
   weeklyReportOpen,
   levelUpQueueLength,
   achievementQueueLength,
+  missionCompletedCount,
+  relicPending,
+  onNavigate,
 }) {
+  const [detail, setDetail] = useState(null);
+  const [momentSeen, setMomentSeen] = useState(false);
+  const pendingEraChanged = useGameStore((s) => Boolean(s.ui.pendingReward?.eraChanged));
+  const reduceMotion = useReducedMotion();
+  const growth = useCityGrowthMoment(lootModalOpen);
+
   const hasLevelUp = levelUpQueueLength > 0;
-  const hasAchievementToast = achievementQueueLength > 0;
-  const hasOverlay = (
-    lootModalOpen
-    || disasterModalOpen
-    || eraCrisisModalOpen
-    || prestigeModalOpen
-    || weeklyReportOpen
+
+  /**
+   * ⚠️ KHOẢNH KHẮC THÀNH PHỐ VẪN CHẠY SAU **MỌI** PHIÊN — đừng buộc nó vào hộp thoại.
+   * Trước đây nó nằm trong `RewardSequence`, mà `RewardSequence` chỉ dựng khi hộp
+   * thoại phần thưởng bật. Nếu cứ để nguyên như thế sau khi hộp thoại thôi tự bật
+   * thì lễ mừng "vừa xây xong một công trình" sẽ **biến mất trong im lặng** ở mọi
+   * phiên thường — một tính năng chết mà không có gì đỏ lên. Nó không nằm trong bảy
+   * đường trao thưởng và cũng không đòi Đàm quyết định gì; nó là một đoạn chuyển
+   * cảnh tự kết thúc, nên luật "chỉ bốn việc được chặn màn hình" không áp cho nó.
+   * ⚠️ Nhưng nó CÓ che màn hình lúc chạy, nên nó phải nằm trong `blocking` để đồng
+   * hồ toast dừng lại — nếu không, 4 giây của thẻ cháy hết sau lưng lễ mừng.
+   *
+   * `momentSeen` tự sạch nhờ `key` ở `GlobalOverlays` (đổi mỗi lần hộp thoại bật/tắt),
+   * đúng mẹo vòng đời `RewardSequence` từng dùng — không cần effect đi dọn state.
+   */
+  const showMoment = lootModalOpen && !!growth && !momentSeen && !reduceMotion;
+
+  // Hộp thoại phần thưởng mở THẲNG chỉ khi lên kỷ; ngoài ra phải do Đàm bấm vào thẻ.
+  // `!showMoment` giữ đúng thứ tự cũ: lễ mừng xong rồi mới tới phần thưởng.
+  const showLootModal = lootModalOpen && !showMoment && (pendingEraChanged || detail === 'loot');
+  const showLevelModal = hasLevelUp && detail === 'level';
+
+  // ⚠️ NẠP TRƯỚC gói mã của màn phần thưởng ngay khi một phiên vừa xong. Đo bằng máy
+  // (bản Phase 4′): không có dòng này thì gói `loot-drop-modal` chỉ bắt đầu tải SAU
+  // khi khoảnh khắc kết thúc — trên mạng yếu đó là một khoảng trắng ngay sau 25 phút
+  // làm việc thật. Nay nó còn phục vụ thêm một đường nữa: Đàm bấm vào thẻ tổng kết
+  // thì hộp thoại phải bật ra ngay, không đợi tải.
+  useEffect(() => {
+    if (lootModalOpen) LootDropModal.preload?.();
+  }, [lootModalOpen]);
+
+  // Mọi thứ đang chặn màn hình. Sáu số hạng, nhưng chỉ BA trong số đó tự bật:
+  // lên kỷ (`showLootModal` khi `eraChanged`) · thảm hoạ · khủng hoảng kỷ. Thăng
+  // hoa do Đàm bấm ở Cài đặt, còn `detail === 'loot'|'level'` là do Đàm bấm vào thẻ —
+  // một hộp thoại Đàm tự mở thì không phải "làm phiền".
+  // ⚠️ NGOẠI LỆ DUY NHẤT: `weeklyReportOpen` VẪN tự bật sáng thứ Hai, tức nó chặn
+  // màn hình mà không nằm trong bốn việc được phép. CỐ Ý để lại: báo cáo tuần
+  // không phải một phần thưởng mà là một bản tổng kết, và đẩy nó xuống toast 4
+  // giây nghĩa là lỡ một cái toast = mất báo cáo của cả tuần (`dismissWeeklyReport`
+  // đánh dấu tuần đã xem). Ghi ở `TECH_DEBT.md` #87 để nó được ĐẾM, không bị quên.
+  const blocking = showMoment || showLootModal || disasterModalOpen || eraCrisisModalOpen
+    || prestigeModalOpen || weeklyReportOpen || showLevelModal;
+
+  const hasToast = (
+    (lootModalOpen && !pendingEraChanged)
+    || relicPending
     || hasLevelUp
-    || hasAchievementToast
+    || achievementQueueLength > 0
+    || missionCompletedCount > 0
   );
 
-  if (!hasOverlay) return null;
+  if (!blocking && !hasToast) return null;
 
   return (
     <Suspense fallback={null}>
-      {lootModalOpen && <RewardSequence />}
+      {showMoment && (
+        <CityGrowthMoment moment={growth.moment} era={growth.era} onDone={() => setMomentSeen(true)} />
+      )}
+      {showLootModal && <LootDropModal />}
       {disasterModalOpen && <DisasterModal />}
       {eraCrisisModalOpen && <EraCrisisModal />}
       {prestigeModalOpen && <PrestigeModal />}
-      {hasLevelUp && <LevelUpModal />}
+      {showLevelModal && <LevelUpModal autoDismissMs={0} />}
       {weeklyReportOpen && <WeeklyReportModal />}
-      {hasAchievementToast && <AchievementToast />}
+      {hasToast && (
+        <RewardToastHost
+          paused={blocking}
+          onNavigate={onNavigate}
+          onOpenDetail={setDetail}
+        />
+      )}
     </Suspense>
   );
 }
 
-function EditorialSidebar({ activeTab, isOpen, onOpenWeeklyReport, onSelect, onToggle }) {
+function EditorialSidebar({ activeTab, attentionTabIds, isOpen, onOpenWeeklyReport, onSelect, onToggle }) {
   // ⚠️ NGOẠI LỆ CÓ LÝ DO — cùng chuyện với cột phải: cột trái THU GỌN chứ không XUẤT HIỆN, và
   // bề ngang do chính `animate` khai nên phải NHẢY tới đích chứ không được bỏ đi (`useSnapMotion`).
   const railMotion = useSnapMotion({
@@ -2088,6 +2196,7 @@ function EditorialSidebar({ activeTab, isOpen, onOpenWeeklyReport, onSelect, onT
           <SidebarItem
             key={tab.id}
             active={activeTab === tab.id}
+            attention={attentionTabIds?.has(tab.id) ?? false}
             icon={<tab.Icon size={18} />}
             isOpen={isOpen}
             label={tab.label}
@@ -2130,7 +2239,7 @@ function EditorialSidebar({ activeTab, isOpen, onOpenWeeklyReport, onSelect, onT
   );
 }
 
-function SidebarItem({ active, icon, isOpen, label, onClick }) {
+function SidebarItem({ active, attention = false, icon, isOpen, label, onClick }) {
   return (
     <button
       type="button"
@@ -2141,7 +2250,7 @@ function SidebarItem({ active, icon, isOpen, label, onClick }) {
       }`}
     >
       <span
-        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[11px] transition-colors"
+        className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-[11px] transition-colors"
         style={{
           background: active ? 'var(--accent)' : 'transparent',
           color: active ? '#faf9f6' : 'rgba(250,249,246,0.55)',
@@ -2149,6 +2258,15 @@ function SidebarItem({ active, icon, isOpen, label, onClick }) {
         }}
       >
         {icon}
+        {attention && (
+          // Chấm gắn vào Ô ICON chứ không vào cả nút: thanh bên thu gọn còn 66px thì chỉ ô icon
+          // còn lại, gắn vào nút thì chấm trôi ra rìa và biến mất.
+          <span
+            aria-hidden="true"
+            className="absolute right-0.5 top-0.5 h-[7px] w-[7px] rounded-full"
+            style={{ background: 'var(--accent)', boxShadow: '0 0 0 2px #1b1a17' }}
+          />
+        )}
       </span>
       {isOpen && (
         <span
@@ -2442,37 +2560,78 @@ function useMinWidth(minWidth) {
   return matches;
 }
 
+/**
+ * Dải tab con dạng viên thuốc — MỘT công thức cho mọi tầng tab con.
+ *
+ * ⚠️ Trước 2026-08-27 khối này nằm thẳng trong `CollectionView`. Lúc "Hành trang" cần đúng dải
+ * ấy cho ba tab con của nó, cách rẻ nhất là chép sang — và đó là cách một giao diện tách làm hai
+ * kiểu: hai bản sao trôi khỏi nhau ở bo góc, ở màu chữ khi không chọn, rồi hai tầng tab con nằm
+ * chồng nhau trên cùng một màn hình mà trông không cùng một app.
+ */
+function SubTabs({ items, onChange, value }) {
+  return (
+    <div
+      className="mb-6 inline-flex flex-wrap gap-2 rounded-[18px] border p-1.5"
+      style={{
+        borderColor: 'var(--line)',
+        background: 'var(--panel)',
+        boxShadow: '0 8px 16px rgba(31,30,29,0.03)',
+      }}
+    >
+      {items.map((tab) => {
+        const active = value === tab.id;
+        return (
+          <button
+            key={tab.id}
+            type="button"
+            aria-pressed={active}
+            onClick={() => onChange?.(tab.id)}
+            className="rounded-full px-4 py-2 text-[13px] font-medium transition-colors"
+            style={{
+              background: active ? 'var(--panel-strong)' : 'transparent',
+              color: active ? 'var(--ink)' : 'var(--muted)',
+              border: active ? '1px solid var(--line)' : '1px solid transparent',
+              boxShadow: active ? '0 8px 14px rgba(31,30,29,0.03)' : 'none',
+            }}
+          >
+            {tab.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/**
+ * "Hành trang" — một tab điều hướng, ba màn cũ nguyên vẹn bên trong.
+ *
+ * Đây là việc GOM NHÓM, không phải viết lại: mỗi tab con vẫn dựng đúng component cũ, với đúng
+ * state cũ (`collectionTab` vẫn do `App` giữ, nên mở thông báo "Xưởng" vẫn rơi thẳng vào Xưởng).
+ */
+function InventoryView({ collectionTab, onCollectionChange, onChange, sub }) {
+  return (
+    <div>
+      <SubTabs items={INVENTORY_TABS} onChange={onChange} value={sub} />
+
+      {sub === 'skills' && (
+        <DeferredTabContent>
+          <SkillTree onOpenAchievements={() => onChange?.('achievements')} />
+        </DeferredTabContent>
+      )}
+      {sub === 'collection' && <CollectionView onChange={onCollectionChange} sub={collectionTab} />}
+      {sub === 'achievements' && (
+        <DeferredTabContent>
+          <Achievements />
+        </DeferredTabContent>
+      )}
+    </div>
+  );
+}
+
 function CollectionView({ sub = 'relics', onChange }) {
   return (
     <div>
-      <div
-        className="mb-6 inline-flex flex-wrap gap-2 rounded-[18px] border p-1.5"
-        style={{
-          borderColor: 'var(--line)',
-          background: 'var(--panel)',
-          boxShadow: '0 8px 16px rgba(31,30,29,0.03)',
-        }}
-      >
-        {COLLECTION_TABS.map((tab) => {
-          const active = sub === tab.id;
-          return (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => onChange?.(tab.id)}
-              className="rounded-full px-4 py-2 text-[13px] font-medium transition-colors"
-              style={{
-                background: active ? 'var(--panel-strong)' : 'transparent',
-                color: active ? 'var(--ink)' : 'var(--muted)',
-                border: active ? '1px solid var(--line)' : '1px solid transparent',
-                boxShadow: active ? '0 8px 14px rgba(31,30,29,0.03)' : 'none',
-              }}
-            >
-              {tab.label}
-            </button>
-          );
-        })}
-      </div>
+      <SubTabs items={COLLECTION_TABS} onChange={onChange} value={sub} />
 
       <Suspense fallback={<TabLoadingState />}>
         {sub === 'relics' && <RelicInventory />}

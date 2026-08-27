@@ -3,18 +3,13 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { useEnterMotion } from '../lib/motionPresets';
 
 import useGameStore from '../store/gameStore';
-import { countActiveCrafting } from '../engine/eraLegacy';
+// ⚠️ Ba phép đếm "có việc đang chờ" ĐÃ CHUYỂN sang `engine/opportunities.js` vì cái chấm trên
+// tab "Hành trang" cần đúng câu trả lời này. Đừng chép lại chúng về đây — một luật một công thức.
 import {
-  BLUEPRINT_CATALOG,
-  BLUEPRINT_META,
-  BUILDING_EFFECTS,
-  BUILDING_SPECS,
-  CRAFT_QUEUE_SLOTS,
-  SKILL_TREE,
-  normalizeRawCost,
-  normalizeRefinedBag,
-  getUnifiedRefinedCost,
-} from '../engine/constants';
+  listAvailableSkills,
+  listResearchableBlueprints,
+  listBuildableBlueprints,
+} from '../engine/opportunities';
 import { Glyph } from './icons/Glyph';
 import {
   NOTIF_BELL_GLYPH,
@@ -28,19 +23,6 @@ import {
 
 const DISPLAY_FONT = '"Source Serif 4", Georgia, serif';
 const MONO_FONT = '"JetBrains Mono", "SFMono-Regular", Menlo, monospace';
-
-const ALL_SKILLS = Object.values(SKILL_TREE).flatMap((branch) =>
-  branch.nodes.map((node) => ({
-    ...node,
-    branchLabel: branch.label,
-  }))
-);
-
-const BLUEPRINT_LOOKUP = Object.fromEntries(
-  Object.values(BLUEPRINT_CATALOG)
-    .flat()
-    .map((blueprint) => [blueprint.id, blueprint])
-);
 
 const CenterIcon = {
   bell: (props) => <Glyph markup={NOTIF_BELL_GLYPH} {...props} />,
@@ -77,29 +59,6 @@ function formatRelativeTime(createdAt) {
   return `${diffDays} ngày trước`;
 }
 
-function aggregateWonderEffects(buildings = []) {
-  const effects = new Set();
-  for (const bpId of buildings) {
-    const effect = BUILDING_EFFECTS[bpId];
-    if (effect?.type === 'wonder' && effect.wonderEffect) {
-      effects.add(effect.wonderEffect);
-    }
-  }
-  return effects;
-}
-
-function getEffectiveResearchCost(buildings = [], bpId, baseCost) {
-  const wonderEffects = aggregateWonderEffects(buildings);
-  const meta = BLUEPRINT_META[bpId];
-  let cost = Math.max(0, Math.round(baseCost ?? 0));
-
-  if (meta && wonderEffects.has('t2_research_25off') && meta.era >= 6 && meta.era <= 10) {
-    cost = Math.round(cost * 0.75);
-  }
-
-  return Math.max(1, cost);
-}
-
 function getActionLabel(action) {
   if (action?.tab === 'skills') return 'Kỹ năng';
   if (action?.tab === 'collection' && action?.collectionTab === 'blueprints') return 'Bản vẽ';
@@ -134,61 +93,28 @@ export default function NotificationCenter({ onNavigate }) {
   const initializedOpportunityRef = useRef(false);
   const [popupItems, setPopupItems] = useState([]);
 
-  const availableSkills = useMemo(() => (
-    ALL_SKILLS.filter((skill) => {
-      if (unlockedSkills[skill.id]) return false;
-      if (sp < skill.spCost) return false;
-      return skill.requires.every((requirement) => unlockedSkills[requirement]);
-    })
-  ), [sp, unlockedSkills]);
+  const availableSkills = useMemo(
+    () => listAvailableSkills({ sp, unlockedSkills }),
+    [sp, unlockedSkills],
+  );
 
-  const researchableBlueprints = useMemo(() => {
-    const ownedIds = new Set((blueprints ?? []).map((item) => item.id));
-    const researchedIds = new Set(research?.researched ?? []);
-    const builtIds = new Set(buildings ?? []);
+  const researchableBlueprints = useMemo(
+    () => listResearchableBlueprints({ activeBook, blueprints, buildings, research }),
+    [activeBook, blueprints, buildings, research],
+  );
 
-    return Object.entries(BLUEPRINT_META)
-      .filter(([bpId, meta]) => {
-        if ((activeBook ?? 1) < (meta.requiresEra ?? 1)) return false;
-        if (ownedIds.has(bpId) || researchedIds.has(bpId) || builtIds.has(bpId)) return false;
-        const cost = getEffectiveResearchCost(buildings, bpId, meta.rpCost);
-        return (research?.rp ?? 0) >= cost;
-      })
-      .map(([bpId]) => BLUEPRINT_LOOKUP[bpId])
-      .filter(Boolean);
-  }, [activeBook, blueprints, buildings, research]);
-
-  const buildableBlueprints = useMemo(() => {
-    // ⚠️ ĐẾM Ô BẰNG `countActiveCrafting`, KHÔNG dùng `.length` — từ Phase 4D hàng đợi có thể
-    // chứa "di sản" của kỷ đã đóng, và di sản KHÔNG chiếm ô. Dùng `.length` thì một di sản
-    // đang xây dở sẽ âm thầm tắt hết gợi ý "có thể xây ngay" dù ô vẫn còn trống.
-    if (countActiveCrafting(craftingQueue, activeBook) >= CRAFT_QUEUE_SLOTS) return [];
-
-    const ownedIds = new Set((blueprints ?? []).map((item) => item.id));
-    const researchedIds = new Set(research?.researched ?? []);
-    const builtIds = new Set(buildings ?? []);
-    const queuedIds = new Set((craftingQueue ?? []).map((item) => item.bpId));
-
-    return Object.entries(BLUEPRINT_META)
-      .filter(([bpId, meta]) => {
-        const spec = BUILDING_SPECS[bpId];
-        if (!spec) return false;
-        if (!(ownedIds.has(bpId) || researchedIds.has(bpId))) return false;
-        if (builtIds.has(bpId) || queuedIds.has(bpId)) return false;
-
-        const bookBag = resources?.[`book${meta.era}`] ?? {};
-        const rawCost = normalizeRawCost(spec.cost ?? {});
-        const hasRaw = Object.entries(rawCost).every(([resourceId, amount]) => (bookBag[resourceId] ?? 0) >= amount);
-
-        if (!hasRaw) return false;
-
-        const refined = normalizeRefinedBag(resourcesRefined?.[meta.era]);
-        const refinedCost = getUnifiedRefinedCost(spec.refinedCost);
-        return refined.t2 >= refinedCost;
-      })
-      .map(([bpId]) => BLUEPRINT_LOOKUP[bpId])
-      .filter(Boolean);
-  }, [activeBook, blueprints, buildings, craftingQueue, research, resources, resourcesRefined]);
+  const buildableBlueprints = useMemo(
+    () => listBuildableBlueprints({
+      activeBook,
+      blueprints,
+      buildings,
+      craftingQueue,
+      research,
+      resources,
+      resourcesRefined,
+    }),
+    [activeBook, blueprints, buildings, craftingQueue, research, resources, resourcesRefined],
+  );
 
   const opportunities = useMemo(() => {
     const nextItems = [];

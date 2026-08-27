@@ -23,6 +23,7 @@ import useGameStore  from '../store/gameStore';
 import useSettingsStore from '../store/settingsStore';
 import soundEngine   from '../engine/soundEngine';
 import notificationManager from '../engine/notifications';
+import RewardCard from './shared/RewardCard';
 import {
   ERA_METADATA,
   ERA_REFINED,
@@ -550,31 +551,29 @@ function LootDropContent({ reward, onClose, isLightTheme }) {
                       </div>
                   </div>
 
-                  <ResourceCascade resources={reward.resources} lightTheme={isLightTheme} palette={palette} />
+                  <ResourceCascade resources={reward.resources} />
 
-                  <div className="mt-4 grid gap-3 md:grid-cols-2">
-                    <SupportRewardCard
+                  <div className="mt-3 grid gap-3 md:grid-cols-2">
+                    <RewardCard
                       icon="RP"
-                      label="Nghiên cứu"
-                      value={reward.rpEarned > 0 ? `+${reward.rpEarned} RP` : 'Không có'}
-                      accent="rgba(236,241,245,0.88)"
-                      lightTheme={isLightTheme}
-                      palette={palette}
+                      name="Nghiên cứu"
+                      tier="thuong"
+                      description="Điểm nghiên cứu — dùng để mở bản vẽ mới."
+                      amount={reward.rpEarned > 0 ? `+${reward.rpEarned} RP` : null}
                     />
                     {(() => {
                       const refined = ERA_REFINED[reward.activeBook] ?? ERA_REFINED[1];
                       const refinedTotal = (reward.t2Drop ?? 0) + (reward.buildingPerkBonusRefined ?? 0);
                       return (
-                        <>
-                          <SupportRewardCard
-                            icon="TL"
-                            label={refined.t2Label}
-                            value={refinedTotal > 0 ? `+${refinedTotal}` : 'Không có'}
-                            accent="rgba(243,236,239,0.88)"
-                            lightTheme={isLightTheme}
-                            palette={palette}
-                          />
-                        </>
+                        <RewardCard
+                          icon="TL"
+                          name={refined.t2Label}
+                          // "tốt" chứ không phải "thường": tinh luyện chỉ rớt ở phiên đủ dài
+                          // (`T2_DROP_THRESHOLD_MIN`), nên nó thật sự hiếm hơn tài nguyên thô.
+                          tier="tot"
+                          description="Nguyên liệu tinh luyện — cần cho công trình lớn."
+                          amount={refinedTotal > 0 ? `+${refinedTotal}` : null}
+                        />
                       );
                     })()}
                   </div>
@@ -781,42 +780,17 @@ function BonusPill({ icon, label, value, tone, lightTheme }) {
   );
 }
 
-function SupportRewardCard({ icon, label, value, accent, lightTheme, palette }) {
-  return (
-    <div
-      className="p-4"
-      style={{
-        borderRadius: 'var(--skin-radius-card,18px)',
-        border: `1px solid ${palette.shellBorder}`,
-        background: lightTheme
-          ? 'rgba(255,255,255,0.92)'
-          : 'rgba(255,255,255,0.05)',
-      }}
-    >
-      <div className="flex items-center gap-3">
-        <div
-          className="mono flex h-11 w-11 items-center justify-center text-[11px] font-semibold uppercase tracking-[0.16em]"
-          style={lightTheme ? {
-            borderRadius: 'var(--skin-radius-control,14px)',
-            border: '1px solid rgba(31,30,29,0.08)',
-            background: 'rgba(255,255,255,0.80)',
-            color: 'var(--ink)',
-            fontFamily: MONO_FONT,
-          } : { borderRadius: 'var(--skin-radius-control,14px)' }}
-        >
-          {icon}
-        </div>
-        <div>
-          <p className="text-sm font-semibold" style={{ color: lightTheme ? 'var(--ink)' : '#ffffff' }}>{label}</p>
-          <p className="mono mt-0.5 text-xs uppercase tracking-[0.2em]" style={{ color: lightTheme ? 'var(--muted-2)' : '#94a3b8', fontFamily: MONO_FONT }}>Phụ trợ</p>
-        </div>
-      </div>
-      <p className="mt-4 text-lg font-semibold" style={{ color: lightTheme ? 'var(--ink)' : '#ffffff', fontFamily: 'var(--skin-font-display, ' + DISPLAY_FONT + ')' }}>{value}</p>
-    </div>
-  );
-}
-
-function ResourceCascade({ resources, lightTheme, palette }) {
+/**
+ * ⚠️ `SupportRewardCard` ĐÃ BỊ GỠ (2026-08-27, ADR-060). Hộp thoại này từng có BA
+ * hình khác nhau cho ba loại phần thưởng — `SupportRewardCard` (nghiên cứu/tinh
+ * luyện), thẻ trong `ResourceCascade` (tài nguyên) và `BonusPill` (hệ số) — nằm
+ * cạnh nhau trong CÙNG một hộp thoại. Nay hai cái đầu dùng chung
+ * `shared/RewardCard.jsx` với mọi phần thưởng khác của app; `BonusPill` giữ lại
+ * vì nó KHÔNG phải một phần thưởng mà là một lời giải thích cho con số XP
+ * (hệ số nhân, combo, sự kiện) — cho nó hình thẻ phần thưởng là nói dối rằng
+ * Đàm vừa nhận thêm một món đồ.
+ */
+function ResourceCascade({ resources }) {
   // NGOẠI LỆ CÓ LÝ DO — các ô tài nguyên hiện ra SO LE nhau, mỗi ô trễ hơn ô trước 0,12s. Nhịp
   // `enter` không mang độ trễ, mà độ trễ ấy chính là thứ component này tồn tại để làm (tên nó là
   // "Cascade"). `initial`/`animate`/`delay` phải ở lại tại chỗ vì chúng đọc `index` của vòng lặp;
@@ -832,30 +806,14 @@ function ResourceCascade({ resources, lightTheme, palette }) {
           initial={reduceMotion ? false : { opacity: 0, scale: 0.5, y: 10 }}
           animate={reduceMotion ? undefined : { opacity: 1, scale: 1, y: 0 }}
           transition={reduceMotion ? undefined : { delay: index * 0.12, type: 'spring', damping: 15 }}
-          className="flex items-center justify-between gap-3 px-4 py-3 text-sm"
-          style={{ borderRadius: 'var(--skin-radius-control,14px)', border: `1px solid ${palette.shellBorder}`, background: palette.subCardBg }}
         >
-          <div className="flex min-w-0 items-center gap-3">
-            <div
-              className="mono flex h-11 w-11 items-center justify-center text-[10px] font-semibold uppercase tracking-[0.16em]"
-              style={lightTheme ? {
-                borderRadius: 'var(--skin-radius-control,14px)',
-                border: '1px solid rgba(31,30,29,0.08)',
-                background: 'rgba(255,255,255,0.80)',
-                color: 'var(--ink)',
-                fontFamily: MONO_FONT,
-              } : { borderRadius: 'var(--skin-radius-control,14px)' }}
-            >
-              <ResourceMark id={id} />
-            </div>
-            <div className="min-w-0">
-              <p className="truncate text-sm font-semibold" style={{ color: 'var(--ink)' }}>{ALL_RESOURCE_DEFS.find((r) => r.id === id)?.label ?? id}</p>
-              <p className="mono mt-0.5 text-xs uppercase tracking-[0.18em]" style={{ color: 'var(--muted-2)', fontFamily: MONO_FONT }}>Tài nguyên</p>
-            </div>
-          </div>
-          <div className="rounded-full border px-3 py-1.5 text-sm font-semibold tabular-nums" style={{ borderColor: 'var(--line)', background: 'rgba(255,255,255,0.8)', color: 'var(--ink-2)', fontFamily: MONO_FONT }}>
-            +{amount.toLocaleString()}
-          </div>
+          <RewardCard
+            icon={<ResourceMark id={id} />}
+            name={ALL_RESOURCE_DEFS.find((r) => r.id === id)?.label ?? id}
+            tier="thuong"
+            description="Tài nguyên thô của kỷ này."
+            amount={amount}
+          />
         </motion.div>
       ))}
     </div>

@@ -11,6 +11,72 @@
 
 ---
 
+## ADR-060 — MỘT ngôn ngữ hình cho mọi phần thưởng, và một luật MỨC ĐỘ LÀM PHIỀN có phân tầng
+
+**Ngày:** 2026-08-27
+**Trạng thái:** đã áp dụng. Không đảo ngược ADR nào.
+
+**Bối cảnh.** App có bảy đường trao thưởng: `LootDropModal` · `LevelUpModal` · `AchievementToast` ·
+`DailyMissions` · `PrestigeModal` · `EraCrisisModal` · `WeeklyReportModal`. Mỗi đường tự chọn cách
+vẽ và tự chọn màu, và điều đó không dừng ở "mỗi file một kiểu": **riêng `LootDropModal` đã có BA
+hình cho ba loại thưởng trong CÙNG một hộp thoại** (`SupportRewardCard` · thẻ trong
+`ResourceCascade` · `BonusPill`). Về màu thì có bốn từ vựng rời nhau cùng trả lời một câu hỏi
+*"cái này quý tới đâu?"*: bốn "tone" của hộp thoại phần thưởng · ba bậc Tailwind ở `badgeStyles.js` ·
+năm hạng huy chương của thành tích · một dòng chữ `tierLabel` của phiên. Đồng thời mọi phần thưởng,
+lớn hay nhỏ, đều mở một hộp thoại toàn màn hình — **một phiên Pomodoro thường cũng chặn màn hình**.
+
+**Vấn đề.** Hai thứ, và chúng độc lập với nhau:
+1. **Không so được.** Không có cách nào nhìn hai phần thưởng đến từ hai đường rồi biết cái nào quý
+   hơn, vì chúng không nói cùng một thứ tiếng.
+2. **Làm phiền đồng loạt.** Nhận một hòn đá và lên một kỷ nguyên mới gây ra cùng một mức gián đoạn.
+
+**Phương án đã cân nhắc.**
+- **(A) Chỉ thống nhất MÀU, giữ nguyên bảy cách vẽ.** Rẻ nhất. Loại: nó chữa triệu chứng dễ thấy
+  nhất mà không chạm vế thứ hai, và bảy cách vẽ vẫn tiếp tục trôi khỏi nhau.
+- **(B) Một `RewardModal` chung cho tất cả.** Loại: nó làm vế 2 tệ hơn — chuẩn hoá mức làm phiền
+  bằng cách nâng mọi thứ lên mức cao nhất.
+- **(C) Đẩy MỌI thứ xuống toast, bỏ hẳn hộp thoại.** Loại: lên kỷ và khủng hoảng kỷ buộc phải
+  QUYẾT ĐỊNH; một quyết định trôi qua trong 4 giây là mất quyết định.
+- **(D — đã chọn) Một thẻ chung + phân tầng theo *"việc này có buộc phải quyết định không?"*.**
+
+**Giải pháp.** Ba lớp, đúng khuôn ba lớp mà dự án đã dùng cho mái · tầng trệt · mặt đường · thực vật:
+- `src/engine/rewardTiers.js` — **BẢNG**: thang độ hiếm duy nhất, **đúng bốn bậc**
+  (thường `--muted` · tốt `--good` · hiếm `--warn` · huyền thoại `--accent`), kèm ánh xạ từ cả bốn
+  từ vựng cũ. Sống ở `engine/` chứ không ở `components/shared/` (nơi `badgeStyles.js` ở) vì
+  `rewardFeed.js` cần nó, mà **chưa từng có file nào trong `engine/` import từ `components/`**.
+- `src/components/shared/RewardCard.jsx` — **HÌNH**: một thẻ duy nhất, chỉ vẽ, không đọc store.
+- `src/engine/rewardFeed.js` — **LUẬT**: hàm thuần gom sáu kênh thưởng nhẹ thành một hàng đợi,
+  cắt còn 3 thẻ + một dòng "và N phần thưởng khác".
+- `src/components/RewardToastHost.jsx` — chồng toast ở góc; thay `AchievementToast.jsx` (đã xoá).
+
+**Luật mức độ làm phiền** — chặn màn hình CHỈ dành cho: **lên kỷ · thăng hoa · khủng hoảng kỷ ·
+thảm hoạ**. Mọi thứ còn lại đi qua toast, tự tắt sau 4 giây, bấm vào thì mở chi tiết.
+
+**Trade-off.**
+- Hộp thoại phần thưởng đầy đủ nay phải BẤM mới thấy ở phiên thường. Đổi lại 25 phút làm việc kết
+  thúc bằng một thẻ trượt vào góc thay vì một tấm chắn.
+- Một thẻ hẹp hơn hộp thoại ⇒ mô tả phải gói trong một dòng. Bố cục đã qua **hai lần bị ảnh dựng
+  bác bỏ** trước khi đúng (xem chú thích trong `RewardCard.jsx`).
+- Bốn bậc là ÍT so với năm hạng huy chương ⇒ bạch kim và kim cương dùng chung bậc đỉnh. Chấp nhận:
+  một thang màu chỉ đọc được khi số bậc còn đếm được trong một cái liếc.
+
+**Ảnh hưởng.**
+- **KHÔNG đổi một luật tính thưởng nào.** Store vẫn bật `lootModalOpen` ĐỒNG BỘ y như cũ (ba bài
+  test ở `completeFocusSession.test.js` khẳng định điều đó); toàn bộ thay đổi nằm ở tầng hiển thị,
+  đúng điểm cắm mà `RewardSequence` đã chọn từ Phase 4′.
+- **Ba kênh thông báo chết nay sống lại.** `relicNotification` · `rankUpNotification` ·
+  `missionCompletedIds` được store ghi từ lâu mà **không màn hình nào đọc** — nghĩa là *nhận một
+  di vật xưa nay không hiện gì cả*. Chồng toast là chỗ đọc đầu tiên.
+- `dismissAchievementNotification` / `dismissMissionNotification` nhận thêm **id tuỳ chọn** (không
+  truyền thì hành vi y hệt bản cũ): ba thẻ chồng nhau có ba đồng hồ riêng, nên thẻ thứ ba có thể
+  hết trước thẻ thứ nhất và `slice(1)` sẽ bỏ nhầm.
+- `LevelUpModal` không còn tự bật; nó thành phần CHI TIẾT mở khi bấm thẻ.
+
+**Điều kiện xem lại.** Nếu Đàm nói toast dễ bị bỏ lỡ ⇒ xem lại 4 giây và số 3, KHÔNG xem lại việc
+phân tầng. Nếu có mục thứ hai xin được tự bật ⇒ đọc `TECH_DEBT #87` trước.
+
+---
+
 ## ADR-059 — MẠNG ĐƯỜNG là một trục bản sắc: mỗi kỷ tự sinh lấy tập ô đường của mình bằng những CUNG CONG, thay cho một bàn cờ chung cho cả 15 kỷ
 
 **Ngày:** 2026-08-24

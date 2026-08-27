@@ -902,6 +902,73 @@ export function isCancelledHistoryEntry(entry) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// TIẾN ĐỘ HÔM NAY — NGUỒN SỰ THẬT DUY NHẤT
+// ─────────────────────────────────────────────────────────────────────────────
+// ⚠️ VÌ SAO PHẢI Ở ĐÂY chứ không để mỗi màn hình tự tính. Hai chỗ cùng hiển thị "hôm nay đã đi
+// được bao nhiêu" mà tính bằng hai công thức riêng thì sớm muộn cũng lệch nhau — và triệu chứng
+// là hai con số KHÁC NHAU nằm cách nhau vài phân trên cùng một màn hình (vòng mục tiêu quanh đồng
+// hồ nói "Phiên 2/4", thẻ "Hôm nay" ngay bên phải nói "3 / 5 phiên"). Không có gì đỏ lên, và người
+// đọc không biết tin cái nào. Đây đúng cái bẫy "một luật một công thức" mà dự án đã trả giá nhiều
+// lần; nay chỉ còn một chỗ để sửa.
+//
+// ⚠️ `todayKey` là THAM SỐ BẮT BUỘC, cố ý — không mặc định `localDateStr()`. Module này thuần
+// (không side-effect, không đọc đồng hồ máy); nơi gọi tự lấy ngày rồi truyền vào, đúng như
+// `weekKeysDesc` của Coach đã làm.
+
+/**
+ * Số phiên tập trung đã hoàn thành trong ngày `todayKey`.
+ * Đọc từ `dailyTracking` — bộ đếm mà store tự cập nhật — chứ KHÔNG đếm lại `history`: hai đường ấy
+ * có thể lệch nhau (phiên bị huỷ, phiên nhập từ máy khác), và `dailyTracking` mới là con số mà mọi
+ * cơ chế thưởng/nhiệm vụ ngày đang dùng.
+ */
+export function countSessionsOnDay(dailyTracking, todayKey) {
+  return dailyTracking?.date === todayKey ? (dailyTracking.sessionsCompleted ?? 0) : 0;
+}
+
+/**
+ * Tổng số phút tập trung trong ngày `todayKey`. Bỏ phiên đã huỷ và phiên chưa hoàn thành.
+ */
+export function sumFocusMinutesOnDay(history = [], todayKey) {
+  return history.reduce((sum, entry) => {
+    if (isCancelledHistoryEntry(entry) || entry?.completed === false) return sum;
+    return localDateStr(entry.timestamp) === todayKey ? sum + (entry.minutes ?? 0) : sum;
+  }, 0);
+}
+
+/**
+ * Tiến độ so với MỤC TIÊU NGÀY, theo đúng trục người dùng đã chọn (phiên hoặc phút).
+ * Trả về đủ bộ để vừa vẽ được vòng tiến độ vừa viết được một dòng chữ, nên hai thứ đó không thể
+ * nói hai điều khác nhau.
+ *
+ * `pct` KHÔNG bị kẹp ở 100: nơi gọi tự quyết định có kẹp hay không (vòng tròn thì phải kẹp, còn
+ * một dòng chữ "5/4" thì nên nói thật là đã vượt).
+ */
+export function getDailyGoalProgress({
+  dailyTracking,
+  history = [],
+  todayKey,
+  dailyGoalType = 'sessions',
+  dailyGoalSessions = 0,
+  dailyGoalMinutes = 0,
+} = {}) {
+  const useMinutes = dailyGoalType === 'minutes';
+  const goalValue = useMinutes ? dailyGoalMinutes : dailyGoalSessions;
+  const currentValue = useMinutes
+    ? sumFocusMinutesOnDay(history, todayKey)
+    : countSessionsOnDay(dailyTracking, todayKey);
+  const hasGoal = Number.isFinite(goalValue) && goalValue > 0;
+  return {
+    useMinutes,
+    goalValue,
+    currentValue,
+    hasGoal,
+    unit: useMinutes ? 'phút' : 'phiên',
+    pct: hasGoal ? (currentValue / goalValue) * 100 : 0,
+    goalMet: hasGoal && currentValue >= goalValue,
+  };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // GỢI Ý ĐỘ DÀI PHIÊN — học từ chính lịch sử của người dùng theo buổi trong ngày
 // ─────────────────────────────────────────────────────────────────────────────
 

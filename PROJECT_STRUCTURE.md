@@ -14,7 +14,16 @@
 │   │   │                     #   `notificationLayer.test.js` — thêm hộp thoại mới thì đừng dùng
 │   │   │                     #   z dưới 50, kẻo chuông nổi lên trên lớp mờ và bấm được
 │   │   ├── shared/           # Component/style dùng chung GIỮA NHIỀU file components khác
-│   │   │   └── BadgeKit.jsx      # TypeBadge/RarityBadge/PerkSummary (BuildingWorkshop + BlueprintInventory)
+│   │   │   ├── BadgeKit.jsx      # TypeBadge/RarityBadge/PerkSummary (BuildingWorkshop + BlueprintInventory)
+│   │   │   └── RewardCard.jsx    # THẺ PHẦN THƯỞNG DUY NHẤT của app (ADR-060). Chỉ VẼ, không đọc
+│   │   │                         #   store, không biết luật chơi ⇒ dùng được cả trong hộp thoại
+│   │   │                         #   lẫn trong toast. Độ hiếm lấy từ `engine/rewardTiers.js` và
+│   │   │                         #   phải đọc được KHI KHÔNG NHÌN MÀU (nhãn chữ + dải chấm)
+│   │   ├── RewardToastHost.jsx   # Chồng toast phần thưởng ở góc màn hình (thay `AchievementToast.jsx`,
+│   │   │                         #   đã xoá). Tối đa 3 thẻ + dòng "và N phần thưởng khác"; mỗi thẻ
+│   │   │                         #   MỘT đồng hồ riêng 4 giây, và đồng hồ DỪNG khi có hộp thoại
+│   │   │                         #   chặn màn hình. Nằm ở z-[48]: trên chuông (z-[45]), dưới sàn
+│   │   │                         #   hộp thoại (z-50) — đúng thứ bậc "phải quyết" vs "chỉ cần biết"
 │   │   ├── icons/            # Bộ icon SVG tự vẽ (thay emoji), 1 component Glyph + data tách riêng
 │   │   ├── CityView.jsx      # Tab Thành Phố — CHỈ lấy dữ liệu + chọn bộ vẽ, giữ mỏng có chủ ý
 │   │   ├── city/             # Màn hình Thành Phố. Luật: KHUNG tách khỏi BỘ VẼ (ADR-008)
@@ -87,12 +96,22 @@
 │   │   │                     #   Hàm định dạng thuần đã tách ra statsFormatters.js cạnh nó.
 │   │   ├── PomodoroEngine.jsx # Khung chính chứa đồng hồ Pomodoro/Stopwatch (UI, logic timer
 │   │   │                     #   thật nằm ở src/hooks/useTimer.js)
+│   │   ├── ResourceDisplay.jsx # Thẻ tài nguyên: LUÔN ba thứ (thanh tiến độ kỷ · chuỗi · tinh thể),
+│   │   │                     #   mọi thứ còn lại nằm sau nút "Kho". Trần BA con số là một LỜI HỨA
+│   │   │                     #   có test canh (resourceDisplay.test.js) — đừng thêm số thứ tư.
+│   │   ├── resourceDisplayFormat.js # Ba luật trình bày số của thẻ trên (tabular-nums · nhãn nhỏ
+│   │   │                     #   hơn số 40% · nháy --good khi tăng). File .js thuần CỐ Ý: node --test
+│   │   │                     #   không biên dịch JSX, nên luật để trong .jsx là luật không test nào
+│   │   │                     #   chạm tới được. Cùng quy ước với statsFormatters.js ở trên.
 │   │   ├── sessionGoalState.js # BA trạng thái ô "Mục tiêu phiên" (empty/partial/ready) — thuần.
 │   │   │                     #   Tách ra vì hai trạng thái là KHÔNG đủ: ô chưa gõ gì mà bị dán
 │   │   │                     #   màu cảnh báo thì app thành ra mắng người dùng ngay lúc mở lên.
 │   │   │                     #   Cả 2 khối giao diện mục tiêu đều đọc file này ⇒ không lệch nhau.
 │   │   └── ...                # Các màn hình còn lại: Achievements, SkillTree, BuildingWorkshop,
 │   │                          #   BlueprintInventory, RelicInventory, Settings, DailyMissions...
+│   │                          #   ⚠️ Từ 2026-08-27 ba màn Kỹ năng/Kho báu/Thành tích KHÔNG còn là
+│   │                          #   mục điều hướng riêng — chúng là ba TAB CON của "Hành trang"
+│   │                          #   (`INVENTORY_TABS` trong App.jsx). Bản thân component không đổi.
 │   ├── engine/                # Logic THUẦN (không JSX, không Zustand) — công thức game, dễ test
 │   │   ├── coach/             # TOÀN BỘ "bộ não" AI Coach (model-agnostic, hiện chạy Gemini)
 │   │   │   ├── prompt.js          # 2 prompt hệ thống (chat/phân tích) + dựng prompt + sanitize
@@ -150,6 +169,18 @@
 │   │   │                     #   (BUILDING_EFFECTS vs BLUEPRINT_META) và không kẹp biên ⇒ Xưởng in
 │   │   │                     #   ra "-4/2 phiên". Mọi nơi cần con số này PHẢI gọi
 │   │   │                     #   describeCraftProgress, đừng tự chia lại.
+│   │   ├── rewardTiers.js     # THANG ĐỘ HIẾM DUY NHẤT — đúng BỐN bậc, không thêm bậc thứ năm
+│   │   │                     #   (thường/tốt/hiếm/huyền thoại → --muted/--good/--warn/--accent).
+│   │   │                     #   Kèm ánh xạ từ cả bốn từ vựng cũ của app: độ hiếm bản vẽ · hạng
+│   │   │                     #   thành tích · hệ số nhân phiên · bucket nhiệm vụ.
+│   │   │                     #   ⚠️ Ở `engine/` chứ không ở `components/shared/` (nơi
+│   │   │                     #   badgeStyles.js ở) vì rewardFeed.js cần nó, mà CHƯA TỪNG có file
+│   │   │                     #   nào trong engine/ import từ components/ — đừng mở chiều đó ra
+│   │   ├── rewardFeed.js      # Gom SÁU kênh thưởng nhẹ thành MỘT hàng đợi toast (THUẦN). Cắt còn
+│   │   │                     #   3 thẻ + dòng gộp phần dư. Xếp theo NGUỒN chứ không theo bậc, để
+│   │   │                     #   vị trí thẻ không nhảy giữa các phiên.
+│   │   │                     #   ⚠️ Nó chỉ ĐỌC `ui.*` mà store đã ghi sẵn — không đổi một luật
+│   │   │                     #   tính thưởng nào, và không đụng `completeFocusSession`
 │   │   ├── cityMoment.js      # Điều đáng nói về thành phố ở CẢ HAI đầu một phiên: buildFocusTease
 │   │   │                     #   (trước — phiên này đẩy cái gì tới đâu) + buildGrowthMoment (sau —
 │   │   │                     #   thành phố vừa lớn lên thế nào). Chung một phép chọn công trường.
@@ -603,6 +634,15 @@
 │   │   ├── soundEngine.js / ambientEngine.js # Âm thanh 100% procedural (Web Audio API)
 │   │   ├── pushPayloads.js    # Nội dung thông báo push (title/body/tag) — dùng chung client+server
 │   │   ├── time.js            # Helper giờ/ngày/tuần theo múi giờ VN (mọi engine phải dùng cái này)
+│   │   ├── opportunities.js   # "Có việc gì đáng vào xem không?" — kỹ năng đủ SP · bản vẽ đủ RP ·
+│   │   │                     #   công trình đủ tài nguyên. THUẦN. ⚠️ Có ĐÚNG HAI người đọc (chuông
+│   │   │                     #   thông báo + chấm trên tab Hành trang); chép công thức về lại
+│   │   │                     #   NotificationCenter là "một luật hai công thức", và hai bản sao sẽ
+│   │   │                     #   trôi khỏi nhau ở BIÊN rồi nói ngược nhau mà không gì đỏ lên
+│   │   ├── navAttention.js    # Dấu "thành tích đã xem" (localStorage `dc-nav-seen-v1`). ⚠️ `null`
+│   │   │                     #   (chưa từng ghi) KHÁC `[]` (đã ghi, đang rỗng) — nhập hai thứ đó
+│   │   │                     #   làm một thì lần đầu mở app cái chấm sáng oan cho hàng chục thành
+│   │   │                     #   tích Đàm đã xem từ lâu
 │   │   ├── timerSession.js / breaks.js / challengeEngine.js / notifications.js # engine chuyên biệt khác
 │   ├── hooks/                 # React hook — cầu nối giữa store và engine/component
 │   │   ├── useTimer.js         # LỚN — toàn bộ state machine đồng hồ Pomodoro/Stopwatch
@@ -610,6 +650,11 @@
 │   │   ├── useCityMoment.js   # Cầu nối store → engine/cityMoment.js, CẢ HAI đầu của một phiên:
 │   │   │                     #   useCityFocusTease (trước) + useCityGrowthMoment (sau). Dùng chung
 │   │   │                     #   một snapshot memo theo NỘI DUNG
+│   │   ├── useInventoryAttention.js # Chấm "có việc cần xem" trên tab Hành trang. Đọc engine/
+│   │   │                     #   opportunities.js (dùng CHUNG với chuông thông báo) + dấu "đã xem"
+│   │   │                     #   ở engine/navAttention.js. ⚠️ Selector trả về BOOLEAN, không phải
+│   │   │                     #   mảng — gốc app bọc cả cảnh 3D, cho nó render lại theo từng con số
+│   │   │                     #   tài nguyên là trả một cái giá không ai đo được cho một chấm 5px
 │   │   └── useGameLoop.js
 │   ├── lib/                   # Hạ tầng dùng chung, KHÔNG phải logic game thuần: tích hợp dịch vụ
 │   │                          #   ngoài, và từ 2026-08-27 thêm từ vựng chuyển động của giao diện

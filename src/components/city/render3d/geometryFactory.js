@@ -46,11 +46,24 @@ function createSink() {
  * Thứ tự đỉnh quyết định mặt nào là mặt NGOÀI — sai thứ tự thì mặt đó biến mất khi nhìn từ ngoài
  * (bị loại vì quay lưng) mà lại hiện ra khi nhìn từ trong. Mọi lời gọi bên dưới đều đã kiểm thứ tự.
  *
- * `shade = true` ⇒ nướng BÓNG TIẾP XÚC vào màu đỉnh: càng gần mặt đất càng tối. Đây là thứ làm
- * công trình NGỒI trên đất thay vì nổi lều bều, và nó tốn 0 đồng lúc chạy vì tính sẵn một lần ở
- * đây. Ô cửa sáng đèn truyền `false` — chúng tự phát sáng, tối chân thì thành vô lý.
+ * `shadeBase` = cao độ NỀN mà khối này đang đứng lên (đơn vị thế giới) ⇒ nướng BÓNG TIẾP XÚC vào
+ * màu đỉnh: càng gần nền càng tối. Đây là thứ làm công trình NGỒI trên đất thay vì nổi lều bều, và
+ * nó tốn 0 đồng lúc chạy vì tính sẵn một lần ở đây. `null` ⇒ không nướng (ô cửa sáng đèn tự phát
+ * sáng, tối chân thì thành vô lý).
+ *
+ * ⚠️ VÌ SAO LÀ CAO ĐỘ NỀN CHỨ KHÔNG PHẢI `true`/`false` — một khuyết tật ĐO ĐƯỢC, vá 2026-08-27.
+ * Bản cũ hỏi `contactShade(p[1])`, tức độ cao THẾ GIỚI của đỉnh. Đúng khi `contactShade` được viết,
+ * vì hồi đó mặt đất là một mặt phẳng ở y = 0. Phase 7B cho mặt đất có cao độ, và từ đó mệnh đề ấy
+ * chết mà không ai để ý: đo được ở lưới 12×12 thì **kỷ 8 có 88/144 ô (61%) nền cao hơn
+ * `CONTACT_REACH` = 0,38**, kỷ 5 có 52%, kỷ 1 có 15% — mọi công trình đứng trên những ô đó nhận
+ * hệ số 1 ở MỌI đỉnh, tức mất sạch bóng tiếp xúc. Hậu quả nhìn thấy được: trong cùng một thành
+ * phố, nhà dưới thấp thì ngồi xuống đất còn nhà trên thềm cao thì dán lên — phụ thuộc thềm chứ
+ * không phụ thuộc gì có ý nghĩa. Đúng hình dạng "một kết luận đúng hết đúng vì TIỀN ĐỀ của nó bị
+ * gỡ ở một phase khác" (Phase 8C).
+ * ⚠️ Khối LƠ LỬNG (kỷ 15) vẫn KHÔNG bị tối — chúng nổi bằng `part.y` cục bộ chứ không bằng cao độ
+ * nền, nên `p[1] - shadeBase` vẫn lớn. Đúng như chú thích ở `materials.js` đã hứa.
  */
-function pushTriangle(sink, a, b, c, rgb, shade) {
+function pushTriangle(sink, a, b, c, rgb, shadeBase) {
   const ux = b[0] - a[0];
   const uy = b[1] - a[1];
   const uz = b[2] - a[2];
@@ -67,7 +80,7 @@ function pushTriangle(sink, a, b, c, rgb, shade) {
   for (const p of [a, b, c]) {
     sink.pos.push(p[0], p[1], p[2]);
     sink.nor.push(nx, ny, nz);
-    const k = shade ? contactShade(p[1]) : 1;
+    const k = shadeBase === null ? 1 : contactShade(p[1] - shadeBase);
     sink.col.push(rgb.r * k, rgb.g * k, rgb.b * k);
   }
   sink.triangles += 1;
@@ -92,7 +105,7 @@ function place(px, py, pz, transform) {
  * thì hộp vuông (n = 4) sẽ rộng hơn ý định 41%, và mọi công trình sẽ lấn sang ô bên cạnh.
  * Góc bắt đầu `π/n` là thứ làm mặt phẳng quay ra trước thay vì một góc nhọn chĩa vào người xem.
  */
-function emitPrism(sink, part, transform, rgb, shade, bevel = 0) {
+function emitPrism(sink, part, transform, rgb, shadeBase, bevel = 0) {
   const n = part.sides;
   const half = Math.PI / n;
   const rx = (part.w / 2) / Math.cos(half);
@@ -120,8 +133,8 @@ function emitPrism(sink, part, transform, rgb, shade, bevel = 0) {
   const band = (lower, upper) => {
     for (let i = 0; i < n; i += 1) {
       const j = (i + 1) % n;
-      pushTriangle(sink, lower[i], upper[i], upper[j], rgb, shade);
-      pushTriangle(sink, lower[i], upper[j], lower[j], rgb, shade);
+      pushTriangle(sink, lower[i], upper[i], upper[j], rgb, shadeBase);
+      pushTriangle(sink, lower[i], upper[j], lower[j], rgb, shadeBase);
     }
   };
 
@@ -130,10 +143,10 @@ function emitPrism(sink, part, transform, rgb, shade, bevel = 0) {
     const bottom = ring(1, part.y);
     const apex = place(0, top, 0, transform);
     for (let i = 0; i < n; i += 1) {
-      pushTriangle(sink, bottom[i], apex, bottom[(i + 1) % n], rgb, shade);
+      pushTriangle(sink, bottom[i], apex, bottom[(i + 1) % n], rgb, shadeBase);
     }
     for (let i = 1; i < n - 1; i += 1) {
-      pushTriangle(sink, bottom[0], bottom[i], bottom[i + 1], rgb, shade);
+      pushTriangle(sink, bottom[0], bottom[i], bottom[i + 1], rgb, shadeBase);
     }
     return;
   }
@@ -159,17 +172,17 @@ function emitPrism(sink, part, transform, rgb, shade, bevel = 0) {
 
   // Mặt trên: quạt tam giác theo chiều NGƯỢC vòng để pháp tuyến hướng lên.
   for (let i = 1; i < n - 1; i += 1) {
-    pushTriangle(sink, upper[0], upper[i + 1], upper[i], rgb, shade);
+    pushTriangle(sink, upper[0], upper[i + 1], upper[i], rgb, shadeBase);
   }
   // Mặt đáy: chiều thuận → pháp tuyến hướng xuống. Vẫn phải vẽ vì camera hạ được xuống thấp và
   // khối lơ lửng (kỷ 15) thì nhìn thấy đáy thật.
   for (let i = 1; i < n - 1; i += 1) {
-    pushTriangle(sink, bottom[0], bottom[i], bottom[i + 1], rgb, shade);
+    pushTriangle(sink, bottom[0], bottom[i], bottom[i + 1], rgb, shadeBase);
   }
 }
 
 /** Mái dốc hai phía. Nóc chạy dọc trục X cục bộ; `ry` của khối lo phần xoay. */
-function emitGable(sink, part, transform, rgb, shade) {
+function emitGable(sink, part, transform, rgb, shadeBase) {
   const hw = part.w / 2;
   const hd = part.d / 2;
   const y0 = part.y;
@@ -182,14 +195,14 @@ function emitGable(sink, part, transform, rgb, shade) {
   const R0 = place(-hw, y1, 0, transform);
   const R1 = place(hw, y1, 0, transform);
 
-  pushTriangle(sink, D, C, R1, rgb, shade);      // mặt dốc hướng +Z
-  pushTriangle(sink, D, R1, R0, rgb, shade);
-  pushTriangle(sink, B, A, R0, rgb, shade);      // mặt dốc hướng −Z
-  pushTriangle(sink, B, R0, R1, rgb, shade);
-  pushTriangle(sink, B, R1, C, rgb, shade);      // đầu hồi +X
-  pushTriangle(sink, A, D, R0, rgb, shade);      // đầu hồi −X
-  pushTriangle(sink, A, B, C, rgb, shade);       // đáy
-  pushTriangle(sink, A, C, D, rgb, shade);
+  pushTriangle(sink, D, C, R1, rgb, shadeBase);      // mặt dốc hướng +Z
+  pushTriangle(sink, D, R1, R0, rgb, shadeBase);
+  pushTriangle(sink, B, A, R0, rgb, shadeBase);      // mặt dốc hướng −Z
+  pushTriangle(sink, B, R0, R1, rgb, shadeBase);
+  pushTriangle(sink, B, R1, C, rgb, shadeBase);      // đầu hồi +X
+  pushTriangle(sink, A, D, R0, rgb, shadeBase);      // đầu hồi −X
+  pushTriangle(sink, A, B, C, rgb, shadeBase);       // đáy
+  pushTriangle(sink, A, C, D, rgb, shadeBase);
 }
 
 /**
@@ -279,15 +292,16 @@ export function buildMergedGeometry(
       const glowing = glowSink !== null && part.role === glowRole;
       const target = glowing ? glowSink : sinkFor(materialFamilyFor(part.role, style));
       const rgb = colorFor(glowing ? 'glassLit' : part.role);
-      // Ô cửa sáng đèn KHÔNG nhận bóng tiếp xúc — chúng tự phát sáng.
-      const shade = !glowing;
+      // Ô cửa sáng đèn KHÔNG nhận bóng tiếp xúc — chúng tự phát sáng. Còn lại: đo độ cao từ CHÍNH
+      // cao độ nền mà công trình này đứng lên (`item.y`), không phải từ y = 0 — xem `pushTriangle`.
+      const shadeBase = glowing ? null : (Number.isFinite(item.y) ? item.y : 0);
       // ⚠️ QUYẾT ĐỊNH VÁT LẤY TỪ KHỐI **CHƯA NHÂN TỈ LỆ** — `bevelWidth(part)` chứ không phải
       // `bevelWidth(scaled)`. `countTriangles` bên tầng thuần cũng đọc khối chưa nhân, nên hỏi
       // cùng một câu trên cùng một dữ liệu là cách duy nhất giữ hai bên không bao giờ lệch. Hỏi
       // trên số đã nhân 1,3 thì những khối nằm sát ngưỡng sẽ được vát ở đây mà không được đếm ở
       // kia, và cái lệch đó im lặng: nó chỉ hiện ra dưới dạng bảng ngân sách báo sai.
-      if (part.shape === 'gable') emitGable(target, scaled, transform, rgb, shade);
-      else emitPrism(target, scaled, transform, rgb, shade, bevelWidth(part) * scale);
+      if (part.shape === 'gable') emitGable(target, scaled, transform, rgb, shadeBase);
+      else emitPrism(target, scaled, transform, rgb, shadeBase, bevelWidth(part) * scale);
     }
   }
 

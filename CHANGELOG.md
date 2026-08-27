@@ -40,6 +40,64 @@ tiên đưa đúng bản tuần trước. Đó là hành vi đúng, không phả
 
 ---
 
+## 2026-08-27 (khuya) — Bóng tiếp xúc đo từ nền của chính công trình, không từ y = 0
+
+**Mục đích.** Lấy việc "giống 3D hơn" trong hàng đợi. Trong lúc làm thì lộ ra một khuyết tật thật:
+`contactShade` — bóng tiếp xúc nướng sẵn vào màu đỉnh, chính là "AO" mà hàng đợi đòi thêm — đo độ
+cao so với **y = 0**, tiền đề đúng khi nó được viết (mặt đất phẳng) nhưng đã chết từ Phase 7B khi
+mặt đất có cao độ.
+
+**Phạm vi.** Thành phố 3D, tầng hình học và ánh sáng. Không thêm nguồn sáng, không đụng camera.
+
+- **`src/components/city/render3d/geometryFactory.js`** — `shade` (boolean) → `shadeBase` (cao độ
+  nền của chính công trình). Đo được: **7/15 kỷ** có ô nền cao hơn `CONTACT_REACH` = 0,38, nhiều
+  nhất là kỷ 8 với 88/144 ô (61%); công trình trên những ô đó trước đây mất sạch bóng chân.
+- **`src/components/city/render3d/sceneGraph.js`** — `SHADOW_MAP_DESKTOP` 2048 → 4096 (điện thoại
+  giữ 512). Thử siết `sun.shadow.camera` xuống 0,58·lưới và **hoàn tác**: không đọc ra khác biệt
+  trên ảnh, mà rủi ro cắt cụt bóng ở vành ngoài thì có thật — lý do đã ghi vào mã.
+- **`START_HERE.md`** — gỡ việc "kim tự tháp / ziggurat" khỏi hàng đợi: **đã làm xong từ
+  2026-08-21**, hàng đợi đang bảo phiên sau đi làm lại. Viết lại mục "giống 3D hơn" thành ba lựa
+  chọn mỹ thuật cần Đàm chọn.
+- **`TECH_DEBT.md`** — thêm **#88**: `soiVetRach` bỏ sót một vết rách ảnh mắt thường nhìn ra ngay,
+  và một phép đo chạy trên tấm ảnh ấy cho ra bộ số bịa rất thuyết phục.
+
+**Ảnh hưởng.** Công trình trên thềm cao nay có bóng chân như công trình dưới thấp. Mép bóng đổ nét
+gấp đôi. Cả hai đều dưới ngưỡng mắt ở khung toàn cảnh — thấy rõ khi soi gần.
+
+**Tương thích.** Không đổi dữ liệu, không migration, không đụng ADR-007.
+
+**Cổng.** `npm test` 1.234 bài · 1.233 pass · 0 fail · 1 skipped · lint sạch · build xanh.
+
+---
+
+## 2026-08-27 (khuya) — Ba nhịp phủ kín giao diện, và một cổng chặn hồi quy
+
+**Mục đích.** Lượt trước gom 11 file; phần còn lại của giao diện vẫn tự khai nhịp riêng. Và không
+có gì ngăn một file MỚI gõ lại `initial={{ opacity: 0, y: 20 }}` — đúng cách hơn ba mươi file đã
+trôi thành 5 thời lượng và 7 đường cong.
+
+**Phạm vi.** Toàn bộ `src/**/*.jsx` **trừ** `components/city/render3d/` (three.js, một hệ khác).
+
+- **Đo được, trên cả hai mốc, bằng cùng một phép đếm:** **410 khai báo rời rạc trên 30 file → 54
+  trên 11 file (−87%)**. Ba ổ lớn nhất: `StatsDashboard` 36→4 · `Settings` 32→0 · `SkillTree` 10→0.
+- **`withDelay(preset, giây)` (mới)** — danh sách hiện SO LE vẫn là nhịp `enter`, chỉ lệch giờ.
+  Hàm THUẦN nên gọi được trong `.map()`, và tự giữ lời hứa Giảm chuyển động. **Không phải nhịp
+  thứ tư.**
+- **`src/lib/motionCoverage.test.js` (mới)** — cổng đếm khai báo rời rạc từng file, so với một
+  BẢNG NGOẠI LỆ tường minh. Có cả hai vế: ngoài bảng phải bằng 0, **và** trong bảng mà dọn bớt rồi
+  thì phải hạ số xuống. 5/5 phép thử ngược đã thấy đỏ.
+- **Dọn kèm:** prop `reducedMotion` truyền tay xuống 4 component nay là prop chết — đã gỡ; 4 bản
+  vá tay `width: reduceMotion ? … : undefined` cũng gỡ (`useSnapMotion` đã làm đúng việc đó).
+
+**Ảnh hưởng.** Thuần thị giác. Vài chỗ đổi hình dạng thấy được: các nút ở Cài đặt trước đây phóng
+to ba mức khác nhau (1,01 · 1,02 · 1,03) nay một mức; hai biểu đồ ở Thống kê trước đây tự vẽ ra
+theo hai bộ số khác nhau nay chung một bộ.
+
+**Tương thích.** Không đổi dữ liệu, không đổi API, không cần migration.
+
+**Cố ý đứng ngoài.** `city/CityGrowthMoment.jsx` là một đoạn phim 3,2 giây có ba luật cứng riêng và
+**không hề được dựng** khi bật Giảm chuyển động — ép nó vào `enter` là làm hỏng một cảnh diễn để
+đổi lấy một con số đẹp.
 ## 2026-08-27 (tối) — Một ngôn ngữ hình cho mọi phần thưởng, và phân tầng mức độ làm phiền
 
 **Mục đích.** App có bảy đường trao thưởng và bảy cách trình bày — riêng `LootDropModal` đã có ba

@@ -43,6 +43,118 @@
 > giờ VN — kèm một bài đối chứng khẳng định mốc ấy đúng là thứ Hai, vì chạy vào thứ Ba thì cả file
 > sẽ "xanh vì không đo gì". Bảy phép thử ngược đều đỏ đúng bài dự kiến.
 
+> Cập nhật lần cuối: **2026-08-27 (khuya)** — **BÓNG TIẾP XÚC ĐÃ CHẾT Ở 7/15 KỶ MÀ KHÔNG AI BIẾT.**
+> Lấy việc 1+2 trong hàng đợi `START_HERE`. Kết quả: **việc 1 đã xong từ 2026-08-21** (kỷ 2 khai
+> `roof: 'pyramid'`, kỷ 3 khai `roof: 'ziggurat'`, ảnh dựng ra chóp bốn mặt rõ ràng) — hàng đợi
+> đang bảo phiên sau đi làm lại một việc đã làm. Đã gỡ khỏi `START_HERE`.
+>
+> **⚠️ KHUYẾT TẬT THẬT TÌM ĐƯỢC TRONG LÚC LÀM VIỆC 2 — TIỀN ĐỀ BỊ GỠ Ở MỘT PHASE KHÁC (Phase 8C).**
+> `contactShade` (bóng tiếp xúc nướng sẵn vào màu đỉnh — chính là "AO" mà hàng đợi đòi thêm) hỏi
+> `contactShade(p[1])`, tức độ cao **THẾ GIỚI** của đỉnh. Đúng lúc nó được viết: hồi đó mặt đất là
+> một mặt phẳng ở y = 0. **Phase 7B cho mặt đất có cao độ**, và từ đó mệnh đề ấy chết trong im lặng.
+> Đo trên lưới 12×12: **kỷ 8 có 88/144 ô (61%) nền cao hơn `CONTACT_REACH` = 0,38**, kỷ 5 52%,
+> kỷ 4 50%, kỷ 7 34%, kỷ 10 32%, kỷ 15 28%, kỷ 13 27%, kỷ 1 15% — **7/15 kỷ**. Công trình đứng trên
+> những ô đó nhận hệ số 1 ở MỌI đỉnh ⇒ mất sạch bóng chân. Hậu quả: trong cùng một thành phố, nhà
+> dưới thấp thì NGỒI xuống đất còn nhà trên thềm cao thì DÁN lên — phụ thuộc thềm chứ không phụ
+> thuộc gì có ý nghĩa. Vá: `shade` (boolean) → `shadeBase` (cao độ NỀN của chính công trình), đo
+> `contactShade(p[1] - shadeBase)`. Khối lơ lửng kỷ 15 vẫn không bị tối, đúng như chú thích cũ hứa.
+>
+> **Đã làm nốt phần bóng đổ**: `SHADOW_MAP_DESKTOP` 2048 → **4096** (texel bóng 0,0088 → 0,0044 ô).
+> Điện thoại giữ 512. Giá là BỘ NHỚ (16 → 64 MB) chứ không phải thời gian mỗi khung —
+> `sun.shadow.autoUpdate` đang tắt nên bản đồ chỉ vẽ lại khi thành phố đổi.
+>
+> **HOÀN TÁC có chủ đích**: thử siết `sun.shadow.camera` từ 0,75·lưới xuống 0,58 — ảnh kỷ 11 lúc
+> 16 giờ (bóng dài nhất) **không đọc ra khác biệt nào**, trong khi tấm đất nhận bóng rộng tới ±9,5
+> nên siết về ±6,96 là mua rủi ro cắt cụt bóng để đổi lấy một thứ không nhìn thấy. Giữ 0,75, ghi lý
+> do vào mã.
+>
+> **⚠️ HAI LẦN PHÉP ĐO SUÝT LÀM TÔI KẾT LUẬN SAI:**
+> **(1)** Nhìn ảnh kỷ 11 lúc 16 giờ tôi tưởng *"tháp cao mà gần như không đổ bóng xuống đất"*. Bật/
+> tắt bóng rồi so (§10.2): **21,9% điểm ảnh đổi QUÁ ngưỡng mắt, lệch tối đa 93** — bóng đang hoạt
+> động rất mạnh. Ấn tượng sai, số đo đúng.
+> **(2)** Ảnh cận cảnh kỷ 8 (`--width 1500`, 3 dải ngang) **BỊ RÁCH** — một mảng góc trên phải thuộc
+> khung hình khác, nhìn là thấy. `soiVetRach` trả về LÀNH nên ảnh vẫn được ghi, và phép đo trên nó
+> cho ra *"21,38% điểm ảnh vượt ngưỡng, lệch tối đa 222"* — một bộ số hoàn toàn bịa, đủ thuyết phục
+> để kết luận sai về bản vá. Dựng lại lần hai thì sạch. **Đã bỏ bộ số đó, ghi `TECH_DEBT #88`**
+> (vết rách lần này có mép DỌC, mà `soiVetRach` chỉ quét mép NGANG — cần đo lại trước khi tin lời
+> giải thích ấy). Bài học cũ, lần thứ N: *ảnh là sản phẩm VÀ là cái kiểm.*
+>
+> **⚠️ NÓI THẲNG: PHIÊN NÀY KHÔNG ĐẠT "≥4 THAY ĐỔI NHÌN THẤY ĐƯỢC" (`PHASE_RULES` §1).** Cả hai cần
+> gạt mà hàng đợi nêu tên đều **đã có sẵn** — một cái đã bó sát, một cái đã tồn tại nhưng hỏng. Hai
+> bản vá đều đúng và đo được, nhưng **đều dưới ngưỡng mắt ở khung toàn cảnh**. Muốn thành phố trông
+> 3D hơn thật sự thì cần một quyết định MỸ THUẬT của Đàm, không cần thêm mã — ba lựa chọn kèm số đã
+> ghi ở `START_HERE` mục 2.
+>
+> Cổng: `npm test` **1.234 bài · 1.233 pass · 0 fail · 1 skipped** (không đỏ thêm bài nào, gồm cả
+> bất biến ADR-007) · lint sạch · build xanh.
+
+> Cập nhật lần cuối: **2026-08-27 (khuya)** — **BA NHỊP PHỦ KÍN GIAO DIỆN + CỔNG CHẶN HỒI QUY.**
+> Vòng hai của việc gom nhịp. **Đo bằng chính phép đếm đã vá, trên cả hai mốc** (`git worktree`
+> tại `95fb96b` cho vế TRƯỚC — đừng chép cột "sau" của lượt trước, bài học `TECH_DEBT #43`):
+> **410 khai báo rời rạc trên 30 file → 54 trên 11 file (−87%)**, quét 44 file `.jsx`.
+> Ba ổ lớn nhất đã dọn (`StatsDashboard` 36→4 · `Settings` 32→0 · `SkillTree` 10→0), cùng 15
+> file vừa và nhỏ.
+>
+> **THÊM MỘT PHÉP DỜI GIỜ, KHÔNG PHẢI MỘT NHỊP THỨ TƯ.** `withDelay(enterMotion, i * 0.03)` —
+> danh sách hiện SO LE vẫn dùng ĐÚNG nhịp `enter`, chỉ khác thời điểm bắt đầu. Là hàm THUẦN nên
+> gọi được trong `.map()` (chỗ hook bị cấm), và nó tự giữ lời hứa Giảm chuyển động: lúc ấy preset
+> là object rỗng, không có `transition` để dời, nên nó trả lại đúng object rỗng ấy. Không có nó
+> thì 5 danh sách kia mỗi cái lại phải tự khai một bộ `initial`/`animate` riêng chỉ để cài một
+> con số `delay` — tức đẻ ra đúng thứ đang đi xoá.
+>
+> **CỔNG MỚI `src/lib/motionCoverage.test.js`** — `motionPresets.test.js` canh ba nhịp có ĐÚNG
+> không; nó KHÔNG canh được cả app có DÙNG chúng không. Cổng mới đếm khai báo rời rạc từng file
+> rồi so với BẢNG NGOẠI LỆ tường minh (đúng khuôn `assert.deepEqual(TRUOT, [4])` của địa hình).
+> Có **cả hai vế**: file ngoài bảng phải bằng 0, **và** file trong bảng mà dọn bớt rồi thì phải hạ
+> số xuống — không có vế sau thì bảng chỉ có thể to ra và những con số cũ lặng lẽ thành chỗ trống
+> cho lần trôi sau.
+>
+> **⚠️ PHÉP THỬ NGƯỢC BẮT ĐƯỢC MỘT LỖ THẬT TRONG CHÍNH CÁI CỔNG VỪA VIẾT — VÀ NÓ SUÝT LÀM TÔI KẾT
+> LUẬN NGƯỢC.** Ba phép phá đầu tiên chạy ra "2 vẫn xanh"; phản xạ đầu là *"bài test không có
+> răng"*. Sai — theo đúng luật đã ghi (Phase 8A) thì nghi PHÉP PHÁ trước, và lần này cả hai đều
+> hỏng: tôi bơm khai báo vào **chung một dòng với thẻ**, trong khi phép đếm neo `^\s*` vào ĐẦU
+> DÒNG. Nhưng đi tiếp một bước nữa mới ra chuyện đáng nói: **cái neo ấy là một lỗ thật**. Lối viết
+> gọn một dòng CÓ THẬT trong kho — `FocusRail.jsx` **3 dòng**, `BuildingWorkshop.jsx` **2 dòng** —
+> và cả hai file ấy tôi đã **bỏ sót hoàn toàn** ở lượt quét trước vì chính cái neo đó. Vá phép đếm
+> xong thì tổng nhảy từ 55 lên 65 và hai file kia lộ ra. ⇒ *Khi phép phá không nổ, nghi phép phá
+> trước — rồi hỏi tiếp "vì sao nó không nổ?", vì câu trả lời có thể là một lỗ trong chính phép đo.*
+>
+> **⚠️ VÀ MỘT PHÉP PHÁ THỨ NĂM CHỈ RA BÀI ĐỐI CHỨNG CHƯA NHỐT ĐÚNG LỖI VỪA TÌM.** Neo lại `^\s*`
+> vào phép đếm thì **cả 4 phép phá kia vẫn đỏ mà cổng vẫn xanh** — vì sau khi dọn xong, mọi khai
+> báo CÒN LẠI đều tình cờ nằm ở đầu dòng, nên phép quét file không phân biệt được hai bản regex.
+> Chỉ một ca tổng hợp viết-gọn-một-dòng trong bài đối chứng mới phân biệt được. ⇒ *Đối chứng phải
+> nhốt đúng bộ số hỏng vừa tìm ra, không phải một ca "tương tự".*
+>
+> **⚠️ SUÝT SHIP MỘT CHÚ THÍCH NÓI NGƯỢC VỚI MÃ.** `AchievementToast` được viết `useCustomMotion`
+> (bỏ hẳn) trong khi chú thích ngay trên nó ghi "nhảy tới đích". Thẻ ấy đặt `left-1/2` rồi kéo
+> ngược lại bằng `x: '-50%'` để CĂN GIỮA — bỏ hẳn là dải thông báo lệch sang phải đúng nửa bề
+> ngang của chính nó. Đã đổi sang `useSnapMotion`. Thứ bắt được là việc **đọc lại chú thích mình
+> vừa viết và hỏi nó có khớp mã không**, không phải một cổng nào cả.
+>
+> **DỌN KÈM:** prop `reducedMotion` truyền tay xuống `SkillNode`/`SynergyPanel`/`BuildingCard`/
+> `TodayMissionRow` nay là prop CHẾT (cái gác đã lo) — đã gỡ khỏi cả chữ ký lẫn chỗ gọi; 4 bản vá
+> tay kiểu `width: reduceMotion ? … : undefined` cũng đã gỡ vì `useSnapMotion` đã làm đúng việc đó
+> ("một luật một công thức"). ⚠️ `reduceMotion` của `CityStage` thì GIỮ — nó còn nuôi `CityScene3D`.
+>
+> **⚠️ GỘP `main` (16 commit của BỐN phiên khác) — VÀ CỔNG MỚI ĐÃ LÀM ĐÚNG VIỆC NGAY LẦN ĐẦU.**
+> Bốn phiên song song đã đẩy lên `main` trong lúc làm việc này, chạm đúng những file vừa sửa.
+> Ba điều đáng ghi: **(a)** họ đã LẤY `motionPresets` của lượt trước và xây tiếp trên đó —
+> `ResourceDisplay` viết lại hoàn toàn và tự import `EASE`/`useEnterMotion`/`useSnapMotion`,
+> nên chỉ việc lấy bản của họ; **(b)** `AchievementToast.jsx` bị **XOÁ** ở `main` (thay bằng
+> `RewardToastHost`, và có hẳn một bài test đòi file cũ phải biến mất) — giữ bản sửa của tôi là
+> làm hỏng việc của họ, nên chấp nhận xoá; **(c)** `motionCoverage.test.js` chạy trên cây đã gộp
+> và báo đúng MỘT chỗ: `ResourceDisplay` nay 0 mà bảng vẫn ghi 2. Đó là **vế NGƯỢC LẠI** của cổng
+> — vế mà tôi suýt không viết — và nó vừa chứng minh mình có ích ngay lần chạy đầu tiên trên mã
+> của người khác. Số sau khi gộp: **52 trên 10 file**, quét 45 file `.jsx`.
+> Tài liệu gộp theo lối GIỮ CẢ HAI BÊN: không nhật ký của phiên nào bị mất.
+>
+> **CỐ Ý ĐỨNG NGOÀI:** `city/CityGrowthMoment.jsx` (13) là một **đoạn phim 3,2 giây** có ba luật
+> cứng riêng, và nó **không hề được dựng** khi bật Giảm chuyển động (`App.jsx` chặn từ đầu) — ép nó
+> vào `enter` là làm hỏng một cảnh diễn để đổi lấy một con số đẹp. `render3d/` vẫn nguyên (three.js).
+>
+> ---
+>
+> Cập nhật trước đó: **2026-08-27 (tối)** — **MỌI CHUYỂN ĐỘNG VỀ ĐÚNG BA NHỊP.**
 > Cập nhật lần cuối: **2026-08-27 (tối)** — **MỌI PHẦN THƯỞNG NÓI CHUNG MỘT THỨ TIẾNG, VÀ CHỈ
 > BỐN VIỆC CÒN ĐƯỢC CHẶN MÀN HÌNH** (ADR-060).
 >

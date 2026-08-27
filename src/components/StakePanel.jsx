@@ -9,6 +9,7 @@
 
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useCustomMotion, useEnterMotion, usePressMotion } from '../lib/motionPresets';
 import useGameStore from '../store/gameStore';
 import useSettingsStore from '../store/settingsStore';
 import {
@@ -19,6 +20,15 @@ import {
 } from '../engine/constants';
 
 export default function StakePanel() {
+  const enterMotion = useEnterMotion();
+  const pressMotion = usePressMotion();
+  // Phóng to khi DI CHUỘT không thuộc ba nhịp — đi qua cái gác ngoại lệ.
+  const hoverGrow = useCustomMotion({ whileHover: { scale: 1.05 } });
+  // NGOẠI LỆ (trang trí) — biểu tượng LẮC khi ván cược đang chạy, lặp vô hạn.
+  const lacMotion = useCustomMotion({
+    animate: { rotate: [0, -10, 10, -10, 0] },
+    transition: { duration: 0.5, repeat: Infinity, repeatDelay: 2 },
+  });
   const staking             = useGameStore((s) => s.staking);
   const totalEP             = useGameStore((s) => s.progress.totalEP);
   const focusMinutes        = useGameStore((s) => s.timerConfig.focusMinutes);
@@ -42,9 +52,7 @@ export default function StakePanel() {
   return (
     <AnimatePresence>
       <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: 10 }}
+        {...enterMotion}
         className={`mt-3 md:mt-4 w-full p-4 md:p-5 ${
           lightTheme
             ? isActive
@@ -67,8 +75,7 @@ export default function StakePanel() {
           <div className="flex items-start gap-3 flex-1 min-w-0">
             <motion.span
               className="mono flex h-9 w-9 items-center justify-center rounded-full text-[9px] font-semibold uppercase tracking-[0.14em] flex-shrink-0"
-              animate={isActive ? { rotate: [0, -10, 10, -10, 0] } : {}}
-              transition={{ duration: 0.5, repeat: isActive ? Infinity : 0, repeatDelay: 2 }}
+              {...(isActive ? lacMotion : {})}
               style={lightTheme
                 ? { border: '1px solid rgba(var(--accent-rgb),0.16)', background: 'rgba(var(--accent-rgb),0.10)', color: 'var(--accent2)' }
                 : { border: '1px solid rgba(var(--accent-rgb),0.18)', background: 'rgba(var(--accent-rgb),0.10)', color: 'var(--accent-light)' }}
@@ -112,8 +119,8 @@ export default function StakePanel() {
 
           {/* Toggle button */}
           <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
+            {...hoverGrow}
+            {...pressMotion}
             onClick={isActive ? deactivateOverclock : activateOverclock}
             disabled={!isActive && stakedAmount <= 0}
             style={{ borderRadius: 'var(--skin-radius-control, 14px)' }}

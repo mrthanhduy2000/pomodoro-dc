@@ -12,6 +12,34 @@
 
 ---
 
+## 2026-08-27 (tối) — Thanh tài nguyên: ba con số cộng một thanh tiến độ
+
+**Mục đích.** `ResourceDisplay` bày cùng lúc EP, chặng của kỷ, tài nguyên thô, tài nguyên tinh chế,
+RP và tinh thể — tất cả cùng một trọng lượng thị giác. Khi mọi thứ đều được nhấn thì không thứ nào
+được nhấn: mắt không có thứ tự đọc, nên thanh này thật ra không nói được điều gì.
+
+**Phạm vi.** Tầng giao diện, đúng một thẻ. Không đụng engine game, store, thành phố 3D hay sync.
+Không dữ liệu nào bị xoá — chỉ đổi chỗ hiển thị.
+
+- **`src/components/ResourceDisplay.jsx`** — viết lại. LUÔN hiện đúng ba thứ: thanh tiến độ kỷ (trọn
+  chiều ngang, nhãn `Kỷ N · chặng i/n`, phần chạy `var(--accent)` đặc trên nền `var(--line)`) ·
+  `chuỗi` · `tinh thể`. Tài nguyên thô, tinh chế, RP, tên giai đoạn và khoảng EP của chặng chuyển vào
+  panel mở bằng nút **Kho** (`aria-expanded`/`aria-controls`). Số tăng thì nháy `var(--good)` 400ms;
+  bật giảm chuyển động thì đổi màu tức thì, không tween.
+- **`src/components/resourceDisplayFormat.js`** (mới) — ba luật trình bày, mỗi luật một công thức:
+  `NUMBER_STYLE` (mọi con số `tabular-nums`, `Object.freeze`) · `labelSizeFor()` (nhãn nhỏ hơn số 40%,
+  màu `var(--muted)`) · `shouldFlashOnIncrease()` + `FLASH_MS`. Tách ra file `.js` thuần vì bộ chạy
+  test là `node --test` không biên dịch JSX — luật để trong `.jsx` là luật không test nào chạm tới.
+- **`src/components/resourceDisplay.test.js`** (mới, 11 bài) — nửa thuần khoá ba luật trên; nửa đọc-mã
+  khoá bố cục: trần BA con số ở vùng luôn hiện · đúng một thanh tiến độ · thanh dùng `--accent`/`--line`
+  và `w-full` · tài nguyên thô/tinh chế/RP chỉ nằm sau cổng Kho (và vẫn PHẢI còn ở đó) · nháy đúng
+  `--good` và tôn trọng giảm chuyển động · không chỗ nào tự khai `tabular-nums`. Chín phép thử ngược
+  đều đỏ đúng bài dự kiến, khôi phục thì xanh lại.
+
+**Tương thích.** Không đổi store, không đổi dữ liệu lưu, không migration. Thuần trình bày.
+
+---
+
 ## 2026-08-27 (chiều) — Nút hành động nghe theo skin, và có cảm giác bấm lún xuống
 
 **Mục đích.** `ActionButton` là nút chuẩn của app nhưng nó khai hai bảng màu chốt cứng rẽ theo

@@ -1,3 +1,47 @@
+> Cập nhật lần cuối: **2026-08-27 (tối)** — **THANH TÀI NGUYÊN RÚT TỪ "BÀY HẾT" XUỐNG "BA CON SỐ
+> CỘNG MỘT THANH".** Đàm: bản cũ bày cùng lúc EP · chặng · tài nguyên thô · tinh chế · RP · tinh thể,
+> **tất cả cùng một trọng lượng thị giác**, nên không thứ nào nổi lên. Nay LUÔN hiện đúng ba thứ —
+> thanh tiến độ kỷ (trọn chiều ngang, nhãn `Kỷ N · chặng i/n`, chạy `var(--accent)` trên nền
+> `var(--line)`) · `chuỗi` · `tinh thể` — mọi thứ còn lại nằm sau nút **Kho**. ⚠️ **ĐỔI CHỖ, KHÔNG
+> XOÁ**: không một con số nào biến mất, bấm "Kho" là thấy đầy đủ y như trước (kèm cả tên giai đoạn
+> và khoảng EP của chặng, hai thứ trước đây nằm ở thân thẻ).
+>
+> **Ba luật trình bày, mỗi luật MỘT công thức, đặt ở `resourceDisplayFormat.js`** — file `.js` thuần
+> **cố ý**, vì `node --test` không biên dịch JSX nên luật nằm trong `.jsx` là luật không bài test nào
+> chạm tới được. `NUMBER_STYLE` (mọi con số `tabular-nums`, đông cứng bằng `Object.freeze`) ·
+> `labelSizeFor()` (nhãn nhỏ hơn số 40% + màu `var(--muted)` — đây mới là thứ khiến con số được đọc
+> trước) · `shouldFlashOnIncrease()` (số TĂNG thì nháy `var(--good)` 400ms).
+>
+> **⚠️ BỐN CÁI BẪY, CÁI NÀO CŨNG TỰ CẮN TRONG PHIÊN NÀY:**
+> **(1) `setState` thẳng trong thân `useEffect` → lint bắt (`react-hooks/set-state-in-effect`).** Nó
+> đẻ một lượt dựng THỪA và làm cú nháy trễ đúng một khung hình — tức cơ chế sinh ra để chỉ ra "số vừa
+> đổi" lại là thứ chỉ ra muộn. Vá bằng khuôn "điều chỉnh state khi prop đổi" của React: so cũ↔mới
+> **trong lúc dựng**, effect chỉ còn giữ đồng hồ 400ms.
+> **(2) Cờ `true/false` KHÔNG re-arm được đồng hồ.** Số tăng lần hai lúc đang nháy dở thì
+> `setFlashing(true)` là phép gán TRÙNG GIÁ TRỊ ⇒ React bỏ qua ⇒ effect không chạy lại ⇒ 400ms vẫn
+> tính từ lần tăng ĐẦU. Nay là một **thẻ đếm** (`token => token + 1`), mỗi lần tăng bump một nấc.
+> **(3) Bài test đọc-mã bản đầu ĐỎ trên mã hoàn toàn đúng** — nó cắt vùng "luôn hiện" bằng
+> `code.slice(0, cổngKho)`, tức quét luôn phần ĐỊNH NGHĨA `TopStat`/`KhoRow` (bên trong có
+> `<FlashNumber>`) và khối `useGameStore` khai `researchRP`. **Định nghĩa ≠ lời gọi; khai báo biến ≠
+> dựng ra màn hình** — cùng họ bài học `/tênHàm\(/` đã ghi ở `CLAUDE.md`. Nay chặn CẢ HAI ĐẦU (từ
+> `return (` của `ResourceDisplay` tới cổng Kho) kèm gác chống-tập-rỗng.
+> **(4) Một assert dạng HOẶC là cái phễu, không phải hàng rào.** Bài canh "thẻ đếm" bản đầu viết
+> `(?:token\) => token \+ 1|0)`; phá vế bump thì vế `setFlashToken(0)` vẫn khớp và bài test **vẫn
+> xanh**. Nay hỏi TỪNG vế một. Phát hiện được **chỉ nhờ chạy phép thử ngược** — không có nó thì bài
+> test đứng đó như một lời bảo chứng rỗng.
+>
+> **⚠️ VÀ MỘT LỖI CHỈ CON MẮT BẮT ĐƯỢC, KHÔNG CỔNG NÀO BẮT.** Bản đầu cho "Khoảng EP của chặng" vào
+> `KhoRow` như một con số bình thường. Test xanh, lint sạch, build xanh — nhưng ảnh chụp cho thấy nó
+> chiếm cỡ chữ của một con số đầu bảng, át cả panel, **còn xén mất nhãn của chính nó** (`KHOẢNG EP
+> CỦA C…`). Tệ hơn: nó sẽ nháy `var(--good)` mỗi lần Đàm sang kỷ khác — một lời khen cho việc chẳng
+> ai làm. **Khoảng EP là một RANH GIỚI CỐ ĐỊNH, không phải một số dư đếm được**, nên nay nó là một
+> dòng chú thích nhỏ màu `--muted`, không đi qua `FlashNumber`.
+>
+> **Nghiệm thu bằng ẢNH THẬT** (`scripts/shot.mjs`, sau `npm run build`): máy bàn 1280 + điện thoại
+> 390 THẬT (`scrollWidth=390 · không tràn`) + theme tối, cả hai trạng thái đóng/mở Kho, và một lượt
+> có `--fixture` để thấy thanh tiến độ chạy thật (`1.320 / 1.867 EP`, kỷ 8 chặng 3/3).
+> Cổng: **1174 bài · 0 đỏ · `# skipped 1`** · lint sạch · build 3,56s.
+
 > Cập nhật lần cuối: **2026-08-27 (chiều)** — **`ActionButton` NGHE THEO SKIN + CÓ CẢM GIÁC BẤM LÚN.**
 > Ba bệnh đã chữa: `themeMap` khai màu cứng theo `lightTheme` (chỉ đúng **2 trong 10** tổ hợp skin ×
 > chế độ) · bóng MỜ nhiều lớp làm nút trông như thẻ giấy · `whileHover scale 1.03` phóng to cả khối

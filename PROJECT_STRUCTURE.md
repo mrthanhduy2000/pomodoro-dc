@@ -87,6 +87,13 @@
 │   │   │                     #   Hàm định dạng thuần đã tách ra statsFormatters.js cạnh nó.
 │   │   ├── PomodoroEngine.jsx # Khung chính chứa đồng hồ Pomodoro/Stopwatch (UI, logic timer
 │   │   │                     #   thật nằm ở src/hooks/useTimer.js)
+│   │   ├── ResourceDisplay.jsx # Thẻ tài nguyên: LUÔN ba thứ (thanh tiến độ kỷ · chuỗi · tinh thể),
+│   │   │                     #   mọi thứ còn lại nằm sau nút "Kho". Trần BA con số là một LỜI HỨA
+│   │   │                     #   có test canh (resourceDisplay.test.js) — đừng thêm số thứ tư.
+│   │   ├── resourceDisplayFormat.js # Ba luật trình bày số của thẻ trên (tabular-nums · nhãn nhỏ
+│   │   │                     #   hơn số 40% · nháy --good khi tăng). File .js thuần CỐ Ý: node --test
+│   │   │                     #   không biên dịch JSX, nên luật để trong .jsx là luật không test nào
+│   │   │                     #   chạm tới được. Cùng quy ước với statsFormatters.js ở trên.
 │   │   ├── sessionGoalState.js # BA trạng thái ô "Mục tiêu phiên" (empty/partial/ready) — thuần.
 │   │   │                     #   Tách ra vì hai trạng thái là KHÔNG đủ: ô chưa gõ gì mà bị dán
 │   │   │                     #   màu cảnh báo thì app thành ra mắng người dùng ngay lúc mở lên.

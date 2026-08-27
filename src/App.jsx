@@ -19,7 +19,7 @@ import useGameStore from './store/gameStore';
 import useInventoryAttention from './hooks/useInventoryAttention';
 import useSettingsStore from './store/settingsStore';
 import { ERA_METADATA, ERA_THRESHOLDS } from './engine/constants';
-import { getLevelProgress, isCancelledHistoryEntry } from './engine/gameMath';
+import { countSessionsOnDay, getLevelProgress, sumFocusMinutesOnDay } from './engine/gameMath';
 import {
   formatVietnamDate,
   formatVietnamTime,
@@ -1565,16 +1565,11 @@ export default function App() {
   const weekdayLabel = getWeekdayLabel();
   const greeting = getGreeting(getVietnamHour());
   const todayKey = localDateStr();
-  const sessionsCompletedToday = dailyTracking?.date === todayKey
-    ? (dailyTracking.sessionsCompleted ?? 0)
-    : 0;
-  const focusMinutesToday = history.reduce(
-    (sum, entry) => {
-      if (isCancelledHistoryEntry(entry) || entry?.completed === false) return sum;
-      return localDateStr(entry.timestamp) === todayKey ? sum + (entry.minutes ?? 0) : sum;
-    },
-    0,
-  );
+  // ⚠️ Hai con số này dùng chung công thức với vòng MỤC TIÊU NGÀY quanh đồng hồ
+  // (`PomodoroEngine.jsx`). Đừng tính lại tại chỗ: hai chỗ cùng nói "hôm nay đi được bao nhiêu"
+  // mà lệch nhau thì màn hình tự mâu thuẫn với chính nó, và không có gì đỏ lên.
+  const sessionsCompletedToday = countSessionsOnDay(dailyTracking, todayKey);
+  const focusMinutesToday = sumFocusMinutesOnDay(history, todayKey);
   const focusHoursToday = formatDurationMinutes(focusMinutesToday);
   const hasFocusSessionInProgress = timerSessionRunning && !isOnBreak;
   const isFocusSessionPaused = hasFocusSessionInProgress && Boolean(timerSessionPausedAt);

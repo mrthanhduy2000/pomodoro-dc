@@ -12,6 +12,43 @@
 
 ---
 
+## 2026-08-27 (tối) — Đồng hồ Pomodoro trả lời hai câu hỏi thay vì một
+
+**Mục đích.** Nhìn một cái vào đồng hồ phải biết được CẢ HAI: còn bao nhiêu phút của phiên này, và
+hôm nay đã đi được mấy phần mục tiêu. Trước đây nó chỉ trả lời câu thứ nhất, bằng một vòng mảnh
+7px mà màu thì chốt cứng nên không đổi theo skin.
+
+**Phạm vi.** Màn Tập trung. Không đụng thành phố 3D, không thêm nguồn sáng.
+
+- **`src/components/PomodoroEngine.jsx`** — vòng chính nét 7 → **14**, bo tròn hai đầu, nền
+  `--timer-track`; màu theo trạng thái đọc token (tập trung `--accent`, nghỉ ngắn **và** nghỉ dài
+  `--good`). Thêm **vòng thứ hai** mảnh 4px cách 8px nằm ngoài, màu `--warn`, thể hiện tiến độ mục
+  tiêu ngày; chưa đặt mục tiêu thì không vẽ. Con số ở giữa +20% cỡ (cả 12 mốc đáp ứng), weight 800,
+  `tabular-nums`; thêm dòng 13px `--muted` "Phiên 2/5 hôm nay" ngay dưới.
+- **`src/engine/gameMath.js`** — thêm `countSessionsOnDay`, `sumFocusMinutesOnDay`,
+  `getDailyGoalProgress` làm **nguồn sự thật duy nhất** cho "tiến độ hôm nay". `App.jsx` (và qua đó
+  thẻ "Hôm nay" ở `FocusRail`) nay dùng chung công thức với vòng quanh đồng hồ, nên hai con số cạnh
+  nhau không thể nói hai điều khác nhau.
+- **`src/components/timerRing.test.js`** (mới, 7 bài) + 5 bài thuần trong `gameMath.test.js` — khoá
+  hình học hai vòng, màu đọc token, bo tròn đầu vòng, không vẽ vòng rỗng, và việc vòng kẹp 100%
+  trong khi dòng chữ nói thật con số đã vượt. Cả 10 phép thử ngược đều đỏ đúng chỗ.
+- **`scripts/shot.mjs`** — fixture có 2 phiên của hôm nay (seed vào `history`, vì store dựng lại bộ
+  đếm ngày từ history), nếu không vòng mục tiêu luôn vẽ 0% và vô hình trong mọi ảnh chụp.
+
+**Ảnh hưởng.** Đồng hồ to hơn ~9% (khung SVG nới để ôm vòng thứ hai) và con số to hơn 20%. Đã đo:
+không tràn ở cả 1280px lẫn 390px, kể cả chuỗi dài nhất "180:00".
+
+**Tương thích.** Không có migration. Không đổi dữ liệu lưu.
+
+**Đã biết, chưa xử lý.** Con số đồng hồ vẫn dùng `.serif` chốt cứng `'Source Serif 4'` thay vì
+`var(--skin-font-display)`, nên ở skin Sân Chơi (sans) nó vẫn là serif — cùng họ bệnh với
+`ActionButton` đã chữa cùng ngày, nhưng đổi font là một quyết định mỹ thuật nên để lại.
+
+**Cổng.** `npm test` 1.175 bài · 1.174 pass · 0 fail · 1 skipped · `test:cross` 3/3 · lint sạch ·
+build xanh.
+
+---
+
 ## 2026-08-27 (chiều) — Nút hành động nghe theo skin, và có cảm giác bấm lún xuống
 
 **Mục đích.** `ActionButton` là nút chuẩn của app nhưng nó khai hai bảng màu chốt cứng rẽ theo

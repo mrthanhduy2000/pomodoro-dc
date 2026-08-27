@@ -5,8 +5,8 @@ import useGameStore from '../store/gameStore';
 import { pushNow } from '../lib/syncService';
 import useSettingsStore from '../store/settingsStore';
 import { useTimer, formatTime, TIMER_MODES, TIMER_STATES } from '../hooks/useTimer';
-import { getComboDecayMs, getMultiplierTier, suggestSessionLength, clampRelicDisasterReduction } from '../engine/gameMath';
-import { getVietnamHour } from '../engine/time';
+import { getComboDecayMs, getDailyGoalProgress, getMultiplierTier, suggestSessionLength, clampRelicDisasterReduction } from '../engine/gameMath';
+import { getVietnamHour, localDateStr } from '../engine/time';
 import { FLOWTIME_BREAK_RULES, QUICK_FOCUS_PRESETS, getBreakPlan } from '../engine/breaks';
 import {
   DEFAULT_DEEP_FOCUS_THRESHOLD,
@@ -34,9 +34,19 @@ const SESSION_EXTENSION_SECONDS = 60;
 const SESSION_EXTENSION_WINDOW_SECONDS = 5 * 60;
 const SESSION_EXTENSION_IDLE_GRACE_MS = 30 * 1000;
 const RING_RADIUS = 128;
-const RING_STROKE = 7;
+const RING_STROKE = 14;
 const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
-const SVG_SIZE = (RING_RADIUS + RING_STROKE) * 2 + 4;
+// ── Vòng thứ hai: MỤC TIÊU NGÀY ──────────────────────────────────────────────
+// Mảnh hơn hẳn vòng chính (4 so với 14) và nằm NGOÀI nó, cách một khoảng trống rõ — để mắt đọc ra
+// ngay đâu là "phiên này" và đâu là "cả ngày", không phải đoán. Bán kính suy ra từ hình học chứ
+// KHÔNG viết cứng: mép ngoài vòng chính + khoảng trống + nửa nét vòng ngoài. Đổi độ dày vòng chính
+// thì vòng ngoài tự dịch theo, và `SVG_SIZE` bên dưới cũng tự nới — không có con số nào phải sửa tay.
+const GOAL_RING_GAP = 8;
+const GOAL_RING_STROKE = 4;
+const GOAL_RING_RADIUS = RING_RADIUS + RING_STROKE / 2 + GOAL_RING_GAP + GOAL_RING_STROKE / 2;
+const GOAL_RING_CIRCUMFERENCE = 2 * Math.PI * GOAL_RING_RADIUS;
+// Khung SVG phải ôm được VÒNG NGOÀI CÙNG, nay là vòng mục tiêu chứ không còn là vòng chính.
+const SVG_SIZE = (GOAL_RING_RADIUS + GOAL_RING_STROKE / 2) * 2 + 4;
 
 const RING_COLORS = {
   [TIMER_STATES.IDLE]: 'var(--ink)',
@@ -149,6 +159,7 @@ export default function PomodoroEngine({
   const breakSecsLeft = useGameStore((s) => s.ui.breakSecondsLeft);
   const breakTotalSeconds = useGameStore((s) => s.ui.breakTotalSeconds);
   const breakIsLong = useGameStore((s) => s.ui.breakIsLong);
+  const dailyTracking = useGameStore((s) => s.dailyTracking);
 
   const autoStartNext = useSettingsStore((s) => s.autoStartNext);
   const disableBreak = useSettingsStore((s) => s.disableBreak);
@@ -157,6 +168,9 @@ export default function PomodoroEngine({
   const longBreakDuration = useSettingsStore((s) => s.longBreakDuration);
   const longBreakAfterN = useSettingsStore((s) => s.longBreakAfterN);
   const setBreakProfile = useSettingsStore((s) => s.setBreakProfile);
+  const dailyGoalType = useSettingsStore((s) => s.dailyGoalType);
+  const dailyGoalSessions = useSettingsStore((s) => s.dailyGoalSessions);
+  const dailyGoalMinutes = useSettingsStore((s) => s.dailyGoalMinutes);
   const uiTheme = useSettingsStore((s) => s.uiTheme);
   const lightTheme = uiTheme === 'light';
   const paperCardStyle = lightTheme
@@ -548,14 +562,28 @@ export default function PomodoroEngine({
   const useMinimalFocusStage = fullScreenMode || (isActive && !isBreakMode);
   const showComboBadge = !useMinimalFocusStage && !isBreakMode && comboCount >= 2;
   const showMultiplierBadge = !useMinimalFocusStage && !isBreakMode;
+  // Cỡ chữ đã tăng ~20% so với bản trước (2026-08-27) để con số thành trung tâm thị giác thật sự.
+  // ⚠️ Mọi mốc đáp ứng đều phải nhân CÙNG hệ số — nới một mốc rồi bỏ quên mốc kia thì chữ nhảy cỡ
+  // đúng lúc xoay ngang máy. Bảng cũ → mới: 4.8→5.75 · 5.6→6.7 · 6.4→7.7 · 7.05→8.45 ·
+  // 4.55→5.45 · 4.9→5.9 · 5.2→6.25 · 5.55→6.65 · 3.95→4.75 · 4.65→5.6 · 5.2→6.25 ·
+  // text-6xl (3.75rem) → 4.5rem.
   const timerValueLayoutClass = useImmersiveHeroLayout
     ? fullScreenMode
       ? isDesktopFullScreen
-        ? 'block w-[82%] text-center text-[4.8rem] leading-[0.81] tracking-[-0.065em] md:text-[5.6rem] xl:text-[6.4rem] 2xl:text-[7.05rem]'
-        : 'block w-[84%] text-center text-[4.55rem] leading-[0.8] tracking-[-0.068em] sm:text-[4.9rem] md:text-[5.2rem] xl:text-[5.55rem]'
-      : 'block max-w-[82%] text-center text-[3.95rem] leading-[0.86] tracking-[-0.06em] md:text-[4.65rem] xl:text-[5.2rem]'
-    : 'text-6xl tracking-widest';
-  const timerValueFontClass = lightTheme ? 'serif font-medium' : 'font-mono font-bold';
+        ? 'block w-[82%] text-center text-[5.75rem] leading-[0.81] tracking-[-0.065em] md:text-[6.7rem] xl:text-[7.7rem] 2xl:text-[8.45rem]'
+        : 'block w-[84%] text-center text-[5.45rem] leading-[0.8] tracking-[-0.068em] sm:text-[5.9rem] md:text-[6.25rem] xl:text-[6.65rem]'
+      : 'block max-w-[82%] text-center text-[4.75rem] leading-[0.86] tracking-[-0.06em] md:text-[5.6rem] xl:text-[6.25rem]'
+    // ⚠️ `tracking-wide` chứ KHÔNG còn `tracking-widest`, và đây là hệ quả ĐO ĐƯỢC của việc nâng
+    // cỡ chữ 20%: nhánh này là nhánh DUY NHẤT không có ràng buộc bề rộng, mà ở khung 390px lòng
+    // đĩa chỉ rộng 238px. Đo thật: "180:00" (bấm giờ chạy quá 100 phút — `clampFocusMinutes` cho
+    // tới 180) ở `widest` (0,1em) rộng **247px ⇒ TRÀN 9px** ra đè lên vòng; `wider` 226px; `wide`
+    // 215px ⇒ dư 23px. Bản trước cỡ chữ nhỏ hơn nên `widest` vẫn vừa — cái tràn này do chính phép
+    // nâng cỡ sinh ra, không phải có sẵn.
+    : 'text-[4.5rem] tracking-wide';
+  // ⚠️ MỘT lớp độ đậm duy nhất. `.serif`/`.mono` chỉ khai font-family (kiểm ở `index.css`), nên
+  // `font-extrabold` không phải tranh với ai — chồng thêm `font-medium`/`font-bold` như bản cũ là
+  // để hai lớp cùng khai `font-weight` rồi phó mặc thứ tự bảng kiểu Tailwind quyết ai thắng.
+  const timerValueFontClass = `${lightTheme ? 'serif' : 'font-mono'} font-extrabold`;
   const timerValueToneClass = isBreakMode
     ? breakIsLong
       ? 'text-blue-300'
@@ -761,14 +789,34 @@ export default function PomodoroEngine({
     : 0;
   const displayRingSeconds = isBreakMode ? breakSecsLeft : visibleDisplaySeconds;
   const displayProgressPct = isBreakMode ? breakProgressPct : progressPct;
-  const breakRingColor = lightTheme
-    ? (breakIsLong ? 'var(--accent2)' : 'var(--accent)')
-    : (breakIsLong ? '#60a5fa' : '#38bdf8');
+  // Nghỉ NGẮN hay nghỉ DÀI đều là "đang nghỉ" ⇒ cùng một màu, và là màu tích cực `--good`.
+  // ⚠️ Bản cũ rẽ theo `lightTheme` rồi chốt cứng `#60a5fa`/`#38bdf8` cho chế độ tối — hai mã màu
+  // xanh lam ấy không thuộc bảng màu nào của 5 skin hiện tại, nên vòng đồng hồ là thứ DUY NHẤT
+  // trên màn hình không đổi theo skin. Nay đọc token, đúng ở cả 10 tổ hợp skin × chế độ.
+  const breakRingColor = 'var(--good)';
   const strokeDashoffset = RING_CIRCUMFERENCE - (displayProgressPct / 100) * RING_CIRCUMFERENCE;
+  // ⚠️ Dùng CHUNG công thức với thẻ "Hôm nay" ở `FocusRail` (qua `App.jsx`) — xem khối chú thích
+  // ở `getDailyGoalProgress` trong `gameMath.js`. Tính lại tại chỗ là cách chắc chắn nhất để hai
+  // con số cạnh nhau trên cùng màn hình nói hai điều khác nhau.
+  const dailyGoal = getDailyGoalProgress({
+    dailyTracking,
+    history: sessionHistory,
+    todayKey: localDateStr(),
+    dailyGoalType,
+    dailyGoalSessions,
+    dailyGoalMinutes,
+  });
+  // Vòng tròn thì PHẢI kẹp ở 100% (vẽ quá một vòng là vẽ đè lên chính nó, đọc ra thành "chưa xong"),
+  // còn dòng chữ bên dưới vẫn nói thật con số đã vượt.
+  const goalRingDashoffset = GOAL_RING_CIRCUMFERENCE
+    - (Math.min(100, Math.max(0, dailyGoal.pct)) / 100) * GOAL_RING_CIRCUMFERENCE;
   const baseRingColor = isBreakMode
     ? breakRingColor
     : (RING_COLORS[timerState] ?? RING_COLORS[TIMER_STATES.IDLE]);
   const ringColor = isBreakMode ? breakRingColor : baseRingColor;
+  // Quầng sáng quanh vòng: cùng màu vòng, pha loãng. Nhạt hơn ở theme sáng vì nền sáng thì một
+  // quầng đậm đọc ra thành vệt bẩn, còn nền tối thì nó là thứ làm vòng "phát sáng".
+  const ringGlowColor = `color-mix(in srgb, ${ringColor} ${lightTheme ? 22 : 45}%, transparent)`;
   const shouldPrioritizeSessionReview = immersiveMode && showSessionReview;
   const sessionReviewCard = showSessionReview ? (
     <SessionReviewCard
@@ -1179,15 +1227,15 @@ export default function PomodoroEngine({
             className="transform -rotate-90"
             aria-hidden="true"
             style={{
-              filter: isBreakMode
-                ? lightTheme
-                  ? 'none'
-                  : `drop-shadow(0 0 12px ${ringColor}55)`
-                : timerState === TIMER_STATES.RUNNING
-                  ? lightTheme
-                    ? 'none'
-                    : `drop-shadow(0 0 12px ${ringColor}60)`
-                  : 'none',
+              // ⚠️ Bản cũ ghép chuỗi `${ringColor}55` để lấy màu mờ. Cách ấy CHỈ hợp lệ khi
+              // `ringColor` là một mã hex; từ lúc màu vòng đọc token nó cho ra `var(--accent)55`
+              // — một giá trị CSS vô nghĩa, nên `drop-shadow` im lặng không vẽ gì. Thật ra nó đã
+              // hỏng sẵn ở theme sáng từ trước (ở đó `RING_COLORS` vốn đã là token); chỉ nhánh tối
+              // còn chạy nhờ hai mã hex cứng, mà hai mã ấy vừa bị gỡ. `color-mix` giữ được `var()`
+              // nên quầng sáng đi theo skin — dự án đã dùng cách này ở `cityBackdropScrim.js`.
+              filter: isBreakMode || timerState === TIMER_STATES.RUNNING
+                ? `drop-shadow(0 0 12px ${ringGlowColor})`
+                : 'none',
               transition: 'filter 0.4s ease',
             }}
           >
@@ -1221,6 +1269,22 @@ export default function PomodoroEngine({
                 }}
               />
             )}
+            {/* Vòng NGOÀI = tiến độ MỤC TIÊU NGÀY. Chưa đặt mục tiêu thì không vẽ gì cả — một
+                vòng rỗng vẫn là một vòng, và nó sẽ bị đọc thành "hôm nay chưa làm được gì". */}
+            {dailyGoal.hasGoal && (
+              <motion.circle
+                cx={SVG_SIZE / 2}
+                cy={SVG_SIZE / 2}
+                r={GOAL_RING_RADIUS}
+                fill="none"
+                style={{ stroke: 'var(--warn)' }}
+                strokeWidth={GOAL_RING_STROKE}
+                strokeLinecap="round"
+                strokeDasharray={GOAL_RING_CIRCUMFERENCE}
+                animate={{ strokeDashoffset: goalRingDashoffset }}
+                transition={{ duration: 0.8, ease: 'easeOut' }}
+              />
+            )}
           </svg>
           </motion.div>
 
@@ -1247,6 +1311,18 @@ export default function PomodoroEngine({
             >
               {formatTime(displayRingSeconds)}
             </motion.span>
+            {/* Câu trả lời thứ hai của đồng hồ: hôm nay đã đi được mấy phần mục tiêu. Đọc CÙNG
+                nguồn số liệu với vòng ngoài, nên hai thứ không thể nói hai điều khác nhau — và
+                cùng nguồn với thẻ "Hôm nay" ở cột bên phải.
+                ⚠️ Ở đây KHÔNG kẹp 100%: vượt mục tiêu thì phải nói thật là "Phiên 6/4", trong khi
+                vòng tròn thì buộc phải kẹp (vẽ quá một vòng là vẽ đè lên chính nó). */}
+            {dailyGoal.hasGoal && (
+              <span className="mt-1.5 text-[13px] leading-none" style={{ color: 'var(--muted)' }}>
+                {dailyGoal.useMinutes
+                  ? `${dailyGoal.currentValue}/${dailyGoal.goalValue} phút hôm nay`
+                  : `Phiên ${dailyGoal.currentValue}/${dailyGoal.goalValue} hôm nay`}
+              </span>
+            )}
             {!isBreakMode && isStopwatchMode && (
               <>
                 <span className={`mt-0.5 text-xs ${lightTheme ? 'text-[var(--accent)]' : 'text-[var(--accent-light)]'}`}>

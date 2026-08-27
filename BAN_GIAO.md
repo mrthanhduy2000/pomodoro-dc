@@ -1,3 +1,64 @@
+> Cập nhật lần cuối: **2026-08-27 (tối)** — **ĐỒNG HỒ TRẢ LỜI HAI CÂU HỎI THAY VÌ MỘT.**
+> Vòng chính dày 14px (từ 7), bo tròn hai đầu, màu theo token — tập trung `--accent`, nghỉ (ngắn
+> LẪN dài) `--good`, nền `--timer-track`. Thêm **vòng thứ hai** mảnh 4px nằm ngoài, cách đúng 8px,
+> màu `--warn`: tiến độ MỤC TIÊU NGÀY. Con số ở giữa to thêm 20%, weight 800, `tabular-nums`; ngay
+> dưới là dòng 13px `--muted` ghi "Phiên 2/5 hôm nay".
+>
+> **⚠️ MỘT NGUỒN SỰ THẬT CHO "HÔM NAY", VÌ HAI CON SỐ NÀY NẰM CÁCH NHAU VÀI PHÂN.** Vòng mục tiêu
+> quanh đồng hồ và thẻ "Hôm nay" ở cột phải nói về cùng một thứ. Chép công thức sang là chắc chắn
+> có ngày chúng lệch — và triệu chứng là màn hình tự mâu thuẫn với chính nó, không có gì đỏ lên.
+> Đã tách `countSessionsOnDay` · `sumFocusMinutesOnDay` · `getDailyGoalProgress` sang `gameMath.js`
+> (thuần, `todayKey` là tham số BẮT BUỘC nên module không đọc đồng hồ máy), `App.jsx` nối vào đó.
+> Trước đây chỉ có MỘT bản ở `App.jsx` — nay vẫn một bản, nhưng hai nơi dùng.
+>
+> **⚠️ HAI QUẢ MÌN TỰ TAY GÂY RA, ĐO MỚI THẤY:**
+> **(1) Nâng cỡ chữ 20% làm số 3 chữ số TRÀN khỏi lòng đĩa ở khung 390px.** Nhánh cỡ chữ không
+> immersive là nhánh DUY NHẤT không có ràng buộc bề rộng. Đo thật: "180:00" (bấm giờ chạy quá 100
+> phút — `clampFocusMinutes` cho tới 180) ở `tracking-widest` rộng **247px trên lòng đĩa 238px ⇒
+> tràn 9px** đè lên vòng. Bản cũ cỡ nhỏ hơn nên vẫn vừa (dư 32px) ⇒ **do chính phép nâng cỡ sinh
+> ra**. Vá bằng `tracking-wide` (đo: 215px, dư 23px), giữ nguyên mức tăng 20%. Cả 12 mốc đáp ứng
+> đều nhân đúng ×1,196–1,204.
+> **(2) `drop-shadow(0 0 12px ${ringColor}55)` — ghép chuỗi để lấy màu mờ — chỉ hợp lệ khi màu là
+> mã hex.** Từ lúc màu vòng đọc token nó cho ra `var(--accent)55`, một giá trị CSS vô nghĩa nên
+> quầng sáng im lặng biến mất. Thật ra nó **đã hỏng sẵn ở theme sáng từ trước** (ở đó `RING_COLORS`
+> vốn đã là token); chỉ nhánh tối còn chạy nhờ hai mã hex cứng `#60a5fa`/`#38bdf8` — mà hai mã ấy
+> chính là thứ vừa bị gỡ vì không thuộc bảng màu của skin nào. Vá bằng `color-mix` (giữ `var()`
+> sống, dự án đã dùng ở `cityBackdropScrim.js`).
+>
+> **⚠️ CÔNG CỤ ĐO NÓI DỐI, LẦN NÀY VÌ MỘT LÝ DO MỚI: `transition-all`.** Phép đo bề rộng chữ dựng
+> một bản sao của thẻ số rồi đổi `letter-spacing` và đọc ngay — bốn giá trị khác nhau ra **cùng một
+> con số**. Bản sao thừa hưởng `transition-all duration-300`, mà `letter-spacing` là thuộc tính
+> CHUYỂN ĐỘNG ĐƯỢC, nên nó chưa kịp đổi lúc đọc; `textContent` thì không chuyển động nên chuỗi khác
+> nhau vẫn ra số khác nhau — đủ để trông như phép đo đang chạy. ⇒ **Mọi phép đo dựng bản sao để đo
+> phải đặt `transition: none` trước.**
+>
+> **Không đo được trạng thái "đang chạy"/"đang nghỉ" bằng trình duyệt** — luật số 4 cấm start phiên
+> trên dev (dùng chung dòng Supabase với bản thật). Nên màu hai trạng thái ấy khoá bằng test đọc-mã
+> (`timerRing.test.js`, 7 bài) cộng 5 bài thuần cho helper mới. **Cả 10 phép thử ngược đều đỏ đúng
+> chỗ** — sau khi vá một bài **MÙ**: phép so `khoảngTrống === GAP` là một **hằng đẳng thức** vì
+> `GOAL_RING_RADIUS` suy ra TỪ `GAP`, nên hạ `GAP` về 0 vẫn xanh (đúng bài học ADR-048 "bất biến
+> đúng theo cấu tạo thì không phải một cái gác"). Đã thêm sàn QUAN HỆ `GAP >= GOAL_RING_STROKE`.
+>
+> **Fixture ảnh chụp đã sửa để soi được chính tính năng này.** `shot.mjs` không có phiên nào của
+> hôm nay ⇒ vòng mục tiêu luôn vẽ 0% ⇒ VÔ HÌNH trong mọi ảnh. Phải seed vào `history` chứ không vào
+> `dailyTracking` (store dựng lại bộ đếm từ history mỗi lần nạp — seed thẳng bị ghi đè về 0 trong im
+> lặng, đã đo); và lùi 10/20 PHÚT chứ không vài giờ, vì chạy gần nửa đêm giờ VN thì mốc lùi 3 giờ
+> rơi sang hôm qua và fixture lặng lẽ còn 1 phiên (cũng đã đo). Khoá ngày nhập THẲNG `localDateStr`
+> từ mã sản phẩm, không viết lại phép đổi múi giờ.
+>
+> **Nghiệm thu bằng trình duyệt thật**: track `#e3e0d9` (`--timer-track`) · vòng chính r=128 nét 14
+> `round` · vòng mục tiêu r=145 nét 4 `#e0921f` (`--warn`), vẽ `911,1 − 546,6 = 364,5` = **đúng 40%**
+> khớp 2/5 · số 72px weight **800** `font-variant-numeric: tabular-nums` · "25:00" và "99:59" **cùng
+> 177px** ⇒ đếm lùi không nhảy ngang · dòng phụ 13px `#6b675f` (`--muted`).
+>
+> **CÒN LẠI, KHÔNG SỬA VÌ NGOÀI PHẠM VI**: con số đồng hồ vẫn dùng `lightTheme ? 'serif' : 'font-mono'`
+> và `.serif` chốt cứng `'Source Serif 4'` — tức ở skin Sân Chơi (sans) con số vẫn là serif. Cùng họ
+> bệnh với `ActionButton` đã chữa hôm nay; đổi sang `var(--skin-font-display)` là một dòng, nhưng đó
+> là một quyết định mỹ thuật nên để Đàm quyết.
+>
+> Cổng: `npm test` **1.175 bài · 1.174 pass · 0 fail · 1 skipped** (+12 bài mới) · `test:cross` 3/3
+> · lint sạch · build xanh.
+
 > Cập nhật lần cuối: **2026-08-27 (chiều)** — **`ActionButton` NGHE THEO SKIN + CÓ CẢM GIÁC BẤM LÚN.**
 > Ba bệnh đã chữa: `themeMap` khai màu cứng theo `lightTheme` (chỉ đúng **2 trong 10** tổ hợp skin ×
 > chế độ) · bóng MỜ nhiều lớp làm nút trông như thẻ giấy · `whileHover scale 1.03` phóng to cả khối

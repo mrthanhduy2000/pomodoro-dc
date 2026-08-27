@@ -80,6 +80,11 @@ import { extname, join, resolve } from 'node:path';
 import { spawn } from 'node:child_process';
 
 import { DEFAULT_UI_SKIN } from '../src/store/uiSkins.js';
+// ⚠️ Nhập THẲNG `localDateStr` từ mã sản phẩm, không viết lại phép đổi sang giờ Việt Nam ở đây:
+// khoá ngày của fixture phải khớp TỪNG KÝ TỰ với khoá mà app tính ra, nếu không `dailyTracking`
+// bị coi là của hôm khác và mọi ảnh chụp lại hiện "0 phiên hôm nay". (`time.js` không import gì
+// nên nạp được bằng node trần, không cần loader ESM của dự án.)
+import { localDateStr } from '../src/engine/time.js';
 
 const argv = process.argv;
 const has = (f) => argv.includes(f);
@@ -123,6 +128,8 @@ const FAKE_EPOCH = HOUR === null ? null : Date.UTC(2026, 7, 13, (HOUR - 7 + 24) 
  * khuyết điểm khi có nhiều dữ liệu.
  */
 const FIXTURE = arg('--fixture', null);
+// Mốc thời gian của fixture: theo đúng đồng hồ mà app sẽ thấy (kể cả khi `--hour` giả lập).
+const FIXTURE_NOW = FAKE_EPOCH === null ? Date.now() : FAKE_EPOCH;
 const GAME = FIXTURE ? JSON.parse(readFileSync(FIXTURE, 'utf8')) : {
   state: {
     buildings: ['bp_xuong_hoa', 'bp_truong_dai_hoc', 'bp_nha_bao_tang', 'bp_thu_vien_kh', 'bp_cung_dien_ph'],
@@ -130,6 +137,20 @@ const GAME = FIXTURE ? JSON.parse(readFileSync(FIXTURE, 'utf8')) : {
     progress: { activeBook: 7 },
     eraTracking: { sessionsInCurrentEra: 40 },
     streak: { currentStreak: 9 },
+    // ⚠️ HAI PHIÊN CỦA HÔM NAY. Không có chúng thì "phiên hôm nay" LUÔN bằng 0, nên vòng MỤC TIÊU
+    // NGÀY quanh đồng hồ vẽ ra 0% — tức VÔ HÌNH — trong mọi ảnh chụp; một fixture không thể hiện
+    // nổi tính năng đang soi thì không soi được gì (bài học "fixture đều tăm tắp là fixture vô
+    // dụng", `CLAUDE.md`).
+    // ⚠️ Phải seed vào `history` chứ KHÔNG phải vào `dailyTracking`: store DỰNG LẠI `dailyTracking`
+    // từ `history` mỗi lần nạp (`rebuildCurrentDailyTrackingFromHistory`), nên một bộ đếm seed
+    // thẳng sẽ bị ghi đè về 0 trong im lặng — đã thử và đo được đúng như vậy.
+    history: [
+      // ⚠️ Lùi vài PHÚT chứ không vài GIỜ: khoá ngày tính theo giờ Việt Nam, nên khi chạy gần nửa
+      // đêm VN thì một mốc lùi 3 giờ rơi sang HÔM QUA và fixture lặng lẽ chỉ còn 1 phiên (đã đo
+      // đúng như vậy). Lùi 10/20 phút thì gần như không thể lệch ngày.
+      { timestamp: FIXTURE_NOW - 20 * 60 * 1000, minutes: 25, completed: true },
+      { timestamp: FIXTURE_NOW - 10 * 60 * 1000, minutes: 25, completed: true },
+    ],
   },
   version: 4,
 };

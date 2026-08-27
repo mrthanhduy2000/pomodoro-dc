@@ -9,6 +9,7 @@
 
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { SCRIM_FADE, useCustomMotion, useEnterMotion, usePressMotion } from '../lib/motionPresets';
 import useGameStore from '../store/gameStore';
 import useSettingsStore from '../store/settingsStore';
 import {
@@ -119,6 +120,9 @@ function RPBar({ currentRP, cost, lightTheme = false }) {
 
 // ─── Tab 1: Bản Vẽ Của Tôi ────────────────────────────────────────────────────
 function MyBlueprintsTab({ blueprints, research, buildings, activeBook, onSelectBp, lightTheme }) {
+  const enterMotion = useEnterMotion();
+  // Phóng to khi DI CHUỘT không thuộc ba nhịp — đi qua cái gác ngoại lệ.
+  const hoverGrow = useCustomMotion({ whileHover: { scale: 1.01 } });
   const [filterEra, setFilterEra] = useState(0);
 
   const unlockedIds = new Set([
@@ -197,9 +201,8 @@ function MyBlueprintsTab({ blueprints, research, buildings, activeBook, onSelect
             <motion.div
               key={id}
               layout
-              initial={{ opacity: 0, scale: 0.97 }}
-              animate={{ opacity: 1, scale: 1 }}
-              whileHover={{ scale: 1.01 }}
+              {...enterMotion}
+              {...hoverGrow}
               onClick={() => onSelectBp?.(id)}
               className={`p-4 cursor-pointer transition-colors ${lightTheme ? '' : 'rounded-[24px] border'}`}
               style={lightTheme
@@ -261,6 +264,9 @@ function MyBlueprintsTab({ blueprints, research, buildings, activeBook, onSelect
 
 // ─── Tab 2: Nghiên Cứu ────────────────────────────────────────────────────────
 function ResearchTab({ research, blueprints, buildings, activeBook, researchBlueprint, onSelectBp }) {
+  const pressMotion = usePressMotion();
+  // Phóng to khi DI CHUỘT không thuộc ba nhịp — đi qua cái gác ngoại lệ.
+  const hoverGrow = useCustomMotion({ whileHover: { scale: 1.05 } });
   const selectedEra = activeBook;
   const [toast, setToast] = useState(null);
   const uiTheme = useSettingsStore((s) => s.uiTheme);
@@ -459,8 +465,8 @@ function ResearchTab({ research, blueprints, buildings, activeBook, researchBlue
 
                 {!isResearched && (
                   <motion.button
-                    whileHover={canAffordRP ? { scale: 1.05 } : {}}
-                    whileTap={canAffordRP ? { scale: 0.95 } : {}}
+                    {...(canAffordRP ? hoverGrow : {})}
+                    {...(canAffordRP ? pressMotion : {})}
                     onClick={(e) => { e.stopPropagation(); canAffordRP && handleResearch(id, researchCost); }}
                     disabled={!canAffordRP}
                     className="px-3 py-1.5 text-xs font-bold flex-shrink-0 transition-colors"
@@ -492,6 +498,9 @@ function ResearchTab({ research, blueprints, buildings, activeBook, researchBlue
 
 // ─── Blueprint Detail Panel ────────────────────────────────────────────────────
 function BlueprintDetailPanel({ bpId, onClose, buildings, research, lightTheme }) {
+  const enterMotion = useEnterMotion();
+  // Lớp phủ tối chỉ mờ dần, không trôi — xem `SCRIM_FADE` ở `motionPresets.js`.
+  const scrimMotion = useCustomMotion(SCRIM_FADE);
   const def          = CATALOG_FLAT[bpId];
   const meta         = BLUEPRINT_META[bpId];
   const eff          = BUILDING_EFFECTS[bpId];
@@ -513,9 +522,7 @@ function BlueprintDetailPanel({ bpId, onClose, buildings, research, lightTheme }
 
   return (
     <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
+      {...scrimMotion}
       className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
       style={{
         backgroundColor: lightTheme ? 'rgba(31,30,29,0.34)' : 'rgba(0,0,0,0.75)',
@@ -524,10 +531,7 @@ function BlueprintDetailPanel({ bpId, onClose, buildings, research, lightTheme }
       onClick={onClose}
     >
       <motion.div
-        initial={{ y: 80, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        exit={{ y: 80, opacity: 0 }}
-        transition={{ type: 'spring', damping: 22, stiffness: 260 }}
+        {...enterMotion}
         className={`w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl overflow-hidden shadow-2xl max-h-[90vh] flex flex-col ${lightTheme ? '' : 'bg-slate-900'}`}
         style={lightTheme
           ? {

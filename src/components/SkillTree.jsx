@@ -14,6 +14,7 @@
 
 import React, { useState, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
+import { SCRIM_FADE, useCustomMotion, useEnterMotion } from '../lib/motionPresets';
 
 import useGameStore       from '../store/gameStore';
 import useSettingsStore   from '../store/settingsStore';
@@ -630,21 +631,20 @@ function RecentAchievements({ onOpen }) {
 // ─── PurchaseConfirmDialog ────────────────────────────────────────────────────
 
 function PurchaseConfirmDialog({ node, sp, lightTheme, onConfirm, onCancel }) {
+  const enterMotion = useEnterMotion();
+  // Lớp phủ tối chỉ mờ dần, không trôi — xem `SCRIM_FADE` ở `motionPresets.js`.
+  const scrimMotion = useCustomMotion(SCRIM_FADE);
   const tierStyle = TIER_STYLE[node.tier] ?? TIER_STYLE.basic;
   const tierBadgeProps = getTierBadgeProps(tierStyle, lightTheme);
 
   return (
     <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
+      {...scrimMotion}
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70"
       onClick={onCancel}
     >
       <motion.div
-        initial={{ scale: 0.85, y: 20 }}
-        animate={{ scale: 1, y: 0 }}
-        exit={{ scale: 0.85, opacity: 0 }}
+        {...enterMotion}
         onClick={(e) => e.stopPropagation()}
         className={`w-full max-w-sm p-6 ${lightTheme ? '' : 'bg-white/[0.04] border border-white/8 rounded-2xl shadow-2xl'}`}
         style={lightTheme ? {

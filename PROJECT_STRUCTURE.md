@@ -96,12 +96,22 @@
 │   │   │                     #   Hàm định dạng thuần đã tách ra statsFormatters.js cạnh nó.
 │   │   ├── PomodoroEngine.jsx # Khung chính chứa đồng hồ Pomodoro/Stopwatch (UI, logic timer
 │   │   │                     #   thật nằm ở src/hooks/useTimer.js)
+│   │   ├── ResourceDisplay.jsx # Thẻ tài nguyên: LUÔN ba thứ (thanh tiến độ kỷ · chuỗi · tinh thể),
+│   │   │                     #   mọi thứ còn lại nằm sau nút "Kho". Trần BA con số là một LỜI HỨA
+│   │   │                     #   có test canh (resourceDisplay.test.js) — đừng thêm số thứ tư.
+│   │   ├── resourceDisplayFormat.js # Ba luật trình bày số của thẻ trên (tabular-nums · nhãn nhỏ
+│   │   │                     #   hơn số 40% · nháy --good khi tăng). File .js thuần CỐ Ý: node --test
+│   │   │                     #   không biên dịch JSX, nên luật để trong .jsx là luật không test nào
+│   │   │                     #   chạm tới được. Cùng quy ước với statsFormatters.js ở trên.
 │   │   ├── sessionGoalState.js # BA trạng thái ô "Mục tiêu phiên" (empty/partial/ready) — thuần.
 │   │   │                     #   Tách ra vì hai trạng thái là KHÔNG đủ: ô chưa gõ gì mà bị dán
 │   │   │                     #   màu cảnh báo thì app thành ra mắng người dùng ngay lúc mở lên.
 │   │   │                     #   Cả 2 khối giao diện mục tiêu đều đọc file này ⇒ không lệch nhau.
 │   │   └── ...                # Các màn hình còn lại: Achievements, SkillTree, BuildingWorkshop,
 │   │                          #   BlueprintInventory, RelicInventory, Settings, DailyMissions...
+│   │                          #   ⚠️ Từ 2026-08-27 ba màn Kỹ năng/Kho báu/Thành tích KHÔNG còn là
+│   │                          #   mục điều hướng riêng — chúng là ba TAB CON của "Hành trang"
+│   │                          #   (`INVENTORY_TABS` trong App.jsx). Bản thân component không đổi.
 │   ├── engine/                # Logic THUẦN (không JSX, không Zustand) — công thức game, dễ test
 │   │   ├── coach/             # TOÀN BỘ "bộ não" AI Coach (model-agnostic, hiện chạy Gemini)
 │   │   │   ├── prompt.js          # 2 prompt hệ thống (chat/phân tích) + dựng prompt + sanitize
@@ -624,6 +634,15 @@
 │   │   ├── soundEngine.js / ambientEngine.js # Âm thanh 100% procedural (Web Audio API)
 │   │   ├── pushPayloads.js    # Nội dung thông báo push (title/body/tag) — dùng chung client+server
 │   │   ├── time.js            # Helper giờ/ngày/tuần theo múi giờ VN (mọi engine phải dùng cái này)
+│   │   ├── opportunities.js   # "Có việc gì đáng vào xem không?" — kỹ năng đủ SP · bản vẽ đủ RP ·
+│   │   │                     #   công trình đủ tài nguyên. THUẦN. ⚠️ Có ĐÚNG HAI người đọc (chuông
+│   │   │                     #   thông báo + chấm trên tab Hành trang); chép công thức về lại
+│   │   │                     #   NotificationCenter là "một luật hai công thức", và hai bản sao sẽ
+│   │   │                     #   trôi khỏi nhau ở BIÊN rồi nói ngược nhau mà không gì đỏ lên
+│   │   ├── navAttention.js    # Dấu "thành tích đã xem" (localStorage `dc-nav-seen-v1`). ⚠️ `null`
+│   │   │                     #   (chưa từng ghi) KHÁC `[]` (đã ghi, đang rỗng) — nhập hai thứ đó
+│   │   │                     #   làm một thì lần đầu mở app cái chấm sáng oan cho hàng chục thành
+│   │   │                     #   tích Đàm đã xem từ lâu
 │   │   ├── timerSession.js / breaks.js / challengeEngine.js / notifications.js # engine chuyên biệt khác
 │   ├── hooks/                 # React hook — cầu nối giữa store và engine/component
 │   │   ├── useTimer.js         # LỚN — toàn bộ state machine đồng hồ Pomodoro/Stopwatch
@@ -631,8 +650,22 @@
 │   │   ├── useCityMoment.js   # Cầu nối store → engine/cityMoment.js, CẢ HAI đầu của một phiên:
 │   │   │                     #   useCityFocusTease (trước) + useCityGrowthMoment (sau). Dùng chung
 │   │   │                     #   một snapshot memo theo NỘI DUNG
+│   │   ├── useInventoryAttention.js # Chấm "có việc cần xem" trên tab Hành trang. Đọc engine/
+│   │   │                     #   opportunities.js (dùng CHUNG với chuông thông báo) + dấu "đã xem"
+│   │   │                     #   ở engine/navAttention.js. ⚠️ Selector trả về BOOLEAN, không phải
+│   │   │                     #   mảng — gốc app bọc cả cảnh 3D, cho nó render lại theo từng con số
+│   │   │                     #   tài nguyên là trả một cái giá không ai đo được cho một chấm 5px
 │   │   └── useGameLoop.js
-│   ├── lib/                   # Tích hợp dịch vụ ngoài (KHÔNG phải logic game thuần)
+│   ├── lib/                   # Hạ tầng dùng chung, KHÔNG phải logic game thuần: tích hợp dịch vụ
+│   │                          #   ngoài, và từ 2026-08-27 thêm từ vựng chuyển động của giao diện
+│   │   ├── motionPresets.js    # BA NHỊP CHUYỂN ĐỘNG DUY NHẤT của app (`enter`/`press`/`reward`).
+│   │   │                       #   ⚠️ ĐÚNG BA, KHÔNG HƠN — nhịp thứ tư là bước đầu quay lại tình
+│   │   │                       #   trạng cũ (hơn 30 file mỗi chỗ một thời lượng). Cả ba TỰ trả về
+│   │   │                       #   object rỗng khi bật "Giảm chuyển động", nên chỗ gọi KHÔNG
+│   │   │                       #   phải tự kiểm tra. Kèm hai cái GÁC cho ngoại lệ (`useCustomMotion`
+│   │   │                       #   bỏ hẳn · `useSnapMotion` nhảy thẳng tới đích khi `animate` mang
+│   │   │                       #   bố cục) và hằng `SCRIM_FADE` cho lớp phủ tối của modal.
+│   │   │                       #   ⚠️ KHÔNG dùng cho thành phố 3D — chuyển động ở đó là chuyện khác.
 │   │   ├── supabase.js         # Supabase client (anon key, hardcode — không cần .env)
 │   │   ├── syncService.js      # Đồng bộ 2 chiều "First Action Wins" (xem ARCHITECTURE.md)
 │   │   ├── timerLiveService.js # Đồng bộ trạng thái timer cho Electron tray + push webhook
@@ -839,6 +872,41 @@ tự viết trong chuỗi**. Ở ca thật: lớp truyền thêm THUA, nút ch�
 - Có lưới tự động: `src/components/actionButtonSizing.test.js` (đọc mã nguồn, cả 3 bài đã được
   thử-cho-đỏ). Kiểm bằng mắt/bằng số: `node scripts/shot.mjs --phone --fit` và
   `node scripts/shot.mjs --phone --fit --el "<chữ trên nút>"` (in ra font-size/padding THẬT).
+
+## Quy tắc chuyển động: BA NHỊP, và mọi ngoại lệ phải tự khai lý do
+
+⚠️ **Bài học 2026-08-27.** Trước đó `initial`/`animate`/`transition` được khai RỜI RẠC ở hơn ba
+mươi file — đo được **năm** thời lượng khác nhau (0,18 · 0,22 · 0,26 · 0,28 · 0,35 giây) và **bảy**
+đường cong (`easeOut`, `[0.4,0,0.2,1]`, `[0.22,1,0.36,1]`, spring 200/300/360/380/420…). Mắt không
+đọc ra "app này mượt"; nó đọc ra "mỗi chỗ một kiểu". Kèm theo, tuỳ chọn **Giảm chuyển động** của hệ
+điều hành được xử lý bằng tay ở từng file với **ba tên biến khác nhau** (`reduceMotion`,
+`shouldReduceMotion`, `prefersReducedMotion`) — tức "một luật ba mươi công thức", và nó hỏng lặng lẽ
+ở đúng những chỗ người ta quên.
+
+- ✅ **Đúng**: `const enterMotion = useEnterMotion();` rồi `<Motion.div {...enterMotion}>`.
+  Ba nhịp ở `src/lib/motionPresets.js` — `enter` (thứ xuất hiện) · `press` (thứ bấm được) ·
+  `reward` (phần thưởng và cột mốc). **Cả ba TỰ im khi bật Giảm chuyển động.**
+- ❌ Đừng gõ lại `initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}` — đó chính là
+  cái đã sinh ra năm thời lượng.
+- ❌ Đừng thêm nhịp thứ tư. Hỏi trước: *"nó thật sự là một nhịp MỚI, hay chỉ là một chỗ đáng lẽ
+  phải dùng `enter`?"* — gần như luôn là vế sau. `motionPresets.test.js` ĐẾM và sẽ đỏ.
+- **Ngoại lệ thì đi qua GÁC, và phải kèm một dòng lý do.** Câu hỏi phân loại:
+  ***"bỏ hẳn `animate` đi thì phần tử còn ở đúng chỗ của nó không?"***
+  - CÒN → `useCustomMotion` (lớp phủ tối, đốm sáng, nhịp thở nền, pháo hoa) — bỏ hẳn.
+  - KHÔNG → `useSnapMotion` (bề ngang cột, vị trí núm gạt, chiều dài thanh tiến độ, vòng đếm giờ)
+    — giữ nguyên đích, chỉ bỏ QUÃNG ĐƯỜNG. ⚠️ Trả object rỗng ở những chỗ này là **vỡ bố cục**:
+    cột phải khai bề ngang bằng chính `animate`, bỏ đi thì nó bung ra chiếm cả màn hình.
+- **Hai chỗ CỐ Ý đứng ngoài, đừng "dọn" chúng:**
+  - `src/components/city/render3d/` — chuyển động thành phố 3D là một hệ khác hẳn (three.js,
+    không phải framer-motion).
+  - `ActionButton` (`PomodoroEngine.jsx`) — cú lún `whileTap y:4` BẰNG ĐÚNG chiều dày vạch bóng
+    đặc bên dưới nó; `actionButtonPress.test.js` khoá cứng quan hệ ấy và cấm `scale` ở
+    `whileHover`. Một nhịp `press` dùng `scale` sẽ phá cả hai. Nó vẫn được gác Giảm chuyển động
+    bằng một phép trải ghi đè đặt SAU hai dòng đó.
+- Có lưới tự động: `src/lib/motionPresets.test.js` (6 bài, cả 9 phép thử ngược đều đã thấy đỏ).
+- Đo tiêu chí nghiệm thu: `npm run build && node scripts/motion-still.mjs` — bấm chuyển tab rồi
+  đếm điểm ảnh lệch giữa hai khung hình cách nhau 90ms, chạy CẢ HAI chế độ (một con số 0 chỉ có
+  nghĩa khi chế độ thường ra một con số khác 0).
 
 ## Quy tắc đặt tên
 

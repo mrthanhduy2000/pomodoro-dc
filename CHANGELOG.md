@@ -48,6 +48,141 @@ toast là chỗ đọc đầu tiên của cả ba.
 **Tương thích.** Không có migration. Không đụng dữ liệu lưu (`ui` không nằm trong `partialize` nên
 không lên Supabase). Ngoại lệ duy nhất còn lại của luật mới: báo cáo tuần vẫn tự bật sáng thứ Hai —
 cố ý, ghi ở `TECH_DEBT #87`. Chi tiết quyết định: **ADR-060**.
+## 2026-08-27 (tối) — Thanh tài nguyên: ba con số cộng một thanh tiến độ
+
+**Mục đích.** `ResourceDisplay` bày cùng lúc EP, chặng của kỷ, tài nguyên thô, tài nguyên tinh chế,
+RP và tinh thể — tất cả cùng một trọng lượng thị giác. Khi mọi thứ đều được nhấn thì không thứ nào
+được nhấn: mắt không có thứ tự đọc, nên thanh này thật ra không nói được điều gì.
+
+**Phạm vi.** Tầng giao diện, đúng một thẻ. Không đụng engine game, store, thành phố 3D hay sync.
+Không dữ liệu nào bị xoá — chỉ đổi chỗ hiển thị.
+
+- **`src/components/ResourceDisplay.jsx`** — viết lại. LUÔN hiện đúng ba thứ: thanh tiến độ kỷ (trọn
+  chiều ngang, nhãn `Kỷ N · chặng i/n`, phần chạy `var(--accent)` đặc trên nền `var(--line)`) ·
+  `chuỗi` · `tinh thể`. Tài nguyên thô, tinh chế, RP, tên giai đoạn và khoảng EP của chặng chuyển vào
+  panel mở bằng nút **Kho** (`aria-expanded`/`aria-controls`). Số tăng thì nháy `var(--good)` 400ms;
+  bật giảm chuyển động thì đổi màu tức thì, không tween.
+- **`src/components/resourceDisplayFormat.js`** (mới) — ba luật trình bày, mỗi luật một công thức:
+  `NUMBER_STYLE` (mọi con số `tabular-nums`, `Object.freeze`) · `labelSizeFor()` (nhãn nhỏ hơn số 40%,
+  màu `var(--muted)`) · `shouldFlashOnIncrease()` + `FLASH_MS`. Tách ra file `.js` thuần vì bộ chạy
+  test là `node --test` không biên dịch JSX — luật để trong `.jsx` là luật không test nào chạm tới.
+- **`src/components/resourceDisplay.test.js`** (mới, 11 bài) — nửa thuần khoá ba luật trên; nửa đọc-mã
+  khoá bố cục: trần BA con số ở vùng luôn hiện · đúng một thanh tiến độ · thanh dùng `--accent`/`--line`
+  và `w-full` · tài nguyên thô/tinh chế/RP chỉ nằm sau cổng Kho (và vẫn PHẢI còn ở đó) · nháy đúng
+  `--good` và tôn trọng giảm chuyển động · không chỗ nào tự khai `tabular-nums`. Chín phép thử ngược
+  đều đỏ đúng bài dự kiến, khôi phục thì xanh lại.
+
+**Tương thích.** Không đổi store, không đổi dữ liệu lưu, không migration. Thuần trình bày.
+## 2026-08-27 (tối) — Đồng hồ Pomodoro trả lời hai câu hỏi thay vì một
+
+**Mục đích.** Nhìn một cái vào đồng hồ phải biết được CẢ HAI: còn bao nhiêu phút của phiên này, và
+hôm nay đã đi được mấy phần mục tiêu. Trước đây nó chỉ trả lời câu thứ nhất, bằng một vòng mảnh
+7px mà màu thì chốt cứng nên không đổi theo skin.
+
+**Phạm vi.** Màn Tập trung. Không đụng thành phố 3D, không thêm nguồn sáng.
+
+- **`src/components/PomodoroEngine.jsx`** — vòng chính nét 7 → **14**, bo tròn hai đầu, nền
+  `--timer-track`; màu theo trạng thái đọc token (tập trung `--accent`, nghỉ ngắn **và** nghỉ dài
+  `--good`). Thêm **vòng thứ hai** mảnh 4px cách 8px nằm ngoài, màu `--warn`, thể hiện tiến độ mục
+  tiêu ngày; chưa đặt mục tiêu thì không vẽ. Con số ở giữa +20% cỡ (cả 12 mốc đáp ứng), weight 800,
+  `tabular-nums`; thêm dòng 13px `--muted` "Phiên 2/5 hôm nay" ngay dưới.
+- **`src/engine/gameMath.js`** — thêm `countSessionsOnDay`, `sumFocusMinutesOnDay`,
+  `getDailyGoalProgress` làm **nguồn sự thật duy nhất** cho "tiến độ hôm nay". `App.jsx` (và qua đó
+  thẻ "Hôm nay" ở `FocusRail`) nay dùng chung công thức với vòng quanh đồng hồ, nên hai con số cạnh
+  nhau không thể nói hai điều khác nhau.
+- **`src/components/timerRing.test.js`** (mới, 7 bài) + 5 bài thuần trong `gameMath.test.js` — khoá
+  hình học hai vòng, màu đọc token, bo tròn đầu vòng, không vẽ vòng rỗng, và việc vòng kẹp 100%
+  trong khi dòng chữ nói thật con số đã vượt. Cả 10 phép thử ngược đều đỏ đúng chỗ.
+- **`scripts/shot.mjs`** — fixture có 2 phiên của hôm nay (seed vào `history`, vì store dựng lại bộ
+  đếm ngày từ history), nếu không vòng mục tiêu luôn vẽ 0% và vô hình trong mọi ảnh chụp.
+
+**Ảnh hưởng.** Đồng hồ to hơn ~9% (khung SVG nới để ôm vòng thứ hai) và con số to hơn 20%. Đã đo:
+không tràn ở cả 1280px lẫn 390px, kể cả chuỗi dài nhất "180:00".
+
+**Tương thích.** Không có migration. Không đổi dữ liệu lưu.
+
+**Đã biết, chưa xử lý.** Con số đồng hồ vẫn dùng `.serif` chốt cứng `'Source Serif 4'` thay vì
+`var(--skin-font-display)`, nên ở skin Sân Chơi (sans) nó vẫn là serif — cùng họ bệnh với
+`ActionButton` đã chữa cùng ngày, nhưng đổi font là một quyết định mỹ thuật nên để lại.
+
+**Cổng.** `npm test` 1.175 bài · 1.174 pass · 0 fail · 1 skipped · `test:cross` 3/3 · lint sạch ·
+build xanh.
+## 2026-08-27 (khuya) — Điều hướng chính từ 8 mục xuống 5: gộp, không xoá
+
+**Mục đích.** Thanh điều hướng có 8 mục, trong đó Kỹ năng · Kho báu · Thành tích chiếm ba ô cho ba
+màn cùng một họ ("những gì tôi đã tích luỹ"). Trên iPhone, 8 mục chen vào 4 nút nên "Thành Phố" —
+mặt trận đang xây — bị đẩy vào nút "Thêm". Gộp ba mục ấy thành một tab **"Hành trang"** trả lại ô
+thứ tư cho Thành Phố mà không màn hình nào bị xoá.
+
+**Phạm vi.** Tầng điều hướng. Không đụng engine game, thành phố 3D, sync, hay nội dung từng màn —
+mỗi tab con vẫn dựng đúng component cũ với đúng state cũ.
+
+- **`src/App.jsx`** — `DESKTOP_TABS` còn **5 mục** (Tập trung · Hành trang · Thành Phố · Thống kê ·
+  Cài đặt); `MOBILE_TABS` còn 6, `MOBILE_PRIMARY_IDS` = 4 nút (Tập trung · Nhiệm vụ · Hành trang ·
+  Thành Phố), nút "Thêm" giữ Thống kê + Cài đặt. Thêm `INVENTORY_TABS` (3 tab con **giữ nguyên id
+  cũ** `skills`/`collection`/`achievements`) và `resolveTabTarget` — cửa dịch id cũ sang "tab Hành
+  trang + tab con". Dải tab con tách thành `SubTabs` dùng chung với `COLLECTION_TABS`.
+- **`src/engine/opportunities.js`** (mới) — ba phép đếm "có việc đang chờ" chuyển từ
+  `NotificationCenter.jsx` sang đây, vì nay có HAI người đọc chúng.
+- **`src/engine/navAttention.js`** + **`src/hooks/useInventoryAttention.js`** (mới) — chấm màu
+  `var(--accent)` trên tab "Hành trang" khi có kỹ năng/bản vẽ/công trình sẵn sàng, hoặc có thành
+  tích đã mở khoá mà chưa xem.
+- **Test mới**: `src/appNavigation.test.js` (6 bài, đọc mã nguồn — đếm 5 mục/4 nút/3 tab con và
+  canh mọi đích thông báo còn tới được), `src/engine/navAttention.test.js` (6),
+  `src/engine/opportunities.test.js` (5). Cả **15 phép thử ngược** đều đỏ đúng bài dự kiến.
+
+**Gộp nhánh.** Nhánh này gộp với mốc "ba nhịp chuyển động" (`motionPresets.js`) đã lên `main`
+trước đó; hai bên đụng nhau ở 2 chỗ trong `App.jsx` và giữ CẢ HAI (hiệu ứng `enterMotion` của mốc
+kia + lưới co theo số mục và prop `attentionTabIds` của mốc này). Sau gộp: `npm test` 1.186 bài.
+
+**Ảnh hưởng.** Số màn hình không đổi — mọi màn cũ vẫn vào được, qua một lớp tab con. Thanh dưới
+iPhone đổi chỗ "Thống kê" (nay nằm sau nút "Thêm") lấy chỗ cho "Thành Phố".
+
+**Tương thích.** Thông báo đã lưu trong localStorage mang `action: { tab: 'skills' }` /
+`{ tab: 'collection', collectionTab: … }` **vẫn đi đúng chỗ** — id cũ được `resolveTabTarget` dịch
+chứ không bị đổi ở nguồn. Không có migration.
+
+---
+
+## 2026-08-27 (tối) — Mọi chuyển động của app về đúng BA NHỊP
+
+**Mục đích.** `initial`/`animate`/`transition` được khai rời rạc ở hơn ba mươi file, mỗi chỗ một
+thời lượng và một đường cong. Đo được **5 thời lượng** (0,18 · 0,22 · 0,26 · 0,28 · 0,35 giây) và
+**7 đường cong** khác nhau. Mắt không đọc ra "app này mượt" mà đọc ra "mỗi chỗ một kiểu". Kèm theo,
+tuỳ chọn **Giảm chuyển động** của hệ điều hành được xử lý bằng tay ở từng file, với ba tên biến
+khác nhau — nên nó vắng mặt ở đúng những chỗ người ta quên.
+
+**Phạm vi.** Tầng giao diện: `App.jsx`, `PomodoroEngine.jsx` và toàn bộ modal. **KHÔNG đụng**
+`src/components/city/render3d/` (chuyển động thành phố 3D là một hệ khác), không đụng engine game,
+sync, hay AI Coach.
+
+- **`src/lib/motionPresets.js` (MỚI)** — ba nhịp, không hơn: `enter` (opacity 0→1, y 6→0, 180ms,
+  ease `[0.22,1,0.36,1]`) · `press` (scale 1→0,97, 90ms) · `reward` (scale 0,9→1 bằng lò xo
+  420/18). Cả ba là **hook** và **tự trả về object rỗng** khi `useReducedMotion()` bật, nên chỗ
+  gọi không phải tự kiểm tra. Kèm hai cái GÁC cho ngoại lệ (`useCustomMotion` bỏ hẳn ·
+  `useSnapMotion` nhảy thẳng tới đích khi `animate` mang bố cục) và hằng `SCRIM_FADE` dùng chung
+  cho lớp phủ tối của modal.
+- **11 file đã đổi** — `App.jsx`, `PomodoroEngine.jsx`, `DisasterModal`, `EraCrisisModal`,
+  `LevelUpModal`, `LootDropModal`, `PrestigeModal`, `WeeklyReportModal`, `OnboardingOverlay`,
+  `BlueprintInventory`, `SkillTree`. Bốn nhóm nút của bảng điều khiển đồng hồ trước đây khai
+  **y hệt nhau bốn lần**, nay một nhịp. ⚠️ Hai file cuối chứa modal nằm LỒNG bên trong
+  (`BlueprintDetailPanel`, `PurchaseConfirmDialog`) — quét theo tên file `*Modal.jsx` sẽ bỏ sót
+  chúng; phải quét theo HÌNH DẠNG (`fixed inset-0`).
+- **`src/lib/motionPresets.test.js` (MỚI)** — 6 bài đọc-mã-nguồn, cả **9 phép thử ngược** đều đã
+  thấy đỏ. Nó ĐẾM số preset (nhịp thứ tư là đỏ) và chặn một quả mìn thật: framer-motion 12 **ném
+  lỗi ở bản dev và im lặng ở bản production** khi một lò xo nhận quá hai mốc.
+
+**Ảnh hưởng.** Mọi thẻ và modal mở ra cùng một nhịp 180ms. Bật *Giảm chuyển động* (Mac: Trợ năng →
+Màn hình; iPhone: Trợ năng → Chuyển động) thì giao diện đứng yên: pháo hoa và mưa hạt biến mất hẳn,
+những thứ mang bố cục (bề ngang cột, núm gạt, thanh tiến độ, vòng đếm giờ) nhảy thẳng tới đích thay
+vì chạy.
+
+**Tương thích.** Không đổi dữ liệu, không đổi API, không cần migration. Thuần thị giác.
+
+**Hai chỗ cố ý đứng ngoài ba nhịp** — `ActionButton` (cú lún `y:4` BẰNG ĐÚNG chiều dày vạch bóng
+đặc, `actionButtonPress.test.js` khoá cứng quan hệ ấy) và các hiệu ứng SO LE (`ResourceCascade`,
+viên tài nguyên của `EraChangeBanner`) — cả hai vẫn được gác Giảm chuyển động, và đều có chú thích
+tại chỗ nêu lý do.
 
 ---
 

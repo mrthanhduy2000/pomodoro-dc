@@ -25,6 +25,9 @@ import {
   clampRelicDisasterReduction,
   getComboDecayMs,
   computeLevelUps,
+  getDailyGoalProgress,
+  countSessionsOnDay,
+  sumFocusMinutesOnDay,
 } from './gameMath.js';
 import {
   SIEU_TAP_TRUNG_MULT,
@@ -668,4 +671,75 @@ test('computeLevelUps: XP âm (đặc tả hiện trạng) → có thể TỤT c
   assert.equal(r.levelsGained, -1);
   assert.equal(r.spGained, -SP_PER_LEVEL);
   assert.equal(r.newTotalEXP, EXP_PER_LEVEL - 1);
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TIẾN ĐỘ HÔM NAY — nguồn chung cho vòng mục tiêu quanh đồng hồ và thẻ "Hôm nay"
+// ─────────────────────────────────────────────────────────────────────────────
+test('countSessionsOnDay: chỉ nhận bộ đếm CỦA ĐÚNG NGÀY ĐANG HỎI', () => {
+  assert.equal(countSessionsOnDay({ date: '2026-08-27', sessionsCompleted: 3 }, '2026-08-27'), 3);
+  // ⚠️ Ca quan trọng nhất: bộ đếm của HÔM QUA còn nguyên trong store cho tới lần ghi tiếp theo.
+  // Trả về nó là hiển thị tiến độ hôm qua như thể của hôm nay.
+  assert.equal(countSessionsOnDay({ date: '2026-08-26', sessionsCompleted: 9 }, '2026-08-27'), 0);
+  assert.equal(countSessionsOnDay(undefined, '2026-08-27'), 0);
+  assert.equal(countSessionsOnDay({ date: '2026-08-27' }, '2026-08-27'), 0);
+});
+
+test('sumFocusMinutesOnDay: bỏ phiên đã huỷ và phiên chưa hoàn thành', () => {
+  const ts = (d) => new Date(d + 'T10:00:00').getTime();
+  const history = [
+    { timestamp: ts('2026-08-27'), minutes: 25 },
+    { timestamp: ts('2026-08-27'), minutes: 50, status: 'cancelled' },
+    { timestamp: ts('2026-08-27'), minutes: 15, completed: false },
+    { timestamp: ts('2026-08-27'), minutes: 10 },
+    { timestamp: ts('2026-08-26'), minutes: 90 },
+  ];
+  assert.equal(sumFocusMinutesOnDay(history, '2026-08-27'), 35);
+  assert.equal(sumFocusMinutesOnDay([], '2026-08-27'), 0);
+});
+
+test('getDailyGoalProgress: đi theo ĐÚNG trục người dùng chọn (phiên hay phút)', () => {
+  const base = { dailyTracking: { date: 'D', sessionsCompleted: 2 }, history: [], todayKey: 'D' };
+  const phien = getDailyGoalProgress({ ...base, dailyGoalType: 'sessions', dailyGoalSessions: 5 });
+  assert.deepEqual(
+    { cur: phien.currentValue, goal: phien.goalValue, unit: phien.unit, pct: phien.pct },
+    { cur: 2, goal: 5, unit: 'phiên', pct: 40 },
+  );
+
+  const ts = new Date('2026-08-27T10:00:00').getTime();
+  const phut = getDailyGoalProgress({
+    dailyTracking: { date: '2026-08-27', sessionsCompleted: 2 },
+    history: [{ timestamp: ts, minutes: 30 }],
+    todayKey: '2026-08-27',
+    dailyGoalType: 'minutes',
+    dailyGoalMinutes: 120,
+  });
+  // ⚠️ Ở trục PHÚT thì tử số phải là PHÚT, không phải số phiên — trộn hai trục là ra "2/120".
+  assert.deepEqual(
+    { cur: phut.currentValue, goal: phut.goalValue, unit: phut.unit, pct: phut.pct },
+    { cur: 30, goal: 120, unit: 'phút', pct: 25 },
+  );
+});
+
+test('getDailyGoalProgress: chưa có mục tiêu ⇒ hasGoal=false và pct=0 (không chia cho 0)', () => {
+  for (const goal of [0, undefined, null, NaN, -3]) {
+    const r = getDailyGoalProgress({
+      dailyTracking: { date: 'D', sessionsCompleted: 4 }, todayKey: 'D',
+      dailyGoalType: 'sessions', dailyGoalSessions: goal,
+    });
+    assert.equal(r.hasGoal, false, 'mục tiêu ' + goal + ' phải cho hasGoal=false');
+    assert.equal(r.pct, 0);
+    assert.equal(r.goalMet, false);
+  }
+});
+
+test('getDailyGoalProgress: VƯỢT mục tiêu thì pct KHÔNG bị kẹp — nơi gọi tự quyết', () => {
+  // Vòng tròn phải kẹp (vẽ quá một vòng là vẽ đè lên chính nó), nhưng dòng chữ phải nói thật "6/4".
+  const r = getDailyGoalProgress({
+    dailyTracking: { date: 'D', sessionsCompleted: 6 }, todayKey: 'D',
+    dailyGoalType: 'sessions', dailyGoalSessions: 4,
+  });
+  assert.equal(r.pct, 150);
+  assert.equal(r.goalMet, true);
+  assert.equal(r.currentValue, 6);
 });

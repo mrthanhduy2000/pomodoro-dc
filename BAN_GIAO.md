@@ -43,11 +43,275 @@
 > không phải phần thưởng, và `dismissWeeklyReport` đánh dấu tuần đã xem, nên lỡ một cái toast 4 giây
 > = **mất báo cáo của cả tuần**. Ghi `TECH_DEBT #87` kèm điều kiện bắt buộc phải làm trước.
 >
-> Test **1163 → 1187 bài, 0 đỏ** (+24: 5 thang bậc · 11 hàng đợi toast · 8 nối dây). Lint sạch,
-> build xanh. Ảnh nghiệm thu: chồng 3 thẻ + dòng phần dư · thẻ trong hộp thoại phần thưởng · thẻ ở
+> **⚠️ GỘP `main` GIỮA PHIÊN — ba phiên khác đã đổi đúng những file này.** `main` nhận thêm "ba
+> nhịp chuyển động" (`src/lib/motionPresets.js`) + điều hướng 5 mục + thanh tài nguyên mới, đụng
+> `App.jsx` (359 dòng), `LootDropModal`, `LevelUpModal` và bốn modal khác. Bốn xung đột, **không
+> vứt bỏ gì của ai**: `ResourceCascade` giữ CẢ bản vá `reduceMotion` của họ LẪN việc chuyển sang
+> `RewardCard` của mình; ba file tài liệu giữ cả hai nhật ký. Và vì luật mới của họ (*"đừng gõ lại
+> `initial`/`animate` bằng tay"*) ra đời SAU khi tôi viết `RewardToastHost`, tôi đã chuyển nó sang
+> `useEnterMotion()` — **cố ý KHÔNG dùng `useRewardMotion()`** dù đây đúng là thẻ phần thưởng: nhịp
+> `reward` là nhịp đắt nhất, dành cho cột mốc, mà thẻ này nổ sau MỌI phiên (`motionPresets.js` ghi
+> rõ *"dùng bừa thì nó hết là phần thưởng"*). `enter` cũng là nhịp DUY NHẤT có `exit`, thứ một chồng
+> toast bắt buộc phải có.
+>
+> Test **1163 → 1187 bài của riêng phần này, 0 đỏ** (+24: 5 thang bậc · 11 hàng đợi toast · 8 nối
+> dây); sau khi gộp `main` là **1234 bài, 0 đỏ**. Lint sạch, build xanh. Ảnh nghiệm thu: chồng 3 thẻ + dòng phần dư · thẻ trong hộp thoại phần thưởng · thẻ ở
 > Nhiệm vụ (cả 1280 và 390) · hộp thoại lên kỷ vẫn chặn màn hình đầy đủ.
 
 ---
+> Cập nhật lần cuối: **2026-08-27 (tối)** — **THANH TÀI NGUYÊN RÚT TỪ "BÀY HẾT" XUỐNG "BA CON SỐ
+> CỘNG MỘT THANH".** Đàm: bản cũ bày cùng lúc EP · chặng · tài nguyên thô · tinh chế · RP · tinh thể,
+> **tất cả cùng một trọng lượng thị giác**, nên không thứ nào nổi lên. Nay LUÔN hiện đúng ba thứ —
+> thanh tiến độ kỷ (trọn chiều ngang, nhãn `Kỷ N · chặng i/n`, chạy `var(--accent)` trên nền
+> `var(--line)`) · `chuỗi` · `tinh thể` — mọi thứ còn lại nằm sau nút **Kho**. ⚠️ **ĐỔI CHỖ, KHÔNG
+> XOÁ**: không một con số nào biến mất, bấm "Kho" là thấy đầy đủ y như trước (kèm cả tên giai đoạn
+> và khoảng EP của chặng, hai thứ trước đây nằm ở thân thẻ).
+>
+> **Ba luật trình bày, mỗi luật MỘT công thức, đặt ở `resourceDisplayFormat.js`** — file `.js` thuần
+> **cố ý**, vì `node --test` không biên dịch JSX nên luật nằm trong `.jsx` là luật không bài test nào
+> chạm tới được. `NUMBER_STYLE` (mọi con số `tabular-nums`, đông cứng bằng `Object.freeze`) ·
+> `labelSizeFor()` (nhãn nhỏ hơn số 40% + màu `var(--muted)` — đây mới là thứ khiến con số được đọc
+> trước) · `shouldFlashOnIncrease()` (số TĂNG thì nháy `var(--good)` 400ms).
+>
+> **⚠️ BỐN CÁI BẪY, CÁI NÀO CŨNG TỰ CẮN TRONG PHIÊN NÀY:**
+> **(1) `setState` thẳng trong thân `useEffect` → lint bắt (`react-hooks/set-state-in-effect`).** Nó
+> đẻ một lượt dựng THỪA và làm cú nháy trễ đúng một khung hình — tức cơ chế sinh ra để chỉ ra "số vừa
+> đổi" lại là thứ chỉ ra muộn. Vá bằng khuôn "điều chỉnh state khi prop đổi" của React: so cũ↔mới
+> **trong lúc dựng**, effect chỉ còn giữ đồng hồ 400ms.
+> **(2) Cờ `true/false` KHÔNG re-arm được đồng hồ.** Số tăng lần hai lúc đang nháy dở thì
+> `setFlashing(true)` là phép gán TRÙNG GIÁ TRỊ ⇒ React bỏ qua ⇒ effect không chạy lại ⇒ 400ms vẫn
+> tính từ lần tăng ĐẦU. Nay là một **thẻ đếm** (`token => token + 1`), mỗi lần tăng bump một nấc.
+> **(3) Bài test đọc-mã bản đầu ĐỎ trên mã hoàn toàn đúng** — nó cắt vùng "luôn hiện" bằng
+> `code.slice(0, cổngKho)`, tức quét luôn phần ĐỊNH NGHĨA `TopStat`/`KhoRow` (bên trong có
+> `<FlashNumber>`) và khối `useGameStore` khai `researchRP`. **Định nghĩa ≠ lời gọi; khai báo biến ≠
+> dựng ra màn hình** — cùng họ bài học `/tênHàm\(/` đã ghi ở `CLAUDE.md`. Nay chặn CẢ HAI ĐẦU (từ
+> `return (` của `ResourceDisplay` tới cổng Kho) kèm gác chống-tập-rỗng.
+> **(4) Một assert dạng HOẶC là cái phễu, không phải hàng rào.** Bài canh "thẻ đếm" bản đầu viết
+> `(?:token\) => token \+ 1|0)`; phá vế bump thì vế `setFlashToken(0)` vẫn khớp và bài test **vẫn
+> xanh**. Nay hỏi TỪNG vế một. Phát hiện được **chỉ nhờ chạy phép thử ngược** — không có nó thì bài
+> test đứng đó như một lời bảo chứng rỗng.
+>
+> **⚠️ VÀ MỘT LỖI CHỈ CON MẮT BẮT ĐƯỢC, KHÔNG CỔNG NÀO BẮT.** Bản đầu cho "Khoảng EP của chặng" vào
+> `KhoRow` như một con số bình thường. Test xanh, lint sạch, build xanh — nhưng ảnh chụp cho thấy nó
+> chiếm cỡ chữ của một con số đầu bảng, át cả panel, **còn xén mất nhãn của chính nó** (`KHOẢNG EP
+> CỦA C…`). Tệ hơn: nó sẽ nháy `var(--good)` mỗi lần Đàm sang kỷ khác — một lời khen cho việc chẳng
+> ai làm. **Khoảng EP là một RANH GIỚI CỐ ĐỊNH, không phải một số dư đếm được**, nên nay nó là một
+> dòng chú thích nhỏ màu `--muted`, không đi qua `FlashNumber`.
+>
+> **Nghiệm thu bằng ẢNH THẬT** (`scripts/shot.mjs`, sau `npm run build`): máy bàn 1280 + điện thoại
+> 390 THẬT (`scrollWidth=390 · không tràn`) + theme tối, cả hai trạng thái đóng/mở Kho, và một lượt
+> có `--fixture` để thấy thanh tiến độ chạy thật (`1.320 / 1.867 EP`, kỷ 8 chặng 3/3).
+> Cổng: **1174 bài · 0 đỏ · `# skipped 1`** · lint sạch · build 3,56s.
+> **⚠️ GỘP VỚI `main` — THẺ NÀY ĐÃ ĐI THEO LUẬT BA NHỊP MỚI.** Trong lúc làm, một phiên khác đưa
+> `src/lib/motionPresets.js` lên `main` (mọi chuyển động về đúng ba nhịp). Thẻ này **KHÔNG** giữ
+> `initial`/`animate` gõ tay nữa: thanh tiến độ đi qua `useSnapMotion` (ngoại lệ đúng nghĩa — `animate`
+> ở đây MANG BỐ CỤC, bề rộng CHÍNH LÀ tiến độ, trả rỗng là thanh biến mất; chú thích của chính
+> `useSnapMotion` gọi tên thẳng "chiều dài thanh tiến độ"), và cú nháy màu — một `transition` của CSS
+> nên ba nhịp không trải vào được — lấy tín hiệu Giảm chuyển động từ `useEnterMotion()` trả object
+> RỖNG thay vì tự gọi `useReducedMotion`, đồng thời mượn nguyên thời lượng + đường cong của nhịp
+> `enter` để không đẻ ra thời lượng thứ sáu. Có thêm một bài test khoá cả ba điều đó (đã thử ngược).
+>
+> Cổng sau khi gộp: **1181 bài · 0 đỏ · `# skipped 1`** · lint sạch · build 3,27s · chụp lại ảnh
+> nghiệm thu: thanh tiến độ vẫn chạy đúng `var(--accent)`, không tràn.
+>
+> ⚠️ **CHƯA TỰ XÁC NHẬN ĐƯỢC VERCEL "READY" TỪ HỘP CÁT NÀY — VÀ ĐÂY LÀ VIỆC ĐÀM PHẢI LIẾC MẮT.**
+> Luật số 2 ở `START_HERE.md` bắt "push xong phải xác nhận Vercel hiện Ready". Phiên này chạy trong
+> hộp cát từ xa, nơi chính sách mạng **chặn `pomodoro-dc.vercel.app`** (proxy trả 403 ở bước CONNECT)
+> và repo **không có GitHub Actions** (`total_count: 0` — deploy đi qua tích hợp GitHub của Vercel,
+> thứ gắn *commit status*, mà bộ công cụ GitHub ở đây không đọc được commit status). ⇒ Xác nhận được
+> tới đâu thì ghi tới đó: commit `2d1a096` **đã nằm trên `origin/main`**, và bản trên `main` **có đủ**
+> `resourceDisplayFormat.js` + `resourceDisplay.test.js` + đúng ba `<TopStat>`. Việc còn lại — tab
+> Deployments hiện "Ready" — **chưa ai kiểm**. Đúng bài học `8ee264d`: *code xanh + commit thành công
+> KHÔNG có nghĩa là đã thực sự lên production*. Phiên sau chạy trong hộp cát này đừng mất công thử
+> `curl` lại; hoặc nhờ Đàm liếc, hoặc chạy từ máy Đàm.
+> Cập nhật lần cuối: **2026-08-27 (tối)** — **ĐỒNG HỒ TRẢ LỜI HAI CÂU HỎI THAY VÌ MỘT.**
+> Vòng chính dày 14px (từ 7), bo tròn hai đầu, màu theo token — tập trung `--accent`, nghỉ (ngắn
+> LẪN dài) `--good`, nền `--timer-track`. Thêm **vòng thứ hai** mảnh 4px nằm ngoài, cách đúng 8px,
+> màu `--warn`: tiến độ MỤC TIÊU NGÀY. Con số ở giữa to thêm 20%, weight 800, `tabular-nums`; ngay
+> dưới là dòng 13px `--muted` ghi "Phiên 2/5 hôm nay".
+>
+> **⚠️ MỘT NGUỒN SỰ THẬT CHO "HÔM NAY", VÌ HAI CON SỐ NÀY NẰM CÁCH NHAU VÀI PHÂN.** Vòng mục tiêu
+> quanh đồng hồ và thẻ "Hôm nay" ở cột phải nói về cùng một thứ. Chép công thức sang là chắc chắn
+> có ngày chúng lệch — và triệu chứng là màn hình tự mâu thuẫn với chính nó, không có gì đỏ lên.
+> Đã tách `countSessionsOnDay` · `sumFocusMinutesOnDay` · `getDailyGoalProgress` sang `gameMath.js`
+> (thuần, `todayKey` là tham số BẮT BUỘC nên module không đọc đồng hồ máy), `App.jsx` nối vào đó.
+> Trước đây chỉ có MỘT bản ở `App.jsx` — nay vẫn một bản, nhưng hai nơi dùng.
+>
+> **⚠️ HAI QUẢ MÌN TỰ TAY GÂY RA, ĐO MỚI THẤY:**
+> **(1) Nâng cỡ chữ 20% làm số 3 chữ số TRÀN khỏi lòng đĩa ở khung 390px.** Nhánh cỡ chữ không
+> immersive là nhánh DUY NHẤT không có ràng buộc bề rộng. Đo thật: "180:00" (bấm giờ chạy quá 100
+> phút — `clampFocusMinutes` cho tới 180) ở `tracking-widest` rộng **247px trên lòng đĩa 238px ⇒
+> tràn 9px** đè lên vòng. Bản cũ cỡ nhỏ hơn nên vẫn vừa (dư 32px) ⇒ **do chính phép nâng cỡ sinh
+> ra**. Vá bằng `tracking-wide` (đo: 215px, dư 23px), giữ nguyên mức tăng 20%. Cả 12 mốc đáp ứng
+> đều nhân đúng ×1,196–1,204.
+> **(2) `drop-shadow(0 0 12px ${ringColor}55)` — ghép chuỗi để lấy màu mờ — chỉ hợp lệ khi màu là
+> mã hex.** Từ lúc màu vòng đọc token nó cho ra `var(--accent)55`, một giá trị CSS vô nghĩa nên
+> quầng sáng im lặng biến mất. Thật ra nó **đã hỏng sẵn ở theme sáng từ trước** (ở đó `RING_COLORS`
+> vốn đã là token); chỉ nhánh tối còn chạy nhờ hai mã hex cứng `#60a5fa`/`#38bdf8` — mà hai mã ấy
+> chính là thứ vừa bị gỡ vì không thuộc bảng màu của skin nào. Vá bằng `color-mix` (giữ `var()`
+> sống, dự án đã dùng ở `cityBackdropScrim.js`).
+>
+> **⚠️ CÔNG CỤ ĐO NÓI DỐI, LẦN NÀY VÌ MỘT LÝ DO MỚI: `transition-all`.** Phép đo bề rộng chữ dựng
+> một bản sao của thẻ số rồi đổi `letter-spacing` và đọc ngay — bốn giá trị khác nhau ra **cùng một
+> con số**. Bản sao thừa hưởng `transition-all duration-300`, mà `letter-spacing` là thuộc tính
+> CHUYỂN ĐỘNG ĐƯỢC, nên nó chưa kịp đổi lúc đọc; `textContent` thì không chuyển động nên chuỗi khác
+> nhau vẫn ra số khác nhau — đủ để trông như phép đo đang chạy. ⇒ **Mọi phép đo dựng bản sao để đo
+> phải đặt `transition: none` trước.**
+>
+> **Không đo được trạng thái "đang chạy"/"đang nghỉ" bằng trình duyệt** — luật số 4 cấm start phiên
+> trên dev (dùng chung dòng Supabase với bản thật). Nên màu hai trạng thái ấy khoá bằng test đọc-mã
+> (`timerRing.test.js`, 7 bài) cộng 5 bài thuần cho helper mới. **Cả 10 phép thử ngược đều đỏ đúng
+> chỗ** — sau khi vá một bài **MÙ**: phép so `khoảngTrống === GAP` là một **hằng đẳng thức** vì
+> `GOAL_RING_RADIUS` suy ra TỪ `GAP`, nên hạ `GAP` về 0 vẫn xanh (đúng bài học ADR-048 "bất biến
+> đúng theo cấu tạo thì không phải một cái gác"). Đã thêm sàn QUAN HỆ `GAP >= GOAL_RING_STROKE`.
+>
+> **Fixture ảnh chụp đã sửa để soi được chính tính năng này.** `shot.mjs` không có phiên nào của
+> hôm nay ⇒ vòng mục tiêu luôn vẽ 0% ⇒ VÔ HÌNH trong mọi ảnh. Phải seed vào `history` chứ không vào
+> `dailyTracking` (store dựng lại bộ đếm từ history mỗi lần nạp — seed thẳng bị ghi đè về 0 trong im
+> lặng, đã đo); và lùi 10/20 PHÚT chứ không vài giờ, vì chạy gần nửa đêm giờ VN thì mốc lùi 3 giờ
+> rơi sang hôm qua và fixture lặng lẽ còn 1 phiên (cũng đã đo). Khoá ngày nhập THẲNG `localDateStr`
+> từ mã sản phẩm, không viết lại phép đổi múi giờ.
+>
+> **Nghiệm thu bằng trình duyệt thật**: track `#e3e0d9` (`--timer-track`) · vòng chính r=128 nét 14
+> `round` · vòng mục tiêu r=145 nét 4 `#e0921f` (`--warn`), vẽ `911,1 − 546,6 = 364,5` = **đúng 40%**
+> khớp 2/5 · số 72px weight **800** `font-variant-numeric: tabular-nums` · "25:00" và "99:59" **cùng
+> 177px** ⇒ đếm lùi không nhảy ngang · dòng phụ 13px `#6b675f` (`--muted`).
+>
+> **CÒN LẠI, KHÔNG SỬA VÌ NGOÀI PHẠM VI**: con số đồng hồ vẫn dùng `lightTheme ? 'serif' : 'font-mono'`
+> và `.serif` chốt cứng `'Source Serif 4'` — tức ở skin Sân Chơi (sans) con số vẫn là serif. Cùng họ
+> bệnh với `ActionButton` đã chữa hôm nay; đổi sang `var(--skin-font-display)` là một dòng, nhưng đó
+> là một quyết định mỹ thuật nên để Đàm quyết.
+>
+> Cổng: `npm test` **1.175 bài · 1.174 pass · 0 fail · 1 skipped** (+12 bài mới) · `test:cross` 3/3
+> · lint sạch · build xanh.
+> Cập nhật lần cuối: **2026-08-27 (khuya)** — **ĐIỀU HƯỚNG CHÍNH: 8 MỤC → 5, BẰNG CÁCH GỘP.**
+> Ba màn Kỹ năng · Kho báu · Thành tích nay là ba TAB CON của **"Hành trang"**. Desktop còn đúng 5
+> mục (Tập trung · Hành trang · Thành Phố · Thống kê · Cài đặt); iPhone còn 4 nút (Tập trung ·
+> Nhiệm vụ · Hành trang · Thành Phố) + nút "Thêm" giữ Thống kê và Cài đặt. **Không màn nào bị xoá**
+> — mỗi tab con vẫn dựng đúng component cũ, với đúng state cũ.
+>
+> **Vì sao Thành Phố quay lại nhóm chính.** Chú thích cũ ghi *"Thành Phố CỐ Ý không nằm trong nhóm
+> chính: thanh dưới iPhone giữ đúng 4 nút"*. Lý do ấy vẫn đúng, nhưng TIỀN ĐỀ của nó đã chết: hồi đó
+> ba màn kia ăn ba ô nên phải hy sinh một mục. Gộp xong thì ô thứ tư trống ra, và Thành Phố — mặt
+> trận đang xây — là thứ đáng nhận nó. Thứ đổi chỗ là "Thống kê" (nay sau nút "Thêm"): nó là chỗ
+> ngồi ĐỌC, không phải chỗ bấm vào giữa một phiên. Chú thích cũ đã viết lại kèm cả lý do đổi.
+>
+> **⚠️ BỐN ĐIỀU PHẢI BIẾT TRƯỚC KHI SỬA TIẾP:**
+> **(1) ID CŨ ĐƯỢC GIỮ NGUYÊN, VÀ ĐÓ KHÔNG PHẢI SỰ LƯỜI.** Ba tab con vẫn mang id `skills` ·
+> `collection` · `achievements` vì **thông báo đã LƯU trong localStorage của Đàm** mang sẵn
+> `action: { tab: 'skills' }` và `{ tab: 'collection', collectionTab: 'workshop' }`. Đổi id ở nguồn
+> cho "gọn" thì mọi thông báo cũ bấm vào **không đi đâu cả**, và không có gì đỏ lên. Cửa dịch là
+> `resolveTabTarget` trong `App.jsx`; `selectTab` gọi nó nên MỌI lời gọi cũ vẫn đúng. Có một bài
+> test quét CẢ `gameStore.js` lẫn `NotificationCenter.jsx` đòi mọi `tab: '…'` phải còn tới được.
+> **(2) BA PHÉP ĐẾM "CÓ VIỆC ĐANG CHỜ" ĐÃ RA KHỎI `NotificationCenter.jsx`.** Chúng nay ở
+> `src/engine/opportunities.js` vì có HAI người đọc: cái chuông, và cái chấm trên tab Hành trang.
+> Chép chúng về lại là "một luật hai công thức" — hai bản sao trôi khỏi nhau ở BIÊN rồi chuông báo
+> có việc trong khi chấm im, mà mỗi bên vẫn tự nhất quán với chính nó nên không gì đỏ lên. Đã khoá
+> bằng một bài test đọc mã nguồn.
+> **(3) DẤU "THÀNH TÍCH ĐÃ XEM": `null` KHÁC `[]`.** `dc-nav-seen-v1` chưa từng ghi (`null`) nghĩa
+> là *"máy này chưa bật cơ chế"* ⇒ **không có gì là mới**; ghi rồi mà rỗng (`[]`) nghĩa là *"chưa
+> xem gì cả"* ⇒ **mọi thứ đều mới**. Nhập hai thứ đó làm một thì lần đầu mở app cái chấm sáng oan
+> cho hàng chục thành tích Đàm đã xem từ lâu — và một cái chấm kêu oan thì lần sau anh sẽ bỏ qua
+> nó, kể cả khi nó kêu đúng. Dấu chỉ được ghi khi Đàm mở ĐÚNG tab con "Thành tích", không phải khi
+> đi ngang qua "Hành trang".
+> **(4) `useInventoryAttention` TRẢ VỀ MỘT BOOLEAN, KHÔNG PHẢI MỘT MẢNG.** Selector zustand so bằng
+> `Object.is`, nên gốc app chỉ render lại khi cái chấm THẬT SỰ bật/tắt. Đổi nó thành mảng/đối tượng
+> là cho `App` — thứ bọc cả cảnh 3D — render lại theo từng con số tài nguyên nhúc nhích.
+>
+> **⚠️ MỘT ĐIỀU CHƯA KIỂM ĐƯỢC, NÓI THẲNG RA.** Đường vào từ **thông báo** (bấm một dòng cơ hội
+> trong chuông) không lái được bằng `scripts/shot.mjs`: bấm xong thì bảng thông báo KHÔNG đóng, tức
+> handler chưa hề chạy — công cụ không tới được chỗ đó. Đã đo **bản TRƯỚC khi sửa** bằng đúng cách
+> ấy và nó cho **kết quả y hệt**, nên đây là giới hạn của công cụ chứ không phải hồi quy do lần sửa
+> này. Phần logic thì có test (mục 1 ở trên). Ai muốn đóng nốt: cần một cú bấm CDP thật, kiểu cờ
+> `--press` mới thêm hôm nay, chứ `element.click()` trong `--probe` không đủ.
+>
+> Cổng (ĐO SAU KHI GỘP nhánh "ba nhịp chuyển động" vào): `npm test` **1.186 bài · 1.185 pass ·
+> 0 fail · 1 skipped** — riêng phần việc này góp **+17 bài** (đo trên nhánh trước lúc gộp: 1.180) ·
+> `test:cross` 3/3
+> · lint sạch · build xanh. Ảnh chụp thật: desktop đếm được 5 mục, iPhone 4 nút + "Thêm" (2 mục
+> trong đó, lưới tự co còn 2 cột), `--fit` ở 390px soi 23 nút không nút nào tràn chữ. Cái chấm đã
+> chụp được ở CẢ hai thanh khi bơm một cơ hội thật (fixture `sp: 99`), và tắt đúng khi không có việc.
+
+> Cập nhật lần cuối: **2026-08-27 (tối)** — **MỌI CHUYỂN ĐỘNG VỀ ĐÚNG BA NHỊP.**
+> `initial`/`animate`/`transition` đang khai rời rạc ở hơn ba mươi file. Đếm được **5 thời lượng**
+> (0,18 · 0,22 · 0,26 · 0,28 · 0,35 giây) và **7 đường cong** khác nhau; riêng bảng điều khiển đồng
+> hồ khai **y hệt nhau bốn lần**. Nay: `src/lib/motionPresets.js` xuất ra ĐÚNG ba nhịp —
+> **`enter`** (opacity 0→1, y 6→0, 180ms, ease `[0.22,1,0.36,1]`) · **`press`** (scale 1→0,97,
+> 90ms) · **`reward`** (scale 0,9→1 bằng lò xo 420/18). Cả ba là hook và **tự trả về object rỗng**
+> khi `useReducedMotion()` bật ⇒ chỗ gọi không phải tự kiểm tra.
+>
+> **11 file đã đổi:** `App.jsx` · `PomodoroEngine.jsx` · `DisasterModal` · `EraCrisisModal` ·
+> `LevelUpModal` · `LootDropModal` · `PrestigeModal` · `WeeklyReportModal` · `OnboardingOverlay` ·
+> `BlueprintInventory` · `SkillTree`. **KHÔNG đụng `src/components/city/render3d/`** (three.js).
+>
+> ⚠️ **HAI FILE CUỐI SUÝT BỊ BỎ SÓT, VÌ "MODAL" KHÔNG PHẢI LÚC NÀO CŨNG TÊN `*Modal.jsx`.**
+> Quét theo tên file ra đúng 7 modal và tôi đã tưởng thế là hết. Quét lại theo **HÌNH DẠNG**
+> (`grep 'fixed inset-0'`) ra thêm ba ứng viên, và hai trong ba là modal thật nằm LỒNG trong một
+> file lớn hơn: `BlueprintDetailPanel` (trong `BlueprintInventory.jsx`) và `PurchaseConfirmDialog`
+> (trong `SkillTree.jsx`) — mỗi cái đủ bộ lớp phủ + thân, đúng khuôn rời rạc cần dọn. Ứng viên thứ
+> ba (`ExportImport`) là một `<div>` trần không có chuyển động nào, nên không phải việc.
+> ⇒ **Đi tìm một LOẠI thứ thì quét theo hình dạng của nó, đừng quét theo quy ước đặt tên** — quy
+> ước đặt tên chỉ đúng cho những cái ai đó đã nhớ mà đặt tên đúng.
+>
+> **⚠️ BỐN ĐIỀU ĐÃ TRẢ GIÁ, CÁI NÀO CŨNG IM LẶNG:**
+> **(1) CHỈ THỊ GỐC TỰ MÂU THUẪN, VÀ MỘT NỬA CỦA NÓ LÀ QUẢ MÌN.** Chỉ thị ghi `reward` là *"scale
+> 0,9 sang 1,04 rồi về 1"* KÈM *"spring stiffness 420 damping 18"*. Hai vế **không thể cùng đúng**:
+> framer-motion 12.38 chặn thẳng lò xo có quá hai mốc (`JSAnimation.mjs`: *"Only two keyframes
+> currently supported with spring and inertia animations"*) — và `invariant` ấy **NÉM LỖI ở bản dev,
+> IM LẶNG ở bản production**, tức viết `[0.9, 1.04, 1]` là gài một quả mìn chỉ nổ ở một trong hai
+> môi trường. Đo đỉnh thật của `spring(420, 18)` đi từ 0,9 tới 1 bằng chính `spring()` của
+> `motion-dom`: **1,0215 ở mốc 171ms, đứng yên ở 337ms**. ⇒ **Đã giữ đúng 420/18 như chỉ thị ghi**;
+> hình dạng "co lại → vọt quá → về 1" vẫn nguyên, chỉ là cú vọt cao **2,2% thay vì 4%**. Muốn đúng
+> 4% thì hạ **`damping` 18 → 11,5** (đo được 1,0399) — đổi MỘT con số ở `motionPresets.js`. Bài học:
+> *độ vọt lố của lò xo là HỆ QUẢ, không phải thứ mình liệt kê ra.*
+> **(2) TRẢ OBJECT RỖNG CÓ THỂ **VỠ BỐ CỤC**, NÊN PHẢI CÓ HAI CÁI GÁC CHỨ KHÔNG PHẢI MỘT.** Chỉ thị
+> nói cả ba preset trả về rỗng — đúng cho thứ TRANG TRÍ. Nhưng cột phải khai bề ngang **bằng chính
+> `animate={{ width }}`** chứ không bằng CSS: bỏ đi thì cột mất bề ngang và bung ra chiếm cả màn
+> hình — một cách "tắt hoạt hoạ" bằng cách phá giao diện. Câu hỏi phân loại: ***"bỏ hẳn `animate`
+> đi thì phần tử còn ở đúng chỗ của nó không?"*** CÒN → `useCustomMotion` (bỏ hẳn). KHÔNG →
+> `useSnapMotion` (giữ đích, `duration: 0`). Bốn thứ thuộc nhóm hai: bề ngang hai cột · núm gạt chế
+> độ nghiêm ngặt · thanh tiến độ · vòng đếm giờ.
+> **(3) `transition` CỦA `press` PHẢI NẰM TRONG `whileTap`, KHÔNG PHẢI Ở CẤP NGOÀI.** Nhiều nút vừa
+> có `whileTap` vừa có `animate` riêng (thẻ preset nhấc lên khi đang chọn, núm gạt trượt…). Đặt
+> `transition` ở cấp ngoài thì việc trải preset **ĐÈ MẤT** `transition` của thẻ — không có gì đỏ
+> lên, chỉ có nhịp của thứ khác bị đổi. Đã khoá bằng test.
+> **(4) HOOK ĐẶT SAU MỘT LỐI RA SỚM.** `PrestigeModal` có `if (!isOpen) return null;` ở giữa thân
+> hàm; đặt bốn hook bên dưới nó là vi phạm quy tắc hook. **`npm run lint` bắt được ngay** (test
+> KHÔNG bắt được — đây là loại lỗi chỉ có lint thấy, đúng bài học ADR-054).
+>
+> **NGOẠI LỆ ĐỀU ĐẾM ĐƯỢC VÀ ĐỀU CÓ CHÚ THÍCH LÝ DO TẠI CHỖ:** `ActionButton` giữ cú lún `y:4` vì
+> nó BẰNG ĐÚNG chiều dày vạch bóng đặc (`actionButtonPress.test.js` khoá cứng quan hệ ấy **và cấm
+> `scale` ở `whileHover`** — một nhịp `press` dùng `scale` sẽ phá cả hai); các hiệu ứng SO LE
+> (`ResourceCascade`, viên tài nguyên của `EraChangeBanner`) giữ độ trễ vì độ trễ CHÍNH LÀ thứ chúng
+> tồn tại để làm; pháo hoa (`ParticleField`, `ParticleRain`) `return null` hẳn khi Giảm chuyển động.
+>
+> **Lưới tự động:** `src/lib/motionPresets.test.js` **MỚI** — 6 bài, **cả 9 phép thử ngược đều đã
+> thấy đỏ** (thêm preset thứ tư · bỏ gác · guard hết rỗng · đổi thời lượng · bỏ `exit` · đưa
+> `transition` ra ngoài · lò xo 3 mốc · lò xo hết vọt lố · lớp phủ mượn `y`). Bài "lò xo" **không
+> đọc mã** — nó chạy thẳng `spring()` thật rồi ĐO đỉnh, thay vì tin con số chép trong chú thích.
+>
+> **ĐẾM ĐƯỢC:** khai báo rời rạc trong 11 file ấy đi từ **228 xuống 34** (−85%). Và 34 kia phải
+> nói cho đúng, đừng gộp thành một câu: **24 là ngoại lệ NẰM TRONG phạm vi, mỗi cái có một dòng
+> chú thích nêu lý do** (thanh tiến độ đọc biến vòng lặp · hiệu ứng so le · pháo hoa · `ActionButton`);
+> **10 còn lại nằm ở phần KHÔNG-phải-modal của `SkillTree`** (nhịp thở của nút kỹ năng, quầng sáng
+> hiệp trợ, thanh tiến độ nhánh) — **ngoài phạm vi việc này, giữ nguyên**. Chúng vẫn tự xử lý
+> `reducedMotion` bằng tay theo lối cũ ở 6/10 dòng; 4 dòng còn lại (thanh tiến độ nhánh, huy hiệu)
+> thì không. Đó là việc của một lượt sau, không phải một lời hứa đã hoàn thành ở lượt này.
+>
+> **TIÊU CHÍ NGHIỆM THU ĐÃ ĐƯỢC ĐO, KHÔNG PHẢI KHAI.** `scripts/motion-still.mjs` **MỚI**: bấm
+> chuyển tab rồi chụp HAI khung hình cách nhau 90ms và đếm điểm ảnh lệch. Chạy CẢ HAI chế độ, vì
+> một con số "0 điểm ảnh lệch" tự nó không chứng minh gì — nó cũng đúng y hệt khi cú bấm trượt
+> hoặc app chưa mọc ra. Hai lượt liên tiếp: **THƯỜNG 40.385 rồi 39.370 điểm ảnh đổi** (3,51% /
+> 3,42%, lệch lớn nhất 255 ⇒ thước CÓ răng) · **GIẢM CHUYỂN ĐỘNG 0 rồi 0, lệch lớn nhất 0**.
+> Cột thường trôi vài phần trăm là đúng (hai khung rơi vào hai thời điểm khác nhau của cùng một
+> hoạt hoạ); cột giảm **không trôi**, và chính sự không-trôi ấy mới là bằng chứng.
+> ⚠️ Cổng "app đã mọc ra chưa" trong script đó KHÔNG được thay bằng một phép đợi cố định: bảng
+> kiểu Google Fonts là tài nguyên CHẶN RENDER, trong hộp cát không có mạng ngoài thì
+> `document.readyState` kẹt ở `loading` rất lâu — bản đầu đợi cố định 6 giây ra **0 nút** và suýt
+> cho ra kết luận "không có hoạt hoạ nào" hoàn toàn sai, ở CẢ HAI chế độ.
+>
+> Cổng: `npm test` **1.169 bài · 1.168 pass · 0 fail · 1 skipped** · `test:cross` 3/3 (32,1 giây) ·
+> lint sạch · build xanh · `scripts/shot.mjs` chụp lại trang chủ 1280px: không tràn, mọi khối còn đủ.
 
 > Cập nhật lần cuối: **2026-08-27 (chiều)** — **`ActionButton` NGHE THEO SKIN + CÓ CẢM GIÁC BẤM LÚN.**
 > Ba bệnh đã chữa: `themeMap` khai màu cứng theo `lightTheme` (chỉ đúng **2 trong 10** tổ hợp skin ×

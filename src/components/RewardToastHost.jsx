@@ -20,7 +20,7 @@
  * hai luật cùng đúng.
  */
 import { useEffect, useMemo, useRef } from 'react';
-import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 
 import useGameStore from '../store/gameStore';
 import soundEngine from '../engine/soundEngine';
@@ -31,11 +31,12 @@ import {
   splitRewardToasts,
 } from '../engine/rewardFeed';
 import { getRewardTier } from '../engine/rewardTiers';
+import { useEnterMotion } from '../lib/motionPresets';
 import RewardCard from './shared/RewardCard';
 
 const MONO_FONT = '"JetBrains Mono", "SFMono-Regular", Menlo, monospace';
 
-function ToastItem({ toast, paused, index, reduceMotion, onDismiss, onOpen }) {
+function ToastItem({ toast, paused, enterMotion, onDismiss, onOpen }) {
   // `onDismiss` được dựng lại mỗi lần cha vẽ. Nếu để nó trong danh sách phụ thuộc
   // thì đồng hồ khởi động lại theo mỗi lần vẽ; nếu bỏ nó ra mà không ghim thì
   // effect giữ mãi bản đầu tiên (bẫy closure cũ). Ref giải cả hai: danh sách phụ
@@ -54,15 +55,18 @@ function ToastItem({ toast, paused, index, reduceMotion, onDismiss, onOpen }) {
     return () => window.clearTimeout(timer);
   }, [paused, toast.id]);
 
+  /*
+   * ⚠️ DÙNG NHỊP `enter`, KHÔNG DÙNG `reward`. Cám dỗ rất lớn vì đây đúng là thẻ
+   * PHẦN THƯỞNG — nhưng `motionPresets.js` viết rõ: `reward` là nhịp ĐẮT nhất,
+   * dành cho phần thưởng và CỘT MỐC, *"dùng bừa thì nó hết là phần thưởng"*. Thẻ
+   * này nổ sau MỌI phiên, tức là định nghĩa của dùng bừa. Thứ nói "đây là phần
+   * thưởng" ở đây là bậc độ hiếm và vệt màu của `RewardCard`, không phải cú nảy.
+   * Và `enter` mô tả đúng việc đang xảy ra: *"một dòng vừa được thêm vào danh sách"*.
+   * (Nó cũng có sẵn `exit` — thứ `reward` không có, mà một chồng toast thì phần tử
+   * LUÔN rời đi.)
+   */
   return (
-    <motion.div
-      layout={!reduceMotion}
-      initial={reduceMotion ? false : { opacity: 0, x: 40, scale: 0.96 }}
-      animate={{ opacity: 1, x: 0, scale: 1 }}
-      exit={reduceMotion ? { opacity: 0 } : { opacity: 0, x: 40, scale: 0.96 }}
-      transition={reduceMotion ? { duration: 0.12 } : { type: 'spring', damping: 24, stiffness: 300, delay: index * 0.05 }}
-      style={{ boxShadow: 'var(--skin-card-shadow)' }}
-    >
+    <motion.div {...enterMotion} style={{ boxShadow: 'var(--skin-card-shadow)' }}>
       <RewardCard
         icon={toast.icon}
         name={toast.name}
@@ -91,7 +95,7 @@ export default function RewardToastHost({ paused = false, onNavigate, onOpenDeta
   const dismissRankUpNotification = useGameStore((s) => s.dismissRankUpNotification);
   const dismissAchievementNotification = useGameStore((s) => s.dismissAchievementNotification);
   const dismissMissionNotification = useGameStore((s) => s.dismissMissionNotification);
-  const reduceMotion = useReducedMotion();
+  const enterMotion = useEnterMotion();
 
   const toasts = useMemo(() => buildRewardToasts(ui, missions), [ui, missions]);
   const { shown, hidden, overflowLabel } = splitRewardToasts(toasts);
@@ -155,13 +159,12 @@ export default function RewardToastHost({ paused = false, onNavigate, onOpenDeta
       aria-live="polite"
     >
       <AnimatePresence initial={false}>
-        {shown.map((toast, index) => (
+        {shown.map((toast) => (
           <div className="pointer-events-auto" key={toast.id}>
             <ToastItem
               toast={toast}
-              index={index}
               paused={paused}
-              reduceMotion={reduceMotion}
+              enterMotion={enterMotion}
               onDismiss={dismiss}
               onOpen={open}
             />
@@ -170,10 +173,7 @@ export default function RewardToastHost({ paused = false, onNavigate, onOpenDeta
         {overflowLabel && (
           <motion.div
             key="overflow"
-            layout={!reduceMotion}
-            initial={reduceMotion ? false : { opacity: 0, x: 40 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={reduceMotion ? { opacity: 0 } : { opacity: 0, x: 40 }}
+            {...enterMotion}
             className="mono pointer-events-none px-3.5 py-2 text-[11px] font-semibold uppercase tracking-[0.16em]"
             style={{
               background: 'var(--card-bg-solid)',

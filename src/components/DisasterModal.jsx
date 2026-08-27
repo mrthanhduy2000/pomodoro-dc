@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { SCRIM_FADE, useCustomMotion, useEnterMotion, usePressMotion } from '../lib/motionPresets';
 
 import useGameStore from '../store/gameStore';
 import soundEngine from '../engine/soundEngine';
@@ -66,6 +67,13 @@ export default function DisasterModal() {
 }
 
 function DisasterContent({ data, onClose }) {
+  const enterMotion = useEnterMotion();
+  const pressMotion = usePressMotion();
+  // Nhấc 1px khi DI CHUỘT không thuộc ba nhịp (ba nhịp nói về xuất hiện / bấm / thưởng), nên nó
+  // đi qua cái gác ngoại lệ để vẫn im khi bật Giảm chuyển động.
+  const hoverLift = useCustomMotion({ whileHover: { y: -1 } });
+  // Lớp phủ tối chỉ mờ dần, không trôi — xem `SCRIM_FADE` ở `motionPresets.js`.
+  const scrimMotion = useCustomMotion(SCRIM_FADE);
   useEffect(() => {
     if (!data.waived) soundEngine.playDisaster();
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -103,18 +111,13 @@ function DisasterContent({ data, onClose }) {
 
   return (
     <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
+      {...scrimMotion}
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
       style={{ backgroundColor: 'rgba(31, 30, 29, 0.34)', backdropFilter: 'blur(10px)' }}
       onClick={onClose}
     >
       <motion.div
-        initial={{ y: 18, scale: 0.96, opacity: 0 }}
-        animate={{ y: 0, scale: 1, opacity: 1 }}
-        exit={{ y: 10, scale: 0.97, opacity: 0 }}
-        transition={{ duration: 0.26, ease: 'easeOut' }}
+        {...enterMotion}
         className="w-full max-w-md border p-6"
         style={{
           borderRadius: 'var(--skin-radius-card,18px)',
@@ -257,8 +260,8 @@ function DisasterContent({ data, onClose }) {
         <div className="flex justify-center">
           <motion.button
             type="button"
-            whileHover={{ y: -1 }}
-            whileTap={{ scale: 0.99 }}
+            {...hoverLift}
+            {...pressMotion}
             onClick={onClose}
             className="border px-7 py-3 text-sm font-semibold"
             style={waived ? {

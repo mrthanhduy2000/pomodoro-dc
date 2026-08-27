@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
+import { SCRIM_FADE, useCustomMotion, useEnterMotion, useRewardMotion } from '../lib/motionPresets';
 
 import useGameStore from '../store/gameStore';
 
@@ -37,6 +38,11 @@ const PARTICLES = Array.from({ length: 10 }, (_, index) => ({
 export default function LevelUpModal({ autoDismissMs = 0 }) {
   const queue = useGameStore((state) => state.ui.levelUpQueue);
   const dismissLevelUp = useGameStore((state) => state.dismissLevelUp);
+  const enterMotion = useEnterMotion();
+  // Con số cấp độ mới là một CỘT MỐC — đúng chỗ để tiêu nhịp đắt nhất.
+  const rewardMotion = useRewardMotion();
+  // Lớp phủ tối chỉ mờ dần, không trôi — xem `SCRIM_FADE` ở `motionPresets.js`.
+  const scrimMotion = useCustomMotion(SCRIM_FADE);
 
   const current = queue[0] ?? null;
 
@@ -52,10 +58,7 @@ export default function LevelUpModal({ autoDismissMs = 0 }) {
       {current && (
         <motion.div
           key={current.newLevel}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.22 }}
+          {...scrimMotion}
           className="fixed inset-0 z-[60] flex items-center justify-center"
           style={{ backgroundColor: 'rgba(31, 30, 29, 0.26)', backdropFilter: 'blur(10px)' }}
           onClick={dismissLevelUp}
@@ -63,10 +66,7 @@ export default function LevelUpModal({ autoDismissMs = 0 }) {
           <ParticleField />
 
           <motion.div
-            initial={{ y: 20, scale: 0.96, opacity: 0 }}
-            animate={{ y: 0, scale: 1, opacity: 1 }}
-            exit={{ y: 16, scale: 0.97, opacity: 0 }}
-            transition={{ duration: 0.28, ease: 'easeOut' }}
+            {...enterMotion}
             className="pointer-events-none mx-4 flex max-w-[420px] flex-col items-center gap-5 border px-8 py-9 text-center select-none"
             style={{
               background: 'var(--card-bg-solid)',
@@ -84,9 +84,7 @@ export default function LevelUpModal({ autoDismissMs = 0 }) {
             </p>
 
             <motion.div
-              initial={{ scale: 0.82 }}
-              animate={{ scale: [0.82, 1.03, 1] }}
-              transition={{ duration: 0.5, ease: 'easeOut' }}
+              {...rewardMotion}
               className="relative flex h-40 w-40 items-center justify-center rounded-full border"
               style={{
                 borderColor: 'rgba(var(--accent-rgb),0.18)',
@@ -180,6 +178,10 @@ export default function LevelUpModal({ autoDismissMs = 0 }) {
 }
 
 function ParticleField() {
+  // NGOẠI LỆ (trang trí) — pháo hoa bay ra từ tâm màn hình. Không mang một chữ thông tin nào,
+  // nên bật Giảm chuyển động thì bỏ HẲN: đây đúng là loại chuyển động lớn mà tuỳ chọn ấy nhắm tới.
+  const reduceMotion = useReducedMotion();
+  if (reduceMotion) return null;
   return (
     <div className="pointer-events-none absolute inset-0 overflow-hidden">
       {PARTICLES.map((particle) => (

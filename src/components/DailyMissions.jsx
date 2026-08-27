@@ -4,6 +4,7 @@ import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import useGameStore from '../store/gameStore';
 import useSettingsStore from '../store/settingsStore';
 import RewardCard from './shared/RewardCard';
+import { useCustomMotion, useEnterMotion, usePressMotion } from '../lib/motionPresets';
 import {
   BUILDING_EFFECTS,
   MISSION_ALL_BONUS_XP,
@@ -157,7 +158,6 @@ export default function DailyMissions() {
                       label="Nhận"
                       lightTheme={lightTheme}
                       onClick={claimMissionAllBonus}
-                      reduceMotion={reduceMotion}
                     />
                   ) : null}
                 </AnimatePresence>
@@ -238,7 +238,6 @@ export default function DailyMissions() {
                     label="Chốt bước"
                     lightTheme={lightTheme}
                     onClick={claimWeeklyStep}
-                    reduceMotion={reduceMotion}
                   />
                 ) : null}
               />
@@ -285,14 +284,17 @@ export default function DailyMissions() {
  * ép dòng nhiệm vụ vào thẻ chung là mua sự đồng bộ bằng cách vứt đi một con số
  * Đàm đang dùng. Thẻ dùng cho thứ ĐÃ hoặc SẼ nhận; hàng dùng cho thứ đang làm.
  */
-function ClaimButton({ label, lightTheme, onClick, reduceMotion }) {
+function ClaimButton({ label, lightTheme, onClick }) {
+  const enterMotion = useEnterMotion();
+  const pressMotion = usePressMotion();
+  // Nhấc 1px khi rê chuột — cùng ngoại lệ mà `DisasterModal` đã đặt tên: nó không
+  // mang bố cục (bỏ đi thì nút vẫn ở đúng chỗ) nên đi qua `useCustomMotion`.
+  const hoverLift = useCustomMotion({ whileHover: { y: -1 } });
   return (
     <motion.button
-      initial={{ opacity: 0, y: 4 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: 4 }}
-      whileHover={reduceMotion ? undefined : { y: -1 }}
-      whileTap={reduceMotion ? undefined : { scale: 0.98 }}
+      {...enterMotion}
+      {...pressMotion}
+      {...hoverLift}
       type="button"
       onClick={onClick}
       className="whitespace-nowrap px-3.5 py-2 text-[12px] font-semibold"

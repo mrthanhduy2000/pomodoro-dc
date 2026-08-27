@@ -32,6 +32,15 @@ Mặt trận đang làm: **thành phố 3D** (`src/engine/city3d/` + `src/compon
   hoạ**; mọi phần thưởng khác đi qua chồng toast `RewardToastHost`, tự tắt sau 4 giây).
   Trước đó: **ADR-059** (mỗi kỷ MỘT MẠNG ĐƯỜNG riêng — hết bàn cờ; `roadPlan.js` nối các điểm mốc
   bằng cung cong ⇒ giao lộ chữ T/Y/ngã năm).
+- Chuyển động: **ĐÚNG BA NHỊP**, nguồn duy nhất `src/lib/motionPresets.js` — `enter` (thứ xuất
+  hiện) · `press` (thứ bấm được) · `reward` (phần thưởng, cột mốc). Cả ba **tự im** khi bật
+  "Giảm chuyển động" nên chỗ gọi đừng tự kiểm tra. ⚠️ Đừng gõ lại `initial`/`animate` bằng tay,
+  đừng thêm nhịp thứ tư (`motionPresets.test.js` đếm và sẽ đỏ). Ngoại lệ đi qua `useCustomMotion`
+  (bỏ hẳn) hoặc `useSnapMotion` (nhảy tới đích, cho thứ mà `animate` MANG BỐ CỤC — trả rỗng ở đó
+  là vỡ giao diện), và phải kèm một dòng lý do. **KHÔNG áp cho thành phố 3D.**
+- Điều hướng: **5 mục** ở thanh bên desktop (Tập trung · Hành trang · Thành Phố · Thống kê · Cài
+  đặt); iPhone **4 nút + "Thêm"**. Kỹ năng/Kho báu/Thành tích là ba TAB CON của "Hành trang" và
+  **vẫn mang id cũ** — thông báo đã lưu trỏ vào chúng, `resolveTabTarget` (`App.jsx`) là cửa dịch.
 - Giao diện: **5 skin**, mặc định là **"Sân Chơi" (`arcade`)** — phẳng, sans đậm, thẻ có chân bóng
   đặc 3px. Danh sách skin + mặc định có MỘT nguồn duy nhất: `src/store/uiSkins.js`. ⚠️ Thêm skin thì
   phải đủ ba chỗ (danh sách · `SKIN_OPTIONS` ở `Settings.jsx` · khối `[data-skin=…]` ở `index.css`)

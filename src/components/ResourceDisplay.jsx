@@ -1,14 +1,50 @@
-import React from 'react';
-import { motion, useReducedMotion } from 'framer-motion';
+/**
+ * ResourceDisplay.jsx — thanh tài nguyên: BA con số cộng MỘT thanh tiến độ, hết.
+ * ─────────────────────────────────────────────────────────────────────────────
+ * ⚠️ VÌ SAO PHẢI RÚT GỌN (Đàm, 2026-08-27): bản cũ bày cùng lúc EP · chặng · tài nguyên thô
+ * theo kỷ · tài nguyên tinh chế · RP · tinh thể, **tất cả cùng một trọng lượng thị giác**.
+ * Khi mọi thứ đều được nhấn thì không thứ nào được nhấn — mắt không biết đọc cái gì trước,
+ * nên thanh này thật ra không nói được điều gì. Đây là cùng một họ với bài học đã ghi ở
+ * `CLAUDE.md`: *"một con số không có mẫu số thì không phải mục tiêu"* — ở đây là vế còn lại:
+ * **một màn hình không có thứ tự đọc thì không phải một bảng điều khiển.**
+ *
+ * BA THỨ LUÔN HIỆN, theo đúng thứ tự này (và KHÔNG được thêm thứ tư vào đây):
+ *   1. Thanh tiến độ kỷ — chiếm TRỌN chiều ngang, nhãn `Kỷ N · chặng i/n`.
+ *   2. Chuỗi ngày.
+ *   3. Tinh thể.
+ * Mọi thứ còn lại (tài nguyên thô · tinh chế · RP · tên giai đoạn · khoảng EP của chặng)
+ * nằm sau nút **Kho**. ⚠️ ĐỔI CHỖ, KHÔNG XOÁ: không một con số nào biến mất khỏi app —
+ * bấm "Kho" là thấy đầy đủ y như trước.
+ *
+ * BA LUẬT TRÌNH BÀY nằm ở `resourceDisplayFormat.js` (file `.js` thuần, vì `node --test`
+ * không biên dịch JSX ⇒ luật để trong file này thì không bài test nào chạm tới được):
+ *   • `NUMBER_STYLE`  — mọi con số dùng `font-variant-numeric: tabular-nums`, để cột số
+ *     không nhảy ngang mỗi lần chữ số đổi (`1` hẹp hơn `8` ở font tỉ lệ).
+ *   • `labelSizeFor()` — nhãn/đơn vị nhỏ hơn con số **40%** và mang màu `var(--muted)`.
+ *     Đây là thứ quyết định "con số được đọc trước": cùng một hàng, cái to và đậm thắng.
+ *   • `shouldFlashOnIncrease()` — số TĂNG thì nháy `var(--good)` trong `FLASH_MS`.
+ *
+ * ⚠️ GIẢM CHUYỂN ĐỘNG: màu vẫn đổi (thông tin không được mất) nhưng đổi **tức thì** — không tween.
+ * Tín hiệu "đang bật" KHÔNG lấy bằng `useReducedMotion()` tự gọi mà bằng `useEnterMotion()` trả về
+ * object RỖNG (xem `src/lib/motionPresets.js`: chỗ gọi không phải tự kiểm tra).
+ * Lúc BẮT ĐẦU nháy thì luôn tắt `transition`, kể cả khi cho phép hoạt hoạ — nếu không thì màu xanh
+ * *phai dần vào* thay vì *nháy*, tức mất đúng cái tín hiệu đang muốn gửi.
+ */
+import React, { useEffect, useState } from 'react';
+import { motion } from 'framer-motion';
+
+import { EASE, useEnterMotion, useSnapMotion } from '../lib/motionPresets';
 
 import useGameStore from '../store/gameStore';
 import useSettingsStore from '../store/settingsStore';
+import { ERA_METADATA, ERA_REFINED, normalizeRefinedBag } from '../engine/constants';
 import {
-  ERA_METADATA,
-  ERA_THRESHOLDS,
-  ERA_REFINED,
-  normalizeRefinedBag,
-} from '../engine/constants';
+  FLASH_MS,
+  NUMBER_STYLE,
+  formatEraStageLabel,
+  labelSizeFor,
+  shouldFlashOnIncrease,
+} from './resourceDisplayFormat';
 
 function getCurrentStage(eraMeta, totalEP) {
   if (!eraMeta?.stages?.length) return null;
@@ -30,6 +66,100 @@ function getCurrentStage(eraMeta, totalEP) {
   };
 }
 
+/**
+ * Trả về `true` trong `FLASH_MS` sau mỗi lần `value` TĂNG.
+ *
+ * ⚠️ Phép đối chiếu cũ↔mới làm NGAY TRONG LÚC DỰNG, không làm trong `useEffect` — đây là khuôn
+ * "điều chỉnh state khi prop đổi" mà React khuyến nghị. Bản đầu của hàm này gọi `setFlashing`
+ * thẳng trong thân effect và `react-hooks/set-state-in-effect` bắt được: nó đẻ ra một lượt dựng
+ * THỪA, và cú nháy trễ đúng một khung hình so với lúc con số đổi — tức đúng thứ nó sinh ra để
+ * chỉ ra lại là thứ nó chỉ trễ.
+ *
+ * ⚠️ Đếm bằng THẺ (`flashToken`) chứ không bằng cờ `true/false`: nếu con số tăng lần nữa khi
+ * đang nháy dở thì `setFlashing(true)` là một phép gán TRÙNG GIÁ TRỊ ⇒ React bỏ qua ⇒ effect
+ * không chạy lại ⇒ đồng hồ 400ms vẫn tính từ lần tăng ĐẦU. Mỗi lần tăng bump thẻ lên một nấc
+ * thì effect chạy lại, dọn đồng hồ cũ và mở đồng hồ mới — 400ms luôn tính từ lần tăng MỚI NHẤT.
+ */
+function useIncreaseFlash(value) {
+  const [previous, setPrevious] = useState(value);
+  const [flashToken, setFlashToken] = useState(0);   // 0 = không nháy
+
+  if (!Object.is(previous, value)) {
+    setPrevious(value);
+    if (shouldFlashOnIncrease(previous, value)) setFlashToken((token) => token + 1);
+    else setFlashToken(0);
+  }
+
+  useEffect(() => {
+    if (flashToken === 0) return undefined;
+    const timer = setTimeout(() => setFlashToken(0), FLASH_MS);
+    return () => clearTimeout(timer);
+  }, [flashToken]);
+
+  return flashToken > 0;
+}
+
+/** Con số: tabular-nums + nháy `--good` khi tăng. Mọi con số của file này đi qua đây. */
+function FlashNumber({ value, size, format }) {
+  // ⚠️ Ngoại lệ có lý do: đây là `transition` của CSS, không phải prop của `motion.*`, nên ba nhịp
+  // không trải vào được. Nhưng nó vẫn đi qua `useEnterMotion()` chứ không tự gọi `useReducedMotion`:
+  // hook ấy trả object RỖNG khi Đàm bật Giảm chuyển động, nên `enterTransition === undefined` chính
+  // là tín hiệu ấy — và thời lượng lẫn đường cong mượn nguyên nhịp `enter`, không đẻ con số thứ sáu.
+  const { transition: enterTransition } = useEnterMotion();
+  const flashing = useIncreaseFlash(value);
+
+  return (
+    <span
+      className="font-semibold leading-none"
+      style={{
+        ...NUMBER_STYLE,
+        fontSize: `${size}px`,
+        fontFamily: 'var(--skin-font-display)',
+        color: flashing ? 'var(--good)' : 'var(--ink)',
+        // Nháy thì vào TỨC THÌ (fade-in sẽ nuốt mất cú nháy); chỉ đường VỀ mới được mượt, và cũng
+        // chỉ khi không bật Giảm chuyển động (`enterTransition` rỗng = đang bật).
+        transition: enterTransition && !flashing
+          ? `color ${enterTransition.duration}s cubic-bezier(${EASE.join(', ')})`
+          : 'none',
+      }}
+    >
+      {format ? format(value) : value.toLocaleString()}
+    </span>
+  );
+}
+
+/** Ô số ở thanh trên cùng: SỐ trước (to, đậm), nhãn sau (nhỏ hơn 40%, `--muted`). */
+function TopStat({ value, label, size, format, title }) {
+  return (
+    <div className="flex min-w-0 items-baseline gap-1.5" title={title}>
+      <FlashNumber value={value} size={size} format={format} />
+      <span
+        className="truncate leading-none"
+        style={{ ...NUMBER_STYLE, fontSize: `${labelSizeFor(size)}px`, color: 'var(--muted)' }}
+      >
+        {label}
+      </span>
+    </div>
+  );
+}
+
+const KHO_NUMBER_PX = 16;
+
+/** Một dòng trong panel Kho: nhãn trái, số phải. Cùng luật cỡ chữ, cùng luật nháy. */
+function KhoRow({ label, value, format }) {
+  return (
+    <div className="flex items-center justify-between gap-3 py-2">
+      <div
+        className="mono min-w-0 truncate uppercase tracking-[0.14em]"
+        style={{ fontSize: `${labelSizeFor(KHO_NUMBER_PX)}px`, color: 'var(--muted)' }}
+      >
+        {label}
+      </div>
+      <FlashNumber value={value} size={KHO_NUMBER_PX} format={format} />
+    </div>
+  );
+}
+
 export default function ResourceDisplay() {
   const activeBook = useGameStore((s) => s.progress.activeBook);
   const allResources = useGameStore((s) => s.resources);
@@ -37,8 +167,9 @@ export default function ResourceDisplay() {
   const researchRP = useGameStore((s) => s.research?.rp ?? 0);
   const tinhThe = useGameStore((s) => s.tinhThe);
   const resourcesRefined = useGameStore((s) => s.resourcesRefined);
+  const currentStreak = useGameStore((s) => s.streak?.currentStreak ?? 0);
   const uiTheme = useSettingsStore((s) => s.uiTheme);
-  const reduceMotion = useReducedMotion();
+  const [khoOpen, setKhoOpen] = useState(false);
 
   const lightTheme = uiTheme === 'light';
   const bookKey = `book${activeBook}`;
@@ -57,6 +188,13 @@ export default function ResourceDisplay() {
     value: allResources[bookKey]?.[def.id] ?? 0,
   }));
 
+  const { transition: enterTransition } = useEnterMotion();
+  const barMotion = useSnapMotion({
+    initial: { width: 0 },
+    animate: { width: `${stagePct}%` },
+    transition: enterTransition,
+  });
+
   return (
     <section
       className="px-5 py-5"
@@ -69,113 +207,100 @@ export default function ResourceDisplay() {
           : 'var(--skin-card-shadow, 0 12px 28px rgba(0, 0, 0, 0.14))',
       }}
     >
-      <div className="mb-4 flex items-end justify-between gap-3">
-        <div className="min-w-0">
-          <div className="mono text-[10px] uppercase tracking-[0.2em] text-[var(--muted-2)]">
+      {/* ── 1. THANH TIẾN ĐỘ KỶ — chiếm trọn chiều ngang, là thứ đọc trước tiên ───────── */}
+      <div className="flex items-baseline justify-between gap-3">
+        <div
+          className="mono min-w-0 truncate uppercase tracking-[0.16em]"
+          style={{ fontSize: `${labelSizeFor(18)}px`, color: 'var(--muted)', ...NUMBER_STYLE }}
+        >
+          {formatEraStageLabel(activeBook, stage)}
+        </div>
+        <button
+          type="button"
+          onClick={() => setKhoOpen((open) => !open)}
+          aria-expanded={khoOpen}
+          aria-controls="kho-panel"
+          className="mono shrink-0 px-2.5 py-1 uppercase tracking-[0.16em]"
+          style={{
+            fontSize: `${labelSizeFor(18)}px`,
+            color: 'var(--accent2)',
+            background: 'rgba(var(--accent-rgb), 0.1)',
+            borderRadius: 'var(--skin-radius-control, 14px)',
+          }}
+        >
+          Kho {khoOpen ? '▴' : '▾'}
+        </button>
+      </div>
+
+      <div className="mt-1.5">
+        <TopStat
+          value={stageXP}
+          size={18}
+          label={`/ ${stageRange.toLocaleString()} EP`}
+          title={`Chặng hiện tại: ${stage?.label ?? eraMeta.label}`}
+        />
+      </div>
+
+      <div
+        className="mt-2.5 h-1.5 w-full overflow-hidden rounded-full"
+        style={{ background: 'var(--line)' }}
+      >
+        {/* Ngoại lệ có lý do: `animate` ở đây MANG BỐ CỤC — bề rộng CHÍNH LÀ tiến độ, trả rỗng là
+            thanh biến mất. Đúng ca mà `useSnapMotion` sinh ra (chú thích của nó gọi tên thẳng
+            "chiều dài thanh tiến độ"): bật Giảm chuyển động thì nhảy tới đích, bố cục vẫn đúng.
+            Thời lượng và đường cong mượn nguyên của nhịp `enter` — đừng đẻ ra con số thứ sáu. */}
+        <motion.div className="h-full rounded-full" {...barMotion} style={{ background: 'var(--accent)' }} />
+      </div>
+
+      {/* ── 2 & 3. CHUỖI · TINH THỂ — hai con số còn lại, hết. ───────────────────────── */}
+      <div className="mt-4 flex items-baseline gap-6">
+        <TopStat value={currentStreak} size={24} label="chuỗi" title="Số ngày liên tiếp có phiên hoàn thành" />
+        <TopStat value={tinhThe ?? 0} size={24} label="tinh thể" title={`Tinh thể: ${tinhThe ?? 0} / 12 (tồn kho tối đa)`} />
+      </div>
+
+      {/* ── KHO — mọi thứ còn lại, đầy đủ y như trước, chỉ là không tranh chỗ nữa. ───── */}
+      {khoOpen && (
+        <div id="kho-panel" className="mt-4 border-t pt-3" style={{ borderColor: 'var(--line)' }}>
+          <div
+            className="mono uppercase tracking-[0.2em]"
+            style={{ fontSize: `${labelSizeFor(KHO_NUMBER_PX)}px`, color: 'var(--muted-2)' }}
+          >
             Giai đoạn hiện tại
           </div>
-          <div
-            className="mt-1.5 text-[23px] font-semibold leading-tight tracking-[-0.02em] text-[var(--ink)]"
-            style={{ fontFamily: 'var(--skin-font-display)' }}
-          >
+          <div className="mt-1 text-[13px] leading-snug" style={{ color: 'var(--ink)' }}>
             {stage?.label ?? eraMeta.label}
+            <span style={{ color: 'var(--muted)' }}> · {eraMeta.label}</span>
           </div>
-          <div className="mt-1 text-[12px] text-[var(--muted)]">
-            {stage
-              ? `${eraMeta.label} · chặng ${stage.index + 1}/${stage.totalStages}`
-              : eraMeta.label}
+          {/* ⚠️ Khoảng EP là một RANH GIỚI CỐ ĐỊNH của chặng, KHÔNG phải một số dư đếm được — nên
+              nó KHÔNG đi qua <KhoRow>/<FlashNumber>. Bản đầu cho nó vào KhoRow và hỏng hai đường:
+              nó chiếm cỡ chữ của một con số đầu bảng (át cả panel, còn xén mất nhãn của chính nó),
+              và nó sẽ nháy `--good` mỗi lần Đàm sang kỷ khác — một lời khen cho việc chẳng ai làm. */}
+          <div
+            className="mt-1"
+            style={{ ...NUMBER_STYLE, fontSize: `${labelSizeFor(KHO_NUMBER_PX)}px`, color: 'var(--muted)' }}
+          >
+            Khoảng EP của chặng: {stageStart.toLocaleString()} → {stageEnd.toLocaleString()}
           </div>
-        </div>
-        <span
-          className="mono shrink-0 px-2.5 py-1 text-[10px] uppercase tracking-[0.16em]"
-          style={{
-            color: 'var(--accent2)',
-            background: 'rgba(var(--accent-rgb), 0.1)',
-            borderRadius: 'var(--skin-radius-control, 14px)',
-          }}
-        >
-          Kỷ {activeBook}
-        </span>
-      </div>
 
-      <div>
-        <div className="flex items-baseline justify-between gap-3">
-          <div className="mono text-[10px] uppercase tracking-[0.2em] text-[var(--muted)]">
-            Tiến độ chặng
-          </div>
-          <div className="flex items-baseline gap-1.5">
-            <span className="mono text-[15px] font-semibold tabular-nums text-[var(--ink)]">
-              {stageXP.toLocaleString()}
-            </span>
-            <span className="mono text-[11px] uppercase tabular-nums text-[var(--muted)]">
-              / {stageRange.toLocaleString()} EP
-            </span>
-          </div>
-        </div>
-
-        <div className="mt-2.5 h-[3px] overflow-hidden rounded-full bg-[var(--line)]">
-          <motion.div
-            className="h-full rounded-full"
-            initial={reduceMotion ? false : { width: 0 }}
-            animate={reduceMotion ? undefined : { width: `${stagePct}%` }}
-            transition={reduceMotion ? undefined : { duration: 0.45, ease: 'easeOut' }}
+          <div
+            className="mono mt-2 border-t pt-3 uppercase tracking-[0.2em]"
             style={{
-              width: reduceMotion ? `${stagePct}%` : undefined,
-              background: 'linear-gradient(90deg, var(--accent), var(--accent2))',
+              fontSize: `${labelSizeFor(KHO_NUMBER_PX)}px`,
+              color: 'var(--muted-2)',
+              borderColor: 'var(--line)',
             }}
-          />
-        </div>
-      </div>
-
-      <div className="mt-5 border-t pt-3.5" style={{ borderColor: 'var(--line)' }}>
-        <div className="mono text-[10px] uppercase tracking-[0.2em] text-[var(--muted-2)]">
-          Tài nguyên trong kỷ
-        </div>
-      </div>
-
-      <div className="mt-0.5 divide-y" style={{ borderColor: 'var(--line)' }}>
-        {resourceEntries.map((entry) => (
-          <ResourceTile key={entry.id} label={entry.label} value={entry.value.toLocaleString()} />
-        ))}
-        <ResourceTile label="RP" value={researchRP.toLocaleString()} accent />
-        <ResourceTile label={refined.t2Label} value={refinedBag.t2.toLocaleString()} accent />
-        <ResourceTile label="💠 Tinh Thể" value={`${tinhThe ?? 0} / 12`} accent />
-      </div>
-
-      <div className="mt-4 border-t pt-3.5" style={{ borderColor: 'var(--line)' }}>
-        <div className="flex items-center justify-between gap-3">
-          <div className="mono text-[10px] uppercase tracking-[0.2em] text-[var(--muted-2)]">
-            Khoảng EP của chặng
+          >
+            Tài nguyên trong kỷ
           </div>
-          <div className="mono text-[11px] tabular-nums text-[var(--muted)]">
-            {stageStart.toLocaleString()} → {stageEnd.toLocaleString()}
+          <div className="mt-0.5 divide-y" style={{ borderColor: 'var(--line)' }}>
+            {resourceEntries.map((entry) => (
+              <KhoRow key={entry.id} label={entry.label} value={entry.value} />
+            ))}
+            <KhoRow label={refined.t2Label} value={refinedBag.t2} />
+            <KhoRow label="RP nghiên cứu" value={researchRP} />
           </div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function ResourceTile({ accent = false, label, value }) {
-  return (
-    <div className="flex items-center justify-between gap-3 py-2.5">
-      <div className="mono text-[10px] uppercase tracking-[0.16em] text-[var(--muted)]">{label}</div>
-      {accent ? (
-        <span
-          className="mono px-2 py-0.5 text-[15px] font-semibold tabular-nums"
-          style={{
-            color: 'var(--accent2)',
-            background: 'rgba(var(--accent-rgb), 0.1)',
-            borderRadius: 'var(--skin-radius-control, 14px)',
-          }}
-        >
-          {value}
-        </span>
-      ) : (
-        <div className="mono text-[16px] font-semibold tabular-nums text-[var(--ink)]">
-          {value}
         </div>
       )}
-    </div>
+    </section>
   );
 }

@@ -16,7 +16,8 @@
  */
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
+import { SCRIM_FADE, useCustomMotion, useEnterMotion, usePressMotion, useRewardMotion } from '../lib/motionPresets';
 
 import useGameStore  from '../store/gameStore';
 import useSettingsStore from '../store/settingsStore';
@@ -182,6 +183,30 @@ export default function LootDropModal() {
 function LootDropContent({ reward, onClose, isLightTheme }) {
   const [phase, setPhase] = useState(0);
   const resolvedPhase = resolveRewardPhase(phase, reward);
+  const enterMotion = useEnterMotion();
+  const pressMotion = usePressMotion();
+  // Lớp phủ tối chỉ mờ dần, không trôi — xem `SCRIM_FADE` ở `motionPresets.js`.
+  const scrimMotion = useCustomMotion(SCRIM_FADE);
+  // Phóng to khi DI CHUỘT không thuộc ba nhịp — đi qua cái gác ngoại lệ.
+  const hoverGrow = useCustomMotion({ whileHover: { scale: 1.05 } });
+  // NGOẠI LỆ (trang trí) — cái rương LẮC lúc mở rồi TRÔI lên xuống VÔ HẠN. Không phải một nhịp
+  // xuất hiện (nó chạy mãi), và nó không mang thông tin nào ⇒ bật Giảm chuyển động thì bỏ hẳn.
+  const chestMotion = useCustomMotion({
+    animate: resolvedPhase === 0
+      ? (() => {
+          const shakeIntensity = Math.min(25, Math.floor((reward.effectiveMinutes ?? 25) / 4));
+          return {
+            rotate: [-shakeIntensity / 5, shakeIntensity / 5, -shakeIntensity / 5, shakeIntensity / 5, 0],
+            scale: [1, 1 + shakeIntensity / 100, 0.92, 1 + shakeIntensity / 90, 1],
+          };
+        })()
+      : { y: [0, -6, 0] },
+    transition: {
+      duration: resolvedPhase === 0 ? 0.8 : 2.6,
+      repeat: resolvedPhase === 0 ? 0 : Infinity,
+      ease: 'easeInOut',
+    },
+  });
   const canSkip = resolvedPhase >= 2;
   const displayPhase = resolvedPhase >= 4 ? resolvedPhase - 1 : resolvedPhase;
 
@@ -256,9 +281,7 @@ function LootDropContent({ reward, onClose, isLightTheme }) {
 
   return (
     <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
+      {...scrimMotion}
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
       style={{
         background: palette.overlayBg,
@@ -271,10 +294,7 @@ function LootDropContent({ reward, onClose, isLightTheme }) {
         style={{ background: palette.overlayAmbient }}
       />
       <motion.div
-        initial={{ scale: 0.8, y: 40 }}
-        animate={{ scale: 1,   y: 0  }}
-        exit={{ scale: 0.8, opacity: 0 }}
-        transition={{ type: 'spring', damping: 20, stiffness: 200 }}
+        {...enterMotion}
         className="relative flex w-full max-w-2xl flex-col overflow-hidden backdrop-blur-xl"
         style={{
           maxHeight: '92vh',
@@ -354,14 +374,7 @@ function LootDropContent({ reward, onClose, isLightTheme }) {
                   </div>
 
                   <motion.div
-                    animate={resolvedPhase === 0 ? (() => {
-                      const shakeIntensity = Math.min(25, Math.floor((reward.effectiveMinutes ?? 25) / 4));
-                      return {
-                        rotate: [-shakeIntensity / 5, shakeIntensity / 5, -shakeIntensity / 5, shakeIntensity / 5, 0],
-                        scale: [1, 1 + shakeIntensity / 100, 0.92, 1 + shakeIntensity / 90, 1],
-                      };
-                    })() : { y: [0, -6, 0] }}
-                    transition={{ duration: resolvedPhase === 0 ? 0.8 : 2.6, repeat: resolvedPhase === 0 ? 0 : Infinity, ease: 'easeInOut' }}
+                    {...chestMotion}
                     className="mono flex h-20 w-20 flex-shrink-0 items-center justify-center text-[18px] font-semibold uppercase tracking-[0.18em]"
                     style={{
                       borderRadius: 'var(--skin-radius-control,14px)',
@@ -379,10 +392,7 @@ function LootDropContent({ reward, onClose, isLightTheme }) {
                 <div className="grid gap-4 lg:grid-cols-[1.2fr_0.9fr]">
                   <AnimatePresence>
                     {resolvedPhase >= 1 && (
-                      <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                      >
+                      <motion.div {...enterMotion}>
                         <XPCounter
                           base={reward.baseXP}
                           final={resolvedPhase >= 2 ? displayFinalXP : reward.baseXP}
@@ -412,8 +422,7 @@ function LootDropContent({ reward, onClose, isLightTheme }) {
                 <AnimatePresence>
                   {resolvedPhase >= 2 && (
                     <motion.div
-                      initial={{ opacity: 0, y: 12 }}
-                      animate={{ opacity: 1, y: 0 }}
+                      {...enterMotion}
                       className="flex flex-wrap gap-2"
                     >
                       <div
@@ -436,9 +445,7 @@ function LootDropContent({ reward, onClose, isLightTheme }) {
                 <AnimatePresence>
                   {resolvedPhase >= 2 && reward.positiveEvent && ((reward.positiveEventBonus ?? 0) !== 0 || (reward.positiveEventRPBonus ?? 0) !== 0) && (
                     <motion.div
-                      initial={{ opacity: 0, y: 8, scale: 0.96 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      transition={{ delay: 0.15, type: 'spring', damping: 15 }}
+                      {...enterMotion}
                       className="grid gap-3 p-4 md:grid-cols-[auto_1fr_auto]"
                       style={{
                         borderRadius: 'var(--skin-radius-card,18px)',
@@ -504,8 +511,7 @@ function LootDropContent({ reward, onClose, isLightTheme }) {
             <AnimatePresence>
               {resolvedPhase >= 3 && (
                 <motion.section
-                  initial={{ opacity: 0, y: 18 }}
-                  animate={{ opacity: 1, y: 0 }}
+                  {...enterMotion}
                   className="p-5"
                   style={{
                     borderRadius: 'var(--skin-radius-card,18px)',
@@ -639,14 +645,10 @@ function LootDropContent({ reward, onClose, isLightTheme }) {
         {/* ── Giai đoạn 7: Nút Nhận Thưởng ───────────────────────────── */}
         <AnimatePresence>
           {resolvedPhase >= 7 && (
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="flex justify-center"
-            >
+            <motion.div {...enterMotion} className="flex justify-center">
               <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
+                {...hoverGrow}
+                {...pressMotion}
                 onClick={handleClaim}
                 className="w-full border py-4 text-[16px] font-semibold tracking-[0.01em]"
                 style={{
@@ -674,6 +676,8 @@ function LootDropContent({ reward, onClose, isLightTheme }) {
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 function XPCounter({ base, final, countDuration, bonusXP, xpPerMinute, lightTheme, palette }) {
+  // Chỉ nảy khi phần thưởng ĐƯỢC NHÂN — nảy mọi lúc thì cú nảy hết là một tín hiệu.
+  const rewardMotion = useRewardMotion();
   const displayValue = useCountUp(final, countDuration, true);
   const isMultiplied = final > base;
 
@@ -711,8 +715,7 @@ function XPCounter({ base, final, countDuration, bonusXP, xpPerMinute, lightThem
       <div className="mt-5 flex items-end gap-3">
         <motion.span
           key={final}
-          animate={isMultiplied ? { scale: [1, 1.08, 1] } : {}}
-          transition={{ duration: 0.4 }}
+          {...(isMultiplied ? rewardMotion : {})}
           className="mono text-5xl font-medium tabular-nums tracking-tight md:text-6xl"
           style={{ color: lightTheme ? 'var(--ink)' : '#fde68a', fontFamily: MONO_FONT }}
         >
@@ -788,6 +791,11 @@ function BonusPill({ icon, label, value, tone, lightTheme }) {
  * Đàm vừa nhận thêm một món đồ.
  */
 function ResourceCascade({ resources }) {
+  // NGOẠI LỆ CÓ LÝ DO — các ô tài nguyên hiện ra SO LE nhau, mỗi ô trễ hơn ô trước 0,12s. Nhịp
+  // `enter` không mang độ trễ, mà độ trễ ấy chính là thứ component này tồn tại để làm (tên nó là
+  // "Cascade"). `initial`/`animate`/`delay` phải ở lại tại chỗ vì chúng đọc `index` của vòng lặp;
+  // cái gác chỉ lo việc im lặng khi bật Giảm chuyển động.
+  const reduceMotion = useReducedMotion();
   const resEntries = Object.entries(resources ?? {}).filter(([, v]) => v > 0);
 
   return (
@@ -795,9 +803,9 @@ function ResourceCascade({ resources }) {
       {resEntries.map(([id, amount], index) => (
         <motion.div
           key={id}
-          initial={{ opacity: 0, scale: 0.5, y: 10 }}
-          animate={{ opacity: 1, scale: 1,   y: 0  }}
-          transition={{ delay: index * 0.12, type: 'spring', damping: 15 }}
+          initial={reduceMotion ? false : { opacity: 0, scale: 0.5, y: 10 }}
+          animate={reduceMotion ? undefined : { opacity: 1, scale: 1, y: 0 }}
+          transition={reduceMotion ? undefined : { delay: index * 0.12, type: 'spring', damping: 15 }}
         >
           <RewardCard
             icon={<ResourceMark id={id} />}
@@ -822,6 +830,10 @@ function ResourceMark({ id }) {
 
 function ParticleRain({ count = 24, color = '#6366f1' }) {
   const particles = useMemo(() => buildParticles(count), [count]);
+  // NGOẠI LỆ (trang trí) — mưa hạt rơi từ mép trên xuống hết màn hình. Không mang một chữ thông
+  // tin nào, và đây đúng là loại chuyển động lớn mà tuỳ chọn Giảm chuyển động nhắm tới ⇒ bỏ HẲN.
+  const reduceMotion = useReducedMotion();
+  if (reduceMotion) return null;
 
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -843,6 +855,17 @@ function ParticleRain({ count = 24, color = '#6366f1' }) {
 
 function SlotMachineReveal({ lightTheme }) {
   const [settled, setSettled] = useState(false);
+  const enterMotion = useEnterMotion();
+  // NGOẠI LỆ (trang trí) — màn quay số có HAI CHẶNG (đang quay ↔ đã dừng), nên `animate` đổi theo
+  // `settled` chứ không chạy một lần rồi thôi. Bỏ hẳn thì khối vẫn ở đúng chỗ, chỉ mất cú dừng.
+  const revealMotion = useCustomMotion({
+    initial: { scale: 0.7, opacity: 0 },
+    animate: { scale: settled ? [1.1, 1] : 1, opacity: 1 },
+  });
+  const dialMotion = useCustomMotion({
+    animate: settled ? { scale: [0.96, 1.02, 1] } : { opacity: [0.5, 1, 0.6] },
+    transition: { duration: 0.6, ease: 'easeOut' },
+  });
 
   useEffect(() => {
     const id = window.setTimeout(() => setSettled(true), 520);
@@ -851,8 +874,7 @@ function SlotMachineReveal({ lightTheme }) {
 
   return (
     <motion.div
-      initial={{ scale: 0.7, opacity: 0 }}
-      animate={{ scale: settled ? [1.1, 1] : 1, opacity: 1 }}
+      {...revealMotion}
       className="p-5 text-center"
       style={{
         borderRadius: 'var(--skin-radius-card,18px)',
@@ -875,8 +897,7 @@ function SlotMachineReveal({ lightTheme }) {
         Bonus lớn
       </div>
       <motion.div
-        animate={settled ? { scale: [0.96, 1.02, 1] } : { opacity: [0.5, 1, 0.6] }}
-        transition={{ duration: 0.6, ease: 'easeOut' }}
+        {...dialMotion}
         className="mx-auto mb-3 flex h-24 w-24 items-center justify-center rounded-full border"
         style={{
           borderColor: lightTheme ? 'rgba(var(--accent-rgb),0.16)' : 'rgba(250,204,21,0.25)',
@@ -891,7 +912,7 @@ function SlotMachineReveal({ lightTheme }) {
         </span>
       </motion.div>
       {settled && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+        <motion.div {...enterMotion}>
           <p className="text-[28px] font-semibold" style={{ color: lightTheme ? 'var(--ink)' : '#fde68a', fontFamily: 'var(--skin-font-display, ' + DISPLAY_FONT + ')' }}>
             Phần thưởng được nhân ba
           </p>
@@ -905,10 +926,10 @@ function SlotMachineReveal({ lightTheme }) {
 }
 
 function LevelUpBanner({ newLevel, spGained, lightTheme }) {
+  const enterMotion = useEnterMotion();
   return (
     <motion.div
-      initial={{ x: -60, opacity: 0 }}
-      animate={{ x: 0, opacity: 1 }}
+      {...enterMotion}
       className="grid gap-3 p-5 md:grid-cols-[auto_1fr_auto]"
       style={{
         borderRadius: 'var(--skin-radius-card,18px)',
@@ -933,15 +954,18 @@ function LevelUpBanner({ newLevel, spGained, lightTheme }) {
 }
 
 function EraChangeBanner({ newBook, lightTheme }) {
+  // Sang một KỶ mới là cột mốc lớn nhất trò chơi có — đúng chỗ để tiêu nhịp `reward`.
+  const rewardMotion = useRewardMotion();
+  // NGOẠI LỆ CÓ LÝ DO — các viên tài nguyên mới hiện ra SO LE (trễ 0,3s rồi mỗi viên thêm 0,1s);
+  // `enter` không mang độ trễ, mà độ trễ mới là thứ làm chúng đọc ra như một danh sách đang mở.
+  const reduceMotion = useReducedMotion();
   const meta    = ERA_METADATA[newBook];
   const newResources = meta?.resources?.slice(0, 3) ?? [];
   const accent  = meta?.accentColor ?? '#6366f1';
 
   return (
     <motion.div
-      initial={{ scale: 0.85, opacity: 0, y: 20 }}
-      animate={{ scale: 1, opacity: 1, y: 0 }}
-      transition={{ type: 'spring', damping: 12, stiffness: 180 }}
+      {...rewardMotion}
       className="mt-4 overflow-hidden text-center relative"
       style={{
         borderRadius: 'var(--skin-radius-card,18px)',
@@ -1000,9 +1024,9 @@ function EraChangeBanner({ newBook, lightTheme }) {
               {newResources.map((r) => (
                 <motion.span
                   key={r.id}
-                  initial={{ scale: 0, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ delay: 0.3 + newResources.indexOf(r) * 0.1, type: 'spring' }}
+                  initial={reduceMotion ? false : { scale: 0, opacity: 0 }}
+                  animate={reduceMotion ? undefined : { scale: 1, opacity: 1 }}
+                  transition={reduceMotion ? undefined : { delay: 0.3 + newResources.indexOf(r) * 0.1, type: 'spring' }}
                   className="text-xs px-2.5 py-1 rounded-full font-medium"
                   style={{
                     background: `${accent}16`,

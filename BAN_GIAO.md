@@ -58,6 +58,54 @@
 >
 > Cổng: `npm test` **1.175 bài · 1.174 pass · 0 fail · 1 skipped** (+12 bài mới) · `test:cross` 3/3
 > · lint sạch · build xanh.
+> Cập nhật lần cuối: **2026-08-27 (khuya)** — **ĐIỀU HƯỚNG CHÍNH: 8 MỤC → 5, BẰNG CÁCH GỘP.**
+> Ba màn Kỹ năng · Kho báu · Thành tích nay là ba TAB CON của **"Hành trang"**. Desktop còn đúng 5
+> mục (Tập trung · Hành trang · Thành Phố · Thống kê · Cài đặt); iPhone còn 4 nút (Tập trung ·
+> Nhiệm vụ · Hành trang · Thành Phố) + nút "Thêm" giữ Thống kê và Cài đặt. **Không màn nào bị xoá**
+> — mỗi tab con vẫn dựng đúng component cũ, với đúng state cũ.
+>
+> **Vì sao Thành Phố quay lại nhóm chính.** Chú thích cũ ghi *"Thành Phố CỐ Ý không nằm trong nhóm
+> chính: thanh dưới iPhone giữ đúng 4 nút"*. Lý do ấy vẫn đúng, nhưng TIỀN ĐỀ của nó đã chết: hồi đó
+> ba màn kia ăn ba ô nên phải hy sinh một mục. Gộp xong thì ô thứ tư trống ra, và Thành Phố — mặt
+> trận đang xây — là thứ đáng nhận nó. Thứ đổi chỗ là "Thống kê" (nay sau nút "Thêm"): nó là chỗ
+> ngồi ĐỌC, không phải chỗ bấm vào giữa một phiên. Chú thích cũ đã viết lại kèm cả lý do đổi.
+>
+> **⚠️ BỐN ĐIỀU PHẢI BIẾT TRƯỚC KHI SỬA TIẾP:**
+> **(1) ID CŨ ĐƯỢC GIỮ NGUYÊN, VÀ ĐÓ KHÔNG PHẢI SỰ LƯỜI.** Ba tab con vẫn mang id `skills` ·
+> `collection` · `achievements` vì **thông báo đã LƯU trong localStorage của Đàm** mang sẵn
+> `action: { tab: 'skills' }` và `{ tab: 'collection', collectionTab: 'workshop' }`. Đổi id ở nguồn
+> cho "gọn" thì mọi thông báo cũ bấm vào **không đi đâu cả**, và không có gì đỏ lên. Cửa dịch là
+> `resolveTabTarget` trong `App.jsx`; `selectTab` gọi nó nên MỌI lời gọi cũ vẫn đúng. Có một bài
+> test quét CẢ `gameStore.js` lẫn `NotificationCenter.jsx` đòi mọi `tab: '…'` phải còn tới được.
+> **(2) BA PHÉP ĐẾM "CÓ VIỆC ĐANG CHỜ" ĐÃ RA KHỎI `NotificationCenter.jsx`.** Chúng nay ở
+> `src/engine/opportunities.js` vì có HAI người đọc: cái chuông, và cái chấm trên tab Hành trang.
+> Chép chúng về lại là "một luật hai công thức" — hai bản sao trôi khỏi nhau ở BIÊN rồi chuông báo
+> có việc trong khi chấm im, mà mỗi bên vẫn tự nhất quán với chính nó nên không gì đỏ lên. Đã khoá
+> bằng một bài test đọc mã nguồn.
+> **(3) DẤU "THÀNH TÍCH ĐÃ XEM": `null` KHÁC `[]`.** `dc-nav-seen-v1` chưa từng ghi (`null`) nghĩa
+> là *"máy này chưa bật cơ chế"* ⇒ **không có gì là mới**; ghi rồi mà rỗng (`[]`) nghĩa là *"chưa
+> xem gì cả"* ⇒ **mọi thứ đều mới**. Nhập hai thứ đó làm một thì lần đầu mở app cái chấm sáng oan
+> cho hàng chục thành tích Đàm đã xem từ lâu — và một cái chấm kêu oan thì lần sau anh sẽ bỏ qua
+> nó, kể cả khi nó kêu đúng. Dấu chỉ được ghi khi Đàm mở ĐÚNG tab con "Thành tích", không phải khi
+> đi ngang qua "Hành trang".
+> **(4) `useInventoryAttention` TRẢ VỀ MỘT BOOLEAN, KHÔNG PHẢI MỘT MẢNG.** Selector zustand so bằng
+> `Object.is`, nên gốc app chỉ render lại khi cái chấm THẬT SỰ bật/tắt. Đổi nó thành mảng/đối tượng
+> là cho `App` — thứ bọc cả cảnh 3D — render lại theo từng con số tài nguyên nhúc nhích.
+>
+> **⚠️ MỘT ĐIỀU CHƯA KIỂM ĐƯỢC, NÓI THẲNG RA.** Đường vào từ **thông báo** (bấm một dòng cơ hội
+> trong chuông) không lái được bằng `scripts/shot.mjs`: bấm xong thì bảng thông báo KHÔNG đóng, tức
+> handler chưa hề chạy — công cụ không tới được chỗ đó. Đã đo **bản TRƯỚC khi sửa** bằng đúng cách
+> ấy và nó cho **kết quả y hệt**, nên đây là giới hạn của công cụ chứ không phải hồi quy do lần sửa
+> này. Phần logic thì có test (mục 1 ở trên). Ai muốn đóng nốt: cần một cú bấm CDP thật, kiểu cờ
+> `--press` mới thêm hôm nay, chứ `element.click()` trong `--probe` không đủ.
+>
+> Cổng (ĐO SAU KHI GỘP nhánh "ba nhịp chuyển động" vào): `npm test` **1.186 bài · 1.185 pass ·
+> 0 fail · 1 skipped** — riêng phần việc này góp **+17 bài** (đo trên nhánh trước lúc gộp: 1.180) ·
+> `test:cross` 3/3
+> · lint sạch · build xanh. Ảnh chụp thật: desktop đếm được 5 mục, iPhone 4 nút + "Thêm" (2 mục
+> trong đó, lưới tự co còn 2 cột), `--fit` ở 390px soi 23 nút không nút nào tràn chữ. Cái chấm đã
+> chụp được ở CẢ hai thanh khi bơm một cơ hội thật (fixture `sp: 99`), và tắt đúng khi không có việc.
+
 > Cập nhật lần cuối: **2026-08-27 (tối)** — **MỌI CHUYỂN ĐỘNG VỀ ĐÚNG BA NHỊP.**
 > `initial`/`animate`/`transition` đang khai rời rạc ở hơn ba mươi file. Đếm được **5 thời lượng**
 > (0,18 · 0,22 · 0,26 · 0,28 · 0,35 giây) và **7 đường cong** khác nhau; riêng bảng điều khiển đồng

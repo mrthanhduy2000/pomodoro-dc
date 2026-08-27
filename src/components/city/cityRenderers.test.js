@@ -253,6 +253,8 @@ test('DẤU "TRỌN VẸN" KHÔNG ĐƯỢC TÔ BẰNG MÀU KỶ — đã đo, kh
   // tàng hình ở theme sáng. Đo thật (2026-08-13) tương phản của `ERA_METADATA.accentColor` trên nền
   // thẻ: kỷ 9 `#a3e635` = 1,49:1 và kỷ 3 `#facc15` = 1,51:1, trong khi `--accent` đạt 2,97–7,43:1
   // qua cả 8 tổ hợp theme × skin. Phần thưởng mà không nhìn thấy thì không phải phần thưởng.
+  // ĐÍNH CHÍNH PHẠM VI (2026-08-27): skin thứ 5 "arcade" nâng lên 10 tổ hợp; đã đo riêng và
+  // `--accent` của arcade rơi vào 3,35–6,06:1 — vẫn trong dải cũ, kết luận giữ nguyên.
   //
   // Cám dỗ tái phạm rất cao: `eraSolid` đã có sẵn ngay trong hai file này (dùng cho chấm tròn, cho
   // thanh tiến độ) nên đổi lại "cho hợp màu kỷ" chỉ mất một chữ. Bài test này là thứ duy nhất cản.

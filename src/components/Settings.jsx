@@ -66,9 +66,10 @@ const THEME_MODE_OPTIONS = [
   { value: 'dark', label: 'Tối hoàn toàn', note: 'Giữ nền tối ở mọi nơi' },
 ];
 
-// Bộ giao diện (skin). Editorial hoàn chỉnh; các skin khác đang hoàn thiện theo phase.
+// Bộ giao diện (skin). Thứ tự ở đây là thứ tự hiện trên màn hình — mặc định đứng đầu.
 const SKIN_OPTIONS = [
-  { value: 'editorial', label: 'Giấy & Đất nung', note: 'Ấm, đầm — mặc định', ready: true, swatch: ['#faf9f6', '#c96442', '#5b7a52'] },
+  { value: 'arcade', label: 'Sân Chơi', note: 'Phẳng, nút có chân — mặc định', ready: true, swatch: ['#f2f1ed', '#e2542c', '#2f8f5b'] },
+  { value: 'editorial', label: 'Giấy & Đất nung', note: 'Ấm, đầm', ready: true, swatch: ['#faf9f6', '#c96442', '#5b7a52'] },
   { value: 'aurora', label: 'Bình minh', note: 'Ấm, hiện đại, bo tròn', ready: true, swatch: ['#fdf3ec', '#e0764f', '#cf5a30'] },
   { value: 'inkgold', label: 'Mực & Vàng', note: 'Nền tối, điểm vàng đồng', ready: true, swatch: ['#151310', '#d9a441', '#c96442'] },
   { value: 'swiss', label: 'Khối Thụy Sĩ', note: 'Tương phản, viền đậm', ready: true, swatch: ['#f3efe7', '#d6492f', '#15140f'] },
@@ -682,7 +683,7 @@ export default function Settings() {
             lightTheme={lightTheme}
             eyebrow="Surface"
             title="Giao diện"
-            description="Chọn bề mặt nền và chủ đề UI. Bản sáng editorial vẫn là cấu hình hợp nhất với shell hiện tại."
+            description="Chọn bề mặt nền và chủ đề UI. Mặc định là Sân Chơi — mặt phẳng sạch, chữ sans đậm, thẻ có chân bóng đặc."
           />
 
           <div className="mt-4 space-y-4">

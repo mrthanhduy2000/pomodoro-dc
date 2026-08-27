@@ -1,7 +1,7 @@
 /**
  * cityTokens.js — token thiết kế DÙNG CHUNG cho màn hình Thành Phố (mọi bộ vẽ).
  *
- * ⚠️ QUY TẮC MÀU (app có 2 theme × 4 skin = 8 tổ hợp, sai là chữ/khối tàng hình):
+ * ⚠️ QUY TẮC MÀU (app có 2 theme × 5 skin = 10 tổ hợp, sai là chữ/khối tàng hình):
  *   - Mọi màu "khung" (nền, viền, chữ) PHẢI dùng CSS variable: `var(--canvas)`, `var(--panel)`,
  *     `var(--ink)`, `var(--muted)`, `var(--line)`, `var(--accent)`…
  *   - Màu RIÊNG của mỗi kỷ lấy từ `ERA_METADATA[era].accentColor` **đã có sẵn** — KHÔNG bịa bảng
@@ -31,7 +31,7 @@ function hexToRgb(hex) {
   };
 }
 
-/** Màu kỷ ở dạng rgba() — luôn vẽ chồng lên nền theo theme nên hợp cả 8 tổ hợp giao diện. */
+/** Màu kỷ ở dạng rgba() — luôn vẽ chồng lên nền theo theme nên hợp cả 10 tổ hợp giao diện. */
 export function eraTint(era, alpha) {
   const { r, g, b } = hexToRgb(ERA_METADATA[era]?.accentColor);
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
@@ -42,7 +42,7 @@ export function eraSolid(era) {
   return ERA_METADATA[era]?.accentColor ?? FALLBACK_ACCENT;
 }
 
-/** Khuôn thẻ chuẩn của app — copy từ `FocusRail.jsx` để mọi thẻ trông như nhau ở cả 4 skin. */
+/** Khuôn thẻ chuẩn của app — copy từ `FocusRail.jsx` để mọi thẻ trông như nhau ở cả 5 skin. */
 export const cardStyle = {
   background: 'var(--card-bg-solid)',
   border: 'var(--skin-card-border-width,1px) solid var(--line)',

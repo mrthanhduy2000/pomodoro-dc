@@ -5,8 +5,8 @@
  * nạp, chuỗi lạ, `getComputedStyle` trả rỗng) là chuyện xảy ra thật lúc mount sớm — khi đó phải
  * lùi về màu dự phòng, chứ khối 3D màu đen tuyền trên nền đen là "bug tàng hình" đúng nghĩa.
  *
- * Bất biến thứ hai: bảng màu phải TỰ ĐỔI theo theme. App có 2 theme × 4 skin = 8 tổ hợp; nếu 3D
- * chốt cứng một bảng màu thì 7/8 tổ hợp sẽ sai.
+ * Bất biến thứ hai: bảng màu phải TỰ ĐỔI theo theme. App có 2 theme × 5 skin = 10 tổ hợp; nếu 3D
+ * chốt cứng một bảng màu thì 9/10 tổ hợp sẽ sai.
  */
 
 import test from 'node:test';
@@ -128,7 +128,7 @@ test('buildScenePalette: theme sáng và theme tối cho ra bảng màu KHÁC nh
 
   assert.equal(light.isDark, false);
   assert.equal(dark.isDark, true);
-  assert.notEqual(light.background, dark.background, 'nền không đổi theo theme ⇒ sai ở 7/8 tổ hợp giao diện');
+  assert.notEqual(light.background, dark.background, 'nền không đổi theo theme ⇒ sai ở 9/10 tổ hợp giao diện');
   assert.notEqual(light.ground, dark.ground);
   assert.notEqual(light.roof, dark.roof);
 });

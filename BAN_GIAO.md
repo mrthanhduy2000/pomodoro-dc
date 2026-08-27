@@ -1,3 +1,65 @@
+> Cập nhật lần cuối: **2026-08-27** — **SKIN THỨ 5 "SÂN CHƠI" (arcade), ĐẶT LÀM MẶC ĐỊNH.**
+> Nền cho hướng game hoá đơn giản, hiện đại: bỏ giấy, bỏ serif, bỏ gradient, bỏ kính mờ ⇒ mặt
+> phẳng sạch · chữ sans đậm (Inter 800, không thêm font mới) · **BÓNG ĐẶC** — một vạch màu dày 3px
+> dưới đáy thẻ thay cho bóng mờ nhiều lớp, cho thẻ một "cái chân" như phím bấm.
+>
+> **Đã làm:** `src/index.css` khối `[data-skin="arcade"]` + khối `[data-theme="dark"][data-skin=
+> "arcade"]` + quy tắc tiêu đề h1–h4 · `src/store/uiSkins.js` **MỚI** (nguồn sự thật duy nhất về
+> danh sách skin + mặc định) · `settingsStore.js` nhập từ đó · `Settings.jsx` thêm mục "Sân Chơi"
+> đứng đầu + sửa câu mô tả đã thành sai · `src/store/uiSkins.test.js` **MỚI** (6 bài) ·
+> `scripts/shot.mjs` thêm cờ `--skin` · 12 chú thích ghi "4 skin / 8 tổ hợp" đã thành sai sự thật.
+>
+> **Ba cái bẫy đã đo được và vá, không cái nào có gì đỏ lên:**
+> **(1) THỨ TỰ TẦNG CSS.** Khối `[data-theme="dark"]` đứng SAU mọi khối skin và có **độ đặc hiệu
+> BẰNG NHAU** (0,1,0), mà nó khai `--app-bg` là một radial-gradient. Nên lời hứa "bỏ gradient" chỉ
+> đúng ở chế độ sáng, trừ khi khối tối ghép đôi đặt lại. Cùng cái bẫy đó nuốt `--panel`/`--item-*`
+> (theme tối khai rgba trong suốt ⇒ mất "mặt phẳng đục") và `--skin-card-border-color` (theme tối
+> **không** khai ⇒ viền xám sáng `#e3e0d9` dính nguyên vào thẻ đen). Đã viết một phép đo liệt kê
+> token nào của bản sáng sống sót sang chế độ tối: còn đúng 6, và cả 6 đều **phi màu** (font, bo
+> góc, độ dày viền) — thứ dùng chung hai chế độ là ĐÚNG.
+> **(2) `!important` Ở `font-weight` LÀ BẮT BUỘC, KHÔNG PHẢI TUỲ CHỌN.** Ba tiêu đề thật
+> (`BuildingWorkshop` h2 · `RelicInventory` h2 · `SkillTree` h3) mang `fontWeight: 600` dạng
+> **INLINE**, mà style inline thắng mọi quy tắc stylesheet trừ `!important`. Đây chính là lý do
+> skin `swiss` phải dùng nó. Bỏ đi thì hỏng **không đều**: ba tiêu đề ấy kẹt ở 600 còn phần còn
+> lại lên 800 — và không có gì đỏ lên.
+> **(3) `shot.mjs` CHỐT CỨNG `uiSkin: 'editorial'`.** Từ nay app mặc định arcade, nên mọi ảnh chụp
+> nghiệm thu sẽ lặng lẽ hiện một skin KHÔNG phải mặc định — đúng loại "công cụ đo nói dối" đã cắn
+> dự án 25 lần, và nói dối theo hướng khó thấy nhất: tấm ảnh vẫn hợp lý, chỉ là nó mô tả một app
+> khác. Nay đọc `DEFAULT_UI_SKIN` thẳng từ store và có cờ `--skin <tên>`.
+>
+> **Bài test tự bắt lỗi của chính nó.** Bài "mỗi skin phải có khối CSS riêng" bản đầu hỏi
+> `css.includes('[data-skin="arcade"] {')` và **XANH OAN**: chuỗi ấy là **chuỗi con** của
+> `[data-theme="dark"][data-skin="arcade"] {`, nên gỡ sạch khối sáng vẫn qua được. Phép thử ngược
+> phát hiện; nay neo bằng xuống dòng. Cùng bài học *"assert 'có ít nhất một chỗ' là cái phễu,
+> không phải hàng rào"*. Cả 5 phép phá đều đã chạy và đều làm ĐỎ đúng bài dự kiến; một phép phá tự
+> tố cáo mình khớp **2 chỗ** thay vì 1 (cùng lý do chuỗi-con) và đã được làm lại bằng neo duy nhất.
+>
+> **Một ngoại lệ ĐÚNG, ghi ra tường minh:** `inkgold` bị `App.jsx` ghim `data-theme="dark"` nên nó
+> **không có chế độ sáng** — khối `[data-skin="inkgold"]` của nó CHÍNH LÀ thiết kế tối. Bài test
+> đọc danh sách ghim thẳng từ `App.jsx` (`assert.deepEqual(ghimTheme, ['inkgold'])`) chứ không chốt
+> cứng ngoại lệ, nên skin thứ hai bị ghim sẽ bắt buộc có người nhìn lại thay vì lặng lẽ ra khỏi
+> tầm canh.
+>
+> **⚠️ HAI SỐ ĐO PHẢI BÁO, KHÔNG CÁI NÀO CHẶN VIỆC:**
+> **(a) `--warn: #e0921f` đạt 2,53:1 trên thẻ trắng** — dưới ngưỡng 3:1 cho màu tín hiệu, và nó
+> ĐƯỢC dùng làm màu CHỮ (`text-[var(--warn)]` ở `PomodoroEngine`, `LootDropModal`, `EraCrisisModal`).
+> Ba skin sáng còn lại đều đạt 3,49–3,54:1, nên đây là một bước lùi có thể đo được. Giữ nguyên giá
+> trị Đàm khai; đổi sang `#a8701a` là đủ 4,5:1 nếu Đàm muốn.
+> **(b) Chân bóng ở chế độ tối yếu hơn hẳn bản sáng** — 1,19:1 so với 1,48:1 (so với thân thẻ). Đây
+> là **giới hạn vật lý, không phải số chọn ẩu**: thân thẻ tối `#211f1c` vốn đã gần đen nên một cái
+> bóng "tối hơn thân thẻ" hết dư địa rất nhanh — **đen tuyệt đối cũng chỉ tới 1,28:1**. Muốn vượt
+> phải ĐẢO hướng, dùng một vành SÁNG hơn thân thẻ (`#3a352e` = 1,35 · `#423d36` = 1,53), tức đổi
+> bóng thành gờ nổi — một quyết định mỹ thuật của Đàm, không phải phép chỉnh số.
+>
+> **⚠️ MÁY ĐÃ LƯU LỰA CHỌN CŨ SẼ KHÔNG TỰ ĐỔI.** Dữ liệu đã lưu THẮNG giá trị mặc định (đúng như
+> phải thế — đó là lựa chọn của người dùng). Máy của Đàm đang lưu `uiSkin: 'editorial'`, nên mở app
+> vẫn thấy giao diện cũ cho tới khi vào **Cài đặt → Bộ giao diện → Sân Chơi**. Mặc định mới chỉ áp
+> cho máy chưa từng chọn.
+>
+> Cổng: `npm test` **1.158 bài · 1.157 pass · 0 fail · 1 skipped** (+6 bài mới) · `test:cross` 3/3
+> · lint sạch · build xanh. Nghiệm thu bằng trình duyệt thật trên CSS đã build, cả hai chế độ:
+> `background-image: none` · chân bóng `0 3px 0 0` · tiêu đề `Inter weight=800`.
+
 > Cập nhật lần cuối: **2026-08-24 (đêm)** — **CẮT CHI PHÍ MỖI PHIÊN: 6.323 DÒNG BẮT BUỘC ĐỌC → 55**.
 > Đàm: *"mỗi lượt sửa quá ít thay đổi và không hiệu quả, không cần đo performance quá nhiều…
 > quy ước lại cách ra prompt đi"*.

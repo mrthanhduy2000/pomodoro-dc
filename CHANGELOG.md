@@ -12,6 +12,50 @@
 
 ---
 
+## 2026-08-27 — Skin thứ 5 "Sân Chơi" (arcade), đặt làm mặc định
+
+**Mục đích.** Nền cho hướng game hoá đơn giản, hiện đại. Bỏ giấy, bỏ serif, bỏ gradient, bỏ kính
+mờ; còn lại ba thứ: mặt phẳng sạch, chữ sans đậm, và **bóng đặc** — một vạch màu dày 3px dưới đáy
+thẻ thay cho bóng mờ nhiều lớp, cho thẻ một "cái chân" như phím bấm.
+
+**Phạm vi.** Tầng giao diện. Không đụng engine game, không đụng thành phố 3D, không đụng sync.
+
+- **`src/index.css`** — khối `[data-skin="arcade"]` (bảng token đầy đủ, `--app-bg` là **màu phẳng**)
+  + khối `[data-theme="dark"][data-skin="arcade"]` + quy tắc tiêu đề `h1–h4` (Inter 800, tracking
+  −0.025em). Không thêm font mới: Inter đã được app tải sẵn và đủ dấu tiếng Việt; tương phản tạo
+  bằng ĐỘ ĐẬM.
+- **`src/store/uiSkins.js`** (mới) — nguồn sự thật DUY NHẤT về danh sách skin + mặc định. Trước đây
+  whitelist được chép nguyên văn ở hai nơi trong `settingsStore.js`; thêm skin mà quên một chỗ thì
+  skin ấy bị đá về mặc định ở đúng một trong hai đường đi, không có gì đỏ lên.
+- **`src/store/uiSkins.test.js`** (mới, 6 bài) — khoá ba chiều: mỗi skin phải có mặt trong
+  `UI_SKINS`, trong `SKIN_OPTIONS` của màn Cài đặt, và có khối `[data-skin="…"]` trong CSS; cộng
+  hai bất biến về chế độ tối (nền phẳng phải phẳng ở cả hai chế độ; màu của bản sáng không được rò
+  sang bản tối). Cả 5 phép thử ngược đều làm đỏ đúng bài dự kiến.
+- **`src/components/Settings.jsx`** — mục "Sân Chơi" đứng đầu danh sách; sửa câu mô tả cũ (nói
+  editorial là cấu hình hợp nhất) vì nó đã thành sai.
+- **`scripts/shot.mjs`** — thêm cờ `--skin <tên>`; fixture thôi chốt cứng `editorial` và đọc thẳng
+  `DEFAULT_UI_SKIN`, để ảnh nghiệm thu không lặng lẽ mô tả một skin khác mặc định của app.
+- 12 chú thích/thông báo ghi "2 theme × 4 skin = 8 tổ hợp" đã cập nhật thành 5 skin / 10 tổ hợp.
+  Hai **bản ghi số đo có ngày tháng** thì giữ nguyên văn và thêm dòng đính chính (số đo gắn với
+  đúng thứ đã đo; viết lại "8" thành "10" là nhận vơ một phép đo chưa từng chạy).
+
+**Ảnh hưởng.** Người dùng **đã lưu lựa chọn skin cũ sẽ KHÔNG bị đổi giao diện** — dữ liệu đã lưu
+thắng giá trị mặc định, đúng như phải thế. Mặc định mới chỉ áp cho máy chưa từng chọn. Muốn dùng
+skin mới thì vào **Cài đặt → Bộ giao diện → Sân Chơi**.
+
+**Tương thích.** Không có migration. `uiSkin` cũ vẫn hợp lệ; giá trị rác vẫn rơi về mặc định như
+trước (nay là `arcade` thay vì `editorial`).
+
+**Đã biết, chưa xử lý.** `--warn` của skin này đạt 2,53:1 trên thẻ trắng — dưới ngưỡng 3:1 cho màu
+tín hiệu, trong khi ba skin sáng còn lại đạt 3,49–3,54:1; nó có được dùng làm màu chữ. Và chân bóng
+ở chế độ tối chỉ đạt 1,19:1 so với thân thẻ (bản sáng 1,48:1) — giới hạn vật lý, vì thân thẻ tối
+vốn đã gần đen nên đen tuyệt đối cũng chỉ tới 1,28:1. Chi tiết + phương án ở `BAN_GIAO.md`.
+
+**Cổng.** `npm test` 1.158 bài · 1.157 pass · 0 fail · 1 skipped · `test:cross` 3/3 · lint sạch ·
+build xanh. Nghiệm thu bằng trình duyệt thật trên CSS đã build, cả hai chế độ.
+
+---
+
 ## 2026-08-24 (đêm) — Quy trình làm việc: cắt 6.323 dòng bắt buộc đọc xuống 55
 
 **Mục đích.** Mỗi phiên đang tiêu ~80% sức vào đọc tài liệu, đo đạc và viết báo cáo, chỉ ~20% vào

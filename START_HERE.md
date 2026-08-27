@@ -29,6 +29,11 @@ Mặt trận đang làm: **thành phố 3D** (`src/engine/city3d/` + `src/compon
 ## Đang ở đâu
 - Nhánh production: `main`. Mốc gần nhất: **ADR-059** (mỗi kỷ MỘT MẠNG ĐƯỜNG riêng — hết bàn
   cờ; `roadPlan.js` nối các điểm mốc bằng cung cong ⇒ giao lộ chữ T/Y/ngã năm).
+- Giao diện: **5 skin**, mặc định là **"Sân Chơi" (`arcade`)** — phẳng, sans đậm, thẻ có chân bóng
+  đặc 3px. Danh sách skin + mặc định có MỘT nguồn duy nhất: `src/store/uiSkins.js`. ⚠️ Thêm skin thì
+  phải đủ ba chỗ (danh sách · `SKIN_OPTIONS` ở `Settings.jsx` · khối `[data-skin=…]` ở `index.css`)
+  **và** một khối `[data-theme="dark"][data-skin=…]`, vì khối `[data-theme="dark"]` đứng sau mọi
+  khối skin với độ đặc hiệu bằng nhau nên nó thắng. `uiSkins.test.js` canh cả bốn.
 - Cảnh 3D: 15 kỷ, mỗi kỷ buộc vào một nước có thật (`country`/`landmark` ở `eraStyle.js`).
   Các bảng bản sắc 15 kỷ đã có: mái · tầng trệt · mặt đường · thực vật · địa thế/nước ·
   vùng phụ cận · khu phố · dáng đi · mạng đường.

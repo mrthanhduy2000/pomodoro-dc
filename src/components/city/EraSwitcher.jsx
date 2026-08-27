@@ -30,6 +30,9 @@
  * theme × skin thì kỷ 9 (`#a3e635`, xanh chanh) chỉ đạt **1,49:1** và kỷ 3 (`#facc15`, vàng)
  * 1,51:1 ở theme sáng — tức gần như tàng hình đúng chỗ đáng lẽ phải là phần thưởng. `--accent` đo
  * được 2,97:1 (tệ nhất, skin sáng thứ hai) tới 7,43:1, tốt hơn gấp đôi ở ca xấu nhất.
+ * ĐÍNH CHÍNH PHẠM VI (2026-08-27, thêm skin thứ 5 "arcade"): nay là 10 tổ hợp. Đã đo lại riêng
+ * cho arcade — `--accent` đạt 3,35:1 (sáng, trên nền) · 3,79:1 (sáng, trên thẻ) · 5,41–6,06:1
+ * (tối), tức nằm GỌN trong dải 2,97–7,43 đã ghi ở trên, nên kết luận cũ không đổi.
  * Cái dấu chấm tròn bên cạnh thì VẪN giữ màu kỷ, và đó không phải sự thiếu nhất quán: nó là trang
  * trí thuần (số kỷ đã ghi ngay cạnh), còn ngôi sao thì mang thông tin.
  */

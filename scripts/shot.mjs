@@ -36,6 +36,7 @@
  *   node scripts/shot.mjs --tab "Thành tích" --out b.png
  *   node scripts/shot.mjs --phone --out c.png               # 390px THẬT
  *   node scripts/shot.mjs --dark --hour 22 --out d.png
+ *   node scripts/shot.mjs --skin swiss --out d2.png       # soi một skin khác mặc định
  *   node scripts/shot.mjs --tab "Thống kê" --full --out e.png   # chụp trọn chiều dài trang
  *   node scripts/shot.mjs --phone --fit                     # ĐO chữ có tràn khỏi nút không
  *   node scripts/shot.mjs --tab "Thành Phố" --probe "..."   # hỏi thẳng trình duyệt một con số
@@ -78,6 +79,8 @@ import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { extname, join, resolve } from 'node:path';
 import { spawn } from 'node:child_process';
 
+import { DEFAULT_UI_SKIN } from '../src/store/uiSkins.js';
+
 const argv = process.argv;
 const has = (f) => argv.includes(f);
 const arg = (f, d) => { const i = argv.indexOf(f); return i >= 0 ? argv[i + 1] : d; };
@@ -86,6 +89,12 @@ const ROOT = resolve(process.env.DIST ?? 'dist');
 const OUT = arg('--out', 'shot.png');
 const TAB = arg('--tab', null);
 const THEME = has('--dark') ? 'dark' : 'light';
+// ⚠️ Fixture này TỪNG chốt cứng `uiSkin: 'editorial'`. Khi mặc định của app đổi sang 'arcade'
+// (2026-08-27) thì mọi ảnh chụp sẽ lặng lẽ hiện một skin KHÔNG phải mặc định — đúng loại
+// "công cụ đo nói dối" đã cắn dự án này nhiều lần, và nó nói dối theo hướng khó thấy nhất:
+// tấm ảnh vẫn hợp lý, chỉ là nó mô tả một app khác. Nay lấy đúng mặc định của store, và có cờ
+// `--skin <tên>` để soi bất kỳ skin nào.
+const SKIN = arg('--skin', DEFAULT_UI_SKIN);
 const PHONE = has('--phone');
 const FULL = has('--full');
 const WIDTH = Number(arg('--width', PHONE ? 390 : 1280));
@@ -126,7 +135,7 @@ const GAME = FIXTURE ? JSON.parse(readFileSync(FIXTURE, 'utf8')) : {
 };
 const SETTINGS = {
   state: {
-    uiTheme: THEME, uiSkin: 'editorial', cityHomeBackdrop: true,
+    uiTheme: THEME, uiSkin: SKIN, cityHomeBackdrop: true,
     cityRenderMode: '3d', hasViewedInitialOnboarding: true,
   },
   version: 8,

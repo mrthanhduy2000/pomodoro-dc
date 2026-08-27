@@ -207,29 +207,38 @@ thang độ hiếm bốn bậc (`engine/rewardTiers.js`). Cái quyết định n
 `completeFocusSession` (hàm dài nhất dự án) và không đổi một con số thưởng nào. Đồng hồ 4 giây
 **dừng** khi có hộp thoại chặn màn hình, nếu không nó cháy hết sau lưng lớp mờ.
 
-⚠️ **KHÔNG CÒN NGOẠI LỆ NÀO (ADR-061).** Báo cáo tuần từng tự bật sáng thứ Hai; nay tín hiệu của
-nó là một **CHẤM "chưa xem"** trên mục "Báo cáo tuần", suy ra từ `lastWeeklyReportDate` bằng hàm
-thuần `isWeeklyReportUnread` (`engine/navAttention.js`):
+⚠️ **KHÔNG CÒN NGOẠI LỆ NÀO (ADR-061).** Báo cáo tuần từng tự bật sáng thứ Hai. Nay nó chạy được
+là nhờ **tách một trường gánh hai việc thành hai**: `lastWeeklyReportDate` = *đã MỜI* ·
+`lastWeeklyReportSeenDate` = *đã XEM*.
 
 ```
-lastWeeklyReportDate (state ĐỒNG BỘ)  ──→ isWeeklyReportUnread()
-                                                  │
-                                        attentionTabIds ∋ 'weeklyReport'
-                                                  │
-                        ┌─────────────────────────┴─────────────────────────┐
-                  thanh bên desktop                          menu "Thêm" trên iPhone
-                  "Báo cáo tuần" + chấm                      "Báo cáo tuần" + chấm
-                        └─────────────────────────┬─────────────────────────┘
-                                        openWeeklyReport()
-                                   (mở vào tab "Tuần trước" nếu chưa xem)
-                                                  │
-                                        dismissWeeklyReport() → đánh dấu ĐÃ XEM ⇒ chấm tắt
+sáng thứ Hai · chưa mời tuần này
+        ▼
+checkWeeklyReport()  ── ghi lastWeeklyReportDate = thứHai   (đã MỜI — mời đúng 1 lần/tuần)
+        │              └─ bật ui.weeklyReportPending
+        ▼
+  một THẺ trong <RewardToastHost>            ─── hết 4 giây ──→ dismissWeeklyReportToast()
+        │  (bấm vào)                                              KHÔNG ghi ngày nào
+        ▼                                                                │
+openWeeklyReport() ── ghi lastWeeklyReportSeenDate = thứHai  (đã XEM)     │
+        │              cú mở ĐẦU TIÊN trong tuần → tab "Tuần trước"       │
+        ▼                                                                ▼
+  <WeeklyReportModal>                                    lastWeeklyReportSeenDate KHÔNG đổi
+                                                                         │
+                                                      ⇒ weeklyReportUnseen vẫn TRUE
+                                                      ⇒ CHẤM vẫn sáng, KHÔNG hết hạn
+                                            ┌────────────────┴────────────────┐
+                                      thanh bên desktop        menu "Thêm" trên iPhone
+                                      "Báo cáo tuần" + chấm    "Báo cáo tuần" + chấm
 ```
 
-⚠️ **LỐI VÀO TRÊN ĐIỆN THOẠI LÀ ĐIỀU KIỆN AN TOÀN, KHÔNG PHẢI TIỆN ÍCH.** Trước ADR-061, nút mở
-báo cáo tuần chỉ có ở thanh bên desktop (`hidden md:flex`) — nghĩa là trên iPhone, hộp thoại tự
-bật không phải cách báo cáo *xuất hiện* mà là cách nó *tồn tại*. Gỡ tự-bật mà không thêm mục vào
-menu "Thêm" thì báo cáo tuần biến mất khỏi thiết bị Đàm dùng nhiều nhất.
+⚠️ **CÁI CHẤM LÀ LƯỚI AN TOÀN, VÀ NÓ PHẢI CĂNG Ở CẢ HAI NỀN TẢNG.** Toast tự tắt sau 4 giây nên
+nó bị lỡ được; cái chấm thì đọc `lastWeeklyReportSeenDate` nên nó ở lại tới khi Đàm mở bản tổng
+kết ra thật. **Trước ADR-061, nút mở báo cáo tuần chỉ tồn tại ở thanh bên desktop
+(`hidden md:flex`)** — nghĩa là trên iPhone, hộp thoại tự bật không phải cách báo cáo *xuất hiện*
+mà là cách nó *tồn tại*. Vì thế mục "Báo cáo tuần" trong menu "Thêm" là **điều kiện an toàn của cả
+thay đổi**, không phải một tiện ích: thiếu nó thì lưới chỉ căng một bên, và bên hở lại đúng là
+thiết bị Đàm dùng nhiều nhất. `rewardToastWiring.test.js` đòi cả lối vào lẫn cái chấm ở CẢ HAI.
 
 ⚠️ `ui.pendingReward.newlyBuiltIds` là trường **chỉ để hiển thị**: `ui` không nằm trong `partialize`
 của store, nên nó không lên Supabase — không thêm một byte nào vào JSONB đang tranh chấp CAS

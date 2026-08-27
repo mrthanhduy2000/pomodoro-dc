@@ -95,6 +95,8 @@ export default function RewardToastHost({ paused = false, onNavigate, onOpenDeta
   const dismissRankUpNotification = useGameStore((s) => s.dismissRankUpNotification);
   const dismissAchievementNotification = useGameStore((s) => s.dismissAchievementNotification);
   const dismissMissionNotification = useGameStore((s) => s.dismissMissionNotification);
+  const dismissWeeklyReportToast = useGameStore((s) => s.dismissWeeklyReportToast);
+  const openWeeklyReport = useGameStore((s) => s.openWeeklyReport);
   const enterMotion = useEnterMotion();
 
   const toasts = useMemo(() => buildRewardToasts(ui, missions), [ui, missions]);
@@ -125,6 +127,9 @@ export default function RewardToastHost({ paused = false, onNavigate, onOpenDeta
 
   const dismiss = (toast) => {
     switch (toast.source) {
+      // ⚠️ Hết 4 giây thì CHỈ tắt lời mời — không ghi "đã xem". Lỡ thẻ này thì chấm ở nút
+      // "Báo cáo tuần" vẫn sáng, đó là cả lý do `TECH_DEBT #87` bắt tách hai trạng thái.
+      case 'weekly':      return dismissWeeklyReportToast();
       case 'loot':        return closeLootModal();
       case 'relic':       return dismissRelicNotification();
       case 'level':       return dismissLevelUp();
@@ -140,6 +145,12 @@ export default function RewardToastHost({ paused = false, onNavigate, onOpenDeta
   // ⚠️ Kiểu `detail` KHÔNG gọi `dismiss`: hộp thoại đọc chính trường store mà
   // `dismiss` sẽ xoá, nên xoá trước là mở ra một hộp thoại rỗng.
   const open = (toast) => {
+    // Bản tổng kết tuần đi qua chính hàm của store, nơi giữ luật "cú mở đầu tiên trong tuần là
+    // bản TUẦN TRƯỚC" + luật ghi "đã xem". Nó tự tắt lời mời nên không gọi `dismiss` ở đây.
+    if (toast.action?.weekly) {
+      openWeeklyReport();
+      return;
+    }
     if (toast.action?.detail) {
       onOpenDetail?.(toast.action.detail);
       return;

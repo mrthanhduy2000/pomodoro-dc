@@ -11,60 +11,84 @@
 
 ---
 
-## ADR-061 — Báo cáo tuần đổi từ HỘP THOẠI TỰ BẬT sang một CHẤM "chưa xem", và iPhone lần đầu có đường vào
+## ADR-061 — Tách "đã MỜI" khỏi "đã XEM" để gỡ nốt ngoại lệ cuối của luật mức độ làm phiền
 
-**Ngày:** 2026-08-27 (tối, ngay sau ADR-060)
-**Trạng thái:** đã áp dụng. Đóng ngoại lệ duy nhất mà ADR-060 để lại (`TECH_DEBT #87`).
+**Ngày:** 2026-08-27
+**Trạng thái:** đã áp dụng. Không đảo ngược ADR nào — nó HOÀN TẤT ADR-060, đóng `TECH_DEBT #87`.
 
-**Bối cảnh.** ADR-060 lập luật: chặn màn hình chỉ dành cho **lên kỷ · thăng hoa · khủng hoảng kỷ ·
-thảm hoạ**. Báo cáo tuần được để lại làm ngoại lệ CÓ GHI SỔ vì gỡ nó lúc ấy sẽ đổi một phiền toái
-nhỏ lấy một mất mát thật.
+**Bối cảnh.** ADR-060 chốt: chặn màn hình chỉ dành cho bốn việc buộc phải QUYẾT ĐỊNH (lên kỷ ·
+thăng hoa · khủng hoảng kỷ · thảm hoạ). Nhưng nó để lại đúng MỘT ngoại lệ, và ghi rõ lý do:
+`checkWeeklyReport` vẫn tự mở `WeeklyReportModal` sáng thứ Hai. Ngoại lệ ấy không phải vì lười —
+nó bị chặn bởi một khuyết tật ở tầng dữ liệu.
 
-**Vấn đề — và nó không phải chuyện làm phiền.** Đi đọc mã mới thấy sự thật quyết định cả hướng đi:
-**trên iPhone KHÔNG có đường nào mở báo cáo tuần.** Nút duy nhất nằm ở thanh bên desktop
-(`hidden md:flex`). Nghĩa là cái hộp thoại tự bật sáng thứ Hai không chỉ là cách báo cáo *xuất
-hiện* — nó là cách duy nhất báo cáo *tồn tại* trên thiết bị Đàm dùng nhiều nhất. Và
-`dismissWeeklyReport` đánh dấu "tuần này đã xem", nên **đóng vội một lần là mất báo cáo cả tuần**.
+**Vấn đề.** `dismissWeeklyReport` ghi `lastWeeklyReportDate` ở MỌI lần đóng, và cùng một trường ấy
+là thứ chặn `checkWeeklyReport` chạy lại. Tức một trường đang trả lời HAI câu hỏi khác nhau —
+*"tuần này đã mời chưa?"* và *"Đàm đã xem chưa?"*. Chừng nào còn gộp thì đẩy bản tổng kết xuống một
+toast 4 giây là **đổi một phiền toái nhỏ lấy một mất mát thật**: lỡ một cái toast = mất báo cáo của
+cả tuần. Đây là lần thứ **BẢY** của khuôn *"một trường gánh hai việc"* (`storyHeight` · `roof` ·
+bảng loài cây · `avenue` · vai màu `cloth2` · hồ sơ `{sides, rings}`), và lần đầu nó gánh hai việc
+ở tầng DỮ LIỆU BỀN chứ không ở tầng hình.
 
 **Phương án đã cân nhắc.**
-- **(A) Đẩy xuống toast như mọi thứ khác trong ADR-060.** Loại — và đây là điểm quan trọng nhất
-  của ADR này: một toast tự tắt sau 4 giây, trên một thiết bị không có đường vào nào khác, chính
-  là *"lỡ một cái toast = mất báo cáo cả tuần"*. Nó KHÔNG phải bản vá; nó là cùng một khuyết tật
-  mặc áo mới.
-- **(B) Toast + thêm một trường `weeklyReportOfferedDate`** để tách "đã được MỜI" khỏi "đã XEM".
-  Loại: nó chữa được chuyện mời-lại, nhưng vẫn không trả lời được câu *"lỡ rồi thì vào bằng lối
-  nào"*, và nó thêm một trường đồng bộ cho một việc mà một cái chấm làm được không cần trường nào.
-- **(C — đã chọn) Bỏ HẲN việc tự bật; tín hiệu là một CHẤM "chưa xem", cộng một lối vào trên
-  điện thoại.**
+- **(A) Cứ đẩy xuống toast, giữ nguyên một trường.** Rẻ nhất, và chính `TECH_DEBT #87` đã cấm: nó
+  biến một phiền toái đo được thành một mất mát im lặng.
+- **(B) Giữ hộp thoại tự bật, chấp nhận ngoại lệ vĩnh viễn.** Loại: một ngoại lệ là chỗ để ngoại lệ
+  thứ hai bám vào (*"nếu báo cáo tuần được phép tự bật thì cái này cũng được"*), và luật mức độ làm
+  phiền chỉ sống được khi không có ngoại lệ nào.
+- **(C) Cho toast KHÔNG tự tắt, phải bấm mới mất.** Loại: đó là một hộp thoại đội lốt toast, và nó
+  phá luật 4 giây mà `RewardToastHost` vừa dựng cho cả sáu kênh còn lại.
+- **(D — đã chọn) Tách đôi trường, cộng một lưới an toàn KHÔNG hết hạn.**
 
-**Giải pháp.**
-- Gỡ `checkWeeklyReport()` khỏi store và cả hai chỗ gọi ở `App.jsx`.
-- `isWeeklyReportUnread()` (thuần, ở `engine/navAttention.js`) → chấm trên mục "Báo cáo tuần",
-  đi qua đúng `attentionTabIds` mà phiên trước đã dựng cho tab "Hành trang".
-- **Thêm mục "Báo cáo tuần" vào menu "Thêm" trên điện thoại** — đây là ĐIỀU KIỆN AN TOÀN, không
-  phải tiện ích. Thiếu nó thì ADR này là một hồi quy.
-- `openWeeklyReport()` mở thẳng vào tab **"Tuần trước"** khi tuần này chưa xem — đó chính là bản
-  báo cáo cái chấm đang trỏ tới.
+**Giải pháp.** Hai trường bền, hai câu hỏi:
+`lastWeeklyReportDate` = *đã MỜI tuần này* (ghi lúc `checkWeeklyReport` bật lời mời, để không mời
+lại mỗi lần mở app) · `lastWeeklyReportSeenDate` = *đã MỞ bản tổng kết ra* (ghi lúc
+`openWeeklyReport`). Toast hết 4 giây gọi `dismissWeeklyReportToast`, thứ **chỉ tắt lời mời và
+không ghi ngày nào**.
 
-**⚠️ MỘT TRƯỜNG GÁNH HAI VIỆC, LẦN THỨ BẢY.** `lastWeeklyReportDate` vừa là cổng *"tuần này đã TỰ
-BẬT chưa"* vừa là dấu *"đã XEM chưa"*. Hai câu hỏi khác nhau trùng nhau **chỉ vì** tự-bật-một-lần
-cũng đồng nghĩa với đã-thấy-một-lần — một sự trùng hợp, không phải một quan hệ. Điều đáng chú ý:
-lần này lời giải KHÔNG phải tách đôi cái trường (phương án B), mà là **bỏ đi cái việc thứ hai**.
-Khi một trường gánh hai việc, hỏi thêm *"có phải một trong hai việc ấy đáng lẽ không nên tồn tại
-không?"* — rẻ hơn nhiều so với việc nuôi hai trường.
+⚠️ **Ba luật đi kèm, đừng gỡ cái nào:**
+1. **MỞ = đã xem; ĐÓNG = không ghi gì.** Ghi ở lúc đóng là dựng lại đúng cái bẫy cũ ở một chỗ khác.
+2. **Cú mở ĐẦU TIÊN trong tuần rơi vào chế độ `'previous'`.** Không có luật này thì việc đổi sang
+   toast âm thầm đổi luôn NỘI DUNG Đàm nhận được — nút ở thanh bên xưa nay mở `'current'` (tuần
+   đang chạy dở), còn hộp thoại tự bật thì mở `'previous'` (tuần đã xong).
+3. **Chấm ở nút "Báo cáo tuần" là LƯỚI AN TOÀN, không phải trang trí.** Nó do
+   `lastWeeklyReportSeenDate` điều khiển nên nó KHÔNG hết hạn. Thiếu nó thì phương án (D) thoái hoá
+   về phương án (A): một lời mời 4 giây có thể bị lỡ, và không còn dấu vết nào cho biết đã lỡ.
 
-**Trade-off.**
-- Sáng thứ Hai không còn gì bật ra. Đàm phải THẤY cái chấm rồi tự bấm. Đổi lại nó không thể bị lỡ:
-  chấm suy ra từ trạng thái đã lưu, không từ một cái hẹn giờ, nên nó sáng cho tới khi được xem.
-- Cái chấm ở thanh bên desktop **nằm dưới đáy**, ít nổi hơn một hộp thoại. Chấp nhận: đó đúng là
-  ý nghĩa của "không chen ngang".
+**Đánh đổi.** Thêm một trường vào dữ liệu bền (đi qua `normalizePersistedGameState`, ảnh chụp thăng
+hoa và `partialize` lên Supabase) — giá phải trả để một trường thôi gánh hai việc. Máy cũ nạp lên có
+`lastWeeklyReportSeenDate` rỗng ⇒ chấm sáng một lần và cú bấm đầu tiên đưa đúng bản tuần trước; đó
+là hành vi ĐÚNG chứ không phải một ca cần migration.
 
-**Ảnh hưởng.** Không migration: `lastWeeklyReportDate` giữ nguyên tên, kiểu và cách đồng bộ — chỉ
-NGHĨA của nó hẹp lại. Dữ liệu cũ đọc vẫn đúng. `weeklyReportOpen` vẫn nằm trong `blocking`, nhưng
-nay nó chỉ bật khi Đàm tự bấm, nên nó không còn là ngoại lệ của ADR-060.
+**Ảnh hưởng.** ADR-060 nay không còn ngoại lệ nào: `blocking` ở `OverlayStack` chỉ còn chứa những
+hộp thoại do Đàm bấm hoặc do bốn việc bắt buộc phải quyết định.
 
-**Điều kiện xem lại.** Nếu Đàm nói *"tôi không để ý thấy cái chấm"* thì bàn lại việc thêm MỘT toast
-nhắc (lúc ấy an toàn, vì lối vào trên điện thoại đã có). Đừng dựng lại hộp thoại tự bật.
+**Điều kiện xem lại.** Khi có mục thứ hai xin được tự bật — lúc đó câu hỏi không phải "cho nó bật
+không" mà là "nó có buộc phải quyết định gì không".
+
+**Khoá bằng test.** `src/store/gameStore.weeklyReport.test.js` (9 bài, chạy store THẬT với đồng hồ
+đóng băng ở một thứ Hai giờ VN, có bài đối chứng khẳng định mốc ấy đúng là thứ Hai). Bảy phép thử
+ngược đều đỏ đúng bài dự kiến — trong đó có phép dựng lại chính khuyết tật cũ (toast hết giờ cũng
+ghi "đã xem") và phép bỏ luật `'previous'`.
+
+**⚠️ BỔ SUNG CÙNG NGÀY — LƯỚI AN TOÀN PHẢI CÓ MẶT TRÊN CẢ HAI NỀN TẢNG, KHÔNG CHỈ DESKTOP.**
+Bản đầu của quyết định này đặt cái chấm "chưa xem" ở **thanh bên desktop**, mà thanh bên là
+`hidden md:flex`. Đi đọc lại toàn bộ đường vào mới thấy điều làm hỏng cả lập luận: **trước ADR
+này, iPhone KHÔNG có nút nào mở báo cáo tuần** — nút duy nhất nằm đúng ở cái thanh bên ấy. Nghĩa
+là trên iPhone, hộp thoại tự bật không phải cách báo cáo *xuất hiện*, nó là cách báo cáo *tồn
+tại*; bỏ nó đi mà lưới an toàn lại nằm ở nền tảng kia thì trên thiết bị Đàm dùng nhiều nhất, lỡ
+một cái toast 4 giây vẫn là mất báo cáo cả tuần — đúng thứ ADR này sinh ra để tránh.
+
+⇒ Đã thêm mục **"Báo cáo tuần" vào menu "Thêm" trên điện thoại**, mang cùng cái chấm
+`weeklyReportUnseen`. Đây là **điều kiện an toàn của quyết định, không phải một tiện ích**: gỡ nó
+ra thì ADR-061 trở lại thành một hồi quy, và là hồi quy im lặng (build xanh, lint sạch, mọi bài
+test khác xanh). Khoá bằng `rewardToastWiring.test.js` — bài test đòi cả lối vào lẫn cái chấm ở
+CẢ HAI thanh điều hướng.
+
+**Bài học chung:** khi gỡ một cơ chế và thay bằng "một lưới an toàn", hãy liệt kê **mọi đường vào
+hiện có** trước — một lưới chỉ căng ở một nền tảng thì nó không phải lưới, nó là một lời hứa đúng
+một nửa. Cùng họ với luật đã ghi ở `appNavigation.test.js`: *nối một chỗ quên một chỗ — mà iPhone
+mới là chỗ Đàm dùng nhiều nhất.*
+
 
 ---
 

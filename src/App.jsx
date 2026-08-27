@@ -17,7 +17,6 @@ import { useGameLoop } from './hooks/useGameLoop';
 import { useCityGrowthMoment } from './hooks/useCityMoment';
 import useGameStore from './store/gameStore';
 import useInventoryAttention from './hooks/useInventoryAttention';
-import { isWeeklyReportUnread } from './engine/navAttention';
 import useSettingsStore from './store/settingsStore';
 import { ERA_METADATA, ERA_THRESHOLDS } from './engine/constants';
 import { countSessionsOnDay, getLevelProgress, sumFocusMinutesOnDay } from './engine/gameMath';
@@ -1423,6 +1422,14 @@ export default function App() {
   const eraCrisisModalOpen = useGameStore((s) => s.ui.eraCrisisModalOpen);
   const prestigeModalOpen = useGameStore((s) => s.ui.prestigeModalOpen);
   const weeklyReportOpen = useGameStore((s) => s.ui.weeklyReportOpen);
+  const weeklyReportPending = useGameStore((s) => s.ui.weeklyReportPending);
+  const lastWeeklyReportSeenDate = useGameStore((s) => s.lastWeeklyReportSeenDate);
+  // ⚠️ Dùng CHÍNH `localWeekMondayStr` mà store gọi (`getWeekMonday` chỉ là một lớp bọc quanh nó),
+  // không tự dựng lại phép tính "thứ Hai của tuần này" — hai công thức cho một luật thì sớm muộn
+  // một bên trôi, và triệu chứng ở đây sẽ là cái chấm sáng/tắt lệch một ngày mà chẳng ai truy ra.
+  // `history.length > 0` khớp đúng điều kiện của `checkWeeklyReport`: người dùng mới chưa có phiên
+  // nào thì bản tổng kết rỗng, chấm vào đó là chỉ vào một trang trắng.
+  const weeklyReportUnseen = history.length > 0 && lastWeeklyReportSeenDate !== localWeekMondayStr();
   const levelUpQueueLength = useGameStore((s) => s.ui.levelUpQueue.length);
   const achievementQueueLength = useGameStore((s) => s.ui.achievementQueue.length);
   // Hai kênh phần thưởng nhẹ này store đã ghi từ lâu nhưng TRƯỚC 2026-08-27 không
@@ -1467,24 +1474,17 @@ export default function App() {
     markAchievementsSeen,
     unseenAchievementCount,
   } = useInventoryAttention();
-  // "Báo cáo tuần chưa xem" — thay cho việc TỰ BẬT hộp thoại sáng thứ Hai (ADR-061).
-  // ⚠️ Không phải một TAB, nhưng vẫn đi qua đúng cái tập này: chỗ dùng chỉ hỏi "mục này có chấm
-  // không", nên một mục-là-hành-động cũng trả lời được câu ấy. Đây đúng là chỗ mở rộng mà chú
-  // thích ngay dưới đã hứa.
-  const weeklyReportUnread = useGameStore((s) => isWeeklyReportUnread({
-    lastReadWeek: s.lastWeeklyReportDate,
-    weekMonday: localWeekMondayStr(),
-    hasHistory: s.history.length > 0,
-  }));
   // Một TẬP chứ không phải một cờ `inventoryNeedsAttention` truyền thẳng: thanh bên và thanh dưới
   // đều chỉ hỏi "mục này có chấm không", nên ngày mai thêm chấm cho một tab khác thì không phải
   // đi mở lại hai component điều hướng.
+  //
+  // ⚠️ CHẤM "BÁO CÁO TUẦN CHƯA XEM" KHÔNG ĐI QUA TẬP NÀY, và đó là chủ ý: nó đọc
+  // `weeklyReportUnseen` (suy từ `lastWeeklyReportSeenDate`) chứ không đọc một id tab. Nhét nó vào
+  // đây thì phải đặt cho nó một id giả `'weeklyReport'` — một khoá trông như tab mà không có tab
+  // nào tên thế, và `selectTab` sẽ nuốt im lặng nếu có ai lỡ truyền nó đi.
   const attentionTabIds = useMemo(
-    () => new Set([
-      ...(inventoryNeedsAttention ? ['inventory'] : []),
-      ...(weeklyReportUnread ? ['weeklyReport'] : []),
-    ]),
-    [inventoryNeedsAttention, weeklyReportUnread],
+    () => new Set(inventoryNeedsAttention ? ['inventory'] : []),
+    [inventoryNeedsAttention],
   );
   // ⚠️ MỌI đường vào điều hướng phải đi qua đây, kể cả khi nơi gọi truyền id CŨ
   // (`skills`/`collection`/`achievements`) — `resolveTabTarget` dịch chúng thành
@@ -1643,6 +1643,7 @@ export default function App() {
               attentionTabIds={attentionTabIds}
               isOpen={sidebarOpen}
               onOpenWeeklyReport={openWeeklyReport}
+              weeklyReportUnseen={weeklyReportUnseen}
               onSelect={selectTab}
               onToggle={() => setSidebarOpen((value) => !value)}
             />
@@ -1940,7 +1941,7 @@ export default function App() {
                 >
                   <span className="relative">
                     <AppIcon.report size={17} />
-                    {attentionTabIds.has('weeklyReport') && (
+                    {weeklyReportUnseen && (
                       <span
                         aria-hidden="true"
                         className="absolute -right-1.5 -top-1 h-[6px] w-[6px] rounded-full"
@@ -2041,6 +2042,7 @@ export default function App() {
           eraCrisisModalOpen,
           prestigeModalOpen,
           weeklyReportOpen,
+          weeklyReportPending,
           levelUpQueueLength,
           achievementQueueLength,
           missionCompletedCount,
@@ -2054,6 +2056,7 @@ export default function App() {
           eraCrisisModalOpen={eraCrisisModalOpen}
           prestigeModalOpen={prestigeModalOpen}
           weeklyReportOpen={weeklyReportOpen}
+          weeklyReportPending={weeklyReportPending}
           levelUpQueueLength={levelUpQueueLength}
           achievementQueueLength={achievementQueueLength}
           missionCompletedCount={missionCompletedCount}
@@ -2108,6 +2111,7 @@ function OverlayStack({
   eraCrisisModalOpen,
   prestigeModalOpen,
   weeklyReportOpen,
+  weeklyReportPending,
   levelUpQueueLength,
   achievementQueueLength,
   missionCompletedCount,
@@ -2152,17 +2156,15 @@ function OverlayStack({
     if (lootModalOpen) LootDropModal.preload?.();
   }, [lootModalOpen]);
 
-  // Mọi thứ đang chặn màn hình. Sáu số hạng, nhưng chỉ BA trong số đó TỰ BẬT:
-  // lên kỷ (`showLootModal` khi `eraChanged`) · thảm hoạ · khủng hoảng kỷ — đúng ba
-  // việc buộc Đàm phải quyết định gì đó. Ba số hạng còn lại đều do Đàm tự mở:
-  // thăng hoa (nút ở Cài đặt) · `detail === 'loot'|'level'` (bấm vào thẻ) ·
-  // `weeklyReportOpen` (nút "Báo cáo tuần"). Một hộp thoại Đàm TỰ MỞ thì không phải
-  // "làm phiền" — luật của ADR-060 nói về việc CHEN NGANG, không nói về việc chặn.
-  //
-  // ⚠️ TỪ ADR-061 KHÔNG CÒN NGOẠI LỆ NÀO. Báo cáo tuần từng tự bật sáng thứ Hai;
-  // nay tín hiệu của nó là một CHẤM trên mục "Báo cáo tuần" (`attentionTabIds`),
-  // và cái chấm ấy không thể bị lỡ vì nó suy ra từ `lastWeeklyReportDate` đã lưu
-  // chứ không từ một cái hẹn giờ. Đừng dựng lại `checkWeeklyReport`.
+  // Mọi thứ đang chặn màn hình. Sáu số hạng, nhưng chỉ BA trong số đó tự bật:
+  // lên kỷ (`showLootModal` khi `eraChanged`) · thảm hoạ · khủng hoảng kỷ. Thăng
+  // hoa do Đàm bấm ở Cài đặt, còn `detail === 'loot'|'level'` là do Đàm bấm vào thẻ —
+  // một hộp thoại Đàm tự mở thì không phải "làm phiền".
+  // ⚠️ HẾT NGOẠI LỆ (2026-08-27, đóng `TECH_DEBT #87`). `weeklyReportOpen` từng TỰ bật sáng
+  // thứ Hai, tức nó chặn màn hình mà không nằm trong bốn việc được phép. Nay `checkWeeklyReport`
+  // chỉ bật một lời MỜI (`weeklyReportPending` → một thẻ toast); cờ này chỉ lên khi Đàm bấm —
+  // nút ở thanh bên hoặc chính cái thẻ ấy — nên nó rơi vào đúng câu đã ghi ở trên: "một hộp
+  // thoại Đàm tự mở thì không phải làm phiền".
   const blocking = showMoment || showLootModal || disasterModalOpen || eraCrisisModalOpen
     || prestigeModalOpen || weeklyReportOpen || showLevelModal;
 
@@ -2172,6 +2174,7 @@ function OverlayStack({
     || hasLevelUp
     || achievementQueueLength > 0
     || missionCompletedCount > 0
+    || weeklyReportPending
   );
 
   if (!blocking && !hasToast) return null;
@@ -2198,7 +2201,7 @@ function OverlayStack({
   );
 }
 
-function EditorialSidebar({ activeTab, attentionTabIds, isOpen, onOpenWeeklyReport, onSelect, onToggle }) {
+function EditorialSidebar({ activeTab, attentionTabIds, isOpen, onOpenWeeklyReport, onSelect, onToggle, weeklyReportUnseen = false }) {
   // ⚠️ NGOẠI LỆ CÓ LÝ DO — cùng chuyện với cột phải: cột trái THU GỌN chứ không XUẤT HIỆN, và
   // bề ngang do chính `animate` khai nên phải NHẢY tới đích chứ không được bỏ đi (`useSnapMotion`).
   const railMotion = useSnapMotion({
@@ -2255,9 +2258,13 @@ function EditorialSidebar({ activeTab, attentionTabIds, isOpen, onOpenWeeklyRepo
       </nav>
 
       <div className="mt-auto flex flex-col gap-1 px-2.5 pb-3 pt-3">
+        {/* ⚠️ CHẤM NÀY LÀ LƯỚI AN TOÀN CỦA VIỆC BỎ HỘP THOẠI TỰ BẬT (`TECH_DEBT #87`). Thẻ toast
+            sáng thứ Hai tự tắt sau 4 giây và có thể bị lỡ; cái chấm thì ở lại tới khi Đàm mở bản
+            tổng kết ra thật. Không có nó thì việc bỏ chặn màn hình đúng là "đổi một phiền toái
+            nhỏ lấy một mất mát thật" — và cú bấm ấy mở thẳng bản TUẦN TRƯỚC, xem `openWeeklyReport`. */}
         <SidebarItem
           active={false}
-          attention={attentionTabIds?.has('weeklyReport') ?? false}
+          attention={weeklyReportUnseen}
           icon={<AppIcon.report size={18} />}
           isOpen={isOpen}
           label="Báo cáo tuần"

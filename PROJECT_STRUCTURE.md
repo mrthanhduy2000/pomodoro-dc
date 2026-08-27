@@ -639,15 +639,10 @@
 │   │   │                     #   thông báo + chấm trên tab Hành trang); chép công thức về lại
 │   │   │                     #   NotificationCenter là "một luật hai công thức", và hai bản sao sẽ
 │   │   │                     #   trôi khỏi nhau ở BIÊN rồi nói ngược nhau mà không gì đỏ lên
-│   │   ├── navAttention.js    # HAI cái chấm "có thứ chưa xem" trên thanh điều hướng, HAI nguồn
-│   │   │                     #   sự thật khác nhau — cố ý:
-│   │   │                     #   · thành tích  → localStorage `dc-nav-seen-v1` (chuyện TỪNG MÁY).
-│   │   │                     #     ⚠️ `null` (chưa từng ghi) KHÁC `[]` (đã ghi, đang rỗng) — nhập
-│   │   │                     #     hai thứ đó làm một thì lần đầu mở app cái chấm sáng oan cho
-│   │   │                     #     hàng chục thành tích Đàm đã xem từ lâu
-│   │   │                     #   · báo cáo tuần → `lastWeeklyReportDate` trong state ĐỒNG BỘ
-│   │   │                     #     (chuyện VÁN CHƠI: xem trên Mac rồi thì iPhone hết chấm).
-│   │   │                     #     Thay cho việc TỰ BẬT hộp thoại sáng thứ Hai — xem ADR-061
+│   │   ├── navAttention.js    # Dấu "thành tích đã xem" (localStorage `dc-nav-seen-v1`). ⚠️ `null`
+│   │   │                     #   (chưa từng ghi) KHÁC `[]` (đã ghi, đang rỗng) — nhập hai thứ đó
+│   │   │                     #   làm một thì lần đầu mở app cái chấm sáng oan cho hàng chục thành
+│   │   │                     #   tích Đàm đã xem từ lâu
 │   │   ├── timerSession.js / breaks.js / challengeEngine.js / notifications.js # engine chuyên biệt khác
 │   ├── hooks/                 # React hook — cầu nối giữa store và engine/component
 │   │   ├── useTimer.js         # LỚN — toàn bộ state machine đồng hồ Pomodoro/Stopwatch

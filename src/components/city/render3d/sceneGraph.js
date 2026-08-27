@@ -336,7 +336,14 @@ export function applyPaintedLook(renderer) {
  * ⚠️ Điện thoại GIỮ 512 — không phải vì tiếc, mà vì bóng ở đó vẽ lại rất hiếm (render-on-demand)
  * và bộ nhớ texture là thứ iOS Safari giết tab vì nó. 2048² × 4 byte = 16 MB cho MỘT bản đồ.
  */
-export const SHADOW_MAP_DESKTOP = 2048;
+// ⚠️ 2048 → 4096 (2026-08-27). Khung bóng phủ 2·reach = 18 đơn vị thế giới, nên 2048 cho ra một
+// texel bóng rộng 18/2048 = 0,0088 ô lưới; 4096 hạ xuống 0,0044 — mép bóng nét gấp đôi, và đó là
+// thứ mắt đọc ra "khối này ĐANG ĐỨNG trên mặt đất" chứ không phải "khối này được dán lên".
+// Cái giá là BỘ NHỚ (16 MB → 64 MB) chứ không phải thời gian mỗi khung: `sun.shadow.autoUpdate`
+// đang TẮT nên bản đồ chỉ vẽ lại khi thành phố đổi, còn phép LẤY MẪU mỗi khung không phụ thuộc độ
+// phân giải. Điện thoại GIỮ 512 vì lý do ngược lại — ở đó bộ nhớ texture chính là thứ iOS Safari
+// giết tab vì nó.
+export const SHADOW_MAP_DESKTOP = 4096;
 export const SHADOW_MAP_MOBILE = 512;
 
 /**
@@ -1561,6 +1568,10 @@ export function createCityScene({
   sun.shadow.mapSize.setScalar(isMobile ? SHADOW_MAP_MOBILE : SHADOW_MAP_DESKTOP);
 
   // Khung bóng bó SÁT đúng lưới — rộng thừa thì mất độ nét, thiếu thì cụt bóng ở rìa.
+  // ⚠️ 0,75 GIỮ NGUYÊN — đã thử siết xuống 0,58 (2026-08-27) và HOÀN TÁC: ảnh kỷ 11 lúc 16 giờ
+  // (bóng dài nhất) không đọc ra khác biệt nào, trong khi tấm đất nhận bóng rộng tới ±9,5 nên siết
+  // về ±6,96 là mua một rủi ro cắt cụt bóng ở vành ngoài để đổi lấy một thứ không nhìn thấy.
+  // Độ nét đã lấy bằng đường khác: bản đồ bóng 2048 → 4096.
   const reach = gridSize * 0.75;
   sun.shadow.camera.left = -reach;
   sun.shadow.camera.right = reach;

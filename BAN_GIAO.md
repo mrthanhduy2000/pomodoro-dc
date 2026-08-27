@@ -1,51 +1,135 @@
-> Cập nhật lần cuối: **2026-08-27 (tối muộn)** — **ĐÓNG NGOẠI LỆ CUỐI CÙNG: BÁO CÁO TUẦN THÔI TỰ
-> BẬT, VÀ IPHONE LẦN ĐẦU CÓ ĐƯỜNG VÀO** (ADR-061, đóng `TECH_DEBT #87` mở cùng ngày).
+> Cập nhật lần cuối: **2026-08-27 (tối muộn)** — **BÁO CÁO TUẦN: LƯỚI AN TOÀN NAY CĂNG Ở CẢ HAI
+> NỀN TẢNG** (bổ sung cho ADR-061).
 >
-> **⚠️ SỰ THẬT QUYẾT ĐỊNH CẢ HƯỚNG ĐI, VÀ NÓ KHÔNG NẰM TRONG MỤC NỢ:** đi đọc mã mới thấy **trên
-> iPhone KHÔNG có đường nào mở báo cáo tuần** — nút duy nhất ở thanh bên desktop (`hidden md:flex`).
-> Nghĩa là cái hộp thoại tự bật sáng thứ Hai không chỉ là cách báo cáo *xuất hiện*, nó là cách báo
-> cáo *tồn tại* trên thiết bị Đàm dùng nhiều nhất. ⇒ **Đơn thuốc ghi sẵn ở `TECH_DEBT #87` ("đẩy
-> xuống toast + tách hai trạng thái") là đơn SAI**: một toast 4 giây trên thiết bị không có lối vào
-> nào khác CHÍNH LÀ khuyết tật "lỡ một cái là mất cả tuần", chỉ mặc áo mới. Đúng bài học của
-> `TECH_DEBT #82`: *cái "Recommended Solution" được viết lúc người viết còn đứng TRONG mô hình cũ.*
+> ⚠️ **HAI PHIÊN LÀM CÙNG MỘT VIỆC CÙNG LÚC — VÀ ĐÂY LÀ CÁCH ĐÃ GỠ.** Phiên này và một phiên khác
+> cùng nhận việc đóng `TECH_DEBT #87`, cùng viết một ADR-061, và cùng đẩy lên trong vòng một giờ.
+> Bản của họ lên `main` trước và **tốt hơn ở tầng dữ liệu**: tách `lastWeeklyReportDate` (*đã MỜI*)
+> khỏi `lastWeeklyReportSeenDate` (*đã XEM*), giữ `checkWeeklyReport` nhưng cho nó chỉ bật một lời
+> MỜI (`ui.weeklyReportPending` → thẻ toast), kèm `gameStore.weeklyReport.test.js` (9 bài, 7 phép
+> thử ngược). ⇒ **Đã VỨT BỎ bản của mình** (hàm thuần `isWeeklyReportUnread` + cách gỡ hẳn
+> `checkWeeklyReport`) và giữ nguyên vẹn bản của họ, kể cả `appNavigation.test.js` trả về đúng
+> từng ký tự.
 >
-> **Đã làm thay:** gỡ hẳn `checkWeeklyReport()` (store + hai chỗ gọi ở `App.jsx`) · tín hiệu thành
-> một **CHẤM "chưa xem"** suy từ `lastWeeklyReportDate` bằng hàm thuần `isWeeklyReportUnread`
-> (`engine/navAttention.js`) — nó **không thể bị lỡ** vì nó không có hẹn giờ, sáng cho tới khi Đàm
-> thật sự mở ra xem · **thêm mục "Báo cáo tuần" vào menu "Thêm" trên điện thoại** (điều kiện AN
-> TOÀN, không phải tiện ích) · `openWeeklyReport()` mở thẳng vào tab **"Tuần trước"** khi chưa xem,
-> vì đó chính là bản báo cáo cái chấm đang trỏ tới.
+> **⚠️ NHƯNG BẢN CỦA HỌ HỞ ĐÚNG MỘT CHỖ, VÀ CHỖ ẤY LÀ THIẾT BỊ ĐÀM DÙNG NHIỀU NHẤT.** Lưới an toàn
+> của họ là cái chấm "chưa xem" ở **thanh bên desktop** — mà thanh bên là `hidden md:flex`. Đi đọc
+> lại mọi đường vào mới thấy: **trước ADR-061, iPhone KHÔNG có nút nào mở báo cáo tuần**, nút duy
+> nhất nằm đúng ở cái thanh bên ấy. Nghĩa là trên iPhone, hộp thoại tự bật không phải cách báo cáo
+> *xuất hiện* — nó là cách báo cáo *tồn tại*. Bỏ nó đi mà lưới lại căng ở nền tảng kia thì lỡ một
+> cái toast 4 giây vẫn là mất báo cáo cả tuần, đúng thứ ADR-061 sinh ra để tránh.
 >
-> **⚠️ MỘT TRƯỜNG GÁNH HAI VIỆC — LẦN THỨ BẢY, VÀ LỜI GIẢI KHÁC SÁU LẦN TRƯỚC.**
-> `lastWeeklyReportDate` vừa là cổng *"tuần này đã TỰ BẬT chưa"* vừa là dấu *"đã XEM chưa"*; hai
-> câu hỏi ấy trùng nhau **chỉ vì** tự-bật-một-lần cũng đồng nghĩa với đã-thấy-một-lần — một sự
-> trùng hợp, không phải một quan hệ. Sáu lần trước lời giải là TÁCH ĐÔI cái trường. Lần này lời
-> giải là **bỏ đi cái việc thứ hai**, và trường ấy tự hết gánh nặng mà không cần thêm một trường
-> đồng bộ nào. ⇒ Gặp trường gánh hai việc, hỏi thêm: ***"có phải một trong hai việc đáng lẽ không
-> nên tồn tại không?"***
+> ⇒ **Phần giữ lại của phiên này chỉ còn một việc, và nó là điều kiện an toàn chứ không phải tiện
+> ích**: thêm mục **"Báo cáo tuần" vào menu "Thêm" trên iPhone**, mang cùng cái chấm
+> `weeklyReportUnseen` của họ (KHÔNG tự tính lại — một luật một công thức). Số cột của menu ấy đọc
+> `MOBILE_SECONDARY_TABS.length + 1` chứ không chốt cứng, đúng chú thích sẵn có ở đó. Khoá bằng
+> `rewardToastWiring.test.js`: bài test đòi CẢ lối vào LẪN cái chấm ở CẢ HAI thanh điều hướng, và
+> đã thử-cho-đỏ.
 >
-> **⚠️ MỘT BÀI TEST CỦA PHIÊN KHÁC ĐỎ, VÀ MÃ KHÔNG HỀ SAI.** `appNavigation.test.js` khớp NGUYÊN
-> VĂN `new Set(inventoryNeedsAttention ? ['inventory'] : [])`, nên nó đỏ ngay khi cái tập ấy nhận
-> nguồn thứ hai — dù chú thích của chính nó chỉ tuyên bố *"tập tab có chấm phải suy từ
-> `inventoryNeedsAttention`"*, điều mã mới vẫn làm đúng. **Không bóp mã cho vừa regex**: đã sửa
-> assert để hỏi đúng NGUỒN TÍN HIỆU thay vì HÌNH DẠNG MÃ, rồi thêm một assert nữa cho nguồn mới —
-> bài test nay chặt HƠN bản cũ. Một bài test khoá cách viết thì nó chặn cả những thay đổi đúng, và
-> dạy người sửa một bài học sai.
+> **Bài học đáng giữ nhất của phiên**: khi gỡ một cơ chế rồi thay bằng "một lưới an toàn", hãy liệt
+> kê **mọi đường vào hiện có** TRƯỚC. Một lưới chỉ căng ở một nền tảng thì nó không phải lưới — nó
+> là một lời hứa đúng một nửa, và nửa sai lại rơi đúng vào iPhone. Cùng họ với luật đã ghi sẵn
+> trong `appNavigation.test.js`: *nối một chỗ quên một chỗ — mà iPhone mới là chỗ Đàm dùng nhiều nhất.*
 >
-> Cổng: **1240 bài · 0 đỏ · `# skipped 1`** · lint sạch · build xanh. Ảnh: chấm cam trên "Báo cáo
-> tuần" ở thanh bên desktop · menu "Thêm" trên iPhone nay ba mục (Thống kê · Cài đặt · Báo cáo
-> tuần, có chấm) · bấm vào mở đúng tab "Tuần trước".
+> **Bài học thứ hai — về việc gộp**: mã của tôi sống sót qua auto-merge nhưng **hết đúng về NGHĨA**.
+> `weeklyReportUnread` của tôi đọc `lastWeeklyReportDate`, mà trong mô hình của họ trường ấy nay
+> nghĩa là *đã MỜI* ⇒ cái chấm sẽ tắt ngay lúc vừa mời, trước khi Đàm kịp xem gì. Git không thấy
+> xung đột vì hai bên sửa hai vùng khác nhau. ⇒ **Sau mỗi lần gộp, đọc lại NGHĨA của những trường
+> mà cả hai bên cùng chạm, đừng chỉ đếm số dấu `<<<<<<<`.**
 >
-> **Gộp `main` lần hai trong phiên**: nhận thêm "ba nhịp phủ kín giao diện" + `motionCoverage.test.js`
-> (cổng quét mọi component tìm `initial`/`animate` gõ tay). Hai xung đột, đều ở nhật ký, giữ cả hai.
-> **`RewardToastHost.jsx` và `DailyMissions.jsx` qua cổng mới ngay từ lần chạy đầu** — vì ở lần gộp
-> TRƯỚC đã chuyển chúng sang `useEnterMotion`/`usePressMotion`/`useCustomMotion` rồi. Cổng sau khi
-> gộp: **1243 bài · 0 đỏ · `# skipped 1`**.
->
-> ⚠️ **VERCEL "READY" VẪN CHƯA TỰ XÁC NHẬN ĐƯỢC** từ hộp cát này (proxy chặn `pomodoro-dc.vercel.app`,
-> 403 ở bước CONNECT; repo không có GitHub Actions) — đã kiểm lại, vẫn đúng như phiên trước ghi.
+> Cổng sau khi gộp: **lint sạch · build xanh · test ở dòng dưới**.
+> ⚠️ **VERCEL "READY" VẪN CHƯA TỰ XÁC NHẬN ĐƯỢC** từ hộp cát này (proxy chặn
+> `pomodoro-dc.vercel.app`, 403 ở bước CONNECT; repo không có GitHub Actions) — đã kiểm lại.
 
 ---
+
+ Cập nhật lần cuối: **2026-08-27 (khuya)** — **BÁO CÁO TUẦN THÔI TỰ BẬT ⇒ LUẬT MỨC ĐỘ LÀM PHIỀN
+> HẾT NGOẠI LỆ** (ADR-061, đóng `TECH_DEBT #87` đúng ngày nó được mở). Sáng thứ Hai xưa nay
+> `checkWeeklyReport` tự mở một hộp thoại toàn màn hình — thứ DUY NHẤT còn chặn màn hình mà không
+> nằm trong bốn việc ADR-060 cho phép. Nay nó chỉ MỜI bằng một thẻ toast góc màn hình.
+>
+> **⚠️ ĐIỀU KIỆN BẮT BUỘC ĐÃ LÀM TRƯỚC, KHÔNG BỎ QUA.** `TECH_DEBT #87` cấm đụng vào tính năng này
+> cho tới khi tách được "đã xem" khỏi "đã bỏ qua" — vì `dismissWeeklyReport` ghi
+> `lastWeeklyReportDate` ở MỌI lần đóng, mà chính trường ấy chặn `checkWeeklyReport` chạy lại. Đẩy
+> thẳng sang toast 4 giây mà giữ nguyên cách ghi = **lỡ một cái toast là mất báo cáo của cả tuần**.
+> Nay hai trường, hai câu hỏi: `lastWeeklyReportDate` (*đã MỜI*) · `lastWeeklyReportSeenDate`
+> (*đã XEM*). Đây là lần thứ **BẢY** của khuôn "một trường gánh hai việc", và lần đầu nó gánh hai
+> việc ở tầng DỮ LIỆU BỀN chứ không ở tầng hình.
+>
+> **Ba luật đi kèm — gỡ cái nào là bản vá thoái hoá về đúng cái bẫy nó vừa gỡ:**
+> **(1) MỞ = đã xem; ĐÓNG = không ghi gì; TOAST HẾT GIỜ = không ghi gì.**
+> **(2) Cú mở ĐẦU TIÊN trong tuần rơi vào `'previous'`** — không có luật này thì đổi sang toast là
+> âm thầm đổi luôn NỘI DUNG Đàm nhận: nút thanh bên xưa nay mở `'current'` (tuần đang chạy dở), còn
+> hộp thoại tự bật thì mở `'previous'` (tuần đã xong).
+> **(3) Chấm ở nút "Báo cáo tuần" là LƯỚI AN TOÀN, không phải trang trí** — nó do
+> `lastWeeklyReportSeenDate` điều khiển nên KHÔNG hết hạn. Thiếu nó thì một lời mời 4 giây bị lỡ sẽ
+> không để lại dấu vết nào.
+>
+> **⚠️ HAI CÁI BẪY CÔNG CỤ TRONG CHÍNH PHIÊN NÀY, CẢ HAI ĐỀU DO PHÉP THAY CHUỖI:**
+> **(a) `s.count(old)` là phép đếm CHUỖI CON, không phải đếm DÒNG.** Mẫu `        lastWeeklyReportDate:`
+> (8 dấu cách) nằm gọn bên trong dòng `          lastWeeklyReportDate:` (10 dấu cách) mà bước trước
+> vừa chèn ⇒ cổng "phải khớp đúng 1 chỗ" nổ, dù cả hai chỗ đều có thật và đều khác nhau. Cắn **hai
+> lần** (`gameStore.js` rồi `App.jsx`). Vá: neo bằng DÒNG ĐỨNG SAU (`prestige: {`,
+> `levelUpQueueLength,`) để mỗi mẫu là duy nhất. May là cổng ấy chặn TRƯỚC khi ghi file, nên không
+> lần nào sửa hỏng — *một phép thay chuỗi không tự đếm số chỗ khớp là một quả mìn*.
+> **(b) MỘT BÀI TEST XANH OAN, VÀ CHỈ PHÉP THỬ NGƯỢC BẮT ĐƯỢC.** Bài "thẻ tuần phải đứng ĐẦU chồng
+> toast" dựng đúng MỘT thẻ rồi hỏi `toasts[0].source === 'weekly'` — nó xanh kể cả khi gỡ `'weekly'`
+> khỏi `SOURCE_ORDER`, vì **một danh sách một phần tử thì phần tử nào cũng đứng đầu**. Một phép sắp
+> xếp chỉ kiểm được khi có thứ để sắp. Đã thêm một thẻ thứ hai vào chồng; nay nó đỏ đúng lúc cần.
+>
+> **Đã NHÌN, không chỉ đọc cổng số**: bật tạm cờ trong bản build cục bộ để chụp thẻ toast thật
+> (`📊 Tổng kết tuần trước · TỐT · Xem lại bảy ngày vừa qua.`) và chấm cam trên nút *Báo cáo tuần*.
+> Lượt chụp đầu **không thấy thẻ đâu** — đúng vì nó đã tự tắt sau 4 giây trước lúc chụp, tức chính
+> cơ chế đang cần kiểm đã chạy. Câu mô tả đầu tiên còn bị **xén cụt** trong thẻ nên đã rút gọn; đó là
+> thứ chỉ ảnh chụp nói được, không cổng nào nói. Hai phép bật tạm đã hoàn tác và **kiểm bằng `md5sum`**.
+>
+> Cổng: **1243 bài · 0 đỏ · `# skipped 1`** · lint sạch · build xanh. Bài mới
+> `gameStore.weeklyReport.test.js` (9 bài) chạy **store THẬT** với đồng hồ đóng băng ở một thứ Hai
+> giờ VN — kèm một bài đối chứng khẳng định mốc ấy đúng là thứ Hai, vì chạy vào thứ Ba thì cả file
+> sẽ "xanh vì không đo gì". Bảy phép thử ngược đều đỏ đúng bài dự kiến.
+
+> Cập nhật lần cuối: **2026-08-27 (khuya)** — **BÓNG TIẾP XÚC ĐÃ CHẾT Ở 7/15 KỶ MÀ KHÔNG AI BIẾT.**
+> Lấy việc 1+2 trong hàng đợi `START_HERE`. Kết quả: **việc 1 đã xong từ 2026-08-21** (kỷ 2 khai
+> `roof: 'pyramid'`, kỷ 3 khai `roof: 'ziggurat'`, ảnh dựng ra chóp bốn mặt rõ ràng) — hàng đợi
+> đang bảo phiên sau đi làm lại một việc đã làm. Đã gỡ khỏi `START_HERE`.
+>
+> **⚠️ KHUYẾT TẬT THẬT TÌM ĐƯỢC TRONG LÚC LÀM VIỆC 2 — TIỀN ĐỀ BỊ GỠ Ở MỘT PHASE KHÁC (Phase 8C).**
+> `contactShade` (bóng tiếp xúc nướng sẵn vào màu đỉnh — chính là "AO" mà hàng đợi đòi thêm) hỏi
+> `contactShade(p[1])`, tức độ cao **THẾ GIỚI** của đỉnh. Đúng lúc nó được viết: hồi đó mặt đất là
+> một mặt phẳng ở y = 0. **Phase 7B cho mặt đất có cao độ**, và từ đó mệnh đề ấy chết trong im lặng.
+> Đo trên lưới 12×12: **kỷ 8 có 88/144 ô (61%) nền cao hơn `CONTACT_REACH` = 0,38**, kỷ 5 52%,
+> kỷ 4 50%, kỷ 7 34%, kỷ 10 32%, kỷ 15 28%, kỷ 13 27%, kỷ 1 15% — **7/15 kỷ**. Công trình đứng trên
+> những ô đó nhận hệ số 1 ở MỌI đỉnh ⇒ mất sạch bóng chân. Hậu quả: trong cùng một thành phố, nhà
+> dưới thấp thì NGỒI xuống đất còn nhà trên thềm cao thì DÁN lên — phụ thuộc thềm chứ không phụ
+> thuộc gì có ý nghĩa. Vá: `shade` (boolean) → `shadeBase` (cao độ NỀN của chính công trình), đo
+> `contactShade(p[1] - shadeBase)`. Khối lơ lửng kỷ 15 vẫn không bị tối, đúng như chú thích cũ hứa.
+>
+> **Đã làm nốt phần bóng đổ**: `SHADOW_MAP_DESKTOP` 2048 → **4096** (texel bóng 0,0088 → 0,0044 ô).
+> Điện thoại giữ 512. Giá là BỘ NHỚ (16 → 64 MB) chứ không phải thời gian mỗi khung —
+> `sun.shadow.autoUpdate` đang tắt nên bản đồ chỉ vẽ lại khi thành phố đổi.
+>
+> **HOÀN TÁC có chủ đích**: thử siết `sun.shadow.camera` từ 0,75·lưới xuống 0,58 — ảnh kỷ 11 lúc
+> 16 giờ (bóng dài nhất) **không đọc ra khác biệt nào**, trong khi tấm đất nhận bóng rộng tới ±9,5
+> nên siết về ±6,96 là mua rủi ro cắt cụt bóng để đổi lấy một thứ không nhìn thấy. Giữ 0,75, ghi lý
+> do vào mã.
+>
+> **⚠️ HAI LẦN PHÉP ĐO SUÝT LÀM TÔI KẾT LUẬN SAI:**
+> **(1)** Nhìn ảnh kỷ 11 lúc 16 giờ tôi tưởng *"tháp cao mà gần như không đổ bóng xuống đất"*. Bật/
+> tắt bóng rồi so (§10.2): **21,9% điểm ảnh đổi QUÁ ngưỡng mắt, lệch tối đa 93** — bóng đang hoạt
+> động rất mạnh. Ấn tượng sai, số đo đúng.
+> **(2)** Ảnh cận cảnh kỷ 8 (`--width 1500`, 3 dải ngang) **BỊ RÁCH** — một mảng góc trên phải thuộc
+> khung hình khác, nhìn là thấy. `soiVetRach` trả về LÀNH nên ảnh vẫn được ghi, và phép đo trên nó
+> cho ra *"21,38% điểm ảnh vượt ngưỡng, lệch tối đa 222"* — một bộ số hoàn toàn bịa, đủ thuyết phục
+> để kết luận sai về bản vá. Dựng lại lần hai thì sạch. **Đã bỏ bộ số đó, ghi `TECH_DEBT #88`**
+> (vết rách lần này có mép DỌC, mà `soiVetRach` chỉ quét mép NGANG — cần đo lại trước khi tin lời
+> giải thích ấy). Bài học cũ, lần thứ N: *ảnh là sản phẩm VÀ là cái kiểm.*
+>
+> **⚠️ NÓI THẲNG: PHIÊN NÀY KHÔNG ĐẠT "≥4 THAY ĐỔI NHÌN THẤY ĐƯỢC" (`PHASE_RULES` §1).** Cả hai cần
+> gạt mà hàng đợi nêu tên đều **đã có sẵn** — một cái đã bó sát, một cái đã tồn tại nhưng hỏng. Hai
+> bản vá đều đúng và đo được, nhưng **đều dưới ngưỡng mắt ở khung toàn cảnh**. Muốn thành phố trông
+> 3D hơn thật sự thì cần một quyết định MỸ THUẬT của Đàm, không cần thêm mã — ba lựa chọn kèm số đã
+> ghi ở `START_HERE` mục 2.
+>
+> Cổng: `npm test` **1.234 bài · 1.233 pass · 0 fail · 1 skipped** (không đỏ thêm bài nào, gồm cả
+> bất biến ADR-007) · lint sạch · build xanh.
 
 > Cập nhật lần cuối: **2026-08-27 (khuya)** — **BA NHỊP PHỦ KÍN GIAO DIỆN + CỔNG CHẶN HỒI QUY.**
 > Vòng hai của việc gom nhịp. **Đo bằng chính phép đếm đã vá, trên cả hai mốc** (`git worktree`

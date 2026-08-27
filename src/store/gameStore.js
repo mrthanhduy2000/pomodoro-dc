@@ -45,7 +45,6 @@ import {
   getVietnamYear,
 } from '../engine/time';
 import { mergeCityArchive, normalizeCityArchive } from '../engine/cityArchive';
-import { isWeeklyReportUnread } from '../engine/navAttention';
 import {
   canRestoreBlueprint, countActiveCrafting, pickLegacyCompletions, splitCraftingQueue,
 } from '../engine/eraLegacy';
@@ -2050,6 +2049,8 @@ const makeDefaultUiState = () => ({
   activeBreakSessionId: null,
   weeklyReportOpen: false,
   weeklyReportMode: 'current',
+  // Có một lời mời xem tổng kết tuần đang treo (thẻ toast). KHÔNG phải "đã xem".
+  weeklyReportPending: false,
 });
 
 function normalizePersistedGameState(persistedState, currentState, options = {}) {
@@ -2182,6 +2183,7 @@ function normalizePersistedGameState(persistedState, currentState, options = {})
       ? Math.max(0, Math.min(TINH_THE_HARD_CAP, Math.floor(persisted.tinhThe)))
       : (current.tinhThe ?? 0),
     lastWeeklyReportDate: persisted.lastWeeklyReportDate ?? current.lastWeeklyReportDate,
+    lastWeeklyReportSeenDate: persisted.lastWeeklyReportSeenDate ?? current.lastWeeklyReportSeenDate,
     latestSessionUndo: persisted.latestSessionUndo ?? current.latestSessionUndo,
   };
 
@@ -3382,8 +3384,14 @@ const useGameStore = create(
       // ══════════════════════════════════════════════════════════════════════
       ui: makeDefaultUiState(),
 
-      // Ngày cuối cùng đã hiện Weekly Report (persist)
+      // ⚠️ HAI NGÀY, HAI CÂU HỎI KHÁC NHAU — đừng gộp lại (`TECH_DEBT #87`).
+      //   `lastWeeklyReportDate`     = tuần này ĐÃ MỜI chưa (để không mời lại mỗi lần mở app).
+      //   `lastWeeklyReportSeenDate` = tuần này Đàm ĐÃ MỞ bản tổng kết ra chưa.
+      // Gộp hai thứ này chính là cái bẫy cũ: một cái toast tự tắt sau 4 giây mà cũng ghi
+      // "đã xem" thì LỠ một cái toast = mất báo cáo của cả tuần. Nay lời mời hết hạn KHÔNG
+      // đụng tới "đã xem", nên chấm ở nút "Báo cáo tuần" vẫn sáng cho tới khi Đàm mở thật.
       lastWeeklyReportDate: null,
+      lastWeeklyReportSeenDate: null,
 
       // ══════════════════════════════════════════════════════════════════════
       // ── ACTIONS ──────────────────────────────────────────────────────────
@@ -5982,6 +5990,7 @@ const useGameStore = create(
           relicEvolutions: state.relicEvolutions,
           sessionCategories: state.sessionCategories,
           lastWeeklyReportDate: state.lastWeeklyReportDate,
+          lastWeeklyReportSeenDate: state.lastWeeklyReportSeenDate,
           prestige: {
             count:          newCount,
             permanentBonus: newBonus,
@@ -6000,37 +6009,63 @@ const useGameStore = create(
         set((prev) => ({ ui: { ...prev.ui, prestigeModalOpen: false } })),
 
       // ── Weekly Report ──────────────────────────────────────────────────────
+      // ⚠️ SÁNG THỨ HAI KHÔNG CÒN CHẶN MÀN HÌNH (2026-08-27, đóng `TECH_DEBT #87`). Đây từng là
+      // ngoại lệ DUY NHẤT của luật mức độ làm phiền ở ADR-060: một bản tổng kết Đàm không xin,
+      // đứng chắn ngang app. Nay nó chỉ MỜI bằng một thẻ toast; hộp thoại chỉ mở khi Đàm bấm.
+      //
+      // ⚠️ VÌ SAO PHẢI TÁCH HAI NGÀY TRƯỚC KHI ĐỔI: bản cũ gộp "đã mời" với "đã xem" vào một
+      // trường, và `dismissWeeklyReport` ghi trường ấy ở mọi lần ĐÓNG. Đẩy thẳng sang toast
+      // 4 giây mà giữ nguyên cách ghi thì lỡ một cái toast = mất báo cáo của cả tuần — đổi một
+      // phiền toái nhỏ lấy một mất mát thật. Nay:
+      //   · hết giờ toast  → chỉ tắt lời mời, KHÔNG ghi gì (`dismissWeeklyReportToast`)
+      //   · Đàm mở ra xem  → mới ghi "đã xem" (`openWeeklyReport`)
+      // ⇒ lỡ toast thì chấm ở nút "Báo cáo tuần" vẫn sáng, và cú bấm đầu tiên trong tuần vẫn
+      // mở đúng bản TUẦN TRƯỚC — đúng thứ hộp thoại tự bật ngày xưa đưa ra.
+      checkWeeklyReport: () => {
+        const state = get();
+        const monday = getWeekMonday();
+        // Chỉ mời nếu hôm nay là thứ 2 VÀ chưa mời tuần này
+        const isMonday = getVietnamDayOfWeek() === 1;
+        if (isMonday && state.lastWeeklyReportDate !== monday && state.history.length > 0) {
+          // Ghi "đã mời" NGAY tại đây, không đợi Đàm phản hồi: nếu đợi thì mỗi lần mở app trong
+          // ngày thứ Hai lại nổ thêm một thẻ nữa. Lưới an toàn cho việc mời hụt là cái chấm ở
+          // thanh bên, thứ do `lastWeeklyReportSeenDate` điều khiển chứ không do trường này.
+          set((prev) => ({
+            lastWeeklyReportDate: monday,
+            ui: { ...prev.ui, weeklyReportPending: true },
+          }));
+        }
+      },
+
       /**
-       * ⚠️ `checkWeeklyReport` ĐÃ BỊ GỠ (2026-08-27 tối, ADR-061). Nó là thứ TỰ BẬT một hộp thoại
-       * toàn màn hình vào sáng thứ Hai — ngoại lệ cuối cùng của luật "chặn màn hình chỉ dành cho
-       * bốn việc buộc phải quyết định" (ADR-060). Nay tín hiệu "có báo cáo mới" là một CHẤM trên
-       * mục "Báo cáo tuần", suy ra từ `lastWeeklyReportDate` (xem `engine/navAttention.js`).
-       * Đừng dựng lại hàm này: một cái chấm không thể bị lỡ, một hộp thoại tự bật thì bị đóng vội.
+       * Mở hộp thoại tổng kết. LUÔN do Đàm chủ động (nút ở thanh bên, hoặc bấm vào thẻ toast).
        *
-       * ⚠️ VÀ `lastWeeklyReportDate` NAY CHỈ CÒN MỘT NGHĨA. Trước đây nó gánh hai việc: vừa là
-       * cổng "tuần này đã TỰ BẬT chưa", vừa là dấu "đã XEM chưa" — hai câu hỏi khác nhau trùng
-       * nhau chỉ vì tự-bật-một-lần cũng đồng nghĩa với đã-thấy-một-lần. Bỏ phần tự bật thì nó còn
-       * đúng một nghĩa: **tuần này Đàm đã thật sự mở báo cáo ra xem**.
+       * ⚠️ Cú mở ĐẦU TIÊN trong tuần rơi vào chế độ `'previous'` — bản TUẦN TRƯỚC, đúng thứ hộp
+       * thoại tự bật ngày xưa đưa ra. Không có luật này thì đổi sang toast là âm thầm đổi luôn
+       * NỘI DUNG Đàm nhận được: nút thanh bên xưa nay mở `'current'` (tuần đang chạy dở).
        */
       openWeeklyReport: () => {
         const state = get();
-        // Mở thẳng vào TUẦN TRƯỚC khi tuần này chưa xem — đó chính là bản báo cáo cái chấm đang
-        // trỏ tới. Mở vào "tuần này" lúc ấy là đưa ra một tuần còn dở dang và giấu mất bản đã
-        // xong. (Hộp thoại vẫn có hai tab nên Đàm đổi lại được bất cứ lúc nào.)
-        const unread = isWeeklyReportUnread({
-          lastReadWeek: state.lastWeeklyReportDate,
-          weekMonday: getWeekMonday(),
-          hasHistory: state.history.length > 0,
-        });
+        const monday = getWeekMonday();
+        const unseen = state.lastWeeklyReportSeenDate !== monday;
         set((prev) => ({
-          ui: { ...prev.ui, weeklyReportOpen: true, weeklyReportMode: unread ? 'previous' : 'current' },
+          lastWeeklyReportSeenDate: monday,
+          ui: {
+            ...prev.ui,
+            weeklyReportOpen: true,
+            weeklyReportMode: unseen ? 'previous' : 'current',
+            weeklyReportPending: false,
+          },
         }));
       },
 
+      /** Thẻ toast hết 4 giây. CHỈ tắt lời mời — tuyệt đối không ghi "đã xem". */
+      dismissWeeklyReportToast: () =>
+        set((prev) => ({ ui: { ...prev.ui, weeklyReportPending: false } })),
+
+      /** Đóng hộp thoại. "Đã xem" đã được ghi lúc MỞ, nên ở đây không ghi ngày nào nữa. */
       dismissWeeklyReport: () => {
-        const monday = getWeekMonday();
         set((prev) => ({
-          lastWeeklyReportDate: monday,
           ui: { ...prev.ui, weeklyReportOpen: false, weeklyReportMode: 'current' },
         }));
       },
@@ -6170,7 +6205,8 @@ const useGameStore = create(
         resourcesRefined: state.resourcesRefined,
         relicEvolutions:      state.relicEvolutions,
         tinhThe:              state.tinhThe,
-        lastWeeklyReportDate: state.lastWeeklyReportDate,
+        lastWeeklyReportDate:     state.lastWeeklyReportDate,
+        lastWeeklyReportSeenDate: state.lastWeeklyReportSeenDate,
         buildingLastUsed:     state.buildingLastUsed,
         latestSessionUndo:    state.latestSessionUndo,
       }),

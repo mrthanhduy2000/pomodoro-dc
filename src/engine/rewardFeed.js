@@ -50,11 +50,42 @@ const ACHIEVEMENT_LOOKUP = Object.fromEntries(ACHIEVEMENTS.map((a) => [a.id, a])
  * Một chồng toast chỉ đọc được khi vị trí ổn định — thứ vừa xảy ra (tổng kết
  * phiên) luôn ở trên cùng, thứ hiếm nhất (di vật) ngay dưới.
  */
-const SOURCE_ORDER = ['loot', 'relic', 'level', 'rank', 'achievement', 'mission'];
+const SOURCE_ORDER = ['weekly', 'loot', 'relic', 'level', 'rank', 'achievement', 'mission'];
 
 function sourceRank(source) {
   const index = SOURCE_ORDER.indexOf(source);
   return index === -1 ? SOURCE_ORDER.length : index;
+}
+
+/**
+/**
+ * Tổng kết tuần trước — lời mời sáng thứ Hai, thay cho hộp thoại tự chặn màn hình ngày xưa
+ * (2026-08-27, đóng `TECH_DEBT #87`).
+ *
+ * ⚠️ ĐỨNG ĐẦU `SOURCE_ORDER`, và đây là ngoại lệ CÓ LÝ DO của lời giải thích ngay bên trên
+ * ("thứ vừa xảy ra luôn ở trên cùng"). Thẻ này chỉ sinh ra lúc MỞ APP và nhiều nhất một lần mỗi
+ * tuần, nên nó không tranh chỗ với một phiên vừa xong; thứ nằm cùng chồng với nó lúc ấy là
+ * trạng thái còn sót từ phiên trước. Xếp nó xuống cuối là mở đường cho nó rơi khỏi ba thẻ đầu
+ * rồi biến mất — mà nó là thẻ DUY NHẤT trong chồng này không thể tự đến lần thứ hai.
+ *
+ * ⚠️ `action.weekly` chứ không phải `action.detail`: mở bản tổng kết phải đi qua
+ * `openWeeklyReport()` của store, nơi giữ luật "cú mở đầu tiên trong tuần là bản TUẦN TRƯỚC"
+ * và luật ghi "đã xem". Bật cờ mở bằng tay ở tầng giao diện là chép lại hai luật ấy lần thứ hai.
+ */
+function buildWeeklyToast(pending) {
+  if (!pending) return null;
+  return {
+    id: 'weekly',
+    source: 'weekly',
+    key: 'weekly',
+    icon: '📊',
+    name: 'Tổng kết tuần trước',
+    // `tot` chứ không phải `hiem`: nó đến đều đặn mỗi tuần. Bậc hiếm để dành cho thứ hiếm thật.
+    tier: 'tot',
+    description: 'Xem lại bảy ngày vừa qua.',
+    amount: null,
+    action: { weekly: true },
+  };
 }
 
 /**
@@ -195,6 +226,7 @@ export function buildBlueprintToast(blueprint) {
  */
 export function buildRewardToasts(ui = {}, missions = {}) {
   const toasts = [
+    buildWeeklyToast(ui.weeklyReportPending),
     buildLootToast(ui.lootModalOpen ? ui.pendingReward : null),
     buildRelicToast(ui.relicNotification),
     buildLevelToast((ui.levelUpQueue ?? [])[0]),

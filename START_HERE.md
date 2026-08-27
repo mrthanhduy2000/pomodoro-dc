@@ -27,12 +27,19 @@ Mặt trận đang làm: **thành phố 3D** (`src/engine/city3d/` + `src/compon
    `api/_tests/`. Hiện có 10 function thật.
 
 ## Đang ở đâu
-- Nhánh production: `main`. Mốc gần nhất: **ADR-060 + ADR-061** — MỘT thẻ phần thưởng chung cho cả
-  app, và luật mức độ làm phiền: **chặn màn hình CHỈ dành cho lên kỷ · thăng hoa · khủng hoảng kỷ ·
-  thảm hoạ**; mọi phần thưởng khác đi qua chồng toast `RewardToastHost` (tự tắt sau 4 giây), còn
-  báo cáo tuần đi qua một CHẤM "chưa xem". ⚠️ **Không còn ngoại lệ nào — đừng thêm thứ gì TỰ BẬT
-  hộp thoại.** Trước đó: **ADR-059** (mỗi kỷ MỘT MẠNG ĐƯỜNG riêng — hết bàn cờ; `roadPlan.js` nối
-  các điểm mốc bằng cung cong ⇒ giao lộ chữ T/Y/ngã năm).
+- Nhánh production: `main`. Mốc gần nhất: **ADR-061** (báo cáo tuần thôi tự bật sáng thứ Hai ⇒ luật
+  mức độ làm phiền **hết ngoại lệ**). ⚠️ Nó chạy được nhờ tách MỘT trường thành HAI:
+  `lastWeeklyReportDate` = *đã MỜI* · `lastWeeklyReportSeenDate` = *đã XEM*. Luật: **mở = đã xem,
+  đóng = không ghi gì, toast hết giờ = không ghi gì**; cú mở đầu tiên trong tuần phải là bản
+  `'previous'`; chấm ở nút "Báo cáo tuần" là LƯỚI AN TOÀN (không hết hạn), đừng gỡ.
+  ⚠️ **Lưới ấy phải căng ở CẢ HAI nền tảng**: thanh bên desktop VÀ mục "Báo cáo tuần" trong menu
+  "Thêm" trên iPhone — trước ADR-061, iPhone không có nút nào mở báo cáo tuần, nên gỡ mục ấy là
+  đưa khuyết tật cũ quay lại đúng thiết bị Đàm dùng nhiều nhất (`rewardToastWiring.test.js` canh).
+  Trước đó: **ADR-060** (MỘT thẻ phần thưởng chung cho cả app +
+  luật mức độ làm phiền: **chặn màn hình CHỈ dành cho lên kỷ · thăng hoa · khủng hoảng kỷ · thảm
+  hoạ**; mọi phần thưởng khác đi qua chồng toast `RewardToastHost`, tự tắt sau 4 giây).
+  Trước đó: **ADR-059** (mỗi kỷ MỘT MẠNG ĐƯỜNG riêng — hết bàn cờ; `roadPlan.js` nối các điểm mốc
+  bằng cung cong ⇒ giao lộ chữ T/Y/ngã năm).
 - Chuyển động: **ĐÚNG BA NHỊP**, nguồn duy nhất `src/lib/motionPresets.js` — `enter` (thứ xuất
   hiện) · `press` (thứ bấm được) · `reward` (phần thưởng, cột mốc). Cả ba **tự im** khi bật
   "Giảm chuyển động" nên chỗ gọi đừng tự kiểm tra. ⚠️ Đừng gõ lại `initial`/`animate` bằng tay,
@@ -73,6 +80,20 @@ Mặt trận đang làm: **thành phố 3D** (`src/engine/city3d/` + `src/compon
    không có khối chóp bốn mặt. `prism` với `sides: 4` + `taper: 0` chính là thứ cần.
 2. **"Giống 3D hơn"** — bóng đổ nét hơn (`SHADOW_MAP_DESKTOP` 2048 → 4096, siết
    `sun.shadow.camera` về phạm vi thành phố) + thêm che khuất môi trường (AO).
+0. **Báo cáo tuần vẫn tự bật sáng thứ Hai** — ngoại lệ DUY NHẤT của luật mức độ làm phiền
+   (ADR-060). ⚠️ Đọc `TECH_DEBT #87` TRƯỚC: phải tách "đã xem" khỏi "đã bỏ qua" rồi mới đụng,
+   nếu không lỡ một cái toast 4 giây = mất báo cáo của cả tuần.
+1. *(ĐÃ XONG, gỡ 2026-08-27)* ~~Kim tự tháp / ziggurat~~ — kỷ 2 khai `roof: 'pyramid'`, kỷ 3 khai
+   `roof: 'ziggurat'`, cả hai `case` đã có trong `buildingSpec.js` **từ 2026-08-21**. Mục này nằm
+   trong hàng đợi mô tả một việc đã làm xong, và một phiên sau đã suýt đi làm lại nó.
+2. **"Giống 3D hơn" — nay cần Đàm CHỌN, không cần code.** Hai cần gạt mục cũ nêu đã dùng hết
+   (2026-08-27): bản đồ bóng 2048 → **4096** ✓ · `sun.shadow.camera` vốn đã bó sát (thử siết thêm
+   xuống 0,58·lưới → ảnh không đọc ra khác biệt, đã hoàn tác) · AO thì **đã có từ lâu**
+   (`contactShade`) và vừa được vá một khuyết tật thật. Cả hai đều DƯỚI ngưỡng mắt ở khung toàn
+   cảnh. Cần gạt còn lại đều là quyết định MỸ THUẬT, đừng tự chọn: (a) đậm/cao thêm bóng tiếp xúc
+   (`CONTACT_FLOOR` 0,58 · `CONTACT_REACH` 0,38) · (b) mép bóng cứng hơn (`PCFSoftShadowMap` →
+   `PCFShadowMap`) · (c) hạ đèn nền cho bóng sâu hơn — nhưng (c) đụng cảnh báo "nhợt như sữa"
+   ở `PHASE_RULES` §2.
 
 ## Lệnh hay dùng
 ```

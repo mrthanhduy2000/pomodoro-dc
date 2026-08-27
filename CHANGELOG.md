@@ -12,31 +12,53 @@
 
 ---
 
-## 2026-08-27 (tối muộn) — Báo cáo tuần thôi tự bật; iPhone lần đầu có đường vào
+## 2026-08-27 (tối muộn) — Báo cáo tuần: lối vào trên iPhone (bổ sung ADR-061)
 
-**Mục đích.** ADR-060 để lại đúng một ngoại lệ: báo cáo tuần vẫn tự bật một hộp thoại toàn màn hình
-sáng thứ Hai. Đóng nốt ngoại lệ ấy.
+**Mục đích.** ADR-061 (phiên khác, cùng ngày) bỏ hộp thoại báo cáo tuần tự bật và thay bằng một thẻ
+toast cộng một chấm "chưa xem" làm lưới an toàn. Cái chấm ấy chỉ có ở **thanh bên desktop**, mà
+thanh bên là `hidden md:flex` — và trước ADR-061, **iPhone không có nút nào mở báo cáo tuần**. Nên
+trên thiết bị Đàm dùng nhiều nhất, lỡ một cái toast 4 giây vẫn là mất báo cáo cả tuần.
 
-**Phạm vi.** Tầng giao diện + một hàm thuần. Không đụng engine game, thành phố 3D, sync.
+**Phạm vi.** Một mục trên thanh điều hướng dưới + một bài test. Không đụng store, không đụng luật
+tính thưởng, không đổi mô hình hai-ngày của ADR-061.
 
-- **`src/engine/navAttention.js`** — thêm `isWeeklyReportUnread()` (thuần): "tuần này đã mở báo cáo
-  ra xem chưa". Đọc từ state ĐỒNG BỘ (`lastWeeklyReportDate`), khác với dấu "thành tích đã xem"
-  nằm ở localStorage — cố ý: xem trên Mac rồi thì iPhone không nên còn chấm.
-- **`src/store/gameStore.js`** — **gỡ hẳn `checkWeeklyReport()`**. `openWeeklyReport()` nay mở
-  thẳng vào tab "Tuần trước" khi tuần này chưa xem.
-- **`src/App.jsx`** — chấm "chưa xem" trên mục "Báo cáo tuần" ở thanh bên desktop, và **thêm mục
-  "Báo cáo tuần" vào menu "Thêm" trên điện thoại**. Cả hai đi qua `attentionTabIds` sẵn có.
-- **`src/appNavigation.test.js`** — sửa một assert khớp nguyên văn hình dạng mã (nó đỏ oan khi tập
-  chấm nhận nguồn thứ hai) thành assert hỏi đúng nguồn tín hiệu, rồi thêm assert cho nguồn mới.
+- **`src/App.jsx`** — thêm mục **"Báo cáo tuần" vào menu "Thêm"** trên điện thoại, mang cùng chấm
+  `weeklyReportUnseen` (đọc lại biến sẵn có, không tự tính lại). Số cột của menu đọc
+  `MOBILE_SECONDARY_TABS.length + 1` chứ không chốt cứng.
+- **`src/components/rewardToastWiring.test.js`** — khoá cả lối vào lẫn cái chấm ở CẢ HAI thanh
+  điều hướng.
 
-**Ảnh hưởng.** Trước thay đổi này, trên iPhone **không có đường nào** mở báo cáo tuần — nút duy
-nhất nằm ở thanh bên desktop. Mục mới trong menu "Thêm" là điều kiện an toàn của cả thay đổi, không
-phải một tiện ích: thiếu nó thì gỡ tự-bật là làm báo cáo tuần biến mất khỏi thiết bị dùng nhiều
-nhất.
+**Tương thích.** Không migration, không đổi dữ liệu.
 
-**Tương thích.** Không migration. `lastWeeklyReportDate` giữ nguyên tên, kiểu và cách đồng bộ — chỉ
-NGHĨA hẹp lại thành "đã thật sự xem". Dữ liệu cũ đọc vẫn đúng. Chi tiết: **ADR-061**;
-`TECH_DEBT #87` đã đóng.
+---
+
+## 2026-08-27 (khuya) — Bóng tiếp xúc đo từ nền của chính công trình, không từ y = 0
+
+**Mục đích.** Lấy việc "giống 3D hơn" trong hàng đợi. Trong lúc làm thì lộ ra một khuyết tật thật:
+`contactShade` — bóng tiếp xúc nướng sẵn vào màu đỉnh, chính là "AO" mà hàng đợi đòi thêm — đo độ
+cao so với **y = 0**, tiền đề đúng khi nó được viết (mặt đất phẳng) nhưng đã chết từ Phase 7B khi
+mặt đất có cao độ.
+
+**Phạm vi.** Thành phố 3D, tầng hình học và ánh sáng. Không thêm nguồn sáng, không đụng camera.
+
+- **`src/components/city/render3d/geometryFactory.js`** — `shade` (boolean) → `shadeBase` (cao độ
+  nền của chính công trình). Đo được: **7/15 kỷ** có ô nền cao hơn `CONTACT_REACH` = 0,38, nhiều
+  nhất là kỷ 8 với 88/144 ô (61%); công trình trên những ô đó trước đây mất sạch bóng chân.
+- **`src/components/city/render3d/sceneGraph.js`** — `SHADOW_MAP_DESKTOP` 2048 → 4096 (điện thoại
+  giữ 512). Thử siết `sun.shadow.camera` xuống 0,58·lưới và **hoàn tác**: không đọc ra khác biệt
+  trên ảnh, mà rủi ro cắt cụt bóng ở vành ngoài thì có thật — lý do đã ghi vào mã.
+- **`START_HERE.md`** — gỡ việc "kim tự tháp / ziggurat" khỏi hàng đợi: **đã làm xong từ
+  2026-08-21**, hàng đợi đang bảo phiên sau đi làm lại. Viết lại mục "giống 3D hơn" thành ba lựa
+  chọn mỹ thuật cần Đàm chọn.
+- **`TECH_DEBT.md`** — thêm **#88**: `soiVetRach` bỏ sót một vết rách ảnh mắt thường nhìn ra ngay,
+  và một phép đo chạy trên tấm ảnh ấy cho ra bộ số bịa rất thuyết phục.
+
+**Ảnh hưởng.** Công trình trên thềm cao nay có bóng chân như công trình dưới thấp. Mép bóng đổ nét
+gấp đôi. Cả hai đều dưới ngưỡng mắt ở khung toàn cảnh — thấy rõ khi soi gần.
+
+**Tương thích.** Không đổi dữ liệu, không migration, không đụng ADR-007.
+
+**Cổng.** `npm test` 1.234 bài · 1.233 pass · 0 fail · 1 skipped · lint sạch · build xanh.
 
 ---
 

@@ -13,10 +13,13 @@
 > mà không được refactor triệt để, phải CHỦ ĐỘNG đề xuất mở một "Maintenance Sprint" (nêu rõ mục
 > tiêu/phạm vi/lợi ích/rủi ro/tiêu chí hoàn thành) thay vì tiếp tục cộng thêm tính năng mới.
 >
-> **Trạng thái ngưỡng hiện tại (2026-08-27 tối, sau ADR-060 + ADR-061)**: **#87 mở rồi ĐÓNG ngay
-> trong ngày** — báo cáo tuần thôi tự bật, và iPhone lần đầu có đường vào. Không còn ngoại lệ nào
-> của luật mức độ làm phiền. Vẫn **1 mục Priority High còn mở** (#53), **0 mục Critical** → xa
+> **Trạng thái ngưỡng hiện tại (2026-08-27 tối, sau ADR-061 "tách đã-mời khỏi đã-xem")**:
+> **#87 ĐÃ ĐÓNG cùng ngày mở** — báo cáo tuần thôi tự bật, và luật mức độ làm phiền của ADR-060 nay
+> **không còn ngoại lệ nào**. Vẫn **1 mục Priority High còn mở** (#53), **0 mục Critical** → xa
 > ngưỡng Maintenance Sprint.
+>
+> *(mốc trước)* **(2026-08-27 tối, sau ADR-060 "một ngôn ngữ hình cho phần thưởng")**: thêm **#87**
+> (báo cáo tuần vẫn tự bật sáng thứ Hai) ở mức **Low**.
 >
 > *(mốc trước)* **(2026-08-27, sau khi viết lại `ActionButton`)**: thêm **#86**
 > (137 nút tự vẽ không đọc token skin) ở mức **Medium** — vẫn **1 mục Priority High còn mở**
@@ -4445,7 +4448,7 @@ trong chú thích thì đừng để `--selftest` của chính nó vẫn dùng �
 
 ---
 
-## #87 — Báo cáo tuần VẪN tự bật sáng thứ Hai — ✅ ĐÃ ĐÓNG 2026-08-27 (tối), ADR-061
+## #87 — ~~Báo cáo tuần VẪN tự bật sáng thứ Hai~~ ✅ **ĐÃ ĐÓNG 2026-08-27 (ADR-061)**
 
 - **Tên**: `weeklyReportOpen` tự bật (không do Đàm bấm) và mở một hộp thoại toàn màn hình.
 - **Module**: `src/App.jsx` (`OverlayStack`) · `src/store/gameStore.js` (`checkWeeklyReport`) ·
@@ -4469,20 +4472,52 @@ trong chú thích thì đừng để `--selftest` của chính nó vẫn dùng �
 - **Estimated Complexity**: Small (nếu đã tách xong hai trạng thái trên); Medium nếu tính cả việc tách.
 - **Blocking Conditions**: không có blocker kỹ thuật; chỉ chờ quyết định của Đàm về đánh đổi ở trên.
 - **Review Trigger**: khi Đàm nói báo cáo tuần làm phiền, hoặc khi có mục thứ hai xin được tự bật.
-- **Owner**: đã xử lý · **Status**: ✅ **CLOSED** (mở 2026-08-27 cùng ADR-060, đóng cùng ngày bởi ADR-061).
-
-**Đã đóng thế nào — và vì sao KHÔNG theo cách đã kê ở trên.** Mục này kê đơn "toast + tách hai
-trạng thái". Đi làm mới lộ ra thứ khiến đơn ấy sai: **trên iPhone không có đường nào khác để mở
-báo cáo tuần** (nút duy nhất ở thanh bên `hidden md:flex`), nên một toast 4 giây trên thiết bị đó
-CHÍNH LÀ khuyết tật "lỡ một cái là mất cả tuần", chỉ mặc áo mới. Đã làm thay:
-`checkWeeklyReport()` bị gỡ hẳn · tín hiệu thành một CHẤM "chưa xem" suy từ `lastWeeklyReportDate`
-(không thể bị lỡ vì nó không có hẹn giờ) · và **thêm mục "Báo cáo tuần" vào menu "Thêm" trên điện
-thoại** — điều kiện an toàn, không phải tiện ích.
-⚠️ **Bài học đáng giữ**: cái "Recommended Solution" viết lúc mở một mục nợ được nghĩ ra khi người
-viết còn đứng TRONG mô hình cũ. Đọc nó như một gợi ý, đừng đọc như một chỉ thị — cùng hình dạng
-với `TECH_DEBT #82`, nơi đơn thuốc cũng bị chính việc đi làm bác bỏ.
+- **Owner**: chưa giao · **Status**: ✅ **ĐÓNG 2026-08-27** (ADR-061) — cùng ngày mở.
+- **Đã làm gì**: tách trường theo đúng "ĐIỀU KIỆN BẮT BUỘC" ở trên trước khi đụng vào tính năng.
+  `lastWeeklyReportDate` = *đã MỜI* · `lastWeeklyReportSeenDate` = *đã XEM*. `checkWeeklyReport`
+  nay chỉ bật `ui.weeklyReportPending` (một thẻ toast, nguồn `weekly` trong `rewardFeed.js`); hộp
+  thoại chỉ mở khi Đàm bấm. Toast hết 4 giây gọi `dismissWeeklyReportToast` — **không ghi ngày nào**.
+- **Lưới an toàn** (thứ khiến bản vá này KHÔNG phải là đánh đổi mà mục này cảnh báo): chấm "chưa
+  xem" ở nút *Báo cáo tuần* trên thanh bên, do `lastWeeklyReportSeenDate` điều khiển nên nó KHÔNG
+  hết hạn; và cú bấm đầu tiên trong tuần mở thẳng bản `'previous'` — đúng thứ hộp thoại tự bật đưa ra.
+- **Khoá bằng test**: `src/store/gameStore.weeklyReport.test.js` (9 bài, 7 phép thử ngược đã đỏ),
+  trong đó có bài dựng lại chính khuyết tật cũ và ĐÒI nó phải đỏ.
+- ⚠️ **BỔ SUNG cùng ngày — lưới an toàn phải căng ở CẢ HAI nền tảng.** Cái chấm ở trên lúc đầu chỉ
+  có ở thanh bên desktop (`hidden md:flex`), mà **trước ADR-061 iPhone không có nút nào mở báo cáo
+  tuần** — nút duy nhất nằm đúng ở cái thanh bên ấy. Trên iPhone, hộp thoại tự bật vì thế không
+  phải cách báo cáo *xuất hiện* mà là cách nó *tồn tại*; lưới căng ở nền tảng kia thì lỡ toast vẫn
+  là mất báo cáo cả tuần. Đã thêm mục **"Báo cáo tuần" vào menu "Thêm" trên điện thoại**, mang cùng
+  chấm `weeklyReportUnseen`, và khoá bằng `rewardToastWiring.test.js` (đòi cả lối vào lẫn cái chấm
+  ở CẢ HAI thanh điều hướng). **Bài học**: gỡ một cơ chế rồi thay bằng "một lưới an toàn" thì phải
+  liệt kê MỌI đường vào hiện có trước — một lưới chỉ căng một bên là một lời hứa đúng một nửa.
 
 ---
+
+## #88 — `soiVetRach` bỏ sót một vết rách mắt thường nhìn ra ngay
+
+- **Tên**: cổng chống-ảnh-rách của `city-preview.mjs` báo LÀNH cho một tấm ảnh rách rõ rệt
+- **Module**: `scripts/city-preview.mjs` (`soiVetRach`, `VET_RACH_SAN`, `VET_RACH_HE_SO`)
+- **Priority**: Medium · **Severity**: Medium
+- **Impact**: Dựng `--era 8 --hour 12 --width 1500` (3 dải ngang) ra một tấm ảnh mà **một mảng chữ
+  nhật ở góc trên phải thuộc về một khung hình khác** — nhìn là thấy ngay. `soiVetRach` trả về
+  `hong: false` nên ảnh được ghi ra bình thường, và một phép đo chênh lệch điểm ảnh trên nó cho ra
+  **21,38% điểm ảnh vượt ngưỡng mắt, lệch tối đa 222** — một bộ số hoàn toàn bịa, đủ thuyết phục để
+  kết luận sai về một bản vá mỹ thuật. Dựng lại lần hai thì sạch (md5 khác), xác nhận là vết rách
+  chứ không phải nội dung thật.
+- **Root Cause**: chưa truy. `soiVetRach` quét **mép HÀNG** (`TECH_DEBT #52` cố ý làm vậy để không
+  phụ thuộc mốc chia dải). Vết rách lần này có một mép **DỌC** rõ rệt ở giữa khung — một phép quét
+  chỉ nhìn mép ngang có thể mù với nó nếu hai dải chỉ khác nhau ở một PHẦN bề rộng chứ không khác
+  trên cả hàng. Cần đo lại trước khi tin lời giải thích này.
+- **Current Risk**: Trung bình — ảnh rách chỉ xảy ra ở ảnh nhiều dải (`--width` lớn hoặc `--sweep`),
+  tức đúng những ảnh dùng để soi CHI TIẾT NHỎ, nơi một mảng sai dễ bị đọc thành "chi tiết mới".
+- **Future Risk**: Trung bình. Mỗi phase mỹ thuật đều dựng ảnh cận cảnh để nghiệm thu.
+- **Recommended Solution**: bổ sung một vế quét mép **DỌC** cho `soiVetRach` (cùng khuôn: so cột kề
+  nhau, tìm mép nổi bật hẳn so với phân bố), và hiệu chuẩn ngưỡng trên chính tấm ảnh rách này —
+  **giữ lại nó làm đối chứng nhốt-ca-hỏng**, đừng chỉ nới ngưỡng.
+- **Estimated Complexity**: Low–Medium (hàm đã thuần và đã có test).
+- **Blocking Conditions**: không có.
+- **Review Trigger**: lần tới có ai dựng ảnh nhiều dải để nghiệm thu chi tiết nhỏ.
+- **Owner**: chưa ai · **Status**: MỞ (2026-08-27)
 
 ## #86 — 137 nút tự vẽ trên 28 file KHÔNG đọc token skin, và `ActionButton` không nhận nổi chúng
 

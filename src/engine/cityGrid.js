@@ -15,7 +15,7 @@
  * đọc ra ĐẦU TIÊN khi nhìn thành phố từ trên cao.
  *
  * ⇒ Bộ xương nay được SINH RA THEO KỶ ở `city3d/cityPlan.js` (lớp HÌNH), khai ở
- * `city3d/networkStyle.js` (lớp BẢNG). Xem ADR-060.
+ * `city3d/networkStyle.js` (lớp BẢNG). Xem ADR-066.
  *
  * ⚠️ VÀ VÌ SAO `CITY_GRID_SIZE` PHẢI Ở LẠI ĐÂY, KHÔNG DỌN LUÔN SANG `cityPlan.js`: `cityPlan.js`
  * cần biết lưới rộng bao nhiêu, mà `cityLayout.js`/`dwellings.js` lại cần biết cả hai. Để con số ở

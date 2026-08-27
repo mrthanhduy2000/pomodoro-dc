@@ -1,8 +1,8 @@
 import React, { useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
+import { SCRIM_FADE, useCustomMotion, useEnterMotion, useRewardMotion } from '../lib/motionPresets';
 
 import useGameStore from '../store/gameStore';
-import soundEngine from '../engine/soundEngine';
 
 const DISPLAY_FONT = '"Source Serif 4", Georgia, serif';
 const MONO_FONT = '"JetBrains Mono", "SFMono-Regular", Menlo, monospace';
@@ -20,29 +20,45 @@ const PARTICLES = Array.from({ length: 10 }, (_, index) => ({
   ][index % 3],
 }));
 
-export default function LevelUpModal() {
+/**
+ * ⚠️ TỪ 2026-08-27 (ADR-060) MÀN NÀY KHÔNG CÒN TỰ BẬT. Lên cấp không buộc Đàm
+ * quyết định gì nên nó thuộc nhóm toast; hộp thoại này là phần CHI TIẾT, chỉ mở
+ * khi Đàm bấm vào thẻ (`GlobalOverlays` truyền `autoDismissMs={0}`).
+ *
+ * ⚠️ HAI THỨ ĐÃ RỜI ĐI, VÀ CẢ HAI ĐỀU CÓ LÝ DO — đừng "khôi phục cho đầy đủ":
+ *   • Hẹn giờ tự đóng: một hộp thoại Đàm CHỦ ĐỘNG mở mà tự biến mất sau 4 giây
+ *     là lấy mất đúng thứ anh vừa xin xem.
+ *   • `soundEngine.playLevelUp()`: chồng toast đã phát đúng MỘT tiếng lúc thẻ
+ *     xuất hiện. Kêu lại ở đây là một lần lên cấp phát tiếng hai lần.
+ *
+ * `autoDismissMs` giữ lại làm CÔNG TẮC chứ không phải mặc định ẩn: mặc định là 0
+ * (không hẹn giờ), nên nếu ngày nào có người muốn màn này tự bật lại thì phải
+ * truyền số vào một cách tường minh và sẽ đọc thấy khối chú thích này.
+ */
+export default function LevelUpModal({ autoDismissMs = 0 }) {
   const queue = useGameStore((state) => state.ui.levelUpQueue);
   const dismissLevelUp = useGameStore((state) => state.dismissLevelUp);
+  const enterMotion = useEnterMotion();
+  // Con số cấp độ mới là một CỘT MỐC — đúng chỗ để tiêu nhịp đắt nhất.
+  const rewardMotion = useRewardMotion();
+  // Lớp phủ tối chỉ mờ dần, không trôi — xem `SCRIM_FADE` ở `motionPresets.js`.
+  const scrimMotion = useCustomMotion(SCRIM_FADE);
 
   const current = queue[0] ?? null;
 
   useEffect(() => {
-    if (!current) return;
-    soundEngine.playLevelUp();
-    const timeoutId = window.setTimeout(dismissLevelUp, 4000);
+    if (!current || autoDismissMs <= 0) return undefined;
+    const timeoutId = window.setTimeout(dismissLevelUp, autoDismissMs);
     return () => window.clearTimeout(timeoutId);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [current?.newLevel]);
+  }, [current?.newLevel, autoDismissMs]);
 
   return (
     <AnimatePresence>
       {current && (
         <motion.div
           key={current.newLevel}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.22 }}
+          {...scrimMotion}
           className="fixed inset-0 z-[60] flex items-center justify-center"
           style={{ backgroundColor: 'rgba(31, 30, 29, 0.26)', backdropFilter: 'blur(10px)' }}
           onClick={dismissLevelUp}
@@ -50,10 +66,7 @@ export default function LevelUpModal() {
           <ParticleField />
 
           <motion.div
-            initial={{ y: 20, scale: 0.96, opacity: 0 }}
-            animate={{ y: 0, scale: 1, opacity: 1 }}
-            exit={{ y: 16, scale: 0.97, opacity: 0 }}
-            transition={{ duration: 0.28, ease: 'easeOut' }}
+            {...enterMotion}
             className="pointer-events-none mx-4 flex max-w-[420px] flex-col items-center gap-5 border px-8 py-9 text-center select-none"
             style={{
               background: 'var(--card-bg-solid)',
@@ -71,9 +84,7 @@ export default function LevelUpModal() {
             </p>
 
             <motion.div
-              initial={{ scale: 0.82 }}
-              animate={{ scale: [0.82, 1.03, 1] }}
-              transition={{ duration: 0.5, ease: 'easeOut' }}
+              {...rewardMotion}
               className="relative flex h-40 w-40 items-center justify-center rounded-full border"
               style={{
                 borderColor: 'rgba(var(--accent-rgb),0.18)',
@@ -167,6 +178,10 @@ export default function LevelUpModal() {
 }
 
 function ParticleField() {
+  // NGOẠI LỆ (trang trí) — pháo hoa bay ra từ tâm màn hình. Không mang một chữ thông tin nào,
+  // nên bật Giảm chuyển động thì bỏ HẲN: đây đúng là loại chuyển động lớn mà tuỳ chọn ấy nhắm tới.
+  const reduceMotion = useReducedMotion();
+  if (reduceMotion) return null;
   return (
     <div className="pointer-events-none absolute inset-0 overflow-hidden">
       {PARTICLES.map((particle) => (

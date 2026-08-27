@@ -118,7 +118,7 @@ html, body, #root {
   color-scheme: light;
 }
 
-/* ── Bộ tokens 4 giao diện (skin) ─────────────────────────────────────────────
+/* ── Bộ tokens 5 giao diện (skin) ─────────────────────────────────────────────
    Phase 1: kiến trúc + skin "editorial" (baseline = giống hiện tại).
    Các skin khác định nghĩa sẵn token, sẽ bật & hoàn thiện ở các phase sau khi
    component đã tiêu thụ các biến --skin-* này. */
@@ -341,12 +341,99 @@ html, body, #root {
   font-weight: 800 !important;
   letter-spacing: -0.03em;
 }
-/* Nút hành động CHÍNH = khối đỏ Thụy Sĩ dứt khoát (thay vì đen) — CTA táo bạo */
+/* Nút hành động CHÍNH = khối đỏ Thụy Sĩ dứt khoát (thay vì đen) — CTA táo bạo.
+   ⚠️ ĐÃ BỎ `box-shadow: none !important` (2026-08-27). Dòng ấy viết khi nút còn dùng bóng MỜ
+   nhiều lớp, và mục đích của nó là "skin này không có bóng mờ" — đúng với tinh thần phẳng của lưới
+   Thụy Sĩ. Nhưng từ khi `ActionButton` đổi sang BÓNG ĐẶC, cái vạch dưới đáy nút không còn là trang
+   trí: nó là thứ mà cú bấm LÚN VÀO (nút hạ đúng 4px = đúng chiều dày vạch, rồi vạch biến mất). Giữ
+   dòng này thì riêng skin Thụy Sĩ có nút primary tụt xuống 4px mà chẳng có gì để tụt vào — trông
+   như lỗi bố cục chứ không như một cú bấm. Và một vạch ĐẶC, không nhoè, màu `--line-2` = `#100f0b`
+   dưới một khối đỏ `#df3a1e` chính là ngôn ngữ Thụy Sĩ (khối lệch cạnh cứng), không phải bóng mờ
+   mà dòng cũ muốn cấm. Ba dòng màu còn lại GIỮ NGUYÊN — quyết định "CTA đỏ thay vì đen" không đổi. */
 [data-skin="swiss"] button[data-variant="primary"]:not(:disabled) {
   background: var(--accent) !important;
   border-color: var(--accent) !important;
   color: #fff !important;
-  box-shadow: none !important;
+}
+/* Sân Chơi (arcade) — MẶC ĐỊNH. Nền cho hướng game hoá đơn giản, hiện đại: bỏ giấy, bỏ serif,
+   bỏ gradient, bỏ kính mờ. Còn lại ba thứ: MẶT PHẲNG sạch, CHỮ SANS ĐẬM, và BÓNG ĐẶC — một
+   vạch màu dày 3px dưới đáy thẻ thay cho bóng mờ nhiều lớp. Cái vạch ấy là chữ ký của skin:
+   nó cho thẻ một "cái chân" như phím bấm, đọc ra được ngay cả khi thu nhỏ.
+   ⚠️ BẪY THỨ TỰ — MỌI token khai ở đây PHẢI có bản song sinh ở khối
+   `[data-theme="dark"][data-skin="arcade"]` phía dưới. Khối `[data-theme="dark"]` đứng SAU khối
+   này và có ĐỘ ĐẶC HIỆU BẰNG NHAU (0,1,0), nên ở chế độ tối nó thắng mọi token nó cũng khai.
+   Chỗ dễ mất nhất là `--app-bg`: theme tối khai một radial-gradient, nên nếu khối tối của arcade
+   quên đặt lại thì lời hứa "hết gradient" chỉ đúng ở chế độ sáng. */
+[data-skin="arcade"] {
+  /* Inter cho CẢ tiêu đề lẫn thân bài: app đã tải sẵn, có đủ dấu tiếng Việt, và tương phản được
+     tạo bằng ĐỘ ĐẬM chứ không cần thêm một font thứ hai. Đừng thêm font mới vào đây. */
+  --skin-font-display: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --skin-radius-card: 20px;
+  --skin-radius-control: 14px;
+  --skin-card-border-width: 1px;
+  --skin-card-border-color: #e3e0d9;
+  --skin-surface-blur: 0px;
+  --skin-accent-grad: none;
+  /* Bóng ĐẶC: một vạch, không toả, không nhiều lớp. Đo được 1,48:1 so với thân thẻ trắng — mắt
+     đọc ra là "cái chân" chứ không phải vệt mờ. */
+  --skin-card-shadow: 0 3px 0 0 #d8d4ca;
+  /* MÀU PHẲNG — bỏ hẳn radial-gradient của :root. Đây là nửa đầu của "bỏ gradient"; nửa sau nằm
+     ở khối tối bên dưới. */
+  --app-bg: var(--canvas);
+
+  --canvas: #f2f1ed;
+  --canvas-2: #eae7e0;
+
+  /* Bề mặt ĐỤC hoàn toàn (không rgba, không blur) — mặt phẳng sạch, không kính mờ. */
+  --card-bg: #ffffff;
+  --card-bg-solid: #ffffff;
+  --card-bg-solid2: #f7f6f2;
+  --panel: #ffffff;
+  --panel-soft: #f7f6f2;
+  --panel-strong: #ffffff;
+  --modal-bg: #ffffff;
+  --item-bg: #ffffff;
+  --item-bg-solid: #f7f6f2;
+  --item-btn-bg: #f7f6f2;
+
+  /* Mực trên nền trắng (đo được: ink 18,1:1 · ink-2 12,8:1 · muted 5,6:1 · muted-2 3,1:1) */
+  --ink: #171614;
+  --ink-2: #35322d;
+  --muted: #6b675f;
+  --muted-2: #97928a;
+
+  --line: #e3e0d9;
+  --line-2: #cfcbc1;
+
+  /* Cam sân chơi — rực hơn terracotta của editorial, dứt khoát hơn (accent 3,8:1 trên thẻ trắng,
+     accent-ink 6,0:1 cho chữ nhỏ). */
+  --accent: #e2542c;
+  --accent-light: #ef6c45;
+  --accent2: #b23a17;
+  --accent-ink: #b23a17;
+  --accent-rgb: 226, 84, 44;
+  --accent2-rgb: 178, 58, 23;
+
+  --good: #2f8f5b;
+  --good-soft: #e2f2e8;
+  --warn: #e0921f;
+  --warn-soft: #fbeed6;
+
+  --timer-disc: #ffffff;
+  --timer-track: #e3e0d9;
+}
+/* Tiêu đề Sân Chơi: sans NẶNG và bó sát — tương phản được tạo bằng độ đậm, không bằng font thứ hai.
+   ⚠️ `!important` ở font-weight là BẮT BUỘC, giống hệt lý do skin "swiss" phải dùng: ba tiêu đề
+   thật trong app (`BuildingWorkshop` h2, `RelicInventory` h2, `SkillTree` h3) mang `fontWeight: 600`
+   dạng INLINE, mà style inline thắng mọi quy tắc stylesheet trừ `!important`. Bỏ nó đi thì đúng ba
+   tiêu đề ấy kẹt ở 600 trong khi phần còn lại lên 800 — hỏng KHÔNG ĐỀU, và không có gì đỏ lên.
+   `letter-spacing` thì không cần (không tiêu đề nào khai inline), nên để nguyên như swiss. */
+[data-skin="arcade"] h1,
+[data-skin="arcade"] h2,
+[data-skin="arcade"] h3,
+[data-skin="arcade"] h4 {
+  font-weight: 800 !important;
+  letter-spacing: -0.025em;
 }
 /* Ink & Gold — nền tối, điểm vàng đồng (cần ghép data-theme="dark" khi bật) */
 [data-skin="inkgold"] {
@@ -557,6 +644,63 @@ html, body, #root {
     --stats-chart-point-ring: rgba(230, 194, 112, 0.84);
     --stats-chart-shadow: rgba(0, 0, 0, 0.36);
     color-scheme: dark;
+}
+/* Sân Chơi ở chế độ tối. Selector 2 thuộc tính (0,2,0) để thắng `[data-theme="dark"]` bất kể thứ tự
+   — giống hệt lý do khối inkgold ngay trên phải viết như vậy.
+   ⚠️ Khối này KHÔNG chỉ là "bản tối của bảng màu": nó còn phải đặt lại những token mà theme tối
+   chung cũng khai, nếu không lời hứa của skin chỉ đúng ở một chế độ. Ba nhóm dễ mất nhất:
+   `--app-bg` (theme tối khai radial-gradient ⇒ gradient quay lại), `--panel`/`--item-*` (theme tối
+   khai rgba trong suốt ⇒ mất "mặt phẳng đục"), và `--skin-card-border-color` (theme tối KHÔNG khai,
+   nên nếu không đặt lại thì viền xám sáng #e3e0d9 của bản sáng dính nguyên vào thẻ tối). */
+[data-theme="dark"][data-skin="arcade"] {
+  --canvas: #151412;
+  --canvas-2: #1c1a18;
+  /* nửa sau của "bỏ gradient" — xem cảnh báo ở khối sáng */
+  --app-bg: var(--canvas);
+
+  --card-bg: #211f1c;
+  --card-bg-solid: #211f1c;
+  --card-bg-solid2: #26241f;
+  --panel: #211f1c;
+  --panel-soft: #26241f;
+  --panel-strong: #211f1c;
+  --modal-bg: #211f1c;
+  --item-bg: #211f1c;
+  --item-bg-solid: #26241f;
+  --item-btn-bg: #26241f;
+
+  --ink: #f3f1ec;
+  --ink-2: #d3cec5;
+  --muted: #9a948a;
+  --muted-2: #746f66;
+
+  --line: #34302a;
+  --line-2: #423d36;
+  --skin-card-border-color: #34302a;
+
+  --accent: #f26a41;
+  --accent-light: #f58a68;
+  --accent2: #c94a26;
+  --accent-ink: #f9b49a;
+  --accent-rgb: 242, 106, 65;
+  --accent2-rgb: 201, 74, 38;
+
+  --good: #4fb27d;
+  --good-soft: #1a2f24;
+  --warn: #dda33c;
+  --warn-soft: #2e2414;
+
+  --timer-disc: #211f1c;
+  --timer-track: #34302a;
+
+  /* ⚠️ Cái chân ở chế độ tối YẾU HƠN ở chế độ sáng, và đó là một giới hạn vật lý chứ không phải
+     một con số chọn ẩu: thân thẻ tối (#211f1c) vốn đã gần đen, nên một cái bóng "tối hơn thân thẻ"
+     hết dư địa rất nhanh. Đo được so với thân thẻ: #0d0c0b = 1,19:1, và ĐEN TUYỆT ĐỐI cũng chỉ tới
+     1,28:1 (bản sáng đạt 1,48:1). Muốn vượt qua thì phải ĐẢO hướng — dùng một vành SÁNG hơn thân
+     thẻ (#3a352e = 1,35:1 · #423d36 = 1,53:1) — nhưng đó là một quyết định mỹ thuật (bóng đổi thành
+     gờ nổi), không phải một phép chỉnh số. */
+  --skin-card-shadow: 0 3px 0 0 #0d0c0b;
+  color-scheme: dark;
 }
 html:has([data-theme="light"]),
 html:has([data-theme="light"]) body,

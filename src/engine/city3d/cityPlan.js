@@ -1,6 +1,6 @@
 /**
  * cityPlan.js — SINH THỬA ĐẤT CHO MỘT KỶ. Đây là lớp HÌNH của bộ xương thành phố (Phase 20,
- * ADR-060); lớp BẢNG là `networkStyle.js`, và mọi nơi khác chỉ ĐỌC.
+ * ADR-066); lớp BẢNG là `networkStyle.js`, và mọi nơi khác chỉ ĐỌC.
  *
  * ⚠️ ĐẦU VÀO CHỈ CÓ `era`. KHÔNG `built`, KHÔNG `sessionCount`, KHÔNG `buildings`, KHÔNG `levels`.
  * Đây là ĐIỀU KIỆN SỐNG CÒN của ADR-007 ("bảo tàng bất động"), không phải một lựa chọn cho gọn:

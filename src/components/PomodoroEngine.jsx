@@ -1,12 +1,13 @@
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 
+import { SCRIM_FADE, useCustomMotion, useEnterMotion, usePressMotion, useRewardMotion, useSnapMotion } from '../lib/motionPresets';
 import useGameStore from '../store/gameStore';
 import { pushNow } from '../lib/syncService';
 import useSettingsStore from '../store/settingsStore';
 import { useTimer, formatTime, TIMER_MODES, TIMER_STATES } from '../hooks/useTimer';
-import { getComboDecayMs, getMultiplierTier, suggestSessionLength, clampRelicDisasterReduction } from '../engine/gameMath';
-import { getVietnamHour } from '../engine/time';
+import { getComboDecayMs, getDailyGoalProgress, getMultiplierTier, suggestSessionLength, clampRelicDisasterReduction } from '../engine/gameMath';
+import { getVietnamHour, localDateStr } from '../engine/time';
 import { FLOWTIME_BREAK_RULES, QUICK_FOCUS_PRESETS, getBreakPlan } from '../engine/breaks';
 import {
   DEFAULT_DEEP_FOCUS_THRESHOLD,
@@ -34,9 +35,19 @@ const SESSION_EXTENSION_SECONDS = 60;
 const SESSION_EXTENSION_WINDOW_SECONDS = 5 * 60;
 const SESSION_EXTENSION_IDLE_GRACE_MS = 30 * 1000;
 const RING_RADIUS = 128;
-const RING_STROKE = 7;
+const RING_STROKE = 14;
 const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
-const SVG_SIZE = (RING_RADIUS + RING_STROKE) * 2 + 4;
+// ── Vòng thứ hai: MỤC TIÊU NGÀY ──────────────────────────────────────────────
+// Mảnh hơn hẳn vòng chính (4 so với 14) và nằm NGOÀI nó, cách một khoảng trống rõ — để mắt đọc ra
+// ngay đâu là "phiên này" và đâu là "cả ngày", không phải đoán. Bán kính suy ra từ hình học chứ
+// KHÔNG viết cứng: mép ngoài vòng chính + khoảng trống + nửa nét vòng ngoài. Đổi độ dày vòng chính
+// thì vòng ngoài tự dịch theo, và `SVG_SIZE` bên dưới cũng tự nới — không có con số nào phải sửa tay.
+const GOAL_RING_GAP = 8;
+const GOAL_RING_STROKE = 4;
+const GOAL_RING_RADIUS = RING_RADIUS + RING_STROKE / 2 + GOAL_RING_GAP + GOAL_RING_STROKE / 2;
+const GOAL_RING_CIRCUMFERENCE = 2 * Math.PI * GOAL_RING_RADIUS;
+// Khung SVG phải ôm được VÒNG NGOÀI CÙNG, nay là vòng mục tiêu chứ không còn là vòng chính.
+const SVG_SIZE = (GOAL_RING_RADIUS + GOAL_RING_STROKE / 2) * 2 + 4;
 
 const RING_COLORS = {
   [TIMER_STATES.IDLE]: 'var(--ink)',
@@ -149,6 +160,7 @@ export default function PomodoroEngine({
   const breakSecsLeft = useGameStore((s) => s.ui.breakSecondsLeft);
   const breakTotalSeconds = useGameStore((s) => s.ui.breakTotalSeconds);
   const breakIsLong = useGameStore((s) => s.ui.breakIsLong);
+  const dailyTracking = useGameStore((s) => s.dailyTracking);
 
   const autoStartNext = useSettingsStore((s) => s.autoStartNext);
   const disableBreak = useSettingsStore((s) => s.disableBreak);
@@ -157,6 +169,9 @@ export default function PomodoroEngine({
   const longBreakDuration = useSettingsStore((s) => s.longBreakDuration);
   const longBreakAfterN = useSettingsStore((s) => s.longBreakAfterN);
   const setBreakProfile = useSettingsStore((s) => s.setBreakProfile);
+  const dailyGoalType = useSettingsStore((s) => s.dailyGoalType);
+  const dailyGoalSessions = useSettingsStore((s) => s.dailyGoalSessions);
+  const dailyGoalMinutes = useSettingsStore((s) => s.dailyGoalMinutes);
   const uiTheme = useSettingsStore((s) => s.uiTheme);
   const lightTheme = uiTheme === 'light';
   const paperCardStyle = lightTheme
@@ -548,14 +563,28 @@ export default function PomodoroEngine({
   const useMinimalFocusStage = fullScreenMode || (isActive && !isBreakMode);
   const showComboBadge = !useMinimalFocusStage && !isBreakMode && comboCount >= 2;
   const showMultiplierBadge = !useMinimalFocusStage && !isBreakMode;
+  // Cỡ chữ đã tăng ~20% so với bản trước (2026-08-27) để con số thành trung tâm thị giác thật sự.
+  // ⚠️ Mọi mốc đáp ứng đều phải nhân CÙNG hệ số — nới một mốc rồi bỏ quên mốc kia thì chữ nhảy cỡ
+  // đúng lúc xoay ngang máy. Bảng cũ → mới: 4.8→5.75 · 5.6→6.7 · 6.4→7.7 · 7.05→8.45 ·
+  // 4.55→5.45 · 4.9→5.9 · 5.2→6.25 · 5.55→6.65 · 3.95→4.75 · 4.65→5.6 · 5.2→6.25 ·
+  // text-6xl (3.75rem) → 4.5rem.
   const timerValueLayoutClass = useImmersiveHeroLayout
     ? fullScreenMode
       ? isDesktopFullScreen
-        ? 'block w-[82%] text-center text-[4.8rem] leading-[0.81] tracking-[-0.065em] md:text-[5.6rem] xl:text-[6.4rem] 2xl:text-[7.05rem]'
-        : 'block w-[84%] text-center text-[4.55rem] leading-[0.8] tracking-[-0.068em] sm:text-[4.9rem] md:text-[5.2rem] xl:text-[5.55rem]'
-      : 'block max-w-[82%] text-center text-[3.95rem] leading-[0.86] tracking-[-0.06em] md:text-[4.65rem] xl:text-[5.2rem]'
-    : 'text-6xl tracking-widest';
-  const timerValueFontClass = lightTheme ? 'serif font-medium' : 'font-mono font-bold';
+        ? 'block w-[82%] text-center text-[5.75rem] leading-[0.81] tracking-[-0.065em] md:text-[6.7rem] xl:text-[7.7rem] 2xl:text-[8.45rem]'
+        : 'block w-[84%] text-center text-[5.45rem] leading-[0.8] tracking-[-0.068em] sm:text-[5.9rem] md:text-[6.25rem] xl:text-[6.65rem]'
+      : 'block max-w-[82%] text-center text-[4.75rem] leading-[0.86] tracking-[-0.06em] md:text-[5.6rem] xl:text-[6.25rem]'
+    // ⚠️ `tracking-wide` chứ KHÔNG còn `tracking-widest`, và đây là hệ quả ĐO ĐƯỢC của việc nâng
+    // cỡ chữ 20%: nhánh này là nhánh DUY NHẤT không có ràng buộc bề rộng, mà ở khung 390px lòng
+    // đĩa chỉ rộng 238px. Đo thật: "180:00" (bấm giờ chạy quá 100 phút — `clampFocusMinutes` cho
+    // tới 180) ở `widest` (0,1em) rộng **247px ⇒ TRÀN 9px** ra đè lên vòng; `wider` 226px; `wide`
+    // 215px ⇒ dư 23px. Bản trước cỡ chữ nhỏ hơn nên `widest` vẫn vừa — cái tràn này do chính phép
+    // nâng cỡ sinh ra, không phải có sẵn.
+    : 'text-[4.5rem] tracking-wide';
+  // ⚠️ MỘT lớp độ đậm duy nhất. `.serif`/`.mono` chỉ khai font-family (kiểm ở `index.css`), nên
+  // `font-extrabold` không phải tranh với ai — chồng thêm `font-medium`/`font-bold` như bản cũ là
+  // để hai lớp cùng khai `font-weight` rồi phó mặc thứ tự bảng kiểu Tailwind quyết ai thắng.
+  const timerValueFontClass = `${lightTheme ? 'serif' : 'font-mono'} font-extrabold`;
   const timerValueToneClass = isBreakMode
     ? breakIsLong
       ? 'text-blue-300'
@@ -761,14 +790,104 @@ export default function PomodoroEngine({
     : 0;
   const displayRingSeconds = isBreakMode ? breakSecsLeft : visibleDisplaySeconds;
   const displayProgressPct = isBreakMode ? breakProgressPct : progressPct;
-  const breakRingColor = lightTheme
-    ? (breakIsLong ? 'var(--accent2)' : 'var(--accent)')
-    : (breakIsLong ? '#60a5fa' : '#38bdf8');
+  // Nghỉ NGẮN hay nghỉ DÀI đều là "đang nghỉ" ⇒ cùng một màu, và là màu tích cực `--good`.
+  // ⚠️ Bản cũ rẽ theo `lightTheme` rồi chốt cứng `#60a5fa`/`#38bdf8` cho chế độ tối — hai mã màu
+  // xanh lam ấy không thuộc bảng màu nào của 5 skin hiện tại, nên vòng đồng hồ là thứ DUY NHẤT
+  // trên màn hình không đổi theo skin. Nay đọc token, đúng ở cả 10 tổ hợp skin × chế độ.
+  const breakRingColor = 'var(--good)';
   const strokeDashoffset = RING_CIRCUMFERENCE - (displayProgressPct / 100) * RING_CIRCUMFERENCE;
+  // ⚠️ Dùng CHUNG công thức với thẻ "Hôm nay" ở `FocusRail` (qua `App.jsx`) — xem khối chú thích
+  // ở `getDailyGoalProgress` trong `gameMath.js`. Tính lại tại chỗ là cách chắc chắn nhất để hai
+  // con số cạnh nhau trên cùng màn hình nói hai điều khác nhau.
+  const dailyGoal = getDailyGoalProgress({
+    dailyTracking,
+    history: sessionHistory,
+    todayKey: localDateStr(),
+    dailyGoalType,
+    dailyGoalSessions,
+    dailyGoalMinutes,
+  });
+  // Vòng tròn thì PHẢI kẹp ở 100% (vẽ quá một vòng là vẽ đè lên chính nó, đọc ra thành "chưa xong"),
+  // còn dòng chữ bên dưới vẫn nói thật con số đã vượt.
+  const goalRingDashoffset = GOAL_RING_CIRCUMFERENCE
+    - (Math.min(100, Math.max(0, dailyGoal.pct)) / 100) * GOAL_RING_CIRCUMFERENCE;
   const baseRingColor = isBreakMode
     ? breakRingColor
     : (RING_COLORS[timerState] ?? RING_COLORS[TIMER_STATES.IDLE]);
   const ringColor = isBreakMode ? breakRingColor : baseRingColor;
+  // Quầng sáng quanh vòng: cùng màu vòng, pha loãng. Nhạt hơn ở theme sáng vì nền sáng thì một
+  // quầng đậm đọc ra thành vệt bẩn, còn nền tối thì nó là thứ làm vòng "phát sáng".
+  const ringGlowColor = `color-mix(in srgb, ${ringColor} ${lightTheme ? 22 : 45}%, transparent)`;
+  // ── BA NHỊP CHUNG + NHỮNG NGOẠI LỆ CÓ LÝ DO ────────────────────────────────────────────────
+  // Ba nhịp ở `src/lib/motionPresets.js`. Mỗi `useSnapMotion`/`useCustomMotion` bên dưới là một
+  // ngoại lệ, và mỗi ngoại lệ phải tự khai lý do — không có dòng lý do thì nó đáng lẽ là `enter`.
+  const enterMotion = useEnterMotion();
+  const rewardMotion = useRewardMotion();
+
+  // NGOẠI LỆ (mang bố cục) — cỡ đồng hồ lúc vào/ra chế độ chuyên chú. `animate` KHAI ra tỉ lệ, bỏ
+  // hẳn thì đồng hồ nhảy về cỡ mặc định và chế độ chuyên chú mất luôn ý nghĩa.
+  const timerScaleMotion = useSnapMotion({
+    animate: { scale: timerVisualScale, y: immersiveMode ? (isDesktopFullScreen ? 8 : 4) : 0 },
+    transition: { duration: 0.28, ease: [0.22, 1, 0.36, 1] },
+  });
+
+  // NGOẠI LỆ (trang trí) — nhịp thở của đồng hồ: lặp VÔ HẠN, nên nó không thể là `enter` (một nhịp
+  // xuất hiện chạy đúng một lần). Bỏ hẳn thì đồng hồ đứng yên ở tỉ lệ 1 — đúng thứ cần.
+  const timerBreathMotion = useCustomMotion({
+    animate: timerState === TIMER_STATES.FINISHED && !isBreakMode
+      ? { scale: [1, 1.06, 1] }
+      : timerState === TIMER_STATES.RUNNING && !isBreakMode
+        ? { scale: [1, 1.018, 1] }
+        : { scale: 1 },
+    transition: timerState === TIMER_STATES.FINISHED && !isBreakMode
+      ? { duration: 0.7, ease: 'easeOut' }
+      : timerState === TIMER_STATES.RUNNING && !isBreakMode
+        ? { duration: 5, repeat: Infinity, ease: 'easeInOut' }
+        : { duration: 0.3 },
+  });
+
+  // NGOẠI LỆ (mang bố cục) — vòng tiến độ: `strokeDashoffset` CHÍNH LÀ phần trăm đã trôi qua, bỏ
+  // đi thì vòng luôn đầy. 0,8s là cố ý: nó phải chậm hơn mọi thứ khác để đọc ra "đang trôi".
+  const ringProgressMotion = useSnapMotion({
+    animate: { strokeDashoffset, stroke: ringColor },
+    transition: { strokeDashoffset: { duration: 0.8, ease: 'easeOut' }, stroke: { duration: 0.3 } },
+  });
+
+  // NGOẠI LỆ (mang bố cục) — vòng MỤC TIÊU NGÀY: cung dài bao nhiêu CHÍNH LÀ đã đi được mấy phần
+  // mục tiêu, bỏ đi thì vòng luôn đầy và nói dối. Cùng 0,8s với vòng tiến độ phiên để hai vòng
+  // chạy như một khối, không phải hai thứ rời nhau.
+  const goalRingMotion = useSnapMotion({
+    animate: { strokeDashoffset: goalRingDashoffset },
+    transition: { duration: 0.8, ease: 'easeOut' },
+  });
+
+  // NGOẠI LỆ (trang trí) — mười giây cuối đập theo nhịp giây, lặp vô hạn. Con số vẫn đọc được khi tắt.
+  const countdownPulseMotion = useCustomMotion({
+    animate: !isBreakMode && timerState === TIMER_STATES.RUNNING && !isStopwatchMode && displaySeconds <= 10
+      ? { scale: [1, 1.04, 1] }
+      : {},
+    transition: { duration: 1, repeat: !isBreakMode && !isStopwatchMode && displaySeconds <= 10 ? Infinity : 0 },
+  });
+
+  // NGOẠI LỆ (mang bố cục) — thanh tiến độ ô mục tiêu: bề dài CHÍNH LÀ số ký tự đã gõ.
+  const goalProgressMotion = useSnapMotion({
+    initial: false,
+    animate: { width: `${sessionGoalCharCount > 0 ? Math.max(sessionGoalProgressPct, 8) : 0}%` },
+    transition: { duration: 0.24, ease: [0.22, 1, 0.36, 1] },
+  });
+
+  // NGOẠI LỆ (mang bố cục) — bề ngang và khoảng cách của cả khối khi đổi bố cục chuyên chú.
+  const rootLayoutMotion = useSnapMotion({
+    animate: { maxWidth: immersiveRootMaxWidth, gap: useImmersiveHeroLayout ? 46 : immersiveMode ? 38 : 34 },
+    transition: { duration: 0.28, ease: [0.22, 1, 0.36, 1] },
+  });
+
+  // NGOẠI LỆ (trang trí) — viền báo động nhấp nháy, lặp vô hạn. Chữ trên nút vẫn nói đủ khi tắt.
+  const crisisPulseMotion = useCustomMotion({
+    animate: { borderColor: ['#ef4444', '#f59e0b', '#ef4444'] },
+    transition: { duration: 1.5, repeat: Infinity },
+  });
+
   const shouldPrioritizeSessionReview = immersiveMode && showSessionReview;
   const sessionReviewCard = showSessionReview ? (
     <SessionReviewCard
@@ -1061,10 +1180,7 @@ export default function PomodoroEngine({
         {!useMinimalFocusStage && activeMilestone && (
           <motion.div
             key={activeMilestone}
-            initial={{ opacity: 0, y: -12, scale: 0.9 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -12, scale: 0.9 }}
-            transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+            {...rewardMotion}
             className={`flex items-center gap-2 rounded-2xl px-4 py-2 ${
               lightTheme
                 ? 'border border-[rgba(91,122,82,0.18)] bg-[rgba(229,236,223,0.94)]'
@@ -1086,8 +1202,7 @@ export default function PomodoroEngine({
           <div className="flex flex-col items-center gap-2.5 sm:gap-3">
             {showComboBadge && (
               <motion.div
-                initial={{ scale: 0.8, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
+                {...rewardMotion}
                 className={`inline-flex shrink-0 items-center rounded-full px-2.5 py-1.5 text-[11px] font-semibold tracking-[-0.02em] sm:px-4 sm:py-2 sm:text-sm sm:tracking-normal ${
                   lightTheme
                     ? 'border border-[rgba(245,158,11,0.18)] bg-[rgba(255,247,237,0.96)]'
@@ -1117,8 +1232,7 @@ export default function PomodoroEngine({
 
       {!useMinimalFocusStage && isBreakMode && (
         <motion.div
-          initial={{ opacity: 0, y: -8 }}
-          animate={{ opacity: 1, y: 0 }}
+          {...enterMotion}
           className={`flex items-center gap-2 px-4 py-2 rounded-2xl border ${
             breakIsLong
               ? lightTheme
@@ -1141,37 +1255,18 @@ export default function PomodoroEngine({
       >
         <motion.div
           className="relative flex shrink-0 items-center justify-center"
-          animate={{ scale: timerVisualScale, y: immersiveMode ? (isDesktopFullScreen ? 8 : 4) : 0 }}
-          transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+          {...timerScaleMotion}
           style={{ width: timerCanvasSize, height: timerCanvasSize }}
         >
           {immersiveMode && (isActive || isBreakMode) && (
             <motion.div
               aria-hidden="true"
               className="pointer-events-none absolute inset-[-10%] rounded-full blur-3xl"
-              initial={{ opacity: 0, scale: 0.92 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.35, ease: 'easeOut' }}
+              {...enterMotion}
               style={{ background: immersiveGlow }}
             />
           )}
-          <motion.div
-            className="relative"
-            animate={
-              timerState === TIMER_STATES.FINISHED && !isBreakMode
-                ? { scale: [1, 1.06, 1] }
-                : timerState === TIMER_STATES.RUNNING && !isBreakMode
-                  ? { scale: [1, 1.018, 1] }
-                  : { scale: 1 }
-            }
-            transition={
-              timerState === TIMER_STATES.FINISHED && !isBreakMode
-                ? { duration: 0.7, ease: 'easeOut' }
-                : timerState === TIMER_STATES.RUNNING && !isBreakMode
-                  ? { duration: 5, repeat: Infinity, ease: 'easeInOut' }
-                  : { duration: 0.3 }
-            }
-          >
+          <motion.div className="relative" {...timerBreathMotion}>
           <svg
             width={timerCanvasSize}
             height={timerCanvasSize}
@@ -1179,15 +1274,15 @@ export default function PomodoroEngine({
             className="transform -rotate-90"
             aria-hidden="true"
             style={{
-              filter: isBreakMode
-                ? lightTheme
-                  ? 'none'
-                  : `drop-shadow(0 0 12px ${ringColor}55)`
-                : timerState === TIMER_STATES.RUNNING
-                  ? lightTheme
-                    ? 'none'
-                    : `drop-shadow(0 0 12px ${ringColor}60)`
-                  : 'none',
+              // ⚠️ Bản cũ ghép chuỗi `${ringColor}55` để lấy màu mờ. Cách ấy CHỈ hợp lệ khi
+              // `ringColor` là một mã hex; từ lúc màu vòng đọc token nó cho ra `var(--accent)55`
+              // — một giá trị CSS vô nghĩa, nên `drop-shadow` im lặng không vẽ gì. Thật ra nó đã
+              // hỏng sẵn ở theme sáng từ trước (ở đó `RING_COLORS` vốn đã là token); chỉ nhánh tối
+              // còn chạy nhờ hai mã hex cứng, mà hai mã ấy vừa bị gỡ. `color-mix` giữ được `var()`
+              // nên quầng sáng đi theo skin — dự án đã dùng cách này ở `cityBackdropScrim.js`.
+              filter: isBreakMode || timerState === TIMER_STATES.RUNNING
+                ? `drop-shadow(0 0 12px ${ringGlowColor})`
+                : 'none',
               transition: 'filter 0.4s ease',
             }}
           >
@@ -1214,11 +1309,22 @@ export default function PomodoroEngine({
                 strokeWidth={RING_STROKE}
                 strokeLinecap="round"
                 strokeDasharray={RING_CIRCUMFERENCE}
-                animate={{ strokeDashoffset, stroke: ringColor }}
-                transition={{
-                  strokeDashoffset: { duration: 0.8, ease: 'easeOut' },
-                  stroke: { duration: 0.3 },
-                }}
+                {...ringProgressMotion}
+              />
+            )}
+            {/* Vòng NGOÀI = tiến độ MỤC TIÊU NGÀY. Chưa đặt mục tiêu thì không vẽ gì cả — một
+                vòng rỗng vẫn là một vòng, và nó sẽ bị đọc thành "hôm nay chưa làm được gì". */}
+            {dailyGoal.hasGoal && (
+              <motion.circle
+                cx={SVG_SIZE / 2}
+                cy={SVG_SIZE / 2}
+                r={GOAL_RING_RADIUS}
+                fill="none"
+                style={{ stroke: 'var(--warn)' }}
+                strokeWidth={GOAL_RING_STROKE}
+                strokeLinecap="round"
+                strokeDasharray={GOAL_RING_CIRCUMFERENCE}
+                {...goalRingMotion}
               />
             )}
           </svg>
@@ -1240,13 +1346,22 @@ export default function PomodoroEngine({
             <motion.span
               key={`${isBreakMode ? 'break' : runtimeTimerMode}-${displayRingSeconds}`}
               className={`mt-3 ${timerValueLayoutClass} ${timerValueFontClass} ${timerValueToneClass} tabular-nums transition-all duration-300`}
-              animate={!isBreakMode && timerState === TIMER_STATES.RUNNING && !isStopwatchMode && displaySeconds <= 10
-                ? { scale: [1, 1.04, 1] }
-                : {}}
-              transition={{ duration: 1, repeat: !isBreakMode && !isStopwatchMode && displaySeconds <= 10 ? Infinity : 0 }}
+              {...countdownPulseMotion}
             >
               {formatTime(displayRingSeconds)}
             </motion.span>
+            {/* Câu trả lời thứ hai của đồng hồ: hôm nay đã đi được mấy phần mục tiêu. Đọc CÙNG
+                nguồn số liệu với vòng ngoài, nên hai thứ không thể nói hai điều khác nhau — và
+                cùng nguồn với thẻ "Hôm nay" ở cột bên phải.
+                ⚠️ Ở đây KHÔNG kẹp 100%: vượt mục tiêu thì phải nói thật là "Phiên 6/4", trong khi
+                vòng tròn thì buộc phải kẹp (vẽ quá một vòng là vẽ đè lên chính nó). */}
+            {dailyGoal.hasGoal && (
+              <span className="mt-1.5 text-[13px] leading-none" style={{ color: 'var(--muted)' }}>
+                {dailyGoal.useMinutes
+                  ? `${dailyGoal.currentValue}/${dailyGoal.goalValue} phút hôm nay`
+                  : `Phiên ${dailyGoal.currentValue}/${dailyGoal.goalValue} hôm nay`}
+              </span>
+            )}
             {!isBreakMode && isStopwatchMode && (
               <>
                 <span className={`mt-0.5 text-xs ${lightTheme ? 'text-[var(--accent)]' : 'text-[var(--accent-light)]'}`}>
@@ -1309,9 +1424,7 @@ export default function PomodoroEngine({
           {!isBreakMode && timerState === TIMER_STATES.IDLE && (
             <motion.div
               key="start"
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.9 }}
+              {...enterMotion}
               className="grid w-full grid-cols-[minmax(0,1.72fr)_minmax(112px,0.88fr)] items-stretch gap-2 sm:flex sm:w-auto sm:gap-3"
             >
               {/* ⚠️ PHẢI DÙNG `size="compactMobile"`, ĐỪNG NHÉT `px-…`/`text-…` VÀO `className`.
@@ -1363,9 +1476,7 @@ export default function PomodoroEngine({
           {!isBreakMode && timerState === TIMER_STATES.RUNNING && (
             <motion.div
               key="running-btns"
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.9 }}
+              {...enterMotion}
               className={compactTimerActionRowClassName}
             >
               <ActionButton onClick={pause} variant="soft" size="compactMobile" className={compactTimerActionButtonClassName}>
@@ -1400,9 +1511,7 @@ export default function PomodoroEngine({
           {!isBreakMode && timerState === TIMER_STATES.PAUSED && (
             <motion.div
               key={continuedPomodoroConfirmationPending ? 'continued-confirm-btns' : 'paused-btns'}
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.9 }}
+              {...enterMotion}
               className={continuedPomodoroConfirmationPending
                 ? 'grid w-full grid-cols-2 items-stretch gap-2 sm:w-auto sm:min-w-[360px]'
                 : compactTimerActionRowClassName}
@@ -1452,9 +1561,7 @@ export default function PomodoroEngine({
           {!isBreakMode && timerState === TIMER_STATES.FINISHED && (
             <motion.div
               key="finished-btns"
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.9 }}
+              {...enterMotion}
               className="flex items-center gap-3"
             >
               {!disableBreak && !finishedSessionWillStartBreak && (
@@ -1610,9 +1717,7 @@ export default function PomodoroEngine({
             lightTheme ? 'bg-[rgba(201,100,66,0.08)]' : 'bg-white/8'
           }`}>
             <Motion.div
-              initial={false}
-              animate={{ width: `${sessionGoalCharCount > 0 ? Math.max(sessionGoalProgressPct, 8) : 0}%` }}
-              transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+              {...goalProgressMotion}
               className={`h-full rounded-full ${
                 isSessionGoalValid
                   ? lightTheme
@@ -1834,13 +1939,11 @@ export default function PomodoroEngine({
   return (
     <Motion.div
       className="relative mx-auto flex w-full max-w-full flex-col items-center overflow-x-hidden select-none"
-      animate={{ maxWidth: immersiveRootMaxWidth, gap: useImmersiveHeroLayout ? 46 : immersiveMode ? 38 : 34 }}
-      transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+      {...rootLayoutMotion}
     >
       {eraCrisis.active && (
         <motion.button
-          animate={{ borderColor: ['#ef4444', '#f59e0b', '#ef4444'] }}
-          transition={{ duration: 1.5, repeat: Infinity }}
+          {...crisisPulseMotion}
           onClick={openCrisis}
           className="w-full py-2 rounded-xl border-2 border-red-700 bg-red-950 text-red-300 text-sm font-bold flex items-center justify-center gap-2"
         >
@@ -2006,6 +2109,9 @@ function MultiplierBadge({
 }
 
 function ModeSwitch({ disabled, mode, onChange }) {
+  // NGOẠI LỆ (mang bố cục) — viên nền trượt từ tab cũ sang tab mới bằng `layoutId`. Vị trí của
+  // nó CHÍNH LÀ tab đang chọn, nên bật Giảm chuyển động thì nó nhảy chứ không biến mất.
+  const pillMotion = useSnapMotion({ transition: { type: 'spring', stiffness: 320, damping: 28 } });
   const uiTheme = useSettingsStore((s) => s.uiTheme);
   const lightTheme = uiTheme === 'light';
   return (
@@ -2043,7 +2149,7 @@ function ModeSwitch({ disabled, mode, onChange }) {
                     ? 'bg-[var(--ink)] shadow-[0_10px_20px_rgba(31,30,29,0.14)]'
                     : 'bg-white/[0.08] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]'
                 }`}
-                transition={{ type: 'spring', stiffness: 320, damping: 28 }}
+                {...pillMotion}
               />
             )}
             <span className="relative z-10">{item.label}</span>
@@ -2057,6 +2163,11 @@ function ModeSwitch({ disabled, mode, onChange }) {
 function QuickPresets({ className = '', activePresetId, disabled, mode, onSelect }) {
   const uiTheme = useSettingsStore((s) => s.uiTheme);
   const lightTheme = uiTheme === 'light';
+  const pressMotion = usePressMotion();
+  // NGOẠI LỆ (mang bố cục) — thẻ đang chọn được nhấc lên 1px; `y` chính là trạng thái "đang chọn".
+  const liftMotion = useSnapMotion({ transition: { type: 'spring', stiffness: 360, damping: 28 } });
+  // NGOẠI LỆ (mang bố cục) — vạch nhấn trượt sang thẻ mới bằng `layoutId`, cùng chuyện với ModeSwitch.
+  const activeLineMotion = useSnapMotion({ transition: { type: 'spring', stiffness: 420, damping: 34 } });
 
   return (
     <div className={`grid grid-cols-[repeat(auto-fit,minmax(120px,1fr))] gap-x-2.5 gap-y-3.5 sm:gap-2 ${className}`}>
@@ -2072,9 +2183,10 @@ function QuickPresets({ className = '', activePresetId, disabled, mode, onSelect
             aria-label={`Chọn preset ${preset.label}: ${preset.focusMinutes} phút tập trung`}
             onClick={() => onSelect(preset)}
             initial={false}
+            // `animate` phải ở lại tại chỗ vì `active` chỉ có trong vòng lặp, không có ở tầng hook.
             animate={{ y: active ? -1 : 0 }}
-            whileTap={disabled ? undefined : { scale: 0.98 }}
-            transition={{ type: 'spring', stiffness: 360, damping: 28 }}
+            {...liftMotion}
+            {...(disabled ? {} : pressMotion)}
             className={`relative min-w-0 overflow-hidden rounded-[20px] border px-3.5 py-4 text-left transition-colors touch-manipulation focus-visible:outline-none focus-visible:ring-2 disabled:cursor-not-allowed sm:rounded-[18px] sm:px-3 sm:py-2.5 ${
               active
                 ? lightTheme
@@ -2091,7 +2203,7 @@ function QuickPresets({ className = '', activePresetId, disabled, mode, onSelect
                 className={`absolute inset-x-3 top-0 h-0.5 rounded-full ${
                   lightTheme ? 'bg-[var(--accent)]' : 'bg-[var(--accent-light)]'
                 }`}
-                transition={{ type: 'spring', stiffness: 420, damping: 34 }}
+                {...activeLineMotion}
               />
             )}
             {/*
@@ -2196,6 +2308,12 @@ function QuickPresets({ className = '', activePresetId, disabled, mode, onSelect
 }
 
 function StrictModeToggle({ disabled, enabled, onChange }) {
+  // NGOẠI LỆ (mang bố cục) — vị trí núm gạt CHÍNH LÀ bật/tắt. Bỏ `animate` đi thì núm kẹt bên trái
+  // trong khi nền đã đổi màu sang "đang bật": người dùng đọc ra hai câu trả lời trái ngược nhau.
+  const knobMotion = useSnapMotion({
+    animate: { x: enabled ? 20 : 0 },
+    transition: { type: 'spring', stiffness: 380, damping: 28 },
+  });
   const uiTheme = useSettingsStore((s) => s.uiTheme);
   const lightTheme = uiTheme === 'light';
 
@@ -2225,8 +2343,7 @@ function StrictModeToggle({ disabled, enabled, onChange }) {
         }`}
       >
         <motion.span
-          animate={{ x: enabled ? 20 : 0 }}
-          transition={{ type: 'spring', stiffness: 380, damping: 28 }}
+          {...knobMotion}
           className="absolute left-1 top-1 size-5 rounded-full bg-white shadow"
         />
       </button>
@@ -2271,11 +2388,11 @@ function SessionReviewCard({ completedGoalAchieved, goalText, goalBonusXP = 0, g
     goalBonusXP > 0 ? `+${goalBonusXP} EXP` : null,
     goalBonusEP > 0 ? `+${goalBonusEP} EP` : null,
   ].filter(Boolean);
+  const enterMotion = useEnterMotion();
+  const rewardMotion = useRewardMotion();
   return (
     <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: 10 }}
+      {...enterMotion}
       className={`mx-auto w-full max-w-[520px] rounded-[28px] border p-4 ${
         lightTheme
           ? 'border-[var(--line)] bg-white shadow-[0_22px_56px_rgba(31,30,29,0.08)]'
@@ -2322,8 +2439,7 @@ function SessionReviewCard({ completedGoalAchieved, goalText, goalBonusXP = 0, g
       </div>
       {showGoalBonus && (
         <motion.p
-          initial={{ opacity: 0, y: 6 }}
-          animate={{ opacity: 1, y: 0 }}
+          {...rewardMotion}
           className={`mt-3 text-center text-[13px] font-semibold ${lightTheme ? 'text-[var(--good)]' : 'text-emerald-300'}`}
         >
           🎯 Hoàn thành mục tiêu — thưởng {bonusParts.join(' · ')}
@@ -2336,6 +2452,8 @@ function SessionReviewCard({ completedGoalAchieved, goalText, goalBonusXP = 0, g
 function CancelConfirmDialog({ hasForgivenessCharge, onAbort, onConfirm, preview }) {
   const uiTheme = useSettingsStore((s) => s.uiTheme);
   const lightTheme = uiTheme === 'light';
+  const enterMotion = useEnterMotion();
+  const scrimMotion = useCustomMotion(SCRIM_FADE);
 
   useEffect(() => {
     const handleKeyDown = (event) => {
@@ -2351,18 +2469,13 @@ function CancelConfirmDialog({ hasForgivenessCharge, onAbort, onConfirm, preview
 
   return (
     <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
+      {...scrimMotion}
       className="fixed inset-0 z-[70] flex items-center justify-center p-4 sm:p-6"
       style={{ backgroundColor: 'rgba(31, 30, 29, 0.34)', backdropFilter: 'blur(10px)' }}
       onClick={onAbort}
     >
       <motion.div
-        initial={{ opacity: 0, y: 14, scale: 0.98 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        exit={{ opacity: 0, y: 10, scale: 0.98 }}
-        transition={{ duration: 0.22, ease: 'easeOut' }}
+        {...enterMotion}
         role="dialog"
         aria-modal="true"
         aria-labelledby="cancel-session-dialog-title"
@@ -2421,6 +2534,7 @@ function CancelConfirmDialog({ hasForgivenessCharge, onAbort, onConfirm, preview
 }
 
 function CategoryManager({ categories, onClose, onAdd, onDelete }) {
+  const enterMotion = useEnterMotion();
   const uiTheme = useSettingsStore((s) => s.uiTheme);
   const lightTheme = uiTheme === 'light';
   const [newLabel, setNewLabel] = useState('');
@@ -2439,9 +2553,7 @@ function CategoryManager({ categories, onClose, onAdd, onDelete }) {
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -8 }}
+      {...enterMotion}
       className={`mt-3 rounded-3xl border p-4 ${
         lightTheme
           ? 'border-[var(--line)] bg-white shadow-[0_18px_40px_rgba(31,30,29,0.06)]'
@@ -2539,25 +2651,48 @@ function CategoryManager({ categories, onClose, onAdd, onDelete }) {
   );
 }
 
-function ActionButton({ children, className = '', disabled = false, onClick, size = 'default', title, variant = 'soft', ...motionProps }) {
-  const uiTheme = useSettingsStore((s) => s.uiTheme);
-  const lightTheme = uiTheme === 'light';
+/**
+ * ActionButton — nút hành động chuẩn của app.
+ *
+ * ⚠️ MÀU ĐỌC TỪ TOKEN, KHÔNG RẼ NHÁNH THEO `lightTheme`. Bản cũ khai hai bảng màu cứng (một cho
+ * sáng, một cho tối) với mã màu chốt thẳng vào chuỗi lớp — nên **đổi skin không đổi được nút**:
+ * app có 5 skin × 2 chế độ = 10 tổ hợp, mà bảng cứng chỉ biết 2. Nay mỗi biến thể chỉ trỏ tới
+ * token; token đã tự đổi theo CẢ skin lẫn chế độ sáng/tối, nên nút đi theo miễn phí. Vì vậy
+ * component này KHÔNG còn đọc `useSettingsStore` nữa — nó không cần biết đang ở chế độ nào.
+ *
+ * ⚠️ BÓNG LÀ BÓNG ĐẶC (`0 4px 0 0`), KHÔNG PHẢI BÓNG MỜ. Bóng mờ nhiều lớp làm nút trông như một
+ * thẻ giấy đang trôi; một vạch đặc dày 4px dưới đáy làm nó trông như một PHÍM BẤM có chiều dày.
+ * Cả cảm giác bấm nằm ở chỗ đó: `whileTap` hạ nút xuống **đúng 4px** — bằng chiều dày vạch —
+ * đồng thời `active:shadow-none` xoá vạch, nên mép dưới của nút đứng yên tại chỗ và mắt đọc ra
+ * "nút vừa lún xuống chạm mặt bàn". Lệch hai con số ấy là hỏng hiệu ứng.
+ *
+ * ⚠️ VÌ SAO BÓNG XOÁ BẰNG CSS `active:` CHỨ KHÔNG BẰNG `whileTap: { boxShadow }` — đây là cái bẫy
+ * đắt nhất ở đây. Framer Motion animate `boxShadow` bằng cách ghi một **style inline đã resolve**
+ * (`var(--line-2)` bị thay bằng mã màu cụ thể tại thời điểm chạm). Style inline thắng mọi lớp CSS,
+ * và nó ở lại sau khi animation kết thúc ⇒ nút sẽ **đóng băng màu bóng của skin cũ**: đổi skin
+ * xong, mọi nút đã từng được bấm vẫn giữ bóng cũ, mà không có gì đỏ lên. Dùng `active:` thì `var()`
+ * còn sống, nên bóng luôn đi theo skin. Framer chỉ lo `y` — thứ không chứa màu.
+ *
+ * ⚠️ `transition` CHỈ LIỆT KÊ THUỘC TÍNH CSS THẬT SỰ SỞ HỮU. Bản cũ dùng `transition-all`, mà
+ * `all` bao gồm `transform` — thứ Framer đang tự animate bằng vòng lặp riêng của nó. Hai bên cùng
+ * điều khiển một thuộc tính thì trình duyệt phải nội suy lại từng giá trị Framer ghi ra, và cú bấm
+ * thành nhão. Bỏ `transform` khỏi danh sách thì cú lún đanh lại.
+ */
+/** Bật Giảm chuyển động thì trải cái này SAU `whileHover`/`whileTap` để xoá cả hai — xem chú thích dưới. */
+const ACTION_BUTTON_STILL = Object.freeze({ whileHover: undefined, whileTap: undefined });
 
-  const themeMap = lightTheme
-    ? {
-        primary: 'border-transparent bg-[var(--ink)] text-[var(--canvas)] shadow-[0_12px_24px_rgba(31,30,29,0.14)] hover:bg-[var(--ink-2)]',
-        accent: 'border-transparent bg-[var(--accent)] text-white shadow-[0_12px_24px_rgba(201,100,66,0.16)] hover:bg-[var(--accent2)]',
-        soft: 'border-[var(--line)] bg-white text-[var(--ink)] shadow-[0_8px_16px_rgba(31,30,29,0.05)] hover:border-[var(--line-2)] hover:bg-[rgba(244,242,236,0.96)]',
-        info: 'border-[rgba(201,100,66,0.14)] bg-[rgba(255,247,237,0.98)] text-[var(--accent2)] shadow-[0_8px_16px_rgba(201,100,66,0.06)] hover:bg-[rgba(255,239,228,0.98)]',
-        danger: 'border-[rgba(31,30,29,0.08)] bg-[rgba(244,242,236,0.96)] text-[var(--ink)] shadow-[0_8px_16px_rgba(31,30,29,0.04)] hover:border-[var(--line-2)] hover:bg-white',
-      }
-    : {
-        primary: 'text-[var(--ink)] bg-white/[0.08] border-white/10 shadow-[0_4px_20px_rgba(0,0,0,0.14)] hover:bg-white/[0.10]',
-        accent: 'text-white bg-[rgba(var(--accent-rgb),0.88)] border-[rgba(var(--accent-rgb),0.24)] shadow-[0_4px_20px_rgba(var(--accent-rgb),0.18)] hover:bg-[rgba(var(--accent-rgb),0.78)]',
-        soft: 'text-[var(--ink)] bg-white/[0.05] border-white/8 shadow-[0_4px_16px_rgba(0,0,0,0.12)] hover:bg-white/[0.08]',
-        info: 'text-[var(--accent-light)] bg-white/[0.05] border-[rgba(var(--accent-rgb),0.18)] shadow-[0_4px_16px_rgba(0,0,0,0.12)] hover:bg-white/[0.08]',
-        danger: 'text-[var(--accent-light)] bg-white/[0.05] border-[rgba(var(--accent-rgb),0.18)] shadow-[0_4px_16px_rgba(0,0,0,0.12)] hover:bg-white/[0.08]',
-      };
+function ActionButton({ children, className = '', disabled = false, onClick, size = 'default', title, variant = 'soft', ...motionProps }) {
+  const reduceMotion = useReducedMotion();
+  // Bóng đặc dày ĐÚNG bằng quãng lún của `whileTap` bên dưới. Đổi một con số thì phải đổi cả hai.
+  const themeMap = {
+    primary: 'border-transparent bg-[var(--ink)] text-[var(--canvas)] shadow-[0_4px_0_0_var(--line-2)]',
+    accent: 'border-transparent bg-[var(--accent)] text-white shadow-[0_4px_0_0_var(--accent2)]',
+    soft: 'border-[var(--line-2)] bg-[var(--card-bg-solid)] text-[var(--ink)] shadow-[0_4px_0_0_var(--line-2)]',
+    // `--accent-soft` chưa skin nào khai (2026-08-27) nên hôm nay fallback luôn là đường chạy thật.
+    // Giữ nguyên lối `var(a, b)` để skin nào muốn có nền nhấn riêng thì chỉ cần khai thêm token.
+    info: 'border-transparent bg-[var(--accent-soft,var(--card-bg-solid2))] text-[var(--accent-ink)] shadow-[0_4px_0_0_var(--line-2)]',
+    danger: 'border-transparent bg-[var(--card-bg-solid2)] text-[var(--ink)] shadow-[0_4px_0_0_var(--line-2)]',
+  };
 
   // ⚠️ MỖI `size` LÀ MỘT BỘ TRỌN VẸN, CỐ Ý — đừng "gọn hơn" bằng cách để nơi gọi chồng thêm lớp.
   // `sizeMap[size] ?? sizeMap.default` chỉ phát ra ĐÚNG MỘT bộ, nên không có hai lớp nào cùng khai
@@ -2582,14 +2717,36 @@ function ActionButton({ children, className = '', disabled = false, onClick, siz
       disabled={disabled}
       title={title}
       data-variant={variant}
-      whileHover={disabled ? undefined : { scale: 1.03, y: -1 }}
-      whileTap={disabled ? undefined : { scale: 0.97 }}
+      // Nhấc nhẹ 1px + sáng lên 6%: đủ để biết con trỏ đang ở đâu, không đủ để chữ nhoè.
+      // (Bản cũ dùng `scale: 1.03` — phóng to cả khối làm chữ bị nội suy lại nên MỜ đi đúng lúc
+      // người dùng đang nhìn vào nó.)
+      whileHover={disabled ? undefined : { y: -1 }}
+      whileTap={disabled ? undefined : { y: 4 }}
+      // ⚠️ NGOẠI LỆ CÓ LÝ DO — nút này KHÔNG dùng nhịp `press` (scale 0,97) của `motionPresets.js`.
+      // Cú lún `y: 4` không phải một lựa chọn mỹ thuật rời rạc: nó BẰNG ĐÚNG chiều dày vạch bóng
+      // đặc bên dưới, nên khi bấm thì nút hạ xuống đúng bằng vạch rồi vạch tắt đi ⇒ mép dưới đứng
+      // yên và mắt đọc ra "lún chạm mặt bàn". `actionButtonPress.test.js` khoá cứng quan hệ ấy,
+      // và cùng bài test cấm `scale` trong `whileHover` (phóng to làm chữ nhoè). Một nhịp `press`
+      // dùng `scale` sẽ vừa phá quan hệ lún↔bóng vừa mất luôn hiệu ứng bóng đặc của skin.
+      // Trải SAU hai dòng trên nên nó THẮNG: bật Giảm chuyển động là nút đứng yên hoàn toàn.
+      // (Phải ghi đè chứ không gộp vào hai dòng trên, vì bài test khoá NGUYÊN VĂN dòng `whileTap`.)
+      {...(reduceMotion ? ACTION_BUTTON_STILL : null)}
       onClick={onClick}
-      className={`inline-flex max-w-full items-center justify-center rounded-2xl border text-center transition-all ${
+      // ⚠️ `disabled:shadow-none` chứ KHÔNG phải `shadow-none` trần. Lớp trần có cùng độ đặc hiệu
+      // (0,1,0) với `shadow-[0_4px…]` của biến thể, nên ai thắng là do THỨ TỰ trong bảng kiểu
+      // Tailwind quyết — hôm nay đo được `.shadow-none` tình cờ đứng sau nên nó thắng, nhưng đó là
+      // một sự trùng hợp, không phải một luật. `:disabled` nâng độ đặc hiệu lên (0,2,0) nên nó
+      // thắng bất kể thứ tự. Cùng lý do với `active:shadow-none`. (Đây đúng là cái canh bạc mà
+      // chú thích của `sizeMap` ngay trên đã cảnh báo — chỉ khác là ở thuộc tính `box-shadow`.)
+      className={`inline-flex max-w-full items-center justify-center rounded-2xl border text-center transition-[background-color,border-color,color,box-shadow,filter] duration-150 disabled:shadow-none ${
         sizeMap[size] ?? sizeMap.default
       } ${
         themeMap[variant] ?? themeMap.soft
-      } ${disabled ? 'cursor-not-allowed opacity-45' : ''} ${className}`}
+      } ${
+        disabled
+          ? 'cursor-not-allowed opacity-45'
+          : 'hover:brightness-[1.06] active:shadow-none'
+      } ${className}`}
       {...motionProps}
     >
       {children}

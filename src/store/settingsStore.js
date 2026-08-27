@@ -13,6 +13,9 @@ import ambientEngine from '../engine/ambientEngine';
 import notificationManager from '../engine/notifications';
 import { DEFAULT_QUICK_FOCUS_PRESET } from '../engine/breaks';
 import { normalizeRenderMode } from '../engine/city3d/renderMode';
+// Danh sách skin + mặc định nằm ở module THUẦN riêng để script Node đọc được mà không phải
+// nạp cả engine âm thanh/thông báo — xem khối chú thích ở `uiSkins.js`.
+import { DEFAULT_UI_SKIN, normalizeUiSkin } from './uiSkins';
 import {
   disablePushSubscription,
   ensurePushSubscription,
@@ -74,8 +77,8 @@ const useSettingsStore = create(
       uiTheme: 'light',
 
       // ── UI Skin (bộ giao diện) ─────────────────────────────────────────
-      // 'editorial' (mặc định, hoàn chỉnh) | 'aurora' | 'inkgold' | 'swiss'
-      uiSkin: 'editorial',
+      // 'arcade' (mặc định) | 'editorial' | 'aurora' | 'inkgold' | 'swiss'
+      uiSkin: DEFAULT_UI_SKIN,
 
       // ── Sound Pack ─────────────────────────────────────────────────────
       // 'classic' | 'nature' | 'synthwave' | 'minimal'
@@ -195,9 +198,7 @@ const useSettingsStore = create(
 
       setUiTheme: (theme) => set({ uiTheme: theme === 'dark' ? 'dark' : 'light' }),
 
-      setUiSkin: (skin) => set({
-        uiSkin: ['editorial', 'aurora', 'inkgold', 'swiss'].includes(skin) ? skin : 'editorial',
-      }),
+      setUiSkin: (skin) => set({ uiSkin: normalizeUiSkin(skin) }),
 
       setSoundPack: (pack) => {
         soundEngine.setPack(pack);
@@ -263,7 +264,7 @@ const useSettingsStore = create(
             ? clampDailyGoalMinutes(safeStored.dailyGoalMinutes)
             : DEFAULT_DAILY_GOAL.dailyGoalMinutes,
           uiTheme: safeStored.uiTheme === 'dark' ? 'dark' : 'light',
-          uiSkin: ['editorial', 'aurora', 'inkgold', 'swiss'].includes(safeStored.uiSkin) ? safeStored.uiSkin : 'editorial',
+          uiSkin: normalizeUiSkin(safeStored.uiSkin),
           ambientVolume,
           // Giá trị rác (bản cũ, sửa tay localStorage) không được lọt tới chỗ quyết định có dựng
           // WebGL hay không — chuẩn hoá ngay tại cửa.

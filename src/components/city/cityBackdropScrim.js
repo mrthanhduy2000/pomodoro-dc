@@ -117,8 +117,8 @@ export function cityPresenceAt(stops, pct, backdropOpacity) {
 /**
  * Dựng chuỗi `linear-gradient` cho `style`.
  *
- * Dùng `color-mix` với `var(--canvas)` chứ KHÔNG phải mã màu chốt cứng: app có 2 theme × 4 skin,
- * một mã cứng sẽ sai ở 7/8 tổ hợp. Đây vẫn nằm trong luật "chỉ dùng biến CSS" và không cần token mới.
+ * Dùng `color-mix` với `var(--canvas)` chứ KHÔNG phải mã màu chốt cứng: app có 2 theme × 5 skin,
+ * một mã cứng sẽ sai ở 9/10 tổ hợp. Đây vẫn nằm trong luật "chỉ dùng biến CSS" và không cần token mới.
  */
 export function buildScrimGradient(isPhone) {
   const stops = isPhone ? SCRIM_STOPS.phone : SCRIM_STOPS.desktop;

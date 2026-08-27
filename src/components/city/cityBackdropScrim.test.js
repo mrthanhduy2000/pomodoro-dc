@@ -107,7 +107,7 @@ test('Chuỗi CSS sinh ra phải dùng biến theme, không có mã màu chốt 
     assert.ok(css.startsWith('linear-gradient(to bottom,'), 'Phải là gradient dọc.');
     assert.ok(
       !/#[0-9a-fA-F]{3,8}\b/.test(css) && !/\brgba?\(/.test(css),
-      `Có mã màu chốt cứng trong lớp phủ: ${css}. App có 2 theme × 4 skin — mã cứng sai ở 7/8 tổ hợp.`,
+      `Có mã màu chốt cứng trong lớp phủ: ${css}. App có 2 theme × 5 skin — mã cứng sai ở 9/10 tổ hợp.`,
     );
     assert.equal(
       (css.match(/var\(--canvas\)/g) ?? []).length,

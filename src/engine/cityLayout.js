@@ -81,7 +81,7 @@ for (const [eraKey, list] of Object.entries(BLUEPRINT_CATALOG)) {
 }
 
 /**
- * ─── MẠNG ĐƯỜNG: NAY SINH THEO KỶ, KHÔNG CÒN LÀ BỐN TRỤC CỐ ĐỊNH (Phase 20, ADR-060) ──────────
+ * ─── MẠNG ĐƯỜNG: NAY SINH THEO KỶ, KHÔNG CÒN LÀ BỐN TRỤC CỐ ĐỊNH (Phase 20, ADR-066) ──────────
  *
  * Trước 2026-08-24, file này tự dựng mạng đường từ bốn hằng số ở `cityGrid.js`
  * (`ROAD_LINES = {0, 4, 8, 11}`) — **giống hệt nhau ở cả 15 kỷ**, đối xứng bốn chiều hoàn hảo.

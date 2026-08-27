@@ -14,7 +14,7 @@
 ## ADR-065 — **BÀN CỜ LÀ MỘT MỐC LỊCH SỬ, KHÔNG PHẢI MỘT CÁCH SẮP XẾP MẶC ĐỊNH**: bố cục bên trong một thửa có trục `layout`, và một khu nhà phải NẰM TRONG thửa của nó
 
 - **Ngày**: 2026-08-24
-- **Bối cảnh**: Phase 21 §3–§5. Phase 20 (ADR-060) đã đổi được **bộ xương** thành phố — đường thôi
+- **Bối cảnh**: Phase 21 §3–§5. Phase 20 (ADR-066) đã đổi được **bộ xương** thành phố — đường thôi
   là hàng và cột, thửa khác cỡ khác hình. Đàm xem bản quét và vẫn nói: *«nhà vẫn xếp rất ngăn nếp
   trông như quy hoạch, dù quy hoạch ô bàn cờ chỉ bùng nổ và trở thành chuẩn mực từ thế kỷ 19 (Cách
   mạng Công nghiệp). Và việc mở rộng thành phố không phải là nhà xếp chồng lên nhau, nó rất phản
@@ -112,7 +112,7 @@
 - **Bối cảnh**: Phase 21. Hai nhánh đã đi giải **cùng một bài toán** — *"xoá vẻ quy hoạch của bộ
   xương thành phố"* — bằng hai lời giải khác nhau, trong hai phiên không nhìn thấy nhau. `main` có
   **ADR-059**: mỗi kỷ tự sinh tập ô đường bằng những **CUNG CONG** (`arcTrace` trong `roadPlan.js`),
-  cho ra đường lượn và giao lộ chữ T/Y thật. Nhánh Phase 20 có **ADR-060**: **chia thửa đệ quy**
+  cho ra đường lượn và giao lộ chữ T/Y thật. Nhánh Phase 20 có **ADR-066**: **chia thửa đệ quy**
   (`cityPlan.js`), cho ra thửa **khác cỡ khác hình** thay cho 9 siêu-ô đều tăm tắp. Đàm ra lệnh hợp
   nhất, và nói rõ giữ `cityPlan` làm nguồn sự thật về bố cục còn ADR-059 làm tầng hình dạng của
   đường. Hai bên còn **trùng số ADR 056 và 057** cho hai nội dung khác hẳn nhau, và trùng cả
@@ -145,7 +145,7 @@
   ⚠️ Và đây **không phải một phép vá cho test hết đỏ**: một thửa có mép cong thì khu nhà bên trong
   nó thôi là một hình chữ nhật đều đặn — tức nó chính là thứ chỉ thị đòi.
 - **Giải pháp**:
-  - `buildCityPlan(era)` (ADR-060) quyết **CHỖ CẮT**; mỗi nhát cắt gọi `arcTrace` (ADR-059) để lấy
+  - `buildCityPlan(era)` (ADR-066) quyết **CHỖ CẮT**; mỗi nhát cắt gọi `arcTrace` (ADR-059) để lấy
     **HÌNH DẠNG** của nét cắt ấy, kèm `crossings` — tim đường cắt qua mỗi ranh giới ô ở đâu, chuẩn
     hoá `[−1, 1]` — thứ mà `roadPath.boundaryBend` đọc để mặt đường **đọc ra là cong** thay vì một
     bậc thang.
@@ -162,9 +162,9 @@
     cục còn `bow`/`wiggle`/`loops` là của tầng hình dạng. Đo lại toàn bộ ở bảng CUỐI CÙNG: quần thể
     ô nhà dân **476** (đi từ 371 → 432 → 476), **2.370** khối, chi tiết mái giữ **431/476 = 90,5%**.
   - **Đánh số lại cho hết trùng**: số của `main` giữ nguyên nghĩa; entry của nhánh này đổi
-    ADR-057 → **ADR-060** (chia thửa) · ADR-056 → **ADR-061** (khung hình) · ADR-054 → **ADR-062**
-    (`monolith`) · ADR-055 → **ADR-063** (che khuất môi trường); `TECH_DEBT #79` → **#86**,
-    `#80` → **#87**. ⚠️ Vì vậy thứ tự VẬT LÝ của file này không còn giảm dần đơn điệu ở đoạn
+    ADR-057 → **ADR-066** (chia thửa) · ADR-056 → **ADR-061** (khung hình) · ADR-054 → **ADR-062**
+    (`monolith`) · ADR-055 → **ADR-063** (che khuất môi trường); `TECH_DEBT #79` → **#89**,
+    `#80` → **#90**. ⚠️ Vì vậy thứ tự VẬT LÝ của file này không còn giảm dần đơn điệu ở đoạn
     059…053 — đó là dấu vết của lần hợp nhất, không phải một chỗ hỏng.
 - **✅ ADR-007 — ĐÀM ĐÃ DUYỆT PHƯƠNG ÁN (a), ghi lại ở đây vì nó là một quyết định kiến trúc, không
   phải một chi tiết thi công**: chấp nhận **dời 75/75 công trình ĐÚNG MỘT LẦN**, và sau lần ship
@@ -185,9 +185,75 @@
   Bảy tài liệu phải gỡ xung đột. `TECH_DEBT` không mở mục mới, không đóng mục nào.
 - **Điều kiện xem lại**: nếu sau này cần ranh giới **XIÊN** (Voronoi) thì đây là chỗ phải quay lại —
   và lúc ấy phải viết lại cả tầng dựng đường, vì `terrainMesh`/`streetCrossSection`/`carriagewayShape`
-  chỉ biết ô vuông (lý do loại Voronoi ở ADR-060 vẫn còn nguyên giá trị).
+  chỉ biết ô vuông (lý do loại Voronoi ở ADR-066 vẫn còn nguyên giá trị).
 
 ---
+## ADR-060 — MỘT ngôn ngữ hình cho mọi phần thưởng, và một luật MỨC ĐỘ LÀM PHIỀN có phân tầng
+
+**Ngày:** 2026-08-27
+**Trạng thái:** đã áp dụng. Không đảo ngược ADR nào.
+
+**Bối cảnh.** App có bảy đường trao thưởng: `LootDropModal` · `LevelUpModal` · `AchievementToast` ·
+`DailyMissions` · `PrestigeModal` · `EraCrisisModal` · `WeeklyReportModal`. Mỗi đường tự chọn cách
+vẽ và tự chọn màu, và điều đó không dừng ở "mỗi file một kiểu": **riêng `LootDropModal` đã có BA
+hình cho ba loại thưởng trong CÙNG một hộp thoại** (`SupportRewardCard` · thẻ trong
+`ResourceCascade` · `BonusPill`). Về màu thì có bốn từ vựng rời nhau cùng trả lời một câu hỏi
+*"cái này quý tới đâu?"*: bốn "tone" của hộp thoại phần thưởng · ba bậc Tailwind ở `badgeStyles.js` ·
+năm hạng huy chương của thành tích · một dòng chữ `tierLabel` của phiên. Đồng thời mọi phần thưởng,
+lớn hay nhỏ, đều mở một hộp thoại toàn màn hình — **một phiên Pomodoro thường cũng chặn màn hình**.
+
+**Vấn đề.** Hai thứ, và chúng độc lập với nhau:
+1. **Không so được.** Không có cách nào nhìn hai phần thưởng đến từ hai đường rồi biết cái nào quý
+   hơn, vì chúng không nói cùng một thứ tiếng.
+2. **Làm phiền đồng loạt.** Nhận một hòn đá và lên một kỷ nguyên mới gây ra cùng một mức gián đoạn.
+
+**Phương án đã cân nhắc.**
+- **(A) Chỉ thống nhất MÀU, giữ nguyên bảy cách vẽ.** Rẻ nhất. Loại: nó chữa triệu chứng dễ thấy
+  nhất mà không chạm vế thứ hai, và bảy cách vẽ vẫn tiếp tục trôi khỏi nhau.
+- **(B) Một `RewardModal` chung cho tất cả.** Loại: nó làm vế 2 tệ hơn — chuẩn hoá mức làm phiền
+  bằng cách nâng mọi thứ lên mức cao nhất.
+- **(C) Đẩy MỌI thứ xuống toast, bỏ hẳn hộp thoại.** Loại: lên kỷ và khủng hoảng kỷ buộc phải
+  QUYẾT ĐỊNH; một quyết định trôi qua trong 4 giây là mất quyết định.
+- **(D — đã chọn) Một thẻ chung + phân tầng theo *"việc này có buộc phải quyết định không?"*.**
+
+**Giải pháp.** Ba lớp, đúng khuôn ba lớp mà dự án đã dùng cho mái · tầng trệt · mặt đường · thực vật:
+- `src/engine/rewardTiers.js` — **BẢNG**: thang độ hiếm duy nhất, **đúng bốn bậc**
+  (thường `--muted` · tốt `--good` · hiếm `--warn` · huyền thoại `--accent`), kèm ánh xạ từ cả bốn
+  từ vựng cũ. Sống ở `engine/` chứ không ở `components/shared/` (nơi `badgeStyles.js` ở) vì
+  `rewardFeed.js` cần nó, mà **chưa từng có file nào trong `engine/` import từ `components/`**.
+- `src/components/shared/RewardCard.jsx` — **HÌNH**: một thẻ duy nhất, chỉ vẽ, không đọc store.
+- `src/engine/rewardFeed.js` — **LUẬT**: hàm thuần gom sáu kênh thưởng nhẹ thành một hàng đợi,
+  cắt còn 3 thẻ + một dòng "và N phần thưởng khác".
+- `src/components/RewardToastHost.jsx` — chồng toast ở góc; thay `AchievementToast.jsx` (đã xoá).
+
+**Luật mức độ làm phiền** — chặn màn hình CHỈ dành cho: **lên kỷ · thăng hoa · khủng hoảng kỷ ·
+thảm hoạ**. Mọi thứ còn lại đi qua toast, tự tắt sau 4 giây, bấm vào thì mở chi tiết.
+
+**Trade-off.**
+- Hộp thoại phần thưởng đầy đủ nay phải BẤM mới thấy ở phiên thường. Đổi lại 25 phút làm việc kết
+  thúc bằng một thẻ trượt vào góc thay vì một tấm chắn.
+- Một thẻ hẹp hơn hộp thoại ⇒ mô tả phải gói trong một dòng. Bố cục đã qua **hai lần bị ảnh dựng
+  bác bỏ** trước khi đúng (xem chú thích trong `RewardCard.jsx`).
+- Bốn bậc là ÍT so với năm hạng huy chương ⇒ bạch kim và kim cương dùng chung bậc đỉnh. Chấp nhận:
+  một thang màu chỉ đọc được khi số bậc còn đếm được trong một cái liếc.
+
+**Ảnh hưởng.**
+- **KHÔNG đổi một luật tính thưởng nào.** Store vẫn bật `lootModalOpen` ĐỒNG BỘ y như cũ (ba bài
+  test ở `completeFocusSession.test.js` khẳng định điều đó); toàn bộ thay đổi nằm ở tầng hiển thị,
+  đúng điểm cắm mà `RewardSequence` đã chọn từ Phase 4′.
+- **Ba kênh thông báo chết nay sống lại.** `relicNotification` · `rankUpNotification` ·
+  `missionCompletedIds` được store ghi từ lâu mà **không màn hình nào đọc** — nghĩa là *nhận một
+  di vật xưa nay không hiện gì cả*. Chồng toast là chỗ đọc đầu tiên.
+- `dismissAchievementNotification` / `dismissMissionNotification` nhận thêm **id tuỳ chọn** (không
+  truyền thì hành vi y hệt bản cũ): ba thẻ chồng nhau có ba đồng hồ riêng, nên thẻ thứ ba có thể
+  hết trước thẻ thứ nhất và `slice(1)` sẽ bỏ nhầm.
+- `LevelUpModal` không còn tự bật; nó thành phần CHI TIẾT mở khi bấm thẻ.
+
+**Điều kiện xem lại.** Nếu Đàm nói toast dễ bị bỏ lỡ ⇒ xem lại 4 giây và số 3, KHÔNG xem lại việc
+phân tầng. Nếu có mục thứ hai xin được tự bật ⇒ đọc `TECH_DEBT #87` trước.
+
+---
+
 ## ADR-059 — MẠNG ĐƯỜNG là một trục bản sắc: mỗi kỷ tự sinh lấy tập ô đường của mình bằng những CUNG CONG, thay cho một bàn cờ chung cho cả 15 kỷ
 
 **Ngày:** 2026-08-24
@@ -936,16 +1002,16 @@ hình dạng lỗi, xem `TECH_DEBT #79`).
   chứng minh: cây mã có đủ VIỆC 1+2+3+4 nhưng **hoàn tác riêng `orbit.js`** ra **14,23** — tức bốn
   việc kia cộng lại chỉ tốn 0,16, còn **2,90 là của riêng phép lùi này**. Và phép lùi KHÔNG rút
   ngắn được: hạ biên an toàn từ 4% xuống 0% chỉ lấy lại 3,3% khoảng cách.
-- **Ảnh hưởng**: đóng `TECH_DEBT #24`; mở `TECH_DEBT #86` (trục chặng dưới ngưỡng). Cặp đôi này là
+- **Ảnh hưởng**: đóng `TECH_DEBT #24`; mở `TECH_DEBT #89` (trục chặng dưới ngưỡng). Cặp đôi này là
   một **quyết định của Đàm**, không phải của tôi — hai thứ anh đã yêu cầu đang xung đột nhau, và
   cách duy nhất sai là lặng lẽ chọn hộ rồi nới ngưỡng (phễu Phase 9A).
 - **Điều kiện xem lại**: khi trục chặng được nâng lại bằng cần gạt THẬT (bầu trời lúc 6h so với
-  15h — xem `TECH_DEBT #86`), hoặc khi Đàm chốt hướng.
+  15h — xem `TECH_DEBT #89`), hoặc khi Đàm chốt hướng.
 
 ---
 
 
-## ADR-060 — Bộ xương thành phố SINH THEO KỶ bằng chia đôi đệ quy; đường là RANH GIỚI THỬA, không phải hàng và cột
+## ADR-066 — Bộ xương thành phố SINH THEO KỶ bằng chia đôi đệ quy; đường là RANH GIỚI THỬA, không phải hàng và cột
 
 - **Ngày**: 2026-08-24
 - **Bối cảnh**: Phase 20. Đàm nhìn bản quét 15 kỷ rồi nói hai câu, và cả hai đều nói về cùng một
@@ -998,12 +1064,12 @@ hình dạng lỗi, xem `TECH_DEBT #79`).
   `ring` · `minSide`; `country` khoá cứng vào `eraStyle`) và `cityPlan.js` (HÌNH). Bản quét lên ở cả
   hai trục: CHẶNG NGÀY **11,33 → 12,44** (qua lại ngưỡng mắt 12, 0/15), KỶ gần nhất **19,18 → 21,77**
   · trung vị **36,31 → 38,48** (0/105).
-  ⚠️ **ĐÍNH CHÍNH TRONG CHÍNH ADR NÀY — BẢN ĐẦU GHI "ĐÓNG `TECH_DEBT #86`" VÀ ĐÓ LÀ MỘT KẾT LUẬN
+  ⚠️ **ĐÍNH CHÍNH TRONG CHÍNH ADR NÀY — BẢN ĐẦU GHI "ĐÓNG `TECH_DEBT #89`" VÀ ĐÓ LÀ MỘT KẾT LUẬN
   SAI, ĐÃ ĐO VÀ TỰ BÁC BỎ.** Lời giải thích đi kèm cũng sai (*"bộ xương mỗi kỷ nay đổ bóng khác nhau
   nên các chặng không còn bị 15 bản sao pha loãng"*) — nghe cực kỳ xuôi, và tách ba dải của đúng cặp
   yếu nhất (6h↔15h) thì nó ngược hẳn: **trời 4,12 → 4,05 (−0,07)** · thành phố 6,51 → 5,56 (**tệ
   đi**) · **đất 18,05 → 20,42 (+2,37 — TOÀN BỘ phần tăng)**. Mà dải TRỜI mới là cần gạt đã được nêu
-  đích danh HAI LẦN ở `CLAUDE.md`. ⇒ **`#86` GIỮ NGUYÊN TRẠNG THÁI MỞ**; cổng qua nhờ một dải chẳng
+  đích danh HAI LẦN ở `CLAUDE.md`. ⇒ **`#89` GIỮ NGUYÊN TRẠNG THÁI MỞ**; cổng qua nhờ một dải chẳng
   liên quan tới chẩn đoán, và biên chỉ **0,44**. Cơ chế khả dĩ cho phần tăng ở dải đất — ghi là
   **TƯƠNG QUAN, chưa chứng minh nhân quả** — là số ô đường thôi là hằng số 80 mà thành 34…92 tuỳ kỷ.
   Bài học: **một cái cổng đo một con số GỘP thì không phân biệt được "đã chữa đúng bệnh" với "một
@@ -1053,11 +1119,11 @@ hình dạng lỗi, xem `TECH_DEBT #79`).
   chứng minh: cây mã có đủ VIỆC 1+2+3+4 nhưng **hoàn tác riêng `orbit.js`** ra **14,23** — tức bốn
   việc kia cộng lại chỉ tốn 0,16, còn **2,90 là của riêng phép lùi này**. Và phép lùi KHÔNG rút
   ngắn được: hạ biên an toàn từ 4% xuống 0% chỉ lấy lại 3,3% khoảng cách.
-- **Ảnh hưởng**: đóng `TECH_DEBT #24`; mở `TECH_DEBT #86` (trục chặng dưới ngưỡng). Cặp đôi này là
+- **Ảnh hưởng**: đóng `TECH_DEBT #24`; mở `TECH_DEBT #89` (trục chặng dưới ngưỡng). Cặp đôi này là
   một **quyết định của Đàm**, không phải của tôi — hai thứ anh đã yêu cầu đang xung đột nhau, và
   cách duy nhất sai là lặng lẽ chọn hộ rồi nới ngưỡng (phễu Phase 9A).
 - **Điều kiện xem lại**: khi trục chặng được nâng lại bằng cần gạt THẬT (bầu trời lúc 6h so với
-  15h — xem `TECH_DEBT #86`), hoặc khi Đàm chốt hướng.
+  15h — xem `TECH_DEBT #89`), hoặc khi Đàm chốt hướng.
 
 ---
 

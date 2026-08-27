@@ -13,7 +13,7 @@
  *
  * Phase 21 tách đôi hai việc ấy, vì chúng là hai câu hỏi khác nhau và chỉ có việc thứ hai là đúng:
  *
- * · *"đất được chia thế nào?"* → **`city3d/cityPlan.js`** (chia thửa đệ quy, ADR-060). Năm kiểu
+ * · *"đất được chia thế nào?"* → **`city3d/cityPlan.js`** (chia thửa đệ quy, ADR-066). Năm kiểu
  *   khung cũ dựng đường từ **các điểm mốc cố định** — 5 khu 3×3 ở bốn góc + tâm — nên dù đường có
  *   cong, bộ xương của nó vẫn là cái bố cục ấy ở cả 15 kỷ. Đó chính là "vẻ quy hoạch" mà Đàm chỉ
  *   vào lần thứ hai. Chia thửa thì mỗi kỷ ra một tập thửa khác cỡ khác hình, không có điểm mốc nào

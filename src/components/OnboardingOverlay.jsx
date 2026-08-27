@@ -4,6 +4,7 @@
  * mount một lần trong App là đủ. Người dùng cũ (đã có phiên) không bao giờ thấy.
  */
 import { motion } from 'framer-motion';
+import { useEnterMotion } from '../lib/motionPresets';
 import useGameStore from '../store/gameStore';
 import useSettingsStore from '../store/settingsStore';
 import { Glyph } from './icons/Glyph';
@@ -21,6 +22,7 @@ export default function OnboardingOverlay() {
   const dismiss = useSettingsStore((s) => s.setHasViewedInitialOnboarding);
   const sessionsCompleted = useGameStore((s) => s.progress.sessionsCompleted ?? 0);
   const historyLength = useGameStore((s) => s.history?.length ?? 0);
+  const enterMotion = useEnterMotion();
 
   // Chỉ hiện cho người MỚI: chưa xem + chưa có phiên nào trong lịch sử.
   const isNewUser = sessionsCompleted === 0 && historyLength === 0;
@@ -35,8 +37,7 @@ export default function OnboardingOverlay() {
       style={{ background: 'rgba(31,30,29,0.5)', backdropFilter: 'blur(6px)' }}
     >
       <motion.div
-        initial={{ opacity: 0, y: 24, scale: 0.97 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
+        {...enterMotion}
         className="w-full max-w-[440px] rounded-[30px] border px-6 py-6"
         style={{
           background: lightTheme ? 'rgba(255,255,255,0.98)' : 'rgba(24,24,27,0.98)',

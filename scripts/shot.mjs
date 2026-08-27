@@ -36,6 +36,7 @@
  *   node scripts/shot.mjs --tab "Thành tích" --out b.png
  *   node scripts/shot.mjs --phone --out c.png               # 390px THẬT
  *   node scripts/shot.mjs --dark --hour 22 --out d.png
+ *   node scripts/shot.mjs --skin swiss --out d2.png       # soi một skin khác mặc định
  *   node scripts/shot.mjs --tab "Thống kê" --full --out e.png   # chụp trọn chiều dài trang
  *   node scripts/shot.mjs --phone --fit                     # ĐO chữ có tràn khỏi nút không
  *   node scripts/shot.mjs --tab "Thành Phố" --probe "..."   # hỏi thẳng trình duyệt một con số
@@ -78,6 +79,13 @@ import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { extname, join, resolve } from 'node:path';
 import { spawn } from 'node:child_process';
 
+import { DEFAULT_UI_SKIN } from '../src/store/uiSkins.js';
+// ⚠️ Nhập THẲNG `localDateStr` từ mã sản phẩm, không viết lại phép đổi sang giờ Việt Nam ở đây:
+// khoá ngày của fixture phải khớp TỪNG KÝ TỰ với khoá mà app tính ra, nếu không `dailyTracking`
+// bị coi là của hôm khác và mọi ảnh chụp lại hiện "0 phiên hôm nay". (`time.js` không import gì
+// nên nạp được bằng node trần, không cần loader ESM của dự án.)
+import { localDateStr } from '../src/engine/time.js';
+
 const argv = process.argv;
 const has = (f) => argv.includes(f);
 const arg = (f, d) => { const i = argv.indexOf(f); return i >= 0 ? argv[i + 1] : d; };
@@ -86,6 +94,12 @@ const ROOT = resolve(process.env.DIST ?? 'dist');
 const OUT = arg('--out', 'shot.png');
 const TAB = arg('--tab', null);
 const THEME = has('--dark') ? 'dark' : 'light';
+// ⚠️ Fixture này TỪNG chốt cứng `uiSkin: 'editorial'`. Khi mặc định của app đổi sang 'arcade'
+// (2026-08-27) thì mọi ảnh chụp sẽ lặng lẽ hiện một skin KHÔNG phải mặc định — đúng loại
+// "công cụ đo nói dối" đã cắn dự án này nhiều lần, và nó nói dối theo hướng khó thấy nhất:
+// tấm ảnh vẫn hợp lý, chỉ là nó mô tả một app khác. Nay lấy đúng mặc định của store, và có cờ
+// `--skin <tên>` để soi bất kỳ skin nào.
+const SKIN = arg('--skin', DEFAULT_UI_SKIN);
 const PHONE = has('--phone');
 const FULL = has('--full');
 const WIDTH = Number(arg('--width', PHONE ? 390 : 1280));
@@ -114,6 +128,8 @@ const FAKE_EPOCH = HOUR === null ? null : Date.UTC(2026, 7, 13, (HOUR - 7 + 24) 
  * khuyết điểm khi có nhiều dữ liệu.
  */
 const FIXTURE = arg('--fixture', null);
+// Mốc thời gian của fixture: theo đúng đồng hồ mà app sẽ thấy (kể cả khi `--hour` giả lập).
+const FIXTURE_NOW = FAKE_EPOCH === null ? Date.now() : FAKE_EPOCH;
 const GAME = FIXTURE ? JSON.parse(readFileSync(FIXTURE, 'utf8')) : {
   state: {
     buildings: ['bp_xuong_hoa', 'bp_truong_dai_hoc', 'bp_nha_bao_tang', 'bp_thu_vien_kh', 'bp_cung_dien_ph'],
@@ -121,12 +137,26 @@ const GAME = FIXTURE ? JSON.parse(readFileSync(FIXTURE, 'utf8')) : {
     progress: { activeBook: 7 },
     eraTracking: { sessionsInCurrentEra: 40 },
     streak: { currentStreak: 9 },
+    // ⚠️ HAI PHIÊN CỦA HÔM NAY. Không có chúng thì "phiên hôm nay" LUÔN bằng 0, nên vòng MỤC TIÊU
+    // NGÀY quanh đồng hồ vẽ ra 0% — tức VÔ HÌNH — trong mọi ảnh chụp; một fixture không thể hiện
+    // nổi tính năng đang soi thì không soi được gì (bài học "fixture đều tăm tắp là fixture vô
+    // dụng", `CLAUDE.md`).
+    // ⚠️ Phải seed vào `history` chứ KHÔNG phải vào `dailyTracking`: store DỰNG LẠI `dailyTracking`
+    // từ `history` mỗi lần nạp (`rebuildCurrentDailyTrackingFromHistory`), nên một bộ đếm seed
+    // thẳng sẽ bị ghi đè về 0 trong im lặng — đã thử và đo được đúng như vậy.
+    history: [
+      // ⚠️ Lùi vài PHÚT chứ không vài GIỜ: khoá ngày tính theo giờ Việt Nam, nên khi chạy gần nửa
+      // đêm VN thì một mốc lùi 3 giờ rơi sang HÔM QUA và fixture lặng lẽ chỉ còn 1 phiên (đã đo
+      // đúng như vậy). Lùi 10/20 phút thì gần như không thể lệch ngày.
+      { timestamp: FIXTURE_NOW - 20 * 60 * 1000, minutes: 25, completed: true },
+      { timestamp: FIXTURE_NOW - 10 * 60 * 1000, minutes: 25, completed: true },
+    ],
   },
   version: 4,
 };
 const SETTINGS = {
   state: {
-    uiTheme: THEME, uiSkin: 'editorial', cityHomeBackdrop: true,
+    uiTheme: THEME, uiSkin: SKIN, cityHomeBackdrop: true,
     cityRenderMode: '3d', hasViewedInitialOnboarding: true,
   },
   version: 8,
@@ -374,9 +404,86 @@ const fullH = Math.max(sh, innerSh ?? 0);
 //
 // ⚠️ Chú thích về đoạn mã trình duyệt phải nằm NGOÀI chuỗi (xem cảnh báo dài ở khối `--fit`).
 // Biểu thức được bọc trong `String(...)`, nên trả về đối tượng thì nên tự `JSON.stringify`.
+// ─── `--press "<chữ trên nút>"` — BẤM GIỮ MỘT NÚT RỒI ĐO, bằng số ───────────────────────────
+//
+// ⚠️ Vì sao KHÔNG đo bằng `--probe` với `dispatchEvent`: CSS `:active` chỉ được trình duyệt bật
+// bởi INPUT THẬT. Một `new PointerEvent(...)` tổng hợp làm Framer Motion phản ứng (nó nghe sự kiện
+// JS) nhưng KHÔNG làm `:active` khớp — nên phép đo sẽ thấy nút hạ xuống mà bóng vẫn còn, tức
+// **báo hỏng một cơ chế đang chạy đúng**. `Input.dispatchMouseEvent` của CDP đi qua đúng đường mà
+// chuột thật đi, nên cả hai nửa cùng nổ.
+//
+// ⚠️ Và vì sao nằm Ở ĐÂY chứ không phải một script đo riêng: y hệt lý do của `--probe` ngay trên.
+//
+// In ra ba mốc: nghỉ → đang giữ → đã nhả. Cả ba đọc CÙNG hai đại lượng (dịch chuyển dọc và độ dày
+// bóng) để so trực tiếp được với nhau.
+const PRESS = arg('--press', null);
+if (PRESS) {
+  const found = await evaluate(`(function(){
+    var t = ${JSON.stringify(PRESS)};
+    var bs = Array.prototype.slice.call(document.querySelectorAll('button'));
+    var el = bs.filter(function(b){ return !b.disabled && b.textContent.trim().indexOf(t) !== -1; })[0];
+    if (!el) return JSON.stringify({ err: 'không thấy nút BẬT nào chứa chữ đó. Có: '
+      + bs.filter(function(b){return !b.disabled;}).map(function(b){return JSON.stringify(b.textContent.trim().slice(0,26));}).join(', ') });
+    window.__pressEl = el;
+    // ⚠️ Nút có thể đang bị CUỘN KHUẤT (app cuộn trong một khung bên trong, cao hơn khung nhìn
+    // nhiều lần). Toạ độ của một nút ngoài màn hình vẫn là một con số hợp lệ, nên không cuộn thì
+    // phép đo sẽ bấm vào chỗ trống rồi báo "nút không lún" — hỏng theo hướng đổ oan cho mã.
+    el.scrollIntoView({ block: 'center', inline: 'center' });
+    var r = el.getBoundingClientRect();
+    var x = Math.round(r.left + r.width/2), y = Math.round(r.top + r.height/2);
+    var at = document.elementFromPoint(x, y);
+    return JSON.stringify({ x: x, y: y,
+      trung: !!(at && (at === el || el.contains(at))),
+      dang_cham: at ? (at.tagName + (at.className ? '.' + String(at.className).split(' ')[0] : '')) : null });
+  })()`);
+  const hit = JSON.parse(found);
+  if (hit.err) { console.log('[press] ❌ ' + hit.err); ws.close(); chrome.kill(); server.close(); process.exit(2); }
+  // ⚠️ Gác BẮT BUỘC: toạ độ không trúng nút thì mọi con số bên dưới là số của một cú bấm vào chỗ
+  // khác — tức phép đo sẽ báo "không lún" cho một cơ chế hoàn toàn lành.
+  if (!hit.trung) { console.log(`[press] ❌ toạ độ (${hit.x},${hit.y}) KHÔNG trúng nút — đang chạm ${hit.dang_cham}`); ws.close(); chrome.kill(); server.close(); process.exit(2); }
+  // Chuột thật bao giờ cũng DI tới trước rồi mới nhấn; thiếu bước này một số handler bỏ qua.
+  await cdp('Input.dispatchMouseEvent', { type: 'mouseMoved', x: hit.x, y: hit.y, buttons: 0 });
+  await sleep(120);
+
+  // Đọc: dịch chuyển dọc (Framer ghi vào transform) + độ dày bóng (CSS `active:` quyết).
+  const doc = `(function(){
+    var el = window.__pressEl, cs = getComputedStyle(el);
+    var m = new DOMMatrixReadOnly(cs.transform === 'none' ? '' : cs.transform);
+    return JSON.stringify({ y: Math.round(m.m42 * 100) / 100, bong: cs.getPropertyValue('--tw-shadow').trim(),
+      inline: el.getAttribute('style') || '', con_trong_dom: document.body.contains(el) });
+  })()`;
+  const nghi = JSON.parse(await evaluate(doc));
+  await cdp('Input.dispatchMouseEvent', { type: 'mousePressed', x: hit.x, y: hit.y, button: 'left', buttons: 1, clickCount: 1 });
+  await sleep(320);                                   // chờ lò xo của Framer đứng yên
+  const giu = JSON.parse(await evaluate(doc));
+  await cdp('Input.dispatchMouseEvent', { type: 'mouseReleased', x: hit.x, y: hit.y, button: 'left', buttons: 0, clickCount: 1 });
+  await sleep(420);
+  const nha = JSON.parse(await evaluate(doc));
+
+  const day = /0 (\d+)px/.exec(nghi.bong);
+  console.log(`[press] nút chứa "${PRESS}"`);
+  console.log(`  nghỉ    : y=${nghi.y}px · bóng=${nghi.bong} · style="${nghi.inline}"`);
+  console.log(`  ĐANG GIỮ: y=${giu.y}px · bóng=${giu.bong} · style="${giu.inline}"`);
+  console.log(`  đã nhả  : y=${nha.y}px · bóng=${nha.bong} · cònTrongDOM=${nha.con_trong_dom}`);
+  const dayNghi = day ? Number(day[1]) : null;
+  const lun = giu.y - nghi.y;
+  const matBong = /^0 0 /.test(giu.bong) || giu.bong === 'none';
+  const batLen = Math.abs(nha.y - nghi.y) < 0.5 && nha.bong === nghi.bong;
+  console.log(`  ⇒ lún ${lun}px so với chiều dày bóng ${dayNghi}px : ${lun === dayNghi ? '✓ KHỚP' : '✗ LỆCH'}`);
+  console.log(`  ⇒ bóng biến mất lúc giữ : ${matBong ? '✓' : '✗'}`);
+  console.log(`  ⇒ nhả ra bật về như cũ  : ${batLen ? '✓' : '✗'}`);
+  ws.close(); chrome.kill(); server.close();
+  process.exit(lun === dayNghi && matBong && batLen ? 0 : 1);
+}
+
 const PROBE = arg('--probe', null);
 if (PROBE) {
-  const out = await evaluate(`String((function(){ return (${PROBE}); })())`);
+  // ⚠️ `Promise.resolve(...).then(String)` chứ KHÔNG phải `String(...)`. Bản cũ bọc `String()` ở
+  // ngoài cùng, nên một biểu thức bất đồng bộ bị biến thành chuỗi "[object Promise]" NGAY LẬP TỨC
+  // — `awaitPromise: true` của CDP không còn gì để chờ. Triệu chứng là một dòng kết quả trông
+  // hoàn toàn bình thường mà chẳng chứa số nào thật: đúng kiểu công cụ đo nói dối. Nay chuỗi hoá
+  // SAU khi promise đã xong, nên probe đo được cả những thứ cần chờ (hoạt hoạ, cử chỉ, mạng).
+  const out = await evaluate(`Promise.resolve((function(){ return (${PROBE}); })()).then(String)`);
   console.log(`[probe] innerWidth=${iw} innerHeight=${ih} · ${out}`);
   ws.close(); chrome.kill(); server.close();
   process.exit(0);

@@ -2307,7 +2307,7 @@ xuống, mà `massHeight` thì không phụ thuộc hình chiếu đáy) — bù
 
 ---
 
-## Phase 20 — BỎ LƯỚI CỨNG: BỘ XƯƠNG SINH THEO KỶ (2026-08-24, ADR-060)
+## Phase 20 — BỎ LƯỚI CỨNG: BỘ XƯƠNG SINH THEO KỶ (2026-08-24, ADR-066)
 
 - **Công cụ**: `scripts/city-preview.mjs --sweep` → `scripts/sweep-score.mjs`
 - **Dòng lệnh** (hai vế **y hệt nhau**, chỉ khác KHO):
@@ -2350,7 +2350,7 @@ nó bắt được một chỗ trôi.
 | ⇒ gộp (RMS ba dải) | 11,33 | **12,44** | +1,11 |
 
 ⇒ **Toàn bộ phần đi lên nằm ở dải ĐẤT. Dải THÀNH PHỐ còn TỆ ĐI. Dải TRỜI đứng yên** — đúng như phải
-thế, vì Phase 20 không chạm một dòng nào vào bầu trời. Nghĩa là `TECH_DEBT #86` qua được cổng nhờ
+thế, vì Phase 20 không chạm một dòng nào vào bầu trời. Nghĩa là `TECH_DEBT #89` qua được cổng nhờ
 một dải **KHÔNG liên quan tới nguyên nhân**, chứ không phải vì chỗ hỏng được sửa; trời vẫn là dải
 yếu nhất bảng (4,05, thấp hơn ngưỡng mắt ba lần) và cần gạt thật vẫn chưa được kéo.
 ⚠️ **Cơ chế vì sao dải ĐẤT mạnh lên thì CHƯA ĐƯỢC CHỨNG MINH.** Thứ duy nhất đo được là một tương
@@ -2360,7 +2360,7 @@ VIÊN, không phải một kết luận — đừng chép nó thành nhân quả
 ⚠️ **PHÉP ĐO BA DẢI PHẢI CHIA CHO SỐ DẢI TRƯỚC KHI LẤY CĂN.** `vecDist` là **RMS**, không phải tổng
 Euclid (`sqrt(Σ/(n/3))`). Bản đầu của script tách dải quên vế chia và in ra **21,55** trong khi công
 cụ thật in **12,44** — hai con số cho cùng một đại lượng. Nếu không truy tới cùng thì tôi đã gán sai
-công lao cho từng dải, mà chính bảng phân dải này là thứ quyết định `#86` được đọc thế nào.
+công lao cho từng dải, mà chính bảng phân dải này là thứ quyết định `#89` được đọc thế nào.
 
 ### Đối xứng bốn chiều — đo trên DỮ LIỆU QUY HOẠCH, không đo trên điểm ảnh
 
@@ -2387,7 +2387,7 @@ Thang: **0% = đúng mức ngẫu nhiên** (một bộ xương ngẫu nhiên cù
 
 > ⚠️ **ĐÍNH CHÍNH sau khi hợp nhất (Phase 21)**: lệnh tái lập dưới đây **KHÔNG chạy được nữa** —
 > `buildRoadPlan` cùng năm bộ dựng khung đã bị xoá khi hợp nhất hai nhánh (ADR-064), vì bố cục nay
-> do `buildCityPlan` (chia thửa đệ quy, ADR-060) quyết còn `arcTrace` chỉ lo HÌNH DẠNG của nét cắt.
+> do `buildCityPlan` (chia thửa đệ quy, ADR-066) quyết còn `arcTrace` chỉ lo HÌNH DẠNG của nét cắt.
 > Bảng số bên dưới vẫn là bản ghi ĐÚNG của thời điểm nó được đo; đừng chép nó làm mốc nền cho một
 > phase sau (bài học `TECH_DEBT #43`) — hãy tự đo lại.
 

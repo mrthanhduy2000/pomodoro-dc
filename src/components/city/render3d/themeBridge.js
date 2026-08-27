@@ -3,7 +3,7 @@
  *
  * ⚠️ CÁI BẪY LỚN NHẤT Ở ĐÂY: `data-theme`/`data-skin` KHÔNG nằm trên `document.documentElement`
  * mà trên một div BÊN TRONG (`src/App.jsx`, div gốc của khung app). Đọc từ `documentElement` sẽ
- * luôn ra token mặc định của theme sáng — tức là **sai màu ở 7 trong 8 tổ hợp** theme × skin, mà
+ * luôn ra token mặc định của theme sáng — tức là **sai màu ở 9 trong 10 tổ hợp** theme × skin, mà
  * lại sai một cách âm thầm (vẫn ra màu, chỉ là màu của giao diện khác).
  * Vì vậy hàm dưới đây leo NGƯỢC từ chính canvas lên tới phần tử gần nhất có `data-theme`.
  *

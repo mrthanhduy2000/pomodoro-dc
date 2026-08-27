@@ -13,22 +13,33 @@
 > mà không được refactor triệt để, phải CHỦ ĐỘNG đề xuất mở một "Maintenance Sprint" (nêu rõ mục
 > tiêu/phạm vi/lợi ích/rủi ro/tiêu chí hoàn thành) thay vì tiếp tục cộng thêm tính năng mới.
 >
-> **Trạng thái ngưỡng hiện tại (2026-08-24, sau Phase 21 — HỢP NHẤT hai nhánh)**: phiên này không
+> **Trạng thái ngưỡng hiện tại (2026-08-27 tối, sau ADR-060 "một ngôn ngữ hình cho phần thưởng")**:
+> thêm **#87** (báo cáo tuần vẫn tự bật sáng thứ Hai — ngoại lệ DUY NHẤT của luật mức độ làm phiền)
+> ở mức **Low**. Vẫn **1 mục Priority High còn mở** (#53), **0 mục Critical** → xa ngưỡng
+> Maintenance Sprint.
+>
+> *(mốc trước)* **(2026-08-27, sau khi viết lại `ActionButton`)**: thêm **#86**
+> (137 nút tự vẽ không đọc token skin) ở mức **Medium** — vẫn **1 mục Priority High còn mở**
+> (#53), **0 mục Critical** → xa ngưỡng Maintenance Sprint.
+>
+> *(mốc trước)* **Trạng thái ngưỡng (2026-08-24 chiều, sau ADR-059)**: thêm **#84** (kỷ 1 và 2 thấp đi
+
+> *(mốc trước)* **Trạng thái ngưỡng (2026-08-24, sau Phase 21 — HỢP NHẤT hai nhánh)**: phiên này không
 > mở mục nợ mới và không đóng mục nào — nó gộp hai bộ sinh bố cục đã giải cùng một bài toán hai
 > lần. `buildRoadPlan` cùng năm bộ dựng khung của ADR-059 **đã bị xoá**; nay `buildCityPlan` (chia
-> thửa đệ quy, ADR-060) quyết CHỖ CẮT còn `arcTrace` (ADR-059) quyết HÌNH DẠNG nét cắt — xem
+> thửa đệ quy, ADR-066) quyết CHỖ CẮT còn `arcTrace` (ADR-059) quyết HÌNH DẠNG nét cắt — xem
 > ADR-064. Hệ quả phải biết: **mọi bảng số đo trên một trong hai nhánh cũ đều đã lạc hậu** (quần
 > thể ô nhà dân đi 371 → 432 → **476**), nên đừng chép cột "sau" của Phase 19 hay Phase 20 làm mốc
 > nền — tự đo lại (bài học `#43`). Con số ngưỡng thì KHÔNG đổi: vẫn **0 Critical**, **2 mục đúng
 > chữ `High`** (`#14`, `#53`) ⇒ **dưới ngưỡng 8–10, KHÔNG cần Maintenance Sprint**.
 
-> **(Mốc trước) 2026-08-24 tối (Phase 20)**: Phase 20 **MỞ 1 mục** (`#87` — khu phố
-> làm 4 kỷ thấp đi + kỷ 6 mất chi tiết mái) và **KHÔNG đóng mục nào**. `#86` vẫn MỞ nhưng đã nhẹ
+> **(Mốc trước) 2026-08-24 tối (Phase 20)**: Phase 20 **MỞ 1 mục** (`#90` — khu phố
+> làm 4 kỷ thấp đi + kỷ 6 mất chi tiết mái) và **KHÔNG đóng mục nào**. `#89` vẫn MỞ nhưng đã nhẹ
 > đi: cổng qua ngưỡng (11,33 → **12,44** ✓) nhờ một dải KHÔNG liên quan tới nguyên nhân, còn dải
 > TRỜI — cần gạt thật — vẫn đứng yên ở 4,05. `#52` cũng nhẹ đi (đã vá kiểu báo oan trên ảnh
 > nhìn-từ-trên-xuống) nhưng nguyên nhân vết rách vẫn chưa truy được. Đếm lại theo đúng cách đã ghi
 > bên dưới: **80 mục · 60 còn mở · 0 Critical**; đếm **đúng chữ `High`** ra **2** (`#14`, `#53`),
-> đếm **gộp cả `Medium-High`** ra **6** (`#3`, `#13`, `#14`, `#15`, `#53`, `#86`) — `#87` là
+> đếm **gộp cả `Medium-High`** ra **6** (`#3`, `#13`, `#14`, `#15`, `#53`, `#89`) — `#90` là
 > Medium nên không vào cả hai. Cả hai con số vẫn **dưới ngưỡng 8–10** ⇒ **KHÔNG cần Maintenance
 > Sprint**.
 
@@ -105,11 +116,11 @@
 
 
 > **(Mốc trước) 2026-08-24 (Phase 19)**: Phase 19 **ĐÓNG 2 mục** (`#24` khung hình cắt công
-> trình · `#75` ziggurat đọc ra là khối đội mũ) và **MỞ 1** (`#86`, trục chặng ngày dưới ngưỡng mắt
+> trình · `#75` ziggurat đọc ra là khối đội mũ) và **MỞ 1** (`#89`, trục chặng ngày dưới ngưỡng mắt
 > — cái giá của ADR-061, đang chờ Đàm chọn hướng). Đếm lại bằng cách quét trường `**Priority**` của
 > TỪNG mục rồi loại mục đã đóng: **79 mục · 59 còn mở · 0 Critical**. High thì phải nói rõ cách
 > đếm, vì đây đúng chỗ dòng này đã trôi một lần: đếm **đúng chữ `High`** ra **2** (`#14`, `#53`);
-> đếm **gộp cả `Medium-High`** ra **6** (`#3`, `#13`, `#14`, `#15`, `#53`, `#86`). Cả hai con số
+> đếm **gộp cả `Medium-High`** ra **6** (`#3`, `#13`, `#14`, `#15`, `#53`, `#89`). Cả hai con số
 > đều **dưới ngưỡng 8–10** ⇒ **KHÔNG cần Maintenance Sprint**. ⚠️ Lần trước dòng này ghi "1 mục
 > High" mà không nói đếm kiểu gì, nên không ai tái lập được — một con số nghiệm thu phải đi kèm
 > cách đo ra nó, kể cả khi con số ấy chỉ nằm trong một dòng tài liệu.
@@ -1056,8 +1067,8 @@
 > trần đặt lúc thành phố còn thấp, ở lại sau khi ADR-052 chia ô thành khu phố — đúng hình dạng
 > ADR-019 (*tiền đề bị gỡ ở một phase khác, kết luận chết theo mà không ai biết*).
 >
-> ⚠️ **CÁI GIÁ ĐÃ TRẢ, ghi ở `#86`**: thành phố nay đứng xa hơn ~38% và trục CHẶNG NGÀY của bản
-> quét tụt 14,39 → 11,33. Đóng mục này KHÔNG miễn phí, và mục #86 là chỗ ghi phần chưa trả xong.
+> ⚠️ **CÁI GIÁ ĐÃ TRẢ, ghi ở `#89`**: thành phố nay đứng xa hơn ~38% và trục CHẶNG NGÀY của bản
+> quét tụt 14,39 → 11,33. Đóng mục này KHÔNG miễn phí, và mục #89 là chỗ ghi phần chưa trả xong.
 
 > ⚠️ **CẬP NHẬT 2026-08-18 (Phase 12) — BỘ SỐ GỐC CỦA MỤC NÀY ĐO THIẾU 30% CHIỀU CAO.**
 > `frame-fit.mjs` nhân `BUILDING_SCALE` (1,3) vào bề NGANG nhưng quên nhân vào chiều CAO, trong khi
@@ -2415,7 +2426,7 @@ ship một trạng thái dở dang, hãy làm nó **ĐẾM ĐƯỢC trong một 
 > ⇒ Mục này nay **chỉ còn kỷ 4**.
 >
 > ⚠️ **NHƯNG ĐỪNG ĐÓNG NỬA NÀY VỘI — nó đang ĐỨNG NHỜ ADR-061, mà ADR-061 thì đang chờ Đàm quyết**
-> (xem `#86`: phép lùi ấy làm trục chặng ngày tụt xuống dưới ngưỡng mắt). Nếu Đàm chọn hoàn tác
+> (xem `#89`: phép lùi ấy làm trục chặng ngày tụt xuống dưới ngưỡng mắt). Nếu Đàm chọn hoàn tác
 > phép lùi thì kỷ 5 **tụt lại** xuống 3,51%. Đây đúng hình dạng bài học Phase 7D: *một lời hứa đúng
 > nhờ một thứ chẳng liên quan thì gãy trong im lặng đúng lúc thứ đó đổi* — nên nó được ghi ra ở đây
 > thay vì để yên trong một con số test.
@@ -2968,7 +2979,7 @@ hai con số. Việc *nâng* 9 kỷ kia lên trên 5% nếu có làm thì thuộ
 > **nhưng** trần toàn cục nay > 5%. Hai câu ấy phải cùng được khẳng định, vì chỉ câu đầu thì đọc
 > thành "vẫn hỏng", chỉ câu sau thì đọc thành "đã xong".
 > ⚠️ Kết luận **BỀ RỘNG** của mục này (kỷ 7 và 10) vẫn nguyên giá trị, và mục vẫn ĐÓNG — thứ đổi là
-> một chữ trong tiêu đề, không phải hướng chữa. Và nó cũng đứng nhờ ADR-061 (xem `#86`).
+> một chữ trong tiêu đề, không phải hướng chữa. Và nó cũng đứng nhờ ADR-061 (xem `#89`).
 
 > ⚠️ **MỤC NÀY ĐÃ ĐƯỢC TÁCH ĐÔI (2026-08-21, Đàm ra lệnh: *"`#59` chứa hai loại nguyên nhân: TÁCH"*).**
 > Nó từng ôm cả hai chứng bệnh: **(1) nước quá HẸP** (kỷ 6 · 7 · 10) và **(2) địa hình CHE** (kỷ 4 · 5,
@@ -4512,7 +4523,7 @@ cấp `Math.min(3,…)` → `Math.min(9,…)` · cắt bớt danh sách cấp th
 > ⚠️ **ĐÁNH SỐ LẠI khi hợp nhất (Phase 21)**: hai mục dưới đây vốn mang số **#79** và **#80** trên
 > nhánh Phase 19/20, trùng với hai mục CÙNG SỐ mà `main` đã dùng cho hai chuyện khác hẳn (vai màu
 > `gear` · cư dân chiếm 0,29% khung hình). Theo đúng luật đã áp cho ADR — *số của `main` giữ
-> nguyên nghĩa* — chúng đổi thành **#86** (trục chặng ngày) và **#87** (khu phố làm 4 kỷ thấp đi).
+> nguyên nghĩa* — chúng đổi thành **#89** (trục chặng ngày) và **#90** (khu phố làm 4 kỷ thấp đi).
 
 ## #88 — Trần "một khu phố không rộng quá MỘT Ô" khoá luôn số suất đất ở 4, làm cột `units`/`cols`/`rows` của bảng khu phố thành một TRỤC CHẾT
 
@@ -4569,7 +4580,7 @@ cấp `Math.min(3,…)` → `Math.min(9,…)` · cắt bớt danh sách cấp th
 ---
 
 
-## #87 — Chia ô thành khu phố làm 4 kỷ THẤP ĐI và kỷ 6 mất một phần ba chi tiết mái; cả hai đều bị chặn bởi bảng lịch sử của Phase 14
+## #90 — Chia ô thành khu phố làm 4 kỷ THẤP ĐI và kỷ 6 mất một phần ba chi tiết mái; cả hai đều bị chặn bởi bảng lịch sử của Phase 14
 
 > Mở 2026-08-24 (Phase 20). Hai khuyết tật khác nhau nhưng **cùng một nguyên nhân gốc và cùng một
 > vật cản**, nên ghi chung: chia một ô thành 4–10 đơn vị (ADR-052) làm mỗi đơn vị nhỏ đi, mà cả hai
@@ -4678,6 +4689,75 @@ mà sinuosity chỉ **1,0083** ⇒ đối chứng **ĐỎ trên một mạng đ�
 trong chú thích thì đừng để `--selftest` của chính nó vẫn dùng đại lượng ấy.**
 
 ---
+
+## #87 — Báo cáo tuần VẪN tự bật sáng thứ Hai, tức nó là ngoại lệ duy nhất của luật "chỉ bốn việc được chặn màn hình"
+
+- **Tên**: `weeklyReportOpen` tự bật (không do Đàm bấm) và mở một hộp thoại toàn màn hình.
+- **Module**: `src/App.jsx` (`OverlayStack`) · `src/store/gameStore.js` (`checkWeeklyReport`) ·
+  `src/components/WeeklyReportModal.jsx`.
+- **Priority**: Low · **Severity**: Low.
+- **Impact**: sáng thứ Hai đầu tiên trong tuần, Đàm mở app và bị chặn bởi một bản tổng kết mà anh
+  không xin. Đúng loại làm phiền mà ADR-060 sinh ra để dẹp — nhưng nó là bản tổng kết chứ không
+  phải một phần thưởng, nên nó nằm ngoài phạm vi bảy đường trao thưởng của phase này.
+- **Root Cause**: `checkWeeklyReport` đặt `weeklyReportOpen: true` + `weeklyReportMode: 'previous'`
+  vào sáng thứ Hai. Có sẵn hai chế độ (`'previous'` = tự bật · `'current'` = Đàm bấm ở thanh bên),
+  nên phân biệt "tự bật" với "được gọi" là chuyện SẴN CÓ, không cần thêm cờ mới.
+- **Current Risk**: thấp — mỗi tuần đúng một lần.
+- **Future Risk**: nó là ngoại lệ duy nhất còn lại; ngoại lệ nào cũng là chỗ để ngoại lệ thứ hai
+  bám vào (*"nếu báo cáo tuần được phép tự bật thì cái này cũng được"*).
+- **Recommended Solution**: `showWeeklyModal = weeklyReportOpen && (weeklyReportMode === 'current'
+  || detail === 'weekly')`, và chế độ `'previous'` sinh một thẻ toast bấm-để-mở.
+- **⚠️ ĐIỀU KIỆN BẮT BUỘC trước khi làm** (đây là lý do phase này KHÔNG làm luôn): `dismissWeeklyReport`
+  ghi `lastWeeklyReportDate` ⇒ **đóng một lần là mất báo cáo của cả tuần**. Một toast tự tắt sau 4
+  giây mà cũng gọi hàm ấy thì lỡ một cái toast = mất báo cáo. Phải tách "đã xem" khỏi "đã bỏ qua"
+  TRƯỚC, nếu không bản vá đổi một phiền toái nhỏ lấy một mất mát thật.
+- **Estimated Complexity**: Small (nếu đã tách xong hai trạng thái trên); Medium nếu tính cả việc tách.
+- **Blocking Conditions**: không có blocker kỹ thuật; chỉ chờ quyết định của Đàm về đánh đổi ở trên.
+- **Review Trigger**: khi Đàm nói báo cáo tuần làm phiền, hoặc khi có mục thứ hai xin được tự bật.
+- **Owner**: chưa giao · **Status**: OPEN (ghi 2026-08-27, ADR-060).
+
+---
+
+## #86 — 137 nút tự vẽ trên 28 file KHÔNG đọc token skin, và `ActionButton` không nhận nổi chúng
+
+- **Tên**: nút hành động của app tồn tại hai thế giới — `ActionButton` (nay đọc token, đúng ở cả 10
+  tổ hợp skin × chế độ) và 137 thẻ `<button>`/`<motion.button>` tự vẽ bằng lớp Tailwind chốt cứng.
+- **Module**: 28 file dưới `src/components/` (đậm nhất: `StatsDashboard.jsx` 38 · `PomodoroEngine.jsx`
+  35 · `Settings.jsx` 15 · `NotificationCenter.jsx` 8 · `SkillTree.jsx` 11)
+- **Priority**: Medium · **Severity**: Low
+- **Impact**: Những nút ấy chốt cứng bảng màu **editorial** — `rgba(201,100,66,…)` (terracotta),
+  `border-emerald-200`, `bg-[rgba(244,242,236,0.82)]` — và rẽ nhánh theo `lightTheme`, tức chúng chỉ
+  đúng ở **2 trong 10** tổ hợp skin × chế độ. Đây ĐÚNG cái bệnh vừa chữa cho `ActionButton`
+  (2026-08-27), chỉ là ở 137 chỗ khác. Chưa ai kêu vì cả 5 skin đều dùng chung một họ màu ấm.
+- **Root Cause**: `ActionButton` có `sizeMap` là một bộ **ĐÓNG gồm 3 cỡ**, cả ba đều `text-lg px-7`
+  và `rounded-2xl` — chúng được đo riêng cho HÀNG NÚT LỚN của đồng hồ. Mọi ứng viên khác đều lệch ít
+  nhất một chiều, nên chuyển sang là ĐỔI HÌNH DẠNG chứ không phải hợp nhất. Đã soi từng cái:
+  | Chỗ | Vì sao KHÔNG chuyển được |
+  |---|---|
+  | `PomodoroEngine.jsx:1772` "Thu nhỏ" | `position: fixed` + `style` safe-area riêng, chữ 11px, `rounded-full` |
+  | `PomodoroEngine.jsx:2023` chọn chế độ | có TRẠNG THÁI ĐƯỢC CHỌN + con trỏ trượt `layoutId`; `ActionButton` không có khái niệm "đang chọn" |
+  | `PomodoroEngine.jsx:2241` chip phân loại | màu lấy từ dữ liệu người dùng qua `style` inline |
+  | `PomodoroEngine.jsx:2292 · 2307` đạt/không đạt | cặp hai lựa chọn có trạng thái chọn, `flex-1 rounded-full` |
+  | `PomodoroEngine.jsx:2395 · 2406` Quay lại / Hủy phiên | `rounded-full px-4 py-2.5 text-sm` — chuyển thì thành `rounded-2xl px-7 py-3.5 text-lg` |
+  | `PomodoroEngine.jsx:2524` "Thêm" | `px-4 py-2 text-sm`, nằm cùng hàng với một ô nhập — cỡ `default` sẽ phá hàng |
+  | `AppErrorBoundary.jsx:115 · 128` | màn hình lỗi CỐ Ý không phụ thuộc component nào khác (nó chạy khi cây React đã hỏng) |
+  | `CoachChat` · `CoachOffline` · `Achievements` · `RichText` · `SkillTree` · `StatsDashboard` | `ActionButton` KHÔNG được export — nằm trong `PomodoroEngine.jsx` (2.598 dòng); dùng xuyên file phải export hoặc tách ra file riêng |
+- **Current Risk**: Thấp — 5 skin hiện tại cùng họ màu ấm nên mã cứng terracotta chưa chọi rõ với
+  skin nào. Rủi ro nhảy lên NGAY khi có một skin lệch tông (xanh/lam/tím).
+- **Future Risk**: Medium. Mỗi phase thêm nút mới lại nhân thêm một chỗ phải sửa tay.
+- **Recommended Solution**: theo THỨ TỰ, đừng làm ngược: **(1)** tách `ActionButton` ra
+  `src/components/ActionButton.jsx` và export (thuần trình bày, không đọc store nữa từ 2026-08-27 nên
+  tách là an toàn); **(2)** thêm các mục `sizeMap` còn thiếu (`dialog` = `px-4 py-2.5 text-sm`,
+  `inline` = `px-4 py-2 text-sm`) — đúng lối mà chú thích `sizeMap` đã chỉ, KHÔNG chồng lớp qua
+  `className`; **(3)** thêm `shape` (`pill` | `card`) vì `rounded-2xl` đang chốt cứng trong khuôn;
+  **(4)** thêm khái niệm "đang chọn" HOẶC tách hẳn một `ToggleButton` riêng cho nhóm có trạng thái —
+  đây là nhóm đông nhất và KHÔNG nên nhồi vào `ActionButton`.
+- **Estimated Complexity**: Medium–High (đụng 28 file; phải chụp ảnh đối chiếu từng màn hình).
+- **Blocking Conditions**: không có blocker kỹ thuật; chỉ cần một phiên riêng đủ dài, vì rủi ro thật
+  nằm ở việc ĐỔI BỐ CỤC 137 chỗ chứ không ở việc viết mã.
+- **Review Trigger**: khi thêm một skin **lệch tông** với họ ấm hiện tại, hoặc khi ai đó báo "nút chỗ
+  này không đổi màu theo skin".
+- **Owner**: chưa ai · **Status**: MỞ (mở 2026-08-27, cùng phiên viết lại `ActionButton`)
 
 ## #84 — Kỷ 1 và kỷ 2 THẤP ĐI sau khi ô nhà dân thành khu phố, và mọi cần gạt đã cạn
 
@@ -4895,77 +4975,6 @@ trong chú thích thì đừng để `--selftest` của chính nó vẫn dùng �
 > chung MỘT màu vải và MỘT màu lá vì một tham số bị một biến cùng tên che khuất ở `palette3d.js`.
 
 
-## #86 — Trục CHẶNG NGÀY của bản quét tụt xuống DƯỚI ngưỡng mắt (11,33) — cái giá của ADR-061, và cần gạt để nâng nó lên KHÔNG nằm ở thành phố
-
-> Mở 2026-08-24 (Phase 19 VIỆC 6). Đây là nợ **được chọn mang có ý thức**, và nó là một **CÂU HỎI
-> CHO ĐÀM**, không phải một việc tôi được tự quyết: hai thứ anh đã yêu cầu đang xung đột nhau.
->
-> ⚠️ **CẬP NHẬT 2026-08-24 (Phase 20) — CỔNG ĐÃ QUA (11,33 → 12,44 ✓), NHƯNG CHẨN ĐOÁN BÊN DƯỚI
-> VẪN ĐỨNG NGUYÊN, VÀ MỤC NÀY CHƯA ĐÓNG.** Bộ xương sinh theo kỷ (ADR-060) đưa cặp yếu nhất
-> `bình minh 6h ↔ chiều 15h` từ **11,33 lên 12,44**, tức 0/15 cặp dưới ngưỡng. Mốc nền được **TỰ ĐO
-> lại** trong một `git worktree` ở đúng HEAD `0abb272` (không chép cột "sau" của Phase 19 — bài học
-> `#43`) và nó tái lập **y hệt** 11,33 · 19,18 · 36,31, nên phép so là sạch.
->
-> ⚠️ **NHƯNG ĐỪNG ĐỌC "12,44 ✓" THÀNH "ĐÃ CHỮA".** Tách ba dải của đúng cặp ấy (trước → sau):
-> **trời 4,12 → 4,05** · **thành phố 6,51 → 5,56** · **đất 18,05 → 20,42**.
-> ⇒ Toàn bộ phần đi lên nằm ở dải **ĐẤT (+2,37)**; dải **THÀNH PHỐ còn TỆ ĐI (−0,95)**; và dải
-> **TRỜI đứng yên (−0,07)** — đúng như phải thế, vì Phase 20 không chạm một dòng nào vào bầu trời.
-> Tức **cần gạt thật vẫn chưa được kéo**: trời vẫn là dải yếu nhất bảng, 4,05, thấp hơn ngưỡng mắt
-> ba lần. Mục này qua được cổng nhờ một dải KHÁC bù vào, không nhờ chỗ hỏng được sửa.
-> ⚠️ **Cơ chế vì sao dải ĐẤT mạnh lên thì CHƯA ĐƯỢC CHỨNG MINH.** Thứ duy nhất đã đo được là một
-> tương quan: số ô đường đi từ **80 cố định ở cả 15 kỷ** xuống **34…92, trung bình 59,7**, tức đất
-> trống lộ ra nhiều hơn. Đó là một ỨNG VIÊN, không phải một kết luận — đừng chép nó thành nhân quả
-> khi chưa bật/tắt để đo (bài học Phase 3Y: *sửa đúng không chứng minh hiểu đúng*).
-> ⇒ **Ba hướng bên dưới vẫn nguyên giá trị**, và hướng (a) *nâng bầu trời* vẫn là hướng đúng.
-> Trạng thái đổi từ "một cặp đang dưới ngưỡng" sang "biên mỏng 0,44 trên ngưỡng, dựa vào một dải
-> không liên quan tới nguyên nhân" — nhẹ đi, chưa hết.
-
-- **Tên**: bản quét 15 kỷ × 6 chặng — cặp `bình minh 6h ↔ chiều 15h` = **11,33**, dưới ngưỡng mắt 12
-- **Module**: `src/engine/city3d/orbit.js` (nguyên nhân) · `src/engine/city3d/daylight.js` (cần gạt)
-  · đo bằng `scripts/city-preview.mjs --sweep` + `scripts/sweep-score.mjs`
-- **Priority**: Medium-High · **Severity**: Medium (mỹ thuật; không ảnh hưởng dữ liệu/hiệu năng)
-- **Impact**: hai trong sáu chặng ngày là **CÙNG MỘT BỨC ẢNH** với mắt người. Thứ mất đi là phần
-  thưởng của việc mở app vào những giờ khác nhau. ⚠️ Trục **KỶ vẫn ĐẠT** — 0/105 cặp dưới ngưỡng,
-  gần nhất 19,18, trung vị 36,31 — nên *"15 kỷ còn phân biệt được"*, đúng điều VIỆC 6 hỏi, là CÓ.
-- **Root Cause — ĐÃ TÁCH MỘT BIẾN, KHÔNG PHẢI SUY ĐOÁN**: ba lượt quét đầy đủ trên ba cây mã:
-
-  | cây mã | trục chặng | trục kỷ | trung vị |
-  |---|---|---|---|
-  | mốc nền `be9d2ea` (tự đo, không chép của phase trước) | **14,39** ✓ | 22,13 | 38,59 |
-  | Phase 19 **trừ** `orbit.js` (đủ VIỆC 1+2+3+4) | **14,23** ✓ | 21,24 | 38,67 |
-  | Phase 19 **đủ** | **11,33** ✗ | 19,18 | 36,31 |
-
-  ⇒ bốn việc kia cộng lại tốn **0,16**; **2,90 là của riêng phép lùi khung hình** (ADR-061). Cơ chế:
-  các dải đo là phân số **CỐ ĐỊNH** của ô (trời 2–30% · thành phố 34–68% · đất 72–98%), nên thành
-  phố nhỏ lại thì mỗi dải bị pha loãng thêm nền — đúng hình dạng `TECH_DEBT #22`.
-- **Current Risk**: thấp — không ai mất dữ liệu, không ai thấy lỗi. Nó chỉ làm nhạt đi một phần
-  thưởng.
-- **Future Risk**: cao nếu bị **hiểu nhầm**. Một phiên sau đọc "11,33 < 12" rồi đi sửa MÀU thành
-  phố sẽ chữa nhầm chỗ. Tách ba dải của đúng cặp yếu nhất (mốc nền → nay):
-  **trời 8,38 → 4,12** · thành phố 10,74 → 6,51 · **đất 20,88 → 18,05**.
-  ⇒ Đất vẫn khoẻ gấp bốn lần trời. **Cần gạt nằm ở BẦU TRỜI lúc 6h so với 15h** — đúng kết luận mà
-  `CLAUDE.md` đã ghi sau Phase 14 §1(3), nay được xác nhận lại bằng một bộ số mới.
-  ⚠️ Và nó **bác bỏ lần thứ hai** chỉ thị cũ *"phải làm vùng quê đổi theo giờ"*: vùng quê nằm ở dải
-  ĐẤT, dải đang mạnh nhất bảng.
-- **Recommended Solution — BA HƯỚNG, ĐÀM CHỌN, TÔI KHÔNG TỰ CHỌN**:
-  - **(a) Giữ khung mới, nâng bầu trời.** Được cả hai lời hứa. Là một thay đổi MỸ THUẬT vào vòng
-    ngày (`daylight.js`), nằm ngoài phạm vi Phase 19 nên tôi không tự làm.
-  - **(b) Hoàn tác ADR-061.** Lấy lại 14,39 và mở lại `TECH_DEBT #24` (nóc nhà bị cắt ở 14/15 kỷ).
-  - **(c) Giữ nguyên, chấp nhận hai chặng nhìn giống nhau** cho tới khi có phase riêng cho bầu trời.
-  ❌ **KHÔNG được nới ngưỡng 12** (phễu Phase 9A) và ❌ **KHÔNG được đổi cách cắt dải để lấy lại con
-  số** — ba mốc 20,7/17/14 của Đàm đều hiệu chuẩn trên cách đo hiện tại; đổi ruột thước mà giữ vạch
-  cũ là tạo ra một ngưỡng chưa hiệu chuẩn (`TECH_DEBT #55`).
-- **Estimated Complexity**: (a) trung bình · (b) thấp · (c) không
-- **Blocking Conditions**: chờ Đàm chọn hướng.
-- **Review Trigger**: mỗi lần chạm `orbit.js`, `daylight.js`, hoặc kích thước công trình — và mỗi lần
-  bản quét đổi, vì cổng nay chỉ hơn ngưỡng **0,44** và phần dư ấy đến từ một dải KHÔNG liên quan
-  tới nguyên nhân, nên nó có thể mất đi vì một thay đổi chẳng dính gì tới bầu trời.
-- **Owner**: chưa giao · **Status**: MỞ — cổng đã qua (12,44 ✓) nhưng nguyên nhân chưa chữa; chờ quyết định
-
----
-
-## #78 — 14/15 kỷ vẫn dùng chung MỘT mốc người phổ thông (chỉ kỷ 1 có bản sắc thật)
-
 - **Tên**: `HUMAN_STYLES` mới thiết kế thật 1/15 dòng
 - **Module**: `src/engine/city3d/humanStyle.js` (bảng) · `src/engine/city3d/human.js` (thư viện hình
   — hiện mới có 7 loại trang phục, 7 loại đội đầu, 6 loại đồ mang theo, đủ dùng cho vài kỷ nữa
@@ -5053,3 +5062,73 @@ trong chú thích thì đừng để `--selftest` của chính nó vẫn dùng �
     `node --import ./scripts/register-esm-loader.mjs scripts/human-scale.mjs --eras 1` ·
     `… scripts/human-scale.mjs --gait --eras 1`. Đo trên cây mã tại commit `be9d2ea`.
 - **Owner**: phiên AI kế tiếp · **Status**: Open (có chủ đích, đúng phạm vi Đàm giao)
+
+---
+
+
+## #89 — Trục CHẶNG NGÀY của bản quét tụt xuống DƯỚI ngưỡng mắt (11,33) — cái giá của ADR-061, và cần gạt để nâng nó lên KHÔNG nằm ở thành phố
+
+> Mở 2026-08-24 (Phase 19 VIỆC 6). Đây là nợ **được chọn mang có ý thức**, và nó là một **CÂU HỎI
+> CHO ĐÀM**, không phải một việc tôi được tự quyết: hai thứ anh đã yêu cầu đang xung đột nhau.
+>
+> ⚠️ **CẬP NHẬT 2026-08-24 (Phase 20) — CỔNG ĐÃ QUA (11,33 → 12,44 ✓), NHƯNG CHẨN ĐOÁN BÊN DƯỚI
+> VẪN ĐỨNG NGUYÊN, VÀ MỤC NÀY CHƯA ĐÓNG.** Bộ xương sinh theo kỷ (ADR-066) đưa cặp yếu nhất
+> `bình minh 6h ↔ chiều 15h` từ **11,33 lên 12,44**, tức 0/15 cặp dưới ngưỡng. Mốc nền được **TỰ ĐO
+> lại** trong một `git worktree` ở đúng HEAD `0abb272` (không chép cột "sau" của Phase 19 — bài học
+> `#43`) và nó tái lập **y hệt** 11,33 · 19,18 · 36,31, nên phép so là sạch.
+>
+> ⚠️ **NHƯNG ĐỪNG ĐỌC "12,44 ✓" THÀNH "ĐÃ CHỮA".** Tách ba dải của đúng cặp ấy (trước → sau):
+> **trời 4,12 → 4,05** · **thành phố 6,51 → 5,56** · **đất 18,05 → 20,42**.
+> ⇒ Toàn bộ phần đi lên nằm ở dải **ĐẤT (+2,37)**; dải **THÀNH PHỐ còn TỆ ĐI (−0,95)**; và dải
+> **TRỜI đứng yên (−0,07)** — đúng như phải thế, vì Phase 20 không chạm một dòng nào vào bầu trời.
+> Tức **cần gạt thật vẫn chưa được kéo**: trời vẫn là dải yếu nhất bảng, 4,05, thấp hơn ngưỡng mắt
+> ba lần. Mục này qua được cổng nhờ một dải KHÁC bù vào, không nhờ chỗ hỏng được sửa.
+> ⚠️ **Cơ chế vì sao dải ĐẤT mạnh lên thì CHƯA ĐƯỢC CHỨNG MINH.** Thứ duy nhất đã đo được là một
+> tương quan: số ô đường đi từ **80 cố định ở cả 15 kỷ** xuống **34…92, trung bình 59,7**, tức đất
+> trống lộ ra nhiều hơn. Đó là một ỨNG VIÊN, không phải một kết luận — đừng chép nó thành nhân quả
+> khi chưa bật/tắt để đo (bài học Phase 3Y: *sửa đúng không chứng minh hiểu đúng*).
+> ⇒ **Ba hướng bên dưới vẫn nguyên giá trị**, và hướng (a) *nâng bầu trời* vẫn là hướng đúng.
+> Trạng thái đổi từ "một cặp đang dưới ngưỡng" sang "biên mỏng 0,44 trên ngưỡng, dựa vào một dải
+> không liên quan tới nguyên nhân" — nhẹ đi, chưa hết.
+
+- **Tên**: bản quét 15 kỷ × 6 chặng — cặp `bình minh 6h ↔ chiều 15h` = **11,33**, dưới ngưỡng mắt 12
+- **Module**: `src/engine/city3d/orbit.js` (nguyên nhân) · `src/engine/city3d/daylight.js` (cần gạt)
+  · đo bằng `scripts/city-preview.mjs --sweep` + `scripts/sweep-score.mjs`
+- **Priority**: Medium-High · **Severity**: Medium (mỹ thuật; không ảnh hưởng dữ liệu/hiệu năng)
+- **Impact**: hai trong sáu chặng ngày là **CÙNG MỘT BỨC ẢNH** với mắt người. Thứ mất đi là phần
+  thưởng của việc mở app vào những giờ khác nhau. ⚠️ Trục **KỶ vẫn ĐẠT** — 0/105 cặp dưới ngưỡng,
+  gần nhất 19,18, trung vị 36,31 — nên *"15 kỷ còn phân biệt được"*, đúng điều VIỆC 6 hỏi, là CÓ.
+- **Root Cause — ĐÃ TÁCH MỘT BIẾN, KHÔNG PHẢI SUY ĐOÁN**: ba lượt quét đầy đủ trên ba cây mã:
+
+  | cây mã | trục chặng | trục kỷ | trung vị |
+  |---|---|---|---|
+  | mốc nền `be9d2ea` (tự đo, không chép của phase trước) | **14,39** ✓ | 22,13 | 38,59 |
+  | Phase 19 **trừ** `orbit.js` (đủ VIỆC 1+2+3+4) | **14,23** ✓ | 21,24 | 38,67 |
+  | Phase 19 **đủ** | **11,33** ✗ | 19,18 | 36,31 |
+
+  ⇒ bốn việc kia cộng lại tốn **0,16**; **2,90 là của riêng phép lùi khung hình** (ADR-061). Cơ chế:
+  các dải đo là phân số **CỐ ĐỊNH** của ô (trời 2–30% · thành phố 34–68% · đất 72–98%), nên thành
+  phố nhỏ lại thì mỗi dải bị pha loãng thêm nền — đúng hình dạng `TECH_DEBT #22`.
+- **Current Risk**: thấp — không ai mất dữ liệu, không ai thấy lỗi. Nó chỉ làm nhạt đi một phần
+  thưởng.
+- **Future Risk**: cao nếu bị **hiểu nhầm**. Một phiên sau đọc "11,33 < 12" rồi đi sửa MÀU thành
+  phố sẽ chữa nhầm chỗ. Tách ba dải của đúng cặp yếu nhất (mốc nền → nay):
+  **trời 8,38 → 4,12** · thành phố 10,74 → 6,51 · **đất 20,88 → 18,05**.
+  ⇒ Đất vẫn khoẻ gấp bốn lần trời. **Cần gạt nằm ở BẦU TRỜI lúc 6h so với 15h** — đúng kết luận mà
+  `CLAUDE.md` đã ghi sau Phase 14 §1(3), nay được xác nhận lại bằng một bộ số mới.
+  ⚠️ Và nó **bác bỏ lần thứ hai** chỉ thị cũ *"phải làm vùng quê đổi theo giờ"*: vùng quê nằm ở dải
+  ĐẤT, dải đang mạnh nhất bảng.
+- **Recommended Solution — BA HƯỚNG, ĐÀM CHỌN, TÔI KHÔNG TỰ CHỌN**:
+  - **(a) Giữ khung mới, nâng bầu trời.** Được cả hai lời hứa. Là một thay đổi MỸ THUẬT vào vòng
+    ngày (`daylight.js`), nằm ngoài phạm vi Phase 19 nên tôi không tự làm.
+  - **(b) Hoàn tác ADR-061.** Lấy lại 14,39 và mở lại `TECH_DEBT #24` (nóc nhà bị cắt ở 14/15 kỷ).
+  - **(c) Giữ nguyên, chấp nhận hai chặng nhìn giống nhau** cho tới khi có phase riêng cho bầu trời.
+  ❌ **KHÔNG được nới ngưỡng 12** (phễu Phase 9A) và ❌ **KHÔNG được đổi cách cắt dải để lấy lại con
+  số** — ba mốc 20,7/17/14 của Đàm đều hiệu chuẩn trên cách đo hiện tại; đổi ruột thước mà giữ vạch
+  cũ là tạo ra một ngưỡng chưa hiệu chuẩn (`TECH_DEBT #55`).
+- **Estimated Complexity**: (a) trung bình · (b) thấp · (c) không
+- **Blocking Conditions**: chờ Đàm chọn hướng.
+- **Review Trigger**: mỗi lần chạm `orbit.js`, `daylight.js`, hoặc kích thước công trình — và mỗi lần
+  bản quét đổi, vì cổng nay chỉ hơn ngưỡng **0,44** và phần dư ấy đến từ một dải KHÔNG liên quan
+  tới nguyên nhân, nên nó có thể mất đi vì một thay đổi chẳng dính gì tới bầu trời.
+- **Owner**: chưa giao · **Status**: MỞ — cổng đã qua (12,44 ✓) nhưng nguyên nhân chưa chữa; chờ quyết định

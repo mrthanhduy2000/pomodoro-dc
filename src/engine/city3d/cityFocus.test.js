@@ -408,7 +408,7 @@ test('ĐỐI CHỨNG: chỉ canh ĐIỂM ĐẾN thôi là chưa đủ — và đ
   //   mái, hoặc nó đã teo lại — cả hai đều đáng biết.
   // 2026-08-24 (Phase 19 VIỆC 5): 14 → **13 chuyến**, cùng nguyên nhân với việc kỷ 5 rơi khỏi danh
   // sách trên — khung toàn cảnh lùi ra nên điểm xuất phát của mọi chuyến bay cũng lùi theo.
-  // ⚠️ 2026-08-24, PHASE 20 (ADR-060): **9 kỷ / 12 chuyến, và danh sách gần như ĐỔI HẲN** —
+  // ⚠️ 2026-08-24, PHASE 20 (ADR-066): **9 kỷ / 12 chuyến, và danh sách gần như ĐỔI HẲN** —
   // [1,3,7,8,9,11,12,13,14,15] → [2,3,4,5,6,7,8,12,13]. Sáu kỷ rời đi (1·9·10·11·14·15), năm kỷ
   // rơi vào (2·4·5·6). Đây KHÔNG phải một hồi quy và cũng không phải một cải thiện: bộ xương thành
   // phố nay được SINH THEO KỶ, nên câu hỏi *"bay từ khung toàn cảnh tới kỳ quan thì có đi ngang
@@ -569,7 +569,7 @@ test('CA THẬT CỦA APP — xuất phát từ đúng khung TOÀN CẢNH thì K
   // qua chỗ dày nhà hơn, nên cần lùi thêm ở đích. Đây là cơ chế chữa THỨ NHẤT (lùi ra) làm đúng
   // việc của nó — vế `phaiNgang` ngay dưới vẫn RỖNG, tức không kỷ nào phải ngẩng lên, và đó mới
   // là ranh giới Đàm chốt ở ADR-035.
-  // ⚠️ 2026-08-24, PHASE 20 (ADR-060): danh sách về **RỖNG** — không kỷ nào còn phải lùi ra ở ca
+  // ⚠️ 2026-08-24, PHASE 20 (ADR-066): danh sách về **RỖNG** — không kỷ nào còn phải lùi ra ở ca
   // thường gặp. Đây là lần đầu nó rỗng, nên phải nói rõ hai điều kẻo phiên sau đọc nhầm:
   //   (1) VÌ SAO. Bộ xương cũ nhét năm kỳ quan vào năm khu 3×3 cố định, nhà dân bu kín xung quanh,
   //       nên lối tiếp cận bị chính nhà dân chắn. Bộ xương sinh theo kỷ cho MỖI kỳ quan một THỬA

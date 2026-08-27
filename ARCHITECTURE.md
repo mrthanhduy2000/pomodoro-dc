@@ -156,24 +156,60 @@ useTimer.commitCompletedSession()
 gameStore.completeFocusSession()  ── đặt ui.lootModalOpen = true NGAY LẬP TỨC
         │                            (ba bài test khẳng định điều này)
         ▼
-App.jsx <GlobalOverlays> ── {lootModalOpen && <RewardSequence />}
+App.jsx <OverlayStack>
         │
         ├─ useCityGrowthMoment → engine/cityMoment.buildGrowthMoment()
-        │        │
-        │        ├── có công trình vừa xong / có giàn giáo vừa cao thêm ⇒ trả về một khoảnh khắc
-        │        └── thành phố KHÔNG đổi gì ⇒ trả `null`  (im lặng, không khen rỗng)
+        │        ├── có công trình vừa xong / giàn giáo vừa cao thêm ⇒ một khoảnh khắc
+        │        └── thành phố KHÔNG đổi gì ⇒ `null`  (im lặng, không khen rỗng)
         │
-        ├─ CÓ khoảnh khắc & Đàm không bật giảm chuyển động
-        │        └→ <CityGrowthMoment> 3,2 giây → onDone → LootDropModal
+        ├─ CÓ khoảnh khắc & không bật giảm chuyển động
+        │        └→ <CityGrowthMoment> 3,2 giây → onDone
         │           (song song: LootDropModal.preload() nạp sẵn gói mã)
         │
-        └─ MỌI trường hợp khác → <LootDropModal> NGAY
+        └─ rồi PHÂN TẦNG theo mức độ làm phiền (ADR-060):
+                 ├─ pendingReward.eraChanged  ⇒ <LootDropModal> — LÊN KỶ được chặn màn hình
+                 └─ mọi phiên khác            ⇒ một THẺ trong <RewardToastHost>
+                                                 bấm vào thẻ ⇒ mở <LootDropModal> đầy đủ
 ```
 
 **Luật của tầng này (ADR-010)**: trạng thái của một hoạt hoạ 3 giây **không phải dữ liệu** — nó là
 vòng đời của một component. Store không biết gì về khoảnh khắc này, nên không có cờ nào có thể kẹt
 ở trạng thái bật và chặn mất phần thưởng vĩnh viễn. Cổng **hỏng theo hướng MỞ**: phần thưởng hiện ra
 TRỪ KHI khoảnh khắc đang thật sự chạy.
+
+⚠️ **Lễ mừng thành phố chạy sau MỌI phiên, không chỉ khi hộp thoại mở.** Trước ADR-060 nó nằm trong
+`RewardSequence` — component chỉ dựng khi hộp thoại phần thưởng bật — nên buộc cổng hộp thoại lại
+mà quên tách nó ra sẽ **giết lễ mừng ở mọi phiên thường, trong im lặng**. Đúng cái bẫy ấy đã xảy ra
+trong chính phiên viết ADR-060 và nay có test canh.
+
+### 6.3 Phân tầng mức độ làm phiền (ADR-060)
+
+Mọi phần thưởng của app đi qua **một** thẻ chung (`components/shared/RewardCard.jsx`) với **một**
+thang độ hiếm bốn bậc (`engine/rewardTiers.js`). Cái quyết định nó hiện ra **thế nào** là câu hỏi
+*"việc này có buộc Đàm phải QUYẾT ĐỊNH gì không?"*:
+
+```
+                    ui.* (store ghi y như cũ, KHÔNG đổi luật tính thưởng)
+                                 │
+        ┌────────────────────────┴────────────────────────┐
+        │                                                 │
+  CHẶN MÀN HÌNH (modal)                        TOAST GÓC MÀN HÌNH
+  lên kỷ · thăng hoa ·                         engine/rewardFeed.buildRewardToasts()
+  khủng hoảng kỷ · thảm hoạ                              │
+        │                                        ≤3 thẻ + "và N phần thưởng khác"
+  buộc phải quyết định gì đó                     tự tắt sau 4s · bấm → chi tiết
+                                                         │
+                                    phiên thường · di vật · thành tích ·
+                                    nhiệm vụ ngày · lên cấp · danh xưng
+```
+
+⚠️ `rewardFeed.js` chỉ **ĐỌC** các trường `ui.*` mà store đã ghi sẵn — nó không đụng
+`completeFocusSession` (hàm dài nhất dự án) và không đổi một con số thưởng nào. Đồng hồ 4 giây
+**dừng** khi có hộp thoại chặn màn hình, nếu không nó cháy hết sau lưng lớp mờ.
+
+⚠️ Ngoại lệ DUY NHẤT còn lại: **báo cáo tuần vẫn tự bật sáng thứ Hai** — cố ý, vì
+`dismissWeeklyReport` đánh dấu tuần đã xem nên lỡ một toast = mất báo cáo cả tuần
+(`TECH_DEBT #87`).
 
 ⚠️ `ui.pendingReward.newlyBuiltIds` là trường **chỉ để hiển thị**: `ui` không nằm trong `partialize`
 của store, nên nó không lên Supabase — không thêm một byte nào vào JSONB đang tranh chấp CAS
@@ -247,7 +283,7 @@ phiên" vẫn là câu dùng được, "3/ phiên" thì không.
 (1) `CityView.jsx` chọn NGUỒN dữ liệu — kỷ hiện tại lấy state sống, kỷ đã niêm phong lấy ảnh chụp
 trong `cityArchive`; đây là chỗ dễ sai nhất cả màn hình. (2) `computeCityLayout` (engine thuần) trả
 về **ô lưới `(x, y)`, không phải pixel** — cùng một bố cục dùng được cho mọi cách vẽ. ⚠️ Từ Phase 20
-(ADR-060) nó **không còn tự biết đường và khu kỳ quan nằm đâu**: nó hỏi `city3d/cityPlan.js`
+(ADR-066) nó **không còn tự biết đường và khu kỳ quan nằm đâu**: nó hỏi `city3d/cityPlan.js`
 (`planIsRoad` · `planRoadCells` · `planWonderZone`) — một hàm THUẦN của **duy nhất `era`**. Nghĩa là
 bộ xương khác nhau ở cả 15 kỷ mà bất biến ADR-007 vẫn đứng nguyên, vì `sessionCount`/`built` không
 lọt được vào bản quy hoạch. Bố cục gồm
@@ -490,7 +526,7 @@ duy nhất là **chia nhỏ thứ đứng trong một ô đã có**: một ô th
 khu phố*. Kết quả: **371 → 1.812 khối nhìn thấy** mà không một ô nào xê dịch, không một kỳ quan nào
 bị đụng, và **không một lệnh vẽ nào ở cả 15 kỷ**.
 
-⚠️ **CẬP NHẬT 2026-08-24 (Phase 20, ADR-060) — HAI CON SỐ TRÊN LÀ CỦA BỘ XƯƠNG CŨ, ĐỪNG TRÍCH LẠI
+⚠️ **CẬP NHẬT 2026-08-24 (Phase 20, ADR-066) — HAI CON SỐ TRÊN LÀ CỦA BỘ XƯƠNG CŨ, ĐỪNG TRÍCH LẠI
 LÀM SỐ HIỆN HÀNH.** `ROAD_LINES` **không còn tồn tại**; bộ xương nay SINH THEO KỶ (xem mục
 «`networkStyle` + `cityPlan`» ngay dưới), nên số ô đường đi từ một hằng số 80 thành **34…92 tuỳ kỷ
 (trung bình 59,7)**. Cái trần *"~30 ô xây được nhà dân"* vì vậy cũng đổi theo từng kỷ. **Lý lẽ của
@@ -519,7 +555,7 @@ chiếu đáy — và nó bù đủ: mỗi ô cao thêm **7,0%**, không kỷ n�
 đi thật**, và đó là một đánh đổi có chủ đích chứ không phải một lỗi.
 
 **`networkStyle` + `cityPlan` (BỘ XƯƠNG THÀNH PHỐ) — khuôn ba lớp lần thứ MƯỜI, và là tầng đầu tiên
-đụng tới thứ mắt đọc ra TRƯỚC NHẤT khi nhìn từ trên cao (Phase 20, 2026-08-24, ADR-060)**:
+đụng tới thứ mắt đọc ra TRƯỚC NHẤT khi nhìn từ trên cao (Phase 20, 2026-08-24, ADR-066)**:
 `city3d/networkStyle.js` trả lời *"thành phố ở nước ấy, kỷ ấy, được QUY HOẠCH theo lối nào?"* — năm
 trục: `plan` (`organic` · `axial` · `grid`) · `parcels` (số thửa) · `sizeVary` (độ chênh cỡ thửa,
 0,05…0,86) · `ring` (có đường vành đai không) · `minSide` (thửa hẹp nhất được phép). `city3d/cityPlan.js`
@@ -555,7 +591,7 @@ cả 15/15 kỷ theo `BLUEPRINT_CATALOG`, một hợp đồng có sẵn chứ kh
    đòi kết quả **trùng từng byte** (đúng khuôn đã dùng cho `buildTerrain` ở Phase 7B), và **liệt kê
    đủ 1…120 phiên × 15 kỷ** rồi đòi bản quy hoạch đứng yên. ⚠️ Nhưng bất biến ấy chỉ nói *"từ nay
    trở đi không dời"*; **bản thân việc đổi bộ xương thì DỜI mọi công trình đã xây** — đó là một
-   quyết định của Đàm, ghi ở phần Trade-off của ADR-060, không phải một thứ tầng này tự giải quyết
+   quyết định của Đàm, ghi ở phần Trade-off của ADR-066, không phải một thứ tầng này tự giải quyết
    được.
 
 ⚠️ **Đo được, không phải cảm nhận:** độ đối xứng bốn chiều của các ô kỳ quan đi từ **100,0%** (bộ

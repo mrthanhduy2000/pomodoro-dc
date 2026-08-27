@@ -48,3 +48,9 @@ test-results/
 # nên một file PNG lạc ở gốc repo sẽ bị nuốt vào commit mà không ai để ý. Chỉ chặn ĐÚNG tên mặc
 # định ở gốc — `--out <tên khác>` vẫn theo dõi được bình thường nếu thật sự muốn lưu.
 /shot.png
+
+# Thư mục ảnh nghiệm thu tạm của `scripts/shot.mjs --out .shots/…` (2026-08-27, phiên skin arcade).
+# Cùng lý do với `/shot.png` ngay trên: deploy của dự án là `git add .`, nên một thư mục PNG vài
+# trăm KB sẽ bị nuốt vào commit mà không ai để ý. Đây là ảnh để SOI BẰNG MẮT lúc phát triển,
+# không phải sản phẩm — ảnh nào đáng giữ thì `--out` ra chỗ khác rồi thêm có chủ đích.
+.shots/

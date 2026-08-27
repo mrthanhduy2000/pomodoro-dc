@@ -85,7 +85,7 @@ export const BLOCK_ATTACH = ['party', 'loose', 'court'];
  * một phép kiểm chồng lấn mà chính phép kiểm ấy là chỗ dễ sai, và số lần thử lại là một cái núm
  * chưa hiệu chuẩn. Các mảnh của một phép chia đôi đệ quy thì **rời nhau THEO CẤU TẠO** — không
  * cần kiểm chồng lấn, không thể xuyên qua nhau, và luôn ra đúng số mảnh nếu còn chỗ. Đây cũng
- * đúng cơ chế mà `cityPlan.js` đã dùng ở tầng THỬA ĐẤT (ADR-060): một luật, một công thức, hai
+ * đúng cơ chế mà `cityPlan.js` đã dùng ở tầng THỬA ĐẤT (ADR-066): một luật, một công thức, hai
  * quy mô.
  *
  * ⚠️ VÀ NÓ KHÔNG "ĐỀU" NHƯ TÊN GỌI GỢI Ý. Chỗ cắt lệch tâm theo hạt giống, và mỗi lần chỉ cắt MỘT

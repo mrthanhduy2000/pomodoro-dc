@@ -98,7 +98,7 @@ test('CAO LÊN, KHÔNG THẤP ĐI — lời hứa trung tâm của cả phase, �
   //
   // ⚠️ VÀ KHÔNG NỚI NGƯỠNG. Ngưỡng vẫn là 1, kỷ trượt được KỂ TÊN BẰNG (`assert.deepEqual`): kỷ
   // thứ hai rơi xuống thì đỏ, mà kỷ 5 được chữa xong cũng đỏ. Nới xuống 0,99 là bỏ răng cho cả 15
-  // kỷ (bài học Phase 9A). Ghi ở `TECH_DEBT #87`.
+  // kỷ (bài học Phase 9A). Ghi ở `TECH_DEBT #90`.
   //
   // THỬ-CHO-ĐỎ (đã chạy 2026-08-21): hạ `storey` kỷ 7 từ 1,7 về 1,0 ⇒ bài này ĐỎ.
   let daKiem = 0;
@@ -129,7 +129,7 @@ test('CAO LÊN, KHÔNG THẤP ĐI — lời hứa trung tâm của cả phase, �
   assert.equal(daKiem, 473, 'quần thể đổi cỡ — mọi con số biên ghi trong file này phải đo lại');
   assert.deepEqual(truot, [5],
     `kỷ bị THẤP ĐI sau khi chia khu phố nay là [${truot.join(',')}] — dài ra là có kỷ mới tụt xuống, `
-    + 'ngắn đi là có kỷ vừa được chữa (hãy cập nhật bảng số trong chú thích và `TECH_DEBT #87`)');
+    + 'ngắn đi là có kỷ vừa được chữa (hãy cập nhật bảng số trong chú thích và `TECH_DEBT #90`)');
   assert.ok(biMin < 1.02, `biên mỏng nhất nay là ${biMin.toFixed(4)}× — nếu nó nới rộng ra thì tốt, `
     + 'nhưng hãy cập nhật con số 0,9942 trong chú thích thay vì để nó thành một lời nói dối');
 });
@@ -375,7 +375,7 @@ test('CHI TIẾT MÁI KHÔNG ĐƯỢC CHẾT — và danh sách kỷ mất một
   // — xem chú thích tại dòng kỷ 6 của `blockStyle.js`), và hệ số `EAVE_LAND_FACTOR` được chọn
   // bằng một bảng quét ba cột chứ không bằng cảm giác. Một danh sách RỖNG được `assert` BẰNG chứ
   // không bỏ đi: kỷ đầu tiên rơi xuống lại thì đỏ ngay. KHÔNG hạ sàn 0,7 (hạ là bỏ răng cho cả 15
-  // kỷ). Ghi ở `TECH_DEBT #87`. Bốn kỷ dưới 100%, cũng kể tên BẰNG chứ không "bao gồm".
+  // kỷ). Ghi ở `TECH_DEBT #90`. Bốn kỷ dưới 100%, cũng kể tên BẰNG chứ không "bao gồm".
   // THỬ-CHO-ĐỎ (đã chạy): đổi `Math.max` thành `Math.min` trong `MIN_UNIT_CELLS` ⇒ bài này ĐỎ.
   const duoi100 = [];
   const duoiSan = [];
@@ -399,7 +399,7 @@ test('CHI TIẾT MÁI KHÔNG ĐƯỢC CHẾT — và danh sách kỷ mất một
   }
   assert.deepEqual(duoiSan, [],
     `kỷ mất QUÁ MỘT PHẦN BA chi tiết mái nay là [${duoiSan.join(',')}] — danh sách này phải RỖNG; `
-    + 'dài ra là có kỷ vừa tụt xuống dưới sàn 0,7 (`TECH_DEBT #87`)');
+    + 'dài ra là có kỷ vừa tụt xuống dưới sàn 0,7 (`TECH_DEBT #90`)');
   assert.deepEqual(duoi100, [6, 10, 11, 13],
     `kỷ mất một phần chi tiết mái nay là [${duoi100.join(',')}] — nếu ngắn đi thì tốt, hãy cập nhật `
     + 'con số 463/473 trong chú thích; nếu dài ra thì có kỷ vừa tụt xuống');

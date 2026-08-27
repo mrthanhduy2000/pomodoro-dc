@@ -39,7 +39,7 @@ import { buildScrimGradient } from './cityBackdropScrim';
 
 /**
  * Độ mờ của lớp nền. Thấp có chủ ý — đây là KHUNG CẢNH, không phải nội dung.
- * ⚠️ Chữ trên trang chủ phải đọc được ở mọi tổ hợp theme × skin (8 tổ hợp). Lớp phủ ngay dưới đây
+ * ⚠️ Chữ trên trang chủ phải đọc được ở mọi tổ hợp theme × skin (10 tổ hợp). Lớp phủ ngay dưới đây
  * mới là thứ bảo đảm điều đó; con số này chỉ quyết định thành phố hiện ra đậm hay nhạt.
  */
 const BACKDROP_OPACITY = 0.5;

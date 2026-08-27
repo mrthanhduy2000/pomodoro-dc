@@ -884,7 +884,7 @@ test('MẢNG PHỦ — kỷ khai `share` CAO nhất luôn phủ nhiều hơn k�
   // ⚠️ PHASE 21 PHẢI TÁCH BÀI NÀY LÀM HAI VẾ, VÌ MẪU SỐ THÔI KHÔNG CÒN CHUNG NỮA. Trước Phase 20
   // cả 15 kỷ dùng CHUNG một lưới đường cứng, nên số ô trống của mọi kỷ xấp xỉ bằng nhau và việc
   // đem hai con số ĐẾM của hai kỷ ra so là một phép so công bằng. Nay mỗi kỷ tự sinh bộ xương
-  // riêng (ADR-060 + ADR-059) nên mẫu số khác nhau tới **3 lần**: đo ở mốc 150 phiên, kỷ 1 còn
+  // riêng (ADR-066 + ADR-059) nên mẫu số khác nhau tới **3 lần**: đo ở mốc 150 phiên, kỷ 1 còn
   // ~33 ô trống trong khi kỷ 14 chỉ còn ~12. Cả hai cùng ra 8 mảng — kỷ 1 lấy 24% phần đất của
   // MÌNH, kỷ 14 lấy 66% phần đất của MÌNH, tức `share` vẫn cai trị hoàn hảo, chỉ là hai phân số
   // khác mẫu tình cờ rơi vào cùng một số nguyên.

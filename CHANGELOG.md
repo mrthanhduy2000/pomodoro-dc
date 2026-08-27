@@ -12,7 +12,7 @@
 
 ---
 
-## 2026-08-27 (tối) — Điều hướng chính từ 8 mục xuống 5: gộp, không xoá
+## 2026-08-27 (khuya) — Điều hướng chính từ 8 mục xuống 5: gộp, không xoá
 
 **Mục đích.** Thanh điều hướng có 8 mục, trong đó Kỹ năng · Kho báu · Thành tích chiếm ba ô cho ba
 màn cùng một họ ("những gì tôi đã tích luỹ"). Trên iPhone, 8 mục chen vào 4 nút nên "Thành Phố" —
@@ -36,12 +36,55 @@ mỗi tab con vẫn dựng đúng component cũ với đúng state cũ.
   canh mọi đích thông báo còn tới được), `src/engine/navAttention.test.js` (6),
   `src/engine/opportunities.test.js` (5). Cả **15 phép thử ngược** đều đỏ đúng bài dự kiến.
 
+**Gộp nhánh.** Nhánh này gộp với mốc "ba nhịp chuyển động" (`motionPresets.js`) đã lên `main`
+trước đó; hai bên đụng nhau ở 2 chỗ trong `App.jsx` và giữ CẢ HAI (hiệu ứng `enterMotion` của mốc
+kia + lưới co theo số mục và prop `attentionTabIds` của mốc này). Sau gộp: `npm test` 1.186 bài.
+
 **Ảnh hưởng.** Số màn hình không đổi — mọi màn cũ vẫn vào được, qua một lớp tab con. Thanh dưới
 iPhone đổi chỗ "Thống kê" (nay nằm sau nút "Thêm") lấy chỗ cho "Thành Phố".
 
 **Tương thích.** Thông báo đã lưu trong localStorage mang `action: { tab: 'skills' }` /
 `{ tab: 'collection', collectionTab: … }` **vẫn đi đúng chỗ** — id cũ được `resolveTabTarget` dịch
 chứ không bị đổi ở nguồn. Không có migration.
+
+---
+
+## 2026-08-27 (tối) — Mọi chuyển động của app về đúng BA NHỊP
+
+**Mục đích.** `initial`/`animate`/`transition` được khai rời rạc ở hơn ba mươi file, mỗi chỗ một
+thời lượng và một đường cong. Đo được **5 thời lượng** (0,18 · 0,22 · 0,26 · 0,28 · 0,35 giây) và
+**7 đường cong** khác nhau. Mắt không đọc ra "app này mượt" mà đọc ra "mỗi chỗ một kiểu". Kèm theo,
+tuỳ chọn **Giảm chuyển động** của hệ điều hành được xử lý bằng tay ở từng file, với ba tên biến
+khác nhau — nên nó vắng mặt ở đúng những chỗ người ta quên.
+
+**Phạm vi.** Tầng giao diện: `App.jsx`, `PomodoroEngine.jsx` và toàn bộ modal. **KHÔNG đụng**
+`src/components/city/render3d/` (chuyển động thành phố 3D là một hệ khác), không đụng engine game,
+sync, hay AI Coach.
+
+- **`src/lib/motionPresets.js` (MỚI)** — ba nhịp, không hơn: `enter` (opacity 0→1, y 6→0, 180ms,
+  ease `[0.22,1,0.36,1]`) · `press` (scale 1→0,97, 90ms) · `reward` (scale 0,9→1 bằng lò xo
+  420/18). Cả ba là **hook** và **tự trả về object rỗng** khi `useReducedMotion()` bật, nên chỗ
+  gọi không phải tự kiểm tra. Kèm hai cái GÁC cho ngoại lệ (`useCustomMotion` bỏ hẳn ·
+  `useSnapMotion` nhảy thẳng tới đích khi `animate` mang bố cục) và hằng `SCRIM_FADE` dùng chung
+  cho lớp phủ tối của modal.
+- **9 file đã đổi** — `App.jsx`, `PomodoroEngine.jsx`, `DisasterModal`, `EraCrisisModal`,
+  `LevelUpModal`, `LootDropModal`, `PrestigeModal`, `WeeklyReportModal`, `OnboardingOverlay`.
+  Bốn nhóm nút của bảng điều khiển đồng hồ trước đây khai **y hệt nhau bốn lần**, nay một nhịp.
+- **`src/lib/motionPresets.test.js` (MỚI)** — 6 bài đọc-mã-nguồn, cả **9 phép thử ngược** đều đã
+  thấy đỏ. Nó ĐẾM số preset (nhịp thứ tư là đỏ) và chặn một quả mìn thật: framer-motion 12 **ném
+  lỗi ở bản dev và im lặng ở bản production** khi một lò xo nhận quá hai mốc.
+
+**Ảnh hưởng.** Mọi thẻ và modal mở ra cùng một nhịp 180ms. Bật *Giảm chuyển động* (Mac: Trợ năng →
+Màn hình; iPhone: Trợ năng → Chuyển động) thì giao diện đứng yên: pháo hoa và mưa hạt biến mất hẳn,
+những thứ mang bố cục (bề ngang cột, núm gạt, thanh tiến độ, vòng đếm giờ) nhảy thẳng tới đích thay
+vì chạy.
+
+**Tương thích.** Không đổi dữ liệu, không đổi API, không cần migration. Thuần thị giác.
+
+**Hai chỗ cố ý đứng ngoài ba nhịp** — `ActionButton` (cú lún `y:4` BẰNG ĐÚNG chiều dày vạch bóng
+đặc, `actionButtonPress.test.js` khoá cứng quan hệ ấy) và các hiệu ứng SO LE (`ResourceCascade`,
+viên tài nguyên của `EraChangeBanner`) — cả hai vẫn được gác Giảm chuyển động, và đều có chú thích
+tại chỗ nêu lý do.
 
 ---
 

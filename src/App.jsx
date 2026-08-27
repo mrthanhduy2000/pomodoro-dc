@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState, Suspense } from 'react';
 import { AnimatePresence, motion as Motion, useReducedMotion } from 'framer-motion';
+import { useEnterMotion, useSnapMotion } from './lib/motionPresets';
 import { initSync } from './lib/syncService';
 import { clearTimerLive, updateTimerLive } from './lib/timerLiveService';
 
@@ -1439,6 +1440,19 @@ export default function App() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [supportRailOpen, setSupportRailOpen] = useState(true);
   const [focusFullscreen, setFocusFullscreen] = useState(false);
+  const enterMotion = useEnterMotion();
+  // ⚠️ NGOẠI LỆ CÓ LÝ DO — cột phải THU GỌN chứ không XUẤT HIỆN. `enter` là opacity+y nên nó
+  // không diễn đạt được một bề ngang đang co lại, và bề ngang ấy do chính `animate` khai (không
+  // có lớp CSS nào đặt nó) ⇒ phải dùng `useSnapMotion`: bỏ hẳn thì cột bung ra chiếm cả màn hình.
+  const supportRailMotion = useSnapMotion({
+    animate: { width: supportRailOpen ? 340 : 60 },
+    transition: { duration: 0.22, ease: [0.4, 0, 0.2, 1] },
+  });
+  // Mũi tên chỉ HƯỚNG thu/mở — góc quay chính là trạng thái, nên nó nhảy chứ không biến mất.
+  const supportRailChevronMotion = useSnapMotion({
+    animate: { rotate: supportRailOpen ? 180 : 0 },
+    transition: { duration: 0.2 },
+  });
   const leftShiftPressedRef = useRef(false);
   const isDesktop = useMinWidth(1024);
   const isWideViewport = useMinWidth(768);
@@ -1720,8 +1734,7 @@ export default function App() {
                   <Motion.aside
                     className="hidden min-h-0 overflow-hidden border-l lg:flex lg:flex-col"
                     style={{ borderColor: 'var(--line)', background: 'var(--canvas)' }}
-                    animate={{ width: supportRailOpen ? 340 : 60 }}
-                    transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}
+                    {...supportRailMotion}
                   >
                     <div className="min-h-0 flex-1 overflow-y-auto">
                       {supportRailOpen ? (
@@ -1758,10 +1771,7 @@ export default function App() {
                           supportRailOpen ? 'gap-2.5 px-2.5 justify-start' : 'justify-center'
                         }`}
                       >
-                        <Motion.span
-                          animate={{ rotate: supportRailOpen ? 180 : 0 }}
-                          transition={{ duration: 0.2 }}
-                        >
+                        <Motion.span {...supportRailChevronMotion}>
                           <AppIcon.chevronLeft size={15} />
                         </Motion.span>
                         {supportRailOpen && <span>Thu gọn</span>}
@@ -1873,8 +1883,7 @@ export default function App() {
                 trống ngay giữa thanh — không có gì đỏ lên, chỉ trông như hỏng.
               */}
               <Motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
+                {...enterMotion}
                 className="pointer-events-auto relative mb-2 grid w-full max-w-[760px] gap-1 rounded-[22px] border p-1.5 backdrop-blur-xl"
                 style={{
                   borderColor: 'var(--line)',
@@ -2088,12 +2097,21 @@ function GlobalOverlays({
 }
 
 function EditorialSidebar({ activeTab, attentionTabIds, isOpen, onOpenWeeklyReport, onSelect, onToggle }) {
+  // ⚠️ NGOẠI LỆ CÓ LÝ DO — cùng chuyện với cột phải: cột trái THU GỌN chứ không XUẤT HIỆN, và
+  // bề ngang do chính `animate` khai nên phải NHẢY tới đích chứ không được bỏ đi (`useSnapMotion`).
+  const railMotion = useSnapMotion({
+    animate: { width: isOpen ? 232 : 66 },
+    transition: { duration: 0.22, ease: [0.4, 0, 0.2, 1] },
+  });
+  const chevronMotion = useSnapMotion({
+    animate: { rotate: isOpen ? 0 : 180 },
+    transition: { duration: 0.2 },
+  });
   return (
     <Motion.aside
       className="hidden md:flex md:flex-col"
       style={{ background: '#1b1a17', borderRight: '1px solid rgba(255,255,255,0.06)' }}
-      animate={{ width: isOpen ? 232 : 66 }}
-      transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}
+      {...railMotion}
     >
       {/* Thương hiệu */}
       <div className={`flex items-center gap-2.5 px-3.5 pb-2 pt-4 ${isOpen ? '' : 'justify-center px-0'}`}>
@@ -2150,10 +2168,7 @@ function EditorialSidebar({ activeTab, attentionTabIds, isOpen, onOpenWeeklyRepo
           }`}
           style={{ color: 'rgba(250,249,246,0.5)' }}
         >
-          <Motion.span
-            animate={{ rotate: isOpen ? 0 : 180 }}
-            transition={{ duration: 0.2 }}
-          >
+          <Motion.span {...chevronMotion}>
             <AppIcon.chevronLeft size={16} />
           </Motion.span>
           {isOpen && <span>Thu gọn</span>}
@@ -2437,14 +2452,11 @@ function ShellPane({ children, subtitle, title, topRail = null }) {
 }
 
 function TabPane({ children }) {
+  // `enter` mang sẵn `exit` — bỏ nó đi thì `AnimatePresence mode="wait"` tháo tab cũ tức thì
+  // và mỗi lần chuyển tab giật một cái.
+  const enterMotion = useEnterMotion();
   return (
-    <Motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -8 }}
-      transition={{ duration: 0.18 }}
-      className="h-full"
-    >
+    <Motion.div {...enterMotion} className="h-full">
       {children}
     </Motion.div>
   );

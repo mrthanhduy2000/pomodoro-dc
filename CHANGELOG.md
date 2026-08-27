@@ -40,6 +40,34 @@ NGHĨA hẹp lại thành "đã thật sự xem". Dữ liệu cũ đọc vẫn �
 
 ---
 
+## 2026-08-27 (khuya) — Ba nhịp phủ kín giao diện, và một cổng chặn hồi quy
+
+**Mục đích.** Lượt trước gom 11 file; phần còn lại của giao diện vẫn tự khai nhịp riêng. Và không
+có gì ngăn một file MỚI gõ lại `initial={{ opacity: 0, y: 20 }}` — đúng cách hơn ba mươi file đã
+trôi thành 5 thời lượng và 7 đường cong.
+
+**Phạm vi.** Toàn bộ `src/**/*.jsx` **trừ** `components/city/render3d/` (three.js, một hệ khác).
+
+- **Đo được, trên cả hai mốc, bằng cùng một phép đếm:** **410 khai báo rời rạc trên 30 file → 54
+  trên 11 file (−87%)**. Ba ổ lớn nhất: `StatsDashboard` 36→4 · `Settings` 32→0 · `SkillTree` 10→0.
+- **`withDelay(preset, giây)` (mới)** — danh sách hiện SO LE vẫn là nhịp `enter`, chỉ lệch giờ.
+  Hàm THUẦN nên gọi được trong `.map()`, và tự giữ lời hứa Giảm chuyển động. **Không phải nhịp
+  thứ tư.**
+- **`src/lib/motionCoverage.test.js` (mới)** — cổng đếm khai báo rời rạc từng file, so với một
+  BẢNG NGOẠI LỆ tường minh. Có cả hai vế: ngoài bảng phải bằng 0, **và** trong bảng mà dọn bớt rồi
+  thì phải hạ số xuống. 5/5 phép thử ngược đã thấy đỏ.
+- **Dọn kèm:** prop `reducedMotion` truyền tay xuống 4 component nay là prop chết — đã gỡ; 4 bản
+  vá tay `width: reduceMotion ? … : undefined` cũng gỡ (`useSnapMotion` đã làm đúng việc đó).
+
+**Ảnh hưởng.** Thuần thị giác. Vài chỗ đổi hình dạng thấy được: các nút ở Cài đặt trước đây phóng
+to ba mức khác nhau (1,01 · 1,02 · 1,03) nay một mức; hai biểu đồ ở Thống kê trước đây tự vẽ ra
+theo hai bộ số khác nhau nay chung một bộ.
+
+**Tương thích.** Không đổi dữ liệu, không đổi API, không cần migration.
+
+**Cố ý đứng ngoài.** `city/CityGrowthMoment.jsx` là một đoạn phim 3,2 giây có ba luật cứng riêng và
+**không hề được dựng** khi bật Giảm chuyển động — ép nó vào `enter` là làm hỏng một cảnh diễn để
+đổi lấy một con số đẹp.
 ## 2026-08-27 (tối) — Một ngôn ngữ hình cho mọi phần thưởng, và phân tầng mức độ làm phiền
 
 **Mục đích.** App có bảy đường trao thưởng và bảy cách trình bày — riêng `LootDropModal` đã có ba

@@ -1,10 +1,10 @@
 import React from 'react';
-import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 
 import useGameStore from '../store/gameStore';
 import useSettingsStore from '../store/settingsStore';
 import RewardCard from './shared/RewardCard';
-import { useCustomMotion, useEnterMotion, usePressMotion } from '../lib/motionPresets';
+import { useCustomMotion, useEnterMotion, usePressMotion, useSnapMotion } from '../lib/motionPresets';
 import {
   BUILDING_EFFECTS,
   MISSION_ALL_BONUS_XP,
@@ -40,7 +40,6 @@ export default function DailyMissions() {
   const claimWeeklyStep = useGameStore((s) => s.claimWeeklyStep);
   const refreshDailyMissions = useGameStore((s) => s.refreshDailyMissions);
   const uiTheme = useSettingsStore((s) => s.uiTheme);
-  const reduceMotion = useReducedMotion();
 
   React.useEffect(() => {
     refreshDailyMissions();
@@ -134,7 +133,6 @@ export default function DailyMissions() {
                 key={mission.id}
                 mission={mission}
                 rewardXP={scaleMissionXP(mission.rewardXP, missionRewardMultiplier)}
-                reduceMotion={reduceMotion}
               />
             ))}
           </div>
@@ -347,7 +345,9 @@ function QuietSection({ children, eyebrow, lightTheme, meta, title }) {
   );
 }
 
-function TodayMissionRow({ mission, reduceMotion, rewardXP }) {
+function TodayMissionRow({ mission, rewardXP }) {
+  // NGOẠI LỆ (mang bố cục) — bề dài thanh CHÍNH LÀ tiến độ của nhiệm vụ.
+  const barMotion = useSnapMotion({ transition: { duration: 0.45, ease: 'easeOut' } });
   const pct = Math.max(0, Math.min(100, (mission.progress / Math.max(1, mission.goal)) * 100));
   const done = mission.claimed || mission.progress >= mission.goal;
 
@@ -386,11 +386,10 @@ function TodayMissionRow({ mission, reduceMotion, rewardXP }) {
       <div className="mt-2 h-[2px] overflow-hidden rounded-full bg-[var(--line)]">
         <motion.div
           className="h-full rounded-full"
-          initial={reduceMotion ? false : { width: 0 }}
-          animate={reduceMotion ? undefined : { width: `${pct}%` }}
-          transition={reduceMotion ? undefined : { duration: 0.45, ease: 'easeOut' }}
+          initial={{ width: 0 }}
+          animate={{ width: `${pct}%` }}
+          {...barMotion}
           style={{
-            width: reduceMotion ? `${pct}%` : undefined,
             background: done ? 'var(--good)' : 'var(--accent)',
           }}
         />

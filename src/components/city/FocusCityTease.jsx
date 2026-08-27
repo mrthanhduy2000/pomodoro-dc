@@ -14,10 +14,12 @@
  */
 
 import { motion } from 'framer-motion';
+import { useEnterMotion } from '../../lib/motionPresets';
 
 import { useCityFocusTease } from '../../hooks/useCityMoment';
 
 export default function FocusCityTease() {
+  const enterMotion = useEnterMotion();
   const tease = useCityFocusTease(true);
 
   if (!tease) return null;
@@ -31,9 +33,7 @@ export default function FocusCityTease() {
   return (
     <motion.div
       className="mt-3 flex items-center justify-center gap-2 px-2 text-center"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.3 }}
+      {...enterMotion}
     >
       <span aria-hidden="true" className="text-[13px] leading-none">{tease.icon}</span>
       <span className="text-[12px] leading-snug" style={{ color, fontWeight: imminent ? 600 : 400 }}>

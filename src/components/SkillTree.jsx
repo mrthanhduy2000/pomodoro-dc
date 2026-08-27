@@ -13,8 +13,8 @@
  */
 
 import React, { useState, useCallback, useMemo } from 'react';
-import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
-import { SCRIM_FADE, useCustomMotion, useEnterMotion } from '../lib/motionPresets';
+import { motion, AnimatePresence } from 'framer-motion';
+import { SCRIM_FADE, useCustomMotion, useEnterMotion, usePressMotion, useSnapMotion } from '../lib/motionPresets';
 
 import useGameStore       from '../store/gameStore';
 import useSettingsStore   from '../store/settingsStore';
@@ -155,7 +155,11 @@ export default function SkillTree({ onOpenAchievements }) {
 
   const [confirmNode, setConfirmNode] = useState(null);
   const [activeBranch, setActiveBranch] = useState(BRANCH_KEYS[0]);
-  const prefersReducedMotion = useReducedMotion();
+  // NGOẠI LỆ (mang bố cục) — bề dài thanh CHÍNH LÀ phần trăm kinh nghiệm đã tích.
+  const expBarMotion = useSnapMotion({
+    animate: { width: `${progressPct}%` },
+    transition: { duration: 0.6, ease: 'easeOut' },
+  });
   const lightTheme = uiTheme === 'light';
 
   const getNodeState = useCallback((node) => {
@@ -227,8 +231,7 @@ export default function SkillTree({ onOpenAchievements }) {
           <motion.div
             className="h-full rounded-full"
             style={{ background: 'linear-gradient(90deg, var(--accent), var(--accent2))' }}
-            animate={{ width: `${progressPct}%` }}
-            transition={{ duration: 0.6, ease: 'easeOut' }}
+            {...expBarMotion}
           />
         </div>
         <p className="mt-1.5 text-[11px]" style={{ color: 'var(--muted)' }}>
@@ -290,7 +293,6 @@ export default function SkillTree({ onOpenAchievements }) {
                   nodeState={getNodeState(node)}
                   effectiveCost={getEffectiveSkillCost(node.id, node.spCost, relics, relicEvolutions)}
                   isLast={i === selectedBranch.nodes.length - 1}
-                  reducedMotion={prefersReducedMotion}
                   onBuy={() => handleBuy(node)}
                 />
               ))}
@@ -319,7 +321,6 @@ export default function SkillTree({ onOpenAchievements }) {
       {/* ── Tổ hợp kỹ năng (toàn chiều rộng) ─────────────────────────────── */}
       <SynergyPanel
         lightTheme={lightTheme}
-        reducedMotion={prefersReducedMotion}
         synergies={SKILL_SYNERGIES}
         activeSynergies={activeSynergies}
         branchCounts={branchCounts}
@@ -466,7 +467,17 @@ function ActiveAbilityBar({ lightTheme, unlockedSkills, skillActivations, onActi
 
 // ─── SkillNode (một hàng trong cây, kiểu mockup) ──────────────────────────────
 
-function SkillNode({ node, nodeState, effectiveCost, isLast, reducedMotion, onBuy }) {
+function SkillNode({ node, nodeState, effectiveCost, isLast, onBuy }) {
+  const pressMotion = usePressMotion();
+  // Nhấc khi DI CHUỘT không thuộc ba nhịp — đi qua cái gác ngoại lệ.
+  const hoverLift = useCustomMotion({ whileHover: { y: -1 } });
+  // NGOẠI LỆ (trang trí) — quầng sáng THỞ quanh kỹ năng đã mở khoá được, lặp vô hạn.
+  // ⚠️ Điều kiện nay chỉ còn `isAvailable`: cái gác đã lo vế `!reducedMotion`, giữ lại là
+  // "một luật hai công thức" và sớm muộn hai vế sẽ lệch nhau.
+  const haloMotion = useCustomMotion({
+    animate: { boxShadow: ['0 0 0 0 rgba(var(--accent-rgb),0)', '0 0 0 4px rgba(var(--accent-rgb),0.12)', '0 0 0 0 rgba(var(--accent-rgb),0)'] },
+    transition: { duration: 2.4, repeat: Infinity },
+  });
   const isUnlocked     = nodeState === NODE_STATE.UNLOCKED;
   const isAvailable    = nodeState === NODE_STATE.AVAILABLE;
   const isLocked       = nodeState === NODE_STATE.LOCKED;
@@ -492,10 +503,7 @@ function SkillNode({ node, nodeState, effectiveCost, isLast, reducedMotion, onBu
         <motion.span
           className="relative z-10 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[17px] leading-none"
           style={{ ...circleStyle, opacity: isLocked ? 0.6 : 1 }}
-          animate={isAvailable && !reducedMotion
-            ? { boxShadow: ['0 0 0 0 rgba(var(--accent-rgb),0)', '0 0 0 4px rgba(var(--accent-rgb),0.12)', '0 0 0 0 rgba(var(--accent-rgb),0)'] }
-            : undefined}
-          transition={isAvailable && !reducedMotion ? { duration: 2.4, repeat: Infinity } : undefined}
+          {...(isAvailable ? haloMotion : {})}
         >
           <SkillGlyph id={node.id} locked={isLocked} size={20} />
         </motion.span>
@@ -539,8 +547,8 @@ function SkillNode({ node, nodeState, effectiveCost, isLast, reducedMotion, onBu
               <motion.button
                 type="button"
                 onClick={onBuy}
-                whileHover={reducedMotion ? undefined : { y: -1 }}
-                whileTap={reducedMotion ? undefined : { scale: 0.97 }}
+                {...hoverLift}
+                {...pressMotion}
                 className="mono inline-flex items-center whitespace-nowrap rounded-full px-3 py-1.5 text-[11px] font-semibold tabular-nums transition-colors"
                 style={{ background: 'rgba(var(--accent-rgb),0.10)', border: '1px solid rgba(var(--accent-rgb),0.30)', color: 'var(--accent2)' }}
               >
@@ -710,7 +718,14 @@ function PurchaseConfirmDialog({ node, sp, lightTheme, onConfirm, onCancel }) {
 }
 
 // ─── Synergy Panel ────────────────────────────────────────────────────────────
-function SynergyPanel({ synergies, activeSynergies, branchCounts, lightTheme, reducedMotion }) {
+function SynergyPanel({ synergies, activeSynergies, branchCounts, lightTheme }) {
+  const enterMotion = useEnterMotion();
+  // NGOẠI LỆ (trang trí) — thẻ hiệp trợ đang bật thì THỞ, lặp vô hạn. Cùng lý do với quầng ở
+  // `SkillNode`: điều kiện chỉ còn `active`, phần `!reducedMotion` đã có cái gác lo.
+  const glowMotion = useCustomMotion({
+    animate: { boxShadow: ['0 0 0px rgba(var(--accent-rgb),0)', '0 0 12px rgba(var(--accent-rgb),0.18)', '0 0 0px rgba(var(--accent-rgb),0)'] },
+    transition: { duration: 2.5, repeat: Infinity },
+  });
   const activeIds  = new Set(activeSynergies.map((s) => s.id));
   const totalBonus = activeSynergies.reduce((s, syn) => s + syn.bonus, 0);
 
@@ -736,8 +751,7 @@ function SynergyPanel({ synergies, activeSynergies, branchCounts, lightTheme, re
         </div>
         {totalBonus > 0 && (
           <motion.div
-            initial={{ scale: 0.8 }}
-            animate={{ scale: 1 }}
+            {...enterMotion}
             className="mono flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold tabular-nums"
             style={lightTheme
               ? { background: 'rgba(var(--accent-rgb), 0.1)', border: '1px solid rgba(var(--accent-rgb), 0.16)', color: 'var(--accent2)' }
@@ -770,8 +784,7 @@ function SynergyPanel({ synergies, activeSynergies, branchCounts, lightTheme, re
           return (
             <motion.div
               key={syn.id}
-              animate={!reducedMotion && active ? { boxShadow: ['0 0 0px rgba(var(--accent-rgb),0)', '0 0 12px rgba(var(--accent-rgb),0.18)', '0 0 0px rgba(var(--accent-rgb),0)'] } : undefined}
-              transition={!reducedMotion && active ? { duration: 2.5, repeat: Infinity } : undefined}
+              {...(active ? glowMotion : {})}
               className="p-3 flex flex-col gap-1.5 relative overflow-hidden"
               style={{
                 borderRadius: 'var(--skin-radius-control,14px)',

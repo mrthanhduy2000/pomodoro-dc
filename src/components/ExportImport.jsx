@@ -9,6 +9,7 @@
 
 import { useRef, useState } from 'react';
 import { motion } from 'framer-motion';
+import { useCustomMotion, useEnterMotion, usePressMotion } from '../lib/motionPresets';
 import useGameStore, { GAME_STORE_EXPORT_VERSION } from '../store/gameStore';
 import { formatVietnamOffsetISOString, localDateStr } from '../engine/time';
 import { EXPORT_FILENAME_PREFIX } from '../lib/appIdentity';
@@ -28,6 +29,10 @@ function formatExportedAt(iso) {
 }
 
 export default function ExportImport() {
+  const enterMotion = useEnterMotion();
+  const pressMotion = usePressMotion();
+  // Phóng to khi DI CHUỘT không thuộc ba nhịp — đi qua cái gác ngoại lệ.
+  const hoverGrow = useCustomMotion({ whileHover: { scale: 1.02 } });
   const storeState   = useGameStore.getState;
   const importData   = useGameStore((s) => s._importGameData);
   const fileInputRef = useRef(null);
@@ -171,8 +176,7 @@ export default function ExportImport() {
       {/* Status banner */}
       {importStatus && (
         <motion.div
-          initial={{ opacity: 0, y: -8 }}
-          animate={{ opacity: 1, y: 0 }}
+          {...enterMotion}
           className="rounded-[18px] border px-3 py-2.5 text-center text-xs font-medium"
           style={importStatus.type === 'success'
             ? {
@@ -193,8 +197,8 @@ export default function ExportImport() {
       <div className="flex gap-2">
         {/* Export */}
         <motion.button
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
+          {...hoverGrow}
+          {...pressMotion}
           onClick={handleExport}
           className="flex flex-1 items-center justify-center gap-2 rounded-[18px] px-3 py-3 text-xs font-bold transition-colors"
           style={{
@@ -208,8 +212,8 @@ export default function ExportImport() {
 
         {/* Import */}
         <motion.button
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
+          {...hoverGrow}
+          {...pressMotion}
           onClick={handleImportClick}
           className="flex flex-1 items-center justify-center gap-2 rounded-[18px] border px-3 py-3 text-xs font-bold transition-colors"
           style={{
@@ -244,8 +248,7 @@ export default function ExportImport() {
           onClick={handleCancelImport}
         >
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
+            {...enterMotion}
             onClick={(e) => e.stopPropagation()}
             className="w-full max-w-[420px] rounded-[28px] border px-5 py-5"
             style={{ background: 'var(--card-bg-solid, rgba(255,255,255,0.98))', borderColor: 'var(--line-2, #d9d6cc)' }}
@@ -284,8 +287,8 @@ export default function ExportImport() {
 
             <div className="mt-4 flex gap-2">
               <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
+                {...hoverGrow}
+                {...pressMotion}
                 onClick={handleCancelImport}
                 className="flex-1 rounded-[16px] border px-3 py-2.5 text-xs font-bold"
                 style={{ background: 'var(--card-bg-solid2, rgba(244,242,236,0.96))', borderColor: 'var(--line-2, #d9d6cc)', color: 'var(--ink, #1f1e1d)' }}
@@ -293,8 +296,8 @@ export default function ExportImport() {
                 Hủy
               </motion.button>
               <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
+                {...hoverGrow}
+                {...pressMotion}
                 onClick={handleConfirmImport}
                 className="flex-1 rounded-[16px] px-3 py-2.5 text-xs font-bold"
                 style={{ background: '#1f1e1d', color: '#faf9f6' }}

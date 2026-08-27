@@ -4,6 +4,7 @@
  * AI phân tích tổng thể). Chỉ hiện khi máy chạy được Qwen (desktop có WebGPU). Skin-aware.
  */
 import { motion } from 'framer-motion';
+import { useEnterMotion } from '../lib/motionPresets';
 import useGameStore from '../store/gameStore';
 import { calculateStreakMilestoneProgress } from '../engine/gameMath';
 import { localWeekMondayStr } from '../engine/time';
@@ -54,6 +55,7 @@ export default function FocusRail({
   dailyGoalSessions = 5,
   dailyGoalMinutes = 125,
 }) {
+  const enterMotion = useEnterMotion();
   const streak = useGameStore((s) => s.streak);
   const hasShield = useGameStore((s) => !!s.player.unlockedSkills?.la_chan_streak);
   const dailyTracking = useGameStore((s) => s.dailyTracking);
@@ -73,7 +75,7 @@ export default function FocusRail({
   return (
     <div className="space-y-4">
       {/* HÔM NAY */}
-      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} style={cardStyle} className="p-4">
+      <motion.div {...enterMotion} style={cardStyle} className="p-4">
         <div className={eyebrow} style={{ color: 'var(--muted-2)' }}>Hôm nay</div>
         <div className="mt-1.5 flex items-baseline gap-1.5">
           <span className="text-[26px] font-semibold leading-none" style={{ fontFamily: 'var(--skin-font-display)', color: 'var(--ink)' }}>
@@ -89,7 +91,7 @@ export default function FocusRail({
       </motion.div>
 
       {/* CHUỖI */}
-      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} style={cardStyle} className="p-4">
+      <motion.div {...enterMotion} style={cardStyle} className="p-4">
         <div className="flex items-center justify-between">
           <div className={eyebrow} style={{ color: 'var(--muted-2)' }}>Chuỗi</div>
           {hasShield && (
@@ -120,7 +122,7 @@ export default function FocusRail({
 
       {/* AI COACH — Gemini (đám mây) là chính; mất mạng trên máy thì rơi về Qwen dự phòng */}
       {(
-        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} style={cardStyle} className="p-4">
+        <motion.div {...enterMotion} style={cardStyle} className="p-4">
           <div className={eyebrow} style={{ color: 'var(--muted-2)' }}>AI Coach</div>
           <p className="mt-1.5 text-[12px] leading-snug" style={{ color: 'var(--muted)' }}>
             Hỏi đáp & phân tích từ số liệu thật của bạn.

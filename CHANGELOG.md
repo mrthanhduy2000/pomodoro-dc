@@ -12,6 +12,31 @@
 
 ---
 
+## 2026-08-27 (đêm) — Phase 21 §1: gộp `main` vào nhánh Phase 21, gỡ hai va chạm số
+
+**Mục đích.** Chỉ thị Phase 21 §1 yêu cầu hợp nhất trước mọi việc khác. `main` đã đi thêm 20 commit
+(tới `4360ca5`) trong lúc nhánh Phase 21 làm việc.
+
+**Phạm vi.** Chỉ tài liệu và đánh số — **không một dòng mã sản phẩm nào bị sửa để giải xung đột**.
+Cả 5 xung đột đều là "hai bên cùng thêm mốc mới vào đầu file", giải bằng cách giữ cả hai theo thứ
+tự thời gian. Hai va chạm số được gỡ: **ADR-060** (Phase 21 → **ADR-066**, 33 chỗ) và
+**TECH_DEBT #86/#87** (Phase 21 → **#89**/**#90**, 40 chỗ) — nhánh đã lên production giữ số, nhánh
+tính năng nhường. Kèm hai khuyết tật có sẵn được vá: mục `#78` bị tách làm hai nửa rời nhau, và
+ADR-066 chứa lạc nguyên một thân ADR-061 (45 dòng, thiếu đúng dòng tiêu đề nên không phép đếm nào
+thấy).
+
+**Ảnh hưởng.** Không đổi hành vi app. Số bài test đi từ 1.184 lên **1.266** (`main` mang sang ~82
+bài). Bản quét 15 kỷ đo lại sau khi gộp **không trôi một chữ số** (12,11 · 22,14 · trung vị 36,42 ·
+0/15 · 0/105) — đúng kết quả phải có, vì `git diff` cho thấy `main` chỉ đụng CHÚ THÍCH ở tầng màu
+3D (thêm skin thứ 5 nên "8 tổ hợp" → "10 tổ hợp"), không đụng giá trị màu nào. Sự đứng yên ấy đồng
+thời chứng minh skin arcade mới không rò vào cảnh 3D.
+
+**Tương thích.** Hoàn toàn tương thích ngược; không có migration. Ai đang trích dẫn `ADR-060` hoặc
+`TECH_DEBT #86`/`#87` từ tài liệu Phase 21 (trước `c2b66bc`) thì nay phải đọc là `ADR-066`, `#89`,
+`#90`.
+
+---
+
 ## 2026-08-27 (tối) — Một ngôn ngữ hình cho mọi phần thưởng, và phân tầng mức độ làm phiền
 
 **Mục đích.** App có bảy đường trao thưởng và bảy cách trình bày — riêng `LootDropModal` đã có ba

@@ -30,7 +30,11 @@ Mặt trận đang làm: **thành phố 3D** (`src/engine/city3d/` + `src/compon
 - Nhánh production: `main`. **Nhánh đang làm: `claude/xay-san-pham-huong-nay-nasr3n`** — đã
   gộp `main` VÀO nhánh này, nhưng **CHƯA gộp ngược lên `main`**: chỉ thị Phase 21 ghi rõ
   *"Push nhánh phụ, không tự gộp `main`"* (ngoại lệ cho ĐÚNG phase này; luật thường trực
-  ở mục 2 bên trên vẫn là tự gộp).
+  ở mục 2 bên trên vẫn là tự gộp). Phép gộp là `c2b66bc` (0 xung đột mã nguồn; 5 xung đột tài
+  liệu đều là "hai bên cùng thêm mốc mới vào đầu file"). Cổng sau khi gộp: `test:fast` **1.266
+  bài · 0 fail · 1 skipped** · `test:cross` 3/3 · lint sạch · build ✓. Bản quét đo lại: **12,11
+  · 22,14 · trung vị 36,42** — KHÔNG trôi, và đó là kết quả đúng vì `main` chỉ đụng chú thích ở
+  tầng màu 3D.
 - Mốc gần nhất trên nhánh này: **Phase 21** — ADR-064 hợp nhất hai nhánh · ADR-065 bàn cờ là
   một mốc lịch sử · **ADR-066** bộ xương sinh theo kỷ (số cũ 060, ĐÃ ĐỔI vì `main` đã dùng
   060 cho thẻ phần thưởng). Bộ xương thành phố: BSP quyết cắt Ở ĐÂU, cung cong quyết cắt

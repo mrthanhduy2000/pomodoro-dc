@@ -1,4 +1,54 @@
-> Cập nhật lần cuối: **2026-08-27 (tối)** — **MỌI PHẦN THƯỞNG NÓI CHUNG MỘT THỨ TIẾNG, VÀ CHỈ
+> Cập nhật lần cuối: **2026-08-27 (đêm)** — **PHASE 21 §1: ĐÃ GỘP `main` VÀO NHÁNH PHASE 21.**
+>
+> `main` đi thêm 20 commit trong lúc Phase 21 làm việc. Gộp xong: **0 xung đột ở mã nguồn**, cả 5
+> xung đột đều là "hai bên cùng thêm một mốc mới vào đầu file tài liệu" ⇒ giữ CẢ HAI, mốc của
+> `main` (27/8) đứng trước, mốc Phase 21 (24/8) đứng sau kèm nhãn *(mốc trước)*.
+>
+> **HAI VA CHẠM SỐ, cả hai im lặng.** Không có gì đỏ lên khi hai nhánh cùng đặt MỘT cái tên cho
+> HAI thứ khác nhau — đây là loại lỗi mà chỉ việc đi gộp mới lộ ra:
+> · **ADR-060**: `main` = "MỘT ngôn ngữ hình cho mọi phần thưởng"; Phase 21 = "Bộ xương thành phố
+>   SINH THEO KỶ". `main` đã lên production nên nó giữ số; Phase 21 đổi sang **ADR-066** (33 chỗ).
+> · **TECH_DEBT #86/#87**: `main` = 137 nút không đọc token skin / báo cáo tuần tự bật; Phase 21 =
+>   trục chặng ngày dưới ngưỡng mắt / chia ô thành khu phố làm 4 kỷ thấp đi. Phase 21 đổi sang
+>   **#89** và **#90** (40 chỗ).
+>
+> ⚠️ **BÀI HỌC — ĐỔI SỐ TRONG TÀI LIỆU TRỘN CHỦ ĐỀ THÌ PHẢI ĐỔI THEO TỪNG DÒNG, KHÔNG THAY HÀNG
+> LOẠT.** Cùng một chuỗi `#86` trong CÙNG một file có thể thuộc hai chủ nhân khác nhau, cách nhau
+> vài trăm dòng — `TECH_DEBT.md` có đúng tình huống đó. Cách làm: phân loại từng chỗ theo NỘI DUNG
+> câu văn quanh nó (từ khoá "137 nút"/"token skin" ⇒ của `main`; "chặng ngày"/"11,33"/"khu phố" ⇒
+> của Phase 21), rồi thay theo danh sách (file, dòng) đã phân loại, và mỗi lần thay đều đếm số chỗ
+> khớp — 0 chỗ khớp là một KẾT QUẢ, không được để nó im lặng thành "đã xong". Với file chỉ-thành-phố
+> (`block.test.js`) thì thay hàng loạt vẫn an toàn.
+>
+> **HAI KHUYẾT TẬT CÓ SẴN LỘ RA TRONG LÚC GỘP** (cả hai đã có ở `65f3422`, không phải do gộp):
+> · `TECH_DEBT.md` có `## #78` **hai lần** — một bản mang dấu ✅ ĐÃ ĐÓNG nhưng chỉ có ghi chú đóng,
+>   một bản mang tiêu đề MỞ mang cả phần thân; chúng bị một mục khác chen vào giữa nên tách rời từ
+>   lúc #78 được đóng. `main` đã có hình đúng (ghi chú + thân liền một khối) nên ghép lại theo hình
+>   của `main`, rồi ĐỐI CHIẾU: sau khi ghép, mục #78 giống hệt từng byte bản của `main`.
+> · **ADR-066 chứa nguyên một thân ADR thứ hai** — toàn bộ thân ADR-061, chỉ thiếu dòng tiêu đề
+>   `## ADR-061`. Vì thiếu đúng dòng tiêu đề nên KHÔNG phép đếm nào thấy được: `grep '^## ADR-'` ra
+>   66 mục không trùng số, file vẫn đọc trôi chảy. Thứ để lộ ra là hai dòng `**Ảnh hưởng**` GIỐNG
+>   HỆT nhau ở hai chỗ cách nhau 110 dòng — một câu nói về phép lùi khung hình lại nằm trong bản ghi
+>   về chia đôi đệ quy. Đã đối chiếu 45 dòng ấy với thân ADR-061 hiện có (giống hệt) rồi mới xoá.
+>
+> **CỔNG ĐÃ CHẠY LẠI SAU KHI GỘP** — `test:fast` **1.266 bài · 1.265 pass · 0 fail · 1 skipped**
+> (tăng từ 1.184, `main` mang sang ~82 bài) · `test:cross` 3/3 · lint sạch · build ✓ 5,27s · PWA 55
+> mục / 1.892,57 KiB · `blockStyle.test.js` riêng 16/16.
+>
+> **BẢN QUÉT ĐO LẠI SAU KHI GỘP — KHÔNG TRÔI MỘT CHỮ SỐ**: chặng gần nhất **12,11** · kỷ gần nhất
+> **22,14** · trung vị **36,42** · 0/15 và 0/105. ⚠️ Và theo đúng bài học *"bản quét không đổi một
+> chữ số không chứng minh được gì cả"*, con số giống hệt ở đây MỚI là kết quả đúng — vì đã kiểm
+> `git diff` trên tầng màu 3D (`palette3d.js` · `cityTokens.js` · `themeBridge.js` ·
+> `cityBackdropScrim.js`) và **toàn bộ thay đổi từ `main` chỉ là CHÚ THÍCH** (app thêm skin thứ 5
+> nên "8 tổ hợp" → "10 tổ hợp"); không một giá trị màu nào đổi. Nói cách khác sự đứng yên ấy chứng
+> minh **skin arcade mới của `main` KHÔNG rò vào cảnh 3D**.
+>
+> ⚠️ **VẪN CHƯA GỘP NGƯỢC LÊN `main`** — chỉ thị Phase 21 ghi rõ *"Push nhánh phụ, không tự gộp
+> `main`"*. Nhánh đang ở `e3235e0`.
+
+---
+
+> *(mốc trước)* **2026-08-27 (tối)** — **MỌI PHẦN THƯỞNG NÓI CHUNG MỘT THỨ TIẾNG, VÀ CHỈ
 > BỐN VIỆC CÒN ĐƯỢC CHẶN MÀN HÌNH** (ADR-060).
 >
 > Bảy đường trao thưởng, bảy cách vẽ — và riêng `LootDropModal` đã có **BA hình cho ba loại thưởng
@@ -59,7 +109,7 @@
 > Nhiệm vụ (cả 1280 và 390) · hộp thoại lên kỷ vẫn chặn màn hình đầy đủ.
 
 ---
-> Cập nhật lần cuối: **2026-08-27 (tối)** — **THANH TÀI NGUYÊN RÚT TỪ "BÀY HẾT" XUỐNG "BA CON SỐ
+> *(mốc trước)* **2026-08-27 (tối)** — **THANH TÀI NGUYÊN RÚT TỪ "BÀY HẾT" XUỐNG "BA CON SỐ
 > CỘNG MỘT THANH".** Đàm: bản cũ bày cùng lúc EP · chặng · tài nguyên thô · tinh chế · RP · tinh thể,
 > **tất cả cùng một trọng lượng thị giác**, nên không thứ nào nổi lên. Nay LUÔN hiện đúng ba thứ —
 > thanh tiến độ kỷ (trọn chiều ngang, nhãn `Kỷ N · chặng i/n`, chạy `var(--accent)` trên nền
@@ -124,7 +174,7 @@
 > Deployments hiện "Ready" — **chưa ai kiểm**. Đúng bài học `8ee264d`: *code xanh + commit thành công
 > KHÔNG có nghĩa là đã thực sự lên production*. Phiên sau chạy trong hộp cát này đừng mất công thử
 > `curl` lại; hoặc nhờ Đàm liếc, hoặc chạy từ máy Đàm.
-> Cập nhật lần cuối: **2026-08-27 (tối)** — **ĐỒNG HỒ TRẢ LỜI HAI CÂU HỎI THAY VÌ MỘT.**
+> *(mốc trước)* **2026-08-27 (tối)** — **ĐỒNG HỒ TRẢ LỜI HAI CÂU HỎI THAY VÌ MỘT.**
 > Vòng chính dày 14px (từ 7), bo tròn hai đầu, màu theo token — tập trung `--accent`, nghỉ (ngắn
 > LẪN dài) `--good`, nền `--timer-track`. Thêm **vòng thứ hai** mảnh 4px nằm ngoài, cách đúng 8px,
 > màu `--warn`: tiến độ MỤC TIÊU NGÀY. Con số ở giữa to thêm 20%, weight 800, `tabular-nums`; ngay
@@ -184,7 +234,7 @@
 >
 > Cổng: `npm test` **1.175 bài · 1.174 pass · 0 fail · 1 skipped** (+12 bài mới) · `test:cross` 3/3
 > · lint sạch · build xanh.
-> Cập nhật lần cuối: **2026-08-27 (khuya)** — **ĐIỀU HƯỚNG CHÍNH: 8 MỤC → 5, BẰNG CÁCH GỘP.**
+> *(mốc trước)* **2026-08-27 (khuya)** — **ĐIỀU HƯỚNG CHÍNH: 8 MỤC → 5, BẰNG CÁCH GỘP.**
 > Ba màn Kỹ năng · Kho báu · Thành tích nay là ba TAB CON của **"Hành trang"**. Desktop còn đúng 5
 > mục (Tập trung · Hành trang · Thành Phố · Thống kê · Cài đặt); iPhone còn 4 nút (Tập trung ·
 > Nhiệm vụ · Hành trang · Thành Phố) + nút "Thêm" giữ Thống kê và Cài đặt. **Không màn nào bị xoá**
@@ -232,7 +282,7 @@
 > trong đó, lưới tự co còn 2 cột), `--fit` ở 390px soi 23 nút không nút nào tràn chữ. Cái chấm đã
 > chụp được ở CẢ hai thanh khi bơm một cơ hội thật (fixture `sp: 99`), và tắt đúng khi không có việc.
 
-> Cập nhật lần cuối: **2026-08-27 (tối)** — **MỌI CHUYỂN ĐỘNG VỀ ĐÚNG BA NHỊP.**
+> *(mốc trước)* **2026-08-27 (tối)** — **MỌI CHUYỂN ĐỘNG VỀ ĐÚNG BA NHỊP.**
 > `initial`/`animate`/`transition` đang khai rời rạc ở hơn ba mươi file. Đếm được **5 thời lượng**
 > (0,18 · 0,22 · 0,26 · 0,28 · 0,35 giây) và **7 đường cong** khác nhau; riêng bảng điều khiển đồng
 > hồ khai **y hệt nhau bốn lần**. Nay: `src/lib/motionPresets.js` xuất ra ĐÚNG ba nhịp —
@@ -313,7 +363,7 @@
 > Cổng: `npm test` **1.169 bài · 1.168 pass · 0 fail · 1 skipped** · `test:cross` 3/3 (32,1 giây) ·
 > lint sạch · build xanh · `scripts/shot.mjs` chụp lại trang chủ 1280px: không tràn, mọi khối còn đủ.
 
-> Cập nhật lần cuối: **2026-08-27 (chiều)** — **`ActionButton` NGHE THEO SKIN + CÓ CẢM GIÁC BẤM LÚN.**
+> *(mốc trước)* **2026-08-27 (chiều)** — **`ActionButton` NGHE THEO SKIN + CÓ CẢM GIÁC BẤM LÚN.**
 > Ba bệnh đã chữa: `themeMap` khai màu cứng theo `lightTheme` (chỉ đúng **2 trong 10** tổ hợp skin ×
 > chế độ) · bóng MỜ nhiều lớp làm nút trông như thẻ giấy · `whileHover scale 1.03` phóng to cả khối
 > nên chữ nhoè đúng lúc đang nhìn. Nay: một bảng màu DUY NHẤT đọc token · bóng ĐẶC `0 4px 0 0` ·
@@ -378,7 +428,7 @@
 > Cổng: `npm test` **1.163 bài · 1.162 pass · 0 fail · 1 skipped** (+5 bài mới) · `test:cross` 3/3 ·
 > lint sạch · build xanh. Đo trên trình duyệt thật: 6 tổ hợp skin × chế độ ra 6 bộ màu nút khác nhau.
 
-> Cập nhật lần cuối: **2026-08-27** — **SKIN THỨ 5 "SÂN CHƠI" (arcade), ĐẶT LÀM MẶC ĐỊNH.**
+> *(mốc trước)* **2026-08-27** — **SKIN THỨ 5 "SÂN CHƠI" (arcade), ĐẶT LÀM MẶC ĐỊNH.**
 > Nền cho hướng game hoá đơn giản, hiện đại: bỏ giấy, bỏ serif, bỏ gradient, bỏ kính mờ ⇒ mặt
 > phẳng sạch · chữ sans đậm (Inter 800, không thêm font mới) · **BÓNG ĐẶC** — một vạch màu dày 3px
 > dưới đáy thẻ thay cho bóng mờ nhiều lớp, cho thẻ một "cái chân" như phím bấm.
@@ -440,7 +490,7 @@
 > · lint sạch · build xanh. Nghiệm thu bằng trình duyệt thật trên CSS đã build, cả hai chế độ:
 > `background-image: none` · chân bóng `0 3px 0 0` · tiêu đề `Inter weight=800`.
 
-> Cập nhật lần cuối: **2026-08-24 (đêm)** — **CẮT CHI PHÍ MỖI PHIÊN: 6.323 DÒNG BẮT BUỘC ĐỌC → 55**.
+> *(mốc trước)* **2026-08-24 (đêm)** — **CẮT CHI PHÍ MỖI PHIÊN: 6.323 DÒNG BẮT BUỘC ĐỌC → 55**.
 
 > *(mốc trước)* **2026-08-24 (khuya)** — **PHASE 21: HỢP NHẤT HAI NHÁNH, RỒI XOÁ NỐT VẺ QUY
 > HOẠCH**. Đàm xem bản quét Phase 20: *«nhà vẫn xếp rất ngăn nếp trông như quy hoạch, dù quy hoạch

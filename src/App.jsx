@@ -49,7 +49,7 @@ const EraCrisisModal = createRecoverableLazy(() => import('./components/EraCrisi
 const PrestigeModal = createRecoverableLazy(() => import('./components/PrestigeModal.jsx'), 'prestige-modal');
 const LevelUpModal = createRecoverableLazy(() => import('./components/LevelUpModal.jsx'), 'level-up-modal');
 const WeeklyReportModal = createRecoverableLazy(() => import('./components/WeeklyReportModal.jsx'), 'weekly-report-modal');
-const AchievementToast = createRecoverableLazy(() => import('./components/AchievementToast.jsx'), 'achievement-toast');
+const RewardToastHost = createRecoverableLazy(() => import('./components/RewardToastHost.jsx'), 'reward-toast-host');
 const OnboardingOverlay = createRecoverableLazy(() => import('./components/OnboardingOverlay.jsx'), 'onboarding-overlay');
 
 function createBoundaryLogger(scope) {
@@ -1404,6 +1404,11 @@ export default function App() {
   const weeklyReportOpen = useGameStore((s) => s.ui.weeklyReportOpen);
   const levelUpQueueLength = useGameStore((s) => s.ui.levelUpQueue.length);
   const achievementQueueLength = useGameStore((s) => s.ui.achievementQueue.length);
+  // Hai kênh phần thưởng nhẹ này store đã ghi từ lâu nhưng TRƯỚC 2026-08-27 không
+  // màn hình nào đọc (xem chú thích đầu `engine/rewardFeed.js`) — chồng toast là
+  // chỗ đọc đầu tiên, nên chúng phải nằm trong điều kiện dựng lớp phủ.
+  const missionCompletedCount = useGameStore((s) => (s.ui.missionCompletedIds ?? []).length);
+  const relicPending = useGameStore((s) => Boolean(s.ui.relicNotification));
 
   const eraMeta = ERA_METADATA[activeBook] ?? ERA_METADATA[1];
   const eraStart = ERA_THRESHOLDS[`ERA_${activeBook - 1}_END`] ?? 0;
@@ -1948,6 +1953,8 @@ export default function App() {
           weeklyReportOpen,
           levelUpQueueLength,
           achievementQueueLength,
+          missionCompletedCount,
+          relicPending,
         ]}
         variant="section"
       >
@@ -1959,6 +1966,9 @@ export default function App() {
           weeklyReportOpen={weeklyReportOpen}
           levelUpQueueLength={levelUpQueueLength}
           achievementQueueLength={achievementQueueLength}
+          missionCompletedCount={missionCompletedCount}
+          relicPending={relicPending}
+          onNavigate={handleNotificationNavigate}
         />
         <Suspense fallback={null}>
           <OnboardingOverlay />
@@ -1969,42 +1979,40 @@ export default function App() {
 }
 
 /**
- * RewardSequence — thứ tự hiện ra sau khi một phiên hoàn thành:
- * **khoảnh khắc thành phố lớn lên (nếu có) → hộp thoại phần thưởng**.
+ * GlobalOverlays — nơi LUẬT MỨC ĐỘ LÀM PHIỀN được thi hành (2026-08-27, ADR-060).
  *
- * ⚠️ ĐIỂM CẮM ĐÃ CHỌN RẤT KỸ: `lootModalOpen` trong store vẫn bật ĐỒNG BỘ y như cũ (ba bài test ở
- * `completeFocusSession.test.js` khẳng định điều đó) — ta CHỈ hoãn phần HIỂN THỊ. Sửa store để hoãn
- * là cách chắc chắn làm vỡ ba bài test đó, và đụng vào đúng hàm dài nhất dự án.
+ * ⚠️ CHẶN MÀN HÌNH CHỈ DÀNH CHO BỐN VIỆC, và cả bốn đều buộc Đàm phải QUYẾT ĐỊNH
+ * gì đó: lên kỷ · thăng hoa · khủng hoảng kỷ · thảm hoạ. Mọi phần thưởng còn lại
+ * đi qua `RewardToastHost` — tự tắt sau 4 giây, bấm vào mới mở chi tiết.
  *
- * ⚠️ VÌ SAO LÀ MỘT COMPONENT RIÊNG chứ không phải vài dòng trong `GlobalOverlays`: nó được dựng
- * MỚI mỗi lần hộp thoại phần thưởng bật, nên `seen` tự khởi động lại ở `false` — không cần một
- * `useEffect` đi dọn state, tức là không có chỗ nào để quên dọn. Vòng đời của React làm hộ.
+ * ⚠️ CỔNG "LÊN KỶ" ĐỌC `pendingReward.eraChanged`, KHÔNG ĐỌC MỘT CỜ MỚI NÀO. Store
+ * vẫn bật `lootModalOpen` ĐỒNG BỘ y như cũ (ba bài test ở `completeFocusSession.test.js`
+ * khẳng định điều đó) — ta chỉ đổi phần HIỂN THỊ, đúng điểm cắm mà `RewardSequence`
+ * (component đã gộp vào đây) chọn từ trước. Sửa store để hoãn/đổi luồng là cách chắc
+ * chắn làm vỡ ba bài đó, và đụng vào đúng hàm dài nhất dự án.
  *
- * ⚠️ CỔNG NÀY HỎNG THEO HƯỚNG MỞ: phần thưởng hiện ra TRỪ KHI khoảnh khắc đang thật sự chạy.
- * Không có gì thật để khoe · Đàm bật giảm chuyển động · khoảnh khắc đã xong — mọi nhánh đều dẫn
- * thẳng tới phần thưởng. Không có đường nào để màn hình phần thưởng biến mất.
+ * ⚠️ `detail` là trạng thái CỤC BỘ, không vào store: nó chỉ sống đúng một lượt xem,
+ * không cần đồng bộ lên Supabase, và cho vào store là thêm một trường `ui` nữa mà
+ * ngày mai lại có người quên dọn.
  */
-function RewardSequence() {
-  const growth = useCityGrowthMoment(true);
-  const reduceMotion = useReducedMotion();
-  const [seen, setSeen] = useState(false);
-  const showMoment = !!growth && !seen && !reduceMotion;
-
-  // ⚠️ NẠP TRƯỚC gói mã của màn phần thưởng NGAY BÂY GIỜ, trong lúc khoảnh khắc đang chạy.
-  // Đo bằng máy (bản Phase 4′): trước khi có dòng này, gói `loot-drop-modal` chỉ bắt đầu tải SAU
-  // khi khoảnh khắc kết thúc — tức là ta vừa đẩy nó lùi 3,2 giây so với trước. Trên mạng yếu, cái
-  // giá đó là một khoảng trắng ngay sau 25 phút làm việc thật. Tải song song thì lúc cần đã có sẵn.
-  useEffect(() => { LootDropModal.preload?.(); }, []);
-
-  if (showMoment) {
-    return (
-      <CityGrowthMoment moment={growth.moment} era={growth.era} onDone={() => setSeen(true)} />
-    );
-  }
-  return <LootDropModal />;
+function GlobalOverlays(props) {
+  const { lootModalOpen } = props;
+  // ⚠️ MẸO VÒNG ĐỜI (kế thừa từ `RewardSequence`, component nay đã gộp vào
+  // `OverlayStack`), và vì đúng lý do cũ: `detail` ("Đàm đã bấm xem chi tiết") phải trở về `null` khi phần thưởng
+  // ĐỔI, nếu không phần thưởng KẾ TIẾP sẽ tự mở hộp thoại mà không ai bấm — tức
+  // luật "chỉ bốn việc được chặn màn hình" lặng lẽ hỏng sau đúng một lần bấm.
+  // Đặt `key` để React dựng lại thì state tự sạch; một `useEffect` đi dọn state là
+  // chỗ để quên dọn, và React cũng cấm gọi `setState` thẳng trong thân effect.
+  const levelUpHead = useGameStore((s) => s.ui.levelUpQueue[0]?.newLevel ?? null);
+  return (
+    <OverlayStack
+      key={`${lootModalOpen ? 'loot' : 'none'}:${levelUpHead ?? 'none'}`}
+      {...props}
+    />
+  );
 }
 
-function GlobalOverlays({
+function OverlayStack({
   lootModalOpen,
   disasterModalOpen,
   eraCrisisModalOpen,
@@ -2012,30 +2020,88 @@ function GlobalOverlays({
   weeklyReportOpen,
   levelUpQueueLength,
   achievementQueueLength,
+  missionCompletedCount,
+  relicPending,
+  onNavigate,
 }) {
+  const [detail, setDetail] = useState(null);
+  const [momentSeen, setMomentSeen] = useState(false);
+  const pendingEraChanged = useGameStore((s) => Boolean(s.ui.pendingReward?.eraChanged));
+  const reduceMotion = useReducedMotion();
+  const growth = useCityGrowthMoment(lootModalOpen);
+
   const hasLevelUp = levelUpQueueLength > 0;
-  const hasAchievementToast = achievementQueueLength > 0;
-  const hasOverlay = (
-    lootModalOpen
-    || disasterModalOpen
-    || eraCrisisModalOpen
-    || prestigeModalOpen
-    || weeklyReportOpen
+
+  /**
+   * ⚠️ KHOẢNH KHẮC THÀNH PHỐ VẪN CHẠY SAU **MỌI** PHIÊN — đừng buộc nó vào hộp thoại.
+   * Trước đây nó nằm trong `RewardSequence`, mà `RewardSequence` chỉ dựng khi hộp
+   * thoại phần thưởng bật. Nếu cứ để nguyên như thế sau khi hộp thoại thôi tự bật
+   * thì lễ mừng "vừa xây xong một công trình" sẽ **biến mất trong im lặng** ở mọi
+   * phiên thường — một tính năng chết mà không có gì đỏ lên. Nó không nằm trong bảy
+   * đường trao thưởng và cũng không đòi Đàm quyết định gì; nó là một đoạn chuyển
+   * cảnh tự kết thúc, nên luật "chỉ bốn việc được chặn màn hình" không áp cho nó.
+   * ⚠️ Nhưng nó CÓ che màn hình lúc chạy, nên nó phải nằm trong `blocking` để đồng
+   * hồ toast dừng lại — nếu không, 4 giây của thẻ cháy hết sau lưng lễ mừng.
+   *
+   * `momentSeen` tự sạch nhờ `key` ở `GlobalOverlays` (đổi mỗi lần hộp thoại bật/tắt),
+   * đúng mẹo vòng đời `RewardSequence` từng dùng — không cần effect đi dọn state.
+   */
+  const showMoment = lootModalOpen && !!growth && !momentSeen && !reduceMotion;
+
+  // Hộp thoại phần thưởng mở THẲNG chỉ khi lên kỷ; ngoài ra phải do Đàm bấm vào thẻ.
+  // `!showMoment` giữ đúng thứ tự cũ: lễ mừng xong rồi mới tới phần thưởng.
+  const showLootModal = lootModalOpen && !showMoment && (pendingEraChanged || detail === 'loot');
+  const showLevelModal = hasLevelUp && detail === 'level';
+
+  // ⚠️ NẠP TRƯỚC gói mã của màn phần thưởng ngay khi một phiên vừa xong. Đo bằng máy
+  // (bản Phase 4′): không có dòng này thì gói `loot-drop-modal` chỉ bắt đầu tải SAU
+  // khi khoảnh khắc kết thúc — trên mạng yếu đó là một khoảng trắng ngay sau 25 phút
+  // làm việc thật. Nay nó còn phục vụ thêm một đường nữa: Đàm bấm vào thẻ tổng kết
+  // thì hộp thoại phải bật ra ngay, không đợi tải.
+  useEffect(() => {
+    if (lootModalOpen) LootDropModal.preload?.();
+  }, [lootModalOpen]);
+
+  // Mọi thứ đang chặn màn hình. Sáu số hạng, nhưng chỉ BA trong số đó tự bật:
+  // lên kỷ (`showLootModal` khi `eraChanged`) · thảm hoạ · khủng hoảng kỷ. Thăng
+  // hoa do Đàm bấm ở Cài đặt, còn `detail === 'loot'|'level'` là do Đàm bấm vào thẻ —
+  // một hộp thoại Đàm tự mở thì không phải "làm phiền".
+  // ⚠️ NGOẠI LỆ DUY NHẤT: `weeklyReportOpen` VẪN tự bật sáng thứ Hai, tức nó chặn
+  // màn hình mà không nằm trong bốn việc được phép. CỐ Ý để lại: báo cáo tuần
+  // không phải một phần thưởng mà là một bản tổng kết, và đẩy nó xuống toast 4
+  // giây nghĩa là lỡ một cái toast = mất báo cáo của cả tuần (`dismissWeeklyReport`
+  // đánh dấu tuần đã xem). Ghi ở `TECH_DEBT.md` #83 để nó được ĐẾM, không bị quên.
+  const blocking = showMoment || showLootModal || disasterModalOpen || eraCrisisModalOpen
+    || prestigeModalOpen || weeklyReportOpen || showLevelModal;
+
+  const hasToast = (
+    (lootModalOpen && !pendingEraChanged)
+    || relicPending
     || hasLevelUp
-    || hasAchievementToast
+    || achievementQueueLength > 0
+    || missionCompletedCount > 0
   );
 
-  if (!hasOverlay) return null;
+  if (!blocking && !hasToast) return null;
 
   return (
     <Suspense fallback={null}>
-      {lootModalOpen && <RewardSequence />}
+      {showMoment && (
+        <CityGrowthMoment moment={growth.moment} era={growth.era} onDone={() => setMomentSeen(true)} />
+      )}
+      {showLootModal && <LootDropModal />}
       {disasterModalOpen && <DisasterModal />}
       {eraCrisisModalOpen && <EraCrisisModal />}
       {prestigeModalOpen && <PrestigeModal />}
-      {hasLevelUp && <LevelUpModal />}
+      {showLevelModal && <LevelUpModal autoDismissMs={0} />}
       {weeklyReportOpen && <WeeklyReportModal />}
-      {hasAchievementToast && <AchievementToast />}
+      {hasToast && (
+        <RewardToastHost
+          paused={blocking}
+          onNavigate={onNavigate}
+          onOpenDetail={setDetail}
+        />
+      )}
     </Suspense>
   );
 }

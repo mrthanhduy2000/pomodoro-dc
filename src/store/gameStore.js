@@ -5368,11 +5368,34 @@ const useGameStore = create(
       dismissRankUpNotification: () =>
         set((prev) => ({ ui: { ...prev.ui, rankUpNotification: null } })),
 
-      dismissAchievementNotification: () =>
-        set((prev) => ({ ui: { ...prev.ui, achievementQueue: prev.ui.achievementQueue.slice(1) } })),
+      /**
+       * ⚠️ NHẬN ID TUỲ CHỌN (2026-08-27, ADR-060). Trước đây chỉ có `slice(1)` vì
+       * toast hiện MỘT cái một lúc, nên "bỏ cái đang hiện" và "bỏ cái đầu hàng"
+       * là cùng một việc. Nay chồng tối đa 3 thẻ cùng lúc và mỗi thẻ tự hết hạn
+       * theo đồng hồ riêng, nên thẻ thứ ba có thể hết trước thẻ thứ nhất —
+       * `slice(1)` lúc đó sẽ bỏ NHẦM một thành tích Đàm chưa kịp đọc.
+       * Không truyền id thì hành vi y hệt bản cũ.
+       */
+      dismissAchievementNotification: (id) =>
+        set((prev) => ({
+          ui: {
+            ...prev.ui,
+            achievementQueue: id === undefined
+              ? prev.ui.achievementQueue.slice(1)
+              : prev.ui.achievementQueue.filter((item) => item !== id),
+          },
+        })),
 
-      dismissMissionNotification: () =>
-        set((prev) => ({ ui: { ...prev.ui, missionCompletedIds: (prev.ui.missionCompletedIds ?? []).slice(1) } })),
+      dismissMissionNotification: (id) =>
+        set((prev) => {
+          const queue = prev.ui.missionCompletedIds ?? [];
+          return {
+            ui: {
+              ...prev.ui,
+              missionCompletedIds: id === undefined ? queue.slice(1) : queue.filter((item) => item !== id),
+            },
+          };
+        }),
 
       // ─── Daily Missions ──────────────────────────────────────────────────
       refreshDailyMissions: () =>

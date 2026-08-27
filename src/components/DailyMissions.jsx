@@ -3,6 +3,7 @@ import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 
 import useGameStore from '../store/gameStore';
 import useSettingsStore from '../store/settingsStore';
+import RewardCard from './shared/RewardCard';
 import {
   BUILDING_EFFECTS,
   MISSION_ALL_BONUS_XP,
@@ -137,48 +138,31 @@ export default function DailyMissions() {
             ))}
           </div>
 
-          <div className="flex items-center justify-between gap-3 border-t pt-4" style={{ borderColor: 'var(--line)' }}>
-            <div className="min-w-0">
-              <div className="mono text-[10px] uppercase tracking-[0.2em]" style={{ color: 'var(--muted-2)' }}>
-                Còn lại
-              </div>
-              <div className="mt-1 text-[13px] leading-snug text-[var(--muted)]">
-                {allClaimed ? 'Đã hoàn tất toàn bộ nhiệm vụ ngày.' : `Còn ${pendingXP.toLocaleString()} XP từ các mục chưa xong.`}
-              </div>
-            </div>
-            <AnimatePresence initial={false}>
-              {allClaimed && !missions.bonusClaimedToday ? (
-                <motion.button
-                  initial={{ opacity: 0, y: 4 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 4 }}
-                  whileHover={reduceMotion ? undefined : { y: -1 }}
-                  whileTap={reduceMotion ? undefined : { scale: 0.98 }}
-                  type="button"
-                  onClick={claimMissionAllBonus}
-                  className="whitespace-nowrap px-4 py-2 text-[12px] font-semibold"
-                  style={lightTheme ? {
-                    borderRadius: 'var(--skin-radius-control, 14px)',
-                    background: 'var(--ink)',
-                    color: 'var(--canvas)',
-                    border: '1px solid rgba(31, 30, 29, 0.06)',
-                    boxShadow: '0 10px 20px rgba(31, 30, 29, 0.12)',
-                  } : {
-                    borderRadius: 'var(--skin-radius-control, 14px)',
-                    background: 'rgba(var(--accent-rgb), 0.9)',
-                    color: 'var(--ink)',
-                    border: '1px solid rgba(var(--accent-rgb), 0.22)',
-                    boxShadow: '0 10px 20px rgba(var(--accent-rgb), 0.18)',
-                  }}
-                >
-                  Nhận +{allMissionBonusXP} XP
-                </motion.button>
-              ) : (
-                <div className="mono text-[11px] font-medium" style={{ color: missions.bonusClaimedToday ? 'var(--good)' : 'var(--muted)' }}>
-                  {missions.bonusClaimedToday ? 'Đã nhận thưởng ngày' : `${pendingXP.toLocaleString()} XP`}
-                </div>
+          <div className="border-t pt-4" style={{ borderColor: 'var(--line)' }}>
+            <RewardCard
+              icon="🎯"
+              name="Thưởng trọn ngày"
+              tier="tot"
+              description={missions.bonusClaimedToday
+                ? 'Đã nhận thưởng trọn ngày hôm nay.'
+                : allClaimed
+                  ? 'Đã hoàn tất toàn bộ nhiệm vụ ngày.'
+                  : `Còn ${pendingXP.toLocaleString()} XP từ các mục chưa xong.`}
+              amount={missions.bonusClaimedToday ? null : `+${allMissionBonusXP} XP`}
+              action={(
+                <AnimatePresence initial={false}>
+                  {allClaimed && !missions.bonusClaimedToday ? (
+                    <ClaimButton
+                      key="claim-daily"
+                      label="Nhận"
+                      lightTheme={lightTheme}
+                      onClick={claimMissionAllBonus}
+                      reduceMotion={reduceMotion}
+                    />
+                  ) : null}
+                </AnimatePresence>
               )}
-            </AnimatePresence>
+            />
           </div>
         </div>
       </QuietSection>
@@ -230,42 +214,34 @@ export default function DailyMissions() {
               ))}
             </div>
 
-            <div className="flex items-center justify-between gap-3 border-t pt-4" style={{ borderColor: 'var(--line)' }}>
-              <div className="min-w-0">
-                <div className="mono text-[10px] uppercase tracking-[0.2em]" style={{ color: 'var(--muted-2)' }}>
-                  Trạng thái
-                </div>
-                <div className="mt-1 text-[13px] leading-snug text-[var(--muted)]">
-                  {chainDone
-                    ? 'Chuỗi tuần này đã hoàn tất.'
-                    : canClaimWeeklyStep
-                      ? 'Bước hiện tại đã đủ điều kiện để chốt.'
-                      : activeStep
-                        ? `Đang ở bước ${chainStepIndex + 1}: ${activeStep.progressLabel ?? activeStep.label}`
-                        : 'Chưa có bước tuần hoạt động.'}
-                </div>
-              </div>
-              {canClaimWeeklyStep ? (
-                <motion.button
-                  whileHover={reduceMotion ? undefined : { y: -1 }}
-                  whileTap={reduceMotion ? undefined : { scale: 0.98 }}
-                  type="button"
-                  onClick={claimWeeklyStep}
-                  className="whitespace-nowrap px-4 py-2 text-[12px] font-semibold"
-                  style={{
-                    borderRadius: 'var(--skin-radius-control, 14px)',
-                    background: 'rgba(var(--accent-rgb), 0.1)',
-                    border: '1px solid rgba(var(--accent-rgb), 0.18)',
-                    color: 'var(--accent2)',
-                  }}
-                >
-                  Nhận bước tuần
-                </motion.button>
-              ) : (
-                <div className="mono text-[11px] font-medium" style={{ color: chainDone ? 'var(--good)' : 'var(--muted)' }}>
-                  {chainDone ? 'Hoàn tất' : `${weeklyChain?.stepProgress ?? 0}/${activeStep?.goal ?? 0}`}
-                </div>
-              )}
+            <div className="border-t pt-4" style={{ borderColor: 'var(--line)' }}>
+              <RewardCard
+                icon="🗓️"
+                name="Thưởng chuỗi tuần"
+                // "hiếm" chứ không phải "tốt": chuỗi tuần đòi giữ nhịp qua nhiều
+                // ngày, nên nó phải đứng trên thưởng trọn ngày trên cùng một thang.
+                tier="hiem"
+                // ⚠️ TIẾN ĐỘ NẰM TRONG MÔ TẢ, KHÔNG ở một ô riêng bên phải. Ở khung
+                // 390px, icon + số XP + một ô trạng thái nữa bóp phần tên xuống còn
+                // ~110px — ảnh dựng cho ra "Thưởn…". Và ô ấy vốn đã nói lại đúng thứ
+                // mô tả vừa nói, tức là trả một cái tên bị cắt để lấy một câu lặp.
+                description={chainDone
+                  ? 'Chuỗi tuần này đã hoàn tất.'
+                  : canClaimWeeklyStep
+                    ? 'Bước hiện tại đã đủ điều kiện để chốt.'
+                    : activeStep
+                      ? `Bước ${chainStepIndex + 1} — ${weeklyChain?.stepProgress ?? 0}/${activeStep.goal}: ${activeStep.progressLabel ?? activeStep.label}`
+                      : 'Chưa có bước tuần hoạt động.'}
+                amount={weeklyBonusXP > 0 ? `+${weeklyBonusXP} XP` : null}
+                action={canClaimWeeklyStep ? (
+                  <ClaimButton
+                    label="Chốt bước"
+                    lightTheme={lightTheme}
+                    onClick={claimWeeklyStep}
+                    reduceMotion={reduceMotion}
+                  />
+                ) : null}
+              />
             </div>
 
             {(streakMissionEligible || unlockedSkills.ke_hoach_hoan_hao) && (
@@ -300,6 +276,42 @@ export default function DailyMissions() {
         </QuietSection>
       )}
     </div>
+  );
+}
+
+/**
+ * ⚠️ CHỈ PHẦN TRẢ THƯỞNG dùng `RewardCard`, các dòng nhiệm vụ thì KHÔNG. Một thẻ
+ * phần thưởng không có thanh tiến độ, mà tiến độ (3/5 phiên) là thông tin thật —
+ * ép dòng nhiệm vụ vào thẻ chung là mua sự đồng bộ bằng cách vứt đi một con số
+ * Đàm đang dùng. Thẻ dùng cho thứ ĐÃ hoặc SẼ nhận; hàng dùng cho thứ đang làm.
+ */
+function ClaimButton({ label, lightTheme, onClick, reduceMotion }) {
+  return (
+    <motion.button
+      initial={{ opacity: 0, y: 4 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: 4 }}
+      whileHover={reduceMotion ? undefined : { y: -1 }}
+      whileTap={reduceMotion ? undefined : { scale: 0.98 }}
+      type="button"
+      onClick={onClick}
+      className="whitespace-nowrap px-3.5 py-2 text-[12px] font-semibold"
+      style={lightTheme ? {
+        borderRadius: 'var(--skin-radius-control, 14px)',
+        background: 'var(--ink)',
+        color: 'var(--canvas)',
+        border: '1px solid rgba(31, 30, 29, 0.06)',
+        boxShadow: '0 10px 20px rgba(31, 30, 29, 0.12)',
+      } : {
+        borderRadius: 'var(--skin-radius-control, 14px)',
+        background: 'rgba(var(--accent-rgb), 0.9)',
+        color: 'var(--ink)',
+        border: '1px solid rgba(var(--accent-rgb), 0.22)',
+        boxShadow: '0 10px 20px rgba(var(--accent-rgb), 0.18)',
+      }}
+    >
+      {label}
+    </motion.button>
   );
 }
 

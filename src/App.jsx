@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, Suspense } from 'react';
+import React, { useEffect, useMemo, useRef, useState, Suspense } from 'react';
 import { AnimatePresence, motion as Motion, useReducedMotion } from 'framer-motion';
 import { initSync } from './lib/syncService';
 import { clearTimerLive, updateTimerLive } from './lib/timerLiveService';
@@ -15,6 +15,7 @@ import { RichTextView } from './components/RichText';
 import { useGameLoop } from './hooks/useGameLoop';
 import { useCityGrowthMoment } from './hooks/useCityMoment';
 import useGameStore from './store/gameStore';
+import useInventoryAttention from './hooks/useInventoryAttention';
 import useSettingsStore from './store/settingsStore';
 import { ERA_METADATA, ERA_THRESHOLDS } from './engine/constants';
 import { getLevelProgress, isCancelledHistoryEntry } from './engine/gameMath';
@@ -112,27 +113,11 @@ const AppIcon = {
       <path d="M12 8v4l2.5 2.5" />
     </Glyph>
   ),
-  skills: (props) => (
-    <Glyph {...props}>
-      <path d="M12 3v18" />
-      <path d="M12 7c3 0 5-2 8-2" />
-      <path d="M12 11c-3 0-5-2-8-2" />
-      <path d="M12 15c3 0 5-2 8-2" />
-    </Glyph>
-  ),
   vault: (props) => (
     <Glyph {...props}>
       <path d="M4 8l8-4 8 4v8l-8 4-8-4z" />
       <path d="M4 8l8 4 8-4" />
       <path d="M12 12v8" />
-    </Glyph>
-  ),
-  trophy: (props) => (
-    <Glyph {...props}>
-      <path d="M8 4h8v5a4 4 0 0 1-8 0z" />
-      <path d="M5 5h3v3a3 3 0 0 1-3-3z" />
-      <path d="M19 5h-3v3a3 3 0 0 0 3-3z" />
-      <path d="M9 14h6l-1 5h-4z" />
     </Glyph>
   ),
   stats: (props) => (
@@ -202,9 +187,7 @@ const AppIcon = {
 
 const DESKTOP_TABS = [
   { id: 'focus', label: 'Tập trung', shortLabel: 'Tập trung', Icon: AppIcon.focus },
-  { id: 'skills', label: 'Kỹ năng', shortLabel: 'Kỹ năng', Icon: AppIcon.skills },
-  { id: 'collection', label: 'Kho báu', shortLabel: 'Kho báu', Icon: AppIcon.vault },
-  { id: 'achievements', label: 'Thành tích', shortLabel: 'Thành tích', Icon: AppIcon.trophy },
+  { id: 'inventory', label: 'Hành trang', shortLabel: 'Hành trang', Icon: AppIcon.vault },
   { id: 'city', label: 'Thành Phố', shortLabel: 'Thành Phố', Icon: AppIcon.city },
   { id: 'stats', label: 'Thống kê', shortLabel: 'Thống kê', Icon: AppIcon.stats },
   { id: 'settings', label: 'Cài đặt', shortLabel: 'Cài đặt', Icon: AppIcon.settings },
@@ -213,19 +196,57 @@ const DESKTOP_TABS = [
 const MOBILE_TABS = [
   { id: 'focus', label: 'Tập trung', shortLabel: 'Tập trung', Icon: AppIcon.focus },
   { id: 'missions', label: 'Nhiệm vụ', shortLabel: 'Nhiệm vụ', Icon: AppIcon.missions },
-  { id: 'skills', label: 'Kỹ năng', shortLabel: 'Kỹ năng', Icon: AppIcon.skills },
-  { id: 'collection', label: 'Kho báu', shortLabel: 'Kho báu', Icon: AppIcon.vault },
-  { id: 'achievements', label: 'Thành tích', shortLabel: 'Thành tích', Icon: AppIcon.trophy },
+  { id: 'inventory', label: 'Hành trang', shortLabel: 'Hành trang', Icon: AppIcon.vault },
   { id: 'city', label: 'Thành Phố', shortLabel: 'Thành Phố', Icon: AppIcon.city },
   { id: 'stats', label: 'Thống kê', shortLabel: 'Thống kê', Icon: AppIcon.stats },
   { id: 'settings', label: 'Cài đặt', shortLabel: 'Cài đặt', Icon: AppIcon.settings },
 ];
 
 // Mobile: 4 tab chính luôn hiện + nút "Thêm" mở các tab phụ → đỡ chật trên iPhone.
-// "Thành Phố" CỐ Ý không nằm trong nhóm chính: thanh dưới iPhone giữ đúng 4 nút.
-const MOBILE_PRIMARY_IDS = ['focus', 'missions', 'skills', 'stats'];
+//
+// ⚠️ ĐỔI 2026-08-27 — ĐỌC TRƯỚC KHI SỬA LẠI. Dòng này trước đây ghi: *"Thành Phố CỐ Ý không nằm
+// trong nhóm chính: thanh dưới iPhone giữ đúng 4 nút"*. Lý do ấy vẫn còn nguyên giá trị (bốn nút
+// là bốn nút), nhưng TIỀN ĐỀ của nó đã chết: hồi đó điều hướng có 8 mục và riêng Kỹ năng · Kho báu
+// · Thành tích đã ăn ba ô, nên phải hy sinh một mục — và Thành Phố là mục bị hy sinh. Nay ba mục
+// ấy gộp thành MỘT ("Hành trang") nên ô thứ tư được trả lại đúng cho Thành Phố. Thứ đổi chỗ là
+// "Thống kê" — nó đi sang nút "Thêm" cùng "Cài đặt", vì hai mục đó là chỗ để NGỒI ĐỌC chứ không
+// phải chỗ bấm vào giữa một phiên.
+const MOBILE_PRIMARY_IDS = ['focus', 'missions', 'inventory', 'city'];
 const MOBILE_PRIMARY_TABS = MOBILE_TABS.filter((t) => MOBILE_PRIMARY_IDS.includes(t.id));
 const MOBILE_SECONDARY_TABS = MOBILE_TABS.filter((t) => !MOBILE_PRIMARY_IDS.includes(t.id));
+
+// Ba màn cũ nay là ba TAB CON của "Hành trang".
+//
+// ⚠️ GIỮ NGUYÊN ID CŨ (`skills` · `collection` · `achievements`), đừng đổi cho "gọn". Thông báo đã
+// LƯU trong localStorage của Đàm vẫn mang `action: { tab: 'skills' }` và `{ tab: 'collection',
+// collectionTab: 'workshop' }`; đổi id ở đây thì mỗi thông báo cũ bấm vào sẽ không đi đâu cả, và
+// KHÔNG có gì đỏ lên — build xanh, test xanh, chỉ có một nút chết. `resolveTabTarget` bên dưới
+// dịch id cũ sang "tab Hành trang + tab con", nên mọi lời gọi `selectTab('skills')` cũ vẫn đúng.
+const INVENTORY_TABS = [
+  {
+    id: 'skills',
+    label: 'Kỹ năng',
+    subtitle: 'Mở khóa các nhánh tăng trưởng dài hạn và định hình phong cách tập trung.',
+  },
+  {
+    id: 'collection',
+    label: 'Kho báu',
+    subtitle: 'Theo dõi di vật, bản vẽ và lịch sử phiên dưới cùng một bề mặt điều hướng.',
+  },
+  {
+    id: 'achievements',
+    label: 'Thành tích',
+    subtitle: 'Nhìn lại các cột mốc đã đạt và khoảng cách tới các biểu tượng kế tiếp.',
+  },
+];
+
+const INVENTORY_SUB_IDS = INVENTORY_TABS.map((tab) => tab.id);
+
+/** Dịch một id điều hướng (kể cả id cũ đã lưu trong thông báo) sang "tab nào + tab con nào". */
+function resolveTabTarget(tab) {
+  if (INVENTORY_SUB_IDS.includes(tab)) return { tab: 'inventory', sub: tab };
+  return { tab, sub: null };
+}
 
 const COLLECTION_TABS = [
   { id: 'relics', label: 'Di vật' },
@@ -1413,6 +1434,7 @@ export default function App() {
   const { progressPct: levelPct } = getLevelProgress(totalEXP);
 
   const [activeTab, setActiveTab] = useState('focus');
+  const [inventoryTab, setInventoryTab] = useState('skills');
   const [collectionTab, setCollectionTab] = useState('relics');
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [supportRailOpen, setSupportRailOpen] = useState(true);
@@ -1421,12 +1443,37 @@ export default function App() {
   const isDesktop = useMinWidth(1024);
   const isWideViewport = useMinWidth(768);
   const showFocusFullscreen = focusFullscreen && activeTab === 'focus';
+  const activeInventoryTab = INVENTORY_TABS.find((tab) => tab.id === inventoryTab) ?? INVENTORY_TABS[0];
+  const {
+    hasAttention: inventoryNeedsAttention,
+    markAchievementsSeen,
+    unseenAchievementCount,
+  } = useInventoryAttention();
+  // Một TẬP chứ không phải một cờ `inventoryNeedsAttention` truyền thẳng: thanh bên và thanh dưới
+  // đều chỉ hỏi "mục này có chấm không", nên ngày mai thêm chấm cho một tab khác thì không phải
+  // đi mở lại hai component điều hướng.
+  const attentionTabIds = useMemo(
+    () => new Set(inventoryNeedsAttention ? ['inventory'] : []),
+    [inventoryNeedsAttention],
+  );
+  // ⚠️ MỌI đường vào điều hướng phải đi qua đây, kể cả khi nơi gọi truyền id CŨ
+  // (`skills`/`collection`/`achievements`) — `resolveTabTarget` dịch chúng thành
+  // "tab Hành trang + tab con", nên không nơi gọi nào phải biết chuyện gộp tab đã xảy ra.
   const selectTab = (tab) => {
-    setActiveTab(tab);
-    if (tab !== 'focus') {
+    const target = resolveTabTarget(tab);
+    if (target.sub) setInventoryTab(target.sub);
+    setActiveTab(target.tab);
+    if (target.tab !== 'focus') {
       setFocusFullscreen(false);
     }
   };
+
+  // Cái chấm tắt khi Đàm ĐÃ XEM, không phải khi anh đi ngang qua: chỉ mở tab con "Thành tích"
+  // mới ghi dấu. Mở "Hành trang" rồi ngồi ở "Kỹ năng" thì thành tích mới vẫn còn là chưa xem.
+  useEffect(() => {
+    if (activeTab !== 'inventory' || inventoryTab !== 'achievements') return;
+    markAchievementsSeen();
+  }, [activeTab, inventoryTab, markAchievementsSeen, unseenAchievementCount]);
 
   useEffect(() => {
     if (!focusFullscreen) return undefined;
@@ -1568,6 +1615,7 @@ export default function App() {
           >
             <EditorialSidebar
               activeTab={activeTab}
+              attentionTabIds={attentionTabIds}
               isOpen={sidebarOpen}
               onOpenWeeklyReport={openWeeklyReport}
               onSelect={selectTab}
@@ -1727,20 +1775,23 @@ export default function App() {
                 area="workspace hiện tại"
                 description="Nội dung tab đang mở gặp lỗi. Chuyển tab hoặc thử render lại khu vực này để tiếp tục."
                 onError={WORKSPACE_ERROR_LOGGER}
-                resetKeys={[activeTab, collectionTab]}
+                resetKeys={[activeTab, inventoryTab, collectionTab]}
                 variant="section"
               >
                 <AnimatePresence mode="wait">
-                  {activeTab === 'skills' && (
-                    <TabPane key="skills">
+                  {activeTab === 'inventory' && (
+                    <TabPane key="inventory">
                       <ShellPane
-                        title="Kỹ năng"
-                        subtitle="Mở khóa các nhánh tăng trưởng dài hạn và định hình phong cách tập trung."
+                        title="Hành trang"
+                        subtitle={activeInventoryTab.subtitle}
                         topRail={!isDesktop && !showFocusFullscreen ? renderTopRail() : null}
                       >
-                        <DeferredTabContent>
-                          <SkillTree onOpenAchievements={() => selectTab('achievements')} />
-                        </DeferredTabContent>
+                        <InventoryView
+                          collectionTab={collectionTab}
+                          onChange={setInventoryTab}
+                          onCollectionChange={setCollectionTab}
+                          sub={inventoryTab}
+                        />
                       </ShellPane>
                     </TabPane>
                   )}
@@ -1757,32 +1808,6 @@ export default function App() {
                           <ResourceDisplay />
                           <RankDisplay />
                         </div>
-                      </ShellPane>
-                    </TabPane>
-                  )}
-
-                  {activeTab === 'collection' && (
-                    <TabPane key="collection">
-                      <ShellPane
-                        title="Kho báu"
-                        subtitle="Theo dõi di vật, bản vẽ và lịch sử phiên dưới cùng một bề mặt điều hướng."
-                        topRail={!isDesktop && !showFocusFullscreen ? renderTopRail() : null}
-                      >
-                        <CollectionView sub={collectionTab} onChange={setCollectionTab} />
-                      </ShellPane>
-                    </TabPane>
-                  )}
-
-                  {activeTab === 'achievements' && (
-                    <TabPane key="achievements">
-                      <ShellPane
-                        title="Thành tích"
-                        subtitle="Nhìn lại các cột mốc đã đạt và khoảng cách tới các biểu tượng kế tiếp."
-                        topRail={!isDesktop && !showFocusFullscreen ? renderTopRail() : null}
-                      >
-                        <DeferredTabContent>
-                          <Achievements />
-                        </DeferredTabContent>
                       </ShellPane>
                     </TabPane>
                   )}
@@ -1842,11 +1867,21 @@ export default function App() {
                 onClick={() => setMoreMenuOpen(false)}
                 aria-hidden="true"
               />
+              {/*
+                ⚠️ Số cột đọc từ chính danh sách, KHÔNG chốt cứng `grid-cols-3`: nhóm phụ vừa đi
+                từ 4 mục xuống 2 (Thống kê · Cài đặt), và một lưới 3 cột cho 2 mục để lại một ô
+                trống ngay giữa thanh — không có gì đỏ lên, chỉ trông như hỏng.
+              */}
               <Motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="pointer-events-auto relative mb-2 grid w-full max-w-[760px] grid-cols-3 gap-1 rounded-[22px] border p-1.5 backdrop-blur-xl"
-                style={{ borderColor: 'var(--line)', background: 'var(--panel-soft)', boxShadow: '0 16px 34px rgba(31,30,29,0.12)' }}
+                className="pointer-events-auto relative mb-2 grid w-full max-w-[760px] gap-1 rounded-[22px] border p-1.5 backdrop-blur-xl"
+                style={{
+                  borderColor: 'var(--line)',
+                  background: 'var(--panel-soft)',
+                  boxShadow: '0 16px 34px rgba(31,30,29,0.12)',
+                  gridTemplateColumns: `repeat(${Math.min(3, Math.max(1, MOBILE_SECONDARY_TABS.length))}, minmax(0, 1fr))`,
+                }}
               >
                 {MOBILE_SECONDARY_TABS.map((tab) => {
                   const active = activeTab === tab.id;
@@ -1893,7 +1928,19 @@ export default function App() {
                     boxShadow: active ? '0 8px 14px rgba(31,30,29,0.03)' : 'none',
                   }}
                 >
-                  <tab.Icon size={15} />
+                  <span className="relative">
+                    <tab.Icon size={15} />
+                    {attentionTabIds.has(tab.id) && (
+                      // Chấm chú ý nằm ở GÓC ICON; chấm "đang mở" nằm ở đáy nút. Hai chấm nói hai
+                      // chuyện khác nhau nên chúng không được ở cùng một chỗ, kể cả khi tab này
+                      // vừa đang mở vừa đang có việc.
+                      <span
+                        aria-hidden="true"
+                        className="absolute -right-1.5 -top-1 h-[6px] w-[6px] rounded-full"
+                        style={{ background: 'var(--accent)' }}
+                      />
+                    )}
+                  </span>
                   <span className="truncate">{tab.shortLabel}</span>
                   {active && (
                     <span
@@ -2040,7 +2087,7 @@ function GlobalOverlays({
   );
 }
 
-function EditorialSidebar({ activeTab, isOpen, onOpenWeeklyReport, onSelect, onToggle }) {
+function EditorialSidebar({ activeTab, attentionTabIds, isOpen, onOpenWeeklyReport, onSelect, onToggle }) {
   return (
     <Motion.aside
       className="hidden md:flex md:flex-col"
@@ -2070,6 +2117,7 @@ function EditorialSidebar({ activeTab, isOpen, onOpenWeeklyReport, onSelect, onT
           <SidebarItem
             key={tab.id}
             active={activeTab === tab.id}
+            attention={attentionTabIds?.has(tab.id) ?? false}
             icon={<tab.Icon size={18} />}
             isOpen={isOpen}
             label={tab.label}
@@ -2115,7 +2163,7 @@ function EditorialSidebar({ activeTab, isOpen, onOpenWeeklyReport, onSelect, onT
   );
 }
 
-function SidebarItem({ active, icon, isOpen, label, onClick }) {
+function SidebarItem({ active, attention = false, icon, isOpen, label, onClick }) {
   return (
     <button
       type="button"
@@ -2126,7 +2174,7 @@ function SidebarItem({ active, icon, isOpen, label, onClick }) {
       }`}
     >
       <span
-        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[11px] transition-colors"
+        className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-[11px] transition-colors"
         style={{
           background: active ? 'var(--accent)' : 'transparent',
           color: active ? '#faf9f6' : 'rgba(250,249,246,0.55)',
@@ -2134,6 +2182,15 @@ function SidebarItem({ active, icon, isOpen, label, onClick }) {
         }}
       >
         {icon}
+        {attention && (
+          // Chấm gắn vào Ô ICON chứ không vào cả nút: thanh bên thu gọn còn 66px thì chỉ ô icon
+          // còn lại, gắn vào nút thì chấm trôi ra rìa và biến mất.
+          <span
+            aria-hidden="true"
+            className="absolute right-0.5 top-0.5 h-[7px] w-[7px] rounded-full"
+            style={{ background: 'var(--accent)', boxShadow: '0 0 0 2px #1b1a17' }}
+          />
+        )}
       </span>
       {isOpen && (
         <span
@@ -2430,37 +2487,78 @@ function useMinWidth(minWidth) {
   return matches;
 }
 
+/**
+ * Dải tab con dạng viên thuốc — MỘT công thức cho mọi tầng tab con.
+ *
+ * ⚠️ Trước 2026-08-27 khối này nằm thẳng trong `CollectionView`. Lúc "Hành trang" cần đúng dải
+ * ấy cho ba tab con của nó, cách rẻ nhất là chép sang — và đó là cách một giao diện tách làm hai
+ * kiểu: hai bản sao trôi khỏi nhau ở bo góc, ở màu chữ khi không chọn, rồi hai tầng tab con nằm
+ * chồng nhau trên cùng một màn hình mà trông không cùng một app.
+ */
+function SubTabs({ items, onChange, value }) {
+  return (
+    <div
+      className="mb-6 inline-flex flex-wrap gap-2 rounded-[18px] border p-1.5"
+      style={{
+        borderColor: 'var(--line)',
+        background: 'var(--panel)',
+        boxShadow: '0 8px 16px rgba(31,30,29,0.03)',
+      }}
+    >
+      {items.map((tab) => {
+        const active = value === tab.id;
+        return (
+          <button
+            key={tab.id}
+            type="button"
+            aria-pressed={active}
+            onClick={() => onChange?.(tab.id)}
+            className="rounded-full px-4 py-2 text-[13px] font-medium transition-colors"
+            style={{
+              background: active ? 'var(--panel-strong)' : 'transparent',
+              color: active ? 'var(--ink)' : 'var(--muted)',
+              border: active ? '1px solid var(--line)' : '1px solid transparent',
+              boxShadow: active ? '0 8px 14px rgba(31,30,29,0.03)' : 'none',
+            }}
+          >
+            {tab.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/**
+ * "Hành trang" — một tab điều hướng, ba màn cũ nguyên vẹn bên trong.
+ *
+ * Đây là việc GOM NHÓM, không phải viết lại: mỗi tab con vẫn dựng đúng component cũ, với đúng
+ * state cũ (`collectionTab` vẫn do `App` giữ, nên mở thông báo "Xưởng" vẫn rơi thẳng vào Xưởng).
+ */
+function InventoryView({ collectionTab, onCollectionChange, onChange, sub }) {
+  return (
+    <div>
+      <SubTabs items={INVENTORY_TABS} onChange={onChange} value={sub} />
+
+      {sub === 'skills' && (
+        <DeferredTabContent>
+          <SkillTree onOpenAchievements={() => onChange?.('achievements')} />
+        </DeferredTabContent>
+      )}
+      {sub === 'collection' && <CollectionView onChange={onCollectionChange} sub={collectionTab} />}
+      {sub === 'achievements' && (
+        <DeferredTabContent>
+          <Achievements />
+        </DeferredTabContent>
+      )}
+    </div>
+  );
+}
+
 function CollectionView({ sub = 'relics', onChange }) {
   return (
     <div>
-      <div
-        className="mb-6 inline-flex flex-wrap gap-2 rounded-[18px] border p-1.5"
-        style={{
-          borderColor: 'var(--line)',
-          background: 'var(--panel)',
-          boxShadow: '0 8px 16px rgba(31,30,29,0.03)',
-        }}
-      >
-        {COLLECTION_TABS.map((tab) => {
-          const active = sub === tab.id;
-          return (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => onChange?.(tab.id)}
-              className="rounded-full px-4 py-2 text-[13px] font-medium transition-colors"
-              style={{
-                background: active ? 'var(--panel-strong)' : 'transparent',
-                color: active ? 'var(--ink)' : 'var(--muted)',
-                border: active ? '1px solid var(--line)' : '1px solid transparent',
-                boxShadow: active ? '0 8px 14px rgba(31,30,29,0.03)' : 'none',
-              }}
-            >
-              {tab.label}
-            </button>
-          );
-        })}
-      </div>
+      <SubTabs items={COLLECTION_TABS} onChange={onChange} value={sub} />
 
       <Suspense fallback={<TabLoadingState />}>
         {sub === 'relics' && <RelicInventory />}

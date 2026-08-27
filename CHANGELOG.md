@@ -12,6 +12,39 @@
 
 ---
 
+## 2026-08-27 (tối) — Điều hướng chính từ 8 mục xuống 5: gộp, không xoá
+
+**Mục đích.** Thanh điều hướng có 8 mục, trong đó Kỹ năng · Kho báu · Thành tích chiếm ba ô cho ba
+màn cùng một họ ("những gì tôi đã tích luỹ"). Trên iPhone, 8 mục chen vào 4 nút nên "Thành Phố" —
+mặt trận đang xây — bị đẩy vào nút "Thêm". Gộp ba mục ấy thành một tab **"Hành trang"** trả lại ô
+thứ tư cho Thành Phố mà không màn hình nào bị xoá.
+
+**Phạm vi.** Tầng điều hướng. Không đụng engine game, thành phố 3D, sync, hay nội dung từng màn —
+mỗi tab con vẫn dựng đúng component cũ với đúng state cũ.
+
+- **`src/App.jsx`** — `DESKTOP_TABS` còn **5 mục** (Tập trung · Hành trang · Thành Phố · Thống kê ·
+  Cài đặt); `MOBILE_TABS` còn 6, `MOBILE_PRIMARY_IDS` = 4 nút (Tập trung · Nhiệm vụ · Hành trang ·
+  Thành Phố), nút "Thêm" giữ Thống kê + Cài đặt. Thêm `INVENTORY_TABS` (3 tab con **giữ nguyên id
+  cũ** `skills`/`collection`/`achievements`) và `resolveTabTarget` — cửa dịch id cũ sang "tab Hành
+  trang + tab con". Dải tab con tách thành `SubTabs` dùng chung với `COLLECTION_TABS`.
+- **`src/engine/opportunities.js`** (mới) — ba phép đếm "có việc đang chờ" chuyển từ
+  `NotificationCenter.jsx` sang đây, vì nay có HAI người đọc chúng.
+- **`src/engine/navAttention.js`** + **`src/hooks/useInventoryAttention.js`** (mới) — chấm màu
+  `var(--accent)` trên tab "Hành trang" khi có kỹ năng/bản vẽ/công trình sẵn sàng, hoặc có thành
+  tích đã mở khoá mà chưa xem.
+- **Test mới**: `src/appNavigation.test.js` (6 bài, đọc mã nguồn — đếm 5 mục/4 nút/3 tab con và
+  canh mọi đích thông báo còn tới được), `src/engine/navAttention.test.js` (6),
+  `src/engine/opportunities.test.js` (5). Cả **15 phép thử ngược** đều đỏ đúng bài dự kiến.
+
+**Ảnh hưởng.** Số màn hình không đổi — mọi màn cũ vẫn vào được, qua một lớp tab con. Thanh dưới
+iPhone đổi chỗ "Thống kê" (nay nằm sau nút "Thêm") lấy chỗ cho "Thành Phố".
+
+**Tương thích.** Thông báo đã lưu trong localStorage mang `action: { tab: 'skills' }` /
+`{ tab: 'collection', collectionTab: … }` **vẫn đi đúng chỗ** — id cũ được `resolveTabTarget` dịch
+chứ không bị đổi ở nguồn. Không có migration.
+
+---
+
 ## 2026-08-27 (chiều) — Nút hành động nghe theo skin, và có cảm giác bấm lún xuống
 
 **Mục đích.** `ActionButton` là nút chuẩn của app nhưng nó khai hai bảng màu chốt cứng rẽ theo

@@ -29,6 +29,9 @@ Mặt trận đang làm: **thành phố 3D** (`src/engine/city3d/` + `src/compon
 ## Đang ở đâu
 - Nhánh production: `main`. Mốc gần nhất: **ADR-059** (mỗi kỷ MỘT MẠNG ĐƯỜNG riêng — hết bàn
   cờ; `roadPlan.js` nối các điểm mốc bằng cung cong ⇒ giao lộ chữ T/Y/ngã năm).
+- Điều hướng: **5 mục** ở thanh bên desktop (Tập trung · Hành trang · Thành Phố · Thống kê · Cài
+  đặt); iPhone **4 nút + "Thêm"**. Kỹ năng/Kho báu/Thành tích là ba TAB CON của "Hành trang" và
+  **vẫn mang id cũ** — thông báo đã lưu trỏ vào chúng, `resolveTabTarget` (`App.jsx`) là cửa dịch.
 - Giao diện: **5 skin**, mặc định là **"Sân Chơi" (`arcade`)** — phẳng, sans đậm, thẻ có chân bóng
   đặc 3px. Danh sách skin + mặc định có MỘT nguồn duy nhất: `src/store/uiSkins.js`. ⚠️ Thêm skin thì
   phải đủ ba chỗ (danh sách · `SKIN_OPTIONS` ở `Settings.jsx` · khối `[data-skin=…]` ở `index.css`)

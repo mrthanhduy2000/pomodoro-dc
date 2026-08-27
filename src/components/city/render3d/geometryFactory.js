@@ -33,7 +33,7 @@
 import { BufferAttribute, BufferGeometry, Color } from 'three';
 
 import { getEraStyle } from '../../../engine/city3d/eraStyle';
-import { MATERIAL_ORDER, contactShade, materialFamilyFor } from '../../../engine/city3d/materials';
+import { MATERIAL_ORDER, contactShade, materialFamilyFor, soffitShade } from '../../../engine/city3d/materials';
 import { bevelWidth } from '../../../engine/city3d/parts';
 
 /** Bộ đệm tích luỹ trong lúc dựng. Mảng JS thường rồi mới đổ sang Float32Array một lần. */
@@ -64,10 +64,14 @@ function pushTriangle(sink, a, b, c, rgb, shade) {
   const len = Math.hypot(nx, ny, nz) || 1;
   nx /= len; ny /= len; nz /= len;
 
+  // Hai trục che khuất, nhân với nhau: ĐỘ CAO (gần đất thì tối) × HƯỚNG MẶT (úp xuống thì tối).
+  // Trục thứ hai là hằng số cho cả tam giác vì pháp tuyến phẳng theo mặt — tính một lần ngoài vòng.
+  const soffit = shade ? soffitShade(ny) : 1;
+
   for (const p of [a, b, c]) {
     sink.pos.push(p[0], p[1], p[2]);
     sink.nor.push(nx, ny, nz);
-    const k = shade ? contactShade(p[1]) : 1;
+    const k = shade ? contactShade(p[1]) * soffit : 1;
     sink.col.push(rgb.r * k, rgb.g * k, rgb.b * k);
   }
   sink.triangles += 1;

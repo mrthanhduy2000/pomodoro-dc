@@ -334,9 +334,10 @@ export function applyPaintedLook(renderer) {
  * một cái bóng, chỉ đủ ra một vệt răng cưa. Đây đúng chỗ Đàm yêu cầu ưu tiên chất lượng hình ảnh
  * và MacBook là máy chính.
  * ⚠️ Điện thoại GIỮ 512 — không phải vì tiếc, mà vì bóng ở đó vẽ lại rất hiếm (render-on-demand)
- * và bộ nhớ texture là thứ iOS Safari giết tab vì nó. 2048² × 4 byte = 16 MB cho MỘT bản đồ.
+ * và bộ nhớ texture là thứ iOS Safari giết tab vì nó. 4096² × 4 byte = 64 MB cho MỘT bản đồ trên
+ * máy bàn; con số ấy là lý do dòng dưới KHÔNG được áp cho điện thoại chỉ vì "cho đồng bộ".
  */
-export const SHADOW_MAP_DESKTOP = 2048;
+export const SHADOW_MAP_DESKTOP = 4096;
 export const SHADOW_MAP_MOBILE = 512;
 
 /**

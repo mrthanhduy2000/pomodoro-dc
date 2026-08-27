@@ -44,10 +44,10 @@
  */
 
 import { readFileSync } from 'node:fs';
-import { decodePng } from './png-probe.mjs';
+import { decodePng } from '../png-probe.mjs';
 import {
   BANDS, cityRect, coTheoMatNa, EYE, gridVector, soHaiKhung, vecDist,
-} from './sweepMetric.mjs';
+} from '../sweepMetric.mjs';
 
 const argv = process.argv.slice(2);
 const SELFTEST = argv.includes('--selftest');

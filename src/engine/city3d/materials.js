@@ -165,3 +165,32 @@ export function contactShade(y) {
   const t = Math.pow(y / CONTACT_REACH, 0.55);
   return CONTACT_FLOOR + (1 - CONTACT_FLOOR) * t;
 }
+
+/** Mặt úp thẳng xuống giữ lại bao nhiêu phần màu gốc. */
+export const SOFFIT_FLOOR = 0.62;
+
+/**
+ * Che khuất theo HƯỚNG MẶT — nửa còn thiếu của phép xấp xỉ ở trên.
+ *
+ * `contactShade` hỏi *"đỉnh này ở CAO bao nhiêu"*; nó mù hoàn toàn với *"mặt này quay đi đâu"*.
+ * Hệ quả nhìn thấy được: **gầm mái đua, gầm thềm ziggurat, gầm ban công, gầm khối bay của kỷ 15
+ * đều đang nhận đủ ánh sáng môi trường y như thể chúng ngửa lên trời** — mà một mặt úp xuống thì
+ * gần như không thấy bầu trời. Đó chính là thứ làm mái đua đọc ra như một tấm bìa dán lên tường
+ * chứ không như một tấm che có bề dày.
+ *
+ * ⚠️ CHỈ ĐỘNG VÀO MẶT ÚP XUỐNG, và đó là ràng buộc chứ không phải sự dè dặt. Công thức bán cầu
+ * đầy đủ `(1 + ny)/2` sẽ làm TƯỜNG ĐỨNG (ny = 0) tối đi ~11% ở cả 15 kỷ — tức đổi bảng màu của
+ * toàn thành phố để đổi lấy một cái gầm mái, đúng cái bệnh "nhợt như sữa" ở chiều ngược lại. Ở
+ * đây `ny >= 0` trả về đúng 1, nên KHÔNG một bức tường, mái dốc hay mặt đất nào đổi màu.
+ *
+ * ⚠️ Và nó KHÔNG chồng lấn với `HemisphereLight` của cảnh: đèn ấy đổi màu theo hướng (trời xanh
+ * ở trên, đất ở dưới), còn cái này đổi ĐỘ SÁNG theo mức nhìn thấy bầu trời. Hai đại lượng khác
+ * nhau, và đèn bán cầu ở cường độ hiện tại không tự nó tách được gầm mái khỏi mặt tường.
+ *
+ * @param {number} ny thành phần thẳng đứng của pháp tuyến đã chuẩn hoá (−1 úp xuống … +1 ngửa lên)
+ * @returns {number} 0..1 — nhân vào từng kênh màu
+ */
+export function soffitShade(ny) {
+  if (!Number.isFinite(ny) || ny >= 0) return 1;
+  return 1 + (SOFFIT_FLOOR - 1) * Math.pow(Math.min(1, -ny), 0.8);
+}

@@ -64,6 +64,13 @@ import { buildRoadPaths, roadHalfWidth } from '../../../engine/city3d/roadPath';
  */
 const SUB = TERRAIN_SUB;
 
+// ── Quầng tối dưới chân công trình ─────────────────────────────────────────
+// Ba con số này quyết định một quầng đọc ra là "bóng" hay là "vết bẩn". `OUTER` lớn hơn `INNER`
+// đúng 0,6 ô để dải chuyển tiếp phủ ~1,8 bước lưới nền (xem chú thích `contactAt`).
+const GROUND_AO_INNER = 0.45;   // trong bán kính này thì tối hết mức (phần lớn nằm dưới gầm nhà)
+const GROUND_AO_OUTER = 1.05;   // ra khỏi đây thì nền nguyên màu
+const GROUND_AO_FLOOR = 0.72;   // sát chân tường giữ lại bao nhiêu phần màu gốc
+
 /**
  * Mặt đường nhô lên tí xíu để không chọi (z-fight) với mặt đất ngay dưới.
  * ⚠️ `sceneGraph.js` NHẬP hằng số này chứ không viết lại số 0,014 của riêng nó — cư dân phải đứng
@@ -161,6 +168,38 @@ function surfaceKit({ terrain, gridSize, layout, palette }) {
   const variantAt = new Map();
   for (const cell of layout?.ground ?? []) variantAt.set(`${cell.x}|${cell.y}`, cell.variant ?? 0);
 
+  // ── Che khuất quanh chân công trình ──────────────────────────────────────
+  // Nền hiện KHÔNG tối đi một chút nào ở chỗ giáp tường, nên mọi công trình đọc ra như một hình
+  // dán lên thảm cỏ. Đây là tầng CHỈ ĐỔI MÀU của lưới nền — cao độ không đụng tới, nên bất biến
+  // ADR-007 (`buildTerrain` không được biết tiến độ chơi) còn nguyên: hàm ấy vẫn không nhận
+  // `layout`, và nhà đã xây vẫn đứng đúng chỗ cũ.
+  const occupied = [];
+  for (const b of layout?.buildings ?? []) if (Number.isFinite(b?.x) && Number.isFinite(b?.y)) occupied.push([b.x, b.y]);
+  for (const b of layout?.dwellings ?? []) if (Number.isFinite(b?.x) && Number.isFinite(b?.y)) occupied.push([b.x, b.y]);
+
+  /**
+   * Hệ số tối của nền tại một điểm, theo khoảng cách tới chân công trình gần nhất.
+   *
+   * ⚠️ BÁN KÍNH PHẢI LỚN HƠN BƯỚC LƯỚI NỀN, nếu không cái bóng này thành một vệt vuông vức thay vì
+   * một quầng mềm: lưới nền có `TERRAIN_SUB = 3` ⇒ đỉnh cách nhau 1/3 ô, nên một dải chuyển tiếp
+   * hẹp hơn ~2/3 ô sẽ chỉ rơi vào một hàng đỉnh và bị nội suy Gouraud kéo thành hình thoi. Dải
+   * 0,45 → 1,05 rộng 0,6 ô ≈ 1,8 bước lưới — mảnh nhất còn đọc ra là quầng.
+   */
+  function contactAt(u, v) {
+    let nearest = Infinity;
+    for (const [bx, by] of occupied) {
+      const dx = u - bx; const dy = v - by;
+      const d2 = dx * dx + dy * dy;
+      if (d2 < nearest) nearest = d2;
+    }
+    if (!Number.isFinite(nearest)) return 1;
+    const d = Math.sqrt(nearest);
+    if (d >= GROUND_AO_OUTER) return 1;
+    if (d <= GROUND_AO_INNER) return GROUND_AO_FLOOR;
+    const t = smoothstep((d - GROUND_AO_INNER) / (GROUND_AO_OUTER - GROUND_AO_INNER));
+    return GROUND_AO_FLOOR + (1 - GROUND_AO_FLOOR) * t;
+  }
+
   const scratch = new Color();
   const rgbOf = (hex) => { scratch.setHex(hex); return [scratch.r, scratch.g, scratch.b]; };
   const shades = palette?.groundShades ?? [palette?.ground ?? 0x888888];
@@ -246,6 +285,13 @@ function surfaceKit({ terrain, gridSize, layout, palette }) {
 
     // ── Tầng 3: sườn dốc lộ đất ──────────────────────────────────────────────
     applyBareEarth(out, normal);
+
+    // ── Tầng 4: quầng tối dưới chân công trình ───────────────────────────────
+    // Đứng CUỐI vì nó là phép che khuất, không phải một màu: nó nhân vào bất kỳ màu nào ba tầng
+    // trên đã pha ra. Đặt nó trước tầng 2 thì vết loang sẽ được tính trên một màu đã tối đi rồi
+    // nhân tiếp — tức quầng đậm nhạt theo vân đất, một thứ chẳng có nghĩa gì.
+    const ao = contactAt(u, v);
+    if (ao < 1) for (let i = 0; i < 3; i += 1) out[i] *= ao;
 
     return out;
   }

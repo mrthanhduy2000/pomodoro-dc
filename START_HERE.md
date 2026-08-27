@@ -55,10 +55,21 @@ Mặt trận đang làm: **thành phố 3D** (`src/engine/city3d/` + `src/compon
   **KHÔNG đo lại** trừ khi Đàm thấy khung hình giật trên máy thật.
 
 ## Việc tiếp theo (chưa làm)
-1. **Kim tự tháp / ziggurat** — kỷ 2 (Ai Cập) và kỷ 3 (Iraq) đang ra mái nón nhiều cạnh,
-   không có khối chóp bốn mặt. `prism` với `sides: 4` + `taper: 0` chính là thứ cần.
-2. **"Giống 3D hơn"** — bóng đổ nét hơn (`SHADOW_MAP_DESKTOP` 2048 → 4096, siết
-   `sun.shadow.camera` về phạm vi thành phố) + thêm che khuất môi trường (AO).
+> ⚠️ Hai việc từng đứng ở đây ĐÃ XONG hoặc đã bị chính số đo bác — đừng làm lại (2026-08-27):
+> **(a) Kim tự tháp / ziggurat** đã xong từ trước: kỷ 2 khai `roof: 'pyramid'` và dựng ra chóp
+> `sides: 4`, kỷ 3 khai `ziggurat` và dựng ra ba thềm + tường nghiêng + đền trên đỉnh. Đã dựng ảnh
+> hai kỷ ở `--width 1500` và nhìn thấy tận mắt. Dòng cũ ở đây mô tả một thế giới không còn tồn tại.
+> **(b) "Bóng nét hơn + AO"** đã làm, và đo được là **gần như vô hình ở khung mặc định**: bóng đổ
+> 2048→4096 đổi **0,5%** điểm ảnh (chỉ dải mép bóng) · che khuất theo hướng mặt **0,0%** (camera
+> chúi xuống 34° nên mặt úp gần như không lọt khung) · quầng tối chân nhà **0,3%** ở thành phố đông,
+> **1,1%** ở thành phố trẻ. Cả ba đã ship vì đúng và tốn 0 đồng, nhưng **đừng trông chúng làm cảnh
+> "3D hơn"** — và cũng đừng đi tinh chỉnh tiếp cùng họ ấy, đây là lần thứ hai một mảng chi tiết
+> nhỏ đo ra dưới ngưỡng mắt (lần đầu: `TECH_DEBT #41`, chi tiết mái Phase 11).
+
+1. **Hỏi Đàm "3D hơn" nghĩa là gì, kèm ảnh.** Ba cần gạt che-khuất/bóng-đổ đều đã đo ≤1,1% điểm
+   ảnh, nên cần một chẩn đoán mới chứ không phải một vòng chỉnh nữa. Cần gạt còn lại và mạnh nhất
+   là **góc/tiêu cự camera** (FOV 38 khá tele nên phối cảnh bị dẹt) — nhưng `PHASE_RULES` §9 cấm
+   đụng camera, nên đây là việc phải có Đàm quyết chứ không tự làm.
 
 ## Lệnh hay dùng
 ```

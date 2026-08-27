@@ -1,3 +1,46 @@
+> Cập nhật lần cuối: **2026-08-27 (đêm)** — **BA CẦN GẠT "GIỐNG 3D HƠN", VÀ CẢ BA ĐỀU ĐO RA
+> DƯỚI NGƯỠNG MẮT.** Ship cả ba vì chúng đúng và tốn 0 đồng, nhưng phải nói thẳng con số.
+>
+> **Trước hết, một đính chính:** việc "Kim tự tháp / ziggurat cho kỷ 2 và kỷ 3" đứng đầu danh sách
+> "việc tiếp theo" của `START_HERE.md` **đã xong từ trước**. Kỷ 2 khai `roof: 'pyramid'` và dựng ra
+> chóp `sides: 4, taper: 0.06`; kỷ 3 khai `ziggurat` và dựng ra ba thềm + tường nghiêng (batter) +
+> đền thờ trên đỉnh. Đã dựng ảnh cả hai ở `--width 1500` và nhìn tận mắt. Một dòng "việc tiếp theo"
+> đã cũ thì tốn của phiên sau trọn một lượt, nên nó đã được viết lại kèm lý do.
+>
+> **Ba việc đã làm, kèm số đo (`sweep-diff --frame`, ngưỡng mắt 12/255):**
+> **(1) `SHADOW_MAP_DESKTOP` 2048 → 4096** — đổi **0,5%** điểm ảnh, lệch trung bình cả khung 0,26.
+> Nó làm đúng việc của nó (sắc lại dải mép bóng) và không làm gì khác.
+> **(2) Che khuất theo HƯỚNG MẶT** (`soffitShade` ở `materials.js`) — trục còn thiếu của phép xấp
+> xỉ cũ: `contactShade` chỉ hỏi *"đỉnh này ở CAO bao nhiêu"* nên gầm mái đua, gầm thềm ziggurat,
+> gầm khối bay kỷ 15 đều đang nhận đủ sáng như thể ngửa lên trời. Đo ra **0,0%** điểm ảnh. ⚠️ Lý do
+> tôi lẽ ra phải hỏi TRƯỚC khi viết: **camera chúi xuống 34°, nên mặt úp xuống gần như không bao
+> giờ lọt vào khung hình.** Tôi nhìn ảnh và tưởng thấy dải tối dưới mái — phép tắt-bật cho thấy dải
+> ấy vốn đã có sẵn từ ánh sáng. Đúng bẫy "lùm cây" Phase 8D.
+> **(3) Quầng tối dưới chân công trình** (tầng 4 của `groundColorAt`, `terrainMesh.js`) — nền xưa
+> nay không tối đi một chút nào chỗ giáp tường, nên nhà đọc ra như hình dán lên thảm cỏ. Đo ra
+> **0,3%** ở thành phố đông (nền quanh nhà phần lớn là ĐƯỜNG, mà đường là tấm lưới khác) và
+> **1,1%** ở thành phố trẻ. Nhìn ảnh kỷ 1 thì quầng đọc ra là bóng mềm, không bị vuông vức.
+>
+> **⚠️ ĐIỀU PHẢI ĐỌC RA, KHÔNG PHẢI BA CON SỐ RỜI:** ba cần gạt độc lập nhau, cùng họ "che khuất /
+> bóng đổ", cùng ra ≤1,1%. Khi ba giả thuyết liên tiếp đều bị số đo bác thì phải **nghi chính câu
+> hỏi** — "giống 3D hơn" gần như chắc chắn KHÔNG nằm ở tầng tô bóng. Cần gạt còn lại và mạnh nhất
+> là **tiêu cự camera** (FOV 38 khá tele ⇒ phối cảnh dẹt), mà `PHASE_RULES` §9 cấm đụng camera ⇒
+> phải có Đàm quyết. Đừng mở thêm một vòng chỉnh AO/bóng nữa.
+>
+> **Hai thứ dọn kèm:** `scripts/archive/*.mjs` bị **hỏng import** sau lần chuyển thư mục (bốn file
+> còn `from './png-probe.mjs'` trong khi png-probe ở thư mục cha) ⇒ `PHASE_RULES` §3 hứa chúng
+> "chạy được khi thật sự cần" mà thật ra không chạy được cái nào. Đã sửa đường dẫn.
+> Và `geometryFactory.test.js` có một bài tự khai *"mọi chênh lệch giữa đỉnh trên và đỉnh dưới chỉ
+> có thể đến từ bóng tiếp xúc"* — tiền đề ấy chết ngay khi có trục thứ hai, nên bài đỏ **đúng đắn**.
+> Vá bằng cách lọc chỉ lấy đỉnh trên MẶT TƯỜNG ĐỨNG (nơi `soffitShade = 1` theo cấu tạo) và hỏi
+> đường cong tại đúng `lowest.y` ĐO ĐƯỢC thay vì viết cứng `contactShade(0)` — khối có mép vát nên
+> đỉnh thấp nhất của mặt tường nằm ở y ≈ 0,035 chứ không phải 0.
+>
+> Cổng: `npm test` **1.187 bài · 1.186 pass · 0 fail · 1 skipped** (+1 bài mới, đã thử-cho-đỏ) ·
+> `test:cross` 3/3 · lint sạch · build xanh · cổng chống trôi 15 kỷ **0/15 và 0/105 dưới ngưỡng**
+> (cặp chặng gần nhất 15,27 · cặp kỷ gần nhất 20,22 · trung vị 37,97). ⚠️ KHÔNG đo mốc nền trước
+> thay đổi cho bản quét ấy, nên đừng đọc ba con số này thành một hiệu số so với bảng cũ.
+
 > Cập nhật lần cuối: **2026-08-27 (khuya)** — **ĐIỀU HƯỚNG CHÍNH: 8 MỤC → 5, BẰNG CÁCH GỘP.**
 > Ba màn Kỹ năng · Kho báu · Thành tích nay là ba TAB CON của **"Hành trang"**. Desktop còn đúng 5
 > mục (Tập trung · Hành trang · Thành Phố · Thống kê · Cài đặt); iPhone còn 4 nút (Tập trung ·

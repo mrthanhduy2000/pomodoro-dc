@@ -27,7 +27,7 @@
  */
 
 import { readFileSync } from 'node:fs';
-import { decodePng } from './png-probe.mjs';
+import { decodePng } from '../png-probe.mjs';
 
 /** Ngưỡng "đây là một điểm SÁNG": trên thang sRGB 0–1. */
 const HIGHLIGHT = 0.75;

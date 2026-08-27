@@ -31,7 +31,7 @@
 
 import { readFileSync } from 'node:fs';
 
-import { decodePng } from './png-probe.mjs';
+import { decodePng } from '../png-probe.mjs';
 
 /** Độ sáng cảm nhận 0..1. */
 function lum(r, g, b) { return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255; }

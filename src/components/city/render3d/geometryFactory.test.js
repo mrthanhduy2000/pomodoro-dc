@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import { buildMergedGeometry } from './geometryFactory.js';
-import { MATERIAL_ORDER, contactShade, materialFamilyFor } from '../../../engine/city3d/materials.js';
+import { MATERIAL_ORDER, SOFFIT_FLOOR, contactShade, materialFamilyFor } from '../../../engine/city3d/materials.js';
 import { getEraStyle } from '../../../engine/city3d/eraStyle.js';
 import { buildBuildingSpec } from '../../../engine/city3d/buildingSpec.js';
 import { bevelWidth, countSpecTriangles, gable, prism } from '../../../engine/city3d/parts.js';
@@ -129,14 +129,25 @@ test('BÓNG TIẾP XÚC ĐƯỢC NƯỚNG THẬT VÀO MÀU ĐỈNH — chân t�
 
   const pos = merged.geometry.getAttribute('position');
   const col = merged.geometry.getAttribute('color');
+  const nor = merged.geometry.getAttribute('normal');
   let lowest = { y: Infinity, lum: 0 };
   let highest = { y: -Infinity, lum: 0 };
   for (let i = 0; i < pos.count; i += 1) {
+    // ⚠️ CHỈ LẤY ĐỈNH TRÊN MẶT TƯỜNG DỰNG ĐỨNG (`ny ≈ 0`), và đó là điều kiện của phép đo chứ
+    // không phải sự cầu kỳ. Từ 2026-08-27 màu đỉnh là TÍCH của hai trục che khuất — độ cao
+    // (`contactShade`) × hướng mặt (`soffitShade`) — nên đỉnh thấp nhất của khối lại nằm trên MẶT
+    // ĐÁY (úp thẳng xuống), chỗ cả hai trục cùng tối. Đo ở đó rồi so với một mình `contactShade`
+    // là đang so hai đại lượng khác nhau; bài này đỏ đúng vì lý do ấy, không phải vì mã hỏng.
+    // Mặt tường đứng có `soffitShade = 1` theo cấu tạo, nên ở đó `contactShade` là thứ DUY NHẤT
+    // còn biến thiên — đúng cái bài này tuyên bố đang canh.
+    if (Math.abs(nor.getY(i)) > 1e-6) continue;
     const y = pos.getY(i);
     const lum = col.getX(i) + col.getY(i) + col.getZ(i);
     if (y < lowest.y) lowest = { y, lum };
     if (y > highest.y) highest = { y, lum };
   }
+  assert.ok(Number.isFinite(lowest.y) && Number.isFinite(highest.y) && lowest.y < highest.y,
+    'Không lọc ra được đỉnh nào trên mặt tường đứng — phép lọc pháp tuyến đã trượt, bài test đang chạy rỗng.');
 
   assert.ok(
     lowest.lum < highest.lum * 0.9,
@@ -144,10 +155,50 @@ test('BÓNG TIẾP XÚC ĐƯỢC NƯỚNG THẬT VÀO MÀU ĐỈNH — chân t�
     + `${highest.lum.toFixed(3)} — bóng tiếp xúc không được nướng vào màu đỉnh.`,
   );
   // Và đậm đúng bằng mức đường cong đã khai, không phải một hằng số nào khác lẻn vào.
-  const expected = contactShade(0) / contactShade(highest.y);
+  //
+  // ⚠️ HỎI ĐƯỜNG CONG TẠI ĐÚNG `lowest.y` ĐÃ ĐO ĐƯỢC, đừng viết cứng `contactShade(0)`: khối có
+  // MÉP VÁT, nên đỉnh thấp nhất của mặt tường đứng nằm ở y ≈ 0,035 chứ không phải 0. Viết cứng số
+  // 0 là ngầm khẳng định một điều về hình học mà bài test này không hề kiểm — và nó sai.
+  const expected = contactShade(lowest.y) / contactShade(highest.y);
   assert.ok(
     Math.abs(lowest.lum / highest.lum - expected) < 1e-5,
     `tỉ lệ tối đo được ${(lowest.lum / highest.lum).toFixed(5)}, đường cong khai ${expected.toFixed(5)}`,
+  );
+});
+
+test('CHE KHUẤT THEO HƯỚNG MẶT được nướng vào màu đỉnh — mặt úp xuống tối hơn mặt tường', () => {
+  // ⚠️ VÌ SAO TRỤC NÀY ĐÁNG MỘT BÀI TEST TRONG KHI `PHASE_RULES` §4 miễn test cho mỹ thuật: luật
+  // miễn ấy dựa trên "hỏng thì nhìn ảnh là thấy ngay". Đo được ngày 2026-08-27 là ở khung mặc
+  // định của app, trục này đổi **0,0% điểm ảnh trên ngưỡng mắt** — vì camera chúi xuống 34° nên
+  // gần như không mặt úp nào lọt vào khung. Tức nếu nó chết thì KHÔNG ai nhìn ảnh mà thấy được,
+  // và lối thoát của §4 không áp dụng. Nó vẫn đáng giữ (đúng vật lý, 0 đồng, và đọc được ở khung
+  // cận cảnh ADR-034), nhưng phải có một cái gác vì mắt không gác nổi.
+  const merged = buildMergedGeometry(
+    placement([prism({ w: 0.6, h: 4, sides: 4, role: 'wall' })]),
+    PALETTE,
+    { era: 9 },
+  );
+  const pos = merged.geometry.getAttribute('position');
+  const col = merged.geometry.getAttribute('color');
+  const nor = merged.geometry.getAttribute('normal');
+
+  // So ở CÙNG một độ cao để trục `contactShade` không lẫn vào: lấy mặt đáy (úp xuống) và mặt
+  // tường đứng, cả hai đều có đỉnh ở chân khối.
+  let upXuong = null; let dungDung = null;
+  for (let i = 0; i < pos.count; i += 1) {
+    const ny = nor.getY(i);
+    const lum = col.getX(i) + col.getY(i) + col.getZ(i);
+    const mau = { y: pos.getY(i), lum };
+    if (ny < -0.999 && (upXuong === null || mau.y < upXuong.y)) upXuong = mau;
+    if (Math.abs(ny) < 1e-6 && (dungDung === null || mau.y < dungDung.y)) dungDung = mau;
+  }
+
+  assert.ok(upXuong && dungDung, 'Không tìm thấy đủ hai loại mặt để so — bài test đang chạy rỗng.');
+  const tiSo = upXuong.lum / (dungDung.lum * (contactShade(upXuong.y) / contactShade(dungDung.y)));
+  assert.ok(
+    Math.abs(tiSo - SOFFIT_FLOOR) < 1e-4,
+    `Mặt úp xuống chỉ tối bằng ${tiSo.toFixed(4)} lần mặt tường (sau khi đã trừ trục độ cao), `
+    + `trong khi \`SOFFIT_FLOOR\` khai ${SOFFIT_FLOOR}. Trục che khuất theo hướng mặt đã đứt.`,
   );
 });
 

@@ -12,6 +12,38 @@
 
 ---
 
+## 2026-08-27 (đêm) — Ba cần gạt "giống 3D hơn", đo ra cả ba dưới ngưỡng mắt
+
+**Mục đích.** Việc số 2 trong "việc tiếp theo": bóng đổ nét hơn + che khuất môi trường (AO).
+Kèm theo, việc số 1 (kim tự tháp/ziggurat kỷ 2–3) hoá ra **đã xong từ trước** — dòng ấy trong
+`START_HERE.md` mô tả một thế giới không còn tồn tại, và đã được viết lại.
+
+**Phạm vi.** Tầng dựng cảnh 3D. Không đụng engine game, sync, điều hướng, hay camera.
+
+- **`sceneGraph.js`** — `SHADOW_MAP_DESKTOP` 2048 → 4096 (điện thoại giữ 512). `sun.shadow.camera`
+  KHÔNG đụng: nó đã bó sát lưới sẵn (`reach = gridSize × 0,75`).
+- **`materials.js`** — thêm `soffitShade(ny)` + `SOFFIT_FLOOR`: trục che khuất theo HƯỚNG MẶT, thứ
+  `contactShade` (chỉ theo độ cao) mù hoàn toàn. Chỉ động vào mặt úp xuống — `ny >= 0` trả về đúng
+  1, nên không một bức tường, mái dốc hay mặt đất nào đổi màu.
+- **`geometryFactory.js`** — màu đỉnh nay là TÍCH hai trục: độ cao × hướng mặt.
+- **`terrainMesh.js`** — tầng 4 của `groundColorAt`: quầng tối quanh chân công trình. Chỉ đổi MÀU
+  lưới nền; `buildTerrain` vẫn không nhận `layout` nên bất biến ADR-007 nguyên vẹn.
+- **`scripts/archive/*.mjs`** — sửa import hỏng sau lần chuyển thư mục (4 file trỏ `./png-probe.mjs`
+  trong khi file ấy ở thư mục cha). `PHASE_RULES` §3 hứa chúng chạy được; trước bản vá thì không.
+- **`geometryFactory.test.js`** — bài "bóng tiếp xúc" đỏ **đúng đắn** vì tiền đề của nó ("chênh lệch
+  chỉ có thể đến từ bóng tiếp xúc") vừa chết; vá bằng cách lọc mặt tường đứng và hỏi đường cong tại
+  `lowest.y` đo được. Thêm 1 bài canh trục mới (đã thử-cho-đỏ).
+
+**Ảnh hưởng — số đo, không phải lời hứa** (`sweep-diff --frame`, ngưỡng mắt 12/255): bóng đổ
+**0,5%** điểm ảnh · hướng mặt **0,0%** · quầng chân nhà **0,3%** (thành phố đông) và **1,1%**
+(thành phố trẻ). Cả ba đúng và tốn 0 đồng lúc chạy, nhưng **không cái nào làm cảnh "3D hơn"** ở
+khung mặc định. Ba cần gạt độc lập cùng ra ≤1,1% ⇒ chẩn đoán "3D hơn nằm ở tầng tô bóng" đã bị
+chính số đo bác.
+
+**Tương thích.** Không có migration. Cổng chống trôi 15 kỷ đạt 0/15 và 0/105 dưới ngưỡng mắt.
+
+---
+
 ## 2026-08-27 (khuya) — Điều hướng chính từ 8 mục xuống 5: gộp, không xoá
 
 **Mục đích.** Thanh điều hướng có 8 mục, trong đó Kỹ năng · Kho báu · Thành tích chiếm ba ô cho ba

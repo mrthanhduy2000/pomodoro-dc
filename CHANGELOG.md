@@ -12,6 +12,36 @@
 
 ---
 
+## 2026-08-27 (khuya) — Bóng tiếp xúc đo từ nền của chính công trình, không từ y = 0
+
+**Mục đích.** Lấy việc "giống 3D hơn" trong hàng đợi. Trong lúc làm thì lộ ra một khuyết tật thật:
+`contactShade` — bóng tiếp xúc nướng sẵn vào màu đỉnh, chính là "AO" mà hàng đợi đòi thêm — đo độ
+cao so với **y = 0**, tiền đề đúng khi nó được viết (mặt đất phẳng) nhưng đã chết từ Phase 7B khi
+mặt đất có cao độ.
+
+**Phạm vi.** Thành phố 3D, tầng hình học và ánh sáng. Không thêm nguồn sáng, không đụng camera.
+
+- **`src/components/city/render3d/geometryFactory.js`** — `shade` (boolean) → `shadeBase` (cao độ
+  nền của chính công trình). Đo được: **7/15 kỷ** có ô nền cao hơn `CONTACT_REACH` = 0,38, nhiều
+  nhất là kỷ 8 với 88/144 ô (61%); công trình trên những ô đó trước đây mất sạch bóng chân.
+- **`src/components/city/render3d/sceneGraph.js`** — `SHADOW_MAP_DESKTOP` 2048 → 4096 (điện thoại
+  giữ 512). Thử siết `sun.shadow.camera` xuống 0,58·lưới và **hoàn tác**: không đọc ra khác biệt
+  trên ảnh, mà rủi ro cắt cụt bóng ở vành ngoài thì có thật — lý do đã ghi vào mã.
+- **`START_HERE.md`** — gỡ việc "kim tự tháp / ziggurat" khỏi hàng đợi: **đã làm xong từ
+  2026-08-21**, hàng đợi đang bảo phiên sau đi làm lại. Viết lại mục "giống 3D hơn" thành ba lựa
+  chọn mỹ thuật cần Đàm chọn.
+- **`TECH_DEBT.md`** — thêm **#88**: `soiVetRach` bỏ sót một vết rách ảnh mắt thường nhìn ra ngay,
+  và một phép đo chạy trên tấm ảnh ấy cho ra bộ số bịa rất thuyết phục.
+
+**Ảnh hưởng.** Công trình trên thềm cao nay có bóng chân như công trình dưới thấp. Mép bóng đổ nét
+gấp đôi. Cả hai đều dưới ngưỡng mắt ở khung toàn cảnh — thấy rõ khi soi gần.
+
+**Tương thích.** Không đổi dữ liệu, không migration, không đụng ADR-007.
+
+**Cổng.** `npm test` 1.234 bài · 1.233 pass · 0 fail · 1 skipped · lint sạch · build xanh.
+
+---
+
 ## 2026-08-27 (tối) — Một ngôn ngữ hình cho mọi phần thưởng, và phân tầng mức độ làm phiền
 
 **Mục đích.** App có bảy đường trao thưởng và bảy cách trình bày — riêng `LootDropModal` đã có ba

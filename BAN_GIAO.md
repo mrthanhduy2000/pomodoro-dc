@@ -1,3 +1,48 @@
+> Cập nhật lần cuối: **2026-08-27 (khuya)** — **BÓNG TIẾP XÚC ĐÃ CHẾT Ở 7/15 KỶ MÀ KHÔNG AI BIẾT.**
+> Lấy việc 1+2 trong hàng đợi `START_HERE`. Kết quả: **việc 1 đã xong từ 2026-08-21** (kỷ 2 khai
+> `roof: 'pyramid'`, kỷ 3 khai `roof: 'ziggurat'`, ảnh dựng ra chóp bốn mặt rõ ràng) — hàng đợi
+> đang bảo phiên sau đi làm lại một việc đã làm. Đã gỡ khỏi `START_HERE`.
+>
+> **⚠️ KHUYẾT TẬT THẬT TÌM ĐƯỢC TRONG LÚC LÀM VIỆC 2 — TIỀN ĐỀ BỊ GỠ Ở MỘT PHASE KHÁC (Phase 8C).**
+> `contactShade` (bóng tiếp xúc nướng sẵn vào màu đỉnh — chính là "AO" mà hàng đợi đòi thêm) hỏi
+> `contactShade(p[1])`, tức độ cao **THẾ GIỚI** của đỉnh. Đúng lúc nó được viết: hồi đó mặt đất là
+> một mặt phẳng ở y = 0. **Phase 7B cho mặt đất có cao độ**, và từ đó mệnh đề ấy chết trong im lặng.
+> Đo trên lưới 12×12: **kỷ 8 có 88/144 ô (61%) nền cao hơn `CONTACT_REACH` = 0,38**, kỷ 5 52%,
+> kỷ 4 50%, kỷ 7 34%, kỷ 10 32%, kỷ 15 28%, kỷ 13 27%, kỷ 1 15% — **7/15 kỷ**. Công trình đứng trên
+> những ô đó nhận hệ số 1 ở MỌI đỉnh ⇒ mất sạch bóng chân. Hậu quả: trong cùng một thành phố, nhà
+> dưới thấp thì NGỒI xuống đất còn nhà trên thềm cao thì DÁN lên — phụ thuộc thềm chứ không phụ
+> thuộc gì có ý nghĩa. Vá: `shade` (boolean) → `shadeBase` (cao độ NỀN của chính công trình), đo
+> `contactShade(p[1] - shadeBase)`. Khối lơ lửng kỷ 15 vẫn không bị tối, đúng như chú thích cũ hứa.
+>
+> **Đã làm nốt phần bóng đổ**: `SHADOW_MAP_DESKTOP` 2048 → **4096** (texel bóng 0,0088 → 0,0044 ô).
+> Điện thoại giữ 512. Giá là BỘ NHỚ (16 → 64 MB) chứ không phải thời gian mỗi khung —
+> `sun.shadow.autoUpdate` đang tắt nên bản đồ chỉ vẽ lại khi thành phố đổi.
+>
+> **HOÀN TÁC có chủ đích**: thử siết `sun.shadow.camera` từ 0,75·lưới xuống 0,58 — ảnh kỷ 11 lúc
+> 16 giờ (bóng dài nhất) **không đọc ra khác biệt nào**, trong khi tấm đất nhận bóng rộng tới ±9,5
+> nên siết về ±6,96 là mua rủi ro cắt cụt bóng để đổi lấy một thứ không nhìn thấy. Giữ 0,75, ghi lý
+> do vào mã.
+>
+> **⚠️ HAI LẦN PHÉP ĐO SUÝT LÀM TÔI KẾT LUẬN SAI:**
+> **(1)** Nhìn ảnh kỷ 11 lúc 16 giờ tôi tưởng *"tháp cao mà gần như không đổ bóng xuống đất"*. Bật/
+> tắt bóng rồi so (§10.2): **21,9% điểm ảnh đổi QUÁ ngưỡng mắt, lệch tối đa 93** — bóng đang hoạt
+> động rất mạnh. Ấn tượng sai, số đo đúng.
+> **(2)** Ảnh cận cảnh kỷ 8 (`--width 1500`, 3 dải ngang) **BỊ RÁCH** — một mảng góc trên phải thuộc
+> khung hình khác, nhìn là thấy. `soiVetRach` trả về LÀNH nên ảnh vẫn được ghi, và phép đo trên nó
+> cho ra *"21,38% điểm ảnh vượt ngưỡng, lệch tối đa 222"* — một bộ số hoàn toàn bịa, đủ thuyết phục
+> để kết luận sai về bản vá. Dựng lại lần hai thì sạch. **Đã bỏ bộ số đó, ghi `TECH_DEBT #88`**
+> (vết rách lần này có mép DỌC, mà `soiVetRach` chỉ quét mép NGANG — cần đo lại trước khi tin lời
+> giải thích ấy). Bài học cũ, lần thứ N: *ảnh là sản phẩm VÀ là cái kiểm.*
+>
+> **⚠️ NÓI THẲNG: PHIÊN NÀY KHÔNG ĐẠT "≥4 THAY ĐỔI NHÌN THẤY ĐƯỢC" (`PHASE_RULES` §1).** Cả hai cần
+> gạt mà hàng đợi nêu tên đều **đã có sẵn** — một cái đã bó sát, một cái đã tồn tại nhưng hỏng. Hai
+> bản vá đều đúng và đo được, nhưng **đều dưới ngưỡng mắt ở khung toàn cảnh**. Muốn thành phố trông
+> 3D hơn thật sự thì cần một quyết định MỸ THUẬT của Đàm, không cần thêm mã — ba lựa chọn kèm số đã
+> ghi ở `START_HERE` mục 2.
+>
+> Cổng: `npm test` **1.234 bài · 1.233 pass · 0 fail · 1 skipped** (không đỏ thêm bài nào, gồm cả
+> bất biến ADR-007) · lint sạch · build xanh.
+
 > Cập nhật lần cuối: **2026-08-27 (tối)** — **MỌI PHẦN THƯỞNG NÓI CHUNG MỘT THỨ TIẾNG, VÀ CHỈ
 > BỐN VIỆC CÒN ĐƯỢC CHẶN MÀN HÌNH** (ADR-060).
 >

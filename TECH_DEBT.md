@@ -4473,6 +4473,32 @@ trong chú thích thì đừng để `--selftest` của chính nó vẫn dùng �
 
 ---
 
+## #88 — `soiVetRach` bỏ sót một vết rách mắt thường nhìn ra ngay
+
+- **Tên**: cổng chống-ảnh-rách của `city-preview.mjs` báo LÀNH cho một tấm ảnh rách rõ rệt
+- **Module**: `scripts/city-preview.mjs` (`soiVetRach`, `VET_RACH_SAN`, `VET_RACH_HE_SO`)
+- **Priority**: Medium · **Severity**: Medium
+- **Impact**: Dựng `--era 8 --hour 12 --width 1500` (3 dải ngang) ra một tấm ảnh mà **một mảng chữ
+  nhật ở góc trên phải thuộc về một khung hình khác** — nhìn là thấy ngay. `soiVetRach` trả về
+  `hong: false` nên ảnh được ghi ra bình thường, và một phép đo chênh lệch điểm ảnh trên nó cho ra
+  **21,38% điểm ảnh vượt ngưỡng mắt, lệch tối đa 222** — một bộ số hoàn toàn bịa, đủ thuyết phục để
+  kết luận sai về một bản vá mỹ thuật. Dựng lại lần hai thì sạch (md5 khác), xác nhận là vết rách
+  chứ không phải nội dung thật.
+- **Root Cause**: chưa truy. `soiVetRach` quét **mép HÀNG** (`TECH_DEBT #52` cố ý làm vậy để không
+  phụ thuộc mốc chia dải). Vết rách lần này có một mép **DỌC** rõ rệt ở giữa khung — một phép quét
+  chỉ nhìn mép ngang có thể mù với nó nếu hai dải chỉ khác nhau ở một PHẦN bề rộng chứ không khác
+  trên cả hàng. Cần đo lại trước khi tin lời giải thích này.
+- **Current Risk**: Trung bình — ảnh rách chỉ xảy ra ở ảnh nhiều dải (`--width` lớn hoặc `--sweep`),
+  tức đúng những ảnh dùng để soi CHI TIẾT NHỎ, nơi một mảng sai dễ bị đọc thành "chi tiết mới".
+- **Future Risk**: Trung bình. Mỗi phase mỹ thuật đều dựng ảnh cận cảnh để nghiệm thu.
+- **Recommended Solution**: bổ sung một vế quét mép **DỌC** cho `soiVetRach` (cùng khuôn: so cột kề
+  nhau, tìm mép nổi bật hẳn so với phân bố), và hiệu chuẩn ngưỡng trên chính tấm ảnh rách này —
+  **giữ lại nó làm đối chứng nhốt-ca-hỏng**, đừng chỉ nới ngưỡng.
+- **Estimated Complexity**: Low–Medium (hàm đã thuần và đã có test).
+- **Blocking Conditions**: không có.
+- **Review Trigger**: lần tới có ai dựng ảnh nhiều dải để nghiệm thu chi tiết nhỏ.
+- **Owner**: chưa ai · **Status**: MỞ (2026-08-27)
+
 ## #86 — 137 nút tự vẽ trên 28 file KHÔNG đọc token skin, và `ActionButton` không nhận nổi chúng
 
 - **Tên**: nút hành động của app tồn tại hai thế giới — `ActionButton` (nay đọc token, đúng ở cả 10

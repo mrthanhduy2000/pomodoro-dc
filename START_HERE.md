@@ -64,10 +64,17 @@ Mặt trận đang làm: **thành phố 3D** (`src/engine/city3d/` + `src/compon
 0. **Báo cáo tuần vẫn tự bật sáng thứ Hai** — ngoại lệ DUY NHẤT của luật mức độ làm phiền
    (ADR-060). ⚠️ Đọc `TECH_DEBT #87` TRƯỚC: phải tách "đã xem" khỏi "đã bỏ qua" rồi mới đụng,
    nếu không lỡ một cái toast 4 giây = mất báo cáo của cả tuần.
-1. **Kim tự tháp / ziggurat** — kỷ 2 (Ai Cập) và kỷ 3 (Iraq) đang ra mái nón nhiều cạnh,
-   không có khối chóp bốn mặt. `prism` với `sides: 4` + `taper: 0` chính là thứ cần.
-2. **"Giống 3D hơn"** — bóng đổ nét hơn (`SHADOW_MAP_DESKTOP` 2048 → 4096, siết
-   `sun.shadow.camera` về phạm vi thành phố) + thêm che khuất môi trường (AO).
+1. *(ĐÃ XONG, gỡ 2026-08-27)* ~~Kim tự tháp / ziggurat~~ — kỷ 2 khai `roof: 'pyramid'`, kỷ 3 khai
+   `roof: 'ziggurat'`, cả hai `case` đã có trong `buildingSpec.js` **từ 2026-08-21**. Mục này nằm
+   trong hàng đợi mô tả một việc đã làm xong, và một phiên sau đã suýt đi làm lại nó.
+2. **"Giống 3D hơn" — nay cần Đàm CHỌN, không cần code.** Hai cần gạt mục cũ nêu đã dùng hết
+   (2026-08-27): bản đồ bóng 2048 → **4096** ✓ · `sun.shadow.camera` vốn đã bó sát (thử siết thêm
+   xuống 0,58·lưới → ảnh không đọc ra khác biệt, đã hoàn tác) · AO thì **đã có từ lâu**
+   (`contactShade`) và vừa được vá một khuyết tật thật. Cả hai đều DƯỚI ngưỡng mắt ở khung toàn
+   cảnh. Cần gạt còn lại đều là quyết định MỸ THUẬT, đừng tự chọn: (a) đậm/cao thêm bóng tiếp xúc
+   (`CONTACT_FLOOR` 0,58 · `CONTACT_REACH` 0,38) · (b) mép bóng cứng hơn (`PCFSoftShadowMap` →
+   `PCFShadowMap`) · (c) hạ đèn nền cho bóng sâu hơn — nhưng (c) đụng cảnh báo "nhợt như sữa"
+   ở `PHASE_RULES` §2.
 
 ## Lệnh hay dùng
 ```

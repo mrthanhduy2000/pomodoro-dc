@@ -12,6 +12,29 @@
 
 ---
 
+## 2026-08-28 — Phase 21 §6b: cổng chống-CHÉP cho công cụ dựng ảnh + đủ 15 kỷ nhìn từ trên xuống
+
+**Mục đích.** Bộ ảnh nghiệm thu §6 mới có 6/15 kỷ. Dựng nốt 9 kỷ còn lại để không kết luận về cả
+bảng từ một mẫu (`TECH_DEBT #38`).
+
+**Phạm vi.**
+- `scripts/city-preview.mjs` — thêm `soiVetChep` (+ hằng số `CHEP_CAO_BANG` / `CHEP_CACH_TOI_THIEU`
+  / `CHEP_SAN`), nối vào vòng chụp-lại 3 lượt đã có. Phát hiện **một dải khung hình bị nhân đôi
+  sang ngang** — chế độ hỏng mà cổng `soiVetRach` không thể thấy vì nó chỉ đo bước nhảy giữa hai
+  HÀNG kề nhau. Hết 3 lượt vẫn hỏng ⇒ ném lỗi, KHÔNG ghi ảnh.
+- Không đụng mã sản phẩm. Không đụng bảng kỷ nào. Không đổi hành vi app.
+
+**Ảnh hưởng.** Mọi ảnh dựng từ nay được soi thêm một cổng; giá ~130 ms/ảnh (~770 ms cho bản quét
+15 kỷ) trên một lượt chụp vốn mất nhiều giây. Ngưỡng 10% nằm giữa hai đầu ĐO ĐƯỢC: ảnh hỏng
+48,0–48,6%, ảnh lành 0,0–0,7% (14 tấm), bản quét 15 kỷ 0,2%.
+
+**Tương thích.** Không phá gì. `soiVetChep` là hàm thuần, export thêm — không đổi chữ ký hàm nào
+đang có. Ảnh đã dựng trước đó vẫn đọc được; 6 tấm đã giao cho Đàm đã được kiểm lại và đều LÀNH.
+
+**Ghi chú lịch sử.** Kỷ 4 (Trường An nhà Đường) là kỷ duy nhất trước thế kỷ 19 dựng ra một mạng
+đường bàn cờ hoàn hảo. Đó là sự thật lịch sử và đã là ngoại lệ đếm được từ trước
+(`RULER_STRAIGHT_ERAS = [4, 11]`, có test hai chiều) — **không tự sửa**, chờ Đàm quyết bằng mắt.
+
 ## 2026-08-27 (đêm) — Phase 21 §1: gộp `main` vào nhánh Phase 21, gỡ hai va chạm số
 
 **Mục đích.** Chỉ thị Phase 21 §1 yêu cầu hợp nhất trước mọi việc khác. `main` đã đi thêm 20 commit

@@ -1,4 +1,49 @@
-> Cập nhật lần cuối: **2026-08-27 (đêm)** — **PHASE 21 §1: ĐÃ GỘP `main` VÀO NHÁNH PHASE 21.**
+> Cập nhật lần cuối: **2026-08-28** — Phase 21 §6b: quét đủ 15 kỷ nhìn từ trên xuống, và bắt được
+> một lỗi DỰNG ẢNH đã suýt biến thành một kết luận mỹ thuật sai.
+
+## 2026-08-28 — Phase 21 §6b: 15/15 kỷ nhìn từ trên xuống + cổng chống-CHÉP cho `city-preview.mjs`
+
+**Vì sao làm tiếp.** Bộ ảnh §6 giao trước đó chỉ có **6/15 kỷ** (1·5·9 phía "không được hàng lối",
+10·13·15 phía "được"). Sáu kỷ ấy là một MẪU, và một mẫu thì không tự khai ra rằng nó là mẫu
+(`TECH_DEBT #38`). Dựng nốt 9 kỷ còn lại thì lộ ra hai chuyện: một về thành phố, một tệ hơn về
+chính công cụ dựng ảnh.
+
+**1. Kỷ 4 là kỷ DUY NHẤT trước thế kỷ 19 đọc ra là bàn cờ — và đó là lịch sử thật.**
+Đếm trên bản đồ ô đường: kỷ 4 có **4 hàng + 4 cột chạy suốt bề ngang**, khai `plan: 'grid',
+bend: 0,00, tangle: 0,00`. Không kỷ nào khác trong nhóm 1–9 làm vậy (kỷ 3·5·6·7·9 có 2–3 đường
+chạy suốt nhưng `bend` 0,30–0,80 nên chúng lượn). Đây là **Trường An nhà Đường** — thành phố lưới
+nổi tiếng nhất thời tiền hiện đại, vuông vắn hơn cả Manhattan. Bảng đã ghi nó thành ngoại lệ ĐẾM
+ĐƯỢC từ trước: `RULER_STRAIGHT_ERAS = [4, 11]`, có test đỏ nếu có kỷ thứ ba khai thẳng hoặc nếu
+một trong hai bỏ đi. ⇒ **KHÔNG tự sửa** — ép nó cong là mua một con số bằng cách nói dối lịch sử
+(ADR-025 cấm). Trình ảnh ra để Đàm quyết.
+
+**2. LẦN THỨ N CÔNG CỤ NÓI DỐI — VÀ LẦN NÀY TÔI SUÝT VIẾT RA MỘT LỜI GIẢI THÍCH LỊCH SỬ CHO NÓ.**
+Ảnh kỷ 4 và kỷ 7 ra với **nửa trên bị CHÉP sang phải đúng 780 điểm ảnh** (hàng 0–348 thoả
+`điểm(x) === điểm(x+780)`; hàng 349–699 lành). Nhìn ảnh kỷ 4 tôi thấy khu phố lặp lại và đã tự nghĩ
+*"phường Trường An vốn giống hệt nhau theo lệnh vua"* — một câu chuyện hoàn toàn hợp lý cho một lỗi
+dựng ảnh. Thứ bác nó là một phép đo, không phải con mắt: quét mọi phép tịnh tiến thì **dịch 780px
+trùng khít 50,0%** trong khi mọi phép dịch khác ≤4,3%.
+
+- **Không tất định**: chụp lại đúng cùng dòng lệnh ⇒ sạch (50,0% → 3,3%). Một cuộc đua lúc chụp.
+- **Cổng chống-rách cũ MÙ với nó**: `soiVetRach` đo bước nhảy giữa hai HÀNG kề nhau; một dải bị chép
+  sang NGANG thì trong lòng nó hàng nào cũng nối nhau mượt, còn chỗ giáp rơi vào vùng đất phẳng.
+  **Hai chế độ hỏng cần hai phép đo** (bài học Phase 9A).
+- **Đã vá tại gốc của công cụ**: `soiVetChep` băm từng ĐOẠN CỘT (cao 50 hàng); hai đoạn cột trùng
+  khít từng byte mà cách nhau ≥64px là chuyện nội dung thật gần như không làm được. Nối vào đúng
+  vòng chụp-lại 3 lượt đã có; hết lượt thì **ném lỗi, không ghi ảnh**.
+- **Ngưỡng nằm giữa hai đầu ĐO ĐƯỢC** (chống cái phễu Phase 9A): hỏng **48,0% và 48,6%** · lành
+  **0,0%–0,7%** trên 14 tấm ⇒ sàn **10%** cách đầu lành 14× và cách đầu hỏng 4,8×.
+- **Kiểm kêu-oan trên đúng quần thể đã từng phá cổng trước**: bản quét 15 kỷ (1864×3120, có các dải
+  nhãn lặp lại) ra **0,2%** — qua thoải mái. Giá: **~130 ms/ảnh**, ~770 ms cho bản quét.
+
+**3. Sáu ảnh đã giao trước đó KHÔNG bị dính.** Chạy phép đo trên cả 21 tấm: chỉ kỷ 4 và kỷ 7 hỏng;
+6 tấm đã gửi Đàm (kỷ 1·5·9·10·13·15, cả hai mốc tuổi) đều lành. Ghi rõ vì nó là câu trả lời cho
+*"vậy những gì anh đưa tôi xem trước đó có tin được không"*.
+
+**Cổng**: `npm run lint` sạch · `scripts/cityPreviewSource.test.js` 23/23.
+**Ảnh**: `.city-preview/city-era{01..15}-light-h12-s120-w1500-topdown.png` (đủ 15 kỷ, mốc 120 phiên).
+
+> *(mốc trước)* **2026-08-27 (đêm)** — **PHASE 21 §1: ĐÃ GỘP `main` VÀO NHÁNH PHASE 21.**
 >
 > `main` đi thêm 20 commit trong lúc Phase 21 làm việc. Gộp xong: **0 xung đột ở mã nguồn**, cả 5
 > xung đột đều là "hai bên cùng thêm một mốc mới vào đầu file tài liệu" ⇒ giữ CẢ HAI, mốc của

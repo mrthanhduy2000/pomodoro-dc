@@ -19,6 +19,7 @@
  */
 
 import { spawn } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { createServer, get as httpGet } from 'node:http';
 import { appendFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { basename, dirname, resolve } from 'node:path';
@@ -1134,6 +1135,69 @@ export function soiVetRach(anh, mocDai = [], hangCauTruc = [], san = VET_RACH_SA
   return { trungVi, xau, hong: xau.length > 0 };
 }
 
+/**
+ * ════════════════════════════════════════════════════════════════════════════════════════════
+ * ⚠️ VẾT **CHÉP**: MỘT DẢI CỦA KHUNG HÌNH BỊ NHÂN ĐÔI SANG NGANG — VÀ CỔNG CHỐNG-RÁCH MÙ VỚI NÓ
+ * ════════════════════════════════════════════════════════════════════════════════════════════
+ * Gặp lần đầu 2026-08-28 (Phase 21 §6, khi dựng 15 ảnh nhìn từ trên xuống). Kỷ 4 và kỷ 7 ra ảnh
+ * mà **nửa trên bị chép sang phải đúng 780 điểm ảnh**: hàng 0–348 thoả `điểm(x) === điểm(x+780)`,
+ * hàng 349–699 lành. Chụp lại đúng cùng dòng lệnh thì SẠCH ⇒ một cuộc đua lúc chụp, không phải
+ * lỗi của cảnh.
+ *
+ * ⚠️ VÌ SAO `soiVetRach` KHÔNG THẤY. Nó đo bước nhảy giữa HAI HÀNG KỀ NHAU. Một dải bị chép sang
+ * NGANG thì trong lòng nó mọi hàng vẫn nối nhau mượt mà, còn chỗ giáp (hàng 349) rơi vào vùng
+ * đất phẳng nên bước nhảy cũng nhỏ. Hai chế độ hỏng khác nhau cần hai phép đo khác nhau — đây
+ * đúng bài học *"phép đo phải chạm đúng đại lượng mình định nói"* (Phase 9A).
+ *
+ * ⚠️ VÀ NÓ SUÝT ĐI VÀO MỘT KẾT LUẬN MỸ THUẬT. Nhìn ảnh kỷ 4 tôi thấy khu phố lặp lại và đã tự
+ * giải thích rằng *"phường của Trường An vốn giống hệt nhau theo lệnh vua"* — một câu chuyện lịch
+ * sử hoàn toàn hợp lý cho một lỗi dựng ảnh. Không cổng nào bắt được một tấm ảnh sai mà "hợp lý".
+ *
+ * CÁCH ĐO: băm TỪNG ĐOẠN CỘT (cao `CHEP_CAO_BANG` hàng). Hai đoạn cột trùng khít TỪNG BYTE mà
+ * cách nhau xa là chuyện nội dung thật gần như không làm được — bóng đổ, dốc sáng và nhiễu
+ * rasterise đều khác nhau — nhưng chắc chắn xảy ra khi một dải bị chép.
+ *
+ * ⚠️ HAI ĐẦU ĐỀU ĐO ĐƯỢC, NGƯỠNG NẰM GIỮA (chống cái phễu Phase 9A). Trên 16 tấm ảnh nhìn từ trên
+ * xuống 1500×700: **hai tấm hỏng ra 48,0% và 48,6%**; **mười bốn tấm lành ra 0,0%–0,7%** (kỷ 3 và
+ * kỷ 7 có 0,6–0,7% vì các thửa ruộng ngoài thành lặp lại thật). Ngưỡng `CHEP_SAN` = 10% nằm cách
+ * đầu lành 14× và cách đầu hỏng 4,8×.
+ *
+ * `CHEP_CACH_TOI_THIEU` loại những bản sao SÁT NHAU (vùng phẳng liền một dải thì cột nào cũng
+ * giống cột bên cạnh — đó là màu, không phải lỗi chép).
+ */
+export const CHEP_CAO_BANG = 50;
+export const CHEP_CACH_TOI_THIEU = 64;
+export const CHEP_SAN = 0.10;
+
+export function soiVetChep(anh, san = CHEP_SAN, caoBang = CHEP_CAO_BANG, cachToiThieu = CHEP_CACH_TOI_THIEU) {
+  const { pixels, width, height } = anh;
+  if (height < caoBang || width < cachToiThieu * 2) return { ti: 0, hong: false, bang: null };
+  let teNhat = { ti: 0, y0: 0, cach: 0, soCot: 0 };
+  for (let y0 = 0; y0 + caoBang <= height; y0 += caoBang) {
+    const dauTien = new Map();
+    let soCot = 0;
+    let cach = 0;
+    for (let x = 0; x < width; x += 1) {
+      const buf = Buffer.allocUnsafe(caoBang * 3);
+      for (let k = 0; k < caoBang; k += 1) {
+        const i = ((y0 + k) * width + x) * 4;
+        buf[k * 3] = pixels[i]; buf[k * 3 + 1] = pixels[i + 1]; buf[k * 3 + 2] = pixels[i + 2];
+      }
+      const h = createHash('sha1').update(buf).digest('hex');
+      const truoc = dauTien.get(h);
+      if (truoc === undefined) dauTien.set(h, x);
+      else if (x - truoc >= cachToiThieu) { soCot += 1; cach = x - truoc; }
+    }
+    const ti = soCot / width;
+    if (ti > teNhat.ti) teNhat = { ti, y0, cach, soCot };
+  }
+  return {
+    ti: teNhat.ti,
+    hong: teNhat.ti >= san,
+    bang: teNhat.ti > 0 ? { y0: teNhat.y0, cao: caoBang, cach: teNhat.cach, soCot: teNhat.soCot } : null,
+  };
+}
+
 export function kiemKhungNhin(hop, khungNhin) {
   const thieuNgang = Math.max(0, Math.ceil(hop.x + hop.width - khungNhin.width));
   const thieuDoc = Math.max(0, Math.ceil(hop.y + hop.height - khungNhin.height));
@@ -1383,6 +1447,22 @@ async function shoot(chrome, url, pngPath,
       if (ghep.height !== hopNguyen.height) {
         throw new Error(`ghép xong cao ${ghep.height}, hộp bao cao ${hopNguyen.height}`);
       }
+      // ⚠️ HAI CHẾ ĐỘ HỎNG, HAI PHÉP ĐO — xem khối chú thích của `soiVetChep`. Vết CHÉP được soi
+      // TRƯỚC vì nó không có đường thoát "đây là nội dung": nội dung thật không thể trùng khít
+      // từng byte trên hàng trăm cột cách nhau xa.
+      const chep = soiVetChep(ghep);
+      if (chep.hong) {
+        const taChep = `${(chep.ti * 100).toFixed(1)}% số cột bị chép (băng hàng ${chep.bang.y0}`
+          + `–${chep.bang.y0 + chep.bang.cao - 1}, lệch ${chep.bang.cach} điểm ảnh)`;
+        if (luot === SO_LUOT) {
+          throw new Error(`ảnh vẫn bị CHÉP DẢI sau ${SO_LUOT} lượt: ${taChep}\n`
+            + '  ⇒ KHÔNG ghi ảnh. Một tấm bị chép trông hoàn toàn hợp lý — nó chỉ kể sai một nửa '
+            + 'thành phố, và người xem sẽ tự nghĩ ra lời giải thích cho phần lặp lại đó.');
+        }
+        process.stderr.write(`  ⚠️  ảnh bị chép dải (${taChep}) — chụp lại, lượt ${luot + 1}/${SO_LUOT}\n`);
+        continue;
+      }
+
       const soi = soiVetRach(ghep, mocDai, hangCauTruc);
       if (!soi.hong) break;
 

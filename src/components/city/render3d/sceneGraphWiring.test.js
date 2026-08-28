@@ -545,15 +545,19 @@ test('⚠️ VẬT CẢN PHẢI ĐỌC THẲNG TỪ DANH SÁCH KHỐI ĐÃ ĐEM 
   // bằng một vòng lặp RIÊNG (duyệt lại `layout` chẳng hạn) thì nó là công thức thứ hai cho cùng
   // một luật, và triệu chứng sẽ là camera đâm xuyên qua đúng những khối được thêm ở phase sau —
   // im lặng tuyệt đối: build xanh, lint sạch, test cũ xanh.
+  // ⚠️ PHASE 20 SIẾT CHẶT HƠN, KHÔNG NỚI: nay đòi cả cái NHÃN `nhom` phải lấy từ CHÍNH `placement`
+  // của vòng lặp ấy. Lý do: `sceneStats.test.js` hỏi nguồn gốc từng vật cản qua nhãn đó, nên một
+  // nhãn suy ra bằng đường khác (đoán theo toạ độ chẳng hạn) sẽ làm bài kia xanh oan về một sự thật
+  // nó không hề kiểm. Nhãn và hộp phải ra từ cùng một `placement`, trong cùng một vòng lặp.
   assert.ok(
-    /for \(const placement of placements\)[\s\S]{0,320}?blockers\.push\(box\)/.test(CODE),
-    'Không còn vòng lặp nào dựng `blockers` TỪ `placements`. Dựng lại danh sách khối bằng đường '
-    + 'khác là tạo công thức thứ hai cho cùng một luật.',
+    /for \(const placement of placements\)[\s\S]{0,2000}?blockers\.push\(\{ \.\.\.box, nhom: placement\.nhomDo \}\)/.test(CODE),
+    'Không còn vòng lặp nào dựng `blockers` TỪ `placements` (kèm nhãn `nhom` của chính nó). Dựng '
+    + 'lại danh sách khối bằng đường khác là tạo công thức thứ hai cho cùng một luật.',
   );
   assert.ok(/^\s*blockers,\s*$/m.test(CODE), '`blockers` không còn được cảnh trả ra ⇒ camera cận cảnh mù.');
   // Phải nằm SAU khi móng đã được đẩy vào: móng cũng là khối đứng trên đất.
   assert.ok(
-    CODE.indexOf('placements.push(...plinths)') < CODE.indexOf('blockers.push(box)'),
+    CODE.indexOf('placements.push(...plinths)') < CODE.indexOf('blockers.push({ ...box'),
     'Vật cản được gom TRƯỚC khi móng vào danh sách ⇒ camera coi bệ kè là không khí.',
   );
 });

@@ -15,32 +15,37 @@ const ERAS = Array.from({ length: 15 }, (_, i) => i + 1);
 const GRID = 12;
 
 /**
- * Tập khoá "x|y" của các ô ĐƯỜNG ứng viên **CỦA MỘT KỶ**.
+ * Tập khoá "x|y" của ô ĐƯỜNG ứng viên **CỦA MỘT KỶ** — hằng số của kỷ ấy, không phụ thuộc tiến độ.
  *
  * ⚠️ TỪ 2026-08-18, CAO ĐỘ Ô ĐƯỜNG VÀ CAO ĐỘ Ô ĐẤT LÀ HAI CHUYỆN KHÁC NHAU, nên gần như mọi bài
  * test ở file này phải hỏi riêng từng loại. Đất giữ bậc thềm (khối đáy phẳng cần mặt đất bằng);
  * đường được san thành dốc thoải (không ai đặt nhà lên mặt phố, mà một con phố nhảy bậc thì mắt
  * đọc ra ngay). Gộp hai loại vào một phép đếm là đo một đại lượng không tồn tại.
  *
- * ⚠️ **PHẢI HỎI ĐÚNG KỶ — TRƯỚC ADR-059 NÓ LÀ MỘT HẰNG SỐ CẤP MODULE VÀ NAY THÌ KHÔNG.** Hỏi
- * `roadCellCandidates()` không tham số là hỏi mạng của kỷ 1, và cái sai ấy **im lặng theo một
- * cách rất khó chịu**: những ô thật ra là ĐƯỜNG ở kỷ 5 bị đếm nhầm thành ĐẤT, mà đường thì đã
- * được san thành dốc liên tục ⇒ bài "mọi kỷ dùng đủ số bậc mình khai" đọc ra 7 bậc ở một kỷ khai
- * 3, và thông báo lỗi trỏ vào địa hình trong khi chỗ hỏng nằm ở phép đo.
+ * ⚠️ PHASE 20 BẮT BUỘC THÊM THAM SỐ `era`, VÀ BỎ NÓ ĐI LÀ MỘT LỖI IM LẶNG HOÀN HẢO. Bản trước viết
+ * `roadCellCandidates()` một lần ở cấp module, đúng chừng nào 15 kỷ dùng chung một bộ xương. Nay
+ * mỗi kỷ một mạng đường (34…92 ô), nên bộ ấy là mạng của kỷ 1 đem đi chấm cả 15 kỷ: những ô kỷ 5
+ * coi là ĐƯỜNG (đã được san thành dốc thoải, cố ý KHÔNG nằm trên lưới bậc) bị đếm nhầm thành ĐẤT
+ * rồi kêu "cao độ không phải bội số của bậc thềm" — một lời tố cáo hoàn toàn oan. Đây là đúng thứ
+ * `cityLayout.js` cảnh báo ngay trong chú thích của `roadCellCandidates`.
  */
-const duongCuaKy = new Map();
-const oDuongKey = (era) => {
-  if (!duongCuaKy.has(era)) {
-    duongCuaKy.set(era, new Set(roadCellCandidates(era).map((c) => `${c.x}|${c.y}`)));
+const CACHE_DUONG = new Map();
+function oDuongCua(era) {
+  if (!CACHE_DUONG.has(era)) {
+    CACHE_DUONG.set(era, new Set(roadCellCandidates(era).map((c) => `${c.x}|${c.y}`)));
   }
-  return duongCuaKy.get(era);
-};
-const laDuong = (era, cell) => oDuongKey(era).has(`${cell.x}|${cell.y}`);
+  return CACHE_DUONG.get(era);
+}
+const laDuong = (era, cell) => oDuongCua(era).has(`${cell.x}|${cell.y}`);
 const oDat = (terrain, era) => terrain.cells.filter((c) => !laDuong(era, c));
 
-/** Đếm số ô ĐẤT ở mỗi cao độ. Trả về `{levels, topShare}`. */
+/**
+ * Đếm số ô ĐẤT ở mỗi cao độ. Trả về `{levels, topShare}`.
+ * Bỏ `era` ⇒ đếm TOÀN BỘ 144 ô (dùng cho bài đối chứng dựng một trường phẳng bằng tay, nơi khái
+ * niệm "ô đường" không tồn tại).
+ */
 function levelStats(terrain, era) {
-  const cells = oDat(terrain, era);
+  const cells = era === undefined ? terrain.cells : oDat(terrain, era);
   const count = new Map();
   for (const cell of cells) {
     const key = cell.h.toFixed(6);
@@ -150,7 +155,7 @@ test('kỷ khai TỪ 3 BẬC TRỞ LÊN thì không bậc nào được nuốt q
 test('ĐỐI CHỨNG: một trường cao độ PHẲNG LÌ phải bị hai hàng rào trên bắt', () => {
   // Không có bài này thì hai ngưỡng trên chỉ là hai con số ai cũng hạ được cho tiện.
   const flat = { cells: Array.from({ length: 144 }, (_, i) => ({ x: i % 12, y: (i / 12) | 0, h: 0 })) };
-  const { levels, topShare } = levelStats(flat, 1);
+  const { levels, topShare } = levelStats(flat);
   assert.equal(levels, 1, 'trường phẳng phải chỉ có 1 mức');
   assert.ok(topShare > 0.60, 'trường phẳng phải vượt ngưỡng 60%');
 });
@@ -251,11 +256,13 @@ test('PHỐ KHÔNG BAO GIỜ DỐC HƠN CON PHỐ DỐC NHẤT THẾ GIỚI (34,
   // ⚠️ ĐỘ DỐC ≠ CHÊNH CAO ĐỘ. Mặt đất nội suy bằng `smoothstep`, đạo hàm cực đại 1,5 ở giữa quãng,
   // nên chỗ dốc nhất dốc gấp rưỡi mức trung bình. Quên hệ số ấy là tự cho mình dốc hơn 50%.
   let soCap = 0;
+  const capMoiKy = [];
   for (const era of ERAS) {
+    const truocKy = soCap;
+    const duong = oDuongCua(era);
+    const oDuong = [...duong].map((k) => k.split('|').map(Number));
     const { heightAt } = buildTerrain({ era, gridSize: GRID });
-    const duong = oDuongKey(era);
-    for (const k of duong) {
-      const [x, y] = k.split('|').map(Number);
+    for (const [x, y] of oDuong) {
       for (const [dx, dy] of [[1, 0], [0, 1]]) {
         if (!duong.has(`${x + dx}|${y + dy}`)) continue;
         soCap += 1;
@@ -265,15 +272,21 @@ test('PHỐ KHÔNG BAO GIỜ DỐC HƠN CON PHỐ DỐC NHẤT THẾ GIỚI (34,
           + `— quá trần ${(STREET_MAX_GRADE * 100).toFixed(1)}%`);
       }
     }
+    capMoiKy.push(soCap - truocKy);
   }
-  /**
-   * Gác chạy-rỗng. ⚠️ **KHÔNG CÒN LÀ MỘT CON SỐ CHÍNH XÁC ĐƯỢC NỮA, VÀ ĐÓ LÀ HỆ QUẢ CÓ CHỦ ĐÍCH
-   * CỦA ADR-059.** Trước đây cả 15 kỷ dùng chung một mạng 80 ô nên số cặp kề nhau là hằng số
-   * (15 × 88); nay mỗi kỷ một mạng riêng (29…83 ô) nên nó đổi theo bảng. Đổi sang một cái SÀN —
-   * đo được 2026-08-24 là 923 cặp, nên sàn 750 đủ sát để một lần mạng đường sập là đỏ, mà không
-   * đỏ chỉ vì ai đó chỉnh một dòng của bảng.
-   */
-  assert.ok(soCap >= 750, `chỉ duyệt ${soCap} cặp ô đường kề nhau — phép quét đang chạy rỗng`);
+  // ── GÁC CHẠY-RỖNG ────────────────────────────────────────────────────────────────────────────
+  // ⚠️ BẢN CŨ VIẾT `assert.equal(soCap, 15 * 88)` — một con số ĐÚNG khi cả 15 kỷ dùng chung một
+  // mạng 80 ô. Phase 20 làm mạng đường khác nhau từng kỷ (34…92 ô ⇒ 33…105 cặp kề nhau), nên một
+  // hằng số chung ở đây thôi là một hằng số: nó không còn nói về thứ nó tự nhận. Thay bằng phép
+  // hỏi ĐÚNG điều gác này sinh ra để hỏi — *"có kỷ nào bị bỏ qua trong im lặng không?"* — và hỏi
+  // TỪNG KỶ MỘT, vì một tổng thì một kỷ rỗng vẫn bị 14 kỷ kia che cho (đúng bẫy `TECH_DEBT #22`).
+  assert.equal(capMoiKy.length, 15, 'vòng lặp không duyệt đủ 15 kỷ');
+  for (let i = 0; i < 15; i += 1) {
+    assert.ok(capMoiKy[i] >= 30,
+      `kỷ ${i + 1} chỉ có ${capMoiKy[i]} cặp ô đường kề nhau — mạng đường của kỷ ấy gần như rỗng `
+      + '(đo được thấp nhất 33 ở kỷ 1, cao nhất 105 ở kỷ 11)');
+  }
+  assert.ok(soCap >= 900, `chỉ duyệt ${soCap} cặp trên cả 15 kỷ (đo được 944 sau Phase 20)`);
 });
 
 test('`SMOOTHSTEP_PEAK` PHẢI LÀ ĐẠO HÀM ĐỈNH THẬT CỦA MẶT ĐẤT, không phải một con số chép từ sách', () => {
@@ -347,12 +360,14 @@ test('ĐỐI CHỨNG: trường CHƯA SAN (bậc thềm thô) phải bị chính
   const buoc = TERRACE_STEP * RELIEF_KY7_TRUOC_BAN_VA;
   const tho = (x, y) => (x + y >= 8 ? 2 * buoc : 0);      // một ranh thềm HAI bậc cắt ngang phố
   let batDuoc = 0;
-  // Đối chứng dựng trên mạng của kỷ 7 — đúng kỷ mà bộ số hỏng cũ thuộc về.
-  const duongDoiChung = oDuongKey(7);
-  for (const k of duongDoiChung) {
-    const [x, y] = k.split('|').map(Number);
+  // ⚠️ DÙNG MẠNG CỦA MỘT KỶ CỤ THỂ LÀ ĐỦ VÀ ĐÚNG Ở ĐÂY: đối chứng này không hỏi kỷ nào cả, nó chỉ
+  // cần một mạng đường THẬT để có những cặp ô kề nhau mà thả một ranh thềm hai bậc cắt ngang. Kỷ 7
+  // là kỷ đã sinh ra bộ số hỏng 173% năm 2026-08-18, nên lấy đúng nó.
+  const duong = oDuongCua(7);
+  const oDuong = [...duong].map((k) => k.split('|').map(Number));
+  for (const [x, y] of oDuong) {
     for (const [dx, dy] of [[1, 0], [0, 1]]) {
-      if (!duongDoiChung.has(`${x + dx}|${y + dy}`)) continue;
+      if (!duong.has(`${x + dx}|${y + dy}`)) continue;
       if (SMOOTHSTEP_PEAK * Math.abs(tho(x, y) - tho(x + dx, y + dy)) > STREET_MAX_GRADE) batDuoc += 1;
     }
   }
@@ -375,7 +390,7 @@ test('SAN ĐƯỜNG KHÔNG ĐƯỢC ĐẨY ĐỘ DỐC SANG NGANG: bờ đất b
     const { heightAt } = buildTerrain({ era, gridSize: GRID });
     const buoc = TERRACE_STEP * eraTerrainProfile(era).relief;
     if (buoc <= 0) continue;
-    const duong = oDuongKey(era);
+    const duong = oDuongCua(era);
     for (const k of duong) {
       const [x, y] = k.split('|').map(Number);
       for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
@@ -385,9 +400,11 @@ test('SAN ĐƯỜNG KHÔNG ĐƯỢC ĐẨY ĐỘ DỐC SANG NGANG: bờ đất b
       }
     }
   }
-  // Gác chạy-rỗng — xem chú thích cùng loại ở bài Baldwin: con số này nay đổi theo bảng mạng
-  // đường, nên nó là một SÀN đo được (1.109 ngày 2026-08-24), không phải một hằng số chính xác.
-  assert.ok(tongCap >= 900, `chỉ duyệt ${tongCap} cặp đường↔đất — phép quét đang chạy rỗng`);
+  // ⚠️ Ngưỡng cũ là 2000, hiệu chuẩn trên mạng 80 ô dùng chung cho 15 kỷ. Phase 20 làm nó rơi
+  // xuống 1582 mà phép san KHÔNG hề đổi — số chỗ CẦN san mới là thứ đổi. Đúng bẫy Phase 7D lần
+  // nữa, và lần này nó nằm trong một cái gác chạy-rỗng chứ không trong một lời hứa.
+  assert.ok(tongCap >= 1500, `chỉ duyệt ${tongCap} cặp đường↔đất (đo được 1582 sau Phase 20) — `
+    + 'phép quét đang chạy rỗng');
   assert.ok(vuot <= 5,
     `${vuot}/${tongCap} chỗ bờ đất rộng hơn một bậc thềm (mốc: 5). Phép san đang đẩy độ dốc sang `
     + 'ngang — đổi lòi lõm dọc lấy lòi lõm ngang thì không phải một bản vá.');

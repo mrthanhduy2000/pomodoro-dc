@@ -146,10 +146,19 @@ function massHeight(mass, style, archetype, rarity, level, storeyScale = 1) {
 // cùng cao độ đỉnh tường), nên một nhánh mái đã bị xoá vẫn 'có khối ở đó' — đã đo và thấy
 // đúng như vậy ở kỷ 3 (2026-08-21), suýt ship một cái gác không thể đỏ.
 export function emitRoof(out, { w, d, top, x, z }, style, ctx) {
-  const eaves = eaveOverhang(style, w, d);
+  // ⚠️ NHÁNH KHỐI ĐẶC (Phase 19, ADR-062). Khi `ctx.monolith` có mặt thì cả công trình LÀ cái
+  // mái, dựng thẳng từ mặt đất lên — xem `emitMonolith` ngay dưới.
+  const mono = ctx?.monolith ?? null;
+  // Kim tự tháp không có diềm mái. Diềm ở đây nới đáy ra thành hình nấm, đúng bệnh `eaves` đã cắn
+  // ở Phase 7C — nên nhánh khối đặc ép về 0 thay vì bắt bảng kỷ phải khai 0 (nhà dân kỷ 2 vẫn cần
+  // diềm của nó).
+  const eaves = mono ? 0 : eaveOverhang(style, w, d);
   const rw = w + eaves * 2;
   const rd = d + eaves * 2;
-  const pitch = Math.max(0.08, style.roofPitch) * Math.max(w, d);
+  // ⚠️ Khối đặc truyền THẲNG `pitch` và cố ý KHÔNG đi qua cái kẹp 0,08: `emitMonolith` đã tính sẵn
+  // con số cho ra ĐÚNG chiều cao đích, cái kẹp sẽ lặng lẽ kéo nó cao lên mà không có gì đỏ —
+  // đúng hình dạng bẫy `MIN_STONE` và `walk` đã ghi ở `streetStyle.js`.
+  const pitch = mono ? mono.pitch : Math.max(0.08, style.roofPitch) * Math.max(w, d);
   const anchors = { x, z, eaveY: top, apexY: top, rw, rd, pitch, deck: null, ridges: [] };
 
   switch (style.roof) {
@@ -361,6 +370,51 @@ export function emitRoof(out, { w, d, top, x, z }, style, ctx) {
   }
 
   return anchors;
+}
+
+/**
+ * KHỐI ĐẶC — công trình LÀ cái khối, không phải một căn nhà đội mái (Phase 19, ADR-062).
+ *
+ * ⚠️ VÌ SAO PHẢI CÓ HÀM NÀY, CHỨ KHÔNG PHẢI "KHAI `roof: 'pyramid'` LÀ XONG". Kỷ 2 đã khai đúng
+ * `pyramid` từ lâu, và kim tự tháp Giza vẫn ra một cái HỘP GẠCH ĐỘI NÓN: bảy nguyên mẫu trong
+ * `archetypes.js` đều theo cùng một khuôn THÂN + MÁI, nên `emitRoof` chỉ được gọi ở đỉnh thân
+ * tường. Bệnh không nằm ở hình cái mái — nó nằm cao hơn một tầng, ở chỗ *cái gì đỡ cái mái*.
+ * Kim tự tháp không có tường, không có cửa, không có diềm; nó là một khối liền từ mặt đất lên đỉnh.
+ *
+ * ⚠️ CHIỀU CAO ĐO ĐƯỢC, KHÔNG DỰ ĐOÁN. `pitch` không phải chiều cao: mỗi hình mái cộng dồn nó theo
+ * một công thức riêng (chóp cộng đúng một lần `pitch`, ziggurat cộng ba thềm rồi cộng thêm cái đền
+ * trên đỉnh ⇒ 1,8 lần). Chép lại mấy công thức ấy ở đây là dựng công thức thứ hai cho cùng một
+ * luật — đúng cái bẫy đã cắn dự án ở `sweep-score.mjs` và ở ngân sách tam giác. Nên: dựng THỬ một
+ * lần ở `pitch = 1`, ĐỌC `apexY` mà chính `emitRoof` trả về, rồi mới chia. Chiều cao TUYẾN TÍNH
+ * theo `pitch` ở mọi nhánh nên một lần thử là đủ, không cần lặp.
+ *
+ * ⚠️ VÀ NÓ ĐO CẢ BỀ NGANG, KHÔNG CHỈ CHIỀU CAO — đây là chỗ dễ ship một con số nói dối nhất.
+ * `emitRoof` nhận bề ngang của THÂN NHÀ rồi từ đó dựng ra hình mái, mà mỗi hình thu vào một kiểu:
+ * chóp giữ nguyên đáy (hệ số 1) còn ziggurat thu thềm dưới cùng về `0,8`. Nếu cứ truyền thẳng
+ * `base` vào làm bề ngang thân thì bảng kỷ KHAI đáy 2,9 mà màn hình DỰNG ra 2,32 — tỉ lệ cao:đáy
+ * thật hoá 0,59 trong khi bảng ghi 0,47, và không có gì đỏ lên. Đúng `TECH_DEBT #42`. Nên: đo
+ * luôn bề ngang của khối thử rồi chia ngược, để `base`/`rise` khai ra là `base`/`rise` DỰNG ra.
+ *
+ * @param {number} base  cạnh đáy ĐÍCH của khối đã dựng (đơn vị mô tả).
+ * @param {number} rise  tỉ lệ cao : đáy của công trình có thật.
+ * @returns {false|object} `anchors` của khối đã dựng, hoặc `false` nếu hình mái này không cao lên
+ *   theo `pitch` (không có nhánh nào như vậy hôm nay — nhưng trả `false` thì lỗi ĐẾM ĐƯỢC ở đầu
+ *   bên kia, thay vì lặng lẽ chia cho 0 rồi đẩy một khối `NaN` vào cảnh).
+ */
+export function emitMonolith(out, { x, z, y, base, rise }, style, ctx) {
+  const thu = [];
+  const doThu = emitRoof(thu, { w: 1, d: 1, top: 0, x: 0, z: 0 }, style, {
+    ...ctx, monolith: { pitch: 1 },
+  });
+  const caoMoiDonVi = doThu.apexY;          // chiều cao trên mỗi đơn vị `pitch`
+  const rongMoiDonVi = specSpan(thu);       // bề ngang trên mỗi đơn vị bề ngang thân
+  if (!(caoMoiDonVi > 1e-6) || !(rongMoiDonVi > 1e-6)) return false;
+
+  const than = base / rongMoiDonVi;         // bề ngang thân cần truyền để DỰNG ra đúng `base`
+  const cao = rise * base;
+  return emitRoof(out, { w: than, d: than, top: y, x, z }, style, {
+    ...ctx, monolith: { pitch: cao / caoMoiDonVi },
+  });
 }
 
 // ─── CỬA SỔ ──────────────────────────────────────────────────────────────────
@@ -689,13 +743,24 @@ export function buildBuildingSpec({
   bpId, era, type, rarity = 'common', level = 1, plot,
 } = {}) {
   const id = typeof bpId === 'string' && bpId ? bpId : 'bp_unknown';
-  const archetype = getArchetype(type);
+  // ⚠️ NGUYÊN MẪU CÓ THỂ BỊ BẢNG KỶ THAY (Phase 19, ADR-062). Kỷ 2 và kỷ 3 khai
+  // `monument: { form: 'monolith' }`, nghĩa là KỲ QUAN của hai kỷ ấy không phải một căn nhà —
+  // nó là một khối liền. Chỗ rẽ nhánh phải nằm ĐÚNG Ở ĐÂY, trước khi `getMassing` và
+  // `archetype.heightScale` được đọc, vì cả hai thứ đó khác hẳn giữa nhà và khối đặc.
+  //
+  // ⚠️ VÀ CHỈ ÁP CHO `wonder`. Bảng khai một hình cho CÔNG TRÌNH BIỂU TƯỢNG của nền văn minh, chứ
+  // không phải cho mọi thứ mọc lên ở kỷ ấy — cho cả 5 bản vẽ thành khối đặc là dựng ra một thành
+  // phố toàn kim tự tháp, đúng cái bẫy `roof` ↔ `vernacularRoof` đã cắn ở Phase 7C.
+  const eraStyleRaw = getEraStyle(era);
+  const monoForm = eraStyleRaw.monument?.form === 'monolith' && type === 'wonder';
+  const effType = monoForm ? 'monolith' : type;
+  const archetype = getArchetype(effType);
   // ⚠️ ĐÂY LÀ CHỖ DUY NHẤT quyết định "công trình này lợp mái kỳ đài hay mái nhà thường", và nó
   // phải nằm ở đây chứ không phải trong `emitRoof`. Xem `getVernacularStyle` (`eraStyle.js`): thay
   // ở NGUỒN thì mọi chỗ đọc `style.roof` về sau tự khớp; thay ở chỗ dựng mái thì `roofRise` vẫn
   // tính theo mái cũ và chi tiết trên nóc sẽ lơ lửng hoặc chôn nửa trong mái.
-  const style = archetype.plain ? getVernacularStyle(era) : getEraStyle(era);
-  const masses = getMassing(type, rarity);
+  const style = archetype.plain ? getVernacularStyle(era) : eraStyleRaw;
+  const masses = getMassing(effType, rarity);
   const safeLevel = Number.isFinite(level) ? Math.max(1, Math.min(3, Math.floor(level))) : 1;
 
   // Bề ngang theo kỷ. Đi CẶP với `massScale`: một mình chiều cao chưa tách được túp lều khỏi tháp
@@ -719,6 +784,9 @@ export function buildBuildingSpec({
   // thành phố mất điểm tựa thị giác.
   const rough = archetype.symmetric ? 0 : style.rough;
 
+  // Đỉnh của từng khối đặc đã dựng. Dùng để CHỮ KÝ KIẾN TRÚC biết leo tới đâu — xem `mainCtx`.
+  const monoTops = [];
+
   masses.forEach((mass, index) => {
     // ⚠️ `rough === 0` thì BỎ HẲN phép tính lệch, không nhân với 0. Nhân số âm với 0 trong
     // JavaScript ra `-0`, mà `-0` không bằng `0` theo `Object.is` — nghĩa là bài test đối xứng
@@ -737,6 +805,42 @@ export function buildBuildingSpec({
     const height = massHeight(mass, style, archetype, rarity, safeLevel, storeyScale);
     const base = 0;
     const top = base + height;
+
+    // ── KHỐI ĐẶC: CẢ CÔNG TRÌNH LÀ MỘT KHỐI, DỪNG Ở ĐÂY (Phase 19, ADR-062) ──────────────────
+    //
+    // ⚠️ NHÁNH NÀY BỎ NĂM THỨ, VÀ PHẢI BỎ ĐỦ CẢ NĂM: thân tường · chân tường · cửa sổ + tầng trệt ·
+    // gờ mái/gờ tầng · chi tiết trên nóc. Bỏ thiếu một thứ là hỏng ngay theo kiểu nhìn thấy được —
+    // một cái cửa gắn giữa sườn dốc kim tự tháp, hay một cái ống khói cắm trên đỉnh chóp. Đó là lý
+    // do nó `return` sớm thay vì rải `if (!monolith)` xuống khắp phần dưới: rải ra thì chỗ thứ sáu
+    // viết sau này sẽ quên, đúng bài học đã ghi ở `emitRooftop`.
+    //
+    // ⚠️ CHIỀU CAO KHÔNG LẤY TỪ `massHeight` — nó lấy từ TỈ LỆ CAO:ĐÁY mà bảng kỷ khai, vì đó mới
+    // là thứ định nghĩa một kim tự tháp. Giza cao 146,6 m trên đáy 230,3 m ⇒ 0,637; ziggurat Ur
+    // khoảng 30 m trên 64 m ⇒ 0,47. Đo bằng `max(w, d)` (cạnh đáy) chứ không phải số tầng: khối
+    // đặc không có tầng nào.
+    //
+    // ⚠️ CẤP NÂNG CẤP NHÂN ĐỀU CẢ BA CHIỀU, không chỉ chiều cao. Chỉ kéo cao lên thì kim tự tháp
+    // cấp 3 thành một cái chóp nhọn hoắt — tức đúng cái tỉ lệ vừa cất công lấy từ Giza lại bị chính
+    // phép nâng cấp phá đi. Nở đều thì nó vẫn là Giza, chỉ to hơn.
+    if (archetype.monolith) {
+      const grow = 1 + (safeLevel - 1) * 0.15;
+      // ⚠️ BỀ NGANG LẤY TỪ `monument.base`, KHÔNG dùng `w`/`d` đã nhân `spread` ở trên: `mass.w` ở
+      // nguyên mẫu khối đặc chỉ là HỆ SỐ TƯƠNG ĐỐI (epic = 1). Lý do không cho `spread` chạm vào
+      // nằm ở chú thích `archetypes.js` — tóm tắt: `spread` là tham số NHÀ Ở, để nó quyết cạnh đáy
+      // kim tự tháp thì Ur (spread 1,18) bè hơn Giza (0,98), tức lật ngược lịch sử.
+      const canhDay = (Number.isFinite(style.monument?.base) && style.monument.base > 0
+        ? style.monument.base : 1.3) * mass.w * grow;
+      const rise = Number.isFinite(style.monument?.rise) && style.monument.rise > 0
+        ? style.monument.rise : 0.6;
+      const anchorsMono = emitMonolith(
+        parts, { x, z, y: base, base: canhDay, rise }, style,
+        { bpId: id, era, rarity, level: safeLevel, style, symmetric: true },
+      );
+      // `false` = hình mái này không cao lên theo `pitch`. Không có nhánh nào như vậy hôm nay; nếu
+      // có thì thà dựng ra khối rỗng còn hơn đẩy `NaN` vào cảnh, và bài test đếm sẽ bắt được.
+      if (anchorsMono) monoTops.push(anchorsMono.apexY);
+      return;
+    }
 
     // Thân nhà. Tháp góc thì thóp mạnh hơn cho ra dáng tháp canh.
     parts.push(prism({
@@ -886,7 +990,14 @@ export function buildBuildingSpec({
   // chính nó — thứ đáng lẽ phải nhận ra từ xa lại thành thứ khó tìm nhất. Nhà dân vẫn giữ NÉT VẼ
   // của kỷ (mái, cửa sổ, vật liệu, tỉ lệ) qua `eraStyle`, chỉ không mang CĂN CƯỚC.
   const mainMass = masses.find((m) => !m.low) ?? masses[0];
-  const mainMassHeight = massHeight(mainMass, style, archetype, rarity, safeLevel, storeyScale);
+  // ⚠️ KHỐI ĐẶC KHÔNG CÓ THÂN TƯỜNG, nên `massHeight` ở đây trả về chiều cao của một cái thân
+  // KHÔNG TỒN TẠI. Chữ ký kiến trúc của kỷ 3 là CẦU THANG CHÍNH DIỆN, và nó lấy `top` để biết leo
+  // tới đâu: đưa nhầm con số thì cái thang của ziggurat dừng lại lưng chừng sườn — một khuyết tật
+  // nhìn thấy được ngay, mà không có gì đỏ lên. Hỏi thẳng ĐỈNH THẬT mà `emitMonolith` vừa trả về,
+  // đừng tính lại (một luật, một công thức).
+  const mainMassHeight = monoTops.length
+    ? Math.max(...monoTops)
+    : massHeight(mainMass, style, archetype, rarity, safeLevel, storeyScale);
   const mainCtx = {
     bpId: id, era, rarity, style,
     w: mainMass.w * spreadX, d: mainMass.d * spreadZ,
@@ -895,7 +1006,12 @@ export function buildBuildingSpec({
     // Kỳ quan đứng giữa thành phố ⇒ chữ ký phải cân hai bên và tuyệt đối không xoay.
     symmetric: Boolean(archetype.symmetric),
   };
-  if (!archetype.plain) emitSignature(parts, style.signature, mainCtx);
+  // ⚠️ KHỐI ĐẶC HỎI MỘT TRƯỜNG KHÁC. `style.signature` trả lời *"nhà cửa kỷ này có nét kiến trúc
+  // gì"* — với kỷ 2 đó là tường talud + gờ cavetto, hai thứ chỉ có nghĩa khi CÓ tường. Đặt chúng
+  // lên một kim tự tháp thì cái gờ rộng 1,18× thân đậu ngay trên đỉnh nhọn. Nên bảng kỷ khai riêng
+  // `monument.signature`: kỷ 3 giữ cầu thang ziggurat, kỷ 2 cố ý để trống (Giza mặt ốp TRƠN).
+  const sigName = archetype.monolith ? (style.monument?.signature ?? null) : style.signature;
+  if (!archetype.plain) emitSignature(parts, sigName, mainCtx);
 
   // ── Chi tiết đặc trưng của kỷ, số lượng theo độ hiếm ──────────────────────
   // ⚠️ Mọi khối sinh ra từ đây trở xuống được đánh dấu `deco: true`. Đó KHÔNG phải cờ phục vụ

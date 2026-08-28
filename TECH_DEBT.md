@@ -26,6 +26,28 @@
 > (#53), **0 mục Critical** → xa ngưỡng Maintenance Sprint.
 >
 > *(mốc trước)* **Trạng thái ngưỡng (2026-08-24 chiều, sau ADR-059)**: thêm **#84** (kỷ 1 và 2 thấp đi
+
+> *(mốc trước)* **Trạng thái ngưỡng (2026-08-24, sau Phase 21 — HỢP NHẤT hai nhánh)**: phiên này không
+> mở mục nợ mới và không đóng mục nào — nó gộp hai bộ sinh bố cục đã giải cùng một bài toán hai
+> lần. `buildRoadPlan` cùng năm bộ dựng khung của ADR-059 **đã bị xoá**; nay `buildCityPlan` (chia
+> thửa đệ quy, ADR-066) quyết CHỖ CẮT còn `arcTrace` (ADR-059) quyết HÌNH DẠNG nét cắt — xem
+> ADR-064. Hệ quả phải biết: **mọi bảng số đo trên một trong hai nhánh cũ đều đã lạc hậu** (quần
+> thể ô nhà dân đi 371 → 432 → **476**), nên đừng chép cột "sau" của Phase 19 hay Phase 20 làm mốc
+> nền — tự đo lại (bài học `#43`). Con số ngưỡng thì KHÔNG đổi: vẫn **0 Critical**, **2 mục đúng
+> chữ `High`** (`#14`, `#53`) ⇒ **dưới ngưỡng 8–10, KHÔNG cần Maintenance Sprint**.
+
+> **(Mốc trước) 2026-08-24 tối (Phase 20)**: Phase 20 **MỞ 1 mục** (`#90` — khu phố
+> làm 4 kỷ thấp đi + kỷ 6 mất chi tiết mái) và **KHÔNG đóng mục nào**. `#89` vẫn MỞ nhưng đã nhẹ
+> đi: cổng qua ngưỡng (11,33 → **12,44** ✓) nhờ một dải KHÔNG liên quan tới nguyên nhân, còn dải
+> TRỜI — cần gạt thật — vẫn đứng yên ở 4,05. `#52` cũng nhẹ đi (đã vá kiểu báo oan trên ảnh
+> nhìn-từ-trên-xuống) nhưng nguyên nhân vết rách vẫn chưa truy được. Đếm lại theo đúng cách đã ghi
+> bên dưới: **80 mục · 60 còn mở · 0 Critical**; đếm **đúng chữ `High`** ra **2** (`#14`, `#53`),
+> đếm **gộp cả `Medium-High`** ra **6** (`#3`, `#13`, `#14`, `#15`, `#53`, `#89`) — `#90` là
+> Medium nên không vào cả hai. Cả hai con số vẫn **dưới ngưỡng 8–10** ⇒ **KHÔNG cần Maintenance
+> Sprint**.
+
+
+> **(Mốc trước) 2026-08-24 chiều (ADR-059)**: thêm **#84** (kỷ 1 và 2 thấp đi
 > ~4% sau khi ô nhà dân thành khu phố — đã đếm tường minh) ở mức **Low**; **#85 mở rồi ĐÓNG ngay
 > trong phiên** (`road-bend.mjs` đo một đại lượng mà ADR-059 đã thay — và trong lúc vá thì lộ ra
 > `--selftest` của nó ĐỎ trên một mạng đường lành, vì đối chứng hỏi sai đại lượng). Đếm lại toàn file bằng cách quét trường
@@ -94,6 +116,17 @@
 > đóng. **KHÔNG mục nào bị đóng bằng cách nới ngưỡng.** ⚠️ Nhắc lại một sự thật đã đo: **kỷ 5 vẫn
 > hiện một đường hào VUÔNG** — đó là hình dạng NƯỚC (`#65`, nửa mỹ thuật của `#64`), **không** phải
 > một bậc địa hình, nên nó KHÔNG được tính là "bệ chưa xoá xong".
+
+
+> **(Mốc trước) 2026-08-24 (Phase 19)**: Phase 19 **ĐÓNG 2 mục** (`#24` khung hình cắt công
+> trình · `#75` ziggurat đọc ra là khối đội mũ) và **MỞ 1** (`#89`, trục chặng ngày dưới ngưỡng mắt
+> — cái giá của ADR-061, đang chờ Đàm chọn hướng). Đếm lại bằng cách quét trường `**Priority**` của
+> TỪNG mục rồi loại mục đã đóng: **79 mục · 59 còn mở · 0 Critical**. High thì phải nói rõ cách
+> đếm, vì đây đúng chỗ dòng này đã trôi một lần: đếm **đúng chữ `High`** ra **2** (`#14`, `#53`);
+> đếm **gộp cả `Medium-High`** ra **6** (`#3`, `#13`, `#14`, `#15`, `#53`, `#89`). Cả hai con số
+> đều **dưới ngưỡng 8–10** ⇒ **KHÔNG cần Maintenance Sprint**. ⚠️ Lần trước dòng này ghi "1 mục
+> High" mà không nói đếm kiểu gì, nên không ai tái lập được — một con số nghiệm thu phải đi kèm
+> cách đo ra nó, kể cả khi con số ấy chỉ nằm trong một dòng tài liệu.
 
 > **(Mốc trước) Cập nhật 2026-08-20 (§1(B))**: đếm lại ⇒ **3 mục High còn mở** (#14 · #32 · #53),
 > 0 mục Critical ⇒ **xa ngưỡng 8–10, KHÔNG cần Maintenance Sprint**. Trong phiên §1(B): **MỞ #66**
@@ -1024,6 +1057,21 @@
 ---
 
 ## #24 — MỌI KỶ ĐỀU CÓ CÔNG TRÌNH BỊ MÉP KHUNG HÌNH CẮT — và không ai đo cho tới hôm nay
+
+> ✅ **ĐÃ ĐÓNG 2026-08-24 (Phase 19 VIỆC 5, ADR-061).** `cityOrbitOptions` nay tính khoảng cách
+> RIÊNG TỪNG KỶ bằng chia đôi, lấy đúng mức TỐI THIỂU để biên mép còn `FRAME_FIT_MARGIN = 0,04`.
+> Đo lại bằng `node scripts/frame-fit.mjs`: **0/15 kỷ có công trình bị cắt** (trước: 14/15), hệ số
+> **1,307 … 1,878**. Bằng chứng nó tối thiểu thật: **14/15 kỷ ra biên đúng 0,0400 = sàn**, kỷ 15 dư
+> 0,0736 vì bị một sàn khác trói, và ngoại lệ ấy được ghi tường minh đếm được trong `orbit.test.js`.
+>
+> ⚠️ **VÀ THỦ PHẠM HOÁ RA LÀ MỘT BÀI TEST, KHÔNG PHẢI MỘT KHUYẾT TẬT.** Bài *"KỶ THẤP GIỮ NGUYÊN
+> KHUNG SÁT"* (Phase 5A) đòi `factor ≤ 1,35`. Đo ra thì 13/15 kỷ cần ≥ 1,47 ⇒ cái trần ấy và lời
+> hứa "không cắt công trình nào" **không thể cùng đúng**, và chính nó đã đẻ ra mục nợ này. Một cái
+> trần đặt lúc thành phố còn thấp, ở lại sau khi ADR-052 chia ô thành khu phố — đúng hình dạng
+> ADR-019 (*tiền đề bị gỡ ở một phase khác, kết luận chết theo mà không ai biết*).
+>
+> ⚠️ **CÁI GIÁ ĐÃ TRẢ, ghi ở `#89`**: thành phố nay đứng xa hơn ~38% và trục CHẶNG NGÀY của bản
+> quét tụt 14,39 → 11,33. Đóng mục này KHÔNG miễn phí, và mục #89 là chỗ ghi phần chưa trả xong.
 
 > ⚠️ **CẬP NHẬT 2026-08-18 (Phase 12) — BỘ SỐ GỐC CỦA MỤC NÀY ĐO THIẾU 30% CHIỀU CAO.**
 > `frame-fit.mjs` nhân `BUILDING_SCALE` (1,3) vào bề NGANG nhưng quên nhân vào chiều CAO, trong khi
@@ -2373,6 +2421,32 @@ ship một trạng thái dở dang, hãy làm nó **ĐẾM ĐƯỢC trong một 
 
 ## #67 — **ĐỊA HÌNH CHE**: kỷ 4 và 5 tụt dưới cổng "thấy nước" 5% vì một bản vá ĐÚNG về vật lý, không vì bề rộng
 
+> ⚠️ **CẬP NHẬT 2026-08-24 (Phase 19) — KỶ 5 TỰ LÀNH, VÀ NÓ LÀNH VÌ MỘT LÝ DO CHẲNG LIÊN QUAN GÌ
+> TỚI MỤC NÀY.** ADR-061 lùi khung toàn cảnh ra ở cả 15 kỷ để không cắt công trình nào. Mặt nước
+> thì nằm **NGOÀI** lưới thành phố, nên lùi ra là kéo thêm nước vào khung: kỷ 5 đi **3,51% → 7,30%**,
+> vượt cổng 5%. `waterView.test.js` đã cập nhật: `TRUOT` từ `[2,3,4,5,6,7,9,10]` còn
+> `[2,3,4,6,7,9,10]`, `DAT.length` 6 → 7.
+> ⇒ Mục này nay **chỉ còn kỷ 4**.
+>
+> ⚠️ **NHƯNG ĐỪNG ĐÓNG NỬA NÀY VỘI — nó đang ĐỨNG NHỜ ADR-061, mà ADR-061 thì đang chờ Đàm quyết**
+> (xem `#89`: phép lùi ấy làm trục chặng ngày tụt xuống dưới ngưỡng mắt). Nếu Đàm chọn hoàn tác
+> phép lùi thì kỷ 5 **tụt lại** xuống 3,51%. Đây đúng hình dạng bài học Phase 7D: *một lời hứa đúng
+> nhờ một thứ chẳng liên quan thì gãy trong im lặng đúng lúc thứ đó đổi* — nên nó được ghi ra ở đây
+> thay vì để yên trong một con số test.
+
+> ⚠️ **CẬP NHẬT 2026-08-24 (Phase 21) — VÀ ĐÚNG CÁI GÃY ẤY ĐÃ XẢY RA, RỒI TỰ LÀNH LẠI TRONG CÙNG
+> MỘT PHASE.** Kỷ 5 đổi phe **hai lần nữa** trong Phase 21: bản hợp nhất (ranh giới thửa đi theo
+> cung) kéo nó **7,30% → 3,63% ❌**, rồi §5 (nâng số thửa của bảy kỷ) kéo nó **3,63% → 7,00% ✅**.
+> Cả hai lần cùng MỘT cơ chế và **không lần nào có ai đụng tới nước**: `terrain.js` san phẳng dải
+> đất dưới chân mạng đường, nên đổi mạng đường là đổi hình dạng đồng bằng, là đổi việc sống đất gần
+> có che bờ xa hay không (`roadCells` kỷ 5: 80 → 83).
+> ⇒ **Đây là lần thứ NĂM kỷ 5 đổi phe** (5,54 → 3,51 → 7,30 → 3,63 → 7,00). Điều phải đọc ra không
+> phải "kỷ 5 đã khỏi" mà là **kỷ 5 đứng đúng ở ranh giới nên mọi thay đổi địa hình đều lật được
+> nó** — nó không có bệnh riêng, nó là cái phong vũ biểu. Mục này vẫn **MỞ** cho kỷ 4 (3,92%, chưa
+> lần nào vượt cổng), và cách chữa THẬT vẫn là hướng `#60` (cầu · bến · thuyền · kè).
+> ⚠️ §5 làm **13/14 kỷ đi LÊN** một chút, nhưng ba kỷ hẹp 6·7·10 vẫn ở 2,88 · 3,53 · 1,85 — xác
+> nhận lại rằng chứng BỀ RỘNG (`#59`) là một chứng KHÁC, không san đất nào chữa được.
+
 > Tách khỏi `#59` ngày 2026-08-21 theo lệnh Đàm (*"`#59` chứa hai loại nguyên nhân: TÁCH. Hai bệnh,
 > hai cách chữa, hai điều kiện đóng"*). `#59` giữ nửa **bề rộng** (đã đóng); mục này giữ nửa **che khuất**.
 
@@ -2898,6 +2972,17 @@ hai con số. Việc *nâng* 9 kỷ kia lên trên 5% nếu có làm thì thuộ
 ---
 
 ## #59 — ✅ ĐÃ ĐÓNG (2026-08-20, Đàm chốt hướng (b)) — **BỀ RỘNG**: ba kỷ nước hẹp (6 · 7 · 10) không thể đạt cổng 5% ở **bất kỳ** góc nhìn nào
+
+> ⚠️ **CẬP NHẬT 2026-08-24 (Phase 19) — MỘT LỜI KHẲNG ĐỊNH TRONG CHÍNH TIÊU ĐỀ MỤC NÀY ĐÃ BỊ BÁC BỎ
+> BẰNG SỐ.** Tiêu đề nói kỷ 6 *"không thể đạt cổng 5% ở **bất kỳ** góc nhìn nào"*. Đo lại sau
+> ADR-061: **trần toàn cục của kỷ 6 đi từ 4,36% lên 7,24%** — tức nay CÓ góc cứu được, chữ "bất kỳ"
+> hết đúng. Nguyên nhân không phải bề rộng đổi (bảng `settingStyle` không đụng tới) mà là khung
+> toàn cảnh lùi ra, kéo thêm mặt nước ngoài lưới vào khung.
+> ⇒ `waterView.test.js` đã **đảo vế** bài kỷ 6 kèm giải thích: góc MẶC ĐỊNH vẫn trượt (2,59% < 5%)
+> **nhưng** trần toàn cục nay > 5%. Hai câu ấy phải cùng được khẳng định, vì chỉ câu đầu thì đọc
+> thành "vẫn hỏng", chỉ câu sau thì đọc thành "đã xong".
+> ⚠️ Kết luận **BỀ RỘNG** của mục này (kỷ 7 và 10) vẫn nguyên giá trị, và mục vẫn ĐÓNG — thứ đổi là
+> một chữ trong tiêu đề, không phải hướng chữa. Và nó cũng đứng nhờ ADR-061 (xem `#89`).
 
 > ⚠️ **MỤC NÀY ĐÃ ĐƯỢC TÁCH ĐÔI (2026-08-21, Đàm ra lệnh: *"`#59` chứa hai loại nguyên nhân: TÁCH"*).**
 > Nó từng ôm cả hai chứng bệnh: **(1) nước quá HẸP** (kỷ 6 · 7 · 10) và **(2) địa hình CHE** (kỷ 4 · 5,
@@ -3453,7 +3538,29 @@ mất chỗ để ghi *"kỷ này khai có nước mà chưa dựng"* — thứ 
   `city-preview.mjs`; công cụ **tự đếm số dòng nhật ký và tự in lời nhắc** khi chạm ngưỡng, có test
   khoá rằng hằng số ấy thật sự được ĐỌC. Một điều kiện xem lại chỉ nằm trong tài liệu thì phải có
   người đi tìm mới đọc được — một con số trong mã thì tự đòi được đọc.
-- **Owner**: chưa phân công · **Status**: Open
+- ⚠️ **2026-08-24 (Phase 20) — NGƯỠNG 5 ĐÃ CHẠM (7 lần), ĐÃ DỪNG TRUY, VÀ BẢNG NHẬT KÝ ĐÃ CHO RA
+  MỘT MẪU ĐỌC ĐƯỢC.** Đúng thứ Đàm đặt nhật ký ra để có. Bảy dòng (đã chép sang `BAN_GIAO.md` theo
+  đúng luật ở gạch đầu dòng trên) chia làm **hai nhóm rạch ròi**:
+
+  | nhóm | ảnh | `trungMocDai` | hàng bị kêu | lặp giữa các lượt |
+  |---|---|---|---|---|
+  | 1 dòng | `s40`, khung thường | **1/1** — TRÙNG mốc dải | 476 | — |
+  | 6 dòng | **toàn bộ là `--topdown`** | **0/N** — không trùng mốc dải nào | 317,331 · 314 · 202,396 | **y hệt ở cả 3 lượt độc lập** |
+
+  ⇒ **Cổng có một kiểu BÁO OAN CÓ HỆ THỐNG trên ảnh nhìn-từ-trên-xuống**, và nguyên nhân là hình
+  học chứ không phải ngẫu nhiên: nhìn thẳng từ trên xuống thì một con đường thẳng chiếu ra thành
+  một mép NGANG SẮC LẸM CHẠY HẾT BỀ NGANG khung — đúng bằng chữ ký mà cổng đi tìm. Đây là `#38`
+  lặp lại lần nữa (*một con số đo trên MỘT quần thể được đọc thành luật của CẢ TẬP*): ngưỡng hiệu
+  chuẩn trên ảnh khung nghiêng, rồi đem áp cho một góc camera chưa hề tồn tại lúc hiệu chuẩn.
+- ✅ **ĐÃ VÁ, VÀ KHÔNG BẰNG MỘT NGƯỠNG THỨ TƯ**: cổng nay so **CHỮ KÝ** của lần kêu trước (`hàng` +
+  `bước`, làm tròn 4 chữ số). Vết rách là một cuộc đua nên nó **không thể** rơi đúng cùng một hàng
+  với cùng một bước ở hai lượt chụp độc lập; một mép NỘI DUNG thì lặp lại y hệt mãi mãi. Trùng chữ
+  ký ⇒ nhận ảnh và ghi một dòng `ℹ️` ra stderr. **Không có tham số nào để vặn**, nên nó không thể
+  bị nới dần cho tiện (phễu Phase 9A) — và nó áp cho MỌI khung hình, không riêng `--topdown`.
+  ⚠️ Nó **không** thay cổng cũ: dòng nhóm 1 (`trungMocDai=1/1`, hàng 476 = đúng mốc dải) vẫn bị
+  chặn và chụp lại như trước, vì nó KHÔNG lặp chữ ký.
+- **Owner**: chưa phân công · **Status**: Open — cổng đã bớt kêu oan, **nguyên nhân vết rách thật
+  vẫn chưa truy được** (mới 1 mẫu thật trong phiên này; cần vài chục dòng nữa mới thành mẫu)
 
 ---
 
@@ -4285,6 +4392,14 @@ cấp `Math.min(3,…)` → `Math.min(9,…)` · cắt bớt danh sách cấp th
 
 ## #75 — Ziggurat kỷ 3 đã có hình ĐÚNG nhưng vẫn đọc ra là «một khối cao đội cái mũ giật cấp» — đây là bài toán KHỐI TÍCH, không phải bài toán MÁI
 
+> ✅ **ĐÃ ĐÓNG 2026-08-24 (Phase 19 VIỆC 2, ADR-054)** — và đóng đúng bằng cách mà chính mục này đã
+> chẩn đoán: **bài toán KHỐI TÍCH**. Không chỉnh `massScale`, không thêm kiểu mái; thêm hẳn nguyên
+> mẫu thứ 8 `monolith` — công trình LÀ khối, dựng thẳng từ mặt đất, **không thân tường, không
+> `groundFloor`, không `eaves`, không `rooftop`**. Kỷ 3 nay đọc ra là GIẬT CẤP (thềm + tường
+> nghiêng batter + đền trắng trên đỉnh + cầu thang chính diện), kỷ 2 là CHÓP TRƠN. Cái "thân nhà
+> cao gấp ba" mà mục này đo được **không còn tồn tại** — không phải nhỏ đi, mà là không được dựng
+> ra nữa.
+
 > Mở 2026-08-21 (Phase 14 §1(2)). Nợ này **được chọn mang**, không phải nợ bị kẹt: hình đã đúng
 > lịch sử, thứ còn lệch là TỈ LỆ giữa mái và thân, mà thân thì nằm ở một tầng khác hẳn.
 
@@ -4407,6 +4522,171 @@ cấp `Math.min(3,…)` → `Math.min(9,…)` · cắt bớt danh sách cấp th
 - **Owner**: chưa phân công · **Status**: Open (đã rà soát 2026-08-21, hoãn có lý do)
 
 ---
+
+> ⚠️ **ĐÁNH SỐ LẠI khi hợp nhất (Phase 21)**: hai mục dưới đây vốn mang số **#79** và **#80** trên
+> nhánh Phase 19/20, trùng với hai mục CÙNG SỐ mà `main` đã dùng cho hai chuyện khác hẳn (vai màu
+> `gear` · cư dân chiếm 0,29% khung hình). Theo đúng luật đã áp cho ADR — *số của `main` giữ
+> nguyên nghĩa* — chúng đổi thành **#89** (trục chặng ngày) và **#90** (khu phố làm 4 kỷ thấp đi).
+
+## #88 — Trần "một khu phố không rộng quá MỘT Ô" khoá luôn số suất đất ở 4, làm cột `units`/`cols`/`rows` của bảng khu phố thành một TRỤC CHẾT
+
+> Mở 2026-08-24 (Phase 21 §4). Đây là **cái giá đã đo được** của việc chữa đúng thứ Đàm chỉ ra
+> (*«việc mở rộng thành phố không phải là nhà xếp chồng lên nhau, nó rất phản thực tế và lịch
+> sử»*), không phải một lỗi cài đặt. Ghi ra vì nó là một trục CHẾT, mà một trục chết bị bỏ im
+> lặng chính là thứ `MIN_STONE` (Phase 9D) đã dạy.
+
+- **Tên**: 15 dòng bảng khai 4…10 suất đất, dựng ra đúng MỘT con số — 4
+- **Module**: `src/engine/city3d/block.js` (`BLOCK_MAX_CELLS`) · `blockStyle.js`
+  (`MIN_UNIT_CELLS`, cột `units`/`cols`/`rows`) — khoá bằng `block.test.js`
+  (`TRỤC CHẾT ĐƯỢC ĐẾM RA`)
+- **Priority**: Medium · **Severity**: Low (mỹ thuật; không đụng dữ liệu, không đụng hiệu năng)
+- **Impact**: một trong bảy trục của bảng khu phố ngừng nói. Trước §4 thì khối/ô trải **4,00–6,13**;
+  nay **4,00 ở cả 15 kỷ**, tổng khối 2370 → **1904** (−19,7%). Sáu trục còn lại (`layout`, `attach`,
+  `alley`, `storey`, `vary`, `gableToStreet`) vẫn sống, và HÌNH của bốn suất đất vẫn khác nhau giữa
+  kỷ hữu cơ và kỷ lưới — nên mắt vẫn phân biệt được 15 kỷ; thứ mất là **mật độ** khác nhau giữa các
+  kỷ ở cấp MỘT Ô. (Mật độ ở cấp THÀNH PHỐ thì không mất: số ô nhà dân vẫn trải 28…71 tuỳ kỷ.)
+- **Root Cause**: SỐ HỌC, không phải một tham số chỉnh sai. Một ô rộng 1,0 chia cho sàn
+  `MIN_UNIT_CELLS = 0,3276` ra 3,05 ⇒ tối đa **2 suất mỗi trục ⇒ 4**. Mà trần 1,0 ô là mức
+  **nhỏ nhất có thể** để hai khu phố ở hai ô kề nhau chạm nhau mà không xuyên qua nhau — đo được
+  96,1% ô nhà dân CÓ láng giềng kề cạnh (616 ô ứng viên, cả 15 kỷ), nên không thể nới trần theo
+  từng ô mà vẫn giữ lời hứa. Hai vế "không xuyên qua nhau" và "mỗi ô 4–10 căn có chi tiết mái"
+  **loại trừ nhau** trong một ô 1,0.
+- **Current Risk**: thấp. Không ai mất dữ liệu; ảnh vẫn đọc ra 15 kỷ khác nhau.
+- **Future Risk**: trung bình — rủi ro thật là **có người đọc bảng rồi tưởng cột `units` đang có
+  tác dụng**, sửa nó, đo không thấy gì đổi, rồi kết luận sai về một chỗ khác. Bài test kể tên
+  (`raBaoNhieu` phải BẰNG `[4]`) là thứ chặn điều đó: nó đỏ cả khi trục sống lại lẫn khi có ô chật
+  tới mức không chia nổi.
+- **Recommended Solution — BA HƯỚNG, ĐÃ ĐO, KHÔNG TỰ CHỌN**:
+  (a) **HAI SÀN**: sàn "mắt còn đọc ra là căn nhà" (`3 × EYE_PIXELS / CELL_PIXELS` = 0,1875) cho
+  mọi suất, cộng luật "mỗi khu phố phải giữ ÍT NHẤT một suất trên sàn mái" — một khuôn viên gồm
+  nhà chính + nhà phụ, đúng đời thật. Đo được: sàn 0,1875 thì **cả 15 kỷ đạt đúng số đã khai**
+  (trung bình 7,27 khối/ô). ⚠️ Chỉ chạy được cho kỷ hữu cơ (1–9); kỷ lưới (10–15) chia đều
+  `cols × rows` nên hoặc tất cả đạt sàn mái hoặc không cái nào — cần một lưới KHÔNG ĐỀU (lô mặt
+  phố sâu hơn lô phía trong, đúng dãy phố thật) thì mới áp được.
+  (b) **THỬA TO HƠN MỘT Ô**: cho một khu phố trải trên nhiều ô của cùng một thửa `cityPlan`
+  (`planParcelAt` đã có sẵn, hiện chưa ai dùng ngoài test). Đây là hướng đúng nhất về kiến trúc —
+  ngoài đời một dãy phố là một THỬA chứ không phải một ô — nhưng nó đụng `dwellings.js` (một nhà
+  dân = một ô) nên là một thay đổi có tầm ADR.
+  (c) **CHẤP NHẬN**: bỏ cột `units`/`cols`/`rows` khỏi bảng, thay bằng một hằng số 4, và lấy mật
+  độ từ số Ô của kỷ. Rẻ nhất, và trung thực nhất với thứ đang chạy.
+  ❌ **KHÔNG nới `BLOCK_MAX_CELLS`** để lấy lại con số — nới là dựng lại đúng cái chồng lấn Đàm
+  vừa bác (đo được: trần 2 ô ⇒ khối/ô 4,00–5,94, và nhà lại xuyên qua nhau).
+- **Estimated Complexity**: (a) trung bình cho kỷ 1–9, cao cho kỷ 10–15 · (b) cao (tầm ADR) ·
+  (c) thấp
+- **Blocking Conditions**: (a) và (b) đều đổi HÌNH của mọi nhà dân ⇒ phải đi kèm một lượt quét 15
+  kỷ + ảnh nhìn từ trên xuống để Đàm nghiệm thu bằng mắt; không phải việc làm kèm trong một phase
+  khác. (b) còn liên đới ADR-007 (một nhà dân đổi từ "một ô" sang "một phần thửa" là đổi bộ sinh).
+- **Review Trigger**: mỗi lần chạm `BLOCK_MAX_CELLS`, `MIN_UNIT_CELLS`, hoặc cột
+  `units`/`cols`/`rows` của `blockStyle.js`.
+- **Owner**: chưa giao · **Status**: MỞ
+
+---
+
+
+## #91 — Bài test canh khung bóng đổ CHÉP TAY hệ số `0,8` thay vì đọc từ mã, nên nó xanh kể cả khi mã dùng một `reach` khác
+
+> Mở 2026-08-28, phát hiện trong lúc gộp nhánh Phase 19–21 vào `main`. Suýt cắn thật: phép gộp có
+> một xung đột đúng ở dòng ấy (`main` chốt 0,75 · nhánh chốt 0,80), và **chọn nhầm bên thì bóng bị
+> cắt cụt trên production mà bài test này vẫn xanh**.
+
+- **Tên**: `sceneStats.test.js` viết cứng `const reachBong = 12 * 0.8` thay vì đọc `reach` đã dựng
+- **Module**: `src/components/city/render3d/sceneStats.test.js` (~dòng 754) ↔ `sceneGraph.js`
+  (`createCityScene`, `const reach = gridSize * 0.8`)
+- **Priority**: Medium · **Severity**: Medium (khuyết tật nhìn thấy được, và im lặng tuyệt đối)
+- **Impact**: khối đổ bóng xa tâm nhất nằm ở bán kính **9,2275** (kỷ 13, 120 phiên). Với 0,80 thì
+  `reach` = 9,60 (dư 4%); với 0,75 thì 9,00 — **nhỏ hơn 9,2275**, tức nhà ở vành ngoài bị cụt bóng.
+  Bài test tự tính `12 × 0,8 = 9,60` nên nó so khối xa nhất với một con số KHÔNG phải con số mã
+  đang chạy: cả hai vế (không-được-thiếu và không-được-thừa) đều xanh ở cả hai giá trị.
+- **Root Cause**: `reach` là biến cục bộ trong `createCityScene`, không export, nên bài test không
+  có đường nào hỏi mã ngoài việc chép lại công thức. Đây đúng khuôn `#42` (*assert con số đã KHAI
+  thay vì con số đã DỰNG*) và *một luật một công thức* — chỉ khác là ở đây bản chép nằm phía test.
+  Chú thích ngay trên dòng ấy còn tự nhận *"không có bài test nào từng phát biểu quan hệ ấy"*,
+  trong khi chính nó là bài test được giao việc đó.
+- **Current Risk**: thấp ngay lúc này — hai bên đang khớp (mã 0,8 · test 0,8), đã kiểm bằng tay
+  trong phép gộp 2026-08-28.
+- **Future Risk**: **cao**. Bất kỳ ai siết `reach` cho "nét hơn" (đúng cám dỗ mà chú thích của
+  `SHADOW_MAP_DESKTOP` kể là đã xảy ra một lần) sẽ không thấy gì đỏ lên, và triệu chứng là bóng
+  cụt ở góc lưới — thứ chỉ lộ ra khi soi ảnh đúng kỷ, đúng giờ.
+- **Recommended Solution**: export hệ số ra một hằng số có tên (`SHADOW_REACH_RATIO = 0.8`) đặt
+  cạnh `SHADOW_MAP_DESKTOP`, cho `createCityScene` VÀ bài test cùng `import` nó. Rẻ, không đổi hành
+  vi, và xoá hẳn khả năng hai bên trôi khỏi nhau.
+- **Estimated Complexity**: rất thấp (một hằng số + hai lời gọi `import`)
+- **Blocking Conditions**: không có
+- **Review Trigger**: lần tới có ai đụng `sun.shadow.camera`, `SHADOW_MAP_DESKTOP`, hoặc bố cục
+  thành phố làm khối lan xa hơn
+- **Owner**: chưa ai nhận · **Status**: MỞ
+
+---
+
+## #90 — Chia ô thành khu phố làm 4 kỷ THẤP ĐI và kỷ 6 mất một phần ba chi tiết mái; cả hai đều bị chặn bởi bảng lịch sử của Phase 14
+
+> Mở 2026-08-24 (Phase 20). Hai khuyết tật khác nhau nhưng **cùng một nguyên nhân gốc và cùng một
+> vật cản**, nên ghi chung: chia một ô thành 4–10 đơn vị (ADR-052) làm mỗi đơn vị nhỏ đi, mà cả hai
+> lời hứa bên dưới đều được phát biểu bằng một MỨC TUYỆT ĐỐI áp lên đơn vị.
+
+- **Tên**: (a) 4/15 kỷ có khu phố THẤP HƠN căn nhà đơn cũ · (b) kỷ 6 mất **40,7%** chi tiết mái nhà dân
+- **Module**: `src/engine/city3d/block.js` · `blockStyle.js` · `eraStyle.js` (cột `storey`) ·
+  `rooftop.js` (`ROOFTOP_MIN_SPAN`) — khoá bằng `src/engine/city3d/block.test.js`
+- **Priority**: Medium · **Severity**: Low (mỹ thuật; không đụng dữ liệu, không đụng hiệu năng)
+- **Impact**: (a) bốn kỷ `[1, 2, 6, 7]` có khu phố thấp hơn căn nhà cũ, biên mỏng nhất **0,9508×**
+  — tức thành phố ở những kỷ ấy trông lùn đi một chút so với trước ADR-052. (b) kỷ 6 rơi từ trên
+  0,7 xuống **0,593** tỉ lệ đơn vị còn giữ được chi tiết mái. ⚠️ Con số TỔNG lại **TỐT LÊN**
+  (389/432 = 90% so với 313/371 = 84%), nên đọc mỗi số tổng sẽ tưởng không có gì hỏng — đúng bài
+  học `#22`: một con số gộp phải được tách ra trước khi đọc thành "ổn".
+- **Root Cause**: cả hai là bẫy Phase 7D (*một mức tuyệt đối không diễn đạt được một quan hệ*) áp
+  lên một đại lượng vừa bị chia nhỏ. (a) `storey` là chiều cao một tầng, khai theo kỷ ở
+  `eraStyle.js` từ Phase 14; khi một ô thành 4–10 đơn vị thì mỗi đơn vị hẹp lại, mái ngắn theo
+  (`pitch = max(0,08, roofPitch) × max(w,d)`) mà `storey` thì không biết chuyện đó. (b)
+  `ROOFTOP_MIN_SPAN` là một bề ngang tối thiểu tuyệt đối; kỷ 6 khai `alley: 0,26` — ngõ rộng nhất
+  bảng, đúng với làng Việt nhà thưa có vườn giữa — nên đơn vị của nó bị bóp nhỏ nhất bảng và nhiều
+  đơn vị rơi xuống dưới ngưỡng ấy.
+- **Current Risk**: thấp. Không ai mất dữ liệu; hai khuyết tật chỉ thấy được khi so trước/sau.
+- **Future Risk**: trung bình — **cả hai đang được canh bằng danh sách kể tên**
+  (`assert.deepEqual(truot, [1,2,6,7])` và `assert.deepEqual(duoiSan, [6])`), nên một kỷ thứ năm rơi
+  xuống sẽ ĐỎ, mà một kỷ được chữa xong cũng ĐỎ. Đó là chủ đích: danh sách kể tên là cái hẹn giờ duy
+  nhất chạy được (bài học Phase 10 Bước 1). Rủi ro thật là có người **nới sàn** cho hết đỏ.
+- **Recommended Solution — ĐÃ ĐO SẴN, KHÔNG TỰ LÀM**: (a) nâng `storey` kỷ 2 (1,93 → 1,94), kỷ 6
+  (1,4 → 1,5), kỷ 7 (1,7 → 1,75) là đủ cho ba kỷ. ⚠️ **Kỷ 1 thì HẾT CHỖ**: nó ở 1,95 trên trần 2,0
+  mà cần 2,05, và `cols×rows` đã đúng `MIN_UNITS` nên không bớt được đơn vị nào nữa — kỷ 1 cần một
+  quyết định khác (nới trần, hay chấp nhận). (b) đổi `ROOFTOP_MIN_SPAN` từ một MỨC sang một QUAN HỆ
+  với bề ngang đơn vị — cùng cách đã chữa `eaves` ở Phase 7C. ❌ **KHÔNG hạ sàn 0,7** và ❌ **KHÔNG
+  nới 0,95**: cả hai là bỏ răng cho cả 15 kỷ (phễu Phase 9A).
+- **Estimated Complexity**: (a) thấp cho ba kỷ, trung bình cho kỷ 1 · (b) trung bình
+- **Blocking Conditions**: (a) đụng bảng `storey` — bảng LỊCH SỬ của Phase 14, mỗi dòng buộc vào một
+  công trình có thật, nên sửa nó là sửa một lời khai lịch sử chứ không phải vặn một cái núm; nằm
+  ngoài phạm vi Phase 20. (b) liên đới `#77` (cùng nói về `ROOFTOP_MIN_SPAN`) — nên làm CÙNG LÚC,
+  không vá riêng kỷ 6.
+- **Review Trigger**: mỗi lần chạm `block.js`, `blockStyle.js`, cột `storey`, `ROOFTOP_MIN_SPAN`,
+  **hoặc bảng `networkStyle.js`** (cột `parcels`/`minSide` — xem cập nhật bên dưới).
+- **Owner**: chưa giao · **Status**: MỞ (đã thu hẹp hai lần, xem bên dưới)
+
+### ⚠️ CẬP NHẬT 2026-08-24 (Phase 21) — CẢ HAI NỬA ĐỀU THU HẸP, VÀ CẢ HAI ĐỀU KHÔNG PHẢI DO AI ĐI CHỮA CHÚNG
+
+Bảng số ở trên đo trên quần thể **432** ô của Phase 20. Phase 21 đổi quần thể hai lần (hợp nhất với
+ADR-059 ⇒ 476 ô; rồi §5 nâng số thửa của bảy kỷ ⇒ **473** ô), và cả hai lần đều làm bảng dịch mà
+**không ai đụng vào `storey`, `ROOFTOP_MIN_SPAN`, hay `blockStyle.js`**:
+
+| | Phase 20 (432 ô) | hợp nhất (476 ô) | sau §5 (473 ô) |
+|---|---|---|---|
+| (a) kỷ THẤP ĐI | `[1, 2, 6, 7]`, tệ nhất 0,9508 | `[1, 7]`, tệ nhất 0,9386 | **`[5]`, tệ nhất 0,9942** |
+| (b) kỷ mất >⅓ chi tiết mái | `[6]` (0,593) | `[]` (kỷ 6 = 0,893) | **`[]`** (kỷ 6 = 0,844) |
+| (b) tổng ô còn chi tiết mái | 389/432 (90%) | 469/476 (98,5%) | **463/473 (97,9%)** |
+
+⚠️ **ĐỌC ĐÚNG NGUYÊN NHÂN, ĐỪNG ĐỌC THÀNH "ĐÃ CHỮA".** Số thửa quyết ranh giới thửa → quyết tập ô
+đường → quyết ô nào là nhà dân **và ô ấy là loại gì**. `workshop` là nguyên mẫu thấp-rộng cho cả hai
+con số tệ nhất bảng, nên một kỷ có nhiều `workshop` hơn sẽ tụt ở CẢ HAI vế. Tức đây là **một hỗn hợp
+nguyên mẫu dịch chỗ**, không phải một cơ chế được vá — bằng chứng: kỷ 5 vừa TỤT xuống dưới 1 trong
+khi kỷ 1 và 7 tự khỏi, và kỷ 6 vừa TỆ ĐI (0,893 → 0,844) dù `alley` của nó không đổi một chữ số.
+**Nguyên nhân gốc ở mục Root Cause vẫn nguyên vẹn**: hai lời hứa vẫn được phát biểu bằng MỨC TUYỆT
+ĐỐI áp lên một đơn vị vừa bị chia nhỏ, nên chúng còn dịch mỗi lần bảng mạng đường đổi.
+
+⚠️ **KHÔNG NỚI GÌ CẢ, VÀ CÓ SIẾT MỘT CHỖ.** Sàn 0,7 giữ nguyên · ngưỡng 1 giữ nguyên · cổng 0,95
+giữ nguyên. Cửa sổ GHIM quanh kỷ tệ nhất dịch theo giá trị thật (0,85–0,95 → 0,80–0,90) vì nó là
+một cái ghim chứ không phải một cái sàn. Trần trôi hình bao thì **SIẾT** 0,13 → 0,10 (giá trị thật
+0,1259 → 0,0919) — siết một cái trần thì không bao giờ giấu được khuyết tật.
+
+---
+
 
 ## #85 — `road-bend.mjs` đo trên một đại lượng mà ADR-059 đã thay: nó vẫn hỏi "tim đường lệch bao nhiêu trong ô", trong khi bản sắc nay nằm ở HÌNH DẠNG CỦA CẢ MẠNG
 
@@ -4863,3 +5143,73 @@ trong chú thích thì đừng để `--selftest` của chính nó vẫn dùng �
     `node --import ./scripts/register-esm-loader.mjs scripts/human-scale.mjs --eras 1` ·
     `… scripts/human-scale.mjs --gait --eras 1`. Đo trên cây mã tại commit `be9d2ea`.
 - **Owner**: phiên AI kế tiếp · **Status**: Open (có chủ đích, đúng phạm vi Đàm giao)
+
+---
+
+
+## #89 — Trục CHẶNG NGÀY của bản quét tụt xuống DƯỚI ngưỡng mắt (11,33) — cái giá của ADR-061, và cần gạt để nâng nó lên KHÔNG nằm ở thành phố
+
+> Mở 2026-08-24 (Phase 19 VIỆC 6). Đây là nợ **được chọn mang có ý thức**, và nó là một **CÂU HỎI
+> CHO ĐÀM**, không phải một việc tôi được tự quyết: hai thứ anh đã yêu cầu đang xung đột nhau.
+>
+> ⚠️ **CẬP NHẬT 2026-08-24 (Phase 20) — CỔNG ĐÃ QUA (11,33 → 12,44 ✓), NHƯNG CHẨN ĐOÁN BÊN DƯỚI
+> VẪN ĐỨNG NGUYÊN, VÀ MỤC NÀY CHƯA ĐÓNG.** Bộ xương sinh theo kỷ (ADR-066) đưa cặp yếu nhất
+> `bình minh 6h ↔ chiều 15h` từ **11,33 lên 12,44**, tức 0/15 cặp dưới ngưỡng. Mốc nền được **TỰ ĐO
+> lại** trong một `git worktree` ở đúng HEAD `0abb272` (không chép cột "sau" của Phase 19 — bài học
+> `#43`) và nó tái lập **y hệt** 11,33 · 19,18 · 36,31, nên phép so là sạch.
+>
+> ⚠️ **NHƯNG ĐỪNG ĐỌC "12,44 ✓" THÀNH "ĐÃ CHỮA".** Tách ba dải của đúng cặp ấy (trước → sau):
+> **trời 4,12 → 4,05** · **thành phố 6,51 → 5,56** · **đất 18,05 → 20,42**.
+> ⇒ Toàn bộ phần đi lên nằm ở dải **ĐẤT (+2,37)**; dải **THÀNH PHỐ còn TỆ ĐI (−0,95)**; và dải
+> **TRỜI đứng yên (−0,07)** — đúng như phải thế, vì Phase 20 không chạm một dòng nào vào bầu trời.
+> Tức **cần gạt thật vẫn chưa được kéo**: trời vẫn là dải yếu nhất bảng, 4,05, thấp hơn ngưỡng mắt
+> ba lần. Mục này qua được cổng nhờ một dải KHÁC bù vào, không nhờ chỗ hỏng được sửa.
+> ⚠️ **Cơ chế vì sao dải ĐẤT mạnh lên thì CHƯA ĐƯỢC CHỨNG MINH.** Thứ duy nhất đã đo được là một
+> tương quan: số ô đường đi từ **80 cố định ở cả 15 kỷ** xuống **34…92, trung bình 59,7**, tức đất
+> trống lộ ra nhiều hơn. Đó là một ỨNG VIÊN, không phải một kết luận — đừng chép nó thành nhân quả
+> khi chưa bật/tắt để đo (bài học Phase 3Y: *sửa đúng không chứng minh hiểu đúng*).
+> ⇒ **Ba hướng bên dưới vẫn nguyên giá trị**, và hướng (a) *nâng bầu trời* vẫn là hướng đúng.
+> Trạng thái đổi từ "một cặp đang dưới ngưỡng" sang "biên mỏng 0,44 trên ngưỡng, dựa vào một dải
+> không liên quan tới nguyên nhân" — nhẹ đi, chưa hết.
+
+- **Tên**: bản quét 15 kỷ × 6 chặng — cặp `bình minh 6h ↔ chiều 15h` = **11,33**, dưới ngưỡng mắt 12
+- **Module**: `src/engine/city3d/orbit.js` (nguyên nhân) · `src/engine/city3d/daylight.js` (cần gạt)
+  · đo bằng `scripts/city-preview.mjs --sweep` + `scripts/sweep-score.mjs`
+- **Priority**: Medium-High · **Severity**: Medium (mỹ thuật; không ảnh hưởng dữ liệu/hiệu năng)
+- **Impact**: hai trong sáu chặng ngày là **CÙNG MỘT BỨC ẢNH** với mắt người. Thứ mất đi là phần
+  thưởng của việc mở app vào những giờ khác nhau. ⚠️ Trục **KỶ vẫn ĐẠT** — 0/105 cặp dưới ngưỡng,
+  gần nhất 19,18, trung vị 36,31 — nên *"15 kỷ còn phân biệt được"*, đúng điều VIỆC 6 hỏi, là CÓ.
+- **Root Cause — ĐÃ TÁCH MỘT BIẾN, KHÔNG PHẢI SUY ĐOÁN**: ba lượt quét đầy đủ trên ba cây mã:
+
+  | cây mã | trục chặng | trục kỷ | trung vị |
+  |---|---|---|---|
+  | mốc nền `be9d2ea` (tự đo, không chép của phase trước) | **14,39** ✓ | 22,13 | 38,59 |
+  | Phase 19 **trừ** `orbit.js` (đủ VIỆC 1+2+3+4) | **14,23** ✓ | 21,24 | 38,67 |
+  | Phase 19 **đủ** | **11,33** ✗ | 19,18 | 36,31 |
+
+  ⇒ bốn việc kia cộng lại tốn **0,16**; **2,90 là của riêng phép lùi khung hình** (ADR-061). Cơ chế:
+  các dải đo là phân số **CỐ ĐỊNH** của ô (trời 2–30% · thành phố 34–68% · đất 72–98%), nên thành
+  phố nhỏ lại thì mỗi dải bị pha loãng thêm nền — đúng hình dạng `TECH_DEBT #22`.
+- **Current Risk**: thấp — không ai mất dữ liệu, không ai thấy lỗi. Nó chỉ làm nhạt đi một phần
+  thưởng.
+- **Future Risk**: cao nếu bị **hiểu nhầm**. Một phiên sau đọc "11,33 < 12" rồi đi sửa MÀU thành
+  phố sẽ chữa nhầm chỗ. Tách ba dải của đúng cặp yếu nhất (mốc nền → nay):
+  **trời 8,38 → 4,12** · thành phố 10,74 → 6,51 · **đất 20,88 → 18,05**.
+  ⇒ Đất vẫn khoẻ gấp bốn lần trời. **Cần gạt nằm ở BẦU TRỜI lúc 6h so với 15h** — đúng kết luận mà
+  `CLAUDE.md` đã ghi sau Phase 14 §1(3), nay được xác nhận lại bằng một bộ số mới.
+  ⚠️ Và nó **bác bỏ lần thứ hai** chỉ thị cũ *"phải làm vùng quê đổi theo giờ"*: vùng quê nằm ở dải
+  ĐẤT, dải đang mạnh nhất bảng.
+- **Recommended Solution — BA HƯỚNG, ĐÀM CHỌN, TÔI KHÔNG TỰ CHỌN**:
+  - **(a) Giữ khung mới, nâng bầu trời.** Được cả hai lời hứa. Là một thay đổi MỸ THUẬT vào vòng
+    ngày (`daylight.js`), nằm ngoài phạm vi Phase 19 nên tôi không tự làm.
+  - **(b) Hoàn tác ADR-061.** Lấy lại 14,39 và mở lại `TECH_DEBT #24` (nóc nhà bị cắt ở 14/15 kỷ).
+  - **(c) Giữ nguyên, chấp nhận hai chặng nhìn giống nhau** cho tới khi có phase riêng cho bầu trời.
+  ❌ **KHÔNG được nới ngưỡng 12** (phễu Phase 9A) và ❌ **KHÔNG được đổi cách cắt dải để lấy lại con
+  số** — ba mốc 20,7/17/14 của Đàm đều hiệu chuẩn trên cách đo hiện tại; đổi ruột thước mà giữ vạch
+  cũ là tạo ra một ngưỡng chưa hiệu chuẩn (`TECH_DEBT #55`).
+- **Estimated Complexity**: (a) trung bình · (b) thấp · (c) không
+- **Blocking Conditions**: chờ Đàm chọn hướng.
+- **Review Trigger**: mỗi lần chạm `orbit.js`, `daylight.js`, hoặc kích thước công trình — và mỗi lần
+  bản quét đổi, vì cổng nay chỉ hơn ngưỡng **0,44** và phần dư ấy đến từ một dải KHÔNG liên quan
+  tới nguyên nhân, nên nó có thể mất đi vì một thay đổi chẳng dính gì tới bầu trời.
+- **Owner**: chưa giao · **Status**: MỞ — cổng đã qua (12,44 ✓) nhưng nguyên nhân chưa chữa; chờ quyết định

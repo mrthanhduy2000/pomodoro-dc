@@ -199,6 +199,57 @@
 >
 > Cập nhật trước đó: **2026-08-27 (tối)** — **MỌI CHUYỂN ĐỘNG VỀ ĐÚNG BA NHỊP.**
 > Cập nhật lần cuối: **2026-08-27 (tối)** — **MỌI PHẦN THƯỞNG NÓI CHUNG MỘT THỨ TIẾNG, VÀ CHỈ
+> Cập nhật lần cuối: **2026-08-27 (đêm)** — **PHASE 21 §1: ĐÃ GỘP `main` VÀO NHÁNH PHASE 21.**
+>
+> `main` đi thêm 20 commit trong lúc Phase 21 làm việc. Gộp xong: **0 xung đột ở mã nguồn**, cả 5
+> xung đột đều là "hai bên cùng thêm một mốc mới vào đầu file tài liệu" ⇒ giữ CẢ HAI, mốc của
+> `main` (27/8) đứng trước, mốc Phase 21 (24/8) đứng sau kèm nhãn *(mốc trước)*.
+>
+> **HAI VA CHẠM SỐ, cả hai im lặng.** Không có gì đỏ lên khi hai nhánh cùng đặt MỘT cái tên cho
+> HAI thứ khác nhau — đây là loại lỗi mà chỉ việc đi gộp mới lộ ra:
+> · **ADR-060**: `main` = "MỘT ngôn ngữ hình cho mọi phần thưởng"; Phase 21 = "Bộ xương thành phố
+>   SINH THEO KỶ". `main` đã lên production nên nó giữ số; Phase 21 đổi sang **ADR-066** (33 chỗ).
+> · **TECH_DEBT #86/#87**: `main` = 137 nút không đọc token skin / báo cáo tuần tự bật; Phase 21 =
+>   trục chặng ngày dưới ngưỡng mắt / chia ô thành khu phố làm 4 kỷ thấp đi. Phase 21 đổi sang
+>   **#89** và **#90** (40 chỗ).
+>
+> ⚠️ **BÀI HỌC — ĐỔI SỐ TRONG TÀI LIỆU TRỘN CHỦ ĐỀ THÌ PHẢI ĐỔI THEO TỪNG DÒNG, KHÔNG THAY HÀNG
+> LOẠT.** Cùng một chuỗi `#86` trong CÙNG một file có thể thuộc hai chủ nhân khác nhau, cách nhau
+> vài trăm dòng — `TECH_DEBT.md` có đúng tình huống đó. Cách làm: phân loại từng chỗ theo NỘI DUNG
+> câu văn quanh nó (từ khoá "137 nút"/"token skin" ⇒ của `main`; "chặng ngày"/"11,33"/"khu phố" ⇒
+> của Phase 21), rồi thay theo danh sách (file, dòng) đã phân loại, và mỗi lần thay đều đếm số chỗ
+> khớp — 0 chỗ khớp là một KẾT QUẢ, không được để nó im lặng thành "đã xong". Với file chỉ-thành-phố
+> (`block.test.js`) thì thay hàng loạt vẫn an toàn.
+>
+> **HAI KHUYẾT TẬT CÓ SẴN LỘ RA TRONG LÚC GỘP** (cả hai đã có ở `65f3422`, không phải do gộp):
+> · `TECH_DEBT.md` có `## #78` **hai lần** — một bản mang dấu ✅ ĐÃ ĐÓNG nhưng chỉ có ghi chú đóng,
+>   một bản mang tiêu đề MỞ mang cả phần thân; chúng bị một mục khác chen vào giữa nên tách rời từ
+>   lúc #78 được đóng. `main` đã có hình đúng (ghi chú + thân liền một khối) nên ghép lại theo hình
+>   của `main`, rồi ĐỐI CHIẾU: sau khi ghép, mục #78 giống hệt từng byte bản của `main`.
+> · **ADR-066 chứa nguyên một thân ADR thứ hai** — toàn bộ thân ADR-061, chỉ thiếu dòng tiêu đề
+>   `## ADR-061`. Vì thiếu đúng dòng tiêu đề nên KHÔNG phép đếm nào thấy được: `grep '^## ADR-'` ra
+>   66 mục không trùng số, file vẫn đọc trôi chảy. Thứ để lộ ra là hai dòng `**Ảnh hưởng**` GIỐNG
+>   HỆT nhau ở hai chỗ cách nhau 110 dòng — một câu nói về phép lùi khung hình lại nằm trong bản ghi
+>   về chia đôi đệ quy. Đã đối chiếu 45 dòng ấy với thân ADR-061 hiện có (giống hệt) rồi mới xoá.
+>
+> **CỔNG ĐÃ CHẠY LẠI SAU KHI GỘP** — `test:fast` **1.266 bài · 1.265 pass · 0 fail · 1 skipped**
+> (tăng từ 1.184, `main` mang sang ~82 bài) · `test:cross` 3/3 · lint sạch · build ✓ 5,27s · PWA 55
+> mục / 1.892,57 KiB · `blockStyle.test.js` riêng 16/16.
+>
+> **BẢN QUÉT ĐO LẠI SAU KHI GỘP — KHÔNG TRÔI MỘT CHỮ SỐ**: chặng gần nhất **12,11** · kỷ gần nhất
+> **22,14** · trung vị **36,42** · 0/15 và 0/105. ⚠️ Và theo đúng bài học *"bản quét không đổi một
+> chữ số không chứng minh được gì cả"*, con số giống hệt ở đây MỚI là kết quả đúng — vì đã kiểm
+> `git diff` trên tầng màu 3D (`palette3d.js` · `cityTokens.js` · `themeBridge.js` ·
+> `cityBackdropScrim.js`) và **toàn bộ thay đổi từ `main` chỉ là CHÚ THÍCH** (app thêm skin thứ 5
+> nên "8 tổ hợp" → "10 tổ hợp"); không một giá trị màu nào đổi. Nói cách khác sự đứng yên ấy chứng
+> minh **skin arcade mới của `main` KHÔNG rò vào cảnh 3D**.
+>
+> ⚠️ **VẪN CHƯA GỘP NGƯỢC LÊN `main`** — chỉ thị Phase 21 ghi rõ *"Push nhánh phụ, không tự gộp
+> `main`"*. Nhánh đang ở `e3235e0`.
+
+---
+
+> *(mốc trước)* **2026-08-27 (tối)** — **MỌI PHẦN THƯỞNG NÓI CHUNG MỘT THỨ TIẾNG, VÀ CHỈ
 > BỐN VIỆC CÒN ĐƯỢC CHẶN MÀN HÌNH** (ADR-060).
 >
 > Bảy đường trao thưởng, bảy cách vẽ — và riêng `LootDropModal` đã có **BA hình cho ba loại thưởng
@@ -259,7 +310,7 @@
 > Nhiệm vụ (cả 1280 và 390) · hộp thoại lên kỷ vẫn chặn màn hình đầy đủ.
 
 ---
-> Cập nhật lần cuối: **2026-08-27 (tối)** — **THANH TÀI NGUYÊN RÚT TỪ "BÀY HẾT" XUỐNG "BA CON SỐ
+> *(mốc trước)* **2026-08-27 (tối)** — **THANH TÀI NGUYÊN RÚT TỪ "BÀY HẾT" XUỐNG "BA CON SỐ
 > CỘNG MỘT THANH".** Đàm: bản cũ bày cùng lúc EP · chặng · tài nguyên thô · tinh chế · RP · tinh thể,
 > **tất cả cùng một trọng lượng thị giác**, nên không thứ nào nổi lên. Nay LUÔN hiện đúng ba thứ —
 > thanh tiến độ kỷ (trọn chiều ngang, nhãn `Kỷ N · chặng i/n`, chạy `var(--accent)` trên nền
@@ -324,7 +375,7 @@
 > Deployments hiện "Ready" — **chưa ai kiểm**. Đúng bài học `8ee264d`: *code xanh + commit thành công
 > KHÔNG có nghĩa là đã thực sự lên production*. Phiên sau chạy trong hộp cát này đừng mất công thử
 > `curl` lại; hoặc nhờ Đàm liếc, hoặc chạy từ máy Đàm.
-> Cập nhật lần cuối: **2026-08-27 (tối)** — **ĐỒNG HỒ TRẢ LỜI HAI CÂU HỎI THAY VÌ MỘT.**
+> *(mốc trước)* **2026-08-27 (tối)** — **ĐỒNG HỒ TRẢ LỜI HAI CÂU HỎI THAY VÌ MỘT.**
 > Vòng chính dày 14px (từ 7), bo tròn hai đầu, màu theo token — tập trung `--accent`, nghỉ (ngắn
 > LẪN dài) `--good`, nền `--timer-track`. Thêm **vòng thứ hai** mảnh 4px nằm ngoài, cách đúng 8px,
 > màu `--warn`: tiến độ MỤC TIÊU NGÀY. Con số ở giữa to thêm 20%, weight 800, `tabular-nums`; ngay
@@ -384,7 +435,7 @@
 >
 > Cổng: `npm test` **1.175 bài · 1.174 pass · 0 fail · 1 skipped** (+12 bài mới) · `test:cross` 3/3
 > · lint sạch · build xanh.
-> Cập nhật lần cuối: **2026-08-27 (khuya)** — **ĐIỀU HƯỚNG CHÍNH: 8 MỤC → 5, BẰNG CÁCH GỘP.**
+> *(mốc trước)* **2026-08-27 (khuya)** — **ĐIỀU HƯỚNG CHÍNH: 8 MỤC → 5, BẰNG CÁCH GỘP.**
 > Ba màn Kỹ năng · Kho báu · Thành tích nay là ba TAB CON của **"Hành trang"**. Desktop còn đúng 5
 > mục (Tập trung · Hành trang · Thành Phố · Thống kê · Cài đặt); iPhone còn 4 nút (Tập trung ·
 > Nhiệm vụ · Hành trang · Thành Phố) + nút "Thêm" giữ Thống kê và Cài đặt. **Không màn nào bị xoá**
@@ -432,7 +483,7 @@
 > trong đó, lưới tự co còn 2 cột), `--fit` ở 390px soi 23 nút không nút nào tràn chữ. Cái chấm đã
 > chụp được ở CẢ hai thanh khi bơm một cơ hội thật (fixture `sp: 99`), và tắt đúng khi không có việc.
 
-> Cập nhật lần cuối: **2026-08-27 (tối)** — **MỌI CHUYỂN ĐỘNG VỀ ĐÚNG BA NHỊP.**
+> *(mốc trước)* **2026-08-27 (tối)** — **MỌI CHUYỂN ĐỘNG VỀ ĐÚNG BA NHỊP.**
 > `initial`/`animate`/`transition` đang khai rời rạc ở hơn ba mươi file. Đếm được **5 thời lượng**
 > (0,18 · 0,22 · 0,26 · 0,28 · 0,35 giây) và **7 đường cong** khác nhau; riêng bảng điều khiển đồng
 > hồ khai **y hệt nhau bốn lần**. Nay: `src/lib/motionPresets.js` xuất ra ĐÚNG ba nhịp —
@@ -513,7 +564,7 @@
 > Cổng: `npm test` **1.169 bài · 1.168 pass · 0 fail · 1 skipped** · `test:cross` 3/3 (32,1 giây) ·
 > lint sạch · build xanh · `scripts/shot.mjs` chụp lại trang chủ 1280px: không tràn, mọi khối còn đủ.
 
-> Cập nhật lần cuối: **2026-08-27 (chiều)** — **`ActionButton` NGHE THEO SKIN + CÓ CẢM GIÁC BẤM LÚN.**
+> *(mốc trước)* **2026-08-27 (chiều)** — **`ActionButton` NGHE THEO SKIN + CÓ CẢM GIÁC BẤM LÚN.**
 > Ba bệnh đã chữa: `themeMap` khai màu cứng theo `lightTheme` (chỉ đúng **2 trong 10** tổ hợp skin ×
 > chế độ) · bóng MỜ nhiều lớp làm nút trông như thẻ giấy · `whileHover scale 1.03` phóng to cả khối
 > nên chữ nhoè đúng lúc đang nhìn. Nay: một bảng màu DUY NHẤT đọc token · bóng ĐẶC `0 4px 0 0` ·
@@ -578,7 +629,7 @@
 > Cổng: `npm test` **1.163 bài · 1.162 pass · 0 fail · 1 skipped** (+5 bài mới) · `test:cross` 3/3 ·
 > lint sạch · build xanh. Đo trên trình duyệt thật: 6 tổ hợp skin × chế độ ra 6 bộ màu nút khác nhau.
 
-> Cập nhật lần cuối: **2026-08-27** — **SKIN THỨ 5 "SÂN CHƠI" (arcade), ĐẶT LÀM MẶC ĐỊNH.**
+> *(mốc trước)* **2026-08-27** — **SKIN THỨ 5 "SÂN CHƠI" (arcade), ĐẶT LÀM MẶC ĐỊNH.**
 > Nền cho hướng game hoá đơn giản, hiện đại: bỏ giấy, bỏ serif, bỏ gradient, bỏ kính mờ ⇒ mặt
 > phẳng sạch · chữ sans đậm (Inter 800, không thêm font mới) · **BÓNG ĐẶC** — một vạch màu dày 3px
 > dưới đáy thẻ thay cho bóng mờ nhiều lớp, cho thẻ một "cái chân" như phím bấm.
@@ -640,7 +691,72 @@
 > · lint sạch · build xanh. Nghiệm thu bằng trình duyệt thật trên CSS đã build, cả hai chế độ:
 > `background-image: none` · chân bóng `0 3px 0 0` · tiêu đề `Inter weight=800`.
 
-> Cập nhật lần cuối: **2026-08-24 (đêm)** — **CẮT CHI PHÍ MỖI PHIÊN: 6.323 DÒNG BẮT BUỘC ĐỌC → 55**.
+> *(mốc trước)* **2026-08-24 (đêm)** — **CẮT CHI PHÍ MỖI PHIÊN: 6.323 DÒNG BẮT BUỘC ĐỌC → 55**.
+
+> *(mốc trước)* **2026-08-24 (khuya)** — **PHASE 21: HỢP NHẤT HAI NHÁNH, RỒI XOÁ NỐT VẺ QUY
+> HOẠCH**. Đàm xem bản quét Phase 20: *«nhà vẫn xếp rất ngăn nếp trông như quy hoạch, dù quy hoạch
+> ô bàn cờ chỉ bùng nổ và trở thành chuẩn mực từ thế kỷ 19 (Cách mạng Công nghiệp). Và việc mở rộng
+> thành phố không phải là nhà xếp chồng lên nhau, nó rất phản thực tế và lịch sử.»*
+>
+> **§1 HỢP NHẤT (ADR-064).** Hai nhánh đã giải **cùng một bài toán hai lần** trong hai phiên không
+> nhìn thấy nhau: `main` có cung cong (ADR-059), nhánh này có chia thửa đệ quy (ADR-066), và còn
+> **trùng số ADR 056/057** cho hai nội dung khác hẳn. Câu hỏi mở khoá được việc gộp là một câu chưa
+> ai đặt: *"hai bộ sinh ấy có đang trả lời cùng một câu hỏi không?"* — **KHÔNG**. Chia thửa trả lời
+> *"đất chia thế nào"*, cung cong trả lời *"một ranh giới có hình gì"*. ⇒ **BSP quyết cắt Ở ĐÂU,
+> cung cong quyết cắt theo HÌNH GÌ.** Kèm theo, một mệnh đề ngầm phải đổi: **một thửa nay là TẬP Ô**
+> (mỗi ô không phải đường thuộc về hình chữ nhật gần nhất), không phải hình chữ nhật đã khai — vì
+> hình chữ nhật là **Ý ĐỊNH** còn con đường đã dựng mới là **SỰ THẬT**. ADR đánh số lại cho hết
+> trùng (060 · 061 · 062 · 063 · 064).
+>
+> **§2 ADR-007 — ĐÀM DUYỆT PHƯƠNG ÁN (a).** Dời 75/75 công trình **MỘT LẦN**, sau đó bố cục mỗi kỷ
+> **đóng băng vĩnh viễn**. Không hai bộ sinh song song. ⚠️ Từ ngày gộp `main`, đổi bộ sinh bố cục
+> của một kỷ là **một quyết định DI TRÚ, phải hỏi trước**.
+>
+> **§3 BÀN CỜ LÀ MỘT MỐC LỊCH SỬ, KHÔNG PHẢI MẶC ĐỊNH (ADR-065).** Phase 20 đổi được bộ xương, mà
+> **bên trong một thửa vẫn là lưới `cols × rows`** cho cả 15 kỷ — hai tầng chỉ khác nhau về cỡ, nên
+> mắt vẫn đọc ra lưới. Nay `blockStyle.js` có trục `layout`: kỷ **1–9** khai `organic` (chia thửa
+> đệ quy lệch tâm, không hàng không cột), kỷ **10–15** khai `grid` (giữ nguyên, không đổi một dòng).
+> Chọn BSP chứ không rải-rồi-tránh-nhau vì **các lá của một cây BSP rời nhau THEO CẤU TẠO** — không
+> phép kiểm chồng lấn, không số lần thử lại phải hiệu chuẩn. Khoá bằng test **HAI CHIỀU** (kỷ 1–9
+> phải TRƯỢT phép kiểm "là lưới đều", kỷ 11–15 phải ĐẠT); một chiều thôi thì cách rẻ nhất để hết đỏ
+> là làm mọi kỷ hữu cơ, tức xoá mất nửa kia của mốc.
+>
+> **§4 KHỐI NẰM TRONG THỬA CỦA NÓ, THÀNH PHỐ LAN RA NGOÀI.** Đo lần đầu: **290 cặp** khối nhà dân
+> đè lên nhau, sâu nhất **−0,441 ô**, khối rộng nhất **1,734 ô** — tức tràn qua trọn ô bên cạnh, và
+> không cổng nào từng hỏi câu ấy. Ba việc, mỗi việc đo riêng: `BLOCK_MAX_CELLS = 1` (290→84) · giải
+> affine lượt ba (84→20) · `EAVE_LAND_FACTOR = 1,05` (20→**15**, sâu nhất **−0,015 ô ≈ 1 điểm ảnh**,
+> dưới sàn mắt 4). ⚠️ Lượt ba là một phép **GIẢI**, không phải vòng lặp: `specFootprint` là hàm **BẬC
+> THANG** của `fx` nên lặp tới hội tụ thì **PHÂN KỲ** (đo được lượt ba đi XA hơn lượt hai). Vế "lan
+> ra" vốn đã đúng theo cấu tạo nhưng **chưa bài nào canh**; nay có: 20 phiên so 120 phiên, đủ 15 kỷ,
+> hộp bao nở **1,65 lần** (kỷ 4) tới **12,0 lần** (kỷ 13).
+>
+> **§5 SÁU KỶ TỪNG CÓ ĐÚNG 0 THỬA NHÀ DÂN — và phép đo "thửa có khác cỡ không" đang đo nhầm.**
+> `WONDER_PARCELS = 5` ăn trước, nên kỷ nào khai `parcels: 6` chỉ còn 1 thửa dư mà thửa ấy lại bị
+> lấy làm sân ⇒ con số tỉ số xưa nay là tỉ số của các **KHU ĐẤT KỲ QUAN**. Vá bằng module lá
+> `parcelRoles.js` (0 lời `import`) giữ **MỘT** công thức chia vai, và **cả `cityPlan` lẫn
+> `networkStyle` cùng gọi nó** — trước đó mỗi bên tự tính một nửa và hai nửa trôi khỏi nhau.
+> Validator **TỪ CHỐI THẲNG** dòng để lại < 2 thửa nhà. Sau khi sửa: mọi kỷ có ≥2 thửa nhà và ≥1
+> sân (23 thửa sân trên 15 kỷ). Tỉ số ô đất lớn nhất/nhỏ nhất theo hình thái — `organic` **trung vị
+> 5,50** · `terrace` 4,67 · `grid` 2,25 · `radial` 2,00 · `axial` 1,25 ⇒ phố cổ chênh **gấp 4,4 lần**
+> nhóm axial, và nó chênh bằng chính hình thái mạng đường chứ không bằng một cột số chọn tay.
+>
+> ⚠️ **CÁI GIÁ CỦA §5, NÓI THẲNG.** Thêm ô đường ⇒ đổi ô nào là nhà ⇒ **đổi tỉ lệ loại nhà**
+> (`workshop` là nguyên mẫu thấp-rộng, tỉ số xấu nhất). Bảy mốc ghim cũ già đi ở năm file; **tất cả
+> được ghim lại SAU khi đo**, không một sàn/trần chất lượng nào bị nới — một cái trần còn được
+> **SIẾT** (`TRAN_TROI` 0,13 → 0,10 ô). *Tốt lên*: chiều cao nhà kỷ 1 và 7 hết trượt · kỷ 5 thôi bị
+> khung hình thu nhỏ vô cớ (biên 0,2294 → 0,0400) · mảng phủ đất nay đạt ở **cả bảy** mốc phiên
+> (trước hụt ở mốc 150) · nước nhìn thấy được tăng ở **13/14 kỷ**, kỷ 5 vượt cổng 5% (3,63 → 7,00).
+> *Xấu đi*: ô mất chi tiết mái **7/476 (1,5%) → 10/473 (2,1%)**, kỷ tệ nhất 0,893 → 0,844.
+>
+> **Bài học lớn nhất của phase**: `TECH_DEBT #90` đã được ghi lại **hai lần** như thể cơ chế đang
+> được chữa dần, trong khi cả hai lần nó chỉ **đổi tỉ lệ loại nhà**. Một mục nợ thu hẹp không có
+> nghĩa là bệnh của nó đang lành — phải hỏi *"cái gì vừa đổi, và nó có phải cơ chế tôi đang tố
+> không?"* trước khi ghi một con số đẹp hơn vào cột trạng thái.
+>
+> Cổng: `npm test` **1.184 bài · 1.183 pass · 0 fail · 1 skipped** (+ đối chiếu chéo 3/3) · lint
+> sạch · build xanh. **Chưa gộp `main`** (chỉ thị Phase 21 ghi rõ: *"Push nhánh phụ, không tự gộp"*).
+>
+> (Mốc trước, 2026-08-24 đêm) — **CẮT CHI PHÍ MỖI PHIÊN: 6.323 DÒNG BẮT BUỘC ĐỌC → 55**.
 > Đàm: *"mỗi lượt sửa quá ít thay đổi và không hiệu quả, không cần đo performance quá nhiều…
 > quy ước lại cách ra prompt đi"*.
 >
@@ -825,6 +941,30 @@
 - ⚠️ **CẦN ĐÀM THỬ TAY** (không test được trên dev): (a) câu nhắc-sau-phiên hiện sau khi xong PHIÊN THẬT; (b) bài "AI phân tích tổng thể" giờ chạy pro — xem có chậm/khác chất lượng không; (c) dòng "Ghi nhớ" lời khuyên hiện sau ≥3 ngày; (d) thông báo chuỗi-sắp-đứt: **từ nay** (11/7) chiều nào quên làm sẽ nhận push (cần đã bật push iPhone) — đây là lần đầu tiên thực sự có cơ hội chạy thật.
 
 ## 🔜 Sẽ làm tiếp (ưu tiên từ trên xuống)
+- 🔴 **CHỜ ĐÀM — NHÌN ẢNH PHASE 21.** Bản quét 15 kỷ + **12 ảnh nhìn thẳng từ trên xuống** (kỷ
+  1 · 3 · 7 · 10 · 11 · 14, mỗi kỷ chụp ở **20 phiên và 120 phiên** để thấy thành phố lan ra),
+  `--width 1500`. **Nghiệm thu bằng MẮT, không bằng cổng số**: kỷ 1–9 không được thấy hàng lối nào;
+  kỷ 11–15 thì phải thấy. Cổng số chỉ nói được rằng mã làm đúng thứ nó được bảo làm.
+- ✅ **ADR-007 — ĐÀM ĐÃ DUYỆT PHƯƠNG ÁN (a)** (khép lại mục "CHỜ ĐÀM QUYẾT" của Phase 20): chấp nhận
+  dời 75/75 công trình **MỘT LẦN**, sau đó bố cục mỗi kỷ **đóng băng vĩnh viễn**. Không dựng hai bộ
+  sinh song song. ⚠️ **Từ ngày gộp `main`, đổi bộ sinh bố cục của một kỷ là một quyết định DI TRÚ —
+  phải hỏi Đàm trước**, vì nó dời công trình trong bản lưu thật. Ghi ở ADR-064.
+- ⚠️ **`TECH_DEBT #89` VẪN MỞ dù cổng đã qua (11,33 → 12,44).** Đừng đọc con số ấy là "đã giải":
+  tách ba dải cho thấy toàn bộ phần tăng nằm ở dải ĐẤT (+2,37), còn dải TRỜI — cần gạt đã nêu đích
+  danh hai lần — gần như không nhúc nhích (4,12 → 4,05) và dải THÀNH PHỐ còn tệ đi. Biên chỉ 0,44.
+  Ba hướng của Đàm vẫn còn nguyên.
+- ⚠️ **`TECH_DEBT #90` — ĐÃ THU HẸP HAI LẦN, VẪN MỞ.** (a) danh sách kỷ ngắn đi sau khi chia khu
+  phố: `[1,2,6,7]` → `[1,7]` (hợp nhất) → **`[5]`** (sau §5), biên mỏng nhất 0,9508 → 0,9386 →
+  **0,9942**; (b) ô mất chi tiết mái **7/476 (1,5%) → 10/473 (2,1%)**, kỷ tệ nhất 0,893 → 0,844 —
+  tức nửa (b) **XẤU ĐI** ở §5. ⚠️ Cả hai lần chuyển đều là hệ quả của một phép **đổi tỉ lệ loại
+  nhà** (thêm ô đường ⇒ đổi ô nào là nhà ⇒ đổi tỉ lệ `workshop`, nguyên mẫu thấp-rộng có tỉ số xấu
+  nhất), **không phải** cơ chế được sửa. Bản vá thật vẫn đụng bảng `storey` lịch sử của Phase 14 và
+  kỷ 1 vẫn không còn chỗ (1,95 trên trần 2,0, cần 2,05). **Cấm** hạ sàn 0,7 hoặc hạ ngưỡng 0,95 để
+  lấy lại con số.
+- ⚠️ **`TECH_DEBT #88` (mới, Phase 21 §4) — cột `units`/`cols`/`rows` của bảng khu phố tạm là TRỤC
+  CHẾT.** `BLOCK_MAX_CELLS = 1` (thứ chặn khối nhà xuyên qua nhau) khoá số suất đất ở **4 ở cả 15
+  kỷ**. Đã đếm ra tường minh bằng một bài test đi qua đúng đường dựng thật, kèm ba phương án đã đo.
+  **Không nới trần**: đo được trần 2 thì khối lại xuyên qua nhau.
 - ⚠️ **CHỜ ĐÀM — SAU PHASE 13 VIỆC B (vùng phụ cận).** (a) **Nhìn 15 kỷ** rồi gật hoặc chỉnh hướng
   mỹ thuật — ba cổng đo đều đạt rộng, nhưng điều kiện DỪNG (c) của chỉ thị là *"dựng xong, (G1) đạt,
   mà ẢNH XẤU ĐI"*, và chỉ mắt Đàm mới trả lời được câu đó. (b) Quyết **có gộp `main`** hay không cho
@@ -947,6 +1087,243 @@
 - **Lịch sử git `main` từng bị xáo** (thao tác git song song): bản đang chạy là `eb44638` — chứa ĐỦ mọi việc gần đây (Hỏi Coach offline + fix đêm khuya + Coach offline analyst). Vài commit cũ (`1e27505`, `9fbcd62`) thành dangling, KHÔNG còn trong `git log` nhưng code vẫn nằm trong bản deploy. Đừng hoảng nếu không thấy chúng.
 
 ### (Nhật ký cũ hơn → `docs/archive/BAN_GIAO_ARCHIVE_2026-08-24.md`)
+
+### 2026-08-24 — Phase 20: BỎ LƯỚI CỨNG, bộ xương thành phố SINH THEO KỶ (ADR-066)
+
+**Đàm nói gì**: *"nhà vẫn quy hoạch rất kỳ quặc, rất bài bản và xếp chồng lên nhau"* · *"cho tôi
+một sự sắp xếp thành phố ngẫu nhiên và mang tính đặc thù, không phải cứ 3x3 được, nó phải nhiều thứ
+và đa dạng hơn"*. Sáu việc, làm hết rồi báo một lượt.
+
+**⚠️ VIỆC 5 — ĐIỀU KIỆN DỪNG ĐÃ KÍCH HOẠT, ĐÂY LÀ THỨ PHẢI ĐỌC TRƯỚC MỌI THỨ KHÁC.** Chỉ thị bảo:
+*"kiểm thành phố THẬT của Đàm xem kỷ nào đã có công trình; nếu có thì DỪNG và BÁO kèm danh sách kỷ
+bị ảnh hưởng và số công trình sẽ dời, rồi làm tiếp các việc còn lại. Đừng tự quyết."*
+- **Không kiểm được bản lưu thật**: Supabase bị proxy của hộp cát chặn (`curl: (56) CONNECT tunnel
+  failed, response 403`). Nói thẳng ra thay vì đoán.
+- **Nhưng câu trả lời không phụ thuộc vào bản lưu ấy**: bộ xương mới đặt cả 5 khu kỳ quan ở chỗ
+  KHÁC, ở **cả 15 kỷ**. Nên **kỷ nào Đàm đã xây thứ gì thì thứ đó dời** — chặn trên là **75/75 công
+  trình (5 mỗi kỷ × 15 kỷ)**.
+- **Vì sao không có cách nào tránh**: "bộ xương khác cái cũ" và "công trình đứng nguyên chỗ cũ" là
+  hai yêu cầu **loại trừ nhau**, không phải một khuyết tật cần vá. ADR-007 vẫn đúng — nó hứa *"cùng
+  một bản quy hoạch thì cùng một vị trí"*, và điều kiện của nó (*bố cục là hàm thuần của riêng
+  `era`*) được giữ nguyên, có test khoá. Cái giá phải trả là MỘT LẦN, đúng lúc đổi bộ sinh.
+- ⇒ **Quyết định của Đàm, không phải của tôi.** Ghi ở phần Trade-off của ADR-066.
+
+**1. `city3d/networkStyle.js` (BẢNG)** — 15 kỷ × 5 trục: `plan` (`organic` · `axial` · `grid`) ·
+`parcels` (6…14) · `sizeVary` (0,05…0,86) · `ring` · `minSide`. Mỗi dòng buộc vào `country` mà
+`eraStyle.js` khai, **có test bắt** — không có ràng buộc ấy thì 15 dòng là 15 lần chọn bừa. Ví dụ:
+kỷ 1 Çatalhöyük *không có phố* (6 thửa rất to, `sizeVary` 0,86, không vành đai) · kỷ 2 Deir el-Medina
+*một con phố duy nhất* (`axial`, `sizeVary` 0,28) · kỷ 4 Trường An *108 phường có tường* (`grid`,
+`sizeVary` 0,06 — đối xứng ở đây là ĐÚNG) · kỷ 11 Manhattan (`grid`, 14 thửa, `minSide` 1).
+
+**2. `city3d/cityPlan.js` (HÌNH)** — chia đôi đệ quy lệch tâm (BSP). Nhận **DUY NHẤT `era`**.
+
+**3. Đường là RANH GIỚI THỬA — và là HỆ QUẢ, không phải một cột của bảng.** Mỗi nhát cắt chừa lại
+một hàng/cột làm lối đi ⇒ số ô đường **tự** đi từ hằng số 80 sang **34…92 tuỳ kỷ (trung bình 59,7)**.
+Cố ý KHÔNG thêm cột *"kỷ này bao nhiêu ô đường"*: một bảng thứ hai thì trôi được khỏi thứ sinh ra nó
+(`TECH_DEBT #43`), và cách rẻ nhất để một bảng hết đỏ luôn là điền cùng một số vào 15 dòng
+(bệnh `MIN_STONE`, Phase 9D).
+
+**Bảng đo được (tự chạy lại sau khi dọn mã, không chép):**
+
+| kỷ | plan | thửa | ô đường | kỳ quan | nhà dân | quảng trường |
+|---|---|---|---|---|---|---|
+| 1 | organic | 6 | 34 | 5 | 0 | 1 |
+| 2 | axial | 7 | 38 | 5 | 1 | 1 |
+| 3 | axial | 8 | 78 | 5 | 2 | 1 |
+| 4 | grid | 9 | 80 | 5 | 3 | 1 |
+| 5 | organic | 6 | 36 | 5 | 0 | 1 |
+| 6 | organic | 7 | 37 | 5 | 1 | 1 |
+| 7 | organic | 9 | 80 | 5 | 3 | 1 |
+| 8 | organic | 12 | 58 | 5 | 5 | 2 |
+| 9 | axial | 9 | 80 | 5 | 3 | 1 |
+| 10 | organic | 11 | 51 | 5 | 4 | 2 |
+| 11 | grid | 14 | 92 | 5 | 7 | 2 |
+| 12 | axial | 9 | 44 | 5 | 3 | 1 |
+| 13 | organic | 12 | 54 | 5 | 5 | 2 |
+| 14 | grid | 12 | 55 | 5 | 5 | 2 |
+| 15 | axial | 8 | 78 | 5 | 2 | 1 |
+
+**4. Kỳ quan CHIẾM THỬA**, không còn khu 3×3. `BUILDING_ZONES` · `ROAD_LINES` · `ROAD_MAIN_AXIS` ·
+`ROAD_CROSS_AXIS` · `RING_LOW`/`RING_HIGH` **xoá hẳn**; `cityGrid.js` nay còn đúng một câu
+(`CITY_GRID_SIZE = 12`). Hạng 4 (kỳ quan `epic`) nhận thửa **TỐT NHẤT**, không phải thửa thứ năm còn
+lại — vì hạng 4 là `wonder` ở cả 15/15 kỷ theo `BLUEPRINT_CATALOG`, một hợp đồng có sẵn. *"Thửa tốt
+nhất"* nghĩa là gì thì **suy từ `plan`** (grid → giữa nhất · axial → sát trục nhất · organic → gần
+nước nhất, kỷ 1 không có nước thì tụ quanh một điểm neo bốc theo hạt giống), cố ý không có cột
+riêng — một cột riêng cho phép khai `grid` + "gần nước nhất", một tổ hợp vô nghĩa mà không gì bắt
+được. Một vài thửa **cố ý để trống** làm quảng trường/chợ (1 thửa, hoặc 2 nếu dôi ≥5): một thành phố
+mà mọi mảnh đất đều có nhà thì đọc ra là một khối đặc — đúng chữ Đàm dùng, *"xếp chồng lên nhau"*.
+
+**5. ADR-007 khoá bằng hai bài** (ngoài các bài cũ): gọi `buildCityPlan` kèm **dữ liệu rác**
+(`built` · `sessionCount` · `buildings`) đòi kết quả **trùng từng byte**; và **liệt kê đủ 1…120 phiên
+× 15 kỷ** đòi bản quy hoạch đứng yên.
+
+**6. Nghiệm thu — ĐO, không phải nhìn.** Đối xứng bốn chiều của ô kỳ quan, quy về thang *0% = đúng
+mức trùng hợp ngẫu nhiên (`p² + (1−p)²`), 100% = đối xứng hoàn hảo*:
+
+| | bộ xương CŨ | bộ xương MỚI |
+|---|---|---|
+| 4 khu kỳ quan ở góc | **100,0%** | — |
+| cả 5 khu kỳ quan | 90,3% | — |
+| mạng đường | 55,0% | — |
+| ô kỳ quan, cao nhất | — | **20,0%** (kỷ 4, `grid` — được phép) |
+| ô kỳ quan, cao nhất **không phải `grid`** | — | **9,6%** (kỷ 8) |
+
+⚠️ Con số 100,0% ở ô đầu **không phải một kết quả, nó là CÁI CÂN**: thứ vốn đối xứng hoàn hảo theo
+đúng nghĩa đen (bốn khu 3×3 ở bốn góc của một lưới vuông) phải đo ra đúng 100,0%, và nó đo ra đúng
+thế. Không có ô ấy thì con số 20,0% không đọc được là tốt hay xấu.
+
+**Bản quét 15 kỷ** (mốc nền `0abb272` TỰ ĐO trong `git worktree` theo `TECH_DEBT #43`, và nó tái lập
+**đúng** bộ số Phase 19 — 11,33 · 19,18 · 36,31 ⇒ không trôi, phép so sạch):
+- Trục CHẶNG NGÀY **11,33 → 12,44** · **0/15** dưới ngưỡng mắt 12 ✓
+- Trục KỶ gần nhất **19,18 → 21,77** · trung vị **36,31 → 38,48** · **0/105** ✓
+
+⚠️ **NHƯNG `TECH_DEBT #89` VẪN MỞ, VÀ TÔI ĐÃ TỰ BÁC BỎ KẾT LUẬN ĐẦU CỦA MÌNH.** Bản đầu của ADR-066
+ghi *"Đóng #89"* kèm một lời giải thích nghe rất xuôi (*"bộ xương mỗi kỷ nay đổ bóng khác nhau nên
+các chặng không còn bị 15 bản sao pha loãng"*). Tách ba dải của đúng cặp yếu nhất (6h↔15h) thì nó
+ngược hẳn:
+
+| dải | mốc nền | sau Phase 20 | |
+|---|---|---|---|
+| trời | 4,12 | **4,05** | −0,07 — **gần như không nhúc nhích** |
+| thành phố | 6,51 | 5,56 | **tệ đi** |
+| đất | 18,05 | **20,42** | +2,37 — **toàn bộ phần tăng** |
+
+Mà dải TRỜI mới là cần gạt đã được nêu đích danh **hai lần** ở `CLAUDE.md`. ⇒ Cổng qua nhờ một dải
+**chẳng liên quan tới chẩn đoán**, biên chỉ **0,44**, nên `#89` giữ nguyên trạng thái MỞ và ba hướng
+của Đàm vẫn còn đó. Cơ chế khả dĩ cho phần tăng ở dải đất — ghi rõ là **TƯƠNG QUAN, chưa chứng minh
+nhân quả** — là số ô đường thôi là hằng số 80.
+
+⚠️ **Và một cái bẫy công cụ suýt làm tôi gán sai công lao**: `vecDist` của `sweep-score.mjs` là
+**RMS chứ không phải Euclid** — `sqrt(Σ(a−b)²/(n/3))`, chia cho SỐ DẢI trước khi lấy căn. Script tự
+viết để tách dải mà quên vế chia in ra **21,55** trong khi công cụ thật in **12,44**: hai con số cho
+cùng một đại lượng. Truy tới cùng rồi mới dám viết bảng trên.
+
+**Ảnh đã giao** (`--width 1500`, nhìn thẳng từ trên xuống, kỷ 1 · 3 · 4 · 7 · 11 · 14) + bản quét
+15 kỷ. **Nhìn bằng mắt**: sáu bộ xương khác hẳn nhau; không kỷ nào còn đối xứng bốn chiều trừ ba kỷ
+`grid`. ⚠️ **Một điều phải nói thẳng, không giấu sau con số**: nhà dân **bên trong một thửa** vẫn
+xếp thành hàng lối đều đặn (đó là `blockStyle` của Phase 14, không phải tầng này) — nếu chữ *"rất
+bài bản"* của Đàm còn nhắm vào cái đó thì Phase 20 chưa chạm tới.
+
+**⚠️ CỔNG CHỐNG-RÁCH KÍCH HOẠT 7 LẦN — chép nguyên `.city-preview/vet-rach.log` sang đây theo đúng
+`TECH_DEBT #52`** (thư mục ấy nằm trong `.gitignore` và hộp cát bị thu hồi sau phiên):
+
+```
+2026-08-24T14:42:46.091Z	city-era01-light-h12-s40.png	1100x700	dai=2	luot=1/3	soVet=1	trungMocDai=1/1	buocMax=0.4155	tiSoMax=50.8	hang=476
+2026-08-24T14:46:53.012Z	city-era01-light-h12-s120-w1500-topdown.png	1500x700	dai=3	luot=1/3	soVet=2	trungMocDai=0/2	buocMax=0.3567	tiSoMax=48.6	hang=317,331
+2026-08-24T14:46:53.701Z	city-era01-light-h12-s120-w1500-topdown.png	1500x700	dai=3	luot=2/3	soVet=2	trungMocDai=0/2	buocMax=0.3567	tiSoMax=48.6	hang=317,331
+2026-08-24T14:46:54.384Z	city-era01-light-h12-s120-w1500-topdown.png	1500x700	dai=3	luot=3/3	soVet=2	trungMocDai=0/2	buocMax=0.3567	tiSoMax=48.6	hang=317,331
+2026-08-24T14:48:30.972Z	city-era01-light-h12-s120-w1500-topdown.png	1500x700	dai=3	luot=1/3	soVet=2	trungMocDai=0/2	buocMax=0.3567	tiSoMax=48.6	hang=317,331
+2026-08-24T14:49:14.824Z	city-era03-light-h12-s120-w1500-topdown.png	1500x700	dai=3	luot=1/3	soVet=1	trungMocDai=0/1	buocMax=0.2307	tiSoMax=31.5	hang=314
+2026-08-24T14:49:59.520Z	city-era14-light-h12-s120-w1500-topdown.png	1500x700	dai=3	luot=1/3	soVet=2	trungMocDai=0/2	buocMax=0.2840	tiSoMax=30.4	hang=202,396
+```
+
+**Đọc ra được gì — và tôi đã DỪNG để chẩn đoán chứ không nới ngưỡng** (`#52` đặt Review Trigger ở 5
+lần, nó vượt):
+- **Dòng 1 là một ca THẬT**: `trungMocDai=1/1` — vết nằm đúng mốc chia dải (hàng 476), tức đúng cơ
+  chế mà cổng sinh ra để bắt. Ảnh ấy đã bị loại và dựng lại.
+- **6 dòng còn lại đều là `--topdown`, và đều `trungMocDai=0/N`** — vết KHÔNG nằm ở mốc chia dải, mà
+  **lặp lại đúng cùng một hàng qua nhiều lượt chụp độc lập** (317,331 ba lượt liền; rồi lại 317,331
+  ở một lần chạy khác cách đó gần hai phút). Một vết rách là một **cuộc đua** nên nó **về mặt cấu
+  trúc không thể** rơi đúng cùng một hàng với cùng một bước hai lần.
+- ⇒ Đây là **một chế độ BÁO OAN CÓ HỆ THỐNG trên khung nhìn-từ-trên-xuống**: nhìn thẳng từ trên
+  xuống thì một con đường thẳng chiếu ra thành **một mép ngang sắc lẹm chạy suốt bề rộng khung** —
+  đúng chữ ký mà cổng đi tìm. Cùng hình dạng `TECH_DEBT #38` (một ngưỡng hiệu chuẩn trên MỘT quần
+  thể rồi đem áp cho CẢ TẬP). Luật *"chữ ký lặp lại thì không phải vết rách"* đã có sẵn và nó bắt
+  đúng cả 6 dòng — **và nó không có tham số nào để vặn**, nên không ai nới nó được.
+
+**Nợ mới ghi ra**: `TECH_DEBT #90` (2 phần) — (a) 4 kỷ `[1,2,6,7]` bị ngắn đi sau khi chia khu phố,
+biên mỏng nhất **0,9508×**; (b) kỷ 6 mất **40,7%** chi tiết mái (0,593 so với sàn 0,7). Bản vá đã đo
+nhưng **không áp**: nó đụng bảng `storey` lịch sử của Phase 14, và kỷ 1 không còn chỗ (1,95 trên
+trần 2,0, cần 2,05). **Cấm** hạ sàn 0,7 hoặc hạ ngưỡng 0,95 để lấy lại con số.
+
+**Nghiệm thu**: `npm test` **1096 bài · 1095 xanh · 0 đỏ · 1 bỏ qua** (`# skipped 1` có mặt như bắt
+buộc) + `test:cross` 3/3 · `npm run lint` sạch · `npm run build` xanh · bộ test ADR-007 xanh.
+
+**Bốn thứ chỉ thị nhắc mà repo KHÔNG có** — báo ra thay vì tự đoán: `START_HERE.md` · `PHASE_RULES.md`
+(cả hai không tồn tại; tôi theo `CLAUDE.md` + `BAN_GIAO.md`) · `networkStyle.plan` (module chưa hề
+tồn tại — tôi tạo mới) · `roadPath.js` (không có; thứ gần nhất là `blockStyle.js`/`block.js`).
+
+> ⚠️ **ĐÍNH CHÍNH sau khi hợp nhất (Phase 21)**: `START_HERE.md` và `PHASE_RULES.md` CÓ thật —
+> chúng nằm trên `main`, nhánh Phase 20 chưa `git fetch` về nên không nhìn thấy. `PHASE_RULES.md`
+> là luật hiện hành và nó **BỎ** nhiều nghi thức mà bản Phase 20 vẫn còn làm (đo hiệu năng · viết
+> công cụ đo mới · báo cáo 11 mục). Hai thứ còn lại thì đúng là không có.
+
+---
+
+
+### 2026-08-24 — Phase 19: khối kiến trúc, bóng đổ, khung hình (ADR-062 `monolith` · ADR-063 AO · ADR-061 khung hình)
+
+**Đàm nói gì**: *"đường có nét đứt trông giả tạo kinh khủng · kim tự tháp không có khối hình chóp"*
+(nhìn kỷ 1 · 2 · 14), cộng một yêu cầu cũ chưa ai làm: *"hiệu ứng hơn, ánh sáng đổ bóng… giống 3D
+hoá hơn nữa"*. Sáu việc, làm hết rồi báo một lượt.
+
+1. **Đường nét đứt** — bisect TRƯỚC, đoán sau, vì chữ *"tự dưng"* chỉ vào một hồi quy.
+2. **Nguyên mẫu thứ 8 `monolith`** (ADR-062). Bệnh KHÔNG nằm ở `roof: 'pyramid'` — kỷ 2 khai đúng
+   từ lâu. Bệnh nằm cao hơn một tầng: **cả 7 nguyên mẫu đều là THÂN + MÁI**, nên Đại Kim Tự Tháp
+   dựng ra là *một hộp gạch bùn đội cái nón*, có tường, có cửa, có mái đua loe chân thành cây nấm.
+   Nay `monolith` dựng thẳng từ mặt đất: **không thân tường, không `groundFloor`, không `eaves`,
+   không `rooftop`**. Kỷ 2 = chóp TRƠN (tỉ lệ cao:đáy 0,64 như Giza) · kỷ 3 = GIẬT CẤP (thềm +
+   tường nghiêng batter + đền trắng trên đỉnh + cầu thang chính diện). **Đóng `TECH_DEBT #75`** —
+   và đóng đúng bằng cách mục ấy đã tự chẩn đoán: *bài toán KHỐI TÍCH, không phải bài toán MÁI*.
+3. **Bóng đổ nét hơn**: `SHADOW_MAP_DESKTOP` 2048 → **4096**; điện thoại **GIỮ 512** (4096² × 4 byte
+   = 64 MB texture — iOS Safari giết tab vì đúng thứ đó). Đo bằng cặp ảnh khác nhau ĐÚNG một hằng
+   số: 0,2–0,3% điểm ảnh đổi, nhưng **16,07–16,33 tại chỗ đã đổi** ⇒ có thật, rất cục bộ, chỉ là
+   một vệt mỏng dọc MÉP bóng. ⚠️ **Nửa sau của chỉ thị đã ĐO VÀ BÁC BỎ**: `reach` (9,00) ĐÃ LÀ phạm
+   vi thành phố — khối đổ bóng xa nhất trên cả 15 kỷ ở bán kính **8,48**, dư đúng 6%. Siết thêm là
+   cắt cụt bóng của nhà ở góc lưới, nên tôi KHÔNG siết và ghi lý do vào mã.
+4. **Che khuất môi trường (AO)** (ADR-063): nướng vào **MÀU ĐỈNH** lúc gộp hình học ⇒ **0 lệnh vẽ,
+   0 tam giác** thêm (đã đo: kỷ 6 = 13 · kỷ 11 = 12, y hệt cả hai phía). Chính vì thế
+   `renderer.info` mù hoàn toàn với nó, nên `--no-ao` là **đối chứng BẮT BUỘC**, không phải tuỳ
+   chọn tiện tay. Đo: **2,2–4,1% điểm ảnh đổi · 15,87–16,55 tại chỗ đã đổi**. ⚠️ **Điều kiện dừng
+   của Đàm KHÔNG kích hoạt**: sàn độ sáng đi XUỐNG, dải tương phản NỞ RA, độ tươi không tụt — cả ba
+   đều ngược hướng "trắng bệch".
+5. **Nóc nhà thôi bị mép khung cắt** (ADR-061) — **đóng `TECH_DEBT #24`**, mở từ Phase 7B. Và thủ
+   phạm hoá ra là **một BÀI TEST**: bài *"KỶ THẤP GIỮ NGUYÊN KHUNG SÁT"* (Phase 5A) đòi
+   `factor ≤ 1,35`, trong khi 13/15 kỷ cần ≥ 1,47 ⇒ cái trần ấy và lời hứa "không cắt" **không thể
+   cùng đúng**. Nay mỗi kỷ một khoảng cách riêng, tìm bằng chia đôi: **0/15 kỷ bị cắt**, hệ số
+   1,307…1,878, và **14/15 kỷ ra biên đúng 0,0400 = sàn** ⇒ tối thiểu thật, không dư một li.
+6. **Quét lại 15 kỷ**: **105/105 cặp kỷ ĐẠT** (gần nhất 19,18 · trung vị 36,31) — điều VIỆC 6 hỏi
+   là CÓ.
+
+⚠️ **CÁI GIÁ, VÀ VÌ SAO TÔI KHÔNG TỰ CHỌN HỘ.** Trục CHẶNG NGÀY tụt **14,39 → 11,33**, lần đầu
+xuống dưới ngưỡng mắt 12. Tôi **không gán cả −3,06 cho "Phase 19"** mà đi tách một biến — ba lượt
+quét đầy đủ trên ba cây mã, mốc nền TỰ ĐO trong `git worktree` chứ không chép của phase trước
+(`TECH_DEBT #43`):
+
+| cây mã | trục chặng | trục kỷ |
+|---|---:|---:|
+| mốc nền `be9d2ea` | **14,39** ✓ | 22,13 |
+| đủ VIỆC 1+2+3+4, **hoàn tác riêng `orbit.js`** | **14,23** ✓ | 21,24 |
+| Phase 19 đủ | **11,33** ✗ | 19,18 |
+
+⇒ Bốn việc mỹ thuật tốn **0,16**; **2,90 là của riêng phép lùi khung hình**. Cơ chế là **pha loãng**
+(`TECH_DEBT #22`): dải đo là phân số CỐ ĐỊNH của ô, thành phố nhỏ lại thì mỗi dải lẫn thêm nền —
+**không phải 15 kỷ/6 chặng thật sự giống nhau hơn**. Bằng chứng phụ: **12/15 cặp chặng TỐT LÊN**
+(bình minh↔hoàng hôn 23,17 → 32,75), chỉ ba cặp *bình minh/sáng ↔ giữa ngày* đi xuống.
+
+Tách ba dải của cặp yếu nhất: **trời 8,38 → 4,12** · thành phố 10,74 → 6,51 · **đất 20,88 → 18,05**
+⇒ đất vẫn khoẻ **gấp bốn lần** trời. **Cần gạt nằm ở BẦU TRỜI lúc 6h so với 15h** — xác nhận lại
+kết luận đã ghi sau Phase 14, và **bác bỏ lần thứ hai** chỉ thị cũ *"làm vùng quê đổi theo giờ"*.
+
+Đây là **xung đột giữa hai thứ Đàm đã yêu cầu**, nên ba hướng nằm ở `TECH_DEBT #89` chờ Đàm chọn.
+❌ Không nới ngưỡng 12 (phễu Phase 9A) · ❌ không đổi cách cắt dải để lấy lại con số (`#55`).
+
+**Hai món quà phụ, cả hai đều nhờ phép lùi khung** (⚠️ và cả hai sẽ mất nếu Đàm chọn hoàn tác):
+kỷ 5 **tự lành** cổng "thấy nước" (3,51% → **7,30%**) vì nước nằm ngoài lưới thành phố ⇒ `#67` nay
+chỉ còn kỷ 4; và một chữ trong tiêu đề `#59` bị bác bỏ bằng số — kỷ 6 *"không đạt ở **bất kỳ** góc
+nào"* nay có trần toàn cục **7,24%** (trước 4,36%), nên bài test kỷ 6 đã được **đảo vế** kèm giải
+thích (góc mặc định vẫn trượt 2,59%, **nhưng** trần toàn cục đã > 5% — phải khẳng định cả hai câu).
+
+**Hai lỗ hổng tài liệu phát hiện trong lúc làm**: `START_HERE.md` và `PHASE_RULES.md` mà chỉ thị bảo
+đọc trước **chưa từng tồn tại trong bất kỳ commit nào, trên bất kỳ nhánh nào** — nên "tóm tắt 5
+dòng theo §6" không đọc được luật gốc. Và `shadow-score.mjs` nằm ở `scripts/`, không phải
+`scripts/archive/` như chỉ thị ghi.
+
+**Nghiệm thu**: `npm test` **1067 bài · 1066 xanh · 0 đỏ · `# skipped 1`** + đối chiếu chéo 3/3 ·
+`npm run lint` sạch · `npm run build` xanh. Ảnh giao: kỷ **2 · 3 · 6 · 11 · 14** ở `--width 1500`,
+cặp AO (kỷ 2 · 6 · 11), cặp bóng đổ (kỷ 6 · 11 ở 15h), và bản quét 15 kỷ × 6 chặng.
+
+---
 
 ### 2026-08-24 (tối muộn) — Đường phố biết uốn cong, và mạng đường có ba hạng (ADR-058)
 

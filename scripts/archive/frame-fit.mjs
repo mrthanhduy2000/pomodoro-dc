@@ -3,10 +3,10 @@
  * frame-fit.mjs — CÔNG TRÌNH NÀO ĐANG BỊ MÉP KHUNG HÌNH CẮT, VÀ PHẢI LÙI BAO NHIÊU THÌ HẾT.
  *
  * Chạy:
- *   node --import ./scripts/register-esm-loader.mjs scripts/frame-fit.mjs            (khung 1,3)
- *   node --import ./scripts/register-esm-loader.mjs scripts/frame-fit.mjs 1.0        (khung vuông)
- *   node --import ./scripts/register-esm-loader.mjs scripts/frame-fit.mjs 1.3 --flat (đối chứng)
- *   node --import ./scripts/register-esm-loader.mjs scripts/frame-fit.mjs --selftest
+ *   node --import ./scripts/register-esm-loader.mjs scripts/archive/frame-fit.mjs            (khung 1,3)
+ *   node --import ./scripts/register-esm-loader.mjs scripts/archive/frame-fit.mjs 1.0        (khung vuông)
+ *   node --import ./scripts/register-esm-loader.mjs scripts/archive/frame-fit.mjs 1.3 --flat (đối chứng)
+ *   node --import ./scripts/register-esm-loader.mjs scripts/archive/frame-fit.mjs --selftest
  *
  * ⚠️ VÌ SAO CẦN CÔNG CỤ NÀY CHỨ KHÔNG PHẢI NHÌN ẢNH. Bảng quét `city-preview.mjs` cho thấy MỘT
  * khung hình; mắt đọc được "cái nhà kia bị cắt" nhưng KHÔNG đọc được "cắt mất bao nhiêu" và tuyệt
@@ -38,7 +38,8 @@
  */
 
 import {
-  CITY_CAMERA_FOV, DEFAULT_PITCH, DEFAULT_YAW, cityOrbitOptions, orbitPosition,
+  CITY_CAMERA_FOV, DEFAULT_PITCH, DEFAULT_YAW,
+  FRAME_FIT_MARGIN, cityFrameBoxes, cityOrbitOptions, orbitPosition, worstFrameMargin,
 } from '../../src/engine/city3d/orbit.js';
 import { buildBuildingSpec } from '../../src/engine/city3d/buildingSpec.js';
 import { BUILDING_SCALE, specSpan } from '../../src/engine/city3d/parts.js';
@@ -48,84 +49,30 @@ import { computeCityLayout } from '../../src/engine/cityLayout.js';
 import { BLUEPRINT_CATALOG, BUILDING_EFFECTS } from '../../src/engine/constants.js';
 
 const GRID = 12;
-const MARGIN_OK = 0.04;
+/** ⚠️ ĐỌC TỪ ENGINE, không chép — một luật một công thức. */
+const MARGIN_OK = FRAME_FIT_MARGIN;
 
-/** Hộp bao của mọi công trình trong một kỷ, đã đặt lên địa hình đúng như `sceneGraph.js` đặt. */
+/**
+ * Hộp bao của mọi công trình trong một kỷ.
+ *
+ * ⚠️ 2026-08-24 — HÀM NÀY NAY CHỈ UỶ QUYỀN. Công thức thật đã chuyển vào `orbit.js`
+ * (`cityFrameBoxes`) vì chính CAMERA phải dùng nó để tự đóng khung (`TECH_DEBT #24`). Công cụ đo
+ * mà chép lại công thức của mã sản phẩm thì hai bên trôi khỏi nhau — đúng thứ đã cắn ở
+ * `sweep-score.mjs` (chép `--cell 260` trong khi bên kia mặc định 300, và chấm màu của một kỷ KHÁC).
+ * Nhánh `--flat` (địa hình phẳng) giữ lại ở đây vì nó chỉ phục vụ phép ĐỐI CHỨNG của công cụ.
+ */
 function cityBoxes(era, { flat = false } = {}) {
-  const ids = BLUEPRINT_CATALOG[era].map((bp) => bp.id);
-  const layout = computeCityLayout({
-    built: ids,
-    levels: Object.fromEntries(ids.map((id) => [id, 3])),
-    era,
-    stats: { sessionCount: 80, streakLength: 9 },
-  });
-  const terrain = buildTerrain({ era, gridSize: GRID });
-  const half = (GRID - 1) / 2;
-  const out = [];
-  for (const b of layout.buildings ?? []) {
-    const bp = BLUEPRINT_CATALOG[era].find((p) => p.id === b.bpId);
-    if (!bp) continue;
-    const spec = buildBuildingSpec({
-      bpId: b.bpId, era, rarity: bp.rarity,
-      type: BUILDING_EFFECTS[b.bpId]?.type ?? 'infrastructure', level: 3,
-    });
-    const reach = (specSpan(spec.parts) * BUILDING_SCALE) / 2;
-    const span = Math.max(1, Math.round(specSpan(spec.parts) * BUILDING_SCALE));
-    const base = flat ? 0 : terrain.footprint(b.x, b.y, span).top;
-    // ⚠️ CHIỀU CAO CŨNG PHẢI NHÂN `BUILDING_SCALE` — xem khối chú thích "LỖI ĐÃ VÁ" ở đầu file.
-    out.push({
-      id: b.bpId, cx: b.x - half, cz: b.y - half, reach, base,
-      top: base + spec.height * BUILDING_SCALE,
-      h: spec.height * BUILDING_SCALE,
-    });
-  }
-  return out;
+  const boxes = cityFrameBoxes(era, GRID);
+  if (!flat) return boxes;
+  return boxes.map((b) => ({ ...b, top: b.top - b.base, base: 0 }));
 }
 
-/** Biên hẹp nhất trong cả kỷ, kèm tên công trình và mép nào đang cắt. */
-function worstMargin(boxes, { distance, targetY, aspect }) {
-  const halfY = ((CITY_CAMERA_FOV / 2) * Math.PI) / 180;
-  const halfX = Math.atan(Math.tan(halfY) * aspect);   // three suy FOV ngang từ FOV dọc × tỉ lệ
-  const target = { x: 0, y: targetY, z: 0 };
-  const eye = orbitPosition({ yaw: DEFAULT_YAW, pitch: DEFAULT_PITCH, distance, target });
-
-  const fwd = { x: -eye.x, y: target.y - eye.y, z: -eye.z };
-  const fl = Math.hypot(fwd.x, fwd.y, fwd.z);
-  fwd.x /= fl; fwd.y /= fl; fwd.z /= fl;
-  // ⚠️ DẤU Ở ĐÂY — xem chú thích đầu file. Viết ngược thì số vẫn đúng mà nhãn mép đảo hết.
-  const right = { x: -fwd.z, y: 0, z: fwd.x };
-  const rl = Math.hypot(right.x, right.z);
-  right.x /= rl; right.z /= rl;
-  const up = {
-    x: right.y * fwd.z - right.z * fwd.y,
-    y: right.z * fwd.x - right.x * fwd.z,
-    z: right.x * fwd.y - right.y * fwd.x,
-  };
-
-  let worst = { margin: Infinity, id: '?', edge: '?' };
-  for (const b of boxes) {
-    for (const dx of [-b.reach, b.reach]) {
-      for (const dz of [-b.reach, b.reach]) {
-        for (const wy of [b.base, b.top]) {
-          const v = { x: b.cx + dx - eye.x, y: wy - eye.y, z: b.cz + dz - eye.z };
-          const f = v.x * fwd.x + v.y * fwd.y + v.z * fwd.z;
-          if (f <= 0) continue;                        // sau lưng camera, không đóng khung được
-          const u = v.x * up.x + v.y * up.y + v.z * up.z;
-          const r = v.x * right.x + v.y * right.y + v.z * right.z;
-          const mV = 1 - Math.abs(u / (f * Math.tan(halfY)));
-          const mH = 1 - Math.abs(r / (f * Math.tan(halfX)));
-          const margin = Math.min(mV, mH);
-          if (margin < worst.margin) {
-            worst = {
-              margin, id: b.id,
-              edge: mV < mH ? (u > 0 ? 'TRÊN' : 'DƯỚI') : (r > 0 ? 'PHẢI' : 'TRÁI'),
-            };
-          }
-        }
-      }
-    }
-  }
-  return worst;
+/**
+ * Biên hẹp nhất trong cả kỷ, kèm tên công trình và mép nào đang cắt.
+ * ⚠️ Uỷ quyền — xem lý do ở khối chú thích của `cityBoxes` ngay trên.
+ */
+function worstMargin(boxes, opts) {
+  return worstFrameMargin(boxes, opts);
 }
 
 /** Hệ số khoảng cách nhỏ nhất (× cỡ lưới) để cả kỷ vào trọn khung. Chia đôi 40 lần là quá đủ. */
@@ -158,9 +105,13 @@ function report(aspect, flat) {
       + `   ${need.toFixed(2)}    | ${(opts.distance / GRID).toFixed(2)} | ${tag} ${w.id}`,
     );
   }
+  // ⚠️ ĐỪNG LẤY KỶ 1 VÀ KỶ 15 LÀM HAI ĐẦU DẢI. Bản cũ viết vậy vì hồi ấy hệ số suy từ `massScale`
+  // nên nó tăng dần theo kỷ; từ 2026-08-24 hệ số là số ĐO ĐƯỢC của từng kỷ và kỷ CAO NHẤT bảng là
+  // kỷ 8, không phải kỷ 15. Dòng tổng kết cũ vì thế in ra "1,31–1,57" trong khi cột bên cạnh hiện
+  // rành rành 1,88 — một dòng tổng kết nói dối, đúng loại lỗi công cụ mà file này sinh ra để chống.
+  const dangDung = Array.from({ length: 15 }, (_, i) => cityOrbitOptions(GRID, i + 1).distance / GRID);
   console.log(`⇒ ${cut}/15 kỷ có công trình bị cắt · hệ số chung cần ${needed.toFixed(2)} `
-    + `(đang dùng ${(cityOrbitOptions(GRID, 1).distance / GRID).toFixed(2)}–`
-    + `${(cityOrbitOptions(GRID, 15).distance / GRID).toFixed(2)})`);
+    + `(đang dùng ${Math.min(...dangDung).toFixed(2)}–${Math.max(...dangDung).toFixed(2)})`);
   return { cut, needed };
 }
 

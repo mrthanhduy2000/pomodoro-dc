@@ -88,6 +88,20 @@ function parseArgs(argv) {
      * 0 = tắt (khung toàn cảnh như cũ).
      */
     focus: 0,
+    /**
+     * `--topdown` — NHÌN THẲNG TỪ TRÊN XUỐNG (bản đồ quy hoạch).
+     *
+     * ⚠️ ĐÂY LÀ MỘT KHUNG HÌNH KHÔNG CÓ TRONG APP, VÀ NÓ CỐ Ý NHƯ VẬY. Khung app ngẩng 34,4° nên
+     * mái nhà che gần hết mặt đường; muốn trả lời câu *"bộ xương thành phố có còn đối xứng bốn
+     * chiều không"* (điều kiện nghiệm thu của Phase 20) thì phải nhìn thẳng xuống. Vì vậy nó
+     * KHÔNG đi qua `createOrbit`: bộ điều khiển ấy kẹp góc ngẩng ở `MAX_PITCH` đúng để app không
+     * bao giờ ngả thành ảnh chụp trực thăng — kẹp ấy là một lời hứa với Đàm, đừng nới nó ra chỉ để
+     * chụp một tấm ảnh nghiệm thu.
+     *
+     * ⚠️ ĐỪNG DÙNG ẢNH NÀY ĐỂ KẾT LUẬN VỀ MỸ THUẬT. Nó chỉ trả lời về BỐ CỤC (đường đi đâu, thửa
+     * to nhỏ ra sao). Mọi kết luận về ánh sáng/màu/bóng phải đọc từ khung thường.
+     */
+    topdown: false,
     // Giờ Việt Nam giả lập để soi từng chặng trong ngày (0–23). Rỗng = giữa trưa trung tính.
     // ⚠️ LÀ MẢNG, và đây là sửa một cái bẫy đã cắn thật: bản đầu để `hour` là MỘT số, nên
     // `--hour 6 --hour 12 --hour 22` chỉ vẽ mỗi giờ 22 rồi in đúng một dòng "✓" — mà hai file kia
@@ -154,6 +168,13 @@ function parseArgs(argv) {
     // `TECH_DEBT #30` đo con số 0,113 của nhựa đường kỷ 11 ở đúng điều kiện này — giữ nguyên cờ
     // này là cách duy nhất để số mới còn so được với số cũ.
     noShadow: false,
+    // ⚠️ TẮT CHE KHUẤT MÔI TRƯỜNG (AO) — CỜ ĐỐI CHỨNG, KHÔNG PHẢI CỜ CHỈNH.
+    // AO được nướng vào MÀU ĐỈNH nên nó KHÔNG hiện ra ở bất kỳ con số nào của `renderer.info`:
+    // bật hay tắt vẫn đúng bằng ấy lệnh vẽ, đúng bằng ấy tam giác (đã đo kỷ 6 = 13 · kỷ 11 = 12 ở
+    // cả hai phía). Thứ duy nhất phân biệt được hai bản là TẤM ẢNH — nên nếu không có đường tắt nó
+    // đi thì mọi câu "nhờ AO mà khối đọc ra là 3D" là một lời nói không kiểm được, đúng loại câu
+    // tự trấn an mà dự án này đã trả giá nhiều lần.
+    noAo: false,
     // ⚠️ DÙNG GPU THẬT thay vì SwiftShader. Mặc định TẮT vì hộp cát dựng ảnh không có card đồ hoạ —
     // nhưng trên MacBook của Đàm thì BẮT BUỘC bật, nếu không mọi con số đo được vẫn là số của một
     // cỗ máy tô hình bằng CPU, chỉ khác là lần này nó đội lốt "đo trên máy thật". Công cụ luôn in
@@ -171,6 +192,7 @@ function parseArgs(argv) {
     else if (key === '--height') { args.height = Number(value); i += 1; }
     else if (key === '--zoom') { args.zoom = Number(value); i += 1; }
     else if (key === '--focus') { args.focus = Number(value); i += 1; }
+    else if (key === '--topdown') args.topdown = true;
     else if (key === '--hour') { args.hours.push(Number(value)); i += 1; }
     else if (key === '--sweep') args.sweep = true;
     else if (key === '--cell') { args.cell = Number(value); i += 1; }
@@ -183,6 +205,7 @@ function parseArgs(argv) {
     else if (key === '--bench') { args.bench = Number(value); i += 1; }
     else if (key === '--mask') { args.mask = String(value); i += 1; }
     else if (key === '--no-shadow') args.noShadow = true;
+    else if (key === '--no-ao') args.noAo = true;
     else if (key === '--gpu') args.gpu = true;
     // Chỉ KIỂM xem có Chromium không rồi thoát — không gói bundle, không mở trình duyệt.
     // ⚠️ Tồn tại để `bench-macbook.sh` hỏi được câu "máy này có Chromium chưa" mà KHÔNG phải chép
@@ -207,10 +230,10 @@ function run(cmd, cmdArgs, options = {}) {
  */
 function entrySource({
   era, level, theme, zoom = 1, focus = 0, hour = null, pending = 0, sessions = 40, dpr = null, bench = 0,
-  mask = null, noShadow = false, t = 17.5, lowDetail = false,
+  mask = null, noShadow = false, noAo = false, t = 17.5, lowDetail = false, topdown = false,
 }) {
   return `
-import { computeCityLayout } from '${ROOT}/src/engine/cityLayout.js';
+import { computeCityLayout, roadCellCount } from '${ROOT}/src/engine/cityLayout.js';
 import { buildScenePalette } from '${ROOT}/src/engine/city3d/palette3d.js';
 import { deriveDaylight } from '${ROOT}/src/engine/city3d/daylight.js';
 import { applyPaintedLook, createCityScene, MAX_PIXEL_RATIO } from '${ROOT}/src/components/city/render3d/sceneGraph.js';
@@ -226,12 +249,14 @@ const MASK = ${mask === null ? 'null' : JSON.stringify(mask)};
 // khác.
 const MASK_NAMES = MASK ? MASK.split(',').map((s) => s.trim()).filter(Boolean) : [];
 const NO_SHADOW = ${noShadow ? 'true' : 'false'};
+const NO_AO = ${noAo ? 'true' : 'false'};
 
 const ERA = ${era};
 const LEVEL = ${level};
 const IS_DARK = ${theme === 'dark'};
 const ZOOM = ${zoom};
 const FOCUS = ${focus};
+const TOPDOWN = ${topdown ? 'true' : 'false'};
 const HOUR = ${hour === null ? 'null' : hour};
 const PENDING = ${pending};
 const SESSIONS = ${sessions};
@@ -251,6 +276,8 @@ const levels = Object.fromEntries(built.map((id) => [id, LEVEL]));
 const layout = computeCityLayout({
   built, levels, era: ERA, stats: { sessionCount: SESSIONS, streakLength: 9 }, pending: pendingQueue,
 });
+// Đếm ô đường CÓ THẬT trong bố cục vừa dựng — hỏi chính 'layout', không suy lại từ 'SESSIONS'.
+const soODuong = (layout.props ?? []).filter((p) => p.kind === 'road').length;
 
 // Token màu lấy thẳng từ giá trị mặc định của hai theme trong src/index.css — trang này không có
 // cây DOM của app nên không đọc được biến CSS thật.
@@ -297,6 +324,7 @@ const city = createCityScene({
   layout, palette, daylight, renderer, lowDetail: LOW_DETAIL,
   stats: { sessionCount: SESSIONS, streakLength: 9 },
   tachDeDo: MASK_NAMES,
+  ao: !NO_AO,
 });
 
 // Đẩy đồng hồ tới một thời điểm giữa chừng. Ở t = 0 mọi cư dân đều đứng ở đầu tuyến của mình —
@@ -343,6 +371,25 @@ const target = orbit.getTarget();
 camera.position.set(eye.x, eye.y, eye.z);
 camera.lookAt(target.x, target.y, target.z);
 
+// ⚠️ NHÌN THẲNG XUỐNG — đè lên camera vừa đặt, KHÔNG đi qua 'orbit'. Lý do đầy đủ ở chú thích của
+// cờ '--topdown' trong 'parseArgs'; tóm tắt: 'createOrbit' kẹp góc ngẩng ở 'MAX_PITCH' và cái kẹp
+// ấy là một lời hứa với Đàm (app không được ngả thành ảnh trực thăng), nên công cụ nghiệm thu
+// không được nới nó ra.
+//
+// Độ cao suy từ HÌNH HỌC, không chọn tay: nửa lưới là 'gridSize / 2', chừa thêm 15% lề, và trục
+// DỌC mới là trục chật (khung 1100×700 rộng hơn cao). Nhìn thẳng xuống với vector 'up' mặc định
+// (0,1,0) là một ca suy biến, nên đặt 'up' về (0,0,-1): bắc ở trên, tây ở trái.
+if (TOPDOWN) {
+  const nuaLuoi = (layout.gridSize / 2) * 1.15;
+  const nuaGoc = (CITY_CAMERA_FOV / 2) * Math.PI / 180;
+  const cao = (nuaLuoi / Math.tan(nuaGoc)) * ZOOM;
+  camera.up.set(0, 0, -1);
+  camera.position.set(0, cao, 0);
+  camera.lookAt(0, 0, 0);
+  console.log('[topdown] nhìn thẳng xuống từ độ cao ' + cao.toFixed(2)
+    + ' · phủ ' + (nuaLuoi * 2).toFixed(2) + ' ô theo chiều dọc khung');
+}
+
 if (NO_SHADOW) {
   // Tắt ở CẢ HAI đầu: đèn thôi ném bóng, và bộ dựng thôi lấy mẫu bản đồ bóng. Tắt mỗi một đầu thì
   // three vẫn tra một bản đồ bóng cũ/rỗng và kết quả không sạch.
@@ -354,6 +401,11 @@ if (NO_SHADOW) {
   renderer.shadowMap.enabled = false;
   console.log('[no-shadow] đã tắt ' + tắt + ' nguồn bóng');
 }
+
+// ⚠️ TỰ KHAI RA. AO nướng vào màu đỉnh nên tấm ảnh KHÔNG có cách nào tự nói nó được dựng có hay
+// không có AO — không lệnh vẽ nào đổi, không tam giác nào đổi. Dòng này (cộng hậu tố '-noao' trong
+// tên file) là hai thứ duy nhất giữ cho một cặp ảnh trước/sau còn truy được nguồn.
+if (NO_AO) console.log('[no-ao] che khuất môi trường ĐÃ TẮT — đây là ảnh ĐỐI CHỨNG');
 
 if (MASK) {
   // ⚠️ THAY VẬT LIỆU, KHÔNG XOÁ ĐỐI TƯỢNG. Xoá thì thứ nằm SAU nó lộ ra và mặt nạ sẽ nhận vơ những
@@ -579,6 +631,19 @@ document.title = 'READY ' + JSON.stringify(city.stats);
 document.getElementById('info').textContent =
   'Kỷ ' + ERA + ' — ' + (ERA_METADATA[ERA]?.label ?? '?') + ' · cấp ' + LEVEL
   + ' · ' + pendingQueue.length + ' công trường'
+  // ⚠️ MẠNG ĐƯỜNG MỞ DẦN THEO SỐ PHIÊN — phải nói ra khi nó CHƯA ĐỦ, nếu không mỗi ảnh xem thử
+  // mặc định ('--sessions 40' trên 80 ô đường) sẽ hiện một thành phố mới xây một nửa, và người
+  // xem đọc những đoạn đường cụt ấy thành một khuyết tật dựng hình. Chuyện đó đã xảy ra thật:
+  // Phase 19 mở ra với một lời chê “đường có nét đứt trông giả tạo” mà thủ phạm chỉ là con số 40.
+  // Con số lấy THẲNG từ 'roadCellCount(ERA)', không viết cứng — nó suy từ chính bộ xương của kỷ.
+  // ⚠️ TỪ PHASE 20 NÓ KHÁC NHAU THEO KỶ (34…92 ô), nên phải hỏi kèm 'ERA'; một hằng số chung ở
+  // đây sẽ nói dối ở 14 kỷ.
+  + ' · đường ' + soODuong + '/' + roadCellCount(ERA)
+  // ⚠️ ĐIỀU KIỆN LÀ 'SESSIONS', KHÔNG PHẢI 'soODuong < tổng ô'. Vài ô đường VĨNH VIỄN
+  // bị công trình chiếm (đo được: 2 ô ở kỷ 1), nên so với trần lý thuyết thì cảnh báo kêu oan
+  // ngay cả khi mạng đã mở hết — mà một cảnh báo kêu oan còn tệ hơn không có cảnh báo. Thứ cần
+  // hỏi là *ngân sách còn đang là chỗ thắt cổ chai không*, và đó đúng là 'SESSIONS < tổng số ô'.
+  + (SESSIONS < roadCellCount(ERA) ? ' ⚠ MẠNG ĐƯỜNG CHƯA MỞ HẾT — tăng --sessions' : '')
   + ' · ' + city.stats.drawCalls + ' lệnh vẽ · '
   // Ba con số, theo đúng thứ tự bảng [stats]: thành phố + nền = tổng. Dòng chú thích dưới ảnh xem
   // thử là chỗ DUY NHẤT Đàm đọc mà không cần mở terminal, nên nó không được nói ít hơn bảng đo.
@@ -1106,13 +1171,13 @@ const nghi = (ms) => new Promise((r) => setTimeout(r, ms));
  * `#info` qua CDP rồi trả về để chỗ gọi in ra terminal. Đổi chỗ hiển thị, không bỏ thông tin.
  */
 async function shoot(chrome, url, pngPath,
-  { width, height, bench = 0, mask = null, noShadow = false, gpu = false, focus = 0,
+  { width, height, bench = 0, mask = null, noShadow = false, noAo = false, gpu = false, focus = 0,
     hangCauTruc = [] }) {
   // Lúc đo hiệu năng thì PHẢI để stderr chảy ra, vì dòng [bench] đi bằng đường đó — và lúc dựng
   // mặt nạ cũng vậy, vì dòng [mask] là thứ DUY NHẤT chứng minh mặt nạ khớp đúng khối cần khớp.
   // ⚠️ Chế độ cận cảnh cũng phải mở đường này: dòng [focus] là thứ DUY NHẤT nói ra camera đã đứng
   // ở đâu. Ngoài mấy ca đó thì im, vì Chromium trong hộp cát này chửi dbus không ngớt.
-  const choNoi = bench > 0 || !!mask || noShadow || focus > 0;
+  const choNoi = bench > 0 || !!mask || noShadow || noAo || focus > 0;
 
   // ⚠️ KHUNG NHÌN RỘNG RÃI CÓ CHỦ Ý. Cắt theo hộp bao rồi thì thừa bao nhiêu cũng không vào ảnh;
   // thứ duy nhất phải chắc là canvas KHÔNG bị xén. Vẫn kiểm lại bằng `kiemKhungNhin` phía dưới —
@@ -1295,6 +1360,9 @@ async function shoot(chrome, url, pngPath,
     const mocDai = dsBang.map((b) => b.y).filter((y) => y > 0);
     const SO_LUOT = 3;
     let ghep = null;
+    // Chữ ký của những mép bị tố ở lượt TRƯỚC — dùng để tách "vết rách" khỏi "nội dung" bằng tính
+    // lặp lại thay vì bằng một ngưỡng nữa. Lý do đầy đủ ở chỗ dùng, bên dưới.
+    let chuKyTruoc = '';
     for (let luot = 1; luot <= SO_LUOT; luot += 1) {
       const dai = [];
       for (const b of dsBang) {
@@ -1317,6 +1385,36 @@ async function shoot(chrome, url, pngPath,
       }
       const soi = soiVetRach(ghep, mocDai, hangCauTruc);
       if (!soi.hong) break;
+
+      /**
+       * ⚠️ MỘT VẾT RÁCH LÀ MỘT CUỘC ĐUA, NÊN NÓ KHÔNG THỂ RƠI ĐÚNG MỘT CHỖ HAI LẦN LIÊN TIẾP.
+       *
+       * Cổng chống-rách hiệu chuẩn trên ảnh MỘT-CẢNH ở khung app (ngẩng 34,4°), nơi không có mép
+       * ngang nào sắc lẹm chạy hết bề ngang. Bảng quét từng làm nó kêu oan 30 chỗ và đã được chữa
+       * bằng cách kể tên các dải nhãn (`hangCauTruc`). Phase 20 thêm quần thể THỨ BA: khung nhìn
+       * thẳng từ trên xuống (`--topdown`), nơi một con đường chạy đúng hướng đông-tây LÀ một mép
+       * ngang sắc lẹm chạy hết bề ngang — đúng hình dạng mà cổng này sinh ra để bắt, chỉ khác là
+       * lần này nó là NỘI DUNG chứ không phải lỗi. Đo được: kỷ 1 báo hàng 317 (27,7%) và hàng 331
+       * (35,7%) — **y hệt nhau tới một chữ số thập phân ở cả ba lượt chụp độc lập**.
+       *
+       * ⇒ Cách tách hai quần thể KHÔNG phải một ngưỡng thứ tư (thêm ngưỡng là thêm chỗ để nới —
+       * bài học Phase 9A), mà là chính TÍNH LẶP LẠI. Một vết rách sinh ra từ việc chụp trúng lúc
+       * khung hình đang được ghép dở: nó phụ thuộc thời điểm, nên hai lượt chụp độc lập không thể
+       * cho ra cùng một hàng với cùng một bề rộng bước. Một mép do nội dung thì lặp lại y hệt mãi
+       * mãi. Phép phân biệt này KHÔNG có tham số nào để nới, và nó áp cho mọi khung hình chứ không
+       * riêng '--topdown' — nghĩa là nó cũng bảo vệ luôn những khung hình sau này chưa ai nghĩ tới.
+       *
+       * ⚠️ VÀ NÓ VẪN GHI NHẬT KÝ + NÓI RA MÀN HÌNH. Một cổng tự tha cho mình trong im lặng là một
+       * cổng không còn ai kiểm được (`TECH_DEBT #52`).
+       */
+      const chuKy = soi.xau.map((m) => `${m.y}:${m.buoc.toFixed(4)}`).join('|');
+      if (chuKy && chuKy === chuKyTruoc) {
+        process.stderr.write(`  ℹ️  mép ngang LẶP LẠI Y HỆT ở lượt chụp độc lập thứ ${luot} `
+          + `(${soi.xau.map((m) => `hàng ${m.y}`).join(' · ')}) ⇒ đây là NỘI DUNG, không phải vết `
+          + 'rách — một vết rách phụ thuộc thời điểm chụp nên không lặp lại đúng chỗ được. Nhận ảnh.\n');
+        break;
+      }
+      chuKyTruoc = chuKy;
 
       // NHẬT KÝ (`TECH_DEBT #52`): ghi TRƯỚC khi quyết định chụp lại hay bỏ cuộc, để cả lượt cuối
       // — lượt ném lỗi — cũng để lại dấu vết. Ghi hỏng thì kệ, không được để việc ghi nhật ký làm
@@ -1485,6 +1583,12 @@ async function main() {
       // (mở nhầm file cũ rồi kết luận bản vá không ăn thua).
       const maskTag = args.mask ? `-mask-${args.mask.replace(/[^a-z0-9]+/gi, '_')}` : '';
       const shadowTag = args.noShadow ? '-noshadow' : '';
+      // ⚠️ LẦN THỨ CHÍN CỦA ĐÚNG CÁI BẪY TRÊN — `--no-ao` (2026-08-24). Cặp ảnh trước/sau của AO
+      // là thứ DUY NHẤT chứng minh được hiệu ứng ấy có tác dụng (nó không hiện ra ở lệnh vẽ hay
+      // tam giác). Để hai vế dùng chung một tên file thì vế sau đè vế trước và phép so sẽ chấm một
+      // tấm ảnh với chính nó — đúng bài học `MAI-SAU-ky9.png`, nơi hai con số nghiệm thu mái phải
+      // vứt đi vì tấm "cận mái" trùng TỪNG BYTE với ảnh khung thường.
+      const aoTag = args.noAo ? '-noao' : '';
       // ⚠️ CHẾ ĐỘ CẬN CẢNH CŨNG PHẢI CÓ TÊN RIÊNG, cùng lý do với mặt nạ ở trên — mà lý do ấy vừa
       // trả giá thật ngày 2026-08-18: hai con số nghiệm thu mái (4,5% / 16,5%) phải vứt đi vì tấm
       // ảnh mang tên "cận mái" hoá ra trùng TỪNG BYTE với ảnh khung thường. Một khung hình khác
@@ -1516,7 +1620,11 @@ async function main() {
       // Chỉ gắn khi KHÁC mặc định, để mọi tên file lịch sử vẫn tra được.
       const tTag = args.t === 17.5 ? '' : `-t${String(args.t).replace('.', 'p')}`;
       const lodTag = args.lowDetail ? '-lod' : '';
-      const pngPath = resolve(OUT_DIR, `city-era${String(era).padStart(2, '0')}-${args.theme}${hourTag}${sessTag}${widthTag}${zoomTag}${tTag}${lodTag}${maskTag}${shadowTag}${focusTag}.png`);
+      // ⚠️ LẦN THỨ CHÍN CỦA ĐÚNG CÁI BẪY TRÊN — `--topdown` (Phase 20). Nó là một KHUNG HÌNH KHÁC
+      // HẲN (nhìn thẳng xuống, không phải khung app), nên dùng chung tên file với ảnh thường là
+      // cách chắc chắn nhất để một phép so trước/sau chấm hai thứ không so được với nhau.
+      const topTag = args.topdown ? '-topdown' : '';
+      const pngPath = resolve(OUT_DIR, `city-era${String(era).padStart(2, '0')}-${args.theme}${hourTag}${sessTag}${widthTag}${zoomTag}${tTag}${lodTag}${maskTag}${shadowTag}${aoTag}${focusTag}${topTag}.png`);
       let info = '';
       let hop = null;
       try {
@@ -1555,6 +1663,7 @@ async function main() {
         sessions: args.sessions,
         mask: args.mask,
         focus: args.focus,
+        topdown: args.topdown,
         zoom: args.zoom,
         theme: args.theme,
       }, null, 2)}\n`);

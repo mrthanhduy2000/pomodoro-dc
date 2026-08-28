@@ -90,6 +90,31 @@ theo hai bộ số khác nhau nay chung một bộ.
 **Cố ý đứng ngoài.** `city/CityGrowthMoment.jsx` là một đoạn phim 3,2 giây có ba luật cứng riêng và
 **không hề được dựng** khi bật Giảm chuyển động — ép nó vào `enter` là làm hỏng một cảnh diễn để
 đổi lấy một con số đẹp.
+## 2026-08-27 (đêm) — Phase 21 §1: gộp `main` vào nhánh Phase 21, gỡ hai va chạm số
+
+**Mục đích.** Chỉ thị Phase 21 §1 yêu cầu hợp nhất trước mọi việc khác. `main` đã đi thêm 20 commit
+(tới `4360ca5`) trong lúc nhánh Phase 21 làm việc.
+
+**Phạm vi.** Chỉ tài liệu và đánh số — **không một dòng mã sản phẩm nào bị sửa để giải xung đột**.
+Cả 5 xung đột đều là "hai bên cùng thêm mốc mới vào đầu file", giải bằng cách giữ cả hai theo thứ
+tự thời gian. Hai va chạm số được gỡ: **ADR-060** (Phase 21 → **ADR-066**, 33 chỗ) và
+**TECH_DEBT #86/#87** (Phase 21 → **#89**/**#90**, 40 chỗ) — nhánh đã lên production giữ số, nhánh
+tính năng nhường. Kèm hai khuyết tật có sẵn được vá: mục `#78` bị tách làm hai nửa rời nhau, và
+ADR-066 chứa lạc nguyên một thân ADR-061 (45 dòng, thiếu đúng dòng tiêu đề nên không phép đếm nào
+thấy).
+
+**Ảnh hưởng.** Không đổi hành vi app. Số bài test đi từ 1.184 lên **1.266** (`main` mang sang ~82
+bài). Bản quét 15 kỷ đo lại sau khi gộp **không trôi một chữ số** (12,11 · 22,14 · trung vị 36,42 ·
+0/15 · 0/105) — đúng kết quả phải có, vì `git diff` cho thấy `main` chỉ đụng CHÚ THÍCH ở tầng màu
+3D (thêm skin thứ 5 nên "8 tổ hợp" → "10 tổ hợp"), không đụng giá trị màu nào. Sự đứng yên ấy đồng
+thời chứng minh skin arcade mới không rò vào cảnh 3D.
+
+**Tương thích.** Hoàn toàn tương thích ngược; không có migration. Ai đang trích dẫn `ADR-060` hoặc
+`TECH_DEBT #86`/`#87` từ tài liệu Phase 21 (trước `c2b66bc`) thì nay phải đọc là `ADR-066`, `#89`,
+`#90`.
+
+---
+
 ## 2026-08-27 (tối) — Một ngôn ngữ hình cho mọi phần thưởng, và phân tầng mức độ làm phiền
 
 **Mục đích.** App có bảy đường trao thưởng và bảy cách trình bày — riêng `LootDropModal` đã có ba
@@ -350,6 +375,38 @@ vốn đã gần đen nên đen tuyệt đối cũng chỉ tới 1,28:1. Chi ti�
 **Cổng.** `npm test` 1.158 bài · 1.157 pass · 0 fail · 1 skipped · `test:cross` 3/3 · lint sạch ·
 build xanh. Nghiệm thu bằng trình duyệt thật trên CSS đã build, cả hai chế độ.
 
+## 2026-08-24 (khuya) — PHASE 21: hợp nhất hai nhánh, và bàn cờ trở thành một mốc lịch sử (ADR-064, ADR-065)
+
+**Mục đích.** Đàm xem bản quét Phase 20 và vẫn bác: *«nhà vẫn xếp rất ngăn nếp trông như quy hoạch,
+dù quy hoạch ô bàn cờ chỉ bùng nổ và trở thành chuẩn mực từ thế kỷ 19»*. Phase 20 đã đổi được **bộ
+xương** thành phố nhưng chưa chạm vào **bên trong một thửa**.
+
+**Phạm vi.** Chỉ tầng dựng hình 3D (`src/engine/city3d/`) và tài liệu. Không đụng timer, store,
+sync, AI Coach, hay bất kỳ luồng dữ liệu nào.
+
+- **§1 Hợp nhất hai nhánh (ADR-064)** — `main` có đường lượn theo cung cong (ADR-059), nhánh này có
+  chia thửa đệ quy (ADR-066). Hai bên trả lời hai câu khác nhau nên **ghép được**: BSP quyết cắt Ở
+  ĐÂU, cung cong quyết cắt theo HÌNH GÌ. Một thửa nay là **tập ô**, không phải hình chữ nhật đã
+  khai. ADR đánh số lại cho hết trùng (060 · 061 · 062 · 063 · 064).
+- **§2 ADR-007** — Đàm duyệt: dời 75/75 công trình **một lần**, sau đó bố cục mỗi kỷ đóng băng vĩnh
+  viễn. Từ ngày gộp `main`, đổi bộ sinh bố cục của một kỷ là **một quyết định di trú, phải hỏi**.
+- **§3 Trục `layout` trong `blockStyle.js` (ADR-065)** — kỷ **1–9** `organic` (chia thửa đệ quy,
+  không hàng không cột), kỷ **10–15** `grid` (giữ nguyên). Khoá bằng test hai chiều.
+- **§4 Khối nhà nằm trong thửa của nó** — cặp khối đè lên nhau **290 → 15**, chỗ sâu nhất
+  −0,441 → **−0,015 ô** (≈1 điểm ảnh, dưới sàn mắt 4). Thêm bài canh "thành phố lan RA NGOÀI":
+  hộp bao ở 120 phiên nở **1,65–12,0 lần** so với 20 phiên.
+- **§5 `parcelRoles.js` (module mới)** — 6/15 kỷ từng có **đúng 0 thửa dành cho nhà dân**, nên phép
+  đo "thửa có khác cỡ không" đang đo các khu đất kỳ quan. Sau khi sửa, tỉ số ô đất lớn nhất/nhỏ
+  nhất: `organic` **5,50** · `terrace` 4,67 · `grid` 2,25 · `radial` 2,00 · `axial` 1,25.
+
+**Ảnh hưởng.** ⚠️ **Bố cục của cả 15 kỷ đổi** — công trình đã xây sẽ đứng ở chỗ khác **một lần** khi
+bản này lên production (Đàm đã duyệt, §2). Sau lần đó, mỗi kỷ đóng băng vĩnh viễn và bất biến "chỉ
+thêm, không bao giờ dời" vẫn xanh cho 1…120 phiên × 15 kỷ. Không mất dữ liệu, không migration.
+Cái giá đã đo và không giấu: ô mất chi tiết mái 1,5% → 2,1% (`TECH_DEBT #90` vẫn mở); cột
+`units`/`cols`/`rows` tạm là trục chết vì trần một-ô (`TECH_DEBT #88`).
+
+**Tương thích.** Không đổi schema, không đổi API, không đổi cách chạy/build/deploy.
+
 ---
 
 ## 2026-08-24 (đêm) — Quy trình làm việc: cắt 6.323 dòng bắt buộc đọc xuống 55
@@ -577,6 +634,72 @@ tuyệt đối (**4,86 × 10⁻¹⁷ ô** trên 210 tổ hợp) nên ADR-007 (v�
     **búi tóc 2,7×2,5 px cũng đã dưới ngưỡng mắt 4 px**.
 - **Tương thích**: không đổi API, không đổi dữ liệu, không đổi hình ảnh. Chỉ test + tài liệu + một
   khối chú thích.
+
+## 2026-08-24 — Phase 20: BỎ LƯỚI CỨNG, bộ xương thành phố SINH THEO KỶ (ADR-066)
+
+- **Mục đích**: Đàm nhìn bản quét rồi nói *"nhà vẫn quy hoạch rất kỳ quặc, rất bài bản và xếp chồng
+  lên nhau"* · *"cho tôi một sự sắp xếp thành phố ngẫu nhiên và mang tính đặc thù, không phải cứ
+  3x3 được, nó phải nhiều thứ và đa dạng hơn"*. Chẩn đoán: cả 15 kỷ dùng **chung một bộ xương**
+  (`ROAD_LINES = {0,4,8,11}` + 5 khu kỳ quan 3×3), và **không thứ nào trong đó phụ thuộc kỷ**. Mọi
+  phase trước đều sửa thứ nằm TRONG một ô nên bộ xương chưa bao giờ đổi — mà bộ xương mới là thứ
+  mắt đọc ra ĐẦU TIÊN khi nhìn từ trên cao.
+- **Phạm vi**:
+  1. **`city3d/networkStyle.js` (BẢNG)** — 15 kỷ × 5 trục: `plan` (`organic`/`axial`/`grid`) ·
+     `parcels` (6…14 thửa) · `sizeVary` (0,05…0,86) · `ring` · `minSide`. Mỗi dòng buộc vào
+     `country` mà `eraStyle.js` khai, có test bắt. ⚠️ *"Kỳ quan chọn thửa nào"* và *"bao nhiêu thửa
+     để trống"* **cố ý KHÔNG có cột riêng** — cái đầu suy từ `plan`, cái sau suy từ số thửa dôi ra;
+     một cột riêng sẽ cho phép khai những tổ hợp vô nghĩa (`grid` + "gần nước nhất") mà không gì bắt.
+  2. **`city3d/cityPlan.js` (HÌNH)** — **chia đôi đệ quy lệch tâm (BSP)** ra danh sách THỬA ĐẤT.
+     Chọn BSP chứ không Voronoi vì ranh giới Voronoi XIÊN, mà cả tầng dựng mặt đường chỉ nói được
+     tiếng "ô thẳng trục" — BSP tái dùng nguyên tầng ấy.
+  3. **Đường là RANH GIỚI THỬA, không phải hàng và cột** — và nó là **HỆ QUẢ, không phải một cột
+     của bảng**: mỗi nhát cắt chừa lại một hàng/cột làm lối đi ⇒ số ô đường tự đi từ hằng số **80**
+     sang **34…92 tuỳ kỷ (trung bình 59,7)**, không ai phải chọn tay 15 con số.
+  4. **Kỳ quan CHIẾM THỬA**, không còn khu 3×3. `BUILDING_ZONES` · `ROAD_LINES` · `ROAD_MAIN_AXIS` ·
+     `ROAD_CROSS_AXIS` · `RING_LOW`/`RING_HIGH` **đã xoá hẳn**; `cityGrid.js` nay chỉ còn đúng một
+     câu (`CITY_GRID_SIZE = 12`).
+  5. **ADR-007 khoá bằng hai bài**: gọi kèm **dữ liệu rác** (`built`/`sessionCount`/`buildings`) đòi
+     kết quả trùng từng byte, và **liệt kê đủ 1…120 phiên × 15 kỷ**.
+  6. **Nghiệm thu bằng số, không bằng mắt**: độ đối xứng bốn chiều của ô kỳ quan **100,0% → tối đa
+     20,0%** (và **9,6%** nếu bỏ ba kỷ `grid`, nơi đối xứng là ĐÚNG). Thang lấy 0% là mức trùng hợp
+     ngẫu nhiên, và nó tự nghiệm thu: thứ vốn đối xứng hoàn hảo đo ra đúng 100,0%.
+- **Ảnh hưởng — MỘT CÁI GIÁ PHẢI ĐÀM QUYẾT, KHÔNG PHẢI TÔI**: bộ xương mới **DỜI công trình đã xây**.
+  Không kiểm được bản lưu thật của Đàm từ hộp cát này (Supabase bị proxy chặn), nhưng theo bản quy
+  hoạch mới thì **75/75 công trình (5 mỗi kỷ × 15 kỷ) sẽ đổi chỗ**. ADR-007 chỉ hứa *"từ nay không
+  dời"*; việc đổi bộ xương thì tự nó là một lần dời. Ghi ở phần Trade-off của ADR-066.
+- **Phụ**: trục CHẶNG NGÀY của bản quét **11,33 → 12,44** (qua lại ngưỡng mắt 12, 0/15) và trục KỶ
+  **19,18 → 21,77** · trung vị **36,31 → 38,48** (0/105). ⚠️ Nhưng `TECH_DEBT #89` **VẪN MỞ**: tách
+  ba dải cho thấy toàn bộ phần tăng nằm ở dải ĐẤT (+2,37), còn **dải TRỜI — cái cần gạt đã nêu đích
+  danh — gần như không nhúc nhích** (4,12 → 4,05) và dải THÀNH PHỐ còn **tệ đi** (6,51 → 5,56).
+  Cổng qua nhờ một dải chẳng liên quan; đó không phải lời giải cho #89.
+- **Tương thích**: không đụng state, không đụng schema, không migration. Chỉ tầng bố cục + hình ảnh.
+
+## 2026-08-24 — Phase 19: khối kiến trúc, bóng đổ, khung hình (ADR-062/063/061)
+
+- **Mục đích**: Đàm nhìn kỷ 1 · 2 · 14 và nói *"đường có nét đứt trông giả tạo kinh khủng · kim tự
+  tháp không có khối hình chóp"*, cộng một yêu cầu cũ chưa làm: *"hiệu ứng hơn, ánh sáng đổ bóng…
+  giống 3D hoá hơn nữa"*. Sáu việc.
+- **Phạm vi**:
+  1. **Đường nét đứt** — bisect trước, đoán sau.
+  2. **Nguyên mẫu thứ 8 `monolith`** (ADR-062): công trình LÀ khối, không phải nhà đội mái. Kỷ 2 ra
+     chóp TRƠN (tỉ lệ Giza 0,64), kỷ 3 ra GIẬT CẤP có cầu thang chính diện. **Đóng `TECH_DEBT #75`.**
+  3. **Bóng đổ nét hơn**: bản đồ bóng máy bàn 2048 → **4096** (điện thoại GIỮ 512 — 4096² là 64 MB
+     texture, iOS Safari giết tab vì thứ đó). ⚠️ Nửa sau của chỉ thị — *"siết khung bóng xuống phạm
+     vi thành phố"* — **đã đo và bác bỏ**: `reach` (9,00) ĐÃ LÀ phạm vi thành phố, khối đổ bóng xa
+     nhất ở 8,48 ⇒ dư 6%, siết thêm là cắt cụt bóng nhà ở góc lưới.
+  4. **Che khuất môi trường (AO)** (ADR-063): nướng vào MÀU ĐỈNH ⇒ **0 lệnh vẽ, 0 tam giác** thêm.
+     Điều kiện dừng của Đàm (*"ảnh ngả trắng bệch thì BỎ NGAY"*) **không kích hoạt** — sàn độ sáng
+     đi XUỐNG, dải tương phản NỞ RA.
+  5. **Nóc nhà thôi bị mép khung cắt** (ADR-061): khoảng cách camera nay tính RIÊNG TỪNG KỶ, bằng
+     đúng mức tối thiểu để không cắt gì. **0/15 kỷ bị cắt** (trước 14/15). **Đóng `TECH_DEBT #24`**,
+     mở từ Phase 7B.
+  6. **Quét lại 15 kỷ**: **105/105 cặp kỷ ĐẠT** (gần nhất 19,18 · trung vị 36,31).
+- **Ảnh hưởng — VÀ MỘT CÁI GIÁ PHẢI NÓI THẲNG**: trục CHẶNG NGÀY của bản quét tụt **14,39 → 11,33**,
+  lần đầu xuống dưới ngưỡng mắt 12. Đã **tách một biến** để biết ai tiêu tiền: cây có đủ 4 việc mỹ
+  thuật nhưng hoàn tác riêng khung hình ra **14,23** ⇒ bốn việc kia tốn 0,16, **2,90 là của riêng
+  phép lùi khung**. Nguyên nhân là pha loãng (`TECH_DEBT #22`), không phải 15 kỷ giống nhau hơn.
+  ⇒ Ghi thành `TECH_DEBT #89` với **ba hướng cho Đàm chọn**; không tự chọn, không nới ngưỡng.
+- **Tương thích**: không đụng state, không đụng schema, không migration. Chỉ tầng hình ảnh.
 
 ---
 

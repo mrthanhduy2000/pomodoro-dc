@@ -234,15 +234,27 @@ test('KHÔNG CÓ HAI CÁI MÁI GIỐNG HỆT NHAU trong cùng một kỷ — đo
   // Nói cho đúng: nguồn biến thể nằm ở bộ sinh KHỐI NHÀ chứ không ở file này; bài test canh cả
   // chuỗi, và đó là chủ ý — thứ Đàm nhìn thấy là kết quả cuối, không phải một mắt xích.
   let daKiem = 0;
+  // ⚠️ 2026-08-24 — MỘT LOẠI CÔNG TRÌNH KHÔNG CÓ MÁI ĐỂ MÀ SO. Nguyên mẫu `monolith` (ADR-062) dựng
+  // kỳ quan THẲNG TỪ MẶT ĐẤT thành một khối đặc: kim tự tháp Giza và ziggurat Ur không có mái, nên
+  // chúng KHÔNG được tính vào phép đếm này. Trước đây gác `ct.length >= 5` đỏ với thông báo *"kỷ 2:
+  // chỉ 4 công trình có mái — quần thể sai hình dạng"*, mà quần thể hoàn toàn lành.
+  // Cách xử lý ĐÚNG không phải hạ 5 xuống 4 (nới cho cả 15 kỷ, tức bỏ răng), mà là ĐẾM NGOẠI LỆ RA
+  // TƯỜNG MINH: kỷ thứ ba mọc thêm một công trình không mái thì đỏ, mà kỷ 2 hay 3 được trả về
+  // nhà-có-mái cũng đỏ. Đúng khuôn `assert.deepEqual(TRUOT, [4])` của `TECH_DEBT #44`.
+  const kyCoKhoiDac = [];
   for (const era of ERAS) {
     const ct = []; const nd = [];
+    let khongMai = 0;
     for (const item of collectCitySpecs({ layout: thanhPho(era) })) {
       const mai = item.spec.parts.filter((p) => p.rooftop);
-      if (!mai.length) continue;
+      if (!mai.length) { if (item.kind === 'building') khongMai += 1; continue; }
       if (item.kind === 'building') ct.push(chuKy(mai));
       if (item.kind === 'dwelling') nd.push(chuKy(mai));
     }
-    assert.ok(ct.length >= 5, `kỷ ${era}: chỉ ${ct.length} công trình có mái — quần thể sai hình dạng`);
+    if (khongMai > 0) kyCoKhoiDac.push(era);
+    assert.equal(ct.length + khongMai, 5,
+      `kỷ ${era}: ${ct.length} công trình có mái + ${khongMai} không mái ≠ 5 — quần thể sai hình dạng`);
+    assert.ok(khongMai <= 1, `kỷ ${era}: ${khongMai} công trình không mái — chỉ kỳ quan khối đặc mới được vậy`);
     assert.ok(nd.length >= 6, `kỷ ${era}: chỉ ${nd.length} nhà dân có mái — quần thể sai hình dạng`);
     assert.equal(new Set(ct).size, ct.length,
       `kỷ ${era}: ${ct.length - new Set(ct).size} công trình đội mái y hệt nhau`);
@@ -251,6 +263,8 @@ test('KHÔNG CÓ HAI CÁI MÁI GIỐNG HỆT NHAU trong cùng một kỷ — đo
     daKiem += 1;
   }
   assert.equal(daKiem, 15, 'không duyệt đủ 15 kỷ');
+  assert.deepEqual(kyCoKhoiDac, [2, 3],
+    'danh sách kỷ có kỳ quan KHÔNG mái (nguyên mẫu `monolith`) đã đổi — thêm hay bớt đều phải xem lại');
 });
 
 test('ĐỐI CHỨNG: phép đếm chữ ký PHẢI sập xuống 1 khi thật sự có nhân bản', () => {

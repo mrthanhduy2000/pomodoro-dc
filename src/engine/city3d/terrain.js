@@ -341,7 +341,7 @@ export const ERA_TERRAIN = {
   7:  { shape: 'rolling', drain: 'nam',  tilt: 0.44, terraces: 3, relief: 0.55, note: 'đồi Toscana nối nhau, THOẢI; Duomo đứng BỜ BẮC nên cả vùng tụt dần về lòng sông Arno phía nam' },
   8:  { shape: 'coast',   drain: 'nam',  tilt: 0.62, terraces: 3, relief: 0.85, note: 'Lisbon "thành phố bảy quả đồi" đổ dốc xuống cửa sông Tejo ở phía nam' },
   9:  { shape: 'valley',  drain: 'tay',  tilt: 0.30, terraces: 2, relief: 0.36, note: 'lòng chảo sông Seine chảy ở phía tây, gần phẳng, chỉ nhô đồi Montmartre' },
-  10: { shape: 'valley',  drain: 'bac',  tilt: 0.36, terraces: 3, relief: 0.55, note: 'Manchester trong thung lũng công nghiệp, nhà máy bám sườn xuống kênh Bridgewater phía bắc — kênh Rochdale phải qua 9 âu thuyền trong 1,6 km giữa lòng thành phố, tức triền dốc THẬT và mạnh' },
+  10: { shape: 'valley',  drain: 'bac',  tilt: 0.26, terraces: 3, relief: 0.55, note: 'Manchester trong thung lũng công nghiệp, nhà máy bám sườn thoải xuống kênh Bridgewater phía bắc' },
   11: { shape: 'plain',   drain: 'tay',  tilt: 0.38, terraces: 2, relief: 0.28, note: 'Manhattan là một tấm granite gần phẳng nghiêng về sông Hudson phía tây — chiều cao đến từ NHÀ' },
   12: { shape: 'plain',   drain: 'dong', tilt: 0.55, terraces: 2, relief: 0.22, note: 'thảo nguyên Nga mênh mông, phẳng đến mức thành biểu tượng; dải phố Stalingrad bám BỜ TÂY nên đất thoải về sông Volga phía đông' },
   13: { shape: 'valley',  drain: 'dong', tilt: 0.40, terraces: 3, relief: 0.62, note: 'đô thị Nhật kẹp giữa núi, mở ra vịnh phía đông — đất hẹp là lý do có nhà nang' },
@@ -613,15 +613,14 @@ export function buildTerrain({ era, gridSize = 12 } = {}) {
    * cho ô đường**: chỗ ấy là mặt phố, không ai đặt nhà lên. Bài test đã tách làm hai vế và đếm
    * riêng, để trạng thái này TƯỜNG MINH chứ không lặng lẽ.
    *
-   * ⚠️ DÙNG `roadCellCandidates(era)` — DANH SÁCH ỨNG VIÊN CỦA KỶ, KHÔNG PHẢI MẠNG ĐANG HIỆN. Từ
-   * 2026-08-24 mạng đường mỗi kỷ một hình (`roadPlan.js`), nên phải truyền `era` — quên truyền thì
-   * cao độ được san theo mạng của kỷ 1 trong khi mặt đường vẽ theo mạng của kỷ đang xem, và con
-   * đường sẽ leo lên xuống những cái dốc chẳng liên quan gì tới nó. Bất biến CẦN giữ vẫn nguyên:
-   * không phụ thuộc TIẾN ĐỘ. Đây là điều
-   * kiện sống còn của ADR-007: mạng đang hiện đổi theo `sessionCount` và theo kỷ (công trình chiếm
-   * chỗ thì ô đường bị bỏ), nên hỏi nó thì cao độ mặt đất sẽ nhúc nhích mỗi lần Đàm xây thêm một
-   * căn nhà. Danh sách ứng viên là hằng số cấp module và là TẬP CHA của mọi mạng đã hiện — đặt
-   * luật lên nó là một lời hứa chặt hơn. Có test khoá cả hai vế ở `cityLayout.test.js`.
+   * ⚠️ DÙNG `roadCellCandidates(era)` — DANH SÁCH ỨNG VIÊN, KHÔNG PHẢI MẠNG ĐANG HIỆN. Đây là điều
+   * kiện sống còn của ADR-007: mạng đang hiện đổi theo `sessionCount` (công trình chiếm chỗ thì ô
+   * đường bị bỏ), nên hỏi nó thì cao độ mặt đất sẽ nhúc nhích mỗi lần Đàm xây thêm một căn nhà.
+   * Danh sách ứng viên chỉ phụ thuộc `era` và là TẬP CHA của mọi mạng đã hiện — đặt luật lên nó là
+   * một lời hứa chặt hơn. Có test khoá cả hai vế ở `cityLayout.test.js`.
+   * ⚠️ TRUYỀN `era` VÀO (Phase 20): từ khi bộ xương sinh theo kỷ, gọi thiếu tham số sẽ lấy mạng
+   * đường của kỷ 1 cho MỌI kỷ — mặt đất sẽ được san phẳng dọc những con đường KHÔNG TỒN TẠI ở kỷ
+   * đang xem, và đường thật thì gồ ghề. Không có gì đỏ lên, ảnh vẫn dựng ra bình thường.
    *
    * PHÉP SAN: giữ đúng hai bao hình Lipschitz rồi lấy trung bình.
    *   `duoi[a] = min_b (h[b] + C·d(a,b))` — hàm C-Lipschitz LỚN NHẤT còn ≤ h

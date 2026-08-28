@@ -305,7 +305,7 @@ test('LÒNG ĐƯỜNG DỰNG ĐÚNG HÌNH MÀ `carriagewayShape` KHAI — LÕI +
   // tiếp. Bài này hỏi CHÍNH hàm thuần mà bên dựng hỏi (`carriagewayShape`) rồi đối chiếu với đỉnh
   // dựng ra — nó canh việc bên dựng CÓ DÙNG luật ấy, chứ không diễn đạt lại luật bằng công thức
   // riêng (hai công thức "tương đương" luôn lệch nhau ở biên — Phase 3Y).
-  let ngõ = 0; let đại_lộ = 0; let liền = 0; let cặpGiáp = 0;
+  let ngõ = 0; let đại_lộ = 0; let liền = 0; let cặpGiáp = 0; let tổngÔĐường = 0;
   for (const era of ERAS) {
     const { layout, road } = dựng(era);
     if (!road) continue;
@@ -473,6 +473,7 @@ test('LÒNG ĐƯỜNG DỰNG ĐÚNG HÌNH MÀ `carriagewayShape` KHAI — LÕI +
     // lòng đường NẰM ĐÚNG trên ranh giới chung rồi so khoảng chúng phủ.
     for (const prop of layout.props ?? []) {
       if (prop.kind !== 'road') continue;
+      tổngÔĐường += 1;
       for (const [du, dv] of [[1, 0], [0, 1]]) {
         if (!ôĐường.has(`${prop.x + du}|${prop.y + dv}`)) continue;
         const ranh = (du ? prop.x : prop.y) + 0.5;
@@ -507,17 +508,21 @@ test('LÒNG ĐƯỜNG DỰNG ĐÚNG HÌNH MÀ `carriagewayShape` KHAI — LÕI +
   }
   assert.ok(ngõ > 0 && đại_lộ > 0, `phải gặp cả hai hạng đường (ngõ ${ngõ}, đại lộ ${đại_lộ})`);
   assert.ok(liền > 50, `chỉ gặp ${liền} mép nối — bài canh liền mạch đang chạy không`);
-  /**
-   * Gác chạy-rỗng cho phép đo bậc: nó duyệt một tập con của `liền`, nên phải tự khai số cặp đã xét.
-   *
-   * ⚠️ **SÀN HẠ 500 → 300 Ở ADR-059, VÀ ĐÓ LÀ MỘT SỐ ĐO CHỨ KHÔNG PHẢI MỘT SỰ NHÂN NHƯỢNG.** Trước
-   * đây cả 15 kỷ dùng chung một mạng bàn cờ 80 ô, nên 6 kỷ trong `ERAS` cho ra ~528 cặp kề nhau.
-   * Nay mỗi kỷ một mạng riêng, và phép tỉa mảng (`tiaMangDuong`) còn bỏ thêm những ô làm mặt
-   * đường phình ra thành sân ⇒ **336 cặp** ở 6 kỷ này (đã đếm riêng bằng một đường độc lập để
-   * chắc đây là số cặp THẬT chứ không phải số cặp bị bỏ qua: phép đo tự khai `0` lần `continue`).
-   * Sàn 300 nằm ngay dưới giá trị đo được.
-   */
-  assert.ok(cặpGiáp >= 300, `chỉ so ${cặpGiáp} cặp giáp nhau — phép canh bậc đang chạy gần như rỗng`);
+  // Gác chạy-rỗng cho phép đo bậc: nó duyệt một tập con của `liền`, nên phải tự khai số cặp đã xét.
+  //
+  // ⚠️ VIẾT THÀNH QUAN HỆ, KHÔNG VIẾT THÀNH MỘT CON SỐ (bài học Phase 7D). Bản trước ghi `> 500`,
+  // một hằng số đo hồi 15 kỷ dùng CHUNG một bộ xương đường (`ROAD_LINES` cố định ⇒ 80 ô đường mỗi
+  // kỷ, tức 480 ô cho 6 kỷ mẫu). Phase 20 sinh bộ xương theo kỷ nên số ô đường nay trải **34…92**
+  // (6 kỷ mẫu cộng lại còn 330 ô, ra **343 cặp**), và cái hằng số ấy lập tức đỏ — trong khi phép
+  // canh bậc vẫn chạy đầy đủ. Một cái gác chạy-rỗng phải đo theo CHÍNH lượng dữ liệu nó vừa duyệt.
+  //
+  // Tỉ lệ đo được là **1,04 cặp trên mỗi ô đường** (343/330): mỗi ô nhìn sang phải và xuống dưới,
+  // nên một mạng đường liền mạch cho ra xấp xỉ một cặp mỗi ô. Sàn 0,5 chừa biên gấp đôi, đủ để
+  // không kêu oan khi một kỷ có mạng thưa hơn, mà vẫn đỏ ngay nếu phép đo ngừng tìm thấy đỉnh
+  // (đúng ca đã cắn: hai chỉ số `cắtNgang`/`dọcTheo` viết ngược ⇒ `phủ` trả `null` ⇒ 0 cặp).
+  assert.ok(tổngÔĐường > 100, `chỉ duyệt ${tổngÔĐường} ô đường — bài test đang chạy trên một thành phố rỗng`);
+  assert.ok(cặpGiáp >= tổngÔĐường * 0.5,
+    `chỉ so ${cặpGiáp} cặp giáp nhau trên ${tổngÔĐường} ô đường — phép canh bậc đang chạy gần như rỗng`);
 });
 
 test('NGÂN SÁCH TAM GIÁC CỦA ĐỊA HÌNH KHÔNG ĐƯỢC PHÌNH LÊN TRONG IM LẶNG', () => {

@@ -23,6 +23,9 @@ import {
   cityOrbitOptions,
   TERRAIN_TO_DISTANCE,
   TERRAIN_TO_TARGET_Y,
+  FRAME_FIT_MARGIN,
+  cityFrameBoxes,
+  worstFrameMargin,
   createOrbit,
   orbitPosition,
   wrapYaw,
@@ -254,48 +257,98 @@ test('ĐỐI CHỨNG: gỡ phần bù địa hình khỏi camera thì kỷ dốc
     + 'và hai hằng số TERRAIN_TO_* đang là số trang trí');
 });
 
-test('KỶ THẤP GIỮ NGUYÊN KHUNG SÁT — "không thu quá xa rồi bị mờ"', async () => {
+test('KHUNG HÌNH SÁT NHẤT CÓ THỂ MÀ VẪN KHÔNG CẮT CÔNG TRÌNH NÀO', async () => {
   const { terrainMaxHeight } = await import('./terrain.js');
-  // Vế thứ hai của yêu cầu Đàm, và nó ngược chiều với bài test trên. Bài trên một mình vẫn xanh
-  // nếu ta lùi camera thật xa cho MỌI kỷ — mà đó đúng là thứ Đàm vừa bảo bỏ đi. Hai bài kẹp nhau
-  // mới thành một hàng rào: vừa đủ xa để không cắt ngọn, vừa đủ gần để nhìn ra chi tiết.
+  // ⚠️ BÀI NÀY THAY BÀI CŨ `KỶ THẤP GIỮ NGUYÊN KHUNG SÁT` (Phase 19, VIỆC 5) — VÀ LÝ DO PHẢI THAY
+  // MỚI LÀ THỨ ĐÁNG ĐỌC, KHÔNG PHẢI BỘ SỐ MỚI.
+  //
+  // Bài cũ kẹp trần ở `1,35 lần mức sát`, dựng từ lời Đàm ở Phase 5A: *"thu phóng cho vừa đủ thôi,
+  // không thu quá xa rồi bị mờ"*. Lời ấy vẫn đúng. Nhưng cái TRẦN thì **không thể cùng đúng** với
+  // lời hứa "không công trình nào bị mép khung cắt": đo bằng `frame-fit.mjs` thì 13/15 kỷ cần từ
+  // **1,47** trở lên, cao nhất kỷ 8 = **1,88**. Nghĩa là suốt từ Phase 5A tới nay, cái trần 1,35
+  // chính là THỨ SINH RA `TECH_DEBT #24` — nó bảo đảm 14/15 kỷ phải cắt mất một công trình, và nó
+  // xanh suốt vì chưa ai đặt hai lời hứa ấy cạnh nhau. Một cái trần và một lời hứa loại trừ nhau
+  // thì cái xanh không phải cái đúng, nó chỉ là cái được viết ra trước.
+  //
+  // ⇒ Thứ thay thế KHÔNG phải một con số to hơn (nới ngưỡng = cái phễu Phase 9A). Nó là chính cái
+  // QUAN HỆ mà Đàm muốn: **camera không được lùi xa hơn MỘT LI so với mức vừa đủ để lọt hết**.
+  // Cách canh ấy chặt hơn `1,35` rất nhiều — 1,35 cho phép mọi kỷ lùi tuỳ ý miễn dưới trần, còn
+  // bài này thì mỗi kỷ chỉ có ĐÚNG MỘT khoảng cách hợp lệ. Đúng bài học Phase 7D: một lời hứa nói
+  // về QUAN HỆ ("vừa đủ") thì phải viết thành quan hệ, đừng viết thành một mức.
   const GRID = 12;
   const BASE = GRID * CAMERA_DISTANCE_FACTOR;
 
-  // (a) Kỷ nhà THẤP phải tiến VÀO GẦN hơn mức sát, không chỉ "không lùi ra". Đây là nửa dễ quên
-  // của yêu cầu: bản đầu kẹp `Math.max(0, …)` nên camera chỉ biết lùi, và kỷ 1 — nơi mọi người bắt
-  // đầu — giữ nguyên khoảng cách đóng cho nhà cao gấp ba, ra một bãi cỏ mênh mông.
-  //
-  // ⚠️ ĐO PHẦN `massScale` RIÊNG, KHÔNG ĐO TỔNG (sửa 2026-08-14, Phase 7B). Bản đầu đòi
-  // `opts.distance < BASE` trên con số TỔNG, và nó đỏ ngay khi địa hình ra đời: kỷ 1 là Göbekli
-  // Tepe — một GÒ ĐẤT cao 1,50 đơn vị — nên camera lùi thêm 1,88 là ĐÚNG, thành phố đã được nâng
-  // lên thật. Bài test khi đó đang đòi một điều đã hết đúng (cùng hình dạng sai với Phase 4D).
-  // Thứ bài này thật sự muốn canh là *nhà thấp thì khung phải sát hơn*, tức phần đóng góp của
-  // `massScale`. Nên trừ đúng phần địa hình ra rồi mới so — trừ bằng hằng số thật, không chép số.
-  for (const era of [1, 2]) {
+  // (a) LỜI HỨA CHÍNH: không kỷ nào còn công trình bị mép khung cắt.
+  for (let era = 1; era <= 15; era += 1) {
     const opts = cityOrbitOptions(GRID, era);
-    const massOnly = opts.distance - terrainMaxHeight(era) * TERRAIN_TO_DISTANCE;
-    assert.ok(massOnly < BASE,
-      `kỷ ${era} nhà rất thấp mà camera vẫn đứng xa như kỷ nhà cao (${massOnly.toFixed(2)})`);
-    const targetMassOnly = opts.target.y - terrainMaxHeight(era) * TERRAIN_TO_TARGET_Y;
-    assert.ok(Math.abs(targetMassOnly) < 1e-9,
-      `kỷ ${era}: nâng điểm ngắm lên vô cớ ⇒ mặt đất tụt khỏi khung (${targetMassOnly.toFixed(3)})`);
+    const xau = worstFrameMargin(cityFrameBoxes(era, GRID), {
+      distance: opts.distance, targetY: opts.target.y,
+    });
+    assert.ok(xau.margin >= FRAME_FIT_MARGIN - 1e-6,
+      `kỷ ${era}: ${xau.id} lọt ra ngoài mép ${xau.edge} `
+      + `(biên ${xau.margin.toFixed(3)} < ${FRAME_FIT_MARGIN})`);
   }
 
-  // (b) Hai TRẦN kẹp hai đầu. Không kỷ nào được lùi quá 1,35 lần mức sát (đo được cao nhất 1,29)
-  // và không kỷ nào được dí sát hơn 0,86 lần (đo được thấp nhất 0,88). Thiếu vế dưới thì một bản
-  // sửa "dí thật gần cho rõ" sẽ cắm camera vào giữa thành phố mà không có gì đỏ lên.
+  // (b) KHÔNG MỘT LI THỪA. Đây là vế ĐỐI CHỨNG, và nó là chỗ lời Đàm ở Phase 5A vẫn sống: thiếu
+  // nó thì (a) vẫn xanh ngay cả khi ai đó nhân đôi mọi khoảng cách "cho chắc ăn", tức quay lại
+  // đúng cái *"thu quá xa rồi bị mờ"*. Cách canh: biên thật phải BẰNG mức fit đã nhắm, không được
+  // rộng hơn — 12/15 kỷ đo được đúng `0,0400`, tức camera đứng ở khoảng cách sát nhất có thể.
+  //
+  // ⚠️ NGOẠI LỆ TƯỜNG MINH ĐẾM ĐƯỢC, KHÔNG NỚI NGƯỠNG CHO CẢ BẢNG (`TECH_DEBT #44`). `cityOrbitOptions`
+  // lấy `max()` của HAI đường: khoảng cách suy từ `massScale` và khoảng cách vừa đủ để lọt khung
+  // (`cityFrameDistance`). Kỷ nào đường `massScale` thắng thì kỷ ấy đứng xa hơn mức fit đòi — dư
+  // địa THẬT, có lý do đọc được, không phải nhiễu.
+  //
+  // ⚠️ PHASE 20 ĐỔI DANH SÁCH NÀY TỪ [15] SANG [14], VÀ ĐÓ LÀ MỘT SỐ ĐO CHỨ KHÔNG PHẢI MỘT LỰA
+  // CHỌN. Bộ xương cũ để cả vành ngoài lưới làm đường (`ROAD_LINES` chứa 0 và 11) nên công trình
+  // dừng ở ô 10; bộ xương sinh theo kỷ nay cho thửa chạm vành ngoài, tức khối xa nhất nhích ra và
+  // đường FIT đòi xa hơn trước.
+  //
+  // ⚠️ PHASE 21 ĐỔI NÓ LẦN NỮA, SANG [4, 5, 14] — CŨNG LÀ SỐ ĐO. Bản hợp nhất cho ranh giới thửa
+  // đi theo CUNG CONG (ADR-059) nên tập ô xây được của mỗi kỷ đổi, và khối xa nhất của kỷ 4 với kỷ
+  // 5 lùi vào trong ⇒ đường FIT của chúng đòi GẦN hơn, để `massScale` thắng. Biên đo được ở mốc
+  // hợp nhất: kỷ 4 = `0,0798` · kỷ 5 = `0,2294` · kỷ 14 = `0,0913`, so với `0,0400` của 12 kỷ kia.
+  // Kỷ 5 dư nhiều nhất bảng vì `minSide: 2` + `sizeVary: 0,82` đẩy thửa lớn vào giữa, nên rìa lưới
+  // của nó thưa hẳn.
+  //
+  //
+  // ⚠️ PHASE 21 §5 ĐỔI NÓ LẦN NỮA, SANG [4, 14] — **KỶ 5 RỜI DANH SÁCH, VÀ ĐÓ LÀ TỐT LÊN**. §5 nâng
+  // số thửa kỷ 5 từ 6 lên 9 (giữ `minSide: 2`), nên đúng cái nguyên nhân ghi ở đoạn trên — *"thửa
+  // lớn dồn vào giữa nên rìa lưới thưa hẳn"* — bị gỡ: rìa nay có thửa nhỏ, khối xa nhất nhích ra,
+  // đường FIT đòi xa hơn và thắng lại đường `massScale`. Biên đo được sau §5: kỷ 4 = `0,0798` ·
+  // kỷ 14 = `0,0913` · **13 kỷ còn lại đúng `0,0400`** (kỷ 5 từ `0,2294` về `0,0400`, tức nó thôi
+  // bị thu nhỏ vô cớ). Đây là hệ quả ĐÚNG của §5, không phải một cái ngưỡng được nới.
+  //
+  // Thêm một kỷ thứ ba vào danh sách này là thêm một kỷ bị thu nhỏ vô cớ, và một trong hai kỷ này
+  // rơi ra cũng phải xem lại — cả hai chiều đều đỏ.
+  const DU_DIA = [];
+  for (let era = 1; era <= 15; era += 1) {
+    const opts = cityOrbitOptions(GRID, era);
+    const xau = worstFrameMargin(cityFrameBoxes(era, GRID), {
+      distance: opts.distance, targetY: opts.target.y,
+    });
+    if (xau.margin > FRAME_FIT_MARGIN + 1e-3) DU_DIA.push(era);
+  }
+  assert.deepEqual(DU_DIA, [4, 14],
+    `những kỷ đứng XA HƠN mức vừa đủ đã đổi: ${JSON.stringify(DU_DIA)}`);
+
+  // (c) SÀN GIỮ NGUYÊN, KHÔNG ĐỔI MỘT CHỮ SỐ. Vế này chưa bao giờ mâu thuẫn với lời hứa nào:
+  // thiếu nó thì một bản sửa "dí thật gần cho rõ" sẽ cắm camera vào giữa thành phố mà không có gì
+  // đỏ lên.
   for (let era = 1; era <= 15; era += 1) {
     const ratio = cityOrbitOptions(GRID, era).distance / BASE;
-    assert.ok(ratio <= 1.35,
-      `kỷ ${era} lùi ra ${ratio.toFixed(2)} lần mức sát — quay lại đúng cái "thu quá xa rồi bị mờ"`);
     assert.ok(ratio >= 0.86,
       `kỷ ${era} dí vào ${ratio.toFixed(2)} lần mức sát — camera chui vào giữa thành phố`);
   }
 
-  // (c) …và kỷ cao thì PHẢI lùi thật, nếu không bài "không cắt ngọn" ở trên chỉ đang may mắn.
-  assert.ok(cityOrbitOptions(GRID, 15).distance > cityOrbitOptions(GRID, 1).distance * 1.3,
-    'kỷ 15 cao gần gấp 5 lần kỷ 1 mà khung hình gần như y hệt nhau');
+  // (d) ĐIỂM NGẮM vẫn không được nâng lên vô cớ — vế này của bài cũ giữ nguyên, vì nó nói về
+  // `target.y` chứ không nói về khoảng cách, nên VIỆC 5 không chạm tới nó.
+  for (const era of [1, 2]) {
+    const opts = cityOrbitOptions(GRID, era);
+    const targetMassOnly = opts.target.y - terrainMaxHeight(era) * TERRAIN_TO_TARGET_Y;
+    assert.ok(Math.abs(targetMassOnly) < 1e-9,
+      `kỷ ${era}: nâng điểm ngắm lên vô cớ ⇒ mặt đất tụt khỏi khung (${targetMassOnly.toFixed(3)})`);
+  }
 });
 
 test('kỷ lạ vẫn ra được khung hình dùng được', () => {

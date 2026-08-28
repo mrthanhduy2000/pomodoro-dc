@@ -160,13 +160,52 @@ test('TECH_DEBT #57 ĐÃ ĐÓNG — 6 kỷ vượt cổng 5% THEO PHÉP TIA; 3 k
   // ⚠️ VÀ KHÔNG NỚI CỔNG 5% XUỐNG CHO VỪA. Cấm bằng chữ ở `TECH_DEBT #59`: *"Nới một ngưỡng cho vừa
   // kết quả là cái phễu Phase 9A."* Cũng KHÔNG quay đồng bằng về phẳng để lấy lại con số — đó là
   // trả lại đúng cái bệ mà Đàm bác ba vòng liền.
-  assert.deepEqual(TRUOT, [2, 3, 4, 5, 6, 7, 9, 10],
-    'đúng TÁM kỷ được miễn cổng 5% theo phép tia — 6·7·10 vì BỀ RỘNG (`TECH_DEBT #59`, đã đóng) và '
-    + '2·3·4·5·9 vì ĐỊA HÌNH CHE (`TECH_DEBT #67`, chờ Đàm). Danh sách này đổi nghĩa là hoặc có kỷ '
-    + 'thứ chín vừa tụt xuống, hoặc một trong tám kỷ ấy vừa được chữa — cả hai trường hợp đều phải '
+  // ⚠️ 2026-08-24, Phase 19 VIỆC 5 — **KỶ 5 ĐÃ ĐƯỢC CHỮA, VÀ NÓ ĐƯỢC CHỮA BỞI MỘT PHASE KHÔNG NÓI
+  // GÌ VỀ NƯỚC.** Đo lại: kỷ 5 đi từ **3,51% lên 7,30%** (cổng 5%), tức nó vượt cổng với biên 46%.
+  // Nguyên nhân: VIỆC 5 lùi khung toàn cảnh ra để không công trình nào bị mép cắt (kỷ 5: 1,42 →
+  // 1,62 lần cỡ lưới), mà mặt nước thì nằm NGOÀI thành phố — lùi ra bao nhiêu thì nước lọt vào
+  // khung thêm bấy nhiêu. Đây là hệ quả thật, không phải phép đo trôi: cùng công cụ, cùng số tia.
+  // ⇒ `TECH_DEBT #67` (ĐỊA HÌNH CHE) nay còn 2·3·4·9, không còn kỷ 5.
+  //
+  // ⚠️ 2026-08-24, PHASE 21 (hợp nhất) — **KỶ 5 QUAY LẠI, VÀ NÓ QUAY LẠI ĐÚNG CHỖ CŨ: 7,30% →
+  // 3,63%.** Nguyên nhân đã truy chứ không đoán: bản hợp nhất cho ranh giới thửa đi theo CUNG, mà
+  // `terrain.js` san phẳng dải đất dưới chân MẠNG ĐƯỜNG (`roadCellCandidates`) — đường đổi thì
+  // hình dạng đồng bằng quanh thành phố đổi theo, và bờ XA của con suối Elzbach lại khuất sau một
+  // sống đất gần. Tức đây vẫn là chứng **ĐỊA HÌNH CHE** (`TECH_DEBT #67`), không phải chứng
+  // **BỀ RỘNG** (`TECH_DEBT #59`, đã đóng cho 6·7·10) — cùng cơ chế đã đẩy nó xuống 3,51% hồi
+  // 2026-08-21 và cùng cơ chế đã kéo nó lên 7,30% hồi Phase 19 VIỆC 5.
+  //
+  // ⚠️ Đây là lần thứ TƯ kỷ 5 đổi phe (5,54 → 3,51 → 7,30 → 3,63), và điều đáng đọc ra là: nó
+  // KHÔNG có bệnh riêng của nó, nó chỉ đứng đúng ở ranh giới nên mọi thay đổi về địa hình đều lật
+  // được nó. Chữa nó bằng cách chỉnh riêng kỷ 5 là chữa triệu chứng; cách chữa THẬT vẫn là hướng
+  // ở `TECH_DEBT #60` (cầu · bến · thuyền · kè thay cho diện tích mặt nước).
+  // ⚠️ VÀ KHÔNG NỚI CỔNG 5%, KHÔNG QUAY `drain`/đồng bằng về giá trị cũ để lấy lại con số.
+  //
+  // ⚠️ 2026-08-24, PHASE 21 §5 — **KỶ 5 ĐỔI PHE LẦN THỨ NĂM: 3,63% → 7,00% ✅**, và lần này lời
+  // giải thích ở ngay đoạn trên đã dự đoán đúng cơ chế: §5 nâng số thửa của bảy kỷ ⇒ `roadCells`
+  // của kỷ 5 đi từ 80 lên 83 ⇒ dải đất được `terrain.js` san phẳng dưới chân mạng đường đổi hình ⇒
+  // sống đất che bờ xa của suối Elzbach thấp xuống. Cùng công cụ, cùng 88 tia, chỉ khác cây mã.
+  //
+  //     kỷ   TRƯỚC §5   SAU §5        kỷ   TRƯỚC §5   SAU §5
+  //      2     3,92 ❌   4,69 ❌        9     4,73 ❌   4,89 ❌
+  //      3     4,61 ❌   4,85 ❌       10     1,62 ❌   1,85 ❌
+  //      4     3,92 ❌   3,92 ❌       11     9,25 ✅   9,64 ✅
+  //      5     3,63 ❌   **7,00 ✅**   12     8,81 ✅   8,66 ✅
+  //      6     2,23 ❌   2,88 ❌       13    18,83 ✅  22,63 ✅
+  //      7     3,27 ❌   3,53 ❌       14    21,57 ✅  21,57 ✅
+  //      8    10,98 ✅  11,99 ✅       15    19,32 ✅  19,93 ✅
+  //
+  // ⚠️ ĐỌC CHO ĐÚNG: **13/14 kỷ đi LÊN** (chỉ kỷ 12 nhích xuống 0,15 đpt, kỷ 14 đứng yên), tức §5
+  // không "chỉnh riêng kỷ 5" mà làm cả bảng khá lên một chút — nhưng ba kỷ hẹp 6·7·10 vẫn còn cách
+  // cổng rất xa (2,88 · 3,53 · 1,85), đúng như chứng **BỀ RỘNG** đã ghi: xoay hay san đất không
+  // cứu được một con kênh rộng 0,9 ô. Cổng 5% KHÔNG nới, `drain` KHÔNG quay lại giá trị sai.
+  assert.deepEqual(TRUOT, [2, 3, 4, 6, 7, 9, 10],
+    'đúng BẢY kỷ được miễn cổng 5% theo phép tia — 6·7·10 vì BỀ RỘNG (`TECH_DEBT #59`) và '
+    + '2·3·4·9 vì ĐỊA HÌNH CHE (`TECH_DEBT #67`, chờ Đàm). Danh sách này đổi nghĩa là hoặc có kỷ '
+    + 'thứ tám vừa tụt xuống, hoặc một trong bảy kỷ ấy vừa được chữa — cả hai trường hợp đều phải '
     + 'xem lại hai mục nợ ấy chứ không phải sửa con số ở đây.');
-  assert.equal(DAT.length, 6,
-    'phải có đúng 6 kỷ vượt 5% THEO PHÉP TIA. ⚠️ KHÔNG phải "6 kỷ đạt cổng 5%" — trên màn hình '
+  assert.equal(DAT.length, 7,
+    'phải có đúng 7 kỷ vượt 5% THEO PHÉP TIA. ⚠️ KHÔNG phải "7 kỷ đạt cổng 5%" — trên màn hình '
     + 'còn ít hơn (xem khối chú thích đầu bài và `TECH_DEBT #63`).');
 
   // Vế thật sự canh bản vá `worldYaw`: 11 kỷ kia phải THẬT SỰ đạt.
@@ -185,6 +224,9 @@ test('TECH_DEBT #57 ĐÃ ĐÓNG — 6 kỷ vượt cổng 5% THEO PHÉP TIA; 3 k
   //     với 8,81%** — biên dày lên 76%. Nghe như một tin tốt, nhưng nó là tin tốt của một nhóm đã
   //     mất ba thành viên: nhóm ĐẠT thu từ 9 xuống 6 kỷ. **Biên dày lên vì những ca mỏng đã bị loại
   //     ra khỏi phép đo, không vì ca nào khoẻ lên.** Ghi thẳng ra để phiên sau khỏi đọc nhầm.
+  //   · sau hợp nhất Phase 21, kỷ mỏng nhất còn lại là **kỷ 12 với 8,64%**. Nhóm ĐẠT thu tiếp từ
+  //     7 xuống 6 kỷ (kỷ 5 rơi ra), nên đây lại là cùng một hiện tượng: biên không dày lên, chỉ có
+  //     ca mỏng bị loại ra khỏi phép đo.
   const mongNhat = Math.min(...DAT.map((era) => doDuoc.get(era)));
   assert.ok(mongNhat >= CONG,
     `kỷ mỏng nhất trong nhóm ĐẠT chỉ được ${(mongNhat * 100).toFixed(2)}%`);
@@ -219,10 +261,18 @@ test('KỶ 6 TRƯỢT VÌ BỀ RỘNG — không góc nào trong 24 góc cứu �
     const yaw = (k / 24) * Math.PI * 2;
     tranToanCuc = Math.max(tranToanCuc, tiLeNuocTrongKhung({ era: 6, yaw, tia: TIA }).nuoc);
   }
-  assert.ok(tranToanCuc < 0.05,
-    `kỷ 6: có một góc đưa mặt nước lên ${(tranToanCuc * 100).toFixed(2)}% — vượt cổng 5%. Nếu đúng `
-    + 'thì `TECH_DEBT #59` đã hết đúng ở kỷ này: xem lại nó thay vì sửa ngưỡng ở đây.');
-  assert.ok(tranToanCuc > 0.03,
-    `kỷ 6: trần toàn cục tụt còn ${(tranToanCuc * 100).toFixed(2)}% — thấp bất thường so với 4,36% `
-    + 'đo được ngày 2026-08-20. Mặt nước có còn được dựng không?');
+  // ⚠️ 2026-08-24 — BÀI NÀY ĐÃ ĐẢO CHIỀU, VÀ NÓ ĐẢO CHIỀU VÌ CHÍNH SỐ ĐO CỦA NÓ.
+  // Bài cũ đòi `trần toàn cục < 5%` để CHỨNG MINH câu *"kỷ 6 trượt vì BỀ RỘNG, không góc nào cứu
+  // được"*. Sau VIỆC 5 (khung toàn cảnh lùi ra ở cả 15 kỷ) trần ấy lên **7,24%** — tức câu kia
+  // **HẾT ĐÚNG**: có góc cứu được kỷ 6. Đúng như bài cũ đã tự hẹn: *"xem lại `TECH_DEBT #59` thay
+  // vì sửa ngưỡng ở đây"* — đã xem lại và ghi vào mục nợ ấy.
+  // Sự thật còn lại, và nó vẫn đáng canh: ở góc MẶC ĐỊNH — góc Đàm thật sự nhìn thấy — kỷ 6 vẫn
+  // chỉ được 2,59%, dưới cổng. Nên nay bài canh ĐÚNG hai vế ấy, mỗi vế một chiều:
+  const macDinh6 = tiLeNuocTrongKhung({ era: 6, tia: TIA }).nuoc;
+  assert.ok(macDinh6 < 0.05,
+    `kỷ 6 ở góc MẶC ĐỊNH đã lên ${(macDinh6 * 100).toFixed(2)}% — nếu thật thì kỷ 6 hết trượt, `
+    + 'gỡ nó khỏi `TRUOT` ở bài trên và đóng phần kỷ 6 của `TECH_DEBT #59`.');
+  assert.ok(tranToanCuc > 0.05,
+    `kỷ 6: trần toàn cục tụt còn ${(tranToanCuc * 100).toFixed(2)}% — dưới 5%, tức đã quay lại thế `
+    + 'giới trước VIỆC 5 nơi không góc nào cứu được kỷ này. Khung toàn cảnh có bị kéo gần lại không?');
 });

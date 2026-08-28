@@ -63,7 +63,7 @@ import { computeCityLayout } from '../../src/engine/cityLayout.js';
 import { BLUEPRINT_CATALOG } from '../../src/engine/constants.js';
 import { ROAD_PART } from '../../src/components/city/render3d/terrainMesh.js';
 import { getNetworkStyle } from '../../src/engine/city3d/networkStyle.js';
-import { buildRoadPlan } from '../../src/engine/roadPlan.js';
+import { planRoadCells } from '../../src/engine/city3d/cityPlan.js';
 
 const GRID = 12;
 const ERAS = Array.from({ length: 15 }, (_, i) => i + 1);
@@ -213,13 +213,17 @@ function đoKỷ(era) {
 /**
  * HÌNH DẠNG CỦA CẢ MẠNG — vế mà `độUốnKhúc` không nhìn tới.
  *
- * ⚠️ Đo THUẦN trên `buildRoadPlan`, không đụng hình học đã dựng: ba con số này nói về *ô nào là
+ * ⚠️ Đo THUẦN trên tập ô đường mà bộ hoạch định trả về, không đụng hình học đã dựng: ba con số này nói về *ô nào là
  * đường*, không nói về mép một đoạn đường. Chúng là thứ trả lời thẳng câu của Đàm — *"làm gì có
  * đường dạng bàn cờ"* — trong khi cột `LỆCH÷BỀ RỘNG` trả lời câu *"con đường ấy có cong không"*.
  * Hai câu khác nhau, nên hai phép đo, và bảng in cả hai.
  */
 function hìnhMạng(era) {
-  const cells = buildRoadPlan(era, getNetworkStyle(era)).cells;
+  // ⚠️ ĐỔI NGUỒN 2026-08-24 (Phase 21, ADR-064): `buildRoadPlan` đã bị xoá khi hợp nhất hai
+  // nhánh — nay bố cục do `buildCityPlan` (chia thửa đệ quy) quyết, còn `arcTrace` chỉ lo
+  // HÌNH DẠNG nét cắt. `planRoadCells` là cùng một đại lượng (`{x, y}` của mọi ô đường),
+  // nên ba con số bên dưới vẫn so được với bảng cũ.
+  const cells = planRoadCells(era);
   const có = new Set(cells.map((c) => `${c.x}|${c.y}`));
   const nhánh = (c) => [[1, 0], [-1, 0], [0, 1], [0, -1]]
     .filter(([dx, dy]) => có.has(`${c.x + dx}|${c.y + dy}`)).length;

@@ -27,19 +27,33 @@ Mặt trận đang làm: **thành phố 3D** (`src/engine/city3d/` + `src/compon
    `api/_tests/`. Hiện có 10 function thật.
 
 ## Đang ở đâu
-- Nhánh production: `main`. Mốc gần nhất: **ADR-061** (báo cáo tuần thôi tự bật sáng thứ Hai ⇒ luật
-  mức độ làm phiền **hết ngoại lệ**). ⚠️ Nó chạy được nhờ tách MỘT trường thành HAI:
-  `lastWeeklyReportDate` = *đã MỜI* · `lastWeeklyReportSeenDate` = *đã XEM*. Luật: **mở = đã xem,
-  đóng = không ghi gì, toast hết giờ = không ghi gì**; cú mở đầu tiên trong tuần phải là bản
-  `'previous'`; chấm ở nút "Báo cáo tuần" là LƯỚI AN TOÀN (không hết hạn), đừng gỡ.
-  ⚠️ **Lưới ấy phải căng ở CẢ HAI nền tảng**: thanh bên desktop VÀ mục "Báo cáo tuần" trong menu
-  "Thêm" trên iPhone — trước ADR-061, iPhone không có nút nào mở báo cáo tuần, nên gỡ mục ấy là
-  đưa khuyết tật cũ quay lại đúng thiết bị Đàm dùng nhiều nhất (`rewardToastWiring.test.js` canh).
-  Trước đó: **ADR-060** (MỘT thẻ phần thưởng chung cho cả app +
-  luật mức độ làm phiền: **chặn màn hình CHỈ dành cho lên kỷ · thăng hoa · khủng hoảng kỷ · thảm
-  hoạ**; mọi phần thưởng khác đi qua chồng toast `RewardToastHost`, tự tắt sau 4 giây).
-  Trước đó: **ADR-059** (mỗi kỷ MỘT MẠNG ĐƯỜNG riêng — hết bàn cờ; `roadPlan.js` nối các điểm mốc
-  bằng cung cong ⇒ giao lộ chữ T/Y/ngã năm).
+- Nhánh production: `main`. Nó nay mang **CẢ HAI** dòng công việc, vừa được gộp 2026-08-28 theo
+  lệnh trực tiếp của Đàm (*"còn 9 commit Phase 19-21 kia gộp vào main luôn"*) — chỉ thị cũ của
+  Phase 21 (*"push nhánh phụ, không tự gộp `main`"*) đã bị lệnh này thay thế.
+  ⚠️ **Phase 21 do đó lên production TRƯỚC khi Đàm nhìn ảnh nghiệm thu** — mục "chờ Đàm nhìn ảnh"
+  ở phần dưới VẪN CÒN HIỆU LỰC, chỉ là nay nó nghiệm thu một thứ đang chạy thật.
+- **Giao diện (từ `main`): ADR-060 + ADR-061** — MỘT thẻ phần thưởng chung; luật mức độ làm phiền
+  **hết ngoại lệ** (chặn màn hình CHỈ dành cho lên kỷ · thăng hoa · khủng hoảng kỷ · thảm hoạ).
+  Nó chạy được nhờ tách MỘT trường thành HAI: `lastWeeklyReportDate` = *đã MỜI* ·
+  `lastWeeklyReportSeenDate` = *đã XEM*. Luật: **mở = đã xem, đóng = không ghi gì, toast hết giờ =
+  không ghi gì**; chấm ở nút "Báo cáo tuần" là LƯỚI AN TOÀN (không hết hạn), đừng gỡ, và nó phải
+  căng ở **CẢ HAI** nền tảng (thanh bên desktop VÀ menu "Thêm" trên iPhone — trước ADR-061 iPhone
+  không có nút nào mở báo cáo tuần).
+  ⚠️ **Skin `arcade` ("Sân Chơi") là mặc định MỚI, nhưng máy đã lưu skin cũ thì KHÔNG tự đổi** —
+  dữ liệu đã lưu thắng `DEFAULT_UI_SKIN` (xem `uiSkins.js`). Đây là lý do Đàm "sửa nhiều mà không
+  thấy gì" ngày 2026-08-28; cần một phép ép chuyển một lần, chưa làm.
+- **Thành phố 3D (từ nhánh Phase 19–21): ADR-064 · ADR-065 · ADR-066.** Bộ xương thành phố sinh
+  theo kỷ: BSP quyết cắt Ở ĐÂU, cung cong quyết cắt theo HÌNH GÌ; **một thửa là TẬP Ô**, không phải
+  hình chữ nhật đã khai. Trước đó: ADR-059 (mỗi kỷ MỘT MẠNG ĐƯỜNG riêng — hết bàn cờ).
+- ⚠️ **PHÉP GỘP 2026-08-28 CÓ MỘT QUYẾT ĐỊNH PHẢI BIẾT — `reach` LẤY 0,8 CỦA NHÁNH, KHÔNG LẤY 0,75
+  CỦA `main`.** Hai phiên đo cùng một đại lượng trên hai THẾ GIỚI khác nhau: `main` đo trên bố cục
+  cũ và chốt 0,75; nhánh đo trên bố cục Phase 21 §4 (thành phố LAN RA NGOÀI ô lưới) và thấy khối đổ
+  bóng xa tâm nhất đi tới bán kính **9,2275** — xa hơn cả `reach` mà 0,75 cho ra (9,00). Sau gộp,
+  thế giới là bố cục MỚI, nên số của nhánh mới là số đúng; giữ 0,75 là cắt cụt bóng ở vành ngoài.
+  Đúng bài học `TECH_DEBT #43`: **một bảng số chỉ đúng cho đúng hai commit đã sinh ra nó.**
+- ⚠️ **Bóng đổ nay có HAI tầng nướng sẵn, nhân vào nhau** — `contactShade` (trục ĐỨNG, đo từ nền của
+  CHÍNH công trình nhờ bản vá của `main`) × `occlusionShade` (đủ BA chiều, từ nhánh Phase 21). Phép
+  gộp giữ cả hai; đừng gỡ tầng nào mà chưa đọc `geometryFactory.js` dòng ~90.
 - Chuyển động: **ĐÚNG BA NHỊP**, nguồn duy nhất `src/lib/motionPresets.js` — `enter` (thứ xuất
   hiện) · `press` (thứ bấm được) · `reward` (phần thưởng, cột mốc). Cả ba **tự im** khi bật
   "Giảm chuyển động" nên chỗ gọi đừng tự kiểm tra. ⚠️ Đừng gõ lại `initial`/`animate` bằng tay,
@@ -66,12 +80,13 @@ Mặt trận đang làm: **thành phố 3D** (`src/engine/city3d/` + `src/compon
   thông báo (`ui.notificationFeed`). `rewardToastWiring.test.js` canh việc này.
 - Cảnh 3D: 15 kỷ, mỗi kỷ buộc vào một nước có thật (`country`/`landmark` ở `eraStyle.js`).
   Các bảng bản sắc 15 kỷ đã có: mái · tầng trệt · mặt đường · thực vật · địa thế/nước ·
-  vùng phụ cận · khu phố · dáng đi · mạng đường.
-- Lưới thành phố **12×12**. Từ ADR-059 mỗi kỷ có mạng đường RIÊNG (**29…83 ô**, không còn
-  là 80 ô chung); 45 ô hứa cho kỳ quan (chỉ 5 ô có nhà); còn **371 ô nhà dân trên cả 15 kỷ**,
-  đã chạm trần. Muốn thành phố đông hơn thì đổi thứ NẰM TRONG một ô, đừng thêm ô.
-  ⚠️ Hỏi mạng đường thì phải truyền `era`: `roadCellCandidates(era)` / `roadCellCount(era)` —
-  gọi thiếu tham số sẽ **im lặng** trả lời về kỷ 1.
+  vùng phụ cận · khu phố (có trục `layout`) · dáng đi · mạng đường.
+- Lưới thành phố **12×12**. Mỗi kỷ có mạng đường RIÊNG (**44…88 ô**, không còn là 80 ô chung).
+  Thửa chia vai ở `city3d/parcelRoles.js`: 5 kỳ quan (536 ô) · 1–2 sân bỏ trống (155 ô) ·
+  còn lại nhà dân (**371 ô trên cả 15 kỷ**, đã chạm trần). Muốn thành phố đông hơn thì đổi thứ
+  NẰM TRONG một ô, đừng thêm ô.
+  ⚠️ Hỏi mạng đường thì phải truyền `era`: `roadCellCandidates(era)` / `roadCellCount(era)`
+  (ở `src/engine/cityLayout.js`) — gọi thiếu tham số sẽ **im lặng** trả lời về kỷ 1.
 - Hiệu năng: đã đo dứt điểm trên Apple M3 — **dư 3,2 lần**, hình học gần như miễn phí.
   **KHÔNG đo lại** trừ khi Đàm thấy khung hình giật trên máy thật.
 
@@ -80,20 +95,24 @@ Mặt trận đang làm: **thành phố 3D** (`src/engine/city3d/` + `src/compon
    không có khối chóp bốn mặt. `prism` với `sides: 4` + `taper: 0` chính là thứ cần.
 2. **"Giống 3D hơn"** — bóng đổ nét hơn (`SHADOW_MAP_DESKTOP` 2048 → 4096, siết
    `sun.shadow.camera` về phạm vi thành phố) + thêm che khuất môi trường (AO).
-0. **Báo cáo tuần vẫn tự bật sáng thứ Hai** — ngoại lệ DUY NHẤT của luật mức độ làm phiền
-   (ADR-060). ⚠️ Đọc `TECH_DEBT #87` TRƯỚC: phải tách "đã xem" khỏi "đã bỏ qua" rồi mới đụng,
-   nếu không lỡ một cái toast 4 giây = mất báo cáo của cả tuần.
-1. *(ĐÃ XONG, gỡ 2026-08-27)* ~~Kim tự tháp / ziggurat~~ — kỷ 2 khai `roof: 'pyramid'`, kỷ 3 khai
-   `roof: 'ziggurat'`, cả hai `case` đã có trong `buildingSpec.js` **từ 2026-08-21**. Mục này nằm
-   trong hàng đợi mô tả một việc đã làm xong, và một phiên sau đã suýt đi làm lại nó.
-2. **"Giống 3D hơn" — nay cần Đàm CHỌN, không cần code.** Hai cần gạt mục cũ nêu đã dùng hết
-   (2026-08-27): bản đồ bóng 2048 → **4096** ✓ · `sun.shadow.camera` vốn đã bó sát (thử siết thêm
-   xuống 0,58·lưới → ảnh không đọc ra khác biệt, đã hoàn tác) · AO thì **đã có từ lâu**
-   (`contactShade`) và vừa được vá một khuyết tật thật. Cả hai đều DƯỚI ngưỡng mắt ở khung toàn
-   cảnh. Cần gạt còn lại đều là quyết định MỸ THUẬT, đừng tự chọn: (a) đậm/cao thêm bóng tiếp xúc
-   (`CONTACT_FLOOR` 0,58 · `CONTACT_REACH` 0,38) · (b) mép bóng cứng hơn (`PCFSoftShadowMap` →
-   `PCFShadowMap`) · (c) hạ đèn nền cho bóng sâu hơn — nhưng (c) đụng cảnh báo "nhợt như sữa"
-   ở `PHASE_RULES` §2.
+0. 🔴 **ÉP CHUYỂN SKIN MỘT LẦN** — máy Đàm vẫn lưu `uiSkin: 'editorial'` nên toàn bộ công giao
+   diện của bảy bước (skin `arcade`, nút bóng đặc, HUD gọn, toast thưởng, 5 tab, ba nhịp chuyển
+   động) đang chạy trên production mà anh KHÔNG nhìn thấy. Cần cờ `skinMigratedV1`: bản lưu chưa
+   có cờ thì đặt về `DEFAULT_UI_SKIN` một lần rồi bật cờ; có cờ rồi thì tôn trọng lựa chọn đã lưu.
+   Kèm: hiện 7 ký tự commit đang chạy ở cuối màn Cài đặt, để lần sau phân biệt được "chưa lên" với
+   "lên rồi mà không thấy".
+1. 🔴 **CHỜ ĐÀM NHÌN ẢNH PHASE 21** — bản quét 15 kỷ + 12 ảnh nhìn thẳng từ trên xuống (kỷ
+   1 · 3 · 7 · 10 · 11 · 14, mỗi kỷ ở 20 phiên và 120 phiên). Nghiệm thu bằng MẮT: kỷ 1–9
+   không được thấy hàng lối nào; kỷ 11–15 thì phải thấy. ⚠️ Nay nó đã Ở TRÊN production.
+2. **`TECH_DEBT #88`** — trần một-ô (`BLOCK_MAX_CELLS = 1`) đang khoá số suất đất ở 4 ở cả 15
+   kỷ, làm cột `units`/`cols`/`rows` của bảng khu phố thành trục chết. Ba phương án đã đo.
+3. **`TECH_DEBT #89` vẫn MỞ** dù cổng trục chặng ngày đã qua (12,44) — dải TRỜI, cần gạt đã
+   nêu đích danh hai lần, gần như không nhúc nhích. Đừng đọc con số gộp là "đã giải".
+4. **"Giống 3D hơn" — nay cần Đàm CHỌN, không cần code.** Hai cần gạt đã dùng hết (2026-08-27):
+   bản đồ bóng 2048 → **4096** ✓ · `sun.shadow.camera` đã bó sát. Cần gạt còn lại đều là quyết
+   định MỸ THUẬT, đừng tự chọn: (a) đậm/cao thêm bóng tiếp xúc (`CONTACT_FLOOR` 0,58 ·
+   `CONTACT_REACH` 0,38) · (b) mép bóng cứng hơn (`PCFSoftShadowMap` → `PCFShadowMap`) · (c) hạ
+   đèn nền cho bóng sâu hơn — nhưng (c) đụng cảnh báo "nhợt như sữa" ở `PHASE_RULES` §2.
 
 ## Lệnh hay dùng
 ```

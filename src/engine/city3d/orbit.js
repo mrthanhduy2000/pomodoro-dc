@@ -10,7 +10,11 @@
  */
 
 import { getEraStyle } from './eraStyle';
-import { terrainMaxHeight } from './terrain';
+import { buildTerrain, terrainMaxHeight } from './terrain';
+import { buildBuildingSpec } from './buildingSpec';
+import { BUILDING_SCALE, specSpan } from './parts';
+import { computeCityLayout } from '../cityLayout';
+import { BLUEPRINT_CATALOG, BUILDING_EFFECTS } from '../constants';
 
 const TAU = Math.PI * 2;
 
@@ -131,6 +135,165 @@ export const TERRAIN_TO_TARGET_Y = 0.55;
  * hằng số đoán mò song song — đúng luật "một luật chỉ được có một công thức". Kỷ thấp giữ y nguyên
  * khung sát: `lift` bằng 0 tuyệt đối, không phải "gần bằng 0".
  */
+/**
+ * ── KHUNG HÌNH KHÔNG ĐƯỢC CẮT CÔNG TRÌNH (`TECH_DEBT #24`, Phase 19 VIỆC 5) ───────────────────
+ *
+ * ⚠️ HỆ SỐ `massScale` Ở TRÊN LÀ MỘT **DỰ ĐOÁN**, VÀ ĐÃ ĐO RA LÀ NÓ ĐOÁN GẦN NHƯ NGƯỢC.
+ * Đặt cạnh nhau lần đầu (2026-08-24, `scripts/frame-fit.mjs`, khung 1,30):
+ *
+ *   kỷ  |  CẦN  | massScale ĐANG CHO
+ *    1  | 1,31  | 1,10        8  | 1,88  | 1,25       15  | 1,52  | 1,57
+ *    7  | 1,75  | 1,25       11  | 1,82  | 1,25
+ *
+ * Kỷ 8 cần LÙI XA NHẤT bảng mà `massScale` cho nó gần như mức sát nhất; kỷ 15 cao nhất bảng lại là
+ * kỷ DUY NHẤT không bị cắt. Lý do: 13/15 kỷ bị cắt ở mép **DƯỚI**, tức góc GẦN của thành phố rơi
+ * khỏi khung — thứ quyết định là BỀ NGANG mặt bằng cộng CAO ĐỘ ĐẤT, không phải chiều cao nhà.
+ * ⇒ Đúng bài học *"đừng DỰ ĐOÁN thứ có thể ĐO"*: nay khoảng cách có một cái SÀN đo thẳng trên
+ *   chính hộp bao của thành phố đã dựng, và số cũ chỉ còn là sàn dưới.
+ *
+ * ⚠️ VÌ SAO PHÉP ĐO NÀY KHÔNG PHÁ ADR-007 (bảo tàng bất động): nó dựng thành phố ở trạng thái
+ * **XÂY ĐỦ 5 BẢN VẼ, CẤP 3** chứ không đọc tiến độ thật, nên nó là hàm thuần của `era`. Nếu lấy
+ * thành phố đang xây dở thì khung hình sẽ nhích mỗi lần Đàm hoàn thành một công trình.
+ *
+ * ⚠️ VÀ NÓ PHẢI LÀ MỘT NGUỒN SỰ THẬT DUY NHẤT: `scripts/frame-fit.mjs` nay `import` chính hai hàm
+ * dưới đây thay vì chép lại công thức — công cụ đo mà chép công thức của công cụ dựng thì hai bên
+ * trôi khỏi nhau, đúng thứ đã cắn ở `sweep-score.mjs` (lần thứ 16 công cụ nói dối).
+ */
+/** Tỉ lệ khung dùng để đóng khung. 1,30 là thẻ cảnh HẸP; khung rộng hơn thì chỉ dư ra, không thiếu. */
+export const FRAME_FIT_ASPECT = 1.3;
+/** Biên tối thiểu tính theo phần NỬA khung: 0,04 ≈ cách mép 2% chiều khung. "Vừa chạm mép" không đạt. */
+export const FRAME_FIT_MARGIN = 0.04;
+
+/** Hộp bao của mọi công trình một kỷ khi đã XÂY ĐỦ, đặt lên địa hình đúng như `sceneGraph.js` đặt. */
+export function cityFrameBoxes(era, gridSize) {
+  const ids = (BLUEPRINT_CATALOG[era] ?? []).map((bp) => bp.id);
+  const layout = computeCityLayout({
+    built: ids,
+    levels: Object.fromEntries(ids.map((id) => [id, 3])),
+    era,
+    stats: { sessionCount: 80, streakLength: 9 },
+  });
+  const terrain = buildTerrain({ era, gridSize });
+  const half = (gridSize - 1) / 2;
+  const out = [];
+  for (const b of layout.buildings ?? []) {
+    const bp = (BLUEPRINT_CATALOG[era] ?? []).find((p) => p.id === b.bpId);
+    if (!bp) continue;
+    const spec = buildBuildingSpec({
+      bpId: b.bpId,
+      era,
+      rarity: bp.rarity,
+      type: BUILDING_EFFECTS[b.bpId]?.type ?? 'infrastructure',
+      level: 3,
+    });
+    const nhip = specSpan(spec.parts) * BUILDING_SCALE;
+    const base = terrain.footprint(b.x, b.y, Math.max(1, Math.round(nhip))).top;
+    // ⚠️ CHIỀU CAO CŨNG NHÂN `BUILDING_SCALE` — `geometryFactory` phóng ĐỀU cả ba chiều. Bản cũ của
+    // `frame-fit.mjs` quên vế này và báo thiếu 30% chiều cao, tức sai theo hướng TRẤN AN.
+    out.push({
+      id: b.bpId,
+      cx: b.x - half,
+      cz: b.y - half,
+      reach: nhip / 2,
+      base,
+      top: base + spec.height * BUILDING_SCALE,
+    });
+  }
+  return out;
+}
+
+/**
+ * Biên hẹp nhất của cả kỷ trong khung hình, kèm tên công trình và mép nào đang cắt.
+ * 1,0 = ở đúng tâm · 0,0 = chạm đúng mép · ÂM = đã lọt ra ngoài, tức bị cắt.
+ */
+export function worstFrameMargin(boxes, { distance, targetY, aspect = FRAME_FIT_ASPECT }) {
+  // ⚠️ HAI CÁI GÁC NÀY SINH RA TỪ MỘT LẦN NÓI DỐI THẬT (2026-08-24). `aspect` trước đây KHÔNG có
+  // giá trị mặc định, nên một bên gọi quên nó thì `halfX = atan(tan(halfY) * undefined) = NaN`,
+  // mọi phép so `NaN < worst.margin` đều FALSE, và hàm trả về `margin: Infinity` — tức là
+  // **"không công trình nào bị cắt, biên rộng vô hạn"**. Sai theo đúng hướng TRẤN AN, loại sai tệ
+  // nhất cho một dụng cụ đo, và nó đã suýt cấp giấy chứng nhận cho một bài test đo bằng NaN.
+  // Cùng họ với `TECH_DEBT #43`: một phép đo không được phép trả lời "ổn cả" khi nó chưa đo gì.
+  if (!Number.isFinite(aspect) || aspect <= 0) {
+    throw new Error(`worstFrameMargin: tỉ lệ khung không dùng được (${aspect})`);
+  }
+  const halfY = ((CITY_CAMERA_FOV / 2) * Math.PI) / 180;
+  const halfX = Math.atan(Math.tan(halfY) * aspect);   // three suy FOV ngang từ FOV dọc × tỉ lệ
+  const target = { x: 0, y: targetY, z: 0 };
+  const eye = orbitPosition({ yaw: DEFAULT_YAW, pitch: DEFAULT_PITCH, distance, target });
+
+  const fwd = { x: -eye.x, y: target.y - eye.y, z: -eye.z };
+  const fl = Math.hypot(fwd.x, fwd.y, fwd.z);
+  fwd.x /= fl; fwd.y /= fl; fwd.z /= fl;
+  // ⚠️ DẤU Ở ĐÂY đã từng viết ngược (lần thứ 17 công cụ nói dối): độ lớn vẫn đúng mà NHÃN MÉP đảo
+  // hết — công cụ báo "cắt ở mép TRÊN" trong khi ảnh cho thấy cắt ở mép DƯỚI.
+  const right = { x: -fwd.z, y: 0, z: fwd.x };
+  const rl = Math.hypot(right.x, right.z);
+  right.x /= rl; right.z /= rl;
+  const up = {
+    x: right.y * fwd.z - right.z * fwd.y,
+    y: right.z * fwd.x - right.x * fwd.z,
+    z: right.x * fwd.y - right.y * fwd.x,
+  };
+
+  let worst = { margin: Infinity, id: '?', edge: '?' };
+  for (const b of boxes) {
+    for (const dx of [-b.reach, b.reach]) {
+      for (const dz of [-b.reach, b.reach]) {
+        for (const wy of [b.base, b.top]) {
+          const v = { x: b.cx + dx - eye.x, y: wy - eye.y, z: b.cz + dz - eye.z };
+          const f = v.x * fwd.x + v.y * fwd.y + v.z * fwd.z;
+          if (f <= 0) continue;                        // sau lưng camera, không đóng khung được
+          const u = v.x * up.x + v.y * up.y + v.z * up.z;
+          const r = v.x * right.x + v.y * right.y + v.z * right.z;
+          const mV = 1 - Math.abs(u / (f * Math.tan(halfY)));
+          const mH = 1 - Math.abs(r / (f * Math.tan(halfX)));
+          const margin = Math.min(mV, mH);
+          if (margin < worst.margin) {
+            worst = {
+              margin,
+              id: b.id,
+              edge: mV < mH ? (u > 0 ? 'TRÊN' : 'DƯỚI') : (r > 0 ? 'PHẢI' : 'TRÁI'),
+            };
+          }
+        }
+      }
+    }
+  }
+  // ⚠️ KHÔNG ĐO ĐƯỢC Ô NÀO ⇒ NÉM, ĐỪNG TRẢ `Infinity`. Danh sách rỗng (kỷ lạ, bảng bản vẽ thiếu)
+  // hay mọi góc nằm sau lưng camera đều là LỖI, không phải "lọt khung thoải mái".
+  if (!Number.isFinite(worst.margin)) {
+    throw new Error(`worstFrameMargin: không chấm được góc nào trên ${boxes.length} công trình`);
+  }
+  return worst;
+}
+
+const FIT_CACHE = new Map();
+
+/**
+ * Khoảng cách NHỎ NHẤT để cả kỷ vào trọn khung. Chia đôi 40 lần là quá đủ cho dải [0,8 ; 4,0]×lưới.
+ * Nhớ lại kết quả theo `(era, gridSize, targetY, aspect)` — mỗi lần dựng cảnh chỉ hỏi một lần.
+ */
+export function cityFrameDistance(era, gridSize, { targetY = 0, aspect = FRAME_FIT_ASPECT } = {}) {
+  const khoa = `${era}|${gridSize}|${targetY.toFixed(4)}|${aspect.toFixed(3)}`;
+  const co = FIT_CACHE.get(khoa);
+  if (co !== undefined) return co;
+  const boxes = cityFrameBoxes(era, gridSize);
+  let lo = 0.8;
+  let hi = 4.0;
+  if (boxes.length) {
+    for (let i = 0; i < 40; i += 1) {
+      const mid = (lo + hi) / 2;
+      const m = worstFrameMargin(boxes, { distance: gridSize * mid, targetY, aspect }).margin;
+      if (m >= FRAME_FIT_MARGIN) hi = mid; else lo = mid;
+    }
+  } else {
+    hi = CAMERA_DISTANCE_FACTOR;
+  }
+  const ra = gridSize * hi;
+  FIT_CACHE.set(khoa, ra);
+  return ra;
+}
+
 export function cityOrbitOptions(gridSize, era) {
   const scale = getEraStyle(era)?.massScale ?? 1;
   // `lift` ÂM ở kỷ nhà thấp — đó là nửa thứ hai của yêu cầu, và là nửa dễ quên. Bản đầu kẹp
@@ -159,19 +322,23 @@ export function cityOrbitOptions(gridSize, era) {
    */
   const terrainLift = terrainMaxHeight(era);
 
+  // Ngắm cao hơn mặt đất một chút ở kỷ cao: nếu chỉ lùi xa mà vẫn ngắm chân tường thì tháp vẫn
+  // chạy lên mép trên, chỉ là chậm hơn.
+  // ⚠️ CHỈ nâng, không bao giờ HẠ: điểm ngắm âm sẽ kéo đường chân trời lên giữa khung và cắt mất
+  // dải trời — thứ đã tốn cả một phase (3V/3W) mới đưa được vào khung hình.
+  const targetY = gridSize * Math.max(0, lift) * LIFT_TO_TARGET_Y + terrainLift * TERRAIN_TO_TARGET_Y;
+
+  // ⚠️ SÀN ĐO ĐƯỢC, KHÔNG PHẢI MỘT TRẦN CHUNG. Cách vá "hiển nhiên" cho `TECH_DEBT #24` là nâng
+  // `CAMERA_DISTANCE_FACTOR` lên đúng con số của kỷ tệ nhất (1,88) — nhưng thế là bắt kỷ 1 lùi từ
+  // 1,10 lên 1,88 (+71%) chỉ vì kỷ 8 cần, tức dựng lại đúng cái "thu quá xa rồi bị mờ" mà Đàm đã
+  // yêu cầu bỏ. Mỗi kỷ lùi đúng bằng nhu cầu của CHÍNH NÓ, không hơn.
+  const sanDo = cityFrameDistance(era, gridSize, { targetY });
+
   return {
-    distance: gridSize * factor + terrainLift * TERRAIN_TO_DISTANCE,
+    distance: Math.max(gridSize * factor + terrainLift * TERRAIN_TO_DISTANCE, sanDo),
     minDistance: gridSize * CAMERA_MIN_FACTOR,
     maxDistance: gridSize * CAMERA_MAX_FACTOR,
-    // Ngắm cao hơn mặt đất một chút ở kỷ cao: nếu chỉ lùi xa mà vẫn ngắm chân tường thì tháp vẫn
-    // chạy lên mép trên, chỉ là chậm hơn.
-    // ⚠️ CHỈ nâng, không bao giờ HẠ: điểm ngắm âm sẽ kéo đường chân trời lên giữa khung và cắt mất
-    // dải trời — thứ đã tốn cả một phase (3V/3W) mới đưa được vào khung hình.
-    target: {
-      x: 0,
-      y: gridSize * Math.max(0, lift) * LIFT_TO_TARGET_Y + terrainLift * TERRAIN_TO_TARGET_Y,
-      z: 0,
-    },
+    target: { x: 0, y: targetY, z: 0 },
   };
 }
 

@@ -2307,7 +2307,89 @@ xuống, mà `massHeight` thì không phụ thuộc hình chiếu đáy) — bù
 
 ---
 
+## Phase 20 — BỎ LƯỚI CỨNG: BỘ XƯƠNG SINH THEO KỶ (2026-08-24, ADR-066)
+
+- **Công cụ**: `scripts/city-preview.mjs --sweep` → `scripts/sweep-score.mjs`
+- **Dòng lệnh** (hai vế **y hệt nhau**, chỉ khác KHO):
+
+```bash
+# vế TRƯỚC — chạy TRONG worktree ở đúng HEAD 0abb272, bằng một lệnh `cd` RIÊNG
+# (cd ghép sang lệnh sau là cái bẫy đã sinh ra một bảng số so bản cũ với chính nó)
+cd <worktree-0abb272> && node scripts/city-preview.mjs --sweep --all --theme light
+cd <worktree-0abb272> && node scripts/sweep-score.mjs .city-preview/sweep-light-ky1-15.png
+
+# vế SAU — cùng dòng lệnh, trong cây làm việc
+node scripts/city-preview.mjs --sweep --all --theme light
+node scripts/sweep-score.mjs .city-preview/sweep-light-ky1-15.png
+```
+
+- **Đầu vào**: mặc định của `--sweep` (15 kỷ × 6 chặng · `--cell 300` · 80 phiên · theme sáng).
+- **Đời ảnh**: cả hai dựng ngày **2026-08-24**, vế TRƯỚC lúc 15:05 trong worktree `0abb272`, vế SAU
+  lúc 14:56 trong cây làm việc — **hai thư mục `.city-preview/` RIÊNG**, không ghi đè nhau.
+  ⚠️ Cố ý **KHÔNG** dùng `md5` để so hai vế: `TECH_DEBT #50` đã đo được rằng `md5` đổi theo TẢI MÁY.
+
+### Hai trục, trước ↔ sau
+
+| cây mã | trục CHẶNG | trục KỶ | trung vị kỷ |
+|---|---:|---:|---:|
+| **mốc nền `0abb272`** (TỰ ĐO trong worktree, không chép của Phase 19) | **11,33** ✗ | 19,18 ✓ | 36,31 |
+| **Phase 20 đủ** | **12,44** ✓ | **21,77** ✓ | **38,48** |
+
+⚠️ **Mốc nền tự đo tái lập Y HỆT ba con số Phase 19 đã ghi** (11,33 · 19,18 · 36,31) ⇒ bảng Phase 19
+**KHÔNG trôi**, và phép so này sạch. Đây đúng là thứ `TECH_DEBT #43` kê đơn sau khi 6/15 dòng của
+bảng Phase 11 trôi trong im lặng — lần này nó nói "không trôi", và điều đó cũng đáng ghi ngang việc
+nó bắt được một chỗ trôi.
+
+### Tách ba dải của cặp yếu nhất (`bình minh 6h ↔ chiều 15h`) — VÀ ĐÂY MỚI LÀ PHẦN PHẢI ĐỌC
+
+| dải | mốc nền `0abb272` | Phase 20 | đổi |
+|---|---:|---:|---:|
+| trời | 4,12 | **4,05** | **−0,07** |
+| thành phố | 6,51 | **5,56** | **−0,95** |
+| đất | 18,05 | **20,42** | **+2,37** |
+| ⇒ gộp (RMS ba dải) | 11,33 | **12,44** | +1,11 |
+
+⇒ **Toàn bộ phần đi lên nằm ở dải ĐẤT. Dải THÀNH PHỐ còn TỆ ĐI. Dải TRỜI đứng yên** — đúng như phải
+thế, vì Phase 20 không chạm một dòng nào vào bầu trời. Nghĩa là `TECH_DEBT #89` qua được cổng nhờ
+một dải **KHÔNG liên quan tới nguyên nhân**, chứ không phải vì chỗ hỏng được sửa; trời vẫn là dải
+yếu nhất bảng (4,05, thấp hơn ngưỡng mắt ba lần) và cần gạt thật vẫn chưa được kéo.
+⚠️ **Cơ chế vì sao dải ĐẤT mạnh lên thì CHƯA ĐƯỢC CHỨNG MINH.** Thứ duy nhất đo được là một tương
+quan: số ô đường đi từ **80 cố định ở cả 15 kỷ** xuống **34…92, trung bình 59,7**. Đó là một ỨNG
+VIÊN, không phải một kết luận — đừng chép nó thành nhân quả khi chưa bật/tắt để đo.
+
+⚠️ **PHÉP ĐO BA DẢI PHẢI CHIA CHO SỐ DẢI TRƯỚC KHI LẤY CĂN.** `vecDist` là **RMS**, không phải tổng
+Euclid (`sqrt(Σ/(n/3))`). Bản đầu của script tách dải quên vế chia và in ra **21,55** trong khi công
+cụ thật in **12,44** — hai con số cho cùng một đại lượng. Nếu không truy tới cùng thì tôi đã gán sai
+công lao cho từng dải, mà chính bảng phân dải này là thứ quyết định `#89` được đọc thế nào.
+
+### Đối xứng bốn chiều — đo trên DỮ LIỆU QUY HOẠCH, không đo trên điểm ảnh
+
+Lý do không đo trên ảnh: điểm ảnh là một **thứ đại diện** cho bố cục (`TECH_DEBT #22`), còn
+`planIsRoad`/`planIsWonderZone` **chính là** thứ tầng dựng đọc để đặt đường và đặt kỳ quan.
+
+Thang: **0% = đúng mức ngẫu nhiên** (một bộ xương ngẫu nhiên cùng mật độ đã tự khớp `p²+(1−p)²`),
+**100% = đối xứng bốn chiều hoàn hảo**. Không quy về thang này thì con số thô không đọc được.
+
+| bộ xương | đối xứng bốn chiều |
+|---|---:|
+| **CŨ — 4 khu kỳ quan ở góc** | **100,0%** (hoàn hảo — đây là mốc hiệu chuẩn của thang) |
+| CŨ — cả 5 khu kỳ quan | 90,3% (khu tâm lệch một ô vì 12 là số chẵn) |
+| CŨ — mạng đường `ROAD_LINES` | 55,0% |
+| **MỚI — khu kỳ quan, cao nhất trong 15 kỷ** | **20,0%** (kỷ 4, `grid` — được phép) |
+| **MỚI — khu kỳ quan, cao nhất trong các kỷ KHÔNG phải `grid`** | **9,6%** (kỷ 8) |
+
+⇒ Thang tự chứng minh nó đo đúng thứ cần đo: thứ **thật sự** đối xứng hoàn hảo ra đúng 100,0%.
+
+---
+
+
 ## Phase 19 — MỖI KỶ MỘT MẠNG ĐƯỜNG RIÊNG (2026-08-24 chiều, ADR-059)
+
+> ⚠️ **ĐÍNH CHÍNH sau khi hợp nhất (Phase 21)**: lệnh tái lập dưới đây **KHÔNG chạy được nữa** —
+> `buildRoadPlan` cùng năm bộ dựng khung đã bị xoá khi hợp nhất hai nhánh (ADR-064), vì bố cục nay
+> do `buildCityPlan` (chia thửa đệ quy, ADR-066) quyết còn `arcTrace` chỉ lo HÌNH DẠNG của nét cắt.
+> Bảng số bên dưới vẫn là bản ghi ĐÚNG của thời điểm nó được đo; đừng chép nó làm mốc nền cho một
+> phase sau (bài học `TECH_DEBT #43`) — hãy tự đo lại.
 
 > **Công cụ · Đầu vào · Đời ảnh** (luật §3-Q2, phải đủ cả ba thì một con số mới truy được nguồn):
 > bảng dưới KHÔNG đo bằng ảnh — nó đo thuần trên `buildRoadPlan(era, getNetworkStyle(era)).cells`,
@@ -2763,3 +2845,98 @@ phải một dòng thừa.
 
 36 cặp trong 9 kiểu đi, mỗi cặp so 4 trường: **cả 36 cặp khác nhau ở 4/4 trường**. Không kỷ liền
 nhau nào dùng chung một kiểu, và cả 9 kiểu đều được ít nhất một kỷ dùng (có test khoá cả ba).
+
+
+## Phase 19 — BẢN QUÉT 15 KỶ: TÁCH MỘT BIẾN ĐỂ BIẾT VIỆC NÀO TIÊU TIỀN (2026-08-24, ADR-062/063/061)
+
+> ⚠️ **KHÔNG PHẢI ĐO HIỆU NĂNG.** Chỉ thị Phase 19 ghi rõ *"Không đo hiệu năng"*, và mục này tuân
+> thủ: mọi con số dưới đây là **khoảng cách MÀU trên ảnh dựng** (thang RGB/255, ngưỡng mắt 12), đo
+> bằng SwiftShader trong hộp cát. Không có một mili-giây nào ở đây, và **đừng suy ra** một cái nào.
+
+**Ba vế của một con số nghiệm thu — CÔNG CỤ · ĐẦU VÀO · ĐỜI ẢNH** (luật §3-Q2):
+
+- **Công cụ**: `node scripts/city-preview.mjs --sweep --all --theme light`
+  rồi `node scripts/sweep-score.mjs .city-preview/sweep-light-ky1-15.png`
+- **Đầu vào**: mặc định của `--sweep` (15 kỷ × 6 chặng · `--cell 300` · 80 phiên · theme sáng).
+  Ảnh ra 1864×3154, ô 300×186, gốc (60,30) — cả ba lượt **cùng một hồ sơ hình học**.
+- **Đời ảnh**: dựng ngày 2026-08-24, mỗi vế trong một cây mã RIÊNG, `md5` ghi kèm để không lẫn.
+
+### Ba lượt quét, ba cây mã — và đó là toàn bộ giá trị của bảng này
+
+| cây mã | `md5` ảnh quét | trục CHẶNG | trục KỶ | trung vị kỷ |
+|---|---|---:|---:|---:|
+| **mốc nền** `be9d2ea` (tự đo, KHÔNG chép của phase trước) | `1e08cedb…` | **14,39** ✓ | 22,13 ✓ | 38,59 |
+| Phase 19 **trừ** `orbit.js` — đủ VIỆC 1+2+3+4 | `41346d18…` | **14,23** ✓ | 21,24 ✓ | 38,67 |
+| Phase 19 **đủ** (thêm VIỆC 5) | `b58408b0…` | **11,33** ✗ | 19,18 ✓ | 36,31 |
+
+⇒ **Bốn việc mỹ thuật cộng lại tiêu 0,16. Phép lùi khung hình một mình tiêu 2,90.** Không có phép
+tách một biến này thì cả −3,06 sẽ bị gán cho "Phase 19" nói chung, và phiên sau sẽ đi sửa nhầm chỗ.
+
+⚠️ **Mốc nền được TỰ ĐO trong một `git worktree` ở đúng `be9d2ea`**, không chép cột "sau" của Phase
+14 — đúng `TECH_DEBT #43`. Nó khớp con số `CLAUDE.md` đang ghi (14,39) tới hai chữ số, còn trục kỷ
+lệch nhẹ (22,13 so với 22,09 · 38,59 so với 38,34) trong khoảng nhiễu SwiftShader (`TECH_DEBT #50`).
+
+### Tách ba dải của đúng cặp yếu nhất (`bình minh 6h ↔ chiều 15h`)
+
+| dải | mốc nền | Phase 19 đủ | đổi |
+|---|---:|---:|---:|
+| trời | 8,38 | **4,12** | −4,26 |
+| thành phố | 10,74 | **6,51** | −4,23 |
+| đất | 20,88 | **18,05** | −2,83 |
+
+⇒ Đất vẫn khoẻ **gấp bốn lần** trời. **Cần gạt để nâng trục chặng nằm ở BẦU TRỜI lúc 6h so với 15h**
+— xác nhận lại kết luận `CLAUDE.md` đã ghi sau Phase 14 §1(3), bằng một bộ số mới. Và nó **bác bỏ
+lần thứ hai** chỉ thị cũ *"làm vùng quê đổi theo giờ"*: vùng quê nằm ở dải ĐẤT, dải đang mạnh nhất.
+
+⚠️ **12/15 cặp chặng THẬT SỰ TỐT LÊN** (ví dụ `bình minh ↔ hoàng hôn` 23,17 → 32,75). Chỉ ba cặp
+dạng *bình minh/sáng ↔ giữa ngày* đi xuống. Đọc mỗi con số gộp "11,33" sẽ tưởng cả bảng xấu đi.
+
+### VIỆC 4 (AO) — cặp ảnh cùng một cây mã, `--no-ao` là đối chứng
+
+`node scripts/city-preview.mjs --era N --hour 12 --sessions 80 --width 1500 [--no-ao]`
+
+| kỷ | điểm ảnh đổi quá ngưỡng mắt | lệch (mọi điểm ảnh) | lệch (chỉ chỗ đã đổi) |
+|---|---:|---:|---:|
+| 2 | 2,8% | 1,95 | **15,87** |
+| 6 | 4,1% | 2,61 | **16,55** |
+| 11 | 2,2% | 1,09 | **15,90** |
+
+⚠️ **Phải đọc cột CUỐI.** AO là hiệu ứng CỤC BỘ (chỉ ở góc lõm), nên cột "mọi điểm ảnh" tất yếu
+thấp — đọc mỗi cột ấy rồi kết luận "vô hình" chính là cái sai của Phase 11. Lệnh vẽ và tam giác
+**không đổi một đơn vị** ở cả hai phía (kỷ 6 = 13 · kỷ 11 = 12), vì AO nướng vào MÀU ĐỈNH.
+
+### VIỆC 3 (bản đồ bóng 2048 → 4096) — cặp ảnh khác nhau ĐÚNG một hằng số
+
+Cây đối chứng chép nguyên cây làm việc rồi hạ `SHADOW_MAP_DESKTOP` về 2048; `diff` xác nhận **đúng
+một dòng khác nhau**. `--hour 15` (nắng xiên, bóng dài — chỗ độ phân giải bản đồ bóng tính tiền).
+
+| kỷ | điểm ảnh đổi quá ngưỡng mắt | lệch (mọi điểm ảnh) | lệch (chỉ chỗ đã đổi) |
+|---|---:|---:|---:|
+| 6 | 0,3% | 0,23 | **16,33** |
+| 11 | 0,2% | 0,15 | **16,07** |
+
+⇒ Có thật, và **rất cục bộ**: nó chỉ đổi một vệt mỏng dọc theo MÉP bóng. Ở khung toàn cảnh gần như
+không thấy; đây là phần thưởng khi nhìn GẦN — đúng luật Đàm ra ở Phase 11 HỆ QUẢ 2b.
+
+⚠️ **Nửa sau của chỉ thị VIỆC 3 — "siết `sun.shadow.camera` từ `reach` xuống phạm vi thành phố" —
+ĐÃ ĐO VÀ BÁC BỎ**: `reach` (9,00) ĐÃ LÀ phạm vi thành phố. Khối đổ bóng xa nhất trên cả 15 kỷ nằm ở
+bán kính **8,48** (kỷ 9) ⇒ chỗ dư đúng **6%**. Siết thêm là bắt đầu cắt cụt bóng của nhà ở góc lưới.
+
+> ⚠️ **CẬP NHẬT 2026-08-24 (Phase 20) — CHỖ DƯ 6% ẤY ĐÃ BỊ TIÊU HẾT, VÀ ĐÓ LÀ MỘT LỖI HÌNH ẢNH
+> THẬT.** Thửa đất nay chạm được tới vành ngoài lưới, nên khối đổ bóng xa tâm nhất đi từ **8,4836
+> lên 9,2275** — tức **vượt qua** `reach = 9,00`, và nhà ở góc lưới bắt đầu **mất bóng**. Không có
+> gì đỏ lên trên màn hình; thứ bắt được là bài đo hộp bao ở `sceneStats.test.js`.
+> ⇒ Đã **NỚI** `reach` từ `gridSize × 0,75` lên `gridSize × 0,80` (9,00 → **9,60**), chỗ dư trở lại
+> **4%**. Nới chứ không siết, vì lời hứa ở đây là *"bóng phải phủ hết thành phố"* — một QUAN HỆ với
+> kích thước thành phố, không phải một mức. Cái giá: bản đồ bóng cùng số điểm ảnh nay trải trên
+> vùng rộng hơn 6,7% ⇒ mật độ đi từ 1024→57 · 2048→114 · **4096→228** xuống **53 · 107 · 213**
+> điểm/đơn vị. Gờ mái rộng 0,08 đơn vị vẫn còn **17 điểm ảnh** ở 4096 ⇒ vẫn thừa.
+> ⚠️ Và đây là lần thứ hai cùng một hình dạng: một hằng số đúng lúc đặt, rồi một phase khác đổi
+> kích thước thành phố mà hằng số ấy **không có cách nào biết** (bẫy Phase 7D).
+
+### Khung hình sau VIỆC 5 — hệ số từng kỷ (`node scripts/frame-fit.mjs`)
+
+**0/15 kỷ có công trình bị cắt** (trước: 14/15). Hệ số **1,307 … 1,878**, trung bình **1,626**.
+Bằng chứng nó tối thiểu: **14/15 kỷ ra biên đúng 0,0400 = sàn**; chỉ kỷ 15 dư (0,0736).
+Mép quyết định: **DƯỚI 7 kỷ · TRÁI 6 · PHẢI 2 · TRÊN 0** ⇒ chĩa camera lên/xuống KHÔNG cứu được,
+vì ràng buộc nằm ở hai bên hông. Hạ biên an toàn từ 4% xuống 0% chỉ lấy lại **3,3%** khoảng cách.

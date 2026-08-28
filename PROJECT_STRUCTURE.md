@@ -129,21 +129,20 @@
 │   │   ├── hashId.js          # FILE LÁ: băm tất định FNV-1a. KHÔNG import gì — đó là điểm chính.
 │   │   │                     #   Tách khỏi cityLayout.js ở Phase 7C để cắt vòng import
 │   │   │                     #   cityLayout ↔ city3d/dwellings. cityLayout TÁI XUẤT, không chép.
-│   │   ├── cityGrid.js        # FILE LÁ: hợp đồng về mảnh đất — lưới 12×12, 5 khu đất đã hứa cho
-│   │   │                     #   kỳ quan (BUILDING_ZONES). Cùng lý do tách như hashId.js. Sai lệch
-│   │   │                     #   giữa hai bên = nhà mọc đè kỳ quan, IM LẶNG. ⚠️ `ROAD_LINES` chỉ
-│   │   │                     #   còn là DI SẢN của mạng bàn cờ trước ADR-059 — mạng đường nay do
-│   │   │                     #   `roadPlan.js` sinh theo kỷ.
-│   │   ├── roadPlan.js        # BỘ SINH MẠNG ĐƯỜNG THEO KỶ (ADR-059) — hàm THUẦN của DUY NHẤT
-│   │   │                     #   `era`, có memo. Nối các ĐIỂM MỐC (5 khu kỳ quan · tâm · cửa ngõ)
-│   │   │                     #   bằng những CUNG CONG (`arcTrace`) ⇒ giao lộ chữ T/Y/ngã năm thay
-│   │   │                     #   vì 16 ngã tư vuông góc. 5 kiểu khung: bàn cờ · xương sống · mạng
-│   │   │                     #   rối · nan quạt+vòng · thềm dốc. `wonderAnchor` (nguồn DUY NHẤT
-│   │   │                     #   cho vị trí kỳ quan — `placeBuilding` GỌI nó, không chép lại) ·
-│   │   │                     #   `tiaMangDuong` (bỏ ô làm mặt đường phình thành SÂN LÁT, chừa
-│   │   │                     #   vành đai) · `vaLienThong`. ⚠️ KHÔNG được phụ thuộc tiến độ:
-│   │   │                     #   terrain.js san cao độ theo nó (ADR-007). File LÁ, không import
-│   │   │                     #   ngược lên cityLayout.
+│   │   ├── cityGrid.js        # FILE LÁ: nay CHỈ còn ĐÚNG MỘT câu — `CITY_GRID_SIZE = 12`.
+│   │   │                     #   ⚠️ Phase 20 GỠ `BUILDING_ZONES` · `ROAD_MAIN/CROSS_AXIS` ·
+│   │   │                     #   `RING_LOW/HIGH` · `ROAD_LINES`: bốn hằng số ấy KHÔNG phụ thuộc kỷ
+│   │   │                     #   nên cả 15 kỷ dùng chung một bộ xương (4 khu kỳ quan ở góc đo ra
+│   │   │                     #   ĐÚNG 100% đối xứng bốn chiều). Bộ xương nay SINH THEO KỶ ở
+│   │   │                     #   city3d/cityPlan.js. Con số 12 ở lại đây vì cả cityPlan lẫn
+│   │   │                     #   cityLayout/dwellings đều cần, và file lá thì không tạo vòng import.
+│   │   ├── roadPlan.js        # HỘP ĐỒ NGHỀ CUNG CONG (ADR-059, thu gọn ở Phase 21). Nay KHÔNG còn
+│   │   │                     #   sinh bố cục — nó chỉ trả lời MỘT câu: *"nối A với B thì con đường
+│   │   │                     #   ấy đi qua những ô nào, và nó cắt qua mỗi ranh giới ở chỗ nào?"*
+│   │   │                     #   `arcTrace` · `gom` · `vaLienThong` · `tiaMangDuong` · `gates`.
+│   │   │                     #   ⚠️ Phase 21 XOÁ `buildRoadPlan` + 5 bộ dựng khung + `wonderAnchor`:
+│   │   │                     #   chúng kẻ đường từ 5 khu kỳ quan CỐ ĐỊNH, tức chính "vẻ quy hoạch"
+│   │   │                     #   mà Đàm bác. Câu *"đất chia thế nào"* nay ở city3d/cityPlan.js.
 │   │   ├── cityLayout.js      # THÀNH PHỐ PIXEL: suy ra bố cục từ danh sách công trình (băm tất
 │   │   │                     #   ⚠️ `roadCellCandidates(era)` = tập ỨNG VIÊN đường CỦA MỘT KỶ (từ
 │   │   │                     #   ADR-059 nó KHÔNG còn là hằng số cấp module), ĐỪNG nhầm với mạng
@@ -187,6 +186,39 @@
 │   │   │                     #   ⚠️ Trả `null` khi không có gì thật để nói — thà im lặng còn hơn
 │   │   │                     #   một câu chúc mừng rỗng (cùng luật chống-bịa với AI Coach)
 │   │   ├── city3d/            # Logic THUẦN của bộ vẽ 3D — cấm import three, cấm DOM
+│   │   │   ├── networkStyle.js    # BẢNG BỘ XƯƠNG THÀNH PHỐ, 15 kỷ — khuôn ba lớp lần thứ TÁM,
+│   │   │   │                      #   HỢP NHẤT hai nhánh ở Phase 21 (ADR-064). Tám trục:
+│   │   │   │                      #   · `plan` grid/axial/organic/terrace/radial — tính cách bố cục
+│   │   │   │                      #   · `bend` độ cong từng con đường · `tangle` độ rối (ADR-059)
+│   │   │   │                      #   · `arms` số đường chính · `loops` số vòng khép kín
+│   │   │   │                      #   · `diagonal` Broadway (CHỈ kỷ 11, có test đếm)
+│   │   │   │                      #   · `parcels` số thửa · `sizeVary` độ chênh cỡ thửa
+│   │   │   │                      #   · `minSide` khu phố sâu bao nhiêu (ADR-066)
+│   │   │   │                      #   ⚠️ ĐÃ BỎ `coil`/`ragged` ở ADR-059 — cả hai chỉ đổi được MÉP
+│   │   │   │                      #   một đoạn đường, và `ragged` chính là thứ Đàm gọi là "lồi lõm".
+│   │   │   │                      #   `country` khoá cứng vào eraStyle.js BẰNG TEST. Validator TỪ
+│   │   │   │                      #   CHỐI THẲNG dòng khai `parcels` vượt `parcelCapacity` — không
+│   │   │   │                      #   tự làm tròn (bẫy `MIN_STONE`). Hình dựng ở city3d/cityPlan.js.
+│   │   │   ├── parcelRoles.js    # FILE LÁ (0 lời `import`): chia vai một danh sách thửa thành
+│   │   │   │                      #   `wonder` (5, luôn ăn trước) / `plaza` (1–2 thửa để trống làm
+│   │   │   │                      #   sân-chợ-bãi chăn) / `dwelling` (phần còn lại). Phase 21 §5.
+│   │   │   │                      #   ⚠️ CHỦ SỞ HỮU DUY NHẤT của phép chia ấy — `cityPlan.js` và
+│   │   │   │                      #   `networkStyle.js` CÙNG gọi nó. Trước đó mỗi bên tự tính một
+│   │   │   │                      #   nửa, và hai nửa trôi khỏi nhau: 6/15 kỷ có ĐÚNG 0 thửa nhà
+│   │   │   │                      #   dân mà không cổng nào kêu. `MIN_DWELLING_PARCELS = 2` được
+│   │   │   │                      #   validator TỪ CHỐI THẲNG, không tự chữa (bẫy `MIN_STONE`).
+│   │   │   ├── parcelCapacity.js  # FILE LÁ: trần số thửa `(minSide+1)·k − 1 ≤ L` + `canSplitRegion`.
+│   │   │   │                      #   ⚠️ CHỦ SỞ HỮU DUY NHẤT của câu "vùng này còn cắt được không" —
+│   │   │   │                      #   đừng viết lại luật ấy bằng công thức thứ hai ở cityPlan.js.
+│   │   │   ├── cityPlan.js        # HÌNH của bộ xương: chia đôi đệ quy LỆCH TÂM (BSP) → thửa đất.
+│   │   │   │                      #   ⚠️ ĐẦU VÀO CHỈ CÓ `era` — không built/sessionCount/buildings.
+│   │   │   │                      #   Đó là điều kiện sống còn của ADR-007, khoá bằng test gọi kèm
+│   │   │   │                      #   DỮ LIỆU RÁC + quét 1…120 phiên × 15 kỷ.
+│   │   │   │                      #   ⚠️ ĐƯỜNG LÀ RANH GIỚI THỬA: số ô đường là HỆ QUẢ của số thửa,
+│   │   │   │                      #   KHÔNG có bảng "kỷ này bao nhiêu ô đường" (một hệ quả không
+│   │   │   │                      #   trôi được khỏi thứ sinh ra nó; một bảng thứ hai thì có).
+│   │   │   │                      #   Chọn BSP chứ không Voronoi vì Voronoi cho ranh giới XIÊN mà
+│   │   │   │                      #   cả tầng dựng đường chỉ biết ô vuông — xem ADR-066.
 │   │   │   ├── renderMode.js      # Luật chọn 3D/2D (FAIL-CLOSED: không chắc → 2D)
 │   │   │   ├── renderLoop.js      # Nhịp khung hình: đứng yên = 0 nhịp rAF + trần FPS khi có hoạt hoạ
 │   │   │   ├── orbit.js           # Toán camera xoay (tự viết, KHÔNG dùng OrbitControls). Từ VIỆC 2
@@ -206,6 +238,15 @@
 │   │   │   │                      #   giữa `geometryFactory` (đánh số nhóm) và `sceneGraph` (dựng
 │   │   │   │                      #   mảng vật liệu) — hai bên tự sắp riêng thì mái mang độ bóng
 │   │   │   │                      #   của mặt nước, mắt thấy ngay mà đọc code thì không
+│   │   │   ├── occlusion.js       # CHE KHUẤT MÔI TRƯỜNG (AO) — NỬA CÒN LẠI của `contactShade` ở
+│   │   │   │                      #   `materials.js`: cái kia chỉ hỏi "đỉnh này cao bao nhiêu", cái
+│   │   │   │                      #   này hỏi "quanh đỉnh này có bao nhiêu vật chắn" (đủ BA chiều).
+│   │   │   │                      #   Nướng vào MÀU ĐỈNH lúc gộp hình học ⇒ 0đ lúc chạy (ADR-063)
+│   │   │   │                      #   ⚠️ Nó KHÔNG đổi một lệnh vẽ nào, KHÔNG đổi một tam giác nào —
+│   │   │   │                      #   nên `renderer.info` MÙ HOÀN TOÀN với nó, và **chỉ ẢNH mới
+│   │   │   │                      #   chứng minh được nó chạy**. Vì thế `city-preview.mjs --no-ao`
+│   │   │   │                      #   là ĐỐI CHỨNG BẮT BUỘC, không phải một tuỳ chọn tiện tay; ảnh
+│   │   │   │                      #   mang hậu tố `-noao` để hai vế không bao giờ ghi đè nhau
 │   │   │   ├── eraStyle.js        # NGỮ PHÁP theo 15 kỷ: vật liệu, kiểu mái, cửa sổ, mô-típ
 │   │   │   │                      #   ⚠️ `wallMaterial`/`roofMaterial` là BỀ MẶT (nhám/bóng), tách
 │   │   │   │                      #   hẳn khỏi `wallColor`/`roofColor` (sắc). Cùng bài học "một
@@ -217,8 +258,16 @@
 │   │   │   │                      #   CÙNG một phép chuẩn hoá — chép lại `Math.round` + mặc định là
 │   │   │   │                      #   "một luật hai công thức", và hai công thức tương đương trên
 │   │   │   │                      #   giấy gần như luôn lệch nhau ở BIÊN (Phase 3Y)
-│   │   │   ├── blockStyle.js      # BẢNG HÌNH THÁI KHU PHỐ 15 KỶ (Phase 14 §1(3), ADR-052): số cột
-│   │   │   │                      #   × số hàng · kiểu dính (`party`/`loose`/`court`) · bề rộng ngõ
+│   │   │   ├── blockStyle.js      # BẢNG HÌNH THÁI KHU PHỐ 15 KỶ (Phase 14 §1(3), ADR-052): trục
+│   │   │   │                      #   `layout` · số cột × số hàng (chỉ kỷ lưới) · số suất `units`
+│   │   │   │                      #   (chỉ kỷ hữu cơ) · kiểu dính (`party`/`loose`/`court`) · ngõ
+│   │   │   │                      #   ⚠️ TRỤC `layout` LÀ MỘT MỐC LỊCH SỬ (Phase 21 §3, ADR-065):
+│   │   │   │                      #   bàn cờ chỉ thành chuẩn mực từ THẾ KỶ 19, nên kỷ 1–9 khai
+│   │   │   │                      #   `organic` (chia thửa đệ quy `xepHuuCo`, không hàng không cột)
+│   │   │   │                      #   còn kỷ 10–15 khai `grid` (`xepLuoi`, `cols × rows` như cũ).
+│   │   │   │                      #   Khoá bằng test HAI CHIỀU — kỷ 1–9 PHẢI trượt phép kiểm "là
+│   │   │   │                      #   lưới đều", kỷ 11–15 PHẢI đạt; một chiều thôi thì cách rẻ
+│   │   │   │                      #   nhất để hết đỏ là làm mọi kỷ hữu cơ, tức xoá mất nửa kia
 │   │   │   │                      #   · hệ số `storey` · biên độ `vary` · `gableToStreet`. Mỗi dòng
 │   │   │   │                      #   buộc vào `country` của eraStyle — CÓ TEST BẮT. Khuôn ba lớp
 │   │   │   │                      #   lần thứ CHÍN, giống hệt streetStyle/flora/groundFloor
@@ -233,11 +282,17 @@
 │   │   │   │                      #   bám ô — công trình vốn thò ra ngoài ô neo), chia thành 4–10
 │   │   │   │                      #   đơn vị, rồi GỘP tất cả vào ĐÚNG MỘT mô tả ⇒ `cityParts.js` vẫn
 │   │   │   │                      #   trả về đúng số ô nhà dân như cũ, không đổi giao diện
-│   │   │   │                      #   ⚠️ Đo hình chiếu đáy HAI LƯỢT (dựng thử `fx=1` → đo → dựng
-│   │   │   │                      #   lại). Lượt thứ BA làm sai số TỆ ĐI (0,186 → 0,234 ô) vì
-│   │   │   │                      #   `footprint` là hàm BẬC THANG của `fx` ⇒ lặp KHÔNG hội tụ. Đây
-│   │   │   │                      #   là sự thật về hàm, không phải việc còn dở — đừng đi "hoàn
-│   │   │   │                      #   thiện" nó
+│   │   │   │                      #   ⚠️ Đo hình chiếu đáy HAI LƯỢT rồi GIẢI (Phase 21 §4): dựng
+│   │   │   │                      #   thử `fx=1` → đo → dựng thử lần hai → đo → hai điểm ấy xác
+│   │   │   │                      #   định một đường thẳng nên giải THẲNG ra hệ số cuối.
+│   │   │   │                      #   ⚠️ TUYỆT ĐỐI KHÔNG lặp tới hội tụ: `footprint` là hàm BẬC
+│   │   │   │                      #   THANG của `fx` (số cửa sổ/cột/bậc đều là số nguyên) nên phép
+│   │   │   │                      #   lặp PHÂN KỲ — đo được lượt ba đi XA hơn lượt hai (0,186 →
+│   │   │   │                      #   0,234 ô). Đây là sự thật về hàm, không phải việc còn dở
+│   │   │   │                      #   ⚠️ Cùng §4: `BLOCK_MAX_CELLS = 1` + `EAVE_LAND_FACTOR = 1,05`
+│   │   │   │                      #   đưa cặp khối nhà dân ĐÈ LÊN NHAU từ 290 xuống 15, chỗ sâu
+│   │   │   │                      #   nhất −0,441 → −0,015 ô (≈1 điểm ảnh, dưới sàn mắt 4). Cái
+│   │   │   │                      #   trần một-ô đang khoá số suất đất ở 4 — xem `TECH_DEBT #88`
 │   │   │   ├── groundFloorStyle.js # BẢNG TẦNG TRỆT 15 KỶ (ADR-026/027, dọn ra riêng ADR-029): cửa
 │   │   │   │                      #   ra vào (kiểu · bề rộng · chiều cao · khuôn · độ hõm · bậc) +
 │   │   │   │                      #   MỘT đặc trưng mặt phố, tách riêng cho kỳ quan và nhà dân.
@@ -323,6 +378,12 @@
 │   │   │   │                      #   như `country`/`landmark`: số không có lời giải thích là số
 │   │   │   │                      #   tuỳ hứng — thứ đã sinh ra "15 kỷ cao bằng nhau" ở Phase 5B
 │   │   │   ├── archetypes.js      # Bóng dáng theo 4 LOẠI (hạ tầng/kinh tế/phòng thủ/kỳ quan)
+│   │   │   │                      # ⚠️ NAY CÓ 8 NGUYÊN MẪU: 7 cái đầu đều là THÂN + MÁI, cái thứ 8
+│   │   │   │                      #   `monolith` thì KHÔNG — công trình LÀ khối, dựng thẳng từ mặt
+│   │   │   │                      #   đất: không thân tường, không `groundFloor`, không `eaves`,
+│   │   │   │                      #   không `rooftop` (ADR-062). Dùng cho kim tự tháp kỷ 2 và
+│   │   │   │                      #   ziggurat kỷ 3. Cần khối đặc nữa thì KHAI THÊM DÒNG vào bảng,
+│   │   │   │                      #   đừng thêm nhánh `if` theo số kỷ
 │   │   │   │                      #   + quy mô theo 3 ĐỘ HIẾM
 │   │   │   ├── signature.js       # CHỮ KÝ KIẾN TRÚC: mỗi kỷ MỘT bộ phận lấy từ công trình CÓ THẬT
 │   │   │   │                      #   của nước biểu tượng (cột chữ T Göbekli Tepe · cầu thang
@@ -377,13 +438,6 @@
 │   │   │   │                      #   cả. Bảng 15 MỐC LỆNH VẼ riêng từng kỷ (ADR-028) + đối chứng.
 │   │   │   │                      #   Chạy được trong `npm test` nhờ quan hệ ĐO ĐƯỢC
 │   │   │   │                      #   `lệnh vẽ thành phố = (số họ vật liệu) + 4`, đúng 15/15 kỷ
-│   │   │   ├── networkStyle.js   # BẢNG HÌNH THÁI MẠNG ĐƯỜNG 15 KỶ (ADR-058 → ADR-059): kiểu khung
-│   │   │   │                     # (`plan`: grid/axial/organic/terrace/radial) · độ cong từng con
-│   │   │   │                     # đường (`bend`) · số đường chính (`arms`) · số vòng khép kín
-│   │   │   │                     # (`loops`) · độ rối (`tangle`) · `diagonal` (Broadway, chỉ kỷ 11).
-│   │   │   │                     # ⚠️ ĐÃ BỎ `coil`/`ragged` ở ADR-059 — cả hai chỉ đổi được MÉP một
-│   │   │   │                     # đoạn đường, và `ragged` chính là thứ Đàm gọi là "lồi lõm".
-│   │   │   │                     # `country` khoá vào eraStyle, CÓ TEST BẮT.
 │   │   │   ├── roadPath.js       # HÌNH của bảng trên: `boundaryBend` (độ lệch tim đường TẠI MỘT
 │   │   │   │                     # RANH GIỚI — nay TRA THẲNG bảng `crossings` mà `arcTrace` ghi
 │   │   │   │                     # ra, không sinh nhiễu; đối xứng theo cấu tạo) · `buildRoadPaths`

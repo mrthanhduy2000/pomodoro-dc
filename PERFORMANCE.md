@@ -2307,6 +2307,97 @@ xuống, mà `massHeight` thì không phụ thuộc hình chiếu đáy) — bù
 
 ---
 
+## Phase 22 — SÂN/VƯỜN THUỘC SUẤT ĐẤT: NHÀ THÔI SÁT NHAU (2026-08-28, ADR-067)
+
+- **Công cụ**: `scripts/city-preview.mjs --sweep` → `scripts/sweep-score.mjs`
+- **Dòng lệnh** (hai vế **y hệt nhau**, chỉ khác KHO):
+
+```bash
+# vế TRƯỚC — chạy TRONG worktree ở đúng HEAD 3d37745, bằng một lệnh `cd` RIÊNG
+# (ghép `cd` sang lệnh sau là cái bẫy đã sinh ra một bảng số so bản cũ với chính nó)
+cd /tmp/mocnen && node scripts/city-preview.mjs --sweep --all --theme light
+cd /tmp/mocnen && node scripts/sweep-score.mjs .city-preview/sweep-light-ky1-15.png
+
+# vế SAU — cùng dòng lệnh, trong cây làm việc
+node scripts/city-preview.mjs --sweep --all --theme light
+node scripts/sweep-score.mjs .city-preview/sweep-light-ky1-15.png
+```
+
+- **Đầu vào**: mặc định của `--sweep` (15 kỷ × 6 chặng · `--cell 300` · 80 phiên · theme sáng).
+- **Đời ảnh**: cả hai dựng ngày **2026-08-28** — vế SAU lúc **14:54** trong `.city-preview/` của cây
+  làm việc (8.510.076 byte), vế TRƯỚC lúc **15:05** trong `/tmp/mocnen/.city-preview/` ở worktree
+  `3d37745` (8.510.523 byte). **Hai thư mục RIÊNG**, không ghi đè nhau.
+  ⚠️ Cố ý **KHÔNG** dùng `md5` để so hai vế (`TECH_DEBT #50`: `md5` đổi theo TẢI MÁY).
+
+### Hai trục, trước ↔ sau
+
+| cây mã | trục CHẶNG | trục KỶ | trung vị kỷ |
+|---|---:|---:|---:|
+| **mốc nền `3d37745`** (TỰ ĐO trong worktree) | 12,11 ✓ | **22,14** ✓ | **36,42** |
+| **Phase 22 đủ** | **12,23** ✓ | 21,86 ✓ | 36,33 |
+| đổi | **+0,12** | −0,28 | −0,09 |
+
+⚠️⚠️ **VÀ ĐÂY MỚI LÀ PHẦN PHẢI ĐỌC — MỐC NỀN TỰ ĐO **KHÔNG** TÁI LẬP CON SỐ PHASE 20 ĐÃ GHI.**
+Bảng Phase 20 ghi trục chặng **12,44**; đo lại tại `3d37745` ra **12,11**, tức lệch **−0,33**.
+⚠️ **ĐỪNG ĐỔ CHO PHASE 21** — đi đọc thì `BAN_GIAO.md` của Phase 21 (commit `6ebda87`) **đã ghi
+đúng 12,11 · 22,14 · 36,42**, cả trước lẫn sau phép gộp `main`, và gọi đó là *"không trôi một chữ
+số"*. Nghĩa là mốc nền của Phase 21 **vốn đã là 12,11**, nên chỗ trôi nằm ở đâu đó **giữa lúc Phase
+20 ghi số và lúc Phase 21 đo lần đầu** — và **tôi CHƯA truy ra nó nằm ở commit nào**. Nói "Phase 21
+làm trôi" là một câu nghe rất xuôi mà không có số nào đỡ. Thứ đo được chỉ có hai điều: (a) hai tài
+liệu trong cùng kho ghi **hai con số khác nhau** cho cùng một đại lượng và **không ai để ý**;
+(b) phép đo hôm nay **tái lập ĐÚNG con số của Phase 21 tới hai chữ số** ⇒ số của Phase 21 đúng, và
+phép đo này không trôi.
+
+⚠️ **Nếu chép cột "sau" của Phase 20 làm mốc nền thì kết luận sẽ ĐẢO NGƯỢC**: Phase 22 bị đọc thành
+*"tiêu mất 0,21"* trong khi thật ra nó **đi LÊN 0,12**. Một phép so sai mốc nền không chỉ sai về độ
+lớn — nó sai về **DẤU**, và dấu mới là thứ quyết định phase sau đi tiếp hay quay lại. Đúng hình dạng
+`TECH_DEBT #43`, lần này bắt được **chỉ vì** mốc nền được TỰ ĐO chứ không chép.
+
+### Tách ba dải của cặp yếu nhất (`bình minh 6h ↔ chiều 15h`)
+
+| dải | mốc nền `3d37745` | Phase 22 | đổi |
+|---|---:|---:|---:|
+| trời | 4,14 | **4,14** | **0,00** |
+| thành phố | 6,54 | **6,71** | **+0,17** |
+| đất | 19,50 | **19,65** | +0,15 |
+| ⇒ gộp (RMS ba dải) | 12,11 | **12,23** | +0,12 |
+
+⚠️ **Dải TRỜI đứng yên TUYỆT ĐỐI (4,14 → 4,14) — và đó là một CÁI CÂN, không phải một kết quả.**
+Phase 22 không chạm một dòng nào vào bầu trời, nên nó **BẮT BUỘC** phải không đổi; việc nó không đổi
+tới hai chữ số thập phân là bằng chứng phép đo này không trôi giữa hai lượt (cùng họ với ba con số 0
+của Bước C). Không có cái cân ấy thì hai con số kia chỉ là hai con số.
+
+⚠️ **Khác Phase 20 ở chỗ dải THÀNH PHỐ lần này ĐI LÊN (+0,17) chứ không tệ đi** — hợp lý, vì sân
+vườn đổi đúng thứ nằm TRONG ô thành phố. Nhưng phần tăng chia gần đều cho hai dải, nên **đừng đọc
+thành "đã chữa được `TECH_DEBT #89`"**: dải trời vẫn là **4,14**, thấp hơn ngưỡng mắt gần **ba lần**,
+và nó là cần gạt đã được nêu đích danh ba lần. **`#79`/`#89` VẪN MỞ.**
+
+⚠️ **PHÉP ĐO BA DẢI PHẢI CHIA CHO SỐ DẢI TRƯỚC KHI LẤY CĂN** (`vecDist` là RMS: `sqrt(Σ/(n/3))`).
+Cả hai vế của bảng trên đều tái lập **ĐÚNG** con số mà `sweep-score.mjs` in ra (12,11 và 12,23) —
+đó chính là phép đối chiếu chéo mà Phase 20 phải trả giá mới có (script quên vế chia in ra 21,55
+trong khi công cụ thật in 12,44).
+
+### Cái giá: số khối nhà NHÌN THẤY ĐƯỢC tụt 28,2%
+
+Đo bằng một đường **độc lập với ảnh** (thuần Node, không Chromium): đếm `buildBlockSpec(...).units`
+trên đúng quần thể nhà dân thật của cả 15 kỷ (80 phiên · cấp 3).
+
+| | mốc nền `3d37745` | Phase 22 |
+|---|---:|---:|
+| ô nhà dân | 473 | 473 |
+| khối nhà dựng ra | **1.892** | **1.358** (−28,2%) |
+| trung bình mỗi ô | **4,00** | **2,87** |
+| phân bố | `4 khối: 473 ô` (một giá trị duy nhất) | `2 khối: 253 ô · 3 khối: 28 ô · 4 khối: 192 ô` |
+
+⇒ **Đây là hai tin trong một bảng.** Tin tốt: cột `units` **đã sống lại** — trước Phase 22 cả 473 ô
+ra đúng **một** giá trị (`TECH_DEBT #88`: trục chết về mặt số học), nay ra **ba** giá trị. Tin phải
+nói thẳng: mỗi ô mất trung bình hơn một căn nhà, và điều đó **đi NGƯỢC** lời Đàm từng nói là thành
+phố trông nhỏ. ⚠️ **Phản xạ SAI ở đây là hạ cột `yard` xuống cho lấy lại 1.892** — làm thế là mua
+một con số bằng cách xoá đúng thứ Đàm vừa yêu cầu (nhà rời nhau). Ghi thành `TECH_DEBT #91`, **chờ
+Đàm duyệt bằng MẮT**, không tự quyết.
+
+---
+
 ## Phase 20 — BỎ LƯỚI CỨNG: BỘ XƯƠNG SINH THEO KỶ (2026-08-24, ADR-066)
 
 - **Công cụ**: `scripts/city-preview.mjs --sweep` → `scripts/sweep-score.mjs`

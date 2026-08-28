@@ -12,7 +12,7 @@ import assert from 'node:assert/strict';
 
 import {
   BLOCK_ATTACH, BLOCK_LAYOUT, BLOCK_STYLES, MIN_UNITS, MAX_UNITS, MIN_UNIT_CELLS,
-  EAVE_LAND_FACTOR,
+  BLOCK_YARD_MAX, EAVE_LAND_FACTOR,
   blockUnitCount, deriveBlockUnits, getBlockStyle, isValidBlockStyle, laLuoiDeu,
 } from './blockStyle.js';
 import { ERA_STYLES } from './eraStyle.js';
@@ -55,6 +55,12 @@ test('ĐỐI CHỨNG: validator TỪ CHỐI từng chiều MỘT — hỏi tổn
     ['thiếu kiểu bố cục', { layout: undefined }],
     ['ngõ âm', { alley: -0.01 }],
     ['ngõ rộng hơn cả nhà', { alley: 0.41 }],
+    // ⚠️ Cột `yard` (Phase 22) phải bị hỏi ĐỦ BA CHIỀU như mọi cột khác. Thiếu vế "thiếu yard"
+    // thì một dòng quên khai sẽ lặng lẽ chạy như cũ và cả kỷ ấy quay về tấm-mái-liền — đúng bẫy
+    // `MIN_STONE` (Phase 9D) mà `blockStyle.js` đã cảnh báo ngay tại chỗ khai `BLOCK_YARD_MAX`.
+    ['thiếu sân', { yard: undefined }],
+    ['sân âm', { yard: -0.01 }],
+    ['sân vượt trần', { yard: BLOCK_YARD_MAX + 0.01 }],
     ['storey dưới sàn', { storey: 0.79 }],
     ['storey vượt trần', { storey: 2.01 }],
     ['vary âm', { vary: -0.01 }],
@@ -108,7 +114,7 @@ test('`blockUnitCount` — quây sân chỉ giữ VÀNH NGOÀI, lòng để tr�
 test('BẢNG KHÔNG DẸT — mọi TRỤC đều còn sống, và mọi kiểu dính đều được dùng', () => {
   // ⚠️ Điền cả 15 dòng bằng cùng một giá trị là cách rẻ nhất để mọi bài test khác hết đỏ, và nó
   // trông y hệt một bảng đầy đủ. Cơ chế "lùm cây" Phase 8D đã chết đúng kiểu đó suốt ba phase.
-  const truc = ['layout', 'attach', 'alley', 'storey', 'vary', 'gableToStreet'];
+  const truc = ['layout', 'attach', 'alley', 'yard', 'storey', 'vary', 'gableToStreet'];
   for (const ten of truc) {
     const khac = new Set(ERAS.map((era) => BLOCK_STYLES[era][ten]));
     assert.ok(khac.size >= 2, `trục "${ten}" chỉ có ${khac.size} giá trị — cả 15 kỷ khai như nhau`);
@@ -273,9 +279,25 @@ test('MỐC LỊCH SỬ ĐÀM RA: kỷ 1–9 KHÔNG được xếp hàng lối, 
   //
   // ⚠️ HỎI Ở MẶT BẰNG ĐỦ RỘNG. Ô chật thì phép kẹp "trần thắng sàn" bóp lưới về một hàng hoặc
   // một cột, và `laLuoiDeu` trả `false` cho CẢ kỷ hiện đại — câu trả lời khi ấy nói về ô chật,
-  // không nói về bảng. 1,6 × 1,2 là cỡ mà cả 15 kỷ đều chia được thoải mái.
-  const RONG = 1.6;
-  const SAU = 1.2;
+  // không nói về bảng.
+  //
+  // ⚠️ CỠ NÀY VỪA PHẢI NỚI 1,6×1,2 → 2,0×1,6 Ở PHASE 22, VÀ ĐÓ KHÔNG PHẢI NỚI NGƯỠNG CHO DỄ QUA.
+  // Câu tự trấn an của chính chú thích cũ — *"1,6 × 1,2 là cỡ mà cả 15 kỷ đều chia được thoải
+  // mái"* — đúng khi bảng chưa có cột `yard`. Cột ấy cắt một phần CHIỀU SÂU ra làm sân/vườn, nên
+  // cùng một mặt bằng nay còn ít đất cho nhà hơn, và mấy kỷ vườn sâu bị bóp lại. Đo cả bốn cỡ:
+  //
+  //     1,6 × 1,2   ít nhất 3 đơn vị   mốc lịch sử SAI (kỷ 12 và 15 rơi nhầm sang nhóm "cổ")
+  //     1,8 × 1,4   ít nhất 3 đơn vị   mốc lịch sử SAI (y hệt)
+  //   → 2,0 × 1,6   ít nhất 4 đơn vị   mốc lịch sử ĐÚNG
+  //     2,2 × 1,8   ít nhất 4 đơn vị   mốc lịch sử ĐÚNG
+  //
+  // Chọn 2,0 × 1,6 vì đó là cỡ NHỎ NHẤT đo được mà cả hai điều kiện cùng đạt — nới thêm nữa là
+  // mua chỗ trống cho một hồi quy sau này nấp vào. Và điều đáng chú ý: ở cỡ chật thì bài test
+  // **kêu oan về mốc lịch sử** (kỷ 12 · 15 bị đọc thành "không hàng lối") trong khi bảng hoàn toàn
+  // đúng — tức nó đang trả lời về Ô CHẬT chứ không về BẢNG, đúng thứ đoạn trên vừa cảnh báo.
+  // Vế `>= 4` bên dưới là gác chạy-rỗng và KHÔNG được hạ: hạ nó là bỏ luôn cái cảnh báo ấy.
+  const RONG = 2.0;
+  const SAU = 1.6;
   const co = [];
   const hienDai = [];
   for (const era of ERAS) {
@@ -326,17 +348,33 @@ test('KỶ 1–9: các suất đất RỜI NHAU theo cấu tạo — không căn
     && b.ox - b.w / 2 < a.ox + a.w / 2 - 1e-9
     && a.oz - a.d / 2 < b.oz + b.d / 2 - 1e-9
     && b.oz - b.d / 2 < a.oz + a.d / 2 - 1e-9;
+  // ⚠️ HỎI Ở CẢ HAI CHẾ ĐỘ, và đó là chỗ Phase 22 phải sửa. Bản cũ chỉ hỏi ở MỘT mặt bằng chật
+  // (1,15 × 1,05 ≈ một ô thật) và đếm được 882 cặp. Cột `yard` cắt bớt chiều sâu cho nhà, nên
+  // cùng mặt bằng ấy nay chỉ ra 575 cặp — gác chạy-rỗng đỏ, trong khi mã hoàn toàn đúng.
+  //
+  // Cách chữa KHÔNG phải hạ 800 xuống 500 (thế là đổi một con số đoán bằng một con số đoán khác,
+  // và nó sẽ đỏ lại ở phase sau). Cách chữa là hỏi ở CẢ HAI chế độ, vì chúng là hai thế giới khác
+  // nhau và mỗi bên có một cách hỏng riêng:
+  //   · CHẬT (1,15 × 1,05) — phép kẹp "trần thắng sàn" đang cắn, số suất đất bị bóp xuống. Đây là
+  //     chế độ RỦI RO: mọi phép kẹp đều là một cơ hội để hai mảnh đè lên nhau.
+  //   · RỘNG (2,0 × 1,6) — lưới đầy đủ, không kẹp. Đây là chế độ mà bộ chia chạy đúng ý đồ.
+  // Đo được: chật 575 cặp · rộng 1455 cặp · **cộng lại 2030 cặp trên 810 đơn vị**. Vừa nhiều răng
+  // hơn bản cũ, vừa phủ đúng cái nhánh mã mà bản cũ không bao giờ chạm tới.
+  const MAT_BANG = [[1.15, 1.05], [2.0, 1.6]];
   let cap = 0;
   for (const era of ERAS) {
     for (const hat of ['a', 'b', 'c', 'd', 'e']) {
-      const u = deriveBlockUnits({ style: BLOCK_STYLES[era], seed: `${era}${hat}`, blockW: 1.15, blockD: 1.05 });
-      for (let i = 0; i < u.length; i += 1) {
-        for (let j = i + 1; j < u.length; j += 1) {
-          cap += 1;
-          assert.equal(chong(u[i], u[j]), false, `kỷ ${era} hạt ${hat}: đơn vị ${i} xuyên qua ${j}`);
+      for (const [blockW, blockD] of MAT_BANG) {
+        const u = deriveBlockUnits({ style: BLOCK_STYLES[era], seed: `${era}${hat}`, blockW, blockD });
+        for (let i = 0; i < u.length; i += 1) {
+          for (let j = i + 1; j < u.length; j += 1) {
+            cap += 1;
+            assert.equal(chong(u[i], u[j]), false,
+              `kỷ ${era} hạt ${hat} ở mặt bằng ${blockW}×${blockD}: đơn vị ${i} xuyên qua ${j}`);
+          }
         }
       }
     }
   }
-  assert.ok(cap >= 800, `chỉ kiểm được ${cap} cặp — vòng lặp đang chạy gần rỗng (đo được 882)`);
+  assert.ok(cap >= 1800, `chỉ kiểm được ${cap} cặp — vòng lặp đang chạy gần rỗng (đo được 2030)`);
 });

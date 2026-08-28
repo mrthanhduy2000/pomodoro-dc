@@ -1,5 +1,93 @@
-> Cập nhật lần cuối: **2026-08-28** — Phase 21 §6b: quét đủ 15 kỷ nhìn từ trên xuống, và bắt được
-> một lỗi DỰNG ẢNH đã suýt biến thành một kết luận mỹ thuật sai.
+> Cập nhật lần cuối: **2026-08-28** — Phase 22: sân/vườn thuộc suất đất, nhà thôi dính mép nhau;
+> `TECH_DEBT #88` đóng một nửa; hai cái giá đã đo, chờ mắt Đàm phán.
+
+## 2026-08-28 — Phase 22: nhà rời nhau vì ĐẤT QUANH NÓ CÓ CHỦ (ADR-067)
+
+**Đàm nói.** *«đừng có làm cho nó giả quá, làm cho nó chân thật hơn, kể cả cách sắp xếp kiến trúc,
+mà ngày xưa làm gì có vụ nhà sát sát nhau như thế»*.
+
+**1. Chẩn đoán: cột `alley` là một KHOẢNG CÁCH, thứ thiếu là một MẢNH ĐẤT.**
+Phase 21 (ADR-065) đã chữa bố cục và đã xoá 290 cặp chồng lấn. Sau đó nhà thôi đè lên nhau nhưng
+vẫn **dính sát mép**, vì mọi phần đất của một khu phố đều là NHÀ. Ngoài đời cái tách hai căn nhà
+không phải một khe hở — nó là **sân, vườn, khoảnh ruộng**, tức đất CÓ CHỦ, có hàng rào, có giếng.
+⇒ nới `alley` là chữa triệu chứng (và `TECH_DEBT #84` đã ghi rằng cần gạt ấy đã cạn).
+
+**2. Nhưng «ngày xưa làm gì có» SAI ở ba kỷ — và đó mới là chỗ có bản sắc.**
+Çatalhöyük (kỷ 1) không hề có ngõ: người ta đi trên MÁI và trèo xuống bằng thang. Insula La Mã
+(kỷ 7) và nhà đấu lưng Anh (kỷ 10) cũng dính liền có chủ đích. ⇒ "nhà rời nhau" không phải một luật
+chung cho 15 kỷ, nó là **một trục của bảng**, và ba kỷ ấy khai thẳng `yard: 0`.
+
+**3. Đã làm — cột `yard`, khuôn ba lớp lần thứ chín.** BẢNG `blockStyle.js` khai (dải 0…0,7, đủ 15
+dòng, buộc vào `country`, validator TỪ CHỐI THẲNG dòng sai) → HÌNH `block.js` dựng qua **chính
+`buildGroundCover`** đã có từ §2-C (không viết bộ hình thứ hai) → `cityParts.js` **đổi đúng MỘT
+dòng** (chuyển tiếp `detail` để LOD tới được mảng phủ sân; nó vẫn không dựng hình, khu phố vẫn gộp
+thành ĐÚNG một mô tả ⇒ lệnh vẽ không đổi một đơn vị). Kèm nhánh **trả-lại-đất**: suất nào mất chi
+tiết mái vì sân ăn mất chiều sâu thì dựng lại trên trọn lô và bỏ cái sân.
+
+**4. `TECH_DEBT #88` ĐÓNG MỘT NỬA — và nửa kia phải nói cho đúng.**
+Trục dựng-ra sống lại: từ **`{4}`** thành **`{2, 3, 4}`** (253 ô 2 khối · 28 ô 3 · 192 ô 4). Nhưng
+**cái gì** làm nó sống thì phải đo chứ đừng đoán: tương quan giữa cột `units` đã KHAI và số khối
+DỰNG RA là **−0,212** (gần như không), còn với cột `yard` là **−0,803** — gấp gần bốn lần. ⇒ trục sống lại **nhờ
+`yard`**, không nhờ chính `units`. Bài test kể tên cả hai vế, nên không ai đóng nhầm nửa còn lại.
+
+**5. Bốn phép thử ngược ĐÃ CHẠY THẬT, không chép lại từ bài cũ.** (a) ép `yard: 0` cả 15 dòng ⇒ tập
+khối thu về `{4}`, bài trục ĐỎ. (b) đổi vai mảnh sân sang `water` ⇒ ĐỎ *"kỷ 11 kéo thêm vai
+[water]"*. (c) gỡ nhãn `groundCover` ⇒ ĐỎ *"kỷ không có mảnh sân nào nay là [1…15]"*. (d) khai
+`yard: 0,05` cho kỷ 2 ⇒ ĐỎ *"nay là [1,2,7,10]"* — tức cái "khoảng giữa" ADR-033 cấm bị BẮT chứ
+không biến mất im lặng. Ba ca sân của validator cũng thử ngược **từng vế một**.
+
+**6. ĐÍNH CHÍNH MỘT CÂU TỰ TRẤN AN TRONG CHÚ THÍCH CỦA CHÍNH TÔI.** `block.js` từng ghi *"ngưỡng
+mắt loại đúng ba kỷ 1 · 7 · 10 — cái cổng tự kể đúng lịch sử"*. Nghe rất xuôi, và **sai**: ba kỷ ấy
+không có sân vì **BẢNG khai `yard: 0`**, chứ không phải vì cổng chặn. Đo trên quần thể thật: cổng
+loại **0/1.064** cái sân, sân hẹp nhất cả thành phố **6,47 px = 1,62 lần ngưỡng 4 px**. Công trạng
+bị gán nhầm — đúng bài học Phase 7D *"một lời hứa đúng NHỜ MỘT THỨ CHẲNG LIÊN QUAN"*. ⚠️ Nhưng cổng
+ấy **không** đúng-theo-cấu-tạo (bẫy ADR-048): quét 2.704 mặt bằng thì `yard 0,15` → 0/2704 dưới
+ngưỡng, `0,12` → 1352/2704, `0,10` → **2704/2704 (cả kỷ mất sạch sân, im lặng)**. Thứ chặn được nó
+là **phép ĐẾM ở đầu bên kia**, không phải cái cổng — đúng bài học Phase 10 Bước 2.
+
+**7. HAI CÁI GIÁ, cả hai đã đo, cả hai phải nói thẳng — không giấu sau con số.**
+- ⚠️ **Số căn nhà nhìn thấy giảm 28,2%**: 1892 → **1358 khối** trên 473 ô (4,00 đồng loạt →
+  2,87 trung bình). Đây **đi NGƯỢC** lời phê trước đó của Đàm rằng thành phố trông nhỏ. Đất dành
+  cho sân thì không dành cho nhà — hai lời phê ấy **không thể cùng thoả trong một ô 1,0**.
+  `TECH_DEBT #91`. Lối ra đúng KHÔNG phải hạ `yard` mà là hướng (b) của `#88` (thửa to hơn một ô).
+- ⚠️ **Kỷ 15 giữ mái bằng cách mất cái sân trong** — mà sân trong CHÍNH LÀ typology Dubai. Đo được
+  đây là một hoặc/hoặc thật: có nhánh trả-lại-đất ⇒ mái 28/28 · sân 3/28; bỏ nhánh ⇒ mái 3/28 ·
+  sân 28/28 **và 5 kỷ khác rơi dưới sàn 0,7**. Ghi thành ngoại lệ ĐẾM ĐƯỢC trong test
+  (`assert.deepEqual(hutSan, [15])`) + `TECH_DEBT #92`, nối cứng với `#88`.
+
+**8. Cổng số.** 1267 bài test (1266 xanh · `# skipped 1` đúng như phải thế) · đối chiếu chéo xanh ·
+lint sạch · build xanh. **Lệnh vẽ không đổi một đơn vị ở cả 15 kỷ** (`buildGroundCover` chỉ dùng bốn
+vai đã có ở 15/15 kỷ). Chi tiết mái **459/473 = 97,0%**, kỷ tệ nhất 0,844, **không kỷ nào dưới sàn**.
+
+**9. Bản quét 15 kỷ (cổng không-trôi) — QUA, và trục chặng còn ĐI LÊN.** Mốc nền TỰ ĐO trong
+`git worktree` tại HEAD `3d37745`, không chép cột "sau" của phase trước (`TECH_DEBT #43`):
+
+| | trục CHẶNG | trục KỶ | trung vị kỷ |
+|---|---:|---:|---:|
+| mốc nền `3d37745` | 12,11 ✓ | 22,14 ✓ | 36,42 |
+| Phase 22 | **12,23** ✓ | 21,86 ✓ | 36,33 |
+
+**0/15 và 0/105** — không cặp nào dưới ngưỡng mắt. Tách ba dải của cặp yếu nhất
+(`bình minh 6h ↔ chiều 15h`): **trời 4,14 → 4,14 (ĐỨNG YÊN TUYỆT ĐỐI)** · thành phố 6,54 → 6,71 ·
+đất 19,50 → 19,65. Dải trời đứng yên là một **CÁI CÂN**, không phải một kết quả: Phase 22 không
+chạm gì tới bầu trời nên nó **bắt buộc** phải không đổi, và việc nó không đổi tới hai chữ số chứng
+minh phép đo không trôi giữa hai lượt. ⚠️ Nhưng **đừng đọc thành "đã chữa `#89`"** — trời vẫn 4,14,
+thấp hơn ngưỡng mắt gần ba lần, và nó là cần gạt đã nêu đích danh ba lần. `#79`/`#89` VẪN MỞ.
+
+⚠️ **VÀ VIỆC TỰ ĐO MỐC NỀN ĐÃ BẮT ĐƯỢC MỘT CHỖ LỆCH TÀI LIỆU — `TECH_DEBT #93` (mới).** Bảng
+Phase 20 ở `PERFORMANCE.md` ghi trục chặng **12,44**, còn đo tại `3d37745` ra **12,11**. Đi đọc thì
+`BAN_GIAO.md` của Phase 21 (`6ebda87`) **đã ghi đúng 12,11 · 22,14 · 36,42** ⇒ **KHÔNG phải Phase 21
+làm trôi**, và tôi **chưa truy ra** nó nằm ở commit nào — nói bừa một thủ phạm nghe xuôi tai thì dễ,
+nhưng không có số nào đỡ. Thứ đo được chỉ có hai điều: hai tài liệu cùng kho ghi hai con số khác
+nhau cho cùng một đại lượng suốt hai phase mà không ai để ý, và phép đo hôm nay **tái lập ĐÚNG** bộ
+số của Phase 21. ⚠️ Nếu chép cột Phase 20 làm mốc nền thì Phase 22 bị đọc thành *"tiêu mất 0,21"*
+trong khi thật ra nó **đi LÊN 0,12** — sai **DẤU**, không phải sai độ lớn.
+
+**⚠️ CHỜ ĐÀM.** Bản quét chỉ canh không-trôi, nó **không** chứng minh phase này có tác dụng
+(`HỆ QUẢ 1`, Phase 11). Câu hỏi thật chỉ mắt Đàm trả lời được: *nhìn vào thì nó ra một ngôi làng có
+sân vườn, hay ra một thành phố bị rút bớt nhà?*
+
+---
 
 ## 2026-08-28 — Phase 21 §6b: 15/15 kỷ nhìn từ trên xuống + cổng chống-CHÉP cho `city-preview.mjs`
 

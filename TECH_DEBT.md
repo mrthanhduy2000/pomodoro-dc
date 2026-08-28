@@ -4520,6 +4520,105 @@ cấp `Math.min(3,…)` → `Math.min(9,…)` · cắt bớt danh sách cấp th
 
 ---
 
+## #93 — Hai tài liệu trong CÙNG kho ghi hai con số khác nhau cho CÙNG một đại lượng, và không cổng nào kêu
+
+| Trường | Nội dung |
+|---|---|
+| **Module** | `PERFORMANCE.md` (bảng Phase 20) ↔ `BAN_GIAO.md`/`START_HERE.md` (bộ số Phase 21) |
+| **Priority** | Medium |
+| **Severity** | Medium — không sai mã, nhưng nó làm hỏng **dấu** của kết luận phase sau |
+| **Impact** | Bảng Phase 20 ghi trục chặng **12,44**. Phase 21 (`6ebda87`) ghi **12,11 · 22,14 · 36,42** cho cùng đại lượng, cùng dòng lệnh, và gọi đó là *"không trôi một chữ số"*. Phase 22 tự đo tại `3d37745` ra **đúng 12,11 · 22,14 · 36,42** ⇒ số của Phase 21 đúng, số Phase 20 lệch **−0,33** so với thực tế về sau. Hai con số ấy nằm trong cùng một kho, cách nhau vài trăm dòng, **suốt hai phase không ai đối chiếu**. |
+| **Root Cause** | Không có bất kỳ cơ chế nào buộc hai tài liệu nói về cùng một đại lượng phải khớp nhau. `TECH_DEBT #43` đã kê đơn *"mỗi phase PHẢI tự đo lại mốc nền"* — đơn ấy được **tuân thủ** (Phase 21 tự đo, Phase 22 tự đo), nhưng nó chỉ bảo vệ **phase đang chạy**; nó không hề nói ai phải đi **đối chiếu số mới với số cũ đã ghi**. Nên chỗ lệch vẫn nằm im. |
+| **Current Risk** | Trung bình. Ai lấy bảng Phase 20 làm mốc nền sẽ đọc Phase 22 thành *"tiêu mất 0,21"* trong khi thật ra nó **đi LÊN 0,12** — sai **DẤU**, không phải sai độ lớn. Mà dấu là thứ quyết định phase sau đi tiếp hay quay lại. |
+| **Future Risk** | Cao dần. Trục chặng đang ở **12,23**, chỉ trên ngưỡng mắt 12 đúng **0,23**. Ở biên mỏng như thế, một mốc nền lệch 0,33 **lớn hơn cả cái biên còn lại** — tức nó có thể biến "vừa qua cổng" thành "đã trượt cổng" hoặc ngược lại. |
+| **CHƯA TRUY RA** | ⚠️ Chỗ trôi nằm ở commit nào thì **CHƯA BIẾT**, và tôi cố ý **KHÔNG** đoán. Nó nằm đâu đó giữa lúc Phase 20 ghi số và lúc Phase 21 đo lần đầu. Câu *"Phase 21 làm trôi"* nghe rất xuôi và **không có số nào đỡ** — Phase 21 đo ra 12,11 ở **cả hai phía** phép gộp của nó. |
+| **Recommended Solution** | (a) **Rẻ nhất, làm được ngay**: mỗi lần ghi một bộ số quét vào tài liệu thì `grep` chính đại lượng ấy trong các tài liệu khác và **đối chiếu**; lệch thì phải ghi ra chỗ lệch chứ không im lặng ghi đè. (b) **Thật sự chặn được**: một bài test đọc `PERFORMANCE.md` + `START_HERE.md`, rút bộ số quét MỚI NHẤT của mỗi file rồi đòi chúng khớp — cùng tinh thần *"một bài học được ghi ra KHÔNG chặn được gì; chỉ một bài TEST mới chặn được"*. Chi phí: phải quy ước một định dạng máy đọc được cho dòng số, mà hiện mỗi file đang viết một kiểu. |
+| **Estimated Complexity** | (a) gần như bằng 0 · (b) Trung bình (phải chuẩn hoá định dạng trước) |
+| **Blocking Conditions** | Không có. Đây là nợ **tài liệu**, không chặn mã. |
+| **Review Trigger** | Lần kế tiếp có ai ghi một bộ số quét vào tài liệu, hoặc lần kế tiếp trục chặng bị đem so với ngưỡng mắt. |
+| **Owner** | Chưa giao |
+| **Status** | **MỞ** — đã ghi chỗ lệch vào `PERFORMANCE.md` mục «Phase 22»; **chưa** sửa bảng Phase 20 (nó **đúng cho đúng hai commit đã sinh ra nó**, và sửa tại chỗ mà không đo lại tại commit ấy sẽ tạo ra một con số thứ ba không truy được nguồn). |
+
+---
+
+## #92 — Kỷ 15 giữ chi tiết mái bằng cách MẤT cái sân trong — mà sân trong CHÍNH LÀ typology của nó
+
+> Mở 2026-08-28 (Phase 22, ADR-067). Đây là **một hoặc/hoặc đã đo**, không phải một lỗi cài đặt.
+> Ghi ra vì nó là chỗ duy nhất trong bảng mà một dòng khai đúng lịch sử lại dựng ra thứ ngược lại.
+
+- **Tên**: `yard: 0,55` của kỷ 15 bị nhánh trả-lại-đất thu hồi ở 25/28 ô
+- **Module**: `src/engine/city3d/block.js` (nhánh trả-lại-đất trong vòng lặp suất đất) ·
+  `blockStyle.js` (dòng kỷ 15) — khoá bằng `block.test.js`
+  (`SÂN HOẶC ĐỦ THẤY, HOẶC BẰNG 0`, ngoại lệ đếm được `assert.deepEqual(hutSan, [15])`)
+- **Priority**: Medium · **Severity**: Low (mỹ thuật; không đụng dữ liệu, không đụng lệnh vẽ)
+- **Impact**: Dubai khai cái sân LỚN NHẤT bảng (0,55) vì **sân trong là typology của nó** — nhà
+  sân trong vùng Vịnh tổ chức toàn bộ mặt bằng quanh một khoảnh giữa để tránh nắng. Dựng ra thì chỉ
+  **3/28 ô** giữ được cái sân ấy. Mắt đọc kỷ 15 ra một dãy khối đặc, tức mất đúng thứ làm nó là nó.
+- **Root Cause**: một **HOẶC/HOẶC thật sự**, đã đo bằng hai lượt dựng đủ 15 kỷ:
+  - **CÓ** nhánh trả-lại-đất → kỷ 15: chi tiết mái **28/28 (100%)** · sân **3/28 (11%)**
+  - **BỎ** nhánh trả-lại-đất → kỷ 15: chi tiết mái **3/28 (11%)** · sân **28/28 (100%)**
+  Lý do: `yard` 0,55 ăn hơn nửa chiều sâu suất đất, nên phần còn lại tụt xuống dưới
+  `ROOFTOP_MIN_SPAN` và mái mất chi tiết. Kỷ 12 khai 0,50 thì vẫn vừa; 0,55 là chỗ vượt.
+- **Current Risk**: thấp. Không mất dữ liệu, không thêm lệnh vẽ; kỷ 15 vẫn phân biệt được với 14 kỷ
+  kia bằng sáu trục còn lại.
+- **Future Risk**: trung bình — rủi ro thật là **có người đọc dòng bảng (0,55, cao nhất) rồi tưởng
+  kỷ 15 là kỷ nhiều sân nhất**, trong khi nó là kỷ ít sân nhất. Bài test kể tên `[15]` là thứ chặn
+  điều đó: nó đỏ cả khi có kỷ thứ hai rơi vào lẫn khi kỷ 15 được sửa xong.
+- **Recommended Solution — BA HƯỚNG, ĐÃ ĐO, KHÔNG TỰ CHỌN**:
+  (a) **BỎ NHÁNH TRẢ-LẠI-ĐẤT CHO RIÊNG KỶ 15.** ❌ Loại thẳng: một `if (era === 15)` là một ngoại lệ
+  viết cứng theo kỷ, thứ dự án đã cấm nhiều lần (ADR-025, và bài học `TRUOT` ở Phase 12-B — *một
+  ngoại lệ BIẾN MẤT là bằng chứng mạnh hơn một ngoại lệ được THÊM VÀO*).
+  (b) **BỎ NHÁNH TRẢ-LẠI-ĐẤT CHO CẢ 15 KỶ.** Đo được: chi tiết mái tụt 459/473 → **384/473**, và
+  **5 kỷ (2·3·6·9·15) rơi xuống dưới sàn 0,7** — tức mua cái sân của một kỷ bằng cái mái của năm kỷ.
+  (c) **HẠ `ROOFTOP_MIN_SPAN` hoặc SÀN 0,7.** ❌ Loại: `block.test.js` ghi thẳng *"KHÔNG hạ sàn 0,7
+  (hạ là bỏ răng cho cả 15 kỷ)"*, và `#90` đã ghi lý do. Đây là cái phễu Phase 9A.
+  (d) **HƯỚNG THẬT SỰ ĐÚNG — thửa to hơn một ô** (hướng (b) của `#88`): sân trong Dubai cần một mặt
+  bằng rộng hơn một ô lưới mới vừa cả sân LẪN vành nhà có mái. Hai mục nợ này **nối cứng với nhau**:
+  giải `#88` theo hướng (b) thì `#92` tự đóng, còn giải riêng `#92` thì gần như chắc chắn là vá
+  triệu chứng.
+- **Estimated Complexity**: (b) thấp nhưng cái giá quá cao · (d) cao (tầm ADR, đụng `dwellings.js`)
+- **Blocking Conditions**: (d) đổi HÌNH của mọi nhà dân ⇒ phải kèm một lượt quét 15 kỷ + ảnh nhìn
+  từ trên xuống để Đàm nghiệm thu bằng mắt. Không phải việc làm kèm trong một phase khác.
+- **Review Trigger**: mỗi lần chạm nhánh trả-lại-đất, `ROOFTOP_MIN_SPAN`, `BLOCK_YARD_MAX`, hoặc
+  dòng kỷ 15 của `blockStyle.js`. **Và bắt buộc xem lại cùng lúc với `#88`.**
+- **Owner**: chưa giao · **Status**: MỞ
+
+---
+
+## #91 — Sân/vườn mua sự "rời nhau" bằng 28% số căn nhà nhìn thấy được — đi NGƯỢC lời phê "thành phố trông nhỏ"
+
+> Mở 2026-08-28 (Phase 22, ADR-067). **Cái giá đã đo được** của việc chữa đúng thứ Đàm chỉ ra
+> (*«ngày xưa làm gì có vụ nhà sát sát nhau như thế»*), không phải một lỗi. Ghi ra vì nó kéo NGƯỢC
+> một lời phê khác của chính Đàm, và hai lời phê ấy không thể cùng thoả trong một ô 1,0.
+
+- **Tên**: 1892 → **1358 khối** trên 473 ô (−28,2%)
+- **Module**: `src/engine/city3d/blockStyle.js` (cột `yard`) · `block.js` (`sanThanhMang`) —
+  khoá bằng `block.test.js` (`MỘT Ô LÀ MỘT KHU PHỐ`, bảng mốc `MOC_KHOI` riêng từng kỷ)
+- **Priority**: Medium · **Severity**: Low (mỹ thuật)
+- **Impact**: đất dành cho sân thì không dành cho nhà. Khối/ô đi từ **4,00 đồng loạt** xuống
+  **2,87 trung bình, tập {2, 3, 4}**. Mặt được: các căn thôi dính mép nhau, và mỗi khoảng cách giữa
+  hai căn nay là một mảnh đất CÓ CHỦ (hàng rào, giếng, sào phơi) chứ không phải một khe trống.
+- **Root Cause**: SỐ HỌC, cùng gốc với `#88`. Một ô rộng 1,0; sàn suất đất `MIN_UNIT_CELLS = 0,3276`;
+  `yard` ăn một phần chiều sâu ⇒ số suất vừa được một ô giảm. Không có tham số nào chỉnh được cả hai
+  chiều cùng lúc **trong một ô 1,0** — đó là chỗ hai lời phê của Đàm loại trừ nhau.
+- **Current Risk**: thấp. Không mất dữ liệu; ADR-007 nguyên vẹn; lệnh vẽ không đổi một đơn vị.
+- **Future Risk**: trung bình — nếu Đàm đọc ảnh và thấy thành phố thưa quá thì phản xạ sai nhất là
+  **hạ `yard`**, vì đó là quay lại đúng cái "nhà sát sát nhau" vừa bị bác. Mục này tồn tại để phiên
+  sau biết lối ra nằm ở chỗ khác.
+- **Recommended Solution**: ⚠️ **KHÔNG hạ cột `yard`.** Lối ra đúng là hướng (b) của `#88` — **cho
+  một khu phố trải trên nhiều ô của cùng một thửa** (`planParcelAt` đã có sẵn, hiện chưa ai dùng
+  ngoài test). Mặt bằng rộng hơn thì vừa cả sân LẪN số căn; đây là cách duy nhất đã đo mà thoả được
+  cả hai lời phê. Hai mục nối cứng với nhau.
+- **Estimated Complexity**: cao (tầm ADR — đụng `dwellings.js`, liên đới ADR-007)
+- **Blocking Conditions**: **CHỜ ĐÀM xem ảnh trước.** Con số −28% chỉ là một con số; câu hỏi thật là
+  *"nhìn vào thì nó ra một ngôi làng có sân vườn, hay ra một thành phố bị rút bớt nhà?"* — và đó là
+  câu chỉ mắt Đàm trả lời được (`PHASE_RULES` §1).
+- **Review Trigger**: mỗi lần chạm cột `yard`, `MIN_UNIT_CELLS`, `BLOCK_MAX_CELLS`, hoặc khi `#88`
+  được đem ra giải.
+- **Owner**: chưa giao · **Status**: MỞ — **chờ Đàm duyệt bằng mắt**
+
+---
+
 > ⚠️ **ĐÁNH SỐ LẠI khi hợp nhất (Phase 21)**: hai mục dưới đây vốn mang số **#79** và **#80** trên
 > nhánh Phase 19/20, trùng với hai mục CÙNG SỐ mà `main` đã dùng cho hai chuyện khác hẳn (vai màu
 > `gear` · cư dân chiếm 0,29% khung hình). Theo đúng luật đã áp cho ADR — *số của `main` giữ

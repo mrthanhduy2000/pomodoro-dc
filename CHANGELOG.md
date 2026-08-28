@@ -12,6 +12,38 @@
 
 ---
 
+## 2026-08-28 — Phase 22: sân/vườn thuộc suất đất, nhà thôi dính mép nhau
+
+**Mục đích.** Đàm: *«đừng có làm cho nó giả quá … ngày xưa làm gì có vụ nhà sát sát nhau như thế»*.
+Phase 21 đã xoá chồng lấn nhưng nhà vẫn dính mép, vì mọi phần đất của một khu phố đều là NHÀ.
+
+**Phạm vi.** Thêm cột `yard` (phần suất đất là sân/vườn) vào bảng `blockStyle.js` — khuôn ba lớp
+lần thứ chín: BẢNG khai → `block.js` dựng hình qua chính `buildGroundCover` đã có → `cityParts.js`
+chỉ thêm một dòng chuyển tiếp `detail` (không dựng hình, lệnh vẽ không đổi). Ba kỷ dính-liền có
+thật (Çatalhöyük · insula La Mã · nhà đấu lưng Anh) khai thẳng `0`.
+Kèm nhánh trả-lại-đất cho suất nào mất chi tiết mái. Xem **ADR-067**.
+
+**Ảnh hưởng.** `TECH_DEBT #88` đóng MỘT NỬA: trục suất đất dựng-ra sống lại từ `{4}` thành
+`{2,3,4}` — nhưng do cột `yard` (tương quan −0,803) chứ không do cột `units` (−0,212), nên nửa kia
+vẫn mở. **Lệnh vẽ không đổi một đơn vị ở cả 15 kỷ.** Chi tiết mái 459/473 = 97,0%, không kỷ nào
+dưới sàn 0,7. Bản quét 15 kỷ đạt cả hai cổng không-trôi (**0/15 và 0/105**), và trục chặng còn đi
+LÊN: 12,11 → **12,23** (mốc nền TỰ ĐO tại HEAD `3d37745`, không chép của phase trước).
+
+**Kèm một chỗ lệch tài liệu bắt được nhờ chính việc tự đo — `TECH_DEBT #93` (mới).** Bảng Phase 20
+ghi trục chặng 12,44 trong khi Phase 21 ghi 12,11 cho cùng đại lượng; phép đo hôm nay tái lập đúng
+số của Phase 21. Hai tài liệu cùng kho lệch nhau suốt hai phase mà không cổng nào kêu. **Chưa truy
+ra chỗ trôi nằm ở commit nào** — cố ý không đoán. Bảng Phase 20 **giữ nguyên** (nó đúng cho đúng
+hai commit đã sinh ra nó); chỗ lệch được ghi ra ở mục Phase 22 của `PERFORMANCE.md`.
+
+**Hai cái giá đã đo** (mở `TECH_DEBT #91` và `#92`): số căn nhà nhìn thấy giảm **28,2%**
+(1892 → 1358 khối) — đi ngược lời phê "thành phố trông nhỏ"; và kỷ 15 giữ chi tiết mái bằng cách
+mất cái sân trong ở 25/28 ô, dù sân trong chính là typology Dubai. Cả hai chờ Đàm duyệt bằng mắt.
+
+**Tương thích.** Không đụng state, không đụng Supabase, không migration. ADR-007 nguyên vẹn — `yard`
+là hàm thuần của `(era, bpId, toạ độ ô)`, không đọc tiến độ.
+
+---
+
 ## 2026-08-28 — Phase 21 §6b: cổng chống-CHÉP cho công cụ dựng ảnh + đủ 15 kỷ nhìn từ trên xuống
 
 **Mục đích.** Bộ ảnh nghiệm thu §6 mới có 6/15 kỷ. Dựng nốt 9 kỷ còn lại để không kết luận về cả

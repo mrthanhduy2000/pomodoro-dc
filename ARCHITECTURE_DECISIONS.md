@@ -11,6 +11,92 @@
 
 ---
 
+## ADR-067 — **NHÀ RỜI NHAU LÀ VÌ ĐẤT QUANH NÓ CÓ CHỦ, KHÔNG PHẢI VÌ TA ĐẨY CHÚNG RA XA**: sân/vườn thuộc SUẤT ĐẤT, và cột `units` sống lại nhờ `yard` chứ không nhờ chính nó
+
+- **Ngày**: 2026-08-28
+- **Bối cảnh**: Phase 22. Đàm xem bản quét Phase 21 rồi nói: *«đừng có làm cho nó giả quá, làm cho
+  nó chân thật hơn, kể cả cách sắp xếp kiến trúc, mà ngày xưa làm gì có vụ nhà sát sát nhau như
+  thế»*. Phase 21 (ADR-065) đã chữa **bố cục** bên trong một thửa (BSP lệch tâm thay cho lưới) và
+  đã chữa **chồng lấn** (290 cặp → 0). Nhưng nó không chạm tới thứ Đàm đang chỉ: sau khi hết chồng
+  lên nhau, các căn nhà **vẫn dính sát mép nhau**, vì mọi phần đất của một khu phố đều là NHÀ.
+- **Vấn đề**: ba khuyết tật, và cái thứ ba chỉ lộ ra khi đã đo hai cái đầu.
+  1. **KHÔNG CÓ ĐẤT TRỐNG THUỘC VỀ AI.** Cột `alley` (khe giữa hai nhà) đã có từ ADR-052, nhưng nó
+     là một **khoảng cách**, không phải một **mảnh đất**. Ngoài đời cái tách hai căn nhà không phải
+     một khe hở — nó là **sân, vườn, khoảnh ruộng, chỗ để xe**, tức một mảnh đất CÓ CHỦ, có hàng
+     rào, có giếng, có sào phơi. Đẩy hai căn ra xa mà không đặt gì vào giữa thì được một thành phố
+     thưa, không được một thành phố THẬT.
+  2. **KHÔNG PHẢI KỶ NÀO CŨNG THẾ, VÀ ĐÓ MỚI LÀ CHỖ CÓ BẢN SẮC.** Đàm nói *"ngày xưa làm gì có"*,
+     nhưng đo theo lịch sử thì mệnh đề ấy **sai ở ba kỷ**: Çatalhöyük (kỷ 1) không hề có ngõ — người
+     ta đi trên MÁI và trèo xuống bằng thang; insula La Mã (kỷ 7) và nhà đấu lưng Anh (kỷ 10) cũng
+     dính liền có chủ đích. ⇒ "nhà rời nhau" không phải một luật chung áp cho 15 kỷ, nó là **một
+     trục của bảng**, và ba kỷ ấy phải khai thẳng **0**.
+  3. **CỘT `units` LÀ MỘT TRỤC CHẾT** (`TECH_DEBT #88`, mở từ Phase 21 §4): 15 dòng khai 4…10 suất
+     đất, dựng ra **đúng 4 ở cả 15 kỷ**, vì một ô rộng 1,0 chia cho sàn `MIN_UNIT_CELLS = 0,3276`
+     ra 3,05 ⇒ tối đa 2 suất mỗi trục. Số học, không phải tham số chỉnh sai.
+- **Phương án cân nhắc**:
+  1. **Nới `alley` cho to hẳn lên.** Loại: nó cho ra khoảng trống, không cho ra mảnh đất — và
+     `TECH_DEBT #84` đã ghi rằng mọi cần gạt của `alley` đều đã cạn (nới nữa thì nhà tụt xuống dưới
+     sàn chi tiết mái). Nó cũng đúng cái bẫy đã nêu ở mục 1: chữa triệu chứng, không chữa nguyên
+     nhân.
+  2. **Thêm cột `yard` — một PHẦN của suất đất là sân, không phải nhà** — chọn.
+  3. **Đặt sân thành một loại `prop` riêng rải trên ô trống.** Loại: đó chính là §2-C (`covers`) đã
+     làm từ Phase 19, và phép đo trần khi ấy nói thẳng rằng nó **không giải được bài này** — ô lưới
+     thành phố chỉ chiếm 12–16% chỗ "đất" nhìn thấy được. Quan trọng hơn: một cái sân rải bừa trên
+     ô trống **không thuộc về căn nhà nào**, nên nó không kể được câu chuyện "đất này có chủ".
+  4. **Nới `BLOCK_MAX_CELLS` để mỗi khu phố rộng hơn một ô** (hướng (b) của `TECH_DEBT #88`). Loại
+     **trong phạm vi phase này**: nó đụng `dwellings.js` (một nhà dân = một ô) và liên đới ADR-007,
+     tức một thay đổi tầm ADR riêng. Vẫn là hướng đúng nhất về lâu dài; giữ nguyên trong `#88`.
+- **Lý do loại bỏ**: xem từng mục ở trên. Điểm chung của (1) và (3): cả hai đều tạo ra **khoảng
+  trống VÔ CHỦ**, mà thứ Đàm gọi là "giả" chính là một thành phố nơi đất hoặc là nhà, hoặc là không
+  của ai — ngoài đời không có trạng thái thứ hai ấy trong một khu dân cư.
+- **Giải pháp chọn**: cột `yard` trong `blockStyle.js`, đi đúng **khuôn ba lớp** lần thứ chín
+  (BẢNG khai → HÌNH dựng → người đọc chỉ ĐỌC):
+  - **BẢNG** — `yard` = phần suất đất là sân/vườn chứ không phải nhà, dải `[0; BLOCK_YARD_MAX=0,7]`,
+    **bắt buộc đủ 15 dòng**, mỗi dòng buộc vào `country` mà `eraStyle.js` khai. Ba kỷ dính-liền khai
+    thẳng **0** (Çatalhöyük · insula · back-to-back), và validator **TỪ CHỐI THẲNG** dòng thiếu/âm/
+    vượt trần — không tự chữa về 0 (bẫy `MIN_STONE`, Phase 9D).
+  - **HÌNH** — `sanThanhMang` trong `block.js` dựng mảng phủ cho từng cái sân, **đi qua chính
+    `buildGroundCover`** đã có từ §2-C. Không viết một bộ hình thứ hai cho "sân sau nhà": hai bảng
+    nói về cùng một sự thật thì chúng sẽ trôi khỏi nhau.
+  - **NGƯỜI ĐỌC** — `cityParts.js` đổi **đúng MỘT dòng**: chuyển tiếp `detail` xuống
+    `buildBlockSpec` để mức chi tiết (LOD) tới được mảng phủ sân. Nó vẫn KHÔNG dựng một mảnh hình
+    học nào, và cả khu phố vẫn gộp thành ĐÚNG một mô tả ⇒ **lệnh vẽ không đổi một đơn vị ở cả 15
+    kỷ**. ⚠️ Bản nháp của mục này từng ghi *«không đổi một dòng nào»* — sai, và `git diff` bác bỏ;
+    một câu tự trấn an phải được kiểm như một con số (Phase 4G).
+  - **`yard` ăn MỘT trục (chiều sâu) ở mọi kiểu xếp**, còn `alley` giữ nguyên nghĩa "khe giữa hai
+    nhà". Một knob một việc.
+  - **Nhánh TRẢ LẠI ĐẤT**: nếu một suất đất mất chi tiết mái vì sân ăn mất chiều sâu, nó được dựng
+    lại trên TRỌN lô và **bỏ cái sân**. Đo được: bỏ nhánh này thì chi tiết mái tụt **459/473 →
+    384/473**, và 5 kỷ (2·3·6·9·15) rơi xuống dưới sàn 0,7 — tức nó chịu lực thật, không phải một
+    lớp trang trí.
+- **Trade-off** — **hai cái giá, cả hai đã đo, cả hai phải nói thẳng ra**:
+  1. ⚠️ **SỐ CĂN NHÀ NHÌN THẤY GIẢM 28%**: 1892 → **1358 khối** trên 473 ô. Đây là điều **đi ngược**
+     lời phê trước đó của Đàm rằng thành phố trông nhỏ. Nó là hệ quả trực tiếp và không tránh được:
+     đất dành cho sân thì không dành cho nhà. Ghi thành `TECH_DEBT #91`.
+  2. ⚠️ **KỶ 15 GIỮ CHI TIẾT MÁI BẰNG CÁCH MẤT CÁI SÂN**: Dubai khai `yard: 0,55` (lớn nhất bảng) vì
+     sân trong CHÍNH LÀ typology của nó, nhưng nhánh trả-lại-đất thu hồi 25/28 ô. Đo được đây là một
+     **hoặc/hoặc thật sự**: có nhánh ⇒ mái 28/28 · sân 3/28; bỏ nhánh ⇒ mái 3/28 · sân 28/28. Không
+     sửa được mà không hoặc (a) làm 5 kỷ khác rơi dưới sàn mái, hoặc (b) viết `if (era === 15)` —
+     mà một ngoại lệ viết cứng theo kỷ là thứ dự án đã cấm. Ghi thành **ngoại lệ ĐẾM ĐƯỢC** trong
+     bài test (`assert.deepEqual(hutSan, [15])`) + `TECH_DEBT #92`.
+- **Ảnh hưởng**:
+  - `TECH_DEBT #88` **ĐÓNG MỘT NỬA**: trục DỰNG RA đã sống lại, từ `{4}` thành **`{2, 3, 4}`**
+    (253 ô 2 suất · 28 ô 3 suất · 192 ô 4 suất). ⚠️ Nhưng phải nói cho đúng **cái gì** làm nó sống:
+    tương quan giữa cột `units` đã KHAI và số khối DỰNG RA là **−0,212** (gần như không), còn tương
+    quan với cột `yard` là **−0,803** — gấp gần **bốn lần**. ⇒ trục sống lại **nhờ `yard`**, không nhờ chính `units`.
+    Nửa còn mở: `units` vẫn chưa lái được cái nó mang tên. Bài test kể tên cả hai vế.
+  - **Lệnh vẽ: 0 thay đổi ở cả 15 kỷ.** `buildGroundCover` chỉ dùng bốn vai `stone`/`wood`/`leaf`/
+    `wall`, cả bốn đã có ở 15/15 kỷ. Có bài test khoá, và mốc nền của nó dựng từ `collectCitySpecs`
+    trên CẢ cảnh (không phải chỉ nhà dân) — đếm ở cấp MỘT CÔNG TRÌNH là đo sai cấp.
+  - **Chi tiết mái**: 459/473 = **97,0%**, kỷ tệ nhất 0,844 (kỷ 6), **không kỷ nào dưới sàn 0,7**.
+  - **ADR-007 nguyên vẹn** — `yard` là hàm thuần của `(era, bpId, toạ độ ô)`, không đọc tiến độ.
+- **Điều kiện xem lại**: (a) Đàm xem ảnh và nói mật độ nhà đã xuống quá thấp ⇒ mở lại `#91`, và lối
+  ra đúng là hướng (b) của `#88` (thửa to hơn một ô) chứ không phải hạ `yard`; (b) có ai chạm vào
+  `MIN_UNIT_CELLS`, `BLOCK_MAX_CELLS`, `BLOCK_YARD_MAX`, hoặc nhánh trả-lại-đất; (c) `groundCover.js`
+  thêm một vai vật liệu mới ⇒ phải đo lại lệnh vẽ trước khi ship.
+
+---
+
 ## ADR-065 — **BÀN CỜ LÀ MỘT MỐC LỊCH SỬ, KHÔNG PHẢI MỘT CÁCH SẮP XẾP MẶC ĐỊNH**: bố cục bên trong một thửa có trục `layout`, và một khu nhà phải NẰM TRONG thửa của nó
 
 - **Ngày**: 2026-08-24

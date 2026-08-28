@@ -28,6 +28,9 @@
 import { BUILDING_SCALE, countSpecTriangles, specFootprint, specHeight, specSpan } from './parts.js';
 import { buildBuildingSpec } from './buildingSpec.js';
 import { deriveBlockUnits, getBlockStyle } from './blockStyle.js';
+import { buildGroundCover } from './groundCover.js';
+import { getGroundCoverStyle, pickCoverKind } from './groundCoverStyle.js';
+import { CELL_PIXELS, EYE_PIXELS } from './streetStyle.js';
 
 /**
  * Hệ số thu nhỏ mặt bằng danh nghĩa của khu phố.
@@ -108,6 +111,192 @@ function xoayVaDoi(parts, goc, ox, oz) {
 }
 
 /**
+ * ── SÂN CỦA SUẤT ĐẤT → MỘT MẢNG PHỦ NHÌN THẤY ĐƯỢC ───────────────────────────────────────────
+ *
+ * `blockStyle.js` đã tách mỗi suất đất thành hai phần: phần có nhà đứng lên, và phần SÂN. Nhưng
+ * một mảnh đất trống thì trên màn hình chỉ là mặt cỏ — tức mở sân ra mà không lấp thì thành phố
+ * **trông TRỐNG HƠN** chứ không chân thật hơn, đúng cái bẫy Phase 14 đã ghi (*"chia nhỏ mà không
+ * nâng cao thì thành phố còn trông nhỏ hơn"*). Nên sân phải được LẤP bằng thứ mắt đọc ra.
+ *
+ * ⚠️ TÁI DÙNG `groundCover.js` (§2-C), KHÔNG viết nhà máy thứ hai. Bảy kiểu dùng đất ấy đã có
+ * bảng 15 kỷ, đã có trọng số theo nước, và — quan trọng nhất — đã được chứng minh là **không đẻ
+ * ra lệnh vẽ nào** (chỉ dùng bốn vai `stone`/`wood`/`leaf`/`wall`, cả bốn có ở 15/15 kỷ). Viết
+ * một bộ hình riêng cho "sân sau nhà" sẽ là hai bảng nói về cùng một sự thật, rồi trôi khỏi nhau.
+ *
+ * ⚠️ SÂN HẸP HƠN NGƯỠNG MẮT THÌ **KHÔNG DỰNG GÌ CẢ**, và đây là luật của chính Đàm (ADR-033):
+ * *nới cho vượt ngưỡng nhìn thấy được, HOẶC khai thẳng 0 — không có gì ở giữa*. Một mảng phủ rộng
+ * 1 điểm ảnh không phải một cái sân, nó là nhiễu; và nó tốn tam giác thật cho thứ không ai thấy.
+ *
+ * ⚠️ ĐÍNH CHÍNH — CHÚ THÍCH Ở ĐÂY TỪNG GHI *"ngưỡng này loại đúng ba kỷ 1 · 7 · 10, tức đúng ba
+ * nền mà ngoài đời nhà thật sự dính vào nhau — cái cổng tự kể đúng lịch sử"*. Nghe rất xuôi, và
+ * **SAI**: ba kỷ ấy không có sân vì **BẢNG khai thẳng `yard: 0`**, chứ không phải vì cái cổng này
+ * chặn. Đo trên quần thể thật (473 ô · 1.456 suất đất · 80 phiên · cấp 3): **cổng loại đúng 0 /
+ * 1.064 cái sân**, và cái sân hẹp nhất cả thành phố là **6,47 px — gấp 1,62 lần ngưỡng 4 px**.
+ * Cùng hình dạng với bài học *"một lời hứa đúng NHỜ MỘT THỨ CHẲNG LIÊN QUAN"* (Phase 7D): công
+ * trạng bị gán nhầm cho cái cổng, nên ngày nào bảng đổi thì lời giải thích ấy vẫn còn nằm đây.
+ *
+ * ⚠️ NHƯNG CỔNG NÀY **KHÔNG** ĐÚNG-THEO-CẤU-TẠO (bẫy ADR-048) — nó CÓ đường nổ, chỉ là hôm nay
+ * không dòng nào của bảng đi vào đường ấy. Quét chính `deriveBlockUnits` trên 2.704 mặt bằng, chỉ
+ * đổi mỗi cột `yard`:
+ *
+ *     yard 0,22 → 0/2704 dưới ngưỡng (hẹp nhất 6,47 px)   ← dòng nhỏ nhất bảng đang dùng
+ *     yard 0,15 → 0/2704                (hẹp nhất 4,32 px)   ← mép an toàn cuối cùng
+ *     yard 0,12 → 1352/2704             (hẹp nhất 3,34 px)
+ *     yard 0,10 → 2704/2704             (hẹp nhất 2,78 px)   ← CẢ KỶ mất sạch sân, im lặng
+ *
+ * ⇒ một dòng bảng khai `yard: 0,05` sẽ **được validator nhận** rồi **dựng ra đúng không có gì** —
+ * chính cái "khoảng giữa" mà ADR-033 cấm. Thứ chặn được nó KHÔNG phải cổng này (cổng chỉ im lặng
+ * trả về mảng rỗng) mà là **phép ĐẾM ở đầu bên kia**: bài `SÂN HOẶC ĐỦ THẤY, HOẶC BẰNG 0` trong
+ * `block.test.js` khoá *"tập kỷ không có mảnh sân nào BẰNG tập kỷ khai `yard: 0`"*, nên dòng 0,05
+ * ấy làm test ĐỎ thay vì biến mất. Đúng bài học Phase 10 Bước 2: *"từ chối thẳng" chỉ an toàn khi
+ * có người ĐẾM số lần từ chối* — hai lời "đúng" cộng lại vẫn ra một lỗi im lặng nếu không ai đếm.
+ *
+ * ⚠️ MẢNG PHỦ LÀ HÌNH VUÔNG, nên nó lấy CẠNH NGẮN của sân. Sân hình dải (sân sau của một suất đất
+ * burgage) thì phần thừa theo cạnh dài để trống — đó là ĐÚNG: một mảnh vườn dài thì cũng chỉ có
+ * một khoảnh được dùng, phần còn lại là lối đi. Kéo dãn mảng phủ theo một trục thì mọi khối đã
+ * xoay trong nó (rào, sào phơi, giếng) sẽ bị méo, mà `groundCover.js` có bốn chỗ dùng `ry`.
+ */
+const SAN_TOI_THIEU_O = EYE_PIXELS / CELL_PIXELS;
+
+/** Bề rộng cơ sở của một mảng phủ, chép từ `buildGroundCover` — xem chú thích ở đó. */
+const COVER_BASE_W = 0.86;
+
+/**
+ * Dựng mảng phủ cho MỘT cái sân, đã dời về đúng chỗ trong hệ toạ độ của khu phố.
+ *
+ * ⚠️ CHIA CHO `BUILDING_SCALE`: `u.yard` nói bằng Ô LƯỚI (cùng hệ với `MIN_UNIT_CELLS` và mắt
+ * Đàm), còn mọi thứ trong `parts` nói bằng ĐƠN VỊ MÔ TẢ, mà `sceneGraph.js` nhân cả cụm lên
+ * `BUILDING_SCALE` lần khi đặt vào cảnh. Quên phép chia này thì cái sân to gấp 1,3 lần chỗ đất
+ * của nó và thò sang nhà hàng xóm — im lặng, vì không có gì đo bề rộng sân.
+ */
+function sanThanhMang({ yard, era, seed, detail }) {
+  if (!yard) return [];
+  const canhNgan = Math.min(yard.w, yard.d);
+  if (!(canhNgan >= SAN_TOI_THIEU_O)) return [];
+  const style = getGroundCoverStyle(era);
+  const scale = canhNgan / BUILDING_SCALE / COVER_BASE_W;
+  const parts = buildGroundCover({
+    kind: pickCoverKind(era, seed),
+    scale,
+    enclose: style.enclose,
+    seed,
+    detail,
+  });
+  if (parts.length === 0) return [];
+  // ⚠️ GẮN NHÃN `groundCover` — MỘT TRẠNG THÁI KHÔNG ĐẾM ĐƯỢC LÀ MỘT TRẠNG THÁI KHÔNG CANH ĐƯỢC.
+  // Cái sân đi qua ba cửa có thể chặn nó lại trong im lặng (`yard` rỗng · cạnh ngắn dưới ngưỡng
+  // mắt · nhà đòi lại đất để giữ chi tiết mái), và ba cửa ấy đều TỪ CHỐI THẲNG — đúng luật
+  // ADR-026, nhưng "từ chối thẳng" chỉ an toàn khi có người ĐẾM số lần từ chối (bài học Phase 10
+  // Bước 2: hai lời "đúng" cộng lại thành một lỗi). Không có nhãn này thì không bài test nào phân
+  // biệt nổi "kỷ này cố ý không có sân" với "cơ chế sân đã chết ở cả 15 kỷ" — và tôi đã tự tay
+  // viết một phép đo hỏi `p.groundCover` trên những khối KHÔNG mang nhãn ấy, rồi suýt kết luận
+  // rằng cả cơ chế đã chết. Nhãn là dữ liệu thuần, không đổi `role` nên không tốn lệnh vẽ nào.
+  return xoayVaDoi(parts, 0, yard.ox / BUILDING_SCALE, yard.oz / BUILDING_SCALE)
+    .map((khoi) => ({ ...khoi, groundCover: true }));
+}
+
+/** Căn nhà này có còn chi tiết mái (ống khói, bồn nước, cửa sổ mái…) không? */
+const coMai = (spec) => spec.parts.some((p) => p.rooftop);
+
+/**
+ * Số lượt CO THÊM tối đa của `dungVuaDat` sau lượt giải tuyến tính.
+ *
+ * ⚠️ Đây là một cái gác NHANH-CHẬM, không phải một cái gác ĐÚNG-SAI: hết lượt thì hàm vẫn trả về
+ * bản vừa nhất nó đã dựng được, chỉ là kém khít hơn. Đo trên 380 ca trả-đất thật, phần thò ra
+ * còn lại của ca tệ nhất theo số lượt: **2 lượt → 0,340 ô · 3 → 0,245 · 4 → 0,0735 · 6 → 0,0131
+ * · 10 → 0,0001**. Chọn 6 vì `0,0131 ô × CELL_PIXELS(64) = 0,84 điểm ảnh` — dưới ngưỡng mắt 4
+ * điểm ảnh (`EYE_PIXELS`), tức mắt không đọc ra được, trong khi 10 lượt thì tốn thêm ~16% số lần
+ * dựng để đổi lấy một khoảng cách không ai nhìn thấy.
+ */
+const VONG_VUA_DAT = 6;
+
+/**
+ * Dựng MỘT căn nhà VỪA ĐÚNG mảnh đất `doiW × doiD` (đơn vị mô tả) — và chữ "vừa" ở đây phải
+ * **ĐO ĐƯỢC**, không phải **DỰ ĐOÁN ĐƯỢC**.
+ *
+ * ⚠️ ĐO HÌNH BAO CỦA CHÍNH ĐƠN VỊ, ĐỪNG SUY NÓ TỪ HÌNH BAO CỦA BẢN THAM CHIẾU. Bản đầu tính
+ * `fx = doiW / goc.w` với `goc` là hình bao của bản THAM CHIẾU, và nó sai một cách có hệ thống:
+ * hình bao gồm cả MÁI ĐUA, mà mái đua thì KHÔNG co theo `fx`. Nhân một hệ số nhỏ vào cả cụm ⇒
+ * khối thân teo đi nhiều hơn hình bao, đo ra khối thân chỉ còn ~0,12–0,16 trong khi suất đất
+ * rộng 0,25–0,35 — mỗi căn bỏ hoang gần nửa mảnh đất của mình VÀ rơi xuống dưới
+ * `ROOFTOP_MIN_SPAN` nên mất luôn chi tiết mái.
+ *
+ * ⚠️⚠️ **VÀ BẢN VÁ CỦA CÁI SAI ẤY LẠI LÀ MỘT DỰ ĐOÁN KHÁC — NÓ NỔ TUNG NGAY KHI RA KHỎI VÙNG ĐÃ
+ * HIỆU CHUẨN (Phase 22).** Bản trước dựng hai lượt rồi kẻ một ĐƯỜNG THẲNG qua hai điểm ấy
+ * (`hình bao(f) = thân × f + mái đua`) và giải thẳng ra hệ số cần dùng. Mô hình affine đó đúng
+ * khi chỉ chỉnh nhẹ quanh `f = 1`, và Phase 22 đưa nó ra khỏi vùng ấy theo hai hướng cùng lúc:
+ * cái sân làm suất đất **DẸT** hẳn đi, rồi phép trả-đất lại đòi **nhảy sang một hình bao to hơn
+ * nhiều**. Đo trên 380 ca trả-đất thật: **41% số ca lượt giải tuyến tính cho ra căn nhà TO HƠN
+ * mảnh đất được giao**, ca tệ nhất thò ra **0,53 ô** — tức lấn sang nhà hàng xóm, và
+ * `block.test.js` («KHÔNG CHIẾM THÊM ĐẤT») bắt được ngay.
+ *
+ * Nguyên nhân gốc: hình bao **không phải hàm bậc nhất, và cũng KHÔNG đơn điệu**. Đo 7.200 bước
+ * (15 kỷ × 6 ô × 41 mức `f` từ 0,20 tới 2,20): **551 bước ĐI LÙI** — hình bao NHỎ ĐI khi hệ số
+ * TĂNG — bước lùi lớn nhất **0,85 ô**. Nó là một hàm BẬC THANG nhảy cả hai chiều, vì số cửa sổ,
+ * số cột, và chính chi tiết mái đều bật/tắt theo cỡ. Một đường thẳng kẻ qua hai điểm của một hàm
+ * như thế có thể trỏ đi bất cứ đâu; và vì **không đơn điệu** nên **chia đôi cũng không cứu được**.
+ *
+ * ⇒ Bản này thôi đoán. Nó vẫn lấy phép giải tuyến tính làm **ĐIỂM XUẤT PHÁT** (rẻ, và trúng
+ * trong 59% số ca), rồi **ĐO bản vừa dựng**: còn thò ra thì nhân hệ số với đúng tỉ lệ thừa rồi
+ * dựng lại, tối đa `VONG_VUA_DAT` lượt. Cuối cùng trả về bản **LỚN NHẤT trong những bản ĐO ĐƯỢC
+ * LÀ VỪA** — *lớn nhất* vì nhà càng to càng giữ được chi tiết mái, *vừa* vì
+ * **TRẦN LUÔN THẮNG SÀN**: thà mất chi tiết mái còn hơn lấn sang đất hàng xóm.
+ *
+ * ⚠️ KHÔNG có hệ số "ăn thêm cho chắc" nào ở đây. Đã đo bốn mức (1 · 0,99 · 0,97 · 0,94): mức
+ * 0,99 hội tụ nhanh hơn thật, nhưng nó **mua tốc độ bằng cách vứt bớt chi tiết mái** và ca trôi
+ * tệ nhất lại XẤU HƠN (0,0697 so với 0,0131 ô). Nhân một con số "cho chắc" vào là dựng lại đúng
+ * cái phễu Phase 9A ở một chỗ mới.
+ */
+function dungVuaDat({ bpId, era, type, rarity, storey, faces, doiW, doiD }) {
+  const dung = (fx, fz) => buildBuildingSpec({
+    bpId, era, type, rarity, level: 1, plot: { fx, fz, storey, faces },
+  });
+  const daDung = [];
+  const themBan = (fx, fz) => {
+    const spec = dung(fx, fz);
+    const hinhBao = specFootprint(spec.parts);
+    const ban = { spec, hinhBao, troi: Math.max(hinhBao.w - doiW, hinhBao.d - doiD, 0) };
+    daDung.push(ban);
+    return ban;
+  };
+
+  const mot = themBan(1, 1);
+  const k1 = mot.hinhBao.w > 0 ? doiW / mot.hinhBao.w : 1;
+  const k2 = mot.hinhBao.d > 0 ? doiD / mot.hinhBao.d : 1;
+  const hai = themBan(k1, k2);
+
+  // Hai điểm `(1, mot)` và `(k, hai)` xác định một đường thẳng — giải ra hệ số cho ĐÍCH. Đây chỉ
+  // là điểm xuất phát; `m ≤ 0` nghĩa là hai điểm ấy không nói được gì (hàm vừa đi lùi ở đoạn đó),
+  // lúc ấy quay về `k` chứ không giả vờ đã giải được.
+  const giai = (dich, f1, k, f2) => {
+    if (Math.abs(1 - k) < 1e-9) return k;
+    const m = (f1 - f2) / (1 - k);
+    if (!(m > 1e-9)) return k;
+    const c = f1 - m;
+    const f = (dich - c) / m;
+    return Number.isFinite(f) && f > 1e-6 ? f : k;
+  };
+  let fx = giai(doiW, mot.hinhBao.w, k1, hai.hinhBao.w);
+  let fz = giai(doiD, mot.hinhBao.d, k2, hai.hinhBao.d);
+  let cuoi = (fx === k1 && fz === k2) ? hai : themBan(fx, fz);
+
+  // CO CHO VỪA — mỗi lượt nhân hệ số với đúng tỉ lệ đang thừa, và chỉ co trục nào thật sự thừa.
+  for (let vong = 0; vong < VONG_VUA_DAT && cuoi.troi > 1e-9; vong += 1) {
+    if (cuoi.hinhBao.w > doiW) fx *= doiW / cuoi.hinhBao.w;
+    if (cuoi.hinhBao.d > doiD) fz *= doiD / cuoi.hinhBao.d;
+    cuoi = themBan(fx, fz);
+  }
+
+  const vuaDat = daDung.filter((b) => b.troi <= 1e-9);
+  if (vuaDat.length) {
+    // vừa đất rồi thì chọn bản CHIẾM NHIỀU ĐẤT NHẤT — nhà to thì giữ được chi tiết mái.
+    return vuaDat.reduce((a, b) => (b.hinhBao.w * b.hinhBao.d > a.hinhBao.w * a.hinhBao.d ? b : a)).spec;
+  }
+  // không bản nào vừa (khuôn nhà có sàn cứng) ⇒ lấy bản THÒ RA ÍT NHẤT.
+  return daDung.reduce((a, b) => (b.troi < a.troi ? b : a)).spec;
+}
+
+/**
  * Mô tả hình học đầy đủ của MỘT KHU PHỐ nhà dân.
  *
  * @param {object} input
@@ -115,9 +304,10 @@ function xoayVaDoi(parts, goc, ox, oz) {
  * @param {number} input.era     1..15
  * @param {string} input.type    'house' | 'shop' | 'workshop'
  * @param {string} input.rarity  'common' | 'rare' | 'epic' — ở nhà dân nghĩa là CỠ nhà
+ * @param {string} [input.detail] 'high' | 'low' — CHỈ áp cho mảng phủ sân; khối nhà không có LOD
  * @returns {{parts:Array, height:number, span:number, triangles:number, units:number}}
  */
-export function buildBlockSpec({ bpId, era, type, rarity = 'common' } = {}) {
+export function buildBlockSpec({ bpId, era, type, rarity = 'common', detail = 'high' } = {}) {
   // BƯỚC 1 — bản tham chiếu: đúng căn nhà hôm nay, dựng bằng đúng lời gọi cũ.
   const ref = buildBuildingSpec({ bpId, era, type, rarity, level: 1 });
   const style = getBlockStyle(era);
@@ -150,72 +340,51 @@ export function buildBlockSpec({ bpId, era, type, rarity = 'common' } = {}) {
     // ⚠️ Mặt nạ tính theo LƯỚI KHU PHỐ, mà `emitWindows` thì làm việc trong hệ TOẠ ĐỘ RIÊNG của
     // căn nhà. Đơn vị nào quay 90° thì hai hệ ấy lệch nhau, nên phải đổi trục — quên chỗ này thì
     // cửa sổ biến mất ở mặt tiền và mọc ra trong bức tường chung.
-    const mn = u.faces;
-    const faces = quay ? { xm: mn.zp, xp: mn.zm, zm: mn.xm, zp: mn.xp } : mn;
-    // ⚠️ ĐO HÌNH BAO CỦA CHÍNH ĐƠN VỊ, ĐỪNG SUY NÓ TỪ HÌNH BAO CỦA BẢN THAM CHIẾU. Bản đầu tính
-    // `fx = doiW / goc.w` với `goc` là hình bao của bản THAM CHIẾU, và nó sai một cách có hệ
-    // thống: hình bao gồm cả MÁI ĐUA, mà mái đua thì KHÔNG co theo `fx` (nó là một tỉ lệ của
-    // chính khối thân, cộng thêm phần tuyệt đối). Nhân một hệ số nhỏ vào cả cụm ⇒ khối thân teo
-    // đi nhiều hơn hình bao, và đo ra thì khối thân chỉ còn ~0,12–0,16 (đơn vị mô tả) trong khi
-    // suất đất của nó rộng 0,25–0,35 — tức mỗi căn nhà bỏ hoang gần nửa mảnh đất của mình, VÀ
-    // rơi xuống dưới `ROOFTOP_MIN_SPAN` nên mất luôn chi tiết mái.
+    const doiTruc = (m) => (quay ? { xm: m.zp, xp: m.zm, zm: m.xm, zp: m.xp } : m);
+    const faces = doiTruc(u.faces);
+    const spec = dungVuaDat({ bpId: `${bpId}#${u.col},${u.row}`, era, type, rarity, storey: u.storey, faces, doiW, doiD });
+    // ⚠️ SÂN NHƯỜNG, NHÀ KHÔNG NHƯỜNG — VÀ CÂU ẤY PHẢI **ĐO**, KHÔNG ĐƯỢC **ĐOÁN**.
     //
-    // Sửa bằng đúng luật đã trả giá nhiều lần: *"đừng DỰ ĐOÁN thứ có thể ĐO"*. Dựng thử một lần ở
-    // tỉ lệ 1, ĐO hình bao thật của chính nó, rồi mới dựng lần thật với tỉ lệ đã biết. Hai lượt
-    // dựng cho mỗi đơn vị — cái giá ấy có thật, và nó được canh bởi cổng thời gian dựng cảnh
-    // (`TECH_DEBT #70`, `npm run test:cross`).
-    const thu = buildBuildingSpec({
-      bpId: `${bpId}#${u.col},${u.row}`,
-      era,
-      type,
-      rarity,
-      level: 1,
-      plot: { fx: 1, fz: 1, storey: u.storey, faces },
-    });
-    const gocU = specFootprint(thu.parts);
-    const k1 = gocU.w > 0 ? doiW / gocU.w : 1;
-    const k2 = gocU.d > 0 ? doiD / gocU.d : 1;
-    const hai = buildBuildingSpec({
-      bpId: `${bpId}#${u.col},${u.row}`,
-      era,
-      type,
-      rarity,
-      level: 1,
-      plot: { fx: k1, fz: k2, storey: u.storey, faces },
-    });
-    // ⚠️ LƯỢT THỨ BA — VÌ HAI LƯỢT KHÔNG THỂ TRÚNG ĐÍCH, VÀ LÝ DO NẰM Ở PHÉP TOÁN CHỨ KHÔNG Ở
-    // CÁCH VIẾT MÃ. Hình bao của một căn nhà theo hệ số co là một hàm AFFINE chứ không phải tuyến
-    // tính: `hình bao(fx) = thân × fx + mái đua`, trong đó mái đua có một phần TUYỆT ĐỐI không co
-    // theo `fx`. Lượt hai chia đích cho hình bao đo ở `fx = 1`, tức nó ngầm coi hàm ấy đi qua gốc
-    // toạ độ — nên nó LUÔN dựng ra một căn rộng hơn chỗ đất đã chia, một cách có hệ thống và luôn
-    // cùng một dấu. Đo được: khu phố tràn ra khỏi ô tới 0,168 ô, và 84 cặp nhà dân xuyên vào nhau.
+    // `MIN_UNIT_CELLS` là một DỰ ĐOÁN về chỗ đất tối thiểu để `emitRooftop` chịu dựng chi tiết
+    // mái (`ROOFTOP_MIN_SPAN × BUILDING_SCALE × EAVE_LAND_FACTOR`). Nó đúng ở thế giới trước
+    // Phase 22, nơi căn nhà chiếm TRỌN suất đất nên hai cạnh luôn cùng cỡ. Mở sân ra thì một
+    // cạnh bị ép xuống đúng cái sàn ấy trong khi cạnh kia vẫn dài — và ở hình bao dẹt đó thì
+    // `EAVE_LAND_FACTOR = 1,05` không còn đủ biên: đo được **67/473 ô** mất chi tiết mái, kỷ 15
+    // chỉ còn 0,286. Một dự đoán được hiệu chuẩn ở một hình dạng rồi đem dùng cho hình dạng khác
+    // là đúng bài học *"đừng DỰ ĐOÁN thứ có thể ĐO"* (Performance Gate 2026-08-17).
     //
-    // Hai điểm đã có — `(1, gocU)` và `(k, hai)` — xác định đúng một đường thẳng, nên giải thẳng
-    // ra hệ số cần dùng thay vì lặp. Đã đo lặp: nó KHÔNG hội tụ về đích ở mọi ca, vì phần tuyệt
-    // đối của mái đua là một SÀN CỨNG — kỷ 10 xin 0,20 thì bốn lượt liên tiếp mới xuống 0,2226 và
-    // vẫn đang bò. Lặp thêm là đuổi theo một thứ không tồn tại; giải phương trình thì xong trong
-    // một lượt, và khi cái sàn ấy chặn thật (`m ≤ 0`) thì hàm dưới đây trả lại hệ số cũ chứ không
-    // giả vờ đạt được.
-    const giai = (dich, f1, k, f2) => {
-      if (Math.abs(1 - k) < 1e-9) return k;
-      const m = (f1 - f2) / (1 - k);
-      if (!(m > 1e-9)) return k;
-      const c = f1 - m;
-      const fx = (dich - c) / m;
-      return Number.isFinite(fx) && fx > 1e-6 ? fx : k;
-    };
-    const nhi = specFootprint(hai.parts);
-    const fx = giai(doiW, gocU.w, k1, nhi.w);
-    const fz = giai(doiD, gocU.d, k2, nhi.d);
-    const spec = (fx === k1 && fz === k2) ? hai : buildBuildingSpec({
-      bpId: `${bpId}#${u.col},${u.row}`,
-      era,
-      type,
-      rarity,
-      level: 1,
-      plot: { fx, fz, storey: u.storey, faces },
-    });
-    parts.push(...xoayVaDoi(spec.parts, u.ry, u.ox / BUILDING_SCALE, u.oz / BUILDING_SCALE));
+    // ⇒ Không đi chỉnh con số dự đoán ấy (chỉnh là siết cả 15 kỷ cho một ca của ba kỷ), cũng
+    // KHÔNG hạ sàn 0,7 của `block.test.js` (hạ là bỏ răng cho cả bảng). Thay vào đó: **hỏi thẳng
+    // căn nhà vừa dựng xem nó còn mái không**, và nếu không thì TRẢ LẠI cho nó cả suất đất. Cái
+    // sân của riêng suất ấy biến mất — đúng thứ tự nhường đã ghi ở `docGiuLai`, và cũng đúng
+    // ngoài đời: không phải nhà nào trong xóm cũng có vườn.
+    //
+    // Giá phải trả có thật và đã đo: thêm tối đa ba lượt dựng cho những đơn vị rơi vào ca này
+    // (~14% số đơn vị), canh bởi cổng thời gian dựng cảnh (`TECH_DEBT #70`).
+    let dung = spec;
+    let san = u.yard;
+    let ox = u.ox;
+    let oz = u.oz;
+    if (san && u.plot && coMai(ref) && !coMai(spec)) {
+      const rong = dungVuaDat({
+        bpId: `${bpId}#${u.col},${u.row}`,
+        era,
+        type,
+        rarity,
+        storey: u.storey,
+        faces: doiTruc(u.plot.faces ?? u.faces),
+        doiW: (quay ? u.plot.d : u.plot.w) / BUILDING_SCALE,
+        doiD: (quay ? u.plot.w : u.plot.d) / BUILDING_SCALE,
+      });
+      // Nhận cả suất đất thì cũng phải về đứng GIỮA suất đất — căn nhà không còn lùi ra mép nữa
+      // vì không còn cái vườn nào để lùi khỏi. Quên vế này thì nó lệch nửa chiều sâu sân và
+      // thò sang nhà bên.
+      if (coMai(rong)) { dung = rong; san = null; ox = u.plot.ox; oz = u.plot.oz; }
+    }
+    parts.push(...xoayVaDoi(dung.parts, u.ry, ox / BUILDING_SCALE, oz / BUILDING_SCALE));
+    parts.push(...sanThanhMang({
+      yard: san, era, seed: `${bpId}#${u.col},${u.row}|san`, detail,
+    }));
   }
 
   return {

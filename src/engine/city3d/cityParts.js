@@ -124,6 +124,7 @@ export function collectCitySpecs({ layout, detail = 'high' } = {}) {
         era,
         type:   home.type,
         rarity: home.rarity,
+        detail,
       }),
     });
   }

@@ -17,7 +17,13 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { UI_SKINS, DEFAULT_UI_SKIN, normalizeUiSkin } from './uiSkins.js';
+import {
+  UI_SKINS,
+  DEFAULT_UI_SKIN,
+  normalizeUiSkin,
+  resolveSkinAfterMigration,
+  SKIN_MIGRATION_FLAG,
+} from './uiSkins.js';
 
 const SRC = join(dirname(fileURLToPath(import.meta.url)), '..');
 const doc = (rel) => readFileSync(join(SRC, rel), 'utf8');
@@ -128,4 +134,41 @@ test('MÀU nào khai ở bản sáng của một skin thì bản tối của ski
       `skin "${skin}": màu của bản SÁNG sống sót sang chế độ tối — ${rò.join(', ')}`);
   }
   assert.ok(đãSoi > 0, 'không skin hai-chế-độ nào có khối tối riêng — bài test đang chạy rỗng');
+});
+
+/**
+ * ─── ÉP CHUYỂN SKIN MỘT LẦN ──────────────────────────────────────────────────
+ * Ba bài dưới đây canh một thứ mà không cổng nào khác nhìn thấy: **lựa chọn giao diện của Đàm**.
+ * Hỏng theo hướng này thì im lặng tuyệt đối — app vẫn chạy, chỉ là hoặc anh không bao giờ thấy
+ * bản mới, hoặc lựa chọn của anh bị đá về mặc định sau mỗi lần nâng cấp.
+ */
+
+test('bản lưu CHƯA có cờ ⇒ ép về mặc định hiện hành, đúng một lần', () => {
+  // Đây là bản lưu thật của Đàm ngày 2026-08-28: skin `editorial` nằm đó vì hồi ấy nó LÀ mặc định.
+  const ra = resolveSkinAfterMigration({ uiSkin: 'editorial' });
+  assert.equal(ra.uiSkin, DEFAULT_UI_SKIN, 'bản lưu mang mặc định CŨ phải được đưa sang mặc định MỚI');
+  assert.equal(ra[SKIN_MIGRATION_FLAG], true, 'phải bật cờ, nếu không lần sau sẽ ép lại');
+  // Bản lưu trắng trơn / rác cũng phải ra mặc định, không được ra `undefined`.
+  for (const bảnLưu of [undefined, null, {}, { uiSkin: 'không-có-thật' }]) {
+    assert.equal(resolveSkinAfterMigration(bảnLưu).uiSkin, DEFAULT_UI_SKIN);
+  }
+});
+
+test('đã ép rồi ⇒ lựa chọn của người dùng thắng, kể cả khi nó khác mặc định', () => {
+  // ⚠️ Bài QUAN TRỌNG NHẤT của bộ ba. Không có nó thì cách "sửa" rẻ nhất cho bài trên là ép mọi
+  // lần nạp — và lúc ấy Đàm chọn skin nào cũng bị đá về `arcade` ở lần bump version kế tiếp,
+  // một triệu chứng ("chọn xong, thoát ra vào lại thì mất") mà chính `uiSkins.js` sinh ra để diệt.
+  for (const skin of UI_SKINS) {
+    const ra = resolveSkinAfterMigration({ uiSkin: skin, [SKIN_MIGRATION_FLAG]: true });
+    assert.equal(ra.uiSkin, skin, `skin "${skin}" đã chọn có ý mà vẫn bị ép về mặc định`);
+  }
+});
+
+test('cờ chỉ được coi là bật khi nó ĐÚNG là true', () => {
+  // Bản lưu cũ / sửa tay có thể để cờ thành 1, 'true', {} … Coi những thứ đó là "đã ép" nghĩa là
+  // bỏ qua phép ép ở đúng những máy có bản lưu bất thường — tức đúng những máy cần nó nhất.
+  for (const dốiTrá of [1, 'true', 'yes', {}, [], 'skinMigratedV1']) {
+    const ra = resolveSkinAfterMigration({ uiSkin: 'editorial', [SKIN_MIGRATION_FLAG]: dốiTrá });
+    assert.equal(ra.uiSkin, DEFAULT_UI_SKIN, `cờ ${JSON.stringify(dốiTrá)} không được coi là đã ép`);
+  }
 });

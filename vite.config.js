@@ -1,6 +1,29 @@
+import { execSync } from 'node:child_process';
+
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
+
+/**
+ * 7 ký tự đầu của commit đang được build — hiện ở cuối màn Cài đặt.
+ *
+ * ⚠️ VÌ SAO CẦN: ngày 2026-08-28 Đàm sửa rất nhiều mà "không thấy gì đổi", và phải mất một phiên
+ * mới truy ra rằng mã ĐÃ lên production, chỉ là bản lưu trên máy anh giữ skin cũ. Không có cách
+ * nào phân biệt "chưa lên" với "lên rồi mà không thấy" nếu màn hình không tự khai nó đang chạy
+ * bản nào. Một dòng 7 ký tự đóng vĩnh viễn cả một họ nghi vấn.
+ *
+ * Vercel không có `.git` lúc build nên `git` sẽ ném — đó là lý do có biến môi trường đứng trước,
+ * và một `catch` trả 'dev' để việc build KHÔNG BAO GIỜ đổ vì một dòng trang trí.
+ */
+function resolveCommitSha() {
+  const fromEnv = process.env.VERCEL_GIT_COMMIT_SHA ?? process.env.APP_COMMIT_SHA;
+  if (fromEnv) return String(fromEnv).slice(0, 7);
+  try {
+    return execSync('git rev-parse --short=7 HEAD', { encoding: 'utf8' }).trim();
+  } catch {
+    return 'dev';
+  }
+}
 
 const PORT = Number(process.env.PORT ?? 31105);
 const HOST = process.env.VITE_BIND_HOST ?? '0.0.0.0';
@@ -8,6 +31,9 @@ const SHOULD_OPEN = process.env.VITE_OPEN === 'true';
 
 // https://vite.dev/config/
 export default defineConfig({
+  define: {
+    __APP_COMMIT__: JSON.stringify(resolveCommitSha()),
+  },
   server: {
     host: HOST,
     port: PORT,

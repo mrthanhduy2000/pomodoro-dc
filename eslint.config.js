@@ -40,7 +40,9 @@ export default defineConfig([
     ],
     languageOptions: {
       ecmaVersion: 2020,
-      globals: globals.browser,
+      // `__APP_COMMIT__` do Vite bơm vào lúc build (xem `define` ở `vite.config.js`). Không khai
+      // ở đây thì `no-undef` đỏ, và phản xạ sai sẽ là bọc nó trong `typeof` cho hết đỏ.
+      globals: { ...globals.browser, __APP_COMMIT__: 'readonly' },
       parserOptions: {
         ecmaVersion: 'latest',
         ecmaFeatures: { jsx: true },

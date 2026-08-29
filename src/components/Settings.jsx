@@ -965,6 +965,16 @@ export default function Settings() {
             <p style={lightTheme ? { color: '#6a6862' } : { color: 'var(--muted-2)' }}>
               Hành trình qua 15 kỷ nguyên. Dữ liệu đang được lưu cục bộ trong trình duyệt.
             </p>
+            {/*
+              7 ký tự commit đang CHẠY THẬT trên máy này.
+              ⚠️ Đây không phải trang trí. Ngày 2026-08-28 Đàm sửa nhiều mà "không thấy gì đổi", và
+              mất trọn một phiên mới truy ra rằng mã đã lên production từ lâu — thứ chặn lại là bản
+              lưu skin cũ trên máy anh. Không có dòng này thì "chưa deploy" và "deploy rồi mà không
+              thấy" trông giống hệt nhau, mà hai thứ ấy cần hai cách sửa ngược nhau.
+            */}
+            <p className="mono pt-1 text-[11px]" style={lightTheme ? { color: '#8a8880' } : { color: 'var(--muted-2)' }}>
+              Bản đang chạy: <span className="font-semibold">{__APP_COMMIT__}</span>
+            </p>
           </div>
         </Card>
 

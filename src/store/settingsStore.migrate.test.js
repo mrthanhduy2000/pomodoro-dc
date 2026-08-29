@@ -57,3 +57,42 @@ test('giá trị rác trong bản lưu không lọt được vào quyết địn
   assert.ok(['auto', '2d', '3d'].includes(state.cityRenderMode), `ra chế độ lạ: ${state.cityRenderMode}`);
   assert.equal(state.cityPerfHud, false, 'chuỗi bất kỳ không được coi là bật');
 });
+
+/**
+ * ─── ÉP CHUYỂN SKIN MỘT LẦN (8 → 9) ──────────────────────────────────────────
+ * Ba bài ở `uiSkins.test.js` canh HÀM THUẦN. Ba bài dưới đây canh DÂY NỐI: hàm ấy có thật sự
+ * được `migrate` gọi không, và bản lưu đi ra có mang cờ không. Hàm đúng mà dây đứt thì triệu
+ * chứng y hệt lúc chưa làm gì cả — đúng bài học "một bài test xanh chỉ chứng minh thứ nó chạm tới".
+ */
+
+test('bản lưu mang mặc định CŨ ⇒ lần mở đầu tiên nhảy sang mặc định MỚI', async () => {
+  const { DEFAULT_UI_SKIN, SKIN_MIGRATION_FLAG } = await import('./uiSkins.js');
+  // Bản lưu thật của Đàm: `editorial` nằm đó vì hồi ấy nó là mặc định, không phải vì anh chọn.
+  const state = rehydrateFrom({ version: 8, state: { uiSkin: 'editorial' } });
+  assert.equal(state.uiSkin, DEFAULT_UI_SKIN,
+    'bảy bước làm lại giao diện vẫn không tới được máy đã dùng app từ trước');
+  assert.equal(state[SKIN_MIGRATION_FLAG], true, 'không bật cờ ⇒ lần nâng cấp sau sẽ ép lại');
+});
+
+test('đã ép rồi ⇒ nâng cấp phiên bản KHÔNG được ghi đè lựa chọn', async () => {
+  const { SKIN_MIGRATION_FLAG } = await import('./uiSkins.js');
+  // Cùng khuôn với bài `cityHomeBackdrop` ở trên: nâng cấp không bao giờ được đè lên một lựa chọn
+  // mà người dùng đã cố ý đưa ra.
+  const state = rehydrateFrom({ version: 8, state: { uiSkin: 'swiss', [SKIN_MIGRATION_FLAG]: true } });
+  assert.equal(state.uiSkin, 'swiss', 'lựa chọn có ý của Đàm bị phép ép chuyển nuốt mất');
+});
+
+test('máy MỚI (chưa có bản lưu nào) đã mang sẵn cờ', async () => {
+  const { SKIN_MIGRATION_FLAG, DEFAULT_UI_SKIN } = await import('./uiSkins.js');
+  // Máy mới đi thẳng vào state mặc định, KHÔNG qua `migrate`. Thiếu cờ ở đó thì lần bump version
+  // kế tiếp sẽ chạy phép ép trên một máy chưa từng cần ép — và nếu lúc ấy Đàm đã đổi skin trên
+  // máy mới đó, lựa chọn của anh bay mất.
+  //
+  // ⚠️ HỎI `getInitialState()`, KHÔNG hỏi `getState()` sau khi xoá localStorage. Bản đầu của bài
+  // này làm cách sau và ĐỎ trên mã hoàn toàn đúng: `persist.rehydrate()` không có gì để đọc thì
+  // nó KHÔNG đặt lại gì cả, nên state vẫn mang `uiSkin: 'swiss'` mà bài ngay trên vừa nạp vào.
+  // Phép đo hỏng, không phải mã hỏng — và cách "sửa" sai là nới assert cho hết đỏ.
+  const state = useSettingsStore.getInitialState();
+  assert.equal(state[SKIN_MIGRATION_FLAG], true, 'state mặc định thiếu cờ ⇒ máy mới sẽ bị ép oan sau này');
+  assert.equal(state.uiSkin, DEFAULT_UI_SKIN);
+});

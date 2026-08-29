@@ -15,7 +15,12 @@ import { DEFAULT_QUICK_FOCUS_PRESET } from '../engine/breaks';
 import { normalizeRenderMode } from '../engine/city3d/renderMode';
 // Danh sách skin + mặc định nằm ở module THUẦN riêng để script Node đọc được mà không phải
 // nạp cả engine âm thanh/thông báo — xem khối chú thích ở `uiSkins.js`.
-import { DEFAULT_UI_SKIN, normalizeUiSkin } from './uiSkins';
+import {
+  DEFAULT_UI_SKIN,
+  normalizeUiSkin,
+  resolveSkinAfterMigration,
+  SKIN_MIGRATION_FLAG,
+} from './uiSkins';
 import {
   disablePushSubscription,
   ensurePushSubscription,
@@ -79,6 +84,9 @@ const useSettingsStore = create(
       // ── UI Skin (bộ giao diện) ─────────────────────────────────────────
       // 'arcade' (mặc định) | 'editorial' | 'aurora' | 'inkgold' | 'swiss'
       uiSkin: DEFAULT_UI_SKIN,
+      // Máy MỚI đã ở mặc định hiện hành rồi ⇒ bật sẵn cờ, không có gì để ép. Thiếu dòng này thì
+      // lần bump version kế tiếp sẽ chạy phép ép trên một máy chưa từng cần ép.
+      [SKIN_MIGRATION_FLAG]: true,
 
       // ── Sound Pack ─────────────────────────────────────────────────────
       // 'classic' | 'nature' | 'synthwave' | 'minimal'
@@ -264,7 +272,9 @@ const useSettingsStore = create(
             ? clampDailyGoalMinutes(safeStored.dailyGoalMinutes)
             : DEFAULT_DAILY_GOAL.dailyGoalMinutes,
           uiTheme: safeStored.uiTheme === 'dark' ? 'dark' : 'light',
-          uiSkin: normalizeUiSkin(safeStored.uiSkin),
+          // ⚠️ KHÔNG phải `normalizeUiSkin(safeStored.uiSkin)` nữa: bản lưu của Đàm mang skin
+          // `editorial` vì hồi ấy nó là MẶC ĐỊNH, không phải vì anh chọn. Xem `uiSkins.js`.
+          ...resolveSkinAfterMigration(safeStored),
           ambientVolume,
           // Giá trị rác (bản cũ, sửa tay localStorage) không được lọt tới chỗ quyết định có dựng
           // WebGL hay không — chuẩn hoá ngay tại cửa.
@@ -277,7 +287,10 @@ const useSettingsStore = create(
       },
       // 6 → 7 (2026-08-12): thêm `cityRenderMode` + `cityPerfHud` cho màn hình Thành Phố 3D.
       // 7 → 8 (2026-08-12): thêm `cityHomeBackdrop` — thành phố làm lớp nền ở trang chủ (Phase 3F).
-      version: 8,
+      // 8 → 9 (2026-08-29): ép chuyển skin MỘT LẦN về `DEFAULT_UI_SKIN` cho bản lưu chưa có cờ
+      //   `skinMigratedV1`. Bump version là thứ DUY NHẤT làm `migrate` chạy lại, nên không có nó
+      //   thì hàm ép chuyển có viết đúng tới đâu cũng không bao giờ được gọi trên máy Đàm.
+      version: 9,
     },
   ),
 );

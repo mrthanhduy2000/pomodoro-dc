@@ -148,3 +148,77 @@ export function hasReadyOpportunity(snapshot = {}) {
   if (listResearchableBlueprints(snapshot).length > 0) return true;
   return listBuildableBlueprints(snapshot).length > 0;
 }
+
+/**
+ * "VIỆC TIẾP THEO" — MỘT việc duy nhất, để hiện thành một dòng ở màn Tập trung.
+ *
+ * ⚠️ VÌ SAO CẦN, KHI ĐÃ CÓ CÁI CHẤM VÀ CÁI CHUÔNG. Cái chấm trên tab "Hành trang" nói *"có
+ * việc"*; nó KHÔNG nói *"việc gì"*. Đàm phải bấm vào tab, rồi chọn giữa ba tab con, rồi tự dò
+ * trong 51 kỹ năng / 75 công trình xem cái nào đang mở được. Đo được: game có 360 thành tích,
+ * 51 kỹ năng, 75 công trình, 30 loại tài nguyên — cái khó chưa bao giờ là thiếu việc để làm, mà
+ * là **không có gì nói cho anh biết việc nào đáng làm ngay**. Một dòng chữ đọc trong một nhịp
+ * mắt, bấm được, đi thẳng tới đúng chỗ.
+ *
+ * ⚠️ THỨ TỰ ƯU TIÊN — XÂY > NGHIÊN CỨU > KỸ NĂNG, và đây là một quyết định chứ không phải thứ tự
+ * tình cờ của ba dòng `if`:
+ *   · **Xây** cho kết quả NHÌN THẤY ĐƯỢC trong thành phố 3D ngay phiên sau. Nó đóng đúng vòng lặp
+ *     "làm việc → thấy thành quả" mà `cityMoment.js` sinh ra để giữ.
+ *   · **Nghiên cứu** đứng thứ hai vì nó là thứ MỞ KHOÁ cho việc xây — làm nó tức là dọn đường.
+ *   · **Kỹ năng** đứng cuối dù nó rẻ nhất về thao tác: phần thưởng của nó là mấy phần trăm cộng
+ *     thêm, thứ không nhìn thấy được ở đâu cả. Để nó lên đầu là dùng chỗ đắt giá nhất màn hình
+ *     cho thứ mờ nhạt nhất.
+ * Ô xưởng có hạn (`CRAFT_QUEUE_SLOTS`), nên khi xưởng đầy thì nhánh "xây" tự trả rỗng và việc
+ * hiện ra rơi xuống mục kế — không cần thêm luật nào cho chuyện đó.
+ *
+ * ⚠️ `othersCount` LÀ PHẦN KHÔNG ĐƯỢC BỎ. Nếu chỉ hiện một việc mà im lặng về phần còn lại thì
+ * hôm nào Đàm có 5 kỹ năng chờ, anh vẫn chỉ thấy đúng một dòng nói về công trình và sẽ tưởng
+ * không còn gì khác. Con số ấy là thứ giữ cho dòng này không nói dối bằng cách bỏ sót.
+ *
+ * THUẦN: không đọc store, không đụng `Date`, không DOM.
+ *
+ * @returns {{id: string, icon: string, label: string, text: string,
+ *            action: {tab: string, collectionTab?: string}, othersCount: number} | null}
+ *          `null` khi không có việc nào — nơi gọi KHÔNG được render khung rỗng thay cho nó.
+ */
+export function pickNextAction(snapshot = {}) {
+  const buildable = listBuildableBlueprints(snapshot);
+  const researchable = listResearchableBlueprints(snapshot);
+  const skills = listAvailableSkills(snapshot);
+
+  const total = buildable.length + researchable.length + skills.length;
+  if (total === 0) return null;
+
+  if (buildable.length > 0) {
+    const [top] = buildable;
+    return {
+      id: 'workshop',
+      icon: '🔨',
+      label: top.label,
+      text: `Xây «${top.label}» — đủ tài nguyên rồi`,
+      action: { tab: 'collection', collectionTab: 'workshop' },
+      othersCount: total - 1,
+    };
+  }
+
+  if (researchable.length > 0) {
+    const [top] = researchable;
+    return {
+      id: 'blueprints',
+      icon: '📐',
+      label: top.label,
+      text: `Nghiên cứu «${top.label}» — đủ điểm nghiên cứu`,
+      action: { tab: 'collection', collectionTab: 'blueprints' },
+      othersCount: total - 1,
+    };
+  }
+
+  const [top] = skills;
+  return {
+    id: 'skills',
+    icon: '✦',
+    label: top.label,
+    text: `Mở kỹ năng «${top.label}» — đủ ${top.spCost} điểm`,
+    action: { tab: 'skills' },
+    othersCount: total - 1,
+  };
+}

@@ -10,6 +10,7 @@ import ResourceDisplay from './components/ResourceDisplay';
 import RankDisplay from './components/RankDisplay';
 import DailyMissions from './components/DailyMissions';
 import FocusRail from './components/FocusRail';
+import FocusNextAction from './components/FocusNextAction';
 import FocusCoachMobile from './components/FocusCoachMobile';
 import NotificationCenter from './components/NotificationCenter';
 import { RichTextView } from './components/RichText';
@@ -1712,6 +1713,15 @@ export default function App() {
                         <Suspense fallback={null}>
                           <FocusCityTease />
                         </Suspense>
+                        {/*
+                          Dòng thứ hai, ngay dưới dòng "đang xây" — và hai dòng này CỐ Ý đứng cạnh
+                          nhau vì chúng trả lời hai nửa của cùng một câu hỏi: dòng trên nói *phiên
+                          này đang đẩy cái gì tới đâu*, dòng dưới nói *ngoài việc bấm Bắt đầu thì
+                          còn việc gì đang chờ*. Cùng lý do bố cục: cột GIỮA, trên nếp gấp iPhone.
+                          Cả hai đều tự IM khi không có gì để nói, nên không có ngày nào màn Tập
+                          trung mọc ra hai dòng rỗng.
+                        */}
+                        <FocusNextAction onNavigate={handleNotificationNavigate} />
                         <div className="mt-6">
                           <PomodoroEngine
                             immersiveMode={isWideViewport}

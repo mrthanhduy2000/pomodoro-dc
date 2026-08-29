@@ -4,12 +4,14 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { BLUEPRINT_META, BUILDING_SPECS, normalizeRawCost } from './constants.js';
 import {
   ALL_SKILLS,
   hasReadyOpportunity,
   listAvailableSkills,
   listBuildableBlueprints,
   listResearchableBlueprints,
+  pickNextAction,
 } from './opportunities.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -106,4 +108,59 @@ test('`hasReadyOpportunity` nói ĐÚNG điều ba danh sách nói — không ph
   assert.equal(hasReadyOpportunity(nen), false, 'Ảnh chụp "trắng tinh" phải ra false, nếu không cả bài test này chỉ đang so true với true.');
   assert.equal(hasReadyOpportunity(chiKyNang), true);
   assert.equal(hasReadyOpportunity(chiBanVe), true);
+});
+
+/**
+ * ─── "VIỆC TIẾP THEO" ────────────────────────────────────────────────────────
+ * Dòng ở màn Tập trung. Ba bài dưới đây canh ba cách nó có thể nói dối, và cả ba đều IM LẶNG:
+ * hiện việc sai thứ tự · nói có việc khi không có · giấu mất phần việc còn lại.
+ */
+
+test('không có việc gì ⇒ trả `null`, KHÔNG trả một mục rỗng', () => {
+  // Nơi gọi dựa vào `null` để không render gì cả. Trả về một object "trống" thì màn Tập trung sẽ
+  // mọc ra một dòng trống chừa chỗ sẵn — thứ phá sự yên tĩnh hơn cả việc không có dòng nào.
+  assert.equal(pickNextAction({ sp: 0, unlockedSkills: {} }), null);
+  assert.equal(pickNextAction({}), null);
+});
+
+test('XÂY được thì việc hiện ra phải là XÂY, dù cùng lúc có cả kỹ năng lẫn bản vẽ đang chờ', () => {
+  // ⚠️ Bài canh chính cái QUYẾT ĐỊNH ưu tiên, không canh một chuỗi chữ. Xây là việc duy nhất cho
+  // kết quả nhìn thấy được trong thành phố ở phiên sau; để kỹ năng (thưởng mấy phần trăm, không
+  // nhìn thấy ở đâu) chen lên trước là dùng chỗ đắt nhất màn hình cho thứ mờ nhạt nhất.
+  const kho = { sp: Number.MAX_SAFE_INTEGER, unlockedSkills: {} };
+  const coSan = pickNextAction(kho);
+  assert.ok(coSan, 'với SP vô hạn phải có ít nhất một việc — bài test đang chạy rỗng');
+  assert.equal(coSan.id, 'skills', 'chỉ có kỹ năng sẵn sàng thì việc hiện ra phải là kỹ năng');
+
+  // Dựng một ván có ĐỦ CẢ BA loại việc, rồi đòi "xây" thắng.
+  const daySpec = Object.entries(BUILDING_SPECS);
+  assert.ok(daySpec.length > 0, 'không có BUILDING_SPECS — bài test đang chạy rỗng');
+  const [bpId, spec] = daySpec.find(([id]) => BLUEPRINT_META[id]?.era === 1) ?? daySpec[0];
+  const meta = BLUEPRINT_META[bpId];
+
+  const bag = {};
+  for (const [res, amount] of Object.entries(normalizeRawCost(spec.cost ?? {}))) bag[res] = amount * 10;
+
+  const banVe = pickNextAction({
+    ...kho,
+    activeBook: meta.era,
+    blueprints: [{ id: bpId }],
+    resources: { [`book${meta.era}`]: bag },
+    resourcesRefined: { [meta.era]: { t2: 999 } },
+    research: { rp: 999_999, researched: [] },
+  });
+  assert.equal(banVe.id, 'workshop', `xây được «${bpId}» mà việc hiện ra lại là "${banVe.id}"`);
+  assert.equal(banVe.action.tab, 'collection');
+  assert.equal(banVe.action.collectionTab, 'workshop');
+});
+
+test('`othersCount` đếm ĐÚNG phần việc còn lại, không phải tổng', () => {
+  // Không có con số này thì một dòng nói về công trình sẽ im lặng nuốt mất 5 kỹ năng đang chờ, và
+  // Đàm tưởng đã hết việc. Đây là chỗ dòng ấy dễ nói dối nhất — bằng cách bỏ sót, không bằng sai.
+  const kho = { sp: Number.MAX_SAFE_INTEGER, unlockedSkills: {} };
+  const soViec = listAvailableSkills(kho).length
+    + listResearchableBlueprints(kho).length
+    + listBuildableBlueprints(kho).length;
+  assert.ok(soViec >= 2, 'cần ít nhất 2 việc thì mới kiểm được phép trừ — bài test đang chạy rỗng');
+  assert.equal(pickNextAction(kho).othersCount, soViec - 1);
 });

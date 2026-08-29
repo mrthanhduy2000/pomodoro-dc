@@ -24,6 +24,14 @@
 │   │   │                         #   MỘT đồng hồ riêng 4 giây, và đồng hồ DỪNG khi có hộp thoại
 │   │   │                         #   chặn màn hình. Nằm ở z-[48]: trên chuông (z-[45]), dưới sàn
 │   │   │                         #   hộp thoại (z-50) — đúng thứ bậc "phải quyết" vs "chỉ cần biết"
+│   │   ├── FocusNextAction.jsx   # MỘT DÒNG BẤM ĐƯỢC ở màn Tập trung: việc đáng làm tiếp theo là
+│   │   │                         #   gì (mở kỹ năng nào / nghiên cứu gì / xây gì), bấm là tới đúng
+│   │   │                         #   tab. Ưu tiên XÂY > NGHIÊN CỨU > KỸ NĂNG — xây là việc duy nhất
+│   │   │                         #   cho kết quả nhìn thấy được trong thành phố ở phiên sau.
+│   │   │                         #   ⚠️ Phải ở CỘT GIỮA của App.jsx, cạnh `FocusCityTease`: cột
+│   │   │                         #   phải (`FocusRail`) là `hidden … lg:flex` nên iPhone không bao
+│   │   │                         #   giờ thấy. Không có việc ⇒ render null, không khung rỗng.
+│   │   │                         #   Dây nối khoá bằng `focusNextActionWiring.test.js`
 │   │   ├── icons/            # Bộ icon SVG tự vẽ (thay emoji), 1 component Glyph + data tách riêng
 │   │   ├── CityView.jsx      # Tab Thành Phố — CHỈ lấy dữ liệu + chọn bộ vẽ, giữ mỏng có chủ ý
 │   │   ├── city/             # Màn hình Thành Phố. Luật: KHUNG tách khỏi BỘ VẼ (ADR-008)
@@ -709,6 +717,11 @@
 │   │   │                     #   ở engine/navAttention.js. ⚠️ Selector trả về BOOLEAN, không phải
 │   │   │                     #   mảng — gốc app bọc cả cảnh 3D, cho nó render lại theo từng con số
 │   │   │                     #   tài nguyên là trả một cái giá không ai đo được cho một chấm 5px
+│   │   ├── useNextAction.js   # "Việc tiếp theo" cho màn Tập trung — MỘT việc, hoặc null. Đọc
+│   │   │                     #   engine/opportunities.js (pickNextAction), dùng CHUNG ba phép đếm
+│   │   │                     #   với chuông thông báo + chấm tab. ⚠️ Lấy từng mảnh state rồi
+│   │   │                     #   useMemo, KHÔNG gọi pickNextAction trong selector: nó dựng object
+│   │   │                     #   mới mỗi lần nên zustand sẽ coi là "luôn khác"
 │   │   └── useGameLoop.js
 │   ├── lib/                   # Hạ tầng dùng chung, KHÔNG phải logic game thuần: tích hợp dịch vụ
 │   │                          #   ngoài, và từ 2026-08-27 thêm từ vựng chuyển động của giao diện

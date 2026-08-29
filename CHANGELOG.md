@@ -12,6 +12,45 @@
 
 ---
 
+## 2026-08-29 — Mở van skin + dòng "Việc tiếp theo" ở màn Tập trung
+
+**Mục đích.** Hai việc nhỏ nhắm vào cùng một câu hỏi của Đàm: *"làm sao game dễ chơi và hứng thú
+hơn"*. Cả hai đều KHÔNG thêm hệ thống mới — game đã có 51 kỹ năng, 75 công trình, 360 thành tích;
+cái thiếu chưa bao giờ là nội dung.
+
+**(1) Ép chuyển skin một lần.** Đổi `DEFAULT_UI_SKIN` không đổi được giao diện của máy đã lưu lựa
+chọn cũ — dữ liệu đã lưu thắng mặc định, và điều đó vốn đúng. Nhưng skin `editorial` trong bản lưu
+của Đàm nằm đó vì hồi ấy nó LÀ mặc định, không phải vì anh chọn; hệ quả là bảy bước làm lại giao
+diện chạy trên production nhiều ngày mà chủ dự án không thấy một thứ nào. Nay `migrate` (version
+8 → 9) đưa bản lưu chưa có cờ `skinMigratedV1` về mặc định hiện hành **đúng một lần** rồi bật cờ;
+từ đó lựa chọn của người dùng được tôn trọng vĩnh viễn. Cờ riêng chứ không so `uiSkin === 'editorial'`
+— so giá trị thì mọi lần bump version sau đều ép lại, kể cả với người đã chọn có ý.
+
+**(2) 7 ký tự commit ở cuối màn Cài đặt.** Bơm lúc build (`vite.config.js` → `__APP_COMMIT__`, ưu
+tiên `VERCEL_GIT_COMMIT_SHA`, `catch` về `'dev'` để build không bao giờ đổ vì một dòng trang trí).
+Không có nó thì "chưa deploy" và "deploy rồi mà không thấy" trông giống hệt nhau — hai thứ cần hai
+cách sửa ngược nhau, và đã tốn trọn một phiên để phân biệt.
+
+**(3) Dòng "Việc tiếp theo".** `engine/opportunities.js` đã tính sẵn ba danh sách (kỹ năng mở được /
+bản vẽ nghiên cứu được / công trình xây được) nhưng chỉ dùng làm một cái CHẤM — chấm nói *"có
+việc"*, không nói *"việc gì"*. Thêm hàm thuần `pickNextAction` chọn ra một việc, ưu tiên **XÂY >
+NGHIÊN CỨU > KỸ NĂNG** (xây là việc duy nhất cho kết quả nhìn thấy được trong thành phố ở phiên
+sau), kèm `othersCount` để dòng không nói dối bằng cách bỏ sót. Hiện ở **cột giữa** màn Tập trung,
+cạnh dòng "đang xây" — cột phải không hiện trên iPhone.
+
+**Phạm vi.** `store/uiSkins.js` · `store/settingsStore.js` (version 9) · `vite.config.js` ·
+`eslint.config.js` · `components/Settings.jsx` · `engine/opportunities.js` ·
+`hooks/useNextAction.js` (mới) · `components/FocusNextAction.jsx` (mới) · `App.jsx`.
+
+**Ảnh hưởng / tương thích.** Lần mở app đầu tiên sau bản này, máy nào chưa có cờ sẽ nhảy sang skin
+"Sân Chơi" — đổi skin lại trong Cài đặt là giữ vĩnh viễn. Không đụng `gameStore`, không thêm byte
+nào vào khối JSONB đồng bộ Supabase, không đổi luật chơi hay công thức phần thưởng.
+
+**Cổng.** 1292 bài `test:fast` xanh (`# skipped 1`) + 3 bài `test:cross` · lint sạch · build xanh ·
+đã xác nhận bằng ảnh chụp khung 390px thật.
+
+---
+
 ## 2026-08-27 (tối muộn) — Báo cáo tuần: lối vào trên iPhone (bổ sung ADR-061)
 
 **Mục đích.** ADR-061 (phiên khác, cùng ngày) bỏ hộp thoại báo cáo tuần tự bật và thay bằng một thẻ

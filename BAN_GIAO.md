@@ -1,3 +1,67 @@
+> Cập nhật lần cuối: **2026-08-29** — **MỞ VAN SKIN + DÒNG "VIỆC TIẾP THEO"** (trả lời câu hỏi của
+> Đàm: *"nên phát triển thế nào để game dễ chơi và hứng thú hơn"*).
+>
+> **Chẩn đoán trước khi làm.** Đếm ra: **360 thành tích · 51 kỹ năng · 75 công trình · 30 loại tài
+> nguyên · 27 nhiệm vụ · 15 kỳ quan · 15 khủng hoảng kỷ**, cộng thảm hoạ / gacha / cược Overclock /
+> prestige / di sản kỷ / AI Coach. Nhiều hệ thống hơn phần lớn game thương mại — cho MỘT người chơi.
+> ⇒ **Cái khó không phải thiếu tính năng, mà là không có gì nói cho Đàm biết việc nào đáng làm tiếp
+> theo.** Nhịp thì ngược lại: ở 100 phút/ngày, kỷ 12–15 mất **107–189 ngày mỗi kỷ**, cả 15 kỷ ≈
+> **1.008 ngày**. Phần thưởng lớn quá xa, phần thưởng nhỏ bị chia cho quá nhiều kênh.
+>
+> **VIỆC 1 — ép chuyển skin một lần (đóng mục 🔴 số 0 ở `START_HERE.md`).** `resolveSkinAfterMigration`
+> (thuần, ở `uiSkins.js`) + cờ `skinMigratedV1` + bump `settingsStore` version **8 → 9**. Bản lưu chưa
+> có cờ ⇒ về `DEFAULT_UI_SKIN` đúng một lần rồi bật cờ; có cờ ⇒ tôn trọng tuyệt đối.
+> ⚠️ **Cờ RIÊNG chứ không so `uiSkin === 'editorial'`** — so giá trị thì mọi lần bump version sau đều
+> ép lại, và Đàm chọn `editorial` CÓ Ý sẽ bị đá về `arcade` mà không hiểu vì sao. Cái cờ phân biệt
+> được hai thứ mà giá trị skin không phân biệt nổi: *"đang mang mặc định cũ"* vs *"đã chọn, tình cờ
+> trùng mặc định cũ"*. ⚠️ **Bump version là thứ DUY NHẤT làm `migrate` chạy lại** — thiếu nó thì hàm
+> ép chuyển viết đúng tới đâu cũng không bao giờ được gọi trên máy Đàm.
+>
+> **VIỆC 2 — 7 ký tự commit ở cuối màn Cài đặt.** `vite.config.js` bơm `__APP_COMMIT__` lúc build (ưu
+> tiên `VERCEL_GIT_COMMIT_SHA`; `git rev-parse` khi có `.git`; `catch` về `'dev'` để build KHÔNG BAO
+> GIỜ đổ vì một dòng trang trí). Đã xác minh chuỗi thật sự nằm trong `dist/assets/*.js`, không chỉ
+> đúng trên lý thuyết. Lý do tồn tại: không có nó thì *"chưa deploy"* và *"deploy rồi mà không thấy"*
+> trông giống hệt nhau, mà hai thứ ấy cần hai cách sửa ngược nhau.
+>
+> **VIỆC 3 — dòng "Việc tiếp theo" ở màn Tập trung.** `pickNextAction` (thuần, thêm vào
+> `engine/opportunities.js`) + `hooks/useNextAction.js` + `components/FocusNextAction.jsx`, đặt ở
+> **cột giữa** cạnh `FocusCityTease`. Ưu tiên **XÂY > NGHIÊN CỨU > KỸ NĂNG**: xây là việc duy nhất cho
+> kết quả NHÌN THẤY ĐƯỢC trong thành phố ở phiên sau (đóng đúng vòng lặp mà `cityMoment.js` giữ);
+> kỹ năng đứng cuối vì phần thưởng của nó là mấy phần trăm, không nhìn thấy ở đâu cả. `othersCount`
+> là phần không được bỏ — thiếu nó thì một dòng nói về công trình sẽ im lặng nuốt mất 5 kỹ năng đang
+> chờ, tức dòng ấy nói dối bằng cách bỏ sót.
+>
+> **⚠️ HAI PHÉP ĐO HỎNG TRONG CHÍNH PHIÊN NÀY, CẢ HAI ĐỀU ĐỎ TRÊN MÃ HOÀN TOÀN ĐÚNG.**
+> **(a)** Bài "máy MỚI đã mang sẵn cờ" xoá localStorage rồi gọi `persist.rehydrate()` — nhưng
+> rehydrate KHÔNG có gì để đọc thì nó **không đặt lại gì cả**, nên state vẫn mang `uiSkin: 'swiss'`
+> mà bài ngay trên vừa nạp vào. Vá bằng `getInitialState()`. **(b)** Bài canh vị trí dùng
+> `APP_CODE.indexOf('<PomodoroEngine')` — mà `App.jsx` dựng đồng hồ ở **HAI** nhánh (toàn màn hình ở
+> dòng 1666, cột giữa ở 1726), `indexOf` trả chỗ đầu tiên nên nó đang so với một cái đồng hồ ở màn
+> hình KHÁC. Vá bằng `indexOf(..., mốcNeo)`. ⇒ Cả hai đúng bài học *"phép đo hỏng, không phải mã
+> hỏng"*, và cách sửa SAI ở cả hai đều là nới assert cho hết đỏ.
+>
+> **⚠️ FIXTURE KHÔNG THỂ HIỆN NỔI TÍNH NĂNG ĐANG SOI.** Ảnh chụp đầu tiên KHÔNG có dòng "việc tiếp
+> theo", và phản xạ sai là đi nghi dây nối. Hỏi thẳng `pickNextAction` trên chính fixture đó:
+> `sp = 1`, `RP = undefined`, 0 việc ở cả ba loại ⇒ trả `null` là **ĐÚNG**, và component im lặng là
+> đúng. Đây là bài học *"fixture đều tăm tắp là fixture vô dụng"* lặp lại: fixture mặc định dựng ra
+> một tài khoản không có việc nào, nên nó không soi được thứ đang soi. Dựng biến thể `sp = 20` (đổi
+> ĐÚNG MỘT biến) thì dòng hiện ra: *"✦ Mở kỹ năng «Đà Tập Trung» — đủ 7 điểm  +11"*.
+>
+> **Nghiệm thu bằng ẢNH** (khung 390px THẬT, `scripts/shot.mjs`, fixture 180 ngày · kỷ 8 · cấp 5):
+> dòng mới nằm **trên nếp gấp**, ngay dưới dòng "🚢 Đang xây Cảng Biển Lớn · còn 4 phiên" và **trên**
+> thẻ đồng hồ. Màn Cài đặt hiện *"Bản đang chạy: 33411b2"*.
+>
+> **Cổng.** `test:fast` **1292 bài xanh · 0 đỏ · `# skipped 1`** (thêm 13 bài mới) · `test:cross`
+> 3 xanh (24,2 giây) · lint sạch · build xanh. Ba phép phá của bài skin đã chạy thật trong bản sao
+> riêng: bỏ phép ép ⇒ 2 đỏ · luôn ép ⇒ 1 đỏ · cờ truthy ⇒ 1 đỏ · không phá ⇒ 9 xanh.
+>
+> **Việc tiếp theo đề xuất (chưa làm, chờ Đàm).** Cho 3 CHẶNG trong mỗi kỷ một thay đổi nhìn thấy
+> được trong thành phố — dữ liệu chặng đã có sẵn (`makeEraStages`) nhưng hiện chỉ là một nhãn CHỮ ở
+> `ResourceDisplay`, thành phố không đổi gì. Làm được thì 15 mốc thành **45 mốc**, khoảng cách giữa
+> hai lần *"à, thành phố khác rồi"* rút còn 1/3 mà không phải cân lại một con số kinh tế nào.
+
+---
+
 > Cập nhật lần cuối: **2026-08-27 (tối muộn)** — **BÁO CÁO TUẦN: LƯỚI AN TOÀN NAY CĂNG Ở CẢ HAI
 > NỀN TẢNG** (bổ sung cho ADR-061).
 >

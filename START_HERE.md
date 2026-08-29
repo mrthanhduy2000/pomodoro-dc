@@ -95,12 +95,18 @@ Mặt trận đang làm: **thành phố 3D** (`src/engine/city3d/` + `src/compon
    không có khối chóp bốn mặt. `prism` với `sides: 4` + `taper: 0` chính là thứ cần.
 2. **"Giống 3D hơn"** — bóng đổ nét hơn (`SHADOW_MAP_DESKTOP` 2048 → 4096, siết
    `sun.shadow.camera` về phạm vi thành phố) + thêm che khuất môi trường (AO).
-0. 🔴 **ÉP CHUYỂN SKIN MỘT LẦN** — máy Đàm vẫn lưu `uiSkin: 'editorial'` nên toàn bộ công giao
-   diện của bảy bước (skin `arcade`, nút bóng đặc, HUD gọn, toast thưởng, 5 tab, ba nhịp chuyển
-   động) đang chạy trên production mà anh KHÔNG nhìn thấy. Cần cờ `skinMigratedV1`: bản lưu chưa
-   có cờ thì đặt về `DEFAULT_UI_SKIN` một lần rồi bật cờ; có cờ rồi thì tôn trọng lựa chọn đã lưu.
-   Kèm: hiện 7 ký tự commit đang chạy ở cuối màn Cài đặt, để lần sau phân biệt được "chưa lên" với
-   "lên rồi mà không thấy".
+3. **Chặng trong kỷ chưa đổi gì trong thành phố** (đề xuất 2026-08-29, chờ Đàm). Mỗi kỷ đã chia sẵn
+   3 chặng (`makeEraStages`) nhưng chặng chỉ là một nhãn CHỮ ở `ResourceDisplay` — thành phố không
+   đổi gì. Cho mỗi chặng một thay đổi nhìn thấy được thì 15 mốc thành **45 mốc**, và khoảng cách
+   giữa hai lần "à, thành phố khác rồi" rút còn 1/3 mà không phải cân lại con số kinh tế nào.
+   Bối cảnh: ở nhịp 100 phút/ngày, kỷ 12–15 mất **107–189 ngày mỗi kỷ**.
+0. ✅ **ÉP CHUYỂN SKIN MỘT LẦN — XONG 2026-08-29.** `resolveSkinAfterMigration` + cờ
+   `skinMigratedV1` + `settingsStore` version **8 → 9**: bản lưu chưa có cờ về `DEFAULT_UI_SKIN`
+   đúng một lần rồi bật cờ, có cờ rồi thì tôn trọng tuyệt đối lựa chọn đã lưu. Màn Cài đặt nay
+   hiện 7 ký tự commit đang chạy (`__APP_COMMIT__`, bơm lúc build ở `vite.config.js`).
+   ⚠️ **Đừng "sửa" thành so `uiSkin === 'editorial'`** — so giá trị thì mọi lần bump version sau
+   đều ép lại, kể cả với người đã chọn có ý. Ba bài ở `uiSkins.test.js` + ba bài ở
+   `settingsStore.migrate.test.js` khoá cả hai chiều.
 1. 🔴 **CHỜ ĐÀM NHÌN ẢNH PHASE 21** — bản quét 15 kỷ + 12 ảnh nhìn thẳng từ trên xuống (kỷ
    1 · 3 · 7 · 10 · 11 · 14, mỗi kỷ ở 20 phiên và 120 phiên). Nghiệm thu bằng MẮT: kỷ 1–9
    không được thấy hàng lối nào; kỷ 11–15 thì phải thấy. ⚠️ Nay nó đã Ở TRÊN production.

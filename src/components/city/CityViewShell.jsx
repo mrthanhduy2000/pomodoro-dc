@@ -41,11 +41,22 @@ const rowHighlight = (on) => (on
   ? { background: 'var(--canvas-2)', boxShadow: 'inset 2px 0 0 var(--accent)' }
   : undefined);
 
-function Stat({ label, value }) {
+function Stat({ label, value, hint = null }) {
   return (
     <div>
       <div className={eyebrow} style={{ color: 'var(--muted-2)' }}>{label}</div>
-      <div className="mt-0.5 text-[15px] font-semibold" style={{ color: 'var(--ink)' }}>{value}</div>
+      <div className="mt-0.5 text-[15px] font-semibold" style={{ color: 'var(--ink)' }}>
+        {value}
+        {/*
+          ⚠️ `hint` là chỗ một con số LẠNH nói ra ý nghĩa của nó. "Công trình 4/5" đúng nhưng
+          không hành động được; "4/5 · còn 1 nữa ★" thì nói thẳng rằng đây là mốc gần nhất và
+          phần thưởng là cái sao vĩnh viễn trên thanh chuyển kỷ. Chỉ hiện khi CÒN ĐÚNG MỘT —
+          một gợi ý lúc nào cũng bật thì hết là gợi ý.
+        */}
+        {hint && (
+          <span className="ml-1.5 text-[12px] font-semibold" style={{ color: 'var(--accent2)' }}>{hint}</span>
+        )}
+      </div>
     </div>
   );
 }
@@ -216,7 +227,16 @@ export default function CityViewShell({
           {[
             // ⚠️ CÓ MẪU SỐ. "Công trình: 3" là một con số không hành động được — 3 trên mấy thì
             // chính Đàm cũng không biết. "3/5" thì cùng ô đó tự đọc ra "còn 2 nữa là trọn vẹn".
-            { label: 'Công trình', value: scoreText ?? layout.buildings.length },
+            {
+              label: 'Công trình',
+              value: scoreText ?? layout.buildings.length,
+              // Còn đúng một công trình nữa là kỷ này trọn vẹn — mốc gần nhất mà thành phố có,
+              // và phần thưởng của nó (ngôi sao trên thanh chuyển kỷ) là thứ KHÔNG sửa lại được
+              // nữa vì kỷ niêm phong vĩnh viễn (ADR-007).
+              hint: isCurrent && completion?.total > 0 && completion.total - completion.done === 1
+                ? 'còn 1 nữa ★'
+                : null,
+            },
             { label: 'Phiên trong kỷ', value: stats.sessionCount },
             // ⚠️ Ô NÀY TỪNG LÀ "CHUỖI NGÀY", VÀ ĐÓ LÀ MỘT Ô BỊ LÃNG PHÍ — soi bằng mắt mới thấy
             // (2026-08-13, Phase 4H). Thanh tiêu đề của app đã hiện "CHUỖI 4" ở ngay trên đầu MỌI
@@ -262,7 +282,7 @@ export default function CityViewShell({
             { label: 'Cư dân', value: residents },
           ].map((stat) => (
             <div key={stat.label} className="px-3 py-2.5" style={cardStyle}>
-              <Stat label={stat.label} value={stat.value} />
+              <Stat label={stat.label} value={stat.value} hint={stat.hint ?? null} />
             </div>
           ))}
         </div>

@@ -24,6 +24,9 @@
 │   │   │                         #   MỘT đồng hồ riêng 4 giây, và đồng hồ DỪNG khi có hộp thoại
 │   │   │                         #   chặn màn hình. Nằm ở z-[48]: trên chuông (z-[45]), dưới sàn
 │   │   │                         #   hộp thoại (z-50) — đúng thứ bậc "phải quyết" vs "chỉ cần biết"
+│   │   ├── FocusStageCountdown.jsx # MỘT DÒNG ở màn Tập trung: "còn ~N phiên nữa tới «chặng kế
+│   │   │                         #   tiếp»". Đổi giọng + màu khi còn ≤1 phiên (chỗ dopamine mạnh
+│   │   │                         #   nhất là NGAY TRƯỚC đích). Phép tính ở engine/eraStage.js
 │   │   ├── FocusNextAction.jsx   # MỘT DÒNG BẤM ĐƯỢC ở màn Tập trung: việc đáng làm tiếp theo là
 │   │   │                         #   gì (mở kỹ năng nào / nghiên cứu gì / xây gì), bấm là tới đúng
 │   │   │                         #   tab. Ưu tiên XÂY > NGHIÊN CỨU > KỸ NĂNG — xây là việc duy nhất
@@ -705,6 +708,12 @@
 │   │   │                     #   (chưa từng ghi) KHÁC `[]` (đã ghi, đang rỗng) — nhập hai thứ đó
 │   │   │                     #   làm một thì lần đầu mở app cái chấm sáng oan cho hàng chục thành
 │   │   │                     #   tích Đàm đã xem từ lâu
+│   │   ├── eraStage.js        # CHẶNG TRONG KỶ — mốc gần nhất người chơi đang đi tới. NGUỒN DUY
+│   │   │                     #   NHẤT của phép "EP này thuộc chặng nào": thanh tiêu đề (App.jsx),
+│   │   │                     #   màn Tập trung, và ResourceDisplay đều đọc đây. ⚠️ `epStart` của
+│   │   │                     #   chặng là mốc TUYỆT ĐỐI (tính từ EP tổng), đừng trừ thêm gốc kỷ.
+│   │   │                     #   ⚠️ Đích của phép đếm ngược là chặng KẾ TIẾP (`nextLabel`), không
+│   │   │                     #   phải chặng đang đứng; `null` ở chặng cuối = đích là KỶ MỚI
 │   │   ├── timerSession.js / breaks.js / challengeEngine.js / notifications.js # engine chuyên biệt khác
 │   ├── hooks/                 # React hook — cầu nối giữa store và engine/component
 │   │   ├── useTimer.js         # LỚN — toàn bộ state machine đồng hồ Pomodoro/Stopwatch
@@ -717,6 +726,8 @@
 │   │   │                     #   ở engine/navAttention.js. ⚠️ Selector trả về BOOLEAN, không phải
 │   │   │                     #   mảng — gốc app bọc cả cảnh 3D, cho nó render lại theo từng con số
 │   │   │                     #   tài nguyên là trả một cái giá không ai đo được cho một chấm 5px
+│   │   ├── useStageCountdown.js # Nhịp EP/phiên lấy TRUNG VỊ 10 phiên gần nhất (không lấy từ Cài
+│   │   │                     #   đặt: đó là phiên Đàm ĐỊNH làm, không phải phiên anh THẬT SỰ làm)
 │   │   ├── useNextAction.js   # "Việc tiếp theo" cho màn Tập trung — MỘT việc, hoặc null. Đọc
 │   │   │                     #   engine/opportunities.js (pickNextAction), dùng CHUNG ba phép đếm
 │   │   │                     #   với chuông thông báo + chấm tab. ⚠️ Lấy từng mảnh state rồi

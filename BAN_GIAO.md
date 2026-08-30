@@ -1,3 +1,57 @@
+> Cập nhật lần cuối: **2026-08-29 (chiều)** — **MỐC GẦN HƠN: THANH TIÊU ĐỀ ĐO *CHẶNG*, VÀ ĐẾM
+> NGƯỢC BẰNG SỐ PHIÊN** (Đàm: *"hứng thú và đầy dopamine hơn, nhưng đơn giản"*).
+>
+> **Chẩn đoán, và nó không phải thứ tôi định làm ban đầu.** Định làm "cho mỗi chặng một thay đổi
+> trong thành phố 3D". Đi khảo sát thì thấy một chuyện khác hẳn: **thanh chặng ĐÃ TỒN TẠI** ở
+> `ResourceDisplay` — nhưng thẻ đó nằm trong `Motion.aside className="hidden … lg:flex"`, tức
+> **iPhone không bao giờ thấy**. Thứ Đàm thấy trên điện thoại là thanh trên thanh tiêu đề, và nó
+> đo **cả KỶ**: 5.600–20.800 EP ⇒ **~1% mỗi phiên**, đầy đúng MỘT lần mỗi 1–6 tháng. Cùng hình
+> dạng lỗi đã cắn nhiều lần (ADR-061, `FocusCityTease`): *thứ tốt nằm ở nơi iPhone không thấy.*
+>
+> **Đã làm (4 việc, cùng một chủ đề — kéo cái đích lại gần):**
+> **(1)** `src/engine/eraStage.js` mới — NGUỒN DUY NHẤT của phép "EP này thuộc chặng nào".
+> `ResourceDisplay` bỏ hàm cục bộ `getCurrentStage`; nay ba nơi hỏi cùng một câu đọc chung một file.
+> **(2)** Thanh tiêu đề đo CHẶNG (~3%/phiên, đầy **ba lần mỗi kỷ**), kèm **ba vạch chặng** cho biết
+> đang ở mốc thứ mấy — không có ba vạch ấy thì thanh mới trông y hệt thanh cũ, chỉ chạy nhanh hơn,
+> và không ai có cách nào biết vì sao.
+> **(3)** Dòng đếm ngược ở màn Tập trung (cột GIỮA, cạnh hai dòng đã có): *"còn ~3 phiên nữa tới
+> «Khám Phá Tân Thế Giới»"*. Nhịp lấy **TRUNG VỊ** 10 phiên gần nhất từ `history`.
+> **(4)** Còn ≤1 phiên ⇒ đổi giọng + màu (`🔥 Một phiên nữa là tới «…»`).
+>
+> **⚠️ MỘT LỖI LOGIC BẮT ĐƯỢC NGAY TRONG HÀM VỪA VIẾT, VÀ NÓ RẤT DỄ SỐNG SÓT.** Bản đầu của
+> `describeStageCountdown` viết *"còn 3 phiên nữa tới «{stage.label}»"* — mà `label` là chặng ĐANG
+> ĐỨNG TRONG, còn `epEnd` mới là mốc kết thúc nó. Tức nó hứa hẹn một thứ người chơi đã ở trong rồi.
+> Câu ấy đọc lên hoàn toàn xuôi tai và sẽ không ai để ý trong nhiều tuần. Vá bằng `nextLabel`
+> (`null` ở chặng cuối ⇒ đích là **KỶ MỚI**, phải gọi đúng tên vì đó là phần thưởng lớn nhất game).
+>
+> **⚠️ TRUNG VỊ CHỨ KHÔNG PHẢI TRUNG BÌNH, và đây là một quyết định có đo.** Lịch sử có cả phiên 5
+> phút lẫn 90 phút; một phiên dài bất thường kéo trung bình lên và biến "còn 3 phiên" thành "còn 1
+> phiên" — **một lời hứa hụt, mà một lời hứa hụt làm hỏng mọi lời hứa sau đó**. Cùng luật trung
+> thực đã áp cho AI Coach và `cityMoment.js`: chưa đủ mẫu thì trả `null`, nói bằng EP, không bịa.
+>
+> **⚠️ HAI CỔNG ĐÃ LÀM ĐÚNG VIỆC CỦA CHÚNG.** (a) `no-undef` của ESLint bắt hai biến còn sót
+> (`stageStart`/`stageEnd`) sau khi gỡ hàm cục bộ — **test không thể bắt được ca này** vì nhánh ấy
+> chỉ chạy khi mở panel Kho; đúng bài học *"đừng bỏ `npm run lint` khi thấy test đã xanh"*.
+> (b) `resourceDisplay.test.js` đỏ — nhưng **bài test sai, không phải mã sai**: nó tìm chuỗi
+> `stageStart.toLocaleString()`, tức bám vào TÊN BIẾN, trong khi lời hứa nó tuyên bố canh là *"con
+> số cũ vẫn xem được trong panel Kho"* — và dòng ấy vẫn nằm nguyên đó. Sửa bài test để nó hỏi CHỮ
+> HIỆN RA (`'Khoảng EP của chặng:'`). Nới assert cho hết đỏ là cách sai.
+>
+> **Nghiệm thu bằng ẢNH** (khung 390px thật): trạng thái thường — *"THƯƠNG MẠI TOÀN CẦU · 1.320 /
+> 1.867 EP"* + ba vạch, dòng *"◈ Còn ~19 phiên nữa tới KỶ MỚI"*; trạng thái sắp-tới — *"VƯƠN RA
+> BIỂN LỚN · 1.840 / 1.867 EP"*, ba vạch **1 cam 2 xám** (phân biệt rõ đang ở chặng 1/3), dòng
+> *"🔥 Một phiên nữa là tới «Khám Phá Tân Thế Giới»"* màu nhấn. Đối chiếu chéo desktop: cột phải in
+> ra *"Kỷ 8 · chặng 1/3 … 1.840 / 1.867 EP"* — **khớp từng con số** với thanh tiêu đề, tức một luật
+> một công thức đang chạy thật chứ không chỉ đúng trên giấy.
+>
+> **Cổng.** `test:fast` **1304 bài · 0 đỏ · `# skipped 1`** (thêm 12 bài) · lint sạch · build xanh.
+>
+> **Việc tiếp theo đề xuất (chưa làm).** Phần "chặng" nay đã là một MỐC ĐO ĐƯỢC, nhưng **thành phố
+> 3D vẫn chưa đổi gì theo chặng** — đó vẫn là việc còn lại của đề xuất cũ, và nay nó rẻ hơn vì
+> `getEraStage` đã có sẵn để hỏi.
+
+---
+
 > Cập nhật lần cuối: **2026-08-29** — **MỞ VAN SKIN + DÒNG "VIỆC TIẾP THEO"** (trả lời câu hỏi của
 > Đàm: *"nên phát triển thế nào để game dễ chơi và hứng thú hơn"*).
 >

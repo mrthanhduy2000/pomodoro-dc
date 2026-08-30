@@ -95,11 +95,14 @@ Mặt trận đang làm: **thành phố 3D** (`src/engine/city3d/` + `src/compon
    không có khối chóp bốn mặt. `prism` với `sides: 4` + `taper: 0` chính là thứ cần.
 2. **"Giống 3D hơn"** — bóng đổ nét hơn (`SHADOW_MAP_DESKTOP` 2048 → 4096, siết
    `sun.shadow.camera` về phạm vi thành phố) + thêm che khuất môi trường (AO).
-3. **Chặng trong kỷ chưa đổi gì trong thành phố** (đề xuất 2026-08-29, chờ Đàm). Mỗi kỷ đã chia sẵn
-   3 chặng (`makeEraStages`) nhưng chặng chỉ là một nhãn CHỮ ở `ResourceDisplay` — thành phố không
-   đổi gì. Cho mỗi chặng một thay đổi nhìn thấy được thì 15 mốc thành **45 mốc**, và khoảng cách
-   giữa hai lần "à, thành phố khác rồi" rút còn 1/3 mà không phải cân lại con số kinh tế nào.
-   Bối cảnh: ở nhịp 100 phút/ngày, kỷ 12–15 mất **107–189 ngày mỗi kỷ**.
+3. **Chặng trong kỷ: MỐC đã xong, THÀNH PHỐ thì chưa** (2026-08-29 chiều). Chặng nay là mốc đo
+   được thật — thanh tiêu đề đo chặng (~3%/phiên, đầy 3 lần mỗi kỷ) + dòng đếm ngược "còn ~N phiên
+   nữa tới «…»" ở màn Tập trung. Nguồn duy nhất: `src/engine/eraStage.js`.
+   ⚠️ **Còn lại: thành phố 3D vẫn KHÔNG đổi gì theo chặng.** Đó là nửa sau của đề xuất cũ, và nay
+   rẻ hơn vì `getEraStage(era, totalEP)` đã có sẵn để hỏi.
+   ⚠️ Đừng "dọn dẹp" thanh tiêu đề về đo cả kỷ: một kỷ dài 5.600–20.800 EP ⇒ ~1%/phiên, đầy một
+   lần mỗi 1–6 tháng. Có `stageProgressWiring.test.js` canh, kèm bài đòi nó nằm NGOÀI mọi khối
+   `hidden … lg:flex` (thanh chặng cũ chỉ có ở cột phải nên iPhone chưa bao giờ thấy).
 0. ✅ **ÉP CHUYỂN SKIN MỘT LẦN — XONG 2026-08-29.** `resolveSkinAfterMigration` + cờ
    `skinMigratedV1` + `settingsStore` version **8 → 9**: bản lưu chưa có cờ về `DEFAULT_UI_SKIN`
    đúng một lần rồi bật cờ, có cờ rồi thì tôn trọng tuyệt đối lựa chọn đã lưu. Màn Cài đặt nay

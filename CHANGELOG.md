@@ -12,6 +12,32 @@
 
 ---
 
+## 2026-08-29 (chiều) — Mốc gần hơn: thanh tiêu đề đo CHẶNG, và đếm ngược bằng số phiên
+
+**Mục đích.** Đàm: *"làm cho game hứng thú và đầy dopamine hơn, nhưng đơn giản"*. Không thêm hệ
+thống nào — chỉ đổi **cái mốc đang được ĐO**.
+
+**Chẩn đoán.** Thanh trên thanh tiêu đề đo cả KỶ. Một kỷ dài 5.600–20.800 EP, nên ở nhịp thường một
+phiên đẩy thanh **~1%** và nó đầy đúng MỘT lần mỗi 1–6 tháng — một cái đích xa tới mức không nhìn
+thấy mình đang tiến. Mỗi kỷ đã chia sẵn 3 chặng từ lâu (`makeEraStages`), nhưng chặng chỉ được dùng
+ở `ResourceDisplay` — mà thẻ đó nằm trong cột `hidden … lg:flex`, tức **trên iPhone Đàm chưa bao
+giờ nhìn thấy nó**.
+
+**Thay đổi.** (1) `engine/eraStage.js` mới — nguồn DUY NHẤT của phép chia chặng; `ResourceDisplay`
+bỏ bản sao cục bộ. (2) Thanh tiêu đề đo chặng: ~3%/phiên, đầy **ba lần mỗi kỷ**, kèm ba vạch cho
+biết đang ở chặng mấy. (3) Dòng đếm ngược ở màn Tập trung: *"còn ~3 phiên nữa tới «Khám Phá Tân
+Thế Giới»"* — nhịp lấy TRUNG VỊ 10 phiên gần nhất (chịu được phiên dài bất thường), chưa đủ mẫu thì
+nói bằng EP chứ không bịa. (4) Còn ≤1 phiên thì dòng đổi giọng và đổi màu.
+
+**Ảnh hưởng / tương thích.** Thuần hiển thị: không đụng `gameStore`, không đổi một luật tính thưởng
+nào, không thêm byte nào vào dữ liệu đồng bộ. `eraProgress` (tiến độ cả kỷ) vẫn giữ — nó là con số
+đúng cho câu hỏi "còn bao xa tới kỷ sau", chỉ là không phải con số nên đặt ở chỗ liếc mắt.
+
+**Cổng.** 1304 bài `test:fast` xanh (thêm 12 bài) · lint sạch · build xanh · nghiệm thu bằng ảnh
+khung 390px ở cả hai trạng thái (bình thường và sắp-tới-đích).
+
+---
+
 ## 2026-08-29 — Mở van skin + dòng "Việc tiếp theo" ở màn Tập trung
 
 **Mục đích.** Hai việc nhỏ nhắm vào cùng một câu hỏi của Đàm: *"làm sao game dễ chơi và hứng thú

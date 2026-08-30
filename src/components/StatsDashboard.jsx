@@ -4743,12 +4743,20 @@ function NotesTab({ savedNotes, sessionCategories }) {
 }
 
 // ─── Main Component ───────────────────────────────────────────────────────────
+/**
+ * ⚠️ SỐ THỨ TỰ "01…05" ĐÃ GỠ (2026-08-30) — nó là trang trí, và nó phải TRẢ TIỀN bằng chỗ.
+ * Đo ở khung 390px: mỗi nút chỉ rộng ~108px, mà con số chiếm mất phần đầu ⇒ nhãn hai chữ bị đẩy
+ * XUỐNG HAI DÒNG ("Tổng / Quan", "Tập / Trung", "Phân / Loại"), làm cả hàng tab cao gấp đôi.
+ * Con số ấy không nói được gì mà cái nhãn chưa nói: không ai gọi "tab 02", và thứ tự thì mắt đã
+ * đọc ra từ vị trí trái-sang-phải. Một nhãn giống nhau ở mọi nơi thì không phân biệt được gì —
+ * cùng lý do đã gỡ chữ "Workspace" khỏi `ShellPane`.
+ */
 const TABS = [
-  { key: 'overview',  label: 'Tổng Quan', icon: '01' },
-  { key: 'focus',     label: 'Tập Trung', icon: '02' },
-  { key: 'category',  label: 'Phân Loại', icon: '03' },
-  { key: 'journal',   label: 'Nhật Ký',   icon: '04' },
-  { key: 'notes',     label: 'Ghi Chú',   icon: '05' },
+  { key: 'overview',  label: 'Tổng Quan' },
+  { key: 'focus',     label: 'Tập Trung' },
+  { key: 'category',  label: 'Phân Loại' },
+  { key: 'journal',   label: 'Nhật Ký' },
+  { key: 'notes',     label: 'Ghi Chú' },
 ];
 
 export default function StatsDashboard() {
@@ -4842,22 +4850,14 @@ export default function StatsDashboard() {
               key={tab.key}
               type="button"
               onClick={() => handleTabChange(tab.key)}
-              className="group flex min-w-[108px] flex-1 flex-col items-start justify-center gap-1.5 rounded-[18px] border px-3 py-2.5 text-left text-[12px] font-semibold transition-[background-color,color,box-shadow,transform,border-color,opacity] duration-200 hover:-translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(201,100,66,0.28)] focus-visible:ring-offset-2 md:min-w-[148px] md:flex-none md:flex-row md:items-center md:justify-center md:gap-2 md:px-4 md:py-3 md:text-sm md:text-center"
+              className="group flex min-w-[84px] flex-1 flex-col items-start justify-center gap-1.5 rounded-[18px] border px-3 py-2.5 text-left text-[12px] font-semibold transition-[background-color,color,box-shadow,transform,border-color,opacity] duration-200 hover:-translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(201,100,66,0.28)] focus-visible:ring-offset-2 md:min-w-[148px] md:flex-none md:flex-row md:items-center md:justify-center md:gap-2 md:px-4 md:py-3 md:text-sm md:text-center"
               aria-pressed={activeTab === tab.key}
               aria-busy={isTabPending && activeTab !== tab.key ? 'true' : undefined}
               style={activeTab === tab.key
                 ? { background: TAB_ACTIVE_BG, color: TAB_ACTIVE_TEXT, boxShadow: TAB_ACTIVE_SHADOW, borderColor: TAB_ACTIVE_BORDER, touchAction: 'manipulation' }
                 : { background: TAB_IDLE_BG, color: TAB_IDLE_TEXT, borderColor: TAB_IDLE_BORDER, touchAction: 'manipulation' }}
             >
-              <div className="flex items-center gap-2 md:contents">
-                <span
-                  aria-hidden="true"
-                  className="font-mono text-[10px] tracking-[0.2em] opacity-80 group-hover:opacity-100"
-                >
-                  {tab.icon}
-                </span>
-                <span>{tab.label}</span>
-              </div>
+              <span className="whitespace-nowrap">{tab.label}</span>
               {tab.key === 'notes' && notesCount > 0 && (
                 <span
                   className="rounded-full px-1.5 py-0.5 text-[10px] font-bold leading-none"

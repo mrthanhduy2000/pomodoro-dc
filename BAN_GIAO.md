@@ -7,6 +7,10 @@
 > **BA lần** (ô "PHIÊN 0" ở thanh đầu · câu "Bạn chưa chốt phiên nào trong hôm nay" · dòng "Phiên
 > 0/5 hôm nay" dưới đồng hồ). Bản thứ ba là bản TỐT NHẤT vì nó có mẫu số ⇒ hai bản kia nhường.
 >
+> **VÒNG 12 — số thứ tự "01…05" ở tab Thống kê đã gỡ.** Chúng là trang trí mà PHẢI TRẢ TIỀN bằng
+> chỗ: ở 390px mỗi nút rộng ~108px, con số chiếm phần đầu ⇒ nhãn hai chữ xuống HAI DÒNG và hàng tab
+> cao gấp đôi. Nay bốn tab lọt vào khung thay vì ba.
+>
 > **VÒNG 11 — FIXTURE LẦN ĐẦU GIEO THÀNH TÍCH (147/360), VÀ LỖI ẤY NẰM TRONG CHÚ THÍCH CỦA CHÍNH
 > NÓ.** `make-fixture.mjs` mở đầu bằng câu nêu rõ nó sinh ra để chữa cảnh *"0/360 thành tích"* — mà
 > nó chưa bao giờ gieo một dấu nào. ⇒ **mọi kết luận mỹ thuật về tab Thành tích trước hôm nay đều

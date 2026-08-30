@@ -12,6 +12,21 @@
 
 ---
 
+## 2026-08-30 (vòng 12) — Bỏ số thứ tự trang trí ở tab Thống kê
+
+Năm tab của màn Thống kê mang số thứ tự "01…05" trước nhãn. Ở khung 390px mỗi nút chỉ rộng ~108px,
+mà con số chiếm mất phần đầu ⇒ nhãn hai chữ bị đẩy **xuống hai dòng** ("Tổng / Quan", "Tập / Trung",
+"Phân / Loại") và cả hàng tab cao gấp đôi. Con số ấy không nói được gì mà cái nhãn chưa nói — không
+ai gọi "tab 02", còn thứ tự thì mắt đã đọc ra từ vị trí trái-sang-phải. Gỡ đi: mỗi nhãn về một
+dòng, **bốn tab lọt vào khung thay vì ba**, hàng tab thấp đi ~45px.
+
+Cùng lý do đã gỡ chữ "Workspace" khỏi `ShellPane`: một nhãn giống nhau ở mọi nơi thì không phân
+biệt được gì, nó chỉ tốn chỗ.
+
+**Ảnh hưởng.** Chỉ giao diện màn Thống kê. Không migration.
+
+---
+
 ## 2026-08-30 (vòng 11) — Fixture lần đầu gieo thành tích, và một thẻ nói-lần-hai ở màn Thành tích
 
 **Lỗi công cụ, và nó nằm ngay trong chú thích của chính công cụ.** `scripts/make-fixture.mjs` mở đầu

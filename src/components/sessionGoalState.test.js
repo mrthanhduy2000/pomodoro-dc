@@ -5,6 +5,7 @@ import {
   GOAL_TONE,
   SESSION_GOAL_MIN_CHARS,
   deriveSessionGoalState,
+  pickRecentGoals,
   sessionGoalHint,
 } from './sessionGoalState.js';
 
@@ -89,4 +90,39 @@ test('hai khối giao diện chỉ khác nhau ở câu LÚC ĐÃ ĐỦ', () => {
 test('state rỗng/thiếu → vẫn ra câu của trạng thái trống, không ném lỗi', () => {
   assert.equal(sessionGoalHint(null), sessionGoalHint(deriveSessionGoalState('')));
   assert.equal(sessionGoalHint(undefined), sessionGoalHint(deriveSessionGoalState('')));
+});
+
+/* ─── GỢI Ý MỤC TIÊU GẦN ĐÂY ─────────────────────────────────────────────────── */
+
+test('chỉ gợi ý mục tiêu ĐỦ DÀI để mở được nút Bắt đầu', () => {
+  // ⚠️ Gợi ý một chuỗi mà bấm vào vẫn không mở được nút là một cái bẫy: người dùng bấm, nút vẫn
+  // xám, và không có gì giải thích vì sao.
+  const ra = pickRecentGoals([
+    { goal: 'ngắn' },
+    { goal: 'Hoàn thành phần đang dở' },
+    { goal: '   ' },
+    { goal: null },
+  ]);
+  assert.deepEqual(ra, ['Hoàn thành phần đang dở']);
+  ra.forEach((g) => assert.ok(g.length >= SESSION_GOAL_MIN_CHARS));
+});
+
+test('bỏ trùng KHÔNG phân biệt hoa-thường và khoảng trắng thừa', () => {
+  // "Viết báo cáo tuần" và "viết  BÁO CÁO  tuần" là một việc; hiện hai chip thì vừa tốn chỗ vừa
+  // trông như app không nhớ gì.
+  const ra = pickRecentGoals([
+    { goal: 'Viết báo cáo tuần' },
+    { goal: 'viết  BÁO CÁO  tuần' },
+    { goal: 'Đọc tài liệu dự án' },
+  ]);
+  assert.deepEqual(ra, ['Viết báo cáo tuần', 'Đọc tài liệu dự án'],
+    'giữ nguyên chữ gốc của lần dùng GẦN NHẤT, và chỉ một chip cho một việc');
+});
+
+test('giữ đúng thứ tự mới-nhất-trước và tôn trọng giới hạn', () => {
+  const lichSu = ['việc thứ nhất', 'việc thứ hai', 'việc thứ ba', 'việc thứ tư']
+    .map((goal) => ({ goal }));
+  assert.deepEqual(pickRecentGoals(lichSu, 2), ['việc thứ nhất', 'việc thứ hai']);
+  assert.deepEqual(pickRecentGoals(lichSu, 0), [], 'giới hạn 0 phải ra rỗng, không phải ra tất cả');
+  assert.deepEqual(pickRecentGoals(null), [], 'lịch sử rỗng/rác ⇒ không gợi ý gì');
 });

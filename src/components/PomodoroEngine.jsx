@@ -28,7 +28,12 @@ import {
 import StakePanel from './StakePanel';
 import { RichNoteEditor } from './RichText';
 import { countRichTextWords, trimRichTextToWordLimit } from '../utils/richText';
-import { SESSION_GOAL_MIN_CHARS, deriveSessionGoalState, sessionGoalHint } from './sessionGoalState';
+import {
+  SESSION_GOAL_MIN_CHARS,
+  deriveSessionGoalState,
+  pickRecentGoals,
+  sessionGoalHint,
+} from './sessionGoalState';
 
 const NOTE_WORD_LIMIT = 3000;
 const SESSION_EXTENSION_SECONDS = 60;
@@ -475,6 +480,13 @@ export default function PomodoroEngine({
       : lightTheme
         ? 'border border-[var(--line)] bg-[var(--panel-soft)] text-[var(--muted)]'
         : 'border border-white/8 bg-white/[0.05] text-[var(--muted)]';
+  // ⚠️ CHỈ GỢI Ý KHI Ô CÒN TRỐNG. Đang gõ dở mà mọc ra mấy cái chip thì chúng vừa che chỗ vừa mời
+  // vứt bỏ thứ vừa gõ. Đây là lối tắt cho lúc bắt đầu, không phải một bảng chọn thường trực.
+  // ⚠️ KHÔNG bọc `useMemo`: React Compiler từ chối tối ưu cả component khi thấy memo hoá thủ công
+  // mà nó không bảo toàn được ("Existing memoization could not be preserved") — đổi lấy một phép
+  // tính vốn đã rẻ (duyệt lịch sử và DỪNG sau 3 kết quả) là một cái giá tệ. Để compiler tự lo.
+  const recentGoals = sessionGoalText.trim() ? [] : pickRecentGoals(sessionHistory);
+
   const goalHintClass = goalState.tone === 'warn'
     ? lightTheme ? 'font-semibold text-[var(--accent2)]' : 'font-semibold text-red-300'
     : lightTheme ? 'text-[var(--muted)]' : 'text-slate-500';
@@ -1742,6 +1754,34 @@ export default function PomodoroEngine({
                          focus:bg-white/[0.07] focus:border-amber-400/30"
               style={{ ...paperInputStyle, scrollbarWidth: 'none' }}
             />
+            {/*
+              ⚠️ LỐI TẮT, KHÔNG PHẢI NỚI LUẬT. Nút Bắt đầu vẫn bị khoá cho tới khi đủ
+              `SESSION_GOAL_MIN_CHARS` ký tự — đó là luật CÓ CHỦ ĐÍCH (mục tiêu làm phiên có nghĩa,
+              có thưởng khi đạt, AI Coach đọc nó). Nhưng phần lớn công việc là LẶP LẠI: "Hoàn thành
+              phần đang dở" hôm nay cũng đúng như hôm qua, mà app bắt gõ lại 10 ký tự ấy mỗi phiên
+              — ma sát đặt đúng vào hành động quan trọng nhất của cả app. Chip này bỏ việc GÕ LẠI,
+              không bỏ luật. `pickRecentGoals` chỉ trả mục tiêu ĐỦ DÀI, nên bấm cái nào cũng mở
+              được nút ngay — gợi ý một chuỗi bấm vào vẫn không dùng được là một cái bẫy.
+            */}
+            {recentGoals.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {recentGoals.map((goal) => (
+                  <button
+                    key={goal}
+                    type="button"
+                    onClick={() => setPendingSessionGoal(goal)}
+                    className="max-w-full truncate rounded-full px-2.5 py-1 text-[11px] transition-colors"
+                    style={{
+                      background: 'rgba(var(--accent-rgb), 0.08)',
+                      border: '1px solid rgba(var(--accent-rgb), 0.18)',
+                      color: 'var(--accent2)',
+                    }}
+                  >
+                    {goal}
+                  </button>
+                ))}
+              </div>
+            )}
             <div className="mt-2 flex items-start justify-between gap-3">
               <p className={`max-w-[32rem] text-[11px] leading-5 ${goalHintClass}`}>
                 {sessionGoalHint(goalState, 'compact')}

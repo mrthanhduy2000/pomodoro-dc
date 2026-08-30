@@ -89,3 +89,49 @@ export function sessionGoalHint(state, variant = 'compact', minChars = SESSION_G
     ? 'Mục tiêu đã đủ rõ. Bạn có thể quay lên và bắt đầu phiên bất cứ lúc nào.'
     : 'Mục tiêu đã đủ rõ để mở phiên mới.';
 }
+
+/** Tối đa bao nhiêu mục tiêu cũ được gợi ý lại. Ba là vừa một hàng ở khung 390px. */
+export const GOAL_SUGGESTION_LIMIT = 3;
+
+/**
+ * Những mục tiêu ĐÃ DÙNG gần đây, để bấm một cái là điền lại.
+ *
+ * ⚠️ VÌ SAO ĐÁNG CÓ. Nút Bắt đầu bị khoá cho tới khi gõ đủ `SESSION_GOAL_MIN_CHARS` ký tự — một
+ * luật CÓ CHỦ ĐÍCH (mục tiêu làm phiên có nghĩa, có thưởng khi đạt, AI Coach đọc nó). Nhưng phần
+ * lớn công việc của một người là LẶP LẠI: "Hoàn thành phần đang dở" hôm nay cũng đúng như hôm qua.
+ * Bắt gõ lại 10 ký tự ấy mỗi phiên là ma sát đặt đúng vào hành động quan trọng nhất của cả app.
+ * Hàm này KHÔNG nới luật — nó chỉ bỏ việc GÕ LẠI.
+ *
+ * ⚠️ Bỏ trùng có PHÂN BIỆT HOA-THƯỜNG và khoảng trắng thừa: "Viết báo cáo" và "viết  báo cáo" là
+ * một việc, hiện thành hai chip thì vừa tốn chỗ vừa trông như app không nhớ gì.
+ * ⚠️ Chỉ lấy mục tiêu ĐỦ DÀI: gợi ý một chuỗi mà bấm vào vẫn không mở được nút là một cái bẫy.
+ *
+ * THUẦN: không đọc store, không đụng `Date`, không DOM.
+ *
+ * @param {Array} history  lịch sử phiên, mới nhất đứng đầu
+ * @param {number} [limit] số chip tối đa
+ * @returns {string[]} mục tiêu gần đây nhất, đã bỏ trùng, giữ nguyên chữ gốc của lần dùng gần nhất
+ */
+export function pickRecentGoals(history, limit = GOAL_SUGGESTION_LIMIT) {
+  // ⚠️ Chặn ở ĐẦU, không dựa vào phép `break` cuối vòng. Bản đầu viết `push` rồi mới kiểm
+  // `out.length >= limit`, nên với `limit = 0` nó vẫn trả về MỘT chip — tức một nơi gọi muốn tắt
+  // hẳn gợi ý lại nhận được đúng một cái. Bài test bắt được.
+  const max = Math.max(0, Math.floor(Number(limit) || 0));
+  if (max === 0) return [];
+
+  const seen = new Set();
+  const out = [];
+
+  for (const entry of Array.isArray(history) ? history : []) {
+    const goal = typeof entry?.goal === 'string' ? entry.goal.trim() : '';
+    if (goal.length < SESSION_GOAL_MIN_CHARS) continue;
+
+    const key = goal.toLowerCase().replace(/\s+/g, ' ');
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(goal);
+    if (out.length >= max) break;
+  }
+
+  return out;
+}

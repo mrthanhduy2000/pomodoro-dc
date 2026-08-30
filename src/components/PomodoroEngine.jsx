@@ -978,12 +978,10 @@ export default function PomodoroEngine({
           <p className={`mono text-[10px] uppercase tracking-[0.2em] whitespace-nowrap ${
             lightTheme ? 'text-[var(--muted-2)]' : 'text-slate-400'
           }`}>Thiết lập phiên</p>
-          <p
-            className={`mt-1.5 text-[15px] leading-snug ${lightTheme ? 'text-[var(--ink-2)]' : 'text-slate-500'}`}
-            style={lightTheme ? { fontFamily: 'var(--skin-font-display)' } : undefined}
-          >
-            Chọn mode, thời lượng và mức kỷ luật trước khi bắt đầu.
-          </p>
+          {/* ⚠️ ĐÃ GỠ câu "Chọn mode, thời lượng và mức kỷ luật trước khi bắt đầu." (41px, vòng 20).
+              Nhãn "THIẾT LẬP PHIÊN" ngay trên đã trả lời xong, và ba thứ câu ấy liệt kê thì đứng
+              ngay bên dưới nó, mỗi thứ đã có nhãn riêng. Nó còn chứa chữ "mode" — tiếng Anh trong
+              một app tiếng Việt của một người không đọc tiếng Anh. */}
         </div>
         <ModeSwitch
           disabled={timerState !== TIMER_STATES.IDLE || isBreakMode}
@@ -1009,9 +1007,15 @@ export default function PomodoroEngine({
               }`}>
                 {isStopwatchMode ? 'Mốc tham chiếu' : 'Tập trung'}
               </p>
-              <p className={`mt-1 text-xs ${lightTheme ? 'text-[var(--muted)]' : 'text-slate-500'}`}>
-                {isStopwatchMode ? 'Dùng để neo mốc thưởng khi bấm giờ.' : 'Thời lượng countdown của phiên kế tiếp.'}
-              </p>
+              {/* ⚠️ Ở chế độ Pomo, câu "Thời lượng countdown của phiên kế tiếp." đã bị GỠ (vòng 20):
+                  nhãn "TẬP TRUNG" cộng chính con số "25 PHÚT" ngay bên cạnh đã nói đủ, và câu ấy
+                  còn chứa chữ "countdown". Chế độ Bấm giờ thì GIỮ — ở đó con số là một MỐC THAM
+                  CHIẾU chứ không phải thời lượng đếm ngược, và không có gì khác nói ra điều đó. */}
+              {isStopwatchMode && (
+                <p className={`mt-1 text-xs ${lightTheme ? 'text-[var(--muted)]' : 'text-slate-500'}`}>
+                  Dùng để neo mốc thưởng khi bấm giờ.
+                </p>
+              )}
             </div>
             <div className={`flex items-center justify-between gap-3 self-stretch rounded-[var(--skin-radius-control,14px)] px-2 py-1.5 sm:self-auto sm:justify-start sm:gap-2 sm:rounded-none sm:px-0 sm:py-0 ${
               lightTheme
@@ -1705,13 +1709,25 @@ export default function PomodoroEngine({
       <div className="w-full px-3.5 py-3 backdrop-blur-2xl bg-white/[0.045] border border-white/[0.10] shadow-[0_12px_28px_rgba(15,23,42,0.10)]" style={{ borderRadius: 'var(--skin-radius-card, 18px)', ...paperCardStyle }}>
         <div className="flex items-start justify-between gap-3 px-0.5">
           <div className="min-w-0">
+            {/*
+              ⚠️ HAI ĐOẠN VĂN ĐÃ BỊ GỠ Ở ĐÂY (vòng 20, 2026-08-30) — thẻ này từng nói ĐÚNG MỘT ĐIỀU
+              tới NĂM lần trong 250px, ở màn hình Đàm mở nhiều nhất:
+                1. "Chốt một đích đến rõ ràng trước khi bấm bắt đầu…"   (4 dòng, 80px)  ← GỠ
+                2. huy hiệu "Bắt buộc" + nhãn "Mục tiêu phiên"                            ← giữ
+                3. "Viết kết quả cần chốt trong phiên này…"             (3 dòng, 59px)  ← GỠ
+                4. placeholder "Ví dụ: chốt outline, giải xong 3 bài…"                    ← giữ
+                5. `sessionGoalHint` ngay dưới ô nhập                                     ← giữ
+              Ba cái ở lại là ba cái NÓI THÊM được: nhãn nói *bắt buộc*, placeholder cho VÍ DỤ để
+              bắt chước (cụ thể hơn hẳn hai đoạn đã gỡ), và dòng gợi ý nằm ĐÚNG CHỖ SẮP GÕ. Hai
+              cái gỡ đi chỉ diễn đạt lại tên của chính cái ô ngay dưới chúng.
+              ⚠️ Vế "Ghi chú cho lần sau chỉ để giữ mạch chuyển tiếp" của đoạn 1 còn là hướng dẫn
+              cho một Ô KHÁC (accordion "Ghi chú phiên" ở phía trên, đang đóng) — luật chỉ dùng lúc
+              sắp hành động thì phải nói NGAY TẠI chỗ hành động, không nói ở đầu một thẻ khác.
+            */}
             <p className={`mono text-[10px] uppercase tracking-[0.2em] ${
               lightTheme ? 'text-[var(--muted-2)]' : 'text-slate-500'
             }`}>
               Chuẩn bị phiên
-            </p>
-            <p className={`mt-1 text-[13px] leading-5 ${lightTheme ? 'text-[var(--muted)]' : 'text-slate-400'}`}>
-              Chốt một đích đến rõ ràng trước khi bấm bắt đầu. Ghi chú cho lần sau chỉ để giữ mạch chuyển tiếp.
             </p>
           </div>
           <span className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-semibold ${goalBadgeClass}`}>
@@ -1748,9 +1764,6 @@ export default function PomodoroEngine({
                   </span>
                 </div>
               </div>
-              <p className={`mt-2 text-xs leading-relaxed ${lightTheme ? 'text-[var(--muted)]' : 'text-slate-400'}`}>
-                Viết kết quả cần chốt trong phiên này, đủ cụ thể để tự đánh giá khi xong.
-              </p>
             </div>
             <div className="shrink-0 text-right">
               <p className={`mono text-[10px] ${lightTheme ? 'text-[var(--muted-2)]' : 'text-slate-500'}`}>

@@ -11,9 +11,7 @@ import RankDisplay from './components/RankDisplay';
 import DailyMissions from './components/DailyMissions';
 import FocusRail from './components/FocusRail';
 import FocusNextAction from './components/FocusNextAction';
-import FocusStageCountdown from './components/FocusStageCountdown';
-import FocusStreakMilestone from './components/FocusStreakMilestone';
-import FocusWeeklyReportTease from './components/FocusWeeklyReportTease';
+import FocusMoment from './components/FocusMoment';
 import { getEraStage } from './engine/eraStage';
 import { evaluateStreakAtRisk } from './engine/gameMath';
 import FocusCoachMobile from './components/FocusCoachMobile';
@@ -1758,7 +1756,7 @@ export default function App() {
                           khác — đặt nó giữa màn hình tập trung trong lúc Đàm đang tập trung là mời
                           anh rời khỏi đúng việc anh vừa bấm nút để làm. Soi ảnh lúc đồng hồ đang
                           chạy mới thấy: nó nằm ngay trên đồng hồ, sáng màu nhấn.
-                          `FocusCityTease` và `FocusStageCountdown` thì Ở LẠI: chúng nói *phiên này
+                          `FocusCityTease` và `FocusMoment` thì Ở LẠI: chúng nói *phiên này
                           đang đẩy cái gì tới đâu* — tức động lực để NGỒI YÊN, không phải lời mời đi.
                           Cùng luật mà `FocusCoachMobile` đã dùng (`hidden={hasFocusSessionInProgress}`).
                         */}
@@ -1766,36 +1764,25 @@ export default function App() {
                           <FocusNextAction onNavigate={handleNotificationNavigate} />
                         )}
                         {/*
-                          Dòng thứ ba của cùng một bộ: "còn ~N phiên nữa tới mốc kế tiếp". Đặt SAU
-                          hai dòng kia vì nó nói về đích XA hơn — thứ tự đọc đi từ *phiên này đang
-                          đẩy cái gì* → *còn việc gì đang chờ* → *còn bao xa tới mốc*. Cả ba đều tự
-                          IM khi không có gì để nói.
+                          ⚠️ MỘT DÒNG DUY NHẤT CHO BA NGUỒN (gộp 2026-08-30). Trước đó đây là ba
+                          component riêng — đếm ngược chặng · sắp chạm mốc chuỗi · tổng kết tuần
+                          chưa xem — mỗi cái tự quyết có hiện hay không, và ba cái gác ấy ĐỘC LẬP
+                          nhau. Cộng `FocusCityTease` và `FocusNextAction` là **năm dòng** có thể
+                          cùng nổ (~130px), đủ đẩy đồng hồ xuống dưới nếp gấp — đúng cái vừa mất
+                          công kéo lên. Ba dòng ấy lại trả lời CÙNG một câu (*bấm Bắt đầu bây giờ
+                          thì được gì*), chỉ khác thang thời gian, nên gộp vừa an toàn hơn vừa
+                          đúng hơn: ba câu trả lời cùng lúc cho một câu hỏi là nhiễu.
+                          Thứ tự ưu tiên và lý do từng bậc: xem `FocusMoment.jsx`.
+                          ⚠️ Nó KHÔNG bọc trong `!hasFocusSessionInProgress`: chỉ nhánh "tổng kết
+                          tuần" là lời mời đi chỗ khác, và chính `pickFocusMoment` đã tự im nhánh
+                          ấy khi phiên đang chạy. Bọc cả cụm thì mất luôn ba nguồn còn lại — những
+                          thứ nói lý do NGỒI YÊN cho hết phiên.
                         */}
-                        <FocusStageCountdown />
-                        {/*
-                          Dòng thứ TƯ, và là dòng nói về thang thời gian DÀI nhất: chuỗi ngày. Thứ
-                          tự đọc của cả bộ đi từ gần tới xa — *phiên này đang đẩy cái gì* → *còn
-                          việc gì đang chờ* → *còn bao xa tới mốc của kỷ* → *chuỗi sắp chạm mốc*.
-                          ⚠️ Ở LẠI khi phiên đang chạy (khác `FocusNextAction`): nó không mời đi
-                          đâu cả, nó nói lý do để NGỒI YÊN cho hết phiên — đúng nhóm với
-                          `FocusCityTease`/`FocusStageCountdown`.
-                          ⚠️ Nó là dòng dễ gây phình nhất trong bốn dòng, nên engine gác rất chặt
-                          (chỉ mở miệng khi còn ≤3 ngày tới mốc): bốn dòng cùng hiện thì đồng hồ
-                          lại rơi xuống dưới nếp gấp, đúng cái vừa mất công kéo lên.
-                        */}
-                        <FocusStreakMilestone />
-                        {/*
-                          ⚠️ ẨN KHI PHIÊN ĐANG CHẠY (cùng luật `FocusNextAction`): đây là một lời
-                          mời đi xem chỗ khác, mà giữa lúc tập trung thì mọi lời mời đi đều đi
-                          ngược đúng việc Đàm vừa bấm nút để làm.
-                          ⚠️ Nó ở CUỐI bộ vì nó nói về thang thời gian dài nhất — cả một tuần đã
-                          xong — và vì nó là dòng HIẾM NHẤT: mỗi tuần nhiều nhất một lần, rồi tự
-                          im khi đã xem. Bốn dòng kia gác theo trạng thái, dòng này gác theo "đã
-                          đọc chưa", nên nó không cộng thêm vào ca xấu nhất một cách thường xuyên.
-                        */}
-                        {!hasFocusSessionInProgress && (
-                          <FocusWeeklyReportTease unseen={weeklyReportUnseen} onOpen={openWeeklyReport} />
-                        )}
+                        <FocusMoment
+                          weeklyUnseen={weeklyReportUnseen}
+                          onOpenWeekly={openWeeklyReport}
+                          sessionInProgress={hasFocusSessionInProgress}
+                        />
                         <div className="mt-6">
                           <PomodoroEngine
                             immersiveMode={isWideViewport}

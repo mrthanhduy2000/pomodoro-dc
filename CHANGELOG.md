@@ -12,6 +12,42 @@
 
 ---
 
+## 2026-08-30 (vòng 18) — Ba dòng cột mốc gộp thành MỘT dòng biết chọn
+
+**Rủi ro tôi tự tạo ra trong chính phiên này, và đây là bản vá.** Vòng 10 và 15 thêm hai dòng mới
+vào cột giữa màn Tập trung. Cộng với những dòng có sẵn, ở đó thành **năm** component độc lập, mỗi
+cái tự quyết có hiện hay không: `FocusCityTease` · `FocusNextAction` · `FocusStageCountdown` ·
+`FocusStreakMilestone` · `FocusWeeklyReportTease`. Ba cái gác sau **độc lập nhau** (≤12 phiên tới
+hết chặng · ≤3 ngày tới mốc chuỗi · chưa xem tổng kết tuần) ⇒ về mặt cấu trúc cả năm CÓ THỂ cùng
+nổ (~130px), đủ đẩy đồng hồ xuống dưới nếp gấp — đúng cái vòng 8–9 vừa mất công kéo lên. Ở đây
+không có chỗ cho lý lẽ *"hiếm nên chắc không sao"*: ba điều kiện độc lập thì sớm muộn cũng trùng
+nhau một ngày, và ngày đó không ai biết trước.
+
+**Đã gộp** ba dòng cột-mốc thành `FocusMoment` — **đúng một dòng**, chọn ra khoảnh khắc đáng nói
+nhất. Trần xấu nhất từ **5 dòng xuống 3**.
+
+**Và nó đơn giản hơn thật, không chỉ an toàn hơn:** ba dòng ấy trả lời CÙNG một câu — *bấm Bắt đầu
+bây giờ thì được gì* — chỉ khác thang thời gian. Ba câu trả lời cùng lúc cho một câu hỏi là nhiễu,
+không phải nhiều thông tin.
+
+**Thứ tự ưu tiên, mỗi bậc một lý do:** ăn mừng vừa qua mốc chặng (ăn mừng thì phải NGAY, để lỡ là
+mất luôn) → tổng kết tuần chưa xem (phần thưởng cả tuần, mỗi tuần một lần) → sắp chạm mốc chuỗi
+(thứ mất đi thì không lấy lại được) → đếm ngược tới hết chặng (đích xa nhất, nhường trước).
+
+⚠️ **KHÔNG tái dùng ba component cũ rồi chỉ chọn cái nào được render** — làm thế thì mỗi hook bị gọi
+HAI lần, và với `useStageCountdown` điều đó **sai thật** chứ không chỉ phí: nó giữ một `useState`
+cho dấu "đã ăn mừng", nên hai bản sao có hai state riêng — bấm tắt ở con thì bản ở cha không hay
+biết và vẫn tiếp tục chọn nhánh ăn mừng.
+
+**Test.** `focusMoment.test.js` (9 bài) chấm thẳng luật chọn thuần, gồm một gác cấu trúc đòi **đúng
+MỘT** dòng khoảnh khắc trong `App.jsx` — cái sai nó ngăn là một phiên sau "thêm một dòng nữa cho
+tiện" rồi dựng lại đúng đống năm dòng vừa gỡ. Ba bài cũ trỏ vào component đã xoá được **sửa phép đo,
+giữ nguyên lời hứa**, không xoá.
+
+**Ảnh hưởng.** Chỉ giao diện. Không migration.
+
+---
+
 ## 2026-08-30 (vòng 17) — Công cụ soi giao diện lần đầu bấm được nút chỉ-có-biểu-tượng
 
 **Lỗi công cụ, và nó giấu cả một họ màn hình.** `shot.mjs --click` khớp nút bằng **chữ hiển thị**.

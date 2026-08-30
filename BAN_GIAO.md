@@ -7,6 +7,22 @@
 > **BA lần** (ô "PHIÊN 0" ở thanh đầu · câu "Bạn chưa chốt phiên nào trong hôm nay" · dòng "Phiên
 > 0/5 hôm nay" dưới đồng hồ). Bản thứ ba là bản TỐT NHẤT vì nó có mẫu số ⇒ hai bản kia nhường.
 >
+> **VÒNG 18 — BA DÒNG CỘT MỐC GỘP THÀNH MỘT (`FocusMoment`).** Đây là bản vá cho rủi ro CHÍNH TÔI
+> tạo ra ở vòng 10 và 15: cột giữa màn Tập trung có **năm** component độc lập, ba trong số đó gác
+> theo ba điều kiện KHÔNG liên quan nhau ⇒ cả năm có thể cùng nổ (~130px) và đẩy đồng hồ xuống dưới
+> nếp gấp. Trần xấu nhất nay **5 → 3 dòng**.
+> ⚠️ **KHÔNG tái dùng ba component cũ rồi chỉ chọn cái nào render** — mỗi hook sẽ bị gọi HAI lần, và
+> với `useStageCountdown` điều đó SAI THẬT: nó giữ `useState` cho dấu "đã ăn mừng", nên hai bản sao
+> có hai state riêng, bấm tắt ở con thì cha không hay biết. Luật chọn phải gọi hook MỘT lần rồi tự
+> dựng hình.
+> ⚠️ **Ba bài test cũ trỏ vào component đã xoá được SỬA PHÉP ĐO, KHÔNG XOÁ** — ý định của chúng
+> (đếm ngược phải tới cột giữa · lời chúc mừng phải bấm tắt được · cột mốc chuỗi phải tới iPhone)
+> vẫn đúng nguyên vẹn; chỉ chỗ nhìn là đổi.
+> ⚠️ **BẪY "NEO VÀO CÁI TÊN" CẮN LẦN THỨ BA TRONG NGÀY** — bài test đòi "ăn mừng phải xét trước
+> tổng kết tuần" đỏ oan vì `indexOf('weeklyUnseen')` bắt trúng **dòng khai báo tham số**, đứng trước
+> mọi nhánh. ⇒ **neo vào ĐIỀU KIỆN của nhánh** (`weeklyUnseen && !sessionInProgress`), đừng neo vào
+> tên biến / nhãn hiển thị / tên hàm — chúng đều xuất hiện sớm hơn ở chỗ khai báo hoặc chú thích.
+>
 > **VÒNG 17 — `shot.mjs` LẦN ĐẦU BẤM ĐƯỢC NÚT CHỈ-CÓ-BIỂU-TƯỢNG.** `--click` xưa nay chỉ khớp CHỮ
 > HIỂN THỊ, mà nút biểu tượng thì `textContent` rỗng ⇒ **Trung tâm thông báo — có mặt trên MỌI màn
 > hình — chưa lần nào được chụp**. Nay thử chữ trước, rồi `aria-label`/`title`. Khoá bằng

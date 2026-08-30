@@ -1074,10 +1074,27 @@ function OverviewTab({ history, streak, period, onPeriodChange }) {
           <p className="mt-1 text-[1.6rem] font-semibold" style={{ color: TEXT_PRIMARY, fontFamily: 'var(--skin-font-display)' }}>{view.winCount}</p>
           <p className="mt-1 text-[11px]" style={{ color: TEXT_SOFT }}>{(view.winCount / periodDays).toFixed(1)} / ngày</p>
         </div>
+        {/*
+          ⚠️ KHÔNG CÓ PHIÊN NÀO ĐẶT MỤC TIÊU THÌ IN "—", KHÔNG IN "0%" (vòng 20, 2026-08-30).
+          `achPct` rơi về 0 khi mẫu số bằng 0, nên ô này hiện **"0%" cạnh "0 / 0 phiên"** — mà
+          "0%" đọc ra là *"anh trượt hết"*, trong khi sự thật là *"anh chưa thi lần nào"*. Hai
+          tình huống ngược hẳn nhau, cùng một con số. Đây đúng khuôn "con số tạo động lực quay ra
+          làm nản" mà dự án đã vá cho dòng đếm ngược chặng.
+          ⚠️ Không đụng `achPct` ở tầng tính: nó là 0 đúng theo toán học, chỗ sai là chỗ ĐỌC RA.
+        */}
         <div className="p-4" style={card}>
           <p className="text-[12px]" style={{ color: TEXT_SOFT }}>Đạt mục tiêu</p>
-          <p className="mt-1 text-[1.6rem] font-semibold" style={{ color: TEXT_PRIMARY, fontFamily: 'var(--skin-font-display)' }}>{view.achPct}<span className="text-[1rem]" style={{ color: TEXT_SOFT }}>%</span></p>
-          <p className="mt-1 text-[11px]" style={{ color: 'var(--good)' }}>{view.achieved} / {view.goaled} phiên</p>
+          {view.goaled > 0 ? (
+            <>
+              <p className="mt-1 text-[1.6rem] font-semibold" style={{ color: TEXT_PRIMARY, fontFamily: 'var(--skin-font-display)' }}>{view.achPct}<span className="text-[1rem]" style={{ color: TEXT_SOFT }}>%</span></p>
+              <p className="mt-1 text-[11px]" style={{ color: 'var(--good)' }}>{view.achieved} / {view.goaled} phiên</p>
+            </>
+          ) : (
+            <>
+              <p className="mt-1 text-[1.6rem] font-semibold" style={{ color: TEXT_SOFT, fontFamily: 'var(--skin-font-display)' }}>—</p>
+              <p className="mt-1 text-[11px]" style={{ color: TEXT_SOFT }}>chưa phiên nào đặt mục tiêu</p>
+            </>
+          )}
         </div>
         <div className="p-4" style={card}>
           <p className="text-[12px]" style={{ color: TEXT_SOFT }}>Chuỗi</p>
@@ -1088,7 +1105,7 @@ function OverviewTab({ history, streak, period, onPeriodChange }) {
 
       <InsightStrip items={insights} />
 
-      <div className="grid gap-3 lg:grid-cols-[1.5fr_1fr]">
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-[1.5fr_1fr]">
         <div className="p-5" style={card}>
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em]" style={{ color: TEXT_SOFT }}>
             Giờ tập trung theo {view.bars[0]?.unit ?? 'ngày'}
@@ -1256,7 +1273,7 @@ const CompactFocusTimeline = React.memo(function CompactFocusTimeline({ summary,
         </div>
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.18fr)_minmax(252px,0.82fr)]">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.18fr)_minmax(252px,0.82fr)]">
         <div>
           <div className="pb-1">
             <div
@@ -1663,11 +1680,11 @@ const FocusTab = React.memo(function FocusTab({ history, period: focusPeriod, on
                 </div>
 
                 <div className="max-w-3xl">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.28em]" style={{ color: TEXT_SOFT }}>
-                    Tập trung
-                  </p>
+                  {/* ⚠️ NHÃN "TẬP TRUNG" ĐÃ GỠ (2026-08-30) — nó là ĐÚNG chữ trên nút tab đang
+                      sáng cách đó vài chục điểm ảnh. Tiêu đề ngay dưới thì ĐỔI theo số liệu, nên
+                      nó mới là dòng đáng chiếm chỗ. */}
                   <h3
-                    className="mt-2.5 text-[1.6rem] font-semibold leading-tight md:text-[2rem]"
+                    className="text-[1.6rem] font-semibold leading-tight md:text-[2rem]"
                     style={{ color: TEXT_PRIMARY, fontFamily: DISPLAY_FONT, textWrap: 'balance' }}
                   >
                     {focusHeadline}
@@ -1752,8 +1769,22 @@ const FocusTab = React.memo(function FocusTab({ history, period: focusPeriod, on
             </div>
           </Motion.section>
 
+          {/*
+            ⚠️ `grid-cols-1` LÀ BẮT BUỘC, KHÔNG PHẢI THỪA (vòng 20, 2026-08-30). Ở khung hẹp,
+            `lg:grid-cols-…` chưa áp nên grid chỉ có MỘT cột NGẦM cỡ `auto` — mà một track `auto`
+            thì tự PHÌNH theo nội dung rộng nhất bên trong, bất kể item khai `min-width: 0`. Nội
+            dung rộng nhất ở đây là lịch nhiệt 365 ngày (`min-w-[560px]`, cố ý, nó có
+            `overflow-x-auto` riêng để cuộn ngang). Hậu quả đo được ở 390px: cả THẺ phình lên
+            602px ⇒ tiêu đề "365 Ngày Gần Đây" và câu "Nhìn nhanh toàn bộ nhịp tập trung trong
+            năm gần nhất…" cũng rộng 560px và bị MÉP MÀN HÌNH cắt — cụt giữa từ, không có dấu "…".
+            ⚠️ Không cổng nào đỏ: đây không phải `truncate` nên `--fit` mù, và `scrollWidth` cũng
+            gần như mù vì `overflow-x:hidden` ở tổ tiên kẹp nó lại. Thứ bắt được là ĐỌC ẢNH, và
+            một probe liệt kê mọi phần tử rộng hơn 390px.
+            Cùng đúng cái bẫy `SkillTree.jsx` đã ghi lại — nay vá cho cả 8 grid cùng khuôn trong
+            file này, không vá riêng chỗ đã bắt được.
+          */}
           <div
-            className="grid gap-4 lg:grid-cols-[minmax(0,1.05fr)_minmax(320px,0.95fr)]"
+            className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.05fr)_minmax(320px,0.95fr)]"
             style={{ contentVisibility: 'auto', containIntrinsicSize: '720px' }}
           >
             {focusSummary.sparseMode
@@ -1764,7 +1795,7 @@ const FocusTab = React.memo(function FocusTab({ history, period: focusPeriod, on
           </div>
 
           <div
-            className="grid gap-4 lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]"
+            className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]"
             style={{ contentVisibility: 'auto', containIntrinsicSize: '640px' }}
           >
             <div
@@ -2705,20 +2736,20 @@ function JournalTab({ history, sessionCategories }) {
         style={{ background: BG_CARD, borderColor: PANEL_BORDER }}
       >
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div className="min-w-0">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.26em]" style={{ color: TEXT_SOFT }}>
-              Lưu trữ
-            </p>
-            <h3 className="mt-3 text-[1.9rem] font-semibold leading-tight" style={{ color: TEXT_PRIMARY, fontFamily: DISPLAY_FONT }}>
-              Nhật ký của các phiên đã ghi.
-            </h3>
-            <p className="mt-3 max-w-2xl text-[13px] leading-6" style={{ color: TEXT_MUTED }}>
-              Khối này giữ lại nhịp, mốc XP, ghi chú, phần tự chấm và cả những phiên bị hủy theo đúng thứ tự thời gian. Bộ lọc phía dưới giúp soi từng nhóm phiên mà không làm mất cảm giác của một cuốn sổ đang được bổ sung dần.
-            </p>
-            <p className="mt-2 max-w-2xl text-[12px] leading-5" style={{ color: TEXT_SOFT }}>
-              Bạn có thể xoá từng phiên không muốn giữ. Phiên mới nhất sẽ hoàn tác theo bản lưu tạm; phiên cũ sẽ trừ lại XP, EP, tài nguyên và điểm nghiên cứu đang lưu trong bản ghi đó.
-            </p>
-          </div>
+          {/*
+            ⚠️ KHỐI MỞ ĐẦU ~800px ĐÃ GỠ (2026-08-30) — bốn lớp, và cả bốn đều nói về một màn hình mà
+            người đọc ĐANG ĐỨNG TRONG ĐÓ:
+            · nhãn "LƯU TRỮ" — nhắc lại nút tab "Nhật Ký" đang sáng ngay phía trên;
+            · tiêu đề "Nhật ký của các phiên đã ghi." ở cỡ 1,9rem, xuống HAI DÒNG ở khung 390px;
+            · một đoạn kể rằng nhật ký thì lưu lại các phiên theo thứ tự thời gian;
+            · một đoạn về CÁCH XOÁ — thông tin thật và quan trọng, nhưng đặt sai chỗ.
+            ⚠️ Đoạn cuối KHÔNG bị mất tin: mỗi phiên đã có sẵn một bước XÁC NHẬN riêng
+            (`confirmDelete === h.id`) với nút ghi rõ *"Xoá + hoàn tác"* / *"Xoá phiên"* kèm chú
+            giải. Nói luật hoàn tác ở ĐẦU MÀN là nói trước cho người chưa định xoá gì, mỗi lần mở,
+            mãi mãi — còn nói ở NÚT là nói đúng lúc người ta sắp bấm.
+            Ở khung 390px khối này chiếm ~800px, tức người xem cuộn gần một màn hình rưỡi mới thấy
+            phiên đầu tiên trong chính cuốn nhật ký mình vừa mở.
+          */}
           <div
             className="inline-flex w-fit items-center gap-2 rounded-full border px-3 py-1.5 text-[11px] font-semibold"
             style={{ background: FILTER_PILL_BG, color: FILTER_PILL_TEXT, borderColor: FILTER_PILL_BORDER }}
@@ -3139,7 +3170,7 @@ function JournalTab({ history, sessionCategories }) {
                   )}
 
                   {(goalText || nextNoteText || reviewMeta) && (
-                    <div className="grid gap-2 lg:grid-cols-2">
+                    <div className="grid grid-cols-1 gap-2 lg:grid-cols-2">
                       {(goalText || reviewMeta) && (
                         <div
                           className="rounded-[20px] px-3.5 py-3.5"
@@ -3189,7 +3220,7 @@ function JournalTab({ history, sessionCategories }) {
                   )}
 
                   {(h.note || h.breakNote) && (
-                    <div className="grid gap-2 lg:grid-cols-2">
+                    <div className="grid grid-cols-1 gap-2 lg:grid-cols-2">
                       <div
                         className="lg:col-span-2 rounded-[20px] px-3.5 py-3.5 space-y-3"
                         style={{ background: NOTE_PANEL_BG, border: `1px solid ${NOTE_PANEL_BORDER}` }}
@@ -3237,7 +3268,7 @@ function JournalTab({ history, sessionCategories }) {
                           )}
                         </div>
 
-                        <div className="grid gap-2 lg:grid-cols-2">
+                        <div className="grid grid-cols-1 gap-2 lg:grid-cols-2">
                           {h.note && (
                             <div
                               className="rounded-[18px] px-3.5 py-3.5"
@@ -3341,20 +3372,13 @@ function NotesTab({ savedNotes, sessionCategories }) {
         style={{ background: BG_CARD, borderColor: PANEL_BORDER }}
       >
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div className="min-w-0">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.26em]" style={{ color: TEXT_SOFT }}>
-              Lưu trữ
-            </p>
-            <h3 className="mt-3 text-[1.9rem] font-semibold leading-tight" style={{ color: TEXT_PRIMARY, fontFamily: DISPLAY_FONT }}>
-              Ghi chép được giữ lại sau mỗi phiên.
-            </h3>
-            <p className="mt-3 max-w-2xl text-[13px] leading-6" style={{ color: TEXT_MUTED }}>
-              Khối này giữ lại bản sao của ghi chú tập trung và ghi chú giải lao. Nó vận hành như một kho lưu trữ yên tĩnh để nhìn lại ý định, vấn đề và điều cần tiếp tục ở phiên kế tiếp.
-            </p>
-            <p className="mt-2 max-w-2xl text-[12px] leading-5" style={{ color: TEXT_SOFT }}>
-              Bạn có thể xóa từng ghi chú cũ ở đây. Nếu ghi chú đó vẫn gắn với một phiên trong nhật ký, phần note ở tab Nhật ký cũng sẽ được gỡ theo.
-            </p>
-          </div>
+          {/*
+            ⚠️ KHỐI MỞ ĐẦU ĐÃ GỠ (2026-08-30) — cùng ca với tab Nhật Ký, và cùng bốn lớp: nhãn "LƯU
+            TRỮ" nhắc lại nút tab đang sáng · một tiêu đề 1,9rem xuống hai dòng ở khung 390px · một
+            đoạn kể rằng kho ghi chú thì giữ ghi chú · một đoạn về CÁCH XOÁ.
+            Đoạn cuối không mất tin: mỗi ghi chú đã có bước xác nhận riêng ngay tại nút xoá của nó.
+            Nói luật xoá ở đầu màn là nói trước cho người chưa định xoá gì, mỗi lần mở, mãi mãi.
+          */}
           <div
             className="inline-flex w-fit items-center gap-2 rounded-full border px-3 py-1.5 text-[11px] font-semibold"
             style={{ background: FILTER_PILL_BG, color: FILTER_PILL_TEXT, borderColor: FILTER_PILL_BORDER }}
@@ -3529,7 +3553,7 @@ function NotesTab({ savedNotes, sessionCategories }) {
                     ))}
                   </div>
 
-                  <div className="grid gap-2 md:grid-cols-2">
+                  <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
                     {entry.note && (
                       <div
                         className="rounded-[20px] px-3.5 py-3.5"

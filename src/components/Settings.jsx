@@ -45,21 +45,25 @@ function usePWAInstall() {
   return { canInstall: !!deferredPrompt, isInstalled, install };
 }
 
+// ⚠️ TRƯỜNG `short` ĐÃ BỊ GỠ (vòng 20, 2026-08-30). Mỗi nút từng hiện HAI nhãn cho cùng một thứ:
+// một mã tiếng Anh viết hoa ("RAIN", "CL") và ngay cạnh là chính cái tên tiếng Việt ("Mưa",
+// "Cổ điển"). Đàm không đọc tiếng Anh, nên mã kia không nói thêm được gì mà vẫn bắt mắt dừng lại
+// giải mã — cùng đúng lý do đã gỡ 11 nhãn tiếng Anh khác khỏi màn này ở vòng 14.
 const AMBIENT_OPTIONS = [
-  { value: 'none', label: 'Tắt', short: 'OFF' },
-  { value: 'rain', label: 'Mưa', short: 'RAIN' },
-  { value: 'wind', label: 'Gió', short: 'WIND' },
-  { value: 'forest', label: 'Rừng', short: 'FOREST' },
-  { value: 'coffee', label: 'Cà phê', short: 'CAFE' },
-  { value: 'waves', label: 'Sóng biển', short: 'WAVES' },
-  { value: 'fireplace', label: 'Lò sưởi', short: 'FIRE' },
+  { value: 'none', label: 'Tắt' },
+  { value: 'rain', label: 'Mưa' },
+  { value: 'wind', label: 'Gió' },
+  { value: 'forest', label: 'Rừng' },
+  { value: 'coffee', label: 'Cà phê' },
+  { value: 'waves', label: 'Sóng biển' },
+  { value: 'fireplace', label: 'Lò sưởi' },
 ];
 
 const SOUND_PACK_OPTIONS = [
-  { value: 'classic', label: 'Cổ điển', short: 'CL' },
-  { value: 'nature', label: 'Tự nhiên', short: 'NT' },
-  { value: 'synthwave', label: 'Tổng hợp', short: 'SW' },
-  { value: 'minimal', label: 'Tối giản', short: 'MN' },
+  { value: 'classic', label: 'Cổ điển' },
+  { value: 'nature', label: 'Tự nhiên' },
+  { value: 'synthwave', label: 'Tổng hợp' },
+  { value: 'minimal', label: 'Tối giản' },
 ];
 
 const THEME_MODE_OPTIONS = [
@@ -250,25 +254,25 @@ export default function Settings() {
     <div className="w-full max-w-5xl mx-auto space-y-5 pb-6">
       <div className="px-5 py-5" style={paperCardStyle(lightTheme)}>
         <div className="flex flex-wrap items-end justify-between gap-4">
+          {/*
+            ⚠️ KHỐI MỞ ĐẦU ĐÃ THU TỪ ~590px XUỐNG MỘT DÒNG (2026-08-30). Ba lớp bị gỡ, và cả ba
+            đều đang giải thích một màn hình mà người đọc ĐANG ĐỨNG TRONG ĐÓ:
+            · nhãn "TÙY CHỈNH" — chỗ nói lần thứ hai của chính chữ "Cài đặt";
+            · tiêu đề "Cài đặt trải nghiệm tập trung" ở cỡ 30–40px, xuống HAI DÒNG ở khung 390px;
+            · ba dòng văn xuôi kể rằng cài đặt dùng để chỉnh cài đặt.
+            Đọc một lần là đủ cho cả đời dùng app, nhưng chúng chiếm chỗ ĐẮT NHẤT màn hình, mỗi lần
+            mở, mãi mãi — cùng lý do đã gỡ `subtitle` của `ShellPane` khỏi khổ điện thoại.
+            GIỮ tiêu đề ở cỡ nhỏ: trên iPhone Đàm tới đây qua tab "Thêm", nên đây là thứ DUY NHẤT
+            nói anh đang đứng ở màn nào. GIỮ ba chip bên phải: chúng là TRẠNG THÁI hiện tại (giao
+            diện / nền / gói âm đang bật), không phải lời giải thích — chúng đổi theo lựa chọn.
+          */}
           <div className="max-w-2xl">
-            <p
-              className="mono text-[11px] font-semibold uppercase tracking-[0.3em]"
-              style={lightTheme ? { color: 'var(--accent2, #9a5a48)' } : { color: 'var(--accent2, rgba(var(--accent-rgb), 0.8))' }}
-            >
-              Tùy chỉnh
-            </p>
             <h2
-              className="serif mt-2 text-3xl leading-tight md:text-[2.5rem]"
+              className="text-[19px] font-semibold leading-tight"
               style={{ fontFamily: 'var(--skin-font-display)', fontWeight: 600, color: lightTheme ? 'var(--ink, #1f1e1d)' : 'var(--ink)' }}
             >
-              Cài đặt trải nghiệm tập trung
+              Cài đặt
             </h2>
-            <p
-              className="mt-2 max-w-xl text-sm leading-relaxed"
-              style={lightTheme ? { color: '#6a6862' } : { color: 'var(--muted)' }}
-            >
-              Điều chỉnh nhịp nghỉ, âm thanh và cách hiển thị để khu vực làm việc giữ được cảm giác yên, rõ và dùng lâu không mệt.
-            </p>
           </div>
 
           <div className="flex flex-wrap gap-2">
@@ -297,7 +301,6 @@ export default function Settings() {
         <Card lightTheme={lightTheme} className="md:col-span-2">
           <SectionHeader
             lightTheme={lightTheme}
-            eyebrow="Rhythm"
             title="Bộ hẹn giờ"
             description="Nhịp làm việc, khoảng nghỉ và cách app tự chuyển trạng thái."
           />
@@ -425,7 +428,6 @@ export default function Settings() {
         <Card lightTheme={lightTheme}>
           <SectionHeader
             lightTheme={lightTheme}
-            eyebrow="Atmosphere"
             title="Âm nền tập trung"
             description="Chọn một không khí nền vừa đủ hiện diện, không lấn vào phần chữ và nhịp đếm."
           />
@@ -443,16 +445,16 @@ export default function Settings() {
                   style={choiceStyle(active, lightTheme)}
                 >
                   <div className="flex items-center justify-between gap-2">
-                    <span className="mono text-[11px] font-semibold uppercase tracking-[0.16em]" style={lightTheme ? { color: active ? '#9a5a48' : '#6a6862' } : { color: active ? 'var(--accent-light)' : 'var(--muted)' }}>
-                      {opt.short}
-                    </span>
+                    {/* ⚠️ Mã tiếng Anh ("RAIN"/"CAFE") đã bị GỠ ở đây — tên tiếng Việt nằm ngay
+                        dòng dưới đã là cái tên thật. Ô này nay chỉ còn trạng thái "bật". */}
+                    <span aria-hidden="true" />
                     {active && (
                       <span className="text-[10px] font-semibold uppercase tracking-[0.14em]" style={lightTheme ? { color: '#9a5a48' } : { color: 'var(--accent-light)' }}>
                         bật
                       </span>
                     )}
                   </div>
-                  <p className="mt-2 text-xs font-semibold">{opt.label}</p>
+                  <p className="text-sm font-semibold">{opt.label}</p>
                 </motion.button>
               );
             })}
@@ -487,7 +489,6 @@ export default function Settings() {
         <Card lightTheme={lightTheme}>
           <SectionHeader
             lightTheme={lightTheme}
-            eyebrow="Signals"
             title="Âm thanh hệ thống"
             description="Tiếng báo bắt đầu, đếm ngược cuối phiên và tín hiệu hoàn tất."
           />
@@ -549,7 +550,6 @@ export default function Settings() {
         <Card lightTheme={lightTheme}>
           <SectionHeader
             lightTheme={lightTheme}
-            eyebrow="Pack"
             title="Gói âm thanh"
             description="Mỗi pack đổi chất liệu tiếng báo, không đổi bố cục hay nhịp vận hành."
           />
@@ -566,9 +566,6 @@ export default function Settings() {
                   className="flex items-center gap-2.5 rounded-2xl px-3 py-3 text-sm font-medium transition-all"
                   style={choiceStyle(active, lightTheme)}
                 >
-                  <span className="mono text-[11px] font-semibold uppercase tracking-[0.18em]" style={lightTheme ? { color: active ? '#9a5a48' : '#6a6862' } : { color: active ? 'var(--accent-light)' : 'var(--muted)' }}>
-                    {opt.short}
-                  </span>
                   <span>{opt.label}</span>
                 </motion.button>
               );
@@ -579,7 +576,6 @@ export default function Settings() {
         <Card lightTheme={lightTheme}>
           <SectionHeader
             lightTheme={lightTheme}
-            eyebrow="Alerts"
             title="Thông báo"
             description="Tín hiệu ngoài tab khi một phiên vừa kết thúc hoặc đã tới lúc quay lại."
           />
@@ -690,7 +686,6 @@ export default function Settings() {
         <Card lightTheme={lightTheme}>
           <SectionHeader
             lightTheme={lightTheme}
-            eyebrow="Surface"
             title="Giao diện"
             description="Chọn bề mặt nền và chủ đề UI. Mặc định là Sân Chơi — mặt phẳng sạch, chữ sans đậm, thẻ có chân bóng đặc."
           />
@@ -866,7 +861,6 @@ export default function Settings() {
         <Card lightTheme={lightTheme}>
           <SectionHeader
             lightTheme={lightTheme}
-            eyebrow="Archive"
             title="Dữ liệu"
             description="Xuất, nhập và sao lưu toàn bộ hành trình ngay trong trình duyệt."
           />
@@ -879,7 +873,6 @@ export default function Settings() {
           <Card lightTheme={lightTheme} className="md:col-span-2">
             <SectionHeader
               lightTheme={lightTheme}
-              eyebrow="Cycle"
               title="New Game+"
               description="Bắt đầu một vòng mới với chỉ số nền tốt hơn sau khi chạm ngưỡng EP yêu cầu."
             />
@@ -913,7 +906,6 @@ export default function Settings() {
           <Card lightTheme={lightTheme}>
             <SectionHeader
               lightTheme={lightTheme}
-              eyebrow="Install"
               title="Cài đặt app"
               description="Đưa DC Pomodoro lên thiết bị để mở nhanh và chạy như một ứng dụng riêng."
             />
@@ -954,7 +946,6 @@ export default function Settings() {
         <Card lightTheme={lightTheme}>
           <SectionHeader
             lightTheme={lightTheme}
-            eyebrow="About"
             title="Giới thiệu"
             description="Tóm tắt sản phẩm và phạm vi lưu trữ hiện tại."
           />
@@ -981,7 +972,6 @@ export default function Settings() {
         <Card lightTheme={lightTheme} className="md:col-span-2">
           <SectionHeader
             lightTheme={lightTheme}
-            eyebrow="Reset"
             title="Vùng nguy hiểm"
             description="Xóa vĩnh viễn toàn bộ tiến trình. Không có thao tác hoàn tác."
           />
@@ -1035,38 +1025,32 @@ function Card({ children, lightTheme = false, className = '' }) {
   );
 }
 
-function SectionHeader({ icon, title, description, eyebrow, lightTheme = false }) {
+/**
+ * ⚠️ `eyebrow` ĐÃ GỠ KHỎI CẢ MÀN CÀI ĐẶT (2026-08-30), và nó gánh HAI thứ nên gỡ được cả hai.
+ *
+ * · **Nhãn nhỏ** — mười một mục của màn này mang nhãn `Rhythm` · `Atmosphere` · `Signals` · `Pack`
+ *   · `Alerts` · `Surface` · `Archive` · `Cycle` · `Install` · `About` · `Reset`: **tiếng Anh
+ *   trong một app tiếng Việt**, và mỗi cái đứng ngay trên một tiêu đề tiếng Việt đã nói rõ hơn
+ *   ("Rhythm" trên "Bộ hẹn giờ"). Cùng lý do đã gỡ chữ "Workspace" khỏi `ShellPane`.
+ * · **Vòng tròn hai chữ** ("RH", "AT", "SI"…) — nó KHÔNG phải một biểu tượng, nó là
+ *   `eyebrow.slice(0, 2)`, tức hai ký tự đầu của chính chữ tiếng Anh kia. Một huy hiệu suy ra từ
+ *   một nhãn đã bị gỡ thì không còn nghĩa gì; giữ lại nó là giữ cái bóng của thứ vừa bỏ đi.
+ *
+ * Giá: ~22px mỗi mục × 11 mục, cộng 11 vòng tròn trang trí. Tiêu đề `title` ở lại và nay là dòng
+ * đầu tiên của mỗi mục — đúng thứ mắt cần để biết mục này chỉnh cái gì.
+ */
+function SectionHeader({ icon, title, description, lightTheme = false }) {
   return (
     <div>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p
-            className="mono text-[10px] font-semibold uppercase tracking-[0.2em]"
-            style={lightTheme ? { color: 'var(--muted-2, #9a5a48)' } : { color: 'var(--muted-2)' }}
-          >
-            {eyebrow}
-          </p>
           <h3
-            className="mt-2 text-[18px] font-semibold leading-tight"
+            className="text-[18px] font-semibold leading-tight"
             style={{ fontFamily: 'var(--skin-font-display)', fontWeight: 600, color: lightTheme ? 'var(--ink, #1f1e1d)' : 'var(--ink)' }}
           >
             {title}
           </h3>
         </div>
-        <span
-          className="mono flex h-8 min-w-8 items-center justify-center rounded-full px-2 text-[10px] font-semibold uppercase tracking-[0.18em]"
-          style={lightTheme ? {
-            background: 'rgba(var(--accent-rgb), 0.1)',
-            border: '1px solid rgba(var(--accent-rgb), 0.18)',
-            color: 'var(--accent2, #9a5a48)',
-          } : {
-            background: 'rgba(var(--accent-rgb), 0.12)',
-            border: '1px solid rgba(var(--accent-rgb), 0.18)',
-            color: 'var(--accent2, var(--accent-light))',
-          }}
-        >
-          {eyebrow.slice(0, 2)}
-        </span>
       </div>
       {description && (
         <p className="mt-2 max-w-xl text-xs leading-relaxed" style={lightTheme ? { color: '#6a6862' } : { color: 'var(--muted-2)' }}>

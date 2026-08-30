@@ -12,7 +12,7 @@
 
 ---
 
-## 2026-08-30 (vòng 14) — Màn Thống kê: một bộ lọc thời gian, và dải "Điều đáng chú ý"
+## 2026-08-30 (vòng 21) — Màn Thống kê: một bộ lọc thời gian, và dải "Điều đáng chú ý"
 
 **Vấn đề 1 — ba bộ lọc thời gian, ba mặc định.** Tab Tổng Quan mặc định "tuần", tab Tập Trung và
 Phân Loại mặc định "tất cả", và mỗi tab khai bảng kỳ riêng. Bấm sang tab khác là **cửa sổ thời
@@ -53,6 +53,216 @@ dùng thấy gần như không đổi theo ngày, nên nó không nói được 
 
 **Test.** +40 bài (20 kỳ · 12 insight · 8 canh mã nguồn) ⇒ 1371 đạt · 1 bỏ qua · 0 hỏng. Chi tiết
 quyết định: `ARCHITECTURE_DECISIONS.md` ADR-067. Nợ mới ghi ở `TECH_DEBT.md` #92.
+## 2026-08-30 (vòng 20) — Tối giản toàn app bằng fan-out soi song song
+
+**Cách làm:** 6 nhánh CHỈ ĐỌC soi song song 9 màn ở khung 390px thật (mỗi nhánh một màn, ảnh ra
+tên riêng, mọi phát hiện phải kèm toạ độ Y + chiều cao px — *không số đo = không tính*), rồi
+chấm chéo và **sửa TUẦN TỰ**, mỗi việc một commit. 9 việc.
+
+**1. Nút chính hết bị thanh tab che.** Đo lại trên tài khoản đã chơi 6 tháng: nút "Điền mục tiêu →"
+y=773…815 còn thanh tab NỔI y=774, nền ĐỤC hoàn toàn ⇒ **lòi ra 1px**. Vòng 19 đã vá nhưng chỉ đủ
+cho NGÀY CHÀO NGẮN. Ba nguyên nhân: cụm ba dòng nhắc cùng nổ (84px) · khối chào dài 2 hoặc 3 dòng
+tuỳ biến thể copy (chênh 26px) · 32px khoảng trắng đỉnh cột giữa. Vá: `FocusNextAction` nhập vào bộ
+chọn `focusMomentPick` thành **nguồn thứ năm** (còn đúng HAI dòng, trần xấu nhất khoá bằng CẤU
+TRÚC) · trần vòng đồng hồ `64vw → 58vw` (226px ở 390px, máy bàn không đổi) · `pt-8 → pt-4` ở khổ
+điện thoại. **Kết quả: nút cách thanh tab 53px** (ngày 2 dòng) / 27px (ngày 3 dòng).
+
+**2. Thẻ "Chuẩn bị phiên" nói một điều năm lần → giữ ba.** Gỡ hai đoạn văn (80px + 59px) chỉ diễn
+đạt lại tên của chính cái ô ngay dưới chúng; giữ nhãn "Bắt buộc", placeholder có VÍ DỤ, và dòng
+gợi ý ở đúng chỗ sắp gõ. Cùng lượt gỡ "Chọn mode…" (41px) và "Thời lượng countdown…" (16px).
+**Trang màn Tập trung 2.920 → 2.660px.**
+
+**3. Tab Kỹ năng thôi dựng lại nguyên tab Nhiệm vụ ở iPhone.** `SkillTree` render `<DailyMissions/>`
+làm cột ngữ cảnh — đúng ở màn rộng (thanh bên desktop không có mục "Nhiệm vụ"), nhưng ở 390px hai
+cột xếp chồng nên nó thành **1.097px chắn ngang**, mà đúng thẻ ấy LÀ toàn bộ tab "Nhiệm vụ".
+**Trang Kỹ năng 3.145 → 2.032px (−35%)**, máy bàn không đổi.
+
+**4. Ô "Chuỗi" có mẫu số: `1` → `1 / 7`.** Mốc chuỗi kế tiếp đã tính sẵn nhưng hai chỗ dùng nó đều
+không tới được iPhone. Không tốn thêm một điểm ảnh chiều cao (đã đo).
+
+**5. Kỹ năng: sáu nhánh thôi giống hệt nhau.** Nhãn tên nhánh là `hidden sm:inline` (sm=640px) nên
+ở 390px **5/6 nhánh cùng ghi "0/6" ⇒ năm nút trông y hệt nhau**. Và "THÀNH TỰU GẦN ĐÂY" chỉ hiện
+"VC"/"DS"/"C5", tên thật nằm trong `title` — tức **chỉ con chuột mới đọc được**.
+
+**6. Hai chỗ chữ bị cắt mà không cổng nào kêu.** `RewardCard`: mô tả được **144px cho 370px chữ
+(61% ngoài màn hình)** vì `min-w-[9rem]` luôn vừa cạnh huy hiệu bậc nên không bao giờ wrap → tách
+hai hàng, mô tả trọn bề ngang (131 → 272px, 2 dòng). `StatsDashboard`: 8 grid khai `lg:grid-cols-…`
+mà thiếu `grid-cols-1` ⇒ track `auto` phình theo lịch nhiệt `min-w-[560px]`, kéo tiêu đề và câu dẫn
+ra 560px trên máy 390px.
+
+**7. Nhãn tiếng Anh còn sót → quét lại còn 0.** "Full Screen"×3 · "Overclock" · "stake" ·
+"Stopwatch"/"Flowtime" · "OFF/RAIN/WIND/FOREST/CAFE/WAVES/FIRE" · "CL/NT/SW/MN" · "JSON"×3.
+
+**8. Thành tích: gỡ sáu chỗ nói-lần-hai. 14.254 → 12.633px.** Trong đó nhãn "Ghi chú tiến trình"
+lặp ở CẢ 48 thẻ, và chip "#146" `shrink-0` ép tiêu đề vỡ hai dòng.
+
+**9. "Đạt mục tiêu 0%" khi chưa phiên nào đặt mục tiêu.** Hai tình huống ngược hẳn nhau ra cùng
+một con số; nay in "—" kèm "chưa phiên nào đặt mục tiêu". Không đụng tầng tính.
+
+**Cổng:** `npm test` 1355 bài xanh (+ lượt cross 3 bài) · lint sạch · build xanh. Ba phép phá
+thử-cho-đỏ cho `focusNextActionWiring.test.js` (gỡ nhánh · gỡ `onNavigate` · gỡ lời gọi hook) đều
+đỏ, khôi phục xanh. `timerFold.test.js` nay khoá QUAN HỆ (trần ≤ 58vw, hai vế phải cùng trần) thay
+vì khoá con số 64.
+
+**Tương thích:** không đổi dữ liệu, không migration, không đụng tập Thành Phố.
+
+## 2026-08-30 (vòng 19) — Nút Bắt đầu lần đầu nằm TRÊN nếp gấp
+
+**Đo trước khi sửa** (khung 390px thật): nút chính của cả app nằm ở **y=779..822** trong khi thanh
+tab **NỔI** bắt đầu ở **y=774** ⇒ **nút bị thanh tab che**, và Đàm phải cuộn mới bấm được đúng thứ
+anh mở app ra để bấm. Mỗi phiên, mỗi ngày. Không cổng nào bắt được: lint sạch, test xanh, build
+xanh, ảnh chụp trông vẫn "đẹp" — chỉ có một nút nằm sau một thanh nổi.
+
+**Hai bước, tổng 92px.**
+1. **Thu khoảng trắng quanh đồng hồ (36px)** — `mt-5` → `mt-2` ở khối vòng, `mt-4` → `mt-2` và
+   `min-h-[68px]` → `min-h-[52px]` ở hàng nút. Không đụng gì tới hình.
+2. **Trần theo bề ngang cho vòng đồng hồ (48px)** — `min(298px, 64vw)`. ⚠️ **Là `min()` chứ không
+   phải một hằng số nhỏ hơn**: hằng số thì thu đồng hồ ở MỌI khổ màn hình, kể cả nơi không hề thiếu
+   chỗ. Trần này chỉ cắn khi bề ngang < 466px. Đo lại: **390px → 250px** (vẫn 64% bề ngang máy, vẫn
+   là thứ to nhất màn hình) · **1280px → 411px, không đổi một điểm ảnh nào**.
+
+**Kết quả:** nút ở **y=731..773**, thanh tab bắt đầu ở 774. Cả vòng lặp nay nằm trọn MỘT màn: lời
+chào → đang xây gì → phần thưởng tuần → hệ số nhân → đồng hồ → nút bắt đầu.
+
+⚠️ **Vế dễ quên nhất, và quên thì không được một điểm ảnh nào:** `minHeight` của khối cha là chỗ
+**giữ sẵn** chiều cao — thu mỗi cái vòng mà để nguyên nó thì khoảng trống vẫn bị giữ y như cũ. Có
+test canh (`timerFold.test.js`, 3 bài, đã thử-cho-đỏ), vì chỗ này rất dễ trôi lại: chỉ cần một phase
+sau thêm một dòng vào cột giữa hoặc nới lại một khoảng trắng là nút chui xuống.
+
+**Ảnh hưởng.** Chỉ giao diện, chỉ ở khổ hẹp. Không migration.
+
+---
+
+## 2026-08-30 (vòng 18) — Ba dòng cột mốc gộp thành MỘT dòng biết chọn
+
+**Rủi ro tôi tự tạo ra trong chính phiên này, và đây là bản vá.** Vòng 10 và 15 thêm hai dòng mới
+vào cột giữa màn Tập trung. Cộng với những dòng có sẵn, ở đó thành **năm** component độc lập, mỗi
+cái tự quyết có hiện hay không: `FocusCityTease` · `FocusNextAction` · `FocusStageCountdown` ·
+`FocusStreakMilestone` · `FocusWeeklyReportTease`. Ba cái gác sau **độc lập nhau** (≤12 phiên tới
+hết chặng · ≤3 ngày tới mốc chuỗi · chưa xem tổng kết tuần) ⇒ về mặt cấu trúc cả năm CÓ THỂ cùng
+nổ (~130px), đủ đẩy đồng hồ xuống dưới nếp gấp — đúng cái vòng 8–9 vừa mất công kéo lên. Ở đây
+không có chỗ cho lý lẽ *"hiếm nên chắc không sao"*: ba điều kiện độc lập thì sớm muộn cũng trùng
+nhau một ngày, và ngày đó không ai biết trước.
+
+**Đã gộp** ba dòng cột-mốc thành `FocusMoment` — **đúng một dòng**, chọn ra khoảnh khắc đáng nói
+nhất. Trần xấu nhất từ **5 dòng xuống 3**.
+
+**Và nó đơn giản hơn thật, không chỉ an toàn hơn:** ba dòng ấy trả lời CÙNG một câu — *bấm Bắt đầu
+bây giờ thì được gì* — chỉ khác thang thời gian. Ba câu trả lời cùng lúc cho một câu hỏi là nhiễu,
+không phải nhiều thông tin.
+
+**Thứ tự ưu tiên, mỗi bậc một lý do:** ăn mừng vừa qua mốc chặng (ăn mừng thì phải NGAY, để lỡ là
+mất luôn) → tổng kết tuần chưa xem (phần thưởng cả tuần, mỗi tuần một lần) → sắp chạm mốc chuỗi
+(thứ mất đi thì không lấy lại được) → đếm ngược tới hết chặng (đích xa nhất, nhường trước).
+
+⚠️ **KHÔNG tái dùng ba component cũ rồi chỉ chọn cái nào được render** — làm thế thì mỗi hook bị gọi
+HAI lần, và với `useStageCountdown` điều đó **sai thật** chứ không chỉ phí: nó giữ một `useState`
+cho dấu "đã ăn mừng", nên hai bản sao có hai state riêng — bấm tắt ở con thì bản ở cha không hay
+biết và vẫn tiếp tục chọn nhánh ăn mừng.
+
+**Test.** `focusMoment.test.js` (9 bài) chấm thẳng luật chọn thuần, gồm một gác cấu trúc đòi **đúng
+MỘT** dòng khoảnh khắc trong `App.jsx` — cái sai nó ngăn là một phiên sau "thêm một dòng nữa cho
+tiện" rồi dựng lại đúng đống năm dòng vừa gỡ. Ba bài cũ trỏ vào component đã xoá được **sửa phép đo,
+giữ nguyên lời hứa**, không xoá.
+
+**Ảnh hưởng.** Chỉ giao diện. Không migration.
+
+---
+
+## 2026-08-30 (vòng 17) — Công cụ soi giao diện lần đầu bấm được nút chỉ-có-biểu-tượng
+
+**Lỗi công cụ, và nó giấu cả một họ màn hình.** `shot.mjs --click` khớp nút bằng **chữ hiển thị**.
+Mọi nút chỉ-có-biểu-tượng đều có `textContent` rỗng — chuông thông báo, nút ⚙, nút đóng "×" — nên
+chúng **không soi được bằng bất kỳ cách nào**. Hậu quả cụ thể: **Trung tâm thông báo** nằm trên MỌI
+màn hình của app và chưa lần nào được chụp. Cùng hình dạng với lỗi fixture ở vòng 11 (soi mãi một
+màn rỗng rồi tưởng đó là màn thật) — chỉ khác là ở đây thứ giấu màn hình không phải dữ liệu mà là
+cách chọn phần tử.
+
+**Đã vá.** `--click` nay thử **chữ hiển thị trước** (chính xác hơn, ít bất ngờ hơn) rồi mới tới
+`aria-label` / `title`. Danh sách gợi ý khi bấm trượt cũng kể luôn nhãn trợ năng — không có vế đó
+thì người đọc thông báo lỗi sẽ tưởng nút mình cần không tồn tại, trong khi nó chỉ không có chữ.
+Khoá bằng `scripts/shotSource.test.js` (4 bài, đã thử-cho-đỏ): file parse được · có nhánh nhãn trợ
+năng · danh sách gợi ý kể nhãn ấy · **thứ tự ưu tiên** không được đảo.
+
+**Nhân tiện, dọn nốt một nhãn dán.** "TRUNG TÂM" đứng trên "Thông báo" trong chính panel vừa soi
+được lần đầu — panel bật ra từ nút chuông vừa bấm, và dòng ngay dưới đã ghi "Thông báo".
+
+**Ảnh hưởng.** `shot.mjs` là công cụ dev, không vào bundle. Thay đổi giao diện chỉ một dòng nhãn.
+
+---
+
+## 2026-08-30 (vòng 16) — Nhật Ký và Ghi Chú: gỡ ~800px văn giải thích mỗi màn
+
+Hai tab của màn Thống kê mở đầu bằng cùng một khối bốn lớp, và cả bốn đều nói về một màn hình mà
+người đọc **đang đứng trong đó**: nhãn "LƯU TRỮ" (nhắc lại nút tab đang sáng) · một tiêu đề 1,9rem
+xuống hai dòng ở khung 390px · một đoạn kể rằng nhật ký thì lưu các phiên / kho ghi chú thì giữ ghi
+chú · một đoạn về **cách xoá**.
+
+Đoạn cuối là thông tin thật và quan trọng — nhưng đặt sai chỗ: mỗi phiên (và mỗi ghi chú) **đã có
+sẵn một bước xác nhận riêng** ngay tại nút xoá của nó, với nhãn ghi rõ *"Xoá + hoàn tác"* /
+*"Xoá phiên"*. Nói luật hoàn tác ở ĐẦU MÀN là nói trước cho người chưa định xoá gì, mỗi lần mở, mãi
+mãi; nói ở NÚT là nói đúng lúc người ta sắp bấm.
+
+**Kết quả:** ~800px mỗi tab. Nhật Ký nay hiện ngay bốn ô số thật (624 phiên · 99 có ghi chú · 36 đã
+tự chấm · 36 phiên huỷ) cộng bộ lọc danh mục, và phiên đầu tiên lên khỏi vùng phải cuộn một màn
+rưỡi. Cùng lượt, gỡ nhãn "TẬP TRUNG" ở tab Tập Trung — nó là ĐÚNG chữ trên nút tab đang sáng cách
+đó vài chục điểm ảnh, trong khi tiêu đề ngay dưới thì đổi theo số liệu.
+
+**Ảnh hưởng.** Chỉ giao diện. Không migration.
+
+---
+
+## 2026-08-30 (vòng 15) — Báo cáo tuần lần đầu tự mời: một dòng ở màn Tập trung
+
+**Vấn đề.** `WeeklyReportModal` là **màn đầy dopamine nhất của cả app** — một con số to ("15g14p"),
+một mức tăng ("+19% so với tuần trước"), một điểm hạng ("A · Xuất Sắc"), số ngày hoạt động ("6/7").
+Nó là phần thưởng cho cả một tuần làm việc. Vậy mà trên iPhone, tín hiệu DUY NHẤT báo có nó là **một
+chấm tròn 6px nằm BÊN TRONG một menu phải bấm mới mở ra** ("Thêm" → "Báo cáo tuần"). Phần thưởng lớn
+nhất được thông báo bằng thứ nhỏ nhất, ở chỗ khuất nhất.
+
+**Đã thêm.** `FocusWeeklyReportTease` — một dòng ở cột giữa màn Tập trung, chữ đậm màu nhấn kèm 🏆:
+*"Tổng kết tuần trước đã xong — xem thử"*. Bấm là mở thẳng báo cáo. Ẩn khi phiên đang chạy (cùng
+luật `FocusNextAction`: đây là lời mời đi chỗ khác). Im lặng khi đã xem — mỗi tuần nhiều nhất một
+lần.
+
+**KHÔNG tính lại con số nào, và đó là chủ ý.** Điểm hạng và các số liệu tuần sống trong
+`WeeklyReportModal` dưới dạng hằng số cấp module; kéo chúng ra để in sẵn lên dòng chữ sẽ hoặc phải
+chép lại công thức (đúng bẫy *"một luật hai công thức"* dự án đã trả giá nhiều lần), hoặc phải tách
+một module engine mới cho một dòng chữ. Dòng này chỉ làm một việc: **nói rằng CÓ**, rồi mở ra — con
+số ở lại đúng chỗ nó đang sống. Có test cấm nó tự tính lại (`GRADES`, `computeWeekStats`, …).
+
+**Ảnh hưởng.** Chỉ giao diện. Không migration.
+
+---
+
+## 2026-08-30 (vòng 14) — Gỡ 11 nhãn tiếng Anh khỏi Cài đặt, sửa một tên công trình bị cắt cụt
+
+**Một lỗi thật ở Xưởng.** Thẻ "Hàng chờ xây dựng" xếp tên công trình chung hàng với hai huy hiệu
+(độ hiếm + loại), và **cả hai huy hiệu đều `shrink-0`** ⇒ tên là thứ DUY NHẤT trong hàng có thể bị
+bóp. Ở khung 390px "Cảng Biển Lớn" hiện ra thành **"Cảng Biể…"** — thứ trả lời câu *"tôi đang xây
+cái gì"* lại là thứ nhường chỗ cho hai cái nhãn phân loại. Không có gì đỏ lên: `truncate` là hành
+vi ĐÚNG của CSS, chỉ là nó cắt nhầm thứ. Nay tên có một hàng riêng.
+
+**Cài đặt: 11 nhãn tiếng Anh + 11 vòng tròn trang trí.** Mười một mục mang nhãn `Rhythm` ·
+`Atmosphere` · `Signals` · `Pack` · `Alerts` · `Surface` · `Archive` · `Cycle` · `Install` ·
+`About` · `Reset` — tiếng Anh trong một app tiếng Việt, mỗi cái đứng ngay trên một tiêu đề tiếng
+Việt đã nói rõ hơn ("Rhythm" trên "Bộ hẹn giờ"). Cùng lý do đã gỡ chữ "Workspace". Vòng tròn hai
+chữ bên cạnh ("RH", "AT", "SI"…) hoá ra **không phải biểu tượng** mà là `eyebrow.slice(0, 2)` — hai
+ký tự đầu của chính chữ tiếng Anh kia; giữ nó lại là giữ cái bóng của thứ vừa bỏ đi.
+
+**Khối mở đầu Cài đặt: ~590px xuống một dòng.** Nhãn "TÙY CHỈNH" + tiêu đề "Cài đặt trải nghiệm tập
+trung" cỡ 30–40px (xuống hai dòng ở 390px) + ba dòng văn xuôi kể rằng cài đặt dùng để chỉnh cài
+đặt. Giữ tiêu đề ở cỡ nhỏ (trên iPhone Đàm tới đây qua tab "Thêm" nên đó là thứ duy nhất nói anh
+đang ở màn nào) và giữ ba chip trạng thái (chúng đổi theo lựa chọn, không phải lời giải thích).
+**Kết quả: ba nút chỉnh đầu tiên nay thấy và bấm được ngay, không cần cuộn.**
+
+**Kho báu → Di vật: gỡ thẻ rỗng.** Màn ấy nói "chưa có di vật nào" ở BA chỗ, và câu hướng dẫn của
+thẻ rỗng là bản viết lại của câu nằm cách nó chưa tới 60px. Gỡ đi (~500px) thì thứ đầu tiên đập vào
+mắt là **danh sách những gì lấy được** thay vì một lời nhắc rằng bạn chưa có gì.
+
+**Ảnh hưởng.** Chỉ giao diện. Không migration.
+
+---
 
 ## 2026-08-30 (vòng 13) — Danh sách di vật khoá: 3.000px xuống 700px
 

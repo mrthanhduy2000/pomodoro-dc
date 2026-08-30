@@ -147,8 +147,17 @@ function QueueSection({ queue, activeBook, cancelCrafting, lightTheme }) {
             <div className="flex items-center gap-3">
               <span className="text-xl flex-shrink-0">{bpDef.icon}</span>
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1">
-                  <p className="font-semibold text-sm truncate" style={lightTheme ? { color: 'var(--ink)', fontFamily: 'var(--skin-font-display)' } : { color: '#fcd34d' }}>{bpDef.label}</p>
+                {/*
+                  ⚠️ TÊN CÔNG TRÌNH ĐƯỢC MỘT HÀNG RIÊNG (2026-08-30). Bản cũ xếp tên chung hàng với
+                  hai huy hiệu (độ hiếm + loại) và cả hai huy hiệu ấy đều `shrink-0`, nên **tên là
+                  thứ DUY NHẤT trong hàng có thể bị bóp** — và nó bị bóp thật: ở khung 390px
+                  "Cảng Biển Lớn" hiện ra thành **"Cảng Biể…"**. Thứ quan trọng nhất thẻ, thứ trả
+                  lời câu *"tôi đang xây cái gì"*, lại là thứ nhường chỗ cho hai cái nhãn phân loại.
+                  Không có gì đỏ lên: `truncate` là hành vi ĐÚNG của CSS, chỉ là nó cắt nhầm thứ.
+                  Giá phải trả là ~18px chiều cao mỗi thẻ hàng chờ — đổi lấy việc đọc được tên.
+                */}
+                <p className="mb-1 truncate text-sm font-semibold" style={lightTheme ? { color: 'var(--ink)', fontFamily: 'var(--skin-font-display)' } : { color: '#fcd34d' }}>{bpDef.label}</p>
+                <div className="mb-1 flex flex-wrap items-center gap-1.5">
                   {meta.rarity && <RarityBadge rarity={meta.rarity} lightTheme={lightTheme} variant="skin" />}
                   <TypeBadge type={eff.type} typeStyle={TYPE_STYLE} lightTheme={lightTheme} variant="skin" />
                   {isLegacy && (
@@ -497,11 +506,9 @@ export default function BuildingWorkshop() {
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
-          {lightTheme && (
-            <p className="mono text-[10px] font-semibold uppercase tracking-[0.2em]" style={{ color: 'var(--muted-2)', fontFamily: MONO_FONT }}>
-              Xưởng
-            </p>
-          )}
+          {/* ⚠️ NHÃN "XƯỞNG" ĐÃ GỠ (2026-08-30) — chữ ấy xuất hiện BA lần trong một khung nhìn:
+              nút tab đang sáng ("Xưởng"), nhãn này, rồi tiêu đề ngay dưới ("Xưởng xây dựng").
+              Tiêu đề đã nói đủ và nói rõ hơn; nhãn chỉ gọi tên thứ mắt vừa đọc xong. */}
           <h2 className={lightTheme ? 'serif text-[1.8rem] leading-none sm:text-[2rem]' : 'text-white font-bold text-[1.1rem] sm:text-lg'} style={lightTheme ? { color: 'var(--ink)', fontFamily: 'var(--skin-font-display)', fontWeight: 600 } : undefined}>Xưởng xây dựng</h2>
         </div>
         <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">

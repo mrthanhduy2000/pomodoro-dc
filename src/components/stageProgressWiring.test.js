@@ -70,9 +70,16 @@ test('MỘT LUẬT MỘT CÔNG THỨC: không nơi nào dựng lại phép chia 
 });
 
 test('dòng đếm ngược ở CỘT GIỮA, cạnh hai dòng kia', () => {
-  assert.ok(/<FocusStageCountdown\b/.test(APP_CODE), '`FocusStageCountdown` không được dựng ở đâu cả');
+  // ⚠️ TỪ 2026-08-30 nó KHÔNG còn là một component riêng: `FocusStageCountdown`,
+  // `FocusStreakMilestone` và `FocusWeeklyReportTease` đã GỘP thành `FocusMoment` — một dòng duy
+  // nhất chọn ra khoảnh khắc đáng nói nhất. Lý do gộp: ba cái gác của chúng ĐỘC LẬP nhau nên cả ba
+  // có thể cùng nổ, và cộng hai dòng kia là năm dòng đủ đẩy đồng hồ xuống dưới nếp gấp.
+  // LỜI HỨA của bài này KHÔNG đổi — đếm ngược chặng phải tới được cột giữa, TRÊN đồng hồ.
+  assert.ok(/<FocusMoment\b/.test(APP_CODE), '`FocusMoment` không được dựng ở đâu cả');
+  const moment = readFileSync(join(HERE, 'focusMomentPick.js'), 'utf8');
+  assert.ok(/stage\.text/.test(moment), '`FocusMoment` không còn nhánh nào nói ra chặng');
   const tease = APP_CODE.indexOf('<FocusCityTease');
-  const countdown = APP_CODE.indexOf('<FocusStageCountdown');
+  const countdown = APP_CODE.indexOf('<FocusMoment');
   assert.ok(tease > 0 && countdown > tease, 'không đứng sau `FocusCityTease` — bố cục đã đổi, đọc lại');
   // ⚠️ Tìm đồng hồ SAU mốc neo: `App.jsx` dựng `<PomodoroEngine>` ở HAI nhánh (toàn màn hình và
   // cột giữa), `indexOf` từ đầu file sẽ bắt nhánh của màn hình KHÁC.
@@ -83,11 +90,19 @@ test('dòng đếm ngược ở CỘT GIỮA, cạnh hai dòng kia', () => {
 /* ─── PHẦN THƯỞNG KHI TỚI ĐÍCH, VÀ CHUỖI ĐANG TREO ──────────────────────────── */
 
 test('lời chúc mừng vượt mốc phải BẤM ĐƯỢC để tắt', () => {
-  const src = readFileSync(join(HERE, 'FocusStageCountdown.jsx'), 'utf8');
+  // ⚠️ Luật chọn nay ở `focusMomentPick.js` (xem ghi chú bài trên về việc gộp ba dòng làm một).
+  const src = readFileSync(join(HERE, 'focusMomentPick.js'), 'utf8');
   assert.ok(/tone === 'celebrate'/.test(src), 'dòng không còn biết tới trạng thái vừa-vượt-mốc');
   // ⚠️ Nó CHIẾM CHỖ của dòng đếm ngược, nên phải có đường trả lại chỗ ấy. Không có `dismiss` thì
   // lời chúc mừng ở lại vĩnh viễn và Đàm mất luôn dòng "còn ~N phiên nữa" của chặng kế tiếp.
-  assert.ok(/onClick=\{countdown\.dismiss\}/.test(src), 'lời chúc mừng không tắt được');
+  assert.ok(/onClick: stage\.dismiss/.test(src), 'lời chúc mừng không tắt được');
+  // Và nó phải THẮNG mọi nhánh khác — ăn mừng thì phải ngay, để lỡ là mất luôn.
+  // ⚠️ NEO VÀO ĐIỀU KIỆN CỦA NHÁNH, KHÔNG NEO VÀO TÊN BIẾN. Bản đầu tìm chuỗi `weeklyUnseen` và
+  // ĐỎ OAN trên mã đúng, vì cái tên ấy xuất hiện LẦN ĐẦU ở dòng khai báo tham số — trước mọi nhánh.
+  // Cùng hình dạng đã cắn hai lần trong ngày (neo vào nhãn hiển thị, và tìm trúng chú thích).
+  const celebrateAt = src.indexOf("tone === 'celebrate'");
+  const weeklyAt = src.indexOf('weeklyUnseen && !sessionInProgress');
+  assert.ok(celebrateAt > 0 && weeklyAt > celebrateAt, 'ăn mừng phải được xét TRƯỚC mọi nhánh khác');
 });
 
 test('dấu "đã ăn mừng" ở localStorage, KHÔNG ở state đồng bộ', () => {

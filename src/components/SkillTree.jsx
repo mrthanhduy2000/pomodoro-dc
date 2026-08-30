@@ -292,6 +292,16 @@ export default function SkillTree({ onOpenAchievements }) {
               </div>
             </div>
 
+            {/*
+              ⚠️ TÊN NHÁNH PHẢI HIỆN Ở KHỔ ĐIỆN THOẠI (vòng 20, 2026-08-30). Nhãn từng là
+              `hidden sm:inline`, mà `sm` là 640px — tức ở 390px sáu nút chỉ còn một glyph nhỏ và
+              một phân số. Đo trên fixture đã chơi 6 tháng: 5 trong 6 nhánh cùng ghi "0/6" ⇒ **năm
+              nút trông y hệt nhau**, và cách duy nhất biết nút nào là "Ý Chí" hay "Vận May" là
+              bấm thử từng cái. Một hàng nút mà không đọc được nhãn thì không phải một hàng nút.
+              ⚠️ Cái giá phải TRẢ chứ không giấu: hàng chip cao thêm (nó wrap thành nhiều dòng ở
+              390px). Đổi lại sáu nút thôi giống hệt nhau — và trang Kỹ năng vừa ngắn đi 1.113px ở
+              chính vòng này nên chỗ ấy có sẵn.
+            */}
             {/* Chọn nhánh */}
             <div className="mt-4 flex flex-wrap gap-1.5">
               {BRANCH_KEYS.map((key) => {
@@ -309,7 +319,7 @@ export default function SkillTree({ onOpenAchievements }) {
                       : { background: 'rgba(var(--accent-rgb),0.06)', color: 'var(--muted)', border: '1px solid var(--line)' }}
                   >
                     <BranchGlyph branch={key} size={14} />
-                    <span className="hidden sm:inline">{b.label}</span>
+                    <span>{b.label}</span>
                     <span className="tabular-nums" style={{ opacity: 0.7 }}>{owned}/{b.nodes.length}</span>
                   </button>
                 );
@@ -345,7 +355,22 @@ export default function SkillTree({ onOpenAchievements }) {
 
         {/* PHẢI — Ngữ cảnh: nhiệm vụ ngày + chuỗi tuần + thành tựu */}
         <div className="flex flex-col gap-4">
-          <DailyMissions />
+          {/*
+            ⚠️ `hidden lg:block` CHO NHIỆM VỤ NGÀY, và đây là một phép GỠ TRÙNG chứ không phải ẩn
+            một tính năng (vòng 20, 2026-08-30). Ở màn RỘNG thẻ này là cột NGỮ CẢNH bên phải cây
+            kỹ năng — hoàn toàn đúng chỗ, vì thanh bên desktop KHÔNG có mục "Nhiệm vụ". Nhưng ở
+            390px hai cột XẾP CHỒNG, nên nó thành **1.097px chắn ngang giữa trang** — và đúng cái
+            thẻ ấy LÀ TOÀN BỘ nội dung của tab "Nhiệm vụ", cách một cú chạm trên thanh dưới.
+            Đo được: gỡ khỏi khổ điện thoại thì trang Kỹ năng 3.145 → ~2.048px và "Tổ hợp kỹ năng"
+            từ y=2382 lên y≈1285.
+            ⚠️ Đây là mặt TRÁI của khuôn "hidden … lg:" quen thuộc: thường nó giấu mất thứ iPhone
+            cần thấy; ở đây nó là cách duy nhất để iPhone THÔI phải xem hai lần cùng một thẻ, vì
+            desktop thật sự cần nó ở chỗ này còn iPhone thì đã có nguyên một tab riêng.
+            `RecentAchievements` thì Ở LẠI cả hai khổ — nó KHÔNG có tab nào của riêng nó.
+          */}
+          <div className="hidden lg:block">
+            <DailyMissions />
+          </div>
           <RecentAchievements onOpen={onOpenAchievements} />
         </div>
       </div>
@@ -646,10 +671,25 @@ function RecentAchievements({ onOpen }) {
                 type="button"
                 onClick={onOpen}
                 title={tierLabel ? `${a.label} · ${tierLabel}` : a.label}
-                className="flex aspect-square items-center justify-center transition-transform hover:-translate-y-0.5"
+                className="flex flex-col items-center justify-center gap-1 px-1 py-2 transition-transform hover:-translate-y-0.5"
                 style={{ background: withAlpha(tint, 0.12), border: `1px solid ${withAlpha(tint, 0.3)}`, borderRadius: 'var(--skin-radius-control,14px)' }}
               >
-                <span className="mono text-[13px] font-semibold tracking-[0.06em]" style={{ color: tint }}>{getLabelMark(a.label, 'TT')}</span>
+                {/*
+                  ⚠️ TÊN THẬT, KHÔNG PHẢI HAI CHỮ CÁI (vòng 20, 2026-08-30). Ô này từng chỉ hiện
+                  `getLabelMark` — "VC" · "DS" · "C5" — còn tên đầy đủ ("Vua Cuối Tuần",
+                  "Dũng Sĩ Bóng Đêm", "Cấp 5") nằm trong thuộc tính `title`, tức **chỉ con chuột
+                  mới đọc được**. Trên iPhone không có con chuột nào, nên khu "thành tựu gần đây"
+                  — chỗ để KHOE — biến thành bốn mã hai chữ cái không giải mã được.
+                  ⚠️ Bỏ `aspect-square` cùng lúc: ô vuông không đủ chỗ cho hai dòng chữ, và một
+                  cái tên bị cắt cụt còn tệ hơn một cái tên viết tắt.
+                */}
+                <span className="mono text-[11px] font-semibold tracking-[0.06em]" style={{ color: tint }}>{getLabelMark(a.label, 'TT')}</span>
+                <span
+                  className="w-full text-center text-[9px] leading-[1.15]"
+                  style={{ color: 'var(--muted)', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}
+                >
+                  {a.label}
+                </span>
               </button>
             );
           })}
@@ -657,7 +697,7 @@ function RecentAchievements({ onOpen }) {
             type="button"
             onClick={onOpen}
             title="Xem tất cả thành tựu"
-            className="mono flex aspect-square items-center justify-center text-[13px] font-semibold tabular-nums transition-transform hover:-translate-y-0.5"
+            className="mono flex items-center justify-center px-1 py-2 text-[13px] font-semibold tabular-nums transition-transform hover:-translate-y-0.5"
             style={{ background: 'rgba(var(--accent-rgb),0.08)', border: '1px dashed rgba(var(--accent-rgb),0.30)', color: 'var(--accent2)', borderRadius: 'var(--skin-radius-control,14px)' }}
           >
             {more > 0 ? `+${more}` : 'Xem'}

@@ -350,21 +350,39 @@ if (TAB) {
   await sleep(SETTLE);
 }
 
+// ⚠️ KHỚP CẢ `aria-label` VÀ `title`, KHÔNG CHỈ CHỮ HIỂN THỊ (thêm 2026-08-30).
+// Mọi nút CHỈ-CÓ-BIỂU-TƯỢNG đều có `textContent` rỗng — chuông thông báo, nút ⚙, nút đóng "×".
+// Với bản cũ chúng **không soi được bằng bất kỳ cách nào**, tức có cả một họ giao diện chưa ai
+// từng nhìn thấy bằng công cụ này; đúng hình dạng đã cắn với fixture không gieo thành tích
+// (soi mãi một màn hình rỗng rồi tưởng đó là màn thật). Nhãn trợ năng chính là cái tên mà nút
+// tự khai, nên dùng nó vừa đúng vừa không phải bịa thêm một cơ chế chọn phần tử mới.
+// Thứ tự thử: chữ hiển thị TRƯỚC (khớp chính xác, ít bất ngờ nhất), rồi mới tới nhãn trợ năng.
 for (const label of CLICKS) {
   const ok = await evaluate(`(function(){
     var want=${JSON.stringify(label)}, hit=null;
-    document.querySelectorAll('button,a,[role="tab"]').forEach(function(el){
+    var all = document.querySelectorAll('button,a,[role="tab"]');
+    all.forEach(function(el){
       if(hit) return;
       if((el.textContent||'').replace(/\\s+/g,' ').trim()===want) hit=el;
+    });
+    if(!hit) all.forEach(function(el){
+      if(hit) return;
+      var alt = (el.getAttribute('aria-label')||el.title||'').replace(/\\s+/g,' ').trim();
+      if(alt===want) hit=el;
     });
     if(hit){ hit.click(); return true; }
     return false;
   })()`);
   if (!ok) {
     // Hỏng TO chứ không âm thầm giao một tấm ảnh của màn hình khác — cùng lý do với nhánh tab.
+    // ⚠️ Danh sách gợi ý phải kể CẢ nhãn trợ năng, nếu không người đọc thông báo lỗi sẽ tưởng
+    // nút mình cần không tồn tại, trong khi nó chỉ không có chữ.
     const seen = await evaluate(`JSON.stringify(Array.from(document.querySelectorAll('button,a,[role="tab"]'))
-      .map(function(e){return (e.textContent||'').replace(/\\s+/g,' ').trim();})
-      .filter(function(t){return t && t.length<24;}).slice(0,30))`);
+      .map(function(e){
+        var t = (e.textContent||'').replace(/\\s+/g,' ').trim();
+        return t || (e.getAttribute('aria-label')||e.title||'').replace(/\\s+/g,' ').trim();
+      })
+      .filter(function(t){return t && t.length<32;}).slice(0,34))`);
     console.error(`✗ KHÔNG tìm thấy nút "${label}" để bấm. Các nhãn đang có: ${seen}`);
     ws.close(); chrome.kill(); server.close();
     process.exit(1);

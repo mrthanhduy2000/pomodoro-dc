@@ -1,4 +1,51 @@
-> Cập nhật lần cuối: **2026-08-30 (vòng 14)** — **RÀNG BUỘC MỚI CỦA ĐÀM: "không đụng tới những gì
+> Cập nhật lần cuối: **2026-08-30 (vòng 21)** — màn **Thống kê**: gộp ba bộ lọc
+> thời gian làm một, sửa lỗi nhãn "tuần này", thêm dải "Điều đáng chú ý", xoá 960
+> dòng code chết. Chi tiết ở **VÒNG 21** bên dưới.
+>
+> Cập nhật lần cuối: **2026-08-30 (vòng 20)** — tối giản toàn app bằng **fan-out soi song song**:
+> 6 nhánh CHỈ ĐỌC soi 9 màn ở khung 390px thật (mỗi nhánh một màn, ảnh ra tên riêng, cấm sửa file,
+> **cấm `npm run build`** vì `dist/` dùng chung ⇒ build giữa chừng làm các nhánh đo trên hai cây mã
+> khác nhau), luật *không số đo = không tính*, rồi chấm chéo và **sửa TUẦN TỰ** — 9 việc, 9 commit.
+>
+> **PHÁT HIỆN LỚN NHẤT, và nó là một HỒI QUY CỦA CHÍNH VÒNG 19:** nút chính màn Tập trung lại bị
+> thanh tab che (nút y=773…815 · thanh tab NỔI y=774, nền ĐỤC `rgb(247,246,242)` không alpha ⇒ lòi
+> ra **1px**). Vòng 19 đã vá và đo đúng — nhưng đo trên **NGÀY CHÀO NGẮN**. Khối chào là
+> `${lời chào}. ${biến thể theo ngày}` với 8 biến thể, nên có ngày nó 2 dòng có ngày 3 dòng,
+> **chênh 26px**; cộng cụm ba dòng nhắc cùng nổ (84px) là quá đủ. ⇒ ***một cái trần chỉ đúng vào
+> ngày may mắn thì không phải một cái trần*** — mọi phép đo về nếp gấp phải chạy trên NHIỀU biến
+> thể copy, không chỉ một.
+>
+> ⚠️ **VÀ ẢNH `--full` KHÔNG THẤY LỖI NÀY.** Nó là ảnh GHÉP nên thanh `fixed` không nằm đè lên gì:
+> trong ảnh `--full` hai nút hiện rõ mồn một. Chỉ ảnh chụp ĐÚNG KHUNG 844px mới thấy. Mọi kết luận
+> về nếp gấp từ nay phải xem ảnh viewport.
+>
+> **Ba phát hiện im lặng khác, cùng một họ — "không cổng nào có thể kêu":**
+> · `RewardCard` hứa trong chú thích rằng *"thẻ hẹp thì mô tả tự rơi xuống hàng riêng và lấy trọn
+>   bề ngang"*. Probe bác bỏ: **144px cho 370px chữ, 61% câu ngoài màn hình**. `flex-wrap` chỉ
+>   xuống dòng khi món hàng KHÔNG VỪA, mà `min-w-[9rem]` = đúng 144px thì luôn vừa ⇒ không bao giờ
+>   wrap. `truncate` là hành vi ĐÚNG của CSS nên lint/test/build đều xanh, và `--fit` mù vì nó chỉ
+>   soi NÚT. ⇒ **một lời hứa trong chú thích phải được đo như một con số.**
+> · 8 grid ở `StatsDashboard` khai `lg:grid-cols-…` mà thiếu `grid-cols-1` ⇒ ở khung hẹp chỉ có MỘT
+>   cột NGẦM cỡ `auto`, và track `auto` PHÌNH theo nội dung rộng nhất (lịch nhiệt `min-w-[560px]`)
+>   bất kể item khai `min-width:0` — kéo tiêu đề và câu dẫn ra 560px trên máy 390px. Đây là **đúng
+>   cái bẫy `SkillTree.jsx` đã ghi lại từ trước**; vá cho cả 8 chỗ, không vá riêng chỗ bắt được.
+> · `SkillTree` render `<DailyMissions/>` làm cột ngữ cảnh — ĐÚNG ở màn rộng (thanh bên desktop
+>   không có mục "Nhiệm vụ"), nhưng ở 390px hai cột xếp chồng nên nó thành **1.097px chắn ngang**,
+>   mà đúng thẻ ấy LÀ toàn bộ tab "Nhiệm vụ" cách một cú chạm. ⇒ **mặt TRÁI của khuôn
+>   `hidden … lg:`**: thường nó giấu thứ iPhone cần thấy, ở đây nó là cách duy nhất để iPhone thôi
+>   phải xem hai lần cùng một thẻ.
+>
+> **Số đo trước → sau (khung 390px):** nút chính bị che 41px → **cách 53px** · màn Tập trung
+> 2.920 → **2.660px** · tab Kỹ năng 3.145 → **2.032px** · Thành tích 14.254 → **12.633px** ·
+> mô tả thẻ thưởng 144 → **272px** · nhãn tiếng Anh quét `innerText` 4 màn: 11 từ → **0**.
+>
+> **Bài học về CÁCH LÀM, không về mã:** fan-out CHỈ ĐỂ SOI, tuần tự để SỬA. Sáu nhánh soi song song
+> tìm ra ~55 phát hiện có số đo trong một lượt; nhưng sửa thì phải tuần tự vì nhiều việc cùng đụng
+> `App.jsx` và cột giữa màn Tập trung — hai bản vá song song sẽ đè nhau mà không ai biết. Và **phép
+> đo với lần sửa mã không được chồng lấn thời gian**: các nhánh soi bị CẤM chạy `npm run build`
+> đúng vì lý do đó.
+
+> Cập nhật lần cuối: **2026-08-30 (vòng 8)** — **RÀNG BUỘC MỚI CỦA ĐÀM: "không đụng tới những gì
 > thuộc Thành Phố"**, và "không đo, phải làm liên tục". Vòng này vì vậy làm ở bốn màn còn lại.
 >
 > **Phát hiện lớn nhất, đo bằng ảnh chụp 390px THẬT:** ở màn **Tập trung** — màn Đàm mở nhiều nhất —
@@ -7,7 +54,7 @@
 > **BA lần** (ô "PHIÊN 0" ở thanh đầu · câu "Bạn chưa chốt phiên nào trong hôm nay" · dòng "Phiên
 > 0/5 hôm nay" dưới đồng hồ). Bản thứ ba là bản TỐT NHẤT vì nó có mẫu số ⇒ hai bản kia nhường.
 >
-> **VÒNG 14 — MÀN THỐNG KÊ: MỘT BỘ LỌC THỜI GIAN, VÀ MỘT LỖI NHÃN ĐÃ SHIP.** Đàm hỏi *"xem lại
+> **VÒNG 21 — MÀN THỐNG KÊ: MỘT BỘ LỌC THỜI GIAN, VÀ MỘT LỖI NHÃN ĐÃ SHIP.** Đàm hỏi *"xem lại
 > phần Thống kê … có nên sửa gì không hay big upgrade lên không?"*. Khảo sát ra ba thứ, và thứ thứ
 > hai là loại im lặng nhất: **(1)** ba tab khai BA bộ lọc thời gian riêng (`PERIODS_UI` ·
 > `FOCUS_PERIODS` · `CAT_PERIODS`), khác cả danh sách, cả nhãn, cả markup, cả MẶC ĐỊNH — Tổng Quan
@@ -57,6 +104,85 @@
 > cho thấy "Năm Nay"/"Tất Cả" bị mép phải xén, đã cho xuống hàng riêng), fixture 180 ngày/624
 > phiên. Test **1371 đạt · 1 bỏ qua · 0 hỏng** (+40 bài). Chi tiết: ADR-067 · CHANGELOG vòng 14.
 
+> **VÒNG 19 — NÚT BẮT ĐẦU LẦN ĐẦU NẰM TRÊN NẾP GẤP.** Đo ở 390px: nút chính ở y=779..822 còn thanh
+> tab NỔI bắt đầu ở y=774 ⇒ **nút bị che**. Vá bằng hai bước, tổng 92px: thu khoảng trắng quanh
+> đồng hồ (36px) + đặt **trần theo bề ngang** cho vòng đồng hồ `min(298px, 64vw)` (48px).
+> ⚠️ **LÀ `min()` CHỨ KHÔNG PHẢI HẰNG SỐ NHỎ HƠN** — hằng số thu đồng hồ ở MỌI khổ, kể cả nơi
+> không thiếu chỗ. Đo: 390px → 250px · **1280px → 411px, không đổi một điểm ảnh**.
+> ⚠️ **VẾ DỄ QUÊN NHẤT:** `minHeight` của khối cha là chỗ GIỮ SẴN chiều cao — thu mỗi cái vòng mà
+> để nguyên nó thì **không được một điểm ảnh nào**. Có test canh cả ba vế (vòng · minHeight · SVG
+> phải `width="100%"` để co theo cha).
+> ⚠️ **CHỖ NÀY RẤT DỄ TRÔI LẠI**: chỉ cần một phase sau thêm một dòng vào cột giữa màn Tập trung
+> hoặc nới lại một khoảng trắng là nút chui xuống dưới thanh tab, và **không cổng nào kêu**. Thêm
+> bất cứ gì vào cột giữa thì phải đo lại bằng `--probe` (lệnh trong nhật ký phiên này).
+>
+> **VÒNG 18 — BA DÒNG CỘT MỐC GỘP THÀNH MỘT (`FocusMoment`).** Đây là bản vá cho rủi ro CHÍNH TÔI
+> tạo ra ở vòng 10 và 15: cột giữa màn Tập trung có **năm** component độc lập, ba trong số đó gác
+> theo ba điều kiện KHÔNG liên quan nhau ⇒ cả năm có thể cùng nổ (~130px) và đẩy đồng hồ xuống dưới
+> nếp gấp. Trần xấu nhất nay **5 → 3 dòng**.
+> ⚠️ **KHÔNG tái dùng ba component cũ rồi chỉ chọn cái nào render** — mỗi hook sẽ bị gọi HAI lần, và
+> với `useStageCountdown` điều đó SAI THẬT: nó giữ `useState` cho dấu "đã ăn mừng", nên hai bản sao
+> có hai state riêng, bấm tắt ở con thì cha không hay biết. Luật chọn phải gọi hook MỘT lần rồi tự
+> dựng hình.
+> ⚠️ **Ba bài test cũ trỏ vào component đã xoá được SỬA PHÉP ĐO, KHÔNG XOÁ** — ý định của chúng
+> (đếm ngược phải tới cột giữa · lời chúc mừng phải bấm tắt được · cột mốc chuỗi phải tới iPhone)
+> vẫn đúng nguyên vẹn; chỉ chỗ nhìn là đổi.
+> ⚠️ **BẪY "NEO VÀO CÁI TÊN" CẮN LẦN THỨ BA TRONG NGÀY** — bài test đòi "ăn mừng phải xét trước
+> tổng kết tuần" đỏ oan vì `indexOf('weeklyUnseen')` bắt trúng **dòng khai báo tham số**, đứng trước
+> mọi nhánh. ⇒ **neo vào ĐIỀU KIỆN của nhánh** (`weeklyUnseen && !sessionInProgress`), đừng neo vào
+> tên biến / nhãn hiển thị / tên hàm — chúng đều xuất hiện sớm hơn ở chỗ khai báo hoặc chú thích.
+>
+> **VÒNG 17 — `shot.mjs` LẦN ĐẦU BẤM ĐƯỢC NÚT CHỈ-CÓ-BIỂU-TƯỢNG.** `--click` xưa nay chỉ khớp CHỮ
+> HIỂN THỊ, mà nút biểu tượng thì `textContent` rỗng ⇒ **Trung tâm thông báo — có mặt trên MỌI màn
+> hình — chưa lần nào được chụp**. Nay thử chữ trước, rồi `aria-label`/`title`. Khoá bằng
+> `scripts/shotSource.test.js` (4 bài, đã thử-cho-đỏ; trước đó `shot.mjs` KHÔNG có test nào).
+> ⚠️ **Bài học lặp lần thứ ba trong phiên:** *thứ chặn tôi nhìn thấy màn hình không phải lúc nào
+> cũng là mã sản phẩm* — vòng 11 là fixture không gieo dữ liệu, vòng 17 là công cụ không chọn được
+> phần tử. Trước khi kết luận "màn này trống/chán", hỏi **"tôi có đang NHÌN THẤY nó thật không?"**
+> ⚠️ Chỗ duy nhất còn chưa soi được: màn hiện ra SAU khi kết thúc một phiên (cấm chạy phiên trên
+> dev vì dùng chung hàng Supabase với production) — đó cũng chính là khoảnh khắc dopamine lớn nhất
+> của app, nên nếu có cách soi an toàn thì đó là việc đáng làm nhất còn lại.
+>
+> **VÒNG 16 — Nhật Ký và Ghi Chú: ~800px văn giải thích mỗi màn.** Cùng khuôn bốn lớp đã gặp ở
+> `ShellPane`, Thành tích, Xưởng, Cài đặt. ⚠️ Đoạn "cách xoá" KHÔNG mất tin — mỗi phiên/ghi chú đã
+> có bước xác nhận riêng ngay tại nút xoá. ⇒ **luật chỉ dùng lúc sắp hành động thì phải nói Ở NÚT,
+> đừng nói ở đầu màn**: ở đầu màn nó nói với người chưa định làm gì, mỗi lần mở, mãi mãi.
+> ⚠️ **KHUÔN NÀY GẦN NHƯ ĐÃ QUÉT XONG** — đã soi cả 5 tab Thống kê (Tổng Quan đã ẩn từ trước),
+> 3 tab Hành trang, 4 tab Kho báu, Nhiệm vụ, Cài đặt, Thêm. Chỗ chưa soi: nội dung chuông thông báo,
+> và màn hiện ra SAU khi kết thúc một phiên (không soi được — cấm chạy phiên trên dev vì dùng chung
+> hàng Supabase với production).
+>
+> **VÒNG 15 — BÁO CÁO TUẦN LẦN ĐẦU TỰ MỜI.** Màn đầy dopamine nhất của app (số to · +19% · hạng A
+> · 6/7 ngày) chỉ được báo bằng **một chấm 6px nằm BÊN TRONG một menu phải bấm mới mở**. Nay có
+> `FocusWeeklyReportTease`: một dòng 🏆 ở cột giữa màn Tập trung, bấm là mở thẳng.
+> ⚠️ **KHÔNG tính lại con số nào** — điểm hạng sống trong `WeeklyReportModal`; có test cấm dòng mời
+> nhắc tới `GRADES`/`computeWeekStats`. Muốn in điểm hạng ra dòng ấy thì phải TÁCH một module engine
+> trước, đừng chép công thức.
+> ⚠️ **RỦI RO ĐÃ ĐO ĐƯỢC, PHIÊN SAU CÂN NHẮC:** cột giữa màn Tập trung nay có **NĂM** dòng độc lập
+> (`FocusCityTease` · `FocusNextAction` · `FocusStageCountdown` · `FocusStreakMilestone` ·
+> `FocusWeeklyReportTease`). Hôm nay với fixture trưởng thành chỉ **3 dòng** cùng hiện (~78px), vì
+> mỗi dòng có gác riêng. Nhưng ba gác ấy ĐỘC LẬP nhau (≤12 phiên tới hết chặng · ≤3 ngày tới mốc
+> chuỗi · chưa xem báo cáo tuần) nên **về mặt cấu trúc cả năm CÓ THỂ cùng nổ** (~130px) và lúc ấy
+> đồng hồ lại rơi xuống dưới nếp gấp — đúng cái vòng 8–9 mất công kéo lên. Cách chữa đúng nếu Đàm
+> kêu: gộp ba dòng cột-mốc thành MỘT dòng biết CHỌN theo ưu tiên (tuần > chuỗi > chặng), chứ đừng
+> gỡ bớt tính năng.
+> ⚠️ **BẪY "TÌM TRÊN MÃ NGUỒN BẮT TRÚNG CHÚ THÍCH" CẮN LẦN THỨ HAI TRONG NGÀY** — bài test cấm
+> nhân-đôi-công-thức đỏ oan vì chú thích của chính component nhắc đích danh `GRADES` để giải thích
+> *vì sao nó KHÔNG dùng*. ⇒ **mọi bài test đọc mã nguồn phải LỌC CHÚ THÍCH trước** (`codeOnly`), và
+> nhớ rằng văn xuôi nói về một thứ chính là nơi cái tên ấy xuất hiện nhiều nhất.
+>
+> **VÒNG 14 — 11 NHÃN TIẾNG ANH KHỎI CÀI ĐẶT, VÀ MỘT TÊN CÔNG TRÌNH BỊ CẮT CỤT.**
+> ⚠️ **Lỗi thật:** thẻ hàng chờ ở Xưởng xếp tên công trình chung hàng với hai huy hiệu `shrink-0`,
+> nên **tên là thứ DUY NHẤT có thể bị bóp** ⇒ "Cảng Biển Lớn" → **"Cảng Biể…"**. `truncate` là hành
+> vi ĐÚNG của CSS nên không cổng nào đỏ; chỉ ảnh chụp 390px thấy. ⇒ *khi một hàng flex có phần tử
+> `shrink-0`, hỏi ngay "vậy thứ gì sẽ bị bóp, và nó có phải thứ quan trọng nhất hàng không?"*
+> ⚠️ `eyebrow` ở `Settings.jsx` gánh HAI thứ: nhãn tiếng Anh, VÀ cái vòng tròn hai chữ bên cạnh
+> (`eyebrow.slice(0, 2)` — không phải biểu tượng, chỉ là hai ký tự đầu của chính chữ ấy). Gỡ một
+> trường thì mất cả hai, và đó là đúng.
+> ⚠️ **HÌNH DẠNG CÒN ĐI SOI ĐƯỢC TIẾP:** *"khối mở đầu giải thích màn hình mà người đọc đang đứng
+> trong đó"* — đã gặp ở `ShellPane`, Thành tích, Xưởng, và nay Cài đặt (~590px). Mỗi lần mở một màn
+> mới, hỏi *"khối trên cùng có nói gì mà cái nhãn tab chưa nói không?"*
+>
 > **VÒNG 13 — danh sách di vật khoá: ~3.000px xuống ~700px.** 15 thẻ, mỗi thẻ nói ĐÚNG một câu như
 > nhau, và phần khác nhau duy nhất (tên khủng hoảng) đã nằm trên tiêu đề của chính thẻ ấy. Nay mỗi
 > di vật là MỘT DÒNG; luật chơi vẫn được nói, đúng một lần, ở đầu danh sách (chỗ nó vốn đã có).

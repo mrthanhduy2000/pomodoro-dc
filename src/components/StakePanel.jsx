@@ -83,9 +83,11 @@ export default function StakePanel() {
               OC
             </motion.span>
             <div className="min-w-0">
-              <p className="mono text-[10px] uppercase tracking-[0.2em]" style={{ color: 'var(--muted-2)' }}>
-                Overclock
-              </p>
+              {/* ⚠️ ĐÃ GỠ nhãn "Overclock" (vòng 20, 2026-08-30). Nó là lần thứ HAI gọi tên cùng
+                  một thứ trong 20px — huy hiệu tròn "OC" bên trái là lần một, và dòng ngay dưới
+                  ("Tăng lực phiên") là cái tên TIẾNG VIỆT, tức bản duy nhất Đàm đọc được. Ba nhãn
+                  cho một thứ thì hai nhãn kia là nhiễu. Huy hiệu "OC" ở lại làm dấu nhận diện thị
+                  giác (nó không phải chỗ để ĐỌC, nó là chỗ để NHẬN RA). */}
               <p
                 className={`mt-0.5 text-sm font-semibold ${
                   lightTheme
@@ -98,7 +100,7 @@ export default function StakePanel() {
               </p>
               {isActive ? (
                 <p className={`mt-0.5 text-xs ${lightTheme ? 'text-[var(--muted)]' : 'text-[var(--muted)]'}`}>
-                  Đặt cược {staking.stakedEP.toLocaleString()} EP · Hoàn thành để nhận lại stake và +{bonusMultiple}%
+                  Đặt cược {staking.stakedEP.toLocaleString()} EP · Hoàn thành để nhận lại và +{bonusMultiple}%
                 </p>
               ) : (
                 <div className="mt-0.5 space-y-0.5">

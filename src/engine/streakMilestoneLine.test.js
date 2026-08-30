@@ -75,12 +75,21 @@ test('mốc thường gọi bằng SỐ NGÀY, mốc vĩnh viễn gọi bằng T
 // ⚠️ Gác "đã tới được màn hình chưa". Cơ chế này đã tồn tại nhiều tháng ở FocusRail mà iPhone
 // không thấy — đúng loại hỏng mà lint/build/test thường không bắt. Bài này hỏi thẳng App.jsx.
 // THỬ-CHO-ĐỎ: xoá dòng `<FocusStreakMilestone />` ⇒ đỏ.
-test('dòng cột mốc chuỗi thật sự được gắn vào CỘT GIỮA của màn Tập trung', () => {
+test('dòng cột mốc chuỗi thật sự tới được màn hình', () => {
+  // ⚠️ TỪ 2026-08-30 nó không còn là component riêng — đã gộp vào `FocusMoment` cùng đếm ngược
+  // chặng và tổng kết tuần (ba cái gác độc lập nhau nên cả ba có thể cùng nổ, đẩy đồng hồ xuống
+  // dưới nếp gấp). LỜI HỨA giữ nguyên: cơ chế này phải TỚI ĐƯỢC iPhone, chứ không nằm mãi trong
+  // cột phải `hidden … lg:flex` như trước vòng 10.
   const app = readFileSync(new URL('../App.jsx', import.meta.url), 'utf8');
-  assert.match(app, /<FocusStreakMilestone \/>/, 'component chưa được gắn ⇒ iPhone vẫn không thấy');
-  // Phải đứng cạnh ba dòng anh em của nó, không lạc sang nhánh toàn màn hình.
-  const i = app.indexOf('<FocusStreakMilestone />');
-  const j = app.indexOf('<FocusStageCountdown />');
-  assert.ok(j > 0 && i > j, 'phải nằm SAU FocusStageCountdown — thứ tự đọc đi từ đích gần tới đích xa');
-  assert.ok(i - j < 1600, 'phải nằm trong cùng khối với ba dòng kia, không lạc đi đâu khác');
+  assert.match(app, /<FocusMoment\b/, 'dòng khoảnh khắc chưa được gắn ⇒ iPhone vẫn không thấy');
+
+  const moment = readFileSync(new URL('../components/FocusMoment.jsx', import.meta.url), 'utf8');
+  assert.match(moment, /useStreakMilestone/, '`FocusMoment` không còn đọc cột mốc chuỗi');
+
+  const pick = readFileSync(new URL('../components/focusMomentPick.js', import.meta.url), 'utf8');
+  assert.match(pick, /streak\.text/, 'luật chọn không còn nhánh nào nói ra cột mốc chuỗi');
+  // Thứ tự: chuỗi phải đứng TRÊN đếm ngược chặng — chuỗi đứt là thứ không lấy lại được.
+  const streakAt = pick.indexOf('streak.text');
+  const stageAt = pick.indexOf('stage.text', streakAt);
+  assert.ok(stageAt > streakAt, 'cột mốc chuỗi phải được xét trước đếm ngược chặng');
 });

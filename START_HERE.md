@@ -35,6 +35,16 @@ Mặt trận đang làm: **thành phố 3D** (`src/engine/city3d/` + `src/compon
   Phase 21 (*"push nhánh phụ, không tự gộp `main`"*) đã bị lệnh này thay thế.
   ⚠️ **Phase 21 do đó lên production TRƯỚC khi Đàm nhìn ảnh nghiệm thu** — mục "chờ Đàm nhìn ảnh"
   ở phần dưới VẪN CÒN HIỆU LỰC, chỉ là nay nó nghiệm thu một thứ đang chạy thật.
+- **Giao diện — VÒNG 20 (2026-08-30, mới nhất):** tối giản toàn app bằng **fan-out soi song song**
+  (6 nhánh chỉ-đọc soi 9 màn ở 390px, luật *không số đo = không tính*, rồi sửa TUẦN TỰ — 9 commit).
+  ⚠️ **Nút chính màn Tập trung từng bị thanh tab che LẠI sau vòng 19** vì vòng 19 đo trên NGÀY CHÀO
+  NGẮN, mà khối chào dài 2 hoặc 3 dòng tuỳ biến thể copy (chênh 26px). Nay: `FocusNextAction` đã
+  NHẬP vào bộ chọn `focusMomentPick` thành nguồn thứ năm (cột giữa còn đúng HAI dòng, trần xấu nhất
+  khoá bằng CẤU TRÚC), trần vòng đồng hồ `64vw → 58vw`, `pt-8 → pt-4` ở khổ điện thoại ⇒ **nút cách
+  thanh tab 53px**. ⚠️ **Thêm bất cứ gì vào cột giữa màn Tập trung thì phải đo lại bằng ảnh
+  VIEWPORT — ảnh `--full` KHÔNG thấy lỗi này** (nó là ảnh ghép nên thanh `fixed` không đè lên gì).
+  Số đo khác: màn Tập trung 2.920→2.660px · tab Kỹ năng 3.145→2.032px · Thành tích 14.254→12.633px
+  · nhãn tiếng Anh trên màn hình 11→0.
 - **Giao diện (từ `main`): ADR-060 + ADR-061** — MỘT thẻ phần thưởng chung; luật mức độ làm phiền
   **hết ngoại lệ** (chặn màn hình CHỈ dành cho lên kỷ · thăng hoa · khủng hoảng kỷ · thảm hoạ).
   Nó chạy được nhờ tách MỘT trường thành HAI: `lastWeeklyReportDate` = *đã MỜI* ·
@@ -94,6 +104,13 @@ Mặt trận đang làm: **thành phố 3D** (`src/engine/city3d/` + `src/compon
   **KHÔNG đo lại** trừ khi Đàm thấy khung hình giật trên máy thật.
 
 ## Việc tiếp theo (chưa làm)
+0. **Hai thứ CHƯA SOI ĐƯỢC, không phải chưa làm** (vòng 20 ghi lại để phiên sau khỏi đi lại):
+   (a) **màn hiện ra SAU khi kết thúc một phiên** — khoảnh khắc dopamine lớn nhất của app. `ui`
+   KHÔNG nằm trong `partialize` của store nên KHÔNG gieo được bằng `--fixture`/`--ls`, và store
+   không lộ ra `window` nên `--probe` cũng không mở được hộp thoại. Cấm bấm "Bắt đầu" trên dev.
+   (b) **tab Kho báu › Di vật** — fixture chưa gieo `relics`/`research` nên nó luôn hiện 0/15 và 15
+   dòng "??? KHOÁ"; cái trống ấy là của CÔNG CỤ, không phải của app. Muốn soi thật thì phải thêm
+   gieo `relics` vào `scripts/make-fixture.mjs` trước.
 1. **Kim tự tháp / ziggurat** — kỷ 2 (Ai Cập) và kỷ 3 (Iraq) đang ra mái nón nhiều cạnh,
    không có khối chóp bốn mặt. `prism` với `sides: 4` + `taper: 0` chính là thứ cần.
 2. **"Giống 3D hơn"** — bóng đổ nét hơn (`SHADOW_MAP_DESKTOP` 2048 → 4096, siết

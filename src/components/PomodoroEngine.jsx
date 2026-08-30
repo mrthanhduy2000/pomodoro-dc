@@ -978,12 +978,10 @@ export default function PomodoroEngine({
           <p className={`mono text-[10px] uppercase tracking-[0.2em] whitespace-nowrap ${
             lightTheme ? 'text-[var(--muted-2)]' : 'text-slate-400'
           }`}>Thiết lập phiên</p>
-          <p
-            className={`mt-1.5 text-[15px] leading-snug ${lightTheme ? 'text-[var(--ink-2)]' : 'text-slate-500'}`}
-            style={lightTheme ? { fontFamily: 'var(--skin-font-display)' } : undefined}
-          >
-            Chọn mode, thời lượng và mức kỷ luật trước khi bắt đầu.
-          </p>
+          {/* ⚠️ ĐÃ GỠ câu "Chọn mode, thời lượng và mức kỷ luật trước khi bắt đầu." (41px, vòng 20).
+              Nhãn "THIẾT LẬP PHIÊN" ngay trên đã trả lời xong, và ba thứ câu ấy liệt kê thì đứng
+              ngay bên dưới nó, mỗi thứ đã có nhãn riêng. Nó còn chứa chữ "mode" — tiếng Anh trong
+              một app tiếng Việt của một người không đọc tiếng Anh. */}
         </div>
         <ModeSwitch
           disabled={timerState !== TIMER_STATES.IDLE || isBreakMode}
@@ -1009,9 +1007,15 @@ export default function PomodoroEngine({
               }`}>
                 {isStopwatchMode ? 'Mốc tham chiếu' : 'Tập trung'}
               </p>
-              <p className={`mt-1 text-xs ${lightTheme ? 'text-[var(--muted)]' : 'text-slate-500'}`}>
-                {isStopwatchMode ? 'Dùng để neo mốc thưởng khi bấm giờ.' : 'Thời lượng countdown của phiên kế tiếp.'}
-              </p>
+              {/* ⚠️ Ở chế độ Pomo, câu "Thời lượng countdown của phiên kế tiếp." đã bị GỠ (vòng 20):
+                  nhãn "TẬP TRUNG" cộng chính con số "25 PHÚT" ngay bên cạnh đã nói đủ, và câu ấy
+                  còn chứa chữ "countdown". Chế độ Bấm giờ thì GIỮ — ở đó con số là một MỐC THAM
+                  CHIẾU chứ không phải thời lượng đếm ngược, và không có gì khác nói ra điều đó. */}
+              {isStopwatchMode && (
+                <p className={`mt-1 text-xs ${lightTheme ? 'text-[var(--muted)]' : 'text-slate-500'}`}>
+                  Dùng để neo mốc thưởng khi bấm giờ.
+                </p>
+              )}
             </div>
             <div className={`flex items-center justify-between gap-3 self-stretch rounded-[var(--skin-radius-control,14px)] px-2 py-1.5 sm:self-auto sm:justify-start sm:gap-2 sm:rounded-none sm:px-0 sm:py-0 ${
               lightTheme
@@ -1134,7 +1138,7 @@ export default function PomodoroEngine({
               {isStopwatchMode ? (
                 <>
                   <p className={`mt-1 text-sm leading-relaxed ${lightTheme ? 'text-[var(--muted)]' : 'text-slate-500'}`}>
-                    Stopwatch dùng công thức Flowtime để tự đổi giờ nghỉ theo thời lượng bạn vừa làm.
+                    Chế độ Bấm giờ tự đổi giờ nghỉ theo đúng thời lượng bạn vừa làm.
                   </p>
                   <div className="mt-3 space-y-2">
                     {FLOWTIME_BREAK_RULES.map((rule) => (
@@ -1262,14 +1266,32 @@ export default function PomodoroEngine({
         </motion.div>
       )}
 
+      {/*
+        ⚠️ TRẦN THEO BỀ NGANG MÀN HÌNH, KHÔNG PHẢI ĐỔI CỠ ĐỒNG HỒ (2026-08-30).
+        Đo trên khung 390px thật: nút Bắt đầu nằm ở y=779..822 trong khi thanh tab NỔI bắt đầu ở
+        y=774 ⇒ **nút chính của cả app bị thanh tab che**, và Đàm phải cuộn mới bấm được thứ anh mở
+        app ra để bấm. Sau khi đã thu hết khoảng trắng quanh đồng hồ (36px) vẫn còn thiếu 48px, mà
+        thứ duy nhất còn đủ lớn để nhường là chính vòng đồng hồ (298px = 76% bề ngang máy).
+        ⚠️ VÌ SAO LÀ `min()` CHỨ KHÔNG PHẢI MỘT HẰNG SỐ NHỎ HƠN: hằng số thì thu đồng hồ ở MỌI khổ
+        màn hình, kể cả nơi không hề thiếu chỗ — tức trả giá ở chỗ không có vấn đề. Cái trần này
+        chỉ cắn khi bề ngang < 466px; từ đó trở lên `timerCanvasSize` thắng và mọi thứ y như cũ.
+        ⚠️ 64vw → 58vw (vòng 20, 2026-08-30). Đo lại trên tài khoản đã chơi lâu thì nút VẪN bị
+        che: khối chào là `${lời chào}. ${biến thể theo ngày}` với 8 biến thể, nên có ngày nó dài
+        2 dòng, có ngày 3 dòng — chênh 26px. Ở ngày dài, nút xuống y=757…799 trong khi thanh tab
+        bắt đầu ở y=774. Tức trần cũ chỉ đủ cho NGÀY NGẮN, và một cái trần chỉ đúng vào ngày may
+        mắn thì không phải một cái trần. 58vw ở 390px cho ra 226px — vẫn là thứ to nhất màn hình,
+        và trần chỉ cắn khi bề ngang < 514px nên máy bàn không đổi một điểm ảnh nào.
+        ⚠️ `minHeight` PHẢI dùng CÙNG biểu thức: nó là chỗ giữ sẵn chiều cao, nên nếu chỉ thu cái
+        vòng mà quên nó thì khoảng trống vẫn bị giữ nguyên và không được một điểm ảnh nào.
+      */}
       <div
-        className="relative mt-5 flex w-full items-center justify-center sm:mt-5 md:mt-1"
-        style={{ minHeight: timerFootprintHeight }}
+        className="relative mt-2 flex w-full items-center justify-center sm:mt-5 md:mt-1"
+        style={{ minHeight: `min(${timerFootprintHeight}px, 58vw)` }}
       >
         <motion.div
           className="relative flex shrink-0 items-center justify-center"
           {...timerScaleMotion}
-          style={{ width: timerCanvasSize, height: timerCanvasSize }}
+          style={{ width: `min(${timerCanvasSize}px, 58vw)`, height: `min(${timerCanvasSize}px, 58vw)` }}
         >
           {immersiveMode && (isActive || isBreakMode) && (
             <motion.div
@@ -1281,8 +1303,8 @@ export default function PomodoroEngine({
           )}
           <motion.div className="relative" {...timerBreathMotion}>
           <svg
-            width={timerCanvasSize}
-            height={timerCanvasSize}
+            width="100%"
+            height="100%"
             viewBox={`0 0 ${SVG_SIZE} ${SVG_SIZE}`}
             className="transform -rotate-90"
             aria-hidden="true"
@@ -1418,7 +1440,7 @@ export default function PomodoroEngine({
   const timerStageActions = (
     <div className={shouldDockFullScreenActions
       ? 'flex w-full items-start justify-center'
-      : `mt-4 flex w-full items-start justify-center md:mt-0 ${immersiveMode ? 'min-h-[104px]' : 'min-h-[68px]'}`
+      : `mt-2 flex w-full items-start justify-center md:mt-4 ${immersiveMode ? 'min-h-[104px]' : 'min-h-[52px]'}`
     }>
       <div className={`flex w-full max-w-[412px] flex-col items-stretch gap-3 ${
         shouldDockFullScreenActions ? 'sm:w-full sm:max-w-[540px] sm:items-center' : 'sm:w-auto sm:max-w-none sm:items-start'
@@ -1501,7 +1523,7 @@ export default function PomodoroEngine({
                   size="compactPrimary"
                   className={compactTimerActionButtonClassName}
                 >
-                  Full Screen
+                  Toàn màn hình
                 </ActionButton>
               )}
             </motion.div>
@@ -1518,7 +1540,7 @@ export default function PomodoroEngine({
               </ActionButton>
               {canEnterFullScreen && (
                 <ActionButton onClick={onEnterFullScreen} variant="soft" size="compactMobile" className={compactTimerActionButtonClassName}>
-                  Full Screen
+                  Toàn màn hình
                 </ActionButton>
               )}
               {canExtendActivePomodoro && (
@@ -1566,7 +1588,7 @@ export default function PomodoroEngine({
                   </ActionButton>
                   {canEnterFullScreen && (
                     <ActionButton onClick={onEnterFullScreen} variant="soft" size="compactMobile" className={compactTimerActionButtonClassName}>
-                      Full Screen
+                      Toàn màn hình
                     </ActionButton>
                   )}
                   {canExtendActivePomodoro && (
@@ -1687,13 +1709,25 @@ export default function PomodoroEngine({
       <div className="w-full px-3.5 py-3 backdrop-blur-2xl bg-white/[0.045] border border-white/[0.10] shadow-[0_12px_28px_rgba(15,23,42,0.10)]" style={{ borderRadius: 'var(--skin-radius-card, 18px)', ...paperCardStyle }}>
         <div className="flex items-start justify-between gap-3 px-0.5">
           <div className="min-w-0">
+            {/*
+              ⚠️ HAI ĐOẠN VĂN ĐÃ BỊ GỠ Ở ĐÂY (vòng 20, 2026-08-30) — thẻ này từng nói ĐÚNG MỘT ĐIỀU
+              tới NĂM lần trong 250px, ở màn hình Đàm mở nhiều nhất:
+                1. "Chốt một đích đến rõ ràng trước khi bấm bắt đầu…"   (4 dòng, 80px)  ← GỠ
+                2. huy hiệu "Bắt buộc" + nhãn "Mục tiêu phiên"                            ← giữ
+                3. "Viết kết quả cần chốt trong phiên này…"             (3 dòng, 59px)  ← GỠ
+                4. placeholder "Ví dụ: chốt outline, giải xong 3 bài…"                    ← giữ
+                5. `sessionGoalHint` ngay dưới ô nhập                                     ← giữ
+              Ba cái ở lại là ba cái NÓI THÊM được: nhãn nói *bắt buộc*, placeholder cho VÍ DỤ để
+              bắt chước (cụ thể hơn hẳn hai đoạn đã gỡ), và dòng gợi ý nằm ĐÚNG CHỖ SẮP GÕ. Hai
+              cái gỡ đi chỉ diễn đạt lại tên của chính cái ô ngay dưới chúng.
+              ⚠️ Vế "Ghi chú cho lần sau chỉ để giữ mạch chuyển tiếp" của đoạn 1 còn là hướng dẫn
+              cho một Ô KHÁC (accordion "Ghi chú phiên" ở phía trên, đang đóng) — luật chỉ dùng lúc
+              sắp hành động thì phải nói NGAY TẠI chỗ hành động, không nói ở đầu một thẻ khác.
+            */}
             <p className={`mono text-[10px] uppercase tracking-[0.2em] ${
               lightTheme ? 'text-[var(--muted-2)]' : 'text-slate-500'
             }`}>
               Chuẩn bị phiên
-            </p>
-            <p className={`mt-1 text-[13px] leading-5 ${lightTheme ? 'text-[var(--muted)]' : 'text-slate-400'}`}>
-              Chốt một đích đến rõ ràng trước khi bấm bắt đầu. Ghi chú cho lần sau chỉ để giữ mạch chuyển tiếp.
             </p>
           </div>
           <span className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-semibold ${goalBadgeClass}`}>
@@ -1730,9 +1764,6 @@ export default function PomodoroEngine({
                   </span>
                 </div>
               </div>
-              <p className={`mt-2 text-xs leading-relaxed ${lightTheme ? 'text-[var(--muted)]' : 'text-slate-400'}`}>
-                Viết kết quả cần chốt trong phiên này, đủ cụ thể để tự đánh giá khi xong.
-              </p>
             </div>
             <div className="shrink-0 text-right">
               <p className={`mono text-[10px] ${lightTheme ? 'text-[var(--muted-2)]' : 'text-slate-500'}`}>
@@ -2335,7 +2366,7 @@ function QuickPresets({ className = '', activePresetId, disabled, mode, onSelect
                       ? 'bg-[rgba(244,242,236,0.96)] text-[var(--muted)]'
                       : 'bg-white/[0.06] text-[var(--muted)]'
                 }`}>
-                  Flowtime
+                  nghỉ theo phiên
                 </span>
               ) : (
                 <>

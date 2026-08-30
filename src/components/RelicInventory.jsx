@@ -105,29 +105,20 @@ export default function RelicInventory() {
         </div>
       </div>
 
+      {/*
+        ⚠️ THẺ RỖNG "Chưa có di vật nào" ĐÃ GỠ (2026-08-30) — nó là lần nói thứ HAI trong ba lần.
+        Cùng một màn hình, khi chưa có di vật nào, từng nói điều đó ba chỗ: dòng ngay trên đầu
+        ("0/15 — chinh phục Khủng Hoảng Kỷ Nguyên để nhận buff vĩnh viễn"), thẻ rỗng này, rồi tiêu
+        đề của chính danh sách bên dưới ("Chưa thu thập"). Và câu hướng dẫn của thẻ này *"Chọn chế
+        độ Đương Đầu khi Khủng Hoảng xuất hiện…"* là bản viết lại của câu nằm cách nó chưa tới 60px.
+        Nó tốn ~500px — sau khi danh sách khoá được thu về một dòng mỗi cái (cùng ngày), thẻ rỗng
+        này thành thứ TO NHẤT màn hình, và thứ to nhất đang nói rằng bạn không có gì.
+        ⚠️ VÀ ĐÂY KHÔNG CHỈ LÀ CẮT CHO GỌN: bỏ nó đi thì thứ đầu tiên đập vào mắt là **danh sách
+        những gì LẤY ĐƯỢC** thay vì một lời nhắc rằng bạn chưa có gì. Cùng một sự thật, hai cách
+        mở màn hình, và chỉ một cách khiến người ta muốn đi lấy.
+      */}
       {relics.length === 0 ? (
-        <>
-          <div
-            className={`px-6 py-10 text-center ${lightTheme ? '' : 'rounded-[var(--skin-radius-card,28px)] border border-white/8 bg-white/[0.03]'}`}
-            style={paperCardStyle(lightTheme)}
-          >
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full" style={lightTheme ? {
-              background: 'rgba(var(--accent-rgb), 0.1)',
-              border: '1px solid rgba(var(--accent-rgb), 0.2)',
-              color: 'var(--accent2)',
-            } : undefined}>
-              <span className="mono text-[12px] font-semibold uppercase tracking-[0.22em]">AR</span>
-            </div>
-            <p className="text-base font-semibold" style={lightTheme ? { color: 'var(--ink)', fontFamily: 'var(--skin-font-display)' } : { color: '#ffffff' }}>
-              Chưa có di vật nào
-            </p>
-            <p className="mx-auto mt-2 max-w-xl text-sm leading-relaxed" style={lightTheme ? { color: 'var(--muted)' } : { color: '#94a3b8' }}>
-              Chọn chế độ Đương Đầu khi Khủng Hoảng xuất hiện để chinh phục và nhận di vật cho kho lưu trữ này.
-            </p>
-          </div>
-
-          <LockedRelics collectedIds={collectedIds} lightTheme={lightTheme} />
-        </>
+        <LockedRelics collectedIds={collectedIds} lightTheme={lightTheme} />
       ) : (
         <>
           <div className="flex flex-col gap-4">

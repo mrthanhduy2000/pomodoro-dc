@@ -300,9 +300,17 @@ function AchievementCard({
               </span>
             ) : null}
 
-            <span className="rounded-full border border-[var(--line)] bg-[rgba(255,255,255,0.88)] px-3 py-1">
-              {entry.isUnlocked ? `Thời điểm đạt: ${unlockLabel}` : 'Trạng thái: chưa đạt'}
-            </span>
+            {/* ⚠️ BỎ TIỀN TỐ, VÀ BỎ HẲN CHIP Ở NHÁNH CHƯA ĐẠT (vòng 20, 2026-08-30).
+                "Thời điểm đạt: " — trong một mục tên là "Đã đạt (146)" thì một con dấu thời gian
+                không cần được giới thiệu; bỏ tiền tố làm chip ngắn đi ~90px nên nó thôi phải
+                chiếm trọn một hàng riêng ở cột chữ 191px.
+                "Trạng thái: chưa đạt" — tiêu đề mục và kiểu vẽ mờ đã nói xong, mà nó lặp ở 24
+                thẻ. Bỏ đi thì phần "Chưa đạt" LIẾC được thay vì phải đọc. */}
+            {entry.isUnlocked ? (
+              <span className="rounded-full border border-[var(--line)] bg-[rgba(255,255,255,0.88)] px-3 py-1">
+                {unlockLabel}
+              </span>
+            ) : null}
 
             {entry.timeSource === 'reconstructed' ? (
               <span className="rounded-full border border-[rgba(131,155,176,0.22)] bg-[rgba(236,241,245,0.9)] px-3 py-1 text-[#5f7386]">
@@ -315,10 +323,10 @@ function AchievementCard({
             className="mt-3 border border-[var(--line)] bg-[var(--card-bg-solid2)] px-3.5 py-3"
             style={{ borderRadius: 'var(--skin-radius-control,14px)' }}
           >
-            <p className="mono text-[10px] uppercase tracking-[0.2em] text-[var(--muted-2)]">
-              Ghi chú tiến trình
-            </p>
-            <p className="mt-1 text-sm leading-6 text-[var(--ink-2)]">
+            {/* ⚠️ ĐÃ GỠ nhãn "Ghi chú tiến trình" (vòng 20, 2026-08-30). Nó lặp ở CẢ 48 thẻ trên
+                một trang dài 14.254px — gọi tên một thứ bốn mươi tám lần thì nó thôi là nhãn và
+                thành nhiễu. Cái hộp có viền và nền riêng đã đủ tách đoạn này khỏi phần mô tả. */}
+            <p className="text-sm leading-6 text-[var(--ink-2)]">
               {aiRemark}
             </p>
           </div>
@@ -482,7 +490,6 @@ export default function Achievements() {
   const heroSurface = dataset.latestEntry
     ? getTierSurface(dataset.latestEntry.achievement.tier)
     : TIER_SURFACES.silver;
-  const latestAchievement = dataset.latestEntry?.achievement;
 
   return (
     <div className="space-y-5 text-[var(--ink)]">
@@ -494,9 +501,9 @@ export default function Achievements() {
         >
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div>
-              <p className="mono text-[10px] uppercase tracking-[0.2em] text-[var(--muted-2)]">
-                Lưu trữ thành tích
-              </p>
+              {/* ⚠️ ĐÃ GỠ nhãn "Lưu trữ thành tích" (vòng 20, 2026-08-30): nút tab con đang SÁNG,
+                  cách 56px phía trên, đã trả lời xong câu "tôi đang ở đâu". Cùng luật đã áp cho
+                  `RelicInventory` và `BuildingWorkshop` ngày 2026-08-30 nhưng còn sót ở file này. */}
               {/*
                 ⚠️ NHẤN VÀO CON SỐ ĐÃ ĐẠT, KHÔNG NHẤN VÀO MẪU SỐ (đổi 2026-08-29).
                 Bản cũ viết `{đã đạt}/{360} dấu đã đạt` ở cỡ 40px — ở khung 390px nó tràn thành HAI
@@ -545,38 +552,18 @@ export default function Achievements() {
             />
           </div>
 
+          {/*
+            ⚠️ HAI THẺ TÓM TẮT ĐÃ GỠ (vòng 20, 2026-08-30) — cả hai đều là chỗ nói lần thứ hai, và
+            cả hai đều đứng ở vùng ĐẮT NHẤT màn hình (trên nếp gấp 390px).
+            · "Gần nhất" (111px): dòng đầu của mục "Mới đạt gần đây" ở ngay dưới nói y hệt và nói
+              NHIỀU hơn — thêm bậc độ hiếm và số thứ tự. Chỗ nói ít hơn phải nhường.
+            · "Theo tier" (131px): "43 · 51 · 34 · 14 · 4" trên một dòng và "Đồng · Bạc · Vàng ·
+              Bạch Kim · Kim Cương" trên dòng kế — mắt phải ĐẾM VỊ TRÍ để ghép số với tên, và
+              "Kim Cương" còn rớt xuống dòng thứ hai ở 390px. Hàng chip lọc ngay dưới nói cùng
+              điều đó, có MẪU SỐ ("43/64" ⇒ đọc được "còn 21 cái nữa"), lại còn BẤM ĐƯỢC.
+              Chữ "tier" trong nhãn cũng là tiếng Anh.
+          */}
           <div className="mt-5 grid gap-3 md:grid-cols-2">
-            <div
-              className="border p-4"
-              style={{ borderColor: 'var(--line)', background: 'var(--card-bg-solid2)', borderRadius: 'var(--skin-radius-control,14px)' }}
-            >
-              <p className="mono text-[10px] uppercase tracking-[0.2em] text-[var(--muted-2)]">
-                Gần nhất
-              </p>
-              <p className="mt-2 text-[20px] text-[var(--ink)]" style={{ fontFamily: DISPLAY_FONT, fontWeight: 600 }}>
-                {latestAchievement ? latestAchievement.label : 'Chưa có dấu nào'}
-              </p>
-              <p className="mt-1 text-sm text-[var(--muted)]">
-                {dataset.latestEntry
-                  ? formatUnlockLabel(dataset.latestEntry.unlockedAt)
-                  : 'Bắt đầu bằng phiên tập trung đầu tiên.'}
-              </p>
-            </div>
-
-            <div
-              className="border p-4"
-              style={{ borderColor: 'var(--line)', background: 'var(--card-bg-solid2)', borderRadius: 'var(--skin-radius-control,14px)' }}
-            >
-              <p className="mono text-[10px] uppercase tracking-[0.2em] text-[var(--muted-2)]">
-                Theo tier
-              </p>
-              <p className="mt-2 text-[20px] text-[var(--ink)]" style={{ fontFamily: DISPLAY_FONT, fontWeight: 600 }}>
-                {TIER_SEQUENCE.map((tier) => dataset.tierStats[tier]?.unlocked ?? 0).join(' · ')}
-              </p>
-              <p className="mt-1 text-sm text-[var(--muted)]">
-                Đồng · Bạc · Vàng · Bạch Kim · Kim Cương
-              </p>
-            </div>
 
             {/*
               ⚠️ THẺ "HIỂN THỊ" ĐÃ GỠ (2026-08-30) — nó là chỗ nói lần thứ hai, và cả hai vế của nó
@@ -598,26 +585,23 @@ export default function Achievements() {
           className="p-5"
           style={CARD_SURFACE}
         >
+          {/*
+            ⚠️ HAI THỨ ĐÃ GỠ Ở HÀNG TIÊU ĐỀ NÀY (vòng 20, 2026-08-30), cả hai là khuôn 1 + 11:
+            · Nhãn "Dấu gần đây" đứng ngay TRÊN tiêu đề "Mới đạt gần đây" — hai cách nói cùng một
+              câu, cách nhau 8px.
+            · Chip "#146": số thứ tự ấy ĐÃ có ở dòng đầu tiên của chính danh sách ngay dưới
+              ("#146 · 14:24 30/08/2026"). Và vì nó là `shrink-0` cạnh một tiêu đề 30px, ở 390px
+              nó ép "Mới đạt gần đây" **vỡ thành hai dòng** — một chip 60px thêm vào "cho gọn"
+              lại đẻ ra một dòng chữ 45px. Đúng khuôn `truncate + shrink-0` ở dạng nhỏ: thứ bị bóp
+              luôn là cái không khai `shrink-0`.
+          */}
           <div className="flex items-center justify-between gap-3">
-            <div>
-                <p className="mono text-[10px] uppercase tracking-[0.2em] text-[var(--muted-2)]">
-                  Dấu gần đây
-                </p>
-              <h3
-                className="mt-2 text-[30px] tracking-[-0.04em] text-[var(--ink)]"
-                style={{ fontFamily: DISPLAY_FONT, fontWeight: 600 }}
-              >
-                Mới đạt gần đây
-              </h3>
-            </div>
-            {dataset.latestEntry?.order ? (
-              <span
-                className="rounded-full border border-[var(--line)] bg-[rgba(255,255,255,0.85)] px-3 py-1 text-sm text-[var(--muted)]"
-                style={{ fontFamily: MONO_FONT }}
-              >
-                #{padOrder(dataset.latestEntry.order)}
-              </span>
-            ) : null}
+            <h3
+              className="text-[30px] tracking-[-0.04em] text-[var(--ink)]"
+              style={{ fontFamily: DISPLAY_FONT, fontWeight: 600 }}
+            >
+              Mới đạt gần đây
+            </h3>
           </div>
 
           {latestThreeEntries.length === 0 ? (

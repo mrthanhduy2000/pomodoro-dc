@@ -545,7 +545,7 @@ export default function Achievements() {
             />
           </div>
 
-          <div className="mt-5 grid gap-3 md:grid-cols-3">
+          <div className="mt-5 grid gap-3 md:grid-cols-2">
             <div
               className="border p-4"
               style={{ borderColor: 'var(--line)', background: 'var(--card-bg-solid2)', borderRadius: 'var(--skin-radius-control,14px)' }}
@@ -578,20 +578,18 @@ export default function Achievements() {
               </p>
             </div>
 
-            <div
-              className="border p-4"
-              style={{ borderColor: 'var(--line)', background: 'var(--card-bg-solid2)', borderRadius: 'var(--skin-radius-control,14px)' }}
-            >
-              <p className="mono text-[10px] uppercase tracking-[0.2em] text-[var(--muted-2)]">
-                Hiển thị
-              </p>
-              <p className="mt-2 text-[20px] text-[var(--ink)]" style={{ fontFamily: DISPLAY_FONT, fontWeight: 600 }}>
-                {filteredUnlockedEntries.length} đã đạt / {filteredLockedEntries.length} chưa đạt
-              </p>
-              <p className="mt-1 text-sm text-[var(--muted)]">
-                Bộ lọc đang áp dụng trực tiếp lên cả hai danh sách bên dưới.
-              </p>
-            </div>
+            {/*
+              ⚠️ THẺ "HIỂN THỊ" ĐÃ GỠ (2026-08-30) — nó là chỗ nói lần thứ hai, và cả hai vế của nó
+              đều thừa. Vế con số (*"N đã đạt / M chưa đạt"*) là ĐÚNG hai con số mà hai danh sách
+              ngay bên dưới tự in ra làm tiêu đề của chính chúng: «Đã đạt (N)» và «Chưa đạt (M)» —
+              gần hơn, và gắn liền với thứ chúng đếm. Vế câu chữ (*"Bộ lọc đang áp dụng trực tiếp
+              lên cả hai danh sách bên dưới"*) là một câu HƯỚNG DẪN SỬ DỤNG: nó mô tả cách giao
+              diện hoạt động, đúng một lần là đủ cho cả đời dùng app, rồi nằm đó mãi mãi.
+              Đo ở khung 390px: ba thẻ con này XẾP DỌC (grid chỉ chia 3 cột từ `md:`), mỗi thẻ
+              ~130px — nên thẻ thừa này chiếm 130px của màn hình trước khi thấy một thành tích nào.
+              GIỮ hai thẻ kia: "Gần nhất" là thẻ khoe thành quả (dopamine), "Theo tier" là một hình
+              dạng liếc-một-cái-biết-ngay mà không chỗ nào khác nói.
+            */}
           </div>
         </MotionSection>
 

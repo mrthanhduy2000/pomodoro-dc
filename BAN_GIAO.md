@@ -7,6 +7,20 @@
 > **BA lần** (ô "PHIÊN 0" ở thanh đầu · câu "Bạn chưa chốt phiên nào trong hôm nay" · dòng "Phiên
 > 0/5 hôm nay" dưới đồng hồ). Bản thứ ba là bản TỐT NHẤT vì nó có mẫu số ⇒ hai bản kia nhường.
 >
+> **VÒNG 11 — FIXTURE LẦN ĐẦU GIEO THÀNH TÍCH (147/360), VÀ LỖI ẤY NẰM TRONG CHÚ THÍCH CỦA CHÍNH
+> NÓ.** `make-fixture.mjs` mở đầu bằng câu nêu rõ nó sinh ra để chữa cảnh *"0/360 thành tích"* — mà
+> nó chưa bao giờ gieo một dấu nào. ⇒ **mọi kết luận mỹ thuật về tab Thành tích trước hôm nay đều
+> rút ra từ màn hình của NGÀY ĐẦU TIÊN** (0 / "Chưa có dấu nào" / 0·0·0·0·0). Vá bằng cách DÙNG LẠI
+> `inferAchievementUnlockTimes` (replay lịch sử, gọi chính `achievement.check()` của mã sản phẩm),
+> KHÔNG viết bản dựng ảnh chụp trạng thái thứ ba — dự án đã có hai bản và chú thích của chúng đã
+> cảnh báo nhau về nguy cơ trôi lệch.
+> ⚠️ **CÁCH SOI MÀN CÓ CHUỖI SỐNG + THÀNH TÍCH** (fixture mặc định KHÔNG soi được, vì store dựng
+> lại chuỗi từ lịch sử mà lịch sử fixture đề ngày cũ): sinh fixture rồi **dịch toàn bộ mốc thời
+> gian** (cả `history` lẫn `achievements.timeline`) sao cho phiên mới nhất rơi vào hôm qua. Lệnh
+> đầy đủ ở nhật ký phiên này.
+> ⚠️ **BẪY NHÁY NGƯỢC CẮN LẦN THỨ NĂM**, lần này trong `console.log` của `make-fixture.mjs`.
+> `node --check` bắt được ngay — **chạy nó sau mỗi lần sửa script**, đừng đợi tới lúc chạy thật.
+>
 > **VÒNG 10 — CƠ CHẾ THƯỞNG MẠNH NHẤT GAME LẦN ĐẦU TỚI ĐƯỢC iPHONE.** Cột mốc chuỗi (kể cả mốc
 > "Bền Vững" cho một **bonus VĨNH VIỄN**) đã chạy từ lâu, có test, và CHỈ hiện ở `FocusRail` — một
 > cột `hidden … lg:flex`. ⇒ **iPhone chưa bao giờ thấy nó.** Nay có `describeStreakMilestone` →

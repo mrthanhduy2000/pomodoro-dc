@@ -12,6 +12,33 @@
 
 ---
 
+## 2026-08-30 (vòng 11) — Fixture lần đầu gieo thành tích, và một thẻ nói-lần-hai ở màn Thành tích
+
+**Lỗi công cụ, và nó nằm ngay trong chú thích của chính công cụ.** `scripts/make-fixture.mjs` mở đầu
+bằng câu nêu rõ nó sinh ra để chữa cảnh *"0 XP, **0/360 thành tích**, 0 kỹ năng"* — mà nó **chưa bao
+giờ gieo một dấu thành tích nào**. Nghĩa là mọi lần soi tab Thành tích bằng fixture đều đang xem màn
+hình của NGÀY ĐẦU TIÊN: một thẻ "0 / 360 dấu", một thẻ "Chưa có dấu nào", một thẻ "0·0·0·0·0" — và
+không kết luận mỹ thuật nào rút ra từ đó có giá trị. Cùng bài học *"một câu tự trấn an cũng phải
+được kiểm như một con số"*, lần này câu ấy nằm trong chú thích của một công cụ đo.
+
+**Vá bằng cách DÙNG LẠI, không viết công thức thứ hai.** Dự án đã có HAI bản dựng ảnh chụp trạng
+thái thành tích và chú thích của chúng đã cảnh báo nhau về nguy cơ trôi lệch; thêm bản thứ ba trong
+một script là mời đúng cái bẫy ấy. Thay vào đó fixture gọi `inferAchievementUnlockTimes` — nó replay
+lịch sử và gọi **chính `achievement.check()` của mã sản phẩm**. Kết quả: **147/360 dấu** cho 588
+phiên qua 180 ngày, kèm mốc thời gian mở khoá thật. Sai số đã biết và đã ghi: vài dấu kiểu "mở được
+N dấu khác" có thể nổ sớm, vì hàm ấy được đưa cả 360 id làm ứng viên — chấp nhận được với một
+fixture dùng để SOI GIAO DIỆN, và tuyệt đối không trích số ở đó vào kết luận cân bằng game.
+
+**Cắt một thẻ nói-lần-hai.** Thẻ "Hiển thị" ở đầu màn Thành tích in *"N đã đạt / M chưa đạt"* — đúng
+hai con số mà hai danh sách ngay bên dưới tự in ra làm tiêu đề của chính chúng (*"Đã đạt (N)"* /
+*"Chưa đạt (M)"*) — kèm một câu hướng dẫn sử dụng giao diện. Ở khung 390px ba thẻ con ấy **xếp dọc**
+(grid chỉ chia 3 cột từ `md:`), nên thẻ thừa chiếm ~130px trước khi thấy một thành tích nào.
+
+**Ảnh hưởng.** Fixture là công cụ dev, không vào bundle. Thay đổi giao diện chỉ ở màn Thành tích.
+Không migration.
+
+---
+
 ## 2026-08-30 (vòng 10) — Cơ chế thưởng mạnh nhất game lần đầu tới được iPhone
 
 **Vấn đề.** Cột mốc chuỗi — kể cả mốc **"Bền Vững"** cho một **bonus VĨNH VIỄN**, phần thưởng mạnh

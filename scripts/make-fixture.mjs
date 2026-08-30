@@ -72,12 +72,14 @@
  */
 import { writeFileSync } from 'node:fs';
 import {
+  ACHIEVEMENTS,
   BLUEPRINT_CATALOG,
   BLUEPRINT_META,
   EXP_PER_LEVEL,
   SKILL_TREE,
   SP_PER_LEVEL,
 } from '../src/engine/constants.js';
+import { inferAchievementUnlockTimes } from '../src/engine/achievementTimeline.js';
 
 const arg = (f, d) => { const i = process.argv.indexOf(f); return i >= 0 ? process.argv[i + 1] : d; };
 const OUT = arg('--out', 'fixture.json');
@@ -337,6 +339,37 @@ const run = playthrough(UNLOCKED_SKILLS);
 
 const history = [...run.seq].sort((a, b) => b.timestamp - a.timestamp);
 
+// ─── THÀNH TÍCH ────────────────────────────────────────────────────────────────────────────────
+/**
+ * ⚠️ FIXTURE NÀY TỪNG KHÔNG GIEO MỘT DẤU THÀNH TÍCH NÀO — trong khi chú thích ở đầu file tự nêu
+ * "0/360 thành tích" làm ĐÚNG cái cảnh nó sinh ra để chữa. Nghĩa là suốt thời gian qua, mọi lần
+ * soi tab Thành tích bằng fixture đều đang xem màn hình của NGÀY ĐẦU TIÊN: một thẻ "0 / 360 dấu",
+ * một thẻ "Chưa có dấu nào", một thẻ "0 · 0 · 0 · 0 · 0". Không kết luận mỹ thuật nào rút ra từ
+ * đó có giá trị. Cùng bài học *"một câu tự trấn an cũng phải được kiểm như một con số"* — lần này
+ * câu tự trấn an nằm trong chú thích của chính công cụ.
+ *
+ * ⚠️ KHÔNG VIẾT CÔNG THỨC THỨ HAI. Dự án đã có sẵn HAI bản dựng ảnh chụp trạng thái thành tích
+ * (`buildAchievementSnapshot` ở `gameStore.js` và `buildAchievementSnapshotForReplay` ở
+ * `achievementTimeline.js`) và chú thích của chúng đã cảnh báo nhau về nguy cơ trôi lệch. Thêm bản
+ * thứ ba ở đây là mời đúng cái bẫy ấy. Thay vào đó dùng lại `inferAchievementUnlockTimes`: nó
+ * replay lịch sử và gọi CHÍNH `achievement.check()` của mã sản phẩm, nên tập dấu mở được ở đây
+ * đúng bằng tập mà app thật sẽ mở với cùng lịch sử đó.
+ *
+ * ⚠️ MỘT SAI SỐ ĐÃ BIẾT, CÓ CHỦ ĐÍCH: hàm ấy nhận `unlockedIds` làm ĐẦU VÀO (nó vốn dùng để suy
+ * NGÀY mở khoá cho những dấu ĐÃ biết là mở). Ta đưa cả 360 id vào làm ứng viên, nên vài dấu kiểu
+ * "mở được N dấu khác" có thể nổ sớm hơn thực tế. Với một fixture dùng để SOI GIAO DIỆN thì đó là
+ * đánh đổi đúng; tuyệt đối đừng trích số ở đây vào bất kỳ kết luận cân bằng game nào.
+ */
+const achievementTimeline = inferAchievementUnlockTimes(
+  history,
+  ACHIEVEMENTS.map((a) => a.id),
+  {},
+);
+const achievements = {
+  unlocked: Object.keys(achievementTimeline),
+  timeline: achievementTimeline,
+};
+
 // ─── SUY RA mọi con số giao diện đem so với nhau ──────────────────────────────────────────────
 const activeBook = getActiveBook(run.totalEP);
 const level = Math.floor(run.totalXP / EXP_PER_LEVEL);
@@ -395,6 +428,7 @@ const fixture = {
       unlockedSkills: UNLOCKED_SKILLS,
     },
     streak: { currentStreak, longestStreak, lastActiveDate, skipShieldUsedWeekKey: null },
+    achievements,
     history,
     historyStats: {
       completedSessions: run.doneCount, completedMinutes: run.minutes,
@@ -417,4 +451,5 @@ console.log(`  ${DAYS} ngày · ${run.doneCount} phiên xong · ${run.cancelCoun
 console.log(`  ${Math.round(run.minutes / 60)} giờ tập trung · ${run.totalXP.toLocaleString('vi-VN')} XP · cấp ${level} · ${spAvailable} điểm kỹ năng chưa tiêu`);
 console.log(`  ${run.totalEP.toLocaleString('vi-VN')} EP → kỷ ${activeBook} · ${run.buildings.length} công trình đang đứng · ${sealedEras} kỷ đã niêm phong vào bảo tàng`);
 console.log(`  ${Object.keys(UNLOCKED_SKILLS).length} kỹ năng đã mở (tiêu ${SP_SPENT} điểm)`);
+console.log(`  ${achievements.unlocked.length}/${ACHIEVEMENTS.length} dấu thành tích — replay bằng chính hàm check() của mã sản phẩm`);
 console.log('  ⚠️ Công thức phần thưởng là THẬT; nhịp chơi là giả — đừng trích số vào kết luận cân bằng game.');

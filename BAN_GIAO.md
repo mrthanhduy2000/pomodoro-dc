@@ -7,6 +7,17 @@
 > **BA lần** (ô "PHIÊN 0" ở thanh đầu · câu "Bạn chưa chốt phiên nào trong hôm nay" · dòng "Phiên
 > 0/5 hôm nay" dưới đồng hồ). Bản thứ ba là bản TỐT NHẤT vì nó có mẫu số ⇒ hai bản kia nhường.
 >
+> **VÒNG 17 — `shot.mjs` LẦN ĐẦU BẤM ĐƯỢC NÚT CHỈ-CÓ-BIỂU-TƯỢNG.** `--click` xưa nay chỉ khớp CHỮ
+> HIỂN THỊ, mà nút biểu tượng thì `textContent` rỗng ⇒ **Trung tâm thông báo — có mặt trên MỌI màn
+> hình — chưa lần nào được chụp**. Nay thử chữ trước, rồi `aria-label`/`title`. Khoá bằng
+> `scripts/shotSource.test.js` (4 bài, đã thử-cho-đỏ; trước đó `shot.mjs` KHÔNG có test nào).
+> ⚠️ **Bài học lặp lần thứ ba trong phiên:** *thứ chặn tôi nhìn thấy màn hình không phải lúc nào
+> cũng là mã sản phẩm* — vòng 11 là fixture không gieo dữ liệu, vòng 17 là công cụ không chọn được
+> phần tử. Trước khi kết luận "màn này trống/chán", hỏi **"tôi có đang NHÌN THẤY nó thật không?"**
+> ⚠️ Chỗ duy nhất còn chưa soi được: màn hiện ra SAU khi kết thúc một phiên (cấm chạy phiên trên
+> dev vì dùng chung hàng Supabase với production) — đó cũng chính là khoảnh khắc dopamine lớn nhất
+> của app, nên nếu có cách soi an toàn thì đó là việc đáng làm nhất còn lại.
+>
 > **VÒNG 16 — Nhật Ký và Ghi Chú: ~800px văn giải thích mỗi màn.** Cùng khuôn bốn lớp đã gặp ở
 > `ShellPane`, Thành tích, Xưởng, Cài đặt. ⚠️ Đoạn "cách xoá" KHÔNG mất tin — mỗi phiên/ghi chú đã
 > có bước xác nhận riêng ngay tại nút xoá. ⇒ **luật chỉ dùng lúc sắp hành động thì phải nói Ở NÚT,

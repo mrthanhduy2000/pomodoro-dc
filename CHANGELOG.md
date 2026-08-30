@@ -12,6 +12,28 @@
 
 ---
 
+## 2026-08-30 (vòng 17) — Công cụ soi giao diện lần đầu bấm được nút chỉ-có-biểu-tượng
+
+**Lỗi công cụ, và nó giấu cả một họ màn hình.** `shot.mjs --click` khớp nút bằng **chữ hiển thị**.
+Mọi nút chỉ-có-biểu-tượng đều có `textContent` rỗng — chuông thông báo, nút ⚙, nút đóng "×" — nên
+chúng **không soi được bằng bất kỳ cách nào**. Hậu quả cụ thể: **Trung tâm thông báo** nằm trên MỌI
+màn hình của app và chưa lần nào được chụp. Cùng hình dạng với lỗi fixture ở vòng 11 (soi mãi một
+màn rỗng rồi tưởng đó là màn thật) — chỉ khác là ở đây thứ giấu màn hình không phải dữ liệu mà là
+cách chọn phần tử.
+
+**Đã vá.** `--click` nay thử **chữ hiển thị trước** (chính xác hơn, ít bất ngờ hơn) rồi mới tới
+`aria-label` / `title`. Danh sách gợi ý khi bấm trượt cũng kể luôn nhãn trợ năng — không có vế đó
+thì người đọc thông báo lỗi sẽ tưởng nút mình cần không tồn tại, trong khi nó chỉ không có chữ.
+Khoá bằng `scripts/shotSource.test.js` (4 bài, đã thử-cho-đỏ): file parse được · có nhánh nhãn trợ
+năng · danh sách gợi ý kể nhãn ấy · **thứ tự ưu tiên** không được đảo.
+
+**Nhân tiện, dọn nốt một nhãn dán.** "TRUNG TÂM" đứng trên "Thông báo" trong chính panel vừa soi
+được lần đầu — panel bật ra từ nút chuông vừa bấm, và dòng ngay dưới đã ghi "Thông báo".
+
+**Ảnh hưởng.** `shot.mjs` là công cụ dev, không vào bundle. Thay đổi giao diện chỉ một dòng nhãn.
+
+---
+
 ## 2026-08-30 (vòng 16) — Nhật Ký và Ghi Chú: gỡ ~800px văn giải thích mỗi màn
 
 Hai tab của màn Thống kê mở đầu bằng cùng một khối bốn lớp, và cả bốn đều nói về một màn hình mà

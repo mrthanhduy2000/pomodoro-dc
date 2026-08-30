@@ -371,14 +371,12 @@ export default function NotificationCenter({ onNavigate }) {
             <div className="border-b px-4 pb-3 pt-4" style={{ borderColor: 'var(--line)' }}>
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <div
-                    className="mono text-[10px] uppercase tracking-[0.2em]"
-                    style={{ color: 'var(--muted-2)', fontFamily: MONO_FONT }}
-                  >
-                    Trung tâm
-                  </div>
+                  {/* ⚠️ NHÃN "TRUNG TÂM" ĐÃ GỠ (2026-08-30) — panel này vừa bật ra từ nút chuông
+                      mà Đàm vừa bấm, và dòng ngay dưới đã ghi "Thông báo". Nói thêm "Trung tâm" là
+                      gọi tên cái hộp thay vì nói cái gì trong hộp. Cùng luật đã áp cho "TÙY CHỈNH"
+                      (Cài đặt), "LƯU TRỮ" (Nhật ký), "XƯỞNG", và 11 nhãn tiếng Anh ở Cài đặt. */}
                   <h2
-                    className="mt-1.5 text-[24px] font-semibold leading-none tracking-[-0.03em]"
+                    className="text-[24px] font-semibold leading-none tracking-[-0.03em]"
                     style={{ color: 'var(--ink)', fontFamily: 'var(--skin-font-display)' }}
                   >
                     Thông báo

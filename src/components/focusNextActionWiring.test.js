@@ -91,3 +91,15 @@ test('không dựng lại ba phép đếm ở tầng giao diện', () => {
     );
   }
 });
+
+test('KHÔNG hiện khi phiên đang chạy — nó là lời mời đi chỗ khác', () => {
+  // ⚠️ Dòng này là một cái NÚT dẫn sang tab khác. Để nó giữa màn hình tập trung trong lúc đồng hồ
+  // đang chạy là mời Đàm rời khỏi đúng việc anh vừa bấm nút để làm. Chỉ soi ảnh lúc phiên chạy mới
+  // thấy — mọi cổng khác đều xanh.
+  // `FocusCityTease` / `FocusStageCountdown` thì Ở LẠI: chúng nói "phiên này đang đẩy cái gì tới
+  // đâu", tức động lực để NGỒI YÊN.
+  assert.ok(
+    /\{!hasFocusSessionInProgress && \(\s*<FocusNextAction/.test(APP_CODE),
+    '`FocusNextAction` không còn bị ẩn khi phiên đang chạy',
+  );
+});

@@ -1751,7 +1751,18 @@ export default function App() {
                           Cả hai đều tự IM khi không có gì để nói, nên không có ngày nào màn Tập
                           trung mọc ra hai dòng rỗng.
                         */}
-                        <FocusNextAction onNavigate={handleNotificationNavigate} />
+                        {/*
+                          ⚠️ ẨN KHI PHIÊN ĐANG CHẠY. Dòng này là một cái NÚT, và nó mời đi sang tab
+                          khác — đặt nó giữa màn hình tập trung trong lúc Đàm đang tập trung là mời
+                          anh rời khỏi đúng việc anh vừa bấm nút để làm. Soi ảnh lúc đồng hồ đang
+                          chạy mới thấy: nó nằm ngay trên đồng hồ, sáng màu nhấn.
+                          `FocusCityTease` và `FocusStageCountdown` thì Ở LẠI: chúng nói *phiên này
+                          đang đẩy cái gì tới đâu* — tức động lực để NGỒI YÊN, không phải lời mời đi.
+                          Cùng luật mà `FocusCoachMobile` đã dùng (`hidden={hasFocusSessionInProgress}`).
+                        */}
+                        {!hasFocusSessionInProgress && (
+                          <FocusNextAction onNavigate={handleNotificationNavigate} />
+                        )}
                         {/*
                           Dòng thứ ba của cùng một bộ: "còn ~N phiên nữa tới mốc kế tiếp". Đặt SAU
                           hai dòng kia vì nó nói về đích XA hơn — thứ tự đọc đi từ *phiên này đang

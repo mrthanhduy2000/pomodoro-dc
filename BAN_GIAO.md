@@ -1,3 +1,27 @@
+> Cập nhật lần cuối: **2026-08-29 (đêm, vòng 7)** — **SOI ĐƯỢC MÀN ĐANG-CHẠY-PHIÊN LẦN ĐẦU, VÀ
+> NÓ CÓ HAI LỖI.**
+>
+> **⚠️ MÀN ĐÀM NHÌN LÂU NHẤT (25–50 phút mỗi phiên) TRƯỚC NAY KHÔNG SOI ĐƯỢC** — vì nút Bắt đầu bị
+> khoá sau ô mục tiêu, mà `shot.mjs` không gõ chữ được. Chip gợi ý mục tiêu (vòng 6) tình cờ **mở
+> được đường vào**: `--click "«mục tiêu cũ»" --click "Bắt đầu phiên"`. ⇒ *Một tính năng tiện ích
+> có thể mở ra cả một vùng chưa ai kiểm được.* Ghi lại cách vào để phiên sau dùng luôn.
+>
+> **Hai lỗi tìm được, cả hai đều IM LẶNG ở mọi cổng:**
+> · **Chip "Mở kỹ năng «…»" vẫn hiện khi đang tập trung** — nó là một cái NÚT dẫn sang tab khác,
+>   nằm ngay trên đồng hồ, sáng màu nhấn. Đặt một lời mời-đi-chỗ-khác giữa màn hình tập trung là đi
+>   ngược đúng việc Đàm vừa bấm nút để làm. ⇒ ẩn khi `hasFocusSessionInProgress`, cùng luật
+>   `FocusCoachMobile` đã dùng. ⚠️ `FocusCityTease`/`FocusStageCountdown` **Ở LẠI**: chúng nói
+>   *phiên này đang đẩy cái gì tới đâu* — động lực để NGỒI YÊN, không phải lời mời đi.
+> · **Nút "Hủy phiên" là nút HÚT MẮT NHẤT màn hình.** Biến thể `danger` dùng nền ĐẶC + chữ `--ink`
+>   đen đậm, nặng hơn cả `soft` ngay cạnh — trong khi nó là hành động phá hoại (mất trọn tiến độ
+>   phiên + phạt tài nguyên). **Thứ tự thị giác phải khớp thứ tự hậu quả.** Nay nền trong, viền
+>   nhạt, chữ `--muted`. ⚠️ **KHÔNG tô đỏ rực**: đỏ cũng là một cách để nổi nhất, chỉ đổi từ "mời
+>   gọi" sang "doạ", mà cả hai đều kéo mắt khỏi cái đồng hồ.
+>
+> **Cổng.** `test:fast` **1324 bài · 0 đỏ** · lint sạch · build xanh.
+
+---
+
 > Cập nhật lần cuối: **2026-08-29 (đêm, vòng 5–6)** — **ĐẾM NGƯỢC CÓ TRẦN** · **GỢI Ý MỤC TIÊU
 > GẦN ĐÂY** · **Ô "CÔNG TRÌNH" NÓI RA MỐC.**
 >

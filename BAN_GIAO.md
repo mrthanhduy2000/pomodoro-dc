@@ -7,6 +7,18 @@
 > **BA lần** (ô "PHIÊN 0" ở thanh đầu · câu "Bạn chưa chốt phiên nào trong hôm nay" · dòng "Phiên
 > 0/5 hôm nay" dưới đồng hồ). Bản thứ ba là bản TỐT NHẤT vì nó có mẫu số ⇒ hai bản kia nhường.
 >
+> **VÒNG 14 — 11 NHÃN TIẾNG ANH KHỎI CÀI ĐẶT, VÀ MỘT TÊN CÔNG TRÌNH BỊ CẮT CỤT.**
+> ⚠️ **Lỗi thật:** thẻ hàng chờ ở Xưởng xếp tên công trình chung hàng với hai huy hiệu `shrink-0`,
+> nên **tên là thứ DUY NHẤT có thể bị bóp** ⇒ "Cảng Biển Lớn" → **"Cảng Biể…"**. `truncate` là hành
+> vi ĐÚNG của CSS nên không cổng nào đỏ; chỉ ảnh chụp 390px thấy. ⇒ *khi một hàng flex có phần tử
+> `shrink-0`, hỏi ngay "vậy thứ gì sẽ bị bóp, và nó có phải thứ quan trọng nhất hàng không?"*
+> ⚠️ `eyebrow` ở `Settings.jsx` gánh HAI thứ: nhãn tiếng Anh, VÀ cái vòng tròn hai chữ bên cạnh
+> (`eyebrow.slice(0, 2)` — không phải biểu tượng, chỉ là hai ký tự đầu của chính chữ ấy). Gỡ một
+> trường thì mất cả hai, và đó là đúng.
+> ⚠️ **HÌNH DẠNG CÒN ĐI SOI ĐƯỢC TIẾP:** *"khối mở đầu giải thích màn hình mà người đọc đang đứng
+> trong đó"* — đã gặp ở `ShellPane`, Thành tích, Xưởng, và nay Cài đặt (~590px). Mỗi lần mở một màn
+> mới, hỏi *"khối trên cùng có nói gì mà cái nhãn tab chưa nói không?"*
+>
 > **VÒNG 13 — danh sách di vật khoá: ~3.000px xuống ~700px.** 15 thẻ, mỗi thẻ nói ĐÚNG một câu như
 > nhau, và phần khác nhau duy nhất (tên khủng hoảng) đã nằm trên tiêu đề của chính thẻ ấy. Nay mỗi
 > di vật là MỘT DÒNG; luật chơi vẫn được nói, đúng một lần, ở đầu danh sách (chỗ nó vốn đã có).

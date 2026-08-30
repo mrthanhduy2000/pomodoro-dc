@@ -12,6 +12,35 @@
 
 ---
 
+## 2026-08-30 (vòng 14) — Gỡ 11 nhãn tiếng Anh khỏi Cài đặt, sửa một tên công trình bị cắt cụt
+
+**Một lỗi thật ở Xưởng.** Thẻ "Hàng chờ xây dựng" xếp tên công trình chung hàng với hai huy hiệu
+(độ hiếm + loại), và **cả hai huy hiệu đều `shrink-0`** ⇒ tên là thứ DUY NHẤT trong hàng có thể bị
+bóp. Ở khung 390px "Cảng Biển Lớn" hiện ra thành **"Cảng Biể…"** — thứ trả lời câu *"tôi đang xây
+cái gì"* lại là thứ nhường chỗ cho hai cái nhãn phân loại. Không có gì đỏ lên: `truncate` là hành
+vi ĐÚNG của CSS, chỉ là nó cắt nhầm thứ. Nay tên có một hàng riêng.
+
+**Cài đặt: 11 nhãn tiếng Anh + 11 vòng tròn trang trí.** Mười một mục mang nhãn `Rhythm` ·
+`Atmosphere` · `Signals` · `Pack` · `Alerts` · `Surface` · `Archive` · `Cycle` · `Install` ·
+`About` · `Reset` — tiếng Anh trong một app tiếng Việt, mỗi cái đứng ngay trên một tiêu đề tiếng
+Việt đã nói rõ hơn ("Rhythm" trên "Bộ hẹn giờ"). Cùng lý do đã gỡ chữ "Workspace". Vòng tròn hai
+chữ bên cạnh ("RH", "AT", "SI"…) hoá ra **không phải biểu tượng** mà là `eyebrow.slice(0, 2)` — hai
+ký tự đầu của chính chữ tiếng Anh kia; giữ nó lại là giữ cái bóng của thứ vừa bỏ đi.
+
+**Khối mở đầu Cài đặt: ~590px xuống một dòng.** Nhãn "TÙY CHỈNH" + tiêu đề "Cài đặt trải nghiệm tập
+trung" cỡ 30–40px (xuống hai dòng ở 390px) + ba dòng văn xuôi kể rằng cài đặt dùng để chỉnh cài
+đặt. Giữ tiêu đề ở cỡ nhỏ (trên iPhone Đàm tới đây qua tab "Thêm" nên đó là thứ duy nhất nói anh
+đang ở màn nào) và giữ ba chip trạng thái (chúng đổi theo lựa chọn, không phải lời giải thích).
+**Kết quả: ba nút chỉnh đầu tiên nay thấy và bấm được ngay, không cần cuộn.**
+
+**Kho báu → Di vật: gỡ thẻ rỗng.** Màn ấy nói "chưa có di vật nào" ở BA chỗ, và câu hướng dẫn của
+thẻ rỗng là bản viết lại của câu nằm cách nó chưa tới 60px. Gỡ đi (~500px) thì thứ đầu tiên đập vào
+mắt là **danh sách những gì lấy được** thay vì một lời nhắc rằng bạn chưa có gì.
+
+**Ảnh hưởng.** Chỉ giao diện. Không migration.
+
+---
+
 ## 2026-08-30 (vòng 13) — Danh sách di vật khoá: 3.000px xuống 700px
 
 **Vấn đề.** Tab Kho báu → Di vật liệt kê 15 di vật chưa mở, mỗi cái một THẺ cao ~200px ⇒ **~3.000px

@@ -23,6 +23,7 @@ import { useEffect, useMemo, useRef } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 
 import useGameStore from '../store/gameStore';
+import useStageCountdown from '../hooks/useStageCountdown';
 import soundEngine from '../engine/soundEngine';
 import {
   REWARD_TOAST_MS,
@@ -89,6 +90,12 @@ function ToastItem({ toast, paused, enterMotion, onDismiss, onOpen }) {
 export default function RewardToastHost({ paused = false, onNavigate, onOpenDetail }) {
   const ui = useGameStore((s) => s.ui);
   const missions = useGameStore((s) => s.missions);
+  // ⚠️ DÙNG CHUNG hook với dòng ở màn Tập trung — một luật một công thức. Chép lại phép tính chặng
+  // xuống đây là cách hai chỗ nói hai con số khác nhau về cùng một cột mốc.
+  // ⚠️ CHỈ lấy trạng thái `imminent`. Trạng thái `celebrate` thì dòng ở màn Tập trung đã lo, mà
+  // hai thứ ấy hiện CÙNG LÚC trên CÙNG màn hình — nói hai lần thì lời chúc mừng mất một nửa giá.
+  const stageCountdown = useStageCountdown();
+  const stageHint = stageCountdown?.tone === 'imminent' ? stageCountdown.text : null;
   const closeLootModal = useGameStore((s) => s.closeLootModal);
   const dismissRelicNotification = useGameStore((s) => s.dismissRelicNotification);
   const dismissLevelUp = useGameStore((s) => s.dismissLevelUp);
@@ -99,7 +106,7 @@ export default function RewardToastHost({ paused = false, onNavigate, onOpenDeta
   const openWeeklyReport = useGameStore((s) => s.openWeeklyReport);
   const enterMotion = useEnterMotion();
 
-  const toasts = useMemo(() => buildRewardToasts(ui, missions), [ui, missions]);
+  const toasts = useMemo(() => buildRewardToasts(ui, missions, { stageHint }), [ui, missions, stageHint]);
   const { shown, hidden, overflowLabel } = splitRewardToasts(toasts);
 
   /**

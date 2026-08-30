@@ -175,3 +175,39 @@ test('bậc cao nhất của phần dư đọc đúng, kể cả khi danh sách 
   assert.equal(highestTier([]), 'thuong');
   assert.equal(highestTier([{ tier: 'lung_tung' }]), 'thuong');
 });
+
+/* ─── THẺ PHIÊN NÓI VỀ CỘT MỐC KHI SẮP TỚI ──────────────────────────────────── */
+
+const PHIEN_THUONG = {
+  lootModalOpen: true,
+  pendingReward: { totalSessionXP: 120, resources: { go: 18 }, rpEarned: 50, multiplier: 1.3 },
+};
+
+test('không có mốc sắp tới ⇒ thẻ phiên vẫn đếm tài nguyên như cũ', () => {
+  const [loot] = buildRewardToasts(PHIEN_THUONG, {}).filter((t) => t.source === 'loot');
+  assert.ok(loot, 'mất luôn thẻ tổng kết phiên');
+  assert.match(loot.description, /tài nguyên/, 'không có mốc mà đã thôi nói tài nguyên');
+});
+
+test('sắp tới mốc ⇒ thẻ phiên NÓI VỀ MỐC thay vì đếm tài nguyên', () => {
+  // ⚠️ THAY chứ không NỐI: `description` của `RewardCard` chỉ được ĐÚNG MỘT DÒNG, nối thêm thì bị
+  // cắt bằng "…" và mất đúng phần đáng đọc. Thứ bị thay là con số Đàm không dùng để quyết gì.
+  const hint = 'Một phiên nữa là tới «Khám Phá Tân Thế Giới»';
+  const [loot] = buildRewardToasts(PHIEN_THUONG, {}, { stageHint: hint }).filter((t) => t.source === 'loot');
+  assert.equal(loot.description, hint);
+  assert.ok(!/tài nguyên/.test(loot.description), 'vẫn còn đếm tài nguyên ⇒ đang NỐI chứ không THAY');
+  // Mọi thứ khác của thẻ phải y nguyên — đây chỉ là đổi một dòng chữ, không đổi luật thưởng.
+  assert.equal(loot.amount, '+120 XP');
+  assert.deepEqual(loot.action, { detail: 'loot' });
+});
+
+test('lên kỷ vẫn KHÔNG có thẻ phiên, kể cả khi đang sắp tới mốc', () => {
+  // Lên kỷ là một trong bốn việc được phép chặn màn hình; hộp thoại đã mở, thêm toast là bản sao
+  // thừa. `stageHint` không được mở lại cánh cửa mà `eraChanged` đã đóng.
+  const toasts = buildRewardToasts(
+    { lootModalOpen: true, pendingReward: { ...PHIEN_THUONG.pendingReward, eraChanged: true } },
+    {},
+    { stageHint: 'Một phiên nữa là tới «X»' },
+  );
+  assert.equal(toasts.filter((t) => t.source === 'loot').length, 0);
+});

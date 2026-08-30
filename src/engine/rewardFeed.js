@@ -94,7 +94,7 @@ function buildWeeklyToast(pending) {
  * ⚠️ LÊN KỶ THÌ KHÔNG CÓ THẺ NÀY: kỷ mới là một trong bốn việc được phép chặn
  * màn hình, nên hộp thoại mở thẳng và toast sẽ chỉ là một bản sao thừa.
  */
-function buildLootToast(pendingReward) {
+function buildLootToast(pendingReward, stageHint = null) {
   if (!pendingReward || pendingReward.eraChanged) return null;
 
   const xp = Number(pendingReward.totalSessionXP ?? pendingReward.finalXP ?? 0);
@@ -104,6 +104,13 @@ function buildLootToast(pendingReward) {
   if (resourceUnits > 0) bits.push(`+${resourceUnits} tài nguyên`);
   if ((pendingReward.rpEarned ?? 0) > 0) bits.push(`+${pendingReward.rpEarned} RP`);
 
+  // ⚠️ SẮP TỚI MỐC THÌ NÓI VỀ MỐC, KHÔNG ĐẾM TÀI NGUYÊN. `description` chỉ được ĐÚNG MỘT DÒNG
+  // (dài hơn bị cắt "…"), nên đây là THAY chứ không nối thêm — và cái được thay là con số Đàm
+  // không dùng để quyết gì ("+18 tài nguyên"), còn thứ thay vào ("một phiên nữa là tới «…»") là
+  // thứ khiến người ta muốn làm phiên tiếp. Bấm vào thẻ vẫn mở hộp thoại đủ mọi con số.
+  // Chỉ áp khi CÒN ≤1 PHIÊN: mốc còn xa thì tin ấy chưa đáng chiếm chỗ, và một dòng lúc nào cũng
+  // nói về mốc thì hết là tin.
+
   return {
     id: 'loot',
     source: 'loot',
@@ -111,7 +118,7 @@ function buildLootToast(pendingReward) {
     icon: '🎁',
     name: 'Phiên đã xong',
     tier: tierFromSessionMultiplier(pendingReward.multiplier, pendingReward.jackpotApplied),
-    description: bits.length > 0 ? bits.join(' · ') : (pendingReward.tierLabel ?? 'Phần thưởng đã được cộng.'),
+    description: stageHint ?? (bits.length > 0 ? bits.join(' · ') : (pendingReward.tierLabel ?? 'Phần thưởng đã được cộng.')),
     amount: xp > 0 ? `+${xp.toLocaleString('vi-VN')} XP` : null,
     action: { detail: 'loot' },
   };
@@ -224,10 +231,14 @@ export function buildBlueprintToast(blueprint) {
  * @param {object} missions  - `state.missions` (cần `list` để lấy tên nhiệm vụ)
  * @returns {Array} danh sách thẻ, đã xếp theo `SOURCE_ORDER`
  */
-export function buildRewardToasts(ui = {}, missions = {}) {
+/**
+ * @param {object} [extras] tin ngoài `ui`. `stageHint`: câu về cột mốc sắp tới, chỉ truyền khi
+ *   CÒN ≤1 PHIÊN là tới — xem `buildLootToast`.
+ */
+export function buildRewardToasts(ui = {}, missions = {}, extras = {}) {
   const toasts = [
     buildWeeklyToast(ui.weeklyReportPending),
-    buildLootToast(ui.lootModalOpen ? ui.pendingReward : null),
+    buildLootToast(ui.lootModalOpen ? ui.pendingReward : null, extras.stageHint ?? null),
     buildRelicToast(ui.relicNotification),
     buildLevelToast((ui.levelUpQueue ?? [])[0]),
     buildRankToast(ui.rankUpNotification),

@@ -38,6 +38,7 @@ import {
   filterByPeriod,
   toTimestampMs,
 } from '../engine/statsPeriod';
+import { buildStatsInsights } from '../engine/statsInsights';
 import {
   formatVietnamDate,
   formatVietnamTime,
@@ -1794,6 +1795,49 @@ function TrendBadge({ current, previous, unit = '', baselineLabel = 'giai đoạ
 }
 
 // ─── Period Selector ─────────────────────────────────────────────────────────
+// ─── "Điều đáng chú ý" — đưa phân tích của engine ra màn hình ────────────────
+//
+// ⚠️ DẢI NÀY ĐỌC TOÀN BỘ LỊCH SỬ, KHÔNG THEO KỲ ĐANG CHỌN — và điều đó PHẢI được nói ra trên
+// màn hình. Các hàm tín hiệu ở `gameMath.js` đều tự gác cỡ mẫu (cần 8–24 phiên tuỳ tín hiệu),
+// nên lọc chúng về "Hôm Nay" là làm chúng câm hết. Nhưng nếu không ghi rõ, người đọc sẽ mặc
+// định nó thuộc về khoảng thời gian đang chọn ngay phía trên — tức là dựng lại đúng cái hiểu
+// nhầm mà cả bản vá bộ lọc vừa đi sửa.
+const INSIGHT_TONE = {
+  warn: { dot: '#c2663f', label: 'Đáng để ý' },
+  good: { dot: '#5f8a5f', label: 'Điểm mạnh' },
+  info: { dot: '#9b9892', label: 'Ghi nhận' },
+};
+
+const InsightStrip = React.memo(function InsightStrip({ items }) {
+  if (!items || items.length === 0) return null;
+  return (
+    <div className="p-5" style={{ background: BG_CARD, border: `1px solid ${PANEL_BORDER}`, borderRadius: 'var(--skin-radius-card, 18px)', boxShadow: 'var(--skin-card-shadow)' }}>
+      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.18em]" style={{ color: TEXT_SOFT }}>Điều đáng chú ý</p>
+        <p className="text-[11px]" style={{ color: TEXT_SOFT }}>Đọc trên toàn bộ lịch sử, không theo khoảng thời gian đang chọn</p>
+      </div>
+      <div className="mt-4 grid gap-3 md:grid-cols-2">
+        {items.map((x) => {
+          const tone = INSIGHT_TONE[x.tone] ?? INSIGHT_TONE.info;
+          return (
+            <div key={x.id} className="rounded-[14px] border p-3.5" style={{ background: PANEL_BG_SOFT, borderColor: PANEL_BORDER }}>
+              <div className="flex items-center gap-2">
+                <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: tone.dot }} />
+                <span className="text-[10px] font-semibold uppercase tracking-[0.16em]" style={{ color: TEXT_SOFT }}>{tone.label}</span>
+              </div>
+              <p className="mt-1.5 text-[13.5px] font-semibold leading-snug" style={{ color: TEXT_PRIMARY }}>{x.headline}</p>
+              <p className="mt-1 text-[12px] leading-relaxed" style={{ color: TEXT_MUTED }}>{x.detail}</p>
+              {/* Cỡ mẫu KHÔNG phải chi tiết trang trí: một con số "79%" không có mẫu số thì
+                  không đọc được là mạnh hay là ngẫu nhiên. Cùng luật với AI Coach. */}
+              <p className="mt-2 text-[11px]" style={{ color: TEXT_SOFT }}>Dựa trên {x.sample}</p>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+});
+
 // ─── Bộ chọn khoảng thời gian — DÙNG CHUNG CHO CẢ MÀN ────────────────────────
 //
 // ⚠️ Trước 2026-08-30 có BA bộ chọn khai riêng ở ba tab, khác nhau cả danh sách, cả nhãn, cả
@@ -1899,6 +1943,12 @@ function OverviewTab({ history, streak, period, onPeriodChange }) {
     return { winMin, winCount: inWin.length, pct, achPct, achieved, goaled: goaled.length, bars, maxBar, cats, heat, maxDay, periodDays };
   }, [history, period, now]);
 
+  // Toàn bộ lịch sử, KHÔNG lọc theo kỳ — xem lý do ở chú thích của `InsightStrip`.
+  const insights = useMemo(
+    () => buildStatsInsights(history, { now: new Date(now), activeCategoryIds: (sessionCategories ?? []).map((c) => c.id) }),
+    [history, now, sessionCategories],
+  );
+
   const fmtH = (m) => { const h = Math.floor(m / 60); const r = m % 60; return h > 0 ? (r ? `${h}g ${r}p` : `${h}g`) : `${m}p`; };
   const periodLabel = getPeriodLabel(period).toLowerCase();
   const periodDays = view.periodDays;
@@ -1950,10 +2000,12 @@ function OverviewTab({ history, streak, period, onPeriodChange }) {
         </div>
       </div>
 
+      <InsightStrip items={insights} />
+
       <div className="grid gap-3 lg:grid-cols-[1.5fr_1fr]">
         <div className="p-5" style={card}>
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em]" style={{ color: TEXT_SOFT }}>
-            Giờ tập trung theo {period === 'year' ? 'tháng' : period === 'month' ? 'tuần' : 'ngày'}
+            Giờ tập trung theo {view.bars[0]?.unit ?? 'ngày'}
           </p>
           <div className="mt-5 flex h-[170px] items-stretch justify-between gap-2">
             {view.bars.map((b, i) => (

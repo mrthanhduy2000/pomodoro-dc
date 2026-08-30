@@ -204,3 +204,13 @@ test("CỘT 'ALL' — dữ liệu dài trên 2 năm thì gom theo NĂM, ngắn t
   // ĐỐI CHỨNG: hai độ mịn phải THẬT SỰ khác nhau, nếu không phép chọn độ mịn là mã chết.
   assert.notEqual(nam.length, thang.length);
 });
+
+test('CỘT — mỗi kỳ khai đúng ĐỘ MỊN của nó, và mọi cột trong một kỳ cùng độ mịn', () => {
+  const mong = { today: 'khung 2 giờ', week: 'ngày', month: 'tuần', quarter: 'tháng', year: 'tháng' };
+  for (const [key, unit] of Object.entries(mong)) {
+    const b = buildPeriodBuckets(key, WEDNESDAY);
+    assert.ok(b.every((x) => x.unit === unit), `${key}: phải là "${unit}", nhận được "${b[0].unit}"`);
+  }
+  assert.equal(buildPeriodBuckets('all', WEDNESDAY, new Date('2021-01-05T00:00:00+07:00').getTime())[0].unit, 'năm');
+  assert.equal(buildPeriodBuckets('all', WEDNESDAY, new Date('2026-05-05T00:00:00+07:00').getTime())[0].unit, 'tháng');
+});

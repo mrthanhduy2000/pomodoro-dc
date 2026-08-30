@@ -159,7 +159,12 @@ function monthSpan(fromTs, toTs) {
 export function buildPeriodBuckets(period, now = new Date(), spanStartTs = null) {
   const at = now instanceof Date ? now : new Date(now);
   const nowTs = at.getTime();
-  const mark = (list) => list.map((b) => ({ ...b, active: nowTs >= b.startTs && nowTs < b.endTs }));
+  // ⚠️ Mỗi cột tự khai ĐỘ MỊN (`unit`) của nó. Trước đó tầng giao diện đoán lại bằng
+  // `period === 'year' ? 'tháng' : period === 'month' ? 'tuần' : 'ngày'` — một chuỗi `if` viết
+  // cho BA kỳ, mà nay có SÁU, nên nó sẽ gọi cột 2-giờ là "ngày" và cột tháng của quý là "ngày".
+  // Đây đúng loại lỗi NHÃN vừa phải sửa ở tab Tổng Quan; nguồn của nhãn phải là nơi dựng ra thứ
+  // được dán nhãn, không phải nơi hiển thị nó.
+  const mark = (list, unit) => list.map((b) => ({ ...b, unit, active: nowTs >= b.startTs && nowTs < b.endTs }));
 
   if (period === 'today') {
     const dayStart = startOfVietnamDayTs(at);
@@ -168,7 +173,7 @@ export function buildPeriodBuckets(period, now = new Date(), spanStartTs = null)
       label: `${i * 2}h`,
       startTs: dayStart + i * 2 * HOUR,
       endTs: dayStart + (i + 1) * 2 * HOUR,
-    })));
+    })), 'khung 2 giờ');
   }
 
   if (period === 'week') {
@@ -178,7 +183,7 @@ export function buildPeriodBuckets(period, now = new Date(), spanStartTs = null)
       label,
       startTs: weekStart + i * 86400000,
       endTs: weekStart + (i + 1) * 86400000,
-    })));
+    })), 'ngày');
   }
 
   if (period === 'month') {
@@ -197,7 +202,7 @@ export function buildPeriodBuckets(period, now = new Date(), spanStartTs = null)
       cursor = end;
       i += 1;
     }
-    return mark(out);
+    return mark(out, 'tuần');
   }
 
   if (period === 'quarter') {
@@ -206,7 +211,7 @@ export function buildPeriodBuckets(period, now = new Date(), spanStartTs = null)
       const startTs = startOfVietnamMonthTs(new Date(qStart), i);
       const endTs = startOfVietnamMonthTs(new Date(qStart), i + 1);
       return { label: `Th${getVietnamMonthIndex(new Date(startTs)) + 1}`, startTs, endTs };
-    }));
+    }), 'tháng');
   }
 
   if (period === 'year') {
@@ -215,7 +220,7 @@ export function buildPeriodBuckets(period, now = new Date(), spanStartTs = null)
       const startTs = startOfVietnamMonthTs(new Date(yStart), i);
       const endTs = startOfVietnamMonthTs(new Date(yStart), i + 1);
       return { label: `Th${i + 1}`, startTs, endTs };
-    }));
+    }), 'tháng');
   }
 
   // 'all' — độ mịn theo bề rộng dữ liệu: dài quá 2 năm thì gom theo NĂM, không thì theo THÁNG.
@@ -231,7 +236,7 @@ export function buildPeriodBuckets(period, now = new Date(), spanStartTs = null)
       label: String(firstYear + i),
       startTs: startOfVietnamYearTs(new Date(yearZero), i),
       endTs: startOfVietnamYearTs(new Date(yearZero), i + 1),
-    })));
+    })), 'năm');
   }
 
   const count = Math.max(1, months + 1);
@@ -240,5 +245,5 @@ export function buildPeriodBuckets(period, now = new Date(), spanStartTs = null)
     const startTs = startOfVietnamMonthTs(new Date(monthZero), i);
     const endTs = startOfVietnamMonthTs(new Date(monthZero), i + 1);
     return { label: `Th${getVietnamMonthIndex(new Date(startTs)) + 1}`, startTs, endTs };
-  }));
+  }), 'tháng');
 }

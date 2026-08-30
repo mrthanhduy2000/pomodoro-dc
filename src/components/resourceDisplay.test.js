@@ -165,7 +165,11 @@ test('Tài nguyên thô · tinh chế · RP: CHỈ nằm sau nút Kho, không r�
     ['tài nguyên tinh chế', 'refined.t2Label'],
     ['RP nghiên cứu', 'researchRP'],
     ['tên giai đoạn', 'stage?.label'],
-    ['khoảng EP của chặng', 'stageStart.toLocaleString()'],
+    // ⚠️ Hỏi bằng CHỮ HIỆN RA, không bằng tên biến. Bản đầu tìm `stageStart.toLocaleString()`
+    // và ĐỎ khi phép chia chặng chuyển sang engine dùng chung (`engine/eraStage.js`) —
+    // trong khi dòng ấy vẫn nằm nguyên trong panel Kho, chỉ là nó đọc `eraStage?.epStart`.
+    // Lời hứa của bài test này là "con số cũ vẫn xem được", không phải "biến vẫn tên cũ".
+    ['khoảng EP của chặng', 'Khoảng EP của chặng:'],
   ];
 
   for (const [ten, needle] of mustBeInsideKho) {

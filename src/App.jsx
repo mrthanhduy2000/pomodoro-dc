@@ -11,6 +11,8 @@ import RankDisplay from './components/RankDisplay';
 import DailyMissions from './components/DailyMissions';
 import FocusRail from './components/FocusRail';
 import FocusNextAction from './components/FocusNextAction';
+import FocusStageCountdown from './components/FocusStageCountdown';
+import { getEraStage } from './engine/eraStage';
 import FocusCoachMobile from './components/FocusCoachMobile';
 import NotificationCenter from './components/NotificationCenter';
 import { RichTextView } from './components/RichText';
@@ -1444,6 +1446,12 @@ export default function App() {
   const eraEnd = ERA_THRESHOLDS[`ERA_${activeBook}_END`] ?? ERA_THRESHOLDS.ERA_15_END;
   const eraGap = Math.max(1, eraEnd - eraStart);
   const eraProgress = Math.min(1, Math.max(0, (totalEP - eraStart) / eraGap));
+  // ⚠️ THANH TIÊU ĐỀ NAY ĐO **CHẶNG**, KHÔNG ĐO CẢ KỶ. Một kỷ dài 5.600–20.800 EP nên ở nhịp
+  // thường một phiên đẩy thanh đúng ~1% và nó đầy một lần mỗi 1–6 THÁNG — tức người chơi không
+  // bao giờ nhìn thấy mình đang tiến. Chặng chia quãng ấy làm ba: ~3% mỗi phiên, đầy ba lần mỗi
+  // kỷ. `eraProgress` vẫn giữ vì nó là con số ĐÚNG cho câu hỏi "còn bao xa tới kỷ sau", chỉ là
+  // nó không phải con số nên đặt ở chỗ liếc mắt.
+  const eraStage = getEraStage(activeBook, totalEP);
   const { progressPct: levelPct } = getLevelProgress(totalEXP);
 
   const [activeTab, setActiveTab] = useState('focus');
@@ -1613,6 +1621,7 @@ export default function App() {
         eraLabel={eraMeta.label}
         eraEnd={eraEnd}
         eraProgress={eraProgress}
+        eraStage={eraStage}
         level={level}
         levelPct={levelPct / 100}
         sessionsCompletedToday={sessionsCompletedToday}
@@ -1722,6 +1731,13 @@ export default function App() {
                           trung mọc ra hai dòng rỗng.
                         */}
                         <FocusNextAction onNavigate={handleNotificationNavigate} />
+                        {/*
+                          Dòng thứ ba của cùng một bộ: "còn ~N phiên nữa tới mốc kế tiếp". Đặt SAU
+                          hai dòng kia vì nó nói về đích XA hơn — thứ tự đọc đi từ *phiên này đang
+                          đẩy cái gì* → *còn việc gì đang chờ* → *còn bao xa tới mốc*. Cả ba đều tự
+                          IM khi không có gì để nói.
+                        */}
+                        <FocusStageCountdown />
                         <div className="mt-6">
                           <PomodoroEngine
                             immersiveMode={isWideViewport}
@@ -2344,6 +2360,7 @@ function TopRail({
   eraLabel,
   eraEnd,
   eraProgress,
+  eraStage,
   level,
   levelPct,
   sessionsCompletedToday,
@@ -2388,25 +2405,51 @@ function TopRail({
             boxShadow: '0 8px 16px rgba(31,30,29,0.03)',
           }}
         >
+          {/*
+            ⚠️ THANH NÀY ĐO **CHẶNG**, KHÔNG ĐO CẢ KỶ (2026-08-29).
+            Một kỷ dài 5.600–20.800 EP ⇒ ở nhịp thường một phiên đẩy thanh ~1% và nó đầy ĐÚNG MỘT
+            LẦN mỗi 1–6 tháng. Một cái đích xa tới mức không nhìn thấy mình đang tiến thì không
+            phải một cái đích. Mỗi kỷ đã chia sẵn 3 chặng từ lâu (`makeEraStages`) nhưng chặng chỉ
+            được dùng ở `ResourceDisplay` — mà thẻ đó nằm ở cột phải `hidden … lg:flex`, tức trên
+            iPhone Đàm KHÔNG BAO GIỜ thấy. Đây là chỗ cả hai nền tảng đều thấy.
+            Phép tính ở `engine/eraStage.js`, dùng CHUNG với `ResourceDisplay` và màn Tập trung.
+          */}
           <div className="flex items-center justify-between gap-3">
-            <span className="mono whitespace-nowrap text-[10px] uppercase tracking-[0.2em] text-[var(--muted)]">Tiến trình kỷ</span>
+            <span className="mono min-w-0 truncate text-[10px] uppercase tracking-[0.2em] text-[var(--muted)]">
+              {eraStage ? eraStage.label : 'Tiến trình kỷ'}
+            </span>
             <span className="mono whitespace-nowrap text-[11.5px] text-[var(--muted)]">
-              {/* ⚠️ ĐƠN VỊ Ở ĐÂY LÀ **EP**, KHÔNG PHẢI XP. Hai con số này là `progress.totalEP` và
-                  `ERA_THRESHOLDS[…]` — cùng một đơn vị mà `ResourceDisplay`/`PrestigeModal`/
-                  `StakePanel` đều gọi là EP. Chữ "XP" ở đây từng nói dối suốt một thời gian dài mà
-                  không ai thấy, vì trên một tài khoản mới thì nó chỉ là "0 / 1.300" — vô hại. Chỉ
-                  khi soi bằng fixture "đã chơi 6 tháng" (`scripts/make-fixture.mjs`) mới lộ ra:
-                  cấp 4 mà thanh XP báo 20.888, trong khi cấp 4 chỉ cần 24.000 XP — hai đại lượng
-                  khác nhau bị dán cùng một nhãn ngay trên thanh tiêu đề, chỗ dễ thấy nhất app. */}
-              {totalEP.toLocaleString()} / {eraEnd.toLocaleString()} EP
+              {/* ⚠️ ĐƠN VỊ Ở ĐÂY LÀ **EP**, KHÔNG PHẢI XP. Cùng đơn vị mà `ResourceDisplay`/
+                  `PrestigeModal`/`StakePanel` đều gọi là EP. Chữ "XP" ở đây từng nói dối suốt một
+                  thời gian dài mà không ai thấy, vì trên tài khoản mới nó chỉ là "0 / 1.300" — vô
+                  hại. Chỉ khi soi bằng fixture "đã chơi 6 tháng" mới lộ ra: cấp 4 mà thanh XP báo
+                  20.888, trong khi cấp 4 cần 24.000 XP — hai đại lượng khác nhau, cùng một nhãn,
+                  ngay trên thanh tiêu đề. */}
+              {eraStage
+                ? `${Math.round(eraStage.epInStage).toLocaleString()} / ${eraStage.epRange.toLocaleString()} EP`
+                : `${totalEP.toLocaleString()} / ${eraEnd.toLocaleString()} EP`}
             </span>
           </div>
           <div className="mt-2.5 h-[3px] overflow-hidden rounded-full bg-[var(--line)]">
             <div
               className="h-full rounded-full bg-[var(--ink)] transition-[width] duration-500"
-              style={{ width: `${eraProgress * 100}%` }}
+              style={{ width: `${(eraStage ? eraStage.progress : eraProgress) * 100}%` }}
             />
           </div>
+          {/* Ba vạch chặng: cho thấy đây là mốc thứ mấy trong ba, tức "đầy thanh" sẽ tới BA lần
+              mỗi kỷ chứ không phải một. Không có nó thì thanh mới trông y hệt thanh cũ, chỉ chạy
+              nhanh hơn — và người xem không có cách nào biết vì sao. */}
+          {eraStage && (
+            <div className="mt-1.5 flex gap-1" aria-hidden="true">
+              {Array.from({ length: eraStage.total }, (_, i) => (
+                <span
+                  key={i}
+                  className="h-[2px] flex-1 rounded-full"
+                  style={{ background: i <= eraStage.index ? 'var(--accent)' : 'var(--line)' }}
+                />
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="grid grid-cols-[repeat(3,minmax(0,1fr))_auto] items-center gap-2 lg:hidden">

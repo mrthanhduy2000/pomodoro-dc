@@ -38,6 +38,10 @@ import { EASE, useEnterMotion, useSnapMotion } from '../lib/motionPresets';
 import useGameStore from '../store/gameStore';
 import useSettingsStore from '../store/settingsStore';
 import { ERA_METADATA, ERA_REFINED, normalizeRefinedBag } from '../engine/constants';
+// ⚠️ Phép "EP này thuộc chặng nào" TỪNG là một hàm cục bộ ngay trong file này — nghĩa là chỉ
+// cột phải (`hidden … lg:flex`, iPhone không thấy) mới biết tới chặng. Nay thanh tiêu đề và màn
+// Tập trung cũng hỏi cùng câu ấy, nên công thức chuyển sang engine thuần dùng chung.
+import { getEraStage } from '../engine/eraStage';
 import {
   FLASH_MS,
   NUMBER_STYLE,
@@ -45,26 +49,6 @@ import {
   labelSizeFor,
   shouldFlashOnIncrease,
 } from './resourceDisplayFormat';
-
-function getCurrentStage(eraMeta, totalEP) {
-  if (!eraMeta?.stages?.length) return null;
-
-  for (let index = eraMeta.stages.length - 1; index >= 0; index -= 1) {
-    if (totalEP >= eraMeta.stages[index].epStart) {
-      return {
-        ...eraMeta.stages[index],
-        index,
-        totalStages: eraMeta.stages.length,
-      };
-    }
-  }
-
-  return {
-    ...eraMeta.stages[0],
-    index: 0,
-    totalStages: eraMeta.stages.length,
-  };
-}
 
 /**
  * Trả về `true` trong `FLASH_MS` sau mỗi lần `value` TĂNG.
@@ -174,12 +158,13 @@ export default function ResourceDisplay() {
   const lightTheme = uiTheme === 'light';
   const bookKey = `book${activeBook}`;
   const eraMeta = ERA_METADATA[activeBook] ?? ERA_METADATA[1];
-  const stage = getCurrentStage(eraMeta, totalEP);
-  const stageStart = stage?.epStart ?? 0;
-  const stageEnd = stage?.epEnd ?? stageStart;
-  const stageRange = Math.max(1, stageEnd - stageStart);
-  const stageXP = Math.max(0, totalEP - stageStart);
-  const stagePct = Math.max(0, Math.min(100, (stageXP / stageRange) * 100));
+  const eraStage = getEraStage(activeBook, totalEP);
+  // `formatEraStageLabel` đọc `totalStages` (tên cũ) — dịch ở đúng một chỗ thay vì đổi tên trường
+  // trong engine, vì tên `total` bên engine hợp với chỗ khác và đây chỉ là một nhãn hiển thị.
+  const stage = eraStage ? { ...eraStage, totalStages: eraStage.total } : null;
+  const stageRange = eraStage?.epRange ?? 1;
+  const stageXP = eraStage?.epInStage ?? 0;
+  const stagePct = Math.max(0, Math.min(100, (eraStage?.progress ?? 0) * 100));
   const refined = ERA_REFINED[activeBook] ?? ERA_REFINED[1];
   const refinedBag = normalizeRefinedBag(resourcesRefined?.[activeBook]);
   const resourceEntries = (eraMeta.resources ?? []).map((def) => ({
@@ -279,7 +264,7 @@ export default function ResourceDisplay() {
             className="mt-1"
             style={{ ...NUMBER_STYLE, fontSize: `${labelSizeFor(KHO_NUMBER_PX)}px`, color: 'var(--muted)' }}
           >
-            Khoảng EP của chặng: {stageStart.toLocaleString()} → {stageEnd.toLocaleString()}
+            Khoảng EP của chặng: {(eraStage?.epStart ?? 0).toLocaleString()} → {(eraStage?.epEnd ?? 0).toLocaleString()}
           </div>
 
           <div

@@ -12,7 +12,7 @@ import DailyMissions from './components/DailyMissions';
 import FocusRail from './components/FocusRail';
 import FocusMoment from './components/FocusMoment';
 import { getEraStage } from './engine/eraStage';
-import { evaluateStreakAtRisk } from './engine/gameMath';
+import { calculateStreakMilestoneProgress, evaluateStreakAtRisk } from './engine/gameMath';
 import FocusCoachMobile from './components/FocusCoachMobile';
 import NotificationCenter from './components/NotificationCenter';
 import { RichTextView } from './components/RichText';
@@ -1613,6 +1613,9 @@ export default function App() {
   // xuôi hơn) và cả app TRẮNG XOÁ: `const` trong vùng chết tạm thời ném `ReferenceError` ngay
   // lúc render. ESLint KHÔNG bắt (`no-use-before-define` không bật), `npm test` KHÔNG bắt (test
   // đọc mã nguồn, không dựng React), `npm run build` KHÔNG bắt — chỉ ảnh chụp mới thấy.
+  // Mốc chuỗi kế tiếp — dùng làm MẪU SỐ cho ô "Chuỗi" ở thanh trên. CÙNG hàm mà `FocusRail` và
+  // `useStreakMilestone` dùng, nên ba chỗ không thể nói lệch nhau. `null` khi đã mở hết mốc.
+  const streakMilestoneTarget = calculateStreakMilestoneProgress(currentStreak).nextMilestone?.days ?? null;
   const focusMinutesToday = sumFocusMinutesOnDay(history, todayKey);
   const focusHoursToday = formatDurationMinutes(focusMinutesToday);
   const hasFocusSessionInProgress = timerSessionRunning && !isOnBreak;
@@ -1647,6 +1650,7 @@ export default function App() {
         sessionsCompletedToday={sessionsCompletedToday}
         focusHoursToday={focusHoursToday}
         currentStreak={currentStreak}
+        streakMilestoneTarget={streakMilestoneTarget}
         totalEP={totalEP}
         notificationControl={<NotificationCenter onNavigate={handleNotificationNavigate} />}
       />
@@ -2402,6 +2406,7 @@ function TopRail({
   sessionsCompletedToday,
   focusHoursToday,
   currentStreak,
+  streakMilestoneTarget,
   totalEP,
   notificationControl,
 }) {
@@ -2518,10 +2523,24 @@ function TopRail({
         */}
         <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] items-center gap-2 lg:hidden">
           <TinyStat compact label="Hôm nay" value={focusHoursToday} />
+          {/*
+            ⚠️ Ô CHUỖI CÓ MẪU SỐ (vòng 20, 2026-08-30). Nó vốn hiện đúng một con số trần — "1" —
+            và theo luật sẵn có của dự án thì *một con số không có mẫu số không phải một mục
+            tiêu*: nó nói "đang ở đâu" mà không nói "còn bao xa". Mốc chuỗi kế tiếp ĐÃ được tính
+            sẵn (`calculateStreakMilestoneProgress`, dùng chung với `FocusRail` và
+            `useStreakMilestone`) nhưng cả hai chỗ ấy đều là `hidden … lg:flex` hoặc một dòng chỉ
+            hiện khi còn ≤3 ngày, nên ở iPhone con số này chưa bao giờ có đích.
+            ⚠️ KHÔNG tốn thêm một điểm ảnh chiều cao nào: ô đã cao 50px và dòng giá trị vẫn là
+            MỘT dòng ("1 / 7" thay cho "1"). Đã đo — không phải đoán, vì đúng ô hàng này từng bị
+            một bản vá "cho gọn" làm CAO THÊM khi gộp hai số vào một chuỗi (xem ghi chú trên).
+            Đã mở hết mốc thì thôi mẫu số — lúc ấy không còn cái đích nào để nói.
+          */}
           <TinyStat
             compact
             label={streakRisk?.atRisk ? 'Chuỗi ⚠' : 'Chuỗi'}
-            value={currentStreak.toLocaleString()}
+            value={streakMilestoneTarget
+              ? `${currentStreak.toLocaleString()} / ${streakMilestoneTarget}`
+              : currentStreak.toLocaleString()}
             accent
             atRisk={streakRisk?.atRisk === true}
           />

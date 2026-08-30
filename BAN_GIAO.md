@@ -39,6 +39,20 @@
 > (UTC trong hộp cát) trong khi mã đọc `getVietnamHour` ⇒ nhóm phiên "buổi tối" rơi vào "đêm
 > khuya", và bài test khẳng định một điều về một khung giờ khác hẳn khung nó tưởng. Nó **không
 > đỏ** — nó chỉ lặng lẽ kiểm sai chỗ. Fixture nay dựng chuỗi `+07:00` tường minh.
+> ⚠️ **VÀ MỘT MẠCH RÁC LỚN HƠN NHIỀU, tìm ra bằng cách quét khai báo cấp cao nhất nào chỉ xuất
+> hiện ĐÚNG MỘT LẦN:** **bốn component chết** — `AreaChart` (600 dòng!) · `OverviewHeroMetric` ·
+> `WeekPulseList` · `TrendBadge` — cộng **rác DÂY CHUYỀN** chỉ sống nhờ chúng (6 hàm trợ giúp +
+> 7 hằng số + 2 import). `AreaChart` còn được nhắc trong **chú thích đầu file** như thể đang
+> dùng (*"3. AreaChart — dots có title tooltip, chiều cao đúng"*), tức chú thích ấy đã nói dối
+> nhiều tháng. Tổng: **4.901 → 3.941 dòng (−960, −19,6%)**.
+> ⚠️ **Bản xoá ĐẦU TIÊN sai và LINT bắt được** (34 lỗi `no-undef`): phép cắt theo cân bằng ngoặc
+> nuốt cả hằng số hàng xóm, vì `MONO_FONT` (chết) nằm NGAY DƯỚI `DISPLAY_FONT` (dùng 20+ chỗ).
+> Làm lại: hàm thì cắt theo khối, hằng số một dòng thì xoá đúng dòng và **đối chiếu lại rằng tên
+> ấy chỉ xuất hiện 1 lần trong cả file trước khi xoá**. ⇒ *xoá hàng loạt phải kiểm từng cái, và
+> phải quét LẶP LẠI cho tới khi không còn gì — rác dây chuyền chỉ lộ ra sau khi xoá vòng trước.*
+> ⚠️ **Gói tải KHÔNG nhỏ đi mấy** (115 → 123,5 KB, nhưng phần tăng là do dải insight mới): bundler
+> vốn đã tree-shake được code chết cấp module. **Cái được là khả năng bảo trì, không phải tốc độ**
+> — đừng bán chuyện này thành "app nhẹ hơn".
 > **Nghiệm thu:** ảnh chụp thật 1280px và 390px (bộ chọn 6 nút không nằm vừa cạnh tiêu đề — ảnh
 > cho thấy "Năm Nay"/"Tất Cả" bị mép phải xén, đã cho xuống hàng riêng), fixture 180 ngày/624
 > phiên. Test **1371 đạt · 1 bỏ qua · 0 hỏng** (+40 bài). Chi tiết: ADR-067 · CHANGELOG vòng 14.

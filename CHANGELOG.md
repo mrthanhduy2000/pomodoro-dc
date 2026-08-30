@@ -40,6 +40,12 @@ hình **nói rõ điều đó**.
 **Dọn kèm.** Gỡ 3 props chết, 3 hằng số chết, 1 hàm chết 30 dòng, 2 helper trùng lặp với engine,
 4 import thời gian thừa.
 
+**Dọn code chết.** Quét khai báo cấp cao nhất nào chỉ xuất hiện đúng một lần: **4 component chết**
+(`AreaChart` 600 dòng · `OverviewHeroMetric` · `WeekPulseList` · `TrendBadge`) + rác dây chuyền chỉ
+sống nhờ chúng (6 hàm, 7 hằng số, 2 import). `StatsDashboard.jsx`: **4.901 → 3.941 dòng (−19,6%)**.
+⚠️ Gói tải không nhỏ đi (bundler vốn đã tree-shake được) — cái được là **khả năng bảo trì**, không
+phải tốc độ.
+
 **Ảnh hưởng / tương thích.** Không đụng dữ liệu đã lưu, không migration, không đổi store. Chỉ là
 cách màn Thống kê ĐỌC lịch sử. Mặc định kỳ đổi từ "tất cả" sang **"Tuần Này"** ở hai tab Tập Trung
 và Phân Loại — có chủ đích: một màn thống kê mở ra ở "toàn bộ lịch sử" thì con số đầu tiên người

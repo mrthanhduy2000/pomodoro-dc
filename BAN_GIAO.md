@@ -7,6 +7,23 @@
 > **BA lần** (ô "PHIÊN 0" ở thanh đầu · câu "Bạn chưa chốt phiên nào trong hôm nay" · dòng "Phiên
 > 0/5 hôm nay" dưới đồng hồ). Bản thứ ba là bản TỐT NHẤT vì nó có mẫu số ⇒ hai bản kia nhường.
 >
+> **VÒNG 10 — CƠ CHẾ THƯỞNG MẠNH NHẤT GAME LẦN ĐẦU TỚI ĐƯỢC iPHONE.** Cột mốc chuỗi (kể cả mốc
+> "Bền Vững" cho một **bonus VĨNH VIỄN**) đã chạy từ lâu, có test, và CHỈ hiện ở `FocusRail` — một
+> cột `hidden … lg:flex`. ⇒ **iPhone chưa bao giờ thấy nó.** Nay có `describeStreakMilestone` →
+> `useStreakMilestone` → `FocusStreakMilestone.jsx`, một dòng ở CỘT GIỮA.
+> ⚠️ **ĐÂY LÀ MỘT MẠCH CÒN ĐÀO ĐƯỢC, PHIÊN SAU ĐỌC KỸ:** `FocusRail` còn thứ nữa iPhone không
+> thấy — bộ đánh dấu ngày ("Đạt mục tiêu ngày" · "Một phiên sâu ≥45′"). *Một tính năng đã làm xong
+> mà nằm trong một cột `hidden` thì bằng chưa làm* — soi `hidden … lg:` trên toàn cây trước khi
+> nghĩ ra tính năng mới.
+> ⚠️ Gác `STREAK_MILESTONE_NEAR_DAYS = 3` là CÓ CHỦ ĐÍCH, cùng lý do `STAGE_COUNTDOWN_MAX_SESSIONS`:
+> đích quá xa thì làm nản chứ không kéo, và bốn dòng cùng hiện thì đồng hồ rơi lại xuống dưới nếp
+> gấp — đúng cái vòng 8–9 vừa mất công kéo lên. **Rủi ro còn lại:** bốn dòng ấy độc lập nhau, chưa
+> ai đo ca xấu nhất (cả bốn cùng nói). Đo được thì cân nhắc gộp thành MỘT dòng biết chọn.
+> ⚠️ Fixture mặc định KHÔNG soi được dòng này: `streak.currentStreak` trong file bị store **dựng
+> lại từ lịch sử** (`rebuildStreakFromHistory`), mà lịch sử của fixture đề ngày cũ ⇒ chuỗi về 0.
+> Phải DỊCH TOÀN BỘ lịch sử sao cho phiên mới nhất rơi vào hôm qua (lệnh trong nhật ký phiên này).
+> Đúng bài học *"fixture đều tăm tắp là fixture vô dụng"*.
+>
 > **VÒNG 9 — NÚT CHÍNH CỦA APP HẾT LÀ NGÕ CỤT.** Nút quan trọng nhất, khi chưa có mục tiêu, là một
 > nút `disabled` ghi "Cần điền mục tiêu". Nút `disabled` không nhận sự kiện bấm ⇒ nó nói ra điều
 > đang thiếu mà **không nói thiếu ở đâu**. Ô mục tiêu nằm ở y≈1400 trên trang cao 3035px. Nay nó là

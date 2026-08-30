@@ -1110,6 +1110,67 @@ export function evaluateStreakAtRisk({
   return { atRisk: done === 0, streak, shieldReady: shieldReady === true };
 }
 
+/**
+ * Trần "còn mấy ngày nữa thì mới đáng nói" cho dòng cột mốc chuỗi ở màn Tập trung.
+ *
+ * ⚠️ CÙNG MỘT LÝ DO VỚI `STAGE_COUNTDOWN_MAX_SESSIONS`, và bài học ấy phải trả giá mới có: một
+ * dòng đếm ngược tới cái đích còn RẤT XA thì **làm nản chứ không kéo** — bản đầu của dòng đếm
+ * ngược chặng in ra *"Còn ~64 phiên nữa tới «Thương Mại Toàn Cầu»"* và nó chiếm đúng chỗ mà một
+ * câu cổ vũ đáng lẽ đứng. Ở đây mốc chuỗi cách nhau 7 ngày, nên 3 ngày ≈ nửa chặng cuối: đủ gần
+ * để "hôm nay đừng bỏ" là một câu có nghĩa, đủ hiếm để nó không thành tiếng ồn hằng ngày.
+ * Hệ quả CÓ CHỦ ĐÍCH: dòng này im lặng ở phần lớn các ngày.
+ */
+export const STREAK_MILESTONE_NEAR_DAYS = 3;
+
+/**
+ * "Sắp tới một cột mốc chuỗi chưa?" — MỘT DÒNG cho màn Tập trung.
+ *
+ * ⚠️ VÌ SAO PHẢI CÓ HÀM NÀY TRONG KHI `calculateStreakMilestoneProgress` ĐÃ TỒN TẠI: hàm kia trả
+ * về dữ liệu THÔ và nó đang được dùng ở `FocusRail` — cột phải, `hidden … lg:flex`, tức **iPhone
+ * KHÔNG BAO GIỜ thấy**. Cơ chế mạnh nhất của game (một bonus VĨNH VIỄN, đếm ngược từng ngày) đã
+ * làm xong, đã có test, và chưa từng tới được thiết bị Đàm dùng hằng ngày. Hàm này là cái cổng để
+ * nó đi ra màn hình chính, và nó THUẦN nên gác được bằng test thay vì bằng ảnh chụp.
+ *
+ * ⚠️ KHÔNG NÓI KHI CHUỖI = 0. Lúc ấy thứ đúng để nói là "hôm nay chưa có phiên nào", mà câu ấy đã
+ * có chỗ nói rồi (dòng dưới lời chào). Thêm một câu về cột mốc mình chưa bắt đầu đi tới là nói về
+ * một cái đích chưa có đường.
+ *
+ * @param {object} input
+ * @param {number} input.currentStreak
+ * @param {number} [input.nearDays] trần ngày; chỉ để test bơm giá trị, mã sản phẩm dùng mặc định.
+ * @returns {{text: string, days: number, permanent: boolean, tone: 'imminent'|'normal'} | null}
+ *          `null` = im lặng, và đó là trạng thái THƯỜNG GẶP.
+ */
+export function describeStreakMilestone({ currentStreak = 0, nearDays = STREAK_MILESTONE_NEAR_DAYS } = {}) {
+  const streak = Math.max(0, Math.floor(Number(currentStreak) || 0));
+  if (streak < 1) return null;
+
+  const { nextMilestone, daysRemaining } = calculateStreakMilestoneProgress(streak);
+  if (!nextMilestone || daysRemaining < 1) return null;
+
+  const limit = Math.max(0, Math.floor(Number(nearDays) || 0));
+  if (daysRemaining > limit) return null;
+
+  // ⚠️ "còn 1 ngày" nói thành "ngày mai" — cùng một sự thật, nhưng một cái là số đếm còn một cái là
+  // một thời điểm có thật trong đầu người đọc. Chỗ dopamine mạnh nhất nằm NGAY TRƯỚC đích, nên
+  // đúng ca ấy phải là câu dễ hình dung nhất.
+  const khi = daysRemaining === 1 ? 'Mai' : `Còn ${daysRemaining} ngày`;
+  // ⚠️ MỐC THƯỜNG GỌI BẰNG SỐ NGÀY, MỐC VĨNH VIỄN GỌI BẰNG TÊN. Nhãn trong bảng là "mốc 7" /
+  // "mốc 14" / "Bền Vững"; ghép thẳng nhãn vào câu ra "chạm mốc 7 chuỗi" — đúng dữ liệu mà sai
+  // tiếng Việt. Hai mốc đầu chỉ là con số nên nói bằng số ("mốc chuỗi 7 ngày") thì tự nó rõ; mốc
+  // cuối có TÊN RIÊNG và đó chính là thứ đáng khoe, nên giữ tên.
+  const dich = nextMilestone.permanent
+    ? nextMilestone.label
+    : `mốc chuỗi ${nextMilestone.days} ngày`;
+  const thuong = nextMilestone.permanent ? ' — bonus vĩnh viễn' : '';
+  return {
+    text: `${khi} là chạm ${dich}${thuong}`,
+    days: daysRemaining,
+    permanent: nextMilestone.permanent === true,
+    tone: daysRemaining <= 1 ? 'imminent' : 'normal',
+  };
+}
+
 export function calculateStreakMilestoneProgress(currentStreak = 0) {
   const streak = Math.max(0, Math.floor(Number(currentStreak) || 0));
   const allMilestones = STREAK_MILESTONES.map((m) => ({

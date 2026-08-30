@@ -12,6 +12,7 @@ import DailyMissions from './components/DailyMissions';
 import FocusRail from './components/FocusRail';
 import FocusNextAction from './components/FocusNextAction';
 import FocusStageCountdown from './components/FocusStageCountdown';
+import FocusStreakMilestone from './components/FocusStreakMilestone';
 import { getEraStage } from './engine/eraStage';
 import { evaluateStreakAtRisk } from './engine/gameMath';
 import FocusCoachMobile from './components/FocusCoachMobile';
@@ -1770,6 +1771,18 @@ export default function App() {
                           IM khi không có gì để nói.
                         */}
                         <FocusStageCountdown />
+                        {/*
+                          Dòng thứ TƯ, và là dòng nói về thang thời gian DÀI nhất: chuỗi ngày. Thứ
+                          tự đọc của cả bộ đi từ gần tới xa — *phiên này đang đẩy cái gì* → *còn
+                          việc gì đang chờ* → *còn bao xa tới mốc của kỷ* → *chuỗi sắp chạm mốc*.
+                          ⚠️ Ở LẠI khi phiên đang chạy (khác `FocusNextAction`): nó không mời đi
+                          đâu cả, nó nói lý do để NGỒI YÊN cho hết phiên — đúng nhóm với
+                          `FocusCityTease`/`FocusStageCountdown`.
+                          ⚠️ Nó là dòng dễ gây phình nhất trong bốn dòng, nên engine gác rất chặt
+                          (chỉ mở miệng khi còn ≤3 ngày tới mốc): bốn dòng cùng hiện thì đồng hồ
+                          lại rơi xuống dưới nếp gấp, đúng cái vừa mất công kéo lên.
+                        */}
+                        <FocusStreakMilestone />
                         <div className="mt-6">
                           <PomodoroEngine
                             immersiveMode={isWideViewport}

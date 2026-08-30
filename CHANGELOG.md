@@ -12,6 +12,38 @@
 
 ---
 
+## 2026-08-30 (vòng 10) — Cơ chế thưởng mạnh nhất game lần đầu tới được iPhone
+
+**Vấn đề.** Cột mốc chuỗi — kể cả mốc **"Bền Vững"** cho một **bonus VĨNH VIỄN**, phần thưởng mạnh
+nhất trong cả game — đã chạy từ lâu, có test, và được hiện ở `FocusRail`. Nhưng `FocusRail` nằm
+trong cột phải `hidden … lg:flex`, tức **iPhone KHÔNG BAO GIỜ thấy** — mà iPhone là thiết bị Đàm
+dùng hằng ngày. Một cơ chế đúng, đã trả tiền để làm, mà không tới được người dùng thì bằng không.
+
+**Đã thêm.** `describeStreakMilestone` (`engine/gameMath.js`) → `useStreakMilestone` →
+`FocusStreakMilestone.jsx`: **một dòng** ở cột GIỮA màn Tập trung, cạnh ba dòng anh em đã có. Bốn
+dòng cùng trả lời một câu — *bấm Bắt đầu bây giờ thì được gì* — ở bốn thang thời gian: phiên này ·
+việc kế tiếp · chặng của kỷ · **chuỗi ngày**.
+
+**Gác chặt, im lặng là mặc định.** `STREAK_MILESTONE_NEAR_DAYS = 3`: chỉ mở miệng khi còn ≤3 ngày
+tới mốc. Cùng lý do với `STAGE_COUNTDOWN_MAX_SESSIONS = 12` — một cái đích còn rất xa thì **làm nản
+chứ không kéo**, và bốn dòng cùng hiện thì đồng hồ lại rơi xuống dưới nếp gấp. Còn 1 ngày thì đổi
+giọng (nhịp phần thưởng, màu nhấn, nói "Mai" thay vì "còn 1 ngày") — chỗ dopamine mạnh nhất nằm
+ngay trước đích.
+
+**Cách gọi tên có chủ đích:** mốc thường gọi bằng SỐ NGÀY ("mốc chuỗi 14 ngày"), mốc vĩnh viễn gọi
+bằng TÊN RIÊNG và nói rõ phần thưởng ("Bền Vững — bonus vĩnh viễn"). Bản đầu ghép thẳng nhãn của
+bảng vào câu và ra *"chạm mốc 7 chuỗi"* — đúng dữ liệu, sai tiếng Việt.
+
+**Khoá bằng test** (`streakMilestoneLine.test.js`, 7 bài): im khi chưa có chuỗi · im khi còn xa ·
+đúng số ngày ở mọi mốc · **cắt đúng ở biên** (đúng trần thì nói, quá một ngày thì im — chỗ một bản
+vá "nới cho chắc" sẽ đi qua mà không ai thấy) · đổi giọng ở ngày cuối · cách gọi tên · và một bài
+đọc `App.jsx` đòi component **thật sự được gắn vào cột giữa** — đúng loại hỏng đã để cơ chế này
+nằm ngoài tầm mắt suốt nhiều tháng.
+
+**Ảnh hưởng.** Chỉ giao diện; không đụng kinh tế game, không đụng Thành Phố. Không migration.
+
+---
+
 ## 2026-08-30 (vòng 9) — Nút chính hết là ngõ cụt: "Cần điền mục tiêu" → "Điền mục tiêu →"
 
 **Vấn đề, đo bằng ảnh chụp khung 390px THẬT.** Nút quan trọng nhất của cả app, khi chưa có mục tiêu,

@@ -497,21 +497,31 @@ export default function Achievements() {
               <p className="mono text-[10px] uppercase tracking-[0.2em] text-[var(--muted-2)]">
                 Lưu trữ thành tích
               </p>
+              {/*
+                ⚠️ NHẤN VÀO CON SỐ ĐÃ ĐẠT, KHÔNG NHẤN VÀO MẪU SỐ (đổi 2026-08-29).
+                Bản cũ viết `{đã đạt}/{360} dấu đã đạt` ở cỡ 40px — ở khung 390px nó tràn thành HAI
+                DÒNG CHỮ KHỔNG LỒ, và là thứ ĐẦU TIÊN, TO NHẤT màn hình. Với một mẫu số 360 thì câu
+                ấy luôn đọc ra là *"bạn mới đi được vài phần trăm"*, kể cả khi người chơi vừa mở
+                được cái thứ một trăm. Đó là mở màn hình bằng một lời chê.
+                Nay: con số ĐÃ ĐẠT to (đó là thành quả), mẫu số lùi về cỡ nhỏ bên cạnh (vẫn có mặt
+                để biết còn bao xa — không giấu sự thật, chỉ thôi hét nó lên).
+                Cỡ chữ 40 → 30: hai dòng ở khung 390px là hai dòng cho một con số.
+                ⚠️ Bốn dòng mô tả "màn này là gì" ĐÃ GỠ — nó giải thích một màn hình mà người đọc
+                đang đứng trong đó, và đọc một lần là đủ cho cả đời dùng app. Cùng lý do đã gỡ
+                subtitle của `ShellPane` khỏi khổ điện thoại.
+              */}
               <h2
-                className="mt-2 text-[40px] tracking-[-0.05em] text-[var(--ink)]"
+                className="mt-2 text-[30px] leading-tight tracking-[-0.04em] text-[var(--ink)]"
                 style={{ fontFamily: DISPLAY_FONT, fontWeight: 600 }}
               >
-                {dataset.totalUnlocked}/{dataset.totalAchievements} dấu đã đạt
+                {dataset.totalUnlocked}
+                <span className="ml-2 text-[15px] font-semibold tracking-normal text-[var(--muted)]">
+                  / {dataset.totalAchievements} dấu
+                </span>
               </h2>
-              <p className="mt-2 max-w-2xl text-[14px] leading-6 text-[var(--ink-2)]">
-                Mỗi dấu ghi lại một chặng tiến. Màn này giữ thứ tự đạt, thời điểm mở và một ghi chú ngắn để đọc lại tiến trình như một lưu trữ gọn.
-              </p>
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
-              <span className="rounded-full border border-[var(--line)] bg-[rgba(255,255,255,0.82)] px-3 py-1.5 text-xs font-semibold text-[var(--muted)]">
-                Tiến độ tổng: {totalProgress}%
-              </span>
               {activeTierInfo ? (
                 <span className="rounded-full border border-[var(--line)] bg-[rgba(255,255,255,0.82)] px-3 py-1.5 text-xs font-semibold text-[var(--muted)]">
                   Đang lọc theo tier: {activeTierInfo.label}

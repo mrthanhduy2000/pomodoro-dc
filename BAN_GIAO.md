@@ -1,3 +1,46 @@
+> Cập nhật lần cuối: **2026-08-30 (vòng 20)** — tối giản toàn app bằng **fan-out soi song song**:
+> 6 nhánh CHỈ ĐỌC soi 9 màn ở khung 390px thật (mỗi nhánh một màn, ảnh ra tên riêng, cấm sửa file,
+> **cấm `npm run build`** vì `dist/` dùng chung ⇒ build giữa chừng làm các nhánh đo trên hai cây mã
+> khác nhau), luật *không số đo = không tính*, rồi chấm chéo và **sửa TUẦN TỰ** — 9 việc, 9 commit.
+>
+> **PHÁT HIỆN LỚN NHẤT, và nó là một HỒI QUY CỦA CHÍNH VÒNG 19:** nút chính màn Tập trung lại bị
+> thanh tab che (nút y=773…815 · thanh tab NỔI y=774, nền ĐỤC `rgb(247,246,242)` không alpha ⇒ lòi
+> ra **1px**). Vòng 19 đã vá và đo đúng — nhưng đo trên **NGÀY CHÀO NGẮN**. Khối chào là
+> `${lời chào}. ${biến thể theo ngày}` với 8 biến thể, nên có ngày nó 2 dòng có ngày 3 dòng,
+> **chênh 26px**; cộng cụm ba dòng nhắc cùng nổ (84px) là quá đủ. ⇒ ***một cái trần chỉ đúng vào
+> ngày may mắn thì không phải một cái trần*** — mọi phép đo về nếp gấp phải chạy trên NHIỀU biến
+> thể copy, không chỉ một.
+>
+> ⚠️ **VÀ ẢNH `--full` KHÔNG THẤY LỖI NÀY.** Nó là ảnh GHÉP nên thanh `fixed` không nằm đè lên gì:
+> trong ảnh `--full` hai nút hiện rõ mồn một. Chỉ ảnh chụp ĐÚNG KHUNG 844px mới thấy. Mọi kết luận
+> về nếp gấp từ nay phải xem ảnh viewport.
+>
+> **Ba phát hiện im lặng khác, cùng một họ — "không cổng nào có thể kêu":**
+> · `RewardCard` hứa trong chú thích rằng *"thẻ hẹp thì mô tả tự rơi xuống hàng riêng và lấy trọn
+>   bề ngang"*. Probe bác bỏ: **144px cho 370px chữ, 61% câu ngoài màn hình**. `flex-wrap` chỉ
+>   xuống dòng khi món hàng KHÔNG VỪA, mà `min-w-[9rem]` = đúng 144px thì luôn vừa ⇒ không bao giờ
+>   wrap. `truncate` là hành vi ĐÚNG của CSS nên lint/test/build đều xanh, và `--fit` mù vì nó chỉ
+>   soi NÚT. ⇒ **một lời hứa trong chú thích phải được đo như một con số.**
+> · 8 grid ở `StatsDashboard` khai `lg:grid-cols-…` mà thiếu `grid-cols-1` ⇒ ở khung hẹp chỉ có MỘT
+>   cột NGẦM cỡ `auto`, và track `auto` PHÌNH theo nội dung rộng nhất (lịch nhiệt `min-w-[560px]`)
+>   bất kể item khai `min-width:0` — kéo tiêu đề và câu dẫn ra 560px trên máy 390px. Đây là **đúng
+>   cái bẫy `SkillTree.jsx` đã ghi lại từ trước**; vá cho cả 8 chỗ, không vá riêng chỗ bắt được.
+> · `SkillTree` render `<DailyMissions/>` làm cột ngữ cảnh — ĐÚNG ở màn rộng (thanh bên desktop
+>   không có mục "Nhiệm vụ"), nhưng ở 390px hai cột xếp chồng nên nó thành **1.097px chắn ngang**,
+>   mà đúng thẻ ấy LÀ toàn bộ tab "Nhiệm vụ" cách một cú chạm. ⇒ **mặt TRÁI của khuôn
+>   `hidden … lg:`**: thường nó giấu thứ iPhone cần thấy, ở đây nó là cách duy nhất để iPhone thôi
+>   phải xem hai lần cùng một thẻ.
+>
+> **Số đo trước → sau (khung 390px):** nút chính bị che 41px → **cách 53px** · màn Tập trung
+> 2.920 → **2.660px** · tab Kỹ năng 3.145 → **2.032px** · Thành tích 14.254 → **12.633px** ·
+> mô tả thẻ thưởng 144 → **272px** · nhãn tiếng Anh quét `innerText` 4 màn: 11 từ → **0**.
+>
+> **Bài học về CÁCH LÀM, không về mã:** fan-out CHỈ ĐỂ SOI, tuần tự để SỬA. Sáu nhánh soi song song
+> tìm ra ~55 phát hiện có số đo trong một lượt; nhưng sửa thì phải tuần tự vì nhiều việc cùng đụng
+> `App.jsx` và cột giữa màn Tập trung — hai bản vá song song sẽ đè nhau mà không ai biết. Và **phép
+> đo với lần sửa mã không được chồng lấn thời gian**: các nhánh soi bị CẤM chạy `npm run build`
+> đúng vì lý do đó.
+
 > Cập nhật lần cuối: **2026-08-30 (vòng 8)** — **RÀNG BUỘC MỚI CỦA ĐÀM: "không đụng tới những gì
 > thuộc Thành Phố"**, và "không đo, phải làm liên tục". Vòng này vì vậy làm ở bốn màn còn lại.
 >

@@ -12,6 +12,59 @@
 
 ---
 
+## 2026-08-30 (vòng 20) — Tối giản toàn app bằng fan-out soi song song
+
+**Cách làm:** 6 nhánh CHỈ ĐỌC soi song song 9 màn ở khung 390px thật (mỗi nhánh một màn, ảnh ra
+tên riêng, mọi phát hiện phải kèm toạ độ Y + chiều cao px — *không số đo = không tính*), rồi
+chấm chéo và **sửa TUẦN TỰ**, mỗi việc một commit. 9 việc.
+
+**1. Nút chính hết bị thanh tab che.** Đo lại trên tài khoản đã chơi 6 tháng: nút "Điền mục tiêu →"
+y=773…815 còn thanh tab NỔI y=774, nền ĐỤC hoàn toàn ⇒ **lòi ra 1px**. Vòng 19 đã vá nhưng chỉ đủ
+cho NGÀY CHÀO NGẮN. Ba nguyên nhân: cụm ba dòng nhắc cùng nổ (84px) · khối chào dài 2 hoặc 3 dòng
+tuỳ biến thể copy (chênh 26px) · 32px khoảng trắng đỉnh cột giữa. Vá: `FocusNextAction` nhập vào bộ
+chọn `focusMomentPick` thành **nguồn thứ năm** (còn đúng HAI dòng, trần xấu nhất khoá bằng CẤU
+TRÚC) · trần vòng đồng hồ `64vw → 58vw` (226px ở 390px, máy bàn không đổi) · `pt-8 → pt-4` ở khổ
+điện thoại. **Kết quả: nút cách thanh tab 53px** (ngày 2 dòng) / 27px (ngày 3 dòng).
+
+**2. Thẻ "Chuẩn bị phiên" nói một điều năm lần → giữ ba.** Gỡ hai đoạn văn (80px + 59px) chỉ diễn
+đạt lại tên của chính cái ô ngay dưới chúng; giữ nhãn "Bắt buộc", placeholder có VÍ DỤ, và dòng
+gợi ý ở đúng chỗ sắp gõ. Cùng lượt gỡ "Chọn mode…" (41px) và "Thời lượng countdown…" (16px).
+**Trang màn Tập trung 2.920 → 2.660px.**
+
+**3. Tab Kỹ năng thôi dựng lại nguyên tab Nhiệm vụ ở iPhone.** `SkillTree` render `<DailyMissions/>`
+làm cột ngữ cảnh — đúng ở màn rộng (thanh bên desktop không có mục "Nhiệm vụ"), nhưng ở 390px hai
+cột xếp chồng nên nó thành **1.097px chắn ngang**, mà đúng thẻ ấy LÀ toàn bộ tab "Nhiệm vụ".
+**Trang Kỹ năng 3.145 → 2.032px (−35%)**, máy bàn không đổi.
+
+**4. Ô "Chuỗi" có mẫu số: `1` → `1 / 7`.** Mốc chuỗi kế tiếp đã tính sẵn nhưng hai chỗ dùng nó đều
+không tới được iPhone. Không tốn thêm một điểm ảnh chiều cao (đã đo).
+
+**5. Kỹ năng: sáu nhánh thôi giống hệt nhau.** Nhãn tên nhánh là `hidden sm:inline` (sm=640px) nên
+ở 390px **5/6 nhánh cùng ghi "0/6" ⇒ năm nút trông y hệt nhau**. Và "THÀNH TỰU GẦN ĐÂY" chỉ hiện
+"VC"/"DS"/"C5", tên thật nằm trong `title` — tức **chỉ con chuột mới đọc được**.
+
+**6. Hai chỗ chữ bị cắt mà không cổng nào kêu.** `RewardCard`: mô tả được **144px cho 370px chữ
+(61% ngoài màn hình)** vì `min-w-[9rem]` luôn vừa cạnh huy hiệu bậc nên không bao giờ wrap → tách
+hai hàng, mô tả trọn bề ngang (131 → 272px, 2 dòng). `StatsDashboard`: 8 grid khai `lg:grid-cols-…`
+mà thiếu `grid-cols-1` ⇒ track `auto` phình theo lịch nhiệt `min-w-[560px]`, kéo tiêu đề và câu dẫn
+ra 560px trên máy 390px.
+
+**7. Nhãn tiếng Anh còn sót → quét lại còn 0.** "Full Screen"×3 · "Overclock" · "stake" ·
+"Stopwatch"/"Flowtime" · "OFF/RAIN/WIND/FOREST/CAFE/WAVES/FIRE" · "CL/NT/SW/MN" · "JSON"×3.
+
+**8. Thành tích: gỡ sáu chỗ nói-lần-hai. 14.254 → 12.633px.** Trong đó nhãn "Ghi chú tiến trình"
+lặp ở CẢ 48 thẻ, và chip "#146" `shrink-0` ép tiêu đề vỡ hai dòng.
+
+**9. "Đạt mục tiêu 0%" khi chưa phiên nào đặt mục tiêu.** Hai tình huống ngược hẳn nhau ra cùng
+một con số; nay in "—" kèm "chưa phiên nào đặt mục tiêu". Không đụng tầng tính.
+
+**Cổng:** `npm test` 1355 bài xanh (+ lượt cross 3 bài) · lint sạch · build xanh. Ba phép phá
+thử-cho-đỏ cho `focusNextActionWiring.test.js` (gỡ nhánh · gỡ `onNavigate` · gỡ lời gọi hook) đều
+đỏ, khôi phục xanh. `timerFold.test.js` nay khoá QUAN HỆ (trần ≤ 58vw, hai vế phải cùng trần) thay
+vì khoá con số 64.
+
+**Tương thích:** không đổi dữ liệu, không migration, không đụng tập Thành Phố.
+
 ## 2026-08-30 (vòng 19) — Nút Bắt đầu lần đầu nằm TRÊN nếp gấp
 
 **Đo trước khi sửa** (khung 390px thật): nút chính của cả app nằm ở **y=779..822** trong khi thanh

@@ -26,6 +26,22 @@ import { ERA_METADATA } from './constants.js';
 export const STAGE_PACE_SAMPLE = 10;
 
 /**
+ * Xa hơn ngần này phiên thì KHÔNG nói gì về mốc nữa.
+ *
+ * ⚠️ VÌ SAO CÓ TRẦN — bài học đo được từ chính ảnh chụp của bản vá trước. Dòng đếm ngược sinh ra
+ * để tạo động lực, nhưng khi mốc còn xa nó in ra *"Còn ~64 phiên nữa tới «Thương Mại Toàn Cầu»"*
+ * — một con số làm NẢN chứ không làm hứng, và nó chiếm đúng chỗ mà một câu cổ vũ đáng lẽ đứng.
+ * **Một cái đích chỉ kéo được người ta khi nó với tới được.**
+ *
+ * 12 phiên ≈ 4–6 ngày ở nhịp thường — vẫn hình dung ra được. Xa hơn thì im lặng: thà không nói gì
+ * còn hơn nói một câu làm nản, cùng luật trung thực mà `cityMoment.js` đang sống bằng nó.
+ *
+ * Hệ quả có chủ đích: dòng này chỉ hiện ở khoảng một phần ba cuối mỗi chặng — đúng lúc thúc một
+ * cái là tới, chứ không phải nhắc suốt cả chặng rằng còn xa lắm.
+ */
+export const STAGE_COUNTDOWN_MAX_SESSIONS = 12;
+
+/**
  * Chặng hiện tại của một kỷ, kèm tiến độ trong chặng.
  *
  * ⚠️ `epStart` của chặng là một mốc TUYỆT ĐỐI (tính từ EP tổng của cả ván chơi), không phải mốc
@@ -120,6 +136,9 @@ export function describeStageCountdown(stage, epPerSession) {
   if (!stage) return null;
 
   const sessions = sessionsToStageEnd(stage.epRemaining, epPerSession);
+
+  // ⚠️ Còn quá xa ⇒ IM LẶNG. Xem `STAGE_COUNTDOWN_MAX_SESSIONS`.
+  if (sessions !== null && sessions > STAGE_COUNTDOWN_MAX_SESSIONS) return null;
 
   // Chưa đủ mẫu để quy ra phiên ⇒ vẫn nói được cái đích, chỉ là nói bằng EP.
   // Chặng cuối thì cái đích không còn là một chặng nữa — nó là cả một kỷ mới. Nói đúng tên của

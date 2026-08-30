@@ -8,6 +8,7 @@ import {
   medianSessionEP,
   pickStageCelebration,
   sessionsToStageEnd,
+  STAGE_COUNTDOWN_MAX_SESSIONS,
   stageMilestoneKey,
 } from './eraStage.js';
 
@@ -153,4 +154,27 @@ test('chỉ khen khi THẬT SỰ vượt mốc, và khen đúng MỘT lần', ()
   const dauKy = getEraStage(1, 100);
   assert.equal(pickStageCelebration(dauKy, 1, stageMilestoneKey(8, 2)), null,
     'reset tiến độ mà vẫn chúc mừng "đã mở chặng 1"');
+});
+
+test('mốc còn QUÁ XA ⇒ im lặng, không in ra một con số làm nản', () => {
+  // ⚠️ Bài học đo được từ ảnh chụp: bản đầu in *"Còn ~64 phiên nữa tới «Thương Mại Toàn Cầu»"* —
+  // một cái đích xa tới mức nó làm nản chứ không kéo, mà lại chiếm đúng chỗ một câu cổ vũ.
+  const stages = ERA_METADATA[8].stages;
+  const dauChang = getEraStage(8, stages[1].epStart + 10);
+  const nhipRatCham = 5;   // 5 EP/phiên ⇒ còn hàng trăm phiên
+  assert.equal(describeStageCountdown(dauChang, nhipRatCham), null);
+
+  // Ngay tại trần thì VẪN nói — biên phải nằm đúng chỗ khai, không lệch một nấc.
+  const epPerSession = dauChang.epRemaining / STAGE_COUNTDOWN_MAX_SESSIONS;
+  assert.ok(describeStageCountdown(dauChang, epPerSession), `${STAGE_COUNTDOWN_MAX_SESSIONS} phiên phải còn nói`);
+  const quaTran = dauChang.epRemaining / (STAGE_COUNTDOWN_MAX_SESSIONS + 1);
+  assert.equal(describeStageCountdown(dauChang, quaTran), null, 'quá trần một nấc mà vẫn nói');
+});
+
+test('chưa biết nhịp thì VẪN nói bằng EP — trần chỉ áp cho con số PHIÊN', () => {
+  // Trần là về "còn bao nhiêu PHIÊN", mà chưa đủ mẫu thì không có con số phiên nào để mà xa.
+  // Chặn luôn cả ca này là làm người mới mất hẳn cái đích ngay lúc họ cần nó nhất.
+  const stage = getEraStage(8, ERA_METADATA[8].stages[1].epStart + 10);
+  const ra = describeStageCountdown(stage, null);
+  assert.ok(ra && /EP nữa tới/.test(ra.text), 'chưa biết nhịp mà đã im lặng');
 });

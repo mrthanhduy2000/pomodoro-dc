@@ -4583,6 +4583,49 @@ cấp `Math.min(3,…)` → `Math.min(9,…)` · cắt bớt danh sách cấp th
 ---
 
 
+## #92 — `no-unused-vars` đang TẮT cho MỌI file `.jsx`, nên code chết ở cả tầng giao diện là vô hình với lint
+
+> Mở 2026-08-30, phát hiện khi đi tìm lý do ba bảng kỳ chết sống sót nhiều tháng trong
+> `StatsDashboard.jsx`. ⚠️ **Rule ấy tắt KHÔNG phải do cẩu thả — đã kiểm và phải đính chính chẩn
+> đoán đầu tiên của chính tôi.** Bật thử lên thì ra 45 lỗi, nhưng phần lớn là **BÁO NHẦM**:
+> `DisasterModal.jsx` dùng `motion.` 6 lần mà vẫn bị tố "motion không dùng", vì luật gốc
+> `no-unused-vars` không hiểu `<motion.div>` trong JSX. Tắt rule là một cách NÉ lỗi giả, không
+> phải bỏ mặc.
+
+- **Tên**: tầng `.jsx` không có cổng nào bắt biến/hằng/import chết
+- **Module**: `eslint.config.js` dòng ~53 (`'no-unused-vars': 'off'` trong khối `files: ['**/*.jsx']`)
+- **Priority**: Medium · **Severity**: Low (không gây lỗi chạy, nhưng làm rác tích lại im lặng)
+- **Impact**: đo được trong đúng MỘT file (`StatsDashboard.jsx`, trước bản vá 2026-08-30): **3 hằng
+  số chết** (`PERIODS` · `METRIC_OPTIONS` · `PERIOD_UNITS`), **1 hàm chết** 30 dòng
+  (`summarizeSessionReviews`), **3 import chết** (`useReducedMotion` · `createRichTextPreview` ·
+  `computeAllTimeStats`) — tất cả đều có TỪ TRƯỚC bản vá, không ai biết. Toàn repo: 45 lỗi thô,
+  trong đó ~30 là `motion` báo nhầm ⇒ khoảng **15 lỗi THẬT** nằm rải ở ~10 file.
+- **Root Cause**: dự án không cài `eslint-plugin-react`, nên không có `react/jsx-uses-vars` — luật
+  duy nhất dạy `no-unused-vars` rằng một định danh xuất hiện trong JSX là ĐANG ĐƯỢC DÙNG.
+- **Current Risk**: thấp. Rác không chạy thì không hỏng gì; nó chỉ làm file phình và làm phiên sau
+  tưởng một hằng số chết là đang có tác dụng (đã suýt xảy ra: `PERIODS` có 5 kỳ trong khi màn hình
+  chỉ hiện 3, đọc lướt sẽ tưởng hai kỳ kia đang ở đâu đó).
+- **Future Risk**: trung bình, và **tăng dần theo thời gian** — mỗi phiên thêm một ít rác mà không
+  có cổng nào đếm. Đây chính là cách `StatsDashboard.jsx` đi tới 4.901 dòng.
+- **Recommended Solution**: thêm `eslint-plugin-react` (devDependency, không vào bundle) và bật
+  đúng **một** luật của nó — `react/jsx-uses-vars` — rồi mở lại `no-unused-vars` cho `.jsx` với
+  cùng `varsIgnorePattern: '^[A-Z_]'` mà khối `.js` đang dùng. Sau đó dọn ~15 lỗi thật.
+  ⚠️ **ĐỪNG** bật `no-unused-vars` mà chưa có plugin ấy: 30 lỗi giả sẽ khiến người ta hoặc tắt lại
+  rule, hoặc tệ hơn là đổi `varsIgnorePattern` thành một cái rây thủng để cho qua — tức mua một
+  cổng xanh bằng cách bỏ hết răng của nó.
+- **Estimated Complexity**: nhỏ (1 dependency + 2 dòng cấu hình), nhưng phần dọn 15 lỗi chạm nhiều
+  file ở nhiều màn khác nhau nên phải đi kèm một lượt chụp ảnh nghiệm thu.
+- **Blocking Conditions**: thêm một dependency là quyết định của Đàm, không phải của phiên AI —
+  dự án có lịch sử CỐ Ý gỡ dependency cho nhẹ (Qwen/WebLLM, `@huggingface/transformers`,
+  `@anthropic-ai/sdk`). Cần Đàm đồng ý trước.
+- **Review Trigger**: lần tới có ai đụng `eslint.config.js`, hoặc khi một file `.jsx` vượt 3.000
+  dòng và cần biết bao nhiêu phần trong đó là rác.
+- **Owner**: chưa ai · **Status**: MỞ
+- **Giảm nhẹ tạm thời (đã làm 2026-08-30)**: `src/components/statsPeriodWiring.test.js` đọc mã
+  nguồn và cấm bảng kỳ chết quay lại **trong riêng màn Thống kê**. Nó KHÔNG thay được cái cổng
+  toàn cục — nó chỉ bịt đúng chỗ vừa bị cắn, đúng tinh thần *"một bài học được ghi ra không chặn
+  được gì; chỉ một bài TEST mới chặn được"*.
+
 ## #91 — Bài test canh khung bóng đổ CHÉP TAY hệ số `0,8` thay vì đọc từ mã, nên nó xanh kể cả khi mã dùng một `reach` khác
 
 > Mở 2026-08-28, phát hiện trong lúc gộp nhánh Phase 19–21 vào `main`. Suýt cắn thật: phép gộp có

@@ -11,6 +11,66 @@
 
 ---
 
+## ADR-067 — Màn Thống kê có MỘT nguồn kỳ thời gian, và kỳ mang nghĩa LỊCH chứ không phải "N ngày gần nhất"
+
+- **Ngày**: 2026-08-30
+- **Bối cảnh**: Đàm hỏi *"xem lại phần Thống kê … có nên sửa gì không hay big upgrade lên không?"*.
+  Đi khảo sát thì màn này là file lớn thứ hai dự án (`StatsDashboard.jsx`, 4.901 dòng) và **không
+  có một bài test hành vi nào** — bài duy nhất nhắc tên nó là `motionCoverage.test.js`, và bài đó
+  chỉ đếm số khai báo chuyển động.
+- **Vấn đề**: hai lỗi khác nhau, cùng một hình dạng — *một luật được phát biểu ở nhiều chỗ*.
+  1. **Ba bộ lọc thời gian, ba mặc định.** `PERIODS_UI` (Tổng Quan, mặc định `week`) ·
+     `FOCUS_PERIODS` (Tập Trung, mặc định `all`) · `CAT_PERIODS` (Phân Loại, mặc định `all`) —
+     khác nhau cả danh sách, cả nhãn, cả markup. Bấm từ tab này sang tab kia là **cửa sổ thời gian
+     âm thầm đổi**, không có gì báo; hai con số cách nhau một cú bấm đang nói về hai khoảng thời
+     gian khác nhau.
+  2. **Một lỗi NHÃN (số đúng, tên sai).** Tổng Quan tính cửa sổ bằng `now - 7×86400000` rồi dán
+     nhãn *"tuần này"*. Vào thứ Tư thì "tuần này" là T2→T4 còn "7 ngày gần nhất" là T5 tuần
+     trước→T4. Và biểu đồ cột **ngay bên dưới** lại dựng theo tuần LỊCH (từ thứ Hai) ⇒ ô số tổng
+     và bộ cột dưới nó đo hai khoảng khác nhau mà mang cùng một nhãn. Cùng họ với lỗi nhãn mép
+     khung ở `frame-fit.mjs` (Phase 7B): độ lớn đúng, cái tên sai.
+  Kèm ba hằng số CHẾT (`PERIODS` · `METRIC_OPTIONS` · `PERIOD_UNITS`) và ba props chết
+  (`progress`/`prestige`/`buildings` truyền cho `OverviewTab` mà hàm không nhận).
+- **Phương án cân nhắc**:
+  1. **Chỉ sửa nhãn cho khớp cửa sổ 7-ngày.** Loại: nó làm ba tab lệch nhau THÊM, vì hai tab kia
+     đã dùng nghĩa lịch ("Tuần Này" = từ thứ Hai). Và "7 ngày gần nhất" không phải thứ người dùng
+     nghĩ tới khi đọc chữ "tuần này".
+  2. **Giữ ba bộ lọc, chỉ đồng bộ danh sách.** Loại: danh sách giống nhau mà TRẠNG THÁI vẫn riêng
+     thì cửa sổ vẫn nhảy khi chuyển tab — chữa cái nhìn thấy, để nguyên cái cắn.
+  3. **Viết lại cả màn Thống kê.** Loại: 4.901 dòng không test, đập đi xây lại là canh bạc rủi ro
+     cao với lợi ích không chắc, trong khi màn hình đang chạy đúng.
+  4. **Một nguồn kỳ ở engine + một trạng thái ở component cha** — chọn.
+- **Lý do chọn**: kỳ thời gian là phép tính THUẦN, không có điểm ảnh nào trong đó, nên chỗ của nó
+  là engine (`src/engine/statsPeriod.js`). Nâng TRẠNG THÁI lên `StatsDashboard` thì ba tab **không
+  thể** lệch nhau — không phải "rất khó lệch", mà là không có đường nào để lệch, vì chỉ có một
+  biến. Chọn nghĩa LỊCH vì (a) đó là thứ người dùng hiểu khi đọc "tuần này", (b) hai tab còn lại
+  đã dùng nghĩa ấy sẵn, (c) nó làm ô số tổng khớp với biểu đồ cột ngay dưới nó — hai thứ ấy nay
+  đọc chung `getPeriodStartTs`/`buildPeriodBuckets` nên không thể lệch.
+- **Trade-off**: dải "Điều đáng chú ý" (ADR cùng ngày, xem mục Ảnh hưởng) **KHÔNG** theo kỳ đang
+  chọn — các hàm tín hiệu ở `gameMath.js` cần 8–24 phiên mới vượt gác cỡ mẫu, lọc về "Hôm Nay" là
+  làm chúng câm hết. Đây là một sự KHÔNG NHẤT QUÁN có chủ đích, và cái giá của nó được trả bằng
+  một dòng chữ trên màn hình (*"Đọc trên toàn bộ lịch sử, không theo khoảng thời gian đang chọn"*)
+  chứ không giấu đi — không nói ra thì nó dựng lại đúng cái hiểu nhầm mà ADR này đi sửa.
+  Trade-off thứ hai: bộ chọn nay có SÁU nút nên không nằm vừa cạnh tiêu đề, phải xuống hàng riêng
+  (ảnh chụp 1280px cho thấy "Năm Nay"/"Tất Cả" bị mép phải xén mất) — đổi lại ba tab nay có cùng
+  một bố cục.
+- **Ảnh hưởng**: thêm `src/engine/statsPeriod.js` (nguồn kỳ + `buildPeriodBuckets`, mỗi cột tự
+  khai ĐỘ MỊN của nó thay cho chuỗi `if` ở tầng giao diện vốn viết cho ba kỳ) và
+  `src/engine/statsInsights.js` (dải "Điều đáng chú ý" — chỉ GỌI hàm `gameMath.js` đã có, KHÔNG
+  chế công thức mới). `StatsDashboard.jsx` gỡ 3 props chết + 3 hằng số chết + 2 helper trùng lặp
+  + 4 import thời gian thừa + 1 hàm chết (`summarizeSessionReviews`), và nhịp "/ ngày" nay chia
+  cho số ngày ĐÃ TRÔI QUA trong kỳ thay vì độ dài danh nghĩa (chia cho 365 vào tháng Giêng là
+  đúng phép chia mà sai ý nghĩa). Khoá bằng `statsPeriod.test.js` (20 bài),
+  `statsInsights.test.js` (12 bài) và `statsPeriodWiring.test.js` (8 bài đọc mã nguồn) — bài cuối
+  làm cho thao tác "thêm một `useState('all')` vào một tab" ĐỎ NGAY, vì đó là cách cái bẫy này
+  quay lại mà đọc một mình thì hoàn toàn hợp lý.
+- **Điều kiện xem lại**: nếu có ngày cần một tab đo theo cửa sổ TRƯỢT (ví dụ "30 ngày gần nhất"
+  cho một biểu đồ xu hướng), thì thêm nó vào `STATS_PERIODS` như một kỳ RIÊNG có tên nói đúng
+  nghĩa ("30 Ngày Gần Nhất"), **đừng** đổi nghĩa của một kỳ đang có — đổi nghĩa là dựng lại đúng
+  lỗi nhãn mà ADR này đi sửa.
+
+---
+
 ## ADR-061 — Tách "đã MỜI" khỏi "đã XEM" để gỡ nốt ngoại lệ cuối của luật mức độ làm phiền
 
 **Ngày:** 2026-08-27

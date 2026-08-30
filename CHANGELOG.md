@@ -12,6 +12,42 @@
 
 ---
 
+## 2026-08-30 (vòng 14) — Màn Thống kê: một bộ lọc thời gian, và dải "Điều đáng chú ý"
+
+**Vấn đề 1 — ba bộ lọc thời gian, ba mặc định.** Tab Tổng Quan mặc định "tuần", tab Tập Trung và
+Phân Loại mặc định "tất cả", và mỗi tab khai bảng kỳ riêng. Bấm sang tab khác là **cửa sổ thời
+gian âm thầm đổi**, không có gì báo — hai con số cách nhau một cú bấm đang nói về hai khoảng thời
+gian khác nhau.
+
+**Vấn đề 2 — một lỗi NHÃN đã ship.** Tổng Quan tính cửa sổ bằng `now − 7 ngày` rồi dán nhãn *"tuần
+này"*. Vào thứ Tư, "tuần này" là T2→T4 còn "7 ngày gần nhất" là T5 tuần trước→T4. Tệ hơn: biểu đồ
+cột **ngay bên dưới** lại dựng theo tuần LỊCH, nên ô số tổng và bộ cột dưới nó đo hai khoảng khác
+nhau mà mang cùng một nhãn.
+
+**Vấn đề 3 — kho báu bỏ quên.** `gameMath.js` đã có sẵn ~10 phép phân tích ĐÃ VIẾT, ĐÃ TEST, ĐÃ
+GÁC CỠ MẪU (giờ vàng · hay bỏ giữa chừng · phiên khuya kém hơn · loại việc bị bỏ bê · quay lại sau
+ngày nghỉ · phiên liền mạch…). Chúng chỉ chảy vào AI Coach — tức cần mạng, tốn tiền Gemini, có thể
+lỗi. Màn Thống kê không hiện một cái nào.
+
+**Đã đổi.** Thêm `engine/statsPeriod.js` làm **nguồn kỳ duy nhất** (6 kỳ, nghĩa LỊCH) và nâng
+trạng thái kỳ lên component cha ⇒ ba tab **không thể** lệch nhau nữa. Kỳ liền trước nay là kỳ
+trước theo lịch (tuần trước), không phải "lùi thêm N ngày". Nhịp "/ ngày" chia cho số ngày ĐÃ TRÔI
+QUA trong kỳ. Thêm `engine/statsInsights.js` + dải **"Điều đáng chú ý"** ở tab Tổng Quan — chỉ GỌI
+hàm đã có, không chế công thức mới; mọi phần trăm kèm cỡ mẫu, và nói tương quan chứ không nói nhân
+quả (cả hai đều có test canh). Dải này đọc TOÀN BỘ lịch sử chứ không theo kỳ đang chọn, và màn
+hình **nói rõ điều đó**.
+
+**Dọn kèm.** Gỡ 3 props chết, 3 hằng số chết, 1 hàm chết 30 dòng, 2 helper trùng lặp với engine,
+4 import thời gian thừa.
+
+**Ảnh hưởng / tương thích.** Không đụng dữ liệu đã lưu, không migration, không đổi store. Chỉ là
+cách màn Thống kê ĐỌC lịch sử. Mặc định kỳ đổi từ "tất cả" sang **"Tuần Này"** ở hai tab Tập Trung
+và Phân Loại — có chủ đích: một màn thống kê mở ra ở "toàn bộ lịch sử" thì con số đầu tiên người
+dùng thấy gần như không đổi theo ngày, nên nó không nói được gì về hôm nay.
+
+**Test.** +40 bài (20 kỳ · 12 insight · 8 canh mã nguồn) ⇒ 1371 đạt · 1 bỏ qua · 0 hỏng. Chi tiết
+quyết định: `ARCHITECTURE_DECISIONS.md` ADR-067. Nợ mới ghi ở `TECH_DEBT.md` #92.
+
 ## 2026-08-30 (vòng 13) — Danh sách di vật khoá: 3.000px xuống 700px
 
 **Vấn đề.** Tab Kho báu → Di vật liệt kê 15 di vật chưa mở, mỗi cái một THẺ cao ~200px ⇒ **~3.000px

@@ -11,18 +11,16 @@
  */
 
 import React, { useEffect, useId, useRef, useState, useMemo, useTransition, useDeferredValue } from 'react';
-import { motion as Motion, AnimatePresence, useReducedMotion } from 'framer-motion';
+import { motion as Motion, AnimatePresence } from 'framer-motion';
 import { useCustomMotion, useEnterMotion, useSnapMotion, withDelay } from '../lib/motionPresets';
 import useGameStore from '../store/gameStore';
 import { RichTextView } from './RichText';
-import { createRichTextPreview } from '../utils/richText';
 import { getLabelMark } from '../utils/labelMark';
 import {
   timeAgo, formatExactDateTime, formatPreciseDuration, resolveEntryCategory,
   fmtHours, fmtXPCompact, fmtCount, fmtVal, hexToRgba, fmtChartAxisValue, clampValue,
 } from './statsFormatters';
 import {
-  computeAllTimeStats,
   computeYearGrid,
   computeCategoryStats,
   isCancelledHistoryEntry,
@@ -44,10 +42,6 @@ import {
   formatVietnamTime,
   getVietnamHour,
   startOfVietnamDayTs,
-  startOfVietnamMonthTs,
-  startOfVietnamQuarterTs,
-  startOfVietnamWeekTs,
-  startOfVietnamYearTs,
 } from '../engine/time';
 
 // ─── Palette ─────────────────────────────────────────────────────────────────
@@ -306,36 +300,6 @@ function getSessionStatusMeta(entry) {
     border: 'rgba(91,122,82,0.24)',
     color: '#6f8f62',
   };
-}
-
-function summarizeSessionReviews(entries = []) {
-  return entries.reduce((acc, entry) => {
-    const goalText = getSessionGoalText(entry);
-    if (!goalText) return acc;
-
-    acc.sessionsWithGoal += 1;
-
-    if (entry?.goalAchieved === true) {
-      acc.reviewedCount += 1;
-      acc.achievedCount += 1;
-      return acc;
-    }
-
-    if (entry?.goalAchieved === false) {
-      acc.reviewedCount += 1;
-      acc.missedCount += 1;
-      return acc;
-    }
-
-    acc.pendingCount += 1;
-    return acc;
-  }, {
-    sessionsWithGoal: 0,
-    reviewedCount: 0,
-    achievedCount: 0,
-    missedCount: 0,
-    pendingCount: 0,
-  });
 }
 
 function SessionReviewBadge({ entry, compact = false }) {

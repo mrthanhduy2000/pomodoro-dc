@@ -1,4 +1,4 @@
-> Cập nhật lần cuối: **2026-08-30 (vòng 8)** — **RÀNG BUỘC MỚI CỦA ĐÀM: "không đụng tới những gì
+> Cập nhật lần cuối: **2026-08-30 (vòng 14)** — **RÀNG BUỘC MỚI CỦA ĐÀM: "không đụng tới những gì
 > thuộc Thành Phố"**, và "không đo, phải làm liên tục". Vòng này vì vậy làm ở bốn màn còn lại.
 >
 > **Phát hiện lớn nhất, đo bằng ảnh chụp 390px THẬT:** ở màn **Tập trung** — màn Đàm mở nhiều nhất —
@@ -7,6 +7,42 @@
 > **BA lần** (ô "PHIÊN 0" ở thanh đầu · câu "Bạn chưa chốt phiên nào trong hôm nay" · dòng "Phiên
 > 0/5 hôm nay" dưới đồng hồ). Bản thứ ba là bản TỐT NHẤT vì nó có mẫu số ⇒ hai bản kia nhường.
 >
+> **VÒNG 14 — MÀN THỐNG KÊ: MỘT BỘ LỌC THỜI GIAN, VÀ MỘT LỖI NHÃN ĐÃ SHIP.** Đàm hỏi *"xem lại
+> phần Thống kê … có nên sửa gì không hay big upgrade lên không?"*. Khảo sát ra ba thứ, và thứ thứ
+> hai là loại im lặng nhất: **(1)** ba tab khai BA bộ lọc thời gian riêng (`PERIODS_UI` ·
+> `FOCUS_PERIODS` · `CAT_PERIODS`), khác cả danh sách, cả nhãn, cả markup, cả MẶC ĐỊNH — Tổng Quan
+> "tuần", hai tab kia "tất cả" ⇒ **bấm sang tab khác là cửa sổ thời gian âm thầm đổi**; **(2)** tab
+> Tổng Quan tính cửa sổ bằng `now − 7×86400000` rồi dán nhãn **"tuần này"** — vào thứ Tư thì hai
+> thứ đó lệch nhau 4 ngày, mà biểu đồ cột NGAY BÊN DƯỚI lại dựng theo tuần LỊCH, nên ô số tổng và
+> bộ cột dưới nó đo hai khoảng khác nhau dưới cùng một nhãn (đúng họ lỗi NHÃN của `frame-fit.mjs`
+> — độ lớn đúng, tên sai); **(3)** `gameMath.js` có sẵn ~10 phép phân tích ĐÃ TEST, ĐÃ GÁC CỠ MẪU
+> mà màn Thống kê **không hiện một cái nào** — chúng chỉ chảy vào AI Coach, tức cần mạng và tốn
+> tiền Gemini.
+> **Đã làm:** `engine/statsPeriod.js` (nguồn kỳ DUY NHẤT, nghĩa LỊCH, 6 kỳ) + nâng trạng thái kỳ
+> lên component cha ⇒ ba tab **không thể** lệch nhau (không phải "khó lệch" — chỉ có một biến).
+> `engine/statsInsights.js` + dải **"Điều đáng chú ý"**, chỉ GỌI hàm đã có chứ không chế công thức
+> mới. Gỡ 3 props chết + 3 hằng số chết + 1 hàm chết 30 dòng + 2 helper trùng lặp + 4 import thừa.
+> ⚠️ **MỘT LỖI THẬT SUÝT SHIP, VÀ NÓ LỌT QUA CẢ LINT LẪN 11 BÀI TEST:** `getNeglectedCategory` gọi
+> `activeCategoryIds.has(...)` nên nó chờ một **Set**; tôi truyền MẢNG ⇒ `TypeError` giữa lúc
+> render, cả màn Thống kê ra **trang trắng**. Lint không có kiểu để bắt, build không quan tâm, và
+> bài test của chính tôi cũng không — vì nó chỉ đi vào nhánh KHÔNG truyền danh sách, tức đúng
+> nhánh không có lỗi. **Chỉ chạy trên fixture 624 phiên mới lộ.** Đã có bài test riêng, thử-cho-đỏ
+> xác nhận nó bắt đúng lỗi ấy.
+> ⚠️ **VÀ MỘT CHẨN ĐOÁN CỦA CHÍNH TÔI ĐÃ BỊ SỐ ĐO BÁC BỎ:** thấy `no-unused-vars` **tắt** cho mọi
+> file `.jsx`, tôi kết luận đó là lý do rác tích lại. Bật thử lên: 45 lỗi — nhưng `DisasterModal`
+> dùng `motion.` **6 lần** mà vẫn bị tố "motion không dùng", vì luật gốc không hiểu `<motion.div>`.
+> Rule tắt là cách NÉ lỗi giả, không phải cẩu thả; muốn bật thật thì cần `eslint-plugin-react`
+> (`react/jsx-uses-vars`) — một dependency, tức **quyết định của Đàm**, ghi ở `TECH_DEBT #92`.
+> Giảm nhẹ tạm: `components/statsPeriodWiring.test.js` đọc mã nguồn, cấm bảng kỳ chết và cấm tab
+> tự giữ kỳ riêng quay lại — bịt đúng chỗ vừa bị cắn, không thay được cổng toàn cục.
+> ⚠️ **FIXTURE CỦA BÀI TEST TỪNG SAI MÚI GIỜ:** dùng `d.setHours(19, ...)` là 19 giờ theo giờ MÁY
+> (UTC trong hộp cát) trong khi mã đọc `getVietnamHour` ⇒ nhóm phiên "buổi tối" rơi vào "đêm
+> khuya", và bài test khẳng định một điều về một khung giờ khác hẳn khung nó tưởng. Nó **không
+> đỏ** — nó chỉ lặng lẽ kiểm sai chỗ. Fixture nay dựng chuỗi `+07:00` tường minh.
+> **Nghiệm thu:** ảnh chụp thật 1280px và 390px (bộ chọn 6 nút không nằm vừa cạnh tiêu đề — ảnh
+> cho thấy "Năm Nay"/"Tất Cả" bị mép phải xén, đã cho xuống hàng riêng), fixture 180 ngày/624
+> phiên. Test **1371 đạt · 1 bỏ qua · 0 hỏng** (+40 bài). Chi tiết: ADR-067 · CHANGELOG vòng 14.
+
 > **VÒNG 13 — danh sách di vật khoá: ~3.000px xuống ~700px.** 15 thẻ, mỗi thẻ nói ĐÚNG một câu như
 > nhau, và phần khác nhau duy nhất (tên khủng hoảng) đã nằm trên tiêu đề của chính thẻ ấy. Nay mỗi
 > di vật là MỘT DÒNG; luật chơi vẫn được nói, đúng một lần, ở đầu danh sách (chỗ nó vốn đã có).

@@ -137,6 +137,19 @@
 │   │   │   ├── coachEvalFixtures.js  # ~30 câu mẫu (sạch/bịa) cho eval.test.js
 │   │   │   └── *.test.js          # test đi kèm từng file cùng tên
 │   │   ├── gameMath.js        # Công thức tính điểm/XP/streak/thống kê — file LỚN, sửa cẩn thận
+│   │   ├── statsPeriod.js     # KỲ THỜI GIAN của màn Thống kê — NGUỒN DUY NHẤT (ADR-067).
+│   │   │                     #   6 kỳ (Hôm Nay…Tất Cả) + getPeriodStartTs + getPreviousPeriodRange
+│   │   │                     #   + buildPeriodBuckets (chia cột biểu đồ, mỗi cột TỰ KHAI độ mịn).
+│   │   │                     #   ⚠️ Nghĩa LỊCH: "tuần này" = từ thứ Hai, KHÔNG phải "7 ngày gần
+│   │   │                     #   nhất". Trước 2026-08-30 màn Thống kê khai BA bảng kỳ riêng ở ba
+│   │   │                     #   tab với ba mặc định khác nhau ⇒ chuyển tab là đổi cửa sổ thời
+│   │   │                     #   gian mà không báo. Đừng khai lại bảng kỳ ở tầng giao diện —
+│   │   │                     #   `components/statsPeriodWiring.test.js` đọc mã nguồn và sẽ ĐỎ.
+│   │   ├── statsInsights.js   # "Điều đáng chú ý" — dải insight ở tab Tổng Quan.
+│   │   │                     #   ⚠️ CHỈ GỌI hàm tín hiệu đã có ở gameMath.js rồi diễn đạt lại;
+│   │   │                     #   TUYỆT ĐỐI không chế công thức mới ở đây (chế thêm = "một luật
+│   │   │                     #   hai công thức"). Hai luật nội dung có test canh: mọi % kèm CỠ
+│   │   │                     #   MẪU · nói TƯƠNG QUAN, không dùng "vì/nên/do".
 │   │   ├── constants.js       # Toàn bộ dữ liệu tĩnh của game (kỹ năng, công trình, thành tích...)
 │   │   ├── hashId.js          # FILE LÁ: băm tất định FNV-1a. KHÔNG import gì — đó là điểm chính.
 │   │   │                     #   Tách khỏi cityLayout.js ở Phase 7C để cắt vòng import

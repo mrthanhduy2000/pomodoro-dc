@@ -7,6 +7,18 @@
 > **BA lần** (ô "PHIÊN 0" ở thanh đầu · câu "Bạn chưa chốt phiên nào trong hôm nay" · dòng "Phiên
 > 0/5 hôm nay" dưới đồng hồ). Bản thứ ba là bản TỐT NHẤT vì nó có mẫu số ⇒ hai bản kia nhường.
 >
+> **VÒNG 19 — NÚT BẮT ĐẦU LẦN ĐẦU NẰM TRÊN NẾP GẤP.** Đo ở 390px: nút chính ở y=779..822 còn thanh
+> tab NỔI bắt đầu ở y=774 ⇒ **nút bị che**. Vá bằng hai bước, tổng 92px: thu khoảng trắng quanh
+> đồng hồ (36px) + đặt **trần theo bề ngang** cho vòng đồng hồ `min(298px, 64vw)` (48px).
+> ⚠️ **LÀ `min()` CHỨ KHÔNG PHẢI HẰNG SỐ NHỎ HƠN** — hằng số thu đồng hồ ở MỌI khổ, kể cả nơi
+> không thiếu chỗ. Đo: 390px → 250px · **1280px → 411px, không đổi một điểm ảnh**.
+> ⚠️ **VẾ DỄ QUÊN NHẤT:** `minHeight` của khối cha là chỗ GIỮ SẴN chiều cao — thu mỗi cái vòng mà
+> để nguyên nó thì **không được một điểm ảnh nào**. Có test canh cả ba vế (vòng · minHeight · SVG
+> phải `width="100%"` để co theo cha).
+> ⚠️ **CHỖ NÀY RẤT DỄ TRÔI LẠI**: chỉ cần một phase sau thêm một dòng vào cột giữa màn Tập trung
+> hoặc nới lại một khoảng trắng là nút chui xuống dưới thanh tab, và **không cổng nào kêu**. Thêm
+> bất cứ gì vào cột giữa thì phải đo lại bằng `--probe` (lệnh trong nhật ký phiên này).
+>
 > **VÒNG 18 — BA DÒNG CỘT MỐC GỘP THÀNH MỘT (`FocusMoment`).** Đây là bản vá cho rủi ro CHÍNH TÔI
 > tạo ra ở vòng 10 và 15: cột giữa màn Tập trung có **năm** component độc lập, ba trong số đó gác
 > theo ba điều kiện KHÔNG liên quan nhau ⇒ cả năm có thể cùng nổ (~130px) và đẩy đồng hồ xuống dưới

@@ -12,6 +12,33 @@
 
 ---
 
+## 2026-08-30 (vòng 19) — Nút Bắt đầu lần đầu nằm TRÊN nếp gấp
+
+**Đo trước khi sửa** (khung 390px thật): nút chính của cả app nằm ở **y=779..822** trong khi thanh
+tab **NỔI** bắt đầu ở **y=774** ⇒ **nút bị thanh tab che**, và Đàm phải cuộn mới bấm được đúng thứ
+anh mở app ra để bấm. Mỗi phiên, mỗi ngày. Không cổng nào bắt được: lint sạch, test xanh, build
+xanh, ảnh chụp trông vẫn "đẹp" — chỉ có một nút nằm sau một thanh nổi.
+
+**Hai bước, tổng 92px.**
+1. **Thu khoảng trắng quanh đồng hồ (36px)** — `mt-5` → `mt-2` ở khối vòng, `mt-4` → `mt-2` và
+   `min-h-[68px]` → `min-h-[52px]` ở hàng nút. Không đụng gì tới hình.
+2. **Trần theo bề ngang cho vòng đồng hồ (48px)** — `min(298px, 64vw)`. ⚠️ **Là `min()` chứ không
+   phải một hằng số nhỏ hơn**: hằng số thì thu đồng hồ ở MỌI khổ màn hình, kể cả nơi không hề thiếu
+   chỗ. Trần này chỉ cắn khi bề ngang < 466px. Đo lại: **390px → 250px** (vẫn 64% bề ngang máy, vẫn
+   là thứ to nhất màn hình) · **1280px → 411px, không đổi một điểm ảnh nào**.
+
+**Kết quả:** nút ở **y=731..773**, thanh tab bắt đầu ở 774. Cả vòng lặp nay nằm trọn MỘT màn: lời
+chào → đang xây gì → phần thưởng tuần → hệ số nhân → đồng hồ → nút bắt đầu.
+
+⚠️ **Vế dễ quên nhất, và quên thì không được một điểm ảnh nào:** `minHeight` của khối cha là chỗ
+**giữ sẵn** chiều cao — thu mỗi cái vòng mà để nguyên nó thì khoảng trống vẫn bị giữ y như cũ. Có
+test canh (`timerFold.test.js`, 3 bài, đã thử-cho-đỏ), vì chỗ này rất dễ trôi lại: chỉ cần một phase
+sau thêm một dòng vào cột giữa hoặc nới lại một khoảng trắng là nút chui xuống.
+
+**Ảnh hưởng.** Chỉ giao diện, chỉ ở khổ hẹp. Không migration.
+
+---
+
 ## 2026-08-30 (vòng 18) — Ba dòng cột mốc gộp thành MỘT dòng biết chọn
 
 **Rủi ro tôi tự tạo ra trong chính phiên này, và đây là bản vá.** Vòng 10 và 15 thêm hai dòng mới

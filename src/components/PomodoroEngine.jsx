@@ -1262,14 +1262,27 @@ export default function PomodoroEngine({
         </motion.div>
       )}
 
+      {/*
+        ⚠️ TRẦN THEO BỀ NGANG MÀN HÌNH, KHÔNG PHẢI ĐỔI CỠ ĐỒNG HỒ (2026-08-30).
+        Đo trên khung 390px thật: nút Bắt đầu nằm ở y=779..822 trong khi thanh tab NỔI bắt đầu ở
+        y=774 ⇒ **nút chính của cả app bị thanh tab che**, và Đàm phải cuộn mới bấm được thứ anh mở
+        app ra để bấm. Sau khi đã thu hết khoảng trắng quanh đồng hồ (36px) vẫn còn thiếu 48px, mà
+        thứ duy nhất còn đủ lớn để nhường là chính vòng đồng hồ (298px = 76% bề ngang máy).
+        ⚠️ VÌ SAO LÀ `min()` CHỨ KHÔNG PHẢI MỘT HẰNG SỐ NHỎ HƠN: hằng số thì thu đồng hồ ở MỌI khổ
+        màn hình, kể cả nơi không hề thiếu chỗ — tức trả giá ở chỗ không có vấn đề. Cái trần này
+        chỉ cắn khi bề ngang < 466px; từ đó trở lên `timerCanvasSize` thắng và mọi thứ y như cũ.
+        Ở 390px nó cho ra 250px — vẫn 64% bề ngang máy, vẫn là thứ to nhất màn hình.
+        ⚠️ `minHeight` PHẢI dùng CÙNG biểu thức: nó là chỗ giữ sẵn chiều cao, nên nếu chỉ thu cái
+        vòng mà quên nó thì khoảng trống vẫn bị giữ nguyên và không được một điểm ảnh nào.
+      */}
       <div
-        className="relative mt-5 flex w-full items-center justify-center sm:mt-5 md:mt-1"
-        style={{ minHeight: timerFootprintHeight }}
+        className="relative mt-2 flex w-full items-center justify-center sm:mt-5 md:mt-1"
+        style={{ minHeight: `min(${timerFootprintHeight}px, 64vw)` }}
       >
         <motion.div
           className="relative flex shrink-0 items-center justify-center"
           {...timerScaleMotion}
-          style={{ width: timerCanvasSize, height: timerCanvasSize }}
+          style={{ width: `min(${timerCanvasSize}px, 64vw)`, height: `min(${timerCanvasSize}px, 64vw)` }}
         >
           {immersiveMode && (isActive || isBreakMode) && (
             <motion.div
@@ -1281,8 +1294,8 @@ export default function PomodoroEngine({
           )}
           <motion.div className="relative" {...timerBreathMotion}>
           <svg
-            width={timerCanvasSize}
-            height={timerCanvasSize}
+            width="100%"
+            height="100%"
             viewBox={`0 0 ${SVG_SIZE} ${SVG_SIZE}`}
             className="transform -rotate-90"
             aria-hidden="true"
@@ -1418,7 +1431,7 @@ export default function PomodoroEngine({
   const timerStageActions = (
     <div className={shouldDockFullScreenActions
       ? 'flex w-full items-start justify-center'
-      : `mt-4 flex w-full items-start justify-center md:mt-0 ${immersiveMode ? 'min-h-[104px]' : 'min-h-[68px]'}`
+      : `mt-2 flex w-full items-start justify-center md:mt-4 ${immersiveMode ? 'min-h-[104px]' : 'min-h-[52px]'}`
     }>
       <div className={`flex w-full max-w-[412px] flex-col items-stretch gap-3 ${
         shouldDockFullScreenActions ? 'sm:w-full sm:max-w-[540px] sm:items-center' : 'sm:w-auto sm:max-w-none sm:items-start'

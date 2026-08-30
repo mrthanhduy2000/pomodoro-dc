@@ -87,3 +87,24 @@ test('DẢI "Điều đáng chú ý" phải nói rõ nó KHÔNG theo kỳ đang 
     'dải insight đọc toàn bộ lịch sử — không nói ra thì người đọc mặc định nó thuộc kỳ đang chọn',
   );
 });
+
+// ⚠️ MÀU DẢI ĐỘ DÀI nằm ở HAI FILE: nhãn/nhịp ở `engine/statsFocus.js`, mã màu ở đây. Đó là
+// đúng chỗ của chúng (logic ↔ mỹ thuật), nhưng nó tạo ra một cặp có thể TRÔI KHỎI NHAU: thêm một
+// dải ở engine mà quên thêm màu thì dải cuối nhận `undefined` và render ra một thanh gradient
+// "undefined, undefinedbb" — trình duyệt bỏ qua trong im lặng, không có gì đỏ lên.
+test('MÀU DẢI ĐỘ DÀI khớp số lượng với bảng dải ở engine', async () => {
+  const { FOCUS_BUCKETS } = await import('../engine/statsFocus.js');
+  const m = SRC.match(/const FOCUS_BUCKET_ACCENTS = \[([^\]]*)\]/);
+  assert.ok(m, 'không tìm thấy FOCUS_BUCKET_ACCENTS ở tầng giao diện');
+  const mau = m[1].split(',').map((x) => x.trim()).filter(Boolean);
+  assert.equal(
+    mau.length, FOCUS_BUCKETS.length,
+    `engine khai ${FOCUS_BUCKETS.length} dải nhưng giao diện chỉ có ${mau.length} màu`,
+  );
+  for (const c of mau) assert.match(c, /^'#[0-9a-fA-F]{6}'$/, `mã màu không hợp lệ: ${c}`);
+});
+
+test('PHÉP TÍNH NHỊP TẬP TRUNG đọc từ engine, không định nghĩa lại ở đây', () => {
+  assert.ok(!/function\s+summarizeFocusStats\s*\(/.test(SRC), '`summarizeFocusStats` phải nhập từ engine');
+  assert.ok(/from '\.\.\/engine\/statsFocus'/.test(SRC), 'phải thật sự nhập từ `engine/statsFocus`');
+});

@@ -64,6 +64,15 @@
   `statsInsights.test.js` (12 bài) và `statsPeriodWiring.test.js` (8 bài đọc mã nguồn) — bài cuối
   làm cho thao tác "thêm một `useState('all')` vào một tab" ĐỎ NGAY, vì đó là cách cái bẫy này
   quay lại mà đọc một mình thì hoàn toàn hợp lý.
+- **Ảnh hưởng (bổ sung cùng ngày)**: chuyển nốt `summarizeFocusStats` + bảng dải/buổi (206 dòng,
+  phép tính lái toàn bộ tab Tập Trung) xuống `engine/statsFocus.js`. Phép chuyển được chứng minh
+  KHÔNG đổi hành vi bằng **đối chiếu chéo**: chạy CẢ HAI bản trên cùng fixture 624 phiên ở cả 6
+  kỳ, so JSON — **6/6 trùng khít từng byte** (sau khi bỏ `accent`, khác biệt duy nhất có chủ ý).
+  ⚠️ Chính phép đối chiếu ấy bắt được một lỗi TIỀM ẨN trong module mới: thiếu `import
+  startOfVietnamDayTs`, thứ chỉ ném `ReferenceError` lúc CHẠY chứ không lúc nạp — `node -e
+  "import(...)"` báo nạp thành công, lint sạch, build xanh. *Một module nạp được không có nghĩa là
+  nó chạy được.* Và xoá 960 dòng code chết khỏi `StatsDashboard.jsx` (4 component + rác dây
+  chuyền), đưa file từ **4.901 → 3.746 dòng (−23,6%)**.
 - **Điều kiện xem lại**: nếu có ngày cần một tab đo theo cửa sổ TRƯỢT (ví dụ "30 ngày gần nhất"
   cho một biểu đồ xu hướng), thì thêm nó vào `STATS_PERIODS` như một kỳ RIÊNG có tên nói đúng
   nghĩa ("30 Ngày Gần Nhất"), **đừng** đổi nghĩa của một kỳ đang có — đổi nghĩa là dựng lại đúng

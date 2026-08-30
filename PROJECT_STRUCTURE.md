@@ -145,6 +145,12 @@
 │   │   │                     #   tab với ba mặc định khác nhau ⇒ chuyển tab là đổi cửa sổ thời
 │   │   │                     #   gian mà không báo. Đừng khai lại bảng kỳ ở tầng giao diện —
 │   │   │                     #   `components/statsPeriodWiring.test.js` đọc mã nguồn và sẽ ĐỎ.
+│   │   ├── statsFocus.js      # Tóm tắt NHỊP TẬP TRUNG — lái toàn bộ tab "Tập Trung"
+│   │   │                     #   (~25 con số: khung giờ rõ nhất, tỉ lệ phiên sâu, chuỗi ngày…).
+│   │   │                     #   ⚠️ MÀU KHÔNG Ở ĐÂY: `FOCUS_BUCKETS` từng mang `accent: '#…'`,
+│   │   │                     #   một quyết định MỸ THUẬT lẫn trong bảng LOGIC — nay màu nằm ở
+│   │   │                     #   `FOCUS_BUCKET_ACCENTS` phía giao diện, khớp theo THỨ TỰ. Đổi số
+│   │   │                     #   dải thì phải sửa CẢ HAI; `statsPeriodWiring.test.js` có bài canh.
 │   │   ├── statsInsights.js   # "Điều đáng chú ý" — dải insight ở tab Tổng Quan.
 │   │   │                     #   ⚠️ CHỈ GỌI hàm tín hiệu đã có ở gameMath.js rồi diễn đạt lại;
 │   │   │                     #   TUYỆT ĐỐI không chế công thức mới ở đây (chế thêm = "một luật

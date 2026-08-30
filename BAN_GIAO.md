@@ -1,3 +1,42 @@
+> Cập nhật lần cuối: **2026-08-29 (đêm, vòng 5–6)** — **ĐẾM NGƯỢC CÓ TRẦN** · **GỢI Ý MỤC TIÊU
+> GẦN ĐÂY** · **Ô "CÔNG TRÌNH" NÓI RA MỐC.**
+>
+> **⚠️ MỘT BẢN VÁ CỦA CHÍNH PHIÊN NÀY ĐI NGƯỢC MỤC TIÊU, VÀ ẢNH CHỤP BẮT ĐƯỢC.** Dòng đếm ngược
+> vừa làm in ra *"Còn ~64 phiên nữa tới «Thương Mại Toàn Cầu»"*. Nó sinh ra để tạo động lực, nhưng
+> một cái đích xa tới mức ấy **làm NẢN chứ không kéo** — và nó chiếm đúng chỗ mà một câu cổ vũ đáng
+> lẽ đứng. ⇒ `STAGE_COUNTDOWN_MAX_SESSIONS = 12` (≈ 4–6 ngày ở nhịp thường); xa hơn thì IM LẶNG.
+> Hệ quả có chủ đích: dòng chỉ hiện ở **một phần ba cuối mỗi chặng** — đúng lúc thúc một cái là
+> tới. ⚠️ Trần chỉ áp cho con số PHIÊN: chưa đủ mẫu để biết nhịp thì vẫn nói bằng EP, vì chặn cả
+> ca đó là làm người mới mất cái đích ngay lúc cần nó nhất.
+> **Bài học**: *một cơ chế tạo động lực có thể quay ra làm nản khi con số nó in ra vượt ngưỡng với
+> tới được — và chỉ ẢNH CHỤP mới cho thấy điều đó, vì test chỉ biết hàm chạy đúng.*
+>
+> **⚠️ MA SÁT LỚN NHẤT CỦA APP NẰM Ở NÚT QUAN TRỌNG NHẤT — và nó không có một gợi ý nào.** Nút Bắt
+> đầu bị khoá cho tới khi gõ đủ `SESSION_GOAL_MIN_CHARS = 10` ký tự. Luật ấy **CÓ CHỦ ĐÍCH** (mục
+> tiêu làm phiên có nghĩa · thưởng `GOAL_ACHIEVED_BONUS_RATE` 12% khi đạt · AI Coach đọc nó) nên
+> **KHÔNG đụng tới** — đó là quyết định của Đàm, không phải của AI. Nhưng `grep` ra: **không hề có
+> cơ chế gợi ý mục tiêu nào**, trong khi `history[].goal` đã lưu sẵn từ lâu. ⇒ `pickRecentGoals`
+> (thuần, ở `sessionGoalState.js`) + chip bấm-một-cái-là-điền. **Bỏ việc GÕ LẠI, không bỏ luật.**
+> ⚠️ Chỉ gợi ý mục tiêu ĐỦ DÀI (gợi ý một chuỗi bấm vào vẫn không mở được nút là một cái bẫy) ·
+> bỏ trùng không phân biệt hoa-thường + khoảng trắng · chỉ hiện khi ô còn TRỐNG.
+> ⚠️ **Bài test bắt được một lỗi thật trong chính hàm ấy**: `limit = 0` vẫn trả về MỘT chip, vì
+> phép `push` đứng trước phép kiểm.
+> ⚠️ **KHÔNG bọc `useMemo`**: React Compiler từ chối tối ưu CẢ COMPONENT khi thấy memo hoá thủ công
+> nó không bảo toàn được (`Existing memoization could not be preserved`) — đổi lấy một phép tính
+> vốn đã dừng sau 3 kết quả là một cái giá tệ. `npm run lint` bắt được, test thì không.
+>
+> **Ô "Công trình" nói ra mốc gần nhất**: `4/5 · còn 1 nữa ★`. Chỉ hiện khi còn ĐÚNG MỘT — một gợi
+> ý lúc nào cũng bật thì hết là gợi ý. Phần thưởng của nó (sao trên thanh chuyển kỷ) là thứ không
+> sửa lại được nữa vì kỷ niêm phong vĩnh viễn (ADR-007).
+>
+> **Đã soi HẾT bảy màn** ở khung 390px (Tập trung · Nhiệm vụ · Hành trang ×3 tab con · Thành Phố ·
+> Thống kê · Cài đặt · menu Thêm). Menu "Thêm" gọn sẵn, không sửa. Desktop đã kiểm lại: tiêu đề
+> `["Thành Phố","Kỷ Khám Phá"]` và `["Thống kê","Hành trình tập trung"]` **còn nguyên**.
+>
+> **Cổng.** `test:fast` **1323 bài · 0 đỏ · `# skipped 1`** · lint sạch · build xanh.
+
+---
+
 > Cập nhật lần cuối: **2026-08-29 (đêm, vòng 2–4)** — **TỐI GIẢN TOÀN APP: SÁU MÀN, MỘT LUẬT** ·
 > **THẺ PHIÊN BIẾT NÓI VỀ CỘT MỐC** · **CƯ DÂN ĐÃ CHẠM TRẦN TỪ PHIÊN 80.**
 >

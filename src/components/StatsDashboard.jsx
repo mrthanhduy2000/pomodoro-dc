@@ -1982,10 +1982,27 @@ function OverviewTab({ history, streak }) {
           <p className="mt-1 text-[1.6rem] font-semibold" style={{ color: TEXT_PRIMARY, fontFamily: 'var(--skin-font-display)' }}>{view.winCount}</p>
           <p className="mt-1 text-[11px]" style={{ color: TEXT_SOFT }}>{(view.winCount / periodDays).toFixed(1)} / ngày</p>
         </div>
+        {/*
+          ⚠️ KHÔNG CÓ PHIÊN NÀO ĐẶT MỤC TIÊU THÌ IN "—", KHÔNG IN "0%" (vòng 20, 2026-08-30).
+          `achPct` rơi về 0 khi mẫu số bằng 0, nên ô này hiện **"0%" cạnh "0 / 0 phiên"** — mà
+          "0%" đọc ra là *"anh trượt hết"*, trong khi sự thật là *"anh chưa thi lần nào"*. Hai
+          tình huống ngược hẳn nhau, cùng một con số. Đây đúng khuôn "con số tạo động lực quay ra
+          làm nản" mà dự án đã vá cho dòng đếm ngược chặng.
+          ⚠️ Không đụng `achPct` ở tầng tính: nó là 0 đúng theo toán học, chỗ sai là chỗ ĐỌC RA.
+        */}
         <div className="p-4" style={card}>
           <p className="text-[12px]" style={{ color: TEXT_SOFT }}>Đạt mục tiêu</p>
-          <p className="mt-1 text-[1.6rem] font-semibold" style={{ color: TEXT_PRIMARY, fontFamily: 'var(--skin-font-display)' }}>{view.achPct}<span className="text-[1rem]" style={{ color: TEXT_SOFT }}>%</span></p>
-          <p className="mt-1 text-[11px]" style={{ color: 'var(--good)' }}>{view.achieved} / {view.goaled} phiên</p>
+          {view.goaled > 0 ? (
+            <>
+              <p className="mt-1 text-[1.6rem] font-semibold" style={{ color: TEXT_PRIMARY, fontFamily: 'var(--skin-font-display)' }}>{view.achPct}<span className="text-[1rem]" style={{ color: TEXT_SOFT }}>%</span></p>
+              <p className="mt-1 text-[11px]" style={{ color: 'var(--good)' }}>{view.achieved} / {view.goaled} phiên</p>
+            </>
+          ) : (
+            <>
+              <p className="mt-1 text-[1.6rem] font-semibold" style={{ color: TEXT_SOFT, fontFamily: 'var(--skin-font-display)' }}>—</p>
+              <p className="mt-1 text-[11px]" style={{ color: TEXT_SOFT }}>chưa phiên nào đặt mục tiêu</p>
+            </>
+          )}
         </div>
         <div className="p-4" style={card}>
           <p className="text-[12px]" style={{ color: TEXT_SOFT }}>Chuỗi</p>

@@ -51,6 +51,14 @@ export default defineConfig([
     },
     rules: {
       'no-unused-vars': 'off',
+      // ⚠️ BẮT "DÙNG BIẾN TRƯỚC KHI KHAI BÁO" (2026-08-29). Một `const` dùng sớm hơn dòng khai báo
+      // ném `ReferenceError` NGAY LÚC RENDER và cả app ra trang trắng — mà `npm test` không bắt
+      // (test đọc mã nguồn, không dựng React), `npm run build` không bắt (bundler không quan tâm
+      // thứ tự trong một hàm), và trước hôm nay ESLint cũng không bắt. Nó chỉ lộ ra khi CHỤP ẢNH.
+      // Đã cắn thật: `streakRisk` đặt cạnh `eraStage` cho đọc xuôi, trong khi
+      // `sessionsCompletedToday` mà nó cần thì khai xuống dưới 146 dòng.
+      // `functions: false` — hàm khai sau mà gọi trước là hợp lệ và cả dự án đang dùng kiểu đó.
+      'no-use-before-define': ['error', { functions: false, classes: false, variables: true }],
     },
   },
   {

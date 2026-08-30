@@ -128,6 +128,19 @@ const FAKE_EPOCH = HOUR === null ? null : Date.UTC(2026, 7, 13, (HOUR - 7 + 24) 
  * khuyết điểm khi có nhiều dữ liệu.
  */
 const FIXTURE = arg('--fixture', null);
+// `--ls khoá=giá-trị` (lặp được) — gieo thêm khoá localStorage tuỳ ý trước khi app chạy.
+// ⚠️ VÌ SAO CẦN: nhiều tính năng của app nhớ trạng thái "đã xem" bằng một khoá localStorage RIÊNG,
+// ngoài hai khoá lớn ở dưới — `dc-nav-seen-v1` (thành tích đã xem), `dc-stage-seen-v1` (mốc đã ăn
+// mừng), `dc-coach-nudge-v1`, `dc-coach-chat-v1`, `dc-coach-advice-v1`. Không gieo được chúng thì
+// mọi trạng thái "lần đầu nhìn thấy" là KHÔNG THỂ chụp — và đó thường là đúng trạng thái đáng soi
+// nhất, vì nó là thứ Đàm gặp một lần rồi thôi.
+const EXTRA_LS = process.argv.reduce((acc, a, i) => {
+  if (a !== '--ls') return acc;
+  const pair = process.argv[i + 1] ?? '';
+  const at = pair.indexOf('=');
+  if (at > 0) acc.push([pair.slice(0, at), pair.slice(at + 1)]);
+  return acc;
+}, []);
 // Mốc thời gian của fixture: theo đúng đồng hồ mà app sẽ thấy (kể cả khi `--hour` giả lập).
 const FIXTURE_NOW = FAKE_EPOCH === null ? Date.now() : FAKE_EPOCH;
 const GAME = FIXTURE ? JSON.parse(readFileSync(FIXTURE, 'utf8')) : {
@@ -178,6 +191,7 @@ const MIME = {
 const seedPage = `<!doctype html><meta charset="utf-8"><body><script>
 localStorage.setItem('dc-pomodoro-v1', ${JSON.stringify(JSON.stringify(GAME))});
 localStorage.setItem('dc-pomodoro-settings-v2', ${JSON.stringify(JSON.stringify(SETTINGS))});
+${EXTRA_LS.map(([k, v]) => `localStorage.setItem(${JSON.stringify(k)}, ${JSON.stringify(v)});`).join('\n')}
 location.replace('/index.html');
 </script></body>`;
 

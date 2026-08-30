@@ -274,10 +274,14 @@ export default function CityScene3D({
           orbit.set(to);
           orbit.setLimits({ minPitch, minDistance });
           flight = null;
+          // `loop` khai bên dưới, nhưng hàm này chỉ CHẠY sau khi nó đã khởi tạo (closure, không
+          // phải lời gọi ngay) — nên đây là ca hợp lệ, không phải lỗi thứ tự.
+          // eslint-disable-next-line no-use-before-define
           loop.invalidate();
           return;
         }
         flight = { from, to, minPitch, minDistance, startedAt: performance.now() };
+        // eslint-disable-next-line no-use-before-define -- xem lý do ở `loop.invalidate()` bên trên.
         loop.beginSustained('bay-camera');
       }
 
@@ -300,6 +304,7 @@ export default function CityScene3D({
         if (t >= 1) {
           orbit.setLimits({ minPitch: flight.minPitch, minDistance: flight.minDistance });
           flight = null;
+          // eslint-disable-next-line no-use-before-define -- xem lý do ở `loop.invalidate()` bên trên.
           loop.endSustained('bay-camera');
         }
       }

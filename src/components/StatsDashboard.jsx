@@ -1994,7 +1994,7 @@ function OverviewTab({ history, streak }) {
         </div>
       </div>
 
-      <div className="grid gap-3 lg:grid-cols-[1.5fr_1fr]">
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-[1.5fr_1fr]">
         <div className="p-5" style={card}>
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em]" style={{ color: TEXT_SOFT }}>
             Giờ tập trung theo {period === 'year' ? 'tháng' : period === 'month' ? 'tuần' : 'ngày'}
@@ -2370,7 +2370,7 @@ const CompactFocusTimeline = React.memo(function CompactFocusTimeline({ summary,
         </div>
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.18fr)_minmax(252px,0.82fr)]">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.18fr)_minmax(252px,0.82fr)]">
         <div>
           <div className="pb-1">
             <div
@@ -2887,8 +2887,22 @@ const FocusTab = React.memo(function FocusTab({ history }) {
             </div>
           </Motion.section>
 
+          {/*
+            ⚠️ `grid-cols-1` LÀ BẮT BUỘC, KHÔNG PHẢI THỪA (vòng 20, 2026-08-30). Ở khung hẹp,
+            `lg:grid-cols-…` chưa áp nên grid chỉ có MỘT cột NGẦM cỡ `auto` — mà một track `auto`
+            thì tự PHÌNH theo nội dung rộng nhất bên trong, bất kể item khai `min-width: 0`. Nội
+            dung rộng nhất ở đây là lịch nhiệt 365 ngày (`min-w-[560px]`, cố ý, nó có
+            `overflow-x-auto` riêng để cuộn ngang). Hậu quả đo được ở 390px: cả THẺ phình lên
+            602px ⇒ tiêu đề "365 Ngày Gần Đây" và câu "Nhìn nhanh toàn bộ nhịp tập trung trong
+            năm gần nhất…" cũng rộng 560px và bị MÉP MÀN HÌNH cắt — cụt giữa từ, không có dấu "…".
+            ⚠️ Không cổng nào đỏ: đây không phải `truncate` nên `--fit` mù, và `scrollWidth` cũng
+            gần như mù vì `overflow-x:hidden` ở tổ tiên kẹp nó lại. Thứ bắt được là ĐỌC ẢNH, và
+            một probe liệt kê mọi phần tử rộng hơn 390px.
+            Cùng đúng cái bẫy `SkillTree.jsx` đã ghi lại — nay vá cho cả 8 grid cùng khuôn trong
+            file này, không vá riêng chỗ đã bắt được.
+          */}
           <div
-            className="grid gap-4 lg:grid-cols-[minmax(0,1.05fr)_minmax(320px,0.95fr)]"
+            className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.05fr)_minmax(320px,0.95fr)]"
             style={{ contentVisibility: 'auto', containIntrinsicSize: '720px' }}
           >
             {focusSummary.sparseMode
@@ -2899,7 +2913,7 @@ const FocusTab = React.memo(function FocusTab({ history }) {
           </div>
 
           <div
-            className="grid gap-4 lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]"
+            className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]"
             style={{ contentVisibility: 'auto', containIntrinsicSize: '640px' }}
           >
             <div
@@ -4304,7 +4318,7 @@ function JournalTab({ history, sessionCategories }) {
                   )}
 
                   {(goalText || nextNoteText || reviewMeta) && (
-                    <div className="grid gap-2 lg:grid-cols-2">
+                    <div className="grid grid-cols-1 gap-2 lg:grid-cols-2">
                       {(goalText || reviewMeta) && (
                         <div
                           className="rounded-[20px] px-3.5 py-3.5"
@@ -4354,7 +4368,7 @@ function JournalTab({ history, sessionCategories }) {
                   )}
 
                   {(h.note || h.breakNote) && (
-                    <div className="grid gap-2 lg:grid-cols-2">
+                    <div className="grid grid-cols-1 gap-2 lg:grid-cols-2">
                       <div
                         className="lg:col-span-2 rounded-[20px] px-3.5 py-3.5 space-y-3"
                         style={{ background: NOTE_PANEL_BG, border: `1px solid ${NOTE_PANEL_BORDER}` }}
@@ -4402,7 +4416,7 @@ function JournalTab({ history, sessionCategories }) {
                           )}
                         </div>
 
-                        <div className="grid gap-2 lg:grid-cols-2">
+                        <div className="grid grid-cols-1 gap-2 lg:grid-cols-2">
                           {h.note && (
                             <div
                               className="rounded-[18px] px-3.5 py-3.5"
@@ -4687,7 +4701,7 @@ function NotesTab({ savedNotes, sessionCategories }) {
                     ))}
                   </div>
 
-                  <div className="grid gap-2 md:grid-cols-2">
+                  <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
                     {entry.note && (
                       <div
                         className="rounded-[20px] px-3.5 py-3.5"

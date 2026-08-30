@@ -103,7 +103,7 @@ export default function RewardCard({
     <Wrapper
       type={interactive ? 'button' : undefined}
       onClick={onClick}
-      className={`flex w-full items-center gap-3 text-left ${compact ? 'px-3.5 py-3' : 'px-4 py-3.5'} ${className}`}
+      className={`flex w-full flex-col gap-1.5 text-left ${compact ? 'px-3.5 py-3' : 'px-4 py-3.5'} ${className}`}
       style={{
         background: 'var(--card-bg-solid)',
         border: 'var(--skin-card-border-width,1px) solid var(--line)',
@@ -115,6 +115,9 @@ export default function RewardCard({
         ...style,
       }}
     >
+      {/* HÀNG TRÊN — biểu tượng · tên + bậc · số lượng. Mô tả xuống hàng riêng ở dưới; lý do
+          nằm ở khối chú thích của chính nó. */}
+      <span className="flex w-full items-center gap-3">
       <span
         className="mono flex shrink-0 items-center justify-center text-[15px] leading-none"
         style={{
@@ -155,16 +158,22 @@ export default function RewardCard({
         >
           {name}
         </span>
-        <span className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
+        {/*
+          ⚠️ MÔ TẢ CÓ HÀNG RIÊNG, VÀ `line-clamp-2` CHỨ KHÔNG `truncate` (vòng 20, 2026-08-30).
+          Khối chú thích ngay trên hứa rằng *"thẻ hẹp thì mô tả tự rơi xuống hàng riêng và lấy
+          trọn bề ngang"*. ĐO RA THÌ KHÔNG: ở 390px mô tả chỉ được **144px cho 370px chữ — 61%
+          câu nằm ngoài màn hình**, và chữ cụt giữa từ. Lý do là `flex-wrap` chỉ xuống dòng khi
+          món hàng KHÔNG VỪA, mà `min-w-[9rem]` = đúng 144px thì luôn vừa cạnh huy hiệu bậc ⇒ nó
+          không bao giờ wrap, và `flex-1` chỉ chia phần thừa của CÙNG một dòng.
+          Câu bị cắt là câu nói LÀM GÌ ("Bước 1 — 0/1: Lấy đà — có 1 ngày gồm cả phiên ngắn và
+          phiên dài"), tức đúng thứ cái thẻ tồn tại để nói.
+          ⚠️ `truncate` là hành vi ĐÚNG của CSS nên KHÔNG cổng nào đỏ, và `shot.mjs --fit` cũng
+          mù vì nó chỉ soi NÚT. Thứ bắt được là một `--probe` so `scrollWidth` với bề ngang thật.
+          Nay: huy hiệu bậc một hàng, mô tả một hàng trọn bề ngang, tối đa 2 dòng — đúng lưới an
+          toàn mà chính cái TÊN ở trên đã dùng.
+        */}
+        <span className="mt-1 flex items-center">
           <RewardTierBadge tier={tier.key} />
-          {description && (
-            <span
-              className="min-w-[9rem] flex-1 truncate text-[11px] leading-snug"
-              style={{ color: 'var(--muted)' }}
-            >
-              {description}
-            </span>
-          )}
         </span>
       </span>
 
@@ -183,6 +192,31 @@ export default function RewardCard({
       )}
 
       {action && <span className="shrink-0">{action}</span>}
+      </span>
+
+      {/*
+        ⚠️ MÔ TẢ XUỐNG HÀNG RIÊNG, TRỌN BỀ NGANG (vòng 20, 2026-08-30). Khối chú thích ở trên từng
+        hứa rằng *"thẻ hẹp thì mô tả tự rơi xuống hàng riêng và lấy trọn bề ngang"*. ĐO RA THÌ
+        KHÔNG: ở 390px mô tả chỉ được **144px cho 370px chữ — 61% câu nằm ngoài màn hình**, cụt
+        giữa từ. Lý do: `flex-wrap` chỉ xuống dòng khi món hàng KHÔNG VỪA, mà `min-w-[9rem]` =
+        đúng 144px thì luôn vừa cạnh huy hiệu bậc ⇒ nó không bao giờ wrap, còn `flex-1` thì chỉ
+        chia phần thừa của CÙNG một dòng. Câu bị cắt là câu nói LÀM GÌ ("Bước 1 — 0/1: Lấy đà —
+        có 1 ngày gồm cả phiên ngắn và phiên dài") — đúng thứ cái thẻ tồn tại để nói.
+        ⚠️ `truncate` là hành vi ĐÚNG của CSS nên KHÔNG cổng nào đỏ, và `shot.mjs --fit` cũng mù
+        vì nó chỉ soi NÚT chứ không soi thẻ chữ. Thứ bắt được là một `--probe` so `scrollWidth`
+        với bề ngang thật — dùng lại nó nếu nghi chỗ nào bị cắt.
+        ⚠️ Nay mô tả nằm NGOÀI hàng icon nên nó lấy trọn bề ngang thẻ. `line-clamp-3` là trần an
+        toàn cho một mô tả dài bất thường, KHÔNG phải cỡ thường dùng — ở trọn bề ngang, câu dài
+        nhất hiện có chỉ chiếm 2 dòng.
+      */}
+      {description && (
+        <span
+          className="line-clamp-3 w-full text-[11px] leading-snug"
+          style={{ color: 'var(--muted)' }}
+        >
+          {description}
+        </span>
+      )}
     </Wrapper>
   );
 }

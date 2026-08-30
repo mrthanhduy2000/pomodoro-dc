@@ -224,7 +224,11 @@ export default function CityStage({
         <p className="text-[11px]" style={{ color: 'var(--muted-2)' }}>
           {selection
             ? 'Đang ngắm gần · kéo để xoay quanh · bấm “Toàn cảnh” hoặc Esc để lùi ra'
-            : 'Kéo để xoay · chạm vào công trình để bay tới ngắm gần'}
+            // ⚠️ RÚT GỌN 2026-08-29, KHÔNG GỠ. Lý do dòng này tồn tại (khối chú thích ngay trên)
+            // vẫn nguyên giá trị: trên iPhone không có con trỏ đổi hình, nên không gì nói rằng
+            // chạm được. Nhưng câu đầy đủ chiếm trọn một dòng ở khung 390px ngay dưới hình, cạnh
+            // một dòng chú thích khác — hai dòng chữ nhỏ liên tiếp thì mắt bỏ qua cả hai.
+            : 'Kéo để xoay · chạm để ngắm gần'}
         </p>
       )}
 

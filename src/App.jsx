@@ -2613,16 +2613,34 @@ function ShellPane({ children, subtitle, title, topRail = null }) {
   return (
     <div className="h-full overflow-y-auto">
       {topRail}
-      <div className="mx-auto max-w-[1120px] px-5 pb-28 pt-8 md:px-8 lg:px-12 lg:pb-8">
+      {/*
+        ⚠️ KHỐI TIÊU ĐỀ ĐÃ ĐƯỢC CẮT GỌN (2026-08-29) — đo trước khi cắt: ở khung 390px, tab Thành
+        Phố có canvas 3D **chỉ chiếm 24% chiều cao** và nó bắt đầu ở y=537, tức **63% màn hình
+        trôi qua trước khi thấy thứ đáng xem nhất**. Ba lớp bị gỡ/thu, mỗi lớp một lý do riêng:
+
+        · **Chữ "Workspace"** — GỠ HẲN. Nó là tiếng Anh trong một app tiếng Việt, và nó xuất hiện
+          y hệt nhau ở CẢ NĂM tab ⇒ nó không phân biệt được gì cả, chỉ tốn một dòng mỗi màn hình.
+          Một nhãn giống nhau ở mọi nơi thì không mang thông tin.
+        · **`subtitle`** — chỉ còn hiện trên MÀN RỘNG. Nó giải thích luật chơi, tức chỉ đáng đọc
+          vài lần đầu; trên điện thoại nó đứng chắn ngay chỗ đắt nhất, mỗi lần mở tab, mãi mãi.
+        · **`h1`** — nhỏ lại trên điện thoại (28 → 21px). Nhãn tab đang sáng ở thanh dưới ĐÃ nói
+          tên màn hình rồi, nên đây là chỗ nói lần thứ hai; theo luật sẵn có của dự án thì *chỗ
+          nói ít hơn phải nhường*. Vẫn giữ ở màn rộng, nơi thanh bên có thể đang thu gọn.
+      */}
+      <div className="mx-auto max-w-[1120px] px-5 pb-28 pt-5 md:px-8 md:pt-8 lg:px-12 lg:pb-8">
         {title ? (
           <>
-            <div className="mb-6">
-              <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.18em] text-[var(--muted-2)]">
-                <AppIcon.spark size={13} />
-                <span>Workspace</span>
-              </div>
+            {/*
+              ⚠️ CẢ KHỐI TIÊU ĐỀ ẨN TRÊN ĐIỆN THOẠI (`hidden md:block`). Nhãn tab đang SÁNG ở thanh
+              dưới đã nói đúng tên màn hình rồi — đây là chỗ nói lần thứ hai, và luật sẵn có của dự
+              án là *hai chỗ nói cùng một chuyện thì chỗ nói ít hơn phải nhường*. Ở màn rộng thì
+              giữ: thanh bên có thể đang thu gọn, và ở đó chỗ trống không phải thứ khan hiếm.
+              Đo được ở tab Thành Phố, khung 390px: bỏ khối này đưa canvas 3D từ y=380 lên y≈270,
+              tức thành phố lọt trọn vào nửa trên màn hình thay vì nằm vắt qua nếp gấp.
+            */}
+            <div className="mb-6 hidden md:block">
               <h1
-                className="mt-2.5 text-[28px] font-semibold leading-[1.08] tracking-[-0.02em] text-[var(--ink)] md:text-[33px]"
+                className="text-[28px] font-semibold leading-[1.08] tracking-[-0.02em] text-[var(--ink)] md:text-[33px]"
                 style={{ fontFamily: 'var(--skin-font-display)' }}
               >
                 {title}
@@ -2633,7 +2651,7 @@ function ShellPane({ children, subtitle, title, topRail = null }) {
                 </p>
               )}
             </div>
-            <div className="border-t pt-5 md:pt-6" style={{ borderColor: 'var(--line)' }}>
+            <div className="md:border-t md:pt-6" style={{ borderColor: 'var(--line)' }}>
               {children}
             </div>
           </>

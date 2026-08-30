@@ -19,6 +19,8 @@ import { deriveResidentCount } from '../../engine/city3d/residents';
 import { getEraStyle } from '../../engine/city3d/eraStyle';
 import EraSwitcher from './EraSwitcher';
 import { cardStyle, eraSolid } from './cityTokens';
+import { DAY_PHASE_LABEL, deriveDaylight } from '../../engine/city3d/daylight';
+import { getVietnamHour } from '../../engine/time';
 
 const eyebrow = 'mono text-[10px] uppercase tracking-[0.2em]';
 
@@ -147,28 +149,13 @@ export default function CityViewShell({
           </div>
           <div className="text-[11px]" style={{ color: 'var(--muted)' }}>
             {isCurrent
-              ? 'Đang xây · thành phố lớn lên sau mỗi phiên'
+              ? 'Đang xây'
               : (isLost
                   ? 'Thất truyền'
                   : `Đã niêm phong${viewing?.sealedAt ? ` ngày ${viewing.sealedAt}` : ''}`)}
           </div>
         </div>
 
-        {/*
-          MỘT DÒNG NÓI RA "THÀNH PHỐ NÀY LẤY MẪU TỪ ĐÂU".
-          Đàm: *"mỗi kỷ có thể lấy một đất nước làm biểu tượng"*. Hình khối đã theo đúng nước ấy từ
-          `eraStyle.js`, nhưng nếu không nói ra thì Đàm phải TỰ ĐOÁN — mà đoán ra "Bồ Đào Nha" từ
-          một cái kho có cột buồm thì gần như không ai làm được. Một dòng chữ biến công sức dựng
-          hình thành thứ đọc được, và biến việc lên kỷ mới thành "được đi thăm một nước mới".
-          Kỷ thất truyền thì giấu: ở đó không có thành phố nào để mà nói nó giống nước nào.
-        */}
-        {!isLost && eraStyle.country && (
-          <p className="mb-3 text-[11px] leading-snug" style={{ color: 'var(--muted)' }}>
-            Kiến trúc lấy mẫu từ{' '}
-            <span className="font-semibold" style={{ color: 'var(--ink)' }}>{eraStyle.country}</span>
-            {' '}· {eraStyle.landmark}
-          </p>
-        )}
 
         {isLost ? (
           <EmptyState icon="🏛️" title="Thành phố thất truyền">
@@ -190,6 +177,36 @@ export default function CityViewShell({
             {...enterMotion}
           >
             {children}
+            {/*
+              MỘT DÒNG NÓI RA "THÀNH PHỐ NÀY LẤY MẪU TỪ ĐÂU".
+              Đàm: *"mỗi kỷ có thể lấy một đất nước làm biểu tượng"*. Hình khối đã theo đúng nước ấy
+              từ `eraStyle.js`, nhưng nếu không nói ra thì Đàm phải TỰ ĐOÁN — mà đoán ra "Bồ Đào
+              Nha" từ một cái kho có cột buồm thì gần như không ai làm được. Một dòng chữ biến công
+              sức dựng hình thành thứ đọc được, và biến việc lên kỷ mới thành "đi thăm một nước mới".
+
+              ⚠️ ĐỨNG DƯỚI HÌNH, không đứng trên (đổi 2026-08-29). Nó là CHÚ THÍCH cho bức ảnh, mà
+              chú thích thì đọc SAU khi đã nhìn. Ở trên, nó chiếm 2 dòng ở khung 390px và đẩy thành
+              phố — thứ đáng xem nhất màn hình — xuống thấp thêm chừng ấy. Đo trước khi đổi: canvas
+              chỉ chiếm 24% chiều cao và bắt đầu ở y=537/844.
+              Kỷ thất truyền thì giấu: ở đó không có thành phố nào để mà nói nó giống nước nào.
+            */}
+            {eraStyle.country && (
+              <p className="mt-2 text-[11px] leading-snug" style={{ color: 'var(--muted)' }}>
+                Kiến trúc lấy mẫu từ{' '}
+                <span className="font-semibold" style={{ color: 'var(--ink)' }}>{eraStyle.country}</span>
+                {' '}· {eraStyle.landmark}
+                {/*
+                  ⚠️ CHẶNG NGÀY — GHÉP VÀO DÒNG NÀY, KHÔNG THÊM DÒNG MỚI. Cảnh 3D đã đổi theo đồng
+                  hồ thật (giờ Việt Nam) từ lâu: bình minh hồng, trưa gắt, đêm xanh có đèn cửa sổ.
+                  Nhưng không màn hình nào NÓI RA, nên với Đàm nó chỉ là "hôm nay trông hơi khác" —
+                  không đủ thành một lý do mở app vào giờ khác. Một chữ biến hiệu ứng vô hình thành
+                  lời mời quay lại, mà không tốn thêm một dòng nào trên màn hình.
+                  Chỉ hiện cho kỷ ĐANG chơi: bảo tàng là ảnh chụp một thành phố đã niêm phong, nói
+                  "đang là hoàng hôn" ở đó là nói về một nơi không còn đổi nữa.
+                */}
+                {isCurrent && ` · ${DAY_PHASE_LABEL[deriveDaylight(getVietnamHour()).phase]}`}
+              </p>
+            )}
           </motion.div>
         )}
       </div>

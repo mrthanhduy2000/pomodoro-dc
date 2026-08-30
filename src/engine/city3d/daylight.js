@@ -23,6 +23,27 @@
  */
 export const DAY_PHASES = ['dawn', 'morning', 'noon', 'afternoon', 'dusk', 'night'];
 
+/**
+ * Tên tiếng Việt của từng chặng — để MÀN HÌNH nói ra được điều mà cảnh 3D vẫn luôn làm.
+ *
+ * ⚠️ VÌ SAO ĐÁNG CÓ. Thành phố đã đổi theo ĐỒNG HỒ THẬT (giờ Việt Nam) từ lâu: bình minh hồng,
+ * trưa gắt, đêm xanh có đèn cửa sổ. Nhưng **không màn hình nào nói ra**, nên với người chơi thì nó
+ * chỉ là "hôm nay trông hơi khác" — không đủ để thành một lý do MỞ APP LÚC KHÁC trong ngày. Một
+ * chữ ở đúng chỗ biến một hiệu ứng vô hình thành một lời mời quay lại.
+ *
+ * Ở đây chứ không ở tầng giao diện: chặng ngày là tri thức của module này, và để nhãn ở nơi khác
+ * thì hai bảng sẽ trôi khỏi nhau — thêm chặng thứ bảy mà quên thêm nhãn thì màn hình im lặng.
+ * Có test canh phủ đủ `DAY_PHASES`.
+ */
+export const DAY_PHASE_LABEL = {
+  dawn: 'bình minh',
+  morning: 'buổi sáng',
+  noon: 'giữa trưa',
+  afternoon: 'buổi chiều',
+  dusk: 'hoàng hôn',
+  night: 'ban đêm',
+};
+
 /** Giờ nào thuộc chặng nào. Tra bảng chứ không chuỗi if — dễ đọc và dễ sửa hơn. */
 const PHASE_BY_HOUR = [
   // 0  1  2  3  4  5

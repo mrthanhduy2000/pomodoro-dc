@@ -2731,7 +2731,14 @@ function ActionButton({ children, className = '', disabled = false, onClick, siz
     // `--accent-soft` chưa skin nào khai (2026-08-27) nên hôm nay fallback luôn là đường chạy thật.
     // Giữ nguyên lối `var(a, b)` để skin nào muốn có nền nhấn riêng thì chỉ cần khai thêm token.
     info: 'border-transparent bg-[var(--accent-soft,var(--card-bg-solid2))] text-[var(--accent-ink)] shadow-[0_4px_0_0_var(--line-2)]',
-    danger: 'border-transparent bg-[var(--card-bg-solid2)] text-[var(--ink)] shadow-[0_4px_0_0_var(--line-2)]',
+    // ⚠️ `danger` PHẢI LÙI VỀ SAU, KHÔNG ĐƯỢC NỔI (đổi 2026-08-29). Bản cũ dùng nền ĐẶC
+    // (`--card-bg-solid2`) + chữ `--ink` đen đậm, tức nặng hơn cả `soft` đứng ngay cạnh — nên trên
+    // màn hình phiên đang chạy, "Hủy phiên" là nút HÚT MẮT NHẤT trong ba nút. Mà nó là hành động
+    // phá hoại: mất toàn bộ tiến độ phiên VÀ chịu phạt tài nguyên (`DISASTER_*_PENALTY_RATE`).
+    // Thứ tự thị giác phải khớp thứ tự hậu quả. Nay: nền trong, viền nhạt, chữ `--muted` — vẫn tìm
+    // ra ngay khi cần, nhưng thôi mời gọi. KHÔNG tô đỏ rực: đỏ cũng là một cách để nổi nhất, chỉ
+    // đổi từ "mời gọi" sang "doạ", mà cả hai đều kéo mắt khỏi cái đồng hồ.
+    danger: 'border-[var(--line-2)] bg-transparent text-[var(--muted)] shadow-[0_4px_0_0_var(--line-2)]',
   };
 
   // ⚠️ MỖI `size` LÀ MỘT BỘ TRỌN VẸN, CỐ Ý — đừng "gọn hơn" bằng cách để nơi gọi chồng thêm lớp.

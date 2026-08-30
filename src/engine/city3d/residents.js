@@ -21,7 +21,25 @@ import { hashId, unit } from '../hashId';
 import { buildRoadPaths } from './roadPath';
 import { HUMAN_PRESETS, getHumanStyle } from './humanStyle';
 
-/** Trần cư dân. Đây là ngưỡng HIỆU NĂNG: mỗi người là một thực thể phải cập nhật mỗi khung hình. */
+/**
+ * Trần cư dân. Đây là ngưỡng HIỆU NĂNG: mỗi người là một thực thể phải cập nhật mỗi khung hình.
+ *
+ * ⚠️ ĐÃ THỬ NÂNG 28 → 48 NGÀY 2026-08-29 VÀ CỔNG BÁC BỎ — ghi lại để phiên sau khỏi thử lại.
+ * Động cơ hợp lý: đo bằng chính công thức bên dưới (5 công trình, chuỗi 10) thì trần 28 **chạm ở
+ * phiên thứ 33** của một kỷ, trong khi kỷ 8 dài ~130 phiên và kỷ 15 dài ~840 — tức gần như suốt cả
+ * kỷ thành phố không đông thêm một người nào, và đó là một trong ba cái trần mà `TECH_DEBT #14`
+ * chỉ đích danh cho "phiên 121+ trong kỷ: 0% có tin thật".
+ *
+ * **Nhưng ngân sách nói không.** `sceneGraphWiring.test.js` chấm cư dân theo TỈ LỆ tam giác của
+ * cảnh (trần 30%), và một cư dân nay tốn **1.808 tam giác** — không phải ~319 như ADR-055 ước, vì
+ * ADR-057 đã thay chân cứng bằng khớp ngược thật. Số học: 48 người = 44,8% cảnh (bác), trần thật
+ * là **32 người** (29,8%), mà 32 chỉ đẩy mốc chạm trần từ phiên 33 lên phiên 57 — **mua 24 phiên
+ * bằng gần hết phần ngân sách còn lại**. Không đáng.
+ *
+ * ⚠️ VÀ ĐÂY LÀ CON SỐ ĐÁNG NHỚ NHẤT: **cư dân đang chiếm 26,1% tam giác của cả cảnh** (28 × 1.808
+ * trên 193.836 ở kỷ 1). Tức nhóm này đã sát trần 30% từ trước; chỗ để tiêu cho cư dân gần như
+ * không còn. Muốn thành phố "sống" thêm thì phải tìm ở nhóm khác, không phải ở số người.
+ */
 export const MAX_RESIDENTS = 28;
 
 /**

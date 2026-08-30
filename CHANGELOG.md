@@ -12,6 +12,43 @@
 
 ---
 
+## 2026-08-30 — Tối giản vòng 8: gỡ bốn chỗ "nói lần thứ hai", và sửa ba câu bị cắt cụt
+
+**Mục đích.** Đàm: *"đơn giản hoá, tối giản hoá và làm hứng thú hơn"*, kèm một ràng buộc mới:
+**không đụng tới những gì thuộc Thành Phố**. Nên vòng này làm ở bốn màn còn lại.
+
+**Đo trước khi cắt** (ảnh chụp khung 390px THẬT, `shot.mjs --phone`): ở màn **Tập trung** — màn Đàm
+mở nhiều nhất — đồng hồ `25:00` nằm ở y≈1325 trên một trang cao 1690, tức **thứ duy nhất Đàm mở app
+để làm đang nằm dưới nếp gấp**, và nút bắt đầu bị thanh tab che hẳn. Phía trên nó là 425px thanh đầu
+cộng 280px khối chào, trong đó "hôm nay làm 0 phiên" được nói **ba lần**.
+
+**Đã đổi.**
+- **Màn Tập trung** — gỡ dòng nhãn "NGÀY HÔM NAY · CHỦ NHẬT" (câu ngay dưới nó mở bằng "Chào buổi
+  tối", đã nói xong cả "hôm nay" lẫn "lúc nào trong ngày") và gỡ câu "Bạn chưa chốt phiên nào trong
+  hôm nay" (chỗ thứ ba nói cùng con số; bản dưới đồng hồ — "Phiên 0/5 hôm nay" — tốt hơn vì có mẫu
+  số). Giữ nửa hành-động-được: "Bạn còn 5 phiên nữa là đủ nhịp hôm nay."
+- **Thanh đầu (mọi màn)** — ba ô số liệu xuống còn hai: gỡ ô "Phiên". Nó và ô "Tập trung" là hai
+  hình chiếu của cùng một sự việc (làm 3 phiên thì đương nhiên có ~75 phút), và ở màn Tập trung nó
+  còn trùng lần thứ hai với dòng dưới đồng hồ **trong cùng một khung nhìn**. Giữ số PHÚT chứ không
+  giữ số phiên: số phút không được nói ở đâu khác, số phiên thì có.
+- **Màn Nhiệm vụ** — gỡ hai nhãn "HÔM NAY" / "CHUỖI TUẦN" đứng trên "Nhiệm vụ ngày" / "Nhiệm vụ
+  tuần" (chữ "ngày"/"tuần" trong chính tiêu đề đã nói xong). `QuietSection.eyebrow` nay là **tuỳ
+  chọn thật**, không còn rơi về mặc định im lặng "Nhật ký".
+- **Màn Hành trang** — gỡ hai nhãn "TIẾN TRÌNH" / "CÂY KỸ NĂNG" (cái sau nhắc lại tên tab Đàm vừa
+  bấm). Đổi dòng luật chơi "6.000 XP/cấp · 2 SP mỗi cấp" thành **đếm ngược tới phần thưởng**:
+  "Còn 3.555 XP nữa lên cấp 6 → +2 SP" — cùng chỗ, nhưng nó đổi sau mỗi phiên.
+
+**Một lỗi thật, im lặng ở mọi cổng.** Cả **ba** câu mô tả của thẻ "Thưởng trọn ngày" dài 32–34 ký tự
+trong khi ô chứa chúng là một dòng `truncate`, nên cả ba hiện ra cụt: «Còn 123 XP từ các mục …».
+Hợp đồng "đúng một dòng" có ghi trong chú thích của `RewardCard` nhưng **không có gì canh**. Nay ba
+câu ≤22 ký tự, tách ra `src/components/dailyBonusCopy.js` và có `dailyBonusCopy.test.js` (4 bài, đã
+thử-cho-đỏ) đo độ dài — kể cả ca XP 5 chữ số.
+
+**Ảnh hưởng.** Chỉ giao diện; không đụng engine, không đụng kinh tế game, không đụng Thành Phố.
+**Tương thích:** không có migration.
+
+---
+
 ## 2026-08-29 (đêm) — Tối giản: cắt 213px chữ khỏi màn Thành Phố, và sửa một lỗi cắt chữ im lặng
 
 **Mục đích.** Đàm: *"đơn giản hoá, tối giản hoá, làm thành phố hứng thú hơn"*. Nguyên tắc áp dụng:

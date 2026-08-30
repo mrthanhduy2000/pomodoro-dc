@@ -2493,9 +2493,28 @@ function TopRail({
           )}
         </div>
 
-        <div className="grid grid-cols-[repeat(3,minmax(0,1fr))_auto] items-center gap-2 lg:hidden">
-          <TinyStat compact label="Phiên" value={sessionsCompletedToday.toLocaleString()} />
-          <TinyStat compact label="Tập trung" value={focusHoursToday} />
+        {/*
+          ⚠️ BA Ô XUỐNG CÒN HAI (2026-08-30) — ô «Phiên» đã bị GỠ, và đây là lý do, không phải
+          dọn cho gọn mắt. «Phiên» và «Tập trung» là hai cách nhìn của CÙNG một sự việc: làm 3
+          phiên thì đương nhiên có ~75 phút, không có cách nào một con số tăng mà con số kia đứng
+          yên. Hai ô cạnh nhau cho hai hình chiếu của một đại lượng thì ô thứ hai không thêm tin.
+          ⚠️ Và «Phiên» còn trùng LẦN THỨ HAI: ở màn Tập trung, dòng «Phiên 0/5 hôm nay» nằm ngay
+          dưới đồng hồ, tức **cùng một khung nhìn 844px** (đã kiểm bằng ảnh chụp 390px sau khi
+          khối chào được cắt gọn). Bản dưới đồng hồ tốt hơn hẳn vì nó có MẪU SỐ — nó nói được
+          "còn bao xa", còn ô này chỉ nói "đang ở đâu". Nên chỗ nhường là ô này.
+          ⚠️ GIỮ LẠI SỐ PHÚT chứ không giữ số phiên, dù số phiên mới là đơn vị của mục tiêu ngày:
+          số phút là đại lượng KHÔNG được nói ở đâu khác trong app, còn số phiên thì có. Giữ cái
+          trùng và bỏ cái duy nhất là đổi một ô đang có tin lấy một ô lặp lại.
+          ⚠️ ĐÃ THỬ GỘP HAI SỐ VÀO MỘT Ô («0 phiên · 0 phút») VÀ HỎNG: ở 390px chuỗi ấy xuống hai
+          dòng, làm cả hàng CAO THÊM — tức bản vá "cho gọn" lại tốn thêm chỗ. Ảnh chụp bắt được,
+          không phép đo nào khác thấy.
+
+          CHỖ TRỐNG DỒN CHO «CHUỖI», CÓ CHỦ ĐÍCH: trong ba con số này, chuỗi là con số DUY NHẤT
+          mà mất đi thì không lấy lại được — phiên và phút hôm nay thì mai làm lại từ đầu, còn
+          chuỗi đứt là đứt hẳn. Nó xứng đáng là ô to, không phải ô cuối hàng.
+        */}
+        <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] items-center gap-2 lg:hidden">
+          <TinyStat compact label="Hôm nay" value={focusHoursToday} />
           <TinyStat
             compact
             label={streakRisk?.atRisk ? 'Chuỗi ⚠' : 'Chuỗi'}
@@ -2589,7 +2608,7 @@ function FocusIntro({
 }) {
   // Màn Focus tĩnh: khi phiên đang chạy/tạm dừng, ẩn lời chào lớn để chỉ còn đồng hồ.
   if (hasFocusSessionInProgress) return null;
-  const { badgeLabel, title, progressTemplate, remainingValue, statusTemplate } = getFocusIntroCopy({
+  const { title, remainingValue, statusTemplate } = getFocusIntroCopy({
     greeting,
     sessionsCompletedToday,
     focusMinutesToday,
@@ -2609,11 +2628,29 @@ function FocusIntro({
   };
 
   return (
+    /*
+      ⚠️ HAI LỚP ĐÃ BỊ GỠ (2026-08-30) — cả hai đều là chỗ NÓI LẦN THỨ HAI, không phải chỗ nói
+      lần đầu. Đo trên ảnh chụp khung 390px: đồng hồ `25:00` nằm ở y≈1325 trên một trang cao
+      1690, tức **thứ duy nhất Đàm mở app để làm đang nằm dưới nếp gấp**, và nút bắt đầu bị
+      thanh tab che mất hẳn. Phía trên nó là 425px thanh đầu + 280px khối chào.
+
+      · **Dòng nhãn "NGÀY HÔM NAY · CHỦ NHẬT"** — GỠ. Câu ngay dưới nó mở đầu bằng "Chào buổi
+        tối", tức đã nói cả "hôm nay" lẫn "đang là lúc nào trong ngày", bằng giọng người thay vì
+        giọng nhãn dán. Thứ còn lại của nó là tên thứ trong tuần — một thông tin mà điện thoại
+        nào cũng hiện sẵn ở thanh trạng thái phía trên.
+      · **Câu `progressTemplate`** ("Bạn chưa chốt phiên nào trong hôm nay.") — GỠ. Đây là chỗ
+        thứ BA nói cùng một con số: thanh đầu có ô «PHIÊN 0», và ngay dưới đồng hồ có
+        «Phiên 0/5 hôm nay». Bản dưới đồng hồ là bản TỐT NHẤT vì nó có mẫu số — nó nói được
+        "còn bao xa", còn hai bản kia chỉ nói "đang ở đâu" (đúng luật «một con số không có mẫu
+        số thì không phải mục tiêu»). Theo luật sẵn có của dự án — *hai chỗ nói cùng một chuyện
+        thì chỗ nói ít hơn phải nhường* — chỗ nhường là câu này.
+
+      GIỮ LẠI `statusTemplate` ("Bạn còn 5 phiên nữa là đủ nhịp hôm nay") vì nó là nửa HÀNH
+      ĐỘNG ĐƯỢC của cặp câu, và nó không trùng với ai. Hai lớp gỡ đi kéo dòng việc-tiếp-theo
+      («Đang xây Cảng Biển Lớn · còn 4 phiên») lên gần đỉnh màn hình — đó mới là thứ trả lời
+      "làm phiên này để được gì".
+    */
     <div className="mb-4 flex flex-wrap items-baseline gap-x-3 gap-y-1 border-t px-1 pt-4" style={{ borderColor: 'var(--line)' }}>
-      <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-[0.18em] text-[var(--muted-2)]">
-        <AppIcon.calendar size={13} />
-        <span>{badgeLabel}</span>
-      </div>
       <h1
         className="text-[19px] font-semibold leading-snug tracking-[-0.01em] text-[var(--ink)] md:text-[21px]"
         style={{ fontFamily: 'var(--skin-font-display)' }}
@@ -2621,7 +2658,6 @@ function FocusIntro({
         {title}
       </h1>
       <p className="w-full text-[12.5px] leading-[1.5] text-[var(--muted)] md:max-w-[560px]">
-        {renderFocusIntroCopy(progressTemplate, emphasisValues)}{' '}
         {renderFocusIntroCopy(statusTemplate, emphasisValues)}
       </p>
     </div>

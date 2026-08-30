@@ -219,8 +219,12 @@ export default function SkillTree({ onOpenAchievements }) {
       <div className="px-5 py-4" style={CARD}>
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <p className="mono text-[10px] uppercase tracking-[0.22em]" style={{ color: 'var(--muted-2)' }}>Tiến trình</p>
-            <div className="mt-1 flex flex-wrap items-baseline gap-2">
+            {/* ⚠️ NHÃN "TIẾN TRÌNH" ĐÃ GỠ (2026-08-30). Ngay dưới nó là "Cấp 5 · 2.445/6.000 XP"
+                cộng một thanh chạy — một con số có mẫu số và một thanh đang đầy dần thì tự nó đã
+                là tiến trình; cái nhãn chỉ gọi tên thứ mắt vừa đọc xong. Cùng luật đã áp cho khối
+                tiêu đề `ShellPane` và dòng "NGÀY HÔM NAY" ở màn Tập trung: *hai chỗ nói cùng một
+                chuyện thì chỗ nói ít hơn phải nhường*. */}
+            <div className="flex flex-wrap items-baseline gap-2">
               <span className="text-[1.7rem] font-semibold leading-none" style={{ fontFamily: 'var(--skin-font-display)', color: 'var(--ink)' }}>Cấp {level}</span>
               <span className="mono text-[12px] tabular-nums" style={{ color: 'var(--muted)' }}>{currentLevelEXP.toLocaleString()} / {nextLevelEXP.toLocaleString()} XP</span>
             </div>
@@ -234,8 +238,20 @@ export default function SkillTree({ onOpenAchievements }) {
             {...expBarMotion}
           />
         </div>
+        {/*
+          ⚠️ DÒNG NÀY ĐỔI TỪ "LUẬT CHƠI" SANG "CÒN BAO XA" (2026-08-30).
+          Bản cũ ghi «6.000 XP/cấp · 2 SP mỗi cấp» — hai vế, và cả hai đều hỏng theo cách riêng:
+          · «6.000 XP/cấp» nói lại đúng con số vừa hiện ngay phía trên nó («2.445 / 6.000 XP»),
+            tức chỗ nói lần thứ hai.
+          · «2 SP mỗi cấp» là một câu LUẬT — đúng mãi mãi, giống hệt nhau ở mọi lần mở màn hình.
+            Một dòng không bao giờ đổi thì sau lần đọc thứ hai nó thôi là thông tin.
+          Nay nó nói KHOẢNG CÁCH tới phần thưởng kế tiếp: cùng một dòng, cùng bằng ấy chỗ, nhưng
+          nó ĐỔI sau mỗi phiên và nó trả lời được câu "cày thêm chút nữa thì được gì". Đúng luật
+          của dự án: *một con số không có mẫu số thì không phải mục tiêu* — ở đây còn đi thêm một
+          bước, nói luôn cái mẫu số ấy đổi lấy được gì.
+        */}
         <p className="mt-1.5 text-[11px]" style={{ color: 'var(--muted)' }}>
-          {EXP_PER_LEVEL.toLocaleString()} XP/cấp · {SP_PER_LEVEL} SP mỗi cấp
+          Còn <strong style={{ color: 'var(--ink)' }}>{Math.max(0, nextLevelEXP - currentLevelEXP).toLocaleString()} XP</strong> nữa lên cấp {level + 1} → +{SP_PER_LEVEL} SP
         </p>
       </div>
 
@@ -261,8 +277,10 @@ export default function SkillTree({ onOpenAchievements }) {
           <div className="px-5 py-5" style={CARD}>
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <p className="mono text-[10px] uppercase tracking-[0.22em]" style={{ color: 'var(--muted-2)' }}>Cây kỹ năng</p>
-                <h3 className="mt-1 flex items-center gap-2 text-[1.45rem] font-semibold leading-tight" style={{ fontFamily: 'var(--skin-font-display)', color: 'var(--ink)' }}>
+                {/* ⚠️ NHÃN "CÂY KỸ NĂNG" ĐÃ GỠ (2026-08-30) — đây là chỗ nói lần thứ HAI: cái
+                    tab Đàm vừa bấm để tới đây tên là "Kỹ năng", và nó đang sáng ngay phía trên.
+                    Một nhãn nhắc lại tên màn hình mình đang đứng thì không phân biệt được gì. */}
+                <h3 className="flex items-center gap-2 text-[1.45rem] font-semibold leading-tight" style={{ fontFamily: 'var(--skin-font-display)', color: 'var(--ink)' }}>
                   <BranchGlyph branch={activeBranch} size={24} />{selectedBranch.label}
                 </h3>
                 <p className="mt-1 text-[12px] leading-snug" style={{ color: 'var(--muted)' }}>{selectedBranch.focus}</p>

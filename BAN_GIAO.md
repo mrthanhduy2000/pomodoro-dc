@@ -1,24 +1,37 @@
-> Cập nhật lần cuối: **2026-08-29 (đêm, vòng 7)** — **SOI ĐƯỢC MÀN ĐANG-CHẠY-PHIÊN LẦN ĐẦU, VÀ
-> NÓ CÓ HAI LỖI.**
+> Cập nhật lần cuối: **2026-08-30 (vòng 8)** — **RÀNG BUỘC MỚI CỦA ĐÀM: "không đụng tới những gì
+> thuộc Thành Phố"**, và "không đo, phải làm liên tục". Vòng này vì vậy làm ở bốn màn còn lại.
 >
-> **⚠️ MÀN ĐÀM NHÌN LÂU NHẤT (25–50 phút mỗi phiên) TRƯỚC NAY KHÔNG SOI ĐƯỢC** — vì nút Bắt đầu bị
-> khoá sau ô mục tiêu, mà `shot.mjs` không gõ chữ được. Chip gợi ý mục tiêu (vòng 6) tình cờ **mở
-> được đường vào**: `--click "«mục tiêu cũ»" --click "Bắt đầu phiên"`. ⇒ *Một tính năng tiện ích
-> có thể mở ra cả một vùng chưa ai kiểm được.* Ghi lại cách vào để phiên sau dùng luôn.
+> **Phát hiện lớn nhất, đo bằng ảnh chụp 390px THẬT:** ở màn **Tập trung** — màn Đàm mở nhiều nhất —
+> đồng hồ `25:00` nằm ở y≈1325 trên trang cao 1690, tức **thứ duy nhất Đàm mở app để làm đang nằm
+> dưới nếp gấp**, nút bắt đầu bị thanh tab che hẳn. Phía trên nó, "hôm nay làm 0 phiên" được nói
+> **BA lần** (ô "PHIÊN 0" ở thanh đầu · câu "Bạn chưa chốt phiên nào trong hôm nay" · dòng "Phiên
+> 0/5 hôm nay" dưới đồng hồ). Bản thứ ba là bản TỐT NHẤT vì nó có mẫu số ⇒ hai bản kia nhường.
 >
-> **Hai lỗi tìm được, cả hai đều IM LẶNG ở mọi cổng:**
-> · **Chip "Mở kỹ năng «…»" vẫn hiện khi đang tập trung** — nó là một cái NÚT dẫn sang tab khác,
->   nằm ngay trên đồng hồ, sáng màu nhấn. Đặt một lời mời-đi-chỗ-khác giữa màn hình tập trung là đi
->   ngược đúng việc Đàm vừa bấm nút để làm. ⇒ ẩn khi `hasFocusSessionInProgress`, cùng luật
->   `FocusCoachMobile` đã dùng. ⚠️ `FocusCityTease`/`FocusStageCountdown` **Ở LẠI**: chúng nói
->   *phiên này đang đẩy cái gì tới đâu* — động lực để NGỒI YÊN, không phải lời mời đi.
-> · **Nút "Hủy phiên" là nút HÚT MẮT NHẤT màn hình.** Biến thể `danger` dùng nền ĐẶC + chữ `--ink`
->   đen đậm, nặng hơn cả `soft` ngay cạnh — trong khi nó là hành động phá hoại (mất trọn tiến độ
->   phiên + phạt tài nguyên). **Thứ tự thị giác phải khớp thứ tự hậu quả.** Nay nền trong, viền
->   nhạt, chữ `--muted`. ⚠️ **KHÔNG tô đỏ rực**: đỏ cũng là một cách để nổi nhất, chỉ đổi từ "mời
->   gọi" sang "doạ", mà cả hai đều kéo mắt khỏi cái đồng hồ.
+> **Bốn chỗ "nói lần thứ hai" đã gỡ:** dòng nhãn "NGÀY HÔM NAY · CHỦ NHẬT" (màn Tập trung) · ô
+> "Phiên" ở thanh đầu · nhãn "HÔM NAY"/"CHUỖI TUẦN" (màn Nhiệm vụ) · nhãn "TIẾN TRÌNH"/"CÂY KỸ
+> NĂNG" (màn Hành trang). Cộng một dòng đổi VAI: "6.000 XP/cấp · 2 SP mỗi cấp" (luật chơi, bất
+> biến) → "Còn 3.555 XP nữa lên cấp 6 → +2 SP" (đếm ngược tới phần thưởng, đổi sau mỗi phiên).
 >
-> **Cổng.** `test:fast` **1324 bài · 0 đỏ** · lint sạch · build xanh.
+> **⚠️ MỘT LỖI THẬT, IM LẶNG Ở MỌI CỔNG.** Cả **ba** câu mô tả thẻ "Thưởng trọn ngày" dài 32–34 ký
+> tự trong khi ô chứa chúng là một dòng `truncate` ⇒ cả ba hiện ra cụt: «Còn 123 XP từ các mục …».
+> Hợp đồng "đúng một dòng" ĐÃ ĐƯỢC GHI trong chú thích `RewardCard`, và nó vẫn hỏng — đúng luật
+> *một bài học được ghi ra KHÔNG chặn được gì; chỉ một bài TEST mới chặn được*. Nay copy nằm ở
+> `src/components/dailyBonusCopy.js` với `dailyBonusCopy.test.js` (4 bài, đã thử-cho-đỏ) canh độ
+> dài, kể cả ca XP 5 chữ số.
+>
+> **⚠️ MỘT BẢN VÁ "CHO GỌN" LẠI TỐN THÊM CHỖ — và chỉ ảnh chụp thấy.** Bản đầu gộp hai ô thành
+> «0 phiên · 0 phút»; ở 390px chuỗi ấy xuống hai dòng làm cả hàng CAO THÊM. Lint xanh, test xanh,
+> build xanh. ⇒ *mọi thay đổi bố cục phải chụp lại ở 390px THẬT trước khi tin.*
+>
+> **Đã đo và ĐÓNG một hướng (trước khi Đàm ra ràng buộc mới):** trần cảnh vật rải rác của
+> `TECH_DEBT #14`. Bản đồ thành phố **đứng yên vĩnh viễn từ phiên 44–88 tuỳ kỷ (trung vị 78)**,
+> mà Đàm đang ở phiên ~130. Thứ bão hoà SAU CÙNG là **đường**, không phải cảnh vật (cảnh vật chạm
+> trần từ phiên 1–38). Ô đất trống ở phiên 130 còn **8–70 ô** ⇒ kết luận Phase 8D ("lưới kín
+> 144/144") KHÔNG còn đúng sau Phase 20. Cảnh vật chỉ tốn ~170 tam giác/vật (cư dân 1.808) nên
+> trần hiệu năng còn rộng — **nhưng nới trần nào cũng chỉ dời điểm bão hoà thêm vài chục phiên**,
+> y hệt bài học cư dân (nới 28→32 mua được 24 phiên). ⇒ **cả ba trần trong #14 đều là cần gạt SAI**;
+> thứ chữa được phải là cơ chế KHÔNG bão hoà theo tổng số phiên. Vẫn là quyết định của Đàm.
+>
 
 ---
 

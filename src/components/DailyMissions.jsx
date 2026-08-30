@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import useGameStore from '../store/gameStore';
 import useSettingsStore from '../store/settingsStore';
 import RewardCard from './shared/RewardCard';
+import { DAILY_BONUS_COPY } from './dailyBonusCopy';
 import { useCustomMotion, useEnterMotion, usePressMotion, useSnapMotion } from '../lib/motionPresets';
 import {
   BUILDING_EFFECTS,
@@ -19,6 +20,7 @@ import {
   STREAK_MISSION_XP_PER_DAY,
   STREAK_MISSION_MAX_XP,
 } from '../engine/constants';
+
 
 function getStreakBonusCapDays(buildings = []) {
   return STREAK_MAX_BONUS_DAYS + (
@@ -92,7 +94,6 @@ export default function DailyMissions() {
   return (
     <div className="space-y-4">
       <QuietSection
-        eyebrow="Hôm nay"
         lightTheme={lightTheme}
         meta={(
           <span
@@ -142,11 +143,22 @@ export default function DailyMissions() {
               icon="🎯"
               name="Thưởng trọn ngày"
               tier="tot"
+              /*
+                ⚠️ BA CÂU NÀY ĐỀU ĐÃ BỊ VIẾT NGẮN LẠI (2026-08-30) VÌ CẢ BA ĐANG BỊ CẮT CỤT.
+                `RewardCard.description` khai rõ hợp đồng của nó ngay trong chú thích — *"ĐÚNG MỘT
+                DÒNG; dài hơn thì bị cắt bằng …"* — nhưng không có gì canh, nên ba câu 32–34 ký tự
+                lặng lẽ hiện ra thành "Còn 123 XP từ các mục …". Một câu cụt còn tệ hơn không có
+                câu: nó chiếm đúng bằng ấy chỗ, trông như app hỏng, và không nói được gì.
+                Nay câu dài nhất là 22 ký tự (ca 4 chữ số), có `dailyMissionsCopy.test.js` canh.
+                ⚠️ Ca `allClaimed` đổi luôn giọng: từ mô tả trạng thái ("Đã hoàn tất…") sang CHỈ
+                VIỆC CẦN LÀM ("Xong hết — bấm Nhận"), vì đúng lúc đó có một nút Nhận vừa hiện ra
+                cạnh nó mà câu cũ không hề nhắc tới.
+              */
               description={missions.bonusClaimedToday
-                ? 'Đã nhận thưởng trọn ngày hôm nay.'
+                ? DAILY_BONUS_COPY.claimed
                 : allClaimed
-                  ? 'Đã hoàn tất toàn bộ nhiệm vụ ngày.'
-                  : `Còn ${pendingXP.toLocaleString()} XP từ các mục chưa xong.`}
+                  ? DAILY_BONUS_COPY.ready
+                  : DAILY_BONUS_COPY.pending(pendingXP)}
               amount={missions.bonusClaimedToday ? null : `+${allMissionBonusXP} XP`}
               action={(
                 <AnimatePresence initial={false}>
@@ -167,7 +179,6 @@ export default function DailyMissions() {
 
       {chain && (
         <QuietSection
-          eyebrow="Chuỗi tuần"
           lightTheme={lightTheme}
           meta={(
             <span
@@ -328,11 +339,20 @@ function QuietSection({ children, eyebrow, lightTheme, meta, title }) {
     >
       <div className="mb-4 flex items-end justify-between gap-3">
         <div className="min-w-0">
-          <div className="mono text-[10px] uppercase tracking-[0.2em]" style={{ color: 'var(--muted-2)' }}>
-            {eyebrow ?? 'Nhật ký'}
-          </div>
+          {/*
+            ⚠️ NHÃN NHỎ NAY LÀ TUỲ CHỌN THẬT (2026-08-30). Trước đây bỏ trống thì nó rơi về chữ
+            "Nhật ký" — một mặc định IM LẶNG, tức không có cách nào nói "thẻ này không cần nhãn"
+            mà không dán nhầm cho nó một cái tên sai. Hai thẻ nhiệm vụ đều rơi vào đúng ca ấy:
+            "Hôm nay" đứng trên "Nhiệm vụ ngày", "Chuỗi tuần" đứng trên "Nhiệm vụ tuần" — chữ
+            "ngày"/"tuần" trong chính tiêu đề đã nói xong điều nhãn định nói.
+          */}
+          {eyebrow && (
+            <div className="mono text-[10px] uppercase tracking-[0.2em]" style={{ color: 'var(--muted-2)' }}>
+              {eyebrow}
+            </div>
+          )}
           <div
-            className="mt-1.5 text-[18px] font-semibold leading-tight tracking-[-0.01em]"
+            className={`text-[18px] font-semibold leading-tight tracking-[-0.01em] ${eyebrow ? 'mt-1.5' : ''}`}
             style={{ fontFamily: 'var(--skin-font-display)', color: 'var(--ink)' }}
           >
             {title}

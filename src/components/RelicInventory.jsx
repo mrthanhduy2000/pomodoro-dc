@@ -81,34 +81,27 @@ export default function RelicInventory() {
   return (
     <div className="space-y-5">
       <div>
-        {lightTheme && (
-          <p className="mono text-[10px] uppercase tracking-[0.2em]" style={{ color: 'var(--muted-2)' }}>
-            Di vật
-          </p>
-        )}
-        <div className="mt-1 flex flex-wrap items-end justify-between gap-3">
+        {/*
+          ⚠️ CHỮ "DI VẬT" TỪNG XUẤT HIỆN BA LẦN trong ba dòng liên tiếp (soi ảnh 390px,
+          2026-08-29): nút tab con đang sáng · eyebrow `mono` · rồi `h2` cỡ 2rem. Ba lần cùng một
+          chữ cách nhau vài chục điểm ảnh, tốn ~110px ở chỗ đắt nhất — trong khi nút tab đang sáng
+          đã trả lời xong câu "tôi đang ở đâu". Giữ lại đúng dòng MANG THÔNG TIN ("0/15 — chinh
+          phục Khủng Hoảng Kỷ Nguyên để nhận buff vĩnh viễn"), nâng nó lên cỡ đọc được.
+          Cùng luật đã áp cho `ShellPane` và màn Thành tích: *hai chỗ nói cùng một chuyện thì chỗ
+          nói ít hơn phải nhường.*
+        */}
+        <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h2 className={lightTheme ? 'serif text-[2rem] leading-none' : 'text-white font-bold text-lg'} style={lightTheme ? { color: 'var(--ink)', fontFamily: 'var(--skin-font-display)', fontWeight: 600 } : undefined}>
-              Di vật
-            </h2>
-            <p className="mt-1 text-sm" style={lightTheme ? { color: 'var(--muted)' } : { color: '#94a3b8' }}>
+            <p className="text-[13px] leading-snug" style={lightTheme ? { color: 'var(--muted)' } : { color: '#94a3b8' }}>
               {relics.length}/{ALL_RELIC_DEFS.length} — chinh phục Khủng Hoảng Kỷ Nguyên để nhận buff vĩnh viễn.
             </p>
           </div>
-          <div
-            className="rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em]"
-            style={lightTheme ? {
-              background: 'rgba(var(--accent-rgb), 0.1)',
-              border: '1px solid rgba(var(--accent-rgb), 0.2)',
-              color: 'var(--accent2)',
-            } : {
-              background: 'rgba(255,255,255,0.05)',
-              border: '1px solid rgba(255,255,255,0.08)',
-              color: '#94a3b8',
-            }}
-          >
-            kho lưu trữ · {relics.length}
-          </div>
+          {/*
+            ⚠️ CHIP "kho lưu trữ · N" ĐÃ GỠ (2026-08-29). `N` chính là con số đứng đầu dòng ngay
+            bên trái ("0/15 — …"), cách chưa tới một đốt ngón tay — lần thứ tư cùng một thông tin
+            trên một màn hình, sau nút tab / eyebrow / tiêu đề đã gỡ ở trên. Một chip nhấn màu chỉ
+            đáng có khi nó nói điều gì khác.
+          */}
         </div>
       </div>
 

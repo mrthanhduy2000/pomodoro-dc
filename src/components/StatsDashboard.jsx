@@ -29,6 +29,16 @@ import {
 } from '../engine/gameMath';
 import { STREAK_MAX_BONUS_DAYS, STREAK_BONUS_PER_DAY, BUILDING_EFFECTS } from '../engine/constants';
 import {
+  STATS_PERIODS,
+  DEFAULT_STATS_PERIOD,
+  getPeriodLabel,
+  getPeriodStartTs,
+  getPreviousPeriodRange,
+  buildPeriodBuckets,
+  filterByPeriod,
+  toTimestampMs,
+} from '../engine/statsPeriod';
+import {
   formatVietnamDate,
   formatVietnamTime,
   getVietnamHour,
@@ -96,7 +106,6 @@ const DISPLAY_FONT = SANS_FONT;
 const MONO_FONT = '"JetBrains Mono", "SFMono-Regular", Menlo, monospace';
 const METRIC_FONT = SANS_FONT;
 const METRIC_TRACKING = '-0.035em';
-const TIMESTAMP_MS_CACHE = new Map();
 
 function useResponsiveChartWidth(fallbackWidth) {
   const rootRef = useRef(null);
@@ -417,23 +426,6 @@ function formatHourWindow(hour) {
   return `${start}:00–${end}:00`;
 }
 
-function getTimestampMs(value) {
-  if (typeof value === 'number' && Number.isFinite(value)) return value;
-  if (!value) return NaN;
-
-  const key = String(value);
-  if (TIMESTAMP_MS_CACHE.has(key)) {
-    return TIMESTAMP_MS_CACHE.get(key);
-  }
-
-  const parsed = new Date(value).getTime();
-  if (TIMESTAMP_MS_CACHE.size > 5000) {
-    TIMESTAMP_MS_CACHE.clear();
-  }
-  TIMESTAMP_MS_CACHE.set(key, parsed);
-  return parsed;
-}
-
 function buildCategoryAdvisor({
   catStats,
   totalMins,
@@ -603,30 +595,6 @@ function buildCategoryAdvisor({
     scenarios,
     mentorSignals,
   };
-}
-
-/** Lọc history theo khoảng thời gian */
-function getPeriodStartTs(period) {
-  if (period === 'today') return startOfVietnamDayTs();
-  if (period === 'week') return startOfVietnamWeekTs();
-  if (period === 'month') return startOfVietnamMonthTs();
-  if (period === 'quarter') return startOfVietnamQuarterTs();
-  if (period === 'year') return startOfVietnamYearTs();
-  return null;
-}
-
-function filterByPeriod(history, period) {
-  const startTs = getPeriodStartTs(period);
-  if (startTs === null) return history;
-
-  const filtered = [];
-  for (const entry of history) {
-    const timestampMs = getTimestampMs(entry?.timestamp);
-    if (Number.isFinite(timestampMs) && timestampMs >= startTs) {
-      filtered.push(entry);
-    }
-  }
-  return filtered;
 }
 
 // ─── SVG Bar Chart ────────────────────────────────────────────────────────────
@@ -1826,29 +1794,41 @@ function TrendBadge({ current, previous, unit = '', baselineLabel = 'giai đoạ
 }
 
 // ─── Period Selector ─────────────────────────────────────────────────────────
-const PERIODS = [
-  { key: 'day',     label: 'Ngày',  n: 14 },
-  { key: 'week',    label: 'Tuần',  n: 8  },
-  { key: 'month',   label: 'Tháng', n: 6  },
-  { key: 'quarter', label: 'Quý',   n: 4  },
-  { key: 'year',    label: 'Năm',   n: 3  },
-];
-const METRIC_OPTIONS = [
-  { key: 'minutes', label: 'Phút' },
-  { key: 'sessions', label: 'Phiên' },
-  { key: 'xp', label: 'XP' },
-];
-const PERIOD_UNITS = {
-  day: 'ngày',
-  week: 'tuần',
-  month: 'tháng',
-  quarter: 'quý',
-  year: 'năm',
-};
+// ─── Bộ chọn khoảng thời gian — DÙNG CHUNG CHO CẢ MÀN ────────────────────────
+//
+// ⚠️ Trước 2026-08-30 có BA bộ chọn khai riêng ở ba tab, khác nhau cả danh sách, cả nhãn, cả
+// mặc định, và cả markup. Hệ quả người dùng thấy: bấm từ "Tổng Quan" (mặc định tuần) sang
+// "Tập Trung" (mặc định tất cả) là cửa sổ thời gian âm thầm đổi mà không có gì báo. Nay danh
+// sách kỳ đến từ `engine/statsPeriod.js` và TRẠNG THÁI nằm ở `StatsDashboard`, nên ba tab
+// không thể lệch nhau nữa — đổi kỳ ở tab nào thì cả màn đổi theo.
+const PeriodPicker = React.memo(function PeriodPicker({ value, onChange, className = '' }) {
+  return (
+    <div
+      className={`overflow-x-auto rounded-2xl p-1 ${className}`}
+      style={{ background: TAB_BAR_BG, border: `1px solid ${PANEL_BORDER}`, overscrollBehaviorX: 'contain', WebkitOverflowScrolling: 'touch' }}
+    >
+      <div className="inline-flex min-w-full gap-1" role="group" aria-label="Khoảng thời gian">
+        {STATS_PERIODS.map((p) => (
+          <button
+            key={p.key}
+            type="button"
+            onClick={() => onChange(p.key)}
+            aria-pressed={value === p.key}
+            className="min-w-[78px] flex-1 rounded-xl border px-3 py-2 text-xs font-semibold whitespace-nowrap transition-[background-color,color,box-shadow,transform,border-color] duration-200 hover:-translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(201,100,66,0.28)] focus-visible:ring-offset-2"
+            style={value === p.key
+              ? { background: TAB_ACTIVE_BG, color: TAB_ACTIVE_TEXT, boxShadow: TAB_ACTIVE_SHADOW, borderColor: TAB_ACTIVE_BORDER, touchAction: 'manipulation' }
+              : { background: TAB_IDLE_BG, color: TAB_IDLE_TEXT, borderColor: TAB_IDLE_BORDER, touchAction: 'manipulation' }}
+          >
+            {p.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+});
 
 // ─── Tab: Tổng Quan ───────────────────────────────────────────────────────────
-function OverviewTab({ history, streak }) {
-  const [period, setPeriod] = useState('week');
+function OverviewTab({ history, streak, period, onPeriodChange }) {
   const [now] = useState(() => Date.now());
   const sessionCategories = useGameStore((s) => s.sessionCategories);
   const categoryMap = useMemo(() => {
@@ -1857,55 +1837,46 @@ function OverviewTab({ history, streak }) {
     return map;
   }, [sessionCategories]);
 
+  // ⚠️ CỬA SỔ THỜI GIAN Ở ĐÂY LÀ CỬA SỔ **LỊCH**, KHÔNG PHẢI "N NGÀY GẦN NHẤT" (sửa 2026-08-30).
+  // Bản trước tính `now - 7×86400000` rồi dán nhãn "tuần này" — hai thứ khác nhau, và biểu đồ cột
+  // ngay bên dưới thì lại dựng theo tuần LỊCH (từ thứ Hai). Nghĩa là ô số tổng và bộ cột dưới nó
+  // đo hai khoảng khác nhau mà mang cùng một nhãn. Nay cả hai đọc chung `getPeriodStartTs` /
+  // `buildPeriodBuckets` ở `engine/statsPeriod.js`, nên chúng KHÔNG THỂ lệch nhau nữa.
   const view = useMemo(() => {
     const DAY = 86400000;
     const isDone = (s) => s && s.completed !== false && s.status !== 'cancelled' && !s.cancelled && Number.isFinite(s.minutes);
     const done = (history || []).filter(isDone);
-    const ts = (s) => new Date(s.timestamp || s.finishedAt || 0).getTime();
-    const winDays = period === 'week' ? 7 : period === 'month' ? 30 : 365;
-    const winStart = now - winDays * DAY;
-    const prevStart = now - 2 * winDays * DAY;
+    const ts = (s) => toTimestampMs(s.timestamp || s.finishedAt || 0);
     const sum = (arr) => arr.reduce((a, s) => a + (s.minutes || 0), 0);
-    const inWin = done.filter((s) => ts(s) >= winStart);
-    const inPrev = done.filter((s) => ts(s) >= prevStart && ts(s) < winStart);
+
+    const winStart = getPeriodStartTs(period, new Date(now));
+    const inWin = winStart === null ? done : done.filter((s) => ts(s) >= winStart);
+
+    // Kỳ liền TRƯỚC theo lịch (tuần trước, tháng trước…) — trước đây là "cửa sổ N ngày lùi thêm
+    // N ngày", tức so tuần này với 7 ngày trước nữa chứ không phải với tuần trước.
+    const prevRange = getPreviousPeriodRange(period, new Date(now));
+    const inPrev = prevRange ? done.filter((s) => ts(s) >= prevRange.startTs && ts(s) < prevRange.endTs) : [];
+
     const winMin = sum(inWin);
     const prevMin = sum(inPrev);
     const pct = prevMin > 0 ? Math.round(((winMin - prevMin) / prevMin) * 100) : null;
+
     const goaled = inWin.filter((s) => typeof s.goalAchieved === 'boolean');
     const achieved = goaled.filter((s) => s.goalAchieved === true).length;
     const achPct = goaled.length > 0 ? Math.round((achieved / goaled.length) * 100) : 0;
 
-    let bars = [];
-    if (period === 'week') {
-      const d = new Date(now);
-      const dow = (d.getDay() + 6) % 7;
-      const monday = new Date(d);
-      monday.setHours(0, 0, 0, 0);
-      monday.setDate(d.getDate() - dow);
-      const labels = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
-      bars = labels.map((lb, i) => {
-        const s = monday.getTime() + i * DAY;
-        const e = s + DAY;
-        return { label: lb, mins: sum(done.filter((x) => ts(x) >= s && ts(x) < e)), active: i === dow };
-      });
-    } else if (period === 'month') {
-      bars = Array.from({ length: 5 }, (_, i) => {
-        const e = now - (4 - i) * 7 * DAY;
-        const s = e - 7 * DAY;
-        return { label: 'Tu' + (i + 1), mins: sum(done.filter((x) => ts(x) >= s && ts(x) < e)), active: i === 4 };
-      });
-    } else {
-      bars = Array.from({ length: 12 }, (_, i) => {
-        const dt = new Date(now);
-        dt.setDate(1);
-        dt.setHours(0, 0, 0, 0);
-        dt.setMonth(dt.getMonth() - (11 - i));
-        const s = dt.getTime();
-        const e2 = new Date(dt);
-        e2.setMonth(e2.getMonth() + 1);
-        return { label: 'Th' + (dt.getMonth() + 1), mins: sum(done.filter((x) => ts(x) >= s && ts(x) < e2.getTime())), active: i === 11 };
-      });
-    }
+    // Số ngày ĐÃ TRÔI QUA trong kỳ, không phải độ dài danh nghĩa của kỳ. Chia cho 365 vào tháng
+    // Giêng thì nhịp "mỗi ngày" bị dìm xuống gần bằng 0 — một con số đúng phép chia mà sai ý nghĩa.
+    const spanStartTs = done.length > 0 ? Math.min(...done.map(ts)) : now;
+    const elapsedFrom = winStart === null ? spanStartTs : winStart;
+    const periodDays = Math.max(1, Math.ceil((now - elapsedFrom) / DAY));
+
+    const buckets = buildPeriodBuckets(period, new Date(now), spanStartTs);
+    const bars = buckets.map((b) => ({
+      label: b.label,
+      mins: sum(done.filter((x) => { const t = ts(x); return t >= b.startTs && t < b.endTs; })),
+      active: b.active,
+    }));
     const maxBar = Math.max(1, ...bars.map((b) => b.mins));
 
     const catMin = {};
@@ -1925,12 +1896,12 @@ function OverviewTab({ history, streak }) {
     const heat = [];
     for (let i = cells - 1; i >= 0; i--) heat.push(dayMin[todayMid.getTime() - i * DAY] || 0);
 
-    return { winMin, winCount: inWin.length, pct, achPct, achieved, goaled: goaled.length, bars, maxBar, cats, heat, maxDay };
+    return { winMin, winCount: inWin.length, pct, achPct, achieved, goaled: goaled.length, bars, maxBar, cats, heat, maxDay, periodDays };
   }, [history, period, now]);
 
   const fmtH = (m) => { const h = Math.floor(m / 60); const r = m % 60; return h > 0 ? (r ? `${h}g ${r}p` : `${h}g`) : `${m}p`; };
-  const periodLabel = period === 'week' ? 'tuần này' : period === 'month' ? 'tháng này' : 'năm nay';
-  const periodDays = period === 'week' ? 7 : period === 'month' ? 30 : 365;
+  const periodLabel = getPeriodLabel(period).toLowerCase();
+  const periodDays = view.periodDays;
   const shade = (v) => {
     if (v <= 0) return 'var(--heat-empty, #ece8de)';
     const r = v / view.maxDay;
@@ -1938,7 +1909,6 @@ function OverviewTab({ history, streak }) {
     return `rgba(var(--accent-rgb), ${a})`;
   };
   const card = { background: BG_CARD, border: `1px solid ${PANEL_BORDER}`, borderRadius: 'var(--skin-radius-card, 18px)', boxShadow: 'var(--skin-card-shadow)' };
-  const PERIODS_UI = [{ k: 'week', l: 'Tuần' }, { k: 'month', l: 'Tháng' }, { k: 'year', l: 'Năm' }];
 
   return (
     <div className="flex flex-col gap-4">
@@ -1949,25 +1919,11 @@ function OverviewTab({ history, streak }) {
         Nó lại còn lặp: eyebrow "Tổng quan" nói đúng chữ mà nút tab "01 Tổng Quan" ngay phía trên
         đang sáng. Ẩn cả cụm trên điện thoại thì nhóm nút lên thẳng hàng đầu và đọc được ngay.
       */}
-      <div className="flex items-end justify-between gap-3">
-        <div className="hidden md:block">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.24em]" style={{ color: TEXT_SOFT }}>Tổng quan</p>
-          <h3 className="mt-1.5 text-[1.9rem] font-semibold leading-tight md:text-[2.2rem]" style={{ color: TEXT_PRIMARY, fontFamily: 'var(--skin-font-display)' }}>Hành trình tập trung</h3>
-        </div>
-        <div className="flex gap-1 rounded-full p-1" style={{ background: PANEL_BG_SOFT, border: `1px solid ${PANEL_BORDER}` }}>
-          {PERIODS_UI.map((p) => (
-            <button
-              key={p.k}
-              type="button"
-              onClick={() => setPeriod(p.k)}
-              className="rounded-full px-3.5 py-1.5 text-[12px] font-semibold transition-colors"
-              style={period === p.k ? { background: 'var(--ink)', color: 'var(--canvas)' } : { background: 'transparent', color: TEXT_MUTED }}
-            >
-              {p.l}
-            </button>
-          ))}
-        </div>
+      <div className="hidden md:block">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.24em]" style={{ color: TEXT_SOFT }}>Tổng quan</p>
+        <h3 className="mt-1.5 text-[1.9rem] font-semibold leading-tight md:text-[2.2rem]" style={{ color: TEXT_PRIMARY, fontFamily: 'var(--skin-font-display)' }}>Hành trình tập trung</h3>
       </div>
+      <PeriodPicker value={period} onChange={onPeriodChange} />
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <div className="p-4" style={card}>
@@ -2054,13 +2010,6 @@ const HEAT_COLORS = [
   'rgba(201, 100, 66, 0.94)',
 ];
 
-const FOCUS_PERIODS = [
-  { key: 'all', label: 'Tất Cả' },
-  { key: 'month', label: 'Tháng Này' },
-  { key: 'week', label: 'Tuần Này' },
-  { key: 'today', label: 'Hôm Nay' },
-];
-
 const FOCUS_BUCKETS = [
   { label: '< 15p', tone: 'Mở đầu', accent: '#9a8d82' },
   { label: '15–25p', tone: 'Giữ nhịp', accent: '#b7a596' },
@@ -2123,7 +2072,7 @@ function summarizeFocusStats(history, period = 'all') {
   let latestSessionTs = null;
 
   for (const entry of history) {
-    const timestampMs = getTimestampMs(entry?.timestamp);
+    const timestampMs = toTimestampMs(entry?.timestamp);
     if (!Number.isFinite(timestampMs) || (startTs !== null && timestampMs < startTs)) continue;
 
     filteredEntries.push(entry);
@@ -2611,8 +2560,7 @@ const FocusHourSpotlight = React.memo(function FocusHourSpotlight({ summary, per
 });
 
 // ─── Tab: Tập Trung ───────────────────────────────────────────────────────────
-const FocusTab = React.memo(function FocusTab({ history }) {
-  const [focusPeriod, setFocusPeriod] = useState('all');
+const FocusTab = React.memo(function FocusTab({ history, period: focusPeriod, onPeriodChange }) {
   const [isPeriodPending, startPeriodTransition] = useTransition();
   const enterMotion = useEnterMotion();
   // NGOẠI LỆ (mang bố cục) — bề dài cột CHÍNH LÀ số phiên của khoảng ấy; `initial`/`animate`
@@ -2624,7 +2572,7 @@ const FocusTab = React.memo(function FocusTab({ history }) {
     [history, deferredFocusPeriod],
   );
 
-  const periodLabel = FOCUS_PERIODS.find((period) => period.key === deferredFocusPeriod)?.label ?? 'Tất Cả';
+  const periodLabel = getPeriodLabel(deferredFocusPeriod);
   const bestHourLabel = focusSummary.bestHour.minutes > 0 ? formatHourWindow(focusSummary.bestHour.hour) : 'Chưa có dữ liệu';
   const bestTimeBlockAverage = focusSummary.bestTimeBlock.sessions > 0
     ? Math.round(focusSummary.bestTimeBlock.minutes / focusSummary.bestTimeBlock.sessions)
@@ -2651,32 +2599,12 @@ const FocusTab = React.memo(function FocusTab({ history }) {
 
   const handlePeriodChange = (nextPeriod) => {
     if (nextPeriod === focusPeriod) return;
-    startPeriodTransition(() => setFocusPeriod(nextPeriod));
+    startPeriodTransition(() => onPeriodChange(nextPeriod));
   };
 
   return (
     <div className="space-y-3.5 md:space-y-4">
-      <div
-        className="overflow-x-auto rounded-2xl p-1"
-        style={{ background: TAB_BAR_BG, border: `1px solid ${PANEL_BORDER}` }}
-      >
-        <div className="inline-flex min-w-full gap-1">
-          {FOCUS_PERIODS.map((period) => (
-            <button
-              key={period.key}
-              type="button"
-              onClick={() => handlePeriodChange(period.key)}
-              aria-pressed={focusPeriod === period.key}
-              className="min-w-[86px] rounded-xl border px-3 py-2 text-xs font-semibold whitespace-nowrap transition-[background-color,color,box-shadow,transform,border-color] duration-200 hover:-translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(201,100,66,0.28)] focus-visible:ring-offset-2"
-              style={focusPeriod === period.key
-                ? { background: TAB_ACTIVE_BG, color: TAB_ACTIVE_TEXT, boxShadow: TAB_ACTIVE_SHADOW, borderColor: TAB_ACTIVE_BORDER }
-                : { background: TAB_IDLE_BG, color: TAB_IDLE_TEXT, borderColor: TAB_IDLE_BORDER }}
-            >
-              {period.label}
-            </button>
-          ))}
-        </div>
-      </div>
+      <PeriodPicker value={focusPeriod} onChange={handlePeriodChange} />
 
       {focusSummary.totalSessions === 0 ? (
         <>
@@ -3041,17 +2969,7 @@ const FocusTab = React.memo(function FocusTab({ history }) {
 });
 
 // ─── Tab: Phân Loại ───────────────────────────────────────────────────────────
-const CAT_PERIODS = [
-  { key: 'all',     label: 'Tất Cả' },
-  { key: 'year',    label: 'Năm Nay' },
-  { key: 'quarter', label: 'Quý Này' },
-  { key: 'month',   label: 'Tháng Này' },
-  { key: 'week',    label: 'Tuần Này' },
-  { key: 'today',   label: 'Hôm Nay' },
-];
-
-function CategoryTab({ history, sessionCategories }) {
-  const [catPeriod, setCatPeriod] = useState('all');
+function CategoryTab({ history, sessionCategories, period: catPeriod, onPeriodChange }) {
   // NGOẠI LỆ (mang bố cục) — bề dài thanh CHÍNH LÀ tỉ lệ của loại việc ấy.
   const thanhMotion = useSnapMotion({ transition: { duration: 0.7, ease: 'easeOut' } });
 
@@ -3071,7 +2989,7 @@ function CategoryTab({ history, sessionCategories }) {
   const totalXP   = catStats.reduce((s, c) => s + c.xp, 0);
   const avgMinutesOverall = totalSess > 0 ? Math.round(totalMins / totalSess) : 0;
 
-  const periodLabel = CAT_PERIODS.find((p) => p.key === catPeriod)?.label ?? '';
+  const periodLabel = getPeriodLabel(catPeriod);
 
   const noData = catStats.length === 0 || totalSess === 0;
   const topTimeCat = catStats[0] ?? null;
@@ -3195,27 +3113,7 @@ function CategoryTab({ history, sessionCategories }) {
   return (
     <div className="flex flex-col gap-4">
 
-      {/* Period filter */}
-      <div
-        className="overflow-x-auto rounded-2xl p-1"
-        style={{ background: TAB_BAR_BG, border: `1px solid ${PANEL_BORDER}` }}
-      >
-        <div className="inline-flex min-w-full gap-1">
-          {CAT_PERIODS.map((p) => (
-            <button
-              key={p.key}
-              type="button"
-              onClick={() => setCatPeriod(p.key)}
-              className="min-w-[90px] rounded-xl border px-3 py-2 text-xs font-semibold whitespace-nowrap transition-[background-color,color,box-shadow,transform,border-color] duration-200 hover:-translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(201,100,66,0.28)] focus-visible:ring-offset-2"
-              style={catPeriod === p.key
-                ? { background: TAB_ACTIVE_BG, color: TAB_ACTIVE_TEXT, boxShadow: TAB_ACTIVE_SHADOW, borderColor: TAB_ACTIVE_BORDER }
-                : { background: TAB_IDLE_BG, color: TAB_IDLE_TEXT, borderColor: TAB_IDLE_BORDER }}
-            >
-              {p.label}
-            </button>
-          ))}
-        </div>
-      </div>
+      <PeriodPicker value={catPeriod} onChange={onPeriodChange} />
 
       {noData ? (
         <div
@@ -4763,10 +4661,7 @@ export default function StatsDashboard() {
   const enterMotion       = useEnterMotion();
   const history           = useGameStore((s) => s.history);
   const savedNotes        = useGameStore((s) => s.savedNotes ?? []);
-  const progress          = useGameStore((s) => s.progress);
   const streak            = useGameStore((s) => s.streak);
-  const prestige          = useGameStore((s) => s.prestige);
-  const buildings         = useGameStore((s) => s.buildings);
   const sessionCategories = useGameStore((s) => s.sessionCategories);
   const effectiveSavedNotes = useMemo(() => {
     if (savedNotes.length > 0) return savedNotes;
@@ -4790,6 +4685,12 @@ export default function StatsDashboard() {
 
   const [activeTab, setActiveTab] = useState('overview');
   const [isTabPending, startTabTransition] = useTransition();
+
+  // ⚠️ KỲ THỜI GIAN SỐNG Ở ĐÂY, KHÔNG SỐNG TRONG TỪNG TAB (2026-08-30). Ba tab từng giữ ba
+  // trạng thái riêng với ba mặc định khác nhau, nên chuyển tab là đổi cửa sổ thời gian mà không
+  // báo gì. Nâng lên cha thì "Tuần Này" ở tab này vẫn là "Tuần Này" ở tab kia — và đó là điều
+  // kiện để hai con số ở hai tab được phép đặt cạnh nhau.
+  const [period, setPeriod] = useState(DEFAULT_STATS_PERIOD);
 
   const handleTabChange = (nextTab) => {
     if (nextTab === activeTab) return;
@@ -4882,11 +4783,13 @@ export default function StatsDashboard() {
           {...enterMotion}
         >
           {activeTab === 'overview' && (
-            <OverviewTab history={history} progress={progress} streak={streak} prestige={prestige} buildings={buildings} />
+            <OverviewTab history={history} streak={streak} period={period} onPeriodChange={setPeriod} />
           )}
-          {activeTab === 'focus' && <FocusTab history={history} />}
+          {activeTab === 'focus' && (
+            <FocusTab history={history} period={period} onPeriodChange={setPeriod} />
+          )}
           {activeTab === 'category' && (
-            <CategoryTab history={history} sessionCategories={sessionCategories} />
+            <CategoryTab history={history} sessionCategories={sessionCategories} period={period} onPeriodChange={setPeriod} />
           )}
           {activeTab === 'journal' && (
             <JournalTab history={history} sessionCategories={sessionCategories} />

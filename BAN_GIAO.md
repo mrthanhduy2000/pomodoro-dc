@@ -1,3 +1,42 @@
+> Cập nhật lần cuối: **2026-08-29 (đêm, vòng 2–4)** — **TỐI GIẢN TOÀN APP: SÁU MÀN, MỘT LUẬT** ·
+> **THẺ PHIÊN BIẾT NÓI VỀ CỘT MỐC** · **CƯ DÂN ĐÃ CHẠM TRẦN TỪ PHIÊN 80.**
+>
+> **MỘT LUẬT DUY NHẤT áp cho cả sáu màn**: *hai chỗ nói cùng một chuyện thì chỗ nói ít hơn phải
+> nhường*. Soi từng màn ở khung 390px rồi cắt:
+> · **Thành tích** — `{đã đạt}/360 dấu đã đạt` cỡ 40px vỡ **hai dòng khổng lồ**, là thứ to nhất và
+>   đầu tiên màn hình. Với mẫu số 360 thì câu ấy LUÔN đọc ra *"bạn mới đi được vài phần trăm"*, kể
+>   cả khi vừa mở được cái thứ một trăm — **mở màn hình bằng một lời chê**. Nay con số ĐÃ ĐẠT to,
+>   mẫu số lùi về cỡ nhỏ. Gỡ 4 dòng mô tả + chip "Tiến độ tổng: N%" (nói lại đúng hai con số trên).
+> · **Kho báu** — chữ "Di vật" hiện **BỐN lần**: nút tab đang sáng · eyebrow · `h2` 2rem · chip
+>   "kho lưu trữ · 0" (mà số 0 ấy chính là đầu dòng "0/15" bên trái). Giữ đúng dòng mang thông tin.
+> · **Thống kê** — ⚠️ **"Workspace" SỐNG SÓT qua đợt cắt trước** vì màn này dựng `<ShellPane>`
+>   KHÔNG có `title` rồi **tự dựng tiêu đề riêng**, tức không đi qua chỗ đã sửa. Đúng hình dạng
+>   *sửa một chỗ, quên chỗ thứ hai*. Và **"Hành trình tập trung" vỡ BỐN DÒNG, mỗi dòng một từ** ở
+>   cỡ 1.9rem vì phải chia chiều ngang với nhóm nút Tuần/Tháng/Năm — một lỗi bố cục thật, ~300px.
+>   Trang từ 1738 → **1487px**.
+> · **Nhiệm vụ** — khối "Nhịp hiện tại" chỉ còn hiện khi THẬT SỰ có chuỗi; bỏ dòng
+>   "Tiến độ hiện tại: 0/1" (con số ấy đã ở ngay bên phải cùng hàng).
+> · **Thanh tiêu đề** — "Cấp 5" thôi hiện hai lần trên khổ điện thoại.
+>
+> **THÊM — thẻ "phiên đã xong" biết nói về cột mốc.** Khoảng im lặng lớn nhất của game là ngay sau
+> khi xong phiên mà thành phố không đổi (`TECH_DEBT #14`: 80–85% số phiên); khi ấy phần thưởng duy
+> nhất là một thẻ đếm *"+18 tài nguyên · +50 RP"* — những con số không dùng để quyết gì. Nay còn ≤1
+> phiên là tới mốc thì thẻ nói *"Một phiên nữa là tới «Khám Phá Tân Thế Giới»"*.
+> ⚠️ **THAY chứ không NỐI**: `description` của `RewardCard` chỉ được ĐÚNG MỘT DÒNG, nối thêm thì bị
+> cắt "…" và mất đúng phần đáng đọc. ⚠️ Chỉ lấy `imminent`, **không** lấy `celebrate` — lúc vừa
+> vượt mốc thì dòng ở màn Tập trung đã lo, mà hai thứ hiện CÙNG LÚC trên CÙNG màn hình.
+>
+> **⚠️ ĐO ĐƯỢC, KHÔNG SỬA — CƯ DÂN ĐÃ CHẠM TRẦN.** `deriveResidentCount` có `MAX_RESIDENTS = 28`,
+> và với 4 công trình thì nó chạm trần **từ phiên thứ 80** rồi đứng yên vĩnh viễn (đo: 10→17,
+> 40→24, 80→28, 130→28, 800→28). Đàm đang ở phiên 130 ⇒ ô "Cư dân 28" là một **con số chết**, và
+> thành phố thôi đông thêm từ lâu. **KHÔNG nâng trần**: 28→29 người thì mắt không thấy, tức tiêu
+> ngân sách cho một thay đổi dưới ngưỡng nhìn. Ghi lại để phiên sau khỏi "phát hiện" lại.
+>
+> **Cổng.** `test:fast` **1318 bài · 0 đỏ · `# skipped 1`** · lint sạch · build xanh · quét tràn
+> sạch trên cả sáu màn ở khung 390px.
+
+---
+
 > Cập nhật lần cuối: **2026-08-29 (đêm)** — **TỐI GIẢN: CẮT 213px CHỮ KHỎI MÀN THÀNH PHỐ · MỘT
 > LỖI CẮT CHỮ IM LẶNG Ở CÂY KỸ NĂNG.** (Đàm: *"đơn giản hoá, tối giản hoá, làm thành phố hứng thú
 > hơn"*. Nguyên tắc: **gỡ bớt trước, thêm sau**.)

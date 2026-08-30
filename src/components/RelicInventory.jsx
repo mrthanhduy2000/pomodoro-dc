@@ -419,39 +419,31 @@ function LockedRelics({ collectedIds, lightTheme }) {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+      {/*
+        ⚠️ MỘT DÒNG MỘT DI VẬT, KHÔNG CÒN MỘT THẺ MỘT DI VẬT (2026-08-30). Đo ở khung 390px: 15 di
+        vật khoá × ~200px = **~3.000px** cuộn, và mỗi thẻ nói ĐÚNG một câu như nhau — *"Chinh phục
+        «X» ở chế độ Đương Đầu để mở khóa"* — trong đó phần duy nhất khác nhau (**tên khủng hoảng**)
+        đã nằm ngay trên tiêu đề của chính thẻ ấy. Tức mỗi thẻ nói tên ấy HAI lần, và cái luật chơi
+        thì được nói LẠI mười lăm lần.
+        ⚠️ Luật ấy KHÔNG BỊ MẤT — nó đã có một chỗ để nói, ngay đầu màn này: *"0/15 — chinh phục
+        Khủng Hoảng Kỷ Nguyên để nhận buff vĩnh viễn."* Nói một lần ở đầu danh sách là đủ; nói lại
+        ở từng dòng thì nó thôi là hướng dẫn và thành nhiễu.
+        ⚠️ Ô "ẨN" 48×48 cũng gỡ: mười lăm ô giống hệt nhau không phân biệt được gì, mà chúng chính
+        là thứ ép mỗi thẻ phải cao ít nhất 48px. Chữ "Khoá" ở lề phải giữ lại — nó là trạng thái,
+        và nó là thứ sẽ đổi khi mở được.
+        Kết quả: ~3.000px → ~700px, và danh sách LIẾC được thay vì phải đọc.
+      */}
+      <div className="grid grid-cols-1 gap-x-4 gap-y-0 sm:grid-cols-2">
         {locked.map((relic) => (
           <div
             key={relic.id}
-            className={`px-4 py-4 ${lightTheme ? '' : 'rounded-[var(--skin-radius-card,18px)] border border-white/8 bg-white/[0.03]'}`}
-            style={lightTheme ? {
-              background: 'var(--card-bg-solid)',
-              border: 'var(--skin-card-border-width, 1px) solid var(--line)',
-              borderRadius: 'var(--skin-radius-card, 18px)',
-              boxShadow: 'var(--skin-card-shadow)',
-            } : { background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}
+            className="flex items-baseline justify-between gap-3 border-b py-2.5"
+            style={{ borderColor: lightTheme ? 'var(--line)' : 'rgba(255,255,255,0.08)' }}
           >
-            <div className="flex items-start gap-4">
-              <div
-                className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-[var(--skin-radius-control,14px)] text-2xl"
-                style={lightTheme ? {
-                  background: 'rgba(31, 30, 29, 0.04)',
-                  border: '1px solid rgba(31, 30, 29, 0.06)',
-                  opacity: 0.55,
-                } : { opacity: 0.25 }}
-              >
-                <span className="mono text-[10px] font-semibold uppercase tracking-[0.16em]">Ẩn</span>
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold" style={lightTheme ? { color: 'var(--muted)' } : { color: '#94a3b8' }}>
-                  ??? (từ {relic.crisisName})
-                </p>
-                <p className="mt-1 text-xs leading-relaxed" style={lightTheme ? { color: '#8a8a86' } : { color: '#64748b' }}>
-                  Chinh phục {relic.crisisName} ở chế độ Đương Đầu để mở khóa.
-                </p>
-              </div>
-              <span className="mono text-[10px] font-semibold uppercase tracking-[0.16em]" style={lightTheme ? { color: 'var(--accent2)' } : { color: '#475569' }}>Khoá</span>
-            </div>
+            <p className="min-w-0 flex-1 truncate text-[13px]" style={lightTheme ? { color: 'var(--muted)' } : { color: '#94a3b8' }}>
+              ??? <span style={{ opacity: 0.75 }}>từ {relic.crisisName}</span>
+            </p>
+            <span className="mono shrink-0 text-[10px] font-semibold uppercase tracking-[0.16em]" style={lightTheme ? { color: 'var(--accent2)' } : { color: '#475569' }}>Khoá</span>
           </div>
         ))}
       </div>

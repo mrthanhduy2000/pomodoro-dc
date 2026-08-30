@@ -7,6 +7,16 @@
 > **BA lần** (ô "PHIÊN 0" ở thanh đầu · câu "Bạn chưa chốt phiên nào trong hôm nay" · dòng "Phiên
 > 0/5 hôm nay" dưới đồng hồ). Bản thứ ba là bản TỐT NHẤT vì nó có mẫu số ⇒ hai bản kia nhường.
 >
+> **VÒNG 13 — danh sách di vật khoá: ~3.000px xuống ~700px.** 15 thẻ, mỗi thẻ nói ĐÚNG một câu như
+> nhau, và phần khác nhau duy nhất (tên khủng hoảng) đã nằm trên tiêu đề của chính thẻ ấy. Nay mỗi
+> di vật là MỘT DÒNG; luật chơi vẫn được nói, đúng một lần, ở đầu danh sách (chỗ nó vốn đã có).
+> ⚠️ **MỘT HÌNH DẠNG ĐÁNG ĐI SOI TIẾP:** *"mỗi phần tử một THẺ, và mỗi thẻ nhắc lại cùng một luật"*.
+> Nó vừa được tìm thấy ở đây; tab "Bản vẽ" cũng có một thẻ bốn dòng luật RP không bao giờ đổi.
+> ⚠️ **FIXTURE VẪN CÒN LỖ**: nó không gieo `relics` lẫn `research`, nên hai tab ấy luôn hiện 0/15 và
+> 0/75 — tức vẫn đang soi màn hình của NGÀY ĐẦU TIÊN ở hai chỗ đó (cùng loại lỗi vòng 11 vừa vá cho
+> thành tích). Vá được thì soi tiếp; cách vá đúng là DÙNG LẠI hàm của mã sản phẩm, đừng viết công
+> thức thứ hai.
+>
 > **VÒNG 12 — số thứ tự "01…05" ở tab Thống kê đã gỡ.** Chúng là trang trí mà PHẢI TRẢ TIỀN bằng
 > chỗ: ở 390px mỗi nút rộng ~108px, con số chiếm phần đầu ⇒ nhãn hai chữ xuống HAI DÒNG và hàng tab
 > cao gấp đôi. Nay bốn tab lọt vào khung thay vì ba.

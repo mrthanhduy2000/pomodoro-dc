@@ -12,6 +12,27 @@
 
 ---
 
+## 2026-08-30 (vòng 13) — Danh sách di vật khoá: 3.000px xuống 700px
+
+**Vấn đề.** Tab Kho báu → Di vật liệt kê 15 di vật chưa mở, mỗi cái một THẺ cao ~200px ⇒ **~3.000px
+cuộn** ở khung 390px. Và mỗi thẻ nói đúng một câu như nhau — *"Chinh phục «X» ở chế độ Đương Đầu để
+mở khóa"* — trong đó phần duy nhất khác nhau (**tên khủng hoảng**) đã nằm ngay trên tiêu đề của
+chính thẻ ấy. Tức mỗi thẻ nói tên ấy hai lần, và cái luật chơi được nói lại mười lăm lần.
+
+**Đã đổi.** Mỗi di vật khoá nay là MỘT DÒNG: `??? từ «tên khủng hoảng»` · `KHOÁ`. Luật chơi **không
+mất** — nó đã có sẵn một chỗ để nói ngay đầu màn (*"0/15 — chinh phục Khủng Hoảng Kỷ Nguyên để nhận
+buff vĩnh viễn"*); nói một lần ở đầu danh sách là đủ, nói lại ở từng dòng thì nó thôi là hướng dẫn
+và thành nhiễu. Ô "ẨN" 48×48 cũng gỡ — mười lăm ô giống hệt nhau không phân biệt được gì, mà chính
+chúng ép mỗi thẻ phải cao ít nhất 48px.
+
+**Kết quả:** ~3.000px → ~700px, cả 15 di vật lọt trong **một màn hình**, và danh sách **liếc được**
+thay vì phải đọc — nhìn một cái thấy trọn vòng cung khủng hoảng từ Kỷ Băng Hà tới Nổi Dậy AI, thứ
+mà bản cũ giấu sau mười lăm lần cuộn.
+
+**Ảnh hưởng.** Chỉ giao diện. Không migration.
+
+---
+
 ## 2026-08-30 (vòng 12) — Bỏ số thứ tự trang trí ở tab Thống kê
 
 Năm tab của màn Thống kê mang số thứ tự "01…05" trước nhãn. Ở khung 390px mỗi nút chỉ rộng ~108px,

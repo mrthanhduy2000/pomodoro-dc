@@ -1942,8 +1942,15 @@ function OverviewTab({ history, streak }) {
 
   return (
     <div className="flex flex-col gap-4">
+      {/*
+        ⚠️ TIÊU ĐỀ ẨN TRÊN ĐIỆN THOẠI, VÀ ĐÂY LÀ MỘT LỖI BỐ CỤC THẬT chứ không chỉ là dọn chữ.
+        Ở khung 390px, "Hành trình tập trung" phải chia chiều ngang với nhóm nút Tuần/Tháng/Năm nên
+        nó vỡ thành **BỐN DÒNG, mỗi dòng một từ**, ở cỡ 1.9rem — tốn ~300px và trông như hỏng.
+        Nó lại còn lặp: eyebrow "Tổng quan" nói đúng chữ mà nút tab "01 Tổng Quan" ngay phía trên
+        đang sáng. Ẩn cả cụm trên điện thoại thì nhóm nút lên thẳng hàng đầu và đọc được ngay.
+      */}
       <div className="flex items-end justify-between gap-3">
-        <div>
+        <div className="hidden md:block">
           <p className="text-[11px] font-semibold uppercase tracking-[0.24em]" style={{ color: TEXT_SOFT }}>Tổng quan</p>
           <h3 className="mt-1.5 text-[1.9rem] font-semibold leading-tight md:text-[2.2rem]" style={{ color: TEXT_PRIMARY, fontFamily: 'var(--skin-font-display)' }}>Hành trình tập trung</h3>
         </div>
@@ -4799,14 +4806,17 @@ export default function StatsDashboard() {
         }}
       />
 
-      {/* Header */}
-      <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+      {/*
+        ⚠️ HEADER NÀY KHÔNG ĐI QUA `ShellPane` nên nó SỐNG SÓT qua đợt cắt trước (App.jsx dựng màn
+        Thống kê bằng `<ShellPane>` KHÔNG có `title`, rồi màn tự dựng tiêu đề riêng ở đây). Đó là
+        lý do chữ "Workspace" vẫn còn ở đúng một màn hình sau khi đã gỡ khỏi bốn màn kia — đúng
+        hình dạng "sửa một chỗ, quên chỗ thứ hai" mà dự án đã bị cắn nhiều lần.
+        Nay ẩn cả khối trên điện thoại, cùng luật: nhãn tab đang sáng đã nói tên màn hình.
+      */}
+      <div className="hidden flex-col gap-3 md:flex md:flex-row md:items-end md:justify-between">
         <div className="min-w-0">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.28em]" style={{ color: TEXT_SOFT }}>
-            Workspace
-          </p>
           <h2
-            className="mt-1 text-[1.55rem] font-semibold leading-none md:text-[1.75rem]"
+            className="text-[1.55rem] font-semibold leading-none md:text-[1.75rem]"
             style={{ color: TEXT_PRIMARY, fontFamily: DISPLAY_FONT, textWrap: 'balance' }}
           >
             Thống kê

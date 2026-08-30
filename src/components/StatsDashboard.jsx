@@ -2798,11 +2798,11 @@ const FocusTab = React.memo(function FocusTab({ history }) {
                 </div>
 
                 <div className="max-w-3xl">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.28em]" style={{ color: TEXT_SOFT }}>
-                    Tập trung
-                  </p>
+                  {/* ⚠️ NHÃN "TẬP TRUNG" ĐÃ GỠ (2026-08-30) — nó là ĐÚNG chữ trên nút tab đang
+                      sáng cách đó vài chục điểm ảnh. Tiêu đề ngay dưới thì ĐỔI theo số liệu, nên
+                      nó mới là dòng đáng chiếm chỗ. */}
                   <h3
-                    className="mt-2.5 text-[1.6rem] font-semibold leading-tight md:text-[2rem]"
+                    className="text-[1.6rem] font-semibold leading-tight md:text-[2rem]"
                     style={{ color: TEXT_PRIMARY, fontFamily: DISPLAY_FONT, textWrap: 'balance' }}
                   >
                     {focusHeadline}
@@ -3870,20 +3870,20 @@ function JournalTab({ history, sessionCategories }) {
         style={{ background: BG_CARD, borderColor: PANEL_BORDER }}
       >
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div className="min-w-0">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.26em]" style={{ color: TEXT_SOFT }}>
-              Lưu trữ
-            </p>
-            <h3 className="mt-3 text-[1.9rem] font-semibold leading-tight" style={{ color: TEXT_PRIMARY, fontFamily: DISPLAY_FONT }}>
-              Nhật ký của các phiên đã ghi.
-            </h3>
-            <p className="mt-3 max-w-2xl text-[13px] leading-6" style={{ color: TEXT_MUTED }}>
-              Khối này giữ lại nhịp, mốc XP, ghi chú, phần tự chấm và cả những phiên bị hủy theo đúng thứ tự thời gian. Bộ lọc phía dưới giúp soi từng nhóm phiên mà không làm mất cảm giác của một cuốn sổ đang được bổ sung dần.
-            </p>
-            <p className="mt-2 max-w-2xl text-[12px] leading-5" style={{ color: TEXT_SOFT }}>
-              Bạn có thể xoá từng phiên không muốn giữ. Phiên mới nhất sẽ hoàn tác theo bản lưu tạm; phiên cũ sẽ trừ lại XP, EP, tài nguyên và điểm nghiên cứu đang lưu trong bản ghi đó.
-            </p>
-          </div>
+          {/*
+            ⚠️ KHỐI MỞ ĐẦU ~800px ĐÃ GỠ (2026-08-30) — bốn lớp, và cả bốn đều nói về một màn hình mà
+            người đọc ĐANG ĐỨNG TRONG ĐÓ:
+            · nhãn "LƯU TRỮ" — nhắc lại nút tab "Nhật Ký" đang sáng ngay phía trên;
+            · tiêu đề "Nhật ký của các phiên đã ghi." ở cỡ 1,9rem, xuống HAI DÒNG ở khung 390px;
+            · một đoạn kể rằng nhật ký thì lưu lại các phiên theo thứ tự thời gian;
+            · một đoạn về CÁCH XOÁ — thông tin thật và quan trọng, nhưng đặt sai chỗ.
+            ⚠️ Đoạn cuối KHÔNG bị mất tin: mỗi phiên đã có sẵn một bước XÁC NHẬN riêng
+            (`confirmDelete === h.id`) với nút ghi rõ *"Xoá + hoàn tác"* / *"Xoá phiên"* kèm chú
+            giải. Nói luật hoàn tác ở ĐẦU MÀN là nói trước cho người chưa định xoá gì, mỗi lần mở,
+            mãi mãi — còn nói ở NÚT là nói đúng lúc người ta sắp bấm.
+            Ở khung 390px khối này chiếm ~800px, tức người xem cuộn gần một màn hình rưỡi mới thấy
+            phiên đầu tiên trong chính cuốn nhật ký mình vừa mở.
+          */}
           <div
             className="inline-flex w-fit items-center gap-2 rounded-full border px-3 py-1.5 text-[11px] font-semibold"
             style={{ background: FILTER_PILL_BG, color: FILTER_PILL_TEXT, borderColor: FILTER_PILL_BORDER }}
@@ -4506,20 +4506,13 @@ function NotesTab({ savedNotes, sessionCategories }) {
         style={{ background: BG_CARD, borderColor: PANEL_BORDER }}
       >
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div className="min-w-0">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.26em]" style={{ color: TEXT_SOFT }}>
-              Lưu trữ
-            </p>
-            <h3 className="mt-3 text-[1.9rem] font-semibold leading-tight" style={{ color: TEXT_PRIMARY, fontFamily: DISPLAY_FONT }}>
-              Ghi chép được giữ lại sau mỗi phiên.
-            </h3>
-            <p className="mt-3 max-w-2xl text-[13px] leading-6" style={{ color: TEXT_MUTED }}>
-              Khối này giữ lại bản sao của ghi chú tập trung và ghi chú giải lao. Nó vận hành như một kho lưu trữ yên tĩnh để nhìn lại ý định, vấn đề và điều cần tiếp tục ở phiên kế tiếp.
-            </p>
-            <p className="mt-2 max-w-2xl text-[12px] leading-5" style={{ color: TEXT_SOFT }}>
-              Bạn có thể xóa từng ghi chú cũ ở đây. Nếu ghi chú đó vẫn gắn với một phiên trong nhật ký, phần note ở tab Nhật ký cũng sẽ được gỡ theo.
-            </p>
-          </div>
+          {/*
+            ⚠️ KHỐI MỞ ĐẦU ĐÃ GỠ (2026-08-30) — cùng ca với tab Nhật Ký, và cùng bốn lớp: nhãn "LƯU
+            TRỮ" nhắc lại nút tab đang sáng · một tiêu đề 1,9rem xuống hai dòng ở khung 390px · một
+            đoạn kể rằng kho ghi chú thì giữ ghi chú · một đoạn về CÁCH XOÁ.
+            Đoạn cuối không mất tin: mỗi ghi chú đã có bước xác nhận riêng ngay tại nút xoá của nó.
+            Nói luật xoá ở đầu màn là nói trước cho người chưa định xoá gì, mỗi lần mở, mãi mãi.
+          */}
           <div
             className="inline-flex w-fit items-center gap-2 rounded-full border px-3 py-1.5 text-[11px] font-semibold"
             style={{ background: FILTER_PILL_BG, color: FILTER_PILL_TEXT, borderColor: FILTER_PILL_BORDER }}

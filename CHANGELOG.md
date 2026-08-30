@@ -12,6 +12,27 @@
 
 ---
 
+## 2026-08-30 (vòng 16) — Nhật Ký và Ghi Chú: gỡ ~800px văn giải thích mỗi màn
+
+Hai tab của màn Thống kê mở đầu bằng cùng một khối bốn lớp, và cả bốn đều nói về một màn hình mà
+người đọc **đang đứng trong đó**: nhãn "LƯU TRỮ" (nhắc lại nút tab đang sáng) · một tiêu đề 1,9rem
+xuống hai dòng ở khung 390px · một đoạn kể rằng nhật ký thì lưu các phiên / kho ghi chú thì giữ ghi
+chú · một đoạn về **cách xoá**.
+
+Đoạn cuối là thông tin thật và quan trọng — nhưng đặt sai chỗ: mỗi phiên (và mỗi ghi chú) **đã có
+sẵn một bước xác nhận riêng** ngay tại nút xoá của nó, với nhãn ghi rõ *"Xoá + hoàn tác"* /
+*"Xoá phiên"*. Nói luật hoàn tác ở ĐẦU MÀN là nói trước cho người chưa định xoá gì, mỗi lần mở, mãi
+mãi; nói ở NÚT là nói đúng lúc người ta sắp bấm.
+
+**Kết quả:** ~800px mỗi tab. Nhật Ký nay hiện ngay bốn ô số thật (624 phiên · 99 có ghi chú · 36 đã
+tự chấm · 36 phiên huỷ) cộng bộ lọc danh mục, và phiên đầu tiên lên khỏi vùng phải cuộn một màn
+rưỡi. Cùng lượt, gỡ nhãn "TẬP TRUNG" ở tab Tập Trung — nó là ĐÚNG chữ trên nút tab đang sáng cách
+đó vài chục điểm ảnh, trong khi tiêu đề ngay dưới thì đổi theo số liệu.
+
+**Ảnh hưởng.** Chỉ giao diện. Không migration.
+
+---
+
 ## 2026-08-30 (vòng 15) — Báo cáo tuần lần đầu tự mời: một dòng ở màn Tập trung
 
 **Vấn đề.** `WeeklyReportModal` là **màn đầy dopamine nhất của cả app** — một con số to ("15g14p"),

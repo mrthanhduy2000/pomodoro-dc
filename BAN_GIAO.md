@@ -7,6 +7,15 @@
 > **BA lần** (ô "PHIÊN 0" ở thanh đầu · câu "Bạn chưa chốt phiên nào trong hôm nay" · dòng "Phiên
 > 0/5 hôm nay" dưới đồng hồ). Bản thứ ba là bản TỐT NHẤT vì nó có mẫu số ⇒ hai bản kia nhường.
 >
+> **VÒNG 16 — Nhật Ký và Ghi Chú: ~800px văn giải thích mỗi màn.** Cùng khuôn bốn lớp đã gặp ở
+> `ShellPane`, Thành tích, Xưởng, Cài đặt. ⚠️ Đoạn "cách xoá" KHÔNG mất tin — mỗi phiên/ghi chú đã
+> có bước xác nhận riêng ngay tại nút xoá. ⇒ **luật chỉ dùng lúc sắp hành động thì phải nói Ở NÚT,
+> đừng nói ở đầu màn**: ở đầu màn nó nói với người chưa định làm gì, mỗi lần mở, mãi mãi.
+> ⚠️ **KHUÔN NÀY GẦN NHƯ ĐÃ QUÉT XONG** — đã soi cả 5 tab Thống kê (Tổng Quan đã ẩn từ trước),
+> 3 tab Hành trang, 4 tab Kho báu, Nhiệm vụ, Cài đặt, Thêm. Chỗ chưa soi: nội dung chuông thông báo,
+> và màn hiện ra SAU khi kết thúc một phiên (không soi được — cấm chạy phiên trên dev vì dùng chung
+> hàng Supabase với production).
+>
 > **VÒNG 15 — BÁO CÁO TUẦN LẦN ĐẦU TỰ MỜI.** Màn đầy dopamine nhất của app (số to · +19% · hạng A
 > · 6/7 ngày) chỉ được báo bằng **một chấm 6px nằm BÊN TRONG một menu phải bấm mới mở**. Nay có
 > `FocusWeeklyReportTease`: một dòng 🏆 ở cột giữa màn Tập trung, bấm là mở thẳng.

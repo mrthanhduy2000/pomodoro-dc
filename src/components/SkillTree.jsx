@@ -345,7 +345,22 @@ export default function SkillTree({ onOpenAchievements }) {
 
         {/* PHẢI — Ngữ cảnh: nhiệm vụ ngày + chuỗi tuần + thành tựu */}
         <div className="flex flex-col gap-4">
-          <DailyMissions />
+          {/*
+            ⚠️ `hidden lg:block` CHO NHIỆM VỤ NGÀY, và đây là một phép GỠ TRÙNG chứ không phải ẩn
+            một tính năng (vòng 20, 2026-08-30). Ở màn RỘNG thẻ này là cột NGỮ CẢNH bên phải cây
+            kỹ năng — hoàn toàn đúng chỗ, vì thanh bên desktop KHÔNG có mục "Nhiệm vụ". Nhưng ở
+            390px hai cột XẾP CHỒNG, nên nó thành **1.097px chắn ngang giữa trang** — và đúng cái
+            thẻ ấy LÀ TOÀN BỘ nội dung của tab "Nhiệm vụ", cách một cú chạm trên thanh dưới.
+            Đo được: gỡ khỏi khổ điện thoại thì trang Kỹ năng 3.145 → ~2.048px và "Tổ hợp kỹ năng"
+            từ y=2382 lên y≈1285.
+            ⚠️ Đây là mặt TRÁI của khuôn "hidden … lg:" quen thuộc: thường nó giấu mất thứ iPhone
+            cần thấy; ở đây nó là cách duy nhất để iPhone THÔI phải xem hai lần cùng một thẻ, vì
+            desktop thật sự cần nó ở chỗ này còn iPhone thì đã có nguyên một tab riêng.
+            `RecentAchievements` thì Ở LẠI cả hai khổ — nó KHÔNG có tab nào của riêng nó.
+          */}
+          <div className="hidden lg:block">
+            <DailyMissions />
+          </div>
           <RecentAchievements onOpen={onOpenAchievements} />
         </div>
       </div>

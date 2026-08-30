@@ -240,10 +240,24 @@ export default function SkillTree({ onOpenAchievements }) {
       </div>
 
       {/* ── Bố cục 2 cột: cây kỹ năng (trái) · ngữ cảnh (phải) ──────────── */}
-      <div className="grid gap-4 lg:grid-cols-[1.5fr_1fr]">
+      {/*
+        ⚠️ `min-w-0` TRÊN CỘT GRID LÀ BẮT BUỘC, KHÔNG PHẢI TRANG TRÍ. Mặc định của một ô grid là
+        `min-width: auto`, tức nó PHÌNH theo nội dung dài nhất bên trong thay vì co về bề rộng cột.
+        Ở đây nội dung dài nhất là mô tả kỹ năng, nên trên khung 390px cột phình thành **567px** và
+        mô tả bị mép màn hình cắt mất ~100px — đúng thứ Đàm đọc để quyết mở kỹ năng nào.
+        ⚠️ Nó IM LẶNG trên desktop: ở đó cột rộng sẵn nên không có gì tràn, và `--fit` của
+        `shot.mjs` cũng không kêu vì nó chỉ soi NÚT, còn đây là thẻ `<p>`. Chỉ nhìn ảnh chụp khung
+        390px mới thấy.
+        ⚠️ VÀ `min-w-0` TRÊN ITEM MỘT MÌNH KHÔNG ĐỦ — đã thử và đo: cột vẫn 567px. Ở khung hẹp,
+        `lg:grid-cols-…` chưa áp nên grid chỉ có MỘT cột ngầm cỡ `auto`, mà một track `auto` thì tự
+        phình theo nội dung bất kể item khai `min-width: 0`. Thứ chữa được là `grid-cols-1`:
+        Tailwind dựng nó thành `repeat(1, minmax(0, 1fr))`, và chính vế `minmax(0, …)` mới ép được
+        track co lại.
+      */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.5fr_1fr]">
 
         {/* TRÁI — Cây kỹ năng */}
-        <div className="flex flex-col gap-4">
+        <div className="flex min-w-0 flex-col gap-4">
           <div className="px-5 py-5" style={CARD}>
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">

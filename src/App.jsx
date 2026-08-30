@@ -13,6 +13,7 @@ import FocusRail from './components/FocusRail';
 import FocusNextAction from './components/FocusNextAction';
 import FocusStageCountdown from './components/FocusStageCountdown';
 import { getEraStage } from './engine/eraStage';
+import { evaluateStreakAtRisk } from './engine/gameMath';
 import FocusCoachMobile from './components/FocusCoachMobile';
 import NotificationCenter from './components/NotificationCenter';
 import { RichTextView } from './components/RichText';
@@ -1420,6 +1421,12 @@ export default function App() {
   const dailyTracking = useGameStore((s) => s.dailyTracking);
   const history = useGameStore((s) => s.history);
   const currentStreak = useGameStore((s) => s.streak.currentStreak);
+  // Lá Chắn Chuỗi: có kỹ năng VÀ tuần này chưa tiêu. Nó KHÔNG làm hết treo — chỉ đổi hậu quả,
+  // nên `evaluateStreakAtRisk` vẫn báo treo, chỉ là câu chữ bớt nặng. Cùng phép tính mà
+  // `FocusRail` dùng cho thẻ Chuỗi ở cột phải.
+  const hasStreakShield = useGameStore((s) => (
+    !!s.player.unlockedSkills?.la_chan_streak && s.streak?.skipShieldUsedWeekKey !== localWeekMondayStr()
+  ));
   const lootModalOpen = useGameStore((s) => s.ui.lootModalOpen);
   const disasterModalOpen = useGameStore((s) => s.ui.disasterModalOpen);
   const eraCrisisModalOpen = useGameStore((s) => s.ui.eraCrisisModalOpen);
@@ -1594,6 +1601,19 @@ export default function App() {
   // (`PomodoroEngine.jsx`). Đừng tính lại tại chỗ: hai chỗ cùng nói "hôm nay đi được bao nhiêu"
   // mà lệch nhau thì màn hình tự mâu thuẫn với chính nó, và không có gì đỏ lên.
   const sessionsCompletedToday = countSessionsOnDay(dailyTracking, todayKey);
+  // ⚠️ Ô "Chuỗi" xưa nay chỉ hiện một CON SỐ, mà con số không phân biệt được hai tình huống ngược
+  // hẳn nhau: "17 ngày, hôm nay xong rồi" và "17 ngày, hết hôm nay không làm là mất sạch". Cái thứ
+  // hai là thứ đáng nói nhất trong ngày, và trước 2026-08-29 nó chỉ sống trong AI Coach và trong
+  // push lúc 17h — tức chỉ tới được Đàm khi anh KHÔNG mở app.
+  const streakRisk = evaluateStreakAtRisk({
+    currentStreak,
+    sessionsCompletedToday,
+    shieldReady: hasStreakShield,
+  });
+  // ⚠️ PHẢI ĐỨNG SAU `sessionsCompletedToday`. Bản đầu đặt nó ở trên (cạnh `eraStage`, chỗ đọc
+  // xuôi hơn) và cả app TRẮNG XOÁ: `const` trong vùng chết tạm thời ném `ReferenceError` ngay
+  // lúc render. ESLint KHÔNG bắt (`no-use-before-define` không bật), `npm test` KHÔNG bắt (test
+  // đọc mã nguồn, không dựng React), `npm run build` KHÔNG bắt — chỉ ảnh chụp mới thấy.
   const focusMinutesToday = sumFocusMinutesOnDay(history, todayKey);
   const focusHoursToday = formatDurationMinutes(focusMinutesToday);
   const hasFocusSessionInProgress = timerSessionRunning && !isOnBreak;
@@ -1622,6 +1642,7 @@ export default function App() {
         eraEnd={eraEnd}
         eraProgress={eraProgress}
         eraStage={eraStage}
+        streakRisk={streakRisk}
         level={level}
         levelPct={levelPct / 100}
         sessionsCompletedToday={sessionsCompletedToday}
@@ -2361,6 +2382,7 @@ function TopRail({
   eraEnd,
   eraProgress,
   eraStage,
+  streakRisk,
   level,
   levelPct,
   sessionsCompletedToday,
@@ -2455,7 +2477,13 @@ function TopRail({
         <div className="grid grid-cols-[repeat(3,minmax(0,1fr))_auto] items-center gap-2 lg:hidden">
           <TinyStat compact label="Phiên" value={sessionsCompletedToday.toLocaleString()} />
           <TinyStat compact label="Tập trung" value={focusHoursToday} />
-          <TinyStat compact label="Chuỗi" value={currentStreak.toLocaleString()} accent />
+          <TinyStat
+            compact
+            label={streakRisk?.atRisk ? 'Chuỗi ⚠' : 'Chuỗi'}
+            value={currentStreak.toLocaleString()}
+            accent
+            atRisk={streakRisk?.atRisk === true}
+          />
           <div className="flex items-center justify-end">
             {notificationControl}
           </div>
@@ -2508,12 +2536,15 @@ function LevelDot({ level, pct }) {
   );
 }
 
-function TinyStat({ accent = false, compact = false, label, value }) {
+function TinyStat({ accent = false, atRisk = false, compact = false, label, value }) {
+  // ⚠️ Trạng thái "treo" nói bằng CẢ HAI: viền màu VÀ chữ "⚠" trong nhãn. Chỉ đổi màu thì người
+  // không phân biệt được màu sẽ không nhận ra gì — cùng luật đã áp cho thẻ phần thưởng (ADR-060:
+  // độ hiếm phải đọc được KHI KHÔNG NHÌN MÀU).
   return (
     <div
       className={`rounded-[16px] border text-center leading-tight ${compact ? 'min-w-[68px] px-2.5 py-2' : 'min-w-[72px] px-3 py-2'}`}
       style={{
-        borderColor: 'var(--line)',
+        borderColor: atRisk ? 'var(--accent2)' : 'var(--line)',
         background: 'var(--panel-soft)',
         boxShadow: '0 8px 16px rgba(31,30,29,0.03)',
       }}

@@ -6,7 +6,9 @@ import {
   describeStageCountdown,
   getEraStage,
   medianSessionEP,
+  pickStageCelebration,
   sessionsToStageEnd,
+  stageMilestoneKey,
 } from './eraStage.js';
 
 test('mọi kỷ đều chia được chặng, và các chặng phủ KÍN quãng của kỷ', () => {
@@ -105,4 +107,50 @@ test('còn ≤1 phiên thì đổi giọng — chỗ dopamine mạnh nhất là 
     'mọi lúc đều "imminent" thì chẳng còn gì để nổi bật khi đáng');
 
   assert.equal(describeStageCountdown(null, 50), null, 'không có chặng ⇒ không render gì');
+});
+
+/* ─── KHOẢNH KHẮC VỪA VƯỢT CHẶNG ─────────────────────────────────────────────── */
+
+test('mốc LUÔN tăng khi đi tới, kể cả lúc sang kỷ mới', () => {
+  // ⚠️ Lên kỷ thì chỉ số chặng quay về 0. So riêng chỉ số sẽ đọc bước tiến LỚN NHẤT game thành
+  // một bước LÙI — và hậu quả là đúng cái mốc đáng ăn mừng nhất thì im lặng.
+  assert.ok(stageMilestoneKey(9, 0) > stageMilestoneKey(8, 2), 'sang kỷ mới mà mốc lại tụt');
+
+  // Duyệt cả 15 kỷ × mọi chặng: dãy mốc phải đơn điệu tăng, không một chỗ nào hụt.
+  let truoc = -1;
+  for (let era = 1; era <= 15; era += 1) {
+    const total = ERA_METADATA[era].stages.length;
+    assert.ok(total < 10, `kỷ ${era} có ${total} chặng — phép nhân 10 của stageMilestoneKey hết đúng`);
+    for (let i = 0; i < total; i += 1) {
+      const key = stageMilestoneKey(era, i);
+      assert.ok(key > truoc, `mốc không tăng ở kỷ ${era} chặng ${i}`);
+      truoc = key;
+    }
+  }
+});
+
+test('máy chưa từng ghi dấu ⇒ IM LẶNG, không khen cho chặng đã qua từ lâu', () => {
+  // ⚠️ Cái bẫy đã cắn thật ở `navAttention.js`: không có luật này thì lần đầu mở app sau bản cập
+  // nhật, Đàm nhận một lời chúc mừng cho việc anh làm xong từ nhiều tuần trước.
+  const stage = getEraStage(8, 20340);
+  assert.equal(pickStageCelebration(stage, 8, null), null);
+  assert.equal(pickStageCelebration(stage, 8, undefined), null);
+  assert.equal(pickStageCelebration(null, 8, 0), null, 'không có chặng ⇒ không có gì để khen');
+});
+
+test('chỉ khen khi THẬT SỰ vượt mốc, và khen đúng MỘT lần', () => {
+  const stage = getEraStage(8, 20340);            // kỷ 8, chặng 1 (index 0)
+  const key = stageMilestoneKey(8, stage.index);
+
+  // Đã thấy mốc này rồi ⇒ im.
+  assert.equal(pickStageCelebration(stage, 8, key), null, 'khen lại một mốc đã khen');
+  // Dấu cũ hơn ⇒ có mốc mới để khen, và nó trả về đúng key để ghi lại.
+  const mung = pickStageCelebration(stage, 8, key - 1);
+  assert.ok(mung && mung.key === key);
+  assert.ok(mung.text.includes(stage.label), 'lời khen không nhắc tên chặng vừa mở');
+
+  // Thăng hoa đưa về kỷ 1 ⇒ mốc TỤT ⇒ không khen.
+  const dauKy = getEraStage(1, 100);
+  assert.equal(pickStageCelebration(dauKy, 1, stageMilestoneKey(8, 2)), null,
+    'reset tiến độ mà vẫn chúc mừng "đã mở chặng 1"');
 });

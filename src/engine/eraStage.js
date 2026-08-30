@@ -139,3 +139,51 @@ export function describeStageCountdown(stage, epPerSession) {
 
   return { tone: 'normal', text: `Còn ~${sessions} phiên nữa tới ${dich}` };
 }
+
+/**
+ * ─── KHOẢNH KHẮC VỪA VƯỢT CHẶNG ──────────────────────────────────────────────
+ *
+ * ⚠️ VÌ SAO PHẦN NÀY TỒN TẠI: một cái đích không có phần thưởng là một lời hứa hụt. Bước trước
+ * dựng dòng *"còn ~3 phiên nữa tới «Khám Phá Tân Thế Giới»"* — rồi khi tới nơi thì **không có gì
+ * xảy ra cả**. Đó đúng là thứ mà chính file này cảnh báo ở `sessionsToStageEnd` (*"một lời hứa hụt
+ * làm hỏng mọi lời hứa sau đó"*), chỉ khác là lần ấy nó nói về con số còn lần này nó nói về sự
+ * IM LẶNG ở đích.
+ */
+
+/**
+ * Một mốc "đã đi tới đâu" so sánh được bằng phép `>`.
+ *
+ * ⚠️ PHẢI GỘP CẢ KỶ, không chỉ chỉ số chặng. Lên kỷ thì chỉ số chặng quay về 0, nên so riêng chỉ
+ * số sẽ đọc bước tiến LỚN NHẤT game (sang kỷ mới) thành một bước LÙI. Nhân 10 là đủ vì mỗi kỷ chỉ
+ * có 3 chặng — và nếu ngày nào có kỷ khai hơn 10 chặng thì hàm này phải đổi, nên có test canh.
+ *
+ * ⚠️ Thăng hoa (prestige) đưa về kỷ 1 ⇒ mốc TỤT, và lúc ấy không ăn mừng gì cả — đúng như phải
+ * thế: người chơi vừa tự nguyện đổi tiến độ lấy thứ khác, chúc mừng họ "đã mở chặng 1" là vô nghĩa.
+ */
+export function stageMilestoneKey(era, stageIndex) {
+  const e = Number.isFinite(era) ? era : 0;
+  const i = Number.isFinite(stageIndex) ? stageIndex : 0;
+  return e * 10 + i;
+}
+
+/**
+ * "Có mốc nào vừa vượt qua mà chưa được ăn mừng không?"
+ *
+ * ⚠️ `seenKey === null` (máy chưa từng ghi dấu) PHẢI IM LẶNG, và đây là cái bẫy đã cắn thật ở
+ * `navAttention.js`: không có luật này thì lần đầu mở app sau bản cập nhật, Đàm sẽ nhận một lời
+ * chúc mừng cho một chặng anh đã đi qua từ nhiều tuần trước. Một lời khen sai một lần thì mọi lời
+ * khen sau đó đều mất giá — cùng nguyên tắc mà `cityMoment.js` sống bằng nó.
+ *
+ * @returns {{text: string, key: number} | null}
+ */
+export function pickStageCelebration(stage, era, seenKey) {
+  if (!stage) return null;
+  const key = stageMilestoneKey(era, stage.index);
+  if (seenKey === null || seenKey === undefined) return null;   // lần đầu: gieo dấu, đừng khen
+  if (key <= seenKey) return null;
+
+  // Vừa sang KỶ mới thì chặng 1 của kỷ ấy không phải tin chính — hộp thoại lên kỷ đã lo phần đó,
+  // và nói thêm một câu nữa ở đây là lặp lại chính nó bằng giọng nhỏ hơn.
+  if (stage.index === 0) return { text: `Đã bước vào «${stage.label}»`, key };
+  return { text: `Vừa mở «${stage.label}»`, key };
+}

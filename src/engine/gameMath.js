@@ -1079,6 +1079,37 @@ export function suggestSessionLength(history = [], opts = {}) {
  * @param {number} currentStreak
  * @returns {{nextMilestone:object|null, daysRemaining:number, allMilestones:object[], hasUnlockedAll:boolean}}
  */
+/**
+ * "Chuỗi ngày đang TREO chưa?" — còn chuỗi, mà hôm nay chưa chốt phiên nào.
+ *
+ * ⚠️ VÌ SAO ĐÁNG CÓ Ở MÀN HÌNH CHÍNH. Ô "Chuỗi" trên thanh tiêu đề xưa nay chỉ hiện một CON SỐ,
+ * mà một con số thì không phân biệt được hai tình huống ngược hẳn nhau: *"17 ngày, hôm nay xong
+ * rồi, yên tâm"* và *"17 ngày, hết hôm nay không làm là mất sạch"*. Cái thứ hai là thứ đáng nói
+ * nhất trong ngày và app chưa bao giờ nói nó ở màn chính — nó chỉ sống trong AI Coach
+ * (`predictStreakKeep`) và trong push lúc 17h (`api/_lib/coachDigest.js`).
+ *
+ * ⚠️ CÙNG ĐỊNH NGHĨA với `evaluateStreakRisk` bên phía push, phát biểu lại bằng dữ liệu mà màn
+ * hình đã có sẵn: *còn chuỗi ≥1 NHƯNG hôm nay chưa có phiên hoàn thành nào*. Không import chéo
+ * `api/` sang `src/` — đó là hai tầng chạy ở hai nơi khác nhau, và một `import` như vậy sẽ kéo
+ * theo cả nhánh server vào bundle trình duyệt.
+ *
+ * ⚠️ `shieldReady` KHÔNG làm hết treo, nó chỉ đổi HẬU QUẢ. Nói "an toàn" khi có Lá Chắn là nói
+ * dối: khiên tiêu một lần rồi hết, và người chơi vẫn nên biết hôm nay mình đang tiêu nó.
+ *
+ * @returns {{atRisk: boolean, streak: number, shieldReady: boolean} | null}
+ *          `null` khi chưa có chuỗi nào — không có gì để mất thì không có gì để cảnh báo.
+ */
+export function evaluateStreakAtRisk({
+  currentStreak = 0,
+  sessionsCompletedToday = 0,
+  shieldReady = false,
+} = {}) {
+  const streak = Math.max(0, Math.floor(Number(currentStreak) || 0));
+  if (streak < 1) return null;
+  const done = Math.max(0, Math.floor(Number(sessionsCompletedToday) || 0));
+  return { atRisk: done === 0, streak, shieldReady: shieldReady === true };
+}
+
 export function calculateStreakMilestoneProgress(currentStreak = 0) {
   const streak = Math.max(0, Math.floor(Number(currentStreak) || 0));
   const allMilestones = STREAK_MILESTONES.map((m) => ({

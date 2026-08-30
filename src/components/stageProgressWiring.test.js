@@ -79,3 +79,41 @@ test('dòng đếm ngược ở CỘT GIỮA, cạnh hai dòng kia', () => {
   const dongHo = APP_CODE.indexOf('<PomodoroEngine', tease);
   assert.ok(dongHo > countdown, 'dòng bị đẩy xuống dưới đồng hồ, tức dưới nếp gấp trên iPhone');
 });
+
+/* ─── PHẦN THƯỞNG KHI TỚI ĐÍCH, VÀ CHUỖI ĐANG TREO ──────────────────────────── */
+
+test('lời chúc mừng vượt mốc phải BẤM ĐƯỢC để tắt', () => {
+  const src = readFileSync(join(HERE, 'FocusStageCountdown.jsx'), 'utf8');
+  assert.ok(/tone === 'celebrate'/.test(src), 'dòng không còn biết tới trạng thái vừa-vượt-mốc');
+  // ⚠️ Nó CHIẾM CHỖ của dòng đếm ngược, nên phải có đường trả lại chỗ ấy. Không có `dismiss` thì
+  // lời chúc mừng ở lại vĩnh viễn và Đàm mất luôn dòng "còn ~N phiên nữa" của chặng kế tiếp.
+  assert.ok(/onClick=\{countdown\.dismiss\}/.test(src), 'lời chúc mừng không tắt được');
+});
+
+test('dấu "đã ăn mừng" ở localStorage, KHÔNG ở state đồng bộ', () => {
+  const hook = readFileSync(join(HERE, '..', 'hooks', 'useStageCountdown.js'), 'utf8');
+  assert.ok(/dc-stage-seen-v1/.test(hook), 'không còn khoá localStorage — dấu đã đi đâu?');
+  // ⚠️ Đẩy dấu này vào `gameStore` thì xem trên iPhone sẽ tắt mất lời chúc mừng trên Mac, VÀ nó
+  // thêm một trường nữa vào khối JSONB đang chịu cơ chế CAS "First Action Wins".
+  assert.ok(
+    !/setStageSeen|stageSeenKey:/.test(readFileSync(join(HERE, '..', 'store', 'gameStore.js'), 'utf8')),
+    'dấu "đã ăn mừng" lọt vào gameStore — nó là chuyện của TỪNG MÁY',
+  );
+});
+
+test('ô Chuỗi báo treo bằng CẢ chữ lẫn màu, không chỉ màu', () => {
+  // Chỉ đổi màu thì người không phân biệt được màu sẽ không nhận ra gì — cùng luật ADR-060 đã áp
+  // cho thẻ phần thưởng (độ hiếm phải đọc được KHI KHÔNG NHÌN MÀU).
+  assert.ok(/streakRisk\?\.atRisk \? 'Chuỗi ⚠' : 'Chuỗi'/.test(APP_CODE),
+    'nhãn ô Chuỗi không còn đổi theo trạng thái treo');
+  assert.ok(/atRisk \? 'var\(--accent2\)' : 'var\(--line\)'/.test(APP_CODE),
+    'viền ô Chuỗi không còn đổi theo trạng thái treo');
+});
+
+test('ô Chuỗi nằm ở thanh tiêu đề — chỗ CẢ HAI nền tảng đều thấy', () => {
+  // Thẻ "Chuỗi" đầy đủ đã có ở `FocusRail`, nhưng cột đó là `hidden … lg:flex`. Nếu cảnh báo treo
+  // chỉ nằm ở đó thì nó chỉ tới được Đàm khi anh ngồi máy bàn — tức gần như không bao giờ.
+  const topRail = APP_CODE.indexOf('function TopRail(');
+  const canhBao = APP_CODE.indexOf("'Chuỗi ⚠'");
+  assert.ok(topRail > 0 && canhBao > topRail, 'cảnh báo treo không nằm trong `TopRail`');
+});

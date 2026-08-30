@@ -12,6 +12,36 @@
 
 ---
 
+## 2026-08-29 (đêm) — Tối giản: cắt 213px chữ khỏi màn Thành Phố, và sửa một lỗi cắt chữ im lặng
+
+**Mục đích.** Đàm: *"đơn giản hoá, tối giản hoá, làm thành phố hứng thú hơn"*. Nguyên tắc áp dụng:
+**gỡ bớt trước, thêm sau** — và mọi thứ gỡ đi đều là chỗ nói lại điều vừa nói.
+
+**Đo trước khi cắt** (khung 390px, tab Thành Phố): canvas 3D chỉ chiếm **24% chiều cao** và bắt đầu
+ở **y=537** — tức 63% màn hình trôi qua trước khi thấy thứ đáng xem nhất. Trước hình có sáu lớp,
+phần lớn là chữ giải thích luật chơi.
+
+**Đã gỡ / thu.** Chữ "Workspace" (tiếng Anh, hiện y hệt ở cả 5 tab ⇒ không phân biệt gì) · khối
+tiêu đề trang trên điện thoại (nhãn tab đang sáng đã nói tên màn hình) · dòng "Kiến trúc lấy mẫu
+từ…" chuyển xuống DƯỚI hình (nó là chú thích cho ảnh) · câu hướng dẫn kéo/chạm rút gọn · khối
+"Nhịp hiện tại" ở Nhiệm vụ chỉ còn hiện khi THẬT SỰ có chuỗi · dòng "Tiến độ hiện tại: 0/1" dưới
+mỗi nhiệm vụ (con số ấy đã ở ngay bên phải) · "Cấp 5" trên thanh tiêu đề điện thoại thôi hiện hai
+lần. Canvas nay bắt đầu ở **y=324**, lọt trọn nửa trên màn hình.
+
+**Đã thêm, không tốn dòng nào.** Cảnh 3D đổi theo đồng hồ thật từ lâu nhưng không màn hình nào nói
+ra — nay ghép một chữ vào cuối dòng chú thích đã có (*"· buổi chiều"*), biến một hiệu ứng vô hình
+thành lý do mở app vào giờ khác.
+
+**Đã sửa một lỗi thật.** Cột cây kỹ năng phình 567px trên khung 390px ⇒ mô tả mỗi kỹ năng bị cắt
+cụt giữa câu. Nguyên nhân: ở khung hẹp grid chỉ có một cột ngầm cỡ `auto`, tự phình theo nội dung;
+`min-w-0` không cứu được, phải là `grid-cols-1` (`minmax(0,1fr)`). Lỗi im lặng ở mọi cổng — desktop
+không tràn, và `--fit` chỉ soi nút chứ không soi thẻ `<p>`.
+
+**Cổng.** 1315 bài xanh · lint sạch · build xanh · đã quét cả sáu màn ở khung 390px, không còn khối
+nào tràn.
+
+---
+
 ## 2026-08-29 (tối) — Phần thưởng khi TỚI đích, và chuỗi đang treo
 
 **Mục đích.** Bước trước dựng một cái đích (*"còn ~3 phiên nữa tới «…»"*) rồi khi tới nơi thì

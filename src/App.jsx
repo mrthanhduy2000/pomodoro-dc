@@ -2397,9 +2397,17 @@ function TopRail({
       style={{ borderColor: 'var(--line)', borderBottomWidth: '2px', borderTop: '3px solid var(--accent)' }}
     >
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+        {/*
+          ⚠️ CẤP CHỈ NÓI MỘT LẦN Ở KHỔ ĐIỆN THOẠI (đổi 2026-08-29). Trước đó cùng một thanh có
+          "Kỷ 8 · Cấp 5" bên trái VÀ huy hiệu "Lv 5" bên phải — cùng con số, cách nhau ~250px, lại
+          một cái tiếng Việt một cái tiếng Anh. Bỏ khỏi dòng trái (giữ huy hiệu vì nó là điểm nhấn
+          thị giác cho một con số tăng rất chậm) và đổi "Lv" sang "Cấp" cho hết jargon.
+          ⚠️ Khối `md:block` bên dưới thì GIỮ NGUYÊN "Kỷ · Cấp": ở khổ md huy hiệu này đã ẩn mà
+          `LevelDot` thì mãi `xl` mới hiện, nên bỏ ở đó là làm cấp biến mất hẳn trong một dải khổ.
+        */}
         <div className="flex items-start justify-between gap-3 md:hidden">
           <div>
-            <div className="mono text-[10px] uppercase tracking-[0.24em] text-[var(--muted)]">Kỷ {activeBook} · Cấp {level}</div>
+            <div className="mono text-[10px] uppercase tracking-[0.24em] text-[var(--muted)]">Kỷ {activeBook}</div>
             <div className="mt-1 text-[20px] font-bold leading-none tracking-[-0.03em] text-[var(--ink)]" style={{ fontFamily: 'var(--skin-font-display)' }}>{eraLabel}</div>
           </div>
           <div
@@ -2410,7 +2418,7 @@ function TopRail({
               boxShadow: '0 10px 18px rgba(31,30,29,0.04)',
             }}
           >
-            <span className="mono text-[11px] font-semibold text-[var(--ink)]">Lv {level}</span>
+            <span className="mono text-[11px] font-semibold text-[var(--ink)]">Cấp {level}</span>
           </div>
         </div>
 

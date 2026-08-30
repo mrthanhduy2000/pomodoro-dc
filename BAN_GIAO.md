@@ -1,3 +1,61 @@
+> Cập nhật lần cuối: **2026-08-29 (đêm)** — **TỐI GIẢN: CẮT 213px CHỮ KHỎI MÀN THÀNH PHỐ · MỘT
+> LỖI CẮT CHỮ IM LẶNG Ở CÂY KỸ NĂNG.** (Đàm: *"đơn giản hoá, tối giản hoá, làm thành phố hứng thú
+> hơn"*. Nguyên tắc: **gỡ bớt trước, thêm sau**.)
+>
+> **⚠️ ĐO TRƯỚC KHI CẮT — và con số này là cả lý do của phiên.** Khung 390px, tab Thành Phố: canvas
+> 3D **chỉ chiếm 24% chiều cao** và bắt đầu ở **y=537/844**, tức **63% màn hình trôi qua trước khi
+> thấy thứ đáng xem nhất**. Trước hình có SÁU lớp: eyebrow "WORKSPACE" · h1 "Thành Phố" · hai dòng
+> giải thích luật chơi · đường kẻ · thanh chuyển kỷ · tiêu đề thẻ. Sau khi cắt: **y=324**, thành phố
+> lọt trọn nửa trên màn hình.
+>
+> **Đã gỡ, mỗi thứ một lý do riêng (KHÔNG cắt bừa):**
+> · **"Workspace"** — tiếng Anh trong app tiếng Việt, và hiện **y hệt nhau ở cả 5 tab** ⇒ một nhãn
+>   giống nhau ở mọi nơi thì không mang thông tin. Gỡ hẳn.
+> · **Khối tiêu đề trang** (h1 + subtitle + đường kẻ) — `hidden md:block`. Nhãn tab đang SÁNG ở
+>   thanh dưới đã nói tên màn hình. Màn rộng vẫn giữ (thanh bên có thể đang thu gọn).
+> · **"Kiến trúc lấy mẫu từ…"** — chuyển XUỐNG DƯỚI hình: nó là chú thích cho bức ảnh, mà chú thích
+>   thì đọc SAU khi đã nhìn.
+> · **"Nhịp hiện tại"** ở Nhiệm vụ — chỉ hiện khi THẬT SỰ có chuỗi. Bản cũ dùng dòng chữ lớn nhất
+>   thẻ (22px font display, 2 dòng) để báo *"Bắt đầu lại một chuỗi mới · 0%"*, tức tiêu ~90px chỗ
+>   đắt nhất để nói người chơi đang có SỐ KHÔNG, ngay trên chính những nhiệm vụ sẽ chữa điều đó.
+> · **"Tiến độ hiện tại: 0/1"** — chính con số ấy đã ở ngay bên phải cùng hàng.
+> · **"Cấp 5" hai lần trên một thanh** — dòng trái và huy hiệu phải, cách nhau ~250px, một cái
+>   tiếng Việt một cái tiếng Anh ("Lv"). ⚠️ Chỉ bỏ ở khổ ĐIỆN THOẠI: khổ `md` huy hiệu đã ẩn mà
+>   `LevelDot` mãi `xl` mới hiện, bỏ ở đó là làm cấp biến mất hẳn trong một dải khổ.
+>
+> **Đã thêm — KHÔNG tốn một dòng nào.** Cảnh 3D đổi theo ĐỒNG HỒ THẬT từ lâu (bình minh hồng, trưa
+> gắt, đêm xanh có đèn cửa sổ) nhưng **không màn hình nào nói ra**, nên với Đàm nó chỉ là "hôm nay
+> trông hơi khác" — không đủ thành lý do mở app vào giờ khác. `DAY_PHASE_LABEL` (`daylight.js`) +
+> ghép một chữ vào CUỐI dòng chú thích đã có: *"· buổi chiều"*.
+>
+> **⚠️ MỘT LỖI THẬT, IM LẶNG Ở MỌI CỔNG.** Cột trái cây kỹ năng phình **567px trên khung 390px** ⇒
+> mô tả mỗi kỹ năng (thứ Đàm đọc để quyết mở cái nào) bị cắt cụt giữa câu, và hàng chip nhánh thứ
+> hai biến mất. Nguyên nhân: ở khung hẹp `lg:grid-cols-…` chưa áp nên grid chỉ có MỘT cột ngầm cỡ
+> `auto`, mà track `auto` tự phình theo nội dung. ⚠️ **`min-w-0` trên item KHÔNG cứu được — đã thử
+> và đo: vẫn 567px.** Thứ chữa được là **`grid-cols-1`**, vì Tailwind dựng nó thành
+> `repeat(1, minmax(0, 1fr))` và chính vế `minmax(0, …)` mới ép track co lại. Sau vá: **525 → 308px**.
+> Lỗi này desktop không thấy (cột rộng sẵn), `--fit` không thấy (nó chỉ soi NÚT, đây là thẻ `<p>`),
+> test không thấy. **Chỉ ảnh chụp khung 390px mới thấy.**
+>
+> **⚠️ VÀ MỘT BÁO ĐỘNG GIẢ ĐÃ ĐƯỢC NHẬN RA ĐÚNG.** Phép quét tràn báo thêm một khối **578px** ở tab
+> Thống kê. Truy lên cha: `overflow-x: auto` ⇒ đó là **băng cuộn ngang có chủ đích**, vuốt một cái
+> là thấy. Đúng bài học đã ghi sẵn ở `CLAUDE.md` (*"gộp `overflow-x:auto` chung với `hidden` ⇒ báo
+> 5 chip của thanh chuyển kỷ BỊ XÉN"*). ⇒ **Chỉ có ĐÚNG MỘT chỗ tràn thật trên cả sáu màn.**
+> Không sửa mù 8 chỗ `grid` cùng khuôn — đo trước, sửa theo triệu chứng đo được.
+>
+> **⚠️ ĐÃ CÂN NHẮC RỒI BỎ hai hướng, ghi lại để phiên sau khỏi đi lại:**
+> · **Tăng chiều cao canvas.** Camera chỉ nhận `camera.aspect = width/height` và **không bù gì** ⇒
+>   khung cao hơn (aspect nhỏ hơn) với FOV DỌC cố định thì thấy ÍT hơn theo chiều ngang, tức **cắt
+>   mất hai bên thành phố**. Không đụng tỉ lệ.
+> · **Đo lại `TECH_DEBT #14`** (tỉ lệ phiên im lặng). `simulate-pacing.mjs` chạy được nhưng chỉ in
+>   TIẾN ĐỘ, không có tỉ lệ im lặng — đo cho đúng là cả một phép mô phỏng hàng đợi xây qua 4.400
+>   phiên, và kết quả là **một bảng số, không phải thứ Đàm nhìn thấy** (PHASE_RULES §1: *một phiên
+>   chỉ có bảng số là một phiên chưa giao gì*). Để lại.
+>
+> **Cổng.** `test:fast` **1315 bài · 0 đỏ** · lint sạch · build xanh · quét tràn sạch trên cả 6 màn.
+
+---
+
 > Cập nhật lần cuối: **2026-08-29 (tối)** — **PHẦN THƯỞNG KHI TỚI ĐÍCH · CHUỖI ĐANG TREO · MỘT
 > LỖI TRẮNG MÀN HÌNH MÀ KHÔNG CỔNG NÀO BẮT ĐƯỢC.**
 >

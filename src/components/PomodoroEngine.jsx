@@ -34,6 +34,7 @@ import {
   pickRecentGoals,
   sessionGoalHint,
 } from './sessionGoalState';
+import { jumpToSessionGoal } from './focusGoalJump';
 
 const NOTE_WORD_LIMIT = 3000;
 const SESSION_EXTENSION_SECONDS = 60;
@@ -1452,26 +1453,47 @@ export default function PomodoroEngine({
                   dấu "…". `className` chỉ giữ những lớp KHÔNG đụng hàng: `min-w-0 w-full`.
                   Kiểm bằng: `node scripts/shot.mjs --phone --fit`
                   và `node scripts/shot.mjs --phone --fit --el "Cần điền mục tiêu"`. */}
-              <ActionButton
-                disabled={!isSessionGoalValid && !isCrisisBlockingStart}
-                onClick={handleStartSession}
-                variant="primary"
-                size="compactPrimary"
-                className={compactTimerActionButtonClassName}
-                title={isCrisisBlockingStart
-                  ? 'Cần xử lý Khủng hoảng Kỷ Nguyên trước khi bắt đầu phiên mới'
-                  : isSessionGoalValid
-                    ? 'Bắt đầu phiên tập trung'
-                    : `Cần nhập mục tiêu ít nhất ${SESSION_GOAL_MIN_CHARS} ký tự`}
-              >
-                {isCrisisBlockingStart
-                  ? 'Xử lý khủng hoảng'
-                  : isSessionGoalValid
-                    ? 'Bắt đầu phiên'
-                    // "phiên" ở cuối là chữ thừa: cả màn hình này đang nói về một phiên, và ô nhập
-                    // ngay bên dưới đã ghi rõ "MỤC TIÊU PHIÊN". Bỏ nó đi thì nhãn vừa khung 390px.
-                    : 'Cần điền mục tiêu'}
-              </ActionButton>
+              {/*
+                ⚠️ KHI CHƯA CÓ MỤC TIÊU, NÚT NÀY **DẪN ĐƯỜNG** CHỨ KHÔNG CÒN LÀ NGÕ CỤT (2026-08-30).
+                Bản cũ để nó `disabled` với nhãn "Cần điền mục tiêu". Một nút `disabled` không nhận
+                sự kiện bấm, nên nó nói ra điều đang thiếu mà **không nói thiếu ở đâu**, và bấm vào
+                thì không có gì xảy ra. Đo trên ảnh chụp 390px: ô mục tiêu nằm ở y≈1400 của một
+                trang cao 3035px — Đàm phải cuộn qua đồng hồ, qua "Chu kỳ nghỉ", qua "Ghi chú
+                phiên" mới thấy nó, rồi cuộn ngược lên mới bấm được. Mỗi phiên một lần, mãi mãi,
+                ngay tại hành động quan trọng nhất của cả app.
+                ⚠️ LUẬT KHÔNG BỊ NỚI: vẫn phải đủ `SESSION_GOAL_MIN_CHARS` ký tự mới bắt đầu được.
+                Thứ bị gỡ là ma sát ĐI LẠI, không phải cái cổng. Nhãn cũng đổi theo cho khỏi nói
+                dối: nút này giờ ĐƯA TỚI ô mục tiêu, nên nó nói "Điền mục tiêu →", không nói "Cần".
+                ⚠️ Vẫn `variant="soft"` chứ không "primary": bấm nó KHÔNG bắt đầu phiên, và một nút
+                trông như nút chính mà làm việc khác là cách nhanh nhất để mất lòng tin vào nút.
+                Ca khủng hoảng thì giữ nguyên `disabled` — ở đó thứ chặn không nằm trên màn này.
+              */}
+              {!isCrisisBlockingStart && !isSessionGoalValid ? (
+                <ActionButton
+                  onClick={() => jumpToSessionGoal()}
+                  variant="soft"
+                  size="compactPrimary"
+                  className={compactTimerActionButtonClassName}
+                  title={`Đưa tới ô mục tiêu — cần ít nhất ${SESSION_GOAL_MIN_CHARS} ký tự`}
+                >
+                  Điền mục tiêu →
+                </ActionButton>
+              ) : (
+                <ActionButton
+                  disabled={isCrisisBlockingStart}
+                  onClick={handleStartSession}
+                  variant="primary"
+                  size="compactPrimary"
+                  className={compactTimerActionButtonClassName}
+                  title={isCrisisBlockingStart
+                    ? 'Cần xử lý Khủng hoảng Kỷ Nguyên trước khi bắt đầu phiên mới'
+                    : 'Bắt đầu phiên tập trung'}
+                >
+                  {/* "phiên" ở cuối là chữ thừa: cả màn hình này đang nói về một phiên, và ô nhập
+                      ngay bên dưới đã ghi rõ "MỤC TIÊU PHIÊN". Bỏ nó đi thì nhãn vừa khung 390px. */}
+                  {isCrisisBlockingStart ? 'Xử lý khủng hoảng' : 'Bắt đầu phiên'}
+                </ActionButton>
+              )}
               {canEnterFullScreen && (
                 <ActionButton
                   onClick={onEnterFullScreen}
@@ -1744,6 +1766,7 @@ export default function PomodoroEngine({
 
           <div id="session-goal-panel" className="mt-3">
             <textarea
+              data-session-goal-field
               value={pendingSessionGoal}
               onChange={(e) => setPendingSessionGoal(e.target.value)}
               rows={useImmersiveHeroLayout ? 2 : 2}
@@ -1865,6 +1888,7 @@ export default function PomodoroEngine({
         </div>
 
         <textarea
+          data-session-goal-field
           value={pendingSessionGoal}
           onChange={(e) => setPendingSessionGoal(e.target.value)}
           rows={3}

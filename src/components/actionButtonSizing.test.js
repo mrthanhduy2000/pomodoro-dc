@@ -108,16 +108,25 @@ test('ActionButton: KHÔNG truyền lớp kích thước qua `className` — ch�
     + 'nếu cần) thay vì chồng lớp.\nVi phạm:\n  - ' + violations.join('\n  - '));
 });
 
-test('Nút chính ở trang chủ dùng `size="compactMobile"` — đây là chỗ đã từng cắt mất chữ', () => {
+test('CẢ HAI nút ở chỗ đồng hồ dùng `size` compact — đây là chỗ đã từng cắt mất chữ', () => {
   const code = codeOnly(SOURCE);
-  const labelAt = code.indexOf('Cần điền mục tiêu');
-  assert.notEqual(labelAt, -1, 'Không tìm thấy nhãn "Cần điền mục tiêu" — nhãn đổi thì sửa bài test này.');
-  // Thẻ mở GẦN NHẤT phía trước nhãn mới là thẻ chứa nó.
-  const owner = actionButtonTags(code).filter((t) => t.start < labelAt).pop();
-  assert.ok(owner, 'Nhãn không nằm trong thẻ <ActionButton> nào.');
-  assert.match(owner.attrs, /size="compact(?:Primary|Mobile)"/,
-    'Nút chính ở khung điện thoại PHẢI dùng một `size` compact. Đo được ở bản không có nó:\n'
-    + 'font 18px + padding 28px trong một khung rộng 186px ⇒ chữ cần 209px ⇒ bị xén.');
+  // ⚠️ NAY CÓ HAI NÚT Ở ĐÚNG CHỖ NÀY, KHÔNG CÒN MỘT (đổi 2026-08-30). Trước đây một nút duy nhất
+  // đổi nhãn theo trạng thái ("Bắt đầu phiên" ↔ "Cần điền mục tiêu"), và bản `disabled` của nó là
+  // một NGÕ CỤT — nói ra điều đang thiếu mà không nói thiếu ở đâu. Nay lúc chưa có mục tiêu thì
+  // đó là một nút KHÁC, bấm được, đưa thẳng tới ô mục tiêu ("Điền mục tiêu →").
+  // ⚠️ Bài này phải kiểm CẢ HAI: kiểm mỗi nút cũ thì nút mới — cái Đàm gặp trước tiên vì nó là
+  // trạng thái mặc định mỗi lần mở app — sẽ không có ai canh, và nó là nút DÀI CHỮ HƠN.
+  const NHAN = ['Bắt đầu phiên', 'Điền mục tiêu →'];
+  for (const nhan of NHAN) {
+    const labelAt = code.indexOf(nhan);
+    assert.notEqual(labelAt, -1, `Không tìm thấy nhãn "${nhan}" — nhãn đổi thì sửa bài test này.`);
+    // Thẻ mở GẦN NHẤT phía trước nhãn mới là thẻ chứa nó.
+    const owner = actionButtonTags(code).filter((t) => t.start < labelAt).pop();
+    assert.ok(owner, `Nhãn "${nhan}" không nằm trong thẻ <ActionButton> nào.`);
+    assert.match(owner.attrs, /size="compact(?:Primary|Mobile)"/,
+      `Nút "${nhan}" ở khung điện thoại PHẢI dùng một \`size\` compact. Đo được ở bản không có nó:\n`
+      + 'font 18px + padding 28px trong một khung rộng 186px ⇒ chữ cần 209px ⇒ bị xén.');
+  }
 });
 
 test('`compactTimerActionButtonClassName` chỉ chứa lớp KHÔNG đụng `sizeMap`', () => {

@@ -12,6 +12,35 @@
 
 ---
 
+## 2026-08-30 (vòng 9) — Nút chính hết là ngõ cụt: "Cần điền mục tiêu" → "Điền mục tiêu →"
+
+**Vấn đề, đo bằng ảnh chụp khung 390px THẬT.** Nút quan trọng nhất của cả app, khi chưa có mục tiêu,
+là một nút **`disabled`** ghi *"Cần điền mục tiêu"*. Một nút `disabled` KHÔNG nhận sự kiện bấm ⇒ nó
+nói ra điều đang thiếu mà **không nói thiếu ở đâu**, và bấm vào thì không có gì xảy ra. Ô mục tiêu
+thật nằm ở **y≈1400 trên một trang cao 3035px** — Đàm phải cuộn qua đồng hồ, qua "Chu kỳ nghỉ", qua
+"Ghi chú phiên" mới thấy, gõ, rồi cuộn ngược lên mới bấm được. **Mỗi phiên một lần, mãi mãi, ngay
+tại hành động quan trọng nhất của app.**
+
+**Đã đổi.** Lúc chưa có mục tiêu, chỗ ấy nay là một nút KHÁC — bấm được, `variant="soft"`, nhãn
+*"Điền mục tiêu →"* — cuộn tới ô mục tiêu rồi đặt luôn con trỏ vào đó. Cộng với chip gợi ý mục tiêu
+đã có từ vòng 6, chuỗi thao tác đi từ *thấy-nút-chết → cuộn → gõ 10 ký tự → cuộn ngược* xuống còn
+**bấm → bấm một chip → bấm Bắt đầu**.
+
+**KHÔNG nới luật.** Vẫn phải đủ `SESSION_GOAL_MIN_CHARS` ký tự mới bắt đầu được phiên — cổng ấy có
+chủ đích (phiên có đích thì mới chấm được, AI Coach đọc nó) và còn nguyên. Thứ bị gỡ là ma sát ĐI
+LẠI. Nút cũng cố ý KHÔNG mang `variant="primary"`: nó không bắt đầu phiên, mà một nút trông như nút
+chính lại làm việc khác là cách nhanh nhất để mất lòng tin vào nút.
+
+**Khoá lại bằng test** (`focusGoalJump.test.js`, 5 bài, đã thử-cho-đỏ): cuộn-trước-focus-sau (trên
+iOS bàn phím che nửa dưới) · **CẢ HAI** ô nhập mục tiêu phải mang mốc chung `data-session-goal-field`
+(màn Tập trung dựng hai ô ở hai bố cục; quên một nhánh thì nút dẫn đường lặng lẽ không tới đâu) ·
+nút không được `disabled` trở lại · cổng đủ-ký-tự còn nguyên.
+
+**Ảnh hưởng.** Chỉ giao diện màn Tập trung; không đụng engine, kinh tế game, hay Thành Phố.
+**Tương thích:** không có migration.
+
+---
+
 ## 2026-08-30 — Tối giản vòng 8: gỡ bốn chỗ "nói lần thứ hai", và sửa ba câu bị cắt cụt
 
 **Mục đích.** Đàm: *"đơn giản hoá, tối giản hoá và làm hứng thú hơn"*, kèm một ràng buộc mới:

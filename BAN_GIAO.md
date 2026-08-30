@@ -7,6 +7,22 @@
 > **BA lần** (ô "PHIÊN 0" ở thanh đầu · câu "Bạn chưa chốt phiên nào trong hôm nay" · dòng "Phiên
 > 0/5 hôm nay" dưới đồng hồ). Bản thứ ba là bản TỐT NHẤT vì nó có mẫu số ⇒ hai bản kia nhường.
 >
+> **VÒNG 9 — NÚT CHÍNH CỦA APP HẾT LÀ NGÕ CỤT.** Nút quan trọng nhất, khi chưa có mục tiêu, là một
+> nút `disabled` ghi "Cần điền mục tiêu". Nút `disabled` không nhận sự kiện bấm ⇒ nó nói ra điều
+> đang thiếu mà **không nói thiếu ở đâu**. Ô mục tiêu nằm ở y≈1400 trên trang cao 3035px. Nay nó là
+> một nút KHÁC, bấm được, nhãn "Điền mục tiêu →", cuộn tới ô ấy rồi đặt luôn con trỏ.
+> ⚠️ **KHÔNG nới luật** đủ-ký-tự (cổng có chủ đích, còn nguyên) — chỉ gỡ ma sát ĐI LẠI.
+> ⚠️ **Bài test canh CẢ HAI ô nhập**: màn Tập trung dựng hai `<textarea>` mục tiêu ở hai bố cục,
+> mỗi lúc chỉ một cái được gắn; quên mốc `data-session-goal-field` ở một nhánh thì nút dẫn đường
+> lặng lẽ không tới đâu ở đúng bố cục ấy, và chỉ ảnh chụp ở đúng khổ màn hình đó mới thấy.
+> ⚠️ **MỘT BÀI TEST TỰ VIẾT ĐỎ OAN VÌ NEO VÀO NHÃN THAY VÌ LỜI GỌI**: bản đầu tìm chuỗi
+> `'Điền mục tiêu →'`, mà chữ ấy xuất hiện LẦN ĐẦU trong khối chú thích giải thích bản vá, nên phép
+> "lùi về thẻ `<ActionButton>` gần nhất" nhảy ngược lên một nút hoàn toàn khác. Cùng họ bài học đã
+> ghi: hỏi `/tênHàm\(/` trên mã nguồn thì chính dòng định nghĩa cũng là một match. ⇒ **neo vào LỜI
+> GỌI, đừng neo vào nhãn hiển thị** — nhãn thì lặp lại trong chú thích, lời gọi thì không.
+> ⚠️ `actionButtonSizing.test.js` đỏ đúng và tự dặn sẵn "nhãn đổi thì sửa bài test này": nay nó
+> kiểm **cả hai** nút (nút mới dài chữ hơn, và nó là trạng thái Đàm gặp trước tiên mỗi lần mở app).
+>
 > **Bốn chỗ "nói lần thứ hai" đã gỡ:** dòng nhãn "NGÀY HÔM NAY · CHỦ NHẬT" (màn Tập trung) · ô
 > "Phiên" ở thanh đầu · nhãn "HÔM NAY"/"CHUỖI TUẦN" (màn Nhiệm vụ) · nhãn "TIẾN TRÌNH"/"CÂY KỸ
 > NĂNG" (màn Hành trang). Cộng một dòng đổi VAI: "6.000 XP/cấp · 2 SP mỗi cấp" (luật chơi, bất

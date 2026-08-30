@@ -1,5 +1,5 @@
 /**
- * FocusMoment.jsx — ĐÚNG MỘT DÒNG "khoảnh khắc" ở màn Tập trung, chọn ra từ ba nguồn.
+ * FocusMoment.jsx — ĐÚNG MỘT DÒNG "khoảnh khắc" ở màn Tập trung, chọn ra từ NĂM nguồn.
  *
  * ⚠️ VÌ SAO GỘP (2026-08-30). Trước đó có BA component riêng, mỗi cái tự quyết có hiện hay không:
  * `FocusStageCountdown` (còn ≤12 phiên tới hết chặng) · `FocusStreakMilestone` (còn ≤3 ngày tới mốc
@@ -24,7 +24,10 @@
  *      thưởng cho cái đích mà chính dòng này đã dựng lên mấy phiên trước.
  *   2. **Tổng kết tuần chưa xem** — phần thưởng cho cả một tuần, và mỗi tuần chỉ có một lần.
  *   3. **Sắp chạm mốc chuỗi** — thứ mất đi thì không lấy lại được (chuỗi đứt là đứt hẳn).
- *   4. **Đếm ngược tới hết chặng** — cái đích xa nhất trong ba, nên nhường trước.
+ *   4. **Đếm ngược tới hết chặng** — cái đích xa nhất trong bốn thứ có hạn, nên nhường trước.
+ *   5. **Việc tiếp theo** (vòng 20) — nguồn DUY NHẤT không hết hạn, nên đứng cuối. Lý do nó nhập
+ *      vào đây thay vì đứng riêng: xem khối đầu `focusMomentPick.js` (nó là dòng thứ ba đã đẩy
+ *      hàng nút chính xuống dưới thanh tab ở khung 390px).
  */
 
 import { motion } from 'framer-motion';
@@ -32,16 +35,24 @@ import { motion } from 'framer-motion';
 import { useEnterMotion, useRewardMotion } from '../lib/motionPresets';
 import useStageCountdown from '../hooks/useStageCountdown';
 import useStreakMilestone from '../hooks/useStreakMilestone';
+import useNextAction from '../hooks/useNextAction';
 import { pickFocusMoment } from './focusMomentPick';
 
-export default function FocusMoment({ weeklyUnseen = false, onOpenWeekly, sessionInProgress = false }) {
+export default function FocusMoment({
+  weeklyUnseen = false, onOpenWeekly, onNavigate, sessionInProgress = false,
+}) {
   const enterMotion = useEnterMotion();
   // Nhịp `reward` — dành riêng cho phần thưởng và cột mốc; nguồn duy nhất là `lib/motionPresets.js`.
   const rewardMotion = useRewardMotion();
   const stage = useStageCountdown();
   const streak = useStreakMilestone();
+  // Nguồn thứ năm — xem khối đầu `focusMomentPick.js` để biết vì sao nó nhập vào đây thay vì đứng
+  // riêng thành một dòng thứ ba.
+  const nextAction = useNextAction();
 
-  const moment = pickFocusMoment({ stage, streak, weeklyUnseen, sessionInProgress, onOpenWeekly });
+  const moment = pickFocusMoment({
+    stage, streak, weeklyUnseen, sessionInProgress, onOpenWeekly, nextAction, onNavigate,
+  });
   if (!moment) return null;
 
   const motionProps = moment.strong ? rewardMotion : enterMotion;
@@ -49,11 +60,16 @@ export default function FocusMoment({ weeklyUnseen = false, onOpenWeekly, sessio
     <>
       <span aria-hidden="true" className="text-[13px] leading-none">{moment.icon}</span>
       <span
-        className="text-[12px] leading-snug"
+        className="min-w-0 truncate text-[12px] leading-snug"
         style={{ color: moment.strong ? 'var(--accent2)' : 'var(--muted)', fontWeight: moment.strong ? 600 : 400 }}
       >
         {moment.text}
       </span>
+      {moment.badge && (
+        <span className="mono shrink-0 text-[10px] leading-none" style={{ color: 'var(--muted-2)' }}>
+          {moment.badge}
+        </span>
+      )}
     </>
   );
 

@@ -10,7 +10,6 @@ import ResourceDisplay from './components/ResourceDisplay';
 import RankDisplay from './components/RankDisplay';
 import DailyMissions from './components/DailyMissions';
 import FocusRail from './components/FocusRail';
-import FocusNextAction from './components/FocusNextAction';
 import FocusMoment from './components/FocusMoment';
 import { getEraStage } from './engine/eraStage';
 import { evaluateStreakAtRisk } from './engine/gameMath';
@@ -1718,7 +1717,11 @@ export default function App() {
                       resetKeys={[activeTab, isDesktop, isWideViewport, focusFullscreen]}
                       variant="section"
                     >
-                      <div className="mx-auto max-w-[860px] px-5 pb-[calc(env(safe-area-inset-bottom)+7.4rem)] pt-8 md:px-8 md:pb-28 lg:px-12 lg:pb-8 xl:px-16">
+                      {/* ⚠️ `pt-4` Ở KHỔ ĐIỆN THOẠI, `md:pt-8` giữ nguyên cho màn rộng (vòng 20, 2026-08-30).
+                          32px khoảng trắng trên đỉnh là rẻ ở máy bàn và rất đắt ở 390px: nó nằm
+                          trong đúng 774px mà thanh tab NỔI chừa lại, tức nó đang đẩy hàng nút
+                          chính xuống dưới thanh tab. Cắt xuống 16px không mất một chữ nào. */}
+                      <div className="mx-auto max-w-[860px] px-5 pb-[calc(env(safe-area-inset-bottom)+7.4rem)] pt-4 md:px-8 md:pb-28 md:pt-8 lg:px-12 lg:pb-8 xl:px-16">
                         <FocusIntro
                           greeting={greeting}
                           sessionsCompletedToday={sessionsCompletedToday}
@@ -1744,43 +1747,30 @@ export default function App() {
                           <FocusCityTease />
                         </Suspense>
                         {/*
-                          Dòng thứ hai, ngay dưới dòng "đang xây" — và hai dòng này CỐ Ý đứng cạnh
-                          nhau vì chúng trả lời hai nửa của cùng một câu hỏi: dòng trên nói *phiên
-                          này đang đẩy cái gì tới đâu*, dòng dưới nói *ngoài việc bấm Bắt đầu thì
-                          còn việc gì đang chờ*. Cùng lý do bố cục: cột GIỮA, trên nếp gấp iPhone.
-                          Cả hai đều tự IM khi không có gì để nói, nên không có ngày nào màn Tập
-                          trung mọc ra hai dòng rỗng.
-                        */}
-                        {/*
-                          ⚠️ ẨN KHI PHIÊN ĐANG CHẠY. Dòng này là một cái NÚT, và nó mời đi sang tab
-                          khác — đặt nó giữa màn hình tập trung trong lúc Đàm đang tập trung là mời
-                          anh rời khỏi đúng việc anh vừa bấm nút để làm. Soi ảnh lúc đồng hồ đang
-                          chạy mới thấy: nó nằm ngay trên đồng hồ, sáng màu nhấn.
-                          `FocusCityTease` và `FocusMoment` thì Ở LẠI: chúng nói *phiên này
-                          đang đẩy cái gì tới đâu* — tức động lực để NGỒI YÊN, không phải lời mời đi.
-                          Cùng luật mà `FocusCoachMobile` đã dùng (`hidden={hasFocusSessionInProgress}`).
-                        */}
-                        {!hasFocusSessionInProgress && (
-                          <FocusNextAction onNavigate={handleNotificationNavigate} />
-                        )}
-                        {/*
-                          ⚠️ MỘT DÒNG DUY NHẤT CHO BA NGUỒN (gộp 2026-08-30). Trước đó đây là ba
-                          component riêng — đếm ngược chặng · sắp chạm mốc chuỗi · tổng kết tuần
-                          chưa xem — mỗi cái tự quyết có hiện hay không, và ba cái gác ấy ĐỘC LẬP
-                          nhau. Cộng `FocusCityTease` và `FocusNextAction` là **năm dòng** có thể
-                          cùng nổ (~130px), đủ đẩy đồng hồ xuống dưới nếp gấp — đúng cái vừa mất
-                          công kéo lên. Ba dòng ấy lại trả lời CÙNG một câu (*bấm Bắt đầu bây giờ
-                          thì được gì*), chỉ khác thang thời gian, nên gộp vừa an toàn hơn vừa
-                          đúng hơn: ba câu trả lời cùng lúc cho một câu hỏi là nhiễu.
-                          Thứ tự ưu tiên và lý do từng bậc: xem `FocusMoment.jsx`.
-                          ⚠️ Nó KHÔNG bọc trong `!hasFocusSessionInProgress`: chỉ nhánh "tổng kết
-                          tuần" là lời mời đi chỗ khác, và chính `pickFocusMoment` đã tự im nhánh
-                          ấy khi phiên đang chạy. Bọc cả cụm thì mất luôn ba nguồn còn lại — những
-                          thứ nói lý do NGỒI YÊN cho hết phiên.
+                          ⚠️ MỘT DÒNG DUY NHẤT CHO NĂM NGUỒN — và đây là dòng thứ HAI, cũng là dòng
+                          CUỐI, của cột giữa. Vòng 20 (2026-08-30) nhập nốt `FocusNextAction` vào
+                          bộ chọn này sau khi đo được ở khung 390px: cụm ba dòng nhắc cao **84px**
+                          và đẩy hàng nút chính xuống y=773…815, trong khi thanh tab NỔI (nền ĐỤC,
+                          không alpha) bắt đầu ở y=774 ⇒ nút Đàm mở app để bấm bị che gần trọn.
+                          Không cổng nào kêu; chỉ ảnh chụp ĐÚNG KHUNG 844px thấy (ảnh `--full` là
+                          ảnh ghép nên thanh `fixed` không đè lên gì — đừng dùng nó để kết luận về
+                          nếp gấp).
+
+                          VAI TRÒ TÁCH BẠCH, đó mới là lý do dừng ở HAI dòng chứ không phải một:
+                          · `FocusCityTease` ở trên = lý do NGỒI YÊN (phiên này đẩy cái gì tới đâu)
+                          · dòng này              = MỘT lời mời duy nhất, chọn từ năm nguồn
+                          Trần xấu nhất do đó là 2 dòng ~41px, khoá bằng CẤU TRÚC chứ không bằng
+                          "hiếm khi cả ba cùng có gì để nói". Thứ tự ưu tiên: xem `FocusMoment.jsx`.
+
+                          ⚠️ Nó KHÔNG bọc trong `!hasFocusSessionInProgress`: chỉ hai nhánh "tổng
+                          kết tuần" và "việc tiếp theo" là lời mời đi chỗ khác, và chính
+                          `pickFocusMoment` đã tự im HAI nhánh ấy khi phiên đang chạy. Bọc cả cụm
+                          thì mất luôn ba nguồn còn lại — những thứ nói lý do NGỒI YÊN cho hết phiên.
                         */}
                         <FocusMoment
                           weeklyUnseen={weeklyReportUnseen}
                           onOpenWeekly={openWeeklyReport}
+                          onNavigate={handleNotificationNavigate}
                           sessionInProgress={hasFocusSessionInProgress}
                         />
                         <div className="mt-6">
@@ -2663,7 +2653,7 @@ function FocusIntro({
       («Đang xây Cảng Biển Lớn · còn 4 phiên») lên gần đỉnh màn hình — đó mới là thứ trả lời
       "làm phiên này để được gì".
     */
-    <div className="mb-4 flex flex-wrap items-baseline gap-x-3 gap-y-1 border-t px-1 pt-4" style={{ borderColor: 'var(--line)' }}>
+    <div className="mb-3 flex flex-wrap items-baseline gap-x-3 gap-y-1 border-t px-1 pt-3 md:mb-4 md:pt-4" style={{ borderColor: 'var(--line)' }}>
       <h1
         className="text-[19px] font-semibold leading-snug tracking-[-0.01em] text-[var(--ink)] md:text-[21px]"
         style={{ fontFamily: 'var(--skin-font-display)' }}

@@ -1271,18 +1271,23 @@ export default function PomodoroEngine({
         ⚠️ VÌ SAO LÀ `min()` CHỨ KHÔNG PHẢI MỘT HẰNG SỐ NHỎ HƠN: hằng số thì thu đồng hồ ở MỌI khổ
         màn hình, kể cả nơi không hề thiếu chỗ — tức trả giá ở chỗ không có vấn đề. Cái trần này
         chỉ cắn khi bề ngang < 466px; từ đó trở lên `timerCanvasSize` thắng và mọi thứ y như cũ.
-        Ở 390px nó cho ra 250px — vẫn 64% bề ngang máy, vẫn là thứ to nhất màn hình.
+        ⚠️ 64vw → 58vw (vòng 20, 2026-08-30). Đo lại trên tài khoản đã chơi lâu thì nút VẪN bị
+        che: khối chào là `${lời chào}. ${biến thể theo ngày}` với 8 biến thể, nên có ngày nó dài
+        2 dòng, có ngày 3 dòng — chênh 26px. Ở ngày dài, nút xuống y=757…799 trong khi thanh tab
+        bắt đầu ở y=774. Tức trần cũ chỉ đủ cho NGÀY NGẮN, và một cái trần chỉ đúng vào ngày may
+        mắn thì không phải một cái trần. 58vw ở 390px cho ra 226px — vẫn là thứ to nhất màn hình,
+        và trần chỉ cắn khi bề ngang < 514px nên máy bàn không đổi một điểm ảnh nào.
         ⚠️ `minHeight` PHẢI dùng CÙNG biểu thức: nó là chỗ giữ sẵn chiều cao, nên nếu chỉ thu cái
         vòng mà quên nó thì khoảng trống vẫn bị giữ nguyên và không được một điểm ảnh nào.
       */}
       <div
         className="relative mt-2 flex w-full items-center justify-center sm:mt-5 md:mt-1"
-        style={{ minHeight: `min(${timerFootprintHeight}px, 64vw)` }}
+        style={{ minHeight: `min(${timerFootprintHeight}px, 58vw)` }}
       >
         <motion.div
           className="relative flex shrink-0 items-center justify-center"
           {...timerScaleMotion}
-          style={{ width: `min(${timerCanvasSize}px, 64vw)`, height: `min(${timerCanvasSize}px, 64vw)` }}
+          style={{ width: `min(${timerCanvasSize}px, 58vw)`, height: `min(${timerCanvasSize}px, 58vw)` }}
         >
           {immersiveMode && (isActive || isBreakMode) && (
             <motion.div

@@ -4583,6 +4583,42 @@ cấp `Math.min(3,…)` → `Math.min(9,…)` · cắt bớt danh sách cấp th
 ---
 
 
+## #93 — `buildCategoryAdvisor` (170 dòng) vẫn nằm trong file giao diện, và ĐÓ LÀ CÓ CHỦ ĐÍCH — đừng "dọn" nó xuống engine
+
+> Mở 2026-08-30, ngay sau khi chuyển thành công `summarizeFocusStats` xuống
+> `engine/statsFocus.js`. Ghi mục này để phiên sau **không mất công phân tích lại rồi đi tới cùng
+> một kết luận** — hoặc tệ hơn, đi tới kết luận ngược rồi kéo màu sắc xuống tầng engine.
+
+- **Tên**: khối sinh lời khuyên của tab Phân Loại còn ở `StatsDashboard.jsx`
+- **Module**: `src/components/StatsDashboard.jsx` (`buildCategoryAdvisor`, ~170 dòng)
+- **Priority**: Low · **Severity**: Low
+- **Impact**: 170 dòng sinh **văn bản Đàm đọc** (giọng cố vấn + tối đa 4 khuyến nghị + 3 kịch bản
+  + 3 tín hiệu) mà không có bài test nào.
+- **Root Cause / VÌ SAO KHÔNG CHUYỂN**: nó **không phải logic thuần** — nó là một *bộ dựng
+  view-model*. Đo được: mã màu dệt vào **7 chỗ** (`color: bestEfficiencyCat?.color ?? '#0ea5e9'`,
+  `uncategorizedShare >= 20 ? '#ef4444' : '#64748b'`…), có cả `icon: 'NX'/'XP'/'CB'`, và nó gọi
+  `fmtHours` — một hàm ĐỊNH DẠNG. Kéo nguyên khối xuống `engine/` là kéo bảng màu và hàm định
+  dạng xuống theo, tức phá đúng ranh giới mà `PROJECT_STRUCTURE.md` đang giữ (*"engine = logic
+  THUẦN, không JSX"*), và đi ngược bài học vừa rút ra ở `statsFocus.js` (*màu rời khỏi engine*).
+- **Current Risk**: thấp — văn bản viết dè dặt ("Thử…", "Hãy thử…"), không phát biểu như kết luận.
+  ⚠️ **Đã kiểm một nghi vấn và BÁC BỎ**: nhánh `Math.round(longestAvgCat.minutes /
+  longestAvgCat.sessions)` không có gác chia-cho-0 trong khi nhánh kế bên có
+  (`Math.max(sessions, 1)`) — bất đối xứng đáng ngờ, nhưng **không phải lỗi**:
+  `computeCategoryStats` đã lọc `sessions > 0` ở engine, và `longestAvgCat` lọc lại lần nữa. Gác
+  thừa, không phải gác thiếu.
+- **Future Risk**: trung bình — nó gác cỡ mẫu ở `totalSess < 4`, LỎNG hơn nhiều so với các tín
+  hiệu ở `gameMath.js` (cần 8–24 phiên). Tức nó có thể nói *"X mới là loại cho XP/phút tốt nhất"*
+  dựa trên 4 phiên.
+- **Recommended Solution**: **KHÔNG** chuyển nguyên khối. Nếu muốn test nó thì tách theo ĐÚNG
+  ranh giới: phần *quyết định* (chọn kịch bản nào, ngưỡng nào) xuống engine dưới dạng trả về
+  **khoá** (`'thieu-du-lieu'` · `'loang-vi-chua-phan-loai'` · …), còn phần *câu chữ + màu + icon*
+  ở lại giao diện tra theo khoá ấy. Đó cũng là cách gỡ được cái gác cỡ mẫu quá lỏng.
+- **Estimated Complexity**: trung bình (đụng văn bản người dùng đọc ⇒ phải chụp ảnh nghiệm thu).
+- **Blocking Conditions**: không có — nhưng đây là việc cải thiện cấu trúc, không phải sửa lỗi.
+- **Review Trigger**: khi có ai định "dọn nốt cho đồng bộ với `statsFocus.js`", hoặc khi cái gác
+  `totalSess < 4` sinh ra một lời khuyên sai mà Đàm để ý thấy.
+- **Owner**: chưa ai · **Status**: MỞ (có chủ đích)
+
 ## #92 — `no-unused-vars` đang TẮT cho MỌI file `.jsx`, nên code chết ở cả tầng giao diện là vô hình với lint
 
 > Mở 2026-08-30, phát hiện khi đi tìm lý do ba bảng kỳ chết sống sót nhiều tháng trong

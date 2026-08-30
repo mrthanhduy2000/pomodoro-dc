@@ -13,6 +13,7 @@ import FocusRail from './components/FocusRail';
 import FocusNextAction from './components/FocusNextAction';
 import FocusStageCountdown from './components/FocusStageCountdown';
 import FocusStreakMilestone from './components/FocusStreakMilestone';
+import FocusWeeklyReportTease from './components/FocusWeeklyReportTease';
 import { getEraStage } from './engine/eraStage';
 import { evaluateStreakAtRisk } from './engine/gameMath';
 import FocusCoachMobile from './components/FocusCoachMobile';
@@ -1783,6 +1784,18 @@ export default function App() {
                           lại rơi xuống dưới nếp gấp, đúng cái vừa mất công kéo lên.
                         */}
                         <FocusStreakMilestone />
+                        {/*
+                          ⚠️ ẨN KHI PHIÊN ĐANG CHẠY (cùng luật `FocusNextAction`): đây là một lời
+                          mời đi xem chỗ khác, mà giữa lúc tập trung thì mọi lời mời đi đều đi
+                          ngược đúng việc Đàm vừa bấm nút để làm.
+                          ⚠️ Nó ở CUỐI bộ vì nó nói về thang thời gian dài nhất — cả một tuần đã
+                          xong — và vì nó là dòng HIẾM NHẤT: mỗi tuần nhiều nhất một lần, rồi tự
+                          im khi đã xem. Bốn dòng kia gác theo trạng thái, dòng này gác theo "đã
+                          đọc chưa", nên nó không cộng thêm vào ca xấu nhất một cách thường xuyên.
+                        */}
+                        {!hasFocusSessionInProgress && (
+                          <FocusWeeklyReportTease unseen={weeklyReportUnseen} onOpen={openWeeklyReport} />
+                        )}
                         <div className="mt-6">
                           <PomodoroEngine
                             immersiveMode={isWideViewport}

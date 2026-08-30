@@ -12,6 +12,29 @@
 
 ---
 
+## 2026-08-30 (vòng 15) — Báo cáo tuần lần đầu tự mời: một dòng ở màn Tập trung
+
+**Vấn đề.** `WeeklyReportModal` là **màn đầy dopamine nhất của cả app** — một con số to ("15g14p"),
+một mức tăng ("+19% so với tuần trước"), một điểm hạng ("A · Xuất Sắc"), số ngày hoạt động ("6/7").
+Nó là phần thưởng cho cả một tuần làm việc. Vậy mà trên iPhone, tín hiệu DUY NHẤT báo có nó là **một
+chấm tròn 6px nằm BÊN TRONG một menu phải bấm mới mở ra** ("Thêm" → "Báo cáo tuần"). Phần thưởng lớn
+nhất được thông báo bằng thứ nhỏ nhất, ở chỗ khuất nhất.
+
+**Đã thêm.** `FocusWeeklyReportTease` — một dòng ở cột giữa màn Tập trung, chữ đậm màu nhấn kèm 🏆:
+*"Tổng kết tuần trước đã xong — xem thử"*. Bấm là mở thẳng báo cáo. Ẩn khi phiên đang chạy (cùng
+luật `FocusNextAction`: đây là lời mời đi chỗ khác). Im lặng khi đã xem — mỗi tuần nhiều nhất một
+lần.
+
+**KHÔNG tính lại con số nào, và đó là chủ ý.** Điểm hạng và các số liệu tuần sống trong
+`WeeklyReportModal` dưới dạng hằng số cấp module; kéo chúng ra để in sẵn lên dòng chữ sẽ hoặc phải
+chép lại công thức (đúng bẫy *"một luật hai công thức"* dự án đã trả giá nhiều lần), hoặc phải tách
+một module engine mới cho một dòng chữ. Dòng này chỉ làm một việc: **nói rằng CÓ**, rồi mở ra — con
+số ở lại đúng chỗ nó đang sống. Có test cấm nó tự tính lại (`GRADES`, `computeWeekStats`, …).
+
+**Ảnh hưởng.** Chỉ giao diện. Không migration.
+
+---
+
 ## 2026-08-30 (vòng 14) — Gỡ 11 nhãn tiếng Anh khỏi Cài đặt, sửa một tên công trình bị cắt cụt
 
 **Một lỗi thật ở Xưởng.** Thẻ "Hàng chờ xây dựng" xếp tên công trình chung hàng với hai huy hiệu

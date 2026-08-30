@@ -7,6 +7,25 @@
 > **BA lần** (ô "PHIÊN 0" ở thanh đầu · câu "Bạn chưa chốt phiên nào trong hôm nay" · dòng "Phiên
 > 0/5 hôm nay" dưới đồng hồ). Bản thứ ba là bản TỐT NHẤT vì nó có mẫu số ⇒ hai bản kia nhường.
 >
+> **VÒNG 15 — BÁO CÁO TUẦN LẦN ĐẦU TỰ MỜI.** Màn đầy dopamine nhất của app (số to · +19% · hạng A
+> · 6/7 ngày) chỉ được báo bằng **một chấm 6px nằm BÊN TRONG một menu phải bấm mới mở**. Nay có
+> `FocusWeeklyReportTease`: một dòng 🏆 ở cột giữa màn Tập trung, bấm là mở thẳng.
+> ⚠️ **KHÔNG tính lại con số nào** — điểm hạng sống trong `WeeklyReportModal`; có test cấm dòng mời
+> nhắc tới `GRADES`/`computeWeekStats`. Muốn in điểm hạng ra dòng ấy thì phải TÁCH một module engine
+> trước, đừng chép công thức.
+> ⚠️ **RỦI RO ĐÃ ĐO ĐƯỢC, PHIÊN SAU CÂN NHẮC:** cột giữa màn Tập trung nay có **NĂM** dòng độc lập
+> (`FocusCityTease` · `FocusNextAction` · `FocusStageCountdown` · `FocusStreakMilestone` ·
+> `FocusWeeklyReportTease`). Hôm nay với fixture trưởng thành chỉ **3 dòng** cùng hiện (~78px), vì
+> mỗi dòng có gác riêng. Nhưng ba gác ấy ĐỘC LẬP nhau (≤12 phiên tới hết chặng · ≤3 ngày tới mốc
+> chuỗi · chưa xem báo cáo tuần) nên **về mặt cấu trúc cả năm CÓ THỂ cùng nổ** (~130px) và lúc ấy
+> đồng hồ lại rơi xuống dưới nếp gấp — đúng cái vòng 8–9 mất công kéo lên. Cách chữa đúng nếu Đàm
+> kêu: gộp ba dòng cột-mốc thành MỘT dòng biết CHỌN theo ưu tiên (tuần > chuỗi > chặng), chứ đừng
+> gỡ bớt tính năng.
+> ⚠️ **BẪY "TÌM TRÊN MÃ NGUỒN BẮT TRÚNG CHÚ THÍCH" CẮN LẦN THỨ HAI TRONG NGÀY** — bài test cấm
+> nhân-đôi-công-thức đỏ oan vì chú thích của chính component nhắc đích danh `GRADES` để giải thích
+> *vì sao nó KHÔNG dùng*. ⇒ **mọi bài test đọc mã nguồn phải LỌC CHÚ THÍCH trước** (`codeOnly`), và
+> nhớ rằng văn xuôi nói về một thứ chính là nơi cái tên ấy xuất hiện nhiều nhất.
+>
 > **VÒNG 14 — 11 NHÃN TIẾNG ANH KHỎI CÀI ĐẶT, VÀ MỘT TÊN CÔNG TRÌNH BỊ CẮT CỤT.**
 > ⚠️ **Lỗi thật:** thẻ hàng chờ ở Xưởng xếp tên công trình chung hàng với hai huy hiệu `shrink-0`,
 > nên **tên là thứ DUY NHẤT có thể bị bóp** ⇒ "Cảng Biển Lớn" → **"Cảng Biể…"**. `truncate` là hành

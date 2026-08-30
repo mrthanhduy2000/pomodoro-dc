@@ -105,27 +105,27 @@ export default function DailyMissions() {
         title="Nhiệm vụ ngày"
       >
         <div className="space-y-3">
-          <div className="flex items-end justify-between gap-3 border-b pb-4" style={{ borderColor: 'var(--line)' }}>
-            <div>
-              <div className="mono text-[10px] uppercase tracking-[0.2em]" style={{ color: 'var(--muted-2)' }}>
-                Nhịp hiện tại
+          {/*
+            ⚠️ CHỈ HIỆN KHI CÓ CHUỖI (đổi 2026-08-29). Bản cũ luôn dựng khối này, và khi chuỗi = 0
+            nó dùng DÒNG CHỮ LỚN NHẤT thẻ (22px, font display, hai dòng ở khung 390px) để thông báo
+            *"Bắt đầu lại một chuỗi mới · 0%"* — tức tiêu ~90px chỗ đắt nhất màn hình để nói rằng
+            người chơi đang có SỐ KHÔNG, ngay phía trên chính những nhiệm vụ sẽ chữa điều đó.
+            Đó là ba lần nói cùng một chuyện trong một màn hình: thanh tiêu đề đã có ô "Chuỗi",
+            dòng lớn nói lại, rồi con số "0%" nói lần thứ ba.
+
+            Có chuỗi thì nó là tin ĐÁNG khoe và được giữ — nhưng gộp một dòng, cỡ vừa: bậc chữ lớn
+            nhất của thẻ này phải để dành cho tiêu đề "Nhiệm vụ ngày", thứ nói ra việc phải làm.
+          */}
+          {streak.currentStreak > 0 && (
+            <div className="flex items-baseline justify-between gap-3 border-b pb-3" style={{ borderColor: 'var(--line)' }}>
+              <div className="text-[15px] font-semibold" style={{ color: 'var(--ink)' }}>
+                {streak.currentStreak} ngày liên tiếp
               </div>
-              <div
-                className="mt-1.5 text-[22px] font-semibold leading-tight tracking-[-0.02em]"
-                style={{ fontFamily: 'var(--skin-font-display)', color: 'var(--ink)' }}
-              >
-                {streak.currentStreak > 0
-                  ? `${streak.currentStreak} ngày liên tiếp`
-                  : 'Bắt đầu lại một chuỗi mới'}
+              <div className="mono text-[13px] font-semibold tabular-nums" style={{ color: 'var(--accent2)' }}>
+                +{streakBonusPct.toFixed(0)}% mỗi phiên
               </div>
             </div>
-            <div className="text-right">
-              <div className="mono text-[15px] font-semibold tabular-nums" style={{ color: 'var(--accent2)' }}>
-                {streak.currentStreak > 0 ? `+${streakBonusPct.toFixed(0)}%` : '0%'}
-              </div>
-              <div className="mono mt-0.5 text-[10px] uppercase tracking-[0.16em]" style={{ color: 'var(--muted)' }}>bonus ngày</div>
-            </div>
-          </div>
+          )}
 
           <div className="divide-y" style={{ borderColor: 'var(--line)' }}>
             {list.map((mission) => (
@@ -368,9 +368,19 @@ function TodayMissionRow({ mission, rewardXP }) {
             <div className={`text-[13px] leading-snug ${done ? 'line-through' : ''}`} style={{ color: done ? 'var(--muted-2)' : 'var(--ink)' }}>
               {mission.label}
             </div>
-            <div className="mt-1 text-[11px] text-[var(--muted)]">
-              {done ? 'Đã hoàn tất.' : `Tiến độ hiện tại: ${mission.progress}/${mission.goal}`}
-            </div>
+            {/*
+              ⚠️ CHỈ CÒN DÒNG "đã xong" (đổi 2026-08-29). Bản cũ ghi `Tiến độ hiện tại: 0/1` ở đây,
+              trong khi CHÍNH con số `0/1` ấy đã nằm ngay bên phải cùng một hàng, cách chưa tới một
+              đốt ngón tay. Ba nhiệm vụ × một dòng thừa = ~60px nhiễu, và mắt phải đọc hai lần để
+              nhận ra không có gì mới. Luật sẵn có của dự án: *hai chỗ nói cùng một chuyện thì chỗ
+              nói ít hơn phải nhường* — ở đây chỗ nói ít hơn là dòng chữ, vì con số bên phải còn
+              mang thêm màu trạng thái.
+              Dòng "Đã hoàn tất." thì GIỮ: nó không lặp lại gì (bên phải khi ấy ghi "xong"), và một
+              lời xác nhận ở chỗ vừa tick xong là thứ đáng giữ.
+            */}
+            {done && (
+              <div className="mt-1 text-[11px] text-[var(--muted)]">Đã hoàn tất.</div>
+            )}
           </div>
         </div>
         <div className="text-right">

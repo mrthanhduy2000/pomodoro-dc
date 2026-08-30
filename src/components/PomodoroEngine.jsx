@@ -1138,7 +1138,7 @@ export default function PomodoroEngine({
               {isStopwatchMode ? (
                 <>
                   <p className={`mt-1 text-sm leading-relaxed ${lightTheme ? 'text-[var(--muted)]' : 'text-slate-500'}`}>
-                    Stopwatch dùng công thức Flowtime để tự đổi giờ nghỉ theo thời lượng bạn vừa làm.
+                    Chế độ Bấm giờ tự đổi giờ nghỉ theo đúng thời lượng bạn vừa làm.
                   </p>
                   <div className="mt-3 space-y-2">
                     {FLOWTIME_BREAK_RULES.map((rule) => (
@@ -1523,7 +1523,7 @@ export default function PomodoroEngine({
                   size="compactPrimary"
                   className={compactTimerActionButtonClassName}
                 >
-                  Full Screen
+                  Toàn màn hình
                 </ActionButton>
               )}
             </motion.div>
@@ -1540,7 +1540,7 @@ export default function PomodoroEngine({
               </ActionButton>
               {canEnterFullScreen && (
                 <ActionButton onClick={onEnterFullScreen} variant="soft" size="compactMobile" className={compactTimerActionButtonClassName}>
-                  Full Screen
+                  Toàn màn hình
                 </ActionButton>
               )}
               {canExtendActivePomodoro && (
@@ -1588,7 +1588,7 @@ export default function PomodoroEngine({
                   </ActionButton>
                   {canEnterFullScreen && (
                     <ActionButton onClick={onEnterFullScreen} variant="soft" size="compactMobile" className={compactTimerActionButtonClassName}>
-                      Full Screen
+                      Toàn màn hình
                     </ActionButton>
                   )}
                   {canExtendActivePomodoro && (
@@ -2366,7 +2366,7 @@ function QuickPresets({ className = '', activePresetId, disabled, mode, onSelect
                       ? 'bg-[rgba(244,242,236,0.96)] text-[var(--muted)]'
                       : 'bg-white/[0.06] text-[var(--muted)]'
                 }`}>
-                  Flowtime
+                  nghỉ theo phiên
                 </span>
               ) : (
                 <>

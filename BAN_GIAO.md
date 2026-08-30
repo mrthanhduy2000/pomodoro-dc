@@ -1,3 +1,57 @@
+> Cập nhật lần cuối: **2026-08-29 (tối)** — **PHẦN THƯỞNG KHI TỚI ĐÍCH · CHUỖI ĐANG TREO · MỘT
+> LỖI TRẮNG MÀN HÌNH MÀ KHÔNG CỔNG NÀO BẮT ĐƯỢC.**
+>
+> **⚠️ BÀI HỌC LỚN NHẤT PHIÊN NÀY — `no-use-before-define`, VÀ NÓ ĐÃ ĐƯỢC BẬT VĨNH VIỄN.**
+> Đặt `const streakRisk = evaluateStreakAtRisk({… sessionsCompletedToday …})` ở dòng 1466 cho "đọc
+> xuôi", cạnh `eraStage`. Nhưng `sessionsCompletedToday` khai ở dòng **1612** — dùng một `const`
+> trước dòng khai báo ném `ReferenceError` NGAY LÚC RENDER và **cả app ra trang trắng**.
+> Điều đáng sợ: **`npm run lint` SẠCH · `npm test` 1311 bài XANH · `npm run build` XANH.** Test đọc
+> mã nguồn chứ không dựng React; bundler không quan tâm thứ tự trong một hàm; ESLint khi ấy chưa
+> bật rule. Thứ DUY NHẤT bắt được là **ảnh chụp** — và nó chỉ nói "app chưa mọc ra", không nói vì sao.
+> ⇒ Đã **bật `no-use-before-define`** (`variables: true, functions: false`) cho cả dự án. Nó tìm ra
+> đúng 3 chỗ hợp lệ (closure `loop` trong `CityScene3D.jsx`) — miễn trừ kèm lý do. Đúng luật đã ghi
+> nhiều lần: *một bài học được ghi ra KHÔNG chặn được gì; chỉ một cái CỔNG mới chặn được.*
+>
+> **⚠️ VÀ CÁCH TRUY RA NÓ, vì `shot.mjs` KHÔNG bắt lỗi console.** Công cụ chỉ in *"✗ CHỈ THẤY 2 nút
+> sau ~20 giây"*. Ba bước: (a) tắt riêng component mới ⇒ **vẫn hỏng** ⇒ không phải nó; (b) `git stash`
+> toàn bộ rồi dựng lại `ddb7be9` (bản Đàm xác nhận đang chạy) ⇒ **chạy tốt** ⇒ lỗi CHẮC CHẮN do hôm
+> nay; (c) thay riêng `streakRisk = null` ⇒ **mọc lại** ⇒ khoanh đúng một biểu thức. Bước (b) là
+> bước đáng giá nhất — không có nó thì rất dễ đi sửa một thứ không hỏng.
+>
+> **Đã làm (2 việc, KHÔNG thêm dòng nào lên màn hình — cả hai dùng chỗ đã có):**
+> **(1) Vượt mốc thì được ăn mừng.** `pickStageCelebration` + `stageMilestoneKey` (thuần, ở
+> `eraStage.js`); dòng đếm ngược đổi giọng thành *"🎉 Vừa mở «…»"*, **bấm được để tắt** (nó chiếm
+> chỗ dòng đếm ngược nên phải có đường trả chỗ lại). ⚠️ Mốc phải GỘP CẢ KỶ (`era*10 + index`): lên
+> kỷ thì chỉ số chặng quay về 0, so riêng chỉ số sẽ đọc bước tiến LỚN NHẤT game thành một bước LÙI.
+> ⚠️ Thăng hoa đưa về kỷ 1 ⇒ mốc TỤT ⇒ không khen (đúng như phải thế). ⚠️ Dấu ở localStorage
+> `dc-stage-seen-v1`, và **lần đầu phải GIEO rồi IM LẶNG** — cái bẫy `navAttention.js` đã cắn thật.
+> **(2) Ô "Chuỗi" báo treo.** `evaluateStreakAtRisk` (thuần, thêm vào `gameMath.js`) — cùng định
+> nghĩa với `evaluateStreakRisk` bên push, phát biểu lại bằng dữ liệu màn hình đã có (KHÔNG import
+> chéo `api/` sang `src/`: hai tầng chạy hai nơi, và một `import` như vậy kéo cả nhánh server vào
+> bundle). Nhãn `Chuỗi ⚠` + viền màu nhấn — **cả chữ lẫn màu**, đọc được khi không nhìn màu
+> (ADR-060). ⚠️ Lá Chắn KHÔNG làm hết treo, nó chỉ đổi hậu quả; nói "an toàn" là nói dối.
+>
+> **⚠️ ĐÃ BỎ một việc thứ ba đang định làm.** Định "cho thành phố 3D đổi theo chặng" (nửa sau của
+> đề xuất trước). Đi đọc thì `deriveProps` và `deriveResidentCount` **đã** nhận `sessionCount` +
+> `streakLength` — thành phố vốn đã đông dần theo tiến độ. Thêm "theo chặng" nữa là trùng lặp, mà
+> phải đụng vào mặt trận 3D. ⇒ *Đọc mã trước khi làm theo đề xuất của chính mình ở phiên trước.*
+> Cũng bỏ "thanh chặng nháy khi EP tăng": thanh đã có hiệu ứng trượt 500ms và sau mỗi phiên đã có
+> `CityGrowthMoment` + toast — thêm nữa là chồng phản hồi lên nhau.
+>
+> **Công cụ: `shot.mjs` có cờ `--ls khoá=giá-trị`.** Không có nó thì mọi trạng thái "lần đầu nhìn
+> thấy" (5 khoá marker của dự án: `dc-nav-seen-v1`, `dc-stage-seen-v1`, `dc-coach-nudge-v1`…) là
+> **không thể chụp** — mà đó thường là đúng trạng thái đáng soi nhất, vì Đàm gặp một lần rồi thôi.
+>
+> **Nghiệm thu bằng ẢNH** (khung 390px thật, 3 trạng thái): *"🎉 Vừa mở «Khám Phá Tân Thế Giới»"*
+> (thanh vừa reset về 33/1.866, ba vạch 2 cam 1 xám) · *"🔥 Một phiên nữa là tới «…»"* · ô
+> **`CHUỖI ⚠ 4`** viền cam nổi hẳn giữa hai ô xám. ⚠️ Dựng ca "chuỗi treo" phải **dời cả lịch sử về
+> hôm qua**, không phải sửa `streak.currentStreak` — store DỰNG LẠI chuỗi từ `history`
+> (`rebuildStreakFromHistory`), nên sửa trường ấy trong fixture là vô ích (đã mất một vòng vì điều này).
+>
+> **Cổng.** `test:fast` **1315 bài · 0 đỏ · `# skipped 1`** (thêm 11) · lint sạch · build xanh.
+
+---
+
 > Cập nhật lần cuối: **2026-08-29 (chiều)** — **MỐC GẦN HƠN: THANH TIÊU ĐỀ ĐO *CHẶNG*, VÀ ĐẾM
 > NGƯỢC BẰNG SỐ PHIÊN** (Đàm: *"hứng thú và đầy dopamine hơn, nhưng đơn giản"*).
 >

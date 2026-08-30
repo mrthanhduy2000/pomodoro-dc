@@ -12,6 +12,37 @@
 
 ---
 
+## 2026-08-29 (tối) — Phần thưởng khi TỚI đích, và chuỗi đang treo
+
+**Mục đích.** Bước trước dựng một cái đích (*"còn ~3 phiên nữa tới «…»"*) rồi khi tới nơi thì
+**không có gì xảy ra cả** — đúng thứ mà chính mã ấy cảnh báo: *một lời hứa hụt làm hỏng mọi lời hứa
+sau đó*. Hai việc, không thêm một dòng nào lên màn hình vì cả hai dùng chỗ đã có.
+
+**(1) Vượt mốc thì được ăn mừng.** Dòng đếm ngược đổi giọng thành *"🎉 Vừa mở «Khám Phá Tân Thế
+Giới»"*, bấm được để tắt và trả chỗ lại cho dòng đếm ngược của chặng kế. Dấu "đã ăn mừng" ở
+localStorage (`dc-stage-seen-v1`) — chuyện của từng máy, không thêm byte nào vào dữ liệu đồng bộ.
+Lần đầu chạy thì GIEO dấu rồi im lặng: không có luật ấy, Đàm sẽ nhận lời chúc mừng cho chặng anh
+đi qua từ nhiều tuần trước.
+
+**(2) Ô "Chuỗi" báo khi chuỗi đang treo.** Một con số trần không phân biệt được *"17 ngày, hôm nay
+xong rồi"* với *"17 ngày, hết hôm nay là mất sạch"*. Cái thứ hai là thứ đáng nói nhất trong ngày, và
+trước bản này nó chỉ sống trong AI Coach và push lúc 17h — tức chỉ tới được Đàm khi anh KHÔNG mở
+app. Nay nhãn đổi thành `Chuỗi ⚠` kèm viền màu nhấn: đọc được cả khi không nhìn màu (luật ADR-060).
+Lá Chắn KHÔNG làm hết treo, nó chỉ đổi hậu quả.
+
+**(3) `no-use-before-define` bật cho toàn dự án.** Xem mục dưới — một `const` dùng trước dòng khai
+báo làm cả app ra trang trắng, mà không cổng nào bắt được.
+
+**Phạm vi.** `engine/eraStage.js` · `engine/gameMath.js` · `hooks/useStageCountdown.js` ·
+`components/FocusStageCountdown.jsx` · `App.jsx` · `eslint.config.js` · `scripts/shot.mjs` (cờ
+`--ls` để gieo khoá localStorage tuỳ ý — không có nó thì mọi trạng thái "lần đầu nhìn thấy" là
+không thể chụp).
+
+**Cổng.** 1315 bài `test:fast` xanh (thêm 11) · lint sạch · build xanh · ba trạng thái mới đều đã
+nghiệm thu bằng ảnh khung 390px.
+
+---
+
 ## 2026-08-29 (chiều) — Mốc gần hơn: thanh tiêu đề đo CHẶNG, và đếm ngược bằng số phiên
 
 **Mục đích.** Đàm: *"làm cho game hứng thú và đầy dopamine hơn, nhưng đơn giản"*. Không thêm hệ

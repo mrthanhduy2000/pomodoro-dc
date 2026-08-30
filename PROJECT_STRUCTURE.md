@@ -24,9 +24,10 @@
 │   │   │                         #   MỘT đồng hồ riêng 4 giây, và đồng hồ DỪNG khi có hộp thoại
 │   │   │                         #   chặn màn hình. Nằm ở z-[48]: trên chuông (z-[45]), dưới sàn
 │   │   │                         #   hộp thoại (z-50) — đúng thứ bậc "phải quyết" vs "chỉ cần biết"
-│   │   ├── FocusStageCountdown.jsx # MỘT DÒNG ở màn Tập trung: "còn ~N phiên nữa tới «chặng kế
-│   │   │                         #   tiếp»". Đổi giọng + màu khi còn ≤1 phiên (chỗ dopamine mạnh
-│   │   │                         #   nhất là NGAY TRƯỚC đích). Phép tính ở engine/eraStage.js
+│   │   ├── FocusStageCountdown.jsx # MỘT DÒNG ở màn Tập trung, BA giọng: "🎉 Vừa mở «…»" (vượt
+│   │   │                         #   mốc — bấm được để tắt) · "🔥 Một phiên nữa là tới «…»" ·
+│   │   │                         #   "◈ Còn ~N phiên nữa tới «…»". Phép tính ở engine/eraStage.js;
+│   │   │                         #   dấu "đã ăn mừng" ở localStorage `dc-stage-seen-v1`
 │   │   ├── FocusNextAction.jsx   # MỘT DÒNG BẤM ĐƯỢC ở màn Tập trung: việc đáng làm tiếp theo là
 │   │   │                         #   gì (mở kỹ năng nào / nghiên cứu gì / xây gì), bấm là tới đúng
 │   │   │                         #   tab. Ưu tiên XÂY > NGHIÊN CỨU > KỸ NĂNG — xây là việc duy nhất

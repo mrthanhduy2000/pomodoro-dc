@@ -23,7 +23,10 @@ Mặt trận đang làm: **thành phố 3D** (`src/engine/city3d/` + `src/compon
    tắc; một bản tóm tắt chép sai một luật vận hành thì tệ hơn không có bản tóm tắt.)*
 3. **Không hạ DPR · không thêm nguồn sáng thứ tư.** Hai cách phá hình ảnh nhanh nhất.
 4. **Không start phiên focus trên dev/localhost** — dùng chung Supabase row với bản thật.
-5. **Vercel Hobby: tối đa 12 Serverless Function.** Test của `api/` phải nằm trong
+5. **`no-use-before-define` ĐÃ BẬT** (2026-08-29) — một `const` dùng trước dòng khai báo làm cả
+   app ra TRANG TRẮNG, mà lint/test/build đều không bắt (đã cắn thật). 3 chỗ hợp lệ trong
+   `CityScene3D.jsx` được miễn trừ kèm lý do. Đừng tắt rule để "cho nhanh".
+6. **Vercel Hobby: tối đa 12 Serverless Function.** Test của `api/` phải nằm trong
    `api/_tests/`. Hiện có 10 function thật.
 
 ## Đang ở đâu
@@ -98,8 +101,11 @@ Mặt trận đang làm: **thành phố 3D** (`src/engine/city3d/` + `src/compon
 3. **Chặng trong kỷ: MỐC đã xong, THÀNH PHỐ thì chưa** (2026-08-29 chiều). Chặng nay là mốc đo
    được thật — thanh tiêu đề đo chặng (~3%/phiên, đầy 3 lần mỗi kỷ) + dòng đếm ngược "còn ~N phiên
    nữa tới «…»" ở màn Tập trung. Nguồn duy nhất: `src/engine/eraStage.js`.
-   ⚠️ **Còn lại: thành phố 3D vẫn KHÔNG đổi gì theo chặng.** Đó là nửa sau của đề xuất cũ, và nay
-   rẻ hơn vì `getEraStage(era, totalEP)` đã có sẵn để hỏi.
+   ⚠️ **ĐÃ BỎ nửa sau của đề xuất cũ** ("thành phố 3D đổi theo chặng"): `deriveProps` và
+   `deriveResidentCount` ĐÃ nhận `sessionCount` + `streakLength`, tức thành phố vốn đã đông dần
+   theo tiến độ — thêm "theo chặng" là trùng lặp mà phải đụng mặt trận 3D.
+   ⚠️ Vượt mốc nay CÓ ăn mừng (`pickStageCelebration`, dấu ở localStorage `dc-stage-seen-v1`), và
+   ô "Chuỗi" ở thanh tiêu đề báo `Chuỗi ⚠` khi chuỗi đang treo (`evaluateStreakAtRisk`).
    ⚠️ Đừng "dọn dẹp" thanh tiêu đề về đo cả kỷ: một kỷ dài 5.600–20.800 EP ⇒ ~1%/phiên, đầy một
    lần mỗi 1–6 tháng. Có `stageProgressWiring.test.js` canh, kèm bài đòi nó nằm NGOÀI mọi khối
    `hidden … lg:flex` (thanh chặng cũ chỉ có ở cột phải nên iPhone chưa bao giờ thấy).

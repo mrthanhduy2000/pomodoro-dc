@@ -19,6 +19,7 @@ import { RichTextView } from './components/RichText';
 import { useGameLoop } from './hooks/useGameLoop';
 import { useCityGrowthMoment } from './hooks/useCityMoment';
 import useGameStore from './store/gameStore';
+import useNextAction from './hooks/useNextAction';
 import useInventoryAttention from './hooks/useInventoryAttention';
 import useSettingsStore from './store/settingsStore';
 import { ERA_METADATA, ERA_THRESHOLDS } from './engine/constants';
@@ -615,6 +616,7 @@ export default function App() {
 
   const [activeTab, setActiveTab] = useState('focus');
   const [inventoryTab, setInventoryTab] = useState('skills');
+  const nextAction = useNextAction();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [supportRailOpen, setSupportRailOpen] = useState(true);
   const [focusFullscreen, setFocusFullscreen] = useState(false);
@@ -657,9 +659,33 @@ export default function App() {
   // ⚠️ MỌI đường vào điều hướng phải đi qua đây, kể cả khi nơi gọi truyền id CŨ
   // (`skills`/`collection`/`achievements`) — `resolveTabTarget` dịch chúng thành
   // "tab Hành trang + tab con", nên không nơi gọi nào phải biết chuyện gộp tab đã xảy ra.
+  /**
+   * BẤM "HÀNH TRANG" THÌ RƠI VÀO TAB CON CÓ VIỆC LÀM ĐƯỢC.
+   *
+   * ⚠️ Đo trước: tab con mặc định luôn là "Kỹ năng", và đó là màn **duy nhất trong ba màn thường
+   * không có nút nào bấm được** — với 1 SP thì cả 6 nhánh, cả 32 kỹ năng chưa mở đều là chữ xám
+   * (nút rẻ nhất 2 SP), và phải ~11 ngày nữa nút đầu tiên mới xuất hiện. Tức mỗi lần mở túi đồ,
+   * Đàm gặp 83 con số và 0 việc làm.
+   *
+   * ⚠️ KHÔNG THÊM MỘT KHỐI CHỮ "LÀM ĐƯỢC NGAY" — câu ấy đã có ở màn Tập trung (`useNextAction`),
+   * chép sang đây là đúng cái lạm phát thông tin bị cấm. Thứ còn thiếu không phải một lời nhắc,
+   * mà là **đứng đúng chỗ**. Chỗ này không in thêm một chữ nào; nó chỉ chọn tab.
+   *
+   * ⚠️ ĐẶT Ở ĐÂY, KHÔNG ĐẶT TRONG MỘT `useEffect`. Đây là hệ quả của một CÚ BẤM, và một effect
+   * gọi `setState` vừa bị `react-hooks/set-state-in-effect` chặn — đúng đắn: nó sẽ chạy lại mỗi
+   * lần `nextAction` đổi và có thể giật tab dưới tay Đàm trong lúc anh đang ngồi trong Hành trang.
+   * Ở đây nó chỉ nổ khi người gọi nói ĐÍCH DANH "inventory" (tức cú bấm ở thanh điều hướng); mọi
+   * lời gọi mang sẵn tab con — thông báo, cái chuông, `selectTab('skills')` — đều đi nhánh trên và
+   * giữ nguyên đích của chúng.
+   */
   const selectTab = (tab, collectionTab = null) => {
     const target = resolveTabTarget(tab, collectionTab);
-    if (target.sub) setInventoryTab(target.sub);
+    if (target.sub) {
+      setInventoryTab(target.sub);
+    } else if (target.tab === 'inventory' && nextAction?.action?.tab) {
+      const goiY = resolveTabTarget(nextAction.action.tab, nextAction.action.collectionTab);
+      if (goiY.tab === 'inventory' && goiY.sub) setInventoryTab(goiY.sub);
+    }
     setActiveTab(target.tab);
     if (target.tab !== 'focus') {
       setFocusFullscreen(false);

@@ -178,3 +178,38 @@ test('không màn nào còn bảo người chơi đi sang một TAB đã bị g�
     assert.deepEqual(pham, [], `${ten}.jsx còn câu chỉ đường sang một tab khác: ${pham.join(' · ')}`);
   }
 });
+
+test('bấm "Hành trang" thì rơi vào tab con CÓ VIỆC, và phép nhắm nằm ở cú bấm chứ không ở effect', () => {
+  // ⚠️ Đo trước: tab con mặc định luôn là "Kỹ năng" — màn duy nhất trong ba màn thường KHÔNG có
+  // nút nào bấm được (1 SP, nút rẻ nhất 2 SP, ~11 ngày nữa mới có nút đầu tiên). Mỗi lần mở túi
+  // đồ là 83 con số và 0 việc làm.
+  const than = APP_SOURCE.slice(APP_SOURCE.indexOf('const selectTab = ('));
+  const than1 = than.slice(0, than.indexOf('\n  };'));
+  assert.match(than1, /nextAction\?\.action\?\.tab/, 'selectTab phải hỏi "việc tiếp theo" khi không có tab con chỉ định.');
+  assert.match(than1, /else if \(target\.tab === 'inventory'/, 'chỉ nhắm khi người gọi nói ĐÍCH DANH "inventory" — lời gọi mang sẵn tab con phải giữ nguyên đích.');
+
+  // ⚠️ VÀ NÓ PHẢI Ở TRONG `selectTab`, KHÔNG Ở TRONG MỘT `useEffect`. Bản đầu viết bằng effect và
+  // `react-hooks/set-state-in-effect` chặn lại — đúng đắn: effect ấy chạy lại mỗi lần `nextAction`
+  // đổi, tức có thể giật tab dưới tay Đàm trong lúc anh đang ngồi trong Hành trang.
+  // ⚠️ Phép quét này bản đầu viết `/useEffect\([^)]*\{[^}]*setInventoryTab/s` và **KHÔNG BẮT ĐƯỢC**
+  // phép phá — vì `[^)]*` dừng ngay ở dấu `)` của `() =>`. Một regex sai kiểu đó cho ra một bài
+  // test luôn xanh, tức đúng thứ nó sinh ra để ngăn. Nay cắt theo từng khối `useEffect(` rồi hỏi
+  // trong thân của nó.
+  const coEffectNham = APP_SOURCE
+    .split('useEffect(')
+    .slice(1)
+    .some((khoi) => khoi.slice(0, khoi.indexOf('}, [') + 1).includes('setInventoryTab'));
+  assert.equal(coEffectNham, false, 'phép nhắm tab quay lại trong một useEffect — nó sẽ giật tab dưới tay người dùng.');
+
+  // Nguồn gợi ý phải là CÙNG hàm nuôi cái chấm đỏ và dòng "việc tiếp theo" ở màn Tập trung.
+  assert.match(APP_SOURCE, /import useNextAction from '\.\/hooks\/useNextAction'/, 'không được dựng lại phép chọn việc lần thứ hai.');
+});
+
+test('khối "Thành tựu gần đây" đã rời màn Kỹ năng — và không còn là mã chết nằm lại', () => {
+  // ⚠️ Lý do giữ nó ("nó KHÔNG có tab nào của riêng nó") chết khi ba hàng tab gộp làm một: "Huy
+  // hiệu" nay là một trong BA viên cùng hàng, cách đúng một cú chạm. Đo được: con số "147" và ba
+  // tên huy hiệu gần nhất xuất hiện 4/4 ở CẢ hai màn.
+  const ma = readFileSync(join(HERE, 'components', 'SkillTree.jsx'), 'utf8');
+  assert.ok(!/<RecentAchievements/.test(ma), 'khối "Thành tựu gần đây" quay lại màn Kỹ năng.');
+  assert.ok(!/function RecentAchievements/.test(ma), 'hàm còn nằm lại mà không ai gọi — mã chết.');
+});

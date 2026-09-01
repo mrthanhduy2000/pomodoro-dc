@@ -34,6 +34,7 @@ import {
 } from '../engine/constants';
 import { getLevelProgress, getEffectiveSkillCost } from '../engine/gameMath';
 import { RELIC_ELITE_RESONANCE } from '../engine/constants';
+import { giaCaChuoi } from './skillChainCost';
 
 const NODE_STATE = {
   LOCKED:          'LOCKED',
@@ -78,6 +79,12 @@ const SKILL_LABELS = Object.fromEntries(
 );
 
 const BRANCH_KEYS = Object.keys(SKILL_TREE);
+
+// Bảng tra id → nút, dựng MỘT LẦN từ chính `SKILL_TREE`. Không chép danh sách nút ra đâu cả: một
+// bảng chép tay sẽ trôi khỏi dữ liệu ngay lần ai đó thêm một nhánh.
+const NODE_BY_ID = new Map(
+  Object.values(SKILL_TREE).flatMap((branch) => (branch.nodes ?? []).map((node) => [node.id, node])),
+);
 
 // Cộng hưởng Di Vật — bản đồ tra cứu theo elite: nhãn di vật cùng kỷ để gợi ý giảm giá
 const RELIC_LABELS_VI = {
@@ -334,6 +341,12 @@ export default function SkillTree({ onOpenAchievements }) {
                   node={node}
                   nodeState={getNodeState(node)}
                   effectiveCost={getEffectiveSkillCost(node.id, node.spCost, relics, relicEvolutions)}
+                  giaChuoi={giaCaChuoi(
+                    node.id,
+                    NODE_BY_ID,
+                    (id) => !!unlockedSkills[id],
+                    (n) => getEffectiveSkillCost(n.id, n.spCost, relics, relicEvolutions) ?? n.spCost,
+                  )}
                   isLast={i === selectedBranch.nodes.length - 1}
                   onBuy={() => handleBuy(node)}
                 />
@@ -366,12 +379,17 @@ export default function SkillTree({ onOpenAchievements }) {
             ⚠️ Đây là mặt TRÁI của khuôn "hidden … lg:" quen thuộc: thường nó giấu mất thứ iPhone
             cần thấy; ở đây nó là cách duy nhất để iPhone THÔI phải xem hai lần cùng một thẻ, vì
             desktop thật sự cần nó ở chỗ này còn iPhone thì đã có nguyên một tab riêng.
-            `RecentAchievements` thì Ở LẠI cả hai khổ — nó KHÔNG có tab nào của riêng nó.
+            ⚠️ ĐÍNH CHÍNH 2026-09-01 — `RecentAchievements` NAY ĐÃ GỠ, và lý do giữ nó ghi ở
+            dòng ngay trên (*"nó KHÔNG có tab nào của riêng nó"*) đã **chết vì một tiền đề bị gỡ ở
+            chỗ khác**: sau khi ba hàng tab gộp làm một, "Huy hiệu" là một trong BA viên cùng hàng,
+            luôn nhìn thấy, cách đúng một cú chạm. Đo được sự trùng lặp: probe bốn chuỗi (con số
+            "147" + ba tên huy hiệu gần nhất) ra **4/4 xuất hiện ở CẢ màn Kỹ năng lẫn màn Huy
+            hiệu**. Hai chỗ nói cùng một chuyện thì chỗ nói ít hơn phải nhường — và ở đây chỗ nói
+            ít hơn còn đứng trong một màn chẳng liên quan gì tới thành tích.
           */}
           <div className="hidden lg:block">
             <DailyMissions />
           </div>
-          <RecentAchievements onOpen={onOpenAchievements} />
         </div>
       </div>
 
@@ -524,7 +542,7 @@ function ActiveAbilityBar({ lightTheme, unlockedSkills, skillActivations, onActi
 
 // ─── SkillNode (một hàng trong cây, kiểu mockup) ──────────────────────────────
 
-function SkillNode({ node, nodeState, effectiveCost, isLast, onBuy }) {
+function SkillNode({ node, nodeState, effectiveCost, giaChuoi, isLast, onBuy }) {
   const pressMotion = usePressMotion();
   // Nhấc khi DI CHUỘT không thuộc ba nhịp — đi qua cái gác ngoại lệ.
   const hoverLift = useCustomMotion({ whileHover: { y: -1 } });
@@ -579,13 +597,24 @@ function SkillNode({ node, nodeState, effectiveCost, isLast, onBuy }) {
             <p className="text-[14px] font-semibold leading-tight" style={{ color: isLocked ? 'var(--muted-2)' : 'var(--ink)' }}>
               {node.label}
             </p>
+            {/*
+              ⚠️ MÔ TẢ LUÔN HIỆN, KỂ CẢ KHI NÚT ĐANG KHOÁ. Bản cũ THAY mô tả bằng dòng
+              "Cần mở: X" ⇒ đo được **21/32 nút chưa mua (66%) không có một chữ nào nói mình làm
+              gì** — màn hình cho biết GIÁ nhưng giấu MÓN HÀNG. Người ta chỉ thèm thứ mình biết là
+              gì; "Bền Vững · 8 SP · Cần mở: Lá Chắn Chuỗi" không tạo ra ham muốn nào, nó chỉ là
+              một ô xám có giá. Và đúng thứ đáng thèm nhất (6 nút Tinh Hoa) lại là thứ bị giấu
+              kín nhất. Nay "Cần mở" xuống thành DÒNG PHỤ bên dưới thay vì thay thế.
+            */}
             <p className="mt-1 text-[12px] leading-snug" style={{ color: 'var(--muted)' }}>
-              {isLocked
-                ? (node.requires.length > 0
-                    ? `Cần mở: ${node.requires.map((r) => SKILL_LABELS[r] ?? r.replace(/_/g, ' ')).join(', ')}`
-                    : 'Cần mở nút trước')
-                : node.description}
+              {node.description}
             </p>
+            {isLocked ? (
+              <p className="mt-1 text-[11px] leading-snug" style={{ color: 'var(--muted-2)' }}>
+                {node.requires.length > 0
+                  ? `Cần mở trước: ${node.requires.map((r) => SKILL_LABELS[r] ?? r.replace(/_/g, ' ')).join(', ')}`
+                  : 'Cần mở nút trước'}
+              </p>
+            ) : null}
             {showHint && (
               <p className="mt-1 text-[11px] leading-snug" style={{ color: 'var(--accent2)', opacity: 0.85 }}>
                 {hintRelicLabel
@@ -623,7 +652,16 @@ function SkillNode({ node, nodeState, effectiveCost, isLast, onBuy }) {
                 {isDiscounted && (
                   <span className="line-through opacity-60 mr-1">{node.spCost}</span>
                 )}
-                {cost} SP
+                {/*
+                  ⚠️ NÚT ĐANG KHOÁ HIỆN GIÁ CẢ CHUỖI, KHÔNG PHẢI GIÁ LẺ. Đo trên một ván thật:
+                  **21/32 nút chưa mua (66%) từng hiện một con số thấp hơn giá thật**, tệ nhất gấp
+                  **2,3 lần** — ô ghi "8 SP" trong khi phải tiêu 18 SP mới chạm tới được nó (≈ 9
+                  cấp ≈ 254 ngày ở nhịp chơi thật). Con số duy nhất người chơi đọc được lại là con
+                  số nói dối, và nó nói dối theo hướng DỄ CHỊU — khi phát hiện ra, lòng tin vào mọi
+                  con số khác trên màn cũng mất theo.
+                  Nút MỞ ĐƯỢC vẫn hiện giá lẻ, vì lúc ấy giá lẻ CHÍNH LÀ số SP sắp bị trừ.
+                */}
+                {giaChuoi > cost ? `${giaChuoi} SP cả chuỗi` : `${cost} SP`}
               </span>
             )}
           </div>
@@ -633,80 +671,6 @@ function SkillNode({ node, nodeState, effectiveCost, isLast, onBuy }) {
   );
 }
 
-// ─── RecentAchievements (thẻ "Thành tựu gần đây" cột phải) ─────────────────────
-
-function RecentAchievements({ onOpen }) {
-  const unlocked = useGameStore((s) => s.achievements?.unlocked ?? []);
-  const recent = useMemo(
-    () => unlocked.slice(-3).reverse().map((id) => ACHIEVEMENT_BY_ID[id]).filter(Boolean),
-    [unlocked],
-  );
-  const total = unlocked.length;
-  const more = Math.max(0, total - recent.length);
-
-  return (
-    <section className="px-5 py-5" style={CARD}>
-      <div className="mb-4 flex items-end justify-between gap-3">
-        <p className="mono text-[10px] uppercase tracking-[0.2em]" style={{ color: 'var(--muted-2)' }}>Thành tựu gần đây</p>
-        <span
-          className="mono inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold tabular-nums"
-          style={{ background: 'rgba(var(--accent-rgb), 0.1)', color: 'var(--accent2)' }}
-        >
-          {total} đã mở
-        </span>
-      </div>
-
-      {total === 0 ? (
-        <p className="text-[12px] leading-snug" style={{ color: 'var(--muted)' }}>
-          Chưa mở thành tựu nào. Hoàn thành phiên để bắt đầu sưu tầm huy hiệu.
-        </p>
-      ) : (
-        <div className="grid grid-cols-4 gap-2.5">
-          {recent.map((a) => {
-            const tint = ACH_TIER_TINT[a.tier] ?? '#c96442';
-            const tierLabel = ACHIEVEMENT_TIERS[a.tier]?.label;
-            return (
-              <button
-                key={a.id}
-                type="button"
-                onClick={onOpen}
-                title={tierLabel ? `${a.label} · ${tierLabel}` : a.label}
-                className="flex flex-col items-center justify-center gap-1 px-1 py-2 transition-transform hover:-translate-y-0.5"
-                style={{ background: withAlpha(tint, 0.12), border: `1px solid ${withAlpha(tint, 0.3)}`, borderRadius: 'var(--skin-radius-control,14px)' }}
-              >
-                {/*
-                  ⚠️ TÊN THẬT, KHÔNG PHẢI HAI CHỮ CÁI (vòng 20, 2026-08-30). Ô này từng chỉ hiện
-                  `getLabelMark` — "VC" · "DS" · "C5" — còn tên đầy đủ ("Vua Cuối Tuần",
-                  "Dũng Sĩ Bóng Đêm", "Cấp 5") nằm trong thuộc tính `title`, tức **chỉ con chuột
-                  mới đọc được**. Trên iPhone không có con chuột nào, nên khu "thành tựu gần đây"
-                  — chỗ để KHOE — biến thành bốn mã hai chữ cái không giải mã được.
-                  ⚠️ Bỏ `aspect-square` cùng lúc: ô vuông không đủ chỗ cho hai dòng chữ, và một
-                  cái tên bị cắt cụt còn tệ hơn một cái tên viết tắt.
-                */}
-                <span className={hasGlyphIcon(a.icon) ? 'text-[17px] leading-none' : 'mono text-[11px] font-semibold tracking-[0.06em]'} style={{ color: tint }}>{getGlyph(a.icon, a.label, 'TT')}</span>
-                <span
-                  className="w-full text-center text-[9px] leading-[1.15]"
-                  style={{ color: 'var(--muted)', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}
-                >
-                  {a.label}
-                </span>
-              </button>
-            );
-          })}
-          <button
-            type="button"
-            onClick={onOpen}
-            title="Xem tất cả thành tựu"
-            className="mono flex items-center justify-center px-1 py-2 text-[13px] font-semibold tabular-nums transition-transform hover:-translate-y-0.5"
-            style={{ background: 'rgba(var(--accent-rgb),0.08)', border: '1px dashed rgba(var(--accent-rgb),0.30)', color: 'var(--accent2)', borderRadius: 'var(--skin-radius-control,14px)' }}
-          >
-            {more > 0 ? `+${more}` : 'Xem'}
-          </button>
-        </div>
-      )}
-    </section>
-  );
-}
 
 // ─── PurchaseConfirmDialog ────────────────────────────────────────────────────
 

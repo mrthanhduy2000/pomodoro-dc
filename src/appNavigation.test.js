@@ -126,3 +126,55 @@ test('chấm "có việc cần xem" được nối ở CẢ hai thanh điều h�
     'Tập tab có chấm không còn suy từ `inventoryNeedsAttention` — cái chấm mất nguồn tín hiệu.',
   );
 });
+
+// ─── SAU KHI LÀM PHẲNG (2026-09-01) ──────────────────────────────────────────────────────────────
+
+test('"Hành trang" chỉ còn MỘT hàng tab — tầng thứ hai đã bị xoá, không phải giấu đi', () => {
+  // ⚠️ Ba hàng tab chồng nhau từng ăn 246px = 29,1% màn hình 390×844 trước khi hiện chữ đầu tiên,
+  // và cả ba dùng CHUNG `SubTabs` nên không có gì nói hàng nào là cha. Bài này bắt đúng cái tầng
+  // ấy nếu có ai dựng lại nó: hai lời gọi `<SubTabs` trong cùng một cây là hai hàng viên giống hệt
+  // nhau chồng lên nhau.
+  const soLoiGoi = [...APP_SOURCE.matchAll(/<SubTabs\b/g)].length;
+  assert.equal(soLoiGoi, 1, `App.jsx có ${soLoiGoi} lời gọi <SubTabs>; nhiều hơn một là hàng tab lồng hàng tab.`);
+  assert.ok(!APP_SOURCE.includes('const COLLECTION_TABS'), 'COLLECTION_TABS quay lại ⇒ tầng tab thứ hai quay lại.');
+  assert.ok(!APP_SOURCE.includes('function CollectionView'), 'CollectionView quay lại ⇒ tầng tab thứ hai quay lại.');
+});
+
+test('tab "Lịch sử" đã xoá, và KHÔNG có thông báo nào còn trỏ tới nó', () => {
+  // Nó dài 98.568px = 117 màn hình điện thoại, 4.362 con số, 0 nút bấm được, và 0 thông báo trỏ
+  // tới (so với `workshop` 8 chỗ · `blueprints` 4 · `relics` 1). Cùng mảng `history` ấy đã được
+  // màn Thống kê đọc và tóm tắt.
+  assert.ok(!APP_SOURCE.includes('function SessionHistory'), 'SessionHistory quay lại.');
+  const nguon = `${STORE_SOURCE}\n${NOTIFICATION_SOURCE}\n${APP_SOURCE}`;
+  const troToi = [...nguon.matchAll(/collectionTab: '([^']+)'/g)].map((hit) => hit[1]);
+  assert.ok(!troToi.includes('history'), 'Có thông báo trỏ tới tab "Lịch sử" đã bị xoá — một nút chết.');
+  assert.ok(troToi.length > 0, 'Không quét ra `collectionTab` nào — regex đã lạc, bài này đang xanh rỗng.');
+});
+
+test('MỌI `collectionTab` cũ trong thông báo đã lưu vẫn tới được một màn CÓ THẬT', () => {
+  // ⚠️ Bốn cái tên ấy nằm trong localStorage của Đàm từ trước khi gộp tab. `relics` là ca hiểm:
+  // nó nay thuộc "Huy hiệu" chứ không phải "Công trình", nên nếu `resolveTabTarget` bỏ qua tham số
+  // thứ hai thì nút cũ sẽ lặng lẽ mở SAI màn — build, lint, test đều không thấy.
+  const than = APP_SOURCE.slice(APP_SOURCE.indexOf('function resolveTabTarget'));
+  const than1 = than.slice(0, than.indexOf('\n}\n'));
+  assert.ok(/collectionTab\s*=\s*null/.test(than1), 'resolveTabTarget phải NHẬN `collectionTab`, không thì nó mù với ca `relics`.');
+  assert.ok(/'relics'[\s\S]*sub: 'achievements'/.test(than1), '`relics` phải được dịch sang tab con "achievements".');
+  assert.ok(/'history'[\s\S]*tab: 'stats'/.test(than1), '`history` phải được dịch sang màn Thống kê.');
+  // Và `selectTab` phải TRUYỀN nó xuống — dịch đúng mà không ai gọi thì vô nghĩa.
+  assert.ok(
+    /selectTab\(action\.tab, action\.collectionTab\)/.test(APP_SOURCE),
+    'handleNotificationNavigate phải truyền `collectionTab` xuống `selectTab`.',
+  );
+});
+
+test('không màn nào còn bảo người chơi đi sang một TAB đã bị gộp', () => {
+  // ⚠️ Bản vá gộp tab TỰ TẠO RA lỗi này: màn Xưởng vẫn in "Đi sang mục Bản vẽ để mở thêm công
+  // trình" trong khi Bản vẽ nay nằm ngay bên dưới cùng màn. Một câu chỉ đường tới một cái tab
+  // không còn tồn tại thì tệ hơn không có câu nào — và không cổng nào bắt được nó.
+  const MAN = ['BuildingWorkshop', 'BlueprintInventory', 'RelicInventory', 'Achievements', 'SkillTree'];
+  for (const ten of MAN) {
+    const nguon = readFileSync(join(HERE, 'components', `${ten}.jsx`), 'utf8');
+    const pham = [...nguon.matchAll(/(?:sang|qua|tới|đến)\s+(?:mục|tab)\s+([^.<{]{1,20})/gi)].map((h) => h[0].trim());
+    assert.deepEqual(pham, [], `${ten}.jsx còn câu chỉ đường sang một tab khác: ${pham.join(' · ')}`);
+  }
+});

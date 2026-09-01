@@ -234,30 +234,34 @@ const INVENTORY_TABS = [
   },
   {
     id: 'collection',
-    label: 'Kho báu',
-    subtitle: 'Theo dõi di vật, bản vẽ và lịch sử phiên dưới cùng một bề mặt điều hướng.',
+    label: 'Công trình',
+    subtitle: 'Nghiên cứu bản vẽ rồi dựng nó lên — một vòng, một màn.',
   },
   {
     id: 'achievements',
-    label: 'Thành tích',
-    subtitle: 'Nhìn lại các cột mốc đã đạt và khoảng cách tới các biểu tượng kế tiếp.',
+    label: 'Huy hiệu',
+    subtitle: 'Những gì đã giành được, và cái sắp giành được nằm ngay trên đầu.',
   },
 ];
 
 const INVENTORY_SUB_IDS = INVENTORY_TABS.map((tab) => tab.id);
 
-/** Dịch một id điều hướng (kể cả id cũ đã lưu trong thông báo) sang "tab nào + tab con nào". */
-function resolveTabTarget(tab) {
+/**
+ * Dịch một id điều hướng (kể cả id cũ đã lưu trong thông báo) sang "tab nào + tab con nào".
+ *
+ * ⚠️ THAM SỐ THỨ HAI LÀ ĐƯỜNG SỐNG CỦA CÁC THÔNG BÁO CŨ. Trước 2026-09-01, "Kho báu" có bốn tab
+ * con và thông báo lưu kèm `collectionTab`. Bốn cái tên ấy vẫn nằm trong localStorage của Đàm:
+ * `workshop` (8 chỗ sinh ra), `blueprints` (4), `relics` (1), `history` (0). Bỏ qua chúng thì mỗi
+ * thông báo cũ vẫn mở đúng tab "Công trình" — trừ `relics`, nay thuộc "Huy hiệu", nên nó PHẢI được
+ * dịch tường minh; không thì một nút cũ lặng lẽ dẫn sai chỗ mà build/lint/test đều không thấy.
+ */
+function resolveTabTarget(tab, collectionTab = null) {
+  if (tab === 'collection' && collectionTab === 'relics') return { tab: 'inventory', sub: 'achievements' };
+  // "Lịch sử" đã xoá — dữ liệu ấy nay chỉ còn ở màn Thống kê, nên đưa thẳng người bấm tới đó.
+  if (tab === 'collection' && collectionTab === 'history') return { tab: 'stats', sub: null };
   if (INVENTORY_SUB_IDS.includes(tab)) return { tab: 'inventory', sub: tab };
   return { tab, sub: null };
 }
-
-const COLLECTION_TABS = [
-  { id: 'relics', label: 'Di vật' },
-  { id: 'blueprints', label: 'Bản vẽ' },
-  { id: 'workshop', label: 'Xưởng' },
-  { id: 'history', label: 'Lịch sử' },
-];
 
 const FOCUS_INTRO_COPY = {
   titleStart: [
@@ -611,7 +615,6 @@ export default function App() {
 
   const [activeTab, setActiveTab] = useState('focus');
   const [inventoryTab, setInventoryTab] = useState('skills');
-  const [collectionTab, setCollectionTab] = useState('relics');
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [supportRailOpen, setSupportRailOpen] = useState(true);
   const [focusFullscreen, setFocusFullscreen] = useState(false);
@@ -654,8 +657,8 @@ export default function App() {
   // ⚠️ MỌI đường vào điều hướng phải đi qua đây, kể cả khi nơi gọi truyền id CŨ
   // (`skills`/`collection`/`achievements`) — `resolveTabTarget` dịch chúng thành
   // "tab Hành trang + tab con", nên không nơi gọi nào phải biết chuyện gộp tab đã xảy ra.
-  const selectTab = (tab) => {
-    const target = resolveTabTarget(tab);
+  const selectTab = (tab, collectionTab = null) => {
+    const target = resolveTabTarget(tab, collectionTab);
     if (target.sub) setInventoryTab(target.sub);
     setActiveTab(target.tab);
     if (target.tab !== 'focus') {
@@ -772,12 +775,10 @@ export default function App() {
   const isFocusSessionPaused = hasFocusSessionInProgress && Boolean(timerSessionPausedAt);
   const handleNotificationNavigate = (action) => {
     if (!action) return;
-    if (action.collectionTab) {
-      setCollectionTab(action.collectionTab);
-      selectTab('collection');
-    } else if (action.tab) {
-      selectTab(action.tab);
-    }
+    // ⚠️ `collectionTab` không còn là một tab con, nhưng nó VẪN nằm trong thông báo đã lưu của Đàm.
+    // Nên nó được TRUYỀN cho `resolveTabTarget` (qua `selectTab`) chứ không bị bỏ qua: chỉ mình nó
+    // phân biệt được `relics` (nay ở "Huy hiệu") với `workshop`/`blueprints` (nay ở "Công trình").
+    if (action.tab) selectTab(action.tab, action.collectionTab);
   };
 
   const renderTopRail = () => (
@@ -1010,7 +1011,7 @@ export default function App() {
                 area="workspace hiện tại"
                 description="Nội dung tab đang mở gặp lỗi. Chuyển tab hoặc thử render lại khu vực này để tiếp tục."
                 onError={WORKSPACE_ERROR_LOGGER}
-                resetKeys={[activeTab, inventoryTab, collectionTab]}
+                resetKeys={[activeTab, inventoryTab]}
                 variant="section"
               >
                 <AnimatePresence mode="wait">
@@ -1022,9 +1023,7 @@ export default function App() {
                         topRail={!isDesktop && !showFocusFullscreen ? renderTopRail() : null}
                       >
                         <InventoryView
-                          collectionTab={collectionTab}
                           onChange={setInventoryTab}
-                          onCollectionChange={setCollectionTab}
                           sub={inventoryTab}
                         />
                       </ShellPane>
@@ -2002,12 +2001,32 @@ function SubTabs({ items, onChange, value }) {
 }
 
 /**
- * "Hành trang" — một tab điều hướng, ba màn cũ nguyên vẹn bên trong.
+ * "Hành trang" — MỘT hàng tab, ba màn.
  *
- * Đây là việc GOM NHÓM, không phải viết lại: mỗi tab con vẫn dựng đúng component cũ, với đúng
- * state cũ (`collectionTab` vẫn do `App` giữ, nên mở thông báo "Xưởng" vẫn rơi thẳng vào Xưởng).
+ * ⚠️ TRƯỚC 2026-09-01 CHỖ NÀY CÓ BA HÀNG TAB CHỒNG LÊN NHAU và chúng ăn **246px = 29,1% màn hình
+ * điện thoại** trước khi hiện chữ đầu tiên (đo ở 390×844: hàng 1 y=222→274 · hàng 2 y=298→349 ·
+ * hàng 3 y=416→468; ở màn Kho báu dòng nội dung đầu bắt đầu ở y=373, tức 44,2% màn hình đã trôi
+ * qua). Tệ hơn: cả ba hàng dùng CHUNG component `SubTabs` nên bo góc, màu nền, cỡ chữ giống hệt
+ * nhau — **không có gì nói hàng nào là cha, hàng nào là con.**
+ *
+ * Ba màn nay gom theo CÂU HỎI người chơi đang hỏi, không theo loại dữ liệu:
+ *   Kỹ năng   → "tôi tiêu điểm vào đâu"
+ *   Công trình→ "tôi xây gì tiếp" — gộp Bản vẽ (nghiên cứu) + Xưởng (dựng). Trước đây chúng là
+ *               HAI tab, và màn Xưởng phải in hẳn một câu bảo người chơi *"Đi sang mục Bản vẽ"* —
+ *               đó là bằng chứng chúng là hai nửa của MỘT vòng lặp bị cắt đôi.
+ *   Huy hiệu  → "tôi đã giành được gì" — gộp Thành tích + Di vật, cả hai đều là phần thưởng vĩnh
+ *               viễn đã kiếm được.
+ *
+ * ⚠️ BA ID GIỮ NGUYÊN (`skills` · `collection` · `achievements`) — đổi nhãn và nội dung, KHÔNG đổi
+ * id. Thông báo đã LƯU trong localStorage của Đàm mang `{ tab: 'collection', collectionTab: … }`,
+ * và `appNavigation.test.js` khoá đúng bộ ba id này.
+ *
+ * ⚠️ ĐÃ XOÁ tab "Lịch sử": nó dài **98.568px = 117 màn hình điện thoại**, chứa 4.362 con số,
+ * **0 nút bấm được**, và `grep` toàn dự án ra **0 thông báo nào trỏ tới nó** (so với `workshop` 8
+ * chỗ, `blueprints` 4, `relics` 1). Cùng mảng `history` ấy đã được màn Thống kê đọc và tóm tắt.
+ * Nó là một cái tên trong hàng tab bắt Đàm phải đọc và loại trừ mỗi lần đi tìm thứ khác.
  */
-function InventoryView({ collectionTab, onCollectionChange, onChange, sub }) {
+function InventoryView({ onChange, sub }) {
   return (
     <div>
       <SubTabs items={INVENTORY_TABS} onChange={onChange} value={sub} />
@@ -2017,160 +2036,28 @@ function InventoryView({ collectionTab, onCollectionChange, onChange, sub }) {
           <SkillTree onOpenAchievements={() => onChange?.('achievements')} />
         </DeferredTabContent>
       )}
-      {sub === 'collection' && <CollectionView onChange={onCollectionChange} sub={collectionTab} />}
+      {sub === 'collection' && (
+        <Suspense fallback={<TabLoadingState />}>
+          {/* Xưởng TRƯỚC Bản vẽ: Xưởng là nơi có việc làm ngay (hàng chờ đang chạy, công trình
+              nâng cấp được), còn Bản vẽ là nơi tiêu RP cho việc SAU. Thứ tự cũ bắt người chơi đi
+              qua 2.745px bảng giá mới tới được chỗ bấm. */}
+          <BuildingWorkshop />
+          <div className="mt-6">
+            <BlueprintInventory />
+          </div>
+        </Suspense>
+      )}
       {sub === 'achievements' && (
         <DeferredTabContent>
           <Achievements />
+          <div className="mt-6">
+            <Suspense fallback={<TabLoadingState />}>
+              <RelicInventory />
+            </Suspense>
+          </div>
         </DeferredTabContent>
       )}
     </div>
   );
 }
 
-function CollectionView({ sub = 'relics', onChange }) {
-  return (
-    <div>
-      <SubTabs items={COLLECTION_TABS} onChange={onChange} value={sub} />
-
-      <Suspense fallback={<TabLoadingState />}>
-        {sub === 'relics' && <RelicInventory />}
-        {sub === 'blueprints' && <BlueprintInventory />}
-        {sub === 'workshop' && <BuildingWorkshop />}
-        {sub === 'history' && <SessionHistory />}
-      </Suspense>
-    </div>
-  );
-}
-
-function SessionHistory() {
-  const history = useGameStore((s) => s.history);
-
-  if (history.length === 0) {
-    return (
-      <div
-        className="rounded-[22px] border py-14 text-center"
-        style={{
-          borderColor: 'var(--line)',
-          background: 'var(--panel)',
-          boxShadow: '0 12px 26px rgba(31,30,29,0.04)',
-        }}
-      >
-        <div className="serif text-[28px] text-[var(--muted)]">Chưa có lịch sử phiên</div>
-        <p className="mt-2 text-[14px] text-[var(--muted)]">Bắt đầu một phiên mới để tạo mốc đầu tiên.</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-3">
-      {history.map((entry) => (
-        <article
-          key={entry.id}
-          className="rounded-[22px] border p-4"
-          style={{
-            borderColor: 'var(--line)',
-            background: 'var(--panel)',
-            boxShadow: '0 10px 24px rgba(31,30,29,0.04)',
-          }}
-        >
-          <div className="flex items-start gap-4">
-            {/*
-              ⚠️ BA MÃ HAI CHỮ CÁI ('JP' · 'RF' · 'PM') → BA BIỂU TƯỢNG (2026-09-01), cùng lý do
-              đã áp cho mọi màn sưu tập hôm qua: hai chữ cái viết hoa không nói được gì, và ở đây
-              chúng lặp lại 624 lần. Δ thông tin = 0 — vẫn đúng ba trạng thái, chỉ đọc được.
-              ⚠️ VÀ BỎ PHÉP GỘP 'tinh luyện HOẶC dài ≥45 phút'. Đó là một trường gánh hai việc:
-              đo trên fixture, **180/624 hàng (28,8%)** mang nhãn 'RF' mà phần lớn chỉ vì phiên
-              dài — trong khi số phút đã in bằng chữ TO ngay bên cạnh. Nay ký hiệu chỉ nói đúng
-              thứ KHÔNG có chỗ nào khác nói: có tinh luyện rơi ra hay không.
-            */}
-            <div
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] border text-[18px] leading-none"
-              style={{
-                borderColor: entry.jackpot ? 'rgba(201,100,66,0.35)' : 'var(--line)',
-                background: 'var(--item-bg-solid)',
-              }}
-            >
-              <span aria-hidden="true">
-                {entry.jackpot ? '🎰' : (entry.refinedEarned ?? 0) > 0 ? '💎' : '🍅'}
-              </span>
-            </div>
-
-            <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="serif text-[20px] font-medium text-[var(--ink)]">{entry.minutes} phút</span>
-                <span className="rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em]" style={{ borderColor: 'var(--line-2)', color: 'var(--muted)' }}>
-                  {entry.tier}
-                </span>
-                {/*
-                  ⚠️ CHIP NÀY NAY LÀ ĐƯỜNG RƠI VỀ, KHÔNG PHẢI MỘT BẢN SAO (2026-09-01).
-                  `entry.tier` là chuỗi do `getMultiplierTier` trả về và nó ĐÃ chứa hệ số
-                  ('Tập Trung Sâu ×1.3'), nên chip in thêm '×1.3' ngay 33px bên dưới là nói lại
-                  đúng phần đuôi của cái nhãn nằm trên nó. Đo trên fixture 624 phiên: **463/463
-                  phiên có hệ số > 1 đều đã mang dấu '×' trong nhãn**, và ẩn đúng 463 chip ấy làm
-                  trang Lịch sử ngắn đi **15.279px (−13,4%)** = 18,1 màn hình 844px.
-                  ⚠️ Nhưng KHÔNG xoá trắng: bản lưu đời cũ (trước khi có `tierLabel`) có thể mang
-                  `tier: null` kèm `multiplier > 1`, và lúc ấy chip là chỗ DUY NHẤT nói hệ số.
-                  Hỏi chính cái nhãn thay vì đoán — chip chỉ hiện khi nhãn KHÔNG tự nói.
-                */}
-                {entry.multiplier > 1 && !String(entry.tier ?? '').includes('×') && (
-                  <span className="rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em]" style={{ borderColor: 'rgba(201,100,66,0.22)', color: 'var(--accent)' }}>
-                    ×{entry.multiplier.toFixed(1)}
-                  </span>
-                )}
-              </div>
-
-              <p className="mt-1 text-[13px] text-[var(--muted)]">
-                +{(entry.xpEarned ?? entry.epEarned ?? 0).toLocaleString()} XP
-              </p>
-
-              {entry.goal && (
-                <p className="mt-2 text-[13px] leading-[1.55] text-[var(--ink-2)]">
-                  <strong className="font-semibold text-[var(--ink)]">Mục tiêu:</strong> {entry.goal}
-                </p>
-              )}
-
-              {typeof entry.goalAchieved === 'boolean' && (
-                <div className="mt-2">
-                  <span
-                    className="rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em]"
-                    style={{
-                      background: entry.goalAchieved ? 'var(--good-soft)' : 'rgba(var(--accent-rgb),0.12)',
-                      color: entry.goalAchieved ? 'var(--good)' : 'var(--accent-ink)',
-                    }}
-                  >
-                    {entry.goalAchieved ? 'Đạt mục tiêu' : 'Chưa đạt mục tiêu'}
-                  </span>
-                </div>
-              )}
-
-              {entry.note && (
-                <div className="mt-2 text-[12px] text-[var(--muted)]">
-                  <span className="mono mr-1 text-[10px] uppercase tracking-[0.16em]">Ghi chú</span>
-                  <RichTextView value={entry.note} compact className="mt-1" />
-                </div>
-              )}
-
-              {entry.nextNote && (
-                <p className="mt-2 text-[12px] text-[var(--accent-ink)]">
-                  <span className="mono mr-1 text-[10px] uppercase tracking-[0.16em]">Lần sau</span>
-                  {entry.nextNote}
-                </p>
-              )}
-            </div>
-
-            <div
-              className="shrink-0 rounded-[14px] border px-3 py-2 text-right text-[11px] text-[var(--muted)]"
-              style={{
-                borderColor: 'var(--line)',
-                background: 'var(--item-bg)',
-              }}
-            >
-              <div>{formatVietnamDate(entry.timestamp, { month: 'short', day: 'numeric' })}</div>
-              <div className="mono mt-1">{formatVietnamTime(entry.timestamp, { hour: '2-digit', minute: '2-digit' })}</div>
-            </div>
-          </div>
-        </article>
-      ))}
-    </div>
-  );
-}

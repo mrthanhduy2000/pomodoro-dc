@@ -607,7 +607,7 @@ export default function BuildingWorkshop() {
             <div className="mono mb-2 text-[12px] font-semibold uppercase tracking-[0.22em]" style={lightTheme ? { color: 'var(--accent2)', fontFamily: MONO_FONT } : { color: 'var(--accent-light)', fontFamily: MONO_FONT }}>BP</div>
             <p className="text-sm" style={lightTheme ? { color: 'var(--ink)' } : { color: '#64748b' }}>Chưa có bản vẽ nào chờ được dựng lên.</p>
             <p className="text-xs mt-1" style={lightTheme ? { color: 'var(--muted)' } : { color: '#475569' }}>
-              Đi sang mục Bản vẽ để mở thêm công trình bằng RP.
+              Nghiên cứu một bản vẽ ở ngay bên dưới để mở thêm công trình.
             </p>
           </div>
         ) : (

@@ -1,4 +1,65 @@
-> Cập nhật lần cuối: **2026-08-30 (vòng 20)** — tối giản toàn app bằng **fan-out soi song song**:
+> Cập nhật lần cuối: **2026-09-01 (vòng 21)** — **"hứng thú hơn, hệ thống ĐƠN GIẢN hơn"** (lệnh
+> của Đàm: *"làm cho game hứng thú và đầy dopamine hơn, làm hệ thống game đơn giản hơn nữa nhưng
+> tỷ lệ hứng thú cao hơn"*). Nguyên tắc an toàn của cả vòng: **đơn giản hoá thứ Đàm THẤY và CẢM,
+> đừng xoá thứ Đàm đã KIẾM ĐƯỢC.** Bảy việc, không việc nào thêm một khái niệm mới cho người chơi,
+> và ba việc là XOÁ hoặc HẠ. 3 commit.
+>
+> **PHÁT HIỆN LỚN NHẤT: phần lớn "dopamine" của game ĐÃ ĐƯỢC TÍNH RỒI, chỉ chưa bao giờ được HIỆN
+> RA.** Không phải thiếu nội dung — thiếu đường dẫn từ dữ liệu tới mắt.
+> · **63% số phiên** sinh một sự kiện có TÊN, ICON và câu chuyện riêng (+15–30% XP), nhưng nó chỉ
+>   được vẽ trong `LootDropModal`, mà hộp ấy sau ADR-060 chỉ tự mở khi LÊN KỶ = **1,2%** số phiên.
+>   ~358 câu chuyện đã tính, đã cộng XP, rồi bị xoá không ai thấy; thẻ toast thì nói đúng một câu
+>   "🎁 Phiên đã xong" ở cả 579 phiên.
+> · **513 biểu tượng vẽ tay** nằm sẵn trong dữ liệu (360 thành tích · 75 bản vẽ · 36 nút kỹ năng ·
+>   15 di vật · 14 nhóm · 7 cộng hưởng · 6 loại việc) trong khi MỌI màn sưu tập hiện ký hiệu 2 chữ
+>   cái: "NH" · "VC" · "XĐ" · "RL". 360 thành tích ra 360 cái nhãn xam xám giống hệt nhau.
+> · **`soundEngine.playMilestone()` có 0 nơi gọi** — mốc chuỗi 7/14/30 chạm tới mà app không kêu
+>   một tiếng nào, kể cả mốc 30 vốn mở +5% allBonus VĨNH VIỄN.
+> · **Rương Lớn** (10,1% số phiên) trước nay chỉ là chữ "lớn" viết thường bé xíu trên huy hiệu hệ
+>   số; **tinh luyện T2** (28,8%) không hiện ở đâu cả.
+>
+> **PHÁT HIỆN LỚN THỨ HAI: hai nhánh tiến trình của game gần như không đáng theo.** Cây kỹ năng 36
+> nút tốn **336 SP** — ở nhịp ~80 SP/năm là **15,9 năm** — và mua được tổng cộng +5,1% XP, trong
+> khi chỉ cần kéo dài phiên đã cho +103%. Hạ về **138 SP** (2/3/5/8 theo hạng) ⇒ ~1,7 năm.
+> ⚠️ **Hạ giá là phép CỘNG THÊM thuần**: kỹ năng đã mở giữ nguyên, SP đã tiêu không đòi lại,
+> KHÔNG cần migration. ⚠️ Và cố ý **KHÔNG** đụng `EXP_PER_LEVEL`: `player.level` được LƯU chứ không
+> suy ra, mà `migrate` KHÔNG chạy trên đường Supabase pull (`_importGameData` và `merge` gọi thẳng
+> `normalizePersistedGameState`) — muốn tặng SP hồi tố thì phải có cờ một-lần kiểu `skinMigratedV1`
+> đặt TRONG `normalize`.
+>
+> **BA BÀI HỌC VỀ CÔNG CỤ / CÁCH LÀM, cả ba đều do phép đo bắt chứ không do đọc mã:**
+> · ⚠️ **`grep` một CÁI TÊN không bằng `grep` một CÁI LUẬT.** Đổi xong 7 chỗ gọi `getLabelMark`,
+>   tưởng xong; ảnh chụp thì `BlueprintInventory.jsx` VẪN hiện "XĐ" · "TĐ" — nó gọi thẳng
+>   `initialsFromLabel`, cùng một luật, một cái tên khác. Ba ô bản vẽ suýt bị bỏ lại. Bài test nay
+>   canh cái LUẬT ở mọi cái tên nó mang.
+> · ⚠️ **ĐỪNG ĐOÁN THỨ CÓ THỂ HỎI THẲNG.** Định chọn cỡ chữ bằng cách soi chuỗi glyph ("không chứa
+>   chữ cái thì là emoji"). Đo ra: 517/518 đúng, nhưng có một biểu tượng là `π` — một chữ cái Hy
+>   Lạp — nên phép đoán ấy sai NGAY HÔM NAY và sẽ sai thêm trong im lặng. Chỗ duy nhất biết câu trả
+>   lời là chính trường `icon`; hỏi nó (`hasGlyphIcon`).
+> · ⚠️ **MỘT MỤC KHẢO SÁT CÓ THỂ SAI TIỀN ĐỀ — ĐO TRƯỚC KHI SỬA.** Danh sách việc có mục "cho
+>   `sp > 0` bật cái chấm chú ý, Đàm có 4 SP mà không có tín hiệu nào". Đo lại thì
+>   `hasReadyOpportunity` **ĐÃ** đọc `sp` và gác đúng: sáng ở 2 SP (mua được 9 kỹ năng), tắt ở 1 SP
+>   (mua được 0). Làm theo mục ấy là bật một cảnh báo KÊU OAN — đẩy Đàm sang màn anh không làm được
+>   gì. **Đã bỏ mục đó**, và đó là kết quả tốt của phép đo chứ không phải việc bỏ dở.
+>
+> **Số đo trước → sau:** cây kỹ năng **336 → 138 SP** (15,9 năm → ~1,7 năm) · thẻ tổng kết mang tên
+> sự kiện ở **63%** số phiên (trước: 1,2%) · huy hiệu hệ số câm ở **75,2% → 0%** số phiên · lễ mừng
+> thành phố **579 → ~9 lần** trong 180 ngày (tiết kiệm 30,9 phút chờ) · ký hiệu 2 chữ cái trên các
+> màn sưu tập: **7 chỗ → 0**.
+>
+> **Cổng:** lint sạch · build xanh · **1379 bài (# skipped 1) · 0 đỏ** (trước vòng: 1363).
+> 12 bài test mới, tất cả đã thử-cho-đỏ, mỗi lần phá đúng MỘT cơ chế.
+>
+> ⚠️ **Ba thứ ghi lại để phiên sau khỏi đi lại:** (a) `refinedEarned`/`jackpot` trong fixture LUÔN
+> bằng 0 — `make-fixture.mjs` không replay hai trường ấy, nên hỏi thẳng CÔNG THỨC
+> (`T2_DROP_THRESHOLD_MIN` 45' · `DEEP_SESSION_THRESHOLD` 60') chứ đừng đọc fixture;
+> (b) `utils/sourceScan.js` mới — các bài test đọc-mã-nguồn phải bỏ nguyên KHỐI chú thích chứ không
+> lọc theo đầu dòng, vì chính các bản vá KỂ LẠI cái tên đang bị cấm trong khối nhiều dòng (đã bắt
+> oan thật); (c) viết dấu đóng-khối-chú-thích NGUYÊN VĂN bên trong một khối chú thích thì nó đóng
+> giữa chừng và Node báo lỗi ở một dòng chẳng liên quan — cùng họ cái bẫy dấu nháy ngược trong
+> `city-preview.mjs`: **mô tả một cú pháp thì mô tả bằng LỜI, đừng dán ký tự thật vào.**
+
+> Cập nhật lần trước: **2026-08-30 (vòng 20)** — tối giản toàn app bằng **fan-out soi song song**:
 > 6 nhánh CHỈ ĐỌC soi 9 màn ở khung 390px thật (mỗi nhánh một màn, ảnh ra tên riêng, cấm sửa file,
 > **cấm `npm run build`** vì `dist/` dùng chung ⇒ build giữa chừng làm các nhánh đo trên hai cây mã
 > khác nhau), luật *không số đo = không tính*, rồi chấm chéo và **sửa TUẦN TỰ** — 9 việc, 9 commit.

@@ -35,7 +35,28 @@ Mặt trận đang làm: **thành phố 3D** (`src/engine/city3d/` + `src/compon
   Phase 21 (*"push nhánh phụ, không tự gộp `main`"*) đã bị lệnh này thay thế.
   ⚠️ **Phase 21 do đó lên production TRƯỚC khi Đàm nhìn ảnh nghiệm thu** — mục "chờ Đàm nhìn ảnh"
   ở phần dưới VẪN CÒN HIỆU LỰC, chỉ là nay nó nghiệm thu một thứ đang chạy thật.
-- **Giao diện — VÒNG 20 (2026-08-30, mới nhất):** tối giản toàn app bằng **fan-out soi song song**
+- **Trò chơi — VÒNG 21 (2026-09-01, mới nhất): "hứng thú hơn, hệ thống ĐƠN GIẢN hơn".** Bảy việc,
+  không việc nào thêm một khái niệm mới cho Đàm; ba việc là XOÁ hoặc HẠ.
+  · **Cây kỹ năng 336 SP → 138 SP** (2/3/5/8 theo hạng). Ở nhịp ~80 SP/năm thì mở trọn cây đi từ
+  **15,9 năm xuống ~1,7 năm**. Hạ giá là phép CỘNG THÊM thuần — kỹ năng đã mở giữ nguyên, SP đã
+  tiêu không đòi lại, KHÔNG cần migration. ⚠️ Cố ý **KHÔNG** đụng `EXP_PER_LEVEL`: `player.level`
+  được LƯU chứ không suy ra, và `migrate` KHÔNG chạy trên đường Supabase pull (`_importGameData`
+  và `merge` gọi thẳng `normalizePersistedGameState`) — muốn tặng SP hồi tố thì phải có cờ một-lần
+  kiểu `skinMigratedV1` đặt TRONG `normalize`.
+  · **Sự kiện của phiên lên mặt thẻ.** 63% số phiên sinh một sự kiện có tên/icon/câu chuyện riêng
+  (+15–30% XP) nhưng nó chỉ được vẽ trong `LootDropModal`, mà hộp ấy chỉ tự mở ở **1,2%** số phiên
+  ⇒ ~358 câu chuyện đã tính rồi bị xoá không ai thấy.
+  · **513 biểu tượng vẽ tay lên được màn hình** — `getGlyph`/`hasGlyphIcon` ở `utils/labelMark.js`.
+  Mọi màn sưu tập trước nay hiện ký hiệu 2 chữ cái ("NH" · "VC" · "XĐ" · "RL").
+  · **Huy hiệu hệ số hết câm**: bản cũ chỉ nói được vách ×1.3 rồi im ở **75,2%** số phiên, mà im
+  đúng khúc 45–59 phút nơi **117 phiên** đã dừng khi chỉ còn 1–15 phút là chạm ×2.0.
+  · **Mốc chuỗi 7/14/30 nay có thẻ + tiếng chuông** (`playMilestone` xưa nay 0 nơi gọi).
+  · **Rương Lớn + tinh luyện được gọi tên** trên thẻ (10,1% và 28,8% số phiên).
+  · **Lễ mừng thành phố chỉ chạy khi có công trình MỚI** — trước đó nó chạy 3,2 giây sau MỌI phiên
+  để khoe một dòng chữ vốn luôn hiện sẵn: 30,9 phút chờ trong 579 phiên.
+  ⚠️ **KHÔNG làm** cái chấm chú ý theo `sp > 0`: đo lại thì `hasReadyOpportunity` ĐÃ đọc `sp` và
+  gác đúng (sáng ở 2 SP, tắt ở 1 SP). Bật chấm ở 1 SP là đẩy Đàm sang màn anh không làm được gì.
+- **Giao diện — VÒNG 20 (2026-08-30):** tối giản toàn app bằng **fan-out soi song song**
   (6 nhánh chỉ-đọc soi 9 màn ở 390px, luật *không số đo = không tính*, rồi sửa TUẦN TỰ — 9 commit).
   ⚠️ **Nút chính màn Tập trung từng bị thanh tab che LẠI sau vòng 19** vì vòng 19 đo trên NGÀY CHÀO
   NGẮN, mà khối chào dài 2 hoặc 3 dòng tuỳ biến thể copy (chênh 26px). Nay: `FocusNextAction` đã
@@ -111,6 +132,9 @@ Mặt trận đang làm: **thành phố 3D** (`src/engine/city3d/` + `src/compon
    (b) **tab Kho báu › Di vật** — fixture chưa gieo `relics`/`research` nên nó luôn hiện 0/15 và 15
    dòng "??? KHOÁ"; cái trống ấy là của CÔNG CỤ, không phải của app. Muốn soi thật thì phải thêm
    gieo `relics` vào `scripts/make-fixture.mjs` trước.
+   (c) **`refinedEarned` / `jackpot` trong fixture luôn bằng 0** (vòng 21) — `make-fixture.mjs`
+   không replay hai trường ấy, nên đừng đọc chúng để suy ra tần suất. Hỏi thẳng CÔNG THỨC:
+   `minutes >= T2_DROP_THRESHOLD_MIN` (45') và `>= DEEP_SESSION_THRESHOLD` (60').
 1. **Kim tự tháp / ziggurat** — kỷ 2 (Ai Cập) và kỷ 3 (Iraq) đang ra mái nón nhiều cạnh,
    không có khối chóp bốn mặt. `prism` với `sides: 4` + `taper: 0` chính là thứ cần.
 2. **"Giống 3D hơn"** — bóng đổ nét hơn (`SHADOW_MAP_DESKTOP` 2048 → 4096, siết

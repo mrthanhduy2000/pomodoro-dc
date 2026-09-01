@@ -12,6 +12,50 @@
 
 ---
 
+## 2026-09-01 (vòng 21) — Hứng thú hơn, hệ thống ĐƠN GIẢN hơn
+
+**Mục đích:** nâng tỉ lệ *hứng thú ÷ độ phức tạp*. Nguyên tắc an toàn của cả vòng: **đơn giản hoá
+thứ Đàm THẤY và CẢM, đừng xoá thứ Đàm đã KIẾM ĐƯỢC.** Bảy việc; không việc nào thêm một khái niệm
+mới cho người chơi, và ba việc là XOÁ hoặc HẠ.
+
+**Phạm vi:** chỉ tầng hiển thị + một bảng giá. **Không đổi một luật tính thưởng nào**, không đụng
+`completeFocusSession`, không thêm trường nào vào store, không dùng localStorage mới.
+
+**1. Cây kỹ năng: 336 SP → 138 SP.** 36 nút, giá theo hạng 3/7/14/22 → **2/3/5/8**. Ở nhịp
+~80 SP/năm thì mở trọn cây đi từ **15,9 năm xuống ~1,7 năm**. Cây cũ mua được +5,1% XP trong khi
+chỉ cần kéo dài phiên đã cho +103% — tức nhánh tiến trình này gần như không đáng theo.
+
+**2. Sự kiện của phiên lên MẶT thẻ tổng kết.** 63% số phiên sinh một sự kiện có tên, icon và câu
+chuyện riêng (+15–30% XP), nhưng nó chỉ được vẽ bên trong `LootDropModal` — hộp thoại ấy sau
+ADR-060 chỉ tự mở khi LÊN KỶ, tức **1,2%** số phiên. ~358 câu chuyện đã tính, đã cộng XP, rồi bị
+xoá không ai thấy; thẻ thì nói "🎁 Phiên đã xong" ở cả 579 phiên.
+
+**3. Lễ mừng thành phố chỉ chạy khi có công trình MỚI.** Trước đó nó chạy 3,2 giây sau MỌI phiên
+để khoe một dòng chữ vốn luôn hiện sẵn trên màn hình — **30,9 phút chờ trong 579 phiên**.
+
+**4. 513 biểu tượng vẽ tay lên được màn hình.** Dữ liệu đã có sẵn biểu tượng cho 360 thành tích,
+75 bản vẽ, 36 nút kỹ năng, 15 di vật, 14 nhóm, 7 cộng hưởng, 6 loại việc — nhưng mọi màn sưu tập
+hiện ký hiệu 2 chữ cái ("NH" · "VC" · "XĐ" · "RL"). `getGlyph`/`hasGlyphIcon` (`utils/labelMark.js`)
+dùng biểu tượng khi có, rơi về ký hiệu tắt khi không (loại việc Đàm tự tạo ghi `icon: ''`).
+`ACHIEVEMENT_TIERS` là bảng duy nhất thiếu `icon` — đã thêm.
+
+**5. Huy hiệu hệ số gọi tên vách KẾ TIẾP.** Bản cũ chỉ nói được "còn N phút để ×1.3" rồi câm ở
+**75,2%** số phiên, mà im đúng khúc đáng nói nhất: **117 phiên** dừng trong 45–59 phút, chỉ còn
+1–15 phút nữa là chạm ×2.0 (bậc nhảy lớn nhất thang, +54%).
+
+**6. Mốc chuỗi 7/14/30 nay có thẻ ăn mừng + tiếng chuông.** `soundEngine.playMilestone()` xưa nay
+có **0 nơi gọi**. Chống lặp không cần state mới: `streakMissionXP` đã là tín hiệu một-lần-mỗi-ngày,
+và ngưỡng 7 của nó nằm đúng dưới cả ba mốc.
+
+**7. Rương Lớn và tinh luyện được gọi tên trên thẻ** (10,1% và 28,8% số phiên); và bỏ dòng
+"Không có jackpot." khỏi bản tổng kết tuần — jackpot đòi một kỹ năng Đàm chưa mở, tức nó **không
+thể xảy ra**, nên đó là bản tin tuần nào cũng giống tuần nào về một việc không có thật.
+
+**Tương thích:** hoàn toàn ngược tương thích. Hạ giá SP là phép cộng thêm thuần (kỹ năng đã mở giữ
+nguyên, SP đã tiêu không đòi lại). **KHÔNG có migration nào cần chạy.**
+
+---
+
 ## 2026-08-30 (vòng 20) — Tối giản toàn app bằng fan-out soi song song
 
 **Cách làm:** 6 nhánh CHỈ ĐỌC soi song song 9 màn ở khung 390px thật (mỗi nhánh một màn, ảnh ra

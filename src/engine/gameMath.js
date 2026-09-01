@@ -417,7 +417,6 @@ export function calculateRewards(
     nextSessionBuffs          = [],    // [{type:'nguoi_lap_ke'|'cu_tri', sessionsRemaining}]
     keHoachWeeklyBuffActive   = false, // tuần kế nhận +10% allBonus
     // Dồn Lực: người chơi tự chọn trump nào áp dụng phiên này (tùy chọn)
-    surgeOverride             = null,  // 'so_do' | 'sieu_tap_trung' | 'jackpot' | null
   } = sessionCtx;
 
   // ── 1. Bộ kỹ năng V2 không có Bẻ Cong Thời Gian → effectiveMinutes = minutes
@@ -453,19 +452,19 @@ export function calculateRewards(
     && minutesFocused >= SO_DO_MIN_MINUTES
     && rand() < SO_DO_TRIGGER_CHANCE;
 
-  // Chọn đúng 1 trump: ưu tiên override hợp lệ, nếu không theo DON_LUC_PRIORITY.
+  // Chọn đúng 1 trump theo DON_LUC_PRIORITY.
+  // ⚠️ ĐÃ XOÁ nhánh `surgeOverride` (2026-09-01) — nó KHÔNG ĐI TỚI ĐƯỢC. Trường ấy chỉ được GHI
+  // ở đúng một chỗ (`setSurgeChoice` trong `gameStore.js`), mà hàm đó có **0 nơi gọi trên toàn
+  // repo** ⇒ `surgeOverride` vĩnh viễn là `null` và nhánh này chưa từng chạy một lần.
+  // Xoá cùng lượt với chính `setSurgeChoice`; luật "mỗi phiên chỉ áp 1 trump" giữ nguyên.
   const surgeCandidates = {
     jackpot:        jackpotTriggered,
     sieu_tap_trung: sieuTapTrungActive,
     so_do:          luckyBurstTriggered,
   };
   let donLucChosen = null;
-  if (surgeOverride && surgeCandidates[surgeOverride]) {
-    donLucChosen = surgeOverride;
-  } else {
-    for (const trumpId of DON_LUC_PRIORITY) {
-      if (surgeCandidates[trumpId]) { donLucChosen = trumpId; break; }
-    }
+  for (const trumpId of DON_LUC_PRIORITY) {
+    if (surgeCandidates[trumpId]) { donLucChosen = trumpId; break; }
   }
   const applyJackpot = donLucChosen === 'jackpot';
   const applySieu    = donLucChosen === 'sieu_tap_trung';

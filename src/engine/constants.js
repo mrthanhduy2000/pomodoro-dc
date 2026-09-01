@@ -2096,7 +2096,6 @@ export const TTCH_PER_STREAK_MISSION     = 1;    // khi nhận thưởng nhiệm
 export const TINH_THE_HARD_CAP           = 12;   // tồn kho TTCH tối đa
 export const TTCH_PER_REFINED            = 2;    // 2 TTCH thay 1 đơn vị tinh luyện (t2-quy đổi)
 export const TTCH_RELIC_SUBSIDY_CAP_PCT  = 0.50; // TTCH gánh tối đa 50% chi phí tiến hóa cổ vật
-export const TTCH_TRUMP_PICK_COST        = 1;    // 1 TTCH để tự chọn trump nào áp dụng phiên này (Dồn Lực)
 // (Dự trữ — chưa wire) ý tưởng trả-trước-charge bằng TTCH; bỏ để giữ thiết kế tinh gọn.
 export const TTCH_PER_CHARGE_SUB         = 6;
 export const TRUMP_TT_BUYS_PER_DAY       = 1;

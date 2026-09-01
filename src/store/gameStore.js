@@ -116,7 +116,6 @@ import {
   TTCH_PER_STREAK_MISSION,
   TTCH_PER_REFINED,
   TTCH_RELIC_SUBSIDY_CAP_PCT,
-  TTCH_TRUMP_PICK_COST,
 } from '../engine/constants';
 import {
   calculateRewards,
@@ -1174,7 +1173,6 @@ const makeDefaultSkillActivations = () => ({
   luckyModeChargesUsed:  0,
   lastResetDate:         null,  // 'YYYY-MM-DD' — reset charges hàng ngày
   // Bản Cập Nhật Cộng Hưởng (transient, reset theo ngày qua lastResetDate)
-  surgeOverride:         null,  // 'so_do' | 'sieu_tap_trung' | 'jackpot' | null — Dồn Lực tự chọn
 });
 
 // ─── FACTORY: CATEGORY TRACKING ──────────────────────────────────────────────
@@ -1349,21 +1347,6 @@ function normalizeStoredRefined(resourcesRefined = {}) {
   return next;
 }
 
-function spendRawResources(bookBag = {}, totalCost = 0) {
-  const entries = Object.entries(bookBag)
-    .sort(([, left], [, right]) => right - left);
-  const updated = { ...bookBag };
-  let remaining = totalCost;
-
-  for (const [resourceId, amount] of entries) {
-    if (remaining <= 0) break;
-    const spend = Math.min(amount ?? 0, remaining);
-    updated[resourceId] = Math.max(0, (updated[resourceId] ?? 0) - spend);
-    remaining -= spend;
-  }
-
-  return remaining > 0 ? null : updated;
-}
 
 // ─── HELPER: Tổng hợp tác động Wonder từ danh sách công trình ─────────────────
 function aggregateWonderEffects(buildings) {
@@ -1390,11 +1373,6 @@ function getWonderForgivenessCapacity(buildings) {
   return FORGIVENESS_CANCELS_PER_WEEK + (wonders.has('extra_forgiveness') ? 1 : 0);
 }
 
-function getWonderRefinedCraftCost(buildings) {
-  const wonders = aggregateWonderEffects(buildings);
-  if (!wonders.has('cheaper_t2_craft')) return T2_CRAFT_COST;
-  return Math.max(4, Math.round(T2_CRAFT_COST * 0.75));
-}
 
 function getWonderResearchCost(buildings, bpId, baseCost) {
   const wonders = aggregateWonderEffects(buildings);
@@ -4023,7 +4001,6 @@ const useGameStore = create(
           nextSessionBuffs:         Array.isArray(state.player.skillBuffQueue) ? state.player.skillBuffQueue : [],
           keHoachWeeklyBuffActive,
           // DỒN LỰC: ưu tiên trump người chơi tự chọn cho hôm nay (nếu có)
-          surgeOverride:            skillAct.surgeOverride ?? null,
         };
 
         // Tính toán phần thưởng phiên và gộp thêm bonus Wonder còn hoạt động.
@@ -5100,36 +5077,6 @@ const useGameStore = create(
         return true;
       },
 
-      /**
-       * setSurgeChoice — DỒN LỰC: tự chọn trump nào được áp dụng khi nhiều trump
-       * cùng kích hoạt trong một phiên. Đặt preference cho HÔM NAY (reset theo ngày).
-       * Đặt một lựa chọn mới (khác null) tốn TTCH_TRUMP_PICK_COST; xóa (null) miễn phí.
-       * Đây CHỈ là sắp xếp lại thứ tự trong số trump đang active — không tạo thêm sức mạnh.
-       */
-      setSurgeChoice: (pref) => {
-        const state = get();
-        const allowed = pref === null || ['so_do', 'sieu_tap_trung', 'jackpot'].includes(pref);
-        if (!allowed) return false;
-        const today   = localDateStr();
-        const sa      = state.skillActivations;
-        const saToday = sa.lastResetDate === today ? sa : makeDefaultSkillActivations();
-
-        if (pref === null) {
-          set(() => ({
-            skillActivations: { ...saToday, lastResetDate: today, surgeOverride: null },
-            latestSessionUndo: null,
-          }));
-          return true;
-        }
-        if (saToday.surgeOverride === pref) return true;  // đã chọn đúng — không tính phí lại
-        if ((state.tinhThe ?? 0) < TTCH_TRUMP_PICK_COST) return false;
-        set(() => ({
-          skillActivations: { ...saToday, lastResetDate: today, surgeOverride: pref },
-          tinhThe: Math.max(0, (state.tinhThe ?? 0) - TTCH_TRUMP_PICK_COST),
-          latestSessionUndo: null,
-        }));
-        return true;
-      },
 
       /**
        * markBreakCompleted
@@ -5628,44 +5575,6 @@ const useGameStore = create(
           };
         }),
 
-      /**
-       * addBuildingPassiveResources
-       * Gọi từ useGameLoop mỗi phút nghỉ cho từng infrastructure building.
-       * Cộng nguyên liệu thô + tinh luyện vào đúng bucket kỷ nguyên của công trình đó.
-       */
-      addBuildingPassiveResources: (bpId) => {
-        const eff = BUILDING_EFFECTS[bpId];
-        if (!eff || eff.type !== 'infrastructure') return;
-        const eraKey = eff.era;
-        set((prev) => {
-          const level = prev.buildingLevels?.[bpId] ?? 1;
-          const levelMult = getBuildingLevelMultiplier(level);
-
-          const prevRef = normalizeRefinedBag(prev.resourcesRefined?.[eraKey]);
-          const bookKey = `book${eraKey}`;
-          const prevBook = prev.resources[bookKey] ?? {};
-          const rawResourceIds = (ERA_METADATA[eraKey]?.resources ?? []).map((resource) => resource.id);
-          const t1Add = Math.floor((eff.passiveT1PerBreakMin ?? 0) * levelMult);
-          const updatedBook = { ...prevBook };
-          if (rawResourceIds[0]) {
-            updatedBook[rawResourceIds[0]] = (updatedBook[rawResourceIds[0]] ?? 0) + Math.ceil(t1Add / 2);
-          }
-          if (rawResourceIds[1]) {
-            updatedBook[rawResourceIds[1]] = (updatedBook[rawResourceIds[1]] ?? 0) + Math.floor(t1Add / 2);
-          }
-          const refinedGain = (eff.passiveT2PerBreakMin ?? 0) * levelMult;
-          return {
-            resources: { ...prev.resources, [bookKey]: updatedBook },
-            resourcesRefined: {
-              ...prev.resourcesRefined,
-              [eraKey]: {
-                t2: prevRef.t2 + refinedGain,
-                t3: 0,
-              },
-            },
-          };
-        });
-      },
 
       // ─── Hệ thống Nghiên Cứu ─────────────────────────────────────────────
       /**
@@ -5782,38 +5691,6 @@ const useGameStore = create(
         return true;
       },
 
-      /**
-       * craftTier
-       * Chế tác nguyên liệu tinh luyện từ nguyên liệu thô của cùng kỷ.
-       * @param {number} era - kỷ nguyên
-       * @param {'t2'} tier
-       * @param {number} times - số lần chế tác
-       */
-      craftTier: (era, tier, times = 1) => {
-        if (tier !== 't2') return false;
-        const state   = get();
-        const cost    = getWonderRefinedCraftCost(state.buildings) * times;
-        const bookKey = `book${era}`;
-        const bag     = state.resources[bookKey] ?? {};
-        const updatedBook = spendRawResources(bag, cost);
-        if (!updatedBook) return false;
-
-        set((prev) => {
-          const refined = normalizeRefinedBag(prev.resourcesRefined?.[era]);
-          return {
-            resources: {
-              ...prev.resources,
-              [bookKey]: updatedBook,
-            },
-            resourcesRefined: {
-              ...prev.resourcesRefined,
-              [era]: { t2: refined.t2 + times, t3: 0 },
-            },
-            latestSessionUndo: null,
-          };
-        });
-        return true;
-      },
 
       /**
        * repairBuilding

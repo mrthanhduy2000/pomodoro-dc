@@ -35,7 +35,7 @@ Mặt trận đang làm: **thành phố 3D** (`src/engine/city3d/` + `src/compon
   Phase 21 (*"push nhánh phụ, không tự gộp `main`"*) đã bị lệnh này thay thế.
   ⚠️ **Phase 21 do đó lên production TRƯỚC khi Đàm nhìn ảnh nghiệm thu** — mục "chờ Đàm nhìn ảnh"
   ở phần dưới VẪN CÒN HIỆU LỰC, chỉ là nay nó nghiệm thu một thứ đang chạy thật.
-- **Trò chơi — VÒNG 21 (2026-09-01, mới nhất): "hứng thú hơn, hệ thống ĐƠN GIẢN hơn".** Bảy việc,
+- **Trò chơi — VÒNG 22 (2026-09-01, mới nhất): "hứng thú hơn, hệ thống ĐƠN GIẢN hơn".** Bảy việc,
   không việc nào thêm một khái niệm mới cho Đàm; ba việc là XOÁ hoặc HẠ.
   · **Cây kỹ năng 336 SP → 138 SP** (2/3/5/8 theo hạng). Ở nhịp ~80 SP/năm thì mở trọn cây đi từ
   **15,9 năm xuống ~1,7 năm**. Hạ giá là phép CỘNG THÊM thuần — kỹ năng đã mở giữ nguyên, SP đã
@@ -56,6 +56,12 @@ Mặt trận đang làm: **thành phố 3D** (`src/engine/city3d/` + `src/compon
   để khoe một dòng chữ vốn luôn hiện sẵn: 30,9 phút chờ trong 579 phiên.
   ⚠️ **KHÔNG làm** cái chấm chú ý theo `sp > 0`: đo lại thì `hasReadyOpportunity` ĐÃ đọc `sp` và
   gác đúng (sáng ở 2 SP, tắt ở 1 SP). Bật chấm ở 1 SP là đẩy Đàm sang màn anh không làm được gì.
+- **Thống kê — VÒNG 21 (2026-08-30, phiên khác):** gộp ba bộ lọc thời gian thành MỘT
+  (`engine/statsPeriod.js` là nguồn kỳ duy nhất, 6 kỳ theo nghĩa LỊCH — trước đó ba tab có ba mặc
+  định khác nhau nên bấm sang tab là cửa sổ thời gian âm thầm đổi); sửa lỗi NHÃN "tuần này" vốn
+  tính bằng `now − 7 ngày`; thêm dải "Điều đáng chú ý" đưa ~10 phép phân tích SẴN CÓ trong
+  `gameMath.js` ra màn hình (trước đó chúng chỉ chảy vào AI Coach, tức cần mạng + tốn tiền Gemini);
+  xoá 960 dòng code chết khỏi `StatsDashboard.jsx` (4.901 → 3.941). Xem `TECH_DEBT #93`.
 - **Giao diện — VÒNG 20 (2026-08-30):** tối giản toàn app bằng **fan-out soi song song**
   (6 nhánh chỉ-đọc soi 9 màn ở 390px, luật *không số đo = không tính*, rồi sửa TUẦN TỰ — 9 commit).
   ⚠️ **Nút chính màn Tập trung từng bị thanh tab che LẠI sau vòng 19** vì vòng 19 đo trên NGÀY CHÀO
@@ -132,7 +138,7 @@ Mặt trận đang làm: **thành phố 3D** (`src/engine/city3d/` + `src/compon
    (b) **tab Kho báu › Di vật** — fixture chưa gieo `relics`/`research` nên nó luôn hiện 0/15 và 15
    dòng "??? KHOÁ"; cái trống ấy là của CÔNG CỤ, không phải của app. Muốn soi thật thì phải thêm
    gieo `relics` vào `scripts/make-fixture.mjs` trước.
-   (c) **`refinedEarned` / `jackpot` trong fixture luôn bằng 0** (vòng 21) — `make-fixture.mjs`
+   (c) **`refinedEarned` / `jackpot` trong fixture luôn bằng 0** (vòng 22) — `make-fixture.mjs`
    không replay hai trường ấy, nên đừng đọc chúng để suy ra tần suất. Hỏi thẳng CÔNG THỨC:
    `minutes >= T2_DROP_THRESHOLD_MIN` (45') và `>= DEEP_SESSION_THRESHOLD` (60').
 1. **Kim tự tháp / ziggurat** — kỷ 2 (Ai Cập) và kỷ 3 (Iraq) đang ra mái nón nhiều cạnh,

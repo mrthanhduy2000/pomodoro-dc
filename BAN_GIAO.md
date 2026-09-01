@@ -1,4 +1,4 @@
-> Cập nhật lần cuối: **2026-09-01 (vòng 21)** — **"hứng thú hơn, hệ thống ĐƠN GIẢN hơn"** (lệnh
+> Cập nhật lần cuối: **2026-09-01 (vòng 22)** — **"hứng thú hơn, hệ thống ĐƠN GIẢN hơn"** (lệnh
 > của Đàm: *"làm cho game hứng thú và đầy dopamine hơn, làm hệ thống game đơn giản hơn nữa nhưng
 > tỷ lệ hứng thú cao hơn"*). Nguyên tắc an toàn của cả vòng: **đơn giản hoá thứ Đàm THẤY và CẢM,
 > đừng xoá thứ Đàm đã KIẾM ĐƯỢC.** Bảy việc, không việc nào thêm một khái niệm mới cho người chơi,
@@ -60,6 +60,12 @@
 > `city-preview.mjs`: **mô tả một cú pháp thì mô tả bằng LỜI, đừng dán ký tự thật vào.**
 
 > Cập nhật lần trước: **2026-08-30 (vòng 20)** — tối giản toàn app bằng **fan-out soi song song**:
+
+> Cập nhật lần trước: **2026-08-30 (vòng 21)** — màn **Thống kê**: gộp ba bộ lọc
+> thời gian làm một, sửa lỗi nhãn "tuần này", thêm dải "Điều đáng chú ý", xoá 960
+> dòng code chết. Chi tiết ở **VÒNG 21** bên dưới.
+>
+> Cập nhật lần cuối: **2026-08-30 (vòng 20)** — tối giản toàn app bằng **fan-out soi song song**:
 > 6 nhánh CHỈ ĐỌC soi 9 màn ở khung 390px thật (mỗi nhánh một màn, ảnh ra tên riêng, cấm sửa file,
 > **cấm `npm run build`** vì `dist/` dùng chung ⇒ build giữa chừng làm các nhánh đo trên hai cây mã
 > khác nhau), luật *không số đo = không tính*, rồi chấm chéo và **sửa TUẦN TỰ** — 9 việc, 9 commit.
@@ -111,6 +117,56 @@
 > **BA lần** (ô "PHIÊN 0" ở thanh đầu · câu "Bạn chưa chốt phiên nào trong hôm nay" · dòng "Phiên
 > 0/5 hôm nay" dưới đồng hồ). Bản thứ ba là bản TỐT NHẤT vì nó có mẫu số ⇒ hai bản kia nhường.
 >
+> **VÒNG 21 — MÀN THỐNG KÊ: MỘT BỘ LỌC THỜI GIAN, VÀ MỘT LỖI NHÃN ĐÃ SHIP.** Đàm hỏi *"xem lại
+> phần Thống kê … có nên sửa gì không hay big upgrade lên không?"*. Khảo sát ra ba thứ, và thứ thứ
+> hai là loại im lặng nhất: **(1)** ba tab khai BA bộ lọc thời gian riêng (`PERIODS_UI` ·
+> `FOCUS_PERIODS` · `CAT_PERIODS`), khác cả danh sách, cả nhãn, cả markup, cả MẶC ĐỊNH — Tổng Quan
+> "tuần", hai tab kia "tất cả" ⇒ **bấm sang tab khác là cửa sổ thời gian âm thầm đổi**; **(2)** tab
+> Tổng Quan tính cửa sổ bằng `now − 7×86400000` rồi dán nhãn **"tuần này"** — vào thứ Tư thì hai
+> thứ đó lệch nhau 4 ngày, mà biểu đồ cột NGAY BÊN DƯỚI lại dựng theo tuần LỊCH, nên ô số tổng và
+> bộ cột dưới nó đo hai khoảng khác nhau dưới cùng một nhãn (đúng họ lỗi NHÃN của `frame-fit.mjs`
+> — độ lớn đúng, tên sai); **(3)** `gameMath.js` có sẵn ~10 phép phân tích ĐÃ TEST, ĐÃ GÁC CỠ MẪU
+> mà màn Thống kê **không hiện một cái nào** — chúng chỉ chảy vào AI Coach, tức cần mạng và tốn
+> tiền Gemini.
+> **Đã làm:** `engine/statsPeriod.js` (nguồn kỳ DUY NHẤT, nghĩa LỊCH, 6 kỳ) + nâng trạng thái kỳ
+> lên component cha ⇒ ba tab **không thể** lệch nhau (không phải "khó lệch" — chỉ có một biến).
+> `engine/statsInsights.js` + dải **"Điều đáng chú ý"**, chỉ GỌI hàm đã có chứ không chế công thức
+> mới. Gỡ 3 props chết + 3 hằng số chết + 1 hàm chết 30 dòng + 2 helper trùng lặp + 4 import thừa.
+> ⚠️ **MỘT LỖI THẬT SUÝT SHIP, VÀ NÓ LỌT QUA CẢ LINT LẪN 11 BÀI TEST:** `getNeglectedCategory` gọi
+> `activeCategoryIds.has(...)` nên nó chờ một **Set**; tôi truyền MẢNG ⇒ `TypeError` giữa lúc
+> render, cả màn Thống kê ra **trang trắng**. Lint không có kiểu để bắt, build không quan tâm, và
+> bài test của chính tôi cũng không — vì nó chỉ đi vào nhánh KHÔNG truyền danh sách, tức đúng
+> nhánh không có lỗi. **Chỉ chạy trên fixture 624 phiên mới lộ.** Đã có bài test riêng, thử-cho-đỏ
+> xác nhận nó bắt đúng lỗi ấy.
+> ⚠️ **VÀ MỘT CHẨN ĐOÁN CỦA CHÍNH TÔI ĐÃ BỊ SỐ ĐO BÁC BỎ:** thấy `no-unused-vars` **tắt** cho mọi
+> file `.jsx`, tôi kết luận đó là lý do rác tích lại. Bật thử lên: 45 lỗi — nhưng `DisasterModal`
+> dùng `motion.` **6 lần** mà vẫn bị tố "motion không dùng", vì luật gốc không hiểu `<motion.div>`.
+> Rule tắt là cách NÉ lỗi giả, không phải cẩu thả; muốn bật thật thì cần `eslint-plugin-react`
+> (`react/jsx-uses-vars`) — một dependency, tức **quyết định của Đàm**, ghi ở `TECH_DEBT #92`.
+> Giảm nhẹ tạm: `components/statsPeriodWiring.test.js` đọc mã nguồn, cấm bảng kỳ chết và cấm tab
+> tự giữ kỳ riêng quay lại — bịt đúng chỗ vừa bị cắn, không thay được cổng toàn cục.
+> ⚠️ **FIXTURE CỦA BÀI TEST TỪNG SAI MÚI GIỜ:** dùng `d.setHours(19, ...)` là 19 giờ theo giờ MÁY
+> (UTC trong hộp cát) trong khi mã đọc `getVietnamHour` ⇒ nhóm phiên "buổi tối" rơi vào "đêm
+> khuya", và bài test khẳng định một điều về một khung giờ khác hẳn khung nó tưởng. Nó **không
+> đỏ** — nó chỉ lặng lẽ kiểm sai chỗ. Fixture nay dựng chuỗi `+07:00` tường minh.
+> ⚠️ **VÀ MỘT MẠCH RÁC LỚN HƠN NHIỀU, tìm ra bằng cách quét khai báo cấp cao nhất nào chỉ xuất
+> hiện ĐÚNG MỘT LẦN:** **bốn component chết** — `AreaChart` (600 dòng!) · `OverviewHeroMetric` ·
+> `WeekPulseList` · `TrendBadge` — cộng **rác DÂY CHUYỀN** chỉ sống nhờ chúng (6 hàm trợ giúp +
+> 7 hằng số + 2 import). `AreaChart` còn được nhắc trong **chú thích đầu file** như thể đang
+> dùng (*"3. AreaChart — dots có title tooltip, chiều cao đúng"*), tức chú thích ấy đã nói dối
+> nhiều tháng. Tổng: **4.901 → 3.941 dòng (−960, −19,6%)**.
+> ⚠️ **Bản xoá ĐẦU TIÊN sai và LINT bắt được** (34 lỗi `no-undef`): phép cắt theo cân bằng ngoặc
+> nuốt cả hằng số hàng xóm, vì `MONO_FONT` (chết) nằm NGAY DƯỚI `DISPLAY_FONT` (dùng 20+ chỗ).
+> Làm lại: hàm thì cắt theo khối, hằng số một dòng thì xoá đúng dòng và **đối chiếu lại rằng tên
+> ấy chỉ xuất hiện 1 lần trong cả file trước khi xoá**. ⇒ *xoá hàng loạt phải kiểm từng cái, và
+> phải quét LẶP LẠI cho tới khi không còn gì — rác dây chuyền chỉ lộ ra sau khi xoá vòng trước.*
+> ⚠️ **Gói tải KHÔNG nhỏ đi mấy** (115 → 123,5 KB, nhưng phần tăng là do dải insight mới): bundler
+> vốn đã tree-shake được code chết cấp module. **Cái được là khả năng bảo trì, không phải tốc độ**
+> — đừng bán chuyện này thành "app nhẹ hơn".
+> **Nghiệm thu:** ảnh chụp thật 1280px và 390px (bộ chọn 6 nút không nằm vừa cạnh tiêu đề — ảnh
+> cho thấy "Năm Nay"/"Tất Cả" bị mép phải xén, đã cho xuống hàng riêng), fixture 180 ngày/624
+> phiên. Test **1371 đạt · 1 bỏ qua · 0 hỏng** (+40 bài). Chi tiết: ADR-067 · CHANGELOG vòng 14.
+
 > **VÒNG 19 — NÚT BẮT ĐẦU LẦN ĐẦU NẰM TRÊN NẾP GẤP.** Đo ở 390px: nút chính ở y=779..822 còn thanh
 > tab NỔI bắt đầu ở y=774 ⇒ **nút bị che**. Vá bằng hai bước, tổng 92px: thu khoảng trắng quanh
 > đồng hồ (36px) + đặt **trần theo bề ngang** cho vòng đồng hồ `min(298px, 64vw)` (48px).

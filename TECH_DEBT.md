@@ -4583,6 +4583,85 @@ cấp `Math.min(3,…)` → `Math.min(9,…)` · cắt bớt danh sách cấp th
 ---
 
 
+## #93 — `buildCategoryAdvisor` (170 dòng) vẫn nằm trong file giao diện, và ĐÓ LÀ CÓ CHỦ ĐÍCH — đừng "dọn" nó xuống engine
+
+> Mở 2026-08-30, ngay sau khi chuyển thành công `summarizeFocusStats` xuống
+> `engine/statsFocus.js`. Ghi mục này để phiên sau **không mất công phân tích lại rồi đi tới cùng
+> một kết luận** — hoặc tệ hơn, đi tới kết luận ngược rồi kéo màu sắc xuống tầng engine.
+
+- **Tên**: khối sinh lời khuyên của tab Phân Loại còn ở `StatsDashboard.jsx`
+- **Module**: `src/components/StatsDashboard.jsx` (`buildCategoryAdvisor`, ~170 dòng)
+- **Priority**: Low · **Severity**: Low
+- **Impact**: 170 dòng sinh **văn bản Đàm đọc** (giọng cố vấn + tối đa 4 khuyến nghị + 3 kịch bản
+  + 3 tín hiệu) mà không có bài test nào.
+- **Root Cause / VÌ SAO KHÔNG CHUYỂN**: nó **không phải logic thuần** — nó là một *bộ dựng
+  view-model*. Đo được: mã màu dệt vào **7 chỗ** (`color: bestEfficiencyCat?.color ?? '#0ea5e9'`,
+  `uncategorizedShare >= 20 ? '#ef4444' : '#64748b'`…), có cả `icon: 'NX'/'XP'/'CB'`, và nó gọi
+  `fmtHours` — một hàm ĐỊNH DẠNG. Kéo nguyên khối xuống `engine/` là kéo bảng màu và hàm định
+  dạng xuống theo, tức phá đúng ranh giới mà `PROJECT_STRUCTURE.md` đang giữ (*"engine = logic
+  THUẦN, không JSX"*), và đi ngược bài học vừa rút ra ở `statsFocus.js` (*màu rời khỏi engine*).
+- **Current Risk**: thấp — văn bản viết dè dặt ("Thử…", "Hãy thử…"), không phát biểu như kết luận.
+  ⚠️ **Đã kiểm một nghi vấn và BÁC BỎ**: nhánh `Math.round(longestAvgCat.minutes /
+  longestAvgCat.sessions)` không có gác chia-cho-0 trong khi nhánh kế bên có
+  (`Math.max(sessions, 1)`) — bất đối xứng đáng ngờ, nhưng **không phải lỗi**:
+  `computeCategoryStats` đã lọc `sessions > 0` ở engine, và `longestAvgCat` lọc lại lần nữa. Gác
+  thừa, không phải gác thiếu.
+- **Future Risk**: trung bình — nó gác cỡ mẫu ở `totalSess < 4`, LỎNG hơn nhiều so với các tín
+  hiệu ở `gameMath.js` (cần 8–24 phiên). Tức nó có thể nói *"X mới là loại cho XP/phút tốt nhất"*
+  dựa trên 4 phiên.
+- **Recommended Solution**: **KHÔNG** chuyển nguyên khối. Nếu muốn test nó thì tách theo ĐÚNG
+  ranh giới: phần *quyết định* (chọn kịch bản nào, ngưỡng nào) xuống engine dưới dạng trả về
+  **khoá** (`'thieu-du-lieu'` · `'loang-vi-chua-phan-loai'` · …), còn phần *câu chữ + màu + icon*
+  ở lại giao diện tra theo khoá ấy. Đó cũng là cách gỡ được cái gác cỡ mẫu quá lỏng.
+- **Estimated Complexity**: trung bình (đụng văn bản người dùng đọc ⇒ phải chụp ảnh nghiệm thu).
+- **Blocking Conditions**: không có — nhưng đây là việc cải thiện cấu trúc, không phải sửa lỗi.
+- **Review Trigger**: khi có ai định "dọn nốt cho đồng bộ với `statsFocus.js`", hoặc khi cái gác
+  `totalSess < 4` sinh ra một lời khuyên sai mà Đàm để ý thấy.
+- **Owner**: chưa ai · **Status**: MỞ (có chủ đích)
+
+## #92 — `no-unused-vars` đang TẮT cho MỌI file `.jsx`, nên code chết ở cả tầng giao diện là vô hình với lint
+
+> Mở 2026-08-30, phát hiện khi đi tìm lý do ba bảng kỳ chết sống sót nhiều tháng trong
+> `StatsDashboard.jsx`. ⚠️ **Rule ấy tắt KHÔNG phải do cẩu thả — đã kiểm và phải đính chính chẩn
+> đoán đầu tiên của chính tôi.** Bật thử lên thì ra 45 lỗi, nhưng phần lớn là **BÁO NHẦM**:
+> `DisasterModal.jsx` dùng `motion.` 6 lần mà vẫn bị tố "motion không dùng", vì luật gốc
+> `no-unused-vars` không hiểu `<motion.div>` trong JSX. Tắt rule là một cách NÉ lỗi giả, không
+> phải bỏ mặc.
+
+- **Tên**: tầng `.jsx` không có cổng nào bắt biến/hằng/import chết
+- **Module**: `eslint.config.js` dòng ~53 (`'no-unused-vars': 'off'` trong khối `files: ['**/*.jsx']`)
+- **Priority**: Medium · **Severity**: Low (không gây lỗi chạy, nhưng làm rác tích lại im lặng)
+- **Impact**: đo được trong đúng MỘT file (`StatsDashboard.jsx`, trước bản vá 2026-08-30): **3 hằng
+  số chết** (`PERIODS` · `METRIC_OPTIONS` · `PERIOD_UNITS`), **1 hàm chết** 30 dòng
+  (`summarizeSessionReviews`), **3 import chết** (`useReducedMotion` · `createRichTextPreview` ·
+  `computeAllTimeStats`) — tất cả đều có TỪ TRƯỚC bản vá, không ai biết. Toàn repo: 45 lỗi thô,
+  trong đó ~30 là `motion` báo nhầm ⇒ khoảng **15 lỗi THẬT** nằm rải ở ~10 file.
+- **Root Cause**: dự án không cài `eslint-plugin-react`, nên không có `react/jsx-uses-vars` — luật
+  duy nhất dạy `no-unused-vars` rằng một định danh xuất hiện trong JSX là ĐANG ĐƯỢC DÙNG.
+- **Current Risk**: thấp. Rác không chạy thì không hỏng gì; nó chỉ làm file phình và làm phiên sau
+  tưởng một hằng số chết là đang có tác dụng (đã suýt xảy ra: `PERIODS` có 5 kỳ trong khi màn hình
+  chỉ hiện 3, đọc lướt sẽ tưởng hai kỳ kia đang ở đâu đó).
+- **Future Risk**: trung bình, và **tăng dần theo thời gian** — mỗi phiên thêm một ít rác mà không
+  có cổng nào đếm. Đây chính là cách `StatsDashboard.jsx` đi tới 4.901 dòng.
+- **Recommended Solution**: thêm `eslint-plugin-react` (devDependency, không vào bundle) và bật
+  đúng **một** luật của nó — `react/jsx-uses-vars` — rồi mở lại `no-unused-vars` cho `.jsx` với
+  cùng `varsIgnorePattern: '^[A-Z_]'` mà khối `.js` đang dùng. Sau đó dọn ~15 lỗi thật.
+  ⚠️ **ĐỪNG** bật `no-unused-vars` mà chưa có plugin ấy: 30 lỗi giả sẽ khiến người ta hoặc tắt lại
+  rule, hoặc tệ hơn là đổi `varsIgnorePattern` thành một cái rây thủng để cho qua — tức mua một
+  cổng xanh bằng cách bỏ hết răng của nó.
+- **Estimated Complexity**: nhỏ (1 dependency + 2 dòng cấu hình), nhưng phần dọn 15 lỗi chạm nhiều
+  file ở nhiều màn khác nhau nên phải đi kèm một lượt chụp ảnh nghiệm thu.
+- **Blocking Conditions**: thêm một dependency là quyết định của Đàm, không phải của phiên AI —
+  dự án có lịch sử CỐ Ý gỡ dependency cho nhẹ (Qwen/WebLLM, `@huggingface/transformers`,
+  `@anthropic-ai/sdk`). Cần Đàm đồng ý trước.
+- **Review Trigger**: lần tới có ai đụng `eslint.config.js`, hoặc khi một file `.jsx` vượt 3.000
+  dòng và cần biết bao nhiêu phần trong đó là rác.
+- **Owner**: chưa ai · **Status**: MỞ
+- **Giảm nhẹ tạm thời (đã làm 2026-08-30)**: `src/components/statsPeriodWiring.test.js` đọc mã
+  nguồn và cấm bảng kỳ chết quay lại **trong riêng màn Thống kê**. Nó KHÔNG thay được cái cổng
+  toàn cục — nó chỉ bịt đúng chỗ vừa bị cắn, đúng tinh thần *"một bài học được ghi ra không chặn
+  được gì; chỉ một bài TEST mới chặn được"*.
+
 ## #91 — Bài test canh khung bóng đổ CHÉP TAY hệ số `0,8` thay vì đọc từ mã, nên nó xanh kể cả khi mã dùng một `reach` khác
 
 > Mở 2026-08-28, phát hiện trong lúc gộp nhánh Phase 19–21 vào `main`. Suýt cắn thật: phép gộp có

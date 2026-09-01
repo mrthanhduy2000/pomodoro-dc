@@ -1465,6 +1465,46 @@ export default function PomodoroEngine({
             </ActionButton>
           )}
 
+          {/*
+            ⚠️ CHIP MỤC TIÊU GẦN ĐÂY NAY NẰM TRÊN NẾP GẤP — TRƯỚC ĐÓ CHÚNG Ở y≈900, DƯỚI THANH
+            ĐIỀU HƯỚNG. Đây là bản vá cho ma sát lớn nhất của cả app.
+            Đo ở khung 390×844 thật (thanh điều hướng bắt đầu ở y=774): nút chính ở y=661 ghi
+            "Điền mục tiêu →" — một nút chỉ để CUỘN — còn ô nhập bắt buộc ở **y=934**, tức dưới
+            nếp gấp 160px. Nên mỗi phiên, việc quan trọng nhất của cả app tốn: bấm nút cuộn → gõ
+            đủ 10 ký tự → cuộn ngược lên → bấm Bắt đầu.
+            `pickRecentGoals` vốn đã chỉ trả về mục tiêu ĐỦ DÀI (bấm cái nào cũng mở được nút
+            ngay), nhưng chúng bị chôn cùng chỗ với ô nhập nên gần như không ai thấy. Đưa lên đây
+            thì đường ngắn nhất còn **hai cú chạm, không gõ chữ nào, không cuộn**.
+            ⚠️ LUẬT KHÔNG BỊ NỚI: vẫn phải đủ 10 ký tự mới bắt đầu được — chip chỉ bỏ việc GÕ LẠI.
+            ⚠️ VÀ KHÔNG TỰ ĐIỀN GIÙM. Mục tiêu được chấm thưởng khi đạt và được AI Coach đọc, nên
+            gán ngầm mục tiêu hôm qua cho phiên hôm nay là nói dối thay Đàm. Anh vẫn phải CHỌN, và
+            nhìn thấy mình vừa chọn cái gì.
+          */}
+          {!isBreakMode && timerState === TIMER_STATES.IDLE && !isSessionGoalValid && recentGoals.length > 0 && (
+            <div className="mb-2 w-full">
+              <p className="mono mb-1.5 text-[10px] uppercase tracking-[0.2em]" style={{ color: 'var(--muted-2)' }}>
+                Mục tiêu gần đây
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {recentGoals.map((goal) => (
+                  <button
+                    key={goal}
+                    type="button"
+                    onClick={() => setPendingSessionGoal(goal)}
+                    className="max-w-full truncate rounded-full px-2.5 py-1 text-[11px] transition-colors"
+                    style={{
+                      background: 'rgba(var(--accent-rgb), 0.08)',
+                      border: '1px solid rgba(var(--accent-rgb), 0.18)',
+                      color: 'var(--accent2)',
+                    }}
+                  >
+                    {goal}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {!isBreakMode && timerState === TIMER_STATES.IDLE && (
             <motion.div
               key="start"
@@ -1678,42 +1718,17 @@ export default function PomodoroEngine({
         ? `mx-auto max-w-[760px] lg:max-w-[780px] ${showShortcutHint ? 'pt-0' : 'pt-6 lg:pt-8'}`
         : ''
     }`}>
-      <div className={`w-full border backdrop-blur-2xl ${
-        useImmersiveHeroLayout
-          ? 'bg-white/[0.045] border-white/[0.10] px-4 py-4 shadow-[0_12px_28px_rgba(15,23,42,0.10)]'
-          : 'bg-white/[0.04] border-white/[0.09] px-3.5 py-3 shadow-[0_8px_22px_rgba(15,23,42,0.08)]'
-      }`} style={{ borderRadius: 'var(--skin-radius-card, 18px)', ...paperCardStyle }}>
-        <button
-          type="button"
-          onClick={() => setNoteExpanded((v) => !v)}
-          className="flex w-full items-center justify-between gap-2 px-0.5 text-left"
-          aria-expanded={noteExpanded}
-        >
-          <span className={`mono text-[10px] uppercase tracking-[0.2em] ${
-            lightTheme ? 'text-[var(--muted-2)]' : 'text-slate-500'
-          }`}>
-            Ghi chú phiên{!noteExpanded && noteWordCount > 0 ? ` · ${noteWordCount} từ` : ''}
-          </span>
-          <span className={`mono text-[10px] uppercase tracking-[0.16em] ${lightTheme ? 'text-[var(--muted)]' : 'text-slate-400'}`}>
-            {noteExpanded ? 'Thu gọn ▴' : 'Mở ▾'}
-          </span>
-        </button>
-        {noteExpanded && (
-          <div className="mt-2.5">
-            <RichNoteEditor
-              value={pendingNote}
-              onChange={(nextNote) => setPendingNote(trimRichTextToWordLimit(nextNote, NOTE_WORD_LIMIT))}
-              rows={4}
-              maxWords={NOTE_WORD_LIMIT}
-              wordCount={noteWordCount}
-              lightTheme={lightTheme}
-              inputStyle={paperInputStyle}
-              placeholder="Bạn đang nghĩ gì, đang kẹt ở đâu, hay cần chốt ý nào trước khi vào nhịp sâu?"
-            />
-          </div>
-        )}
-      </div>
-
+      {/*
+        ⚠️ THỨ TỰ HAI KHỐI NÀY ĐÃ ĐẢO (2026-09-01), VÀ ĐÓ LÀ MỘT LỖI BỐ CỤC CÓ SỐ ĐO.
+        Ô "Mục tiêu phiên" là thứ BẮT BUỘC (10 ký tự, không có nó thì nút Bắt đầu không bật), còn
+        "Ghi chú phiên" là một accordion TUỲ CHỌN đang đóng. Vậy mà cái tuỳ chọn lại nằm CHEN GIỮA
+        nút bấm và cái bắt buộc. Đo ở khung 390×844 thật: nút chính ở y=661, ô mục tiêu ở **y=934**
+        — tức dưới nếp gấp (thanh điều hướng bắt đầu ở y=774) đúng **160px**.
+        Hậu quả: mỗi lần muốn tập trung, Đàm phải bấm "Điền mục tiêu →" (một nút chỉ để CUỘN), gõ,
+        rồi cuộn ngược lên bấm "Bắt đầu". Ba thao tác cho việc quan trọng nhất của cả app, mỗi
+        phiên một lần, mãi mãi.
+        ⚠️ LUẬT KHÔNG BỊ NỚI — vẫn phải đủ 10 ký tự. Thứ bị gỡ là quãng ĐI LẠI, không phải cái cổng.
+      */}
       {isIdle && !isBreakMode && (
       <div className="w-full px-3.5 py-3 backdrop-blur-2xl bg-white/[0.045] border border-white/[0.10] shadow-[0_12px_28px_rgba(15,23,42,0.10)]" style={{ borderRadius: 'var(--skin-radius-card, 18px)', ...paperCardStyle }}>
         <div className="flex items-start justify-between gap-3 px-0.5">
@@ -1733,15 +1748,22 @@ export default function PomodoroEngine({
               cho một Ô KHÁC (accordion "Ghi chú phiên" ở phía trên, đang đóng) — luật chỉ dùng lúc
               sắp hành động thì phải nói NGAY TẠI chỗ hành động, không nói ở đầu một thẻ khác.
             */}
-            <p className={`mono text-[10px] uppercase tracking-[0.2em] ${
-              lightTheme ? 'text-[var(--muted-2)]' : 'text-slate-500'
-            }`}>
-              Chuẩn bị phiên
-            </p>
+            {/*
+              ⚠️ HAI NHÃN NỮA ĐÃ GỠ (2026-09-01) — thẻ này nói ĐÚNG MỘT ĐIỀU tới BỐN lần trong
+              ~170px, ngay trên nếp gấp của màn hình Đàm mở nhiều nhất:
+                1. eyebrow "CHUẨN BỊ PHIÊN"                                          ← GỠ
+                2. chip trạng thái "Chưa đặt mục tiêu"                                ← GỠ
+                3. huy hiệu "BẮT BUỘC" + nhãn "MỤC TIÊU PHIÊN" + bộ đếm "0/10"        ← giữ
+                4. câu "Phiên này bạn định chốt xong việc gì? Viết một dòng từ 10 ký tự…" ← giữ
+              (1) là TÊN CỦA THẺ, mà thẻ này chỉ chứa đúng một thứ và thứ ấy đã tự xưng tên ngay
+              dưới ("MỤC TIÊU PHIÊN"). (2) là trạng thái, mà bộ đếm "0/10" ở cách đó 40px nói cùng
+              điều ấy VÀ có mẫu số — nó cho biết còn bao xa, cái chip thì không.
+              ⚠️ VÌ SAO ĐÁNG GỠ, KHÔNG PHẢI VÌ GỌN: ô nhập bắt buộc này nằm ở y=873 trong khi thanh
+              điều hướng bắt đầu ở y=774 — nó ở DƯỚI nếp gấp, nên mỗi phiên Đàm phải bấm một nút
+              chỉ-để-cuộn rồi cuộn ngược lại. Mỗi ~40px lấy lại được ở đây là 40px đưa ô ấy lên
+              chỗ nhìn thấy.
+            */}
           </div>
-          <span className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-semibold ${goalBadgeClass}`}>
-            {sessionPrepStatusLabel}
-          </span>
         </div>
 
         <Motion.div
@@ -1826,25 +1848,12 @@ export default function PomodoroEngine({
               không bỏ luật. `pickRecentGoals` chỉ trả mục tiêu ĐỦ DÀI, nên bấm cái nào cũng mở
               được nút ngay — gợi ý một chuỗi bấm vào vẫn không dùng được là một cái bẫy.
             */}
-            {recentGoals.length > 0 && (
-              <div className="mt-2 flex flex-wrap gap-1.5">
-                {recentGoals.map((goal) => (
-                  <button
-                    key={goal}
-                    type="button"
-                    onClick={() => setPendingSessionGoal(goal)}
-                    className="max-w-full truncate rounded-full px-2.5 py-1 text-[11px] transition-colors"
-                    style={{
-                      background: 'rgba(var(--accent-rgb), 0.08)',
-                      border: '1px solid rgba(var(--accent-rgb), 0.18)',
-                      color: 'var(--accent2)',
-                    }}
-                  >
-                    {goal}
-                  </button>
-                ))}
-              </div>
-            )}
+            {/*
+              ⚠️ BẢN CHIP Ở ĐÂY ĐÃ GỠ (2026-09-01) — chúng nay nằm TRÊN NẾP GẤP, ngay trên nút
+              chính (xem chú thích ở hàng nút). Giữ cả hai là in cùng một hàng chip hai lần trên
+              một màn hình, mà bản ở đây thì chỉ thấy được sau khi đã cuộn xuống — tức nó chỉ hữu
+              ích cho người đã đi hết quãng đường mà bản kia sinh ra để xoá.
+            */}
             <div className="mt-2 flex items-start justify-between gap-3">
               <p className={`max-w-[32rem] text-[11px] leading-5 ${goalHintClass}`}>
                 {sessionGoalHint(goalState, 'compact')}
@@ -1867,6 +1876,42 @@ export default function PomodoroEngine({
         </Motion.div>
       </div>
       )}
+
+      <div className={`w-full border backdrop-blur-2xl ${
+        useImmersiveHeroLayout
+          ? 'bg-white/[0.045] border-white/[0.10] px-4 py-4 shadow-[0_12px_28px_rgba(15,23,42,0.10)]'
+          : 'bg-white/[0.04] border-white/[0.09] px-3.5 py-3 shadow-[0_8px_22px_rgba(15,23,42,0.08)]'
+      }`} style={{ borderRadius: 'var(--skin-radius-card, 18px)', ...paperCardStyle }}>
+        <button
+          type="button"
+          onClick={() => setNoteExpanded((v) => !v)}
+          className="flex w-full items-center justify-between gap-2 px-0.5 text-left"
+          aria-expanded={noteExpanded}
+        >
+          <span className={`mono text-[10px] uppercase tracking-[0.2em] ${
+            lightTheme ? 'text-[var(--muted-2)]' : 'text-slate-500'
+          }`}>
+            Ghi chú phiên{!noteExpanded && noteWordCount > 0 ? ` · ${noteWordCount} từ` : ''}
+          </span>
+          <span className={`mono text-[10px] uppercase tracking-[0.16em] ${lightTheme ? 'text-[var(--muted)]' : 'text-slate-400'}`}>
+            {noteExpanded ? 'Thu gọn ▴' : 'Mở ▾'}
+          </span>
+        </button>
+        {noteExpanded && (
+          <div className="mt-2.5">
+            <RichNoteEditor
+              value={pendingNote}
+              onChange={(nextNote) => setPendingNote(trimRichTextToWordLimit(nextNote, NOTE_WORD_LIMIT))}
+              rows={4}
+              maxWords={NOTE_WORD_LIMIT}
+              wordCount={noteWordCount}
+              lightTheme={lightTheme}
+              inputStyle={paperInputStyle}
+              placeholder="Bạn đang nghĩ gì, đang kẹt ở đâu, hay cần chốt ý nào trước khi vào nhịp sâu?"
+            />
+          </div>
+        )}
+      </div>
 
       {!immersiveMode && (
         <AnimatePresence initial={false}>

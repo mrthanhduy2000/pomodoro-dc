@@ -132,6 +132,7 @@ import {
 } from '../engine/gameMath';
 import { inferAchievementUnlockTimes } from '../engine/achievementTimeline';
 import { countRichTextWords } from '../utils/richText';
+import soundEngine from '../engine/soundEngine';
 import {
   detectEraCrisis,
   createEraCrisisState,
@@ -5246,8 +5247,22 @@ const useGameStore = create(
           };
         }),
 
-      startBreak: (breakInput) =>
-        set((prev) => {
+      /**
+       * ⚠️ TIẾNG VÀO NGHỈ (2026-09-01). `soundEngine.playBreakStart()` viết xong từ lâu với **0
+       * nơi gọi**, trong khi chuyển sang chế độ nghỉ là lần DUY NHẤT app TỰ chiếm màn hình mà
+       * không ai bấm gì — và nó làm việc đó hoàn toàn im lặng. Một màn hình tự đổi mà không có
+       * tín hiệu nào là chỗ dễ làm người ta giật mình nhất.
+       *
+       * ⚠️ GỌI NGOÀI `set(...)`, KHÔNG GỌI TRONG. Hàm cập nhật của zustand có thể chạy nhiều lần
+       * cho một lần gọi (StrictMode gọi đôi), nên nhét một tác dụng phụ vào trong là mở đường
+       * cho tiếng kêu hai lần.
+       * ⚠️ GỌI Ở STORE, KHÔNG RẮC VÀO BA CHỖ GỌI `startBreak` — bịt ba chỗ thì chỗ thứ tư viết
+       * sau này sẽ quên (bài học "bịt mười lăm chỗ thì chỗ thứ mười sáu quên").
+       * ⚠️ Gác `isOnBreak`: gọi lại lúc ĐANG nghỉ thì không kêu thêm lần nữa.
+       */
+      startBreak: (breakInput) => {
+        if (!get().ui.isOnBreak) soundEngine.playBreakStart();
+        return set((prev) => {
           const breakConfig = typeof breakInput === 'number'
             ? { durationMinutes: breakInput, isLong: false }
             : (breakInput ?? {});
@@ -5286,7 +5301,8 @@ const useGameStore = create(
               breakCompletedOnTime: false,
             },
           };
-        }),
+        });
+      },
 
       tickBreak: () => get().syncBreakSession(),
 

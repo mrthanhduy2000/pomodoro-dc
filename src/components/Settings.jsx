@@ -537,9 +537,10 @@ export default function Settings() {
                     }}
                   >
                     <p className="text-xs font-semibold" style={lightTheme ? { color: '#1f1e1d' } : { color: 'var(--ink-2)' }}>Âm thanh Pomodoro</p>
-                    <p className="mt-1 text-[11px] leading-relaxed" style={lightTheme ? { color: '#6a6862' } : { color: 'var(--muted-2)' }}>
-                      Trong lúc tập trung, trò chơi chỉ phát tiếng khi bắt đầu phiên, trong 10 giây cuối và khi phiên kết thúc.
-                    </p>
+                    {/* ⚠️ ĐÃ GỠ câu tả tiếng bằng chữ (2026-09-01): "Trong lúc tập trung, trò chơi
+                        chỉ phát tiếng khi bắt đầu phiên, trong 10 giây cuối và khi phiên kết thúc."
+                        Tả một âm thanh bằng 105 ký tự là chỗ dở nhất để tiêu chữ — nay bấm vào một
+                        gói là NGHE được nó, nên chữ ấy hết việc. */}
                   </div>
                 </motion.div>
               )}
@@ -551,7 +552,7 @@ export default function Settings() {
           <SectionHeader
             lightTheme={lightTheme}
             title="Gói âm thanh"
-            description="Mỗi pack đổi chất liệu tiếng báo, không đổi bố cục hay nhịp vận hành."
+            description="Chạm để nghe thử."
           />
 
           <div className="mt-4 grid grid-cols-2 gap-2">

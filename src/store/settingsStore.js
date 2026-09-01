@@ -208,9 +208,23 @@ const useSettingsStore = create(
 
       setUiSkin: (skin) => set({ uiSkin: normalizeUiSkin(skin) }),
 
+      /**
+       * ⚠️ BẤM CHỌN GÓI = NGHE THỬ LUÔN (2026-09-01). Trước đây bốn gói âm thanh đứng cạnh nhau
+       * mà bấm vào **không nghe được gì** — Đàm phải bắt đầu một phiên thật mới biết mình vừa
+       * chọn cái gì. Chỗ trống ấy được lấp bằng CHỮ: 174 ký tự / 93px tả tiếng bằng lời
+       * ("Mỗi pack đổi chất liệu tiếng báo…"). Nay chính cú bấm là cú nghe thử, và hai câu tả
+       * kia đã gỡ ⇒ đây là phép ĐỔI CHỮ LẤY TIẾNG, không phải phép thêm.
+       *
+       * ⚠️ ĐẶT Ở STORE, KHÔNG ĐẶT Ở `.jsx`: mọi chỗ đổi gói đều phải kêu, và một luật thì chỉ
+       * được có một công thức.
+       * ⚠️ PHẢI GỌI SAU `setPack` — gọi trước thì nghe tiếng của gói CŨ, đúng loại lỗi im lặng
+       * mà không cổng nào bắt được.
+       * `playSessionStart` là tiếng ngắn nhất bảng (0,18–0,20 giây) — đúng cỡ một tiếng thử.
+       */
       setSoundPack: (pack) => {
         soundEngine.setPack(pack);
         set({ soundPack: pack });
+        soundEngine.playSessionStart();
       },
 
       setShortBreakDuration: (n) => set({ shortBreakDuration: Math.min(60, Math.max(1, n)) }),

@@ -30,7 +30,6 @@ import {
 import {
   getRewardTier,
   tierFromAchievementTier,
-  tierFromMissionBucket,
   tierFromSessionMultiplier,
 } from './rewardTiers.js';
 
@@ -51,7 +50,7 @@ const ACHIEVEMENT_LOOKUP = Object.fromEntries(ACHIEVEMENTS.map((a) => [a.id, a])
  * Một chồng toast chỉ đọc được khi vị trí ổn định — thứ vừa xảy ra (tổng kết
  * phiên) luôn ở trên cùng, thứ hiếm nhất (di vật) ngay dưới.
  */
-const SOURCE_ORDER = ['weekly', 'loot', 'milestone', 'relic', 'level', 'rank', 'achievement', 'mission'];
+const SOURCE_ORDER = ['weekly', 'loot', 'milestone', 'relic', 'level', 'achievement'];
 
 function sourceRank(source) {
   const index = SOURCE_ORDER.indexOf(source);
@@ -220,20 +219,6 @@ function buildLevelToast(entry) {
   };
 }
 
-function buildRankToast(rankUp) {
-  if (!rankUp?.rankLabel) return null;
-  return {
-    id: `rank:${rankUp.rankLabel}`,
-    source: 'rank',
-    key: rankUp.rankLabel,
-    icon: rankUp.rankIcon ?? '🎖️',
-    name: rankUp.rankLabel,
-    tier: 'hiem',
-    description: 'Đã hoàn thành thử thách danh xưng.',
-    amount: null,
-    action: { tab: 'skills' },
-  };
-}
 
 function buildAchievementToast(id) {
   const ach = ACHIEVEMENT_LOOKUP[id];
@@ -251,21 +236,6 @@ function buildAchievementToast(id) {
   };
 }
 
-function buildMissionToast(id, missionList) {
-  const mission = (missionList ?? []).find((item) => item?.id === id);
-  if (!mission) return null;
-  return {
-    id: `mission:${id}`,
-    source: 'mission',
-    key: id,
-    icon: '✅',
-    name: mission.label ?? 'Nhiệm vụ đã xong',
-    tier: tierFromMissionBucket(mission.bucket),
-    description: 'Nhiệm vụ ngày đã hoàn thành.',
-    amount: mission.rewardXP > 0 ? `+${mission.rewardXP} XP` : null,
-    action: { tab: 'skills' },
-  };
-}
 
 /**
  * Bản vẽ vừa nghiên cứu xong. Store ghi nó vào `notificationFeed` (hộp thư), chứ
@@ -334,24 +304,49 @@ export function buildBlueprintToast(blueprint) {
  * Dựng danh sách toast từ trạng thái `ui` mà store đã ghi.
  * THUẦN: cùng đầu vào ⇒ cùng đầu ra, không đọc đồng hồ, không đọc store.
  *
+ * ⚠️ Tham số `missions` ĐÃ BỎ (2026-09-01): nó chỉ tồn tại để tra tên nhiệm vụ cho thẻ
+ * `mission`, mà nguồn ấy nay đi qua tab "Nhiệm vụ". Giữ lại một tham số không ai đọc là mời
+ * người sau truyền nhầm vị trí cho `extras`.
+ *
  * @param {object} ui        - `state.ui`
- * @param {object} missions  - `state.missions` (cần `list` để lấy tên nhiệm vụ)
  * @returns {Array} danh sách thẻ, đã xếp theo `SOURCE_ORDER`
  */
 /**
  * @param {object} [extras] tin ngoài `ui`. `stageHint`: câu về cột mốc sắp tới, chỉ truyền khi
  *   CÒN ≤1 PHIÊN là tới — xem `buildLootToast`.
  */
-export function buildRewardToasts(ui = {}, missions = {}, extras = {}) {
+/*
+  ⚠️ BA NGUỒN ĐÃ RỜI KHỎI CHỒNG THẺ (2026-09-01) — VÌ CHÚNG ĐÃ CÓ MỘT KÊNH BỀN RIÊNG.
+  Đo ca xấu nhất hợp lý (lên cấp + 2 thành tích + xong nhiệm vụ + mốc chuỗi + di vật + tổng kết
+  tuần): **8 thẻ · 87 từ · 12 giây thẻ nối đuôi nhau**, mà trần 3 thẻ KHÔNG cắt gì — nó chỉ HOÃN.
+  Và thứ tự cũ đặt «tổng kết tuần» LÊN ĐẦU, tức một bản báo cáo đọc lúc nào cũng được đứng trước
+  cả phiên vừa xong lẫn DI VẬT — phần thưởng hiếm nhất game, thứ bị đẩy xuống thẻ số 4 nên không
+  nằm trong ba thẻ được hiện.
+
+  Ba nguồn bị cắt, mỗi cái đã có chỗ nói KHÔNG hết hạn:
+   · `rank`    → CÙNG sự kiện đã được đẩy vào chuông (`makeRankUpFeedNotification`,
+     `gameStore.js`) ⇒ nó đang được kể HAI lần cho một lần xảy ra.
+   · `mission` → tab "Nhiệm vụ" là nút thứ 2/5 của thanh dưới và hiện tiến độ SỐNG của từng
+     nhiệm vụ (đo được 4 chỉ số ngay trên màn ấy); nhiệm vụ ngày xong gần như MỖI NGÀY, tức đây
+     là nguồn thường xuyên nhất và ít bất ngờ nhất trong chồng.
+
+  ⚠️ GIỮ `weekly` DÙ NÓ CŨNG CÓ CHẤM BỀN. Đã định cắt nó và đã đổi ý sau khi đọc chính bài test
+  của nó: thẻ này đến ĐÚNG MỘT LẦN MỖI TUẦN và không thể tự đến lần thứ hai. Một nhịp mỗi tuần là
+  thứ ĐỐI LẬP với lạm phát thông tin — cắt nó là cắt một khoảnh khắc, không phải cắt tiếng ồn.
+  ⚠️ GIỮ `achievement` dù nó cũng có chấm riêng (`navAttention.js`). Cái chấm 6px trả lời "có
+  việc"; nó KHÔNG phải một lời chúc mừng — mà mở khoá một thành tích đúng là khoảnh khắc đáng ăn
+  mừng. Vòng này Đàm xin THÊM hứng thú, nên chỗ cắt phải là chỗ LẶP, không phải chỗ VUI.
+
+  ⚠️ Mọi hàm `dismiss*` GIỮ NGUYÊN — chúng vẫn được gọi khi Đàm xem kênh bền.
+*/
+export function buildRewardToasts(ui = {}, extras = {}) {
   const toasts = [
     buildWeeklyToast(ui.weeklyReportPending),
     buildLootToast(ui.lootModalOpen ? ui.pendingReward : null, extras.stageHint ?? null),
     buildMilestoneToast(ui.lootModalOpen ? ui.pendingReward : null),
     buildRelicToast(ui.relicNotification),
     buildLevelToast((ui.levelUpQueue ?? [])[0]),
-    buildRankToast(ui.rankUpNotification),
     ...(ui.achievementQueue ?? []).map(buildAchievementToast),
-    ...(ui.missionCompletedIds ?? []).map((id) => buildMissionToast(id, missions.list)),
   ].filter(Boolean);
 
   // Sắp xếp ỔN ĐỊNH theo nguồn: `sort` của JS đã ổn định từ ES2019 nên thứ tự

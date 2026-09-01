@@ -90,7 +90,6 @@ function ToastItem({ toast, paused, enterMotion, onDismiss, onOpen }) {
  */
 export default function RewardToastHost({ paused = false, onNavigate, onOpenDetail }) {
   const ui = useGameStore((s) => s.ui);
-  const missions = useGameStore((s) => s.missions);
   // ⚠️ DÙNG CHUNG hook với dòng ở màn Tập trung — một luật một công thức. Chép lại phép tính chặng
   // xuống đây là cách hai chỗ nói hai con số khác nhau về cùng một cột mốc.
   // ⚠️ CHỈ lấy trạng thái `imminent`. Trạng thái `celebrate` thì dòng ở màn Tập trung đã lo, mà
@@ -107,7 +106,7 @@ export default function RewardToastHost({ paused = false, onNavigate, onOpenDeta
   const openWeeklyReport = useGameStore((s) => s.openWeeklyReport);
   const enterMotion = useEnterMotion();
 
-  const toasts = useMemo(() => buildRewardToasts(ui, missions, { stageHint }), [ui, missions, stageHint]);
+  const toasts = useMemo(() => buildRewardToasts(ui, { stageHint }), [ui, stageHint]);
   const { shown, hidden, overflowLabel } = splitRewardToasts(toasts);
   // Khoá ổn định cho effect âm thanh: chuỗi id của đúng những thẻ ĐANG HIỆN.
   const shownIds = shown.map((t) => t.id);

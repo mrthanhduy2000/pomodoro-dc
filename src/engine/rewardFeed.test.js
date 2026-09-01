@@ -35,7 +35,7 @@ function ui(extra = {}) {
 }
 
 test('trạng thái sạch không sinh toast nào', () => {
-  assert.deepEqual(buildRewardToasts(ui(), MISSIONS), []);
+  assert.deepEqual(buildRewardToasts(ui()), []);
   // Gọi trần cũng không được ném — nó chạy trong đường vẽ của mọi khung hình.
   assert.deepEqual(buildRewardToasts(), []);
 });
@@ -52,7 +52,7 @@ test('phiên thường + di vật ⇒ hai toast, KHÔNG có gì đòi chặn mà
       totalSessionXP: 120, multiplier: 1.0, resources: { go: 3 }, rpEarned: 4, eraChanged: false,
     },
     relicNotification: RELIC,
-  }), MISSIONS);
+  }));
 
   assert.equal(toasts.length, 2);
   assert.equal(toasts[0].source, 'loot');
@@ -69,7 +69,7 @@ test('lên kỷ KHÔNG sinh toast tổng kết — hộp thoại giữ nguyên v
   const toasts = buildRewardToasts(ui({
     lootModalOpen: true,
     pendingReward: { totalSessionXP: 300, multiplier: 2, eraChanged: true, newBook: 3 },
-  }), MISSIONS);
+  }));
 
   assert.equal(toasts.filter((t) => t.source === 'loot').length, 0);
 });
@@ -78,7 +78,7 @@ test('hộp thoại phần thưởng đã đóng thì không còn toast tổng k
   const toasts = buildRewardToasts(ui({
     lootModalOpen: false,
     pendingReward: { totalSessionXP: 120, multiplier: 1 },
-  }), MISSIONS);
+  }));
   assert.equal(toasts.length, 0);
 });
 
@@ -90,13 +90,19 @@ test('thành tích và nhiệm vụ lấy tên + bậc từ bảng THẬT, khôn
   const toasts = buildRewardToasts(ui({
     achievementQueue: [gold.id, bronze.id],
     missionCompletedIds: [mission.id],
-  }), MISSIONS);
+  }));
 
   const byId = Object.fromEntries(toasts.map((t) => [t.id, t]));
   assert.equal(byId[`achievement:${gold.id}`].name, gold.label);
   assert.equal(byId[`achievement:${gold.id}`].tier, 'hiem');
   assert.equal(byId[`achievement:${bronze.id}`].tier, 'thuong');
-  assert.equal(byId[`mission:${mission.id}`].name, mission.label);
+  // ⚠️ NHIỆM VỤ NGÀY ĐÃ RỜI KHỎI CHỒNG THẺ (2026-09-01) — nó xong gần như MỖI NGÀY, tức là nguồn
+  // thường xuyên nhất và ít bất ngờ nhất, mà tab "Nhiệm vụ" (nút thứ 2/5 thanh dưới) đã hiện tiến
+  // độ SỐNG của từng nhiệm vụ. Bài này nay khoá điều NGƯỢC LẠI: nó không được quay lại.
+  assert.equal(
+    byId[`mission:${mission.id}`], undefined,
+    'nhiệm vụ ngày lại sinh thẻ toast — mỗi ngày một lần thì đó là tiếng ồn, không phải tin',
+  );
 
   // Thứ tự trong CÙNG một nguồn giữ nguyên thứ tự store ghi (sort ổn định).
   const achOrder = toasts.filter((t) => t.source === 'achievement').map((t) => t.key);
@@ -107,7 +113,7 @@ test('id lạ bị bỏ qua, không dựng thẻ rỗng', () => {
   const toasts = buildRewardToasts(ui({
     achievementQueue: ['khong_ton_tai'],
     missionCompletedIds: ['cung_khong_ton_tai'],
-  }), MISSIONS);
+  }));
   assert.deepEqual(toasts, []);
 });
 
@@ -124,11 +130,11 @@ test('thứ tự xếp theo nguồn — vị trí thẻ không nhảy khi phần
     levelUpQueue: [{ levelsGained: 1, newLevel: 7, spGained: 2 }],
     achievementQueue: [ACHIEVEMENTS[0].id],
     missionCompletedIds: [MISSIONS.list[0].id],
-  }), MISSIONS);
+  }));
 
   assert.deepEqual(
     toasts.map((t) => t.source),
-    ['loot', 'relic', 'level', 'achievement', 'mission'],
+    ['loot', 'relic', 'level', 'achievement'],
   );
 });
 
@@ -141,7 +147,7 @@ test('mỗi thẻ có id DUY NHẤT — chồng toast không thể vẽ trùng k
     rankUpNotification: { rankLabel: 'Tân Binh', rankIcon: '🎖️' },
     achievementQueue: ACHIEVEMENTS.slice(0, 4).map((a) => a.id),
     missionCompletedIds: MISSIONS.list.map((m) => m.id),
-  }), MISSIONS);
+  }));
 
   const ids = toasts.map((t) => t.id);
   assert.equal(new Set(ids).size, ids.length, `id trùng: ${ids.join(' · ')}`);
@@ -155,7 +161,7 @@ test('quá 3 thẻ thì phần dư gộp thành MỘT dòng, và con số khớp
     relicNotification: RELIC,
     levelUpQueue: [{ levelsGained: 1, newLevel: 3, spGained: 1 }],
     achievementQueue: ACHIEVEMENTS.slice(0, 3).map((a) => a.id),
-  }), MISSIONS);
+  }));
 
   const { shown, hidden, overflowLabel } = splitRewardToasts(toasts);
   assert.equal(shown.length, MAX_REWARD_TOASTS);
@@ -184,7 +190,7 @@ const PHIEN_THUONG = {
 };
 
 test('không có mốc sắp tới ⇒ thẻ phiên vẫn đếm tài nguyên như cũ', () => {
-  const [loot] = buildRewardToasts(PHIEN_THUONG, {}).filter((t) => t.source === 'loot');
+  const [loot] = buildRewardToasts(PHIEN_THUONG).filter((t) => t.source === 'loot');
   assert.ok(loot, 'mất luôn thẻ tổng kết phiên');
   assert.match(loot.description, /tài nguyên/, 'không có mốc mà đã thôi nói tài nguyên');
 });
@@ -193,7 +199,7 @@ test('sắp tới mốc ⇒ thẻ phiên NÓI VỀ MỐC thay vì đếm tài ng
   // ⚠️ THAY chứ không NỐI: `description` của `RewardCard` chỉ được ĐÚNG MỘT DÒNG, nối thêm thì bị
   // cắt bằng "…" và mất đúng phần đáng đọc. Thứ bị thay là con số Đàm không dùng để quyết gì.
   const hint = 'Một phiên nữa là tới «Khám Phá Tân Thế Giới»';
-  const [loot] = buildRewardToasts(PHIEN_THUONG, {}, { stageHint: hint }).filter((t) => t.source === 'loot');
+  const [loot] = buildRewardToasts(PHIEN_THUONG, { stageHint: hint }).filter((t) => t.source === 'loot');
   assert.equal(loot.description, hint);
   assert.ok(!/tài nguyên/.test(loot.description), 'vẫn còn đếm tài nguyên ⇒ đang NỐI chứ không THAY');
   // Mọi thứ khác của thẻ phải y nguyên — đây chỉ là đổi một dòng chữ, không đổi luật thưởng.
@@ -233,7 +239,7 @@ const PHIEN_CO_SU_KIEN = {
 };
 
 test('có sự kiện ⇒ thẻ mang TÊN và ICON của sự kiện, không phải "Phiên đã xong"', () => {
-  const [loot] = buildRewardToasts(PHIEN_CO_SU_KIEN, {}).filter((t) => t.source === 'loot');
+  const [loot] = buildRewardToasts(PHIEN_CO_SU_KIEN).filter((t) => t.source === 'loot');
   assert.ok(loot, 'mất luôn thẻ tổng kết phiên');
   assert.equal(loot.name, 'Đột Phá!', 'thẻ vẫn dùng nhãn chung ⇒ câu chuyện của phiên bị xoá');
   assert.equal(loot.icon, '💡', 'vẫn dùng icon quà chung ⇒ mọi phiên trông giống hệt nhau');
@@ -243,7 +249,7 @@ test('có sự kiện ⇒ thẻ mang TÊN và ICON của sự kiện, không ph�
 
 test('KHÔNG có sự kiện ⇒ giữ nguyên thẻ chung như cũ', () => {
   // Đối chứng: bản vá chỉ được đổi hành vi ở nhánh CÓ sự kiện. 37% số phiên còn lại phải y hệt.
-  const [loot] = buildRewardToasts(PHIEN_THUONG, {}).filter((t) => t.source === 'loot');
+  const [loot] = buildRewardToasts(PHIEN_THUONG).filter((t) => t.source === 'loot');
   assert.equal(loot.name, 'Phiên đã xong');
   assert.equal(loot.icon, '🎁');
   assert.match(loot.description, /tài nguyên/);
@@ -253,7 +259,7 @@ test('mốc sắp tới VẪN THẮNG phần mô tả, nhưng sự kiện giữ 
   // Hai thứ này KHÔNG tranh chỗ: "còn một phiên nữa là tới «…»" là thứ khiến người ta làm phiên
   // tiếp và nó hiếm hơn nhiều; sự kiện thì nhận diện cái thẻ. Nhường một dòng, giữ mặt thẻ.
   const hint = 'Một phiên nữa là tới «Khám Phá Tân Thế Giới»';
-  const [loot] = buildRewardToasts(PHIEN_CO_SU_KIEN, {}, { stageHint: hint }).filter((t) => t.source === 'loot');
+  const [loot] = buildRewardToasts(PHIEN_CO_SU_KIEN, { stageHint: hint }).filter((t) => t.source === 'loot');
   assert.equal(loot.description, hint, 'mốc bị sự kiện đẩy khỏi dòng mô tả');
   assert.equal(loot.name, 'Đột Phá!', 'có mốc thì lại mất luôn tên sự kiện');
 });
@@ -261,8 +267,8 @@ test('mốc sắp tới VẪN THẮNG phần mô tả, nhưng sự kiện giữ 
 test('sự kiện KHÔNG nâng bậc độ hiếm — bậc đang đo ĐỘ DÀI PHIÊN', () => {
   // ⚠️ Bậc nói về thứ Đàm CHỦ ĐỘNG quyết được (25' ×1.0 · 26' ×1.3 · 60' ×2.0). Nâng bậc theo một
   // cú tung xúc xắc sẽ làm bậc thôi nói lên điều gì về chính phiên ấy.
-  const [thuong] = buildRewardToasts(PHIEN_THUONG, {}).filter((t) => t.source === 'loot');
-  const [coSuKien] = buildRewardToasts(PHIEN_CO_SU_KIEN, {}).filter((t) => t.source === 'loot');
+  const [thuong] = buildRewardToasts(PHIEN_THUONG).filter((t) => t.source === 'loot');
+  const [coSuKien] = buildRewardToasts(PHIEN_CO_SU_KIEN).filter((t) => t.source === 'loot');
   assert.equal(coSuKien.tier, thuong.tier, 'sự kiện đang tự nâng bậc của mình');
 });
 
@@ -373,5 +379,57 @@ test('mọi mốc phải nằm trên ngưỡng của tín hiệu chống-lặp m
     `mốc ${hoLot.map((m) => m.days).join(', ')} nằm DƯỚI ngưỡng ${STREAK_MISSION_MIN_STREAK} `
     + 'nên `streakMissionXP` không che được nó ⇒ mốc ấy sẽ ăn mừng lại ở MỌI phiên trong ngày. '
     + 'Thêm mốc nhỏ hơn thì phải tìm một tín hiệu một-lần-mỗi-ngày khác, đừng bỏ qua bài này.',
+  );
+});
+
+// ─── CHỒNG THẺ SAU MỘT PHIÊN: CẮT CHỖ LẶP, GIỮ CHỖ VUI (2026-09-01) ──────────
+// Đo ca xấu nhất hợp lý trước vòng 23: **8 thẻ · 87 từ · 12 giây thẻ nối đuôi**, và thứ tự đặt
+// «tổng kết tuần» lên trước cả DI VẬT — phần thưởng hiếm nhất game — nên di vật rơi khỏi ba thẻ
+// được hiện. Hai nguồn bị cắt vì chúng ĐÃ có một kênh bền và chúng LẶP:
+//   `rank`    — cùng sự kiện đã vào chuông (`makeRankUpFeedNotification`) ⇒ kể hai lần
+//   `mission` — xong gần như MỖI NGÀY, mà tab "Nhiệm vụ" hiện tiến độ sống
+// Hai nguồn KHÔNG bị cắt dù cũng có chấm bền, vì chúng là KHOẢNH KHẮC chứ không phải tiếng ồn:
+//   `weekly`      — đến đúng một lần mỗi tuần, không thể tự đến lần thứ hai
+//   `achievement` — mở khoá một thành tích là chuyện đáng ăn mừng; một cái chấm 6px thì không.
+
+// THỬ-CHO-ĐỎ: nối lại `...missionCompletedIds.map(buildMissionToast)` ⇒ bài này đỏ.
+test('nguồn LẶP đã rời chồng thẻ, nguồn KHOẢNH KHẮC thì ở lại', () => {
+  const day = buildRewardToasts({
+    lootModalOpen: true,
+    pendingReward: { totalSessionXP: 900, multiplier: 1.3 },
+    weeklyReportPending: true,
+    relicNotification: RELIC,
+    levelUpQueue: [{ levelsGained: 1, newLevel: 6, spGained: 2 }],
+    achievementQueue: [ACHIEVEMENTS[0].id],
+    missionCompletedIds: ['m1', 'm2', 'm3'],
+    rankUpNotification: { rankLabel: 'Cao thủ', rankIcon: '🎖️' },
+  });
+  const nguon = new Set(day.map((t) => t.source));
+
+  assert.ok(!nguon.has('mission'), 'nhiệm vụ ngày quay lại chồng thẻ — nguồn thường xuyên nhất');
+  assert.ok(!nguon.has('rank'), 'thăng hạng quay lại chồng thẻ — chuông đã kể chuyện ấy rồi');
+  for (const phai of ['loot', 'weekly', 'relic', 'level', 'achievement']) {
+    assert.ok(nguon.has(phai), `mất nguồn "${phai}" — đó là khoảnh khắc, không phải tiếng ồn`);
+  }
+  // Gác chạy-rỗng: kịch bản phải THẬT SỰ dựng ra nhiều thẻ, nếu không mọi assert trên là vô nghĩa.
+  assert.ok(day.length >= 5, `mới có ${day.length} thẻ — kịch bản thử không đủ dày`);
+});
+
+// THỬ-CHO-ĐỎ: nối lại nguồn `mission` ⇒ bài này đỏ (ca thường ngày thành 2 thẻ).
+test('ngày thường: xong phiên + xong nhiệm vụ ngày vẫn chỉ MỘT thẻ', () => {
+  const chiPhien = buildRewardToasts({
+    lootModalOpen: true,
+    pendingReward: { totalSessionXP: 900, multiplier: 1.3 },
+  });
+  const kemNhiemVu = buildRewardToasts({
+    lootModalOpen: true,
+    pendingReward: { totalSessionXP: 900, multiplier: 1.3 },
+    missionCompletedIds: ['m1', 'm2'],
+  });
+  assert.equal(chiPhien.length, 1);
+  assert.equal(
+    kemNhiemVu.length, 1,
+    'xong nhiệm vụ ngày lại đẻ thêm thẻ — đây là ca xảy ra gần như mỗi ngày, tức chỗ mà một thẻ '
+    + 'thừa bị nhìn thấy nhiều nhất',
   );
 });

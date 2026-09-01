@@ -97,9 +97,6 @@ const MISSION_BUCKET_TO_TIER = {
   rare:    'hiem',
 };
 
-export function tierFromMissionBucket(bucket) {
-  return MISSION_BUCKET_TO_TIER[bucket] ?? DEFAULT_REWARD_TIER;
-}
 
 /**
  * Phiên làm việc: hệ số nhân (`getMultiplierTier` ở `gameMath.js`) là thứ app đã

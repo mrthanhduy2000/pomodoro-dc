@@ -27,7 +27,7 @@ import {
   getUpgradeRefinedCost,
   getBuildingLevelMultiplier,
 } from '../engine/constants';
-import { initialsFromLabel } from '../utils/labelMark';
+import { getGlyph, hasGlyphIcon } from '../utils/labelMark';
 import { TypeBadge, RarityBadge, PerkSummary } from './shared/BadgeKit';
 
 const DISPLAY_FONT = '"Source Serif 4", Georgia, serif';
@@ -86,8 +86,12 @@ function paperPanel(lightTheme) {
   };
 }
 
-function getBlueprintMark(def) {
-  return initialsFromLabel(def?.label ?? def?.id ?? 'BP');
+// ⚠️ 75 bản vẽ đều đã có biểu tượng riêng trong `BLUEPRINT_CATALOG` (⚓ · 🏪 · 🪨 …). File này
+// gọi `initialsFromLabel` THẲNG chứ không qua `getLabelMark`, nên nó **lọt khỏi lần đổi đầu
+// tiên** và ba ô ở đây vẫn hiện "XĐ" · "TĐ" trong khi các màn khác đã lên biểu tượng — đúng
+// bài học "đổi một luật thì grep chính CÁI LUẬT ấy, đừng grep một cái TÊN".
+function getBlueprintGlyph(def) {
+  return getGlyph(def?.icon, def?.label ?? def?.id, 'BP');
 }
 
 // ─── RP progress bar ─────────────────────────────────────────────────────────
@@ -217,12 +221,12 @@ function MyBlueprintsTab({ blueprints, research, buildings, activeBook, onSelect
             >
               <div className="flex items-start gap-3">
                 <div
-                  className="mono flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-[14px] border text-[10px] font-semibold uppercase tracking-[0.16em]"
+                  className={`mono flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-[14px] border font-semibold ${hasGlyphIcon(def?.icon) ? 'text-[21px] leading-none' : 'text-[10px] uppercase tracking-[0.16em]'}`}
                   style={lightTheme
                     ? { borderColor: 'rgba(31, 30, 29, 0.08)', background: 'rgba(244,242,236,0.94)', color: '#9a5a48', fontFamily: MONO_FONT }
                     : { borderColor: 'rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.04)', color: '#cbd5e1', fontFamily: MONO_FONT }}
                 >
-                  {getBlueprintMark(def)}
+                  {getBlueprintGlyph(def)}
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 flex-wrap">
@@ -419,12 +423,12 @@ function ResearchTab({ research, blueprints, buildings, activeBook, researchBlue
             >
               <div className="flex items-start gap-3">
                 <div
-                  className="mono flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-[14px] border text-[10px] font-semibold uppercase tracking-[0.16em]"
+                  className={`mono flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-[14px] border font-semibold ${hasGlyphIcon(icon) ? 'text-[21px] leading-none' : 'text-[10px] uppercase tracking-[0.16em]'}`}
                   style={lightTheme
                     ? { borderColor: 'rgba(31, 30, 29, 0.08)', background: 'rgba(244,242,236,0.94)', color: '#9a5a48', fontFamily: MONO_FONT }
                     : { borderColor: 'rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.04)', color: '#cbd5e1', fontFamily: MONO_FONT }}
                 >
-                  {getBlueprintMark({ id, label })}
+                  {getBlueprintGlyph({ id, label, icon })}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap mb-1">
@@ -545,12 +549,12 @@ function BlueprintDetailPanel({ bpId, onClose, buildings, research, lightTheme }
         {/* Header */}
         <div className="flex items-center gap-3 px-5 pt-5 pb-4" style={{ borderBottom: lightTheme ? '1px solid var(--line)' : '1px solid rgba(255,255,255,0.06)' }}>
           <div
-            className="mono flex h-14 w-14 flex-shrink-0 items-center justify-center border text-[12px] font-semibold uppercase tracking-[0.18em]"
+            className={`mono flex h-14 w-14 flex-shrink-0 items-center justify-center border font-semibold ${hasGlyphIcon(def?.icon) ? 'text-[26px] leading-none' : 'text-[12px] uppercase tracking-[0.18em]'}`}
             style={lightTheme
               ? { border: '1px solid rgba(var(--accent-rgb),0.2)', background: 'rgba(var(--accent-rgb),0.1)', color: 'var(--accent2)', fontFamily: MONO_FONT, borderRadius: 'var(--skin-radius-control,14px)' }
               : { border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.04)', color: '#cbd5e1', fontFamily: MONO_FONT, borderRadius: '18px' }}
           >
-            {getBlueprintMark(def)}
+            {getBlueprintGlyph(def)}
           </div>
           <div className="flex-1 min-w-0">
             <p

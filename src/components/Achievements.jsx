@@ -13,7 +13,7 @@ import {
   ACHIEVEMENT_TIERS,
 } from '../engine/constants';
 import { formatVietnamDateTime } from '../engine/time';
-import { getLabelMark } from '../utils/labelMark';
+import { getGlyph, hasGlyphIcon } from '../utils/labelMark';
 import useGameStore from '../store/gameStore';
 
 const TIER_SEQUENCE = ['bronze', 'silver', 'gold', 'platinum', 'diamond'];
@@ -175,6 +175,10 @@ function FilterChip({
   active,
   countLabel,
   icon,
+  // Ô biểu tượng của chip chỉ rộng 20px: emoji cần 13px mới đọc được, còn ký hiệu 2 chữ cái
+  // ở 13px thì tràn ra ngoài. Cờ này do NƠI GỌI truyền vào (nó biết dữ liệu có icon hay không),
+  // KHÔNG đoán bằng cách soi chuỗi — xem chú thích `hasGlyphIcon` ở `utils/labelMark.js`.
+  iconIsPicture = false,
   label,
   onClick,
   tone,
@@ -194,7 +198,7 @@ function FilterChip({
       {icon ? (
         <span
           aria-hidden="true"
-          className="flex h-5 w-5 items-center justify-center rounded-full text-[11px]"
+          className={`flex h-5 w-5 items-center justify-center rounded-full ${iconIsPicture ? 'text-[13px] leading-none' : 'text-[11px]'}`}
           style={tone ? { backgroundColor: active ? withAlpha('#ffffff', 0.14) : withAlpha(tone, 0.12) } : undefined}
         >
           {icon}
@@ -249,7 +253,9 @@ function AchievementCard({
       <div className="flex items-start gap-4">
         <div
           className={[
-            'mono flex h-14 w-14 shrink-0 items-center justify-center border text-[10px] font-semibold uppercase tracking-[0.16em]',
+            'mono flex h-14 w-14 shrink-0 items-center justify-center border font-semibold',
+            // Emoji cần TO mới đọc được trong ô 56px; ký hiệu 2 chữ cái thì cần nhỏ + giãn chữ.
+            hasGlyphIcon(entry.achievement.icon) ? 'text-[26px] leading-none' : 'text-[10px] uppercase tracking-[0.16em]',
             entry.isUnlocked ? 'bg-[var(--card-bg-solid)] text-[var(--ink)]' : 'bg-[var(--card-bg-solid2)] text-[var(--muted-2)]',
           ].join(' ')}
           style={{
@@ -259,7 +265,7 @@ function AchievementCard({
             fontFamily: MONO_FONT,
           }}
         >
-          {getLabelMark(entry.achievement.label, 'DG')}
+          {getGlyph(entry.achievement.icon, entry.achievement.label, 'DG')}
         </div>
 
         <div className="min-w-0 flex-1">
@@ -621,7 +627,7 @@ export default function Achievements() {
                     className="px-0 py-3 first:pt-0 last:pb-0"
                   >
                     <div className="flex items-start gap-3">
-                      <div className="mono mt-0.5 flex h-10 w-10 items-center justify-center border bg-[var(--card-bg-solid2)] text-[9px] font-semibold uppercase tracking-[0.14em]" style={{ borderColor: withAlpha(getTierSurface(entry.achievement.tier).line, 0.2), borderRadius: 'var(--skin-radius-control,14px)', fontFamily: MONO_FONT }}>{getLabelMark(entry.achievement.label, 'DG')}</div>
+                      <div className={`mono mt-0.5 flex h-10 w-10 items-center justify-center border bg-[var(--card-bg-solid2)] font-semibold ${hasGlyphIcon(entry.achievement.icon) ? 'text-[19px] leading-none' : 'text-[9px] uppercase tracking-[0.14em]'}`} style={{ borderColor: withAlpha(getTierSurface(entry.achievement.tier).line, 0.2), borderRadius: 'var(--skin-radius-control,14px)', fontFamily: MONO_FONT }}>{getGlyph(entry.achievement.icon, entry.achievement.label, 'DG')}</div>
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
                           <p className="text-[16px] text-[var(--ink)]" style={{ fontFamily: DISPLAY_FONT, fontWeight: 600 }}>
@@ -657,7 +663,8 @@ export default function Achievements() {
               <FilterChip
                 active={selectedTier === 'all'}
                 countLabel={`${dataset.totalUnlocked}/${dataset.totalAchievements}`}
-                    icon="TC"
+                    icon="✦"
+                    iconIsPicture
                 label="Tất cả"
                 onClick={() => handleTierChange('all')}
               />
@@ -669,7 +676,8 @@ export default function Achievements() {
                     key={tier}
                     active={selectedTier === tier}
                     countLabel={`${stats?.unlocked ?? 0}/${stats?.total ?? 0}`}
-                    icon={getLabelMark(tierInfo.label, 'TR')}
+                    icon={getGlyph(tierInfo.icon, tierInfo.label, 'TR')}
+                    iconIsPicture={hasGlyphIcon(tierInfo.icon)}
                     label={tierInfo.label}
                     onClick={() => handleTierChange(tier)}
                     tone={tierInfo.color}
@@ -687,7 +695,8 @@ export default function Achievements() {
               <FilterChip
                 active={selectedCategory === 'all'}
                 countLabel={`${dataset.totalUnlocked}/${dataset.totalAchievements}`}
-                icon="TC"
+                icon="✦"
+                iconIsPicture
                 label="Tất cả"
                 onClick={() => handleCategoryChange('all')}
               />
@@ -699,7 +708,8 @@ export default function Achievements() {
                     key={categoryKey}
                     active={selectedCategory === categoryKey}
                     countLabel={`${stats?.unlocked ?? 0}/${stats?.total ?? 0}`}
-                    icon={getLabelMark(categoryInfo.label, 'DM')}
+                    icon={getGlyph(categoryInfo.icon, categoryInfo.label, 'DM')}
+                    iconIsPicture={hasGlyphIcon(categoryInfo.icon)}
                     label={categoryInfo.label}
                     onClick={() => handleCategoryChange(categoryKey)}
                     tone={ACHIEVEMENT_TIERS[activeTierInfo ? deferredTier : 'silver']?.color ?? '#94a3b8'}

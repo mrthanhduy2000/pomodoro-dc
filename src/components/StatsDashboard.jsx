@@ -16,7 +16,7 @@ import { useCustomMotion, useEnterMotion, useSnapMotion, withDelay } from '../li
 import useGameStore from '../store/gameStore';
 import { RichTextView } from './RichText';
 import { createRichTextPreview } from '../utils/richText';
-import { getLabelMark } from '../utils/labelMark';
+import { getGlyph, hasGlyphIcon } from '../utils/labelMark';
 import {
   timeAgo, formatExactDateTime, formatPreciseDuration, resolveEntryCategory,
   fmtHours, fmtXPCompact, fmtCount, fmtVal, hexToRgba, fmtChartAxisValue, clampValue,
@@ -3136,14 +3136,16 @@ function CategoryTab({ history, sessionCategories }) {
       label: 'Loại chủ đạo',
       value: topTimeCat?.label ?? '—',
       sub: topTimeCat ? `${topShare.toFixed(0)}% thời gian` : 'Chưa có dữ liệu',
-      icon: getLabelMark(topTimeCat?.label, 'CD'),
+      icon: getGlyph(topTimeCat?.icon, topTimeCat?.label, 'CD'),
+      iconIsPicture: hasGlyphIcon(topTimeCat?.icon),
       color: topTimeCat?.color ?? ACCENT,
     },
     {
       label: 'Nhịp hiệu quả nhất',
       value: bestEfficiencyCat ? `${(bestEfficiencyCat.xp / bestEfficiencyCat.minutes).toFixed(1)} XP/p` : '—',
       sub: bestEfficiencyCat?.label ?? 'Cần thêm dữ liệu',
-      icon: getLabelMark(bestEfficiencyCat?.label, 'HQ'),
+      icon: getGlyph(bestEfficiencyCat?.icon, bestEfficiencyCat?.label, 'HQ'),
+      iconIsPicture: hasGlyphIcon(bestEfficiencyCat?.icon),
       color: bestEfficiencyCat?.color ?? '#0ea5e9',
     },
     {
@@ -3152,14 +3154,16 @@ function CategoryTab({ history, sessionCategories }) {
       sub: totalCancelled > 0
         ? `${totalSess} phiên · ${totalCancelled} hủy`
         : `${totalSess} phiên trong ${periodLabel.toLowerCase()}`,
-      icon: 'TB',
+      icon: '⏱️',
+      iconIsPicture: true,
       color: '#0ea5e9',
     },
     {
       label: 'Độ mở hiện tại',
       value: `${catStats.length} loại`,
       sub: focusStyle,
-      icon: 'DM',
+      icon: '🧩',
+      iconIsPicture: true,
       color: '#8b5cf6',
     },
   ];
@@ -3171,7 +3175,8 @@ function CategoryTab({ history, sessionCategories }) {
       value: topTimeCat.label,
       sub: `${fmtHours(topTimeCat.minutes)} · ${topShare.toFixed(0)}%`,
       color: topTimeCat.color,
-      icon: getLabelMark(topTimeCat.label, 'CD'),
+      icon: getGlyph(topTimeCat.icon, topTimeCat.label, 'CD'),
+      iconIsPicture: hasGlyphIcon(topTimeCat.icon),
     } : null,
     bestEfficiencyCat ? {
       key: 'best-eff',
@@ -3179,7 +3184,8 @@ function CategoryTab({ history, sessionCategories }) {
       value: bestEfficiencyCat.label,
       sub: `${(bestEfficiencyCat.xp / bestEfficiencyCat.minutes).toFixed(1)} XP/p`,
       color: bestEfficiencyCat.color,
-      icon: getLabelMark(bestEfficiencyCat.label, 'HQ'),
+      icon: getGlyph(bestEfficiencyCat.icon, bestEfficiencyCat.label, 'HQ'),
+      iconIsPicture: hasGlyphIcon(bestEfficiencyCat.icon),
     } : null,
     longestAvgCat ? {
       key: 'longest',
@@ -3187,7 +3193,8 @@ function CategoryTab({ history, sessionCategories }) {
       value: longestAvgCat.label,
       sub: `${Math.round(longestAvgCat.minutes / longestAvgCat.sessions)}p / phiên`,
       color: longestAvgCat.color,
-      icon: getLabelMark(longestAvgCat.label, 'DH'),
+      icon: getGlyph(longestAvgCat.icon, longestAvgCat.label, 'DH'),
+      iconIsPicture: hasGlyphIcon(longestAvgCat.icon),
     } : null,
     leastUsedCat ? {
       key: 'least-used',
@@ -3195,7 +3202,8 @@ function CategoryTab({ history, sessionCategories }) {
       value: leastUsedCat.label,
       sub: `${fmtHours(leastUsedCat.minutes)} · ${leastUsedCat.sessions} phiên`,
       color: leastUsedCat.color,
-      icon: getLabelMark(leastUsedCat.label, 'IT'),
+      icon: getGlyph(leastUsedCat.icon, leastUsedCat.label, 'IT'),
+      iconIsPicture: hasGlyphIcon(leastUsedCat.icon),
     } : null,
   ].filter(Boolean);
 
@@ -3637,7 +3645,7 @@ function CategoryTab({ history, sessionCategories }) {
                         </p>
                       </div>
                       <div
-                        className="mono w-11 h-11 rounded-2xl flex items-center justify-center text-[9px] font-semibold uppercase tracking-[0.14em] shrink-0"
+                        className={`mono w-11 h-11 rounded-2xl flex items-center justify-center font-semibold shrink-0 ${item.iconIsPicture ? 'text-[21px] leading-none' : 'text-[9px] uppercase tracking-[0.14em]'}`}
                         style={{ background: `${item.color}18`, color: item.color, border: `1px solid ${item.color}2f` }}
                       >
                         {item.icon}
@@ -3663,7 +3671,7 @@ function CategoryTab({ history, sessionCategories }) {
                 >
                   <div className="flex items-center gap-3">
                     <div
-                      className="mono w-11 h-11 rounded-2xl flex items-center justify-center text-[9px] font-semibold uppercase tracking-[0.14em] shrink-0"
+                      className={`mono w-11 h-11 rounded-2xl flex items-center justify-center font-semibold shrink-0 ${item.iconIsPicture ? 'text-[21px] leading-none' : 'text-[9px] uppercase tracking-[0.14em]'}`}
                       style={{ background: `${item.color}18`, color: item.color, border: `1px solid ${item.color}28` }}
                     >
                       {item.icon}
@@ -4043,10 +4051,10 @@ function JournalTab({ history, sessionCategories }) {
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex min-w-0 flex-1 items-start gap-3">
                     <div
-                      className="mono flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl text-[8px] font-semibold uppercase tracking-[0.14em]"
+                      className={`mono flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl font-semibold ${hasGlyphIcon(cat?.icon) ? 'text-[19px] leading-none' : 'text-[8px] uppercase tracking-[0.14em]'}`}
                       style={{ background: `${cat?.color ?? '#475569'}14`, color: cat?.color ?? '#475569', border: `1px solid ${(cat?.color ?? '#475569')}28` }}
                     >
-                      {getLabelMark(cat?.label, 'DM')}
+                      {getGlyph(cat?.icon, cat?.label, 'DM')}
                     </div>
 
                     <div className="min-w-0 flex-1 space-y-2">
@@ -4611,10 +4619,10 @@ function NotesTab({ savedNotes, sessionCategories }) {
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex min-w-0 flex-1 items-start gap-3">
                       <div
-                        className="mono flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl text-[8px] font-semibold uppercase tracking-[0.14em]"
+                        className={`mono flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl font-semibold ${hasGlyphIcon(cat?.icon) ? 'text-[19px] leading-none' : 'text-[8px] uppercase tracking-[0.14em]'}`}
                         style={{ background: `${accent}14`, color: accent, border: `1px solid ${accent}28` }}
                       >
-                        {getLabelMark(cat?.label, 'DM')}
+                        {getGlyph(cat?.icon, cat?.label, 'DM')}
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">

@@ -32,7 +32,7 @@ import {
   getUpgradeRefinedCost,
   getBuildingLevelMultiplier,
 } from '../engine/constants';
-import { getLabelMark } from '../utils/labelMark';
+import { getGlyph, hasGlyphIcon } from '../utils/labelMark';
 import { TypeBadge, RarityBadge, PerkSummary } from './shared/BadgeKit';
 
 const MONO_FONT = '"JetBrains Mono", "SFMono-Regular", Menlo, monospace';
@@ -240,12 +240,12 @@ function ReadyCard({ bpId, bookResources, resourcesRefined, craftingQueue, onSta
     >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
         <span
-          className="mono inline-flex h-9 w-9 items-center justify-center rounded-full border text-[8px] font-semibold uppercase tracking-[0.14em] flex-shrink-0"
+          className={`mono inline-flex h-9 w-9 items-center justify-center rounded-full border font-semibold flex-shrink-0 ${hasGlyphIcon(bpDef.icon) ? 'text-[18px] leading-none' : 'text-[8px] uppercase tracking-[0.14em]'}`}
           style={lightTheme
             ? { borderColor: 'var(--line)', background: 'var(--card-bg-solid2)', color: 'var(--accent2)', fontFamily: MONO_FONT }
             : { borderColor: 'rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.04)', color: 'var(--accent-light)', fontFamily: MONO_FONT }}
         >
-          {getLabelMark(bpDef.label, 'BP')}
+          {getGlyph(bpDef.icon, bpDef.label, 'BP')}
         </span>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap mb-0.5">
@@ -340,12 +340,12 @@ function BuiltCard({ bpId, level, resourcesRefined, onUpgrade, lightTheme }) {
         : undefined}
     >
       <span
-        className="mono inline-flex h-9 w-9 items-center justify-center rounded-full border text-[8px] font-semibold uppercase tracking-[0.14em] flex-shrink-0"
+        className={`mono inline-flex h-9 w-9 items-center justify-center rounded-full border font-semibold flex-shrink-0 ${hasGlyphIcon(bpDef.icon) ? 'text-[18px] leading-none' : 'text-[8px] uppercase tracking-[0.14em]'}`}
         style={lightTheme
           ? { borderColor: 'var(--line)', background: 'var(--card-bg-solid2)', color: 'var(--accent2)', fontFamily: MONO_FONT }
           : { borderColor: 'rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.04)', color: 'var(--accent-light)', fontFamily: MONO_FONT }}
       >
-        {getLabelMark(bpDef.label, 'BP')}
+        {getGlyph(bpDef.icon, bpDef.label, 'BP')}
       </span>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-0.5 flex-wrap">

@@ -15,7 +15,7 @@ import {
   normalizeRefinedBag,
   getRelicEvolutionRefinedCost,
 } from '../engine/constants';
-import { getLabelMark } from '../utils/labelMark';
+import { getGlyph, hasGlyphIcon } from '../utils/labelMark';
 
 const ALL_RELIC_DEFS = Object.entries(ERA_CRISES)
   .sort(([a], [b]) => Number(a) - Number(b))
@@ -172,7 +172,7 @@ function RelicCard({ relic, stage, lightTheme }) {
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
         <div className="flex min-w-0 flex-1 items-start gap-4">
           <div
-            className="mono flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-[var(--skin-radius-control,22px)] text-[12px] font-semibold uppercase tracking-[0.18em]"
+            className={`mono flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-[var(--skin-radius-control,22px)] font-semibold ${hasGlyphIcon(relic.icon) ? 'text-[30px] leading-none' : 'text-[12px] uppercase tracking-[0.18em]'}`}
             style={lightTheme ? {
               background: token.accentSoft,
               border: `1px solid ${token.accentBorder}`,
@@ -182,7 +182,7 @@ function RelicCard({ relic, stage, lightTheme }) {
               color: 'var(--accent-light)',
             }}
           >
-            {getLabelMark(relic.label, 'RL')}
+            {getGlyph(relic.icon, relic.label, 'RL')}
           </div>
 
           <div className="min-w-0 flex-1">

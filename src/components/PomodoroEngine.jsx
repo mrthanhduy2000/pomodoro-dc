@@ -6,7 +6,7 @@ import useGameStore from '../store/gameStore';
 import { pushNow } from '../lib/syncService';
 import useSettingsStore from '../store/settingsStore';
 import { useTimer, formatTime, TIMER_MODES, TIMER_STATES } from '../hooks/useTimer';
-import { getComboDecayMs, getDailyGoalProgress, getMultiplierTier, suggestSessionLength, clampRelicDisasterReduction } from '../engine/gameMath';
+import { getComboDecayMs, getDailyGoalProgress, getMultiplierTier, nextMultiplierStep, suggestSessionLength, clampRelicDisasterReduction } from '../engine/gameMath';
 import { getVietnamHour, localDateStr } from '../engine/time';
 import { FLOWTIME_BREAK_RULES, QUICK_FOCUS_PRESETS, getBreakPlan } from '../engine/breaks';
 import {
@@ -2176,6 +2176,7 @@ function MultiplierBadge({
   const lightTheme = uiTheme === 'light';
   const isHigh = tier.multiplier >= 2.0;
   const isMid = tier.multiplier >= 1.3;
+  const nextStep = nextMultiplierStep(focusMinutes, deepFocusThreshold);
 
   return (
     <div
@@ -2196,8 +2197,18 @@ function MultiplierBadge({
       <span>{tier.tierLabel}</span>
       {tier.chestGuaranteed && <span className="mono text-[10px] uppercase tracking-[0.16em]" title="Rương Lớn đảm bảo">lớn</span>}
       {isStopwatchMode && <span className="text-[10px] opacity-70 sm:text-xs">tham chiếu {referenceMinutes}'</span>}
-      {!isStopwatchMode && tier.multiplier < 1.3 && focusMinutes < deepFocusThreshold && (
-        <span className="text-[10px] opacity-60 sm:text-xs">còn {deepFocusThreshold - focusMinutes}' để ×1.3</span>
+      {/*
+        ⚠️ HUY HIỆU PHẢI GỌI TÊN VÁCH KẾ TIẾP, KHÔNG CHỈ VÁCH ĐẦU TIÊN (2026-09-01).
+        Bản cũ có thêm điều kiện `tier.multiplier < 1.3`, nên nó chỉ biết nói "còn N phút để
+        ×1.3" rồi CÂM ở mọi phiên đã qua vách ấy. Đo trên fixture 624 phiên: câm ở **75,2%**
+        số phiên, mà im lặng đúng ở khúc đáng nói nhất — **117 phiên dừng trong 45–59 phút**,
+        tức chỉ còn 1–15 phút nữa là chạm ×2.0, bậc nhảy LỚN NHẤT của cả thang (+54%).
+        `nextMultiplierStep` (thuần, ở `gameMath.js`) trả về vách kế tiếp bất kể đang ở bậc nào,
+        và trả `null` khi đã kịch trần — lúc ấy KHÔNG hiện gì, vì một dòng chữ báo rằng không
+        còn việc gì để làm thì chỉ tốn chỗ.
+      */}
+      {!isStopwatchMode && nextStep && (
+        <span className="text-[10px] opacity-60 sm:text-xs">còn {nextStep.minutesLeft}' để ×{nextStep.targetMultiplier.toFixed(1)}</span>
       )}
     </div>
   );

@@ -21,7 +21,7 @@ import useSettingsStore   from '../store/settingsStore';
 import soundEngine        from '../engine/soundEngine';
 import DailyMissions      from './DailyMissions';
 import { SkillGlyph, BranchGlyph, BoltGlyph } from './icons/Glyph';
-import { getLabelMark } from '../utils/labelMark';
+import { getGlyph, hasGlyphIcon } from '../utils/labelMark';
 import {
   SKILL_TREE,
   SKILL_SYNERGIES,
@@ -683,7 +683,7 @@ function RecentAchievements({ onOpen }) {
                   ⚠️ Bỏ `aspect-square` cùng lúc: ô vuông không đủ chỗ cho hai dòng chữ, và một
                   cái tên bị cắt cụt còn tệ hơn một cái tên viết tắt.
                 */}
-                <span className="mono text-[11px] font-semibold tracking-[0.06em]" style={{ color: tint }}>{getLabelMark(a.label, 'TT')}</span>
+                <span className={hasGlyphIcon(a.icon) ? 'text-[17px] leading-none' : 'mono text-[11px] font-semibold tracking-[0.06em]'} style={{ color: tint }}>{getGlyph(a.icon, a.label, 'TT')}</span>
                 <span
                   className="w-full text-center text-[9px] leading-[1.15]"
                   style={{ color: 'var(--muted)', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}
@@ -735,9 +735,9 @@ function PurchaseConfirmDialog({ node, sp, lightTheme, onConfirm, onCancel }) {
         } : undefined}
       >
         <div className="text-center mb-4">
-          <span className="mono inline-flex h-14 w-14 items-center justify-center rounded-full border text-[12px] font-semibold uppercase tracking-[0.18em]"
+          <span className={`mono inline-flex h-14 w-14 items-center justify-center rounded-full border font-semibold ${hasGlyphIcon(node.icon) ? 'text-[26px] leading-none' : 'text-[12px] uppercase tracking-[0.18em]'}`}
                 style={lightTheme ? { borderColor: 'var(--line)', background: 'var(--card-bg-solid2)', color: 'var(--accent2)' } : { borderColor: 'rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.04)', color: 'var(--accent-light)' }}>
-            {getLabelMark(node.label)}
+            {getGlyph(node.icon, node.label)}
           </span>
           <h3 className="font-bold text-xl mt-2" style={lightTheme ? { fontFamily: 'var(--skin-font-display)', fontWeight: 600, color: 'var(--ink)' } : { color: '#ffffff' }}>{node.label}</h3>
           <span className={`inline-block mt-1.5 ${tierBadgeProps.className}`} style={tierBadgeProps.style}>
@@ -880,7 +880,7 @@ function SynergyPanel({ synergies, activeSynergies, branchCounts, lightTheme }) 
               )}
 
               <div className="flex items-center gap-2 relative z-10">
-                <span className="mono inline-flex h-6 w-6 items-center justify-center rounded-full border text-[7px] font-semibold uppercase tracking-[0.12em]" style={lightTheme ? { borderColor: 'var(--line)', background: 'rgba(255,255,255,0.74)', color: active ? 'var(--accent2)' : 'var(--muted)' } : { borderColor: 'rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.04)', color: active ? 'var(--accent-light)' : '#94a3b8' }}>{getLabelMark(syn.label)}</span>
+                <span className={`mono inline-flex h-6 w-6 items-center justify-center rounded-full border font-semibold ${hasGlyphIcon(syn.icon) ? 'text-[13px] leading-none' : 'text-[7px] uppercase tracking-[0.12em]'}`} style={lightTheme ? { borderColor: 'var(--line)', background: 'rgba(255,255,255,0.74)', color: active ? 'var(--accent2)' : 'var(--muted)' } : { borderColor: 'rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.04)', color: active ? 'var(--accent-light)' : '#94a3b8' }}>{getGlyph(syn.icon, syn.label)}</span>
                 {/*
                   ⚠️ TÊN HỢP LỰC ĐƯỢC XUỐNG DÒNG, KHÔNG CẮT BẰNG DẤU … — đây là TÊN RIÊNG, cắt đi
                   thì mất luôn thứ để gọi nó. Đo ở 390px (lưới 2 cột): chỗ cho tên chỉ **74px**,

@@ -51,6 +51,10 @@ export const MULTIPLIER_TIERS = [
 // Kỹ năng "Làm Nóng Nhanh" kéo ngưỡng ×1.3 từ 26 phút xuống 20 phút
 export const WARMUP_REDUCED_THRESHOLD    = 20; // phút
 export const DEFAULT_DEEP_FOCUS_THRESHOLD = 26; // phút (mặc định)
+// Vách ×2.0. Trước 2026-09-01 con số 60 này được VIẾT CỨNG trong `getMultiplierTier`, nên khi
+// huy hiệu hệ số cần biết "còn bao nhiêu phút nữa tới ×2.0" thì nó buộc phải chép lại — hai
+// công thức cho một cái thang, và chúng sẽ lệch nhau trong im lặng. Đặt tên một lần ở đây.
+export const DEEP_SESSION_THRESHOLD       = 60; // phút — mốc ×2.0 + đảm bảo Rương Lớn
 
 // ─── TỈ GIÁ PHẦN THƯỞNG CƠ BẢN (mỗi phút tập trung) ────────────────────────
 // XP dùng cho level / kỹ năng / thống kê hiệu suất.
@@ -1386,12 +1390,16 @@ export const ACHIEVEMENT_CATEGORIES = {
   meta:         { label: 'Thành Tựu Tổng',         icon: '🌌' },
 };
 
+// Hạng thành tích. `icon` thêm 2026-09-01 cho ĐỦ BỘ: 6/7 bảng dữ liệu sưu tập đã có biểu
+// tượng riêng, chỉ bảng này thiếu, nên hàng lọc theo hạng ở màn Thành Tích là chỗ DUY NHẤT
+// còn hiện ký hiệu tắt ("DO" · "BA" · "VA" · "BK" · "KC"). Thêm một khoá vào object literal
+// là phép CỘNG THÊM thuần — không đụng dữ liệu đã lưu, không cần migration.
 export const ACHIEVEMENT_TIERS = {
-  bronze:   { label: 'Đồng',     color: '#cd7f32' },
-  silver:   { label: 'Bạc',      color: '#94a3b8' },
-  gold:     { label: 'Vàng',     color: '#fbbf24' },
-  platinum: { label: 'Bạch Kim', color: '#c084fc' },
-  diamond:  { label: 'Kim Cương',color: '#67e8f9' },
+  bronze:   { label: 'Đồng',     color: '#cd7f32', icon: '🥉' },
+  silver:   { label: 'Bạc',      color: '#94a3b8', icon: '🥈' },
+  gold:     { label: 'Vàng',     color: '#fbbf24', icon: '🥇' },
+  platinum: { label: 'Bạch Kim', color: '#c084fc', icon: '🏵️' },
+  diamond:  { label: 'Kim Cương',color: '#67e8f9', icon: '💎' },
 };
 
 export const ACHIEVEMENTS = [

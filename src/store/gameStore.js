@@ -5792,6 +5792,33 @@ const useGameStore = create(
        * Tiến hóa di vật lên giai đoạn tiếp theo bằng nguyên liệu tinh luyện.
        * Returns true nếu thành công, false nếu không đủ điều kiện.
        */
+      /**
+       * Ảnh chụp số liệu mà `check()` của thành tích đọc — dựng từ TRẠNG THÁI HIỆN TẠI.
+       *
+       * ⚠️ VÌ SAO PHẢI CÓ. Màn "Huy hiệu" cần trả lời "còn bao nhiêu nữa", mà con số ấy chỉ tồn
+       * tại bên trong `buildAchievementSnapshot` — một hàm riêng của file này, xưa nay chỉ chạy
+       * đúng một lần mỗi khi xong phiên. Không có lối này thì giao diện buộc phải tự dựng lại
+       * một bản snapshot thứ hai, tức hai công thức cho một sự thật, và chúng sẽ trôi khỏi nhau.
+       *
+       * ⚠️ ĐẮT: nó quét lại TOÀN BỘ `history` (fixture 180 ngày = 624 phiên). Chỗ gọi PHẢI bọc
+       * `useMemo` theo đúng những lát state nó đọc, đừng gọi thẳng trong thân render.
+       */
+      buildAchievementSnapshotNow: () => {
+        const s = get();
+        return buildAchievementSnapshot(
+          s.progress,
+          s.relics,
+          s.blueprints,
+          s.research,
+          s.history,
+          s.rankSystem,
+          s.streak,
+          s.buildings,
+          s.prestige,
+          s.player,
+        );
+      },
+
       evolveRelic: (relicId, opts = {}) => {
         const state   = get();
         const evoDef  = RELIC_EVOLUTION[relicId];

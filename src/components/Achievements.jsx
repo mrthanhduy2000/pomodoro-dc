@@ -14,6 +14,8 @@ import {
 } from '../engine/constants';
 import { formatVietnamDateTime } from '../engine/time';
 import { getGlyph, hasGlyphIcon } from '../utils/labelMark';
+import { thanhTichGanDat } from '../engine/achievementProgress';
+import { cauConLai } from './achievementUnit';
 import useGameStore from '../store/gameStore';
 
 const TIER_SEQUENCE = ['bronze', 'silver', 'gold', 'platinum', 'diamond'];
@@ -314,6 +316,20 @@ export default function Achievements() {
   const unlockedIds = useGameStore((state) => state.achievements?.unlocked ?? []);
   const timeline = useGameStore((state) => state.achievements?.timeline ?? {});
 
+  // ⚠️ `buildAchievementSnapshotNow` quét lại TOÀN BỘ lịch sử (624 phiên trên fixture 180 ngày),
+  // nên nó PHẢI nằm trong `useMemo` khoá theo đúng những lát state nó đọc — gọi thẳng trong thân
+  // render là quét lại 624 phiên mỗi lần bấm một cái chip lọc.
+  const history = useGameStore((state) => state.history);
+  const progressSlice = useGameStore((state) => state.progress);
+  const streakSlice = useGameStore((state) => state.streak);
+  const playerSlice = useGameStore((state) => state.player);
+  const buildSnapshot = useGameStore((state) => state.buildAchievementSnapshotNow);
+  const sapDat = useMemo(
+    () => thanhTichGanDat(ACHIEVEMENTS, buildSnapshot(), unlockedIds, 3),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [history, progressSlice, streakSlice, playerSlice, unlockedIds],
+  );
+
   const [selectedTier, setSelectedTier] = useState('all');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [unlockedVisibleCount, setUnlockedVisibleCount] = useState(DEFAULT_UNLOCKED_BATCH);
@@ -536,6 +552,58 @@ export default function Achievements() {
               điều đó, có MẪU SỐ ("43/64" ⇒ đọc được "còn 21 cái nữa"), lại còn BẤM ĐƯỢC.
               Chữ "tier" trong nhãn cũng là tiếng Anh.
           */}
+          {/*
+            SẮP ĐẠT — thứ DUY NHẤT trên màn này trả lời "tôi sắp được gì", và nó phải đứng trên
+            nếp gấp.
+
+            ⚠️ VÌ SAO NÓ ĐÁNG CHỖ ĐẮT NHẤT MÀN HÌNH. Trước 2026-09-01, cả 360 thành tích chỉ có
+            đạt/chưa-đạt — `Achievements.jsx` chỉ biết `isUnlocked`, và chữ "progress" xuất hiện
+            đúng MỘT lần trong cả file, trong một chú thích nói về màn khác. Nghĩa là 213 mục chưa
+            đạt là 213 ô xám giống hệt nhau, không ô nào cho biết mình còn cách bao xa. Đo ra:
+            310/360 mục (86%) chỉ là một phép so ngưỡng đơn, tức con số "còn bao nhiêu nữa" đã nằm
+            sẵn trong dữ liệu từ đầu — chưa ai lấy nó ra.
+
+            ⚠️ VÀ VÌ SAO CHỈ BA MỤC, KHÔNG PHẢI MỘT THANH TIẾN ĐỘ TRÊN CẢ 213 Ô. Gắn thanh cho mọi
+            ô là THÊM 213 thứ phải đọc để trả lời một câu hỏi — đúng cái "lạm phát thông tin" mà
+            vòng trước vừa gỡ. Ba dòng cô đặc nói được nhiều hơn 213 thanh, và chúng tự biến mất
+            khi không còn mục nào ở gần (ngưỡng 10%: dưới đó thì "còn 900/1000" đọc y hệt "chưa
+            bắt đầu").
+          */}
+          {sapDat.length > 0 ? (
+            <div className="mt-5">
+              <div className="mono text-[11px] font-semibold uppercase tracking-[0.22em] text-[var(--muted)]">
+                Sắp đạt
+              </div>
+              <div className="mt-2 flex flex-col gap-2">
+                {sapDat.map(({ achievement, tiLe, con, dem }) => (
+                  <div
+                    key={achievement.id}
+                    className="rounded-[18px] border border-[var(--line)] bg-[rgba(255,255,255,0.72)] px-3 py-2.5"
+                  >
+                    <div className="flex items-baseline justify-between gap-3">
+                      <span className="truncate text-[14px] font-semibold text-[var(--ink)]">
+                        <span className={hasGlyphIcon(achievement.icon) ? 'mr-1.5' : 'mr-1.5 text-[11px]'}>
+                          {getGlyph(achievement.icon, achievement.label, 'TT')}
+                        </span>
+                        {achievement.label}
+                      </span>
+                      <span className="mono shrink-0 text-[12px] font-semibold text-[var(--accent)]">
+                        {Math.floor(tiLe * 100)}%
+                      </span>
+                    </div>
+                    <div className="mt-1.5 overflow-hidden rounded-full bg-[var(--line)]">
+                      <div
+                        className="h-[3px] rounded-full transition-all"
+                        style={{ width: `${Math.max(2, Math.floor(tiLe * 100))}%`, background: heroSurface.line }}
+                      />
+                    </div>
+                    <div className="mt-1.5 text-[12px] text-[var(--muted)]">{cauConLai(con, dem)}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
           <div className="mt-5 grid gap-3 md:grid-cols-2">
 
             {/*

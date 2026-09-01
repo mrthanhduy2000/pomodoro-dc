@@ -2192,7 +2192,8 @@ function OverlayStack({
   const hasLevelUp = levelUpQueueLength > 0;
 
   /**
-   * ⚠️ KHOẢNH KHẮC THÀNH PHỐ VẪN CHẠY SAU **MỌI** PHIÊN — đừng buộc nó vào hộp thoại.
+   * ⚠️ KHOẢNH KHẮC THÀNH PHỐ KHÔNG BỊ BUỘC VÀO HỘP THOẠI PHẦN THƯỞNG — nhưng từ
+   * 2026-08-30 nó chỉ chạy khi một công trình THẬT SỰ vừa xong (xem khối ngay dưới).
    * Trước đây nó nằm trong `RewardSequence`, mà `RewardSequence` chỉ dựng khi hộp
    * thoại phần thưởng bật. Nếu cứ để nguyên như thế sau khi hộp thoại thôi tự bật
    * thì lễ mừng "vừa xây xong một công trình" sẽ **biến mất trong im lặng** ở mọi
@@ -2205,7 +2206,27 @@ function OverlayStack({
    * `momentSeen` tự sạch nhờ `key` ở `GlobalOverlays` (đổi mỗi lần hộp thoại bật/tắt),
    * đúng mẹo vòng đời `RewardSequence` từng dùng — không cần effect đi dọn state.
    */
-  const showMoment = lootModalOpen && !!growth && !momentSeen && !reduceMotion;
+  /*
+    ⚠️ CHỈ CHẶN MÀN HÌNH KHI MỘT CÔNG TRÌNH THẬT SỰ VỪA XONG (2026-08-30).
+    `buildGrowthMoment` trả về ba loại: `built` (công trình vừa hoàn thành) · `scaffold` (giàn
+    giáo nhích một nấc) · `tick` (thành phố nhúc nhích: thêm một đoạn đường, thêm một cư dân).
+    Trước bản vá này CẢ BA đều dựng một lớp phủ TOÀN MÀN HÌNH 3,2 giây, và vì Đàm gần như luôn có
+    một công trình trong hàng chờ nên nó nổ sau **~100% số phiên**.
+
+    Đo được: 3,2 giây × 579 phiên = 1.853 giây = **30,9 PHÚT** trong 180 ngày, để nói lại đúng câu
+    đang in THƯỜNG TRỰC ngay trên màn Tập trung ("Đang xây Thương Điếm · còn 2 phiên") — hai chỗ
+    đọc CÙNG một nguồn (`snapshot.layout.scaffolds`). Nó cũng bắt `blocking = true`, tức chặn luôn
+    mọi thứ khác đang xếp hàng.
+
+    ⇒ `built` GIỮ NGUYÊN quyền chặn màn hình: nó xảy ra mỗi 4–9 phiên (`sessionsToComplete` của
+    bản vẽ kỷ 8 là 4/6/6/9), nó là tin THẬT, và nó là lúc thành phố của Đàm đổi hình. Hai loại
+    còn lại thôi chặn — thông tin của chúng đã nằm sẵn, thường trực, ở đúng màn hình Đàm đang
+    nhìn. Đây là "ít hơn nhưng đánh mạnh hơn": lễ mừng hiếm đi 5–9 lần thì mỗi lần mới có nghĩa.
+    ⚠️ KHÔNG đụng một dòng nào trong `src/components/city/` hay `useCityMoment.js` — chỉ đổi ĐIỀU
+    KIỆN DỰNG ở đây. Engine vẫn tính đủ ba loại; ngày nào muốn cho `scaffold` một thẻ toast thì
+    dữ liệu vẫn còn nguyên.
+  */
+  const showMoment = lootModalOpen && growth?.moment?.kind === 'built' && !momentSeen && !reduceMotion;
 
   // Hộp thoại phần thưởng mở THẲNG chỉ khi lên kỷ; ngoài ra phải do Đàm bấm vào thẻ.
   // `!showMoment` giữ đúng thứ tự cũ: lễ mừng xong rồi mới tới phần thưởng.

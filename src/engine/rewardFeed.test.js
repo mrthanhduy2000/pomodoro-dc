@@ -211,3 +211,57 @@ test('lên kỷ vẫn KHÔNG có thẻ phiên, kể cả khi đang sắp tới m
   );
   assert.equal(toasts.filter((t) => t.source === 'loot').length, 0);
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SỰ KIỆN CỦA PHIÊN LÀM CHỦ CÁI THẺ (2026-08-30)
+//
+// ⚠️ VÌ SAO BỘ NÀY TỒN TẠI. Đo trên 579 phiên thật: **63% số phiên sinh ra một sự kiện có TÊN,
+// có ICON, có câu chuyện riêng** (`POSITIVE_EVENTS` 6 mục + `ERA_MINI_EVENTS` mỗi kỷ 2–3 mục,
+// tổng xác suất ~0,67/phiên). Nhưng nó chỉ được VẼ trong `LootDropModal`, mà hộp thoại ấy — sau
+// ADR-060 — chỉ tự mở khi LÊN KỶ: 7/579 phiên = 1,2%. Tức ~358 câu chuyện đã tính xong, đã cộng
+// XP, rồi bị xoá mà không ai thấy; thẻ toast thì nói "🎁 Phiên đã xong · +18 tài nguyên" ở CẢ 579
+// phiên. Đây là khoản dopamine lớn nhất bị bỏ phí trong app, và nó nằm trọn ở khâu HIỂN THỊ.
+//
+// Bộ này khoá bốn vế, mỗi vế một cách hỏng riêng.
+const SU_KIEN = {
+  id: 'breakthrough', label: 'Đột Phá!', icon: '💡',
+  desc: 'Khoảnh khắc hiểu sâu bất ngờ.', bonusPct: 0.25,
+};
+const PHIEN_CO_SU_KIEN = {
+  lootModalOpen: true,
+  pendingReward: { ...PHIEN_THUONG.pendingReward, positiveEvent: SU_KIEN, positiveEventBonus: 30 },
+};
+
+test('có sự kiện ⇒ thẻ mang TÊN và ICON của sự kiện, không phải "Phiên đã xong"', () => {
+  const [loot] = buildRewardToasts(PHIEN_CO_SU_KIEN, {}).filter((t) => t.source === 'loot');
+  assert.ok(loot, 'mất luôn thẻ tổng kết phiên');
+  assert.equal(loot.name, 'Đột Phá!', 'thẻ vẫn dùng nhãn chung ⇒ câu chuyện của phiên bị xoá');
+  assert.equal(loot.icon, '💡', 'vẫn dùng icon quà chung ⇒ mọi phiên trông giống hệt nhau');
+  assert.match(loot.description, /hiểu sâu/, 'mất câu kể chuyện');
+  assert.match(loot.description, /30 XP thưởng/, 'không nói phần XP mà chính sự kiện mang lại');
+});
+
+test('KHÔNG có sự kiện ⇒ giữ nguyên thẻ chung như cũ', () => {
+  // Đối chứng: bản vá chỉ được đổi hành vi ở nhánh CÓ sự kiện. 37% số phiên còn lại phải y hệt.
+  const [loot] = buildRewardToasts(PHIEN_THUONG, {}).filter((t) => t.source === 'loot');
+  assert.equal(loot.name, 'Phiên đã xong');
+  assert.equal(loot.icon, '🎁');
+  assert.match(loot.description, /tài nguyên/);
+});
+
+test('mốc sắp tới VẪN THẮNG phần mô tả, nhưng sự kiện giữ tên và icon', () => {
+  // Hai thứ này KHÔNG tranh chỗ: "còn một phiên nữa là tới «…»" là thứ khiến người ta làm phiên
+  // tiếp và nó hiếm hơn nhiều; sự kiện thì nhận diện cái thẻ. Nhường một dòng, giữ mặt thẻ.
+  const hint = 'Một phiên nữa là tới «Khám Phá Tân Thế Giới»';
+  const [loot] = buildRewardToasts(PHIEN_CO_SU_KIEN, {}, { stageHint: hint }).filter((t) => t.source === 'loot');
+  assert.equal(loot.description, hint, 'mốc bị sự kiện đẩy khỏi dòng mô tả');
+  assert.equal(loot.name, 'Đột Phá!', 'có mốc thì lại mất luôn tên sự kiện');
+});
+
+test('sự kiện KHÔNG nâng bậc độ hiếm — bậc đang đo ĐỘ DÀI PHIÊN', () => {
+  // ⚠️ Bậc nói về thứ Đàm CHỦ ĐỘNG quyết được (25' ×1.0 · 26' ×1.3 · 60' ×2.0). Nâng bậc theo một
+  // cú tung xúc xắc sẽ làm bậc thôi nói lên điều gì về chính phiên ấy.
+  const [thuong] = buildRewardToasts(PHIEN_THUONG, {}).filter((t) => t.source === 'loot');
+  const [coSuKien] = buildRewardToasts(PHIEN_CO_SU_KIEN, {}).filter((t) => t.source === 'loot');
+  assert.equal(coSuKien.tier, thuong.tier, 'sự kiện đang tự nâng bậc của mình');
+});

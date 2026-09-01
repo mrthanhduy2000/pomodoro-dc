@@ -111,6 +111,47 @@ function buildLootToast(pendingReward, stageHint = null) {
   // Chỉ áp khi CÒN ≤1 PHIÊN: mốc còn xa thì tin ấy chưa đáng chiếm chỗ, và một dòng lúc nào cũng
   // nói về mốc thì hết là tin.
 
+  /*
+    ⚠️ SỰ KIỆN CỦA PHIÊN LÀM CHỦ CÁI THẺ (2026-08-30). Đây là khoản dopamine lớn nhất bị bỏ phí
+    trong cả app, và nó đã được TÍNH XONG từ lâu — chỉ chưa bao giờ được HIỆN RA.
+
+    Đo trên 579 phiên thật: **63% số phiên sinh ra một sự kiện có TÊN, có ICON, có câu chuyện
+    riêng** — "Đột Phá! 💡 Khoảnh khắc hiểu sâu bất ngờ" (+25% XP) · "Lý Trí Thắng Lợi 💡" ·
+    "Buổi Thảo Luận Salon 🍷 Tranh luận triết học mang lại insight" (+30% XP). `POSITIVE_EVENTS`
+    (6 mục) cộng `ERA_MINI_EVENTS` (mỗi kỷ 2–3 mục riêng) — tổng xác suất ~0,67/phiên.
+    Nhưng nó CHỈ được vẽ bên trong `LootDropModal`, mà hộp thoại ấy — sau ADR-060 — chỉ tự mở khi
+    LÊN KỶ: **7/579 phiên = 1,2%**. Tức ~358 câu chuyện đã tính, đã cộng XP, rồi bị xoá không ai
+    thấy. Thẻ toast thì nói "🎁 Phiên đã xong · +18 tài nguyên · +120 RP" ở CẢ 579 phiên.
+
+    ⇒ Có sự kiện thì để SỰ KIỆN làm mặt thẻ: icon riêng, tên riêng, câu chuyện riêng. Cái thẻ
+    thôi giống hệt nhau ở mọi phiên, và thứ Đàm đọc được đổi từ một con số anh không dùng để
+    quyết gì ("+18 tài nguyên") sang một câu kể phiên vừa rồi đã xảy ra chuyện gì.
+    ⚠️ KHÔNG đổi một luật tính thưởng nào — `positiveEventBonus` vẫn cộng y như cũ ở
+    `completeFocusSession`. Đây thuần là khâu HIỂN THỊ, đúng chỗ cắm mà ADR-060 đã chọn.
+    ⚠️ `stageHint` VẪN THẮNG ở phần mô tả: "còn một phiên nữa là tới «…»" là thứ khiến người ta
+    làm phiên tiếp, và nó hiếm hơn nhiều (chỉ khi còn ≤1 phiên). Sự kiện giữ icon + tên, nhường
+    một dòng mô tả — hai thứ không tranh nhau chỗ.
+    ⚠️ Bậc độ hiếm KHÔNG bị nâng lên theo sự kiện: bậc đang đo ĐỘ DÀI PHIÊN (×1.0/×1.3/×2.0), tức
+    thứ Đàm CHỦ ĐỘNG quyết được. Nâng bậc theo một cú tung xúc xắc sẽ làm bậc thôi nói lên điều
+    gì về chính phiên ấy.
+  */
+  const event = pendingReward.positiveEvent;
+  const eventBonus = Number(pendingReward.positiveEventBonus ?? 0);
+  if (event?.label) {
+    const khoe = eventBonus > 0 ? `+${eventBonus.toLocaleString('vi-VN')} XP thưởng` : null;
+    return {
+      id: 'loot',
+      source: 'loot',
+      key: 'loot',
+      icon: event.icon ?? '✨',
+      name: event.label,
+      tier: tierFromSessionMultiplier(pendingReward.multiplier, pendingReward.jackpotApplied),
+      description: stageHint ?? ([event.desc, khoe].filter(Boolean).join(' · ') || 'Phiên đã xong.'),
+      amount: xp > 0 ? `+${xp.toLocaleString('vi-VN')} XP` : null,
+      action: { detail: 'loot' },
+    };
+  }
+
   return {
     id: 'loot',
     source: 'loot',

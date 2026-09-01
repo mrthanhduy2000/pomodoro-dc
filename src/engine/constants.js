@@ -973,7 +973,23 @@ export const RELIC_EVOLUTION = {
 };
 
 // ─── CÂY KỸ NĂNG V2 (6 nhánh × 6 kỹ năng = 36 kỹ năng) ─────────────────────
-// Hạng: basic (🟩 3SP) → intermediate (🟦 7SP) → advanced (🟪 14SP) → elite (🔴 22SP)
+// Hạng: basic (🟩 2SP) → intermediate (🟦 3SP) → advanced (🟪 5SP) → elite (🔴 8SP)
+//
+// ⚠️ GIÁ SP HẠ 2,4 LẦN (2026-08-30) — 3/7/14/22 → 2/3/5/8, tổng cây 336 → 138 SP. Đây là một
+// bản vá CÂN BẰNG, và nó có số:
+//   · Đo trên 180 ngày thật (nhịp 3,91 phiên/ngày, 173,6 XP/ngày): Đàm mở được **2/36 kỹ năng**,
+//     5 trong 6 nhánh vẫn 0/6. Ở giá cũ, mở HẾT cây cần 336 SP trên nguồn ~2 SP mỗi 34,6 ngày
+//     ⇒ **15,9 NĂM**. Một cái cây 36 dòng mà 34 dòng sẽ còn xám suốt 15 năm không phải một hệ
+//     thống tiến bộ; nó là một bức tường.
+//   · Và nó YẾU chứ không phải mạnh: hai kỹ năng Đàm đang có mua được **+5,1% XP** trên phiên 30
+//     phút (39 → 41 XP), trong khi ĐỘ DÀI PHIÊN — thứ không bị gác bởi bất cứ gì — mua được
+//     **+36% chỉ từ một phút** (25' = 25 XP, 26' = 34 XP) và **+103%** khi đi từ 45' lên 60'.
+//     Cả cây kỹ năng cộng lại chiếm ~1% tổng XP. Nên hạ giá KHÔNG tạo lạm phát sức mạnh.
+// ⇒ Ở giá mới, cả cây còn ~1,7 năm và 4 SP đang dư của Đàm mua được NGAY hai kỹ năng nền.
+// ⚠️ AN TOÀN VỚI DỮ LIỆU: hạ giá là phép CỘNG thuần — kỹ năng đã mua vẫn còn, SP đã tiêu không
+// bị đòi lại, không cần migration nào. (Nâng giá thì mới cần.)
+// ⚠️ Bốn con số này là MỘT LUẬT, không phải 36 con số rời: `skillTreeCost.test.js` canh mọi nút
+// phải đúng giá của hạng nó khai. Đổi một nút lẻ là đỏ.
 // Tổng nếu max hết: 336 SP. Mỗi nhánh có ≥1 skill cộng EP.
 // Length-based buff yêu cầu > 25' (≥30/45/60). Phiên 25' (tối thiểu) không nhận buff mới.
 export const SKILL_TREE = {
@@ -988,32 +1004,32 @@ export const SKILL_TREE = {
     nodes: [
       {
         id: 'vao_guong', label: 'Vào Guồng', icon: '🔥',
-        tier: 'basic', spCost: 3, requires: [],
+        tier: 'basic', spCost: 2, requires: [],
         description: `Phiên ≥${VAO_GUONG_MIN_MINUTES}': +${VAO_GUONG_XP_BONUS * 100}% XP. Thưởng cho việc đi nhỉnh hơn tối thiểu.`,
       },
       {
         id: 'chuyen_can', label: 'Chuyên Cần', icon: '⏱️',
-        tier: 'basic', spCost: 3, requires: [],
+        tier: 'basic', spCost: 2, requires: [],
         description: `Phiên ≥${CHUYEN_CAN_MIN_MINUTES}': +${CHUYEN_CAN_XP_BONUS * 100}% XP.`,
       },
       {
         id: 'da_tap_trung', label: 'Đà Tập Trung', icon: '🌀',
-        tier: 'intermediate', spCost: 7, requires: ['vao_guong'],
+        tier: 'intermediate', spCost: 3, requires: ['vao_guong'],
         description: `Mỗi phiên hoàn thành liên tiếp trong ngày: +${DA_TAP_TRUNG_STACK_BONUS * 100}% XP (tối đa ${DA_TAP_TRUNG_MAX_STACKS} lần = +${DA_TAP_TRUNG_STACK_BONUS * DA_TAP_TRUNG_MAX_STACKS * 100}%).`,
       },
       {
         id: 'vung_dong_chay', label: 'Vùng Dòng Chảy', icon: '🌊',
-        tier: 'intermediate', spCost: 7, requires: ['chuyen_can'],
+        tier: 'intermediate', spCost: 3, requires: ['chuyen_can'],
         description: `Phiên ≥${VUNG_DONG_CHAY_MIN_MIN}': tăng 1 bậc hệ số (×1.0→×1.3 / ×1.3→×2.0).`,
       },
       {
         id: 'tap_trung_sieu_viet', label: 'Tập Trung Siêu Việt', icon: '🧠',
-        tier: 'advanced', spCost: 14, requires: ['vung_dong_chay'],
+        tier: 'advanced', spCost: 5, requires: ['vung_dong_chay'],
         description: `Phiên ≥${TAP_TRUNG_SV_MIN_MIN}': +${TAP_TRUNG_SV_XP_BONUS * 100}% XP, +${TAP_TRUNG_SV_EP_BONUS * 100}% EP và đảm bảo rương lớn.`,
       },
       {
         id: 'sieu_tap_trung', label: 'Siêu Tập Trung', icon: '⚡',
-        tier: 'elite', spCost: 22, requires: ['tap_trung_sieu_viet'],
+        tier: 'elite', spCost: 8, requires: ['tap_trung_sieu_viet'],
         description: `${SIEU_TAP_TRUNG_CHARGES} lần/ngày: kích hoạt thủ công — phiên kế ≥${SIEU_TAP_TRUNG_MIN_MIN}' nhận ×${SIEU_TAP_TRUNG_MULT} XP và ×${SIEU_TAP_TRUNG_EP_MULT} EP.`,
       },
     ],
@@ -1029,32 +1045,32 @@ export const SKILL_TREE = {
     nodes: [
       {
         id: 'su_tha_thu', label: 'Sự Tha Thứ', icon: '🛡️',
-        tier: 'basic', spCost: 3, requires: [],
+        tier: 'basic', spCost: 2, requires: [],
         description: `${FORGIVENESS_CANCELS_PER_WEEK} lần hủy/tuần không bị Thảm Họa.`,
       },
       {
         id: 'bo_nho_co_bap', label: 'Bộ Nhớ Cơ Bắp', icon: '⏰',
-        tier: 'basic', spCost: 3, requires: [],
+        tier: 'basic', spCost: 2, requires: [],
         description: `Combo không mất trong ${BO_NHO_CO_BAP_COMBO_HOURS}h (mặc định 4h).`,
       },
       {
         id: 'phuc_hoi', label: 'Phục Hồi', icon: '💪',
-        tier: 'intermediate', spCost: 7, requires: ['su_tha_thu'],
+        tier: 'intermediate', spCost: 3, requires: ['su_tha_thu'],
         description: `Sau Thảm Họa/hủy phiên: phiên kế ≥${PHUC_HOI_MIN_MINUTES}' nhận +${PHUC_HOI_XP_BONUS * 100}% XP và +${PHUC_HOI_EP_BONUS * 100}% EP.`,
       },
       {
         id: 'chuoi_ngay', label: 'Chuỗi Ngày', icon: '🔥',
-        tier: 'intermediate', spCost: 7, requires: ['bo_nho_co_bap'],
+        tier: 'intermediate', spCost: 3, requires: ['bo_nho_co_bap'],
         description: `+${CHUOI_NGAY_XP_PER_DAY * 100}% XP mỗi ngày streak liên tiếp (tối đa +${CHUOI_NGAY_MAX_DAYS * CHUOI_NGAY_XP_PER_DAY * 100}%).`,
       },
       {
         id: 'la_chan_streak', label: 'Lá Chắn Streak', icon: '🛡️',
-        tier: 'advanced', spCost: 14, requires: ['chuoi_ngay'],
+        tier: 'advanced', spCost: 5, requires: ['chuoi_ngay'],
         description: `${LA_CHAN_STREAK_PER_WEEK} ngày skip/tuần không reset streak. Bảo hiểm cho người làm 6 ngày/tuần.`,
       },
       {
         id: 'ben_vung', label: 'Bền Vững', icon: '👑',
-        tier: 'elite', spCost: 22, requires: ['la_chan_streak'],
+        tier: 'elite', spCost: 8, requires: ['la_chan_streak'],
         description: `Khi đạt streak ≥${BEN_VUNG_STREAK_THRESHOLD} ngày liên tục: các phiên ≥${BEN_VUNG_MIN_MINUTES}' nhận +${BEN_VUNG_PERMANENT_ALLBONUS * 100}% allBonus VĨNH VIỄN (giữ kể cả khi reset streak).`,
       },
     ],
@@ -1070,32 +1086,32 @@ export const SKILL_TREE = {
     nodes: [
       {
         id: 'hit_tho_sau', label: 'Hít Thở Sâu', icon: '🌬️',
-        tier: 'basic', spCost: 3, requires: [],
+        tier: 'basic', spCost: 2, requires: [],
         description: `Break ngắn và dài đều +${BREAK_EXTENSION_MINUTES} phút.`,
       },
       {
         id: 'nap_nang_luong', label: 'Nạp Năng Lượng', icon: '🔋',
-        tier: 'basic', spCost: 3, requires: [],
+        tier: 'basic', spCost: 2, requires: [],
         description: `Hoàn thành break đúng hạn: phiên kế ≥${NAP_NANG_LUONG_MIN_MINUTES}' nhận +${NAP_NANG_LUONG_XP_BONUS * 100}% XP.`,
       },
       {
         id: 'tich_phien', label: 'Tích Phiên', icon: '📊',
-        tier: 'intermediate', spCost: 7, requires: ['hit_tho_sau'],
+        tier: 'intermediate', spCost: 3, requires: ['hit_tho_sau'],
         description: `Sau khi hoàn thành ${TICH_PHIEN_AFTER_SESSIONS} phiên trong ngày: các phiên còn lại +${TICH_PHIEN_XP_BONUS * 100}% XP.`,
       },
       {
         id: 'phien_vang_sang', label: 'Phiên Vàng Sáng', icon: '🌅',
-        tier: 'intermediate', spCost: 7, requires: ['nap_nang_luong'],
+        tier: 'intermediate', spCost: 3, requires: ['nap_nang_luong'],
         description: `Phiên đầu ngày NẾU ≥${PHIEN_VANG_SANG_MIN_MINUTES}': +${PHIEN_VANG_SANG_XP_BONUS * 100}% XP và +${PHIEN_VANG_SANG_EP_BONUS * 100}% EP.`,
       },
       {
         id: 'nhip_sinh_hoc', label: 'Nhịp Sinh Học', icon: '🌙',
-        tier: 'advanced', spCost: 14, requires: ['phien_vang_sang'],
+        tier: 'advanced', spCost: 5, requires: ['phien_vang_sang'],
         description: `Từ phiên ${NHIP_SINH_HOC_MIN_SESSIONS} trở đi, phiên ≥${NHIP_SINH_HOC_MIN_MINUTES}': +${NHIP_SINH_HOC_XP_BONUS * 100}% XP.`,
       },
       {
         id: 'nhip_hoan_hao', label: 'Nhịp Hoàn Hảo', icon: '🌸',
-        tier: 'elite', spCost: 22, requires: ['nhip_sinh_hoc'],
+        tier: 'elite', spCost: 8, requires: ['nhip_sinh_hoc'],
         description: `≥${NHIP_HOAN_HAO_SESSIONS_PER_DAY} phiên/ngày trong ${NHIP_HOAN_HAO_DAYS_NEEDED} ngày liên tiếp → ngày kế các phiên ≥${NHIP_HOAN_HAO_MIN_MINUTES}' nhận +${NHIP_HOAN_HAO_XP_BONUS * 100}% XP và +${NHIP_HOAN_HAO_EP_BONUS * 100}% EP.`,
       },
     ],
@@ -1111,32 +1127,32 @@ export const SKILL_TREE = {
     nodes: [
       {
         id: 'ban_tay_vang', label: 'Bàn Tay Vàng', icon: '✨',
-        tier: 'basic', spCost: 3, requires: [],
+        tier: 'basic', spCost: 2, requires: [],
         description: `Phiên ≥${BAN_TAY_VANG_MIN_MINUTES}': ${BAN_TAY_VANG_RAW_CHANCE * 100}% cơ hội +1 nguyên liệu thô bất kỳ.`,
       },
       {
         id: 'nhan_quan', label: 'Nhãn Quan', icon: '👁️',
-        tier: 'basic', spCost: 3, requires: [],
+        tier: 'basic', spCost: 2, requires: [],
         description: `Phiên ≥${NHAN_QUAN_MIN_MINUTES}': ${NHAN_QUAN_REFINED_CHANCE * 100}% cơ hội nhận thêm 1 tinh luyện.`,
       },
       {
         id: 'linh_cam', label: 'Linh Cảm', icon: '🔮',
-        tier: 'intermediate', spCost: 7, requires: ['ban_tay_vang'],
+        tier: 'intermediate', spCost: 3, requires: ['ban_tay_vang'],
         description: `Phiên ≥${LINH_CAM_MIN_MINUTES}': ${LINH_CAM_REFINED_CHANCE * 100}% cơ hội nhận tinh luyện và ${LINH_CAM_DOUBLE_CHANCE * 100}% cơ hội double drop.`,
       },
       {
         id: 'loc_ban_tang', label: 'Lộc Ban Tặng', icon: '🎁',
-        tier: 'intermediate', spCost: 7, requires: ['nhan_quan'],
+        tier: 'intermediate', spCost: 3, requires: ['nhan_quan'],
         description: `Mỗi ${LOC_BAN_TANG_SESSIONS_NEEDED} phiên ≥${LOC_BAN_TANG_MIN_MINUTES}' hoàn thành → +${LOC_BAN_TANG_XP_REWARD} XP và +${LOC_BAN_TANG_REFINED_REWARD} tinh luyện T2 đảm bảo.`,
       },
       {
         id: 'dai_trung_thuong', label: 'Đại Trúng Thưởng', icon: '🎰',
-        tier: 'advanced', spCost: 14, requires: ['loc_ban_tang'],
+        tier: 'advanced', spCost: 5, requires: ['loc_ban_tang'],
         description: `Phiên ≥${DAI_TRUNG_THUONG_MIN_MINUTES}': ${JACKPOT_CHANCE * 100}% cơ hội jackpot — XP và nguyên liệu thô ×${JACKPOT_MULTIPLIER}, EP ×${JACKPOT_EP_MULTIPLIER}.`,
       },
       {
         id: 'so_do', label: 'Số Đỏ', icon: '🍀',
-        tier: 'elite', spCost: 22, requires: ['dai_trung_thuong'],
+        tier: 'elite', spCost: 8, requires: ['dai_trung_thuong'],
         description: `${SO_DO_CHARGES} lần/ngày: kích hoạt thủ công — phiên kế ≥${SO_DO_MIN_MINUTES}' có ${SO_DO_TRIGGER_CHANCE * 100}% cơ hội ×${SO_DO_MULTIPLIER} XP, EP, RP và nguyên liệu thô.`,
       },
     ],
@@ -1152,32 +1168,32 @@ export const SKILL_TREE = {
     nodes: [
       {
         id: 'nguoi_lap_ke', label: 'Người Lập Kế', icon: '📌',
-        tier: 'basic', spCost: 3, requires: [],
+        tier: 'basic', spCost: 2, requires: [],
         description: `Hoàn thành 1 daily mission → phiên kế nhận +${NGUOI_LAP_KE_XP_BONUS * 100}% XP (mọi độ dài).`,
       },
       {
         id: 'cu_tri', label: 'Cử Tri', icon: '🗳️',
-        tier: 'basic', spCost: 3, requires: [],
+        tier: 'basic', spCost: 2, requires: [],
         description: `Weekly chain step xong → ${CU_TRI_BUFF_SESSIONS} phiên kế nhận +${CU_TRI_XP_BONUS * 100}% XP.`,
       },
       {
         id: 'co_van', label: 'Cố Vấn', icon: '📋',
-        tier: 'intermediate', spCost: 7, requires: ['nguoi_lap_ke'],
+        tier: 'intermediate', spCost: 3, requires: ['nguoi_lap_ke'],
         description: `Khi đạt mục tiêu ngày → các phiên còn lại trong ngày +${CO_VAN_XP_BONUS * 100}% XP.`,
       },
       {
         id: 'lich_day', label: 'Lịch Đầy', icon: '⚖️',
-        tier: 'intermediate', spCost: 7, requires: ['cu_tri'],
+        tier: 'intermediate', spCost: 3, requires: ['cu_tri'],
         description: `Khi có ≥1 phiên ≥${LICH_DAY_THRESHOLD_45_MIN}' và ≥1 phiên ≥${LICH_DAY_THRESHOLD_60_MIN}' trong ngày → các phiên còn lại +${LICH_DAY_ALLBONUS * 100}% allBonus (cả XP và EP).`,
       },
       {
         id: 'bac_thay_chien_luoc', label: 'Bậc Thầy Chiến Lược', icon: '🎯',
-        tier: 'advanced', spCost: 14, requires: ['co_van'],
+        tier: 'advanced', spCost: 5, requires: ['co_van'],
         description: `Khi toàn bộ daily missions xong → các phiên ≥${BAC_THAY_CHIEN_LUOC_MIN_MIN}' sau nhận +${BAC_THAY_CHIEN_LUOC_XP_BONUS * 100}% XP, +${BAC_THAY_CHIEN_LUOC_RP_BONUS * 100}% RP và +${BAC_THAY_CHIEN_LUOC_EP_BONUS * 100}% EP.`,
       },
       {
         id: 'ke_hoach_hoan_hao', label: 'Kế Hoạch Hoàn Hảo', icon: '🏆',
-        tier: 'elite', spCost: 22, requires: ['bac_thay_chien_luoc'],
+        tier: 'elite', spCost: 8, requires: ['bac_thay_chien_luoc'],
         description: `Hoàn thành chuỗi tuần: step cuối ×2 + thưởng chuỗi ×2 + tuần kế các phiên +${KE_HOACH_HOAN_HAO_NEXT_WEEK_BONUS * 100}% allBonus.`,
       },
     ],
@@ -1194,32 +1210,32 @@ export const SKILL_TREE = {
     nodes: [
       {
         id: 'ky_uc_ky_nguyen', label: 'Ký Ức Kỷ Nguyên', icon: '📜',
-        tier: 'basic', spCost: 3, requires: [],
+        tier: 'basic', spCost: 2, requires: [],
         description: `Phiên đầu kỷ nguyên mới NẾU ≥${KY_UC_KY_NGUYEN_MIN_MINUTES}': +${KY_UC_KY_NGUYEN_XP_BONUS * 100}% XP và +${KY_UC_KY_NGUYEN_EP_BONUS * 100}% EP.`,
       },
       {
         id: 'tri_tue_tich_luy', label: 'Trí Tuệ Tích Lũy', icon: '📚',
-        tier: 'basic', spCost: 3, requires: [],
+        tier: 'basic', spCost: 2, requires: [],
         description: `Mỗi kỷ nguyên đã vượt qua: +${TRI_TUE_TICH_LUY_XP_PER_ERA * 100}% XP vĩnh viễn (tối đa +${TRI_TUE_TICH_LUY_MAX_ERAS * TRI_TUE_TICH_LUY_XP_PER_ERA * 100}%).`,
       },
       {
         id: 'kien_thuc_nen', label: 'Kiến Thức Nền', icon: '🏛️',
-        tier: 'intermediate', spCost: 7, requires: ['ky_uc_ky_nguyen'],
+        tier: 'intermediate', spCost: 3, requires: ['ky_uc_ky_nguyen'],
         description: 'Khi Prestige: giữ lại thêm 1 kỹ năng Cao Cấp (advanced) đã mở khóa.',
       },
       {
         id: 'bac_thay_ky_nguyen', label: 'Bậc Thầy Kỷ Nguyên', icon: '🌐',
-        tier: 'intermediate', spCost: 7, requires: ['tri_tue_tich_luy'],
+        tier: 'intermediate', spCost: 3, requires: ['tri_tue_tich_luy'],
         description: `Mỗi ${BAC_THAY_KY_NGUYEN_SESSIONS} phiên trong cùng kỷ nguyên: +${BAC_THAY_KY_NGUYEN_BONUS * 100}% XP (tối đa +${BAC_THAY_KY_NGUYEN_MAX * 100}%).`,
       },
       {
         id: 'ke_thua', label: 'Kế Thừa', icon: '💎',
-        tier: 'advanced', spCost: 14, requires: ['kien_thuc_nen'],
+        tier: 'advanced', spCost: 5, requires: ['kien_thuc_nen'],
         description: `Khi Prestige: giữ lại ${KE_THUA_SP_RETENTION * 100}% SP chưa dùng.`,
       },
       {
         id: 'sieu_viet', label: 'Siêu Việt', icon: '🌠',
-        tier: 'elite', spCost: 22, requires: ['ke_thua'],
+        tier: 'elite', spCost: 8, requires: ['ke_thua'],
         description: `Sau Prestige: phiên ≥${SIEU_VIET_MIN_MINUTES}' trong kỷ nguyên 1 nhận +${SIEU_VIET_ERA1_XP_BONUS * 100}% XP; ngưỡng kỷ nguyên giảm ${SIEU_VIET_THRESHOLD_REDUCTION * 100}%.`,
       },
     ],

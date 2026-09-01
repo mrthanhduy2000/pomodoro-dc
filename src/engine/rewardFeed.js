@@ -25,6 +25,7 @@
 import {
   ACHIEVEMENTS,
   BLUEPRINT_RARITY_LABEL,
+  STREAK_MILESTONES,
 } from './constants.js';
 import {
   getRewardTier,
@@ -50,7 +51,7 @@ const ACHIEVEMENT_LOOKUP = Object.fromEntries(ACHIEVEMENTS.map((a) => [a.id, a])
  * Một chồng toast chỉ đọc được khi vị trí ổn định — thứ vừa xảy ra (tổng kết
  * phiên) luôn ở trên cùng, thứ hiếm nhất (di vật) ngay dưới.
  */
-const SOURCE_ORDER = ['weekly', 'loot', 'relic', 'level', 'rank', 'achievement', 'mission'];
+const SOURCE_ORDER = ['weekly', 'loot', 'milestone', 'relic', 'level', 'rank', 'achievement', 'mission'];
 
 function sourceRank(source) {
   const index = SOURCE_ORDER.indexOf(source);
@@ -100,7 +101,23 @@ function buildLootToast(pendingReward, stageHint = null) {
   const xp = Number(pendingReward.totalSessionXP ?? pendingReward.finalXP ?? 0);
   const resourceUnits = Object.values(pendingReward.resources ?? {})
     .reduce((sum, value) => sum + (Number(value) || 0), 0);
+  /*
+    ⚠️ XẾP HIẾM TRƯỚC, THƯỜNG SAU — dòng này chỉ được MỘT dòng, dài hơn là bị cắt "…", nên thứ
+    tự ở đây quyết định cái gì sống sót. Đo trên fixture 624 phiên (ngưỡng lấy thẳng từ
+    `constants.js`, không chép tay):
+      · Rương Lớn (phiên ≥60 phút)      —  63/624 =  10,1%
+      · Tinh luyện T2 (phiên ≥45 phút)  — 180/624 =  28,8%
+      · tài nguyên / RP                  — gần như MỌI phiên
+    Hai thứ đầu là phần thưởng cho việc KHÓ NHẤT Đàm làm, và chúng đã được tính từ lâu mà chưa
+    bao giờ được GỌI TÊN trên thẻ: "Rương Lớn" trước nay chỉ là chữ "lớn" viết thường bé xíu
+    trên huy hiệu hệ số, còn tinh luyện thì không hiện ở đâu cả. Để "+18 tài nguyên" — con số
+    có ở mọi phiên nên chẳng phân biệt được phiên nào — đứng trước chúng là đẩy phần thưởng
+    hiếm nhất ra khỏi dòng.
+  */
   const bits = [];
+  if (pendingReward.largeChest) bits.push('Rương Lớn');
+  const tinhLuyen = Number(pendingReward.t2Drop ?? 0);
+  if (tinhLuyen > 0) bits.push(`+${tinhLuyen} tinh luyện`);
   if (resourceUnits > 0) bits.push(`+${resourceUnits} tài nguyên`);
   if ((pendingReward.rpEarned ?? 0) > 0) bits.push(`+${pendingReward.rpEarned} RP`);
 
@@ -138,7 +155,13 @@ function buildLootToast(pendingReward, stageHint = null) {
   const event = pendingReward.positiveEvent;
   const eventBonus = Number(pendingReward.positiveEventBonus ?? 0);
   if (event?.label) {
-    const khoe = eventBonus > 0 ? `+${eventBonus.toLocaleString('vi-VN')} XP thưởng` : null;
+    // ⚠️ Nhánh CÓ sự kiện cũng phải khoe hai thứ hiếm: chúng không tranh chỗ với câu chuyện
+    // (đây là phần đuôi nối sau `event.desc`), và bỏ chúng ở đây nghĩa là 63% số phiên — đúng
+    // những phiên VUI NHẤT — lại là những phiên giấu mất Rương Lớn.
+    const khoe = [
+      pendingReward.largeChest ? 'Rương Lớn' : null,
+      eventBonus > 0 ? `+${eventBonus.toLocaleString('vi-VN')} XP thưởng` : null,
+    ].filter(Boolean).join(' · ') || null;
     return {
       id: 'loot',
       source: 'loot',
@@ -248,6 +271,49 @@ function buildMissionToast(id, missionList) {
  * Bản vẽ vừa nghiên cứu xong. Store ghi nó vào `notificationFeed` (hộp thư), chứ
  * không có kênh riêng — nên chỗ gọi truyền thẳng bản vẽ vào đây khi cần.
  */
+const MILESTONE_DAYS = new Map(STREAK_MILESTONES.map((m) => [m.days, m]));
+
+/**
+ * MỐC CHUỖI — thẻ ăn mừng ngày chuỗi chạm mốc 7 / 14 / 30 (2026-09-01).
+ *
+ * VÌ SAO CÓ: `STREAK_MILESTONES` tồn tại từ lâu và được dùng để vẽ "đích kế tiếp" ở thanh trên,
+ * nhưng LÚC CHẠM mốc thì app không nói một câu nào — con số chuỗi chỉ lặng lẽ nhích thêm một.
+ * Mốc 30 còn mở +5% allBonus VĨNH VIỄN (`BEN_VUNG_STREAK_THRESHOLD`) mà cũng không được báo.
+ * Đây là phần thưởng đắt nhất game về mặt công sức (30 ngày liên tục) và rẻ nhất về mặt ăn mừng.
+ *
+ * ⚠️ KHÔNG THÊM MỘT TRƯỜNG NÀO VÀO STORE, KHÔNG DÙNG localStorage. Cái khó duy nhất là chống
+ * lặp: `streakDays` giữ nguyên giá trị ở MỌI phiên trong ngày, nên hỏi mỗi nó thì làm phiên thứ
+ * hai của ngày mốc sẽ ăn mừng lần nữa. Nhưng `streakMissionXP` đã là tín hiệu **một lần mỗi
+ * ngày** có sẵn (`streakMissionClaimedToday` gác nó ở `completeFocusSession`), và ngưỡng của nó
+ * — `STREAK_MISSION_MIN_STREAK = 7` — nằm ĐÚNG dưới cả ba mốc (7 · 14 · 30), nên nó che trọn.
+ * Có test khoá quan hệ ấy: thêm một mốc nhỏ hơn 7 thì bài test đỏ chứ không im lặng bỏ sót.
+ *
+ * ⚠️ Bậc `huyenThoai` chỉ dành cho mốc VĨNH VIỄN. Mốc 7 và 14 là lời động viên; mốc 30 mở một
+ * thứ không bao giờ mất đi. Cho cả ba cùng bậc là làm bậc thôi nói lên điều gì.
+ */
+export function buildMilestoneToast(pendingReward) {
+  if (!pendingReward) return null;
+  // Tín hiệu MỘT-LẦN-MỖI-NGÀY. Thiếu vế này thì mỗi phiên trong ngày mốc lại ăn mừng một lần.
+  if (!(Number(pendingReward.streakMissionXP ?? 0) > 0)) return null;
+
+  const moc = MILESTONE_DAYS.get(Number(pendingReward.streakDays));
+  if (!moc) return null;
+
+  return {
+    id: `milestone-${moc.days}`,
+    source: 'milestone',
+    key: `milestone-${moc.days}`,
+    icon: moc.permanent ? '🏅' : '🔥',
+    name: `Chuỗi ${moc.days} ngày`,
+    tier: moc.permanent ? 'huyenThoai' : 'hiem',
+    description: moc.permanent
+      ? `«${moc.label}» — từ nay mọi phần thưởng +5% vĩnh viễn.`
+      : `${moc.days} ngày liên tục. Giữ nhịp này.`,
+    amount: null,
+    action: { tab: 'stats' },
+  };
+}
+
 export function buildBlueprintToast(blueprint) {
   if (!blueprint?.id) return null;
   const rarityLabel = BLUEPRINT_RARITY_LABEL[blueprint.rarity];
@@ -280,6 +346,7 @@ export function buildRewardToasts(ui = {}, missions = {}, extras = {}) {
   const toasts = [
     buildWeeklyToast(ui.weeklyReportPending),
     buildLootToast(ui.lootModalOpen ? ui.pendingReward : null, extras.stageHint ?? null),
+    buildMilestoneToast(ui.lootModalOpen ? ui.pendingReward : null),
     buildRelicToast(ui.relicNotification),
     buildLevelToast((ui.levelUpQueue ?? [])[0]),
     buildRankToast(ui.rankUpNotification),

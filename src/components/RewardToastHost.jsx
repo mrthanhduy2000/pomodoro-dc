@@ -110,19 +110,30 @@ export default function RewardToastHost({ paused = false, onNavigate, onOpenDeta
   const { shown, hidden, overflowLabel } = splitRewardToasts(toasts);
 
   /**
-   * Âm thanh: giữ ĐÚNG những tiếng đã có trước đây, không thêm tiếng mới.
+   * Âm thanh: giữ ĐÚNG những tiếng đã có trước đây.
    * `playChestOpen` vốn kêu ở giai đoạn 0 của hộp thoại phần thưởng và
    * `playLevelUp` ở giai đoạn 5 — phiên thường nay không mở hộp thoại nữa nên
    * hai tiếng ấy phải kêu ở đây, nếu không việc bỏ chặn màn hình sẽ lặng lẽ lấy
    * mất phản hồi âm thanh của mỗi phiên xong.
+   *
+   * ⚠️ THÊM `playMilestone` (2026-09-01) — tiếng này đã nằm sẵn trong `soundEngine` với **0 nơi
+   * gọi**, đúng hình dạng "hàm engine chưa có ai gọi" (Phase 4H). Nó dành cho thẻ mốc chuỗi
+   * 7/14/30 ngày, thứ trước nay chạm tới mà app không kêu một tiếng nào.
+   *
+   * ⚠️ VÀ NÓ THAY tiếng rương, KHÔNG chồng lên. Thẻ mốc chỉ sinh ra khi một phiên vừa xong, tức
+   * nó LUÔN đi cùng thẻ tổng kết — để cả hai cùng kêu là bảo đảm hai tiếng chồng nhau ở đúng
+   * khoảnh khắc đáng nhớ nhất, chứ không phải một ca hiếm. Cái nào hiếm hơn thì cái đó được
+   * tiếng: mốc chuỗi 30 ngày đến 12 lần một năm, rương thì mỗi phiên.
    */
   const soundedRef = useRef(new Set());
   useEffect(() => {
     const live = new Set(toasts.map((t) => t.id));
+    const coMoc = toasts.some((t) => t.source === 'milestone');
     for (const toast of toasts) {
       if (soundedRef.current.has(toast.id)) continue;
       soundedRef.current.add(toast.id);
-      if (toast.source === 'loot') soundEngine.playChestOpen();
+      if (toast.source === 'loot' && !coMoc) soundEngine.playChestOpen();
+      if (toast.source === 'milestone') soundEngine.playMilestone();
       if (toast.source === 'level') soundEngine.playLevelUp();
     }
     // Dọn id đã biến mất để cùng một phần thưởng lần sau vẫn kêu (ví dụ lên cấp 7

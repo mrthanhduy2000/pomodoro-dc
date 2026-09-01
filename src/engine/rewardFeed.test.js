@@ -265,3 +265,113 @@ test('sự kiện KHÔNG nâng bậc độ hiếm — bậc đang đo ĐỘ DÀI
   const [coSuKien] = buildRewardToasts(PHIEN_CO_SU_KIEN, {}).filter((t) => t.source === 'loot');
   assert.equal(coSuKien.tier, thuong.tier, 'sự kiện đang tự nâng bậc của mình');
 });
+
+// ─── Rương Lớn + tinh luyện phải được GỌI TÊN trên thẻ (2026-09-01) ──────────
+// Đo trên fixture 624 phiên: Rương Lớn ở 10,1% số phiên, tinh luyện ở 28,8% — cả hai đã được
+// tính từ lâu mà chưa bao giờ hiện tên. "Rương Lớn" trước nay chỉ là chữ "lớn" viết thường bé
+// xíu trên huy hiệu hệ số; tinh luyện thì không hiện ở đâu cả.
+
+// THỬ-CHO-ĐỎ: xoá dòng `if (pendingReward.largeChest) bits.push('Rương Lớn');` ⇒ bài này đỏ.
+test('thẻ tổng kết gọi tên Rương Lớn và tinh luyện, xếp HIẾM trước THƯỜNG', () => {
+  const [the] = buildRewardToasts({
+    lootModalOpen: true,
+    pendingReward: {
+      totalSessionXP: 900, multiplier: 2.0, largeChest: true, t2Drop: 1,
+      resources: { go: 18 }, rpEarned: 120,
+    },
+  });
+  assert.equal(the.source, 'loot');
+  const mo = the.description;
+  assert.ok(mo.includes('Rương Lớn'), `thiếu Rương Lớn: ${mo}`);
+  assert.ok(mo.includes('tinh luyện'), `thiếu tinh luyện: ${mo}`);
+  // Thứ tự là phần quan trọng: dòng chỉ có MỘT dòng, dài hơn bị cắt "…".
+  assert.ok(
+    mo.indexOf('Rương Lớn') < mo.indexOf('tinh luyện'),
+    `Rương Lớn (10,1% phiên) phải đứng trước tinh luyện (28,8%): ${mo}`,
+  );
+  assert.ok(
+    mo.indexOf('tinh luyện') < mo.indexOf('tài nguyên'),
+    `tinh luyện phải đứng trước tài nguyên (có ở gần như mọi phiên): ${mo}`,
+  );
+});
+
+// THỬ-CHO-ĐỎ: bỏ `pendingReward.largeChest ? 'Rương Lớn' : null` khỏi mảng `khoe` ⇒ đỏ.
+test('phiên CÓ sự kiện vẫn khoe Rương Lớn — 63% phiên đi qua nhánh này', () => {
+  const [the] = buildRewardToasts({
+    lootModalOpen: true,
+    pendingReward: {
+      totalSessionXP: 900, multiplier: 2.0, largeChest: true,
+      positiveEvent: { icon: '💡', label: 'Đột Phá!', desc: 'Khoảnh khắc hiểu sâu bất ngờ' },
+      positiveEventBonus: 120,
+    },
+  });
+  assert.equal(the.icon, '💡');
+  assert.equal(the.name, 'Đột Phá!');
+  assert.ok(the.description.includes('Rương Lớn'), `thiếu Rương Lớn: ${the.description}`);
+  assert.ok(the.description.includes('Khoảnh khắc hiểu sâu'), 'mất câu chuyện của sự kiện');
+});
+
+test('không có gì hiếm thì KHÔNG bịa ra dòng nào', () => {
+  const [the] = buildRewardToasts({
+    lootModalOpen: true,
+    pendingReward: { totalSessionXP: 300, multiplier: 1.0, resources: { go: 4 }, rpEarned: 40 },
+  });
+  assert.ok(!the.description.includes('Rương Lớn'));
+  assert.ok(!the.description.includes('tinh luyện'));
+  assert.equal(the.description, '+4 tài nguyên · +40 RP');
+});
+
+// ─── MỐC CHUỖI 7 / 14 / 30 (2026-09-01) ──────────────────────────────────────
+// `STREAK_MILESTONES` có từ lâu và được dùng để vẽ "đích kế tiếp", nhưng LÚC CHẠM mốc thì app
+// không nói một câu nào — kể cả mốc 30, thứ mở +5% allBonus VĨNH VIỄN.
+
+// THỬ-CHO-ĐỎ: xoá `buildMilestoneToast(...)` khỏi mảng trong `buildRewardToasts` ⇒ bài này đỏ.
+test('chạm mốc chuỗi thì có thẻ ăn mừng, và mốc vĩnh viễn mang bậc cao hơn', () => {
+  const nhinThay = (streakDays) => buildRewardToasts({
+    lootModalOpen: true,
+    pendingReward: { totalSessionXP: 500, multiplier: 1.3, streakDays, streakMissionXP: 40 },
+  }).find((t) => t.source === 'milestone');
+
+  const moc7 = nhinThay(7);
+  assert.ok(moc7, 'mốc 7 không sinh thẻ');
+  assert.equal(moc7.name, 'Chuỗi 7 ngày');
+  assert.equal(moc7.tier, 'hiem');
+
+  const moc30 = nhinThay(30);
+  assert.ok(moc30, 'mốc 30 không sinh thẻ');
+  assert.equal(moc30.tier, 'huyenThoai', 'mốc mở buff vĩnh viễn phải ở bậc cao nhất');
+  assert.ok(/vĩnh viễn/.test(moc30.description), 'không nói ra phần thưởng vĩnh viễn');
+
+  // ngày thường thì im lặng
+  for (const ngay of [1, 6, 8, 13, 29, 31]) {
+    assert.equal(nhinThay(ngay), undefined, `ngày ${ngay} không phải mốc mà vẫn ăn mừng`);
+  }
+});
+
+// THỬ-CHO-ĐỎ: bỏ vế `if (!(Number(pendingReward.streakMissionXP ?? 0) > 0)) return null;` ⇒ đỏ.
+test('mỗi mốc ăn mừng ĐÚNG MỘT LẦN, kể cả khi làm nhiều phiên trong ngày mốc', () => {
+  // Phiên thứ hai trong cùng ngày: `streakDays` VẪN là 7 (chuỗi chỉ nhích ở phiên đầu ngày),
+  // nhưng `streakMissionXP` đã bị `streakMissionClaimedToday` gác về 0.
+  const phienSau = buildRewardToasts({
+    lootModalOpen: true,
+    pendingReward: { totalSessionXP: 500, multiplier: 1.3, streakDays: 7, streakMissionXP: 0 },
+  });
+  assert.equal(
+    phienSau.filter((t) => t.source === 'milestone').length, 0,
+    'phiên thứ hai trong ngày mốc lại ăn mừng lần nữa',
+  );
+});
+
+// THỬ-CHO-ĐỎ: thêm `{ days: 3, label: 'mốc 3' }` vào STREAK_MILESTONES ⇒ bài này đỏ.
+// Đây là bài canh QUAN HỆ, không canh con số: nó bảo đảm tín hiệu chống-lặp còn CHE HẾT các mốc.
+test('mọi mốc phải nằm trên ngưỡng của tín hiệu chống-lặp một-lần-mỗi-ngày', async () => {
+  const { STREAK_MILESTONES, STREAK_MISSION_MIN_STREAK } = await import('./constants.js');
+  assert.ok(STREAK_MILESTONES.length > 0, 'bảng mốc rỗng — phép đo chạy rỗng');
+  const hoLot = STREAK_MILESTONES.filter((m) => m.days < STREAK_MISSION_MIN_STREAK);
+  assert.deepEqual(
+    hoLot, [],
+    `mốc ${hoLot.map((m) => m.days).join(', ')} nằm DƯỚI ngưỡng ${STREAK_MISSION_MIN_STREAK} `
+    + 'nên `streakMissionXP` không che được nó ⇒ mốc ấy sẽ ăn mừng lại ở MỌI phiên trong ngày. '
+    + 'Thêm mốc nhỏ hơn thì phải tìm một tín hiệu một-lần-mỗi-ngày khác, đừng bỏ qua bài này.',
+  );
+});

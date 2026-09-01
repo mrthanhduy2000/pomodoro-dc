@@ -11,6 +11,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
 import { getGlyph, hasGlyphIcon, getLabelMark } from './labelMark.js';
+import { stripComments } from './sourceScan.js';
 import {
   ACHIEVEMENTS,
   ACHIEVEMENT_TIERS,
@@ -89,12 +90,10 @@ test('màn sưu tập phải hỏi getGlyph, KHÔNG được nối thẳng ký h
   ];
   for (const duongDan of man) {
     const ma = readFileSync(duongDan, 'utf8');
-    // Bỏ dòng chú thích ra trước khi phán xét — một cái tên nằm trong lời kể lịch sử
-    // không phải một lời gọi (bài học `/tênHàm\(/` bắt trúng cả dòng định nghĩa).
-    const loiGoi = ma
-      .split('\n')
-      .filter((d) => !d.trimStart().startsWith('//') && !d.trimStart().startsWith('*'))
-      .join('\n');
+    // Bỏ chú thích ra trước khi phán xét — một cái tên nằm trong lời kể lịch sử không phải một
+    // lời gọi (bài học `/tênHàm\(/` bắt trúng cả dòng định nghĩa). Phải bỏ nguyên KHỐI: các file
+    // này có khối `{/* … */}` nhiều dòng nhắc đúng cái tên đang bị cấm.
+    const loiGoi = stripComments(ma);
     assert.ok(
       !/(getLabelMark|initialsFromLabel)\s*\(/.test(loiGoi),
       `${duongDan} còn sinh ký hiệu tắt thẳng từ nhãn — 513 biểu tượng đã vẽ tay sẽ không lên được màn hình`,

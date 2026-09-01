@@ -9,6 +9,7 @@
  */
 
 import React, { useMemo, useState } from 'react';
+import { weeklyXpNote } from './weeklyXpNote';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SCRIM_FADE, useCustomMotion, useEnterMotion, useSnapMotion } from '../lib/motionPresets';
 import useGameStore from '../store/gameStore';
@@ -701,7 +702,16 @@ function WeeklyReportModalContent({
               <SnapshotMetric
                 label="XP kiếm được"
                 value={curr.totalXP > 999 ? `${(curr.totalXP / 1000).toFixed(1)}k` : curr.totalXP}
-                note={curr.jackpots > 0 ? `${curr.jackpots} jackpot trong tuần` : 'Không có jackpot.'}
+                /*
+                  ⚠️ ĐỪNG BÁO CÁO SỰ VẮNG MẶT CỦA MỘT THỨ KHÔNG THỂ XẢY RA (2026-09-01). Dòng
+                  này trước đây in "Không có jackpot." mỗi tuần. Nhưng jackpot đòi BA điều kiện
+                  cùng lúc: đã mở kỹ năng "Đại Trúng Thưởng", phiên ≥45 phút, VÀ trúng một cú
+                  tung 2,5%. Đàm chưa mở kỹ năng ấy ⇒ với anh nó **không thể xảy ra**, nên câu
+                  ấy là một bản tin tuần nào cũng giống tuần nào về một việc không có thật.
+                  Thay bằng thứ ô này thật sự đang nói: XP tuần này so với tuần trước — cùng một
+                  chỗ, cùng một dòng, nhưng là một con số Đàm quyết được.
+                */
+                note={weeklyXpNote(curr.totalXP, prev.totalXP)}
                 color={ACCENT_DEEP}
               />
             </div>

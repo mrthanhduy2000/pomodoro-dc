@@ -79,3 +79,18 @@ test('Xưởng: luật chung nói MỘT lần, và tên đặc quyền không t�
     + 'trình sinh ra nó, cùng một màn',
   );
 });
+
+// ─── PHẢN HỒI KHI BẤM (2026-09-01) ───────────────────────────────────────────
+// THỬ-CHO-ĐỎ: đổi `<Motion.button` của thanh điều hướng về `<button` ⇒ đỏ.
+test('năm nút thanh điều hướng — thứ Đàm chạm nhiều nhất — phải NHÚC NHÍCH khi bấm', () => {
+  const ma = stripComments(readFileSync(new URL('../App.jsx', import.meta.url), 'utf8'));
+  const i = ma.indexOf('MOBILE_PRIMARY_TABS.map');
+  assert.ok(i > 0, 'không tìm thấy thanh điều hướng — phép đo chạy rỗng');
+  const khoi = ma.slice(i, i + 700);
+  assert.match(khoi, /<Motion\.button/, 'nút thanh dưới trở lại `<button>` trần — bấm không có phản hồi nào');
+  assert.match(khoi, /\{\.\.\.pressMotion\}/, 'không còn trải nhịp BẤM');
+  // ⚠️ Phải lấy từ `motionPresets` chứ không gõ tay `whileTap`: nhịp ở đó tự im khi bật
+  // "Giảm chuyển động", còn một prop viết rời thì không, và `motionCoverage.test.js` sẽ đỏ.
+  assert.match(ma, /usePressMotion\(\)/, 'nhịp bấm không lấy từ `lib/motionPresets`');
+  assert.ok(!/whileTap=\{/.test(khoi), 'gõ tay `whileTap` — phải đi qua `usePressMotion()`');
+});

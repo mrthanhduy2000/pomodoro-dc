@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState, Suspense } from 'react';
 import { AnimatePresence, motion as Motion, useReducedMotion } from 'framer-motion';
-import { useEnterMotion, useSnapMotion } from './lib/motionPresets';
+import { useEnterMotion, usePressMotion, useSnapMotion } from './lib/motionPresets';
 import { initSync } from './lib/syncService';
 import { clearTimerLive, updateTimerLive } from './lib/timerLiveService';
 
@@ -616,6 +616,7 @@ export default function App() {
   const [supportRailOpen, setSupportRailOpen] = useState(true);
   const [focusFullscreen, setFocusFullscreen] = useState(false);
   const enterMotion = useEnterMotion();
+  const pressMotion = usePressMotion();
   // ⚠️ NGOẠI LỆ CÓ LÝ DO — cột phải THU GỌN chứ không XUẤT HIỆN. `enter` là opacity+y nên nó
   // không diễn đạt được một bề ngang đang co lại, và bề ngang ấy do chính `animate` khai (không
   // có lớp CSS nào đặt nó) ⇒ phải dùng `useSnapMotion`: bỏ hẳn thì cột bung ra chiếm cả màn hình.
@@ -1174,12 +1175,22 @@ export default function App() {
               boxShadow: '0 12px 28px rgba(31,30,29,0.08)',
             }}
           >
+            {/*
+              ⚠️ NĂM NÚT NÀY LÀ THỨ ĐÀM CHẠM NHIỀU NHẤT TRONG CẢ APP, VÀ CHÚNG KHÔNG NHÚC NHÍCH
+              KHI BẤM (2026-09-01). Chúng là `<button>` trần chỉ có `transition-colors`, tức phản
+              hồi duy nhất là màu đổi SAU khi tab mới đã dựng xong. `usePressMotion()` là nhịp
+              BẤM sẵn có của dự án (`lib/motionPresets.js`) — nó tự im khi Đàm bật "Giảm chuyển
+              động", nên chỗ gọi không phải tự kiểm.
+              Đây là dopamine tốn **0 chữ, 0 thẻ, 0 tiếng**: thứ vừa bấm phải cho biết nó đã nhận
+              cú bấm, ngay lúc ngón tay còn ở đó.
+            */}
             {MOBILE_PRIMARY_TABS.map((tab) => {
               const active = activeTab === tab.id;
               return (
-                <button
+                <Motion.button
                   key={tab.id}
                   type="button"
+                  {...pressMotion}
                   onClick={() => { selectTab(tab.id); setMoreMenuOpen(false); }}
                   className="relative flex min-h-[48px] flex-1 flex-col items-center justify-center gap-0.5 rounded-[16px] px-1 py-1.5 text-[10px] font-medium leading-none transition-colors"
                   style={{
@@ -1209,7 +1220,7 @@ export default function App() {
                       style={{ background: 'var(--accent)' }}
                     />
                   )}
-                </button>
+                </Motion.button>
               );
             })}
             {(() => {

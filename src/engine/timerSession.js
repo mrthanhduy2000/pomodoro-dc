@@ -32,6 +32,28 @@ export const CONTINUED_POMODORO_CONFIRM_SECONDS = 15 * 60;
  * được vì cả hai trường hợp người dùng đều đang nhìn hộp phần thưởng, không nhìn đồng hồ; và vì
  * lệch về phía "được nghỉ đủ" thì an toàn hơn lệch về phía "bị ăn bớt".
  * Muốn quay lại: đổi đúng dòng dưới về 500 (bài test sẽ ĐỎ và nhắc lại toàn bộ lý do ở trên).
+ *
+ * ⚠️⚠️ ĐÍNH CHÍNH 2026-09-01 — TIỀN ĐỀ CỦA ĐOẠN NGAY TRÊN ĐÃ CHẾT, VÀ NÓ CHẾT DO HAI BẢN VÁ Ở
+ * CHỖ KHÁC, KHÔNG DO AI ĐỘNG VÀO FILE NÀY.
+ *   · ADR-060 (2026-08-27) làm phiên thường THÔI tự mở hộp phần thưởng — nay chỉ còn một thẻ
+ *     toast nhỏ ở góc.
+ *   · Vòng 22 (2026-08-31) siết lễ mừng thành phố xuống CHỈ khi có công trình vừa xong.
+ * Đo lại: `sessionsToComplete` qua 15 kỷ cho trung bình **5,60 phiên mỗi công trình ⇒ lễ mừng
+ * chỉ chạy ở ~17,9% số phiên**. Tức câu "cả hai trường hợp người dùng đều đang nhìn hộp phần
+ * thưởng" nay SAI ở khoảng 82% số phiên: ở đó không có lễ mừng nào để che, mà màn hình vẫn giữ
+ * trạng thái vừa-xong thêm 3,2 giây trước khi chuyển sang nghỉ. Trên fixture 588 phiên hoàn
+ * thành, đó là **31,4 phút** chờ trong 180 ngày.
+ *
+ * ⚠️ CỐ Ý CHƯA ĐỔI CON SỐ, và đây là một quyết định chứ không phải một chỗ bỏ sót:
+ *   (a) đường đúng là làm độ trễ THEO chính thứ nó sinh ra để che (3 200 khi có lễ mừng, 500 khi
+ *       không) — tức một QUAN HỆ, không phải một hằng số; nhưng
+ *   (b) nó đụng thẳng vào luồng tự-vào-nghỉ, nơi một sai lầm sẽ ÂM THẦM ăn bớt giờ nghỉ thật của
+ *       Đàm; và
+ *   (c) khoảnh khắc ấy **KHÔNG chụp ảnh kiểm được trên bản dev** — `ui` không nằm trong
+ *       `partialize` nên không gieo được bằng `--fixture`, và cấm bấm "Bắt đầu" trên dev (dùng
+ *       chung một hàng Supabase với bản thật).
+ * Đổi một hành vi đồng hồ mà KHÔNG quan sát được nó là đúng thứ phải hỏi Đàm trước.
+ * Ghi ở `TECH_DEBT` và ở báo cáo vòng 23.
  */
 export const BREAK_START_DELAY_MS = 3200;
 

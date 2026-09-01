@@ -1,4 +1,82 @@
-> Cập nhật lần cuối: **2026-09-01 (vòng 23)** — **"hứng thú hơn, hệ thống đơn giản hơn, NHƯNG
+> Cập nhật lần cuối: **2026-09-01 (vòng 24)** — **TAB "HÀNH TRANG": 6 MÀN SAU 3 TẦNG TAB → 3 MÀN,
+> 1 HÀNG TAB** (lệnh của Đàm: *"tối ưu lại tab hành trang và toàn bộ những gì trong đó, làm lại
+> ĐƠN GIẢN HƠN nhưng vẫn nâng cao độ hứng thú, độ nghiện và dopamin… PHẢI DỄ HIỂU, DỄ CHƠI… có thể
+> đập đi xây lại"*). Khảo sát bằng **12 nhánh soi song song** (chỉ đọc, luật *không số đo = không
+> tính*), rồi sửa TUẦN TỰ. 6 commit · 22 file · +1.769 / −669 dòng.
+>
+> **CHẨN ĐOÁN GỐC — và nó giải thích cả sáu màn cùng lúc: Hành trang là một BẢO TÀNG CỦA NHỮNG THỨ
+> ĐÀM KHÔNG CÓ.** Nó trả lời câu *"tôi đang có gì"* — một câu không có tính cấp bách — trong khi
+> vòng lặp gây nghiện cần câu *"tôi SẮP có gì, và còn bao xa"*. Đo: 6 màn dài **115.864px = 137 màn
+> hình điện thoại**, mang **4.808 con số**, chỉ **44 nút bấm được**, và **2/6 màn có ĐÚNG 0 nút**.
+>
+> | | trước | sau |
+> |---|---|---|
+> | tầng tab | 3 (4 ở chỗ sâu nhất) | **1** |
+> | màn con | 6 | **3** |
+> | hàng tab ăn của màn hình 844px | 246px = 29,1% | **38px** |
+> | tổng chiều dài | 115.864px | **17.754px** |
+> | màn không có nút nào bấm được | 2/6 | **0/3** |
+> | thành tích hiện tiến độ | **0/360** | **310/360 (86%)** |
+>
+> **BỐN PHÁT HIỆN LỚN, tất cả đều do PHÉP ĐO bắt chứ không do đọc mã:**
+> · ⚠️ **BA HÀNG TAB DÙNG CHUNG MỘT COMPONENT** (`SubTabs`) nên bo góc, màu nền, cỡ chữ giống hệt
+>   nhau — **không có gì nói hàng nào là cha, hàng nào là con**. Ở màn Kho báu, dòng nội dung đầu
+>   tiên bắt đầu ở y=373, tức **44,2% màn hình đã trôi qua** trước khi thấy một chữ đáng xem.
+> · ⚠️ **TAB "LỊCH SỬ": 98.568px = 117 màn hình, 4.362 con số, 0 nút, và 0 THÔNG BÁO NÀO TRỎ TỚI**
+>   (`workshop` có 8 chỗ · `blueprints` 4 · `relics` 1 · `history` **0**). Cùng mảng `history` ấy
+>   đã được màn Thống kê đọc và tóm tắt. Chính game cũng không bao giờ mời Đàm vào đó.
+> · ⚠️ **310/360 THÀNH TÍCH ĐÃ CÓ SẴN CON SỐ "CÒN BAO NHIÊU NỮA" TỪ ĐẦU** — 86% số mục chỉ là một
+>   phép so ngưỡng đơn `s.<trường> >= <số>` — mà `Achievements.jsx` chỉ biết `isUnlocked` (đúng/
+>   sai). Chữ "progress" xuất hiện đúng MỘT lần trong cả file, trong một chú thích nói về màn khác.
+> · ⚠️ **Ô GIÁ KỸ NĂNG NÓI DỐI Ở 21/32 NÚT, TỆ NHẤT 2,3 LẦN** — ô ghi "8 SP" trong khi phải tiêu
+>   **18 SP** (≈ 9 cấp ≈ 254 ngày) mới chạm tới, vì nó in giá LẺ chứ không phải giá cả chuỗi tiên
+>   quyết. Con số duy nhất người chơi đọc được lại là con số nói dối theo hướng DỄ CHỊU.
+>
+> **BỐN BÀI HỌC VỀ CÁCH LÀM — cả bốn đều là chỗ tôi suýt sai:**
+> · ⚠️ **MỘT CÁCH LÀM CHẠY ĐÚNG DƯỚI `node` VÀ HỎNG CÂM TRÊN BẢN THẬT.** Cách hiển nhiên để lấy
+>   ngưỡng thành tích là đọc mã nguồn hàm `check` bằng regex — đúng 100% khi đo, và **sai 100% trên
+>   production** vì Vite rút gọn `s.sessionsCompleted` thành `s.a`. Lúc ấy Đàm mất sạch tiến độ
+>   trong khi mọi bài test vẫn xanh. ⇒ **Ngưỡng phải là DỮ LIỆU** (`dem` + `moc`), và `check` được
+>   SINH RA từ chính nó — một luật, một công thức. Nghiệm thu phép biến đổi: 360 mục × 62 ảnh chụp
+>   số liệu = **22.320 phép so, khớp TỪNG BIT**, kèm đối chứng bơm kết quả giả (lệch 360/360).
+> · ⚠️ **BẢN VÁ GỘP TAB TỰ TẠO RA MỘT LỖI TRUNG THỰC, VÀ TÔI CHỈ THẤY KHI NHÌN ẢNH.** Sau khi gộp,
+>   màn Xưởng vẫn in *"Đi sang mục Bản vẽ"* — chỉ đường tới một cái tab không còn tồn tại. Build
+>   xanh, lint sạch, 1461 bài xanh, **không cổng nào thấy**. Nay có một bài test quét năm màn tìm
+>   mọi câu dạng "sang mục/tab X".
+> · ⚠️ **CÔNG CỤ LÀM MÙ BA MÀN, VÀ BẢN VÁ ĐẦU CỦA TÔI ĐỌC NHẦM MỘT TÊN KHOÁ.** `make-fixture.mjs`
+>   không gieo `research`/`relics`/`resources` ⇒ Di vật hiện "0/15", Bản vẽ "0/75 · 0 RP", Xưởng
+>   "có 0" — **ba màn trông như ba màn chết trong khi app hoàn toàn lành**. Vá xong thì bản đầu đọc
+>   `entry.buildings` trong khi khoá thật là `entry.built` ⇒ in ra "4/75" trông hoàn toàn hợp lý,
+>   sự thật là **38/75** (lệch 9,5 lần). Đây là **lần thứ hai** file ấy bị cắn bởi cùng một chuyện.
+> · ⚠️ **HAI BÀI TEST CŨ ĐỎ, KHÔNG BÀI NÀO ĐỎ VÌ MÃ HỎNG** — và cả hai làm đúng việc của chúng.
+>   Gác chạy-rỗng của `motSuThatMotCho.test.js` hỏi `locked.map(`; khi danh sách tách làm hai nó ĐỎ
+>   với đúng câu *"phép đo chạy rỗng"* thay vì lặng lẽ xanh trên một file nó không còn hiểu.
+>
+> **BA CHỖ TÔI TỰ BẮT ĐƯỢC MÌNH (ghi ra vì chúng là hình dạng dễ lặp):**
+> · một `assert.deepEqual` mà **hai nhánh ternary giống hệt nhau** — một phép so luôn đúng, đội lốt
+>   một cái gác;
+> · một `Math.max(0, …)` **không thể nổ theo cấu tạo** (phép thử ngược: 0/6 bài đỏ) — mã chết đội
+>   lốt lưới an toàn còn tệ hơn không có gì, vì nó khiến người sau tưởng đã có ai canh;
+> · một regex `/useEffect\([^)]*\{[^}]*setInventoryTab/` **dừng ngay ở dấu `)` của `() =>`**, nên
+>   bài test canh nó sẽ xanh vĩnh viễn — đúng thứ nó sinh ra để ngăn.
+>
+> **HAI ĐỀ NGHỊ CỦA KHẢO SÁT ĐÃ BỊ BÁC BẰNG SỐ, KHÔNG BẰNG LÝ LẼ:**
+> · *"đưa Di vật lên đầu tab Huy hiệu"* — đo ra khủng hoảng kế tiếp còn **114 phiên**, trong khi
+>   «Sắp đạt» đang nói *"còn 1 ghi chú"*. Một thứ 114 phiên nữa không phải "việc tiếp theo".
+> · *"thêm một khối «Làm được ngay» ở đầu Hành trang"* — câu ấy đã có ở màn Tập trung
+>   (`useNextAction`); chép sang là đúng cái lạm phát thông tin vòng 23 vừa gỡ. Thứ còn thiếu không
+>   phải một lời nhắc mà là **đứng đúng chỗ** ⇒ bấm "Hành trang" nay rơi vào tab CÓ việc, và bản vá
+>   ấy **không in thêm một chữ nào**.
+>
+> **GHI NỢ CHO ĐÀM QUYẾT — `TECH_DEBT #96`: TIẾN HOÁ DI VẬT LÀ MỘT CƠ CHẾ CHẾT.** `evolveRelic`
+> tiêu `resourcesRefined[kỷ CỦA DI VẬT]`, mà tinh luyện chỉ rơi vào `resourcesRefined[kỷ ĐANG
+> CHƠI]` và công trình kỷ cũ bị gỡ khi lên kỷ ⇒ **không có đường nào kiếm**. Ảnh chụp: 3/3 nút
+> "Chưa đủ tài nguyên", và chúng sẽ ở nguyên như vậy vĩnh viễn. Mọi lối ra đều là đổi luật KINH TẾ.
+>
+> **Cổng:** lint sạch · build xanh · **1484 bài (# skipped 1) · 0 đỏ** (trước vòng: 1453).
+> **33 bài mới**, tất cả đã thử-cho-đỏ; các phép phá đều nêu TRƯỚC nó mong đợi đỏ ở đâu.
+
+> Cập nhật lần trước: **2026-09-01 (vòng 23)** — **"hứng thú hơn, hệ thống đơn giản hơn, NHƯNG
 > KHÔNG LẠM PHÁT THÔNG TIN"** (lệnh của Đàm, vế cuối là vế mới). **Vế ấy đảo ngược phản xạ mặc
 > định:** cách rẻ nhất để một màn hình "vui hơn" luôn là thêm một huy hiệu, thêm một dòng chữ,
 > thêm một thẻ — và đó chính là thứ bị cấm. Nên câu trả lời cả vòng phải đến từ phép **TRỪ**.

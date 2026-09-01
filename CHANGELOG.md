@@ -12,6 +12,74 @@
 
 ---
 
+## 2026-09-01 (vòng 24) — Tab "Hành trang": 6 màn sau 3 tầng tab → **3 màn, 1 hàng tab**
+
+**Mục đích:** lệnh của Đàm — *"tối ưu lại tab hành trang và toàn bộ những gì trong đó, làm lại
+ĐƠN GIẢN HƠN nhưng vẫn nâng cao độ hứng thú, độ nghiện và dopamin… PHẢI DỄ HIỂU, DỄ CHƠI… có thể
+đập đi xây lại"*. Khảo sát bằng 12 nhánh soi song song (chỉ đọc), luật *không số đo = không tính*,
+rồi sửa TUẦN TỰ. 6 commit.
+
+**CHẨN ĐOÁN GỐC:** Hành trang là **một bảo tàng của những thứ Đàm KHÔNG có**, nằm sau 3 tầng tab
+(4 ở chỗ sâu nhất), nơi phần lớn nút không bấm được. Đo: 6 màn dài **115.864px = 137 màn hình
+điện thoại**, 4.808 con số, chỉ 44 nút bấm được — và **2/6 màn có ĐÚNG 0 nút**.
+
+**Số đo trước → sau**
+
+| | trước | sau |
+|---|---|---|
+| tầng tab | 3 (4 ở chỗ sâu nhất) | **1** |
+| màn con | 6 | **3** |
+| hàng tab ăn của màn hình | 246px (29,1%) | **38px** |
+| tổng chiều dài | 115.864px | **17.754px** |
+| màn không có nút nào | 2/6 | **0/3** |
+| thành tích hiện tiến độ | 0/360 | **310/360 (86%)** |
+
+**1. Ba hàng tab chồng nhau → một.** Cả ba dùng CHUNG component `SubTabs` nên bo góc, màu nền, cỡ
+chữ giống hệt nhau — **không có gì nói hàng nào là cha, hàng nào là con**. Ba màn nay gom theo CÂU
+HỎI người chơi đang hỏi: **Kỹ năng** (tôi tiêu điểm vào đâu) · **Công trình** (tôi xây gì tiếp) ·
+**Huy hiệu** (tôi đã giành được gì). Ba id tab con GIỮ NGUYÊN nên mọi thông báo đã lưu vẫn trúng.
+
+**2. Xoá tab "Lịch sử."** Dài **98.568px = 117 màn hình**, 4.362 con số, **0 nút**, và **0 thông
+báo nào trong game trỏ tới nó** (so với `workshop` 8 chỗ · `blueprints` 4 · `relics` 1). Cùng mảng
+`history` ấy đã được màn Thống kê đọc và tóm tắt.
+
+**3. Bản vẽ + Xưởng là một vòng lặp bị cắt đôi** — và app đã tự thú: màn Xưởng in hẳn một câu bảo
+người chơi *"Đi sang mục Bản vẽ"*. Nay một màn, Xưởng đứng trước (nơi có việc làm ngay).
+
+**4. 310/360 thành tích nay có tiến độ; trước là 0/360.** 86% số mục chỉ là một phép so ngưỡng đơn
+`s.<trường> >= <số>` — con số "còn bao nhiêu nữa" nằm sẵn trong dữ liệu từ đầu, chưa ai lấy ra.
+Ngưỡng nay là **DỮ LIỆU** (`dem` + `moc`) và `check` được SINH RA từ chính nó. ⚠️ Cách hiển nhiên
+(đọc mã nguồn `check` bằng regex) chạy đúng dưới `node` và **hỏng câm trên production** vì Vite rút
+gọn `s.sessionsCompleted` thành `s.a`. Nghiệm thu: 360 mục × 62 ảnh chụp = **22.320 phép so, khớp
+từng bit**.
+
+**5. Màn Huy hiệu xếp theo ĐỘ KHẨN CẤP.** «Sắp đạt» ba mục gần nhất lên nếp gấp (*"còn 1 ghi chú"*
+· *"còn 751 phút"* · *"còn 11 phiên"*); «Chưa đạt» từ y=7.040 lên **y=2.120** và sắp theo tiến độ
+(mục gần nhất từng nằm ở y=9.606 = 11,4 màn hình); «Đã đạt» xuống dưới.
+
+**6. Di vật nói thật.** Khủng hoảng chỉ nổ đúng một lần lúc vượt mốc EP ⇒ **5/12 dòng đã lỡ vĩnh
+viễn trong ván này**, mà màn hình gộp cả 12 dưới một câu mời "chinh phục để nhận". Nay tách hai
+nhóm, hiện PHẦN THƯỞNG THẬT thay cho "???" (bản cũ dùng 2/7 trường và vứt 5), và thêm thẻ đếm
+ngược đọc `triggerEP` — con số ấy trước đây được **0 component** đọc.
+
+**7. Kỹ năng thôi nói dối về giá.** Ô giá in giá LẺ trong khi phải mua cả chuỗi tiên quyết:
+**21/32 nút (66%) hiện con số thấp hơn giá thật, tệ nhất 2,3 lần** (ghi "8 SP", thật ra 18 SP ≈
+254 ngày). Và 21/32 nút khoá không có một chữ nào nói mình làm gì — mô tả bị THAY bằng "Cần mở: X".
+
+**8. Bấm "Hành trang" rơi vào tab CÓ VIỆC**, hỏi cùng hàm nuôi cái chấm đỏ. Không thêm một chữ nào.
+
+**Tương thích:** không migration, không đổi hình dạng dữ liệu lưu, không đổi một công thức thưởng
+nào. Ba id tab con giữ nguyên; `collectionTab` cũ được DỊCH chứ không bỏ qua.
+
+**Ghi nợ cho Đàm quyết:** `TECH_DEBT #96` — tiến hoá di vật là **cơ chế chết** (`evolveRelic` tiêu
+tinh luyện của kỷ ĐÃ QUA, mà tinh luyện chỉ rơi vào kỷ đang chơi ⇒ 3/3 nút "Chưa đủ tài nguyên",
+vĩnh viễn). Mọi lối ra đều là đổi luật KINH TẾ.
+
+**Cổng:** lint sạch · build xanh · **1484 bài (# skipped 1) · 0 đỏ** (trước vòng: 1453).
+33 bài mới, tất cả đã thử-cho-đỏ.
+
+---
+
 ## 2026-09-01 (vòng 23) — Hứng thú hơn, hệ thống đơn giản hơn, **KHÔNG lạm phát thông tin**
 
 **Mục đích:** cùng mục tiêu vòng 22, cộng thêm một mệnh lệnh mới của Đàm — *"nhưng không bị lạm

@@ -35,7 +35,36 @@ Mặt trận đang làm: **thành phố 3D** (`src/engine/city3d/` + `src/compon
   Phase 21 (*"push nhánh phụ, không tự gộp `main`"*) đã bị lệnh này thay thế.
   ⚠️ **Phase 21 do đó lên production TRƯỚC khi Đàm nhìn ảnh nghiệm thu** — mục "chờ Đàm nhìn ảnh"
   ở phần dưới VẪN CÒN HIỆU LỰC, chỉ là nay nó nghiệm thu một thứ đang chạy thật.
-- **Trò chơi — VÒNG 23 (2026-09-01, mới nhất): "hứng thú hơn, đơn giản hơn, NHƯNG KHÔNG LẠM PHÁT
+- **Trò chơi — VÒNG 24 (2026-09-01, mới nhất): TAB "HÀNH TRANG" — 6 màn sau 3 tầng tab → 3 màn,
+  1 hàng tab.** Lệnh Đàm: *"làm lại đơn giản hơn… phải DỄ HIỂU, DỄ CHƠI… có thể đập đi xây lại"*.
+  Khảo sát bằng 12 nhánh soi song song, luật *không số đo = không tính*, rồi sửa TUẦN TỰ.
+  · **CHẨN ĐOÁN GỐC:** Hành trang là **bảo tàng của những thứ Đàm KHÔNG có** — nó trả lời *"tôi
+  đang có gì"*, một câu không có tính cấp bách, trong khi vòng lặp gây nghiện cần *"tôi SẮP có gì,
+  còn bao xa"*.
+  · **Số đo:** tầng tab **3 → 1** · màn con **6 → 3** · hàng tab **246px (29,1% màn hình) → 38px**
+  · tổng chiều dài **115.864px → 17.754px** · màn không có nút nào **2/6 → 0/3** · thành tích hiện
+  tiến độ **0/360 → 310/360**.
+  · Ba màn gom theo CÂU HỎI, không theo loại dữ liệu: **Kỹ năng · Công trình** (Bản vẽ+Xưởng) **·
+  Huy hiệu** (Thành tích+Di vật). ⚠️ **Ba id tab con GIỮ NGUYÊN** (`skills`/`collection`/
+  `achievements`) nên thông báo đã lưu vẫn trúng; `collectionTab` cũ được DỊCH chứ không bỏ qua
+  (`relics` → Huy hiệu, `history` → Thống kê).
+  · **Xoá tab "Lịch sử"**: 98.568px = 117 màn hình, 4.362 con số, **0 nút**, **0 thông báo trỏ tới**.
+  · **«Sắp đạt»** ba mục gần nhất lên nếp gấp Huy hiệu; «Chưa đạt» từ y=7.040 → **y=2.120** và sắp
+  theo tiến độ (mục gần nhất từng nằm ở y=9.606 = 11,4 màn hình).
+  · **Di vật nói thật**: khủng hoảng chỉ nổ MỘT LẦN lúc vượt mốc EP ⇒ **5/12 dòng đã lỡ vĩnh viễn**
+  mà màn hình vẫn mời "chinh phục"; nay tách hai nhóm + hiện phần thưởng thật thay "???" + đếm
+  ngược đọc `triggerEP` (trước đó **0 component** đọc con số ấy).
+  · **Kỹ năng thôi nói dối**: **21/32 nút (66%) hiện giá thấp hơn giá thật, tệ nhất 2,3 lần**.
+  ⚠️ **BÀI HỌC LỚN NHẤT — MỘT CÁCH LÀM CHẠY ĐÚNG DƯỚI `node` VÀ HỎNG CÂM TRÊN BẢN THẬT:** đọc
+  ngưỡng thành tích bằng regex trên mã nguồn `check` đúng 100% khi đo và **sai 100% trên production**
+  (Vite rút gọn `s.sessionsCompleted` → `s.a`). Ngưỡng phải là **DỮ LIỆU**, `check` sinh ra từ nó.
+  ⚠️ **KHÔNG làm** hai việc khảo sát đề nghị, cả hai bị bác BẰNG SỐ: đưa Di vật lên đầu (khủng
+  hoảng kế còn **114 phiên** — không phải "việc tiếp theo") · thêm khối "Làm được ngay" (câu ấy đã
+  có ở màn Tập trung; thứ thiếu là **đứng đúng chỗ**, nên nay bấm "Hành trang" rơi vào tab CÓ việc,
+  không in thêm một chữ).
+  ⚠️ **`TECH_DEBT #96` — tiến hoá di vật là CƠ CHẾ CHẾT**: tiêu tinh luyện của kỷ ĐÃ QUA, mà tinh
+  luyện chỉ rơi vào kỷ đang chơi ⇒ 3/3 nút "Chưa đủ tài nguyên" vĩnh viễn. **Đàm chọn.**
+- **Trò chơi — VÒNG 23 (2026-09-01): "hứng thú hơn, đơn giản hơn, NHƯNG KHÔNG LẠM PHÁT
   THÔNG TIN".** Vế cuối là vế MỚI và nó **đảo ngược phản xạ mặc định**: cách rẻ nhất để một màn
   hình "vui hơn" luôn là thêm huy hiệu / thêm chữ / thêm thẻ — đúng thứ bị cấm. Nên cả vòng phải
   trả lời bằng phép **TRỪ**: 9 việc, 27 file, **+1.006 / −1.248 dòng (ròng −242)**.
@@ -176,6 +205,10 @@ Mặt trận đang làm: **thành phố 3D** (`src/engine/city3d/` + `src/compon
    ship được vì không quan sát được**. Ai gỡ được điểm mù (a) thì mở khoá luôn `TECH_DEBT #94`.
 0b. **HAI VIỆC ĐÀM PHẢI CHỌN, tôi không tự chọn** (mở ở vòng 23, đã đo sẵn):
    · **`TECH_DEBT #94`** — độ trễ vào nghỉ, xem ngay trên.
+   · **`TECH_DEBT #96`** — **tiến hoá di vật là một cơ chế CHẾT**: `evolveRelic` tiêu tinh luyện
+   của kỷ ĐÃ QUA, mà tinh luyện chỉ rơi vào kỷ đang chơi và công trình kỷ cũ bị gỡ khi lên kỷ ⇒
+   không có đường nào kiếm. Ảnh chụp: 3/3 nút "Chưa đủ tài nguyên", vĩnh viễn. Mọi lối ra đều là
+   đổi luật KINH TẾ.
    · **`TECH_DEBT #95`** — xây MỘT công trình phải qua **BA cổng tiền tệ**, cả ba đều là hàm của
    số phút. Kho thô thừa **14 lần** nhu cầu. Đây là **kinh tế**, không phải hiển thị ⇒ nằm ở phía
    bên kia ranh giới an toàn *"đừng xoá thứ Đàm đã KIẾM ĐƯỢC"*. ⚠️ **ĐÃ BÁC** phương án "nối dây

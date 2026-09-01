@@ -904,13 +904,14 @@ function SynergyPanel({ synergies, activeSynergies, branchCounts, lightTheme }) 
 
               <p className={`text-[10px] relative z-10 leading-tight line-clamp-2 ${lightTheme ? '' : 'text-slate-500'}`} style={lightTheme ? { color: 'var(--muted)' } : undefined}>{syn.desc}</p>
 
+              {/*
+                ⚠️ ĐÃ GỠ huy hiệu «+N% XP» (2026-09-01). Nó chép lại ĐÚNG sáu ký tự cuối của câu
+                mô tả nằm 31px ngay trên nó, và đo trên bảng thật thì **7/7 mô tả đều đã kết thúc
+                bằng chính con số ấy** ("≥3 skill Ý Chí: phiên ≥30' nhận **+5% XP**."). Bảy thẻ ×
+                một dòng thừa = 60px trên màn Kỹ năng.
+                Thanh tiến độ thì GIỮ NGUYÊN — nó mang tin "còn bao xa", thứ không câu nào nói.
+              */}
               <div className="flex items-center gap-2 relative z-10">
-                <span
-                  className={`mono text-xs font-bold tabular-nums ${lightTheme ? '' : active ? 'text-[var(--accent-light)]' : 'text-slate-400'}`}
-                  style={lightTheme ? { color: active ? 'var(--accent2)' : 'var(--muted)' } : undefined}
-                >
-                  +{(syn.bonus * 100).toFixed(0)}% XP
-                </span>
                 {!active && progress > 0 && (
                   <div
                     className="flex-1 h-1 rounded-full overflow-hidden"

@@ -125,28 +125,6 @@ function getTierSurface(tier) {
   return TIER_SURFACES[tier] ?? TIER_SURFACES.silver;
 }
 
-function buildAiRemark(entry, totalUnlocked, latestId) {
-  const categoryRemark = CATEGORY_REMARKS[entry.achievement.category] ?? CATEGORY_REMARKS.special;
-
-  if (!entry.isUnlocked) {
-    return `Mốc này còn ở phía trước. ${categoryRemark}`;
-  }
-
-  if (!entry.unlockedAt) {
-    return `Save cũ không giữ lại giờ đạt cho mốc này, nên hệ thống chỉ giữ đúng vị trí tương đối. ${categoryRemark}`;
-  }
-
-  if (entry.timeSource === 'reconstructed') {
-    return `Giờ đạt ở đây được suy từ nhật ký phiên cũ. ${categoryRemark}`;
-  }
-
-  if (entry.id === latestId) {
-    return `Đây là cột mốc mới nhất trong tiến trình hiện tại. ${categoryRemark}`;
-  }
-
-  return `Đây là cột mốc thứ ${entry.order} trên tổng ${totalUnlocked} dấu đã đạt. ${categoryRemark}`;
-}
-
 function sortUnlockedEntries(left, right) {
   const leftTs = getUnlockTimestamp(left.unlockedAt);
   const rightTs = getUnlockTimestamp(right.unlockedAt);
@@ -205,15 +183,17 @@ function FilterChip({
         </span>
       ) : null}
       <span>{label}</span>
-      <span
-        className={[
-          'rounded-full px-2 py-0.5 text-[10px] font-semibold',
-          active ? 'bg-white/12 text-white/82' : 'bg-[rgba(244,242,236,0.96)] text-[var(--muted)]',
-        ].join(' ')}
-        style={{ fontFamily: MONO_FONT }}
-      >
-        {countLabel}
-      </span>
+      {countLabel ? (
+        <span
+          className={[
+            'rounded-full px-2 py-0.5 text-[10px] font-semibold',
+            active ? 'bg-white/12 text-white/82' : 'bg-[rgba(244,242,236,0.96)] text-[var(--muted)]',
+          ].join(' ')}
+          style={{ fontFamily: MONO_FONT }}
+        >
+          {countLabel}
+        </span>
+      ) : null}
     </button>
   );
 }
@@ -221,12 +201,10 @@ function FilterChip({
 function AchievementCard({
   entry,
   latestId,
-  totalUnlocked,
 }) {
   const tierInfo = ACHIEVEMENT_TIERS[entry.achievement.tier] ?? ACHIEVEMENT_TIERS.silver;
   const categoryInfo = ACHIEVEMENT_CATEGORIES[entry.achievement.category] ?? ACHIEVEMENT_CATEGORIES.special;
   const tierSurface = getTierSurface(entry.achievement.tier);
-  const aiRemark = buildAiRemark(entry, totalUnlocked, latestId);
   const unlockLabel = formatUnlockLabel(entry.unlockedAt);
   const showOrder = entry.isUnlocked && clampOrder(entry.order);
 
@@ -325,17 +303,6 @@ function AchievementCard({
             ) : null}
           </div>
 
-          <div
-            className="mt-3 border border-[var(--line)] bg-[var(--card-bg-solid2)] px-3.5 py-3"
-            style={{ borderRadius: 'var(--skin-radius-control,14px)' }}
-          >
-            {/* ⚠️ ĐÃ GỠ nhãn "Ghi chú tiến trình" (vòng 20, 2026-08-30). Nó lặp ở CẢ 48 thẻ trên
-                một trang dài 14.254px — gọi tên một thứ bốn mươi tám lần thì nó thôi là nhãn và
-                thành nhiễu. Cái hộp có viền và nền riêng đã đủ tách đoạn này khỏi phần mô tả. */}
-            <p className="text-sm leading-6 text-[var(--ink-2)]">
-              {aiRemark}
-            </p>
-          </div>
         </div>
       </div>
     </div>
@@ -692,9 +659,17 @@ export default function Achievements() {
               Lọc theo danh mục
             </p>
             <div className="mt-3 flex flex-wrap gap-2">
+              {/*
+                ⚠️ KHÔNG truyền `countLabel` ở đây (2026-09-01): viên này và viên "Tất cả" của
+                hàng HẠNG cách nhau ĐÚNG 282px và in ra CÙNG một chuỗi từng ký tự, vì cả hai
+                dùng chung biểu thức `totalUnlocked/totalAchievements` — một con số HẰNG, không
+                đổi theo bộ lọc nào. Hàng hạng nằm TRÊN nên nó giữ con số; hàng này nằm ngay dưới
+                một hàng vừa nói xong đúng con số ấy.
+                ⚠️ `FilterChip` phải bọc `{countLabel ? … : null}` — bản cũ dựng bong bóng đếm VÔ
+                ĐIỀU KIỆN, không truyền prop thì còn lại một bong bóng xám rỗng.
+              */}
               <FilterChip
                 active={selectedCategory === 'all'}
-                countLabel={`${dataset.totalUnlocked}/${dataset.totalAchievements}`}
                 icon="✦"
                 iconIsPicture
                 label="Tất cả"
@@ -717,6 +692,25 @@ export default function Achievements() {
                 );
               })}
             </div>
+
+            {/*
+              ⚠️ MỘT LẦN, KHÔNG PHẢI BỐN MƯƠI TÁM LẦN (2026-09-01). `CATEGORY_REMARKS` trước nay
+              được nối vào ĐUÔI của một câu dựng riêng cho TỪNG thẻ (`buildAiRemark`), rồi đóng
+              khung trong một cái hộp có viền — 48 hộp trên một trang, chiếm **38,4% chiều dài
+              trang** (19.059 → 11.739px sau khi xoá), mà nửa đầu mỗi câu chỉ chép lại chip `#N`
+              cùng thẻ và nửa đuôi thì giống hệt nhau ở mọi thẻ cùng danh mục (đuôi lặp nhiều
+              nhất 17 lần, và 24/48 hộp mở đầu bằng đúng chữ "Mốc này còn ở phía trước.").
+              Kiểm cả 5 nhánh của hàm cũ: KHÔNG nhánh nào là tín hiệu duy nhất — "chưa có dấu
+              thời gian" đã có ở `formatUnlockLabel`, "suy từ nhật ký" và "mới nhất" đã là chip
+              riêng, thứ tự đã là chip `#N`, danh mục đã là chip danh mục. Xoá không mất dữ kiện.
+              Giữ lại giọng văn ở ĐÚNG chỗ nó có nghĩa: một dòng cho danh mục Đàm vừa chọn — nó
+              vừa nói về đúng thứ anh đang xem, vừa là phản hồi nhìn thấy được cho cú chạm lọc.
+            */}
+            {selectedCategory !== 'all' && CATEGORY_REMARKS[selectedCategory] ? (
+              <p className="mt-3 text-sm leading-6 text-[var(--muted)]">
+                {CATEGORY_REMARKS[selectedCategory]}
+              </p>
+            ) : null}
           </div>
         </div>
       </section>
@@ -758,7 +752,6 @@ export default function Achievements() {
                     <AchievementCard
                       entry={entry}
                       latestId={dataset.latestEntry?.id ?? null}
-                      totalUnlocked={dataset.totalUnlocked}
                     />
                   </MotionDiv>
                 ))}
@@ -821,7 +814,6 @@ export default function Achievements() {
                   key={entry.id}
                   entry={entry}
                   latestId={dataset.latestEntry?.id ?? null}
-                  totalUnlocked={dataset.totalUnlocked}
                 />
               ))}
             </div>

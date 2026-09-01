@@ -2924,15 +2924,24 @@ function SessionHistory() {
           }}
         >
           <div className="flex items-start gap-4">
+            {/*
+              ⚠️ BA MÃ HAI CHỮ CÁI ('JP' · 'RF' · 'PM') → BA BIỂU TƯỢNG (2026-09-01), cùng lý do
+              đã áp cho mọi màn sưu tập hôm qua: hai chữ cái viết hoa không nói được gì, và ở đây
+              chúng lặp lại 624 lần. Δ thông tin = 0 — vẫn đúng ba trạng thái, chỉ đọc được.
+              ⚠️ VÀ BỎ PHÉP GỘP 'tinh luyện HOẶC dài ≥45 phút'. Đó là một trường gánh hai việc:
+              đo trên fixture, **180/624 hàng (28,8%)** mang nhãn 'RF' mà phần lớn chỉ vì phiên
+              dài — trong khi số phút đã in bằng chữ TO ngay bên cạnh. Nay ký hiệu chỉ nói đúng
+              thứ KHÔNG có chỗ nào khác nói: có tinh luyện rơi ra hay không.
+            */}
             <div
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] border"
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] border text-[18px] leading-none"
               style={{
-                borderColor: 'var(--line)',
+                borderColor: entry.jackpot ? 'rgba(201,100,66,0.35)' : 'var(--line)',
                 background: 'var(--item-bg-solid)',
               }}
             >
-              <span className="mono text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
-                {entry.jackpot ? 'JP' : ((entry.refinedEarned ?? 0) > 0 || (entry.minutes ?? 0) >= 45) ? 'RF' : 'PM'}
+              <span aria-hidden="true">
+                {entry.jackpot ? '🎰' : (entry.refinedEarned ?? 0) > 0 ? '💎' : '🍅'}
               </span>
             </div>
 
@@ -2942,7 +2951,18 @@ function SessionHistory() {
                 <span className="rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em]" style={{ borderColor: 'var(--line-2)', color: 'var(--muted)' }}>
                   {entry.tier}
                 </span>
-                {entry.multiplier > 1 && (
+                {/*
+                  ⚠️ CHIP NÀY NAY LÀ ĐƯỜNG RƠI VỀ, KHÔNG PHẢI MỘT BẢN SAO (2026-09-01).
+                  `entry.tier` là chuỗi do `getMultiplierTier` trả về và nó ĐÃ chứa hệ số
+                  ('Tập Trung Sâu ×1.3'), nên chip in thêm '×1.3' ngay 33px bên dưới là nói lại
+                  đúng phần đuôi của cái nhãn nằm trên nó. Đo trên fixture 624 phiên: **463/463
+                  phiên có hệ số > 1 đều đã mang dấu '×' trong nhãn**, và ẩn đúng 463 chip ấy làm
+                  trang Lịch sử ngắn đi **15.279px (−13,4%)** = 18,1 màn hình 844px.
+                  ⚠️ Nhưng KHÔNG xoá trắng: bản lưu đời cũ (trước khi có `tierLabel`) có thể mang
+                  `tier: null` kèm `multiplier > 1`, và lúc ấy chip là chỗ DUY NHẤT nói hệ số.
+                  Hỏi chính cái nhãn thay vì đoán — chip chỉ hiện khi nhãn KHÔNG tự nói.
+                */}
+                {entry.multiplier > 1 && !String(entry.tier ?? '').includes('×') && (
                   <span className="rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em]" style={{ borderColor: 'rgba(201,100,66,0.22)', color: 'var(--accent)' }}>
                     ×{entry.multiplier.toFixed(1)}
                   </span>

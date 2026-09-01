@@ -363,11 +363,6 @@ function BuiltCard({ bpId, level, resourcesRefined, onUpgrade, lightTheme }) {
           )}
         </div>
         <PerkSummary perk={eff.perk} lightTheme={lightTheme} variant="skin" />
-        {lv > 1 && (
-          <p className="mt-1 text-xs" style={lightTheme ? { color: 'var(--muted-2)' } : { color: '#64748b' }}>
-            Cấp công trình vẫn tăng thông số nền phía sau đặc quyền.
-          </p>
-        )}
       </div>
       <div className="flex flex-col gap-1 flex-shrink-0">
         {lv < 3 && onUpgrade && (
@@ -500,7 +495,6 @@ export default function BuildingWorkshop() {
     ),
     0.6,
   );
-  const activePerkLabels = [...new Set(builtEntries.map(({ eff }) => eff.perk?.label).filter(Boolean))].slice(0, 3);
   return (
     <div className="space-y-5">
       {/* Header */}
@@ -511,18 +505,15 @@ export default function BuildingWorkshop() {
               Tiêu đề đã nói đủ và nói rõ hơn; nhãn chỉ gọi tên thứ mắt vừa đọc xong. */}
           <h2 className={lightTheme ? 'serif text-[1.8rem] leading-none sm:text-[2rem]' : 'text-white font-bold text-[1.1rem] sm:text-lg'} style={lightTheme ? { color: 'var(--ink)', fontFamily: 'var(--skin-font-display)', fontWeight: 600 } : undefined}>Xưởng xây dựng</h2>
         </div>
+        {/*
+          ⚠️ ĐÃ GỠ BA CHIP TÊN ĐẶC QUYỀN (2026-09-01). `activePerkLabels` lấy tên đặc quyền của
+          những công trình ĐÃ XÂY — mà mỗi cái tên ấy được in LẠI nguyên văn trên chính thẻ công
+          trình sinh ra nó, cách đó vài trăm px trên cùng một màn (`PerkSummary`). Đo bằng cách
+          đếm chuỗi trong `document.body.innerText`: mỗi nhãn xuất hiện ĐÚNG HAI LẦN.
+          Bản trên thẻ nói rõ hơn (có kèm cấp và mô tả), nên bản tóm tắt ở đây là chỗ nhường.
+          Sáu chip còn lại toàn là SỐ (thô/phút nghỉ, tinh luyện…) — chúng không lặp ở đâu khác.
+        */}
         <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-          {activePerkLabels.map((label) => (
-            <span
-              key={label}
-              className="rounded-full px-2.5 sm:px-3 py-1 text-[10.5px] sm:text-xs font-medium"
-              style={lightTheme
-                ? { color: 'var(--accent2)', background: 'rgba(var(--accent-rgb),0.1)', border: 'var(--skin-card-border-width,1px) solid rgba(var(--accent-rgb),0.18)' }
-                : undefined}
-            >
-              {label}
-            </span>
-          ))}
           {totalT1Passive > 0 && (
             <span
               className="rounded-full px-2.5 sm:px-3 py-1 text-[10.5px] sm:text-xs"
@@ -704,6 +695,15 @@ export default function BuildingWorkshop() {
               {currentEraBuildings.length}
             </span>
           </div>
+          {/*
+            ⚠️ CÂU NÀY TRƯỚC ĐÂY IN TRÊN TỪNG THẺ (2026-09-01) — đo trên màn thật ở 390px:
+            **4 lần trên một màn**, và nó là một LUẬT CHUNG của mọi công trình từ cấp 2 trở lên,
+            không phải một dữ kiện của riêng thẻ nào. Một luật nói lại ở mỗi thẻ thì nó thôi là
+            hướng dẫn và thành nhiễu (cùng lý lẽ đã dùng cho 15 dòng di vật và 48 hộp thành tích).
+          */}
+          <p className="text-xs" style={lightTheme ? { color: 'var(--muted-2)' } : { color: '#64748b' }}>
+            Cấp công trình vẫn tăng thông số nền phía sau đặc quyền.
+          </p>
           <div className="flex flex-col gap-2">
             {currentEraBuildings.map((id) => (
               <BuiltCard

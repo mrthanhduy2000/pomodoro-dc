@@ -782,17 +782,16 @@ export default function BlueprintInventory() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between flex-wrap gap-2">
-        <div>
-          {lightTheme && (
-            <p className="mono text-[10px] uppercase tracking-[0.2em]" style={{ color: 'var(--muted-2)' }}>
-              Blueprints
-            </p>
-          )}
-          <h2 className={lightTheme ? 'text-[2rem] leading-none font-semibold' : 'text-white font-bold text-lg'} style={lightTheme ? { color: 'var(--ink)', fontFamily: 'var(--skin-font-display)' } : undefined}>
-            Bản vẽ & nghiên cứu
-          </h2>
-        </div>
+      {/*
+        ⚠️ ĐÃ GỠ HAI CÁI TÊN THỪA (2026-09-01). Màn này từng mang BA cái tên trong 83px: viên tab
+        "Bản vẽ" đang sáng (y=305) → nhãn "Blueprints" (y=373) → tiêu đề "Bản vẽ & nghiên cứu"
+        (y=388, cao 64px vì xuống hai dòng). Cái viên tab ở trên đã nói rồi, và nó nói bằng
+        tiếng Việt. Đo: ẩn hai dòng dưới ⇒ trang 2.832 → 2.745px.
+        ⚠️ Có đối chứng ngay trong dự án: 2/4 tab con của Kho báu ("Di vật", "Lịch sử") KHÔNG có
+        khối tên nào và vào thẳng nội dung, còn `BuildingWorkshop.jsx` đã ghi rõ lý do gỡ nhãn
+        "Xưởng" của nó. Đây là nốt còn thiếu của cùng một bản vá.
+      */}
+      <div className="flex items-center justify-end flex-wrap gap-2">
         <span className="mono text-[11px] uppercase tracking-[0.14em] rounded-full px-3 py-1" style={lightTheme ? { color: 'var(--accent2)', background: 'rgba(var(--accent-rgb),0.1)', border: '1px solid rgba(var(--accent-rgb),0.18)' } : {}}>
           {unlockedCount}/{Object.keys(CATALOG_FLAT).length} đã mở
         </span>

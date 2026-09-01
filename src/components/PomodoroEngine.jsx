@@ -9,6 +9,13 @@ import { useTimer, formatTime, TIMER_MODES, TIMER_STATES } from '../hooks/useTim
 import { getComboDecayMs, getDailyGoalProgress, getMultiplierTier, nextMultiplierStep, suggestSessionLength, clampRelicDisasterReduction } from '../engine/gameMath';
 import { getVietnamHour, localDateStr } from '../engine/time';
 import { FLOWTIME_BREAK_RULES, QUICK_FOCUS_PRESETS, getBreakPlan } from '../engine/breaks';
+
+/**
+ * Trục «cứ mấy phiên thì nghỉ dài» có THẬT SỰ phân biệt được các preset không?
+ * Hỏi thẳng bảng thay vì viết cứng `!== 4`: hôm nay cả 4 preset đều khai 4, nhưng ngày nào có
+ * một preset khai số khác thì viên «×N» phải tự hiện lại — mà không ai phải nhớ sửa chỗ này.
+ */
+const CHU_KY_NGHI_CO_KHAC_NHAU = new Set(QUICK_FOCUS_PRESETS.map((p) => p.longBreakAfterN)).size > 1;
 import {
   DEFAULT_DEEP_FOCUS_THRESHOLD,
   WARMUP_REDUCED_THRESHOLD,
@@ -2358,17 +2365,29 @@ function QuickPresets({ className = '', activePresetId, disabled, mode, onSelect
               </span>
             </span>
             <span className="mt-3 flex flex-wrap gap-2 sm:mt-2.5 sm:gap-1.5">
-              <span className={`whitespace-nowrap rounded-full px-2 py-1 text-[10px] font-semibold tabular-nums ${
-                active
-                  ? lightTheme
-                    ? 'bg-[rgba(255,255,255,0.54)] text-[var(--ink)]'
-                    : 'bg-white/[0.08] text-[var(--ink)]'
-                  : lightTheme
-                    ? 'bg-[rgba(244,242,236,0.96)] text-[var(--muted)]'
-                    : 'bg-white/[0.06] text-slate-500'
-              }`}>
-                ×{preset.longBreakAfterN}
-              </span>
+              {/*
+                ⚠️ VIÊN «×N» CHỈ HIỆN KHI NÓ THẬT SỰ KHÁC (2026-09-01). Cả 4 preset trong
+                `engine/breaks.js` đều khai `longBreakAfterN: 4`, nên bốn viên giống hệt nhau
+                đứng trong đúng cái lưới sinh ra để SO SÁNH — ba trục kia thì phân biệt được
+                (15/25/52/90 phút · nghỉ 3/5/17/20 · dài 12/15/30/45), riêng trục này thì không.
+                Cùng con số 4 còn được nói ở dòng "Phiên dài xuất hiện sau mỗi 4 lượt hoàn thành"
+                và ở chuỗi bốn cái chấm "Chu kỳ nghỉ ●●●●" — cả hai đều rõ hơn một viên "×4".
+                Viết thành ĐIỀU KIỆN chứ không xoá thẳng: ngày nào có một preset khai số khác thì
+                viên tự hiện lại, và lúc ấy nó mới thật sự nói được điều gì.
+              */}
+              {CHU_KY_NGHI_CO_KHAC_NHAU && (
+                <span className={`whitespace-nowrap rounded-full px-2 py-1 text-[10px] font-semibold tabular-nums ${
+                  active
+                    ? lightTheme
+                      ? 'bg-[rgba(255,255,255,0.54)] text-[var(--ink)]'
+                      : 'bg-white/[0.08] text-[var(--ink)]'
+                    : lightTheme
+                      ? 'bg-[rgba(244,242,236,0.96)] text-[var(--muted)]'
+                      : 'bg-white/[0.06] text-slate-500'
+                }`}>
+                  ×{preset.longBreakAfterN}
+                </span>
+              )}
               {mode === TIMER_MODES.STOPWATCH ? (
                 <span className={`whitespace-nowrap rounded-full px-2 py-1 text-[10px] font-semibold ${
                   active

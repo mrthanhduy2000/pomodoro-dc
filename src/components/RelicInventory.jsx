@@ -420,9 +420,19 @@ function LockedRelics({ collectedIds, lightTheme }) {
         Khủng Hoảng Kỷ Nguyên để nhận buff vĩnh viễn."* Nói một lần ở đầu danh sách là đủ; nói lại
         ở từng dòng thì nó thôi là hướng dẫn và thành nhiễu.
         ⚠️ Ô "ẨN" 48×48 cũng gỡ: mười lăm ô giống hệt nhau không phân biệt được gì, mà chúng chính
-        là thứ ép mỗi thẻ phải cao ít nhất 48px. Chữ "Khoá" ở lề phải giữ lại — nó là trạng thái,
-        và nó là thứ sẽ đổi khi mở được.
+        là thứ ép mỗi thẻ phải cao ít nhất 48px.
         Kết quả: ~3.000px → ~700px, và danh sách LIẾC được thay vì phải đọc.
+
+        ⚠️ ĐÍNH CHÍNH 2026-09-01 — CHỮ "KHOÁ" Ở LỀ PHẢI NAY ĐÃ GỠ NỐT, và lý do giữ nó ghi ở
+        vòng trước (*"nó là trạng thái, và nó là thứ sẽ đổi khi mở được"*) **tự mâu thuẫn với dòng
+        lọc cách nó 24 dòng**: `locked = filter(r => !collectedIds.has(r.id))` ⇒ mọi hàng ở đây
+        khoá THEO CẤU TẠO, và một di vật mở được thì RỜI khỏi mảng này chứ không đổi chữ tại chỗ.
+        Tức nó không bao giờ là "trạng thái sẽ đổi"; nó là cùng một chữ in mười lăm lần dưới đúng
+        một tiêu đề đã nói "Chưa thu thập". Đo: 15 span 30×15px.
+        ⚠️ VÀ ĐÂY LÀ TẤT CẢ những gì được gỡ ở màn này. Một vòng soi có đề nghị THAY luôn 15 dòng
+        bằng một dòng tổng — ĐÃ BÁC: mỗi dòng mang một danh từ riêng ("??? từ Kỷ Băng Hà") không
+        lặp lại ở đâu khác, tức nó trả lời đúng câu *"cái này rơi ở đâu"*; và câu tổng được đề
+        nghị thêm vào thì đã nằm sẵn ở đầu màn ("0/15 — chinh phục Khủng Hoảng Kỷ Nguyên…").
       */}
       <div className="grid grid-cols-1 gap-x-4 gap-y-0 sm:grid-cols-2">
         {locked.map((relic) => (
@@ -434,7 +444,6 @@ function LockedRelics({ collectedIds, lightTheme }) {
             <p className="min-w-0 flex-1 truncate text-[13px]" style={lightTheme ? { color: 'var(--muted)' } : { color: '#94a3b8' }}>
               ??? <span style={{ opacity: 0.75 }}>từ {relic.crisisName}</span>
             </p>
-            <span className="mono shrink-0 text-[10px] font-semibold uppercase tracking-[0.16em]" style={lightTheme ? { color: 'var(--accent2)' } : { color: '#475569' }}>Khoá</span>
           </div>
         ))}
       </div>

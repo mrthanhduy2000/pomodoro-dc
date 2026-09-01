@@ -34,3 +34,23 @@ test('không biết đơn vị thì CÂM, không đoán bừa', () => {
   assert.equal(cauConLai(-3, 'sessionsCompleted'), '');
   assert.equal(cauConLai(NaN, 'sessionsCompleted'), '');
 });
+
+test('thành tích nói CÙNG MỘT TỪ với phần còn lại của app', () => {
+  // ⚠️ Đo trước khi sửa: app in "Chuỗi" ở 11 chỗ giao diện nhưng 28 thành tích viết "Streak"; một
+  // mục còn ghi "Era Crisis" trong khi màn Di vật gọi nó là "Khủng Hoảng Kỷ Nguyên"; và "Vua
+  // Jackpot" đứng ngay trên mô tả "100 lần Đại Trúng Thưởng" — sai ngay trong một mục.
+  // Hai cái tên cho một thứ là cách rẻ nhất làm một trò chơi khó hiểu.
+  //
+  // ⚠️ "Prestige" CỐ Ý KHÔNG nằm trong danh sách cấm: `PrestigeModal.jsx` tự gọi nó là "Prestige"
+  // 18 lần, nên đổi riêng phía thành tích là tạo ra đúng cái lệch mà bài này sinh ra để ngăn.
+  // Muốn Việt hoá thì phải đổi CẢ HAI phía trong một lần, và đó là việc khác.
+  const CAM = ['Era Crisis', 'Crisis', 'Streak', 'Jackpot', 'Blueprint', 'Daily', 'Weekly'];
+  const dinh = [];
+  for (const a of ACHIEVEMENTS) {
+    const text = `${a.label} ${a.description}`;
+    for (const tu of CAM) {
+      if (new RegExp(`\\b${tu}\\b`).test(text)) dinh.push(`${a.id}: "${tu}"`);
+    }
+  }
+  assert.deepEqual(dinh, [], `thành tích còn dùng từ tiếng Anh trong khi app đã có từ tiếng Việt: ${dinh.join(' · ')}`);
+});

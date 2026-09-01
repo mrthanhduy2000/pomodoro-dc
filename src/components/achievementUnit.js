@@ -76,8 +76,8 @@ export const DON_VI_NGUONG = {
   activeBook: 'kỷ',
   playerLevel: 'cấp',
   maxRankAchieved: 'hạng',
-  prestigeCount: 'lần thăng hoa',
-  totalJackpots: 'lần nổ hũ',
+  prestigeCount: 'lần Prestige',
+  totalJackpots: 'lần Đại Trúng Thưởng',
   uniqueCategoriesUsed: 'loại việc',
   monthsActiveThisYear: 'tháng',
 };

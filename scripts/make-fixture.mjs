@@ -489,6 +489,36 @@ const resources = Object.fromEntries(
   ]),
 );
 
+// ─── BÙ CÁC DẤU THÀNH TÍCH VỀ SƯU TẬP ──────────────────────────────────────────────────────────
+/**
+ * ⚠️ MỘT LỖ HỔNG CÓ THẬT CỦA ĐƯỜNG REPLAY, ĐO ĐƯỢC TRÊN MÀN HÌNH. `buildAchievementSnapshotForReplay`
+ * (`achievementTimeline.js:214`) **viết cứng** `relicsCount: 0 · blueprintsCount: 0 ·
+ * buildingsBuilt: 0 · prestigeCount: 0` — hoàn toàn đúng với vai trò của nó (lịch sử phiên không
+ * ghi bốn con số ấy), nhưng nó có nghĩa là **fixture thiếu TOÀN BỘ thành tích về sưu tập**.
+ * Triệu chứng nhìn thấy được: sau khi màn Huy hiệu biết sắp theo tiến độ, đầu danh sách "Chưa đạt"
+ * là ba thẻ ghi **"1/1" · "1/1" · "2/2"** — đạt 100% mà vẫn nằm trong mục chưa đạt. Đó là fixture
+ * TỰ MÂU THUẪN (gieo `research`/`relics`/`buildings` SAU khi replay), không phải app hỏng.
+ *
+ * ⚠️ VÁ HẸP, KHÔNG DỰNG SNAPSHOT THỨ BA. Chỉ chấm lại đúng những mục có ngưỡng nằm trên bốn
+ * trường ấy, bằng CHÍNH `check()` của mã sản phẩm. App thật cũng làm y hệt ở lần xong phiên kế
+ * tiếp, nên đây là bù cho một độ trễ chứ không phải phát minh ra dấu mới.
+ */
+const TRUONG_SUU_TAP = {
+  relicsCount: relics.length,
+  blueprintsCount: researched.length,
+  buildingsBuilt: run.buildings.length,
+  prestigeCount: 0,
+};
+const daCo = new Set(achievements.unlocked);
+let buThem = 0;
+for (const a of ACHIEVEMENTS) {
+  if (daCo.has(a.id) || !(a.dem in TRUONG_SUU_TAP)) continue;
+  if (!a.check(TRUONG_SUU_TAP, achievements.unlocked)) continue;
+  achievements.unlocked.push(a.id);
+  achievements.timeline[a.id] = { unlockedAt: new Date(endMs).toISOString(), source: 'inferred' };
+  buThem += 1;
+}
+
 const fixture = {
   state: {
     progress: {
@@ -534,5 +564,5 @@ console.log(`  ${Math.round(run.minutes / 60)} giờ tập trung · ${run.totalX
 console.log(`  ${run.totalEP.toLocaleString('vi-VN')} EP → kỷ ${activeBook} · ${run.buildings.length} công trình đang đứng · ${sealedEras} kỷ đã niêm phong vào bảo tàng`);
 console.log(`  ${Object.keys(UNLOCKED_SKILLS).length} kỹ năng đã mở (tiêu ${SP_SPENT} điểm)`);
 console.log(`  ${achievements.unlocked.length}/${ACHIEVEMENTS.length} dấu thành tích — replay bằng chính hàm check() của mã sản phẩm`);
-console.log(`  ${relics.length}/${Object.keys(ERA_CRISES).length} di vật · ${researched.length}/75 bản vẽ đã nghiên cứu · ${rpLeft.toLocaleString('vi-VN')} RP còn lại (đã tiêu ${rpSpent.toLocaleString('vi-VN')}) · ${Object.values(resources[`book${activeBook}`] ?? {}).reduce((n, v) => n + v, 0).toLocaleString('vi-VN')} tài nguyên thô ở kỷ đang chơi`);
+console.log(`  ${relics.length}/${Object.keys(ERA_CRISES).length} di vật · ${researched.length}/75 bản vẽ đã nghiên cứu · bù ${buThem} dấu sưu tập · ${rpLeft.toLocaleString('vi-VN')} RP còn lại (đã tiêu ${rpSpent.toLocaleString('vi-VN')}) · ${Object.values(resources[`book${activeBook}`] ?? {}).reduce((n, v) => n + v, 0).toLocaleString('vi-VN')} tài nguyên thô ở kỷ đang chơi`);
 console.log('  ⚠️ Công thức phần thưởng là THẬT; nhịp chơi là giả — đừng trích số vào kết luận cân bằng game.');

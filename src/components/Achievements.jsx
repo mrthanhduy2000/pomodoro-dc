@@ -14,7 +14,7 @@ import {
 } from '../engine/constants';
 import { formatVietnamDateTime } from '../engine/time';
 import { getGlyph, hasGlyphIcon } from '../utils/labelMark';
-import { thanhTichGanDat } from '../engine/achievementProgress';
+import { thanhTichGanDat, tienDoThanhTich } from '../engine/achievementProgress';
 import { cauConLai } from './achievementUnit';
 import useGameStore from '../store/gameStore';
 
@@ -144,7 +144,23 @@ function sortUnlockedEntries(left, right) {
   return left.definitionIndex - right.definitionIndex;
 }
 
+/**
+ * Danh sách "Chưa đạt" sắp theo TIẾN ĐỘ giảm dần — gần nhất lên đầu.
+ *
+ * ⚠️ Trước 2026-09-01 nó sắp theo THỨ TỰ KHAI BÁO trong `constants.js`, tức theo thứ tự người
+ * viết dữ liệu gõ ra. Hậu quả đo được: mục gần đạt nhất ("Một Năm Tập Trung", 97%, còn 751 phút)
+ * nằm ở y=9.606px — **11,4 màn hình điện thoại** phải vuốt xuống mới gặp, trong khi thứ đứng đầu
+ * danh sách là một mục người chơi còn cách rất xa. Danh sách 213 mục thì thứ tự KHÔNG phải chuyện
+ * thẩm mỹ: nó quyết định người chơi có bao giờ nhìn thấy thứ mình sắp lấy được hay không.
+ *
+ * Mục không đo được tiến độ (50/360 mục có điều kiện ghép) xuống cuối, giữ nguyên thứ tự cũ giữa
+ * chúng với nhau — chúng không có gì để so, và đẩy chúng lên đầu là đẩy đúng phần mù mịt nhất lên
+ * chỗ đắt nhất.
+ */
 function sortLockedEntries(left, right) {
+  const l = left.tienDo?.tiLe ?? -1;
+  const r = right.tienDo?.tiLe ?? -1;
+  if (l !== r) return r - l;
   if (left.definitionIndex !== right.definitionIndex) {
     return left.definitionIndex - right.definitionIndex;
   }
@@ -276,6 +292,32 @@ function AchievementCard({
             {entry.achievement.description}
           </p>
 
+          {/*
+            ⚠️ THANH TIẾN ĐỘ CHỈ MỌC RA Ở THẺ CHƯA ĐẠT CÓ ĐO ĐƯỢC — không phải ở cả 360 thẻ.
+            Thẻ đã đạt không cần (100% là chuyện đã rồi), và 50/360 mục có điều kiện ghép trả về
+            `null` nên chúng CÂM chứ không hiện "0%": một con số 0% đọc lên như "bạn chưa làm gì",
+            còn sự thật là "chỗ này không đo được".
+            Nó THAY câu mô tả trả lời "cần gì" bằng câu trả lời "còn bao xa" — mô tả vẫn ở ngay
+            trên, nên đây là một dòng THÊM có mẫu số chứ không phải một dòng lặp lại.
+          */}
+          {entry.tienDo ? (
+            <div className="mt-2">
+              <div className="overflow-hidden rounded-full bg-[var(--line)]">
+                <div
+                  className="h-[3px] rounded-full transition-all"
+                  style={{
+                    width: `${Math.max(2, Math.floor(entry.tienDo.tiLe * 100))}%`,
+                    background: 'var(--accent)',
+                  }}
+                />
+              </div>
+              <div className="mono mt-1 text-[11px] text-[var(--muted)]">
+                {entry.tienDo.hienTai.toLocaleString('vi-VN')}/{entry.tienDo.moc.toLocaleString('vi-VN')}
+                {cauConLai(entry.tienDo.con, entry.tienDo.dem) ? ` · ${cauConLai(entry.tienDo.con, entry.tienDo.dem)}` : ''}
+              </div>
+            </div>
+          ) : null}
+
           <div className="mt-3 flex flex-wrap items-center gap-2 text-[12px] font-medium text-[var(--muted)]">
             {showOrder ? (
               <span
@@ -324,10 +366,14 @@ export default function Achievements() {
   const streakSlice = useGameStore((state) => state.streak);
   const playerSlice = useGameStore((state) => state.player);
   const buildSnapshot = useGameStore((state) => state.buildAchievementSnapshotNow);
-  const sapDat = useMemo(
-    () => thanhTichGanDat(ACHIEVEMENTS, buildSnapshot(), unlockedIds, 3),
+  const snapshot = useMemo(
+    () => buildSnapshot(),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [history, progressSlice, streakSlice, playerSlice, unlockedIds],
+    [history, progressSlice, streakSlice, playerSlice],
+  );
+  const sapDat = useMemo(
+    () => thanhTichGanDat(ACHIEVEMENTS, snapshot, unlockedIds, 3),
+    [snapshot, unlockedIds],
   );
 
   const [selectedTier, setSelectedTier] = useState('all');
@@ -396,6 +442,8 @@ export default function Achievements() {
         id: achievement.id,
         achievement,
         definitionIndex,
+        // `null` cho 50/360 mục có điều kiện ghép — đó là câu trả lời thật, không phải 0%.
+        tienDo: isUnlocked ? null : tienDoThanhTich(achievement, snapshot),
         isUnlocked,
         order,
         unlockedAt,
@@ -441,7 +489,7 @@ export default function Achievements() {
       totalUnlocked: unlockedEntries.length,
       unlockedEntries,
     };
-  }, [timeline, unlockedIds]);
+  }, [timeline, unlockedIds, snapshot]);
 
   const filteredEntries = useMemo(() => (
     dataset.allEntries.filter((entry) => {
@@ -786,6 +834,66 @@ export default function Achievements() {
       <section className="space-y-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <h3 className="mono text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--muted)]">
+            Chưa đạt ({filteredLockedEntries.length})
+          </h3>
+
+          {filteredLockedEntries.length > DEFAULT_LOCKED_BATCH ? (
+            <span className="rounded-full border border-[var(--line)] bg-[rgba(255,255,255,0.85)] px-3 py-1.5 text-xs font-medium text-[var(--muted)]">
+              Đang hiện {visibleLockedEntries.length}/{filteredLockedEntries.length} mục để giữ giao diện nhẹ hơn.
+            </span>
+          ) : null}
+        </div>
+
+        {filteredLockedEntries.length === 0 ? (
+          <div
+            className="border border-dashed border-[var(--line-2)] bg-[var(--card-bg-solid)] px-5 py-10 text-center text-sm text-[var(--muted)]"
+            style={{ borderRadius: 'var(--skin-radius-card,18px)' }}
+          >
+            Bộ lọc hiện tại không còn dấu nào ở trạng thái chờ.
+          </div>
+        ) : (
+          <>
+            <div
+              className="grid gap-3"
+              style={{
+                contentVisibility: 'auto',
+                containIntrinsicSize: '1px 1600px',
+              }}
+            >
+              {visibleLockedEntries.map((entry) => (
+                <AchievementCard
+                  key={entry.id}
+                  entry={entry}
+                  latestId={dataset.latestEntry?.id ?? null}
+                />
+              ))}
+            </div>
+
+            {visibleLockedEntries.length < filteredLockedEntries.length ? (
+              <div className="flex justify-center">
+                <button
+                  type="button"
+                  onClick={() => setLockedVisibleCount((count) => (
+                    Math.min(count + DEFAULT_LOCKED_BATCH, filteredLockedEntries.length)
+                  ))}
+                  className="rounded-full border px-5 py-2.5 text-sm font-semibold transition"
+                  style={{
+                    borderColor: 'var(--line)',
+                    background: 'rgba(255,255,255,0.92)',
+                    color: 'var(--ink-2)',
+                  }}
+                >
+                  Xem thêm {Math.min(DEFAULT_LOCKED_BATCH, filteredLockedEntries.length - visibleLockedEntries.length)} mục
+                </button>
+              </div>
+            ) : null}
+          </>
+        )}
+      </section>
+
+      <section className="space-y-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <h3 className="mono text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--muted)]">
             Đã đạt ({filteredUnlockedEntries.length})
           </h3>
           {filteredUnlockedEntries.length > DEFAULT_UNLOCKED_BATCH ? (
@@ -841,66 +949,6 @@ export default function Achievements() {
                   }}
                 >
                   Xem thêm {Math.min(DEFAULT_UNLOCKED_BATCH, filteredUnlockedEntries.length - visibleUnlockedEntries.length)} mục đã đạt
-                </button>
-              </div>
-            ) : null}
-          </>
-        )}
-      </section>
-
-      <section className="space-y-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <h3 className="mono text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--muted)]">
-            Chưa đạt ({filteredLockedEntries.length})
-          </h3>
-
-          {filteredLockedEntries.length > DEFAULT_LOCKED_BATCH ? (
-            <span className="rounded-full border border-[var(--line)] bg-[rgba(255,255,255,0.85)] px-3 py-1.5 text-xs font-medium text-[var(--muted)]">
-              Đang hiện {visibleLockedEntries.length}/{filteredLockedEntries.length} mục để giữ giao diện nhẹ hơn.
-            </span>
-          ) : null}
-        </div>
-
-        {filteredLockedEntries.length === 0 ? (
-          <div
-            className="border border-dashed border-[var(--line-2)] bg-[var(--card-bg-solid)] px-5 py-10 text-center text-sm text-[var(--muted)]"
-            style={{ borderRadius: 'var(--skin-radius-card,18px)' }}
-          >
-            Bộ lọc hiện tại không còn dấu nào ở trạng thái chờ.
-          </div>
-        ) : (
-          <>
-            <div
-              className="grid gap-3"
-              style={{
-                contentVisibility: 'auto',
-                containIntrinsicSize: '1px 1600px',
-              }}
-            >
-              {visibleLockedEntries.map((entry) => (
-                <AchievementCard
-                  key={entry.id}
-                  entry={entry}
-                  latestId={dataset.latestEntry?.id ?? null}
-                />
-              ))}
-            </div>
-
-            {visibleLockedEntries.length < filteredLockedEntries.length ? (
-              <div className="flex justify-center">
-                <button
-                  type="button"
-                  onClick={() => setLockedVisibleCount((count) => (
-                    Math.min(count + DEFAULT_LOCKED_BATCH, filteredLockedEntries.length)
-                  ))}
-                  className="rounded-full border px-5 py-2.5 text-sm font-semibold transition"
-                  style={{
-                    borderColor: 'var(--line)',
-                    background: 'rgba(255,255,255,0.92)',
-                    color: 'var(--ink-2)',
-                  }}
-                >
-                  Xem thêm {Math.min(DEFAULT_LOCKED_BATCH, filteredLockedEntries.length - visibleLockedEntries.length)} mục
                 </button>
               </div>
             ) : null}

@@ -53,3 +53,58 @@ test('SVG co theo khối cha thay vì giữ cỡ px riêng', () => {
   assert.match(before, /width="100%"/);
   assert.match(before, /height="100%"/);
 });
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// VÒNG 23 (2026-09-01) — BA THỨ NỮA QUYẾT ĐỊNH BIÊN AN TOÀN CỦA NÚT CHÍNH
+//
+// Đo trên app thật ở khung 390×844 (`shot.mjs --probe`), so ĐÁY nút chính với ĐỈNH thanh điều
+// hướng nổi (y=774), trên CA TIÊU ĐỀ DÀI NHẤT (63 ký tự = 3 dòng, không phải câu của hôm nay):
+//        trước vòng 23:  ~6px          sau vòng 23:  45px
+// Ba nguồn, và không nguồn nào là "chỉnh một khoảng cách":
+//   (a) nút phụ "Toàn màn hình" chiếm 112/308px hàng nút, và vì nhãn hai chữ XUỐNG DÒNG ở cột
+//       112px nên chính nó quyết định chiều cao 59px của cả hàng — nút quan trọng nhất màn hình
+//       cao bằng một nhãn bị vỡ dòng của một nút phụ. Gỡ ở nhánh CHỜ ⇒ hàng còn 42px.
+//   (b) dòng "Chu kỳ nghỉ ●●●● 0/4 · đặt lại" nằm y=754…779 — tức ĂN VÀO biên, và nút "đặt lại"
+//       bị thanh điều hướng cắt mất 5px. Ở `cyclePos === 0` nó không mang một mẩu tin nào.
+//   (c) phụ đề "Bạn còn 5 phiên nữa là đủ nhịp hôm nay." (y=288) nói lại đúng trạng thái mà
+//       "Phiên 0/5 hôm nay" (y=626) đã nói, mà bản dưới đồng hồ có cả tử lẫn mẫu.
+//
+// Ba bài dưới đây canh CẤU TRÚC sinh ra con số ấy, vì một bài đọc mã KHÔNG đo được điểm ảnh.
+// Muốn đo lại con số thật thì chạy `shot.mjs --probe` như ghi trong thông điệp commit.
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// THỬ-CHO-ĐỎ: dán lại khối `{canEnterFullScreen && …}` vào nhánh IDLE ⇒ đỏ.
+test('hàng nút lúc CHỜ chỉ có MỘT nút — nút chính lấy trọn bề ngang', () => {
+  const i = SRC.indexOf('key="start"');
+  assert.ok(i > 0, 'không tìm thấy nhánh nút lúc chờ — phép đo chạy rỗng');
+  const j = SRC.indexOf('timerState === TIMER_STATES.RUNNING', i);
+  assert.ok(j > i, 'không tìm thấy nhánh kế tiếp');
+  const nhanhCho = SRC.slice(i, j);
+
+  assert.ok(
+    !/canEnterFullScreen/.test(nhanhCho),
+    'nút "Toàn màn hình" quay lại nhánh CHỜ — nhãn của nó xuống dòng và kéo cả hàng lên 59px, '
+    + 'ăn mất biên an toàn của nút chính',
+  );
+  assert.ok(
+    !/grid-cols-\[/.test(nhanhCho),
+    'hàng nút lúc chờ lại chia cột — nút chính thôi lấy trọn bề ngang',
+  );
+  // Hai bản CÒN LẠI phải sống: toàn màn hình sinh ra để tập trung TRONG lúc chạy.
+  const soBanConLai = (SRC.match(/canEnterFullScreen &&/g) ?? []).length;
+  assert.equal(soBanConLai, 2, `phải còn ĐÚNG 2 nút toàn màn hình (đang chạy + tạm dừng), thấy ${soBanConLai}`);
+});
+
+// THỬ-CHO-ĐỎ: bỏ dòng `if (cyclePos <= 0) return null;` ⇒ đỏ.
+test('dòng "Chu kỳ nghỉ" im lặng khi chu kỳ chưa chạy', () => {
+  assert.match(
+    SRC, /if \(cyclePos <= 0\) return null;/,
+    'dòng "Chu kỳ nghỉ" lại hiện ở 0/4 — bốn chấm rỗng cộng một nút "đặt lại" cho một chu kỳ '
+    + 'chưa bắt đầu, và nó nằm đúng trong biên an toàn của nút chính (nút "đặt lại" bị cắt 5px)',
+  );
+  // Bốn cái chấm đã nói "N trên mấy" — con số bên cạnh là chỗ nói lần thứ hai.
+  assert.ok(
+    !/\{cyclePos\}\/\{longBreakAfterN\}/.test(SRC),
+    'chữ "N/4" quay lại cạnh bốn cái chấm nói đúng điều đó',
+  );
+});

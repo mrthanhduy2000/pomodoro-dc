@@ -912,11 +912,16 @@ export default function PomodoroEngine({
     />
   ) : null;
   const canEnterFullScreen = Boolean(onEnterFullScreen) && !fullScreenMode;
+  // ⚠️ CHỈ HIỆN KHI CHU KỲ ĐÃ CHẠY (2026-09-01). Ở `cyclePos === 0` dòng này là bốn chấm rỗng,
+  // chữ "0/4", và một nút "đặt lại" cho một chu kỳ chưa bắt đầu — không mẩu tin nào. Tệ hơn, đo ở
+  // khung 390px thì nó nằm y=754…779 trong khi thanh điều hướng bắt đầu ở 774 ⇒ **nút "đặt lại"
+  // bị cắt mất 5px**, và nó ăn đúng vào 32px biên an toàn của nút chính.
   const cycleIndicator = !isBreakMode && !isStopwatchMode && longBreakAfterN > 1 ? (() => {
     const completedCyclePos = Math.max(0, (sessionsCompleted - longBreakCycleStart) % longBreakAfterN);
     const cyclePos = longBreakPreviewSession
       ? Math.min(longBreakAfterN, completedCyclePos + 1)
       : completedCyclePos;
+    if (cyclePos <= 0) return null;
     return (
       <div className={`flex flex-wrap items-center gap-x-2.5 gap-y-2 ${useImmersiveHeroLayout ? 'px-0' : 'px-1'}`}>
         <span className={`text-[10px] uppercase tracking-wider font-medium whitespace-nowrap ${
@@ -944,11 +949,8 @@ export default function PomodoroEngine({
             />
           ))}
         </div>
-        <span className={`text-[11px] font-medium tabular-nums ${
-          lightTheme ? 'text-[var(--muted-2)]' : 'text-slate-400'
-        }`}>
-          {cyclePos}/{longBreakAfterN}
-        </span>
+        {/* ⚠️ Bỏ chữ "N/4": bốn cái chấm cách nó 10px đã nói đúng điều ấy, mà chấm thì LIẾC
+            được còn con số thì phải ĐỌC. Hai chỗ nói cùng một chuyện thì chỗ nói ít hơn nhường. */}
         <button
           type="button"
           onClick={resetLongBreakCycle}
@@ -1460,7 +1462,7 @@ export default function PomodoroEngine({
             <motion.div
               key="start"
               {...enterMotion}
-              className="grid w-full grid-cols-[minmax(0,1.72fr)_minmax(112px,0.88fr)] items-stretch gap-2 sm:flex sm:w-auto sm:gap-3"
+              className="flex w-full flex-col items-stretch gap-2 sm:flex-row sm:w-auto sm:gap-3"
             >
               {/* ⚠️ PHẢI DÙNG `size="compactMobile"`, ĐỪNG NHÉT `px-…`/`text-…` VÀO `className`.
                   Bài học đắt (2026-08-13): bản trước truyền `px-2.5 text-[11px]` qua `className`
@@ -1516,16 +1518,16 @@ export default function PomodoroEngine({
                   {isCrisisBlockingStart ? 'Xử lý khủng hoảng' : 'Bắt đầu phiên'}
                 </ActionButton>
               )}
-              {canEnterFullScreen && (
-                <ActionButton
-                  onClick={onEnterFullScreen}
-                  variant="soft"
-                  size="compactPrimary"
-                  className={compactTimerActionButtonClassName}
-                >
-                  Toàn màn hình
-                </ActionButton>
-              )}
+              {/*
+                ⚠️ ĐÃ GỠ nút "Toàn màn hình" Ở NHÁNH CHỜ (2026-09-01) — hai bản lúc ĐANG CHẠY và
+                lúc TẠM DỪNG còn nguyên. Đo ở khung 390px: nó chiếm **112/308px = 36,4%** hàng nút
+                chính, và vì nhãn hai chữ "Toàn màn hình" XUỐNG DÒNG ở cột 112px nên chính nó
+                QUYẾT ĐỊNH chiều cao 59px của cả hàng — tức nút quan trọng nhất màn hình đang cao
+                bằng một nhãn bị vỡ dòng của một nút phụ.
+                Không mất tính năng: vào toàn màn hình TRƯỚC khi bấm Bắt đầu thì vẫn phải bấm Bắt
+                đầu ở màn kia, mà toàn màn hình sinh ra để tập trung TRONG lúc chạy.
+                Nút chính nay lấy trọn bề ngang — vùng chạm lớn hơn cho đúng thứ Đàm mở app để bấm.
+              */}
             </motion.div>
           )}
 

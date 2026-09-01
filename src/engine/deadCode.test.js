@@ -65,14 +65,20 @@ test('mọi kho câu chào phải có ít nhất một nơi dùng', () => {
 
   const khoi = L.slice(bd, end + 1).join('\n');
   const banks = [...khoi.matchAll(/^ {2}([A-Za-z0-9_]+):/gm)].map((m) => m[1]);
-  assert.ok(banks.length >= 5, `mới thấy ${banks.length} bank — phép đo chạy rỗng`);
+  // ⚠️ Gác chạy-rỗng hỏi TÊN, không hỏi số lượng. Bản đầu viết `length >= 5` và nó ĐỎ OAN ngay
+  // trong cùng phiên, khi khối co từ 7 xuống 3 bank một cách hoàn toàn đúng — một cái sàn theo
+  // số đếm sẽ kêu mỗi lần dọn dẹp thành công. Ba bank tiêu đề là thứ màn Tập trung THẬT SỰ vẽ
+  // ra; mất một trong ba mới là mất tính năng.
+  for (const phai of ['titleStart', 'titleContinue', 'titleAfter']) {
+    assert.ok(banks.includes(phai), `mất bank tiêu đề "${phai}" — lời chào sẽ rỗng`);
+  }
 
   const ngoai = L.slice(0, bd).join('\n') + '\n' + L.slice(end + 1).join('\n');
   const chet = banks.filter((b) => !new RegExp(`FOCUS_INTRO_COPY\\.${b}\\b`).test(ngoai));
   assert.deepEqual(
     chet, [],
     `kho câu chào có ${chet.length} bank không ai dùng: ${chet.join(', ')}. `
-    + 'Trước vòng 23 con số này là 32/39 bank (≈616 câu) — đừng để nó phình lại.',
+    + 'Trước vòng 23 con số này là 36/39 bank (~656 câu) — đừng để nó phình lại.',
   );
 
   // ⚠️ Không có đường vào bằng khoá chuỗi: nếu có thì phép đếm trên VÔ NGHĨA.

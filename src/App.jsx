@@ -300,46 +300,6 @@ const FOCUS_INTRO_COPY = {
     'Thêm một phiên nữa cho chắc tay nhé?',
     'Giữ đà bằng một phiên nữa nhé?',
   ],
-  sessionRemaining: [
-    'Còn {{remainingLabel}} nữa để đủ mục tiêu hôm nay.',
-    'Thêm {{remainingLabel}} là chạm mốc hôm nay.',
-    'Bạn còn {{remainingLabel}} nữa là đủ nhịp hôm nay.',
-    'Chỉ cần thêm {{remainingLabel}} nữa thôi.',
-    'Còn {{remainingLabel}} nữa là xong mục tiêu hôm nay.',
-    'Bạn còn thiếu {{remainingLabel}} để đủ mốc hôm nay.',
-    'Thêm {{remainingLabel}} nữa là tròn chỉ tiêu hôm nay.',
-    'Còn đúng {{remainingLabel}} nữa để khép ngày.',
-  ],
-  sessionCompleted: [
-    'Mục tiêu hôm nay đã đủ. Giờ cứ giữ chất lượng từng phiên.',
-    'Hôm nay bạn đã đủ nhịp. Nếu làm tiếp, cứ giữ cho thật gọn.',
-    'Mốc hôm nay đã xong. Phần còn lại là làm cho thật chắc.',
-    'Hôm nay đã đủ số phiên. Giờ ưu tiên việc quan trọng nhất.',
-    'Phần số lượng đã đủ. Giờ chỉ cần giữ độ tập trung.',
-    'Mục tiêu hôm nay đã hoàn thành. Giờ cứ làm chậm mà chắc.',
-    'Bạn đã chạm mốc hôm nay. Nếu làm thêm, cứ giữ nhịp nhẹ thôi.',
-    'Nhịp hôm nay đã tròn. Giờ chỉ cần từng phiên thật sạch.',
-  ],
-  minuteRemainingNatural: [
-    'Còn {{remainingLabel}} nữa để chạm mục tiêu hôm nay.',
-    'Thêm {{remainingLabel}} là đủ mốc hôm nay.',
-    'Bạn còn {{remainingLabel}} nữa là hoàn thành mục tiêu ngày.',
-    'Chỉ cần thêm {{remainingLabel}} nữa thôi.',
-    'Còn {{remainingLabel}} nữa là đủ chỉ tiêu hôm nay.',
-    'Bạn còn thiếu {{remainingLabel}} để đủ mốc hôm nay.',
-    'Thêm {{remainingLabel}} nữa là xong mục tiêu hôm nay.',
-    'Còn đúng {{remainingLabel}} nữa để khép ngày.',
-  ],
-  minuteCompletedNatural: [
-    'Mục tiêu hôm nay đã đủ. Giờ chỉ cần giữ sự tập trung cho việc quan trọng nhất.',
-    'Phần thời lượng đã xong. Nếu làm tiếp, cứ giữ nhịp thật gọn.',
-    'Mốc hôm nay đã đủ. Giờ ưu tiên những việc đáng làm nhất.',
-    'Bạn đã chạm mục tiêu ngày. Giờ chỉ cần làm cho thật chắc tay.',
-    'Hôm nay đã đủ thời lượng. Phần còn lại là giữ đầu óc thật sạch.',
-    'Mục tiêu thời lượng đã hoàn thành. Giờ cứ chọn đúng việc để làm.',
-    'Hôm nay đã đủ phút tập trung. Nếu làm tiếp, cứ làm nhẹ mà chắc.',
-    'Phần số phút đã xong. Giờ tập trung vào chất lượng từng phiên.',
-  ],
 };
 
 function getFocusIntroDayIndex() {
@@ -363,71 +323,30 @@ function pickDailyVariantParts(dayIndex, banks) {
   });
 }
 
-function renderFocusIntroCopy(template, values) {
-  return template
-    .split(/(\{\{countLabel\}\}|\{\{remainingLabel\}\})/g)
-    .filter(Boolean)
-    .map((part, index) => {
-      if (part === '{{countLabel}}') {
-        return (
-          <strong key={`count-${index}`} className="font-semibold text-[var(--ink)]">
-            {values.countLabel}
-          </strong>
-        );
-      }
-      if (part === '{{remainingLabel}}') {
-        return (
-          <strong key={`remaining-${index}`} className="font-semibold text-[var(--ink)]">
-            {values.remainingLabel}
-          </strong>
-        );
-      }
-      return <React.Fragment key={`text-${index}`}>{part}</React.Fragment>;
-    });
-}
 
-function formatDailyGoalValue(value, goalType) {
-  const safeValue = Number.isFinite(value) ? Math.max(0, value) : 0;
-  return `${safeValue.toLocaleString()} ${goalType === 'minutes' ? 'phút' : 'phiên'}`;
-}
 
 function getMinuteGoalIntroCopy({ greeting, focusMinutesToday, dailyGoalMinutes }) {
   const remainingMinutes = Math.max(0, dailyGoalMinutes - focusMinutesToday);
   const dayIndex = getFocusIntroDayIndex();
 
   if (remainingMinutes <= 0) {
-    const [title, statusTemplate] = pickDailyVariantParts(dayIndex, [
-      FOCUS_INTRO_COPY.titleAfter,
-      FOCUS_INTRO_COPY.minuteCompletedNatural,
-    ]);
+    const [title] = pickDailyVariantParts(dayIndex, [FOCUS_INTRO_COPY.titleAfter]);
     return {
       title: `${greeting}. ${title}`,
-      statusTemplate,
-      remainingValue: remainingMinutes,
     };
   }
 
   if (focusMinutesToday <= 0) {
-    const [title, statusTemplate] = pickDailyVariantParts(dayIndex, [
-      FOCUS_INTRO_COPY.titleStart,
-      FOCUS_INTRO_COPY.minuteRemainingNatural,
-    ]);
+    const [title] = pickDailyVariantParts(dayIndex, [FOCUS_INTRO_COPY.titleStart]);
     return {
       title: `${greeting}. ${title}`,
-      statusTemplate,
-      remainingValue: remainingMinutes,
     };
   }
 
-  const [title, statusTemplate] = pickDailyVariantParts(dayIndex, [
-    FOCUS_INTRO_COPY.titleContinue,
-    FOCUS_INTRO_COPY.minuteRemainingNatural,
-  ]);
+  const [title] = pickDailyVariantParts(dayIndex, [FOCUS_INTRO_COPY.titleContinue]);
 
   return {
     title: `${greeting}. ${title}`,
-    statusTemplate,
-    remainingValue: remainingMinutes,
   };
 }
 
@@ -436,40 +355,25 @@ function getSessionGoalIntroCopy({ greeting, sessionsCompletedToday, dailyGoalSe
   const dayIndex = getFocusIntroDayIndex();
 
   if (remainingSessions <= 0) {
-    const [title, statusTemplate] = pickDailyVariantParts(dayIndex, [
-      FOCUS_INTRO_COPY.titleAfter,
-      FOCUS_INTRO_COPY.sessionCompleted,
-    ]);
+    const [title] = pickDailyVariantParts(dayIndex, [FOCUS_INTRO_COPY.titleAfter]);
 
     return {
       title: `${greeting}. ${title}`,
-      statusTemplate,
-      remainingValue: remainingSessions,
     };
   }
 
   if (sessionsCompletedToday <= 0) {
-    const [title, statusTemplate] = pickDailyVariantParts(dayIndex, [
-      FOCUS_INTRO_COPY.titleStart,
-      FOCUS_INTRO_COPY.sessionRemaining,
-    ]);
+    const [title] = pickDailyVariantParts(dayIndex, [FOCUS_INTRO_COPY.titleStart]);
 
     return {
       title: `${greeting}. ${title}`,
-      statusTemplate,
-      remainingValue: remainingSessions,
     };
   }
 
-  const [title, statusTemplate] = pickDailyVariantParts(dayIndex, [
-    FOCUS_INTRO_COPY.titleContinue,
-    FOCUS_INTRO_COPY.sessionRemaining,
-  ]);
+  const [title] = pickDailyVariantParts(dayIndex, [FOCUS_INTRO_COPY.titleContinue]);
 
   return {
     title: `${greeting}. ${title}`,
-    statusTemplate,
-    remainingValue: remainingSessions,
   };
 }
 
@@ -1892,7 +1796,7 @@ function FocusIntro({
 }) {
   // Màn Focus tĩnh: khi phiên đang chạy/tạm dừng, ẩn lời chào lớn để chỉ còn đồng hồ.
   if (hasFocusSessionInProgress) return null;
-  const { title, remainingValue, statusTemplate } = getFocusIntroCopy({
+  const { title } = getFocusIntroCopy({
     greeting,
     sessionsCompletedToday,
     focusMinutesToday,
@@ -1900,13 +1804,6 @@ function FocusIntro({
     dailyGoalSessions,
     dailyGoalMinutes,
   });
-  const emphasisValues = {
-    countLabel: formatDailyGoalValue(
-      dailyGoalType === 'minutes' ? focusMinutesToday : sessionsCompletedToday,
-      dailyGoalType,
-    ),
-    remainingLabel: formatDailyGoalValue(remainingValue, dailyGoalType),
-  };
 
   return (
     /*
@@ -1926,21 +1823,25 @@ function FocusIntro({
         số thì không phải mục tiêu»). Theo luật sẵn có của dự án — *hai chỗ nói cùng một chuyện
         thì chỗ nói ít hơn phải nhường* — chỗ nhường là câu này.
 
-      GIỮ LẠI `statusTemplate` ("Bạn còn 5 phiên nữa là đủ nhịp hôm nay") vì nó là nửa HÀNH
-      ĐỘNG ĐƯỢC của cặp câu, và nó không trùng với ai. Hai lớp gỡ đi kéo dòng việc-tiếp-theo
-      («Đang xây Cảng Biển Lớn · còn 4 phiên») lên gần đỉnh màn hình — đó mới là thứ trả lời
-      "làm phiên này để được gì".
+      · **Câu `statusTemplate`** ("Bạn còn 5 phiên nữa là đủ nhịp hôm nay.") — GỠ NỐT (2026-09-01).
+        Vòng trước GIỮ nó với lý do *"nó là nửa hành động được của cặp câu, và nó không trùng với
+        ai"*. Lý lẽ ấy tự mâu thuẫn với đoạn ngay trên: `progressTemplate` bị gỡ **vì** dòng dưới
+        đồng hồ đã "nói được còn bao xa" — mà đó đúng là việc câu này đang làm. Đo ở khung 390px:
+        phụ đề ở y=288 và «Phiên 0/5 hôm nay» ở y=626, **cùng trên một màn hình**, cùng nói một
+        trạng thái; bản dưới đồng hồ có cả tử lẫn mẫu và nằm ngay chỗ ra quyết định.
+        Cái được không chỉ là 27px chữ: nó là BIÊN AN TOÀN của nút chính ở ca tiêu đề DÀI NHẤT —
+        đo được **22px → 49px**. Màn này đã tụt xuống dưới thanh tab HAI lần (vòng 19 và 20), nên
+        biên là thứ đáng mua.
+        Khối chào còn đúng một dòng: TIẾNG NÓI. Phần hành-động-được nằm ở hai dòng ngay dưới
+        («Đang xây … · còn 4 phiên» · «Tổng kết tuần trước») và ở «Phiên 0/5» dưới đồng hồ.
     */
-    <div className="mb-3 flex flex-wrap items-baseline gap-x-3 gap-y-1 border-t px-1 pt-3 md:mb-4 md:pt-4" style={{ borderColor: 'var(--line)' }}>
+    <div className="mb-3 border-t px-1 pt-3 md:mb-4 md:pt-4" style={{ borderColor: 'var(--line)' }}>
       <h1
         className="text-[19px] font-semibold leading-snug tracking-[-0.01em] text-[var(--ink)] md:text-[21px]"
         style={{ fontFamily: 'var(--skin-font-display)' }}
       >
         {title}
       </h1>
-      <p className="w-full text-[12.5px] leading-[1.5] text-[var(--muted)] md:max-w-[560px]">
-        {renderFocusIntroCopy(statusTemplate, emphasisValues)}
-      </p>
     </div>
   );
 }

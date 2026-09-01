@@ -116,3 +116,39 @@ export function tierFromSessionMultiplier(multiplier, jackpotApplied = false) {
   if (m >= 1.3) return 'tot';
   return 'thuong';
 }
+
+/**
+ * TIẾNG THEO BẬC — mỗi lượt thẻ mới kêu ĐÚNG MỘT tiếng, chọn theo bậc hiếm nhất trong lượt ấy.
+ *
+ * VÌ SAO CÓ (2026-09-01): `rewardFeed.js` có **9 nguồn thẻ** nhưng `RewardToastHost` chỉ rẽ **3
+ * nhánh `if`** (`loot` · `milestone` · `level`) ⇒ **6/9 nguồn hoàn toàn câm**, trong đó có cả di
+ * vật và mốc chuỗi vĩnh viễn — hai thứ mang bậc `huyenThoai`, tức đúng những phần thưởng hiếm
+ * nhất game lại là những phần thưởng không kêu một tiếng nào. Trong khi đó bậc độ hiếm ĐÃ được
+ * tính cho MỌI thẻ và đã được kênh MẮT dùng (vệt màu + chấm `pips` của `RewardCard`); chỉ kênh
+ * TAI là chưa bao giờ đọc tới nó.
+ *
+ * ⚠️ ĐÂY LÀ PHÉP GỘP, KHÔNG PHẢI PHÉP THÊM. Nó XOÁ ba nhánh `if` (kể cả trường hợp đặc biệt
+ * `!coMoc` viết ngày 2026-09-01 để chống hai tiếng chồng nhau) và thay bằng một bảng bốn dòng:
+ * "một lượt một tiếng" biến việc chống-chồng-tiếng thành HỆ QUẢ CỦA CẤU TẠO chứ không phải một
+ * cái `if` phải nhớ. **0 tiếng mới, 0 chữ mới trên màn hình, ít mã hơn trước.**
+ *
+ * ⚠️ GHI TÊN HÀM, KHÔNG GHI HÀM. `engine/` chưa từng import `components/` hay `soundEngine`
+ * (xem chú thích đầu file về chiều phụ thuộc); để tầng giao diện tự tra tên trong `soundEngine`
+ * thì bảng này vẫn thuần và vẫn test được mà không kéo Web Audio vào `node --test`.
+ *
+ * ⚠️ `tot` và `thuong` CỐ Ý DÙNG CHUNG một tiếng. Bốn bậc là để MẮT đọc (bốn màu, bốn mức chấm);
+ * tai không phân biệt nổi bốn tiếng chuông gần nhau trong 4 giây, và hai bậc thấp chiếm 89,9%
+ * số phiên (đo 624 phiên: thuong 25,8% · tot 64,1% · hiem 10,1%) — cho chúng hai tiếng khác nhau
+ * là làm cái tiếng thường gặp nhất mất ý nghĩa. Tiếng chỉ cần trả lời "vừa rồi có gì hiếm không".
+ */
+export const REWARD_TIER_SOUND = {
+  thuong:     'playChestOpen',
+  tot:        'playChestOpen',
+  hiem:       'playMilestone',
+  huyenThoai: 'playJackpot',
+};
+
+/** Tên hàm trong `soundEngine` cho một bậc; luôn trả về một tên hợp lệ. */
+export function soundForTier(key) {
+  return REWARD_TIER_SOUND[resolveRewardTier(key)];
+}

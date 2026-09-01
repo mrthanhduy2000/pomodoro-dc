@@ -31,6 +31,7 @@ import {
   highestTier,
   splitRewardToasts,
 } from '../engine/rewardFeed';
+import { soundForTier } from '../engine/rewardTiers';
 import { getRewardTier } from '../engine/rewardTiers';
 import { useEnterMotion } from '../lib/motionPresets';
 import RewardCard from './shared/RewardCard';
@@ -108,40 +109,44 @@ export default function RewardToastHost({ paused = false, onNavigate, onOpenDeta
 
   const toasts = useMemo(() => buildRewardToasts(ui, missions, { stageHint }), [ui, missions, stageHint]);
   const { shown, hidden, overflowLabel } = splitRewardToasts(toasts);
+  // Khoá ổn định cho effect âm thanh: chuỗi id của đúng những thẻ ĐANG HIỆN.
+  const shownIds = shown.map((t) => t.id);
+  const shownKey = shownIds.join('|');
 
   /**
-   * Âm thanh: giữ ĐÚNG những tiếng đã có trước đây.
-   * `playChestOpen` vốn kêu ở giai đoạn 0 của hộp thoại phần thưởng và
-   * `playLevelUp` ở giai đoạn 5 — phiên thường nay không mở hộp thoại nữa nên
-   * hai tiếng ấy phải kêu ở đây, nếu không việc bỏ chặn màn hình sẽ lặng lẽ lấy
-   * mất phản hồi âm thanh của mỗi phiên xong.
+   * ÂM THANH: MỘT LƯỢT THẺ MỚI = ĐÚNG MỘT TIẾNG, CHỌN THEO BẬC HIẾM NHẤT TRONG LƯỢT.
    *
-   * ⚠️ THÊM `playMilestone` (2026-09-01) — tiếng này đã nằm sẵn trong `soundEngine` với **0 nơi
-   * gọi**, đúng hình dạng "hàm engine chưa có ai gọi" (Phase 4H). Nó dành cho thẻ mốc chuỗi
-   * 7/14/30 ngày, thứ trước nay chạm tới mà app không kêu một tiếng nào.
+   * Bản trước rẽ ba nhánh `if` theo NGUỒN (`loot` · `milestone` · `level`), mà `rewardFeed.js`
+   * có **9 nguồn** ⇒ **6/9 nguồn câm**, gồm cả di vật và mốc chuỗi vĩnh viễn — hai thứ mang bậc
+   * `huyenThoai`, tức chính những phần thưởng hiếm nhất game lại không kêu tiếng nào. Bậc độ
+   * hiếm thì đã được tính cho MỌI thẻ và kênh MẮT đã dùng nó từ lâu (vệt màu + chấm của
+   * `RewardCard`); chỉ kênh TAI là chưa đọc tới. Bảng tra ở `engine/rewardTiers.js`.
    *
-   * ⚠️ VÀ NÓ THAY tiếng rương, KHÔNG chồng lên. Thẻ mốc chỉ sinh ra khi một phiên vừa xong, tức
-   * nó LUÔN đi cùng thẻ tổng kết — để cả hai cùng kêu là bảo đảm hai tiếng chồng nhau ở đúng
-   * khoảnh khắc đáng nhớ nhất, chứ không phải một ca hiếm. Cái nào hiếm hơn thì cái đó được
-   * tiếng: mốc chuỗi 30 ngày đến 12 lần một năm, rương thì mỗi phiên.
+   * ⚠️ ĐÂY LÀ PHÉP GỘP: nó XOÁ ba nhánh `if` **và** trường hợp đặc biệt `!coMoc` (viết cùng ngày
+   * để chống hai tiếng chồng nhau). "Một lượt một tiếng" làm việc chống-chồng-tiếng thành hệ quả
+   * của CẤU TẠO chứ không phải một cái `if` phải nhớ ở mỗi lần thêm nguồn mới.
+   *
+   * ⚠️ DUYỆT `shown`, KHÔNG DUYỆT `toasts`. Chỉ 3 thẻ được hiện; bản cũ duyệt cả danh sách nên
+   * một thẻ nằm ngoài chồng vẫn kêu — Đàm nghe một tiếng cho một tấm thẻ anh không hề thấy. Thẻ
+   * bị hoãn sẽ kêu đúng lúc nó nổi lên, vì lúc ấy nó mới vào `shown`.
    */
   const soundedRef = useRef(new Set());
   useEffect(() => {
-    const live = new Set(toasts.map((t) => t.id));
-    const coMoc = toasts.some((t) => t.source === 'milestone');
-    for (const toast of toasts) {
-      if (soundedRef.current.has(toast.id)) continue;
-      soundedRef.current.add(toast.id);
-      if (toast.source === 'loot' && !coMoc) soundEngine.playChestOpen();
-      if (toast.source === 'milestone') soundEngine.playMilestone();
-      if (toast.source === 'level') soundEngine.playLevelUp();
+    const live = new Set(shownIds);
+    const moi = shown.filter((t) => !soundedRef.current.has(t.id));
+    if (moi.length > 0) {
+      for (const t of moi) soundedRef.current.add(t.id);
+      soundEngine[soundForTier(highestTier(moi))]?.();
     }
     // Dọn id đã biến mất để cùng một phần thưởng lần sau vẫn kêu (ví dụ lên cấp 7
     // ở lượt prestige sau). Không dọn thì Set phình vô hạn và tiếng tắt vĩnh viễn.
     // Gom rồi mới xoá — sửa một tập hợp đang được duyệt là chỗ dễ sinh lỗi im lặng.
     const stale = [...soundedRef.current].filter((id) => !live.has(id));
     for (const id of stale) soundedRef.current.delete(id);
-  }, [toasts]);
+    // ⚠️ Phụ thuộc theo CHUỖI ID chứ không theo mảng `shown`: `splitRewardToasts` trả mảng MỚI ở
+    // mỗi lần render, nên để `shown` trong danh sách phụ thuộc là bắt effect chạy lại liên tục.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shownKey]);
 
   const dismiss = (toast) => {
     switch (toast.source) {
@@ -183,7 +188,25 @@ export default function RewardToastHost({ paused = false, onNavigate, onOpenDeta
 
   return (
     <div
-      className="pointer-events-none fixed inset-x-3 bottom-3 z-[48] flex flex-col items-stretch gap-2 sm:inset-x-auto sm:right-4 sm:bottom-4 sm:w-[340px]"
+      /*
+        ⚠️ CHỒNG THẺ PHẢI NỔI **TRÊN** THANH ĐIỀU HƯỚNG, KHÔNG ĐÈ LÊN NÓ (2026-09-01).
+        Đo trên app thật ở khung 390×844 (`shot.mjs --probe`): thanh điều hướng dưới cùng nằm
+        y=774…832 (cao 58px, cha đệm dưới 12px), còn `bottom-3` đặt mép dưới chồng thẻ ở đúng
+        844−12 = **832** — TRÙNG KHÍT mép dưới thanh nav. Chồng thẻ có `z-[48]` > `z-40` của nav,
+        và mỗi thẻ là một `<button>` mang `pointer-events-auto`, nên sau MỖI phiên xong, **cả năm
+        nút của thanh điều hướng bị che và chạm vào bất kỳ nút nào cũng mở hộp thoại phần thưởng**.
+        Một thẻ đo được ~100px đã cao hơn cả thanh nav (58px) ⇒ không cần tới ba thẻ mới che hết.
+        ⚠️ `env(safe-area-inset-bottom)` phải có mặt vì THANH NAV cũng dùng đúng nó
+        (`App.jsx`, `paddingBottom: calc(env(safe-area-inset-bottom) + 12px)`) — viết một con số
+        trần thì trên máy có thanh gạt dưới (safe-area 34px) thẻ sẽ tụt lại vào nav. Hôm nay
+        `index.html` KHÔNG khai `viewport-fit=cover` nên safe-area = 0 kể cả trên iPhone của Đàm,
+        nhưng khoá bằng QUAN HỆ thì ngày ai đó thêm cờ ấy vào cũng không gãy.
+        ⚠️ 82 = 58 (cao nav) + 12 (đệm dưới của nav) + 12 (khe hở). Ba số ấy ĐO ĐƯỢC, không đoán.
+        ⚠️ Giá đã biết và chấp nhận: ở chế độ TOÀN MÀN HÌNH thanh nav không được dựng, nên chồng
+        thẻ chừa thừa 70px. Đó là một khoảng trống, không phải một nút bị che — rẻ hơn nhiều so
+        với việc luồn một prop qua ba tầng component chỉ để bỏ một khe hở.
+      */
+      className="pointer-events-none fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+82px)] z-[48] flex flex-col items-stretch gap-2 sm:inset-x-auto sm:right-4 sm:bottom-4 sm:w-[340px]"
       role="status"
       aria-live="polite"
     >

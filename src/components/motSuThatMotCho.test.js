@@ -18,15 +18,24 @@ const doc = (p) => stripComments(readFileSync(new URL(p, import.meta.url), 'utf8
 // THỬ-CHO-ĐỎ: dán lại `<span>Khoá</span>` vào hàng di vật ⇒ đỏ.
 test('Di vật: không in "Khoá" ở từng hàng của danh sách VỐN toàn hàng khoá', () => {
   const ma = doc('./RelicInventory.jsx');
-  assert.match(ma, /locked\.map\(/, 'không còn danh sách khoá — phép đo chạy rỗng');
+  // ⚠️ GÁC CHẠY-RỖNG ĐÃ ĐỔI ĐÍCH (2026-09-01) — và nó đã làm đúng việc của nó: khi danh sách được
+  // TÁCH LÀM HAI (`conLay` còn lấy được / `daLo` đã lỡ), phép đo cũ hỏi `locked.map(` liền ĐỎ với
+  // đúng câu "phép đo chạy rỗng" thay vì lặng lẽ xanh trên một file nó không còn hiểu. Đây là lý
+  // do mọi bài test đọc-mã-nguồn phải có gác chạy-rỗng.
+  assert.match(ma, /conLay\.map\(/, 'không còn danh sách di vật chưa có — phép đo chạy rỗng');
   assert.ok(
     !/>Khoá</.test(ma),
-    'chữ "Khoá" quay lại từng hàng. Danh sách dựng bằng `locked.map(...)` nên mọi hàng khoá THEO '
+    'chữ "Khoá" quay lại từng hàng. Danh sách chỉ chứa di vật CHƯA có nên mọi hàng khoá THEO '
     + 'CẤU TẠO — mở được thì di vật RỜI khỏi mảng chứ không đổi chữ tại chỗ.',
   );
-  // ⚠️ Nhưng TÊN KHỦNG HOẢNG thì phải còn: đó là dữ kiện duy nhất của mỗi hàng, và một vòng soi
-  // đã đề nghị gộp cả 15 hàng thành một dòng — bị BÁC vì lý do này.
-  assert.match(ma, /relic\.crisisName/, 'mất tên khủng hoảng ⇒ 15 hàng thành 15 dòng giống hệt nhau');
+  // ⚠️ Nhưng TÊN KHỦNG HOẢNG thì phải còn: nó trả lời "cái này rơi ở đâu", và một vòng soi đã đề
+  // nghị gộp cả 15 hàng thành một dòng — bị BÁC vì lý do này.
+  assert.match(ma, /relic\.crisisName/, 'mất tên khủng hoảng ⇒ các hàng thành những dòng giống hệt nhau');
+  // ⚠️ VÀ HÀNG PHẢI NÓI RA PHẦN THƯỞNG. Bản cũ in "??? từ <tên khủng hoảng>" — dùng đúng 2/7
+  // trường của mỗi di vật và vứt 5, trong đó có chính cái tên và cái phần thưởng. Mười lăm dòng
+  // "???" không tạo ra ham muốn nào; chúng chỉ nói "bạn đang thiếu mười lăm thứ".
+  assert.ok(!/\?\?\?/.test(ma), 'dấu "???" quay lại — hàng di vật lại giấu mất phần thưởng.');
+  assert.match(ma, /relic\.label/, 'hàng di vật phải nói TÊN phần thưởng.');
 });
 
 // THỬ-CHO-ĐỎ: đổi `CHU_KY_NGHI_CO_KHAC_NHAU` thành `true` ⇒ đỏ.

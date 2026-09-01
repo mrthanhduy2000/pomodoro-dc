@@ -6,6 +6,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { useCustomMotion, useEnterMotion, usePressMotion } from '../lib/motionPresets';
 import useGameStore from '../store/gameStore';
+import { chiaNhomDiVat } from './relicReach';
 import useSettingsStore from '../store/settingsStore';
 import {
   ERA_CRISES,
@@ -19,10 +20,15 @@ import { getGlyph, hasGlyphIcon } from '../utils/labelMark';
 
 const ALL_RELIC_DEFS = Object.entries(ERA_CRISES)
   .sort(([a], [b]) => Number(a) - Number(b))
-  .map(([, crisis]) => ({
+  .map(([era, crisis]) => ({
     ...crisis.challengeOption.successRelic,
     crisisName: crisis.name,
     crisisIcon: crisis.icon,
+    // ⚠️ `triggerEP` là con số DUY NHẤT trả lời "khủng hoảng kế tiếp còn bao xa", và trước
+    // 2026-09-01 nó được đọc bởi **0 component** — chỉ `constants.js` khai và `challengeEngine.js`
+    // dò. Không màn nào nói cho người chơi biết mốc ấy tồn tại.
+    triggerEP: crisis.triggerEP,
+    era: Number(era),
   }));
 
 const STAGE_TOKENS = [
@@ -74,6 +80,7 @@ function paperCardStyle(lightTheme, accentBorder = 'var(--line)', accentShadow =
 export default function RelicInventory() {
   const relics = useGameStore((s) => s.relics);
   const relicEvolutions = useGameStore((s) => s.relicEvolutions ?? {});
+  const totalEP = useGameStore((s) => s.progress?.totalEP ?? 0);
   const uiTheme = useSettingsStore((s) => s.uiTheme);
   const lightTheme = uiTheme === 'light';
   const collectedIds = new Set(relics.map((r) => r.id));
@@ -118,7 +125,7 @@ export default function RelicInventory() {
         mở màn hình, và chỉ một cách khiến người ta muốn đi lấy.
       */}
       {relics.length === 0 ? (
-        <LockedRelics collectedIds={collectedIds} lightTheme={lightTheme} />
+        <LockedRelics collectedIds={collectedIds} lightTheme={lightTheme} totalEP={totalEP} />
       ) : (
         <>
           <div className="flex flex-col gap-4">
@@ -131,7 +138,7 @@ export default function RelicInventory() {
               />
             ))}
           </div>
-          <LockedRelics collectedIds={collectedIds} lightTheme={lightTheme} />
+          <LockedRelics collectedIds={collectedIds} lightTheme={lightTheme} totalEP={totalEP} />
         </>
       )}
     </div>
@@ -395,58 +402,102 @@ function BuffTagRow({ buff, lightTheme, token }) {
   );
 }
 
-function LockedRelics({ collectedIds, lightTheme }) {
+function LockedRelics({ collectedIds, lightTheme, totalEP }) {
   const locked = ALL_RELIC_DEFS.filter((relic) => !collectedIds.has(relic.id));
   if (!locked.length) return null;
 
+  // ⚠️ HAI NHÓM, VÌ CHÚNG LÀ HAI SỰ THẬT KHÁC HẲN NHAU. `detectEraCrisis`
+  // (`challengeEngine.js:187`) chỉ nổ đúng lúc `prevEP < triggerEP && newEP >= triggerEP` — tức
+  // mỗi khủng hoảng có ĐÚNG MỘT khoảnh khắc trong cả đời một ván. Đi qua mốc rồi thì di vật ấy
+  // **không bao giờ lấy được nữa**. Đo trên một ván 23.553 EP: 5/12 dòng đang khoá là loại ấy,
+  // mà màn hình vẫn gộp chung và mời "chinh phục Khủng Hoảng Kỷ Nguyên để nhận" — một lời hứa
+  // sai cho gần một nửa danh sách. Gộp chung thì cái danh sách vừa nói dối vừa vô dụng: người
+  // chơi không biết dòng nào còn đáng chờ.
+  const { conLay, daLo, sapToi, conBaoNhieuEP } = chiaNhomDiVat(ALL_RELIC_DEFS, collectedIds, totalEP);
+
   return (
-    <section className="space-y-3">
+    <section className="space-y-4">
+      {sapToi ? (
+        <div
+          className="rounded-[18px] border px-3.5 py-3"
+          style={{
+            borderColor: lightTheme ? 'var(--line)' : 'rgba(255,255,255,0.08)',
+            background: lightTheme ? 'rgba(255,255,255,0.72)' : 'rgba(30,41,59,0.4)',
+          }}
+        >
+          <p className="mono text-[10px] uppercase tracking-[0.2em]" style={lightTheme ? { color: 'var(--muted-2)' } : { color: '#64748b' }}>
+            Khủng hoảng kế tiếp
+          </p>
+          <p className="mt-1 text-[15px] font-semibold" style={lightTheme ? { color: 'var(--ink)' } : { color: '#e2e8f0' }}>
+            {sapToi.crisisIcon} {sapToi.crisisName}
+          </p>
+          <div className="mt-2 overflow-hidden rounded-full" style={{ background: lightTheme ? 'var(--line)' : 'rgba(255,255,255,0.1)' }}>
+            <div
+              className="h-[3px] rounded-full transition-all"
+              style={{
+                width: `${Math.max(2, Math.min(100, Math.floor((totalEP / sapToi.triggerEP) * 100)))}%`,
+                background: 'var(--accent)',
+              }}
+            />
+          </div>
+          <p className="mono mt-1.5 text-[11px]" style={lightTheme ? { color: 'var(--muted)' } : { color: '#94a3b8' }}>
+            còn {conBaoNhieuEP.toLocaleString('vi-VN')} EP · thắng thì được{' '}
+            {sapToi.icon} {sapToi.label}
+          </p>
+        </div>
+      ) : null}
+
       <div>
         <p className="mono text-[10px] uppercase tracking-[0.2em]" style={lightTheme ? { color: 'var(--muted-2)' } : { color: '#64748b' }}>
-          Những gì còn ẩn
+          Còn lấy được
         </p>
         <p className="mt-1 text-sm font-semibold" style={lightTheme ? { color: 'var(--ink)', fontFamily: 'var(--skin-font-display)' } : { color: '#e2e8f0' }}>
-          Chưa thu thập
+          {conLay.length} di vật phía trước
         </p>
       </div>
 
       {/*
-        ⚠️ MỘT DÒNG MỘT DI VẬT, KHÔNG CÒN MỘT THẺ MỘT DI VẬT (2026-08-30). Đo ở khung 390px: 15 di
-        vật khoá × ~200px = **~3.000px** cuộn, và mỗi thẻ nói ĐÚNG một câu như nhau — *"Chinh phục
-        «X» ở chế độ Đương Đầu để mở khóa"* — trong đó phần duy nhất khác nhau (**tên khủng hoảng**)
-        đã nằm ngay trên tiêu đề của chính thẻ ấy. Tức mỗi thẻ nói tên ấy HAI lần, và cái luật chơi
-        thì được nói LẠI mười lăm lần.
-        ⚠️ Luật ấy KHÔNG BỊ MẤT — nó đã có một chỗ để nói, ngay đầu màn này: *"0/15 — chinh phục
-        Khủng Hoảng Kỷ Nguyên để nhận buff vĩnh viễn."* Nói một lần ở đầu danh sách là đủ; nói lại
-        ở từng dòng thì nó thôi là hướng dẫn và thành nhiễu.
-        ⚠️ Ô "ẨN" 48×48 cũng gỡ: mười lăm ô giống hệt nhau không phân biệt được gì, mà chúng chính
-        là thứ ép mỗi thẻ phải cao ít nhất 48px.
-        Kết quả: ~3.000px → ~700px, và danh sách LIẾC được thay vì phải đọc.
-
-        ⚠️ ĐÍNH CHÍNH 2026-09-01 — CHỮ "KHOÁ" Ở LỀ PHẢI NAY ĐÃ GỠ NỐT, và lý do giữ nó ghi ở
-        vòng trước (*"nó là trạng thái, và nó là thứ sẽ đổi khi mở được"*) **tự mâu thuẫn với dòng
-        lọc cách nó 24 dòng**: `locked = filter(r => !collectedIds.has(r.id))` ⇒ mọi hàng ở đây
-        khoá THEO CẤU TẠO, và một di vật mở được thì RỜI khỏi mảng này chứ không đổi chữ tại chỗ.
-        Tức nó không bao giờ là "trạng thái sẽ đổi"; nó là cùng một chữ in mười lăm lần dưới đúng
-        một tiêu đề đã nói "Chưa thu thập". Đo: 15 span 30×15px.
-        ⚠️ VÀ ĐÂY LÀ TẤT CẢ những gì được gỡ ở màn này. Một vòng soi có đề nghị THAY luôn 15 dòng
-        bằng một dòng tổng — ĐÃ BÁC: mỗi dòng mang một danh từ riêng ("??? từ Kỷ Băng Hà") không
-        lặp lại ở đâu khác, tức nó trả lời đúng câu *"cái này rơi ở đâu"*; và câu tổng được đề
-        nghị thêm vào thì đã nằm sẵn ở đầu màn ("0/15 — chinh phục Khủng Hoảng Kỷ Nguyên…").
+        ⚠️ HIỆN PHẦN THƯỞNG THẬT, KHÔNG PHẢI "???". Mỗi phần tử `ALL_RELIC_DEFS` mang 7 trường
+        (id · label · icon · description · buff · crisisName · crisisIcon) và bản cũ dùng đúng
+        HAI (`id` làm khoá, `crisisName` làm chữ) — **5/7 trường bị vứt, trong đó có chính cái
+        tên và cái phần thưởng**. Mười lăm dòng "???" giống hệt nhau không tạo ra ham muốn nào;
+        chúng chỉ nói "bạn đang thiếu mười lăm thứ".
+        ⚠️ Vẫn GIỮ tên khủng hoảng ở mỗi dòng — nó là danh từ riêng trả lời đúng câu *"cái này
+        rơi ở đâu"*, và một vòng soi trước đã bác đúng đắn đề nghị thay 15 dòng bằng một dòng tổng.
       */}
       <div className="grid grid-cols-1 gap-x-4 gap-y-0 sm:grid-cols-2">
-        {locked.map((relic) => (
+        {conLay.map((relic) => (
           <div
             key={relic.id}
             className="flex items-baseline justify-between gap-3 border-b py-2.5"
             style={{ borderColor: lightTheme ? 'var(--line)' : 'rgba(255,255,255,0.08)' }}
           >
-            <p className="min-w-0 flex-1 truncate text-[13px]" style={lightTheme ? { color: 'var(--muted)' } : { color: '#94a3b8' }}>
-              ??? <span style={{ opacity: 0.75 }}>từ {relic.crisisName}</span>
+            <p className="min-w-0 flex-1 truncate text-[13px]" style={lightTheme ? { color: 'var(--ink-2)' } : { color: '#cbd5e1' }}>
+              <span className="mr-1">{relic.icon}</span>
+              <span className="font-semibold">{relic.label}</span>
+              <span style={{ opacity: 0.7 }}> · từ {relic.crisisName}</span>
             </p>
           </div>
         ))}
       </div>
+
+      {daLo.length > 0 ? (
+        <div>
+          <p className="mono text-[10px] uppercase tracking-[0.2em]" style={lightTheme ? { color: 'var(--muted-2)' } : { color: '#64748b' }}>
+            Đã lỡ trong ván này
+          </p>
+          {/*
+            ⚠️ NÓI THẲNG RA THAY VÌ ĐỂ NGƯỜI CHƠI CHỜ MÃI. Khủng hoảng chỉ nổ đúng một lần lúc
+            vượt mốc EP, nên đi qua rồi là hết — giấu chuyện đó đi thì người chơi vẫn nhìn danh
+            sách và tưởng mình còn cơ hội. Chúng sẽ quay lại ở ván sau (Prestige), nên đây là một
+            sự thật về LƯỢT CHƠI NÀY, không phải một cánh cửa đóng vĩnh viễn.
+          */}
+          <p className="mt-1 text-[12px]" style={lightTheme ? { color: 'var(--muted)' } : { color: '#94a3b8' }}>
+            {daLo.length} di vật đã đi qua mốc — ván sau (Prestige) mới gặp lại:{' '}
+            {daLo.map((relic) => relic.label).join(' · ')}
+          </p>
+        </div>
+      ) : null}
     </section>
   );
 }

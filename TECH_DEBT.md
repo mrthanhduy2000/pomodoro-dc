@@ -5342,3 +5342,30 @@ trong chú thích thì đừng để `--selftest` của chính nó vẫn dùng �
   bản quét đổi, vì cổng nay chỉ hơn ngưỡng **0,44** và phần dư ấy đến từ một dải KHÔNG liên quan
   tới nguyên nhân, nên nó có thể mất đi vì một thay đổi chẳng dính gì tới bầu trời.
 - **Owner**: chưa giao · **Status**: MỞ — cổng đã qua (12,44 ✓) nhưng nguyên nhân chưa chữa; chờ quyết định
+
+## #96 — Tiến hoá di vật là một cơ chế CHẾT: nó đòi tinh luyện của kỷ ĐÃ QUA — ĐÀM CHỌN, tôi không tự chọn
+
+> Mở 2026-09-01 (vòng 24, lúc soi lại tab Hành trang). Đây là một NGÕ CỤT cấu trúc, không phải một
+> con số cần cân bằng lại — nên nó khác `#95`, và nó cũng không sửa được bằng cách chỉnh giá.
+
+- **Tên**: `evolveRelic` tiêu `resourcesRefined[kỷ của di vật]`, mà tinh luyện chỉ rơi vào kỷ ĐANG CHƠI
+- **Module**: `src/store/gameStore.js` (`evolveRelic` ~5795, credit tinh luyện ~4135) · `RelicInventory.jsx`
+- **Priority**: Medium · **Severity**: Medium
+- **Số đo**: `evolveRelic` đọc `state.resourcesRefined[evoDef.era]`; còn tinh luyện khi xong phiên
+  được cộng vào `resourcesRefined[reward.activeBook]` — **kỷ đang chơi**. Nguồn duy nhất khác là
+  đặc quyền hạ tầng, nhưng `pruneEraScopedBlueprintState` gỡ công trình của kỷ cũ khi lên kỷ ⇒
+  **không có đường nào kiếm tinh luyện của một kỷ đã qua**. Ảnh chụp fixture (3 di vật, kỷ 8):
+  **3/3 nút tiến hoá đều "Chưa đủ tài nguyên"**, và chúng sẽ ở nguyên như vậy vĩnh viễn.
+- **Impact**: màn hình vẽ ra một thang tiến hoá `1 → 2 → 3` kèm một dòng chi phí và một cái nút —
+  cả ba đều là lời hứa về một việc **không thể làm được**. Cửa sổ dùng được của cơ chế này chỉ là
+  khoảng thời gian giữa lúc thắng khủng hoảng và lúc lên kỷ, mà khủng hoảng nổ ở ~95% ngưỡng kết
+  thúc kỷ ⇒ cửa sổ ấy gần như bằng không.
+- **⚠️ VÌ SAO CHƯA LÀM**: mọi lối ra đều là đổi luật KINH TẾ, không phải đổi hiển thị —
+  (a) cho tinh luyện của kỷ cũ tiếp tục rơi, (b) cho đổi tinh luyện kỷ mới lấy kỷ cũ, (c) đổi chi
+  phí tiến hoá sang tinh luyện của kỷ ĐANG chơi. Nguyên tắc an toàn đang áp: *đơn giản hoá thứ Đàm
+  THẤY và CẢM, đừng xoá thứ Đàm đã KIẾM ĐƯỢC* — cả ba phương án nằm ở phía bên kia ranh giới ấy.
+- **⚠️ ĐÃ CÂN NHẮC VÀ BÁC "vá bằng cách giấu đi"**: ẩn thang tiến hoá khi không đủ tài nguyên. Nó
+  làm màn hình hết nói dối nhưng cũng xoá luôn dấu vết của một cơ chế đã viết xong — và phiên sau
+  sẽ không có cách nào biết nó tồn tại. Ghi ra một mục nợ đọc được thì hơn.
+- **Review Trigger**: khi Đàm hỏi "sao cái nút tiến hoá di vật không bấm được bao giờ".
+- **Owner**: Đàm quyết · **Status**: MỞ, chờ Đàm

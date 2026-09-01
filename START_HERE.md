@@ -35,7 +35,36 @@ Mặt trận đang làm: **thành phố 3D** (`src/engine/city3d/` + `src/compon
   Phase 21 (*"push nhánh phụ, không tự gộp `main`"*) đã bị lệnh này thay thế.
   ⚠️ **Phase 21 do đó lên production TRƯỚC khi Đàm nhìn ảnh nghiệm thu** — mục "chờ Đàm nhìn ảnh"
   ở phần dưới VẪN CÒN HIỆU LỰC, chỉ là nay nó nghiệm thu một thứ đang chạy thật.
-- **Trò chơi — VÒNG 22 (2026-09-01, mới nhất): "hứng thú hơn, hệ thống ĐƠN GIẢN hơn".** Bảy việc,
+- **Trò chơi — VÒNG 23 (2026-09-01, mới nhất): "hứng thú hơn, đơn giản hơn, NHƯNG KHÔNG LẠM PHÁT
+  THÔNG TIN".** Vế cuối là vế MỚI và nó **đảo ngược phản xạ mặc định**: cách rẻ nhất để một màn
+  hình "vui hơn" luôn là thêm huy hiệu / thêm chữ / thêm thẻ — đúng thứ bị cấm. Nên cả vòng phải
+  trả lời bằng phép **TRỪ**: 9 việc, 27 file, **+1.006 / −1.248 dòng (ròng −242)**.
+  · ⚠️ **VÁ HAI LỖI THẬT ĐANG CHẠY TRÊN PRODUCTION.** (1) **Chồng thẻ thưởng che TRỌN thanh điều
+  hướng sau MỖI phiên** — nav y=774…832, `bottom-3` đặt đáy chồng thẻ đúng ở 832, `z-[48] > z-40`,
+  mỗi thẻ là `<button>` có `pointer-events-auto` ⇒ chạm bất kỳ nút nào trong 5 nút đều mở hộp phần
+  thưởng. Ba thứ **đều đúng riêng lẻ** cộng lại thành lỗi, không có dòng nào để `grep`.
+  (2) **Bước cuối chuỗi tuần hiện "Đã chốt" và "0%" cạnh nhau** — hai công thức cho một sự thật
+  (`chainStepsCompleted` so với `chainStepIndex`, lệch đúng 1 khi xong chuỗi). Nay trạng thái một
+  bước tính MỘT LẦN ở `components/weeklyChainStep.js`, ba trạng thái loại trừ nhau ⇒ mâu thuẫn cũ
+  **bất khả thi theo cấu tạo**.
+  · **~860 dòng mã KHÔNG BAO GIỜ chạy được đã xoá — ba kiểu chết, chỉ MỘT kiểu `grep`/lint thấy:**
+  (a) 0 nơi tham chiếu (`setSurgeChoice` · `addBuildingPassiveResources` · `craftTier`);
+  (b) chết vì một `return null` ĐỨNG TRƯỚC (`FocusIntro` là nơi gọi DUY NHẤT của
+  `getFocusIntroCopy`) ⇒ kho câu chào **39 bank/762 dòng → 3 bank/42 dòng**, **giữ nguyên toàn bộ
+  câu TIÊU ĐỀ**; (c) chết vì một trường vĩnh viễn `null` (`surgeOverride`).
+  `App.jsx` **3.006 → 2.176 dòng** · `gameStore.js` 6.230 → 6.123.
+  · **Chữ nói lại chữ, bảy màn:** Thành tích **19.059 → 11.739px (−38,4%)** · Xưởng 2.559 → 2.455 ·
+  Bản vẽ 2.832 → 2.745 · nút chính màn Tập trung **188×59 → 308×42**, biên tới nav 32 → **71px**
+  (ca tiêu đề dài nhất **~6 → 45px** — màn này đã để nút chính chui xuống dưới nav HAI lần rồi).
+  · **Chồng thẻ sau phiên: cắt `rank` + `mission`** (cả hai đã có kênh bền VÀ chúng lặp) ⇒ ca
+  thường ngày **2–3 → 1–2 thẻ**. **GIỮ `weekly`** — một nhịp MỖI TUẦN là thứ ĐỐI LẬP với lạm phát.
+  · **Ba khoảnh khắc câm nay có tiếng, tốn 0 chữ** (một trong ba còn XOÁ 174 ký tự): chọn gói âm
+  thanh nay LÀ cú nghe thử · vào nghỉ có tiếng · 5 nút nav nhúc nhích khi bấm. Cộng cổng mới
+  `soundReach.test.js` (mọi `play*` phải có ≥1 nơi gọi; miễn trừ là `assert.deepEqual`).
+  ⚠️ **HAI LẦN KHẢO SÁT ĐỀ NGHỊ XOÁ MỘT THỨ ĐÁNG GIỮ** và cả hai lần lý lẽ nghe rất xuôi (thẻ
+  «tổng kết tuần»; 15 dòng di vật — mỗi dòng mang một danh từ riêng trả lời *"cái này rơi ở đâu"*).
+  **Điểm "đơn giản hoá" cao không tự nó là lý do làm.**
+- **Trò chơi — VÒNG 22 (2026-09-01): "hứng thú hơn, hệ thống ĐƠN GIẢN hơn".** Bảy việc,
   không việc nào thêm một khái niệm mới cho Đàm; ba việc là XOÁ hoặc HẠ.
   · **Cây kỹ năng 336 SP → 138 SP** (2/3/5/8 theo hạng). Ở nhịp ~80 SP/năm thì mở trọn cây đi từ
   **15,9 năm xuống ~1,7 năm**. Hạ giá là phép CỘNG THÊM thuần — kỹ năng đã mở giữ nguyên, SP đã
@@ -141,6 +170,16 @@ Mặt trận đang làm: **thành phố 3D** (`src/engine/city3d/` + `src/compon
    (c) **`refinedEarned` / `jackpot` trong fixture luôn bằng 0** (vòng 22) — `make-fixture.mjs`
    không replay hai trường ấy, nên đừng đọc chúng để suy ra tần suất. Hỏi thẳng CÔNG THỨC:
    `minutes >= T2_DROP_THRESHOLD_MIN` (45') và `>= DEEP_SESSION_THRESHOLD` (60').
+   ⚠️ **(a) đã chặn một việc THẬT ở vòng 23, không chỉ là bất tiện.** `BREAK_START_DELAY_MS` chờ
+   3,2 giây ở **~82%** số phiên không còn lễ mừng nào để che (31,4 phút trong 180 ngày) — bản vá
+   đúng đã biết rồi (đổi hằng số thành quan hệ: 3.200 khi có lễ mừng, 500 khi không) nhưng **không
+   ship được vì không quan sát được**. Ai gỡ được điểm mù (a) thì mở khoá luôn `TECH_DEBT #94`.
+0b. **HAI VIỆC ĐÀM PHẢI CHỌN, tôi không tự chọn** (mở ở vòng 23, đã đo sẵn):
+   · **`TECH_DEBT #94`** — độ trễ vào nghỉ, xem ngay trên.
+   · **`TECH_DEBT #95`** — xây MỘT công trình phải qua **BA cổng tiền tệ**, cả ba đều là hàm của
+   số phút. Kho thô thừa **14 lần** nhu cầu. Đây là **kinh tế**, không phải hiển thị ⇒ nằm ở phía
+   bên kia ranh giới an toàn *"đừng xoá thứ Đàm đã KIẾM ĐƯỢC"*. ⚠️ **ĐÃ BÁC** phương án "nối dây
+   nút đổi thô lấy tinh luyện": chính con số 14 lần bác nó.
 1. **Kim tự tháp / ziggurat** — kỷ 2 (Ai Cập) và kỷ 3 (Iraq) đang ra mái nón nhiều cạnh,
    không có khối chóp bốn mặt. `prism` với `sides: 4` + `taper: 0` chính là thứ cần.
 2. **"Giống 3D hơn"** — bóng đổ nét hơn (`SHADOW_MAP_DESKTOP` 2048 → 4096, siết

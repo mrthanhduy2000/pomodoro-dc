@@ -1,4 +1,93 @@
-> Cập nhật lần cuối: **2026-09-01 (vòng 22)** — **"hứng thú hơn, hệ thống ĐƠN GIẢN hơn"** (lệnh
+> Cập nhật lần cuối: **2026-09-01 (vòng 23)** — **"hứng thú hơn, hệ thống đơn giản hơn, NHƯNG
+> KHÔNG LẠM PHÁT THÔNG TIN"** (lệnh của Đàm, vế cuối là vế mới). **Vế ấy đảo ngược phản xạ mặc
+> định:** cách rẻ nhất để một màn hình "vui hơn" luôn là thêm một huy hiệu, thêm một dòng chữ,
+> thêm một thẻ — và đó chính là thứ bị cấm. Nên câu trả lời cả vòng phải đến từ phép **TRỪ**.
+> Chín việc · 9 commit · 27 file · **+1.006 / −1.248 dòng (ròng −242)** · không việc nào thêm một
+> khái niệm mới cho người chơi.
+>
+> **HAI LỖI THẬT ĐANG CHẠY TRÊN PRODUCTION, cả hai đều không cổng nào bắt được:**
+> · **Chồng thẻ thưởng che TRỌN thanh điều hướng sau MỖI phiên.** Thanh nav y=774…832; `bottom-3`
+>   đặt đáy chồng thẻ đúng ở **832**, `z-[48] > z-40`, và mỗi thẻ là một `<button>` mang
+>   `pointer-events-auto` ⇒ sau mỗi phiên, chạm bất kỳ nút nào trong **5 nút** đều mở hộp phần
+>   thưởng thay vì chuyển tab. Vá bằng đúng MỘT lớp CSS; đo lại còn 12px hở.
+>   ⚠️ Ba thứ **đều đúng riêng lẻ** cộng lại thành lỗi (khoảng cách · lớp xếp chồng · vùng bấm) —
+>   không có dòng nào để `grep`, và test không thấy vì đây là hình học của trình duyệt.
+> · **Bước CUỐI của chuỗi tuần vừa xong hiện "Đã chốt" và "0%" cạnh nhau.** Hai cột dùng hai công
+>   thức cho cùng một sự thật: `index < chainStepsCompleted` (3<4 ⇒ đúng) và `index < chainStepIndex`
+>   (3<3 ⇒ sai), vì xong chuỗi thì `chainStepIndex = len−1` còn `chainStepsCompleted = len`. Lỗi có
+>   ở MỌI độ dài chuỗi ≥1 và nổ đúng khoảnh khắc trả phần thưởng lớn nhất tuần. **Mỗi biểu thức
+>   đều ĐÚNG theo công thức của riêng nó** ⇒ đúng cái giá của "một sự thật, hai công thức".
+>
+> **PHÁT HIỆN LỚN NHẤT: ~860 DÒNG MÃ KHÔNG BAO GIỜ CHẠY ĐƯỢC — ba kiểu chết, và chỉ MỘT kiểu là
+> thứ `grep` hay lint nhìn thấy.**
+> · *(a) không ai tham chiếu* — 3 hành động store (`setSurgeChoice` · `addBuildingPassiveResources`
+>   · `craftTier`), 0 nơi gọi trên toàn repo, 0 bài test, 0 dòng trong TECH_DEBT/ADR/BAN_GIAO ⇒
+>   không có quyết định nào ghi rằng chúng được cố ý gác lại.
+> · *(b) chết vì một `return null` ĐỨNG TRƯỚC* — `FocusIntro` mở đầu bằng
+>   `if (hasFocusSessionInProgress) return null`, mà nó là nơi gọi **DUY NHẤT** của
+>   `getFocusIntroCopy` ⇒ cả nhánh "phiên đang chạy" bên trong, cùng `getLiveSessionIntroCopy` và
+>   6 bank câu, **chưa từng chạy một lần**. Kho câu chào **39 bank/762 dòng → 3 bank/42 dòng**.
+>   ⚠️ **GIỮ NGUYÊN toàn bộ câu TIÊU ĐỀ** — đó chính là phần "bất ngờ mỗi ngày", thứ đang được
+>   yêu cầu tăng lên chứ không phải giảm đi.
+> · *(c) chết vì một TRƯỜNG vĩnh viễn `null`* — nhánh `surgeOverride` ở `gameMath.js`; trường ấy
+>   chỉ được ghi bởi `setSurgeChoice` (0 nơi gọi).
+> ⇒ `src/App.jsx` **3.006 → 2.176 dòng**; `gameStore.js` 6.230 → 6.123.
+> ⚠️ **VÀ MỘT BÀI TEST CŨ ĐÃ ĐỎ — ĐÚNG NHƯ NÓ NÊN ĐỎ.** *"Dồn Lực: override chọn Siêu Tập Trung"*
+> xanh suốt nhiều tháng trong khi canh một khả năng app **KHÔNG với tới được**: nó truyền thẳng
+> `surgeOverride` vào hàm thuần, đường mà giao diện chưa bao giờ đi. Một bài test có thể canh một
+> thế giới không tồn tại và **không có gì phân biệt nó với một bài test thật**.
+>
+> **SỐ ĐO CHỮ-NÓI-LẠI-CHỮ (đo bằng `shot.mjs`, không ước lượng):** Thành tích **19.059 →
+> 11.739px (−38,4%)** · Xưởng 2.559 → **2.455px** · Bản vẽ 2.832 → **2.745px** · nút chính màn
+> Tập trung **188×59 → 308×42** với biên tới thanh nav **32 → 71px** (ca tiêu đề dài nhất:
+> **~6 → 45px**) · chồng thẻ ca thường ngày **2–3 → 1–2 thẻ**.
+>
+> **BA KHOẢNH KHẮC CÂM NAY CÓ TIẾNG, và chúng tốn 0 chữ — một trong ba còn XOÁ chữ:** chọn gói âm
+> thanh nay **là** cú nghe thử (đổi **174 ký tự tả tiếng bằng lời** lấy một cú nghe); vào nghỉ có
+> tiếng (`playBreakStart` — 0 nơi gọi từ khi viết ra); năm nút thanh điều hướng nhúc nhích khi bấm.
+>
+> **BỐN BÀI HỌC VỀ CÁCH LÀM, cả bốn đều do phép đo hoặc phép phá bắt chứ không do đọc mã:**
+> · ⚠️ **MỘT PHÉP PHÁ TRƯỢT TRÔNG Y HỆT MỘT BÀI TEST MÙ.** Hai lần trong vòng này, phép thử-cho-đỏ
+>   không đổi được file (neo sai) và tôi suýt kết luận bài test của mình vô dụng. Phải `diff` lại
+>   sau khi phá, và phải **nêu TRƯỚC mình mong đợi đỏ ở đâu**.
+> · ⚠️ **MỘT CÁI SÀN THEO SỐ ĐẾM SẼ KÊU OAN MỖI LẦN DỌN DẸP THÀNH CÔNG.** Gác chạy-rỗng tôi viết
+>   là `banks.length >= 5`, rồi nó ĐỎ khi khối co từ 7 xuống 3 một cách hoàn toàn đúng. Nay nó hỏi
+>   **TÊN** ba bank tiêu đề — hỏi danh tính, đừng hỏi số lượng.
+> · ⚠️ **`grep` MỘT CÁI TÊN KHÔNG BẰNG `grep` THỨ ĐƯỢC HIỆN RA.** Regex `/Blueprints/` trúng đúng
+>   tên hàm `MyBlueprintsTab` và làm bài test đỏ oan; `soundReach.test.js` thì tố oan
+>   `playMilestone` vì nó nay được gọi **gián tiếp qua bảng bậc** (`soundEngine[soundForTier(b)]()`)
+>   — thứ regex về cấu trúc không thể thấy. Cách vá đúng là **đọc thẳng cái bảng**, không nới regex.
+> · ⚠️ **HAI LẦN KHẢO SÁT ĐỀ NGHỊ XOÁ MỘT THỨ ĐÁNG GIỮ, và cả hai lần lý lẽ nghe rất xuôi.**
+>   Đề nghị cắt thẻ «tổng kết tuần» (đổi ý sau khi đọc chính bài test của nó: **một nhịp MỖI TUẦN
+>   là thứ ĐỐI LẬP với lạm phát thông tin**) và đề nghị thay 15 dòng di vật bằng một dòng tổng
+>   (mỗi dòng mang một danh từ riêng — *"??? từ Kỷ Băng Hà"* — trả lời đúng câu *"cái này rơi ở
+>   đâu"*). **Điểm "đơn giản hoá" cao không tự nó là lý do làm.**
+>
+> **HAI VIỆC GIÁ TRỊ CAO ĐÃ TỪ CHỐI LÀM, ghi thành `TECH_DEBT #94` và `#95` chờ Đàm quyết:**
+> · **#94 — `BREAK_START_DELAY_MS` chờ 3,2 giây ở ~82% số phiên KHÔNG có lễ mừng nào để che.**
+>   Tiền đề của hằng số ấy chết do HAI bản vá ở **chỗ khác** (ADR-060 và vòng 22), không do ai động
+>   vào `timerSession.js`. Đo `sessionsToComplete` qua 15 kỷ ⇒ 5,60 phiên mỗi công trình ⇒ lễ mừng
+>   chỉ chạy ở **17,9%** số phiên; trên fixture 588 phiên là **31,4 phút** chờ vô cớ trong 180 ngày.
+>   **CHƯA SỬA vì hai lý do, và cả hai đều là lý do đúng:** nó đụng thẳng luồng tự-vào-nghỉ nơi một
+>   sai lầm sẽ **âm thầm ăn bớt giờ nghỉ thật**, và khoảnh khắc ấy **KHÔNG quan sát được trên dev**
+>   (`ui` không nằm trong `partialize` ⇒ không gieo được bằng `--fixture`; và cấm bấm "Bắt đầu" vì
+>   dùng chung một hàng Supabase với bản thật). *Đổi một hành vi đồng hồ mà không nhìn thấy nó là
+>   thứ phải hỏi trước.* Chú thích tại chỗ nay ghi đủ số đo để Đàm quyết.
+> · **#95 — xây MỘT công trình phải qua BA cổng tiền tệ**, cả ba đều là hàm của cùng một đại lượng
+>   gốc (số phút tập trung). Kho thô thừa **20.422 đơn vị = 2.552 tinh luyện** trong khi nâng trọn
+>   5 công trình kỷ 8 lên cấp 3 chỉ tốn **180** ⇒ dư **14 lần**. Điểm đơn giản hoá cao nhất vòng
+>   (8/10) và cũng rủi ro nhất (6/10). ⚠️ **ĐÃ BÁC "phương án đỡ phí"** là nối dây một nút đổi thô
+>   lấy tinh luyện: chính con số 14 lần bác nó — bấm nút ấy một buổi là xoá sạch tính khan hiếm.
+>   **Việc `craftTier` chưa bao giờ có nút bấm là điều MAY, không phải điều thiếu.**
+>
+> **Nguyên tắc an toàn giữ nguyên từ vòng 22:** *đơn giản hoá thứ Đàm THẤY và CẢM, đừng xoá thứ Đàm
+> đã KIẾM ĐƯỢC.* Không migration · không đổi hình dạng dữ liệu lưu · không đổi một công thức thưởng
+> nào · không đụng Thành Phố.
+>
+> **Cổng:** lint sạch · build xanh · **1453 bài (# skipped 1) · 0 đỏ** (trước vòng: 1431).
+> **22 bài mới**, tất cả đã thử-cho-đỏ.
+
+> Cập nhật lần trước: **2026-09-01 (vòng 22)** — **"hứng thú hơn, hệ thống ĐƠN GIẢN hơn"** (lệnh
 > của Đàm: *"làm cho game hứng thú và đầy dopamine hơn, làm hệ thống game đơn giản hơn nữa nhưng
 > tỷ lệ hứng thú cao hơn"*). Nguyên tắc an toàn của cả vòng: **đơn giản hoá thứ Đàm THẤY và CẢM,
 > đừng xoá thứ Đàm đã KIẾM ĐƯỢC.** Bảy việc, không việc nào thêm một khái niệm mới cho người chơi,

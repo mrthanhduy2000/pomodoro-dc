@@ -4583,6 +4583,56 @@ cấp `Math.min(3,…)` → `Math.min(9,…)` · cắt bớt danh sách cấp th
 ---
 
 
+## #95 — Xây MỘT công trình phải qua BA cổng tiền tệ, cả ba đều là hàm của số phút — ĐÀM CHỌN, tôi không tự chọn
+
+> Mở 2026-09-01 (vòng 23). Đây là phát hiện có điểm ĐƠN GIẢN HOÁ cao nhất cả vòng (8/10) nhưng
+> cũng có điểm RỦI RO cao nhất (6/10), vì nó đụng vào kinh tế game — thứ Đàm đã tích luỹ 180 ngày.
+
+- **Tên**: ba cổng tiền tệ chồng nhau trên cùng một hành động "xây một công trình"
+- **Module**: `src/engine/constants.js` (RP · tài nguyên thô · tinh luyện) · `BuildingWorkshop.jsx`
+- **Priority**: Medium · **Severity**: Medium
+- **Impact**: Đàm phải hiểu và theo dõi BA loại tiền để làm MỘT việc, mà cả ba đều suy ra từ cùng
+  một đại lượng gốc là SỐ PHÚT TẬP TRUNG. Ba con số cho một quyết định.
+- **Số đo**: kho thô thừa **20.422 đơn vị** = 2.552 tinh luyện quy đổi, trong khi nâng trọn 5 công
+  trình kỷ 8 lên cấp 3 chỉ tốn **180** ⇒ dư **14 lần**. (Đo trên fixture 180 ngày; công thức là
+  thật, nhịp chơi là giả — xem cảnh báo ở đầu `make-fixture.mjs`.)
+- **VÌ SAO CHƯA LÀM**: gộp hay bỏ một loại tiền là đổi luật KINH TẾ, không phải đổi hiển thị.
+  Nguyên tắc an toàn của vòng 23 là *đơn giản hoá thứ Đàm THẤY và CẢM, đừng xoá thứ Đàm đã KIẾM
+  ĐƯỢC* — mục này nằm ở phía bên kia ranh giới ấy.
+- **⚠️ ĐÃ BÁC một "phương án đỡ phí"**: nối dây một nút "đổi 8 thô lấy 1 tinh luyện" (hàm
+  `craftTier` từng tồn tại với 0 nơi gọi, đã xoá ở vòng 23). Chính con số 14 lần bác nó: bấm cái
+  nút ấy một buổi là xoá sạch tính khan hiếm của tinh luyện. Việc nó chưa bao giờ có nút bấm là
+  điều MAY, không phải điều thiếu.
+- **Review Trigger**: khi Đàm thấy kho tài nguyên là thứ phiền chứ không phải thứ vui.
+- **Owner**: Đàm quyết · **Status**: MỞ, chờ Đàm
+
+## #94 — `BREAK_START_DELAY_MS` chờ 3,2 giây ở ~82% số phiên KHÔNG có lễ mừng nào để che
+
+> Mở 2026-09-01 (vòng 23). Tiền đề của hằng số này chết do HAI bản vá ở chỗ khác, không do ai
+> động vào `timerSession.js`.
+
+- **Tên**: độ trễ vào nghỉ là HẰNG SỐ trong khi thứ nó sinh ra để che là BIẾN
+- **Module**: `src/engine/timerSession.js` (`BREAK_START_DELAY_MS`) · `src/hooks/useTimer.js`
+- **Priority**: Medium · **Severity**: Low
+- **Impact**: sau mỗi phiên, màn hình giữ trạng thái vừa-xong thêm 3,2 giây trước khi chuyển sang
+  nghỉ. Chú thích của hằng số biện minh cho con số ấy bằng câu *"cả hai trường hợp người dùng đều
+  đang nhìn hộp phần thưởng"* — câu ấy nay SAI ở ~82% số phiên.
+- **Root Cause**: ADR-060 làm phiên thường thôi tự mở hộp phần thưởng; vòng 22 siết lễ mừng thành
+  phố xuống CHỈ khi có công trình vừa xong. Đo `sessionsToComplete` qua 15 kỷ: trung bình **5,60
+  phiên mỗi công trình ⇒ lễ mừng chỉ chạy ở 17,9% số phiên**. Trên fixture 588 phiên hoàn thành:
+  **31,4 phút** chờ không còn lý do, trong 180 ngày.
+- **Recommended Solution**: làm độ trễ THEO chính thứ nó che — 3.200 ms khi có lễ mừng, 500 ms khi
+  không (500 là giá trị đã chạy đúng suốt thời kỳ trước khi có lễ mừng). Tức đổi một HẰNG SỐ thành
+  một QUAN HỆ. Hai bài test hiện khoá quan hệ `BREAK_START_DELAY_MS >= GROWTH_MOMENT_MS` sẽ phải
+  viết lại thành có điều kiện.
+- **⚠️ VÌ SAO CHƯA LÀM**: (a) nó đụng thẳng luồng tự-vào-nghỉ, nơi một sai lầm sẽ **ÂM THẦM ăn bớt
+  giờ nghỉ thật** của Đàm; (b) khoảnh khắc ấy **KHÔNG chụp ảnh kiểm được trên bản dev** — `ui`
+  không nằm trong `partialize` nên không gieo được bằng `--fixture`, và cấm bấm "Bắt đầu" trên dev
+  vì dùng chung một hàng Supabase với bản thật. **Đổi một hành vi đồng hồ mà không quan sát được
+  nó là thứ phải hỏi Đàm trước.**
+- **Blocking Conditions**: cần một cách quan sát được khoảnh khắc sau-phiên trên dev.
+- **Owner**: Đàm quyết · **Status**: MỞ, chờ Đàm
+
 ## #93 — `buildCategoryAdvisor` (170 dòng) vẫn nằm trong file giao diện, và ĐÓ LÀ CÓ CHỦ ĐÍCH — đừng "dọn" nó xuống engine
 
 > Mở 2026-08-30, ngay sau khi chuyển thành công `summarizeFocusStats` xuống

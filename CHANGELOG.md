@@ -12,6 +12,98 @@
 
 ---
 
+## 2026-09-01 (vòng 23) — Hứng thú hơn, hệ thống đơn giản hơn, **KHÔNG lạm phát thông tin**
+
+**Mục đích:** cùng mục tiêu vòng 22, cộng thêm một mệnh lệnh mới của Đàm — *"nhưng không bị lạm
+phát thông tin"*. Mệnh lệnh ấy đảo ngược phản xạ mặc định: câu trả lời phải đến từ phép **TRỪ**
+(xoá · gộp), không từ việc thêm huy hiệu và thêm chữ. Chín việc; **không việc nào thêm một khái
+niệm mới**, và toàn vòng ròng lại là **−242 dòng** mã (27 file, +1.006 / −1.248).
+
+**Phạm vi:** tầng hiển thị + hai tác dụng phụ âm thanh. **Không đổi một luật tính thưởng nào**,
+không đụng `completeFocusSession`, không thêm trường nào vào store, không đụng Thành Phố.
+
+**HAI LỖI THẬT ĐANG CHẠY TRÊN PRODUCTION đã được vá:**
+
+**1. Chồng thẻ thưởng che TRỌN thanh điều hướng sau MỖI phiên.** Thanh nav nằm ở y=774–832, còn
+`bottom-3` đặt đáy chồng thẻ đúng ở 832 với `z-[48] > z-40`; mỗi thẻ là một `<button>` có
+`pointer-events-auto` ⇒ chạm bất kỳ nút nào trong 5 nút đều mở hộp phần thưởng thay vì chuyển tab.
+Vá bằng đúng MỘT lớp CSS (`bottom-[calc(env(safe-area-inset-bottom)+82px)]`); đo lại còn 12px hở.
+
+**2. Bước cuối của chuỗi tuần hiện "Đã chốt" và "0%" cạnh nhau.** Hai cột dùng hai công thức cho
+cùng một sự thật (`index < chainStepsCompleted` so với `index < chainStepIndex`), mà khi xong chuỗi
+thì hai biến ấy lệch nhau đúng 1. Lỗi có ở MỌI độ dài chuỗi và nổ đúng lúc trả thưởng lớn nhất
+tuần. Vá hai tầng: **gỡ cột «%»** (nó là hàm của dòng chữ bên trái, cộng thanh tiến độ bên dưới là
+ba cách mã hoá một con số) và đưa trạng thái một bước về **một hàm thuần duy nhất**
+(`weeklyChainStep.js`) — ba trạng thái loại trừ nhau, nên mâu thuẫn cũ nay **bất khả thi theo cấu
+tạo**, không phải nhờ một cái `if`.
+
+**~860 DÒNG MÃ KHÔNG BAO GIỜ CHẠY ĐƯỢC đã bị xoá — ba kiểu chết, chỉ MỘT kiểu `grep`/lint thấy:**
+- *(a) không ai tham chiếu* — `setSurgeChoice` · `addBuildingPassiveResources` · `craftTier`
+  (0 nơi gọi toàn repo), kéo theo 2 hàm mồ côi và 1 hằng số.
+- *(b) chết vì một `return null` đứng trước* — `FocusIntro` mở đầu bằng
+  `if (hasFocusSessionInProgress) return null` mà nó là nơi gọi DUY NHẤT của `getFocusIntroCopy`,
+  nên cả nhánh "phiên đang chạy" + `getLiveSessionIntroCopy` + 6 bank câu chưa từng chạy một lần.
+  Kho câu chào **39 bank/762 dòng → 3 bank/42 dòng**; **giữ nguyên toàn bộ câu tiêu đề** — đó
+  chính là phần "bất ngờ mỗi ngày".
+- *(c) chết vì một trường vĩnh viễn `null`* — nhánh `surgeOverride` trong `gameMath.js`.
+
+`src/App.jsx` **3.006 → 2.176 dòng**; `gameStore.js` 6.230 → 6.123.
+
+**CHỮ NÓI LẠI CHỮ — bảy màn hình được dọn (mọi con số đo bằng `shot.mjs`, không ước lượng):**
+- **Thành tích: 19.059 → 11.739px (−38,4%)** — 48 hộp "ghi chú AI" sinh từ 5 nhánh `if`, tức 48
+  bản sao của 5 câu. Câu theo NHÓM vẫn còn, nhưng in MỘT LẦN dưới hàng lọc.
+- **Tập trung** — bỏ phụ đề nói lại "Phiên 0/5 hôm nay" ở cách đó 338px; bỏ chuỗi `0/4` khi chu kỳ
+  chưa chạy; bỏ viên `×4` (cả 4 preset đều khai `longBreakAfterN: 4` nên trục ấy không phân biệt
+  được gì — viết thành điều kiện HỎI THẲNG BẢNG, ngày nào có preset khác thì viên tự hiện lại).
+- **Bản vẽ: 2.832 → 2.745px** — ba cái tên cho một màn trong 83px, một cái bằng tiếng Anh.
+- **Xưởng: 2.559 → 2.455px** — 3 chip tóm tắt tên đặc quyền đã in nguyên văn trên chính thẻ sinh
+  ra nó, cộng một câu luật CHUNG in 4 lần một màn (nay in một lần dưới tiêu đề).
+- **Di vật** — 15 chữ "Khoá" trong một danh sách dựng bằng `locked.map(...)`, tức khoá theo cấu
+  tạo. ⚠️ **ĐÃ BÁC** đề nghị thay 15 dòng bằng một dòng tổng: mỗi dòng mang một danh từ riêng
+  ("??? từ Kỷ Băng Hà") trả lời đúng câu *"cái này rơi ở đâu"*.
+- **Cài đặt** — đổi **174 ký tự tả tiếng bằng lời** lấy một cú nghe thử.
+- Lịch sử phiên: chip `×N.N` thành đường lui (nó lặp lại bậc ngay bên cạnh); 'JP'/'RF'/'PM' → 🎰/💎/🍅.
+
+**CHỒNG THẺ SAU PHIÊN — cắt chỗ LẶP, giữ chỗ VUI.** Cắt hai nguồn đã có kênh bền VÀ lặp: `rank`
+(cùng sự kiện đã đẩy vào chuông) và `mission` (xong gần như mỗi ngày; tab "Nhiệm vụ" là nút 2/5 và
+hiện tiến độ sống). **Giữ** `weekly` (một nhịp MỖI TUẦN là thứ đối lập với lạm phát thông tin —
+đổi ý sau khi đọc chính bài test của nó) và `achievement` (cái chấm 6px trả lời "có việc", nó
+không phải một lời chúc mừng). Ca thường ngày: **2–3 thẻ → 1–2 thẻ**.
+
+**BA KHOẢNH KHẮC CÂM NAY CÓ TIẾNG — dopamine tốn 0 chữ:**
+- **chọn gói âm thanh = nghe thử luôn** (gọi SAU `setPack`, nếu không sẽ nghe tiếng gói CŨ);
+- **vào nghỉ có tiếng** (`playBreakStart` — 0 nơi gọi từ khi viết ra; đặt ở STORE và NGOÀI
+  `set(...)`, vì hàm cập nhật zustand có thể chạy hai lần);
+- **năm nút thanh điều hướng nhúc nhích khi bấm** (`usePressMotion()` — tự im khi bật "Giảm chuyển
+  động").
+Cộng một cổng mới `soundReach.test.js`: mọi hàm `play*` phải có ít nhất một nơi gọi; danh sách
+miễn trừ là `assert.deepEqual` nên **tường minh và đếm được** (đúng một mục: `playTick`).
+
+**MÀN TẬP TRUNG — biên an toàn 6px → 45px.** Màn này đã để nút chính chui xuống dưới thanh điều
+hướng HAI lần (vòng 19, vòng 20). Nút phụ «Toàn màn hình» chiếm 112/308px và vì nhãn hai chữ xuống
+dòng nên chính nó quyết định chiều cao 59px của cả hàng; gỡ ở nhánh CHỜ (giữ ở ĐANG CHẠY và TẠM
+DỪNG). Nút chính **188×59 → 308×42**; biên tới thanh nav 32 → **71px** hôm nay, ~6 → **45px** ở
+tiêu đề dài nhất (63 ký tự = 3 dòng).
+
+**Tương thích:** không có migration. Không đổi hình dạng dữ liệu lưu, không đổi một công thức
+thưởng nào; mọi thứ đã kiếm được giữ nguyên.
+
+**HAI VIỆC GIÁ TRỊ CAO ĐÃ TỪ CHỐI LÀM và ghi lại cho Đàm quyết** (`TECH_DEBT #94`, `#95`):
+- **#94** — `BREAK_START_DELAY_MS` chờ 3,2 giây ở **~82%** số phiên không còn lễ mừng nào để che
+  (31,4 phút trong 180 ngày). Tiền đề của hằng số ấy chết do HAI bản vá ở chỗ khác. Chưa sửa vì nó
+  đụng thẳng luồng tự-vào-nghỉ — sai một lần là **âm thầm ăn bớt giờ nghỉ thật** — và khoảnh khắc
+  ấy KHÔNG chụp ảnh kiểm được trên bản dev.
+- **#95** — xây một công trình phải qua **BA cổng tiền tệ**, cả ba đều là hàm của số phút. Kho thô
+  thừa **14 lần** nhu cầu. Gộp hay bỏ một loại tiền là đổi luật KINH TẾ, không phải đổi hiển thị.
+
+**Nguyên tắc an toàn giữ nguyên từ vòng 22:** *đơn giản hoá thứ Đàm THẤY và CẢM, đừng xoá thứ Đàm
+đã KIẾM ĐƯỢC.*
+
+**Cổng:** lint sạch · build xanh · **1453 bài (# skipped 1) · 0 đỏ** (trước vòng: 1431).
+22 bài mới, tất cả đã thử-cho-đỏ.
+
+---
+
 ## 2026-09-01 (vòng 22) — Hứng thú hơn, hệ thống ĐƠN GIẢN hơn
 
 **Mục đích:** nâng tỉ lệ *hứng thú ÷ độ phức tạp*. Nguyên tắc an toàn của cả vòng: **đơn giản hoá

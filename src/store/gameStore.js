@@ -133,6 +133,7 @@ import {
 import { inferAchievementUnlockTimes } from '../engine/achievementTimeline';
 import { countRichTextWords } from '../utils/richText';
 import soundEngine from '../engine/soundEngine';
+import notificationManager from '../engine/notifications';
 import {
   detectEraCrisis,
   createEraCrisisState,
@@ -171,6 +172,15 @@ const BLUEPRINT_LOOKUP = Object.fromEntries(
 );
 
 const UI_NOTIFICATION_LIMIT = 40;
+
+/**
+ * Cửa sổ còn được phép reo báo "hết giờ nghỉ". Xem khối chú thích ở `syncBreakSession`:
+ * hàm ấy cũng chạy khi tab được đánh thức lại, nên nếu không gác thì mở máy sau hai tiếng
+ * app sẽ reo lên báo một giờ nghỉ đã kết thúc từ đời nào. 90 giây đủ rộng để một nhịp tick
+ * trễ hoặc một lần quay lại tab trong vòng một phút rưỡi vẫn được báo, đủ hẹp để cái tin
+ * ấy còn là tin.
+ */
+const BREAK_OVER_ANNOUNCE_MS = 90_000;
 
 function createUiNotification({
   title,
@@ -3455,8 +3465,56 @@ const useGameStore = create(
           },
         })),
 
-      syncBreakSession: (now = Date.now()) =>
-        set((prev) => {
+      /**
+       * ⚠️ KHOẢNH KHẮC HẾT GIỜ NGHỈ TỪNG IM LẶNG HOÀN TOÀN (2026-09-02) — và nó im trên
+       * CẢ BA kênh cùng lúc, nên không kênh nào lộ ra rằng hai kênh kia cũng câm:
+       *   · tiếng: `soundEngine` không hề có `playBreakEnd`;
+       *   · thông báo trình duyệt: `notificationManager.notifyBreakOver()` viết xong từ lâu
+       *     với **0 nơi gọi** (đúng họ `playMilestone`/`playBreakStart` đã vá ở vòng 23);
+       *   · Web Push: `pushService.js` chỉ hẹn `focus-complete` và `pomodoro-continue`,
+       *     KHÔNG có job nào cho lúc hết nghỉ.
+       * Hệ quả: hết 5 phút nghỉ thì Đàm chỉ biết nếu đang nhìn chằm chằm vào màn hình —
+       * mà nghỉ giải lao thì theo định nghĩa là lúc KHÔNG nhìn màn hình. Có sẵn một cái
+       * bẫy chuyển-trạng-thái ở `PomodoroEngine.jsx` (`justEndedBreak`) nhưng nó chỉ làm
+       * gì đó khi `autoStartNext` bật, mà mặc định của nó là **false**.
+       *
+       * ĐẶT Ở ĐÂY chứ không ở component, vì `syncBreakSession` chạy bất kể Đàm đang mở
+       * tab nào — báo ở PomodoroEngine thì chuyển sang Hành Trang là mất tín hiệu.
+       *
+       * ⚠️ Tiếng/thông báo phải nằm NGOÀI `set()` — `set` là hàm thuần, nhét tác dụng phụ
+       * vào đó thì React strict-mode gọi hai lần và Đàm nghe hai tiếng. Cùng hình dạng với
+       * `if (!get().ui.isOnBreak) soundEngine.playBreakStart();` ở `startBreak`.
+       *
+       * ⚠️ MÌN CHO PHIÊN SAU: đây là lần đầu `soundEngine`/`notificationManager` được chạm tới
+       * từ một cái ĐỒNG HỒ (`useGameLoop` gọi mỗi giây) chứ không từ một cú bấm nút. Cả hai
+       * singleton ấy mặc định `enabled = true` và đọc `window` không rào (`window.AudioContext`
+       * ở `audioContext.js`, `'Notification' in window` ở `notifications.js`), nên bài test node
+       * nào tick giờ nghỉ sẽ nổ `ReferenceError: window is not defined` — một thông báo trỏ vào
+       * `audioContext.js`, cách xa nguyên nhân thật. Cách chữa là đặt `soundEngine.enabled` và
+       * `notificationManager.enabled` về `false` TRONG BÀI TEST, KHÔNG phải đi rào hai engine
+       * dùng chung (rào sai một chỗ là câm tiếng thật của Đàm trên production — cái giá ấy đắt
+       * hơn nhiều so với một thông báo lỗi khó đọc).
+       *
+       * ⚠️ CỬA SỔ GẦN ĐÂY (`BREAK_OVER_ANNOUNCE_MS`) là bắt buộc: `useGameLoop` gọi hàm này
+       * cả ở `visibilitychange`/`pageshow`, tức là Đàm gập máy giữa giờ nghỉ rồi mở lại sau
+       * hai tiếng cũng chạy vào đây. Không có cửa sổ thì app sẽ reo lên báo một giờ nghỉ đã
+       * kết thúc từ lâu — cùng lý do `CoachNudge` gác 5 phút trước khi nhắc phiên vừa xong.
+       */
+      syncBreakSession: (now = Date.now()) => {
+        const truoc = get();
+        const phienNghi = truoc.breakSession;
+        const quaHanMs = Number.isFinite(phienNghi?.endsAt) ? now - phienNghi.endsAt : Number.NaN;
+        if (
+          phienNghi?.isRunning
+          && truoc.ui.isOnBreak
+          && quaHanMs >= 0
+          && quaHanMs <= BREAK_OVER_ANNOUNCE_MS
+        ) {
+          soundEngine.playTimerFinish();
+          notificationManager.notifyBreakOver();
+        }
+
+        return set((prev) => {
           const session = prev.breakSession;
           if (!session?.isRunning) return prev;
 
@@ -3542,7 +3600,8 @@ const useGameStore = create(
               levelUpQueue: nextLevelQueue,
             },
           };
-        }),
+        });
+      },
 
       // ─── Reset vòng nghỉ dài về 0 ────────────────────────────────────────
       resetLongBreakCycle: () =>

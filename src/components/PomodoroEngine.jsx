@@ -1202,8 +1202,23 @@ export default function PomodoroEngine({
   );
   const timerStageVisual = (
     <>
+      {/*
+        ⚠️ HUY HIỆU MỐC NÀY TỪNG KHÔNG BAO GIỜ HIỆN ĐƯỢC — hai điều kiện của nó loại trừ nhau.
+        `activeMilestone` CHỈ được đặt khi một phiên ĐANG CHẠY (`MILESTONE_PCTS = [25, 50, 75]`,
+        `useTimer.js`), còn `useMinimalFocusStage = fullScreenMode || (isActive && !isBreakMode)`
+        — tức nó LUÔN đúng trong lúc phiên chạy. `!useMinimalFocusStage && activeMilestone` vì vậy
+        là một điều kiện **bất khả thi theo cấu tạo**: mã tính ra mốc, giữ nó 2,2 giây, rồi vứt đi
+        mà không ai thấy. Hậu quả với người chơi: **suốt gần 25 phút không một tín hiệu nào** — màn
+        hình chỉ đếm ngược, không có một nhịp nào nói "đang đi được".
+        ⚠️ Gác nay là `!fullScreenMode`, KHÔNG phải bỏ hẳn: chế độ toàn màn hình sinh ra để trống
+        trơn, đó là chủ đích. Còn ở màn thường thì một huy hiệu sống 2,2 giây không phải "chrome" —
+        nó là phần thưởng, và nó là thứ duy nhất chia một quãng 25 phút thành bốn chặng.
+        ⚠️ Hai huy hiệu KIA (combo, hệ số) VẪN im trong lúc chạy — chúng là trạng thái thường trực,
+        đọc lúc nào cũng được, nên chúng đúng là thứ cần dẹp cho đỡ phân tâm. Khác nhau ở chỗ:
+        một cái ĐẾN RỒI ĐI, cái kia NẰM ĐÓ.
+      */}
       <AnimatePresence>
-        {!useMinimalFocusStage && activeMilestone && (
+        {!fullScreenMode && activeMilestone && (
           <motion.div
             key={activeMilestone}
             {...rewardMotion}
@@ -1379,7 +1394,18 @@ export default function PomodoroEngine({
               lightTheme ? 'text-[var(--muted)]' : 'text-slate-400'
             }`}>
               {isBreakMode && (breakIsLong ? 'Giải lao dài' : 'Giải lao')}
-              {!isBreakMode && timerState === TIMER_STATES.IDLE && (isStopwatchMode ? 'Sẵn sàng bấm giờ' : 'Sẵn sàng')}
+              {/*
+                ⚠️ "Sẵn sàng" TỪNG NÓI DỐI. Nhãn này hiện ở MỌI trạng thái chờ, kể cả khi app đang
+                từ chối bắt đầu vì chưa đủ mục tiêu — tức giữa vòng đồng hồ ghi "SẴN SÀNG" trong
+                khi cách đó ~200px cái nút ghi "Điền mục tiêu →". Hai câu trên cùng một màn hình
+                nói ngược nhau, và cái to hơn là cái sai.
+                Bấm giờ tự do không có cổng mục tiêu nên nó luôn sẵn sàng thật.
+              */}
+              {!isBreakMode && timerState === TIMER_STATES.IDLE && (
+                isStopwatchMode
+                  ? 'Sẵn sàng bấm giờ'
+                  : (isSessionGoalValid ? 'Sẵn sàng' : 'Chờ mục tiêu')
+              )}
               {!isBreakMode && timerState === TIMER_STATES.RUNNING && (isStopwatchMode ? 'Đang bấm giờ' : 'Đang tập trung')}
               {!isBreakMode && timerState === TIMER_STATES.PAUSED && (
                 continuedPomodoroConfirmationPending ? 'Chờ xác nhận' : 'Đã tạm dừng'

@@ -30,16 +30,25 @@ import {
 
 /**
  * Danh sách kỳ CHÍNH THỨC, xếp từ hẹp tới rộng.
- * `unit` là danh từ đếm được để ghép câu ("trong 1 tuần"), `label` là chữ hiện trên nút.
+ * `unit` là danh từ đếm được để ghép câu ("trong 1 tuần"); `label` là câu ĐẦY ĐỦ dùng trong văn
+ * xuôi ("Anh mới có N phiên trong tuần này"); `short` là chữ trên NÚT.
+ *
+ * ⚠️ VÌ SAO PHẢI TÁCH `short` KHỎI `label` — đây là khuôn "một trường gánh hai việc" mà dự án đã
+ * bị cắn bảy lần (`storyHeight` · `roof` · bảng loài cây · `avenue` · vai màu `cloth2` · `eaves` ·
+ * hồ sơ hình học). Một nút và một mảnh câu có ĐÒI HỎI NGƯỢC NHAU: câu cần đủ chữ để đọc xuôi
+ * ("trong tuần này"), nút cần ngắn để vừa màn hình. Ép một chuỗi làm cả hai thì nút thua, và nó
+ * thua trong im lặng: đo ở khung 390px, sáu nút "Hôm Nay/Tuần Này/…" rộng thật **547px** trên
+ * **348px** nhìn thấy ⇒ **3 trong 6 kỳ nằm ngoài màn hình**, không mũi tên, không thanh cuộn,
+ * nên với người dùng thì chúng KHÔNG TỒN TẠI. Với `short`, cả sáu vừa MỘT hàng.
  * ⚠️ Thêm/bớt một kỳ thì phải sửa Ở ĐÂY, không khai lại ở tầng giao diện.
  */
 export const STATS_PERIODS = [
-  { key: 'today',   label: 'Hôm Nay',   unit: 'ngày'  },
-  { key: 'week',    label: 'Tuần Này',  unit: 'tuần'  },
-  { key: 'month',   label: 'Tháng Này', unit: 'tháng' },
-  { key: 'quarter', label: 'Quý Này',   unit: 'quý'   },
-  { key: 'year',    label: 'Năm Nay',   unit: 'năm'   },
-  { key: 'all',     label: 'Tất Cả',    unit: null    },
+  { key: 'today',   label: 'Hôm Nay',   short: 'Ngày',   unit: 'ngày'  },
+  { key: 'week',    label: 'Tuần Này',  short: 'Tuần',   unit: 'tuần'  },
+  { key: 'month',   label: 'Tháng Này', short: 'Tháng',  unit: 'tháng' },
+  { key: 'quarter', label: 'Quý Này',   short: 'Quý',    unit: 'quý'   },
+  { key: 'year',    label: 'Năm Nay',   short: 'Năm',    unit: 'năm'   },
+  { key: 'all',     label: 'Tất Cả',    short: 'Tất cả', unit: null    },
 ];
 
 export const DEFAULT_STATS_PERIOD = 'week';

@@ -931,25 +931,34 @@ const InsightStrip = React.memo(function InsightStrip({ items }) {
 // "Tập Trung" (mặc định tất cả) là cửa sổ thời gian âm thầm đổi mà không có gì báo. Nay danh
 // sách kỳ đến từ `engine/statsPeriod.js` và TRẠNG THÁI nằm ở `StatsDashboard`, nên ba tab
 // không thể lệch nhau nữa — đổi kỳ ở tab nào thì cả màn đổi theo.
+//
+// ⚠️ XUỐNG DÒNG, KHÔNG CUỘN NGANG (2026-09-01) — đây là một lỗi GIẤU MẤT LỰA CHỌN, không phải
+// chuyện thẩm mỹ. Đo ở khung 390px thật: hàng này rộng thật **547px** trong khi chỗ nhìn thấy
+// chỉ **348px** ⇒ **199px = 36% nằm ngoài màn hình**, tức **3 trong 6 kỳ** ("Quý Này", "Năm
+// Nay", "Tất Cả") vô hình. Một dải cuộn ngang trên điện thoại không có thanh cuộn, không có
+// mũi tên, không có gì báo còn thứ bên phải — nên với Đàm thì ba kỳ ấy đơn giản là KHÔNG TỒN
+// TẠI. Xuống dòng tốn thêm ~34px chiều cao và đổi lại: không giấu gì cả.
+// ⚠️ Bỏ `flex-1` và `min-w-[78px]`: chính chúng ép 6 viên phải chiếm ≥468px nên hàng buộc phải
+// tràn. Nay mỗi viên vừa đúng chữ của nó.
 const PeriodPicker = React.memo(function PeriodPicker({ value, onChange, className = '' }) {
   return (
     <div
-      className={`overflow-x-auto rounded-2xl p-1 ${className}`}
-      style={{ background: TAB_BAR_BG, border: `1px solid ${PANEL_BORDER}`, overscrollBehaviorX: 'contain', WebkitOverflowScrolling: 'touch' }}
+      className={`rounded-2xl p-1 ${className}`}
+      style={{ background: TAB_BAR_BG, border: `1px solid ${PANEL_BORDER}` }}
     >
-      <div className="inline-flex min-w-full gap-1" role="group" aria-label="Khoảng thời gian">
+      <div className="flex gap-1" role="group" aria-label="Khoảng thời gian">
         {STATS_PERIODS.map((p) => (
           <button
             key={p.key}
             type="button"
             onClick={() => onChange(p.key)}
             aria-pressed={value === p.key}
-            className="min-w-[78px] flex-1 rounded-xl border px-3 py-2 text-xs font-semibold whitespace-nowrap transition-[background-color,color,box-shadow,transform,border-color] duration-200 hover:-translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(201,100,66,0.28)] focus-visible:ring-offset-2"
+            className="flex-1 rounded-xl border px-2 py-2 text-xs font-semibold whitespace-nowrap transition-[background-color,color,box-shadow,transform,border-color] duration-200 hover:-translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(201,100,66,0.28)] focus-visible:ring-offset-2"
             style={value === p.key
               ? { background: TAB_ACTIVE_BG, color: TAB_ACTIVE_TEXT, boxShadow: TAB_ACTIVE_SHADOW, borderColor: TAB_ACTIVE_BORDER, touchAction: 'manipulation' }
               : { background: TAB_IDLE_BG, color: TAB_IDLE_TEXT, borderColor: TAB_IDLE_BORDER, touchAction: 'manipulation' }}
           >
-            {p.label}
+            {p.short ?? p.label}
           </button>
         ))}
       </div>
@@ -3618,9 +3627,16 @@ function NotesTab({ savedNotes, sessionCategories }) {
  * đọc ra từ vị trí trái-sang-phải. Một nhãn giống nhau ở mọi nơi thì không phân biệt được gì —
  * cùng lý do đã gỡ chữ "Workspace" khỏi `ShellPane`.
  */
+// ⚠️ TAB 'focus' TỪNG TÊN LÀ "Tập Trung" — TRÙNG NGUYÊN VĂN với nút đầu tiên của thanh điều hướng
+// dưới cùng, một màn hoàn toàn khác. Hai thứ khác hẳn nhau mang cùng một cái tên, cách nhau
+// khoảng 600px trên cùng một màn hình, là cách rẻ nhất để làm một app khó hiểu: bấm "Tập Trung"
+// ở trên thì ra thống kê, bấm "Tập trung" ở dưới thì ra đồng hồ.
+// Tên mới lấy từ chính nội dung tab ấy — "Tỷ lệ phiên sâu", "Khung giờ rõ nhất", "Phiên nổi bật"
+// — tức nó nói về CHIỀU SÂU của phiên, không phải về việc tập trung nói chung. Ngắn hơn 2 ký tự
+// cũng giúp năm viên vừa khít hơn ở khung 390px.
 const TABS = [
   { key: 'overview',  label: 'Tổng Quan' },
-  { key: 'focus',     label: 'Tập Trung' },
+  { key: 'focus',     label: 'Chiều Sâu' },
   { key: 'category',  label: 'Phân Loại' },
   { key: 'journal',   label: 'Nhật Ký' },
   { key: 'notes',     label: 'Ghi Chú' },
@@ -3706,9 +3722,15 @@ export default function StatsDashboard() {
       </div>
 
       {/* Tab bar */}
-      <div className="-mx-1 overflow-x-auto px-1 pb-1" style={{ overscrollBehaviorX: 'contain', WebkitOverflowScrolling: 'touch' }}>
+      {/*
+        ⚠️ CÙNG LỖI, CÙNG BẢN VÁ. Đo ở 390px: hàng này rộng thật **499px** trên **358px** nhìn thấy
+        ⇒ **141px = 28% nằm ngoài màn hình**, tức tab "Ghi Chú" (đang có 99 mục) gần như không ai
+        biết là có. Cộng cả hai hàng, **48,6% nếp gấp là khung điều hướng** trước khi hiện một con
+        số nào.
+      */}
+      <div className="-mx-1 px-1 pb-1">
         <div
-          className="inline-flex min-w-full gap-1.5 rounded-[24px] border p-1.5 md:min-w-0"
+          className="flex flex-wrap gap-1.5 rounded-[24px] border p-1.5"
           style={{
             background: TAB_BAR_BG,
             borderColor: PANEL_BORDER,
@@ -3720,7 +3742,7 @@ export default function StatsDashboard() {
               key={tab.key}
               type="button"
               onClick={() => handleTabChange(tab.key)}
-              className="group flex min-w-[84px] flex-1 flex-col items-start justify-center gap-1.5 rounded-[18px] border px-3 py-2.5 text-left text-[12px] font-semibold transition-[background-color,color,box-shadow,transform,border-color,opacity] duration-200 hover:-translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(201,100,66,0.28)] focus-visible:ring-offset-2 md:min-w-[148px] md:flex-none md:flex-row md:items-center md:justify-center md:gap-2 md:px-4 md:py-3 md:text-sm md:text-center"
+              className="group flex flex-col items-start justify-center gap-1.5 rounded-[18px] border px-3 py-2.5 text-left text-[12px] font-semibold transition-[background-color,color,box-shadow,transform,border-color,opacity] duration-200 hover:-translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(201,100,66,0.28)] focus-visible:ring-offset-2 md:min-w-[148px] md:flex-none md:flex-row md:items-center md:justify-center md:gap-2 md:px-4 md:py-3 md:text-sm md:text-center"
               aria-pressed={activeTab === tab.key}
               aria-busy={isTabPending && activeTab !== tab.key ? 'true' : undefined}
               style={activeTab === tab.key

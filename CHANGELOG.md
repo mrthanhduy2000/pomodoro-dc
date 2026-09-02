@@ -12,6 +12,28 @@
 
 ---
 
+## 2026-09-02 (vòng 29) — Dọn nợ: đóng 5 mục, và một bài học đắt về ba cổng cùng mù
+
+**Đóng:** #92 (mã chết ở tầng giao diện) · #5 (lệch mô tả ↔ hành vi) · #13 & #7 (đã lỗi thời, chưa
+ai kiểm lại) · #93 (là QUYẾT ĐỊNH, không phải nợ — đánh dấu lại).
+
+⚠️ **BÀI HỌC ĐẮT NHẤT VÒNG NÀY.** Bật `no-unused-vars` cho `.jsx` ra **54 báo cáo**; tôi tin cả 54
+và đi gỡ. Kết quả: **lint sạch · build sạch · 1.524 bài test XANH · và app ra thẳng "RENDER
+RECOVERY: motion is not defined"**. ESLint lõi không coi `<motion.div>` là một lần DÙNG biến
+`motion`, nên **27/54 là báo nhầm** và chúng nhắm đúng vào những import đang sống. Ba cổng mạnh
+nhất của dự án cùng xanh trên một app đã vỡ hoàn toàn — thứ duy nhất bắt được là một **ẢNH CHỤP**.
+Vá bằng `react/jsx-uses-vars`; 27 chỗ còn lại là mã chết thật và đã dọn.
+
+⚠️ **#5 — biến một LỜI HẸN thành một CỔNG.** Mục nợ kê đơn *"rà soát định kỳ khi có thời gian
+rảnh"* — mà một lời hẹn thì không bao giờ đỏ lên (chính #3 nằm im gần hai tháng để chứng minh).
+Nay `descriptionDrift.test.js` đối chiếu con số trong mô tả với ngưỡng thật ở **310 thành tích**;
+lần chạy đầu: **0 chỗ lệch**.
+
+**Trạng thái nợ:** 97 mục · **32 đã đóng** · 65 còn mở, trong đó **49 thuộc Thành Phố 3D** (vùng
+Đàm dặn không đụng) và **3 chờ Đàm quyết**.
+
+---
+
 ## 2026-09-02 (vòng 28) — Hành trang: **bớt trước, rồi mới dựng**
 
 **Mục đích:** Đàm lặp lại y nguyên yêu cầu lần thứ ba — *"UX/UI và mọi thứ ở hành trang vẫn chưa

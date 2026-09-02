@@ -477,7 +477,7 @@
 
 ---
 
-## #5 — Rủi ro lệch giữa mô tả tĩnh (`constants.js`) và hành vi code thật
+## #5 — ✅ **ĐÃ XỬ LÝ (2026-09-02)** — Rủi ro lệch giữa mô tả tĩnh (`constants.js`) và hành vi code thật
 
 - **Module**: `src/engine/constants.js` nói chung (không chỉ 3 kỹ năng ở mục #3)
 - **Priority**: Low-Medium
@@ -496,6 +496,20 @@
 - **Review Trigger**: định kỳ, hoặc khi phát hiện thêm 1 trường hợp lệch cụ thể khác (như #3).
 - **Owner**: (chưa gán)
 - **Status**: Open — mang tính phòng ngừa, không cấp bách.
+
+
+- **✅ ĐÃ XỬ LÝ 2026-09-02 — biến một LỜI HẸN thành một CỔNG.** Mục này kê đơn *"rà soát định kỳ
+  khi có thời gian rảnh"*, mà một lời hẹn rà soát thì **không bao giờ đỏ lên**: chính #3 đã chứng
+  minh — ba kỹ năng Thăng Hoa hứa hẹn rành mạch mà code chưa bao giờ nối dây, nằm im gần **hai
+  tháng** qua nhiều phiên đọc đúng file ấy. Nguyên nhân gốc mà mục này tự nêu là *"không có cơ chế
+  kiểm tra tự động nào"* — nay đã có: `src/engine/descriptionDrift.test.js` (2 bài, đã thử-cho-đỏ
+  3 cách) đối chiếu con số trong `description` với `moc` thật ở **310 thành tích**.
+- **Kết quả lần chạy đầu: 0 chỗ lệch thật.** 49 chỗ "lệch" là ĐỔI ĐƠN VỊ (`moc` tính bằng phút,
+  mô tả nói giờ) — cổng hiểu điều đó; 11 chỗ còn lại có số trong mô tả là SỐ THÁNG chứ không phải
+  ngưỡng, nằm trong danh sách miễn trừ **tường minh đếm được** (`assert.deepEqual`), nên mục thứ
+  mười hai rơi vào đây sẽ đỏ — **và một mục được SỬA để hết lệch cũng đỏ**, nhắc dọn danh sách.
+- ⚠️ Cổng này chỉ khả thi nhờ vòng 24 đổi 310/360 thành tích từ `check: (s) => s.x >= N` (một hàm,
+  đọc không ra ngưỡng) sang **DỮ LIỆU** `dem`/`moc`. *Biến luật thành dữ liệu thì mới canh được luật.*
 
 ---
 
@@ -520,7 +534,7 @@
 
 ---
 
-## #7 — Dependency: `npm install` cần flag `--legacy-peer-deps`
+## #7 — ✅ **ĐÃ HẾT HIỆU LỰC (2026-09-02)** — Dependency: `npm install` cần flag `--legacy-peer-deps`
 
 - **Module**: `package.json` (toàn dự án)
 - **Priority**: Low
@@ -538,6 +552,15 @@
 - **Review Trigger**: khi cần thêm một dependency mới mà xung đột trở nên khó quản lý hơn.
 - **Owner**: (chưa gán)
 - **Status**: Open — chấp nhận sống chung, không cấp bách.
+
+
+- **✅ ĐÃ HẾT HIỆU LỰC 2026-09-02.** Chạy `npm install --dry-run` **không kèm cờ nào**: giải xong
+  cây phụ thuộc, thêm 51 gói, **không một lỗi `ERESOLVE`**. Xung đột peer đã tự tan theo các lần
+  nâng cấp gói, mà không ai kiểm lại mục nợ. ⇒ cùng bài học với #13: *một mục nợ không được kiểm
+  lại cũng trôi y như một con số không được đo lại*.
+  ⚠️ `CLAUDE.md` vẫn ghi "cần `--legacy-peer-deps`" — giữ nguyên câu ấy vì nó VÔ HẠI (dùng cờ vẫn
+  chạy đúng) và vì máy của Đàm có thể có `node_modules` đời khác; nhưng nay nó là một lời khuyên
+  phòng hờ, không còn là một yêu cầu.
 
 ---
 
@@ -4678,7 +4701,7 @@ cấp `Math.min(3,…)` → `Math.min(9,…)` · cắt bớt danh sách cấp th
 - **Blocking Conditions**: cần một cách quan sát được khoảnh khắc sau-phiên trên dev.
 - **Owner**: Đàm quyết · **Status**: MỞ, chờ Đàm
 
-## #93 — `buildCategoryAdvisor` (170 dòng) vẫn nằm trong file giao diện, và ĐÓ LÀ CÓ CHỦ ĐÍCH — đừng "dọn" nó xuống engine
+## #93 — 📌 **QUYẾT ĐỊNH, KHÔNG PHẢI NỢ (đánh dấu lại 2026-09-02)** — `buildCategoryAdvisor` (170 dòng) vẫn nằm trong file giao diện, và ĐÓ LÀ CÓ CHỦ ĐÍCH — đừng "dọn" nó xuống engine
 
 > Mở 2026-08-30, ngay sau khi chuyển thành công `summarizeFocusStats` xuống
 > `engine/statsFocus.js`. Ghi mục này để phiên sau **không mất công phân tích lại rồi đi tới cùng
@@ -4811,6 +4834,12 @@ cấp `Math.min(3,…)` → `Math.min(9,…)` · cắt bớt danh sách cấp th
   phải một cái gác — nó là một cái bẫy.* Gỡ plugin thì PHẢI tắt lại luật.
 - ⚠️ **Bài học rộng hơn, đáng nhớ hơn cả bản vá:** ba cổng mạnh nhất của dự án (lint · build ·
   1.524 test) **cùng xanh trên một app đã vỡ hoàn toàn**. Thứ duy nhất bắt được là một ẢNH CHỤP.
+
+
+- **📌 ĐÁNH DẤU LẠI 2026-09-02.** Mục này nói *"ĐÓ LÀ CÓ CHỦ ĐÍCH — đừng dọn nó xuống engine"*, tức
+  nó là một QUYẾT ĐỊNH đã chốt, không phải một khoản nợ đang chờ trả. Để nó trong danh sách "còn
+  mở" làm phồng con số nợ và khiến phiên sau tưởng còn việc phải làm — đúng thứ nó sinh ra để
+  ngăn. Không đổi một dòng mã nào.
 
 ---
 

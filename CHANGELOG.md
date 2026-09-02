@@ -12,6 +12,35 @@
 
 ---
 
+## 2026-09-02 (vòng 28) — Hành trang: **bớt trước, rồi mới dựng**
+
+**Mục đích:** Đàm lặp lại y nguyên yêu cầu lần thứ ba — *"UX/UI và mọi thứ ở hành trang vẫn chưa
+thấy thay đổi gì"*.
+
+**CHẨN ĐOÁN — và nó chỉ vào chính bản vá vòng trước.** Vòng 27 THÊM một dải hero lên trên một thẻ
+đã nói cùng nội dung ("157/360" + "SẮP ĐẠT"), nên màn hình **dài thêm mà không mới thêm**.
+⇒ **Thêm mà không bớt thì không phải thiết kế lại.**
+
+**BỚT** — ba chỗ nói cùng một chuyện trên cùng một màn Huy hiệu: thẻ tóm tắt (137 dòng) · danh sách
+"Mới đạt gần đây" (62 dòng) · hai danh sách "Đã đạt"/"Chưa đạt" (124 dòng). Và ở Công trình: tiêu
+đề "Xưởng xây dựng" (chỗ thứ BA gọi tên màn hình) + sáu chip thông số.
+
+**DỰNG** — 360 huy hiệu thành **một LƯỚI** (`shared/BadgeGrid.jsx`). Bản cũ vẽ mỗi dấu thành một
+HÀNG CHỮ đầy đủ cho 360 mục: một bảng tính, không phải bộ sưu tập — dài tới mức chính giao diện
+phải thừa nhận *"đang hiện 40/203 mục để giữ giao diện nhẹ hơn"*. Nay mỗi dấu là một ô có màu theo
+bậc; ô chưa đạt để xám KÈM vòng tiến độ, và **bỏ luôn phân trang** — một bộ sưu tập chỉ có nghĩa
+khi thấy được phần còn thiếu.
+
+| | trước | sau |
+|---|---|---|
+| lưới huy hiệu bắt đầu ở | — (không có lưới) | **y=589** (từng là y=1398 khi bộ lọc còn mở) |
+| `Achievements.jsx` | 977 dòng | **745 dòng** |
+| bộ lọc | 13 chip, ~9 hàng, chắn trước bộ sưu tập | một dòng, mở khi cần |
+
+**Ảnh hưởng:** thuần giao diện. Không đụng dữ liệu, không đụng Thành Phố, không đụng công thức.
+
+---
+
 ## 2026-09-02 (vòng 27) — Hành trang có bản sắc riêng · đóng 3 mục nợ · 1 bug im lặng cắn 3 lần
 
 **Mục đích:** lệnh Đàm — *"khắc phục toàn bộ tech_debt và sửa lỗi bug… thay đổi lớn hơn nữa, UX/UI

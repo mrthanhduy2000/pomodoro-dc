@@ -35,6 +35,20 @@ Mặt trận đang làm: **thành phố 3D** (`src/engine/city3d/` + `src/compon
   Phase 21 (*"push nhánh phụ, không tự gộp `main`"*) đã bị lệnh này thay thế.
   ⚠️ **Phase 21 do đó lên production TRƯỚC khi Đàm nhìn ảnh nghiệm thu** — mục "chờ Đàm nhìn ảnh"
   ở phần dưới VẪN CÒN HIỆU LỰC, chỉ là nay nó nghiệm thu một thứ đang chạy thật.
+- **Trò chơi — VÒNG 28 (2026-09-02, mới nhất): HÀNH TRANG — BỚT TRƯỚC, RỒI MỚI DỰNG.**
+  · ⚠️ **BÀI HỌC CHÍNH, và nó chỉ vào chính bản vá vòng 27:** Đàm nói **ba lần** rằng Hành trang
+  "chưa thấy thay đổi gì". Lý do là vòng 27 tôi THÊM một dải hero lên trên một thẻ đã nói cùng nội
+  dung, nên màn hình **dài thêm mà không mới thêm**. ⇒ ***Thêm mà không bớt thì không phải thiết
+  kế lại.*** Trước khi thêm bất cứ khối nào vào một màn, hỏi *"khối này nói điều gì mà màn hình
+  chưa nói?"* — không trả lời được thì đừng thêm.
+  · **Huy hiệu:** 360 dấu nay là **một LƯỚI ô vuông** (`shared/BadgeGrid.jsx`) thay cho hai danh
+  sách chữ. Ô chưa đạt để xám kèm vòng tiến độ — bộ sưu tập chỉ có nghĩa khi thấy được phần còn
+  thiếu. **Bỏ phân trang**: xem hết là điểm chính. Bộ lọc thu gọn (lưới từng bắt đầu ở y=1398, nay
+  y=589). `Achievements.jsx` 977 → 745 dòng.
+  · **Công trình:** gỡ tiêu đề "Xưởng xây dựng" (chỗ thứ BA gọi tên màn hình) + thu gọn sáu chip
+  thông số vào một `<details>`.
+  · Test **1524 bài** (1523 pass · 0 fail · 1 skipped).
+
 - **Trò chơi — VÒNG 27 (2026-09-02, mới nhất): HÀNH TRANG CÓ BẢN SẮC RIÊNG · ĐÓNG 3 MỤC NỢ.**
   Lệnh Đàm: *"khắc phục toàn bộ tech_debt và sửa lỗi bug… thay đổi lớn hơn nữa, UX/UI và mọi thứ ở
   hành trang vẫn chưa thấy thay đổi gì… đừng có quá đo tiểu tiết, nên thực hiện lớn rồi sửa khi mà

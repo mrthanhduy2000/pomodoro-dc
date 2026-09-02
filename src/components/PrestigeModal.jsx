@@ -36,8 +36,8 @@ function InventorySection({ items, title, subtitle, tone = 'neutral' }) {
         chipText: '#5b7a52',
       }
     : {
-        chipBg: 'rgba(201,100,66,0.08)',
-        chipBorder: 'rgba(201,100,66,0.16)',
+        chipBg: 'rgba(var(--accent-rgb),0.08)',
+        chipBorder: 'rgba(var(--accent-rgb),0.16)',
         chipText: 'var(--accent2)',
       };
 

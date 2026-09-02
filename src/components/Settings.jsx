@@ -1099,7 +1099,7 @@ function ToggleRow({ label, description, value, onChange, compact = false, disab
         className="relative h-6 w-11 flex-shrink-0 rounded-full transition-colors"
         style={lightTheme ? {
           background: value ? '#c96442' : 'rgba(31, 30, 29, 0.12)',
-          border: value ? '1px solid rgba(201, 100, 66, 0.5)' : '1px solid rgba(31, 30, 29, 0.08)',
+          border: value ? '1px solid rgba(var(--accent-rgb), 0.5)' : '1px solid rgba(31, 30, 29, 0.08)',
         } : {
           background: value ? 'var(--accent)' : 'var(--toggle-off-bg, rgba(58, 52, 46, 0.96))',
           border: value ? '1px solid rgba(var(--accent-rgb), 0.5)' : '1px solid rgba(255,255,255,0.08)',

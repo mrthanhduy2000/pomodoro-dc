@@ -118,8 +118,8 @@ function getSessionReviewMeta(entry) {
         ? `Chạm mục tiêu đã đặt — thưởng ${bonusBits.join(' · ')}`
         : 'Chạm mục tiêu đã đặt',
       shortLabel: 'Đúng nhịp',
-      bg: 'rgba(201,100,66,0.10)',
-      border: 'rgba(201,100,66,0.18)',
+      bg: 'rgba(var(--accent-rgb),0.10)',
+      border: 'rgba(var(--accent-rgb),0.18)',
       color: '#8a3f24',
     };
   }
@@ -219,10 +219,10 @@ function SessionReviewControls({ achieved, onPick }) {
       value: false,
       label: 'Không đạt',
       activeStyle: {
-        background: 'rgba(201,100,66,0.16)',
-        borderColor: 'rgba(201,100,66,0.30)',
+        background: 'rgba(var(--accent-rgb),0.16)',
+        borderColor: 'rgba(var(--accent-rgb),0.30)',
         color: ACCENT2,
-        boxShadow: '0 10px 22px rgba(201,100,66,0.12)',
+        boxShadow: '0 10px 22px rgba(var(--accent-rgb),0.12)',
       },
       idleStyle: {
         background: 'rgba(255,255,255,0.04)',
@@ -242,7 +242,7 @@ function SessionReviewControls({ achieved, onPick }) {
             type="button"
             aria-pressed={isActive}
             onClick={() => onPick(option.value)}
-            className="rounded-full border px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] transition-[background-color,color,border-color,box-shadow,transform] duration-200 hover:-translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(201,100,66,0.28)] focus-visible:ring-offset-2"
+            className="rounded-full border px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] transition-[background-color,color,border-color,box-shadow,transform] duration-200 hover:-translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(var(--accent-rgb),0.28)] focus-visible:ring-offset-2"
             style={isActive ? option.activeStyle : option.idleStyle}
           >
             {option.label}
@@ -950,7 +950,7 @@ const PeriodPicker = React.memo(function PeriodPicker({ value, onChange, classNa
             type="button"
             onClick={() => onChange(p.key)}
             aria-pressed={value === p.key}
-            className="flex-1 rounded-xl border px-2 py-2 text-xs font-semibold whitespace-nowrap transition-[background-color,color,box-shadow,transform,border-color] duration-200 hover:-translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(201,100,66,0.28)] focus-visible:ring-offset-2"
+            className="flex-1 rounded-xl border px-2 py-2 text-xs font-semibold whitespace-nowrap transition-[background-color,color,box-shadow,transform,border-color] duration-200 hover:-translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(var(--accent-rgb),0.28)] focus-visible:ring-offset-2"
             style={value === p.key
               ? { background: TAB_ACTIVE_BG, color: TAB_ACTIVE_TEXT, boxShadow: TAB_ACTIVE_SHADOW, borderColor: TAB_ACTIVE_BORDER, touchAction: 'manipulation' }
               : { background: TAB_IDLE_BG, color: TAB_IDLE_TEXT, borderColor: TAB_IDLE_BORDER, touchAction: 'manipulation' }}
@@ -1168,7 +1168,7 @@ const HEAT_COLORS = [
   'rgba(228, 220, 210, 0.96)',
   'rgba(217, 196, 178, 0.96)',
   'rgba(205, 148, 117, 0.92)',
-  'rgba(201, 100, 66, 0.94)',
+  'rgba(var(--accent-rgb), 0.94)',
 ];
 
 // ⚠️ MÀU CỦA DẢI ĐỘ DÀI PHIÊN — khớp theo THỨ TỰ với `FOCUS_BUCKETS` ở `engine/statsFocus.js`.
@@ -1599,7 +1599,7 @@ const FocusTab = React.memo(function FocusTab({ history, period: focusPeriod, on
                   </div>
                   <div
                     className="rounded-full px-3 py-1.5 text-[11px] font-semibold"
-                    style={{ background: `${ACCENT}10`, color: ACCENT2, border: `1px solid rgba(201,100,66,0.16)` }}
+                    style={{ background: `${ACCENT}10`, color: ACCENT2, border: `1px solid rgba(var(--accent-rgb),0.16)` }}
                   >
                     Khởi đầu phù hợp · 25 đến 45 phút
                   </div>
@@ -2126,7 +2126,7 @@ function CategoryTab({ history, sessionCategories, period: catPeriod, onPeriodCh
                 {catPeriod !== 'all' && (
                   <div
                     className="rounded-full px-3 py-1.5 text-[11px] font-semibold"
-                    style={{ background: `${ACCENT}10`, color: ACCENT2, border: `1px solid rgba(201,100,66,0.16)` }}
+                    style={{ background: `${ACCENT}10`, color: ACCENT2, border: `1px solid rgba(var(--accent-rgb),0.16)` }}
                   >
                     Gợi ý · thử mở rộng sang “Tất cả”
                   </div>
@@ -2805,7 +2805,7 @@ function JournalTab({ history, sessionCategories }) {
             <button
               type="button"
               onClick={() => { setFilterCat(null); setPage(0); }}
-              className="min-w-[104px] rounded-xl border px-3 py-2 text-xs font-semibold whitespace-nowrap transition-[background-color,color,border-color,box-shadow,transform] duration-200 hover:-translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(201,100,66,0.28)] focus-visible:ring-offset-2"
+              className="min-w-[104px] rounded-xl border px-3 py-2 text-xs font-semibold whitespace-nowrap transition-[background-color,color,border-color,box-shadow,transform] duration-200 hover:-translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(var(--accent-rgb),0.28)] focus-visible:ring-offset-2"
               style={!filterCat
                 ? { background: TAB_ACTIVE_BG, color: TAB_ACTIVE_TEXT, borderColor: TAB_ACTIVE_BORDER, boxShadow: TAB_ACTIVE_SHADOW }
                 : { background: TAB_IDLE_BG, color: TAB_IDLE_TEXT, borderColor: TAB_IDLE_BORDER }}
@@ -2819,7 +2819,7 @@ function JournalTab({ history, sessionCategories }) {
                   key={cat.id}
                   type="button"
                   onClick={() => { setFilterCat(cat.id); setPage(0); }}
-                  className="min-w-[118px] rounded-xl border px-3 py-2 text-xs font-semibold whitespace-nowrap transition-[background-color,color,border-color,box-shadow,transform] duration-200 hover:-translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(201,100,66,0.28)] focus-visible:ring-offset-2"
+                  className="min-w-[118px] rounded-xl border px-3 py-2 text-xs font-semibold whitespace-nowrap transition-[background-color,color,border-color,box-shadow,transform] duration-200 hover:-translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(var(--accent-rgb),0.28)] focus-visible:ring-offset-2"
                   style={filterCat === cat.id
                     ? { background: `${cat.color}18`, color: cat.color, borderColor: `${cat.color}55`, boxShadow: `0 10px 20px ${cat.color}14` }
                     : { background: TAB_IDLE_BG, color: TAB_IDLE_TEXT, borderColor: TAB_IDLE_BORDER }}
@@ -2908,12 +2908,12 @@ function JournalTab({ history, sessionCategories }) {
                         <button
                           type="button"
                           onClick={() => setEditingCategorySessionId(isEditingCategory ? null : h.id)}
-                          className="rounded-full px-2 py-0.5 text-[10px] font-semibold border transition-[background-color,color,border-color,transform] duration-200 hover:-translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(201,100,66,0.28)] focus-visible:ring-offset-2"
+                          className="rounded-full px-2 py-0.5 text-[10px] font-semibold border transition-[background-color,color,border-color,transform] duration-200 hover:-translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(var(--accent-rgb),0.28)] focus-visible:ring-offset-2"
                           style={cat?.id === '__none__'
                             ? {
-                                background: 'rgba(201,100,66,0.10)',
+                                background: 'rgba(var(--accent-rgb),0.10)',
                                 color: ACCENT2,
-                                borderColor: 'rgba(201,100,66,0.18)',
+                                borderColor: 'rgba(var(--accent-rgb),0.18)',
                               }
                             : {
                                 background: FILTER_PILL_BG,
@@ -2996,10 +2996,10 @@ function JournalTab({ history, sessionCategories }) {
                   >
                     <p className="text-[10px] font-semibold uppercase tracking-[0.16em]" style={{ color: TEXT_SOFT }}>Sự kiện</p>
                     <div className="mt-2 flex flex-wrap gap-1.5">
-                      {h.jackpot && <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold" style={{ background: 'rgba(201,100,66,0.12)', color: ACCENT2 }}>Thưởng lớn</span>}
+                      {h.jackpot && <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold" style={{ background: 'rgba(var(--accent-rgb),0.12)', color: ACCENT2 }}>Thưởng lớn</span>}
                       {!isCancelled && ((h.refinedEarned ?? 0) > 0 || (h.minutes ?? 0) >= 45) && <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold" style={{ background: 'rgba(148,163,184,0.18)', color: TEXT_MUTED }}>Tinh luyện</span>}
                       {hasEvent && <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold" style={{ background: 'rgba(var(--accent-rgb), 0.14)', color: ACCENT2 }}>Mốc phụ</span>}
-                      {comboVal >= 2 && <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold" style={{ background: 'rgba(138,63,36,0.12)', color: ACCENT2 }}>Chuỗi ×{comboVal}</span>}
+                      {comboVal >= 2 && <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold" style={{ background: 'rgba(var(--accent2-rgb),0.12)', color: ACCENT2 }}>Chuỗi ×{comboVal}</span>}
                       {isCancelled && (
                         <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold" style={{ background: 'rgba(239,68,68,0.10)', color: '#ef4444' }}>
                           Dừng ở {Number.isFinite(h.cancelProgressRatio) ? `${Math.round(h.cancelProgressRatio * 100)}%` : 'giữa phiên'}
@@ -3330,7 +3330,7 @@ function JournalTab({ history, sessionCategories }) {
       {hasMore && (
         <button
           onClick={() => setPage((p) => p + 1)}
-          className="w-full py-2.5 rounded-xl text-sm font-medium border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(201,100,66,0.28)] focus-visible:ring-offset-2 transition-[background-color,color,border-color,box-shadow,transform] duration-200 hover:-translate-y-px"
+          className="w-full py-2.5 rounded-xl text-sm font-medium border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(var(--accent-rgb),0.28)] focus-visible:ring-offset-2 transition-[background-color,color,border-color,box-shadow,transform] duration-200 hover:-translate-y-px"
           style={{ background: FILTER_PILL_BG, color: FILTER_PILL_TEXT, borderColor: FILTER_PILL_BORDER }}
         >
           Xem thêm ({filtered.length - paged.length} phiên)
@@ -3739,7 +3739,7 @@ export default function StatsDashboard() {
               key={tab.key}
               type="button"
               onClick={() => handleTabChange(tab.key)}
-              className="group flex flex-col items-start justify-center gap-1.5 rounded-[18px] border px-3 py-2.5 text-left text-[12px] font-semibold transition-[background-color,color,box-shadow,transform,border-color,opacity] duration-200 hover:-translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(201,100,66,0.28)] focus-visible:ring-offset-2 md:min-w-[148px] md:flex-none md:flex-row md:items-center md:justify-center md:gap-2 md:px-4 md:py-3 md:text-sm md:text-center"
+              className="group flex flex-col items-start justify-center gap-1.5 rounded-[18px] border px-3 py-2.5 text-left text-[12px] font-semibold transition-[background-color,color,box-shadow,transform,border-color,opacity] duration-200 hover:-translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(var(--accent-rgb),0.28)] focus-visible:ring-offset-2 md:min-w-[148px] md:flex-none md:flex-row md:items-center md:justify-center md:gap-2 md:px-4 md:py-3 md:text-sm md:text-center"
               aria-pressed={activeTab === tab.key}
               aria-busy={isTabPending && activeTab !== tab.key ? 'true' : undefined}
               style={activeTab === tab.key
@@ -3751,9 +3751,9 @@ export default function StatsDashboard() {
                 <span
                   className="rounded-full px-1.5 py-0.5 text-[10px] font-bold leading-none"
                   style={{
-                    background: activeTab === 'notes' ? 'rgba(31,30,29,0.08)' : 'rgba(201,100,66,0.10)',
+                    background: activeTab === 'notes' ? 'rgba(31,30,29,0.08)' : 'rgba(var(--accent-rgb),0.10)',
                     color: activeTab === 'notes' ? TAB_ACTIVE_TEXT : ACCENT2,
-                    border: `1px solid ${activeTab === 'notes' ? 'rgba(31,30,29,0.10)' : 'rgba(201,100,66,0.16)'}`,
+                    border: `1px solid ${activeTab === 'notes' ? 'rgba(31,30,29,0.10)' : 'rgba(var(--accent-rgb),0.16)'}`,
                   }}
                 >
                   {fmtCount(notesCount)}

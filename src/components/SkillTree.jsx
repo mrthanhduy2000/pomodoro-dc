@@ -51,7 +51,7 @@ const TIER_STYLE = {
     bg: 'bg-emerald-900/70',
     text: 'text-emerald-300',
     border: 'border-emerald-700',
-    light: { background: 'rgba(201, 100, 66, 0.08)', color: '#8f4d3a', border: 'rgba(201, 100, 66, 0.16)' },
+    light: { background: 'rgba(var(--accent-rgb), 0.08)', color: '#8f4d3a', border: 'rgba(var(--accent-rgb), 0.16)' },
   },
   intermediate: {
     label: 'Trung Cấp',

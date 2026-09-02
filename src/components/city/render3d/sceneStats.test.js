@@ -19,8 +19,7 @@ import assert from 'node:assert/strict';
 import { Frustum, Matrix4, PerspectiveCamera } from 'three';
 
 import {
-  createCityScene, NGOAI_LUOI, NHOM_TACH_THANH_PHO, NHOM_TACH_MAT_DAT,
-} from './sceneGraph.js';
+  createCityScene, NGOAI_LUOI, NHOM_TACH_THANH_PHO, NHOM_TACH_MAT_DAT, SHADOW_REACH_RATIO } from './sceneGraph.js';
 import { deriveOutskirts } from '../../../engine/city3d/outskirts.js';
 import { computeCityLayout } from '../../../engine/cityLayout.js';
 import { buildScenePalette } from '../../../engine/city3d/palette3d.js';
@@ -751,7 +750,11 @@ test('⚠️ TRẦN HỘP BAO khối `city` — và nội thành PHẢI vẫn nh
   // hai con số có thể trôi khỏi nhau trong im lặng — hoặc phase sau làm nhà to ra và bóng bắt đầu
   // cụt ở góc lưới, hoặc ai đó siết `reach` cho "nét hơn" rồi cũng thế. Hai vế dưới đây khoá cả hai
   // chiều: KHÔNG ĐƯỢC THIẾU (bóng cụt) và KHÔNG ĐƯỢC THỪA QUÁ (phí điểm ảnh bản đồ bóng).
-  const reachBong = 12 * 0.8;   // đúng công thức ở `createCityScene`: `gridSize * 0.8`
+  // ⚠️ ĐỌC TỪ MÃ, KHÔNG CHÉP TAY (2026-09-02, đóng `TECH_DEBT #91`). Bản cũ viết cứng `12 * 0.8`,
+  // tức khoá một CON SỐ chứ không khoá cái LUẬT — đổi hệ số ở `sceneGraph.js` mà quên sửa dòng này
+  // thì bài test vẫn xanh trong khi bóng bị cắt cụt. Suýt cắn thật ở lần gộp nhánh Phase 19–21
+  // (`main` chốt 0,75 · nhánh chốt 0,80, xung đột đúng dòng ấy).
+  const reachBong = 12 * SHADOW_REACH_RATIO;
   assert.ok(lớnNhấtNộiThành <= reachBong,
     `khung bóng đổ chỉ với tới ${reachBong} mà khối đổ bóng xa nhất ở ${lớnNhấtNộiThành.toFixed(4)} `
     + '— nhà ở góc lưới sẽ bị CỤT BÓNG, và chuyện đó không có gì đỏ lên ngoài bài này.');

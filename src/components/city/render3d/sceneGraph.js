@@ -392,6 +392,18 @@ export const MAX_PIXEL_RATIO = 2;
  * vẽ. Gộp phẳng thì hỏi `--mask ground-grid` sẽ cắt oan cả thành phố.
  */
 export const NHOM_TACH_THANH_PHO = ['buildings', 'props', 'landscape', 'hinterland'];
+/**
+ * Khung bóng đổ với tới bao xa, tính theo bề rộng lưới.
+ *
+ * ⚠️ EXPORT ĐỂ BÀI TEST ĐỌC ĐƯỢC (2026-09-02, đóng `TECH_DEBT #91`). Trước đây hệ số này là một
+ * số trần trong thân hàm, và `sceneStats.test.js` **chép tay** `12 * 0.8`. Nghĩa là bài test khoá
+ * một CON SỐ chứ không khoá cái LUẬT: đổi hệ số ở đây mà quên sửa bài test thì nó vẫn xanh, trong
+ * khi bóng bị cắt cụt trên production.
+ * Suýt cắn thật: lần gộp nhánh Phase 19–21 có một xung đột đúng ở dòng ấy (`main` chốt 0,75 ·
+ * nhánh chốt 0,80) — chọn nhầm bên thì không gì đỏ lên.
+ */
+export const SHADOW_REACH_RATIO = 0.8;
+
 export const NHOM_TACH_MAT_DAT = ['ground-grid', 'ground-apron'];
 
 /**
@@ -1608,7 +1620,7 @@ export function createCityScene({
   // và HOÀN TÁC — ảnh kỷ 11 lúc 16 giờ (bóng dài nhất) không đọc ra khác biệt nào, trong khi tấm
   // đất nhận bóng rộng tới ±9,5 nên siết là mua rủi ro cắt bóng để đổi lấy một thứ không nhìn thấy.
   // Độ nét đã lấy bằng đường khác: bản đồ bóng 2048 → 4096 (xem `SHADOW_MAP_DESKTOP`).
-  const reach = gridSize * 0.8;
+  const reach = gridSize * SHADOW_REACH_RATIO;
   sun.shadow.camera.left = -reach;
   sun.shadow.camera.right = reach;
   sun.shadow.camera.top = reach;

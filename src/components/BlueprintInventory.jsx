@@ -167,7 +167,7 @@ function MyBlueprintsTab({ blueprints, research, buildings, activeBook, onSelect
             className="text-xs px-3 py-1 rounded-full border transition-colors"
             style={activeFilterEra === 0
               ? (lightTheme
-                  ? { background: 'rgba(201, 100, 66, 0.10)', borderColor: 'rgba(201, 100, 66, 0.22)', color: '#9a5a48' }
+                  ? { background: 'rgba(var(--accent-rgb), 0.10)', borderColor: 'rgba(var(--accent-rgb), 0.22)', color: '#9a5a48' }
                   : { background: '#4f46e5', borderColor: '#6366f1', color: '#ffffff' })
               : (lightTheme
                   ? { borderColor: 'rgba(31, 30, 29, 0.08)', color: '#6a6862', background: 'rgba(255,255,255,0.74)' }
@@ -182,7 +182,7 @@ function MyBlueprintsTab({ blueprints, research, buildings, activeBook, onSelect
               className="text-xs px-3 py-1 rounded-full border transition-colors"
               style={activeFilterEra === era
                 ? (lightTheme
-                    ? { background: 'rgba(201, 100, 66, 0.10)', borderColor: 'rgba(201, 100, 66, 0.22)', color: '#9a5a48' }
+                    ? { background: 'rgba(var(--accent-rgb), 0.10)', borderColor: 'rgba(var(--accent-rgb), 0.22)', color: '#9a5a48' }
                     : { background: '#4f46e5', borderColor: '#6366f1', color: '#ffffff' })
                 : (lightTheme
                     ? { borderColor: 'rgba(31, 30, 29, 0.08)', color: '#6a6862', background: 'rgba(255,255,255,0.74)' }
@@ -371,7 +371,7 @@ function ResearchTab({ research, blueprints, buildings, activeBook, researchBlue
           style={lightTheme
             ? toast.ok
               ? { background: 'rgba(255,255,255,0.84)', border: '1px solid rgba(217,214,204,0.96)', color: '#5b7a52', boxShadow: '0 14px 28px rgba(31,30,29,0.05)' }
-              : { background: 'rgba(248,235,228,0.84)', border: '1px solid rgba(201,100,66,0.16)', color: '#8a3f24', boxShadow: '0 14px 28px rgba(31,30,29,0.05)' }
+              : { background: 'rgba(248,235,228,0.84)', border: '1px solid rgba(var(--accent-rgb),0.16)', color: '#8a3f24', boxShadow: '0 14px 28px rgba(31,30,29,0.05)' }
             : undefined}
         >
           {toast.msg}
@@ -387,7 +387,7 @@ function ResearchTab({ research, blueprints, buildings, activeBook, researchBlue
             className="text-xs px-3 py-1 rounded-full border transition-colors"
             style={selectedEra === era
               ? (lightTheme
-                  ? { background: 'rgba(201, 100, 66, 0.10)', borderColor: 'rgba(201, 100, 66, 0.22)', color: '#9a5a48' }
+                  ? { background: 'rgba(var(--accent-rgb), 0.10)', borderColor: 'rgba(var(--accent-rgb), 0.22)', color: '#9a5a48' }
                   : { background: 'rgba(var(--accent-rgb),0.18)', borderColor: 'rgba(var(--accent-rgb),0.28)', color: '#f4efe7' })
               : (lightTheme
                   ? { borderColor: 'rgba(31, 30, 29, 0.08)', color: '#6a6862', background: 'rgba(255,255,255,0.74)' }
@@ -574,7 +574,7 @@ function BlueprintDetailPanel({ bpId, onClose, buildings, research, lightTheme }
                 </span>
               )}
               {!isBuilt && isUnlocked && (
-                <span className="text-xs px-1.5 py-0.5 rounded-full" style={lightTheme ? { color: '#9a5a48', background: 'rgba(201, 100, 66, 0.10)', border: '1px solid rgba(201, 100, 66, 0.18)' } : undefined}>
+                <span className="text-xs px-1.5 py-0.5 rounded-full" style={lightTheme ? { color: '#9a5a48', background: 'rgba(var(--accent-rgb), 0.10)', border: '1px solid rgba(var(--accent-rgb), 0.18)' } : undefined}>
                   Đã nghiên cứu
                 </span>
               )}

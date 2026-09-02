@@ -35,8 +35,8 @@ const STAGE_TOKENS = [
   {
     label: 'Cơ Bản',
     accent: '#9a5a48',
-    accentSoft: 'rgba(201, 100, 66, 0.08)',
-    accentBorder: 'rgba(201, 100, 66, 0.18)',
+    accentSoft: 'rgba(var(--accent-rgb), 0.08)',
+    accentBorder: 'rgba(var(--accent-rgb), 0.18)',
     darkCard: 'border-white/8 bg-white/[0.04]',
     darkBadge: 'bg-white/[0.05] border border-white/8 text-[var(--accent-light)]',
   },

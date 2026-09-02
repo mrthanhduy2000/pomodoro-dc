@@ -185,8 +185,8 @@ export default function ExportImport() {
                 color: 'var(--good, #5b7a52)',
               }
             : {
-                background: 'rgba(201,100,66,0.1)',
-                borderColor: 'rgba(201,100,66,0.18)',
+                background: 'rgba(var(--accent-rgb),0.1)',
+                borderColor: 'rgba(var(--accent-rgb),0.18)',
                 color: 'var(--accent2, #8a3f24)',
               }}
         >
@@ -284,7 +284,7 @@ export default function ExportImport() {
               ))}
             </div>
 
-            <p className="mt-3 rounded-[14px] px-3 py-2 text-[12px] leading-5" style={{ background: 'rgba(201,100,66,0.1)', color: 'var(--accent2, #8a3f24)' }}>
+            <p className="mt-3 rounded-[14px] px-3 py-2 text-[12px] leading-5" style={{ background: 'rgba(var(--accent-rgb),0.1)', color: 'var(--accent2, #8a3f24)' }}>
               ⚠️ Toàn bộ tiến trình HIỆN TẠI trên thiết bị này sẽ bị thay thế và không thể hoàn tác.
             </p>
 

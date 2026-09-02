@@ -475,7 +475,7 @@ function LootDropContent({ reward, onClose, isLightTheme }) {
                       className="grid gap-3 p-4 md:grid-cols-[auto_1fr_auto]"
                       style={{
                         borderRadius: 'var(--skin-radius-card,18px)',
-                        border: isLightTheme ? '1px solid rgba(201,100,66,0.14)' : '1px solid rgba(129,140,248,0.30)',
+                        border: isLightTheme ? '1px solid rgba(var(--accent-rgb),0.14)' : '1px solid rgba(129,140,248,0.30)',
                         background: isLightTheme
                           ? 'linear-gradient(160deg, rgba(255,255,255,0.96), rgba(248,235,228,0.90))'
                           : 'rgba(49,46,129,0.40)',
@@ -486,7 +486,7 @@ function LootDropContent({ reward, onClose, isLightTheme }) {
                         style={isLightTheme ? {
                           borderRadius: 'var(--skin-radius-control,14px)',
                           background: 'rgba(var(--accent-rgb),0.1)',
-                          border: '1px solid rgba(201,100,66,0.16)',
+                          border: '1px solid rgba(var(--accent-rgb),0.16)',
                           color: 'var(--accent2)',
                           fontFamily: MONO_FONT,
                         } : { borderRadius: 'var(--skin-radius-control,14px)' }}
@@ -798,7 +798,7 @@ function MiniMetric({ label, value, palette }) {
 function BonusPill({ icon, label, value, tone, lightTheme }) {
   const toneStyles = {
     amber: lightTheme ? 'border-[rgba(176,125,59,0.22)] bg-[rgba(242,230,209,0.72)] text-[#8b6733]' : 'border-white/8 bg-white/[0.05] text-[var(--ink)]',
-    orange: lightTheme ? 'border-[rgba(201,100,66,0.22)] bg-[rgba(248,235,228,0.76)] text-[var(--accent2)]' : 'border-[rgba(var(--accent-rgb),0.18)] bg-white/[0.05] text-[var(--accent-light)]',
+    orange: lightTheme ? 'border-[rgba(var(--accent-rgb),0.22)] bg-[rgba(248,235,228,0.76)] text-[var(--accent2)]' : 'border-[rgba(var(--accent-rgb),0.18)] bg-white/[0.05] text-[var(--accent-light)]',
     sky: lightTheme ? 'border-[rgba(131,155,176,0.22)] bg-[rgba(236,241,245,0.8)] text-[#5f7386]' : 'border-white/8 bg-white/[0.05] text-[var(--ink)]',
     violet: lightTheme ? 'border-[rgba(166,137,149,0.22)] bg-[rgba(243,236,239,0.8)] text-[#7b5c68]' : 'border-white/8 bg-white/[0.05] text-[var(--ink)]',
   };

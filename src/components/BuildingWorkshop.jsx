@@ -83,7 +83,7 @@ function ResourceCost({ era, cost, bookResources, lightTheme = false }) {
             style={lightTheme
               ? ok
                 ? { borderColor: 'rgba(111, 123, 98, 0.18)', color: '#6f7b62', background: 'rgba(111, 123, 98, 0.10)', fontFamily: MONO_FONT }
-                : { borderColor: 'rgba(201, 100, 66, 0.16)', color: '#8a3f24', background: 'rgba(248,235,228,0.10)', fontFamily: MONO_FONT }
+                : { borderColor: 'rgba(var(--accent-rgb), 0.16)', color: '#8a3f24', background: 'rgba(248,235,228,0.10)', fontFamily: MONO_FONT }
               : undefined}
           >
             {amount.toLocaleString()} {(def?.label ?? res)}
@@ -283,7 +283,7 @@ function ReadyCard({ bpId, bookResources, resourcesRefined, craftingQueue, onSta
               }`} style={lightTheme
                 ? refinedOk
                   ? { borderColor: 'rgba(166,137,149,0.18)', color: '#7a6877', background: 'rgba(243,236,239,0.82)', fontFamily: MONO_FONT }
-                  : { borderColor: 'rgba(201,100,66,0.16)', color: '#8a3f24', background: 'rgba(248,235,228,0.82)', fontFamily: MONO_FONT }
+                  : { borderColor: 'rgba(var(--accent-rgb),0.16)', color: '#8a3f24', background: 'rgba(248,235,228,0.82)', fontFamily: MONO_FONT }
                 : { fontFamily: MONO_FONT }}>
                 {refinedCost} {eraRefMeta.t2Label ?? 'Tinh luyện'}
                 {!refinedOk && <span className="opacity-70"> (có {Math.floor(refined.t2)})</span>}
@@ -606,7 +606,7 @@ export default function BuildingWorkshop() {
             <span
               className="rounded-full px-2.5 sm:px-3 py-1 text-[10.5px] sm:text-xs"
               style={lightTheme
-                ? { color: '#8a3f24', background: 'rgba(248,235,228,0.9)', border: '1px solid rgba(201,100,66,0.16)' }
+                ? { color: '#8a3f24', background: 'rgba(248,235,228,0.9)', border: '1px solid rgba(var(--accent-rgb),0.16)' }
                 : undefined}
             >
               -{formatPercent(totalCancelLossReduction)} thất thoát khi hủy

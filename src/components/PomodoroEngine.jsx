@@ -483,7 +483,7 @@ export default function PomodoroEngine({
       : 'border border-[rgba(var(--accent-rgb),0.18)] bg-white/[0.05] text-[var(--accent-light)]'
     : goalState.tone === 'warn'
       ? lightTheme
-        ? 'border border-[rgba(201,100,66,0.14)] bg-[rgba(201,100,66,0.08)] text-[var(--accent2)]'
+        ? 'border border-[rgba(var(--accent-rgb),0.14)] bg-[rgba(var(--accent-rgb),0.08)] text-[var(--accent2)]'
         : 'border border-white/8 bg-white/[0.05] text-[var(--muted)]'
       : lightTheme
         ? 'border border-[var(--line)] bg-[var(--panel-soft)] text-[var(--muted)]'
@@ -617,14 +617,14 @@ export default function PomodoroEngine({
   const immersiveGlow = isBreakMode
     ? breakIsLong
       ? (lightTheme
-        ? 'radial-gradient(circle, rgba(201,100,66,0.08) 0%, rgba(201,100,66,0.03) 38%, rgba(201,100,66,0) 72%)'
+        ? 'radial-gradient(circle, rgba(var(--accent-rgb),0.08) 0%, rgba(var(--accent-rgb),0.03) 38%, rgba(var(--accent-rgb),0) 72%)'
         : 'radial-gradient(circle, rgba(96,165,250,0.14) 0%, rgba(96,165,250,0.06) 36%, rgba(96,165,250,0) 70%)')
       : (lightTheme
-        ? 'radial-gradient(circle, rgba(201,100,66,0.07) 0%, rgba(201,100,66,0.025) 38%, rgba(201,100,66,0) 72%)'
+        ? 'radial-gradient(circle, rgba(var(--accent-rgb),0.07) 0%, rgba(var(--accent-rgb),0.025) 38%, rgba(var(--accent-rgb),0) 72%)'
         : 'radial-gradient(circle, rgba(56,189,248,0.12) 0%, rgba(56,189,248,0.05) 36%, rgba(56,189,248,0) 70%)')
     : isActive
       ? (lightTheme
-        ? 'radial-gradient(circle, rgba(201,100,66,0.10) 0%, rgba(201,100,66,0.035) 38%, rgba(201,100,66,0) 72%)'
+        ? 'radial-gradient(circle, rgba(var(--accent-rgb),0.10) 0%, rgba(var(--accent-rgb),0.035) 38%, rgba(var(--accent-rgb),0) 72%)'
         : 'radial-gradient(circle, rgba(34,197,94,0.14) 0%, rgba(34,197,94,0.06) 36%, rgba(34,197,94,0) 70%)')
       : (lightTheme
         ? 'radial-gradient(circle, rgba(31,30,29,0.045) 0%, rgba(31,30,29,0.015) 42%, rgba(31,30,29,0) 72%)'
@@ -965,7 +965,7 @@ export default function PomodoroEngine({
           aria-label="Reset chu kỳ nghỉ dài"
           className={`rounded-full px-2.5 py-1 text-[10px] transition-all focus-visible:outline-none focus-visible:ring-2 ${
             lightTheme
-              ? 'border border-[var(--line)] bg-white text-[var(--muted)] hover:border-[var(--line-2)] hover:text-[var(--ink)] focus-visible:ring-[rgba(201,100,66,0.22)]'
+              ? 'border border-[var(--line)] bg-white text-[var(--muted)] hover:border-[var(--line-2)] hover:text-[var(--ink)] focus-visible:ring-[rgba(var(--accent-rgb),0.22)]'
               : 'text-slate-600 hover:text-slate-300 border border-white/[0.06] hover:border-white/[0.14] bg-white/[0.03] hover:bg-white/[0.07] focus-visible:ring-white/30'
           }`}
         >
@@ -1277,10 +1277,10 @@ export default function PomodoroEngine({
           className={`flex items-center gap-2 px-4 py-2 rounded-2xl border ${
             breakIsLong
               ? lightTheme
-                ? 'bg-[rgba(255,247,237,0.96)] border-[rgba(201,100,66,0.18)] text-[var(--accent2)]'
+                ? 'bg-[rgba(255,247,237,0.96)] border-[rgba(var(--accent-rgb),0.18)] text-[var(--accent2)]'
                 : 'bg-white/[0.05] border-white/8 text-[var(--ink)]'
               : lightTheme
-                ? 'bg-[rgba(255,247,237,0.96)] border-[rgba(201,100,66,0.18)] text-[var(--accent2)]'
+                ? 'bg-[rgba(255,247,237,0.96)] border-[rgba(var(--accent-rgb),0.18)] text-[var(--accent2)]'
                 : 'bg-white/[0.05] border-white/8 text-[var(--ink)]'
           }`}
         >
@@ -1864,7 +1864,7 @@ export default function PomodoroEngine({
           </div>
 
           <div className={`mt-3 h-1.5 overflow-hidden rounded-full ${
-            lightTheme ? 'bg-[rgba(201,100,66,0.08)]' : 'bg-white/8'
+            lightTheme ? 'bg-[rgba(var(--accent-rgb),0.08)]' : 'bg-white/8'
           }`}>
             <Motion.div
               {...goalProgressMotion}
@@ -1918,7 +1918,7 @@ export default function PomodoroEngine({
                   onClick={() => setPendingSessionGoal('')}
                   className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 ${
                     lightTheme
-                      ? 'border border-[rgba(201,100,66,0.14)] text-[var(--accent2)] hover:bg-[rgba(201,100,66,0.08)] focus-visible:ring-[rgba(31,30,29,0.14)]'
+                      ? 'border border-[rgba(var(--accent-rgb),0.14)] text-[var(--accent2)] hover:bg-[rgba(var(--accent-rgb),0.08)] focus-visible:ring-[rgba(31,30,29,0.14)]'
                       : 'border border-white/10 text-slate-300 hover:bg-white/6 focus-visible:ring-white/30'
                   }`}
                 >
@@ -2035,7 +2035,7 @@ export default function PomodoroEngine({
           className="mt-5 w-full rounded-[24px] border px-4 py-3.5 text-[15px] leading-[1.7] resize-none focus:outline-none transition-colors"
           style={{
             ...paperGoalInsetStyle,
-            borderColor: lightTheme ? 'rgba(201,100,66,0.18)' : 'rgba(255,255,255,0.08)',
+            borderColor: lightTheme ? 'rgba(var(--accent-rgb),0.18)' : 'rgba(255,255,255,0.08)',
             background: lightTheme ? 'rgba(255,248,243,0.96)' : 'rgba(255,255,255,0.03)',
             color: lightTheme ? 'var(--ink)' : 'var(--ink)',
             scrollbarWidth: 'thin',
@@ -2052,7 +2052,7 @@ export default function PomodoroEngine({
               onClick={() => setPendingSessionGoal('')}
               className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 ${
                 lightTheme
-                  ? 'border border-[rgba(201,100,66,0.14)] text-[var(--accent2)] hover:bg-[rgba(201,100,66,0.08)] focus-visible:ring-[rgba(31,30,29,0.14)]'
+                  ? 'border border-[rgba(var(--accent-rgb),0.14)] text-[var(--accent2)] hover:bg-[rgba(var(--accent-rgb),0.08)] focus-visible:ring-[rgba(31,30,29,0.14)]'
                   : 'border border-white/10 text-slate-300 hover:bg-white/6 focus-visible:ring-white/30'
               }`}
             >
@@ -2230,7 +2230,7 @@ export default function PomodoroEngine({
                   aria-label="Mở quản lý phân loại"
                   className={`flex-shrink-0 size-7 rounded-full flex items-center justify-center transition-all text-xs focus-visible:outline-none focus-visible:ring-2 ${
                     lightTheme
-                      ? 'border border-[var(--line)] bg-white text-[var(--muted)] hover:text-[var(--ink)] focus-visible:ring-[rgba(201,100,66,0.22)]'
+                      ? 'border border-[var(--line)] bg-white text-[var(--muted)] hover:text-[var(--ink)] focus-visible:ring-[rgba(var(--accent-rgb),0.22)]'
                       : 'text-slate-500 hover:text-slate-200 backdrop-blur-md bg-white/[0.05] hover:bg-white/[0.10] border border-white/[0.08] focus-visible:ring-white/30'
                   }`}
                   title="Quản lý phân loại"
@@ -2653,10 +2653,10 @@ function SessionReviewCard({ completedGoalAchieved, goalText, goalBonusXP = 0, g
           className={`flex-1 rounded-full border px-4 py-2.5 text-sm font-semibold transition ${
             completedGoalAchieved === false
               ? lightTheme
-                ? 'border-[rgba(201,100,66,0.22)] bg-[rgba(255,247,237,0.96)] text-[var(--accent2)] shadow-[0_10px_24px_rgba(201,100,66,0.12)]'
+                ? 'border-[rgba(var(--accent-rgb),0.22)] bg-[rgba(255,247,237,0.96)] text-[var(--accent2)] shadow-[0_10px_24px_rgba(var(--accent-rgb),0.12)]'
                 : 'border-[rgba(var(--accent-rgb),0.18)] bg-white/[0.06] text-[var(--accent-light)]'
               : lightTheme
-                ? 'border-[var(--line)] bg-[rgba(244,242,236,0.82)] text-[var(--muted)] hover:border-[rgba(201,100,66,0.22)] hover:text-[var(--accent2)]'
+                ? 'border-[var(--line)] bg-[rgba(244,242,236,0.82)] text-[var(--muted)] hover:border-[rgba(var(--accent-rgb),0.22)] hover:text-[var(--accent2)]'
                 : 'border-white/10 bg-white/[0.035] text-slate-300 hover:border-rose-300/25 hover:bg-rose-400/10 hover:text-rose-100'
           }`}
         >
@@ -2708,7 +2708,7 @@ function CancelConfirmDialog({ hasForgivenessCharge, onAbort, onConfirm, preview
         onClick={(event) => event.stopPropagation()}
         className={`w-full max-w-md rounded-[30px] border p-5 ${
           lightTheme
-            ? 'border-[rgba(201,100,66,0.22)] bg-white shadow-[0_24px_64px_rgba(31,30,29,0.10)]'
+            ? 'border-[rgba(var(--accent-rgb),0.22)] bg-white shadow-[0_24px_64px_rgba(31,30,29,0.10)]'
             : 'border-white/8 bg-[rgba(21,19,16,0.92)] shadow-[0_22px_56px_rgba(0,0,0,0.24)] backdrop-blur-2xl'
         }`}
       >
@@ -2747,7 +2747,7 @@ function CancelConfirmDialog({ hasForgivenessCharge, onAbort, onConfirm, preview
             onClick={onConfirm}
             className={`rounded-full border px-4 py-2.5 text-sm font-semibold transition ${
               lightTheme
-                ? 'border-[rgba(201,100,66,0.22)] bg-[rgba(255,247,237,0.96)] text-[var(--accent2)] hover:bg-[rgba(255,239,228,0.98)]'
+                ? 'border-[rgba(var(--accent-rgb),0.22)] bg-[rgba(255,247,237,0.96)] text-[var(--accent2)] hover:bg-[rgba(255,239,228,0.98)]'
                 : 'border-[rgba(var(--accent-rgb),0.18)] bg-white/[0.06] text-[var(--accent-light)] hover:bg-white/[0.08]'
             }`}
           >
@@ -2865,7 +2865,7 @@ function CategoryManager({ categories, onClose, onAdd, onDelete }) {
             onClick={handleAdd}
             className={`rounded-2xl border px-4 py-2 text-sm font-semibold transition disabled:opacity-40 ${
               lightTheme
-                ? 'border-[rgba(201,100,66,0.22)] bg-[var(--ink)] text-[var(--canvas)] hover:bg-[var(--ink-2)]'
+                ? 'border-[rgba(var(--accent-rgb),0.22)] bg-[var(--ink)] text-[var(--canvas)] hover:bg-[var(--ink-2)]'
                 : 'border-[rgba(var(--accent-rgb),0.20)] bg-[rgba(var(--accent-rgb),0.88)] text-white hover:bg-[rgba(var(--accent-rgb),0.78)]'
             }`}
           >

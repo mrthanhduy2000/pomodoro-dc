@@ -251,6 +251,6 @@ function challengeStyle(lightTheme) {
   return {
     borderRadius: 'var(--skin-radius-control, 14px)',
     background: lightTheme ? 'rgba(255, 247, 237, 0.92)' : 'rgba(255,255,255,0.04)',
-    border: `1px solid ${lightTheme ? 'rgba(201, 100, 66, 0.18)' : 'rgba(148, 163, 184, 0.14)'}`,
+    border: `1px solid ${lightTheme ? 'rgba(var(--accent-rgb), 0.18)' : 'rgba(148, 163, 184, 0.14)'}`,
   };
 }

@@ -4780,7 +4780,7 @@ cấp `Math.min(3,…)` → `Math.min(9,…)` · cắt bớt danh sách cấp th
   toàn cục — nó chỉ bịt đúng chỗ vừa bị cắn, đúng tinh thần *"một bài học được ghi ra không chặn
   được gì; chỉ một bài TEST mới chặn được"*.
 
-## #91 — Bài test canh khung bóng đổ CHÉP TAY hệ số `0,8` thay vì đọc từ mã, nên nó xanh kể cả khi mã dùng một `reach` khác
+## #91 — ✅ **ĐÃ XỬ LÝ (2026-09-02)** — Bài test canh khung bóng đổ CHÉP TAY hệ số `0,8` thay vì đọc từ mã, nên nó xanh kể cả khi mã dùng một `reach` khác
 
 > Mở 2026-08-28, phát hiện trong lúc gộp nhánh Phase 19–21 vào `main`. Suýt cắn thật: phép gộp có
 > một xung đột đúng ở dòng ấy (`main` chốt 0,75 · nhánh chốt 0,80), và **chọn nhầm bên thì bóng bị
@@ -4840,6 +4840,13 @@ cấp `Math.min(3,…)` → `Math.min(9,…)` · cắt bớt danh sách cấp th
   nó là một QUYẾT ĐỊNH đã chốt, không phải một khoản nợ đang chờ trả. Để nó trong danh sách "còn
   mở" làm phồng con số nợ và khiến phiên sau tưởng còn việc phải làm — đúng thứ nó sinh ra để
   ngăn. Không đổi một dòng mã nào.
+
+
+- **✅ ĐÃ XỬ LÝ 2026-09-02.** Hệ số nay là một hằng số CÓ TÊN và được `export`:
+  `SHADOW_REACH_RATIO = 0.8` ở `sceneGraph.js`; `sceneStats.test.js` `import` nó thay vì chép tay
+  `12 * 0.8`. Bài test khi ấy khoá cái LUẬT chứ không khoá một CON SỐ — đổi hệ số mà quên sửa test
+  thì nay không còn xảy ra được. (Suýt cắn thật ở lần gộp nhánh Phase 19–21: xung đột đúng dòng ấy,
+  `main` chốt 0,75 · nhánh chốt 0,80, và chọn nhầm bên thì không gì đỏ lên.)
 
 ---
 
@@ -5024,7 +5031,7 @@ trong chú thích thì đừng để `--selftest` của chính nó vẫn dùng �
 - **Review Trigger**: lần tới có ai dựng ảnh nhiều dải để nghiệm thu chi tiết nhỏ.
 - **Owner**: chưa ai · **Status**: MỞ (2026-08-27)
 
-## #86 — 137 nút tự vẽ trên 28 file KHÔNG đọc token skin, và `ActionButton` không nhận nổi chúng
+## #86 — ⚠️ **NỬA GỐC ĐÃ XỬ LÝ (2026-09-02)** — 137 nút tự vẽ trên 28 file KHÔNG đọc token skin, và `ActionButton` không nhận nổi chúng
 
 - **Tên**: nút hành động của app tồn tại hai thế giới — `ActionButton` (nay đọc token, đúng ở cả 10
   tổ hợp skin × chế độ) và 137 thẻ `<button>`/`<motion.button>` tự vẽ bằng lớp Tailwind chốt cứng.
@@ -5089,6 +5096,22 @@ trong chú thích thì đừng để `--selftest` của chính nó vẫn dùng �
 - **Blocking Conditions**: Không có.
 - **Review Trigger**: khi `MIN_UNITS` được đổi, hoặc khi có phase chia nhỏ đơn vị nhà dân lần nữa.
 - **Owner**: chưa ai · **Status**: 🔴 mở
+
+
+- **⚠️ ĐÃ XỬ LÝ NỬA THẬT SỰ HỎNG (2026-09-02).** Mục này gộp HAI chuyện, và chỉ một trong hai là
+  khuyết tật:
+  - **(a) MÀU chốt cứng — ĐÃ SỬA.** 84 chỗ trong 16 file viết thẳng `rgba(201, 100, 66, …)` (màu
+    terracotta của skin MẶC ĐỊNH), trong khi `arcade` khai `--accent-rgb: 226, 84, 44` và `inkgold`
+    khai `217, 164, 65`. Tức chúng chỉ đúng ở **2 trong 10** tổ hợp theme × skin. Nay tất cả đọc
+    `rgba(var(--accent-rgb), …)` — **tương đương tuyệt đối** ở skin mặc định (cùng con số), và đúng
+    ở bốn skin còn lại. Khoá bằng `src/components/skinTokens.test.js` (2 bài, đã thử-cho-đỏ), trong
+    đó có một bài canh chính cái token: nếu MỌI skin khai cùng một giá trị thì token không mang tin
+    và bài kia chỉ là hình thức.
+  - **(b) 137 nút không dùng `ActionButton` — KHÔNG sửa, và mục nợ này TỰ giải thích vì sao:** bảng
+    trong chính nó đã soi từng cái và kết luận mỗi chỗ lệch ít nhất một chiều (vị trí `fixed`, chữ
+    11px, `rounded-full`…), nên chuyển sang là **ĐỔI HÌNH DẠNG chứ không phải hợp nhất**. Đó là một
+    quyết định đã có lý lẽ, không phải việc còn tồn.
+  ⇒ Phần còn lại của mục này là (b), và nó nên được đọc như một GHI CHÚ THIẾT KẾ.
 
 ---
 

@@ -128,6 +128,11 @@ const FAKE_EPOCH = HOUR === null ? null : Date.UTC(2026, 7, 13, (HOUR - 7 + 24) 
  * khuyết điểm khi có nhiều dữ liệu.
  */
 const FIXTURE = arg('--fixture', null);
+// ⚠️ CỬA SOI MÀN-SAU-PHIÊN. `--preview <tên cảnh>` gắn `?dc-preview=` vào URL để `src/dev/
+// previewStage.js` dựng sẵn `state.ui`. Đây là đường DUY NHẤT soi được lễ mừng / hộp phần thưởng
+// / lên cấp / chuỗi toast, vì `ui` nằm ngoài `partialize` (gieo localStorage không tới) và bấm
+// "Bắt đầu" thì bị cấm trên dev. Tên cảnh: xem `PREVIEW_SCENES`.
+const PREVIEW = arg('--preview', null);
 // `--ls khoá=giá-trị` (lặp được) — gieo thêm khoá localStorage tuỳ ý trước khi app chạy.
 // ⚠️ VÌ SAO CẦN: nhiều tính năng của app nhớ trạng thái "đã xem" bằng một khoá localStorage RIÊNG,
 // ngoài hai khoá lớn ở dưới — `dc-nav-seen-v1` (thành tích đã xem), `dc-stage-seen-v1` (mốc đã ăn
@@ -182,6 +187,29 @@ const clockPatch = FAKE_EPOCH === null ? '' : `<script>(function(){
   Fake.UTC=Real.UTC; Fake.parse=Real.parse; window.Date=Fake;
 })();</script>`;
 
+/*
+  ⚠️ LỜI NÓI DỐI THỨ NĂM — MỘT TẤM ẢNH KHÔNG BẮT ĐƯỢC THỨ CHỈ SỐNG 4 GIÂY.
+  Thẻ phần thưởng (`RewardToastHost`) tự tắt sau ~4 giây, mà `shot.mjs` thì `--settle` rồi còn
+  đợi DOM đứng yên nữa ⇒ tới lúc chụp thì nó đã biến mất. Triệu chứng y hệt "tính năng không
+  chạy": ảnh sạch, probe `false`, không lỗi nào. Đo thử `--settle` 400/1000/3500/6000 đều ra
+  `false` — nên nếu chỉ có ảnh thì sẽ kết luận sai rằng thẻ không hề hiện.
+  `--watch "<chuỗi>"` gắn một MutationObserver NGAY TỪ ĐẦU trang và ghi lại MỌI lần chuỗi ấy
+  xuất hiện, kèm mốc thời gian và lúc nó biến mất. Đây là cách duy nhất soi được những thứ
+  thoáng qua: thẻ thưởng · huy hiệu mốc 25/50/75% · lễ mừng thành phố.
+*/
+const WATCH = arg('--watch', null);
+const watchPatch = !WATCH ? '' : `<script>(function(){
+  var CAN=${JSON.stringify(WATCH)}, t0=Date.now(), log=[], dang=false;
+  window.__dcWatch=log;
+  function xem(){
+    var co=(document.body&&document.body.innerText||'').indexOf(CAN)>=0;
+    if(co&&!dang){ dang=true; log.push({hien:Date.now()-t0}); }
+    else if(!co&&dang){ dang=false; if(log.length)log[log.length-1].tat=Date.now()-t0; }
+  }
+  new MutationObserver(xem).observe(document.documentElement,{childList:true,subtree:true,characterData:true});
+  setInterval(xem, 100);
+})();</script>`;
+
 const MIME = {
   '.html': 'text/html;charset=utf-8', '.js': 'text/javascript', '.css': 'text/css',
   '.json': 'application/json', '.png': 'image/png', '.svg': 'image/svg+xml',
@@ -192,7 +220,7 @@ const seedPage = `<!doctype html><meta charset="utf-8"><body><script>
 localStorage.setItem('dc-pomodoro-v1', ${JSON.stringify(JSON.stringify(GAME))});
 localStorage.setItem('dc-pomodoro-settings-v2', ${JSON.stringify(JSON.stringify(SETTINGS))});
 ${EXTRA_LS.map(([k, v]) => `localStorage.setItem(${JSON.stringify(k)}, ${JSON.stringify(v)});`).join('\n')}
-location.replace('/index.html');
+location.replace('/index.html' + ${JSON.stringify(PREVIEW ? `?dc-preview=${PREVIEW}` : '')});
 </script></body>`;
 
 const server = createServer((req, res) => {
@@ -200,9 +228,9 @@ const server = createServer((req, res) => {
   if (url === '/seed') { res.writeHead(200, { 'content-type': 'text/html;charset=utf-8' }); return res.end(seedPage); }
   const file = join(ROOT, url === '/' ? '/index.html' : url);
   if (!file.startsWith(ROOT) || !existsSync(file)) { res.writeHead(404); return res.end('x'); }
-  if (clockPatch && (url === '/' || url === '/index.html')) {
+  if ((clockPatch || watchPatch) && (url === '/' || url === '/index.html')) {
     res.writeHead(200, { 'content-type': MIME['.html'] });
-    return res.end(readFileSync(file, 'utf8').replace('<head>', '<head>' + clockPatch));
+    return res.end(readFileSync(file, 'utf8').replace('<head>', '<head>' + clockPatch + watchPatch));
   }
   res.writeHead(200, { 'content-type': MIME[extname(file)] ?? 'application/octet-stream' });
   res.end(readFileSync(file));
@@ -312,7 +340,33 @@ const waitForSteadyDom = async () => {
   }
   return { buttons: await countButtons(), total: count };
 };
-{
+/*
+  ⚠️ VỚI `--watch`, "ĐỢI DOM ĐỨNG YÊN" LÀ SAI HẲN CHIỀU. Cổng đứng-yên sinh ra để đợi app dựng
+  xong; nhưng thứ ta đang rình thì THOÁNG QUA, nên đợi tới lúc mọi thứ đứng yên đúng bằng đợi tới
+  lúc nó đã tắt. Đo được: thẻ thưởng hiện ở giây 13,5 và tắt ở giây 17,7, mà cổng đứng-yên nhả ra
+  sau đó ⇒ mọi `--settle` từ 0,4 tới 14 giây đều chụp trúng lúc KHÔNG có gì, và ảnh sạch ấy đọc y
+  hệt "tính năng không chạy".
+  Nên khi có `--watch`, ta bỏ qua cả `--settle` lẫn cổng đứng-yên, và chụp NGAY LÚC chuỗi ấy đang
+  hiện. Vẫn giữ cổng "≥3 nút" (đó là cổng CÓ NỘI DUNG, không phải cổng đứng yên).
+*/
+if (WATCH) {
+  let thay = false;
+  for (let i = 0; i < 300; i += 1) {
+    const dangHien = await evaluate(
+      'String(!!(window.__dcWatch||[]).some(function(e){return e.tat===undefined;}))',
+    );
+    if (dangHien === 'true') { thay = true; break; }
+    await sleep(100);
+  }
+  if (!thay) {
+    const nhatKy = await evaluate('JSON.stringify(window.__dcWatch||[])');
+    console.error(`✗ KHÔNG THẤY ${JSON.stringify(WATCH)} trong 30 giây. Nhật ký: ${nhatKy}`);
+    console.error('  Nhật ký RỖNG nghĩa là chuỗi chưa từng hiện; có mốc `hien`/`tat` nghĩa là nó'
+      + ' hiện rồi tắt trước khi kịp chụp — hạ `--settle` hoặc rình một chuỗi khác.');
+    ws.close(); chrome.kill(); server.close();
+    process.exit(2);
+  }
+} else {
   const { buttons, total } = await waitForSteadyDom();
   if (buttons < 3) {
     console.error(`✗ CHỈ THẤY ${buttons} nút sau ~20 giây (tổng ${total} phần tử)`

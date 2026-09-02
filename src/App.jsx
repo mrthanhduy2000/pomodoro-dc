@@ -33,6 +33,7 @@ import {
   localWeekMondayStr,
 } from './engine/time';
 import { createRecoverableLazy } from './utils/runtimeRecovery';
+import { readPreviewScene, buildPreviewUi } from './dev/previewStage';
 
 const SkillTree = createRecoverableLazy(() => import('./components/SkillTree.jsx'), 'skill-tree');
 const RelicInventory = createRecoverableLazy(() => import('./components/RelicInventory.jsx'), 'relic-inventory');
@@ -476,6 +477,30 @@ export default function App() {
     refreshDailyMissions();
     initSync();
   }, [storesHydrated, hydrateEngines, refreshPushState, checkRankChallengeDeadlines, refreshDailyMissions]);
+
+  /*
+    ⚠️ CỬA SOI MÀN-SAU-PHIÊN (2026-09-02). Khoảnh khắc dopamine lớn nhất của app từng là màn DUY
+    NHẤT không ai soi được: nó sống trong `state.ui`, mà `ui` nằm ngoài `partialize` nên gieo bằng
+    `--fixture`/`--ls` không tới, store lại không lộ ra `window` nên `--probe` cũng không mở được,
+    còn đường cuối cùng — bấm "Bắt đầu" — thì bị CẤM trên dev (dùng chung một dòng Supabase với
+    bản thật của Đàm). Ba đường cùng bịt ⇒ mọi bản vá cho màn ấy đều phải ship mù.
+
+    ⚠️ VÌ SAO AN TOÀN, đã ĐO chứ không suy đoán: mọi hộp thoại sau phiên CHỈ ĐỌC `ui`, và mọi hành
+    động đóng của chúng cũng CHỈ ghi `ui` (phần thưởng đã được `completeFocusSession` cấp từ
+    trước — các màn này thuần tuý trình bày lại). Cộng với việc `ui` nằm ngoài `partialize`, cửa
+    này KHÔNG ghi localStorage, KHÔNG lên Supabase, KHÔNG bắt đầu phiên nào. Lời hứa ấy được canh
+    bằng `src/dev/previewStage.test.js`.
+
+    Chạy SAU `storesHydrated` vì `merge` của persist trả về `current.ui`; dựng cảnh trước lúc ấy
+    thì nó bị thay lại bằng `ui` mặc định — một lỗi im lặng đúng kiểu khó truy nhất.
+  */
+  useEffect(() => {
+    if (!storesHydrated) return;
+    const scene = readPreviewScene(window.location.search);
+    if (!scene) return;
+    const patch = buildPreviewUi(scene);
+    if (patch) useGameStore.setState((prev) => ({ ui: { ...prev.ui, ...patch } }));
+  }, [storesHydrated]);
 
   useEffect(() => {
     const handleVisibilityChange = () => {

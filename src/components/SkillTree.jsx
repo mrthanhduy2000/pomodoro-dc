@@ -13,6 +13,8 @@
  */
 
 import React, { useState, useCallback, useMemo } from 'react';
+import InventoryHero from './shared/InventoryHero.jsx';
+import { heroKyNang } from './shared/inventoryHero.js';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SCRIM_FADE, useCustomMotion, useEnterMotion, usePressMotion, useSnapMotion } from '../lib/motionPresets';
 
@@ -221,6 +223,9 @@ export default function SkillTree({ onOpenAchievements }) {
 
   return (
     <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-4">
+
+      {/* ── Dải mở đầu Hành trang — xem `shared/inventoryHero.js` ────────── */}
+      <InventoryHero hero={heroKyNang({ spChuaTieu: sp, daMo: unlockedCount, tongKyNang: totalNodes })} icon="✦" />
 
       {/* ── Tóm tắt tiến trình: cấp + XP ─────────────────────────────────── */}
       <div className="px-5 py-4" style={CARD}>

@@ -5,6 +5,8 @@ import React, {
   useState,
 } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
+import InventoryHero from './shared/InventoryHero.jsx';
+import { heroHuyHieu } from './shared/inventoryHero.js';
 import { useEnterMotion, withDelay } from '../lib/motionPresets';
 
 import {
@@ -530,6 +532,19 @@ export default function Achievements() {
 
   return (
     <div className="space-y-5 text-[var(--ink)]">
+      {/* Dải mở đầu Hành trang — xem `shared/inventoryHero.js`. Dùng LẠI `sapDat` (đã tính ở trên
+          cho danh sách "sắp đạt") chứ không tính lại: một luật một công thức. */}
+      <InventoryHero
+        hero={heroHuyHieu({
+          daMo: unlockedIds.length,
+          tong: ACHIEVEMENTS.length,
+          ganDat: sapDat[0]
+            ? { ten: sapDat[0].achievement?.label ?? 'Huy hiệu', pct: sapDat[0].tiLe }
+            : null,
+        })}
+        icon="🏅"
+      />
+
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1.5fr)_minmax(320px,0.75fr)]">
         <MotionSection
           {...enterMotion}

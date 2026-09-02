@@ -9,6 +9,8 @@
  */
 
 import React from 'react';
+import InventoryHero from './shared/InventoryHero.jsx';
+import { heroCongTrinh } from './shared/inventoryHero.js';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCustomMotion, useEnterMotion, usePressMotion, useSnapMotion } from '../lib/motionPresets';
 import useGameStore from '../store/gameStore';
@@ -495,8 +497,40 @@ export default function BuildingWorkshop() {
     ),
     0.6,
   );
+  /*
+    Dải mở đầu Hành trang — xem `shared/inventoryHero.js`.
+    ⚠️ Đọc THẲNG `craftingQueue` và `describeCraftProgress` (đúng hàm mà `QueueSection` dùng để vẽ
+    thanh tiến độ ngay bên dưới) chứ không tự tính lại: hai chỗ nói cùng một con số thì phải đi
+    qua CÙNG một công thức, nếu không chúng sẽ trôi khỏi nhau đúng lúc không ai để ý.
+  */
+  const heroDangXay = (() => {
+    const item = (craftingQueue ?? [])[0];
+    if (!item) return null;
+    const { total, remaining } = describeCraftProgress(item.bpId, item.sessionsRemaining);
+    if (!Number.isFinite(remaining) || remaining <= 0) return null;
+    // ⚠️ Tên nằm ở `label`, KHÔNG phải `name` — `BLUEPRINT_META` chỉ có era/type/rarity/rpCost.
+    // Bản đầu hỏi `.name` và dải hero hiện ra "Công trình sẽ mọc lên…" cho MỌI công trình: một
+    // lỗi im lặng vì `?? 'Công trình'` nuốt gọn nó, và câu ấy đọc lên vẫn hoàn toàn hợp lý.
+    // `BLUEPRINT_CATALOG` là OBJECT các mảng theo kỷ, không phải một mảng — dùng bản đã làm
+    // phẳng sẵn ở đầu file (`ALL_BLUEPRINTS`), đừng gọi `.find` thẳng lên nó.
+    const ten = BUILDING_EFFECTS[item.bpId]?.label
+      ?? ALL_BLUEPRINTS.find((b) => b.id === item.bpId)?.label
+      ?? 'Công trình';
+    return { ten, con: remaining, tong: total ?? remaining };
+  })();
+
   return (
     <div className="space-y-5">
+      <InventoryHero
+        hero={heroCongTrinh({
+          dangXay: heroDangXay,
+          daXay: builtEntries.length,
+          tongBanVe: unlockedBpIds.length + readyIds.length,
+          sanSangXay: readyIds.length,
+        })}
+        icon="🏗"
+      />
+
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div>

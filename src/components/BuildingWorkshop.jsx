@@ -17,7 +17,7 @@ import useGameStore from '../store/gameStore';
 import {
   blueprintEraOf, countActiveCrafting, countLegacyCrafting, listRestorableBlueprints,
 } from '../engine/eraLegacy';
-import { describeCraftProgress } from '../engine/craftProgress';
+import { describeCraftProgress, blueprintLabel } from '../engine/craftProgress';
 import useSettingsStore from '../store/settingsStore';
 import {
   BUILDING_SPECS,
@@ -511,11 +511,7 @@ export default function BuildingWorkshop() {
     // ⚠️ Tên nằm ở `label`, KHÔNG phải `name` — `BLUEPRINT_META` chỉ có era/type/rarity/rpCost.
     // Bản đầu hỏi `.name` và dải hero hiện ra "Công trình sẽ mọc lên…" cho MỌI công trình: một
     // lỗi im lặng vì `?? 'Công trình'` nuốt gọn nó, và câu ấy đọc lên vẫn hoàn toàn hợp lý.
-    // `BLUEPRINT_CATALOG` là OBJECT các mảng theo kỷ, không phải một mảng — dùng bản đã làm
-    // phẳng sẵn ở đầu file (`ALL_BLUEPRINTS`), đừng gọi `.find` thẳng lên nó.
-    const ten = BUILDING_EFFECTS[item.bpId]?.label
-      ?? ALL_BLUEPRINTS.find((b) => b.id === item.bpId)?.label
-      ?? 'Công trình';
+    const ten = blueprintLabel(item.bpId);
     return { ten, con: remaining, tong: total ?? remaining };
   })();
 

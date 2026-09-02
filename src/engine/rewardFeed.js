@@ -94,7 +94,7 @@ function buildWeeklyToast(pending) {
  * ⚠️ LÊN KỶ THÌ KHÔNG CÓ THẺ NÀY: kỷ mới là một trong bốn việc được phép chặn
  * màn hình, nên hộp thoại mở thẳng và toast sẽ chỉ là một bản sao thừa.
  */
-function buildLootToast(pendingReward, stageHint = null) {
+function buildLootToast(pendingReward, stageHint = null, buildHint = null) {
   if (!pendingReward || pendingReward.eraChanged) return null;
 
   const xp = Number(pendingReward.totalSessionXP ?? pendingReward.finalXP ?? 0);
@@ -168,7 +168,7 @@ function buildLootToast(pendingReward, stageHint = null) {
       icon: event.icon ?? '✨',
       name: event.label,
       tier: tierFromSessionMultiplier(pendingReward.multiplier, pendingReward.jackpotApplied),
-      description: stageHint ?? ([event.desc, khoe].filter(Boolean).join(' · ') || 'Phiên đã xong.'),
+      description: stageHint ?? buildHint ?? ([event.desc, khoe].filter(Boolean).join(' · ') || 'Phiên đã xong.'),
       amount: xp > 0 ? `+${xp.toLocaleString('vi-VN')} XP` : null,
       action: { detail: 'loot' },
     };
@@ -181,7 +181,18 @@ function buildLootToast(pendingReward, stageHint = null) {
     icon: '🎁',
     name: 'Phiên đã xong',
     tier: tierFromSessionMultiplier(pendingReward.multiplier, pendingReward.jackpotApplied),
-    description: stageHint ?? (bits.length > 0 ? bits.join(' · ') : (pendingReward.tierLabel ?? 'Phần thưởng đã được cộng.')),
+    /*
+      ⚠️ THẺ CỦA PHIÊN THƯỜNG PHẢI NÓI PHIÊN ẤY ĐẨY ĐƯỢC CÁI GÌ (2026-09-02, giảm nhẹ
+      `TECH_DEBT #14`). Lễ mừng thành phố chỉ chạy ở ~5% số phiên; 95% còn lại Đàm làm xong 25
+      phút thật và thứ duy nhất anh nhận là một thẻ xám ghi "+20 tài nguyên · +18 RP" — hai con
+      số anh không dùng để quyết bất cứ điều gì, và giống hệt nhau ở mọi phiên.
+      `buildHint` đổi nó thành TIẾN ĐỘ: "Cảng Biển Lớn · còn 4 phiên". Cùng một tấm thẻ, cùng
+      bằng ấy chỗ, nhưng nó ĐỔI sau mỗi phiên và nó trả lời được câu "làm thêm phiên nữa thì
+      được gì" — đúng câu mà cả vòng 24 xác định là gốc của chữ "chán".
+      ⚠️ Thứ tự nhường: `stageHint` (hiếm nhất, "còn 1 phiên nữa là tới …") > `buildHint` >
+      danh sách tài nguyên. KHÔNG đổi một luật tính thưởng nào — thuần khâu hiển thị.
+    */
+    description: stageHint ?? buildHint ?? (bits.length > 0 ? bits.join(' · ') : (pendingReward.tierLabel ?? 'Phần thưởng đã được cộng.')),
     amount: xp > 0 ? `+${xp.toLocaleString('vi-VN')} XP` : null,
     action: { detail: 'loot' },
   };
@@ -342,7 +353,7 @@ export function buildBlueprintToast(blueprint) {
 export function buildRewardToasts(ui = {}, extras = {}) {
   const toasts = [
     buildWeeklyToast(ui.weeklyReportPending),
-    buildLootToast(ui.lootModalOpen ? ui.pendingReward : null, extras.stageHint ?? null),
+    buildLootToast(ui.lootModalOpen ? ui.pendingReward : null, extras.stageHint ?? null, extras.buildHint ?? null),
     buildMilestoneToast(ui.lootModalOpen ? ui.pendingReward : null),
     buildRelicToast(ui.relicNotification),
     buildLevelToast((ui.levelUpQueue ?? [])[0]),

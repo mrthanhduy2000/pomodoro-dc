@@ -20,6 +20,7 @@
  * hai luật cùng đúng.
  */
 import { useEffect, useMemo, useRef } from 'react';
+import { describeCraftProgress, blueprintLabel } from '../engine/craftProgress';
 import { AnimatePresence, motion } from 'framer-motion';
 
 import useGameStore from '../store/gameStore';
@@ -106,7 +107,27 @@ export default function RewardToastHost({ paused = false, onNavigate, onOpenDeta
   const openWeeklyReport = useGameStore((s) => s.openWeeklyReport);
   const enterMotion = useEnterMotion();
 
-  const toasts = useMemo(() => buildRewardToasts(ui, { stageHint }), [ui, stageHint]);
+  /*
+    ⚠️ TIẾN ĐỘ CÔNG TRÌNH LÀ THỨ 95% SỐ PHIÊN CÒN LẠI ĐƯỢC NHẬN (`TECH_DEBT #14`).
+    Lễ mừng thành phố chỉ chạy khi một công trình VỪA XONG (~5% số phiên). Nhưng mỗi phiên đều
+    đẩy hàng đợi tiến một bước — sự thật ấy có sẵn, chỉ là chưa ai nói ra. Dòng này nói nó.
+    ⚠️ Đọc CHÍNH `describeCraftProgress`, đúng hàm mà thẻ hàng đợi ở Hành trang dùng — hai chỗ
+    nói cùng một con số thì phải đi qua CÙNG một công thức.
+  */
+  const craftingQueue = useGameStore((s) => s.craftingQueue ?? []);
+  const buildHint = useMemo(() => {
+    const item = craftingQueue[0];
+    if (!item) return null;
+    const { remaining } = describeCraftProgress(item.bpId, item.sessionsRemaining);
+    if (!Number.isFinite(remaining) || remaining <= 0) return null;
+    const ten = blueprintLabel(item.bpId);
+    return `${ten} · còn ${remaining} phiên`;
+  }, [craftingQueue]);
+
+  const toasts = useMemo(
+    () => buildRewardToasts(ui, { stageHint, buildHint }),
+    [ui, stageHint, buildHint],
+  );
   const { shown, hidden, overflowLabel } = splitRewardToasts(toasts);
   // Khoá ổn định cho effect âm thanh: chuỗi id của đúng những thẻ ĐANG HIỆN.
   const shownIds = shown.map((t) => t.id);

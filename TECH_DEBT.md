@@ -1356,7 +1356,7 @@
 
 ---
 
-## #14 — **95% số phiên tập trung KHÔNG có lễ mừng nào** — và càng chơi lâu càng im lặng
+## #14 — ⚠️ **GIẢM NHẸ MỘT PHẦN (2026-09-02)** — 95% số phiên tập trung KHÔNG có lễ mừng nào
 
 - **Module**: cân bằng game — `src/engine/constants.js` (`CRAFT_QUEUE_SLOTS`, `sessionsToComplete`)
   + `advanceCraftingQueueWithPerks` (`gameStore.js:1494`). KHÔNG phải lỗi của `cityMoment.js`.
@@ -1535,6 +1535,19 @@
   ngày lặp thì có mô phỏng được không". Câu trả lời hoá ra là CÓ: repo đã có sẵn
   `scripts/simulate-pacing.mjs` mô phỏng trọn 365 ngày mà chưa phiên AI nào dùng nó để soi trải
   nghiệm — nó xưa nay chỉ dùng để cân kinh tế.
+
+
+- **⚠️ GIẢM NHẸ, CHƯA ĐÓNG (2026-09-02).** Nguyên nhân gốc (ba hằng số nhân nhau + lọc theo kỷ)
+  **KHÔNG đụng tới** — hướng (b) mà Đàm chọn đòi sửa `BUILDING_ZONES`/`placeBuilding`, tức đụng
+  thẳng ADR-007 và bố cục Thành Phố; đó là việc riêng, phải có ADR trước.
+  Thứ ĐÃ làm là chữa TRIỆU CHỨNG lớn nhất mà không đổi một luật kinh tế nào: thẻ thưởng của phiên
+  thường nay nói **TIẾN ĐỘ** thay vì hai con số vô nghĩa. Trước: *"+20 tài nguyên · +18 RP"* —
+  giống hệt nhau ở mọi phiên, và Đàm không dùng chúng để quyết bất cứ điều gì. Sau: *"Cảng Biển
+  Lớn · còn 4 phiên"* — đổi sau mỗi phiên, và trả lời được câu *"làm thêm phiên nữa thì được gì"*.
+  Mỗi phiên đều đẩy hàng đợi tiến một bước; sự thật ấy vốn đã có, chỉ là chưa ai nói ra.
+  Thứ tự nhường ở phần mô tả: `stageHint` (hiếm nhất) > `buildHint` > danh sách tài nguyên.
+  ⇒ Tỉ lệ phiên có LỄ MỪNG vẫn ~5%; tỉ lệ phiên có một câu **nói được điều gì đó về tiến độ** nay
+  là 100% khi hàng đợi không rỗng. Mục này giữ **Open** cho phần gốc.
 
 ---
 

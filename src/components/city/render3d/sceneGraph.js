@@ -1683,6 +1683,26 @@ export function createCityScene({
       mesh.dispose?.();
     }
     for (const resource of disposables.splice(0)) resource.dispose?.();
+
+    /*
+      ⚠️ BẢN ĐỒ BÓNG PHẢI DỌN RIÊNG (2026-09-02, đóng `TECH_DEBT #31`).
+      Hai vòng lặp ở trên duyệt `meshes` và `disposables` — hai danh sách chứa những thứ hàm này TỰ
+      tạo ra. Bản đồ bóng KHÔNG nằm trong danh sách nào: nó do chính three tạo ra **muộn hơn**, ở
+      lần render đầu tiên, rồi treo vào `sun.shadow.map`. Đây là hình dạng sai quen thuộc — *dọn
+      theo danh sách mình ghi, trong khi có thứ được sinh ra ngoài danh sách ấy*.
+      Cái giá đo được: mỗi lần dựng-rồi-dọn để lại **+2 texture sống sót**; bản đồ bóng desktop là
+      4096×4096, nên chạy 24 cảnh liên tiếp trên MỘT renderer để lại gần **800 MB bộ nhớ đồ hoạ**.
+      ⚠️ APP KHÔNG DÍNH (nó gọi `renderer.forceContextLoss()` ngay sau, mất context thì cả GPU dọn
+      sạch) — thứ dính là **CÔNG CỤ**, chỗ dựng 24 cảnh liên tiếp trên một renderer. Nhưng lời hứa
+      của một hàm tên `dispose()` là "dọn hết", và một hàm chỉ đúng nhờ việc người gọi làm thêm một
+      bước nữa thì đó là đúng **nhờ một thứ chẳng liên quan** (bẫy Phase 7D).
+      `?.` ở mọi bậc: `shadow.map` là `null` cho tới lần render đầu tiên, nên một cảnh dựng rồi dọn
+      mà chưa kịp vẽ lần nào vẫn phải chạy qua đây không ném lỗi.
+    */
+    sun.shadow?.map?.dispose?.();
+    if (sun.shadow) sun.shadow.map = null;
+
+
     scene.clear();
   }
 

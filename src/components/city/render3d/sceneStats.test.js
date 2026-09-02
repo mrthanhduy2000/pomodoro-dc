@@ -763,3 +763,35 @@ test('⚠️ TRẦN HỘP BAO khối `city` — và nội thành PHẢI vẫn nh
     + ' — thừa hơn 15%, tức đang tiêu điểm ảnh bản đồ bóng vào chỗ không có gì. Siết `reach` lại '
     + '(và ghi số đo mới vào chú thích `SHADOW_MAP_DESKTOP`), đừng để nguyên.');
 });
+
+/**
+ * ⚠️ `dispose()` PHẢI DỌN CẢ BẢN ĐỒ BÓNG (`TECH_DEBT #31`).
+ *
+ * Hai vòng lặp trong `dispose()` duyệt `meshes` và `disposables` — hai danh sách chứa những thứ
+ * `createCityScene` TỰ tạo. Bản đồ bóng không nằm trong danh sách nào: three tạo nó **muộn hơn**,
+ * ở lần render đầu, rồi treo vào `sun.shadow.map`. Mỗi lần dựng-rồi-dọn để lại **+2 texture sống
+ * sót**; 24 cảnh liên tiếp trên một renderer ≈ **800 MB bộ nhớ đồ hoạ**.
+ *
+ * App không dính (nó `forceContextLoss()` ngay sau), nhưng một hàm tên `dispose()` mà chỉ đúng
+ * NHỜ người gọi làm thêm một bước nữa thì đó là đúng nhờ một thứ chẳng liên quan — đúng bẫy
+ * Phase 7D. Công cụ dựng 24 cảnh thì dính thật.
+ */
+test('dispose() dọn cả bản đồ bóng, và chịu được gọi hai lần', () => {
+  const canh = createCityScene(thamSố(7));
+  let den = null;
+  canh.scene.traverse((o) => { if (o.isDirectionalLight && o.shadow) den = o; });
+  assert.ok(den, 'không tìm thấy đèn mặt trời có bóng — phép đo đang chạy rỗng');
+
+  // Giả lập đúng thứ three làm ở lần render đầu: gắn một bản đồ bóng vào đèn.
+  let daDon = 0;
+  den.shadow.map = { dispose: () => { daDon += 1; } };
+
+  canh.dispose();
+  assert.equal(daDon, 1, 'bản đồ bóng KHÔNG được dọn — mỗi lần dựng-rồi-dọn rò rỉ 2 texture');
+  assert.equal(den.shadow.map, null, 'phải gỡ tham chiếu, nếu không đối tượng đã dọn vẫn bị giữ');
+
+  // ⚠️ Gọi lần hai phải im lặng: React StrictMode mount → unmount → mount, và đường mất WebGL
+  // context cũng gọi dọn trước khi effect kịp chạy hàm dọn của mình.
+  canh.dispose();
+  assert.equal(daDon, 1, 'gọi dispose() lần hai lại dọn thêm một lần nữa');
+});

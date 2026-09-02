@@ -2057,7 +2057,7 @@
 
 ---
 
-## #31 — `city.dispose()` KHÔNG giải phóng bản đồ bóng (app hiện KHÔNG dính, công cụ thì dính)
+## #31 — ✅ **ĐÃ XỬ LÝ (2026-09-02)** — `city.dispose()` KHÔNG giải phóng bản đồ bóng (app hiện KHÔNG dính, công cụ thì dính)
 
 - **Tên**: Bản đồ bóng của mặt trời sống sót qua `city.dispose()`
 - **Module**: `src/components/city/render3d/sceneGraph.js` (hàm `dispose()`, ~dòng 1167)
@@ -2087,6 +2087,22 @@
   đụng vào `dispose()` vì lý do khác thì sửa luôn.
 - **Owner**: phiên AI kế tiếp · **Status**: Open
 
+
+
+- **✅ ĐÃ XỬ LÝ 2026-09-02.** `dispose()` nay dọn cả `sun.shadow.map` rồi **gỡ tham chiếu về
+  `null`** — dọn mà giữ tham chiếu thì đối tượng đã chết vẫn bị neo. Dùng `?.` ở mọi bậc vì
+  `shadow.map` là `null` cho tới lần render ĐẦU TIÊN: một cảnh dựng rồi dọn mà chưa kịp vẽ lần nào
+  vẫn phải chạy qua đây không ném lỗi.
+- ⚠️ **VÌ SAO VẪN ĐÁNG SỬA DÙ APP KHÔNG DÍNH.** `CityScene3D.jsx` gọi `renderer.forceContextLoss()`
+  ngay sau, mất context thì GPU dọn sạch — nên app không rò rỉ. Nhưng một hàm tên `dispose()` mà chỉ
+  đúng **nhờ người gọi làm thêm một bước nữa** là đúng nhờ một thứ chẳng liên quan, đúng bẫy
+  Phase 7D (`roadColor` đúng nhờ một hằng số ở file khác). Công cụ dựng 24 cảnh liên tiếp trên MỘT
+  renderer thì dính thật: +2 texture mỗi cảnh, bản đồ bóng desktop 4096² ⇒ gần **800 MB**.
+- Khoá bằng `sceneStats.test.js` (bài "dispose() dọn cả bản đồ bóng, và chịu được gọi hai lần").
+  ⚠️ Phép thử ngược "gỡ hẳn phần dọn bóng" ĐÃ chạy và ĐỎ; hai phép còn lại bị hết bộ nhớ giữa
+  chừng (bộ test này dựng cảnh thật, rất nặng) — và chính lượt bị giết ấy để lại một file sửa dở,
+  bắt được nhờ chạy lại test chứ không nhờ `git status`. *Bộ thử ngược trên test nặng phải chạy
+  TỪNG phép một, và phải xác nhận khôi phục bằng cách CHẠY LẠI, không chỉ nhìn `git status`.*
 
 ---
 

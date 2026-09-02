@@ -12,6 +12,29 @@
 
 ---
 
+## 2026-09-02 (vòng 30) — Dọn nợ tiếp: #91, #86, và một bản vá TỰ HOÀN TÁC
+
+**Đóng #91** — `sceneStats.test.js` chép tay `12 * 0.8` thay vì đọc hệ số đã dựng, tức khoá một CON
+SỐ chứ không khoá cái LUẬT. Suýt cắn thật ở lần gộp nhánh Phase 19–21 (xung đột đúng dòng ấy,
+`main` 0,75 · nhánh 0,80). Nay `SHADOW_REACH_RATIO` là hằng số có tên, được export, test import nó.
+
+**Đóng nửa gốc của #86** — 84 chỗ trong 16 file chốt cứng `rgba(201, 100, 66, …)`, đúng terracotta
+của skin MẶC ĐỊNH, trong khi `arcade` khai `226, 84, 44` và `inkgold` khai `217, 164, 65`. Tức chúng
+chỉ đúng ở **2 trong 10** tổ hợp theme × skin. Nay tất cả đọc `rgba(var(--accent-rgb), …)` — tương
+đương tuyệt đối ở skin mặc định, đúng ở bốn skin còn lại. Nửa còn lại (137 nút không dùng
+`ActionButton`) **cố ý không sửa**: chính mục nợ đã soi từng cái và kết luận chuyển sang là ĐỔI HÌNH
+DẠNG chứ không phải hợp nhất.
+
+⚠️ **#97 — viết một bản vá rồi TỰ HOÀN TÁC, và đó là kết quả đúng.** Chẩn đoán ("phép quét chỉ nhìn
+mép NGANG nên mù với mép DỌC") đúng, cách chữa hiển nhiên là quét cột chuyển vị. Viết xong thì nó
+**báo oan ngay** trên bài đối chứng có sẵn — vì ảnh thật đầy mép dọc (mép nhà, mép đường), nên một
+phép quét cột dùng cùng ngưỡng **về mặt cấu trúc** là cỗ máy báo động giả. Đã hoàn tác và ghi rõ vì
+sao, để phiên sau không đi lại con đường ấy.
+
+**Trạng thái nợ: 97 mục · 35 đã đóng (36%) · 62 còn mở** — trong đó **~49 thuộc Thành Phố 3D**.
+
+---
+
 ## 2026-09-02 (vòng 29) — Dọn nợ: đóng 5 mục, và một bài học đắt về ba cổng cùng mù
 
 **Đóng:** #92 (mã chết ở tầng giao diện) · #5 (lệch mô tả ↔ hành vi) · #13 & #7 (đã lỗi thời, chưa

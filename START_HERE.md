@@ -35,6 +35,21 @@ Mặt trận đang làm: **thành phố 3D** (`src/engine/city3d/` + `src/compon
   Phase 21 (*"push nhánh phụ, không tự gộp `main`"*) đã bị lệnh này thay thế.
   ⚠️ **Phase 21 do đó lên production TRƯỚC khi Đàm nhìn ảnh nghiệm thu** — mục "chờ Đàm nhìn ảnh"
   ở phần dưới VẪN CÒN HIỆU LỰC, chỉ là nay nó nghiệm thu một thứ đang chạy thật.
+- **Trò chơi — VÒNG 29–30 (2026-09-02, mới nhất): DỌN NỢ — 32 → 35 mục đã đóng.**
+  · Đóng **#92** (mã chết tầng giao diện) · **#5** (lệch mô tả↔hành vi, nay là một CỔNG chấm 310
+  thành tích) · **#13**, **#7** (đã lỗi thời, chưa ai kiểm lại) · **#91** (test khoá con số thay vì
+  khoá luật) · nửa gốc **#86** (84 chỗ chốt cứng màu nhấn → token, đúng ở cả 5 skin) · **#93** đánh
+  dấu lại là QUYẾT ĐỊNH chứ không phải nợ.
+  · ⚠️⚠️ **BÀI HỌC ĐẮT NHẤT TỪ TRƯỚC TỚI NAY — BA CỔNG CÙNG MÙ.** Bật `no-unused-vars` cho `.jsx`
+  ra 54 báo cáo; tôi tin cả 54 và đi gỡ. Kết quả: **lint sạch · build sạch · 1.524 bài test XANH ·
+  và app ra thẳng "RENDER RECOVERY: motion is not defined"**. ESLint lõi KHÔNG coi `<motion.div>`
+  là một lần DÙNG biến `motion` ⇒ **27/54 là báo nhầm**, nhắm đúng vào những import đang sống.
+  ⇒ **XOÁ MÃ HÀNG LOẠT THÌ PHẢI CHỤP LẠI APP TRƯỚC KHI COMMIT** — lint/build/test không thay được
+  một tấm ảnh. Mắt xích thiếu là `react/jsx-uses-vars` (nay đã cài); gỡ plugin thì PHẢI tắt lại luật.
+  · ⚠️ **#97 — viết bản vá rồi TỰ HOÀN TÁC.** Quét cột chuyển vị báo oan ngay trên đối chứng có
+  sẵn, vì ảnh thật đầy mép dọc. *Chuyển vị một phép đo không tạo ra một phép đo mới.*
+  · Nợ: **97 mục · 35 đã đóng · 62 còn mở** (~49 thuộc Thành Phố 3D). Test **1530 bài**.
+
 - **Trò chơi — VÒNG 28 (2026-09-02, mới nhất): HÀNH TRANG — BỚT TRƯỚC, RỒI MỚI DỰNG.**
   · ⚠️ **BÀI HỌC CHÍNH, và nó chỉ vào chính bản vá vòng 27:** Đàm nói **ba lần** rằng Hành trang
   "chưa thấy thay đổi gì". Lý do là vòng 27 tôi THÊM một dải hero lên trên một thẻ đã nói cùng nội

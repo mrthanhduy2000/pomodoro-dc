@@ -5113,6 +5113,23 @@ trong chú thích thì đừng để `--selftest` của chính nó vẫn dùng �
     quyết định đã có lý lẽ, không phải việc còn tồn.
   ⇒ Phần còn lại của mục này là (b), và nó nên được đọc như một GHI CHÚ THIẾT KẾ.
 
+
+- **⚠️ ĐÃ THỬ MỘT BẢN VÁ VÀ HOÀN TÁC (2026-09-02) — ghi lại để phiên sau không đi lại đúng con đường
+  ấy.** Chẩn đoán trong mục này ("phép quét chỉ nhìn mép NGANG nên mù với mép DỌC") **đúng**, và
+  cách chữa hiển nhiên là thêm một phép quét cột chuyển vị. Đã viết, và nó **báo oan ngay lập tức**
+  trên chính bài đối chứng có sẵn (`ẢNH RÁCH — mức khắc nghiệt NHẤT từng đo trên ảnh lành vẫn phải
+  được THA`).
+  **Lý do, và đây mới là thứ đáng giữ:** ảnh lành trong bài ấy dựng mỗi hàng là *một đoạn lục rồi
+  một đoạn đỏ*, tức có một **mép dọc thật** chạy suốt chiều cao. Ảnh render thật còn nhiều mép dọc
+  hơn thế — mép nhà, mép đường, mép tấm nước. Một phép quét cột dùng CÙNG ngưỡng với phép quét hàng
+  vì vậy **về mặt cấu trúc** là một cỗ máy báo động giả: nội dung dọc và vết rách dọc trông giống
+  hệt nhau với nó.
+  ⇒ Muốn chữa thật thì phải tìm một đại lượng PHÂN BIỆT được hai thứ ấy (ví dụ: vết rách do ghép
+  dải thì gián đoạn **đồng thời trên mọi kênh và mọi cao độ**, còn mép nhà thì không) — chứ không
+  phải chuyển vị phép đo cũ. Chưa có đại lượng ấy thì mục này **giữ nguyên Open**; ngưỡng hiện tại
+  KHÔNG được siết cho "chắc ăn", vì `TECH_DEBT #52` đã ghi: *một cảnh báo kêu oan còn tệ hơn không
+  có cảnh báo*.
+
 ---
 
 ## #83 — Ngưỡng "lượn bao nhiêu thì mắt đọc ra" CHƯA được hiệu chuẩn bằng một phép dựng ảnh

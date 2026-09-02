@@ -533,7 +533,10 @@ export default function BuildingWorkshop() {
           {/* ⚠️ NHÃN "XƯỞNG" ĐÃ GỠ (2026-08-30) — chữ ấy xuất hiện BA lần trong một khung nhìn:
               nút tab đang sáng ("Xưởng"), nhãn này, rồi tiêu đề ngay dưới ("Xưởng xây dựng").
               Tiêu đề đã nói đủ và nói rõ hơn; nhãn chỉ gọi tên thứ mắt vừa đọc xong. */}
-          <h2 className={lightTheme ? 'serif text-[1.8rem] leading-none sm:text-[2rem]' : 'text-white font-bold text-[1.1rem] sm:text-lg'} style={lightTheme ? { color: 'var(--ink)', fontFamily: 'var(--skin-font-display)', fontWeight: 600 } : undefined}>Xưởng xây dựng</h2>
+          {/* ⚠️ TIÊU ĐỀ "Xưởng xây dựng" ĐÃ GỠ (2026-09-02): nút tab con đang SÁNG cách đó ~120px
+              ghi "Công trình", và dải hero ngay dưới nói rõ đang xây cái gì còn mấy phiên. Đây là
+              chỗ thứ BA gọi tên màn hình. Cùng luật đã áp cho nhãn "Xưởng" (2026-08-30) và cho thẻ
+              tóm tắt ở tab Huy hiệu: *hai chỗ nói cùng một chuyện thì chỗ nói ít hơn phải nhường*. */}
         </div>
         {/*
           ⚠️ ĐÃ GỠ BA CHIP TÊN ĐẶC QUYỀN (2026-09-01). `activePerkLabels` lấy tên đặc quyền của
@@ -543,7 +546,22 @@ export default function BuildingWorkshop() {
           Bản trên thẻ nói rõ hơn (có kèm cấp và mô tả), nên bản tóm tắt ở đây là chỗ nhường.
           Sáu chip còn lại toàn là SỐ (thô/phút nghỉ, tinh luyện…) — chúng không lặp ở đâu khác.
         */}
-        <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+        {/*
+          ⚠️ SÁU CHIP THÔNG SỐ THU GỌN MẶC ĐỊNH (2026-09-02). "+5 thô/phút nghỉ · +0.50 tinh
+          luyện/phút nghỉ · +66% thô mỗi phiên · +29% tinh luyện mỗi phiên dài · -25% thất thoát
+          khi huỷ · 4 đã xây" — đó là một BẢNG THÔNG SỐ. Nó đúng, nó hữu ích, và nó là thứ Đàm tra
+          cứu vài tháng một lần chứ không phải thứ anh cần thấy mỗi lần mở tab. Ở khung 390px nó
+          ăn ba hàng ngay dưới tiêu đề, đẩy hàng chờ xây dựng — thứ CÓ tiến độ, CÓ việc để làm —
+          xuống dưới. Nay nó nằm sau một nút một dòng.
+        */}
+        <details className="w-full">
+          <summary
+            className="mono cursor-pointer list-none text-[10px] uppercase tracking-[0.2em]"
+            style={{ color: 'var(--muted-2)' }}
+          >
+            Đặc quyền đang có ▾
+          </summary>
+          <div className="mt-2 flex items-center gap-1.5 sm:gap-2 flex-wrap">
           {totalT1Passive > 0 && (
             <span
               className="rounded-full px-2.5 sm:px-3 py-1 text-[10.5px] sm:text-xs"
@@ -597,7 +615,8 @@ export default function BuildingWorkshop() {
           <span className="mono rounded-full px-2.5 sm:px-3 py-1 text-[10.5px] sm:text-xs tabular-nums" style={lightTheme ? { color: 'var(--accent2)', background: 'rgba(var(--accent-rgb),0.1)', border: 'var(--skin-card-border-width,1px) solid rgba(var(--accent-rgb),0.18)', fontFamily: MONO_FONT } : {}}>
             {currentEraBuildings.length} đã xây
           </span>
-        </div>
+          </div>
+        </details>
       </div>
 
       {/* Toast */}

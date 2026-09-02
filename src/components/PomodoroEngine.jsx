@@ -1432,6 +1432,29 @@ export default function PomodoroEngine({
                   : `Phiên ${dailyGoal.currentValue}/${dailyGoal.goalValue} hôm nay`}
               </span>
             )}
+            {/*
+              ⚠️ MỤC TIÊU PHIÊN TỪNG BIẾN MẤT ĐÚNG LÚC CẦN NHẤT (2026-09-02). App BẮT BUỘC gõ ≥10
+              ký tự mới cho bấm "Bắt đầu" — rồi giấu ngay câu ấy đi suốt 25 phút sau đó. Đo trên
+              mã: mọi chỗ render mục tiêu đều nằm trong khối `isIdle` (dòng 1763) hoặc trong
+              `fullScreenNotebook`, và dòng 982 còn hạ cả thẻ chuẩn bị xuống `opacity-25
+              pointer-events-none` khi `!isIdle`. Tức KHÔNG có một chỗ nào gác theo `isActive`.
+              Hậu quả: cái cổng bắt Đàm trả lời "phiên này chốt xong việc gì?" thu tiền xong thì
+              vứt câu trả lời đi, đúng lúc câu ấy phải làm việc — nửa chừng phiên, khi đầu bắt đầu
+              trôi. Nó biến một lời hứa với chính mình thành một thủ tục.
+              Đặt TRONG vòng đồng hồ vì đó là chỗ mắt đã nhìn sẵn; nếu để ở thẻ dưới thì lại rơi
+              xuống dưới nếp gấp đúng như ô nhập cũ.
+              ⚠️ `line-clamp-2` chứ không `truncate`: một mục tiêu thật thường dài hơn một dòng,
+              cắt còn một dòng thì đọc ra một câu cụt — mà câu cụt thì tệ hơn không có câu.
+            */}
+            {!isBreakMode && !isIdle && sessionGoalText && (
+              <span
+                className="mt-2 line-clamp-2 max-w-[15rem] text-center text-[12px] italic leading-snug"
+                style={{ color: 'var(--muted)' }}
+                title={sessionGoalText}
+              >
+                {sessionGoalText}
+              </span>
+            )}
             {!isBreakMode && isStopwatchMode && (
               <>
                 <span className={`mt-0.5 text-xs ${lightTheme ? 'text-[var(--accent)]' : 'text-[var(--accent-light)]'}`}>

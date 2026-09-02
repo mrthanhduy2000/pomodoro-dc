@@ -77,3 +77,46 @@ test('ô mục tiêu BẮT BUỘC đứng trước ô ghi chú TUỲ CHỌN', ()
   assert.ok(iMucTieu !== -1 && iGhiChu !== -1, 'phép đo chạy rỗng — một trong hai khối đã đổi tên');
   assert.ok(iMucTieu < iGhiChu, 'ô ghi chú tuỳ chọn lại chen lên trước ô mục tiêu bắt buộc.');
 });
+
+/**
+ * ⚠️ MỤC TIÊU PHIÊN PHẢI CÒN NHÌN THẤY TRONG LÚC PHIÊN CHẠY (2026-09-02).
+ *
+ * App bắt buộc gõ ≥10 ký tự mới cho bấm "Bắt đầu", rồi giấu câu ấy đi 25 phút. Đo được: mọi chỗ
+ * render mục tiêu đều nằm trong khối `isIdle`, và thẻ chuẩn bị còn bị hạ xuống `opacity-25
+ * pointer-events-none` khi `!isIdle` — KHÔNG một chỗ nào gác theo phiên đang chạy.
+ *
+ * Bài này canh cả HAI vế, vì mỗi vế một mình đều xanh oan được:
+ *   · có một chỗ render gác `!isIdle` (thiếu ⇒ lại giấu mất);
+ *   · chỗ ấy nằm TRONG vòng đồng hồ (đặt ở thẻ dưới thì rơi xuống dưới nếp gấp, đúng cái bẫy mà
+ *     cả vòng này sinh ra để gỡ — nhìn thì "có hiện" mà thật ra vẫn phải cuộn mới thấy).
+ */
+test('mục tiêu phiên còn hiện trong lúc phiên chạy, và hiện TRONG vòng đồng hồ', () => {
+  const src = stripComments(
+    readFileSync(new URL('./PomodoroEngine.jsx', import.meta.url), 'utf8'),
+  );
+
+  const gac = '{!isBreakMode && !isIdle && sessionGoalText && (';
+  assert.ok(
+    src.includes(gac),
+    'mục tiêu phiên lại biến mất khi phiên chạy — app bắt gõ nó rồi giấu đi suốt 25 phút, '
+    + 'đúng lúc nó phải làm việc',
+  );
+
+  // Vòng đồng hồ = cột tuyệt đối phủ kín giữa vòng tròn. Chỗ render phải nằm SAU khi cột ấy mở
+  // và TRƯỚC khi khối bấm-giờ-tự-do bắt đầu — đó là dải duy nhất còn nằm trong vòng.
+  const moCot = src.indexOf('absolute inset-0 flex flex-col items-center justify-center');
+  const viTri = src.indexOf(gac);
+  const heoStopwatch = src.indexOf('Ghi nhận theo phút thực tế');
+  assert.ok(moCot > 0 && heoStopwatch > moCot, 'không tìm thấy vòng đồng hồ — phép đo đang chạy rỗng');
+  assert.ok(
+    viTri > moCot && viTri < heoStopwatch,
+    'mục tiêu có hiện nhưng KHÔNG nằm trong vòng đồng hồ — đặt ở thẻ dưới thì nó lại rơi xuống '
+    + 'dưới nếp gấp, tức vẫn phải cuộn mới đọc được',
+  );
+
+  // ⚠️ `line-clamp-2` chứ không `truncate`: cắt một mục tiêu thật còn MỘT dòng thì ra một câu cụt,
+  // mà câu cụt tệ hơn không có câu.
+  const khoi = src.slice(viTri, viTri + 400);
+  assert.match(khoi, /line-clamp-2/, 'thiếu giới hạn 2 dòng ⇒ mục tiêu dài phá vỡ vòng đồng hồ');
+  assert.doesNotMatch(khoi, /\btruncate\b/, 'truncate cắt còn một dòng ⇒ câu cụt, tệ hơn không có');
+});

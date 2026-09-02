@@ -329,7 +329,7 @@ function ClaimButton({ label, lightTheme, onClick }) {
   );
 }
 
-function QuietSection({ children, eyebrow, lightTheme, meta, title }) {
+function QuietSection({ children, eyebrow, _lightTheme, meta, title }) {
   return (
     <section
       className="px-5 py-5"

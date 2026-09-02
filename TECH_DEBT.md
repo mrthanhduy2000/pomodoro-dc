@@ -1571,7 +1571,7 @@
 
 ---
 
-## #13 — `useTimer.js` (1 100+ dòng, hot spot) có ĐÚNG 0 bài test — và tài liệu từng ghi ngược lại
+## #13 — ✅ **ĐÃ HẾT HIỆU LỰC (2026-09-02)** — `useTimer.js` (1 100+ dòng, hot spot) có ĐÚNG 0 bài test — và tài liệu từng ghi ngược lại
 
 - **Module**: `src/hooks/useTimer.js`
 - **Priority**: **Medium-High**
@@ -1608,6 +1608,12 @@
 - **Owner**: (chưa gán)
 - **Status**: Open — phát hiện 2026-08-12 khi định thực hiện chính task "nối bộ test đã có" và
   phát hiện bộ test đó không tồn tại.
+
+
+- **✅ MỤC NÀY ĐÃ LỖI THỜI 2026-09-02.** Đếm lại: `src/hooks/useTimer.test.js` có **41 bài test**
+  (57 KB), trong đó có cả bài canh độ trễ vào nghỉ vừa viết lại ở vòng 27. Tiêu đề mục nợ ("có ĐÚNG
+  0 bài test") đã sai sự thật từ lâu mà không ai đóng nó. ⇒ *Một mục nợ không được kiểm lại cũng
+  trôi y như một con số không được đo lại* — đúng bài học `TECH_DEBT #43`, áp cho chính file này.
 
 ---
 
@@ -4708,7 +4714,7 @@ cấp `Math.min(3,…)` → `Math.min(9,…)` · cắt bớt danh sách cấp th
   `totalSess < 4` sinh ra một lời khuyên sai mà Đàm để ý thấy.
 - **Owner**: chưa ai · **Status**: MỞ (có chủ đích)
 
-## #92 — `no-unused-vars` đang TẮT cho MỌI file `.jsx`, nên code chết ở cả tầng giao diện là vô hình với lint
+## #92 — ✅ **ĐÃ XỬ LÝ (2026-09-02)** — `no-unused-vars` đang TẮT cho MỌI file `.jsx`, nên code chết ở cả tầng giao diện là vô hình với lint
 
 > Mở 2026-08-30, phát hiện khi đi tìm lý do ba bảng kỳ chết sống sót nhiều tháng trong
 > `StatsDashboard.jsx`. ⚠️ **Rule ấy tắt KHÔNG phải do cẩu thả — đã kiểm và phải đính chính chẩn
@@ -4791,6 +4797,20 @@ cấp `Math.min(3,…)` → `Math.min(9,…)` · cắt bớt danh sách cấp th
   hai biến mà `App.jsx` dùng để quyết định hiện lễ mừng (`activeNewlyBuilt` · `eraChanged`) chứ
   không chép lại điều kiện. Bài test ở `useTimer.test.js` đã đổi từ canh MỘT MỨC sang canh QUAN
   HỆ và chạy CẢ HAI nhánh — một nhánh thôi thì đổi hằng số nào cũng xanh.
+
+
+- **✅ ĐÃ XỬ LÝ 2026-09-02.** Bật `no-unused-vars` cho `.jsx` — bắt ra **27 chỗ mã chết thật**
+  (import không ai dùng, biến tính rồi vứt, tàn dư của những khối vừa bị xoá ở vòng 28). Kèm
+  `src/lintConfig.test.js` (2 bài, đã thử-cho-đỏ) canh nó không lặng lẽ tắt về.
+- ⚠️ **VÀ ĐÂY LÀ LÝ DO NÓ TỪNG BỊ TẮT — tôi đã phải trả giá mới hiểu.** Bật lần đầu ra **54** báo
+  cáo; tôi tin cả 54 và đi gỡ. Kết quả: **lint sạch · build sạch · 1.524 bài test XANH · và app ra
+  thẳng màn hình "RENDER RECOVERY: motion is not defined"**. ESLint lõi KHÔNG coi `<motion.div>`
+  trong JSX là một lần DÙNG biến `motion`, nên **27/54 là BÁO NHẦM**, và chúng nhắm đúng vào những
+  import đang sống. Mắt xích thiếu là **`react/jsx-uses-vars`** (`eslint-plugin-react`, nay đã
+  thêm vào devDependencies). ⇒ *Bật `no-unused-vars` cho `.jsx` mà không có nó thì luật ấy không
+  phải một cái gác — nó là một cái bẫy.* Gỡ plugin thì PHẢI tắt lại luật.
+- ⚠️ **Bài học rộng hơn, đáng nhớ hơn cả bản vá:** ba cổng mạnh nhất của dự án (lint · build ·
+  1.524 test) **cùng xanh trên một app đã vỡ hoàn toàn**. Thứ duy nhất bắt được là một ẢNH CHỤP.
 
 ---
 
@@ -4949,7 +4969,7 @@ trong chú thích thì đừng để `--selftest` của chính nó vẫn dùng �
 
 ---
 
-## #88 — `soiVetRach` bỏ sót một vết rách mắt thường nhìn ra ngay
+## #97 — `soiVetRach` bỏ sót một vết rách mắt thường nhìn ra ngay
 
 - **Tên**: cổng chống-ảnh-rách của `city-preview.mjs` báo LÀNH cho một tấm ảnh rách rõ rệt
 - **Module**: `scripts/city-preview.mjs` (`soiVetRach`, `VET_RACH_SAN`, `VET_RACH_HE_SO`)

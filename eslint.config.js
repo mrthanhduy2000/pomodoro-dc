@@ -1,5 +1,6 @@
 import js from '@eslint/js'
 import globals from 'globals'
+import react from 'eslint-plugin-react'
 import reactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
 import { defineConfig, globalIgnores } from 'eslint/config'
@@ -38,6 +39,7 @@ export default defineConfig([
       reactHooks.configs.flat.recommended,
       reactRefresh.configs.vite,
     ],
+    plugins: { react },
     languageOptions: {
       ecmaVersion: 2020,
       // `__APP_COMMIT__` do Vite bơm vào lúc build (xem `define` ở `vite.config.js`). Không khai
@@ -50,7 +52,20 @@ export default defineConfig([
       },
     },
     rules: {
-      'no-unused-vars': 'off',
+      /*
+        ⚠️ BẬT LẠI, VÀ CHỈ BẬT ĐƯỢC NHỜ `react/jsx-uses-vars` (2026-09-02, đóng `TECH_DEBT #92`).
+        Luật này từng TẮT cho mọi file `.jsx`, nên mã chết ở tầng giao diện là vô hình — bật lần
+        đầu bắt ra **54 chỗ thật**.
+        ⚠️ NHƯNG BẬT KHÔNG THÔI THÌ NÓ BÁO NHẦM VÀ LÀM VỠ APP. ESLint lõi KHÔNG coi `<motion.div>`
+        trong JSX là một lần DÙNG biến `motion`, nên nó tố mọi import ấy là chết. Tôi đã tin và gỡ
+        chúng — kết quả: **lint sạch · build sạch · 1.524 test xanh · và app ra thẳng màn hình
+        "RENDER RECOVERY: motion is not defined"**. Ba cổng cùng mù; chỉ ẢNH CHỤP mới bắt được.
+        `react/jsx-uses-vars` là mắt xích thiếu — nó dạy ESLint đọc JSX như một lần dùng biến.
+        ⇒ AI GỠ PLUGIN `eslint-plugin-react` ĐI THÌ PHẢI TẮT LẠI LUẬT NÀY, nếu không nó sẽ báo
+        nhầm y hệt và người sau lại đi gỡ những import đang sống.
+      */
+      'react/jsx-uses-vars': 'error',
+      'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]', argsIgnorePattern: '^_' }],
       // ⚠️ BẮT "DÙNG BIẾN TRƯỚC KHI KHAI BÁO" (2026-08-29). Một `const` dùng sớm hơn dòng khai báo
       // ném `ReferenceError` NGAY LÚC RENDER và cả app ra trang trắng — mà `npm test` không bắt
       // (test đọc mã nguồn, không dựng React), `npm run build` không bắt (bundler không quan tâm

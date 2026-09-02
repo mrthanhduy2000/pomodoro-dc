@@ -25,9 +25,6 @@ import useSettingsStore from './store/settingsStore';
 import { ERA_METADATA, ERA_THRESHOLDS } from './engine/constants';
 import { countSessionsOnDay, getLevelProgress, sumFocusMinutesOnDay } from './engine/gameMath';
 import {
-  formatVietnamDate,
-  formatVietnamTime,
-  getVietnamDayOfWeek,
   getVietnamHour,
   localDateStr,
   localWeekMondayStr,
@@ -423,11 +420,6 @@ function getGreeting(hour) {
   return 'Chào buổi khuya';
 }
 
-function getWeekdayLabel() {
-  const weekday = getVietnamDayOfWeek();
-  const map = ['Chủ nhật', 'Thứ hai', 'Thứ ba', 'Thứ tư', 'Thứ năm', 'Thứ sáu', 'Thứ bảy'];
-  return map[weekday] ?? 'Hôm nay';
-}
 
 export default function App() {
   useGameLoop();
@@ -448,7 +440,6 @@ export default function App() {
   const closeDisasterModal = useGameStore((s) => s.closeDisasterModal);
   const isDisasterModalOpen = useGameStore((s) => s.ui.disasterModalOpen);
   const timerSessionRunning = useGameStore((s) => s.timerSession.isRunning);
-  const timerSessionPausedAt = useGameStore((s) => s.timerSession.pausedAt);
   const refreshDailyMissions = useGameStore((s) => s.refreshDailyMissions);
   const openWeeklyReport = useGameStore((s) => s.openWeeklyReport);
   const missionBoundaryRef = useRef({ day: localDateStr(), week: localWeekMondayStr() });
@@ -566,7 +557,6 @@ export default function App() {
   }, [storesHydrated, checkEraCrisisDeadlines, refreshDailyMissions, timerSessionRunning]);
 
   const isOnBreak = useGameStore((s) => s.ui.isOnBreak);
-  const breakSecsLeft = useGameStore((s) => s.ui.breakSecondsLeft);
   const breakStartedAt = useGameStore((s) => s.breakSession.startedAt);
   const breakTotalSeconds = useGameStore((s) => s.breakSession.totalSeconds);
   const breakIsRunning = useGameStore((s) => s.breakSession.isRunning);
@@ -797,7 +787,6 @@ export default function App() {
     };
   }, [activeTab, isDesktop, isWideViewport, showFocusFullscreen, sidebarOpen, supportRailOpen]);
 
-  const weekdayLabel = getWeekdayLabel();
   const greeting = getGreeting(getVietnamHour());
   const todayKey = localDateStr();
   // ⚠️ Hai con số này dùng chung công thức với vòng MỤC TIÊU NGÀY quanh đồng hồ
@@ -823,7 +812,6 @@ export default function App() {
   const focusMinutesToday = sumFocusMinutesOnDay(history, todayKey);
   const focusHoursToday = formatDurationMinutes(focusMinutesToday);
   const hasFocusSessionInProgress = timerSessionRunning && !isOnBreak;
-  const isFocusSessionPaused = hasFocusSessionInProgress && Boolean(timerSessionPausedAt);
   const handleNotificationNavigate = (action) => {
     if (!action) return;
     // ⚠️ `collectionTab` không còn là một tab con, nhưng nó VẪN nằm trong thông báo đã lưu của Đàm.
@@ -1632,7 +1620,6 @@ function TopRail({
   streakRisk,
   level,
   levelPct,
-  sessionsCompletedToday,
   focusHoursToday,
   currentStreak,
   streakMilestoneTarget,

@@ -10,7 +10,7 @@
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
-import React, { useEffect, useRef, useState, useMemo, useTransition, useDeferredValue } from 'react';
+import React, { useState, useMemo, useTransition, useDeferredValue } from 'react';
 import { motion as Motion, AnimatePresence } from 'framer-motion';
 import { useEnterMotion, useSnapMotion, withDelay } from '../lib/motionPresets';
 import useGameStore from '../store/gameStore';
@@ -18,8 +18,7 @@ import { RichTextView } from './RichText';
 import { getGlyph, hasGlyphIcon } from '../utils/labelMark';
 import {
   timeAgo, formatExactDateTime, formatPreciseDuration, resolveEntryCategory,
-  fmtHours, fmtXPCompact, fmtCount, fmtVal, hexToRgba, fmtChartAxisValue, clampValue,
-} from './statsFormatters';
+  fmtHours, fmtXPCompact, fmtCount, fmtVal, } from './statsFormatters';
 import {
   computeYearGrid,
   computeCategoryStats,
@@ -41,8 +40,6 @@ import { summarizeFocusStats } from '../engine/statsFocus';
 import {
   formatVietnamDate,
   formatVietnamTime,
-  getVietnamHour,
-  startOfVietnamDayTs,
 } from '../engine/time';
 
 // ─── Palette ─────────────────────────────────────────────────────────────────

@@ -8,7 +8,6 @@ import { AnimatePresence, motion } from 'framer-motion';
 import BadgeGrid from './shared/BadgeGrid.jsx';
 import InventoryHero from './shared/InventoryHero.jsx';
 import { heroHuyHieu } from './shared/inventoryHero.js';
-import { useEnterMotion, withDelay } from '../lib/motionPresets';
 
 import {
   ACHIEVEMENTS,
@@ -361,7 +360,6 @@ function AchievementCard({
 }
 
 export default function Achievements() {
-  const enterMotion = useEnterMotion();
   const unlockedIds = useGameStore((state) => state.achievements?.unlocked ?? []);
   const timeline = useGameStore((state) => state.achievements?.timeline ?? {});
 
@@ -387,8 +385,6 @@ export default function Achievements() {
   const [selectedEntry, setSelectedEntry] = useState(null);
   const [selectedTier, setSelectedTier] = useState('all');
   const [selectedCategory, setSelectedCategory] = useState('all');
-  const [unlockedVisibleCount, setUnlockedVisibleCount] = useState(DEFAULT_UNLOCKED_BATCH);
-  const [lockedVisibleCount, setLockedVisibleCount] = useState(DEFAULT_LOCKED_BATCH);
 
   const deferredTier = useDeferredValue(selectedTier);
   const deferredCategory = useDeferredValue(selectedCategory);
@@ -396,16 +392,12 @@ export default function Achievements() {
   const handleTierChange = (tier) => {
     startTransition(() => {
       setSelectedTier(tier);
-      setUnlockedVisibleCount(DEFAULT_UNLOCKED_BATCH);
-      setLockedVisibleCount(DEFAULT_LOCKED_BATCH);
     });
   };
 
   const handleCategoryChange = (category) => {
     startTransition(() => {
       setSelectedCategory(category);
-      setUnlockedVisibleCount(DEFAULT_UNLOCKED_BATCH);
-      setLockedVisibleCount(DEFAULT_LOCKED_BATCH);
     });
   };
 
@@ -516,26 +508,11 @@ export default function Achievements() {
     filteredEntries.filter((entry) => !entry.isUnlocked).sort(sortLockedEntries)
   ), [filteredEntries]);
 
-  const visibleUnlockedEntries = useMemo(() => (
-    filteredUnlockedEntries.slice(0, unlockedVisibleCount)
-  ), [filteredUnlockedEntries, unlockedVisibleCount]);
 
-  const visibleLockedEntries = useMemo(() => (
-    filteredLockedEntries.slice(0, lockedVisibleCount)
-  ), [filteredLockedEntries, lockedVisibleCount]);
 
-  const latestThreeEntries = useMemo(() => (
-    dataset.unlockedEntries.slice(0, 3)
-  ), [dataset.unlockedEntries]);
 
-  const totalProgress = dataset.totalAchievements > 0
-    ? Math.round((dataset.totalUnlocked / dataset.totalAchievements) * 100)
-    : 0;
 
   const activeTierInfo = deferredTier === 'all' ? null : ACHIEVEMENT_TIERS[deferredTier];
-  const heroSurface = dataset.latestEntry
-    ? getTierSurface(dataset.latestEntry.achievement.tier)
-    : TIER_SURFACES.silver;
 
   return (
     <div className="space-y-5 text-[var(--ink)]">

@@ -518,7 +518,6 @@ function BlueprintDetailPanel({ bpId, onClose, buildings, research, lightTheme }
   const normalizedRawCost = normalizeRawCost(spec?.cost ?? {});
   const refinedCost = getUnifiedRefinedCost(spec?.refinedCost);
   const researchCost = getDisplayedResearchCost(buildings, bpId);
-  const typeStyle    = TYPE_STYLE[eff?.type] ?? TYPE_STYLE.infrastructure;
 
   const isBuilt      = buildings?.includes(bpId);
   const isResearched = research?.researched?.includes(bpId);

@@ -111,14 +111,6 @@ const ACH_TIER_TINT = {
   diamond: '#839bb0',
 };
 
-function withAlpha(hex, alpha) {
-  const m = String(hex || '').replace('#', '');
-  if (m.length !== 6) return hex;
-  const r = parseInt(m.slice(0, 2), 16);
-  const g = parseInt(m.slice(2, 4), 16);
-  const b = parseInt(m.slice(4, 6), 16);
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-}
 
 // Thẻ chuẩn dùng chung — tự đổi theo skin (bo góc, viền, bóng)
 const CARD = {
@@ -147,7 +139,7 @@ function getTierBadgeProps(tierStyle, lightTheme) {
 
 // ─────────────────────────────────────────────────────────────────────────────
 
-export default function SkillTree({ onOpenAchievements }) {
+export default function SkillTree({ _onOpenAchievements }) {
   const uiTheme            = useSettingsStore((s) => s.uiTheme);
   const sp                 = useGameStore((s) => s.player.sp);
   const totalEXP           = useGameStore((s) => s.player.totalEXP);

@@ -59,13 +59,6 @@ function formatRelativeTime(createdAt) {
   return `${diffDays} ngày trước`;
 }
 
-function getActionLabel(action) {
-  if (action?.tab === 'skills') return 'Kỹ năng';
-  if (action?.tab === 'collection' && action?.collectionTab === 'blueprints') return 'Bản vẽ';
-  if (action?.tab === 'collection' && action?.collectionTab === 'workshop') return 'Xưởng';
-  if (action?.tab === 'focus') return 'Trung tâm';
-  return 'Mở';
-}
 
 export default function NotificationCenter({ onNavigate }) {
   const enterMotion = useEnterMotion();

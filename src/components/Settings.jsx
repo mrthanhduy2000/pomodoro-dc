@@ -1040,7 +1040,7 @@ function Card({ children, lightTheme = false, className = '' }) {
  * Giá: ~22px mỗi mục × 11 mục, cộng 11 vòng tròn trang trí. Tiêu đề `title` ở lại và nay là dòng
  * đầu tiên của mỗi mục — đúng thứ mắt cần để biết mục này chỉnh cái gì.
  */
-function SectionHeader({ icon, title, description, lightTheme = false }) {
+function SectionHeader({ _icon, title, description, lightTheme = false }) {
   return (
     <div>
       <div className="flex items-start justify-between gap-3">

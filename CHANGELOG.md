@@ -26,19 +26,39 @@ tuyến**, nội suy góc theo đường ngắn nhất, phá hoà ca quay đầu
 `sweep-score.mjs`: thêm cổng **TỪ CHỐI chấm một tấm ảnh cũ hơn mã** (mã thoát 2, không có cờ bỏ
 qua), khoá bằng `scripts/sweepScoreGate.test.js`. Xem **ADR-068**.
 
-**Ảnh hưởng.** Cư dân: **180,0° → 35,9°/khung**, **1.101 → 0** khung lật quá 90° (302.400 mẫu, 6 kỷ
-· 168 người · 30fps); cú quay đầu tệ nhất trải ra 6–10 khung (0,20–0,33 giây). Vẫn thuần theo
-`(tuyến, thời gian)` ⇒ **ADR-007 nguyên vẹn**, 0 tam giác, 0 lệnh vẽ.
+**Ảnh hưởng.** Cư dân: **180,0° → 35,9°/khung**, **1.101 → 0** khung lật quá 90°; cú quay đầu tệ
+nhất trải ra 6–10 khung (0,20–0,33 giây). Đo trên **quần thể ĐẦY ĐỦ — 15 kỷ · 420 tuyến · 387.084
+mẫu @30fps**, mỗi tuyến quét trọn ít nhất một vòng. Vẫn thuần theo `(tuyến, thời gian)` ⇒ **ADR-007
+nguyên vẹn**, 0 tam giác, 0 lệnh vẽ.
 ⚠️ **Và một hồi quy IM LẶNG từ Phase 21 (`3d37745`) đã được vá:** cổng chống-CHÉP tố mọi ảnh
 `--mask` là *«95,4% số cột bị chép»* và TỪ CHỐI ghi ảnh — vì một tấm mặt nạ theo cấu tạo gần như
 toàn đen, mà mọi cột đen thì trùng khít nhau. Nó đã làm hỏng `scripts/human-strip.mjs` cùng mọi
 phép đo dựa trên mặt nạ trong suốt thời gian đó, **không có gì đỏ lên**.
 
+⚠️ **Và hai lỗ hổng trong chính PHÉP ĐO đã được vá, cả hai đều chỉ lộ ra khi đi truy một chi
+tiết lệch, không cổng nào bắt được.** (i) Phép quét 30 khung/giây bỏ qua **34,5% cư dân** tại đúng
+đỉnh nối cuối→đầu của tuyến — cái đỉnh duy nhất mà "đoạn trước" phải lấy vòng về cuối mảng, tức
+đúng chỗ một lỗi chỉ số sẽ nấp. (ii) Nó chỉ quét **165 trên 420 tuyến** nên **chưa bao giờ nhìn
+thấy ca xấu nhất** — phát hiện nhờ hai dòng tài liệu ghi hai con số (35,9° và 35,6°) cho cùng một
+đại lượng. Cả hai nay có gác riêng (phủ điểm nối · quần thể đã bão hoà), đều đã thử-cho-đỏ.
+
 **Tương thích.** Không đụng state, không đụng schema, không đụng camera/`gridSize`. `npm test`
-**1271 bài · 0 đỏ**. Mốc nền `6038cd9` **tự đo lại** trong `git worktree` riêng (`TECH_DEBT #43`):
-**12,23 (chặng, 0/15) · 21,86 (kỷ, 0/105) · trung vị 36,33**. ⚠️ Con số của cây sau-vá phải dựng
-LẠI mới đọc được: bản quét đầu tiên đã bị chấm khi nó **cũ hơn `residents.js` 31 phút** — chính cái
-bẫy mà cổng mới ở mục (c) sinh ra để chặn. Xem `BAN_GIAO.md` mục 8–10.
+**1274 bài · 1273 xanh · 0 đỏ · 1 bỏ qua** (+3 bài đối chiếu chéo) · lint sạch. Bản quét
+không-trôi **dựng lại SẠCH** rồi chấm: **12,23 (chặng, 0/15) · 21,86 (kỷ, 0/105) · trung vị 36,33**
+— trùng hai chữ số thập phân với mốc nền `6038cd9` tự đo trong `git worktree` riêng
+(`TECH_DEBT #43`). ⚠️ Một bảng số y hệt lần trước **không đọc được theo chiều nào cả**, nên đã mượn
+một phép đo khác hẳn để phân biệt *"không trôi"* với *"phép đo mù"*: giữa hai bản quét có **1.886
+điểm ảnh lệch quá nhiễu, lệch lớn nhất 42** (nhiễu SwiftShader là ±1) ⇒ bản vá CÓ tới được điểm
+ảnh, con số gộp đứng yên chỉ vì cư dân chiếm 0,14% khung. ⚠️ Bản quét đầu tiên đã suýt bị chấm khi
+nó **cũ hơn `residents.js` 31 phút** — chính cái bẫy mà cổng mới ở mục (c) sinh ra để chặn.
+
+⚠️ **Và việc chấm lại bản quét làm lộ một con số đã trôi trong im lặng:** `TECH_DEBT #89` (mục canh
+đúng cái cổng ấy) vẫn ghi **12,44 · biên 0,44** như số hiện hành, trong khi thật ra là **12,23 ·
+biên 0,23 — mất một nửa**. Đường đi đã nằm sẵn trong `PERFORMANCE.md`: **12,44 (Phase 20) → 12,11
+(Phase 21) → 12,23 (Phase 22)**, chỉ chưa ai chép về mục nợ. Cả hai phase tiêu biên ấy đều **không
+đụng tới bầu trời** — chúng chỉ thêm chi tiết cho thành phố, thứ không phản ứng với giờ trong ngày
+(`TECH_DEBT #22`) — nên nó **củng cố** chẩn đoán của #89 chứ không bác. #89 đã được cập nhật.
+Xem `BAN_GIAO.md` mục 8–13.
 
 ---
 

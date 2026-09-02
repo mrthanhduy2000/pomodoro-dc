@@ -57,17 +57,22 @@ export const RESIDENT_HEIGHT = 0.2;
  *
  * ⚠️ HẰNG SỐ NÀY BÃO HOÀ Ở 0,20 — VÀ ĐÓ LÀ ĐIỀU PHẢI BIẾT TRƯỚC KHI CHỈNH NÓ. Cửa sổ quay bị kẹp
  * về `min(TURN_ARC, độ dài đoạn)` trong `headingAt` (bắt buộc, nếu không hai cú quay liên tiếp
- * chồng lên nhau và người xoay tít). Mà **67,6% số đoạn tuyến ngắn hơn 0,30 ô** (trung vị 0,242 ·
- * ngắn nhất 0,068), nên từ 0,20 trở lên thì thứ quyết định ca tệ nhất KHÔNG còn là hằng số này
- * nữa mà là ĐOẠN NGẮN NHẤT. Quét thật (6 kỷ, 165 người, 98.835 khung @30fps):
+ * chồng lên nhau và người xoay tít). Mà **71,6% số đoạn tuyến ngắn hơn 0,30 ô** (17.040 đoạn ·
+ * trung vị 0,250 · ngắn nhất 0,040), nên từ 0,20 trở lên thì thứ quyết định ca tệ nhất KHÔNG còn
+ * là hằng số này nữa mà là ĐOẠN NGẮN NHẤT. Quét thật trên quần thể ĐẦY ĐỦ (15 kỷ · 420 tuyến ·
+ * 387.084 khung @30fps, mỗi tuyến trọn ít nhất một vòng):
  *
- *     TURN_ARC   0,02 → 180,0°/khung    0,20 → 35,6°     1,00 → 35,6°
- *                0,05 →  92,8°/khung    0,30 → 35,6°     5,00 → 35,6°
- *                0,10 →  46,4°/khung    0,50 → 35,6°
+ *     TURN_ARC   0,02 → 180,0°/khung    0,20 → 35,9°     1,00 → 35,9°
+ *                0,05 →  92,8°/khung    0,30 → 35,9°     5,00 → 35,9°
+ *                0,10 →  46,4°/khung    0,50 → 35,9°
+ *
+ * ⚠️ Bảng cũ ghi sàn là **35,6°** và 67,6% — đó là số của quần thể HẸP (6 kỷ · 165 tuyến), thứ
+ * chưa bao giờ chứa ca xấu nhất. Hai mốc do chính `TURN_ARC` cai trị (92,8° · 46,4°) thì TRÙNG
+ * KHÍT ở cả hai quần thể — một phép tự đối chiếu cho thấy chỉ VÙNG BÃO HOÀ mới phụ thuộc quần thể.
  *
  * Chọn 0,30 (không phải 0,20) để đứng qua khỏi chỗ gãy một quãng, phòng khi hình học tuyến đổi.
  * ⚠️ Đừng đọc bảng này thành "nới lên nữa thì mượt hơn" — nới không đổi được gì; muốn hạ dưới
- * 35,6° thì phải trải cú quay QUA NHIỀU ĐOẠN, một bài toán khác hẳn.
+ * 35,9° thì phải trải cú quay QUA NHIỀU ĐOẠN, một bài toán khác hẳn.
  *
  * Đo sau khi có hàm này: **35,9°/khung**, **0 khung** quay quá 90°, và cú quay đầu 180° tệ nhất
  * trải ra **6–10 khung (0,20–0,33 giây)** — mắt đọc ra "người ấy quay lại", không phải "hình bị

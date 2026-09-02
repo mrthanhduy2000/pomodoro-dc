@@ -4624,12 +4624,12 @@ cấp `Math.min(3,…)` → `Math.min(9,…)` · cắt bớt danh sách cấp th
 > `gear` · cư dân chiếm 0,29% khung hình). Theo đúng luật đã áp cho ADR — *số của `main` giữ
 > nguyên nghĩa* — chúng đổi thành **#89** (trục chặng ngày) và **#90** (khu phố làm 4 kỷ thấp đi).
 
-## #94 — Cú quay đầu của cư dân dừng ở 35,6°/khung vì cửa sổ quay BÃO HOÀ, và hạ tiếp thì cần một cơ chế khác hẳn
+## #94 — Cú quay đầu của cư dân dừng ở 35,9°/khung vì cửa sổ quay BÃO HOÀ, và hạ tiếp thì cần một cơ chế khác hẳn
 
 > Mở 2026-09-02 (Phase 23, ADR-068). Đây là **cái sàn ĐÃ ĐO của cơ chế**, không phải một tham số
 > chỉnh chưa tới — ghi ra để phiên sau đừng đi vặn `TURN_ARC` và tưởng mình đang cải thiện.
 
-- **Tên**: cửa sổ quay bão hoà ở 0,20 ⇒ 35,6°/khung là sàn, không hạ được bằng cách nới hằng số
+- **Tên**: cửa sổ quay bão hoà ở 0,20 ⇒ 35,9°/khung là sàn, không hạ được bằng cách nới hằng số
 - **Module**: `src/engine/city3d/residents.js` (`TURN_ARC`, `headingAt`) — khoá bằng
   `residents.test.js` (`KHÔNG GIẬT` + đối chứng luật cũ)
 - **Priority**: Low · **Severity**: Low (mỹ thuật cận cảnh; 0 tam giác, 0 lệnh vẽ, không đụng state)
@@ -4637,14 +4637,15 @@ cấp `Math.min(3,…)` → `Math.min(9,…)` · cắt bớt danh sách cấp th
   còn lại là những cú **quay đầu 180° ở ngõ cụt**, trải ra 6–10 khung (0,20–0,33 giây). Mắt đọc ra
   *"người ấy quay lại"*, không còn là *"hình bị lật"* — nên đây là một cái sàn **chấp nhận được**,
   không phải một khuyết tật đang chạy.
-- **Root Cause**: SỐ HỌC, không phải tham số sai. `window = min(TURN_ARC, độ dài đoạn)` mà **67,6%
-  số đoạn tuyến ngắn hơn 0,30** (trung vị 0,242 · ngắn nhất 0,068) ⇒ qua mốc 0,20 thì **đoạn ngắn
+- **Root Cause**: SỐ HỌC, không phải tham số sai. `window = min(TURN_ARC, độ dài đoạn)` mà **71,6%
+  số đoạn tuyến ngắn hơn 0,30** (17.040 đoạn · trung vị 0,250 · ngắn nhất 0,040) ⇒ qua 0,20 thì **đoạn ngắn
   nhất mới là thứ cai trị**. Bảng đo: `0,02 → 180,0°` · `0,05 → 92,8°` · `0,10 → 46,4°` ·
-  `0,20 · 0,30 · 0,50 · 1,00 · 5,00 → 35,6°` không đổi một chữ số.
+  `0,20 · 0,30 · 0,50 · 1,00 · 5,00 → 35,9°` không đổi một chữ số (đo trên quần thể ĐẦY ĐỦ:
+  15 kỷ · 420 tuyến · 387.084 khung; bảng cũ ghi 35,6° vì chỉ quét 6 kỷ · 165 tuyến).
 - **Current Risk**: gần như không. Phân bố: trung vị **0,00°** · 99% ở **19,1°** · 99,9% ở **29,5°**
   · chỉ **0,881%** số khung vượt 20°.
 - **Future Risk**: nếu hình học tuyến đổi (Phase sau sửa mạng đường) làm đoạn ngắn nhất ngắn thêm
-  thì con số 35,6° **tự xấu đi** mà `TURN_ARC` không cứu được — và không có gì đỏ lên, vì bài test
+  thì con số 35,9° **tự xấu đi** mà `TURN_ARC` không cứu được — và không có gì đỏ lên, vì bài test
   đặt trần ở 60°. Đó là lý do bảng bão hoà nằm trong chú thích chứ không chỉ ở đây.
 - **Recommended Solution**: hai hướng, **cả hai đều là bài toán khác, đừng làm kèm**:
   (a) **trải cú quay qua NHIỀU đoạn** — nhưng cửa sổ sẽ chồng lấn ở những chuỗi đoạn ngắn liên tiếp
@@ -5265,6 +5266,27 @@ trong chú thích thì đừng để `--selftest` của chính nó vẫn dùng �
 - **Estimated Complexity**: (a) trung bình · (b) thấp · (c) không
 - **Blocking Conditions**: chờ Đàm chọn hướng.
 - **Review Trigger**: mỗi lần chạm `orbit.js`, `daylight.js`, hoặc kích thước công trình — và mỗi lần
-  bản quét đổi, vì cổng nay chỉ hơn ngưỡng **0,44** và phần dư ấy đến từ một dải KHÔNG liên quan
-  tới nguyên nhân, nên nó có thể mất đi vì một thay đổi chẳng dính gì tới bầu trời.
-- **Owner**: chưa giao · **Status**: MỞ — cổng đã qua (12,44 ✓) nhưng nguyên nhân chưa chữa; chờ quyết định
+  bản quét đổi, vì phần dư trên ngưỡng đến từ một dải KHÔNG liên quan tới nguyên nhân, nên nó có thể
+  mất đi vì một thay đổi chẳng dính gì tới bầu trời. **Cái review trigger này đã tự chứng minh mình
+  đúng — xem ngay dưới đây.**
+
+> ⚠️ **CẬP NHẬT 2026-09-02 (Phase 23) — BIÊN ĐÃ TỤT MỘT NỬA VÀ MỤC NÀY VẪN GHI SỐ CŨ.** Đo lại hai
+> lượt độc lập hôm nay (mốc nền `6038cd9` trong `git worktree` riêng, và cây Phase 23) đều ra
+> **12,23**, tức biên trên ngưỡng mắt 12 là **0,23 chứ không phải 0,44 — mất đúng một nửa**. Đường
+> đi đã có sẵn trong `PERFORMANCE.md`, chỉ là chưa ai chép về đây: **12,44 (Phase 20) → 12,11
+> (Phase 21, `3d37745`) → 12,23 (Phase 22)**. Nghĩa là Phase 21 tiêu **0,33** rồi Phase 22 trả lại
+> **0,12**, và ở đáy ấy cổng chỉ còn hơn ngưỡng **0,11** — một phase nữa cùng cỡ là rơi.
+>
+> ⚠️ **Và không một phase nào trong hai phase ấy đụng tới bầu trời.** Phase 21 tách nhà khỏi mép
+> nhau, Phase 22 cho sân/vườn thuộc suất đất — cả hai đều thêm chi tiết KHÔNG phản ứng với giờ
+> trong ngày, đúng cơ chế pha loãng đã ghi ở `TECH_DEBT #22`. ⇒ Điều này **củng cố** chẩn đoán của
+> mục này thay vì bác nó: cần gạt vẫn nằm ở dải TRỜI, và mỗi phase thêm chi tiết cho THÀNH PHỐ lại
+> tiêu thêm vào phần dư mà không ai định tiêu. Phase 23 tự nó **không tiêu gì** (chỉ đụng `angle`
+> của cư dân — cả hai lượt đo ra y hệt 12,23).
+>
+> ⇒ **Con số phải theo dõi từ nay là 0,23, không phải 0,44.** Và bài học chung: *một mục nợ ghi
+> "cổng đã qua (X ✓)" thì con số X ấy già đi y như mọi con số khác* — `TECH_DEBT #43` áp cho cả
+> bảng số trong `TECH_DEBT.md`, không chỉ cho `PERFORMANCE.md`.
+
+- **Owner**: chưa giao · **Status**: MỞ — cổng vẫn qua nhưng biên chỉ còn **0,23** (12,23 · đo
+  2026-09-02); nguyên nhân chưa chữa; chờ quyết định

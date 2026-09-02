@@ -133,24 +133,67 @@ test('cư dân KHÔNG dồn cục một chỗ lúc bắt đầu', () => {
  *  vẫn xanh — vì nó chỉ hỏi ở MỘT thời điểm, và thời điểm ấy tình cờ không rơi vào ca xấu. */
 const gói = (a) => ((((a + Math.PI) % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2)) - Math.PI;
 
-const KỶ_MẪU = [1, 4, 6, 9, 13, 15];
+/**
+ * ⚠️ QUÉT CẢ 15 KỶ, KHÔNG PHẢI SÁU KỶ MẪU — và con số kỷ SUY TỪ BẢNG, không viết cứng.
+ * Bản trước lấy 6 kỷ, và điều đó lộ ra vì hai tài liệu ghi hai con số cho CÙNG một đại lượng
+ * (35,9° ở `CHANGELOG.md`, 35,6° ở đây). Không con số nào sai — chúng đo hai ĐẦU VÀO khác nhau:
+ *   6 kỷ · 40 phiên → 165 tuyến → tệ nhất 35,6°
+ *   6 kỷ · 80 phiên → 168 tuyến → tệ nhất 35,9°   ← ba tuyến thừa ra, một trong số đó tệ hơn
+ *  15 kỷ · 80 phiên → 420 tuyến → tệ nhất 35,9°
+ * Tức phép quét cũ **chưa bao giờ nhìn thấy ca xấu nhất**. Đúng họ `TECH_DEBT #38` (một ngưỡng
+ * hiệu chuẩn trên MỘT quần thể rồi được đọc thành luật của CẢ TẬP) — và nó chỉ lộ ra nhờ đi truy
+ * một mâu thuẫn giữa hai dòng tài liệu, chứ không cổng nào bắt được.
+ */
+const KỶ_MẪU = Object.keys(BLUEPRINT_CATALOG).map(Number).sort((a, b) => a - b);
+/** ⚠️ 80 nằm QUA chỗ bão hoà, có chủ ý — đo được: số tuyến đi 355 (20 phiên) → 414 (40) → **420
+ *  (60)** rồi ĐỨNG YÊN tới 400 phiên. Chọn 80 để còn biên nếu bảng cư dân được nới; bài dưới có
+ *  một gác ĐÒI mốc này thật sự đã bão hoà, nên nếu ngày nào nó thôi bão hoà thì test tự đỏ. */
+const PHIÊN_QUÉT = 80;
 const FPS = 30;
 
-/** Quét mọi cư dân của vài kỷ ở 30 khung/giây, gọi `đo(trước, sau)` cho từng cặp khung liền nhau. */
-function quétKhungHình(đo, giây = 20) {
+/**
+ * Quét mọi cư dân của vài kỷ ở 30 khung/giây, gọi `đo(trước, sau)` cho từng cặp khung liền nhau.
+ *
+ * ⚠️ MỖI TUYẾN QUÉT TRỌN ÍT NHẤT MỘT VÒNG, và đó KHÔNG phải một chi tiết nhỏ. Tuyến là một vòng
+ * KHÉP KÍN: đoạn cuối nối `path[n−1]` về `path[0]`. Cái đỉnh nối ấy là đỉnh DUY NHẤT mà "đoạn
+ * trước nó" phải lấy từ đầu kia của mảng (`(i − 1 + n) % n`) — tức đúng chỗ một lỗi chỉ-số sẽ nấp.
+ * Bản đầu của bài này quét cứng **20 giây** và tôi đã suýt gọi thế là xong. Đo ra:
+ *   • 107/165 cư dân KHÔNG đi hết một vòng trong 20 giây (vòng ít nhất chỉ 0,27 vòng);
+ *   • và câu hỏi ĐÚNG hơn — vì mỗi người xuất phát ở một `phase` khác nhau — là *"`travelled` có
+ *     vượt qua mốc 0 không"*: **57/165 người (34,5%) KHÔNG BAO GIỜ chạm điểm nối** trong 20 giây.
+ * Nghĩa là kết quả "0 khung lật quá 90°" trước đó chỉ nói về **hai phần ba** quần thể tại đúng
+ * cái đỉnh đáng ngờ nhất. Đúng bài học Phase 11: *một tổ hợp mà phép đo chưa chạm tới là một tổ
+ * hợp CHƯA ĐƯỢC KIỂM* — và lý lẽ "mã dùng số học modulo nên đỉnh nối chẳng có gì đặc biệt" là
+ * một lời SUY LUẬN, không phải một phép đo.
+ *
+ * ⚠️ Thời lượng ĐO TỪ DỮ LIỆU (`length / speed`), tuyệt đối không viết cứng: vòng chậm nhất trong
+ * cả 15 kỷ hôm nay là **74,70 giây** (kỷ 4), nhưng con số ấy đổi theo bảng cư dân, mà một hằng số
+ * thì không nhìn thấy bảng (bẫy Phase 7D). Sàn 20 giây giữ cho tuyến ngắn vẫn đủ mẫu.
+ *
+ * Trả về `{ mẫu, sốTuyến, quaĐiểmNối }` để bài gọi còn ĐÒI được phủ trọn — nếu chỉ trả `mẫu` thì
+ * ngày nào tốc độ cư dân bị chỉnh chậm đi, phép quét lại lặng lẽ bỏ sót điểm nối như cũ.
+ */
+function quétKhungHình(đo) {
   const dt = 1 / FPS;
   let mẫu = 0;
+  let sốTuyến = 0;
+  let quaĐiểmNối = 0;
   for (const era of KỶ_MẪU) {
     const built = BLUEPRINT_CATALOG[era].map((bp) => bp.id);
-    const layout = computeCityLayout({ built, era, stats: { sessionCount: 40, streakLength: 9 } });
-    for (const route of buildResidents(layout, { sessionCount: 40, streakLength: 9 })) {
+    const stats = { sessionCount: PHIÊN_QUÉT, streakLength: 9 };
+    const layout = computeCityLayout({ built, era, stats });
+    for (const route of buildResidents(layout, stats)) {
+      const mộtVòng = route.length / route.speed;
+      const giây = Math.max(20, mộtVòng * 1.05);
+      sốTuyến += 1;
+      if ((route.phase * route.length) + giây * route.speed >= route.length) quaĐiểmNối += 1;
       for (let t = dt; t < giây; t += dt) {
         đo(route, t - dt, t);
         mẫu += 1;
       }
     }
   }
-  return mẫu;
+  return { mẫu, sốTuyến, quaĐiểmNối };
 }
 
 test('KHÔNG GIẬT: cú quay đầu được TRẢI RA, không lật trong một khung hình', () => {
@@ -160,7 +203,7 @@ test('KHÔNG GIẬT: cú quay đầu được TRẢI RA, không lật trong mộ
   let tệNhất = 0;
   let sốKhungCóQuay = 0;
   let ngoàiKhoảng = 0;
-  const mẫu = quétKhungHình((route, t0, t1) => {
+  const { mẫu, sốTuyến, quaĐiểmNối } = quétKhungHình((route, t0, t1) => {
     const a = residentAt(route, t0);
     const b = residentAt(route, t1);
     if (Math.abs(b.angle) > Math.PI + 1e-9) ngoàiKhoảng += 1;
@@ -171,16 +214,46 @@ test('KHÔNG GIẬT: cú quay đầu được TRẢI RA, không lật trong mộ
 
   // Gác chạy-rỗng: một phép quét không quét gì cũng cho `tệNhất = 0` và xanh vĩnh viễn.
   assert.ok(mẫu > 50000, `mới quét được ${mẫu} khung — phép đo gần như không chạy`);
+
+  // ⚠️ GÁC PHỦ ĐIỂM NỐI. Không có dòng này thì phép quét có thể lặng lẽ bỏ qua cái đỉnh duy nhất
+  // mà "đoạn trước" phải lấy vòng về cuối mảng — đúng chỗ nó đã bỏ qua 34,5% quần thể lúc đầu.
+  assert.equal(quaĐiểmNối, sốTuyến,
+    `${sốTuyến - quaĐiểmNối}/${sốTuyến} tuyến không đi qua điểm nối cuối→đầu — cái đỉnh ĐÁNG NGỜ`
+    + ' NHẤT đang không được kiểm; nới thời lượng quét trong `quétKhungHình`');
   assert.ok(sốKhungCóQuay > 1000,
     `chỉ ${sốKhungCóQuay} khung có đổi hướng — tuyến gần như thẳng thì bài test này không đo gì`);
 
   // Góc đi ra khỏi engine phải luôn ở khoảng chuẩn (xem `wrapPi` trong `residents.js`).
   assert.equal(ngoàiKhoảng, 0, `${ngoàiKhoảng} khung có \`angle\` nằm ngoài [−π, π]`);
 
-  // Ngưỡng 60° nằm GIỮA HAI ĐẦU ĐO ĐƯỢC — hỏng 180,0° · lành 35,6° — chứ không phải một con số
-  // chọn cho rộng rãi (bẫy cái phễu, Phase 9A).
+  // Ngưỡng 60° nằm GIỮA HAI ĐẦU ĐO ĐƯỢC — hỏng 180,0° · lành 35,9° — chứ không phải một con số
+  // chọn cho rộng rãi (bẫy cái phễu, Phase 9A). ⚠️ 35,9° là số của quần thể ĐẦY ĐỦ (15 kỷ, 420
+  // tuyến); quần thể hẹp cũ (6 kỷ, 165 tuyến) ra 35,6° và KHÔNG chứa ca xấu nhất.
   assert.ok(tệNhất < 60,
     `quay ${tệNhất.toFixed(1)}°/khung — mắt đọc ra một cú lật, không phải một cú quay`);
+});
+
+test('GÁC QUẦN THỂ: mốc phiên dùng để quét phải đã BÃO HOÀ số tuyến', () => {
+  // ⚠️ Không có bài này thì câu "phép quét nhìn thấy MỌI cư dân" chỉ là một lời tự trấn an —
+  // và một lời tự trấn an phải được kiểm như một con số (Phase 4G). Hỏi bằng QUAN HỆ (thêm phiên
+  // nữa có đẻ thêm tuyến không?) chứ không bằng hằng số 420: hằng số thì trôi theo bảng cư dân,
+  // còn quan hệ thì tự đỏ đúng ngày bảng ấy được nới. THỬ-CHO-ĐỎ: hạ `PHIÊN_QUÉT` về 40 ⇒ đỏ
+  // (414 ≠ 420), tức nó đang canh đúng thứ nó nói.
+  const đếm = (sessionCount) => {
+    const stats = { sessionCount, streakLength: 9 };
+    let n = 0;
+    for (const era of KỶ_MẪU) {
+      const built = BLUEPRINT_CATALOG[era].map((bp) => bp.id);
+      n += buildResidents(computeCityLayout({ built, era, stats }), stats).length;
+    }
+    return n;
+  };
+  const ở = đếm(PHIÊN_QUÉT);
+  const xa = đếm(PHIÊN_QUÉT * 5);
+  assert.ok(ở > 300, `chỉ ${ở} tuyến — quần thể quét nhỏ bất thường`);
+  assert.equal(ở, xa,
+    `${PHIÊN_QUÉT} phiên mới có ${ở} tuyến nhưng ${PHIÊN_QUÉT * 5} phiên có ${xa} — mốc quét CHƯA`
+    + ' bão hoà, nên phép quét đang bỏ sót cư dân; nâng `PHIÊN_QUÉT`');
 });
 
 test('ĐỐI CHỨNG: luật CŨ (lật thẳng tại đỉnh) phải vẫn bị phép đo trên bắt được', () => {

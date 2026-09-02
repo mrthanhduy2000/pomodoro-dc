@@ -45,7 +45,7 @@
   xử được** và trả 0 — một câu trả lời TRUNG THỰC, khác hẳn "sạch".
 - **Trade-off**:
   (A) Cửa sổ quay **bão hoà ở 0,20**: qua mốc ấy thì `min(TURN_ARC, độ dài đoạn)` bị đoạn ngắn nhất
-  cai trị (67,6% số đoạn ngắn hơn 0,30), nên **35,6°/khung là sàn của cơ chế này**. Muốn thấp hơn
+  cai trị (71,6% trong 17.040 đoạn ngắn hơn 0,30), nên **35,9°/khung là sàn của cơ chế này**. Muốn thấp hơn
   phải trải cú quay QUA NHIỀU ĐOẠN — cửa sổ chồng lấn ⇒ người xoay tít — hoặc dừng lại xoay tại chỗ,
   cần sửa `humanPose.js` để bàn chân không đứng hình giữa nhịp bước. Cả hai là bài toán khác —
   ghi thành `TECH_DEBT #94` kèm bảng bão hoà và phân bố, để phiên sau không đi vặn một cần gạt đã
@@ -55,7 +55,7 @@
 - **Ảnh hưởng**: 0 tam giác · 0 lệnh vẽ · 0 nguồn sáng — cả hai bản vá đều là logic thuần. Bản quét
   15 kỷ không trôi (12,23 · 21,86 · 36,33, trùng mốc Phase 22).
   ⚠️ Và (B) khôi phục `scripts/human-strip.mjs` cùng mọi phép đo dựa trên mặt nạ.
-- **Điều kiện xem lại**: (A) nếu hình học tuyến đổi làm đoạn ngắn nhất ngắn thêm, `35,6°` sẽ xấu đi
+- **Điều kiện xem lại**: (A) nếu hình học tuyến đổi làm đoạn ngắn nhất ngắn thêm, `35,9°` sẽ xấu đi
   mà `TURN_ARC` không cứu được — lúc ấy phải đọc lại bảng bão hoà trong `residents.js` trước khi
   chỉnh con số. (B) mỗi lần thêm một CHẾ ĐỘ DỰNG mới (`--mask`, `--lowdetail`, …) phải hỏi *"cổng
   nào đang hiệu chuẩn trên một quần thể không có chế độ này?"*.

@@ -17,13 +17,13 @@ mà eo 0,72, tay vung, kỷ 6 đội nón lá ⇒ mỗi cú lật là một cái
 **2. Đã làm — CỬA SỔ QUAY cân giữa đỉnh tuyến.** `TURN_ARC = 0,30` ô: nửa cuối đoạn tới + nửa đầu
 đoạn sau nội suy góc theo đường ngắn nhất. Đo lại: **35,9°/khung · 0 khung quá 90°**, cú quay đầu
 180° tệ nhất trải ra **6–10 khung (0,20–0,33 giây)**. Vẫn là hàm thuần của `(tuyến, thời gian)` ⇒
-ADR-007 nguyên vẹn. Phần dư (35,6° là SÀN của cơ chế) ghi ở `TECH_DEBT #94`.
+ADR-007 nguyên vẹn. Phần dư (**35,9° là SÀN của cơ chế**) ghi ở `TECH_DEBT #94`.
 
 **3. ⚠️ HẰNG SỐ ẤY BÃO HOÀ Ở 0,20 — VÀ TÔI CHỈ BIẾT VÌ PHÉP PHÁ KHÔNG NỔ.** Thử ngược bằng cách
 NỚI `TURN_ARC` lên 5,0: **không bài nào đỏ**. Theo luật Phase 8A thì nghi phép phá trước — và đúng:
-`window = min(TURN_ARC, độ dài đoạn)` mà **67,6% số đoạn ngắn hơn 0,30** (trung vị 0,242), nên qua
+`window = min(TURN_ARC, độ dài đoạn)` mà **71,6% số đoạn ngắn hơn 0,30** (trung vị 0,250), nên qua
 0,20 thì đoạn ngắn nhất mới là thứ cai trị. Bảng đo: `0,02 → 180,0°` · `0,05 → 92,8°` ·
-`0,10 → 46,4°` · `0,20…5,00 → 35,6°` không đổi một chữ số. ⇒ phép phá đúng là **BÓP LẠI** (0,02),
+`0,10 → 46,4°` · `0,20…5,00 → 35,9°` không đổi một chữ số. ⇒ phép phá đúng là **BÓP LẠI** (0,02),
 và nó đỏ ngay. **Nới một hằng số đã bão hoà KHÔNG phải một phép phá** — nó là một phép thử không
 chạm tới đại lượng nào.
 
@@ -53,11 +53,25 @@ bài ấy phải đi cùng nhau — thiếu bài sau thì cách rẻ nhất đ�
 dân cao **7×9 điểm ảnh**; đo lệch giữa hai cây mã trên ba khung liên tiếp: **cả khung 0,001–0,002**
 (không gì cả), **trong vùng người 1,63–2,00**, chỉ **3,7–4,8% số điểm ảnh** vượt ngưỡng mắt 12 (đỉnh
 lệch 100). ⇒ Theo đúng luật 2b của Đàm, đây là **một sửa lỗi CẬN CẢNH** — và app đã có đường đưa
-mắt tới gần (ADR-034/035: chạm vào công trình thì camera bay tới). Ảnh `p23-quay-cancanh.png` dựng
-ở đúng chế độ ấy. **Đây là một kết quả đã đo, không phải một lời bào chữa.**
+mắt tới gần (ADR-034/035: chạm vào công trình thì camera bay tới). Dải phim
+`p23-quay-cancanh-ky01.png` dựng ở đúng chế độ ấy — ba khung liên tiếp @30fps, **hàng trên = luật
+cũ, hàng dưới = luật mới**, vị trí người tìm bằng cách DIFF chính cặp trước/sau (bản vá chỉ đụng
+`angle`, nên mọi điểm ảnh đổi đều thuộc về một cư dân đang quay ⇒ không cần dựng thêm mặt nạ).
+**Đây là một kết quả đã đo, không phải một lời bào chữa.**
+
+⚠️ **Bản kỷ 6 (`p23-quay-cancanh.png`) đã bị loại — và lý do là một thứ đáng ghi.** Kỷ 6 là kỷ có
+nón lá, tức đúng cái chi tiết bất đối xứng làm cú lật NHÌN THẤY được, nên nó là kỷ *đáng lẽ* minh
+hoạ tốt nhất. Nhưng cụm cư dân sáng nhất mà công cụ tìm được ở đó chỉ **46,7/255** — camera cận cảnh
+đứng giữa các khối nhà nên người rơi vào bóng đổ. Kỷ 1 ra **54,9/255** và đọc được. ⚠️ Ban đầu tôi
+nghi GIỜ trong ngày, nhưng đo bác bỏ: cả khung lúc 12h là **84,0/255**, lúc 15h là **71,6/255** —
+giữa trưa vốn đã là chặng sáng nhất, nên chỗ tối không đến từ đồng hồ mà từ **vị trí camera**. Ghi
+ra vì phase sau muốn minh hoạ cận cảnh sẽ đụng lại đúng chỗ này.
 
 **8. Cổng không-trôi — và một lời "không trôi" SUÝT được viết ra từ một tấm ảnh CŨ.** `npm test`
-**1271 bài · 1270 xanh · 0 đỏ · 1 bỏ qua** · `npm run lint` sạch · `npm run build` xanh.
+lượt cuối: **1274 bài · 1273 xanh · 0 đỏ · 1 bỏ qua** (lượt nhanh, 4 phút 23) **+ 3 bài đối chiếu
+chéo `scene-tri` ↔ `plinth-tri`** (24,8 giây) · `npm run lint` sạch. ⚠️ Con số ấy đi từ **1271** lên
+1274 **trong chính phase này**, vì hai lỗ hổng độ phủ ở mục 10 và 12 được vá SAU lượt chạy đầu —
+nên nếu đọc thấy 1271 ở đâu đó thì đó là số của một cây mã cũ hơn, không phải một mâu thuẫn.
 
 Mốc nền tại `6038cd9` **tự đo lại trong một `git worktree` riêng** (đúng `TECH_DEBT #43`: *"mỗi phase
 PHẢI tự đo lại mốc nền của mình, đừng chép cột 'sau' của phase trước"*): **12,23 (chặng, 0/15) ·
@@ -68,7 +82,7 @@ còn `residents.js` sửa lần cuối lúc **21:33** — tức nó mô tả m�
 "trùng từng chữ số với Phase 22" đã được viết ra dựa trên nó. Thứ lôi ra được là phép kiểm `mtime`
 mà `CLAUDE.md` đã kê đơn từ Phase 14 (*"tiến trình dựng phải bằng 0, và `mtime` của ảnh phải mới hơn
 file nguồn mới nhất"*) — một cái đơn đã nằm sẵn trong tài liệu suốt mười phase mà vẫn không chặn
-được gì, vì **chữ thì không tự chạy**. Đã dựng lại từ đầu và chấm lại: xem mục 10.
+được gì, vì **chữ thì không tự chạy**. Đã dựng lại từ đầu và chấm lại: xem mục 11.
 
 **9. Biến cái đơn thuốc ấy thành một cái RĂNG — cổng "ảnh cũ hơn mã" trong `sweep-score.mjs`.**
 Đây là lần thứ **ba** dự án suýt (hoặc thật sự) rút một kết luận mỹ thuật từ ảnh cũ: Phase 13 VIỆC B
@@ -99,10 +113,104 @@ gác đúng đắn trông y hệt một cái gác mù. Đây là mặt **ngượ
 hỏng, ở đây phép phá lành mà **lời gọi** sai. ⇒ Bổ sung một câu hỏi thứ ba cho mọi lần thử ngược:
 *"tôi có đang chạy đúng bản mã vừa sửa không?"* — dùng đường dẫn TUYỆT ĐỐI cho công cụ, luôn luôn.
 
-**10. Bản quét không-trôi, dựng lại SẠCH.** (điền sau khi lượt dựng lại kết thúc — xem CHANGELOG)
+**10. Phép quét 30fps đang bỏ sót đúng cái đỉnh đáng ngờ nhất — 34,5% quần thể.** Sau khi vá xong
+cú quay, tôi đi hỏi tiếp: *tuyến là một vòng KHÉP KÍN, nên đoạn cuối nối `path[n−1]` về `path[0]`;
+cái đỉnh nối ấy là đỉnh DUY NHẤT mà "đoạn trước nó" phải lấy vòng về cuối mảng (`(i−1+n) % n`) —
+phép quét 20 giây của tôi có đi qua nó không?* Đo ra: **57/165 cư dân KHÔNG BAO GIỜ chạm điểm nối**
+trong 20 giây (và 107/165 không đi hết một vòng; vòng chậm nhất mới đi được **0,27** vòng). Nghĩa là
+kết quả *"0 khung lật quá 90°"* trước đó chỉ nói về **hai phần ba** quần thể tại đúng chỗ đáng ngờ
+nhất. Đây là bài học Phase 11 (*một tổ hợp mà phép đo chưa chạm tới là một tổ hợp CHƯA ĐƯỢC KIỂM*),
+và lý lẽ trấn an *"mã dùng số học modulo nên đỉnh nối chẳng có gì đặc biệt"* là một lời **SUY LUẬN**,
+không phải một phép đo.
 
-**Chưa xong / chờ Đàm.** Mọi mục `CHỜ ĐÀM QUYẾT` cũ vẫn nguyên. Nhánh đã đẩy là
-`claude/xay-san-pham-huong-nay-nasr3n`, **chưa gộp `main`** theo đúng chỉ thị Phase 21/22.
+Vá: `quétKhungHình` nay quét mỗi tuyến **trọn ít nhất một vòng**, thời lượng **suy từ dữ liệu**
+(`length / speed`, sàn 20 giây) chứ không viết cứng — vòng chậm nhất cả 15 kỷ hôm nay là **74,70
+giây** (kỷ 4), mà một hằng số thì không nhìn thấy bảng cư dân (bẫy Phase 7D). Kèm một **gác phủ**
+đòi `quaĐiểmNối === sốTuyến`, để ngày nào tốc độ cư dân bị chỉnh chậm đi thì phép quét không lặng lẽ
+bỏ sót như cũ. Thử ngược (quét cứng lại 20 giây) ⇒ ĐỎ với đúng câu *«57/165 tuyến không đi qua điểm
+nối cuối→đầu»*; file khôi phục byte-identical. Giá: **1.306 → 1.575 ms**, mẫu **98.835 → 164.736**.
+
+⚠️ **Và kết quả thì KHÔNG đổi: tệ nhất vẫn đúng 35,6°/khung trên quần thể lúc ấy (6 kỷ · 165
+tuyến — mục 12 sau này nới ra 15 kỷ · 420 tuyến và ra 35,9°), vẫn 0 khung lật quá 90°.** Nói thẳng ra
+vì nó dễ bị đọc nhầm thành "công toi": lỗ hổng nằm ở **ĐỘ PHỦ CỦA PHÉP ĐO**, không nằm ở mã — mã đã
+đúng ở đỉnh nối từ đầu, chỉ là chưa ai chứng minh được điều đó. *Một bản vá đúng-về-lý-lẽ mà không
+đổi được con số nào thì nó vừa loại trừ giúp ta một nghi phạm; đừng vứt kết quả ấy đi.*
+
+**11. Bản quét không-trôi, dựng lại SẠCH — và một con số ĐỨNG YÊN phải được truy tới cùng.**
+Dựng lại từ đầu (`node scripts/city-preview.mjs --sweep --all --theme light`, cổng mới ở mục 9 cho
+qua) rồi chấm: **cặp chặng gần nhất 12,23 · 0/15** · **cặp kỷ gần nhất 21,86 · trung vị 36,33 ·
+0/105**. Tức **trùng tới hai chữ số thập phân** với mốc nền `6038cd9` mà tôi tự đo trong
+`git worktree` (12,23 · 21,86 · 36,33). Cổng không-trôi ĐẠT.
+
+⚠️ **Và bản quét ấy đã phải dựng lại LẦN THỨ HAI** (ảnh 21:55:27 → **22:25:53**), vì sau đó tôi còn
+chạm vào `residents.js` — chỉ sửa CHÚ THÍCH, không một dòng mã. Đúng cổng mới ở mục 9 bắt: nó không
+biết và không được phép đoán rằng lần chạm ấy vô hại. Lượt hai chấm ra **y hệt tới từng chữ số**
+(12,23 · 21,86 · 36,33 · 0/15 · 0/105) ⇒ đó vừa là kết quả, vừa là một **đối chứng miễn phí cho
+chính cái cổng**: một lần sửa chú thích mà làm dịch được con số nào thì mới là chuyện phải lo. Giá
+phải trả cho việc tuân thủ: **8,6 phút** dựng lại. Rẻ hơn nhiều một kết luận mỹ thuật rút từ ảnh cũ.
+
+⚠️ **Nhưng theo đúng bài học 2026-08-20, một bảng số y hệt lần trước KHÔNG đọc được theo một chiều
+nào cả** — nó vừa có thể là *"không trôi"*, vừa có thể là *"phép đo không nhìn tới chỗ tôi vừa
+sửa"*, và bảng ấy không phân biệt được hai khả năng. Nên phải mượn một phép đo **KHÁC HẲN**: đếm
+điểm ảnh lệch giữa hai bản quét trên **toàn khung** (probe vứt đi ở `/tmp`, §3). Kết quả: **1.886
+điểm ảnh lệch quá nhiễu (0,032%), 113 điểm vượt ngưỡng mắt 12, lệch lớn nhất 42**. Nhiễu SwiftShader
+là **±1** (`TECH_DEBT #50`) nên nó **về mặt cấu trúc không thể** sinh ra con số 42 ⇒ hai tấm ảnh
+KHÁC nhau thật, bản vá CÓ tới được điểm ảnh. Con số gộp đứng yên chỉ vì 0,032% khung hình không đủ
+kéo một trung bình dải đi 12/255 — đúng hình dạng `TECH_DEBT #22`, và đúng như dự đoán viết trước
+khi đo (cư dân chiếm **0,14%** khung ở góc toàn cảnh). ⇒ *Bảng không-trôi là một cái GÁC, nó chưa
+bao giờ là bằng chứng rằng một phase cận cảnh có tác dụng.*
+
+**12. HAI TÀI LIỆU GHI HAI CON SỐ CHO CÙNG MỘT ĐẠI LƯỢNG — và đi truy nó thì lòi ra một lỗ
+hổng thứ hai cùng họ.** `CHANGELOG.md` ghi cú quay tệ nhất là **35,9°/khung**, chú thích bài test
+ghi **35,6°**. Không được để yên: hoặc một cái sai, hoặc chúng đo hai ĐẦU VÀO khác nhau — mà nếu là
+vế sau thì phải **nói ra đầu vào**, chứ không phải chọn con số nghe hay hơn (`TECH_DEBT #43`).
+
+Đo cả sáu tổ hợp thì **không con số nào sai**, chúng chỉ đo hai quần thể:
+
+| quần thể quét | số tuyến | mẫu | tệ nhất | lật > 90° |
+|---|---:|---:|---:|---:|
+| 6 kỷ · 40 phiên (bài test lúc ấy) | 165 | 164.736 | **35,6°** | 0 |
+| 6 kỷ · 80 phiên | 168 | 167.374 | **35,9°** | 0 |
+| 15 kỷ · 80 phiên (đầy đủ) | **420** | 387.084 | **35,9°** | 0 |
+
+⇒ Bài test đang quét **165 trên 420 tuyến** và **chưa bao giờ nhìn thấy ca xấu nhất** — đúng
+`TECH_DEBT #38` (*một ngưỡng hiệu chuẩn trên MỘT quần thể rồi được đọc thành luật của CẢ TẬP*), và
+đúng cùng họ với lỗ hổng điểm-nối ở mục 10. Vá: `KỶ_MẪU` nay **suy từ `BLUEPRINT_CATALOG`**
+(cả 15 kỷ, không viết cứng) và mốc quét lên **80 phiên**. Giá: **1,0 giây** cho 2,35× độ phủ.
+
+Kèm một **gác bão hoà** mới, hỏi bằng QUAN HỆ chứ không bằng hằng số 420 (hằng số thì trôi theo bảng
+cư dân): *thêm phiên nữa có đẻ thêm tuyến không?* Đo được số tuyến đi **355 (20 phiên) → 414 (40) →
+420 (60)** rồi đứng yên tới 400 phiên, nên 80 nằm **qua** chỗ bão hoà có chủ ý. Thử ngược (hạ về 40)
+⇒ ĐỎ với đúng câu *«40 phiên mới có 414 tuyến nhưng 200 phiên có 420»*; file khôi phục
+byte-identical. Bài `residents.test.js` nay **11/11 xanh trong 3,1 giây**.
+
+⚠️ **Điều đáng nhớ: không cổng nào bắt được chuyện này.** Build xanh, lint sạch, test xanh. Thứ lộ
+ra sự thật là **một mâu thuẫn giữa hai dòng chữ trong tài liệu của chính tôi** — nên khi thấy hai
+con số cho một đại lượng, đừng hoà giải bằng cách chọn một cái; hãy đo cả hai đầu vào rồi hỏi *"cái
+nào là quần thể THẬT?"*.
+
+**13. ⚠️ MỘT MỤC NỢ GHI "CỔNG ĐÃ QUA (12,44 ✓)" — VÀ CON SỐ ẤY GIÀ ĐI Y NHƯ MỌI CON SỐ KHÁC.**
+Chấm xong bản quét thì thấy cặp chặng gần nhất là **12,23**, tức chỉ hơn ngưỡng mắt 12 đúng
+**0,23**. Đi đọc `TECH_DEBT #89` (mục đang theo dõi chính cái cổng này) thì nó vẫn ghi **12,44** và
+**biên 0,44** như thể đó là số hiện hành — trong khi `PERFORMANCE.md` đã ghi đủ đường đi từ lâu:
+**12,44 (Phase 20) → 12,11 (Phase 21, `3d37745`) → 12,23 (Phase 22)**. Không ai chép về mục nợ.
+
+⇒ **Biên đã mất đúng một nửa mà mục canh nó không biết**, và ở đáy (Phase 21) cổng chỉ còn hơn
+ngưỡng **0,11** — một phase nữa cùng cỡ là rơi. Đáng chú ý: **không phase nào trong hai phase ấy
+đụng tới bầu trời** (Phase 21 tách nhà khỏi mép nhau, Phase 22 cho sân/vườn thuộc suất đất); cả hai
+chỉ thêm chi tiết cho THÀNH PHỐ, thứ không phản ứng với giờ trong ngày — đúng cơ chế pha loãng
+`TECH_DEBT #22`. Nên điều này **củng cố** chẩn đoán của #89 (*cần gạt nằm ở dải TRỜI*) chứ không bác
+nó. Phase 23 tự nó **không tiêu gì**: cả hai lượt đo đều ra y hệt 12,23.
+
+Đã cập nhật #89 với con số thật + đường đi + lý do. **Đây là ghi lại một sự thật đã đo, không phải
+một quyết định** — chính `Review Trigger` của #89 (*"mỗi lần bản quét đổi"*) yêu cầu việc này.
+Bài học chung: `TECH_DEBT #43` (*"đừng chép cột 'sau' của phase trước"*) áp cho **cả bảng số nằm
+trong `TECH_DEBT.md`**, không chỉ cho `PERFORMANCE.md` — một mục nợ cũng là một chỗ chứa số.
+
+**Chưa xong / chờ Đàm.** Mọi mục `CHỜ ĐÀM QUYẾT` cũ vẫn nguyên. **`TECH_DEBT #89` nay là mục sát
+ngưỡng nhất của cả dự án (biên 0,23)** — nó đã có sẵn ba hướng cho Đàm chọn, và nó là đề xuất
+"kế tiếp" của phase này. Nhánh đã đẩy là `claude/xay-san-pham-huong-nay-nasr3n`, **chưa gộp `main`**
+theo đúng chỉ thị Phase 21/22.
 
 ## 2026-08-28 — Phase 22: nhà rời nhau vì ĐẤT QUANH NÓ CÓ CHỦ (ADR-067)
 

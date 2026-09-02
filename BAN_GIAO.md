@@ -1,3 +1,81 @@
+> Cập nhật lần cuối: **2026-09-02 (vòng 26)** — **GỠ ĐIỂM MÙ "MÀN SAU KHI KẾT THÚC PHIÊN", RỒI
+> LÀM LẠI NÓ** (lệnh Đàm: *"gỡ điểm mù màn hiện ra sau khi kết thúc… đơn giản hơn, dopamine lớn
+> nhất, không phức tạp, có thể làm lại toàn bộ nếu muốn"*). Đây đúng là task mà vòng 25 đề xuất
+> làm tiếp, và nó mở khoá đúng như dự đoán.
+>
+> ### PHẦN 1 — GỠ ĐIỂM MÙ
+> Khoảnh khắc dopamine lớn nhất của app là màn **DUY NHẤT** chưa ai từng soi được. Ba đường vào
+> đều bịt: nó sống trong `state.ui`, mà `ui` nằm ngoài `partialize` ⇒ gieo `--fixture`/`--ls`
+> không tới (đã kiểm: `normalizePersistedGameState` cũng KHÔNG đọc `persisted.ui`, và điều đó
+> **phải giữ nguyên** — cổng ấy gác mọi dữ liệu từ Supabase/import, cho `ui` qua đó là để một máy
+> khác đẩy hộp thoại sang máy này); store không lộ ra `window` ⇒ `--probe` không mở được; bấm
+> "Bắt đầu" thì bị CẤM trên dev.
+>
+> **Vì sao cửa soi an toàn — ĐO chứ không suy đoán:** mọi hộp thoại sau phiên **CHỈ ĐỌC** `ui`, và
+> mọi hành động đóng của chúng (`closeLootModal`, `dismissLevelUp`, `dismissRelicNotification`…)
+> cũng **CHỈ ghi** `ui`. Phần thưởng đã được `completeFocusSession` cấp từ trước; các màn này thuần
+> tuý trình bày lại. ⇒ dựng cảnh không ghi localStorage, không lên Supabase, không bắt đầu phiên.
+> `src/dev/previewStage.js` (5 cảnh) + `shot.mjs --preview <cảnh>`.
+>
+> ⚠️ **LỜI NÓI DỐI THỨ NĂM CỦA `shot.mjs` — MỘT TẤM ẢNH KHÔNG BẮT ĐƯỢC THỨ CHỈ SỐNG 4 GIÂY.**
+> Thẻ thưởng hiện ở giây **13,5** và tắt ở giây **17,7**. `--settle` thử **0,4 · 1 · 3,5 · 6 · 14**
+> giây — *không lần nào* ảnh có thẻ, và mỗi lần đều ra ảnh sạch + probe `false` + **không lỗi nào**,
+> tức đọc y hệt *"tính năng không chạy"*. Tôi đã đi qua bốn giả thuyết sai (chunk lazy hỏng · state
+> không dựng được · `showMoment` chặn · auto-dismiss) trước khi đo đúng. Nguyên nhân: cổng "đợi DOM
+> đứng yên" chạy **SAU** `--settle` và chỉ nhả khi mọi thứ thôi nhúc nhích — tức đúng lúc thẻ đã
+> tắt. ⇒ `--watch "<chuỗi>"`: MutationObserver gắn **từ đầu trang** ghi lại mọi lần hiện/tắt, và
+> khi rình thì **bỏ qua** cổng đứng-yên để chụp đúng lúc nó đang hiện. **Soi bất cứ thứ gì thoáng
+> qua (thẻ thưởng · huy hiệu mốc · lễ mừng thành phố) thì phải dùng `--watch`, đừng chỉnh
+> `--settle`.**
+>
+> ⚠️ **Và lần soi ĐẦU TIÊN đã bắt ngay một lỗi trong chính bản giả:** màn hình hiện
+> `RENDER RECOVERY: (e.buildingPerkRewards ?? []).map is not a function` — bản giả khai `{}` trong
+> khi bản thật là một MẢNG. Bài "phủ đủ trường" không thấy vì nó chỉ kiểm **sự có mặt của khoá**.
+> Nay có thêm một bài **suy KIỂU từ chính cách hộp thoại DÙNG trường** (`.map` ⇒ mảng,
+> `.toLocaleString` ⇒ số) — không chép tay bảng kiểu, vì bảng chép tay thì trôi y như bản giả.
+>
+> ### PHẦN 2 — LÀM LẠI MÀN ẤY
+> Nhìn được rồi thì thấy ba khuyết tật, cả ba đo được:
+>
+> | | trước | sau |
+> |---|---|---|
+> | di vật **huyền thoại** vs phiên thường | khác nhau **3px vệt màu + mấy chấm + một chữ** | nền pha màu + vệt dày dần theo bậc |
+> | nhãn bậc trên chiến thắng vừa giành | đóng dấu **"THƯỜNG"** | bậc thấp nhất không dán nhãn |
+> | tin **kỷ nguyên mới** (hiếm nhất game) | thẻ **299px** ở **đáy** trang cao **3.201px** | **nhan đề** nói ngay |
+> | chữ trong màn | **327 chữ · 31 số** | **267 chữ** (−18%) |
+>
+> 1. **Một di vật HUYỀN THOẠI hiện ra y hệt một phiên 25 phút thường.** Bậc độ hiếm chỉ đổi được
+>    một vệt màu **3px** + mấy cái chấm + một chữ; nền, viền, cỡ chữ, cỡ thẻ đều **giống hệt**.
+>    Chú thích cũ tại chỗ chốt rằng vệt màu là *"chỗ DUY NHẤT màu bậc chạm vào khung thẻ … để phần
+>    thưởng không thành biển quảng cáo"* — ý ấy hợp lý nhưng đã đi quá xa về phía kia. Nay chỉnh
+>    lại **theo bậc**: `thuong`/`tot` giữ NGUYÊN (không một điểm ảnh nào đổi), chỉ `hiem`/
+>    `huyenThoai` mới nổi. *Hiếm mà nổi thì không phải quảng cáo; thường mà nổi mới là.*
+> 2. **Chữ "THƯỜNG" đóng dấu lên đúng chiến thắng vừa giành được.** `thuong` là
+>    `DEFAULT_REWARD_TIER` ⇒ nhãn ấy không mang TIN, nó mang sự VẮNG tin — mà chỗ nó xuất hiện
+>    nhiều nhất lại là ngay sau khi Đàm làm xong một phiên. `DailyMissions` chỉ dùng `tot`/`hiem`
+>    nên **không đổi một điểm ảnh** (đã đếm, không suy đoán).
+> 3. **Tin "kỷ nguyên mới" — sự kiện hiếm nhất game — nằm ở ĐÁY.** Đo chiều cao **từng khối** mới
+>    thấy: nó ở trong một thẻ **299px** dưới đáy một trang **3.201px** (gần bốn màn hình), trong
+>    khi dòng chữ to nhất đầu trang chỉ ghi *"Tổng kết phiên"* — một từ HÀNH CHÍNH. Nay nhan đề nói
+>    thứ to nhất vừa xảy ra (kỷ nguyên > lên cấp > xong phiên); **thẻ ăn mừng giai đoạn 6 GIỮ
+>    NGUYÊN** — cả chuỗi 7 giai đoạn sinh ra để dồn nén tới đó, thứ được sửa là cái nhan đề.
+>
+> Kèm: gỡ **bốn** đoạn kể lại nghiệp vụ kế toán (một đoạn còn mô tả **BỐ CỤC TRANG** chứ không mô
+> tả phần thưởng nào). ⚠️ **Chiều cao gần như không đổi sau khi cắt chữ (3.201 → 3.238px)** — phần
+> còn lại là NỘI DUNG phần thưởng thật, nên **cắt tiếp là cắt vào dopamine, không phải cắt mỡ**.
+> Thứ thật sự đổi được trải nghiệm là **THỨ TỰ** (tin to nhất lên đầu) và **ĐỘ NỔI theo bậc**,
+> không phải độ dài.
+>
+> ⚠️ **Bài học công cụ, ghi lại vì nó suýt làm hỏng chính bài test của tôi:** bài canh nhan đề ĐỎ
+> ngay lần chạy đầu **trên mã hoàn toàn đúng** — neo `resolvedPhase === 0` xuất hiện **6 lần**
+> trong file (hoạt hoạ lắc, nhịp lặp, tiếng mở rương…) nên `indexOf` trỏ vào chỗ cách nhan đề vài
+> nghìn ký tự. Nay neo vào chuỗi duy nhất **và có assert đòi nó duy nhất**. *Một cái neo trong bài
+> test đọc-mã-nguồn phải được chứng minh là DUY NHẤT, nếu không nó lặng lẽ đo một chỗ khác.*
+>
+> **Test: 1512 bài** (1511 pass · 0 fail · 1 skipped). 13 assert mới, tất cả đã thử-cho-đỏ.
+>
+> ---
+>
 > Cập nhật lần cuối: **2026-09-02 (vòng 25)** — **MÀN "TẬP TRUNG" + "THỐNG KÊ": GỠ BỐN CHỖ APP
 > NÓI DỐI HOẶC IM LẶNG** (nốt phần còn lại của lệnh vòng 24: *"tổng đại tu cho đơn giản, dễ hiểu
 > hơn về UX/UI của mục Tập Trung, Hành Trang và Thống Kê"*).

@@ -12,6 +12,41 @@
 
 ---
 
+## 2026-09-02 (vòng 26) — Gỡ điểm mù "màn sau khi kết thúc phiên", rồi làm lại nó
+
+**Mục đích:** lệnh Đàm — *"gỡ điểm mù màn hiện ra sau khi kết thúc… đơn giản hơn, dopamine lớn
+nhất, không phức tạp, có thể làm lại toàn bộ nếu muốn"*.
+
+**PHẦN 1 — GỠ ĐIỂM MÙ.** Khoảnh khắc dopamine lớn nhất của app là màn DUY NHẤT chưa ai từng soi
+được, suốt nhiều vòng. Ba đường vào đều bịt: nó sống trong `state.ui`, mà `ui` nằm ngoài
+`partialize` ⇒ gieo `--fixture`/`--ls` không tới; store không lộ ra `window` ⇒ `--probe` không mở
+được; bấm "Bắt đầu" thì bị CẤM trên dev. Nay có `src/dev/previewStage.js` + `shot.mjs --preview`.
+**An toàn vì đã ĐO**: mọi hộp thoại sau phiên CHỈ ĐỌC `ui`, mọi hành động đóng cũng CHỈ ghi `ui`
+⇒ không ghi localStorage, không lên Supabase, không bắt đầu phiên nào.
+
+⚠️ **Và ngay trong lúc gỡ, tìm ra LỜI NÓI DỐI THỨ NĂM của `shot.mjs`:** một tấm ảnh không bắt được
+thứ chỉ sống 4 giây. Đo được: thẻ thưởng hiện ở giây **13,5**, tắt ở giây **17,7**; `--settle` thử
+0,4 · 1 · 3,5 · 6 · 14 giây đều ra ảnh sạch + probe `false` + không lỗi nào — đọc y hệt *"tính năng
+không chạy"*. Vá bằng `--watch "<chuỗi>"` (MutationObserver gắn từ đầu trang + bỏ qua cổng
+đứng-yên để chụp đúng lúc nó đang hiện).
+
+**PHẦN 2 — LÀM LẠI.** Nhìn lần đầu thấy ba khuyết tật, cả ba đo được:
+
+| | trước | sau |
+|---|---|---|
+| di vật **huyền thoại** vs phiên thường | khác nhau **3px vệt màu + mấy chấm + một chữ** | nền pha màu + vệt dày dần theo bậc |
+| nhãn bậc trên chiến thắng vừa giành | đóng dấu **"THƯỜNG"** | bậc thấp nhất không dán nhãn |
+| tin **kỷ nguyên mới** (hiếm nhất game) | thẻ 299px ở **đáy** trang cao 3.201px | **nhan đề** nói ngay: kỷ nguyên > lên cấp > xong phiên |
+| chữ trong màn | 327 chữ · 31 số | **267 chữ** (−18%) |
+
+**Ảnh hưởng:** chỉ tầng giao diện + một module dev mới. **Không** đụng công thức phần thưởng,
+**không** đụng Thành Phố, **không** đụng `partialize`. `DailyMissions` không đổi một điểm ảnh
+(chỉ dùng bậc `tot`/`hiem`, đã đếm).
+
+**Tương thích:** không có migration.
+
+---
+
 ## 2026-09-02 (vòng 25) — Màn "Tập trung" + "Thống kê": gỡ bốn chỗ app **nói dối hoặc im lặng**
 
 **Mục đích:** phần còn lại của lệnh Đàm ở vòng 24 — *"tổng đại tu cho đơn giản, dễ hiểu hơn về

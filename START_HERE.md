@@ -35,6 +35,30 @@ Mặt trận đang làm: **thành phố 3D** (`src/engine/city3d/` + `src/compon
   Phase 21 (*"push nhánh phụ, không tự gộp `main`"*) đã bị lệnh này thay thế.
   ⚠️ **Phase 21 do đó lên production TRƯỚC khi Đàm nhìn ảnh nghiệm thu** — mục "chờ Đàm nhìn ảnh"
   ở phần dưới VẪN CÒN HIỆU LỰC, chỉ là nay nó nghiệm thu một thứ đang chạy thật.
+- **Trò chơi — VÒNG 26 (2026-09-02, mới nhất): GỠ ĐIỂM MÙ "MÀN SAU KHI KẾT THÚC PHIÊN", RỒI
+  LÀM LẠI NÓ.** Đây chính là việc mà vòng 25 đề xuất làm tiếp, và nó mở khoá đúng như dự đoán.
+  · **Cách soi từ nay:** `node scripts/shot.mjs --phone --fixture <f.json> --preview <cảnh>` —
+  cảnh ở `src/dev/previewStage.js` (`loot` · `loot-max` · `era` · `level` · `toasts`). An toàn vì
+  mọi hộp thoại sau phiên CHỈ ĐỌC `ui`, và `ui` nằm ngoài `partialize` ⇒ không ghi localStorage,
+  không lên Supabase, không bắt đầu phiên nào. **KHÔNG được cho `ui` vào `partialize`** — cả lời
+  hứa an toàn dựa vào việc nó nằm ngoài (có test canh).
+  · ⚠️ **LỜI NÓI DỐI THỨ NĂM CỦA `shot.mjs`: một tấm ảnh KHÔNG bắt được thứ chỉ sống 4 giây.**
+  Thẻ thưởng hiện ở giây **13,5** và tắt ở giây **17,7**; `--settle` 0,4 → 14 giây đều ra ảnh
+  sạch + probe `false` + không lỗi nào, tức đọc y hệt *"tính năng không chạy"* (tôi suýt kết luận
+  đúng như vậy). Nguyên nhân: cổng "đợi DOM đứng yên" chạy SAU `--settle` và chỉ nhả khi mọi thứ
+  thôi nhúc nhích = khi thẻ đã tắt. ⇒ **Soi thứ thoáng qua thì PHẢI dùng `--watch "<chuỗi>"`**
+  (ghi lại mọi lần hiện/tắt + chụp đúng lúc đang hiện), đừng chỉnh `--settle`.
+  · **Ba khuyết tật đã sửa, cả ba đo được:** di vật **huyền thoại** từng khác phiên thường đúng
+  **3px vệt màu + mấy chấm + một chữ** → nay nền pha màu + vệt dày dần theo bậc (chỉ `hiem`/
+  `huyenThoai`; `thuong`/`tot` không đổi một điểm ảnh) · chữ **"THƯỜNG"** từng đóng dấu lên đúng
+  chiến thắng vừa giành được (mà `thuong` là bậc MẶC ĐỊNH ⇒ nó mang sự VẮNG tin) → bậc thấp nhất
+  không dán nhãn · tin **kỷ nguyên mới** (hiếm nhất game) từng nằm trong thẻ 299px ở **đáy** một
+  trang cao 3.201px → nay **nhan đề** nói ngay (kỷ nguyên > lên cấp > xong phiên), còn thẻ ăn mừng
+  giai đoạn 6 GIỮ NGUYÊN.
+  · Chữ trong màn **327 → 267** (−18%). Chiều cao gần như không đổi — phần còn lại là NỘI DUNG
+  phần thưởng thật, cắt tiếp là cắt vào dopamine chứ không phải cắt mỡ.
+  · Test **1512 bài** (1511 pass · 0 fail · 1 skipped).
+
 - **Trò chơi — VÒNG 25 (2026-09-02, mới nhất): MÀN "TẬP TRUNG" + "THỐNG KÊ" — gỡ bốn chỗ app
   NÓI DỐI HOẶC IM LẶNG.** Nốt phần còn lại của lệnh vòng 24 (*"tổng đại tu cho đơn giản, dễ hiểu
   hơn về UX/UI của mục Tập Trung, Hành Trang và Thống Kê"*).

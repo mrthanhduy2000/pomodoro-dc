@@ -35,7 +35,30 @@ Mặt trận đang làm: **thành phố 3D** (`src/engine/city3d/` + `src/compon
   Phase 21 (*"push nhánh phụ, không tự gộp `main`"*) đã bị lệnh này thay thế.
   ⚠️ **Phase 21 do đó lên production TRƯỚC khi Đàm nhìn ảnh nghiệm thu** — mục "chờ Đàm nhìn ảnh"
   ở phần dưới VẪN CÒN HIỆU LỰC, chỉ là nay nó nghiệm thu một thứ đang chạy thật.
-- **Trò chơi — VÒNG 24 (2026-09-01, mới nhất): TAB "HÀNH TRANG" — 6 màn sau 3 tầng tab → 3 màn,
+- **Trò chơi — VÒNG 25 (2026-09-02, mới nhất): MÀN "TẬP TRUNG" + "THỐNG KÊ" — gỡ bốn chỗ app
+  NÓI DỐI HOẶC IM LẶNG.** Nốt phần còn lại của lệnh vòng 24 (*"tổng đại tu cho đơn giản, dễ hiểu
+  hơn về UX/UI của mục Tập Trung, Hành Trang và Thống Kê"*).
+  · **CHẨN ĐOÁN GỐC:** màn Tập trung KHÔNG thiếu tính năng — nó có bốn thứ **đã viết xong mà không
+  tới được Đàm**, mỗi thứ im lặng một kiểu, nên không thứ nào lộ ra ba thứ kia.
+  · **Số đo:** bắt đầu một phiên **4 thao tác → 2 chạm ngay trên nếp gấp** (khoảng hở tới thanh
+  điều hướng **76px**) · huy hiệu mốc 25/50/75% từ **không thể hiện** (cổng `!useMinimalFocusStage`
+  luôn sai lúc phiên chạy ⇒ app tính mốc rồi vứt đi) **→ hiện thật** · nhãn vòng đồng hồ **"SẴN
+  SÀNG" → "Chờ mục tiêu"** khi app đang từ chối bắt đầu · **mục tiêu phiên nay còn nhìn thấy trong
+  lúc phiên chạy** (trước đó mọi chỗ render đều gác `isIdle` ⇒ bắt gõ ≥10 ký tự rồi giấu 25 phút) ·
+  Thống kê: **1/5 tab và 3/6 kỳ hạn** từng nằm ngoài màn hình sau cuộn ngang **→ hiện đủ**.
+  · ⚠️ **ĐÁNG NHỚ NHẤT — HẾT GIỜ NGHỈ CÂM TRÊN CẢ BA KÊNH CÙNG LÚC** (tiếng · thông báo trình duyệt
+  · Web Push), nên **không kênh nào lộ ra rằng hai kênh kia cũng câm**. Đây là lần thứ BA tìm thấy
+  một hàm viết xong với **0 nơi gọi** (`playMilestone` vòng 22 · `playBreakStart` vòng 23 ·
+  `notifyBreakOver` vòng 25) ⇒ đã dựng `notificationReach.test.js` để lớp THÔNG BÁO cũng được ĐẾM
+  như lớp TIẾNG. `notifyFocusComplete`/`notifyDisaster` nằm trong danh sách miễn trừ **tường minh
+  kèm lý do đo được**, không phải bị bỏ quên.
+  · ⚠️ **MÌN CHO PHIÊN SAU:** đây là lần đầu `soundEngine`/`notificationManager` bị chạm từ một
+  ĐỒNG HỒ (`useGameLoop`, mỗi giây) chứ không từ một cú bấm nút. Bài test node nào tick giờ nghỉ sẽ
+  nổ `ReferenceError: window is not defined` — chữa bằng cách đặt `.enabled = false` TRONG BÀI TEST,
+  **không** đi rào hai engine dùng chung (rào sai một chỗ là câm tiếng thật của Đàm trên production).
+  · Test **1499 bài** (1498 pass · 0 fail · 1 skipped).
+
+- **Trò chơi — VÒNG 24 (2026-09-01): TAB "HÀNH TRANG" — 6 màn sau 3 tầng tab → 3 màn,
   1 hàng tab.** Lệnh Đàm: *"làm lại đơn giản hơn… phải DỄ HIỂU, DỄ CHƠI… có thể đập đi xây lại"*.
   Khảo sát bằng 12 nhánh soi song song, luật *không số đo = không tính*, rồi sửa TUẦN TỰ.
   · **CHẨN ĐOÁN GỐC:** Hành trang là **bảo tàng của những thứ Đàm KHÔNG có** — nó trả lời *"tôi

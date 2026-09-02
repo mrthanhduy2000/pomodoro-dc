@@ -1,3 +1,83 @@
+> Cập nhật lần cuối: **2026-09-02 (vòng 25)** — **MÀN "TẬP TRUNG" + "THỐNG KÊ": GỠ BỐN CHỖ APP
+> NÓI DỐI HOẶC IM LẶNG** (nốt phần còn lại của lệnh vòng 24: *"tổng đại tu cho đơn giản, dễ hiểu
+> hơn về UX/UI của mục Tập Trung, Hành Trang và Thống Kê"*).
+>
+> **CHẨN ĐOÁN GỐC — màn Tập trung KHÔNG thiếu tính năng.** Nó có bốn thứ **đã viết xong mà không
+> tới được Đàm**, và mỗi thứ im lặng theo một kiểu khác nhau, nên **không thứ nào lộ ra ba thứ
+> kia**. Đó là lý do chúng sống sót qua nhiều vòng soi trước.
+>
+> | | trước | sau |
+> |---|---|---|
+> | bắt đầu một phiên | **4 thao tác** (bấm nút chỉ-để-cuộn → gõ → cuộn ngược → bấm) | **2 chạm ngay trên nếp gấp**, hở 76px |
+> | huy hiệu mốc 25/50/75% | tính ra rồi **vứt đi** | hiện thật |
+> | nhãn vòng đồng hồ khi thiếu mục tiêu | **"SẴN SÀNG"** | **"Chờ mục tiêu"** |
+> | mục tiêu phiên lúc đang chạy | **không hiện ở đâu cả** | hiện trong vòng đồng hồ, 2 dòng |
+> | hết giờ nghỉ | im trên **cả ba kênh** | tiếng + thông báo, gác cửa sổ 90 giây |
+> | tab / kỳ hạn ở Thống kê | **1/5 tab + 3/6 kỳ hạn** ngoài màn hình | hiện đủ |
+>
+> **Bốn chỗ đó, và vì sao mỗi chỗ im lặng được lâu tới vậy:**
+>
+> 1. **Huy hiệu mốc 25/50/75% KHÔNG THỂ hiện** — `activeMilestone` chỉ được đặt trong lúc phiên
+>    chạy, mà `useMinimalFocusStage = fullScreenMode || (isActive && !isBreakMode)` thì **luôn
+>    đúng** trong lúc phiên chạy ⇒ `!useMinimalFocusStage && activeMilestone` là một điều kiện
+>    **không thể cùng đúng**. App tính mốc, giữ 2,2 giây, rồi vứt đi — để trống ~25 phút không một
+>    tín hiệu nào. Không cổng nào bắt được: lint xanh, build xanh, test xanh; triệu chứng là "không
+>    có gì xảy ra", thứ không ai đi tìm. Đổi gác thành `!fullScreenMode`.
+> 2. **Vòng đồng hồ ghi "SẴN SÀNG" trong khi app đang từ chối bắt đầu** vì thiếu mục tiêu — cách đó
+>    ~200px cái nút ghi "Điền mục tiêu →". Hai câu trên cùng một màn hình nói ngược nhau, và **cái
+>    to hơn là cái sai**.
+> 3. **Mục tiêu phiên biến mất đúng lúc cần nhất.** App BẮT BUỘC gõ ≥10 ký tự mới cho bấm "Bắt
+>    đầu", rồi giấu ngay câu ấy đi suốt 25 phút. Đo trên mã: mọi chỗ render đều nằm trong khối
+>    `isIdle` hoặc trong `fullScreenNotebook`, và dòng 982 còn hạ cả thẻ chuẩn bị xuống
+>    `opacity-25 pointer-events-none` khi `!isIdle` ⇒ **không một chỗ nào gác theo `isActive`**.
+>    Tức cái cổng thu tiền xong thì vứt câu trả lời đi, đúng lúc câu ấy phải làm việc. Dữ liệu vốn
+>    đã có sẵn (`useTimer` đồng bộ `pendingSessionGoal` vào `timerSession.goal` suốt RUNNING/PAUSED)
+>    — đây thuần là chỗ RENDER bị thiếu, không phải trạng thái bị mất.
+> 4. ⚠️ **HẾT GIỜ NGHỈ CÂM TRÊN CẢ BA KÊNH CÙNG LÚC.** `soundEngine` không có tiếng nào cho nó ·
+>    `notificationManager.notifyBreakOver()` viết xong với **0 nơi gọi** · `pushService` chỉ hẹn
+>    `focus-complete` và `pomodoro-continue`. Vì cả ba cùng câm nên **không kênh nào lộ ra hai kênh
+>    kia**. Màn Cài Đặt lại hứa *"khi phiên kết thúc, iPhone sẽ nhận notification"* — lời hứa ấy
+>    đúng cho phiên TẬP TRUNG và sai cho giờ NGHỈ. Có sẵn một bẫy chuyển-trạng-thái ở
+>    `PomodoroEngine` (`justEndedBreak`) nhưng nó chỉ làm gì đó khi `autoStartNext` bật, mà **mặc
+>    định của nó là `false`**.
+>
+> **Nối ở đâu và vì sao:** ở `syncBreakSession` (store) chứ không ở component — hàm ấy chạy bất kể
+> đang mở tab nào; báo ở `PomodoroEngine` thì chuyển sang Hành trang là mất tín hiệu. Tác dụng phụ
+> đặt **NGOÀI `set(...)`** vì `set` là hàm thuần (nhét vào trong thì React strict-mode gọi hai lần
+> ⇒ Đàm nghe hai tiếng) — cùng hình dạng với `if (!get().ui.isOnBreak) soundEngine.playBreakStart()`
+> ở `startBreak`. Kèm **cửa sổ gần đây 90 giây** (`BREAK_OVER_ANNOUNCE_MS`), bắt buộc: `useGameLoop`
+> cũng gọi hàm này ở `visibilitychange`/`pageshow`, nên không gác thì gập máy giữa giờ nghỉ rồi mở
+> lại sau hai tiếng app sẽ reo lên báo một giờ nghỉ đã kết thúc từ đời nào — cùng lý do `CoachNudge`
+> gác 5 phút trước khi nhắc phiên vừa xong. Cận DƯỚI (`quaHanMs >= 0`) cũng bắt buộc: thiếu nó thì
+> mọi tick giữa giờ nghỉ đều thoả *"<= 90 giây"* ⇒ app reo **mỗi giây suốt cả giờ nghỉ**.
+>
+> **LẦN THỨ BA của "một hàm viết xong với 0 nơi gọi"** (`playMilestone` vòng 22 · `playBreakStart`
+> vòng 23 · `notifyBreakOver` vòng 25). Vòng 23 đã dựng `soundReach.test.js` để ĐẾM lớp TIẾNG —
+> nhưng nó chỉ quét `soundEngine.js`, nên cả lớp **THÔNG BÁO chưa từng được đếm**. Đo lần đầu:
+> **3/4** hàm tiện lợi có 0 nơi gọi. Nay có `notificationReach.test.js` làm việc ấy, với danh sách
+> miễn trừ **TƯỜNG MINH** (`assert.deepEqual`, không phải "bao gồm"): `notifyFocusComplete` (moment
+> ấy đã có `playTimerFinish` + Web Push; nối thêm kênh thứ ba thì máy đã đăng ký push nhận **hai**
+> thông báo cho một sự kiện) và `notifyDisaster` (`DisasterModal` đã chiếm trọn màn hình kèm
+> `playDisaster()`; bắn thêm thông báo hệ thống cho thứ đang che kín màn hình là tiếng ồn).
+>
+> ⚠️ **MÌN GHI LẠI CHO PHIÊN SAU:** đây là lần đầu `soundEngine`/`notificationManager` bị chạm từ
+> một **ĐỒNG HỒ** (`useGameLoop`, mỗi giây) chứ không từ một cú bấm nút. Cả hai singleton mặc định
+> `enabled = true` và đọc `window` **không rào** (`window.AudioContext` ở `audioContext.js`,
+> `'Notification' in window` ở `notifications.js`), nên bài test node nào tick giờ nghỉ sẽ nổ
+> `ReferenceError: window is not defined` — một thông báo trỏ vào `audioContext.js`, **cách xa
+> nguyên nhân thật**. Chữa bằng cách đặt `.enabled = false` TRONG BÀI TEST, **KHÔNG** đi rào hai
+> engine dùng chung: rào sai một chỗ là câm tiếng thật của Đàm trên production, cái giá ấy đắt hơn
+> nhiều so với một thông báo lỗi khó đọc.
+>
+> **Đã cân nhắc rồi BÁC BỎ:** *"mặc định 25 phút thiếu đúng 1 phút để đạt bậc ×1.3"*. Bảng bậc ghi
+> rõ `26` là ranh giới CÓ CHỦ ĐÍCH (`DEFAULT_DEEP_FOCUS_THRESHOLD = 26`), và giao diện đã tự mời
+> gọi bằng chip *"Tiêu Chuẩn ×1.0 · còn 1' để ×1.3"*. Đổi nó là một thay đổi ~30% nền kinh tế EP
+> **đội lốt một bản sửa lỗi**.
+>
+> **Test: 1499 bài** (1498 pass · 0 fail · 1 skipped) — mọi bài mới đều đã thử-cho-đỏ.
+>
+> ---
+>
 > Cập nhật lần cuối: **2026-09-01 (vòng 24)** — **TAB "HÀNH TRANG": 6 MÀN SAU 3 TẦNG TAB → 3 MÀN,
 > 1 HÀNG TAB** (lệnh của Đàm: *"tối ưu lại tab hành trang và toàn bộ những gì trong đó, làm lại
 > ĐƠN GIẢN HƠN nhưng vẫn nâng cao độ hứng thú, độ nghiện và dopamin… PHẢI DỄ HIỂU, DỄ CHƠI… có thể

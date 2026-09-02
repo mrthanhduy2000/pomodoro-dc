@@ -12,6 +12,36 @@
 
 ---
 
+## 2026-09-02 (vòng 25) — Màn "Tập trung" + "Thống kê": gỡ bốn chỗ app **nói dối hoặc im lặng**
+
+**Mục đích:** phần còn lại của lệnh Đàm ở vòng 24 — *"tổng đại tu cho đơn giản, dễ hiểu hơn về
+UX/UI của mục Tập Trung, Hành Trang và Thống Kê"*. Hành trang xong ở vòng 24; vòng này làm hai mục
+còn lại. Khảo sát song song chỉ-đọc, luật *không số đo = không tính*, rồi sửa TUẦN TỰ.
+
+**CHẨN ĐOÁN GỐC:** màn Tập trung không thiếu tính năng — nó có bốn chỗ **đã viết xong mà không tới
+được Đàm**, mỗi chỗ im lặng theo một kiểu khác nhau, nên không chỗ nào lộ ra ba chỗ kia.
+
+| chỗ | trước | sau |
+|---|---|---|
+| bắt đầu một phiên | **4 thao tác** (bấm nút chỉ-để-cuộn → gõ → cuộn ngược → bấm) | **2 chạm ngay trên nếp gấp** |
+| huy hiệu mốc 25/50/75% | tính ra rồi **vứt đi** — cổng `!useMinimalFocusStage` luôn sai lúc phiên chạy | hiện thật, ~25 phút có 3 tín hiệu |
+| nhãn vòng đồng hồ lúc thiếu mục tiêu | ghi **"SẴN SÀNG"** trong khi nút cách 200px ghi "Điền mục tiêu →" | **"Chờ mục tiêu"** |
+| mục tiêu phiên lúc đang chạy | **không hiện ở đâu cả** (mọi chỗ render gác `isIdle`) | hiện trong vòng đồng hồ, 2 dòng |
+| hết giờ nghỉ | im trên **cả ba kênh** (tiếng · thông báo · Web Push) | có tiếng + thông báo, gác cửa sổ 90 giây |
+| tab/kỳ hạn ở Thống kê | **1/5 tab và 3/6 kỳ hạn** nằm ngoài màn hình, sau cuộn ngang | xuống dòng, hiện đủ |
+
+**Ảnh hưởng:** chỉ tầng giao diện + một chỗ nối tín hiệu ở `gameStore`. **Không** đụng công thức
+phần thưởng, **không** đụng Thành Phố, **không** nới cổng 10 ký tự của mục tiêu phiên.
+
+**Tương thích:** không có migration. Dữ liệu cũ đọc nguyên vẹn.
+
+**Đáng nhớ nhất:** khoảnh khắc hết giờ nghỉ câm trên cả ba kênh cùng lúc — nên *không kênh nào lộ
+ra rằng hai kênh kia cũng câm*. Đó là lần thứ ba dự án tìm thấy một hàm viết xong với 0 nơi gọi
+(`playMilestone` vòng 22, `playBreakStart` vòng 23, `notifyBreakOver` vòng 25); lần này đã dựng
+`notificationReach.test.js` để lớp thông báo cũng được ĐẾM như lớp tiếng.
+
+---
+
 ## 2026-09-01 (vòng 24) — Tab "Hành trang": 6 màn sau 3 tầng tab → **3 màn, 1 hàng tab**
 
 **Mục đích:** lệnh của Đàm — *"tối ưu lại tab hành trang và toàn bộ những gì trong đó, làm lại

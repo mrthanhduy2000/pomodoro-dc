@@ -55,8 +55,19 @@ function TierPips({ tier }) {
   );
 }
 
+/*
+  ⚠️ BẬC "THƯỜNG" KHÔNG ĐƯỢC DÁN NHÃN (2026-09-02). `DEFAULT_REWARD_TIER = 'thuong'`, nghĩa là
+  mọi thứ KHÔNG khai bậc đều rơi về đây — nên tấm nhãn ấy không mang TIN, nó mang sự VẮNG tin.
+  Mà chỗ nó xuất hiện nhiều nhất lại là khoảnh khắc ngay sau khi Đàm vừa làm xong một phiên tập
+  trung: màn hình đóng dấu chữ "THƯỜNG" lên đúng chiến thắng vừa giành được. Đó là phản-dopamine,
+  và nó còn thêm một dòng chữ vào chỗ đang cần ít chữ nhất.
+  ⚠️ Bỏ nhãn ở bậc thấp nhất KHÔNG làm mất tín hiệu độ hiếm: vệt màu bên trái vẫn còn, và chính
+  việc CÓ nhãn đã trở thành tín hiệu ("có nhãn = đáng chú ý"). `DailyMissions` chỉ dùng `tot` và
+  `hiem` nên nó không đổi một điểm ảnh nào — đã đếm, không suy đoán.
+*/
 export function RewardTierBadge({ tier: tierKey }) {
   const tier = getRewardTier(tierKey);
+  if (tier.rank === 0) return null;
   return (
     <span
       className="mono inline-flex shrink-0 items-center gap-1.5 rounded-full px-2 py-[3px] text-[10px] font-semibold uppercase tracking-[0.16em]"
@@ -105,13 +116,24 @@ export default function RewardCard({
       onClick={onClick}
       className={`flex w-full flex-col gap-1.5 text-left ${compact ? 'px-3.5 py-3' : 'px-4 py-3.5'} ${className}`}
       style={{
-        background: 'var(--card-bg-solid)',
+        // ⚠️ THẺ PHẢI LEO THANG THEO BẬC (2026-09-02) — chú thích cũ ở đây chốt rằng vệt màu
+        // bên trái là "chỗ DUY NHẤT màu bậc chạm vào khung thẻ … để phần thưởng không thành
+        // biển quảng cáo". Ý ấy hợp lý, nhưng ĐO ra thì nó đã đi quá xa về phía kia: bậc chỉ
+        // đổi được **3px vệt màu + mấy chấm + một chữ**, tức một DI VẬT HUYỀN THOẠI — thứ hiếm
+        // nhất game — hiện ra y hệt một phiên 25 phút bình thường. Ba tấm thẻ xám chồng lên
+        // nhau, không tấm nào nổi hơn tấm nào. Đàm ra chỉ thị "dopamine lớn nhất, có thể làm
+        // lại toàn bộ", nên cán cân được chỉnh lại — nhưng CHỈNH THEO BẬC, không phải tô đậm
+        // tất cả: `thuong`/`tot` giữ NGUYÊN như cũ (không một điểm ảnh nào đổi), chỉ `hiem` và
+        // `huyenThoai` mới được nền pha màu + vệt dày hơn. Hiếm mà nổi thì không phải quảng
+        // cáo; thường mà nổi mới là.
+        // `color-mix` chứ không mã màu cứng: app có 2 theme × 5 skin (cùng lý do
+        // `cityBackdropScrim.js` đã chọn nó).
+        background: tier.rank >= 2
+          ? `color-mix(in srgb, ${tier.colorVar} ${tier.rank >= 3 ? 12 : 7}%, var(--card-bg-solid))`
+          : 'var(--card-bg-solid)',
         border: 'var(--skin-card-border-width,1px) solid var(--line)',
         borderRadius: 'var(--skin-radius-card,18px)',
-        // Vệt màu bên trái: bậc đọc được ngay cả khi thẻ bị cắt cụt trong một
-        // chồng toast. Đây là chỗ DUY NHẤT màu bậc chạm vào khung thẻ — nền và
-        // viền giữ nguyên như mọi thẻ khác để phần thưởng không thành biển quảng cáo.
-        borderLeft: `3px solid ${tier.colorVar}`,
+        borderLeft: `${3 + Math.max(0, tier.rank - 1) * 2}px solid ${tier.colorVar}`,
         ...style,
       }}
     >

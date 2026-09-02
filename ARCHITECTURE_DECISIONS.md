@@ -11,6 +11,57 @@
 
 ---
 
+## ADR-068 — **HƯỚNG MẶT LÀ MỘT ĐẠI LƯỢNG LIÊN TỤC, KHÔNG PHẢI THUỘC TÍNH CỦA ĐOẠN TUYẾN ĐANG ĐI**; và một cổng đo phải hỏi *"quần thể này có nằm trong mẫu hiệu chuẩn không?"*
+
+- **Ngày**: 2026-09-02
+- **Bối cảnh**: Đàm yêu cầu *«tiếp tục tối ưu hoạt ảnh 3D»*. Phase 22 đã cho cư dân thân người bất
+  đối xứng (vai 1,00 ↔ eo 0,72), tay vung, và mũ nón riêng từng kỷ. Cùng lúc, đi dựng ảnh nghiệm
+  thu thì phát hiện MỌI lượt `--mask` đều bị từ chối.
+- **Vấn đề (hai, độc lập nhau)**:
+  **(A)** `residentAt().angle` trả `atan2` của đoạn tuyến ĐANG đi — một hàm **bậc thang**. Sang đoạn
+  mới là góc nhảy tức thì: đo được **180,0°/khung · 1.101 khung** lật quá 90° trên 302.400 mẫu.
+  Trước Phase 22 thân người gần đối xứng nên mắt không đọc ra; nay thì đọc ra.
+  **(B)** `soiVetChep` (thêm ở `3d37745`, Phase 21) tố mọi ảnh `--mask` là *«95,4% số cột bị chép»*
+  và TỪ CHỐI ghi ảnh — ngưỡng 10% của nó hiệu chuẩn trên **16 tấm ảnh MÀU nhìn từ trên xuống**, một
+  quần thể không có ảnh mặt nạ trong đó.
+- **Phương án đã cân nhắc (A)**:
+  1. *Làm mượt góc bằng bộ lọc theo thời gian (nhớ góc khung trước).* **LOẠI** — nó biến hướng mặt
+     thành TRẠNG THÁI TÍCH LUỸ, phá thẳng ADR-007: cùng một `(tuyến, thời gian)` sẽ ra hai kết quả
+     khác nhau tuỳ máy đã chạy bao lâu.
+  2. *Bo tròn góc tuyến (cắt cua).* **LOẠI** — nó đổi ĐƯỜNG ĐI, tức đổi vị trí, tức đổi thứ ADR-007
+     hứa là bất động.
+  3. ✅ *Cửa sổ quay CÂN GIỮA đỉnh tuyến* — vẫn là hàm thuần của `(tuyến, thời gian)`; nửa cuối đoạn
+     tới và nửa đầu đoạn sau cùng nội suy MỘT phép quay theo đường ngắn nhất.
+- **Phương án đã cân nhắc (B)**:
+  1. *Nới `CHEP_SAN` từ 10% lên trên 95%.* **LOẠI** — đó là cái phễu Phase 9A ở dạng thuần tuý: nó
+     tắt cổng cho MỌI tấm ảnh, không riêng ảnh mặt nạ.
+  2. *Tắt cổng khi có cờ `--mask`.* **LOẠI** — nó tạo một chế độ KHÔNG được canh, và một vết chép
+     thật trên ảnh mặt nạ sẽ làm sai mọi phép đếm điểm ảnh sau đó mà không gì kêu.
+  3. ✅ *Loại cột PHẲNG khỏi cả tử số lẫn mẫu số* — một cột một màu **không mang thông tin nào** về
+     việc chép, vì vết chép là bản sao của NỘI DUNG mà nội dung thì không phẳng.
+- **Giải pháp**: (A) `TURN_ARC = 0,30` ô + `headingAt` + `wrapPi` làm cửa duy nhất cho mọi góc;
+  ca quay đầu đúng 180° (hai phía HOÀ) phá hoà bằng `turnSign` suy từ hạt giống tuyến.
+  (B) `soiVetChep` bỏ qua cột phẳng; băng còn dưới `CHEP_CACH_TOI_THIEU` cột có tin thì **không phán
+  xử được** và trả 0 — một câu trả lời TRUNG THỰC, khác hẳn "sạch".
+- **Trade-off**:
+  (A) Cửa sổ quay **bão hoà ở 0,20**: qua mốc ấy thì `min(TURN_ARC, độ dài đoạn)` bị đoạn ngắn nhất
+  cai trị (67,6% số đoạn ngắn hơn 0,30), nên **35,6°/khung là sàn của cơ chế này**. Muốn thấp hơn
+  phải trải cú quay QUA NHIỀU ĐOẠN — cửa sổ chồng lấn ⇒ người xoay tít — hoặc dừng lại xoay tại chỗ,
+  cần sửa `humanPose.js` để bàn chân không đứng hình giữa nhịp bước. Cả hai là bài toán khác —
+  ghi thành `TECH_DEBT #94` kèm bảng bão hoà và phân bố, để phiên sau không đi vặn một cần gạt đã
+  hết tác dụng.
+  (B) Mẫu số nhỏ đi ⇒ cổng **CHẶT HƠN** trên ảnh thường. Đây là hướng an toàn, nhưng nó có nghĩa là
+  một tấm ảnh có nhiều vùng phẳng nay bị soi kỹ hơn trước.
+- **Ảnh hưởng**: 0 tam giác · 0 lệnh vẽ · 0 nguồn sáng — cả hai bản vá đều là logic thuần. Bản quét
+  15 kỷ không trôi (12,23 · 21,86 · 36,33, trùng mốc Phase 22).
+  ⚠️ Và (B) khôi phục `scripts/human-strip.mjs` cùng mọi phép đo dựa trên mặt nạ.
+- **Điều kiện xem lại**: (A) nếu hình học tuyến đổi làm đoạn ngắn nhất ngắn thêm, `35,6°` sẽ xấu đi
+  mà `TURN_ARC` không cứu được — lúc ấy phải đọc lại bảng bão hoà trong `residents.js` trước khi
+  chỉnh con số. (B) mỗi lần thêm một CHẾ ĐỘ DỰNG mới (`--mask`, `--lowdetail`, …) phải hỏi *"cổng
+  nào đang hiệu chuẩn trên một quần thể không có chế độ này?"*.
+
+---
+
 ## ADR-067 — **NHÀ RỜI NHAU LÀ VÌ ĐẤT QUANH NÓ CÓ CHỦ, KHÔNG PHẢI VÌ TA ĐẨY CHÚNG RA XA**: sân/vườn thuộc SUẤT ĐẤT, và cột `units` sống lại nhờ `yard` chứ không nhờ chính nó
 
 - **Ngày**: 2026-08-28

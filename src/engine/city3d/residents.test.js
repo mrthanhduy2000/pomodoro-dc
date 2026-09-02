@@ -128,14 +128,105 @@ test('cư dân KHÔNG dồn cục một chỗ lúc bắt đầu', () => {
     `mới có ${spots.size} vị trí khác nhau trên ${residents.length} người`);
 });
 
-test('hướng quay mặt khớp với hướng đang đi', () => {
-  const [route] = buildResidents(LAYOUT, { sessionCount: 40, streakLength: 9 });
-  const now = residentAt(route, 3);
-  const soon = residentAt(route, 3.25);
-  const moved = Math.hypot(soon.x - now.x, soon.y - now.y);
-  if (moved > 1e-6) {
-    const heading = Math.atan2(soon.y - now.y, soon.x - now.x);
-    const diff = Math.abs(((heading - now.angle + Math.PI) % (Math.PI * 2)) - Math.PI);
-    assert.ok(diff < 0.5, `quay mặt lệch ${diff.toFixed(2)} rad so với hướng đi`);
+/** Gói góc về [−π, π]. ⚠️ `((d + π) % 2π) − π` KHÔNG đúng trong JS: `%` giữ dấu của số bị chia,
+ *  nên với `d` âm nó trả về tới −2π. Bản cũ của bài test dưới đây dùng đúng công thức sai ấy và
+ *  vẫn xanh — vì nó chỉ hỏi ở MỘT thời điểm, và thời điểm ấy tình cờ không rơi vào ca xấu. */
+const gói = (a) => ((((a + Math.PI) % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2)) - Math.PI;
+
+const KỶ_MẪU = [1, 4, 6, 9, 13, 15];
+const FPS = 30;
+
+/** Quét mọi cư dân của vài kỷ ở 30 khung/giây, gọi `đo(trước, sau)` cho từng cặp khung liền nhau. */
+function quétKhungHình(đo, giây = 20) {
+  const dt = 1 / FPS;
+  let mẫu = 0;
+  for (const era of KỶ_MẪU) {
+    const built = BLUEPRINT_CATALOG[era].map((bp) => bp.id);
+    const layout = computeCityLayout({ built, era, stats: { sessionCount: 40, streakLength: 9 } });
+    for (const route of buildResidents(layout, { sessionCount: 40, streakLength: 9 })) {
+      for (let t = dt; t < giây; t += dt) {
+        đo(route, t - dt, t);
+        mẫu += 1;
+      }
+    }
   }
+  return mẫu;
+}
+
+test('KHÔNG GIẬT: cú quay đầu được TRẢI RA, không lật trong một khung hình', () => {
+  // ⚠️ ĐÂY LÀ LỜI HỨA VỀ THỨ ĐÀM NHÌN THẤY, nên nó phải được đo ở nhịp Đàm nhìn: 30 khung/giây.
+  // Tuyến nào cũng là đường đi-rồi-quay-lại, nên hai đầu tuyến đều là một cú quay đầu 180°. Trước
+  // `TURN_ARC` cú ấy xảy ra trong ĐÚNG MỘT khung ⇒ hình người lộn ngược tức thì.
+  let tệNhất = 0;
+  let sốKhungCóQuay = 0;
+  let ngoàiKhoảng = 0;
+  const mẫu = quétKhungHình((route, t0, t1) => {
+    const a = residentAt(route, t0);
+    const b = residentAt(route, t1);
+    if (Math.abs(b.angle) > Math.PI + 1e-9) ngoàiKhoảng += 1;
+    const d = Math.abs(gói(b.angle - a.angle)) * 180 / Math.PI;
+    if (d > tệNhất) tệNhất = d;
+    if (d > 5) sốKhungCóQuay += 1;
+  });
+
+  // Gác chạy-rỗng: một phép quét không quét gì cũng cho `tệNhất = 0` và xanh vĩnh viễn.
+  assert.ok(mẫu > 50000, `mới quét được ${mẫu} khung — phép đo gần như không chạy`);
+  assert.ok(sốKhungCóQuay > 1000,
+    `chỉ ${sốKhungCóQuay} khung có đổi hướng — tuyến gần như thẳng thì bài test này không đo gì`);
+
+  // Góc đi ra khỏi engine phải luôn ở khoảng chuẩn (xem `wrapPi` trong `residents.js`).
+  assert.equal(ngoàiKhoảng, 0, `${ngoàiKhoảng} khung có \`angle\` nằm ngoài [−π, π]`);
+
+  // Ngưỡng 60° nằm GIỮA HAI ĐẦU ĐO ĐƯỢC — hỏng 180,0° · lành 35,6° — chứ không phải một con số
+  // chọn cho rộng rãi (bẫy cái phễu, Phase 9A).
+  assert.ok(tệNhất < 60,
+    `quay ${tệNhất.toFixed(1)}°/khung — mắt đọc ra một cú lật, không phải một cú quay`);
+});
+
+test('ĐỐI CHỨNG: luật CŨ (lật thẳng tại đỉnh) phải vẫn bị phép đo trên bắt được', () => {
+  // Không có vế này thì không biết bài trên còn răng hay không: một phép đo hỏng cũng cho ra
+  // "0°/khung" rất đẹp. Dựng lại đúng luật đã bị thay — hướng = góc của đoạn đang đứng — rồi
+  // ĐÒI nó phải chạm 180°.
+  const gócCũ = (route, time) => {
+    let còn = ((route.phase * route.length) + time * route.speed) % route.length;
+    for (let i = 0; i < route.path.length; i += 1) {
+      const a = route.path[i];
+      const b = route.path[(i + 1) % route.path.length];
+      const đoạn = Math.hypot(b.x - a.x, b.y - a.y);
+      if (đoạn <= 0) continue;
+      if (còn <= đoạn) return Math.atan2(b.y - a.y, b.x - a.x);
+      còn -= đoạn;
+    }
+    return 0;
+  };
+
+  let tệNhất = 0;
+  quétKhungHình((route, t0, t1) => {
+    const d = Math.abs(gói(gócCũ(route, t1) - gócCũ(route, t0))) * 180 / Math.PI;
+    if (d > tệNhất) tệNhất = d;
+  });
+  assert.ok(tệNhất > 170,
+    `luật cũ chỉ ra ${tệNhất.toFixed(1)}°/khung — phép đo đã mất răng, ngưỡng 60° không còn nghĩa gì`);
+});
+
+test('hướng quay mặt bám hướng đang đi, trừ đúng lúc đang quay', () => {
+  // ⚠️ BẢN CŨ CỦA BÀI NÀY HỎI Ở MỘT THỜI ĐIỂM DUY NHẤT (t = 3) và xanh vì may. Từ khi cú quay
+  // được trải ra, mặt CỐ Ý dẫn trước / theo sau hướng đi ở quanh mỗi đỉnh — nên "một mẫu" là câu
+  // hỏi sai: nó vừa có thể xanh oan, vừa có thể đỏ oan tuỳ mẫu rơi vào đâu.
+  let khớp = 0;
+  let tổng = 0;
+  quétKhungHình((route, t0, t1) => {
+    const a = residentAt(route, t0);
+    const b = residentAt(route, t1);
+    const đi = Math.hypot(b.x - a.x, b.y - a.y);
+    if (đi < 1e-9) return;
+    const hướng = Math.atan2(b.y - a.y, b.x - a.x);
+    tổng += 1;
+    if (Math.abs(gói(hướng - a.angle)) < 0.5) khớp += 1;
+  });
+  assert.ok(tổng > 50000, `mới đo được ${tổng} khung`);
+  const tỉLệ = khớp / tổng;
+  // Đo được 94,2%; phần còn lại là các khung nằm TRONG cửa sổ quay, ở đó lệch là đúng thiết kế.
+  assert.ok(tỉLệ > 0.85,
+    `chỉ ${(tỉLệ * 100).toFixed(1)}% số khung có mặt bám hướng đi — cửa sổ quay đang nuốt cả tuyến`);
 });

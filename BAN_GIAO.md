@@ -1,5 +1,108 @@
-> Cập nhật lần cuối: **2026-08-28** — Phase 22: sân/vườn thuộc suất đất, nhà thôi dính mép nhau;
-> `TECH_DEBT #88` đóng một nửa; hai cái giá đã đo, chờ mắt Đàm phán.
+> Cập nhật lần cuối: **2026-09-02** — Phase 23: cư dân biết QUAY thay vì lật hình trong một khung;
+> và một cổng dựng ảnh đã giết MỌI ảnh mặt nạ trong im lặng suốt từ Phase 21.
+
+## 2026-09-02 — Phase 23: người biết quay đầu · và một cổng đo giết mọi ảnh mặt nạ
+
+**Đàm nói.** *«Tiếp tục tối ưu hoạt ảnh 3D và trau chuốt lại hình ảnh trong Thành Phố»*.
+⚠️ **Giả định tôi đã dùng, nói thẳng ra để Đàm bác nếu sai:** *"tối ưu hoạt ảnh"* tôi đọc là **làm
+cho nó thật hơn**, KHÔNG phải đo hiệu năng — `PERFORMANCE.md` ghi máy M3 còn dư **3,2 lần**, và
+phase mỹ thuật thì không đo hiệu năng.
+
+**1. Chẩn đoán — hướng mặt là một hàm BẬC THANG, nên nó lật 180° trong ĐÚNG MỘT khung hình.**
+`residentAt` trả về `Math.atan2` của đoạn tuyến ĐANG đi. Đổi đoạn ⇒ góc nhảy tức thì. Quét
+**302.400 mẫu** (6 kỷ · 168 người · 20 giây @30fps): **180,0°/khung**, **1.101 khung** có cú lật
+quá 90°. Trước Phase 22 chuyện này còn giấu được vì thân người gần như đối xứng; nay vai rộng 1,00
+mà eo 0,72, tay vung, kỷ 6 đội nón lá ⇒ mỗi cú lật là một cái giật nhìn thấy được.
+
+**2. Đã làm — CỬA SỔ QUAY cân giữa đỉnh tuyến.** `TURN_ARC = 0,30` ô: nửa cuối đoạn tới + nửa đầu
+đoạn sau nội suy góc theo đường ngắn nhất. Đo lại: **35,9°/khung · 0 khung quá 90°**, cú quay đầu
+180° tệ nhất trải ra **6–10 khung (0,20–0,33 giây)**. Vẫn là hàm thuần của `(tuyến, thời gian)` ⇒
+ADR-007 nguyên vẹn. Phần dư (35,6° là SÀN của cơ chế) ghi ở `TECH_DEBT #94`.
+
+**3. ⚠️ HẰNG SỐ ẤY BÃO HOÀ Ở 0,20 — VÀ TÔI CHỈ BIẾT VÌ PHÉP PHÁ KHÔNG NỔ.** Thử ngược bằng cách
+NỚI `TURN_ARC` lên 5,0: **không bài nào đỏ**. Theo luật Phase 8A thì nghi phép phá trước — và đúng:
+`window = min(TURN_ARC, độ dài đoạn)` mà **67,6% số đoạn ngắn hơn 0,30** (trung vị 0,242), nên qua
+0,20 thì đoạn ngắn nhất mới là thứ cai trị. Bảng đo: `0,02 → 180,0°` · `0,05 → 92,8°` ·
+`0,10 → 46,4°` · `0,20…5,00 → 35,6°` không đổi một chữ số. ⇒ phép phá đúng là **BÓP LẠI** (0,02),
+và nó đỏ ngay. **Nới một hằng số đã bão hoà KHÔNG phải một phép phá** — nó là một phép thử không
+chạm tới đại lượng nào.
+
+**4. ⚠️ VÀ MỘT LỖI THẬT LỘ RA TỪ MỘT CON SỐ VÔ LÝ: 398,5°.** Phép đo lệch hướng in ra một góc lớn
+hơn 360° — bất khả với góc đã gói. Hai chỗ hỏng, cả hai là **dấu của `%` trong JavaScript**: `%`
+giữ dấu của SỐ BỊ CHIA, nên `((d + π) % 2π) − π` sai với `d` âm. Công thức ấy nằm ở CẢ bài test cũ
+LẪN `headingAt`. Nay có đúng một hàm `wrapPi` và **mọi góc đi ra khỏi file phải đi qua nó**.
+
+**5. ⚠️⚠️ PHÁT HIỆN LỚN NHẤT CỦA PHIÊN KHÔNG NẰM Ở CƯ DÂN — CỔNG CHỐNG-CHÉP ĐÃ GIẾT MỌI ẢNH MẶT NẠ
+TỪ PHASE 21.** Đi dựng ảnh nghiệm thu thì `--mask residents` chết với đúng một dòng *«95,4% số cột
+bị chép»*, ba lượt chụp lại ra **CÙNG một con số** — mà một vết chép là một CUỘC ĐUA nên nó không
+thể lặp lại y hệt ba lần; chính sự lặp lại ấy tố cáo đây là NỘI DUNG. Nguyên nhân: `soiVetChep`
+(thêm ở `3d37745`) băm từng đoạn cột rồi tố các đoạn trùng khít cách nhau xa — mà một ảnh `--mask`
+**theo cấu tạo** gần như toàn một màu đen (cư dân chiếm **0,08% khung**), nên cột nào cũng trùng
+cột nào. Dựng lại đúng ca ấy bằng ảnh tổng hợp: nhiễu thuần ra **0,0%**, thêm một băng đen 60 hàng
+ra **95,4%, lệch 1399 điểm ảnh** — trùng từng chữ số với lỗi thật. Nó làm hỏng luôn
+`scripts/human-strip.mjs`, một công cụ `CLAUDE.md` ghi tên. **Vá:** cột PHẲNG không mang tin về
+việc chép ⇒ loại khỏi CẢ tử số LẪN mẫu số (làm cổng **CHẶT HƠN** trên ảnh thường, không nới ra);
+băng còn quá ít cột có tin thì **không phán xử được**, trả 0 là câu trả lời trung thực.
+
+**6. Bảy phép thử ngược ĐÃ CHẠY THẬT, mỗi cái nêu TRƯỚC chỗ nó mong đợi đỏ, và mỗi cái ĐẾM số chỗ
+khớp.** Đáng nhớ nhất là hai cái cuối, cho cổng vừa vá: khôi phục lỗi cột-phẳng ⇒ đỏ đúng bài
+*«BÁO ĐỘNG GIẢ»*; ép `hong: false` ⇒ đỏ đúng bài *«ĐỐI CHỨNG: vết chép THẬT vẫn phải bị bắt»*. Hai
+bài ấy phải đi cùng nhau — thiếu bài sau thì cách rẻ nhất để bài đầu xanh là gỡ luôn cái cổng.
+
+**7. ⚠️ GIỚI HẠN PHẢI NÓI THẲNG: MỘT TẤM ẢNH TĨNH KHÔNG KỂ ĐƯỢC CÚ QUAY.** Ở khung mặc định một cư
+dân cao **7×9 điểm ảnh**; đo lệch giữa hai cây mã trên ba khung liên tiếp: **cả khung 0,001–0,002**
+(không gì cả), **trong vùng người 1,63–2,00**, chỉ **3,7–4,8% số điểm ảnh** vượt ngưỡng mắt 12 (đỉnh
+lệch 100). ⇒ Theo đúng luật 2b của Đàm, đây là **một sửa lỗi CẬN CẢNH** — và app đã có đường đưa
+mắt tới gần (ADR-034/035: chạm vào công trình thì camera bay tới). Ảnh `p23-quay-cancanh.png` dựng
+ở đúng chế độ ấy. **Đây là một kết quả đã đo, không phải một lời bào chữa.**
+
+**8. Cổng không-trôi — và một lời "không trôi" SUÝT được viết ra từ một tấm ảnh CŨ.** `npm test`
+**1271 bài · 1270 xanh · 0 đỏ · 1 bỏ qua** · `npm run lint` sạch · `npm run build` xanh.
+
+Mốc nền tại `6038cd9` **tự đo lại trong một `git worktree` riêng** (đúng `TECH_DEBT #43`: *"mỗi phase
+PHẢI tự đo lại mốc nền của mình, đừng chép cột 'sau' của phase trước"*): **12,23 (chặng, 0/15) ·
+21,86 (kỷ, 0/105) · trung vị 36,33**.
+
+⚠️ **Nhưng con số của CÂY TÔI thì đã suýt bị lấy từ một tấm ảnh cũ.** Bản quét ấy dựng lúc **21:02**,
+còn `residents.js` sửa lần cuối lúc **21:33** — tức nó mô tả một cây mã KHÔNG còn tồn tại, và một câu
+"trùng từng chữ số với Phase 22" đã được viết ra dựa trên nó. Thứ lôi ra được là phép kiểm `mtime`
+mà `CLAUDE.md` đã kê đơn từ Phase 14 (*"tiến trình dựng phải bằng 0, và `mtime` của ảnh phải mới hơn
+file nguồn mới nhất"*) — một cái đơn đã nằm sẵn trong tài liệu suốt mười phase mà vẫn không chặn
+được gì, vì **chữ thì không tự chạy**. Đã dựng lại từ đầu và chấm lại: xem mục 10.
+
+**9. Biến cái đơn thuốc ấy thành một cái RĂNG — cổng "ảnh cũ hơn mã" trong `sweep-score.mjs`.**
+Đây là lần thứ **ba** dự án suýt (hoặc thật sự) rút một kết luận mỹ thuật từ ảnh cũ: Phase 13 VIỆC B
+(cổng cache `[ -f "$png" ] ||` biến sự tồn tại của một TÊN FILE thành bằng chứng về NỘI DUNG file —
+bảng số khi ấy báo *"kỷ 1 đổi 74,2% khung hình"*, sự thật là 0,30%), Phase 14 §1(3) (suýt chấm một
+bản quét chưa dựng xong), và hôm nay. Ba lần cùng một hình dạng, và mỗi lần đều được chữa bằng cách
+**ghi thêm một dòng vào tài liệu** — nên nó quay lại.
+
+Nay `sweep-score.mjs` **tự TỪ CHỐI chấm** (mã thoát 2) khi ảnh cũ hơn file nguồn mới nhất trong
+`src/engine/city3d`, `src/components/city/render3d`, `scripts/city-preview.mjs`, và in ra **đúng một
+lệnh** dựng lại. Bốn quyết định đáng ghi:
+- **Không có cờ bỏ qua**, có chủ đích. Cách chữa duy nhất là dựng lại, mà dựng lại thì LUÔN đúng;
+  một `--force` sẽ thành thứ người ta gõ theo phản xạ, tức là tự gỡ răng của chính cái gác này.
+- **Gốc cây mã suy từ đường dẫn ẢNH**, không phải `process.cwd()` — nếu không thì mọi ảnh mốc nền
+  dựng trong một `git worktree` riêng (đúng cách `TECH_DEBT #43` kê đơn) sẽ bị từ chối oan.
+- Cổng nằm **TRƯỚC `decodePng`** ⇒ nó từ chối trước khi tốn công giải mã 8 MB.
+- ⚠️ Nó **không thể làm một con số nào đẹp lên** — chỉ có quyền TỪ CHỐI in số. Nói thẳng điều này ra
+  vì `CLAUDE.md` cấm sửa thước trong lúc đang đo mà không khai báo.
+
+Khoá bằng `scripts/sweepScoreGate.test.js` (2 bài, **cả hai đã thử-cho-đỏ thật**, không chép dòng
+THỬ-CHO-ĐỎ từ bài khác): gỡ hẳn cổng ⇒ bài 1 đỏ · bắt cổng luôn kêu ⇒ bài 2 (**đối chứng chống kêu
+oan**) đỏ; file khôi phục byte-identical sau cả hai. Vế thứ hai mới là vế hay bị quên — một cổng
+luôn-luôn-kêu vẫn xanh nếu chỉ có vế thứ nhất, mà *một cảnh báo kêu oan còn tệ hơn không có cảnh báo*.
+
+⚠️ **Và phép thử ngược của chính cổng này đã "không nổ" một lần, vì `cd` rò rỉ.** Tôi `cd` vào
+worktree rồi gọi `node scripts/sweep-score.mjs` — nên nó chạy **bản CHƯA vá của worktree**, và cái
+gác đúng đắn trông y hệt một cái gác mù. Đây là mặt **ngược** của bài học Phase 8A: ở đó phép phá
+hỏng, ở đây phép phá lành mà **lời gọi** sai. ⇒ Bổ sung một câu hỏi thứ ba cho mọi lần thử ngược:
+*"tôi có đang chạy đúng bản mã vừa sửa không?"* — dùng đường dẫn TUYỆT ĐỐI cho công cụ, luôn luôn.
+
+**10. Bản quét không-trôi, dựng lại SẠCH.** (điền sau khi lượt dựng lại kết thúc — xem CHANGELOG)
+
+**Chưa xong / chờ Đàm.** Mọi mục `CHỜ ĐÀM QUYẾT` cũ vẫn nguyên. Nhánh đã đẩy là
+`claude/xay-san-pham-huong-nay-nasr3n`, **chưa gộp `main`** theo đúng chỉ thị Phase 21/22.
 
 ## 2026-08-28 — Phase 22: nhà rời nhau vì ĐẤT QUANH NÓ CÓ CHỦ (ADR-067)
 

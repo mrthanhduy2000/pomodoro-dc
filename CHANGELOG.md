@@ -12,6 +12,36 @@
 
 ---
 
+## 2026-09-02 — Phase 23: cư dân biết QUAY · vá một cổng đo đã giết mọi ảnh mặt nạ
+
+**Mục đích.** Đàm: *«Tiếp tục tối ưu hoạt ảnh 3D và trau chuốt lại hình ảnh trong Thành Phố»*.
+Hướng mặt cư dân là một hàm bậc thang của đoạn tuyến đang đi, nên đổi đoạn là **lật 180° trong đúng
+một khung hình** — thứ mà thân người đối xứng của các phase cũ còn giấu được, còn thân người có vai
+rộng + tay vung + nón lá của Phase 22 thì không.
+
+**Phạm vi.** (a) `residents.js`: thêm `TURN_ARC` + `headingAt` — một **cửa sổ quay cân giữa đỉnh
+tuyến**, nội suy góc theo đường ngắn nhất, phá hoà ca quay đầu đúng 180° bằng hạt giống của tuyến
+(`turnSign`) để giữ tính tất định. Thêm `wrapPi` làm **cửa duy nhất** cho mọi góc đi ra khỏi file.
+(b) `city-preview.mjs`: `soiVetChep` nay loại cột PHẲNG khỏi cả tử số lẫn mẫu số. (c)
+`sweep-score.mjs`: thêm cổng **TỪ CHỐI chấm một tấm ảnh cũ hơn mã** (mã thoát 2, không có cờ bỏ
+qua), khoá bằng `scripts/sweepScoreGate.test.js`. Xem **ADR-068**.
+
+**Ảnh hưởng.** Cư dân: **180,0° → 35,9°/khung**, **1.101 → 0** khung lật quá 90° (302.400 mẫu, 6 kỷ
+· 168 người · 30fps); cú quay đầu tệ nhất trải ra 6–10 khung (0,20–0,33 giây). Vẫn thuần theo
+`(tuyến, thời gian)` ⇒ **ADR-007 nguyên vẹn**, 0 tam giác, 0 lệnh vẽ.
+⚠️ **Và một hồi quy IM LẶNG từ Phase 21 (`3d37745`) đã được vá:** cổng chống-CHÉP tố mọi ảnh
+`--mask` là *«95,4% số cột bị chép»* và TỪ CHỐI ghi ảnh — vì một tấm mặt nạ theo cấu tạo gần như
+toàn đen, mà mọi cột đen thì trùng khít nhau. Nó đã làm hỏng `scripts/human-strip.mjs` cùng mọi
+phép đo dựa trên mặt nạ trong suốt thời gian đó, **không có gì đỏ lên**.
+
+**Tương thích.** Không đụng state, không đụng schema, không đụng camera/`gridSize`. `npm test`
+**1271 bài · 0 đỏ**. Mốc nền `6038cd9` **tự đo lại** trong `git worktree` riêng (`TECH_DEBT #43`):
+**12,23 (chặng, 0/15) · 21,86 (kỷ, 0/105) · trung vị 36,33**. ⚠️ Con số của cây sau-vá phải dựng
+LẠI mới đọc được: bản quét đầu tiên đã bị chấm khi nó **cũ hơn `residents.js` 31 phút** — chính cái
+bẫy mà cổng mới ở mục (c) sinh ra để chặn. Xem `BAN_GIAO.md` mục 8–10.
+
+---
+
 ## 2026-08-28 — Phase 22: sân/vườn thuộc suất đất, nhà thôi dính mép nhau
 
 **Mục đích.** Đàm: *«đừng có làm cho nó giả quá … ngày xưa làm gì có vụ nhà sát sát nhau như thế»*.

@@ -4624,6 +4624,43 @@ cấp `Math.min(3,…)` → `Math.min(9,…)` · cắt bớt danh sách cấp th
 > `gear` · cư dân chiếm 0,29% khung hình). Theo đúng luật đã áp cho ADR — *số của `main` giữ
 > nguyên nghĩa* — chúng đổi thành **#89** (trục chặng ngày) và **#90** (khu phố làm 4 kỷ thấp đi).
 
+## #94 — Cú quay đầu của cư dân dừng ở 35,6°/khung vì cửa sổ quay BÃO HOÀ, và hạ tiếp thì cần một cơ chế khác hẳn
+
+> Mở 2026-09-02 (Phase 23, ADR-068). Đây là **cái sàn ĐÃ ĐO của cơ chế**, không phải một tham số
+> chỉnh chưa tới — ghi ra để phiên sau đừng đi vặn `TURN_ARC` và tưởng mình đang cải thiện.
+
+- **Tên**: cửa sổ quay bão hoà ở 0,20 ⇒ 35,6°/khung là sàn, không hạ được bằng cách nới hằng số
+- **Module**: `src/engine/city3d/residents.js` (`TURN_ARC`, `headingAt`) — khoá bằng
+  `residents.test.js` (`KHÔNG GIẬT` + đối chứng luật cũ)
+- **Priority**: Low · **Severity**: Low (mỹ thuật cận cảnh; 0 tam giác, 0 lệnh vẽ, không đụng state)
+- **Impact**: 180,0°/khung → **35,9°/khung**, **1.101 → 0** khung lật quá 90° (302.400 mẫu). Phần
+  còn lại là những cú **quay đầu 180° ở ngõ cụt**, trải ra 6–10 khung (0,20–0,33 giây). Mắt đọc ra
+  *"người ấy quay lại"*, không còn là *"hình bị lật"* — nên đây là một cái sàn **chấp nhận được**,
+  không phải một khuyết tật đang chạy.
+- **Root Cause**: SỐ HỌC, không phải tham số sai. `window = min(TURN_ARC, độ dài đoạn)` mà **67,6%
+  số đoạn tuyến ngắn hơn 0,30** (trung vị 0,242 · ngắn nhất 0,068) ⇒ qua mốc 0,20 thì **đoạn ngắn
+  nhất mới là thứ cai trị**. Bảng đo: `0,02 → 180,0°` · `0,05 → 92,8°` · `0,10 → 46,4°` ·
+  `0,20 · 0,30 · 0,50 · 1,00 · 5,00 → 35,6°` không đổi một chữ số.
+- **Current Risk**: gần như không. Phân bố: trung vị **0,00°** · 99% ở **19,1°** · 99,9% ở **29,5°**
+  · chỉ **0,881%** số khung vượt 20°.
+- **Future Risk**: nếu hình học tuyến đổi (Phase sau sửa mạng đường) làm đoạn ngắn nhất ngắn thêm
+  thì con số 35,6° **tự xấu đi** mà `TURN_ARC` không cứu được — và không có gì đỏ lên, vì bài test
+  đặt trần ở 60°. Đó là lý do bảng bão hoà nằm trong chú thích chứ không chỉ ở đây.
+- **Recommended Solution**: hai hướng, **cả hai đều là bài toán khác, đừng làm kèm**:
+  (a) **trải cú quay qua NHIỀU đoạn** — nhưng cửa sổ sẽ chồng lấn ở những chuỗi đoạn ngắn liên tiếp
+  và người sẽ xoay tít; phải có luật nhường giữa hai cửa sổ trước;
+  (b) **dừng lại xoay tại chỗ** ở ngõ cụt — đúng cách người thật làm, nhưng đóng băng `travelled`
+  sẽ đóng băng luôn nhịp bước giữa chừng (bàn chân treo giữa không khí), nên nó **bắt buộc phải sửa
+  `humanPose.js`** để về tư thế hai chân chạm đất trước khi dừng.
+- **Estimated Complexity**: (a) Trung bình · (b) Trung bình–cao (đụng hai module)
+- **Blocking Conditions**: không có blocker kỹ thuật. Cả hai hướng đều là **cận cảnh** theo luật 2b
+  của Đàm — ở khung mặc định cư dân chỉ cao 7–9 điểm ảnh, nên phải hỏi *"có đáng không"* trước.
+- **Review Trigger**: khi có phase đổi mạng đường/tuyến đi của cư dân, HOẶC khi Đàm nói cư dân vẫn
+  còn giật ở chế độ cận cảnh.
+- **Owner**: chưa ai · **Status**: MỞ (chấp nhận có chủ đích)
+
+---
+
 ## #88 — Trần "một khu phố không rộng quá MỘT Ô" khoá luôn số suất đất ở 4, làm cột `units`/`cols`/`rows` của bảng khu phố thành một TRỤC CHẾT
 
 > Mở 2026-08-24 (Phase 21 §4). Đây là **cái giá đã đo được** của việc chữa đúng thứ Đàm chỉ ra

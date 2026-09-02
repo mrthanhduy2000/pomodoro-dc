@@ -32,6 +32,7 @@ import {
   BYTE_MOI_DIEM_XAU_NHAT, chiaBang, HAN_TIN_CDP, kiemKhungNhin, SO_DIEM_MOI_BANG,
   hangCauTrucBangQuet, soiVetRach, VET_RACH_HE_SO, VET_RACH_SAN,
   dongNhatKyVetRach, NGUONG_TRUY_VET_RACH,
+  soiVetChep, CHEP_CAO_BANG, CHEP_CACH_TOI_THIEU,
 } from './city-preview.mjs';
 
 const GỐC = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -504,4 +505,78 @@ test('⚠️ ĐỐI CHỨNG: gọi bằng ĐƯỜNG DẪN TƯƠNG ĐỐI thì c�
   }
   assert.match(ra, /Cách dùng/,
     'Gọi `node scripts/png-probe.mjs` (đường dẫn TƯƠNG ĐỐI) không in gì — cổng "chạy thẳng" đóng.');
+});
+
+
+/**
+ * ⚠️ CỔNG CHỐNG-CHÉP TỪNG GIẾT MỌI ẢNH MẶT NẠ TRONG IM LẶNG (2026-09-02).
+ *
+ * `soiVetChep` băm từng đoạn cột rồi tố những đoạn TRÙNG KHÍT cách nhau xa. Một cột PHẲNG (cả đoạn
+ * một màu) thì trùng khít với mọi cột phẳng khác — nên một tấm `--mask`, thứ theo cấu tạo gần như
+ * toàn đen, bị tố **95,4% số cột bị chép** và công cụ TỪ CHỐI ghi ảnh. Đo được: mọi lượt
+ * `--mask residents` ở 1400×900 đều chết, ba lượt chụp lại ra CÙNG con số (một vết chép là một
+ * cuộc đua nên nó không thể lặp lại y hệt — chính sự lặp lại ấy tố cáo đây là NỘI DUNG).
+ *
+ * Hai bài dưới đây phải ĐI CÙNG NHAU: bài đầu chứng minh báo động giả đã hết, bài sau **nhốt bộ số
+ * hỏng cũ** và đòi cổng vẫn bắt được một vết chép THẬT. Thiếu bài sau thì cách rẻ nhất để bài đầu
+ * xanh là gỡ luôn cái cổng.
+ */
+function ảnhThử({ băngPhẳng = 0, chépTừ = null, w = 1400, h = 900 } = {}) {
+  const pixels = Buffer.alloc(w * h * 4);
+  const tô = (x, y, v) => {
+    const i = (y * w + x) * 4;
+    pixels[i] = v; pixels[i + 1] = (v * 3) % 251; pixels[i + 2] = (v * 5) % 251; pixels[i + 3] = 255;
+  };
+  for (let y = 0; y < h; y += 1) {
+    for (let x = 0; x < w; x += 1) {
+      // Nhiễu tất định KHÔNG tuần hoàn theo x — nội dung thật thì cột nào cũng riêng.
+      tô(x, y, y < băngPhẳng ? 0 : ((x * 2654435761 + y * 40503) >>> 16) & 255);
+    }
+  }
+  if (chépTừ !== null) {
+    // Vết chép THẬT: chép nguyên một dải cột sang chỗ khác, đúng cách một khung hình bị xé.
+    for (let y = 0; y < CHEP_CAO_BANG; y += 1) {
+      for (let k = 0; k < w - chépTừ; k += 1) {
+        const s = (y * w + (k % chépTừ)) * 4;
+        const d = (y * w + chépTừ + k) * 4;
+        pixels[d] = pixels[s]; pixels[d + 1] = pixels[s + 1];
+        pixels[d + 2] = pixels[s + 2]; pixels[d + 3] = 255;
+      }
+    }
+  }
+  return { pixels, width: w, height: h };
+}
+
+test('BÁO ĐỘNG GIẢ: một băng PHẲNG (ảnh mặt nạ) không còn bị tố là vết chép', () => {
+  const sạch = soiVetChep(ảnhThử());
+  assert.equal(sạch.hong, false, `ảnh nhiễu thuần đã bị tố ${(sạch.ti * 100).toFixed(1)}%`);
+
+  // 60 hàng đầu đen tuyệt đối = đúng hình dạng của `--mask residents` (cư dân chiếm 0,14% khung).
+  const mặtNạ = soiVetChep(ảnhThử({ băngPhẳng: 60 }));
+  assert.equal(mặtNạ.hong, false,
+    `băng phẳng bị tố ${(mặtNạ.ti * 100).toFixed(1)}% — cổng lại giết ảnh mặt nạ như trước`);
+  assert.equal(mặtNạ.ti, 0, 'cột phẳng phải bị loại khỏi CẢ tử số lẫn mẫu số');
+});
+
+test('⚠️ ĐỐI CHỨNG: một vết chép THẬT vẫn phải bị bắt (kể cả khi có băng phẳng bên cạnh)', () => {
+  // Nhốt bộ số hỏng cũ: nếu ai đó "chữa" báo động giả bằng cách gỡ cổng thì bài này đỏ.
+  const chép = soiVetChep(ảnhThử({ chépTừ: 400 }));
+  assert.equal(chép.hong, true, 'vết chép thật KHÔNG còn bị bắt — cổng đã mất răng');
+  assert.ok(chép.bang.cach >= CHEP_CACH_TOI_THIEU,
+    `bản sao cách nhau ${chép.bang.cach}, phải ≥ ${CHEP_CACH_TOI_THIEU}`);
+
+  // Và nó phải bắt được NGAY CẢ khi tấm ảnh có một băng phẳng ở băng KHÁC — hai chế độ không
+  // được che nhau. (Băng phẳng ở hàng 0–49, vết chép ở hàng 50–99.)
+  const cả = ảnhThử({ băngPhẳng: CHEP_CAO_BANG });
+  const nguồn = ảnhThử({ chépTừ: 400 });
+  for (let y = CHEP_CAO_BANG; y < CHEP_CAO_BANG * 2; y += 1) {
+    for (let x = 0; x < cả.width; x += 1) {
+      const d = (y * cả.width + x) * 4;
+      const s = ((y - CHEP_CAO_BANG) * cả.width + x) * 4;
+      cả.pixels[d] = nguồn.pixels[s]; cả.pixels[d + 1] = nguồn.pixels[s + 1];
+      cả.pixels[d + 2] = nguồn.pixels[s + 2];
+    }
+  }
+  assert.equal(soiVetChep(cả).hong, true,
+    'một băng phẳng ở trên đã che mất vết chép ở băng dưới');
 });

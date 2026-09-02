@@ -41,6 +41,43 @@ const DEFAULT_WALK_SPEED = HUMAN_PRESETS.mocPhoThong.walkSpeed;
 export const RESIDENT_HEIGHT = 0.2;
 
 /**
+ * Quãng đường mà một lần ĐỔI HƯỚNG được trải ra, tính bằng ô lưới.
+ *
+ * ⚠️ VÌ SAO PHẢI CÓ SỐ NÀY. Tuyến đi là một đường gấp khúc, và tuyến nào cũng là đường
+ * ĐI-RỒI-QUAY-LẠI (xem chỗ "khép kín bằng cách đi ngược lại" phía dưới), nên hai đầu tuyến đều
+ * là một cú quay đầu 180° TẠI CHỖ. Trước bản này `angle` nhảy thẳng từ góc đoạn này sang góc
+ * đoạn kia trong ĐÚNG MỘT khung hình. Đo được (6 kỷ, 168 người, 302.400 mẫu ở 30 khung/giây):
+ * **góc quay lớn nhất mỗi khung = 180,0°**, và **1.101 khung** quay quá 90°.
+ *
+ * ⚠️ VÀ VÌ SAO NÓ ĐÁNG SỬA BÂY GIỜ CHỨ KHÔNG PHẢI TRƯỚC ĐÂY. Chừng nào cư dân còn là một chồng
+ * hộp đối xứng thì "hướng quay mặt" gần như không tới được mắt — một con số có thật về một đại
+ * lượng vô hình (bẫy `TECH_DEBT #22`). Từ khi có thân thật (vai 1,00 ↔ eo 0,72), tay đánh, và
+ * nón lá ở kỷ 6, hình bóng người KHÔNG còn đối xứng quanh trục đứng nữa ⇒ cú lộn ngược trong một
+ * khung hình nay là thứ nhìn thấy được, nên nó mới thành một khuyết tật thật.
+ *
+ * ⚠️ HẰNG SỐ NÀY BÃO HOÀ Ở 0,20 — VÀ ĐÓ LÀ ĐIỀU PHẢI BIẾT TRƯỚC KHI CHỈNH NÓ. Cửa sổ quay bị kẹp
+ * về `min(TURN_ARC, độ dài đoạn)` trong `headingAt` (bắt buộc, nếu không hai cú quay liên tiếp
+ * chồng lên nhau và người xoay tít). Mà **67,6% số đoạn tuyến ngắn hơn 0,30 ô** (trung vị 0,242 ·
+ * ngắn nhất 0,068), nên từ 0,20 trở lên thì thứ quyết định ca tệ nhất KHÔNG còn là hằng số này
+ * nữa mà là ĐOẠN NGẮN NHẤT. Quét thật (6 kỷ, 165 người, 98.835 khung @30fps):
+ *
+ *     TURN_ARC   0,02 → 180,0°/khung    0,20 → 35,6°     1,00 → 35,6°
+ *                0,05 →  92,8°/khung    0,30 → 35,6°     5,00 → 35,6°
+ *                0,10 →  46,4°/khung    0,50 → 35,6°
+ *
+ * Chọn 0,30 (không phải 0,20) để đứng qua khỏi chỗ gãy một quãng, phòng khi hình học tuyến đổi.
+ * ⚠️ Đừng đọc bảng này thành "nới lên nữa thì mượt hơn" — nới không đổi được gì; muốn hạ dưới
+ * 35,6° thì phải trải cú quay QUA NHIỀU ĐOẠN, một bài toán khác hẳn.
+ *
+ * Đo sau khi có hàm này: **35,9°/khung**, **0 khung** quay quá 90°, và cú quay đầu 180° tệ nhất
+ * trải ra **6–10 khung (0,20–0,33 giây)** — mắt đọc ra "người ấy quay lại", không phải "hình bị
+ * lật". (⚠️ Bản đầu của chú thích này ghi "≈ 0,7 giây ≈ 21 khung" — một con số suy ra bằng phép
+ * chia chứ không đo, và sai gấp đôi. Nó đúng nếu mọi đoạn đều dài hơn TURN_ARC; hai phần ba thì
+ * không.)
+ */
+export const TURN_ARC = 0.30;
+
+/**
  * Suy ra số cư dân từ tiến độ của Đàm.
  *
  * Đường cong cố ý DỐC LÚC ĐẦU rồi thoải dần: đi từ 0 lên 4 người phải cảm nhận được ngay ở những
@@ -162,6 +199,10 @@ export function buildResidentRoute(index, roadCells, walkSpeed = DEFAULT_WALK_SP
     speed: walkSpeed * (0.75 + unit(`${seed}|s`) * 0.5),
     // Lệch pha: không có nó thì tất cả cùng xuất phát một chỗ, thành một đoàn diễu hành.
     phase: unit(`${seed}|p`),
+    // Quay đầu 180° thì "phía ngắn nhất" là HOÀ — hai bên bằng nhau đúng bằng π. Chọn phía theo
+    // hạt giống để (a) tất định như ADR-007 đòi, (b) không phải ai cũng quay cùng một chiều như
+    // lính duyệt binh.
+    turnSign: unit(`${seed}|turn`) < 0.5 ? -1 : 1,
   };
 }
 
@@ -200,7 +241,7 @@ export function residentAt(route, time) {
       return {
         x: a.x + (b.x - a.x) * k,
         y: a.y + (b.y - a.y) * k,
-        angle: Math.atan2(b.y - a.y, b.x - a.x),
+        angle: headingAt(route, i, remaining, segment),
         travelled,
       };
     }
@@ -210,6 +251,74 @@ export function residentAt(route, time) {
   // Không tới đây được với dữ liệu hợp lệ; giữ nhánh này để không bao giờ trả `null` giữa chừng.
   const first = route.path[0];
   return { x: first.x, y: first.y, angle: 0, travelled: 0 };
+}
+
+/**
+ * Gói một góc về khoảng [−π, π].
+ *
+ * ⚠️ MỌI GÓC ĐI RA KHỎI FILE NÀY PHẢI ĐI QUA ĐÂY. Phép nội suy trong `headingAt` cộng dồn
+ * `prev + k · delta`, và tổng ấy hoàn toàn có thể vọt ra ngoài [−π, π] (đo được **398,5°** lệch
+ * khi so `angle` với hướng đi thật — một con số không thể tồn tại nếu góc đã được gói). Về mặt
+ * HÌNH ẢNH thì vô hại, vì tầng vẽ dựng quaternion mà phép quay thì tuần hoàn. Nhưng mọi thứ
+ * ĐỌC `angle` để so sánh — bài test, phép đo, code viết sau này — đều ngầm cho rằng nó nằm trong
+ * khoảng chuẩn, và một giá trị 6,1 rad sẽ lặng lẽ làm sai mọi phép so. Gói ở NGUỒN thì không chỗ
+ * nào phải nhớ gói lại.
+ */
+function wrapPi(a) {
+  const m = (((a + Math.PI) % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+  return m - Math.PI;
+}
+
+/** Chênh lệch góc NGẮN NHẤT từ `from` tới `to`, có phá hoà cho ca quay đầu đúng 180°. */
+function angleDelta(from, to, turnSign) {
+  const d = wrapPi(to - from);
+  // Đúng 180° thì hai phía bằng nhau — không tồn tại "ngắn nhất". Chọn theo hạt giống của tuyến.
+  if (Math.abs(Math.abs(d) - Math.PI) < 1e-9) return (turnSign ?? 1) * Math.PI;
+  return d;
+}
+
+/** Góc của đoạn tuyến thứ `i`. */
+function segmentAngle(path, i) {
+  const a = path[i];
+  const b = path[(i + 1) % path.length];
+  return Math.atan2(b.y - a.y, b.x - a.x);
+}
+
+/**
+ * Hướng quay mặt tại một điểm trên tuyến — TRẢI cú đổi hướng ra quanh mỗi đỉnh thay vì lật ngay.
+ *
+ * Cửa sổ quay dài `min(TURN_ARC, độ dài đoạn)`, đặt CÂN GIỮA đỉnh: nửa trước nằm ở cuối đoạn tới,
+ * nửa sau nằm ở đầu đoạn đi. Đúng tại đỉnh cả hai nhánh cùng cho ra "chính giữa hai hướng", nên
+ * hàm liên tục.
+ *
+ * ⚠️ CẢ HAI NHÁNH PHẢI PHÁT BIỂU CÚ QUAY THEO CÙNG MỘT CHIỀU (từ đoạn TRƯỚC sang đoạn SAU).
+ * Bản đầu viết nhánh dưới là `current + k · delta(current → prev)` — đọc thì đối xứng và trông
+ * hoàn toàn hợp lý, nhưng ở ca quay đầu 180° thì phép phá hoà `turnSign` ép CẢ HAI chiều về cùng
+ * một dấu, nên hai nhánh cho ra hai kết quả LỆCH NHAU 180° ngay tại đỉnh — tức dựng lại đúng cái
+ * giật mà cả hàm này sinh ra để xoá. Một cú quay là MỘT đại lượng CÓ CHIỀU; phát biểu nó hai lần
+ * theo hai chiều là tự tạo ra hai sự thật.
+ *
+ * @param {number} i        chỉ số đoạn đang đứng
+ * @param {number} u        đã đi được bao xa TRONG đoạn ấy
+ * @param {number} segment  độ dài đoạn ấy
+ */
+function headingAt(route, i, u, segment) {
+  const path = route.path;
+  const current = segmentAngle(path, i);
+  const window = Math.min(TURN_ARC, segment);
+  const half = window / 2;
+  if (half <= 0) return current;
+
+  const toEnd = segment - u;
+  if (toEnd < half) {
+    const next = segmentAngle(path, (i + 1) % path.length);
+    return wrapPi(current + (0.5 - (toEnd / window)) * angleDelta(current, next, route.turnSign));
+  }
+  if (u < half) {
+    const prev = segmentAngle(path, (i - 1 + path.length) % path.length);
+    return wrapPi(prev + (0.5 + (u / window)) * angleDelta(prev, current, route.turnSign));
+  }
+  return current;
 }
 
 /**

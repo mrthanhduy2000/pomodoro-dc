@@ -1164,6 +1164,28 @@ export function soiVetRach(anh, mocDai = [], hangCauTruc = [], san = VET_RACH_SA
  *
  * `CHEP_CACH_TOI_THIEU` loại những bản sao SÁT NHAU (vùng phẳng liền một dải thì cột nào cũng
  * giống cột bên cạnh — đó là màu, không phải lỗi chép).
+ *
+ * ⚠️⚠️ **CỘT PHẲNG PHẢI BỊ LOẠI HẲN, KHÔNG CHỈ LOẠI KHI NẰM SÁT NHAU — VÀ THIẾU VẾ ẤY CỔNG NÀY ĐÃ
+ * GIẾT MỌI ẢNH MẶT NẠ TRONG IM LẶNG** (phát hiện 2026-09-02). Đoạn ngay trên đã nhìn thấy đúng căn
+ * bệnh (*"vùng phẳng thì cột nào cũng giống cột bên cạnh"*) nhưng chỉ chữa thể NHẸ của nó: hai cột
+ * phẳng nằm SÁT nhau thì `CHEP_CACH_TOI_THIEU` loại được, còn hai cột phẳng nằm ở HAI ĐẦU tấm ảnh
+ * thì cách nhau 1399 điểm ảnh và bị tố là một vết chép. Mà một ảnh `--mask` thì **theo cấu tạo** là
+ * gần như toàn một màu đen: `--mask residents` có cư dân chiếm 0,14% khung hình, phần còn lại đen
+ * tuyệt đối. Hệ quả đo được: MỌI lượt `--mask` ở 1400×900 đều chết với đúng một dòng
+ * `95,4% số cột bị chép (băng hàng 0–49, lệch 1399 điểm ảnh)`, ba lượt chụp lại đều ra **CÙNG MỘT
+ * CON SỐ** — mà một vết chép là một CUỘC ĐUA nên nó không thể lặp lại y hệt ba lần; chính sự lặp
+ * lại ấy là thứ tố cáo rằng đây là NỘI DUNG chứ không phải lỗi. Nó làm hỏng luôn
+ * `scripts/human-strip.mjs`, một công cụ `CLAUDE.md` ghi tên, kể từ commit `3d37745` (Phase 21).
+ *
+ * ⇒ **Ba luật**: **(a)** một cột PHẲNG (cả đoạn cùng một màu) **không mang thông tin nào về việc
+ * chép** — vết chép là bản sao của NỘI DUNG, mà nội dung thì không phẳng; nên cột phẳng bị loại
+ * khỏi CẢ tử số LẪN mẫu số, và tỉ lệ tính trên **số cột CÓ TIN**. Cách này làm cổng **CHẶT HƠN**
+ * trên ảnh thường (mẫu số nhỏ đi) chứ không nới ra — đúng hướng an toàn; **(b)** một băng mà gần
+ * như không còn cột có tin thì **không phán xử được** — trả về 0 cho băng ấy là một câu trả lời
+ * TRUNG THỰC (*"không có thông tin"*), khác hẳn *"sạch"*; **(c)** đây là `TECH_DEBT #38` lần thứ N:
+ * ngưỡng 10% hiệu chuẩn trên **16 tấm ảnh MÀU nhìn từ trên xuống**, rồi được áp cho một quần thể
+ * chưa từng nằm trong mẫu — ảnh mặt nạ. Mỗi lần thêm một CHẾ ĐỘ DỰNG mới (`--mask`, `--lowdetail`,
+ * ...) phải hỏi *"cổng nào đang hiệu chuẩn trên một quần thể không có chế độ này?"*.
  */
 export const CHEP_CAO_BANG = 50;
 export const CHEP_CACH_TOI_THIEU = 64;
@@ -1177,18 +1199,30 @@ export function soiVetChep(anh, san = CHEP_SAN, caoBang = CHEP_CAO_BANG, cachToi
     const dauTien = new Map();
     let soCot = 0;
     let cach = 0;
+    let soCotCoTin = 0;
     for (let x = 0; x < width; x += 1) {
       const buf = Buffer.allocUnsafe(caoBang * 3);
+      let phang = true;
       for (let k = 0; k < caoBang; k += 1) {
         const i = ((y0 + k) * width + x) * 4;
         buf[k * 3] = pixels[i]; buf[k * 3 + 1] = pixels[i + 1]; buf[k * 3 + 2] = pixels[i + 2];
+        if (phang && k > 0
+          && (buf[k * 3] !== buf[0] || buf[k * 3 + 1] !== buf[1] || buf[k * 3 + 2] !== buf[2])) {
+          phang = false;
+        }
       }
+      // Cột PHẲNG = cả đoạn một màu ⇒ không mang tin về việc chép (xem khối chú thích ở trên).
+      if (phang) continue;
+      soCotCoTin += 1;
       const h = createHash('sha1').update(buf).digest('hex');
       const truoc = dauTien.get(h);
       if (truoc === undefined) dauTien.set(h, x);
       else if (x - truoc >= cachToiThieu) { soCot += 1; cach = x - truoc; }
     }
-    const ti = soCot / width;
+    // Quá ít cột có tin ⇒ băng này KHÔNG phán xử được. Trả 0 là "không có thông tin", không phải
+    // "sạch" — và nó đúng, vì một vết chép ở đây sẽ lộ ra ở một băng khác của cùng tấm ảnh.
+    if (soCotCoTin < cachToiThieu) continue;
+    const ti = soCot / soCotCoTin;
     if (ti > teNhat.ti) teNhat = { ti, y0, cach, soCot };
   }
   return {

@@ -70,7 +70,8 @@
  *   node scripts/sweep-score.mjs <ảnh> --selftest
  */
 
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { join, resolve } from 'node:path';
 import { decodePng, describe } from './png-probe.mjs';
 import {
   BANDS, cityRect, EYE, GRID_X, GRID_Y, gridVector, vecDist,
@@ -107,6 +108,54 @@ try {
   console.error('    node scripts/city-preview.mjs --sweep --all');
   console.error('  ⚠️ ĐỪNG chữa bằng cách đoán lại `--cell`: chính việc đoán đã bịa ra số sai một lần.');
   process.exit(2);
+}
+
+// ⚠️ CỔNG ẢNH CŨ (2026-09-02, Phase 23) — LẦN THỨ BA CÙNG MỘT CÁI BẪY, VÀ LẦN NÀY NÓ CẮN CHÍNH
+// PHIÊN VIẾT RA DÒNG NÀY. Dựng một bản quét mất ~90 giây, chấm nó thì tức thì ⇒ rất dễ chấm một
+// tấm ảnh dựng TRƯỚC lần sửa mã gần nhất. Cái sai ấy KHÔNG có triệu chứng: nó in ra một bảng 15
+// dòng chỉnh tề, mô tả một cây mã không còn tồn tại. Đã cắn ở Phase 13 (cổng cache `[ -f "$png" ]`
+// biến sự tồn tại của một TÊN FILE thành bằng chứng về NỘI DUNG file), suýt cắn ở Phase 14 §1(3),
+// và cắn thật ở Phase 23: ảnh dựng 21:02, `residents.js` sửa 21:33, mà một lời "không trôi" đã
+// được viết ra dựa trên ảnh cũ ấy.
+//   • CLAUDE.md đã ghi luật này thành CHỮ từ Phase 14 ("mtime của ảnh phải mới hơn file nguồn mới
+//     nhất"). Chữ không chặn được gì — đây là bản MÁY của nó, đúng bài học đã lặp nhiều lần trong
+//     dự án: "một bài học được ghi ra KHÔNG chặn được gì; chỉ một cái GÁC mới chặn được".
+//   • KHÔNG có cờ bỏ qua, và đó là chủ đích: cách chữa duy nhất là dựng lại, mà dựng lại thì LUÔN
+//     đúng. Một cờ `--force` sẽ thành thứ người ta gõ theo phản xạ, tức là gỡ răng chính cái gác này.
+//   • Gốc cây mã suy từ CHÍNH đường dẫn ảnh (`<gốc>/.city-preview/…`), KHÔNG phải `process.cwd()` —
+//     nếu không thì mọi ảnh mốc nền dựng trong một `git worktree` riêng (đúng cách TECH_DEBT #43 kê
+//     đơn) sẽ bị từ chối oan vì bị đem so với mã của kho đang sửa.
+//   • Cổng này KHÔNG thể làm một con số nào đẹp lên — nó chỉ có quyền TỪ CHỐI in số ra.
+const NGUON_QUYET_DINH_DIEM_ANH = [
+  'src/engine/city3d',
+  'src/components/city/render3d',
+  'scripts/city-preview.mjs',
+];
+const gocCay = FILE.includes('.city-preview')
+  ? resolve(FILE.slice(0, FILE.lastIndexOf('.city-preview')) || '.')
+  : null;
+if (gocCay) {
+  const moiNhat = (duong) => {
+    let st;
+    try { st = statSync(duong); } catch { return 0; }
+    if (!st.isDirectory()) return st.mtimeMs;
+    let m = 0;
+    for (const e of readdirSync(duong, { withFileTypes: true })) {
+      m = Math.max(m, moiNhat(join(duong, e.name)));
+    }
+    return m;
+  };
+  const tNguon = Math.max(...NGUON_QUYET_DINH_DIEM_ANH.map((r) => moiNhat(join(gocCay, r))));
+  const tAnh = statSync(FILE).mtimeMs;
+  if (tNguon > 0 && tNguon > tAnh) {
+    const treGiay = Math.round((tNguon - tAnh) / 1000);
+    console.error(`\u2717 \u1EA2NH C\u0168 H\u01A0N M\u00C3: ${FILE}`);
+    console.error(`  \u1EA3nh d\u1EF1ng l\u00FAc  ${new Date(tAnh).toISOString()}`);
+    console.error(`  m\u00E3 s\u1EEDa l\u00FAc    ${new Date(tNguon).toISOString()}  (m\u1EDBi h\u01A1n ${treGiay} gi\u00E2y)`);
+    console.error('  \u21D2 B\u1EA3ng s\u1ED1 s\u1EBD m\u00F4 t\u1EA3 m\u1ED9t c\u00E2y m\u00E3 KH\u00C1C v\u1EDBi c\u00E2y m\u00E3 hi\u1EC7n t\u1EA1i. D\u1EF1ng l\u1EA1i r\u1ED3i ch\u1EA5m l\u1EA1i:');
+    console.error(`    (cd ${gocCay} && node scripts/city-preview.mjs --sweep --all --theme light)`);
+    process.exit(2);
+  }
 }
 
 const CELL_W = geom.cellW;

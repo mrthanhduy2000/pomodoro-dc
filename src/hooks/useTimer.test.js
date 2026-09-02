@@ -314,7 +314,7 @@ const useSettingsStore = settingsStoreModule.default;
 // Bài dưới từng chờ cứng 500 ms và ĐỎ VĨNH VIỄN từ lúc `BREAK_START_DELAY_MS` được nâng lên
 // 3200 ms (để đồng hồ nghỉ không cắt ngang lễ mừng, xem `timerSession.test.js`). Mã đúng, phép
 // đo già đi — đúng bẫy "một luật hai công thức".
-const { BREAK_START_DELAY_MS } = timerSessionModule;
+const { BREAK_START_DELAY_MS, BREAK_START_DELAY_QUICK_MS } = timerSessionModule;
 
 const initialGameState = useGameStore.getInitialState();
 const initialSettingsState = useSettingsStore.getState();
@@ -370,7 +370,7 @@ async function resetWorld() {
  * phần đó đã có test riêng), và BỌC 3 hành động còn lại để vừa quan sát vừa giữ
  * nguyên hành vi thật.
  */
-function installSpies({ sessionId = 501 } = {}) {
+function installSpies({ sessionId = 501, celebrates = false } = {}) {
   const real = useGameStore.getState();
   const calls = {
     complete: [],
@@ -387,7 +387,7 @@ function installSpies({ sessionId = 501 } = {}) {
     completeFocusSession: (...args) => {
       calls.complete.push(args);
       calls.order.push('complete');
-      return { sessionId };
+      return { sessionId, celebrates };
     },
     cancelFocusSession: (...args) => {
       calls.cancel.push(args);
@@ -861,9 +861,16 @@ test('finish(): store không trả sessionId → về IDLE, không mở giải l
  * mili-giây thì CHƯA được mở, đúng ngưỡng thì PHẢI mở. Một phía thôi là cái phễu, không phải
  * hàng rào: `advance(999999)` cũng qua được vế "phải mở".
  */
-test('finish(): tự mở giải lao đúng BREAK_START_DELAY_MS, kèm đúng sourceSessionId', async () => {
+/*
+  ⚠️ VÀ NAY NÓ CANH MỘT QUAN HỆ, KHÔNG CANH MỘT MỨC (2026-09-02, đóng `TECH_DEBT #94`).
+  3.200ms sinh ra để che lễ mừng — mà lễ mừng chỉ chạy ở **17,9% số phiên** (trung bình 5,60
+  phiên mỗi công trình, đo qua 15 kỷ), nên ~82% số phiên đứng chờ 3,2 giây trước một màn hình
+  KHÔNG có gì diễn ra. Chạy CẢ HAI nhánh, vì một nhánh thôi thì đổi hằng số nào cũng xanh.
+*/
+test('finish(): độ trễ vào nghỉ đi THEO việc có lễ mừng hay không', async () => {
+  // ── Nhánh 1: KHÔNG có lễ mừng (~82% số phiên) ⇒ chờ NHANH ──
   await resetWorld();
-  const calls = installSpies({ sessionId: 777 });
+  const calls = installSpies({ sessionId: 777, celebrates: false });
   useSettingsStore.setState({ autoStartBreak: true, disableBreak: false });
   const timer = await mountTimer({ focusMinutes: 25 });
 
@@ -875,18 +882,36 @@ test('finish(): tự mở giải lao đúng BREAK_START_DELAY_MS, kèm đúng so
   assert.equal(timer.api.lastCompletedSessionId, 777);
   assert.equal(calls.startBreak.length, 0, 'ngay lúc finish() thì chưa mở giải lao');
 
-  await advance(BREAK_START_DELAY_MS - 1);
+  await advance(BREAK_START_DELAY_QUICK_MS - 1);
   assert.equal(calls.startBreak.length, 0,
-    `còn 1 ms nữa mới tới ${BREAK_START_DELAY_MS} ms mà đã mở giải lao`);
-
+    `còn 1 ms nữa mới tới ${BREAK_START_DELAY_QUICK_MS} ms mà đã mở giải lao`);
   await advance(1);
-
   assert.equal(calls.startBreak.length, 1,
-    `đã qua ${BREAK_START_DELAY_MS} ms mà giải lao chưa mở`);
+    `phiên KHÔNG có lễ mừng vẫn bắt chờ quá ${BREAK_START_DELAY_QUICK_MS} ms — đó là 3,2 giây `
+    + 'nhìn vào một màn hình trống, lặp lại ở ~82% số phiên');
   assert.equal(calls.startBreak[0].sourceSessionId, 777);
   assert.equal(timer.api.timerState, TIMER_STATES.IDLE);
-
   await timer.unmount();
+
+  // ── Nhánh 2: CÓ lễ mừng ⇒ vẫn phải chờ đủ 3.200ms để xem hết ──
+  await resetWorld();
+  const calls2 = installSpies({ sessionId: 778, celebrates: true });
+  useSettingsStore.setState({ autoStartBreak: true, disableBreak: false });
+  const timer2 = await mountTimer({ focusMinutes: 25 });
+
+  await run(() => timer2.api.start());
+  jumpBy(25 * 60 * 1000);
+  await run(() => timer2.api.finish());
+
+  await advance(BREAK_START_DELAY_MS - 1);
+  assert.equal(calls2.startBreak.length, 0,
+    'có lễ mừng mà đã cắt sang nghỉ — bản vá #94 KHÔNG được rút ngắn nhánh này');
+  await advance(1);
+  assert.equal(calls2.startBreak.length, 1);
+  await timer2.unmount();
+
+  // Hai nhánh phải THẬT SỰ khác nhau; bằng nhau thì cả bài này chẳng canh gì.
+  assert.ok(BREAK_START_DELAY_QUICK_MS < BREAK_START_DELAY_MS);
 });
 
 test('[chống trùng] gọi finish() hai lần liên tiếp chỉ sinh MỘT Raw Event', async () => {

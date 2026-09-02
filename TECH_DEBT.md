@@ -551,7 +551,7 @@
 
 ---
 
-## #9 — Persist localStorage không bắt `QuotaExceededError`
+## #9 — ✅ **ĐÃ XỬ LÝ (2026-09-02)** — Persist localStorage không bắt `QuotaExceededError`
 
 - **Module**: `src/lib/appIdentity.js` (`createLegacyCompatibleJSONStorage`, `storage.setItem`)
 - **Priority**: Medium
@@ -570,6 +570,12 @@
 - **Review Trigger**: khi làm backup/recovery, hoặc khi thấy lỗi lưu state trong log production.
 - **Owner**: (chưa gán)
 - **Status**: Open — phát hiện trong lúc phân tích bản vá C1 (2026-07-17), chưa xử lý.
+
+- **✅ ĐÃ XỬ LÝ 2026-09-02.** `setItem` nay bọc `try/catch`, và khi đầy thì **dọn `legacyKeys`
+  trước rồi thử lại** — những khoá ấy là bản sao của chính dữ liệu đang ghi nên xoá chúng vừa giải
+  phóng đúng lượng chỗ cần vừa không mất gì. Thất bại lần hai thì `console.error` nói rõ, KHÔNG
+  nuốt im lặng: nuốt lỗi ở đây nghĩa là Đàm mở lại app thấy mất tiến độ mà không có một dòng nào
+  giải thích.
 
 ---
 
@@ -4606,7 +4612,7 @@ cấp `Math.min(3,…)` → `Math.min(9,…)` · cắt bớt danh sách cấp th
 - **Review Trigger**: khi Đàm thấy kho tài nguyên là thứ phiền chứ không phải thứ vui.
 - **Owner**: Đàm quyết · **Status**: MỞ, chờ Đàm
 
-## #94 — `BREAK_START_DELAY_MS` chờ 3,2 giây ở ~82% số phiên KHÔNG có lễ mừng nào để che
+## #94 — ✅ **ĐÃ XỬ LÝ (2026-09-02)** — `BREAK_START_DELAY_MS` chờ 3,2 giây ở ~82% số phiên KHÔNG có lễ mừng nào để che
 
 > Mở 2026-09-01 (vòng 23). Tiền đề của hằng số này chết do HAI bản vá ở chỗ khác, không do ai
 > động vào `timerSession.js`.
@@ -4744,6 +4750,14 @@ cấp `Math.min(3,…)` → `Math.min(9,…)` · cắt bớt danh sách cấp th
 - **Review Trigger**: lần tới có ai đụng `sun.shadow.camera`, `SHADOW_MAP_DESKTOP`, hoặc bố cục
   thành phố làm khối lan xa hơn
 - **Owner**: chưa ai nhận · **Status**: MỞ
+
+
+- **✅ ĐÃ XỬ LÝ 2026-09-02.** Hằng số thành hàm: `breakStartDelayMs(hasCelebration)` — 3.200ms khi
+  có lễ mừng, **500ms** khi không (500 là giá trị đã chạy đúng suốt thời kỳ trước khi có lễ mừng,
+  không phải một con số mới chọn tay). `completeFocusSession` nay trả thêm `celebrates`, đọc CHÍNH
+  hai biến mà `App.jsx` dùng để quyết định hiện lễ mừng (`activeNewlyBuilt` · `eraChanged`) chứ
+  không chép lại điều kiện. Bài test ở `useTimer.test.js` đã đổi từ canh MỘT MỨC sang canh QUAN
+  HỆ và chạy CẢ HAI nhánh — một nhánh thôi thì đổi hằng số nào cũng xanh.
 
 ---
 

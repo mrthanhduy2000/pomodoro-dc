@@ -57,6 +57,31 @@ export const CONTINUED_POMODORO_CONFIRM_SECONDS = 15 * 60;
  */
 export const BREAK_START_DELAY_MS = 3200;
 
+/**
+ * Độ trễ khi KHÔNG có lễ mừng nào để che. 500ms là giá trị đã chạy đúng suốt thời kỳ trước khi
+ * có lễ mừng thành phố — không phải một con số mới chọn tay.
+ */
+export const BREAK_START_DELAY_QUICK_MS = 500;
+
+/**
+ * ⚠️ ĐỘ TRỄ VÀO NGHỈ PHẢI THEO CHÍNH THỨ NÓ CHE (2026-09-02, đóng `TECH_DEBT #94`).
+ *
+ * `BREAK_START_DELAY_MS = 3200` là một HẰNG SỐ, còn thứ nó sinh ra để che là một BIẾN — và chú
+ * thích cũ biện minh cho nó bằng câu *"cả hai trường hợp người dùng đều đang nhìn hộp phần
+ * thưởng"*. Câu ấy chết do HAI bản vá ở chỗ khác, không do ai động vào file này:
+ *   · ADR-060 làm phiên thường thôi TỰ mở hộp phần thưởng;
+ *   · vòng 22 siết lễ mừng thành phố xuống CHỈ khi có công trình vừa xong.
+ * Đo `sessionsToComplete` qua 15 kỷ: trung bình **5,60 phiên mỗi công trình ⇒ lễ mừng chỉ chạy ở
+ * 17,9% số phiên**. Tức ~82% số phiên đứng chờ 3,2 giây trước một màn hình không có gì diễn ra —
+ * trên fixture 588 phiên là **31,4 phút** chờ vô ích trong 180 ngày.
+ *
+ * Đây là bẫy Phase 7D ở tầng thời gian: *một con số tuyệt đối không diễn đạt được một luật nói
+ * về QUAN HỆ*. Luật thật là "chờ đủ lâu để xem hết lễ mừng", mà "lễ mừng" thì có hoặc không.
+ */
+export function breakStartDelayMs(hasCelebration) {
+  return hasCelebration ? BREAK_START_DELAY_MS : BREAK_START_DELAY_QUICK_MS;
+}
+
 export function resolveContinueAfterPomodoro(timerSession = {}, fallback = false) {
   if (typeof timerSession?.continueAfterPomodoro === 'boolean') {
     return timerSession.continueAfterPomodoro;

@@ -78,10 +78,42 @@ export function createLegacyCompatibleJSONStorage(legacyKeys = []) {
       const storage = getBrowserStorage('localStorage');
       if (!storage) return;
 
-      storage.setItem(name, value);
+      /*
+        ⚠️ ĐƯỜNG GHI PHẢI CHỊU ĐƯỢC localStorage ĐẦY (2026-09-02, đóng `TECH_DEBT #9`).
+        Trước đây `setItem` gọi TRẦN. Khi hạn mức bị chạm, lỗi ném thẳng vào trong zustand persist
+        — tức app ngừng lưu được state cục bộ, và cách nó biểu hiện với Đàm là "mở lại app thì
+        mất hết tiến độ của phiên vừa rồi", một triệu chứng không ai nghĩ tới localStorage.
+
+        ⚠️ DỌN KHOÁ CŨ TRƯỚC RỒI THỬ LẠI, chứ không chỉ nuốt lỗi: những khoá `legacyKeys` là bản
+        sao của CHÍNH dữ liệu đang ghi (chúng tồn tại để đọc được state đời cũ), nên xoá chúng đi
+        vừa giải phóng đúng lượng chỗ cần vừa không mất gì. Nuốt lỗi im lặng thì lần ghi này hỏng
+        mà không ai biết — đúng loại lỗi im lặng mà dự án đã trả giá nhiều lần.
+      */
+      try {
+        storage.setItem(name, value);
+      } catch {
+        for (const legacyKey of legacyKeys) {
+          if (legacyKey && legacyKey !== name) {
+            try { storage.removeItem(legacyKey); } catch { /* hết cách, đi tiếp */ }
+          }
+        }
+        try {
+          storage.setItem(name, value);
+        } catch (loiLan2) {
+          // Không cứu được: BÁO RA thay vì im lặng. Đây là chỗ duy nhất biết rằng lần lưu này
+          // đã hỏng — nuốt nó là để Đàm mất dữ liệu mà không có một dòng nào giải thích.
+          console.error(
+            '[storage] Không lưu được state vào localStorage (có thể đã đầy). '
+            + 'Dữ liệu phiên này chỉ còn trong bộ nhớ cho tới khi đồng bộ lên Supabase.',
+            loiLan2,
+          );
+          return;
+        }
+      }
+
       for (const legacyKey of legacyKeys) {
         if (legacyKey && legacyKey !== name) {
-          storage.removeItem(legacyKey);
+          try { storage.removeItem(legacyKey); } catch { /* không quan trọng */ }
         }
       }
     },

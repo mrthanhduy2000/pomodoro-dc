@@ -4569,6 +4569,15 @@ const useGameStore = create(
               }
             : null);
           const activeNewlyBuilt = newlyBuilt.filter((bpId) => isCurrentEraBlueprint(bpId, finalBook));
+          /*
+            ⚠️ `celebrates` để `useTimer` biết có nên chờ 3,2 giây hay không (`TECH_DEBT #94`).
+            Hai thứ CHẶN màn hình sau một phiên thường: lễ mừng thành phố (cần công trình vừa
+            xong) và hộp phần thưởng TỰ mở (chỉ khi lên kỷ). Không cái nào xảy ra thì màn hình
+            trống trơn, và 3,2 giây ấy là 3,2 giây nhìn vào chỗ không có gì.
+            ⚠️ Đọc CHÍNH hai biến mà `App.jsx` dùng để quyết định hiện lễ mừng — đừng chép lại
+            điều kiện, hai chỗ sẽ trôi khỏi nhau đúng lúc không ai để ý.
+          */
+          sessionResult = { ...sessionResult, celebrates: activeNewlyBuilt.length > 0 || eraChanged };
           const activeAcceleratedCraftingIds = acceleratedCraftingIds.filter((bpId) => isCurrentEraBlueprint(bpId, finalBook));
 
           const prevForgivenessCapacity = getWonderForgivenessCapacity(prev.buildings);

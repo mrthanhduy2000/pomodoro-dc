@@ -26,19 +26,44 @@ export function tiLe(dat, tong) {
  * HÀNH ĐỘNG ĐƯỢC ngay bây giờ. "Đã mở 4 kỹ năng" là một lời khen về quá khứ; "có 1 điểm chưa
  * tiêu" là một việc đang chờ.
  */
-export function heroKyNang({ spChuaTieu = 0, daMo = 0, tongKyNang = 0 } = {}) {
-  const coViec = spChuaTieu > 0;
+export function heroKyNang({ spChuaTieu = 0, daMo = 0, tongKyNang = 0, moDuoc = 0, reNhat = 0 } = {}) {
+  // ⚠️ "CÓ ĐIỂM" KHÔNG BẰNG "MỞ ĐƯỢC" — bản trước bật màu nhấn chỉ vì `spChuaTieu > 0` rồi viết
+  // *"mở thêm một kỹ năng ngay bên dưới"*. Đo trên một ván thật: 1 SP trong tay, mà ô rẻ nhất còn
+  // mở được giá 3 SP ⇒ dải mở đầu rực lên và bảo người chơi đi làm một việc **không làm được**.
+  // Một lời hứa sai còn tệ hơn không hứa gì: nó tiêu mất chính cái màu dùng để nói "có việc làm".
+  // Nay `gap` hỏi đúng câu mà bản đồ kỹ năng đang trả lời — `countReady` ở `skillMatrix.js`.
+  if (moDuoc > 0) {
+    return {
+      nhan: 'Điểm kỹ năng',
+      so: spChuaTieu,
+      donVi: 'điểm chưa tiêu',
+      caption: `Mở được ${moDuoc} kỹ năng ngay bây giờ — ô viền đậm trên bản đồ.`,
+      pct: 1,
+      gap: true,
+    };
+  }
+  if (spChuaTieu > 0) {
+    return {
+      nhan: 'Điểm kỹ năng',
+      so: spChuaTieu,
+      donVi: 'điểm chưa tiêu',
+      caption: reNhat > spChuaTieu
+        ? `Chưa đủ: ô rẻ nhất cần ${reNhat} SP. Lên cấp để tích thêm.`
+        : 'Chưa mở được ô nào — mở nút phía trên trong cùng cột trước.',
+      pct: tiLe(spChuaTieu, Math.max(reNhat, spChuaTieu)),
+      gap: false,
+    };
+  }
   return {
     nhan: 'Điểm kỹ năng',
-    so: coViec ? spChuaTieu : daMo,
-    donVi: coViec ? (spChuaTieu > 1 ? 'điểm chưa tiêu' : 'điểm chưa tiêu') : `/ ${tongKyNang} kỹ năng`,
-    caption: coViec
-      ? 'Có điểm đang để không — mở thêm một kỹ năng ngay bên dưới.'
-      : 'Hết điểm rồi. Lên cấp để nhận thêm.',
-    pct: coViec ? 1 : tiLe(daMo, tongKyNang),
-    gap: coViec,
+    so: daMo,
+    donVi: `/ ${tongKyNang} kỹ năng`,
+    caption: 'Hết điểm rồi. Lên cấp để nhận thêm.',
+    pct: tiLe(daMo, tongKyNang),
+    gap: false,
   };
 }
+
 
 /**
  * Hero của tab CÔNG TRÌNH.

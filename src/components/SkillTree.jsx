@@ -14,6 +14,8 @@
 
 import React, { useState, useCallback, useMemo } from 'react';
 import InventoryHero from './shared/InventoryHero.jsx';
+import SkillMatrix from './shared/SkillMatrix.jsx';
+import { buildSkillMatrix, cheapestReachable, countReady, pickDefaultCell, MATRIX_STATE } from './shared/skillMatrix.js';
 import { heroKyNang } from './shared/inventoryHero.js';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SCRIM_FADE, useCustomMotion, useEnterMotion, usePressMotion, useSnapMotion } from '../lib/motionPresets';
@@ -80,7 +82,6 @@ const SKILL_LABELS = Object.fromEntries(
   Object.values(SKILL_TREE).flatMap((branch) => branch.nodes.map((node) => [node.id, node.label]))
 );
 
-const BRANCH_KEYS = Object.keys(SKILL_TREE);
 
 // Bảng tra id → nút, dựng MỘT LẦN từ chính `SKILL_TREE`. Không chép danh sách nút ra đâu cả: một
 // bảng chép tay sẽ trôi khỏi dữ liệu ngay lần ai đó thêm một nhánh.
@@ -155,7 +156,10 @@ export default function SkillTree({ _onOpenAchievements }) {
   const { progressPct, currentLevelEXP, nextLevelEXP } = getLevelProgress(totalEXP);
 
   const [confirmNode, setConfirmNode] = useState(null);
-  const [activeBranch, setActiveBranch] = useState(BRANCH_KEYS[0]);
+  // Ô đang chọn trên bản đồ. `null` = chưa chạm gì ⇒ rơi về ô mặc định (rẻ nhất trong số mở
+  // được ngay) — xem `pickDefaultCell`. Giữ ID chứ không giữ cả ô: ô được DỰNG LẠI mỗi lần
+  // SP/kỹ năng đổi, nên giữ tham chiếu cũ là giữ một trạng thái đã lỗi thời.
+  const [pickedId, setPickedId] = useState(null);
   // NGOẠI LỆ (mang bố cục) — bề dài thanh CHÍNH LÀ phần trăm kinh nghiệm đã tích.
   const expBarMotion = useSnapMotion({
     animate: { width: `${progressPct}%` },
@@ -211,13 +215,32 @@ export default function SkillTree({ _onOpenAchievements }) {
     return { activeSynergies: active, branchCounts: counts };
   }, [unlockedSkills]);
 
-  const selectedBranch = SKILL_TREE[activeBranch];
+  const matrix = useMemo(() => buildSkillMatrix({
+    skillTree: SKILL_TREE,
+    unlockedSkills,
+    sp,
+    costOf: (n) => getEffectiveSkillCost(n.id, n.spCost, relics, relicEvolutions) ?? n.spCost,
+  }), [unlockedSkills, sp, relics, relicEvolutions]);
+  const readyCount = countReady(matrix);
+  const pickedCell = useMemo(() => {
+    const tatCa = matrix.columns.flatMap((col) => col.cells.map((c) => ({ ...c, branch: col })));
+    return tatCa.find((c) => c.node.id === pickedId) ?? pickDefaultCell(matrix);
+  }, [matrix, pickedId]);
 
   return (
     <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-4">
 
       {/* ── Dải mở đầu Hành trang — xem `shared/inventoryHero.js` ────────── */}
-      <InventoryHero hero={heroKyNang({ spChuaTieu: sp, daMo: unlockedCount, tongKyNang: totalNodes })} icon="✦" />
+      <InventoryHero
+        hero={heroKyNang({
+          spChuaTieu: sp,
+          daMo: unlockedCount,
+          tongKyNang: totalNodes,
+          moDuoc: readyCount,
+          reNhat: cheapestReachable(matrix),
+        })}
+        icon="✦"
+      />
 
       {/* ── Tóm tắt tiến trình: cấp + XP ─────────────────────────────────── */}
       <div className="px-5 py-4" style={CARD}>
@@ -281,13 +304,14 @@ export default function SkillTree({ _onOpenAchievements }) {
           <div className="px-5 py-5" style={CARD}>
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                {/* ⚠️ NHÃN "CÂY KỸ NĂNG" ĐÃ GỠ (2026-08-30) — đây là chỗ nói lần thứ HAI: cái
-                    tab Đàm vừa bấm để tới đây tên là "Kỹ năng", và nó đang sáng ngay phía trên.
-                    Một nhãn nhắc lại tên màn hình mình đang đứng thì không phân biệt được gì. */}
-                <h3 className="flex items-center gap-2 text-[1.45rem] font-semibold leading-tight" style={{ fontFamily: 'var(--skin-font-display)', color: 'var(--ink)' }}>
-                  <BranchGlyph branch={activeBranch} size={24} />{selectedBranch.label}
+                <h3 className="text-[1.45rem] font-semibold leading-tight" style={{ fontFamily: 'var(--skin-font-display)', color: 'var(--ink)' }}>
+                  Bản đồ kỹ năng
                 </h3>
-                <p className="mt-1 text-[12px] leading-snug" style={{ color: 'var(--muted)' }}>{selectedBranch.focus}</p>
+                <p className="mt-1 text-[12px] leading-snug" style={{ color: 'var(--muted)' }}>
+                  {readyCount > 0
+                    ? `${readyCount} ô mở được ngay — ô viền đậm, có giá SP ở góc.`
+                    : 'Chưa ô nào mở được ngay. Tích thêm SP, hoặc mở nút phía trên trong cùng cột.'}
+                </p>
               </div>
               <div className="flex shrink-0 items-center gap-1.5 px-3 py-1.5" style={{ background: 'rgba(var(--accent-rgb), 0.1)', border: '1px solid rgba(var(--accent-rgb), 0.18)', borderRadius: 'var(--skin-radius-control,14px)' }}>
                 <span style={{ color: 'var(--accent2)', display: 'inline-flex' }}><BoltGlyph size={14} /></span>
@@ -297,58 +321,33 @@ export default function SkillTree({ _onOpenAchievements }) {
             </div>
 
             {/*
-              ⚠️ TÊN NHÁNH PHẢI HIỆN Ở KHỔ ĐIỆN THOẠI (vòng 20, 2026-08-30). Nhãn từng là
-              `hidden sm:inline`, mà `sm` là 640px — tức ở 390px sáu nút chỉ còn một glyph nhỏ và
-              một phân số. Đo trên fixture đã chơi 6 tháng: 5 trong 6 nhánh cùng ghi "0/6" ⇒ **năm
-              nút trông y hệt nhau**, và cách duy nhất biết nút nào là "Ý Chí" hay "Vận May" là
-              bấm thử từng cái. Một hàng nút mà không đọc được nhãn thì không phải một hàng nút.
-              ⚠️ Cái giá phải TRẢ chứ không giấu: hàng chip cao thêm (nó wrap thành nhiều dòng ở
-              390px). Đổi lại sáu nút thôi giống hệt nhau — và trang Kỹ năng vừa ngắn đi 1.113px ở
-              chính vòng này nên chỗ ấy có sẵn.
+              ⚠️ CẢ 36 KỸ NĂNG TRONG MỘT KHUNG HÌNH — xem `shared/skillMatrix.js` để biết vì sao
+              bản đồ thay cho danh sách. Cột = nhánh, hàng = độ sâu; đường nối dọc trong mỗi cột
+              nói "muốn xuống dưới phải mở cái trên".
             */}
-            {/* Chọn nhánh */}
-            <div className="mt-4 flex flex-wrap gap-1.5">
-              {BRANCH_KEYS.map((key) => {
-                const b = SKILL_TREE[key];
-                const active = key === activeBranch;
-                const owned = branchCounts[key] ?? 0;
-                return (
-                  <button
-                    key={key}
-                    type="button"
-                    onClick={() => setActiveBranch(key)}
-                    className="mono inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-semibold transition-colors"
-                    style={active
-                      ? { background: 'var(--ink)', color: 'var(--canvas)' }
-                      : { background: 'rgba(var(--accent-rgb),0.06)', color: 'var(--muted)', border: '1px solid var(--line)' }}
-                  >
-                    <BranchGlyph branch={key} size={14} />
-                    <span>{b.label}</span>
-                    <span className="tabular-nums" style={{ opacity: 0.7 }}>{owned}/{b.nodes.length}</span>
-                  </button>
-                );
-              })}
+            <div className="mt-4">
+              <SkillMatrix
+                matrix={matrix}
+                selectedId={pickedCell?.node?.id ?? null}
+                onPick={(cell) => setPickedId(cell.node.id)}
+              />
             </div>
 
-            {/* Danh sách nút kỹ năng (nối nhau bằng đường mảnh) */}
-            <div className="mt-5">
-              {selectedBranch.nodes.map((node, i) => (
-                <SkillNode
-                  key={node.id}
-                  node={node}
-                  nodeState={getNodeState(node)}
-                  effectiveCost={getEffectiveSkillCost(node.id, node.spCost, relics, relicEvolutions)}
-                  giaChuoi={giaCaChuoi(
-                    node.id,
-                    NODE_BY_ID,
-                    (id) => !!unlockedSkills[id],
-                    (n) => getEffectiveSkillCost(n.id, n.spCost, relics, relicEvolutions) ?? n.spCost,
-                  )}
-                  isLast={i === selectedBranch.nodes.length - 1}
-                  onBuy={() => handleBuy(node)}
-                />
-              ))}
-            </div>
+            {pickedCell && (
+              <SkillDetail
+                cell={pickedCell}
+                branchKey={pickedCell.branch?.key}
+                branchLabel={pickedCell.branch?.label ?? ''}
+                lightTheme={lightTheme}
+                giaChuoi={giaCaChuoi(
+                  pickedCell.node.id,
+                  NODE_BY_ID,
+                  (id) => !!unlockedSkills[id],
+                  (n) => getEffectiveSkillCost(n.id, n.spCost, relics, relicEvolutions) ?? n.spCost,
+                )}
+                onBuy={() => handleBuy(pickedCell.node)}
+              />
+            )}
           </div>
 
           {/* Kỹ năng chủ động (chỉ hiện khi đã sở hữu) */}
@@ -397,18 +396,6 @@ export default function SkillTree({ _onOpenAchievements }) {
         activeSynergies={activeSynergies}
         branchCounts={branchCounts}
       />
-
-      {/* ── Chú thích bậc độ ─────────────────────────────────────────────── */}
-      <div className="flex flex-wrap gap-2 justify-center mt-5 pb-2">
-        {Object.entries(TIER_STYLE).map(([, style]) => {
-          const badgeProps = getTierBadgeProps(style, lightTheme);
-          return (
-            <span key={style.label} {...badgeProps} className={`${badgeProps.className} px-3 py-1`}>
-              {style.label}
-            </span>
-          );
-        })}
-      </div>
 
       {/* ── Hộp xác nhận mua ──────────────────────────────────────────────── */}
       <AnimatePresence>
@@ -537,132 +524,99 @@ function ActiveAbilityBar({ lightTheme, unlockedSkills, skillActivations, onActi
   );
 }
 
-// ─── SkillNode (một hàng trong cây, kiểu mockup) ──────────────────────────────
-
-function SkillNode({ node, nodeState, effectiveCost, giaChuoi, isLast, onBuy }) {
+// ─── SkillDetail — ô đang chọn trên bản đồ ────────────────────────────────────
+/**
+ * ⚠️ MỘT KHUNG CHI TIẾT, KHÔNG PHẢI BA MƯƠI SÁU. Bản đồ 6×6 chỉ nói được TRẠNG THÁI (đã mở · mở
+ * được · thiếu SP · còn khoá); mô tả, giá và nút bấm sống ở đây. Trước 2026-09-02 mỗi kỹ năng tự
+ * mang cả mô tả lẫn nút, nên riêng khối cây kỹ năng dài hơn một nghìn điểm ảnh và người chơi phải
+ * bấm qua sáu nhánh mới nhìn hết 36 kỹ năng — tức câu hỏi "tiêu SP vào đâu" không trả lời được
+ * bằng mắt.
+ * ⚠️ NÚT ĐANG KHOÁ HIỆN GIÁ CẢ CHUỖI, KHÔNG PHẢI GIÁ LẺ — luật cũ giữ nguyên, xem `giaCaChuoi`:
+ * đo trên một ván thật, 21/32 nút chưa mua từng hiện một con số THẤP HƠN giá thật, tệ nhất 2,3
+ * lần. Nút MỞ ĐƯỢC vẫn hiện giá lẻ, vì lúc ấy giá lẻ CHÍNH LÀ số SP sắp bị trừ.
+ */
+function SkillDetail({ cell, branchKey, branchLabel, giaChuoi, lightTheme, onBuy }) {
   const pressMotion = usePressMotion();
-  // Nhấc khi DI CHUỘT không thuộc ba nhịp — đi qua cái gác ngoại lệ.
-  const hoverLift = useCustomMotion({ whileHover: { y: -1 } });
-  // NGOẠI LỆ (trang trí) — quầng sáng THỞ quanh kỹ năng đã mở khoá được, lặp vô hạn.
-  // ⚠️ Điều kiện nay chỉ còn `isAvailable`: cái gác đã lo vế `!reducedMotion`, giữ lại là
-  // "một luật hai công thức" và sớm muộn hai vế sẽ lệch nhau.
-  const haloMotion = useCustomMotion({
-    animate: { boxShadow: ['0 0 0 0 rgba(var(--accent-rgb),0)', '0 0 0 4px rgba(var(--accent-rgb),0.12)', '0 0 0 0 rgba(var(--accent-rgb),0)'] },
-    transition: { duration: 2.4, repeat: Infinity },
-  });
-  const isUnlocked     = nodeState === NODE_STATE.UNLOCKED;
-  const isAvailable    = nodeState === NODE_STATE.AVAILABLE;
-  const isLocked       = nodeState === NODE_STATE.LOCKED;
-  const isInsufficient = nodeState === NODE_STATE.INSUFFICIENT_SP;
-
-  // Cộng hưởng Di Vật (B): giá hiển thị = effectiveCost; nếu rẻ hơn → có giảm giá
-  const cost          = effectiveCost ?? node.spCost;
-  const isDiscounted  = cost < node.spCost;
-  const resonance     = ELITE_RESONANCE_BY_SKILL[node.id]; // chỉ có ở 6 elite
-  const showHint      = !!resonance && !isDiscounted && !isUnlocked;
+  const { node, cost, state } = cell;
+  const isUnlocked = state === MATRIX_STATE.OWNED;
+  const isReady    = state === MATRIX_STATE.READY;
+  const isLocked   = state === MATRIX_STATE.LOCKED;
+  const isDiscounted = cost < node.spCost;
+  const resonance    = ELITE_RESONANCE_BY_SKILL[node.id];
+  const showHint     = !!resonance && !isDiscounted && !isUnlocked;
   const hintRelicLabel = resonance ? RELIC_LABELS_VI[resonance.relicId] : null;
-
-  const circleStyle = isUnlocked
-    ? { background: 'var(--accent)', color: '#fff', border: '1px solid var(--accent)' }
-    : isAvailable
-      ? { background: 'rgba(var(--accent-rgb),0.10)', color: 'var(--accent2)', border: '1.5px solid rgba(var(--accent-rgb),0.45)' }
-      : { background: 'var(--card-bg-solid2)', color: 'var(--muted-2)', border: '1px solid var(--line)' };
+  const tierStyle = TIER_STYLE[node.tier] ?? TIER_STYLE.basic;
+  const tierBadgeProps = getTierBadgeProps(tierStyle, lightTheme);
 
   return (
-    <div className="flex gap-3.5">
-      {/* Cột trái: vòng tròn + đường nối */}
-      <div className="flex flex-col items-center">
-        <motion.span
-          className="relative z-10 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[17px] leading-none"
-          style={{ ...circleStyle, opacity: isLocked ? 0.6 : 1 }}
-          {...(isAvailable ? haloMotion : {})}
+    <div
+      className="mt-4 px-4 py-3.5"
+      style={{
+        background: isReady
+          ? 'color-mix(in srgb, var(--accent) 7%, var(--card-bg-solid))'
+          : 'var(--card-bg-solid2, var(--card-bg-solid))',
+        border: '1px solid ' + (isReady ? 'color-mix(in srgb, var(--accent) 26%, var(--line))' : 'var(--line)'),
+        borderRadius: 'var(--skin-radius-card,18px)',
+      }}
+    >
+      <div className="flex items-start gap-3">
+        <span
+          className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[17px] leading-none"
+          style={isUnlocked
+            ? { background: 'var(--accent)', color: '#fff', border: '1px solid var(--accent)' }
+            : { background: 'var(--card-bg-solid)', color: 'var(--muted)', border: '1px solid var(--line)' }}
         >
           <SkillGlyph id={node.id} locked={isLocked} size={20} />
-        </motion.span>
-        {!isLast && (
-          <span
-            className="mt-1 w-px flex-1"
-            style={{ background: isUnlocked ? 'rgba(var(--accent-rgb),0.30)' : 'var(--line)', minHeight: '14px' }}
-          />
-        )}
+        </span>
+
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <p className="text-[15px] font-semibold leading-tight" style={{ color: 'var(--ink)' }}>{node.label}</p>
+            <span {...tierBadgeProps}>{tierStyle.label}</span>
+          </div>
+          <p className="mono mt-0.5 inline-flex items-center gap-1 text-[10px] uppercase tracking-[0.16em]" style={{ color: 'var(--muted-2)' }}>
+            <BranchGlyph branch={branchKey} size={12} />{branchLabel}
+          </p>
+          <p className="mt-1.5 text-[12.5px] leading-snug" style={{ color: 'var(--muted)' }}>{node.description}</p>
+          {isLocked && (
+            <p className="mt-1.5 text-[11px] leading-snug" style={{ color: 'var(--muted-2)' }}>
+              {node.requires.length > 0
+                ? `Cần mở trước: ${node.requires.map((r) => SKILL_LABELS[r] ?? r.replace(/_/g, ' ')).join(', ')}`
+                : 'Cần mở nút phía trên trong cùng cột'}
+            </p>
+          )}
+          {showHint && (
+            <p className="mt-1.5 text-[11px] leading-snug" style={{ color: 'var(--accent2)', opacity: 0.85 }}>
+              {hintRelicLabel ? `Tiến hóa "${hintRelicLabel}" để giảm nửa giá` : 'Tiến hóa di vật cùng kỷ để giảm nửa giá'}
+            </p>
+          )}
+        </div>
       </div>
 
-      {/* Cột phải: tên + mô tả + hành động */}
-      <div className={`min-w-0 flex-1 ${isLast ? '' : 'pb-5'}`}>
-        <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0">
-            <p className="text-[14px] font-semibold leading-tight" style={{ color: isLocked ? 'var(--muted-2)' : 'var(--ink)' }}>
-              {node.label}
-            </p>
-            {/*
-              ⚠️ MÔ TẢ LUÔN HIỆN, KỂ CẢ KHI NÚT ĐANG KHOÁ. Bản cũ THAY mô tả bằng dòng
-              "Cần mở: X" ⇒ đo được **21/32 nút chưa mua (66%) không có một chữ nào nói mình làm
-              gì** — màn hình cho biết GIÁ nhưng giấu MÓN HÀNG. Người ta chỉ thèm thứ mình biết là
-              gì; "Bền Vững · 8 SP · Cần mở: Lá Chắn Chuỗi" không tạo ra ham muốn nào, nó chỉ là
-              một ô xám có giá. Và đúng thứ đáng thèm nhất (6 nút Tinh Hoa) lại là thứ bị giấu
-              kín nhất. Nay "Cần mở" xuống thành DÒNG PHỤ bên dưới thay vì thay thế.
-            */}
-            <p className="mt-1 text-[12px] leading-snug" style={{ color: 'var(--muted)' }}>
-              {node.description}
-            </p>
-            {isLocked ? (
-              <p className="mt-1 text-[11px] leading-snug" style={{ color: 'var(--muted-2)' }}>
-                {node.requires.length > 0
-                  ? `Cần mở trước: ${node.requires.map((r) => SKILL_LABELS[r] ?? r.replace(/_/g, ' ')).join(', ')}`
-                  : 'Cần mở nút trước'}
-              </p>
-            ) : null}
-            {showHint && (
-              <p className="mt-1 text-[11px] leading-snug" style={{ color: 'var(--accent2)', opacity: 0.85 }}>
-                {hintRelicLabel
-                  ? `Tiến hóa "${hintRelicLabel}" để giảm nửa giá`
-                  : 'Tiến hóa di vật cùng kỷ để giảm nửa giá'}
-              </p>
-            )}
-          </div>
-
-          <div className="shrink-0 pt-0.5">
-            {isUnlocked ? (
-              <span className="mono inline-flex items-center gap-1 text-[11px] font-semibold" style={{ color: 'var(--good)' }}>
-                ✓ Đã mở
-              </span>
-            ) : isAvailable ? (
-              <motion.button
-                type="button"
-                onClick={onBuy}
-                {...hoverLift}
-                {...pressMotion}
-                className="mono inline-flex items-center whitespace-nowrap rounded-full px-3 py-1.5 text-[11px] font-semibold tabular-nums transition-colors"
-                style={{ background: 'rgba(var(--accent-rgb),0.10)', border: '1px solid rgba(var(--accent-rgb),0.30)', color: 'var(--accent2)' }}
-              >
-                Mở ·{' '}
-                {isDiscounted && (
-                  <span className="line-through opacity-60 mr-1" style={{ color: 'var(--muted)' }}>{node.spCost}</span>
-                )}
-                {cost} SP
-              </motion.button>
-            ) : (
-              <span
-                className="mono inline-flex items-center whitespace-nowrap rounded-full px-3 py-1.5 text-[11px] font-semibold tabular-nums"
-                style={{ background: 'var(--card-bg-solid2)', border: '1px solid var(--line)', color: 'var(--muted-2)', opacity: isInsufficient ? 0.95 : 0.7 }}
-              >
-                {isDiscounted && (
-                  <span className="line-through opacity-60 mr-1">{node.spCost}</span>
-                )}
-                {/*
-                  ⚠️ NÚT ĐANG KHOÁ HIỆN GIÁ CẢ CHUỖI, KHÔNG PHẢI GIÁ LẺ. Đo trên một ván thật:
-                  **21/32 nút chưa mua (66%) từng hiện một con số thấp hơn giá thật**, tệ nhất gấp
-                  **2,3 lần** — ô ghi "8 SP" trong khi phải tiêu 18 SP mới chạm tới được nó (≈ 9
-                  cấp ≈ 254 ngày ở nhịp chơi thật). Con số duy nhất người chơi đọc được lại là con
-                  số nói dối, và nó nói dối theo hướng DỄ CHỊU — khi phát hiện ra, lòng tin vào mọi
-                  con số khác trên màn cũng mất theo.
-                  Nút MỞ ĐƯỢC vẫn hiện giá lẻ, vì lúc ấy giá lẻ CHÍNH LÀ số SP sắp bị trừ.
-                */}
-                {giaChuoi > cost ? `${giaChuoi} SP cả chuỗi` : `${cost} SP`}
-              </span>
-            )}
-          </div>
-        </div>
+      <div className="mt-3 flex justify-end">
+        {isUnlocked ? (
+          <span className="mono inline-flex items-center gap-1 text-[12px] font-semibold" style={{ color: 'var(--good)' }}>✓ Đã mở</span>
+        ) : isReady ? (
+          <motion.button
+            type="button"
+            onClick={onBuy}
+            {...pressMotion}
+            className="mono inline-flex items-center whitespace-nowrap rounded-full px-4 py-2 text-[12px] font-semibold tabular-nums transition-colors"
+            style={{ background: 'var(--accent)', border: '1px solid var(--accent)', color: 'var(--canvas)' }}
+          >
+            Mở ·{' '}
+            {isDiscounted && <span className="mr-1 line-through opacity-60">{node.spCost}</span>}
+            {cost} SP
+          </motion.button>
+        ) : (
+          <span
+            className="mono inline-flex items-center whitespace-nowrap rounded-full px-4 py-2 text-[12px] font-semibold tabular-nums"
+            style={{ background: 'var(--card-bg-solid)', border: '1px solid var(--line)', color: 'var(--muted-2)' }}
+          >
+            {isDiscounted && <span className="mr-1 line-through opacity-60">{node.spCost}</span>}
+            {giaChuoi > cost ? `${giaChuoi} SP cả chuỗi` : `${cost} SP`}
+          </span>
+        )}
       </div>
     </div>
   );

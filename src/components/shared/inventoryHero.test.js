@@ -23,15 +23,29 @@ test('tiLe kẹp 0..1 và không chia cho 0', () => {
 });
 
 test('hero KỸ NĂNG dẫn bằng thứ HÀNH ĐỘNG ĐƯỢC, không phải thành tích quá khứ', () => {
-  const coDiem = heroKyNang({ spChuaTieu: 2, daMo: 4, tongKyNang: 30 });
-  assert.equal(coDiem.so, 2, 'có điểm chưa tiêu thì con số dẫn đầu phải là NÓ');
-  assert.equal(coDiem.gap, true, 'có việc làm được ⇒ dải phải mang màu nhấn');
+  const moDuoc = heroKyNang({ spChuaTieu: 2, daMo: 4, tongKyNang: 30, moDuoc: 1, reNhat: 2 });
+  assert.equal(moDuoc.so, 2, 'có điểm tiêu được thì con số dẫn đầu phải là NÓ');
+  assert.equal(moDuoc.gap, true, 'có việc làm được ⇒ dải phải mang màu nhấn');
 
   const hetDiem = heroKyNang({ spChuaTieu: 0, daMo: 4, tongKyNang: 30 });
   assert.equal(hetDiem.so, 4);
   assert.equal(hetDiem.gap, false, 'không có việc mà vẫn rực thì "rực" thôi mang tin');
 });
 
+test('CÓ ĐIỂM MÀ KHÔNG MỞ ĐƯỢC GÌ THÌ KHÔNG ĐƯỢC RỰC — và phải nói ra còn thiếu bao nhiêu', () => {
+  // Ca thật đã đo được trên một ván: 1 SP trong tay, ô rẻ nhất mở được giá 3 SP. Bản cũ bật màu
+  // nhấn và viết "mở thêm một kỹ năng ngay bên dưới" — một lời hứa KHÔNG làm được.
+  const ket = heroKyNang({ spChuaTieu: 1, daMo: 4, tongKyNang: 36, moDuoc: 0, reNhat: 3 });
+  assert.equal(ket.gap, false, 'không mở được ô nào mà vẫn rực = hứa sai');
+  assert.equal(ket.so, 1, 'vẫn dẫn bằng số điểm đang có — người chơi cần biết mình có gì');
+  assert.match(ket.caption, /3 SP/, 'phải nói ô rẻ nhất cần bao nhiêu, không chỉ nói "chưa đủ"');
+  assert.ok(ket.pct > 0 && ket.pct < 1, 'thanh chạy phải cho thấy còn bao xa (1/3), không phải đầy');
+
+  // …và ca ngược lại: đủ tiền nhưng vướng tiên quyết ⇒ lời khuyên phải KHÁC (đi mở nút cha).
+  const vuong = heroKyNang({ spChuaTieu: 9, daMo: 4, tongKyNang: 36, moDuoc: 0, reNhat: 2 });
+  assert.equal(vuong.gap, false);
+  assert.doesNotMatch(vuong.caption, /Chưa đủ/, 'đủ tiền thì đừng bảo người ta là chưa đủ tiền');
+});
 test('hero CÔNG TRÌNH ưu tiên thứ đang xây (có "còn bao xa") hơn thứ đã xong', () => {
   const dangXay = heroCongTrinh({
     dangXay: { ten: 'Cảng Biển Lớn', con: 4, tong: 9 }, daXay: 4, tongBanVe: 20, sanSangXay: 3,

@@ -12,6 +12,39 @@
 
 ---
 
+## 2026-09-02 (vòng 27) — Hành trang có bản sắc riêng · đóng 3 mục nợ · 1 bug im lặng cắn 3 lần
+
+**Mục đích:** lệnh Đàm — *"khắc phục toàn bộ tech_debt và sửa lỗi bug… thay đổi lớn hơn nữa, UX/UI
+và mọi thứ ở hành trang vẫn chưa thấy thay đổi gì"*.
+
+**HÀNH TRANG.** Vòng 24 gộp 6 màn xuống 3 — một thay đổi về CẤU TRÚC — nhưng phần NHÌN không đổi
+một chút nào: cả ba tab vẫn là thẻ trắng trên nền trắng, y hệt mọi màn khác. Nay mỗi tab mở đầu
+bằng **một dải hero có màu**: một con số to + đúng một việc nên làm tiếp + thanh tiến độ.
+Kỹ năng → *điểm CHƯA TIÊU* (thứ hành động được, không phải số kỹ năng đã mở). Công trình →
+*"còn 4 phiên nữa · Cảng Biển Lớn"*. Huy hiệu → *"99% · Biên Niên Sử Nhỏ — gần xong rồi"*.
+
+**NỢ KỸ THUẬT ĐÃ ĐÓNG**
+
+| mục | trước | sau |
+|---|---|---|
+| **#94** | chờ 3,2 giây vào nghỉ ở **mọi** phiên, kể cả ~82% phiên không có lễ mừng nào | độ trễ đi THEO việc có lễ mừng: 3.200ms / 500ms |
+| **#9** | localStorage đầy ⇒ lỗi ném thẳng vào persist, app ngừng lưu | dọn khoá cũ rồi thử lại; hỏng tiếp thì báo, không nuốt |
+| **#3** | 3 kỹ năng Thăng Hoa (16 SP) có mô tả hứa hẹn mà **không làm gì cả** | nối dây thật, tất định, có đối chứng |
+| **#14** | 95% phiên chỉ nhận *"+20 tài nguyên · +18 RP"* | mọi phiên nói TIẾN ĐỘ: *"Cảng Biển Lớn · còn 4 phiên"* (phần gốc vẫn Open) |
+
+**BUG IM LẶNG CẮN BA LẦN** trong cùng một phiên: chuỗi tra tên bản vẽ bị chép ra ba nơi và sai cả
+ba kiểu khác nhau — `.name` (trường không tồn tại ở bảng nào), `.find` trên một OBJECT các mảng, và
+`BUILDING_EFFECTS[id].label` (0/75 mục có `label` — nhánh chết ngay từ lúc viết). Cả ba im lặng vì
+`??` nuốt gọn. Nay chỉ còn MỘT hàm `blueprintLabel`, **không có nhánh dự phòng nào để giấu lỗi lần
+thứ tư**.
+
+**Ảnh hưởng:** giao diện + hai luật kinh tế nhỏ (độ trễ vào nghỉ, đặc quyền Thăng Hoa). **Không**
+đụng Thành Phố, **không** đụng công thức tính thưởng mỗi phiên.
+
+**Tương thích:** không có migration. `prestige` thêm hai trường có mặc định.
+
+---
+
 ## 2026-09-02 (vòng 26) — Gỡ điểm mù "màn sau khi kết thúc phiên", rồi làm lại nó
 
 **Mục đích:** lệnh Đàm — *"gỡ điểm mù màn hiện ra sau khi kết thúc… đơn giản hơn, dopamine lớn

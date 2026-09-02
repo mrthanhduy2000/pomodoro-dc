@@ -35,6 +35,28 @@ Mặt trận đang làm: **thành phố 3D** (`src/engine/city3d/` + `src/compon
   Phase 21 (*"push nhánh phụ, không tự gộp `main`"*) đã bị lệnh này thay thế.
   ⚠️ **Phase 21 do đó lên production TRƯỚC khi Đàm nhìn ảnh nghiệm thu** — mục "chờ Đàm nhìn ảnh"
   ở phần dưới VẪN CÒN HIỆU LỰC, chỉ là nay nó nghiệm thu một thứ đang chạy thật.
+- **Trò chơi — VÒNG 27 (2026-09-02, mới nhất): HÀNH TRANG CÓ BẢN SẮC RIÊNG · ĐÓNG 3 MỤC NỢ.**
+  Lệnh Đàm: *"khắc phục toàn bộ tech_debt và sửa lỗi bug… thay đổi lớn hơn nữa, UX/UI và mọi thứ ở
+  hành trang vẫn chưa thấy thay đổi gì… đừng có quá đo tiểu tiết, nên thực hiện lớn rồi sửa khi mà
+  tôi muốn sửa"*.
+  · **Hành trang:** mỗi tab mở đầu bằng một **dải hero có màu** (`shared/InventoryHero.jsx` +
+  `inventoryHero.js`) — một con số to + đúng một việc nên làm tiếp + thanh tiến độ. Vòng 24 đổi
+  CẤU TRÚC nhưng không đổi phần NHÌN, và Đàm nói đúng là mở ra chẳng thấy gì mới.
+  · **Đóng `TECH_DEBT #94`** (độ trễ vào nghỉ đi THEO việc có lễ mừng: 3.200ms/500ms — ~82% số
+  phiên từng chờ 3,2 giây trước một màn hình trống) · **#9** (localStorage đầy: dọn khoá cũ rồi
+  thử lại, hỏng tiếp thì BÁO chứ không nuốt) · **phần lớn #3** (ba kỹ năng Thăng Hoa giá 16 SP có
+  mô tả hứa hẹn mà chưa bao giờ được nối dây — nay có thật; vế "ngưỡng kỷ nguyên giảm 20%" đã được
+  GỠ KHỎI MÔ TẢ thay vì để app hứa điều nó không làm).
+  · **Giảm nhẹ #14:** thẻ thưởng của phiên thường nay nói TIẾN ĐỘ (*"Cảng Biển Lớn · còn 4 phiên"*)
+  thay vì hai con số vô nghĩa. Phần gốc (ba hằng số + lọc theo kỷ) vẫn Open — nó đòi sửa
+  `BUILDING_ZONES`/`placeBuilding`, tức đụng ADR-007 và Thành Phố.
+  · ⚠️ **BUG IM LẶNG CẮN BA LẦN trong một phiên:** chuỗi tra tên bản vẽ chép ra ba nơi, sai cả ba
+  kiểu khác nhau (`.name` — trường không tồn tại · `.find` trên một OBJECT các mảng ·
+  `BUILDING_EFFECTS[id].label` — **0/75 mục có `label`**, nhánh chết ngay từ lúc viết). Cả ba im
+  lặng vì `??` nuốt gọn và câu hỏng đọc lên vẫn xuôi tai. ⇒ **Tên bản vẽ chỉ được tra bằng
+  `blueprintLabel()`** (`engine/craftProgress.js`), nguồn duy nhất là `BLUEPRINT_CATALOG`.
+  · Test **1524 bài** (1523 pass · 0 fail · 1 skipped).
+
 - **Trò chơi — VÒNG 26 (2026-09-02, mới nhất): GỠ ĐIỂM MÙ "MÀN SAU KHI KẾT THÚC PHIÊN", RỒI
   LÀM LẠI NÓ.** Đây chính là việc mà vòng 25 đề xuất làm tiếp, và nó mở khoá đúng như dự đoán.
   · **Cách soi từ nay:** `node scripts/shot.mjs --phone --fixture <f.json> --preview <cảnh>` —

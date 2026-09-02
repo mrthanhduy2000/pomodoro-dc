@@ -1465,46 +1465,6 @@ export default function PomodoroEngine({
             </ActionButton>
           )}
 
-          {/*
-            ⚠️ CHIP MỤC TIÊU GẦN ĐÂY NAY NẰM TRÊN NẾP GẤP — TRƯỚC ĐÓ CHÚNG Ở y≈900, DƯỚI THANH
-            ĐIỀU HƯỚNG. Đây là bản vá cho ma sát lớn nhất của cả app.
-            Đo ở khung 390×844 thật (thanh điều hướng bắt đầu ở y=774): nút chính ở y=661 ghi
-            "Điền mục tiêu →" — một nút chỉ để CUỘN — còn ô nhập bắt buộc ở **y=934**, tức dưới
-            nếp gấp 160px. Nên mỗi phiên, việc quan trọng nhất của cả app tốn: bấm nút cuộn → gõ
-            đủ 10 ký tự → cuộn ngược lên → bấm Bắt đầu.
-            `pickRecentGoals` vốn đã chỉ trả về mục tiêu ĐỦ DÀI (bấm cái nào cũng mở được nút
-            ngay), nhưng chúng bị chôn cùng chỗ với ô nhập nên gần như không ai thấy. Đưa lên đây
-            thì đường ngắn nhất còn **hai cú chạm, không gõ chữ nào, không cuộn**.
-            ⚠️ LUẬT KHÔNG BỊ NỚI: vẫn phải đủ 10 ký tự mới bắt đầu được — chip chỉ bỏ việc GÕ LẠI.
-            ⚠️ VÀ KHÔNG TỰ ĐIỀN GIÙM. Mục tiêu được chấm thưởng khi đạt và được AI Coach đọc, nên
-            gán ngầm mục tiêu hôm qua cho phiên hôm nay là nói dối thay Đàm. Anh vẫn phải CHỌN, và
-            nhìn thấy mình vừa chọn cái gì.
-          */}
-          {!isBreakMode && timerState === TIMER_STATES.IDLE && !isSessionGoalValid && recentGoals.length > 0 && (
-            <div className="mb-2 w-full">
-              <p className="mono mb-1.5 text-[10px] uppercase tracking-[0.2em]" style={{ color: 'var(--muted-2)' }}>
-                Mục tiêu gần đây
-              </p>
-              <div className="flex flex-wrap gap-1.5">
-                {recentGoals.map((goal) => (
-                  <button
-                    key={goal}
-                    type="button"
-                    onClick={() => setPendingSessionGoal(goal)}
-                    className="max-w-full truncate rounded-full px-2.5 py-1 text-[11px] transition-colors"
-                    style={{
-                      background: 'rgba(var(--accent-rgb), 0.08)',
-                      border: '1px solid rgba(var(--accent-rgb), 0.18)',
-                      color: 'var(--accent2)',
-                    }}
-                  >
-                    {goal}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
           {!isBreakMode && timerState === TIMER_STATES.IDLE && (
             <motion.div
               key="start"
@@ -1540,15 +1500,60 @@ export default function PomodoroEngine({
                 Ca khủng hoảng thì giữ nguyên `disabled` — ở đó thứ chặn không nằm trên màn này.
               */}
               {!isCrisisBlockingStart && !isSessionGoalValid ? (
-                <ActionButton
-                  onClick={() => jumpToSessionGoal()}
-                  variant="soft"
-                  size="compactPrimary"
-                  className={compactTimerActionButtonClassName}
-                  title={`Đưa tới ô mục tiêu — cần ít nhất ${SESSION_GOAL_MIN_CHARS} ký tự`}
-                >
-                  Điền mục tiêu →
-                </ActionButton>
+                /*
+                  ⚠️ CHỖ NÀY TỪNG LÀ MỘT NÚT CHỈ-ĐỂ-CUỘN, VÀ ĐÓ LÀ MA SÁT LỚN NHẤT CỦA CẢ APP.
+                  Đo ở khung 390×844 thật (thanh điều hướng bắt đầu ở y=774): nút "Điền mục tiêu →"
+                  ở y=661 chỉ đưa người dùng tới ô nhập ở **y=934 — dưới nếp gấp 160px**. Nên mỗi
+                  phiên, việc quan trọng nhất của cả app tốn BỐN thao tác: bấm nút cuộn → gõ đủ 10
+                  ký tự → cuộn ngược lên → bấm Bắt đầu.
+                  `pickRecentGoals` vốn đã chỉ trả về mục tiêu ĐỦ DÀI (bấm cái nào cũng mở được nút
+                  ngay) nhưng chúng bị chôn cạnh ô nhập nên gần như không ai thấy. Nay chúng đứng
+                  ĐÚNG CHỖ cái nút cũ ⇒ đường ngắn nhất còn **hai cú chạm, không gõ, không cuộn**.
+                  ⚠️ THAY CHỖ, KHÔNG THÊM HÀNG. Bản đầu của bản vá này cho chip một hàng RIÊNG bên
+                  trên nút — nó chạy, nhưng tốn thêm **68px** và đẩy đáy nút xuống y=771 trong khi
+                  thanh tab bắt đầu ở y=774: **hở đúng 3px**. Màn này đã để nút chính chạm thanh tab
+                  hai lần trước đó (vòng 19, vòng 20); suýt là lần thứ ba, do chính tôi. Đứng thay
+                  chỗ nút cũ thì chiều cao không đổi một điểm ảnh nào.
+                  ⚠️ LUẬT KHÔNG BỊ NỚI: vẫn phải đủ `SESSION_GOAL_MIN_CHARS` ký tự mới bắt đầu được.
+                  ⚠️ VÀ KHÔNG TỰ ĐIỀN GIÙM — mục tiêu được chấm "đạt/không đạt" khi xong phiên và
+                  được AI Coach đọc, nên gán ngầm mục tiêu hôm qua là nói dối thay Đàm. Anh vẫn
+                  phải BẤM, và nhìn thấy mình vừa chọn cái gì.
+                  ⚠️ Chip "Tự viết →" là đường thoát BẮT BUỘC PHẢI CÓ: không có nó thì người muốn
+                  đặt một mục tiêu mới lại không có lối nào từ nếp gấp — tức bản vá vừa xoá một ngõ
+                  cụt vừa tạo ra một ngõ cụt khác.
+                  ⚠️ MỘT HÀNG, KHÔNG XUỐNG DÒNG. Bản đầu để `flex-wrap`, mà chip đầu tiên dài 23
+                  ký tự ("Hoàn thành phần đang dở") nên nó cùng nút "Tự viết →" tràn thành HAI
+                  dòng — cao 84px thay vì 43px, tức lại ăn mất 41px của đúng cái biên vừa cứu.
+                  Nay chip bị cắt bằng `truncate` trong một hộp co được (`min-w-0 flex-1`), còn
+                  nút thoát `shrink-0` để không bao giờ bị bóp mất chữ.
+                */
+                <div className="flex w-full items-center gap-1.5">
+                  {recentGoals.slice(0, 1).map((goal) => (
+                    <button
+                      key={goal}
+                      type="button"
+                      onClick={() => setPendingSessionGoal(goal)}
+                      className="min-w-0 flex-1 truncate rounded-full px-3 py-2 text-[12px] font-semibold transition-colors"
+                      style={{
+                        background: 'rgba(var(--accent-rgb), 0.10)',
+                        border: '1px solid rgba(var(--accent-rgb), 0.30)',
+                        color: 'var(--accent2)',
+                      }}
+                      title={`Dùng lại mục tiêu này rồi bắt đầu`}
+                    >
+                      {goal}
+                    </button>
+                  ))}
+                  <ActionButton
+                    onClick={() => jumpToSessionGoal()}
+                    variant="soft"
+                    size={recentGoals.length > 0 ? 'compactEscape' : 'compactPrimary'}
+                    className={recentGoals.length > 0 ? '' : compactTimerActionButtonClassName}
+                    title={`Đưa tới ô mục tiêu — cần ít nhất ${SESSION_GOAL_MIN_CHARS} ký tự`}
+                  >
+                    {recentGoals.length > 0 ? 'Tự viết →' : 'Điền mục tiêu →'}
+                  </ActionButton>
+                </div>
               ) : (
                 <ActionButton
                   disabled={isCrisisBlockingStart}
@@ -2888,6 +2893,14 @@ function ActionButton({ children, className = '', disabled = false, onClick, siz
     // không cần thiết cho nút QUAN TRỌNG NHẤT màn hình. 13px vẫn vừa (đo lại sau khi đổi), lại
     // trên ngưỡng cỡ chữ dễ đọc trên điện thoại.
     compactPrimary: 'min-w-0 w-full px-3 py-3 text-[13px] font-semibold leading-tight tracking-[-0.01em] whitespace-normal sm:w-auto sm:px-7 sm:py-3.5 sm:text-lg sm:font-bold sm:leading-none sm:tracking-normal sm:whitespace-nowrap',
+    // Cho nút THOÁT đứng CẠNH một chip co giãn ("Tự viết →" bên phải chip mục tiêu gần đây).
+    // ⚠️ Khác `compactPrimary` ở đúng một chỗ và đó là toàn bộ lý do nó tồn tại: **KHÔNG `w-full`**.
+    // `compactPrimary` có `w-full`, nên đặt nó cạnh một chip `flex-1` thì nút nuốt gần hết bề ngang
+    // và chip bị `truncate` xuống còn một chữ cái ("H…") — đã thấy tận mắt trên ảnh chụp 390px.
+    // ⚠️ Và đây PHẢI là một mục `sizeMap`, không được nhét `w-auto` qua `className`: dự án không có
+    // `tailwind-merge`, Tailwind quyết lớp nào thắng theo THỨ TỰ TRONG BẢNG KIỂU chứ không theo thứ
+    // tự viết — hai lớp cùng khai một thuộc tính là một canh bạc đã thua một lần (2026-08-13).
+    compactEscape: 'shrink-0 px-3 py-3 text-[13px] font-semibold leading-tight tracking-[-0.01em] whitespace-nowrap sm:px-7 sm:py-3.5 sm:text-lg sm:font-bold sm:leading-none sm:tracking-normal',
   };
 
   return (

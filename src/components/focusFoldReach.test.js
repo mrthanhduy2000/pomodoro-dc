@@ -21,24 +21,32 @@ import { stripComments } from '../utils/sourceScan.js';
 const HERE = dirname(fileURLToPath(import.meta.url));
 const NGUON = stripComments(readFileSync(join(HERE, 'PomodoroEngine.jsx'), 'utf8'));
 
-test('chip "Mục tiêu gần đây" nằm TRONG thẻ đồng hồ, TRƯỚC hàng nút chính', () => {
-  const iChip = NGUON.indexOf('Mục tiêu gần đây');
-  const iNut = NGUON.indexOf('Điền mục tiêu →');
-  assert.notEqual(iChip, -1, 'mất khối chip mục tiêu gần đây — đường tắt hai-cú-chạm đã biến mất');
-  assert.notEqual(iNut, -1, 'không tìm thấy nút chính — phép đo chạy rỗng');
-  assert.ok(iChip < iNut, 'chip phải đứng TRƯỚC nút: đứng sau thì nó rơi xuống dưới nếp gấp.');
+test('chip mục tiêu gần đây ĐỨNG THAY CHỖ nút dẫn đường, không thêm một hàng', () => {
+  // ⚠️ Bản đầu của bản vá cho chip một hàng RIÊNG bên trên nút — nó chạy, nhưng tốn thêm **68px**
+  // và đẩy đáy nút xuống y=771 trong khi thanh tab bắt đầu ở y=774: **hở đúng 3px**. Màn này đã
+  // để nút chính chạm thanh tab hai lần trước đó (vòng 19, vòng 20). Đứng THAY CHỖ thì chiều cao
+  // không đổi một điểm ảnh nào — nay hở 71px.
+  assert.match(NGUON, /recentGoals\.slice\(0, 1\)\.map\(/, 'mất hàng chip — đường tắt hai-cú-chạm đã biến mất');
+  assert.match(NGUON, /Tự viết →/, 'mất đường thoát để tự đặt mục tiêu mới');
+  // Chip phải nằm TRONG nhánh "chưa đủ mục tiêu" của cùng hàng nút, tức trước nhánh "Bắt đầu phiên".
+  const iChip = NGUON.indexOf('recentGoals.slice(0, 1).map(');
+  const iBatDau = NGUON.indexOf("'Bắt đầu phiên'");
+  assert.ok(iChip !== -1 && iBatDau !== -1 && iChip < iBatDau, 'chip phải ở nhánh chưa-đủ-mục-tiêu của hàng nút.');
 });
 
 test('chip chỉ hiện khi CHƯA đủ mục tiêu — đủ rồi thì nó là chỗ chiếm chỗ', () => {
-  const khoi = NGUON.slice(NGUON.indexOf('Mục tiêu gần đây') - 700, NGUON.indexOf('Mục tiêu gần đây'));
-  assert.match(khoi, /!isSessionGoalValid/, 'thiếu gác: chip vẫn hiện sau khi đã có mục tiêu.');
-  assert.match(khoi, /recentGoals\.length > 0/, 'thiếu gác: hàng chip rỗng vẫn chiếm chỗ và một nhãn.');
+  const i = NGUON.indexOf('recentGoals.slice(0, 1).map(');
+  const khoi = NGUON.slice(Math.max(0, i - 2600), i);
+  assert.match(khoi, /!isCrisisBlockingStart && !isSessionGoalValid \?/, 'thiếu gác: chip vẫn hiện sau khi đã có mục tiêu.');
+  // Không có mục tiêu gần đây thì nút phải trở lại dạng đầy-hàng, không để một hàng rỗng.
+  assert.match(NGUON, /recentGoals\.length > 0 \? 'compactEscape' : 'compactPrimary'/,
+    'nút thoát phải trở lại cỡ đầy-hàng khi không có chip nào bên cạnh.');
 });
 
 test('KHÔNG in hai hàng chip trên một màn', () => {
   // Bản gốc của hàng chip nằm cạnh ô nhập; giữ cả hai là nói cùng một chuyện hai lần, mà bản dưới
   // chỉ thấy được sau khi đã cuộn — tức nó chỉ phục vụ người đã đi hết quãng đường bản trên xoá.
-  const soLan = [...NGUON.matchAll(/recentGoals\.map\(/g)].length;
+  const soLan = [...NGUON.matchAll(/recentGoals[.\w()0-9, ]*\.map\(/g)].length;
   assert.equal(soLan, 1, `có ${soLan} hàng chip mục tiêu; phải đúng 1.`);
 });
 
@@ -52,7 +60,8 @@ test('LUẬT KHÔNG BỊ NỚI — vẫn phải đủ ký tự tối thiểu m�
 test('KHÔNG tự điền mục tiêu giùm người chơi', () => {
   // Gán ngầm mục tiêu hôm qua cho phiên hôm nay là nói dối thay Đàm — mục tiêu ấy sẽ được chấm
   // "đạt/không đạt" và được AI Coach đọc. Chip phải do anh BẤM.
-  const khoi = NGUON.slice(NGUON.indexOf('Mục tiêu gần đây'), NGUON.indexOf('Mục tiêu gần đây') + 900);
+  const i = NGUON.indexOf('recentGoals.slice(0, 1).map(');
+  const khoi = NGUON.slice(i, i + 900);
   assert.match(khoi, /onClick=\{\(\) => setPendingSessionGoal\(goal\)\}/, 'chip phải điền khi BẤM.');
   assert.ok(
     !/useEffect\([^;]*setPendingSessionGoal\(recentGoals/.test(NGUON),

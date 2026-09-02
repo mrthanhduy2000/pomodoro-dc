@@ -1241,7 +1241,12 @@ export const SKILL_TREE = {
       {
         id: 'sieu_viet', label: 'Siêu Việt', icon: '🌠',
         tier: 'elite', spCost: 8, requires: ['ke_thua'],
-        description: `Sau Prestige: phiên ≥${SIEU_VIET_MIN_MINUTES}' trong kỷ nguyên 1 nhận +${SIEU_VIET_ERA1_XP_BONUS * 100}% XP; ngưỡng kỷ nguyên giảm ${SIEU_VIET_THRESHOLD_REDUCTION * 100}%.`,
+        // ⚠️ VẾ "ngưỡng kỷ nguyên giảm 20%" ĐÃ GỠ KHỎI MÔ TẢ (2026-09-02). Vế XP đã được nối dây
+        // thật (`prestigeCarryover.js`), vế ngưỡng thì CHƯA — nó đòi sửa `getActiveBook`, một hàm
+        // được gọi một-tham-số ở rất nhiều nơi, và cho hai nơi tính ngưỡng khác nhau là cách chắc
+        // chắn nhất để hai màn hình nói hai kỷ khác nhau. Mô tả chỉ được hứa thứ app THẬT SỰ làm;
+        // phần còn lại nằm ở `TECH_DEBT #3` (đã thu hẹp), không nằm ở đây dưới dạng một lời hứa.
+        description: `Sau Prestige: phiên ≥${SIEU_VIET_MIN_MINUTES}' trong kỷ nguyên 1 nhận +${SIEU_VIET_ERA1_XP_BONUS * 100}% XP.`,
       },
     ],
   },

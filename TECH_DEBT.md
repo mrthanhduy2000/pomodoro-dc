@@ -391,7 +391,7 @@
 
 ---
 
-## #3 — Khả năng mismatch: mô tả kỹ năng prestige (Thăng Hoa) không khớp code thật
+## #3 — ⚠️ **PHẦN LỚN ĐÃ XỬ LÝ (2026-09-02)** — mô tả kỹ năng prestige (Thăng Hoa) không khớp code thật
 
 - **Module**: `src/engine/constants.js` (mô tả 3 kỹ năng `kien_thuc_nen`/`ke_thua`/`sieu_viet`) +
   `src/store/gameStore.js` (`triggerPrestige`)
@@ -427,6 +427,26 @@
   (`gameStore.prestige.test.js`, bài "[ĐẶC TẢ BUG #3]") — khi sửa mục này (nối dây HOẶC sửa mô
   tả), test đó PHẢI được cập nhật kèm. Ưu tiên cao hơn 2 mục God File ở trên vì ảnh hưởng trực
   tiếp trải nghiệm người dùng thật.
+
+
+- **⚠️ ĐÃ NỐI DÂY 2026-09-02 — chọn (b) NỐI DÂY, không chọn (a) sửa mô tả.** Ba kỹ năng ấy tốn
+  **16 SP**; sửa mô tả thành "không làm gì" là hợp thức hoá việc bán một món hàng rỗng.
+  Luật nằm ở `src/engine/prestigeCarryover.js` (thuần, TẤT ĐỊNH — có test đảo thứ tự khoá để
+  chứng minh):
+  - `kien_thuc_nen` (3 SP) → giữ lại đúng MỘT kỹ năng Cao Cấp, chọn theo *đắt nhất trước, hoà thì
+    id nhỏ hơn* (không random, không phụ thuộc thứ tự mở khoá).
+  - `ke_thua` (5 SP) → giữ `Math.floor(sp × 0.50)`. **Làm tròn XUỐNG**: hứa 50% thì 13 ra 6, không
+    phải 7 — làm tròn lên là tự tặng thêm một điểm mà mô tả không hứa.
+  - `sieu_viet` (8 SP) → cờ `prestige.sieuViet` SỐNG SÓT qua reset (để ở `player` thì lần Thăng Hoa
+    kế tiếp xoá mất), và phiên ≥30' ở kỷ 1 nhận +100% XP.
+  Bài "[ĐẶC TẢ BUG #3]" từng cố ý đóng băng hành vi lỗi đã được **thay** (không nới), kèm một bài
+  ĐỐI CHỨNG: chưa mua ba kỹ năng ấy thì reset vẫn sạch trơn — thiếu nó thì bản vá có thể đang tặng
+  đặc quyền cho mọi người chơi mà bài chính vẫn xanh.
+- **CÒN LẠI (thu hẹp):** vế *"ngưỡng kỷ nguyên giảm 20%"* của `sieu_viet` CHƯA nối — nó đòi sửa
+  `getActiveBook`, hàm được gọi một-tham-số ở rất nhiều nơi, và để hai nơi tính ngưỡng khác nhau
+  là cách chắc chắn nhất khiến hai màn hình nói hai kỷ khác nhau. Vế ấy **đã được GỠ khỏi mô tả**
+  nên app không còn hứa điều nó không làm. Muốn có thì phải làm tử tế: một nguồn duy nhất cho
+  ngưỡng, có ADR.
 
 ---
 

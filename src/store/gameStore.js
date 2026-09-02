@@ -24,6 +24,7 @@
  */
 
 import { create } from 'zustand';
+import { tinhGiuLai, heSoXpSieuViet } from '../engine/prestigeCarryover';
 import { persist } from 'zustand/middleware';
 import {
   GAME_STORE_STORAGE_KEY,
@@ -1983,6 +1984,10 @@ const makeDefaultPrestige = () => ({
   count:          0,
   permanentBonus: 0,
   history:        [],
+  // ⚠️ Hai trường của `TECH_DEBT #3`. Để trong `prestige` vì đây là một trong số ít nhánh SỐNG SÓT
+  // qua `makeProgressionResetState()` — để ở `player` thì lần Thăng Hoa kế tiếp xoá mất.
+  sieuViet:       false,  // `sieu_viet` đã mở ở một lần Thăng Hoa nào đó ⇒ buff XP kỷ 1 còn hiệu lực
+  giuKyNang:      null,   // kỹ năng Cao Cấp được `kien_thuc_nen` giữ lại ở lần Thăng Hoa gần nhất
 });
 
 function normalizeStoredPrestige(prestige = {}) {
@@ -4159,7 +4164,19 @@ const useGameStore = create(
           && newStreak.currentStreak >= 30;
 
         const overclockBonusXP = Math.max(0, (reward.finalXP ?? 0) - (baseReward.finalXP ?? 0));
-        const baseSessionXP = reward.finalXP + comboBonus + positiveEventBonus + streakBonusXP;
+        /*
+          ⚠️ `sieu_viet` (8 SP): sau Thăng Hoa, phiên đủ dài ở kỷ 1 nhận thêm XP. Hệ số trả về 1 ở
+          mọi ca khác nên không cần một cái `if` riêng ở đây (`TECH_DEBT #3`).
+          ⚠️ Nhân vào TỔNG sau mọi cộng thưởng — mô tả nói "+100% XP", không nói "+100% XP gốc".
+        */
+        const heSoSieuViet = heSoXpSieuViet({
+          sieuViet: !!state.prestige?.sieuViet,
+          book: activeBook,
+          minutes: minutesFocused,
+        });
+        const baseSessionXP = Math.round(
+          (reward.finalXP + comboBonus + positiveEventBonus + streakBonusXP) * heSoSieuViet,
+        );
 
         const resolvedStartedAt = sessionTiming?.startedAt ?? null;
         const resolvedFinishedAt = sessionTiming?.finishedAt ?? new Date().toISOString();
@@ -5967,8 +5984,25 @@ const useGameStore = create(
           PRESTIGE_MAX_STACKS * PRESTIGE_BONUS_PER_RUN,
           state.prestige.permanentBonus + PRESTIGE_BONUS_PER_RUN,
         );
+        /*
+          ⚠️ BA ĐẶC QUYỀN THĂNG HOA NAY CÓ THẬT (2026-09-02, đóng `TECH_DEBT #3`).
+          `kien_thuc_nen` (3 SP) · `ke_thua` (5 SP) · `sieu_viet` (8 SP) có mô tả hứa hẹn rành
+          mạch trong `constants.js` từ lâu, và hàm này **chưa bao giờ đọc tới chúng** — tức Đàm bỏ
+          16 điểm kỹ năng cho ba thứ không làm gì, và app nói với anh là chúng có làm.
+          Luật nằm ở `engine/prestigeCarryover.js` (thuần, tất định); hàm này chỉ áp dụng.
+          ⚠️ Cờ `sieuViet` để trong `prestige` vì đó là một trong số ít nhánh SỐNG SÓT qua reset —
+          để ở `player` thì `makeProgressionResetState()` xoá mất ngay lần Thăng Hoa kế tiếp.
+        */
+        const giuLai = tinhGiuLai({
+          unlockedSkills: state.player.unlockedSkills,
+          sp: state.player.sp,
+          skillsMacDinh: makeDefaultSkills(),
+        });
+        const resetState = makeProgressionResetState();
+
         set({
-          ...makeProgressionResetState(),
+          ...resetState,
+          player: { ...resetState.player, sp: giuLai.sp, unlockedSkills: giuLai.unlockedSkills },
           timerConfig: state.timerConfig,
           relics: state.relics,
           achievements: state.achievements,
@@ -5983,6 +6017,8 @@ const useGameStore = create(
             count:          newCount,
             permanentBonus: newBonus,
             history:        [...state.prestige.history, { at: Date.now(), epAtPrestige: state.progress.totalEP }],
+            sieuViet:       giuLai.sieuViet || !!state.prestige.sieuViet,
+            giuKyNang:      giuLai.giuKyNang,
           },
           ui: makeDefaultUiState(),
           latestSessionUndo: null,

@@ -29,6 +29,7 @@ import {
 import { countActiveCrafting } from './eraLegacy.js';
 import { getEffectiveSkillCost } from './gameMath.js';
 import { khoiCongDuoc } from './craftReadiness.js';
+import { researchCostOf } from './wonderEffects.js';
 
 export const ALL_SKILLS = Object.values(SKILL_TREE).flatMap((branch) =>
   branch.nodes.map((node) => ({
@@ -43,28 +44,9 @@ export const BLUEPRINT_LOOKUP = Object.fromEntries(
     .map((blueprint) => [blueprint.id, blueprint])
 );
 
-function aggregateWonderEffects(buildings = []) {
-  const effects = new Set();
-  for (const bpId of buildings) {
-    const effect = BUILDING_EFFECTS[bpId];
-    if (effect?.type === 'wonder' && effect.wonderEffect) {
-      effects.add(effect.wonderEffect);
-    }
-  }
-  return effects;
-}
-
-export function getEffectiveResearchCost(buildings = [], bpId, baseCost) {
-  const wonderEffects = aggregateWonderEffects(buildings);
-  const meta = BLUEPRINT_META[bpId];
-  let cost = Math.max(0, Math.round(baseCost ?? 0));
-
-  if (meta && wonderEffects.has('t2_research_25off') && meta.era >= 6 && meta.era <= 10) {
-    cost = Math.round(cost * 0.75);
-  }
-
-  return Math.max(1, cost);
-}
+// ⚠️ Giữ tên cũ cho mọi nơi đang gọi, nhưng RUỘT nay là bản dùng chung với store và với màn
+// hình — xem `engine/wonderEffects.js`.
+export { researchCostOf as getEffectiveResearchCost } from './wonderEffects.js';
 
 /**
  * Kỹ năng đã đủ điều kiện tiên quyết VÀ đủ SP để mở ngay bây giờ.
@@ -101,7 +83,7 @@ export function listResearchableBlueprints({
     .filter(([bpId, meta]) => {
       if ((activeBook ?? 1) < (meta.requiresEra ?? 1)) return false;
       if (ownedIds.has(bpId) || researchedIds.has(bpId) || builtIds.has(bpId)) return false;
-      const cost = getEffectiveResearchCost(buildings, bpId, meta.rpCost);
+      const cost = researchCostOf(buildings, bpId, meta.rpCost);
       return (research?.rp ?? 0) >= cost;
     })
     .map(([bpId]) => BLUEPRINT_LOOKUP[bpId])

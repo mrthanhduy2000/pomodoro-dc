@@ -25,6 +25,7 @@
 
 import { create } from 'zustand';
 import { tinhGiuLai, heSoXpSieuViet } from '../engine/prestigeCarryover';
+import { aggregateWonderEffects, researchCostOf } from '../engine/wonderEffects.js';
 import { persist } from 'zustand/middleware';
 import {
   GAME_STORE_STORAGE_KEY,
@@ -1361,14 +1362,9 @@ function normalizeStoredRefined(resourcesRefined = {}) {
 
 
 // ─── HELPER: Tổng hợp tác động Wonder từ danh sách công trình ─────────────────
-function aggregateWonderEffects(buildings) {
-  const effects = new Set();
-  for (const bpId of buildings) {
-    const eff = BUILDING_EFFECTS[bpId];
-    if (eff?.type === 'wonder' && eff.wonderEffect) effects.add(eff.wonderEffect);
-  }
-  return effects;
-}
+// ⚠️ `aggregateWonderEffects` + `getWonderResearchCost` ĐÃ CHUYỂN sang `engine/wonderEffects.js`
+// (2026-09-02) — cùng luật ấy từng có BA bản chép tay và bản ở tầng giao diện đã lệch.
+// Xem khối chú thích ở file đó.
 
 // ─── HELPER: Bonus RP từ Wonder effects đang hoạt động ────────────────────────
 function getWonderRPBonus(buildings) {
@@ -1385,18 +1381,6 @@ function getWonderForgivenessCapacity(buildings) {
   return FORGIVENESS_CANCELS_PER_WEEK + (wonders.has('extra_forgiveness') ? 1 : 0);
 }
 
-
-function getWonderResearchCost(buildings, bpId, baseCost) {
-  const wonders = aggregateWonderEffects(buildings);
-  const meta = BLUEPRINT_META[bpId];
-  let cost = Math.max(0, Math.round(baseCost ?? 0));
-
-  if (meta && wonders.has('t2_research_25off') && meta.era >= 6 && meta.era <= 10) {
-    cost = Math.round(cost * 0.75);
-  }
-
-  return Math.max(1, cost);
-}
 
 function getWonderRelicEvolutionCost(buildings, stageDef) {
   const wonders = aggregateWonderEffects(buildings);
@@ -5690,7 +5674,7 @@ const useGameStore = create(
         if (!isCurrentEraBlueprint(bpId, state.progress.activeBook)) return false;
         if ((state.research?.researched ?? []).includes(bpId)) return false;
         if (state.blueprints.some((b) => b.id === bpId)) return false;
-        const cost = getWonderResearchCost(state.buildings, bpId, meta.rpCost);
+        const cost = researchCostOf(state.buildings, bpId, meta.rpCost);
         if ((state.research?.rp ?? 0) < cost) return false;
         const researchFeed = makeResearchReadyNotification(bpId);
         set((prev) => ({

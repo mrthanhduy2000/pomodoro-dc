@@ -29,6 +29,7 @@ import {
 } from '../engine/constants';
 import { getGlyph, hasGlyphIcon } from '../utils/labelMark';
 import { TypeBadge, RarityBadge, PerkSummary } from './shared/BadgeKit';
+import { researchCostOf } from '../engine/wonderEffects';
 
 const DISPLAY_FONT = '"Source Serif 4", Georgia, serif';
 const MONO_FONT = '"JetBrains Mono", "SFMono-Regular", Menlo, monospace';
@@ -58,22 +59,11 @@ function formatPercent(value = 0) {
   return `${Math.round(value * 100)}%`;
 }
 
-function getActiveWonderEffects(buildings = []) {
-  return new Set(
-    buildings
-      .map((bpId) => BUILDING_EFFECTS[bpId]?.wonderEffect)
-      .filter(Boolean),
-  );
-}
-
+// ⚠️ BẢN CHÉP TAY THỨ BA ĐÃ GỠ (2026-09-02). Nó gom `wonderEffect` từ MỌI công trình, không kiểm
+// `type === 'wonder'`, và thiếu `Math.max(1, …)`/`Math.round` — tức con số IN RA có thể khác con
+// số store TRỪ. Nay cả ba (store · cái chuông · màn hình) đọc chung `engine/wonderEffects.js`.
 function getDisplayedResearchCost(buildings, bpId) {
-  const baseCost = BLUEPRINT_META[bpId]?.rpCost ?? 0;
-  const meta = BLUEPRINT_META[bpId];
-  const wonderEffects = getActiveWonderEffects(buildings);
-  if (meta && wonderEffects.has('t2_research_25off') && meta.era >= 6 && meta.era <= 10) {
-    return Math.max(1, Math.round(baseCost * 0.75));
-  }
-  return baseCost;
+  return researchCostOf(buildings, bpId, BLUEPRINT_META[bpId]?.rpCost ?? 0);
 }
 
 function paperPanel(lightTheme) {

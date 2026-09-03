@@ -10,6 +10,8 @@
 
 import React from 'react';
 import InventoryHero from './shared/InventoryHero.jsx';
+import BuildingGrid from './shared/BuildingGrid.jsx';
+import { buildingState, summarizeBuildings, pickDefaultBuilding, BUILDING_STATE } from './shared/buildingGrid.js';
 import { heroCongTrinh } from './shared/inventoryHero.js';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCustomMotion, useEnterMotion, usePressMotion, useSnapMotion } from '../lib/motionPresets';
@@ -314,72 +316,59 @@ function ReadyCard({ bpId, bookResources, resourcesRefined, craftingQueue, onSta
 }
 
 const LEVEL_LABEL = ['', 'Lv.1', 'Lv.2', 'Lv.3'];
-const LEVEL_COLOR = ['', 'text-slate-400', 'text-violet-300', 'text-fuchsia-300'];
-const LEVEL_MULT  = [1, 1.0, 1.75, 2.5];
 
-// ─── Card công trình đã xây ────────────────────────────────────────────────────
-function BuiltCard({ bpId, level, resourcesRefined, onUpgrade, lightTheme }) {
-  const bpDef = getBpDef(bpId);
-  const eff   = BUILDING_EFFECTS[bpId] ?? {};
-  const era   = eff.era ?? 1;
-  const lv    = level ?? 1;
-  const refined = normalizeRefinedBag(resourcesRefined);
-  const eraRef  = ERA_REFINED[era] ?? {};
-  const upgradeCost = getUpgradeRefinedCost(era, lv);
-  const canUpgrade = lv < 3 && refined.t2 >= upgradeCost;
-  const upgradeCostLabel = `${upgradeCost} ${eraRef.t2Label ?? 'Tinh luyện'}`;
-
+// ─── BuiltDetail — công trình đang chọn trên lưới ─────────────────────────────
+/**
+ * ⚠️ MỘT KHUNG CHI TIẾT, KHÔNG PHẢI MỘT THẺ MỖI CÔNG TRÌNH (2026-09-02). Bản cũ in trọn phần
+ * mô tả đặc quyền trên TỪNG thẻ, mà đúng phần ấy còn được in lần nữa ở khung chi tiết bản vẽ
+ * trong cùng trang — và tab "Công trình" đo được 4.757px ở khung 390px. Thứ người chơi hỏi khi
+ * lướt danh sách là *"tôi đã xây gì, cái nào nâng cấp được"*; câu *"cộng bao nhiêu phần trăm"*
+ * chỉ được hỏi về MỘT công trình một lúc.
+ */
+function BuiltDetail({ tile, onUpgrade, lightTheme }) {
+  if (!tile) return null;
+  const { bpDef, eff, level, mult, state, upgradeCostLabel } = tile;
   return (
     <div
-      className="rounded-[24px] p-4 flex flex-col gap-3 border sm:flex-row sm:items-center"
-      style={lightTheme
-        ? {
-            background: 'var(--card-bg-solid)',
-            border: 'var(--skin-card-border-width,1px) solid var(--line)',
-            borderRadius: 'var(--skin-radius-card,18px)',
-            boxShadow: 'var(--skin-card-shadow)',
-          }
-        : undefined}
+      className="mt-3 px-4 py-3.5"
+      style={{
+        background: state === BUILDING_STATE.READY
+          ? 'color-mix(in srgb, var(--accent) 7%, var(--card-bg-solid))'
+          : 'var(--card-bg-solid2, var(--card-bg-solid))',
+        border: '1px solid ' + (state === BUILDING_STATE.READY
+          ? 'color-mix(in srgb, var(--accent) 26%, var(--line))' : 'var(--line)'),
+        borderRadius: 'var(--skin-radius-card,18px)',
+      }}
     >
-      <span
-        className={`mono inline-flex h-9 w-9 items-center justify-center rounded-full border font-semibold flex-shrink-0 ${hasGlyphIcon(bpDef.icon) ? 'text-[18px] leading-none' : 'text-[8px] uppercase tracking-[0.14em]'}`}
-        style={lightTheme
-          ? { borderColor: 'var(--line)', background: 'var(--card-bg-solid2)', color: 'var(--accent2)', fontFamily: MONO_FONT }
-          : { borderColor: 'rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.04)', color: 'var(--accent-light)', fontFamily: MONO_FONT }}
-      >
-        {getGlyph(bpDef.icon, bpDef.label, 'BP')}
-      </span>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-          <p
-            className={lightTheme ? 'text-[1.06rem] font-semibold leading-none tracking-[-0.02em]' : 'font-semibold text-sm'}
-            style={lightTheme ? { color: 'var(--ink)', fontFamily: 'var(--skin-font-display)' } : { color: '#86efac' }}
-          >
-            {bpDef.label}
-          </p>
-          {BLUEPRINT_META[bpId]?.rarity && <RarityBadge rarity={BLUEPRINT_META[bpId].rarity} lightTheme={lightTheme} variant="skin" />}
-          {eff.type && <TypeBadge type={eff.type} typeStyle={TYPE_STYLE} lightTheme={lightTheme} variant="skin" />}
-          <span className={`text-xs font-bold ${LEVEL_COLOR[lv]}`} style={lightTheme ? { color: lv === 1 ? '#6a6862' : lv === 2 ? '#7a6877' : '#9c7645', fontFamily: MONO_FONT } : { fontFamily: MONO_FONT }}>{LEVEL_LABEL[lv]}</span>
-          {lv > 1 && (
-            <span className="mono text-xs tabular-nums" style={lightTheme ? { color: 'var(--muted-2)', fontFamily: MONO_FONT } : { color: '#64748b', fontFamily: MONO_FONT }}>×{LEVEL_MULT[lv]} hiệu ứng</span>
-          )}
-        </div>
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+        <p className="text-[15px] font-semibold leading-tight" style={{ color: 'var(--ink)', fontFamily: 'var(--skin-font-display)' }}>
+          {bpDef.label}
+        </p>
+        {BLUEPRINT_META[tile.id]?.rarity && <RarityBadge rarity={BLUEPRINT_META[tile.id].rarity} lightTheme={lightTheme} variant="skin" />}
+        {eff.type && <TypeBadge type={eff.type} typeStyle={TYPE_STYLE} lightTheme={lightTheme} variant="skin" />}
+        <span className="mono text-[11px] font-bold tabular-nums" style={{ color: level > 1 ? 'var(--accent)' : 'var(--muted-2)' }}>
+          {LEVEL_LABEL[level]}{level > 1 ? ` · ×${mult} hiệu ứng` : ''}
+        </span>
+      </div>
+
+      <div className="mt-1.5">
         <PerkSummary perk={eff.perk} lightTheme={lightTheme} variant="skin" />
       </div>
-      <div className="flex flex-col gap-1 flex-shrink-0">
-        {lv < 3 && onUpgrade && (
+
+      <div className="mt-3 flex justify-end">
+        {state === BUILDING_STATE.MAX ? (
+          <span className="mono text-[12px] font-semibold" style={{ color: 'var(--good)' }}>✓ Đã kịch cấp</span>
+        ) : (
           <button
-            onClick={() => canUpgrade && onUpgrade(bpId)}
-            disabled={!canUpgrade}
-            className="w-full rounded-[14px] px-2.5 py-1 text-xs border transition-colors sm:w-auto"
-            style={lightTheme
-              ? canUpgrade
-                ? { background: 'rgba(243,236,239,0.88)', borderColor: 'rgba(166,137,149,0.2)', color: '#7a6877', borderRadius: 'var(--skin-radius-control,14px)', boxShadow: 'var(--skin-card-shadow)' }
-                : { background: 'var(--card-bg-solid2)', borderColor: 'var(--line)', color: 'var(--muted-2)', borderRadius: 'var(--skin-radius-control,14px)', cursor: 'not-allowed' }
-              : undefined}
-            title={`Nâng cấp → Lv.${lv + 1} (${upgradeCostLabel})`}
+            type="button"
+            onClick={() => state === BUILDING_STATE.READY && onUpgrade?.(tile.id)}
+            disabled={state !== BUILDING_STATE.READY}
+            className="mono whitespace-nowrap px-4 py-2 text-[12px] font-semibold tabular-nums transition-colors"
+            style={state === BUILDING_STATE.READY
+              ? { background: 'var(--accent)', border: '1px solid var(--accent)', color: 'var(--canvas)', borderRadius: 999 }
+              : { background: 'var(--card-bg-solid)', border: '1px solid var(--line)', color: 'var(--muted-2)', borderRadius: 999, cursor: 'not-allowed' }}
           >
-            Nâng cấp · {upgradeCostLabel}
+            Nâng lên Lv.{level + 1} · {upgradeCostLabel}
           </button>
         )}
       </div>
@@ -407,6 +396,7 @@ export default function BuildingWorkshop() {
   const upgradeBuilding  = useGameStore((s) => s.upgradeBuilding);
 
   const [toast, setToast] = React.useState(null);
+  const [builtId, setBuiltId] = React.useState(null);
 
   const showToast = (msg, ok = true) => {
     setToast({ msg, ok });
@@ -473,6 +463,28 @@ export default function BuildingWorkshop() {
     const mult = getBuildingLevelMultiplier(level);
     return { bpId, eff, level, mult };
   });
+
+  // ── Lưới công trình đã xây: ô + ô đang chọn ────────────────────────────────
+  // ⚠️ GIỮ ID chứ không giữ cả ô: ô được DỰNG LẠI mỗi lần tài nguyên/cấp đổi, nên giữ tham chiếu
+  // cũ là giữ một trạng thái đã lỗi thời (cùng luật đã ghi ở bản đồ kỹ năng).
+  const builtTiles = builtEntries.map(({ bpId, eff, level, mult }) => {
+    const bpDef = getBpDef(bpId);
+    const era = eff.era ?? BLUEPRINT_META[bpId]?.era ?? 1;
+    const upgradeCost = getUpgradeRefinedCost(era, level);
+    return {
+      id: bpId,
+      bpDef,
+      eff,
+      level,
+      mult,
+      glyph: getGlyph(bpDef.icon, bpDef.label, 'BP'),
+      label: bpDef.label,
+      upgradeCostLabel: `${upgradeCost} ${(ERA_REFINED[era] ?? {}).t2Label ?? 'Tinh luyện'}`,
+      state: buildingState({ level, refinedT2: getEraRefined(bpId).t2, upgradeCost }),
+    };
+  });
+  const builtSummary = summarizeBuildings(builtTiles);
+  const builtPicked = builtTiles.find((t) => t.id === builtId) ?? pickDefaultBuilding(builtTiles);
 
   const totalT1Passive = builtEntries.reduce(
     (sum, { eff, mult }) => sum + (eff.type === 'infrastructure' ? Math.floor((eff.passiveT1PerBreakMin ?? 0) * mult) : 0),
@@ -750,21 +762,21 @@ export default function BuildingWorkshop() {
             không phải một dữ kiện của riêng thẻ nào. Một luật nói lại ở mỗi thẻ thì nó thôi là
             hướng dẫn và thành nhiễu (cùng lý lẽ đã dùng cho 15 dòng di vật và 48 hộp thành tích).
           */}
-          <p className="text-xs" style={lightTheme ? { color: 'var(--muted-2)' } : { color: '#64748b' }}>
-            Cấp công trình vẫn tăng thông số nền phía sau đặc quyền.
+          <p className="text-xs" style={{ color: 'var(--muted-2)' }}>
+            {builtSummary.nangDuoc > 0
+              ? `${builtSummary.nangDuoc} công trình nâng cấp được ngay — ô có chấm.`
+              : 'Cấp công trình vẫn tăng thông số nền phía sau đặc quyền.'}
           </p>
-          <div className="flex flex-col gap-2">
-            {currentEraBuildings.map((id) => (
-              <BuiltCard
-                key={id}
-                bpId={id}
-                level={buildingLevels[id] ?? 1}
-                resourcesRefined={getEraRefined(id)}
-                onUpgrade={handleUpgrade}
-                lightTheme={lightTheme}
-              />
-            ))}
-          </div>
+          {/*
+            ⚠️ LƯỚI + MỘT KHUNG CHI TIẾT, xem `shared/buildingGrid.js`. Lướt để biết "đã xây gì,
+            cái nào nâng được"; bấm một ô mới hỏi "nó cộng bao nhiêu".
+          */}
+          <BuildingGrid
+            tiles={builtTiles}
+            selectedId={builtPicked?.id ?? null}
+            onPick={(t) => setBuiltId(t.id)}
+          />
+          <BuiltDetail tile={builtPicked} onUpgrade={handleUpgrade} lightTheme={lightTheme} />
         </div>
       )}
     </div>

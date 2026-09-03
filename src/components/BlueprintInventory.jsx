@@ -279,15 +279,16 @@ function ResearchTab({ research, blueprints, buildings, activeBook, researchBlue
   const researched   = new Set(research?.researched ?? []);
   const alreadyOwned = new Set(blueprints.map((b) => b.id));
   const lightTheme   = uiTheme === 'light';
+  // ⚠️ NĂM CHIP CÒN HAI (2026-09-02). Ba chip bị gỡ đều mở đầu bằng "CÓ THỂ" — "Kỳ Quan có thể
+  // tăng RP HOẶC giảm chi phí", "Sự kiện có thể làm RP tăng HOẶC giảm". Một câu vừa nói có thể
+  // tăng vừa nói có thể giảm thì nó không loại trừ được khả năng nào, tức nó không mang tin; và
+  // cả ba là LUẬT CHUNG, giống hệt nhau ở mọi lần mở màn hình, nên sau lần đọc thứ hai chúng chỉ
+  // còn là 150px nhiễu che mất danh sách bản vẽ. Hai chip giữ lại có SỐ và số ấy đổi theo cấu
+  // hình. Cùng luật đã áp cho câu "cấp công trình vẫn tăng thông số nền" ở `BuildingWorkshop`.
   const rpTips = [
     `+${RP_PER_MINUTE_BASE} RP / phút tập trung`,
     `x${RP_CATEGORY_MULT} cho danh mục đầu tiên trong ngày`,
-    'Kỳ Quan có thể tăng RP hoặc giảm chi phí',
-    'Kỹ năng có thể tăng RP thêm trong phiên',
-    'Sự kiện có thể làm RP tăng hoặc giảm',
   ];
-
-  const eraList = [activeBook];
 
   const eraBps = (BLUEPRINT_CATALOG[selectedEra] ?? []).map((def) => ({
     ...def,
@@ -378,29 +379,15 @@ function ResearchTab({ research, blueprints, buildings, activeBook, researchBlue
         </div>
       )}
 
-      {/* Era selector */}
-      <div className="flex flex-wrap gap-1.5">
-        {eraList.map((era) => (
-          <button
-            key={era}
-            type="button"
-            className="text-xs px-3 py-1 rounded-full border transition-colors"
-            style={selectedEra === era
-              ? (lightTheme
-                  ? { background: 'rgba(var(--accent-rgb), 0.10)', borderColor: 'rgba(var(--accent-rgb), 0.22)', color: '#9a5a48' }
-                  : { background: 'rgba(var(--accent-rgb),0.18)', borderColor: 'rgba(var(--accent-rgb),0.28)', color: '#f4efe7' })
-              : (lightTheme
-                  ? { borderColor: 'rgba(31, 30, 29, 0.08)', color: '#6a6862', background: 'rgba(255,255,255,0.74)' }
-                  : { borderColor: '#475569', color: '#94a3b8' })}
-          >
-            Kỷ {era}
-          </button>
-        ))}
-      </div>
-
+      {/*
+        ⚠️ HÀNG CHỌN KỶ ĐÃ GỠ (2026-09-02). `eraList` được gán cứng `[activeBook]` — tức nó luôn
+        vẽ ra ĐÚNG MỘT nút, và một hàng lựa chọn có một lựa chọn thì không phải một cái chọn: nó
+        chỉ là chữ "Kỷ 5" nói lại con số đang hiện ở đầu màn hình. Muốn cho chọn kỷ khác thì phải
+        cho `eraList` nhiều phần tử trước đã.
+      */}
       {/* Blueprint research cards */}
       <div className="space-y-3">
-        {eraBps.map(({ id, label, icon, description, meta, eff }) => {
+        {eraBps.map(({ id, label, icon, meta, eff }) => {
           if (!meta) return null;
           const researchCost = getDisplayedResearchCost(buildings, id);
           const isResearched  = researched.has(id) || alreadyOwned.has(id);
@@ -446,23 +433,21 @@ function ResearchTab({ research, blueprints, buildings, activeBook, researchBlue
                       </span>
                     )}
                   </div>
-                  <p className="text-xs line-clamp-2" style={lightTheme ? { color: 'var(--muted)' } : { color: '#94a3b8' }}>{description}</p>
-
-                  {/* Hiệu ứng tóm tắt */}
-                  <div className="mt-1.5 space-y-0.5">
-                    {meta?.rarity && (
-                      <p className="text-xs" style={lightTheme ? { color: '#8a8a86' } : { color: '#64748b' }}>{RESEARCH_TRACK[meta.rarity] ?? 'Đầu tư'}</p>
-                    )}
-                    <PerkSummary perk={eff?.perk} lightTheme={lightTheme} variant="literal" />
-                    <p className="text-xs" style={lightTheme ? { color: '#8a8a86' } : { color: '#64748b' }}>{meta.sessionsToComplete} phiên xây</p>
-                  </div>
+                  {/*
+                    ⚠️ MÔ TẢ · HƯỚNG NGHIÊN CỨU · ĐẶC QUYỀN · NHỊP XÂY ĐÃ GỠ KHỎI THẺ (2026-09-02).
+                    Cả bốn được in NGUYÊN VĂN trong `BlueprintDetailPanel`, mà chạm vào thẻ chính
+                    là mở khung ấy — nên chúng là chỗ nói lần thứ hai, và chúng nhân lên theo số
+                    bản vẽ. Tab "Công trình" đo được 4.757px ở khung 390px trước vòng dọn này.
+                    Thứ giữ lại là thứ dùng để CHỌN giữa các thẻ: tên · độ hiếm · loại · còn thiếu
+                    bao nhiêu RP. Thứ trả lời "cái này làm gì" thì hỏi một cái một lúc.
+                  */}
+                  <p className="text-[11px] leading-snug" style={{ color: 'var(--muted-2)' }}>
+                    {meta.sessionsToComplete} phiên xây · {RESEARCH_TRACK[meta?.rarity] ?? 'Đầu tư'}
+                  </p>
 
                   {!isResearched && (
-                    <div className="mt-2 space-y-1.5">
-                      <div>
-                        <p className="text-xs mb-0.5" style={lightTheme ? { color: '#8a8a86' } : { color: '#64748b' }}>Nghiên cứu bằng RP:</p>
-                        <RPBar currentRP={currentRP} cost={researchCost} lightTheme={lightTheme} />
-                      </div>
+                    <div className="mt-1.5">
+                      <RPBar currentRP={currentRP} cost={researchCost} lightTheme={lightTheme} />
                     </div>
                   )}
                 </div>

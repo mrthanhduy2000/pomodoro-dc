@@ -1,3 +1,68 @@
+> Cập nhật lần cuối: **2026-09-02 (vòng 31)** — **BỐN MÀN NGẮN ĐI 29–39%, CÙNG MỘT KHUÔN**
+> (lệnh Đàm, lần thứ ba: *"Thay đổi lớn hơn nữa, UX/UI và mọi thứ ở hành trang vẫn chưa thấy thay
+> đổi gì… đừng có quá đo tiểu tiết, nên thực hiện lớn rồi sửa khi mà tôi muốn sửa"*).
+>
+> ### Đã làm gì
+> Bốn màn dài nhất app đổi sang CÙNG một khuôn — **LƯỚI ô + MỘT khung chi tiết** — thay cho những
+> danh sách thẻ dọc mà mỗi thẻ mang trọn mô tả:
+>
+> | Màn | trước | sau | thay đổi |
+> |---|---|---|---|
+> | Kỹ năng | 2.231px | **1.957px** | danh sách một-nhánh-một-lúc → **bản đồ 6×6** |
+> | Công trình | 4.757px | **2.894px (−39%)** | lưới công trình + gỡ 3 chip luật RP + thẻ bản vẽ thôi chép 4 trường |
+> | Huy hiệu | 4.915px | **3.973px** | gấp 102 dấu tiến độ = 0 |
+> | Tập trung | 2.509px | **1.783px (−29%)** | bảng thiết lập ~1.100px gấp sau một dòng |
+>
+> Đo ở khung 390px trên fixture đã chơi 6 tháng: `node scripts/shot.mjs --phone --fixture
+> .shots/fixture.json --full` (và `--click "Công trình"` / `"Huy hiệu"` cho hai tab con).
+>
+> ### Bốn module THUẦN mới, mỗi cái có test riêng đã thử-cho-đỏ
+> · `src/components/shared/skillMatrix.js` (7 bài · 4 phép phá) — bốn trạng thái ô: đã mở · mở
+> được ngay · thiếu SP · chưa đủ tiên quyết. Gộp hai cái giữa thì hai ca cần hai hành động ngược
+> nhau trông y hệt nhau.
+> · `src/components/shared/buildingGrid.js` (4 bài · 3 phép phá) — ba trạng thái: nâng được ngay ·
+> thiếu tài nguyên · kịch cấp.
+> · `src/components/shared/badgeGroups.js` (4 bài · 2 phép phá) — phân hoạch đúng nghĩa; huy hiệu
+> KHÔNG đo được tiến độ thuộc nhóm "chưa chạm".
+> · `src/components/pomodoroSetupSummary.js` (4 bài · 2 phép phá) — hai chế độ ⇒ hai câu, không
+> phải một câu có chỗ trống.
+>
+> ### ⚠️ LUẬT MỚI RÚT RA — "KHÔNG GIẤU, CHỈ GẤP"
+> Mỗi khối bị gấp phải có một dòng thay nó nói **ĐỦ**: đủ cần gạt (thiết lập phiên: chế độ · số
+> phút · nghỉ ngắn/dài · kỷ luật) hoặc đủ con số còn lại ("Còn 102 dấu chưa chạm tới"). Gấp mà dòng
+> thay thiếu một thứ thì đó là **GIẤU**, và người dùng phải mở ra mỗi lần để kiểm — lúc ấy còn tệ
+> hơn không gấp. Đây là vế bổ sung cho luật vòng 28 (*"thêm mà không bớt thì không phải thiết kế
+> lại"*).
+>
+> ### Một LỖI THẬT đã sửa kèm
+> `heroKyNang` bật màu nhấn chỉ vì `spChuaTieu > 0` rồi viết *"mở thêm một kỹ năng ngay bên dưới"*.
+> Đo trên ván thật: **1 SP trong tay, ô rẻ nhất mở được giá 3 SP** ⇒ dải mở đầu rực lên và bảo
+> người chơi đi làm một việc **không làm được**. Một lời hứa sai còn tệ hơn không hứa gì: nó tiêu
+> mất chính cái màu dùng để nói "có việc làm". Nay `gap` hỏi đúng câu mà bản đồ kỹ năng trả lời
+> (`countReady`), và nói ra còn thiếu bao nhiêu SP.
+>
+> ### Ba mẩu UI chết đã gỡ
+> · Hàng "chọn kỷ" ở tab Nghiên cứu được gán cứng `[activeBook]` ⇒ luôn vẽ **đúng một nút**.
+> · 3/5 chip luật RP đều mở đầu bằng *"có thể … HOẶC …"* — một câu vừa nói tăng vừa nói giảm thì
+> không loại trừ khả năng nào, tức không mang tin.
+> · Dải chú thích bậc độ ở màn Kỹ năng — hàng của bản đồ ĐÃ là bậc.
+>
+> ### Cổng
+> lint sạch · build OK · **1.551 bài (1.550 xanh, 0 đỏ, 1 bỏ qua)**. Đã push `main`
+> (`3ec38c7` · `4091745` · `bdb9991` · `8e2387e`), Vercel tự deploy.
+>
+> ### Việc phiên sau nên biết
+> · Nợ: **97 mục · 36 đã đóng · 61 còn mở**, trong đó ~49 thuộc Thành Phố 3D (ngoài phạm vi được
+> phép của phiên này) và 5 mục ghi rõ *"Đàm chọn, tôi không tự chọn"* (#24 · #53 · #88 · #89 · #90
+> · #95 · #96).
+> · **#43** (số tam giác trong `PERFORMANCE.md` không có cổng nào canh, đã trôi ở 6/15 kỷ) là mục
+> phi-đồ-hoạ dễ đóng nhất còn lại: dựng một cổng ngân sách tam giác theo đúng khuôn
+> `src/engine/city3d/drawCallBudget.test.js`. Cần đo 15 con số thật trước.
+> · **#6** (StatsDashboard tính lại toàn bộ lịch sử mỗi render) có điều kiện chặn ghi ngay trong
+> mục nợ: *"chỉ đáng làm khi CẢM NHẬN ĐƯỢC độ trễ thật"* — đừng tối ưu phòng ngừa.
+
+---
+
 > Cập nhật lần cuối: **2026-09-02 (vòng 26)** — **GỠ ĐIỂM MÙ "MÀN SAU KHI KẾT THÚC PHIÊN", RỒI
 > LÀM LẠI NÓ** (lệnh Đàm: *"gỡ điểm mù màn hiện ra sau khi kết thúc… đơn giản hơn, dopamine lớn
 > nhất, không phức tạp, có thể làm lại toàn bộ nếu muốn"*). Đây đúng là task mà vòng 25 đề xuất

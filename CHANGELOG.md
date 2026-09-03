@@ -12,6 +12,38 @@
 
 ---
 
+## 2026-09-02 (vòng 31) — Bốn màn ngắn đi 29–39%, cùng MỘT khuôn "lưới + một khung chi tiết"
+
+**Mục đích.** Đàm nói lần thứ ba rằng *"UX/UI và mọi thứ ở hành trang vẫn chưa thấy thay đổi gì …
+đừng có quá đo tiểu tiết, nên thực hiện lớn"*. Vòng 28 đã rút ra *"thêm mà không bớt thì không phải
+thiết kế lại"*; vòng này áp nó cho bốn màn dài nhất app.
+
+**Phạm vi.**
+
+| Màn | trước | sau | đổi gì |
+|---|---|---|---|
+| Kỹ năng | 2.231px | **1.957px** | danh sách một-nhánh-một-lúc → **bản đồ 6×6** (cột = nhánh, hàng = độ sâu) |
+| Công trình | 4.757px | **2.894px (−39%)** | công trình đã xây thành lưới ô + một khung chi tiết; gỡ 3/5 chip luật RP; thẻ bản vẽ thôi chép 4 trường đã có ở khung chi tiết |
+| Huy hiệu | 4.915px | **3.973px** | gấp lại 102 dấu có tiến độ = 0 |
+| Tập trung | 2.509px | **1.783px (−29%)** | bảng thiết lập (~1.100px, mở sẵn mọi lần) gấp sau một dòng nói đủ |
+
+Đo ở khung 390px trên fixture đã chơi 6 tháng, bằng `node scripts/shot.mjs --phone --fixture
+.shots/fixture.json --full`.
+
+**Ảnh hưởng.** Không đổi một luật chơi nào, không đổi một con số cân bằng nào, không đổi
+localStorage/Supabase. Toàn bộ là tầng trình bày. Bốn module THUẦN mới, mỗi cái có test riêng:
+`shared/skillMatrix.js` · `shared/buildingGrid.js` · `shared/badgeGroups.js` ·
+`pomodoroSetupSummary.js`.
+
+**Một lỗi thật đã sửa kèm:** dải mở đầu Hành trang bật màu nhấn chỉ vì còn điểm kỹ năng chưa tiêu,
+rồi viết *"mở thêm một kỹ năng ngay bên dưới"* — với 1 SP trong tay mà ô rẻ nhất giá 3 SP thì đó là
+một lời hứa không làm được. Nay nó hỏi đúng câu *"có mở được ô nào không"*.
+
+**Tương thích.** Hoàn toàn tương thích ngược. Mọi khối bị gấp đều mở lại được bằng một nút ghi rõ
+còn bao nhiêu — **không giấu, chỉ gấp**.
+
+---
+
 ## 2026-09-02 (vòng 30) — Dọn nợ tiếp: #91, #86, và một bản vá TỰ HOÀN TÁC
 
 **Đóng #91** — `sceneStats.test.js` chép tay `12 * 0.8` thay vì đọc hệ số đã dựng, tức khoá một CON

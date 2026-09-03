@@ -35,6 +35,27 @@ Mặt trận đang làm: **thành phố 3D** (`src/engine/city3d/` + `src/compon
   Phase 21 (*"push nhánh phụ, không tự gộp `main`"*) đã bị lệnh này thay thế.
   ⚠️ **Phase 21 do đó lên production TRƯỚC khi Đàm nhìn ảnh nghiệm thu** — mục "chờ Đàm nhìn ảnh"
   ở phần dưới VẪN CÒN HIỆU LỰC, chỉ là nay nó nghiệm thu một thứ đang chạy thật.
+- **Trò chơi — VÒNG 31 (2026-09-02, MỚI NHẤT): BỐN MÀN NGẮN ĐI 29–39%, và cả bốn theo CÙNG MỘT
+  khuôn "LƯỚI + MỘT KHUNG CHI TIẾT".** Lệnh Đàm (lần thứ ba): *"Thay đổi lớn hơn nữa… đừng có quá
+  đo tiểu tiết, nên thực hiện lớn rồi sửa khi tôi muốn sửa."*
+  · **Kỹ năng** 2.231 → **1.957px**: danh sách một-nhánh-một-lúc → **BẢN ĐỒ 6×6** (cột = nhánh,
+  hàng = độ sâu). Trước đây phải bấm qua sáu nhánh mới nhìn hết 36 kỹ năng.
+  `shared/skillMatrix.js` + `SkillMatrix.jsx`.
+  · **Công trình** 4.757 → **2.894px (−39%)**: công trình đã xây thành LƯỚI ô + một khung chi tiết;
+  gỡ 3/5 chip luật RP (cả ba mở đầu bằng "có thể … HOẶC …" ⇒ không loại trừ khả năng nào ⇒ không
+  mang tin); thẻ bản vẽ thôi chép 4 trường mà `BlueprintDetailPanel` đã in nguyên văn.
+  `shared/buildingGrid.js` + `BuildingGrid.jsx`.
+  · **Huy hiệu** 4.915 → **3.973px**: gấp lại 102 dấu tiến độ = 0. `shared/badgeGroups.js`.
+  · **Tập trung** 2.509 → **1.783px (−29%)**: bảng thiết lập (~1.100px, mở sẵn mọi lần) gấp lại
+  sau một dòng nói đủ ("25′ · nghỉ 5′/15′ · kỷ luật"). `pomodoroSetupSummary.js`.
+  · ⚠️ **LUẬT CHUNG RÚT RA — "KHÔNG GIẤU, CHỈ GẤP".** Mỗi lần gấp một khối, dòng thay nó phải nói
+  ĐỦ (đủ cần gạt / đủ con số còn lại). Gấp mà dòng thay thiếu một thứ thì đó là GIẤU, và người
+  dùng phải mở ra mỗi lần để kiểm — lúc ấy còn tệ hơn không gấp.
+  · Kèm một LỖI THẬT: dải mở đầu Hành trang bật màu nhấn chỉ vì `spChuaTieu > 0` rồi viết *"mở
+  thêm một kỹ năng ngay bên dưới"*. Đo trên ván thật: **1 SP trong tay, ô rẻ nhất giá 3 SP** ⇒ nó
+  rực lên và bảo người chơi làm một việc KHÔNG làm được. Nay `gap` hỏi đúng câu bản đồ trả lời.
+  · Nợ: **97 mục · 36 đã đóng · 61 còn mở** (~49 thuộc Thành Phố 3D). Test **1.551 bài**.
+
 - **Trò chơi — VÒNG 29–30 (2026-09-02, mới nhất): DỌN NỢ — 32 → 35 mục đã đóng.**
   · Đóng **#92** (mã chết tầng giao diện) · **#5** (lệch mô tả↔hành vi, nay là một CỔNG chấm 310
   thành tích) · **#13**, **#7** (đã lỗi thời, chưa ai kiểm lại) · **#91** (test khoá con số thay vì

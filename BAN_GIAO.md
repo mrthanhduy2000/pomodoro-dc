@@ -51,6 +51,32 @@
 > lint sạch · build OK · **1.551 bài (1.550 xanh, 0 đỏ, 1 bỏ qua)**. Đã push `main`
 > (`3ec38c7` · `4091745` · `bdb9991` · `8e2387e`), Vercel tự deploy.
 >
+> ### ⚠️ BA LỖI THẬT CÙNG MỘT HỌ — "CÓ" KHÔNG BẰNG "LÀM ĐƯỢC" (vòng 31, phần 2)
+> Sau khi bắt được lỗi ở dải Kỹ năng, tôi đi tìm cùng hình dạng ấy ở chỗ khác và thấy thêm hai:
+>
+> 1. **Dải mở đầu tab Công trình** đếm `readyIds` = *"đã nghiên cứu · chưa xây · thuộc kỷ đang
+>    chơi"* — KHÔNG kiểm nguyên liệu, KHÔNG kiểm còn ô hàng đợi. Nó rực lên và viết *"Chọn một bản
+>    vẽ để bắt đầu dựng"* trong khi mọi thẻ bên dưới đều ghi **"Chưa đủ"**.
+> 2. **Cái chuông · cái chấm · dòng "việc tiếp theo"** so số SP với giá **GỐC** của kỹ năng, trong
+>    khi `unlockSkill` TRỪ giá đã giảm nhờ cộng hưởng di vật. Với 11 SP và một kỹ năng 22 SP giảm
+>    còn 11, người chơi **mua được thật** mà cả ba tín hiệu đều bảo *không có việc gì*. Nó nhắm
+>    đúng vào 6 món đắt giá nhất game.
+> 3. **Giá RP nghiên cứu có BA bản chép tay**, và bản ở tầng giao diện đã lệch (không kiểm
+>    `type === 'wonder'`, thiếu `Math.max(1,…)`). Hôm nay vô hại **nhờ một thứ chẳng liên quan**:
+>    trong 75 bản vẽ không có cái nào vừa khai `wonderEffect` vừa không phải kỳ quan (đã đếm: 0).
+>
+> **Nguyên nhân gốc của cả ba là MỘT: luật sống inline trong tầng giao diện, nên tầng khác không
+> thấy nó và tự nghĩ ra một điều kiện lỏng hơn.** Nay có ba module THUẦN dùng chung:
+> `engine/craftReadiness.js` · `engine/wonderEffects.js` · `shared/skillMatrix.js`.
+>
+> ⚠️ Và một ĐIỂM MÙ SẴN CÓ của bộ test lộ ra khi thử ngược: bỏ HẲN phép kiểm nguyên liệu trong
+> `listBuildableBlueprints` mà **không bài nào đỏ**. Đã bịt. *Phép thử ngược không chỉ chứng minh
+> bài test mới có răng — nó còn soi ra những bài CŨ đã mất răng.*
+>
+> ### Cổng (sau phần 2)
+> lint sạch · build OK · **1.565 bài (1.564 xanh, 0 đỏ, 1 bỏ qua)** · đã chụp lại app sau mỗi lần
+> sửa. Push `main`: `497ea1a` · `ed1bdfc` · `4823fd2`.
+>
 > ### Việc phiên sau nên biết
 > · Nợ: **97 mục · 36 đã đóng · 61 còn mở**, trong đó ~49 thuộc Thành Phố 3D (ngoài phạm vi được
 > phép của phiên này) và 5 mục ghi rõ *"Đàm chọn, tôi không tự chọn"* (#24 · #53 · #88 · #89 · #90

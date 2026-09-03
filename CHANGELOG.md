@@ -12,6 +12,29 @@
 
 ---
 
+## 2026-09-02 (vòng 31b) — Ba lỗi thật cùng một họ: "CÓ" không bằng "LÀM ĐƯỢC"
+
+**Mục đích.** Sau khi bắt được một lời hứa sai ở dải mở đầu tab Kỹ năng, đi tìm cùng hình dạng ấy
+ở chỗ khác.
+
+**Phạm vi.** Ba lỗi, một nguyên nhân gốc — luật sống inline trong tầng giao diện nên tầng khác
+không thấy nó và tự nghĩ ra một điều kiện lỏng hơn:
+
+1. Dải mở đầu tab Công trình đếm bản vẽ ĐÃ MỞ thay vì bản vẽ KHỞI CÔNG ĐƯỢC (không kiểm nguyên
+   liệu, không kiểm ô hàng đợi).
+2. Cái chuông · cái chấm · dòng "việc tiếp theo" so SP với giá GỐC của kỹ năng, trong khi store
+   trừ giá đã giảm nhờ cộng hưởng di vật — sai đúng ở 6 kỹ năng Tinh Hoa.
+3. Giá RP nghiên cứu có ba bản chép tay; bản ở tầng giao diện thiếu phép kiểm `type === 'wonder'`
+   và thiếu sàn 1 RP.
+
+**Ảnh hưởng.** Không đổi luật chơi, không đổi con số cân bằng. Ba module THUẦN mới dùng chung:
+`engine/craftReadiness.js` · `engine/wonderEffects.js`. "Hàng đợi đầy" nay là một lý do RIÊNG chứ
+không gộp vào "thiếu nguyên liệu", và nút bị khoá trước thay vì cho bấm rồi báo lỗi.
+
+**Tương thích.** Hoàn toàn tương thích ngược.
+
+---
+
 ## 2026-09-02 (vòng 31) — Bốn màn ngắn đi 29–39%, cùng MỘT khuôn "lưới + một khung chi tiết"
 
 **Mục đích.** Đàm nói lần thứ ba rằng *"UX/UI và mọi thứ ở hành trang vẫn chưa thấy thay đổi gì …

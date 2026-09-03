@@ -54,7 +54,16 @@ Mặt trận đang làm: **thành phố 3D** (`src/engine/city3d/` + `src/compon
   · Kèm một LỖI THẬT: dải mở đầu Hành trang bật màu nhấn chỉ vì `spChuaTieu > 0` rồi viết *"mở
   thêm một kỹ năng ngay bên dưới"*. Đo trên ván thật: **1 SP trong tay, ô rẻ nhất giá 3 SP** ⇒ nó
   rực lên và bảo người chơi làm một việc KHÔNG làm được. Nay `gap` hỏi đúng câu bản đồ trả lời.
-  · Nợ: **97 mục · 36 đã đóng · 61 còn mở** (~49 thuộc Thành Phố 3D). Test **1.551 bài**.
+  · **PHẦN 2 — BA LỖI THẬT CÙNG MỘT HỌ: "CÓ" ≠ "LÀM ĐƯỢC".** (1) dải Công trình đếm bản vẽ ĐÃ MỞ
+  thay vì KHỞI CÔNG ĐƯỢC; (2) cái chuông/chấm/"việc tiếp theo" so SP với giá GỐC trong khi store
+  trừ giá đã giảm nhờ di vật — sai đúng ở 6 kỹ năng Tinh Hoa; (3) giá RP nghiên cứu có BA bản chép
+  tay, bản tầng giao diện thiếu kiểm `type === 'wonder'`. Gốc chung: **luật sống inline trong tầng
+  giao diện nên tầng khác không thấy và tự nghĩ ra điều kiện lỏng hơn.** Ba module thuần dùng
+  chung: `engine/craftReadiness.js` · `engine/wonderEffects.js` · `shared/skillMatrix.js`.
+  · ⚠️ Phép thử ngược soi ra một điểm mù SẴN CÓ: bỏ hẳn phép kiểm nguyên liệu trong
+  `listBuildableBlueprints` mà không bài nào đỏ. *Thử ngược không chỉ chứng minh bài MỚI có răng —
+  nó soi ra bài CŨ đã mất răng.*
+  · Nợ: **97 mục · 36 đã đóng · 61 còn mở** (~49 thuộc Thành Phố 3D). Test **1.565 bài**.
 
 - **Trò chơi — VÒNG 29–30 (2026-09-02, mới nhất): DỌN NỢ — 32 → 35 mục đã đóng.**
   · Đóng **#92** (mã chết tầng giao diện) · **#5** (lệch mô tả↔hành vi, nay là một CỔNG chấm 310

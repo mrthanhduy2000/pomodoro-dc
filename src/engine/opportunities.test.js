@@ -4,7 +4,8 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { BLUEPRINT_META, BUILDING_SPECS, normalizeRawCost } from './constants.js';
+import { BLUEPRINT_META, BUILDING_SPECS, RELIC_ELITE_RESONANCE, normalizeRawCost } from './constants.js';
+import { getEffectiveSkillCost } from './gameMath.js';
 import {
   ALL_SKILLS,
   hasReadyOpportunity,
@@ -163,4 +164,69 @@ test('`othersCount` đếm ĐÚNG phần việc còn lại, không phải tổng
     + listBuildableBlueprints(kho).length;
   assert.ok(soViec >= 2, 'cần ít nhất 2 việc thì mới kiểm được phép trừ — bài test đang chạy rỗng');
   assert.equal(pickNextAction(kho).othersCount, soViec - 1);
+});
+
+// ─── Cộng hưởng di vật: giá THỰC, không phải giá gốc (2026-09-02) ──────────────
+test('KỸ NĂNG GIẢM GIÁ NHỜ DI VẬT PHẢI ĐƯỢC ĐẾM LÀ "MỞ ĐƯỢC NGAY"', () => {
+  // ⚠️ Ca đã cắn thật: `unlockSkill` trong store TRỪ giá đã giảm, còn danh sách cơ hội lại so với
+  // giá GỐC. Với đúng số SP nằm giữa hai giá, người chơi mua được thật trong khi cái chuông ·
+  // cái chấm · dòng "việc tiếp theo" đều bảo không có việc gì — và không có gì đỏ lên.
+  const map = Object.values(RELIC_ELITE_RESONANCE)[0];
+  assert.ok(map, 'phải có ít nhất một cặp cộng hưởng để thử');
+  const elite = ALL_SKILLS.find((s) => s.id === map.elite);
+  assert.ok(elite, `không tìm thấy kỹ năng tinh hoa ${map.elite}`);
+
+  // mở sẵn mọi nút tiên quyết để chỉ còn GIÁ là biến
+  const unlockedSkills = {};
+  const moTienQuyet = (id) => {
+    const n = ALL_SKILLS.find((s) => s.id === id);
+    for (const r of n?.requires ?? []) { moTienQuyet(r); unlockedSkills[r] = true; }
+  };
+  moTienQuyet(elite.id);
+
+  const giaGoc = elite.spCost;
+  const giaGiam = getEffectiveSkillCost(elite.id, giaGoc, [{ id: map.relicId }], { [map.relicId]: 99 });
+  assert.ok(giaGiam < giaGoc, 'cặp cộng hưởng này phải thật sự giảm giá');
+
+  const sp = giaGiam; // đủ cho giá ĐÃ GIẢM, chưa đủ cho giá gốc
+  const khongDiVat = listAvailableSkills({ sp, unlockedSkills });
+  assert.equal(khongDiVat.some((s) => s.id === elite.id), false, 'chưa có di vật thì đúng là chưa mở được');
+
+  const coDiVat = listAvailableSkills({
+    sp, unlockedSkills, relics: [{ id: map.relicId }], relicEvolutions: { [map.relicId]: 99 },
+  });
+  assert.equal(coDiVat.some((s) => s.id === elite.id), true,
+    'có di vật ⇒ mua được thật ⇒ danh sách cơ hội PHẢI thấy');
+});
+
+test('XÂY ĐƯỢC PHẢI ĐÒI ĐỦ NGUYÊN LIỆU — không phải chỉ "đã nghiên cứu xong"', () => {
+  // ⚠️ Phép thử ngược 2026-09-02 cho thấy bộ test cũ MÙ với chuyện này: bỏ hẳn phép kiểm nguyên
+  // liệu trong `listBuildableBlueprints` mà không bài nào đỏ. Một danh sách "xây được ngay" không
+  // kiểm nguyên liệu thì cái chuông sẽ mời người chơi vào bấm một nút đang khoá.
+  const [bpId, meta] = Object.entries(BLUEPRINT_META).find(
+    ([id]) => BUILDING_SPECS[id] && Object.keys(normalizeRawCost(BUILDING_SPECS[id].cost ?? {})).length > 0,
+  );
+  const spec = BUILDING_SPECS[bpId];
+  const rawCost = normalizeRawCost(spec.cost ?? {});
+  const chung = {
+    activeBook: meta.era,
+    blueprints: [{ id: bpId }],
+    buildings: [],
+    craftingQueue: [],
+    research: { researched: [], rp: 0 },
+  };
+  const duTho = Object.fromEntries(Object.entries(rawCost).map(([k, v]) => [k, v * 10]));
+  const duTinh = { [meta.era]: { t2: 9999 } };
+
+  const co = listBuildableBlueprints({ ...chung, resources: { [`book${meta.era}`]: duTho }, resourcesRefined: duTinh });
+  assert.equal(co.some((b) => b.id === bpId), true, 'đủ đồ thì phải thấy');
+
+  const khong = listBuildableBlueprints({ ...chung, resources: { [`book${meta.era}`]: {} }, resourcesRefined: duTinh });
+  assert.equal(khong.some((b) => b.id === bpId), false, 'túi rỗng mà vẫn báo "xây được ngay" là mời bấm một nút khoá');
+
+  // …và thiếu riêng TINH LUYỆN cũng phải chặn, không chỉ thiếu nguyên liệu thô.
+  const thieuTinh = listBuildableBlueprints({ ...chung, resources: { [`book${meta.era}`]: duTho }, resourcesRefined: { [meta.era]: { t2: 0 } } });
+  const canTinh = (spec.refinedCost && Object.values(spec.refinedCost).some((v) => v > 0))
+    || typeof spec.refinedCost === 'number' && spec.refinedCost > 0;
+  if (canTinh) assert.equal(thieuTinh.some((b) => b.id === bpId), false, 'thiếu tinh luyện cũng phải chặn');
 });

@@ -27,6 +27,8 @@ import {
   getUnifiedRefinedCost,
 } from './constants.js';
 import { countActiveCrafting } from './eraLegacy.js';
+import { getEffectiveSkillCost } from './gameMath.js';
+import { khoiCongDuoc } from './craftReadiness.js';
 
 export const ALL_SKILLS = Object.values(SKILL_TREE).flatMap((branch) =>
   branch.nodes.map((node) => ({
@@ -64,11 +66,22 @@ export function getEffectiveResearchCost(buildings = [], bpId, baseCost) {
   return Math.max(1, cost);
 }
 
-/** Kỹ năng đã đủ điều kiện tiên quyết VÀ đủ SP để mở ngay bây giờ. */
-export function listAvailableSkills({ sp = 0, unlockedSkills = {} } = {}) {
+/**
+ * Kỹ năng đã đủ điều kiện tiên quyết VÀ đủ SP để mở ngay bây giờ.
+ *
+ * ⚠️ PHẢI SO VỚI GIÁ THỰC (`getEffectiveSkillCost`), KHÔNG PHẢI `spCost` THÔ (sửa 2026-09-02).
+ * Cộng hưởng di vật giảm NỬA giá 6 kỹ năng Tinh Hoa, và `unlockSkill` trong store TRỪ đúng giá
+ * đã giảm ấy. Bản cũ so với giá gốc ⇒ với 11 SP và một kỹ năng 22 SP đã giảm còn 11, người chơi
+ * **mua được thật** trong khi cái chuông · cái chấm · dòng "việc tiếp theo" đều bảo *không có
+ * việc gì*. Đúng cái bẫy "một luật hai công thức" mà khối chú thích đầu file này cảnh báo — và
+ * nó nhắm vào đúng 6 món đắt giá nhất game.
+ */
+export function listAvailableSkills({
+  sp = 0, unlockedSkills = {}, relics = [], relicEvolutions = {},
+} = {}) {
   return ALL_SKILLS.filter((skill) => {
     if (unlockedSkills[skill.id]) return false;
-    if (sp < skill.spCost) return false;
+    if (sp < getEffectiveSkillCost(skill.id, skill.spCost, relics, relicEvolutions)) return false;
     return skill.requires.every((requirement) => unlockedSkills[requirement]);
   });
 }
@@ -122,15 +135,15 @@ export function listBuildableBlueprints({
       if (!(ownedIds.has(bpId) || researchedIds.has(bpId))) return false;
       if (builtIds.has(bpId) || queuedIds.has(bpId)) return false;
 
-      const bookBag = resources?.[`book${meta.era}`] ?? {};
-      const rawCost = normalizeRawCost(spec.cost ?? {});
-      const hasRaw = Object.entries(rawCost).every(([resourceId, amount]) => (bookBag[resourceId] ?? 0) >= amount);
-
-      if (!hasRaw) return false;
-
-      const refined = normalizeRefinedBag(resourcesRefined?.[meta.era]);
-      const refinedCost = getUnifiedRefinedCost(spec.refinedCost);
-      return refined.t2 >= refinedCost;
+      // ⚠️ MỘT LUẬT MỘT CÔNG THỨC — dùng chung `craftReadiness.js` với `ReadyCard` và dải mở đầu
+      // tab Công trình. Ba bản chép tay của cùng một luật là ba cơ hội để chúng trôi khỏi nhau.
+      // (Ô hàng đợi đã được kiểm ở đầu hàm nên ở đây `conOTrong` chắc chắn đúng.)
+      return khoiCongDuoc({
+        rawCost: normalizeRawCost(spec.cost ?? {}),
+        refinedCost: getUnifiedRefinedCost(spec.refinedCost),
+        bookResources: resources?.[`book${meta.era}`] ?? {},
+        refinedT2: normalizeRefinedBag(resourcesRefined?.[meta.era]).t2,
+      });
     })
     .map(([bpId]) => BLUEPRINT_LOOKUP[bpId])
     .filter(Boolean);

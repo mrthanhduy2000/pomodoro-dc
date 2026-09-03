@@ -27,6 +27,8 @@ export default function useNextAction() {
   const resources = useGameStore((state) => state.resources);
   const resourcesRefined = useGameStore((state) => state.resourcesRefined);
   const craftingQueue = useGameStore((state) => state.craftingQueue);
+  const relics = useGameStore((state) => state.relics);
+  const relicEvolutions = useGameStore((state) => state.relicEvolutions);
 
   return useMemo(
     () => pickNextAction({
@@ -39,7 +41,9 @@ export default function useNextAction() {
       research,
       resources,
       resourcesRefined,
+      relics,
+      relicEvolutions,
     }),
-    [sp, unlockedSkills, activeBook, blueprints, buildings, craftingQueue, research, resources, resourcesRefined],
+    [sp, unlockedSkills, activeBook, blueprints, buildings, craftingQueue, research, resources, resourcesRefined, relics, relicEvolutions],
   );
 }

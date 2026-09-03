@@ -70,6 +70,8 @@ export default function NotificationCenter({ onNavigate }) {
 
   const sp = useGameStore((state) => state.player.sp);
   const unlockedSkills = useGameStore((state) => state.player.unlockedSkills);
+  const relics = useGameStore((state) => state.relics);
+  const relicEvolutions = useGameStore((state) => state.relicEvolutions);
   const activeBook = useGameStore((state) => state.progress.activeBook);
   const research = useGameStore((state) => state.research);
   const blueprints = useGameStore((state) => state.blueprints);
@@ -87,8 +89,8 @@ export default function NotificationCenter({ onNavigate }) {
   const [popupItems, setPopupItems] = useState([]);
 
   const availableSkills = useMemo(
-    () => listAvailableSkills({ sp, unlockedSkills }),
-    [sp, unlockedSkills],
+    () => listAvailableSkills({ sp, unlockedSkills, relics, relicEvolutions }),
+    [sp, unlockedSkills, relics, relicEvolutions],
   );
 
   const researchableBlueprints = useMemo(

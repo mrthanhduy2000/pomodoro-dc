@@ -20,6 +20,7 @@ import {
   blueprintEraOf, countActiveCrafting, countLegacyCrafting, listRestorableBlueprints,
 } from '../engine/eraLegacy';
 import { describeCraftProgress, blueprintLabel } from '../engine/craftProgress';
+import { lyDoKhongKhoiCongDuoc, khoiCongDuoc, NHAN_LY_DO, LY_DO } from '../engine/craftReadiness';
 import useSettingsStore from '../store/settingsStore';
 import {
   BUILDING_SPECS,
@@ -217,7 +218,7 @@ function QueueSection({ queue, activeBook, cancelCrafting, lightTheme }) {
 }
 
 // ─── Card bản vẽ sẵn sàng xây ─────────────────────────────────────────────────
-function ReadyCard({ bpId, bookResources, resourcesRefined, craftingQueue, onStart, lightTheme, restoration = false }) {
+function ReadyCard({ bpId, bookResources, resourcesRefined, craftingQueue, conOTrong = true, onStart, lightTheme, restoration = false }) {
   const enterMotion = useEnterMotion();
   const pressMotion = usePressMotion();
   // Phóng to khi DI CHUỘT không thuộc ba nhịp — đi qua cái gác ngoại lệ.
@@ -231,10 +232,20 @@ function ReadyCard({ bpId, bookResources, resourcesRefined, craftingQueue, onSta
   const refined  = normalizeRefinedBag(resourcesRefined);
   const rawCost  = normalizeRawCost(spec.cost ?? {});
   const refinedCost = getUnifiedRefinedCost(spec.refinedCost);
-  const t1Ok     = Object.entries(rawCost).every(([res, amt]) => (bookResources[res] ?? 0) >= amt);
+  // ⚠️ MỘT LUẬT MỘT CÔNG THỨC — xem `engine/craftReadiness.js`. Trước đây luật này nằm inline ở
+  // đây, nên dải mở đầu đếm "sẵn sàng xây" bằng một điều kiện lỏng hơn hẳn và hứa một việc không
+  // làm được. Và "hàng đợi đầy" nay là một lý do RIÊNG: trước đây nút vẫn bấm được rồi mới hiện
+  // một thông báo lỗi, tức app biết trước câu trả lời mà vẫn để người dùng bấm để nghe "không".
+  // ⚠️ `refinedOk` KHÁC `canAfford`: nó nói riêng về khoản TINH LUYỆN để tô đỏ đúng cái chip ấy.
   const refinedOk = refinedCost === 0 || refined.t2 >= refinedCost;
-  const canAfford = !inQueue && t1Ok && refinedOk;
-  const reason = inQueue ? 'Đang xây...' : !canAfford ? 'Thiếu nguyên liệu' : null;
+  const lyDo = lyDoKhongKhoiCongDuoc({
+    rawCost, refinedCost, bookResources, refinedT2: refined.t2,
+    dangTrongHangDoi: inQueue, conOTrong,
+  });
+  const canAfford = lyDo === null;
+  const reason = lyDo === LY_DO.DANG_XAY ? 'Đang xây...'
+    : lyDo === LY_DO.HANG_DOI_DAY ? 'Hàng đợi đã đầy'
+      : lyDo === LY_DO.THIEU ? 'Thiếu nguyên liệu' : null;
   const eraRefMeta = ERA_REFINED[meta.era] ?? {};
 
   return (
@@ -308,7 +319,7 @@ function ReadyCard({ bpId, bookResources, resourcesRefined, craftingQueue, onSta
                 : { background: 'var(--card-bg-solid2)', color: 'var(--muted-2)', border: 'var(--skin-card-border-width,1px) solid var(--line)', borderRadius: 'var(--skin-radius-control,14px)', cursor: 'not-allowed', fontFamily: MONO_FONT }
             : undefined}
         >
-          {inQueue ? 'Đang xây' : canAfford ? 'Bắt đầu xây' : 'Chưa đủ'}
+          {canAfford ? 'Bắt đầu xây' : NHAN_LY_DO[lyDo]}
         </motion.button>
       </div>
     </motion.div>
@@ -457,6 +468,18 @@ export default function BuildingWorkshop() {
     return normalizeRefinedBag(resourcesRefined[era]);
   };
 
+  const conOTrongThuong = countActiveCrafting(craftingQueue, activeBook) < CRAFT_QUEUE_SLOTS;
+  // ⚠️ "SẴN SÀNG XÂY" PHẢI LÀ SỐ BẢN VẼ KHỞI CÔNG ĐƯỢC NGAY, không phải số bản vẽ đã nghiên cứu —
+  // xem `engine/craftReadiness.js`. Đây là cùng lỗi vừa bắt được ở dải Kỹ năng.
+  const soKhoiCongDuoc = readyIds.filter((id) => khoiCongDuoc({
+    rawCost: normalizeRawCost((BUILDING_SPECS[id] ?? {}).cost ?? {}),
+    refinedCost: getUnifiedRefinedCost((BUILDING_SPECS[id] ?? {}).refinedCost),
+    bookResources: getBookResources(id),
+    refinedT2: getEraRefined(id).t2,
+    dangTrongHangDoi: craftingQueue.some((q) => q.bpId === id),
+    conOTrong: conOTrongThuong,
+  })).length;
+
   const builtEntries = currentEraBuildings.map((bpId) => {
     const eff = BUILDING_EFFECTS[bpId] ?? {};
     const level = buildingLevels[bpId] ?? 1;
@@ -534,7 +557,8 @@ export default function BuildingWorkshop() {
           dangXay: heroDangXay,
           daXay: builtEntries.length,
           tongBanVe: unlockedBpIds.length + readyIds.length,
-          sanSangXay: readyIds.length,
+          sanSangXay: soKhoiCongDuoc,
+          choNguyenLieu: readyIds.length - soKhoiCongDuoc,
         })}
         icon="🏗"
       />
@@ -680,6 +704,7 @@ export default function BuildingWorkshop() {
                 bookResources={getBookResources(id)}
                 resourcesRefined={getEraRefined(id)}
                 craftingQueue={craftingQueue}
+                conOTrong={conOTrongThuong}
                 onStart={handleStart}
                 lightTheme={lightTheme}
               />
@@ -729,6 +754,7 @@ export default function BuildingWorkshop() {
                   bookResources={getBookResources(bp.bpId)}
                   resourcesRefined={getEraRefined(bp.bpId)}
                   craftingQueue={craftingQueue}
+                  conOTrong={!legacyBusy}
                   onStart={handleStart}
                   lightTheme={lightTheme}
                   restoration

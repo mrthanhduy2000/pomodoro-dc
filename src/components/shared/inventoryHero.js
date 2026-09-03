@@ -69,7 +69,9 @@ export function heroKyNang({ spChuaTieu = 0, daMo = 0, tongKyNang = 0, moDuoc = 
  * Hero của tab CÔNG TRÌNH.
  * ⚠️ Ưu tiên thứ ĐANG XÂY hơn thứ đã xây: nó có tiến độ, tức có "còn bao xa".
  */
-export function heroCongTrinh({ dangXay = null, daXay = 0, tongBanVe = 0, sanSangXay = 0 } = {}) {
+export function heroCongTrinh({
+  dangXay = null, daXay = 0, tongBanVe = 0, sanSangXay = 0, choNguyenLieu = 0,
+} = {}) {
   if (dangXay && Number.isFinite(dangXay.con) && dangXay.con > 0) {
     return {
       nhan: 'Đang xây',
@@ -80,6 +82,10 @@ export function heroCongTrinh({ dangXay = null, daXay = 0, tongBanVe = 0, sanSan
       gap: true,
     };
   }
+  // ⚠️ `sanSangXay` PHẢI là số bản vẽ KHỞI CÔNG ĐƯỢC NGAY (đủ nguyên liệu + còn ô hàng đợi), không
+  // phải số bản vẽ đã nghiên cứu — xem `engine/craftReadiness.js`. Trước 2026-09-02 nó đếm cái sau,
+  // nên dải này bật màu nhấn và bảo "chọn một bản vẽ để bắt đầu dựng" trong khi mọi thẻ bên dưới
+  // đều ghi "Chưa đủ". Cùng lỗi với `heroKyNang` ở ngay trên: "CÓ" không bằng "LÀM ĐƯỢC".
   if (sanSangXay > 0) {
     return {
       nhan: 'Sẵn sàng xây',
@@ -88,6 +94,16 @@ export function heroCongTrinh({ dangXay = null, daXay = 0, tongBanVe = 0, sanSan
       caption: 'Chọn một bản vẽ để bắt đầu dựng.',
       pct: 1,
       gap: true,
+    };
+  }
+  if (choNguyenLieu > 0) {
+    return {
+      nhan: 'Chờ nguyên liệu',
+      so: choNguyenLieu,
+      donVi: choNguyenLieu > 1 ? 'bản vẽ đã mở' : 'bản vẽ đã mở',
+      caption: 'Đã nghiên cứu xong nhưng chưa đủ nguyên liệu để khởi công.',
+      pct: tiLe(daXay, tongBanVe),
+      gap: false,
     };
   }
   return {

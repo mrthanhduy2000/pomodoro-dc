@@ -82,3 +82,22 @@ test('tên hiển thị nằm ở `label` — KHÔNG phải `name`, và mã ph�
   const ws = readFileSync(new URL('../BuildingWorkshop.jsx', import.meta.url), 'utf8');
   assert.doesNotMatch(ws, /BUILDING_EFFECTS\[item\.bpId\]\?\.name/, 'hero Công trình lại hỏi `.name`');
 });
+
+test('CÔNG TRÌNH: "sẵn sàng xây" chỉ rực khi THẬT SỰ khởi công được', () => {
+  // Ca đã cắn thật: 4 bản vẽ đã nghiên cứu xong, KHÔNG cái nào đủ nguyên liệu. Bản cũ đếm số bản
+  // vẽ đã mở nên nó rực lên và bảo "chọn một bản vẽ để bắt đầu dựng" — một việc không làm được.
+  const cho = heroCongTrinh({ daXay: 4, tongBanVe: 9, sanSangXay: 0, choNguyenLieu: 4 });
+  assert.equal(cho.gap, false, 'không khởi công được ô nào mà vẫn rực = hứa sai');
+  assert.equal(cho.so, 4);
+  assert.match(cho.caption, /nguyên liệu/, 'phải nói ra vì sao chưa bấm được');
+  assert.doesNotMatch(cho.caption, /bắt đầu dựng/);
+
+  const san = heroCongTrinh({ daXay: 4, tongBanVe: 9, sanSangXay: 2, choNguyenLieu: 3 });
+  assert.equal(san.gap, true);
+  assert.equal(san.so, 2, 'dẫn bằng số KHỞI CÔNG ĐƯỢC, không phải số đã nghiên cứu');
+
+  // Hết sạch: không có gì chờ, không có gì xây được ⇒ về nhánh tổng kết, vẫn không rực.
+  const het = heroCongTrinh({ daXay: 9, tongBanVe: 9 });
+  assert.equal(het.gap, false);
+  assert.equal(het.so, 9);
+});

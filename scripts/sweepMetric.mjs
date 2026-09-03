@@ -39,9 +39,58 @@
  *  • CHỈ ĐỌC DẢI THÀNH PHỐ. Trời (do đồng hồ quyết) và dải đất xa nằm ngoài, như trước.
  */
 
-/** Ba dải theo chiều cao ô. Camera chúc xuống: trên là trời, giữa là thành phố, dưới là đất. */
+/**
+ * Ba dải theo chiều cao ô.
+ *
+ * ⚠️⚠️ DẢI TRÊN CÙNG TỪNG MANG TÊN "TRỜI" SUỐT NHIỀU PHASE, VÀ TRONG NÓ KHÔNG CÓ MỘT ĐIỂM ẢNH TRỜI
+ * NÀO — ĐỔI TÊN 2026-09-03. Đây là lỗi NHÃN (số đúng, tên sai), cùng họ với `frame-fit.mjs` báo
+ * nhầm mép trên/mép dưới; khác ở chỗ lần này cái nhãn sai đã ĐẺ RA MỘT CHẨN ĐOÁN SAI, và chẩn đoán
+ * ấy được chép lại HAI LẦN trong `CLAUDE.md` (sau Phase 19 và sau Phase 20) dưới dạng một chỉ thị
+ * cho phiên sau: *"cần gạt để nâng trục chặng nằm ở BẦU TRỜI lúc 6h so với 15h"*.
+ *
+ * SỰ THẬT ĐÃ ĐO (kỷ 8 · 6 giờ · `node scripts/city-preview.mjs --era 8 --hour 6 --mask
+ * horizon,ground,landscape` rồi đếm điểm ảnh theo kênh do chính bên DỰNG tô — không đoán bằng màu):
+ *     dải trên  : **rặng núi xa 72,3%** · mặt đất lưới 1,3% · cây cối 2,8% · còn lại 23,6%
+ *     dải giữa  : mặt đất lưới 30,5% · rặng núi 5,5% · cây cối 6,3% · còn lại (nhà/đường) 57,8%
+ *     dải dưới  : mặt đất lưới 33,2% · rặng núi 23,7% · cây cối 10,3% · còn lại 32,9%
+ * Và bầu trời chiếm **ĐÚNG 0,00% khung hình** — không phải suy đoán mà là một sự thật đã được
+ * chứng minh từ Phase 9A và ghi ngay trong `sceneGraph.js`: *"pitch camera 34,4° trừ nửa FOV dọc
+ * 19° ⇒ mép trên khung nằm 15,4° DƯỚI tầm mắt, nên không một điểm ảnh nào là trời (đã chứng minh
+ * bằng cách sơn vòm trời ĐỎ CHÓI rồi chụp — đỉnh khung vẫn nguyên màu đất)"*.
+ *
+ * ⚠️ CÁI GIÁ CỦA CÁI NHÃN SAI, ĐO ĐƯỢC: phiên 2026-09-03 đi đóng `TECH_DEBT #89` theo đúng chỉ thị
+ * ấy — đẩy hai hồ sơ bình minh/buổi chiều tách xa nhau ở vòm trời — và bản quét lại **TỆ ĐI**
+ * (12,23 → 11,82, tức cổng từ ĐẠT thành TRƯỢT). Cái nhãn "trời" khiến tôi vặn cần gạt bằng cảm
+ * giác về BẦU TRỜI thay vì bằng thứ dải này thật sự vẽ ra, và tôi đã vặn NGƯỢC CHIỀU: khoảng cách
+ * màu chân trời giữa hai chặng đi từ 24,2 xuống **19,3**, tức hai bầu trời GIỐNG NHAU HƠN.
+ *
+ * ⚠️⚠️ VÀ NGAY TẠI ĐÂY TÔI SUÝT GHI MỘT CÂU SAI THỨ HAI, TỆ HƠN CÁI NHÃN. Bản đầu của khối chú
+ * thích này kết luận: *"đường DUY NHẤT từ vòm trời tới dải đo là `palette.outskirts = mixRgb(màu
+ * đất, màu chân trời, 0,15)`, nên hướng sửa bầu trời là BẤT KHẢ THEO CẤU TẠO"*. Nghe rất chặt, và
+ * SAI — vì nó đếm thiếu một đường. Đo trước khi viết ra thì lộ đường thứ hai, mạnh gấp bội:
+ *     `sceneGraph.js:625` → `scene.fog = new FogExp2(palette.sky2.horizon, fogDensityFor(haze, …))`
+ * tức SƯƠNG MÙ mang **đúng màu chân trời** và phủ lên chính rặng núi mà dải này đo. Độ phủ tính
+ * bằng `1 − e^(−(d·x)²)` với `d = fogDensityFor(haze, 12)`, ở khoảng cách rặng núi 70 đơn vị:
+ *     bình minh (haze 0,90 → d 0,01717): **76,4%**
+ *     buổi chiều (haze 0,16 → d 0,00853): **30,0%**   ⇒ chênh **46,4 điểm phần trăm**
+ * Nghĩa là màu chân trời tới được dải này ở BA PHẦN TƯ sức lúc bình minh — gấp năm lần phép pha
+ * 0,15 của `outskirts`. Hướng "sửa bầu trời" là hướng ĐÚNG; thứ hỏng là chiều vặn.
+ *
+ * ⇒ Bài học kép, và vế thứ hai mới đáng nhớ: một cái nhãn sai đẻ ra một chẩn đoán sai; rồi khi đi
+ * sửa cái nhãn, phản xạ tự nhiên là viết một câu KẾT ÁN thật dứt khoát cho hướng vừa thất bại
+ * ("bất khả theo cấu tạo") — và câu ấy cũng phải được ĐO như mọi con số khác. **Trước khi tuyên bố
+ * một đường là DUY NHẤT, hãy `grep` xem còn ai khác đang đọc cùng giá trị ấy không** (ở đây:
+ * `grep -rn 'sky2' src/components/city/render3d/` ra ngay dòng sương mù). Cùng họ với bài học
+ * "một câu tự trấn an cũng phải được kiểm như một con số" (Phase 4G), khác ở chỗ câu này không
+ * trấn an mà KẾT ÁN — và một lời kết án sai thì đóng vĩnh viễn một hướng đi còn tốt.
+ *
+ * ⇒ Tên nay nói đúng thứ nó đo. **Ranh giới `from`/`to` KHÔNG đổi một chữ số** — đổi cách cắt dải
+ * để lấy lại một con số là điều `TECH_DEBT #55` cấm, và `band.name` chỉ là NHÃN, không nằm trong
+ * đường tính số của `sweep-score.mjs` (đã kiểm: `BANDS` chỉ được dùng ở `flatMap` dựng vector và ở
+ * cổng tự-kiểm `BANDS[0]`, không chỗ nào đọc `.name`). Bộ số sau khi đổi tên trùng từng chữ số.
+ */
 export const BANDS = [
-  { name: 'trời', from: 0.02, to: 0.30 },
+  { name: 'rặng núi xa', from: 0.02, to: 0.30 },
   { name: 'thành phố', from: 0.34, to: 0.68 },
   { name: 'đất', from: 0.72, to: 0.98 },
 ];

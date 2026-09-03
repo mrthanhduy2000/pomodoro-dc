@@ -1,5 +1,77 @@
-> Cập nhật lần cuối: **2026-09-02** — Phase 23: cư dân biết QUAY thay vì lật hình trong một khung;
-> và một cổng dựng ảnh đã giết MỌI ảnh mặt nạ trong im lặng suốt từ Phase 21.
+> Cập nhật lần cuối: **2026-09-03** — Phase 24: bình minh thôi giống buổi chiều; và một hướng cho
+> con số quét ĐẸP NHẤT từ trước tới nay đã bị bộ test bác bỏ vì nó làm tím mặt nước lúc 5 giờ.
+
+## 2026-09-03 — Phase 24: sương dày thì màu phải loãng · và một cái tên sai đã làm hai phiên đi tìm nhầm chỗ
+
+**Đàm nói.** *«Tiếp tục làm»* — gật cho đề xuất duy nhất của báo cáo Phase 23 §6: làm
+`TECH_DEBT #89` hướng (a), *nâng bầu trời lúc bình minh cho khác hẳn buổi chiều*.
+
+**1. Việc đầu tiên là đính chính một CÁI TÊN, và nó không phải chuyện chữ nghĩa.** Mục nợ gọi dải
+đo trên cùng là **"trời"** và đã nêu đích danh nó **hai lần** làm cần gạt. Nhưng dải ấy **không
+chứa một điểm ảnh bầu trời nào**: camera ngẩng 34,4° trừ nửa FOV dọc 19° ⇒ mép trên khung nằm
+**15,4° DƯỚI tầm mắt**; trời chiếm **0,00% khung hình**, một sự thật đã được chứng minh từ Phase 9A
+bằng cách sơn vòm trời đỏ chói rồi chụp (đỉnh khung vẫn nguyên màu đất) và ghi rõ trong
+`sceneGraph.js`. Đo bằng mặt nạ: dải ấy là **72,3% RẶNG NÚI XA** (2,8% cây, 1,3% mặt đất).
+⚠️ **Và tôi suýt ship một câu KẾT ÁN sai vì cái tên ấy.** Tôi đọc `palette3d.js`, thấy vòm trời
+không vào khung, và gần như viết ra rằng *"hướng (a) là BẤT KHẢ THEO CẤU TẠO"* — tức suýt đóng
+vĩnh viễn đúng cái hướng Đàm vừa duyệt. Đường đi thật là **SƯƠNG**, không phải vòm trời:
+`sceneGraph.js` dựng `FogExp2(palette.sky2.horizon, fogDensityFor(haze, …))` — màn sương mang ĐÚNG
+màu chân trời — và ở mốc `FAR_RIDGE` nó phủ **52,7% lúc bình minh so với 16,9% lúc chiều**. Câu trả
+lời nằm sẵn trong repo: chú thích ngay trên `fogDensityFor` viết *"sương là thứ cuối cùng tách được
+bình minh khỏi hoàng hôn"*, và `daylight.test.js` có hẳn một bài tên «SƯƠNG SỚM». Tôi đọc file bên
+cạnh rồi kết án, mà không đọc file mình đang vá.
+
+**2. Hướng làm TRƯỚC cho con số đẹp nhất từ Phase 19 tới nay — và nó là một khuyết tật thật.**
+Kéo bình minh sang hồng sen (`horizonHue` 34 → 330, `skySaturation` → 1,20): khoảng cách màu chân
+trời tới buổi chiều **19,3 → 63,8**, bản quét thật ra **21,26**. Tôi đã commit nó. Rồi `npm test`
+đỏ **2 bài** ở `palette3d.test.js`, cả hai ở **giờ 5**: mặt nước ra `#9585b2`, nền ra `#ea7b88` —
+**tím sen**, đúng thứ Phase 3W đã trả giá để dẹp; điểm tím **28** trên trần **10**. Bản quét lấy
+mẫu 6 giờ (6·8·12·15·18·22) nên nó **về mặt cấu tạo không thể** thấy một lỗi ở giờ 5.
+⇒ **BÀI HỌC LỚN NHẤT CỦA PHASE: một bản quét 6 khung giờ KHÔNG thay được bộ test.** Đúng hình dạng
+`TECH_DEBT #38` (*một ngưỡng hiệu chuẩn trên MỘT quần thể bị đọc thành luật của CẢ TẬP*), và nó nói
+thêm một điều: **khi cổng số của một phase và bộ test cãi nhau, bộ test thắng** — cổng số đo thứ
+phase đang tối ưu, còn bộ test canh mọi thứ phase có thể vô tình phá. Nới ngưỡng chống-tím **BỊ
+CẤM** (`TECH_DEBT #55`, và chú thích của chính hai cái gác ấy đã giải thích vì sao trần là 10).
+
+**3. Đã làm — HẠ ĐỘ TƯƠI, GIỮ NGUYÊN GÓC MÀU.** Một trường: `dawn.skySaturation: 1,00 → 0,45`.
+Nó đúng vật lý chứ không phải một con số mua được: bảng khai `haze: 0,90` cho bình minh — dày hơn
+gấp đôi mọi chặng khác — mà lại khai độ tươi ngang một buổi trời quang; hai lời khai ấy **tự mâu
+thuẫn**, và bản vá chỉ làm bảng khớp với chính nó. Và nó thắng hướng hồng ở **mọi** trục (TB 15 kỷ):
+
+| | bộ cũ | hồng | **nhạt — đã chọn** |
+|---|---|---|---|
+| xa buổi chiều | 19,3 | 63,8 | **46,2** |
+| xa hoàng hôn | 39,5 | **14,6** ⚠️ | **53,9** |
+| điểm tím (trần 10) | −4 | **28 ✗** | **−4 ✓** |
+
+Hướng hồng mua khoảng cách với buổi chiều bằng cách **kéo bình minh lại gần hoàng hôn** (33,5 →
+14,6, chỉ còn nhỉnh hơn ngưỡng mắt). Hướng nhạt đẩy bình minh xa **cả hai**.
+
+**4. Số trên bản quét thật** (mốc nền TỰ ĐO ở `636c695` trong `git worktree` — không chép cột "sau"
+của phase trước, `TECH_DEBT #43`): cặp chặng gần nhất **12,23 → 13,34** (0/15 ✓) · cặp kỷ gần nhất
+21,86 → 21,52 · trung vị 36,33 → 36,21 (0/105 ✓). **Biên trên ngưỡng mắt 12 đi từ 0,23 lên 1,34 —
+gấp 5,8 lần.**
+⚠️ **Nhưng theo đúng bài học của chính dự án, cổng qua KHÔNG chứng minh chẩn đoán đúng** (Phase 20
+qua nhờ một dải chẳng liên quan). Tách ba dải của cặp yếu nhất 6h↔15h: **rặng núi xa 4,14 → 6,12
+(×1,48)** · thành phố 6,71 → 7,75 (×1,16) · đất 19,65 → 20,88 (×1,06). **Lần này dải được nêu đích
+danh chính là dải nhúc nhích nhiều nhất** — khác hẳn Phase 20.
+
+**5. Nhìn bằng mắt (§1 — sản phẩm là ẢNH).** Hai ảnh cận cảnh kỷ 8, cùng một dòng lệnh, chỉ khác
+giờ: bình minh đọc ra là **một buổi sáng mù sương** — bờ xa tan vào sương, cửa sổ còn sáng đèn, bóng
+đổ gần như không có; buổi chiều thì bờ xa sắc nét, cửa sổ tắt, bóng đổ dài hẳn sang một bên. Hai
+bức KHÁC NHAU, và thứ mắt đọc ra rõ nhất lại là **đèn cửa sổ + bóng đổ**, không phải màu chân trời.
+
+**6. Chưa xong — nói thẳng, hai lý do đều đo được.** (a) dải rặng núi xa nay 6,12, **vẫn chỉ bằng
+một nửa ngưỡng mắt**: riêng dải ấy hai chặng vẫn đọc ra là một, con số tổng qua được là nhờ dải ĐẤT
+gánh. (b) cần gạt độ tươi **đã gần hết** — hạ tiếp 0,45 → 0,30 chỉ mua thêm ~17%, đổi lại là mất
+nốt hơi ấm buổi sáng. Tôi chọn 0,45 chứ **không tối đa hoá con số**, vì §1 nói mắt Đàm là trọng
+tài. Muốn nhạt hơn thì chỉ cần đổi một số, bảng đánh đổi nằm trong ADR-069.
+⇒ `TECH_DEBT #89` **vẫn MỞ**. Lối tiếp theo **không nằm ở màu nữa** mà ở bóng đổ / đèn cửa sổ / độ
+cao mặt trời — đúng thứ mắt vừa đọc ra ở mục 5.
+
+**Cổng.** `npm test` **1276 xanh / 0 đỏ / 1 bỏ qua** (+ 3/3 vế chéo) · `npm run lint` sạch.
+Ba bài test mới đều đã **thử-cho-đỏ**: phá về 1,00 ⇒ cả ba đỏ; phá về 0,85 ⇒ A và B đỏ (C lỏng
+nhất). ADR-069. **Push nhánh phụ, không tự gộp `main`** — đúng chỉ thị đang có hiệu lực.
 
 ## 2026-09-02 — Phase 23: người biết quay đầu · và một cổng đo giết mọi ảnh mặt nạ
 

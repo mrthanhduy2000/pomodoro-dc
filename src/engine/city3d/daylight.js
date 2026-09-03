@@ -175,7 +175,41 @@ export const DAYLIGHT_PROFILES = {
   // sạch (bụi đã lắng qua đêm) ⇒ đỉnh trời LAM SẠCH, hơi ngả lục lam; chiều tà bụi và hơi nước bốc
   // lên cả ngày ⇒ đỉnh trời ngả TÍM CHÀM (chính là dải bóng Trái Đất mà dân chụp ảnh gọi là "đai
   // sao Kim"). Cả hai vẫn nằm gọn trong vùng "đỉnh trời phải lạnh" mà bài test đang khoá.
-  dawn:      { sunAltitude: 0.28, sunWarmth:  0.62, sunEnergy: 0.50, fillEnergy: 1.02, skyHue: 202, skyPull: 0.58, horizonHue: 330, horizonPull: 0.62, skySaturation: 1.20, windowsLit: true,  lampEnergy: 0.16, haze: 0.90 },
+  // ⚠️ BÌNH MINH LÀ BUỔI NHIỀU SƯƠNG NHẤT NGÀY, NÊN NÓ PHẢI LÀ BUỔI NHẠT MÀU NHẤT — VÀ SUỐT TỪ
+  // ĐẦU DỰ ÁN NÓ ĐANG KHAI NGƯỢC LẠI. Chính bảng này ghi `haze: 0,90` cho bình minh, hơn GẤP ĐÔI
+  // mọi chặng khác (chiều 0,16 · hoàng hôn 0,08 · trưa 0,06), mà lại khai `skySaturation: 1,00`
+  // ngang ngửa một buổi trời quang. Hai lời khai ấy tự mâu thuẫn: tán xạ trên hạt sương là tán xạ
+  // Mie, và Mie thì gần như KHÔNG chọn bước sóng ⇒ nó pha TRẮNG vào mọi thứ nhìn xuyên qua. Sương
+  // càng dày thì chân trời càng phải LOÃNG, không phải càng rực. Nay bình minh khai 0,45.
+  // Số đo (kỷ 8, theme sáng): chân trời bình minh `#c0b6a5` tươi 0,141 — so với buổi chiều
+  // `#d9c68c` 0,355 và hoàng hôn `#d99c8c` 0,355. Khoảng cách RGB bình minh↔chiều đi từ 16,8 lên
+  // 38,8; bình minh↔hoàng hôn từ 33,5 lên 43,9. **Đẩy được xa CẢ HAI cùng lúc**, chứ không phải
+  // mua khoảng cách với buổi chiều bằng cách dịch lại gần hoàng hôn.
+  //
+  // ⚠️ ĐÃ THỬ HƯỚNG "BÌNH MINH HỒNG SEN" (`horizonHue` 34 → 330) VÀ ĐÃ BỎ, VÌ NÓ LÀ MỘT KHUYẾT
+  // TẬT THẬT. Hướng ấy cho con số quét ĐẸP NHẤT từ trước tới nay, nhưng `palette3d.test.js` bắt
+  // được: lúc 5 giờ nó kéo MẶT NƯỚC ra `#9585b2` và NỀN ra `#ea7b88` — tím sen, đúng thứ Phase 3W
+  // đã trả giá để dẹp; điểm tím 28 trên trần 10. Bản quét KHÔNG thấy vì nó chỉ lấy mẫu 6 giờ
+  // (6·8·12·15·18·22) nên **về mặt cấu tạo** nó không thể nhìn thấy một lỗi ở giờ 5.
+  // ⇒ Ba bài học: (a) một con số quét đẹp KHÔNG thay được bộ test — bộ test phủ 24 giờ, bản quét
+  // phủ 6; (b) `TECH_DEBT #55` cấm nới ngưỡng chống-tím để lấy lại con số, và chú thích của chính
+  // hai cái gác ấy đã giải thích vì sao trần là 10 chứ không phải 18; (c) đây đúng hình dạng
+  // `TECH_DEBT #38` — một phép đo hiệu chuẩn trên MỘT quần thể (6 giờ) bị đọc thành luật của CẢ
+  // TẬP (24 giờ).
+  //
+  // ⚠️ VÌ SAO ĐỔI ĐÚNG MỘT SỐ NÀY LẠI ĐI TỚI ĐƯỢC ĐIỂM ẢNH. `sceneGraph.js` dựng
+  // `new FogExp2(palette.sky2.horizon, fogDensityFor(haze, gridSize))` — tức MÀN SƯƠNG MANG ĐÚNG
+  // MÀU CHÂN TRỜI. Bình minh có `haze` 0,90 còn buổi chiều 0,16, nên ở rặng núi xa sương phủ
+  // 52,7% so với 16,9%: cùng một màu chân trời thì hai buổi vẫn khác nhau, mà đổi màu chân trời
+  // thì khác gấp bội. Đây là đường DUY NHẤT đáng kể, KHÔNG phải phép pha 0,15 của `outskirts`.
+  //
+  // ⚠️ VÀ ĐỪNG "SỬA" VIỆC HOÀNG HÔN RỰC HƠN BÌNH MINH THÀNH NGƯỢC LẠI — ĐÓ LÀ ĐÍCH, KHÔNG PHẢI
+  // LỖI. Sau cái kẹp `min(0,78, 0,60 × skySaturation)` thì bình minh ra 0,270 còn hoàng hôn 0,780.
+  // Đúng đời thật: hoàng hôn bụi nhiều nhưng khô, nên nó ĐỎ; bình minh sương nhiều và ướt, nên nó
+  // TRẮNG. Buổi chiều khai 1,30 đã CHẠM TRẦN 0,78 rồi (nâng lên 1,55 hay 2,00 đều ra đúng một
+  // màu), nên cần gạt duy nhất còn mở nằm ở BÌNH MINH — và nó cũng gần hết: hạ tiếp 0,45 → 0,30
+  // chỉ mua thêm ~17% khoảng cách, mà đổi lại là mất nốt hơi ấm cuối cùng của buổi sáng.
+  dawn:      { sunAltitude: 0.28, sunWarmth:  0.62, sunEnergy: 0.50, fillEnergy: 1.02, skyHue: 202, skyPull: 0.58, horizonHue:  34, horizonPull: 0.62, skySaturation: 0.45, windowsLit: true,  lampEnergy: 0.16, haze: 0.90 },
   morning:   { sunAltitude: 0.55, sunWarmth:  0.40, sunEnergy: 0.95, fillEnergy: 1.00, skyHue: 218, skyPull: 0.58, horizonHue: 210, horizonPull: 0.72, skySaturation: 1.32, windowsLit: false, lampEnergy: 0, haze: 0.34    },
   // ⚠️ Giữa trưa KHÔNG kéo cao độ nắng lên sát đỉnh đầu nữa (0,92 → 0,84). Nghe thì "trưa là mặt
   // trời trên đỉnh đầu", nhưng ở 0,92 bóng đổ ngắn gần bằng không và mọi khối mất hết mặt tối —

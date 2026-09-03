@@ -11,6 +11,108 @@
 
 ---
 
+## ADR-069 — **SƯƠNG DÀY THÌ MÀU PHẢI LOÃNG: bình minh tách khỏi buổi chiều bằng ĐỘ TƯƠI, không bằng GÓC MÀU**; và một bản quét 6 khung giờ không thay được bộ test
+
+**Ngày:** 2026-09-03 (Phase 24)
+
+**Bối cảnh.** `TECH_DEBT #89` mở từ Phase 19: cặp `bình minh 6h ↔ chiều 15h` của bản quét 15 kỷ tụt
+xuống **12,23** trên ngưỡng mắt 12 — biên **0,23**, tức hai chặng ấy gần như là cùng một bức ảnh.
+Mục nợ đã nêu đích danh cần gạt **hai lần**, và Phase 24 bắt đầu bằng việc sửa chính cái tên gọi
+sai của nó: dải đo trên cùng **không chứa một điểm ảnh bầu trời nào** (camera ngẩng 34,4° trừ nửa
+FOV dọc 19° ⇒ mép khung nằm 15,4° DƯỚI tầm mắt), nó là **72,3% rặng núi xa**. Màu chân trời tới
+được nó qua **SƯƠNG**: `sceneGraph.js` dựng `new FogExp2(palette.sky2.horizon, fogDensityFor(haze, gridSize))`,
+và tại mốc `FAR_RIDGE` sương phủ **52,7% lúc bình minh so với 16,9% lúc chiều**.
+
+**Vấn đề.** Bình minh và buổi chiều đều khai một chân trời **ấm, tươi** (`horizonHue` 34° và 44°,
+`skySaturation` 1,00 và 1,30). Hai màu ấm cạnh nhau trên vòng tròn màu thì không thể xa nhau, nên
+mọi cách chỉnh góc màu trong họ ấm đều chỉ đổi chỗ vấn đề.
+
+**Phương án đã cân nhắc.**
+
+- **(A) Kéo bình minh sang HỒNG** (`horizonHue: 330`, `skySaturation: 1.20`). Đây là phương án tôi
+  làm TRƯỚC, và nó **đã được đo là hiệu quả**: khoảng cách màu chân trời tới buổi chiều 19,3 → 63,8,
+  bản quét thật cho trục chặng **21,26**. **BỊ LOẠI** vì nó làm ĐỎ hai bài ở `palette3d.test.js`:
+  chân trời hồng cộng với màu nhấn tím của vài kỷ đẩy **mặt nước lúc 5 giờ** ra `#9585b2` — tím
+  sen, đúng thứ Phase 3W đã phải sửa. Điểm tím đo được **28** trên trần **10**.
+- **(B) Nới ngưỡng chống-tím.** **BỊ LOẠI thẳng.** Chú thích của chính hai bài ấy đã ghi vì sao
+  ngưỡng là 10 chứ không phải 18 (*"để 18 thì bài test vẫn XANH trên đúng cái ảnh hồng đã phải
+  sửa — tức là một cái lưới thủng ngay chỗ cần vá"*). Nới nó là cái phễu Phase 9A.
+- **(C) Hạ ĐỘ TƯƠI của bình minh, GIỮ NGUYÊN góc màu 34°** — phương án đã chọn.
+
+**Giải pháp chọn: (C).** Một trường đổi, `skySaturation: 1.00 → 0.45`.
+
+**Vì sao (C) thắng (A) ở MỌI trục — đo, không phải cảm tính:**
+
+| | bộ cũ | (A) hồng | **(C) nhạt** |
+|---|---|---|---|
+| xa buổi chiều (TB 15 kỷ) | 19,3 | 63,8 | **46,2** |
+| xa hoàng hôn (TB 15 kỷ) | 39,5 | **14,6** ⚠️ | **53,9** |
+| điểm tím (trần 10) | −4 | **28 ✗** | **−4 ✓** |
+
+Phương án (A) mua khoảng cách với buổi chiều bằng cách **kéo bình minh lại gần hoàng hôn** (33,5 →
+14,6, chỉ còn nhỉnh hơn ngưỡng mắt 12), tức nó chuyển món nợ sang một cặp khác và bắt gác
+`dawn.haze > dusk.haze * 3` phải gánh một việc nó không sinh ra để gánh. Phương án (C) đẩy bình
+minh ra xa **cả hai**.
+
+**Vì sao (C) đúng VẬT LÝ, không phải một con số mua được (ADR-025).** Bình minh khai `haze: 0.90` —
+dày gấp hơn hai lần mọi chặng khác. Sương dày nghĩa là tán xạ nhiều lần, mà mỗi lần tán xạ lại kéo
+màu về phía trắng. Một chân trời **vừa mù sương dày nhất bảng vừa tươi ngang buổi chiều** là hai
+lời khai của cùng một bảng nói ngược nhau — bộ số cũ mới là bộ không nhất quán, và (C) chỉ đang
+làm cho bảng tự khớp với chính nó.
+
+⚠️ **Nhưng phép đo đã BÁC một câu mạnh hơn.** Câu tôi định viết thành bất biến là *"sương càng dày
+thì chân trời càng nhạt"* (đơn điệu trên cả 5 chặng ban ngày). Đo ra thì **KHÔNG đơn điệu**: giữa
+trưa haze 0,06 mà tươi 0,379, còn hoàng hôn haze 0,08 lại tươi 0,413 — sai thứ tự. Nên bài test chỉ
+phát biểu phần ĐÚNG: *chặng nhiều sương nhất phải là chặng nhạt nhất*.
+
+**Trade-off.** Chân trời bình minh nay là một màu **xám ấm nhạt** (`#c0b6a5` ở kỷ 8) thay vì vàng
+hổ phách. Đó là một lựa chọn mỹ thuật thật, và **Đàm là người phán xử cuối** (§1: sản phẩm là ẢNH).
+Nếu anh thấy nó nhạt quá thì cần gạt là đúng một con số — mọi giá trị `skySaturation` từ 0,30 đến
+0,55 đều qua cổng chống-tím với nguyên biên, và bảng đánh đổi là: 0,55 → xa 40,7 · 0,45 → 46,2 ·
+0,30 → 54,2. Tôi chọn 0,45 để **không tối đa hoá con số** — giữ lại chút hơi ấm và vẫn còn biên.
+
+**Kết quả trên bản quét thật (cổng không-trôi).** Mốc nền TỰ ĐO trong `git worktree` ở `636c695`
+(không chép cột "sau" của phase trước — `TECH_DEBT #43`):
+
+| | mốc nền | sau |
+|---|---|---|
+| cặp chặng gần nhất | 12,23 (0/15) | **13,34** (0/15) ✓ |
+| cặp kỷ gần nhất | 21,86 | 21,52 |
+| trung vị cặp kỷ | 36,33 | 36,21 (0/105) ✓ |
+
+Biên trên ngưỡng mắt 12 đi từ **0,23 lên 1,34 — gấp 5,8 lần**.
+
+⚠️ **Nhưng theo đúng bài học của chính dự án này, một cái cổng qua KHÔNG chứng minh chẩn đoán
+đúng** (Phase 20 qua cổng nhờ một dải chẳng liên quan). Tách ba dải của đúng cặp yếu nhất 6h↔15h:
+
+| dải | mốc nền | sau | |
+|---|---|---|---|
+| **rặng núi xa** (dải được chẩn đoán) | 4,14 | **6,12** | **×1,48** ← tăng mạnh nhất |
+| thành phố | 6,71 | 7,75 | ×1,16 |
+| đất | 19,65 | 20,88 | ×1,06 |
+
+Lần này **dải được nêu đích danh chính là dải nhúc nhích nhiều nhất** — khác hẳn Phase 20. Nhưng
+phải nói thẳng phần chưa xong: **6,12 vẫn chỉ bằng một nửa ngưỡng mắt**, tức riêng dải ấy thì hai
+chặng vẫn đọc ra là một; con số tổng qua được là nhờ dải ĐẤT gánh. Và cần gạt đã gần hết (0,45 →
+0,30 chỉ mua thêm ~17%). Nếu Đàm còn thấy hai chặng giống nhau thì lối tiếp theo **không nằm ở
+màu nữa** mà ở thứ khác hẳn: bóng đổ dài/ngắn, đèn cửa sổ, độ cao mặt trời.
+
+**Ảnh hưởng.** `TECH_DEBT #89` **ĐÓNG**. Ba bài test mới ở `daylight.test.js`, mỗi bài kèm đối
+chứng nhốt bộ số cũ; cả ba đã thử-cho-đỏ.
+
+**Điều kiện xem lại.** Nếu có ai đổi `afternoon.skySaturation` hoặc `dusk.skySaturation`, ba bài
+test này sẽ nói ngay — chúng canh một **QUAN HỆ**, không canh một mức (bài học Phase 7D).
+
+⚠️ **BÀI HỌC LỚN NHẤT CỦA PHASE NÀY, VÀ NÓ KHÔNG NẰM Ở BẦU TRỜI: MỘT BẢN QUÉT 6 KHUNG GIỜ KHÔNG
+THAY ĐƯỢC BỘ TEST.** Phương án (A) có một bản quét thật đo được **21,26** — con số đẹp nhất từ
+Phase 19 tới nay — và tôi đã suýt ship nó kèm một báo cáo tự tin. Bản quét lấy mẫu **6 giờ**
+(6·8·12·15·18·22), còn lỗi tím sen nằm ở **5 giờ**. Nó **về mặt cấu tạo không thể** thấy. Đây đúng
+hình dạng `TECH_DEBT #38` (*một ngưỡng hiệu chuẩn trên MỘT quần thể rồi được đọc thành luật của CẢ
+TẬP*), và nó nói thêm một điều: **khi cổng số của phase và bộ test cãi nhau, bộ test thắng** — vì
+cổng số đo thứ phase này đang tối ưu, còn bộ test canh mọi thứ phase này có thể vô tình phá.
+
+---
+
 ## ADR-068 — **HƯỚNG MẶT LÀ MỘT ĐẠI LƯỢNG LIÊN TỤC, KHÔNG PHẢI THUỘC TÍNH CỦA ĐOẠN TUYẾN ĐANG ĐI**; và một cổng đo phải hỏi *"quần thể này có nằm trong mẫu hiệu chuẩn không?"*
 
 - **Ngày**: 2026-09-02

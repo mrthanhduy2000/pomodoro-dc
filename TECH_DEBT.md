@@ -5288,5 +5288,45 @@ trong chú thích thì đừng để `--selftest` của chính nó vẫn dùng �
 > "cổng đã qua (X ✓)" thì con số X ấy già đi y như mọi con số khác* — `TECH_DEBT #43` áp cho cả
 > bảng số trong `TECH_DEBT.md`, không chỉ cho `PERFORMANCE.md`.
 
-- **Owner**: chưa giao · **Status**: MỞ — cổng vẫn qua nhưng biên chỉ còn **0,23** (12,23 · đo
-  2026-09-02); nguyên nhân chưa chữa; chờ quyết định
+> ⚠️⚠️ **CẬP NHẬT 2026-09-03 (Phase 24) — ĐÃ LÀM HƯỚNG (a), CẦN GẠT THẬT SỰ ĐƯỢC KÉO LẦN ĐẦU.
+> MỤC NÀY CHUYỂN SANG "NHẸ ĐI ĐÁNG KỂ", VẪN CHƯA ĐÓNG.** Đàm chọn hướng (a). Một trường đổi ở
+> `daylight.js`: `dawn.skySaturation: 1,00 → 0,45` (ADR-069).
+>
+> ⚠️ **TRƯỚC HẾT PHẢI ĐÍNH CHÍNH MỘT CÁI TÊN SAI NẰM NGAY TRONG MỤC NÀY.** Dải đo mà mọi dòng ở
+> trên gọi là **"trời"** **không chứa một điểm ảnh bầu trời nào**: camera ngẩng 34,4° trừ nửa FOV
+> dọc 19° ⇒ mép trên khung nằm **15,4° DƯỚI tầm mắt**, trời chiếm **0,00% khung hình** (đã chứng
+> minh từ Phase 9A bằng cách sơn vòm trời đỏ chói rồi chụp). Đo bằng mặt nạ thì dải ấy là **72,3%
+> RẶNG NÚI XA**. Nay nó tên đúng trong `sweepMetric.mjs`; hai mốc `from`/`to` giữ nguyên **từng
+> chữ số** nên đây KHÔNG phải "đổi cách cắt dải để lấy lại con số" mà chính mục này cấm.
+> ⇒ Chẩn đoán *"cần gạt nằm ở màu chân trời"* thì ĐÚNG, nhưng đường đi của nó là **SƯƠNG**, không
+> phải vòm trời: `sceneGraph.js` dựng `FogExp2(palette.sky2.horizon, fogDensityFor(haze, …))`, và
+> ở mốc `FAR_RIDGE` sương phủ **52,7% lúc bình minh so với 16,9% lúc chiều**.
+>
+> **Số sau bản vá** (mốc nền TỰ ĐO ở `636c695` trong `git worktree` — không chép cột "sau" của
+> phase trước, `#43`): cặp chặng gần nhất **12,23 → 13,34** (0/15 ✓) · cặp kỷ gần nhất 21,86 →
+> 21,52 · trung vị 36,33 → 36,21 (0/105 ✓). **Biên trên ngưỡng mắt 12 đi từ 0,23 lên 1,34 — gấp
+> 5,8 lần**, tức lùi khỏi mép vực.
+>
+> ⚠️ **VÀ LẦN NÀY DẢI ĐƯỢC CHẨN ĐOÁN CHÍNH LÀ DẢI NHÚC NHÍCH NHIỀU NHẤT** — khác hẳn Phase 20, nơi
+> cổng qua nhờ một dải chẳng liên quan. Tách ba dải của cặp 6h↔15h (mốc nền → nay):
+> **rặng núi xa 4,14 → 6,12 (×1,48)** · thành phố 6,71 → 7,75 (×1,16) · đất 19,65 → 20,88 (×1,06).
+>
+> ⚠️ **VÌ SAO VẪN CHƯA ĐÓNG — hai lý do, cả hai đều đo được**: **(1)** dải rặng núi xa nay 6,12,
+> vẫn chỉ bằng **một nửa** ngưỡng mắt, tức riêng dải ấy hai chặng vẫn đọc ra là một; con số tổng
+> qua được là nhờ dải ĐẤT gánh. **(2)** cần gạt độ tươi **đã gần hết**: hạ tiếp 0,45 → 0,30 chỉ
+> mua thêm **~17%** khoảng cách, mà đổi lại là mất nốt hơi ấm cuối cùng của buổi sáng.
+> ⇒ **Lối tiếp theo KHÔNG nằm ở màu nữa.** Ba ứng viên, chưa đo cái nào: bóng đổ dài/ngắn theo độ
+> cao mặt trời · đèn cửa sổ (bình minh bật, buổi chiều tắt — đã có sẵn, chưa ai đo nó đóng góp bao
+> nhiêu) · chính `sunAltitude`. Ba mốc 20,7/17/14 và luật CẤM nới ngưỡng vẫn nguyên hiệu lực.
+>
+> ⚠️ **BÀI HỌC LỚN NHẤT CỦA PHASE, VÀ NÓ KHÔNG NẰM Ở BẦU TRỜI: MỘT BẢN QUÉT 6 KHUNG GIỜ KHÔNG THAY
+> ĐƯỢC BỘ TEST.** Hướng làm TRƯỚC (`horizonHue` 34 → 330, bình minh hồng sen) cho con số quét
+> **21,26 — đẹp nhất từ Phase 19 tới nay** — và tôi đã suýt ship nó. `palette3d.test.js` bắt được:
+> lúc **5 giờ** nó kéo mặt nước ra `#9585b2` và nền ra `#ea7b88`, điểm tím **28** trên trần **10**,
+> đúng thứ Phase 3W đã trả giá để dẹp. Bản quét lấy mẫu 6 giờ (6·8·12·15·18·22) nên nó **về mặt
+> cấu tạo không thể** thấy một lỗi ở giờ 5 — đúng hình dạng `#38`. ⇒ **Khi cổng số của một phase
+> và bộ test cãi nhau, bộ test thắng.**
+
+- **Owner**: chưa giao · **Status**: MỞ nhưng **NHẸ ĐI ĐÁNG KỂ** — biên **1,34** (13,34 · đo
+  2026-09-03, ADR-069); dải được chẩn đoán đã tăng ×1,48 nhưng vẫn dưới ngưỡng mắt khi xét riêng;
+  cần gạt màu gần hết, lối tiếp theo phải sang bóng đổ / đèn cửa sổ / độ cao mặt trời

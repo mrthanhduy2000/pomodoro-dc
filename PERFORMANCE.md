@@ -2307,6 +2307,67 @@ xuống, mà `massHeight` thì không phụ thuộc hình chiếu đáy) — bù
 
 ---
 
+## Phase 24 — BÌNH MINH THÔI GIỐNG BUỔI CHIỀU (2026-09-03, ADR-069)
+
+- **Công cụ**: `scripts/city-preview.mjs --sweep` → `scripts/sweep-score.mjs`
+- **Dòng lệnh** (hai vế **y hệt nhau**, chỉ khác KHO):
+
+```bash
+node scripts/city-preview.mjs --sweep --all --theme light
+node scripts/sweep-score.mjs .city-preview/sweep-light-ky1-15.png
+```
+
+- **ĐỜI ẢNH**: vế "trước" dựng trong `git worktree /home/user/pd-base` tách rời ở **`636c695`**
+  (TỰ ĐO, **không chép** cột "sau" của Phase 23 — `TECH_DEBT #43`); vế "sau" dựng trong cây làm
+  việc sau khi vá `daylight.js`. Ảnh của vế nào nằm trong `.city-preview/` của kho ấy.
+- **Thay đổi được đo**: đúng một trường — `dawn.skySaturation: 1,00 → 0,45`.
+
+| cây mã | cặp chặng gần nhất | cặp kỷ gần nhất | trung vị kỷ |
+|---|---|---|---|
+| mốc nền `636c695` (tự đo) | 12,23 ✓ (0/15) | 21,86 ✓ | 36,33 (0/105) |
+| **Phase 24** | **13,34** ✓ (0/15) | 21,52 ✓ | 36,21 (0/105) |
+
+**Biên trên ngưỡng mắt 12: 0,23 → 1,34 — gấp 5,8 lần.** Trục kỷ gần như đứng yên, đúng như phải
+thế: bản vá áp CÙNG một luật cho cả 15 kỷ nên nó không thể làm hai kỷ khác nhau thêm.
+
+### Tách ba dải của cặp yếu nhất (`bình minh 6h ↔ chiều 15h`)
+
+⚠️ Làm phép tách này vì bài học Phase 20: **một cái cổng qua KHÔNG chứng minh chẩn đoán đúng** —
+ở đó cổng qua nhờ một dải chẳng liên quan tới nguyên nhân đã nêu.
+
+| dải | mốc nền | Phase 24 | tỉ số |
+|---|---|---|---|
+| **rặng núi xa** ← dải được chẩn đoán | 4,14 | **6,12** | **×1,48** |
+| thành phố | 6,71 | 7,75 | ×1,16 |
+| đất | 19,65 | 20,88 | ×1,06 |
+| TỔNG (khớp gác tự-kiểm của công cụ tách) | 12,23 | 13,34 | ✓ |
+
+**Lần này dải được nêu đích danh chính là dải nhúc nhích nhiều nhất.** ⚠️ Nhưng phần chưa xong phải
+ghi ra: **6,12 vẫn chỉ bằng một nửa ngưỡng mắt**, tức riêng dải ấy hai chặng vẫn đọc ra là một —
+con số tổng qua được là nhờ dải ĐẤT gánh. `TECH_DEBT #89` vì vậy **vẫn MỞ**.
+
+### Bảng đánh đổi của cần gạt (để Đàm chỉnh, nếu muốn)
+
+Mọi giá trị dưới đây đều qua cổng chống-tím với nguyên biên. Khoảng cách màu chân trời bình
+minh↔chiều, trung bình 15 kỷ:
+
+| `dawn.skySaturation` | 0,55 | **0,45 (đã chọn)** | 0,30 |
+|---|---|---|---|
+| xa buổi chiều | 40,7 | **46,2** | 54,2 |
+
+Chọn 0,45 để **không tối đa hoá con số** — giữ lại chút hơi ấm buổi sáng, vì §1 nói mắt Đàm là
+trọng tài. Từ 0,45 xuống 0,30 chỉ mua thêm **~17%**, tức cần gạt này đã gần hết.
+
+### ⚠️ Một hướng có con số ĐẸP HƠN đã bị BÁC BỎ — ghi lại để đừng ai thử lại
+
+Kéo bình minh sang hồng sen (`horizonHue` 34 → 330, `skySaturation` → 1,20) cho **trục chặng
+21,26** — con số đẹp nhất từ Phase 19 tới nay. Nó **BỊ LOẠI**: `palette3d.test.js` đỏ 2 bài ở
+**giờ 5** (mặt nước `#9585b2`, nền `#ea7b88`, điểm tím **28** trên trần **10**). Bản quét lấy mẫu
+**6 giờ** (6·8·12·15·18·22) nên nó **về mặt cấu tạo không thể** thấy lỗi ở giờ 5.
+⇒ **Một bản quét 6 khung giờ không thay được bộ test.** Đúng hình dạng `TECH_DEBT #38`.
+
+---
+
 ## Phase 22 — SÂN/VƯỜN THUỘC SUẤT ĐẤT: NHÀ THÔI SÁT NHAU (2026-08-28, ADR-067)
 
 - **Công cụ**: `scripts/city-preview.mjs --sweep` → `scripts/sweep-score.mjs`

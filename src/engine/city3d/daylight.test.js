@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
+import { buildScenePalette } from './palette3d.js';
+import { ERA_METADATA } from '../constants.js';
 import {
   DAYLIGHT_PROFILES,
   DAY_PHASES,
@@ -401,3 +403,136 @@ test('sunDirectionAt: kẹp cao độ để mặt trời không bao giờ chui x
     assert.ok(dir.y >= 0.12, `cao độ ${bad} cho ra mặt trời dưới mặt đất (y = ${dir.y})`);
   }
 });
+
+// ── Phase 24 · TECH_DEBT #89 ───────────────────────────────────────────────────────────────────
+// Ba bài dưới đây đo trên MÀU ĐÃ DỰNG, không trên con số đã KHAI trong bảng. Lý do là `TECH_DEBT
+// #42`: giữa bảng và điểm ảnh còn ba phép biến đổi (`skyward` xoay sắc → khôi phục độ tươi/độ
+// sáng → cái gác chống-tím `mag < 0.5`), nên assert vào `DAYLIGHT_PROFILES.dawn.horizonHue` là
+// canh một thế giới khác với thế giới Đàm nhìn thấy.
+const skyTokens = { canvas2: '#f4f2ec', ink: '#1f1e1d', line: '#e8e6de', accent: '#c96442' };
+const darkTokens = { ...skyTokens, canvas2: '#14110d', ink: '#f5f3ed' };
+const chanTroi = (profile, era = 8, tokens = skyTokens) => buildScenePalette({
+  tokens, eraColor: ERA_METADATA[era].accentColor, era, daylight: { phase: 'dawn', ...profile },
+}).sky2.horizon;
+const kenh = (n) => [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+const cachNhau = (a, b) => { const A = kenh(a), B = kenh(b); return Math.hypot(A[0] - B[0], A[1] - B[1], A[2] - B[2]); };
+/** Độ tươi HSV. Đây là đại lượng Phase 24 dùng để tách bình minh khỏi buổi chiều. */
+const doTuoi = (n) => { const c = kenh(n); const M = Math.max(...c); return M === 0 ? 0 : (M - Math.min(...c)) / M; };
+/** Trung bình 15 kỷ — CÙNG cách bản quét gộp, để con số ở đây so được với con số ở `PERFORMANCE.md`. */
+const trungBinh15Ky = (f) => { let s = 0; for (let e = 1; e <= 15; e += 1) s += f(e); return s / 15; };
+
+/** Bộ số TRƯỚC Phase 24. Dùng làm đối chứng cho cả ba bài — không bài nào được xanh với nó. */
+const CU = { ...DAYLIGHT_PROFILES.dawn, skySaturation: 1.00 };
+
+test('BÌNH MINH KHÔNG ĐƯỢC LÀ BUỔI CHIỀU — đo trên màu chân trời ĐÃ DỰNG mà sương thật sự mang', () => {
+  // ⚠️ VÌ SAO MÀU CHÂN TRỜI LẠI QUYẾT ĐỊNH MỘT DẢI ĐO KHÔNG HỀ CÓ TRỜI TRONG ĐÓ.
+  // Dải trên cùng của bản quét 15 kỷ KHÔNG chứa một điểm ảnh bầu trời nào: camera ngẩng 34,4° trừ
+  // nửa FOV dọc 19° ⇒ mép trên khung nằm 15,4° DƯỚI tầm mắt (Phase 9A đã chứng minh bằng cách sơn
+  // vòm trời đỏ chói rồi chụp — đỉnh khung vẫn nguyên màu đất). Đo bằng mặt nạ thì dải ấy là
+  // 72,3% RẶNG NÚI XA. Màu chân trời tới được nó qua SƯƠNG, vì `sceneGraph.js` dựng
+  // `new FogExp2(palette.sky2.horizon, fogDensityFor(haze, gridSize))`.
+  // ⚠️ Suốt hai phiên, `CLAUDE.md` gọi dải ấy là "bầu trời" và một phiên đã suy từ MỘT MÌNH phép
+  // pha `outskirts` (hệ số 0,15, quá yếu) rồi kết luận hướng này là BẤT KHẢ THEO CẤU TẠO. Sai —
+  // và một lời KẾT ÁN sai thì đóng vĩnh viễn một hướng đi còn tốt.
+  const xa = trungBinh15Ky((e) => cachNhau(chanTroi(DAYLIGHT_PROFILES.dawn, e), chanTroi(DAYLIGHT_PROFILES.afternoon, e)));
+  const cu = trungBinh15Ky((e) => cachNhau(chanTroi(CU, e), chanTroi(DAYLIGHT_PROFILES.afternoon, e)));
+
+  // Ngưỡng 32 nằm GIỮA HAI ĐẦU ĐO ĐƯỢC (bộ cũ 19,3 · bộ hiện tại 46,2), không phải một con số
+  // nhặt đại — đúng luật chống-phễu của Phase 9A.
+  assert.ok(xa > 32,
+    `màu chân trời bình minh chỉ cách buổi chiều ${xa.toFixed(1)} (cần > 32). Sương mang đúng màu `
+    + 'này, nên hai buổi sẽ lại thành cùng một bức ảnh ở dải rặng núi xa.');
+
+  // ⚠️ ĐỐI CHỨNG BẮT BUỘC: bộ số CŨ phải TRƯỢT. Không có vế này thì không ai biết ngưỡng 32 còn
+  // răng hay đã bị nới cho tiện.
+  assert.ok(cu < 32,
+    `bộ số trước Phase 24 đo được ${cu.toFixed(1)} — LỌT qua ngưỡng 32. Phép đo đã bị nới tay tới `
+    + 'mức không còn bắt nổi chính cái lỗi nó sinh ra để bắt (bản quét thật: dải rặng núi xa chỉ '
+    + 'cách nhau 4,14/255, tức thấp hơn ngưỡng mắt 12 tới ba lần).');
+});
+
+test('CHẶNG NHIỀU SƯƠNG NHẤT PHẢI LÀ CHẶNG NHẠT NHẤT — sương dày thì màu phải loãng', () => {
+  // ⚠️ ĐÂY LÀ LÝ DO VẬT LÝ CỦA CẢ PHASE 24, VIẾT THÀNH MỘT BẤT BIẾN.
+  // Bình minh khai `haze: 0.90` — dày gấp hơn hai lần mọi chặng khác. Sương dày thì tán xạ nhiều
+  // lần, và mỗi lần tán xạ lại kéo màu về phía trắng ⇒ chân trời bình minh PHẢI nhạt. Bộ số trước
+  // Phase 24 khai sương dày nhất bảng mà lại cho chân trời TƯƠI NGANG buổi chiều — hai lời khai
+  // của cùng một bảng nói ngược nhau, và không cổng nào bắt.
+  //
+  // ⚠️ ĐO RỒI MỚI PHÁT BIỂU, VÀ PHÉP ĐO ĐÃ BÁC MỘT CÂU MẠNH HƠN. Câu tôi định viết ban đầu là
+  // "sương càng dày thì chân trời càng nhạt" (đơn điệu trên cả 5 chặng ban ngày). Đo ra thì KHÔNG
+  // đơn điệu: giữa trưa haze 0,06 mà tươi 0,379, còn hoàng hôn haze 0,08 lại tươi 0,413 — sai thứ
+  // tự. Nên bài này chỉ phát biểu phần ĐÚNG: chặng nhiều sương nhất phải là chặng nhạt nhất.
+  // (Bỏ ĐÊM ra ngoài: đêm tối tới mức mắt gần như mất khả năng phân biệt sắc — hiệu ứng Purkinje
+  //  đã ghi ở `palette3d.js` — nên độ tươi của nó không nói lên điều gì về thứ Đàm nhìn thấy.)
+  const banNgay = Object.entries(DAYLIGHT_PROFILES).filter(([ten]) => ten !== 'night');
+  const tuoiCua = (phase, prof) => trungBinh15Ky((e) => doTuoi(buildScenePalette({
+    tokens: skyTokens, eraColor: ERA_METADATA[e].accentColor, era: e, daylight: { phase, ...prof },
+  }).sky2.horizon));
+
+  const nhieuSuongNhat = banNgay.reduce((a, b) => (b[1].haze > a[1].haze ? b : a));
+  assert.equal(nhieuSuongNhat[0], 'dawn', 'bình minh phải là chặng nhiều sương nhất — xem bài "SƯƠNG SỚM"');
+
+  const tuoiBinhMinh = tuoiCua('dawn', DAYLIGHT_PROFILES.dawn);
+  for (const [ten, prof] of banNgay) {
+    if (ten === 'dawn') continue;
+    const t = tuoiCua(ten, prof);
+    // Biên 0,10: đo được hẹp nhất là 0,213 (so với giữa trưa), còn bộ CŨ ra ÂM. Ngưỡng nằm giữa.
+    assert.ok(t - tuoiBinhMinh > 0.10,
+      `chân trời bình minh tươi ${tuoiBinhMinh.toFixed(3)}, chặng "${ten}" tươi ${t.toFixed(3)} — `
+      + 'bình minh khai sương dày nhất bảng mà màu lại không loãng ra. Bảng đang tự nói ngược mình.');
+  }
+
+  // ⚠️ ĐỐI CHỨNG: bộ số CŨ phải TRƯỢT ở ít nhất một chặng.
+  const tuoiCu = tuoiCua('dawn', CU);
+  const soChangCuTruot = banNgay.filter(([ten, prof]) => ten !== 'dawn' && tuoiCua(ten, prof) - tuoiCu <= 0.10).length;
+  assert.ok(soChangCuTruot > 0,
+    `bộ số trước Phase 24 (tươi ${tuoiCu.toFixed(3)}) vẫn LỌT qua mọi chặng — bài test đã mất răng`);
+});
+
+test('BÌNH MINH NHẠT HƠN BUỔI CHIỀU Ở TỪNG KỶ MỘT — không phải chỉ nhạt hơn trên trung bình', () => {
+  // ⚠️ VÌ SAO CẦN BÀI NÀY KHI BÀI TRÊN ĐÃ ĐO CÙNG MỘT ĐẠI LƯỢNG: bài trên gộp 15 kỷ thành MỘT số
+  // trung bình rồi mới so. Một trung bình đẹp vẫn có thể che một kỷ đi ngược chiều — đúng cái bẫy
+  // `TECH_DEBT #22` đã dạy ("gộp trước thì hai kỷ ngược chiều nhau sẽ TRIỆT TIÊU nhau"). Bài này
+  // hỏi TỪNG kỷ × TỪNG theme và lấy ca xấu nhất.
+  //
+  // ⚠️ VÀ NÓ LÀ MỘT QUAN HỆ, KHÔNG PHẢI MỘT MỨC (bài học Phase 7D). Không assert "bình minh phải
+  // tươi dưới 0,2" — con số ấy sẽ chết trong im lặng ngày nào có ai chỉnh buổi chiều vì một lý do
+  // khác hẳn, y như `roadColor` đã chết khi mặt đất bị chỉnh ở một phase khác.
+  let hep = { m: Infinity, at: '' };
+  for (const [ten, tokens] of [['sáng', skyTokens], ['tối', darkTokens]]) {
+    for (let era = 1; era <= 15; era += 1) {
+      for (const doi of ['afternoon', 'dusk']) {
+        const m = doTuoi(chanTroi(DAYLIGHT_PROFILES[doi], era, tokens)) - doTuoi(chanTroi(DAYLIGHT_PROFILES.dawn, era, tokens));
+        if (m < hep.m) hep = { m, at: `kỷ ${era} theme ${ten} so với ${doi}` };
+      }
+    }
+  }
+  // Biên đo được hẹp nhất: 0,214 (kỷ 5 theme sáng). Bộ CŨ: −0,071 — tức QUAN HỆ ĐẢO NGƯỢC, bình
+  // minh còn tươi HƠN buổi chiều. Ngưỡng 0,10 nằm giữa hai đầu đo được.
+  assert.ok(hep.m > 0.10,
+    `bình minh không nhạt hơn được bao nhiêu ở ${hep.at}: chênh ${hep.m.toFixed(3)} (cần > 0,10)`);
+
+  // ⚠️ ĐỐI CHỨNG: bộ CŨ phải bị bắt.
+  let hepCu = Infinity;
+  for (const tokens of [skyTokens, darkTokens]) {
+    for (let era = 1; era <= 15; era += 1) {
+      hepCu = Math.min(hepCu, doTuoi(chanTroi(DAYLIGHT_PROFILES.afternoon, era, tokens)) - doTuoi(chanTroi(CU, era, tokens)));
+    }
+  }
+  assert.ok(hepCu <= 0.10,
+    `bộ số trước Phase 24 đo được biên ${hepCu.toFixed(3)} — vẫn lọt, tức bài test này không có răng`);
+});
+
+// ⚠️ MỘT HƯỚNG ĐÃ THỬ VÀ ĐÃ BỊ CHÍNH TEST BÁC — GHI LẠI ĐỂ PHIÊN SAU KHỎI ĐI LẠI.
+// Bản vá ĐẦU TIÊN của Phase 24 kéo bình minh sang màu HỒNG (`horizonHue: 330`, `skySaturation: 1.20`).
+// Nó cho khoảng cách tới buổi chiều còn xa hơn (63,8 so với 46,2) và bản quét thật đo được trục
+// chặng 21,26. Nhưng nó làm ĐỎ hai bài ở `palette3d.test.js`: chân trời hồng cộng với màu nhấn
+// tím của vài kỷ đẩy MẶT NƯỚC lúc 5 giờ ra `#9585b2` — tím sen, thứ dự án đã trả giá ở Phase 3W.
+// Ba điều rút ra:
+//   • Bản quét 15 kỷ chỉ lấy mẫu 6 giờ (6·8·12·15·18·22) nên nó KHÔNG THỂ thấy lỗi ở 5 giờ. Một
+//     con số quét đẹp không thay được bộ test — đúng họ `TECH_DEBT #38` (ngưỡng hiệu chuẩn trên
+//     MỘT quần thể rồi được đọc thành luật của CẢ TẬP).
+//   • Cách vá SAI là nới ngưỡng chống-tím; chú thích của chính hai bài ấy đã ghi vì sao 10 chứ
+//     không phải 18 (để 18 thì lưới thủng đúng chỗ cần vá).
+//   • Hướng NHẠT thắng hướng HỒNG ở mọi trục: qua cổng chống-tím với nguyên biên (−4), và giữ
+//     bình minh XA hoàng hôn hơn (43,9 so với 33,5) thay vì kéo lại gần còn 14,6.

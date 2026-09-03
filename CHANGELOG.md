@@ -12,6 +12,29 @@
 
 ---
 
+## 2026-09-03 — Phase 24: sương dày thì màu phải loãng (bình minh thôi giống buổi chiều)
+
+**Mục đích.** Đóng cần gạt của `TECH_DEBT #89`: cặp `bình minh 6h ↔ chiều 15h` của bản quét 15 kỷ
+đứng ở **12,23** trên ngưỡng mắt 12 — biên **0,23**, tức hai chặng gần như cùng một bức ảnh.
+
+**Phạm vi.** Một trường trong `src/engine/city3d/daylight.js` (`dawn.skySaturation: 1,00 → 0,45`);
+ba bài test mới ở `daylight.test.js`, mỗi bài kèm đối chứng nhốt bộ số cũ; đổi tên một dải đo trong
+`scripts/sweepMetric.mjs` (`trời` → `rặng núi xa`, hai mốc `from`/`to` giữ nguyên từng chữ số).
+
+**Vì sao thế.** Bảng tự mâu thuẫn với chính nó: bình minh khai `haze: 0,90` — dày hơn gấp đôi mọi
+chặng khác — mà lại khai độ tươi chân trời ngang một buổi trời quang. Tán xạ trên hạt sương pha
+TRẮNG vào mọi thứ nhìn xuyên qua, nên sương càng dày thì chân trời càng phải loãng.
+
+**Ảnh hưởng.** Cặp chặng gần nhất **12,23 → 13,34** (0/15 ✓), biên trên ngưỡng mắt gấp **5,8 lần**.
+Trục kỷ đứng yên (21,86 → 21,52 · trung vị 36,33 → 36,21 · 0/105 ✓). Tách ba dải của cặp yếu nhất:
+**rặng núi xa 4,14 → 6,12 (×1,48 — dải được chẩn đoán, tăng mạnh nhất)** · thành phố ×1,16 · đất
+×1,06. `TECH_DEBT #89` **vẫn MỞ** nhưng nhẹ đi đáng kể: dải ấy vẫn dưới ngưỡng mắt khi xét riêng.
+
+**Tương thích.** Không đổi dữ liệu, không đổi API, không thêm lệnh vẽ / tam giác / nguồn sáng.
+Chi tiết: `ARCHITECTURE_DECISIONS.md` ADR-069.
+
+---
+
 ## 2026-09-02 — Phase 23: cư dân biết QUAY · vá một cổng đo đã giết mọi ảnh mặt nạ
 
 **Mục đích.** Đàm: *«Tiếp tục tối ưu hoạt ảnh 3D và trau chuốt lại hình ảnh trong Thành Phố»*.

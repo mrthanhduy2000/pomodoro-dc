@@ -175,7 +175,7 @@ export const DAYLIGHT_PROFILES = {
   // sạch (bụi đã lắng qua đêm) ⇒ đỉnh trời LAM SẠCH, hơi ngả lục lam; chiều tà bụi và hơi nước bốc
   // lên cả ngày ⇒ đỉnh trời ngả TÍM CHÀM (chính là dải bóng Trái Đất mà dân chụp ảnh gọi là "đai
   // sao Kim"). Cả hai vẫn nằm gọn trong vùng "đỉnh trời phải lạnh" mà bài test đang khoá.
-  dawn:      { sunAltitude: 0.28, sunWarmth:  0.62, sunEnergy: 0.50, fillEnergy: 1.02, skyHue: 202, skyPull: 0.58, horizonHue:  34, horizonPull: 0.62, skySaturation: 1.00, windowsLit: true,  lampEnergy: 0.16, haze: 0.90 },
+  dawn:      { sunAltitude: 0.28, sunWarmth:  0.62, sunEnergy: 0.50, fillEnergy: 1.02, skyHue: 202, skyPull: 0.58, horizonHue: 330, horizonPull: 0.62, skySaturation: 1.20, windowsLit: true,  lampEnergy: 0.16, haze: 0.90 },
   morning:   { sunAltitude: 0.55, sunWarmth:  0.40, sunEnergy: 0.95, fillEnergy: 1.00, skyHue: 218, skyPull: 0.58, horizonHue: 210, horizonPull: 0.72, skySaturation: 1.32, windowsLit: false, lampEnergy: 0, haze: 0.34    },
   // ⚠️ Giữa trưa KHÔNG kéo cao độ nắng lên sát đỉnh đầu nữa (0,92 → 0,84). Nghe thì "trưa là mặt
   // trời trên đỉnh đầu", nhưng ở 0,92 bóng đổ ngắn gần bằng không và mọi khối mất hết mặt tối —

@@ -6,6 +6,7 @@ import React, {
 } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import BadgeGrid from './shared/BadgeGrid.jsx';
+import { splitLockedBadges } from './shared/badgeGroups.js';
 import InventoryHero from './shared/InventoryHero.jsx';
 import { heroHuyHieu } from './shared/inventoryHero.js';
 
@@ -382,6 +383,7 @@ export default function Achievements() {
   );
 
   const [filterOpen, setFilterOpen] = useState(false);
+  const [showUntouched, setShowUntouched] = useState(false);
   const [selectedEntry, setSelectedEntry] = useState(null);
   const [selectedTier, setSelectedTier] = useState('all');
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -507,6 +509,20 @@ export default function Achievements() {
   const filteredLockedEntries = useMemo(() => (
     filteredEntries.filter((entry) => !entry.isUnlocked).sort(sortLockedEntries)
   ), [filteredEntries]);
+
+  /*
+    ⚠️ TÁCH "ĐANG TIẾN TỚI" KHỎI "CHƯA CHẠM TỚI" (2026-09-02). Đo trên fixture đã chơi 6 tháng:
+    tab Huy hiệu dài **4.915px ở khung 390px**, và phần lớn chiều dài ấy là những ô có tiến độ
+    ĐÚNG BẰNG 0 — chúng giống hệt nhau, nên một trăm ô như thế không nói được nhiều hơn một ô.
+    ⚠️ KHÔNG GIẤU, CHỈ GẤP LẠI: nút mở nằm ngay đó và ghi rõ còn bao nhiêu ô. Luật cũ của file này
+    (*"ô chưa đạt không bị giấu — một bộ sưu tập chỉ có nghĩa khi thấy được phần còn thiếu"*) vẫn
+    đứng, nhưng nó nói về việc THẤY ĐƯỢC phần còn thiếu, không đòi phải cuộn qua hết phần ấy mỗi
+    lần mở màn hình. Con số "còn N ô" cho thấy phần thiếu ngay cả khi đang gấp.
+  */
+  const { dangTien: lockedInProgress, chuaCham: lockedUntouched } = useMemo(
+    () => splitLockedBadges(filteredLockedEntries),
+    [filteredLockedEntries],
+  );
 
 
 
@@ -684,7 +700,7 @@ export default function Achievements() {
             Bộ sưu tập
           </h3>
           <span className="mono text-[11px] tabular-nums" style={{ color: 'var(--muted)' }}>
-            {filteredUnlockedEntries.length} đã đạt · {filteredLockedEntries.length} còn lại
+            {filteredUnlockedEntries.length} đã đạt · {lockedInProgress.length} đang tiến tới · {lockedUntouched.length} chưa chạm
           </span>
         </div>
 
@@ -725,10 +741,33 @@ export default function Achievements() {
         )}
 
         <BadgeGrid
-          entries={[...filteredUnlockedEntries, ...filteredLockedEntries]}
+          entries={[...filteredUnlockedEntries, ...lockedInProgress]}
           onSelect={setSelectedEntry}
           emptyLabel="Bộ lọc hiện tại không còn dấu nào."
         />
+
+        {lockedUntouched.length > 0 && (
+          <>
+            <button
+              type="button"
+              onClick={() => setShowUntouched((v) => !v)}
+              className="mono w-full px-4 py-2.5 text-[11px] font-semibold uppercase tracking-[0.16em]"
+              style={{
+                background: 'var(--card-bg-solid)',
+                border: 'var(--skin-card-border-width,1px) solid var(--line)',
+                borderRadius: 'var(--skin-radius-card,18px)',
+                color: 'var(--muted)',
+              }}
+            >
+              {showUntouched
+                ? `Thu gọn ${lockedUntouched.length} dấu chưa chạm tới`
+                : `Còn ${lockedUntouched.length} dấu chưa chạm tới — xem`}
+            </button>
+            {showUntouched && (
+              <BadgeGrid entries={lockedUntouched} onSelect={setSelectedEntry} emptyLabel="" />
+            )}
+          </>
+        )}
       </section>
     </div>
   );

@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import { tomTatThietLap } from './pomodoroSetupSummary.js';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 
 import { SCRIM_FADE, useCustomMotion, useEnterMotion, usePressMotion, useRewardMotion, useSnapMotion } from '../lib/motionPresets';
@@ -267,6 +268,8 @@ export default function PomodoroEngine({
   const [noteExpanded, setNoteExpanded] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [activeMilestone, setActiveMilestone] = useState(null);
+  // Bảng thiết lập GẤP LẠI mặc định — xem chú thích ở `sessionSetupCard`.
+  const [setupOpen, setSetupOpen] = useState(false);
   const [focusMinutesDraft, setFocusMinutesDraft] = useState(() => (
     String(clampFocusMinutes(timerConfig.focusMinutes ?? 25))
   ));
@@ -999,6 +1002,39 @@ export default function PomodoroEngine({
         />
       </div>
 
+      {/*
+        ⚠️ GẤP LẠI PHẦN THIẾT LẬP (2026-09-02). Đo trên khung 390px: màn Tập trung dài **2.509px**
+        và **~1.100px trong đó là bảng thiết lập** — công tắc Pomo/Bấm giờ, ô chỉnh phút, BỐN thẻ
+        mẫu (15'/25'/52'/90'), giờ nghỉ, kỷ luật phiên. Nó mở sẵn ở MỌI lần vào màn, trong khi Đàm
+        bắt đầu phiên bằng cùng một thiết lập gần như mọi lần: một bảng chỉnh chiếm gần một nửa
+        màn hình chính để phục vụ một hành động hiếm.
+        ⚠️ KHÔNG GIẤU, CHỈ GẤP: dòng tóm tắt ngay đây NÓI ĐỦ thiết lập đang chạy (chế độ · số phút ·
+        giờ nghỉ · kỷ luật), nên không cần mở ra mới biết mình sắp làm gì — cùng luật đã áp cho
+        102 huy hiệu chưa chạm tới. Bấm "Đổi" là mở, và nó vẫn mở nguyên bảng cũ, không cắt gì.
+      */}
+      <button
+        type="button"
+        onClick={() => setSetupOpen((v) => !v)}
+        aria-expanded={setupOpen}
+        className={`flex w-full items-center justify-between gap-3 border-t px-4 py-3 text-left transition-colors ${
+          lightTheme ? 'border-[var(--line)]' : 'border-white/5'
+        }`}
+      >
+        <span className="mono min-w-0 truncate text-[11px] tabular-nums" style={{ color: 'var(--muted)' }}>
+          {tomTatThietLap({
+            mode: timerMode,
+            focusMinutes: timerConfig.focusMinutes,
+            shortBreak: shortBreakDuration,
+            longBreak: longBreakDuration,
+            strict: strictMode,
+          })}
+        </span>
+        <span className="mono shrink-0 text-[10px] uppercase tracking-[0.18em]" style={{ color: 'var(--accent2)' }}>
+          {setupOpen ? 'Thu gọn ▲' : 'Đổi ▾'}
+        </span>
+      </button>
+
+      {setupOpen && (
       <div className={`grid gap-4 border-t border-white/5 sm:gap-3 ${
         immersiveMode
           ? 'px-5 py-4 md:grid-cols-[minmax(0,1.12fr)_minmax(0,0.88fr)] md:px-5'
@@ -1198,6 +1234,7 @@ export default function PomodoroEngine({
           </div>
         </div>
       </div>
+      )}
     </div>
   );
   const timerStageVisual = (

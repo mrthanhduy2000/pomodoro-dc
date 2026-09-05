@@ -1601,6 +1601,33 @@ async function main() {
   // ── Chế độ QUÉT: một trang, một lần mở trình duyệt, một bảng liên hoàn ───────
   if (args.sweep) {
     const sweepHours = args.hours.length > 0 ? args.hours : [6, 8, 12, 15, 18, 22];
+    // ⚠️ VÀ MỘT CÁI BẪY THỨ HAI, NẶNG HƠN, LỘ RA NGAY TRONG LÚC VÁ CÁI THỨ NHẤT (2026-09-05).
+    // Bản vá đầu tiên của chính đoạn này gắn thêm cả `-noshadow`, `-noao`, `-lod`, `-mask-*`. Nó
+    // SAI, và sai theo hướng tệ hơn cái nó đang chữa: một cái tên **hứa một khác biệt không tồn
+    // tại**. Lý do: chế độ quét dựng bằng `sweepSource({ level, theme, cell, combos, sessions, t })`
+    // — SÁU trường, hết. Mọi cờ khác (`--no-shadow`, `--no-ao`, `--lowdetail`, `--mask`, `--zoom`,
+    // `--focus`, `--topdown`, `--pending`, `--dpr`) **không bao giờ tới được bản dựng**; chúng được
+    // nhận, không báo lỗi, rồi biến mất. Đã đo: `--sweep --no-shadow` cho ra tấm ảnh **trùng TỪNG
+    // BYTE** với bản thường (`cmp` im lặng), và probe chấm ra y hệt tới hai chữ số — tức nếu tin
+    // vào nó thì kết luận sẽ là "bóng đổ đóng góp 0,00", một con số hợp lý và hoàn toàn bịa.
+    // ⚠️ VÀ CỔNG NÀY PHẢI ĐỨNG Ở ĐÂY — TRƯỚC `buildBundle`. Bản đầu đặt nó xuống dưới, sau khi
+    // đã gói bundle (~20 giây) và đã mở server; người chạy phải đợi hết chừng ấy rồi mới bị báo
+    // một điều kiểm được trong một mili-giây, và cú `process.exit` bỏ lại một server chưa đóng.
+    // Đúng thứ bài học 'kiểm điều kiện tiên quyết TRƯỚC, xếp rẻ-trước-đắt-sau' đã cấm.
+    // ⇒ TỪ CHỐI THẲNG, không tự chữa, không gắn nhãn cho một lời hứa suông (đúng luật ADR-026 và
+    // bài học `MIN_STONE` ở Phase 9D: một cơ chế tự chữa là cách một công cụ lặng lẽ nói dối).
+    const boQua = [
+      ['--no-shadow', args.noShadow], ['--no-ao', args.noAo], ['--lowdetail', args.lowDetail],
+      ['--mask', args.mask != null], ['--zoom', args.zoom !== 1], ['--focus', args.focus > 0],
+      ['--topdown', args.topdown], ['--pending', args.pending > 0], ['--dpr', args.dpr != null],
+    ].filter(([, batLen]) => batLen).map(([ten]) => ten);
+    if (boQua.length > 0) {
+      console.error(`❌ Chế độ --sweep KHÔNG dựng được các cờ này: ${boQua.join(' ')}`);
+      console.error('   Bản quét dùng `sweepSource`, chỉ nhận: --level --theme --cell --eras --hour --sessions --t');
+      console.error('   Muốn đo một cần gạt mà bản quét không có cờ ⇒ phá MÃ NGUỒN trong một `git worktree`,');
+      console.error('   rồi dựng lại đúng bản quét ấy. Đừng tin một cờ bị bỏ qua trong im lặng.');
+      process.exit(2);
+    }
     const combos = eras.flatMap((era) => sweepHours.map((hour) => ({ era, hour })));
     const options = { ...args, combos };
     const bundlePath = await buildBundle(options);
@@ -1612,7 +1639,30 @@ async function main() {
 
     const cellH = Math.round(args.cell * 0.62);
     const tag = `${eras[0]}-${eras[eras.length - 1]}`;
-    const pngPath = resolve(OUT_DIR, `sweep-${args.theme}-ky${tag}.png`);
+    // ⚠️ LẦN THỨ MƯỜI CỦA ĐÚNG CÁI BẪY "TÊN FILE KHÔNG MANG THAM SỐ KHUNG HÌNH" — và lần này nó
+    // nằm ở đường QUÉT, nơi chưa học được lần nào, trong khi đường ảnh đơn ngay bên dưới đã học
+    // CHÍN lần và có đủ chuỗi nhãn. Tên cũ chỉ mang `theme` + dải kỷ, nên hai lượt quét khác hẳn
+    // nhau vẫn ghi đè lên nhau trong im lặng:
+    //   • `--sweep --eras 1,5,8,11,14` (6 chặng mặc định) và `--sweep --eras 1,5,8,11,14 --hour 6
+    //     --hour 15` (2 chặng) cho ra CÙNG một tên `sweep-light-ky1-14.png`;
+    //   • một lượt `--no-shadow` đè thẳng lên chính tấm ảnh mốc nền vừa dùng để chấm điểm.
+    // Cái thứ hai suýt xảy ra thật khi đo Phase 25: cần gạt "bóng đổ" được đo bằng cách dựng lại
+    // đúng bản quét ấy với `--no-shadow`, và nếu không có nhãn thì phép so sẽ chấm một tấm ảnh
+    // với CHÍNH NÓ rồi in ra "bóng đổ đóng góp 0,00" — một con số hoàn toàn hợp lý và hoàn toàn
+    // bịa. Đúng bài học `MAI-SAU-ky9.png`.
+    // ⚠️ CHỈ gắn nhãn khi KHÁC MẶC ĐỊNH, để mọi tên file lịch sử vẫn tra được: lệnh chuẩn
+    // `--sweep --all --theme light` vẫn ghi ra đúng `sweep-light-ky1-15.png` như mọi bảng số cũ
+    // trong `PERFORMANCE.md` đã ghi, và cổng ảnh-cũ của `sweep-score.mjs` không phải biết gì thêm.
+    // Chỉ còn nhãn cho những thứ THẬT SỰ đổi nội dung bản quét.
+    const HOURS_MAC_DINH = [6, 8, 12, 15, 18, 22];
+    const gioMacDinh = sweepHours.length === HOURS_MAC_DINH.length
+      && sweepHours.every((h, i) => h === HOURS_MAC_DINH[i]);
+    const hourTag = gioMacDinh ? '' : `-h${sweepHours.map((h) => String(h).padStart(2, '0')).join('_')}`;
+    const sessTag = args.sessions === 40 ? '' : `-s${args.sessions}`;
+    const lvlTag = args.level === 3 ? '' : `-lv${args.level}`;
+    const cellTag = args.cell === 300 ? '' : `-c${args.cell}`;
+    const tTag = args.t === 17.5 ? '' : `-t${String(args.t).replace('.', 'p')}`;
+    const pngPath = resolve(OUT_DIR, `sweep-${args.theme}-ky${tag}${hourTag}${sessTag}${lvlTag}${cellTag}${tTag}.png`);
     try {
       const { info } = await shoot(chrome, `http://127.0.0.1:${port}/index.html`, pngPath, {
         width: sweepHours.length * args.cell + 64,

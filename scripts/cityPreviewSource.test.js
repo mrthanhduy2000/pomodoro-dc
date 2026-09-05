@@ -580,3 +580,114 @@ test('⚠️ ĐỐI CHỨNG: một vết chép THẬT vẫn phải bị bắt (k
   assert.equal(soiVetChep(cả).hong, true,
     'một băng phẳng ở trên đã che mất vết chép ở băng dưới');
 });
+
+// ── CỜ BỊ NUỐT IM LẶNG Ở CHẾ ĐỘ QUÉT (2026-09-05, Phase 25) ───────────────────────────────────
+// LỊCH SỬ, ĐỪNG XOÁ. Đo cần gạt "bóng đổ" bằng `--sweep --no-shadow` cho ra tấm ảnh **trùng TỪNG
+// BYTE** với bản thường: chế độ quét dựng bằng `sweepSource({ level, theme, cell, combos,
+// sessions, t })` — sáu trường, hết — nên mọi cờ khác được nhận, không báo lỗi, rồi biến mất.
+// Nếu tin vào nó thì kết luận là "bóng đổ đóng góp 0,00 vào khoảng cách bình minh↔chiều": một con
+// số hợp lý, một con số bịa, và không có cổng nào bắt được.
+// ⚠️ Bài test này khoá một QUAN HỆ, không khoá một danh sách chép tay: **tập cờ bị từ chối phải
+// BẰNG ĐÚNG tập cờ mà `sweepSource` không nhận**. Nhờ vậy nó đỏ theo CẢ HAI chiều — ai dạy được
+// `sweepSource` hiểu `--no-shadow` thì phải gỡ nó khỏi danh sách từ chối, và ai thêm một cờ mới mà
+// bản quét không dựng được thì phải thêm nó vào. Một danh sách chép tay thì chỉ đúng đúng hôm nay.
+const THAM_SO_SWEEP_SOURCE = () => {
+  const m = NGUỒN.match(/function sweepSource\(\{([^}]*)\}/);
+  assert.ok(m, 'không tìm thấy chữ ký `sweepSource` — bài test này đang canh một hàm đã đổi tên');
+  return m[1].split(',').map((s) => s.trim().split(/[=:]/)[0].trim()).filter(Boolean);
+};
+
+// Cờ CLI → trường mà `sweepSource` phải nhận thì mới dựng được. `--eras`/`--hour` đi vào `combos`.
+const CO_CLI_DOI_NOI_DUNG = {
+  '--level': 'level', '--theme': 'theme', '--cell': 'cell', '--sessions': 'sessions', '--t': 't',
+  '--eras': 'combos', '--hour': 'combos',
+  '--no-shadow': 'noShadow', '--no-ao': 'noAo', '--lowdetail': 'lowDetail', '--mask': 'mask',
+  '--zoom': 'zoom', '--focus': 'focus', '--topdown': 'topdown', '--pending': 'pending',
+  '--dpr': 'dpr',
+};
+
+test('QUÉT — cờ nào bản quét không dựng được thì phải TỪ CHỐI THẲNG, không nuốt im lặng', () => {
+  const nhan = new Set(THAM_SO_SWEEP_SOURCE());
+  const phaiTuChoi = Object.entries(CO_CLI_DOI_NOI_DUNG)
+    .filter(([, truong]) => !nhan.has(truong)).map(([co]) => co).sort();
+
+  // Danh sách công cụ đang thật sự từ chối — đọc thẳng từ mã, không chép.
+  const khoi = NGUỒN.match(/const boQua = \[([\s\S]*?)\]\.filter/);
+  assert.ok(khoi, 'không tìm thấy cổng từ chối `boQua` trong nhánh --sweep');
+  const dangTuChoi = [...khoi[1].matchAll(/'(--[a-z-]+)'/g)].map((m) => m[1]).sort();
+
+  assert.deepEqual(dangTuChoi, phaiTuChoi,
+    `Cổng từ chối lệch với thứ \`sweepSource\` thật sự dựng được.\n`
+    + `  sweepSource nhận: ${[...nhan].join(', ')}\n`
+    + `  phải từ chối:     ${phaiTuChoi.join(' ')}\n`
+    + `  đang từ chối:     ${dangTuChoi.join(' ')}`);
+});
+
+test('QUÉT — cổng từ chối phải DỪNG HẲN: CHẠY THẬT rồi đọc mã thoát, không đọc mã nguồn', () => {
+  // ⚠️ BẢN ĐẦU CỦA CHÍNH BÀI NÀY ĐỌC MÃ NGUỒN VÀ NÓ XANH OAN. Phép thử ngược đổi `process.exit(2)`
+  // thành `// process.exit(2)` — hành vi đã hỏng thật — mà bài test vẫn xanh, vì dòng bị chú thích
+  // VẪN CHỨA chuỗi `process.exit(2)`. Một assert trên VĂN BẢN mã nguồn không phân biệt được mã
+  // đang sống với mã đã chết; đúng cái bẫy `&& 0` của Phase 8A, chỉ khác chỗ đứng.
+  // ⇒ Hỏi bằng HÀNH VI: chạy thật, xem mã thoát. `execFileSync` NÉM khi mã thoát khác 0, nên phải
+  //   bắt lỗi rồi đọc `e.status`/`e.stderr` — chính chỗ này từng làm một bài đối chứng đỏ oan.
+  let status = 0;
+  let err = '';
+  try {
+    execFileSync('node', ['scripts/city-preview.mjs', '--sweep', '--eras', '1', '--hour', '6', '--no-shadow'],
+      { cwd: GỐC, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 60_000 });
+  } catch (e) {
+    status = e.status;
+    err = String(e.stderr ?? '');
+  }
+  assert.equal(status, 2,
+    'Chạy `--sweep --no-shadow` phải DỪNG với mã thoát 2. Mã thoát 0 nghĩa là công cụ vẫn dựng ảnh '
+    + 'với một cờ nó không hề áp dụng được — và tấm ảnh ấy trùng TỪNG BYTE với bản thường.');
+  assert.match(err, /--no-shadow/,
+    'Thông báo phải gọi ĐÍCH DANH cờ bị bỏ qua; "có gì đó sai" thì người nhận không biết sửa gì.');
+});
+
+test('QUÉT — ĐỐI CHỨNG: cổng phải IM khi mọi cờ đều dựng được, nếu không nó chặn cả việc lành', () => {
+  // Không có vế này thì một cổng LUÔN-LUÔN-KÊU vẫn làm bài trên xanh, và bản quét chuẩn sẽ chết.
+  // Chạy tới lúc gói bundle là đủ tốn thời gian, nên chỉ cần biết nó KHÔNG chết ở cổng: cho một
+  // dòng lệnh hợp lệ + một cờ vô nghĩa để công cụ dừng ở chỗ khác, rồi đòi stderr KHÔNG mang câu
+  // từ chối của cổng này.
+  let err = '';
+  try {
+    execFileSync('node', ['scripts/city-preview.mjs', '--sweep', '--eras', '1', '--hour', '6', '--kiem-chromium'],
+      { cwd: GỐC, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 60_000 });
+  } catch (e) {
+    err = String(e.stderr ?? '');
+  }
+  assert.doesNotMatch(err, /KHÔNG dựng được các cờ này/,
+    'Cổng kêu trên một dòng lệnh chỉ dùng cờ mà bản quét dựng được ⇒ nó đang chặn cả việc lành.');
+});
+
+test('QUÉT — tên file phải mang MỌI tham số đổi nội dung, nếu không hai lượt đè lên nhau', () => {
+  // Chỉ những cờ bản quét THẬT SỰ dựng được mới cần nhãn (cờ kia đã bị từ chối ở trên).
+  // `--theme` và `--eras` đã nằm sẵn trong `sweep-${theme}-ky${tag}`.
+  const dong = NGUỒN.match(/const pngPath = resolve\(OUT_DIR, `sweep-[^`]*`\)/);
+  assert.ok(dong, 'không tìm thấy dòng dựng tên file của bản quét');
+  for (const nhan of ['hourTag', 'sessTag', 'lvlTag', 'cellTag', 'tTag']) {
+    assert.match(dong[0], new RegExp(`\\$\\{${nhan}\\}`),
+      `Tên file bản quét thiếu \`${nhan}\`. Hai lượt khác nhau ở tham số ấy sẽ ghi đè lên nhau `
+      + 'trong im lặng, và phép so trước/sau sẽ chấm một tấm ảnh với chính nó.');
+  }
+});
+
+test('QUÉT — ĐỐI CHỨNG: nhãn phải RỖNG ở giá trị mặc định, để mọi tên file lịch sử còn tra được', () => {
+  // `PERFORMANCE.md` ghi hàng chục bảng số kèm tên `sweep-light-ky1-15.png`. Nếu nhãn luôn được
+  // gắn kể cả ở mặc định thì lệnh chuẩn `--sweep --all --theme light` sẽ đổi tên và toàn bộ lịch
+  // sử ấy thành không truy được. Không có vế đối chứng này thì bài test trên vẫn xanh khi ai đó
+  // gắn nhãn vô điều kiện — tức nó chỉ canh được một nửa.
+  for (const [nhan, mau] of [
+    ['hourTag', /gioMacDinh \? '' :/], ['sessTag', /args\.sessions === 40 \? '' :/],
+    ['lvlTag', /args\.level === 3 \? '' :/], ['cellTag', /args\.cell === 300 \? '' :/],
+    ['tTag', /args\.t === 17\.5 \? '' :/],
+  ]) {
+    const d = NGUỒN.match(new RegExp(`const ${nhan} = [^;]*;`));
+    assert.ok(d, `không tìm thấy khai báo \`${nhan}\``);
+    assert.match(d[0], mau,
+      `\`${nhan}\` phải rỗng ở giá trị mặc định — nếu không, lệnh chuẩn đổi tên file và mọi bảng `
+      + 'số cũ trong `PERFORMANCE.md` thành không tra được.');
+  }
+});

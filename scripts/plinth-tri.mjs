@@ -28,7 +28,7 @@
 import { computeCityLayout } from '../src/engine/cityLayout.js';
 import { collectCitySpecs } from '../src/engine/city3d/cityParts.js';
 import { buildTerrain } from '../src/engine/city3d/terrain.js';
-import { BUILDING_SCALE, prism, countSpecTriangles, specSpan } from '../src/engine/city3d/parts.js';
+import { BUILDING_SCALE, buildingSpanCells, countSpecTriangles, plinthParts } from '../src/engine/city3d/parts.js';
 import { BLUEPRINT_CATALOG } from '../src/engine/constants.js';
 
 // ⚠️ KHÔNG CHÉP CON SỐ. Bản đầu của chính phép đo này chép tay `BUILDING_SCALE = 0,86` (giá trị đời
@@ -47,13 +47,15 @@ for (let era = 1; era <= 15; era += 1) {
   for (const item of collectCitySpecs({ layout, detail: 'high' })) {
     if (!CO_BE.has(item.kind)) continue;
     duyet += 1;
-    const span = Math.max(1, Math.round(specSpan(item.spec.parts) * BUILDING_SCALE));
+    // ⚠️ BẢN CHÉP TAY ĐÃ GỠ (2026-09-05). Phép đổi ô đất và hình bệ kè nay là hai hàm THUẦN dùng
+    // chung với `sceneGraph.js` (bên DỰNG) và `triangleBudget.test.js` (bên CANH) — trước đó
+    // chúng là bản chép thứ hai của cùng một luật, và bản chép ấy đã sai một lần rồi.
+    const span = buildingSpanCells(item.spec.parts);
     const { drop } = terrain.footprint(item.source.x, item.source.y, span);
-    if (!(drop > 0)) continue;
+    const beKe = plinthParts(span, drop);
+    if (!beKe) continue;
     be += 1;
-    tri += countSpecTriangles([prism({
-      y: 0, w: span * 0.92, d: span * 0.92, h: drop, sides: 4, taper: 1, role: 'stone',
-    })]);
+    tri += countSpecTriangles(beKe);
   }
   rows.push(`${era}\t${be}\t${tri}`);
   tong += tri; tongBe += be;

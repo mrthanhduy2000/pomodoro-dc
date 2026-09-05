@@ -3995,7 +3995,7 @@ gốc là đúng cái phễu Phase 9A).
 
 ---
 
-## #43 — Số tam giác trong `PERFORMANCE.md` không có gì canh, và nó ĐÃ trôi ở 6/15 kỷ
+## #43 — ✅ **ĐÃ ĐÓNG (2026-09-05)** — Số tam giác không có gì canh, và nó ĐÃ trôi ở 6/15 kỷ
 
 - **Module**: `PERFORMANCE.md` (bảng số) ↔ `src/engine/city3d/*` + `src/components/city/render3d/*`
   (nguồn sinh ra số)
@@ -4032,7 +4032,54 @@ gốc là đúng cái phễu Phase 9A).
   nhân "đường lởm chởm") ⇒ ghi lại thay vì mở rộng phạm vi.
 - **Review Trigger**: ngay trước phase kế tiếp có đụng hình học; hoặc khi có ai định trích một con
   số tam giác từ `PERFORMANCE.md` mà không tự đo lại.
-- **Owner**: chưa ai · **Status**: MỞ, đã đo đủ số, hướng (3) đã áp dụng, (1)+(2) chưa làm
+- **Owner**: phiên 2026-09-05 · **Status**: ✅ **ĐÃ ĐÓNG** — làm hướng **(1) + (2)**.
+
+### Đã đóng thế nào
+
+`src/engine/city3d/triangleBudget.test.js` — **bảng 15 mốc riêng từng kỷ**, đúng khuôn
+`drawCallBudget.test.js`, chạy trong `npm test` **dưới 1 giây**, không cần Chromium và không cần
+`three`.
+
+Chỗ khó mà mục nợ nêu (*"mặt đất/đường/chân trời, vì số ô con của chúng phụ thuộc
+`pavingSubdivision` và lưới địa hình"*) hoá ra **không phải chỗ cần giải**: thứ đã TRÔI là khối
+`city` (`e95cdf1` sửa `roofStyle.js`), còn mặt đất/đường/vòm trời/rặng núi là nền **cố định** —
+gộp chúng vào chỉ pha loãng tín hiệu, đúng `TECH_DEBT #22`. Nên bảng canh đúng khối `city`, và
+`collectCitySpecs` + `countTriangles` + `plinthParts` cộng lại là **đúng** nội dung khối ấy, không
+phải một thứ đại diện cho nó.
+
+**Neo vào một đường đo độc lập** (nếu không thì nó chỉ là một công thức tự soi gương — đúng bẫy
+`drawCallBudget` đã sập 2026-08-23): `scene-tri.mjs --era N --sessions 40 --level 1` ở bốn kỷ
+**1 · 6 · 8 · 15** ra **100.876 · 198.388 · 124.348 · 108.660**, khớp TỪNG ĐƠN VỊ.
+
+**Phép thử ngược**: sửa MỘT dòng `crown` trong `roofStyle.js` — đúng loại thay đổi mà `e95cdf1` đã
+làm — thì bảng ĐỎ ngay. Tức cổng này bắt được chính ca lịch sử đã sinh ra mục nợ.
+
+### Ba thứ tìm thấy trong lúc đóng
+
+1. ⚠️ **Chú thích ở `sceneGraph.js` ghi bệ kè *"chỉ tốn 12 tam giác"* — sai từ Phase 8B.** Phase ấy
+   làm bề rộng vát phụ thuộc KÍCH THƯỚC khối, nên bệ đủ lớn có vát ⇒ **28**. Chính phép đối chiếu
+   chéo lộ ra: hiệu số giữa phép đếm thuần và phép duyệt cảnh đúng bằng `số bệ × 28` (kỷ 6: 4 bệ ⇒
+   +112 · kỷ 8: 1 bệ ⇒ +28).
+2. ⚠️ **VÀ ĐỪNG ĐỌC NGƯỢC LẠI THÀNH "12 ĐÃ CHẾT"** — bản vá tôi suýt ship. Đếm đủ 27 bệ: **26 ăn
+   28, ĐÚNG MỘT ăn 12** (mỏng tới mức `bevelWidth` trả 0, vì nó lấy `min(w,d,h)` mà cái mỏng ấy
+   mỏng theo `h`). Ngoại lệ nay được đếm tường minh, không bị làm tròn.
+3. ⚠️ **Luật bệ kè có BA bản chép tay** (`sceneGraph.js` dựng · `plinth-tri.mjs` đo · bài test
+   canh). Đã gom về hai hàm THUẦN ở `parts.js` (`buildingSpanCells`, `plinthParts`) — hình học
+   trùng từng đơn vị sau khi gom (kỷ 6 vẫn 198.388).
+
+### Hai cái bẫy trong chính bài test này, cả hai do phép thử ngược bắt
+
+- Bài "tổng bệ khớp hiệu số" bản đầu viết `khongBe = tổng − soBe×28` rồi assert
+  `tổng === khongBe + soBe×28` — một hằng đẳng thức `x === x`, **không thể đỏ** (cùng bẫy ADR-048).
+  Nay nó đếm TỪNG bệ và đòi đúng phân bố `{12: 1, 28: 26}`.
+- Phép phá đầu tiên (nới `w`/`d` của bệ) **không nổ**, và **phép phá mới là thứ sai**: `bevelWidth`
+  lấy `min(w, d, h)`, mà cái bệ mỏng là mỏng theo `h`. Phá đúng (`h × 3`) thì đỏ 2 bài.
+
+### Còn lại có chủ đích
+
+Các BẢNG SỐ trong `PERFORMANCE.md` **chưa đo lại** — phiên này không được đụng file ấy. Nhưng nguyên
+nhân gốc của mục nợ (*"không có gì canh"*) đã hết: từ nay một dòng trôi sẽ ĐỎ ở `npm test`, chứ
+không đợi ai đó tình cờ đo lại.
 
 ---
 

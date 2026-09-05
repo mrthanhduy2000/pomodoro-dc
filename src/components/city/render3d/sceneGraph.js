@@ -46,7 +46,7 @@ import { materialProfile } from '../../../engine/city3d/materials';
 import { applySurfaceDetail, specularGainFor } from './surfaceDetail';
 import { getEraStyle } from '../../../engine/city3d/eraStyle';
 import { collectCitySpecs, KIND_NGOAI_LUOI, NHOM_CUA_KIND } from '../../../engine/city3d/cityParts';
-import { BUILDING_SCALE, prism, specSpan } from '../../../engine/city3d/parts';
+import { BUILDING_SCALE, buildingSpanCells, plinthParts } from '../../../engine/city3d/parts';
 import { buildTerrain } from '../../../engine/city3d/terrain';
 import { buildHorizon } from '../../../engine/city3d/horizon';
 import { placeBounds, specBounds } from '../../../engine/city3d/pick';
@@ -950,23 +950,22 @@ export function createCityScene({
    * có góc treo) và phần hụt được lấp bằng một bệ kè — đúng cách nhà trên sườn đồi được xây ngoài
    * đời, và nó thêm đúng loại chi tiết kiến trúc mà cảnh đang thiếu.
    *
-   * Móng đi vào CÙNG khối hình học gộp nên **không tốn thêm lệnh vẽ nào**; nó chỉ tốn 12 tam giác,
-   * và chỉ sinh ra khi thật sự có phần hụt.
+   * Móng đi vào CÙNG khối hình học gộp nên **không tốn thêm lệnh vẽ nào**; nó tốn **28** tam giác
+   * khi đủ lớn để có vát và **12** khi không (đo 2026-09-05: 26 bệ ăn 28, đúng một bệ ăn 12 —
+   * xem `plinthParts` ở `parts.js`). Chú thích cũ ở đây ghi "chỉ tốn 12", tức nêu ca không-vát như
+   * thể là con số duy nhất; nó đúng ở đời trước Phase 8B. Bệ chỉ sinh ra khi thật sự có phần hụt.
+   *
+   * ⚠️ HÌNH CỦA BỆ KÈ VÀ PHÉP ĐỔI Ô ĐẤT NAY Ở `parts.js` (tầng THUẦN), vì bên ĐO cần đúng hai thứ
+   * ấy — chép chúng sang phía đo là "một luật hai công thức", và bản chép đã sai một lần rồi
+   * (`plinth-tri.mjs` đếm 3 bệ thay vì 31, 2026-08-20).
    */
   function groundPlacement(cell, spec, extra = {}) {
     const { x, z } = cellToWorld(cell.x, cell.y, gridSize);
-    const span = Math.max(1, Math.round(specSpan(spec.parts) * BUILDING_SCALE));
+    const span = buildingSpanCells(spec.parts);
     const { top, drop } = terrain.footprint(cell.x, cell.y, span);
     const placement = { x, z, y: top, scale: BUILDING_SCALE, spec, ...extra };
-    const plinth = drop > 0 ? {
-      x, z, y: top - drop, ry: 0, scale: 1,
-      spec: {
-        parts: [prism({
-          y: 0, w: span * 0.92, d: span * 0.92, h: drop,
-          sides: 4, taper: 1, role: 'stone',
-        })],
-      },
-    } : null;
+    const parts = plinthParts(span, drop);
+    const plinth = parts ? { x, z, y: top - drop, ry: 0, scale: 1, spec: { parts } } : null;
     return { placement, plinth };
   }
 

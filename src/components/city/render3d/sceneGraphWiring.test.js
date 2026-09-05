@@ -262,9 +262,17 @@ test('CÔNG TRÌNH ĐỨNG Ở CAO ĐỘ CAO NHẤT DƯỚI BÓNG MÌNH, và ph�
     /const \{ top, drop \} = terrain\.footprint\(/.test(CODE),
     'Không còn đọc CẢ `top` lẫn `drop`. Bỏ `drop` ⇒ nhà trên sườn đồi treo một góc giữa không khí.',
   );
+  // ⚠️ CÂU HỎI ĐÃ ĐỔI (2026-09-05) VÀ NÓ CHẶT HƠN. Bản cũ hỏi `/const plinth = drop > 0 \?/` —
+  // tức nó khoá cả HÌNH DẠNG MÃ lẫn chỗ đặt điều kiện. Nay hình bệ và điều kiện sinh bệ là MỘT hàm
+  // thuần dùng chung với phép đo (`plinthParts` ở `parts.js`), nên câu đúng là *"mã dựng có gọi
+  // đúng cái cửa ấy không"*, chứ không phải *"nó có viết đúng câu điều kiện ấy không"*.
   assert.ok(
-    /const plinth = drop > 0 \?/.test(CODE),
-    'Khối móng không còn được sinh ra khi có phần hụt.',
+    /plinthParts\(span, drop\)/.test(CALLS),
+    'Khối móng không còn được sinh ra khi có phần hụt — `groundPlacement` phải gọi `plinthParts`.',
+  );
+  assert.ok(
+    /import \{[^}]*\bplinthParts\b[^}]*\} from '[^']*parts'/.test(CODE),
+    '`sceneGraph.js` thôi `import` `plinthParts` ⇒ hoặc nó có bản chép riêng, hoặc nó thôi sinh bệ.',
   );
   // ⚠️ Móng phải đi vào CÙNG danh sách `placements` — nếu không nó chỉ là dữ liệu chết, và đây đúng
   // là bẫy Phase 4H (`summarizeMuseum` có test riêng, test xanh, không ai gọi).

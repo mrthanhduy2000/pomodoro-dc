@@ -2327,6 +2327,15 @@ node scripts/sweep-score.mjs .city-preview/sweep-light-ky1-15.png
   ngược vừa ghi lại file ấy) — cổng chống-ảnh-cũ đã làm đúng việc của nó và **không có cờ bỏ qua**,
   nên bản quét được dựng lại sạch. Đó là lý do mốc thời gian trên là mốc thứ hai, không phải mốc đầu.
 
+- ⚠️ **XÁC NHẬN LẠI TẠI COMMIT (cùng ngày, sau khi commit `f857941`)**: thêm khối chú thích giải
+  thích vì sao `0,55` là sự thật vật lý làm `daylight.js` đổi mtime ⇒ cổng chống-ảnh-cũ **lại từ
+  chối chấm**, đúng như thiết kế (nó không thể biết nội dung chỉ khác một chú thích). Dựng lại đủ
+  15 kỷ × 6 chặng tại **`f857941`** và chấm lại: **18,80 · 21,64 · 36,64 · 0/15 · 0/105 — trùng
+  từng chữ số**, và md5 ra **`07397429974936919c18feb1b2995104`, TRÙNG TỪNG BYTE** với lượt trước.
+  Theo `TECH_DEBT #50` thì *trùng md5 ⇒ ảnh y hệt* là chiều đọc được (chiều ngược lại thì không),
+  nên đây là bằng chứng mạnh nhất có thể có rằng bản quét này ra từ **đúng cây mã đã commit**, chứ
+  không phải từ một cây làm việc chưa lưu. ⇒ Ba vế truy nguồn nay đủ cả ba với một commit thật.
+
 ### (a) Ba cần gạt — bảng ĐÓNG CỬA, không phải bảng mở cửa
 
 5 kỷ (1·5·8·11·14) × 2 giờ (6·15), mỗi cần gạt phá ở **MÃ NGUỒN** trong một `git worktree` riêng

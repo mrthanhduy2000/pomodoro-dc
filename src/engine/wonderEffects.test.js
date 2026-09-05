@@ -5,8 +5,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { aggregateWonderEffects, relicEvolutionCostOf, researchCostOf } from './wonderEffects.js';
-import { BLUEPRINT_META, BUILDING_EFFECTS } from './constants.js';
+import {
+  aggregateWonderEffects, cancelPenaltyWonderMultiplier, missionXpMultiplier,
+  relicEvolutionCostOf, researchCostOf, streakBonusCapDays,
+} from './wonderEffects.js';
+import { BLUEPRINT_META, BUILDING_EFFECTS, STREAK_MAX_BONUS_DAYS } from './constants.js';
 
 test('CHỈ CÔNG TRÌNH KHAI type="wonder" MỚI GÓP ĐẶC QUYỀN', () => {
   // ⚠️ Bản chép tay ở tầng giao diện (đã gỡ 2026-09-02) bỏ đúng phép kiểm này, và nó vô hại chỉ vì
@@ -65,6 +68,63 @@ test('KHÔNG CÒN BẢN CHÉP TAY NÀO — cả ba tầng phải đọc chung m�
   for (const f of ['../store/gameStore.js', '../components/RelicInventory.jsx']) {
     assert.equal(/relic_evo_30off'/.test(doc(f)), false,
       `${f} chép lại luật giảm giá tiến hoá di vật — nó phải gọi \`relicEvolutionCostOf\`.`);
+  }
+  // ⚠️ MỞ RỘNG LẦN HAI 2026-09-05 — soi hết `wonderEffect` mà tầng giao diện đọc thì ra thêm BA
+  // bản chép nữa, cùng thiếu `type === 'wonder'`. Năm bản của một hình dạng lỗi, trong bốn file.
+  const KHOA_DAC_QUYEN = {
+    '../store/gameStore.js': ['disaster_hp_50off', 'streak_cap_plus', 'mission_bonus_20'],
+    '../components/PomodoroEngine.jsx': ['building_hp_boost', 'disaster_hp_50off'],
+    '../components/DailyMissions.jsx': ['streak_cap_plus', 'mission_bonus_20'],
+  };
+  for (const [f, khoa] of Object.entries(KHOA_DAC_QUYEN)) {
+    const src = doc(f);
+    for (const k of khoa) {
+      assert.equal(src.includes(`'${k}'`), false,
+        `${f} đọc thẳng '${k}' — nó phải gọi hàm tương ứng ở \`wonderEffects.js\`.`);
+    }
+  }
+  // ⚠️ MỘT NGOẠI LỆ, ĐẾM ĐƯỢC. `building_hp_boost` còn ĐÚNG MỘT lần đọc hợp lệ trong store —
+  // `getWonderRawRewardMultiplier` (+15% tài nguyên thô), một luật KHÁC hẳn phép phạt huỷ phiên và
+  // không có bản chép nào ở tầng giao diện. Đếm chứ không tha: lần đọc thứ hai là đỏ, mà lần đọc
+  // ấy chính là dấu hiệu có ai vừa dựng lại một bản chép.
+  const soLan = (doc('../store/gameStore.js').match(/'building_hp_boost'/g) ?? []).length;
+  assert.equal(soLan, 1, 'store có thêm một chỗ đọc `building_hp_boost` — bản chép thứ hai?');
+});
+
+test('BA ĐẶC QUYỀN CÒN LẠI — cùng một phép kiểm kỳ quan, và trả về SỐ chứ không trả boolean', () => {
+  const kyQuanCua = (hieuUng) => Object.entries(BUILDING_EFFECTS)
+    .find(([, e]) => e?.type === 'wonder' && e.wonderEffect === hieuUng)?.[0];
+
+  // ── phạt huỷ phiên ──────────────────────────────────────────────────────────
+  const hp = kyQuanCua('building_hp_boost');
+  const dis = kyQuanCua('disaster_hp_50off');
+  assert.equal(cancelPenaltyWonderMultiplier([]), 1, 'chưa xây gì thì phạt nguyên đòn');
+  if (hp) assert.equal(cancelPenaltyWonderMultiplier([hp]), 0.85);
+  if (dis) assert.equal(cancelPenaltyWonderMultiplier([dis]), 0.5);
+  // ⚠️ HAI KỲ QUAN THÌ NHÂN, KHÔNG PHẢI LẤY CÁI TỐT HƠN — đổi thành `Math.min` là đổi cân bằng.
+  if (hp && dis) assert.equal(cancelPenaltyWonderMultiplier([hp, dis]), 0.85 * 0.5);
+
+  // ── trần chuỗi + thưởng nhiệm vụ ───────────────────────────────────────────
+  const cap = kyQuanCua('streak_cap_plus');
+  const mis = kyQuanCua('mission_bonus_20');
+  assert.equal(streakBonusCapDays([]), STREAK_MAX_BONUS_DAYS);
+  if (cap) assert.equal(streakBonusCapDays([cap]), STREAK_MAX_BONUS_DAYS + 10);
+  assert.equal(missionXpMultiplier([]), 1);
+  if (mis) assert.equal(missionXpMultiplier([mis]), 1.2);
+
+  // ⚠️ VÀ CẢ BA PHẢI BỎ QUA công trình thường khai `wonderEffect` — đúng phép kiểm mà năm bản chép
+  // đều thiếu. Bơm thẳng ca ấy vào thay vì tin rằng dữ liệu hôm nay không có nó.
+  const thuong = Object.entries(BUILDING_EFFECTS).find(([, e]) => e && e.type !== 'wonder');
+  const goc = BUILDING_EFFECTS[thuong[0]];
+  for (const hieuUng of ['building_hp_boost', 'streak_cap_plus', 'mission_bonus_20']) {
+    BUILDING_EFFECTS[thuong[0]] = { ...goc, wonderEffect: hieuUng };
+    try {
+      assert.equal(cancelPenaltyWonderMultiplier([thuong[0]]), 1, hieuUng);
+      assert.equal(streakBonusCapDays([thuong[0]]), STREAK_MAX_BONUS_DAYS, hieuUng);
+      assert.equal(missionXpMultiplier([thuong[0]]), 1, hieuUng);
+    } finally {
+      BUILDING_EFFECTS[thuong[0]] = goc;
+    }
   }
 });
 

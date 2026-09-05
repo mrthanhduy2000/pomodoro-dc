@@ -15,7 +15,9 @@
  * Nó cũng thiếu `Math.max(1, …)`/`Math.round` ⇒ giá 0 hoặc giá lẻ hiện khác giá bị trừ.
  */
 
-import { BLUEPRINT_META, BUILDING_EFFECTS, getRelicEvolutionRefinedCost } from './constants.js';
+import {
+  BLUEPRINT_META, BUILDING_EFFECTS, STREAK_MAX_BONUS_DAYS, getRelicEvolutionRefinedCost,
+} from './constants.js';
 
 /** Tập đặc quyền kỳ quan đang bật. ⚠️ CHỈ tính công trình khai `type === 'wonder'`. */
 export function aggregateWonderEffects(buildings = []) {
@@ -59,4 +61,39 @@ export function relicEvolutionCostOf(buildings, stageDef) {
   let cost = getRelicEvolutionRefinedCost(stageDef);
   if (wonders.has('relic_evo_30off')) cost = Math.round(cost * 0.7);
   return Math.max(1, cost);
+}
+
+/*
+ * ─── BA ĐẶC QUYỀN CÒN LẠI, GOM NỐT (2026-09-05) ───────────────────────────────────────────────
+ * Đi soi hết `wonderEffect` mà tầng giao diện đọc thì thấy thêm **BA** bản chép tay nữa, và cả ba
+ * thiếu ĐÚNG cùng một phép kiểm `type === 'wonder'`:
+ *   · `PomodoroEngine.jsx`  — phạt huỷ phiên (`building_hp_boost` · `disaster_hp_50off`)
+ *   · `DailyMissions.jsx`   — trần chuỗi (`streak_cap_plus`)
+ *   · `DailyMissions.jsx`   — thưởng nhiệm vụ (`mission_bonus_20`)
+ * Cộng với giá RP và giá tiến hoá di vật là **NĂM** bản chép của cùng một hình dạng lỗi. Chúng
+ * không cắn hôm nay chỉ vì 0/75 bản vẽ vừa khai `wonderEffect` vừa không phải kỳ quan — một sự
+ * thật về DỮ LIỆU, không phải một tính chất của mã. Ngày nào có ai thêm một dòng như thế, năm màn
+ * hình sẽ cùng lúc hứa những con số mà store không chấp nhận.
+ *
+ * ⚠️ Cả ba hàm dưới đây trả về con số ĐÃ ÁP đặc quyền, không trả về boolean — trả boolean là để
+ * hai bên tự nhân lấy, tức vẫn còn hai công thức, chỉ là chúng ngắn hơn.
+ */
+
+/** Hệ số phạt khi huỷ phiên giữa chừng — kỳ quan làm nhẹ đòn. */
+export function cancelPenaltyWonderMultiplier(buildings) {
+  const wonders = aggregateWonderEffects(buildings);
+  let multiplier = 1;
+  if (wonders.has('building_hp_boost')) multiplier *= 0.85;
+  if (wonders.has('disaster_hp_50off')) multiplier *= 0.5;
+  return multiplier;
+}
+
+/** Trần số ngày chuỗi còn được tính thưởng. */
+export function streakBonusCapDays(buildings) {
+  return STREAK_MAX_BONUS_DAYS + (aggregateWonderEffects(buildings).has('streak_cap_plus') ? 10 : 0);
+}
+
+/** Hệ số nhân XP thưởng nhiệm vụ ngày. */
+export function missionXpMultiplier(buildings) {
+  return aggregateWonderEffects(buildings).has('mission_bonus_20') ? 1.2 : 1;
 }

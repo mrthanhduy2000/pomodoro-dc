@@ -25,7 +25,10 @@
 
 import { create } from 'zustand';
 import { tinhGiuLai, heSoXpSieuViet } from '../engine/prestigeCarryover';
-import { aggregateWonderEffects, relicEvolutionCostOf, researchCostOf } from '../engine/wonderEffects.js';
+import {
+  aggregateWonderEffects, cancelPenaltyWonderMultiplier, missionXpMultiplier,
+  relicEvolutionCostOf, researchCostOf, streakBonusCapDays,
+} from '../engine/wonderEffects.js';
 import { persist } from 'zustand/middleware';
 import {
   GAME_STORE_STORAGE_KEY,
@@ -1418,14 +1421,6 @@ function getEconomyRewardModifiers(buildings, buildingLevels = {}) {
   };
 }
 
-function getWonderCancelPenaltyMultiplier(buildings) {
-  const wonders = aggregateWonderEffects(buildings);
-  let multiplier = 1;
-  if (wonders.has('building_hp_boost')) multiplier *= 0.85;
-  if (wonders.has('disaster_hp_50off')) multiplier *= 0.5;
-  return multiplier;
-}
-
 function getBuildingCancelPenaltyMultiplier(buildings, buildingLevels = {}) {
   let reduction = 0;
 
@@ -1441,26 +1436,19 @@ function getBuildingCancelPenaltyMultiplier(buildings, buildingLevels = {}) {
   return 1 - cappedReduction;
 }
 
-function getWonderStreakBonusCap(buildings) {
-  const wonders = aggregateWonderEffects(buildings);
-  return STREAK_MAX_BONUS_DAYS + (wonders.has('streak_cap_plus') ? 10 : 0);
-}
-
 function getWonderCrisisWindowBonusHours(buildings) {
   const wonders = aggregateWonderEffects(buildings);
   return wonders.has('longer_crisis_window') ? 12 : 0;
 }
 
-function getDailyMissionXPBonusMultiplier(buildings) {
-  const wonders = aggregateWonderEffects(buildings);
-  let multiplier = 1;
-  if (wonders.has('mission_bonus_20')) multiplier += 0.2;
-  return multiplier;
-}
+// ⚠️ `getWonderCancelPenaltyMultiplier` · `getWonderStreakBonusCap` ·
+// `getDailyMissionXPBonusMultiplier` ĐÃ CHUYỂN sang `engine/wonderEffects.js` (2026-09-05) —
+// cả ba đều có một bản chép tay ở tầng giao diện, và cả ba bản ấy thiếu phép kiểm
+// `type === 'wonder'`. Xem khối chú thích cuối file đó.
 
 function applyDailyMissionXPBonus(buildings, xpAmount) {
   const normalizedXP = Math.max(0, xpAmount ?? 0);
-  return Math.round(normalizedXP * DAILY_MISSION_XP_SCALE * getDailyMissionXPBonusMultiplier(buildings));
+  return Math.round(normalizedXP * DAILY_MISSION_XP_SCALE * missionXpMultiplier(buildings));
 }
 
 function getBuildingPerkEffects(perk) {
@@ -4133,7 +4121,7 @@ const useGameStore = create(
 
         // Streak advancement — V2: dùng skill check cho Lá Chắn Streak
         const newStreak = advanceStreak(activeStreak, unlockedSkills);
-        const streakBonusDays = Math.min(newStreak.currentStreak, getWonderStreakBonusCap(state.buildings));
+        const streakBonusDays = Math.min(newStreak.currentStreak, streakBonusCapDays(state.buildings));
         const streakBonusXP = Math.floor(reward.finalXP * streakBonusDays * STREAK_BONUS_PER_DAY);
 
         // V2: Bền Vững — kích hoạt khi streak đạt 30 lần đầu
@@ -4968,7 +4956,7 @@ const useGameStore = create(
           freshCharges,
           disasterRedBuff,
           normalizedProgressRatio,
-          getWonderCancelPenaltyMultiplier(state.buildings)
+          cancelPenaltyWonderMultiplier(state.buildings)
             * getBuildingCancelPenaltyMultiplier(state.buildings, state.buildingLevels),
           {
             scopeBookKey: penaltyBookKey,

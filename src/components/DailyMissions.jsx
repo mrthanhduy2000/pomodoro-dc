@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 
 import useGameStore from '../store/gameStore';
 import useSettingsStore from '../store/settingsStore';
+import { missionXpMultiplier, streakBonusCapDays } from '../engine/wonderEffects.js';
 import RewardCard from './shared/RewardCard';
 import { DAILY_BONUS_COPY } from './dailyBonusCopy';
 import { useCustomMotion, useEnterMotion, usePressMotion, useSnapMotion } from '../lib/motionPresets';
@@ -23,11 +24,9 @@ import {
 } from '../engine/constants';
 
 
-function getStreakBonusCapDays(buildings = []) {
-  return STREAK_MAX_BONUS_DAYS + (
-    buildings.some((bpId) => BUILDING_EFFECTS[bpId]?.wonderEffect === 'streak_cap_plus') ? 10 : 0
-  );
-}
+// ⚠️ HAI BẢN CHÉP TAY ĐÃ GỠ (2026-09-05) — `getStreakBonusCapDays` và hệ số thưởng nhiệm vụ.
+// Cả hai hỏi `wonderEffect === '…'` mà KHÔNG kiểm `type === 'wonder'`; xem
+// `engine/wonderEffects.js`.
 
 function scaleMissionXP(xp, multiplier) {
   return Math.max(0, Math.round((xp ?? 0) * DAILY_MISSION_XP_SCALE * multiplier));
@@ -49,11 +48,9 @@ export default function DailyMissions() {
   }, [refreshDailyMissions]);
 
   const lightTheme = uiTheme === 'light';
-  const missionRewardMultiplier = buildings.some(
-    (bpId) => BUILDING_EFFECTS[bpId]?.wonderEffect === 'mission_bonus_20',
-  ) ? 1.2 : 1;
-  const streakBonusCapDays = getStreakBonusCapDays(buildings);
-  const streakBonusPct = Math.min(streak.currentStreak ?? 0, streakBonusCapDays) * (STREAK_BONUS_PER_DAY * 100);
+  const missionRewardMultiplier = missionXpMultiplier(buildings);
+  const capNgayChuoi = streakBonusCapDays(buildings);
+  const streakBonusPct = Math.min(streak.currentStreak ?? 0, capNgayChuoi) * (STREAK_BONUS_PER_DAY * 100);
 
   const list = missions.list ?? [];
   const completedCount = list.filter((mission) => mission.claimed).length;

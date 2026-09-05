@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { tomTatThietLap } from './pomodoroSetupSummary.js';
+import { cancelPenaltyWonderMultiplier } from '../engine/wonderEffects.js';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 
 import { SCRIM_FADE, useCustomMotion, useEnterMotion, usePressMotion, useRewardMotion, useSnapMotion } from '../lib/motionPresets';
@@ -656,13 +657,10 @@ export default function PomodoroEngine({
     }, 0))
   ), [relicEvolutions, relics]);
 
-  const cancelPenaltyWonderMultiplier = useMemo(
-    () => buildings.reduce((multiplier, bpId) => {
-      const wonderEffect = BUILDING_EFFECTS[bpId]?.wonderEffect;
-      if (wonderEffect === 'building_hp_boost') return multiplier * 0.85;
-      if (wonderEffect === 'disaster_hp_50off') return multiplier * 0.5;
-      return multiplier;
-    }, 1),
+  // ⚠️ BẢN CHÉP TAY ĐÃ GỠ (2026-09-05). Nó hỏi `wonderEffect === '…'` mà KHÔNG kiểm
+  // `type === 'wonder'` — một trong NĂM bản chép cùng hình dạng, xem `engine/wonderEffects.js`.
+  const cancelPenaltyWonder = useMemo(
+    () => cancelPenaltyWonderMultiplier(buildings),
     [buildings],
   );
 
@@ -697,12 +695,12 @@ export default function PomodoroEngine({
     return {
       waived: false,
       progressPct: progressRatio * 100,
-      minPct: adjustedMin * skillPenaltyMultiplier * progressRatio * 100 * cancelPenaltyWonderMultiplier * cancelPenaltyStabilityMultiplier,
-      maxPct: adjustedMax * skillPenaltyMultiplier * progressRatio * 100 * cancelPenaltyWonderMultiplier * cancelPenaltyStabilityMultiplier,
+      minPct: adjustedMin * skillPenaltyMultiplier * progressRatio * 100 * cancelPenaltyWonder * cancelPenaltyStabilityMultiplier,
+      maxPct: adjustedMax * skillPenaltyMultiplier * progressRatio * 100 * cancelPenaltyWonder * cancelPenaltyStabilityMultiplier,
     };
   }, [
     cancelPenaltyStabilityMultiplier,
-    cancelPenaltyWonderMultiplier,
+    cancelPenaltyWonder,
     disasterReductionPreview,
     forgiveness.chargesRemaining,
     progressPct,

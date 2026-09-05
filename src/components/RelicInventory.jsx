@@ -17,6 +17,7 @@ import {
   getRelicEvolutionRefinedCost,
 } from '../engine/constants';
 import { getGlyph, hasGlyphIcon } from '../utils/labelMark';
+import { relicEvolutionCostOf } from '../engine/wonderEffects.js';
 
 const ALL_RELIC_DEFS = Object.entries(ERA_CRISES)
   .sort(([a], [b]) => Number(a) - Number(b))
@@ -58,13 +59,12 @@ const STAGE_TOKENS = [
   },
 ];
 
+// ⚠️ BẢN CHÉP TAY ĐÃ GỠ (2026-09-05). Nó hỏi `BUILDING_EFFECTS[bpId]?.wonderEffect === '…'` mà
+// KHÔNG kiểm `type === 'wonder'` — cùng lỗi với bản chép của giá RP, và cũng chỉ vô hại nhờ việc
+// hôm nay không có bản vẽ nào vừa khai `wonderEffect` vừa không phải kỳ quan. Nay cả store lẫn màn
+// hình đọc chung `engine/wonderEffects.js`.
 function getDisplayedRelicEvolutionCost(buildings = [], nextStageDef) {
-  const baseCost = getRelicEvolutionRefinedCost(nextStageDef);
-  const hasDiscount = buildings.some(
-    (bpId) => BUILDING_EFFECTS[bpId]?.wonderEffect === 'relic_evo_30off',
-  );
-  if (!hasDiscount) return baseCost;
-  return Math.max(1, Math.round(baseCost * 0.7));
+  return relicEvolutionCostOf(buildings, nextStageDef);
 }
 
 function paperCardStyle(lightTheme, accentBorder = 'var(--line)', accentShadow = 'rgba(31, 30, 29, 0.05)') {

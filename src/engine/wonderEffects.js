@@ -15,7 +15,7 @@
  * Nó cũng thiếu `Math.max(1, …)`/`Math.round` ⇒ giá 0 hoặc giá lẻ hiện khác giá bị trừ.
  */
 
-import { BLUEPRINT_META, BUILDING_EFFECTS } from './constants.js';
+import { BLUEPRINT_META, BUILDING_EFFECTS, getRelicEvolutionRefinedCost } from './constants.js';
 
 /** Tập đặc quyền kỳ quan đang bật. ⚠️ CHỈ tính công trình khai `type === 'wonder'`. */
 export function aggregateWonderEffects(buildings = []) {
@@ -39,5 +39,24 @@ export function researchCostOf(buildings, bpId, baseCost) {
   if (meta && wonders.has('t2_research_25off') && meta.era >= 6 && meta.era <= 10) {
     cost = Math.round(cost * 0.75);
   }
+  return Math.max(1, cost);
+}
+
+/**
+ * Giá TINH LUYỆN thực để tiến hoá một bậc di vật — kỳ quan kỷ 15 giảm 30%.
+ *
+ * ⚠️ LẦN THỨ HAI CỦA CÙNG MỘT LỖI, Ở MỘT LOẠI TIỀN KHÁC (bắt 2026-09-05). Sau khi gom giá RP về
+ * đây, đi soi tiếp thì `RelicInventory.jsx` cũng giữ một bản chép tay
+ * (`getDisplayedRelicEvolutionCost`), và nó thiếu ĐÚNG cùng một phép kiểm: nó hỏi
+ * `BUILDING_EFFECTS[bpId]?.wonderEffect === 'relic_evo_30off'` mà **không kiểm `type === 'wonder'`**.
+ * Hôm nay vô hại chỉ vì 0/75 bản vẽ vừa khai `wonderEffect` vừa không phải kỳ quan — tức nó đúng
+ * nhờ một thứ chẳng liên quan gì tới nó, y hệt bản chép của giá RP.
+ * ⚠️ Và `Math.max(1, …)` phải nằm SAU phép làm tròn ở CẢ HAI bên: một bậc tiến hoá không bao giờ
+ * miễn phí.
+ */
+export function relicEvolutionCostOf(buildings, stageDef) {
+  const wonders = aggregateWonderEffects(buildings);
+  let cost = getRelicEvolutionRefinedCost(stageDef);
+  if (wonders.has('relic_evo_30off')) cost = Math.round(cost * 0.7);
   return Math.max(1, cost);
 }

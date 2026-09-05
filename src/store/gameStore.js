@@ -25,7 +25,7 @@
 
 import { create } from 'zustand';
 import { tinhGiuLai, heSoXpSieuViet } from '../engine/prestigeCarryover';
-import { aggregateWonderEffects, researchCostOf } from '../engine/wonderEffects.js';
+import { aggregateWonderEffects, relicEvolutionCostOf, researchCostOf } from '../engine/wonderEffects.js';
 import { persist } from 'zustand/middleware';
 import {
   GAME_STORE_STORAGE_KEY,
@@ -105,7 +105,6 @@ import {
   getUnifiedRefinedCost,
   spendUnifiedRefined,
   getUpgradeRefinedCost,
-  getRelicEvolutionRefinedCost,
   normalizeRawResourceId,
   STORAGE_VAULT_XP_PER_MINUTE,
   STORAGE_VAULT_XP_PER_MINUTE_ENHANCED,
@@ -1382,14 +1381,9 @@ function getWonderForgivenessCapacity(buildings) {
 }
 
 
-function getWonderRelicEvolutionCost(buildings, stageDef) {
-  const wonders = aggregateWonderEffects(buildings);
-  let cost = getRelicEvolutionRefinedCost(stageDef);
-  if (wonders.has('relic_evo_30off')) {
-    cost = Math.round(cost * 0.7);
-  }
-  return Math.max(1, cost);
-}
+// ⚠️ `getWonderRelicEvolutionCost` ĐÃ CHUYỂN sang `engine/wonderEffects.js` dưới tên
+// `relicEvolutionCostOf` (2026-09-05) — nó cũng có một bản chép tay ở tầng giao diện,
+// và bản ấy thiếu phép kiểm `type === 'wonder'` y hệt bản chép của giá RP.
 
 function getWonderRawRewardMultiplier(buildings) {
   const wonders = aggregateWonderEffects(buildings);
@@ -5899,7 +5893,7 @@ const useGameStore = create(
         const nextStageDef = evoDef.stages[currentStage + 1];
         const era          = evoDef.era;
         const refined      = normalizeRefinedBag(state.resourcesRefined?.[era]);
-        const refinedCost  = getWonderRelicEvolutionCost(state.buildings, nextStageDef);
+        const refinedCost  = relicEvolutionCostOf(state.buildings, nextStageDef);
 
         // Cộng Hưởng: tùy chọn trả MỘT PHẦN bằng TTCH (tối đa 50%, không bao giờ
         // bỏ hết — người chơi vẫn phải có ≥50% chi phí bằng tinh luyện thật).

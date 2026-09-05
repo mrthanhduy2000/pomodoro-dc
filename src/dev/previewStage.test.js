@@ -18,10 +18,17 @@ import { PREVIEW_SCENES, readPreviewScene, buildPreviewUi, PREVIEW_PARAM } from 
 
 const doc = (p) => readFileSync(new URL(p, import.meta.url), 'utf8');
 
-/** Những trường `LootDropModal` thật sự đọc — lấy từ chính mã nguồn của nó. */
+/**
+ * Những trường mà HAI người đọc `pendingReward` thật sự đọc — lấy từ chính mã nguồn của chúng:
+ * hộp thoại chi tiết (`LootDropModal.jsx`) và bộ dựng chuỗi thẻ thưởng (`sessionRewardStory.js`,
+ * ADR-068). Quên một người đọc là để bản giả thiếu đúng trường người ấy cần, trong im lặng.
+ */
 function truongHopThoaiDoc() {
-  const src = doc('../components/LootDropModal.jsx');
-  const ra = new Set([...src.matchAll(/\breward\.([a-zA-Z0-9_]+)/g)].map((m) => m[1]));
+  const nguon = [
+    doc('../components/LootDropModal.jsx'),
+    doc('../components/sessionRewardStory.js'),
+  ];
+  const ra = new Set(nguon.flatMap((src) => [...src.matchAll(/\breward\.([a-zA-Z0-9_]+)/g)].map((m) => m[1])));
   assert.ok(ra.size >= 20, `mới thấy ${ra.size} trường — phép đo đang chạy rỗng`);
   return ra;
 }

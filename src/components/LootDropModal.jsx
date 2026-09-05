@@ -15,9 +15,10 @@
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { SCRIM_FADE, useCustomMotion, useEnterMotion, usePressMotion, useRewardMotion } from '../lib/motionPresets';
+import { useCountUp } from '../lib/useCountUp';
 
 import useGameStore  from '../store/gameStore';
 import useSettingsStore from '../store/settingsStore';
@@ -137,29 +138,7 @@ const PHASE_DURATION = {
   6: 800,   // chuyển kỷ nguyên (bỏ qua nếu không đổi)
 };
 
-// ─── Hook đếm số có animation ─────────────────────────────────────────────────
-function useCountUp(target, duration = 1000, active = true) {
-  const [value, setValue] = useState(0);
-  const frameRef = useRef(null);
-
-  useEffect(() => {
-    if (!active) return undefined;
-    const start = performance.now();
-
-    const tick = (now) => {
-      const elapsed  = now - start;
-      const progress = Math.min(elapsed / duration, 1);
-      const eased    = 1 - Math.pow(1 - progress, 3); // ease out cubic
-      setValue(Math.round(target * eased));
-      if (progress < 1) frameRef.current = requestAnimationFrame(tick);
-    };
-
-    frameRef.current = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(frameRef.current);
-  }, [target, duration, active]);
-
-  return active ? value : 0;
-}
+// Hook đếm số: `lib/useCountUp.js` — dùng chung với chuỗi thẻ thưởng (ADR-068).
 
 // ─────────────────────────────────────────────────────────────────────────────
 

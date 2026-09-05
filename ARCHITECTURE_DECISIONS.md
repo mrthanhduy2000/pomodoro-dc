@@ -11,6 +11,81 @@
 
 ---
 
+## ADR-068 — VÒNG LẶP CHÍNH theo tâm lý học thói quen: chuỗi lên đầu màn hình, nhiệm vụ ngày về chỗ ra quyết định, và mỗi phiên kết thúc bằng một CHUỖI THẺ chứ không phải một thẻ toast
+
+- **Ngày**: 2026-09-05
+- **Trạng thái**: đã áp dụng. **Đảo ngược MỘT NỬA ADR-060** (vế "mọi phiên thường → toast góc màn
+  hình"); giữ nguyên nửa còn lại (một thẻ chung, một thang độ hiếm, "chặn màn hình chỉ cho việc
+  phải QUYẾT ĐỊNH").
+- **Bối cảnh**: Đàm ra lệnh *"làm một cuộc cách mạng về upgrade, đừng upgrade nhỏ lẻ nữa … ứng
+  dụng UX Psychology đằng sau các app khiến người dùng không thể ngừng dùng … có thể xoá những gì
+  đã có và xây lại … không đụng Thành phố"*. Đi soi màn hình Đàm mở nhiều nhất (Tập trung, khung
+  390px) bằng con mắt của một app thói quen (Duolingo · Strava · Headspace) thì ba thứ mọi app ấy
+  đặt ở chỗ mắt đọc ĐẦU TIÊN lại nằm ở những chỗ iPhone không thấy hoặc thấy rất nhỏ:
+  1. **Chuỗi** — cơ chế giữ chân mạnh nhất — là một ô 68px ghi "7 / 14" ở thanh tiêu đề; tấm
+     "Chuỗi" đầy đủ và thẻ "Hôm nay" nằm ở cột phải `hidden … lg:flex`.
+  2. **Nhiệm vụ ngày** — ba việc dở dang, cái móc Zeigarnik của cả ngày — ở một tab riêng, tức
+     sau một cú chuyển tab, không nằm cạnh nút Bắt đầu.
+  3. **Cái kết của một phiên** — sau ADR-060, một phiên thường kết thúc bằng một thẻ toast 4 giây ở
+     góc; đo ở `timerSession.js`: ~82% số phiên không còn lễ mừng thành phố nào để che. Luật
+     peak-end (Kahneman): người ta nhớ một trải nghiệm bằng ĐỈNH và bằng CÁI KẾT của nó — một cái
+     kết ở góc màn hình không phải một cái kết.
+- **Vấn đề**: các cơ chế đã có đủ (chuỗi, mốc chuỗi, mục tiêu ngày, nhiệm vụ, hệ số nhân, sự kiện
+  tích cực) nhưng chúng **không đứng ở chỗ tâm lý học bảo phải đứng**: không ở lúc mở app (kích
+  hoạt), không ở lúc bấm Bắt đầu (hành động), và không ở lúc xong phiên (phần thưởng). Mô hình
+  Hooked (kích hoạt → hành động → thưởng biến thiên → đầu tư) có đủ bốn mắt xích trong mã, nhưng
+  ba mắt xích đầu bị giấu sau tab hoặc sau `lg:`.
+- **Phương án đã cân nhắc**:
+  - **(A) Vá lẻ** — nới cỡ ô "Chuỗi", thêm một dòng nhắc nhiệm vụ. Loại: đây đúng là "upgrade nhỏ
+    lẻ" Đàm vừa cấm, và nó không đổi CHỖ ĐỨNG của thứ gì.
+  - **(B) Mở lại hộp thoại 7 giai đoạn cũ sau mọi phiên** (đảo ngược ADR-060 hoàn toàn). Loại: hộp
+    thoại ấy đo được 3.384px · 327 chữ · 31 con số — lý do ADR-060 ra đời vẫn còn nguyên. Vấn đề
+    của nó là DÀI, không phải là CHẶN.
+  - **(C) Một màn "Hôm nay" riêng** làm tab đầu, đồng hồ là tab thứ hai. Loại: tách chỗ nhìn khỏi
+    chỗ bấm là mở lại đúng khoảng cách vừa muốn xoá.
+  - **(D — đã chọn) Xếp lại vòng lặp tại chỗ**: mọi thứ mắt cần thấy đứng trên cùng một màn hình
+    với nút Bắt đầu; cái kết của phiên là một chuỗi thẻ ngắn, mỗi thẻ một con số, và mỗi con số ấy
+    là thứ Đàm đã thấy lúc mở app — giờ được TÔ THÊM MỘT NẤC.
+- **Giải pháp**:
+  1. **`TodayHero`** (`components/TodayHero.jsx` + luật ở `todayHero.js`, có test) đứng đầu màn
+     Tập trung: số ngày chuỗi · "+N% XP/phiên" · **dải bảy ngày T2→CN** (`WeekStrip.jsx`) · mốc
+     chuỗi kế tiếp, và khi chuỗi đang treo thì câu *"Làm một phiên để giữ chuỗi"* đứng thay mốc
+     (loss aversion đúng chỗ). Ô "Hôm nay"/"Chuỗi" ở thanh tiêu đề ẩn ở tab này; hai thẻ ở cột
+     phải desktop gỡ — *hai chỗ nói cùng một chuyện thì chỗ nói ít hơn nhường*.
+  2. **Nhiệm vụ ngày nằm ngay dưới đồng hồ** (`<DailyMissions section="daily" />`, `lg:hidden` vì
+     desktop đã có cột phải). Tab cũ giữ **id `missions`** (thông báo đã lưu trỏ vào nó) nhưng đổi
+     nhãn thành **"Tiến trình"** (nhịp tuần · tài nguyên · hạng) và rời nhóm chính ⇒ thanh dưới
+     iPhone còn **4 nút** (Tập trung · Hành trang · Thành Phố · Thêm) — luật Hick.
+  3. **`SessionRewardStory`** (`components/SessionRewardStory.jsx` + luật ở `sessionRewardStory.js`,
+     có test) chạy sau MỌI phiên: xp → chuỗi (dải bảy ngày, ô hôm nay bật lên) → nhịp hôm nay
+     (thanh chạy từ mức trước phiên tới mức sau phiên) → nhiệm vụ (dòng vừa xong bật dấu ✓, nút
+     "Nhận thưởng trọn ngày" ngay tại chỗ) → lên cấp → kỷ mới. Chạm để lật, tự lật sau 2,6 giây,
+     thẻ cuối có "Tiếp tục" và "Xem chi tiết". Hộp thoại chi tiết (`LootDropModal`) chỉ còn mở khi
+     lên kỷ hoặc khi bấm. Điều phối ở `OverlayStack` (`App.jsx`): lễ mừng thành phố → chuỗi thẻ →
+     (lên kỷ) hộp thoại; `finishStory` đóng phần thưởng và dọn những toast chuỗi thẻ đã nói thay.
+  4. Hai công thức dùng chung tách ra `components/missionXp.js` (XP nhiệm vụ, thưởng trọn ngày) và
+     `lib/useCountUp.js` — vì chuỗi thẻ in cùng con số với thẻ nhiệm vụ và hộp thoại cũ.
+- **Trade-off**:
+  - Màn Tập trung dài thêm một khối ⇒ nút Bắt đầu suýt tụt dưới thanh tab lần thứ tư; trả bằng cách
+    hạ lời chào từ tiêu đề 19px hai dòng xuống một dòng 13px, bỏ hàng "Hôm nay · N phút" khỏi khối
+    (số phút còn ở thanh tiêu đề các tab khác và ở Thống kê).
+  - Mỗi phiên nay có ~10 giây màn hình thưởng thay vì 4 giây ở góc. Bỏ qua được bằng MỘT chạm;
+    thẻ cuối tự đóng sau 9 giây để không giam màn hình.
+  - `LootDropModal` 7 giai đoạn nay là màn CHI TIẾT ít được mở — nó và chuỗi thẻ cùng trình bày
+    một `pendingReward` (ghi `TECH_DEBT #98`).
+- **Ảnh hưởng**:
+  - **KHÔNG đổi một luật tính thưởng nào**; store vẫn bật `lootModalOpen` đồng bộ như cũ. Toàn bộ
+    thay đổi nằm ở tầng hiển thị — đúng điểm cắm ADR-060 đã chọn.
+  - **Không đụng `src/engine/city3d/`, `components/city/`, `useCityMoment.js`** — lệnh Đàm.
+  - `appNavigation.test.js` (3 nút chính) · `rewardToastWiring.test.js` (+1 bài canh cổng chuỗi thẻ)
+    · `previewStage.test.js` (đọc trường từ CẢ HAI người đọc `pendingReward`) · hai file test mới.
+  - Cửa soi: `--preview loot` (thẻ đầu) và `--preview "loot&dc-preview-card=streak"` (nhảy thẻ).
+- **Điều kiện xem lại**: Đàm nói chuỗi thẻ "dài" hoặc "phiền" ⇒ rút số thẻ mặc định còn 2 (xp +
+  chuỗi) trước khi nghĩ tới việc tắt; nếu `LootDropModal` không được mở trong nhiều tuần ⇒ xoá nó và
+  chuyển nút "Xem chi tiết" thành một thẻ liệt kê tài nguyên.
+
+---
+
 ## ADR-067 — Màn Thống kê có MỘT nguồn kỳ thời gian, và kỳ mang nghĩa LỊCH chứ không phải "N ngày gần nhất"
 
 - **Ngày**: 2026-08-30

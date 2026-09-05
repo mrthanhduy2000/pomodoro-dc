@@ -12,6 +12,35 @@
 
 ---
 
+## 2026-09-05 — Cách mạng vòng lặp chính (ADR-068): chuỗi lên đầu, nhiệm vụ về cạnh nút Bắt đầu, và một cái KẾT cho mỗi phiên
+
+**Mục đích.** Lệnh Đàm: *"làm một cuộc cách mạng về upgrade… ứng dụng UX Psychology đằng sau các
+app khiến người dùng không thể ngừng dùng… không đụng Thành phố."* Các cơ chế đã có đủ; thứ thiếu
+là CHỖ ĐỨNG: chuỗi và nhiệm vụ ở sau tab hoặc sau `lg:`, và cái kết của một phiên là một thẻ toast
+4 giây ở góc màn hình.
+
+**Đã đổi (ba chỗ, cùng một vòng lặp).**
+1. **Màn Tập trung mở đầu bằng `TodayHero`**: số ngày chuỗi · "+N% XP/phiên" · **dải bảy ngày
+   T2→CN** · mốc chuỗi kế tiếp; chuỗi đang treo thì hiện *"Làm một phiên để giữ chuỗi"*. Lời chào
+   hạ xuống một dòng nhỏ. Ô "Hôm nay"/"Chuỗi" ở thanh tiêu đề ẩn ở tab này; hai thẻ cùng tên ở cột
+   phải desktop gỡ hẳn.
+2. **Nhiệm vụ ngày nằm ngay dưới đồng hồ** (điện thoại/tablet; desktop giữ cột phải). Tab
+   "Nhiệm vụ" thành **"Tiến trình"** (nhịp tuần · tài nguyên · hạng) trong menu "Thêm" ⇒ thanh dưới
+   iPhone còn **4 nút**. Id `missions` giữ nguyên cho thông báo đã lưu.
+3. **Chuỗi thẻ thưởng sau MỌI phiên** (`SessionRewardStory`): +XP đếm lên → 🔥 chuỗi với ô hôm
+   nay bật lên trên dải bảy ngày → nhịp hôm nay 2/5 chạy thanh → nhiệm vụ tick ✓ (nút "Nhận thưởng
+   trọn ngày" ngay tại chỗ) → lên cấp → kỷ mới. Chạm để lật, tự lật, bỏ qua một chạm. Hộp thoại chi
+   tiết 7 giai đoạn chỉ còn mở khi lên kỷ hoặc bấm "Xem chi tiết".
+
+**Kèm.** Thẻ "Thưởng trọn ngày"/"Thưởng chuỗi tuần" bị bóp tên thành *"Th / ch / tua"* khi có cả ô
+XP lẫn nút — nay XP đi vào nút hoặc chỉ đứng một mình. `scaleMissionXP` + thưởng trọn ngày dùng
+chung ở `components/missionXp.js`; `useCountUp` tách ra `lib/`. Cửa soi thêm `dc-preview-card`.
+
+**Tương thích.** Không đổi luật tính thưởng, không đổi state đồng bộ, không đụng Thành phố. Tài
+khoản cũ không cần migration. ADR-060 đảo ngược MỘT NỬA (vế toast-sau-mọi-phiên) — xem ADR-068.
+
+---
+
 ## 2026-09-05 — Một lỗi thật ở thanh nhiệm vụ, và hai móc dopamine bị nói quá nhỏ
 
 **LỖI THẬT: cùng một nhiệm vụ, hai công thức tiến độ, trong cùng một file.** Loại nhiệm vụ

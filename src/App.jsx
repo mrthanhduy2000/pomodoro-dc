@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState, Suspense } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState, Suspense } from 'react';
 import { AnimatePresence, motion as Motion, useReducedMotion } from 'framer-motion';
 import { useEnterMotion, usePressMotion, useSnapMotion } from './lib/motionPresets';
 import { initSync } from './lib/syncService';
@@ -11,6 +11,8 @@ import RankDisplay from './components/RankDisplay';
 import DailyMissions from './components/DailyMissions';
 import FocusRail from './components/FocusRail';
 import FocusMoment from './components/FocusMoment';
+import TodayHero from './components/TodayHero';
+import SessionRewardStory from './components/SessionRewardStory';
 import { getEraStage } from './engine/eraStage';
 import { calculateStreakMilestoneProgress, evaluateStreakAtRisk } from './engine/gameMath';
 import FocusCoachMobile from './components/FocusCoachMobile';
@@ -198,7 +200,9 @@ const DESKTOP_TABS = [
 
 const MOBILE_TABS = [
   { id: 'focus', label: 'Tập trung', shortLabel: 'Tập trung', Icon: AppIcon.focus },
-  { id: 'missions', label: 'Nhiệm vụ', shortLabel: 'Nhiệm vụ', Icon: AppIcon.missions },
+  // ⚠️ ID `missions` GIỮ NGUYÊN (thông báo đã lưu trỏ vào nó); chỉ NHÃN đổi — nhiệm vụ NGÀY nay nằm
+  // ngay dưới đồng hồ ở màn Tập trung (ADR-068), tab này còn lại nhịp tuần · tài nguyên · hạng.
+  { id: 'missions', label: 'Tiến trình', shortLabel: 'Tiến trình', Icon: AppIcon.missions },
   { id: 'inventory', label: 'Hành trang', shortLabel: 'Hành trang', Icon: AppIcon.vault },
   { id: 'city', label: 'Thành Phố', shortLabel: 'Thành Phố', Icon: AppIcon.city },
   { id: 'stats', label: 'Thống kê', shortLabel: 'Thống kê', Icon: AppIcon.stats },
@@ -214,7 +218,11 @@ const MOBILE_TABS = [
 // ấy gộp thành MỘT ("Hành trang") nên ô thứ tư được trả lại đúng cho Thành Phố. Thứ đổi chỗ là
 // "Thống kê" — nó đi sang nút "Thêm" cùng "Cài đặt", vì hai mục đó là chỗ để NGỒI ĐỌC chứ không
 // phải chỗ bấm vào giữa một phiên.
-const MOBILE_PRIMARY_IDS = ['focus', 'missions', 'inventory', 'city'];
+// ⚠️ ĐỔI 2026-09-05 (ADR-068): thanh dưới còn BỐN nút (ba tab + Thêm). "Nhiệm vụ" rời nhóm chính vì
+// nhiệm vụ NGÀY — thứ Đàm bấm vào giữa một ngày — nay nằm ngay dưới đồng hồ ở màn Tập trung; phần
+// còn lại của tab ấy (nhịp tuần · tài nguyên · hạng) là chỗ NGỒI ĐỌC, cùng nhóm với Thống kê.
+// Ít nút hơn thì mỗi nút rộng hơn và câu hỏi "bấm đâu" ngắn hơn (luật Hick).
+const MOBILE_PRIMARY_IDS = ['focus', 'inventory', 'city'];
 const MOBILE_PRIMARY_TABS = MOBILE_TABS.filter((t) => MOBILE_PRIMARY_IDS.includes(t.id));
 const MOBILE_SECONDARY_TABS = MOBILE_TABS.filter((t) => !MOBILE_PRIMARY_IDS.includes(t.id));
 
@@ -789,6 +797,7 @@ export default function App() {
 
   const greeting = getGreeting(getVietnamHour());
   const todayKey = localDateStr();
+  const mondayKey = localWeekMondayStr();
   // ⚠️ Hai con số này dùng chung công thức với vòng MỤC TIÊU NGÀY quanh đồng hồ
   // (`PomodoroEngine.jsx`). Đừng tính lại tại chỗ: hai chỗ cùng nói "hôm nay đi được bao nhiêu"
   // mà lệch nhau thì màn hình tự mâu thuẫn với chính nó, và không có gì đỏ lên.
@@ -820,7 +829,7 @@ export default function App() {
     if (action.tab) selectTab(action.tab, action.collectionTab);
   };
 
-  const renderTopRail = () => (
+  const renderTopRail = ({ hideStats = false } = {}) => (
     <AppErrorBoundary
       area="thanh trạng thái"
       description="Top rail gặp lỗi. Nội dung chính vẫn có thể hoạt động độc lập."
@@ -843,6 +852,7 @@ export default function App() {
         streakMilestoneTarget={streakMilestoneTarget}
         totalEP={totalEP}
         notificationControl={<NotificationCenter onNavigate={handleNotificationNavigate} />}
+        hideStats={hideStats}
       />
     </AppErrorBoundary>
   );
@@ -903,7 +913,8 @@ export default function App() {
                     <CityBackdrop hasFocusSessionInProgress={hasFocusSessionInProgress} />
                   </Suspense>
                   <div className="relative h-full min-h-0 min-w-0 overflow-x-hidden overflow-y-auto scroll-pb-[calc(env(safe-area-inset-bottom)+7.4rem)]">
-                    {!isDesktop && !showFocusFullscreen && !hasFocusSessionInProgress && renderTopRail()}
+                    {/* `hideStats`: ô «Hôm nay»/«Chuỗi» nhường cho `TodayHero` ngay bên dưới (ADR-068). */}
+                    {!isDesktop && !showFocusFullscreen && !hasFocusSessionInProgress && renderTopRail({ hideStats: true })}
                     <AppErrorBoundary
                       area="trang tập trung"
                       description="Khu vực timer chính gặp lỗi. Các phần khác của app vẫn được giữ lại."
@@ -924,6 +935,8 @@ export default function App() {
                           dailyGoalSessions={dailyGoalSessions}
                           dailyGoalMinutes={dailyGoalMinutes}
                           hasFocusSessionInProgress={hasFocusSessionInProgress}
+                          todayKey={todayKey}
+                          mondayKey={mondayKey}
                         />
                         {/*
                           Một dòng: phiên này đang đẩy công trình nào tới đâu.
@@ -965,7 +978,9 @@ export default function App() {
                           onNavigate={handleNotificationNavigate}
                           sessionInProgress={hasFocusSessionInProgress}
                         />
-                        <div className="mt-6">
+                        {/* `mt-4` ở khổ điện thoại (ADR-068): khối chuỗi ở trên tiêu vào biên của nút Bắt
+                            đầu, và 8px ở đây rẻ hơn bất kỳ chữ nào. */}
+                        <div className="mt-4 md:mt-6">
                           <PomodoroEngine
                             immersiveMode={isWideViewport}
                             onEnterFullScreen={() => {
@@ -974,6 +989,17 @@ export default function App() {
                             }}
                           />
                         </div>
+                        {/*
+                          ⚠️ NHIỆM VỤ NGÀY NGAY DƯỚI ĐỒNG HỒ (ADR-068) — hiệu ứng Zeigarnik: ba việc dở dang nằm
+                          trong tầm mắt đúng chỗ ra quyết định bấm Bắt đầu, thay vì sau một cú chuyển tab.
+                          `lg:hidden` vì màn rộng đã có cột phải dựng cả khối ngày lẫn tuần; ẩn khi phiên đang
+                          chạy để giữ màn Tập trung tĩnh, cùng luật với thẻ AI Coach bên dưới.
+                        */}
+                        {!hasFocusSessionInProgress && (
+                          <div className="mt-4 lg:hidden">
+                            <DailyMissions section="daily" />
+                          </div>
+                        )}
                         {/* Thẻ AI Coach gọn cho ĐIỆN THOẠI (cột phải chỉ hiện trên màn rộng).
                             Ẩn khi đang chạy phiên để giữ màn Focus tĩnh. */}
                         <FocusCoachMobile
@@ -1072,12 +1098,12 @@ export default function App() {
                   {activeTab === 'missions' && (
                     <TabPane key="missions">
                       <ShellPane
-                        title="Nhiệm vụ"
-                        subtitle="Gom toàn bộ nhiệm vụ hôm nay, nhịp tuần, giai đoạn hiện tại và rank vào một workspace riêng để phần tập trung trên mobile gọn hơn."
+                        title="Tiến trình"
+                        subtitle="Nhịp tuần, tài nguyên và hạng của kỷ này. Nhiệm vụ ngày nằm ngay dưới đồng hồ ở màn Tập trung."
                         topRail={!isDesktop && !showFocusFullscreen ? renderTopRail() : null}
                       >
                         <div className="space-y-4">
-                          <DailyMissions />
+                          <DailyMissions section="weekly" />
                           <ResourceDisplay />
                           <RankDisplay />
                         </div>
@@ -1152,7 +1178,7 @@ export default function App() {
                   borderColor: 'var(--line)',
                   background: 'var(--panel-soft)',
                   boxShadow: '0 16px 34px rgba(31,30,29,0.12)',
-                  gridTemplateColumns: `repeat(${Math.min(3, Math.max(1, MOBILE_SECONDARY_TABS.length + 1))}, minmax(0, 1fr))`,
+                  gridTemplateColumns: `repeat(${Math.min(4, Math.max(1, MOBILE_SECONDARY_TABS.length + 1))}, minmax(0, 1fr))`,
                 }}
               >
                 {MOBILE_SECONDARY_TABS.map((tab) => {
@@ -1381,7 +1407,12 @@ function OverlayStack({
 }) {
   const [detail, setDetail] = useState(null);
   const [momentSeen, setMomentSeen] = useState(false);
+  // "Chuỗi thẻ thưởng đã xem xong chưa" — tự sạch nhờ `key` ở `GlobalOverlays`, như `momentSeen`.
+  const [storyDone, setStoryDone] = useState(false);
   const pendingEraChanged = useGameStore((s) => Boolean(s.ui.pendingReward?.eraChanged));
+  const closeLootModal = useGameStore((s) => s.closeLootModal);
+  const dismissMissionNotification = useGameStore((s) => s.dismissMissionNotification);
+  const dismissLevelUp = useGameStore((s) => s.dismissLevelUp);
   const reduceMotion = useReducedMotion();
   const growth = useCityGrowthMoment(lootModalOpen);
 
@@ -1424,10 +1455,43 @@ function OverlayStack({
   */
   const showMoment = lootModalOpen && growth?.moment?.kind === 'built' && !momentSeen && !reduceMotion;
 
-  // Hộp thoại phần thưởng mở THẲNG chỉ khi lên kỷ; ngoài ra phải do Đàm bấm vào thẻ.
+  /*
+    ⚠️ CHUỖI THẺ THƯỞNG CHẠY SAU MỌI PHIÊN (2026-09-05, ADR-068) — và đây là chỗ ADR-060 được SỬA
+    LẠI MỘT NỬA. ADR-060 đúng khi bảo hộp thoại 7 giai đoạn (3.384px, 327 chữ) không được chặn màn
+    hình sau mỗi phiên; nó sai ở chỗ thay thế bằng một thẻ toast 4 giây ở góc — đo trên 579 phiên,
+    ~82% số phiên không còn lễ mừng nào, tức 25 phút làm việc thật kết thúc bằng một thứ dễ bỏ lỡ
+    nhất app. Luật peak-end: cái KẾT quyết định người ta nhớ phiên ấy thế nào.
+    Chuỗi thẻ này là cái kết: 3–5 thẻ, mỗi thẻ MỘT con số, chạm là lật, tự lật, ~10 giây, bỏ qua
+    được bằng một chạm. Nó KHÔNG phải một việc phải quyết định — nó là phần thưởng, và phần thưởng
+    thì phải được NHÌN THẤY. Luật "chỉ bốn việc được chặn màn hình" vẫn đúng cho mọi lớp phủ ĐÒI
+    quyết định; toast vẫn là kênh cho di vật/thành tích/nhiệm vụ đến kèm.
+    Thứ tự giữ nguyên: lễ mừng thành phố (nếu có) → chuỗi thẻ → (lên kỷ) hộp thoại chi tiết.
+  */
+  const showStory = lootModalOpen && !showMoment && !storyDone;
+
+  // Hộp thoại chi tiết mở THẲNG chỉ khi lên kỷ (sau chuỗi thẻ); ngoài ra phải do Đàm bấm.
   // `!showMoment` giữ đúng thứ tự cũ: lễ mừng xong rồi mới tới phần thưởng.
-  const showLootModal = lootModalOpen && !showMoment && (pendingEraChanged || detail === 'loot');
+  const showLootModal = lootModalOpen && !showMoment && storyDone && (pendingEraChanged || detail === 'loot');
   const showLevelModal = hasLevelUp && detail === 'level';
+
+  /**
+   * Kết thúc chuỗi thẻ. Ba lối ra:
+   *   · bấm "Xem chi tiết" → giữ `pendingReward`, mở hộp thoại chi tiết;
+   *   · lên kỷ → giữ `pendingReward`, cổng `showLootModal` tự mở hộp thoại;
+   *   · còn lại → đóng phần thưởng, và dọn những toast mà chuỗi thẻ ĐÃ nói thay (nhiệm vụ vừa xong,
+   *     lên cấp) — để chúng không kể lại lần thứ hai ở góc màn hình.
+   */
+  const finishStory = useCallback(({ openDetail = false, shownMissionIds = [], levelShown = false } = {}) => {
+    setStoryDone(true);
+    if (openDetail) {
+      setDetail('loot');
+      return;
+    }
+    if (pendingEraChanged) return;
+    closeLootModal();
+    for (const id of shownMissionIds) dismissMissionNotification(id);
+    if (levelShown) dismissLevelUp();
+  }, [pendingEraChanged, closeLootModal, dismissMissionNotification, dismissLevelUp]);
 
   // ⚠️ NẠP TRƯỚC gói mã của màn phần thưởng ngay khi một phiên vừa xong. Đo bằng máy
   // (bản Phase 4′): không có dòng này thì gói `loot-drop-modal` chỉ bắt đầu tải SAU
@@ -1447,7 +1511,7 @@ function OverlayStack({
   // chỉ bật một lời MỜI (`weeklyReportPending` → một thẻ toast); cờ này chỉ lên khi Đàm bấm —
   // nút ở thanh bên hoặc chính cái thẻ ấy — nên nó rơi vào đúng câu đã ghi ở trên: "một hộp
   // thoại Đàm tự mở thì không phải làm phiền".
-  const blocking = showMoment || showLootModal || disasterModalOpen || eraCrisisModalOpen
+  const blocking = showMoment || showStory || showLootModal || disasterModalOpen || eraCrisisModalOpen
     || prestigeModalOpen || weeklyReportOpen || showLevelModal;
 
   const hasToast = (
@@ -1466,13 +1530,24 @@ function OverlayStack({
       {showMoment && (
         <CityGrowthMoment moment={growth.moment} era={growth.era} onDone={() => setMomentSeen(true)} />
       )}
+      {showStory && <SessionRewardStory onDone={finishStory} />}
       {showLootModal && <LootDropModal />}
       {disasterModalOpen && <DisasterModal />}
       {eraCrisisModalOpen && <EraCrisisModal />}
       {prestigeModalOpen && <PrestigeModal />}
       {showLevelModal && <LevelUpModal autoDismissMs={0} />}
       {weeklyReportOpen && <WeeklyReportModal />}
-      {hasToast && (
+      {/*
+        ⚠️ KHÔNG dựng chồng toast trong lúc chuỗi thẻ đang chạy (ADR-068): nó nằm dưới lớp z-50 nên
+        không thấy được, nhưng `RewardToastHost` PHÁT TIẾNG khi thẻ mới xuất hiện — dựng cùng lúc là
+        tiếng thẻ toast chồng lên tiếng mở rương của thẻ xp. Chuỗi thẻ xong thì chồng toast mọc ra
+        với đúng những gì còn lại (di vật, thành tích…), vì thẻ tổng kết phiên đã bị `closeLootModal`
+        rút đi và thẻ nhiệm vụ/lên cấp mà chuỗi thẻ đã nói thay cũng đã được dọn.
+        ⚠️ Giới hạn biết trước: bấm "Nhận thưởng trọn ngày" NGAY TRONG chuỗi thẻ mà cú nhận ấy làm
+        LÊN CẤP thì `levelUpHead` đổi ⇒ `key` của `GlobalOverlays` đổi ⇒ chuỗi thẻ dựng lại từ thẻ
+        đầu. Hiếm (cần vừa đủ 43 XP để qua ngưỡng cấp) và chỉ tốn một lượt xem lại; ghi ở `TECH_DEBT #98`.
+      */}
+      {hasToast && !showStory && (
         <RewardToastHost
           paused={blocking}
           onNavigate={onNavigate}
@@ -1625,6 +1700,7 @@ function TopRail({
   streakMilestoneTarget,
   totalEP,
   notificationControl,
+  hideStats = false,
 }) {
   return (
     <header
@@ -1645,15 +1721,19 @@ function TopRail({
             <div className="mono text-[10px] uppercase tracking-[0.24em] text-[var(--muted)]">Kỷ {activeBook}</div>
             <div className="mt-1 text-[20px] font-bold leading-none tracking-[-0.03em] text-[var(--ink)]" style={{ fontFamily: 'var(--skin-font-display)' }}>{eraLabel}</div>
           </div>
-          <div
-            className="rounded-full border px-3 py-1.5"
-            style={{
-              borderColor: 'var(--line)',
-              background: 'var(--panel)',
-              boxShadow: '0 10px 18px rgba(31,30,29,0.04)',
-            }}
-          >
-            <span className="mono text-[11px] font-semibold text-[var(--ink)]">Cấp {level}</span>
+          <div className="flex items-center gap-2">
+            {/* Ẩn hàng ô số liệu (tab Tập trung) thì cái chuông lên đây — nó không được biến mất theo. */}
+            {hideStats && notificationControl}
+            <div
+              className="rounded-full border px-3 py-1.5"
+              style={{
+                borderColor: 'var(--line)',
+                background: 'var(--panel)',
+                boxShadow: '0 10px 18px rgba(31,30,29,0.04)',
+              }}
+            >
+              <span className="mono text-[11px] font-semibold text-[var(--ink)]">Cấp {level}</span>
+            </div>
           </div>
         </div>
 
@@ -1737,6 +1817,7 @@ function TopRail({
           mà mất đi thì không lấy lại được — phiên và phút hôm nay thì mai làm lại từ đầu, còn
           chuỗi đứt là đứt hẳn. Nó xứng đáng là ô to, không phải ô cuối hàng.
         */}
+        {!hideStats && (
         <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] items-center gap-2 lg:hidden">
           <TinyStat compact label="Hôm nay" value={focusHoursToday} />
           {/*
@@ -1764,6 +1845,7 @@ function TopRail({
             {notificationControl}
           </div>
         </div>
+        )}
 
         {/* HUD gọn như mockup: chỉ vòng cấp (số trong vòng) — số liệu ngày đã nằm ở cột phải/Thống kê */}
         <div className="hidden items-center gap-2 xl:flex" title={`Cấp ${level} · ${(levelPct * 100).toFixed(0)}%`}>
@@ -1841,6 +1923,8 @@ function FocusIntro({
   dailyGoalSessions,
   dailyGoalMinutes,
   hasFocusSessionInProgress,
+  todayKey,
+  mondayKey,
 }) {
   // Màn Focus tĩnh: khi phiên đang chạy/tạm dừng, ẩn lời chào lớn để chỉ còn đồng hồ.
   if (hasFocusSessionInProgress) return null;
@@ -1883,14 +1967,17 @@ function FocusIntro({
         Khối chào còn đúng một dòng: TIẾNG NÓI. Phần hành-động-được nằm ở hai dòng ngay dưới
         («Đang xây … · còn 4 phiên» · «Tổng kết tuần trước») và ở «Phiên 0/5» dưới đồng hồ.
     */
-    <div className="mb-3 border-t px-1 pt-3 md:mb-4 md:pt-4" style={{ borderColor: 'var(--line)' }}>
-      <h1
-        className="text-[19px] font-semibold leading-snug tracking-[-0.01em] text-[var(--ink)] md:text-[21px]"
-        style={{ fontFamily: 'var(--skin-font-display)' }}
-      >
-        {title}
-      </h1>
-    </div>
+    /*
+      ⚠️ KHỐI CHÀO NAY LÀ `TodayHero` (2026-09-05, ADR-068): dòng TIẾNG NÓI ở trên giữ nguyên, ngay
+      dưới nó là chuỗi · dải bảy ngày · mốc kế tiếp — thứ một app thói quen cho người ta thấy ĐẦU
+      TIÊN. Nó thay ô «Chuỗi» ở thanh tiêu đề (ẩn ở tab này) và hai thẻ của cột phải desktop.
+    */
+    <TodayHero
+      title={title}
+      todayKey={todayKey}
+      mondayKey={mondayKey}
+      sessionsCompletedToday={sessionsCompletedToday}
+    />
   );
 }
 

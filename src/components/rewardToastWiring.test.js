@@ -60,6 +60,36 @@ test('phiên thường KHÔNG mở hộp thoại phần thưởng — chỉ lên
   );
 });
 
+/**
+ * ⚠️ CHUỖI THẺ THƯỞNG CHẠY SAU MỌI PHIÊN (2026-09-05, ADR-068) — và nó SỬA LẠI MỘT NỬA ADR-060.
+ * ADR-060 đúng khi cấm hộp thoại 7 giai đoạn chặn màn hình sau mỗi phiên; nó sai ở chỗ thay bằng
+ * một thẻ toast 4 giây ở góc: ~82% số phiên không còn lễ mừng nào (đo ở `timerSession.js`), nên
+ * 25 phút làm việc thật kết thúc bằng thứ dễ bỏ lỡ nhất app. Chuỗi thẻ là cái KẾT — ngắn, mỗi thẻ
+ * một con số, bỏ qua được bằng một chạm — và hộp thoại chi tiết vẫn chỉ mở khi lên kỷ hoặc khi bấm.
+ */
+test('chuỗi thẻ thưởng bám `lootModalOpen` (mọi phiên), đứng TRƯỚC hộp thoại chi tiết, và tính vào `blocking`', () => {
+  const gate = /const\s+showStory\s*=\s*([^;]+);/.exec(APP_CODE);
+  assert.ok(gate, 'không đọc được `showStory` — chuỗi thẻ thưởng đã đi đâu?');
+  assert.match(gate[1], /lootModalOpen/, 'chuỗi thẻ phải bám `lootModalOpen` — chạy sau MỌI phiên, không chỉ khi lên kỷ');
+  assert.match(gate[1], /!showMoment/, 'lễ mừng thành phố phải xong trước rồi mới tới chuỗi thẻ');
+  assert.match(gate[1], /!storyDone/, 'thiếu cờ "đã xem xong" ⇒ chuỗi thẻ không bao giờ nhường chỗ cho hộp thoại chi tiết');
+  assert.match(APP_CODE, /\{\s*showStory\s*&&\s*<SessionRewardStory/, 'chuỗi thẻ không được dựng');
+
+  // Hộp thoại chi tiết chỉ mở SAU khi chuỗi thẻ xong — nếu không hai lớp phủ chồng lên nhau.
+  const loot = /const\s+showLootModal\s*=\s*([^;]+);/.exec(APP_CODE);
+  assert.match(loot[1], /storyDone/, 'hộp thoại chi tiết phải chờ chuỗi thẻ xong');
+
+  const blocking = /const\s+blocking\s*=\s*([\s\S]*?);/.exec(APP_CODE);
+  assert.match(blocking[1], /showStory/, '`blocking` bỏ sót chuỗi thẻ ⇒ 4 giây của toast cháy sau lưng nó');
+
+  // Kết thúc chuỗi thẻ phải ĐÓNG phần thưởng (như toast từng làm) — trừ khi lên kỷ hoặc bấm xem chi tiết.
+  const finish = /const\s+finishStory\s*=\s*useCallback\(([\s\S]*?)\}, \[/.exec(APP_CODE);
+  assert.ok(finish, 'không đọc được `finishStory`');
+  assert.match(finish[1], /closeLootModal\(\)/, 'chuỗi thẻ xong mà không đóng phần thưởng ⇒ `lootModalOpen` treo mãi');
+  assert.match(finish[1], /if \(pendingEraChanged\) return;/, 'lên kỷ thì phải GIỮ `pendingReward` cho hộp thoại chi tiết đọc');
+  assert.match(finish[1], /setDetail\('loot'\)/, 'bấm "Xem chi tiết" phải mở được hộp thoại đầy đủ');
+});
+
 test('lên cấp cũng không tự chặn màn hình nữa', () => {
   assert.ok(
     !/\{\s*hasLevelUp\s*&&\s*<LevelUpModal/.test(APP_CODE),

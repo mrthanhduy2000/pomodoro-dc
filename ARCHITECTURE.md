@@ -166,10 +166,20 @@ App.jsx <OverlayStack>
         │        └→ <CityGrowthMoment> 3,2 giây → onDone
         │           (song song: LootDropModal.preload() nạp sẵn gói mã)
         │
-        └─ rồi PHÂN TẦNG theo mức độ làm phiền (ADR-060):
+        ├─ rồi <SessionRewardStory> — CHUỖI THẺ THƯỞNG sau MỌI phiên (ADR-068):
+        │        xp → chuỗi (dải bảy ngày) → nhịp hôm nay → nhiệm vụ → lên cấp → kỷ mới
+        │        chạm để lật · tự lật 2,6 s · "Bỏ qua" một chạm · thẻ cuối: Tiếp tục / Xem chi tiết
+        │        luật thẻ: engine-thuần ở components/sessionRewardStory.js (không đọc store)
+        │        └→ onDone (`finishStory`):
+        │             · lên kỷ            ⇒ giữ pendingReward, cổng dưới mở hộp thoại
+        │             · bấm Xem chi tiết  ⇒ detail = 'loot'
+        │             · còn lại           ⇒ closeLootModal() + dọn toast chuỗi thẻ đã nói thay
+        │
+        └─ rồi PHÂN TẦNG theo mức độ làm phiền (ADR-060, sửa một nửa ở ADR-068):
                  ├─ pendingReward.eraChanged  ⇒ <LootDropModal> — LÊN KỶ được chặn màn hình
-                 └─ mọi phiên khác            ⇒ một THẺ trong <RewardToastHost>
-                                                 bấm vào thẻ ⇒ mở <LootDropModal> đầy đủ
+                 ├─ detail === 'loot'         ⇒ <LootDropModal> — chi tiết đầy đủ, do Đàm bấm
+                 └─ di vật · thành tích · nhiệm vụ · lên cấp đến KÈM ⇒ THẺ trong <RewardToastHost>
+                                                 (đồng hồ toast DỪNG trong lúc chuỗi thẻ chạy)
 ```
 
 **Luật của tầng này (ADR-010)**: trạng thái của một hoạt hoạ 3 giây **không phải dữ liệu** — nó là
@@ -181,6 +191,11 @@ TRỪ KHI khoảnh khắc đang thật sự chạy.
 `RewardSequence` — component chỉ dựng khi hộp thoại phần thưởng bật — nên buộc cổng hộp thoại lại
 mà quên tách nó ra sẽ **giết lễ mừng ở mọi phiên thường, trong im lặng**. Đúng cái bẫy ấy đã xảy ra
 trong chính phiên viết ADR-060 và nay có test canh.
+
+⚠️ **ADR-068 (2026-09-05) sửa MỘT NỬA luật này**: phiên thường không còn kết thúc bằng một thẻ toast
+4 giây — nó kết thúc bằng `SessionRewardStory`, một chuỗi 3–6 thẻ toàn màn hình, mỗi thẻ một con
+số, bỏ qua được bằng một chạm. Vế "chặn màn hình chỉ cho việc phải QUYẾT ĐỊNH" vẫn đúng cho mọi lớp
+phủ ĐÒI quyết định; chuỗi thẻ là PHẦN THƯỞNG, và phần thưởng thì phải được nhìn thấy (luật peak-end).
 
 ### 6.3 Phân tầng mức độ làm phiền (ADR-060)
 

@@ -24,18 +24,24 @@
 │   │   │                         #   MỘT đồng hồ riêng 4 giây, và đồng hồ DỪNG khi có hộp thoại
 │   │   │                         #   chặn màn hình. Nằm ở z-[48]: trên chuông (z-[45]), dưới sàn
 │   │   │                         #   hộp thoại (z-50) — đúng thứ bậc "phải quyết" vs "chỉ cần biết"
-│   │   ├── FocusStageCountdown.jsx # MỘT DÒNG ở màn Tập trung, BA giọng: "🎉 Vừa mở «…»" (vượt
-│   │   │                         #   mốc — bấm được để tắt) · "🔥 Một phiên nữa là tới «…»" ·
-│   │   │                         #   "◈ Còn ~N phiên nữa tới «…»". Phép tính ở engine/eraStage.js;
-│   │   │                         #   dấu "đã ăn mừng" ở localStorage `dc-stage-seen-v1`
-│   │   ├── FocusNextAction.jsx   # MỘT DÒNG BẤM ĐƯỢC ở màn Tập trung: việc đáng làm tiếp theo là
-│   │   │                         #   gì (mở kỹ năng nào / nghiên cứu gì / xây gì), bấm là tới đúng
-│   │   │                         #   tab. Ưu tiên XÂY > NGHIÊN CỨU > KỸ NĂNG — xây là việc duy nhất
-│   │   │                         #   cho kết quả nhìn thấy được trong thành phố ở phiên sau.
-│   │   │                         #   ⚠️ Phải ở CỘT GIỮA của App.jsx, cạnh `FocusCityTease`: cột
-│   │   │                         #   phải (`FocusRail`) là `hidden … lg:flex` nên iPhone không bao
-│   │   │                         #   giờ thấy. Không có việc ⇒ render null, không khung rỗng.
-│   │   │                         #   Dây nối khoá bằng `focusNextActionWiring.test.js`
+│   │   ├── FocusMoment.jsx       # MỘT DÒNG "khoảnh khắc" ở màn Tập trung, chọn từ NĂM nguồn (luật
+│   │   │                         #   ở `focusMomentPick.js`): ăn mừng vượt mốc chặng · mốc chuỗi ·
+│   │   │                         #   đếm ngược chặng · tổng kết tuần · việc tiếp theo. Cột GIỮA.
+│   │   ├── TodayHero.jsx         # KHỐI MỞ ĐẦU màn Tập trung (ADR-068): chuỗi 🔥 N · "+N% XP/phiên"
+│   │   │                         #   · dải bảy ngày · mốc kế tiếp; chuỗi treo ⇒ câu kéo về nút Bắt
+│   │   │                         #   đầu. Thay ô Chuỗi ở thanh tiêu đề (tab này) + 2 thẻ cột phải
+│   │   ├── todayHero.js          # LUẬT thuần của khối trên: `buildWeekStrip` (ngày trước đọc
+│   │   │                         #   lịch sử, HÔM NAY đọc dailyTracking) · `describeStreakTarget`
+│   │   │                         #   · `streakBonusPercent`. Test: `todayHero.test.js`
+│   │   ├── WeekStrip.jsx         # Bảy ô T2→CN, CHỈ VẼ. Dùng ở CẢ khối Hôm nay lẫn thẻ Chuỗi trong
+│   │   │                         #   chuỗi thẻ thưởng — cùng một vật, hai khoảnh khắc
+│   │   ├── SessionRewardStory.jsx # CHUỖI THẺ THƯỞNG toàn màn hình sau MỌI phiên (ADR-068): xp →
+│   │   │                         #   chuỗi → hôm nay → nhiệm vụ → cấp → kỷ. Chạm lật · tự lật ·
+│   │   │                         #   "Bỏ qua" một chạm. Đóng qua `onDone` — điều phối ở OverlayStack
+│   │   ├── sessionRewardStory.js # LUẬT thuần dựng thẻ (`buildRewardStoryCards`) + nhịp lật. Đọc
+│   │   │                         #   `reward.*` ⇒ `previewStage.test.js` soi cả file này
+│   │   ├── missionXp.js          # `scaleMissionXP` + `dailyAllBonusXP` dùng CHUNG cho DailyMissions
+│   │   │                         #   và chuỗi thẻ — một luật một công thức
 │   │   ├── icons/            # Bộ icon SVG tự vẽ (thay emoji), 1 component Glyph + data tách riêng
 │   │   ├── CityView.jsx      # Tab Thành Phố — CHỈ lấy dữ liệu + chọn bộ vẽ, giữ mỏng có chủ ý
 │   │   ├── city/             # Màn hình Thành Phố. Luật: KHUNG tách khỏi BỘ VẼ (ADR-008)
@@ -764,6 +770,8 @@
 │   │   │                       #   bỏ hẳn · `useSnapMotion` nhảy thẳng tới đích khi `animate` mang
 │   │   │                       #   bố cục) và hằng `SCRIM_FADE` cho lớp phủ tối của modal.
 │   │   │                       #   ⚠️ KHÔNG dùng cho thành phố 3D — chuyển động ở đó là chuyện khác.
+│   │   ├── useCountUp.js      # Con số đếm lên tới đích (tách từ LootDropModal, ADR-068) — dùng
+│   │   │                     #   chung với chuỗi thẻ thưởng; bật Giảm chuyển động thì trả thẳng đích
 │   │   ├── supabase.js         # Supabase client (anon key, hardcode — không cần .env)
 │   │   ├── syncService.js      # Đồng bộ 2 chiều "First Action Wins" (xem ARCHITECTURE.md)
 │   │   ├── timerLiveService.js # Đồng bộ trạng thái timer cho Electron tray + push webhook

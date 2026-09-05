@@ -5568,3 +5568,31 @@ trong chú thích thì đừng để `--selftest` của chính nó vẫn dùng �
   sẽ không có cách nào biết nó tồn tại. Ghi ra một mục nợ đọc được thì hơn.
 - **Review Trigger**: khi Đàm hỏi "sao cái nút tiến hoá di vật không bấm được bao giờ".
 - **Owner**: Đàm quyết · **Status**: MỞ, chờ Đàm
+
+## #98 — `LootDropModal` (7 giai đoạn) và `SessionRewardStory` cùng trình bày MỘT `pendingReward` — hai màn cho một phần thưởng
+
+- **Tên**: hai bản trình bày của cùng một phần thưởng, sau ADR-068
+- **Module**: `src/components/LootDropModal.jsx` (1.078 dòng) · `src/components/SessionRewardStory.jsx` · `OverlayStack` trong `src/App.jsx`
+- **Priority**: Low · **Severity**: Low
+- **Impact**: ADR-068 cho mọi phiên kết thúc bằng chuỗi thẻ; hộp thoại 7 giai đoạn chỉ còn mở khi lên
+  kỷ hoặc khi Đàm bấm "Xem chi tiết". Hai màn đọc cùng `reward.*`, cùng phát cùng bộ tiếng
+  (`playChestOpen`/`playLevelUp`/`playEraChange`) — ca lên kỷ hiện nghe tiếng mở rương HAI lần (một ở
+  thẻ xp, một khi hộp thoại mở), và mọi trường mới thêm vào `pendingReward` phải nối vào hai chỗ.
+  `previewStage.test.js` đã đọc cả hai file nên bản giả không trôi, nhưng hai bản trình bày thì có thể.
+- **Root Cause**: chuỗi thẻ được xây MỚI (nhẹ, thuần, có test) thay vì cắt hộp thoại cũ — đúng lệnh
+  "có thể xoá và xây lại"; hộp thoại được giữ làm màn CHI TIẾT vì nó là chỗ duy nhất liệt kê tài
+  nguyên/RP/tinh luyện theo từng dòng, và chưa đo được Đàm có mở nó không.
+- **Current Risk**: Thấp — hai màn không chồng nhau (cổng `storyDone` đứng trước `showLootModal`).
+- **Future Risk**: Trung bình — thêm một loại thưởng mới là phải sửa hai chỗ; sửa một chỗ thì lệch
+  trong im lặng.
+- **Recommended Solution**: nếu sau vài tuần "Xem chi tiết" gần như không được bấm ⇒ XOÁ
+  `LootDropModal`, thêm một thẻ "tài nguyên" vào chuỗi thẻ (liệt kê `reward.resources` + RP + tinh
+  luyện bằng `RewardCard`), và cho ca lên kỷ dùng thẻ `era` làm màn cuối. Khi ấy `previewStage.test`
+  chỉ còn đọc một file, và tiếng chỉ phát một lần.
+- **Estimated Complexity**: Low–Medium.
+- **Kèm (cùng nơi, cùng nguyên nhân "hai lớp phủ, một `key`")**: bấm "Nhận thưởng trọn ngày" ngay trong
+  chuỗi thẻ mà cú nhận ấy làm LÊN CẤP ⇒ `levelUpHead` đổi ⇒ `key` của `GlobalOverlays` đổi ⇒ chuỗi thẻ
+  dựng lại từ thẻ đầu. Hiếm, chỉ tốn một lượt xem lại; sửa cùng lúc với việc gộp hai màn.
+- **Blocking Conditions**: cần biết Đàm có dùng "Xem chi tiết" không — hỏi anh, đừng đo.
+- **Review Trigger**: lần tới thêm một loại phần thưởng mới vào `completeFocusSession`.
+- **Owner**: chưa ai · **Status**: MỞ (2026-09-05, ADR-068)

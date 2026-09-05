@@ -4,16 +4,12 @@ import { AnimatePresence, motion } from 'framer-motion';
 
 import useGameStore from '../store/gameStore';
 import useSettingsStore from '../store/settingsStore';
-import { missionXpMultiplier, streakBonusCapDays } from '../engine/wonderEffects.js';
+import { missionXpMultiplier } from '../engine/wonderEffects.js';
+import { dailyAllBonusXP, scaleMissionXP } from './missionXp';
 import RewardCard from './shared/RewardCard';
 import { DAILY_BONUS_COPY } from './dailyBonusCopy';
 import { useCustomMotion, useEnterMotion, usePressMotion, useSnapMotion } from '../lib/motionPresets';
 import {
-  BUILDING_EFFECTS,
-  MISSION_ALL_BONUS_XP,
-  DAILY_MISSION_XP_SCALE,
-  STREAK_MAX_BONUS_DAYS,
-  STREAK_BONUS_PER_DAY,
   WEEKLY_CHAINS,
   WEEKLY_CHAIN_XP_SCALE,
   PERFECT_PLAN_WEEKLY_MULTIPLIER,
@@ -26,13 +22,15 @@ import {
 
 // ⚠️ HAI BẢN CHÉP TAY ĐÃ GỠ (2026-09-05) — `getStreakBonusCapDays` và hệ số thưởng nhiệm vụ.
 // Cả hai hỏi `wonderEffect === '…'` mà KHÔNG kiểm `type === 'wonder'`; xem
-// `engine/wonderEffects.js`.
+// `engine/wonderEffects.js`. `scaleMissionXP` cũng đã dời sang `missionXp.js` vì chuỗi thẻ thưởng
+// sau phiên (ADR-068) in cùng con số — hai bản chép là hai con số sớm muộn lệch nhau.
 
-function scaleMissionXP(xp, multiplier) {
-  return Math.max(0, Math.round((xp ?? 0) * DAILY_MISSION_XP_SCALE * multiplier));
-}
-
-export default function DailyMissions() {
+/**
+ * @param {'all'|'daily'|'weekly'} section — ADR-068 chia màn này làm hai chỗ: khối NGÀY nằm ngay
+ *   dưới đồng hồ ở màn Tập trung (nơi ra quyết định bấm Bắt đầu — hiệu ứng Zeigarnik: việc dở
+ *   dang nằm trong tầm mắt), khối TUẦN ở tab Tiến trình. Cột phải desktop dựng cả hai (`all`).
+ */
+export default function DailyMissions({ section = 'all' }) {
   const missions = useGameStore((s) => s.missions);
   const weeklyChain = useGameStore((s) => s.weeklyChain);
   const streak = useGameStore((s) => s.streak);
@@ -49,8 +47,8 @@ export default function DailyMissions() {
 
   const lightTheme = uiTheme === 'light';
   const missionRewardMultiplier = missionXpMultiplier(buildings);
-  const capNgayChuoi = streakBonusCapDays(buildings);
-  const streakBonusPct = Math.min(streak.currentStreak ?? 0, capNgayChuoi) * (STREAK_BONUS_PER_DAY * 100);
+  const showDaily = section !== 'weekly';
+  const showWeekly = section !== 'daily';
 
   const list = missions.list ?? [];
   const completedCount = list.filter((mission) => mission.claimed).length;
@@ -58,10 +56,10 @@ export default function DailyMissions() {
   const pendingXP = list
     .filter((mission) => !mission.claimed)
     .reduce((sum, mission) => sum + scaleMissionXP(mission.rewardXP, missionRewardMultiplier), 0);
-  const strategyBonusXP = unlockedSkills.bac_thay_chien_luoc
-    ? scaleMissionXP(list.reduce((sum, mission) => sum + (mission.rewardXP ?? 0), 0), missionRewardMultiplier)
-    : 0;
-  const allMissionBonusXP = scaleMissionXP(MISSION_ALL_BONUS_XP, missionRewardMultiplier) + strategyBonusXP;
+  // Cùng công thức với thẻ "Nhiệm vụ" trong chuỗi thẻ thưởng — một luật một công thức.
+  const allMissionBonusXP = dailyAllBonusXP({
+    list, multiplier: missionRewardMultiplier, strategist: Boolean(unlockedSkills.bac_thay_chien_luoc),
+  });
 
   const chain = WEEKLY_CHAINS[weeklyChain?.chainIndex] ?? null;
   const chainDone = Boolean(chain) && weeklyChain.currentStep >= chain.steps.length;
@@ -91,6 +89,7 @@ export default function DailyMissions() {
 
   return (
     <div className="space-y-4">
+      {showDaily && (
       <QuietSection
         lightTheme={lightTheme}
         meta={(
@@ -105,27 +104,10 @@ export default function DailyMissions() {
       >
         <div className="space-y-3">
           {/*
-            ⚠️ CHỈ HIỆN KHI CÓ CHUỖI (đổi 2026-08-29). Bản cũ luôn dựng khối này, và khi chuỗi = 0
-            nó dùng DÒNG CHỮ LỚN NHẤT thẻ (22px, font display, hai dòng ở khung 390px) để thông báo
-            *"Bắt đầu lại một chuỗi mới · 0%"* — tức tiêu ~90px chỗ đắt nhất màn hình để nói rằng
-            người chơi đang có SỐ KHÔNG, ngay phía trên chính những nhiệm vụ sẽ chữa điều đó.
-            Đó là ba lần nói cùng một chuyện trong một màn hình: thanh tiêu đề đã có ô "Chuỗi",
-            dòng lớn nói lại, rồi con số "0%" nói lần thứ ba.
-
-            Có chuỗi thì nó là tin ĐÁNG khoe và được giữ — nhưng gộp một dòng, cỡ vừa: bậc chữ lớn
-            nhất của thẻ này phải để dành cho tiêu đề "Nhiệm vụ ngày", thứ nói ra việc phải làm.
+            ⚠️ DÒNG "N ngày liên tiếp · +8% mỗi phiên" ĐÃ DỜI LÊN KHỐI HÔM NAY (`TodayHero`, ADR-068):
+            khối ấy đứng đầu màn Tập trung — cùng màn hình với danh sách này — và nói cùng con số.
+            Hai chỗ nói cùng một chuyện thì chỗ nói ít hơn phải nhường.
           */}
-          {streak.currentStreak > 0 && (
-            <div className="flex items-baseline justify-between gap-3 border-b pb-3" style={{ borderColor: 'var(--line)' }}>
-              <div className="text-[15px] font-semibold" style={{ color: 'var(--ink)' }}>
-                {streak.currentStreak} ngày liên tiếp
-              </div>
-              <div className="mono text-[13px] font-semibold tabular-nums" style={{ color: 'var(--accent2)' }}>
-                +{streakBonusPct.toFixed(0)}% mỗi phiên
-              </div>
-            </div>
-          )}
-
           <div className="divide-y" style={{ borderColor: 'var(--line)' }}>
             {list.map((mission) => (
               <TodayMissionRow
@@ -157,13 +139,19 @@ export default function DailyMissions() {
                 : allClaimed
                   ? DAILY_BONUS_COPY.ready
                   : DAILY_BONUS_COPY.pending(pendingXP)}
-              amount={missions.bonusClaimedToday ? null : `+${allMissionBonusXP} XP`}
+              /*
+                ⚠️ SỐ XP ĐI VÀO NÚT KHI CÓ NÚT (2026-09-05). Ở khung 390px, ô số lượng + nút "Nhận"
+                cùng đứng bên phải bóp cái TÊN xuống còn ~40px — ảnh dựng cho ra "Th / ch / tua" ba dòng
+                (bắt được ở thẻ tuần, cùng bố cục). Một hàng chỉ đủ chỗ cho MỘT ô bên phải: có nút thì
+                XP nằm trong nút ("Nhận +43 XP"), không có nút thì XP đứng một mình.
+              */
+              amount={missions.bonusClaimedToday || allClaimed ? null : `+${allMissionBonusXP} XP`}
               action={(
                 <AnimatePresence initial={false}>
                   {allClaimed && !missions.bonusClaimedToday ? (
                     <ClaimButton
                       key="claim-daily"
-                      label="Nhận"
+                      label={`Nhận +${allMissionBonusXP} XP`}
                       lightTheme={lightTheme}
                       onClick={claimMissionAllBonus}
                     />
@@ -174,8 +162,9 @@ export default function DailyMissions() {
           </div>
         </div>
       </QuietSection>
+      )}
 
-      {chain && (
+      {chain && showWeekly && (
         <QuietSection
           lightTheme={lightTheme}
           meta={(
@@ -241,7 +230,9 @@ export default function DailyMissions() {
                     : activeStep
                       ? `Bước ${chainStepIndex + 1} — ${weeklyChain?.stepProgress ?? 0}/${activeStep.goal}: ${activeStep.progressLabel ?? activeStep.label}`
                       : 'Chưa có bước tuần hoạt động.'}
-                amount={weeklyBonusXP > 0 ? `+${weeklyBonusXP} XP` : null}
+                // ⚠️ KHÔNG in `amount` ở đây: con số "+328" đã đứng ở đầu khối ("thưởng chuỗi"), và ô
+                // số lượng cạnh nút "Chốt bước" từng bóp tên thẻ thành "Th / ch / tua" (ảnh 390px).
+                amount={null}
                 action={canClaimWeeklyStep ? (
                   <ClaimButton
                     label="Chốt bước"

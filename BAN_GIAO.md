@@ -1,3 +1,43 @@
+> Cập nhật lần cuối: **2026-09-05 (vòng 33)** — **CÁCH MẠNG VÒNG LẶP CHÍNH (ADR-068).** Lệnh Đàm:
+> *"làm một cuộc cách mạng về upgrade, đừng upgrade nhỏ lẻ nữa… ứng dụng UX Psychology… có thể xoá
+> những gì đã có và xây lại… hạn chế đo mà build thẳng… không đụng Thành phố."*
+>
+> ### Ba chỗ đổi, một vòng lặp (kích hoạt → hành động → thưởng)
+> 1. **`TodayHero`** đứng đầu màn Tập trung: chuỗi 🔥 N · "+N% XP/phiên" · **dải bảy ngày T2→CN**
+>    (`WeekStrip`) · mốc kế tiếp; chuỗi treo ⇒ *"Làm một phiên để giữ chuỗi"* thay mốc. Lời chào
+>    còn một dòng 13px. Ô Hôm nay/Chuỗi ở thanh tiêu đề ẩn ở tab này (`hideStats`, chuông dời lên
+>    cạnh "Cấp N"); hai thẻ cùng tên ở `FocusRail` (desktop) gỡ hẳn.
+> 2. **Nhiệm vụ ngày ngay dưới đồng hồ** (`<DailyMissions section="daily" />`, `lg:hidden`). Tab
+>    `missions` giữ id, nhãn → **"Tiến trình"**, rời nhóm chính ⇒ thanh dưới iPhone **4 nút**.
+> 3. **`SessionRewardStory`** sau MỌI phiên: xp → chuỗi → hôm nay → nhiệm vụ → cấp → kỷ. Điều phối ở
+>    `OverlayStack`: lễ mừng thành phố → chuỗi thẻ → (lên kỷ) `LootDropModal`. `finishStory` đóng
+>    phần thưởng và dọn toast chuỗi thẻ đã nói thay (nhiệm vụ vừa xong, lên cấp).
+>
+> ### Đã trả giá / bắt được trong lúc làm
+> · **Nút Bắt đầu suýt tụt dưới thanh tab LẦN THỨ TƯ** (ảnh 390px: y≈765–800, thanh tab y=774) ngay
+>   ở bản đầu của khối chuỗi. Vá bằng cách hạ lời chào 19px×2 dòng → 13px×1 dòng và bỏ hàng
+>   "Hôm nay · N phút" khỏi khối. *Mọi thứ thêm vào cột giữa đều tiêu vào biên của nút chính.*
+> · **Thẻ "Thưởng chuỗi tuần" bóp tên thành "Th / ch / tua"** (ba dòng) khi có cả ô XP lẫn nút
+>   "Chốt bước" — lỗi có sẵn, chỉ lộ khi tab Tiến trình đưa khối tuần lên đầu. Một hàng chỉ đủ MỘT
+>   ô bên phải: XP vào nút ("Nhận +43 XP") hoặc đứng một mình.
+> · **`ADR-067` đã có chủ** (Thống kê) — bản đầu tôi đánh số trùng; đổi thành 068 chỉ ở dòng mình
+>   thêm (so với HEAD từng dòng), không đụng tham chiếu 067 thật.
+> · `--preview loot` với phiên thường trước đây cho ra ảnh TRÙNG BYTE với màn Tập trung — không phải
+>   cửa soi hỏng: **đó chính là hành vi thật** (toast 4 giây đã tắt trước khi chụp). Đây là con số
+>   nói lên vì sao cần cái kết.
+> · `previewStage.test.js` chỉ đọc trường từ `LootDropModal` ⇒ thêm `multiplier` vào bản giả bị kêu
+>   "bịa". Nay đọc từ CẢ HAI người đọc `pendingReward` (hộp thoại + chuỗi thẻ).
+>
+> ### Cửa soi mới
+> `node scripts/shot.mjs --phone --fixture fx.json --preview "loot&dc-preview-card=streak"` — có
+> `dc-preview` thì thẻ ĐỨNG YÊN; `dc-preview-card` = `xp|streak|today|quests|level|era`.
+> Cảnh `loot` gieo thêm `missionCompletedIds: ['session_30min']` để soi trạng thái "vừa xong".
+>
+> Test mới: `todayHero.test.js` (5) · `sessionRewardStory.test.js` (9). Sửa: `appNavigation` (4→3
+> nút) · `rewardToastWiring` (+1 cổng chuỗi thẻ) · `previewStage.test`. Không đụng
+> `engine/city3d/`, `components/city/`, `useCityMoment.js`.
+>
+
 > Cập nhật lần cuối: **2026-09-05** — **MỘT LỖI THẬT Ở THANH NHIỆM VỤ, TÌM RA BẰNG CÁCH ĐỌC MỘT
 > CON SỐ TRÔNG LẠ TRÊN ẢNH CHỤP.**
 >

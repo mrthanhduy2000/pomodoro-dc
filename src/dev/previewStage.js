@@ -30,12 +30,15 @@
  */
 
 export const PREVIEW_PARAM = 'dc-preview';
+/** Thẻ nào của chuỗi thẻ thưởng cần đứng yên để chụp (`xp` · `streak` · `today` · `quests` · `level` · `era`). */
+export const PREVIEW_CARD_PARAM = 'dc-preview-card';
 
 /** Một phiên 25 phút bình thường, không có gì đặc biệt — ca HAY GẶP NHẤT. */
 const PHIEN_THUONG = {
   activeBook: 8,
   newBook: 8,
   tierLabel: 'Tiêu Chuẩn',
+  multiplier: 1.0,
   effectiveMinutes: 25,
   bonusMinutes: 0,
   baseXP: 50,
@@ -68,6 +71,7 @@ const PHIEN_THUONG = {
 const PHIEN_DINH = {
   ...PHIEN_THUONG,
   tierLabel: 'Chuyên Sâu',
+  multiplier: 2.0,
   effectiveMinutes: 60,
   bonusMinutes: 5,
   baseXP: 120,
@@ -102,7 +106,9 @@ const PHIEN_DINH = {
  */
 export const PREVIEW_SCENES = {
   /** Hộp phần thưởng, phiên thường. */
-  loot: { lootModalOpen: true, pendingReward: PHIEN_THUONG },
+  /** `missionCompletedIds`: chỉ có tác dụng khi bản lưu đang soi CÓ nhiệm vụ mang id ấy — để thẻ
+   *  Nhiệm vụ trong chuỗi thẻ thưởng (ADR-068) hiện được trạng thái "vừa xong". */
+  loot: { lootModalOpen: true, pendingReward: PHIEN_THUONG, missionCompletedIds: ['session_30min'] },
   /** Hộp phần thưởng, ca đỉnh — nhiều dòng nhất. */
   'loot-max': { lootModalOpen: true, pendingReward: PHIEN_DINH },
   /** Lên kỷ nguyên: hộp phần thưởng TỰ bật (một trong ba thứ được phép chặn màn hình). */
@@ -131,4 +137,14 @@ export function readPreviewScene(search) {
 export function buildPreviewUi(scene) {
   const patch = PREVIEW_SCENES[scene];
   return patch ? { ...patch } : null;
+}
+
+/**
+ * Tên thẻ của chuỗi thẻ thưởng cần nhảy tới khi soi. `null` nếu không có — chuỗi thẻ tự chọn thẻ
+ * đầu. Chỉ lọc ký tự an toàn; tên lạ thì `SessionRewardStory` tự rơi về thẻ đầu, không ném lỗi.
+ */
+export function readPreviewCard(search) {
+  if (typeof search !== 'string' || search === '') return null;
+  const raw = new URLSearchParams(search).get(PREVIEW_CARD_PARAM);
+  return raw && /^[a-z]+$/.test(raw) ? raw : null;
 }

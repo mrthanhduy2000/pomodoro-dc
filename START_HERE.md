@@ -35,7 +35,16 @@ Mặt trận đang làm: **thành phố 3D** (`src/engine/city3d/` + `src/compon
   Phase 21 (*"push nhánh phụ, không tự gộp `main`"*) đã bị lệnh này thay thế.
   ⚠️ **Phase 21 do đó lên production TRƯỚC khi Đàm nhìn ảnh nghiệm thu** — mục "chờ Đàm nhìn ảnh"
   ở phần dưới VẪN CÒN HIỆU LỰC, chỉ là nay nó nghiệm thu một thứ đang chạy thật.
-- **Trò chơi — VÒNG 32 (2026-09-05, MỚI NHẤT): ĐÓNG #43, VÀ TÌM RA NĂM BẢN CHÉP CỦA MỘT LỖI.**
+- **Trò chơi — VÒNG 33 (2026-09-05, MỚI NHẤT): CÁCH MẠNG VÒNG LẶP CHÍNH (ADR-068), không đụng
+  Thành phố.** Ba chỗ đổi: (1) `TodayHero` mở đầu màn Tập trung — chuỗi · dải bảy ngày T2→CN ·
+  mốc kế tiếp (thay ô Chuỗi ở thanh tiêu đề tại tab này + hai thẻ ở cột phải desktop); (2) nhiệm
+  vụ ngày nằm ngay dưới đồng hồ, tab `missions` đổi nhãn "Tiến trình" và vào menu Thêm ⇒ thanh dưới
+  **4 nút**; (3) **`SessionRewardStory`** sau MỌI phiên (xp → chuỗi → hôm nay → nhiệm vụ → cấp →
+  kỷ), hộp thoại 7 giai đoạn chỉ còn mở khi lên kỷ hoặc bấm "Xem chi tiết". ADR-060 đảo ngược MỘT
+  NỬA (vế toast-sau-mọi-phiên). Cửa soi: `--preview "loot&dc-preview-card=streak"`.
+  ⚠️ Nút Bắt đầu suýt tụt dưới thanh tab lần thứ TƯ — mọi thứ thêm vào cột giữa tiêu vào biên ấy.
+  Nợ mới: `TECH_DEBT #98` (`LootDropModal` trùng vai với chuỗi thẻ).
+- **Trò chơi — VÒNG 32 (2026-09-05): ĐÓNG #43, VÀ TÌM RA NĂM BẢN CHÉP CỦA MỘT LỖI.**
   · **#43 ĐÓNG** — `src/engine/city3d/triangleBudget.test.js`: bảng 15 mốc tam giác riêng từng kỷ,
   đúng khuôn `drawCallBudget.test.js`, chạy **dưới 1 giây**, không cần Chromium/`three`. Neo vào
   `scene-tri.mjs` ở 4 kỷ (khớp từng đơn vị). Thử ngược: sửa MỘT dòng `crown` trong `roofStyle.js`
@@ -341,9 +350,11 @@ Mặt trận đang làm: **thành phố 3D** (`src/engine/city3d/` + `src/compon
 
 ## Việc tiếp theo (chưa làm)
 0. **Hai thứ CHƯA SOI ĐƯỢC, không phải chưa làm** (vòng 20 ghi lại để phiên sau khỏi đi lại):
-   (a) **màn hiện ra SAU khi kết thúc một phiên** — khoảnh khắc dopamine lớn nhất của app. `ui`
-   KHÔNG nằm trong `partialize` của store nên KHÔNG gieo được bằng `--fixture`/`--ls`, và store
-   không lộ ra `window` nên `--probe` cũng không mở được hộp thoại. Cấm bấm "Bắt đầu" trên dev.
+   (a) ✅ **ĐÃ SOI ĐƯỢC từ 2026-09-02** — `src/dev/previewStage.js` + `shot.mjs --preview <cảnh>`
+   (`loot` · `loot-max` · `era` · `level` · `toasts`); vòng 33 thêm `dc-preview-card=<thẻ>` cho
+   chuỗi thẻ thưởng. Ghi chú cũ bên dưới giữ để hiểu VÌ SAO phải có cửa soi: `ui` KHÔNG nằm trong
+   `partialize` của store nên KHÔNG gieo được bằng `--fixture`/`--ls`, và store không lộ ra
+   `window` nên `--probe` cũng không mở được hộp thoại. Cấm bấm "Bắt đầu" trên dev.
    (b) **tab Kho báu › Di vật** — fixture chưa gieo `relics`/`research` nên nó luôn hiện 0/15 và 15
    dòng "??? KHOÁ"; cái trống ấy là của CÔNG CỤ, không phải của app. Muốn soi thật thì phải thêm
    gieo `relics` vào `scripts/make-fixture.mjs` trước.

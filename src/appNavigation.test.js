@@ -53,8 +53,13 @@ test('thanh bên desktop có ĐÚNG 5 mục, đúng thứ tự', () => {
   assert.deepEqual(DESKTOP_IDS, ['focus', 'inventory', 'city', 'stats', 'settings']);
 });
 
-test('thanh dưới iPhone có ĐÚNG 4 nút chính, phần còn lại nằm sau nút "Thêm"', () => {
-  assert.equal(MOBILE_PRIMARY_IDS.length, 4, `Thanh dưới iPhone phải có đúng 4 nút chính (đang có ${MOBILE_PRIMARY_IDS.length}); nút thứ 5 luôn là "Thêm".`);
+test('thanh dưới iPhone có ĐÚNG 3 nút chính, phần còn lại nằm sau nút "Thêm"', () => {
+  // ⚠️ 4 → 3 (2026-09-05, ADR-068): nhiệm vụ NGÀY nay nằm ngay dưới đồng hồ ở màn Tập trung, nên
+  // tab "Nhiệm vụ" (id giữ nguyên `missions`, nhãn đổi thành "Tiến trình") chỉ còn nhịp tuần ·
+  // tài nguyên · hạng — một chỗ NGỒI ĐỌC, cùng nhóm với Thống kê sau nút "Thêm". Nút thứ 4 là "Thêm".
+  assert.equal(MOBILE_PRIMARY_IDS.length, 3, `Thanh dưới iPhone phải có đúng 3 nút chính (đang có ${MOBILE_PRIMARY_IDS.length}); nút thứ 4 luôn là "Thêm".`);
+  assert.deepEqual(MOBILE_PRIMARY_IDS, ['focus', 'inventory', 'city'], 'ba nút chính là Tập trung · Hành trang · Thành Phố, đúng thứ tự');
+  assert.ok(MOBILE_IDS.includes('missions'), 'id `missions` phải còn trong MOBILE_TABS — thông báo đã lưu trỏ vào nó');
 
   for (const id of MOBILE_PRIMARY_IDS) {
     assert.ok(MOBILE_IDS.includes(id), `\`MOBILE_PRIMARY_IDS\` gọi tên "${id}" mà \`MOBILE_TABS\` không có mục ấy — nút sẽ biến mất trong im lặng.`);

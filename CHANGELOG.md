@@ -12,6 +12,26 @@
 
 ---
 
+## 2026-09-05 (vòng 32) — Đóng #43, và năm bản chép của một lỗi
+
+**Mục đích.** Đóng mục nợ phi-đồ-hoạ dễ đóng nhất còn lại, rồi đi hết cái họ lỗi đã tìm thấy ở
+vòng 31b.
+
+**Phạm vi.**
+- **`TECH_DEBT #43` ĐÓNG.** `src/engine/city3d/triangleBudget.test.js` — bảng 15 mốc tam giác riêng
+  từng kỷ, chạy dưới 1 giây trong `npm test`, không cần Chromium. Cột tam giác nay có cổng canh
+  đúng như cột lệnh vẽ, nên nó thôi trôi trong im lặng.
+- **Năm bản chép của một hình dạng lỗi**, trong bốn file: luật *"đặc quyền này chỉ tính khi công
+  trình là KỲ QUAN"* bị bỏ ở tầng giao diện. Gom hết về `engine/wonderEffects.js`.
+- Luật **bệ kè** cũng có bốn bản chép; gom về hai hàm thuần ở `parts.js`.
+
+**Ảnh hưởng.** Không đổi một luật chơi nào, không đổi hình học (kỷ 6 vẫn 198.388 tam giác sau khi
+gom). Một lệch THẬT đã vá: giá tiến hoá di vật hiện 0 trong khi store trừ 1.
+
+**Tương thích.** Hoàn toàn tương thích ngược.
+
+---
+
 ## 2026-09-02 (vòng 31b) — Ba lỗi thật cùng một họ: "CÓ" không bằng "LÀM ĐƯỢC"
 
 **Mục đích.** Sau khi bắt được một lời hứa sai ở dải mở đầu tab Kỹ năng, đi tìm cùng hình dạng ấy

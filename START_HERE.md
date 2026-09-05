@@ -35,6 +35,22 @@ Mặt trận đang làm: **thành phố 3D** (`src/engine/city3d/` + `src/compon
   Phase 21 (*"push nhánh phụ, không tự gộp `main`"*) đã bị lệnh này thay thế.
   ⚠️ **Phase 21 do đó lên production TRƯỚC khi Đàm nhìn ảnh nghiệm thu** — mục "chờ Đàm nhìn ảnh"
   ở phần dưới VẪN CÒN HIỆU LỰC, chỉ là nay nó nghiệm thu một thứ đang chạy thật.
+- **Trò chơi — VÒNG 32 (2026-09-05, MỚI NHẤT): ĐÓNG #43, VÀ TÌM RA NĂM BẢN CHÉP CỦA MỘT LỖI.**
+  · **#43 ĐÓNG** — `src/engine/city3d/triangleBudget.test.js`: bảng 15 mốc tam giác riêng từng kỷ,
+  đúng khuôn `drawCallBudget.test.js`, chạy **dưới 1 giây**, không cần Chromium/`three`. Neo vào
+  `scene-tri.mjs` ở 4 kỷ (khớp từng đơn vị). Thử ngược: sửa MỘT dòng `crown` trong `roofStyle.js`
+  — đúng loại thay đổi đã sinh ra mục nợ — thì ĐỎ ngay.
+  · ⚠️ Chỗ khó mục nợ nêu (mặt đất/đường/chân trời) **không phải chỗ cần giải**: thứ đã trôi là
+  khối `city`, còn nền là cố định — gộp vào chỉ pha loãng tín hiệu (`#22`).
+  · Kèm: chú thích "bệ kè chỉ tốn 12 tam giác" sai từ Phase 8B (thật là **28**) — nhưng **đừng đọc
+  ngược thành "12 đã chết"**: đếm đủ 27 bệ thì 26 ăn 28, **đúng một ăn 12**. Luật bệ kè có BỐN bản
+  chép tay, nay gom về hai hàm thuần ở `parts.js`.
+  · **NĂM BẢN CHÉP CỦA MỘT LỖI** (`type === 'wonder'` bị bỏ), trong bốn file: giá RP · giá tiến hoá
+  di vật · phạt huỷ phiên · trần chuỗi · thưởng nhiệm vụ. Tất cả nay đọc chung
+  `engine/wonderEffects.js`, có bài canh CẤU TRÚC `grep` cả bốn file. Một lệch THẬT đã vá: màn hình
+  in giá tiến hoá 0 trong khi store trừ 1.
+  · Nợ: **97 mục · 37 đã đóng · 60 còn mở**. Test **1.572 bài**.
+
 - **Trò chơi — VÒNG 31 (2026-09-02, MỚI NHẤT): BỐN MÀN NGẮN ĐI 29–39%, và cả bốn theo CÙNG MỘT
   khuôn "LƯỚI + MỘT KHUNG CHI TIẾT".** Lệnh Đàm (lần thứ ba): *"Thay đổi lớn hơn nữa… đừng có quá
   đo tiểu tiết, nên thực hiện lớn rồi sửa khi tôi muốn sửa."*

@@ -1,3 +1,68 @@
+> Cập nhật lần cuối: **2026-09-05 (vòng 32)** — **ĐÓNG `TECH_DEBT #43`, VÀ TÌM RA NĂM BẢN CHÉP CỦA
+> MỘT LỖI.**
+>
+> ### 1. `#43` đã đóng — cột tam giác nay có cổng canh
+> `src/engine/city3d/triangleBudget.test.js`: bảng **15 mốc riêng từng kỷ**, đúng khuôn
+> `drawCallBudget.test.js`, chạy **dưới 1 giây**, không cần Chromium và không cần `three`.
+> · **Neo vào một đường đo độc lập** (nếu không thì nó chỉ là công thức tự soi gương — đúng bẫy
+> `drawCallBudget` đã sập 2026-08-23): `scene-tri.mjs --era N --sessions 40 --level 1` ở bốn kỷ
+> **1 · 6 · 8 · 15** ra **100.876 · 198.388 · 124.348 · 108.660**, khớp TỪNG ĐƠN VỊ.
+> · **Thử ngược**: sửa MỘT dòng `crown` trong `roofStyle.js` — đúng loại thay đổi mà `e95cdf1` đã
+> làm — thì bảng ĐỎ ngay. Cổng bắt được chính ca lịch sử đã sinh ra mục nợ.
+> · ⚠️ **Chỗ khó mà mục nợ nêu KHÔNG phải chỗ cần giải.** Mục nợ ghi *"chỗ khó là mặt đất/đường/
+> chân trời"*; thứ đã TRÔI là khối `city`, còn nền là **cố định** — gộp vào chỉ pha loãng tín hiệu
+> (`TECH_DEBT #22`). *Đọc kỹ mục nợ rồi vẫn phải hỏi lại: cái nó kê đơn có phải cái cần chữa không?*
+>
+> ### 2. Ba thứ tìm thấy trong lúc đóng #43
+> 1. Chú thích ở `sceneGraph.js` ghi bệ kè *"chỉ tốn 12 tam giác"* — sai từ Phase 8B (vát phụ thuộc
+>    kích thước khối ⇒ **28**). Chính phép đối chiếu chéo lộ ra: hiệu số đúng bằng `số bệ × 28`.
+> 2. ⚠️ **VÀ ĐỪNG ĐỌC NGƯỢC THÀNH "12 ĐÃ CHẾT"** — bản vá tôi suýt ship. Đếm đủ 27 bệ: **26 ăn 28,
+>    ĐÚNG MỘT ăn 12** (mỏng theo `h`, mà `bevelWidth` lấy `min(w,d,h)`). Ngoại lệ nay đếm tường minh.
+> 3. Luật bệ kè có **BỐN** bản chép tay; gom về hai hàm THUẦN ở `parts.js` — hình học trùng từng
+>    đơn vị sau khi gom.
+>
+> ### 3. NĂM BẢN CHÉP CỦA MỘT HÌNH DẠNG LỖI, TRONG BỐN FILE
+> Luật *"đặc quyền này chỉ tính khi công trình khai `type === 'wonder'`"* bị bỏ ở: giá RP nghiên
+> cứu · giá tiến hoá di vật · phạt huỷ phiên · trần chuỗi · thưởng nhiệm vụ ngày. Cả năm không cắn
+> hôm nay **chỉ vì 0/75 bản vẽ vừa khai `wonderEffect` vừa không phải kỳ quan** — một sự thật về
+> DỮ LIỆU, không phải một tính chất của mã.
+> · Nay tất cả đọc chung `engine/wonderEffects.js`, và có một bài canh **CẤU TRÚC** `grep` cả bốn
+> file cho từng khoá đặc quyền, kèm **một ngoại lệ đếm được** (`building_hp_boost` còn đúng MỘT lần
+> đọc hợp lệ trong store cho một luật khác).
+> · Một lệch **THẬT** chứ không chỉ latent: bản ở giao diện trả thẳng `baseCost`, store trả
+> `Math.max(1, …)` ⇒ một bậc tiến hoá giá 0 sẽ HIỆN 0 trong khi cửa hàng TRỪ 1.
+>
+> ### 4. Hai cái bẫy trong chính bài test mới, cả hai do thử ngược bắt
+> · Bài *"tổng bệ khớp hiệu số"* bản đầu là hằng đẳng thức `x === x` — **không thể đỏ** (bẫy
+> ADR-048). Nay đếm từng bệ và đòi đúng phân bố `{12: 1, 28: 26}`.
+> · Phép phá đầu (nới `w`/`d` của bệ) **không nổ**, và **phép phá mới là thứ sai** — `bevelWidth`
+> lấy `min(w,d,h)` mà cái bệ mỏng là mỏng theo `h`. Phá đúng (`h × 3`) thì đỏ 2 bài.
+> · Và một bài test mới bắt được chính cái sai của tôi: fixture viết `refinedCost` trong khi trường
+> thật là `t2Cost`/`t3Cost`.
+>
+> ### 5. Hai bài test cũ đỏ vì PHÉP ĐO GIÀ ĐI, không vì mã hỏng
+> `sceneTriCross.test.js` và `sceneGraphWiring.test.js` `grep` công thức bệ kè inline đã chuyển
+> chỗ. Đã đổi sang câu hỏi **CHẶT HƠN**: *"có ai dựng lại bản thứ hai không"* thay cho *"hai bản có
+> khớp không"* — vì nay chỉ còn một bản, nên không còn gì để trôi.
+>
+> ### Cổng
+> lint sạch · build OK · **1.572 bài (1.571 xanh, 0 đỏ, 1 bỏ qua)** · `test:cross` 22,7 giây xanh
+> (27 bệ ở 8/15 kỷ, khớp bảng) · chụp lại Thành Phố · Hành trang · Nhiệm vụ sau mỗi lần sửa.
+> Push `main`: `5b4220d` · `c73590f` · `928d61a`.
+>
+> ### Việc phiên sau nên biết
+> · Nợ: **97 mục · 37 đã đóng · 60 còn mở** — trong đó ~49 thuộc Thành Phố 3D và 7 mục ghi rõ
+> *"Đàm chọn, tôi không tự chọn"* (#24 · #53 · #88 · #89 · #90 · #95 · #96).
+> · **#4** (thiếu E2E + giám sát production) là mục phi-đồ-hoạ đáng làm nhất còn lại, nhưng vế (1)
+> của nó **cần Đàm quyết** (có lập một project Supabase thứ hai cho dev/test không). Vế (2) — ghi
+> log lỗi runtime vào một bảng Supabase — làm được ngay và rẻ.
+> · **#1** (`completeFocusSession` ~760 dòng) và **#2** (God File) là refactor lớn, rủi ro cao ở một
+> hàm cấp phần thưởng — đừng làm chung với một phase khác.
+> · Các BẢNG SỐ trong `PERFORMANCE.md` **chưa đo lại** (phiên này không được đụng file ấy), nhưng
+> nguyên nhân gốc của #43 đã hết: từ nay một dòng trôi sẽ ĐỎ ở `npm test`.
+
+---
+
 > Cập nhật lần cuối: **2026-09-02 (vòng 31)** — **BỐN MÀN NGẮN ĐI 29–39%, CÙNG MỘT KHUÔN**
 > (lệnh Đàm, lần thứ ba: *"Thay đổi lớn hơn nữa, UX/UI và mọi thứ ở hành trang vẫn chưa thấy thay
 > đổi gì… đừng có quá đo tiểu tiết, nên thực hiện lớn rồi sửa khi mà tôi muốn sửa"*).

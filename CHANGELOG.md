@@ -12,6 +12,51 @@
 
 ---
 
+## 2026-09-05 — Một lỗi thật ở thanh nhiệm vụ, và hai móc dopamine bị nói quá nhỏ
+
+**LỖI THẬT: cùng một nhiệm vụ, hai công thức tiến độ, trong cùng một file.** Loại nhiệm vụ
+`singleSession` ("Hoàn thành 1 phiên ≥30 phút") được tính ở HAI đường trong `gameStore.js`, cách
+nhau ~1.300 dòng: đường **sống** (ngay sau khi chốt phiên) ăn-cả-hoặc-không
+(`minutesFocused >= goal ? goal : progress`), còn đường **dựng lại từ lịch sử**
+(`getDailyMissionProgressFromSnapshot`) thì liên tục (`min(goal, maxSessionMinutes)`).
+⇒ Làm một phiên 22 phút thì thanh ghi **0/30**; tải lại app thì **chính nó** ghi **22/30**. Cùng
+một ngày, cùng một dữ liệu, hai con số. Không cổng nào bắt được: build xanh · lint sạch · test
+xanh; triệu chứng duy nhất là một con số tự đổi khi mở lại.
+
+Nay đường sống dùng cùng phép LẤY MAX. **Luật hoàn thành không đổi một chút nào** — `progress` chỉ
+chạm `goal` khi có MỘT phiên đủ dài (ba phiên 25 phút vẫn ra 25/30, vẫn chưa xong). Cái được thêm
+là một số 0 chết biến thành con số biết nói: *"22/30"* bảo Đàm còn thiếu 8 phút.
+Khoá bằng `missionProgressAgreement.test.js` (4 bài, đã thử-cho-đỏ), gồm cả vế canh đường dựng lại
+để không ai "thống nhất" hai bên theo chiều ngược.
+
+**Dòng hệ số nhân: từ tiếng thì thầm thành tiếng nói.** Chip cạnh đồng hồ báo *"còn 1' để ×1.3"*
+bằng `text-[10px] opacity-60` — mờ hơn cả nhãn bậc ngay bên cạnh. Đó là móc dopamine TỨC THÌ mạnh
+nhất màn hình (phần thưởng của chính phiên sắp bấm tăng gần một phần ba, thu được trong 26 phút
+tới). Nay 11px, đậm, màu nhấn: **"+1′ nữa là ×1.3"**.
+⚠️ **Và con số thường là 1**: preset "Chuẩn" dài **25 phút** trong khi
+`DEFAULT_DEEP_FOCUS_THRESHOLD = 26` ⇒ ở nhịp mặc định Đàm hụt ×1.3 **đúng một phút, mỗi phiên**.
+Đó là quyết định CÂN BẰNG GAME nên KHÔNG tự sửa — chỉ làm cho nó nhìn thấy được.
+
+**Dòng khoảnh khắc xếp lại theo TÍNH CẤP THIẾT, không theo độ lớn phần thưởng.** Bản trước xếp
+tổng-kết-tuần trên mốc-chuỗi và đếm-ngược-chặng, nên trên máy thật (tài khoản ở **1.831/1.867 EP**)
+câu *"Còn ~2 phiên nữa tới «Khám Phá Tân Thế Giới»"* bị nuốt bởi một lời mời đi đọc chuyện tuần
+trước. Phép thử phân định: ***câu này có làm Đàm bấm Bắt đầu không?*** Nay: ăn mừng → lý do bấm Bắt
+đầu (mốc chuỗi, đếm ngược chặng) → lời mời đi xem chỗ khác. Tổng kết tuần **không mất**: cờ chưa-xem
+không hết hạn, và chấm ở nút "Báo cáo tuần" là lưới an toàn thứ hai (ADR-061).
+
+**Đã ĐO rồi TỪ CHỐI một hướng**, ghi lại để phiên sau khỏi thử lại: nhãn bậc trên thẻ phần thưởng
+(`•••○ TỐT`) trông như hằng số vô nghĩa vì mọi bên gọi đều truyền cứng — nhưng trên **cùng một màn**
+thẻ ngày là `tot` còn thẻ tuần là `hiem`, tức nó phân biệt được hai thứ đứng cạnh nhau. Giữ.
+
+**Sửa một ghi chú cũ nguy hiểm trong `START_HERE.md`**: nó ghi van ép chuyển skin "chưa làm" trong
+khi việc ấy đã xong từ 2026-08-29 (version 9 + `resolveSkinAfterMigration`). Để nguyên thì phiên sau
+sẽ ép skin lần thứ hai và **đè lên lựa chọn có ý thức của Đàm**.
+
+**Ảnh hưởng.** Một sửa lỗi ở store (không đổi luật hoàn thành, không đổi phần thưởng), hai đổi giao
+diện. Không migration.
+
+---
+
 ## 2026-08-30 (vòng 19) — Nút Bắt đầu lần đầu nằm TRÊN nếp gấp
 
 **Đo trước khi sửa** (khung 390px thật): nút chính của cả app nằm ở **y=779..822** trong khi thanh

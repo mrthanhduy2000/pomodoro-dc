@@ -2178,8 +2178,28 @@ function MultiplierBadge({
       <span>{tier.tierLabel}</span>
       {tier.chestGuaranteed && <span className="mono text-[10px] uppercase tracking-[0.16em]" title="Rương Lớn đảm bảo">lớn</span>}
       {isStopwatchMode && <span className="text-[10px] opacity-70 sm:text-xs">tham chiếu {referenceMinutes}'</span>}
+      {/*
+        ⚠️ DÒNG NÀY TỪNG LÀ MỘT TIẾNG THÌ THẦM CHO MỘT TIN RẤT TO (đổi 2026-09-05).
+        Nó nói: kéo phiên dài thêm mấy phút nữa thì hệ số nhảy từ ×1.0 lên ×1.3 — tức phần thưởng
+        của CHÍNH phiên đang sắp bấm tăng gần một phần ba. Đó là cái móc dopamine TỨC THÌ mạnh
+        nhất trên màn hình này, mạnh hơn mọi đích dài hạn, vì nó thu được ngay trong 26 phút tới.
+        Vậy mà nó được vẽ bằng `text-[10px] opacity-60` — mờ hơn cả nhãn bậc nằm ngay bên cạnh.
+        ⚠️ VÀ CON SỐ THƯỜNG LÀ **1**: preset "Chuẩn" dài 25 phút trong khi
+        `DEFAULT_DEEP_FOCUS_THRESHOLD = 26`, nên ở nhịp mặc định Đàm hụt ×1.3 đúng MỘT phút, mỗi
+        phiên, mãi mãi. Đó là một quyết định CÂN BẰNG GAME (đổi preset là đổi nhịp làm việc của
+        anh) nên tuyệt đối không tự sửa ở đây — việc của dòng này là làm cho điều đó NHÌN THẤY
+        ĐƯỢC, rồi để Đàm quyết.
+        Giữ nguyên từ vựng "×1.3" vì đó chính là chữ mà nhãn bậc bên trái đang dùng; đổi sang
+        "+30%" là nói cùng một chuyện bằng một đơn vị thứ hai, đúng thứ luật "một luật một công
+        thức" cấm.
+      */}
       {!isStopwatchMode && tier.multiplier < 1.3 && focusMinutes < deepFocusThreshold && (
-        <span className="text-[10px] opacity-60 sm:text-xs">còn {deepFocusThreshold - focusMinutes}' để ×1.3</span>
+        <span
+          className="text-[11px] font-semibold sm:text-xs"
+          style={{ color: 'var(--accent2)' }}
+        >
+          +{deepFocusThreshold - focusMinutes}′ nữa là ×1.3
+        </span>
       )}
     </div>
   );

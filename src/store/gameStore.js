@@ -4224,7 +4224,18 @@ const useGameStore = create(
             let progress = m.progress;
             if (m.type === 'sessions') progress = Math.min(m.goal, progress + 1);
             if (m.type === 'focusMinutes') progress = Math.min(m.goal, progress + minutesFocused);
-            if (m.type === 'singleSession') progress = minutesFocused >= m.goal ? m.goal : progress;
+            // ⚠️ PHẢI KHỚP `getDailyMissionProgressFromSnapshot` — CÙNG FILE, cách ~1.300 dòng.
+            // Bản cũ ở đây là ĂN CẢ HOẶC KHÔNG (`minutesFocused >= goal ? goal : progress`) trong
+            // khi bản dựng-lại-từ-lịch-sử dùng `min(goal, maxSessionMinutes)`, tức LIÊN TỤC. Hai
+            // công thức cho CÙNG một nhiệm vụ, CÙNG một ngày, CÙNG một dữ liệu ⇒ làm một phiên 22
+            // phút thì thanh ghi **0/30**, tải lại app thì chính nó ghi **22/30**. Không có gì đỏ
+            // lên; Đàm chỉ thấy một con số tự đổi khi mở lại. Đúng luật *một luật một công thức*.
+            // ⚠️ LUẬT HOÀN THÀNH KHÔNG ĐỔI: `progress` chỉ chạm `goal` khi có MỘT phiên đủ dài,
+            // vì đây là phép lấy MAX của độ dài từng phiên chứ không phải phép cộng dồn. Ba phiên
+            // 25 phút vẫn ra 25/30 — vẫn chưa xong, đúng như nhiệm vụ đòi.
+            // ⚠️ Và nó đổi một số 0 chết thành một con số biết nói: "22/30" bảo Đàm còn thiếu 8
+            // phút, còn "0/30" nói rằng anh chưa làm gì — trong khi anh vừa tập trung 22 phút.
+            if (m.type === 'singleSession') progress = Math.max(progress, Math.min(m.goal, minutesFocused));
             if (m.type === 'researchPoints') progress = Math.min(m.goal, progress + finalSessionRP);
             if (m.type === 'uniqueCategories') progress = Math.min(m.goal, uniqueCatsToday.size);
             if (m.type === 'deepSessions') progress = Math.min(m.goal, deepSessionsToday);

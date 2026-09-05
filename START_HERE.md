@@ -42,9 +42,16 @@ Mặt trận đang làm: **thành phố 3D** (`src/engine/city3d/` + `src/compon
   không ghi gì**; chấm ở nút "Báo cáo tuần" là LƯỚI AN TOÀN (không hết hạn), đừng gỡ, và nó phải
   căng ở **CẢ HAI** nền tảng (thanh bên desktop VÀ menu "Thêm" trên iPhone — trước ADR-061 iPhone
   không có nút nào mở báo cáo tuần).
-  ⚠️ **Skin `arcade` ("Sân Chơi") là mặc định MỚI, nhưng máy đã lưu skin cũ thì KHÔNG tự đổi** —
-  dữ liệu đã lưu thắng `DEFAULT_UI_SKIN` (xem `uiSkins.js`). Đây là lý do Đàm "sửa nhiều mà không
-  thấy gì" ngày 2026-08-28; cần một phép ép chuyển một lần, chưa làm.
+  ✅ **Skin `arcade` ("Sân Chơi") — VAN ÉP CHUYỂN ĐÃ LÀM (2026-08-29), đừng làm lần nữa.**
+  Dữ liệu đã lưu vốn thắng `DEFAULT_UI_SKIN`, nên đổi mặc định KHÔNG đổi được máy của Đàm — đó là
+  lý do anh "sửa nhiều mà không thấy gì" ngày 2026-08-28. Nay `settingsStore` lên **version 9** và
+  `migrate` gọi `resolveSkinAfterMigration` (`uiSkins.js`): máy nào chưa mang cờ `skinMigratedV1`
+  thì bị kéo về mặc định ĐÚNG MỘT LẦN rồi đóng dấu.
+  ⚠️ **TỪ NAY KHÔNG ĐƯỢC ÉP LẦN NỮA** — cờ đã đóng dấu nghĩa là mọi lựa chọn skin sau đó là lựa
+  chọn CÓ Ý THỨC của Đàm; ép thêm một lần là đè lên nó. Muốn đổi mặc định cho máy mới thì chỉ sửa
+  `DEFAULT_UI_SKIN`, đừng tăng version để chạy lại `migrate`.
+  *(Dòng này trước đây ghi "chưa làm" — một ghi chú cũ sống sót qua phép gộp; để nguyên thì phiên
+  sau sẽ ép skin lần thứ hai và xoá lựa chọn của Đàm.)*
 - **Thành phố 3D (từ nhánh Phase 19–21): ADR-064 · ADR-065 · ADR-066.** Bộ xương thành phố sinh
   theo kỷ: BSP quyết cắt Ở ĐÂU, cung cong quyết cắt theo HÌNH GÌ; **một thửa là TẬP Ô**, không phải
   hình chữ nhật đã khai. Trước đó: ADR-059 (mỗi kỷ MỘT MẠNG ĐƯỜNG riêng — hết bàn cờ).

@@ -1,3 +1,45 @@
+> Cập nhật lần cuối: **2026-09-05** — **MỘT LỖI THẬT Ở THANH NHIỆM VỤ, TÌM RA BẰNG CÁCH ĐỌC MỘT
+> CON SỐ TRÔNG LẠ TRÊN ẢNH CHỤP.**
+>
+> ⚠️ **`singleSession` có HAI công thức tiến độ trong CÙNG `gameStore.js`, cách nhau ~1.300 dòng.**
+> Đường SỐNG (sau khi chốt phiên) ăn-cả-hoặc-không · đường DỰNG LẠI (`getDailyMissionProgress
+> FromSnapshot`) liên tục. ⇒ phiên 22 phút ghi **0/30**, tải lại app thì chính nó ghi **22/30**.
+> Build xanh · lint sạch · test xanh; triệu chứng duy nhất là một con số tự đổi khi mở lại. Đúng
+> luật *một luật một công thức*. Đã kéo đường sống về khớp; **luật hoàn thành không đổi** (vẫn phải
+> có MỘT phiên đủ dài). Khoá bằng `missionProgressAgreement.test.js`.
+> ⚠️ **CÁCH TÌM RA, đáng lặp lại:** không phải đọc mã mà là **đọc một con số trông lạ trên ảnh
+> chụp** — nhãn ghi *"Hoàn thành 1 phiên ≥30 phút"* mà tiến độ ghi *"0/30"*: mẫu số không khớp câu
+> chữ. *Khi nhãn và con số cạnh nhau kể hai chuyện khác nhau, một trong hai đang nói dối.*
+> ⚠️ **BẪY `indexOf` BẮT NHẦM KHỐI CẮN LẠI** — bài test đầu neo vào
+> `const updatedMissionList = refreshedMissions.list.map`, chuỗi ấy có **HAI** chỗ và chỗ đầu là
+> một khối hẹp chỉ lo `perfectBreaks` ⇒ đỏ oan, thông báo trỏ vào một loại nhiệm vụ hoàn toàn lành.
+> ⇒ **hàm cắt khối phải ĐÒI mốc khớp đúng MỘT lần**, đừng chỉ `indexOf`.
+>
+> **`DEFAULT_DEEP_FOCUS_THRESHOLD = 26` PHÚT, MÀ PRESET "CHUẨN" LÀ 25** ⇒ ở nhịp mặc định Đàm hụt
+> hệ số ×1.3 **đúng một phút, mỗi phiên, mãi mãi**. Đây là quyết định CÂN BẰNG GAME (đổi preset là
+> đổi nhịp làm việc của anh) nên **chờ Đàm quyết** — phiên này chỉ làm cho nó nhìn thấy được: dòng
+> nhắc đi từ `text-[10px] opacity-60` lên 11px đậm màu nhấn (**"+1′ nữa là ×1.3"**).
+>
+> **Dòng khoảnh khắc nay xếp theo TÍNH CẤP THIẾT, không theo độ lớn phần thưởng** (ăn mừng → lý do
+> bấm Bắt đầu → lời mời đi chỗ khác). Phép thử phân định: *câu này có làm Đàm bấm Bắt đầu không?*
+> Trên máy thật, bản cũ nuốt mất *"Còn ~2 phiên nữa tới «Khám Phá Tân Thế Giới»"* ở đúng tài khoản
+> đang ở 1.831/1.867 EP.
+>
+> **ĐÃ ĐO RỒI TỪ CHỐI, đừng thử lại:** nhãn bậc `•••○ TỐT` trên thẻ phần thưởng trông như hằng số
+> vô nghĩa (mọi bên gọi truyền cứng), nhưng trên CÙNG một màn thẻ ngày là `tot` còn thẻ tuần là
+> `hiem` ⇒ nó phân biệt được hai thứ đứng cạnh nhau. **Giữ.**
+>
+> ⚠️ **`START_HERE.md` MANG MỘT GHI CHÚ CŨ NGUY HIỂM, ĐÃ SỬA:** nó ghi van ép chuyển skin "chưa
+> làm" trong khi việc ấy xong từ 2026-08-29. Để nguyên thì phiên sau ép skin lần thứ hai và **đè
+> lên lựa chọn có ý thức của Đàm**. ⇒ *sau một phép gộp nhánh, ghi chú trạng thái là thứ trôi
+> trước tiên — kiểm nó bằng MÃ, đừng tin chữ.*
+>
+> **Kiểm được mà không phải lỗi** (ghi để khỏi đi lại): "CHUỖI 0" trên fixture là ĐÚNG — fixture
+> cách hôm nay hai ngày nên chuỗi đứt theo luật.
+>
+> npm run test:fast: **1363 pass · 1 skipped · 0 fail**. Lint sạch, build xanh.
+>
+
 > Cập nhật lần cuối: **2026-08-30 (vòng 8)** — **RÀNG BUỘC MỚI CỦA ĐÀM: "không đụng tới những gì
 > thuộc Thành Phố"**, và "không đo, phải làm liên tục". Vòng này vì vậy làm ở bốn màn còn lại.
 >

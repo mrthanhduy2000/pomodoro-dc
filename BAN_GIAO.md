@@ -1,5 +1,111 @@
-> Cập nhật lần cuối: **2026-09-03** — Phase 24: bình minh thôi giống buổi chiều; và một hướng cho
-> con số quét ĐẸP NHẤT từ trước tới nay đã bị bộ test bác bỏ vì nó làm tím mặt nước lúc 5 giờ.
+> Cập nhật lần cuối: **2026-09-05** — Phase 25: đo đủ ba cần gạt của `#89`; hai trong ba đi NGƯỢC
+> hướng trực giác, và cái thứ ba lộ ra một lỗi vật lý: buổi chiều khai mặt trời thấp hơn buổi sáng
+> trong khi hai chặng ấy cách đều chính ngọ.
+
+## 2026-09-05 — Phase 25: hai thời điểm cách đều chính ngọ thì mặt trời phải cao bằng nhau
+
+**Đàm nói.** *«Tiếp tục làm những việc cần làm»* — tức làm tiếp đề xuất duy nhất của báo cáo
+Phase 24 §6: **đo** xem đèn cửa sổ và bóng đổ đóng góp bao nhiêu vào khoảng cách giữa bình minh và
+buổi chiều (*"chỉ đo, chưa sửa"*).
+
+**0. Trước khi đo được thì phải vá công cụ — bản quét đang NUỐT `--no-shadow` trong im lặng.**
+Để tắt bóng đổ rồi chấm lại, việc hiển nhiên là chạy `--sweep --no-shadow`. Nó chạy, ghi ra một file
+trông bình thường, và **hai tấm PNG có cùng cỡ byte cùng số đo** — `cmp` xác nhận chúng giống nhau
+từng byte. Nguyên nhân: `buildBundle` chọn `options.sweep ? sweepSource(options) : entrySource(options)`,
+mà `sweepSource` chỉ nhận **sáu** trường (`level · theme · cell · combos · sessions · t`); cờ
+`--no-shadow` sống trong `entrySource`, nên ở nhánh `--sweep` nó **bị bỏ qua, không một dòng cảnh báo**.
+Chín cờ cùng cảnh ngộ (`--no-ao`, `--lowdetail`, `--mask`, `--zoom`, `--focus`, `--topdown`,
+`--pending`, `--dpr`).
+⚠️ **Bản vá ĐẦU TIÊN của tôi sai đúng cái bệnh nó đang chữa**: gắn nhãn `-noshadow` vào tên file
+sẽ **hứa một khác biệt mà bản dựng không tạo ra**. Vá đúng là **TỪ CHỐI THẲNG** (mã thoát 2, in ra
+cách làm đúng: phá MÃ NGUỒN trong một `git worktree`) — đúng luật ADR-026: validator không tự chữa.
+Tên file bản quét nay mang mọi tham số **thật sự đổi nội dung** (`-h…`, `-s…`, `-lv…`, `-c…`, `-t…`)
+và **rỗng ở giá trị mặc định**, nên `sweep-light-ky1-15.png` giữ nguyên tên lịch sử ⇒ mọi bảng số cũ
+trong `PERFORMANCE.md` vẫn truy được nguồn. Khoá bằng 4 bài test, trong đó bài canh "dừng hẳn" phải
+viết lại thành **CHẠY THẬT rồi đọc mã thoát**: bản đầu đọc mã nguồn tìm `process.exit(2)` và một dòng
+`// process.exit(2);` bị chú thích vẫn khớp — đúng bẫy `&& 0` của Phase 8A. Cùng lúc phát hiện cái
+cổng ấy đang đứng **SAU** `buildBundle` + `serve()` (chờ ~20 giây rồi mới báo lỗi, để hở một server);
+chuyển lên trước ⇒ **0,116 giây**.
+
+**1. Bảng ba cần gạt — và nó có giá trị vì nó ĐÓNG CỬA, không phải vì nó mở cửa.**
+5 kỷ × 2 giờ, phép gộp chính thức của `sweep-score.mjs`, mỗi cần gạt phá ở mã nguồn trong một
+`git worktree` riêng:
+
+| | rặng núi xa | thành phố | đất | **TỔNG** | so mốc nền |
+|---|---:|---:|---:|---:|---:|
+| **MỐC NỀN** | 6,63 | 7,12 | 17,56 | **11,59** | — |
+| TẮT BÓNG ĐỔ | 7,14 | 13,79 | 28,74 | **18,86** | **+7,27** ⇐ ngược |
+| TẮT ĐÈN CỬA SỔ bình minh | 7,48 | 8,46 | 18,76 | **12,64** | **+1,05** ⇐ ngược |
+| MẶT TRỜI BÌNH MINH LÊN 0,48 | 6,85 | 6,88 | 7,86 | **7,21** | −4,38 (thuận) |
+
+Dấu **dương** nghĩa là *tắt thứ ấy đi thì hai giờ CÁCH XA nhau THÊM* — tức thứ ấy đang **kéo hai giờ
+lại gần nhau**. Cơ chế: bóng đổ tính tiền theo `sunEnergy` (chiều 1,00 · bình minh 0,50) nên nó làm
+buổi chiều **tối đi gấp đôi**; đèn cửa sổ bình minh nâng dải thành phố lên **+2,4**, đúng chiều tiến
+về mức của buổi chiều. **Nhưng không cái nào dùng được** — bỏ bóng đổ là mất hình khối (§1), bỏ đèn
+cửa sổ lúc 6h là xoá tín hiệu mạnh nhất nói với con người rằng đây là bình minh (ADR-025).
+⇒ Ghi bảng này ra chính là kết quả: nó **đóng lại hai hướng** mà phiên sau sẽ tốn công đi thử.
+
+**2. Cần gạt thứ ba lộ ra một khuyết tật thật, và nó là lỗi VẬT LÝ.** `PHASE_BY_HOUR` xếp buổi sáng
+= 7,8,9 (tâm **8h30**) và buổi chiều = 14,15,16 (tâm **15h30**) — hai tâm **đối xứng** quanh chính
+ngọ 12h00, cùng cách 3,5 giờ. Mặt trời đi cung đối xứng ⇒ hai thời điểm cách đều **bắt buộc** có
+cùng cao độ. Bảng khai `morning: 0.55` mà `afternoon: 0.48`: buổi chiều bị hạ xuống gần bình minh
+hơn mức vật lý cho phép — **bảng tự tay bồi vào đúng cặp đang hỏng**.
+⚠️ **Lý lẽ đầu tiên tôi nghĩ ra SAI**, và nó chỉ được sửa vì đi ĐỌC bảng giờ thay vì đoán:
+*"15h cách trưa 3 giờ, 8h cách trưa 4 giờ, nên chiều phải CAO HƠN sáng"* — sai vì `phaseForHour` gộp
+theo CHẶNG chứ không theo giờ lẻ, nên tâm chặng mới là đại lượng đúng, và hai tâm ấy bằng nhau.
+
+**3. Bài test cũ để lọt khuyết tật ấy — và cách nó để lọt là một hình dạng đã cắn dự án nhiều lần.**
+Bài `'mặt trời lên cao nhất vào giữa trưa…'` hỏi **ba câu rời rạc**: trưa cao hơn bình minh · hơn
+hoàng hôn · hơn buổi **sáng**. Không hỏi trưa có cao hơn buổi **CHIỀU** không, cũng không hỏi quan hệ
+sáng↔chiều. Một danh sách viết tay thì bỏ sót đúng phần tử không ai nghĩ tới. Thay bằng một bài
+**cấu trúc**: suy tâm mỗi chặng từ chính `phaseForHour` (không chép tay bảng giờ ⇒ đổi bảng giờ thì
+bài test tự đi theo), loại chặng vắt qua nửa đêm bằng **CẤU TRÚC** (dãy giờ có liền mạch không) chứ
+không bằng cách gọi tên `night`, rồi duyệt **đủ tổ hợp đôi** (không duyệt cặp-kề-nhau — bài học
+`bình minh ↔ hoàng hôn`) mà đòi: gần chính ngọ hơn ⇒ **cao hơn**; cách đều ⇒ **bằng nhau**, với danh
+sách ngoại lệ **tường minh, đếm được** `assert.deepEqual(lechDoiXung, ['dawn↔dusk'])`.
+⚠️ Và `morning↔afternoon` **RƠI RA KHỎI** danh sách ngoại lệ sau bản vá — *một ngoại lệ BIẾN MẤT là
+bằng chứng mạnh hơn một ngoại lệ được THÊM VÀO*.
+**Thử ngược, chạy thật, cả ba đều nổ**: (A) chiều về 0,48 ⇒ đỏ, nêu đúng `morning↔afternoon`;
+(B) trưa 0,84 → 0,50 ⇒ đỏ ở vế thứ tự; (C) hoàng hôn 0,16 → 0,28 ⇒ đỏ ở `deepEqual` — chứng minh
+danh sách ngoại lệ có răng theo **chiều ngược**, không chỉ chiều thêm vào.
+
+**4. Số (cổng không-trôi, 15 kỷ × 6 chặng).** Mốc nền TỰ ĐO trong `git worktree` tái lập **đúng** bộ
+số Phase 24 (13,34 · 21,52 · 36,21) ⇒ không trôi, phép so sạch.
+
+| | mốc nền | Phase 25 |
+|---|---:|---:|
+| **bình minh 6h ↔ chiều 15h** | 13,3 | **18,8** |
+| trưa 12h ↔ chiều 15h | 31,1 | **26,6** ⇐ hàng xóm trả tiền |
+| **cặp chặng gần nhất** | **13,34** ✓ 0/15 | **18,80** ✓ 0/15 |
+| cặp kỷ gần nhất · trung vị | 21,52 · 36,21 | 21,64 · 36,64 ✓ 0/105 |
+
+Biên trên ngưỡng mắt 12: **1,34 → 6,80, gấp 5 lần**. Tách ba dải cặp yếu nhất: **rặng núi xa
+6,12 → 10,34 (×1,69 — dải được chẩn đoán, tăng mạnh nhất theo tỉ lệ)** · thành phố 7,75 → 12,92 ·
+đất 20,88 → 28,03. **Đối chứng nằm sẵn trong phép đo**: bảng độ sáng theo giờ cho thấy **chỉ cột 15h
+đổi**, năm cột kia trùng từng chữ số.
+
+**5. Cái giá, nói thẳng.** Cặp `trưa 12h ↔ chiều 15h` **mất thật 4,5 điểm** (31,1 → 26,6) vì kéo
+chiều lên là kéo nó về phía trưa. Chấp nhận được — 26,6 vẫn hơn **gấp đôi** ngưỡng mắt và không còn
+là cặp ràng buộc — nhưng **đừng đi lấy lại 4,5 điểm ấy bằng cách hạ chiều xuống**: đó đúng là khuyết
+tật vừa sửa. Và `TECH_DEBT #89` **VẪN CHƯA ĐÓNG**: riêng dải `rặng núi xa` là **10,34 < 12**, tức xét
+riêng chỗ được chẩn đoán thì hai chặng vẫn đọc ra là một. **Cổng qua không có nghĩa là chẩn đoán đã
+xong** (ADR-066).
+
+**6. Kiểm bằng mắt (§1).** Cận cảnh kỷ 8 lúc 15h, trước/sau, `--width 1500`: bóng ngắn lại ~18%
+(góc ngẩng 28,7° → 33,4°) nhưng vẫn đọc ra là **xế chiều**, không phải giữa trưa — vì `sunWarmth: 0.55`
+(nắng vàng) và `haze: 0.16` giữ nguyên, còn giữa trưa thì 0,05 và 0,06. Đặt cạnh ảnh 6h thì hai
+khung là hai thời điểm không thể nhầm: bình minh mờ sương, gần như không có bóng, cửa sổ vàng rực;
+buổi chiều sắc nét, bóng xiên dài, không một ô cửa nào sáng.
+
+**Nghiệm thu.** `npm test` **1282 bài · 1281 pass · 0 fail · 1 skipped** (lượt nhanh) + **3/3** (lượt
+đối chiếu chéo, 39,7 giây) · `npm run lint` sạch. ⚠️ Chạy ĐỦ cả hai lượt là bắt buộc, không phải thủ
+tục: Phase 24 có một hướng cho con số quét **đẹp hơn** mà làm đỏ hai bài thật ở giờ 5, và bản quét
+lấy mẫu 6 giờ nên nó **về mặt cấu tạo không thể** thấy lỗi ấy.
+
+**Tài liệu.** ADR-070 · `TECH_DEBT #89` (biên 1,34 → 6,80; vẫn MỞ) · `CHANGELOG.md` ·
+`PERFORMANCE.md` mục «Phase 25» (kèm dòng lệnh + ĐỜI ẢNH) · đoạn "SỐ HIỆN HÀNH" trong `CLAUDE.md`.
+
+---
 
 ## 2026-09-03 — Phase 24: sương dày thì màu phải loãng · và một cái tên sai đã làm hai phiên đi tìm nhầm chỗ
 

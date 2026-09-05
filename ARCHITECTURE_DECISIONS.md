@@ -11,6 +11,118 @@
 
 ---
 
+## ADR-070 — **HAI THỜI ĐIỂM CÁCH ĐỀU CHÍNH NGỌ THÌ MẶT TRỜI PHẢI CAO BẰNG NHAU**: buổi chiều khai thấp hơn buổi sáng là nói dối vật lý, và nó tự tay bồi vào `#89`; kèm hai cần gạt ĐI NGƯỢC hướng trực giác
+
+**Ngày:** 2026-09-05 (Phase 25)
+
+**Bối cảnh.** Báo cáo Phase 24 đề xuất đúng MỘT việc kế tiếp: *"đo xem đèn cửa sổ và độ dài bóng đổ
+đang đóng góp bao nhiêu vào khoảng cách giữa hai buổi — chỉ đo, chưa sửa"*. Lý do đề xuất: trong lúc
+nhìn hai tấm ảnh 6h và 15h, thứ mắt đọc ra rõ nhất **không phải màu trời** mà là đèn cửa sổ và bóng
+đổ. `TECH_DEBT #89` khi ấy còn 13,34 — trên ngưỡng mắt 12 vỏn vẹn **1,34**.
+
+**Vấn đề.** Phép đo trả về một bảng mà **hai trong ba cần gạt đi NGƯỢC hướng trực giác**, và cần gạt
+thứ ba chỉ ra một khuyết tật chưa ai biết. Đo bằng đúng phép gộp chính thức của `sweep-score.mjs`
+(gộp-trước rồi mới so — `TECH_DEBT #55` cấm đổi cách gộp để lấy lại con số), 5 kỷ × 2 giờ, mỗi cần
+gạt phá ở MÃ NGUỒN trong một `git worktree` riêng:
+
+| | rặng núi xa | thành phố | đất | **TỔNG** | so mốc nền |
+|---|---:|---:|---:|---:|---:|
+| **MỐC NỀN** (đủ mọi cần gạt) | 6,63 | 7,12 | 17,56 | **11,59** | — |
+| TẮT BÓNG ĐỔ | 7,14 | 13,79 | 28,74 | **18,86** | **+7,27** ⇐ ngược |
+| TẮT ĐÈN CỬA SỔ lúc bình minh | 7,48 | 8,46 | 18,76 | **12,64** | **+1,05** ⇐ ngược |
+| MẶT TRỜI BUỔI CHIỀU LÊN NGANG BUỔI SÁNG | — | — | — | — | thuận |
+
+**Vì sao hai cần gạt kia đi ngược — và vì sao KHÔNG được đụng vào chúng.** Bóng đổ tính tiền theo
+`sunEnergy`: buổi chiều khai 1,00 còn bình minh 0,50, nên **bóng làm buổi chiều tối đi gấp đôi buổi
+bình minh** ⇒ nó đang KÉO HAI GIỜ LẠI GẦN NHAU. Đèn cửa sổ bình minh nâng dải thành phố lên +2,4,
+đúng chiều tiến về mức của buổi chiều. Tức cả hai đang làm cho `#89` nặng thêm. Nhưng **không cái
+nào là cần gạt dùng được**: bỏ bóng đổ thì mất hình khối (§1 — sản phẩm là ẢNH), và đèn cửa sổ sáng
+lúc 6h là **tín hiệu mạnh nhất nói với con người rằng đây là bình minh**. Ghi bảng này ra chính là
+kết quả: nó **đóng lại hai hướng** mà phiên sau sẽ tốn công đi thử.
+
+**Khuyết tật lộ ra từ cần gạt thứ ba.** `PHASE_BY_HOUR` xếp `morning = 7,8,9` (tâm **8h30**) và
+`afternoon = 14,15,16` (tâm **15h30**). Hai tâm ấy **ĐỐI XỨNG quanh chính ngọ 12h00** — cùng cách
+3,5 giờ. Mặt trời đi một cung đối xứng quanh chính ngọ, nên hai thời điểm cách đều chính ngọ
+**bắt buộc** có cùng cao độ. Bảng khai `morning: 0.55` nhưng `afternoon: 0.48`. Buổi chiều bị hạ
+xuống gần bình minh hơn mức vật lý cho phép — tức bảng **tự tay bồi vào đúng cặp đang hỏng**.
+
+⚠️ Lý lẽ đầu tiên tôi nghĩ ra **SAI**, và nó chỉ được sửa vì đi ĐỌC bảng giờ thay vì đoán: *"15h cách
+trưa 3 giờ, 8h cách trưa 4 giờ, nên chiều phải CAO HƠN sáng"*. Sai vì `phaseForHour` gộp theo CHẶNG
+chứ không theo giờ lẻ — tâm chặng mới là đại lượng đúng, và hai tâm ấy bằng nhau.
+
+**Phương án đã cân nhắc.**
+- **(A) Bỏ/giảm bóng đổ ở buổi chiều.** Bác: mua 7,27 điểm bằng cách xoá hình khối. §1 cấm.
+- **(B) Tắt đèn cửa sổ lúc bình minh.** Bác: mua 1,05 điểm bằng cách xoá tín hiệu "đây là sáng sớm".
+  Cùng họ ADR-025 — mua một con số bằng cách nói dối đời thật.
+- **(C) Kéo `afternoon.sunAltitude` 0,48 → 0,55 cho đúng đối xứng vật lý.** Một trường đổi, không
+  hằng số nào chọn tay: 0,55 là **đúng giá trị buổi sáng đã khai**, không phải một con số dò ra.
+
+**Giải pháp chọn: (C).** `afternoon.sunAltitude: 0.48 → 0.55`.
+
+**Kết quả trên bản quét thật (cổng không-trôi, 15 kỷ × 6 chặng).** Mốc nền TỰ ĐO, và nó **tái lập
+đúng bộ số Phase 24** (13,34 · 21,52 · 36,21) ⇒ không trôi, phép so sạch.
+
+| | Mốc nền (chiều 0,48) | Sau bản vá (chiều 0,55) |
+|---|---:|---:|
+| **bình minh 6h ↔ chiều 15h** | 13,3 | **18,8** |
+| trưa 12h ↔ chiều 15h | 31,1 | 26,6 ⇐ hàng xóm trả tiền |
+| sáng 8h ↔ chiều 15h | 23,8 | 23,9 |
+| sáng 8h ↔ trưa 12h | 21,4 | 21,4 |
+| bình minh 6h ↔ sáng 8h | 28,6 | 28,6 |
+| **cặp chặng gần nhất** | **13,34** (0/15) | **18,80** (0/15) ✓ |
+| cặp kỷ gần nhất | 21,52 | 21,64 |
+| trung vị cặp kỷ | 36,21 | 36,64 (0/105) ✓ |
+
+Tách ba dải của đúng cặp yếu nhất: `rặng núi xa` **6,12 → 10,34** (×1,69 — dải được chẩn đoán, và
+là dải tăng mạnh nhất theo tỉ lệ) · thành phố 7,75 → 12,92 · đất 20,88 → 28,03. **Đối chứng có sẵn
+trong chính phép đo**: bảng độ sáng theo giờ cho thấy **chỉ cột 15h đổi**, năm cột còn lại trùng
+từng chữ số — đúng như một bản vá chạm đúng một chặng phải thế.
+
+**Trade-off.** `trưa ↔ chiều` mất thật **4,5 điểm** (31,1 → 26,6), vì kéo chiều lên là kéo nó về
+phía trưa. Chấp nhận được và phải nói ra: 26,6 vẫn hơn **gấp đôi** ngưỡng mắt 12, và nó **không còn
+là cặp ràng buộc**. Biên của cả cổng đi từ 1,34 lên **6,80** — gấp **5 lần**.
+
+**Giả định.** Cung mặt trời đối xứng quanh chính ngọ (đúng với mọi vĩ độ, mọi ngày trong năm).
+`sunAltitude` là **SIN** của góc ngẩng chứ không phải góc — phép so vẫn hợp lệ vì sin đơn điệu trên
+khoảng đang dùng.
+
+**Rủi ro mới.** Bóng đổ buổi chiều ngắn đi ~18% (góc ngẩng 28,7° → 33,4°). Đã kiểm bằng mắt ở cận
+cảnh kỷ 8 `--hour 15 --width 1500`: vẫn đọc ra là **xế chiều**, không phải giữa trưa — vì
+`sunWarmth: 0.55` (nắng vàng) và `haze: 0.16` giữ nguyên, còn giữa trưa thì `sunWarmth: 0.05` và
+`haze: 0.06`. Cao độ chỉ là **một** trong ba trục phân biệt hai chặng.
+
+**Ảnh hưởng.** `TECH_DEBT #89` **chưa đóng** — xem mục đó: riêng dải `rặng núi xa` vẫn 10,34, dưới
+ngưỡng mắt 12. Cổng tổng qua được là nhờ cả ba dải cộng lại, không phải nhờ dải được chẩn đoán đã
+lành hẳn. Nói cách khác, **cổng qua không có nghĩa là chẩn đoán đã xong** — cùng bài học ADR-066.
+
+**Bài test khoá.** Bài cũ `'mặt trời lên cao nhất vào giữa trưa…'` hỏi ba câu rời rạc — *trưa cao
+hơn bình minh · hơn hoàng hôn · hơn buổi sáng* — và **không hỏi trưa có cao hơn buổi CHIỀU không**,
+cũng không hỏi quan hệ sáng↔chiều. Một danh sách viết tay thì bỏ sót đúng phần tử không ai nghĩ tới.
+Thay bằng một bài **cấu trúc**: suy tâm mỗi chặng từ chính `phaseForHour` (không chép tay bảng giờ),
+loại chặng vắt qua nửa đêm bằng CẤU TRÚC (dãy giờ có liền mạch không) chứ không bằng cách gọi tên
+`night`, rồi duyệt **đủ tổ hợp đôi** (không duyệt cặp-kề-nhau — bài học `bình minh ↔ hoàng hôn`) mà
+đòi: gần chính ngọ hơn ⇒ **cao hơn**; cách đều ⇒ **bằng nhau**, với danh sách ngoại lệ
+**tường minh, đếm được** `assert.deepEqual(lechDoiXung, ['dawn↔dusk'])`.
+
+⚠️ `dawn↔dusk` (0,28 so với 0,16) là ngoại lệ **có lý do viết sẵn** ở `daylight.js`: hoàng hôn cố ý
+nắng xiên gắt bóng sâu, ngược với sương sớm mờ đều của bình minh. Dùng `deepEqual` nên nó đỏ theo
+**cả hai chiều** — đỏ khi có cặp thứ hai lệch, và đỏ cả khi ai đó "sửa" luôn cặp này. Và
+`morning↔afternoon` **RƠI RA KHỎI** danh sách sau bản vá: *một ngoại lệ BIẾN MẤT là bằng chứng mạnh
+hơn một ngoại lệ được THÊM VÀO*.
+
+**Thử ngược (chạy thật, cả ba đều nổ):** (A) chiều về 0,48 ⇒ đỏ, thông báo nêu đúng
+`morning↔afternoon`; (B) trưa 0,84 → 0,50 ⇒ đỏ ở vế thứ tự; (C) hoàng hôn 0,16 → 0,28 ⇒ đỏ ở
+`deepEqual` (chứng minh danh sách ngoại lệ có răng theo chiều ngược). Cộng một gác chạy-rỗng
+(`banNgay.length >= 5`) và một gác đếm cặp — thiếu chúng thì một `filter` hỏng sẽ để bài test xanh
+rỗng.
+
+**Điều kiện xem lại.** Nếu có ai đổi `PHASE_BY_HOUR` cho hai chặng thôi đối xứng quanh chính ngọ,
+bài test tự đi theo (nó suy tâm chặng từ `phaseForHour`) và vế "cách đều ⇒ bằng nhau" sẽ tự tắt.
+Nếu `#89` được đi tiếp thì **đừng lấy lại 4,5 điểm của `trưa↔chiều` bằng cách hạ chiều xuống** —
+đó là đúng khuyết tật vừa sửa.
+
+---
+
 ## ADR-069 — **SƯƠNG DÀY THÌ MÀU PHẢI LOÃNG: bình minh tách khỏi buổi chiều bằng ĐỘ TƯƠI, không bằng GÓC MÀU**; và một bản quét 6 khung giờ không thay được bộ test
 
 **Ngày:** 2026-09-03 (Phase 24)

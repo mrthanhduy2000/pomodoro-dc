@@ -5327,6 +5327,54 @@ trong chú thích thì đừng để `--selftest` của chính nó vẫn dùng �
 > cấu tạo không thể** thấy một lỗi ở giờ 5 — đúng hình dạng `#38`. ⇒ **Khi cổng số của một phase
 > và bộ test cãi nhau, bộ test thắng.**
 
-- **Owner**: chưa giao · **Status**: MỞ nhưng **NHẸ ĐI ĐÁNG KỂ** — biên **1,34** (13,34 · đo
-  2026-09-03, ADR-069); dải được chẩn đoán đã tăng ×1,48 nhưng vẫn dưới ngưỡng mắt khi xét riêng;
-  cần gạt màu gần hết, lối tiếp theo phải sang bóng đổ / đèn cửa sổ / độ cao mặt trời
+> ⚠️⚠️ **CẬP NHẬT 2026-09-05 (Phase 25) — ĐÃ ĐO ĐỦ BA ỨNG VIÊN Ở TRÊN. HAI TRONG BA ĐI NGƯỢC
+> HƯỚNG, VÀ CÁI THỨ BA CHỈ RA MỘT KHUYẾT TẬT CHƯA AI BIẾT.** Đo bằng đúng phép gộp chính thức của
+> `sweep-score.mjs` (gộp-trước rồi mới so — `#55` cấm đổi cách gộp để lấy lại con số), 5 kỷ × 2 giờ,
+> mỗi cần gạt phá ở MÃ NGUỒN trong một `git worktree` riêng:
+>
+> | | rặng núi xa | thành phố | đất | **TỔNG** | so mốc nền |
+> |---|---:|---:|---:|---:|---:|
+> | **MỐC NỀN** | 6,63 | 7,12 | 17,56 | **11,59** | — |
+> | TẮT BÓNG ĐỔ | 7,14 | 13,79 | 28,74 | **18,86** | **+7,27** ⇐ ngược |
+> | TẮT ĐÈN CỬA SỔ lúc bình minh | 7,48 | 8,46 | 18,76 | **12,64** | **+1,05** ⇐ ngược |
+>
+> ⇒ **Bóng đổ và đèn cửa sổ đang KÉO HAI GIỜ LẠI GẦN NHAU, không đẩy chúng ra.** Cơ chế: bóng đổ
+> tính tiền theo `sunEnergy`, mà buổi chiều khai 1,00 còn bình minh 0,50 ⇒ bóng làm buổi chiều tối
+> đi **gấp đôi**; đèn cửa sổ bình minh nâng dải thành phố lên **+2,4**, đúng chiều tiến về mức của
+> buổi chiều. **Nhưng không cái nào dùng được**: bỏ bóng đổ là mất hình khối (§1 — sản phẩm là ẢNH),
+> bỏ đèn cửa sổ lúc 6h là xoá tín hiệu mạnh nhất nói với con người rằng đây là bình minh (ADR-025
+> cấm mua một con số bằng cách nói dối đời thật). ⇒ **Bảng này ĐÓNG LẠI HAI HƯỚNG** cho phiên sau,
+> và đó chính là giá trị của nó.
+>
+> **Cần gạt thứ ba lộ ra một khuyết tật thật.** `PHASE_BY_HOUR` xếp `morning = 7,8,9` (tâm **8h30**)
+> và `afternoon = 14,15,16` (tâm **15h30**) — hai tâm ĐỐI XỨNG quanh chính ngọ 12h00, cùng cách 3,5
+> giờ. Mặt trời đi một cung đối xứng quanh chính ngọ ⇒ hai thời điểm cách đều **bắt buộc** có cùng
+> cao độ. Bảng khai `morning: 0.55` nhưng `afternoon: 0.48` ⇒ buổi chiều bị hạ xuống gần bình minh
+> hơn mức vật lý cho phép: **bảng tự tay bồi vào đúng cặp đang hỏng.** Vá:
+> `afternoon.sunAltitude 0.48 → 0.55` (ADR-070).
+>
+> **Số sau bản vá** (mốc nền TỰ ĐO, tái lập **đúng** bộ số Phase 24 ⇒ không trôi, phép so sạch):
+> cặp chặng gần nhất **13,34 → 18,80** (0/15 ✓) · cặp kỷ gần nhất 21,52 → 21,64 · trung vị 36,21 →
+> 36,64 (0/105 ✓). **Biên trên ngưỡng mắt 12 đi từ 1,34 lên 6,80 — gấp 5 lần.**
+> Tách ba dải của cặp 6h↔15h: **rặng núi xa 6,12 → 10,34 (×1,69 — dải được chẩn đoán, tăng mạnh
+> nhất theo tỉ lệ)** · thành phố 7,75 → 12,92 · đất 20,88 → 28,03.
+>
+> ⚠️ **CÁI GIÁ PHẢI NÓI RA, KHÔNG ĐƯỢC GIẤU SAU CON SỐ 18,80**: cặp `trưa 12h ↔ chiều 15h` **mất
+> thật 4,5 điểm** (31,1 → 26,6), vì kéo chiều lên là kéo nó về phía trưa. Chấp nhận được: 26,6 vẫn
+> hơn **gấp đôi** ngưỡng mắt, và nó không còn là cặp ràng buộc. ⚠️ **Đừng đi lấy lại 4,5 điểm ấy
+> bằng cách hạ chiều xuống** — đó đúng là khuyết tật vừa sửa.
+>
+> ⚠️ **VÌ SAO VẪN CHƯA ĐÓNG**: riêng dải `rặng núi xa` vẫn **10,34 < 12**, tức xét riêng dải được
+> chẩn đoán thì hai chặng vẫn đọc ra là một. Cổng tổng qua được là nhờ cả ba dải cộng lại.
+> **Cổng qua không có nghĩa là chẩn đoán đã xong** — cùng bài học ADR-066.
+>
+> **Ba ứng viên cũ nay đều đã đo xong**, nên lối tiếp theo phải là một đại lượng MỚI. Ứng viên chưa
+> ai đo: **`fogDensityFor` ở mốc `FAR_RIDGE`** — sương là đường duy nhất đáng kể tới dải rặng núi xa
+> (ADR-069 đã chứng minh), mà `haze` bình minh 0,90 so với buổi chiều 0,16 đã là một khoảng cách rất
+> rộng ⇒ cần đo xem **đường cong mật độ** có đang nén hai đầu ấy lại gần nhau không, trước khi chỉnh
+> bất kỳ số nào.
+
+- **Owner**: chưa giao · **Status**: MỞ nhưng **NHẸ ĐI RẤT NHIỀU** — biên **6,80** (18,80 · đo
+  2026-09-05, ADR-070), gấp 5 lần mức sau Phase 24 và gấp 30 lần đáy Phase 21; nhưng riêng dải được
+  chẩn đoán (rặng núi xa) vẫn **10,34 < 12** ⇒ chưa đóng. Ba ứng viên cũ (bóng đổ · đèn cửa sổ · cao
+  độ mặt trời) **đều đã đo xong**; lối tiếp theo là đường cong mật độ sương ở mốc `FAR_RIDGE`

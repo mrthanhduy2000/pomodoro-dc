@@ -2307,6 +2307,99 @@ xuống, mà `massHeight` thì không phụ thuộc hình chiếu đáy) — bù
 
 ---
 
+## Phase 25 — BA CẦN GẠT ĐƯỢC ĐO, HAI ĐI NGƯỢC HƯỚNG (2026-09-05, ADR-070)
+
+- **Công cụ**: `scripts/city-preview.mjs --sweep` → `scripts/sweep-score.mjs` · phép tách dải viết
+  tạm trong thư mục nháp (`§3` cấm để công cụ dùng-một-lần vào `scripts/`), dùng **đúng** phép gộp
+  của `sweep-score.mjs` (gộp-trước 15 kỷ rồi mới so — `TECH_DEBT #55`) và có hai cổng tự-kiểm: tổng
+  9 chiều phải BẰNG `RMS` của ba khoảng cách dải, và hai cột phải khác nhau.
+- **Dòng lệnh** (hai vế **y hệt nhau**, chỉ khác KHO):
+
+```bash
+node scripts/city-preview.mjs --sweep --all --theme light
+node scripts/sweep-score.mjs .city-preview/sweep-light-ky1-15.png
+```
+
+- **ĐỜI ẢNH**: vế "trước" dựng trong `git worktree …/p25/wt-mattroi` tách rời ở **`d5cf623`**
+  (TỰ ĐO, **không chép** cột "sau" của Phase 24 — `TECH_DEBT #43`); vế "sau" dựng trong cây làm việc
+  ở `d5cf623` + bản vá một dòng, lúc **2026-09-05T07:59Z**, md5 `07397429974936919c18feb1b2995104`.
+  ⚠️ Ảnh "sau" bị `sweep-score.mjs` **TỪ CHỐI CHẤM một lần** vì nó cũ hơn `daylight.js` (phép thử
+  ngược vừa ghi lại file ấy) — cổng chống-ảnh-cũ đã làm đúng việc của nó và **không có cờ bỏ qua**,
+  nên bản quét được dựng lại sạch. Đó là lý do mốc thời gian trên là mốc thứ hai, không phải mốc đầu.
+
+### (a) Ba cần gạt — bảng ĐÓNG CỬA, không phải bảng mở cửa
+
+5 kỷ (1·5·8·11·14) × 2 giờ (6·15), mỗi cần gạt phá ở **MÃ NGUỒN** trong một `git worktree` riêng
+(bản quét không có cờ cho chúng — xem mục (c)):
+
+| | rặng núi xa | thành phố | đất | **TỔNG** | so mốc nền |
+|---|---:|---:|---:|---:|---:|
+| **MỐC NỀN** (đủ mọi cần gạt) | 6,63 | 7,12 | 17,56 | **11,59** | — |
+| TẮT BÓNG ĐỔ (`sun.castShadow = false`) | 7,14 | 13,79 | 28,74 | **18,86** | **+7,27** ⇐ **ngược** |
+| TẮT ĐÈN CỬA SỔ lúc bình minh (`dawn.windowsLit = false`) | 7,48 | 8,46 | 18,76 | **12,64** | **+1,05** ⇐ **ngược** |
+| MẶT TRỜI BÌNH MINH LÊN 0,48 | 6,85 | 6,88 | 7,86 | **7,21** | −4,38 (thuận) |
+
+⚠️ **Đọc đúng dấu**: cột cuối là *"tắt thứ này đi thì hai giờ CÁCH XA nhau thêm bao nhiêu"*. Dấu
+dương nghĩa là thứ ấy đang **KÉO HAI GIỜ LẠI GẦN NHAU**. Cơ chế đọc ra từ bảng độ sáng theo dải:
+bóng đổ tính tiền theo `sunEnergy` (chiều 1,00 · bình minh 0,50) nên nó làm buổi chiều **tối đi gấp
+đôi** buổi bình minh; đèn cửa sổ bình minh nâng dải thành phố lên **+2,4**, đúng chiều tiến về mức
+của buổi chiều.
+
+⚠️ **Nhưng không cần gạt nào trong hai cái ấy DÙNG ĐƯỢC** — bỏ bóng đổ là mất hình khối (§1: sản
+phẩm là ẢNH), bỏ đèn cửa sổ lúc 6h là xoá tín hiệu mạnh nhất nói với con người rằng đây là bình minh
+(ADR-025 cấm mua một con số bằng cách nói dối đời thật). ⇒ **Giá trị của bảng này là nó ĐÓNG LẠI hai
+hướng cho phiên sau.** Không đo thì một phiên nào đó sẽ tốn trọn một phase đi tắt bóng đổ rồi thấy
+con số tệ đi.
+
+### (b) Bản vá — cổng không-trôi, 15 kỷ × 6 chặng
+
+| | mốc nền `d5cf623` (chiều 0,48) | Phase 25 (chiều 0,55) |
+|---|---:|---:|
+| **bình minh 6h ↔ chiều 15h** | 13,3 | **18,8** |
+| trưa 12h ↔ chiều 15h | 31,1 | **26,6** ⇐ hàng xóm trả tiền |
+| sáng 8h ↔ chiều 15h | 23,8 | 23,9 |
+| sáng 8h ↔ trưa 12h | 21,4 | 21,4 |
+| bình minh 6h ↔ sáng 8h | 28,6 | 28,6 |
+| **cặp chặng gần nhất** | **13,34** ✓ (0/15) | **18,80** ✓ (0/15) |
+| cặp kỷ gần nhất | 21,52 ✓ | 21,64 ✓ |
+| trung vị cặp kỷ | 36,21 (0/105) | 36,64 (0/105) |
+
+Mốc nền tái lập **đúng** bộ số Phase 24 (13,34 · 21,52 · 36,21) ⇒ không trôi, phép so sạch.
+**Biên trên ngưỡng mắt 12: 1,34 → 6,80 (×5)** — mức cao nhất kể từ Phase 14 §1(3).
+
+Ba dải của cặp yếu nhất:
+
+| dải | mốc nền | Phase 25 | tỉ số |
+|---|---:|---:|---:|
+| **rặng núi xa** | 6,12 | **10,34** | **×1,69** |
+| thành phố | 7,75 | 12,92 | ×1,67 |
+| đất | 20,88 | 28,03 | ×1,34 |
+
+⚠️ **Đối chứng nằm sẵn trong phép đo**: bảng độ sáng theo giờ cho thấy **chỉ cột 15h đổi**, năm cột
+còn lại trùng từng chữ số — đúng như một bản vá chạm đúng một chặng phải thế. Không có vế ấy thì
+không phân biệt được *"bản vá có tác dụng"* với *"tôi đang đo hai cây mã khác nhau"*.
+
+⚠️ **`TECH_DEBT #89` VẪN MỞ**: riêng dải `rặng núi xa` là **10,34 < 12**. Cổng tổng qua nhờ cả ba
+dải cộng lại, không nhờ chỗ được chẩn đoán đã lành. **Cổng qua ≠ chẩn đoán xong** (ADR-066).
+
+### (c) Một cái bẫy đã vá trong chính phiên này — bản quét NUỐT `--no-shadow` trong im lặng
+
+`buildBundle` chọn `options.sweep ? sweepSource(options) : entrySource(options)`, mà `sweepSource`
+chỉ nhận **sáu** trường (`level · theme · cell · combos · sessions · t`). Cờ `--no-shadow` (và
+`--no-ao`, `--lowdetail`, `--mask`, `--zoom`, `--focus`, `--topdown`, `--pending`, `--dpr`) chỉ sống
+trong `entrySource` ⇒ ở nhánh `--sweep` chúng **bị bỏ qua mà không một dòng cảnh báo nào**. Phát
+hiện vì hai PNG có **cùng cỡ byte và cùng số đo**, xác nhận bằng `cmp`. Vá ở `d5cf623`: nhánh
+`--sweep` nay **TỪ CHỐI THẲNG** (mã thoát 2, in ra cách làm đúng là phá mã nguồn trong `worktree`)
+thay vì tự chữa hay gắn nhãn — gắn nhãn `-noshadow` vào tên file sẽ **hứa một khác biệt mà bản dựng
+không tạo ra**, tức đúng cái bệnh đang chữa. Tên file bản quét nay mang mọi tham số **thật sự đổi
+nội dung** (`-h…`, `-s…`, `-lv…`, `-c…`, `-t…`), và **rỗng ở giá trị mặc định** nên
+`sweep-light-ky1-15.png` giữ nguyên tên lịch sử ⇒ mọi bảng cũ trong file này vẫn truy được nguồn.
+Khoá bằng 4 bài ở `scripts/cityPreviewSource.test.js`, trong đó bài canh "dừng hẳn" là bài **CHẠY
+THẬT rồi đọc mã thoát** — bản đầu đọc mã nguồn tìm `process.exit(2)` và một dòng
+`// process.exit(2);` bị chú thích vẫn khớp (đúng cái bẫy `&& 0` của Phase 8A).
+
+---
+
 ## Phase 24 — BÌNH MINH THÔI GIỐNG BUỔI CHIỀU (2026-09-03, ADR-069)
 
 - **Công cụ**: `scripts/city-preview.mjs --sweep` → `scripts/sweep-score.mjs`

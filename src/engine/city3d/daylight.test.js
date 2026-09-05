@@ -64,11 +64,91 @@ test('nắng ẤM lúc bình minh/hoàng hôn và LẠNH lúc đêm — đây l�
   assert.ok(deriveDaylight(23).sunWarmth < 0, 'đêm phải lạnh');
 });
 
-test('mặt trời lên cao nhất vào giữa trưa và thấp nhất lúc bình minh/hoàng hôn', () => {
-  const noon = deriveDaylight(12).sunAltitude;
-  assert.ok(noon > deriveDaylight(6).sunAltitude, 'trưa phải cao hơn bình minh');
-  assert.ok(noon > deriveDaylight(18).sunAltitude, 'trưa phải cao hơn hoàng hôn');
-  assert.ok(noon > deriveDaylight(8).sunAltitude, 'trưa phải cao hơn buổi sáng');
+test('CAO ĐỘ MẶT TRỜI PHẢI KHỚP GIỜ: gần chính ngọ hơn thì CAO hơn, cách chính ngọ BẰNG NHAU thì CAO BẰNG NHAU', () => {
+  // ⚠️ BÀI NÀY THAY CHO MỘT BÀI CŨ ĐÃ ĐỂ LỌT MỘT KHUYẾT TẬT SỐNG SÓT NHIỀU THÁNG.
+  // Bản cũ hỏi ba câu rời rạc — "trưa cao hơn bình minh", "cao hơn hoàng hôn", "cao hơn buổi
+  // sáng" — và KHÔNG hỏi "trưa cao hơn buổi CHIỀU", cũng không hỏi quan hệ sáng↔chiều. Đúng cái
+  // hình dạng đã cắn dự án nhiều lần: một danh sách viết tay thì bỏ sót đúng phần tử không ai
+  // nghĩ tới. Buổi chiều khai 0,48 trong khi buổi sáng khai 0,55, và cả hai bài test lẫn con mắt
+  // đều không kêu — cho tới khi Phase 25 đo bằng số.
+  //
+  // ⚠️ VÌ SAO 0,48 LÀ SAI VỀ VẬT LÝ CHỨ KHÔNG PHẢI MỘT LỰA CHỌN MỸ THUẬT. `PHASE_BY_HOUR` xếp
+  // buổi sáng = 7,8,9 (tâm 8h30) và buổi chiều = 14,15,16 (tâm 15h30). Hai tâm ấy ĐỐI XỨNG quanh
+  // chính ngọ 12h00 — cùng cách 3,5 giờ. Mặt trời thì đi một cung tròn đối xứng quanh chính ngọ,
+  // nên hai thời điểm cách đều chính ngọ BẮT BUỘC có cùng cao độ. Khai lệch nhau là nói dối vật
+  // lý, và cái giá phải trả nằm ở chỗ không ai ngờ: buổi chiều thấp xuống làm nó GIỐNG bình minh
+  // thêm, tức tự tay bồi vào đúng `TECH_DEBT #89` (bình minh 6h ↔ chiều 15h là cặp gần nhất bảng).
+  //
+  // ⚠️ ĐỌC KỸ: `sunAltitude` là SIN của góc ngẩng, không phải góc. Nên phép so ở đây là so hai
+  // con số cùng thang, không phải so hai góc — và tính đối xứng của cung mặt trời vẫn giữ nguyên
+  // qua phép lấy sin, vì sin là hàm đơn điệu trên khoảng đang dùng.
+  //
+  // ⚠️ VÀ ĐỪNG CHÉP TAY BẢNG GIỜ VÀO ĐÂY. Giờ giữa của mỗi chặng được SUY TỪ `phaseForHour` —
+  // hàm mà chính cảnh 3D gọi — nên đổi bảng giờ thì bài test tự đi theo, không trôi khỏi mã.
+
+  const gioCua = new Map();
+  for (let hour = 0; hour < 24; hour += 1) {
+    const phase = phaseForHour(hour);
+    if (!gioCua.has(phase)) gioCua.set(phase, []);
+    gioCua.get(phase).push(hour);
+  }
+
+  // Chặng vắt qua nửa đêm (ban đêm: 19..23 rồi 0..4) thì "giờ giữa" là một con số vô nghĩa — nó
+  // rơi vào giữa trưa. Loại nó ra bằng CẤU TRÚC (dãy giờ có liền một mạch không), không loại bằng
+  // cách gọi tên "night": gọi tên thì ngày nào có chặng thứ bảy sẽ lại lọt.
+  const lienMach = (hours) => hours.every((h, i) => i === 0 || h === hours[i - 1] + 1);
+  const banNgay = [...gioCua.entries()]
+    .filter(([, hours]) => lienMach(hours))
+    // giờ h phủ khoảng [h, h+1) nên tâm của nó là h + 0,5
+    .map(([phase, hours]) => ({ phase, giua: hours.reduce((s, h) => s + h + 0.5, 0) / hours.length }));
+
+  // Gác chạy-rỗng: thiếu vế này thì một `filter` hỏng sẽ để lại 0 chặng và cả bài test xanh rỗng.
+  assert.ok(banNgay.length >= 5,
+    `chỉ còn ${banNgay.length} chặng liền mạch — bảng giờ đã đổi hình, bài test này không còn đo gì`);
+
+  const chinhNgo = banNgay.find((c) => c.phase === 'noon');
+  assert.ok(chinhNgo, 'không tìm thấy chặng "noon" để lấy mốc chính ngọ');
+
+  const cachNgo = (c) => Math.abs(c.giua - chinhNgo.giua);
+  const caoDo = (c) => DAYLIGHT_PROFILES[c.phase].sunAltitude;
+
+  // Ngoại lệ TƯỜNG MINH, ĐẾM ĐƯỢC — không phải một ngưỡng nới rộng.
+  // `dawn↔dusk` cách chính ngọ bằng nhau (đều 6 giờ) mà cao độ lệch hẳn (0,28 so với 0,16). Đó là
+  // một lựa chọn mỹ thuật CÓ LÝ DO viết sẵn ở `daylight.js`: hoàng hôn cố ý nắng xiên gắt bóng
+  // sâu, ngược với sương sớm mờ đều của bình minh. Danh sách này dùng `deepEqual` nên nó đỏ theo
+  // CẢ HAI chiều: đỏ khi có cặp thứ hai lệch, và đỏ cả khi ai đó "sửa" luôn cặp này.
+  const NGOAI_LE = ['dawn↔dusk'];
+
+  const lechDoiXung = [];
+  let soCapDaSo = 0;
+  for (let i = 0; i < banNgay.length; i += 1) {
+    for (let j = i + 1; j < banNgay.length; j += 1) {
+      const a = banNgay[i];
+      const b = banNgay[j];
+      soCapDaSo += 1;
+      const dA = cachNgo(a);
+      const dB = cachNgo(b);
+      if (Math.abs(dA - dB) < 1e-9) {
+        if (Math.abs(caoDo(a) - caoDo(b)) > 1e-9) lechDoiXung.push(`${a.phase}↔${b.phase}`);
+        continue;
+      }
+      const [gan, xa] = dA < dB ? [a, b] : [b, a];
+      assert.ok(caoDo(gan) > caoDo(xa),
+        `"${gan.phase}" (tâm ${gan.giua}h, cách chính ngọ ${cachNgo(gan)}h) gần chính ngọ hơn `
+        + `"${xa.phase}" (tâm ${xa.giua}h, cách ${cachNgo(xa)}h) mà mặt trời lại KHÔNG cao hơn: `
+        + `${caoDo(gan)} so với ${caoDo(xa)}`);
+    }
+  }
+
+  // Duyệt ĐỦ tổ hợp đôi, không duyệt danh sách theo thứ tự — bài học đã trả giá ở
+  // "bình minh ↔ hoàng hôn" (hai phần tử ở hai đầu danh sách thì phép duyệt cặp-kề-nhau không
+  // bao giờ đem chúng ra so với nhau).
+  assert.equal(soCapDaSo, (banNgay.length * (banNgay.length - 1)) / 2,
+    'phép duyệt bỏ sót cặp — nó phải chạm MỌI cặp, không chỉ cặp kề nhau');
+
+  assert.deepEqual(lechDoiXung.sort(), NGOAI_LE,
+    `những cặp chặng cách chính ngọ BẰNG NHAU mà cao độ mặt trời lại LỆCH: ${lechDoiXung.join(', ') || '(không có)'}`
+    + ` — mong đợi đúng ${NGOAI_LE.join(', ')}`);
 });
 
 test('cao độ mặt trời KHÔNG bao giờ chạm 0 — bóng dài vô hạn sẽ tràn khỏi khung bóng', () => {

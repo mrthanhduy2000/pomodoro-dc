@@ -263,7 +263,17 @@ export const DAYLIGHT_PROFILES = {
   // tươi và đẩy sắc từ 34° lên 44° (nắng-vàng thay vì đất-nâu). ⚠️ KHÔNG đổi chiều thành xanh:
   // phép đo cả-cảnh cho thấy chiều vốn ĐÃ tách bạch với mọi chặng khác (gần nhất là 37,6/255) —
   // vấn đề của nó là ĐỤC, không phải TRÙNG. Sửa đúng bệnh, không sửa bệnh tưởng tượng.
-  afternoon: { sunAltitude: 0.48, sunWarmth:  0.55, sunEnergy: 1.00, fillEnergy: 1.00, skyHue: 214, skyPull: 0.44, horizonHue:  44, horizonPull: 0.56, skySaturation: 1.30, windowsLit: false, lampEnergy: 0, haze: 0.16    },
+  // ⚠️ `sunAltitude` NÀY LÀ MỘT SỰ THẬT VẬT LÝ, KHÔNG PHẢI MỘT NÚM MỸ THUẬT — ĐỪNG HẠ NÓ XUỐNG.
+  // Trực giác "chiều muộn hơn nên nắng phải thấp hơn sáng" là SAI ở đây, và nó đã cắn một lần:
+  // `PHASE_BY_HOUR` cho chặng "morning" các giờ 7·8·9 (tâm 8h30) và "afternoon" các giờ 14·15·16
+  // (tâm 15h30) — hai tâm ấy CÁCH ĐỀU chính ngọ đúng 3,5 giờ, nên mặt trời phải cao BẰNG NHAU.
+  // Bản cũ khai 0,48 so với 0,55 của buổi sáng, tức nói dối vật lý, và cái nói dối ấy tự tay bồi
+  // vào `TECH_DEBT #89` (bình minh ↔ chiều là cặp chặng gần nhau nhất bảng). Kéo về 0,55 đưa cặp
+  // ấy từ 13,3 lên **18,8** trên ngưỡng mắt 12. Bài "CAO ĐỘ MẶT TRỜI PHẢI KHỚP GIỜ" ở
+  // `daylight.test.js` khoá luật này bằng chính bảng giờ (không chép tay), nên đổi bảng giờ thì
+  // luật tự đi theo. Muốn buổi chiều khác buổi sáng thì vặn `sunWarmth`/`skySaturation`/`haze` —
+  // những trục KHÔNG bị vật lý ràng buộc — chứ đừng vặn cao độ.
+  afternoon: { sunAltitude: 0.55, sunWarmth:  0.55, sunEnergy: 1.00, fillEnergy: 1.00, skyHue: 214, skyPull: 0.44, horizonHue:  44, horizonPull: 0.56, skySaturation: 1.30, windowsLit: false, lampEnergy: 0, haze: 0.16    },
   // Hoàng hôn: đẩy về phía ĐỎ và ĐẬM hơn hẳn bình minh. `fillEnergy` HẠ (1,05 → 0,88) là chủ ý —
   // chiều tà thì nắng xiên gắt và bóng sâu, ngược hẳn với sương sớm mờ đều của bình minh; đây chính
   // là trục "tỉ lệ nắng / đèn nền" mà `night` đã dùng để thoát khỏi bệnh "phẳng" (xem ghi chú đêm).

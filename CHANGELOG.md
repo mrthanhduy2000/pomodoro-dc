@@ -12,6 +12,41 @@
 
 ---
 
+## 2026-09-05 — Phase 25: hai thời điểm cách đều chính ngọ thì mặt trời phải cao bằng nhau
+
+**Mục đích.** Thực hiện đúng việc mà báo cáo Phase 24 đề xuất: **đo** xem đèn cửa sổ, bóng đổ và độ
+cao mặt trời đóng góp bao nhiêu vào khoảng cách `bình minh 6h ↔ chiều 15h` (`TECH_DEBT #89`, khi ấy
+biên chỉ **1,34** trên ngưỡng mắt 12) — rồi hành động theo thứ phép đo chỉ ra.
+
+**Phạm vi.** Một trường trong `src/engine/city3d/daylight.js` (`afternoon.sunAltitude: 0,48 → 0,55`);
+một bài test **cấu trúc** thay cho một bài cũ hỏi ba câu rời rạc (`daylight.test.js`); vá nhánh
+`--sweep` của `scripts/city-preview.mjs` để nó **từ chối thẳng** những cờ nó không dựng được, cộng 4
+bài test khoá (`scripts/cityPreviewSource.test.js`).
+
+**Vì sao thế.** `PHASE_BY_HOUR` xếp buổi sáng = 7,8,9 (tâm **8h30**) và buổi chiều = 14,15,16 (tâm
+**15h30**) — hai tâm **đối xứng** quanh chính ngọ 12h00. Mặt trời đi một cung đối xứng, nên hai thời
+điểm cách đều chính ngọ **bắt buộc** có cùng cao độ. Bảng khai buổi sáng 0,55 mà buổi chiều 0,48:
+buổi chiều bị hạ xuống gần bình minh hơn mức vật lý cho phép, tức bảng tự tay bồi vào đúng cặp đang
+hỏng.
+
+**Hai phát hiện đi NGƯỢC trực giác, và đó mới là phần đáng giữ.** Tắt bóng đổ làm hai giờ **cách xa
+nhau thêm 7,27**; tắt đèn cửa sổ bình minh thêm **1,05**. Tức cả hai đang **kéo hai giờ lại gần
+nhau** (bóng tính tiền theo `sunEnergy`, mà buổi chiều 1,00 so với bình minh 0,50 ⇒ bóng làm chiều
+tối đi gấp đôi; đèn cửa sổ nâng dải thành phố bình minh lên đúng chiều tiến về mức buổi chiều).
+Nhưng không cái nào dùng được — bỏ bóng là mất hình khối, bỏ đèn cửa sổ là xoá tín hiệu "đây là bình
+minh". Bảng ấy có giá trị vì nó **đóng lại hai hướng** cho phiên sau, không phải vì nó mở ra hướng nào.
+
+**Ảnh hưởng.** Cặp chặng gần nhất **13,34 → 18,80** (0/15 ✓) — biên trên ngưỡng mắt 12 đi từ 1,34
+lên **6,80, gấp 5 lần**. Trục kỷ đứng yên (21,52 → 21,64 · trung vị 36,21 → 36,64 · 0/105 ✓).
+**Cái giá**: cặp `trưa 12h ↔ chiều 15h` mất 4,5 điểm (31,1 → 26,6) — vẫn hơn gấp đôi ngưỡng mắt và
+không còn là cặp ràng buộc. `TECH_DEBT #89` **chưa đóng**: riêng dải `rặng núi xa` vẫn 10,34 < 12.
+
+**Tương thích.** Không đổi dữ liệu, không đổi schema, không đổi API. Thuần mỹ thuật + công cụ đo.
+Bản quét mặc định giữ **nguyên tên file lịch sử** (`sweep-light-ky1-15.png`) nên mọi bảng số cũ
+trong `PERFORMANCE.md` vẫn truy được nguồn.
+
+---
+
 ## 2026-09-03 — Phase 24: sương dày thì màu phải loãng (bình minh thôi giống buổi chiều)
 
 **Mục đích.** Đóng cần gạt của `TECH_DEBT #89`: cặp `bình minh 6h ↔ chiều 15h` của bản quét 15 kỷ

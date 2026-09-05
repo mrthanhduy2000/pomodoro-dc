@@ -17,6 +17,7 @@
  * KHÔNG sửa implementation. Mọi giá trị quan sát từ code thật (probe 2 lần).
  */
 import test from 'node:test';
+import { SKILL_TREE } from '../engine/constants';
 import assert from 'node:assert/strict';
 
 function createMemoryStorage() {
@@ -115,7 +116,10 @@ test('triggerPrestige: tiến trình reset đúng (level/EXP/SP/EP/resources/str
 
   assert.equal(s.player.level, 0);
   assert.equal(s.player.totalEXP, 0);
-  assert.equal(s.player.sp, 0);
+  // ⚠️ KHÔNG còn là 0: `setupRichState` mở `ke_thua`, và từ 2026-09-02 kỹ năng ấy THẬT SỰ giữ
+  // 50% SP chưa dùng (`TECH_DEBT #3`). 13 → floor(13 × 0.5) = 6. Đây là hành vi ĐÚNG theo mô tả,
+  // không phải một chỗ reset bị sót — xem bài "[#3 ĐÃ NỐI DÂY]" bên dưới.
+  assert.equal(s.player.sp, 6);
   assert.equal(s.progress.totalEP, 0);
   assert.equal(s.progress.sessionsCompleted, 0);
   assert.equal(s.progress.totalFocusMinutes, 0);
@@ -158,21 +162,52 @@ test('triggerPrestige: dưới ngưỡng EP trả false và không đổi gì', 
 // ═══════════════════════════════════════════════════════════════════════════════
 // 5) ĐÓNG BĂNG BUG (TECH_DEBT #3): 3 kỹ năng Thăng Hoa KHÔNG có tác dụng thật
 // ═══════════════════════════════════════════════════════════════════════════════
-test('triggerPrestige: [ĐẶC TẢ BUG #3] kien_thuc_nen/ke_thua/sieu_viet KHÔNG áp đặc quyền nào', () => {
-  // Mô tả trong constants.js hứa: giữ 1 skill nâng cao (kien_thuc_nen), giữ 50% SP
-  // chưa dùng (ke_thua), +100% XP kỷ nguyên 1 sau prestige (sieu_viet). Thực tế
-  // ĐÃ XÁC MINH (audit 2026-07-13, grep + đọc triggerPrestige): không code nào đọc
-  // 3 cờ này — reset diễn ra VÔ ĐIỀU KIỆN. Test này ĐÓNG BĂNG hành vi hiện tại:
-  //  - sp 13 → 0 (ke_thua hứa giữ 50% ⇒ đáng lẽ ~6-7, thực tế 0)
-  //  - cả 3 skill → false (kien_thuc_nen hứa giữ 1 skill ⇒ thực tế mất sạch)
-  // KHI NÀO SỬA BUG #3 (nối dây hoặc sửa mô tả) thì test này PHẢI được cập nhật
-  // một cách có ý thức — đó chính là mục đích của nó. KHÔNG sửa ở Giai đoạn A
-  // trước khi Đàm chọn phương án (nối dây vs sửa mô tả).
-  setupRichState(); // đã mở cả 3 skill + sp = 13
+test('triggerPrestige: [#3 ĐÃ NỐI DÂY] ba đặc quyền Thăng Hoa nay CÓ tác dụng', () => {
+  /*
+    ⚠️ BÀI NÀY THAY CHO MỘT BÀI ĐÃ CỐ Ý ĐÓNG BĂNG HÀNH VI LỖI ("[ĐẶC TẢ BUG #3]", 2026-07-17).
+    Bài cũ khẳng định `sp 13 → 0` và cả ba kỹ năng → `false`, kèm một dòng dặn: *"khi nào sửa bug
+    #3 thì test này PHẢI được cập nhật một cách có ý thức — đó chính là mục đích của nó"*. Nay đã
+    sửa (nối dây, KHÔNG phải sửa mô tả — sửa mô tả là hợp thức hoá việc bán một món hàng rỗng giá
+    16 SP), nên bài ấy được thay chứ không nới.
+  */
+  setupRichState(); // đã mở cả 3 kỹ năng + sp = 13
+  const truoc = useGameStore.getState().player.unlockedSkills;
+  const coAdvanced = Object.values(SKILL_TREE)
+    .flatMap((b) => b.nodes)
+    .filter((n) => n.tier === 'advanced' && truoc[n.id]);
+  assert.ok(coAdvanced.length > 0, 'fixture không có kỹ năng Cao Cấp nào — phép đo chạy rỗng');
+
   useGameStore.getState().triggerPrestige();
   const s = useGameStore.getState();
-  assert.equal(s.player.sp, 0);
-  assert.equal(s.player.unlockedSkills.ke_thua, false);
-  assert.equal(s.player.unlockedSkills.kien_thuc_nen, false);
-  assert.equal(s.player.unlockedSkills.sieu_viet, false);
+
+  // `ke_thua`: giữ 50% SP chưa dùng, LÀM TRÒN XUỐNG (hứa 50% thì 13 ra 6, không phải 7).
+  assert.equal(s.player.sp, 6);
+
+  // `kien_thuc_nen`: giữ lại ĐÚNG MỘT kỹ năng Cao Cấp, và nó phải là một trong những cái đã mở.
+  const giu = Object.entries(s.player.unlockedSkills).filter(([, v]) => v === true).map(([k]) => k);
+  assert.equal(giu.length, 1, `phải giữ đúng 1 kỹ năng, đang giữ ${giu.length}: ${giu.join(', ')}`);
+  assert.ok(truoc[giu[0]], 'giữ lại một kỹ năng chưa từng mở khoá');
+  assert.equal(s.prestige.giuKyNang, giu[0], 'sổ prestige phải ghi đúng kỹ năng đã giữ');
+
+  // `sieu_viet`: cờ phải SỐNG SÓT qua reset — đó là lý do nó nằm trong `prestige`, không ở `player`.
+  assert.equal(s.prestige.sieuViet, true);
 });
+
+test('triggerPrestige: KHÔNG mở ba kỹ năng ấy thì reset vẫn sạch trơn như cũ', () => {
+  // ⚠️ Đối chứng bắt buộc: thiếu bài này thì bản vá có thể đang tặng đặc quyền cho MỌI người chơi,
+  // và bài trên vẫn xanh. Ba kỹ năng ấy tốn 16 SP — chúng phải là thứ PHẢI MUA mới có.
+  resetStore();
+  useGameStore.setState((st) => ({
+    progress: { ...st.progress, totalEP: PRESTIGE_EP_REQUIREMENT },
+    player: { ...st.player, sp: 13 },
+  }));
+  useGameStore.getState().triggerPrestige();
+  const s = useGameStore.getState();
+  assert.equal(s.player.sp, 0, 'chưa mua `ke_thua` mà vẫn được giữ SP');
+  assert.deepEqual(
+    Object.entries(s.player.unlockedSkills).filter(([, v]) => v === true).map(([k]) => k), [],
+    'chưa mua `kien_thuc_nen` mà vẫn được giữ kỹ năng',
+  );
+  assert.equal(s.prestige.sieuViet, false);
+});
+

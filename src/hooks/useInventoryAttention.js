@@ -33,6 +33,8 @@ export default function useInventoryAttention() {
     research: state.research,
     resources: state.resources,
     resourcesRefined: state.resourcesRefined,
+    relics: state.relics,
+    relicEvolutions: state.relicEvolutions,
   }));
 
   const unlockedAchievements = useGameStore((state) => state.achievements.unlocked);

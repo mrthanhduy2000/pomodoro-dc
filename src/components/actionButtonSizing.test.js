@@ -116,16 +116,31 @@ test('CẢ HAI nút ở chỗ đồng hồ dùng `size` compact — đây là ch
   // đó là một nút KHÁC, bấm được, đưa thẳng tới ô mục tiêu ("Điền mục tiêu →").
   // ⚠️ Bài này phải kiểm CẢ HAI: kiểm mỗi nút cũ thì nút mới — cái Đàm gặp trước tiên vì nó là
   // trạng thái mặc định mỗi lần mở app — sẽ không có ai canh, và nó là nút DÀI CHỮ HƠN.
-  const NHAN = ['Bắt đầu phiên', 'Điền mục tiêu →'];
+  // ⚠️ "Điền mục tiêu →" nay chỉ hiện khi KHÔNG có mục tiêu gần đây; ca thường gặp là "Tự viết →"
+  // đứng cạnh chip. Kiểm cả ba nhãn thì không ca nào mất người canh.
+  const NHAN = ['Bắt đầu phiên', 'Điền mục tiêu →', 'Tự viết →'];
   for (const nhan of NHAN) {
     const labelAt = code.indexOf(nhan);
     assert.notEqual(labelAt, -1, `Không tìm thấy nhãn "${nhan}" — nhãn đổi thì sửa bài test này.`);
     // Thẻ mở GẦN NHẤT phía trước nhãn mới là thẻ chứa nó.
     const owner = actionButtonTags(code).filter((t) => t.start < labelAt).pop();
     assert.ok(owner, `Nhãn "${nhan}" không nằm trong thẻ <ActionButton> nào.`);
-    assert.match(owner.attrs, /size="compact(?:Primary|Mobile)"/,
-      `Nút "${nhan}" ở khung điện thoại PHẢI dùng một \`size\` compact. Đo được ở bản không có nó:\n`
-      + 'font 18px + padding 28px trong một khung rộng 186px ⇒ chữ cần 209px ⇒ bị xén.');
+    // ⚠️ `size` CÓ THỂ LÀ BIỂU THỨC, KHÔNG CHỈ LÀ CHUỖI (từ 2026-09-02). Nút thoát "Tự viết →"
+    // đứng cạnh một chip co giãn nên nó đổi cỡ theo ngữ cảnh:
+    //   size={recentGoals.length > 0 ? 'compactEscape' : 'compactPrimary'}
+    // Bài này vì vậy bóc MỌI tên cỡ xuất hiện trong thuộc tính `size` rồi đòi **tất cả** phải
+    // thuộc nhóm compact — chứ không nới thành "chỉ cần có chữ compact ở đâu đó". Một nhánh
+    // ternary lỡ trỏ về `default` thì vẫn đỏ, mà đó chính là ca đã cắt mất chữ.
+    const COMPACT = new Set(['compactPrimary', 'compactMobile', 'compactEscape']);
+    const cacCo = [...owner.attrs.matchAll(/size=(?:"([^"]+)"|\{([^}]*)\})/g)].flatMap((hit) => (
+      hit[1] ? [hit[1]] : [...hit[2].matchAll(/'([^']+)'/g)].map((x) => x[1])
+    ));
+    assert.ok(cacCo.length > 0, `Nút "${nhan}" không khai \`size\` — nó sẽ rơi về cỡ mặc định.`);
+    const viPham = cacCo.filter((c) => !COMPACT.has(c));
+    assert.deepEqual(viPham, [],
+      `Nút "${nhan}" ở khung điện thoại PHẢI dùng một \`size\` compact ở MỌI nhánh. Đo được ở bản\n`
+      + 'không có nó: font 18px + padding 28px trong một khung rộng 186px ⇒ chữ cần 209px ⇒ bị xén.\n'
+      + `Cỡ không hợp lệ: ${viPham.join(', ')}`);
   }
 });
 

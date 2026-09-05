@@ -202,12 +202,16 @@ test('NỐI HAI ĐẦU: cờ store bật ⇒ `buildRewardToasts` thật sự sin
     // `toasts[0].source === 'weekly'` — và nó XANH kể cả khi gỡ `'weekly'` khỏi `SOURCE_ORDER`,
     // vì một danh sách một phần tử thì phần tử nào cũng đứng đầu. Một phép sắp xếp chỉ kiểm được
     // khi có thứ để sắp. (Bắt được đúng lúc chạy phép thử ngược, không phải lúc đọc lại mã.)
+    // ⚠️ Thẻ thứ hai ĐỔI từ `rankUpNotification` sang lên-cấp (2026-09-01): nguồn `rank` đã rời
+    // khỏi chồng thẻ vì CÙNG sự kiện ấy đã được đẩy vào chuông, tức nó được kể hai lần. Lý lẽ của
+    // bài này thì không đổi một chữ — vẫn cần một thẻ thứ hai, vì một danh sách MỘT phần tử thì
+    // phần tử nào cũng đứng đầu và phép so thứ tự là vô nghĩa.
     useGameStore.setState((prev) => ({
-      ui: { ...prev.ui, rankUpNotification: { rankLabel: 'Thử Thách Mẫu' } },
+      ui: { ...prev.ui, levelUpQueue: [{ levelsGained: 1, newLevel: 4, spGained: 2 }] },
     }));
 
     const state = useGameStore.getState();
-    const toasts = buildRewardToasts(state.ui, state.missions);
+    const toasts = buildRewardToasts(state.ui);
     const weekly = toasts.find((t) => t.source === 'weekly');
 
     assert.ok(weekly, 'Store bật cờ mà bộ dựng toast không thấy ⇒ sáng thứ Hai không hiện gì cả.');

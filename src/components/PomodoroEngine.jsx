@@ -1,4 +1,6 @@
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import { tomTatThietLap } from './pomodoroSetupSummary.js';
+import { cancelPenaltyWonderMultiplier } from '../engine/wonderEffects.js';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 
 import { SCRIM_FADE, useCustomMotion, useEnterMotion, usePressMotion, useRewardMotion, useSnapMotion } from '../lib/motionPresets';
@@ -6,9 +8,16 @@ import useGameStore from '../store/gameStore';
 import { pushNow } from '../lib/syncService';
 import useSettingsStore from '../store/settingsStore';
 import { useTimer, formatTime, TIMER_MODES, TIMER_STATES } from '../hooks/useTimer';
-import { getComboDecayMs, getDailyGoalProgress, getMultiplierTier, suggestSessionLength, clampRelicDisasterReduction } from '../engine/gameMath';
+import { getComboDecayMs, getDailyGoalProgress, getMultiplierTier, nextMultiplierStep, suggestSessionLength, clampRelicDisasterReduction } from '../engine/gameMath';
 import { getVietnamHour, localDateStr } from '../engine/time';
 import { FLOWTIME_BREAK_RULES, QUICK_FOCUS_PRESETS, getBreakPlan } from '../engine/breaks';
+
+/**
+ * Trục «cứ mấy phiên thì nghỉ dài» có THẬT SỰ phân biệt được các preset không?
+ * Hỏi thẳng bảng thay vì viết cứng `!== 4`: hôm nay cả 4 preset đều khai 4, nhưng ngày nào có
+ * một preset khai số khác thì viên «×N» phải tự hiện lại — mà không ai phải nhớ sửa chỗ này.
+ */
+const CHU_KY_NGHI_CO_KHAC_NHAU = new Set(QUICK_FOCUS_PRESETS.map((p) => p.longBreakAfterN)).size > 1;
 import {
   DEFAULT_DEEP_FOCUS_THRESHOLD,
   WARMUP_REDUCED_THRESHOLD,
@@ -260,6 +269,8 @@ export default function PomodoroEngine({
   const [noteExpanded, setNoteExpanded] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [activeMilestone, setActiveMilestone] = useState(null);
+  // Bảng thiết lập GẤP LẠI mặc định — xem chú thích ở `sessionSetupCard`.
+  const [setupOpen, setSetupOpen] = useState(false);
   const [focusMinutesDraft, setFocusMinutesDraft] = useState(() => (
     String(clampFocusMinutes(timerConfig.focusMinutes ?? 25))
   ));
@@ -476,7 +487,7 @@ export default function PomodoroEngine({
       : 'border border-[rgba(var(--accent-rgb),0.18)] bg-white/[0.05] text-[var(--accent-light)]'
     : goalState.tone === 'warn'
       ? lightTheme
-        ? 'border border-[rgba(201,100,66,0.14)] bg-[rgba(201,100,66,0.08)] text-[var(--accent2)]'
+        ? 'border border-[rgba(var(--accent-rgb),0.14)] bg-[rgba(var(--accent-rgb),0.08)] text-[var(--accent2)]'
         : 'border border-white/8 bg-white/[0.05] text-[var(--muted)]'
       : lightTheme
         ? 'border border-[var(--line)] bg-[var(--panel-soft)] text-[var(--muted)]'
@@ -610,14 +621,14 @@ export default function PomodoroEngine({
   const immersiveGlow = isBreakMode
     ? breakIsLong
       ? (lightTheme
-        ? 'radial-gradient(circle, rgba(201,100,66,0.08) 0%, rgba(201,100,66,0.03) 38%, rgba(201,100,66,0) 72%)'
+        ? 'radial-gradient(circle, rgba(var(--accent-rgb),0.08) 0%, rgba(var(--accent-rgb),0.03) 38%, rgba(var(--accent-rgb),0) 72%)'
         : 'radial-gradient(circle, rgba(96,165,250,0.14) 0%, rgba(96,165,250,0.06) 36%, rgba(96,165,250,0) 70%)')
       : (lightTheme
-        ? 'radial-gradient(circle, rgba(201,100,66,0.07) 0%, rgba(201,100,66,0.025) 38%, rgba(201,100,66,0) 72%)'
+        ? 'radial-gradient(circle, rgba(var(--accent-rgb),0.07) 0%, rgba(var(--accent-rgb),0.025) 38%, rgba(var(--accent-rgb),0) 72%)'
         : 'radial-gradient(circle, rgba(56,189,248,0.12) 0%, rgba(56,189,248,0.05) 36%, rgba(56,189,248,0) 70%)')
     : isActive
       ? (lightTheme
-        ? 'radial-gradient(circle, rgba(201,100,66,0.10) 0%, rgba(201,100,66,0.035) 38%, rgba(201,100,66,0) 72%)'
+        ? 'radial-gradient(circle, rgba(var(--accent-rgb),0.10) 0%, rgba(var(--accent-rgb),0.035) 38%, rgba(var(--accent-rgb),0) 72%)'
         : 'radial-gradient(circle, rgba(34,197,94,0.14) 0%, rgba(34,197,94,0.06) 36%, rgba(34,197,94,0) 70%)')
       : (lightTheme
         ? 'radial-gradient(circle, rgba(31,30,29,0.045) 0%, rgba(31,30,29,0.015) 42%, rgba(31,30,29,0) 72%)'
@@ -646,13 +657,10 @@ export default function PomodoroEngine({
     }, 0))
   ), [relicEvolutions, relics]);
 
-  const cancelPenaltyWonderMultiplier = useMemo(
-    () => buildings.reduce((multiplier, bpId) => {
-      const wonderEffect = BUILDING_EFFECTS[bpId]?.wonderEffect;
-      if (wonderEffect === 'building_hp_boost') return multiplier * 0.85;
-      if (wonderEffect === 'disaster_hp_50off') return multiplier * 0.5;
-      return multiplier;
-    }, 1),
+  // ⚠️ BẢN CHÉP TAY ĐÃ GỠ (2026-09-05). Nó hỏi `wonderEffect === '…'` mà KHÔNG kiểm
+  // `type === 'wonder'` — một trong NĂM bản chép cùng hình dạng, xem `engine/wonderEffects.js`.
+  const cancelPenaltyWonder = useMemo(
+    () => cancelPenaltyWonderMultiplier(buildings),
     [buildings],
   );
 
@@ -687,12 +695,12 @@ export default function PomodoroEngine({
     return {
       waived: false,
       progressPct: progressRatio * 100,
-      minPct: adjustedMin * skillPenaltyMultiplier * progressRatio * 100 * cancelPenaltyWonderMultiplier * cancelPenaltyStabilityMultiplier,
-      maxPct: adjustedMax * skillPenaltyMultiplier * progressRatio * 100 * cancelPenaltyWonderMultiplier * cancelPenaltyStabilityMultiplier,
+      minPct: adjustedMin * skillPenaltyMultiplier * progressRatio * 100 * cancelPenaltyWonder * cancelPenaltyStabilityMultiplier,
+      maxPct: adjustedMax * skillPenaltyMultiplier * progressRatio * 100 * cancelPenaltyWonder * cancelPenaltyStabilityMultiplier,
     };
   }, [
     cancelPenaltyStabilityMultiplier,
-    cancelPenaltyWonderMultiplier,
+    cancelPenaltyWonder,
     disasterReductionPreview,
     forgiveness.chargesRemaining,
     progressPct,
@@ -912,11 +920,16 @@ export default function PomodoroEngine({
     />
   ) : null;
   const canEnterFullScreen = Boolean(onEnterFullScreen) && !fullScreenMode;
+  // ⚠️ CHỈ HIỆN KHI CHU KỲ ĐÃ CHẠY (2026-09-01). Ở `cyclePos === 0` dòng này là bốn chấm rỗng,
+  // chữ "0/4", và một nút "đặt lại" cho một chu kỳ chưa bắt đầu — không mẩu tin nào. Tệ hơn, đo ở
+  // khung 390px thì nó nằm y=754…779 trong khi thanh điều hướng bắt đầu ở 774 ⇒ **nút "đặt lại"
+  // bị cắt mất 5px**, và nó ăn đúng vào 32px biên an toàn của nút chính.
   const cycleIndicator = !isBreakMode && !isStopwatchMode && longBreakAfterN > 1 ? (() => {
     const completedCyclePos = Math.max(0, (sessionsCompleted - longBreakCycleStart) % longBreakAfterN);
     const cyclePos = longBreakPreviewSession
       ? Math.min(longBreakAfterN, completedCyclePos + 1)
       : completedCyclePos;
+    if (cyclePos <= 0) return null;
     return (
       <div className={`flex flex-wrap items-center gap-x-2.5 gap-y-2 ${useImmersiveHeroLayout ? 'px-0' : 'px-1'}`}>
         <span className={`text-[10px] uppercase tracking-wider font-medium whitespace-nowrap ${
@@ -944,11 +957,8 @@ export default function PomodoroEngine({
             />
           ))}
         </div>
-        <span className={`text-[11px] font-medium tabular-nums ${
-          lightTheme ? 'text-[var(--muted-2)]' : 'text-slate-400'
-        }`}>
-          {cyclePos}/{longBreakAfterN}
-        </span>
+        {/* ⚠️ Bỏ chữ "N/4": bốn cái chấm cách nó 10px đã nói đúng điều ấy, mà chấm thì LIẾC
+            được còn con số thì phải ĐỌC. Hai chỗ nói cùng một chuyện thì chỗ nói ít hơn nhường. */}
         <button
           type="button"
           onClick={resetLongBreakCycle}
@@ -956,7 +966,7 @@ export default function PomodoroEngine({
           aria-label="Reset chu kỳ nghỉ dài"
           className={`rounded-full px-2.5 py-1 text-[10px] transition-all focus-visible:outline-none focus-visible:ring-2 ${
             lightTheme
-              ? 'border border-[var(--line)] bg-white text-[var(--muted)] hover:border-[var(--line-2)] hover:text-[var(--ink)] focus-visible:ring-[rgba(201,100,66,0.22)]'
+              ? 'border border-[var(--line)] bg-white text-[var(--muted)] hover:border-[var(--line-2)] hover:text-[var(--ink)] focus-visible:ring-[rgba(var(--accent-rgb),0.22)]'
               : 'text-slate-600 hover:text-slate-300 border border-white/[0.06] hover:border-white/[0.14] bg-white/[0.03] hover:bg-white/[0.07] focus-visible:ring-white/30'
           }`}
         >
@@ -978,12 +988,10 @@ export default function PomodoroEngine({
           <p className={`mono text-[10px] uppercase tracking-[0.2em] whitespace-nowrap ${
             lightTheme ? 'text-[var(--muted-2)]' : 'text-slate-400'
           }`}>Thiết lập phiên</p>
-          <p
-            className={`mt-1.5 text-[15px] leading-snug ${lightTheme ? 'text-[var(--ink-2)]' : 'text-slate-500'}`}
-            style={lightTheme ? { fontFamily: 'var(--skin-font-display)' } : undefined}
-          >
-            Chọn mode, thời lượng và mức kỷ luật trước khi bắt đầu.
-          </p>
+          {/* ⚠️ ĐÃ GỠ câu "Chọn mode, thời lượng và mức kỷ luật trước khi bắt đầu." (41px, vòng 20).
+              Nhãn "THIẾT LẬP PHIÊN" ngay trên đã trả lời xong, và ba thứ câu ấy liệt kê thì đứng
+              ngay bên dưới nó, mỗi thứ đã có nhãn riêng. Nó còn chứa chữ "mode" — tiếng Anh trong
+              một app tiếng Việt của một người không đọc tiếng Anh. */}
         </div>
         <ModeSwitch
           disabled={timerState !== TIMER_STATES.IDLE || isBreakMode}
@@ -992,6 +1000,39 @@ export default function PomodoroEngine({
         />
       </div>
 
+      {/*
+        ⚠️ GẤP LẠI PHẦN THIẾT LẬP (2026-09-02). Đo trên khung 390px: màn Tập trung dài **2.509px**
+        và **~1.100px trong đó là bảng thiết lập** — công tắc Pomo/Bấm giờ, ô chỉnh phút, BỐN thẻ
+        mẫu (15'/25'/52'/90'), giờ nghỉ, kỷ luật phiên. Nó mở sẵn ở MỌI lần vào màn, trong khi Đàm
+        bắt đầu phiên bằng cùng một thiết lập gần như mọi lần: một bảng chỉnh chiếm gần một nửa
+        màn hình chính để phục vụ một hành động hiếm.
+        ⚠️ KHÔNG GIẤU, CHỈ GẤP: dòng tóm tắt ngay đây NÓI ĐỦ thiết lập đang chạy (chế độ · số phút ·
+        giờ nghỉ · kỷ luật), nên không cần mở ra mới biết mình sắp làm gì — cùng luật đã áp cho
+        102 huy hiệu chưa chạm tới. Bấm "Đổi" là mở, và nó vẫn mở nguyên bảng cũ, không cắt gì.
+      */}
+      <button
+        type="button"
+        onClick={() => setSetupOpen((v) => !v)}
+        aria-expanded={setupOpen}
+        className={`flex w-full items-center justify-between gap-3 border-t px-4 py-3 text-left transition-colors ${
+          lightTheme ? 'border-[var(--line)]' : 'border-white/5'
+        }`}
+      >
+        <span className="mono min-w-0 truncate text-[11px] tabular-nums" style={{ color: 'var(--muted)' }}>
+          {tomTatThietLap({
+            mode: timerMode,
+            focusMinutes: timerConfig.focusMinutes,
+            shortBreak: shortBreakDuration,
+            longBreak: longBreakDuration,
+            strict: strictMode,
+          })}
+        </span>
+        <span className="mono shrink-0 text-[10px] uppercase tracking-[0.18em]" style={{ color: 'var(--accent2)' }}>
+          {setupOpen ? 'Thu gọn ▲' : 'Đổi ▾'}
+        </span>
+      </button>
+
+      {setupOpen && (
       <div className={`grid gap-4 border-t border-white/5 sm:gap-3 ${
         immersiveMode
           ? 'px-5 py-4 md:grid-cols-[minmax(0,1.12fr)_minmax(0,0.88fr)] md:px-5'
@@ -1009,9 +1050,15 @@ export default function PomodoroEngine({
               }`}>
                 {isStopwatchMode ? 'Mốc tham chiếu' : 'Tập trung'}
               </p>
-              <p className={`mt-1 text-xs ${lightTheme ? 'text-[var(--muted)]' : 'text-slate-500'}`}>
-                {isStopwatchMode ? 'Dùng để neo mốc thưởng khi bấm giờ.' : 'Thời lượng countdown của phiên kế tiếp.'}
-              </p>
+              {/* ⚠️ Ở chế độ Pomo, câu "Thời lượng countdown của phiên kế tiếp." đã bị GỠ (vòng 20):
+                  nhãn "TẬP TRUNG" cộng chính con số "25 PHÚT" ngay bên cạnh đã nói đủ, và câu ấy
+                  còn chứa chữ "countdown". Chế độ Bấm giờ thì GIỮ — ở đó con số là một MỐC THAM
+                  CHIẾU chứ không phải thời lượng đếm ngược, và không có gì khác nói ra điều đó. */}
+              {isStopwatchMode && (
+                <p className={`mt-1 text-xs ${lightTheme ? 'text-[var(--muted)]' : 'text-slate-500'}`}>
+                  Dùng để neo mốc thưởng khi bấm giờ.
+                </p>
+              )}
             </div>
             <div className={`flex items-center justify-between gap-3 self-stretch rounded-[var(--skin-radius-control,14px)] px-2 py-1.5 sm:self-auto sm:justify-start sm:gap-2 sm:rounded-none sm:px-0 sm:py-0 ${
               lightTheme
@@ -1134,7 +1181,7 @@ export default function PomodoroEngine({
               {isStopwatchMode ? (
                 <>
                   <p className={`mt-1 text-sm leading-relaxed ${lightTheme ? 'text-[var(--muted)]' : 'text-slate-500'}`}>
-                    Stopwatch dùng công thức Flowtime để tự đổi giờ nghỉ theo thời lượng bạn vừa làm.
+                    Chế độ Bấm giờ tự đổi giờ nghỉ theo đúng thời lượng bạn vừa làm.
                   </p>
                   <div className="mt-3 space-y-2">
                     {FLOWTIME_BREAK_RULES.map((rule) => (
@@ -1185,12 +1232,28 @@ export default function PomodoroEngine({
           </div>
         </div>
       </div>
+      )}
     </div>
   );
   const timerStageVisual = (
     <>
+      {/*
+        ⚠️ HUY HIỆU MỐC NÀY TỪNG KHÔNG BAO GIỜ HIỆN ĐƯỢC — hai điều kiện của nó loại trừ nhau.
+        `activeMilestone` CHỈ được đặt khi một phiên ĐANG CHẠY (`MILESTONE_PCTS = [25, 50, 75]`,
+        `useTimer.js`), còn `useMinimalFocusStage = fullScreenMode || (isActive && !isBreakMode)`
+        — tức nó LUÔN đúng trong lúc phiên chạy. `!useMinimalFocusStage && activeMilestone` vì vậy
+        là một điều kiện **bất khả thi theo cấu tạo**: mã tính ra mốc, giữ nó 2,2 giây, rồi vứt đi
+        mà không ai thấy. Hậu quả với người chơi: **suốt gần 25 phút không một tín hiệu nào** — màn
+        hình chỉ đếm ngược, không có một nhịp nào nói "đang đi được".
+        ⚠️ Gác nay là `!fullScreenMode`, KHÔNG phải bỏ hẳn: chế độ toàn màn hình sinh ra để trống
+        trơn, đó là chủ đích. Còn ở màn thường thì một huy hiệu sống 2,2 giây không phải "chrome" —
+        nó là phần thưởng, và nó là thứ duy nhất chia một quãng 25 phút thành bốn chặng.
+        ⚠️ Hai huy hiệu KIA (combo, hệ số) VẪN im trong lúc chạy — chúng là trạng thái thường trực,
+        đọc lúc nào cũng được, nên chúng đúng là thứ cần dẹp cho đỡ phân tâm. Khác nhau ở chỗ:
+        một cái ĐẾN RỒI ĐI, cái kia NẰM ĐÓ.
+      */}
       <AnimatePresence>
-        {!useMinimalFocusStage && activeMilestone && (
+        {!fullScreenMode && activeMilestone && (
           <motion.div
             key={activeMilestone}
             {...rewardMotion}
@@ -1249,10 +1312,10 @@ export default function PomodoroEngine({
           className={`flex items-center gap-2 px-4 py-2 rounded-2xl border ${
             breakIsLong
               ? lightTheme
-                ? 'bg-[rgba(255,247,237,0.96)] border-[rgba(201,100,66,0.18)] text-[var(--accent2)]'
+                ? 'bg-[rgba(255,247,237,0.96)] border-[rgba(var(--accent-rgb),0.18)] text-[var(--accent2)]'
                 : 'bg-white/[0.05] border-white/8 text-[var(--ink)]'
               : lightTheme
-                ? 'bg-[rgba(255,247,237,0.96)] border-[rgba(201,100,66,0.18)] text-[var(--accent2)]'
+                ? 'bg-[rgba(255,247,237,0.96)] border-[rgba(var(--accent-rgb),0.18)] text-[var(--accent2)]'
                 : 'bg-white/[0.05] border-white/8 text-[var(--ink)]'
           }`}
         >
@@ -1271,18 +1334,23 @@ export default function PomodoroEngine({
         ⚠️ VÌ SAO LÀ `min()` CHỨ KHÔNG PHẢI MỘT HẰNG SỐ NHỎ HƠN: hằng số thì thu đồng hồ ở MỌI khổ
         màn hình, kể cả nơi không hề thiếu chỗ — tức trả giá ở chỗ không có vấn đề. Cái trần này
         chỉ cắn khi bề ngang < 466px; từ đó trở lên `timerCanvasSize` thắng và mọi thứ y như cũ.
-        Ở 390px nó cho ra 250px — vẫn 64% bề ngang máy, vẫn là thứ to nhất màn hình.
+        ⚠️ 64vw → 58vw (vòng 20, 2026-08-30). Đo lại trên tài khoản đã chơi lâu thì nút VẪN bị
+        che: khối chào là `${lời chào}. ${biến thể theo ngày}` với 8 biến thể, nên có ngày nó dài
+        2 dòng, có ngày 3 dòng — chênh 26px. Ở ngày dài, nút xuống y=757…799 trong khi thanh tab
+        bắt đầu ở y=774. Tức trần cũ chỉ đủ cho NGÀY NGẮN, và một cái trần chỉ đúng vào ngày may
+        mắn thì không phải một cái trần. 58vw ở 390px cho ra 226px — vẫn là thứ to nhất màn hình,
+        và trần chỉ cắn khi bề ngang < 514px nên máy bàn không đổi một điểm ảnh nào.
         ⚠️ `minHeight` PHẢI dùng CÙNG biểu thức: nó là chỗ giữ sẵn chiều cao, nên nếu chỉ thu cái
         vòng mà quên nó thì khoảng trống vẫn bị giữ nguyên và không được một điểm ảnh nào.
       */}
       <div
         className="relative mt-2 flex w-full items-center justify-center sm:mt-5 md:mt-1"
-        style={{ minHeight: `min(${timerFootprintHeight}px, 64vw)` }}
+        style={{ minHeight: `min(${timerFootprintHeight}px, 58vw)` }}
       >
         <motion.div
           className="relative flex shrink-0 items-center justify-center"
           {...timerScaleMotion}
-          style={{ width: `min(${timerCanvasSize}px, 64vw)`, height: `min(${timerCanvasSize}px, 64vw)` }}
+          style={{ width: `min(${timerCanvasSize}px, 58vw)`, height: `min(${timerCanvasSize}px, 58vw)` }}
         >
           {immersiveMode && (isActive || isBreakMode) && (
             <motion.div
@@ -1361,7 +1429,18 @@ export default function PomodoroEngine({
               lightTheme ? 'text-[var(--muted)]' : 'text-slate-400'
             }`}>
               {isBreakMode && (breakIsLong ? 'Giải lao dài' : 'Giải lao')}
-              {!isBreakMode && timerState === TIMER_STATES.IDLE && (isStopwatchMode ? 'Sẵn sàng bấm giờ' : 'Sẵn sàng')}
+              {/*
+                ⚠️ "Sẵn sàng" TỪNG NÓI DỐI. Nhãn này hiện ở MỌI trạng thái chờ, kể cả khi app đang
+                từ chối bắt đầu vì chưa đủ mục tiêu — tức giữa vòng đồng hồ ghi "SẴN SÀNG" trong
+                khi cách đó ~200px cái nút ghi "Điền mục tiêu →". Hai câu trên cùng một màn hình
+                nói ngược nhau, và cái to hơn là cái sai.
+                Bấm giờ tự do không có cổng mục tiêu nên nó luôn sẵn sàng thật.
+              */}
+              {!isBreakMode && timerState === TIMER_STATES.IDLE && (
+                isStopwatchMode
+                  ? 'Sẵn sàng bấm giờ'
+                  : (isSessionGoalValid ? 'Sẵn sàng' : 'Chờ mục tiêu')
+              )}
               {!isBreakMode && timerState === TIMER_STATES.RUNNING && (isStopwatchMode ? 'Đang bấm giờ' : 'Đang tập trung')}
               {!isBreakMode && timerState === TIMER_STATES.PAUSED && (
                 continuedPomodoroConfirmationPending ? 'Chờ xác nhận' : 'Đã tạm dừng'
@@ -1386,6 +1465,29 @@ export default function PomodoroEngine({
                 {dailyGoal.useMinutes
                   ? `${dailyGoal.currentValue}/${dailyGoal.goalValue} phút hôm nay`
                   : `Phiên ${dailyGoal.currentValue}/${dailyGoal.goalValue} hôm nay`}
+              </span>
+            )}
+            {/*
+              ⚠️ MỤC TIÊU PHIÊN TỪNG BIẾN MẤT ĐÚNG LÚC CẦN NHẤT (2026-09-02). App BẮT BUỘC gõ ≥10
+              ký tự mới cho bấm "Bắt đầu" — rồi giấu ngay câu ấy đi suốt 25 phút sau đó. Đo trên
+              mã: mọi chỗ render mục tiêu đều nằm trong khối `isIdle` (dòng 1763) hoặc trong
+              `fullScreenNotebook`, và dòng 982 còn hạ cả thẻ chuẩn bị xuống `opacity-25
+              pointer-events-none` khi `!isIdle`. Tức KHÔNG có một chỗ nào gác theo `isActive`.
+              Hậu quả: cái cổng bắt Đàm trả lời "phiên này chốt xong việc gì?" thu tiền xong thì
+              vứt câu trả lời đi, đúng lúc câu ấy phải làm việc — nửa chừng phiên, khi đầu bắt đầu
+              trôi. Nó biến một lời hứa với chính mình thành một thủ tục.
+              Đặt TRONG vòng đồng hồ vì đó là chỗ mắt đã nhìn sẵn; nếu để ở thẻ dưới thì lại rơi
+              xuống dưới nếp gấp đúng như ô nhập cũ.
+              ⚠️ `line-clamp-2` chứ không `truncate`: một mục tiêu thật thường dài hơn một dòng,
+              cắt còn một dòng thì đọc ra một câu cụt — mà câu cụt thì tệ hơn không có câu.
+            */}
+            {!isBreakMode && !isIdle && sessionGoalText && (
+              <span
+                className="mt-2 line-clamp-2 max-w-[15rem] text-center text-[12px] italic leading-snug"
+                style={{ color: 'var(--muted)' }}
+                title={sessionGoalText}
+              >
+                {sessionGoalText}
               </span>
             )}
             {!isBreakMode && isStopwatchMode && (
@@ -1451,7 +1553,7 @@ export default function PomodoroEngine({
             <motion.div
               key="start"
               {...enterMotion}
-              className="grid w-full grid-cols-[minmax(0,1.72fr)_minmax(112px,0.88fr)] items-stretch gap-2 sm:flex sm:w-auto sm:gap-3"
+              className="flex w-full flex-col items-stretch gap-2 sm:flex-row sm:w-auto sm:gap-3"
             >
               {/* ⚠️ PHẢI DÙNG `size="compactMobile"`, ĐỪNG NHÉT `px-…`/`text-…` VÀO `className`.
                   Bài học đắt (2026-08-13): bản trước truyền `px-2.5 text-[11px]` qua `className`
@@ -1482,15 +1584,60 @@ export default function PomodoroEngine({
                 Ca khủng hoảng thì giữ nguyên `disabled` — ở đó thứ chặn không nằm trên màn này.
               */}
               {!isCrisisBlockingStart && !isSessionGoalValid ? (
-                <ActionButton
-                  onClick={() => jumpToSessionGoal()}
-                  variant="soft"
-                  size="compactPrimary"
-                  className={compactTimerActionButtonClassName}
-                  title={`Đưa tới ô mục tiêu — cần ít nhất ${SESSION_GOAL_MIN_CHARS} ký tự`}
-                >
-                  Điền mục tiêu →
-                </ActionButton>
+                /*
+                  ⚠️ CHỖ NÀY TỪNG LÀ MỘT NÚT CHỈ-ĐỂ-CUỘN, VÀ ĐÓ LÀ MA SÁT LỚN NHẤT CỦA CẢ APP.
+                  Đo ở khung 390×844 thật (thanh điều hướng bắt đầu ở y=774): nút "Điền mục tiêu →"
+                  ở y=661 chỉ đưa người dùng tới ô nhập ở **y=934 — dưới nếp gấp 160px**. Nên mỗi
+                  phiên, việc quan trọng nhất của cả app tốn BỐN thao tác: bấm nút cuộn → gõ đủ 10
+                  ký tự → cuộn ngược lên → bấm Bắt đầu.
+                  `pickRecentGoals` vốn đã chỉ trả về mục tiêu ĐỦ DÀI (bấm cái nào cũng mở được nút
+                  ngay) nhưng chúng bị chôn cạnh ô nhập nên gần như không ai thấy. Nay chúng đứng
+                  ĐÚNG CHỖ cái nút cũ ⇒ đường ngắn nhất còn **hai cú chạm, không gõ, không cuộn**.
+                  ⚠️ THAY CHỖ, KHÔNG THÊM HÀNG. Bản đầu của bản vá này cho chip một hàng RIÊNG bên
+                  trên nút — nó chạy, nhưng tốn thêm **68px** và đẩy đáy nút xuống y=771 trong khi
+                  thanh tab bắt đầu ở y=774: **hở đúng 3px**. Màn này đã để nút chính chạm thanh tab
+                  hai lần trước đó (vòng 19, vòng 20); suýt là lần thứ ba, do chính tôi. Đứng thay
+                  chỗ nút cũ thì chiều cao không đổi một điểm ảnh nào.
+                  ⚠️ LUẬT KHÔNG BỊ NỚI: vẫn phải đủ `SESSION_GOAL_MIN_CHARS` ký tự mới bắt đầu được.
+                  ⚠️ VÀ KHÔNG TỰ ĐIỀN GIÙM — mục tiêu được chấm "đạt/không đạt" khi xong phiên và
+                  được AI Coach đọc, nên gán ngầm mục tiêu hôm qua là nói dối thay Đàm. Anh vẫn
+                  phải BẤM, và nhìn thấy mình vừa chọn cái gì.
+                  ⚠️ Chip "Tự viết →" là đường thoát BẮT BUỘC PHẢI CÓ: không có nó thì người muốn
+                  đặt một mục tiêu mới lại không có lối nào từ nếp gấp — tức bản vá vừa xoá một ngõ
+                  cụt vừa tạo ra một ngõ cụt khác.
+                  ⚠️ MỘT HÀNG, KHÔNG XUỐNG DÒNG. Bản đầu để `flex-wrap`, mà chip đầu tiên dài 23
+                  ký tự ("Hoàn thành phần đang dở") nên nó cùng nút "Tự viết →" tràn thành HAI
+                  dòng — cao 84px thay vì 43px, tức lại ăn mất 41px của đúng cái biên vừa cứu.
+                  Nay chip bị cắt bằng `truncate` trong một hộp co được (`min-w-0 flex-1`), còn
+                  nút thoát `shrink-0` để không bao giờ bị bóp mất chữ.
+                */
+                <div className="flex w-full items-center gap-1.5">
+                  {recentGoals.slice(0, 1).map((goal) => (
+                    <button
+                      key={goal}
+                      type="button"
+                      onClick={() => setPendingSessionGoal(goal)}
+                      className="min-w-0 flex-1 truncate rounded-full px-3 py-2 text-[12px] font-semibold transition-colors"
+                      style={{
+                        background: 'rgba(var(--accent-rgb), 0.10)',
+                        border: '1px solid rgba(var(--accent-rgb), 0.30)',
+                        color: 'var(--accent2)',
+                      }}
+                      title={`Dùng lại mục tiêu này rồi bắt đầu`}
+                    >
+                      {goal}
+                    </button>
+                  ))}
+                  <ActionButton
+                    onClick={() => jumpToSessionGoal()}
+                    variant="soft"
+                    size={recentGoals.length > 0 ? 'compactEscape' : 'compactPrimary'}
+                    className={recentGoals.length > 0 ? '' : compactTimerActionButtonClassName}
+                    title={`Đưa tới ô mục tiêu — cần ít nhất ${SESSION_GOAL_MIN_CHARS} ký tự`}
+                  >
+                    {recentGoals.length > 0 ? 'Tự viết →' : 'Điền mục tiêu →'}
+                  </ActionButton>
+                </div>
               ) : (
                 <ActionButton
                   disabled={isCrisisBlockingStart}
@@ -1507,16 +1654,16 @@ export default function PomodoroEngine({
                   {isCrisisBlockingStart ? 'Xử lý khủng hoảng' : 'Bắt đầu phiên'}
                 </ActionButton>
               )}
-              {canEnterFullScreen && (
-                <ActionButton
-                  onClick={onEnterFullScreen}
-                  variant="soft"
-                  size="compactPrimary"
-                  className={compactTimerActionButtonClassName}
-                >
-                  Full Screen
-                </ActionButton>
-              )}
+              {/*
+                ⚠️ ĐÃ GỠ nút "Toàn màn hình" Ở NHÁNH CHỜ (2026-09-01) — hai bản lúc ĐANG CHẠY và
+                lúc TẠM DỪNG còn nguyên. Đo ở khung 390px: nó chiếm **112/308px = 36,4%** hàng nút
+                chính, và vì nhãn hai chữ "Toàn màn hình" XUỐNG DÒNG ở cột 112px nên chính nó
+                QUYẾT ĐỊNH chiều cao 59px của cả hàng — tức nút quan trọng nhất màn hình đang cao
+                bằng một nhãn bị vỡ dòng của một nút phụ.
+                Không mất tính năng: vào toàn màn hình TRƯỚC khi bấm Bắt đầu thì vẫn phải bấm Bắt
+                đầu ở màn kia, mà toàn màn hình sinh ra để tập trung TRONG lúc chạy.
+                Nút chính nay lấy trọn bề ngang — vùng chạm lớn hơn cho đúng thứ Đàm mở app để bấm.
+              */}
             </motion.div>
           )}
 
@@ -1531,7 +1678,7 @@ export default function PomodoroEngine({
               </ActionButton>
               {canEnterFullScreen && (
                 <ActionButton onClick={onEnterFullScreen} variant="soft" size="compactMobile" className={compactTimerActionButtonClassName}>
-                  Full Screen
+                  Toàn màn hình
                 </ActionButton>
               )}
               {canExtendActivePomodoro && (
@@ -1579,7 +1726,7 @@ export default function PomodoroEngine({
                   </ActionButton>
                   {canEnterFullScreen && (
                     <ActionButton onClick={onEnterFullScreen} variant="soft" size="compactMobile" className={compactTimerActionButtonClassName}>
-                      Full Screen
+                      Toàn màn hình
                     </ActionButton>
                   )}
                   {canExtendActivePomodoro && (
@@ -1660,58 +1807,52 @@ export default function PomodoroEngine({
         ? `mx-auto max-w-[760px] lg:max-w-[780px] ${showShortcutHint ? 'pt-0' : 'pt-6 lg:pt-8'}`
         : ''
     }`}>
-      <div className={`w-full border backdrop-blur-2xl ${
-        useImmersiveHeroLayout
-          ? 'bg-white/[0.045] border-white/[0.10] px-4 py-4 shadow-[0_12px_28px_rgba(15,23,42,0.10)]'
-          : 'bg-white/[0.04] border-white/[0.09] px-3.5 py-3 shadow-[0_8px_22px_rgba(15,23,42,0.08)]'
-      }`} style={{ borderRadius: 'var(--skin-radius-card, 18px)', ...paperCardStyle }}>
-        <button
-          type="button"
-          onClick={() => setNoteExpanded((v) => !v)}
-          className="flex w-full items-center justify-between gap-2 px-0.5 text-left"
-          aria-expanded={noteExpanded}
-        >
-          <span className={`mono text-[10px] uppercase tracking-[0.2em] ${
-            lightTheme ? 'text-[var(--muted-2)]' : 'text-slate-500'
-          }`}>
-            Ghi chú phiên{!noteExpanded && noteWordCount > 0 ? ` · ${noteWordCount} từ` : ''}
-          </span>
-          <span className={`mono text-[10px] uppercase tracking-[0.16em] ${lightTheme ? 'text-[var(--muted)]' : 'text-slate-400'}`}>
-            {noteExpanded ? 'Thu gọn ▴' : 'Mở ▾'}
-          </span>
-        </button>
-        {noteExpanded && (
-          <div className="mt-2.5">
-            <RichNoteEditor
-              value={pendingNote}
-              onChange={(nextNote) => setPendingNote(trimRichTextToWordLimit(nextNote, NOTE_WORD_LIMIT))}
-              rows={4}
-              maxWords={NOTE_WORD_LIMIT}
-              wordCount={noteWordCount}
-              lightTheme={lightTheme}
-              inputStyle={paperInputStyle}
-              placeholder="Bạn đang nghĩ gì, đang kẹt ở đâu, hay cần chốt ý nào trước khi vào nhịp sâu?"
-            />
-          </div>
-        )}
-      </div>
-
+      {/*
+        ⚠️ THỨ TỰ HAI KHỐI NÀY ĐÃ ĐẢO (2026-09-01), VÀ ĐÓ LÀ MỘT LỖI BỐ CỤC CÓ SỐ ĐO.
+        Ô "Mục tiêu phiên" là thứ BẮT BUỘC (10 ký tự, không có nó thì nút Bắt đầu không bật), còn
+        "Ghi chú phiên" là một accordion TUỲ CHỌN đang đóng. Vậy mà cái tuỳ chọn lại nằm CHEN GIỮA
+        nút bấm và cái bắt buộc. Đo ở khung 390×844 thật: nút chính ở y=661, ô mục tiêu ở **y=934**
+        — tức dưới nếp gấp (thanh điều hướng bắt đầu ở y=774) đúng **160px**.
+        Hậu quả: mỗi lần muốn tập trung, Đàm phải bấm "Điền mục tiêu →" (một nút chỉ để CUỘN), gõ,
+        rồi cuộn ngược lên bấm "Bắt đầu". Ba thao tác cho việc quan trọng nhất của cả app, mỗi
+        phiên một lần, mãi mãi.
+        ⚠️ LUẬT KHÔNG BỊ NỚI — vẫn phải đủ 10 ký tự. Thứ bị gỡ là quãng ĐI LẠI, không phải cái cổng.
+      */}
       {isIdle && !isBreakMode && (
       <div className="w-full px-3.5 py-3 backdrop-blur-2xl bg-white/[0.045] border border-white/[0.10] shadow-[0_12px_28px_rgba(15,23,42,0.10)]" style={{ borderRadius: 'var(--skin-radius-card, 18px)', ...paperCardStyle }}>
         <div className="flex items-start justify-between gap-3 px-0.5">
           <div className="min-w-0">
-            <p className={`mono text-[10px] uppercase tracking-[0.2em] ${
-              lightTheme ? 'text-[var(--muted-2)]' : 'text-slate-500'
-            }`}>
-              Chuẩn bị phiên
-            </p>
-            <p className={`mt-1 text-[13px] leading-5 ${lightTheme ? 'text-[var(--muted)]' : 'text-slate-400'}`}>
-              Chốt một đích đến rõ ràng trước khi bấm bắt đầu. Ghi chú cho lần sau chỉ để giữ mạch chuyển tiếp.
-            </p>
+            {/*
+              ⚠️ HAI ĐOẠN VĂN ĐÃ BỊ GỠ Ở ĐÂY (vòng 20, 2026-08-30) — thẻ này từng nói ĐÚNG MỘT ĐIỀU
+              tới NĂM lần trong 250px, ở màn hình Đàm mở nhiều nhất:
+                1. "Chốt một đích đến rõ ràng trước khi bấm bắt đầu…"   (4 dòng, 80px)  ← GỠ
+                2. huy hiệu "Bắt buộc" + nhãn "Mục tiêu phiên"                            ← giữ
+                3. "Viết kết quả cần chốt trong phiên này…"             (3 dòng, 59px)  ← GỠ
+                4. placeholder "Ví dụ: chốt outline, giải xong 3 bài…"                    ← giữ
+                5. `sessionGoalHint` ngay dưới ô nhập                                     ← giữ
+              Ba cái ở lại là ba cái NÓI THÊM được: nhãn nói *bắt buộc*, placeholder cho VÍ DỤ để
+              bắt chước (cụ thể hơn hẳn hai đoạn đã gỡ), và dòng gợi ý nằm ĐÚNG CHỖ SẮP GÕ. Hai
+              cái gỡ đi chỉ diễn đạt lại tên của chính cái ô ngay dưới chúng.
+              ⚠️ Vế "Ghi chú cho lần sau chỉ để giữ mạch chuyển tiếp" của đoạn 1 còn là hướng dẫn
+              cho một Ô KHÁC (accordion "Ghi chú phiên" ở phía trên, đang đóng) — luật chỉ dùng lúc
+              sắp hành động thì phải nói NGAY TẠI chỗ hành động, không nói ở đầu một thẻ khác.
+            */}
+            {/*
+              ⚠️ HAI NHÃN NỮA ĐÃ GỠ (2026-09-01) — thẻ này nói ĐÚNG MỘT ĐIỀU tới BỐN lần trong
+              ~170px, ngay trên nếp gấp của màn hình Đàm mở nhiều nhất:
+                1. eyebrow "CHUẨN BỊ PHIÊN"                                          ← GỠ
+                2. chip trạng thái "Chưa đặt mục tiêu"                                ← GỠ
+                3. huy hiệu "BẮT BUỘC" + nhãn "MỤC TIÊU PHIÊN" + bộ đếm "0/10"        ← giữ
+                4. câu "Phiên này bạn định chốt xong việc gì? Viết một dòng từ 10 ký tự…" ← giữ
+              (1) là TÊN CỦA THẺ, mà thẻ này chỉ chứa đúng một thứ và thứ ấy đã tự xưng tên ngay
+              dưới ("MỤC TIÊU PHIÊN"). (2) là trạng thái, mà bộ đếm "0/10" ở cách đó 40px nói cùng
+              điều ấy VÀ có mẫu số — nó cho biết còn bao xa, cái chip thì không.
+              ⚠️ VÌ SAO ĐÁNG GỠ, KHÔNG PHẢI VÌ GỌN: ô nhập bắt buộc này nằm ở y=873 trong khi thanh
+              điều hướng bắt đầu ở y=774 — nó ở DƯỚI nếp gấp, nên mỗi phiên Đàm phải bấm một nút
+              chỉ-để-cuộn rồi cuộn ngược lại. Mỗi ~40px lấy lại được ở đây là 40px đưa ô ấy lên
+              chỗ nhìn thấy.
+            */}
           </div>
-          <span className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-semibold ${goalBadgeClass}`}>
-            {sessionPrepStatusLabel}
-          </span>
         </div>
 
         <Motion.div
@@ -1743,9 +1884,6 @@ export default function PomodoroEngine({
                   </span>
                 </div>
               </div>
-              <p className={`mt-2 text-xs leading-relaxed ${lightTheme ? 'text-[var(--muted)]' : 'text-slate-400'}`}>
-                Viết kết quả cần chốt trong phiên này, đủ cụ thể để tự đánh giá khi xong.
-              </p>
             </div>
             <div className="shrink-0 text-right">
               <p className={`mono text-[10px] ${lightTheme ? 'text-[var(--muted-2)]' : 'text-slate-500'}`}>
@@ -1761,7 +1899,7 @@ export default function PomodoroEngine({
           </div>
 
           <div className={`mt-3 h-1.5 overflow-hidden rounded-full ${
-            lightTheme ? 'bg-[rgba(201,100,66,0.08)]' : 'bg-white/8'
+            lightTheme ? 'bg-[rgba(var(--accent-rgb),0.08)]' : 'bg-white/8'
           }`}>
             <Motion.div
               {...goalProgressMotion}
@@ -1799,25 +1937,12 @@ export default function PomodoroEngine({
               không bỏ luật. `pickRecentGoals` chỉ trả mục tiêu ĐỦ DÀI, nên bấm cái nào cũng mở
               được nút ngay — gợi ý một chuỗi bấm vào vẫn không dùng được là một cái bẫy.
             */}
-            {recentGoals.length > 0 && (
-              <div className="mt-2 flex flex-wrap gap-1.5">
-                {recentGoals.map((goal) => (
-                  <button
-                    key={goal}
-                    type="button"
-                    onClick={() => setPendingSessionGoal(goal)}
-                    className="max-w-full truncate rounded-full px-2.5 py-1 text-[11px] transition-colors"
-                    style={{
-                      background: 'rgba(var(--accent-rgb), 0.08)',
-                      border: '1px solid rgba(var(--accent-rgb), 0.18)',
-                      color: 'var(--accent2)',
-                    }}
-                  >
-                    {goal}
-                  </button>
-                ))}
-              </div>
-            )}
+            {/*
+              ⚠️ BẢN CHIP Ở ĐÂY ĐÃ GỠ (2026-09-01) — chúng nay nằm TRÊN NẾP GẤP, ngay trên nút
+              chính (xem chú thích ở hàng nút). Giữ cả hai là in cùng một hàng chip hai lần trên
+              một màn hình, mà bản ở đây thì chỉ thấy được sau khi đã cuộn xuống — tức nó chỉ hữu
+              ích cho người đã đi hết quãng đường mà bản kia sinh ra để xoá.
+            */}
             <div className="mt-2 flex items-start justify-between gap-3">
               <p className={`max-w-[32rem] text-[11px] leading-5 ${goalHintClass}`}>
                 {sessionGoalHint(goalState, 'compact')}
@@ -1828,7 +1953,7 @@ export default function PomodoroEngine({
                   onClick={() => setPendingSessionGoal('')}
                   className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 ${
                     lightTheme
-                      ? 'border border-[rgba(201,100,66,0.14)] text-[var(--accent2)] hover:bg-[rgba(201,100,66,0.08)] focus-visible:ring-[rgba(31,30,29,0.14)]'
+                      ? 'border border-[rgba(var(--accent-rgb),0.14)] text-[var(--accent2)] hover:bg-[rgba(var(--accent-rgb),0.08)] focus-visible:ring-[rgba(31,30,29,0.14)]'
                       : 'border border-white/10 text-slate-300 hover:bg-white/6 focus-visible:ring-white/30'
                   }`}
                 >
@@ -1840,6 +1965,42 @@ export default function PomodoroEngine({
         </Motion.div>
       </div>
       )}
+
+      <div className={`w-full border backdrop-blur-2xl ${
+        useImmersiveHeroLayout
+          ? 'bg-white/[0.045] border-white/[0.10] px-4 py-4 shadow-[0_12px_28px_rgba(15,23,42,0.10)]'
+          : 'bg-white/[0.04] border-white/[0.09] px-3.5 py-3 shadow-[0_8px_22px_rgba(15,23,42,0.08)]'
+      }`} style={{ borderRadius: 'var(--skin-radius-card, 18px)', ...paperCardStyle }}>
+        <button
+          type="button"
+          onClick={() => setNoteExpanded((v) => !v)}
+          className="flex w-full items-center justify-between gap-2 px-0.5 text-left"
+          aria-expanded={noteExpanded}
+        >
+          <span className={`mono text-[10px] uppercase tracking-[0.2em] ${
+            lightTheme ? 'text-[var(--muted-2)]' : 'text-slate-500'
+          }`}>
+            Ghi chú phiên{!noteExpanded && noteWordCount > 0 ? ` · ${noteWordCount} từ` : ''}
+          </span>
+          <span className={`mono text-[10px] uppercase tracking-[0.16em] ${lightTheme ? 'text-[var(--muted)]' : 'text-slate-400'}`}>
+            {noteExpanded ? 'Thu gọn ▴' : 'Mở ▾'}
+          </span>
+        </button>
+        {noteExpanded && (
+          <div className="mt-2.5">
+            <RichNoteEditor
+              value={pendingNote}
+              onChange={(nextNote) => setPendingNote(trimRichTextToWordLimit(nextNote, NOTE_WORD_LIMIT))}
+              rows={4}
+              maxWords={NOTE_WORD_LIMIT}
+              wordCount={noteWordCount}
+              lightTheme={lightTheme}
+              inputStyle={paperInputStyle}
+              placeholder="Bạn đang nghĩ gì, đang kẹt ở đâu, hay cần chốt ý nào trước khi vào nhịp sâu?"
+            />
+          </div>
+        )}
+      </div>
 
       {!immersiveMode && (
         <AnimatePresence initial={false}>
@@ -1909,7 +2070,7 @@ export default function PomodoroEngine({
           className="mt-5 w-full rounded-[24px] border px-4 py-3.5 text-[15px] leading-[1.7] resize-none focus:outline-none transition-colors"
           style={{
             ...paperGoalInsetStyle,
-            borderColor: lightTheme ? 'rgba(201,100,66,0.18)' : 'rgba(255,255,255,0.08)',
+            borderColor: lightTheme ? 'rgba(var(--accent-rgb),0.18)' : 'rgba(255,255,255,0.08)',
             background: lightTheme ? 'rgba(255,248,243,0.96)' : 'rgba(255,255,255,0.03)',
             color: lightTheme ? 'var(--ink)' : 'var(--ink)',
             scrollbarWidth: 'thin',
@@ -1926,7 +2087,7 @@ export default function PomodoroEngine({
               onClick={() => setPendingSessionGoal('')}
               className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 ${
                 lightTheme
-                  ? 'border border-[rgba(201,100,66,0.14)] text-[var(--accent2)] hover:bg-[rgba(201,100,66,0.08)] focus-visible:ring-[rgba(31,30,29,0.14)]'
+                  ? 'border border-[rgba(var(--accent-rgb),0.14)] text-[var(--accent2)] hover:bg-[rgba(var(--accent-rgb),0.08)] focus-visible:ring-[rgba(31,30,29,0.14)]'
                   : 'border border-white/10 text-slate-300 hover:bg-white/6 focus-visible:ring-white/30'
               }`}
             >
@@ -2104,7 +2265,7 @@ export default function PomodoroEngine({
                   aria-label="Mở quản lý phân loại"
                   className={`flex-shrink-0 size-7 rounded-full flex items-center justify-center transition-all text-xs focus-visible:outline-none focus-visible:ring-2 ${
                     lightTheme
-                      ? 'border border-[var(--line)] bg-white text-[var(--muted)] hover:text-[var(--ink)] focus-visible:ring-[rgba(201,100,66,0.22)]'
+                      ? 'border border-[var(--line)] bg-white text-[var(--muted)] hover:text-[var(--ink)] focus-visible:ring-[rgba(var(--accent-rgb),0.22)]'
                       : 'text-slate-500 hover:text-slate-200 backdrop-blur-md bg-white/[0.05] hover:bg-white/[0.10] border border-white/[0.08] focus-visible:ring-white/30'
                   }`}
                   title="Quản lý phân loại"
@@ -2158,6 +2319,7 @@ function MultiplierBadge({
   const lightTheme = uiTheme === 'light';
   const isHigh = tier.multiplier >= 2.0;
   const isMid = tier.multiplier >= 1.3;
+  const nextStep = nextMultiplierStep(focusMinutes, deepFocusThreshold);
 
   return (
     <div
@@ -2179,26 +2341,36 @@ function MultiplierBadge({
       {tier.chestGuaranteed && <span className="mono text-[10px] uppercase tracking-[0.16em]" title="Rương Lớn đảm bảo">lớn</span>}
       {isStopwatchMode && <span className="text-[10px] opacity-70 sm:text-xs">tham chiếu {referenceMinutes}'</span>}
       {/*
-        ⚠️ DÒNG NÀY TỪNG LÀ MỘT TIẾNG THÌ THẦM CHO MỘT TIN RẤT TO (đổi 2026-09-05).
-        Nó nói: kéo phiên dài thêm mấy phút nữa thì hệ số nhảy từ ×1.0 lên ×1.3 — tức phần thưởng
-        của CHÍNH phiên đang sắp bấm tăng gần một phần ba. Đó là cái móc dopamine TỨC THÌ mạnh
-        nhất trên màn hình này, mạnh hơn mọi đích dài hạn, vì nó thu được ngay trong 26 phút tới.
-        Vậy mà nó được vẽ bằng `text-[10px] opacity-60` — mờ hơn cả nhãn bậc nằm ngay bên cạnh.
-        ⚠️ VÀ CON SỐ THƯỜNG LÀ **1**: preset "Chuẩn" dài 25 phút trong khi
-        `DEFAULT_DEEP_FOCUS_THRESHOLD = 26`, nên ở nhịp mặc định Đàm hụt ×1.3 đúng MỘT phút, mỗi
-        phiên, mãi mãi. Đó là một quyết định CÂN BẰNG GAME (đổi preset là đổi nhịp làm việc của
-        anh) nên tuyệt đối không tự sửa ở đây — việc của dòng này là làm cho điều đó NHÌN THẤY
-        ĐƯỢC, rồi để Đàm quyết.
-        Giữ nguyên từ vựng "×1.3" vì đó chính là chữ mà nhãn bậc bên trái đang dùng; đổi sang
-        "+30%" là nói cùng một chuyện bằng một đơn vị thứ hai, đúng thứ luật "một luật một công
+        ⚠️ HAI BẢN VÁ CỦA HAI PHIÊN, GHÉP LẠI — vì chúng chữa hai bệnh KHÁC NHAU của cùng một
+        dòng chữ, và chỉ một trong hai thì vẫn còn hỏng một nửa.
+
+        · **KHI NÀO NÓ NÓI (2026-09-01).** Bản cũ có thêm điều kiện `tier.multiplier < 1.3`, nên
+          nó chỉ biết nói "còn N phút để ×1.3" rồi CÂM ở mọi phiên đã qua vách ấy. Đo trên fixture
+          624 phiên: câm ở **75,2%** số phiên, mà im lặng đúng ở khúc đáng nói nhất — **117 phiên
+          dừng trong 45–59 phút**, tức chỉ còn 1–15 phút nữa là chạm ×2.0, bậc nhảy LỚN NHẤT của
+          cả thang (+54%). `nextMultiplierStep` (thuần, ở `gameMath.js`) trả về vách kế tiếp bất
+          kể đang ở bậc nào, và trả `null` khi đã kịch trần — lúc ấy KHÔNG hiện gì, vì một dòng
+          chữ báo rằng không còn việc gì để làm thì chỉ tốn chỗ.
+        · **NÓI TO CỠ NÀO (2026-09-05).** Nó vẫn được vẽ bằng `text-[10px] opacity-60` — mờ hơn cả
+          nhãn bậc nằm ngay bên cạnh — trong khi đây là móc dopamine TỨC THÌ mạnh nhất màn hình:
+          phần thưởng của CHÍNH phiên sắp bấm, thu được ngay trong ít phút tới, chứ không phải một
+          cái đích vài ngày nữa. Nay 11px, đậm, màu nhấn.
+
+        ⚠️ VÀ MỘT PHÁT HIỆN CÂN BẰNG GAME PHẢI ĐỂ ĐÀM QUYẾT, KHÔNG TỰ SỬA: preset "Chuẩn" dài **25
+        phút** trong khi `DEFAULT_DEEP_FOCUS_THRESHOLD = 26`, nên ở nhịp mặc định Đàm hụt ×1.3
+        **đúng một phút, mỗi phiên, mãi mãi**. Đổi preset là đổi nhịp làm việc của anh — việc của
+        dòng này chỉ là làm cho điều đó NHÌN THẤY ĐƯỢC.
+
+        ⚠️ Giữ nguyên từ vựng "×1.3 / ×2.0" vì đó chính là chữ mà nhãn bậc bên trái đang dùng; đổi
+        sang "+30%" là nói cùng một chuyện bằng một đơn vị thứ hai — đúng thứ "một luật một công
         thức" cấm.
       */}
-      {!isStopwatchMode && tier.multiplier < 1.3 && focusMinutes < deepFocusThreshold && (
+      {!isStopwatchMode && nextStep && (
         <span
           className="text-[11px] font-semibold sm:text-xs"
           style={{ color: 'var(--accent2)' }}
         >
-          +{deepFocusThreshold - focusMinutes}′ nữa là ×1.3
+          +{nextStep.minutesLeft}′ nữa là ×{nextStep.targetMultiplier.toFixed(1)}
         </span>
       )}
     </div>
@@ -2347,17 +2519,29 @@ function QuickPresets({ className = '', activePresetId, disabled, mode, onSelect
               </span>
             </span>
             <span className="mt-3 flex flex-wrap gap-2 sm:mt-2.5 sm:gap-1.5">
-              <span className={`whitespace-nowrap rounded-full px-2 py-1 text-[10px] font-semibold tabular-nums ${
-                active
-                  ? lightTheme
-                    ? 'bg-[rgba(255,255,255,0.54)] text-[var(--ink)]'
-                    : 'bg-white/[0.08] text-[var(--ink)]'
-                  : lightTheme
-                    ? 'bg-[rgba(244,242,236,0.96)] text-[var(--muted)]'
-                    : 'bg-white/[0.06] text-slate-500'
-              }`}>
-                ×{preset.longBreakAfterN}
-              </span>
+              {/*
+                ⚠️ VIÊN «×N» CHỈ HIỆN KHI NÓ THẬT SỰ KHÁC (2026-09-01). Cả 4 preset trong
+                `engine/breaks.js` đều khai `longBreakAfterN: 4`, nên bốn viên giống hệt nhau
+                đứng trong đúng cái lưới sinh ra để SO SÁNH — ba trục kia thì phân biệt được
+                (15/25/52/90 phút · nghỉ 3/5/17/20 · dài 12/15/30/45), riêng trục này thì không.
+                Cùng con số 4 còn được nói ở dòng "Phiên dài xuất hiện sau mỗi 4 lượt hoàn thành"
+                và ở chuỗi bốn cái chấm "Chu kỳ nghỉ ●●●●" — cả hai đều rõ hơn một viên "×4".
+                Viết thành ĐIỀU KIỆN chứ không xoá thẳng: ngày nào có một preset khai số khác thì
+                viên tự hiện lại, và lúc ấy nó mới thật sự nói được điều gì.
+              */}
+              {CHU_KY_NGHI_CO_KHAC_NHAU && (
+                <span className={`whitespace-nowrap rounded-full px-2 py-1 text-[10px] font-semibold tabular-nums ${
+                  active
+                    ? lightTheme
+                      ? 'bg-[rgba(255,255,255,0.54)] text-[var(--ink)]'
+                      : 'bg-white/[0.08] text-[var(--ink)]'
+                    : lightTheme
+                      ? 'bg-[rgba(244,242,236,0.96)] text-[var(--muted)]'
+                      : 'bg-white/[0.06] text-slate-500'
+                }`}>
+                  ×{preset.longBreakAfterN}
+                </span>
+              )}
               {mode === TIMER_MODES.STOPWATCH ? (
                 <span className={`whitespace-nowrap rounded-full px-2 py-1 text-[10px] font-semibold ${
                   active
@@ -2368,7 +2552,7 @@ function QuickPresets({ className = '', activePresetId, disabled, mode, onSelect
                       ? 'bg-[rgba(244,242,236,0.96)] text-[var(--muted)]'
                       : 'bg-white/[0.06] text-[var(--muted)]'
                 }`}>
-                  Flowtime
+                  nghỉ theo phiên
                 </span>
               ) : (
                 <>
@@ -2524,10 +2708,10 @@ function SessionReviewCard({ completedGoalAchieved, goalText, goalBonusXP = 0, g
           className={`flex-1 rounded-full border px-4 py-2.5 text-sm font-semibold transition ${
             completedGoalAchieved === false
               ? lightTheme
-                ? 'border-[rgba(201,100,66,0.22)] bg-[rgba(255,247,237,0.96)] text-[var(--accent2)] shadow-[0_10px_24px_rgba(201,100,66,0.12)]'
+                ? 'border-[rgba(var(--accent-rgb),0.22)] bg-[rgba(255,247,237,0.96)] text-[var(--accent2)] shadow-[0_10px_24px_rgba(var(--accent-rgb),0.12)]'
                 : 'border-[rgba(var(--accent-rgb),0.18)] bg-white/[0.06] text-[var(--accent-light)]'
               : lightTheme
-                ? 'border-[var(--line)] bg-[rgba(244,242,236,0.82)] text-[var(--muted)] hover:border-[rgba(201,100,66,0.22)] hover:text-[var(--accent2)]'
+                ? 'border-[var(--line)] bg-[rgba(244,242,236,0.82)] text-[var(--muted)] hover:border-[rgba(var(--accent-rgb),0.22)] hover:text-[var(--accent2)]'
                 : 'border-white/10 bg-white/[0.035] text-slate-300 hover:border-rose-300/25 hover:bg-rose-400/10 hover:text-rose-100'
           }`}
         >
@@ -2579,7 +2763,7 @@ function CancelConfirmDialog({ hasForgivenessCharge, onAbort, onConfirm, preview
         onClick={(event) => event.stopPropagation()}
         className={`w-full max-w-md rounded-[30px] border p-5 ${
           lightTheme
-            ? 'border-[rgba(201,100,66,0.22)] bg-white shadow-[0_24px_64px_rgba(31,30,29,0.10)]'
+            ? 'border-[rgba(var(--accent-rgb),0.22)] bg-white shadow-[0_24px_64px_rgba(31,30,29,0.10)]'
             : 'border-white/8 bg-[rgba(21,19,16,0.92)] shadow-[0_22px_56px_rgba(0,0,0,0.24)] backdrop-blur-2xl'
         }`}
       >
@@ -2618,7 +2802,7 @@ function CancelConfirmDialog({ hasForgivenessCharge, onAbort, onConfirm, preview
             onClick={onConfirm}
             className={`rounded-full border px-4 py-2.5 text-sm font-semibold transition ${
               lightTheme
-                ? 'border-[rgba(201,100,66,0.22)] bg-[rgba(255,247,237,0.96)] text-[var(--accent2)] hover:bg-[rgba(255,239,228,0.98)]'
+                ? 'border-[rgba(var(--accent-rgb),0.22)] bg-[rgba(255,247,237,0.96)] text-[var(--accent2)] hover:bg-[rgba(255,239,228,0.98)]'
                 : 'border-[rgba(var(--accent-rgb),0.18)] bg-white/[0.06] text-[var(--accent-light)] hover:bg-white/[0.08]'
             }`}
           >
@@ -2736,7 +2920,7 @@ function CategoryManager({ categories, onClose, onAdd, onDelete }) {
             onClick={handleAdd}
             className={`rounded-2xl border px-4 py-2 text-sm font-semibold transition disabled:opacity-40 ${
               lightTheme
-                ? 'border-[rgba(201,100,66,0.22)] bg-[var(--ink)] text-[var(--canvas)] hover:bg-[var(--ink-2)]'
+                ? 'border-[rgba(var(--accent-rgb),0.22)] bg-[var(--ink)] text-[var(--canvas)] hover:bg-[var(--ink-2)]'
                 : 'border-[rgba(var(--accent-rgb),0.20)] bg-[rgba(var(--accent-rgb),0.88)] text-white hover:bg-[rgba(var(--accent-rgb),0.78)]'
             }`}
           >
@@ -2813,6 +2997,14 @@ function ActionButton({ children, className = '', disabled = false, onClick, siz
     // không cần thiết cho nút QUAN TRỌNG NHẤT màn hình. 13px vẫn vừa (đo lại sau khi đổi), lại
     // trên ngưỡng cỡ chữ dễ đọc trên điện thoại.
     compactPrimary: 'min-w-0 w-full px-3 py-3 text-[13px] font-semibold leading-tight tracking-[-0.01em] whitespace-normal sm:w-auto sm:px-7 sm:py-3.5 sm:text-lg sm:font-bold sm:leading-none sm:tracking-normal sm:whitespace-nowrap',
+    // Cho nút THOÁT đứng CẠNH một chip co giãn ("Tự viết →" bên phải chip mục tiêu gần đây).
+    // ⚠️ Khác `compactPrimary` ở đúng một chỗ và đó là toàn bộ lý do nó tồn tại: **KHÔNG `w-full`**.
+    // `compactPrimary` có `w-full`, nên đặt nó cạnh một chip `flex-1` thì nút nuốt gần hết bề ngang
+    // và chip bị `truncate` xuống còn một chữ cái ("H…") — đã thấy tận mắt trên ảnh chụp 390px.
+    // ⚠️ Và đây PHẢI là một mục `sizeMap`, không được nhét `w-auto` qua `className`: dự án không có
+    // `tailwind-merge`, Tailwind quyết lớp nào thắng theo THỨ TỰ TRONG BẢNG KIỂU chứ không theo thứ
+    // tự viết — hai lớp cùng khai một thuộc tính là một canh bạc đã thua một lần (2026-08-13).
+    compactEscape: 'shrink-0 px-3 py-3 text-[13px] font-semibold leading-tight tracking-[-0.01em] whitespace-nowrap sm:px-7 sm:py-3.5 sm:text-lg sm:font-bold sm:leading-none sm:tracking-normal',
   };
 
   return (

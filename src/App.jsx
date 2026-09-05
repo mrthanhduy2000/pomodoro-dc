@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState, Suspense } from 'react';
 import { AnimatePresence, motion as Motion, useReducedMotion } from 'framer-motion';
-import { useEnterMotion, useSnapMotion } from './lib/motionPresets';
+import { useEnterMotion, usePressMotion, useSnapMotion } from './lib/motionPresets';
 import { initSync } from './lib/syncService';
 import { clearTimerLive, updateTimerLive } from './lib/timerLiveService';
 
@@ -10,29 +10,27 @@ import ResourceDisplay from './components/ResourceDisplay';
 import RankDisplay from './components/RankDisplay';
 import DailyMissions from './components/DailyMissions';
 import FocusRail from './components/FocusRail';
-import FocusNextAction from './components/FocusNextAction';
 import FocusMoment from './components/FocusMoment';
 import { getEraStage } from './engine/eraStage';
-import { evaluateStreakAtRisk } from './engine/gameMath';
+import { calculateStreakMilestoneProgress, evaluateStreakAtRisk } from './engine/gameMath';
 import FocusCoachMobile from './components/FocusCoachMobile';
 import NotificationCenter from './components/NotificationCenter';
 import { RichTextView } from './components/RichText';
 import { useGameLoop } from './hooks/useGameLoop';
 import { useCityGrowthMoment } from './hooks/useCityMoment';
 import useGameStore from './store/gameStore';
+import useNextAction from './hooks/useNextAction';
 import useInventoryAttention from './hooks/useInventoryAttention';
 import useSettingsStore from './store/settingsStore';
 import { ERA_METADATA, ERA_THRESHOLDS } from './engine/constants';
 import { countSessionsOnDay, getLevelProgress, sumFocusMinutesOnDay } from './engine/gameMath';
 import {
-  formatVietnamDate,
-  formatVietnamTime,
-  getVietnamDayOfWeek,
   getVietnamHour,
   localDateStr,
   localWeekMondayStr,
 } from './engine/time';
 import { createRecoverableLazy } from './utils/runtimeRecovery';
+import { readPreviewScene, buildPreviewUi } from './dev/previewStage';
 
 const SkillTree = createRecoverableLazy(() => import('./components/SkillTree.jsx'), 'skill-tree');
 const RelicInventory = createRecoverableLazy(() => import('./components/RelicInventory.jsx'), 'relic-inventory');
@@ -235,609 +233,36 @@ const INVENTORY_TABS = [
   },
   {
     id: 'collection',
-    label: 'Kho báu',
-    subtitle: 'Theo dõi di vật, bản vẽ và lịch sử phiên dưới cùng một bề mặt điều hướng.',
+    label: 'Công trình',
+    subtitle: 'Nghiên cứu bản vẽ rồi dựng nó lên — một vòng, một màn.',
   },
   {
     id: 'achievements',
-    label: 'Thành tích',
-    subtitle: 'Nhìn lại các cột mốc đã đạt và khoảng cách tới các biểu tượng kế tiếp.',
+    label: 'Huy hiệu',
+    subtitle: 'Những gì đã giành được, và cái sắp giành được nằm ngay trên đầu.',
   },
 ];
 
 const INVENTORY_SUB_IDS = INVENTORY_TABS.map((tab) => tab.id);
 
-/** Dịch một id điều hướng (kể cả id cũ đã lưu trong thông báo) sang "tab nào + tab con nào". */
-function resolveTabTarget(tab) {
+/**
+ * Dịch một id điều hướng (kể cả id cũ đã lưu trong thông báo) sang "tab nào + tab con nào".
+ *
+ * ⚠️ THAM SỐ THỨ HAI LÀ ĐƯỜNG SỐNG CỦA CÁC THÔNG BÁO CŨ. Trước 2026-09-01, "Kho báu" có bốn tab
+ * con và thông báo lưu kèm `collectionTab`. Bốn cái tên ấy vẫn nằm trong localStorage của Đàm:
+ * `workshop` (8 chỗ sinh ra), `blueprints` (4), `relics` (1), `history` (0). Bỏ qua chúng thì mỗi
+ * thông báo cũ vẫn mở đúng tab "Công trình" — trừ `relics`, nay thuộc "Huy hiệu", nên nó PHẢI được
+ * dịch tường minh; không thì một nút cũ lặng lẽ dẫn sai chỗ mà build/lint/test đều không thấy.
+ */
+function resolveTabTarget(tab, collectionTab = null) {
+  if (tab === 'collection' && collectionTab === 'relics') return { tab: 'inventory', sub: 'achievements' };
+  // "Lịch sử" đã xoá — dữ liệu ấy nay chỉ còn ở màn Thống kê, nên đưa thẳng người bấm tới đó.
+  if (tab === 'collection' && collectionTab === 'history') return { tab: 'stats', sub: null };
   if (INVENTORY_SUB_IDS.includes(tab)) return { tab: 'inventory', sub: tab };
   return { tab, sub: null };
 }
 
-const COLLECTION_TABS = [
-  { id: 'relics', label: 'Di vật' },
-  { id: 'blueprints', label: 'Bản vẽ' },
-  { id: 'workshop', label: 'Xưởng' },
-  { id: 'history', label: 'Lịch sử' },
-];
-
 const FOCUS_INTRO_COPY = {
-  badge: [
-    'Hôm nay',
-    'Nhịp hôm nay',
-    'Tiến độ hôm nay',
-    'Lịch hôm nay',
-    'Ngày làm việc',
-    'Nhịp làm việc',
-    'Nhịp tập trung',
-    'Mốc hôm nay',
-    'Nhịp trong ngày',
-    'Tiến trình ngày',
-    'Guồng hôm nay',
-    'Bản ghi hôm nay',
-    'Đường chạy hôm nay',
-    'Nhịp hiện tại',
-    'Kế hoạch hôm nay',
-    'Phiên hôm nay',
-    'Mạch hôm nay',
-    'Nhịp cá nhân',
-    'Guồng trong ngày',
-    'Lượt hôm nay',
-    'Bản đồ hôm nay',
-    'Tâm điểm hôm nay',
-    'Đích hôm nay',
-    'Nhịp chính hôm nay',
-    'Đà hôm nay',
-    'Sổ hôm nay',
-    'Nếp hôm nay',
-    'Cột mốc hôm nay',
-    'Nhịp đang chạy',
-    'Luồng hôm nay',
-    'Bước hôm nay',
-    'Nhịp trọng tâm',
-    'Quỹ hôm nay',
-    'Mốc cá nhân hôm nay',
-    'Tổng quan hôm nay',
-    'Đà tập trung',
-    'Sổ nhịp hôm nay',
-    'Khung hôm nay',
-    'Nhịp mục tiêu',
-    'Bản nhịp hôm nay',
-  ],
-  promptLead: [
-    'Bắt đầu',
-    'Mở',
-    'Khởi động',
-    'Vào guồng với',
-    'Tạo đà bằng',
-    'Bắt tay vào',
-    'Dành',
-    'Làm nóng bằng',
-    'Mở đầu với',
-    'Lấy đà bằng',
-    'Vào việc với',
-    'Tập trung vào',
-    'Bắt đầu với',
-    'Dành ra',
-    'Thử',
-    'Mở ra',
-    'Bắt nhịp với',
-    'Bắt đầu từ',
-    'Làm một',
-    'Khởi nhịp bằng',
-    'Đi vào với',
-    'Dành cho mình',
-    'Bắt đầu ngày bằng',
-    'Mở đầu ngày bằng',
-    'Bắt đầu nhẹ với',
-    'Bước vào với',
-    'Tạo nhịp với',
-  ],
-  promptObject: [
-    'một phiên sâu',
-    'một phiên tập trung',
-    'một phiên gọn',
-    'một phiên 25 phút',
-    'một phiên mới',
-    'một lượt tập trung',
-    'một phiên ngắn',
-    'một phiên chỉn chu',
-    'một nhịp làm việc ngắn',
-    'một chặng tập trung',
-    'một phiên thật gọn',
-    'một phiên có mục tiêu rõ',
-    'một chặng làm việc gọn',
-    'một chặng 25 phút',
-    'một phiên tập trung ngắn',
-    'một phiên vào guồng',
-    'một phiên vào việc',
-    'một phiên giữ mạch',
-    'một phiên cho việc chính',
-    'một phiên có trọng tâm',
-    'một chặng ngắn mà chắc',
-    'một phiên thật chắc',
-    'một phiên rõ việc',
-    'một phiên chắc nhịp',
-    'một chặng làm việc ngắn',
-    'một phiên giữ nhịp',
-    'một lượt có trọng tâm',
-    'một phiên trọn vẹn',
-    'một chặng gọn gàng',
-    'một phiên mở đầu',
-    'một phiên tập trung vừa đủ',
-    'một phiên ngắn mà chắc',
-    'một chặng làm việc rõ ràng',
-  ],
-  promptContinueLead: [
-    'Tiếp nhịp với',
-    'Nối tiếp bằng',
-    'Làm thêm',
-    'Giữ guồng với',
-    'Đi tiếp với',
-    'Bồi thêm bằng',
-    'Dồn tiếp bằng',
-    'Kéo tiếp với',
-    'Nối guồng bằng',
-    'Tiếp đà với',
-    'Giữ mạch với',
-    'Nhích thêm bằng',
-    'Thêm tiếp bằng',
-    'Làm tiếp với',
-    'Chạy tiếp với',
-    'Siết tiếp bằng',
-    'Gom thêm bằng',
-    'Đẩy tiếp với',
-    'Giữ trớn với',
-    'Tiếp mạch bằng',
-    'Nối đà với',
-    'Thêm nhịp bằng',
-    'Đẩy nhịp với',
-    'Làm thêm một',
-    'Thử thêm',
-    'Nối tiếp với',
-    'Tiếp tục bằng',
-    'Giữ nhịp bằng',
-    'Làm thêm một chút với',
-  ],
-  promptContinueObject: [
-    'một phiên nữa',
-    'một lượt tập trung nữa',
-    'một phiên gọn nữa',
-    'một chặng tiếp theo',
-    'một phiên giữ nhịp',
-    'một phiên làm việc nữa',
-    'một phiên chắc tay',
-    'một chặng ngắn nữa',
-    'một phiên có trọng tâm',
-    'một phiên gọn mà chắc',
-    'một phiên tiếp theo',
-    'một chặng sâu nữa',
-    'một phiên nữa cho hôm nay',
-    'một lượt tiếp theo',
-    'một phiên tiếp đà',
-    'một chặng có chủ đích',
-    'một phiên chắc nhịp',
-    'một phiên thêm chút đà',
-    'một phiên tiếp mạch',
-    'một chặng gọn gàng nữa',
-    'một phiên vào nhịp nữa',
-    'một phiên thêm đà',
-    'một chặng nối tiếp',
-    'một chặng làm việc gọn nữa',
-    'một phiên thêm nhịp',
-    'một phiên chắc tay nữa',
-    'một phiên tập trung tiếp',
-    'một chặng nối nhịp',
-    'một phiên làm tiếp',
-    'một phiên ngắn nữa',
-    'một chặng tiếp nhịp',
-    'một phiên rõ việc nữa',
-  ],
-  promptAfterLead: [
-    'Giữ nhịp bằng',
-    'Làm thêm',
-    'Dành thêm',
-    'Đẩy tiếp bằng',
-    'Mở thêm',
-    'Giữ guồng với',
-    'Chốt thêm bằng',
-    'Tiếp tục với',
-    'Bồi thêm bằng',
-    'Nối tiếp bằng',
-    'Làm dày bằng',
-    'Giữ độ sâu bằng',
-    'Giữ đà bằng',
-    'Nâng nhịp với',
-    'Kéo tiếp bằng',
-    'Giữ mạch với',
-    'Tiếp guồng bằng',
-    'Nối guồng với',
-    'Thêm độ sâu bằng',
-    'Làm đầy bằng',
-    'Tiếp nhịp với',
-    'Giữ chắc bằng',
-    'Làm gọn thêm bằng',
-    'Đi tiếp với',
-    'Dồn thêm bằng',
-    'Siết thêm bằng',
-    'Giữ nếp bằng',
-    'Làm thêm một',
-    'Dành thêm một',
-    'Giữ đà với',
-    'Nối tiếp với',
-    'Tiếp tục bằng',
-    'Thử thêm',
-    'Làm thêm nữa với',
-    'Giữ chất lượng bằng',
-  ],
-  promptAfterObject: [
-    'một phiên chất lượng',
-    'một phiên thật gọn',
-    'một phiên sâu',
-    'một phiên chỉn chu',
-    'một phiên ngắn mà sâu',
-    'một phiên tinh gọn',
-    'một chặng làm việc chắc',
-    'một phiên giữ guồng',
-    'một lượt tập trung nữa',
-    'một phiên gọn mà chắc',
-    'một phiên nhịp tốt',
-    'một phiên làm việc sâu',
-    'một phiên giữ guồng',
-    'một chặng chất lượng',
-    'một phiên chắc tay',
-    'một phiên sắc gọn',
-    'một phiên làm việc gọn',
-    'một phiên ngắn mà chắc',
-    'một chặng tập trung nữa',
-    'một phiên ít xao nhãng',
-    'một phiên chắc nhịp',
-    'một phiên sâu thêm',
-    'một chặng thật gọn',
-    'một phiên tiếp đà',
-    'một phiên có trọng tâm',
-    'một phiên giữ nhịp',
-    'một phiên gọn gàng',
-    'một chặng giữ đà',
-    'một phiên trọn vẹn',
-    'một phiên siết tập trung',
-    'một phiên làm việc chắc',
-    'một chặng tinh gọn',
-    'một phiên thêm lực',
-    'một phiên đúng việc',
-    'một phiên rõ trọng tâm',
-    'một phiên ngắn nhưng chắc',
-    'một chặng làm việc gọn',
-  ],
-  progressZeroLead: [
-    'Bạn vẫn chưa có',
-    'Hôm nay bạn chưa có',
-    'Hiện bạn chưa có',
-    'Ngày hôm nay chưa có',
-    'Bảng hôm nay chưa có',
-    'Nhịp hôm nay chưa có',
-    'Bạn hiện chưa có',
-    'Cho tới lúc này bạn chưa có',
-    'Tới giờ bạn chưa có',
-    'Trong hôm nay bạn chưa có',
-    'Tạm thời bạn chưa có',
-    'Từ đầu ngày tới giờ bạn chưa có',
-    'Bên trong nhịp hôm nay bạn chưa có',
-    'Tới lúc này vẫn chưa có',
-    'Ngày này vẫn chưa có',
-    'Guồng hôm nay vẫn chưa có',
-    'Tới hiện tại bạn vẫn chưa có',
-    'Nhịp hiện tại vẫn chưa có',
-    'Hôm nay tới giờ chưa có',
-    'Bạn chưa kịp có',
-    'Trên tiến độ hôm nay chưa có',
-    'Bạn còn chưa có',
-    'Bạn còn chưa ghi nhận',
-    'Ngày này chưa ghi nhận',
-    'Tới giờ vẫn chưa có',
-    'Trong nhịp hôm nay vẫn chưa có',
-    'Tới hiện tại bảng vẫn chưa có',
-    'Phần đầu ngày chưa có',
-    'Guồng làm việc hôm nay chưa có',
-    'Bạn vẫn chưa chạm tới',
-    'Trên mốc hôm nay chưa có',
-    'Đầu ngày tới giờ chưa có',
-  ],
-  progressZeroTail: [
-    'phiên nào được chốt',
-    'phiên nào hoàn tất',
-    'phiên nào để ghi nhận',
-    'mốc phiên nào',
-    'phiên nào vừa xong',
-    'phiên nào trên bảng hôm nay',
-    'phiên nào trong nhịp hiện tại',
-    'lượt nào được hoàn tất',
-    'phiên nào để mở nhịp',
-    'phiên nào được đánh dấu xong',
-    'phiên nào trong guồng hôm nay',
-    'phiên nào trên tiến độ hiện tại',
-    'lượt nào để tính nhịp',
-    'mốc nào được chốt',
-    'phiên nào để mở ngày',
-    'phiên nào vừa khép lại',
-    'chặng nào đã xong',
-    'phiên nào để lấy đà',
-    'phiên nào để đóng dấu',
-    'lượt nào trong ngày',
-    'mốc phiên nào cho hôm nay',
-    'phiên nào để lên nhịp',
-    'phiên nào đủ để tính nhịp',
-    'phiên nào khép xong',
-    'lượt nào để lấy guồng',
-    'phiên nào trên sổ hôm nay',
-    'mốc nào cho ngày này',
-    'phiên nào được đóng lại',
-    'chặng nào để tính tiến độ',
-    'phiên nào ở đường chạy hôm nay',
-    'lượt nào để mở guồng',
-    'phiên nào để gài nhịp',
-  ],
-  progressSomeLead: [
-    'Bạn đã hoàn thành',
-    'Bạn đã chốt',
-    'Bạn đã ghi nhận',
-    'Bạn đã tích lũy',
-    'Hiện bạn có',
-    'Bạn đang giữ',
-    'Bạn đã gom',
-    'Bạn đang có',
-    'Hôm nay bạn đã có',
-    'Tính tới giờ bạn có',
-    'Bạn đã đi qua',
-    'Bạn đã khép',
-    'Bạn đã đưa về',
-    'Trên bảng hôm nay bạn có',
-    'Trong guồng hôm nay bạn có',
-    'Ngày này bạn đã có',
-    'Bạn đã đóng được',
-    'Bạn đã giữ được',
-    'Đến lúc này bạn có',
-    'Bạn đã chạm',
-    'Bạn đang tích được',
-    'Tới hiện tại bạn đã có',
-    'Bạn đã điền vào ngày',
-    'Bạn đã bỏ túi',
-    'Bạn đã nạp vào nhịp',
-    'Bạn đã tạo được',
-    'Bạn đã kịp có',
-    'Bảng hôm nay đang có',
-    'Nhịp hiện tại đang có',
-    'Bạn đã dựng được',
-    'Bạn đã hoàn tất được',
-    'Đầu ngày tới giờ bạn có',
-  ],
-  progressSomeTail: [
-    'từ đầu ngày',
-    'trong hôm nay',
-    'cho tới lúc này',
-    'ở thời điểm này',
-    'tính đến hiện tại',
-    'trên nhịp hôm nay',
-    'trong guồng hôm nay',
-    'trong mạch hôm nay',
-    'trên tiến độ hôm nay',
-    'từ đầu buổi',
-    'từ sáng tới giờ',
-    'trong ngày này',
-    'ở nhịp hiện tại',
-    'trên guồng hiện tại',
-    'kể từ đầu nhịp',
-    'đến lúc này',
-    'trong lượt hôm nay',
-    'trên mốc hôm nay',
-    'trong đường chạy hôm nay',
-    'ở mạch làm việc hôm nay',
-    'suốt từ đầu ngày',
-    'trong nhịp đang chạy',
-    'trên sổ hôm nay',
-    'trên đà hiện tại',
-    'trong guồng làm việc',
-    'ở mốc đang chạy',
-    'từ lúc mở ngày',
-    'trên nhịp mục tiêu',
-    'trong nhịp của ngày',
-    'ở tiến độ này',
-    'trong chặng hôm nay',
-    'trên bảng hiện tại',
-  ],
-  remainingLead: [
-    'Còn',
-    'Thêm',
-    'Bạn chỉ còn',
-    'Cần thêm',
-    'Bạn còn',
-    'Chỉ cần thêm',
-    'Mục tiêu hôm nay còn',
-    'Phần còn lại là',
-    'Bạn đang thiếu',
-    'Bạn còn đúng',
-    'Bạn còn cần',
-    'Giờ còn',
-    'Chốt thêm',
-    'Ráng thêm',
-    'Đi tiếp thêm',
-    'Bổ sung thêm',
-    'Kéo thêm',
-    'Bạn vẫn còn',
-    'Còn thiếu',
-    'Bạn còn vừa đủ',
-    'Thêm đúng',
-    'Lấp thêm',
-    'Giờ bạn còn',
-    'Chỉ thiếu',
-    'Tiếp thêm',
-    'Bù thêm',
-    'Gom thêm',
-    'Bạn chỉ thiếu',
-    'Bạn còn thiếu đúng',
-    'Thêm nữa',
-    'Đi thêm',
-    'Nhích thêm',
-  ],
-  remainingTail: [
-    'để đạt nhịp mục tiêu hôm nay',
-    'là đủ nhịp hôm nay',
-    'để chạm mốc hôm nay',
-    'để khép đủ guồng hôm nay',
-    'là tròn nhịp mục tiêu',
-    'để đủ đà hôm nay',
-    'là xong mốc hôm nay',
-    'để chốt nhịp hôm nay',
-    'là đủ mạch hôm nay',
-    'để về đích nhịp hôm nay',
-    'để chốt chỉ tiêu hôm nay',
-    'là đầy guồng hôm nay',
-    'để khép ngày thật gọn',
-    'để đủ lượt hôm nay',
-    'là bạn chạm đích hôm nay',
-    'để khóa mục tiêu hôm nay',
-    'là tròn đường chạy hôm nay',
-    'để khép mốc ngày',
-    'là đủ tiến độ hôm nay',
-    'để đi tới mốc cuối hôm nay',
-    'là vừa đẹp cho hôm nay',
-    'để đủ số phiên hôm nay',
-    'để đủ guồng mục tiêu',
-    'là tròn số hôm nay',
-    'để chạm mức hôm nay',
-    'để đủ nhịp cá nhân hôm nay',
-    'là chốt xong chỉ tiêu ngày',
-    'để đầy mốc của hôm nay',
-    'là vừa tròn mục tiêu ngày',
-    'để khép gọn hôm nay',
-    'là xong quỹ phiên hôm nay',
-    'để đủ chặng hôm nay',
-  ],
-  completedLead: [
-    'Nhịp hôm nay đã đủ,',
-    'Mục tiêu hôm nay đã xong,',
-    'Bạn đã đủ nhịp hôm nay,',
-    'Chỉ tiêu hôm nay đã chạm,',
-    'Guồng hôm nay đã đủ,',
-    'Bạn đã về đích nhịp hôm nay,',
-    'Nhịp mục tiêu đã đủ,',
-    'Đủ mốc hôm nay rồi,',
-    'Phần số lượng đã xong,',
-    'Hôm nay đã đủ phiên,',
-    'Ngày hôm nay đã đủ nhịp,',
-    'Đà hôm nay đã tới mốc,',
-    'Bạn đã khép đủ phần số lượng,',
-    'Mốc ngày đã hoàn tất,',
-    'Tiến độ hôm nay đã đủ,',
-    'Guồng của ngày đã tròn,',
-    'Bạn đã chạm đủ số phiên,',
-    'Chỉ tiêu ngày đã kín,',
-    'Mạch hôm nay đã đủ,',
-    'Nhịp chính hôm nay đã xong,',
-    'Lượt hôm nay đã đủ mốc,',
-    'Bạn đã về đủ đích cho hôm nay,',
-    'Ngày này đã chạm mốc,',
-    'Bạn đã đi đủ nhịp hôm nay,',
-    'Số phiên hôm nay đã đủ,',
-    'Mốc tập trung hôm nay đã xong,',
-    'Quỹ phiên hôm nay đã kín,',
-    'Đường chạy hôm nay đã đủ,',
-    'Bạn đã khép đủ nhịp của ngày,',
-    'Nhịp cá nhân hôm nay đã đạt,',
-    'Mốc chính của hôm nay đã đủ,',
-    'Phần nhịp hôm nay đã tròn,',
-  ],
-  completedTail: [
-    'giờ là lúc nâng chất lượng từng phiên',
-    'giờ cứ giữ từng phiên thật gọn',
-    'giờ ưu tiên độ sâu',
-    'giờ tập trung vào độ nét từng phiên',
-    'giờ làm ít nhưng chắc',
-    'giờ giữ guồng thật đều',
-    'giờ chỉ cần từng phiên thật tốt',
-    'giờ đẩy chất lượng lên',
-    'giờ giữ từng lượt thật sắc',
-    'giờ chăm vào từng phiên một',
-    'giờ giữ nhịp nhưng làm kỹ hơn',
-    'giờ tập trung vào độ chắc của từng lượt',
-    'giờ ưu tiên từng phiên có điểm rơi rõ',
-    'giờ làm chậm lại nhưng sâu hơn',
-    'giờ chọn ít việc nhưng xử lý gọn',
-    'giờ giữ sự sắc của từng phiên',
-    'giờ dồn vào các phiên có trọng tâm',
-    'giờ khóa sự chú ý cho từng lượt',
-    'giờ tập trung vào chất hơn lượng',
-    'giờ giữ độ gọn trong từng chặng',
-    'giờ làm cho mỗi phiên đáng giá hơn',
-    'giờ chắt từng phiên cho thật sạch',
-    'giờ chỉ việc giữ tay lái thật chắc',
-    'giờ ưu tiên những phiên có trọng tâm',
-    'giờ làm gọn nhưng dứt điểm hơn',
-    'giờ giữ từng chặng thật sáng rõ',
-    'giờ chọn việc kỹ hơn cho từng lượt',
-    'giờ chăm vào độ chắc thay vì số lượng',
-    'giờ giữ đà nhưng bớt phân tán',
-    'giờ siết chất lượng ở từng phiên',
-    'giờ làm ít việc nhưng chạm sâu hơn',
-    'giờ khiến mỗi phiên có sức nặng hơn',
-  ],
-  minuteProgressZero: [
-    'Hôm nay bạn chưa có phút tập trung nào được ghi nhận.',
-    'Cho tới lúc này bạn chưa tích được phút tập trung nào.',
-    'Ngày hôm nay vẫn chưa ghi nhận phút tập trung nào.',
-    'Nhịp hôm nay chưa có phút tập trung nào được chốt.',
-    'Bạn vẫn chưa có phút tập trung nào trên bảng hôm nay.',
-    'Tạm thời hôm nay chưa có phút tập trung nào được tính.',
-    'Tiến độ hôm nay vẫn đang ở 0 phút tập trung.',
-    'Hôm nay bạn còn chưa gom được phút tập trung nào.',
-    'Chưa có phút tập trung nào được đóng vào hôm nay.',
-    'Đầu ngày tới giờ bạn chưa có phút tập trung nào.',
-  ],
-  minuteProgressSome: [
-    'Hôm nay bạn đã có {{countLabel}} tập trung.',
-    'Bạn đã ghi nhận {{countLabel}} tập trung trong hôm nay.',
-    'Tiến độ hiện tại là {{countLabel}} tập trung.',
-    'Cho tới lúc này bạn đã tích được {{countLabel}} tập trung.',
-    'Ngày hôm nay đã có {{countLabel}} tập trung được chốt.',
-    'Bạn đang giữ {{countLabel}} tập trung trong ngày.',
-    'Hiện bạn đã gom {{countLabel}} tập trung.',
-    'Nhịp hôm nay đã có {{countLabel}} tập trung.',
-    'Bạn đã đưa về {{countLabel}} tập trung từ đầu ngày.',
-    'Tới giờ bạn đã có {{countLabel}} tập trung.',
-  ],
-  minuteRemaining: [
-    'Còn {{remainingLabel}} để chạm mục tiêu ngày.',
-    'Thêm {{remainingLabel}} nữa là đủ mốc hôm nay.',
-    'Bạn còn {{remainingLabel}} để chốt mục tiêu ngày.',
-    'Chỉ cần thêm {{remainingLabel}} để đủ nhịp hôm nay.',
-    'Mục tiêu hôm nay còn {{remainingLabel}} nữa.',
-    'Bạn đang thiếu {{remainingLabel}} để về đích hôm nay.',
-    'Phần còn lại là {{remainingLabel}} để khép ngày.',
-    'Thêm {{remainingLabel}} là bạn chạm mốc ngày.',
-    'Còn đúng {{remainingLabel}} để tròn chỉ tiêu hôm nay.',
-    'Nhích thêm {{remainingLabel}} là đủ mục tiêu ngày.',
-  ],
-  minuteCompleted: [
-    'Mục tiêu ngày đã hoàn tất, giờ chỉ cần giữ phần việc quan trọng thật gọn.',
-    'Mốc hôm nay đã đủ, giờ ưu tiên những việc đáng làm nhất.',
-    'Bạn đã chạm mục tiêu ngày, giờ giữ nhịp thật chắc tay.',
-    'Phần thời lượng hôm nay đã xong, giờ tập trung vào chất lượng.',
-    'Đủ mục tiêu rồi, phần còn lại là làm gọn và rõ việc.',
-    'Nhịp ngày đã đạt, giờ chỉ cần giữ sự tập trung thật sạch.',
-    'Mốc thời lượng hôm nay đã kín, giờ chọn đúng việc để làm tiếp.',
-    'Bạn đã đủ thời lượng cho hôm nay, giờ giữ từng lượt thật chắc.',
-    'Phần số phút đã xong, giờ ưu tiên độ nét của từng phiên.',
-    'Hôm nay đã đủ phút tập trung, giờ giữ nhịp mà không dàn trải.',
-  ],
-  badgeNatural: [
-    'Hôm nay',
-    'Tiến độ hôm nay',
-    'Nhịp hôm nay',
-    'Mốc hôm nay',
-    'Ngày hôm nay',
-    'Phần việc hôm nay',
-    'Nhịp tập trung hôm nay',
-    'Mục tiêu hôm nay',
-  ],
   titleStart: [
     'Bắt đầu một phiên nhé?',
     'Mở một phiên tập trung nhé?',
@@ -878,149 +303,6 @@ const FOCUS_INTRO_COPY = {
     'Thêm một phiên nữa cho chắc tay nhé?',
     'Giữ đà bằng một phiên nữa nhé?',
   ],
-  sessionProgressZero: [
-    'Hôm nay bạn chưa có phiên nào.',
-    'Hôm nay vẫn chưa có phiên nào được hoàn thành.',
-    'Bạn chưa chốt phiên nào trong hôm nay.',
-    'Tới lúc này, hôm nay vẫn là 0 phiên.',
-    'Ngày hôm nay chưa ghi nhận phiên nào.',
-    'Bạn vẫn chưa mở phiên nào trong hôm nay.',
-    'Hôm nay chưa có phiên nào được tính.',
-    'Nhịp hôm nay vẫn chưa có phiên nào.',
-  ],
-  sessionProgressSome: [
-    'Hôm nay bạn đã hoàn thành {{countLabel}}.',
-    'Tính tới lúc này, bạn đã có {{countLabel}}.',
-    'Bạn đã đi được {{countLabel}} trong hôm nay.',
-    'Nhịp hôm nay đang ở {{countLabel}}.',
-    'Hôm nay bạn đã chốt {{countLabel}}.',
-    'Bạn đã tích lũy {{countLabel}} từ đầu ngày.',
-    'Tới giờ, bạn đã có {{countLabel}}.',
-    'Ngày hôm nay đã ghi nhận {{countLabel}}.',
-    'Bạn đang có {{countLabel}} trong hôm nay.',
-    'Hôm nay bạn đã đi qua {{countLabel}}.',
-  ],
-  sessionRemaining: [
-    'Còn {{remainingLabel}} nữa để đủ mục tiêu hôm nay.',
-    'Thêm {{remainingLabel}} là chạm mốc hôm nay.',
-    'Bạn còn {{remainingLabel}} nữa là đủ nhịp hôm nay.',
-    'Chỉ cần thêm {{remainingLabel}} nữa thôi.',
-    'Còn {{remainingLabel}} nữa là xong mục tiêu hôm nay.',
-    'Bạn còn thiếu {{remainingLabel}} để đủ mốc hôm nay.',
-    'Thêm {{remainingLabel}} nữa là tròn chỉ tiêu hôm nay.',
-    'Còn đúng {{remainingLabel}} nữa để khép ngày.',
-  ],
-  sessionCompleted: [
-    'Mục tiêu hôm nay đã đủ. Giờ cứ giữ chất lượng từng phiên.',
-    'Hôm nay bạn đã đủ nhịp. Nếu làm tiếp, cứ giữ cho thật gọn.',
-    'Mốc hôm nay đã xong. Phần còn lại là làm cho thật chắc.',
-    'Hôm nay đã đủ số phiên. Giờ ưu tiên việc quan trọng nhất.',
-    'Phần số lượng đã đủ. Giờ chỉ cần giữ độ tập trung.',
-    'Mục tiêu hôm nay đã hoàn thành. Giờ cứ làm chậm mà chắc.',
-    'Bạn đã chạm mốc hôm nay. Nếu làm thêm, cứ giữ nhịp nhẹ thôi.',
-    'Nhịp hôm nay đã tròn. Giờ chỉ cần từng phiên thật sạch.',
-  ],
-  minuteProgressZeroNatural: [
-    'Hôm nay bạn chưa có phút tập trung nào.',
-    'Tới lúc này, hôm nay vẫn là 0 phút tập trung.',
-    'Ngày hôm nay chưa ghi nhận phút tập trung nào.',
-    'Bạn chưa tích lũy phút tập trung nào trong hôm nay.',
-    'Hôm nay vẫn chưa có phút tập trung nào được tính.',
-    'Bạn chưa gom được phút tập trung nào trong hôm nay.',
-    'Nhịp hôm nay vẫn đang ở 0 phút tập trung.',
-    'Hôm nay chưa có phút tập trung nào được ghi nhận.',
-  ],
-  minuteProgressSomeNatural: [
-    'Hôm nay bạn đã có {{countLabel}} tập trung.',
-    'Tính tới lúc này, bạn đã tích lũy {{countLabel}} tập trung.',
-    'Tiến độ hôm nay đang ở {{countLabel}} tập trung.',
-    'Bạn đã ghi nhận {{countLabel}} tập trung trong hôm nay.',
-    'Ngày hôm nay đã có {{countLabel}} tập trung.',
-    'Tới giờ, bạn đã có {{countLabel}} tập trung.',
-    'Bạn đang giữ {{countLabel}} tập trung trong hôm nay.',
-    'Hôm nay bạn đã tích được {{countLabel}} tập trung.',
-  ],
-  minuteRemainingNatural: [
-    'Còn {{remainingLabel}} nữa để chạm mục tiêu hôm nay.',
-    'Thêm {{remainingLabel}} là đủ mốc hôm nay.',
-    'Bạn còn {{remainingLabel}} nữa là hoàn thành mục tiêu ngày.',
-    'Chỉ cần thêm {{remainingLabel}} nữa thôi.',
-    'Còn {{remainingLabel}} nữa là đủ chỉ tiêu hôm nay.',
-    'Bạn còn thiếu {{remainingLabel}} để đủ mốc hôm nay.',
-    'Thêm {{remainingLabel}} nữa là xong mục tiêu hôm nay.',
-    'Còn đúng {{remainingLabel}} nữa để khép ngày.',
-  ],
-  minuteCompletedNatural: [
-    'Mục tiêu hôm nay đã đủ. Giờ chỉ cần giữ sự tập trung cho việc quan trọng nhất.',
-    'Phần thời lượng đã xong. Nếu làm tiếp, cứ giữ nhịp thật gọn.',
-    'Mốc hôm nay đã đủ. Giờ ưu tiên những việc đáng làm nhất.',
-    'Bạn đã chạm mục tiêu ngày. Giờ chỉ cần làm cho thật chắc tay.',
-    'Hôm nay đã đủ thời lượng. Phần còn lại là giữ đầu óc thật sạch.',
-    'Mục tiêu thời lượng đã hoàn thành. Giờ cứ chọn đúng việc để làm.',
-    'Hôm nay đã đủ phút tập trung. Nếu làm tiếp, cứ làm nhẹ mà chắc.',
-    'Phần số phút đã xong. Giờ tập trung vào chất lượng từng phiên.',
-  ],
-  titleSessionRunning: [
-    'Cứ giữ nhịp này nhé.',
-    'Bạn đang làm rất ổn.',
-    'Mình đang đi đúng hướng rồi.',
-    'Tiếp tục như vậy nhé.',
-    'Phiên này đang vào guồng rồi.',
-    'Cứ đi hết nhịp này nhé.',
-    'Bạn đang tập trung tốt đấy.',
-    'Giữ mạch này thêm chút nữa nhé.',
-  ],
-  titleSessionPaused: [
-    'Mình quay lại nốt phiên này nhé.',
-    'Phiên này vẫn đang chờ bạn đó.',
-    'Chỉ cần quay lại là bắt được nhịp ngay.',
-    'Bạn nghỉ một chút rồi vào lại cũng được.',
-    'Phiên này vẫn còn đó, mình quay lại nhé.',
-    'Mình chỉ đang dừng giữa chừng thôi, chưa sao cả.',
-  ],
-  sessionLiveProgressZero: [
-    'Phiên hiện tại đang chạy, nên tiến độ hôm nay sẽ được cộng khi bạn hoàn thành nó.',
-    'Bạn đã vào phiên rồi. Khi phiên này kết thúc, tiến độ hôm nay sẽ bắt đầu được tính.',
-    'Phiên này đang diễn ra, nên phần tiến độ sẽ được cộng sau khi bạn hoàn thành.',
-    'Tiến độ hôm nay chưa nhích lên vì phiên hiện tại vẫn chưa kết thúc.',
-    'Phiên đang chạy chưa được tính vào hôm nay. Chỉ cần đi hết phiên này là sẽ có mốc đầu tiên.',
-  ],
-  sessionLiveProgressSome: [
-    'Hôm nay bạn đã có {{countLabel}}. Phiên hiện tại vẫn đang diễn ra.',
-    'Tính tới lúc này, bạn đã có {{countLabel}}. Phiên này đang chạy tiếp.',
-    'Bạn đã đi được {{countLabel}} trong hôm nay. Phiên hiện tại vẫn chưa được cộng vào.',
-    'Nhịp hôm nay đang ở {{countLabel}}. Phiên này sẽ được tính khi bạn hoàn thành nó.',
-    'Hôm nay bạn đã có {{countLabel}}. Còn phiên hiện tại thì vẫn đang chạy.',
-    'Bạn đang có {{countLabel}} trong hôm nay. Phiên này xong thì tiến độ sẽ nhích thêm.',
-  ],
-  sessionLiveStatusRunning: [
-    'Cứ đi hết phiên này nhé. Hoàn thành xong là tiến độ hôm nay sẽ nhích lên.',
-    'Bạn đang làm tốt rồi. Cứ giữ nhịp tới hết phiên này nhé.',
-    'Chỉ cần đi nốt phiên này thôi là hôm nay sẽ có thêm tiến triển.',
-    'Cứ tập trung thêm một chút nữa nhé. Xong phiên này rồi mình tính tiếp.',
-    'Phiên này mà khép lại là mốc hôm nay sẽ sáng hơn ngay.',
-  ],
-  sessionLiveStatusPaused: [
-    'Khi sẵn sàng, mình quay lại nốt phiên này nhé.',
-    'Phiên này vẫn còn đó. Quay lại một chút là nối được ngay.',
-    'Bạn không mất nhịp đâu. Mình quay lại là đi tiếp được.',
-    'Chỉ cần quay lại nốt phiên này thôi là tiến độ sẽ chạy tiếp.',
-    'Mình nghỉ một chút rồi quay lại cũng hoàn toàn ổn.',
-  ],
-  sessionLiveStatusDoneRunning: [
-    'Mục tiêu hôm nay đã đủ rồi. Giờ cứ thong thả đi hết phiên này nhé.',
-    'Bạn đã chạm mốc hôm nay rồi. Phiên này là phần làm thêm rất đẹp.',
-    'Hôm nay đã đủ nhịp. Giờ chỉ cần giữ chất lượng tới cuối phiên thôi.',
-    'Mốc hôm nay đã xong rồi. Nếu còn tập trung được, mình đi hết phiên này nhé.',
-    'Bạn đã làm đủ cho hôm nay rồi. Giờ cứ khép nốt phiên này thật gọn.',
-  ],
-  sessionLiveStatusDonePaused: [
-    'Mục tiêu hôm nay đã đủ rồi. Nếu muốn, mình quay lại nốt phiên này sau cũng được.',
-    'Bạn đã chạm mốc hôm nay rồi, nên không cần vội nữa.',
-    'Phần mục tiêu đã xong. Phiên đang dừng này không còn tạo áp lực đâu.',
-    'Hôm nay đã đủ rồi. Muốn quay lại nốt phiên này lúc nào cũng được.',
-    'Bạn đã làm đủ cho hôm nay rồi. Phần còn lại chỉ là phần thưởng thêm thôi.',
-  ],
 };
 
 function getFocusIntroDayIndex() {
@@ -1044,211 +326,81 @@ function pickDailyVariantParts(dayIndex, banks) {
   });
 }
 
-function renderFocusIntroCopy(template, values) {
-  return template
-    .split(/(\{\{countLabel\}\}|\{\{remainingLabel\}\})/g)
-    .filter(Boolean)
-    .map((part, index) => {
-      if (part === '{{countLabel}}') {
-        return (
-          <strong key={`count-${index}`} className="font-semibold text-[var(--ink)]">
-            {values.countLabel}
-          </strong>
-        );
-      }
-      if (part === '{{remainingLabel}}') {
-        return (
-          <strong key={`remaining-${index}`} className="font-semibold text-[var(--ink)]">
-            {values.remainingLabel}
-          </strong>
-        );
-      }
-      return <React.Fragment key={`text-${index}`}>{part}</React.Fragment>;
-    });
-}
 
-function formatDailyGoalValue(value, goalType) {
-  const safeValue = Number.isFinite(value) ? Math.max(0, value) : 0;
-  return `${safeValue.toLocaleString()} ${goalType === 'minutes' ? 'phút' : 'phiên'}`;
-}
 
-function getLiveSessionIntroCopy({
-  greeting,
-  weekdayLabel,
-  countValue,
-  remainingValue,
-  isFocusSessionPaused,
-  goalType,
-}) {
-  const dayIndex = getFocusIntroDayIndex();
-  const [badge, title] = pickDailyVariantParts(dayIndex, [
-    FOCUS_INTRO_COPY.badgeNatural,
-    isFocusSessionPaused ? FOCUS_INTRO_COPY.titleSessionPaused : FOCUS_INTRO_COPY.titleSessionRunning,
-  ]);
-
-  const countIsZero = countValue <= 0;
-  const goalMet = remainingValue <= 0;
-
-  const [progressTemplate, statusTemplate] = pickDailyVariantParts(dayIndex, [
-    countIsZero ? FOCUS_INTRO_COPY.sessionLiveProgressZero : FOCUS_INTRO_COPY.sessionLiveProgressSome,
-    goalMet
-      ? (isFocusSessionPaused ? FOCUS_INTRO_COPY.sessionLiveStatusDonePaused : FOCUS_INTRO_COPY.sessionLiveStatusDoneRunning)
-      : (isFocusSessionPaused ? FOCUS_INTRO_COPY.sessionLiveStatusPaused : FOCUS_INTRO_COPY.sessionLiveStatusRunning),
-  ]);
-
-  return {
-    badgeLabel: `${badge} · ${weekdayLabel}`,
-    title: `${greeting}. ${title}`,
-    progressTemplate,
-    statusTemplate,
-    remainingValue,
-    goalType,
-  };
-}
-
-function getMinuteGoalIntroCopy({ greeting, focusMinutesToday, weekdayLabel, dailyGoalMinutes }) {
+function getMinuteGoalIntroCopy({ greeting, focusMinutesToday, dailyGoalMinutes }) {
   const remainingMinutes = Math.max(0, dailyGoalMinutes - focusMinutesToday);
   const dayIndex = getFocusIntroDayIndex();
-  const [badge] = pickDailyVariantParts(dayIndex, [FOCUS_INTRO_COPY.badgeNatural]);
 
   if (remainingMinutes <= 0) {
-    const [title, progressTemplate, statusTemplate] = pickDailyVariantParts(dayIndex, [
-      FOCUS_INTRO_COPY.titleAfter,
-      FOCUS_INTRO_COPY.minuteProgressSomeNatural,
-      FOCUS_INTRO_COPY.minuteCompletedNatural,
-    ]);
+    const [title] = pickDailyVariantParts(dayIndex, [FOCUS_INTRO_COPY.titleAfter]);
     return {
-      badgeLabel: `${badge} · ${weekdayLabel}`,
       title: `${greeting}. ${title}`,
-      progressTemplate,
-      statusTemplate,
-      remainingValue: remainingMinutes,
-      goalType: 'minutes',
     };
   }
 
   if (focusMinutesToday <= 0) {
-    const [title, progressTemplate, statusTemplate] = pickDailyVariantParts(dayIndex, [
-      FOCUS_INTRO_COPY.titleStart,
-      FOCUS_INTRO_COPY.minuteProgressZeroNatural,
-      FOCUS_INTRO_COPY.minuteRemainingNatural,
-    ]);
+    const [title] = pickDailyVariantParts(dayIndex, [FOCUS_INTRO_COPY.titleStart]);
     return {
-      badgeLabel: `${badge} · ${weekdayLabel}`,
       title: `${greeting}. ${title}`,
-      progressTemplate,
-      statusTemplate,
-      remainingValue: remainingMinutes,
-      goalType: 'minutes',
     };
   }
 
-  const [title, progressTemplate, statusTemplate] = pickDailyVariantParts(dayIndex, [
-    FOCUS_INTRO_COPY.titleContinue,
-    FOCUS_INTRO_COPY.minuteProgressSomeNatural,
-    FOCUS_INTRO_COPY.minuteRemainingNatural,
-  ]);
+  const [title] = pickDailyVariantParts(dayIndex, [FOCUS_INTRO_COPY.titleContinue]);
 
   return {
-    badgeLabel: `${badge} · ${weekdayLabel}`,
     title: `${greeting}. ${title}`,
-    progressTemplate,
-    statusTemplate,
-    remainingValue: remainingMinutes,
-    goalType: 'minutes',
   };
 }
 
-function getSessionGoalIntroCopy({ greeting, sessionsCompletedToday, weekdayLabel, dailyGoalSessions }) {
+function getSessionGoalIntroCopy({ greeting, sessionsCompletedToday, dailyGoalSessions }) {
   const remainingSessions = Math.max(0, dailyGoalSessions - sessionsCompletedToday);
   const dayIndex = getFocusIntroDayIndex();
-  const [badge] = pickDailyVariantParts(dayIndex, [FOCUS_INTRO_COPY.badgeNatural]);
 
   if (remainingSessions <= 0) {
-    const [title, progressTemplate, statusTemplate] = pickDailyVariantParts(dayIndex, [
-      FOCUS_INTRO_COPY.titleAfter,
-      FOCUS_INTRO_COPY.sessionProgressSome,
-      FOCUS_INTRO_COPY.sessionCompleted,
-    ]);
+    const [title] = pickDailyVariantParts(dayIndex, [FOCUS_INTRO_COPY.titleAfter]);
 
     return {
-      badgeLabel: `${badge} · ${weekdayLabel}`,
       title: `${greeting}. ${title}`,
-      progressTemplate,
-      statusTemplate,
-      remainingValue: remainingSessions,
-      goalType: 'sessions',
     };
   }
 
   if (sessionsCompletedToday <= 0) {
-    const [title, progressTemplate, statusTemplate] = pickDailyVariantParts(dayIndex, [
-      FOCUS_INTRO_COPY.titleStart,
-      FOCUS_INTRO_COPY.sessionProgressZero,
-      FOCUS_INTRO_COPY.sessionRemaining,
-    ]);
+    const [title] = pickDailyVariantParts(dayIndex, [FOCUS_INTRO_COPY.titleStart]);
 
     return {
-      badgeLabel: `${badge} · ${weekdayLabel}`,
       title: `${greeting}. ${title}`,
-      progressTemplate,
-      statusTemplate,
-      remainingValue: remainingSessions,
-      goalType: 'sessions',
     };
   }
 
-  const [title, progressTemplate, statusTemplate] = pickDailyVariantParts(dayIndex, [
-    FOCUS_INTRO_COPY.titleContinue,
-    FOCUS_INTRO_COPY.sessionProgressSome,
-    FOCUS_INTRO_COPY.sessionRemaining,
-  ]);
+  const [title] = pickDailyVariantParts(dayIndex, [FOCUS_INTRO_COPY.titleContinue]);
 
   return {
-    badgeLabel: `${badge} · ${weekdayLabel}`,
     title: `${greeting}. ${title}`,
-    progressTemplate,
-    statusTemplate,
-    remainingValue: remainingSessions,
-    goalType: 'sessions',
   };
 }
 
+/**
+ * ⚠️ ĐÃ XOÁ NHÁNH «phiên đang chạy» (2026-09-01) — nó KHÔNG ĐI TỚI ĐƯỢC.
+ * `FocusIntro` (nơi gọi DUY NHẤT của hàm này) mở đầu bằng `if (hasFocusSessionInProgress)
+ * return null`, nên nhánh ấy cùng toàn bộ `getLiveSessionIntroCopy` chưa từng chạy một lần.
+ * Nó là tàn dư của quyết định "màn Focus tĩnh: phiên đang chạy thì chỉ còn đồng hồ" — và một
+ * khối mã chết mang chú thích mô tả một tính năng SỐNG là thứ nói dối phiên sau.
+ * Muốn dựng lại lời chào lúc đang chạy thì lấy từ lịch sử git, đừng để nó nằm đây giả vờ sống.
+ */
 function getFocusIntroCopy({
   greeting,
   sessionsCompletedToday,
   focusMinutesToday,
-  weekdayLabel,
   dailyGoalType,
   dailyGoalSessions,
   dailyGoalMinutes,
-  hasFocusSessionInProgress,
-  isFocusSessionPaused,
 }) {
-  if (hasFocusSessionInProgress) {
-    const countValue = dailyGoalType === 'minutes' ? focusMinutesToday : sessionsCompletedToday;
-    const remainingValue = Math.max(
-      0,
-      dailyGoalType === 'minutes'
-        ? dailyGoalMinutes - focusMinutesToday
-        : dailyGoalSessions - sessionsCompletedToday,
-    );
-
-    return getLiveSessionIntroCopy({
-      greeting,
-      weekdayLabel,
-      countValue,
-      remainingValue,
-      isFocusSessionPaused,
-      goalType: dailyGoalType,
-    });
-  }
 
   if (dailyGoalType === 'minutes') {
     return getMinuteGoalIntroCopy({
       greeting,
       focusMinutesToday,
-      weekdayLabel,
       dailyGoalMinutes,
     });
   }
@@ -1256,7 +408,6 @@ function getFocusIntroCopy({
   return getSessionGoalIntroCopy({
     greeting,
     sessionsCompletedToday,
-    weekdayLabel,
     dailyGoalSessions,
   });
 }
@@ -1269,11 +420,6 @@ function getGreeting(hour) {
   return 'Chào buổi khuya';
 }
 
-function getWeekdayLabel() {
-  const weekday = getVietnamDayOfWeek();
-  const map = ['Chủ nhật', 'Thứ hai', 'Thứ ba', 'Thứ tư', 'Thứ năm', 'Thứ sáu', 'Thứ bảy'];
-  return map[weekday] ?? 'Hôm nay';
-}
 
 export default function App() {
   useGameLoop();
@@ -1294,7 +440,6 @@ export default function App() {
   const closeDisasterModal = useGameStore((s) => s.closeDisasterModal);
   const isDisasterModalOpen = useGameStore((s) => s.ui.disasterModalOpen);
   const timerSessionRunning = useGameStore((s) => s.timerSession.isRunning);
-  const timerSessionPausedAt = useGameStore((s) => s.timerSession.pausedAt);
   const refreshDailyMissions = useGameStore((s) => s.refreshDailyMissions);
   const openWeeklyReport = useGameStore((s) => s.openWeeklyReport);
   const missionBoundaryRef = useRef({ day: localDateStr(), week: localWeekMondayStr() });
@@ -1323,6 +468,30 @@ export default function App() {
     refreshDailyMissions();
     initSync();
   }, [storesHydrated, hydrateEngines, refreshPushState, checkRankChallengeDeadlines, refreshDailyMissions]);
+
+  /*
+    ⚠️ CỬA SOI MÀN-SAU-PHIÊN (2026-09-02). Khoảnh khắc dopamine lớn nhất của app từng là màn DUY
+    NHẤT không ai soi được: nó sống trong `state.ui`, mà `ui` nằm ngoài `partialize` nên gieo bằng
+    `--fixture`/`--ls` không tới, store lại không lộ ra `window` nên `--probe` cũng không mở được,
+    còn đường cuối cùng — bấm "Bắt đầu" — thì bị CẤM trên dev (dùng chung một dòng Supabase với
+    bản thật của Đàm). Ba đường cùng bịt ⇒ mọi bản vá cho màn ấy đều phải ship mù.
+
+    ⚠️ VÌ SAO AN TOÀN, đã ĐO chứ không suy đoán: mọi hộp thoại sau phiên CHỈ ĐỌC `ui`, và mọi hành
+    động đóng của chúng cũng CHỈ ghi `ui` (phần thưởng đã được `completeFocusSession` cấp từ
+    trước — các màn này thuần tuý trình bày lại). Cộng với việc `ui` nằm ngoài `partialize`, cửa
+    này KHÔNG ghi localStorage, KHÔNG lên Supabase, KHÔNG bắt đầu phiên nào. Lời hứa ấy được canh
+    bằng `src/dev/previewStage.test.js`.
+
+    Chạy SAU `storesHydrated` vì `merge` của persist trả về `current.ui`; dựng cảnh trước lúc ấy
+    thì nó bị thay lại bằng `ui` mặc định — một lỗi im lặng đúng kiểu khó truy nhất.
+  */
+  useEffect(() => {
+    if (!storesHydrated) return;
+    const scene = readPreviewScene(window.location.search);
+    if (!scene) return;
+    const patch = buildPreviewUi(scene);
+    if (patch) useGameStore.setState((prev) => ({ ui: { ...prev.ui, ...patch } }));
+  }, [storesHydrated]);
 
   useEffect(() => {
     const handleVisibilityChange = () => {
@@ -1388,7 +557,6 @@ export default function App() {
   }, [storesHydrated, checkEraCrisisDeadlines, refreshDailyMissions, timerSessionRunning]);
 
   const isOnBreak = useGameStore((s) => s.ui.isOnBreak);
-  const breakSecsLeft = useGameStore((s) => s.ui.breakSecondsLeft);
   const breakStartedAt = useGameStore((s) => s.breakSession.startedAt);
   const breakTotalSeconds = useGameStore((s) => s.breakSession.totalSeconds);
   const breakIsRunning = useGameStore((s) => s.breakSession.isRunning);
@@ -1463,11 +631,12 @@ export default function App() {
 
   const [activeTab, setActiveTab] = useState('focus');
   const [inventoryTab, setInventoryTab] = useState('skills');
-  const [collectionTab, setCollectionTab] = useState('relics');
+  const nextAction = useNextAction();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [supportRailOpen, setSupportRailOpen] = useState(true);
   const [focusFullscreen, setFocusFullscreen] = useState(false);
   const enterMotion = useEnterMotion();
+  const pressMotion = usePressMotion();
   // ⚠️ NGOẠI LỆ CÓ LÝ DO — cột phải THU GỌN chứ không XUẤT HIỆN. `enter` là opacity+y nên nó
   // không diễn đạt được một bề ngang đang co lại, và bề ngang ấy do chính `animate` khai (không
   // có lớp CSS nào đặt nó) ⇒ phải dùng `useSnapMotion`: bỏ hẳn thì cột bung ra chiếm cả màn hình.
@@ -1505,9 +674,33 @@ export default function App() {
   // ⚠️ MỌI đường vào điều hướng phải đi qua đây, kể cả khi nơi gọi truyền id CŨ
   // (`skills`/`collection`/`achievements`) — `resolveTabTarget` dịch chúng thành
   // "tab Hành trang + tab con", nên không nơi gọi nào phải biết chuyện gộp tab đã xảy ra.
-  const selectTab = (tab) => {
-    const target = resolveTabTarget(tab);
-    if (target.sub) setInventoryTab(target.sub);
+  /**
+   * BẤM "HÀNH TRANG" THÌ RƠI VÀO TAB CON CÓ VIỆC LÀM ĐƯỢC.
+   *
+   * ⚠️ Đo trước: tab con mặc định luôn là "Kỹ năng", và đó là màn **duy nhất trong ba màn thường
+   * không có nút nào bấm được** — với 1 SP thì cả 6 nhánh, cả 32 kỹ năng chưa mở đều là chữ xám
+   * (nút rẻ nhất 2 SP), và phải ~11 ngày nữa nút đầu tiên mới xuất hiện. Tức mỗi lần mở túi đồ,
+   * Đàm gặp 83 con số và 0 việc làm.
+   *
+   * ⚠️ KHÔNG THÊM MỘT KHỐI CHỮ "LÀM ĐƯỢC NGAY" — câu ấy đã có ở màn Tập trung (`useNextAction`),
+   * chép sang đây là đúng cái lạm phát thông tin bị cấm. Thứ còn thiếu không phải một lời nhắc,
+   * mà là **đứng đúng chỗ**. Chỗ này không in thêm một chữ nào; nó chỉ chọn tab.
+   *
+   * ⚠️ ĐẶT Ở ĐÂY, KHÔNG ĐẶT TRONG MỘT `useEffect`. Đây là hệ quả của một CÚ BẤM, và một effect
+   * gọi `setState` vừa bị `react-hooks/set-state-in-effect` chặn — đúng đắn: nó sẽ chạy lại mỗi
+   * lần `nextAction` đổi và có thể giật tab dưới tay Đàm trong lúc anh đang ngồi trong Hành trang.
+   * Ở đây nó chỉ nổ khi người gọi nói ĐÍCH DANH "inventory" (tức cú bấm ở thanh điều hướng); mọi
+   * lời gọi mang sẵn tab con — thông báo, cái chuông, `selectTab('skills')` — đều đi nhánh trên và
+   * giữ nguyên đích của chúng.
+   */
+  const selectTab = (tab, collectionTab = null) => {
+    const target = resolveTabTarget(tab, collectionTab);
+    if (target.sub) {
+      setInventoryTab(target.sub);
+    } else if (target.tab === 'inventory' && nextAction?.action?.tab) {
+      const goiY = resolveTabTarget(nextAction.action.tab, nextAction.action.collectionTab);
+      if (goiY.tab === 'inventory' && goiY.sub) setInventoryTab(goiY.sub);
+    }
     setActiveTab(target.tab);
     if (target.tab !== 'focus') {
       setFocusFullscreen(false);
@@ -1594,7 +787,6 @@ export default function App() {
     };
   }, [activeTab, isDesktop, isWideViewport, showFocusFullscreen, sidebarOpen, supportRailOpen]);
 
-  const weekdayLabel = getWeekdayLabel();
   const greeting = getGreeting(getVietnamHour());
   const todayKey = localDateStr();
   // ⚠️ Hai con số này dùng chung công thức với vòng MỤC TIÊU NGÀY quanh đồng hồ
@@ -1614,18 +806,18 @@ export default function App() {
   // xuôi hơn) và cả app TRẮNG XOÁ: `const` trong vùng chết tạm thời ném `ReferenceError` ngay
   // lúc render. ESLint KHÔNG bắt (`no-use-before-define` không bật), `npm test` KHÔNG bắt (test
   // đọc mã nguồn, không dựng React), `npm run build` KHÔNG bắt — chỉ ảnh chụp mới thấy.
+  // Mốc chuỗi kế tiếp — dùng làm MẪU SỐ cho ô "Chuỗi" ở thanh trên. CÙNG hàm mà `FocusRail` và
+  // `useStreakMilestone` dùng, nên ba chỗ không thể nói lệch nhau. `null` khi đã mở hết mốc.
+  const streakMilestoneTarget = calculateStreakMilestoneProgress(currentStreak).nextMilestone?.days ?? null;
   const focusMinutesToday = sumFocusMinutesOnDay(history, todayKey);
   const focusHoursToday = formatDurationMinutes(focusMinutesToday);
   const hasFocusSessionInProgress = timerSessionRunning && !isOnBreak;
-  const isFocusSessionPaused = hasFocusSessionInProgress && Boolean(timerSessionPausedAt);
   const handleNotificationNavigate = (action) => {
     if (!action) return;
-    if (action.collectionTab) {
-      setCollectionTab(action.collectionTab);
-      selectTab('collection');
-    } else if (action.tab) {
-      selectTab(action.tab);
-    }
+    // ⚠️ `collectionTab` không còn là một tab con, nhưng nó VẪN nằm trong thông báo đã lưu của Đàm.
+    // Nên nó được TRUYỀN cho `resolveTabTarget` (qua `selectTab`) chứ không bị bỏ qua: chỉ mình nó
+    // phân biệt được `relics` (nay ở "Huy hiệu") với `workshop`/`blueprints` (nay ở "Công trình").
+    if (action.tab) selectTab(action.tab, action.collectionTab);
   };
 
   const renderTopRail = () => (
@@ -1648,6 +840,7 @@ export default function App() {
         sessionsCompletedToday={sessionsCompletedToday}
         focusHoursToday={focusHoursToday}
         currentStreak={currentStreak}
+        streakMilestoneTarget={streakMilestoneTarget}
         totalEP={totalEP}
         notificationControl={<NotificationCenter onNavigate={handleNotificationNavigate} />}
       />
@@ -1718,17 +911,19 @@ export default function App() {
                       resetKeys={[activeTab, isDesktop, isWideViewport, focusFullscreen]}
                       variant="section"
                     >
-                      <div className="mx-auto max-w-[860px] px-5 pb-[calc(env(safe-area-inset-bottom)+7.4rem)] pt-8 md:px-8 md:pb-28 lg:px-12 lg:pb-8 xl:px-16">
+                      {/* ⚠️ `pt-4` Ở KHỔ ĐIỆN THOẠI, `md:pt-8` giữ nguyên cho màn rộng (vòng 20, 2026-08-30).
+                          32px khoảng trắng trên đỉnh là rẻ ở máy bàn và rất đắt ở 390px: nó nằm
+                          trong đúng 774px mà thanh tab NỔI chừa lại, tức nó đang đẩy hàng nút
+                          chính xuống dưới thanh tab. Cắt xuống 16px không mất một chữ nào. */}
+                      <div className="mx-auto max-w-[860px] px-5 pb-[calc(env(safe-area-inset-bottom)+7.4rem)] pt-4 md:px-8 md:pb-28 md:pt-8 lg:px-12 lg:pb-8 xl:px-16">
                         <FocusIntro
                           greeting={greeting}
                           sessionsCompletedToday={sessionsCompletedToday}
                           focusMinutesToday={focusMinutesToday}
-                          weekdayLabel={weekdayLabel}
                           dailyGoalType={dailyGoalType}
                           dailyGoalSessions={dailyGoalSessions}
                           dailyGoalMinutes={dailyGoalMinutes}
                           hasFocusSessionInProgress={hasFocusSessionInProgress}
-                          isFocusSessionPaused={isFocusSessionPaused}
                         />
                         {/*
                           Một dòng: phiên này đang đẩy công trình nào tới đâu.
@@ -1744,43 +939,30 @@ export default function App() {
                           <FocusCityTease />
                         </Suspense>
                         {/*
-                          Dòng thứ hai, ngay dưới dòng "đang xây" — và hai dòng này CỐ Ý đứng cạnh
-                          nhau vì chúng trả lời hai nửa của cùng một câu hỏi: dòng trên nói *phiên
-                          này đang đẩy cái gì tới đâu*, dòng dưới nói *ngoài việc bấm Bắt đầu thì
-                          còn việc gì đang chờ*. Cùng lý do bố cục: cột GIỮA, trên nếp gấp iPhone.
-                          Cả hai đều tự IM khi không có gì để nói, nên không có ngày nào màn Tập
-                          trung mọc ra hai dòng rỗng.
-                        */}
-                        {/*
-                          ⚠️ ẨN KHI PHIÊN ĐANG CHẠY. Dòng này là một cái NÚT, và nó mời đi sang tab
-                          khác — đặt nó giữa màn hình tập trung trong lúc Đàm đang tập trung là mời
-                          anh rời khỏi đúng việc anh vừa bấm nút để làm. Soi ảnh lúc đồng hồ đang
-                          chạy mới thấy: nó nằm ngay trên đồng hồ, sáng màu nhấn.
-                          `FocusCityTease` và `FocusMoment` thì Ở LẠI: chúng nói *phiên này
-                          đang đẩy cái gì tới đâu* — tức động lực để NGỒI YÊN, không phải lời mời đi.
-                          Cùng luật mà `FocusCoachMobile` đã dùng (`hidden={hasFocusSessionInProgress}`).
-                        */}
-                        {!hasFocusSessionInProgress && (
-                          <FocusNextAction onNavigate={handleNotificationNavigate} />
-                        )}
-                        {/*
-                          ⚠️ MỘT DÒNG DUY NHẤT CHO BA NGUỒN (gộp 2026-08-30). Trước đó đây là ba
-                          component riêng — đếm ngược chặng · sắp chạm mốc chuỗi · tổng kết tuần
-                          chưa xem — mỗi cái tự quyết có hiện hay không, và ba cái gác ấy ĐỘC LẬP
-                          nhau. Cộng `FocusCityTease` và `FocusNextAction` là **năm dòng** có thể
-                          cùng nổ (~130px), đủ đẩy đồng hồ xuống dưới nếp gấp — đúng cái vừa mất
-                          công kéo lên. Ba dòng ấy lại trả lời CÙNG một câu (*bấm Bắt đầu bây giờ
-                          thì được gì*), chỉ khác thang thời gian, nên gộp vừa an toàn hơn vừa
-                          đúng hơn: ba câu trả lời cùng lúc cho một câu hỏi là nhiễu.
-                          Thứ tự ưu tiên và lý do từng bậc: xem `FocusMoment.jsx`.
-                          ⚠️ Nó KHÔNG bọc trong `!hasFocusSessionInProgress`: chỉ nhánh "tổng kết
-                          tuần" là lời mời đi chỗ khác, và chính `pickFocusMoment` đã tự im nhánh
-                          ấy khi phiên đang chạy. Bọc cả cụm thì mất luôn ba nguồn còn lại — những
-                          thứ nói lý do NGỒI YÊN cho hết phiên.
+                          ⚠️ MỘT DÒNG DUY NHẤT CHO NĂM NGUỒN — và đây là dòng thứ HAI, cũng là dòng
+                          CUỐI, của cột giữa. Vòng 20 (2026-08-30) nhập nốt `FocusNextAction` vào
+                          bộ chọn này sau khi đo được ở khung 390px: cụm ba dòng nhắc cao **84px**
+                          và đẩy hàng nút chính xuống y=773…815, trong khi thanh tab NỔI (nền ĐỤC,
+                          không alpha) bắt đầu ở y=774 ⇒ nút Đàm mở app để bấm bị che gần trọn.
+                          Không cổng nào kêu; chỉ ảnh chụp ĐÚNG KHUNG 844px thấy (ảnh `--full` là
+                          ảnh ghép nên thanh `fixed` không đè lên gì — đừng dùng nó để kết luận về
+                          nếp gấp).
+
+                          VAI TRÒ TÁCH BẠCH, đó mới là lý do dừng ở HAI dòng chứ không phải một:
+                          · `FocusCityTease` ở trên = lý do NGỒI YÊN (phiên này đẩy cái gì tới đâu)
+                          · dòng này              = MỘT lời mời duy nhất, chọn từ năm nguồn
+                          Trần xấu nhất do đó là 2 dòng ~41px, khoá bằng CẤU TRÚC chứ không bằng
+                          "hiếm khi cả ba cùng có gì để nói". Thứ tự ưu tiên: xem `FocusMoment.jsx`.
+
+                          ⚠️ Nó KHÔNG bọc trong `!hasFocusSessionInProgress`: chỉ hai nhánh "tổng
+                          kết tuần" và "việc tiếp theo" là lời mời đi chỗ khác, và chính
+                          `pickFocusMoment` đã tự im HAI nhánh ấy khi phiên đang chạy. Bọc cả cụm
+                          thì mất luôn ba nguồn còn lại — những thứ nói lý do NGỒI YÊN cho hết phiên.
                         */}
                         <FocusMoment
                           weeklyUnseen={weeklyReportUnseen}
                           onOpenWeekly={openWeeklyReport}
+                          onNavigate={handleNotificationNavigate}
                           sessionInProgress={hasFocusSessionInProgress}
                         />
                         <div className="mt-6">
@@ -1868,7 +1050,7 @@ export default function App() {
                 area="workspace hiện tại"
                 description="Nội dung tab đang mở gặp lỗi. Chuyển tab hoặc thử render lại khu vực này để tiếp tục."
                 onError={WORKSPACE_ERROR_LOGGER}
-                resetKeys={[activeTab, inventoryTab, collectionTab]}
+                resetKeys={[activeTab, inventoryTab]}
                 variant="section"
               >
                 <AnimatePresence mode="wait">
@@ -1880,9 +1062,7 @@ export default function App() {
                         topRail={!isDesktop && !showFocusFullscreen ? renderTopRail() : null}
                       >
                         <InventoryView
-                          collectionTab={collectionTab}
                           onChange={setInventoryTab}
-                          onCollectionChange={setCollectionTab}
                           sub={inventoryTab}
                         />
                       </ShellPane>
@@ -2033,12 +1213,22 @@ export default function App() {
               boxShadow: '0 12px 28px rgba(31,30,29,0.08)',
             }}
           >
+            {/*
+              ⚠️ NĂM NÚT NÀY LÀ THỨ ĐÀM CHẠM NHIỀU NHẤT TRONG CẢ APP, VÀ CHÚNG KHÔNG NHÚC NHÍCH
+              KHI BẤM (2026-09-01). Chúng là `<button>` trần chỉ có `transition-colors`, tức phản
+              hồi duy nhất là màu đổi SAU khi tab mới đã dựng xong. `usePressMotion()` là nhịp
+              BẤM sẵn có của dự án (`lib/motionPresets.js`) — nó tự im khi Đàm bật "Giảm chuyển
+              động", nên chỗ gọi không phải tự kiểm.
+              Đây là dopamine tốn **0 chữ, 0 thẻ, 0 tiếng**: thứ vừa bấm phải cho biết nó đã nhận
+              cú bấm, ngay lúc ngón tay còn ở đó.
+            */}
             {MOBILE_PRIMARY_TABS.map((tab) => {
               const active = activeTab === tab.id;
               return (
-                <button
+                <Motion.button
                   key={tab.id}
                   type="button"
+                  {...pressMotion}
                   onClick={() => { selectTab(tab.id); setMoreMenuOpen(false); }}
                   className="relative flex min-h-[48px] flex-1 flex-col items-center justify-center gap-0.5 rounded-[16px] px-1 py-1.5 text-[10px] font-medium leading-none transition-colors"
                   style={{
@@ -2068,7 +1258,7 @@ export default function App() {
                       style={{ background: 'var(--accent)' }}
                     />
                   )}
-                </button>
+                </Motion.button>
               );
             })}
             {(() => {
@@ -2198,7 +1388,8 @@ function OverlayStack({
   const hasLevelUp = levelUpQueueLength > 0;
 
   /**
-   * ⚠️ KHOẢNH KHẮC THÀNH PHỐ VẪN CHẠY SAU **MỌI** PHIÊN — đừng buộc nó vào hộp thoại.
+   * ⚠️ KHOẢNH KHẮC THÀNH PHỐ KHÔNG BỊ BUỘC VÀO HỘP THOẠI PHẦN THƯỞNG — nhưng từ
+   * 2026-08-30 nó chỉ chạy khi một công trình THẬT SỰ vừa xong (xem khối ngay dưới).
    * Trước đây nó nằm trong `RewardSequence`, mà `RewardSequence` chỉ dựng khi hộp
    * thoại phần thưởng bật. Nếu cứ để nguyên như thế sau khi hộp thoại thôi tự bật
    * thì lễ mừng "vừa xây xong một công trình" sẽ **biến mất trong im lặng** ở mọi
@@ -2211,7 +1402,27 @@ function OverlayStack({
    * `momentSeen` tự sạch nhờ `key` ở `GlobalOverlays` (đổi mỗi lần hộp thoại bật/tắt),
    * đúng mẹo vòng đời `RewardSequence` từng dùng — không cần effect đi dọn state.
    */
-  const showMoment = lootModalOpen && !!growth && !momentSeen && !reduceMotion;
+  /*
+    ⚠️ CHỈ CHẶN MÀN HÌNH KHI MỘT CÔNG TRÌNH THẬT SỰ VỪA XONG (2026-08-30).
+    `buildGrowthMoment` trả về ba loại: `built` (công trình vừa hoàn thành) · `scaffold` (giàn
+    giáo nhích một nấc) · `tick` (thành phố nhúc nhích: thêm một đoạn đường, thêm một cư dân).
+    Trước bản vá này CẢ BA đều dựng một lớp phủ TOÀN MÀN HÌNH 3,2 giây, và vì Đàm gần như luôn có
+    một công trình trong hàng chờ nên nó nổ sau **~100% số phiên**.
+
+    Đo được: 3,2 giây × 579 phiên = 1.853 giây = **30,9 PHÚT** trong 180 ngày, để nói lại đúng câu
+    đang in THƯỜNG TRỰC ngay trên màn Tập trung ("Đang xây Thương Điếm · còn 2 phiên") — hai chỗ
+    đọc CÙNG một nguồn (`snapshot.layout.scaffolds`). Nó cũng bắt `blocking = true`, tức chặn luôn
+    mọi thứ khác đang xếp hàng.
+
+    ⇒ `built` GIỮ NGUYÊN quyền chặn màn hình: nó xảy ra mỗi 4–9 phiên (`sessionsToComplete` của
+    bản vẽ kỷ 8 là 4/6/6/9), nó là tin THẬT, và nó là lúc thành phố của Đàm đổi hình. Hai loại
+    còn lại thôi chặn — thông tin của chúng đã nằm sẵn, thường trực, ở đúng màn hình Đàm đang
+    nhìn. Đây là "ít hơn nhưng đánh mạnh hơn": lễ mừng hiếm đi 5–9 lần thì mỗi lần mới có nghĩa.
+    ⚠️ KHÔNG đụng một dòng nào trong `src/components/city/` hay `useCityMoment.js` — chỉ đổi ĐIỀU
+    KIỆN DỰNG ở đây. Engine vẫn tính đủ ba loại; ngày nào muốn cho `scaffold` một thẻ toast thì
+    dữ liệu vẫn còn nguyên.
+  */
+  const showMoment = lootModalOpen && growth?.moment?.kind === 'built' && !momentSeen && !reduceMotion;
 
   // Hộp thoại phần thưởng mở THẲNG chỉ khi lên kỷ; ngoài ra phải do Đàm bấm vào thẻ.
   // `!showMoment` giữ đúng thứ tự cũ: lễ mừng xong rồi mới tới phần thưởng.
@@ -2409,9 +1620,9 @@ function TopRail({
   streakRisk,
   level,
   levelPct,
-  sessionsCompletedToday,
   focusHoursToday,
   currentStreak,
+  streakMilestoneTarget,
   totalEP,
   notificationControl,
 }) {
@@ -2528,10 +1739,24 @@ function TopRail({
         */}
         <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] items-center gap-2 lg:hidden">
           <TinyStat compact label="Hôm nay" value={focusHoursToday} />
+          {/*
+            ⚠️ Ô CHUỖI CÓ MẪU SỐ (vòng 20, 2026-08-30). Nó vốn hiện đúng một con số trần — "1" —
+            và theo luật sẵn có của dự án thì *một con số không có mẫu số không phải một mục
+            tiêu*: nó nói "đang ở đâu" mà không nói "còn bao xa". Mốc chuỗi kế tiếp ĐÃ được tính
+            sẵn (`calculateStreakMilestoneProgress`, dùng chung với `FocusRail` và
+            `useStreakMilestone`) nhưng cả hai chỗ ấy đều là `hidden … lg:flex` hoặc một dòng chỉ
+            hiện khi còn ≤3 ngày, nên ở iPhone con số này chưa bao giờ có đích.
+            ⚠️ KHÔNG tốn thêm một điểm ảnh chiều cao nào: ô đã cao 50px và dòng giá trị vẫn là
+            MỘT dòng ("1 / 7" thay cho "1"). Đã đo — không phải đoán, vì đúng ô hàng này từng bị
+            một bản vá "cho gọn" làm CAO THÊM khi gộp hai số vào một chuỗi (xem ghi chú trên).
+            Đã mở hết mốc thì thôi mẫu số — lúc ấy không còn cái đích nào để nói.
+          */}
           <TinyStat
             compact
             label={streakRisk?.atRisk ? 'Chuỗi ⚠' : 'Chuỗi'}
-            value={currentStreak.toLocaleString()}
+            value={streakMilestoneTarget
+              ? `${currentStreak.toLocaleString()} / ${streakMilestoneTarget}`
+              : currentStreak.toLocaleString()}
             accent
             atRisk={streakRisk?.atRisk === true}
           />
@@ -2612,33 +1837,21 @@ function FocusIntro({
   greeting,
   sessionsCompletedToday,
   focusMinutesToday,
-  weekdayLabel,
   dailyGoalType,
   dailyGoalSessions,
   dailyGoalMinutes,
   hasFocusSessionInProgress,
-  isFocusSessionPaused,
 }) {
   // Màn Focus tĩnh: khi phiên đang chạy/tạm dừng, ẩn lời chào lớn để chỉ còn đồng hồ.
   if (hasFocusSessionInProgress) return null;
-  const { title, remainingValue, statusTemplate } = getFocusIntroCopy({
+  const { title } = getFocusIntroCopy({
     greeting,
     sessionsCompletedToday,
     focusMinutesToday,
-    weekdayLabel,
     dailyGoalType,
     dailyGoalSessions,
     dailyGoalMinutes,
-    hasFocusSessionInProgress,
-    isFocusSessionPaused,
   });
-  const emphasisValues = {
-    countLabel: formatDailyGoalValue(
-      dailyGoalType === 'minutes' ? focusMinutesToday : sessionsCompletedToday,
-      dailyGoalType,
-    ),
-    remainingLabel: formatDailyGoalValue(remainingValue, dailyGoalType),
-  };
 
   return (
     /*
@@ -2658,21 +1871,25 @@ function FocusIntro({
         số thì không phải mục tiêu»). Theo luật sẵn có của dự án — *hai chỗ nói cùng một chuyện
         thì chỗ nói ít hơn phải nhường* — chỗ nhường là câu này.
 
-      GIỮ LẠI `statusTemplate` ("Bạn còn 5 phiên nữa là đủ nhịp hôm nay") vì nó là nửa HÀNH
-      ĐỘNG ĐƯỢC của cặp câu, và nó không trùng với ai. Hai lớp gỡ đi kéo dòng việc-tiếp-theo
-      («Đang xây Cảng Biển Lớn · còn 4 phiên») lên gần đỉnh màn hình — đó mới là thứ trả lời
-      "làm phiên này để được gì".
+      · **Câu `statusTemplate`** ("Bạn còn 5 phiên nữa là đủ nhịp hôm nay.") — GỠ NỐT (2026-09-01).
+        Vòng trước GIỮ nó với lý do *"nó là nửa hành động được của cặp câu, và nó không trùng với
+        ai"*. Lý lẽ ấy tự mâu thuẫn với đoạn ngay trên: `progressTemplate` bị gỡ **vì** dòng dưới
+        đồng hồ đã "nói được còn bao xa" — mà đó đúng là việc câu này đang làm. Đo ở khung 390px:
+        phụ đề ở y=288 và «Phiên 0/5 hôm nay» ở y=626, **cùng trên một màn hình**, cùng nói một
+        trạng thái; bản dưới đồng hồ có cả tử lẫn mẫu và nằm ngay chỗ ra quyết định.
+        Cái được không chỉ là 27px chữ: nó là BIÊN AN TOÀN của nút chính ở ca tiêu đề DÀI NHẤT —
+        đo được **22px → 49px**. Màn này đã tụt xuống dưới thanh tab HAI lần (vòng 19 và 20), nên
+        biên là thứ đáng mua.
+        Khối chào còn đúng một dòng: TIẾNG NÓI. Phần hành-động-được nằm ở hai dòng ngay dưới
+        («Đang xây … · còn 4 phiên» · «Tổng kết tuần trước») và ở «Phiên 0/5» dưới đồng hồ.
     */
-    <div className="mb-4 flex flex-wrap items-baseline gap-x-3 gap-y-1 border-t px-1 pt-4" style={{ borderColor: 'var(--line)' }}>
+    <div className="mb-3 border-t px-1 pt-3 md:mb-4 md:pt-4" style={{ borderColor: 'var(--line)' }}>
       <h1
         className="text-[19px] font-semibold leading-snug tracking-[-0.01em] text-[var(--ink)] md:text-[21px]"
         style={{ fontFamily: 'var(--skin-font-display)' }}
       >
         {title}
       </h1>
-      <p className="w-full text-[12.5px] leading-[1.5] text-[var(--muted)] md:max-w-[560px]">
-        {renderFocusIntroCopy(statusTemplate, emphasisValues)}
-      </p>
     </div>
   );
 }
@@ -2822,12 +2039,32 @@ function SubTabs({ items, onChange, value }) {
 }
 
 /**
- * "Hành trang" — một tab điều hướng, ba màn cũ nguyên vẹn bên trong.
+ * "Hành trang" — MỘT hàng tab, ba màn.
  *
- * Đây là việc GOM NHÓM, không phải viết lại: mỗi tab con vẫn dựng đúng component cũ, với đúng
- * state cũ (`collectionTab` vẫn do `App` giữ, nên mở thông báo "Xưởng" vẫn rơi thẳng vào Xưởng).
+ * ⚠️ TRƯỚC 2026-09-01 CHỖ NÀY CÓ BA HÀNG TAB CHỒNG LÊN NHAU và chúng ăn **246px = 29,1% màn hình
+ * điện thoại** trước khi hiện chữ đầu tiên (đo ở 390×844: hàng 1 y=222→274 · hàng 2 y=298→349 ·
+ * hàng 3 y=416→468; ở màn Kho báu dòng nội dung đầu bắt đầu ở y=373, tức 44,2% màn hình đã trôi
+ * qua). Tệ hơn: cả ba hàng dùng CHUNG component `SubTabs` nên bo góc, màu nền, cỡ chữ giống hệt
+ * nhau — **không có gì nói hàng nào là cha, hàng nào là con.**
+ *
+ * Ba màn nay gom theo CÂU HỎI người chơi đang hỏi, không theo loại dữ liệu:
+ *   Kỹ năng   → "tôi tiêu điểm vào đâu"
+ *   Công trình→ "tôi xây gì tiếp" — gộp Bản vẽ (nghiên cứu) + Xưởng (dựng). Trước đây chúng là
+ *               HAI tab, và màn Xưởng phải in hẳn một câu bảo người chơi *"Đi sang mục Bản vẽ"* —
+ *               đó là bằng chứng chúng là hai nửa của MỘT vòng lặp bị cắt đôi.
+ *   Huy hiệu  → "tôi đã giành được gì" — gộp Thành tích + Di vật, cả hai đều là phần thưởng vĩnh
+ *               viễn đã kiếm được.
+ *
+ * ⚠️ BA ID GIỮ NGUYÊN (`skills` · `collection` · `achievements`) — đổi nhãn và nội dung, KHÔNG đổi
+ * id. Thông báo đã LƯU trong localStorage của Đàm mang `{ tab: 'collection', collectionTab: … }`,
+ * và `appNavigation.test.js` khoá đúng bộ ba id này.
+ *
+ * ⚠️ ĐÃ XOÁ tab "Lịch sử": nó dài **98.568px = 117 màn hình điện thoại**, chứa 4.362 con số,
+ * **0 nút bấm được**, và `grep` toàn dự án ra **0 thông báo nào trỏ tới nó** (so với `workshop` 8
+ * chỗ, `blueprints` 4, `relics` 1). Cùng mảng `history` ấy đã được màn Thống kê đọc và tóm tắt.
+ * Nó là một cái tên trong hàng tab bắt Đàm phải đọc và loại trừ mỗi lần đi tìm thứ khác.
  */
-function InventoryView({ collectionTab, onCollectionChange, onChange, sub }) {
+function InventoryView({ onChange, sub }) {
   return (
     <div>
       <SubTabs items={INVENTORY_TABS} onChange={onChange} value={sub} />
@@ -2837,140 +2074,28 @@ function InventoryView({ collectionTab, onCollectionChange, onChange, sub }) {
           <SkillTree onOpenAchievements={() => onChange?.('achievements')} />
         </DeferredTabContent>
       )}
-      {sub === 'collection' && <CollectionView onChange={onCollectionChange} sub={collectionTab} />}
+      {sub === 'collection' && (
+        <Suspense fallback={<TabLoadingState />}>
+          {/* Xưởng TRƯỚC Bản vẽ: Xưởng là nơi có việc làm ngay (hàng chờ đang chạy, công trình
+              nâng cấp được), còn Bản vẽ là nơi tiêu RP cho việc SAU. Thứ tự cũ bắt người chơi đi
+              qua 2.745px bảng giá mới tới được chỗ bấm. */}
+          <BuildingWorkshop />
+          <div className="mt-6">
+            <BlueprintInventory />
+          </div>
+        </Suspense>
+      )}
       {sub === 'achievements' && (
         <DeferredTabContent>
           <Achievements />
+          <div className="mt-6">
+            <Suspense fallback={<TabLoadingState />}>
+              <RelicInventory />
+            </Suspense>
+          </div>
         </DeferredTabContent>
       )}
     </div>
   );
 }
 
-function CollectionView({ sub = 'relics', onChange }) {
-  return (
-    <div>
-      <SubTabs items={COLLECTION_TABS} onChange={onChange} value={sub} />
-
-      <Suspense fallback={<TabLoadingState />}>
-        {sub === 'relics' && <RelicInventory />}
-        {sub === 'blueprints' && <BlueprintInventory />}
-        {sub === 'workshop' && <BuildingWorkshop />}
-        {sub === 'history' && <SessionHistory />}
-      </Suspense>
-    </div>
-  );
-}
-
-function SessionHistory() {
-  const history = useGameStore((s) => s.history);
-
-  if (history.length === 0) {
-    return (
-      <div
-        className="rounded-[22px] border py-14 text-center"
-        style={{
-          borderColor: 'var(--line)',
-          background: 'var(--panel)',
-          boxShadow: '0 12px 26px rgba(31,30,29,0.04)',
-        }}
-      >
-        <div className="serif text-[28px] text-[var(--muted)]">Chưa có lịch sử phiên</div>
-        <p className="mt-2 text-[14px] text-[var(--muted)]">Bắt đầu một phiên mới để tạo mốc đầu tiên.</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-3">
-      {history.map((entry) => (
-        <article
-          key={entry.id}
-          className="rounded-[22px] border p-4"
-          style={{
-            borderColor: 'var(--line)',
-            background: 'var(--panel)',
-            boxShadow: '0 10px 24px rgba(31,30,29,0.04)',
-          }}
-        >
-          <div className="flex items-start gap-4">
-            <div
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] border"
-              style={{
-                borderColor: 'var(--line)',
-                background: 'var(--item-bg-solid)',
-              }}
-            >
-              <span className="mono text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
-                {entry.jackpot ? 'JP' : ((entry.refinedEarned ?? 0) > 0 || (entry.minutes ?? 0) >= 45) ? 'RF' : 'PM'}
-              </span>
-            </div>
-
-            <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="serif text-[20px] font-medium text-[var(--ink)]">{entry.minutes} phút</span>
-                <span className="rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em]" style={{ borderColor: 'var(--line-2)', color: 'var(--muted)' }}>
-                  {entry.tier}
-                </span>
-                {entry.multiplier > 1 && (
-                  <span className="rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em]" style={{ borderColor: 'rgba(201,100,66,0.22)', color: 'var(--accent)' }}>
-                    ×{entry.multiplier.toFixed(1)}
-                  </span>
-                )}
-              </div>
-
-              <p className="mt-1 text-[13px] text-[var(--muted)]">
-                +{(entry.xpEarned ?? entry.epEarned ?? 0).toLocaleString()} XP
-              </p>
-
-              {entry.goal && (
-                <p className="mt-2 text-[13px] leading-[1.55] text-[var(--ink-2)]">
-                  <strong className="font-semibold text-[var(--ink)]">Mục tiêu:</strong> {entry.goal}
-                </p>
-              )}
-
-              {typeof entry.goalAchieved === 'boolean' && (
-                <div className="mt-2">
-                  <span
-                    className="rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em]"
-                    style={{
-                      background: entry.goalAchieved ? 'var(--good-soft)' : 'rgba(var(--accent-rgb),0.12)',
-                      color: entry.goalAchieved ? 'var(--good)' : 'var(--accent-ink)',
-                    }}
-                  >
-                    {entry.goalAchieved ? 'Đạt mục tiêu' : 'Chưa đạt mục tiêu'}
-                  </span>
-                </div>
-              )}
-
-              {entry.note && (
-                <div className="mt-2 text-[12px] text-[var(--muted)]">
-                  <span className="mono mr-1 text-[10px] uppercase tracking-[0.16em]">Ghi chú</span>
-                  <RichTextView value={entry.note} compact className="mt-1" />
-                </div>
-              )}
-
-              {entry.nextNote && (
-                <p className="mt-2 text-[12px] text-[var(--accent-ink)]">
-                  <span className="mono mr-1 text-[10px] uppercase tracking-[0.16em]">Lần sau</span>
-                  {entry.nextNote}
-                </p>
-              )}
-            </div>
-
-            <div
-              className="shrink-0 rounded-[14px] border px-3 py-2 text-right text-[11px] text-[var(--muted)]"
-              style={{
-                borderColor: 'var(--line)',
-                background: 'var(--item-bg)',
-              }}
-            >
-              <div>{formatVietnamDate(entry.timestamp, { month: 'short', day: 'numeric' })}</div>
-              <div className="mono mt-1">{formatVietnamTime(entry.timestamp, { hour: '2-digit', minute: '2-digit' })}</div>
-            </div>
-          </div>
-        </article>
-      ))}
-    </div>
-  );
-}

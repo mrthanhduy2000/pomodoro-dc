@@ -24,7 +24,7 @@
  * làm nguồn duy nhất, và `craftProgress.test.js` có một bài canh hai bảng phải luôn khớp.
  */
 
-import { BUILDING_EFFECTS } from './constants';
+import { BUILDING_EFFECTS, BLUEPRINT_CATALOG } from './constants';
 
 /** Số phiên còn lại, đã làm sạch: không âm, không lẻ, đầu vào rác → 0. */
 function safeRemaining(value) {
@@ -63,4 +63,27 @@ export function describeCraftProgress(bpId, sessionsRemaining) {
   const ratio = total === null ? 0 : done / total;
 
   return { total, remaining, done, ratio, pct: Math.round(ratio * 100) };
+}
+
+
+/**
+ * Tên hiển thị của một bản vẽ. NGUỒN DUY NHẤT: `BLUEPRINT_CATALOG`.
+ *
+ * ⚠️ BA LẦN CHÉP, BA LẦN SAI — trong đúng MỘT phiên (2026-09-02):
+ *   1. hỏi `BLUEPRINT_META[id].name` → trường `name` KHÔNG tồn tại ở bảng nào cả (tất cả dùng
+ *      `label`), nên dải hero hiện "Công trình sẽ mọc lên trong thành phố." cho MỌI công trình;
+ *   2. hỏi `BLUEPRINT_CATALOG.find(...)` → nó là OBJECT các mảng theo kỷ, không phải một mảng,
+ *      nên `.find` trả `undefined` trong im lặng;
+ *   3. hỏi `BUILDING_EFFECTS[id].label` → **0/75 mục của bảng ấy có `label`** (đã đếm). Nhánh này
+ *      là mã chết ngay từ lúc viết ra, và nó "chạy được" chỉ nhờ nhánh dự phòng phía sau.
+ * Cả ba đều im lặng vì `??` nuốt gọn và câu hỏng đọc lên vẫn xuôi tai. Nay chỉ còn MỘT hàm, và
+ * nó KHÔNG có nhánh dự phòng nào để giấu lỗi lần thứ tư.
+ */
+export function blueprintLabel(bpId, fallback = 'Công trình') {
+  if (!bpId) return fallback;
+  for (const ds of Object.values(BLUEPRINT_CATALOG ?? {})) {
+    const bp = (Array.isArray(ds) ? ds : []).find((b) => b?.id === bpId);
+    if (bp?.label) return bp.label;
+  }
+  return fallback;
 }

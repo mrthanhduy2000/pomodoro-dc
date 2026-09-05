@@ -19,8 +19,7 @@ import assert from 'node:assert/strict';
 import { Frustum, Matrix4, PerspectiveCamera } from 'three';
 
 import {
-  createCityScene, NGOAI_LUOI, NHOM_TACH_THANH_PHO, NHOM_TACH_MAT_DAT,
-} from './sceneGraph.js';
+  createCityScene, NGOAI_LUOI, NHOM_TACH_THANH_PHO, NHOM_TACH_MAT_DAT, SHADOW_REACH_RATIO } from './sceneGraph.js';
 import { deriveOutskirts } from '../../../engine/city3d/outskirts.js';
 import { computeCityLayout } from '../../../engine/cityLayout.js';
 import { buildScenePalette } from '../../../engine/city3d/palette3d.js';
@@ -751,7 +750,11 @@ test('⚠️ TRẦN HỘP BAO khối `city` — và nội thành PHẢI vẫn nh
   // hai con số có thể trôi khỏi nhau trong im lặng — hoặc phase sau làm nhà to ra và bóng bắt đầu
   // cụt ở góc lưới, hoặc ai đó siết `reach` cho "nét hơn" rồi cũng thế. Hai vế dưới đây khoá cả hai
   // chiều: KHÔNG ĐƯỢC THIẾU (bóng cụt) và KHÔNG ĐƯỢC THỪA QUÁ (phí điểm ảnh bản đồ bóng).
-  const reachBong = 12 * 0.8;   // đúng công thức ở `createCityScene`: `gridSize * 0.8`
+  // ⚠️ ĐỌC TỪ MÃ, KHÔNG CHÉP TAY (2026-09-02, đóng `TECH_DEBT #91`). Bản cũ viết cứng `12 * 0.8`,
+  // tức khoá một CON SỐ chứ không khoá cái LUẬT — đổi hệ số ở `sceneGraph.js` mà quên sửa dòng này
+  // thì bài test vẫn xanh trong khi bóng bị cắt cụt. Suýt cắn thật ở lần gộp nhánh Phase 19–21
+  // (`main` chốt 0,75 · nhánh chốt 0,80, xung đột đúng dòng ấy).
+  const reachBong = 12 * SHADOW_REACH_RATIO;
   assert.ok(lớnNhấtNộiThành <= reachBong,
     `khung bóng đổ chỉ với tới ${reachBong} mà khối đổ bóng xa nhất ở ${lớnNhấtNộiThành.toFixed(4)} `
     + '— nhà ở góc lưới sẽ bị CỤT BÓNG, và chuyện đó không có gì đỏ lên ngoài bài này.');
@@ -759,4 +762,36 @@ test('⚠️ TRẦN HỘP BAO khối `city` — và nội thành PHẢI vẫn nh
     `khối đổ bóng xa nhất chỉ ${lớnNhấtNộiThành.toFixed(4)} trong khi khung bóng với tới ${reachBong}`
     + ' — thừa hơn 15%, tức đang tiêu điểm ảnh bản đồ bóng vào chỗ không có gì. Siết `reach` lại '
     + '(và ghi số đo mới vào chú thích `SHADOW_MAP_DESKTOP`), đừng để nguyên.');
+});
+
+/**
+ * ⚠️ `dispose()` PHẢI DỌN CẢ BẢN ĐỒ BÓNG (`TECH_DEBT #31`).
+ *
+ * Hai vòng lặp trong `dispose()` duyệt `meshes` và `disposables` — hai danh sách chứa những thứ
+ * `createCityScene` TỰ tạo. Bản đồ bóng không nằm trong danh sách nào: three tạo nó **muộn hơn**,
+ * ở lần render đầu, rồi treo vào `sun.shadow.map`. Mỗi lần dựng-rồi-dọn để lại **+2 texture sống
+ * sót**; 24 cảnh liên tiếp trên một renderer ≈ **800 MB bộ nhớ đồ hoạ**.
+ *
+ * App không dính (nó `forceContextLoss()` ngay sau), nhưng một hàm tên `dispose()` mà chỉ đúng
+ * NHỜ người gọi làm thêm một bước nữa thì đó là đúng nhờ một thứ chẳng liên quan — đúng bẫy
+ * Phase 7D. Công cụ dựng 24 cảnh thì dính thật.
+ */
+test('dispose() dọn cả bản đồ bóng, và chịu được gọi hai lần', () => {
+  const canh = createCityScene(thamSố(7));
+  let den = null;
+  canh.scene.traverse((o) => { if (o.isDirectionalLight && o.shadow) den = o; });
+  assert.ok(den, 'không tìm thấy đèn mặt trời có bóng — phép đo đang chạy rỗng');
+
+  // Giả lập đúng thứ three làm ở lần render đầu: gắn một bản đồ bóng vào đèn.
+  let daDon = 0;
+  den.shadow.map = { dispose: () => { daDon += 1; } };
+
+  canh.dispose();
+  assert.equal(daDon, 1, 'bản đồ bóng KHÔNG được dọn — mỗi lần dựng-rồi-dọn rò rỉ 2 texture');
+  assert.equal(den.shadow.map, null, 'phải gỡ tham chiếu, nếu không đối tượng đã dọn vẫn bị giữ');
+
+  // ⚠️ Gọi lần hai phải im lặng: React StrictMode mount → unmount → mount, và đường mất WebGL
+  // context cũng gọi dọn trước khi effect kịp chạy hàm dọn của mình.
+  canh.dispose();
+  assert.equal(daDon, 1, 'gọi dispose() lần hai lại dọn thêm một lần nữa');
 });

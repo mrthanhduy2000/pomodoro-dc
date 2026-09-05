@@ -53,3 +53,58 @@ test('ưu tiên chữ hiển thị trước nhãn trợ năng', () => {
   assert.ok(text > 0 && aria > 0 && text < aria,
     'phải thử khớp chữ hiển thị TRƯỚC — nó chính xác hơn và ít bất ngờ hơn');
 });
+
+/**
+ * ⚠️ LỜI NÓI DỐI THỨ NĂM CỦA `shot.mjs` — MỘT TẤM ẢNH KHÔNG BẮT ĐƯỢC THỨ CHỈ SỐNG 4 GIÂY.
+ *
+ * Đo được 2026-09-02: thẻ phần thưởng sau phiên hiện ở giây **13,5** và tắt ở giây **17,7**.
+ * `--settle` thử 0,4 · 1 · 3,5 · 6 · 14 giây — KHÔNG lần nào ảnh có thẻ, vì cổng "đợi DOM đứng
+ * yên" chạy SAU `--settle` và nó chỉ nhả ra khi mọi thứ thôi nhúc nhích, tức khi thẻ đã tắt.
+ * Ảnh sạch + probe `false` + không lỗi nào ⇒ đọc y hệt "tính năng không chạy". Đây là đúng hình
+ * dạng bốn lời nói dối đã ghi ở đầu file: hỏng im lặng, không có gì báo động.
+ *
+ * Bản vá có HAI vế, và thiếu vế nào cũng vô dụng: (a) một MutationObserver gắn từ đầu trang để
+ * GHI LẠI mọi lần chuỗi xuất hiện; (b) bỏ qua cổng đứng-yên khi đang rình, và chụp NGAY lúc nó
+ * đang hiện.
+ */
+test('--watch phải GẮN TỪ ĐẦU TRANG, không phải hỏi sau khi đã settle', () => {
+  const src = readFileSync(new URL('./shot.mjs', import.meta.url), 'utf8');
+
+  assert.match(src, /const WATCH = arg\('--watch'/, 'thiếu cờ --watch');
+  assert.match(
+    src, /watchPatch[\s\S]{0,400}?MutationObserver/,
+    'phải dùng MutationObserver gắn vào <head>: hỏi sau khi settle thì thứ thoáng qua đã tắt',
+  );
+  // Được tiêm cùng đường với `clockPatch` — nếu không thì nó không bao giờ vào trang.
+  assert.match(
+    src, /'<head>' \+ clockPatch \+ watchPatch/,
+    '--watch không được tiêm vào trang ⇒ window.__dcWatch không tồn tại và probe luôn rỗng',
+  );
+  assert.match(
+    src, /if \(\(clockPatch \|\| watchPatch\)/,
+    'cổng tiêm vẫn chỉ hỏi clockPatch ⇒ dùng --watch mà không --hour thì không tiêm gì cả',
+  );
+});
+
+test('--watch phải BỎ QUA cổng đứng-yên — nếu không nó luôn chụp trúng lúc đã tắt', () => {
+  const src = readFileSync(new URL('./shot.mjs', import.meta.url), 'utf8');
+  assert.match(
+    src, /if \(WATCH\) \{[\s\S]{0,900}?\} else \{\s*\n\s*const \{ buttons, total \} = await waitForSteadyDom\(\)/,
+    'cổng đứng-yên vẫn chạy khi có --watch ⇒ đợi tới lúc mọi thứ ngừng nhúc nhích = đợi tới lúc '
+    + 'thẻ đã tắt. Đây chính là cái đã làm 5 lần đo liên tiếp ra kết luận sai.',
+  );
+  // Và khi rình hụt thì phải NÓI RÕ phân biệt hai ca ngược nhau — chưa từng hiện vs hiện rồi tắt.
+  assert.match(src, /Nhật ký RỖNG nghĩa là chuỗi chưa từng hiện/,
+    'thất bại phải phân biệt "chưa từng hiện" với "hiện rồi tắt trước khi chụp" — hai ca ấy cần '
+    + 'hai cách sửa ngược nhau, gộp làm một là bắt người dùng đoán');
+});
+
+test('--preview gắn đúng vào URL sau khi gieo localStorage', () => {
+  const src = readFileSync(new URL('./shot.mjs', import.meta.url), 'utf8');
+  assert.match(src, /const PREVIEW = arg\('--preview'/, 'thiếu cờ --preview');
+  assert.match(
+    src, /location\.replace\('\/index\.html' \+/,
+    'tham số preview phải đi cùng lần chuyển trang SAU khi gieo localStorage; gắn vào /seed thì '
+    + 'nó bị nuốt mất khi trang tự chuyển sang /index.html',
+  );
+});

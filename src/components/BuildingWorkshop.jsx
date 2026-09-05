@@ -9,13 +9,18 @@
  */
 
 import React from 'react';
+import InventoryHero from './shared/InventoryHero.jsx';
+import BuildingGrid from './shared/BuildingGrid.jsx';
+import { buildingState, summarizeBuildings, pickDefaultBuilding, BUILDING_STATE } from './shared/buildingGrid.js';
+import { heroCongTrinh } from './shared/inventoryHero.js';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCustomMotion, useEnterMotion, usePressMotion, useSnapMotion } from '../lib/motionPresets';
 import useGameStore from '../store/gameStore';
 import {
   blueprintEraOf, countActiveCrafting, countLegacyCrafting, listRestorableBlueprints,
 } from '../engine/eraLegacy';
-import { describeCraftProgress } from '../engine/craftProgress';
+import { describeCraftProgress, blueprintLabel } from '../engine/craftProgress';
+import { lyDoKhongKhoiCongDuoc, khoiCongDuoc, NHAN_LY_DO, LY_DO } from '../engine/craftReadiness';
 import useSettingsStore from '../store/settingsStore';
 import {
   BUILDING_SPECS,
@@ -32,7 +37,7 @@ import {
   getUpgradeRefinedCost,
   getBuildingLevelMultiplier,
 } from '../engine/constants';
-import { getLabelMark } from '../utils/labelMark';
+import { getGlyph, hasGlyphIcon } from '../utils/labelMark';
 import { TypeBadge, RarityBadge, PerkSummary } from './shared/BadgeKit';
 
 const MONO_FONT = '"JetBrains Mono", "SFMono-Regular", Menlo, monospace';
@@ -81,7 +86,7 @@ function ResourceCost({ era, cost, bookResources, lightTheme = false }) {
             style={lightTheme
               ? ok
                 ? { borderColor: 'rgba(111, 123, 98, 0.18)', color: '#6f7b62', background: 'rgba(111, 123, 98, 0.10)', fontFamily: MONO_FONT }
-                : { borderColor: 'rgba(201, 100, 66, 0.16)', color: '#8a3f24', background: 'rgba(248,235,228,0.10)', fontFamily: MONO_FONT }
+                : { borderColor: 'rgba(var(--accent-rgb), 0.16)', color: '#8a3f24', background: 'rgba(248,235,228,0.10)', fontFamily: MONO_FONT }
               : undefined}
           >
             {amount.toLocaleString()} {(def?.label ?? res)}
@@ -213,7 +218,7 @@ function QueueSection({ queue, activeBook, cancelCrafting, lightTheme }) {
 }
 
 // ─── Card bản vẽ sẵn sàng xây ─────────────────────────────────────────────────
-function ReadyCard({ bpId, bookResources, resourcesRefined, craftingQueue, onStart, lightTheme, restoration = false }) {
+function ReadyCard({ bpId, bookResources, resourcesRefined, craftingQueue, conOTrong = true, onStart, lightTheme, restoration = false }) {
   const enterMotion = useEnterMotion();
   const pressMotion = usePressMotion();
   // Phóng to khi DI CHUỘT không thuộc ba nhịp — đi qua cái gác ngoại lệ.
@@ -227,10 +232,20 @@ function ReadyCard({ bpId, bookResources, resourcesRefined, craftingQueue, onSta
   const refined  = normalizeRefinedBag(resourcesRefined);
   const rawCost  = normalizeRawCost(spec.cost ?? {});
   const refinedCost = getUnifiedRefinedCost(spec.refinedCost);
-  const t1Ok     = Object.entries(rawCost).every(([res, amt]) => (bookResources[res] ?? 0) >= amt);
+  // ⚠️ MỘT LUẬT MỘT CÔNG THỨC — xem `engine/craftReadiness.js`. Trước đây luật này nằm inline ở
+  // đây, nên dải mở đầu đếm "sẵn sàng xây" bằng một điều kiện lỏng hơn hẳn và hứa một việc không
+  // làm được. Và "hàng đợi đầy" nay là một lý do RIÊNG: trước đây nút vẫn bấm được rồi mới hiện
+  // một thông báo lỗi, tức app biết trước câu trả lời mà vẫn để người dùng bấm để nghe "không".
+  // ⚠️ `refinedOk` KHÁC `canAfford`: nó nói riêng về khoản TINH LUYỆN để tô đỏ đúng cái chip ấy.
   const refinedOk = refinedCost === 0 || refined.t2 >= refinedCost;
-  const canAfford = !inQueue && t1Ok && refinedOk;
-  const reason = inQueue ? 'Đang xây...' : !canAfford ? 'Thiếu nguyên liệu' : null;
+  const lyDo = lyDoKhongKhoiCongDuoc({
+    rawCost, refinedCost, bookResources, refinedT2: refined.t2,
+    dangTrongHangDoi: inQueue, conOTrong,
+  });
+  const canAfford = lyDo === null;
+  const reason = lyDo === LY_DO.DANG_XAY ? 'Đang xây...'
+    : lyDo === LY_DO.HANG_DOI_DAY ? 'Hàng đợi đã đầy'
+      : lyDo === LY_DO.THIEU ? 'Thiếu nguyên liệu' : null;
   const eraRefMeta = ERA_REFINED[meta.era] ?? {};
 
   return (
@@ -240,12 +255,12 @@ function ReadyCard({ bpId, bookResources, resourcesRefined, craftingQueue, onSta
     >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
         <span
-          className="mono inline-flex h-9 w-9 items-center justify-center rounded-full border text-[8px] font-semibold uppercase tracking-[0.14em] flex-shrink-0"
+          className={`mono inline-flex h-9 w-9 items-center justify-center rounded-full border font-semibold flex-shrink-0 ${hasGlyphIcon(bpDef.icon) ? 'text-[18px] leading-none' : 'text-[8px] uppercase tracking-[0.14em]'}`}
           style={lightTheme
             ? { borderColor: 'var(--line)', background: 'var(--card-bg-solid2)', color: 'var(--accent2)', fontFamily: MONO_FONT }
             : { borderColor: 'rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.04)', color: 'var(--accent-light)', fontFamily: MONO_FONT }}
         >
-          {getLabelMark(bpDef.label, 'BP')}
+          {getGlyph(bpDef.icon, bpDef.label, 'BP')}
         </span>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap mb-0.5">
@@ -281,7 +296,7 @@ function ReadyCard({ bpId, bookResources, resourcesRefined, craftingQueue, onSta
               }`} style={lightTheme
                 ? refinedOk
                   ? { borderColor: 'rgba(166,137,149,0.18)', color: '#7a6877', background: 'rgba(243,236,239,0.82)', fontFamily: MONO_FONT }
-                  : { borderColor: 'rgba(201,100,66,0.16)', color: '#8a3f24', background: 'rgba(248,235,228,0.82)', fontFamily: MONO_FONT }
+                  : { borderColor: 'rgba(var(--accent-rgb),0.16)', color: '#8a3f24', background: 'rgba(248,235,228,0.82)', fontFamily: MONO_FONT }
                 : { fontFamily: MONO_FONT }}>
                 {refinedCost} {eraRefMeta.t2Label ?? 'Tinh luyện'}
                 {!refinedOk && <span className="opacity-70"> (có {Math.floor(refined.t2)})</span>}
@@ -304,7 +319,7 @@ function ReadyCard({ bpId, bookResources, resourcesRefined, craftingQueue, onSta
                 : { background: 'var(--card-bg-solid2)', color: 'var(--muted-2)', border: 'var(--skin-card-border-width,1px) solid var(--line)', borderRadius: 'var(--skin-radius-control,14px)', cursor: 'not-allowed', fontFamily: MONO_FONT }
             : undefined}
         >
-          {inQueue ? 'Đang xây' : canAfford ? 'Bắt đầu xây' : 'Chưa đủ'}
+          {canAfford ? 'Bắt đầu xây' : NHAN_LY_DO[lyDo]}
         </motion.button>
       </div>
     </motion.div>
@@ -312,77 +327,59 @@ function ReadyCard({ bpId, bookResources, resourcesRefined, craftingQueue, onSta
 }
 
 const LEVEL_LABEL = ['', 'Lv.1', 'Lv.2', 'Lv.3'];
-const LEVEL_COLOR = ['', 'text-slate-400', 'text-violet-300', 'text-fuchsia-300'];
-const LEVEL_MULT  = [1, 1.0, 1.75, 2.5];
 
-// ─── Card công trình đã xây ────────────────────────────────────────────────────
-function BuiltCard({ bpId, level, resourcesRefined, onUpgrade, lightTheme }) {
-  const bpDef = getBpDef(bpId);
-  const eff   = BUILDING_EFFECTS[bpId] ?? {};
-  const era   = eff.era ?? 1;
-  const lv    = level ?? 1;
-  const refined = normalizeRefinedBag(resourcesRefined);
-  const eraRef  = ERA_REFINED[era] ?? {};
-  const upgradeCost = getUpgradeRefinedCost(era, lv);
-  const canUpgrade = lv < 3 && refined.t2 >= upgradeCost;
-  const upgradeCostLabel = `${upgradeCost} ${eraRef.t2Label ?? 'Tinh luyện'}`;
-
+// ─── BuiltDetail — công trình đang chọn trên lưới ─────────────────────────────
+/**
+ * ⚠️ MỘT KHUNG CHI TIẾT, KHÔNG PHẢI MỘT THẺ MỖI CÔNG TRÌNH (2026-09-02). Bản cũ in trọn phần
+ * mô tả đặc quyền trên TỪNG thẻ, mà đúng phần ấy còn được in lần nữa ở khung chi tiết bản vẽ
+ * trong cùng trang — và tab "Công trình" đo được 4.757px ở khung 390px. Thứ người chơi hỏi khi
+ * lướt danh sách là *"tôi đã xây gì, cái nào nâng cấp được"*; câu *"cộng bao nhiêu phần trăm"*
+ * chỉ được hỏi về MỘT công trình một lúc.
+ */
+function BuiltDetail({ tile, onUpgrade, lightTheme }) {
+  if (!tile) return null;
+  const { bpDef, eff, level, mult, state, upgradeCostLabel } = tile;
   return (
     <div
-      className="rounded-[24px] p-4 flex flex-col gap-3 border sm:flex-row sm:items-center"
-      style={lightTheme
-        ? {
-            background: 'var(--card-bg-solid)',
-            border: 'var(--skin-card-border-width,1px) solid var(--line)',
-            borderRadius: 'var(--skin-radius-card,18px)',
-            boxShadow: 'var(--skin-card-shadow)',
-          }
-        : undefined}
+      className="mt-3 px-4 py-3.5"
+      style={{
+        background: state === BUILDING_STATE.READY
+          ? 'color-mix(in srgb, var(--accent) 7%, var(--card-bg-solid))'
+          : 'var(--card-bg-solid2, var(--card-bg-solid))',
+        border: '1px solid ' + (state === BUILDING_STATE.READY
+          ? 'color-mix(in srgb, var(--accent) 26%, var(--line))' : 'var(--line)'),
+        borderRadius: 'var(--skin-radius-card,18px)',
+      }}
     >
-      <span
-        className="mono inline-flex h-9 w-9 items-center justify-center rounded-full border text-[8px] font-semibold uppercase tracking-[0.14em] flex-shrink-0"
-        style={lightTheme
-          ? { borderColor: 'var(--line)', background: 'var(--card-bg-solid2)', color: 'var(--accent2)', fontFamily: MONO_FONT }
-          : { borderColor: 'rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.04)', color: 'var(--accent-light)', fontFamily: MONO_FONT }}
-      >
-        {getLabelMark(bpDef.label, 'BP')}
-      </span>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-          <p
-            className={lightTheme ? 'text-[1.06rem] font-semibold leading-none tracking-[-0.02em]' : 'font-semibold text-sm'}
-            style={lightTheme ? { color: 'var(--ink)', fontFamily: 'var(--skin-font-display)' } : { color: '#86efac' }}
-          >
-            {bpDef.label}
-          </p>
-          {BLUEPRINT_META[bpId]?.rarity && <RarityBadge rarity={BLUEPRINT_META[bpId].rarity} lightTheme={lightTheme} variant="skin" />}
-          {eff.type && <TypeBadge type={eff.type} typeStyle={TYPE_STYLE} lightTheme={lightTheme} variant="skin" />}
-          <span className={`text-xs font-bold ${LEVEL_COLOR[lv]}`} style={lightTheme ? { color: lv === 1 ? '#6a6862' : lv === 2 ? '#7a6877' : '#9c7645', fontFamily: MONO_FONT } : { fontFamily: MONO_FONT }}>{LEVEL_LABEL[lv]}</span>
-          {lv > 1 && (
-            <span className="mono text-xs tabular-nums" style={lightTheme ? { color: 'var(--muted-2)', fontFamily: MONO_FONT } : { color: '#64748b', fontFamily: MONO_FONT }}>×{LEVEL_MULT[lv]} hiệu ứng</span>
-          )}
-        </div>
-        <PerkSummary perk={eff.perk} lightTheme={lightTheme} variant="skin" />
-        {lv > 1 && (
-          <p className="mt-1 text-xs" style={lightTheme ? { color: 'var(--muted-2)' } : { color: '#64748b' }}>
-            Cấp công trình vẫn tăng thông số nền phía sau đặc quyền.
-          </p>
-        )}
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+        <p className="text-[15px] font-semibold leading-tight" style={{ color: 'var(--ink)', fontFamily: 'var(--skin-font-display)' }}>
+          {bpDef.label}
+        </p>
+        {BLUEPRINT_META[tile.id]?.rarity && <RarityBadge rarity={BLUEPRINT_META[tile.id].rarity} lightTheme={lightTheme} variant="skin" />}
+        {eff.type && <TypeBadge type={eff.type} typeStyle={TYPE_STYLE} lightTheme={lightTheme} variant="skin" />}
+        <span className="mono text-[11px] font-bold tabular-nums" style={{ color: level > 1 ? 'var(--accent)' : 'var(--muted-2)' }}>
+          {LEVEL_LABEL[level]}{level > 1 ? ` · ×${mult} hiệu ứng` : ''}
+        </span>
       </div>
-      <div className="flex flex-col gap-1 flex-shrink-0">
-        {lv < 3 && onUpgrade && (
+
+      <div className="mt-1.5">
+        <PerkSummary perk={eff.perk} lightTheme={lightTheme} variant="skin" />
+      </div>
+
+      <div className="mt-3 flex justify-end">
+        {state === BUILDING_STATE.MAX ? (
+          <span className="mono text-[12px] font-semibold" style={{ color: 'var(--good)' }}>✓ Đã kịch cấp</span>
+        ) : (
           <button
-            onClick={() => canUpgrade && onUpgrade(bpId)}
-            disabled={!canUpgrade}
-            className="w-full rounded-[14px] px-2.5 py-1 text-xs border transition-colors sm:w-auto"
-            style={lightTheme
-              ? canUpgrade
-                ? { background: 'rgba(243,236,239,0.88)', borderColor: 'rgba(166,137,149,0.2)', color: '#7a6877', borderRadius: 'var(--skin-radius-control,14px)', boxShadow: 'var(--skin-card-shadow)' }
-                : { background: 'var(--card-bg-solid2)', borderColor: 'var(--line)', color: 'var(--muted-2)', borderRadius: 'var(--skin-radius-control,14px)', cursor: 'not-allowed' }
-              : undefined}
-            title={`Nâng cấp → Lv.${lv + 1} (${upgradeCostLabel})`}
+            type="button"
+            onClick={() => state === BUILDING_STATE.READY && onUpgrade?.(tile.id)}
+            disabled={state !== BUILDING_STATE.READY}
+            className="mono whitespace-nowrap px-4 py-2 text-[12px] font-semibold tabular-nums transition-colors"
+            style={state === BUILDING_STATE.READY
+              ? { background: 'var(--accent)', border: '1px solid var(--accent)', color: 'var(--canvas)', borderRadius: 999 }
+              : { background: 'var(--card-bg-solid)', border: '1px solid var(--line)', color: 'var(--muted-2)', borderRadius: 999, cursor: 'not-allowed' }}
           >
-            Nâng cấp · {upgradeCostLabel}
+            Nâng lên Lv.{level + 1} · {upgradeCostLabel}
           </button>
         )}
       </div>
@@ -410,6 +407,7 @@ export default function BuildingWorkshop() {
   const upgradeBuilding  = useGameStore((s) => s.upgradeBuilding);
 
   const [toast, setToast] = React.useState(null);
+  const [builtId, setBuiltId] = React.useState(null);
 
   const showToast = (msg, ok = true) => {
     setToast({ msg, ok });
@@ -470,12 +468,46 @@ export default function BuildingWorkshop() {
     return normalizeRefinedBag(resourcesRefined[era]);
   };
 
+  const conOTrongThuong = countActiveCrafting(craftingQueue, activeBook) < CRAFT_QUEUE_SLOTS;
+  // ⚠️ "SẴN SÀNG XÂY" PHẢI LÀ SỐ BẢN VẼ KHỞI CÔNG ĐƯỢC NGAY, không phải số bản vẽ đã nghiên cứu —
+  // xem `engine/craftReadiness.js`. Đây là cùng lỗi vừa bắt được ở dải Kỹ năng.
+  const soKhoiCongDuoc = readyIds.filter((id) => khoiCongDuoc({
+    rawCost: normalizeRawCost((BUILDING_SPECS[id] ?? {}).cost ?? {}),
+    refinedCost: getUnifiedRefinedCost((BUILDING_SPECS[id] ?? {}).refinedCost),
+    bookResources: getBookResources(id),
+    refinedT2: getEraRefined(id).t2,
+    dangTrongHangDoi: craftingQueue.some((q) => q.bpId === id),
+    conOTrong: conOTrongThuong,
+  })).length;
+
   const builtEntries = currentEraBuildings.map((bpId) => {
     const eff = BUILDING_EFFECTS[bpId] ?? {};
     const level = buildingLevels[bpId] ?? 1;
     const mult = getBuildingLevelMultiplier(level);
     return { bpId, eff, level, mult };
   });
+
+  // ── Lưới công trình đã xây: ô + ô đang chọn ────────────────────────────────
+  // ⚠️ GIỮ ID chứ không giữ cả ô: ô được DỰNG LẠI mỗi lần tài nguyên/cấp đổi, nên giữ tham chiếu
+  // cũ là giữ một trạng thái đã lỗi thời (cùng luật đã ghi ở bản đồ kỹ năng).
+  const builtTiles = builtEntries.map(({ bpId, eff, level, mult }) => {
+    const bpDef = getBpDef(bpId);
+    const era = eff.era ?? BLUEPRINT_META[bpId]?.era ?? 1;
+    const upgradeCost = getUpgradeRefinedCost(era, level);
+    return {
+      id: bpId,
+      bpDef,
+      eff,
+      level,
+      mult,
+      glyph: getGlyph(bpDef.icon, bpDef.label, 'BP'),
+      label: bpDef.label,
+      upgradeCostLabel: `${upgradeCost} ${(ERA_REFINED[era] ?? {}).t2Label ?? 'Tinh luyện'}`,
+      state: buildingState({ level, refinedT2: getEraRefined(bpId).t2, upgradeCost }),
+    };
+  });
+  const builtSummary = summarizeBuildings(builtTiles);
+  const builtPicked = builtTiles.find((t) => t.id === builtId) ?? pickDefaultBuilding(builtTiles);
 
   const totalT1Passive = builtEntries.reduce(
     (sum, { eff, mult }) => sum + (eff.type === 'infrastructure' ? Math.floor((eff.passiveT1PerBreakMin ?? 0) * mult) : 0),
@@ -500,29 +532,72 @@ export default function BuildingWorkshop() {
     ),
     0.6,
   );
-  const activePerkLabels = [...new Set(builtEntries.map(({ eff }) => eff.perk?.label).filter(Boolean))].slice(0, 3);
+  /*
+    Dải mở đầu Hành trang — xem `shared/inventoryHero.js`.
+    ⚠️ Đọc THẲNG `craftingQueue` và `describeCraftProgress` (đúng hàm mà `QueueSection` dùng để vẽ
+    thanh tiến độ ngay bên dưới) chứ không tự tính lại: hai chỗ nói cùng một con số thì phải đi
+    qua CÙNG một công thức, nếu không chúng sẽ trôi khỏi nhau đúng lúc không ai để ý.
+  */
+  const heroDangXay = (() => {
+    const item = (craftingQueue ?? [])[0];
+    if (!item) return null;
+    const { total, remaining } = describeCraftProgress(item.bpId, item.sessionsRemaining);
+    if (!Number.isFinite(remaining) || remaining <= 0) return null;
+    // ⚠️ Tên nằm ở `label`, KHÔNG phải `name` — `BLUEPRINT_META` chỉ có era/type/rarity/rpCost.
+    // Bản đầu hỏi `.name` và dải hero hiện ra "Công trình sẽ mọc lên…" cho MỌI công trình: một
+    // lỗi im lặng vì `?? 'Công trình'` nuốt gọn nó, và câu ấy đọc lên vẫn hoàn toàn hợp lý.
+    const ten = blueprintLabel(item.bpId);
+    return { ten, con: remaining, tong: total ?? remaining };
+  })();
+
   return (
     <div className="space-y-5">
+      <InventoryHero
+        hero={heroCongTrinh({
+          dangXay: heroDangXay,
+          daXay: builtEntries.length,
+          tongBanVe: unlockedBpIds.length + readyIds.length,
+          sanSangXay: soKhoiCongDuoc,
+          choNguyenLieu: readyIds.length - soKhoiCongDuoc,
+        })}
+        icon="🏗"
+      />
+
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
           {/* ⚠️ NHÃN "XƯỞNG" ĐÃ GỠ (2026-08-30) — chữ ấy xuất hiện BA lần trong một khung nhìn:
               nút tab đang sáng ("Xưởng"), nhãn này, rồi tiêu đề ngay dưới ("Xưởng xây dựng").
               Tiêu đề đã nói đủ và nói rõ hơn; nhãn chỉ gọi tên thứ mắt vừa đọc xong. */}
-          <h2 className={lightTheme ? 'serif text-[1.8rem] leading-none sm:text-[2rem]' : 'text-white font-bold text-[1.1rem] sm:text-lg'} style={lightTheme ? { color: 'var(--ink)', fontFamily: 'var(--skin-font-display)', fontWeight: 600 } : undefined}>Xưởng xây dựng</h2>
+          {/* ⚠️ TIÊU ĐỀ "Xưởng xây dựng" ĐÃ GỠ (2026-09-02): nút tab con đang SÁNG cách đó ~120px
+              ghi "Công trình", và dải hero ngay dưới nói rõ đang xây cái gì còn mấy phiên. Đây là
+              chỗ thứ BA gọi tên màn hình. Cùng luật đã áp cho nhãn "Xưởng" (2026-08-30) và cho thẻ
+              tóm tắt ở tab Huy hiệu: *hai chỗ nói cùng một chuyện thì chỗ nói ít hơn phải nhường*. */}
         </div>
-        <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-          {activePerkLabels.map((label) => (
-            <span
-              key={label}
-              className="rounded-full px-2.5 sm:px-3 py-1 text-[10.5px] sm:text-xs font-medium"
-              style={lightTheme
-                ? { color: 'var(--accent2)', background: 'rgba(var(--accent-rgb),0.1)', border: 'var(--skin-card-border-width,1px) solid rgba(var(--accent-rgb),0.18)' }
-                : undefined}
-            >
-              {label}
-            </span>
-          ))}
+        {/*
+          ⚠️ ĐÃ GỠ BA CHIP TÊN ĐẶC QUYỀN (2026-09-01). `activePerkLabels` lấy tên đặc quyền của
+          những công trình ĐÃ XÂY — mà mỗi cái tên ấy được in LẠI nguyên văn trên chính thẻ công
+          trình sinh ra nó, cách đó vài trăm px trên cùng một màn (`PerkSummary`). Đo bằng cách
+          đếm chuỗi trong `document.body.innerText`: mỗi nhãn xuất hiện ĐÚNG HAI LẦN.
+          Bản trên thẻ nói rõ hơn (có kèm cấp và mô tả), nên bản tóm tắt ở đây là chỗ nhường.
+          Sáu chip còn lại toàn là SỐ (thô/phút nghỉ, tinh luyện…) — chúng không lặp ở đâu khác.
+        */}
+        {/*
+          ⚠️ SÁU CHIP THÔNG SỐ THU GỌN MẶC ĐỊNH (2026-09-02). "+5 thô/phút nghỉ · +0.50 tinh
+          luyện/phút nghỉ · +66% thô mỗi phiên · +29% tinh luyện mỗi phiên dài · -25% thất thoát
+          khi huỷ · 4 đã xây" — đó là một BẢNG THÔNG SỐ. Nó đúng, nó hữu ích, và nó là thứ Đàm tra
+          cứu vài tháng một lần chứ không phải thứ anh cần thấy mỗi lần mở tab. Ở khung 390px nó
+          ăn ba hàng ngay dưới tiêu đề, đẩy hàng chờ xây dựng — thứ CÓ tiến độ, CÓ việc để làm —
+          xuống dưới. Nay nó nằm sau một nút một dòng.
+        */}
+        <details className="w-full">
+          <summary
+            className="mono cursor-pointer list-none text-[10px] uppercase tracking-[0.2em]"
+            style={{ color: 'var(--muted-2)' }}
+          >
+            Đặc quyền đang có ▾
+          </summary>
+          <div className="mt-2 flex items-center gap-1.5 sm:gap-2 flex-wrap">
           {totalT1Passive > 0 && (
             <span
               className="rounded-full px-2.5 sm:px-3 py-1 text-[10.5px] sm:text-xs"
@@ -567,7 +642,7 @@ export default function BuildingWorkshop() {
             <span
               className="rounded-full px-2.5 sm:px-3 py-1 text-[10.5px] sm:text-xs"
               style={lightTheme
-                ? { color: '#8a3f24', background: 'rgba(248,235,228,0.9)', border: '1px solid rgba(201,100,66,0.16)' }
+                ? { color: '#8a3f24', background: 'rgba(248,235,228,0.9)', border: '1px solid rgba(var(--accent-rgb),0.16)' }
                 : undefined}
             >
               -{formatPercent(totalCancelLossReduction)} thất thoát khi hủy
@@ -576,7 +651,8 @@ export default function BuildingWorkshop() {
           <span className="mono rounded-full px-2.5 sm:px-3 py-1 text-[10.5px] sm:text-xs tabular-nums" style={lightTheme ? { color: 'var(--accent2)', background: 'rgba(var(--accent-rgb),0.1)', border: 'var(--skin-card-border-width,1px) solid rgba(var(--accent-rgb),0.18)', fontFamily: MONO_FONT } : {}}>
             {currentEraBuildings.length} đã xây
           </span>
-        </div>
+          </div>
+        </details>
       </div>
 
       {/* Toast */}
@@ -616,7 +692,7 @@ export default function BuildingWorkshop() {
             <div className="mono mb-2 text-[12px] font-semibold uppercase tracking-[0.22em]" style={lightTheme ? { color: 'var(--accent2)', fontFamily: MONO_FONT } : { color: 'var(--accent-light)', fontFamily: MONO_FONT }}>BP</div>
             <p className="text-sm" style={lightTheme ? { color: 'var(--ink)' } : { color: '#64748b' }}>Chưa có bản vẽ nào chờ được dựng lên.</p>
             <p className="text-xs mt-1" style={lightTheme ? { color: 'var(--muted)' } : { color: '#475569' }}>
-              Đi sang mục Bản vẽ để mở thêm công trình bằng RP.
+              Nghiên cứu một bản vẽ ở ngay bên dưới để mở thêm công trình.
             </p>
           </div>
         ) : (
@@ -628,6 +704,7 @@ export default function BuildingWorkshop() {
                 bookResources={getBookResources(id)}
                 resourcesRefined={getEraRefined(id)}
                 craftingQueue={craftingQueue}
+                conOTrong={conOTrongThuong}
                 onStart={handleStart}
                 lightTheme={lightTheme}
               />
@@ -677,6 +754,7 @@ export default function BuildingWorkshop() {
                   bookResources={getBookResources(bp.bpId)}
                   resourcesRefined={getEraRefined(bp.bpId)}
                   craftingQueue={craftingQueue}
+                  conOTrong={!legacyBusy}
                   onStart={handleStart}
                   lightTheme={lightTheme}
                   restoration
@@ -704,18 +782,27 @@ export default function BuildingWorkshop() {
               {currentEraBuildings.length}
             </span>
           </div>
-          <div className="flex flex-col gap-2">
-            {currentEraBuildings.map((id) => (
-              <BuiltCard
-                key={id}
-                bpId={id}
-                level={buildingLevels[id] ?? 1}
-                resourcesRefined={getEraRefined(id)}
-                onUpgrade={handleUpgrade}
-                lightTheme={lightTheme}
-              />
-            ))}
-          </div>
+          {/*
+            ⚠️ CÂU NÀY TRƯỚC ĐÂY IN TRÊN TỪNG THẺ (2026-09-01) — đo trên màn thật ở 390px:
+            **4 lần trên một màn**, và nó là một LUẬT CHUNG của mọi công trình từ cấp 2 trở lên,
+            không phải một dữ kiện của riêng thẻ nào. Một luật nói lại ở mỗi thẻ thì nó thôi là
+            hướng dẫn và thành nhiễu (cùng lý lẽ đã dùng cho 15 dòng di vật và 48 hộp thành tích).
+          */}
+          <p className="text-xs" style={{ color: 'var(--muted-2)' }}>
+            {builtSummary.nangDuoc > 0
+              ? `${builtSummary.nangDuoc} công trình nâng cấp được ngay — ô có chấm.`
+              : 'Cấp công trình vẫn tăng thông số nền phía sau đặc quyền.'}
+          </p>
+          {/*
+            ⚠️ LƯỚI + MỘT KHUNG CHI TIẾT, xem `shared/buildingGrid.js`. Lướt để biết "đã xây gì,
+            cái nào nâng được"; bấm một ô mới hỏi "nó cộng bao nhiêu".
+          */}
+          <BuildingGrid
+            tiles={builtTiles}
+            selectedId={builtPicked?.id ?? null}
+            onPick={(t) => setBuiltId(t.id)}
+          />
+          <BuiltDetail tile={builtPicked} onUpgrade={handleUpgrade} lightTheme={lightTheme} />
         </div>
       )}
     </div>

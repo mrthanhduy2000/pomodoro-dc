@@ -13,6 +13,10 @@
  */
 
 import React, { useState, useCallback, useMemo } from 'react';
+import InventoryHero from './shared/InventoryHero.jsx';
+import SkillMatrix from './shared/SkillMatrix.jsx';
+import { buildSkillMatrix, cheapestReachable, countReady, pickDefaultCell, MATRIX_STATE } from './shared/skillMatrix.js';
+import { heroKyNang } from './shared/inventoryHero.js';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SCRIM_FADE, useCustomMotion, useEnterMotion, usePressMotion, useSnapMotion } from '../lib/motionPresets';
 
@@ -21,7 +25,7 @@ import useSettingsStore   from '../store/settingsStore';
 import soundEngine        from '../engine/soundEngine';
 import DailyMissions      from './DailyMissions';
 import { SkillGlyph, BranchGlyph, BoltGlyph } from './icons/Glyph';
-import { getLabelMark } from '../utils/labelMark';
+import { getGlyph, hasGlyphIcon } from '../utils/labelMark';
 import {
   SKILL_TREE,
   SKILL_SYNERGIES,
@@ -34,6 +38,7 @@ import {
 } from '../engine/constants';
 import { getLevelProgress, getEffectiveSkillCost } from '../engine/gameMath';
 import { RELIC_ELITE_RESONANCE } from '../engine/constants';
+import { giaCaChuoi } from './skillChainCost';
 
 const NODE_STATE = {
   LOCKED:          'LOCKED',
@@ -48,7 +53,7 @@ const TIER_STYLE = {
     bg: 'bg-emerald-900/70',
     text: 'text-emerald-300',
     border: 'border-emerald-700',
-    light: { background: 'rgba(201, 100, 66, 0.08)', color: '#8f4d3a', border: 'rgba(201, 100, 66, 0.16)' },
+    light: { background: 'rgba(var(--accent-rgb), 0.08)', color: '#8f4d3a', border: 'rgba(var(--accent-rgb), 0.16)' },
   },
   intermediate: {
     label: 'Trung Cấp',
@@ -77,7 +82,12 @@ const SKILL_LABELS = Object.fromEntries(
   Object.values(SKILL_TREE).flatMap((branch) => branch.nodes.map((node) => [node.id, node.label]))
 );
 
-const BRANCH_KEYS = Object.keys(SKILL_TREE);
+
+// Bảng tra id → nút, dựng MỘT LẦN từ chính `SKILL_TREE`. Không chép danh sách nút ra đâu cả: một
+// bảng chép tay sẽ trôi khỏi dữ liệu ngay lần ai đó thêm một nhánh.
+const NODE_BY_ID = new Map(
+  Object.values(SKILL_TREE).flatMap((branch) => (branch.nodes ?? []).map((node) => [node.id, node])),
+);
 
 // Cộng hưởng Di Vật — bản đồ tra cứu theo elite: nhãn di vật cùng kỷ để gợi ý giảm giá
 const RELIC_LABELS_VI = {
@@ -102,14 +112,6 @@ const ACH_TIER_TINT = {
   diamond: '#839bb0',
 };
 
-function withAlpha(hex, alpha) {
-  const m = String(hex || '').replace('#', '');
-  if (m.length !== 6) return hex;
-  const r = parseInt(m.slice(0, 2), 16);
-  const g = parseInt(m.slice(2, 4), 16);
-  const b = parseInt(m.slice(4, 6), 16);
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-}
 
 // Thẻ chuẩn dùng chung — tự đổi theo skin (bo góc, viền, bóng)
 const CARD = {
@@ -138,7 +140,7 @@ function getTierBadgeProps(tierStyle, lightTheme) {
 
 // ─────────────────────────────────────────────────────────────────────────────
 
-export default function SkillTree({ onOpenAchievements }) {
+export default function SkillTree({ _onOpenAchievements }) {
   const uiTheme            = useSettingsStore((s) => s.uiTheme);
   const sp                 = useGameStore((s) => s.player.sp);
   const totalEXP           = useGameStore((s) => s.player.totalEXP);
@@ -154,7 +156,10 @@ export default function SkillTree({ onOpenAchievements }) {
   const { progressPct, currentLevelEXP, nextLevelEXP } = getLevelProgress(totalEXP);
 
   const [confirmNode, setConfirmNode] = useState(null);
-  const [activeBranch, setActiveBranch] = useState(BRANCH_KEYS[0]);
+  // Ô đang chọn trên bản đồ. `null` = chưa chạm gì ⇒ rơi về ô mặc định (rẻ nhất trong số mở
+  // được ngay) — xem `pickDefaultCell`. Giữ ID chứ không giữ cả ô: ô được DỰNG LẠI mỗi lần
+  // SP/kỹ năng đổi, nên giữ tham chiếu cũ là giữ một trạng thái đã lỗi thời.
+  const [pickedId, setPickedId] = useState(null);
   // NGOẠI LỆ (mang bố cục) — bề dài thanh CHÍNH LÀ phần trăm kinh nghiệm đã tích.
   const expBarMotion = useSnapMotion({
     animate: { width: `${progressPct}%` },
@@ -210,10 +215,32 @@ export default function SkillTree({ onOpenAchievements }) {
     return { activeSynergies: active, branchCounts: counts };
   }, [unlockedSkills]);
 
-  const selectedBranch = SKILL_TREE[activeBranch];
+  const matrix = useMemo(() => buildSkillMatrix({
+    skillTree: SKILL_TREE,
+    unlockedSkills,
+    sp,
+    costOf: (n) => getEffectiveSkillCost(n.id, n.spCost, relics, relicEvolutions) ?? n.spCost,
+  }), [unlockedSkills, sp, relics, relicEvolutions]);
+  const readyCount = countReady(matrix);
+  const pickedCell = useMemo(() => {
+    const tatCa = matrix.columns.flatMap((col) => col.cells.map((c) => ({ ...c, branch: col })));
+    return tatCa.find((c) => c.node.id === pickedId) ?? pickDefaultCell(matrix);
+  }, [matrix, pickedId]);
 
   return (
     <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-4">
+
+      {/* ── Dải mở đầu Hành trang — xem `shared/inventoryHero.js` ────────── */}
+      <InventoryHero
+        hero={heroKyNang({
+          spChuaTieu: sp,
+          daMo: unlockedCount,
+          tongKyNang: totalNodes,
+          moDuoc: readyCount,
+          reNhat: cheapestReachable(matrix),
+        })}
+        icon="✦"
+      />
 
       {/* ── Tóm tắt tiến trình: cấp + XP ─────────────────────────────────── */}
       <div className="px-5 py-4" style={CARD}>
@@ -277,13 +304,14 @@ export default function SkillTree({ onOpenAchievements }) {
           <div className="px-5 py-5" style={CARD}>
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                {/* ⚠️ NHÃN "CÂY KỸ NĂNG" ĐÃ GỠ (2026-08-30) — đây là chỗ nói lần thứ HAI: cái
-                    tab Đàm vừa bấm để tới đây tên là "Kỹ năng", và nó đang sáng ngay phía trên.
-                    Một nhãn nhắc lại tên màn hình mình đang đứng thì không phân biệt được gì. */}
-                <h3 className="flex items-center gap-2 text-[1.45rem] font-semibold leading-tight" style={{ fontFamily: 'var(--skin-font-display)', color: 'var(--ink)' }}>
-                  <BranchGlyph branch={activeBranch} size={24} />{selectedBranch.label}
+                <h3 className="text-[1.45rem] font-semibold leading-tight" style={{ fontFamily: 'var(--skin-font-display)', color: 'var(--ink)' }}>
+                  Bản đồ kỹ năng
                 </h3>
-                <p className="mt-1 text-[12px] leading-snug" style={{ color: 'var(--muted)' }}>{selectedBranch.focus}</p>
+                <p className="mt-1 text-[12px] leading-snug" style={{ color: 'var(--muted)' }}>
+                  {readyCount > 0
+                    ? `${readyCount} ô mở được ngay — ô viền đậm, có giá SP ở góc.`
+                    : 'Chưa ô nào mở được ngay. Tích thêm SP, hoặc mở nút phía trên trong cùng cột.'}
+                </p>
               </div>
               <div className="flex shrink-0 items-center gap-1.5 px-3 py-1.5" style={{ background: 'rgba(var(--accent-rgb), 0.1)', border: '1px solid rgba(var(--accent-rgb), 0.18)', borderRadius: 'var(--skin-radius-control,14px)' }}>
                 <span style={{ color: 'var(--accent2)', display: 'inline-flex' }}><BoltGlyph size={14} /></span>
@@ -292,43 +320,34 @@ export default function SkillTree({ onOpenAchievements }) {
               </div>
             </div>
 
-            {/* Chọn nhánh */}
-            <div className="mt-4 flex flex-wrap gap-1.5">
-              {BRANCH_KEYS.map((key) => {
-                const b = SKILL_TREE[key];
-                const active = key === activeBranch;
-                const owned = branchCounts[key] ?? 0;
-                return (
-                  <button
-                    key={key}
-                    type="button"
-                    onClick={() => setActiveBranch(key)}
-                    className="mono inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-semibold transition-colors"
-                    style={active
-                      ? { background: 'var(--ink)', color: 'var(--canvas)' }
-                      : { background: 'rgba(var(--accent-rgb),0.06)', color: 'var(--muted)', border: '1px solid var(--line)' }}
-                  >
-                    <BranchGlyph branch={key} size={14} />
-                    <span className="hidden sm:inline">{b.label}</span>
-                    <span className="tabular-nums" style={{ opacity: 0.7 }}>{owned}/{b.nodes.length}</span>
-                  </button>
-                );
-              })}
+            {/*
+              ⚠️ CẢ 36 KỸ NĂNG TRONG MỘT KHUNG HÌNH — xem `shared/skillMatrix.js` để biết vì sao
+              bản đồ thay cho danh sách. Cột = nhánh, hàng = độ sâu; đường nối dọc trong mỗi cột
+              nói "muốn xuống dưới phải mở cái trên".
+            */}
+            <div className="mt-4">
+              <SkillMatrix
+                matrix={matrix}
+                selectedId={pickedCell?.node?.id ?? null}
+                onPick={(cell) => setPickedId(cell.node.id)}
+              />
             </div>
 
-            {/* Danh sách nút kỹ năng (nối nhau bằng đường mảnh) */}
-            <div className="mt-5">
-              {selectedBranch.nodes.map((node, i) => (
-                <SkillNode
-                  key={node.id}
-                  node={node}
-                  nodeState={getNodeState(node)}
-                  effectiveCost={getEffectiveSkillCost(node.id, node.spCost, relics, relicEvolutions)}
-                  isLast={i === selectedBranch.nodes.length - 1}
-                  onBuy={() => handleBuy(node)}
-                />
-              ))}
-            </div>
+            {pickedCell && (
+              <SkillDetail
+                cell={pickedCell}
+                branchKey={pickedCell.branch?.key}
+                branchLabel={pickedCell.branch?.label ?? ''}
+                lightTheme={lightTheme}
+                giaChuoi={giaCaChuoi(
+                  pickedCell.node.id,
+                  NODE_BY_ID,
+                  (id) => !!unlockedSkills[id],
+                  (n) => getEffectiveSkillCost(n.id, n.spCost, relics, relicEvolutions) ?? n.spCost,
+                )}
+                onBuy={() => handleBuy(pickedCell.node)}
+              />
+            )}
           </div>
 
           {/* Kỹ năng chủ động (chỉ hiện khi đã sở hữu) */}
@@ -345,8 +364,28 @@ export default function SkillTree({ onOpenAchievements }) {
 
         {/* PHẢI — Ngữ cảnh: nhiệm vụ ngày + chuỗi tuần + thành tựu */}
         <div className="flex flex-col gap-4">
-          <DailyMissions />
-          <RecentAchievements onOpen={onOpenAchievements} />
+          {/*
+            ⚠️ `hidden lg:block` CHO NHIỆM VỤ NGÀY, và đây là một phép GỠ TRÙNG chứ không phải ẩn
+            một tính năng (vòng 20, 2026-08-30). Ở màn RỘNG thẻ này là cột NGỮ CẢNH bên phải cây
+            kỹ năng — hoàn toàn đúng chỗ, vì thanh bên desktop KHÔNG có mục "Nhiệm vụ". Nhưng ở
+            390px hai cột XẾP CHỒNG, nên nó thành **1.097px chắn ngang giữa trang** — và đúng cái
+            thẻ ấy LÀ TOÀN BỘ nội dung của tab "Nhiệm vụ", cách một cú chạm trên thanh dưới.
+            Đo được: gỡ khỏi khổ điện thoại thì trang Kỹ năng 3.145 → ~2.048px và "Tổ hợp kỹ năng"
+            từ y=2382 lên y≈1285.
+            ⚠️ Đây là mặt TRÁI của khuôn "hidden … lg:" quen thuộc: thường nó giấu mất thứ iPhone
+            cần thấy; ở đây nó là cách duy nhất để iPhone THÔI phải xem hai lần cùng một thẻ, vì
+            desktop thật sự cần nó ở chỗ này còn iPhone thì đã có nguyên một tab riêng.
+            ⚠️ ĐÍNH CHÍNH 2026-09-01 — `RecentAchievements` NAY ĐÃ GỠ, và lý do giữ nó ghi ở
+            dòng ngay trên (*"nó KHÔNG có tab nào của riêng nó"*) đã **chết vì một tiền đề bị gỡ ở
+            chỗ khác**: sau khi ba hàng tab gộp làm một, "Huy hiệu" là một trong BA viên cùng hàng,
+            luôn nhìn thấy, cách đúng một cú chạm. Đo được sự trùng lặp: probe bốn chuỗi (con số
+            "147" + ba tên huy hiệu gần nhất) ra **4/4 xuất hiện ở CẢ màn Kỹ năng lẫn màn Huy
+            hiệu**. Hai chỗ nói cùng một chuyện thì chỗ nói ít hơn phải nhường — và ở đây chỗ nói
+            ít hơn còn đứng trong một màn chẳng liên quan gì tới thành tích.
+          */}
+          <div className="hidden lg:block">
+            <DailyMissions />
+          </div>
         </div>
       </div>
 
@@ -357,18 +396,6 @@ export default function SkillTree({ onOpenAchievements }) {
         activeSynergies={activeSynergies}
         branchCounts={branchCounts}
       />
-
-      {/* ── Chú thích bậc độ ─────────────────────────────────────────────── */}
-      <div className="flex flex-wrap gap-2 justify-center mt-5 pb-2">
-        {Object.entries(TIER_STYLE).map(([, style]) => {
-          const badgeProps = getTierBadgeProps(style, lightTheme);
-          return (
-            <span key={style.label} {...badgeProps} className={`${badgeProps.className} px-3 py-1`}>
-              {style.label}
-            </span>
-          );
-        })}
-      </div>
 
       {/* ── Hộp xác nhận mua ──────────────────────────────────────────────── */}
       <AnimatePresence>
@@ -497,176 +524,104 @@ function ActiveAbilityBar({ lightTheme, unlockedSkills, skillActivations, onActi
   );
 }
 
-// ─── SkillNode (một hàng trong cây, kiểu mockup) ──────────────────────────────
-
-function SkillNode({ node, nodeState, effectiveCost, isLast, onBuy }) {
+// ─── SkillDetail — ô đang chọn trên bản đồ ────────────────────────────────────
+/**
+ * ⚠️ MỘT KHUNG CHI TIẾT, KHÔNG PHẢI BA MƯƠI SÁU. Bản đồ 6×6 chỉ nói được TRẠNG THÁI (đã mở · mở
+ * được · thiếu SP · còn khoá); mô tả, giá và nút bấm sống ở đây. Trước 2026-09-02 mỗi kỹ năng tự
+ * mang cả mô tả lẫn nút, nên riêng khối cây kỹ năng dài hơn một nghìn điểm ảnh và người chơi phải
+ * bấm qua sáu nhánh mới nhìn hết 36 kỹ năng — tức câu hỏi "tiêu SP vào đâu" không trả lời được
+ * bằng mắt.
+ * ⚠️ NÚT ĐANG KHOÁ HIỆN GIÁ CẢ CHUỖI, KHÔNG PHẢI GIÁ LẺ — luật cũ giữ nguyên, xem `giaCaChuoi`:
+ * đo trên một ván thật, 21/32 nút chưa mua từng hiện một con số THẤP HƠN giá thật, tệ nhất 2,3
+ * lần. Nút MỞ ĐƯỢC vẫn hiện giá lẻ, vì lúc ấy giá lẻ CHÍNH LÀ số SP sắp bị trừ.
+ */
+function SkillDetail({ cell, branchKey, branchLabel, giaChuoi, lightTheme, onBuy }) {
   const pressMotion = usePressMotion();
-  // Nhấc khi DI CHUỘT không thuộc ba nhịp — đi qua cái gác ngoại lệ.
-  const hoverLift = useCustomMotion({ whileHover: { y: -1 } });
-  // NGOẠI LỆ (trang trí) — quầng sáng THỞ quanh kỹ năng đã mở khoá được, lặp vô hạn.
-  // ⚠️ Điều kiện nay chỉ còn `isAvailable`: cái gác đã lo vế `!reducedMotion`, giữ lại là
-  // "một luật hai công thức" và sớm muộn hai vế sẽ lệch nhau.
-  const haloMotion = useCustomMotion({
-    animate: { boxShadow: ['0 0 0 0 rgba(var(--accent-rgb),0)', '0 0 0 4px rgba(var(--accent-rgb),0.12)', '0 0 0 0 rgba(var(--accent-rgb),0)'] },
-    transition: { duration: 2.4, repeat: Infinity },
-  });
-  const isUnlocked     = nodeState === NODE_STATE.UNLOCKED;
-  const isAvailable    = nodeState === NODE_STATE.AVAILABLE;
-  const isLocked       = nodeState === NODE_STATE.LOCKED;
-  const isInsufficient = nodeState === NODE_STATE.INSUFFICIENT_SP;
-
-  // Cộng hưởng Di Vật (B): giá hiển thị = effectiveCost; nếu rẻ hơn → có giảm giá
-  const cost          = effectiveCost ?? node.spCost;
-  const isDiscounted  = cost < node.spCost;
-  const resonance     = ELITE_RESONANCE_BY_SKILL[node.id]; // chỉ có ở 6 elite
-  const showHint      = !!resonance && !isDiscounted && !isUnlocked;
+  const { node, cost, state } = cell;
+  const isUnlocked = state === MATRIX_STATE.OWNED;
+  const isReady    = state === MATRIX_STATE.READY;
+  const isLocked   = state === MATRIX_STATE.LOCKED;
+  const isDiscounted = cost < node.spCost;
+  const resonance    = ELITE_RESONANCE_BY_SKILL[node.id];
+  const showHint     = !!resonance && !isDiscounted && !isUnlocked;
   const hintRelicLabel = resonance ? RELIC_LABELS_VI[resonance.relicId] : null;
-
-  const circleStyle = isUnlocked
-    ? { background: 'var(--accent)', color: '#fff', border: '1px solid var(--accent)' }
-    : isAvailable
-      ? { background: 'rgba(var(--accent-rgb),0.10)', color: 'var(--accent2)', border: '1.5px solid rgba(var(--accent-rgb),0.45)' }
-      : { background: 'var(--card-bg-solid2)', color: 'var(--muted-2)', border: '1px solid var(--line)' };
+  const tierStyle = TIER_STYLE[node.tier] ?? TIER_STYLE.basic;
+  const tierBadgeProps = getTierBadgeProps(tierStyle, lightTheme);
 
   return (
-    <div className="flex gap-3.5">
-      {/* Cột trái: vòng tròn + đường nối */}
-      <div className="flex flex-col items-center">
-        <motion.span
-          className="relative z-10 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[17px] leading-none"
-          style={{ ...circleStyle, opacity: isLocked ? 0.6 : 1 }}
-          {...(isAvailable ? haloMotion : {})}
+    <div
+      className="mt-4 px-4 py-3.5"
+      style={{
+        background: isReady
+          ? 'color-mix(in srgb, var(--accent) 7%, var(--card-bg-solid))'
+          : 'var(--card-bg-solid2, var(--card-bg-solid))',
+        border: '1px solid ' + (isReady ? 'color-mix(in srgb, var(--accent) 26%, var(--line))' : 'var(--line)'),
+        borderRadius: 'var(--skin-radius-card,18px)',
+      }}
+    >
+      <div className="flex items-start gap-3">
+        <span
+          className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[17px] leading-none"
+          style={isUnlocked
+            ? { background: 'var(--accent)', color: '#fff', border: '1px solid var(--accent)' }
+            : { background: 'var(--card-bg-solid)', color: 'var(--muted)', border: '1px solid var(--line)' }}
         >
           <SkillGlyph id={node.id} locked={isLocked} size={20} />
-        </motion.span>
-        {!isLast && (
-          <span
-            className="mt-1 w-px flex-1"
-            style={{ background: isUnlocked ? 'rgba(var(--accent-rgb),0.30)' : 'var(--line)', minHeight: '14px' }}
-          />
-        )}
+        </span>
+
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <p className="text-[15px] font-semibold leading-tight" style={{ color: 'var(--ink)' }}>{node.label}</p>
+            <span {...tierBadgeProps}>{tierStyle.label}</span>
+          </div>
+          <p className="mono mt-0.5 inline-flex items-center gap-1 text-[10px] uppercase tracking-[0.16em]" style={{ color: 'var(--muted-2)' }}>
+            <BranchGlyph branch={branchKey} size={12} />{branchLabel}
+          </p>
+          <p className="mt-1.5 text-[12.5px] leading-snug" style={{ color: 'var(--muted)' }}>{node.description}</p>
+          {isLocked && (
+            <p className="mt-1.5 text-[11px] leading-snug" style={{ color: 'var(--muted-2)' }}>
+              {node.requires.length > 0
+                ? `Cần mở trước: ${node.requires.map((r) => SKILL_LABELS[r] ?? r.replace(/_/g, ' ')).join(', ')}`
+                : 'Cần mở nút phía trên trong cùng cột'}
+            </p>
+          )}
+          {showHint && (
+            <p className="mt-1.5 text-[11px] leading-snug" style={{ color: 'var(--accent2)', opacity: 0.85 }}>
+              {hintRelicLabel ? `Tiến hóa "${hintRelicLabel}" để giảm nửa giá` : 'Tiến hóa di vật cùng kỷ để giảm nửa giá'}
+            </p>
+          )}
+        </div>
       </div>
 
-      {/* Cột phải: tên + mô tả + hành động */}
-      <div className={`min-w-0 flex-1 ${isLast ? '' : 'pb-5'}`}>
-        <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0">
-            <p className="text-[14px] font-semibold leading-tight" style={{ color: isLocked ? 'var(--muted-2)' : 'var(--ink)' }}>
-              {node.label}
-            </p>
-            <p className="mt-1 text-[12px] leading-snug" style={{ color: 'var(--muted)' }}>
-              {isLocked
-                ? (node.requires.length > 0
-                    ? `Cần mở: ${node.requires.map((r) => SKILL_LABELS[r] ?? r.replace(/_/g, ' ')).join(', ')}`
-                    : 'Cần mở nút trước')
-                : node.description}
-            </p>
-            {showHint && (
-              <p className="mt-1 text-[11px] leading-snug" style={{ color: 'var(--accent2)', opacity: 0.85 }}>
-                {hintRelicLabel
-                  ? `Tiến hóa "${hintRelicLabel}" để giảm nửa giá`
-                  : 'Tiến hóa di vật cùng kỷ để giảm nửa giá'}
-              </p>
-            )}
-          </div>
-
-          <div className="shrink-0 pt-0.5">
-            {isUnlocked ? (
-              <span className="mono inline-flex items-center gap-1 text-[11px] font-semibold" style={{ color: 'var(--good)' }}>
-                ✓ Đã mở
-              </span>
-            ) : isAvailable ? (
-              <motion.button
-                type="button"
-                onClick={onBuy}
-                {...hoverLift}
-                {...pressMotion}
-                className="mono inline-flex items-center whitespace-nowrap rounded-full px-3 py-1.5 text-[11px] font-semibold tabular-nums transition-colors"
-                style={{ background: 'rgba(var(--accent-rgb),0.10)', border: '1px solid rgba(var(--accent-rgb),0.30)', color: 'var(--accent2)' }}
-              >
-                Mở ·{' '}
-                {isDiscounted && (
-                  <span className="line-through opacity-60 mr-1" style={{ color: 'var(--muted)' }}>{node.spCost}</span>
-                )}
-                {cost} SP
-              </motion.button>
-            ) : (
-              <span
-                className="mono inline-flex items-center whitespace-nowrap rounded-full px-3 py-1.5 text-[11px] font-semibold tabular-nums"
-                style={{ background: 'var(--card-bg-solid2)', border: '1px solid var(--line)', color: 'var(--muted-2)', opacity: isInsufficient ? 0.95 : 0.7 }}
-              >
-                {isDiscounted && (
-                  <span className="line-through opacity-60 mr-1">{node.spCost}</span>
-                )}
-                {cost} SP
-              </span>
-            )}
-          </div>
-        </div>
+      <div className="mt-3 flex justify-end">
+        {isUnlocked ? (
+          <span className="mono inline-flex items-center gap-1 text-[12px] font-semibold" style={{ color: 'var(--good)' }}>✓ Đã mở</span>
+        ) : isReady ? (
+          <motion.button
+            type="button"
+            onClick={onBuy}
+            {...pressMotion}
+            className="mono inline-flex items-center whitespace-nowrap rounded-full px-4 py-2 text-[12px] font-semibold tabular-nums transition-colors"
+            style={{ background: 'var(--accent)', border: '1px solid var(--accent)', color: 'var(--canvas)' }}
+          >
+            Mở ·{' '}
+            {isDiscounted && <span className="mr-1 line-through opacity-60">{node.spCost}</span>}
+            {cost} SP
+          </motion.button>
+        ) : (
+          <span
+            className="mono inline-flex items-center whitespace-nowrap rounded-full px-4 py-2 text-[12px] font-semibold tabular-nums"
+            style={{ background: 'var(--card-bg-solid)', border: '1px solid var(--line)', color: 'var(--muted-2)' }}
+          >
+            {isDiscounted && <span className="mr-1 line-through opacity-60">{node.spCost}</span>}
+            {giaChuoi > cost ? `${giaChuoi} SP cả chuỗi` : `${cost} SP`}
+          </span>
+        )}
       </div>
     </div>
   );
 }
 
-// ─── RecentAchievements (thẻ "Thành tựu gần đây" cột phải) ─────────────────────
-
-function RecentAchievements({ onOpen }) {
-  const unlocked = useGameStore((s) => s.achievements?.unlocked ?? []);
-  const recent = useMemo(
-    () => unlocked.slice(-3).reverse().map((id) => ACHIEVEMENT_BY_ID[id]).filter(Boolean),
-    [unlocked],
-  );
-  const total = unlocked.length;
-  const more = Math.max(0, total - recent.length);
-
-  return (
-    <section className="px-5 py-5" style={CARD}>
-      <div className="mb-4 flex items-end justify-between gap-3">
-        <p className="mono text-[10px] uppercase tracking-[0.2em]" style={{ color: 'var(--muted-2)' }}>Thành tựu gần đây</p>
-        <span
-          className="mono inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold tabular-nums"
-          style={{ background: 'rgba(var(--accent-rgb), 0.1)', color: 'var(--accent2)' }}
-        >
-          {total} đã mở
-        </span>
-      </div>
-
-      {total === 0 ? (
-        <p className="text-[12px] leading-snug" style={{ color: 'var(--muted)' }}>
-          Chưa mở thành tựu nào. Hoàn thành phiên để bắt đầu sưu tầm huy hiệu.
-        </p>
-      ) : (
-        <div className="grid grid-cols-4 gap-2.5">
-          {recent.map((a) => {
-            const tint = ACH_TIER_TINT[a.tier] ?? '#c96442';
-            const tierLabel = ACHIEVEMENT_TIERS[a.tier]?.label;
-            return (
-              <button
-                key={a.id}
-                type="button"
-                onClick={onOpen}
-                title={tierLabel ? `${a.label} · ${tierLabel}` : a.label}
-                className="flex aspect-square items-center justify-center transition-transform hover:-translate-y-0.5"
-                style={{ background: withAlpha(tint, 0.12), border: `1px solid ${withAlpha(tint, 0.3)}`, borderRadius: 'var(--skin-radius-control,14px)' }}
-              >
-                <span className="mono text-[13px] font-semibold tracking-[0.06em]" style={{ color: tint }}>{getLabelMark(a.label, 'TT')}</span>
-              </button>
-            );
-          })}
-          <button
-            type="button"
-            onClick={onOpen}
-            title="Xem tất cả thành tựu"
-            className="mono flex aspect-square items-center justify-center text-[13px] font-semibold tabular-nums transition-transform hover:-translate-y-0.5"
-            style={{ background: 'rgba(var(--accent-rgb),0.08)', border: '1px dashed rgba(var(--accent-rgb),0.30)', color: 'var(--accent2)', borderRadius: 'var(--skin-radius-control,14px)' }}
-          >
-            {more > 0 ? `+${more}` : 'Xem'}
-          </button>
-        </div>
-      )}
-    </section>
-  );
-}
 
 // ─── PurchaseConfirmDialog ────────────────────────────────────────────────────
 
@@ -695,9 +650,9 @@ function PurchaseConfirmDialog({ node, sp, lightTheme, onConfirm, onCancel }) {
         } : undefined}
       >
         <div className="text-center mb-4">
-          <span className="mono inline-flex h-14 w-14 items-center justify-center rounded-full border text-[12px] font-semibold uppercase tracking-[0.18em]"
+          <span className={`mono inline-flex h-14 w-14 items-center justify-center rounded-full border font-semibold ${hasGlyphIcon(node.icon) ? 'text-[26px] leading-none' : 'text-[12px] uppercase tracking-[0.18em]'}`}
                 style={lightTheme ? { borderColor: 'var(--line)', background: 'var(--card-bg-solid2)', color: 'var(--accent2)' } : { borderColor: 'rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.04)', color: 'var(--accent-light)' }}>
-            {getLabelMark(node.label)}
+            {getGlyph(node.icon, node.label)}
           </span>
           <h3 className="font-bold text-xl mt-2" style={lightTheme ? { fontFamily: 'var(--skin-font-display)', fontWeight: 600, color: 'var(--ink)' } : { color: '#ffffff' }}>{node.label}</h3>
           <span className={`inline-block mt-1.5 ${tierBadgeProps.className}`} style={tierBadgeProps.style}>
@@ -840,7 +795,7 @@ function SynergyPanel({ synergies, activeSynergies, branchCounts, lightTheme }) 
               )}
 
               <div className="flex items-center gap-2 relative z-10">
-                <span className="mono inline-flex h-6 w-6 items-center justify-center rounded-full border text-[7px] font-semibold uppercase tracking-[0.12em]" style={lightTheme ? { borderColor: 'var(--line)', background: 'rgba(255,255,255,0.74)', color: active ? 'var(--accent2)' : 'var(--muted)' } : { borderColor: 'rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.04)', color: active ? 'var(--accent-light)' : '#94a3b8' }}>{getLabelMark(syn.label)}</span>
+                <span className={`mono inline-flex h-6 w-6 items-center justify-center rounded-full border font-semibold ${hasGlyphIcon(syn.icon) ? 'text-[13px] leading-none' : 'text-[7px] uppercase tracking-[0.12em]'}`} style={lightTheme ? { borderColor: 'var(--line)', background: 'rgba(255,255,255,0.74)', color: active ? 'var(--accent2)' : 'var(--muted)' } : { borderColor: 'rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.04)', color: active ? 'var(--accent-light)' : '#94a3b8' }}>{getGlyph(syn.icon, syn.label)}</span>
                 {/*
                   ⚠️ TÊN HỢP LỰC ĐƯỢC XUỐNG DÒNG, KHÔNG CẮT BẰNG DẤU … — đây là TÊN RIÊNG, cắt đi
                   thì mất luôn thứ để gọi nó. Đo ở 390px (lưới 2 cột): chỗ cho tên chỉ **74px**,
@@ -864,13 +819,14 @@ function SynergyPanel({ synergies, activeSynergies, branchCounts, lightTheme }) 
 
               <p className={`text-[10px] relative z-10 leading-tight line-clamp-2 ${lightTheme ? '' : 'text-slate-500'}`} style={lightTheme ? { color: 'var(--muted)' } : undefined}>{syn.desc}</p>
 
+              {/*
+                ⚠️ ĐÃ GỠ huy hiệu «+N% XP» (2026-09-01). Nó chép lại ĐÚNG sáu ký tự cuối của câu
+                mô tả nằm 31px ngay trên nó, và đo trên bảng thật thì **7/7 mô tả đều đã kết thúc
+                bằng chính con số ấy** ("≥3 skill Ý Chí: phiên ≥30' nhận **+5% XP**."). Bảy thẻ ×
+                một dòng thừa = 60px trên màn Kỹ năng.
+                Thanh tiến độ thì GIỮ NGUYÊN — nó mang tin "còn bao xa", thứ không câu nào nói.
+              */}
               <div className="flex items-center gap-2 relative z-10">
-                <span
-                  className={`mono text-xs font-bold tabular-nums ${lightTheme ? '' : active ? 'text-[var(--accent-light)]' : 'text-slate-400'}`}
-                  style={lightTheme ? { color: active ? 'var(--accent2)' : 'var(--muted)' } : undefined}
-                >
-                  +{(syn.bonus * 100).toFixed(0)}% XP
-                </span>
                 {!active && progress > 0 && (
                   <div
                     className="flex-1 h-1 rounded-full overflow-hidden"

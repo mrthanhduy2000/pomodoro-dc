@@ -11,7 +11,7 @@ import {
   getCreditedFocusMinutes,
   getNextContinuedPomodoroConfirmUntilSeconds,
   getWorkedMinutesForBreak,
-  BREAK_START_DELAY_MS,
+  breakStartDelayMs,
   resolveContinueAfterPomodoro,
   shouldContinuePomodoroAsStopwatch,
   shouldHoldContinuedPomodoroForConfirmation,
@@ -614,7 +614,7 @@ export function useTimer({ focusMinutes, mode = TIMER_MODES.POMODORO }) {
           ...breakPlan,
           sourceSessionId: completedSessionId ?? null,
         });
-      }, BREAK_START_DELAY_MS);
+      }, breakStartDelayMs(sessionResult?.celebrates));
     }
   }, [
     autoStartBreak,
@@ -1089,7 +1089,7 @@ export function useTimer({ focusMinutes, mode = TIMER_MODES.POMODORO }) {
           ...breakPlan,
           sourceSessionId: completedSessionId ?? null,
         });
-      }, BREAK_START_DELAY_MS);
+      }, breakStartDelayMs(sessionResult?.celebrates));
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [timerSession.startedAt]);

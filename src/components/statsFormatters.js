@@ -85,14 +85,14 @@ export function fmtVal(v, key) {
 }
 
 export function hexToRgba(hex, alpha) {
-  if (typeof hex !== 'string') return `rgba(201, 100, 66, ${alpha})`;
+  if (typeof hex !== 'string') return `rgba(var(--accent-rgb), ${alpha})`;
   const normalized = hex.replace('#', '').trim();
-  if (![3, 6].includes(normalized.length)) return `rgba(201, 100, 66, ${alpha})`;
+  if (![3, 6].includes(normalized.length)) return `rgba(var(--accent-rgb), ${alpha})`;
   const full = normalized.length === 3
     ? normalized.split('').map((char) => char + char).join('')
     : normalized;
   const numeric = Number.parseInt(full, 16);
-  if (Number.isNaN(numeric)) return `rgba(201, 100, 66, ${alpha})`;
+  if (Number.isNaN(numeric)) return `rgba(var(--accent-rgb), ${alpha})`;
   const red = (numeric >> 16) & 255;
   const green = (numeric >> 8) & 255;
   const blue = numeric & 255;

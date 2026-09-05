@@ -12,7 +12,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import { BLUEPRINT_CATALOG, BLUEPRINT_META, BUILDING_EFFECTS } from './constants';
-import { describeCraftProgress } from './craftProgress';
+import { describeCraftProgress, blueprintLabel } from './craftProgress';
 
 /** Một bản vẽ có `sessionsToComplete` biết chắc, để khỏi phụ thuộc số cụ thể của cân bằng. */
 const SAMPLE = BLUEPRINT_CATALOG[4][0].id;
@@ -98,4 +98,40 @@ test('HAI BẢNG PHẢI KHỚP: `BLUEPRINT_META` và `BUILDING_EFFECTS` cùng m�
   }
   assert.deepEqual(mismatched, [],
     'hai bảng lệch nhau về số phiên xây — tab Thành Phố và Xưởng sẽ nói hai con số khác nhau');
+});
+
+/**
+ * ⚠️ BÀI NÀY RA ĐỜI TỪ MỘT BUG CẮN HAI LẦN TRONG MỘT PHIÊN (2026-09-02).
+ * Chuỗi tra tên bản vẽ bị chép ra BA nơi và sai ở hai nơi khác nhau: một chỗ hỏi `.name` (trường
+ * KHÔNG tồn tại — cả hai bảng đều dùng `label`), một chỗ chỉ hỏi `BUILDING_EFFECTS` rồi rơi về
+ * "Công trình". Cả hai im lặng, vì `??` nuốt gọn và câu hỏng đọc lên vẫn xuôi tai
+ * ("Công trình sẽ mọc lên trong thành phố."). Nay chỉ còn MỘT hàm.
+ */
+test('blueprintLabel: tra được tên thật, và KHÔNG bao giờ trả về undefined', () => {
+  const moiBanVe = Object.values(BLUEPRINT_CATALOG).flat().filter((b) => b?.id);
+  assert.ok(moiBanVe.length >= 50, `mới thấy ${moiBanVe.length} bản vẽ — phép đo đang chạy rỗng`);
+
+  // MỌI bản vẽ phải tra ra tên thật — không cái nào được rơi về câu mặc định.
+  const roiVeMacDinh = moiBanVe.filter((b) => blueprintLabel(b.id) === 'Công trình');
+  assert.deepEqual(roiVeMacDinh.map((b) => b.id), [], 'có bản vẽ không tra ra tên');
+  assert.equal(blueprintLabel(moiBanVe[0].id), moiBanVe[0].label);
+
+  assert.equal(blueprintLabel('bp_khong_ton_tai'), 'Công trình', 'id lạ phải rơi về câu mặc định');
+  assert.equal(blueprintLabel(null), 'Công trình');
+  assert.equal(blueprintLabel(undefined, 'X'), 'X');
+});
+
+// ⚠️ Bài này nhốt SỰ THẬT đã làm ba bản chép sai: KHÔNG bảng nào có `name`, và `BUILDING_EFFECTS`
+// KHÔNG có `label`. Ngày nào một trong hai điều đó đổi thì bài này đỏ và nhắc người ta đọc lại.
+test('không bảng nào dùng `name`, và BUILDING_EFFECTS không giữ tên hiển thị', () => {
+  const moiBanVe = Object.values(BLUEPRINT_CATALOG).flat().filter((b) => b?.id);
+  assert.equal(moiBanVe.filter((b) => b.name !== undefined).length, 0, 'catalog không có `name`');
+
+  const hieuUng = Object.values(BUILDING_EFFECTS);
+  assert.ok(hieuUng.length >= 50, 'phép đo đang chạy rỗng');
+  assert.equal(
+    hieuUng.filter((v) => v?.label).length, 0,
+    'BUILDING_EFFECTS nay CÓ `label` — nếu vậy phải quyết lại đâu là nguồn duy nhất của tên, '
+    + 'chứ đừng hỏi cả hai bảng: hỏi cả hai là dựng lại đúng cái đã sai ba lần.',
+  );
 });

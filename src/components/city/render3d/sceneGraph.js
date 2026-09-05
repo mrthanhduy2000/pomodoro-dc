@@ -46,7 +46,7 @@ import { materialProfile } from '../../../engine/city3d/materials';
 import { applySurfaceDetail, specularGainFor } from './surfaceDetail';
 import { getEraStyle } from '../../../engine/city3d/eraStyle';
 import { collectCitySpecs, KIND_NGOAI_LUOI, NHOM_CUA_KIND } from '../../../engine/city3d/cityParts';
-import { BUILDING_SCALE, prism, specSpan } from '../../../engine/city3d/parts';
+import { BUILDING_SCALE, buildingSpanCells, plinthParts } from '../../../engine/city3d/parts';
 import { buildTerrain } from '../../../engine/city3d/terrain';
 import { buildHorizon } from '../../../engine/city3d/horizon';
 import { placeBounds, specBounds } from '../../../engine/city3d/pick';
@@ -392,6 +392,18 @@ export const MAX_PIXEL_RATIO = 2;
  * vẽ. Gộp phẳng thì hỏi `--mask ground-grid` sẽ cắt oan cả thành phố.
  */
 export const NHOM_TACH_THANH_PHO = ['buildings', 'props', 'landscape', 'hinterland'];
+/**
+ * Khung bóng đổ với tới bao xa, tính theo bề rộng lưới.
+ *
+ * ⚠️ EXPORT ĐỂ BÀI TEST ĐỌC ĐƯỢC (2026-09-02, đóng `TECH_DEBT #91`). Trước đây hệ số này là một
+ * số trần trong thân hàm, và `sceneStats.test.js` **chép tay** `12 * 0.8`. Nghĩa là bài test khoá
+ * một CON SỐ chứ không khoá cái LUẬT: đổi hệ số ở đây mà quên sửa bài test thì nó vẫn xanh, trong
+ * khi bóng bị cắt cụt trên production.
+ * Suýt cắn thật: lần gộp nhánh Phase 19–21 có một xung đột đúng ở dòng ấy (`main` chốt 0,75 ·
+ * nhánh chốt 0,80) — chọn nhầm bên thì không gì đỏ lên.
+ */
+export const SHADOW_REACH_RATIO = 0.8;
+
 export const NHOM_TACH_MAT_DAT = ['ground-grid', 'ground-apron'];
 
 /**
@@ -938,23 +950,22 @@ export function createCityScene({
    * có góc treo) và phần hụt được lấp bằng một bệ kè — đúng cách nhà trên sườn đồi được xây ngoài
    * đời, và nó thêm đúng loại chi tiết kiến trúc mà cảnh đang thiếu.
    *
-   * Móng đi vào CÙNG khối hình học gộp nên **không tốn thêm lệnh vẽ nào**; nó chỉ tốn 12 tam giác,
-   * và chỉ sinh ra khi thật sự có phần hụt.
+   * Móng đi vào CÙNG khối hình học gộp nên **không tốn thêm lệnh vẽ nào**; nó tốn **28** tam giác
+   * khi đủ lớn để có vát và **12** khi không (đo 2026-09-05: 26 bệ ăn 28, đúng một bệ ăn 12 —
+   * xem `plinthParts` ở `parts.js`). Chú thích cũ ở đây ghi "chỉ tốn 12", tức nêu ca không-vát như
+   * thể là con số duy nhất; nó đúng ở đời trước Phase 8B. Bệ chỉ sinh ra khi thật sự có phần hụt.
+   *
+   * ⚠️ HÌNH CỦA BỆ KÈ VÀ PHÉP ĐỔI Ô ĐẤT NAY Ở `parts.js` (tầng THUẦN), vì bên ĐO cần đúng hai thứ
+   * ấy — chép chúng sang phía đo là "một luật hai công thức", và bản chép đã sai một lần rồi
+   * (`plinth-tri.mjs` đếm 3 bệ thay vì 31, 2026-08-20).
    */
   function groundPlacement(cell, spec, extra = {}) {
     const { x, z } = cellToWorld(cell.x, cell.y, gridSize);
-    const span = Math.max(1, Math.round(specSpan(spec.parts) * BUILDING_SCALE));
+    const span = buildingSpanCells(spec.parts);
     const { top, drop } = terrain.footprint(cell.x, cell.y, span);
     const placement = { x, z, y: top, scale: BUILDING_SCALE, spec, ...extra };
-    const plinth = drop > 0 ? {
-      x, z, y: top - drop, ry: 0, scale: 1,
-      spec: {
-        parts: [prism({
-          y: 0, w: span * 0.92, d: span * 0.92, h: drop,
-          sides: 4, taper: 1, role: 'stone',
-        })],
-      },
-    } : null;
+    const parts = plinthParts(span, drop);
+    const plinth = parts ? { x, z, y: top - drop, ry: 0, scale: 1, spec: { parts } } : null;
     return { placement, plinth };
   }
 
@@ -1608,7 +1619,7 @@ export function createCityScene({
   // và HOÀN TÁC — ảnh kỷ 11 lúc 16 giờ (bóng dài nhất) không đọc ra khác biệt nào, trong khi tấm
   // đất nhận bóng rộng tới ±9,5 nên siết là mua rủi ro cắt bóng để đổi lấy một thứ không nhìn thấy.
   // Độ nét đã lấy bằng đường khác: bản đồ bóng 2048 → 4096 (xem `SHADOW_MAP_DESKTOP`).
-  const reach = gridSize * 0.8;
+  const reach = gridSize * SHADOW_REACH_RATIO;
   sun.shadow.camera.left = -reach;
   sun.shadow.camera.right = reach;
   sun.shadow.camera.top = reach;
@@ -1671,6 +1682,26 @@ export function createCityScene({
       mesh.dispose?.();
     }
     for (const resource of disposables.splice(0)) resource.dispose?.();
+
+    /*
+      ⚠️ BẢN ĐỒ BÓNG PHẢI DỌN RIÊNG (2026-09-02, đóng `TECH_DEBT #31`).
+      Hai vòng lặp ở trên duyệt `meshes` và `disposables` — hai danh sách chứa những thứ hàm này TỰ
+      tạo ra. Bản đồ bóng KHÔNG nằm trong danh sách nào: nó do chính three tạo ra **muộn hơn**, ở
+      lần render đầu tiên, rồi treo vào `sun.shadow.map`. Đây là hình dạng sai quen thuộc — *dọn
+      theo danh sách mình ghi, trong khi có thứ được sinh ra ngoài danh sách ấy*.
+      Cái giá đo được: mỗi lần dựng-rồi-dọn để lại **+2 texture sống sót**; bản đồ bóng desktop là
+      4096×4096, nên chạy 24 cảnh liên tiếp trên MỘT renderer để lại gần **800 MB bộ nhớ đồ hoạ**.
+      ⚠️ APP KHÔNG DÍNH (nó gọi `renderer.forceContextLoss()` ngay sau, mất context thì cả GPU dọn
+      sạch) — thứ dính là **CÔNG CỤ**, chỗ dựng 24 cảnh liên tiếp trên một renderer. Nhưng lời hứa
+      của một hàm tên `dispose()` là "dọn hết", và một hàm chỉ đúng nhờ việc người gọi làm thêm một
+      bước nữa thì đó là đúng **nhờ một thứ chẳng liên quan** (bẫy Phase 7D).
+      `?.` ở mọi bậc: `shadow.map` là `null` cho tới lần render đầu tiên, nên một cảnh dựng rồi dọn
+      mà chưa kịp vẽ lần nào vẫn phải chạy qua đây không ném lỗi.
+    */
+    sun.shadow?.map?.dispose?.();
+    if (sun.shadow) sun.shadow.map = null;
+
+
     scene.clear();
   }
 

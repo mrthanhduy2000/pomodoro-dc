@@ -27,8 +27,9 @@ import {
   getUpgradeRefinedCost,
   getBuildingLevelMultiplier,
 } from '../engine/constants';
-import { initialsFromLabel } from '../utils/labelMark';
+import { getGlyph, hasGlyphIcon } from '../utils/labelMark';
 import { TypeBadge, RarityBadge, PerkSummary } from './shared/BadgeKit';
+import { researchCostOf } from '../engine/wonderEffects';
 
 const DISPLAY_FONT = '"Source Serif 4", Georgia, serif';
 const MONO_FONT = '"JetBrains Mono", "SFMono-Regular", Menlo, monospace';
@@ -58,22 +59,11 @@ function formatPercent(value = 0) {
   return `${Math.round(value * 100)}%`;
 }
 
-function getActiveWonderEffects(buildings = []) {
-  return new Set(
-    buildings
-      .map((bpId) => BUILDING_EFFECTS[bpId]?.wonderEffect)
-      .filter(Boolean),
-  );
-}
-
+// ⚠️ BẢN CHÉP TAY THỨ BA ĐÃ GỠ (2026-09-02). Nó gom `wonderEffect` từ MỌI công trình, không kiểm
+// `type === 'wonder'`, và thiếu `Math.max(1, …)`/`Math.round` — tức con số IN RA có thể khác con
+// số store TRỪ. Nay cả ba (store · cái chuông · màn hình) đọc chung `engine/wonderEffects.js`.
 function getDisplayedResearchCost(buildings, bpId) {
-  const baseCost = BLUEPRINT_META[bpId]?.rpCost ?? 0;
-  const meta = BLUEPRINT_META[bpId];
-  const wonderEffects = getActiveWonderEffects(buildings);
-  if (meta && wonderEffects.has('t2_research_25off') && meta.era >= 6 && meta.era <= 10) {
-    return Math.max(1, Math.round(baseCost * 0.75));
-  }
-  return baseCost;
+  return researchCostOf(buildings, bpId, BLUEPRINT_META[bpId]?.rpCost ?? 0);
 }
 
 function paperPanel(lightTheme) {
@@ -86,8 +76,12 @@ function paperPanel(lightTheme) {
   };
 }
 
-function getBlueprintMark(def) {
-  return initialsFromLabel(def?.label ?? def?.id ?? 'BP');
+// ⚠️ 75 bản vẽ đều đã có biểu tượng riêng trong `BLUEPRINT_CATALOG` (⚓ · 🏪 · 🪨 …). File này
+// gọi `initialsFromLabel` THẲNG chứ không qua `getLabelMark`, nên nó **lọt khỏi lần đổi đầu
+// tiên** và ba ô ở đây vẫn hiện "XĐ" · "TĐ" trong khi các màn khác đã lên biểu tượng — đúng
+// bài học "đổi một luật thì grep chính CÁI LUẬT ấy, đừng grep một cái TÊN".
+function getBlueprintGlyph(def) {
+  return getGlyph(def?.icon, def?.label ?? def?.id, 'BP');
 }
 
 // ─── RP progress bar ─────────────────────────────────────────────────────────
@@ -163,7 +157,7 @@ function MyBlueprintsTab({ blueprints, research, buildings, activeBook, onSelect
             className="text-xs px-3 py-1 rounded-full border transition-colors"
             style={activeFilterEra === 0
               ? (lightTheme
-                  ? { background: 'rgba(201, 100, 66, 0.10)', borderColor: 'rgba(201, 100, 66, 0.22)', color: '#9a5a48' }
+                  ? { background: 'rgba(var(--accent-rgb), 0.10)', borderColor: 'rgba(var(--accent-rgb), 0.22)', color: '#9a5a48' }
                   : { background: '#4f46e5', borderColor: '#6366f1', color: '#ffffff' })
               : (lightTheme
                   ? { borderColor: 'rgba(31, 30, 29, 0.08)', color: '#6a6862', background: 'rgba(255,255,255,0.74)' }
@@ -178,7 +172,7 @@ function MyBlueprintsTab({ blueprints, research, buildings, activeBook, onSelect
               className="text-xs px-3 py-1 rounded-full border transition-colors"
               style={activeFilterEra === era
                 ? (lightTheme
-                    ? { background: 'rgba(201, 100, 66, 0.10)', borderColor: 'rgba(201, 100, 66, 0.22)', color: '#9a5a48' }
+                    ? { background: 'rgba(var(--accent-rgb), 0.10)', borderColor: 'rgba(var(--accent-rgb), 0.22)', color: '#9a5a48' }
                     : { background: '#4f46e5', borderColor: '#6366f1', color: '#ffffff' })
                 : (lightTheme
                     ? { borderColor: 'rgba(31, 30, 29, 0.08)', color: '#6a6862', background: 'rgba(255,255,255,0.74)' }
@@ -217,12 +211,12 @@ function MyBlueprintsTab({ blueprints, research, buildings, activeBook, onSelect
             >
               <div className="flex items-start gap-3">
                 <div
-                  className="mono flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-[14px] border text-[10px] font-semibold uppercase tracking-[0.16em]"
+                  className={`mono flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-[14px] border font-semibold ${hasGlyphIcon(def?.icon) ? 'text-[21px] leading-none' : 'text-[10px] uppercase tracking-[0.16em]'}`}
                   style={lightTheme
                     ? { borderColor: 'rgba(31, 30, 29, 0.08)', background: 'rgba(244,242,236,0.94)', color: '#9a5a48', fontFamily: MONO_FONT }
                     : { borderColor: 'rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.04)', color: '#cbd5e1', fontFamily: MONO_FONT }}
                 >
-                  {getBlueprintMark(def)}
+                  {getBlueprintGlyph(def)}
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 flex-wrap">
@@ -275,15 +269,16 @@ function ResearchTab({ research, blueprints, buildings, activeBook, researchBlue
   const researched   = new Set(research?.researched ?? []);
   const alreadyOwned = new Set(blueprints.map((b) => b.id));
   const lightTheme   = uiTheme === 'light';
+  // ⚠️ NĂM CHIP CÒN HAI (2026-09-02). Ba chip bị gỡ đều mở đầu bằng "CÓ THỂ" — "Kỳ Quan có thể
+  // tăng RP HOẶC giảm chi phí", "Sự kiện có thể làm RP tăng HOẶC giảm". Một câu vừa nói có thể
+  // tăng vừa nói có thể giảm thì nó không loại trừ được khả năng nào, tức nó không mang tin; và
+  // cả ba là LUẬT CHUNG, giống hệt nhau ở mọi lần mở màn hình, nên sau lần đọc thứ hai chúng chỉ
+  // còn là 150px nhiễu che mất danh sách bản vẽ. Hai chip giữ lại có SỐ và số ấy đổi theo cấu
+  // hình. Cùng luật đã áp cho câu "cấp công trình vẫn tăng thông số nền" ở `BuildingWorkshop`.
   const rpTips = [
     `+${RP_PER_MINUTE_BASE} RP / phút tập trung`,
     `x${RP_CATEGORY_MULT} cho danh mục đầu tiên trong ngày`,
-    'Kỳ Quan có thể tăng RP hoặc giảm chi phí',
-    'Kỹ năng có thể tăng RP thêm trong phiên',
-    'Sự kiện có thể làm RP tăng hoặc giảm',
   ];
-
-  const eraList = [activeBook];
 
   const eraBps = (BLUEPRINT_CATALOG[selectedEra] ?? []).map((def) => ({
     ...def,
@@ -367,36 +362,22 @@ function ResearchTab({ research, blueprints, buildings, activeBook, researchBlue
           style={lightTheme
             ? toast.ok
               ? { background: 'rgba(255,255,255,0.84)', border: '1px solid rgba(217,214,204,0.96)', color: '#5b7a52', boxShadow: '0 14px 28px rgba(31,30,29,0.05)' }
-              : { background: 'rgba(248,235,228,0.84)', border: '1px solid rgba(201,100,66,0.16)', color: '#8a3f24', boxShadow: '0 14px 28px rgba(31,30,29,0.05)' }
+              : { background: 'rgba(248,235,228,0.84)', border: '1px solid rgba(var(--accent-rgb),0.16)', color: '#8a3f24', boxShadow: '0 14px 28px rgba(31,30,29,0.05)' }
             : undefined}
         >
           {toast.msg}
         </div>
       )}
 
-      {/* Era selector */}
-      <div className="flex flex-wrap gap-1.5">
-        {eraList.map((era) => (
-          <button
-            key={era}
-            type="button"
-            className="text-xs px-3 py-1 rounded-full border transition-colors"
-            style={selectedEra === era
-              ? (lightTheme
-                  ? { background: 'rgba(201, 100, 66, 0.10)', borderColor: 'rgba(201, 100, 66, 0.22)', color: '#9a5a48' }
-                  : { background: 'rgba(var(--accent-rgb),0.18)', borderColor: 'rgba(var(--accent-rgb),0.28)', color: '#f4efe7' })
-              : (lightTheme
-                  ? { borderColor: 'rgba(31, 30, 29, 0.08)', color: '#6a6862', background: 'rgba(255,255,255,0.74)' }
-                  : { borderColor: '#475569', color: '#94a3b8' })}
-          >
-            Kỷ {era}
-          </button>
-        ))}
-      </div>
-
+      {/*
+        ⚠️ HÀNG CHỌN KỶ ĐÃ GỠ (2026-09-02). `eraList` được gán cứng `[activeBook]` — tức nó luôn
+        vẽ ra ĐÚNG MỘT nút, và một hàng lựa chọn có một lựa chọn thì không phải một cái chọn: nó
+        chỉ là chữ "Kỷ 5" nói lại con số đang hiện ở đầu màn hình. Muốn cho chọn kỷ khác thì phải
+        cho `eraList` nhiều phần tử trước đã.
+      */}
       {/* Blueprint research cards */}
       <div className="space-y-3">
-        {eraBps.map(({ id, label, icon, description, meta, eff }) => {
+        {eraBps.map(({ id, label, icon, meta, eff }) => {
           if (!meta) return null;
           const researchCost = getDisplayedResearchCost(buildings, id);
           const isResearched  = researched.has(id) || alreadyOwned.has(id);
@@ -419,12 +400,12 @@ function ResearchTab({ research, blueprints, buildings, activeBook, researchBlue
             >
               <div className="flex items-start gap-3">
                 <div
-                  className="mono flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-[14px] border text-[10px] font-semibold uppercase tracking-[0.16em]"
+                  className={`mono flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-[14px] border font-semibold ${hasGlyphIcon(icon) ? 'text-[21px] leading-none' : 'text-[10px] uppercase tracking-[0.16em]'}`}
                   style={lightTheme
                     ? { borderColor: 'rgba(31, 30, 29, 0.08)', background: 'rgba(244,242,236,0.94)', color: '#9a5a48', fontFamily: MONO_FONT }
                     : { borderColor: 'rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.04)', color: '#cbd5e1', fontFamily: MONO_FONT }}
                 >
-                  {getBlueprintMark({ id, label })}
+                  {getBlueprintGlyph({ id, label, icon })}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap mb-1">
@@ -442,23 +423,21 @@ function ResearchTab({ research, blueprints, buildings, activeBook, researchBlue
                       </span>
                     )}
                   </div>
-                  <p className="text-xs line-clamp-2" style={lightTheme ? { color: 'var(--muted)' } : { color: '#94a3b8' }}>{description}</p>
-
-                  {/* Hiệu ứng tóm tắt */}
-                  <div className="mt-1.5 space-y-0.5">
-                    {meta?.rarity && (
-                      <p className="text-xs" style={lightTheme ? { color: '#8a8a86' } : { color: '#64748b' }}>{RESEARCH_TRACK[meta.rarity] ?? 'Đầu tư'}</p>
-                    )}
-                    <PerkSummary perk={eff?.perk} lightTheme={lightTheme} variant="literal" />
-                    <p className="text-xs" style={lightTheme ? { color: '#8a8a86' } : { color: '#64748b' }}>{meta.sessionsToComplete} phiên xây</p>
-                  </div>
+                  {/*
+                    ⚠️ MÔ TẢ · HƯỚNG NGHIÊN CỨU · ĐẶC QUYỀN · NHỊP XÂY ĐÃ GỠ KHỎI THẺ (2026-09-02).
+                    Cả bốn được in NGUYÊN VĂN trong `BlueprintDetailPanel`, mà chạm vào thẻ chính
+                    là mở khung ấy — nên chúng là chỗ nói lần thứ hai, và chúng nhân lên theo số
+                    bản vẽ. Tab "Công trình" đo được 4.757px ở khung 390px trước vòng dọn này.
+                    Thứ giữ lại là thứ dùng để CHỌN giữa các thẻ: tên · độ hiếm · loại · còn thiếu
+                    bao nhiêu RP. Thứ trả lời "cái này làm gì" thì hỏi một cái một lúc.
+                  */}
+                  <p className="text-[11px] leading-snug" style={{ color: 'var(--muted-2)' }}>
+                    {meta.sessionsToComplete} phiên xây · {RESEARCH_TRACK[meta?.rarity] ?? 'Đầu tư'}
+                  </p>
 
                   {!isResearched && (
-                    <div className="mt-2 space-y-1.5">
-                      <div>
-                        <p className="text-xs mb-0.5" style={lightTheme ? { color: '#8a8a86' } : { color: '#64748b' }}>Nghiên cứu bằng RP:</p>
-                        <RPBar currentRP={currentRP} cost={researchCost} lightTheme={lightTheme} />
-                      </div>
+                    <div className="mt-1.5">
+                      <RPBar currentRP={currentRP} cost={researchCost} lightTheme={lightTheme} />
                     </div>
                   )}
                 </div>
@@ -514,7 +493,6 @@ function BlueprintDetailPanel({ bpId, onClose, buildings, research, lightTheme }
   const normalizedRawCost = normalizeRawCost(spec?.cost ?? {});
   const refinedCost = getUnifiedRefinedCost(spec?.refinedCost);
   const researchCost = getDisplayedResearchCost(buildings, bpId);
-  const typeStyle    = TYPE_STYLE[eff?.type] ?? TYPE_STYLE.infrastructure;
 
   const isBuilt      = buildings?.includes(bpId);
   const isResearched = research?.researched?.includes(bpId);
@@ -545,12 +523,12 @@ function BlueprintDetailPanel({ bpId, onClose, buildings, research, lightTheme }
         {/* Header */}
         <div className="flex items-center gap-3 px-5 pt-5 pb-4" style={{ borderBottom: lightTheme ? '1px solid var(--line)' : '1px solid rgba(255,255,255,0.06)' }}>
           <div
-            className="mono flex h-14 w-14 flex-shrink-0 items-center justify-center border text-[12px] font-semibold uppercase tracking-[0.18em]"
+            className={`mono flex h-14 w-14 flex-shrink-0 items-center justify-center border font-semibold ${hasGlyphIcon(def?.icon) ? 'text-[26px] leading-none' : 'text-[12px] uppercase tracking-[0.18em]'}`}
             style={lightTheme
               ? { border: '1px solid rgba(var(--accent-rgb),0.2)', background: 'rgba(var(--accent-rgb),0.1)', color: 'var(--accent2)', fontFamily: MONO_FONT, borderRadius: 'var(--skin-radius-control,14px)' }
               : { border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.04)', color: '#cbd5e1', fontFamily: MONO_FONT, borderRadius: '18px' }}
           >
-            {getBlueprintMark(def)}
+            {getBlueprintGlyph(def)}
           </div>
           <div className="flex-1 min-w-0">
             <p
@@ -571,7 +549,7 @@ function BlueprintDetailPanel({ bpId, onClose, buildings, research, lightTheme }
                 </span>
               )}
               {!isBuilt && isUnlocked && (
-                <span className="text-xs px-1.5 py-0.5 rounded-full" style={lightTheme ? { color: '#9a5a48', background: 'rgba(201, 100, 66, 0.10)', border: '1px solid rgba(201, 100, 66, 0.18)' } : undefined}>
+                <span className="text-xs px-1.5 py-0.5 rounded-full" style={lightTheme ? { color: '#9a5a48', background: 'rgba(var(--accent-rgb), 0.10)', border: '1px solid rgba(var(--accent-rgb), 0.18)' } : undefined}>
                   Đã nghiên cứu
                 </span>
               )}
@@ -778,17 +756,16 @@ export default function BlueprintInventory() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between flex-wrap gap-2">
-        <div>
-          {lightTheme && (
-            <p className="mono text-[10px] uppercase tracking-[0.2em]" style={{ color: 'var(--muted-2)' }}>
-              Blueprints
-            </p>
-          )}
-          <h2 className={lightTheme ? 'text-[2rem] leading-none font-semibold' : 'text-white font-bold text-lg'} style={lightTheme ? { color: 'var(--ink)', fontFamily: 'var(--skin-font-display)' } : undefined}>
-            Bản vẽ & nghiên cứu
-          </h2>
-        </div>
+      {/*
+        ⚠️ ĐÃ GỠ HAI CÁI TÊN THỪA (2026-09-01). Màn này từng mang BA cái tên trong 83px: viên tab
+        "Bản vẽ" đang sáng (y=305) → nhãn "Blueprints" (y=373) → tiêu đề "Bản vẽ & nghiên cứu"
+        (y=388, cao 64px vì xuống hai dòng). Cái viên tab ở trên đã nói rồi, và nó nói bằng
+        tiếng Việt. Đo: ẩn hai dòng dưới ⇒ trang 2.832 → 2.745px.
+        ⚠️ Có đối chứng ngay trong dự án: 2/4 tab con của Kho báu ("Di vật", "Lịch sử") KHÔNG có
+        khối tên nào và vào thẳng nội dung, còn `BuildingWorkshop.jsx` đã ghi rõ lý do gỡ nhãn
+        "Xưởng" của nó. Đây là nốt còn thiếu của cùng một bản vá.
+      */}
+      <div className="flex items-center justify-end flex-wrap gap-2">
         <span className="mono text-[11px] uppercase tracking-[0.14em] rounded-full px-3 py-1" style={lightTheme ? { color: 'var(--accent2)', background: 'rgba(var(--accent-rgb),0.1)', border: '1px solid rgba(var(--accent-rgb),0.18)' } : {}}>
           {unlockedCount}/{Object.keys(CATALOG_FLAT).length} đã mở
         </span>

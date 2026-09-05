@@ -162,14 +162,14 @@ export default function ExportImport() {
         className="rounded-[24px] border px-4 py-4"
         style={{ background: 'var(--card-bg-solid, rgba(255,255,255,0.94))', borderColor: 'var(--line-2, #d9d6cc)' }}
       >
-        <p className="text-[10px] font-semibold uppercase tracking-[0.24em]" style={{ color: 'var(--muted-2, #9b9892)' }}>
-          Dữ liệu
-        </p>
+        {/* ⚠️ ĐÃ GỠ nhãn "Dữ liệu" (vòng 20, 2026-08-30): mục ở màn Cài đặt bọc thẻ này ĐÃ tên
+            "Dữ liệu", cách đúng 102px phía trên. Hai nhãn giống hệt nhau chồng lên nhau trong một
+            khung nhìn thì cái thứ hai không nói thêm gì. */}
         <h3 className="mt-2 text-[1.6rem] font-semibold leading-none" style={{ color: 'var(--ink, #1f1e1d)', fontFamily: '"Source Serif 4", Georgia, serif' }}>
           Xuất hoặc khôi phục dữ liệu
         </h3>
         <p className="mt-3 text-[13px] leading-6" style={{ color: 'var(--muted, #6a6862)' }}>
-          Tạo một bản sao JSON trước khi đổi máy hoặc thử những thay đổi lớn. Khi nhập lại, toàn bộ tiến trình sẽ được phục hồi từ file sao lưu đó.
+          Tạo một bản sao trước khi đổi máy hoặc thử những thay đổi lớn. Khi nhập lại, toàn bộ tiến trình sẽ được phục hồi từ chính file đó. Dữ liệu vốn chỉ nằm trong trình duyệt máy này.
         </p>
       </div>
 
@@ -185,8 +185,8 @@ export default function ExportImport() {
                 color: 'var(--good, #5b7a52)',
               }
             : {
-                background: 'rgba(201,100,66,0.1)',
-                borderColor: 'rgba(201,100,66,0.18)',
+                background: 'rgba(var(--accent-rgb),0.1)',
+                borderColor: 'rgba(var(--accent-rgb),0.18)',
                 color: 'var(--accent2, #8a3f24)',
               }}
         >
@@ -206,7 +206,10 @@ export default function ExportImport() {
             color: '#faf9f6',
           }}
         >
-          <span className="font-mono text-[10px] uppercase tracking-[0.14em]">JSON</span>
+          {/* ⚠️ ĐÃ GỠ huy hiệu "JSON" khỏi HAI nút (vòng 20). Đoạn văn ngay trên đã nói "một bản
+              sao JSON", nên trên nút nó là lần nhắc thứ hai — và nó là thứ DUY NHẤT khiến nhãn nút
+              vỡ dòng ở 390px. Đúng khuôn `shrink-0` quen thuộc ở dạng nhỏ: cái nhãn kỹ thuật không
+              nhường, thứ bị bóp là ĐỘNG TỪ mà Đàm cần đọc. */}
           Xuất bản sao
         </motion.button>
 
@@ -222,14 +225,14 @@ export default function ExportImport() {
             color: 'var(--ink, #1f1e1d)',
           }}
         >
-          <span className="font-mono text-[10px] uppercase tracking-[0.14em]">JSON</span>
           Khôi phục
         </motion.button>
       </div>
 
-      <p className="text-center text-xs" style={{ color: 'var(--muted, #6a6862)' }}>
-        Dữ liệu được lưu cục bộ. Xuất file khi muốn sao lưu hoặc chuyển thiết bị.
-      </p>
+      {/* ⚠️ ĐÃ GỠ dòng chân "Dữ liệu được lưu cục bộ. Xuất file khi muốn sao lưu hoặc chuyển
+          thiết bị." (vòng 20) — đó là lần thứ BA nói cùng một điều trong một khung nhìn: lần một
+          ở đoạn dẫn của chính thẻ này ("Tạo một bản sao … trước khi đổi máy"), lần hai ở thẻ
+          "Giới thiệu" ngay dưới ("Dữ liệu đang được lưu cục bộ trong trình duyệt"). */}
 
       {/* Hidden file input */}
       <input
@@ -281,7 +284,7 @@ export default function ExportImport() {
               ))}
             </div>
 
-            <p className="mt-3 rounded-[14px] px-3 py-2 text-[12px] leading-5" style={{ background: 'rgba(201,100,66,0.1)', color: 'var(--accent2, #8a3f24)' }}>
+            <p className="mt-3 rounded-[14px] px-3 py-2 text-[12px] leading-5" style={{ background: 'rgba(var(--accent-rgb),0.1)', color: 'var(--accent2, #8a3f24)' }}>
               ⚠️ Toàn bộ tiến trình HIỆN TẠI trên thiết bị này sẽ bị thay thế và không thể hoàn tác.
             </p>
 

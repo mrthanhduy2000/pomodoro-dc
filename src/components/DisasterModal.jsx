@@ -87,7 +87,6 @@ function DisasterContent({ data, onClose }) {
     progressRatio = null,
     basePenaltyRate = null,
     appliedPenaltyRate = null,
-    skillMode = 'default',
   } = data;
 
   const lostItems = [];

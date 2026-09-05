@@ -80,7 +80,7 @@ import { createCityScene } from '../src/components/city/render3d/sceneGraph.js';
 import { computeCityLayout } from '../src/engine/cityLayout.js';
 import { collectCitySpecs } from '../src/engine/city3d/cityParts.js';
 import { buildTerrain } from '../src/engine/city3d/terrain.js';
-import { BUILDING_SCALE, prism, countSpecTriangles, specSpan } from '../src/engine/city3d/parts.js';
+import { BUILDING_SCALE, buildingSpanCells, countSpecTriangles, plinthParts } from '../src/engine/city3d/parts.js';
 import { buildScenePalette } from '../src/engine/city3d/palette3d.js';
 import { deriveDaylight } from '../src/engine/city3d/daylight.js';
 import { BLUEPRINT_CATALOG, ERA_METADATA } from '../src/engine/constants.js';
@@ -90,15 +90,6 @@ const NGUON_SCENE = doc('../src/components/city/render3d/sceneGraph.js');
 const NGUON_BE = doc('./plinth-tri.mjs');
 const TOKENS = { canvas2: '#f4f2ec', ink: '#1f1e1d', line: '#e8e6de', accent: '#c96442' };
 const CO_BE = new Set(['building', 'scaffold', 'dwelling']);
-
-/** Trích công thức khối bệ kè từ một mã nguồn. Trả về đối tượng các trường đã chuẩn hoá khoảng
- *  trắng — so hai đối tượng ấy mới là so LUẬT, so cả đoạn chữ thì thụt lề khác nhau đã đỏ. */
-function locLuatBe(nguon, nhan) {
-  const m = nguon.match(/w:\s*span\s*\*\s*([\d.]+),\s*d:\s*span\s*\*\s*([\d.]+),\s*h:\s*drop,\s*\n?\s*sides:\s*(\d+),\s*taper:\s*(\d+),\s*role:\s*'(\w+)'/);
-  assert.ok(m, `${nhan}: không tìm thấy công thức khối bệ kè — hoặc nó đã bị đổi hình dạng, hoặc `
-    + 'file đã được viết lại. Đừng nới regex cho qua: đi xem hai file có còn cùng một luật không.');
-  return { w: m[1], d: m[2], sides: m[3], taper: m[4], role: m[5] };
-}
 
 test('ĐỐI CHIẾU CHÉO (a) — `BUILDING_SCALE` chỉ được có MỘT bản, và cả hai bên phải `import` nó', () => {
   // Đây chính xác là lỗi 2026-08-20: `plinth-tri` giữ một bản chép tay ghi 0,86 (giá trị đời cũ).
@@ -118,16 +109,28 @@ test('ĐỐI CHIẾU CHÉO (a) — `BUILDING_SCALE` chỉ được có MỘT b�
   assert.ok(Number.isFinite(BUILDING_SCALE) && BUILDING_SCALE > 0, 'giá trị `BUILDING_SCALE` vô lý');
 });
 
-test('ĐỐI CHIẾU CHÉO (b) — MỘT LUẬT MỘT CÔNG THỨC: khối bệ kè phải trùng từng trường giữa hai file', () => {
-  const sanPham = locLuatBe(NGUON_SCENE, 'sceneGraph.js');
-  const phepDo = locLuatBe(NGUON_BE, 'plinth-tri.mjs');
-  assert.deepEqual(phepDo, sanPham,
-    'công thức bệ kè của phép ĐO đã trôi khỏi công thức của mã DỰNG. Mọi con số `plinth-tri` in ra '
-    + 'từ giờ nói về một cái bệ khác với cái bệ đang được vẽ.');
-  // Điều kiện sinh bệ cũng là một phần của luật: `drop > 0`. Đổi nó ở một bên là đếm nhầm SỐ bệ
-  // dù công thức khối vẫn đúng.
-  assert.match(NGUON_SCENE, /const plinth = drop > 0 \?/, 'điều kiện sinh bệ ở mã dựng đã đổi');
-  assert.match(NGUON_BE, /if \(!\(drop > 0\)\) continue;/, 'điều kiện sinh bệ ở phép đo đã đổi');
+test('ĐỐI CHIẾU CHÉO (b) — KHÔNG BÊN NÀO ĐƯỢC GIỮ MỘT BẢN CHÉP CỦA LUẬT BỆ KÈ', () => {
+  // ⚠️ BÀI NÀY ĐÃ ĐỔI CÂU HỎI (2026-09-05), VÀ CÂU MỚI CHẶT HƠN CÂU CŨ.
+  // Bản cũ trích công thức khối bệ từ CẢ HAI mã nguồn bằng regex rồi so từng trường — tức nó chấp
+  // nhận rằng luật ấy tồn tại ở hai nơi và chỉ canh cho hai bản khớp nhau. Nay luật ấy là MỘT hàm
+  // thuần (`plinthParts` ở `parts.js`) mà cả hai bên `import`, nên **không còn bản thứ hai để
+  // trôi**. Câu hỏi đúng không còn là *"hai bản có khớp không?"* mà là *"có ai dựng lại bản thứ
+  // hai không?"* — cùng cách đã làm cho `BUILDING_SCALE` ở bài (a) ngay trên.
+  const CONG_THUC_CHEP_TAY = /w:\s*span\s*\*\s*[\d.]+,\s*d:\s*span\s*\*\s*[\d.]+,\s*h:\s*drop/;
+  for (const [nhan, nguon] of [['sceneGraph.js', NGUON_SCENE], ['plinth-tri.mjs', NGUON_BE]]) {
+    assert.doesNotMatch(nguon, CONG_THUC_CHEP_TAY,
+      `${nhan} đang dựng lại hình bệ kè tại chỗ — nó phải gọi \`plinthParts\` ở \`parts.js\`. Một `
+      + 'bản chép thứ hai là một bản chờ trôi, và bản chép ấy đã sai một lần rồi (2026-08-20).');
+    assert.match(nguon, /import \{[^}]*\bplinthParts\b[^}]*\} from '[^']*parts(\.js)?'/,
+      `${nhan} không \`import\` \`plinthParts\` ⇒ hoặc nó có bản chép riêng, hoặc nó thôi sinh bệ.`);
+    assert.match(nguon, /import \{[^}]*\bbuildingSpanCells\b[^}]*\} from '[^']*parts(\.js)?'/,
+      `${nhan} không \`import\` \`buildingSpanCells\` ⇒ phép đổi ô đất lại có bản thứ hai.`);
+  }
+  // Điều kiện sinh bệ (`drop > 0`) nay nằm TRONG `plinthParts`, nên nó cũng chỉ còn một bản. Hỏi
+  // thẳng hành vi thay vì hỏi chữ: không hụt ⇒ không có bệ, có hụt ⇒ có bệ.
+  assert.equal(plinthParts(3, 0), null, 'không hụt mà vẫn sinh bệ');
+  assert.equal(plinthParts(3, -0.5), null, 'hụt ÂM mà vẫn sinh bệ');
+  assert.ok(Array.isArray(plinthParts(3, 0.4)), 'có hụt mà không sinh bệ');
 });
 
 test('ĐỐI CHIẾU CHÉO (c) — CHẠY THẬT CẢ HAI ĐƯỜNG TRÊN 15 KỶ — kỷ nào có bệ thì cả hai bên đều phải thấy',
@@ -150,13 +153,15 @@ test('ĐỐI CHIẾU CHÉO (c) — CHẠY THẬT CẢ HAI ĐƯỜNG TRÊN 15 K�
     for (const item of collectCitySpecs({ layout, detail: 'high' })) {
       if (!CO_BE.has(item.kind)) continue;
       duyet += 1;
-      const span = Math.max(1, Math.round(specSpan(item.spec.parts) * BUILDING_SCALE));
+      // ⚠️ BẢN CHÉP THỨ TƯ ĐÃ GỠ (2026-09-05). Tính ĐỘC LẬP của phép đối chiếu này nằm ở ĐƯỜNG 2
+      // (dựng scene thật rồi duyệt scene graph), KHÔNG nằm ở việc gõ lại công thức bệ kè ở đường 1
+      // — gõ lại chỉ tạo thêm một bản chờ trôi, đúng thứ bài (b) ngay trên vừa cấm.
+      const span = buildingSpanCells(item.spec.parts);
       const { drop } = terrain.footprint(item.source.x, item.source.y, span);
-      if (!(drop > 0)) continue;
+      const beKe = plinthParts(span, drop);
+      if (!beKe) continue;
       soBe += 1;
-      triBe += countSpecTriangles([prism({
-        y: 0, w: span * 0.92, d: span * 0.92, h: drop, sides: 4, taper: 1, role: 'stone',
-      })]);
+      triBe += countSpecTriangles(beKe);
     }
 
     // ĐƯỜNG 2 — `scene-tri`: dựng scene thật rồi duyệt scene graph.

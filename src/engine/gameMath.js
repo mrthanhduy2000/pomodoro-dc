@@ -21,6 +21,7 @@ import {
   BASE_XP_PER_MINUTE,
   BASE_EP_PER_MINUTE,
   EP_MULTIPLIER_TIERS,
+  DEEP_SESSION_THRESHOLD,
   DEFAULT_DEEP_FOCUS_THRESHOLD,
   DISASTER_MIN_PENALTY_RATE,
   DISASTER_MAX_PENALTY_RATE,
@@ -244,13 +245,46 @@ export function getMultiplierTier(minutesFocused, lamNongNhanhUnlocked = false) 
     ? WARMUP_REDUCED_THRESHOLD          // 20 phút (kỹ năng Khởi Động Nhanh)
     : DEFAULT_DEEP_FOCUS_THRESHOLD;     // 26 phút (mặc định)
 
-  if (minutesFocused >= 60) {
+  if (minutesFocused >= DEEP_SESSION_THRESHOLD) {
     return { multiplier: 2.0, chestGuaranteed: true,  tierLabel: 'Phiên Chuyên Sâu ×2.0' };
   }
   if (minutesFocused >= deepFocusStart) {
     return { multiplier: 1.3, chestGuaranteed: false, tierLabel: 'Tập Trung Sâu ×1.3' };
   }
   return { multiplier: 1.0, chestGuaranteed: false, tierLabel: 'Tiêu Chuẩn ×1.0' };
+}
+
+/**
+ * nextMultiplierStep — "còn bao nhiêu phút nữa thì lên bậc kế tiếp?"
+ *
+ * VÌ SAO CÓ HÀM NÀY (đo trên fixture 624 phiên, 2026-09-01): huy hiệu hệ số trên màn Tập trung
+ * chỉ nói được ĐÚNG MỘT vách — "còn N phút để ×1.3" — rồi im lặng ở mọi phiên đã qua vách ấy.
+ * Tức nó câm ở **469/624 phiên (75,2%)**, mà im lặng đúng ở khúc đáng nói nhất: **117 phiên**
+ * dừng trong khoảng 45–59 phút, tức chỉ còn 1–15 phút nữa là chạm ×2.0 — bậc nhảy LỚN NHẤT
+ * của cả thang (1.3 → 2.0 là +54%). Người chơi không được báo, nên họ dừng.
+ * (Thêm 58 phiên dừng đúng ở phút 25 — thiếu đúng MỘT phút để lên ×1.3.)
+ *
+ * Trả về `null` khi đã ở bậc cao nhất — lúc đó KHÔNG có gì để nói, và một huy hiệu nói
+ * "đã kịch trần" thì chỉ là một dòng chữ báo cáo sự vắng mặt của một việc cần làm.
+ *
+ * ⚠️ Vách phải đọc TỪ CÙNG chỗ mà `getMultiplierTier` đọc — hai công thức cho một cái thang là
+ * cách nó lệch nhau trong im lặng (bài học "một luật một công thức").
+ *
+ * @param {number} minutesFocused    độ dài phiên đang đặt
+ * @param {number} deepFocusStart    ngưỡng ×1.3 (26 mặc định, 20 nếu có Khởi Động Nhanh)
+ * @returns {{ minutesLeft: number, targetMultiplier: number } | null}
+ */
+export function nextMultiplierStep(minutesFocused, deepFocusStart = DEFAULT_DEEP_FOCUS_THRESHOLD) {
+  const phut = Number(minutesFocused);
+  if (!Number.isFinite(phut)) return null;
+  const vach = [
+    { moc: deepFocusStart, he: 1.3 },
+    { moc: DEEP_SESSION_THRESHOLD, he: 2.0 },
+  ];
+  for (const { moc, he } of vach) {
+    if (phut < moc) return { minutesLeft: Math.ceil(moc - phut), targetMultiplier: he };
+  }
+  return null;
 }
 
 function getTierLabel(multiplier) {
@@ -383,7 +417,6 @@ export function calculateRewards(
     nextSessionBuffs          = [],    // [{type:'nguoi_lap_ke'|'cu_tri', sessionsRemaining}]
     keHoachWeeklyBuffActive   = false, // tuần kế nhận +10% allBonus
     // Dồn Lực: người chơi tự chọn trump nào áp dụng phiên này (tùy chọn)
-    surgeOverride             = null,  // 'so_do' | 'sieu_tap_trung' | 'jackpot' | null
   } = sessionCtx;
 
   // ── 1. Bộ kỹ năng V2 không có Bẻ Cong Thời Gian → effectiveMinutes = minutes
@@ -419,19 +452,19 @@ export function calculateRewards(
     && minutesFocused >= SO_DO_MIN_MINUTES
     && rand() < SO_DO_TRIGGER_CHANCE;
 
-  // Chọn đúng 1 trump: ưu tiên override hợp lệ, nếu không theo DON_LUC_PRIORITY.
+  // Chọn đúng 1 trump theo DON_LUC_PRIORITY.
+  // ⚠️ ĐÃ XOÁ nhánh `surgeOverride` (2026-09-01) — nó KHÔNG ĐI TỚI ĐƯỢC. Trường ấy chỉ được GHI
+  // ở đúng một chỗ (`setSurgeChoice` trong `gameStore.js`), mà hàm đó có **0 nơi gọi trên toàn
+  // repo** ⇒ `surgeOverride` vĩnh viễn là `null` và nhánh này chưa từng chạy một lần.
+  // Xoá cùng lượt với chính `setSurgeChoice`; luật "mỗi phiên chỉ áp 1 trump" giữ nguyên.
   const surgeCandidates = {
     jackpot:        jackpotTriggered,
     sieu_tap_trung: sieuTapTrungActive,
     so_do:          luckyBurstTriggered,
   };
   let donLucChosen = null;
-  if (surgeOverride && surgeCandidates[surgeOverride]) {
-    donLucChosen = surgeOverride;
-  } else {
-    for (const trumpId of DON_LUC_PRIORITY) {
-      if (surgeCandidates[trumpId]) { donLucChosen = trumpId; break; }
-    }
+  for (const trumpId of DON_LUC_PRIORITY) {
+    if (surgeCandidates[trumpId]) { donLucChosen = trumpId; break; }
   }
   const applyJackpot = donLucChosen === 'jackpot';
   const applySieu    = donLucChosen === 'sieu_tap_trung';

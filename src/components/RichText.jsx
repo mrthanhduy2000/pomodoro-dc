@@ -225,7 +225,7 @@ function renderEditorLineHtml(line) {
 
   const calloutMatch = line.match(/^\s*>\s?(.*)$/);
   if (calloutMatch) {
-    return `<div data-rich-block="callout" style="background: rgba(201, 100, 66, 0.08); border-left: 2px solid var(--accent, #c96442); border-radius: 12px; color: var(--ink-2, #3a3936); padding: 8px 12px;">${renderInlineHtml(calloutMatch[1])}</div>`;
+    return `<div data-rich-block="callout" style="background: rgba(var(--accent-rgb), 0.08); border-left: 2px solid var(--accent, #c96442); border-radius: 12px; color: var(--ink-2, #3a3936); padding: 8px 12px;">${renderInlineHtml(calloutMatch[1])}</div>`;
   }
 
   return `<div>${renderInlineHtml(line)}</div>`;
@@ -370,7 +370,7 @@ function renderRichLine(line, index, compact) {
         key={`callout_${index}`}
         className={`rounded-[14px] border-l-2 px-3 py-2 ${textClassName}`}
         style={{
-          background: 'rgba(201, 100, 66, 0.08)',
+          background: 'rgba(var(--accent-rgb), 0.08)',
           borderColor: 'var(--accent, #c96442)',
           color: 'var(--ink-2, #3a3936)',
         }}
@@ -683,7 +683,7 @@ export function RichNoteEditor({
       } else if (type === 'callout') {
         block.dataset.richBlock = 'callout';
         Object.assign(block.style, {
-          background: 'rgba(201, 100, 66, 0.08)',
+          background: 'rgba(var(--accent-rgb), 0.08)',
           borderLeft: '2px solid var(--accent, #c96442)',
           borderRadius: '12px',
           color: 'var(--ink-2, #3a3936)',
@@ -987,7 +987,7 @@ export function RichNoteEditor({
                 checklist
               </span>{' '}
               hoặc <span className={lightTheme ? 'text-[var(--ink)]' : 'text-slate-200'}>Cmd/Ctrl+Shift+9</span>{' '}
-              <span className="rounded-[7px] border-l-2 px-2 py-0.5" style={{ background: 'rgba(201, 100, 66, 0.08)', borderColor: 'var(--accent, #c96442)' }}>callout</span>.
+              <span className="rounded-[7px] border-l-2 px-2 py-0.5" style={{ background: 'rgba(var(--accent-rgb), 0.08)', borderColor: 'var(--accent, #c96442)' }}>callout</span>.
             </span>
           </motion.div>
         )}

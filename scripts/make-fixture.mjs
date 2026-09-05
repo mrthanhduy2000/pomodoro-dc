@@ -75,6 +75,8 @@ import {
   ACHIEVEMENTS,
   BLUEPRINT_CATALOG,
   BLUEPRINT_META,
+  ERA_CRISES,
+  ERA_METADATA,
   EXP_PER_LEVEL,
   SKILL_TREE,
   SP_PER_LEVEL,
@@ -189,6 +191,11 @@ function playthrough(unlockedSkills) {
   // Bảo tàng + công trình: dựng dần theo thời gian, niêm phong khi qua kỷ.
   let buildings = [];
   let buildingLevels = {};
+  // Kho tài nguyên + Điểm Nghiên Cứu: CỘNG DỒN từ chính phần thưởng mà `calculateRewards` trả về,
+  // không phải một con số bịa. Nhờ vậy chúng nhất quán với `history` — mỗi phiên trong lịch sử đã
+  // ghi sẵn `resources` và `rpEarned` của đúng phiên ấy.
+  let resources = {};
+  let rp = 0;
   let archive = {};
   let sessionsThisEra = 0;
   let era = getActiveBook(0);
@@ -265,6 +272,16 @@ function playthrough(unlockedSkills) {
         nextNote: null, breakCompletedOnTime: rand() < 0.7, breakCompletedAt: finishedAt + 300000,
       });
 
+      // Cộng dồn tài nguyên vào ĐÚNG túi của kỷ đang chơi (luật `mergeResources`, gameStore.js:2609)
+      // và cộng RP. Hai dòng này là lý do fixture thôi hiện "có 0" ở mọi thứ cần tài nguyên.
+      const bookKey = `book${era}`;
+      const bag = { ...(resources[bookKey] ?? {}) };
+      for (const [resId, amount] of Object.entries(r.resources ?? {})) {
+        bag[resId] = (bag[resId] ?? 0) + amount;
+      }
+      resources = { ...resources, [bookKey]: bag };
+      rp += r.rpEarned ?? 0;
+
       // Xây công trình của kỷ hiện tại.
       //
       // ⚠️ LẦN THỨ 12 CÔNG CỤ DEV NÓI DỐI (2026-08-13). Chỗ này từng là `notBuilt.length > 1` với
@@ -324,7 +341,7 @@ function playthrough(unlockedSkills) {
   return {
     seq, activeDays, totalXP: runXP, totalEP: runEP, minutes,
     doneCount, cancelCount, cancelMinutes,
-    buildings, buildingLevels, archive, era, sessionsThisEra,
+    buildings, buildingLevels, archive, era, sessionsThisEra, resources, rp,
   };
 }
 
@@ -410,6 +427,98 @@ const craftingQueue = pendingBp
 // ⚠️ TÊN KHOÁ lấy từ chính `makeDefaultProgress`/`normalizeStoredPlayer` (gameStore.js:1803,1878),
 // KHÔNG đoán: bản đầu ghi `progress.totalXP` + `player.xp` + `player.totalFocusMinutes` — cả ba
 // khoá đều KHÔNG tồn tại, nên app lẳng lặng đọc ra 0 và tôi lại tưởng app hỏng.
+// ─── DI VẬT · NGHIÊN CỨU · KHO TÀI NGUYÊN ──────────────────────────────────────────────────────
+/**
+ * ⚠️ BA MÀN CỦA "HÀNH TRANG" TỪNG KHÔNG SOI ĐƯỢC VÌ FIXTURE BỎ TRỐNG BA KHOÁ NÀY, và cái trống ấy
+ * đọc lên y hệt một app hỏng: Di vật hiện "0/15" với 15 dòng "???", Bản vẽ hiện "0/75 đã mở · 0 RP"
+ * với năm thẻ đều "0/620 RP", Xưởng hiện "1.050 Sắt Thép (có 0)". Ba màn ấy trông như ba màn chết
+ * trong khi app hoàn toàn lành — **cái trống là của CÔNG CỤ**. Đây đúng cái bẫy fixture-đều-tăm-tắp
+ * đã ghi ở khối "LẦN THỨ 12 CÔNG CỤ DEV NÓI DỐI" phía trên, chỉ khác là lần đó fixture đều NHAU
+ * còn lần này nó đều RỖNG.
+ *
+ * ⚠️ HÌNH DẠNG LẤY THẲNG TỪ `gameStore.js`, KHÔNG ĐOÁN — chính file này đã bị cắn một lần vì đoán
+ * tên khoá (`progress.totalXP`, `player.xp`… đều không tồn tại, app lẳng lặng đọc ra 0):
+ *   research  → `makeDefaultResearch()`  = { rp, researched }         (gameStore.js:1201)
+ *   relics    → `[]` các object `successRelic`                        (gameStore.js:3257)
+ *   resources → `makeEmptyResources()`   = { book<N>: { <id>: số } }  (gameStore.js:160)
+ */
+
+// `researched` PHẢI phủ mọi công trình đã dựng — không thì fixture TỰ MÂU THUẪN: bốn công trình
+// đứng trong Xưởng mà Bản vẽ vẫn báo "0/75 đã mở". Cộng thêm vài bản vẽ đã nghiên cứu mà CHƯA xây,
+// vì đó chính là trạng thái mà mục "Sẵn sàng xây" của Xưởng sinh ra để hiển thị — bỏ trống nó thì
+// mục ấy vĩnh viễn hiện "Chưa có bản vẽ nào chờ được dựng lên".
+// ⚠️ KHOÁ LÀ `built` (một MẢNG id), không phải `buildings`. Bản đầu của chính đoạn này viết
+// `Object.keys(entry.buildings)` — đọc ra `undefined` ⇒ bảy kỷ trong bảo tàng đóng góp ĐÚNG 0 bản
+// vẽ, và dòng tổng kết in ra "4/75" trông hoàn toàn hợp lý. Đây là **lần thứ hai** file này bị cắn
+// bởi cùng một chuyện (lần đầu: `progress.totalXP` / `player.xp`), nên nhắc lại cho rõ: tên khoá
+// phải ĐỌC RA TỪ DỮ LIỆU rồi mới dùng, đừng suy từ tên biến ở chỗ khác.
+const builtEverywhere = [
+  ...run.buildings,
+  ...Object.values(run.archive ?? {}).flatMap((entry) => entry?.built ?? []),
+];
+const readyToBuild = (BLUEPRINT_CATALOG[String(activeBook)] ?? [])
+  .filter((bp) => !run.buildings.includes(bp.id) && bp.id !== pendingBp?.id)
+  .slice(0, 2)
+  .map((bp) => bp.id);
+const researched = [...new Set([...builtEverywhere, ...readyToBuild])];
+
+// RP đã TIÊU cho những bản vẽ ấy phải được trừ ra. Cộng dồn mà không trừ thì fixture ra 42.298 RP
+// — đủ mua sạch mọi thứ — tức nó nói dối theo hướng NGƯỢC với cái trống ban đầu, và màn Bản vẽ lại
+// hết soi được lần nữa (mọi thẻ đều "đủ tiền"). Sàn 0 vì `rpCost` là giá HÔM NAY còn RP thì kiếm
+// theo nhịp cũ; số âm không có nghĩa gì với người chơi.
+const rpSpent = researched.reduce((n, id) => n + (BLUEPRINT_META[id]?.rpCost ?? 0), 0);
+const rpLeft = Math.max(0, run.rp - rpSpent);
+
+// Di vật chỉ có MỘT nguồn: thắng Khủng Hoảng Kỷ Nguyên ở chế độ Đương Đầu (gameStore.js:3877).
+// Nên gieo 100% số kỷ đã qua là NÓI DỐI — không ai thắng mọi khủng hoảng. Gieo một kỷ trên ba.
+const relics = Object.entries(ERA_CRISES)
+  .map(([era, crisis]) => ({ era: Number(era), relic: crisis?.challengeOption?.successRelic }))
+  .filter(({ era, relic }) => relic && era < activeBook && era % 3 === 1)
+  .map(({ relic }) => relic);
+
+// Kho tài nguyên: bắt đầu từ khung RỖNG ĐỦ 15 kỷ (đúng `makeEmptyResources`) rồi phủ số đã cộng
+// dồn lên trên. Thiếu bước này thì các kỷ chưa chơi tới không có khoá và giao diện đọc ra
+// `undefined` thay vì 0.
+const resources = Object.fromEntries(
+  Object.entries(ERA_METADATA).map(([era, meta]) => [
+    `book${era}`,
+    {
+      ...Object.fromEntries((meta.resources ?? []).map((res) => [res.id, 0])),
+      ...(run.resources?.[`book${era}`] ?? {}),
+    },
+  ]),
+);
+
+// ─── BÙ CÁC DẤU THÀNH TÍCH VỀ SƯU TẬP ──────────────────────────────────────────────────────────
+/**
+ * ⚠️ MỘT LỖ HỔNG CÓ THẬT CỦA ĐƯỜNG REPLAY, ĐO ĐƯỢC TRÊN MÀN HÌNH. `buildAchievementSnapshotForReplay`
+ * (`achievementTimeline.js:214`) **viết cứng** `relicsCount: 0 · blueprintsCount: 0 ·
+ * buildingsBuilt: 0 · prestigeCount: 0` — hoàn toàn đúng với vai trò của nó (lịch sử phiên không
+ * ghi bốn con số ấy), nhưng nó có nghĩa là **fixture thiếu TOÀN BỘ thành tích về sưu tập**.
+ * Triệu chứng nhìn thấy được: sau khi màn Huy hiệu biết sắp theo tiến độ, đầu danh sách "Chưa đạt"
+ * là ba thẻ ghi **"1/1" · "1/1" · "2/2"** — đạt 100% mà vẫn nằm trong mục chưa đạt. Đó là fixture
+ * TỰ MÂU THUẪN (gieo `research`/`relics`/`buildings` SAU khi replay), không phải app hỏng.
+ *
+ * ⚠️ VÁ HẸP, KHÔNG DỰNG SNAPSHOT THỨ BA. Chỉ chấm lại đúng những mục có ngưỡng nằm trên bốn
+ * trường ấy, bằng CHÍNH `check()` của mã sản phẩm. App thật cũng làm y hệt ở lần xong phiên kế
+ * tiếp, nên đây là bù cho một độ trễ chứ không phải phát minh ra dấu mới.
+ */
+const TRUONG_SUU_TAP = {
+  relicsCount: relics.length,
+  blueprintsCount: researched.length,
+  buildingsBuilt: run.buildings.length,
+  prestigeCount: 0,
+};
+const daCo = new Set(achievements.unlocked);
+let buThem = 0;
+for (const a of ACHIEVEMENTS) {
+  if (daCo.has(a.id) || !(a.dem in TRUONG_SUU_TAP)) continue;
+  if (!a.check(TRUONG_SUU_TAP, achievements.unlocked)) continue;
+  achievements.unlocked.push(a.id);
+  achievements.timeline[a.id] = { unlockedAt: new Date(endMs).toISOString(), source: 'inferred' };
+  buThem += 1;
+}
+
 const fixture = {
   state: {
     progress: {
@@ -437,6 +546,9 @@ const fixture = {
     eraTracking,
     buildings: run.buildings,
     buildingLevels: run.buildingLevels,
+    research: { rp: rpLeft, researched },
+    relics,
+    resources,
     cityArchive: run.archive,
     craftingQueue,
     sessionCategories: CATEGORIES,
@@ -452,4 +564,5 @@ console.log(`  ${Math.round(run.minutes / 60)} giờ tập trung · ${run.totalX
 console.log(`  ${run.totalEP.toLocaleString('vi-VN')} EP → kỷ ${activeBook} · ${run.buildings.length} công trình đang đứng · ${sealedEras} kỷ đã niêm phong vào bảo tàng`);
 console.log(`  ${Object.keys(UNLOCKED_SKILLS).length} kỹ năng đã mở (tiêu ${SP_SPENT} điểm)`);
 console.log(`  ${achievements.unlocked.length}/${ACHIEVEMENTS.length} dấu thành tích — replay bằng chính hàm check() của mã sản phẩm`);
+console.log(`  ${relics.length}/${Object.keys(ERA_CRISES).length} di vật · ${researched.length}/75 bản vẽ đã nghiên cứu · bù ${buThem} dấu sưu tập · ${rpLeft.toLocaleString('vi-VN')} RP còn lại (đã tiêu ${rpSpent.toLocaleString('vi-VN')}) · ${Object.values(resources[`book${activeBook}`] ?? {}).reduce((n, v) => n + v, 0).toLocaleString('vi-VN')} tài nguyên thô ở kỷ đang chơi`);
 console.log('  ⚠️ Công thức phần thưởng là THẬT; nhịp chơi là giả — đừng trích số vào kết luận cân bằng game.');

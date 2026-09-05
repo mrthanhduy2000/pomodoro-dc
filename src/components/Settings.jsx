@@ -45,21 +45,25 @@ function usePWAInstall() {
   return { canInstall: !!deferredPrompt, isInstalled, install };
 }
 
+// ⚠️ TRƯỜNG `short` ĐÃ BỊ GỠ (vòng 20, 2026-08-30). Mỗi nút từng hiện HAI nhãn cho cùng một thứ:
+// một mã tiếng Anh viết hoa ("RAIN", "CL") và ngay cạnh là chính cái tên tiếng Việt ("Mưa",
+// "Cổ điển"). Đàm không đọc tiếng Anh, nên mã kia không nói thêm được gì mà vẫn bắt mắt dừng lại
+// giải mã — cùng đúng lý do đã gỡ 11 nhãn tiếng Anh khác khỏi màn này ở vòng 14.
 const AMBIENT_OPTIONS = [
-  { value: 'none', label: 'Tắt', short: 'OFF' },
-  { value: 'rain', label: 'Mưa', short: 'RAIN' },
-  { value: 'wind', label: 'Gió', short: 'WIND' },
-  { value: 'forest', label: 'Rừng', short: 'FOREST' },
-  { value: 'coffee', label: 'Cà phê', short: 'CAFE' },
-  { value: 'waves', label: 'Sóng biển', short: 'WAVES' },
-  { value: 'fireplace', label: 'Lò sưởi', short: 'FIRE' },
+  { value: 'none', label: 'Tắt' },
+  { value: 'rain', label: 'Mưa' },
+  { value: 'wind', label: 'Gió' },
+  { value: 'forest', label: 'Rừng' },
+  { value: 'coffee', label: 'Cà phê' },
+  { value: 'waves', label: 'Sóng biển' },
+  { value: 'fireplace', label: 'Lò sưởi' },
 ];
 
 const SOUND_PACK_OPTIONS = [
-  { value: 'classic', label: 'Cổ điển', short: 'CL' },
-  { value: 'nature', label: 'Tự nhiên', short: 'NT' },
-  { value: 'synthwave', label: 'Tổng hợp', short: 'SW' },
-  { value: 'minimal', label: 'Tối giản', short: 'MN' },
+  { value: 'classic', label: 'Cổ điển' },
+  { value: 'nature', label: 'Tự nhiên' },
+  { value: 'synthwave', label: 'Tổng hợp' },
+  { value: 'minimal', label: 'Tối giản' },
 ];
 
 const THEME_MODE_OPTIONS = [
@@ -441,16 +445,16 @@ export default function Settings() {
                   style={choiceStyle(active, lightTheme)}
                 >
                   <div className="flex items-center justify-between gap-2">
-                    <span className="mono text-[11px] font-semibold uppercase tracking-[0.16em]" style={lightTheme ? { color: active ? '#9a5a48' : '#6a6862' } : { color: active ? 'var(--accent-light)' : 'var(--muted)' }}>
-                      {opt.short}
-                    </span>
+                    {/* ⚠️ Mã tiếng Anh ("RAIN"/"CAFE") đã bị GỠ ở đây — tên tiếng Việt nằm ngay
+                        dòng dưới đã là cái tên thật. Ô này nay chỉ còn trạng thái "bật". */}
+                    <span aria-hidden="true" />
                     {active && (
                       <span className="text-[10px] font-semibold uppercase tracking-[0.14em]" style={lightTheme ? { color: '#9a5a48' } : { color: 'var(--accent-light)' }}>
                         bật
                       </span>
                     )}
                   </div>
-                  <p className="mt-2 text-xs font-semibold">{opt.label}</p>
+                  <p className="text-sm font-semibold">{opt.label}</p>
                 </motion.button>
               );
             })}
@@ -533,9 +537,10 @@ export default function Settings() {
                     }}
                   >
                     <p className="text-xs font-semibold" style={lightTheme ? { color: '#1f1e1d' } : { color: 'var(--ink-2)' }}>Âm thanh Pomodoro</p>
-                    <p className="mt-1 text-[11px] leading-relaxed" style={lightTheme ? { color: '#6a6862' } : { color: 'var(--muted-2)' }}>
-                      Trong lúc tập trung, trò chơi chỉ phát tiếng khi bắt đầu phiên, trong 10 giây cuối và khi phiên kết thúc.
-                    </p>
+                    {/* ⚠️ ĐÃ GỠ câu tả tiếng bằng chữ (2026-09-01): "Trong lúc tập trung, trò chơi
+                        chỉ phát tiếng khi bắt đầu phiên, trong 10 giây cuối và khi phiên kết thúc."
+                        Tả một âm thanh bằng 105 ký tự là chỗ dở nhất để tiêu chữ — nay bấm vào một
+                        gói là NGHE được nó, nên chữ ấy hết việc. */}
                   </div>
                 </motion.div>
               )}
@@ -547,7 +552,7 @@ export default function Settings() {
           <SectionHeader
             lightTheme={lightTheme}
             title="Gói âm thanh"
-            description="Mỗi pack đổi chất liệu tiếng báo, không đổi bố cục hay nhịp vận hành."
+            description="Chạm để nghe thử."
           />
 
           <div className="mt-4 grid grid-cols-2 gap-2">
@@ -562,9 +567,6 @@ export default function Settings() {
                   className="flex items-center gap-2.5 rounded-2xl px-3 py-3 text-sm font-medium transition-all"
                   style={choiceStyle(active, lightTheme)}
                 >
-                  <span className="mono text-[11px] font-semibold uppercase tracking-[0.18em]" style={lightTheme ? { color: active ? '#9a5a48' : '#6a6862' } : { color: active ? 'var(--accent-light)' : 'var(--muted)' }}>
-                    {opt.short}
-                  </span>
                   <span>{opt.label}</span>
                 </motion.button>
               );
@@ -1038,7 +1040,7 @@ function Card({ children, lightTheme = false, className = '' }) {
  * Giá: ~22px mỗi mục × 11 mục, cộng 11 vòng tròn trang trí. Tiêu đề `title` ở lại và nay là dòng
  * đầu tiên của mỗi mục — đúng thứ mắt cần để biết mục này chỉnh cái gì.
  */
-function SectionHeader({ icon, title, description, lightTheme = false }) {
+function SectionHeader({ _icon, title, description, lightTheme = false }) {
   return (
     <div>
       <div className="flex items-start justify-between gap-3">
@@ -1097,7 +1099,7 @@ function ToggleRow({ label, description, value, onChange, compact = false, disab
         className="relative h-6 w-11 flex-shrink-0 rounded-full transition-colors"
         style={lightTheme ? {
           background: value ? '#c96442' : 'rgba(31, 30, 29, 0.12)',
-          border: value ? '1px solid rgba(201, 100, 66, 0.5)' : '1px solid rgba(31, 30, 29, 0.08)',
+          border: value ? '1px solid rgba(var(--accent-rgb), 0.5)' : '1px solid rgba(31, 30, 29, 0.08)',
         } : {
           background: value ? 'var(--accent)' : 'var(--toggle-off-bg, rgba(58, 52, 46, 0.96))',
           border: value ? '1px solid rgba(var(--accent-rgb), 0.5)' : '1px solid rgba(255,255,255,0.08)',

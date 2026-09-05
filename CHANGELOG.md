@@ -57,6 +57,552 @@ diện. Không migration.
 
 ---
 
+## 2026-09-05 (vòng 32) — Đóng #43, và năm bản chép của một lỗi
+
+**Mục đích.** Đóng mục nợ phi-đồ-hoạ dễ đóng nhất còn lại, rồi đi hết cái họ lỗi đã tìm thấy ở
+vòng 31b.
+
+**Phạm vi.**
+- **`TECH_DEBT #43` ĐÓNG.** `src/engine/city3d/triangleBudget.test.js` — bảng 15 mốc tam giác riêng
+  từng kỷ, chạy dưới 1 giây trong `npm test`, không cần Chromium. Cột tam giác nay có cổng canh
+  đúng như cột lệnh vẽ, nên nó thôi trôi trong im lặng.
+- **Năm bản chép của một hình dạng lỗi**, trong bốn file: luật *"đặc quyền này chỉ tính khi công
+  trình là KỲ QUAN"* bị bỏ ở tầng giao diện. Gom hết về `engine/wonderEffects.js`.
+- Luật **bệ kè** cũng có bốn bản chép; gom về hai hàm thuần ở `parts.js`.
+
+**Ảnh hưởng.** Không đổi một luật chơi nào, không đổi hình học (kỷ 6 vẫn 198.388 tam giác sau khi
+gom). Một lệch THẬT đã vá: giá tiến hoá di vật hiện 0 trong khi store trừ 1.
+
+**Tương thích.** Hoàn toàn tương thích ngược.
+
+---
+
+## 2026-09-02 (vòng 31b) — Ba lỗi thật cùng một họ: "CÓ" không bằng "LÀM ĐƯỢC"
+
+**Mục đích.** Sau khi bắt được một lời hứa sai ở dải mở đầu tab Kỹ năng, đi tìm cùng hình dạng ấy
+ở chỗ khác.
+
+**Phạm vi.** Ba lỗi, một nguyên nhân gốc — luật sống inline trong tầng giao diện nên tầng khác
+không thấy nó và tự nghĩ ra một điều kiện lỏng hơn:
+
+1. Dải mở đầu tab Công trình đếm bản vẽ ĐÃ MỞ thay vì bản vẽ KHỞI CÔNG ĐƯỢC (không kiểm nguyên
+   liệu, không kiểm ô hàng đợi).
+2. Cái chuông · cái chấm · dòng "việc tiếp theo" so SP với giá GỐC của kỹ năng, trong khi store
+   trừ giá đã giảm nhờ cộng hưởng di vật — sai đúng ở 6 kỹ năng Tinh Hoa.
+3. Giá RP nghiên cứu có ba bản chép tay; bản ở tầng giao diện thiếu phép kiểm `type === 'wonder'`
+   và thiếu sàn 1 RP.
+
+**Ảnh hưởng.** Không đổi luật chơi, không đổi con số cân bằng. Ba module THUẦN mới dùng chung:
+`engine/craftReadiness.js` · `engine/wonderEffects.js`. "Hàng đợi đầy" nay là một lý do RIÊNG chứ
+không gộp vào "thiếu nguyên liệu", và nút bị khoá trước thay vì cho bấm rồi báo lỗi.
+
+**Tương thích.** Hoàn toàn tương thích ngược.
+
+---
+
+## 2026-09-02 (vòng 31) — Bốn màn ngắn đi 29–39%, cùng MỘT khuôn "lưới + một khung chi tiết"
+
+**Mục đích.** Đàm nói lần thứ ba rằng *"UX/UI và mọi thứ ở hành trang vẫn chưa thấy thay đổi gì …
+đừng có quá đo tiểu tiết, nên thực hiện lớn"*. Vòng 28 đã rút ra *"thêm mà không bớt thì không phải
+thiết kế lại"*; vòng này áp nó cho bốn màn dài nhất app.
+
+**Phạm vi.**
+
+| Màn | trước | sau | đổi gì |
+|---|---|---|---|
+| Kỹ năng | 2.231px | **1.957px** | danh sách một-nhánh-một-lúc → **bản đồ 6×6** (cột = nhánh, hàng = độ sâu) |
+| Công trình | 4.757px | **2.894px (−39%)** | công trình đã xây thành lưới ô + một khung chi tiết; gỡ 3/5 chip luật RP; thẻ bản vẽ thôi chép 4 trường đã có ở khung chi tiết |
+| Huy hiệu | 4.915px | **3.973px** | gấp lại 102 dấu có tiến độ = 0 |
+| Tập trung | 2.509px | **1.783px (−29%)** | bảng thiết lập (~1.100px, mở sẵn mọi lần) gấp sau một dòng nói đủ |
+
+Đo ở khung 390px trên fixture đã chơi 6 tháng, bằng `node scripts/shot.mjs --phone --fixture
+.shots/fixture.json --full`.
+
+**Ảnh hưởng.** Không đổi một luật chơi nào, không đổi một con số cân bằng nào, không đổi
+localStorage/Supabase. Toàn bộ là tầng trình bày. Bốn module THUẦN mới, mỗi cái có test riêng:
+`shared/skillMatrix.js` · `shared/buildingGrid.js` · `shared/badgeGroups.js` ·
+`pomodoroSetupSummary.js`.
+
+**Một lỗi thật đã sửa kèm:** dải mở đầu Hành trang bật màu nhấn chỉ vì còn điểm kỹ năng chưa tiêu,
+rồi viết *"mở thêm một kỹ năng ngay bên dưới"* — với 1 SP trong tay mà ô rẻ nhất giá 3 SP thì đó là
+một lời hứa không làm được. Nay nó hỏi đúng câu *"có mở được ô nào không"*.
+
+**Tương thích.** Hoàn toàn tương thích ngược. Mọi khối bị gấp đều mở lại được bằng một nút ghi rõ
+còn bao nhiêu — **không giấu, chỉ gấp**.
+
+---
+
+## 2026-09-02 (vòng 30) — Dọn nợ tiếp: #91, #86, và một bản vá TỰ HOÀN TÁC
+
+**Đóng #91** — `sceneStats.test.js` chép tay `12 * 0.8` thay vì đọc hệ số đã dựng, tức khoá một CON
+SỐ chứ không khoá cái LUẬT. Suýt cắn thật ở lần gộp nhánh Phase 19–21 (xung đột đúng dòng ấy,
+`main` 0,75 · nhánh 0,80). Nay `SHADOW_REACH_RATIO` là hằng số có tên, được export, test import nó.
+
+**Đóng nửa gốc của #86** — 84 chỗ trong 16 file chốt cứng `rgba(201, 100, 66, …)`, đúng terracotta
+của skin MẶC ĐỊNH, trong khi `arcade` khai `226, 84, 44` và `inkgold` khai `217, 164, 65`. Tức chúng
+chỉ đúng ở **2 trong 10** tổ hợp theme × skin. Nay tất cả đọc `rgba(var(--accent-rgb), …)` — tương
+đương tuyệt đối ở skin mặc định, đúng ở bốn skin còn lại. Nửa còn lại (137 nút không dùng
+`ActionButton`) **cố ý không sửa**: chính mục nợ đã soi từng cái và kết luận chuyển sang là ĐỔI HÌNH
+DẠNG chứ không phải hợp nhất.
+
+⚠️ **#97 — viết một bản vá rồi TỰ HOÀN TÁC, và đó là kết quả đúng.** Chẩn đoán ("phép quét chỉ nhìn
+mép NGANG nên mù với mép DỌC") đúng, cách chữa hiển nhiên là quét cột chuyển vị. Viết xong thì nó
+**báo oan ngay** trên bài đối chứng có sẵn — vì ảnh thật đầy mép dọc (mép nhà, mép đường), nên một
+phép quét cột dùng cùng ngưỡng **về mặt cấu trúc** là cỗ máy báo động giả. Đã hoàn tác và ghi rõ vì
+sao, để phiên sau không đi lại con đường ấy.
+
+**Trạng thái nợ: 97 mục · 35 đã đóng (36%) · 62 còn mở** — trong đó **~49 thuộc Thành Phố 3D**.
+
+---
+
+## 2026-09-02 (vòng 29) — Dọn nợ: đóng 5 mục, và một bài học đắt về ba cổng cùng mù
+
+**Đóng:** #92 (mã chết ở tầng giao diện) · #5 (lệch mô tả ↔ hành vi) · #13 & #7 (đã lỗi thời, chưa
+ai kiểm lại) · #93 (là QUYẾT ĐỊNH, không phải nợ — đánh dấu lại).
+
+⚠️ **BÀI HỌC ĐẮT NHẤT VÒNG NÀY.** Bật `no-unused-vars` cho `.jsx` ra **54 báo cáo**; tôi tin cả 54
+và đi gỡ. Kết quả: **lint sạch · build sạch · 1.524 bài test XANH · và app ra thẳng "RENDER
+RECOVERY: motion is not defined"**. ESLint lõi không coi `<motion.div>` là một lần DÙNG biến
+`motion`, nên **27/54 là báo nhầm** và chúng nhắm đúng vào những import đang sống. Ba cổng mạnh
+nhất của dự án cùng xanh trên một app đã vỡ hoàn toàn — thứ duy nhất bắt được là một **ẢNH CHỤP**.
+Vá bằng `react/jsx-uses-vars`; 27 chỗ còn lại là mã chết thật và đã dọn.
+
+⚠️ **#5 — biến một LỜI HẸN thành một CỔNG.** Mục nợ kê đơn *"rà soát định kỳ khi có thời gian
+rảnh"* — mà một lời hẹn thì không bao giờ đỏ lên (chính #3 nằm im gần hai tháng để chứng minh).
+Nay `descriptionDrift.test.js` đối chiếu con số trong mô tả với ngưỡng thật ở **310 thành tích**;
+lần chạy đầu: **0 chỗ lệch**.
+
+**Trạng thái nợ:** 97 mục · **32 đã đóng** · 65 còn mở, trong đó **49 thuộc Thành Phố 3D** (vùng
+Đàm dặn không đụng) và **3 chờ Đàm quyết**.
+
+---
+
+## 2026-09-02 (vòng 28) — Hành trang: **bớt trước, rồi mới dựng**
+
+**Mục đích:** Đàm lặp lại y nguyên yêu cầu lần thứ ba — *"UX/UI và mọi thứ ở hành trang vẫn chưa
+thấy thay đổi gì"*.
+
+**CHẨN ĐOÁN — và nó chỉ vào chính bản vá vòng trước.** Vòng 27 THÊM một dải hero lên trên một thẻ
+đã nói cùng nội dung ("157/360" + "SẮP ĐẠT"), nên màn hình **dài thêm mà không mới thêm**.
+⇒ **Thêm mà không bớt thì không phải thiết kế lại.**
+
+**BỚT** — ba chỗ nói cùng một chuyện trên cùng một màn Huy hiệu: thẻ tóm tắt (137 dòng) · danh sách
+"Mới đạt gần đây" (62 dòng) · hai danh sách "Đã đạt"/"Chưa đạt" (124 dòng). Và ở Công trình: tiêu
+đề "Xưởng xây dựng" (chỗ thứ BA gọi tên màn hình) + sáu chip thông số.
+
+**DỰNG** — 360 huy hiệu thành **một LƯỚI** (`shared/BadgeGrid.jsx`). Bản cũ vẽ mỗi dấu thành một
+HÀNG CHỮ đầy đủ cho 360 mục: một bảng tính, không phải bộ sưu tập — dài tới mức chính giao diện
+phải thừa nhận *"đang hiện 40/203 mục để giữ giao diện nhẹ hơn"*. Nay mỗi dấu là một ô có màu theo
+bậc; ô chưa đạt để xám KÈM vòng tiến độ, và **bỏ luôn phân trang** — một bộ sưu tập chỉ có nghĩa
+khi thấy được phần còn thiếu.
+
+| | trước | sau |
+|---|---|---|
+| lưới huy hiệu bắt đầu ở | — (không có lưới) | **y=589** (từng là y=1398 khi bộ lọc còn mở) |
+| `Achievements.jsx` | 977 dòng | **745 dòng** |
+| bộ lọc | 13 chip, ~9 hàng, chắn trước bộ sưu tập | một dòng, mở khi cần |
+
+**Ảnh hưởng:** thuần giao diện. Không đụng dữ liệu, không đụng Thành Phố, không đụng công thức.
+
+---
+
+## 2026-09-02 (vòng 27) — Hành trang có bản sắc riêng · đóng 3 mục nợ · 1 bug im lặng cắn 3 lần
+
+**Mục đích:** lệnh Đàm — *"khắc phục toàn bộ tech_debt và sửa lỗi bug… thay đổi lớn hơn nữa, UX/UI
+và mọi thứ ở hành trang vẫn chưa thấy thay đổi gì"*.
+
+**HÀNH TRANG.** Vòng 24 gộp 6 màn xuống 3 — một thay đổi về CẤU TRÚC — nhưng phần NHÌN không đổi
+một chút nào: cả ba tab vẫn là thẻ trắng trên nền trắng, y hệt mọi màn khác. Nay mỗi tab mở đầu
+bằng **một dải hero có màu**: một con số to + đúng một việc nên làm tiếp + thanh tiến độ.
+Kỹ năng → *điểm CHƯA TIÊU* (thứ hành động được, không phải số kỹ năng đã mở). Công trình →
+*"còn 4 phiên nữa · Cảng Biển Lớn"*. Huy hiệu → *"99% · Biên Niên Sử Nhỏ — gần xong rồi"*.
+
+**NỢ KỸ THUẬT ĐÃ ĐÓNG**
+
+| mục | trước | sau |
+|---|---|---|
+| **#94** | chờ 3,2 giây vào nghỉ ở **mọi** phiên, kể cả ~82% phiên không có lễ mừng nào | độ trễ đi THEO việc có lễ mừng: 3.200ms / 500ms |
+| **#9** | localStorage đầy ⇒ lỗi ném thẳng vào persist, app ngừng lưu | dọn khoá cũ rồi thử lại; hỏng tiếp thì báo, không nuốt |
+| **#3** | 3 kỹ năng Thăng Hoa (16 SP) có mô tả hứa hẹn mà **không làm gì cả** | nối dây thật, tất định, có đối chứng |
+| **#14** | 95% phiên chỉ nhận *"+20 tài nguyên · +18 RP"* | mọi phiên nói TIẾN ĐỘ: *"Cảng Biển Lớn · còn 4 phiên"* (phần gốc vẫn Open) |
+
+**BUG IM LẶNG CẮN BA LẦN** trong cùng một phiên: chuỗi tra tên bản vẽ bị chép ra ba nơi và sai cả
+ba kiểu khác nhau — `.name` (trường không tồn tại ở bảng nào), `.find` trên một OBJECT các mảng, và
+`BUILDING_EFFECTS[id].label` (0/75 mục có `label` — nhánh chết ngay từ lúc viết). Cả ba im lặng vì
+`??` nuốt gọn. Nay chỉ còn MỘT hàm `blueprintLabel`, **không có nhánh dự phòng nào để giấu lỗi lần
+thứ tư**.
+
+**Ảnh hưởng:** giao diện + hai luật kinh tế nhỏ (độ trễ vào nghỉ, đặc quyền Thăng Hoa). **Không**
+đụng Thành Phố, **không** đụng công thức tính thưởng mỗi phiên.
+
+**Tương thích:** không có migration. `prestige` thêm hai trường có mặc định.
+
+---
+
+## 2026-09-02 (vòng 26) — Gỡ điểm mù "màn sau khi kết thúc phiên", rồi làm lại nó
+
+**Mục đích:** lệnh Đàm — *"gỡ điểm mù màn hiện ra sau khi kết thúc… đơn giản hơn, dopamine lớn
+nhất, không phức tạp, có thể làm lại toàn bộ nếu muốn"*.
+
+**PHẦN 1 — GỠ ĐIỂM MÙ.** Khoảnh khắc dopamine lớn nhất của app là màn DUY NHẤT chưa ai từng soi
+được, suốt nhiều vòng. Ba đường vào đều bịt: nó sống trong `state.ui`, mà `ui` nằm ngoài
+`partialize` ⇒ gieo `--fixture`/`--ls` không tới; store không lộ ra `window` ⇒ `--probe` không mở
+được; bấm "Bắt đầu" thì bị CẤM trên dev. Nay có `src/dev/previewStage.js` + `shot.mjs --preview`.
+**An toàn vì đã ĐO**: mọi hộp thoại sau phiên CHỈ ĐỌC `ui`, mọi hành động đóng cũng CHỈ ghi `ui`
+⇒ không ghi localStorage, không lên Supabase, không bắt đầu phiên nào.
+
+⚠️ **Và ngay trong lúc gỡ, tìm ra LỜI NÓI DỐI THỨ NĂM của `shot.mjs`:** một tấm ảnh không bắt được
+thứ chỉ sống 4 giây. Đo được: thẻ thưởng hiện ở giây **13,5**, tắt ở giây **17,7**; `--settle` thử
+0,4 · 1 · 3,5 · 6 · 14 giây đều ra ảnh sạch + probe `false` + không lỗi nào — đọc y hệt *"tính năng
+không chạy"*. Vá bằng `--watch "<chuỗi>"` (MutationObserver gắn từ đầu trang + bỏ qua cổng
+đứng-yên để chụp đúng lúc nó đang hiện).
+
+**PHẦN 2 — LÀM LẠI.** Nhìn lần đầu thấy ba khuyết tật, cả ba đo được:
+
+| | trước | sau |
+|---|---|---|
+| di vật **huyền thoại** vs phiên thường | khác nhau **3px vệt màu + mấy chấm + một chữ** | nền pha màu + vệt dày dần theo bậc |
+| nhãn bậc trên chiến thắng vừa giành | đóng dấu **"THƯỜNG"** | bậc thấp nhất không dán nhãn |
+| tin **kỷ nguyên mới** (hiếm nhất game) | thẻ 299px ở **đáy** trang cao 3.201px | **nhan đề** nói ngay: kỷ nguyên > lên cấp > xong phiên |
+| chữ trong màn | 327 chữ · 31 số | **267 chữ** (−18%) |
+
+**Ảnh hưởng:** chỉ tầng giao diện + một module dev mới. **Không** đụng công thức phần thưởng,
+**không** đụng Thành Phố, **không** đụng `partialize`. `DailyMissions` không đổi một điểm ảnh
+(chỉ dùng bậc `tot`/`hiem`, đã đếm).
+
+**Tương thích:** không có migration.
+
+---
+
+## 2026-09-02 (vòng 25) — Màn "Tập trung" + "Thống kê": gỡ bốn chỗ app **nói dối hoặc im lặng**
+
+**Mục đích:** phần còn lại của lệnh Đàm ở vòng 24 — *"tổng đại tu cho đơn giản, dễ hiểu hơn về
+UX/UI của mục Tập Trung, Hành Trang và Thống Kê"*. Hành trang xong ở vòng 24; vòng này làm hai mục
+còn lại. Khảo sát song song chỉ-đọc, luật *không số đo = không tính*, rồi sửa TUẦN TỰ.
+
+**CHẨN ĐOÁN GỐC:** màn Tập trung không thiếu tính năng — nó có bốn chỗ **đã viết xong mà không tới
+được Đàm**, mỗi chỗ im lặng theo một kiểu khác nhau, nên không chỗ nào lộ ra ba chỗ kia.
+
+| chỗ | trước | sau |
+|---|---|---|
+| bắt đầu một phiên | **4 thao tác** (bấm nút chỉ-để-cuộn → gõ → cuộn ngược → bấm) | **2 chạm ngay trên nếp gấp** |
+| huy hiệu mốc 25/50/75% | tính ra rồi **vứt đi** — cổng `!useMinimalFocusStage` luôn sai lúc phiên chạy | hiện thật, ~25 phút có 3 tín hiệu |
+| nhãn vòng đồng hồ lúc thiếu mục tiêu | ghi **"SẴN SÀNG"** trong khi nút cách 200px ghi "Điền mục tiêu →" | **"Chờ mục tiêu"** |
+| mục tiêu phiên lúc đang chạy | **không hiện ở đâu cả** (mọi chỗ render gác `isIdle`) | hiện trong vòng đồng hồ, 2 dòng |
+| hết giờ nghỉ | im trên **cả ba kênh** (tiếng · thông báo · Web Push) | có tiếng + thông báo, gác cửa sổ 90 giây |
+| tab/kỳ hạn ở Thống kê | **1/5 tab và 3/6 kỳ hạn** nằm ngoài màn hình, sau cuộn ngang | xuống dòng, hiện đủ |
+
+**Ảnh hưởng:** chỉ tầng giao diện + một chỗ nối tín hiệu ở `gameStore`. **Không** đụng công thức
+phần thưởng, **không** đụng Thành Phố, **không** nới cổng 10 ký tự của mục tiêu phiên.
+
+**Tương thích:** không có migration. Dữ liệu cũ đọc nguyên vẹn.
+
+**Đáng nhớ nhất:** khoảnh khắc hết giờ nghỉ câm trên cả ba kênh cùng lúc — nên *không kênh nào lộ
+ra rằng hai kênh kia cũng câm*. Đó là lần thứ ba dự án tìm thấy một hàm viết xong với 0 nơi gọi
+(`playMilestone` vòng 22, `playBreakStart` vòng 23, `notifyBreakOver` vòng 25); lần này đã dựng
+`notificationReach.test.js` để lớp thông báo cũng được ĐẾM như lớp tiếng.
+
+---
+
+## 2026-09-01 (vòng 24) — Tab "Hành trang": 6 màn sau 3 tầng tab → **3 màn, 1 hàng tab**
+
+**Mục đích:** lệnh của Đàm — *"tối ưu lại tab hành trang và toàn bộ những gì trong đó, làm lại
+ĐƠN GIẢN HƠN nhưng vẫn nâng cao độ hứng thú, độ nghiện và dopamin… PHẢI DỄ HIỂU, DỄ CHƠI… có thể
+đập đi xây lại"*. Khảo sát bằng 12 nhánh soi song song (chỉ đọc), luật *không số đo = không tính*,
+rồi sửa TUẦN TỰ. 6 commit.
+
+**CHẨN ĐOÁN GỐC:** Hành trang là **một bảo tàng của những thứ Đàm KHÔNG có**, nằm sau 3 tầng tab
+(4 ở chỗ sâu nhất), nơi phần lớn nút không bấm được. Đo: 6 màn dài **115.864px = 137 màn hình
+điện thoại**, 4.808 con số, chỉ 44 nút bấm được — và **2/6 màn có ĐÚNG 0 nút**.
+
+**Số đo trước → sau**
+
+| | trước | sau |
+|---|---|---|
+| tầng tab | 3 (4 ở chỗ sâu nhất) | **1** |
+| màn con | 6 | **3** |
+| hàng tab ăn của màn hình | 246px (29,1%) | **38px** |
+| tổng chiều dài | 115.864px | **17.754px** |
+| màn không có nút nào | 2/6 | **0/3** |
+| thành tích hiện tiến độ | 0/360 | **310/360 (86%)** |
+
+**1. Ba hàng tab chồng nhau → một.** Cả ba dùng CHUNG component `SubTabs` nên bo góc, màu nền, cỡ
+chữ giống hệt nhau — **không có gì nói hàng nào là cha, hàng nào là con**. Ba màn nay gom theo CÂU
+HỎI người chơi đang hỏi: **Kỹ năng** (tôi tiêu điểm vào đâu) · **Công trình** (tôi xây gì tiếp) ·
+**Huy hiệu** (tôi đã giành được gì). Ba id tab con GIỮ NGUYÊN nên mọi thông báo đã lưu vẫn trúng.
+
+**2. Xoá tab "Lịch sử."** Dài **98.568px = 117 màn hình**, 4.362 con số, **0 nút**, và **0 thông
+báo nào trong game trỏ tới nó** (so với `workshop` 8 chỗ · `blueprints` 4 · `relics` 1). Cùng mảng
+`history` ấy đã được màn Thống kê đọc và tóm tắt.
+
+**3. Bản vẽ + Xưởng là một vòng lặp bị cắt đôi** — và app đã tự thú: màn Xưởng in hẳn một câu bảo
+người chơi *"Đi sang mục Bản vẽ"*. Nay một màn, Xưởng đứng trước (nơi có việc làm ngay).
+
+**4. 310/360 thành tích nay có tiến độ; trước là 0/360.** 86% số mục chỉ là một phép so ngưỡng đơn
+`s.<trường> >= <số>` — con số "còn bao nhiêu nữa" nằm sẵn trong dữ liệu từ đầu, chưa ai lấy ra.
+Ngưỡng nay là **DỮ LIỆU** (`dem` + `moc`) và `check` được SINH RA từ chính nó. ⚠️ Cách hiển nhiên
+(đọc mã nguồn `check` bằng regex) chạy đúng dưới `node` và **hỏng câm trên production** vì Vite rút
+gọn `s.sessionsCompleted` thành `s.a`. Nghiệm thu: 360 mục × 62 ảnh chụp = **22.320 phép so, khớp
+từng bit**.
+
+**5. Màn Huy hiệu xếp theo ĐỘ KHẨN CẤP.** «Sắp đạt» ba mục gần nhất lên nếp gấp (*"còn 1 ghi chú"*
+· *"còn 751 phút"* · *"còn 11 phiên"*); «Chưa đạt» từ y=7.040 lên **y=2.120** và sắp theo tiến độ
+(mục gần nhất từng nằm ở y=9.606 = 11,4 màn hình); «Đã đạt» xuống dưới.
+
+**6. Di vật nói thật.** Khủng hoảng chỉ nổ đúng một lần lúc vượt mốc EP ⇒ **5/12 dòng đã lỡ vĩnh
+viễn trong ván này**, mà màn hình gộp cả 12 dưới một câu mời "chinh phục để nhận". Nay tách hai
+nhóm, hiện PHẦN THƯỞNG THẬT thay cho "???" (bản cũ dùng 2/7 trường và vứt 5), và thêm thẻ đếm
+ngược đọc `triggerEP` — con số ấy trước đây được **0 component** đọc.
+
+**7. Kỹ năng thôi nói dối về giá.** Ô giá in giá LẺ trong khi phải mua cả chuỗi tiên quyết:
+**21/32 nút (66%) hiện con số thấp hơn giá thật, tệ nhất 2,3 lần** (ghi "8 SP", thật ra 18 SP ≈
+254 ngày). Và 21/32 nút khoá không có một chữ nào nói mình làm gì — mô tả bị THAY bằng "Cần mở: X".
+
+**8. Bấm "Hành trang" rơi vào tab CÓ VIỆC**, hỏi cùng hàm nuôi cái chấm đỏ. Không thêm một chữ nào.
+
+**Tương thích:** không migration, không đổi hình dạng dữ liệu lưu, không đổi một công thức thưởng
+nào. Ba id tab con giữ nguyên; `collectionTab` cũ được DỊCH chứ không bỏ qua.
+
+**Ghi nợ cho Đàm quyết:** `TECH_DEBT #96` — tiến hoá di vật là **cơ chế chết** (`evolveRelic` tiêu
+tinh luyện của kỷ ĐÃ QUA, mà tinh luyện chỉ rơi vào kỷ đang chơi ⇒ 3/3 nút "Chưa đủ tài nguyên",
+vĩnh viễn). Mọi lối ra đều là đổi luật KINH TẾ.
+
+**Cổng:** lint sạch · build xanh · **1484 bài (# skipped 1) · 0 đỏ** (trước vòng: 1453).
+33 bài mới, tất cả đã thử-cho-đỏ.
+
+---
+
+## 2026-09-01 (vòng 23) — Hứng thú hơn, hệ thống đơn giản hơn, **KHÔNG lạm phát thông tin**
+
+**Mục đích:** cùng mục tiêu vòng 22, cộng thêm một mệnh lệnh mới của Đàm — *"nhưng không bị lạm
+phát thông tin"*. Mệnh lệnh ấy đảo ngược phản xạ mặc định: câu trả lời phải đến từ phép **TRỪ**
+(xoá · gộp), không từ việc thêm huy hiệu và thêm chữ. Chín việc; **không việc nào thêm một khái
+niệm mới**, và toàn vòng ròng lại là **−242 dòng** mã (27 file, +1.006 / −1.248).
+
+**Phạm vi:** tầng hiển thị + hai tác dụng phụ âm thanh. **Không đổi một luật tính thưởng nào**,
+không đụng `completeFocusSession`, không thêm trường nào vào store, không đụng Thành Phố.
+
+**HAI LỖI THẬT ĐANG CHẠY TRÊN PRODUCTION đã được vá:**
+
+**1. Chồng thẻ thưởng che TRỌN thanh điều hướng sau MỖI phiên.** Thanh nav nằm ở y=774–832, còn
+`bottom-3` đặt đáy chồng thẻ đúng ở 832 với `z-[48] > z-40`; mỗi thẻ là một `<button>` có
+`pointer-events-auto` ⇒ chạm bất kỳ nút nào trong 5 nút đều mở hộp phần thưởng thay vì chuyển tab.
+Vá bằng đúng MỘT lớp CSS (`bottom-[calc(env(safe-area-inset-bottom)+82px)]`); đo lại còn 12px hở.
+
+**2. Bước cuối của chuỗi tuần hiện "Đã chốt" và "0%" cạnh nhau.** Hai cột dùng hai công thức cho
+cùng một sự thật (`index < chainStepsCompleted` so với `index < chainStepIndex`), mà khi xong chuỗi
+thì hai biến ấy lệch nhau đúng 1. Lỗi có ở MỌI độ dài chuỗi và nổ đúng lúc trả thưởng lớn nhất
+tuần. Vá hai tầng: **gỡ cột «%»** (nó là hàm của dòng chữ bên trái, cộng thanh tiến độ bên dưới là
+ba cách mã hoá một con số) và đưa trạng thái một bước về **một hàm thuần duy nhất**
+(`weeklyChainStep.js`) — ba trạng thái loại trừ nhau, nên mâu thuẫn cũ nay **bất khả thi theo cấu
+tạo**, không phải nhờ một cái `if`.
+
+**~860 DÒNG MÃ KHÔNG BAO GIỜ CHẠY ĐƯỢC đã bị xoá — ba kiểu chết, chỉ MỘT kiểu `grep`/lint thấy:**
+- *(a) không ai tham chiếu* — `setSurgeChoice` · `addBuildingPassiveResources` · `craftTier`
+  (0 nơi gọi toàn repo), kéo theo 2 hàm mồ côi và 1 hằng số.
+- *(b) chết vì một `return null` đứng trước* — `FocusIntro` mở đầu bằng
+  `if (hasFocusSessionInProgress) return null` mà nó là nơi gọi DUY NHẤT của `getFocusIntroCopy`,
+  nên cả nhánh "phiên đang chạy" + `getLiveSessionIntroCopy` + 6 bank câu chưa từng chạy một lần.
+  Kho câu chào **39 bank/762 dòng → 3 bank/42 dòng**; **giữ nguyên toàn bộ câu tiêu đề** — đó
+  chính là phần "bất ngờ mỗi ngày".
+- *(c) chết vì một trường vĩnh viễn `null`* — nhánh `surgeOverride` trong `gameMath.js`.
+
+`src/App.jsx` **3.006 → 2.176 dòng**; `gameStore.js` 6.230 → 6.123.
+
+**CHỮ NÓI LẠI CHỮ — bảy màn hình được dọn (mọi con số đo bằng `shot.mjs`, không ước lượng):**
+- **Thành tích: 19.059 → 11.739px (−38,4%)** — 48 hộp "ghi chú AI" sinh từ 5 nhánh `if`, tức 48
+  bản sao của 5 câu. Câu theo NHÓM vẫn còn, nhưng in MỘT LẦN dưới hàng lọc.
+- **Tập trung** — bỏ phụ đề nói lại "Phiên 0/5 hôm nay" ở cách đó 338px; bỏ chuỗi `0/4` khi chu kỳ
+  chưa chạy; bỏ viên `×4` (cả 4 preset đều khai `longBreakAfterN: 4` nên trục ấy không phân biệt
+  được gì — viết thành điều kiện HỎI THẲNG BẢNG, ngày nào có preset khác thì viên tự hiện lại).
+- **Bản vẽ: 2.832 → 2.745px** — ba cái tên cho một màn trong 83px, một cái bằng tiếng Anh.
+- **Xưởng: 2.559 → 2.455px** — 3 chip tóm tắt tên đặc quyền đã in nguyên văn trên chính thẻ sinh
+  ra nó, cộng một câu luật CHUNG in 4 lần một màn (nay in một lần dưới tiêu đề).
+- **Di vật** — 15 chữ "Khoá" trong một danh sách dựng bằng `locked.map(...)`, tức khoá theo cấu
+  tạo. ⚠️ **ĐÃ BÁC** đề nghị thay 15 dòng bằng một dòng tổng: mỗi dòng mang một danh từ riêng
+  ("??? từ Kỷ Băng Hà") trả lời đúng câu *"cái này rơi ở đâu"*.
+- **Cài đặt** — đổi **174 ký tự tả tiếng bằng lời** lấy một cú nghe thử.
+- Lịch sử phiên: chip `×N.N` thành đường lui (nó lặp lại bậc ngay bên cạnh); 'JP'/'RF'/'PM' → 🎰/💎/🍅.
+
+**CHỒNG THẺ SAU PHIÊN — cắt chỗ LẶP, giữ chỗ VUI.** Cắt hai nguồn đã có kênh bền VÀ lặp: `rank`
+(cùng sự kiện đã đẩy vào chuông) và `mission` (xong gần như mỗi ngày; tab "Nhiệm vụ" là nút 2/5 và
+hiện tiến độ sống). **Giữ** `weekly` (một nhịp MỖI TUẦN là thứ đối lập với lạm phát thông tin —
+đổi ý sau khi đọc chính bài test của nó) và `achievement` (cái chấm 6px trả lời "có việc", nó
+không phải một lời chúc mừng). Ca thường ngày: **2–3 thẻ → 1–2 thẻ**.
+
+**BA KHOẢNH KHẮC CÂM NAY CÓ TIẾNG — dopamine tốn 0 chữ:**
+- **chọn gói âm thanh = nghe thử luôn** (gọi SAU `setPack`, nếu không sẽ nghe tiếng gói CŨ);
+- **vào nghỉ có tiếng** (`playBreakStart` — 0 nơi gọi từ khi viết ra; đặt ở STORE và NGOÀI
+  `set(...)`, vì hàm cập nhật zustand có thể chạy hai lần);
+- **năm nút thanh điều hướng nhúc nhích khi bấm** (`usePressMotion()` — tự im khi bật "Giảm chuyển
+  động").
+Cộng một cổng mới `soundReach.test.js`: mọi hàm `play*` phải có ít nhất một nơi gọi; danh sách
+miễn trừ là `assert.deepEqual` nên **tường minh và đếm được** (đúng một mục: `playTick`).
+
+**MÀN TẬP TRUNG — biên an toàn 6px → 45px.** Màn này đã để nút chính chui xuống dưới thanh điều
+hướng HAI lần (vòng 19, vòng 20). Nút phụ «Toàn màn hình» chiếm 112/308px và vì nhãn hai chữ xuống
+dòng nên chính nó quyết định chiều cao 59px của cả hàng; gỡ ở nhánh CHỜ (giữ ở ĐANG CHẠY và TẠM
+DỪNG). Nút chính **188×59 → 308×42**; biên tới thanh nav 32 → **71px** hôm nay, ~6 → **45px** ở
+tiêu đề dài nhất (63 ký tự = 3 dòng).
+
+**Tương thích:** không có migration. Không đổi hình dạng dữ liệu lưu, không đổi một công thức
+thưởng nào; mọi thứ đã kiếm được giữ nguyên.
+
+**HAI VIỆC GIÁ TRỊ CAO ĐÃ TỪ CHỐI LÀM và ghi lại cho Đàm quyết** (`TECH_DEBT #94`, `#95`):
+- **#94** — `BREAK_START_DELAY_MS` chờ 3,2 giây ở **~82%** số phiên không còn lễ mừng nào để che
+  (31,4 phút trong 180 ngày). Tiền đề của hằng số ấy chết do HAI bản vá ở chỗ khác. Chưa sửa vì nó
+  đụng thẳng luồng tự-vào-nghỉ — sai một lần là **âm thầm ăn bớt giờ nghỉ thật** — và khoảnh khắc
+  ấy KHÔNG chụp ảnh kiểm được trên bản dev.
+- **#95** — xây một công trình phải qua **BA cổng tiền tệ**, cả ba đều là hàm của số phút. Kho thô
+  thừa **14 lần** nhu cầu. Gộp hay bỏ một loại tiền là đổi luật KINH TẾ, không phải đổi hiển thị.
+
+**Nguyên tắc an toàn giữ nguyên từ vòng 22:** *đơn giản hoá thứ Đàm THẤY và CẢM, đừng xoá thứ Đàm
+đã KIẾM ĐƯỢC.*
+
+**Cổng:** lint sạch · build xanh · **1453 bài (# skipped 1) · 0 đỏ** (trước vòng: 1431).
+22 bài mới, tất cả đã thử-cho-đỏ.
+
+---
+
+## 2026-09-01 (vòng 22) — Hứng thú hơn, hệ thống ĐƠN GIẢN hơn
+
+**Mục đích:** nâng tỉ lệ *hứng thú ÷ độ phức tạp*. Nguyên tắc an toàn của cả vòng: **đơn giản hoá
+thứ Đàm THẤY và CẢM, đừng xoá thứ Đàm đã KIẾM ĐƯỢC.** Bảy việc; không việc nào thêm một khái niệm
+mới cho người chơi, và ba việc là XOÁ hoặc HẠ.
+
+**Phạm vi:** chỉ tầng hiển thị + một bảng giá. **Không đổi một luật tính thưởng nào**, không đụng
+`completeFocusSession`, không thêm trường nào vào store, không dùng localStorage mới.
+
+**1. Cây kỹ năng: 336 SP → 138 SP.** 36 nút, giá theo hạng 3/7/14/22 → **2/3/5/8**. Ở nhịp
+~80 SP/năm thì mở trọn cây đi từ **15,9 năm xuống ~1,7 năm**. Cây cũ mua được +5,1% XP trong khi
+chỉ cần kéo dài phiên đã cho +103% — tức nhánh tiến trình này gần như không đáng theo.
+
+**2. Sự kiện của phiên lên MẶT thẻ tổng kết.** 63% số phiên sinh một sự kiện có tên, icon và câu
+chuyện riêng (+15–30% XP), nhưng nó chỉ được vẽ bên trong `LootDropModal` — hộp thoại ấy sau
+ADR-060 chỉ tự mở khi LÊN KỶ, tức **1,2%** số phiên. ~358 câu chuyện đã tính, đã cộng XP, rồi bị
+xoá không ai thấy; thẻ thì nói "🎁 Phiên đã xong" ở cả 579 phiên.
+
+**3. Lễ mừng thành phố chỉ chạy khi có công trình MỚI.** Trước đó nó chạy 3,2 giây sau MỌI phiên
+để khoe một dòng chữ vốn luôn hiện sẵn trên màn hình — **30,9 phút chờ trong 579 phiên**.
+
+**4. 513 biểu tượng vẽ tay lên được màn hình.** Dữ liệu đã có sẵn biểu tượng cho 360 thành tích,
+75 bản vẽ, 36 nút kỹ năng, 15 di vật, 14 nhóm, 7 cộng hưởng, 6 loại việc — nhưng mọi màn sưu tập
+hiện ký hiệu 2 chữ cái ("NH" · "VC" · "XĐ" · "RL"). `getGlyph`/`hasGlyphIcon` (`utils/labelMark.js`)
+dùng biểu tượng khi có, rơi về ký hiệu tắt khi không (loại việc Đàm tự tạo ghi `icon: ''`).
+`ACHIEVEMENT_TIERS` là bảng duy nhất thiếu `icon` — đã thêm.
+
+**5. Huy hiệu hệ số gọi tên vách KẾ TIẾP.** Bản cũ chỉ nói được "còn N phút để ×1.3" rồi câm ở
+**75,2%** số phiên, mà im đúng khúc đáng nói nhất: **117 phiên** dừng trong 45–59 phút, chỉ còn
+1–15 phút nữa là chạm ×2.0 (bậc nhảy lớn nhất thang, +54%).
+
+**6. Mốc chuỗi 7/14/30 nay có thẻ ăn mừng + tiếng chuông.** `soundEngine.playMilestone()` xưa nay
+có **0 nơi gọi**. Chống lặp không cần state mới: `streakMissionXP` đã là tín hiệu một-lần-mỗi-ngày,
+và ngưỡng 7 của nó nằm đúng dưới cả ba mốc.
+
+**7. Rương Lớn và tinh luyện được gọi tên trên thẻ** (10,1% và 28,8% số phiên); và bỏ dòng
+"Không có jackpot." khỏi bản tổng kết tuần — jackpot đòi một kỹ năng Đàm chưa mở, tức nó **không
+thể xảy ra**, nên đó là bản tin tuần nào cũng giống tuần nào về một việc không có thật.
+
+**Tương thích:** hoàn toàn ngược tương thích. Hạ giá SP là phép cộng thêm thuần (kỹ năng đã mở giữ
+nguyên, SP đã tiêu không đòi lại). **KHÔNG có migration nào cần chạy.**
+
+---
+
+---
+
+## 2026-08-30 (vòng 21) — Màn Thống kê: một bộ lọc thời gian, và dải "Điều đáng chú ý"
+
+**Vấn đề 1 — ba bộ lọc thời gian, ba mặc định.** Tab Tổng Quan mặc định "tuần", tab Tập Trung và
+Phân Loại mặc định "tất cả", và mỗi tab khai bảng kỳ riêng. Bấm sang tab khác là **cửa sổ thời
+gian âm thầm đổi**, không có gì báo — hai con số cách nhau một cú bấm đang nói về hai khoảng thời
+gian khác nhau.
+
+**Vấn đề 2 — một lỗi NHÃN đã ship.** Tổng Quan tính cửa sổ bằng `now − 7 ngày` rồi dán nhãn *"tuần
+này"*. Vào thứ Tư, "tuần này" là T2→T4 còn "7 ngày gần nhất" là T5 tuần trước→T4. Tệ hơn: biểu đồ
+cột **ngay bên dưới** lại dựng theo tuần LỊCH, nên ô số tổng và bộ cột dưới nó đo hai khoảng khác
+nhau mà mang cùng một nhãn.
+
+**Vấn đề 3 — kho báu bỏ quên.** `gameMath.js` đã có sẵn ~10 phép phân tích ĐÃ VIẾT, ĐÃ TEST, ĐÃ
+GÁC CỠ MẪU (giờ vàng · hay bỏ giữa chừng · phiên khuya kém hơn · loại việc bị bỏ bê · quay lại sau
+ngày nghỉ · phiên liền mạch…). Chúng chỉ chảy vào AI Coach — tức cần mạng, tốn tiền Gemini, có thể
+lỗi. Màn Thống kê không hiện một cái nào.
+
+**Đã đổi.** Thêm `engine/statsPeriod.js` làm **nguồn kỳ duy nhất** (6 kỳ, nghĩa LỊCH) và nâng
+trạng thái kỳ lên component cha ⇒ ba tab **không thể** lệch nhau nữa. Kỳ liền trước nay là kỳ
+trước theo lịch (tuần trước), không phải "lùi thêm N ngày". Nhịp "/ ngày" chia cho số ngày ĐÃ TRÔI
+QUA trong kỳ. Thêm `engine/statsInsights.js` + dải **"Điều đáng chú ý"** ở tab Tổng Quan — chỉ GỌI
+hàm đã có, không chế công thức mới; mọi phần trăm kèm cỡ mẫu, và nói tương quan chứ không nói nhân
+quả (cả hai đều có test canh). Dải này đọc TOÀN BỘ lịch sử chứ không theo kỳ đang chọn, và màn
+hình **nói rõ điều đó**.
+
+**Dọn kèm.** Gỡ 3 props chết, 3 hằng số chết, 1 hàm chết 30 dòng, 2 helper trùng lặp với engine,
+4 import thời gian thừa.
+
+**Dọn code chết.** Quét khai báo cấp cao nhất nào chỉ xuất hiện đúng một lần: **4 component chết**
+(`AreaChart` 600 dòng · `OverviewHeroMetric` · `WeekPulseList` · `TrendBadge`) + rác dây chuyền chỉ
+sống nhờ chúng (6 hàm, 7 hằng số, 2 import). `StatsDashboard.jsx`: **4.901 → 3.941 dòng (−19,6%)**.
+⚠️ Gói tải không nhỏ đi (bundler vốn đã tree-shake được) — cái được là **khả năng bảo trì**, không
+phải tốc độ.
+
+**Ảnh hưởng / tương thích.** Không đụng dữ liệu đã lưu, không migration, không đổi store. Chỉ là
+cách màn Thống kê ĐỌC lịch sử. Mặc định kỳ đổi từ "tất cả" sang **"Tuần Này"** ở hai tab Tập Trung
+và Phân Loại — có chủ đích: một màn thống kê mở ra ở "toàn bộ lịch sử" thì con số đầu tiên người
+dùng thấy gần như không đổi theo ngày, nên nó không nói được gì về hôm nay.
+
+**Test.** +40 bài (20 kỳ · 12 insight · 8 canh mã nguồn) ⇒ 1371 đạt · 1 bỏ qua · 0 hỏng. Chi tiết
+quyết định: `ARCHITECTURE_DECISIONS.md` ADR-067. Nợ mới ghi ở `TECH_DEBT.md` #92.
+## 2026-08-30 (vòng 20) — Tối giản toàn app bằng fan-out soi song song
+
+**Cách làm:** 6 nhánh CHỈ ĐỌC soi song song 9 màn ở khung 390px thật (mỗi nhánh một màn, ảnh ra
+tên riêng, mọi phát hiện phải kèm toạ độ Y + chiều cao px — *không số đo = không tính*), rồi
+chấm chéo và **sửa TUẦN TỰ**, mỗi việc một commit. 9 việc.
+
+**1. Nút chính hết bị thanh tab che.** Đo lại trên tài khoản đã chơi 6 tháng: nút "Điền mục tiêu →"
+y=773…815 còn thanh tab NỔI y=774, nền ĐỤC hoàn toàn ⇒ **lòi ra 1px**. Vòng 19 đã vá nhưng chỉ đủ
+cho NGÀY CHÀO NGẮN. Ba nguyên nhân: cụm ba dòng nhắc cùng nổ (84px) · khối chào dài 2 hoặc 3 dòng
+tuỳ biến thể copy (chênh 26px) · 32px khoảng trắng đỉnh cột giữa. Vá: `FocusNextAction` nhập vào bộ
+chọn `focusMomentPick` thành **nguồn thứ năm** (còn đúng HAI dòng, trần xấu nhất khoá bằng CẤU
+TRÚC) · trần vòng đồng hồ `64vw → 58vw` (226px ở 390px, máy bàn không đổi) · `pt-8 → pt-4` ở khổ
+điện thoại. **Kết quả: nút cách thanh tab 53px** (ngày 2 dòng) / 27px (ngày 3 dòng).
+
+**2. Thẻ "Chuẩn bị phiên" nói một điều năm lần → giữ ba.** Gỡ hai đoạn văn (80px + 59px) chỉ diễn
+đạt lại tên của chính cái ô ngay dưới chúng; giữ nhãn "Bắt buộc", placeholder có VÍ DỤ, và dòng
+gợi ý ở đúng chỗ sắp gõ. Cùng lượt gỡ "Chọn mode…" (41px) và "Thời lượng countdown…" (16px).
+**Trang màn Tập trung 2.920 → 2.660px.**
+
+**3. Tab Kỹ năng thôi dựng lại nguyên tab Nhiệm vụ ở iPhone.** `SkillTree` render `<DailyMissions/>`
+làm cột ngữ cảnh — đúng ở màn rộng (thanh bên desktop không có mục "Nhiệm vụ"), nhưng ở 390px hai
+cột xếp chồng nên nó thành **1.097px chắn ngang**, mà đúng thẻ ấy LÀ toàn bộ tab "Nhiệm vụ".
+**Trang Kỹ năng 3.145 → 2.032px (−35%)**, máy bàn không đổi.
+
+**4. Ô "Chuỗi" có mẫu số: `1` → `1 / 7`.** Mốc chuỗi kế tiếp đã tính sẵn nhưng hai chỗ dùng nó đều
+không tới được iPhone. Không tốn thêm một điểm ảnh chiều cao (đã đo).
+
+**5. Kỹ năng: sáu nhánh thôi giống hệt nhau.** Nhãn tên nhánh là `hidden sm:inline` (sm=640px) nên
+ở 390px **5/6 nhánh cùng ghi "0/6" ⇒ năm nút trông y hệt nhau**. Và "THÀNH TỰU GẦN ĐÂY" chỉ hiện
+"VC"/"DS"/"C5", tên thật nằm trong `title` — tức **chỉ con chuột mới đọc được**.
+
+**6. Hai chỗ chữ bị cắt mà không cổng nào kêu.** `RewardCard`: mô tả được **144px cho 370px chữ
+(61% ngoài màn hình)** vì `min-w-[9rem]` luôn vừa cạnh huy hiệu bậc nên không bao giờ wrap → tách
+hai hàng, mô tả trọn bề ngang (131 → 272px, 2 dòng). `StatsDashboard`: 8 grid khai `lg:grid-cols-…`
+mà thiếu `grid-cols-1` ⇒ track `auto` phình theo lịch nhiệt `min-w-[560px]`, kéo tiêu đề và câu dẫn
+ra 560px trên máy 390px.
+
+**7. Nhãn tiếng Anh còn sót → quét lại còn 0.** "Full Screen"×3 · "Overclock" · "stake" ·
+"Stopwatch"/"Flowtime" · "OFF/RAIN/WIND/FOREST/CAFE/WAVES/FIRE" · "CL/NT/SW/MN" · "JSON"×3.
+
+**8. Thành tích: gỡ sáu chỗ nói-lần-hai. 14.254 → 12.633px.** Trong đó nhãn "Ghi chú tiến trình"
+lặp ở CẢ 48 thẻ, và chip "#146" `shrink-0` ép tiêu đề vỡ hai dòng.
+
+**9. "Đạt mục tiêu 0%" khi chưa phiên nào đặt mục tiêu.** Hai tình huống ngược hẳn nhau ra cùng
+một con số; nay in "—" kèm "chưa phiên nào đặt mục tiêu". Không đụng tầng tính.
+
+**Cổng:** `npm test` 1355 bài xanh (+ lượt cross 3 bài) · lint sạch · build xanh. Ba phép phá
+thử-cho-đỏ cho `focusNextActionWiring.test.js` (gỡ nhánh · gỡ `onNavigate` · gỡ lời gọi hook) đều
+đỏ, khôi phục xanh. `timerFold.test.js` nay khoá QUAN HỆ (trần ≤ 58vw, hai vế phải cùng trần) thay
+vì khoá con số 64.
+
+**Tương thích:** không đổi dữ liệu, không migration, không đụng tập Thành Phố.
 ## 2026-08-30 (vòng 19) — Nút Bắt đầu lần đầu nằm TRÊN nếp gấp
 
 **Đo trước khi sửa** (khung 390px thật): nút chính của cả app nằm ở **y=779..822** trong khi thanh

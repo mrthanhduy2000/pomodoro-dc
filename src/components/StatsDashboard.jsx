@@ -10,33 +10,36 @@
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
-import React, { useEffect, useId, useRef, useState, useMemo, useTransition, useDeferredValue } from 'react';
-import { motion as Motion, AnimatePresence, useReducedMotion } from 'framer-motion';
-import { useCustomMotion, useEnterMotion, useSnapMotion, withDelay } from '../lib/motionPresets';
+import React, { useState, useMemo, useTransition, useDeferredValue } from 'react';
+import { motion as Motion, AnimatePresence } from 'framer-motion';
+import { useEnterMotion, useSnapMotion, withDelay } from '../lib/motionPresets';
 import useGameStore from '../store/gameStore';
 import { RichTextView } from './RichText';
-import { createRichTextPreview } from '../utils/richText';
-import { getLabelMark } from '../utils/labelMark';
+import { getGlyph, hasGlyphIcon } from '../utils/labelMark';
 import {
   timeAgo, formatExactDateTime, formatPreciseDuration, resolveEntryCategory,
-  fmtHours, fmtXPCompact, fmtCount, fmtVal, hexToRgba, fmtChartAxisValue, clampValue,
-} from './statsFormatters';
+  fmtHours, fmtXPCompact, fmtCount, fmtVal, } from './statsFormatters';
 import {
-  computeAllTimeStats,
   computeYearGrid,
   computeCategoryStats,
   isCancelledHistoryEntry,
 } from '../engine/gameMath';
 import { STREAK_MAX_BONUS_DAYS, STREAK_BONUS_PER_DAY, BUILDING_EFFECTS } from '../engine/constants';
 import {
+  STATS_PERIODS,
+  DEFAULT_STATS_PERIOD,
+  getPeriodLabel,
+  getPeriodStartTs,
+  getPreviousPeriodRange,
+  buildPeriodBuckets,
+  filterByPeriod,
+  toTimestampMs,
+} from '../engine/statsPeriod';
+import { buildStatsInsights } from '../engine/statsInsights';
+import { summarizeFocusStats } from '../engine/statsFocus';
+import {
   formatVietnamDate,
   formatVietnamTime,
-  getVietnamHour,
-  startOfVietnamDayTs,
-  startOfVietnamMonthTs,
-  startOfVietnamQuarterTs,
-  startOfVietnamWeekTs,
-  startOfVietnamYearTs,
 } from '../engine/time';
 
 // ─── Palette ─────────────────────────────────────────────────────────────────
@@ -80,145 +83,15 @@ const BADGE_BG = 'var(--stats-badge-bg, rgba(15,23,42,0.08))';
 const BADGE_TEXT = 'var(--stats-badge-text, #64748b)';
 const BADGE_STRONG_BG = 'var(--stats-badge-strong-bg, rgba(99,102,241,0.16))';
 const BADGE_STRONG_TEXT = 'var(--stats-badge-strong-text, #a5b4fc)';
-const CHART_SURFACE = 'var(--stats-chart-surface, linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(244,242,236,0.98) 100%))';
-const CHART_SURFACE_COMPACT = 'var(--stats-chart-surface-compact, linear-gradient(180deg, rgba(250,249,246,0.98) 0%, rgba(242,238,230,0.98) 100%))';
 const CHART_GUIDE = 'var(--stats-chart-guide, rgba(180,171,154,0.52))';
-const CHART_INSET_LINE = 'var(--stats-chart-inset-line, rgba(255,255,255,0.72))';
 const CHART_CALLOUT_BG = 'var(--stats-chart-callout-bg, rgba(255,255,255,0.94))';
 const CHART_CALLOUT_TEXT = 'var(--stats-chart-callout-text, #1f1e1d)';
-const CHART_CALLOUT_MUTED = 'var(--stats-chart-callout-muted, #6a6862)';
 const CHART_AXIS_TEXT = 'var(--stats-chart-axis-text, #8b847b)';
-const CHART_POINT_FILL = 'var(--stats-chart-point-fill, rgba(255,255,255,0.98))';
-const CHART_POINT_RING = 'var(--stats-chart-point-ring, #fffaf3)';
 const CHART_SHADOW = 'var(--stats-chart-shadow, rgba(31,30,29,0.1))';
 const SANS_FONT = '"Inter", ui-sans-serif, system-ui, -apple-system, sans-serif';
 const DISPLAY_FONT = SANS_FONT;
-const MONO_FONT = '"JetBrains Mono", "SFMono-Regular", Menlo, monospace';
 const METRIC_FONT = SANS_FONT;
 const METRIC_TRACKING = '-0.035em';
-const TIMESTAMP_MS_CACHE = new Map();
-
-function useResponsiveChartWidth(fallbackWidth) {
-  const rootRef = useRef(null);
-  const [width, setWidth] = useState(fallbackWidth);
-
-  useEffect(() => {
-    const node = rootRef.current;
-    if (!node) return undefined;
-
-    const applyWidth = (nextWidth) => {
-      if (!Number.isFinite(nextWidth) || nextWidth <= 0) return;
-      setWidth((current) => (Math.abs(current - nextWidth) > 0.5 ? nextWidth : current));
-    };
-
-    applyWidth(node.getBoundingClientRect().width);
-
-    if (typeof ResizeObserver === 'undefined') {
-      const handleResize = () => applyWidth(node.getBoundingClientRect().width);
-      window.addEventListener('resize', handleResize);
-      return () => window.removeEventListener('resize', handleResize);
-    }
-
-    const observer = new ResizeObserver((entries) => {
-      const entry = entries[0];
-      applyWidth(entry?.contentRect?.width ?? node.getBoundingClientRect().width);
-    });
-
-    observer.observe(node);
-    return () => observer.disconnect();
-  }, [fallbackWidth]);
-
-  return [rootRef, width];
-}
-
-function getTrendDateLabels(entry, index) {
-  if (entry?.date) {
-    const safeDate = new Date(`${entry.date}T00:00:00+07:00`);
-    if (!Number.isNaN(safeDate.getTime())) {
-      const weekday = formatWeekdayLabel(entry.date);
-      return {
-        compact: weekday.replace(/^Th\s*/i, 'T'),
-        weekday,
-        calendar: formatVietnamDate(safeDate, { day: 'numeric', month: 'numeric' }),
-        full: formatVietnamDate(safeDate, { weekday: 'long', day: 'numeric', month: 'numeric' }),
-      };
-    }
-  }
-
-  const rawLabel = String(entry?.label ?? `Mốc ${index + 1}`);
-  return {
-    compact: rawLabel.slice(0, 3).toUpperCase(),
-    weekday: rawLabel,
-    calendar: '',
-    full: rawLabel,
-  };
-}
-
-function getTrendMetricMeta(key) {
-  if (key === 'minutes') {
-    return {
-      selectedLabel: 'Thời lượng đang xem',
-      averageLabel: 'TB mỗi ngày',
-      peakLabel: 'Đỉnh tuần',
-    };
-  }
-  if (key === 'xp') {
-    return {
-      selectedLabel: 'XP đang xem',
-      averageLabel: 'TB mỗi ngày',
-      peakLabel: 'Đỉnh tuần',
-    };
-  }
-  return {
-    selectedLabel: 'Số phiên đang xem',
-    averageLabel: 'TB mỗi ngày',
-    peakLabel: 'Đỉnh tuần',
-  };
-}
-
-function getNiceTrendDomainMax(rawMaxValue, key) {
-  if (!Number.isFinite(rawMaxValue) || rawMaxValue <= 0) return 1;
-  if (key === 'sessions') return Math.max(Math.ceil(rawMaxValue * 1.15), Math.ceil(rawMaxValue));
-  if (key === 'minutes') {
-    if (rawMaxValue <= 30) return Math.ceil(rawMaxValue / 5) * 5;
-    if (rawMaxValue <= 90) return Math.ceil(rawMaxValue / 10) * 10;
-    return Math.ceil(rawMaxValue / 30) * 30;
-  }
-  if (key === 'xp') {
-    if (rawMaxValue <= 500) return Math.ceil(rawMaxValue / 50) * 50;
-    if (rawMaxValue <= 2000) return Math.ceil(rawMaxValue / 100) * 100;
-    return Math.ceil(rawMaxValue / 250) * 250;
-  }
-  return Math.ceil(rawMaxValue);
-}
-
-function getCompactTrendTickIndices(length) {
-  return Array.from(new Set([
-    0,
-    Math.max(0, Math.floor((length - 1) / 2)),
-    Math.max(0, length - 1),
-  ]));
-}
-
-function buildSmoothLinePath(points) {
-  if (points.length === 0) return '';
-  if (points.length === 1) return `M ${points[0].x.toFixed(2)},${points[0].y.toFixed(2)}`;
-
-  let path = `M ${points[0].x.toFixed(2)},${points[0].y.toFixed(2)}`;
-  for (let index = 0; index < points.length - 1; index += 1) {
-    const previous = points[index === 0 ? index : index - 1];
-    const current = points[index];
-    const next = points[index + 1];
-    const future = points[index + 2] || next;
-    const controlPoint1X = current.x + (next.x - previous.x) / 6;
-    const controlPoint1Y = current.y + (next.y - previous.y) / 6;
-    const controlPoint2X = next.x - (future.x - current.x) / 6;
-    const controlPoint2Y = next.y - (future.y - current.y) / 6;
-
-    path += ` C ${controlPoint1X.toFixed(2)},${controlPoint1Y.toFixed(2)} ${controlPoint2X.toFixed(2)},${controlPoint2Y.toFixed(2)} ${next.x.toFixed(2)},${next.y.toFixed(2)}`;
-  }
-  return path;
-}
 
 function getSessionGoalText(entry) {
   if (typeof entry?.goal !== 'string') return '';
@@ -245,8 +118,8 @@ function getSessionReviewMeta(entry) {
         ? `Chạm mục tiêu đã đặt — thưởng ${bonusBits.join(' · ')}`
         : 'Chạm mục tiêu đã đặt',
       shortLabel: 'Đúng nhịp',
-      bg: 'rgba(201,100,66,0.10)',
-      border: 'rgba(201,100,66,0.18)',
+      bg: 'rgba(var(--accent-rgb),0.10)',
+      border: 'rgba(var(--accent-rgb),0.18)',
       color: '#8a3f24',
     };
   }
@@ -298,36 +171,6 @@ function getSessionStatusMeta(entry) {
   };
 }
 
-function summarizeSessionReviews(entries = []) {
-  return entries.reduce((acc, entry) => {
-    const goalText = getSessionGoalText(entry);
-    if (!goalText) return acc;
-
-    acc.sessionsWithGoal += 1;
-
-    if (entry?.goalAchieved === true) {
-      acc.reviewedCount += 1;
-      acc.achievedCount += 1;
-      return acc;
-    }
-
-    if (entry?.goalAchieved === false) {
-      acc.reviewedCount += 1;
-      acc.missedCount += 1;
-      return acc;
-    }
-
-    acc.pendingCount += 1;
-    return acc;
-  }, {
-    sessionsWithGoal: 0,
-    reviewedCount: 0,
-    achievedCount: 0,
-    missedCount: 0,
-    pendingCount: 0,
-  });
-}
-
 function SessionReviewBadge({ entry, compact = false }) {
   const meta = getSessionReviewMeta(entry);
   if (!meta) return null;
@@ -376,10 +219,10 @@ function SessionReviewControls({ achieved, onPick }) {
       value: false,
       label: 'Không đạt',
       activeStyle: {
-        background: 'rgba(201,100,66,0.16)',
-        borderColor: 'rgba(201,100,66,0.30)',
+        background: 'rgba(var(--accent-rgb),0.16)',
+        borderColor: 'rgba(var(--accent-rgb),0.30)',
         color: ACCENT2,
-        boxShadow: '0 10px 22px rgba(201,100,66,0.12)',
+        boxShadow: '0 10px 22px rgba(var(--accent-rgb),0.12)',
       },
       idleStyle: {
         background: 'rgba(255,255,255,0.04)',
@@ -399,7 +242,7 @@ function SessionReviewControls({ achieved, onPick }) {
             type="button"
             aria-pressed={isActive}
             onClick={() => onPick(option.value)}
-            className="rounded-full border px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] transition-[background-color,color,border-color,box-shadow,transform] duration-200 hover:-translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(201,100,66,0.28)] focus-visible:ring-offset-2"
+            className="rounded-full border px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] transition-[background-color,color,border-color,box-shadow,transform] duration-200 hover:-translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(var(--accent-rgb),0.28)] focus-visible:ring-offset-2"
             style={isActive ? option.activeStyle : option.idleStyle}
           >
             {option.label}
@@ -415,23 +258,6 @@ function formatHourWindow(hour) {
   const start = String(hour).padStart(2, '0');
   const end = String((hour + 1) % 24).padStart(2, '0');
   return `${start}:00–${end}:00`;
-}
-
-function getTimestampMs(value) {
-  if (typeof value === 'number' && Number.isFinite(value)) return value;
-  if (!value) return NaN;
-
-  const key = String(value);
-  if (TIMESTAMP_MS_CACHE.has(key)) {
-    return TIMESTAMP_MS_CACHE.get(key);
-  }
-
-  const parsed = new Date(value).getTime();
-  if (TIMESTAMP_MS_CACHE.size > 5000) {
-    TIMESTAMP_MS_CACHE.clear();
-  }
-  TIMESTAMP_MS_CACHE.set(key, parsed);
-  return parsed;
 }
 
 function buildCategoryAdvisor({
@@ -605,30 +431,6 @@ function buildCategoryAdvisor({
   };
 }
 
-/** Lọc history theo khoảng thời gian */
-function getPeriodStartTs(period) {
-  if (period === 'today') return startOfVietnamDayTs();
-  if (period === 'week') return startOfVietnamWeekTs();
-  if (period === 'month') return startOfVietnamMonthTs();
-  if (period === 'quarter') return startOfVietnamQuarterTs();
-  if (period === 'year') return startOfVietnamYearTs();
-  return null;
-}
-
-function filterByPeriod(history, period) {
-  const startTs = getPeriodStartTs(period);
-  if (startTs === null) return history;
-
-  const filtered = [];
-  for (const entry of history) {
-    const timestampMs = getTimestampMs(entry?.timestamp);
-    if (Number.isFinite(timestampMs) && timestampMs >= startTs) {
-      filtered.push(entry);
-    }
-  }
-  return filtered;
-}
-
 // ─── SVG Bar Chart ────────────────────────────────────────────────────────────
 // FIX: preserveAspectRatio="none" distorts SVG <text> (non-uniform scale).
 // Solution: SVG renders ONLY bars + gridlines; all text is HTML (crisp font).
@@ -723,608 +525,6 @@ const BarChart = React.memo(function BarChart({ data, valueKey = 'minutes', heig
     </div>
   );
 });
-
-// ─── SVG Area/Line Chart — redesign with readable axes, labels and focus state ─
-function AreaChart({ data, valueKey = 'minutes', height = 80, accentColor = ACCENT }) {
-  // NGOẠI LỆ (trang trí) — biểu đồ TỰ VẼ RA: `pathLength` là chuyện riêng của SVG, `enter`
-  // (opacity + y) không diễn đạt được một nét đang được kéo dài ra. Bỏ hẳn thì nét vẫn nằm đó,
-  // vẽ sẵn đầy đủ — đúng thứ cần khi người dùng xin đừng chuyển động.
-  // ⚠️ Trước đây hai nhánh của CHÍNH hàm này khai hai bộ số khác nhau (0,35/0,70 và 0,40/0,82)
-  // cho cùng một hiệu ứng — nay một bộ, vì mắt không có lý do gì để thấy hai biểu đồ vẽ khác nhịp.
-  const veNenMotion = useCustomMotion({
-    initial: { opacity: 0 },
-    animate: { opacity: 1 },
-    transition: { duration: 0.35, ease: 'easeOut' },
-  });
-  const veNetMotion = useCustomMotion({
-    initial: { pathLength: 0, opacity: 0.4 },
-    animate: { pathLength: 1, opacity: 1 },
-    transition: { duration: 0.7, ease: 'easeOut' },
-  });
-  const chartId = useId().replace(/:/g, '');
-  const isCompact = height <= 72;
-  const pointCount = data.length;
-  const [activeIndex, setActiveIndex] = useState(Math.max(pointCount - 1, 0));
-  const fallbackWidth = Math.max(isCompact ? 292 : 420, pointCount * (isCompact ? 36 : 54));
-  const [chartRef, measuredWidth] = useResponsiveChartWidth(fallbackWidth);
-
-  const chart = useMemo(() => {
-    if (pointCount < 2) return null;
-
-    const width = Math.max(measuredWidth, isCompact ? 292 : 360);
-    const padding = isCompact
-      ? { top: 16, right: 10, bottom: 16, left: 10 }
-      : { top: 18, right: 18, bottom: 20, left: 42 };
-    const innerWidth = width - padding.left - padding.right;
-    const innerHeight = height - padding.top - padding.bottom;
-    const baselineY = padding.top + innerHeight;
-    const numericValues = data.map((entry) => Number(entry?.[valueKey] ?? 0));
-    const rawMaxValue = Math.max(...numericValues, 0);
-    const domainMax = getNiceTrendDomainMax(rawMaxValue, valueKey);
-    const averageValue = numericValues.reduce((sum, value) => sum + value, 0) / pointCount;
-    const stepX = pointCount > 1 ? innerWidth / (pointCount - 1) : innerWidth;
-
-    const points = data.map((entry, index) => {
-      const value = numericValues[index];
-      const labels = getTrendDateLabels(entry, index);
-      const x = padding.left + (stepX * index);
-      const y = padding.top + (1 - (value / domainMax)) * innerHeight;
-      return {
-        entry,
-        index,
-        value,
-        x,
-        y,
-        ...labels,
-      };
-    });
-
-    const peak = points.reduce((best, point) => (point.value > best.value ? point : best), points[0]);
-    const linePath = buildSmoothLinePath(points);
-    const areaPath = `${linePath} L ${points[points.length - 1].x.toFixed(2)},${baselineY.toFixed(2)} L ${points[0].x.toFixed(2)},${baselineY.toFixed(2)} Z`;
-    const guideValues = [domainMax, domainMax * 0.66, domainMax * 0.33, 0]
-      .map((value) => (valueKey === 'sessions' ? Math.round(value) : value))
-      .filter((value, index, list) => list.findIndex((candidate) => Math.abs(candidate - value) < (valueKey === 'sessions' ? 1 : 0.35)) === index)
-      .sort((left, right) => right - left);
-    const averageY = padding.top + (1 - (averageValue / domainMax)) * innerHeight;
-    const metricMeta = getTrendMetricMeta(valueKey);
-
-    return {
-      width,
-      padding,
-      innerHeight,
-      baselineY,
-      points,
-      linePath,
-      areaPath,
-      guideValues,
-      averageValue,
-      averageY,
-      peak,
-      guideMax: Math.max(...guideValues, 1),
-      stepX,
-      metricMeta,
-    };
-  }, [data, height, isCompact, measuredWidth, pointCount, valueKey]);
-
-  if (!chart) return null;
-
-  const safeActiveIndex = activeIndex >= 0 && activeIndex < chart.points.length
-    ? activeIndex
-    : chart.points.length - 1;
-  const activePoint = chart.points[safeActiveIndex];
-  const activeValueLabel = fmtVal(Math.round(activePoint.value), valueKey);
-  const activeColumnLeft = safeActiveIndex === 0
-    ? chart.padding.left
-    : activePoint.x - (chart.stepX / 2);
-  const activeColumnRight = safeActiveIndex === chart.points.length - 1
-    ? chart.width - chart.padding.right
-    : activePoint.x + (chart.stepX / 2);
-  const accentSoft = hexToRgba(accentColor, 0.12);
-  const accentMid = hexToRgba(accentColor, 0.24);
-  const accentStrong = hexToRgba(accentColor, 0.82);
-  const areaGradientId = `statsArea_${chartId}`;
-  const lineGlowId = `statsGlow_${chartId}`;
-  const compactTickIndices = getCompactTrendTickIndices(chart.points.length);
-  const peakLabelX = clampValue(chart.peak.x, chart.padding.left + 30, chart.width - chart.padding.right - 30);
-  const activeCalloutLeft = clampValue(
-    activePoint.x - 62,
-    chart.padding.left + 8,
-    chart.width - chart.padding.right - 124
-  );
-
-  if (isCompact) {
-    return (
-      <div ref={chartRef} className="space-y-2.5" onMouseLeave={() => setActiveIndex(chart.points.length - 1)}>
-        <div className="flex items-center justify-between gap-3 px-1">
-          <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.22em]" style={{ color: CHART_AXIS_TEXT, fontFamily: SANS_FONT }}>
-              {activePoint.weekday}
-            </p>
-            <p className="mt-1 text-[12px] font-semibold tabular-nums" style={{ color: TEXT_PRIMARY, fontFamily: SANS_FONT }}>
-              {activePoint.calendar || activePoint.full}
-            </p>
-          </div>
-          <div className="text-right">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em]" style={{ color: CHART_AXIS_TEXT, fontFamily: SANS_FONT }}>
-              7 ngày
-            </p>
-            <p className="mt-1 text-[1.05rem] font-semibold leading-none tabular-nums" style={{ color: TEXT_PRIMARY, fontFamily: METRIC_FONT, letterSpacing: METRIC_TRACKING }}>
-              {fmtChartAxisValue(activePoint.value, valueKey)}
-            </p>
-          </div>
-        </div>
-
-        <div
-          className="relative overflow-hidden rounded-[20px]"
-          style={{
-            background: `radial-gradient(circle at ${activePoint.x}px 18%, ${hexToRgba(accentColor, 0.16)} 0%, transparent 36%), ${CHART_SURFACE_COMPACT}`,
-            border: `1px solid ${hexToRgba(accentColor, 0.18)}`,
-            boxShadow: `inset 0 1px 0 ${CHART_INSET_LINE}`,
-          }}
-        >
-          <div
-            className="pointer-events-none absolute inset-y-2 rounded-[16px]"
-            style={{
-              left: `${(activeColumnLeft / chart.width) * 100}%`,
-              width: `${Math.max(((activeColumnRight - activeColumnLeft) / chart.width) * 100, 8)}%`,
-              background: `linear-gradient(180deg, ${hexToRgba(accentColor, 0.12)} 0%, transparent 100%)`,
-            }}
-          />
-
-          <svg
-            viewBox={`0 0 ${chart.width} ${height}`}
-            style={{ display: 'block', width: '100%', height: `${height}px` }}
-          >
-            <defs>
-              <linearGradient id={areaGradientId} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={hexToRgba(accentColor, 0.32)} />
-                <stop offset="100%" stopColor={hexToRgba(accentColor, 0.02)} />
-              </linearGradient>
-              <filter id={lineGlowId} x="-20%" y="-20%" width="140%" height="140%">
-                <feDropShadow dx="0" dy="4" stdDeviation="4" floodColor={hexToRgba(accentColor, 0.3)} />
-              </filter>
-            </defs>
-
-            {[0.25, 0.55, 0.85].map((ratio) => {
-              const guideY = chart.padding.top + (chart.innerHeight * ratio);
-              return (
-                <line
-                  key={`compact-guide-${ratio}`}
-                  x1={chart.padding.left}
-                  x2={chart.width - chart.padding.right}
-                  y1={guideY}
-                  y2={guideY}
-                  stroke={CHART_GUIDE}
-                  strokeWidth="1"
-                  strokeDasharray="4 8"
-                />
-              );
-            })}
-
-            {chart.points.map((point) => {
-              const left = point.index === 0 ? chart.padding.left : point.x - (chart.stepX / 2);
-              const right = point.index === chart.points.length - 1 ? chart.width - chart.padding.right : point.x + (chart.stepX / 2);
-              return (
-                <rect
-                  key={`compact-band-${point.index}`}
-                  x={left}
-                  y={chart.padding.top + 6}
-                  width={Math.max(right - left, 10)}
-                  height={chart.innerHeight - 8}
-                  rx="12"
-                  fill={point.index === safeActiveIndex ? 'transparent' : hexToRgba(accentColor, point.value > 0 ? 0.05 : 0.01)}
-                />
-              );
-            })}
-
-            <Motion.path
-              d={chart.areaPath}
-              fill={`url(#${areaGradientId})`}
-              {...veNenMotion}
-            />
-            <Motion.path
-              d={chart.linePath}
-              fill="none"
-              stroke={accentColor}
-              strokeWidth="2.3"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              filter={`url(#${lineGlowId})`}
-              {...veNetMotion}
-            />
-
-            <line
-              x1={activePoint.x}
-              x2={activePoint.x}
-              y1={activePoint.y - 10}
-              y2={height - chart.padding.bottom + 1}
-              stroke={hexToRgba(accentColor, 0.42)}
-              strokeWidth="1.2"
-              strokeDasharray="3 4"
-            />
-
-            {chart.points.map((point) => {
-              const isActive = point.index === safeActiveIndex;
-              return (
-                <g key={`compact-point-${point.index}`}>
-                  <circle
-                    cx={point.x}
-                    cy={point.y}
-                    r={isActive ? 5.6 : 2.2}
-                    fill={isActive ? hexToRgba(accentColor, 0.18) : hexToRgba(accentColor, 0.1)}
-                  />
-                  <circle
-                    cx={point.x}
-                    cy={point.y}
-                    r={isActive ? 3.4 : 1.8}
-                    fill={isActive ? accentColor : CHART_POINT_FILL}
-                    stroke={accentColor}
-                    strokeWidth={isActive ? 1.8 : 1.1}
-                  />
-                  <title>{`${point.full}: ${fmtVal(Math.round(point.value), valueKey)}`}</title>
-                </g>
-              );
-            })}
-
-            {chart.points.map((point) => {
-              const left = point.index === 0 ? chart.padding.left : point.x - (chart.stepX / 2);
-              const right = point.index === chart.points.length - 1 ? chart.width - chart.padding.right : point.x + (chart.stepX / 2);
-              return (
-                <rect
-                  key={`compact-target-${point.index}`}
-                  x={left}
-                  y={0}
-                  width={Math.max(right - left, 10)}
-                  height={height}
-                  fill="transparent"
-                  style={{ cursor: 'pointer' }}
-                  onMouseEnter={() => setActiveIndex(point.index)}
-                  onFocus={() => setActiveIndex(point.index)}
-                  onClick={() => setActiveIndex(point.index)}
-                />
-              );
-            })}
-          </svg>
-        </div>
-
-        <div className="flex items-center justify-between gap-3 px-1">
-          {compactTickIndices.map((index) => {
-            const point = chart.points[index];
-            const isActive = index === safeActiveIndex;
-            return (
-              <div key={`compact-tick-${index}`} className="min-w-0">
-                <div className="text-[10px] font-semibold uppercase tracking-[0.18em]" style={{ color: isActive ? accentColor : CHART_AXIS_TEXT, fontFamily: SANS_FONT }}>
-                  {point.compact}
-                </div>
-                <div className="mt-0.5 text-[10px] tabular-nums" style={{ color: TEXT_MUTED, fontFamily: SANS_FONT }}>
-                  {fmtChartAxisValue(point.value, valueKey)}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div ref={chartRef} className="space-y-4" onMouseLeave={() => setActiveIndex(chart.points.length - 1)}>
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.24em]" style={{ color: CHART_AXIS_TEXT, fontFamily: SANS_FONT }}>
-            {chart.metricMeta.selectedLabel}
-          </p>
-          <div className="mt-2 flex flex-wrap items-end gap-x-4 gap-y-1">
-            <span className="text-[2rem] font-semibold leading-none tabular-nums" style={{ color: TEXT_PRIMARY, fontFamily: METRIC_FONT, letterSpacing: METRIC_TRACKING }}>
-              {activeValueLabel}
-            </span>
-            <span className="text-[13px] font-medium" style={{ color: TEXT_MUTED, fontFamily: SANS_FONT }}>
-              {activePoint.full}
-            </span>
-          </div>
-        </div>
-
-        <div className="grid gap-2 sm:grid-cols-3 lg:min-w-[420px]">
-          {[
-            { label: 'Mốc đang xem', value: fmtChartAxisValue(activePoint.value, valueKey), tone: TEXT_PRIMARY },
-            { label: chart.metricMeta.averageLabel, value: fmtVal(Math.round(chart.averageValue), valueKey), tone: TEXT_MUTED },
-            { label: chart.metricMeta.peakLabel, value: `${chart.peak.weekday} · ${fmtChartAxisValue(chart.peak.value, valueKey)}`, tone: accentColor },
-          ].map((item) => (
-            <div
-              key={item.label}
-              className="rounded-[18px] px-3.5 py-3"
-              style={{ background: PANEL_BG_SOFT, border: `1px solid ${PANEL_BORDER}` }}
-            >
-              <p className="text-[10px] font-semibold uppercase tracking-[0.18em]" style={{ color: CHART_AXIS_TEXT, fontFamily: SANS_FONT }}>
-                {item.label}
-              </p>
-              <p className="mt-2 text-[15px] font-semibold leading-tight tabular-nums" style={{ color: item.tone, fontFamily: SANS_FONT }}>
-                {item.value}
-              </p>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div
-        className="relative overflow-hidden rounded-[26px]"
-        style={{
-          background: `radial-gradient(circle at ${activePoint.x}px 18%, ${hexToRgba(accentColor, 0.16)} 0%, transparent 34%), ${CHART_SURFACE}`,
-          border: `1px solid ${hexToRgba(accentColor, 0.18)}`,
-          boxShadow: `0 18px 42px ${CHART_SHADOW}, inset 0 1px 0 ${CHART_INSET_LINE}`,
-        }}
-      >
-        <div className="pointer-events-none absolute inset-0 z-[2]">
-          {chart.guideValues.map((guideValue) => {
-            const guideY = chart.padding.top + (1 - (guideValue / chart.guideMax)) * chart.innerHeight;
-            return (
-              <div
-                key={`guide-label-${guideValue.toFixed(2)}`}
-                className="absolute text-right text-[10px] font-semibold"
-                style={{
-                  left: 0,
-                  top: `${guideY - 7}px`,
-                  width: `${Math.max(chart.padding.left - 10, 24)}px`,
-                  color: CHART_AXIS_TEXT,
-                  fontFamily: SANS_FONT,
-                  letterSpacing: '0.04em',
-                }}
-              >
-                {fmtChartAxisValue(guideValue, valueKey)}
-              </div>
-            );
-          })}
-
-          {chart.averageValue > 0 && (
-            <div
-              className="absolute text-[10px] font-bold"
-              style={{
-                right: `${Math.max(chart.padding.right - 2, 8)}px`,
-                top: `${Math.max(chart.averageY - 17, chart.padding.top + 2)}px`,
-                color: accentStrong,
-                fontFamily: SANS_FONT,
-                letterSpacing: '0.08em',
-              }}
-            >
-              TB
-            </div>
-          )}
-
-          {chart.peak.value > 0 && (
-            <div
-              className="absolute text-[10px] font-bold"
-              style={{
-                left: `${peakLabelX}px`,
-                top: `${Math.max(chart.peak.y - 31, chart.padding.top + 2)}px`,
-                transform: 'translateX(-50%)',
-                color: accentStrong,
-                fontFamily: SANS_FONT,
-                letterSpacing: '0.08em',
-              }}
-            >
-              Đỉnh
-            </div>
-          )}
-        </div>
-
-        <div
-          className="pointer-events-none absolute z-[2] rounded-[18px] px-3.5 py-2.5"
-          style={{
-            left: `${activeCalloutLeft}px`,
-            top: `${Math.max(activePoint.y - 58, 14)}px`,
-            background: CHART_CALLOUT_BG,
-            border: `1px solid ${hexToRgba(accentColor, 0.16)}`,
-            boxShadow: `0 16px 36px ${CHART_SHADOW}`,
-          }}
-        >
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em]" style={{ color: CHART_AXIS_TEXT, fontFamily: SANS_FONT }}>
-            {activePoint.weekday}
-          </p>
-          <p className="mt-1 text-[1rem] font-semibold leading-none tabular-nums" style={{ color: CHART_CALLOUT_TEXT, fontFamily: METRIC_FONT, letterSpacing: METRIC_TRACKING }}>
-            {activeValueLabel}
-          </p>
-          <p className="mt-1 text-[11px]" style={{ color: CHART_CALLOUT_MUTED, fontFamily: SANS_FONT }}>
-            {activePoint.calendar}
-          </p>
-        </div>
-
-        <svg
-          viewBox={`0 0 ${chart.width} ${height}`}
-          style={{ display: 'block', width: '100%', height: `${height}px` }}
-        >
-          <defs>
-            <linearGradient id={areaGradientId} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor={hexToRgba(accentColor, 0.44)} />
-              <stop offset="72%" stopColor={hexToRgba(accentColor, 0.14)} />
-              <stop offset="100%" stopColor={hexToRgba(accentColor, 0.02)} />
-            </linearGradient>
-            <filter id={lineGlowId} x="-20%" y="-20%" width="140%" height="140%">
-              <feDropShadow dx="0" dy="8" stdDeviation="7" floodColor={hexToRgba(accentColor, 0.28)} />
-            </filter>
-          </defs>
-
-          <rect
-            x={activeColumnLeft}
-            y={chart.padding.top - 6}
-            width={Math.max(activeColumnRight - activeColumnLeft, 20)}
-            height={chart.innerHeight + 12}
-            rx="18"
-            fill={hexToRgba(accentColor, 0.12)}
-          />
-
-          {chart.points.map((point) => {
-            const left = point.index === 0 ? chart.padding.left : point.x - (chart.stepX / 2);
-            const right = point.index === chart.points.length - 1 ? chart.width - chart.padding.right : point.x + (chart.stepX / 2);
-            const bandAlpha = point.value > 0 ? 0.03 + ((point.value / Math.max(chart.peak.value, 1)) * 0.05) : 0.015;
-            return (
-              <rect
-                key={`detailed-band-${point.index}`}
-                x={left}
-                y={chart.padding.top}
-                width={Math.max(right - left, 8)}
-                height={chart.innerHeight}
-                fill={point.index === safeActiveIndex ? 'transparent' : hexToRgba(accentColor, bandAlpha)}
-              />
-            );
-          })}
-
-          {chart.guideValues.map((guideValue) => {
-            const y = chart.padding.top + (1 - (guideValue / chart.guideMax)) * chart.innerHeight;
-            return (
-              <g key={`guide-${guideValue.toFixed(2)}`}>
-                <line
-                  x1={chart.padding.left}
-                  x2={chart.width - chart.padding.right}
-                  y1={y}
-                  y2={y}
-                  stroke={CHART_GUIDE}
-                  strokeWidth="1"
-                  strokeDasharray={guideValue === 0 ? '0' : '4 7'}
-                />
-              </g>
-            );
-          })}
-
-          {chart.averageValue > 0 && (
-            <>
-              <line
-                x1={chart.padding.left}
-                x2={chart.width - chart.padding.right}
-                y1={chart.averageY}
-                y2={chart.averageY}
-                stroke={hexToRgba(accentColor, 0.52)}
-                strokeWidth="1.2"
-                strokeDasharray="4 5"
-              />
-            </>
-          )}
-
-          <Motion.path
-            d={chart.areaPath}
-            fill={`url(#${areaGradientId})`}
-            {...veNenMotion}
-          />
-          <Motion.path
-            d={chart.linePath}
-            fill="none"
-            stroke={accentColor}
-            strokeWidth="2.7"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            filter={`url(#${lineGlowId})`}
-            {...veNetMotion}
-          />
-
-          <line
-            x1={activePoint.x}
-            x2={activePoint.x}
-            y1={Math.max(activePoint.y - 18, chart.padding.top)}
-            y2={height - chart.padding.bottom + 1}
-            stroke={hexToRgba(accentColor, 0.38)}
-            strokeWidth="1.2"
-            strokeDasharray="4 4"
-          />
-
-          {chart.peak.value > 0 && (
-            <g>
-              <line
-                x1={chart.peak.x}
-                x2={chart.peak.x}
-                y1={chart.peak.y - 16}
-                y2={chart.peak.y - 5}
-                stroke={accentStrong}
-                strokeWidth="1.2"
-                strokeLinecap="round"
-              />
-            </g>
-          )}
-
-          {chart.points.map((point) => {
-            const isActive = point.index === safeActiveIndex;
-            const isPeak = point.index === chart.peak.index && point.value > 0;
-            const radius = isActive ? 4.8 : isPeak ? 3.7 : 2.6;
-
-            return (
-              <g key={`point-${point.index}`}>
-                <circle
-                  cx={point.x}
-                  cy={point.y}
-                  r={radius + (isActive ? 4 : 2)}
-                  fill={hexToRgba(accentColor, isActive ? 0.16 : 0.08)}
-                />
-                <circle
-                  cx={point.x}
-                  cy={point.y}
-                  r={radius}
-                  fill={isActive ? accentColor : CHART_POINT_FILL}
-                  stroke={isActive ? CHART_POINT_RING : accentColor}
-                  strokeWidth={isActive ? 2.2 : 1.5}
-                />
-                <title>{`${point.full}: ${fmtVal(Math.round(point.value), valueKey)}`}</title>
-              </g>
-            );
-          })}
-
-          {chart.points.map((point) => {
-            const left = point.index === 0 ? chart.padding.left : point.x - (chart.stepX / 2);
-            const right = point.index === chart.points.length - 1 ? chart.width - chart.padding.right : point.x + (chart.stepX / 2);
-            return (
-              <rect
-                key={`target-${point.index}`}
-                x={left}
-                y={0}
-                width={Math.max(right - left, 10)}
-                height={height}
-                fill="transparent"
-                style={{ cursor: 'pointer' }}
-                onMouseEnter={() => setActiveIndex(point.index)}
-                onFocus={() => setActiveIndex(point.index)}
-                onClick={() => setActiveIndex(point.index)}
-              />
-            );
-          })}
-        </svg>
-      </div>
-
-      <div
-        className="grid gap-2"
-        style={{ gridTemplateColumns: `repeat(${chart.points.length}, minmax(0, 1fr))` }}
-      >
-        {chart.points.map((point) => {
-          const isActive = point.index === safeActiveIndex;
-          return (
-            <button
-              key={`label-${point.index}`}
-              type="button"
-              onMouseEnter={() => setActiveIndex(point.index)}
-              onFocus={() => setActiveIndex(point.index)}
-              onClick={() => setActiveIndex(point.index)}
-              className="rounded-[16px] px-2 py-2 text-center transition-colors duration-150"
-              style={{
-                background: isActive ? accentSoft : PANEL_BG_SOFT,
-                border: `1px solid ${isActive ? accentMid : PANEL_BORDER}`,
-              }}
-            >
-              <div
-                className="text-[10px] font-semibold uppercase tracking-[0.16em]"
-                style={{ color: isActive ? TEXT_PRIMARY : CHART_AXIS_TEXT, fontFamily: SANS_FONT }}
-              >
-                {point.compact}
-              </div>
-              <div className="mt-1 text-[11px] font-medium tabular-nums" style={{ color: isActive ? TEXT_PRIMARY : TEXT_MUTED, fontFamily: SANS_FONT }}>
-                {fmtChartAxisValue(point.value, valueKey)}
-              </div>
-              <div className="mt-0.5 text-[10px]" style={{ color: CHART_AXIS_TEXT, fontFamily: SANS_FONT }}>
-                {point.calendar}
-              </div>
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
 
 // ─── Scatter Plot: XP/phút vs Độ dài TB/phiên ────────────────────────────────
 function CategoryScatterPlot({ catStats }) {
@@ -1663,56 +863,6 @@ function CategoryDonutChart({ catStats, totalMins, totalSess }) {
   );
 }
 
-// ─── Overview Cards ──────────────────────────────────────────────────────────
-function OverviewHeroMetric({ icon, label, value, detail, accent = ACCENT, chart, className = '' }) {
-  const isMarker = typeof icon === 'string' && /^[A-Z0-9]{1,3}$/.test(icon.trim());
-  // Nhấc khi DI CHUỘT không thuộc ba nhịp — đi qua cái gác ngoại lệ để cũng im khi Giảm chuyển động.
-  const hoverLift = useCustomMotion({ whileHover: { y: -2 }, transition: { duration: 0.18, ease: 'easeOut' } });
-
-  return (
-    <Motion.div
-      {...hoverLift}
-      className={`rounded-[24px] px-3.5 py-3.5 sm:px-4 sm:py-4 md:px-5 md:py-5 ${className}`}
-      style={{ background: PANEL_BG_SOFT, border: `1px solid ${PANEL_BORDER}` }}
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.22em]" style={{ color: TEXT_SOFT }}>{label}</p>
-          <p
-            className="mt-2 text-[clamp(1.45rem,2.2vw,2.2rem)] font-semibold leading-tight break-words tabular-nums"
-            style={{ color: TEXT_PRIMARY, fontFamily: METRIC_FONT, letterSpacing: METRIC_TRACKING }}
-          >
-            {value}
-          </p>
-          {detail && (
-            <div className="mt-2 text-[11px] leading-5" style={{ color: TEXT_MUTED }}>
-              {detail}
-            </div>
-          )}
-        </div>
-        <div
-          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-[18px] ${isMarker ? 'text-[11px] font-semibold tracking-[0.18em]' : 'text-lg'}`}
-          style={isMarker
-            ? {
-              background: 'rgba(255,255,255,0.72)',
-              color: TEXT_SOFT,
-              border: `1px solid ${PANEL_BORDER}`,
-              fontFamily: MONO_FONT,
-            }
-            : { background: `${accent}14`, color: accent, border: `1px solid ${accent}24` }}
-        >
-          {icon}
-        </div>
-      </div>
-      {chart && (
-        <div className="mt-4 opacity-95">
-          {chart}
-        </div>
-      )}
-    </Motion.div>
-  );
-}
-
 const OverviewRailStat = React.memo(function OverviewRailStat({ label, value, detail, accent = TEXT_PRIMARY, className = '' }) {
   return (
     <div
@@ -1728,127 +878,93 @@ const OverviewRailStat = React.memo(function OverviewRailStat({ label, value, de
   );
 });
 
-function formatWeekdayLabel(dateStr) {
-  if (!dateStr) return '—';
-  const date = new Date(`${dateStr}T00:00:00+07:00`);
-  if (Number.isNaN(date.getTime())) return dateStr;
-  const label = formatVietnamDate(date, { weekday: 'short' });
-  return label.charAt(0).toUpperCase() + label.slice(1);
-}
-
-function WeekPulseList({ weeklyData }) {
-  const enterMotion = useEnterMotion();
-  const maxMinutes = Math.max(...weeklyData.map((day) => day.minutes), 1);
-
-  return (
-    <div className="space-y-2.5">
-      {weeklyData.map((day, index) => {
-        const isLatest = index === weeklyData.length - 1;
-        const barWidth = day.minutes > 0 ? Math.max((day.minutes / maxMinutes) * 100, 10) : 0;
-
-        return (
-          <Motion.div
-            key={day.date}
-            {...withDelay(enterMotion, Math.min(index * 0.03, 0.18))}
-            className="grid grid-cols-[44px_minmax(0,1fr)_auto] items-center gap-3 rounded-[20px] px-3 py-2.5"
-            style={{ background: PANEL_BG_SOFT, border: `1px solid ${PANEL_BORDER}` }}
-          >
-            <div className="text-[11px] font-semibold uppercase tracking-[0.18em]" style={{ color: isLatest ? ACCENT : TEXT_SOFT }}>
-              {formatWeekdayLabel(day.date)}
-            </div>
-
-            <div
-              className="relative h-9 overflow-hidden rounded-[18px]"
-              style={{ background: BG_CARD, border: `1px solid ${FILTER_PILL_BORDER}` }}
-            >
-              <div
-                className="absolute inset-y-0 left-0 rounded-2xl"
-                style={{
-                  width: `${barWidth}%`,
-                  minWidth: day.minutes > 0 ? '34px' : '0px',
-                  background: isLatest
-                    ? `linear-gradient(90deg, ${ACCENT2} 0%, ${ACCENT} 100%)`
-                    : `linear-gradient(90deg, ${ACCENT}99 0%, ${ACCENT}33 100%)`,
-                }}
-              />
-              <div className="relative z-[1] flex h-full items-center justify-between px-3">
-                <span className="text-[11px] font-medium" style={{ color: TEXT_PRIMARY }}>
-                  {fmtHours(day.minutes)}
-                </span>
-                <span className="text-[10px] font-medium" style={{ color: TEXT_MUTED }}>
-                  {day.sessions} phiên
-                </span>
-              </div>
-            </div>
-
-            <div className="text-right">
-              <div className="text-[12px] font-semibold" style={{ color: TEXT_PRIMARY }}>
-                {day.xp >= 1000 ? `${(day.xp / 1000).toFixed(1)}k` : day.xp}
-              </div>
-              <div className="text-[10px]" style={{ color: TEXT_SOFT }}>XP</div>
-            </div>
-          </Motion.div>
-        );
-      })}
-    </div>
-  );
-}
-
-// ─── Trend Badge ─────────────────────────────────────────────────────────────
-function TrendBadge({ current, previous, unit = '', baselineLabel = 'giai đoạn trước' }) {
-  if (previous === 0 && current === 0) return <span className="text-xs" style={{ color: TEXT_SOFT }}>—</span>;
-  const diff = current - previous;
-  const pct  = previous > 0 ? Math.round((Math.abs(diff) / previous) * 100) : null;
-  if (diff === 0) {
-    return (
-      <span
-      className="inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold tracking-[0.04em]"
-      style={{ background: 'rgba(244,242,236,0.94)', borderColor: 'rgba(31,30,29,0.08)', color: '#8b847b' }}
-    >
-      ngang {baselineLabel}
-    </span>
-  );
-  }
-
-  const isPositive = diff > 0;
-  const tone = isPositive
-    ? { bg: 'rgba(201,100,66,0.10)', border: 'rgba(201,100,66,0.18)', color: '#8a3f24' }
-    : { bg: 'rgba(31,30,29,0.06)', border: 'rgba(31,30,29,0.10)', color: '#5f5b54' };
-
-  return (
-    <span
-      className="inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold tracking-[0.04em]"
-      style={{ background: tone.bg, borderColor: tone.border, color: tone.color }}
-    >
-      {diff > 0 ? 'nhỉnh hơn ' : 'thấp hơn '}{Math.abs(diff)}{unit}{pct !== null ? ` (${pct}%)` : ''}
-    </span>
-  );
-}
-
-// ─── Period Selector ─────────────────────────────────────────────────────────
-const PERIODS = [
-  { key: 'day',     label: 'Ngày',  n: 14 },
-  { key: 'week',    label: 'Tuần',  n: 8  },
-  { key: 'month',   label: 'Tháng', n: 6  },
-  { key: 'quarter', label: 'Quý',   n: 4  },
-  { key: 'year',    label: 'Năm',   n: 3  },
-];
-const METRIC_OPTIONS = [
-  { key: 'minutes', label: 'Phút' },
-  { key: 'sessions', label: 'Phiên' },
-  { key: 'xp', label: 'XP' },
-];
-const PERIOD_UNITS = {
-  day: 'ngày',
-  week: 'tuần',
-  month: 'tháng',
-  quarter: 'quý',
-  year: 'năm',
+// ─── "Điều đáng chú ý" — đưa phân tích của engine ra màn hình ────────────────
+//
+// ⚠️ DẢI NÀY ĐỌC TOÀN BỘ LỊCH SỬ, KHÔNG THEO KỲ ĐANG CHỌN — và điều đó PHẢI được nói ra trên
+// màn hình. Các hàm tín hiệu ở `gameMath.js` đều tự gác cỡ mẫu (cần 8–24 phiên tuỳ tín hiệu),
+// nên lọc chúng về "Hôm Nay" là làm chúng câm hết. Nhưng nếu không ghi rõ, người đọc sẽ mặc
+// định nó thuộc về khoảng thời gian đang chọn ngay phía trên — tức là dựng lại đúng cái hiểu
+// nhầm mà cả bản vá bộ lọc vừa đi sửa.
+const INSIGHT_TONE = {
+  warn: { dot: '#c2663f', label: 'Đáng để ý' },
+  good: { dot: '#5f8a5f', label: 'Điểm mạnh' },
+  info: { dot: '#9b9892', label: 'Ghi nhận' },
 };
 
+const InsightStrip = React.memo(function InsightStrip({ items }) {
+  if (!items || items.length === 0) return null;
+  return (
+    <div className="p-5" style={{ background: BG_CARD, border: `1px solid ${PANEL_BORDER}`, borderRadius: 'var(--skin-radius-card, 18px)', boxShadow: 'var(--skin-card-shadow)' }}>
+      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.18em]" style={{ color: TEXT_SOFT }}>Điều đáng chú ý</p>
+        <p className="text-[11px]" style={{ color: TEXT_SOFT }}>Đọc trên toàn bộ lịch sử, không theo khoảng thời gian đang chọn</p>
+      </div>
+      <div className="mt-4 grid gap-3 md:grid-cols-2">
+        {items.map((x) => {
+          const tone = INSIGHT_TONE[x.tone] ?? INSIGHT_TONE.info;
+          return (
+            <div key={x.id} className="rounded-[14px] border p-3.5" style={{ background: PANEL_BG_SOFT, borderColor: PANEL_BORDER }}>
+              <div className="flex items-center gap-2">
+                <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: tone.dot }} />
+                <span className="text-[10px] font-semibold uppercase tracking-[0.16em]" style={{ color: TEXT_SOFT }}>{tone.label}</span>
+              </div>
+              <p className="mt-1.5 text-[13.5px] font-semibold leading-snug" style={{ color: TEXT_PRIMARY }}>{x.headline}</p>
+              <p className="mt-1 text-[12px] leading-relaxed" style={{ color: TEXT_MUTED }}>{x.detail}</p>
+              {/* Cỡ mẫu KHÔNG phải chi tiết trang trí: một con số "79%" không có mẫu số thì
+                  không đọc được là mạnh hay là ngẫu nhiên. Cùng luật với AI Coach. */}
+              <p className="mt-2 text-[11px]" style={{ color: TEXT_SOFT }}>Dựa trên {x.sample}</p>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+});
+
+// ─── Bộ chọn khoảng thời gian — DÙNG CHUNG CHO CẢ MÀN ────────────────────────
+//
+// ⚠️ Trước 2026-08-30 có BA bộ chọn khai riêng ở ba tab, khác nhau cả danh sách, cả nhãn, cả
+// mặc định, và cả markup. Hệ quả người dùng thấy: bấm từ "Tổng Quan" (mặc định tuần) sang
+// "Tập Trung" (mặc định tất cả) là cửa sổ thời gian âm thầm đổi mà không có gì báo. Nay danh
+// sách kỳ đến từ `engine/statsPeriod.js` và TRẠNG THÁI nằm ở `StatsDashboard`, nên ba tab
+// không thể lệch nhau nữa — đổi kỳ ở tab nào thì cả màn đổi theo.
+//
+// ⚠️ XUỐNG DÒNG, KHÔNG CUỘN NGANG (2026-09-01) — đây là một lỗi GIẤU MẤT LỰA CHỌN, không phải
+// chuyện thẩm mỹ. Đo ở khung 390px thật: hàng này rộng thật **547px** trong khi chỗ nhìn thấy
+// chỉ **348px** ⇒ **199px = 36% nằm ngoài màn hình**, tức **3 trong 6 kỳ** ("Quý Này", "Năm
+// Nay", "Tất Cả") vô hình. Một dải cuộn ngang trên điện thoại không có thanh cuộn, không có
+// mũi tên, không có gì báo còn thứ bên phải — nên với Đàm thì ba kỳ ấy đơn giản là KHÔNG TỒN
+// TẠI. Xuống dòng tốn thêm ~34px chiều cao và đổi lại: không giấu gì cả.
+// ⚠️ Bỏ `flex-1` và `min-w-[78px]`: chính chúng ép 6 viên phải chiếm ≥468px nên hàng buộc phải
+// tràn. Nay mỗi viên vừa đúng chữ của nó.
+const PeriodPicker = React.memo(function PeriodPicker({ value, onChange, className = '' }) {
+  return (
+    <div
+      className={`rounded-2xl p-1 ${className}`}
+      style={{ background: TAB_BAR_BG, border: `1px solid ${PANEL_BORDER}` }}
+    >
+      <div className="flex gap-1" role="group" aria-label="Khoảng thời gian">
+        {STATS_PERIODS.map((p) => (
+          <button
+            key={p.key}
+            type="button"
+            onClick={() => onChange(p.key)}
+            aria-pressed={value === p.key}
+            className="flex-1 rounded-xl border px-2 py-2 text-xs font-semibold whitespace-nowrap transition-[background-color,color,box-shadow,transform,border-color] duration-200 hover:-translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(var(--accent-rgb),0.28)] focus-visible:ring-offset-2"
+            style={value === p.key
+              ? { background: TAB_ACTIVE_BG, color: TAB_ACTIVE_TEXT, boxShadow: TAB_ACTIVE_SHADOW, borderColor: TAB_ACTIVE_BORDER, touchAction: 'manipulation' }
+              : { background: TAB_IDLE_BG, color: TAB_IDLE_TEXT, borderColor: TAB_IDLE_BORDER, touchAction: 'manipulation' }}
+          >
+            {p.short ?? p.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+});
+
 // ─── Tab: Tổng Quan ───────────────────────────────────────────────────────────
-function OverviewTab({ history, streak }) {
-  const [period, setPeriod] = useState('week');
+function OverviewTab({ history, streak, period, onPeriodChange }) {
   const [now] = useState(() => Date.now());
   const sessionCategories = useGameStore((s) => s.sessionCategories);
   const categoryMap = useMemo(() => {
@@ -1857,55 +973,46 @@ function OverviewTab({ history, streak }) {
     return map;
   }, [sessionCategories]);
 
+  // ⚠️ CỬA SỔ THỜI GIAN Ở ĐÂY LÀ CỬA SỔ **LỊCH**, KHÔNG PHẢI "N NGÀY GẦN NHẤT" (sửa 2026-08-30).
+  // Bản trước tính `now - 7×86400000` rồi dán nhãn "tuần này" — hai thứ khác nhau, và biểu đồ cột
+  // ngay bên dưới thì lại dựng theo tuần LỊCH (từ thứ Hai). Nghĩa là ô số tổng và bộ cột dưới nó
+  // đo hai khoảng khác nhau mà mang cùng một nhãn. Nay cả hai đọc chung `getPeriodStartTs` /
+  // `buildPeriodBuckets` ở `engine/statsPeriod.js`, nên chúng KHÔNG THỂ lệch nhau nữa.
   const view = useMemo(() => {
     const DAY = 86400000;
     const isDone = (s) => s && s.completed !== false && s.status !== 'cancelled' && !s.cancelled && Number.isFinite(s.minutes);
     const done = (history || []).filter(isDone);
-    const ts = (s) => new Date(s.timestamp || s.finishedAt || 0).getTime();
-    const winDays = period === 'week' ? 7 : period === 'month' ? 30 : 365;
-    const winStart = now - winDays * DAY;
-    const prevStart = now - 2 * winDays * DAY;
+    const ts = (s) => toTimestampMs(s.timestamp || s.finishedAt || 0);
     const sum = (arr) => arr.reduce((a, s) => a + (s.minutes || 0), 0);
-    const inWin = done.filter((s) => ts(s) >= winStart);
-    const inPrev = done.filter((s) => ts(s) >= prevStart && ts(s) < winStart);
+
+    const winStart = getPeriodStartTs(period, new Date(now));
+    const inWin = winStart === null ? done : done.filter((s) => ts(s) >= winStart);
+
+    // Kỳ liền TRƯỚC theo lịch (tuần trước, tháng trước…) — trước đây là "cửa sổ N ngày lùi thêm
+    // N ngày", tức so tuần này với 7 ngày trước nữa chứ không phải với tuần trước.
+    const prevRange = getPreviousPeriodRange(period, new Date(now));
+    const inPrev = prevRange ? done.filter((s) => ts(s) >= prevRange.startTs && ts(s) < prevRange.endTs) : [];
+
     const winMin = sum(inWin);
     const prevMin = sum(inPrev);
     const pct = prevMin > 0 ? Math.round(((winMin - prevMin) / prevMin) * 100) : null;
+
     const goaled = inWin.filter((s) => typeof s.goalAchieved === 'boolean');
     const achieved = goaled.filter((s) => s.goalAchieved === true).length;
     const achPct = goaled.length > 0 ? Math.round((achieved / goaled.length) * 100) : 0;
 
-    let bars = [];
-    if (period === 'week') {
-      const d = new Date(now);
-      const dow = (d.getDay() + 6) % 7;
-      const monday = new Date(d);
-      monday.setHours(0, 0, 0, 0);
-      monday.setDate(d.getDate() - dow);
-      const labels = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
-      bars = labels.map((lb, i) => {
-        const s = monday.getTime() + i * DAY;
-        const e = s + DAY;
-        return { label: lb, mins: sum(done.filter((x) => ts(x) >= s && ts(x) < e)), active: i === dow };
-      });
-    } else if (period === 'month') {
-      bars = Array.from({ length: 5 }, (_, i) => {
-        const e = now - (4 - i) * 7 * DAY;
-        const s = e - 7 * DAY;
-        return { label: 'Tu' + (i + 1), mins: sum(done.filter((x) => ts(x) >= s && ts(x) < e)), active: i === 4 };
-      });
-    } else {
-      bars = Array.from({ length: 12 }, (_, i) => {
-        const dt = new Date(now);
-        dt.setDate(1);
-        dt.setHours(0, 0, 0, 0);
-        dt.setMonth(dt.getMonth() - (11 - i));
-        const s = dt.getTime();
-        const e2 = new Date(dt);
-        e2.setMonth(e2.getMonth() + 1);
-        return { label: 'Th' + (dt.getMonth() + 1), mins: sum(done.filter((x) => ts(x) >= s && ts(x) < e2.getTime())), active: i === 11 };
-      });
-    }
+    // Số ngày ĐÃ TRÔI QUA trong kỳ, không phải độ dài danh nghĩa của kỳ. Chia cho 365 vào tháng
+    // Giêng thì nhịp "mỗi ngày" bị dìm xuống gần bằng 0 — một con số đúng phép chia mà sai ý nghĩa.
+    const spanStartTs = done.length > 0 ? Math.min(...done.map(ts)) : now;
+    const elapsedFrom = winStart === null ? spanStartTs : winStart;
+    const periodDays = Math.max(1, Math.ceil((now - elapsedFrom) / DAY));
+
+    const buckets = buildPeriodBuckets(period, new Date(now), spanStartTs);
+    const bars = buckets.map((b) => ({
+      label: b.label,
+      mins: sum(done.filter((x) => { const t = ts(x); return t >= b.startTs && t < b.endTs; })),
+      active: b.active,
+    }));
     const maxBar = Math.max(1, ...bars.map((b) => b.mins));
 
     const catMin = {};
@@ -1925,12 +1032,18 @@ function OverviewTab({ history, streak }) {
     const heat = [];
     for (let i = cells - 1; i >= 0; i--) heat.push(dayMin[todayMid.getTime() - i * DAY] || 0);
 
-    return { winMin, winCount: inWin.length, pct, achPct, achieved, goaled: goaled.length, bars, maxBar, cats, heat, maxDay };
+    return { winMin, winCount: inWin.length, pct, achPct, achieved, goaled: goaled.length, bars, maxBar, cats, heat, maxDay, periodDays };
   }, [history, period, now]);
 
+  // Toàn bộ lịch sử, KHÔNG lọc theo kỳ — xem lý do ở chú thích của `InsightStrip`.
+  const insights = useMemo(
+    () => buildStatsInsights(history, { now: new Date(now), activeCategoryIds: (sessionCategories ?? []).map((c) => c.id) }),
+    [history, now, sessionCategories],
+  );
+
   const fmtH = (m) => { const h = Math.floor(m / 60); const r = m % 60; return h > 0 ? (r ? `${h}g ${r}p` : `${h}g`) : `${m}p`; };
-  const periodLabel = period === 'week' ? 'tuần này' : period === 'month' ? 'tháng này' : 'năm nay';
-  const periodDays = period === 'week' ? 7 : period === 'month' ? 30 : 365;
+  const periodLabel = getPeriodLabel(period).toLowerCase();
+  const periodDays = view.periodDays;
   const shade = (v) => {
     if (v <= 0) return 'var(--heat-empty, #ece8de)';
     const r = v / view.maxDay;
@@ -1938,7 +1051,6 @@ function OverviewTab({ history, streak }) {
     return `rgba(var(--accent-rgb), ${a})`;
   };
   const card = { background: BG_CARD, border: `1px solid ${PANEL_BORDER}`, borderRadius: 'var(--skin-radius-card, 18px)', boxShadow: 'var(--skin-card-shadow)' };
-  const PERIODS_UI = [{ k: 'week', l: 'Tuần' }, { k: 'month', l: 'Tháng' }, { k: 'year', l: 'Năm' }];
 
   return (
     <div className="flex flex-col gap-4">
@@ -1949,25 +1061,11 @@ function OverviewTab({ history, streak }) {
         Nó lại còn lặp: eyebrow "Tổng quan" nói đúng chữ mà nút tab "01 Tổng Quan" ngay phía trên
         đang sáng. Ẩn cả cụm trên điện thoại thì nhóm nút lên thẳng hàng đầu và đọc được ngay.
       */}
-      <div className="flex items-end justify-between gap-3">
-        <div className="hidden md:block">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.24em]" style={{ color: TEXT_SOFT }}>Tổng quan</p>
-          <h3 className="mt-1.5 text-[1.9rem] font-semibold leading-tight md:text-[2.2rem]" style={{ color: TEXT_PRIMARY, fontFamily: 'var(--skin-font-display)' }}>Hành trình tập trung</h3>
-        </div>
-        <div className="flex gap-1 rounded-full p-1" style={{ background: PANEL_BG_SOFT, border: `1px solid ${PANEL_BORDER}` }}>
-          {PERIODS_UI.map((p) => (
-            <button
-              key={p.k}
-              type="button"
-              onClick={() => setPeriod(p.k)}
-              className="rounded-full px-3.5 py-1.5 text-[12px] font-semibold transition-colors"
-              style={period === p.k ? { background: 'var(--ink)', color: 'var(--canvas)' } : { background: 'transparent', color: TEXT_MUTED }}
-            >
-              {p.l}
-            </button>
-          ))}
-        </div>
+      <div className="hidden md:block">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.24em]" style={{ color: TEXT_SOFT }}>Tổng quan</p>
+        <h3 className="mt-1.5 text-[1.9rem] font-semibold leading-tight md:text-[2.2rem]" style={{ color: TEXT_PRIMARY, fontFamily: 'var(--skin-font-display)' }}>Hành trình tập trung</h3>
       </div>
+      <PeriodPicker value={period} onChange={onPeriodChange} />
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <div className="p-4" style={card}>
@@ -1982,10 +1080,27 @@ function OverviewTab({ history, streak }) {
           <p className="mt-1 text-[1.6rem] font-semibold" style={{ color: TEXT_PRIMARY, fontFamily: 'var(--skin-font-display)' }}>{view.winCount}</p>
           <p className="mt-1 text-[11px]" style={{ color: TEXT_SOFT }}>{(view.winCount / periodDays).toFixed(1)} / ngày</p>
         </div>
+        {/*
+          ⚠️ KHÔNG CÓ PHIÊN NÀO ĐẶT MỤC TIÊU THÌ IN "—", KHÔNG IN "0%" (vòng 20, 2026-08-30).
+          `achPct` rơi về 0 khi mẫu số bằng 0, nên ô này hiện **"0%" cạnh "0 / 0 phiên"** — mà
+          "0%" đọc ra là *"anh trượt hết"*, trong khi sự thật là *"anh chưa thi lần nào"*. Hai
+          tình huống ngược hẳn nhau, cùng một con số. Đây đúng khuôn "con số tạo động lực quay ra
+          làm nản" mà dự án đã vá cho dòng đếm ngược chặng.
+          ⚠️ Không đụng `achPct` ở tầng tính: nó là 0 đúng theo toán học, chỗ sai là chỗ ĐỌC RA.
+        */}
         <div className="p-4" style={card}>
           <p className="text-[12px]" style={{ color: TEXT_SOFT }}>Đạt mục tiêu</p>
-          <p className="mt-1 text-[1.6rem] font-semibold" style={{ color: TEXT_PRIMARY, fontFamily: 'var(--skin-font-display)' }}>{view.achPct}<span className="text-[1rem]" style={{ color: TEXT_SOFT }}>%</span></p>
-          <p className="mt-1 text-[11px]" style={{ color: 'var(--good)' }}>{view.achieved} / {view.goaled} phiên</p>
+          {view.goaled > 0 ? (
+            <>
+              <p className="mt-1 text-[1.6rem] font-semibold" style={{ color: TEXT_PRIMARY, fontFamily: 'var(--skin-font-display)' }}>{view.achPct}<span className="text-[1rem]" style={{ color: TEXT_SOFT }}>%</span></p>
+              <p className="mt-1 text-[11px]" style={{ color: 'var(--good)' }}>{view.achieved} / {view.goaled} phiên</p>
+            </>
+          ) : (
+            <>
+              <p className="mt-1 text-[1.6rem] font-semibold" style={{ color: TEXT_SOFT, fontFamily: 'var(--skin-font-display)' }}>—</p>
+              <p className="mt-1 text-[11px]" style={{ color: TEXT_SOFT }}>chưa phiên nào đặt mục tiêu</p>
+            </>
+          )}
         </div>
         <div className="p-4" style={card}>
           <p className="text-[12px]" style={{ color: TEXT_SOFT }}>Chuỗi</p>
@@ -1994,10 +1109,12 @@ function OverviewTab({ history, streak }) {
         </div>
       </div>
 
-      <div className="grid gap-3 lg:grid-cols-[1.5fr_1fr]">
+      <InsightStrip items={insights} />
+
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-[1.5fr_1fr]">
         <div className="p-5" style={card}>
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em]" style={{ color: TEXT_SOFT }}>
-            Giờ tập trung theo {period === 'year' ? 'tháng' : period === 'month' ? 'tuần' : 'ngày'}
+            Giờ tập trung theo {view.bars[0]?.unit ?? 'ngày'}
           </p>
           <div className="mt-5 flex h-[170px] items-stretch justify-between gap-2">
             {view.bars.map((b, i) => (
@@ -2051,222 +1168,14 @@ const HEAT_COLORS = [
   'rgba(228, 220, 210, 0.96)',
   'rgba(217, 196, 178, 0.96)',
   'rgba(205, 148, 117, 0.92)',
-  'rgba(201, 100, 66, 0.94)',
+  'rgba(var(--accent-rgb), 0.94)',
 ];
 
-const FOCUS_PERIODS = [
-  { key: 'all', label: 'Tất Cả' },
-  { key: 'month', label: 'Tháng Này' },
-  { key: 'week', label: 'Tuần Này' },
-  { key: 'today', label: 'Hôm Nay' },
-];
-
-const FOCUS_BUCKETS = [
-  { label: '< 15p', tone: 'Mở đầu', accent: '#9a8d82' },
-  { label: '15–25p', tone: 'Giữ nhịp', accent: '#b7a596' },
-  { label: '25–45p', tone: 'Nhịp chuẩn', accent: '#d0b19b' },
-  { label: '45–60p', tone: 'Đi sâu dần', accent: '#c27a57' },
-  { label: '60p +', tone: 'Đi sâu', accent: '#8a3f24' },
-];
-
-const FOCUS_TIME_BLOCKS = [
-  { key: 'late-night', label: 'Đêm Khuya', icon: '🌙' },
-  { key: 'morning', label: 'Buổi Sáng', icon: '🌤️' },
-  { key: 'afternoon', label: 'Buổi Chiều', icon: '☀️' },
-  { key: 'evening', label: 'Buổi Tối', icon: '🌆' },
-];
-const FOCUS_SPARSE_SESSION_THRESHOLD = 18;
-const FOCUS_SPARSE_ACTIVE_DAY_THRESHOLD = 12;
-const FOCUS_SPARSE_HOUR_THRESHOLD = 6;
-const FOCUS_COMPACT_TIMELINE_DAYS = {
-  all: 56,
-  month: 35,
-  week: 21,
-  today: 14,
-};
-
-function getFocusBucketIndex(minutes) {
-  if (minutes < 15) return 0;
-  if (minutes < 25) return 1;
-  if (minutes < 45) return 2;
-  if (minutes < 60) return 3;
-  return 4;
-}
-
-function getFocusTimeBlockIndex(hour) {
-  if (hour < 6) return 0;
-  if (hour < 12) return 1;
-  if (hour < 18) return 2;
-  return 3;
-}
-
-function getHeatIntensity(minutes, maxMinutes) {
-  if (!minutes || minutes <= 0 || !Number.isFinite(maxMinutes) || maxMinutes <= 0) return 0;
-  return Math.min(4, Math.max(1, Math.ceil((minutes / maxMinutes) * 4)));
-}
-
-function summarizeFocusStats(history, period = 'all') {
-  const startTs = getPeriodStartTs(period);
-  const hourlyStats = Array.from({ length: 24 }, (_, hour) => ({ hour, sessions: 0, minutes: 0 }));
-  const buckets = FOCUS_BUCKETS.map((bucket) => ({ ...bucket, count: 0, minutes: 0 }));
-  const timeBlocks = FOCUS_TIME_BLOCKS.map((block) => ({ ...block, sessions: 0, minutes: 0 }));
-  const dayTotals = new Map();
-  const filteredEntries = [];
-
-  let totalMinutes = 0;
-  let totalSessions = 0;
-  let completedSessions = 0;
-  let cancelledSessions = 0;
-  let deepFocusCount = 0;
-  let ultraFocusCount = 0;
-  let maxSessionMinutes = 0;
-  let latestSessionTs = null;
-
-  for (const entry of history) {
-    const timestampMs = getTimestampMs(entry?.timestamp);
-    if (!Number.isFinite(timestampMs) || (startTs !== null && timestampMs < startTs)) continue;
-
-    filteredEntries.push(entry);
-    const minutes = Math.max(0, entry?.minutes ?? 0);
-    const isCancelled = isCancelledHistoryEntry(entry);
-
-    totalMinutes += minutes;
-    totalSessions += 1;
-    completedSessions += isCancelled ? 0 : 1;
-    cancelledSessions += isCancelled ? 1 : 0;
-    if (minutes >= 60) deepFocusCount += 1;
-    if (minutes >= 90) ultraFocusCount += 1;
-    if (minutes > maxSessionMinutes) maxSessionMinutes = minutes;
-    if (latestSessionTs === null || timestampMs > latestSessionTs) latestSessionTs = timestampMs;
-
-    const hour = getVietnamHour(timestampMs);
-    hourlyStats[hour].sessions += 1;
-    hourlyStats[hour].completed = (hourlyStats[hour].completed ?? 0) + (isCancelled ? 0 : 1);
-    hourlyStats[hour].cancelled = (hourlyStats[hour].cancelled ?? 0) + (isCancelled ? 1 : 0);
-    hourlyStats[hour].minutes += minutes;
-
-    const bucketIndex = getFocusBucketIndex(minutes);
-    buckets[bucketIndex].count += 1;
-    buckets[bucketIndex].minutes += minutes;
-
-    const timeBlockIndex = getFocusTimeBlockIndex(hour);
-    timeBlocks[timeBlockIndex].sessions += 1;
-    timeBlocks[timeBlockIndex].minutes += minutes;
-
-    const dayKey = startOfVietnamDayTs(timestampMs);
-    const currentDay = dayTotals.get(dayKey) ?? {
-      key: dayKey,
-      label: formatVietnamDate(dayKey, { weekday: 'short', day: 'numeric', month: 'numeric' }),
-      minutes: 0,
-      sessions: 0,
-    };
-    currentDay.minutes += minutes;
-    currentDay.sessions += 1;
-    currentDay.completed = (currentDay.completed ?? 0) + (isCancelled ? 0 : 1);
-    currentDay.cancelled = (currentDay.cancelled ?? 0) + (isCancelled ? 1 : 0);
-    dayTotals.set(dayKey, currentDay);
-  }
-
-  const avgSessionMinutes = totalSessions > 0 ? Math.round(totalMinutes / totalSessions) : 0;
-  const maxHourMins = Math.max(...hourlyStats.map((item) => item.minutes), 1);
-  const maxBucket = Math.max(...buckets.map((bucket) => bucket.count), 1);
-  const activeDays = dayTotals.size;
-  const avgMinutesPerActiveDay = activeDays > 0 ? Math.round(totalMinutes / activeDays) : 0;
-  const activeHours = hourlyStats
-    .filter((item) => item.minutes > 0)
-    .sort((a, b) => b.minutes - a.minutes || b.sessions - a.sessions || a.hour - b.hour);
-  const activeHourCount = activeHours.length;
-  const recentActiveDays = Array.from(dayTotals.values())
-    .sort((a, b) => b.key - a.key)
-    .slice(0, 5);
-  const compactWindowDays = FOCUS_COMPACT_TIMELINE_DAYS[period] ?? FOCUS_COMPACT_TIMELINE_DAYS.all;
-  const compactEndTs = startOfVietnamDayTs();
-  const compactTimeline = Array.from({ length: compactWindowDays }, (_, index) => {
-    const dayTs = compactEndTs - ((compactWindowDays - 1 - index) * 86_400_000);
-    const day = dayTotals.get(dayTs);
-    return {
-      key: dayTs,
-      label: formatVietnamDate(dayTs, { weekday: 'short', day: 'numeric', month: 'numeric' }),
-      shortLabel: formatVietnamDate(dayTs, { day: 'numeric', month: 'numeric' }),
-      minutes: day?.minutes ?? 0,
-      sessions: day?.sessions ?? 0,
-    };
-  });
-  const compactTimelineMax = Math.max(...compactTimeline.map((day) => day.minutes), 1);
-  const compactTimelineWeeks = Array.from(
-    { length: Math.ceil(compactTimeline.length / 7) },
-    (_, weekIndex) => compactTimeline
-      .slice(weekIndex * 7, weekIndex * 7 + 7)
-      .map((day) => ({ ...day, intensity: getHeatIntensity(day.minutes, compactTimelineMax) })),
-  );
-  const compactActiveDays = compactTimeline.filter((day) => day.minutes > 0).length;
-  const compactConsistency = compactWindowDays > 0
-    ? Math.round((compactActiveDays / compactWindowDays) * 100)
-    : 0;
-
-  const bestHour = hourlyStats.reduce(
-    (best, item) => (item.minutes > best.minutes ? item : best),
-    { hour: 0, sessions: 0, minutes: 0 },
-  );
-  const bestTimeBlock = timeBlocks.reduce(
-    (best, block) => (block.minutes > best.minutes ? block : best),
-    { key: 'none', label: 'Chưa có dữ liệu', icon: '🕳️', sessions: 0, minutes: 0 },
-  );
-  const bestDay = Array.from(dayTotals.values()).reduce(
-    (best, day) => (day.minutes > best.minutes ? day : best),
-    { key: 0, label: '—', minutes: 0, sessions: 0 },
-  );
-
-  const recent7 = filteredEntries.slice(0, 7);
-  const prev7 = filteredEntries.slice(7, 14);
-  const recent7Minutes = recent7.reduce((sum, entry) => sum + (entry?.minutes ?? 0), 0);
-  const prev7Minutes = prev7.reduce((sum, entry) => sum + (entry?.minutes ?? 0), 0);
-  const recent7Avg = recent7.length > 0 ? Math.round(recent7Minutes / recent7.length) : 0;
-  const recent30 = filteredEntries.slice(0, 30).reverse().map((entry, index) => ({
-    label: String(index + 1),
-    minutes: entry?.minutes ?? 0,
-    sessions: 1,
-    xp: entry?.xpEarned ?? 0,
-  }));
-  const sparseMode = totalSessions < FOCUS_SPARSE_SESSION_THRESHOLD
-    || activeDays < FOCUS_SPARSE_ACTIVE_DAY_THRESHOLD
-    || activeHourCount < FOCUS_SPARSE_HOUR_THRESHOLD;
-
-  return {
-    totalSessions,
-    completedSessions,
-    cancelledSessions,
-    totalMinutes,
-    avgSessionMinutes,
-    maxSessionMinutes,
-    deepFocusCount,
-    ultraFocusCount,
-    activeDays,
-    avgMinutesPerActiveDay,
-    hourlyStats,
-    maxHourMins,
-    bestHour,
-    buckets,
-    maxBucket,
-    timeBlocks,
-    bestTimeBlock,
-    bestDay,
-    recent7Minutes,
-    prev7Minutes,
-    recent7Avg,
-    recent30,
-    activeHours,
-    activeHourCount,
-    recentActiveDays,
-    compactTimeline,
-    compactTimelineWeeks,
-    compactWindowDays,
-    compactActiveDays,
-    compactConsistency,
-    sparseMode,
-    lastSessionLabel: latestSessionTs ? formatVietnamDate(latestSessionTs, { weekday: 'short', day: 'numeric', month: 'numeric' }) : 'Chưa có phiên nào',
-  };
-}
+// ⚠️ MÀU CỦA DẢI ĐỘ DÀI PHIÊN — khớp theo THỨ TỰ với `FOCUS_BUCKETS` ở `engine/statsFocus.js`.
+// Trước 2026-08-30 mã màu nằm THẲNG trong bảng ấy (`accent: '#9a8d82'`), tức một quyết định MỸ
+// THUẬT lẫn vào một bảng LOGIC — và nó là thứ duy nhất giữ bảng ấy không xuống được engine.
+// ⚠️ Thêm/bớt một dải thì phải sửa CẢ HAI nơi; `statsFocus.test.js` có bài đòi hai mảng cùng độ dài.
+const FOCUS_BUCKET_ACCENTS = ['#9a8d82', '#b7a596', '#d0b19b', '#c27a57', '#8a3f24'];
 
 const YearHeatmap = React.memo(function YearHeatmap({ history }) {
   const { weeks, totalMins, activeDays } = useMemo(() => {
@@ -2370,7 +1279,7 @@ const CompactFocusTimeline = React.memo(function CompactFocusTimeline({ summary,
         </div>
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.18fr)_minmax(252px,0.82fr)]">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.18fr)_minmax(252px,0.82fr)]">
         <div>
           <div className="pb-1">
             <div
@@ -2611,8 +1520,7 @@ const FocusHourSpotlight = React.memo(function FocusHourSpotlight({ summary, per
 });
 
 // ─── Tab: Tập Trung ───────────────────────────────────────────────────────────
-const FocusTab = React.memo(function FocusTab({ history }) {
-  const [focusPeriod, setFocusPeriod] = useState('all');
+const FocusTab = React.memo(function FocusTab({ history, period: focusPeriod, onPeriodChange }) {
   const [isPeriodPending, startPeriodTransition] = useTransition();
   const enterMotion = useEnterMotion();
   // NGOẠI LỆ (mang bố cục) — bề dài cột CHÍNH LÀ số phiên của khoảng ấy; `initial`/`animate`
@@ -2624,7 +1532,7 @@ const FocusTab = React.memo(function FocusTab({ history }) {
     [history, deferredFocusPeriod],
   );
 
-  const periodLabel = FOCUS_PERIODS.find((period) => period.key === deferredFocusPeriod)?.label ?? 'Tất Cả';
+  const periodLabel = getPeriodLabel(deferredFocusPeriod);
   const bestHourLabel = focusSummary.bestHour.minutes > 0 ? formatHourWindow(focusSummary.bestHour.hour) : 'Chưa có dữ liệu';
   const bestTimeBlockAverage = focusSummary.bestTimeBlock.sessions > 0
     ? Math.round(focusSummary.bestTimeBlock.minutes / focusSummary.bestTimeBlock.sessions)
@@ -2651,32 +1559,12 @@ const FocusTab = React.memo(function FocusTab({ history }) {
 
   const handlePeriodChange = (nextPeriod) => {
     if (nextPeriod === focusPeriod) return;
-    startPeriodTransition(() => setFocusPeriod(nextPeriod));
+    startPeriodTransition(() => onPeriodChange(nextPeriod));
   };
 
   return (
     <div className="space-y-3.5 md:space-y-4">
-      <div
-        className="overflow-x-auto rounded-2xl p-1"
-        style={{ background: TAB_BAR_BG, border: `1px solid ${PANEL_BORDER}` }}
-      >
-        <div className="inline-flex min-w-full gap-1">
-          {FOCUS_PERIODS.map((period) => (
-            <button
-              key={period.key}
-              type="button"
-              onClick={() => handlePeriodChange(period.key)}
-              aria-pressed={focusPeriod === period.key}
-              className="min-w-[86px] rounded-xl border px-3 py-2 text-xs font-semibold whitespace-nowrap transition-[background-color,color,box-shadow,transform,border-color] duration-200 hover:-translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(201,100,66,0.28)] focus-visible:ring-offset-2"
-              style={focusPeriod === period.key
-                ? { background: TAB_ACTIVE_BG, color: TAB_ACTIVE_TEXT, boxShadow: TAB_ACTIVE_SHADOW, borderColor: TAB_ACTIVE_BORDER }
-                : { background: TAB_IDLE_BG, color: TAB_IDLE_TEXT, borderColor: TAB_IDLE_BORDER }}
-            >
-              {period.label}
-            </button>
-          ))}
-        </div>
-      </div>
+      <PeriodPicker value={focusPeriod} onChange={handlePeriodChange} />
 
       {focusSummary.totalSessions === 0 ? (
         <>
@@ -2711,7 +1599,7 @@ const FocusTab = React.memo(function FocusTab({ history }) {
                   </div>
                   <div
                     className="rounded-full px-3 py-1.5 text-[11px] font-semibold"
-                    style={{ background: `${ACCENT}10`, color: ACCENT2, border: `1px solid rgba(201,100,66,0.16)` }}
+                    style={{ background: `${ACCENT}10`, color: ACCENT2, border: `1px solid rgba(var(--accent-rgb),0.16)` }}
                   >
                     Khởi đầu phù hợp · 25 đến 45 phút
                   </div>
@@ -2887,8 +1775,22 @@ const FocusTab = React.memo(function FocusTab({ history }) {
             </div>
           </Motion.section>
 
+          {/*
+            ⚠️ `grid-cols-1` LÀ BẮT BUỘC, KHÔNG PHẢI THỪA (vòng 20, 2026-08-30). Ở khung hẹp,
+            `lg:grid-cols-…` chưa áp nên grid chỉ có MỘT cột NGẦM cỡ `auto` — mà một track `auto`
+            thì tự PHÌNH theo nội dung rộng nhất bên trong, bất kể item khai `min-width: 0`. Nội
+            dung rộng nhất ở đây là lịch nhiệt 365 ngày (`min-w-[560px]`, cố ý, nó có
+            `overflow-x-auto` riêng để cuộn ngang). Hậu quả đo được ở 390px: cả THẺ phình lên
+            602px ⇒ tiêu đề "365 Ngày Gần Đây" và câu "Nhìn nhanh toàn bộ nhịp tập trung trong
+            năm gần nhất…" cũng rộng 560px và bị MÉP MÀN HÌNH cắt — cụt giữa từ, không có dấu "…".
+            ⚠️ Không cổng nào đỏ: đây không phải `truncate` nên `--fit` mù, và `scrollWidth` cũng
+            gần như mù vì `overflow-x:hidden` ở tổ tiên kẹp nó lại. Thứ bắt được là ĐỌC ẢNH, và
+            một probe liệt kê mọi phần tử rộng hơn 390px.
+            Cùng đúng cái bẫy `SkillTree.jsx` đã ghi lại — nay vá cho cả 8 grid cùng khuôn trong
+            file này, không vá riêng chỗ đã bắt được.
+          */}
           <div
-            className="grid gap-4 lg:grid-cols-[minmax(0,1.05fr)_minmax(320px,0.95fr)]"
+            className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.05fr)_minmax(320px,0.95fr)]"
             style={{ contentVisibility: 'auto', containIntrinsicSize: '720px' }}
           >
             {focusSummary.sparseMode
@@ -2899,7 +1801,7 @@ const FocusTab = React.memo(function FocusTab({ history }) {
           </div>
 
           <div
-            className="grid gap-4 lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]"
+            className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]"
             style={{ contentVisibility: 'auto', containIntrinsicSize: '640px' }}
           >
             <div
@@ -2926,7 +1828,7 @@ const FocusTab = React.memo(function FocusTab({ history }) {
               </div>
 
               <div className="space-y-3">
-                {focusSummary.buckets.map((bucket) => {
+                {focusSummary.buckets.map((bucket, bucketIndex) => {
                   const bucketScale = bucket.count > 0 ? bucket.count / focusSummary.maxBucket : 0;
                   const bucketShare = focusSummary.totalSessions > 0
                     ? Math.round((bucket.count / focusSummary.totalSessions) * 100)
@@ -2948,7 +1850,7 @@ const FocusTab = React.memo(function FocusTab({ history }) {
                           {...thanhCotMotion}
                           className="h-full rounded-full"
                           style={{
-                            background: `linear-gradient(90deg, ${bucket.accent}, ${bucket.accent}bb)`,
+                            background: `linear-gradient(90deg, ${FOCUS_BUCKET_ACCENTS[bucketIndex]}, ${FOCUS_BUCKET_ACCENTS[bucketIndex]}bb)`,
                             transformOrigin: 'left center',
                           }}
                         />
@@ -3041,17 +1943,7 @@ const FocusTab = React.memo(function FocusTab({ history }) {
 });
 
 // ─── Tab: Phân Loại ───────────────────────────────────────────────────────────
-const CAT_PERIODS = [
-  { key: 'all',     label: 'Tất Cả' },
-  { key: 'year',    label: 'Năm Nay' },
-  { key: 'quarter', label: 'Quý Này' },
-  { key: 'month',   label: 'Tháng Này' },
-  { key: 'week',    label: 'Tuần Này' },
-  { key: 'today',   label: 'Hôm Nay' },
-];
-
-function CategoryTab({ history, sessionCategories }) {
-  const [catPeriod, setCatPeriod] = useState('all');
+function CategoryTab({ history, sessionCategories, period: catPeriod, onPeriodChange }) {
   // NGOẠI LỆ (mang bố cục) — bề dài thanh CHÍNH LÀ tỉ lệ của loại việc ấy.
   const thanhMotion = useSnapMotion({ transition: { duration: 0.7, ease: 'easeOut' } });
 
@@ -3071,7 +1963,7 @@ function CategoryTab({ history, sessionCategories }) {
   const totalXP   = catStats.reduce((s, c) => s + c.xp, 0);
   const avgMinutesOverall = totalSess > 0 ? Math.round(totalMins / totalSess) : 0;
 
-  const periodLabel = CAT_PERIODS.find((p) => p.key === catPeriod)?.label ?? '';
+  const periodLabel = getPeriodLabel(catPeriod);
 
   const noData = catStats.length === 0 || totalSess === 0;
   const topTimeCat = catStats[0] ?? null;
@@ -3105,14 +1997,16 @@ function CategoryTab({ history, sessionCategories }) {
       label: 'Loại chủ đạo',
       value: topTimeCat?.label ?? '—',
       sub: topTimeCat ? `${topShare.toFixed(0)}% thời gian` : 'Chưa có dữ liệu',
-      icon: getLabelMark(topTimeCat?.label, 'CD'),
+      icon: getGlyph(topTimeCat?.icon, topTimeCat?.label, 'CD'),
+      iconIsPicture: hasGlyphIcon(topTimeCat?.icon),
       color: topTimeCat?.color ?? ACCENT,
     },
     {
       label: 'Nhịp hiệu quả nhất',
       value: bestEfficiencyCat ? `${(bestEfficiencyCat.xp / bestEfficiencyCat.minutes).toFixed(1)} XP/p` : '—',
       sub: bestEfficiencyCat?.label ?? 'Cần thêm dữ liệu',
-      icon: getLabelMark(bestEfficiencyCat?.label, 'HQ'),
+      icon: getGlyph(bestEfficiencyCat?.icon, bestEfficiencyCat?.label, 'HQ'),
+      iconIsPicture: hasGlyphIcon(bestEfficiencyCat?.icon),
       color: bestEfficiencyCat?.color ?? '#0ea5e9',
     },
     {
@@ -3121,14 +2015,16 @@ function CategoryTab({ history, sessionCategories }) {
       sub: totalCancelled > 0
         ? `${totalSess} phiên · ${totalCancelled} hủy`
         : `${totalSess} phiên trong ${periodLabel.toLowerCase()}`,
-      icon: 'TB',
+      icon: '⏱️',
+      iconIsPicture: true,
       color: '#0ea5e9',
     },
     {
       label: 'Độ mở hiện tại',
       value: `${catStats.length} loại`,
       sub: focusStyle,
-      icon: 'DM',
+      icon: '🧩',
+      iconIsPicture: true,
       color: '#8b5cf6',
     },
   ];
@@ -3140,7 +2036,8 @@ function CategoryTab({ history, sessionCategories }) {
       value: topTimeCat.label,
       sub: `${fmtHours(topTimeCat.minutes)} · ${topShare.toFixed(0)}%`,
       color: topTimeCat.color,
-      icon: getLabelMark(topTimeCat.label, 'CD'),
+      icon: getGlyph(topTimeCat.icon, topTimeCat.label, 'CD'),
+      iconIsPicture: hasGlyphIcon(topTimeCat.icon),
     } : null,
     bestEfficiencyCat ? {
       key: 'best-eff',
@@ -3148,7 +2045,8 @@ function CategoryTab({ history, sessionCategories }) {
       value: bestEfficiencyCat.label,
       sub: `${(bestEfficiencyCat.xp / bestEfficiencyCat.minutes).toFixed(1)} XP/p`,
       color: bestEfficiencyCat.color,
-      icon: getLabelMark(bestEfficiencyCat.label, 'HQ'),
+      icon: getGlyph(bestEfficiencyCat.icon, bestEfficiencyCat.label, 'HQ'),
+      iconIsPicture: hasGlyphIcon(bestEfficiencyCat.icon),
     } : null,
     longestAvgCat ? {
       key: 'longest',
@@ -3156,7 +2054,8 @@ function CategoryTab({ history, sessionCategories }) {
       value: longestAvgCat.label,
       sub: `${Math.round(longestAvgCat.minutes / longestAvgCat.sessions)}p / phiên`,
       color: longestAvgCat.color,
-      icon: getLabelMark(longestAvgCat.label, 'DH'),
+      icon: getGlyph(longestAvgCat.icon, longestAvgCat.label, 'DH'),
+      iconIsPicture: hasGlyphIcon(longestAvgCat.icon),
     } : null,
     leastUsedCat ? {
       key: 'least-used',
@@ -3164,7 +2063,8 @@ function CategoryTab({ history, sessionCategories }) {
       value: leastUsedCat.label,
       sub: `${fmtHours(leastUsedCat.minutes)} · ${leastUsedCat.sessions} phiên`,
       color: leastUsedCat.color,
-      icon: getLabelMark(leastUsedCat.label, 'IT'),
+      icon: getGlyph(leastUsedCat.icon, leastUsedCat.label, 'IT'),
+      iconIsPicture: hasGlyphIcon(leastUsedCat.icon),
     } : null,
   ].filter(Boolean);
 
@@ -3195,27 +2095,7 @@ function CategoryTab({ history, sessionCategories }) {
   return (
     <div className="flex flex-col gap-4">
 
-      {/* Period filter */}
-      <div
-        className="overflow-x-auto rounded-2xl p-1"
-        style={{ background: TAB_BAR_BG, border: `1px solid ${PANEL_BORDER}` }}
-      >
-        <div className="inline-flex min-w-full gap-1">
-          {CAT_PERIODS.map((p) => (
-            <button
-              key={p.key}
-              type="button"
-              onClick={() => setCatPeriod(p.key)}
-              className="min-w-[90px] rounded-xl border px-3 py-2 text-xs font-semibold whitespace-nowrap transition-[background-color,color,box-shadow,transform,border-color] duration-200 hover:-translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(201,100,66,0.28)] focus-visible:ring-offset-2"
-              style={catPeriod === p.key
-                ? { background: TAB_ACTIVE_BG, color: TAB_ACTIVE_TEXT, boxShadow: TAB_ACTIVE_SHADOW, borderColor: TAB_ACTIVE_BORDER }
-                : { background: TAB_IDLE_BG, color: TAB_IDLE_TEXT, borderColor: TAB_IDLE_BORDER }}
-            >
-              {p.label}
-            </button>
-          ))}
-        </div>
-      </div>
+      <PeriodPicker value={catPeriod} onChange={onPeriodChange} />
 
       {noData ? (
         <div
@@ -3246,7 +2126,7 @@ function CategoryTab({ history, sessionCategories }) {
                 {catPeriod !== 'all' && (
                   <div
                     className="rounded-full px-3 py-1.5 text-[11px] font-semibold"
-                    style={{ background: `${ACCENT}10`, color: ACCENT2, border: `1px solid rgba(201,100,66,0.16)` }}
+                    style={{ background: `${ACCENT}10`, color: ACCENT2, border: `1px solid rgba(var(--accent-rgb),0.16)` }}
                   >
                     Gợi ý · thử mở rộng sang “Tất cả”
                   </div>
@@ -3606,7 +2486,7 @@ function CategoryTab({ history, sessionCategories }) {
                         </p>
                       </div>
                       <div
-                        className="mono w-11 h-11 rounded-2xl flex items-center justify-center text-[9px] font-semibold uppercase tracking-[0.14em] shrink-0"
+                        className={`mono w-11 h-11 rounded-2xl flex items-center justify-center font-semibold shrink-0 ${item.iconIsPicture ? 'text-[21px] leading-none' : 'text-[9px] uppercase tracking-[0.14em]'}`}
                         style={{ background: `${item.color}18`, color: item.color, border: `1px solid ${item.color}2f` }}
                       >
                         {item.icon}
@@ -3632,7 +2512,7 @@ function CategoryTab({ history, sessionCategories }) {
                 >
                   <div className="flex items-center gap-3">
                     <div
-                      className="mono w-11 h-11 rounded-2xl flex items-center justify-center text-[9px] font-semibold uppercase tracking-[0.14em] shrink-0"
+                      className={`mono w-11 h-11 rounded-2xl flex items-center justify-center font-semibold shrink-0 ${item.iconIsPicture ? 'text-[21px] leading-none' : 'text-[9px] uppercase tracking-[0.14em]'}`}
                       style={{ background: `${item.color}18`, color: item.color, border: `1px solid ${item.color}28` }}
                     >
                       {item.icon}
@@ -3925,7 +2805,7 @@ function JournalTab({ history, sessionCategories }) {
             <button
               type="button"
               onClick={() => { setFilterCat(null); setPage(0); }}
-              className="min-w-[104px] rounded-xl border px-3 py-2 text-xs font-semibold whitespace-nowrap transition-[background-color,color,border-color,box-shadow,transform] duration-200 hover:-translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(201,100,66,0.28)] focus-visible:ring-offset-2"
+              className="min-w-[104px] rounded-xl border px-3 py-2 text-xs font-semibold whitespace-nowrap transition-[background-color,color,border-color,box-shadow,transform] duration-200 hover:-translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(var(--accent-rgb),0.28)] focus-visible:ring-offset-2"
               style={!filterCat
                 ? { background: TAB_ACTIVE_BG, color: TAB_ACTIVE_TEXT, borderColor: TAB_ACTIVE_BORDER, boxShadow: TAB_ACTIVE_SHADOW }
                 : { background: TAB_IDLE_BG, color: TAB_IDLE_TEXT, borderColor: TAB_IDLE_BORDER }}
@@ -3939,7 +2819,7 @@ function JournalTab({ history, sessionCategories }) {
                   key={cat.id}
                   type="button"
                   onClick={() => { setFilterCat(cat.id); setPage(0); }}
-                  className="min-w-[118px] rounded-xl border px-3 py-2 text-xs font-semibold whitespace-nowrap transition-[background-color,color,border-color,box-shadow,transform] duration-200 hover:-translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(201,100,66,0.28)] focus-visible:ring-offset-2"
+                  className="min-w-[118px] rounded-xl border px-3 py-2 text-xs font-semibold whitespace-nowrap transition-[background-color,color,border-color,box-shadow,transform] duration-200 hover:-translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(var(--accent-rgb),0.28)] focus-visible:ring-offset-2"
                   style={filterCat === cat.id
                     ? { background: `${cat.color}18`, color: cat.color, borderColor: `${cat.color}55`, boxShadow: `0 10px 20px ${cat.color}14` }
                     : { background: TAB_IDLE_BG, color: TAB_IDLE_TEXT, borderColor: TAB_IDLE_BORDER }}
@@ -4012,10 +2892,10 @@ function JournalTab({ history, sessionCategories }) {
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex min-w-0 flex-1 items-start gap-3">
                     <div
-                      className="mono flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl text-[8px] font-semibold uppercase tracking-[0.14em]"
+                      className={`mono flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl font-semibold ${hasGlyphIcon(cat?.icon) ? 'text-[19px] leading-none' : 'text-[8px] uppercase tracking-[0.14em]'}`}
                       style={{ background: `${cat?.color ?? '#475569'}14`, color: cat?.color ?? '#475569', border: `1px solid ${(cat?.color ?? '#475569')}28` }}
                     >
-                      {getLabelMark(cat?.label, 'DM')}
+                      {getGlyph(cat?.icon, cat?.label, 'DM')}
                     </div>
 
                     <div className="min-w-0 flex-1 space-y-2">
@@ -4028,12 +2908,12 @@ function JournalTab({ history, sessionCategories }) {
                         <button
                           type="button"
                           onClick={() => setEditingCategorySessionId(isEditingCategory ? null : h.id)}
-                          className="rounded-full px-2 py-0.5 text-[10px] font-semibold border transition-[background-color,color,border-color,transform] duration-200 hover:-translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(201,100,66,0.28)] focus-visible:ring-offset-2"
+                          className="rounded-full px-2 py-0.5 text-[10px] font-semibold border transition-[background-color,color,border-color,transform] duration-200 hover:-translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(var(--accent-rgb),0.28)] focus-visible:ring-offset-2"
                           style={cat?.id === '__none__'
                             ? {
-                                background: 'rgba(201,100,66,0.10)',
+                                background: 'rgba(var(--accent-rgb),0.10)',
                                 color: ACCENT2,
-                                borderColor: 'rgba(201,100,66,0.18)',
+                                borderColor: 'rgba(var(--accent-rgb),0.18)',
                               }
                             : {
                                 background: FILTER_PILL_BG,
@@ -4116,10 +2996,10 @@ function JournalTab({ history, sessionCategories }) {
                   >
                     <p className="text-[10px] font-semibold uppercase tracking-[0.16em]" style={{ color: TEXT_SOFT }}>Sự kiện</p>
                     <div className="mt-2 flex flex-wrap gap-1.5">
-                      {h.jackpot && <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold" style={{ background: 'rgba(201,100,66,0.12)', color: ACCENT2 }}>Thưởng lớn</span>}
+                      {h.jackpot && <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold" style={{ background: 'rgba(var(--accent-rgb),0.12)', color: ACCENT2 }}>Thưởng lớn</span>}
                       {!isCancelled && ((h.refinedEarned ?? 0) > 0 || (h.minutes ?? 0) >= 45) && <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold" style={{ background: 'rgba(148,163,184,0.18)', color: TEXT_MUTED }}>Tinh luyện</span>}
                       {hasEvent && <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold" style={{ background: 'rgba(var(--accent-rgb), 0.14)', color: ACCENT2 }}>Mốc phụ</span>}
-                      {comboVal >= 2 && <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold" style={{ background: 'rgba(138,63,36,0.12)', color: ACCENT2 }}>Chuỗi ×{comboVal}</span>}
+                      {comboVal >= 2 && <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold" style={{ background: 'rgba(var(--accent2-rgb),0.12)', color: ACCENT2 }}>Chuỗi ×{comboVal}</span>}
                       {isCancelled && (
                         <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold" style={{ background: 'rgba(239,68,68,0.10)', color: '#ef4444' }}>
                           Dừng ở {Number.isFinite(h.cancelProgressRatio) ? `${Math.round(h.cancelProgressRatio * 100)}%` : 'giữa phiên'}
@@ -4304,7 +3184,7 @@ function JournalTab({ history, sessionCategories }) {
                   )}
 
                   {(goalText || nextNoteText || reviewMeta) && (
-                    <div className="grid gap-2 lg:grid-cols-2">
+                    <div className="grid grid-cols-1 gap-2 lg:grid-cols-2">
                       {(goalText || reviewMeta) && (
                         <div
                           className="rounded-[20px] px-3.5 py-3.5"
@@ -4354,7 +3234,7 @@ function JournalTab({ history, sessionCategories }) {
                   )}
 
                   {(h.note || h.breakNote) && (
-                    <div className="grid gap-2 lg:grid-cols-2">
+                    <div className="grid grid-cols-1 gap-2 lg:grid-cols-2">
                       <div
                         className="lg:col-span-2 rounded-[20px] px-3.5 py-3.5 space-y-3"
                         style={{ background: NOTE_PANEL_BG, border: `1px solid ${NOTE_PANEL_BORDER}` }}
@@ -4402,7 +3282,7 @@ function JournalTab({ history, sessionCategories }) {
                           )}
                         </div>
 
-                        <div className="grid gap-2 lg:grid-cols-2">
+                        <div className="grid grid-cols-1 gap-2 lg:grid-cols-2">
                           {h.note && (
                             <div
                               className="rounded-[18px] px-3.5 py-3.5"
@@ -4450,7 +3330,7 @@ function JournalTab({ history, sessionCategories }) {
       {hasMore && (
         <button
           onClick={() => setPage((p) => p + 1)}
-          className="w-full py-2.5 rounded-xl text-sm font-medium border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(201,100,66,0.28)] focus-visible:ring-offset-2 transition-[background-color,color,border-color,box-shadow,transform] duration-200 hover:-translate-y-px"
+          className="w-full py-2.5 rounded-xl text-sm font-medium border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(var(--accent-rgb),0.28)] focus-visible:ring-offset-2 transition-[background-color,color,border-color,box-shadow,transform] duration-200 hover:-translate-y-px"
           style={{ background: FILTER_PILL_BG, color: FILTER_PILL_TEXT, borderColor: FILTER_PILL_BORDER }}
         >
           Xem thêm ({filtered.length - paged.length} phiên)
@@ -4580,10 +3460,10 @@ function NotesTab({ savedNotes, sessionCategories }) {
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex min-w-0 flex-1 items-start gap-3">
                       <div
-                        className="mono flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl text-[8px] font-semibold uppercase tracking-[0.14em]"
+                        className={`mono flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl font-semibold ${hasGlyphIcon(cat?.icon) ? 'text-[19px] leading-none' : 'text-[8px] uppercase tracking-[0.14em]'}`}
                         style={{ background: `${accent}14`, color: accent, border: `1px solid ${accent}28` }}
                       >
-                        {getLabelMark(cat?.label, 'DM')}
+                        {getGlyph(cat?.icon, cat?.label, 'DM')}
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
@@ -4687,7 +3567,7 @@ function NotesTab({ savedNotes, sessionCategories }) {
                     ))}
                   </div>
 
-                  <div className="grid gap-2 md:grid-cols-2">
+                  <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
                     {entry.note && (
                       <div
                         className="rounded-[20px] px-3.5 py-3.5"
@@ -4744,9 +3624,16 @@ function NotesTab({ savedNotes, sessionCategories }) {
  * đọc ra từ vị trí trái-sang-phải. Một nhãn giống nhau ở mọi nơi thì không phân biệt được gì —
  * cùng lý do đã gỡ chữ "Workspace" khỏi `ShellPane`.
  */
+// ⚠️ TAB 'focus' TỪNG TÊN LÀ "Tập Trung" — TRÙNG NGUYÊN VĂN với nút đầu tiên của thanh điều hướng
+// dưới cùng, một màn hoàn toàn khác. Hai thứ khác hẳn nhau mang cùng một cái tên, cách nhau
+// khoảng 600px trên cùng một màn hình, là cách rẻ nhất để làm một app khó hiểu: bấm "Tập Trung"
+// ở trên thì ra thống kê, bấm "Tập trung" ở dưới thì ra đồng hồ.
+// Tên mới lấy từ chính nội dung tab ấy — "Tỷ lệ phiên sâu", "Khung giờ rõ nhất", "Phiên nổi bật"
+// — tức nó nói về CHIỀU SÂU của phiên, không phải về việc tập trung nói chung. Ngắn hơn 2 ký tự
+// cũng giúp năm viên vừa khít hơn ở khung 390px.
 const TABS = [
   { key: 'overview',  label: 'Tổng Quan' },
-  { key: 'focus',     label: 'Tập Trung' },
+  { key: 'focus',     label: 'Chiều Sâu' },
   { key: 'category',  label: 'Phân Loại' },
   { key: 'journal',   label: 'Nhật Ký' },
   { key: 'notes',     label: 'Ghi Chú' },
@@ -4756,10 +3643,7 @@ export default function StatsDashboard() {
   const enterMotion       = useEnterMotion();
   const history           = useGameStore((s) => s.history);
   const savedNotes        = useGameStore((s) => s.savedNotes ?? []);
-  const progress          = useGameStore((s) => s.progress);
   const streak            = useGameStore((s) => s.streak);
-  const prestige          = useGameStore((s) => s.prestige);
-  const buildings         = useGameStore((s) => s.buildings);
   const sessionCategories = useGameStore((s) => s.sessionCategories);
   const effectiveSavedNotes = useMemo(() => {
     if (savedNotes.length > 0) return savedNotes;
@@ -4783,6 +3667,12 @@ export default function StatsDashboard() {
 
   const [activeTab, setActiveTab] = useState('overview');
   const [isTabPending, startTabTransition] = useTransition();
+
+  // ⚠️ KỲ THỜI GIAN SỐNG Ở ĐÂY, KHÔNG SỐNG TRONG TỪNG TAB (2026-08-30). Ba tab từng giữ ba
+  // trạng thái riêng với ba mặc định khác nhau, nên chuyển tab là đổi cửa sổ thời gian mà không
+  // báo gì. Nâng lên cha thì "Tuần Này" ở tab này vẫn là "Tuần Này" ở tab kia — và đó là điều
+  // kiện để hai con số ở hai tab được phép đặt cạnh nhau.
+  const [period, setPeriod] = useState(DEFAULT_STATS_PERIOD);
 
   const handleTabChange = (nextTab) => {
     if (nextTab === activeTab) return;
@@ -4829,9 +3719,15 @@ export default function StatsDashboard() {
       </div>
 
       {/* Tab bar */}
-      <div className="-mx-1 overflow-x-auto px-1 pb-1" style={{ overscrollBehaviorX: 'contain', WebkitOverflowScrolling: 'touch' }}>
+      {/*
+        ⚠️ CÙNG LỖI, CÙNG BẢN VÁ. Đo ở 390px: hàng này rộng thật **499px** trên **358px** nhìn thấy
+        ⇒ **141px = 28% nằm ngoài màn hình**, tức tab "Ghi Chú" (đang có 99 mục) gần như không ai
+        biết là có. Cộng cả hai hàng, **48,6% nếp gấp là khung điều hướng** trước khi hiện một con
+        số nào.
+      */}
+      <div className="-mx-1 px-1 pb-1">
         <div
-          className="inline-flex min-w-full gap-1.5 rounded-[24px] border p-1.5 md:min-w-0"
+          className="flex flex-wrap gap-1.5 rounded-[24px] border p-1.5"
           style={{
             background: TAB_BAR_BG,
             borderColor: PANEL_BORDER,
@@ -4843,7 +3739,7 @@ export default function StatsDashboard() {
               key={tab.key}
               type="button"
               onClick={() => handleTabChange(tab.key)}
-              className="group flex min-w-[84px] flex-1 flex-col items-start justify-center gap-1.5 rounded-[18px] border px-3 py-2.5 text-left text-[12px] font-semibold transition-[background-color,color,box-shadow,transform,border-color,opacity] duration-200 hover:-translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(201,100,66,0.28)] focus-visible:ring-offset-2 md:min-w-[148px] md:flex-none md:flex-row md:items-center md:justify-center md:gap-2 md:px-4 md:py-3 md:text-sm md:text-center"
+              className="group flex flex-col items-start justify-center gap-1.5 rounded-[18px] border px-3 py-2.5 text-left text-[12px] font-semibold transition-[background-color,color,box-shadow,transform,border-color,opacity] duration-200 hover:-translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(var(--accent-rgb),0.28)] focus-visible:ring-offset-2 md:min-w-[148px] md:flex-none md:flex-row md:items-center md:justify-center md:gap-2 md:px-4 md:py-3 md:text-sm md:text-center"
               aria-pressed={activeTab === tab.key}
               aria-busy={isTabPending && activeTab !== tab.key ? 'true' : undefined}
               style={activeTab === tab.key
@@ -4855,9 +3751,9 @@ export default function StatsDashboard() {
                 <span
                   className="rounded-full px-1.5 py-0.5 text-[10px] font-bold leading-none"
                   style={{
-                    background: activeTab === 'notes' ? 'rgba(31,30,29,0.08)' : 'rgba(201,100,66,0.10)',
+                    background: activeTab === 'notes' ? 'rgba(31,30,29,0.08)' : 'rgba(var(--accent-rgb),0.10)',
                     color: activeTab === 'notes' ? TAB_ACTIVE_TEXT : ACCENT2,
-                    border: `1px solid ${activeTab === 'notes' ? 'rgba(31,30,29,0.10)' : 'rgba(201,100,66,0.16)'}`,
+                    border: `1px solid ${activeTab === 'notes' ? 'rgba(31,30,29,0.10)' : 'rgba(var(--accent-rgb),0.16)'}`,
                   }}
                 >
                   {fmtCount(notesCount)}
@@ -4875,11 +3771,13 @@ export default function StatsDashboard() {
           {...enterMotion}
         >
           {activeTab === 'overview' && (
-            <OverviewTab history={history} progress={progress} streak={streak} prestige={prestige} buildings={buildings} />
+            <OverviewTab history={history} streak={streak} period={period} onPeriodChange={setPeriod} />
           )}
-          {activeTab === 'focus' && <FocusTab history={history} />}
+          {activeTab === 'focus' && (
+            <FocusTab history={history} period={period} onPeriodChange={setPeriod} />
+          )}
           {activeTab === 'category' && (
-            <CategoryTab history={history} sessionCategories={sessionCategories} />
+            <CategoryTab history={history} sessionCategories={sessionCategories} period={period} onPeriodChange={setPeriod} />
           )}
           {activeTab === 'journal' && (
             <JournalTab history={history} sessionCategories={sessionCategories} />

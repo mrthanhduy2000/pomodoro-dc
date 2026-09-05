@@ -30,11 +30,18 @@ test('fmtVal: chọn đơn vị theo key (minutes/xp/mặc định phiên)', () 
   assert.equal(fmtVal(3, 'sessions'), '3 phiên');
 });
 
-test('hexToRgba: đổi hex 3/6 ký tự sang rgba; hex hỏng → màu mặc định', () => {
+test('hexToRgba: đổi hex 3/6 ký tự sang rgba; hex hỏng → màu nhấn THEO SKIN', () => {
   assert.equal(hexToRgba('#fff', 0.5), 'rgba(255, 255, 255, 0.5)');
   assert.equal(hexToRgba('#ff0000', 1), 'rgba(255, 0, 0, 1)');
-  assert.equal(hexToRgba('không-hợp-lệ', 0.2), 'rgba(201, 100, 66, 0.2)');
-  assert.equal(hexToRgba(null, 0.2), 'rgba(201, 100, 66, 0.2)');
+  /*
+    ⚠️ MÀU DỰ PHÒNG NAY LÀ TOKEN, KHÔNG PHẢI MÃ MÀU (2026-09-02, `TECH_DEBT #86`).
+    Bản cũ trả `rgba(201, 100, 66, …)` — đúng màu terracotta của skin MẶC ĐỊNH, và sai ở ba skin
+    khai `--accent-rgb` khác (`arcade` 226,84,44 · `inkgold` 217,164,65). Nghĩa là mỗi lần một mã
+    màu hỏng lọt vào, biểu đồ lại vẽ một vệt terracotta giữa một giao diện màu khác hẳn.
+    Giá trị dự phòng cũng là một lựa chọn thiết kế; nó phải theo skin y như mọi màu khác.
+  */
+  assert.equal(hexToRgba('không-hợp-lệ', 0.2), 'rgba(var(--accent-rgb), 0.2)');
+  assert.equal(hexToRgba(null, 0.2), 'rgba(var(--accent-rgb), 0.2)');
 });
 
 test('fmtChartAxisValue: minutes đổi sang giờ khi ≥60, xp rút gọn "k"', () => {

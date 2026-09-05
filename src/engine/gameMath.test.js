@@ -587,16 +587,25 @@ test('Dồn Lực: 3 trump cùng kích hoạt → chỉ áp dụng 1 (ưu tiên 
   assert.ok(r.finalXP < 60 * 2.0 * 2.5 * SIEU_TAP_TRUNG_MULT * SO_DO_MULTIPLIER);
 });
 
-test('Dồn Lực: override chọn Siêu Tập Trung khi đang active', () => {
+// ⚠️ BÀI NÀY THAY MỘT BÀI CŨ TÊN «Dồn Lực: override chọn Siêu Tập Trung khi đang active»
+// (xoá 2026-09-01). Bài cũ truyền `surgeOverride: 'sieu_tap_trung'` vào ngữ cảnh và đòi phép
+// chọn trump nghe theo nó. Nó XANH suốt — nhưng nó canh một khả năng mà **app không bao giờ với
+// tới được**: `surgeOverride` chỉ được GHI ở đúng một chỗ (`setSurgeChoice` trong `gameStore.js`),
+// mà hàm ấy có **0 nơi gọi trên toàn repo**, nên trường đó vĩnh viễn `null` và nhánh đọc nó là mã
+// không đi tới được. Đây là bài học "một bài test xanh về một thế giới không tồn tại": nó không
+// bảo vệ mã, nó chỉ làm cho mã chết trông như mã sống.
+// Nay phép chọn chỉ còn MỘT đường — `DON_LUC_PRIORITY` — nên bài mới khoá đúng điều đó: đưa
+// vào một ngữ cảnh có cả cờ cũ, kết quả vẫn phải theo THỨ TỰ ƯU TIÊN chứ không theo cờ.
+// THỬ-CHO-ĐỎ: dán lại nhánh `if (surgeOverride …)` vào `gameMath.js` ⇒ bài này đỏ.
+test('Dồn Lực: KHÔNG còn đường ghi đè — chỉ DON_LUC_PRIORITY quyết', () => {
   const skills = { dai_trung_thuong: true, sieu_tap_trung: true, so_do: true };
   const ctx = { superFocusActive: true, luckyModeActive: true, surgeOverride: 'sieu_tap_trung' };
   const r = withStubbedRandom(0.001, () => calculateRewards(60, skills, 0, {}, ctx));
-  assert.equal(r.donLucChosen, 'sieu_tap_trung');
-  assert.equal(r.sieuTapTrungApplied, true);
-  assert.equal(r.jackpotApplied, false);
-  assert.equal(r.luckyBurstApplied, false);
-  // XP = base(60) × tier(2.0) × Siêu Tập Trung(1.7) = 204
-  assert.equal(r.finalXP, Math.round(Math.round(60 * 2.0 * 1) * SIEU_TAP_TRUNG_MULT));
+  assert.equal(r.donLucChosen, 'so_do', 'cờ ghi đè đã bị xoá — thứ tự ưu tiên phải thắng');
+  assert.equal(r.sieuTapTrungApplied, false);
+  // Luật gốc «mỗi phiên chỉ áp ĐÚNG MỘT trump» vẫn nguyên vẹn.
+  const soTrump = [r.jackpotApplied, r.sieuTapTrungApplied, r.luckyBurstApplied].filter(Boolean).length;
+  assert.equal(soTrump, 1, 'phải áp đúng một trump mỗi phiên');
 });
 
 test('Dồn Lực: một trump duy nhất → hành vi y như cũ (no-op metering)', () => {

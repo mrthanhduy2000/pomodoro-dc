@@ -1,5 +1,5 @@
 export const RICH_TEXT_TONES = [
-  { id: 'red', label: 'Đỏ', color: '#c96442', soft: 'rgba(201, 100, 66, 0.14)' },
+  { id: 'red', label: 'Đỏ', color: '#c96442', soft: 'rgba(var(--accent-rgb), 0.14)' },
   { id: 'yellow', label: 'Vàng', color: '#b07d3b', soft: 'rgba(176, 125, 59, 0.16)' },
   { id: 'green', label: 'Xanh lá', color: '#5b7a52', soft: 'rgba(91, 122, 82, 0.16)' },
   { id: 'blue', label: 'Xanh dương', color: '#2563eb', soft: 'rgba(37, 99, 235, 0.14)' },

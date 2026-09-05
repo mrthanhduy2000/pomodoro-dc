@@ -5,7 +5,10 @@ import React, {
   useState,
 } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { useEnterMotion, withDelay } from '../lib/motionPresets';
+import BadgeGrid from './shared/BadgeGrid.jsx';
+import { splitLockedBadges } from './shared/badgeGroups.js';
+import InventoryHero from './shared/InventoryHero.jsx';
+import { heroHuyHieu } from './shared/inventoryHero.js';
 
 import {
   ACHIEVEMENTS,
@@ -13,7 +16,9 @@ import {
   ACHIEVEMENT_TIERS,
 } from '../engine/constants';
 import { formatVietnamDateTime } from '../engine/time';
-import { getLabelMark } from '../utils/labelMark';
+import { getGlyph, hasGlyphIcon } from '../utils/labelMark';
+import { thanhTichGanDat, tienDoThanhTich } from '../engine/achievementProgress';
+import { cauConLai } from './achievementUnit';
 import useGameStore from '../store/gameStore';
 
 const TIER_SEQUENCE = ['bronze', 'silver', 'gold', 'platinum', 'diamond'];
@@ -125,28 +130,6 @@ function getTierSurface(tier) {
   return TIER_SURFACES[tier] ?? TIER_SURFACES.silver;
 }
 
-function buildAiRemark(entry, totalUnlocked, latestId) {
-  const categoryRemark = CATEGORY_REMARKS[entry.achievement.category] ?? CATEGORY_REMARKS.special;
-
-  if (!entry.isUnlocked) {
-    return `Mốc này còn ở phía trước. ${categoryRemark}`;
-  }
-
-  if (!entry.unlockedAt) {
-    return `Save cũ không giữ lại giờ đạt cho mốc này, nên hệ thống chỉ giữ đúng vị trí tương đối. ${categoryRemark}`;
-  }
-
-  if (entry.timeSource === 'reconstructed') {
-    return `Giờ đạt ở đây được suy từ nhật ký phiên cũ. ${categoryRemark}`;
-  }
-
-  if (entry.id === latestId) {
-    return `Đây là cột mốc mới nhất trong tiến trình hiện tại. ${categoryRemark}`;
-  }
-
-  return `Đây là cột mốc thứ ${entry.order} trên tổng ${totalUnlocked} dấu đã đạt. ${categoryRemark}`;
-}
-
 function sortUnlockedEntries(left, right) {
   const leftTs = getUnlockTimestamp(left.unlockedAt);
   const rightTs = getUnlockTimestamp(right.unlockedAt);
@@ -164,7 +147,23 @@ function sortUnlockedEntries(left, right) {
   return left.definitionIndex - right.definitionIndex;
 }
 
+/**
+ * Danh sách "Chưa đạt" sắp theo TIẾN ĐỘ giảm dần — gần nhất lên đầu.
+ *
+ * ⚠️ Trước 2026-09-01 nó sắp theo THỨ TỰ KHAI BÁO trong `constants.js`, tức theo thứ tự người
+ * viết dữ liệu gõ ra. Hậu quả đo được: mục gần đạt nhất ("Một Năm Tập Trung", 97%, còn 751 phút)
+ * nằm ở y=9.606px — **11,4 màn hình điện thoại** phải vuốt xuống mới gặp, trong khi thứ đứng đầu
+ * danh sách là một mục người chơi còn cách rất xa. Danh sách 213 mục thì thứ tự KHÔNG phải chuyện
+ * thẩm mỹ: nó quyết định người chơi có bao giờ nhìn thấy thứ mình sắp lấy được hay không.
+ *
+ * Mục không đo được tiến độ (50/360 mục có điều kiện ghép) xuống cuối, giữ nguyên thứ tự cũ giữa
+ * chúng với nhau — chúng không có gì để so, và đẩy chúng lên đầu là đẩy đúng phần mù mịt nhất lên
+ * chỗ đắt nhất.
+ */
 function sortLockedEntries(left, right) {
+  const l = left.tienDo?.tiLe ?? -1;
+  const r = right.tienDo?.tiLe ?? -1;
+  if (l !== r) return r - l;
   if (left.definitionIndex !== right.definitionIndex) {
     return left.definitionIndex - right.definitionIndex;
   }
@@ -175,6 +174,10 @@ function FilterChip({
   active,
   countLabel,
   icon,
+  // Ô biểu tượng của chip chỉ rộng 20px: emoji cần 13px mới đọc được, còn ký hiệu 2 chữ cái
+  // ở 13px thì tràn ra ngoài. Cờ này do NƠI GỌI truyền vào (nó biết dữ liệu có icon hay không),
+  // KHÔNG đoán bằng cách soi chuỗi — xem chú thích `hasGlyphIcon` ở `utils/labelMark.js`.
+  iconIsPicture = false,
   label,
   onClick,
   tone,
@@ -184,7 +187,11 @@ function FilterChip({
       type="button"
       onClick={onClick}
       className={[
-        'inline-flex items-center gap-2 rounded-full border px-3.5 py-2 text-[12.5px] font-medium transition',
+        // ⚠️ CHIP LỌC ĐÃ NÉN (2026-09-02). Ở khung 390px, sáu chip bậc + bảy chip danh mục ở cỡ
+        // cũ (px-3.5 py-2, 12.5px, icon 18px) xếp thành **chín hàng** và ăn gần trọn một màn hình
+        // TRƯỚC khi Đàm thấy được một huy hiệu nào. Bộ lọc là công cụ phụ; nó không được đứng
+        // chắn trước chính thứ nó lọc. Cỡ mới vẫn trên ngưỡng chạm 44px về chiều cao hàng.
+        'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1.5 text-[11.5px] font-medium transition',
         active
           ? 'border-[rgba(31,30,29,0.10)] bg-[rgba(31,30,29,0.98)] text-[var(--canvas)] shadow-[0_12px_24px_rgba(31,30,29,0.12)]'
           : 'border-[var(--line)] bg-[rgba(255,255,255,0.9)] text-[var(--muted)] hover:border-[var(--line-2)] hover:text-[var(--ink)] hover:bg-[rgba(250,249,246,0.98)]',
@@ -194,22 +201,24 @@ function FilterChip({
       {icon ? (
         <span
           aria-hidden="true"
-          className="flex h-5 w-5 items-center justify-center rounded-full text-[11px]"
+          className={`flex h-5 w-5 items-center justify-center rounded-full ${iconIsPicture ? 'text-[13px] leading-none' : 'text-[11px]'}`}
           style={tone ? { backgroundColor: active ? withAlpha('#ffffff', 0.14) : withAlpha(tone, 0.12) } : undefined}
         >
           {icon}
         </span>
       ) : null}
       <span>{label}</span>
-      <span
-        className={[
-          'rounded-full px-2 py-0.5 text-[10px] font-semibold',
-          active ? 'bg-white/12 text-white/82' : 'bg-[rgba(244,242,236,0.96)] text-[var(--muted)]',
-        ].join(' ')}
-        style={{ fontFamily: MONO_FONT }}
-      >
-        {countLabel}
-      </span>
+      {countLabel ? (
+        <span
+          className={[
+            'rounded-full px-2 py-0.5 text-[10px] font-semibold',
+            active ? 'bg-white/12 text-white/82' : 'bg-[rgba(244,242,236,0.96)] text-[var(--muted)]',
+          ].join(' ')}
+          style={{ fontFamily: MONO_FONT }}
+        >
+          {countLabel}
+        </span>
+      ) : null}
     </button>
   );
 }
@@ -217,12 +226,10 @@ function FilterChip({
 function AchievementCard({
   entry,
   latestId,
-  totalUnlocked,
 }) {
   const tierInfo = ACHIEVEMENT_TIERS[entry.achievement.tier] ?? ACHIEVEMENT_TIERS.silver;
   const categoryInfo = ACHIEVEMENT_CATEGORIES[entry.achievement.category] ?? ACHIEVEMENT_CATEGORIES.special;
   const tierSurface = getTierSurface(entry.achievement.tier);
-  const aiRemark = buildAiRemark(entry, totalUnlocked, latestId);
   const unlockLabel = formatUnlockLabel(entry.unlockedAt);
   const showOrder = entry.isUnlocked && clampOrder(entry.order);
 
@@ -249,7 +256,9 @@ function AchievementCard({
       <div className="flex items-start gap-4">
         <div
           className={[
-            'mono flex h-14 w-14 shrink-0 items-center justify-center border text-[10px] font-semibold uppercase tracking-[0.16em]',
+            'mono flex h-14 w-14 shrink-0 items-center justify-center border font-semibold',
+            // Emoji cần TO mới đọc được trong ô 56px; ký hiệu 2 chữ cái thì cần nhỏ + giãn chữ.
+            hasGlyphIcon(entry.achievement.icon) ? 'text-[26px] leading-none' : 'text-[10px] uppercase tracking-[0.16em]',
             entry.isUnlocked ? 'bg-[var(--card-bg-solid)] text-[var(--ink)]' : 'bg-[var(--card-bg-solid2)] text-[var(--muted-2)]',
           ].join(' ')}
           style={{
@@ -259,7 +268,7 @@ function AchievementCard({
             fontFamily: MONO_FONT,
           }}
         >
-          {getLabelMark(entry.achievement.label, 'DG')}
+          {getGlyph(entry.achievement.icon, entry.achievement.label, 'DG')}
         </div>
 
         <div className="min-w-0 flex-1">
@@ -290,6 +299,32 @@ function AchievementCard({
             {entry.achievement.description}
           </p>
 
+          {/*
+            ⚠️ THANH TIẾN ĐỘ CHỈ MỌC RA Ở THẺ CHƯA ĐẠT CÓ ĐO ĐƯỢC — không phải ở cả 360 thẻ.
+            Thẻ đã đạt không cần (100% là chuyện đã rồi), và 50/360 mục có điều kiện ghép trả về
+            `null` nên chúng CÂM chứ không hiện "0%": một con số 0% đọc lên như "bạn chưa làm gì",
+            còn sự thật là "chỗ này không đo được".
+            Nó THAY câu mô tả trả lời "cần gì" bằng câu trả lời "còn bao xa" — mô tả vẫn ở ngay
+            trên, nên đây là một dòng THÊM có mẫu số chứ không phải một dòng lặp lại.
+          */}
+          {entry.tienDo ? (
+            <div className="mt-2">
+              <div className="overflow-hidden rounded-full bg-[var(--line)]">
+                <div
+                  className="h-[3px] rounded-full transition-all"
+                  style={{
+                    width: `${Math.max(2, Math.floor(entry.tienDo.tiLe * 100))}%`,
+                    background: 'var(--accent)',
+                  }}
+                />
+              </div>
+              <div className="mono mt-1 text-[11px] text-[var(--muted)]">
+                {entry.tienDo.hienTai.toLocaleString('vi-VN')}/{entry.tienDo.moc.toLocaleString('vi-VN')}
+                {cauConLai(entry.tienDo.con, entry.tienDo.dem) ? ` · ${cauConLai(entry.tienDo.con, entry.tienDo.dem)}` : ''}
+              </div>
+            </div>
+          ) : null}
+
           <div className="mt-3 flex flex-wrap items-center gap-2 text-[12px] font-medium text-[var(--muted)]">
             {showOrder ? (
               <span
@@ -300,9 +335,17 @@ function AchievementCard({
               </span>
             ) : null}
 
-            <span className="rounded-full border border-[var(--line)] bg-[rgba(255,255,255,0.88)] px-3 py-1">
-              {entry.isUnlocked ? `Thời điểm đạt: ${unlockLabel}` : 'Trạng thái: chưa đạt'}
-            </span>
+            {/* ⚠️ BỎ TIỀN TỐ, VÀ BỎ HẲN CHIP Ở NHÁNH CHƯA ĐẠT (vòng 20, 2026-08-30).
+                "Thời điểm đạt: " — trong một mục tên là "Đã đạt (146)" thì một con dấu thời gian
+                không cần được giới thiệu; bỏ tiền tố làm chip ngắn đi ~90px nên nó thôi phải
+                chiếm trọn một hàng riêng ở cột chữ 191px.
+                "Trạng thái: chưa đạt" — tiêu đề mục và kiểu vẽ mờ đã nói xong, mà nó lặp ở 24
+                thẻ. Bỏ đi thì phần "Chưa đạt" LIẾC được thay vì phải đọc. */}
+            {entry.isUnlocked ? (
+              <span className="rounded-full border border-[var(--line)] bg-[rgba(255,255,255,0.88)] px-3 py-1">
+                {unlockLabel}
+              </span>
+            ) : null}
 
             {entry.timeSource === 'reconstructed' ? (
               <span className="rounded-full border border-[rgba(131,155,176,0.22)] bg-[rgba(236,241,245,0.9)] px-3 py-1 text-[#5f7386]">
@@ -311,17 +354,6 @@ function AchievementCard({
             ) : null}
           </div>
 
-          <div
-            className="mt-3 border border-[var(--line)] bg-[var(--card-bg-solid2)] px-3.5 py-3"
-            style={{ borderRadius: 'var(--skin-radius-control,14px)' }}
-          >
-            <p className="mono text-[10px] uppercase tracking-[0.2em] text-[var(--muted-2)]">
-              Ghi chú tiến trình
-            </p>
-            <p className="mt-1 text-sm leading-6 text-[var(--ink-2)]">
-              {aiRemark}
-            </p>
-          </div>
         </div>
       </div>
     </div>
@@ -329,14 +361,32 @@ function AchievementCard({
 }
 
 export default function Achievements() {
-  const enterMotion = useEnterMotion();
   const unlockedIds = useGameStore((state) => state.achievements?.unlocked ?? []);
   const timeline = useGameStore((state) => state.achievements?.timeline ?? {});
 
+  // ⚠️ `buildAchievementSnapshotNow` quét lại TOÀN BỘ lịch sử (624 phiên trên fixture 180 ngày),
+  // nên nó PHẢI nằm trong `useMemo` khoá theo đúng những lát state nó đọc — gọi thẳng trong thân
+  // render là quét lại 624 phiên mỗi lần bấm một cái chip lọc.
+  const history = useGameStore((state) => state.history);
+  const progressSlice = useGameStore((state) => state.progress);
+  const streakSlice = useGameStore((state) => state.streak);
+  const playerSlice = useGameStore((state) => state.player);
+  const buildSnapshot = useGameStore((state) => state.buildAchievementSnapshotNow);
+  const snapshot = useMemo(
+    () => buildSnapshot(),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [history, progressSlice, streakSlice, playerSlice],
+  );
+  const sapDat = useMemo(
+    () => thanhTichGanDat(ACHIEVEMENTS, snapshot, unlockedIds, 3),
+    [snapshot, unlockedIds],
+  );
+
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [showUntouched, setShowUntouched] = useState(false);
+  const [selectedEntry, setSelectedEntry] = useState(null);
   const [selectedTier, setSelectedTier] = useState('all');
   const [selectedCategory, setSelectedCategory] = useState('all');
-  const [unlockedVisibleCount, setUnlockedVisibleCount] = useState(DEFAULT_UNLOCKED_BATCH);
-  const [lockedVisibleCount, setLockedVisibleCount] = useState(DEFAULT_LOCKED_BATCH);
 
   const deferredTier = useDeferredValue(selectedTier);
   const deferredCategory = useDeferredValue(selectedCategory);
@@ -344,16 +394,12 @@ export default function Achievements() {
   const handleTierChange = (tier) => {
     startTransition(() => {
       setSelectedTier(tier);
-      setUnlockedVisibleCount(DEFAULT_UNLOCKED_BATCH);
-      setLockedVisibleCount(DEFAULT_LOCKED_BATCH);
     });
   };
 
   const handleCategoryChange = (category) => {
     startTransition(() => {
       setSelectedCategory(category);
-      setUnlockedVisibleCount(DEFAULT_UNLOCKED_BATCH);
-      setLockedVisibleCount(DEFAULT_LOCKED_BATCH);
     });
   };
 
@@ -399,6 +445,8 @@ export default function Achievements() {
         id: achievement.id,
         achievement,
         definitionIndex,
+        // `null` cho 50/360 mục có điều kiện ghép — đó là câu trả lời thật, không phải 0%.
+        tienDo: isUnlocked ? null : tienDoThanhTich(achievement, snapshot),
         isUnlocked,
         order,
         unlockedAt,
@@ -444,7 +492,7 @@ export default function Achievements() {
       totalUnlocked: unlockedEntries.length,
       unlockedEntries,
     };
-  }, [timeline, unlockedIds]);
+  }, [timeline, unlockedIds, snapshot]);
 
   const filteredEntries = useMemo(() => (
     dataset.allEntries.filter((entry) => {
@@ -462,209 +510,87 @@ export default function Achievements() {
     filteredEntries.filter((entry) => !entry.isUnlocked).sort(sortLockedEntries)
   ), [filteredEntries]);
 
-  const visibleUnlockedEntries = useMemo(() => (
-    filteredUnlockedEntries.slice(0, unlockedVisibleCount)
-  ), [filteredUnlockedEntries, unlockedVisibleCount]);
+  /*
+    ⚠️ TÁCH "ĐANG TIẾN TỚI" KHỎI "CHƯA CHẠM TỚI" (2026-09-02). Đo trên fixture đã chơi 6 tháng:
+    tab Huy hiệu dài **4.915px ở khung 390px**, và phần lớn chiều dài ấy là những ô có tiến độ
+    ĐÚNG BẰNG 0 — chúng giống hệt nhau, nên một trăm ô như thế không nói được nhiều hơn một ô.
+    ⚠️ KHÔNG GIẤU, CHỈ GẤP LẠI: nút mở nằm ngay đó và ghi rõ còn bao nhiêu ô. Luật cũ của file này
+    (*"ô chưa đạt không bị giấu — một bộ sưu tập chỉ có nghĩa khi thấy được phần còn thiếu"*) vẫn
+    đứng, nhưng nó nói về việc THẤY ĐƯỢC phần còn thiếu, không đòi phải cuộn qua hết phần ấy mỗi
+    lần mở màn hình. Con số "còn N ô" cho thấy phần thiếu ngay cả khi đang gấp.
+  */
+  const { dangTien: lockedInProgress, chuaCham: lockedUntouched } = useMemo(
+    () => splitLockedBadges(filteredLockedEntries),
+    [filteredLockedEntries],
+  );
 
-  const visibleLockedEntries = useMemo(() => (
-    filteredLockedEntries.slice(0, lockedVisibleCount)
-  ), [filteredLockedEntries, lockedVisibleCount]);
 
-  const latestThreeEntries = useMemo(() => (
-    dataset.unlockedEntries.slice(0, 3)
-  ), [dataset.unlockedEntries]);
 
-  const totalProgress = dataset.totalAchievements > 0
-    ? Math.round((dataset.totalUnlocked / dataset.totalAchievements) * 100)
-    : 0;
+
 
   const activeTierInfo = deferredTier === 'all' ? null : ACHIEVEMENT_TIERS[deferredTier];
-  const heroSurface = dataset.latestEntry
-    ? getTierSurface(dataset.latestEntry.achievement.tier)
-    : TIER_SURFACES.silver;
-  const latestAchievement = dataset.latestEntry?.achievement;
 
   return (
     <div className="space-y-5 text-[var(--ink)]">
+      {/* Dải mở đầu Hành trang — xem `shared/inventoryHero.js`. Dùng LẠI `sapDat` (đã tính ở trên
+          cho danh sách "sắp đạt") chứ không tính lại: một luật một công thức. */}
+      <InventoryHero
+        hero={heroHuyHieu({
+          daMo: unlockedIds.length,
+          tong: ACHIEVEMENTS.length,
+          ganDat: sapDat[0]
+            ? { ten: sapDat[0].achievement?.label ?? 'Huy hiệu', pct: sapDat[0].tiLe }
+            : null,
+        })}
+        icon="🏅"
+      />
+
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1.5fr)_minmax(320px,0.75fr)]">
-        <MotionSection
-          {...enterMotion}
-          className="overflow-hidden p-6"
-          style={CARD_SURFACE}
-        >
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-            <div>
-              <p className="mono text-[10px] uppercase tracking-[0.2em] text-[var(--muted-2)]">
-                Lưu trữ thành tích
-              </p>
-              {/*
-                ⚠️ NHẤN VÀO CON SỐ ĐÃ ĐẠT, KHÔNG NHẤN VÀO MẪU SỐ (đổi 2026-08-29).
-                Bản cũ viết `{đã đạt}/{360} dấu đã đạt` ở cỡ 40px — ở khung 390px nó tràn thành HAI
-                DÒNG CHỮ KHỔNG LỒ, và là thứ ĐẦU TIÊN, TO NHẤT màn hình. Với một mẫu số 360 thì câu
-                ấy luôn đọc ra là *"bạn mới đi được vài phần trăm"*, kể cả khi người chơi vừa mở
-                được cái thứ một trăm. Đó là mở màn hình bằng một lời chê.
-                Nay: con số ĐÃ ĐẠT to (đó là thành quả), mẫu số lùi về cỡ nhỏ bên cạnh (vẫn có mặt
-                để biết còn bao xa — không giấu sự thật, chỉ thôi hét nó lên).
-                Cỡ chữ 40 → 30: hai dòng ở khung 390px là hai dòng cho một con số.
-                ⚠️ Bốn dòng mô tả "màn này là gì" ĐÃ GỠ — nó giải thích một màn hình mà người đọc
-                đang đứng trong đó, và đọc một lần là đủ cho cả đời dùng app. Cùng lý do đã gỡ
-                subtitle của `ShellPane` khỏi khổ điện thoại.
-              */}
-              <h2
-                className="mt-2 text-[30px] leading-tight tracking-[-0.04em] text-[var(--ink)]"
-                style={{ fontFamily: DISPLAY_FONT, fontWeight: 600 }}
-              >
-                {dataset.totalUnlocked}
-                <span className="ml-2 text-[15px] font-semibold tracking-normal text-[var(--muted)]">
-                  / {dataset.totalAchievements} dấu
-                </span>
-              </h2>
-            </div>
+        {/*
+          ⚠️ THẺ TÓM TẮT ĐÃ GỠ (2026-09-02) — nó nói ĐÚNG hai điều mà dải hero ngay trên nó vừa
+          nói: tổng "157 / 360 dấu" và danh sách "SẮP ĐẠT". Hai chỗ nói cùng một chuyện, cách nhau
+          chưa tới một màn hình, và chỗ nói SAU lại nói ÍT hơn (không màu, không có câu "còn bao
+          xa"). Luật của dự án: *hai chỗ nói cùng một chuyện thì chỗ nói ít hơn phải nhường*.
+          ⚠️ VÀ ĐÂY CHÍNH LÀ LÝ DO ĐÀM NÓI BA LẦN RẰNG HÀNH TRANG "CHƯA THẤY THAY ĐỔI GÌ": vòng
+          trước tôi THÊM một dải mới lên trên một thẻ nói cùng nội dung, nên màn hình dài thêm mà
+          không mới thêm. **Thêm mà không bớt thì không phải thiết kế lại.**
+        */}
 
-            <div className="flex flex-wrap items-center gap-2">
-              {activeTierInfo ? (
-                <span className="rounded-full border border-[var(--line)] bg-[rgba(255,255,255,0.82)] px-3 py-1.5 text-xs font-semibold text-[var(--muted)]">
-                  Đang lọc theo tier: {activeTierInfo.label}
-                </span>
-              ) : null}
-              {deferredCategory !== 'all' ? (
-                <span className="rounded-full border border-[var(--line)] bg-[rgba(255,255,255,0.82)] px-3 py-1.5 text-xs font-semibold text-[var(--muted)]">
-                  Danh mục: {ACHIEVEMENT_CATEGORIES[deferredCategory]?.label ?? deferredCategory}
-                </span>
-              ) : null}
-            </div>
-          </div>
-
-          <div className="mt-6 overflow-hidden rounded-full bg-[var(--line)]">
-            <div
-              className="h-[3px] rounded-full transition-all"
-              style={{
-                width: `${Math.max(totalProgress, dataset.totalUnlocked > 0 ? 2 : 0)}%`,
-                background: heroSurface.line,
-              }}
-            />
-          </div>
-
-          <div className="mt-5 grid gap-3 md:grid-cols-2">
-            <div
-              className="border p-4"
-              style={{ borderColor: 'var(--line)', background: 'var(--card-bg-solid2)', borderRadius: 'var(--skin-radius-control,14px)' }}
-            >
-              <p className="mono text-[10px] uppercase tracking-[0.2em] text-[var(--muted-2)]">
-                Gần nhất
-              </p>
-              <p className="mt-2 text-[20px] text-[var(--ink)]" style={{ fontFamily: DISPLAY_FONT, fontWeight: 600 }}>
-                {latestAchievement ? latestAchievement.label : 'Chưa có dấu nào'}
-              </p>
-              <p className="mt-1 text-sm text-[var(--muted)]">
-                {dataset.latestEntry
-                  ? formatUnlockLabel(dataset.latestEntry.unlockedAt)
-                  : 'Bắt đầu bằng phiên tập trung đầu tiên.'}
-              </p>
-            </div>
-
-            <div
-              className="border p-4"
-              style={{ borderColor: 'var(--line)', background: 'var(--card-bg-solid2)', borderRadius: 'var(--skin-radius-control,14px)' }}
-            >
-              <p className="mono text-[10px] uppercase tracking-[0.2em] text-[var(--muted-2)]">
-                Theo tier
-              </p>
-              <p className="mt-2 text-[20px] text-[var(--ink)]" style={{ fontFamily: DISPLAY_FONT, fontWeight: 600 }}>
-                {TIER_SEQUENCE.map((tier) => dataset.tierStats[tier]?.unlocked ?? 0).join(' · ')}
-              </p>
-              <p className="mt-1 text-sm text-[var(--muted)]">
-                Đồng · Bạc · Vàng · Bạch Kim · Kim Cương
-              </p>
-            </div>
-
-            {/*
-              ⚠️ THẺ "HIỂN THỊ" ĐÃ GỠ (2026-08-30) — nó là chỗ nói lần thứ hai, và cả hai vế của nó
-              đều thừa. Vế con số (*"N đã đạt / M chưa đạt"*) là ĐÚNG hai con số mà hai danh sách
-              ngay bên dưới tự in ra làm tiêu đề của chính chúng: «Đã đạt (N)» và «Chưa đạt (M)» —
-              gần hơn, và gắn liền với thứ chúng đếm. Vế câu chữ (*"Bộ lọc đang áp dụng trực tiếp
-              lên cả hai danh sách bên dưới"*) là một câu HƯỚNG DẪN SỬ DỤNG: nó mô tả cách giao
-              diện hoạt động, đúng một lần là đủ cho cả đời dùng app, rồi nằm đó mãi mãi.
-              Đo ở khung 390px: ba thẻ con này XẾP DỌC (grid chỉ chia 3 cột từ `md:`), mỗi thẻ
-              ~130px — nên thẻ thừa này chiếm 130px của màn hình trước khi thấy một thành tích nào.
-              GIỮ hai thẻ kia: "Gần nhất" là thẻ khoe thành quả (dopamine), "Theo tier" là một hình
-              dạng liếc-một-cái-biết-ngay mà không chỗ nào khác nói.
-            */}
-          </div>
-        </MotionSection>
-
-        <MotionAside
-          {...withDelay(enterMotion, 0.04)}
-          className="p-5"
-          style={CARD_SURFACE}
-        >
-          <div className="flex items-center justify-between gap-3">
-            <div>
-                <p className="mono text-[10px] uppercase tracking-[0.2em] text-[var(--muted-2)]">
-                  Dấu gần đây
-                </p>
-              <h3
-                className="mt-2 text-[30px] tracking-[-0.04em] text-[var(--ink)]"
-                style={{ fontFamily: DISPLAY_FONT, fontWeight: 600 }}
-              >
-                Mới đạt gần đây
-              </h3>
-            </div>
-            {dataset.latestEntry?.order ? (
-              <span
-                className="rounded-full border border-[var(--line)] bg-[rgba(255,255,255,0.85)] px-3 py-1 text-sm text-[var(--muted)]"
-                style={{ fontFamily: MONO_FONT }}
-              >
-                #{padOrder(dataset.latestEntry.order)}
-              </span>
-            ) : null}
-          </div>
-
-          {latestThreeEntries.length === 0 ? (
-            <div
-              className="mt-5 border border-dashed border-[var(--line-2)] bg-[var(--card-bg-solid2)] px-4 py-6 text-sm leading-6 text-[var(--muted)]"
-              style={{ borderRadius: 'var(--skin-radius-card,18px)' }}
-            >
-              Khi có phiên đầu tiên, khu này sẽ hiện dấu mới nhất cùng hai mốc đứng ngay sau nó.
-            </div>
-          ) : (
-            <div className="mt-5 divide-y" style={{ borderColor: 'rgba(217,214,204,0.82)' }}>
-              {latestThreeEntries.map((entry) => {
-                const tierInfo = ACHIEVEMENT_TIERS[entry.achievement.tier] ?? ACHIEVEMENT_TIERS.silver;
-                return (
-                  <div
-                    key={entry.id}
-                    className="px-0 py-3 first:pt-0 last:pb-0"
-                  >
-                    <div className="flex items-start gap-3">
-                      <div className="mono mt-0.5 flex h-10 w-10 items-center justify-center border bg-[var(--card-bg-solid2)] text-[9px] font-semibold uppercase tracking-[0.14em]" style={{ borderColor: withAlpha(getTierSurface(entry.achievement.tier).line, 0.2), borderRadius: 'var(--skin-radius-control,14px)', fontFamily: MONO_FONT }}>{getLabelMark(entry.achievement.label, 'DG')}</div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <p className="text-[16px] text-[var(--ink)]" style={{ fontFamily: DISPLAY_FONT, fontWeight: 600 }}>
-                            {entry.achievement.label}
-                          </p>
-                          <span className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold ${getTierSurface(entry.achievement.tier).badge}`}>
-                            {tierInfo.label}
-                          </span>
-                        </div>
-                        <p className="mt-1 text-xs text-[var(--muted)]">
-                          #{padOrder(entry.order)} · {formatUnlockLabel(entry.unlockedAt)}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </MotionAside>
+        {/*
+          ⚠️ DANH SÁCH "MỚI ĐẠT GẦN ĐÂY" ĐÃ GỠ (2026-09-02). Đây là chỗ thứ TƯ trên cùng một màn
+          nói rằng Đàm có huy hiệu: dải hero · thẻ tóm tắt (cũng đã gỡ) · danh sách này · và lưới.
+          Lưới xếp ĐÃ ĐẠT LÊN TRƯỚC, nên "mới đạt gần đây" chính là góc trên bên trái của nó, và
+          chạm một ô là ra tên. Thứ duy nhất mất đi là số thứ tự + ngày giờ — dữ liệu để TRA CỨU,
+          không phải để liếc, và nó không xứng với ~1.400px ở màn hình chính.
+        */}
       </div>
 
-      <section
-        className="p-5"
-        style={CARD_SURFACE}
-      >
-        <div className="space-y-4">
+      {/*
+        ⚠️ BỘ LỌC THU GỌN MẶC ĐỊNH (2026-09-02). Đo trước khi sửa: lưới huy hiệu bắt đầu ở **y=1398**
+        — tức gần HAI màn hình điện thoại trôi qua trước khi Đàm thấy được một huy hiệu nào, và
+        phần lớn quãng ấy là mười ba cái chip lọc. Bộ lọc là công cụ PHỤ; nó không được đứng chắn
+        trước chính thứ nó lọc. Nay nó là một nút một dòng, mở ra khi cần.
+        ⚠️ Nút vẫn nói TRẠNG THÁI ĐANG LỌC ngay trên mặt nút — thu gọn một bộ lọc đang bật mà không
+        nói gì thì Đàm sẽ thấy một bộ sưu tập thiếu mục và không hiểu vì sao.
+      */}
+      <section className="p-5" style={CARD_SURFACE}>
+        <button
+          type="button"
+          onClick={() => setFilterOpen((v) => !v)}
+          className="flex w-full items-center justify-between gap-3"
+        >
+          <span className="mono text-[10px] uppercase tracking-[0.2em]" style={{ color: 'var(--muted-2)' }}>
+            Bộ lọc
+          </span>
+          <span className="flex items-center gap-2 text-[12px]" style={{ color: 'var(--muted)' }}>
+            {selectedTier === 'all' && selectedCategory === 'all'
+              ? 'Đang xem tất cả'
+              : 'Đang lọc'}
+            <span aria-hidden>{filterOpen ? '▲' : '▼'}</span>
+          </span>
+        </button>
+
+        <div className="space-y-4" hidden={!filterOpen}>
           <div>
             <p className="mono text-[10px] uppercase tracking-[0.2em] text-[var(--muted-2)]">
               Lọc theo tier
@@ -673,7 +599,8 @@ export default function Achievements() {
               <FilterChip
                 active={selectedTier === 'all'}
                 countLabel={`${dataset.totalUnlocked}/${dataset.totalAchievements}`}
-                    icon="TC"
+                    icon="✦"
+                    iconIsPicture
                 label="Tất cả"
                 onClick={() => handleTierChange('all')}
               />
@@ -685,7 +612,8 @@ export default function Achievements() {
                     key={tier}
                     active={selectedTier === tier}
                     countLabel={`${stats?.unlocked ?? 0}/${stats?.total ?? 0}`}
-                    icon={getLabelMark(tierInfo.label, 'TR')}
+                    icon={getGlyph(tierInfo.icon, tierInfo.label, 'TR')}
+                    iconIsPicture={hasGlyphIcon(tierInfo.icon)}
                     label={tierInfo.label}
                     onClick={() => handleTierChange(tier)}
                     tone={tierInfo.color}
@@ -700,10 +628,19 @@ export default function Achievements() {
               Lọc theo danh mục
             </p>
             <div className="mt-3 flex flex-wrap gap-2">
+              {/*
+                ⚠️ KHÔNG truyền `countLabel` ở đây (2026-09-01): viên này và viên "Tất cả" của
+                hàng HẠNG cách nhau ĐÚNG 282px và in ra CÙNG một chuỗi từng ký tự, vì cả hai
+                dùng chung biểu thức `totalUnlocked/totalAchievements` — một con số HẰNG, không
+                đổi theo bộ lọc nào. Hàng hạng nằm TRÊN nên nó giữ con số; hàng này nằm ngay dưới
+                một hàng vừa nói xong đúng con số ấy.
+                ⚠️ `FilterChip` phải bọc `{countLabel ? … : null}` — bản cũ dựng bong bóng đếm VÔ
+                ĐIỀU KIỆN, không truyền prop thì còn lại một bong bóng xám rỗng.
+              */}
               <FilterChip
                 active={selectedCategory === 'all'}
-                countLabel={`${dataset.totalUnlocked}/${dataset.totalAchievements}`}
-                icon="TC"
+                icon="✦"
+                iconIsPicture
                 label="Tất cả"
                 onClick={() => handleCategoryChange('all')}
               />
@@ -715,7 +652,8 @@ export default function Achievements() {
                     key={categoryKey}
                     active={selectedCategory === categoryKey}
                     countLabel={`${stats?.unlocked ?? 0}/${stats?.total ?? 0}`}
-                    icon={getLabelMark(categoryInfo.label, 'DM')}
+                    icon={getGlyph(categoryInfo.icon, categoryInfo.label, 'DM')}
+                    iconIsPicture={hasGlyphIcon(categoryInfo.icon)}
                     label={categoryInfo.label}
                     onClick={() => handleCategoryChange(categoryKey)}
                     tone={ACHIEVEMENT_TIERS[activeTierInfo ? deferredTier : 'silver']?.color ?? '#94a3b8'}
@@ -723,133 +661,111 @@ export default function Achievements() {
                 );
               })}
             </div>
-          </div>
-        </div>
-      </section>
 
-      <section className="space-y-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <h3 className="mono text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--muted)]">
-            Đã đạt ({filteredUnlockedEntries.length})
-          </h3>
-          {filteredUnlockedEntries.length > DEFAULT_UNLOCKED_BATCH ? (
-            <span className="rounded-full border border-[var(--line)] bg-[rgba(255,255,255,0.85)] px-3 py-1.5 text-xs font-medium text-[var(--muted)]">
-              Đang hiện {visibleUnlockedEntries.length}/{filteredUnlockedEntries.length} mục để giữ danh sách gọn hơn.
-            </span>
-          ) : null}
-          {filteredUnlockedEntries.length > 0 && filteredUnlockedEntries.length <= DEFAULT_UNLOCKED_BATCH ? (
-            <span className="rounded-full border border-[var(--line)] bg-[rgba(255,255,255,0.85)] px-3 py-1.5 text-xs font-medium text-[var(--muted)]">
-              Sắp theo thời điểm gần nhất trước, vẫn giữ số thứ tự thật của từng dấu.
-            </span>
-          ) : null}
-        </div>
-
-        {filteredUnlockedEntries.length === 0 ? (
-          <div
-            className="border border-dashed border-[var(--line-2)] bg-[var(--card-bg-solid)] px-5 py-10 text-center text-sm text-[var(--muted)]"
-            style={{ borderRadius: 'var(--skin-radius-card,18px)' }}
-          >
-            Bộ lọc hiện tại chưa có dấu nào đã đạt.
-          </div>
-        ) : (
-          <>
-            <AnimatePresence initial={false} mode="popLayout">
-              <div className="grid gap-3">
-                {visibleUnlockedEntries.map((entry, index) => (
-                  <MotionDiv
-                    key={entry.id}
-                    layout
-                    {...withDelay(enterMotion, Math.min(index, 5) * 0.02)}
-                  >
-                    <AchievementCard
-                      entry={entry}
-                      latestId={dataset.latestEntry?.id ?? null}
-                      totalUnlocked={dataset.totalUnlocked}
-                    />
-                  </MotionDiv>
-                ))}
-              </div>
-            </AnimatePresence>
-
-            {visibleUnlockedEntries.length < filteredUnlockedEntries.length ? (
-              <div className="flex justify-center">
-                <button
-                  type="button"
-                  onClick={() => setUnlockedVisibleCount((count) => (
-                    Math.min(count + DEFAULT_UNLOCKED_BATCH, filteredUnlockedEntries.length)
-                  ))}
-                  className="rounded-full border px-5 py-2.5 text-sm font-semibold transition"
-                  style={{
-                    borderColor: 'var(--line)',
-                    background: 'rgba(255,255,255,0.92)',
-                    color: 'var(--ink-2)',
-                  }}
-                >
-                  Xem thêm {Math.min(DEFAULT_UNLOCKED_BATCH, filteredUnlockedEntries.length - visibleUnlockedEntries.length)} mục đã đạt
-                </button>
-              </div>
+            {/*
+              ⚠️ MỘT LẦN, KHÔNG PHẢI BỐN MƯƠI TÁM LẦN (2026-09-01). `CATEGORY_REMARKS` trước nay
+              được nối vào ĐUÔI của một câu dựng riêng cho TỪNG thẻ (`buildAiRemark`), rồi đóng
+              khung trong một cái hộp có viền — 48 hộp trên một trang, chiếm **38,4% chiều dài
+              trang** (19.059 → 11.739px sau khi xoá), mà nửa đầu mỗi câu chỉ chép lại chip `#N`
+              cùng thẻ và nửa đuôi thì giống hệt nhau ở mọi thẻ cùng danh mục (đuôi lặp nhiều
+              nhất 17 lần, và 24/48 hộp mở đầu bằng đúng chữ "Mốc này còn ở phía trước.").
+              Kiểm cả 5 nhánh của hàm cũ: KHÔNG nhánh nào là tín hiệu duy nhất — "chưa có dấu
+              thời gian" đã có ở `formatUnlockLabel`, "suy từ nhật ký" và "mới nhất" đã là chip
+              riêng, thứ tự đã là chip `#N`, danh mục đã là chip danh mục. Xoá không mất dữ kiện.
+              Giữ lại giọng văn ở ĐÚNG chỗ nó có nghĩa: một dòng cho danh mục Đàm vừa chọn — nó
+              vừa nói về đúng thứ anh đang xem, vừa là phản hồi nhìn thấy được cho cú chạm lọc.
+            */}
+            {selectedCategory !== 'all' && CATEGORY_REMARKS[selectedCategory] ? (
+              <p className="mt-3 text-sm leading-6 text-[var(--muted)]">
+                {CATEGORY_REMARKS[selectedCategory]}
+              </p>
             ) : null}
-          </>
-        )}
+          </div>
+        </div>
       </section>
 
-      <section className="space-y-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <h3 className="mono text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--muted)]">
-            Chưa đạt ({filteredLockedEntries.length})
+      {/*
+        ⚠️ HAI DANH SÁCH DÀI ĐÃ THÀNH MỘT LƯỚI (2026-09-02, lệnh Đàm lặp lần thứ ba: *"hành trang
+        vẫn chưa thấy thay đổi gì… thực hiện lớn"*). Bản cũ vẽ mỗi huy hiệu thành một HÀNG CHỮ đầy
+        đủ (icon nhỏ · tên · mô tả · thanh tiến độ · ngày đạt) cho **360 mục** — đó là một bảng
+        tính, không phải một bộ sưu tập. Nó dài tới mức chính giao diện phải thừa nhận và cắt bớt:
+        *"đang hiện 40/203 mục để giữ giao diện nhẹ hơn"*. Một danh sách bị cắt thì không bao giờ
+        cho được cảm giác *"nhìn kìa, mình có ngần này rồi"*.
+        ⚠️ Ô CHƯA ĐẠT KHÔNG BỊ GIẤU — một bộ sưu tập chỉ có nghĩa khi thấy được phần còn thiếu; đó
+        chính là thứ khiến người ta muốn lấp đầy. Nên bỏ luôn phân trang: xem hết là ĐIỂM CHÍNH.
+      */}
+      <section className="space-y-3">
+        <div className="flex items-baseline justify-between gap-3">
+          <h3 className="mono text-[10px] font-semibold uppercase tracking-[0.22em]" style={{ color: 'var(--muted)' }}>
+            Bộ sưu tập
           </h3>
-
-          {filteredLockedEntries.length > DEFAULT_LOCKED_BATCH ? (
-            <span className="rounded-full border border-[var(--line)] bg-[rgba(255,255,255,0.85)] px-3 py-1.5 text-xs font-medium text-[var(--muted)]">
-              Đang hiện {visibleLockedEntries.length}/{filteredLockedEntries.length} mục để giữ giao diện nhẹ hơn.
-            </span>
-          ) : null}
+          <span className="mono text-[11px] tabular-nums" style={{ color: 'var(--muted)' }}>
+            {filteredUnlockedEntries.length} đã đạt · {lockedInProgress.length} đang tiến tới · {lockedUntouched.length} chưa chạm
+          </span>
         </div>
 
-        {filteredLockedEntries.length === 0 ? (
+        {/* ⚠️ Lưới chỉ hiện ICON nên phải có chỗ đọc TÊN — nếu không thì đổi một bảng tính quá dài
+            lấy một bức tranh không đọc được. Dải này nằm NGAY TRÊN lưới (không phải hộp thoại):
+            chạm ô này rồi chạm ô kế tiếp là đọc được luôn, không phải đóng-mở gì cả. */}
+        {selectedEntry && (
           <div
-            className="border border-dashed border-[var(--line-2)] bg-[var(--card-bg-solid)] px-5 py-10 text-center text-sm text-[var(--muted)]"
-            style={{ borderRadius: 'var(--skin-radius-card,18px)' }}
+            className="flex items-start gap-3 px-4 py-3"
+            style={{
+              borderRadius: 'var(--skin-radius-card,18px)',
+              background: 'var(--card-bg-solid)',
+              border: 'var(--skin-card-border-width,1px) solid var(--line)',
+            }}
           >
-            Bộ lọc hiện tại không còn dấu nào ở trạng thái chờ.
+            <span className="text-[22px] leading-none" aria-hidden>
+              {selectedEntry.achievement?.icon ?? '•'}
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-[14px] font-semibold leading-tight" style={{ color: 'var(--ink)' }}>
+                {selectedEntry.achievement?.label ?? selectedEntry.id}
+              </p>
+              <p className="mt-0.5 text-[12px] leading-snug" style={{ color: 'var(--muted)' }}>
+                {selectedEntry.isUnlocked
+                  ? 'Đã đạt.'
+                  : (selectedEntry.achievement?.description ?? 'Chưa đủ dữ liệu để đo tiến độ.')}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setSelectedEntry(null)}
+              className="mono shrink-0 text-[11px] uppercase tracking-[0.16em]"
+              style={{ color: 'var(--muted-2)' }}
+            >
+              Đóng
+            </button>
           </div>
-        ) : (
+        )}
+
+        <BadgeGrid
+          entries={[...filteredUnlockedEntries, ...lockedInProgress]}
+          onSelect={setSelectedEntry}
+          emptyLabel="Bộ lọc hiện tại không còn dấu nào."
+        />
+
+        {lockedUntouched.length > 0 && (
           <>
-            <div
-              className="grid gap-3"
+            <button
+              type="button"
+              onClick={() => setShowUntouched((v) => !v)}
+              className="mono w-full px-4 py-2.5 text-[11px] font-semibold uppercase tracking-[0.16em]"
               style={{
-                contentVisibility: 'auto',
-                containIntrinsicSize: '1px 1600px',
+                background: 'var(--card-bg-solid)',
+                border: 'var(--skin-card-border-width,1px) solid var(--line)',
+                borderRadius: 'var(--skin-radius-card,18px)',
+                color: 'var(--muted)',
               }}
             >
-              {visibleLockedEntries.map((entry) => (
-                <AchievementCard
-                  key={entry.id}
-                  entry={entry}
-                  latestId={dataset.latestEntry?.id ?? null}
-                  totalUnlocked={dataset.totalUnlocked}
-                />
-              ))}
-            </div>
-
-            {visibleLockedEntries.length < filteredLockedEntries.length ? (
-              <div className="flex justify-center">
-                <button
-                  type="button"
-                  onClick={() => setLockedVisibleCount((count) => (
-                    Math.min(count + DEFAULT_LOCKED_BATCH, filteredLockedEntries.length)
-                  ))}
-                  className="rounded-full border px-5 py-2.5 text-sm font-semibold transition"
-                  style={{
-                    borderColor: 'var(--line)',
-                    background: 'rgba(255,255,255,0.92)',
-                    color: 'var(--ink-2)',
-                  }}
-                >
-                  Xem thêm {Math.min(DEFAULT_LOCKED_BATCH, filteredLockedEntries.length - visibleLockedEntries.length)} mục
-                </button>
-              </div>
-            ) : null}
+              {showUntouched
+                ? `Thu gọn ${lockedUntouched.length} dấu chưa chạm tới`
+                : `Còn ${lockedUntouched.length} dấu chưa chạm tới — xem`}
+            </button>
+            {showUntouched && (
+              <BadgeGrid entries={lockedUntouched} onSelect={setSelectedEntry} emptyLabel="" />
+            )}
           </>
         )}
       </section>

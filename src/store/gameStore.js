@@ -24,6 +24,11 @@
  */
 
 import { create } from 'zustand';
+import { tinhGiuLai, heSoXpSieuViet } from '../engine/prestigeCarryover';
+import {
+  aggregateWonderEffects, cancelPenaltyWonderMultiplier, missionXpMultiplier,
+  relicEvolutionCostOf, researchCostOf, streakBonusCapDays,
+} from '../engine/wonderEffects.js';
 import { persist } from 'zustand/middleware';
 import {
   GAME_STORE_STORAGE_KEY,
@@ -103,7 +108,6 @@ import {
   getUnifiedRefinedCost,
   spendUnifiedRefined,
   getUpgradeRefinedCost,
-  getRelicEvolutionRefinedCost,
   normalizeRawResourceId,
   STORAGE_VAULT_XP_PER_MINUTE,
   STORAGE_VAULT_XP_PER_MINUTE_ENHANCED,
@@ -116,7 +120,6 @@ import {
   TTCH_PER_STREAK_MISSION,
   TTCH_PER_REFINED,
   TTCH_RELIC_SUBSIDY_CAP_PCT,
-  TTCH_TRUMP_PICK_COST,
 } from '../engine/constants';
 import {
   calculateRewards,
@@ -133,6 +136,8 @@ import {
 } from '../engine/gameMath';
 import { inferAchievementUnlockTimes } from '../engine/achievementTimeline';
 import { countRichTextWords } from '../utils/richText';
+import soundEngine from '../engine/soundEngine';
+import notificationManager from '../engine/notifications';
 import {
   detectEraCrisis,
   createEraCrisisState,
@@ -171,6 +176,15 @@ const BLUEPRINT_LOOKUP = Object.fromEntries(
 );
 
 const UI_NOTIFICATION_LIMIT = 40;
+
+/**
+ * Cửa sổ còn được phép reo báo "hết giờ nghỉ". Xem khối chú thích ở `syncBreakSession`:
+ * hàm ấy cũng chạy khi tab được đánh thức lại, nên nếu không gác thì mở máy sau hai tiếng
+ * app sẽ reo lên báo một giờ nghỉ đã kết thúc từ đời nào. 90 giây đủ rộng để một nhịp tick
+ * trễ hoặc một lần quay lại tab trong vòng một phút rưỡi vẫn được báo, đủ hẹp để cái tin
+ * ấy còn là tin.
+ */
+const BREAK_OVER_ANNOUNCE_MS = 90_000;
 
 function createUiNotification({
   title,
@@ -1174,7 +1188,6 @@ const makeDefaultSkillActivations = () => ({
   luckyModeChargesUsed:  0,
   lastResetDate:         null,  // 'YYYY-MM-DD' — reset charges hàng ngày
   // Bản Cập Nhật Cộng Hưởng (transient, reset theo ngày qua lastResetDate)
-  surgeOverride:         null,  // 'so_do' | 'sieu_tap_trung' | 'jackpot' | null — Dồn Lực tự chọn
 });
 
 // ─── FACTORY: CATEGORY TRACKING ──────────────────────────────────────────────
@@ -1349,31 +1362,11 @@ function normalizeStoredRefined(resourcesRefined = {}) {
   return next;
 }
 
-function spendRawResources(bookBag = {}, totalCost = 0) {
-  const entries = Object.entries(bookBag)
-    .sort(([, left], [, right]) => right - left);
-  const updated = { ...bookBag };
-  let remaining = totalCost;
-
-  for (const [resourceId, amount] of entries) {
-    if (remaining <= 0) break;
-    const spend = Math.min(amount ?? 0, remaining);
-    updated[resourceId] = Math.max(0, (updated[resourceId] ?? 0) - spend);
-    remaining -= spend;
-  }
-
-  return remaining > 0 ? null : updated;
-}
 
 // ─── HELPER: Tổng hợp tác động Wonder từ danh sách công trình ─────────────────
-function aggregateWonderEffects(buildings) {
-  const effects = new Set();
-  for (const bpId of buildings) {
-    const eff = BUILDING_EFFECTS[bpId];
-    if (eff?.type === 'wonder' && eff.wonderEffect) effects.add(eff.wonderEffect);
-  }
-  return effects;
-}
+// ⚠️ `aggregateWonderEffects` + `getWonderResearchCost` ĐÃ CHUYỂN sang `engine/wonderEffects.js`
+// (2026-09-02) — cùng luật ấy từng có BA bản chép tay và bản ở tầng giao diện đã lệch.
+// Xem khối chú thích ở file đó.
 
 // ─── HELPER: Bonus RP từ Wonder effects đang hoạt động ────────────────────────
 function getWonderRPBonus(buildings) {
@@ -1390,32 +1383,10 @@ function getWonderForgivenessCapacity(buildings) {
   return FORGIVENESS_CANCELS_PER_WEEK + (wonders.has('extra_forgiveness') ? 1 : 0);
 }
 
-function getWonderRefinedCraftCost(buildings) {
-  const wonders = aggregateWonderEffects(buildings);
-  if (!wonders.has('cheaper_t2_craft')) return T2_CRAFT_COST;
-  return Math.max(4, Math.round(T2_CRAFT_COST * 0.75));
-}
 
-function getWonderResearchCost(buildings, bpId, baseCost) {
-  const wonders = aggregateWonderEffects(buildings);
-  const meta = BLUEPRINT_META[bpId];
-  let cost = Math.max(0, Math.round(baseCost ?? 0));
-
-  if (meta && wonders.has('t2_research_25off') && meta.era >= 6 && meta.era <= 10) {
-    cost = Math.round(cost * 0.75);
-  }
-
-  return Math.max(1, cost);
-}
-
-function getWonderRelicEvolutionCost(buildings, stageDef) {
-  const wonders = aggregateWonderEffects(buildings);
-  let cost = getRelicEvolutionRefinedCost(stageDef);
-  if (wonders.has('relic_evo_30off')) {
-    cost = Math.round(cost * 0.7);
-  }
-  return Math.max(1, cost);
-}
+// ⚠️ `getWonderRelicEvolutionCost` ĐÃ CHUYỂN sang `engine/wonderEffects.js` dưới tên
+// `relicEvolutionCostOf` (2026-09-05) — nó cũng có một bản chép tay ở tầng giao diện,
+// và bản ấy thiếu phép kiểm `type === 'wonder'` y hệt bản chép của giá RP.
 
 function getWonderRawRewardMultiplier(buildings) {
   const wonders = aggregateWonderEffects(buildings);
@@ -1450,14 +1421,6 @@ function getEconomyRewardModifiers(buildings, buildingLevels = {}) {
   };
 }
 
-function getWonderCancelPenaltyMultiplier(buildings) {
-  const wonders = aggregateWonderEffects(buildings);
-  let multiplier = 1;
-  if (wonders.has('building_hp_boost')) multiplier *= 0.85;
-  if (wonders.has('disaster_hp_50off')) multiplier *= 0.5;
-  return multiplier;
-}
-
 function getBuildingCancelPenaltyMultiplier(buildings, buildingLevels = {}) {
   let reduction = 0;
 
@@ -1473,26 +1436,19 @@ function getBuildingCancelPenaltyMultiplier(buildings, buildingLevels = {}) {
   return 1 - cappedReduction;
 }
 
-function getWonderStreakBonusCap(buildings) {
-  const wonders = aggregateWonderEffects(buildings);
-  return STREAK_MAX_BONUS_DAYS + (wonders.has('streak_cap_plus') ? 10 : 0);
-}
-
 function getWonderCrisisWindowBonusHours(buildings) {
   const wonders = aggregateWonderEffects(buildings);
   return wonders.has('longer_crisis_window') ? 12 : 0;
 }
 
-function getDailyMissionXPBonusMultiplier(buildings) {
-  const wonders = aggregateWonderEffects(buildings);
-  let multiplier = 1;
-  if (wonders.has('mission_bonus_20')) multiplier += 0.2;
-  return multiplier;
-}
+// ⚠️ `getWonderCancelPenaltyMultiplier` · `getWonderStreakBonusCap` ·
+// `getDailyMissionXPBonusMultiplier` ĐÃ CHUYỂN sang `engine/wonderEffects.js` (2026-09-05) —
+// cả ba đều có một bản chép tay ở tầng giao diện, và cả ba bản ấy thiếu phép kiểm
+// `type === 'wonder'`. Xem khối chú thích cuối file đó.
 
 function applyDailyMissionXPBonus(buildings, xpAmount) {
   const normalizedXP = Math.max(0, xpAmount ?? 0);
-  return Math.round(normalizedXP * DAILY_MISSION_XP_SCALE * getDailyMissionXPBonusMultiplier(buildings));
+  return Math.round(normalizedXP * DAILY_MISSION_XP_SCALE * missionXpMultiplier(buildings));
 }
 
 function getBuildingPerkEffects(perk) {
@@ -1994,6 +1950,10 @@ const makeDefaultPrestige = () => ({
   count:          0,
   permanentBonus: 0,
   history:        [],
+  // ⚠️ Hai trường của `TECH_DEBT #3`. Để trong `prestige` vì đây là một trong số ít nhánh SỐNG SÓT
+  // qua `makeProgressionResetState()` — để ở `player` thì lần Thăng Hoa kế tiếp xoá mất.
+  sieuViet:       false,  // `sieu_viet` đã mở ở một lần Thăng Hoa nào đó ⇒ buff XP kỷ 1 còn hiệu lực
+  giuKyNang:      null,   // kỹ năng Cao Cấp được `kien_thuc_nen` giữ lại ở lần Thăng Hoa gần nhất
 });
 
 function normalizeStoredPrestige(prestige = {}) {
@@ -3476,8 +3436,56 @@ const useGameStore = create(
           },
         })),
 
-      syncBreakSession: (now = Date.now()) =>
-        set((prev) => {
+      /**
+       * ⚠️ KHOẢNH KHẮC HẾT GIỜ NGHỈ TỪNG IM LẶNG HOÀN TOÀN (2026-09-02) — và nó im trên
+       * CẢ BA kênh cùng lúc, nên không kênh nào lộ ra rằng hai kênh kia cũng câm:
+       *   · tiếng: `soundEngine` không hề có `playBreakEnd`;
+       *   · thông báo trình duyệt: `notificationManager.notifyBreakOver()` viết xong từ lâu
+       *     với **0 nơi gọi** (đúng họ `playMilestone`/`playBreakStart` đã vá ở vòng 23);
+       *   · Web Push: `pushService.js` chỉ hẹn `focus-complete` và `pomodoro-continue`,
+       *     KHÔNG có job nào cho lúc hết nghỉ.
+       * Hệ quả: hết 5 phút nghỉ thì Đàm chỉ biết nếu đang nhìn chằm chằm vào màn hình —
+       * mà nghỉ giải lao thì theo định nghĩa là lúc KHÔNG nhìn màn hình. Có sẵn một cái
+       * bẫy chuyển-trạng-thái ở `PomodoroEngine.jsx` (`justEndedBreak`) nhưng nó chỉ làm
+       * gì đó khi `autoStartNext` bật, mà mặc định của nó là **false**.
+       *
+       * ĐẶT Ở ĐÂY chứ không ở component, vì `syncBreakSession` chạy bất kể Đàm đang mở
+       * tab nào — báo ở PomodoroEngine thì chuyển sang Hành Trang là mất tín hiệu.
+       *
+       * ⚠️ Tiếng/thông báo phải nằm NGOÀI `set()` — `set` là hàm thuần, nhét tác dụng phụ
+       * vào đó thì React strict-mode gọi hai lần và Đàm nghe hai tiếng. Cùng hình dạng với
+       * `if (!get().ui.isOnBreak) soundEngine.playBreakStart();` ở `startBreak`.
+       *
+       * ⚠️ MÌN CHO PHIÊN SAU: đây là lần đầu `soundEngine`/`notificationManager` được chạm tới
+       * từ một cái ĐỒNG HỒ (`useGameLoop` gọi mỗi giây) chứ không từ một cú bấm nút. Cả hai
+       * singleton ấy mặc định `enabled = true` và đọc `window` không rào (`window.AudioContext`
+       * ở `audioContext.js`, `'Notification' in window` ở `notifications.js`), nên bài test node
+       * nào tick giờ nghỉ sẽ nổ `ReferenceError: window is not defined` — một thông báo trỏ vào
+       * `audioContext.js`, cách xa nguyên nhân thật. Cách chữa là đặt `soundEngine.enabled` và
+       * `notificationManager.enabled` về `false` TRONG BÀI TEST, KHÔNG phải đi rào hai engine
+       * dùng chung (rào sai một chỗ là câm tiếng thật của Đàm trên production — cái giá ấy đắt
+       * hơn nhiều so với một thông báo lỗi khó đọc).
+       *
+       * ⚠️ CỬA SỔ GẦN ĐÂY (`BREAK_OVER_ANNOUNCE_MS`) là bắt buộc: `useGameLoop` gọi hàm này
+       * cả ở `visibilitychange`/`pageshow`, tức là Đàm gập máy giữa giờ nghỉ rồi mở lại sau
+       * hai tiếng cũng chạy vào đây. Không có cửa sổ thì app sẽ reo lên báo một giờ nghỉ đã
+       * kết thúc từ lâu — cùng lý do `CoachNudge` gác 5 phút trước khi nhắc phiên vừa xong.
+       */
+      syncBreakSession: (now = Date.now()) => {
+        const truoc = get();
+        const phienNghi = truoc.breakSession;
+        const quaHanMs = Number.isFinite(phienNghi?.endsAt) ? now - phienNghi.endsAt : Number.NaN;
+        if (
+          phienNghi?.isRunning
+          && truoc.ui.isOnBreak
+          && quaHanMs >= 0
+          && quaHanMs <= BREAK_OVER_ANNOUNCE_MS
+        ) {
+          soundEngine.playTimerFinish();
+          notificationManager.notifyBreakOver();
+        }
+
+        return set((prev) => {
           const session = prev.breakSession;
           if (!session?.isRunning) return prev;
 
@@ -3563,7 +3571,8 @@ const useGameStore = create(
               levelUpQueue: nextLevelQueue,
             },
           };
-        }),
+        });
+      },
 
       // ─── Reset vòng nghỉ dài về 0 ────────────────────────────────────────
       resetLongBreakCycle: () =>
@@ -4023,7 +4032,6 @@ const useGameStore = create(
           nextSessionBuffs:         Array.isArray(state.player.skillBuffQueue) ? state.player.skillBuffQueue : [],
           keHoachWeeklyBuffActive,
           // DỒN LỰC: ưu tiên trump người chơi tự chọn cho hôm nay (nếu có)
-          surgeOverride:            skillAct.surgeOverride ?? null,
         };
 
         // Tính toán phần thưởng phiên và gộp thêm bonus Wonder còn hoạt động.
@@ -4113,7 +4121,7 @@ const useGameStore = create(
 
         // Streak advancement — V2: dùng skill check cho Lá Chắn Streak
         const newStreak = advanceStreak(activeStreak, unlockedSkills);
-        const streakBonusDays = Math.min(newStreak.currentStreak, getWonderStreakBonusCap(state.buildings));
+        const streakBonusDays = Math.min(newStreak.currentStreak, streakBonusCapDays(state.buildings));
         const streakBonusXP = Math.floor(reward.finalXP * streakBonusDays * STREAK_BONUS_PER_DAY);
 
         // V2: Bền Vững — kích hoạt khi streak đạt 30 lần đầu
@@ -4122,7 +4130,19 @@ const useGameStore = create(
           && newStreak.currentStreak >= 30;
 
         const overclockBonusXP = Math.max(0, (reward.finalXP ?? 0) - (baseReward.finalXP ?? 0));
-        const baseSessionXP = reward.finalXP + comboBonus + positiveEventBonus + streakBonusXP;
+        /*
+          ⚠️ `sieu_viet` (8 SP): sau Thăng Hoa, phiên đủ dài ở kỷ 1 nhận thêm XP. Hệ số trả về 1 ở
+          mọi ca khác nên không cần một cái `if` riêng ở đây (`TECH_DEBT #3`).
+          ⚠️ Nhân vào TỔNG sau mọi cộng thưởng — mô tả nói "+100% XP", không nói "+100% XP gốc".
+        */
+        const heSoSieuViet = heSoXpSieuViet({
+          sieuViet: !!state.prestige?.sieuViet,
+          book: activeBook,
+          minutes: minutesFocused,
+        });
+        const baseSessionXP = Math.round(
+          (reward.finalXP + comboBonus + positiveEventBonus + streakBonusXP) * heSoSieuViet,
+        );
 
         const resolvedStartedAt = sessionTiming?.startedAt ?? null;
         const resolvedFinishedAt = sessionTiming?.finishedAt ?? new Date().toISOString();
@@ -4543,6 +4563,15 @@ const useGameStore = create(
               }
             : null);
           const activeNewlyBuilt = newlyBuilt.filter((bpId) => isCurrentEraBlueprint(bpId, finalBook));
+          /*
+            ⚠️ `celebrates` để `useTimer` biết có nên chờ 3,2 giây hay không (`TECH_DEBT #94`).
+            Hai thứ CHẶN màn hình sau một phiên thường: lễ mừng thành phố (cần công trình vừa
+            xong) và hộp phần thưởng TỰ mở (chỉ khi lên kỷ). Không cái nào xảy ra thì màn hình
+            trống trơn, và 3,2 giây ấy là 3,2 giây nhìn vào chỗ không có gì.
+            ⚠️ Đọc CHÍNH hai biến mà `App.jsx` dùng để quyết định hiện lễ mừng — đừng chép lại
+            điều kiện, hai chỗ sẽ trôi khỏi nhau đúng lúc không ai để ý.
+          */
+          sessionResult = { ...sessionResult, celebrates: activeNewlyBuilt.length > 0 || eraChanged };
           const activeAcceleratedCraftingIds = acceleratedCraftingIds.filter((bpId) => isCurrentEraBlueprint(bpId, finalBook));
 
           const prevForgivenessCapacity = getWonderForgivenessCapacity(prev.buildings);
@@ -4938,7 +4967,7 @@ const useGameStore = create(
           freshCharges,
           disasterRedBuff,
           normalizedProgressRatio,
-          getWonderCancelPenaltyMultiplier(state.buildings)
+          cancelPenaltyWonderMultiplier(state.buildings)
             * getBuildingCancelPenaltyMultiplier(state.buildings, state.buildingLevels),
           {
             scopeBookKey: penaltyBookKey,
@@ -5111,36 +5140,6 @@ const useGameStore = create(
         return true;
       },
 
-      /**
-       * setSurgeChoice — DỒN LỰC: tự chọn trump nào được áp dụng khi nhiều trump
-       * cùng kích hoạt trong một phiên. Đặt preference cho HÔM NAY (reset theo ngày).
-       * Đặt một lựa chọn mới (khác null) tốn TTCH_TRUMP_PICK_COST; xóa (null) miễn phí.
-       * Đây CHỈ là sắp xếp lại thứ tự trong số trump đang active — không tạo thêm sức mạnh.
-       */
-      setSurgeChoice: (pref) => {
-        const state = get();
-        const allowed = pref === null || ['so_do', 'sieu_tap_trung', 'jackpot'].includes(pref);
-        if (!allowed) return false;
-        const today   = localDateStr();
-        const sa      = state.skillActivations;
-        const saToday = sa.lastResetDate === today ? sa : makeDefaultSkillActivations();
-
-        if (pref === null) {
-          set(() => ({
-            skillActivations: { ...saToday, lastResetDate: today, surgeOverride: null },
-            latestSessionUndo: null,
-          }));
-          return true;
-        }
-        if (saToday.surgeOverride === pref) return true;  // đã chọn đúng — không tính phí lại
-        if ((state.tinhThe ?? 0) < TTCH_TRUMP_PICK_COST) return false;
-        set(() => ({
-          skillActivations: { ...saToday, lastResetDate: today, surgeOverride: pref },
-          tinhThe: Math.max(0, (state.tinhThe ?? 0) - TTCH_TRUMP_PICK_COST),
-          latestSessionUndo: null,
-        }));
-        return true;
-      },
 
       /**
        * markBreakCompleted
@@ -5310,8 +5309,22 @@ const useGameStore = create(
           };
         }),
 
-      startBreak: (breakInput) =>
-        set((prev) => {
+      /**
+       * ⚠️ TIẾNG VÀO NGHỈ (2026-09-01). `soundEngine.playBreakStart()` viết xong từ lâu với **0
+       * nơi gọi**, trong khi chuyển sang chế độ nghỉ là lần DUY NHẤT app TỰ chiếm màn hình mà
+       * không ai bấm gì — và nó làm việc đó hoàn toàn im lặng. Một màn hình tự đổi mà không có
+       * tín hiệu nào là chỗ dễ làm người ta giật mình nhất.
+       *
+       * ⚠️ GỌI NGOÀI `set(...)`, KHÔNG GỌI TRONG. Hàm cập nhật của zustand có thể chạy nhiều lần
+       * cho một lần gọi (StrictMode gọi đôi), nên nhét một tác dụng phụ vào trong là mở đường
+       * cho tiếng kêu hai lần.
+       * ⚠️ GỌI Ở STORE, KHÔNG RẮC VÀO BA CHỖ GỌI `startBreak` — bịt ba chỗ thì chỗ thứ tư viết
+       * sau này sẽ quên (bài học "bịt mười lăm chỗ thì chỗ thứ mười sáu quên").
+       * ⚠️ Gác `isOnBreak`: gọi lại lúc ĐANG nghỉ thì không kêu thêm lần nữa.
+       */
+      startBreak: (breakInput) => {
+        if (!get().ui.isOnBreak) soundEngine.playBreakStart();
+        return set((prev) => {
           const breakConfig = typeof breakInput === 'number'
             ? { durationMinutes: breakInput, isLong: false }
             : (breakInput ?? {});
@@ -5350,7 +5363,8 @@ const useGameStore = create(
               breakCompletedOnTime: false,
             },
           };
-        }),
+        });
+      },
 
       tickBreak: () => get().syncBreakSession(),
 
@@ -5639,44 +5653,6 @@ const useGameStore = create(
           };
         }),
 
-      /**
-       * addBuildingPassiveResources
-       * Gọi từ useGameLoop mỗi phút nghỉ cho từng infrastructure building.
-       * Cộng nguyên liệu thô + tinh luyện vào đúng bucket kỷ nguyên của công trình đó.
-       */
-      addBuildingPassiveResources: (bpId) => {
-        const eff = BUILDING_EFFECTS[bpId];
-        if (!eff || eff.type !== 'infrastructure') return;
-        const eraKey = eff.era;
-        set((prev) => {
-          const level = prev.buildingLevels?.[bpId] ?? 1;
-          const levelMult = getBuildingLevelMultiplier(level);
-
-          const prevRef = normalizeRefinedBag(prev.resourcesRefined?.[eraKey]);
-          const bookKey = `book${eraKey}`;
-          const prevBook = prev.resources[bookKey] ?? {};
-          const rawResourceIds = (ERA_METADATA[eraKey]?.resources ?? []).map((resource) => resource.id);
-          const t1Add = Math.floor((eff.passiveT1PerBreakMin ?? 0) * levelMult);
-          const updatedBook = { ...prevBook };
-          if (rawResourceIds[0]) {
-            updatedBook[rawResourceIds[0]] = (updatedBook[rawResourceIds[0]] ?? 0) + Math.ceil(t1Add / 2);
-          }
-          if (rawResourceIds[1]) {
-            updatedBook[rawResourceIds[1]] = (updatedBook[rawResourceIds[1]] ?? 0) + Math.floor(t1Add / 2);
-          }
-          const refinedGain = (eff.passiveT2PerBreakMin ?? 0) * levelMult;
-          return {
-            resources: { ...prev.resources, [bookKey]: updatedBook },
-            resourcesRefined: {
-              ...prev.resourcesRefined,
-              [eraKey]: {
-                t2: prevRef.t2 + refinedGain,
-                t3: 0,
-              },
-            },
-          };
-        });
-      },
 
       // ─── Hệ thống Nghiên Cứu ─────────────────────────────────────────────
       /**
@@ -5691,7 +5667,7 @@ const useGameStore = create(
         if (!isCurrentEraBlueprint(bpId, state.progress.activeBook)) return false;
         if ((state.research?.researched ?? []).includes(bpId)) return false;
         if (state.blueprints.some((b) => b.id === bpId)) return false;
-        const cost = getWonderResearchCost(state.buildings, bpId, meta.rpCost);
+        const cost = researchCostOf(state.buildings, bpId, meta.rpCost);
         if ((state.research?.rp ?? 0) < cost) return false;
         const researchFeed = makeResearchReadyNotification(bpId);
         set((prev) => ({
@@ -5793,38 +5769,6 @@ const useGameStore = create(
         return true;
       },
 
-      /**
-       * craftTier
-       * Chế tác nguyên liệu tinh luyện từ nguyên liệu thô của cùng kỷ.
-       * @param {number} era - kỷ nguyên
-       * @param {'t2'} tier
-       * @param {number} times - số lần chế tác
-       */
-      craftTier: (era, tier, times = 1) => {
-        if (tier !== 't2') return false;
-        const state   = get();
-        const cost    = getWonderRefinedCraftCost(state.buildings) * times;
-        const bookKey = `book${era}`;
-        const bag     = state.resources[bookKey] ?? {};
-        const updatedBook = spendRawResources(bag, cost);
-        if (!updatedBook) return false;
-
-        set((prev) => {
-          const refined = normalizeRefinedBag(prev.resourcesRefined?.[era]);
-          return {
-            resources: {
-              ...prev.resources,
-              [bookKey]: updatedBook,
-            },
-            resourcesRefined: {
-              ...prev.resourcesRefined,
-              [era]: { t2: refined.t2 + times, t3: 0 },
-            },
-            latestSessionUndo: null,
-          };
-        });
-        return true;
-      },
 
       /**
        * repairBuilding
@@ -5910,6 +5854,33 @@ const useGameStore = create(
        * Tiến hóa di vật lên giai đoạn tiếp theo bằng nguyên liệu tinh luyện.
        * Returns true nếu thành công, false nếu không đủ điều kiện.
        */
+      /**
+       * Ảnh chụp số liệu mà `check()` của thành tích đọc — dựng từ TRẠNG THÁI HIỆN TẠI.
+       *
+       * ⚠️ VÌ SAO PHẢI CÓ. Màn "Huy hiệu" cần trả lời "còn bao nhiêu nữa", mà con số ấy chỉ tồn
+       * tại bên trong `buildAchievementSnapshot` — một hàm riêng của file này, xưa nay chỉ chạy
+       * đúng một lần mỗi khi xong phiên. Không có lối này thì giao diện buộc phải tự dựng lại
+       * một bản snapshot thứ hai, tức hai công thức cho một sự thật, và chúng sẽ trôi khỏi nhau.
+       *
+       * ⚠️ ĐẮT: nó quét lại TOÀN BỘ `history` (fixture 180 ngày = 624 phiên). Chỗ gọi PHẢI bọc
+       * `useMemo` theo đúng những lát state nó đọc, đừng gọi thẳng trong thân render.
+       */
+      buildAchievementSnapshotNow: () => {
+        const s = get();
+        return buildAchievementSnapshot(
+          s.progress,
+          s.relics,
+          s.blueprints,
+          s.research,
+          s.history,
+          s.rankSystem,
+          s.streak,
+          s.buildings,
+          s.prestige,
+          s.player,
+        );
+      },
+
       evolveRelic: (relicId, opts = {}) => {
         const state   = get();
         const evoDef  = RELIC_EVOLUTION[relicId];
@@ -5921,7 +5892,7 @@ const useGameStore = create(
         const nextStageDef = evoDef.stages[currentStage + 1];
         const era          = evoDef.era;
         const refined      = normalizeRefinedBag(state.resourcesRefined?.[era]);
-        const refinedCost  = getWonderRelicEvolutionCost(state.buildings, nextStageDef);
+        const refinedCost  = relicEvolutionCostOf(state.buildings, nextStageDef);
 
         // Cộng Hưởng: tùy chọn trả MỘT PHẦN bằng TTCH (tối đa 50%, không bao giờ
         // bỏ hết — người chơi vẫn phải có ≥50% chi phí bằng tinh luyện thật).
@@ -5990,8 +5961,25 @@ const useGameStore = create(
           PRESTIGE_MAX_STACKS * PRESTIGE_BONUS_PER_RUN,
           state.prestige.permanentBonus + PRESTIGE_BONUS_PER_RUN,
         );
+        /*
+          ⚠️ BA ĐẶC QUYỀN THĂNG HOA NAY CÓ THẬT (2026-09-02, đóng `TECH_DEBT #3`).
+          `kien_thuc_nen` (3 SP) · `ke_thua` (5 SP) · `sieu_viet` (8 SP) có mô tả hứa hẹn rành
+          mạch trong `constants.js` từ lâu, và hàm này **chưa bao giờ đọc tới chúng** — tức Đàm bỏ
+          16 điểm kỹ năng cho ba thứ không làm gì, và app nói với anh là chúng có làm.
+          Luật nằm ở `engine/prestigeCarryover.js` (thuần, tất định); hàm này chỉ áp dụng.
+          ⚠️ Cờ `sieuViet` để trong `prestige` vì đó là một trong số ít nhánh SỐNG SÓT qua reset —
+          để ở `player` thì `makeProgressionResetState()` xoá mất ngay lần Thăng Hoa kế tiếp.
+        */
+        const giuLai = tinhGiuLai({
+          unlockedSkills: state.player.unlockedSkills,
+          sp: state.player.sp,
+          skillsMacDinh: makeDefaultSkills(),
+        });
+        const resetState = makeProgressionResetState();
+
         set({
-          ...makeProgressionResetState(),
+          ...resetState,
+          player: { ...resetState.player, sp: giuLai.sp, unlockedSkills: giuLai.unlockedSkills },
           timerConfig: state.timerConfig,
           relics: state.relics,
           achievements: state.achievements,
@@ -6006,6 +5994,8 @@ const useGameStore = create(
             count:          newCount,
             permanentBonus: newBonus,
             history:        [...state.prestige.history, { at: Date.now(), epAtPrestige: state.progress.totalEP }],
+            sieuViet:       giuLai.sieuViet || !!state.prestige.sieuViet,
+            giuKyNang:      giuLai.giuKyNang,
           },
           ui: makeDefaultUiState(),
           latestSessionUndo: null,

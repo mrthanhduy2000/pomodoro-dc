@@ -25,11 +25,11 @@
 import {
   ACHIEVEMENTS,
   BLUEPRINT_RARITY_LABEL,
+  STREAK_MILESTONES,
 } from './constants.js';
 import {
   getRewardTier,
   tierFromAchievementTier,
-  tierFromMissionBucket,
   tierFromSessionMultiplier,
 } from './rewardTiers.js';
 
@@ -50,7 +50,7 @@ const ACHIEVEMENT_LOOKUP = Object.fromEntries(ACHIEVEMENTS.map((a) => [a.id, a])
  * Một chồng toast chỉ đọc được khi vị trí ổn định — thứ vừa xảy ra (tổng kết
  * phiên) luôn ở trên cùng, thứ hiếm nhất (di vật) ngay dưới.
  */
-const SOURCE_ORDER = ['weekly', 'loot', 'relic', 'level', 'rank', 'achievement', 'mission'];
+const SOURCE_ORDER = ['weekly', 'loot', 'milestone', 'relic', 'level', 'achievement'];
 
 function sourceRank(source) {
   const index = SOURCE_ORDER.indexOf(source);
@@ -94,13 +94,29 @@ function buildWeeklyToast(pending) {
  * ⚠️ LÊN KỶ THÌ KHÔNG CÓ THẺ NÀY: kỷ mới là một trong bốn việc được phép chặn
  * màn hình, nên hộp thoại mở thẳng và toast sẽ chỉ là một bản sao thừa.
  */
-function buildLootToast(pendingReward, stageHint = null) {
+function buildLootToast(pendingReward, stageHint = null, buildHint = null) {
   if (!pendingReward || pendingReward.eraChanged) return null;
 
   const xp = Number(pendingReward.totalSessionXP ?? pendingReward.finalXP ?? 0);
   const resourceUnits = Object.values(pendingReward.resources ?? {})
     .reduce((sum, value) => sum + (Number(value) || 0), 0);
+  /*
+    ⚠️ XẾP HIẾM TRƯỚC, THƯỜNG SAU — dòng này chỉ được MỘT dòng, dài hơn là bị cắt "…", nên thứ
+    tự ở đây quyết định cái gì sống sót. Đo trên fixture 624 phiên (ngưỡng lấy thẳng từ
+    `constants.js`, không chép tay):
+      · Rương Lớn (phiên ≥60 phút)      —  63/624 =  10,1%
+      · Tinh luyện T2 (phiên ≥45 phút)  — 180/624 =  28,8%
+      · tài nguyên / RP                  — gần như MỌI phiên
+    Hai thứ đầu là phần thưởng cho việc KHÓ NHẤT Đàm làm, và chúng đã được tính từ lâu mà chưa
+    bao giờ được GỌI TÊN trên thẻ: "Rương Lớn" trước nay chỉ là chữ "lớn" viết thường bé xíu
+    trên huy hiệu hệ số, còn tinh luyện thì không hiện ở đâu cả. Để "+18 tài nguyên" — con số
+    có ở mọi phiên nên chẳng phân biệt được phiên nào — đứng trước chúng là đẩy phần thưởng
+    hiếm nhất ra khỏi dòng.
+  */
   const bits = [];
+  if (pendingReward.largeChest) bits.push('Rương Lớn');
+  const tinhLuyen = Number(pendingReward.t2Drop ?? 0);
+  if (tinhLuyen > 0) bits.push(`+${tinhLuyen} tinh luyện`);
   if (resourceUnits > 0) bits.push(`+${resourceUnits} tài nguyên`);
   if ((pendingReward.rpEarned ?? 0) > 0) bits.push(`+${pendingReward.rpEarned} RP`);
 
@@ -111,6 +127,53 @@ function buildLootToast(pendingReward, stageHint = null) {
   // Chỉ áp khi CÒN ≤1 PHIÊN: mốc còn xa thì tin ấy chưa đáng chiếm chỗ, và một dòng lúc nào cũng
   // nói về mốc thì hết là tin.
 
+  /*
+    ⚠️ SỰ KIỆN CỦA PHIÊN LÀM CHỦ CÁI THẺ (2026-08-30). Đây là khoản dopamine lớn nhất bị bỏ phí
+    trong cả app, và nó đã được TÍNH XONG từ lâu — chỉ chưa bao giờ được HIỆN RA.
+
+    Đo trên 579 phiên thật: **63% số phiên sinh ra một sự kiện có TÊN, có ICON, có câu chuyện
+    riêng** — "Đột Phá! 💡 Khoảnh khắc hiểu sâu bất ngờ" (+25% XP) · "Lý Trí Thắng Lợi 💡" ·
+    "Buổi Thảo Luận Salon 🍷 Tranh luận triết học mang lại insight" (+30% XP). `POSITIVE_EVENTS`
+    (6 mục) cộng `ERA_MINI_EVENTS` (mỗi kỷ 2–3 mục riêng) — tổng xác suất ~0,67/phiên.
+    Nhưng nó CHỈ được vẽ bên trong `LootDropModal`, mà hộp thoại ấy — sau ADR-060 — chỉ tự mở khi
+    LÊN KỶ: **7/579 phiên = 1,2%**. Tức ~358 câu chuyện đã tính, đã cộng XP, rồi bị xoá không ai
+    thấy. Thẻ toast thì nói "🎁 Phiên đã xong · +18 tài nguyên · +120 RP" ở CẢ 579 phiên.
+
+    ⇒ Có sự kiện thì để SỰ KIỆN làm mặt thẻ: icon riêng, tên riêng, câu chuyện riêng. Cái thẻ
+    thôi giống hệt nhau ở mọi phiên, và thứ Đàm đọc được đổi từ một con số anh không dùng để
+    quyết gì ("+18 tài nguyên") sang một câu kể phiên vừa rồi đã xảy ra chuyện gì.
+    ⚠️ KHÔNG đổi một luật tính thưởng nào — `positiveEventBonus` vẫn cộng y như cũ ở
+    `completeFocusSession`. Đây thuần là khâu HIỂN THỊ, đúng chỗ cắm mà ADR-060 đã chọn.
+    ⚠️ `stageHint` VẪN THẮNG ở phần mô tả: "còn một phiên nữa là tới «…»" là thứ khiến người ta
+    làm phiên tiếp, và nó hiếm hơn nhiều (chỉ khi còn ≤1 phiên). Sự kiện giữ icon + tên, nhường
+    một dòng mô tả — hai thứ không tranh nhau chỗ.
+    ⚠️ Bậc độ hiếm KHÔNG bị nâng lên theo sự kiện: bậc đang đo ĐỘ DÀI PHIÊN (×1.0/×1.3/×2.0), tức
+    thứ Đàm CHỦ ĐỘNG quyết được. Nâng bậc theo một cú tung xúc xắc sẽ làm bậc thôi nói lên điều
+    gì về chính phiên ấy.
+  */
+  const event = pendingReward.positiveEvent;
+  const eventBonus = Number(pendingReward.positiveEventBonus ?? 0);
+  if (event?.label) {
+    // ⚠️ Nhánh CÓ sự kiện cũng phải khoe hai thứ hiếm: chúng không tranh chỗ với câu chuyện
+    // (đây là phần đuôi nối sau `event.desc`), và bỏ chúng ở đây nghĩa là 63% số phiên — đúng
+    // những phiên VUI NHẤT — lại là những phiên giấu mất Rương Lớn.
+    const khoe = [
+      pendingReward.largeChest ? 'Rương Lớn' : null,
+      eventBonus > 0 ? `+${eventBonus.toLocaleString('vi-VN')} XP thưởng` : null,
+    ].filter(Boolean).join(' · ') || null;
+    return {
+      id: 'loot',
+      source: 'loot',
+      key: 'loot',
+      icon: event.icon ?? '✨',
+      name: event.label,
+      tier: tierFromSessionMultiplier(pendingReward.multiplier, pendingReward.jackpotApplied),
+      description: stageHint ?? buildHint ?? ([event.desc, khoe].filter(Boolean).join(' · ') || 'Phiên đã xong.'),
+      amount: xp > 0 ? `+${xp.toLocaleString('vi-VN')} XP` : null,
+      action: { detail: 'loot' },
+    };
+  }
+
   return {
     id: 'loot',
     source: 'loot',
@@ -118,7 +181,18 @@ function buildLootToast(pendingReward, stageHint = null) {
     icon: '🎁',
     name: 'Phiên đã xong',
     tier: tierFromSessionMultiplier(pendingReward.multiplier, pendingReward.jackpotApplied),
-    description: stageHint ?? (bits.length > 0 ? bits.join(' · ') : (pendingReward.tierLabel ?? 'Phần thưởng đã được cộng.')),
+    /*
+      ⚠️ THẺ CỦA PHIÊN THƯỜNG PHẢI NÓI PHIÊN ẤY ĐẨY ĐƯỢC CÁI GÌ (2026-09-02, giảm nhẹ
+      `TECH_DEBT #14`). Lễ mừng thành phố chỉ chạy ở ~5% số phiên; 95% còn lại Đàm làm xong 25
+      phút thật và thứ duy nhất anh nhận là một thẻ xám ghi "+20 tài nguyên · +18 RP" — hai con
+      số anh không dùng để quyết bất cứ điều gì, và giống hệt nhau ở mọi phiên.
+      `buildHint` đổi nó thành TIẾN ĐỘ: "Cảng Biển Lớn · còn 4 phiên". Cùng một tấm thẻ, cùng
+      bằng ấy chỗ, nhưng nó ĐỔI sau mỗi phiên và nó trả lời được câu "làm thêm phiên nữa thì
+      được gì" — đúng câu mà cả vòng 24 xác định là gốc của chữ "chán".
+      ⚠️ Thứ tự nhường: `stageHint` (hiếm nhất, "còn 1 phiên nữa là tới …") > `buildHint` >
+      danh sách tài nguyên. KHÔNG đổi một luật tính thưởng nào — thuần khâu hiển thị.
+    */
+    description: stageHint ?? buildHint ?? (bits.length > 0 ? bits.join(' · ') : (pendingReward.tierLabel ?? 'Phần thưởng đã được cộng.')),
     amount: xp > 0 ? `+${xp.toLocaleString('vi-VN')} XP` : null,
     action: { detail: 'loot' },
   };
@@ -156,20 +230,6 @@ function buildLevelToast(entry) {
   };
 }
 
-function buildRankToast(rankUp) {
-  if (!rankUp?.rankLabel) return null;
-  return {
-    id: `rank:${rankUp.rankLabel}`,
-    source: 'rank',
-    key: rankUp.rankLabel,
-    icon: rankUp.rankIcon ?? '🎖️',
-    name: rankUp.rankLabel,
-    tier: 'hiem',
-    description: 'Đã hoàn thành thử thách danh xưng.',
-    amount: null,
-    action: { tab: 'skills' },
-  };
-}
 
 function buildAchievementToast(id) {
   const ach = ACHIEVEMENT_LOOKUP[id];
@@ -187,26 +247,54 @@ function buildAchievementToast(id) {
   };
 }
 
-function buildMissionToast(id, missionList) {
-  const mission = (missionList ?? []).find((item) => item?.id === id);
-  if (!mission) return null;
-  return {
-    id: `mission:${id}`,
-    source: 'mission',
-    key: id,
-    icon: '✅',
-    name: mission.label ?? 'Nhiệm vụ đã xong',
-    tier: tierFromMissionBucket(mission.bucket),
-    description: 'Nhiệm vụ ngày đã hoàn thành.',
-    amount: mission.rewardXP > 0 ? `+${mission.rewardXP} XP` : null,
-    action: { tab: 'skills' },
-  };
-}
 
 /**
  * Bản vẽ vừa nghiên cứu xong. Store ghi nó vào `notificationFeed` (hộp thư), chứ
  * không có kênh riêng — nên chỗ gọi truyền thẳng bản vẽ vào đây khi cần.
  */
+const MILESTONE_DAYS = new Map(STREAK_MILESTONES.map((m) => [m.days, m]));
+
+/**
+ * MỐC CHUỖI — thẻ ăn mừng ngày chuỗi chạm mốc 7 / 14 / 30 (2026-09-01).
+ *
+ * VÌ SAO CÓ: `STREAK_MILESTONES` tồn tại từ lâu và được dùng để vẽ "đích kế tiếp" ở thanh trên,
+ * nhưng LÚC CHẠM mốc thì app không nói một câu nào — con số chuỗi chỉ lặng lẽ nhích thêm một.
+ * Mốc 30 còn mở +5% allBonus VĨNH VIỄN (`BEN_VUNG_STREAK_THRESHOLD`) mà cũng không được báo.
+ * Đây là phần thưởng đắt nhất game về mặt công sức (30 ngày liên tục) và rẻ nhất về mặt ăn mừng.
+ *
+ * ⚠️ KHÔNG THÊM MỘT TRƯỜNG NÀO VÀO STORE, KHÔNG DÙNG localStorage. Cái khó duy nhất là chống
+ * lặp: `streakDays` giữ nguyên giá trị ở MỌI phiên trong ngày, nên hỏi mỗi nó thì làm phiên thứ
+ * hai của ngày mốc sẽ ăn mừng lần nữa. Nhưng `streakMissionXP` đã là tín hiệu **một lần mỗi
+ * ngày** có sẵn (`streakMissionClaimedToday` gác nó ở `completeFocusSession`), và ngưỡng của nó
+ * — `STREAK_MISSION_MIN_STREAK = 7` — nằm ĐÚNG dưới cả ba mốc (7 · 14 · 30), nên nó che trọn.
+ * Có test khoá quan hệ ấy: thêm một mốc nhỏ hơn 7 thì bài test đỏ chứ không im lặng bỏ sót.
+ *
+ * ⚠️ Bậc `huyenThoai` chỉ dành cho mốc VĨNH VIỄN. Mốc 7 và 14 là lời động viên; mốc 30 mở một
+ * thứ không bao giờ mất đi. Cho cả ba cùng bậc là làm bậc thôi nói lên điều gì.
+ */
+export function buildMilestoneToast(pendingReward) {
+  if (!pendingReward) return null;
+  // Tín hiệu MỘT-LẦN-MỖI-NGÀY. Thiếu vế này thì mỗi phiên trong ngày mốc lại ăn mừng một lần.
+  if (!(Number(pendingReward.streakMissionXP ?? 0) > 0)) return null;
+
+  const moc = MILESTONE_DAYS.get(Number(pendingReward.streakDays));
+  if (!moc) return null;
+
+  return {
+    id: `milestone-${moc.days}`,
+    source: 'milestone',
+    key: `milestone-${moc.days}`,
+    icon: moc.permanent ? '🏅' : '🔥',
+    name: `Chuỗi ${moc.days} ngày`,
+    tier: moc.permanent ? 'huyenThoai' : 'hiem',
+    description: moc.permanent
+      ? `«${moc.label}» — từ nay mọi phần thưởng +5% vĩnh viễn.`
+      : `${moc.days} ngày liên tục. Giữ nhịp này.`,
+    amount: null,
+    action: { tab: 'stats' },
+  };
+}
+
 export function buildBlueprintToast(blueprint) {
   if (!blueprint?.id) return null;
   const rarityLabel = BLUEPRINT_RARITY_LABEL[blueprint.rarity];
@@ -227,23 +315,49 @@ export function buildBlueprintToast(blueprint) {
  * Dựng danh sách toast từ trạng thái `ui` mà store đã ghi.
  * THUẦN: cùng đầu vào ⇒ cùng đầu ra, không đọc đồng hồ, không đọc store.
  *
+ * ⚠️ Tham số `missions` ĐÃ BỎ (2026-09-01): nó chỉ tồn tại để tra tên nhiệm vụ cho thẻ
+ * `mission`, mà nguồn ấy nay đi qua tab "Nhiệm vụ". Giữ lại một tham số không ai đọc là mời
+ * người sau truyền nhầm vị trí cho `extras`.
+ *
  * @param {object} ui        - `state.ui`
- * @param {object} missions  - `state.missions` (cần `list` để lấy tên nhiệm vụ)
  * @returns {Array} danh sách thẻ, đã xếp theo `SOURCE_ORDER`
  */
 /**
  * @param {object} [extras] tin ngoài `ui`. `stageHint`: câu về cột mốc sắp tới, chỉ truyền khi
  *   CÒN ≤1 PHIÊN là tới — xem `buildLootToast`.
  */
-export function buildRewardToasts(ui = {}, missions = {}, extras = {}) {
+/*
+  ⚠️ BA NGUỒN ĐÃ RỜI KHỎI CHỒNG THẺ (2026-09-01) — VÌ CHÚNG ĐÃ CÓ MỘT KÊNH BỀN RIÊNG.
+  Đo ca xấu nhất hợp lý (lên cấp + 2 thành tích + xong nhiệm vụ + mốc chuỗi + di vật + tổng kết
+  tuần): **8 thẻ · 87 từ · 12 giây thẻ nối đuôi nhau**, mà trần 3 thẻ KHÔNG cắt gì — nó chỉ HOÃN.
+  Và thứ tự cũ đặt «tổng kết tuần» LÊN ĐẦU, tức một bản báo cáo đọc lúc nào cũng được đứng trước
+  cả phiên vừa xong lẫn DI VẬT — phần thưởng hiếm nhất game, thứ bị đẩy xuống thẻ số 4 nên không
+  nằm trong ba thẻ được hiện.
+
+  Ba nguồn bị cắt, mỗi cái đã có chỗ nói KHÔNG hết hạn:
+   · `rank`    → CÙNG sự kiện đã được đẩy vào chuông (`makeRankUpFeedNotification`,
+     `gameStore.js`) ⇒ nó đang được kể HAI lần cho một lần xảy ra.
+   · `mission` → tab "Nhiệm vụ" là nút thứ 2/5 của thanh dưới và hiện tiến độ SỐNG của từng
+     nhiệm vụ (đo được 4 chỉ số ngay trên màn ấy); nhiệm vụ ngày xong gần như MỖI NGÀY, tức đây
+     là nguồn thường xuyên nhất và ít bất ngờ nhất trong chồng.
+
+  ⚠️ GIỮ `weekly` DÙ NÓ CŨNG CÓ CHẤM BỀN. Đã định cắt nó và đã đổi ý sau khi đọc chính bài test
+  của nó: thẻ này đến ĐÚNG MỘT LẦN MỖI TUẦN và không thể tự đến lần thứ hai. Một nhịp mỗi tuần là
+  thứ ĐỐI LẬP với lạm phát thông tin — cắt nó là cắt một khoảnh khắc, không phải cắt tiếng ồn.
+  ⚠️ GIỮ `achievement` dù nó cũng có chấm riêng (`navAttention.js`). Cái chấm 6px trả lời "có
+  việc"; nó KHÔNG phải một lời chúc mừng — mà mở khoá một thành tích đúng là khoảnh khắc đáng ăn
+  mừng. Vòng này Đàm xin THÊM hứng thú, nên chỗ cắt phải là chỗ LẶP, không phải chỗ VUI.
+
+  ⚠️ Mọi hàm `dismiss*` GIỮ NGUYÊN — chúng vẫn được gọi khi Đàm xem kênh bền.
+*/
+export function buildRewardToasts(ui = {}, extras = {}) {
   const toasts = [
     buildWeeklyToast(ui.weeklyReportPending),
-    buildLootToast(ui.lootModalOpen ? ui.pendingReward : null, extras.stageHint ?? null),
+    buildLootToast(ui.lootModalOpen ? ui.pendingReward : null, extras.stageHint ?? null, extras.buildHint ?? null),
+    buildMilestoneToast(ui.lootModalOpen ? ui.pendingReward : null),
     buildRelicToast(ui.relicNotification),
     buildLevelToast((ui.levelUpQueue ?? [])[0]),
-    buildRankToast(ui.rankUpNotification),
     ...(ui.achievementQueue ?? []).map(buildAchievementToast),
-    ...(ui.missionCompletedIds ?? []).map((id) => buildMissionToast(id, missions.list)),
   ].filter(Boolean);
 
   // Sắp xếp ỔN ĐỊNH theo nguồn: `sort` của JS đã ổn định từ ES2019 nên thứ tự

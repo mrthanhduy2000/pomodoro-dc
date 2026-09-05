@@ -1,8 +1,10 @@
 import React from 'react';
+import { weeklyChainStepState } from './weeklyChainStep';
 import { AnimatePresence, motion } from 'framer-motion';
 
 import useGameStore from '../store/gameStore';
 import useSettingsStore from '../store/settingsStore';
+import { missionXpMultiplier, streakBonusCapDays } from '../engine/wonderEffects.js';
 import RewardCard from './shared/RewardCard';
 import { DAILY_BONUS_COPY } from './dailyBonusCopy';
 import { useCustomMotion, useEnterMotion, usePressMotion, useSnapMotion } from '../lib/motionPresets';
@@ -22,11 +24,9 @@ import {
 } from '../engine/constants';
 
 
-function getStreakBonusCapDays(buildings = []) {
-  return STREAK_MAX_BONUS_DAYS + (
-    buildings.some((bpId) => BUILDING_EFFECTS[bpId]?.wonderEffect === 'streak_cap_plus') ? 10 : 0
-  );
-}
+// ⚠️ HAI BẢN CHÉP TAY ĐÃ GỠ (2026-09-05) — `getStreakBonusCapDays` và hệ số thưởng nhiệm vụ.
+// Cả hai hỏi `wonderEffect === '…'` mà KHÔNG kiểm `type === 'wonder'`; xem
+// `engine/wonderEffects.js`.
 
 function scaleMissionXP(xp, multiplier) {
   return Math.max(0, Math.round((xp ?? 0) * DAILY_MISSION_XP_SCALE * multiplier));
@@ -48,11 +48,9 @@ export default function DailyMissions() {
   }, [refreshDailyMissions]);
 
   const lightTheme = uiTheme === 'light';
-  const missionRewardMultiplier = buildings.some(
-    (bpId) => BUILDING_EFFECTS[bpId]?.wonderEffect === 'mission_bonus_20',
-  ) ? 1.2 : 1;
-  const streakBonusCapDays = getStreakBonusCapDays(buildings);
-  const streakBonusPct = Math.min(streak.currentStreak ?? 0, streakBonusCapDays) * (STREAK_BONUS_PER_DAY * 100);
+  const missionRewardMultiplier = missionXpMultiplier(buildings);
+  const capNgayChuoi = streakBonusCapDays(buildings);
+  const streakBonusPct = Math.min(streak.currentStreak ?? 0, capNgayChuoi) * (STREAK_BONUS_PER_DAY * 100);
 
   const list = missions.list ?? [];
   const completedCount = list.filter((mission) => mission.claimed).length;
@@ -213,10 +211,12 @@ export default function DailyMissions() {
             {chain.steps.map((step, index) => (
                 <WeeklyStepRow
                   key={step.id}
-                  currentIndex={chainStepIndex}
-                  done={index < chainStepsCompleted}
+                  {...weeklyChainStepState({
+                    index,
+                    currentStep: weeklyChain?.currentStep ?? 0,
+                    totalSteps: chain.steps.length,
+                  })}
                   index={index}
-                  isCurrent={!chainDone && index === chainStepIndex}
                   progress={weeklyChain?.stepProgress ?? 0}
                   step={step}
                 />
@@ -326,7 +326,7 @@ function ClaimButton({ label, lightTheme, onClick }) {
   );
 }
 
-function QuietSection({ children, eyebrow, lightTheme, meta, title }) {
+function QuietSection({ children, eyebrow, _lightTheme, meta, title }) {
   return (
     <section
       className="px-5 py-5"
@@ -428,7 +428,7 @@ function TodayMissionRow({ mission, rewardXP }) {
   );
 }
 
-function WeeklyStepRow({ currentIndex, done, index, isCurrent, progress, step }) {
+function WeeklyStepRow({ done, index, isCurrent, progress, step }) {
   const pct = Math.max(0, Math.min(100, (progress / Math.max(1, step.goal)) * 100));
 
   return (
@@ -447,13 +447,21 @@ function WeeklyStepRow({ currentIndex, done, index, isCurrent, progress, step })
           <div className={`text-[13px] leading-snug ${done ? 'line-through' : ''}`} style={{ color: done ? 'var(--muted-2)' : 'var(--ink)' }}>
             {step.label}
           </div>
-          <div className="mt-1 flex items-center justify-between gap-3">
-            <div className="text-[11px] text-[var(--muted)]">
-              {isCurrent ? `${progress}/${step.goal}` : done ? 'Đã chốt' : 'Đang chờ'}
-            </div>
-            <div className="mono text-[11px] tabular-nums" style={{ color: isCurrent ? 'var(--accent2)' : 'var(--muted)' }}>
-              {isCurrent ? `${Math.round(pct)}%` : index < currentIndex ? '100%' : '0%'}
-            </div>
+          {/*
+            ⚠️ ĐÃ GỠ CỘT «%» (2026-09-01) — VÀ ĐÓ VỪA LÀ DỌN NHIỄU VỪA LÀ VÁ MỘT LỖI THẬT.
+            (a) Nó là HÀM của dòng chữ ngay bên trái nó: "Đã chốt" ⇒ 100%, "Đang chờ" ⇒ 0%,
+                "2/3" ⇒ 67%. Cộng thanh tiến độ ngay bên dưới nữa là BA cách mã hoá một con số.
+            (b) VÀ NÓ NÓI NGƯỢC ĐÚNG LÚC ĂN MỪNG. Khi chuỗi tuần hoàn tất:
+                `chainStepIndex = steps.length − 1` (=3) nhưng `chainStepsCompleted = steps.length`
+                (=4). Ở bước CUỐI (index=3): cột trái `done = 3 < 4 = true` ⇒ in **"Đã chốt"**;
+                cột phải `isCurrent=false` nên rơi vào `index < currentIndex` = `3 < 3` = false
+                ⇒ in **"0%"**. Một bước vừa hoàn tất bị báo cáo là 0%, ngay tại khoảnh khắc trả
+                phần thưởng lớn nhất của tuần. Lỗi này có ở MỌI độ dài chuỗi ≥1.
+                Không cổng nào bắt được vì hai cột đều "đúng" theo công thức của riêng nó — đó
+                chính là cái giá của việc mã hoá một sự thật hai lần bằng hai công thức.
+          */}
+          <div className="mt-1 text-[11px] text-[var(--muted)]">
+            {isCurrent ? `${progress}/${step.goal}` : done ? 'Đã chốt' : 'Đang chờ'}
           </div>
           {isCurrent && (
             <div className="mt-2 h-[2px] overflow-hidden rounded-full bg-[var(--line)]">

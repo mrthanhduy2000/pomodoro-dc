@@ -114,6 +114,43 @@ test('giọng mạnh chỉ dành cho ca đáng — không phải mặc định',
 // ⚠️ Gác cấu trúc: ĐÚNG MỘT dòng khoảnh khắc được gắn vào App. Cái sai mà bài này ngăn là chuyện
 // một phiên sau thêm "thêm một dòng nữa cho tiện" và dựng lại đúng đống năm dòng vừa gỡ.
 // THỬ-CHO-ĐỎ: thêm lại `<FocusStageCountdown />` vào App ⇒ đỏ.
+// ⚠️ NHÁNH "VIỆC TIẾP THEO" (thêm 2026-09-01 ở một phiên khác) CHƯA TỪNG CÓ BÀI TEST NÀO — phát
+// hiện lúc gộp hai nhánh ngày 2026-09-05. Nó là nguồn thứ NĂM của cùng một dòng chữ, nên nếu
+// không khoá thì mọi lần ai đó xếp lại thứ tự đều có thể lặng lẽ đẩy nó lên trên và cướp chỗ của
+// bốn nguồn có hạn kia. Ba bài dưới đây khoá đúng lý lẽ mà chú thích của chính nhánh ấy đã nêu.
+const NEXT_ACTION = { icon: '✦', text: 'Mở kỹ năng «Thiền Định»', action: { tab: 'skills' }, othersCount: 2 };
+const onNavigate = () => {};
+
+test('việc tiếp theo đứng CUỐI — nó là nguồn DUY NHẤT không có hạn', () => {
+  // Có tổng kết tuần (đã là nguồn xếp sau cùng trong nhóm có hạn) thì việc tiếp theo vẫn phải nhường.
+  const out = pickFocusMoment({
+    stage: null, streak: null, weeklyUnseen: true, onOpenWeekly,
+    nextAction: NEXT_ACTION, onNavigate, sessionInProgress: false,
+  });
+  assert.match(out.text, /Tổng kết tuần/, 'một điểm kỹ năng chưa tiêu thì tuần sau tiêu vẫn thế; cửa sổ tổng kết tuần thì đóng');
+});
+
+test('hết mọi nguồn có hạn thì việc tiếp theo lên tiếng, kèm số việc còn lại', () => {
+  const out = pickFocusMoment({
+    stage: null, streak: null, weeklyUnseen: false,
+    nextAction: NEXT_ACTION, onNavigate, sessionInProgress: false,
+  });
+  assert.equal(out.text, NEXT_ACTION.text);
+  assert.equal(out.badge, '+2', 'còn việc khác đang chờ thì phải nói ra, nếu không dòng này giấu mất phần lớn việc');
+  assert.equal(typeof out.onClick, 'function');
+});
+
+// THỬ-CHO-ĐỎ: bỏ `&& !sessionInProgress` ở nhánh việc-tiếp-theo ⇒ bài này đỏ.
+test('việc tiếp theo cũng IM khi đang chạy phiên — nó là lời mời đi chỗ khác', () => {
+  assert.equal(
+    pickFocusMoment({
+      stage: null, streak: null, weeklyUnseen: false,
+      nextAction: NEXT_ACTION, onNavigate, sessionInProgress: true,
+    }),
+    null,
+  );
+});
+
 test('màn Tập trung chỉ gắn MỘT dòng khoảnh khắc', () => {
   assert.equal((APP.match(/<FocusMoment\b/g) ?? []).length, 1);
   for (const cu of ['FocusStageCountdown', 'FocusStreakMilestone', 'FocusWeeklyReportTease']) {

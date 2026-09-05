@@ -201,3 +201,26 @@ test('báo cáo tuần có đường vào trên ĐIỆN THOẠI, không chỉ �
   );
   assert.match(APP_CODE, /attention=\{weeklyReportUnseen\}/, 'thanh bên desktop mất chấm "chưa xem"');
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// LỄ MỪNG THÀNH PHỐ CHỈ ĐƯỢC CHẶN MÀN HÌNH KHI CÔNG TRÌNH THẬT SỰ VỪA XONG (2026-08-30)
+//
+// ⚠️ VÌ SAO. `buildGrowthMoment` trả ba loại: `built` (công trình hoàn thành) · `scaffold` (giàn
+// giáo nhích một nấc) · `tick` (thành phố nhúc nhích). Cả ba từng dựng một lớp phủ TOÀN MÀN HÌNH
+// 3,2 giây, mà Đàm gần như luôn có công trình trong hàng chờ ⇒ nó nổ sau ~100% số phiên:
+// 3,2 s × 579 phiên = 1.853 giây = **30,9 PHÚT** trong 180 ngày, để nói lại đúng câu đang in
+// THƯỜNG TRỰC trên chính màn Tập trung ("Đang xây … · còn N phiên") — hai chỗ đọc CÙNG một nguồn.
+//
+// Đây là bài test đọc mã nguồn vì điều kiện sống ở `App.jsx`, không ở một hàm thuần nào.
+test('lớp phủ lễ mừng chỉ dựng cho `kind === "built"`', () => {
+  const app = readFileSync(new URL('../App.jsx', import.meta.url), 'utf8')
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .split('\n').filter((l) => !/^\s*(\/\/|\*)/.test(l)).join('\n');
+  const dong = app.split('\n').find((l) => /const showMoment\s*=/.test(l));
+  assert.ok(dong, 'không còn `showMoment` — bố cục đã đổi, đọc lại');
+  assert.match(
+    dong,
+    /kind\s*===\s*'built'/,
+    'lễ mừng 3,2 giây lại chặn màn hình sau MỌI phiên; nó chỉ được dành cho công trình vừa xong',
+  );
+});

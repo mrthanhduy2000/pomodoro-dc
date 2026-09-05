@@ -1,0 +1,105 @@
+/**
+ * motSuThatMotCho.test.js — canh những chỗ app từng nói CÙNG MỘT sự thật hai lần trong một
+ * khung nhìn. Vòng 23 gỡ bốn chỗ; bài này giữ cho chúng không quay lại.
+ *
+ * ⚠️ Đây là bài đọc-MÃ-NGUỒN, nên nó chỉ canh được CẤU TRÚC. Con số điểm ảnh phải đo lại bằng
+ * `node scripts/shot.mjs --phone --fixture .shots/fixture.json --tab … --probe …`; số đo của
+ * từng mục ghi trong chú thích tại chỗ sửa.
+ */
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+
+import { QUICK_FOCUS_PRESETS } from '../engine/breaks.js';
+import { stripComments } from '../utils/sourceScan.js';
+
+const doc = (p) => stripComments(readFileSync(new URL(p, import.meta.url), 'utf8'));
+
+// THỬ-CHO-ĐỎ: dán lại `<span>Khoá</span>` vào hàng di vật ⇒ đỏ.
+test('Di vật: không in "Khoá" ở từng hàng của danh sách VỐN toàn hàng khoá', () => {
+  const ma = doc('./RelicInventory.jsx');
+  // ⚠️ GÁC CHẠY-RỖNG ĐÃ ĐỔI ĐÍCH (2026-09-01) — và nó đã làm đúng việc của nó: khi danh sách được
+  // TÁCH LÀM HAI (`conLay` còn lấy được / `daLo` đã lỡ), phép đo cũ hỏi `locked.map(` liền ĐỎ với
+  // đúng câu "phép đo chạy rỗng" thay vì lặng lẽ xanh trên một file nó không còn hiểu. Đây là lý
+  // do mọi bài test đọc-mã-nguồn phải có gác chạy-rỗng.
+  assert.match(ma, /conLay\.map\(/, 'không còn danh sách di vật chưa có — phép đo chạy rỗng');
+  assert.ok(
+    !/>Khoá</.test(ma),
+    'chữ "Khoá" quay lại từng hàng. Danh sách chỉ chứa di vật CHƯA có nên mọi hàng khoá THEO '
+    + 'CẤU TẠO — mở được thì di vật RỜI khỏi mảng chứ không đổi chữ tại chỗ.',
+  );
+  // ⚠️ Nhưng TÊN KHỦNG HOẢNG thì phải còn: nó trả lời "cái này rơi ở đâu", và một vòng soi đã đề
+  // nghị gộp cả 15 hàng thành một dòng — bị BÁC vì lý do này.
+  assert.match(ma, /relic\.crisisName/, 'mất tên khủng hoảng ⇒ các hàng thành những dòng giống hệt nhau');
+  // ⚠️ VÀ HÀNG PHẢI NÓI RA PHẦN THƯỞNG. Bản cũ in "??? từ <tên khủng hoảng>" — dùng đúng 2/7
+  // trường của mỗi di vật và vứt 5, trong đó có chính cái tên và cái phần thưởng. Mười lăm dòng
+  // "???" không tạo ra ham muốn nào; chúng chỉ nói "bạn đang thiếu mười lăm thứ".
+  assert.ok(!/\?\?\?/.test(ma), 'dấu "???" quay lại — hàng di vật lại giấu mất phần thưởng.');
+  assert.match(ma, /relic\.label/, 'hàng di vật phải nói TÊN phần thưởng.');
+});
+
+// THỬ-CHO-ĐỎ: đổi `CHU_KY_NGHI_CO_KHAC_NHAU` thành `true` ⇒ đỏ.
+test('Tập trung: viên "×N" chỉ hiện khi trục ấy THẬT SỰ phân biệt được các preset', () => {
+  const ma = doc('./PomodoroEngine.jsx');
+  assert.match(
+    ma, /CHU_KY_NGHI_CO_KHAC_NHAU = new Set\(QUICK_FOCUS_PRESETS\.map\(\(p\) => p\.longBreakAfterN\)\)\.size > 1/,
+    'điều kiện hiện viên "×N" phải HỎI THẲNG BẢNG, không được viết cứng `!== 4`',
+  );
+  // Và hôm nay bảng nói: không phân biệt được gì.
+  assert.equal(
+    new Set(QUICK_FOCUS_PRESETS.map((p) => p.longBreakAfterN)).size, 1,
+    'bảng preset nay có nhiều nhịp nghỉ dài khác nhau ⇒ viên "×N" tự hiện lại, đúng như thiết kế',
+  );
+  // Ba trục KIA thì phải còn phân biệt được, nếu không cả cái lưới so sánh là vô nghĩa.
+  for (const truc of ['focusMinutes', 'shortBreakDuration', 'longBreakDuration']) {
+    assert.ok(
+      new Set(QUICK_FOCUS_PRESETS.map((p) => p[truc])).size >= 3,
+      `trục "${truc}" thôi phân biệt được các preset — lưới này sinh ra để SO SÁNH`,
+    );
+  }
+});
+
+// THỬ-CHO-ĐỎ: dán lại `<p>Blueprints</p>` ⇒ đỏ.
+test('Bản vẽ: một màn MỘT cái tên, và cái tên ấy bằng tiếng Việt', () => {
+  const ma = doc('./BlueprintInventory.jsx');
+  // ⚠️ Hỏi NÚT CHỮ ĐƯỢC HIỆN RA, không hỏi cái tên. Bản đầu của bài này viết `/Blueprints/` và
+  // nó ĐỎ OAN vì trúng đúng tên hàm `MyBlueprintsTab` — đúng bài học "assert phải hỏi đích danh
+  // khối cần canh". Một nút chữ JSX nằm riêng một dòng giữa hai thẻ.
+  assert.ok(
+    !/^\s*Blueprints\s*$/m.test(ma),
+    'nhãn tiếng Anh "Blueprints" quay lại — viên tab ở trên đã nói bằng tiếng Việt',
+  );
+  assert.ok(!/^\s*Bản vẽ & nghiên cứu\s*$/m.test(ma), 'tiêu đề lặp lại tên tab quay lại');
+  assert.match(ma, /MyBlueprintsTab/, 'không đọc được file — phép đo chạy rỗng');
+});
+
+// THỬ-CHO-ĐỎ: dán lại câu luật vào `BuiltCard` ⇒ đỏ.
+test('Xưởng: luật chung nói MỘT lần, và tên đặc quyền không tóm tắt lại ở đầu màn', () => {
+  const ma = doc('./BuildingWorkshop.jsx');
+  const soLan = (ma.match(/Cấp công trình vẫn tăng thông số nền/g) ?? []).length;
+  assert.equal(
+    soLan, 1,
+    `câu luật chung xuất hiện ${soLan} lần trong mã. Nó đúng cho MỌI công trình từ cấp 2, nên nó `
+    + 'thuộc về tiêu đề mục chứ không thuộc về từng thẻ (đo trên màn thật: 4 lần một màn).',
+  );
+  assert.ok(
+    !/activePerkLabels/.test(ma),
+    'hàng chip tóm tắt tên đặc quyền quay lại — mỗi tên ấy đã in nguyên văn trên chính thẻ công '
+    + 'trình sinh ra nó, cùng một màn',
+  );
+});
+
+// ─── PHẢN HỒI KHI BẤM (2026-09-01) ───────────────────────────────────────────
+// THỬ-CHO-ĐỎ: đổi `<Motion.button` của thanh điều hướng về `<button` ⇒ đỏ.
+test('năm nút thanh điều hướng — thứ Đàm chạm nhiều nhất — phải NHÚC NHÍCH khi bấm', () => {
+  const ma = stripComments(readFileSync(new URL('../App.jsx', import.meta.url), 'utf8'));
+  const i = ma.indexOf('MOBILE_PRIMARY_TABS.map');
+  assert.ok(i > 0, 'không tìm thấy thanh điều hướng — phép đo chạy rỗng');
+  const khoi = ma.slice(i, i + 700);
+  assert.match(khoi, /<Motion\.button/, 'nút thanh dưới trở lại `<button>` trần — bấm không có phản hồi nào');
+  assert.match(khoi, /\{\.\.\.pressMotion\}/, 'không còn trải nhịp BẤM');
+  // ⚠️ Phải lấy từ `motionPresets` chứ không gõ tay `whileTap`: nhịp ở đó tự im khi bật
+  // "Giảm chuyển động", còn một prop viết rời thì không, và `motionCoverage.test.js` sẽ đỏ.
+  assert.match(ma, /usePressMotion\(\)/, 'nhịp bấm không lấy từ `lib/motionPresets`');
+  assert.ok(!/whileTap=\{/.test(khoi), 'gõ tay `whileTap` — phải đi qua `usePressMotion()`');
+});

@@ -117,7 +117,7 @@ function BoundaryFallback({
               onClick={onRetry}
               className="rounded-full border px-4 py-2.5 text-sm font-semibold transition"
               style={{
-                borderColor: 'rgba(201,100,66,0.22)',
+                borderColor: 'rgba(var(--accent-rgb),0.22)',
                 background: 'var(--ink)',
                 color: 'var(--canvas)',
                 boxShadow: '0 12px 24px rgba(31,30,29,0.12)',

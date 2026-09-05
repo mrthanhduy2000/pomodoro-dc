@@ -295,6 +295,43 @@ export function specSpan(parts) {
 }
 
 /**
+ * Ô ĐẤT mà một công trình chiếm, tính bằng ô lưới — dùng để hỏi địa hình xem chân nó có hụt không.
+ * ⚠️ MỘT LUẬT MỘT CÔNG THỨC: `sceneGraph.js` (bên DỰNG), `scripts/plinth-tri.mjs` (bên ĐO) và bài
+ * canh ngân sách tam giác đều gọi hàm này. Bản chép tay của phép nhân `BUILDING_SCALE` từng sai
+ * một lần và đếm 3 bệ thay vì 31 (2026-08-20) — sau đó số hằng đã dọn về đây, nay tới lượt công
+ * thức.
+ */
+export function buildingSpanCells(parts) {
+  return Math.max(1, Math.round(specSpan(parts) * BUILDING_SCALE));
+}
+
+/**
+ * BỆ KÈ dưới chân một công trình vắt qua mép thềm — khối đá lấp phần hụt.
+ *
+ * ⚠️ NÓ TỐN **28** TAM GIÁC KHI CÓ VÁT, 12 KHI KHÔNG — và chú thích cũ ở `sceneGraph.js` ghi "chỉ
+ * tốn 12 tam giác" như thể đó là con số DUY NHẤT. Câu ấy đúng ở thời một lăng trụ 4 cạnh luôn là
+ * 2×4 + 2×(4−2) = 12; **Phase 8B làm bề rộng vát phụ thuộc KÍCH THƯỚC của chính khối**, nên bệ kè
+ * đủ lớn thì có vát ⇒ mặt bên chia làm BA vành ⇒ 3×2×4 + 2×2 = **28**. Con số 12 đứng yên nhiều
+ * tháng vì không có gì đặt nó cạnh phép đo — đúng hình dạng `TECH_DEBT #43`, lần này ở một chú
+ * thích thay vì một bảng.
+ * ⚠️ VÀ ĐỪNG ĐỌC NGƯỢC LẠI THÀNH "12 ĐÃ CHẾT" — đó là bản vá tôi suýt ship. Đếm đủ 27 bệ của cả 15
+ * kỷ (2026-09-05): **26 bệ tốn 28, ĐÚNG MỘT bệ tốn 12** (nó quá mỏng để có vát). Ngoại lệ ấy được
+ * đếm tường minh ở `triangleBudget.test.js` chứ không bị làm tròn đi. Chênh lệch giữa phép đếm
+ * thuần và phép duyệt cảnh thật khớp TỪNG ĐƠN VỊ ở bốn kỷ đã đối chiếu (kỷ 6: 4 bệ ⇒ +112 · kỷ 8:
+ * 1 bệ ⇒ +28).
+ *
+ * @param {number} span  bề ngang ô đất (`buildingSpanCells`)
+ * @param {number} drop  phần hụt so với cao độ đứng
+ * @returns {object|null} `null` khi không hụt — không hụt thì KHÔNG có bệ, chứ không phải bệ cao 0
+ */
+export function plinthParts(span, drop) {
+  if (!(drop > 0)) return null;
+  return [prism({
+    y: 0, w: span * 0.92, d: span * 0.92, h: drop, sides: 4, taper: 1, role: 'stone',
+  })];
+}
+
+/**
  * Hình bao CHỮ NHẬT thật của một danh sách khối — trả về `{w, d}` theo đúng hai trục X/Z.
  *
  * ⚠️ VÌ SAO KHÔNG DÙNG `specSpan` CHO VIỆC NÀY. `specSpan` trả về MỘT con số: cạnh của hình VUÔNG

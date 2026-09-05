@@ -20,7 +20,7 @@ globalThis.window = {
 const [
   { default: useGameStore, GAME_STORE_SCHEMA_VERSION },
   { localDateStr },
-  { PRESTIGE_EP_REQUIREMENT, TINH_THE_HARD_CAP },
+  { PRESTIGE_EP_REQUIREMENT, TINH_THE_HARD_CAP, SKILL_TREE },
 ] = await Promise.all([
   import('./gameStore.js'),
   import('../engine/time.js'),
@@ -319,27 +319,38 @@ test('Cộng Hưởng: evolveRelic từ chối nếu thiếu phần refined ≥5
   assert.equal(useGameStore.getState().relicEvolutions.mam_song_bat_diet ?? 0, 0);
 });
 
-test('Cộng Hưởng: unlockSkill elite cộng hưởng tốn 11 SP (server tính lại, chống tamper)', () => {
+// ⚠️ GIÁ HỎI CHÍNH BẢNG, KHÔNG CHÉP TAY (sửa 2026-08-30). Ba bài dưới đây từng viết cứng 22/14/11
+// SP. Khi giá cây kỹ năng hạ 3/7/14/22 → 2/3/5/8 (cây 336 → 138 SP, tức 15,9 năm → 1,7 năm — xem
+// `skillTreeCost.test.js`), cả ba ĐỎ trên mã hoàn toàn đúng: **phép đo già đi, không phải mã hỏng**.
+// Nay chúng đọc `SKILL_TREE` nên chúng canh đúng thứ chúng định canh — *"trừ ĐÚNG chi phí"*,
+// *"thiếu SP thì không mất oan"*, *"cộng hưởng giảm nửa giá và server tính lại"* — mà không phụ
+// thuộc vào việc bảng giá hôm nay là bao nhiêu.
+const GIA_ELITE = Object.values(SKILL_TREE)
+  .flatMap((b) => b.nodes)
+  .find((n) => n.id === 'sieu_tap_trung').spCost;
+const GIA_ELITE_CONG_HUONG = Math.ceil(GIA_ELITE / 2);
+
+test('Cộng Hưởng: unlockSkill elite cộng hưởng chỉ tốn NỬA giá (server tính lại, chống tamper)', () => {
   resetStore();
   useGameStore.setState((s) => ({
-    player: { ...s.player, sp: 11, unlockedSkills: { ...s.player.unlockedSkills, tap_trung_sieu_viet: true } },
+    player: { ...s.player, sp: GIA_ELITE_CONG_HUONG, unlockedSkills: { ...s.player.unlockedSkills, tap_trung_sieu_viet: true } },
     relics: [{ id: 'mam_song_bat_diet' }],
     relicEvolutions: { mam_song_bat_diet: 1 },
   }));
-  // Dù UI truyền 22, giá thực = 11 nhờ cộng hưởng.
-  assert.equal(useGameStore.getState().unlockSkill('sieu_tap_trung', 22, ['tap_trung_sieu_viet']), true);
+  // Dù UI truyền giá đầy đủ, giá thực chỉ còn một nửa nhờ cộng hưởng.
+  assert.equal(useGameStore.getState().unlockSkill('sieu_tap_trung', GIA_ELITE, ['tap_trung_sieu_viet']), true);
   const st = useGameStore.getState();
   assert.equal(st.player.unlockedSkills.sieu_tap_trung, true);
   assert.equal(st.player.sp, 0);
 
-  // Không cổ vật → cần đủ 22; tamper-down truyền 11 vẫn bị chặn.
+  // Không cổ vật → cần đủ giá đầy đủ; tamper-down truyền nửa giá vẫn bị chặn.
   resetStore();
   useGameStore.setState((s) => ({
-    player: { ...s.player, sp: 11, unlockedSkills: { ...s.player.unlockedSkills, tap_trung_sieu_viet: true } },
+    player: { ...s.player, sp: GIA_ELITE_CONG_HUONG, unlockedSkills: { ...s.player.unlockedSkills, tap_trung_sieu_viet: true } },
     relics: [],
     relicEvolutions: {},
   }));
-  assert.equal(useGameStore.getState().unlockSkill('sieu_tap_trung', 11, ['tap_trung_sieu_viet']), false);
+  assert.equal(useGameStore.getState().unlockSkill('sieu_tap_trung', GIA_ELITE_CONG_HUONG, ['tap_trung_sieu_viet']), false);
   assert.equal(useGameStore.getState().player.unlockedSkills.sieu_tap_trung ?? false, false);
 });
 
@@ -361,32 +372,32 @@ test('Cộng Hưởng: tinhThe khởi tạo 0, schema đã bump có chủ ý, s�
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // unlockSkill — cơ bản (lưới an toàn Giai đoạn A: SP là tài sản, không mất oan)
-// (Chi phí thật của sieu_tap_trung = 22 SP khi không có cộng hưởng — đã xác lập
+// (Chi phí thật của `sieu_tap_trung` = `GIA_ELITE`, đọc thẳng từ `SKILL_TREE` — đã xác lập
 //  ở test "unlockSkill elite cộng hưởng" phía trên.)
 // ═══════════════════════════════════════════════════════════════════════════════
 
 test('unlockSkill: đủ SP + đủ điều kiện ⇒ mở khoá và trừ ĐÚNG chi phí', () => {
   resetStore();
   useGameStore.setState((s) => ({
-    player: { ...s.player, sp: 22, unlockedSkills: { ...s.player.unlockedSkills, tap_trung_sieu_viet: true } },
+    player: { ...s.player, sp: GIA_ELITE, unlockedSkills: { ...s.player.unlockedSkills, tap_trung_sieu_viet: true } },
     relics: [],
     relicEvolutions: {},
   }));
-  assert.equal(useGameStore.getState().unlockSkill('sieu_tap_trung', 22, ['tap_trung_sieu_viet']), true);
+  assert.equal(useGameStore.getState().unlockSkill('sieu_tap_trung', GIA_ELITE, ['tap_trung_sieu_viet']), true);
   const s = useGameStore.getState();
   assert.equal(s.player.unlockedSkills.sieu_tap_trung, true);
-  assert.equal(s.player.sp, 0); // trừ đúng 22, không hơn không kém
+  assert.equal(s.player.sp, 0); // trừ ĐÚNG giá, không hơn không kém
 });
 
 test('unlockSkill: thiếu SP ⇒ từ chối, SP và cây kỹ năng KHÔNG đổi', () => {
   resetStore();
   useGameStore.setState((s) => ({
-    player: { ...s.player, sp: 21, unlockedSkills: { ...s.player.unlockedSkills, tap_trung_sieu_viet: true } },
+    player: { ...s.player, sp: GIA_ELITE - 1, unlockedSkills: { ...s.player.unlockedSkills, tap_trung_sieu_viet: true } },
     relics: [],
     relicEvolutions: {},
   }));
-  assert.equal(useGameStore.getState().unlockSkill('sieu_tap_trung', 22, ['tap_trung_sieu_viet']), false);
+  assert.equal(useGameStore.getState().unlockSkill('sieu_tap_trung', GIA_ELITE, ['tap_trung_sieu_viet']), false);
   const s = useGameStore.getState();
   assert.equal(s.player.unlockedSkills.sieu_tap_trung ?? false, false);
-  assert.equal(s.player.sp, 21); // tài sản không bị trừ oan khi giao dịch thất bại
+  assert.equal(s.player.sp, GIA_ELITE - 1); // tài sản không bị trừ oan khi giao dịch thất bại
 });

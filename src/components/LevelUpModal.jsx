@@ -14,7 +14,7 @@ const PARTICLES = Array.from({ length: 10 }, (_, index) => ({
   size: 5 + (index % 3),
   delay: index * 0.05,
   color: [
-    'rgba(201,100,66,0.38)',
+    'rgba(var(--accent-rgb),0.38)',
     'rgba(163,158,150,0.34)',
     'rgba(255,255,255,0.55)',
   ][index % 3],

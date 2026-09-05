@@ -358,19 +358,45 @@ function LootDropContent({ reward, onClose, isLightTheme }) {
                       className="text-[34px] font-semibold leading-none tracking-[-0.04em] md:text-[2.5rem]"
                       style={{ color: isLightTheme ? 'var(--ink)' : '#f8fafc', fontFamily: 'var(--skin-font-display, ' + DISPLAY_FONT + ')' }}
                     >
-                      {resolvedPhase === 0 ? 'Đang tổng hợp phần thưởng' : 'Tổng kết phiên'}
+                      {/*
+                        ⚠️ TIÊU ĐỀ PHẢI NÓI THỨ TO NHẤT VỪA XẢY RA (2026-09-02). Trước đây nó ghi
+                        cố định "Tổng kết phiên" — một từ HÀNH CHÍNH — cho khoảnh khắc sướng nhất
+                        của cả app. Và cái tệ hơn chỉ lộ ra khi ĐO được chiều cao từng khối: lúc
+                        Đàm mở một KỶ NGUYÊN MỚI (sự kiện hiếm nhất game), tin ấy nằm trong một
+                        thẻ cao 299px ở ĐÁY một trang cao 3.201px — tức phải cuộn gần bốn màn hình
+                        mới thấy, trong khi dòng chữ to nhất ở đầu trang lại chỉ nói "xong rồi".
+                        Thẻ `EraChangeBanner` ở giai đoạn 6 GIỮ NGUYÊN: nó là phần ăn mừng chi
+                        tiết, và cả chuỗi 7 giai đoạn sinh ra để dồn nén tới đó. Thứ được sửa là
+                        cái NHAN ĐỀ — chỗ luôn nằm trong tầm mắt mà xưa nay không mang tin gì.
+                        Thứ tự: kỷ nguyên > lên cấp > xong phiên. Chỉ MỘT dòng, không thêm khối.
+                      */}
+                      {resolvedPhase === 0
+                        ? 'Đang tổng hợp phần thưởng'
+                        : reward.eraChanged
+                          ? 'Kỷ nguyên mới!'
+                          : reward.levelsGained > 0
+                            ? `Lên cấp ${reward.newLevel}!`
+                            : 'Xong rồi!'}
                     </h2>
-                    <p
-                      className="mt-2 max-w-xl text-sm leading-6 md:text-[15px]"
-                      style={{ color: isLightTheme ? 'var(--ink-2)' : '#cbd5e1' }}
-                    >
-                      Phiên tập trung {reward.effectiveMinutes} phút đã được ghi lại thành XP, tài nguyên và RP.
-                      {reward.bonusMinutes > 0 && (
-                        <span style={{ color: isLightTheme ? 'var(--accent2)' : '#c4b5fd' }}>
-                          {' '}+{reward.bonusMinutes} phút cộng thêm đã được tính vào tổng phiên này.
-                        </span>
-                      )}
-                    </p>
+                    {/*
+                      ⚠️ ĐÃ GỠ MỘT ĐOẠN VĂN KỂ LẠI NGHIỆP VỤ KẾ TOÁN (2026-09-02). Câu cũ:
+                      *"Phiên tập trung N phút đã được ghi lại thành XP, tài nguyên và RP."*
+                      Nó GIẢI THÍCH cách ghi sổ ở đúng khoảnh khắc đáng lẽ phải ăn mừng — mà ba
+                      con số ấy nằm ngay bên dưới dưới dạng thẻ to, nên câu này chỉ đọc lại chúng
+                      bằng chữ. Đo cả màn: 3.384px = 4,01 màn hình điện thoại · 327 chữ · 31 con
+                      số cho MỘT phiên xong.
+                      GIỮ LẠI đúng vế phút cộng thêm, vì đó là phần THƯỞNG thật (Đàm làm dài hơn
+                      mục tiêu thì được cộng), không phải lời kể về sổ sách — và nó không xuất
+                      hiện ở bất kỳ thẻ nào khác.
+                    */}
+                    {reward.bonusMinutes > 0 && (
+                      <p
+                        className="mt-2 max-w-xl text-sm font-semibold leading-6 md:text-[15px]"
+                        style={{ color: isLightTheme ? 'var(--accent2)' : '#c4b5fd' }}
+                      >
+                        Làm dài hơn mục tiêu +{reward.bonusMinutes} phút — đã tính vào phiên này.
+                      </p>
+                    )}
                   </div>
 
                   <motion.div
@@ -449,7 +475,7 @@ function LootDropContent({ reward, onClose, isLightTheme }) {
                       className="grid gap-3 p-4 md:grid-cols-[auto_1fr_auto]"
                       style={{
                         borderRadius: 'var(--skin-radius-card,18px)',
-                        border: isLightTheme ? '1px solid rgba(201,100,66,0.14)' : '1px solid rgba(129,140,248,0.30)',
+                        border: isLightTheme ? '1px solid rgba(var(--accent-rgb),0.14)' : '1px solid rgba(129,140,248,0.30)',
                         background: isLightTheme
                           ? 'linear-gradient(160deg, rgba(255,255,255,0.96), rgba(248,235,228,0.90))'
                           : 'rgba(49,46,129,0.40)',
@@ -460,7 +486,7 @@ function LootDropContent({ reward, onClose, isLightTheme }) {
                         style={isLightTheme ? {
                           borderRadius: 'var(--skin-radius-control,14px)',
                           background: 'rgba(var(--accent-rgb),0.1)',
-                          border: '1px solid rgba(201,100,66,0.16)',
+                          border: '1px solid rgba(var(--accent-rgb),0.16)',
                           color: 'var(--accent2)',
                           fontFamily: MONO_FONT,
                         } : { borderRadius: 'var(--skin-radius-control,14px)' }}
@@ -522,21 +548,23 @@ function LootDropContent({ reward, onClose, isLightTheme }) {
                 >
                   <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
                     <div>
-                      <p
-                        className="mono text-[10px] uppercase tracking-[0.2em]"
-                        style={{ color: isLightTheme ? 'var(--muted-2)' : '#94a3b8', fontFamily: MONO_FONT }}
-                      >
-                        Tài nguyên và nghiên cứu
-                      </p>
+                      {/* ⚠️ ĐÃ GỠ nhãn mắt "Tài nguyên và nghiên cứu" (2026-09-02): nó nói
+                          ĐÚNG điều mà tiêu đề ngay dưới nó nói, cách nhau 4px. Hai chỗ nói cùng
+                          một chuyện thì chỗ nói ít hơn phải nhường — luật đã dùng cho ô "Cư dân"
+                          ở màn Thành Phố. */}
                       <h3
-                        className="mt-1 text-[28px] font-semibold leading-none"
+                        className="text-[28px] font-semibold leading-none"
                         style={{ color: isLightTheme ? 'var(--ink)' : '#ffffff', fontFamily: 'var(--skin-font-display, ' + DISPLAY_FONT + ')' }}
                       >
-                        Những gì phiên này mang về
+                        Phiên này mang về
                       </h3>
-                      <p className="mt-2 text-sm leading-6" style={{ color: isLightTheme ? 'var(--ink-2)' : '#94a3b8' }}>
-                        Từ nguyên liệu thô tới tinh luyện và nghiên cứu, mọi phần thưởng được gom lại ở đây theo cùng một nhịp đọc.
-                      </p>
+                      {/*
+                        ⚠️ ĐÃ GỠ (2026-09-02): *"Từ nguyên liệu thô tới tinh luyện và nghiên cứu,
+                        mọi phần thưởng được gom lại ở đây theo cùng một nhịp đọc."* Câu ấy mô tả
+                        BỐ CỤC CỦA TRANG, không mô tả phần thưởng nào — nó nói cho người đọc biết
+                        cái danh sách ngay dưới nó là một danh sách. Ba dòng chữ ở khoảnh khắc
+                        đang cần ít chữ nhất.
+                      */}
                     </div>
                       <div
                         className="rounded-full px-3 py-1.5 text-sm font-semibold"
@@ -694,9 +722,13 @@ function XPCounter({ base, final, countDuration, bonusXP, xpPerMinute, lightThem
           >
             Điểm kinh nghiệm
           </p>
-          <p className="mt-1 text-sm" style={{ color: lightTheme ? 'var(--ink-2)' : '#94a3b8' }}>
-            Giá trị cuối sau khi cộng mọi hệ số và phần thưởng thêm.
-          </p>
+          {/*
+            ⚠️ ĐÃ GỠ (2026-09-02): *"Giá trị cuối sau khi cộng mọi hệ số và phần thưởng thêm."*
+            Câu ấy đứng NGAY TRÊN con số, tức nó ĐẨY thứ Đàm muốn xem xuống dưới để giải thích một
+            phép cộng — mà ba ô ngay bên dưới (`GỐC` · `THƯỞNG THÊM` · `XP/PHÚT`) đã bày ra chính
+            phép cộng ấy bằng số, rõ hơn mọi câu chữ. Đo cả màn trước khi sửa: 3.384px = 4,01 màn
+            hình · 327 chữ · 31 con số cho MỘT phiên xong.
+          */}
         </div>
         <div
           className="mono flex h-12 w-12 items-center justify-center text-[12px] font-semibold uppercase tracking-[0.18em]"
@@ -766,7 +798,7 @@ function MiniMetric({ label, value, palette }) {
 function BonusPill({ icon, label, value, tone, lightTheme }) {
   const toneStyles = {
     amber: lightTheme ? 'border-[rgba(176,125,59,0.22)] bg-[rgba(242,230,209,0.72)] text-[#8b6733]' : 'border-white/8 bg-white/[0.05] text-[var(--ink)]',
-    orange: lightTheme ? 'border-[rgba(201,100,66,0.22)] bg-[rgba(248,235,228,0.76)] text-[var(--accent2)]' : 'border-[rgba(var(--accent-rgb),0.18)] bg-white/[0.05] text-[var(--accent-light)]',
+    orange: lightTheme ? 'border-[rgba(var(--accent-rgb),0.22)] bg-[rgba(248,235,228,0.76)] text-[var(--accent2)]' : 'border-[rgba(var(--accent-rgb),0.18)] bg-white/[0.05] text-[var(--accent-light)]',
     sky: lightTheme ? 'border-[rgba(131,155,176,0.22)] bg-[rgba(236,241,245,0.8)] text-[#5f7386]' : 'border-white/8 bg-white/[0.05] text-[var(--ink)]',
     violet: lightTheme ? 'border-[rgba(166,137,149,0.22)] bg-[rgba(243,236,239,0.8)] text-[#7b5c68]' : 'border-white/8 bg-white/[0.05] text-[var(--ink)]',
   };

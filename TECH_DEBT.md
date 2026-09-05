@@ -391,7 +391,7 @@
 
 ---
 
-## #3 — Khả năng mismatch: mô tả kỹ năng prestige (Thăng Hoa) không khớp code thật
+## #3 — ⚠️ **PHẦN LỚN ĐÃ XỬ LÝ (2026-09-02)** — mô tả kỹ năng prestige (Thăng Hoa) không khớp code thật
 
 - **Module**: `src/engine/constants.js` (mô tả 3 kỹ năng `kien_thuc_nen`/`ke_thua`/`sieu_viet`) +
   `src/store/gameStore.js` (`triggerPrestige`)
@@ -428,6 +428,26 @@
   tả), test đó PHẢI được cập nhật kèm. Ưu tiên cao hơn 2 mục God File ở trên vì ảnh hưởng trực
   tiếp trải nghiệm người dùng thật.
 
+
+- **⚠️ ĐÃ NỐI DÂY 2026-09-02 — chọn (b) NỐI DÂY, không chọn (a) sửa mô tả.** Ba kỹ năng ấy tốn
+  **16 SP**; sửa mô tả thành "không làm gì" là hợp thức hoá việc bán một món hàng rỗng.
+  Luật nằm ở `src/engine/prestigeCarryover.js` (thuần, TẤT ĐỊNH — có test đảo thứ tự khoá để
+  chứng minh):
+  - `kien_thuc_nen` (3 SP) → giữ lại đúng MỘT kỹ năng Cao Cấp, chọn theo *đắt nhất trước, hoà thì
+    id nhỏ hơn* (không random, không phụ thuộc thứ tự mở khoá).
+  - `ke_thua` (5 SP) → giữ `Math.floor(sp × 0.50)`. **Làm tròn XUỐNG**: hứa 50% thì 13 ra 6, không
+    phải 7 — làm tròn lên là tự tặng thêm một điểm mà mô tả không hứa.
+  - `sieu_viet` (8 SP) → cờ `prestige.sieuViet` SỐNG SÓT qua reset (để ở `player` thì lần Thăng Hoa
+    kế tiếp xoá mất), và phiên ≥30' ở kỷ 1 nhận +100% XP.
+  Bài "[ĐẶC TẢ BUG #3]" từng cố ý đóng băng hành vi lỗi đã được **thay** (không nới), kèm một bài
+  ĐỐI CHỨNG: chưa mua ba kỹ năng ấy thì reset vẫn sạch trơn — thiếu nó thì bản vá có thể đang tặng
+  đặc quyền cho mọi người chơi mà bài chính vẫn xanh.
+- **CÒN LẠI (thu hẹp):** vế *"ngưỡng kỷ nguyên giảm 20%"* của `sieu_viet` CHƯA nối — nó đòi sửa
+  `getActiveBook`, hàm được gọi một-tham-số ở rất nhiều nơi, và để hai nơi tính ngưỡng khác nhau
+  là cách chắc chắn nhất khiến hai màn hình nói hai kỷ khác nhau. Vế ấy **đã được GỠ khỏi mô tả**
+  nên app không còn hứa điều nó không làm. Muốn có thì phải làm tử tế: một nguồn duy nhất cho
+  ngưỡng, có ADR.
+
 ---
 
 ## #4 — Thiếu E2E test và giám sát production
@@ -457,7 +477,7 @@
 
 ---
 
-## #5 — Rủi ro lệch giữa mô tả tĩnh (`constants.js`) và hành vi code thật
+## #5 — ✅ **ĐÃ XỬ LÝ (2026-09-02)** — Rủi ro lệch giữa mô tả tĩnh (`constants.js`) và hành vi code thật
 
 - **Module**: `src/engine/constants.js` nói chung (không chỉ 3 kỹ năng ở mục #3)
 - **Priority**: Low-Medium
@@ -476,6 +496,20 @@
 - **Review Trigger**: định kỳ, hoặc khi phát hiện thêm 1 trường hợp lệch cụ thể khác (như #3).
 - **Owner**: (chưa gán)
 - **Status**: Open — mang tính phòng ngừa, không cấp bách.
+
+
+- **✅ ĐÃ XỬ LÝ 2026-09-02 — biến một LỜI HẸN thành một CỔNG.** Mục này kê đơn *"rà soát định kỳ
+  khi có thời gian rảnh"*, mà một lời hẹn rà soát thì **không bao giờ đỏ lên**: chính #3 đã chứng
+  minh — ba kỹ năng Thăng Hoa hứa hẹn rành mạch mà code chưa bao giờ nối dây, nằm im gần **hai
+  tháng** qua nhiều phiên đọc đúng file ấy. Nguyên nhân gốc mà mục này tự nêu là *"không có cơ chế
+  kiểm tra tự động nào"* — nay đã có: `src/engine/descriptionDrift.test.js` (2 bài, đã thử-cho-đỏ
+  3 cách) đối chiếu con số trong `description` với `moc` thật ở **310 thành tích**.
+- **Kết quả lần chạy đầu: 0 chỗ lệch thật.** 49 chỗ "lệch" là ĐỔI ĐƠN VỊ (`moc` tính bằng phút,
+  mô tả nói giờ) — cổng hiểu điều đó; 11 chỗ còn lại có số trong mô tả là SỐ THÁNG chứ không phải
+  ngưỡng, nằm trong danh sách miễn trừ **tường minh đếm được** (`assert.deepEqual`), nên mục thứ
+  mười hai rơi vào đây sẽ đỏ — **và một mục được SỬA để hết lệch cũng đỏ**, nhắc dọn danh sách.
+- ⚠️ Cổng này chỉ khả thi nhờ vòng 24 đổi 310/360 thành tích từ `check: (s) => s.x >= N` (một hàm,
+  đọc không ra ngưỡng) sang **DỮ LIỆU** `dem`/`moc`. *Biến luật thành dữ liệu thì mới canh được luật.*
 
 ---
 
@@ -500,7 +534,7 @@
 
 ---
 
-## #7 — Dependency: `npm install` cần flag `--legacy-peer-deps`
+## #7 — ✅ **ĐÃ HẾT HIỆU LỰC (2026-09-02)** — Dependency: `npm install` cần flag `--legacy-peer-deps`
 
 - **Module**: `package.json` (toàn dự án)
 - **Priority**: Low
@@ -518,6 +552,15 @@
 - **Review Trigger**: khi cần thêm một dependency mới mà xung đột trở nên khó quản lý hơn.
 - **Owner**: (chưa gán)
 - **Status**: Open — chấp nhận sống chung, không cấp bách.
+
+
+- **✅ ĐÃ HẾT HIỆU LỰC 2026-09-02.** Chạy `npm install --dry-run` **không kèm cờ nào**: giải xong
+  cây phụ thuộc, thêm 51 gói, **không một lỗi `ERESOLVE`**. Xung đột peer đã tự tan theo các lần
+  nâng cấp gói, mà không ai kiểm lại mục nợ. ⇒ cùng bài học với #13: *một mục nợ không được kiểm
+  lại cũng trôi y như một con số không được đo lại*.
+  ⚠️ `CLAUDE.md` vẫn ghi "cần `--legacy-peer-deps`" — giữ nguyên câu ấy vì nó VÔ HẠI (dùng cờ vẫn
+  chạy đúng) và vì máy của Đàm có thể có `node_modules` đời khác; nhưng nay nó là một lời khuyên
+  phòng hờ, không còn là một yêu cầu.
 
 ---
 
@@ -551,7 +594,7 @@
 
 ---
 
-## #9 — Persist localStorage không bắt `QuotaExceededError`
+## #9 — ✅ **ĐÃ XỬ LÝ (2026-09-02)** — Persist localStorage không bắt `QuotaExceededError`
 
 - **Module**: `src/lib/appIdentity.js` (`createLegacyCompatibleJSONStorage`, `storage.setItem`)
 - **Priority**: Medium
@@ -570,6 +613,12 @@
 - **Review Trigger**: khi làm backup/recovery, hoặc khi thấy lỗi lưu state trong log production.
 - **Owner**: (chưa gán)
 - **Status**: Open — phát hiện trong lúc phân tích bản vá C1 (2026-07-17), chưa xử lý.
+
+- **✅ ĐÃ XỬ LÝ 2026-09-02.** `setItem` nay bọc `try/catch`, và khi đầy thì **dọn `legacyKeys`
+  trước rồi thử lại** — những khoá ấy là bản sao của chính dữ liệu đang ghi nên xoá chúng vừa giải
+  phóng đúng lượng chỗ cần vừa không mất gì. Thất bại lần hai thì `console.error` nói rõ, KHÔNG
+  nuốt im lặng: nuốt lỗi ở đây nghĩa là Đàm mở lại app thấy mất tiến độ mà không có một dòng nào
+  giải thích.
 
 ---
 
@@ -1350,7 +1399,7 @@
 
 ---
 
-## #14 — **95% số phiên tập trung KHÔNG có lễ mừng nào** — và càng chơi lâu càng im lặng
+## #14 — ⚠️ **GIẢM NHẸ MỘT PHẦN (2026-09-02)** — 95% số phiên tập trung KHÔNG có lễ mừng nào
 
 - **Module**: cân bằng game — `src/engine/constants.js` (`CRAFT_QUEUE_SLOTS`, `sessionsToComplete`)
   + `advanceCraftingQueueWithPerks` (`gameStore.js:1494`). KHÔNG phải lỗi của `cityMoment.js`.
@@ -1530,9 +1579,22 @@
   `scripts/simulate-pacing.mjs` mô phỏng trọn 365 ngày mà chưa phiên AI nào dùng nó để soi trải
   nghiệm — nó xưa nay chỉ dùng để cân kinh tế.
 
+
+- **⚠️ GIẢM NHẸ, CHƯA ĐÓNG (2026-09-02).** Nguyên nhân gốc (ba hằng số nhân nhau + lọc theo kỷ)
+  **KHÔNG đụng tới** — hướng (b) mà Đàm chọn đòi sửa `BUILDING_ZONES`/`placeBuilding`, tức đụng
+  thẳng ADR-007 và bố cục Thành Phố; đó là việc riêng, phải có ADR trước.
+  Thứ ĐÃ làm là chữa TRIỆU CHỨNG lớn nhất mà không đổi một luật kinh tế nào: thẻ thưởng của phiên
+  thường nay nói **TIẾN ĐỘ** thay vì hai con số vô nghĩa. Trước: *"+20 tài nguyên · +18 RP"* —
+  giống hệt nhau ở mọi phiên, và Đàm không dùng chúng để quyết bất cứ điều gì. Sau: *"Cảng Biển
+  Lớn · còn 4 phiên"* — đổi sau mỗi phiên, và trả lời được câu *"làm thêm phiên nữa thì được gì"*.
+  Mỗi phiên đều đẩy hàng đợi tiến một bước; sự thật ấy vốn đã có, chỉ là chưa ai nói ra.
+  Thứ tự nhường ở phần mô tả: `stageHint` (hiếm nhất) > `buildHint` > danh sách tài nguyên.
+  ⇒ Tỉ lệ phiên có LỄ MỪNG vẫn ~5%; tỉ lệ phiên có một câu **nói được điều gì đó về tiến độ** nay
+  là 100% khi hàng đợi không rỗng. Mục này giữ **Open** cho phần gốc.
+
 ---
 
-## #13 — `useTimer.js` (1 100+ dòng, hot spot) có ĐÚNG 0 bài test — và tài liệu từng ghi ngược lại
+## #13 — ✅ **ĐÃ HẾT HIỆU LỰC (2026-09-02)** — `useTimer.js` (1 100+ dòng, hot spot) có ĐÚNG 0 bài test — và tài liệu từng ghi ngược lại
 
 - **Module**: `src/hooks/useTimer.js`
 - **Priority**: **Medium-High**
@@ -1569,6 +1631,12 @@
 - **Owner**: (chưa gán)
 - **Status**: Open — phát hiện 2026-08-12 khi định thực hiện chính task "nối bộ test đã có" và
   phát hiện bộ test đó không tồn tại.
+
+
+- **✅ MỤC NÀY ĐÃ LỖI THỜI 2026-09-02.** Đếm lại: `src/hooks/useTimer.test.js` có **41 bài test**
+  (57 KB), trong đó có cả bài canh độ trễ vào nghỉ vừa viết lại ở vòng 27. Tiêu đề mục nợ ("có ĐÚNG
+  0 bài test") đã sai sự thật từ lâu mà không ai đóng nó. ⇒ *Một mục nợ không được kiểm lại cũng
+  trôi y như một con số không được đo lại* — đúng bài học `TECH_DEBT #43`, áp cho chính file này.
 
 ---
 
@@ -1989,7 +2057,7 @@
 
 ---
 
-## #31 — `city.dispose()` KHÔNG giải phóng bản đồ bóng (app hiện KHÔNG dính, công cụ thì dính)
+## #31 — ✅ **ĐÃ XỬ LÝ (2026-09-02)** — `city.dispose()` KHÔNG giải phóng bản đồ bóng (app hiện KHÔNG dính, công cụ thì dính)
 
 - **Tên**: Bản đồ bóng của mặt trời sống sót qua `city.dispose()`
 - **Module**: `src/components/city/render3d/sceneGraph.js` (hàm `dispose()`, ~dòng 1167)
@@ -2019,6 +2087,22 @@
   đụng vào `dispose()` vì lý do khác thì sửa luôn.
 - **Owner**: phiên AI kế tiếp · **Status**: Open
 
+
+
+- **✅ ĐÃ XỬ LÝ 2026-09-02.** `dispose()` nay dọn cả `sun.shadow.map` rồi **gỡ tham chiếu về
+  `null`** — dọn mà giữ tham chiếu thì đối tượng đã chết vẫn bị neo. Dùng `?.` ở mọi bậc vì
+  `shadow.map` là `null` cho tới lần render ĐẦU TIÊN: một cảnh dựng rồi dọn mà chưa kịp vẽ lần nào
+  vẫn phải chạy qua đây không ném lỗi.
+- ⚠️ **VÌ SAO VẪN ĐÁNG SỬA DÙ APP KHÔNG DÍNH.** `CityScene3D.jsx` gọi `renderer.forceContextLoss()`
+  ngay sau, mất context thì GPU dọn sạch — nên app không rò rỉ. Nhưng một hàm tên `dispose()` mà chỉ
+  đúng **nhờ người gọi làm thêm một bước nữa** là đúng nhờ một thứ chẳng liên quan, đúng bẫy
+  Phase 7D (`roadColor` đúng nhờ một hằng số ở file khác). Công cụ dựng 24 cảnh liên tiếp trên MỘT
+  renderer thì dính thật: +2 texture mỗi cảnh, bản đồ bóng desktop 4096² ⇒ gần **800 MB**.
+- Khoá bằng `sceneStats.test.js` (bài "dispose() dọn cả bản đồ bóng, và chịu được gọi hai lần").
+  ⚠️ Phép thử ngược "gỡ hẳn phần dọn bóng" ĐÃ chạy và ĐỎ; hai phép còn lại bị hết bộ nhớ giữa
+  chừng (bộ test này dựng cảnh thật, rất nặng) — và chính lượt bị giết ấy để lại một file sửa dở,
+  bắt được nhờ chạy lại test chứ không nhờ `git status`. *Bộ thử ngược trên test nặng phải chạy
+  TỪNG phép một, và phải xác nhận khôi phục bằng cách CHẠY LẠI, không chỉ nhìn `git status`.*
 
 ---
 
@@ -3911,7 +3995,7 @@ gốc là đúng cái phễu Phase 9A).
 
 ---
 
-## #43 — Số tam giác trong `PERFORMANCE.md` không có gì canh, và nó ĐÃ trôi ở 6/15 kỷ
+## #43 — ✅ **ĐÃ ĐÓNG (2026-09-05)** — Số tam giác không có gì canh, và nó ĐÃ trôi ở 6/15 kỷ
 
 - **Module**: `PERFORMANCE.md` (bảng số) ↔ `src/engine/city3d/*` + `src/components/city/render3d/*`
   (nguồn sinh ra số)
@@ -3948,7 +4032,54 @@ gốc là đúng cái phễu Phase 9A).
   nhân "đường lởm chởm") ⇒ ghi lại thay vì mở rộng phạm vi.
 - **Review Trigger**: ngay trước phase kế tiếp có đụng hình học; hoặc khi có ai định trích một con
   số tam giác từ `PERFORMANCE.md` mà không tự đo lại.
-- **Owner**: chưa ai · **Status**: MỞ, đã đo đủ số, hướng (3) đã áp dụng, (1)+(2) chưa làm
+- **Owner**: phiên 2026-09-05 · **Status**: ✅ **ĐÃ ĐÓNG** — làm hướng **(1) + (2)**.
+
+### Đã đóng thế nào
+
+`src/engine/city3d/triangleBudget.test.js` — **bảng 15 mốc riêng từng kỷ**, đúng khuôn
+`drawCallBudget.test.js`, chạy trong `npm test` **dưới 1 giây**, không cần Chromium và không cần
+`three`.
+
+Chỗ khó mà mục nợ nêu (*"mặt đất/đường/chân trời, vì số ô con của chúng phụ thuộc
+`pavingSubdivision` và lưới địa hình"*) hoá ra **không phải chỗ cần giải**: thứ đã TRÔI là khối
+`city` (`e95cdf1` sửa `roofStyle.js`), còn mặt đất/đường/vòm trời/rặng núi là nền **cố định** —
+gộp chúng vào chỉ pha loãng tín hiệu, đúng `TECH_DEBT #22`. Nên bảng canh đúng khối `city`, và
+`collectCitySpecs` + `countTriangles` + `plinthParts` cộng lại là **đúng** nội dung khối ấy, không
+phải một thứ đại diện cho nó.
+
+**Neo vào một đường đo độc lập** (nếu không thì nó chỉ là một công thức tự soi gương — đúng bẫy
+`drawCallBudget` đã sập 2026-08-23): `scene-tri.mjs --era N --sessions 40 --level 1` ở bốn kỷ
+**1 · 6 · 8 · 15** ra **100.876 · 198.388 · 124.348 · 108.660**, khớp TỪNG ĐƠN VỊ.
+
+**Phép thử ngược**: sửa MỘT dòng `crown` trong `roofStyle.js` — đúng loại thay đổi mà `e95cdf1` đã
+làm — thì bảng ĐỎ ngay. Tức cổng này bắt được chính ca lịch sử đã sinh ra mục nợ.
+
+### Ba thứ tìm thấy trong lúc đóng
+
+1. ⚠️ **Chú thích ở `sceneGraph.js` ghi bệ kè *"chỉ tốn 12 tam giác"* — sai từ Phase 8B.** Phase ấy
+   làm bề rộng vát phụ thuộc KÍCH THƯỚC khối, nên bệ đủ lớn có vát ⇒ **28**. Chính phép đối chiếu
+   chéo lộ ra: hiệu số giữa phép đếm thuần và phép duyệt cảnh đúng bằng `số bệ × 28` (kỷ 6: 4 bệ ⇒
+   +112 · kỷ 8: 1 bệ ⇒ +28).
+2. ⚠️ **VÀ ĐỪNG ĐỌC NGƯỢC LẠI THÀNH "12 ĐÃ CHẾT"** — bản vá tôi suýt ship. Đếm đủ 27 bệ: **26 ăn
+   28, ĐÚNG MỘT ăn 12** (mỏng tới mức `bevelWidth` trả 0, vì nó lấy `min(w,d,h)` mà cái mỏng ấy
+   mỏng theo `h`). Ngoại lệ nay được đếm tường minh, không bị làm tròn.
+3. ⚠️ **Luật bệ kè có BA bản chép tay** (`sceneGraph.js` dựng · `plinth-tri.mjs` đo · bài test
+   canh). Đã gom về hai hàm THUẦN ở `parts.js` (`buildingSpanCells`, `plinthParts`) — hình học
+   trùng từng đơn vị sau khi gom (kỷ 6 vẫn 198.388).
+
+### Hai cái bẫy trong chính bài test này, cả hai do phép thử ngược bắt
+
+- Bài "tổng bệ khớp hiệu số" bản đầu viết `khongBe = tổng − soBe×28` rồi assert
+  `tổng === khongBe + soBe×28` — một hằng đẳng thức `x === x`, **không thể đỏ** (cùng bẫy ADR-048).
+  Nay nó đếm TỪNG bệ và đòi đúng phân bố `{12: 1, 28: 26}`.
+- Phép phá đầu tiên (nới `w`/`d` của bệ) **không nổ**, và **phép phá mới là thứ sai**: `bevelWidth`
+  lấy `min(w, d, h)`, mà cái bệ mỏng là mỏng theo `h`. Phá đúng (`h × 3`) thì đỏ 2 bài.
+
+### Còn lại có chủ đích
+
+Các BẢNG SỐ trong `PERFORMANCE.md` **chưa đo lại** — phiên này không được đụng file ấy. Nhưng nguyên
+nhân gốc của mục nợ (*"không có gì canh"*) đã hết: từ nay một dòng trôi sẽ ĐỎ ở `npm test`, chứ
+không đợi ai đó tình cờ đo lại.
 
 ---
 
@@ -4583,7 +4714,136 @@ cấp `Math.min(3,…)` → `Math.min(9,…)` · cắt bớt danh sách cấp th
 ---
 
 
-## #91 — Bài test canh khung bóng đổ CHÉP TAY hệ số `0,8` thay vì đọc từ mã, nên nó xanh kể cả khi mã dùng một `reach` khác
+## #95 — Xây MỘT công trình phải qua BA cổng tiền tệ, cả ba đều là hàm của số phút — ĐÀM CHỌN, tôi không tự chọn
+
+> Mở 2026-09-01 (vòng 23). Đây là phát hiện có điểm ĐƠN GIẢN HOÁ cao nhất cả vòng (8/10) nhưng
+> cũng có điểm RỦI RO cao nhất (6/10), vì nó đụng vào kinh tế game — thứ Đàm đã tích luỹ 180 ngày.
+
+- **Tên**: ba cổng tiền tệ chồng nhau trên cùng một hành động "xây một công trình"
+- **Module**: `src/engine/constants.js` (RP · tài nguyên thô · tinh luyện) · `BuildingWorkshop.jsx`
+- **Priority**: Medium · **Severity**: Medium
+- **Impact**: Đàm phải hiểu và theo dõi BA loại tiền để làm MỘT việc, mà cả ba đều suy ra từ cùng
+  một đại lượng gốc là SỐ PHÚT TẬP TRUNG. Ba con số cho một quyết định.
+- **Số đo**: kho thô thừa **20.422 đơn vị** = 2.552 tinh luyện quy đổi, trong khi nâng trọn 5 công
+  trình kỷ 8 lên cấp 3 chỉ tốn **180** ⇒ dư **14 lần**. (Đo trên fixture 180 ngày; công thức là
+  thật, nhịp chơi là giả — xem cảnh báo ở đầu `make-fixture.mjs`.)
+- **VÌ SAO CHƯA LÀM**: gộp hay bỏ một loại tiền là đổi luật KINH TẾ, không phải đổi hiển thị.
+  Nguyên tắc an toàn của vòng 23 là *đơn giản hoá thứ Đàm THẤY và CẢM, đừng xoá thứ Đàm đã KIẾM
+  ĐƯỢC* — mục này nằm ở phía bên kia ranh giới ấy.
+- **⚠️ ĐÃ BÁC một "phương án đỡ phí"**: nối dây một nút "đổi 8 thô lấy 1 tinh luyện" (hàm
+  `craftTier` từng tồn tại với 0 nơi gọi, đã xoá ở vòng 23). Chính con số 14 lần bác nó: bấm cái
+  nút ấy một buổi là xoá sạch tính khan hiếm của tinh luyện. Việc nó chưa bao giờ có nút bấm là
+  điều MAY, không phải điều thiếu.
+- **Review Trigger**: khi Đàm thấy kho tài nguyên là thứ phiền chứ không phải thứ vui.
+- **Owner**: Đàm quyết · **Status**: MỞ, chờ Đàm
+
+## #94 — ✅ **ĐÃ XỬ LÝ (2026-09-02)** — `BREAK_START_DELAY_MS` chờ 3,2 giây ở ~82% số phiên KHÔNG có lễ mừng nào để che
+
+> Mở 2026-09-01 (vòng 23). Tiền đề của hằng số này chết do HAI bản vá ở chỗ khác, không do ai
+> động vào `timerSession.js`.
+
+- **Tên**: độ trễ vào nghỉ là HẰNG SỐ trong khi thứ nó sinh ra để che là BIẾN
+- **Module**: `src/engine/timerSession.js` (`BREAK_START_DELAY_MS`) · `src/hooks/useTimer.js`
+- **Priority**: Medium · **Severity**: Low
+- **Impact**: sau mỗi phiên, màn hình giữ trạng thái vừa-xong thêm 3,2 giây trước khi chuyển sang
+  nghỉ. Chú thích của hằng số biện minh cho con số ấy bằng câu *"cả hai trường hợp người dùng đều
+  đang nhìn hộp phần thưởng"* — câu ấy nay SAI ở ~82% số phiên.
+- **Root Cause**: ADR-060 làm phiên thường thôi tự mở hộp phần thưởng; vòng 22 siết lễ mừng thành
+  phố xuống CHỈ khi có công trình vừa xong. Đo `sessionsToComplete` qua 15 kỷ: trung bình **5,60
+  phiên mỗi công trình ⇒ lễ mừng chỉ chạy ở 17,9% số phiên**. Trên fixture 588 phiên hoàn thành:
+  **31,4 phút** chờ không còn lý do, trong 180 ngày.
+- **Recommended Solution**: làm độ trễ THEO chính thứ nó che — 3.200 ms khi có lễ mừng, 500 ms khi
+  không (500 là giá trị đã chạy đúng suốt thời kỳ trước khi có lễ mừng). Tức đổi một HẰNG SỐ thành
+  một QUAN HỆ. Hai bài test hiện khoá quan hệ `BREAK_START_DELAY_MS >= GROWTH_MOMENT_MS` sẽ phải
+  viết lại thành có điều kiện.
+- **⚠️ VÌ SAO CHƯA LÀM**: (a) nó đụng thẳng luồng tự-vào-nghỉ, nơi một sai lầm sẽ **ÂM THẦM ăn bớt
+  giờ nghỉ thật** của Đàm; (b) khoảnh khắc ấy **KHÔNG chụp ảnh kiểm được trên bản dev** — `ui`
+  không nằm trong `partialize` nên không gieo được bằng `--fixture`, và cấm bấm "Bắt đầu" trên dev
+  vì dùng chung một hàng Supabase với bản thật. **Đổi một hành vi đồng hồ mà không quan sát được
+  nó là thứ phải hỏi Đàm trước.**
+- **Blocking Conditions**: cần một cách quan sát được khoảnh khắc sau-phiên trên dev.
+- **Owner**: Đàm quyết · **Status**: MỞ, chờ Đàm
+
+## #93 — 📌 **QUYẾT ĐỊNH, KHÔNG PHẢI NỢ (đánh dấu lại 2026-09-02)** — `buildCategoryAdvisor` (170 dòng) vẫn nằm trong file giao diện, và ĐÓ LÀ CÓ CHỦ ĐÍCH — đừng "dọn" nó xuống engine
+
+> Mở 2026-08-30, ngay sau khi chuyển thành công `summarizeFocusStats` xuống
+> `engine/statsFocus.js`. Ghi mục này để phiên sau **không mất công phân tích lại rồi đi tới cùng
+> một kết luận** — hoặc tệ hơn, đi tới kết luận ngược rồi kéo màu sắc xuống tầng engine.
+
+- **Tên**: khối sinh lời khuyên của tab Phân Loại còn ở `StatsDashboard.jsx`
+- **Module**: `src/components/StatsDashboard.jsx` (`buildCategoryAdvisor`, ~170 dòng)
+- **Priority**: Low · **Severity**: Low
+- **Impact**: 170 dòng sinh **văn bản Đàm đọc** (giọng cố vấn + tối đa 4 khuyến nghị + 3 kịch bản
+  + 3 tín hiệu) mà không có bài test nào.
+- **Root Cause / VÌ SAO KHÔNG CHUYỂN**: nó **không phải logic thuần** — nó là một *bộ dựng
+  view-model*. Đo được: mã màu dệt vào **7 chỗ** (`color: bestEfficiencyCat?.color ?? '#0ea5e9'`,
+  `uncategorizedShare >= 20 ? '#ef4444' : '#64748b'`…), có cả `icon: 'NX'/'XP'/'CB'`, và nó gọi
+  `fmtHours` — một hàm ĐỊNH DẠNG. Kéo nguyên khối xuống `engine/` là kéo bảng màu và hàm định
+  dạng xuống theo, tức phá đúng ranh giới mà `PROJECT_STRUCTURE.md` đang giữ (*"engine = logic
+  THUẦN, không JSX"*), và đi ngược bài học vừa rút ra ở `statsFocus.js` (*màu rời khỏi engine*).
+- **Current Risk**: thấp — văn bản viết dè dặt ("Thử…", "Hãy thử…"), không phát biểu như kết luận.
+  ⚠️ **Đã kiểm một nghi vấn và BÁC BỎ**: nhánh `Math.round(longestAvgCat.minutes /
+  longestAvgCat.sessions)` không có gác chia-cho-0 trong khi nhánh kế bên có
+  (`Math.max(sessions, 1)`) — bất đối xứng đáng ngờ, nhưng **không phải lỗi**:
+  `computeCategoryStats` đã lọc `sessions > 0` ở engine, và `longestAvgCat` lọc lại lần nữa. Gác
+  thừa, không phải gác thiếu.
+- **Future Risk**: trung bình — nó gác cỡ mẫu ở `totalSess < 4`, LỎNG hơn nhiều so với các tín
+  hiệu ở `gameMath.js` (cần 8–24 phiên). Tức nó có thể nói *"X mới là loại cho XP/phút tốt nhất"*
+  dựa trên 4 phiên.
+- **Recommended Solution**: **KHÔNG** chuyển nguyên khối. Nếu muốn test nó thì tách theo ĐÚNG
+  ranh giới: phần *quyết định* (chọn kịch bản nào, ngưỡng nào) xuống engine dưới dạng trả về
+  **khoá** (`'thieu-du-lieu'` · `'loang-vi-chua-phan-loai'` · …), còn phần *câu chữ + màu + icon*
+  ở lại giao diện tra theo khoá ấy. Đó cũng là cách gỡ được cái gác cỡ mẫu quá lỏng.
+- **Estimated Complexity**: trung bình (đụng văn bản người dùng đọc ⇒ phải chụp ảnh nghiệm thu).
+- **Blocking Conditions**: không có — nhưng đây là việc cải thiện cấu trúc, không phải sửa lỗi.
+- **Review Trigger**: khi có ai định "dọn nốt cho đồng bộ với `statsFocus.js`", hoặc khi cái gác
+  `totalSess < 4` sinh ra một lời khuyên sai mà Đàm để ý thấy.
+- **Owner**: chưa ai · **Status**: MỞ (có chủ đích)
+
+## #92 — ✅ **ĐÃ XỬ LÝ (2026-09-02)** — `no-unused-vars` đang TẮT cho MỌI file `.jsx`, nên code chết ở cả tầng giao diện là vô hình với lint
+
+> Mở 2026-08-30, phát hiện khi đi tìm lý do ba bảng kỳ chết sống sót nhiều tháng trong
+> `StatsDashboard.jsx`. ⚠️ **Rule ấy tắt KHÔNG phải do cẩu thả — đã kiểm và phải đính chính chẩn
+> đoán đầu tiên của chính tôi.** Bật thử lên thì ra 45 lỗi, nhưng phần lớn là **BÁO NHẦM**:
+> `DisasterModal.jsx` dùng `motion.` 6 lần mà vẫn bị tố "motion không dùng", vì luật gốc
+> `no-unused-vars` không hiểu `<motion.div>` trong JSX. Tắt rule là một cách NÉ lỗi giả, không
+> phải bỏ mặc.
+
+- **Tên**: tầng `.jsx` không có cổng nào bắt biến/hằng/import chết
+- **Module**: `eslint.config.js` dòng ~53 (`'no-unused-vars': 'off'` trong khối `files: ['**/*.jsx']`)
+- **Priority**: Medium · **Severity**: Low (không gây lỗi chạy, nhưng làm rác tích lại im lặng)
+- **Impact**: đo được trong đúng MỘT file (`StatsDashboard.jsx`, trước bản vá 2026-08-30): **3 hằng
+  số chết** (`PERIODS` · `METRIC_OPTIONS` · `PERIOD_UNITS`), **1 hàm chết** 30 dòng
+  (`summarizeSessionReviews`), **3 import chết** (`useReducedMotion` · `createRichTextPreview` ·
+  `computeAllTimeStats`) — tất cả đều có TỪ TRƯỚC bản vá, không ai biết. Toàn repo: 45 lỗi thô,
+  trong đó ~30 là `motion` báo nhầm ⇒ khoảng **15 lỗi THẬT** nằm rải ở ~10 file.
+- **Root Cause**: dự án không cài `eslint-plugin-react`, nên không có `react/jsx-uses-vars` — luật
+  duy nhất dạy `no-unused-vars` rằng một định danh xuất hiện trong JSX là ĐANG ĐƯỢC DÙNG.
+- **Current Risk**: thấp. Rác không chạy thì không hỏng gì; nó chỉ làm file phình và làm phiên sau
+  tưởng một hằng số chết là đang có tác dụng (đã suýt xảy ra: `PERIODS` có 5 kỳ trong khi màn hình
+  chỉ hiện 3, đọc lướt sẽ tưởng hai kỳ kia đang ở đâu đó).
+- **Future Risk**: trung bình, và **tăng dần theo thời gian** — mỗi phiên thêm một ít rác mà không
+  có cổng nào đếm. Đây chính là cách `StatsDashboard.jsx` đi tới 4.901 dòng.
+- **Recommended Solution**: thêm `eslint-plugin-react` (devDependency, không vào bundle) và bật
+  đúng **một** luật của nó — `react/jsx-uses-vars` — rồi mở lại `no-unused-vars` cho `.jsx` với
+  cùng `varsIgnorePattern: '^[A-Z_]'` mà khối `.js` đang dùng. Sau đó dọn ~15 lỗi thật.
+  ⚠️ **ĐỪNG** bật `no-unused-vars` mà chưa có plugin ấy: 30 lỗi giả sẽ khiến người ta hoặc tắt lại
+  rule, hoặc tệ hơn là đổi `varsIgnorePattern` thành một cái rây thủng để cho qua — tức mua một
+  cổng xanh bằng cách bỏ hết răng của nó.
+- **Estimated Complexity**: nhỏ (1 dependency + 2 dòng cấu hình), nhưng phần dọn 15 lỗi chạm nhiều
+  file ở nhiều màn khác nhau nên phải đi kèm một lượt chụp ảnh nghiệm thu.
+- **Blocking Conditions**: thêm một dependency là quyết định của Đàm, không phải của phiên AI —
+  dự án có lịch sử CỐ Ý gỡ dependency cho nhẹ (Qwen/WebLLM, `@huggingface/transformers`,
+  `@anthropic-ai/sdk`). Cần Đàm đồng ý trước.
+- **Review Trigger**: lần tới có ai đụng `eslint.config.js`, hoặc khi một file `.jsx` vượt 3.000
+  dòng và cần biết bao nhiêu phần trong đó là rác.
+- **Owner**: chưa ai · **Status**: MỞ
+- **Giảm nhẹ tạm thời (đã làm 2026-08-30)**: `src/components/statsPeriodWiring.test.js` đọc mã
+  nguồn và cấm bảng kỳ chết quay lại **trong riêng màn Thống kê**. Nó KHÔNG thay được cái cổng
+  toàn cục — nó chỉ bịt đúng chỗ vừa bị cắn, đúng tinh thần *"một bài học được ghi ra không chặn
+  được gì; chỉ một bài TEST mới chặn được"*.
+
+## #91 — ✅ **ĐÃ XỬ LÝ (2026-09-02)** — Bài test canh khung bóng đổ CHÉP TAY hệ số `0,8` thay vì đọc từ mã, nên nó xanh kể cả khi mã dùng một `reach` khác
 
 > Mở 2026-08-28, phát hiện trong lúc gộp nhánh Phase 19–21 vào `main`. Suýt cắn thật: phép gộp có
 > một xung đột đúng ở dòng ấy (`main` chốt 0,75 · nhánh chốt 0,80), và **chọn nhầm bên thì bóng bị
@@ -4615,6 +4875,41 @@ cấp `Math.min(3,…)` → `Math.min(9,…)` · cắt bớt danh sách cấp th
 - **Review Trigger**: lần tới có ai đụng `sun.shadow.camera`, `SHADOW_MAP_DESKTOP`, hoặc bố cục
   thành phố làm khối lan xa hơn
 - **Owner**: chưa ai nhận · **Status**: MỞ
+
+
+- **✅ ĐÃ XỬ LÝ 2026-09-02.** Hằng số thành hàm: `breakStartDelayMs(hasCelebration)` — 3.200ms khi
+  có lễ mừng, **500ms** khi không (500 là giá trị đã chạy đúng suốt thời kỳ trước khi có lễ mừng,
+  không phải một con số mới chọn tay). `completeFocusSession` nay trả thêm `celebrates`, đọc CHÍNH
+  hai biến mà `App.jsx` dùng để quyết định hiện lễ mừng (`activeNewlyBuilt` · `eraChanged`) chứ
+  không chép lại điều kiện. Bài test ở `useTimer.test.js` đã đổi từ canh MỘT MỨC sang canh QUAN
+  HỆ và chạy CẢ HAI nhánh — một nhánh thôi thì đổi hằng số nào cũng xanh.
+
+
+- **✅ ĐÃ XỬ LÝ 2026-09-02.** Bật `no-unused-vars` cho `.jsx` — bắt ra **27 chỗ mã chết thật**
+  (import không ai dùng, biến tính rồi vứt, tàn dư của những khối vừa bị xoá ở vòng 28). Kèm
+  `src/lintConfig.test.js` (2 bài, đã thử-cho-đỏ) canh nó không lặng lẽ tắt về.
+- ⚠️ **VÀ ĐÂY LÀ LÝ DO NÓ TỪNG BỊ TẮT — tôi đã phải trả giá mới hiểu.** Bật lần đầu ra **54** báo
+  cáo; tôi tin cả 54 và đi gỡ. Kết quả: **lint sạch · build sạch · 1.524 bài test XANH · và app ra
+  thẳng màn hình "RENDER RECOVERY: motion is not defined"**. ESLint lõi KHÔNG coi `<motion.div>`
+  trong JSX là một lần DÙNG biến `motion`, nên **27/54 là BÁO NHẦM**, và chúng nhắm đúng vào những
+  import đang sống. Mắt xích thiếu là **`react/jsx-uses-vars`** (`eslint-plugin-react`, nay đã
+  thêm vào devDependencies). ⇒ *Bật `no-unused-vars` cho `.jsx` mà không có nó thì luật ấy không
+  phải một cái gác — nó là một cái bẫy.* Gỡ plugin thì PHẢI tắt lại luật.
+- ⚠️ **Bài học rộng hơn, đáng nhớ hơn cả bản vá:** ba cổng mạnh nhất của dự án (lint · build ·
+  1.524 test) **cùng xanh trên một app đã vỡ hoàn toàn**. Thứ duy nhất bắt được là một ẢNH CHỤP.
+
+
+- **📌 ĐÁNH DẤU LẠI 2026-09-02.** Mục này nói *"ĐÓ LÀ CÓ CHỦ ĐÍCH — đừng dọn nó xuống engine"*, tức
+  nó là một QUYẾT ĐỊNH đã chốt, không phải một khoản nợ đang chờ trả. Để nó trong danh sách "còn
+  mở" làm phồng con số nợ và khiến phiên sau tưởng còn việc phải làm — đúng thứ nó sinh ra để
+  ngăn. Không đổi một dòng mã nào.
+
+
+- **✅ ĐÃ XỬ LÝ 2026-09-02.** Hệ số nay là một hằng số CÓ TÊN và được `export`:
+  `SHADOW_REACH_RATIO = 0.8` ở `sceneGraph.js`; `sceneStats.test.js` `import` nó thay vì chép tay
+  `12 * 0.8`. Bài test khi ấy khoá cái LUẬT chứ không khoá một CON SỐ — đổi hệ số mà quên sửa test
+  thì nay không còn xảy ra được. (Suýt cắn thật ở lần gộp nhánh Phase 19–21: xung đột đúng dòng ấy,
+  `main` chốt 0,75 · nhánh chốt 0,80, và chọn nhầm bên thì không gì đỏ lên.)
 
 ---
 
@@ -4773,7 +5068,7 @@ trong chú thích thì đừng để `--selftest` của chính nó vẫn dùng �
 
 ---
 
-## #88 — `soiVetRach` bỏ sót một vết rách mắt thường nhìn ra ngay
+## #97 — `soiVetRach` bỏ sót một vết rách mắt thường nhìn ra ngay
 
 - **Tên**: cổng chống-ảnh-rách của `city-preview.mjs` báo LÀNH cho một tấm ảnh rách rõ rệt
 - **Module**: `scripts/city-preview.mjs` (`soiVetRach`, `VET_RACH_SAN`, `VET_RACH_HE_SO`)
@@ -4799,7 +5094,7 @@ trong chú thích thì đừng để `--selftest` của chính nó vẫn dùng �
 - **Review Trigger**: lần tới có ai dựng ảnh nhiều dải để nghiệm thu chi tiết nhỏ.
 - **Owner**: chưa ai · **Status**: MỞ (2026-08-27)
 
-## #86 — 137 nút tự vẽ trên 28 file KHÔNG đọc token skin, và `ActionButton` không nhận nổi chúng
+## #86 — ⚠️ **NỬA GỐC ĐÃ XỬ LÝ (2026-09-02)** — 137 nút tự vẽ trên 28 file KHÔNG đọc token skin, và `ActionButton` không nhận nổi chúng
 
 - **Tên**: nút hành động của app tồn tại hai thế giới — `ActionButton` (nay đọc token, đúng ở cả 10
   tổ hợp skin × chế độ) và 137 thẻ `<button>`/`<motion.button>` tự vẽ bằng lớp Tailwind chốt cứng.
@@ -4864,6 +5159,39 @@ trong chú thích thì đừng để `--selftest` của chính nó vẫn dùng �
 - **Blocking Conditions**: Không có.
 - **Review Trigger**: khi `MIN_UNITS` được đổi, hoặc khi có phase chia nhỏ đơn vị nhà dân lần nữa.
 - **Owner**: chưa ai · **Status**: 🔴 mở
+
+
+- **⚠️ ĐÃ XỬ LÝ NỬA THẬT SỰ HỎNG (2026-09-02).** Mục này gộp HAI chuyện, và chỉ một trong hai là
+  khuyết tật:
+  - **(a) MÀU chốt cứng — ĐÃ SỬA.** 84 chỗ trong 16 file viết thẳng `rgba(201, 100, 66, …)` (màu
+    terracotta của skin MẶC ĐỊNH), trong khi `arcade` khai `--accent-rgb: 226, 84, 44` và `inkgold`
+    khai `217, 164, 65`. Tức chúng chỉ đúng ở **2 trong 10** tổ hợp theme × skin. Nay tất cả đọc
+    `rgba(var(--accent-rgb), …)` — **tương đương tuyệt đối** ở skin mặc định (cùng con số), và đúng
+    ở bốn skin còn lại. Khoá bằng `src/components/skinTokens.test.js` (2 bài, đã thử-cho-đỏ), trong
+    đó có một bài canh chính cái token: nếu MỌI skin khai cùng một giá trị thì token không mang tin
+    và bài kia chỉ là hình thức.
+  - **(b) 137 nút không dùng `ActionButton` — KHÔNG sửa, và mục nợ này TỰ giải thích vì sao:** bảng
+    trong chính nó đã soi từng cái và kết luận mỗi chỗ lệch ít nhất một chiều (vị trí `fixed`, chữ
+    11px, `rounded-full`…), nên chuyển sang là **ĐỔI HÌNH DẠNG chứ không phải hợp nhất**. Đó là một
+    quyết định đã có lý lẽ, không phải việc còn tồn.
+  ⇒ Phần còn lại của mục này là (b), và nó nên được đọc như một GHI CHÚ THIẾT KẾ.
+
+
+- **⚠️ ĐÃ THỬ MỘT BẢN VÁ VÀ HOÀN TÁC (2026-09-02) — ghi lại để phiên sau không đi lại đúng con đường
+  ấy.** Chẩn đoán trong mục này ("phép quét chỉ nhìn mép NGANG nên mù với mép DỌC") **đúng**, và
+  cách chữa hiển nhiên là thêm một phép quét cột chuyển vị. Đã viết, và nó **báo oan ngay lập tức**
+  trên chính bài đối chứng có sẵn (`ẢNH RÁCH — mức khắc nghiệt NHẤT từng đo trên ảnh lành vẫn phải
+  được THA`).
+  **Lý do, và đây mới là thứ đáng giữ:** ảnh lành trong bài ấy dựng mỗi hàng là *một đoạn lục rồi
+  một đoạn đỏ*, tức có một **mép dọc thật** chạy suốt chiều cao. Ảnh render thật còn nhiều mép dọc
+  hơn thế — mép nhà, mép đường, mép tấm nước. Một phép quét cột dùng CÙNG ngưỡng với phép quét hàng
+  vì vậy **về mặt cấu trúc** là một cỗ máy báo động giả: nội dung dọc và vết rách dọc trông giống
+  hệt nhau với nó.
+  ⇒ Muốn chữa thật thì phải tìm một đại lượng PHÂN BIỆT được hai thứ ấy (ví dụ: vết rách do ghép
+  dải thì gián đoạn **đồng thời trên mọi kênh và mọi cao độ**, còn mép nhà thì không) — chứ không
+  phải chuyển vị phép đo cũ. Chưa có đại lượng ấy thì mục này **giữ nguyên Open**; ngưỡng hiện tại
+  KHÔNG được siết cho "chắc ăn", vì `TECH_DEBT #52` đã ghi: *một cảnh báo kêu oan còn tệ hơn không
+  có cảnh báo*.
 
 ---
 
@@ -5213,3 +5541,30 @@ trong chú thích thì đừng để `--selftest` của chính nó vẫn dùng �
   bản quét đổi, vì cổng nay chỉ hơn ngưỡng **0,44** và phần dư ấy đến từ một dải KHÔNG liên quan
   tới nguyên nhân, nên nó có thể mất đi vì một thay đổi chẳng dính gì tới bầu trời.
 - **Owner**: chưa giao · **Status**: MỞ — cổng đã qua (12,44 ✓) nhưng nguyên nhân chưa chữa; chờ quyết định
+
+## #96 — Tiến hoá di vật là một cơ chế CHẾT: nó đòi tinh luyện của kỷ ĐÃ QUA — ĐÀM CHỌN, tôi không tự chọn
+
+> Mở 2026-09-01 (vòng 24, lúc soi lại tab Hành trang). Đây là một NGÕ CỤT cấu trúc, không phải một
+> con số cần cân bằng lại — nên nó khác `#95`, và nó cũng không sửa được bằng cách chỉnh giá.
+
+- **Tên**: `evolveRelic` tiêu `resourcesRefined[kỷ của di vật]`, mà tinh luyện chỉ rơi vào kỷ ĐANG CHƠI
+- **Module**: `src/store/gameStore.js` (`evolveRelic` ~5795, credit tinh luyện ~4135) · `RelicInventory.jsx`
+- **Priority**: Medium · **Severity**: Medium
+- **Số đo**: `evolveRelic` đọc `state.resourcesRefined[evoDef.era]`; còn tinh luyện khi xong phiên
+  được cộng vào `resourcesRefined[reward.activeBook]` — **kỷ đang chơi**. Nguồn duy nhất khác là
+  đặc quyền hạ tầng, nhưng `pruneEraScopedBlueprintState` gỡ công trình của kỷ cũ khi lên kỷ ⇒
+  **không có đường nào kiếm tinh luyện của một kỷ đã qua**. Ảnh chụp fixture (3 di vật, kỷ 8):
+  **3/3 nút tiến hoá đều "Chưa đủ tài nguyên"**, và chúng sẽ ở nguyên như vậy vĩnh viễn.
+- **Impact**: màn hình vẽ ra một thang tiến hoá `1 → 2 → 3` kèm một dòng chi phí và một cái nút —
+  cả ba đều là lời hứa về một việc **không thể làm được**. Cửa sổ dùng được của cơ chế này chỉ là
+  khoảng thời gian giữa lúc thắng khủng hoảng và lúc lên kỷ, mà khủng hoảng nổ ở ~95% ngưỡng kết
+  thúc kỷ ⇒ cửa sổ ấy gần như bằng không.
+- **⚠️ VÌ SAO CHƯA LÀM**: mọi lối ra đều là đổi luật KINH TẾ, không phải đổi hiển thị —
+  (a) cho tinh luyện của kỷ cũ tiếp tục rơi, (b) cho đổi tinh luyện kỷ mới lấy kỷ cũ, (c) đổi chi
+  phí tiến hoá sang tinh luyện của kỷ ĐANG chơi. Nguyên tắc an toàn đang áp: *đơn giản hoá thứ Đàm
+  THẤY và CẢM, đừng xoá thứ Đàm đã KIẾM ĐƯỢC* — cả ba phương án nằm ở phía bên kia ranh giới ấy.
+- **⚠️ ĐÃ CÂN NHẮC VÀ BÁC "vá bằng cách giấu đi"**: ẩn thang tiến hoá khi không đủ tài nguyên. Nó
+  làm màn hình hết nói dối nhưng cũng xoá luôn dấu vết của một cơ chế đã viết xong — và phiên sau
+  sẽ không có cách nào biết nó tồn tại. Ghi ra một mục nợ đọc được thì hơn.
+- **Review Trigger**: khi Đàm hỏi "sao cái nút tiến hoá di vật không bấm được bao giờ".
+- **Owner**: Đàm quyết · **Status**: MỞ, chờ Đàm
